@@ -734,12 +734,9 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 		auto selCenterInWorld = sel->GetRootSceneComponent()->GetComponentTransform().TransformPosition(selCenter);
 		if (selRootUIComp)
 		{
-			if (auto RenderCanvas = selRootUIComp->GetRenderCanvas())
+			if (selRootUIComp->IsPointVisibleOnClip(selCenterInWorld))
 			{
-				if (!RenderCanvas->CalculatePointVisibilityOnClip(selCenterInWorld))
-				{
-					continue;//if clip by canvas then skip it
-				}
+				continue;//if not visible then skip it
 			}
 		}
 		FVector myVector = selCenterInWorld - pos;

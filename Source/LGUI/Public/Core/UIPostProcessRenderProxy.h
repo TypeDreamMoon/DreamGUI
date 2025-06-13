@@ -10,7 +10,6 @@
 
 class ULGUICanvas;
 class UUIPostProcessRenderable;
-enum class ELGUICanvasClipType :uint8;
 enum class EUIPostProcessMaskTextureType :uint8;
 
 /**
@@ -50,14 +49,8 @@ public:
 		const FVector4f& ViewTextureScaleOffset
 	) = 0;
 public:
-	ELGUICanvasClipType clipType;
-
-	FVector4f rectClipOffsetAndSize;
-	FVector4f rectClipFeather;
-
-	FTexture2DResource* clipTexture;
-	FVector4f textureClipOffsetAndSize;
-
+	FTexture2DDynamicResource* ClipDataTexture = nullptr;
+	
 	FMatrix44f objectToWorldMatrix = FMatrix44f::Identity;
 	TArray<FLGUIPostProcessCopyMeshRegionVertex> renderScreenToMeshRegionVertexArray;
 	TArray<FLGUIPostProcessVertex> renderMeshRegionToScreenVertexArray;
@@ -75,6 +68,7 @@ public:
 		, FGlobalShaderMap* GlobalShaderMap
 		, FTextureRHIRef MeshRegionTexture
 		, const FMatrix44f & ModelViewProjectionMatrix
+		, const FMatrix44f & ModelMatrix
 		, bool IsWorldSpace
 		, float BlendDepthForWorld
 		, int DepthFadeForWorld

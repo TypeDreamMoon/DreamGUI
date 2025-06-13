@@ -209,14 +209,6 @@ void UIGeometry::UpdateUIRectSimpleVertex(UIGeometry* uiGeo,
 					originVertices[i].Tangent = FVector3f(0, 1, 0);
 				}
 			}
-			//uv1
-			if (renderCanvas->GetRequireUV1())
-			{
-				vertices[0].TextureCoordinate[1] = FVector2f(0, 1);
-				vertices[1].TextureCoordinate[1] = FVector2f(1, 1);
-				vertices[2].TextureCoordinate[1] = FVector2f(0, 0);
-				vertices[3].TextureCoordinate[1] = FVector2f(1, 0);
-			}
 		}
 	}
 }
@@ -539,36 +531,6 @@ void UIGeometry::UpdateUIRectBorderVertex(UIGeometry* uiGeo, bool fillCenter,
 					originVertices[i].Tangent = FVector3f(0, 1, 0);
 				}
 			}
-			//uv1
-			if (renderCanvas->GetRequireUV1())
-			{
-				float widthReciprocal = 1.0f / spriteInfo.width;
-				float heightReciprocal = 1.0f / spriteInfo.height;
-				float buv0X = spriteInfo.borderLeft * widthReciprocal;
-				float buv3X = 1.0f - spriteInfo.borderRight * widthReciprocal;
-				float buv0Y = 1.0f - spriteInfo.borderBottom * heightReciprocal;
-				float buv3Y = spriteInfo.borderTop * heightReciprocal;
-
-				vertices[0].TextureCoordinate[1] = FVector2f(0, 1);
-				vertices[1].TextureCoordinate[1] = FVector2f(buv0X, 1);
-				vertices[2].TextureCoordinate[1] = FVector2f(buv3X, 1);
-				vertices[3].TextureCoordinate[1] = FVector2f(1, 1);
-
-				vertices[4].TextureCoordinate[1] = FVector2f(0, buv0Y);
-				vertices[5].TextureCoordinate[1] = FVector2f(buv0X, buv0Y);
-				vertices[6].TextureCoordinate[1] = FVector2f(buv3X, buv0Y);
-				vertices[7].TextureCoordinate[1] = FVector2f(1, buv0Y);
-
-				vertices[8].TextureCoordinate[1] = FVector2f(0, buv3Y);
-				vertices[9].TextureCoordinate[1] = FVector2f(buv0X, buv3Y);
-				vertices[10].TextureCoordinate[1] = FVector2f(buv3X, buv3Y);
-				vertices[11].TextureCoordinate[1] = FVector2f(1, buv3Y);
-
-				vertices[12].TextureCoordinate[1] = FVector2f(0, 0);
-				vertices[13].TextureCoordinate[1] = FVector2f(buv0X, 0);
-				vertices[14].TextureCoordinate[1] = FVector2f(buv3X, 0);
-				vertices[15].TextureCoordinate[1] = FVector2f(1, 0);
-			}
 		}
 	}
 }
@@ -671,17 +633,6 @@ void UIGeometry::UpdateUIRectTiledVertex(UIGeometry* uiGeo,
 				{
 					originVertices[i].Normal = FVector3f(-1, 0, 0);
 					originVertices[i].Tangent = FVector3f(0, 1, 0);
-				}
-			}
-			//uv1
-			if (renderCanvas->GetRequireUV1())
-			{
-				for (int i = 0; i < verticesCount; i += 4)
-				{
-					vertices[i].TextureCoordinate[1] = FVector2f(0, 0);
-					vertices[i + 1].TextureCoordinate[1] = FVector2f(1, 0);
-					vertices[i + 2].TextureCoordinate[1] = FVector2f(0, 1);
-					vertices[i + 3].TextureCoordinate[1] = FVector2f(1, 1);
 				}
 			}
 		}
@@ -838,14 +789,6 @@ void UIGeometry::UpdateUIRectFillHorizontalVerticalVertex(UIGeometry* uiGeo, con
 					originVertices[i].Normal = FVector3f(-1, 0, 0);
 					originVertices[i].Tangent = FVector3f(0, 1, 0);
 				}
-			}
-			//uv1
-			if (renderCanvas->GetRequireUV1())
-			{
-				vertices[0].TextureCoordinate[1] = FVector2f(0, 1);
-				vertices[1].TextureCoordinate[1] = FVector2f(1, 1);
-				vertices[2].TextureCoordinate[1] = FVector2f(0, 0);
-				vertices[3].TextureCoordinate[1] = FVector2f(1, 0);
 			}
 		}
 	}
@@ -1201,14 +1144,6 @@ void UIGeometry::UpdateUIRectFillRadial90Vertex(UIGeometry* uiGeo, const float& 
 					originVertices[i].Normal = FVector3f(-1, 0, 0);
 					originVertices[i].Tangent = FVector3f(0, 1, 0);
 				}
-			}
-			//uv1
-			if (renderCanvas->GetRequireUV1())
-			{
-				vertices[0].TextureCoordinate[1] = FVector2f(0, 1);
-				vertices[1].TextureCoordinate[1] = FVector2f(1, 1);
-				vertices[2].TextureCoordinate[1] = FVector2f(0, 0);
-				vertices[3].TextureCoordinate[1] = FVector2f(1, 0);
 			}
 		}
 	}
@@ -1775,15 +1710,6 @@ void UIGeometry::UpdateUIRectFillRadial180Vertex(UIGeometry* uiGeo, const float&
 					originVertices[i].Tangent = FVector3f(0, 1, 0);
 				}
 			}
-			//uv1
-			if (renderCanvas->GetRequireUV1())
-			{
-				vertices[0].TextureCoordinate[1] = FVector2f(0, 1);
-				vertices[1].TextureCoordinate[1] = FVector2f(1, 1);
-				vertices[2].TextureCoordinate[1] = FVector2f(0, 0);
-				vertices[3].TextureCoordinate[1] = FVector2f(1, 0);
-				vertices[4].TextureCoordinate[1] = FVector2f(1, 0);
-			}
 		}
 	}
 }
@@ -2319,14 +2245,6 @@ void UIGeometry::UpdateUIRectFillRadial360Vertex(UIGeometry* uiGeo, const float&
 					originVertices[i].Normal = FVector3f(-1, 0, 0);
 					originVertices[i].Tangent = FVector3f(0, 1, 0);
 				}
-			}
-			//uv1
-			if (renderCanvas->GetRequireUV1())
-			{
-				vertices[0].TextureCoordinate[1] = FVector2f(0, 1);
-				vertices[1].TextureCoordinate[1] = FVector2f(1, 1);
-				vertices[2].TextureCoordinate[1] = FVector2f(0, 0);
-				vertices[3].TextureCoordinate[1] = FVector2f(1, 0);
 			}
 		}
 	}

@@ -37,7 +37,7 @@ public:
 private:
 	/** Use these material to render SDF font for UIText, include clip material. */
 	UPROPERTY(EditAnywhere, Category = "LGUI SDF Font")
-		TObjectPtr<UMaterialInterface> SDFDefaultMaterials[(int)ELGUICanvasClipType::Custom];
+		TObjectPtr<UMaterialInterface> SDFDefaultMaterial;
 	/** Font size when render glyph. */
 	UPROPERTY(EditAnywhere, Category = "LGUI SDF Font", meta = (UIMin = "16", UIMax = "100"))
 		int FontSize = 64;
@@ -62,7 +62,7 @@ private:
 
 public:
 	//Begin ULGUIFontDataBaseObject interface
-	virtual UMaterialInterface* GetFontMaterial(ELGUICanvasClipType clipType)override;
+	virtual UMaterialInterface* GetFontMaterial()override;
 	virtual void PushCharData(
 		TCHAR charCode, const FVector2f& lineOffset, const FVector2f& fontSpace, const FLGUICharData_HighPrecision& charData,
 		const LGUIRichTextParser::RichTextParseResult& richTextProperty,
@@ -98,6 +98,4 @@ protected:
 	void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent);
 #endif
 	virtual void PostInitProperties()override;
-
-	void CheckMaterials();
 };

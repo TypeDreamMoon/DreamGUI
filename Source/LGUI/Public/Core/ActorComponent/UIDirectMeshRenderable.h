@@ -44,10 +44,6 @@ public:
 	virtual void ClearMeshData();
 	virtual bool HaveValidData()const PURE_VIRTUAL(UUIDirectMeshRenderable::HaveValidData, return true;);
 	virtual UMaterialInterface* GetMaterial()const PURE_VIRTUAL(UUIDirectMeshRenderable::GetMaterial, return nullptr;);
-
-	virtual void SetClipType(ELGUICanvasClipType clipType) {};
-	virtual void SetRectClipParameter(const FVector4& OffsetAndSize, const FVector4& Feather) {};
-	virtual void SetTextureClipParameter(UTexture* ClipTex, const FVector4& OffsetAndSize) {};
 protected:
 	uint8 bLocalVertexPositionChanged : 1;
 };

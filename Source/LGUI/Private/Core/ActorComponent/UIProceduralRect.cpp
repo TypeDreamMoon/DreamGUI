@@ -5,12 +5,10 @@
 #include "Core/UIGeometry.h"
 #include "Core/ActorComponent/LGUICanvas.h"
 #include "Core/LGUISpriteInfo.h"
-#include "Core/LGUIProceduralRectData.h"
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Core/UIDrawcall.h"
 #include "Core/ActorComponent/UITextureBase.h"
-#include "Core/LGUIManager.h"
 #include "Utils/LGUIUtils.h"
 #include "Core/LGUISpriteData.h"
 #include "Core/LGUISpriteData_BaseObject.h"
@@ -20,6 +18,20 @@ UE_DISABLE_OPTIMIZATION_SHIP
 #endif
 
 #define LOCTEXT_NAMESPACE "UIProceduralRect"
+
+
+void ULGUIProceduralRectData::PostInitProperties()
+{
+	Super::PostInitProperties();
+}
+UMaterialInterface* ULGUIProceduralRectData::GetMaterial()
+{
+	if (!DefaultMaterial)
+	{
+		DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/LexUI_RectBlock"));;
+	}
+	return DefaultMaterial;
+}
 
 
 void UUIProceduralRect::FillData(uint8* Data, float width, float height)
@@ -216,7 +228,7 @@ void UUIProceduralRect::OnCornerRadiusUnitModeChanged(float width, float height)
 	}
 }
 
-FName UUIProceduralRect::DataTextureParameterName = TEXT("DataTexture");
+FName UUIProceduralRect::DataTextureParameterName = TEXT("LexUI_RectBlockDataTexture");
 
 UUIProceduralRect::UUIProceduralRect(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
@@ -408,16 +420,7 @@ UMaterialInterface* UUIProceduralRect::GetMaterialToCreateGeometry()
 	{
 		check(ProceduralRectData);
 		CheckAdditionalShaderChannels();
-		auto CanvasClipType = ELGUICanvasClipType::None;
-		if (this->GetRenderCanvas() != nullptr)
-		{
-			CanvasClipType = this->GetRenderCanvas()->GetActualClipType();
-			if (CanvasClipType == ELGUICanvasClipType::Custom)
-			{
-				CanvasClipType = ELGUICanvasClipType::None;
-			}
-		}
-		return ProceduralRectData->GetMaterial(CanvasClipType);
+		return ProceduralRectData->GetMaterial();
 	}
 }
 void UUIProceduralRect::UpdateMaterialClipType()
@@ -446,7 +449,7 @@ void UUIProceduralRect::CheckAdditionalShaderChannels()
 	if (RenderCanvas.IsValid())
 	{
 		auto flags =
-			//UV1: data position 2d
+			//UV1.y: data position
 			//UV2.x: bIsOuterShadow
 			//UV3: outer shadow's full uv, or BodySpriteTexture's uv
 			(1 << (int)ELGUICanvasAdditionalChannelType::UV1)
@@ -604,7 +607,7 @@ void UUIProceduralRect::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChang
 		{
 			for (int i = 0; i < 8; i++)
 			{
-				vertices[i].TextureCoordinate[1] = FVector2f(DataStartPosition.X, DataStartPosition.Y);
+				vertices[i].TextureCoordinate[1].Y = DataStartPosition;
 			}
 			for (int i = 0; i < 4; i++)
 			{
@@ -615,7 +618,7 @@ void UUIProceduralRect::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChang
 		{
 			for (int i = 0; i < 4; i++)
 			{
-				vertices[i].TextureCoordinate[1] = FVector2f(DataStartPosition.X, DataStartPosition.Y);
+				vertices[i].TextureCoordinate[1].Y = DataStartPosition;
 				vertices[i].TextureCoordinate[2] = FVector2f(0, 0);
 			}
 		}

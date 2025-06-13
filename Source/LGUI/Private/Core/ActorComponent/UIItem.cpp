@@ -12,6 +12,7 @@
 #include "PhysicsEngine/BodySetup.h"
 #include "Layout/LGUICanvasScaler.h"
 #include "LTweenManager.h"
+#include "Core/LGUIClipData.h"
 #if WITH_EDITOR
 #include "DrawDebugHelpers.h"
 #include "EditorViewportClient.h"
@@ -515,6 +516,14 @@ void UUIItem::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent
 		}
 		EditorForceUpdate();
 		UpdateBounds();
+		if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIItem, Clipping))
+		{
+			MarkClipDirty_Recursive(true);
+		}
+		else
+		{
+			MarkClipDirty_Recursive(false);
+		}
 	}
 }
 
@@ -792,6 +801,7 @@ void UUIItem::OnUIAttachedToParent()
 	ULGUICanvas* ParentCanvas = UUIItem::GetComponentInParentUI<ULGUICanvas>(GetOwner()->GetAttachParentActor(), false);
 	UUICanvasGroup* ParentCanvasGroup = UUIItem::GetComponentInParentUI<UUICanvasGroup>(GetOwner()->GetAttachParentActor(), false);
 	UIHierarchyChanged(ParentCanvas, ParentCanvasGroup, ParentUIItem->RootUIItem.Get());
+	MarkClipDirty_Recursive(true);
 	//callback
 	CallUILifeCycleBehavioursAttachmentChanged();
 }
@@ -861,6 +871,7 @@ void UUIItem::OnUIDetachedFromParent()
 	}
 
 	UIHierarchyChanged(nullptr, nullptr, nullptr);
+	MarkClipDirty_Recursive(true);
 	//callback
 	CallUILifeCycleBehavioursAttachmentChanged();
 }
@@ -1051,6 +1062,57 @@ void UUIItem::UnregisterRenderCanvas()
 			uiItem->RenewRenderCanvasRecursive(ParentCanvas);
 		}
 	}
+}
+
+void UUIItem::UpdateClip(ULGUIDataAsTexture* ClipDataTexture, TArray<TSharedPtr<FLGUIClipData>>& ClipDataList)
+{
+	if (!bClipDirty)return;
+	bClipDirty = false;
+	
+	if (bNeedRecreateClip && ClipData.IsValid() && ClipData.Pin()->GetWidget() == this)//delete old clip-data
+	{
+		ClipDataList.Remove(ClipData.Pin());
+	}
+	bNeedRecreateClip = false;
+	
+	TSharedPtr<FLGUIClipData> ParentClip = nullptr;
+	if (ParentUIItem.IsValid())
+	{
+		ParentClip = ParentUIItem->ClipData.Pin();
+	}
+	switch (Clipping)
+	{
+	case ELexWidgetClipping::Inherit:
+		this->ClipData = ParentClip;
+		break;
+	case ELexWidgetClipping::ClipToBounds:
+		{
+			if (!this->ClipData.IsValid())
+			{
+				auto NewClip = MakeShared<FLGUIClipData>(ParentClip, ClipDataTexture, this);
+				ClipDataList.Add(NewClip);
+				this->ClipData = NewClip;
+			}
+		}
+		break;
+	case ELexWidgetClipping::ClipToBoundsWithoutIntersecting:
+		{
+			if (!this->ClipData.IsValid())
+			{
+				auto NewClip = MakeShared<FLGUIClipData>(nullptr, ClipDataTexture, this);
+				ClipDataList.Add(NewClip);
+				this->ClipData = NewClip;
+			}
+		}
+		break;
+	case ELexWidgetClipping::Disabled:
+		this->ClipData = nullptr;
+		break;
+	}
+	// if (IsValid(Visual))
+	// {
+	// 	Visual->OnClipDataChanged();
+	// }
 }
 
 void UUIItem::SetRenderCanvas(ULGUICanvas* InNewCanvas)
@@ -2193,6 +2255,53 @@ void UUIItem::OnCanvasGroupInteractableStateChange()
 void UUIItem::OnChildActiveStateChanged(UUIItem* child)
 {
 	CallUILifeCycleBehavioursChildActiveInHierarchyStateChanged(child, child->GetIsUIActiveInHierarchy());
+}
+
+void UUIItem::MarkClipDirty_Recursive(bool InClipTypeChanged) const
+{
+	bClipDirty = true;
+	if (InClipTypeChanged)bNeedRecreateClip = true;
+	struct LOCAL
+	{
+		static void MarkDirty(const UUIItem* Widget)
+		{
+			switch (Widget->Clipping)
+			{
+			case ELexWidgetClipping::Inherit:
+			case ELexWidgetClipping::ClipToBounds:
+				Widget->bClipDirty = true;
+				break;
+			case ELexWidgetClipping::ClipToBoundsWithoutIntersecting:
+			case ELexWidgetClipping::Disabled:
+				return;
+			}
+
+			for (auto& Child : Widget->GetAttachUIChildren())
+			{
+				MarkDirty(Child);
+			}
+		}
+	};
+	for (auto& Child : this->GetAttachUIChildren())
+	{
+		LOCAL::MarkDirty(Child);
+	}
+}
+bool UUIItem::IsPointVisibleOnClip(const FVector& Value) const
+{
+	if (ClipData.IsValid())
+	{
+		return ClipData.Pin()->IsPointVisible(Value);
+	}
+	return true;
+}
+void UUIItem::SetClipping(ELexWidgetClipping Value)
+{
+	if (Clipping != Value)
+	{
+		Clipping = Value;
+		MarkClipDirty_Recursive(true);
+	}
 }
 
 void UUIItem::CheckUIActiveState()

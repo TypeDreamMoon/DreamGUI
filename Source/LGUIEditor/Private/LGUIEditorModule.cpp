@@ -72,7 +72,6 @@
 #include "DetailCustomization/UISpriteSequencePlayerCustomization.h"
 #include "DetailCustomization/UISpriteSheetTexturePlayerCustomization.h"
 #include "DetailCustomization/UIPostProcessRenderableCustomization.h"
-#include "DetailCustomization/LGUICanvasCustomClip_RoundedRect_Customization.h"
 
 #include "DetailCustomization/UIPanelLayoutHorizontalBoxSlotCustomization.h"
 #include "DetailCustomization/UIPanelLayoutVerticalBoxSlotCustomization.h"
@@ -266,7 +265,6 @@ void FLGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomClassLayout(ULGUISpriteData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLGUISpriteDataCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULGUIStaticSpriteAtlasData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLGUIStaticSpriteAtlasDataCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULGUIFreeTypeRenderFontData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLGUIFreeTypeRenderFontDataCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(ULGUICanvasCustomClip_RoundedRect::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLGUICanvasCustomClip_RoundedRect_Customization::MakeInstance));
 		
 		PropertyModule.RegisterCustomClassLayout(UUISelectableComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISelectableCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUIToggleComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIToggleCustomization::MakeInstance));
@@ -491,7 +489,6 @@ void FLGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(ULGUISpriteData::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(ULGUIStaticSpriteAtlasData::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(ULGUIFreeTypeRenderFontData::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(ULGUICanvasCustomClip_RoundedRect::StaticClass()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(UUISelectableComponent::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUIToggleComponent::StaticClass()->GetFName());

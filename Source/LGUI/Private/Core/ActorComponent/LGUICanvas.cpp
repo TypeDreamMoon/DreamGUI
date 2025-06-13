@@ -25,8 +25,9 @@
 #include "Core/UIPostProcessRenderProxy.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Math/TransformCalculus2D.h"
-#include "Core/LGUICanvasCustomClip.h"
 #include "TextureResource.h"
+#include "Core/LGUIClipData.h"
+#include "Core/LGUIDataAsTexture.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
@@ -38,12 +39,6 @@ ULGUICanvas::ULGUICanvas()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
-
-	bClipTypeChanged = true;
-	bRectClipParameterChanged = true;
-	bTextureClipParameterChanged = true;
-	bNeedToUpdateCustomClipParameter = true;
-	bRectRangeCalculated = false;
 
 	bHasAddToLGUIScreenSpaceRenderer = false;
 	bHasSetIntialStateforLGUIWorldSpaceRenderer = false;
@@ -65,6 +60,7 @@ ULGUICanvas::ULGUICanvas()
 	bIsViewProjectionMatrixDirty = true;
 
 	DefaultMeshType = ULGUIMeshComponent::StaticClass();
+	DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/LexUI/Materials/LexUI_Image"));
 }
 
 void ULGUICanvas::BeginPlay()
@@ -82,10 +78,6 @@ void ULGUICanvas::BeginPlay()
 	}
 	MarkCanvasUpdate(true, true, true, true);
 
-	MarkClipTypeChanged_Recursive();
-	MarkRectClipParameterChanged_Recursive();
-	bTextureClipParameterChanged = true;
-	bNeedToUpdateCustomClipParameter = true;
 	bNeedToSortRenderPriority = true;
 }
 void ULGUICanvas::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -326,6 +318,14 @@ void ULGUICanvas::OnRegister()
 
 		OnUIHierarchyChanged();
 	}
+
+	if (!IsValid(ClipDataAsTexture))
+	{
+		ClipDataAsTexture = NewObject<ULGUIDataAsTexture>(this, ULGUIDataAsTexture::StaticClass(), NAME_None, RF_Transient);
+		ClipDataAsTexture->Init(FLGUIClipData::BlockSizeInBytes, 512);
+		ClipDataAsTexture->OnDataTextureChange.AddUObject(this, &ULGUICanvas::OnClipDataTextureChanged);
+		ClipDataAsTexture->RegisterBuffer();//register a zero position as a placeholder for not clipping type.
+	}
 }
 void ULGUICanvas::OnUnregister()
 {
@@ -542,11 +542,6 @@ void ULGUICanvas::OnUIHierarchyChanged()
 	CheckRootCanvas(true);
 	CheckRenderMode(true);
 
-	MarkRectClipParameterChanged_Recursive();
-	MarkClipTypeChanged_Recursive();
-	bTextureClipParameterChanged = true;
-	bNeedToUpdateCustomClipParameter = true;
-
 	ULGUICanvas* NewParentCanvas = nullptr;
 	if (this->IsRegistered())
 	{
@@ -656,16 +651,6 @@ bool ULGUICanvas::CanEditChange(const FProperty* InProperty) const
 }
 void ULGUICanvas::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
-	if (CheckRootCanvas())
-	{
-		RootCanvas->MarkClipTypeChanged_Recursive();
-	}
-	if (CheckRootCanvas())
-	{
-		RootCanvas->MarkRectClipParameterChanged_Recursive();
-	}
-	bTextureClipParameterChanged = true;
-	bNeedToUpdateCustomClipParameter = true;
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
 	if (CheckUIItem())
@@ -720,62 +705,6 @@ void ULGUICanvas::EnsureDataForRebuild()
 		}, 0);
 }
 #endif
-
-TObjectPtr<UMaterialInterface>* ULGUICanvas::GetMaterials()
-{
-	if(IsRootCanvas())
-	{
-		CheckDefaultMaterials();
-	}
-	else
-	{
-		if (GetOverrideDefaultMaterials())
-		{
-			CheckDefaultMaterials();
-		}
-		else
-		{
-			if (ParentCanvas.IsValid())
-			{
-				return ParentCanvas->GetMaterials();
-			}
-			else
-			{
-				CheckDefaultMaterials();
-			}
-		}
-	}
-	return &DefaultMaterials[0];
-}
-void ULGUICanvas::CheckDefaultMaterials()
-{
-	for (int i = 0; i < (int)ELGUICanvasClipType::Custom; i++)
-	{
-		if (DefaultMaterials[i] == nullptr)
-		{
-			FString matPath;
-			switch (i)
-			{
-			default:
-			case 0: matPath = TEXT("/LGUI/Materials/LGUI_NoClip"); break;
-			case 1: matPath = TEXT("/LGUI/Materials/LGUI_RectClip"); break;
-			case 2: matPath = TEXT("/LGUI/Materials/LGUI_TextureClip"); break;
-			}
-			auto mat = LoadObject<UMaterialInterface>(NULL, *matPath);
-			if (!IsValid(mat))
-			{
-				auto errMsg = LOCTEXT("MissingDefaultContent", "[ULGUICanvas/CheckDefaultMaterials] Load material error! Missing some content of LGUI plugin, reinstall this plugin may fix the issue.");
-#if WITH_EDITOR
-				LGUIUtils::EditorNotification(errMsg, 10);
-#endif
-				continue;
-			}
-			DefaultMaterials[i] = mat;
-			this->MarkPackageDirty();
-		}
-	}
-}
-
 
 ULGUICanvas* ULGUICanvas::GetRootCanvas() const
 { 
@@ -921,10 +850,6 @@ void ULGUICanvas::UpdateGeometry_Implement()
 		{
 			const auto UIRenderableItem = (UUIBaseRenderable*)(Item);
 			UIRenderableItem->UpdateGeometry();
-			if (bClipTypeChanged)
-			{
-				UIRenderableItem->UpdateMaterialClipType();
-			}
 		}
 	}
 }
@@ -1377,22 +1302,6 @@ void ULGUICanvas::SetOverrideProjectionMatrix(bool InOverride, FMatrix InValue)
 void ULGUICanvas::MarkCanvasLayoutDirty()
 {
 	bIsViewProjectionMatrixDirty = true;
-	switch (GetActualClipType())
-	{
-	default:
-		break;
-	case ELGUICanvasClipType::Rect:
-	{
-		MarkRectClipParameterChanged_Recursive();
-	}
-		break;
-	case ELGUICanvasClipType::Texture:
-		bTextureClipParameterChanged = true;
-		break;
-	case ELGUICanvasClipType::Custom:
-		bNeedToUpdateCustomClipParameter = true;
-		break;
-	}
 }
 
 void ULGUICanvas::SetDefaultMeshType(TSubclassOf<ULGUIMeshComponent> InValue)
@@ -1437,10 +1346,6 @@ void ULGUICanvas::MarkFinishRenderFrameRecursive()
 	}
 
 	bShouldRebuildDrawcall = false;
-	bClipTypeChanged = false;
-	bRectClipParameterChanged = false;
-	bTextureClipParameterChanged = false;
-	bNeedToUpdateCustomClipParameter = false;
 }
 
 bool ULGUICanvas::UpdateCanvasDrawcallRecursive()
@@ -1471,6 +1376,26 @@ bool ULGUICanvas::UpdateCanvasDrawcallRecursive()
 	{
 		bCanTickUpdate = false;
 		RootCanvas->bAnythingChangedForRenderTarget = true;
+
+		struct LOCAL
+		{
+			static void CollectWidgetAndUpdateLayout(UUIItem* Widget
+				, ULGUIDataAsTexture* ClipDataTexture
+				, TArray<TSharedPtr<FLGUIClipData>>& ClipDataList)
+			{
+				// Widget->UpdateLayout();
+				Widget->UpdateClip(ClipDataTexture, ClipDataList);
+				for (auto Child : Widget->GetAttachUIChildren())
+				{
+					CollectWidgetAndUpdateLayout(Child, ClipDataTexture, ClipDataList);
+				}
+			}
+		};
+		LOCAL::CollectWidgetAndUpdateLayout(this->UIItem.Get(), ClipDataAsTexture, ClipDataList);
+		for (const auto& ClipData : ClipDataList)
+		{
+			ClipData->UpdateData();
+		}
 
 		UpdateGeometry_Implement();
 
@@ -1845,26 +1770,11 @@ void ULGUICanvas::SortDrawcall()
 	}
 }
 
-FName ULGUICanvas::LGUI_MainTextureMaterialParameterName = FName(TEXT("MainTexture"));
-FName ULGUICanvas::LGUI_RectClipOffsetAndSize_MaterialParameterName = FName(TEXT("RectClipOffsetAndSize"));
-FName ULGUICanvas::LGUI_RectClipFeather_MaterialParameterName = FName(TEXT("RectClipFeather"));
-FName ULGUICanvas::LGUI_TextureClip_MaterialParameterName = FName(TEXT("ClipTexture"));
-FName ULGUICanvas::LGUI_TextureClipOffsetAndSize_MaterialParameterName = FName(TEXT("TextureClipOffsetAndSize"));
-FName ULGUICanvas::LGUI_ClipType_MaterialParameterName = FName(TEXT("LGUIClipType"));
+FName ULGUICanvas::LGUI_MainTextureMaterialParameterName = FName(TEXT("LexUI_MainTexture"));
+FName ULGUICanvas::LGUI_ClipDataTexture_MaterialParameterName = FName(TEXT("LexUI_ClipDataTexture"));
 
-bool ULGUICanvas::IsMaterialContainsLGUIParameter(UMaterialInterface* InMaterial, ELGUICanvasClipType InClipType, ULGUICanvasCustomClip* InCustomClip)
+bool ULGUICanvas::IsMaterialContainsLGUIParameter(UMaterialInterface* InMaterial)
 {
-	if (InClipType == ELGUICanvasClipType::Custom)
-	{
-		if (IsValid(InCustomClip))
-		{
-			return InCustomClip->MaterialContainsClipParameter(InMaterial);
-		}
-		else
-		{
-			return false;
-		}
-	}
 	static TArray<FMaterialParameterInfo> ParameterInfos;
 	static TArray<FGuid> ParameterIds;
 	InMaterial->GetAllTextureParameterInfo(ParameterInfos, ParameterIds);
@@ -1872,44 +1782,13 @@ bool ULGUICanvas::IsMaterialContainsLGUIParameter(UMaterialInterface* InMaterial
 		{
 			return
 				Item.Name == LGUI_MainTextureMaterialParameterName
-				|| Item.Name == LGUI_TextureClip_MaterialParameterName
+				|| Item.Name == LGUI_ClipDataTexture_MaterialParameterName
 				;
 		});
-	if (FoundIndex == INDEX_NONE)
-	{
-		InMaterial->GetAllVectorParameterInfo(ParameterInfos, ParameterIds);
-		FoundIndex = ParameterInfos.IndexOfByPredicate([](const FMaterialParameterInfo& Item)
-			{
-				return
-					Item.Name == LGUI_RectClipFeather_MaterialParameterName || Item.Name == LGUI_RectClipOffsetAndSize_MaterialParameterName
-					|| Item.Name == LGUI_TextureClipOffsetAndSize_MaterialParameterName
-					;
-			});
-	}
-	if (FoundIndex == INDEX_NONE)
-	{
-		InMaterial->GetAllScalarParameterInfo(ParameterInfos, ParameterIds);
-		FoundIndex = ParameterInfos.IndexOfByPredicate([](const FMaterialParameterInfo& Item)
-			{
-				return Item.Name == LGUI_ClipType_MaterialParameterName
-					;
-			});
-	}
 	return FoundIndex != INDEX_NONE;
 }
 void ULGUICanvas::UpdateDrawcallMaterial_Implement()
 {
-	bool bNeedToSetClipParameter = false;
-	auto TempClipType = this->GetActualClipType();
-	ULGUICanvasCustomClip* TempCustomClip = nullptr;
-	if (TempClipType == ELGUICanvasClipType::Custom)
-	{
-		TempCustomClip = GetActualCustomClip();
-		if (!IsValid(TempCustomClip))
-		{
-			TempClipType = ELGUICanvasClipType::None;
-		}
-	}
 	for (int i = 0; i < UIDrawcallList.Num(); i++)
 	{
 		auto DrawcallItem = UIDrawcallList[i];
@@ -1919,7 +1798,7 @@ void ULGUICanvas::UpdateDrawcallMaterial_Implement()
 		case EUIDrawcallType::DirectMesh:
 		{
 			auto RenderMat = DrawcallItem->RenderMaterial;
-			if (!RenderMat.IsValid() || DrawcallItem->bMaterialChanged || this->bClipTypeChanged)
+			if (!RenderMat.IsValid() || DrawcallItem->bMaterialChanged)
 			{
 				if (DrawcallItem->Material.IsValid())//custom material
 				{
@@ -1930,13 +1809,7 @@ void ULGUICanvas::UpdateDrawcallMaterial_Implement()
 						this->AddUIMaterialToPool((UMaterialInstanceDynamic*)RenderMat.Get());
 					}
 					auto SrcMaterial = DrawcallItem->Material.Get();
-					if (TempClipType == ELGUICanvasClipType::Custom)
-					{
-						SrcMaterial = TempCustomClip->GetReplaceMaterial(SrcMaterial);
-					}
-					auto bContainsLGUIParam = IsMaterialContainsLGUIParameter(SrcMaterial
-						, TempClipType, TempCustomClip
-					);
+					auto bContainsLGUIParam = IsMaterialContainsLGUIParameter(SrcMaterial);
 					if (SrcMaterial->IsA(UMaterialInstanceDynamic::StaticClass()))//if custom material is UMaterialInstanceDynamic then use it directly
 					{
 						RenderMat = SrcMaterial;
@@ -1968,7 +1841,7 @@ void ULGUICanvas::UpdateDrawcallMaterial_Implement()
 				}
 				else
 				{
-					RenderMat = this->GetUIMaterialFromPool(TempClipType, TempCustomClip);
+					RenderMat = this->GetUIMaterialFromPool();
 					UIMesh->SetMeshSectionMaterial(DrawcallItem->DrawcallRenderSection.Pin(), RenderMat.Get());
 					DrawcallItem->bMaterialContainsLGUIParameter = true;
 				}
@@ -1977,15 +1850,15 @@ void ULGUICanvas::UpdateDrawcallMaterial_Implement()
 				if (RenderMat.IsValid() && DrawcallItem->bMaterialContainsLGUIParameter)
 				{
 					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LGUI_MainTextureMaterialParameterName, DrawcallItem->Texture.Get());
+					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LGUI_ClipDataTexture_MaterialParameterName, ClipDataAsTexture->GetDataTexture());
 				}
 				DrawcallItem->bTextureChanged = false;
 				DrawcallItem->bMaterialNeedToReassign = false;
-				bNeedToSetClipParameter = true;
 				bNeedToVerifyMaterials = true;
 
 				if (DrawcallItem->DirectMeshRenderableObject.IsValid())
 				{
-					DrawcallItem->DirectMeshRenderableObject->SetClipType(TempClipType);
+					//DrawcallItem->DirectMeshRenderableObject->SetClipType(TempClipType);
 				}
 			}
 			if (DrawcallItem->bTextureChanged)
@@ -2006,144 +1879,14 @@ void ULGUICanvas::UpdateDrawcallMaterial_Implement()
 		break;
 		case EUIDrawcallType::PostProcess:
 		{
-			if (this->bClipTypeChanged
-				|| DrawcallItem->bMaterialChanged//maybe it is newly created, so check the materialChanged parameter
+			if (DrawcallItem->bMaterialChanged//maybe it is newly created, so check the materialChanged parameter
 				)
 			{
 				if (DrawcallItem->PostProcessRenderableObject.IsValid())
 				{
-					DrawcallItem->PostProcessRenderableObject->SetClipType(TempClipType);
-					DrawcallItem->bMaterialChanged = false;
+					// nothing to do here
 				}
-				bNeedToSetClipParameter = true;
-			}
-		}
-		break;
-		}
-
-		//clip parameter
-		switch (TempClipType)
-		{
-		case ELGUICanvasClipType::None:
-		{
-			if (bNeedToSetClipParameter
-				|| this->bNeedToUpdateCustomClipParameter)
-			{
-				switch (DrawcallItem->Type)
-				{
-				default:
-				case EUIDrawcallType::BatchGeometry:
-				case EUIDrawcallType::DirectMesh:
-				{
-					auto RenderMaterial = DrawcallItem->RenderMaterial;
-					if (RenderMaterial.IsValid() && DrawcallItem->bMaterialContainsLGUIParameter)
-					{
-						((UMaterialInstanceDynamic*)RenderMaterial.Get())->SetScalarParameterValue(LGUI_ClipType_MaterialParameterName, (float)TempClipType);
-					}
-				}
-				break;
-				}
-			}
-		}
-			break;
-		case ELGUICanvasClipType::Rect:
-		{
-			if (bNeedToSetClipParameter
-				|| this->bRectClipParameterChanged)
-			{
-				auto TempRectClipOffsetAndSize = this->GetRectClipOffsetAndSize();
-				auto TempRectClipFeather = this->GetRectClipFeather();
-
-				switch (DrawcallItem->Type)
-				{
-				default:
-				case EUIDrawcallType::DirectMesh:
-				case EUIDrawcallType::BatchGeometry:
-				{
-					auto RenderMaterial = DrawcallItem->RenderMaterial;
-					if (RenderMaterial.IsValid() && DrawcallItem->bMaterialContainsLGUIParameter)
-					{
-						((UMaterialInstanceDynamic*)RenderMaterial.Get())->SetScalarParameterValue(LGUI_ClipType_MaterialParameterName, (float)TempClipType);
-						((UMaterialInstanceDynamic*)RenderMaterial.Get())->SetVectorParameterValue(LGUI_RectClipOffsetAndSize_MaterialParameterName, TempRectClipOffsetAndSize);
-						((UMaterialInstanceDynamic*)RenderMaterial.Get())->SetVectorParameterValue(LGUI_RectClipFeather_MaterialParameterName, TempRectClipFeather);
-					}
-					if (DrawcallItem->DirectMeshRenderableObject.IsValid())
-					{
-						DrawcallItem->DirectMeshRenderableObject->SetRectClipParameter(TempRectClipOffsetAndSize, TempRectClipFeather);
-					}
-				}
-				break;
-				case EUIDrawcallType::PostProcess:
-				{
-					if (DrawcallItem->PostProcessRenderableObject.IsValid())
-					{
-						DrawcallItem->PostProcessRenderableObject->SetRectClipParameter(TempRectClipOffsetAndSize, TempRectClipFeather);
-					}
-				}
-				break;
-				}
-			}
-		}
-			break;
-		case ELGUICanvasClipType::Texture:
-		{
-			if (bNeedToSetClipParameter
-				|| this->bTextureClipParameterChanged)
-			{
-				auto TempTextureClipOffsetAndSize = this->GetTextureClipOffsetAndSize();
-				auto TempClipTexture = this->GetClipTexture();
-
-				switch (DrawcallItem->Type)
-				{
-				default:
-				case EUIDrawcallType::DirectMesh:
-				case EUIDrawcallType::BatchGeometry:
-				{
-					auto RenderMaterial = DrawcallItem->RenderMaterial;
-					if (RenderMaterial.IsValid() && DrawcallItem->bMaterialContainsLGUIParameter)
-					{
-						((UMaterialInstanceDynamic*)RenderMaterial.Get())->SetScalarParameterValue(LGUI_ClipType_MaterialParameterName, (float)TempClipType);
-						((UMaterialInstanceDynamic*)RenderMaterial.Get())->SetTextureParameterValue(LGUI_TextureClip_MaterialParameterName, TempClipTexture);
-						((UMaterialInstanceDynamic*)RenderMaterial.Get())->SetVectorParameterValue(LGUI_TextureClipOffsetAndSize_MaterialParameterName, TempTextureClipOffsetAndSize);
-					}
-					if (DrawcallItem->DirectMeshRenderableObject.IsValid())
-					{
-						DrawcallItem->DirectMeshRenderableObject->SetTextureClipParameter(TempClipTexture, TempTextureClipOffsetAndSize);
-					}
-				}
-				break;
-				case EUIDrawcallType::PostProcess:
-				{
-					if (DrawcallItem->PostProcessRenderableObject.IsValid())
-					{
-						DrawcallItem->PostProcessRenderableObject->SetTextureClipParameter(TempClipTexture, TempTextureClipOffsetAndSize);
-					}
-				}
-				break;
-				}
-			}
-		}
-			break;
-		case ELGUICanvasClipType::Custom:
-		{
-			if (bNeedToSetClipParameter
-				|| this->bNeedToUpdateCustomClipParameter)
-			{
-				switch (DrawcallItem->Type)
-				{
-				default:
-				case EUIDrawcallType::BatchGeometry:
-				case EUIDrawcallType::DirectMesh:
-				{
-					auto RenderMaterial = DrawcallItem->RenderMaterial;
-					if (RenderMaterial.IsValid() && DrawcallItem->bMaterialContainsLGUIParameter)
-					{
-						((UMaterialInstanceDynamic*)RenderMaterial.Get())->SetScalarParameterValue(LGUI_ClipType_MaterialParameterName, (float)TempClipType);
-						TempCustomClip->ApplyMaterialParameter((UMaterialInstanceDynamic*)RenderMaterial.Get(), this, UIItem.Get());
-					}
-				}
-				break;
-				}
+				DrawcallItem->bMaterialChanged = false;
 			}
 		}
 		break;
@@ -2174,266 +1917,30 @@ void ULGUICanvas::MarkNeedVerifyMaterials()
 }
 
 
-UMaterialInstanceDynamic* ULGUICanvas::GetUIMaterialFromPool(ELGUICanvasClipType InClipType, ULGUICanvasCustomClip* InCustomClip)
+UMaterialInstanceDynamic* ULGUICanvas::GetUIMaterialFromPool()
 {
 	bNeedToVerifyMaterials = true;
-	if (InClipType == ELGUICanvasClipType::Custom)
-	{
-		auto SrcMaterial = InCustomClip->GetReplaceMaterial(GetMaterials()[0]);//custom clip no need to pool
-		auto UIMat = UMaterialInstanceDynamic::Create(SrcMaterial, this);
-		UIMat->SetFlags(RF_Transient);
-		return UIMat;
-	}
-
 	if (PooledUIMaterialList.Num() == 0)
 	{
-		for (int i = 0; i < (int)ELGUICanvasClipType::Custom; i++)
-		{
-			PooledUIMaterialList.Add({});
-		}
-	}
-	auto& MatList = PooledUIMaterialList[(int)InClipType].MaterialList;
-	if (MatList.Num() == 0)
-	{
-		auto SrcMaterial = GetMaterials()[(int)InClipType];
+		auto SrcMaterial = GetDefaultMaterial();
 		auto UIMat = UMaterialInstanceDynamic::Create(SrcMaterial, this);
 		UIMat->SetFlags(RF_Transient);
 		return UIMat;
 	}
 	else
 	{
-		auto UIMat = MatList[MatList.Num() - 1];
-		MatList.RemoveAt(MatList.Num() - 1);
+		auto UIMat = PooledUIMaterialList[PooledUIMaterialList.Num() - 1];
+		PooledUIMaterialList.RemoveAt(PooledUIMaterialList.Num() - 1);
 		return UIMat;
 	}
 }
 void ULGUICanvas::AddUIMaterialToPool(UMaterialInstanceDynamic* UIMat)
 {
 	bNeedToVerifyMaterials = true;
-	int CacheMatTypeIndex = -1;
-	auto TempDefaultMaterials = GetMaterials();
-	for (int i = 0; i < (int)ELGUICanvasClipType::Custom; i++)
+	if (UIMat->Parent == GetDefaultMaterial())
 	{
-		if (UIMat->Parent == TempDefaultMaterials[i])
-		{
-			CacheMatTypeIndex = i;
-			break;
-		}
+		PooledUIMaterialList.Add(UIMat);
 	}
-	if (CacheMatTypeIndex != -1)
-	{
-		if (PooledUIMaterialList.Num() == 0)//PooledUIMaterialList could be cleared when hierarchy change, but we still willing to pool the material, so check it again
-		{
-			for (int i = 0; i < (int)ELGUICanvasClipType::Custom; i++)
-			{
-				PooledUIMaterialList.Add({});
-			}
-		}
-
-		auto& MatList = PooledUIMaterialList[CacheMatTypeIndex].MaterialList;
-		MatList.Add(UIMat);
-	}
-}
-
-bool ULGUICanvas::CalculatePointVisibilityOnClip(const FVector& InWorldPoint)
-{
-	//if not use clip or use texture clip, then point is visible. texture clip not support this calculation yet.
-	switch (GetActualClipType())
-	{
-	case ELGUICanvasClipType::None:
-		return true;
-		break;
-	case ELGUICanvasClipType::Rect:
-	{
-		ConditionalCalculateRectRange();
-		//transform to local space
-		auto LocalPoint = this->UIItem->GetComponentTransform().InverseTransformPosition(InWorldPoint);
-		//out of range
-		if (LocalPoint.Y < clipRectMin.X) return false;
-		if (LocalPoint.Z < clipRectMin.Y) return false;
-		if (LocalPoint.Y > clipRectMax.X) return false;
-		if (LocalPoint.Z > clipRectMax.Y) return false;
-	}
-	break;
-	case ELGUICanvasClipType::Texture:
-	{
-		if (IsValid(clipTexture))
-		{
-			auto PlatformData = clipTexture->GetPlatformData();
-			if(PlatformData && PlatformData->Mips.Num() > 0)
-			{
-				//calcualte pixel position on hit point
-				auto LocalPoint = this->UIItem->GetComponentTransform().InverseTransformPosition(InWorldPoint);
-				auto LocalLeftBottomPoint = UIItem->GetLocalSpaceLeftBottomPoint();
-				auto UVX01 = (LocalPoint.Y - UIItem->GetLocalSpaceLeft()) / UIItem->GetWidth();
-				auto UVY01 = (LocalPoint.Z - UIItem->GetLocalSpaceBottom()) / UIItem->GetHeight();
-				UVY01 = 1.0f - UVY01;
-				auto TexPosX = (int)(UVX01 * PlatformData->SizeX);
-				auto TexPosY = (int)(UVY01 * PlatformData->SizeY);
-				auto TexPos = TexPosX + TexPosY * PlatformData->SizeX;
-
-				bool Result = true;
-				if (auto Pixels = (FColor*)(PlatformData->Mips[0].BulkData.Lock(LOCK_READ_ONLY)))
-				{
-					auto AlphaValueValue = Pixels[TexPos].R;
-					auto AlphaValueValue01 = LGUIUtils::Color255To1_Table[AlphaValueValue];
-					Result = AlphaValueValue01 > clipTextureHitTestThreshold;
-				}
-				PlatformData->Mips[0].BulkData.Unlock();
-				return Result;
-			}
-		}
-		return true;
-	}
-	break;
-	case ELGUICanvasClipType::Custom:
-	{
-		auto TempCustomClip = GetActualCustomClip();
-		if (IsValid(TempCustomClip))
-		{
-			return TempCustomClip->CheckPointVisible(InWorldPoint, this, UIItem.Get());
-		}
-		return false;
-	}
-	break;
-	}
-
-	return true;
-}
-void ULGUICanvas::ConditionalCalculateRectRange()
-{
-	if (bRectRangeCalculated)return;
-	bRectRangeCalculated = true;
-
-	if (this->GetActualClipType() == ELGUICanvasClipType::Rect)
-	{
-		if (this->GetOverrideClipType())//override clip parameter
-		{
-			//calculate sefl rect range
-			clipRectMin.X = -UIItem->GetPivot().X * UIItem->GetWidth();
-			clipRectMin.Y = -UIItem->GetPivot().Y * UIItem->GetHeight();
-			clipRectMax.X = (1.0f - UIItem->GetPivot().X) * UIItem->GetWidth();
-			clipRectMax.Y = (1.0f - UIItem->GetPivot().Y) * UIItem->GetHeight();
-			//add offset
-			clipRectMin.X = clipRectMin.X - clipRectOffset.Left;
-			clipRectMax.X = clipRectMax.X + clipRectOffset.Right;
-			clipRectMin.Y = clipRectMin.Y - clipRectOffset.Bottom;
-			clipRectMax.Y = clipRectMax.Y + clipRectOffset.Top;
-			//calculate parent rect range
-			if (inheritRectClip && ParentCanvas.IsValid() && ParentCanvas->GetActualClipType() == ELGUICanvasClipType::Rect)
-			{
-				ParentCanvas->ConditionalCalculateRectRange();
-				auto parentRectMin = FVector(0, ParentCanvas->clipRectMin.X, ParentCanvas->clipRectMin.Y);
-				auto parentRectMax = FVector(0, ParentCanvas->clipRectMax.X, ParentCanvas->clipRectMax.Y);
-				//transform ParentCanvas's rect to this space
-				auto& parentCanvasTf = ParentCanvas->UIItem->GetComponentTransform();
-				auto thisTfInv = this->UIItem->GetComponentTransform().Inverse();
-				parentRectMin = thisTfInv.TransformPosition(parentCanvasTf.TransformPosition(parentRectMin));
-				parentRectMax = thisTfInv.TransformPosition(parentCanvasTf.TransformPosition(parentRectMax));
-				//inherit
-				if (clipRectMin.X < parentRectMin.Y)clipRectMin.X = parentRectMin.Y;
-				if (clipRectMin.Y < parentRectMin.Z)clipRectMin.Y = parentRectMin.Z;
-				if (clipRectMax.X > parentRectMax.Y)clipRectMax.X = parentRectMax.Y;
-				if (clipRectMax.Y > parentRectMax.Z)clipRectMax.Y = parentRectMax.Z;
-			}
-		}
-		else//use parent clip parameter
-		{
-			if (ParentCanvas.IsValid() && ParentCanvas->GetActualClipType() == ELGUICanvasClipType::Rect)//have parent, use parent clip parameter
-			{
-				ParentCanvas->ConditionalCalculateRectRange();
-				auto parentRectMin = FVector(0, ParentCanvas->clipRectMin.X, ParentCanvas->clipRectMin.Y);
-				auto parentRectMax = FVector(0, ParentCanvas->clipRectMax.X, ParentCanvas->clipRectMax.Y);
-				//transform ParentCanvas's rect to this space
-				auto& parentCanvasTf = ParentCanvas->UIItem->GetComponentTransform();
-				auto thisTfInv = this->UIItem->GetComponentTransform().Inverse();
-				parentRectMin = thisTfInv.TransformPosition(parentCanvasTf.TransformPosition(parentRectMin));
-				parentRectMax = thisTfInv.TransformPosition(parentCanvasTf.TransformPosition(parentRectMax));
-
-				clipRectMin.X = parentRectMin.Y;
-				clipRectMin.Y = parentRectMin.Z;
-				clipRectMax.X = parentRectMax.Y;
-				clipRectMax.Y = parentRectMax.Z;
-			}
-			else//no parent, use self parameter
-			{
-				//calculate sefl rect range
-				clipRectMin.X = -UIItem->GetPivot().X * UIItem->GetWidth();
-				clipRectMin.Y = -UIItem->GetPivot().Y * UIItem->GetHeight();
-				clipRectMax.X = (1.0f - UIItem->GetPivot().X) * UIItem->GetWidth();
-				clipRectMax.Y = (1.0f - UIItem->GetPivot().Y) * UIItem->GetHeight();
-				//add offset
-				clipRectMin.X = clipRectMin.X - clipRectOffset.Left;
-				clipRectMax.X = clipRectMax.X + clipRectOffset.Right;
-				clipRectMin.Y = clipRectMin.Y - clipRectOffset.Bottom;
-				clipRectMax.Y = clipRectMax.Y + clipRectOffset.Top;
-			}
-		}
-	}
-	else
-	{
-		//calculate self rect range
-		clipRectMin.X = -UIItem->GetPivot().X * UIItem->GetWidth();
-		clipRectMin.Y = -UIItem->GetPivot().Y * UIItem->GetHeight();
-		clipRectMax.X = (1.0f - UIItem->GetPivot().X) * UIItem->GetWidth();
-		clipRectMax.Y = (1.0f - UIItem->GetPivot().Y) * UIItem->GetHeight();
-	}
-}
-
-void ULGUICanvas::MarkRectClipParameterChanged_Recursive()
-{
-	bCanTickUpdate = true;
-	bRectClipParameterChanged = true;
-	bRectRangeCalculated = false;
-	for (auto ChildCanvas : ChildrenCanvasArray)
-	{
-		if (ChildCanvas.IsValid())
-		{
-			ChildCanvas->MarkRectClipParameterChanged_Recursive();
-		}
-	}
-}
-void ULGUICanvas::MarkClipTypeChanged_Recursive()
-{
-	bCanTickUpdate = true;
-	bClipTypeChanged = true;
-	for (auto ChildCanvas : ChildrenCanvasArray)
-	{
-		if (ChildCanvas.IsValid())
-		{
-			ChildCanvas->MarkClipTypeChanged_Recursive();
-		}
-	}
-}
-
-
-FLinearColor ULGUICanvas::GetRectClipOffsetAndSize()
-{
-	ConditionalCalculateRectRange();
-	return FLinearColor((clipRectMin.X + clipRectMax.X) * 0.5f, (clipRectMin.Y + clipRectMax.Y) * 0.5f, (clipRectMax.X - clipRectMin.X) * 0.5f, (clipRectMax.Y - clipRectMin.Y) * 0.5f);
-}
-FLinearColor ULGUICanvas::GetRectClipFeather()
-{
-	if (this->GetOverrideClipType())//override clip parameter
-	{
-		return FLinearColor(clipFeather.X, clipFeather.Y, 0, 0);
-	}
-	else//use parent clip parameter
-	{
-		if (ParentCanvas.IsValid())//have parent, use parent clip parameter
-		{
-			return FLinearColor(ParentCanvas->clipFeather.X, ParentCanvas->clipFeather.Y, 0, 0);
-		}
-		else
-		{
-			return FLinearColor(clipFeather.X, clipFeather.Y, 0, 0);
-		}
-	}
-}
-FLinearColor ULGUICanvas::GetTextureClipOffsetAndSize()
-{
-	auto Offset = FVector2D(UIItem->GetWidth() * -UIItem->GetPivot().X, UIItem->GetHeight() * -UIItem->GetPivot().Y);
-	return FLinearColor(Offset.X, Offset.Y, UIItem->GetWidth(), UIItem->GetHeight());
 }
 
 void ULGUICanvas::SetRenderTargetResolutionScale(float value)
@@ -2468,65 +1975,6 @@ void ULGUICanvas::RequestUpdateForRenderTarget()
 	if (RootCanvas == this)
 	{
 		bRequestUpdateForRenderTarget = true;
-	}
-}
-
-void ULGUICanvas::SetClipType(ELGUICanvasClipType newClipType) 
-{
-	if (clipType != newClipType)
-	{
-		MarkClipTypeChanged_Recursive();
-		clipType = newClipType;
-		MarkCanvasUpdate(true, true, false);
-	}
-}
-void ULGUICanvas::SetRectClipFeather(FVector2D newFeather) 
-{
-	if (clipFeather != newFeather)
-	{
-		MarkRectClipParameterChanged_Recursive();
-		clipFeather = newFeather;
-		MarkCanvasUpdate(true, true, false);
-	}
-}
-void ULGUICanvas::SetRectClipOffset(FMargin newOffset)
-{
-	if (clipRectOffset != newOffset)
-	{
-		MarkRectClipParameterChanged_Recursive();
-		clipRectOffset = newOffset;
-		MarkCanvasUpdate(true, true, false);
-	}
-}
-void ULGUICanvas::SetClipTexture(UTexture2D* newTexture) 
-{
-	if (clipTexture != newTexture)
-	{
-		bTextureClipParameterChanged = true;
-		clipTexture = newTexture;
-		MarkCanvasUpdate(true, true, false);
-	}
-}
-void ULGUICanvas::SetInheriRectClip(bool newBool)
-{
-	if (inheritRectClip != newBool)
-	{
-		inheritRectClip = newBool;
-		bRectRangeCalculated = false;
-		MarkCanvasUpdate(true, true, false);
-	}
-}
-void ULGUICanvas::SetCustomClip(ULGUICanvasCustomClip* value)
-{
-	if (customClip != value)
-	{
-		customClip = value;
-		if (clipType == ELGUICanvasClipType::Custom)
-		{
-			MarkClipTypeChanged_Recursive();
-			bNeedToUpdateCustomClipParameter = true;
-			MarkCanvasUpdate(true, true, false);
-		}
 	}
 }
 
@@ -2631,45 +2079,34 @@ void ULGUICanvas::GetMinMaxSortOrderOfHierarchy(int32& OutMin, int32& OutMax)
 }
 
 
-TArray<UMaterialInterface*> ULGUICanvas::GetDefaultMaterials()const
+UMaterialInterface* ULGUICanvas::GetDefaultMaterial()const
 {
-	TArray<UMaterialInterface*> ResultArray;
-	ResultArray.AddUninitialized((int)ELGUICanvasClipType::Custom);
-	for (int i = 0; i < (int)ELGUICanvasClipType::Custom; i++)
+	if (!DefaultMaterial)
 	{
-		ResultArray[i] = DefaultMaterials[i];
+		DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/LexUI_Image"));;
 	}
-	return ResultArray;
+	return DefaultMaterial;
 }
 
-void ULGUICanvas::SetDefaultMaterials(const TArray<UMaterialInterface*>& InMaterialArray)
+void ULGUICanvas::SetDefaultMaterial(UMaterialInterface* InMaterial)
 {
-	if (InMaterialArray.Num() < (int)ELGUICanvasClipType::Custom)
+	if (DefaultMaterial != InMaterial)
 	{
-		UE_LOG(LGUI, Error, TEXT("[%s].%d InMaterialArray's count must be %d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, (int)ELGUICanvasClipType::Custom);
-		return;
-	}
-	for (int i = 0; i < UIDrawcallList.Num(); i++)
-	{
-		auto DrawcallItem = UIDrawcallList[i];
-		if (DrawcallItem->Type == EUIDrawcallType::BatchGeometry)
+		for (int i = 0; i < UIDrawcallList.Num(); i++)
 		{
-			if (DrawcallItem->Material == nullptr)
+			auto DrawCallItem = UIDrawcallList[i];
+			if (DrawCallItem->Type == EUIDrawcallType::BatchGeometry)
 			{
-				DrawcallItem->bMaterialChanged = true;
+				if (DrawCallItem->Material == nullptr)
+				{
+					DrawCallItem->bMaterialChanged = true;
+				}
 			}
 		}
+		//clear old material
+		PooledUIMaterialList.Reset();
+		MarkCanvasUpdate(true, false, false);
 	}
-	for (int i = 0; i < (int)ELGUICanvasClipType::Custom; i++)
-	{
-		if (IsValid(InMaterialArray[i]))
-		{
-			DefaultMaterials[i] = InMaterialArray[i];
-		}
-	}
-	//clear old material
-	PooledUIMaterialList.Reset();
-	MarkCanvasUpdate(true, false, false);
 }
 
 void ULGUICanvas::SetDynamicPixelsPerUnit(float newValue)
@@ -2795,53 +2232,6 @@ void ULGUICanvas::SetOverrideSorting(bool value)
 		MarkCanvasUpdate(false, false, false);
 	}
 }
-
-ELGUICanvasClipType ULGUICanvas::GetActualClipType()const
-{
-	if (IsRootCanvas())
-	{
-		return clipType;
-	}
-	else
-	{
-		if (GetOverrideClipType())
-		{
-			return clipType;
-		}
-		else
-		{
-			if (ParentCanvas.IsValid())
-			{
-				return ParentCanvas->GetActualClipType();
-			}
-		}
-	}
-	return clipType;
-}
-
-ULGUICanvasCustomClip* ULGUICanvas::GetActualCustomClip()const
-{
-	if (IsRootCanvas())
-	{
-		return customClip;
-	}
-	else
-	{
-		if (GetOverrideClipType())
-		{
-			return customClip;
-		}
-		else
-		{
-			if (ParentCanvas.IsValid())
-			{
-				return ParentCanvas->customClip;
-			}
-		}
-	}
-	return customClip;
-}
-
 
 int8 ULGUICanvas::GetActualAdditionalShaderChannelFlags()const
 {
@@ -3268,6 +2658,37 @@ int32 ULGUICanvas::GetDrawcallCount()const
 	return Result;
 }
 
+void ULGUICanvas::OnClipDataTextureChanged(UTexture* NewTexture)
+{
+	for (const auto& DrawCallItem : UIDrawcallList)
+	{
+		switch (DrawCallItem->Type)
+		{
+		case EUIDrawcallType::BatchGeometry:
+			{
+				auto RenderMat = DrawCallItem->RenderMaterial;
+				if (RenderMat.IsValid() && DrawCallItem->bMaterialContainsLGUIParameter)
+				{
+					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LGUI_ClipDataTexture_MaterialParameterName, NewTexture);
+				}
+			}
+			break;
+		case EUIDrawcallType::PostProcess:
+			break;
+		case EUIDrawcallType::DirectMesh:
+			break;
+		}
+	}
+}
+
+void ULGUICanvas::RemoveClipData(const TSharedPtr<FLGUIClipData>& InClipData)
+{
+	ClipDataList.Remove(InClipData);
+}
+UTexture* ULGUICanvas::GetClipDataTexture()const
+{
+	return ClipDataAsTexture->GetDataTexture();
+}
 
 DECLARE_CYCLE_STAT(TEXT("Canvas 2DTransform"), STAT_Transform2D, STATGROUP_LGUI);
 void ULGUICanvas::GetCacheUIItemToCanvasTransform(UUIBaseRenderable* item, FLGUICacheTransformContainer& outResult)

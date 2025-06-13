@@ -90,7 +90,7 @@ class LGUI_API ULGUIFontData_BaseObject : public UObject
 public:
 	virtual void InitFont()PURE_VIRTUAL(ULGUISpriteData_BaseObject::InitFont, );
 
-	virtual UMaterialInterface* GetFontMaterial(ELGUICanvasClipType clipType)PURE_VIRTUAL(ULGUISpriteData_BaseObject::GetFontMaterial, return nullptr;);
+	virtual UMaterialInterface* GetFontMaterial()PURE_VIRTUAL(ULGUISpriteData_BaseObject::GetFontMaterial, return nullptr;);
 	virtual UTexture2D* GetFontTexture()PURE_VIRTUAL(ULGUISpriteData_BaseObject::GetFontTexture, return nullptr;);
 	virtual FLGUICharData_HighPrecision GetCharData(const TCHAR& charCode, const float& charSize) PURE_VIRTUAL(ULGUIFontData_BaseObject::GetCharData, return FLGUICharData_HighPrecision(););
 	virtual bool HasKerning() { return false; }

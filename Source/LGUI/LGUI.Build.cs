@@ -7,7 +7,6 @@ public class LGUI : ModuleRules
 	public LGUI(ReadOnlyTargetRules Target) : base(Target)
 	{
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-        bEnableUndefinedIdentifierWarnings = false;
         CppStandard = CppStandardVersion.Cpp20;
 
         string EnginSourceFolder = EngineDirectory + "/Source/";

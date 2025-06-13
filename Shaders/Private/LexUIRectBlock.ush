@@ -20,7 +20,7 @@
 #define INV_360 0.00277777777777f
 #endif
 
-half4 LGUI_UnpackUintColor(uint colorUint)
+half4 LexUI_UnpackUintColor(uint colorUint)
 {
     half4 ResultColor;
     ResultColor.r = ((colorUint >> 24) & 0x000000ff) * INV_255;
@@ -29,7 +29,7 @@ half4 LGUI_UnpackUintColor(uint colorUint)
     ResultColor.a = ((colorUint >> 0) & 0x000000ff) * INV_255;
     return ResultColor;
 }
-half4 LGUI_UnpackBytes(uint value)
+half4 LexUI_UnpackBytes(uint value)
 {
     half4 Result;
     Result.x = (value >> 24) & 0x000000ff;
@@ -39,7 +39,7 @@ half4 LGUI_UnpackBytes(uint value)
     return Result;
 }
 
-int2 LGUI_UnpackCoordinate(float value)
+int2 LexUI_UnpackCoordinate(float value)
 {
     uint PackedCoordinate = asuint(value);
     int2 Coordinate;
@@ -47,14 +47,14 @@ int2 LGUI_UnpackCoordinate(float value)
     Coordinate.y = (PackedCoordinate >> 0) & 0x0000ffff;
     return Coordinate;
 }
-float LGUI_ReadFloat(Texture2D DataTex, inout int3 Position)
+float LexUI_ReadFloat(Texture2D DataTex, inout int3 Position)
 {
     float Result;
     Result = DataTex.Load(Position).r;
     Position.x += 1;
     return Result;
 }
-float2 LGUI_ReadFloat2(Texture2D DataTex, inout int3 Position)
+float2 LexUI_ReadFloat2(Texture2D DataTex, inout int3 Position)
 {
     float2 Result;
     Result.x = DataTex.Load(Position).r;
@@ -63,7 +63,7 @@ float2 LGUI_ReadFloat2(Texture2D DataTex, inout int3 Position)
     Position.x += 1;
     return Result;
 }
-float4 LGUI_ReadFloat4(Texture2D DataTex, inout int3 Position)
+float4 LexUI_ReadFloat4(Texture2D DataTex, inout int3 Position)
 {
     float4 Result;
     Result.x = DataTex.Load(Position).r;
@@ -76,11 +76,11 @@ float4 LGUI_ReadFloat4(Texture2D DataTex, inout int3 Position)
     Position.x += 1;
     return Result;
 }
-half4 LGUI_ReadColor(Texture2D DataTex, inout int3 Position)
+half4 LexUI_ReadColor(Texture2D DataTex, inout int3 Position)
 {
     uint ColorUint = asuint(DataTex.Load(Position).r);
     Position.x += 1;
-    half4 Color = LGUI_UnpackUintColor(ColorUint);
+    half4 Color = LexUI_UnpackUintColor(ColorUint);
     Color.rgb = sRGBToLinear(Color.rgb);
     return Color;
 }
@@ -151,7 +151,7 @@ half4 BlendPremul(half4 bottom, half4 top)
     return half4(outColor, outA);
 }
 
-float LGUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, float2 UV0, float2 UV1, float2 UV2, float2 UV3, Texture2D DataTex, inout float3 Color, inout float Alpha)
+float LexUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, float2 UV0, float2 UV1, float2 UV2, float2 UV3, Texture2D DataTex, inout float3 Color, inout float Alpha)
 {
     half _TextureScaleMode;
     float4 _CornerRadius;
@@ -196,8 +196,8 @@ float LGUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, float
     //read data from texture
     {
         _OuterShadow = UV2.x;
-        int2 Coordinate = round(UV1);
-        int3 Position = int3(Coordinate, 0);
+        int Coordinate = round(UV1.y);
+        int3 Position = int3(0, Coordinate, 0);
         
         uint ByteUint = asuint(DataTex.Load(Position).r);
         Position.x += 1;
@@ -212,37 +212,37 @@ float LGUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, float
         _EnableInnerShadow = (BoolValues >> 2) & 1;
         _EnableRadialFill = (BoolValues >> 1) & 1;
         
-        _QuadSize = LGUI_ReadFloat2(DataTex, Position);
+        _QuadSize = LexUI_ReadFloat2(DataTex, Position);
         
-        _CornerRadius = LGUI_ReadFloat4(DataTex, Position);
-        _BodyColor = LGUI_ReadColor(DataTex, Position);
-        _TextureUVCenter = LGUI_ReadFloat2(DataTex, Position);
+        _CornerRadius = LexUI_ReadFloat4(DataTex, Position);
+        _BodyColor = LexUI_ReadColor(DataTex, Position);
+        _TextureUVCenter = LexUI_ReadFloat2(DataTex, Position);
         
-        _GradientColor = LGUI_ReadColor(DataTex, Position);
-        _GradientCenter = LGUI_ReadFloat2(DataTex, Position);
-        _GradientRadius = LGUI_ReadFloat2(DataTex, Position);
-        _GradientRotation = LGUI_ReadFloat(DataTex, Position);
+        _GradientColor = LexUI_ReadColor(DataTex, Position);
+        _GradientCenter = LexUI_ReadFloat2(DataTex, Position);
+        _GradientRadius = LexUI_ReadFloat2(DataTex, Position);
+        _GradientRotation = LexUI_ReadFloat(DataTex, Position);
 
-        _BorderWidth = LGUI_ReadFloat(DataTex, Position);
-        _BorderColor = LGUI_ReadColor(DataTex, Position);
-        _BorderGradientColor = LGUI_ReadColor(DataTex, Position);
-        _BorderGradientCenter = LGUI_ReadFloat2(DataTex, Position);
-        _BorderGradientRadius = LGUI_ReadFloat2(DataTex, Position);
-        _BorderGradientRotation = LGUI_ReadFloat(DataTex, Position);
+        _BorderWidth = LexUI_ReadFloat(DataTex, Position);
+        _BorderColor = LexUI_ReadColor(DataTex, Position);
+        _BorderGradientColor = LexUI_ReadColor(DataTex, Position);
+        _BorderGradientCenter = LexUI_ReadFloat2(DataTex, Position);
+        _BorderGradientRadius = LexUI_ReadFloat2(DataTex, Position);
+        _BorderGradientRotation = LexUI_ReadFloat(DataTex, Position);
         
-        _InnerShadowColor = LGUI_ReadColor(DataTex, Position);
-        _InnerShadowSize = LGUI_ReadFloat(DataTex, Position);
-        _InnerShadowBlur = LGUI_ReadFloat(DataTex, Position);
-        _InnerShadowOffset = LGUI_ReadFloat2(DataTex, Position);
+        _InnerShadowColor = LexUI_ReadColor(DataTex, Position);
+        _InnerShadowSize = LexUI_ReadFloat(DataTex, Position);
+        _InnerShadowBlur = LexUI_ReadFloat(DataTex, Position);
+        _InnerShadowOffset = LexUI_ReadFloat2(DataTex, Position);
         
-        _RadialFillCenter = LGUI_ReadFloat2(DataTex, Position);
-        _RadialFillRotation = LGUI_ReadFloat(DataTex, Position);
-        _RadialFillAngle = LGUI_ReadFloat(DataTex, Position);
+        _RadialFillCenter = LexUI_ReadFloat2(DataTex, Position);
+        _RadialFillRotation = LexUI_ReadFloat(DataTex, Position);
+        _RadialFillAngle = LexUI_ReadFloat(DataTex, Position);
         
-        _OuterShadowColor = LGUI_ReadColor(DataTex, Position);
-        _OuterShadowSize = LGUI_ReadFloat(DataTex, Position);
-        _OuterShadowBlur = LGUI_ReadFloat(DataTex, Position);
-        _OuterShadowOffset = LGUI_ReadFloat2(DataTex, Position);
+        _OuterShadowColor = LexUI_ReadColor(DataTex, Position);
+        _OuterShadowSize = LexUI_ReadFloat(DataTex, Position);
+        _OuterShadowBlur = LexUI_ReadFloat(DataTex, Position);
+        _OuterShadowOffset = LexUI_ReadFloat2(DataTex, Position);
 
     }
     

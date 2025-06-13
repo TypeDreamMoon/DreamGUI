@@ -118,7 +118,7 @@ public:
 
 	//Begin ULGUIFontData_BaseObject interface
 	virtual void InitFont()override;
-	virtual UMaterialInterface* GetFontMaterial(ELGUICanvasClipType clipType)override { return nullptr; }
+	virtual UMaterialInterface* GetFontMaterial()override { return nullptr; }
 	virtual UTexture2D* GetFontTexture()override;
 	virtual FLGUICharData_HighPrecision GetCharData(const TCHAR& charCode, const float& charSize)override;
 	virtual bool HasKerning()override { return hasKerning; }

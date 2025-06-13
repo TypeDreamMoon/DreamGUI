@@ -1,0 +1,51 @@
+
+float4 LexUI_ReadFloat4_ClipData(Texture2D DataTex, inout int3 Position)
+{
+	float4 Result;
+	Result.x = DataTex.Load(Position).r;
+	Position.x += 1;
+	Result.y = DataTex.Load(Position).r;
+	Position.x += 1;
+	Result.z = DataTex.Load(Position).r;
+	Position.x += 1;
+	Result.w = DataTex.Load(Position).r;
+	Position.x += 1;
+	return Result;
+}
+void LexUI_ReadClipData(Texture2D DataTex, inout int3 Position, out float4x4 CanvasToClipMatrix, out float HalfWidth, out float HalfHeight, out float IsValid)
+{
+	float4 Column0 = LexUI_ReadFloat4_ClipData(DataTex, Position);
+	float4 Column1 = LexUI_ReadFloat4_ClipData(DataTex, Position);
+	float4 Column2 = LexUI_ReadFloat4_ClipData(DataTex, Position);
+	float4 Column3 = LexUI_ReadFloat4_ClipData(DataTex, Position);
+	HalfWidth = Column3.x;
+	HalfHeight = Column3.y;
+	IsValid = Column3.z;
+	Column3 = float4(0, 0, 0, 1);
+	CanvasToClipMatrix[0] = Column0;
+	CanvasToClipMatrix[1] = Column1;
+	CanvasToClipMatrix[2] = Column2;
+	CanvasToClipMatrix[3] = Column3;
+}
+#define LexUI_Clip_Depth 16
+float LexUI_CalculateClipData(Texture2D DataTex, SamplerState DataTexSampler, float CoordinateInDataTex, float3 PixelLocalPosition)
+{
+	int Coordinate = round(CoordinateInDataTex);
+	if (Coordinate == 0) return 1.0f;//0 position means no clip
+	float finalAlpha = 1.0f;
+	int3 Position = int3(0, Coordinate, 0);
+	for (int i = 0; i < LexUI_Clip_Depth; i++)
+	{
+		float4x4 CanvasToClipMatrix;
+		float HalfWidth, HalfHeight;
+		float IsValid = 1;
+		LexUI_ReadClipData(DataTex, Position, CanvasToClipMatrix, HalfWidth, HalfHeight, IsValid);
+		if (!IsValid)break;
+		float3 PixelPosition = mul(CanvasToClipMatrix, float4(PixelLocalPosition.xyz, 1.0)).xyz;
+		float2 alpha2 = abs(PixelPosition.yz) - float2(HalfWidth, HalfHeight);
+		alpha2 = saturate(alpha2);
+		float alpha = 1.0 - saturate(alpha2.x + alpha2.y);
+		finalAlpha *= alpha;
+	}
+	return finalAlpha;
+}

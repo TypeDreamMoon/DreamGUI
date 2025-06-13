@@ -1,25 +1,13 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 #include "LGUIRenderMeshVertexShader.usf"
 
-#if LGUI_RECT_CLIP
-float4 _RectClipOffsetAndSize;
-float4 _RectClipFeather;
-float RectClip(float3 pos, float2 offset, float2 size, float2 feather)
-{
-    return (1.0f - saturate((abs(pos.y - offset.x) - size.x) / feather.x)) * (1.0f - saturate((abs(pos.z - offset.y) - size.y) / feather.y));
-}
+#if LEXUI_CLIP
+#include "../LexUIClip.ush"
+Texture2D _ClipDataTex;
+SamplerState _ClipDataTexSampler;
+float4x4 _Inv_M;
 #endif
-#if LGUI_TEXTURE_CLIP
-float4 _TextureClipOffsetAndSize;
-Texture2D _ClipTex;
-SamplerState _ClipTexSampler;
-float TextureClip(float3 pos, float2 offset, float2 size)
-{
-    float2 uv = (pos.yz - offset) / size;
-    uv.y = 1.0 - uv.y;
-    return _ClipTex.Sample(_ClipTexSampler, uv).r;
-}
-#endif
+
 #if LGUI_BLEND_DEPTH
 Texture2D _SceneDepthTex;
 SamplerState _SceneDepthTexSampler;
@@ -46,14 +34,9 @@ void RenderMeshPS(
 {
     OutColor = _MainTex.Sample(_MainTexSampler, input.uv);
     OutColor.a = 1.0;
-#if LGUI_MASK
-    OutColor.a *= _MaskTex.Sample(_MaskTexSampler, input.uvMask).r;
-#endif
-#if LGUI_RECT_CLIP
-    OutColor.a *= RectClip(input.localPosition, _RectClipOffsetAndSize.xy, _RectClipOffsetAndSize.zw, _RectClipFeather.xy);
-#endif
-#if LGUI_TEXTURE_CLIP
-    OutColor.a *= TextureClip(input.localPosition, _TextureClipOffsetAndSize.xy, _TextureClipOffsetAndSize.zw);
+#if LEXUI_CLIP
+	float3 localPosition = mul(float4(input.worldPosition, 1.0), _Inv_M).xyz;
+	OutColor.a *= LexUI_CalculateClipData(_ClipDataTex, _ClipDataTexSampler, input.uv1.x, localPosition);
 #endif
 #if LGUI_BLEND_DEPTH
     float PixelDepth = input.screenPosition.z / input.screenPosition.w;

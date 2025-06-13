@@ -2,6 +2,7 @@
 
 #include "Core/ActorComponent/UIBatchMeshRenderable.h"
 #include "LGUI.h"
+#include "Core/LGUIClipData.h"
 #include "Core/ActorComponent/LGUICanvas.h"
 #include "Utils/LGUIUtils.h"
 #include "GeometryModifier/UIGeometryModifierBase.h"
@@ -306,6 +307,10 @@ void UUIBatchMeshRenderable::UpdateGeometry()
 				CalculateLocalBounds();//CalculateLocalBounds must stay before TransformVertices, because TransformVertices will also cache bounds for Canvas to check 2d overlap.
 			}
 		}
+		if (bClipDataChanged)
+		{
+			OnUpdateGeometryClipData(*(geometry.Get()), bClipDataChanged);
+		}
 		if (bLocalVertexPositionChanged || bTransformChanged)
 		{
 			UIGeometry::TransformVertices(RenderCanvas.Get(), this, geometry.Get());
@@ -334,6 +339,7 @@ void UUIBatchMeshRenderable::UpdateGeometry()
 	bUVChanged = false;
 	bColorChanged = false;
 	bTransformChanged = false;
+	bClipDataChanged = false;
 }
 
 bool UUIBatchMeshRenderable::LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)
@@ -422,6 +428,24 @@ bool UUIBatchMeshRenderable::LineTraceVisiblePixel(float InAlphaThreshold, FHitR
 		}
 	}
 	return false;
+}
+
+int UUIBatchMeshRenderable::GetClipDataStartPosition() const
+{
+	if (this->ClipData.IsValid())
+	{
+		return ClipData.Pin()->GetBufferStartPos();
+	}
+	return 0;
+}
+
+UTexture* UUIBatchMeshRenderable::GetClipDataTexture() const
+{
+	if (auto Canvas = this->GetRenderCanvas())
+	{
+		return Canvas->GetClipDataTexture();
+	}
+	return nullptr;
 }
 
 void UUIBatchMeshRenderable::CalculateLocalBounds()
@@ -539,6 +563,20 @@ void UUIBatchMeshRenderable::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangle
 		GeometryHelper->UIGeo = &InGeo;
 		SCOPE_CYCLE_COUNTER(STAT_BatchGeometryRenderable_OnFillMesh);
 		ReceiveOnUpdateGeometry(GeometryHelper, InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged);
+	}
+}
+
+void UUIBatchMeshRenderable::OnUpdateGeometryClipData(UIGeometry& InMesh, bool InClipDataStartPositionChanged)
+{
+	//clip data
+	if (InClipDataStartPositionChanged)
+	{
+		auto& vertices = InMesh.vertices;
+		auto clipDataStartPos = GetClipDataStartPosition();
+		for (int i = 0; i < vertices.Num(); i++)
+		{
+			vertices[i].TextureCoordinate[1].X = clipDataStartPos;
+		}
 	}
 }
 

@@ -153,49 +153,47 @@ void UUIDropdownComponent::Show()
 		)
 	{
 		//search up til find clipped canvas, or root canvas
-		ULGUICanvas* canvas = GetRootUIComponent()->GetRenderCanvas();
+		auto clipUIItem = GetRootUIComponent();
 		while (true)
 		{
-			if (canvas->GetActualClipType() == ELGUICanvasClipType::Rect)
+			if (clipUIItem->GetClipping() != ELexWidgetClipping::Disabled)
 			{
 				break;
 			}
 			else
 			{
-				auto upperCanvas = canvas->GetParentCanvas();
-				if (!upperCanvas.IsValid())
+				auto upperCanvas = clipUIItem->GetParentUIItem();
+				if (!upperCanvas)
 				{
 					break;
 				}
 				else
 				{
-					canvas = upperCanvas.Get();
+					clipUIItem = upperCanvas;
 				}
 			}
 		}
 
-		auto canvasUIItem = canvas->GetUIItem();
-
-		FTransform selfToCanvasTf;
-		auto inverseCanvasTf = canvasUIItem->GetComponentTransform().Inverse();
-		FTransform::Multiply(&selfToCanvasTf, &GetRootUIComponent()->GetComponentTransform(), &inverseCanvasTf);
+		FTransform selfToClipSpaceTf;
+		auto inverseClipSpaceTf = clipUIItem->GetComponentTransform().Inverse();
+		FTransform::Multiply(&selfToClipSpaceTf, &GetRootUIComponent()->GetComponentTransform(), &inverseClipSpaceTf);
 		if (tempVerticalPosition == EUIDropdownVerticalPosition::Automatic)
 		{
 			//convert top point position from dropdown's self to root ui space, and tell if it is inside root rect
-			FVector listBottomInCanvasSpace;
+			FVector listBottomInClipSpace;
 			if (VerticalOverlap)
 			{
 				auto selfTop = GetRootUIComponent()->GetLocalSpaceTop();
 				auto listBottomInSelfSpace = selfTop - ListRootUIItem->GetHeight();
-				listBottomInCanvasSpace = selfToCanvasTf.TransformPosition(FVector(0, 0, listBottomInSelfSpace));
+				listBottomInClipSpace = selfToClipSpaceTf.TransformPosition(FVector(0, 0, listBottomInSelfSpace));
 			}
 			else
 			{
 				auto selfBottom = GetRootUIComponent()->GetLocalSpaceBottom();
 				auto listBottomInSelfSpace = selfBottom - ListRootUIItem->GetHeight();
-				listBottomInCanvasSpace = selfToCanvasTf.TransformPosition(FVector(0, 0, listBottomInSelfSpace));
+				listBottomInClipSpace = selfToClipSpaceTf.TransformPosition(FVector(0, 0, listBottomInSelfSpace));
 			}
-			if (listBottomInCanvasSpace.Z < canvas->GetClipRectMin().Y)
+			if (listBottomInClipSpace.Z < clipUIItem->GetLocalSpaceBottom())
 			{
 				tempVerticalPosition = EUIDropdownVerticalPosition::Top;
 			}
@@ -207,8 +205,8 @@ void UUIDropdownComponent::Show()
 		if (tempHorizontalPosition == EUIDropdownHorizontalPosition::Automatic)
 		{
 			auto selfRight = GetRootUIComponent()->GetLocalSpaceRight();
-			auto listRightInCanvasSpace = selfToCanvasTf.TransformPosition(FVector(0, selfRight + ListRootUIItem->GetWidth(), 0));
-			if (listRightInCanvasSpace.Y > canvas->GetClipRectMax().X)
+			auto listRightInCanvasSpace = selfToClipSpaceTf.TransformPosition(FVector(0, selfRight + ListRootUIItem->GetWidth(), 0));
+			if (listRightInCanvasSpace.Y > clipUIItem->GetLocalSpaceRight())
 			{
 				tempHorizontalPosition = EUIDropdownHorizontalPosition::Left;
 			}

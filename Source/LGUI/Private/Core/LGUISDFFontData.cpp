@@ -203,9 +203,13 @@ float ULGUISDFFontData::GetVerticalOffset(const float& fontSize)
 	}
 	return VerticalOffset * fontSize * oneDivideFontSize;
 }
-UMaterialInterface* ULGUISDFFontData::GetFontMaterial(ELGUICanvasClipType clipType)
+UMaterialInterface* ULGUISDFFontData::GetFontMaterial()
 {
-	return SDFDefaultMaterials[(int)clipType];
+	if (!SDFDefaultMaterial)
+	{
+		SDFDefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/LexUI_SDF_Font"));;
+	}
+	return SDFDefaultMaterial;
 }
 
 void ULGUISDFFontData::PushCharData(
@@ -344,10 +348,10 @@ void ULGUISDFFontData::PushCharData(
 			//bold and scale
 			{
 				auto tempBoldSize = richTextProperty.bold ? BoldRatio : 0.0f;
-				vertices[verticesStartIndex].TextureCoordinate[1] = FVector2f(tempBoldSize, tempFontScale);
-				vertices[verticesStartIndex + 1].TextureCoordinate[1] = FVector2f(tempBoldSize, tempFontScale);
-				vertices[verticesStartIndex + 2].TextureCoordinate[1] = FVector2f(tempBoldSize, tempFontScale);
-				vertices[verticesStartIndex + 3].TextureCoordinate[1] = FVector2f(tempBoldSize, tempFontScale);
+				vertices[verticesStartIndex].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
+				vertices[verticesStartIndex + 1].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
+				vertices[verticesStartIndex + 2].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
+				vertices[verticesStartIndex + 3].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
 			}
 
 			addVertCount = 4;
@@ -380,10 +384,10 @@ void ULGUISDFFontData::PushCharData(
 			//bold and scale, bold is not needed for underline and strikethrough, but scale is needed
 			{
 				auto tempBoldSize = 0.0f;
-				vertices[verticesStartIndex + addVertCount].TextureCoordinate[1] = FVector2f(tempBoldSize, tempFontScale);
-				vertices[verticesStartIndex + addVertCount + 1].TextureCoordinate[1] = FVector2f(tempBoldSize, tempFontScale);
-				vertices[verticesStartIndex + addVertCount + 2].TextureCoordinate[1] = FVector2f(tempBoldSize, tempFontScale);
-				vertices[verticesStartIndex + addVertCount + 3].TextureCoordinate[1] = FVector2f(tempBoldSize, tempFontScale);
+				vertices[verticesStartIndex + addVertCount].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
+				vertices[verticesStartIndex + addVertCount + 1].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
+				vertices[verticesStartIndex + addVertCount + 2].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
+				vertices[verticesStartIndex + addVertCount + 3].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
 			}
 
 			addVertCount += 4;
@@ -476,7 +480,7 @@ void ULGUISDFFontData::PostEditChangeProperty(FPropertyChangedEvent& PropertyCha
 			ReloadFont();
 		}
 		if (
-			PropertyName == GET_MEMBER_NAME_CHECKED(ULGUISDFFontData, SDFDefaultMaterials)
+			PropertyName == GET_MEMBER_NAME_CHECKED(ULGUISDFFontData, SDFDefaultMaterial)
 			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULGUISDFFontData, ItalicAngle)
 			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULGUISDFFontData, BoldRatio)
 			)
@@ -496,38 +500,5 @@ void ULGUISDFFontData::PostEditChangeProperty(FPropertyChangedEvent& PropertyCha
 void ULGUISDFFontData::PostInitProperties()
 {
 	Super::PostInitProperties();
-	CheckMaterials();
 }
-
-void ULGUISDFFontData::CheckMaterials()
-{
-	for (int i = 0; i < (int)ELGUICanvasClipType::Custom; i++)
-	{
-		if (SDFDefaultMaterials[i] == nullptr)
-		{
-			FString matPath;
-			switch (i)
-			{
-			default:
-			case 0: matPath = TEXT("/LGUI/Materials/LGUI_SDF_Font_NoClip"); break;
-			case 1: matPath = TEXT("/LGUI/Materials/LGUI_SDF_Font_RectClip"); break;
-			case 2: matPath = TEXT("/LGUI/Materials/LGUI_SDF_Font_TextureClip"); break;
-			}
-			auto mat = LoadObject<UMaterialInterface>(NULL, *matPath);
-			if (mat == nullptr)
-			{
-				auto errMsg = FText::Format(LOCTEXT("MissingDefaultContent", "{0} Load material error! Missing some content of LGUI plugin, reinstall this plugin may fix the issue.")
-					, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)));
-				UE_LOG(LGUI, Error, TEXT("%s"), *errMsg.ToString());
-#if WITH_EDITOR
-				LGUIUtils::EditorNotification(errMsg, 10);
-#endif
-				continue;
-			}
-			SDFDefaultMaterials[i] = mat;
-			this->MarkPackageDirty();
-		}
-	}
-}
-
 #undef LOCTEXT_NAMESPACE

@@ -9,9 +9,33 @@
 #include "LTweener.h"
 #include "UIItem.generated.h"
 
+class FLGUIClipData;
+class ULGUIDataAsTexture;
 class ULGUICanvas;
 class UUICanvasGroup;
 enum class ELGUIRenderMode : uint8;
+
+UENUM(BlueprintType)
+enum class ELexWidgetClipping : uint8
+{
+	/**
+	 * This widget does not clip children, it and all children inherit the clipping area of the last widget that clipped.
+	 */
+	Inherit,
+	/**
+	 * This widget clips content the bounds of this widget.  It intersects those bounds with any previous clipping area.
+	 */
+	ClipToBounds,
+	/**
+	 * This widget clips to its bounds.  It does NOT intersect with any existing clipping UIGeometry, it pushes a new clipping 
+	 * state.  Effectively allowing it to render outside the bounds of hierarchy that does clip.
+	 */
+	ClipToBoundsWithoutIntersecting UMETA(DisplayName = "Clip To Bounds - Without Intersecting (Advanced)"),
+	/**
+	 * This widget does not clip.
+	 */
+	Disabled UMETA(DisplayName = "No Clip"),
+};
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FUIItemActiveInHierarchyStateChangedMulticastDelegate, bool);
 DECLARE_DELEGATE_OneParam(FUIItemActiveInHierarchyStateChangedDelegate, bool);
@@ -155,6 +179,8 @@ public:
 	void RegisterRenderCanvas(ULGUICanvas* InRenderCanvas);
 	/** Called by LGUICanvas, when LGUICanvas is unregisterred on self actor */
 	void UnregisterRenderCanvas();
+
+	void UpdateClip(ULGUIDataAsTexture* ClipDataTexture, TArray<TSharedPtr<FLGUIClipData>>& ClipDataList);
 protected:
 	void RenewCanvasGroupRecursive(UUICanvasGroup* InParentCanvasGroup);
 	void RenewRenderCanvasRecursive(ULGUICanvas* InParentRenderCanvas);
@@ -316,6 +342,21 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		UUICanvasGroup* GetCanvasGroup()const { return CanvasGroup.Get(); }
 #pragma endregion UICanvasGroup
+
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UIItem", Getter, Setter, meta = (AllowPrivateAccess = true))
+	ELexWidgetClipping Clipping = ELexWidgetClipping::Inherit;
+	TWeakPtr<FLGUIClipData> ClipData;
+
+	void MarkClipDirty_Recursive(bool InClipTypeChanged)const;
+public:
+	UFUNCTION(BlueprintCallable, Category = "Widget")
+	ELexWidgetClipping GetClipping()const { return Clipping; }
+	UFUNCTION(BlueprintCallable, Category = "Widget")
+	bool IsPointVisibleOnClip(const FVector& Value)const;
+	UFUNCTION(BlueprintCallable, Category = "Widget")
+	void SetClipping(ELexWidgetClipping Value);
+	
 #pragma region UIActive
 public:
 	void CheckUIActiveState();
@@ -462,6 +503,10 @@ protected:
 	/** is this UIItem's actor have LGUICanvas component */
 	UPROPERTY(Transient) mutable uint8 bIsCanvasUIItem:1;
 	uint8 bCanSetAnchorFromTransform : 1;
+	
+	mutable uint8 bClipDirty : 1 = true;
+	mutable uint8 bNeedRecreateClip : 1 = true;
+	uint8 bClipDataChanged : 1 = true;
 
 	/** Only for RootUIItem, if dirty then we need to recalculate it */
 	mutable uint8 bFlattenHierarchyIndexDirty : 1;

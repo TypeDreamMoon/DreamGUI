@@ -9,7 +9,6 @@
 
 class FUIPostProcessRenderProxy;
 struct FLGUIPostProcessVertex;
-enum class ELGUICanvasClipType :uint8;
 
 UENUM(BlueprintType)
 enum class EUIPostProcessMaskTextureType :uint8
@@ -84,9 +83,6 @@ public:
 public:
 	virtual TSharedPtr<FUIPostProcessRenderProxy> GetRenderProxy()PURE_VIRTUAL(UUIPostProcessRenderable::GetRenderProxy, return 0;);
 	virtual bool IsRenderProxyValid()const;
-	virtual void SetClipType(ELGUICanvasClipType clipType);
-	virtual void SetRectClipParameter(const FVector4& OffsetAndSize, const FVector4& Feather);
-	virtual void SetTextureClipParameter(UTexture* ClipTex, const FVector4& OffsetAndSize);
 	virtual bool HaveValidData()const;
 
 	virtual bool LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)override;

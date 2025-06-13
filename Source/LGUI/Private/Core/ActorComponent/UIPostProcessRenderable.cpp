@@ -491,53 +491,6 @@ bool UUIPostProcessRenderable::IsRenderProxyValid()const
 {
 	return RenderProxy.IsValid();
 }
-void UUIPostProcessRenderable::SetClipType(ELGUICanvasClipType clipType)
-{
-	if (RenderProxy.IsValid())
-	{
-		auto TempRenderProxy = RenderProxy.Get();
-		auto tempClipType = clipType;
-		ENQUEUE_RENDER_COMMAND(FUIPostProcess_UpdateClipData)
-			([TempRenderProxy, tempClipType](FRHICommandListImmediate& RHICmdList)
-				{
-					TempRenderProxy->clipType = tempClipType;
-				});
-	}
-}
-void UUIPostProcessRenderable::SetRectClipParameter(const FVector4& OffsetAndSize, const FVector4& Feather)
-{
-	if (RenderProxy.IsValid())
-	{
-		auto TempRenderProxy = RenderProxy.Get();
-		auto rectClipOffsetAndSize = OffsetAndSize;
-		auto rectClipFeather = Feather;
-		ENQUEUE_RENDER_COMMAND(FUIPostProcess_UpdateClipData)
-			([TempRenderProxy, rectClipOffsetAndSize, rectClipFeather](FRHICommandListImmediate& RHICmdList)
-				{
-					TempRenderProxy->rectClipOffsetAndSize = FVector4f(rectClipOffsetAndSize);
-					TempRenderProxy->rectClipFeather = FVector4f(rectClipFeather);
-				});
-	}
-}
-void UUIPostProcessRenderable::SetTextureClipParameter(UTexture* ClipTex, const FVector4& OffsetAndSize)
-{
-	if (RenderProxy.IsValid())
-	{
-		auto TempRenderProxy = RenderProxy.Get();
-		FTexture2DResource* clipTextureResource = nullptr;
-		auto textureClipOffsetAndSize = OffsetAndSize;
-		if (IsValid(ClipTex) && ClipTex->GetResource() != nullptr)
-		{
-			clipTextureResource = (FTexture2DResource*)ClipTex->GetResource();
-		}
-		ENQUEUE_RENDER_COMMAND(FUIPostProcess_UpdateClipData)
-			([TempRenderProxy, textureClipOffsetAndSize, clipTextureResource](FRHICommandListImmediate& RHICmdList)
-				{
-					TempRenderProxy->clipTexture = clipTextureResource;
-					TempRenderProxy->textureClipOffsetAndSize = FVector4f(textureClipOffsetAndSize);
-				});
-	}
-}
 
 bool UUIPostProcessRenderable::HaveValidData()const
 {

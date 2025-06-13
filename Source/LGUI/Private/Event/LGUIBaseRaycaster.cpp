@@ -159,7 +159,7 @@ bool ULGUIBaseRaycaster::RaycastUI(ULGUIPointerEventData* InPointerEventData, co
 							&& uiItem->LineTraceUI(thisHit, OutRayOrigin, OutRayEnd)
 							)
 						{
-							if (CanvasItem->CalculatePointVisibilityOnClip(thisHit.Location))
+							if (uiItem->IsPointVisibleOnClip(thisHit.Location))
 							{
 								multiHitResult.Add(thisHit);
 							}

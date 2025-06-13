@@ -2,15 +2,17 @@
 #include "/Engine/Public/Platform.ush"
 
 float4x4 _MVP;
+float4x4 _M;
 
 struct RenderMeshVSToPS
 {
     float4 position : SV_Position;
     float2 uv : TEXCOORD0;
-    float2 uvMask : TEXCOORD1;
-    float3 localPosition : TEXCOORD2;
+    float2 uv1 : TEXCOORD1;
+    float3 worldPosition : TEXCOORD2;
+    float3 localPosition : TEXCOORD3;
 #if LGUI_BLEND_DEPTH
-    float4 screenPosition : TEXCOORD3;
+    float4 screenPosition : TEXCOORD4;
 #endif
 };
 
@@ -22,9 +24,10 @@ void RenderMeshVS(
 )
 {
     v2p.position = mul(float4(Position.xyz, 1.0), _MVP);
+    v2p.worldPosition = mul(float4(Position.xyz, 1.0), _M);
     v2p.localPosition = Position.xyz;
     v2p.uv = TextureCoord0;
-    v2p.uvMask = TextureCoord1;
+    v2p.uv1 = TextureCoord1;
 #if LGUI_BLEND_DEPTH
     v2p.screenPosition = v2p.position;
 #endif

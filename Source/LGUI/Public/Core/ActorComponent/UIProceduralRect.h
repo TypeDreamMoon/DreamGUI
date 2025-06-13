@@ -4,7 +4,23 @@
 
 #include "UIBatchMeshRenderable.h"
 #include "Core/IUISpriteRenderableInterface.h"
+#include "Core/LGUIDataAsTexture.h"
 #include "UIProceduralRect.generated.h"
+
+
+UCLASS(ClassGroup = (LGUI), BlueprintType)
+class LGUI_API ULGUIProceduralRectData :public ULGUIDataAsTexture
+{
+	GENERATED_BODY()
+private:
+
+	UPROPERTY(EditAnywhere, Category = "LGUI")
+	TObjectPtr<UMaterialInterface> DefaultMaterial;
+protected:
+	virtual void PostInitProperties()override;
+public:
+	UMaterialInterface* GetMaterial();
+};
 
 UENUM(BlueprintType)
 enum class EUIProceduralRectTextureScaleMode: uint8
@@ -248,7 +264,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Raycast", meta = (EditCondition = "bRaycastTarget==true&&RaycastType==EUIRenderableRaycastType::Rect"))
 		bool bRaycastSupportCornerRadius = true;
 
-	FIntVector2 DataStartPosition = FIntVector2(0, 0);
+	int DataStartPosition = 0;
 	static FName DataTextureParameterName;
 
 	virtual void OnBeforeCreateOrUpdateGeometry()override;

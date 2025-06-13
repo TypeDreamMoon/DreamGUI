@@ -140,10 +140,6 @@ void FLGUICanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 		needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, sortOrder));
 	}
 
-	auto clipTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipType));
-	clipTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUICanvasCustomization::ForceRefresh, &DetailBuilder));
-	auto clipType = TargetScriptArray[0]->GetClipType();
-
 	if (TargetScriptArray[0]->IsRootCanvas())
 	{
 		switch (TargetScriptArray[0]->renderMode)
@@ -182,37 +178,6 @@ void FLGUICanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, previewWithLGUIRenderer));
 			break;
 		}
-
-		if (clipType == ELGUICanvasClipType::None)
-		{
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipFeather));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipRectOffset));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, inheritRectClip));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipTexture));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipTextureHitTestThreshold));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, customClip));
-		}
-		else if (clipType == ELGUICanvasClipType::Rect)
-		{
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipTexture));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipTextureHitTestThreshold));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, customClip));
-		}
-		else if (clipType == ELGUICanvasClipType::Texture)
-		{
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipFeather));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipRectOffset));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, inheritRectClip));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, customClip));
-		}
-		else if (clipType == ELGUICanvasClipType::Custom)
-		{
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipFeather));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipRectOffset));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, inheritRectClip));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipTexture));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipTextureHitTestThreshold));
-		}
 	}
 	else
 	{
@@ -238,7 +203,7 @@ void FLGUICanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 		overrideParametersHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUICanvasCustomization::ForceRefresh, &DetailBuilder));
 		if (!TargetScriptArray[0]->GetOverrideDefaultMaterials())
 		{
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, DefaultMaterials));
+			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, DefaultMaterial));
 		}
 		if (!TargetScriptArray[0]->GetOverridePixelPerfect())
 		{
@@ -248,56 +213,9 @@ void FLGUICanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 		{
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, dynamicPixelsPerUnit));
 		}
-		if (!TargetScriptArray[0]->GetOverrideClipType())
-		{
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipType));
-		}
 		if (!TargetScriptArray[0]->GetOverrideAddionalShaderChannel())
 		{
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, additionalShaderChannels));
-		}
-
-		if (TargetScriptArray[0]->GetOverrideClipType())
-		{
-			if (clipType == ELGUICanvasClipType::None)
-			{
-				needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipFeather));
-				needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipRectOffset));
-				needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, inheritRectClip));
-				needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipTexture));
-				needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipTextureHitTestThreshold));
-				needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, customClip));
-			}
-			else if (clipType == ELGUICanvasClipType::Rect)
-			{
-				needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipTexture));
-				needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipTextureHitTestThreshold));
-				needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, customClip));
-			}
-			else if (clipType == ELGUICanvasClipType::Texture)
-			{
-				needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipFeather));
-				needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipRectOffset));
-				needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, inheritRectClip));
-				needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, customClip));
-			}
-			else if (clipType == ELGUICanvasClipType::Custom)
-			{
-				needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipFeather));
-				needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipRectOffset));
-				needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, inheritRectClip));
-				needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipTexture));
-				needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipTextureHitTestThreshold));
-			}
-		}
-		else
-		{
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipFeather));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipRectOffset));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, inheritRectClip));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipTexture));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipTextureHitTestThreshold));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, customClip));
 		}
 
 		if (!TargetScriptArray[0]->GetOverrideBlendDepth())
@@ -317,65 +235,6 @@ void FLGUICanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 	if (!needToHidePropertyNames.Contains(GET_MEMBER_NAME_CHECKED(ULGUICanvas, pixelPerfect)))
 	{
 		category.AddProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvas, pixelPerfect));
-	}
-	if (!needToHidePropertyNames.Contains(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipType)))
-	{
-		//category.AddProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipType));
-		IDetailGroup& ClipTypeGroup = category.AddGroup(FName(TEXT("ClipType")), LOCTEXT("ClipType", "ClipType"));
-		ClipTypeGroup.HeaderProperty(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipType)));
-		if (clipType == ELGUICanvasClipType::None)
-		{
-			
-		}
-		else if (clipType == ELGUICanvasClipType::Rect)
-		{
-			ClipTypeGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipFeather)));
-			ClipTypeGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipRectOffset)));
-			ClipTypeGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvas, inheritRectClip)));
-		}
-		else if (clipType == ELGUICanvasClipType::Texture)
-		{
-			auto ClipTextureProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipTexture));
-			ClipTextureProperty->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUICanvasCustomization::ForceRefresh, &DetailBuilder));
-			ClipTypeGroup.AddPropertyRow(ClipTextureProperty);
-			ClipTypeGroup.AddWidgetRow()
-				.ValueContent()
-				[
-					SNew(SBox)
-					.IsEnabled(this, &FLGUICanvasCustomization::IsFixClipTextureEnabled, ClipTextureProperty)
-					[
-						SNew(SButton)
-						.HAlign(EHorizontalAlignment::HAlign_Center)
-						.VAlign(EVerticalAlignment::VAlign_Center)
-						.OnClicked(this, &FLGUICanvasCustomization::OnClickFixClipTextureSetting, ClipTextureProperty)
-						.ToolTipText(LOCTEXT("FixTextureForHitTest_Tooltip", "\
-By default we can't access texture's pixel data, which is required for line trace.\
-Click this button to fix it by change texture settings.\
-"))
-						[
-							SNew(STextBlock)
-							.Text(LOCTEXT("FixTextureSettingsForHitTest", "Fix texture settings for hit test"))
-							.Font(IDetailLayoutBuilder::GetDetailFont())
-						]
-					]
-				]
-			;
-			ClipTypeGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvas, clipTextureHitTestThreshold)));
-		}
-		else if (clipType == ELGUICanvasClipType::Custom)
-		{
-			IDetailGroup& CustomClipGroup = ClipTypeGroup.AddGroup(FName(TEXT("CustomClip")), LOCTEXT("CustomClip", "CustomClip"));
-			CustomClipGroup.HeaderProperty(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvas, customClip)));
-
-			UObject* customClipObject = nullptr;
-			auto customClipObjectProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvas, customClip));
-			customClipObjectProperty->GetValue(customClipObject);
-
-			IDetailCategoryBuilder& CustomClipCategory = DetailBuilder.EditCategory("LGUI-CustomClip");
-
-			CustomClipCategory.AddExternalObjects({ customClipObject }, EPropertyLocation::Default
-				, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
-		}
 	}
 	if (!needToHidePropertyNames.Contains(GET_MEMBER_NAME_CHECKED(ULGUICanvas, renderTarget)))
 	{

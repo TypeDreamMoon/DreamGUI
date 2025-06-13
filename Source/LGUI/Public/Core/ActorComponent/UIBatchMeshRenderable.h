@@ -154,6 +154,9 @@ public:
 	virtual bool LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)override;
 	/** is this UI element type support drawcall batching? */
 	virtual bool SupportDrawcallBatching()const { return true; }
+
+	int GetClipDataStartPosition()const;
+	UTexture* GetClipDataTexture()const;
 protected:
 	virtual bool LineTraceVisiblePixel(float InAlphaThreshold, FHitResult& OutHit, const FVector& Start, const FVector& End);
 	virtual bool ReadPixelFromMainTexture(const FVector2D& InUV, FColor& OutPixel)const { return false; }
@@ -172,6 +175,7 @@ protected:
 	virtual void OnBeforeCreateOrUpdateGeometry();
 	/** fill and update ui geometry */
 	virtual void OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged);
+	virtual void OnUpdateGeometryClipData(UIGeometry& InGeo, bool InClipDataStartPositionChanged);
 
 	virtual void UpdateGeometry()override final;
 	virtual void GetGeometryBoundsInLocalSpace(FVector2D& OutMinPoint, FVector2D& OutMaxPoint)const override;

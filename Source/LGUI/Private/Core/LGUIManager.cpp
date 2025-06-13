@@ -882,7 +882,7 @@ bool ULGUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<UUII
 					uiRenderable->SetRaycastTarget(true);
 					if (uiRenderable->LineTraceUI(hitInfo, LineStart, LineEnd))
 					{
-						if (uiRenderable->GetRenderCanvas()->CalculatePointVisibilityOnClip(hitInfo.Location))
+						if (uiRenderable->IsPointVisibleOnClip(hitInfo.Location))
 						{
 							HitResultArray.Add(hitInfo);
 						}
