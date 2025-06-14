@@ -4,10 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
-#include "LGUIDataAsTexture.generated.h"
+#include "LexUIDataAsTexture.generated.h"
 
 UCLASS(ClassGroup = (LexUI), BlueprintType)
-class LGUI_API ULGUIDataAsTexture :public UDataAsset
+class LGUI_API ULexUIDataAsTexture :public UDataAsset
 {
 	GENERATED_BODY()
 public:

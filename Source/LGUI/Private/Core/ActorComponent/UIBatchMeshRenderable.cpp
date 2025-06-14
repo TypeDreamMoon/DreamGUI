@@ -2,7 +2,7 @@
 
 #include "Core/ActorComponent/UIBatchMeshRenderable.h"
 #include "LGUI.h"
-#include "Core/LGUIClipData.h"
+#include "Core/LexUIClipData.h"
 #include "Core/ActorComponent/LGUICanvas.h"
 #include "Utils/LGUIUtils.h"
 #include "GeometryModifier/UIGeometryModifierBase.h"
@@ -278,6 +278,7 @@ void UUIBatchMeshRenderable::UpdateGeometry()
 		geometry->texture = GetTextureToCreateGeometry();
 		geometry->material = GetMaterialToCreateGeometry();
 		OnUpdateGeometry(*(geometry.Get()), true, true, true, true);
+		OnUpdateGeometryClipData(*(geometry.Get()), true);
 		ApplyGeometryModifier(true, true, true, true);
 		CalculateLocalBounds();//CalculateLocalBounds must stay before TransformVertices, because TransformVertices will also cache bounds for Canvas to check 2d overlap.
 		UIGeometry::TransformVertices(RenderCanvas.Get(), this, geometry.Get());
@@ -309,7 +310,8 @@ void UUIBatchMeshRenderable::UpdateGeometry()
 		}
 		if (bClipDataChanged)
 		{
-			OnUpdateGeometryClipData(*(geometry.Get()), bClipDataChanged);
+			OnUpdateGeometryClipData(*(geometry.Get()), true);
+			drawcall->bNeedToUpdateVertex = true;
 		}
 		if (bLocalVertexPositionChanged || bTransformChanged)
 		{
@@ -428,24 +430,6 @@ bool UUIBatchMeshRenderable::LineTraceVisiblePixel(float InAlphaThreshold, FHitR
 		}
 	}
 	return false;
-}
-
-int UUIBatchMeshRenderable::GetClipDataStartPosition() const
-{
-	if (this->ClipData.IsValid())
-	{
-		return ClipData.Pin()->GetBufferStartPos();
-	}
-	return 0;
-}
-
-UTexture* UUIBatchMeshRenderable::GetClipDataTexture() const
-{
-	if (auto Canvas = this->GetRenderCanvas())
-	{
-		return Canvas->GetClipDataTexture();
-	}
-	return nullptr;
 }
 
 void UUIBatchMeshRenderable::CalculateLocalBounds()

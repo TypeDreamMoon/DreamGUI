@@ -10,7 +10,7 @@
 
 FUIPostProcessRenderProxy::FUIPostProcessRenderProxy()
 {
-	MaskTextureType = EUIPostProcessMaskTextureType::Simple;
+	
 }
 
 #define SET_PIPELINE_STATE_FOR_CLIP()\

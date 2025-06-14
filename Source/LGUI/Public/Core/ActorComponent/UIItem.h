@@ -9,8 +9,8 @@
 #include "LTweener.h"
 #include "UIItem.generated.h"
 
-class FLGUIClipData;
-class ULGUIDataAsTexture;
+class FLexUIClipData;
+class ULexUIDataAsTexture;
 class ULGUICanvas;
 class UUICanvasGroup;
 enum class ELGUIRenderMode : uint8;
@@ -180,7 +180,7 @@ public:
 	/** Called by LGUICanvas, when LGUICanvas is unregisterred on self actor */
 	void UnregisterRenderCanvas();
 
-	void UpdateClip(ULGUIDataAsTexture* ClipDataTexture, TArray<TSharedPtr<FLGUIClipData>>& ClipDataList);
+	void UpdateClip(ULexUIDataAsTexture* ClipDataTexture, TArray<TSharedPtr<FLexUIClipData>>& ClipDataList);
 protected:
 	void RenewCanvasGroupRecursive(UUICanvasGroup* InParentCanvasGroup);
 	void RenewRenderCanvasRecursive(ULGUICanvas* InParentRenderCanvas);
@@ -346,7 +346,7 @@ public:
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UIItem", Getter, Setter, meta = (AllowPrivateAccess = true))
 	ELexWidgetClipping Clipping = ELexWidgetClipping::Inherit;
-	TWeakPtr<FLGUIClipData> ClipData;
+	TWeakPtr<FLexUIClipData> ClipData;
 
 	void MarkClipDirty_Recursive(bool InClipTypeChanged)const;
 public:

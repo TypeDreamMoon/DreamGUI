@@ -1,18 +1,18 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/LGUIClipData.h"
+#include "Core/LexUIClipData.h"
 
 #include "Core/ActorComponent/UIItem.h"
-#include "Core/LGUIDataAsTexture.h"
+#include "Core/LexUIDataAsTexture.h"
 #include "Core/ActorComponent/LGUICanvas.h"
 
-int FLGUIClipData::InheritClipDepth = 16;
-int FLGUIClipData::SingleBlockSizeInBytes =
+int FLexUIClipData::InheritClipDepth = 16;
+int FLexUIClipData::SingleBlockSizeInBytes =
 	sizeof(FMatrix44f)//canvas to clip object's space, last column of matrix: (half-width, half-height, isValid, 1)
 	;
-int FLGUIClipData::BlockSizeInBytes = SingleBlockSizeInBytes * FLGUIClipData::InheritClipDepth;
+int FLexUIClipData::BlockSizeInBytes = SingleBlockSizeInBytes * FLexUIClipData::InheritClipDepth;
 
-FLGUIClipData::FLGUIClipData(const TSharedPtr<FLGUIClipData>& InParent, ULGUIDataAsTexture* InDataTexture, UUIItem* InWidget)
+FLexUIClipData::FLexUIClipData(const TSharedPtr<FLexUIClipData>& InParent, ULexUIDataAsTexture* InDataTexture, UUIItem* InWidget)
 {
 	this->Parent = InParent;
 	this->DataTexture = InDataTexture;
@@ -20,12 +20,12 @@ FLGUIClipData::FLGUIClipData(const TSharedPtr<FLGUIClipData>& InParent, ULGUIDat
 	this->BufferStartPos = this->DataTexture->RegisterBuffer();
 }
 
-FLGUIClipData::~FLGUIClipData()
+FLexUIClipData::~FLexUIClipData()
 {
 	this->DataTexture->UnregisterBuffer(this->BufferStartPos);
 }
 
-void FLGUIClipData::UpdateData()
+void FLexUIClipData::UpdateData()
 {
 	if (!bNeedUpdateData)return;
 	bNeedUpdateData = false;
@@ -34,7 +34,7 @@ void FLGUIClipData::UpdateData()
 	FMemory::Memzero(BlockBuffer, BlockSizeInBytes);
 	int BlockDataOffset = 0;
 	auto CanvasToWorldMatrix = this->GetWidget()->GetRenderCanvas()->GetUIItem()->GetComponentTransform().ToMatrixWithScale();
-	FLGUIClipData* TargetClip = this;
+	FLexUIClipData* TargetClip = this;
 	for (int i = 0; i < InheritClipDepth; i++)
 	{
 		auto WorldToWidgetMatrix = TargetClip->Widget->GetComponentTransform().ToInverseMatrixWithScale();
@@ -57,7 +57,7 @@ void FLGUIClipData::UpdateData()
 	DataTexture->UpdateBlock(BufferStartPos, BlockBuffer);
 }
 
-bool FLGUIClipData::IsPointVisible(const FVector& Point) const
+bool FLexUIClipData::IsPointVisible(const FVector& Point) const
 {
 	auto TargetClip = this;
 	for (int i = 0; i < InheritClipDepth; i++)

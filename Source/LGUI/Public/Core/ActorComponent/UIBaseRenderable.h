@@ -166,6 +166,9 @@ public:
 
 	TSharedPtr<UUIDrawcall> drawcall = nullptr;//drawcall that response for this UI.
 
+	int GetClipDataStartPosition()const;
+	UTexture* GetClipDataTexture()const;
+	
 	void MarkColorDirty();
 	virtual void MarkAllDirty()override;
 	virtual void MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawcall = false) override;

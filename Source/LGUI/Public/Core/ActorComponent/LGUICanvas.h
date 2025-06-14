@@ -8,8 +8,8 @@
 #include "Math/TransformCalculus2D.h"
 #include "LGUICanvas.generated.h"
 
-class FLGUIClipData;
-class ULGUIDataAsTexture;
+class FLexUIClipData;
+class ULexUIDataAsTexture;
 
 UENUM(BlueprintType, Category = LGUI)
 enum class ELGUIRenderMode :uint8
@@ -545,20 +545,15 @@ private:
 	TArray<TObjectPtr<UUIItem>> UIItemList;//All UIItem that belongs to this canvas
 	TSharedPtr<UUIDrawcall> DrawcallAsChildCanvas = nullptr;//Drawcall that represent this canvas when the canvas is render as child.
 
-	/** rect clip's min position */
-	FVector2D clipRectMin = FVector2D(0, 0);
-	/** rect clip's max position */
-	FVector2D clipRectMax = FVector2D(0, 0);
-
 	TMap<UUIBaseRenderable*, FLGUICacheTransformContainer> CacheUIItemToCanvasTransformMap;//UI element relative to canvas transform
 
-	TArray<TSharedPtr<FLGUIClipData>> ClipDataList;
+	TArray<TSharedPtr<FLexUIClipData>> ClipDataList;
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LexUI", AdvancedDisplay)
-	TObjectPtr<ULGUIDataAsTexture> ClipDataAsTexture;//clip coordinate stored in UV1.x
+	TObjectPtr<ULexUIDataAsTexture> ClipDataAsTexture;//clip coordinate stored in UV1.x
 	void OnClipDataTextureChanged(UTexture* NewTexture);
 public:
 	/** Called by UIItem to delete clip data */
-	FORCEINLINE void RemoveClipData(const TSharedPtr<FLGUIClipData>& InClipData);
+	FORCEINLINE void RemoveClipData(const TSharedPtr<FLexUIClipData>& InClipData);
 	FORCEINLINE UTexture* GetClipDataTexture()const;
 public:
 	void GetCacheUIItemToCanvasTransform(UUIBaseRenderable* item, FLGUICacheTransformContainer& outResult);

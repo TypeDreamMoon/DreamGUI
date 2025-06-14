@@ -274,67 +274,7 @@ private:
 	LAYOUT_FIELD(FShaderResourceParameter, MainTextureParameter);
 	LAYOUT_FIELD(FShaderResourceParameter, MainTextureSamplerParameter);
 };
-class FLGUIRenderMeshWorldPS : public FLGUIRenderMeshPS
-{
-public:
-	DECLARE_SHADER_TYPE(FLGUIRenderMeshWorldPS, Global);
 
-	FLGUIRenderMeshWorldPS() {}
-	FLGUIRenderMeshWorldPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIRenderMeshPS(Initializer)
-	{
-		SceneDepthTextureParameter.Bind(Initializer.ParameterMap, TEXT("_SceneDepthTex"));
-		SceneDepthTextureSamplerParameter.Bind(Initializer.ParameterMap, TEXT("_SceneDepthTexSampler"));
-		SceneDepthTextureScaleOffsetParameter.Bind(Initializer.ParameterMap, TEXT("_SceneDepthTextureScaleOffset"));
-		SceneDepthBlendParameter.Bind(Initializer.ParameterMap, TEXT("_SceneDepthBlend"));
-	}
-	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
-	{
-		OutEnvironment.SetDefine(TEXT("LGUI_BLEND_DEPTH"), true);
-		FLGUIRenderMeshPS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
-	}
-	void SetDepthBlendParameter(FRHICommandList& RHICmdList, float DepthBlend, const FVector4f& DepthTextureScaleOffset, FRHITexture* DepthTexture, FRHISamplerState* DepthTextureSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI())
-	{
-		FRHIBatchedShaderParameters& BatchedParameters = RHICmdList.GetScratchShaderParameters();
-		SetTextureParameter(BatchedParameters, SceneDepthTextureParameter, SceneDepthTextureSamplerParameter, DepthTextureSampler, DepthTexture);
-		SetShaderValue(BatchedParameters, SceneDepthBlendParameter, DepthBlend);
-		SetShaderValue(BatchedParameters, SceneDepthTextureScaleOffsetParameter, DepthTextureScaleOffset);
-		RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
-	}
-private:
-	LAYOUT_FIELD(FShaderResourceParameter, SceneDepthTextureParameter);
-	LAYOUT_FIELD(FShaderResourceParameter, SceneDepthTextureSamplerParameter);
-	LAYOUT_FIELD(FShaderParameter, SceneDepthTextureScaleOffsetParameter);
-	LAYOUT_FIELD(FShaderParameter, SceneDepthBlendParameter);
-};
-class FLGUIRenderMeshWorldDepthFadePS : public FLGUIRenderMeshWorldPS
-{
-public:
-	DECLARE_SHADER_TYPE(FLGUIRenderMeshWorldDepthFadePS, Global);
-
-	FLGUIRenderMeshWorldDepthFadePS() {}
-	FLGUIRenderMeshWorldDepthFadePS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIRenderMeshWorldPS(Initializer)
-	{
-		SceneDepthFadeParameter.Bind(Initializer.ParameterMap, TEXT("_SceneDepthFade"));
-		ViewSizeInvParameter.Bind(Initializer.ParameterMap, TEXT("_ViewSizeInv"));
-	}
-	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
-	{
-		OutEnvironment.SetDefine(TEXT("LGUI_DEPTH_FADE"), true);
-		FLGUIRenderMeshWorldPS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
-	}
-	void SetDepthFadeParameter(FRHICommandList& RHICmdList, int DepthFade, const FVector2f& ViewSizeInv)
-	{
-		FRHIBatchedShaderParameters& BatchedParameters = RHICmdList.GetScratchShaderParameters();
-		SetShaderValue(BatchedParameters, SceneDepthFadeParameter, DepthFade);
-		SetShaderValue(BatchedParameters, ViewSizeInvParameter, ViewSizeInv);
-		RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
-	}
-private:
-	LAYOUT_FIELD(FShaderParameter, SceneDepthFadeParameter);
-	LAYOUT_FIELD(FShaderParameter, ViewSizeInvParameter);
-};
 //render mesh pixel shader, use a mask texture
 class FLGUIRenderMeshWithMaskPS :public FLGUIPostProcessShader
 {
@@ -372,67 +312,6 @@ private:
 	LAYOUT_FIELD(FShaderResourceParameter, MaskTextureParameter);
 	LAYOUT_FIELD(FShaderResourceParameter, MaskTextureSamplerParameter);
 };
-class FLGUIRenderMeshWithMaskWorldPS : public FLGUIRenderMeshWithMaskPS
-{
-public:
-	DECLARE_SHADER_TYPE(FLGUIRenderMeshWithMaskWorldPS, Global);
-
-	FLGUIRenderMeshWithMaskWorldPS() {}
-	FLGUIRenderMeshWithMaskWorldPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIRenderMeshWithMaskPS(Initializer)
-	{
-		SceneDepthTextureParameter.Bind(Initializer.ParameterMap, TEXT("_SceneDepthTex"));
-		SceneDepthTextureSamplerParameter.Bind(Initializer.ParameterMap, TEXT("_SceneDepthTexSampler"));
-		SceneDepthTextureScaleOffsetParameter.Bind(Initializer.ParameterMap, TEXT("_SceneDepthTextureScaleOffset"));
-		SceneDepthBlendParameter.Bind(Initializer.ParameterMap, TEXT("_SceneDepthBlend"));
-	}
-	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
-	{
-		OutEnvironment.SetDefine(TEXT("LGUI_BLEND_DEPTH"), true);
-		FLGUIRenderMeshWithMaskPS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
-	}
-	void SetDepthBlendParameter(FRHICommandList& RHICmdList, float DepthBlend, const FVector4f& DepthTextureScaleOffset, FRHITexture* DepthTexture, FRHISamplerState* DepthTextureSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI())
-	{
-		FRHIBatchedShaderParameters& BatchedParameters = RHICmdList.GetScratchShaderParameters();
-		SetTextureParameter(BatchedParameters, SceneDepthTextureParameter, SceneDepthTextureSamplerParameter, DepthTextureSampler, DepthTexture);
-		SetShaderValue(BatchedParameters, SceneDepthBlendParameter, DepthBlend);
-		SetShaderValue(BatchedParameters, SceneDepthTextureScaleOffsetParameter, DepthTextureScaleOffset);
-		RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
-	}
-private:
-	LAYOUT_FIELD(FShaderResourceParameter, SceneDepthTextureParameter);
-	LAYOUT_FIELD(FShaderResourceParameter, SceneDepthTextureSamplerParameter);
-	LAYOUT_FIELD(FShaderParameter, SceneDepthTextureScaleOffsetParameter);
-	LAYOUT_FIELD(FShaderParameter, SceneDepthBlendParameter);
-};
-class FLGUIRenderMeshWithMaskWorldDepthFadePS : public FLGUIRenderMeshWithMaskWorldPS
-{
-public:
-	DECLARE_SHADER_TYPE(FLGUIRenderMeshWithMaskWorldDepthFadePS, Global);
-
-	FLGUIRenderMeshWithMaskWorldDepthFadePS() {}
-	FLGUIRenderMeshWithMaskWorldDepthFadePS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIRenderMeshWithMaskWorldPS(Initializer)
-	{
-		SceneDepthFadeParameter.Bind(Initializer.ParameterMap, TEXT("_SceneDepthFade"));
-		ViewSizeInvParameter.Bind(Initializer.ParameterMap, TEXT("_ViewSizeInv"));
-	}
-	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
-	{
-		OutEnvironment.SetDefine(TEXT("LGUI_DEPTH_FADE"), true);
-		FLGUIRenderMeshWithMaskWorldPS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
-	}
-	void SetDepthFadeParameter(FRHICommandList& RHICmdList, int DepthFade, const FVector2f& ViewSizeInv)
-	{
-		FRHIBatchedShaderParameters& BatchedParameters = RHICmdList.GetScratchShaderParameters();
-		SetShaderValue(BatchedParameters, SceneDepthFadeParameter, DepthFade);
-		SetShaderValue(BatchedParameters, ViewSizeInvParameter, ViewSizeInv);
-		RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
-	}
-private:
-	LAYOUT_FIELD(FShaderParameter, SceneDepthFadeParameter);
-	LAYOUT_FIELD(FShaderParameter, ViewSizeInvParameter);
-};
 
 #pragma region Clip
 //render mesh pixel shader
@@ -444,13 +323,13 @@ public:
 	FLGUIRenderMeshPS_TextureClip(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
 		: FLGUIRenderMeshPS(Initializer)
 	{
-		ClipTextureParameter.Bind(Initializer.ParameterMap, TEXT("_ClipTex"));
-		ClipTextureSamplerParameter.Bind(Initializer.ParameterMap, TEXT("_ClipTexSampler"));
+		ClipDataTexParameter.Bind(Initializer.ParameterMap, TEXT("_ClipDataTex"));
+		ClipDataTexSamplerParameter.Bind(Initializer.ParameterMap, TEXT("_ClipDataTexSampler"));
 		InvMParameter.Bind(Initializer.ParameterMap, TEXT("_Inv_M"));
 	}
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
-		OutEnvironment.SetDefine(TEXT("LEXUI_CLIP"), 1);
+		OutEnvironment.SetDefine(TEXT("LEXUI_CLIP"), true);
 		FLGUIRenderMeshPS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 	}
 	void SetClipParameters(FRHICommandListImmediate& RHICmdList
@@ -459,13 +338,13 @@ public:
 		, FRHISamplerState* ClipTextureSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI())
 	{
 		FRHIBatchedShaderParameters& BatchedParameters = RHICmdList.GetScratchShaderParameters();
-		SetTextureParameter(BatchedParameters, ClipTextureParameter, ClipTextureSamplerParameter, ClipTextureSampler, ClipTexture);
+		SetTextureParameter(BatchedParameters, ClipDataTexParameter, ClipDataTexSamplerParameter, ClipTextureSampler, ClipTexture);
 		SetShaderValue(BatchedParameters, InvMParameter, InvM);
 		RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
 	}
 private:
-	LAYOUT_FIELD(FShaderResourceParameter, ClipTextureParameter);
-	LAYOUT_FIELD(FShaderResourceParameter, ClipTextureSamplerParameter);
+	LAYOUT_FIELD(FShaderResourceParameter, ClipDataTexParameter);
+	LAYOUT_FIELD(FShaderResourceParameter, ClipDataTexSamplerParameter);
 	LAYOUT_FIELD(FShaderParameter, InvMParameter);
 };
 class FLGUIRenderMeshWorldPS_TextureClip : public FLGUIRenderMeshPS_TextureClip
@@ -538,13 +417,13 @@ public:
 	FLGUIRenderMeshWithMaskPS_TextureClip(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
 		: FLGUIRenderMeshWithMaskPS(Initializer)
 	{
-		ClipTextureParameter.Bind(Initializer.ParameterMap, TEXT("_ClipTex"));
-		ClipTextureSamplerParameter.Bind(Initializer.ParameterMap, TEXT("_ClipTexSampler"));
+		ClipDataTexParameter.Bind(Initializer.ParameterMap, TEXT("_ClipDataTex"));
+		ClipDataTexSamplerParameter.Bind(Initializer.ParameterMap, TEXT("_ClipDataTexSampler"));
 		InvMParameter.Bind(Initializer.ParameterMap, TEXT("_Inv_M"));
 	}
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters & Parameters, FShaderCompilerEnvironment & OutEnvironment)
 	{
-		OutEnvironment.SetDefine(TEXT("LEXUI_CLIP"), 1);
+		OutEnvironment.SetDefine(TEXT("LEXUI_CLIP"), true);
 		FLGUIRenderMeshWithMaskPS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 	}
 	void SetClipParameters(FRHICommandListImmediate & RHICmdList
@@ -553,13 +432,13 @@ public:
 		, FRHISamplerState * ClipTextureSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI())
 	{
 		FRHIBatchedShaderParameters& BatchedParameters = RHICmdList.GetScratchShaderParameters();
-		SetTextureParameter(BatchedParameters, ClipTextureParameter, ClipTextureSamplerParameter, ClipTextureSampler, ClipTexture);
+		SetTextureParameter(BatchedParameters, ClipDataTexParameter, ClipDataTexSamplerParameter, ClipTextureSampler, ClipTexture);
 		SetShaderValue(BatchedParameters, InvMParameter, InvM);
 		RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
 	}
 private:
-	LAYOUT_FIELD(FShaderResourceParameter, ClipTextureParameter);
-	LAYOUT_FIELD(FShaderResourceParameter, ClipTextureSamplerParameter);
+	LAYOUT_FIELD(FShaderResourceParameter, ClipDataTexParameter);
+	LAYOUT_FIELD(FShaderResourceParameter, ClipDataTexSamplerParameter);
 	LAYOUT_FIELD(FShaderParameter, InvMParameter);
 };
 class FLGUIRenderMeshWithMaskWorldPS_TextureClip : public FLGUIRenderMeshWithMaskPS_TextureClip

@@ -4,12 +4,12 @@
 
 #include "UIBatchMeshRenderable.h"
 #include "Core/IUISpriteRenderableInterface.h"
-#include "Core/LGUIDataAsTexture.h"
+#include "Core/LexUIDataAsTexture.h"
 #include "UIProceduralRect.generated.h"
 
 
 UCLASS(ClassGroup = (LGUI), BlueprintType)
-class LGUI_API ULGUIProceduralRectData :public ULGUIDataAsTexture
+class LGUI_API ULGUIProceduralRectData :public ULexUIDataAsTexture
 {
 	GENERATED_BODY()
 private:

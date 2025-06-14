@@ -34,9 +34,12 @@ void RenderMeshPS(
 {
     OutColor = _MainTex.Sample(_MainTexSampler, input.uv);
     OutColor.a = 1.0;
+#if LGUI_MASK
+    OutColor.a *= _MaskTex.Sample(_MaskTexSampler, input.uv).r;
+#endif
 #if LEXUI_CLIP
 	float3 localPosition = mul(float4(input.worldPosition, 1.0), _Inv_M).xyz;
-	OutColor.a *= LexUI_CalculateClipData(_ClipDataTex, _ClipDataTexSampler, input.uv1.x, localPosition);
+	OutColor.a *= LexUI_CalculateClipData(_ClipDataTex, _ClipDataTexSampler, input.uv1.x, input.localPosition);
 #endif
 #if LGUI_BLEND_DEPTH
     float PixelDepth = input.screenPosition.z / input.screenPosition.w;

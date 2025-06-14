@@ -48,8 +48,6 @@ void FUIPostProcessRenderableCustomization::CustomizeDetails(IDetailLayoutBuilde
 		}));
 	IDetailGroup& MaskTextureGroup = LGUICategory.AddGroup(FName("MaskTexture"), LOCTEXT("MaskTexture", "MaskTexture"));
 	MaskTextureGroup.HeaderProperty(MaskTextureHandle);
-	MaskTextureGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIPostProcessRenderable, MaskTextureType)));
-	MaskTextureGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIPostProcessRenderable, MaskTextureSpriteInfo)));
 	MaskTextureGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIPostProcessRenderable, MaskTextureUVRect)));
 }
 

@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/LGUIDataAsTexture.h"
+#include "Core/LexUIDataAsTexture.h"
 #include "LGUI.h"
 #include "Utils/LGUIUtils.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -11,25 +11,25 @@
 #define LOCTEXT_NAMESPACE "LWidgetDataAsTexture"
 
 #if WITH_EDITOR
-void ULGUIDataAsTexture::PreEditChange(FProperty* PropertyAboutToChange)
+void ULexUIDataAsTexture::PreEditChange(FProperty* PropertyAboutToChange)
 {
 	Super::PreEditChange(PropertyAboutToChange);
 }
-void ULGUIDataAsTexture::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
+void ULexUIDataAsTexture::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 #endif
 
-void ULGUIDataAsTexture::BeginDestroy()
+void ULexUIDataAsTexture::BeginDestroy()
 {
 	Super::BeginDestroy();
 }
-void ULGUIDataAsTexture::CreateTexture()
+void ULexUIDataAsTexture::CreateTexture()
 {
 	auto TextureDynamic = NewObject<UTexture2DDynamic>(
 		this,
-		FName(*FString::Printf(TEXT("LWidgetDataAsTexture_%d"), LGUIUtils::LGUITextureNameSuffix++))
+		FName(*FString::Printf(TEXT("LexUIDataAsTexture_%d"), LGUIUtils::LGUITextureNameSuffix++))
 	);
 	TextureDynamic->CompressionSettings = TC_SingleFloat;
 	TextureDynamic->LODGroup = TEXTUREGROUP_UI;
@@ -55,7 +55,7 @@ void ULGUIDataAsTexture::CreateTexture()
 
 	Texture = TextureDynamic;
 }
-bool ULGUIDataAsTexture::ExpandTexture()
+bool ULexUIDataAsTexture::ExpandTexture()
 {
 	uint32 NewTextureHeight = TextureHeight + TextureHeight;
 	if (NewTextureHeight > GetMax2DTextureDimension())
@@ -101,7 +101,7 @@ bool ULGUIDataAsTexture::ExpandTexture()
 	return true;
 }
 
-void ULGUIDataAsTexture::Init(int InBlockSizeInByte, int InInitialTextureSize)
+void ULexUIDataAsTexture::Init(int InBlockSizeInByte, int InInitialTextureSize)
 {
 	if (bIsInitialized)
 	{
@@ -119,7 +119,7 @@ void ULGUIDataAsTexture::Init(int InBlockSizeInByte, int InInitialTextureSize)
 	CreateTexture();
 }
 
-int ULGUIDataAsTexture::RegisterBuffer()
+int ULexUIDataAsTexture::RegisterBuffer()
 {
 	if (NotUsingPositionArray.Num() > 0)
 	{
@@ -138,11 +138,11 @@ int ULGUIDataAsTexture::RegisterBuffer()
 	}
 	return PrevPos;
 }
-void ULGUIDataAsTexture::UnregisterBuffer(int InPosition)
+void ULexUIDataAsTexture::UnregisterBuffer(int InPosition)
 {
 	NotUsingPositionArray.Add(InPosition);
 }
-void ULGUIDataAsTexture::UpdateBlock(int InPosition, uint8* InData)
+void ULexUIDataAsTexture::UpdateBlock(int InPosition, uint8* InData)
 {
 	if (Texture->GetResource())
 	{
@@ -162,7 +162,7 @@ void ULGUIDataAsTexture::UpdateBlock(int InPosition, uint8* InData)
 	}
 }
 
-void ULGUIDataAsTexture::PostInitProperties()
+void ULexUIDataAsTexture::PostInitProperties()
 {
 	Super::PostInitProperties();
 }

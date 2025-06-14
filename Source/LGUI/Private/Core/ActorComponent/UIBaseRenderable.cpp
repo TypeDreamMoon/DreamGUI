@@ -8,6 +8,7 @@
 #include "Core/ActorComponent/UICanvasGroup.h"
 #include "Core/ActorComponent/UIBatchMeshRenderable.h"
 #include "TextureResource.h"
+#include "Core/LexUIClipData.h"
 #include "Engine/Texture2D.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
@@ -162,6 +163,24 @@ void UUIBaseRenderable::OnRenderCanvasChanged(ULGUICanvas* OldCanvas, ULGUICanva
 void UUIBaseRenderable::OnCanvasGroupAlphaChange()
 {
 	MarkColorDirty();
+}
+
+int UUIBaseRenderable::GetClipDataStartPosition() const
+{
+	if (ClipData.IsValid())
+	{
+		return ClipData.Pin()->GetBufferStartPos();
+	}
+	return 0;
+}
+
+UTexture* UUIBaseRenderable::GetClipDataTexture() const
+{
+	if (RenderCanvas.IsValid())
+	{
+		return RenderCanvas->GetClipDataTexture();
+	}
+	return nullptr;
 }
 
 void UUIBaseRenderable::MarkColorDirty()

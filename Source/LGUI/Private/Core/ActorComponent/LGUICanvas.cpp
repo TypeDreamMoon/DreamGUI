@@ -26,8 +26,8 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "Math/TransformCalculus2D.h"
 #include "TextureResource.h"
-#include "Core/LGUIClipData.h"
-#include "Core/LGUIDataAsTexture.h"
+#include "Core/LexUIClipData.h"
+#include "Core/LexUIDataAsTexture.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
@@ -321,8 +321,8 @@ void ULGUICanvas::OnRegister()
 
 	if (!IsValid(ClipDataAsTexture))
 	{
-		ClipDataAsTexture = NewObject<ULGUIDataAsTexture>(this, ULGUIDataAsTexture::StaticClass(), NAME_None, RF_Transient);
-		ClipDataAsTexture->Init(FLGUIClipData::BlockSizeInBytes, 512);
+		ClipDataAsTexture = NewObject<ULexUIDataAsTexture>(this, ULexUIDataAsTexture::StaticClass(), NAME_None, RF_Transient);
+		ClipDataAsTexture->Init(FLexUIClipData::BlockSizeInBytes, 512);
 		ClipDataAsTexture->OnDataTextureChange.AddUObject(this, &ULGUICanvas::OnClipDataTextureChanged);
 		ClipDataAsTexture->RegisterBuffer();//register a zero position as a placeholder for not clipping type.
 	}
@@ -332,8 +332,10 @@ void ULGUICanvas::OnUnregister()
 	Super::OnUnregister();
 	ULGUIManagerWorldSubsystem::RemoveCanvas(this, CurrentRenderMode);
 
+	ClipDataList.Empty();
+	
 	{
-		//these thress functions is from OnUIHierarchyChanged()
+		//these three functions is from OnUIHierarchyChanged()
 		RemoveFromViewExtension(true);
 		CheckRootCanvas(true);
 		CheckRenderMode(true);
@@ -1380,8 +1382,8 @@ bool ULGUICanvas::UpdateCanvasDrawcallRecursive()
 		struct LOCAL
 		{
 			static void CollectWidgetAndUpdateLayout(UUIItem* Widget
-				, ULGUIDataAsTexture* ClipDataTexture
-				, TArray<TSharedPtr<FLGUIClipData>>& ClipDataList)
+				, ULexUIDataAsTexture* ClipDataTexture
+				, TArray<TSharedPtr<FLexUIClipData>>& ClipDataList)
 			{
 				// Widget->UpdateLayout();
 				Widget->UpdateClip(ClipDataTexture, ClipDataList);
@@ -2681,7 +2683,7 @@ void ULGUICanvas::OnClipDataTextureChanged(UTexture* NewTexture)
 	}
 }
 
-void ULGUICanvas::RemoveClipData(const TSharedPtr<FLGUIClipData>& InClipData)
+void ULGUICanvas::RemoveClipData(const TSharedPtr<FLexUIClipData>& InClipData)
 {
 	ClipDataList.Remove(InClipData);
 }

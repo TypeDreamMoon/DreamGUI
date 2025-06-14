@@ -10,7 +10,6 @@
 
 class ULGUICanvas;
 class UUIPostProcessRenderable;
-enum class EUIPostProcessMaskTextureType :uint8;
 
 /**
  * UIPostProcessRenderProxy is an render agent for UIPostProcessRenderable in render thread, act as a SceneProxy.
@@ -56,7 +55,6 @@ public:
 	TArray<FLGUIPostProcessVertex> renderMeshRegionToScreenVertexArray;
 	FVector2f RectSize;
 	FTexture2DResource* maskTexture = nullptr;
-	EUIPostProcessMaskTextureType MaskTextureType;
 
 	/**
 	 * Use a mesh to render the MeshRegionTexture to ScreenTargetTexture

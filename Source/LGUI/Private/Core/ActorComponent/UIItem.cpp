@@ -12,7 +12,7 @@
 #include "PhysicsEngine/BodySetup.h"
 #include "Layout/LGUICanvasScaler.h"
 #include "LTweenManager.h"
-#include "Core/LGUIClipData.h"
+#include "Core/LexUIClipData.h"
 #if WITH_EDITOR
 #include "DrawDebugHelpers.h"
 #include "EditorViewportClient.h"
@@ -711,8 +711,8 @@ void UUIItem::CalculateAnchorFromTransform()
 	{
 		AnchorData.AnchoredPosition = CalculatedAnchoredPosition;
 		PrevScale2D = CompScale2D;
-		SetOnTransformChange(AnchorChanged, ScaleChanged);
 	}
+	SetOnTransformChange(AnchorChanged, ScaleChanged);
 }
 
 void UUIItem::OnChildAttached(USceneComponent* ChildComponent)
@@ -1064,18 +1064,25 @@ void UUIItem::UnregisterRenderCanvas()
 	}
 }
 
-void UUIItem::UpdateClip(ULGUIDataAsTexture* ClipDataTexture, TArray<TSharedPtr<FLGUIClipData>>& ClipDataList)
+void UUIItem::UpdateClip(ULexUIDataAsTexture* ClipDataTexture, TArray<TSharedPtr<FLexUIClipData>>& ClipDataList)
 {
 	if (!bClipDirty)return;
 	bClipDirty = false;
 	
-	if (bNeedRecreateClip && ClipData.IsValid() && ClipData.Pin()->GetWidget() == this)//delete old clip-data
+	if (bNeedRecreateClip && ClipData.IsValid())
 	{
-		ClipDataList.Remove(ClipData.Pin());
+		if (ClipData.Pin()->GetWidget() == this)//remove old clip-data
+		{
+			ClipDataList.Remove(ClipData.Pin());
+		}
+		else
+		{
+			ClipData = nullptr;//will create new
+		}
 	}
 	bNeedRecreateClip = false;
 	
-	TSharedPtr<FLGUIClipData> ParentClip = nullptr;
+	TSharedPtr<FLexUIClipData> ParentClip = nullptr;
 	if (ParentUIItem.IsValid())
 	{
 		ParentClip = ParentUIItem->ClipData.Pin();
@@ -1089,7 +1096,7 @@ void UUIItem::UpdateClip(ULGUIDataAsTexture* ClipDataTexture, TArray<TSharedPtr<
 		{
 			if (!this->ClipData.IsValid())
 			{
-				auto NewClip = MakeShared<FLGUIClipData>(ParentClip, ClipDataTexture, this);
+				auto NewClip = MakeShared<FLexUIClipData>(ParentClip, ClipDataTexture, this);
 				ClipDataList.Add(NewClip);
 				this->ClipData = NewClip;
 			}
@@ -1099,7 +1106,7 @@ void UUIItem::UpdateClip(ULGUIDataAsTexture* ClipDataTexture, TArray<TSharedPtr<
 		{
 			if (!this->ClipData.IsValid())
 			{
-				auto NewClip = MakeShared<FLGUIClipData>(nullptr, ClipDataTexture, this);
+				auto NewClip = MakeShared<FLexUIClipData>(nullptr, ClipDataTexture, this);
 				ClipDataList.Add(NewClip);
 				this->ClipData = NewClip;
 			}
@@ -1109,6 +1116,7 @@ void UUIItem::UpdateClip(ULGUIDataAsTexture* ClipDataTexture, TArray<TSharedPtr<
 		this->ClipData = nullptr;
 		break;
 	}
+	this->bClipDataChanged = true;
 	// if (IsValid(Visual))
 	// {
 	// 	Visual->OnClipDataChanged();
@@ -1119,6 +1127,13 @@ void UUIItem::SetRenderCanvas(ULGUICanvas* InNewCanvas)
 {
 	auto OldRenderCanvas = RenderCanvas;
 	RenderCanvas = InNewCanvas;
+	if (ClipData.IsValid() && ClipData.Pin()->GetWidget() == this)//delete old clip-data
+	{
+		if (OldRenderCanvas.IsValid())
+		{
+			OldRenderCanvas->RemoveClipData(ClipData.Pin());//remove it from old canvas
+		}
+	}
 	OnRenderCanvasChanged(OldRenderCanvas.Get(), RenderCanvas.Get());
 }
 
@@ -2083,6 +2098,10 @@ void UUIItem::SetOnAnchorChange(bool InPivotChange, bool InWidthChange, bool InH
 
 void UUIItem::SetOnTransformChange(bool InPositionChanged, bool InScaleChanged)
 {
+	if (ClipData.IsValid() && ClipData.Pin()->GetWidget() == this)
+	{
+		ClipData.Pin()->MarkNeedUpdateData();
+	}
 	if (this->RenderCanvas.IsValid())
 	{
 		this->RenderCanvas->MarkCanvasUpdate(false, true, false);//mark canvas to update
@@ -2108,6 +2127,10 @@ void UUIItem::SetOnTransformChange(bool InPositionChanged, bool InScaleChanged)
 
 void UUIItem::OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange, bool InDiscardCache)
 {
+	if (ClipData.IsValid() && ClipData.Pin()->GetWidget() == this)
+	{
+		ClipData.Pin()->MarkNeedUpdateData();
+	}
 	bool HorizontalPositionChanged = false, VerticalPositionChanged = false;
 	CalculateTransformFromAnchor(HorizontalPositionChanged, VerticalPositionChanged);
 
