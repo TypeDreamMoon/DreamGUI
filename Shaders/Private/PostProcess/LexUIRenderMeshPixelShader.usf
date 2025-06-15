@@ -1,5 +1,5 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
-#include "LGUIRenderMeshVertexShader.usf"
+#include "LexUIRenderMeshVertexShader.usf"
 
 #if LEXUI_CLIP
 #include "../LexUIClip.ush"
@@ -8,12 +8,12 @@ SamplerState _ClipDataTexSampler;
 float4x4 _Inv_M;
 #endif
 
-#if LGUI_BLEND_DEPTH
+#if LEXUI_BLEND_DEPTH
 Texture2D _SceneDepthTex;
 SamplerState _SceneDepthTexSampler;
 float4 _SceneDepthTextureScaleOffset;
 float _SceneDepthBlend;
-#if LGUI_DEPTH_FADE
+#if LEXUI_DEPTH_FADE
 int _SceneDepthFade;
 float2 _ViewSizeInv;
 #endif
@@ -22,7 +22,7 @@ float2 _ViewSizeInv;
 Texture2D _MainTex;
 SamplerState _MainTexSampler;
 
-#if LGUI_MASK
+#if LEXUI_MASK
 Texture2D _MaskTex;
 SamplerState _MaskTexSampler;
 #endif
@@ -34,19 +34,19 @@ void RenderMeshPS(
 {
     OutColor = _MainTex.Sample(_MainTexSampler, input.uv);
     OutColor.a = 1.0;
-#if LGUI_MASK
+#if LEXUI_MASK
     OutColor.a *= _MaskTex.Sample(_MaskTexSampler, input.uv).r;
 #endif
 #if LEXUI_CLIP
 	float3 localPosition = mul(float4(input.worldPosition, 1.0), _Inv_M).xyz;
 	OutColor.a *= LexUI_CalculateClipData(_ClipDataTex, _ClipDataTexSampler, input.uv1.x, input.localPosition);
 #endif
-#if LGUI_BLEND_DEPTH
+#if LEXUI_BLEND_DEPTH
     float PixelDepth = input.screenPosition.z / input.screenPosition.w;
 	float2 ScreenUV = input.screenPosition.xy / input.screenPosition.w;
 	ScreenUV = ScreenUV * 0.5f + float2(0.5f, 0.5f);
 	ScreenUV.y = 1.0f - ScreenUV.y;
-#if LGUI_DEPTH_FADE
+#if LEXUI_DEPTH_FADE
 	float DepthFadeValue = 0;
 	int SampleCount = 0;
 	int SampleSize = _SceneDepthFade;

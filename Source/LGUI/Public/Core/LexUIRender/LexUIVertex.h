@@ -4,20 +4,19 @@
 
 #include "CoreMinimal.h"
 #include "RenderResource.h"
-#include "Core/LGUIMeshVertex.h"
 
-struct LGUI_API FLGUIPostProcessVertex
+struct LGUI_API FLexUIPostProcessVertex
 {
 	FVector3f Position;
 	FVector2f TextureCoordinate0;
 	FVector2f TextureCoordinate1;
 
-	FLGUIPostProcessVertex(FVector3f InPosition, FVector2f InTextureCoordinate0)
+	FLexUIPostProcessVertex(FVector3f InPosition, FVector2f InTextureCoordinate0)
 	{
 		Position = InPosition;
 		TextureCoordinate0 = InTextureCoordinate0;
 	}
-	FLGUIPostProcessVertex(FVector3f InPosition, FVector2f InTextureCoordinate0, FVector2f InTextureCoordinate1)
+	FLexUIPostProcessVertex(FVector3f InPosition, FVector2f InTextureCoordinate0, FVector2f InTextureCoordinate1)
 	{
 		Position = InPosition;
 		TextureCoordinate0 = InTextureCoordinate0;
@@ -25,58 +24,58 @@ struct LGUI_API FLGUIPostProcessVertex
 	}
 };
 
-class LGUI_API FLGUIPostProcessVertexDeclaration : public FRenderResource
+class LGUI_API FLexUIPostProcessVertexDeclaration : public FRenderResource
 {
 public:
 	FVertexDeclarationRHIRef VertexDeclarationRHI;
 	virtual void InitRHI(FRHICommandListBase& RHICmdList) override;
 	virtual void ReleaseRHI() override;
 };
-LGUI_API FVertexDeclarationRHIRef& GetLGUIPostProcessVertexDeclaration();
+LGUI_API FVertexDeclarationRHIRef& GetLexUIPostProcessVertexDeclaration();
 
 
 
 
-struct LGUI_API FLGUIPostProcessCopyMeshRegionVertex
+struct LGUI_API FLexUIPostProcessCopyMeshRegionVertex
 {
 	FVector3f ScreenPosition;
 	FVector3f LocalPosition;
 
-	FLGUIPostProcessCopyMeshRegionVertex(FVector3f InScreenPosition, FVector3f InLocalPosition)
+	FLexUIPostProcessCopyMeshRegionVertex(FVector3f InScreenPosition, FVector3f InLocalPosition)
 	{
 		ScreenPosition = InScreenPosition;
 		LocalPosition = InLocalPosition;
 	}
 };
 
-class LGUI_API FLGUIPostProcessCopyMeshRegionVertexDeclaration : public FRenderResource
+class LGUI_API FLexUIPostProcessCopyMeshRegionVertexDeclaration : public FRenderResource
 {
 public:
 	FVertexDeclarationRHIRef VertexDeclarationRHI;
 	virtual void InitRHI(FRHICommandListBase& RHICmdList) override;
 	virtual void ReleaseRHI() override;
 };
-LGUI_API FVertexDeclarationRHIRef& GetLGUIPostProcessCopyMeshRegionVertexDeclaration();
+LGUI_API FVertexDeclarationRHIRef& GetLexUIPostProcessCopyMeshRegionVertexDeclaration();
 
 
 /** Parameters for render editor helper line */
-struct LGUI_API FLGUIHelperLineVertex
+struct LGUI_API FLexUIHelperLineVertex
 {
 public:
 	FVector3f Position = FVector3f::ZeroVector;
 	FColor Color = FColor::White;
 
-	FLGUIHelperLineVertex(FVector3f InPosition, FColor InColor)
+	FLexUIHelperLineVertex(FVector3f InPosition, FColor InColor)
 	{
 		Position = InPosition;
 		Color = InColor;
 	}
 };
-struct LGUI_API FLGUIHelperLineVertexDeclaration : public FRenderResource
+struct LGUI_API FLexUIHelperLineVertexDeclaration : public FRenderResource
 {
 public:
 	FVertexDeclarationRHIRef VertexDeclarationRHI;
 	virtual void InitRHI(FRHICommandListBase& RHICmdList) override;
 	virtual void ReleaseRHI() override;
 };
-LGUI_API FVertexDeclarationRHIRef& GetLGUIHelperLineVertexDeclaration();
+LGUI_API FVertexDeclarationRHIRef& GetLexUIHelperLineVertexDeclaration();

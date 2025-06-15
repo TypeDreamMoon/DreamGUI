@@ -6,11 +6,11 @@
 #include "Containers/ResourceArray.h"
 #include "StaticMeshResources.h"
 #include "Materials/Material.h"
-#include "Core/LGUIRender/ILGUIRendererPrimitive.h"
-#include "Core/LGUIRender/LGUIRenderer.h"
+#include "LGUI/Public/Core/LexUIRender/ILexUIRendererPrimitive.h"
+#include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
 #include "Engine/Engine.h"
 #include "LGUI.h"
-#include "Core/LGUIRender/LGUIVertex.h"
+#include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
 #include "Core/ActorComponent/LGUICanvas.h"
 #include "Materials/MaterialRenderProxy.h"
 #include "MaterialDomain.h"
@@ -190,7 +190,7 @@ struct FLGUIChildCanvasSectionProxy : public FLGUIRenderSectionProxy
 DECLARE_CYCLE_STAT(TEXT("LGUIMesh CreateRenderSection"), STAT_CreateRenderSection, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("LGUIMesh UpdateMeshSection_RT"), STAT_UpdateMeshSectionRT, STATGROUP_LGUI);
 /** LGUI render scene proxy */
-class FLGUIRenderSceneProxy : public FPrimitiveSceneProxy, public ILGUIRendererPrimitive
+class FLGUIRenderSceneProxy : public FPrimitiveSceneProxy, public ILexUIRendererPrimitive
 {
 public:
 	SIZE_T GetTypeHash() const override
@@ -684,12 +684,12 @@ public:
 	{
 		return (FVector3f)(GetLocalToWorld().GetOrigin()); 
 	}
-	virtual void CollectRenderData(TArray<FLGUIPrimitiveDataContainer>& OutRenderData, float CurrentWorldTime) override
+	virtual void CollectRenderData(TArray<FLexUIPrimitiveDataContainer>& OutRenderData, float CurrentWorldTime) override
 	{
 		if (ParentSceneProxy != nullptr)return;
 		CollectRenderData_Implement(OutRenderData, CurrentWorldTime);
 	}
-	virtual void GetMeshElements(const FSceneViewFamily& ViewFamily, FMeshElementCollector* Collector, const FLGUIPrimitiveDataContainer& PrimitiveData, TArray<FLGUIMeshBatchContainer>& ResultArray) override
+	virtual void GetMeshElements(const FSceneViewFamily& ViewFamily, FMeshElementCollector* Collector, const FLexUIPrimitiveDataContainer& PrimitiveData, TArray<FLexUIMeshBatchContainer>& ResultArray) override
 	{
 		if (!bIsSupportLGUIRenderer)return;
 		// Set up wireframe material (if needed)
@@ -731,7 +731,7 @@ public:
 			Mesh.DepthPriorityGroup = SDPG_World;
 			Mesh.bCanApplyViewModeOverrides = false;
 
-			FLGUIMeshBatchContainer MeshBatchContainer;
+			FLexUIMeshBatchContainer MeshBatchContainer;
 			MeshBatchContainer.Mesh = Mesh;
 			MeshBatchContainer.VertexBufferRHI = Section->LGUIVertexBuffers.VertexBufferRHI;
 			MeshBatchContainer.NumVerts = Section->LGUIVertexBuffers.Vertices.Num();
@@ -759,7 +759,7 @@ public:
 	}
 	virtual FBoxSphereBounds GetWorldBounds()const override { return FPrimitiveSceneProxy::GetBounds(); }
 	//end ILGUIRendererPrimitive interface
-	void CollectRenderData_Implement(TArray<FLGUIPrimitiveDataContainer>& OutRenderDataArray, float CurrentWorldTime)
+	void CollectRenderData_Implement(TArray<FLexUIPrimitiveDataContainer>& OutRenderDataArray, float CurrentWorldTime)
 	{
 		if (Sections.Num() <= 0)return;
 		if (bNeedToSortRenderSections)
@@ -771,8 +771,8 @@ public:
 
 		if (Sections[0] == nullptr)return;
 		auto PrevRenderSectionType = Sections[0]->Type;
-		auto PrevPrimitiveType = PrevRenderSectionType == ELGUIRenderSectionType::PostProcess ? ELGUIRendererPrimitiveType::PostProcess : ELGUIRendererPrimitiveType::Mesh;
-		FLGUIPrimitiveDataContainer CurrentRenderData;
+		auto PrevPrimitiveType = PrevRenderSectionType == ELGUIRenderSectionType::PostProcess ? ELexUIRendererPrimitiveType::PostProcess : ELexUIRendererPrimitiveType::Mesh;
+		FLexUIPrimitiveDataContainer CurrentRenderData;
 		CurrentRenderData.Primitive = this;
 		CurrentRenderData.Type = PrevPrimitiveType;
 		for (int i = 0; i < Sections.Num(); i++)
@@ -787,9 +787,9 @@ public:
 						OutRenderDataArray.Add(CurrentRenderData);
 					}
 					PrevRenderSectionType = RenderSection->Type;
-					CurrentRenderData = FLGUIPrimitiveDataContainer();
+					CurrentRenderData = FLexUIPrimitiveDataContainer();
 					CurrentRenderData.Primitive = this;
-					auto ItemPrimitiveType = RenderSection->Type == ELGUIRenderSectionType::PostProcess ? ELGUIRendererPrimitiveType::PostProcess : ELGUIRendererPrimitiveType::Mesh;
+					auto ItemPrimitiveType = RenderSection->Type == ELGUIRenderSectionType::PostProcess ? ELexUIRendererPrimitiveType::PostProcess : ELexUIRendererPrimitiveType::Mesh;
 					CurrentRenderData.Type = ItemPrimitiveType;
 				}
 
@@ -797,7 +797,7 @@ public:
 				{
 				case ELGUIRenderSectionType::Mesh:
 				{
-					FLGUIPrimitiveSectionDataContainer SectionData;
+					FLexUIPrimitiveSectionDataContainer SectionData;
 					SectionData.SectionPointer = RenderSection;
 					CurrentRenderData.Sections.Add(SectionData);
 				}
@@ -808,7 +808,7 @@ public:
 					auto PostProcessProxy = Section->PostProcessRenderProxy.Pin();
 					if (PostProcessProxy.IsValid() && PostProcessProxy->CanRender())
 					{
-						FLGUIPrimitiveSectionDataContainer SectionData;
+						FLexUIPrimitiveSectionDataContainer SectionData;
 						SectionData.SectionPointer = RenderSection;
 						CurrentRenderData.Sections.Add(SectionData);
 					}
@@ -883,7 +883,7 @@ private:
 
 	FMaterialRelevance MaterialRelevance;
 	int32 RenderPriority = 0;
-	TWeakPtr<FLGUIRenderer, ESPMode::ThreadSafe> LGUIRenderer;
+	TWeakPtr<FLexUIRenderer, ESPMode::ThreadSafe> LGUIRenderer;
 	bool bIsSupportLGUIRenderer = false;
 	bool bIsSupportUERenderer = true;
 	bool bIsLGUIRenderToWorld = false;
@@ -1241,7 +1241,7 @@ void ULGUIMeshComponent::SetRenderCanvas(ULGUICanvas* InCanvas)
 {
 	RenderCanvas = InCanvas;
 }
-void ULGUIMeshComponent::SetSupportLGUIRenderer(bool InSupportOrNot, TWeakPtr<FLGUIRenderer, ESPMode::ThreadSafe> InLGUIRenderer, bool InIsRenderToWorld)
+void ULGUIMeshComponent::SetSupportLGUIRenderer(bool InSupportOrNot, TWeakPtr<FLexUIRenderer, ESPMode::ThreadSafe> InLGUIRenderer, bool InIsRenderToWorld)
 {
 	if (InSupportOrNot)
 	{

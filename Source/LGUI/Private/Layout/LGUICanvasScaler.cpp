@@ -9,7 +9,7 @@
 #include "DrawDebugHelpers.h"
 #include "Editor.h"
 #include "Core/LGUISettings.h"
-#include "Core/LGUIRender/LGUIRenderer.h"
+#include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
 #include "EditorViewportClient.h"
 #include "LevelEditorViewport.h"
 #endif
@@ -397,7 +397,7 @@ void ULGUICanvasScaler::OnEditorViewportIndexAndKeyChange()
 void ULGUICanvasScaler::OnPreviewSetting_EditorPreviewViewportIndexChange()
 {
 	int32 editorViewIndex = ULGUIEditorSettings::GetLGUIPreview_EditorViewIndex();
-	FLGUIRenderer::EditorPreview_ViewKey = ULGUIEditorManagerObject::Instance->GetViewportKeyFromIndex(editorViewIndex);
+	FLexUIRenderer::EditorPreview_ViewKey = ULGUIEditorManagerObject::Instance->GetViewportKeyFromIndex(editorViewIndex);
 }
 void DeprojectViewPointToWorld(const FMatrix& InViewProjectionMatrix, const FVector2D& InViewPoint01, FVector& OutWorldStart, FVector& OutWorldEnd)
 {

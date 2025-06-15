@@ -133,8 +133,8 @@ private:
 	/** clear drawcalls */
 	void ClearDrawcall();
 	void RemoveFromViewExtension(bool PropogateToChildrenCanvas);
-	TSharedPtr<class FLGUIRenderer, ESPMode::ThreadSafe> RenderTargetViewExtension = nullptr;
-	TSharedPtr<class FLGUIRenderer, ESPMode::ThreadSafe> GetRenderTargetViewExtension();
+	TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> RenderTargetViewExtension = nullptr;
+	TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> GetRenderTargetViewExtension();
 public:
 	/** mark canvas layout dirty */
 	void MarkCanvasLayoutDirty();

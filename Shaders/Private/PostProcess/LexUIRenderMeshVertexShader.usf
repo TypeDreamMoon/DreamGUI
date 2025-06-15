@@ -11,7 +11,7 @@ struct RenderMeshVSToPS
     float2 uv1 : TEXCOORD1;
     float3 worldPosition : TEXCOORD2;
     float3 localPosition : TEXCOORD3;
-#if LGUI_BLEND_DEPTH
+#if LEXUI_BLEND_DEPTH
     float4 screenPosition : TEXCOORD4;
 #endif
 };
@@ -28,7 +28,7 @@ void RenderMeshVS(
     v2p.localPosition = Position.xyz;
     v2p.uv = TextureCoord0;
     v2p.uv1 = TextureCoord1;
-#if LGUI_BLEND_DEPTH
+#if LEXUI_BLEND_DEPTH
     v2p.screenPosition = v2p.position;
 #endif
 }

@@ -16,7 +16,7 @@
 #include "Core/ActorComponent/UIBaseRenderable.h"
 #include "Core/ActorComponent/UIPostProcessRenderable.h"
 #include "Engine/Engine.h"
-#include "Core/LGUIRender/LGUIRenderer.h"
+#include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
 #include "Core/ILGUICultureChangedInterface.h"
 #include "Core/LGUILifeCycleBehaviour.h"
 #include "Layout/ILGUILayoutInterface.h"
@@ -619,22 +619,22 @@ void ULGUIManagerWorldSubsystem::DrawNavigationArrow(UWorld* InWorld, const TArr
 		auto ViewExtension = ULGUIManagerWorldSubsystem::GetViewExtension(InWorld, false);
 		if (ViewExtension.IsValid())
 		{
-			TArray<FLGUIHelperLineVertex> Lines;
+			TArray<FLexUIHelperLineVertex> Lines;
 			//lines
 			FVector prevPoint = ResultPoints[0];
 			for (int i = 1; i < ResultPoints.Num(); i++)
 			{
-				new(Lines) FLGUIHelperLineVertex((FVector3f)prevPoint, InColor);
-				new(Lines) FLGUIHelperLineVertex((FVector3f)ResultPoints[i], InColor);
+				new(Lines) FLexUIHelperLineVertex((FVector3f)prevPoint, InColor);
+				new(Lines) FLexUIHelperLineVertex((FVector3f)ResultPoints[i], InColor);
 				prevPoint = ResultPoints[i];
 			}
 			//arrow
-			new(Lines) FLGUIHelperLineVertex((FVector3f)InControlPoints[3], InColor);
-			new(Lines) FLGUIHelperLineVertex((FVector3f)InArrowPointA, InColor);
-			new(Lines) FLGUIHelperLineVertex((FVector3f)InControlPoints[3], InColor);
-			new(Lines) FLGUIHelperLineVertex((FVector3f)InArrowPointB, InColor);
+			new(Lines) FLexUIHelperLineVertex((FVector3f)InControlPoints[3], InColor);
+			new(Lines) FLexUIHelperLineVertex((FVector3f)InArrowPointA, InColor);
+			new(Lines) FLexUIHelperLineVertex((FVector3f)InControlPoints[3], InColor);
+			new(Lines) FLexUIHelperLineVertex((FVector3f)InArrowPointB, InColor);
 
-			ViewExtension->AddLineRender(FLGUIHelperLineRenderParameter(Lines));
+			ViewExtension->AddLineRender(FLexUIHelperLineRenderParameter(Lines));
 		}
 	}
 	else
@@ -763,70 +763,70 @@ void ULGUIManagerWorldSubsystem::DrawDebugBoxOnScreenSpace(UWorld* InWorld, FVec
 	auto ViewExtension = ULGUIManagerWorldSubsystem::GetViewExtension(InWorld, false);
 	if (ViewExtension.IsValid())
 	{
-		TArray<FLGUIHelperLineVertex> Lines;
+		TArray<FLexUIHelperLineVertex> Lines;
 
 		FTransform const Transform(Rotation);
 		FVector Start = Transform.TransformPosition(FVector(Box.X, Box.Y, Box.Z));
 		FVector End = Transform.TransformPosition(FVector(Box.X, -Box.Y, Box.Z));
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + End), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
 
 		Start = Transform.TransformPosition(FVector(Box.X, -Box.Y, Box.Z));
 		End = Transform.TransformPosition(FVector(-Box.X, -Box.Y, Box.Z));
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + End), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
 
 		Start = Transform.TransformPosition(FVector(-Box.X, -Box.Y, Box.Z));
 		End = Transform.TransformPosition(FVector(-Box.X, Box.Y, Box.Z));
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + End), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
 
 		Start = Transform.TransformPosition(FVector(-Box.X, Box.Y, Box.Z));
 		End = Transform.TransformPosition(FVector(Box.X, Box.Y, Box.Z));
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + End), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
 
 		Start = Transform.TransformPosition(FVector(Box.X, Box.Y, -Box.Z));
 		End = Transform.TransformPosition(FVector(Box.X, -Box.Y, -Box.Z));
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + End), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
 
 		Start = Transform.TransformPosition(FVector(Box.X, -Box.Y, -Box.Z));
 		End = Transform.TransformPosition(FVector(-Box.X, -Box.Y, -Box.Z));
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + End), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
 
 		Start = Transform.TransformPosition(FVector(-Box.X, -Box.Y, -Box.Z));
 		End = Transform.TransformPosition(FVector(-Box.X, Box.Y, -Box.Z));
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + End), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
 
 		Start = Transform.TransformPosition(FVector(-Box.X, Box.Y, -Box.Z));
 		End = Transform.TransformPosition(FVector(Box.X, Box.Y, -Box.Z));
-		new(Lines)FLGUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines)FLGUIHelperLineVertex(FVector3f(Center + End), Color);
+		new(Lines)FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
+		new(Lines)FLexUIHelperLineVertex(FVector3f(Center + End), Color);
 
 		Start = Transform.TransformPosition(FVector(Box.X, Box.Y, Box.Z));
 		End = Transform.TransformPosition(FVector(Box.X, Box.Y, -Box.Z));
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + End), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
 
 		Start = Transform.TransformPosition(FVector(Box.X, -Box.Y, Box.Z));
 		End = Transform.TransformPosition(FVector(Box.X, -Box.Y, -Box.Z));
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + End), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
 
 		Start = Transform.TransformPosition(FVector(-Box.X, -Box.Y, Box.Z));
 		End = Transform.TransformPosition(FVector(-Box.X, -Box.Y, -Box.Z));
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + End), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
 
 		Start = Transform.TransformPosition(FVector(-Box.X, Box.Y, Box.Z));
 		End = Transform.TransformPosition(FVector(-Box.X, Box.Y, -Box.Z));
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + End), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
 
-		ViewExtension->AddLineRender(FLGUIHelperLineRenderParameter(Lines));
+		ViewExtension->AddLineRender(FLexUIHelperLineRenderParameter(Lines));
 	}
 }
 void ULGUIManagerWorldSubsystem::DrawDebugRectOnScreenSpace(UWorld* InWorld, FVector const& Center, FVector const& Box, const FQuat& Rotation, FColor const& Color)
@@ -834,30 +834,30 @@ void ULGUIManagerWorldSubsystem::DrawDebugRectOnScreenSpace(UWorld* InWorld, FVe
 	auto ViewExtension = ULGUIManagerWorldSubsystem::GetViewExtension(InWorld, false);
 	if (ViewExtension.IsValid())
 	{
-		TArray<FLGUIHelperLineVertex> Lines;
+		TArray<FLexUIHelperLineVertex> Lines;
 
 		FTransform const Transform(Rotation);
 		FVector Start = Transform.TransformPosition(FVector(Box.X, Box.Y, Box.Z));
 		FVector End = Transform.TransformPosition(FVector(Box.X, -Box.Y, Box.Z));
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + End), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
 
 		Start = Transform.TransformPosition(FVector(Box.X, Box.Y, -Box.Z));
 		End = Transform.TransformPosition(FVector(Box.X, -Box.Y, -Box.Z));
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + End), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
 
 		Start = Transform.TransformPosition(FVector(Box.X, Box.Y, Box.Z));
 		End = Transform.TransformPosition(FVector(Box.X, Box.Y, -Box.Z));
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + End), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
 
 		Start = Transform.TransformPosition(FVector(Box.X, -Box.Y, Box.Z));
 		End = Transform.TransformPosition(FVector(Box.X, -Box.Y, -Box.Z));
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLGUIHelperLineVertex(FVector3f(Center + End), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
+		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
 
-		ViewExtension->AddLineRender(FLGUIHelperLineRenderParameter(Lines));
+		ViewExtension->AddLineRender(FLexUIHelperLineRenderParameter(Lines));
 	}
 }
 
@@ -1678,7 +1678,7 @@ void ULGUIManagerWorldSubsystem::MarkSortRenderTargetSpaceCanvas()
 	bShouldSortRenderTargetSpaceCanvas = true;
 }
 
-TSharedPtr<class FLGUIRenderer, ESPMode::ThreadSafe> ULGUIManagerWorldSubsystem::GetViewExtension(UWorld* InWorld, bool InCreateIfNotExist)
+TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> ULGUIManagerWorldSubsystem::GetViewExtension(UWorld* InWorld, bool InCreateIfNotExist)
 {
 	if (auto Instance = GetInstance(InWorld))
 	{
@@ -1686,7 +1686,7 @@ TSharedPtr<class FLGUIRenderer, ESPMode::ThreadSafe> ULGUIManagerWorldSubsystem:
 		{
 			if (InCreateIfNotExist)
 			{
-				Instance->MainViewportViewExtension = FSceneViewExtensions::NewExtension<FLGUIRenderer>(InWorld, ELGUIRendererType::ScreenSpace_and_WorldSpace);
+				Instance->MainViewportViewExtension = FSceneViewExtensions::NewExtension<FLexUIRenderer>(InWorld, ELexUIRendererType::ScreenSpace_and_WorldSpace);
 			}
 		}
 		return Instance->MainViewportViewExtension;

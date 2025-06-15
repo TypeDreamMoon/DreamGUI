@@ -3,7 +3,7 @@
 #pragma once
 
 #include "UIPostProcessRenderable.h"
-#include "Core/LGUIRender/LGUIVertex.h"
+#include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
 #include "UIBackgroundPixelate.generated.h"
 
 /** 

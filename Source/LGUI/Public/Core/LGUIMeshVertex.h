@@ -48,5 +48,5 @@ public:
 	virtual void InitRHI(FRHICommandListBase& RHICmdList)override;
 	virtual void ReleaseRHI()override;
 };
-LGUI_API FVertexDeclarationRHIRef& GetLGUIMeshVertexDeclaration();
+LGUI_API FVertexDeclarationRHIRef& GetLexUIMeshVertexDeclaration();
 

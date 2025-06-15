@@ -3,12 +3,12 @@
 #pragma once
 
 #include "UIBaseRenderable.h"
-#include "Core/LGUIRender/LGUIVertex.h"
+#include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
 #include "Core/LGUISpriteInfo.h"
 #include "UIPostProcessRenderable.generated.h"
 
 class FUIPostProcessRenderProxy;
-struct FLGUIPostProcessVertex;
+struct FLexUIPostProcessVertex;
 
 
 /** 
@@ -78,8 +78,8 @@ protected:
 	virtual void OnUpdateGeometryClipData(UIGeometry& InGeo, bool InClipDataStartPositionChanged);
 	/** update region vertex data */
 	virtual void UpdateRegionVertex();
-	TArray<FLGUIPostProcessCopyMeshRegionVertex> renderScreenToMeshRegionVertexArray;
-	TArray<FLGUIPostProcessVertex> renderMeshRegionToScreenVertexArray;
+	TArray<FLexUIPostProcessCopyMeshRegionVertex> renderScreenToMeshRegionVertexArray;
+	TArray<FLexUIPostProcessVertex> renderMeshRegionToScreenVertexArray;
 
 	virtual void SendRegionVertexDataToRenderProxy();
 };

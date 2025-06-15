@@ -6,15 +6,14 @@
 #include "Shader.h"
 #include "ShaderParameterUtils.h"
 #include "MaterialShaderType.h"
-#include "MaterialShader.h"
 #include "Engine/Texture2D.h"
 #include "RHIStaticStates.h"
 
-class FLGUIPostProcessShader :public FGlobalShader
+class FLexUIPostProcessShader :public FGlobalShader
 {
 public:
-	FLGUIPostProcessShader() {}
-	FLGUIPostProcessShader(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+	FLexUIPostProcessShader() {}
+	FLexUIPostProcessShader(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
 		:FGlobalShader(Initializer)
 	{
 
@@ -32,13 +31,13 @@ public:
 		return true;
 	}
 };
-class FLGUISimplePostProcessVS :public FLGUIPostProcessShader
+class FLexUISimplePostProcessVS :public FLexUIPostProcessShader
 {
-	DECLARE_SHADER_TYPE(FLGUISimplePostProcessVS, Global);
+	DECLARE_SHADER_TYPE(FLexUISimplePostProcessVS, Global);
 public:
-	FLGUISimplePostProcessVS() {}
-	FLGUISimplePostProcessVS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIPostProcessShader(Initializer)
+	FLexUISimplePostProcessVS() {}
+	FLexUISimplePostProcessVS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIPostProcessShader(Initializer)
 	{
 
 	}
@@ -48,13 +47,13 @@ public:
 	}
 private:
 };
-class FLGUISimpleCopyTargetPS :public FLGUIPostProcessShader
+class FLexUISimpleCopyTargetPS :public FLexUIPostProcessShader
 {
-	DECLARE_SHADER_TYPE(FLGUISimpleCopyTargetPS, Global);
+	DECLARE_SHADER_TYPE(FLexUISimpleCopyTargetPS, Global);
 public:
-	FLGUISimpleCopyTargetPS() {}
-	FLGUISimpleCopyTargetPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIPostProcessShader(Initializer)
+	FLexUISimpleCopyTargetPS() {}
+	FLexUISimpleCopyTargetPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIPostProcessShader(Initializer)
 	{
 		MainTextureParameter.Bind(Initializer.ParameterMap, TEXT("_MainTex"));
 		MainTextureSamplerParameter.Bind(Initializer.ParameterMap, TEXT("_MainTexSampler"));
@@ -67,29 +66,29 @@ private:
 	LAYOUT_FIELD(FShaderResourceParameter, MainTextureParameter);
 	LAYOUT_FIELD(FShaderResourceParameter, MainTextureSamplerParameter);
 };
-class FLGUISimpleCopyTargetPS_ColorCorrect : public FLGUISimpleCopyTargetPS
+class FLexUISimpleCopyTargetPS_ColorCorrect : public FLexUISimpleCopyTargetPS
 {
-	DECLARE_SHADER_TYPE(FLGUISimpleCopyTargetPS_ColorCorrect, Global);
+	DECLARE_SHADER_TYPE(FLexUISimpleCopyTargetPS_ColorCorrect, Global);
 public:
-	FLGUISimpleCopyTargetPS_ColorCorrect() {}
-	FLGUISimpleCopyTargetPS_ColorCorrect(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUISimpleCopyTargetPS(Initializer)
+	FLexUISimpleCopyTargetPS_ColorCorrect() {}
+	FLexUISimpleCopyTargetPS_ColorCorrect(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUISimpleCopyTargetPS(Initializer)
 	{
 	}
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
-		OutEnvironment.SetDefine(TEXT("LGUI_COLORCORRECT"), true);
-		FLGUISimpleCopyTargetPS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		OutEnvironment.SetDefine(TEXT("LEXUI_COLORCORRECT"), true);
+		FLexUISimpleCopyTargetPS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 	}
 private:
 };
-class FLGUIPostProcessGaussianBlurPS :public FLGUIPostProcessShader
+class FLexUIPostProcessGaussianBlurPS :public FLexUIPostProcessShader
 {
-	DECLARE_SHADER_TYPE(FLGUIPostProcessGaussianBlurPS, Global);
+	DECLARE_SHADER_TYPE(FLexUIPostProcessGaussianBlurPS, Global);
 public:
-	FLGUIPostProcessGaussianBlurPS() {}
-	FLGUIPostProcessGaussianBlurPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIPostProcessShader(Initializer)
+	FLexUIPostProcessGaussianBlurPS() {}
+	FLexUIPostProcessGaussianBlurPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIPostProcessShader(Initializer)
 	{
 		MainTextureParameter.Bind(Initializer.ParameterMap, TEXT("_MainTex"));
 		MainTextureSamplerParameter.Bind(Initializer.ParameterMap, TEXT("_MainTexSampler"));
@@ -101,7 +100,7 @@ public:
 	}
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
-		FLGUIPostProcessShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		FLexUIPostProcessShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 	}
 	void SetBlurStrength(FRHICommandListImmediate& RHICmdList, const FVector2f& BlurStrength)
 	{
@@ -114,13 +113,13 @@ private:
 	LAYOUT_FIELD(FShaderResourceParameter, MainTextureSamplerParameter);
 	LAYOUT_FIELD(FShaderParameter, BlurStrengthParameter);
 };
-class FLGUIPostProcessGaussianBlurWithStrengthTexturePS :public FLGUIPostProcessGaussianBlurPS
+class FLexUIPostProcessGaussianBlurWithStrengthTexturePS :public FLexUIPostProcessGaussianBlurPS
 {
-	DECLARE_SHADER_TYPE(FLGUIPostProcessGaussianBlurWithStrengthTexturePS, Global);
+	DECLARE_SHADER_TYPE(FLexUIPostProcessGaussianBlurWithStrengthTexturePS, Global);
 public:
-	FLGUIPostProcessGaussianBlurWithStrengthTexturePS() {}
-	FLGUIPostProcessGaussianBlurWithStrengthTexturePS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIPostProcessGaussianBlurPS(Initializer)
+	FLexUIPostProcessGaussianBlurWithStrengthTexturePS() {}
+	FLexUIPostProcessGaussianBlurWithStrengthTexturePS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIPostProcessGaussianBlurPS(Initializer)
 	{
 		StrengthTextureParameter.Bind(Initializer.ParameterMap, TEXT("_StrengthTex"));
 		StrengthTextureSamplerParameter.Bind(Initializer.ParameterMap, TEXT("_StrengthTexSampler"));
@@ -132,7 +131,7 @@ public:
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
 		OutEnvironment.SetDefine(TEXT("USE_STRENGTH_TEXTURE"), 1);
-		FLGUIPostProcessGaussianBlurPS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		FLexUIPostProcessGaussianBlurPS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 	}
 private:
 	LAYOUT_FIELD(FShaderResourceParameter, StrengthTextureParameter);
@@ -144,26 +143,26 @@ private:
 
 
 //render mesh region 
-class FLGUICopyMeshRegionVS :public FLGUIPostProcessShader
+class FLexUICopyMeshRegionVS :public FLexUIPostProcessShader
 {
-	DECLARE_SHADER_TYPE(FLGUICopyMeshRegionVS, Global);
+	DECLARE_SHADER_TYPE(FLexUICopyMeshRegionVS, Global);
 public:
-	FLGUICopyMeshRegionVS() {}
-	FLGUICopyMeshRegionVS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIPostProcessShader(Initializer)
+	FLexUICopyMeshRegionVS() {}
+	FLexUICopyMeshRegionVS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIPostProcessShader(Initializer)
 	{
 		
 	}
 };
 
 //render mesh pixel shader
-class FLGUICopyMeshRegionPS :public FLGUIPostProcessShader
+class FLexUICopyMeshRegionPS :public FLexUIPostProcessShader
 {
-	DECLARE_SHADER_TYPE(FLGUICopyMeshRegionPS, Global);
+	DECLARE_SHADER_TYPE(FLexUICopyMeshRegionPS, Global);
 public:
-	FLGUICopyMeshRegionPS() {}
-	FLGUICopyMeshRegionPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIPostProcessShader(Initializer)
+	FLexUICopyMeshRegionPS() {}
+	FLexUICopyMeshRegionPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIPostProcessShader(Initializer)
 	{
 		MainTextureParameter.Bind(Initializer.ParameterMap, TEXT("_MainTex"));
 		MainTextureSamplerParameter.Bind(Initializer.ParameterMap, TEXT("_MainTexSampler"));
@@ -184,19 +183,19 @@ private:
 	LAYOUT_FIELD(FShaderParameter, MainTextureScaleOffsetParameter);
 	LAYOUT_FIELD(FShaderParameter, MVPParameter);
 };
-class FLGUICopyMeshRegionPS_ColorCorrect : public FLGUICopyMeshRegionPS
+class FLexUICopyMeshRegionPS_ColorCorrect : public FLexUICopyMeshRegionPS
 {
-	DECLARE_SHADER_TYPE(FLGUICopyMeshRegionPS_ColorCorrect, Global);
+	DECLARE_SHADER_TYPE(FLexUICopyMeshRegionPS_ColorCorrect, Global);
 public:
-	FLGUICopyMeshRegionPS_ColorCorrect() {}
-	FLGUICopyMeshRegionPS_ColorCorrect(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUICopyMeshRegionPS(Initializer)
+	FLexUICopyMeshRegionPS_ColorCorrect() {}
+	FLexUICopyMeshRegionPS_ColorCorrect(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUICopyMeshRegionPS(Initializer)
 	{
 	}
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
-		OutEnvironment.SetDefine(TEXT("LGUI_COLORCORRECT"), true);
-		FLGUISimpleCopyTargetPS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		OutEnvironment.SetDefine(TEXT("LEXUI_COLORCORRECT"), true);
+		FLexUISimpleCopyTargetPS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 	}
 private:
 };
@@ -205,13 +204,13 @@ private:
 
 
 //common render mesh vertex shader
-class FLGUIRenderMeshVS :public FLGUIPostProcessShader
+class FLexUIRenderMeshVS :public FLexUIPostProcessShader
 {
-	DECLARE_SHADER_TYPE(FLGUIRenderMeshVS, Global);
+	DECLARE_SHADER_TYPE(FLexUIRenderMeshVS, Global);
 public:
-	FLGUIRenderMeshVS() {}
-	FLGUIRenderMeshVS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIPostProcessShader(Initializer)
+	FLexUIRenderMeshVS() {}
+	FLexUIRenderMeshVS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIPostProcessShader(Initializer)
 	{
 		MVPParameter.Bind(Initializer.ParameterMap, TEXT("_MVP"));
 		MParameter.Bind(Initializer.ParameterMap, TEXT("_M"));
@@ -227,21 +226,21 @@ private:
 	LAYOUT_FIELD(FShaderParameter, MVPParameter);
 	LAYOUT_FIELD(FShaderParameter, MParameter);
 };
-class FLGUIRenderMeshWorldVS : public FLGUIRenderMeshVS
+class FLexUIRenderMeshWorldVS : public FLexUIRenderMeshVS
 {
 public:
-	DECLARE_SHADER_TYPE(FLGUIRenderMeshWorldVS, Global);
+	DECLARE_SHADER_TYPE(FLexUIRenderMeshWorldVS, Global);
 
-	FLGUIRenderMeshWorldVS() {}
-	FLGUIRenderMeshWorldVS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIRenderMeshVS(Initializer)
+	FLexUIRenderMeshWorldVS() {}
+	FLexUIRenderMeshWorldVS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIRenderMeshVS(Initializer)
 	{
 
 	}
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
-		OutEnvironment.SetDefine(TEXT("LGUI_BLEND_DEPTH"), true);
-		FLGUIRenderMeshVS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		OutEnvironment.SetDefine(TEXT("LEXUI_BLEND_DEPTH"), true);
+		FLexUIRenderMeshVS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 	}
 private:
 };
@@ -250,21 +249,21 @@ private:
 
 
 //render mesh pixel shader
-class FLGUIRenderMeshPS :public FLGUIPostProcessShader
+class FLexUIRenderMeshPS :public FLexUIPostProcessShader
 {
-	DECLARE_SHADER_TYPE(FLGUIRenderMeshPS, Global);
+	DECLARE_SHADER_TYPE(FLexUIRenderMeshPS, Global);
 public:
-	FLGUIRenderMeshPS() {}
-	FLGUIRenderMeshPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIPostProcessShader(Initializer)
+	FLexUIRenderMeshPS() {}
+	FLexUIRenderMeshPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIPostProcessShader(Initializer)
 	{
 		MainTextureParameter.Bind(Initializer.ParameterMap, TEXT("_MainTex"));
 		MainTextureSamplerParameter.Bind(Initializer.ParameterMap, TEXT("_MainTexSampler"));
 	}
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
-		OutEnvironment.SetDefine(TEXT("LGUI_MASK"), 0);
-		FLGUIPostProcessShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		OutEnvironment.SetDefine(TEXT("LEXUI_MASK"), 0);
+		FLexUIPostProcessShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 	}
 	void SetParameters(FRHICommandListImmediate& RHICmdList, FTextureRHIRef MainTexture, FRHISamplerState* MainTextureSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI())
 	{
@@ -276,13 +275,13 @@ private:
 };
 
 //render mesh pixel shader, use a mask texture
-class FLGUIRenderMeshWithMaskPS :public FLGUIPostProcessShader
+class FLexUIRenderMeshWithMaskPS :public FLexUIPostProcessShader
 {
-	DECLARE_SHADER_TYPE(FLGUIRenderMeshWithMaskPS, Global);
+	DECLARE_SHADER_TYPE(FLexUIRenderMeshWithMaskPS, Global);
 public:
-	FLGUIRenderMeshWithMaskPS() {}
-	FLGUIRenderMeshWithMaskPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIPostProcessShader(Initializer)
+	FLexUIRenderMeshWithMaskPS() {}
+	FLexUIRenderMeshWithMaskPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIPostProcessShader(Initializer)
 	{
 		MainTextureParameter.Bind(Initializer.ParameterMap, TEXT("_MainTex"));
 		MainTextureSamplerParameter.Bind(Initializer.ParameterMap, TEXT("_MainTexSampler"));
@@ -291,8 +290,8 @@ public:
 	}
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
-		OutEnvironment.SetDefine(TEXT("LGUI_MASK"), 1);
-		FLGUIPostProcessShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		OutEnvironment.SetDefine(TEXT("LEXUI_MASK"), 1);
+		FLexUIPostProcessShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 	}
 	void SetParameters(FRHICommandListImmediate& RHICmdList
 		, FTextureRHIRef MainTexture
@@ -315,13 +314,13 @@ private:
 
 #pragma region Clip
 //render mesh pixel shader
-class FLGUIRenderMeshPS_TextureClip :public FLGUIRenderMeshPS
+class FLexUIRenderMeshPS_Clip :public FLexUIRenderMeshPS
 {
-	DECLARE_SHADER_TYPE(FLGUIRenderMeshPS_TextureClip, Global);
+	DECLARE_SHADER_TYPE(FLexUIRenderMeshPS_Clip, Global);
 public:
-	FLGUIRenderMeshPS_TextureClip() {}
-	FLGUIRenderMeshPS_TextureClip(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIRenderMeshPS(Initializer)
+	FLexUIRenderMeshPS_Clip() {}
+	FLexUIRenderMeshPS_Clip(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIRenderMeshPS(Initializer)
 	{
 		ClipDataTexParameter.Bind(Initializer.ParameterMap, TEXT("_ClipDataTex"));
 		ClipDataTexSamplerParameter.Bind(Initializer.ParameterMap, TEXT("_ClipDataTexSampler"));
@@ -330,7 +329,7 @@ public:
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
 		OutEnvironment.SetDefine(TEXT("LEXUI_CLIP"), true);
-		FLGUIRenderMeshPS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		FLexUIRenderMeshPS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 	}
 	void SetClipParameters(FRHICommandListImmediate& RHICmdList
 		, const FMatrix44f& InvM
@@ -347,14 +346,14 @@ private:
 	LAYOUT_FIELD(FShaderResourceParameter, ClipDataTexSamplerParameter);
 	LAYOUT_FIELD(FShaderParameter, InvMParameter);
 };
-class FLGUIRenderMeshWorldPS_TextureClip : public FLGUIRenderMeshPS_TextureClip
+class FLexUIRenderMeshWorldPS_Clip : public FLexUIRenderMeshPS_Clip
 {
 public:
-	DECLARE_SHADER_TYPE(FLGUIRenderMeshWorldPS_TextureClip, Global);
+	DECLARE_SHADER_TYPE(FLexUIRenderMeshWorldPS_Clip, Global);
 
-	FLGUIRenderMeshWorldPS_TextureClip() {}
-	FLGUIRenderMeshWorldPS_TextureClip(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIRenderMeshPS_TextureClip(Initializer)
+	FLexUIRenderMeshWorldPS_Clip() {}
+	FLexUIRenderMeshWorldPS_Clip(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIRenderMeshPS_Clip(Initializer)
 	{
 		SceneDepthTextureParameter.Bind(Initializer.ParameterMap, TEXT("_SceneDepthTex"));
 		SceneDepthTextureSamplerParameter.Bind(Initializer.ParameterMap, TEXT("_SceneDepthTexSampler"));
@@ -363,8 +362,8 @@ public:
 	}
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
-		OutEnvironment.SetDefine(TEXT("LGUI_BLEND_DEPTH"), true);
-		FLGUIRenderMeshPS_TextureClip::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		OutEnvironment.SetDefine(TEXT("LEXUI_BLEND_DEPTH"), true);
+		FLexUIRenderMeshPS_Clip::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 	}
 	void SetDepthBlendParameter(FRHICommandList& RHICmdList, float DepthBlend, const FVector4f& DepthTextureScaleOffset, FRHITexture* DepthTexture, FRHISamplerState* DepthTextureSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI())
 	{
@@ -380,22 +379,22 @@ private:
 	LAYOUT_FIELD(FShaderParameter, SceneDepthTextureScaleOffsetParameter);
 	LAYOUT_FIELD(FShaderParameter, SceneDepthBlendParameter);
 };
-class FLGUIRenderMeshWorldDepthFadePS_TextureClip : public FLGUIRenderMeshWorldPS_TextureClip
+class FLexUIRenderMeshWorldDepthFadePS_Clip : public FLexUIRenderMeshWorldPS_Clip
 {
 public:
-	DECLARE_SHADER_TYPE(FLGUIRenderMeshWorldDepthFadePS_TextureClip, Global);
+	DECLARE_SHADER_TYPE(FLexUIRenderMeshWorldDepthFadePS_Clip, Global);
 
-	FLGUIRenderMeshWorldDepthFadePS_TextureClip() {}
-	FLGUIRenderMeshWorldDepthFadePS_TextureClip(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIRenderMeshWorldPS_TextureClip(Initializer)
+	FLexUIRenderMeshWorldDepthFadePS_Clip() {}
+	FLexUIRenderMeshWorldDepthFadePS_Clip(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIRenderMeshWorldPS_Clip(Initializer)
 	{
 		SceneDepthFadeParameter.Bind(Initializer.ParameterMap, TEXT("_SceneDepthFade"));
 		ViewSizeInvParameter.Bind(Initializer.ParameterMap, TEXT("_ViewSizeInv"));
 	}
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
-		OutEnvironment.SetDefine(TEXT("LGUI_DEPTH_FADE"), true);
-		FLGUIRenderMeshWorldPS_TextureClip::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		OutEnvironment.SetDefine(TEXT("LEXUI_DEPTH_FADE"), true);
+		FLexUIRenderMeshWorldPS_Clip::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 	}
 	void SetDepthFadeParameter(FRHICommandList& RHICmdList, int DepthFade, const FVector2f& ViewSizeInv)
 	{
@@ -409,13 +408,13 @@ private:
 	LAYOUT_FIELD(FShaderParameter, ViewSizeInvParameter);
 };
 //render mesh pixel shader, use a mask texture
-class FLGUIRenderMeshWithMaskPS_TextureClip :public FLGUIRenderMeshWithMaskPS
+class FLexUIRenderMeshWithMaskPS_Clip :public FLexUIRenderMeshWithMaskPS
 {
-	DECLARE_SHADER_TYPE(FLGUIRenderMeshWithMaskPS_TextureClip, Global);
+	DECLARE_SHADER_TYPE(FLexUIRenderMeshWithMaskPS_Clip, Global);
 public:
-	FLGUIRenderMeshWithMaskPS_TextureClip() {}
-	FLGUIRenderMeshWithMaskPS_TextureClip(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIRenderMeshWithMaskPS(Initializer)
+	FLexUIRenderMeshWithMaskPS_Clip() {}
+	FLexUIRenderMeshWithMaskPS_Clip(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIRenderMeshWithMaskPS(Initializer)
 	{
 		ClipDataTexParameter.Bind(Initializer.ParameterMap, TEXT("_ClipDataTex"));
 		ClipDataTexSamplerParameter.Bind(Initializer.ParameterMap, TEXT("_ClipDataTexSampler"));
@@ -424,7 +423,7 @@ public:
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters & Parameters, FShaderCompilerEnvironment & OutEnvironment)
 	{
 		OutEnvironment.SetDefine(TEXT("LEXUI_CLIP"), true);
-		FLGUIRenderMeshWithMaskPS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		FLexUIRenderMeshWithMaskPS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 	}
 	void SetClipParameters(FRHICommandListImmediate & RHICmdList
 		, const FMatrix44f& InvM
@@ -441,14 +440,14 @@ private:
 	LAYOUT_FIELD(FShaderResourceParameter, ClipDataTexSamplerParameter);
 	LAYOUT_FIELD(FShaderParameter, InvMParameter);
 };
-class FLGUIRenderMeshWithMaskWorldPS_TextureClip : public FLGUIRenderMeshWithMaskPS_TextureClip
+class FLexUIRenderMeshWithMaskWorldPS_Clip : public FLexUIRenderMeshWithMaskPS_Clip
 {
 public:
-	DECLARE_SHADER_TYPE(FLGUIRenderMeshWithMaskWorldPS_TextureClip, Global);
+	DECLARE_SHADER_TYPE(FLexUIRenderMeshWithMaskWorldPS_Clip, Global);
 
-	FLGUIRenderMeshWithMaskWorldPS_TextureClip() {}
-	FLGUIRenderMeshWithMaskWorldPS_TextureClip(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIRenderMeshWithMaskPS_TextureClip(Initializer)
+	FLexUIRenderMeshWithMaskWorldPS_Clip() {}
+	FLexUIRenderMeshWithMaskWorldPS_Clip(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIRenderMeshWithMaskPS_Clip(Initializer)
 	{
 		SceneDepthTextureParameter.Bind(Initializer.ParameterMap, TEXT("_SceneDepthTex"));
 		SceneDepthTextureSamplerParameter.Bind(Initializer.ParameterMap, TEXT("_SceneDepthTexSampler"));
@@ -457,8 +456,8 @@ public:
 	}
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
-		OutEnvironment.SetDefine(TEXT("LGUI_BLEND_DEPTH"), true);
-		FLGUIRenderMeshWithMaskPS_TextureClip::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		OutEnvironment.SetDefine(TEXT("LEXUI_BLEND_DEPTH"), true);
+		FLexUIRenderMeshWithMaskPS_Clip::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 	}
 	void SetDepthBlendParameter(FRHICommandList& RHICmdList, float DepthBlend, const FVector4f& DepthTextureScaleOffset, FRHITexture* DepthTexture, FRHISamplerState* DepthTextureSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI())
 	{
@@ -474,22 +473,22 @@ private:
 	LAYOUT_FIELD(FShaderParameter, SceneDepthTextureScaleOffsetParameter);
 	LAYOUT_FIELD(FShaderParameter, SceneDepthBlendParameter);
 };
-class FLGUIRenderMeshWithMaskWorldDepthFadePS_TextureClip : public FLGUIRenderMeshWithMaskWorldPS_TextureClip
+class FLexUIRenderMeshWithMaskWorldDepthFadePS_Clip : public FLexUIRenderMeshWithMaskWorldPS_Clip
 {
 public:
-	DECLARE_SHADER_TYPE(FLGUIRenderMeshWithMaskWorldDepthFadePS_TextureClip, Global);
+	DECLARE_SHADER_TYPE(FLexUIRenderMeshWithMaskWorldDepthFadePS_Clip, Global);
 
-	FLGUIRenderMeshWithMaskWorldDepthFadePS_TextureClip() {}
-	FLGUIRenderMeshWithMaskWorldDepthFadePS_TextureClip(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIRenderMeshWithMaskWorldPS_TextureClip(Initializer)
+	FLexUIRenderMeshWithMaskWorldDepthFadePS_Clip() {}
+	FLexUIRenderMeshWithMaskWorldDepthFadePS_Clip(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIRenderMeshWithMaskWorldPS_Clip(Initializer)
 	{
 		SceneDepthFadeParameter.Bind(Initializer.ParameterMap, TEXT("_SceneDepthFade"));
 		ViewSizeInvParameter.Bind(Initializer.ParameterMap, TEXT("_ViewSizeInv"));
 	}
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
-		OutEnvironment.SetDefine(TEXT("LGUI_DEPTH_FADE"), true);
-		FLGUIRenderMeshWithMaskWorldPS_TextureClip::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		OutEnvironment.SetDefine(TEXT("LEXUI_DEPTH_FADE"), true);
+		FLexUIRenderMeshWithMaskWorldPS_Clip::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 	}
 	void SetDepthFadeParameter(FRHICommandList& RHICmdList, int DepthFade, const FVector2f& ViewSizeInv)
 	{

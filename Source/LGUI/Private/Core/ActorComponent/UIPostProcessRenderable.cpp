@@ -193,10 +193,10 @@ void UUIPostProcessRenderable::UpdateRegionVertex()
 		//full screen vertex position
 		renderScreenToMeshRegionVertexArray =
 		{
-			FLGUIPostProcessCopyMeshRegionVertex(FVector3f(-1, -1, 0), FVector3f(0.0f, 0.0f, 0.0f)),
-			FLGUIPostProcessCopyMeshRegionVertex(FVector3f(1, -1, 0), FVector3f(0.0f, 0.0f, 0.0f)),
-			FLGUIPostProcessCopyMeshRegionVertex(FVector3f(-1, 1, 0), FVector3f(0.0f, 0.0f, 0.0f)),
-			FLGUIPostProcessCopyMeshRegionVertex(FVector3f(1, 1, 0), FVector3f(0.0f, 0.0f, 0.0f))
+			FLexUIPostProcessCopyMeshRegionVertex(FVector3f(-1, -1, 0), FVector3f(0.0f, 0.0f, 0.0f)),
+			FLexUIPostProcessCopyMeshRegionVertex(FVector3f(1, -1, 0), FVector3f(0.0f, 0.0f, 0.0f)),
+			FLexUIPostProcessCopyMeshRegionVertex(FVector3f(-1, 1, 0), FVector3f(0.0f, 0.0f, 0.0f)),
+			FLexUIPostProcessCopyMeshRegionVertex(FVector3f(1, 1, 0), FVector3f(0.0f, 0.0f, 0.0f))
 		};
 	}
 
@@ -231,8 +231,8 @@ void UUIPostProcessRenderable::SendRegionVertexDataToRenderProxy()
 		auto TempRenderProxy = RenderProxy.Get();
 		struct FUIPostProcess_SendRegionVertexDataToRenderProxy
 		{
-			TArray<FLGUIPostProcessCopyMeshRegionVertex> renderScreenToMeshRegionVertexArray;
-			TArray<FLGUIPostProcessVertex> renderMeshRegionToScreenVertexArray;
+			TArray<FLexUIPostProcessCopyMeshRegionVertex> renderScreenToMeshRegionVertexArray;
+			TArray<FLexUIPostProcessVertex> renderMeshRegionToScreenVertexArray;
 			FVector2f RectSize;
 			FMatrix44f objectToWorldMatrix;
 			FTexture2DDynamicResource* ClipDataTexture = nullptr;

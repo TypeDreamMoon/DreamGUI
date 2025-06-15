@@ -7,18 +7,18 @@
 #include "RendererInterface.h"
 #include "RenderResource.h"
 #include "StaticMeshVertexData.h"
-#include "Core/LGUIRender/LGUIVertex.h"
-#include "Core/LGUIRender/ILGUIRendererPrimitive.h"
+#include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
+#include "LGUI/Public/Core/LexUIRender/ILexUIRendererPrimitive.h"
 
 class ULGUICanvas;
-struct FLGUIPostProcessVertex;
-struct FLGUIPostProcessCopyMeshRegionVertex;
+struct FLexUIPostProcessVertex;
+struct FLexUIPostProcessCopyMeshRegionVertex;
 class FGlobalShaderMap;
 
-class FLGUIMeshElementCollector : FMeshElementCollector//why use a custom collector? because default FMeshElementCollector have no public constructor
+class FLexUIMeshElementCollector : FMeshElementCollector//why use a custom collector? because default FMeshElementCollector have no public constructor
 {
 public:
-	FLGUIMeshElementCollector(ERHIFeatureLevel::Type InFeatureLevel, FSceneRenderingBulkObjectAllocator& Allocator, FRHICommandList& InRHICmdList)
+	FLexUIMeshElementCollector(ERHIFeatureLevel::Type InFeatureLevel, FSceneRenderingBulkObjectAllocator& Allocator, FRHICommandList& InRHICmdList)
 		:FMeshElementCollector(InFeatureLevel, Allocator)
 	{
 		RHICmdList = &InRHICmdList;
@@ -27,28 +27,28 @@ public:
 
 #if WITH_EDITOR
 /** Parameters for render editor helper line */
-struct FLGUIHelperLineRenderParameter
+struct FLexUIHelperLineRenderParameter
 {
 public:
-	FLGUIHelperLineRenderParameter(const TArray<FLGUIHelperLineVertex>& InLinePoints)
+	FLexUIHelperLineRenderParameter(const TArray<FLexUIHelperLineVertex>& InLinePoints)
 	{
 		LinePoints = InLinePoints;
 	}
-	TArray<FLGUIHelperLineVertex> LinePoints;
+	TArray<FLexUIHelperLineVertex> LinePoints;
 };
 #endif
 
-enum class ELGUIRendererType :uint8
+enum class ELexUIRendererType :uint8
 {
 	ScreenSpace_and_WorldSpace,
 	RenderTarget,
 };
 
-class LGUI_API FLGUIRenderer : public FSceneViewExtensionBase
+class LGUI_API FLexUIRenderer : public FSceneViewExtensionBase
 {
 public:
-	FLGUIRenderer(const FAutoRegister&, UWorld* InWorld, ELGUIRendererType InRendererType);
-	virtual ~FLGUIRenderer();
+	FLexUIRenderer(const FAutoRegister&, UWorld* InWorld, ELexUIRendererType InRendererType);
+	virtual ~FLexUIRenderer();
 
 	//begin ISceneViewExtension interfaces
 	virtual void SetupViewFamily(FSceneViewFamily& InViewFamily)override {};
@@ -73,11 +73,11 @@ public:
 	//end ISceneViewExtension interfaces
 
 	//
-	void AddWorldSpacePrimitive_RenderThread(ULGUICanvas* InCanvas, ILGUIRendererPrimitive* InPrimitive);
-	void RemoveWorldSpacePrimitive_RenderThread(ULGUICanvas* InCanvas, ILGUIRendererPrimitive* InPrimitive);
+	void AddWorldSpacePrimitive_RenderThread(ULGUICanvas* InCanvas, ILexUIRendererPrimitive* InPrimitive);
+	void RemoveWorldSpacePrimitive_RenderThread(ULGUICanvas* InCanvas, ILexUIRendererPrimitive* InPrimitive);
 
-	void AddScreenSpacePrimitive_RenderThread(ILGUIRendererPrimitive* InPrimitive);
-	void RemoveScreenSpacePrimitive_RenderThread(ILGUIRendererPrimitive* InPrimitive);
+	void AddScreenSpacePrimitive_RenderThread(ILexUIRendererPrimitive* InPrimitive);
+	void RemoveScreenSpacePrimitive_RenderThread(ILexUIRendererPrimitive* InPrimitive);
 
 	void MarkNeedToSortScreenSpacePrimitiveRenderPriority();
 	void MarkNeedToSortWorldSpacePrimitiveRenderPriority();
@@ -101,7 +101,7 @@ public:
 		FRDGTextureRef Dst,
 		FTextureRHIRef Src,
 		FGlobalShaderMap* GlobalShaderMap,
-		const TArray<FLGUIPostProcessCopyMeshRegionVertex>& RegionVertexData,
+		const TArray<FLexUIPostProcessCopyMeshRegionVertex>& RegionVertexData,
 		const FMatrix44f& MVP,
 		const FIntRect& ViewRect,
 		const FVector4f& SrcTextureScaleOffset,
@@ -133,7 +133,7 @@ private:
 		//depth fade effect
 		int DepthFade = 0;
 
-		ILGUIRendererPrimitive* Primitive = nullptr;
+		ILexUIRendererPrimitive* Primitive = nullptr;
 	};
 	struct FScreenSpaceRenderParameter
 	{
@@ -145,7 +145,7 @@ private:
 		bool bNeedSortRenderPriority = true;
 
 		TWeakObjectPtr<ULGUICanvas> RootCanvas = nullptr;
-		TArray<ILGUIRendererPrimitive*> PrimitiveArray;
+		TArray<ILexUIRendererPrimitive*> PrimitiveArray;
 	};
 	TArray<FWorldSpaceRenderParameter> WorldSpaceRenderCanvasParameterArray;
 	TMap<ULGUICanvas*, bool> WorldSpaceCanvasVisibilityMap;
@@ -153,16 +153,16 @@ private:
 	bool bFrustumCulling = true;
 	FScreenSpaceRenderParameter ScreenSpaceRenderParameter;
 	TWeakObjectPtr<UWorld> World;
-	TArray<FLGUIMeshBatchContainer> MeshBatchArray;
+	TArray<FLexUIMeshBatchContainer> MeshBatchArray;
 	//if 'bIsRenderToRenderTarget' is true then we need a render target
 	class FTextureRenderTargetResource* RenderTargetResource = nullptr;
 	void SortScreenSpacePrimitiveRenderPriority_RenderThread();
 	void SetRenderCanvasDepthFade_RenderThread(ULGUICanvas* InRenderCanvas, float InBlendDepth, int InDepthFade);
 	//render thread sample count for MSAA
 	uint8 NumSamples_MSAA = 1;
-	ELGUIRendererType RendererType = ELGUIRendererType::ScreenSpace_and_WorldSpace;
+	ELexUIRendererType RendererType = ELexUIRendererType::ScreenSpace_and_WorldSpace;
 
-	void RenderLGUI_RenderThread(
+	void RenderLexUI_RenderThread(
 		FRDGBuilder& GraphBuilder
 		, FSceneView& InView);
 #if WITH_EDITORONLY_DATA
@@ -175,31 +175,31 @@ private:
 #endif
 #if WITH_EDITOR
 private:
-	TArray<FLGUIHelperLineRenderParameter> HelperLineRenderParameterArray;
+	TArray<FLexUIHelperLineRenderParameter> HelperLineRenderParameterArray;
 public:
-	void AddLineRender(const FLGUIHelperLineRenderParameter& InLineParameter);
+	void AddLineRender(const FLexUIHelperLineRenderParameter& InLineParameter);
 #endif
 };
 
-class LGUI_API FLGUIFullScreenQuadVertexBuffer :public FVertexBuffer
+class LGUI_API FLexUIFullScreenQuadVertexBuffer :public FVertexBuffer
 {
 public:
 	void InitRHI(FRHICommandListBase& RHICmdList)override;
 };
-class LGUI_API FLGUIFullScreenQuadIndexBuffer :public FIndexBuffer
+class LGUI_API FLexUIFullScreenQuadIndexBuffer :public FIndexBuffer
 {
 public:
 	void InitRHI(FRHICommandListBase& RHICmdList)override;
 };
-class LGUI_API FLGUIFullScreenSlicedQuadIndexBuffer :public FIndexBuffer
+class LGUI_API FLexUIFullScreenSlicedQuadIndexBuffer :public FIndexBuffer
 {
 public:
 	void InitRHI(FRHICommandListBase& RHICmdList)override;
 };
-static TGlobalResource<FLGUIFullScreenQuadVertexBuffer> GLGUIFullScreenQuadVertexBuffer;
-static TGlobalResource<FLGUIFullScreenQuadIndexBuffer> GLGUIFullScreenQuadIndexBuffer;
-static TGlobalResource<FLGUIFullScreenSlicedQuadIndexBuffer> GLGUIFullScreenSlicedQuadIndexBuffer;
-BEGIN_SHADER_PARAMETER_STRUCT(FLGUIWorldRenderPSParameter, )
+static TGlobalResource<FLexUIFullScreenQuadVertexBuffer> GLexUIFullScreenQuadVertexBuffer;
+static TGlobalResource<FLexUIFullScreenQuadIndexBuffer> GLexUIFullScreenQuadIndexBuffer;
+static TGlobalResource<FLexUIFullScreenSlicedQuadIndexBuffer> GLexUIFullScreenSlicedQuadIndexBuffer;
+BEGIN_SHADER_PARAMETER_STRUCT(FLexUIWorldRenderPSParameter, )
 	SHADER_PARAMETER_RDG_TEXTURE(Texture2D, SceneDepthTex)
 	RENDER_TARGET_BINDING_SLOTS()
 END_SHADER_PARAMETER_STRUCT()

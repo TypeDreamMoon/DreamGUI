@@ -9,41 +9,41 @@
 #include "GlobalShader.h"
 #include "SceneTextures.h"
 
-class FLGUIRenderer;
+class FLexUIRenderer;
 class FSceneViewFamily;
 class FUIPostProcessRenderProxy;
 enum class ELGUICanvasDepthMode :uint8;
 
-struct FLGUIMeshBatchContainer
+struct FLexUIMeshBatchContainer
 {
 	FMeshBatch Mesh;
 	FBufferRHIRef VertexBufferRHI;
 	int32 NumVerts = 0;
 
-	FLGUIMeshBatchContainer() {}
+	FLexUIMeshBatchContainer() {}
 };
 
-enum class ELGUIRendererPrimitiveType :uint8
+enum class ELexUIRendererPrimitiveType :uint8
 {
 	Mesh,
 	PostProcess,
 };
 
-struct FLGUIPrimitiveSectionDataContainer
+struct FLexUIPrimitiveSectionDataContainer
 {
 	void* SectionPointer = nullptr;
 };
-struct FLGUIPrimitiveDataContainer
+struct FLexUIPrimitiveDataContainer
 {
-	class ILGUIRendererPrimitive* Primitive = nullptr;
-	ELGUIRendererPrimitiveType Type;
-	TArray<FLGUIPrimitiveSectionDataContainer> Sections;
+	class ILexUIRendererPrimitive* Primitive = nullptr;
+	ELexUIRendererPrimitiveType Type;
+	TArray<FLexUIPrimitiveSectionDataContainer> Sections;
 };
 
-class ILGUIRendererPrimitive
+class ILexUIRendererPrimitive
 {
 public:
-	virtual ~ILGUIRendererPrimitive() {}
+	virtual ~ILexUIRendererPrimitive() {}
 
 	virtual bool CanRender() const = 0;
 	virtual int GetRenderPriority() const = 0;
@@ -52,7 +52,7 @@ public:
 	virtual FVector3f GetWorldPositionForSortTranslucent()const = 0;
 	virtual FBoxSphereBounds GetWorldBounds()const = 0;
 
-	virtual void CollectRenderData(TArray<FLGUIPrimitiveDataContainer>& OutRenderData, float CurrentWorldTime) = 0;
-	virtual void GetMeshElements(const FSceneViewFamily& ViewFamilyclass, FMeshElementCollector* Collector, const FLGUIPrimitiveDataContainer& PrimitiveData, TArray<FLGUIMeshBatchContainer>& ResultArray) = 0;
+	virtual void CollectRenderData(TArray<FLexUIPrimitiveDataContainer>& OutRenderData, float CurrentWorldTime) = 0;
+	virtual void GetMeshElements(const FSceneViewFamily& ViewFamily, FMeshElementCollector* Collector, const FLexUIPrimitiveDataContainer& PrimitiveData, TArray<FLexUIMeshBatchContainer>& ResultArray) = 0;
 	virtual FUIPostProcessRenderProxy* GetPostProcessElement(const void* SectionPtr)const = 0;
 };

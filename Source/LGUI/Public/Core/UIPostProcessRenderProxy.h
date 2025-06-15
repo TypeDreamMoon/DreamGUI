@@ -4,8 +4,8 @@
 
 #include "UIGeometry.h"
 #include "Core/LGUISpriteData_BaseObject.h"
-#include "Core/LGUIRender/ILGUIRendererPrimitive.h"
-#include "Core/LGUIRender/LGUIVertex.h"
+#include "LexUIRender/ILexUIRendererPrimitive.h"
+#include "LexUIRender/LexUIVertex.h"
 #include "RHIStaticStates.h"
 
 class ULGUICanvas;
@@ -23,7 +23,7 @@ public:
 		
 	}
 private:
-	TWeakPtr<FLGUIRenderer, ESPMode::ThreadSafe> LGUIRenderer;
+	TWeakPtr<FLexUIRenderer, ESPMode::ThreadSafe> LGUIRenderer;
 	bool bIsWorld = false;//is world space or screen space
 	ULGUICanvas* RenderCanvasPtr = nullptr;
 public:
@@ -36,7 +36,7 @@ public:
 	virtual void OnRenderPostProcess_RenderThread(
 		FRDGBuilder& GraphBuilder,
 		const FMinimalSceneTextures& SceneTextures,
-		FLGUIRenderer* Renderer,
+		FLexUIRenderer* Renderer,
 		FTextureRHIRef ScreenTargetTexture,
 		FGlobalShaderMap* GlobalShaderMap,
 		const FMatrix44f& ViewProjectionMatrix,
@@ -51,8 +51,8 @@ public:
 	FTexture2DDynamicResource* ClipDataTexture = nullptr;
 	
 	FMatrix44f objectToWorldMatrix = FMatrix44f::Identity;
-	TArray<FLGUIPostProcessCopyMeshRegionVertex> renderScreenToMeshRegionVertexArray;
-	TArray<FLGUIPostProcessVertex> renderMeshRegionToScreenVertexArray;
+	TArray<FLexUIPostProcessCopyMeshRegionVertex> renderScreenToMeshRegionVertexArray;
+	TArray<FLexUIPostProcessVertex> renderMeshRegionToScreenVertexArray;
 	FVector2f RectSize;
 	FTexture2DResource* maskTexture = nullptr;
 

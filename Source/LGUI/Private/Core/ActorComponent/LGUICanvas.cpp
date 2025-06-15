@@ -10,7 +10,7 @@
 #include "Core/LGUISettings.h"
 #include "Core/LGUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
-#include "Core/LGUIRender/LGUIRenderer.h"
+#include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
 #include "Core/LGUIMesh/LGUIMeshComponent.h"
 #include "Core/UIDrawcall.h"
 #include "Core/ActorComponent/UIBaseRenderable.h"
@@ -90,11 +90,11 @@ void ULGUICanvas::TickComponent( float DeltaTime, ELevelTick TickType, FActorCom
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 }
 
-TSharedPtr<class FLGUIRenderer, ESPMode::ThreadSafe> ULGUICanvas::GetRenderTargetViewExtension()
+TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> ULGUICanvas::GetRenderTargetViewExtension()
 {
 	if (!RenderTargetViewExtension.IsValid())
 	{
-		RenderTargetViewExtension = FSceneViewExtensions::NewExtension<FLGUIRenderer>(GetWorld(), ELGUIRendererType::RenderTarget);
+		RenderTargetViewExtension = FSceneViewExtensions::NewExtension<FLexUIRenderer>(GetWorld(), ELexUIRendererType::RenderTarget);
 	}
 	return RenderTargetViewExtension;
 }

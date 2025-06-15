@@ -154,7 +154,7 @@ private:
 	bool bShouldUpdateOnCultureChanged = false;
 	FDelegateHandle OnCultureChangedDelegateHandle;
 
-	TSharedPtr<class FLGUIRenderer, ESPMode::ThreadSafe> MainViewportViewExtension;
+	TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> MainViewportViewExtension;
 
 	void UpdateLayout();
 	bool bNeedUpdateLayout = false;
@@ -191,7 +191,7 @@ public:
 
 	const TArray<TWeakObjectPtr<UObject>>& GetAllLayoutArray()const { return AllLayoutArray; }
 
-	static TSharedPtr<class FLGUIRenderer, ESPMode::ThreadSafe> GetViewExtension(UWorld* InWorld, bool InCreateIfNotExist);
+	static TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> GetViewExtension(UWorld* InWorld, bool InCreateIfNotExist);
 
 	const TArray<TWeakObjectPtr<ULGUIBaseRaycaster>>& GetAllRaycasterArray(){ return AllRaycasterArray; }
 	static void AddRaycaster(ULGUIBaseRaycaster* InRaycaster);

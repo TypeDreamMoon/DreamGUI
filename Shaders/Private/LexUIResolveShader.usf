@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 #include "/Engine/Private/Common.ush"
 
-float4 LGUIResolveVS(uint Id : SV_VertexID) : SV_POSITION
+float4 LexUIResolveVS(uint Id : SV_VertexID) : SV_POSITION
 {
     int x = Id & 1;
     int y = Id >> 1;
@@ -9,10 +9,10 @@ float4 LGUIResolveVS(uint Id : SV_VertexID) : SV_POSITION
     return float4(x * 4 - 1, y * 4 - 1, 0, 1);
 }
 
-#if LGUI_RESOLVE_2X
+#if LEXUI_RESOLVE_2X
 
 	Texture2DMS<float4,2> Tex;
-	float4 LGUIResolve2xPS(float4 Pos : SV_POSITION) : SV_Target0
+	float4 LexUIResolve2xPS(float4 Pos : SV_POSITION) : SV_Target0
 	{
 		uint2 P = uint2(Pos.xy);
 		float4 C0 = Tex.Load(P, 0);
@@ -22,10 +22,10 @@ float4 LGUIResolveVS(uint Id : SV_VertexID) : SV_POSITION
 	
 #endif
 
-#if LGUI_RESOLVE_4X
+#if LEXUI_RESOLVE_4X
 
 	Texture2DMS<float4,4> Tex;
-	float4 LGUIResolve4xPS(float4 Pos : SV_POSITION) : SV_Target0
+	float4 LexUIResolve4xPS(float4 Pos : SV_POSITION) : SV_Target0
 	{
 		uint2 P = uint2(Pos.xy);
 		float4 C0 = (Tex.Load(P, 0));
@@ -37,10 +37,10 @@ float4 LGUIResolveVS(uint Id : SV_VertexID) : SV_POSITION
 
 #endif
 
-#if LGUI_RESOLVE_8X
+#if LEXUI_RESOLVE_8X
 
 	Texture2DMS<float4,8> Tex;
-	float4 LGUIResolve8xPS(float4 Pos : SV_POSITION) : SV_Target0
+	float4 LexUIResolve8xPS(float4 Pos : SV_POSITION) : SV_Target0
 	{
 		uint2 P = uint2(Pos.xy);
 		float4 C0 = (Tex.Load(P, 0));

@@ -9,26 +9,26 @@
 #include "MeshMaterialShader.h"
 #include "RHIStaticStates.h"
 
-class FLGUIScreenRenderVS :public FMaterialShader
+class FLexUIScreenRenderVS :public FMaterialShader
 {
 public:
-	DECLARE_SHADER_TYPE(FLGUIScreenRenderVS, Material);
+	DECLARE_SHADER_TYPE(FLexUIScreenRenderVS, Material);
 
-	FLGUIScreenRenderVS() {}
-	FLGUIScreenRenderVS(const FMaterialShaderType::CompiledShaderInitializerType& Initializer);
+	FLexUIScreenRenderVS() {}
+	FLexUIScreenRenderVS(const FMaterialShaderType::CompiledShaderInitializerType& Initializer);
 
 	static void ModifyCompilationEnvironment(const FMaterialShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment);
 	static bool ShouldCompilePermutation(const FMaterialShaderPermutationParameters& Parameters);
 	
 	void SetMaterialShaderParameters(FRHICommandList& RHICmdList, const FSceneView& View, const FMaterialRenderProxy* MaterialRenderProxy, const FMaterial* Material, const FMeshBatch& Mesh);
 };
-class FLGUIScreenRenderPS : public FMaterialShader
+class FLexUIScreenRenderPS : public FMaterialShader
 {
 public:
-	DECLARE_SHADER_TYPE(FLGUIScreenRenderPS, Material);
+	DECLARE_SHADER_TYPE(FLexUIScreenRenderPS, Material);
 
-	FLGUIScreenRenderPS() {}
-	FLGUIScreenRenderPS(const FMaterialShaderType::CompiledShaderInitializerType& Initializer);
+	FLexUIScreenRenderPS() {}
+	FLexUIScreenRenderPS(const FMaterialShaderType::CompiledShaderInitializerType& Initializer);
 	static bool ShouldCompilePermutation(const FMaterialShaderPermutationParameters& Parameters);
 	static void ModifyCompilationEnvironment(const FMaterialShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment);
 
@@ -38,13 +38,13 @@ private:
 	LAYOUT_FIELD(FShaderParameter, LGUIGammaValuesParameter);
 };
 
-class FLGUIWorldRenderPS : public FLGUIScreenRenderPS
+class FLexUIWorldRenderPS : public FLexUIScreenRenderPS
 {
 public:
-	DECLARE_SHADER_TYPE(FLGUIWorldRenderPS, Material);
+	DECLARE_SHADER_TYPE(FLexUIWorldRenderPS, Material);
 
-	FLGUIWorldRenderPS() {}
-	FLGUIWorldRenderPS(const FMaterialShaderType::CompiledShaderInitializerType& Initializer);
+	FLexUIWorldRenderPS() {}
+	FLexUIWorldRenderPS(const FMaterialShaderType::CompiledShaderInitializerType& Initializer);
 	static void ModifyCompilationEnvironment(const FMaterialShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment);
 
 	void SetDepthBlendParameter(FRHICommandList& RHICmdList, float DepthBlend, const FVector4f& DepthTextureScaleOffset, FRHITexture* DepthTexture, FRHISamplerState* DepthTextureSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
@@ -55,13 +55,13 @@ private:
 	LAYOUT_FIELD(FShaderParameter, SceneDepthBlendParameter);
 };
 
-class FLGUIWorldRenderDepthFadePS : public FLGUIWorldRenderPS
+class FLexUIWorldRenderDepthFadePS : public FLexUIWorldRenderPS
 {
 public:
-	DECLARE_SHADER_TYPE(FLGUIWorldRenderDepthFadePS, Material);
+	DECLARE_SHADER_TYPE(FLexUIWorldRenderDepthFadePS, Material);
 
-	FLGUIWorldRenderDepthFadePS() {}
-	FLGUIWorldRenderDepthFadePS(const FMaterialShaderType::CompiledShaderInitializerType& Initializer);
+	FLexUIWorldRenderDepthFadePS() {}
+	FLexUIWorldRenderDepthFadePS(const FMaterialShaderType::CompiledShaderInitializerType& Initializer);
 	static void ModifyCompilationEnvironment(const FMaterialShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment);
 
 	void SetDepthFadeParameter(FRHICommandList& RHICmdList, int DepthFade);

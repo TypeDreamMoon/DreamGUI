@@ -5,7 +5,6 @@
 #include "Components/MeshComponent.h"
 #include "Core/LGUIMeshIndex.h"
 #include "Core/LGUIMeshVertex.h"
-#include "DynamicMeshBuilder.h"
 #include "LGUIMeshComponent.generated.h"
 
 struct FLGUIRenderSectionProxy;
@@ -75,8 +74,8 @@ struct FLGUIChildCanvasSection : public FLGUIRenderSection
 	virtual void UpdateSectionBox(const FTransform& LocalToWorld) override;
 };
 
-class FLGUIRenderer;
-class ILGUIRendererPrimitive;
+class FLexUIRenderer;
+class ILexUIRendererPrimitive;
 class ULGUICanvas;
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(FLGUIMeshSceneProxyCreateDeleteDelegate, class ULGUIMeshComponent*, class FLGUIRenderSceneProxy*);
@@ -98,7 +97,7 @@ public:
 	void SetMeshSectionMaterial(TSharedPtr<FLGUIRenderSection> InMeshSection, UMaterialInterface* InMaterial);
 
 	void SetRenderCanvas(ULGUICanvas* InCanvas);
-	void SetSupportLGUIRenderer(bool InSupportOrNot, TWeakPtr<FLGUIRenderer, ESPMode::ThreadSafe> InLGUIRenderer, bool InIsRenderToWorld);
+	void SetSupportLGUIRenderer(bool InSupportOrNot, TWeakPtr<FLexUIRenderer, ESPMode::ThreadSafe> InLGUIRenderer, bool InIsRenderToWorld);
 	void SetSupportUERenderer(bool InSupportOrNot);
 	void ClearRenderData();
 
@@ -128,7 +127,7 @@ private:
 	friend class FLGUIRenderSceneProxy;
 
 protected:
-	TWeakPtr<FLGUIRenderer, ESPMode::ThreadSafe> LGUIRenderer;
+	TWeakPtr<FLexUIRenderer, ESPMode::ThreadSafe> LGUIRenderer;
 	bool bIsLGUIRenderToWorld = false;//LGUI renderer render to world or screen
 	TWeakObjectPtr<ULGUICanvas> RenderCanvas = nullptr;
 	bool bIsSupportUERenderer = true;

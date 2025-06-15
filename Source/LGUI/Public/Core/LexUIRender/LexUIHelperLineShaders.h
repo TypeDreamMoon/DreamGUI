@@ -6,14 +6,13 @@
 #include "Shader.h"
 #include "ShaderParameterUtils.h"
 #include "MaterialShaderType.h"
-#include "MaterialShader.h"
 #include "Engine/Texture2D.h"
 
-class FLGUIHelperLineShader :public FGlobalShader
+class FLexUIHelperLineShader :public FGlobalShader
 {
 public:
-	FLGUIHelperLineShader() {}
-	FLGUIHelperLineShader(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+	FLexUIHelperLineShader() {}
+	FLexUIHelperLineShader(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
 		:FGlobalShader(Initializer)
 	{
 
@@ -33,13 +32,13 @@ public:
 };
 
 
-class FLGUIHelperLineShaderVS :public FLGUIHelperLineShader
+class FLexUIHelperLineShaderVS :public FLexUIHelperLineShader
 {
-	DECLARE_SHADER_TYPE(FLGUIHelperLineShaderVS, Global);
+	DECLARE_SHADER_TYPE(FLexUIHelperLineShaderVS, Global);
 public:
-	FLGUIHelperLineShaderVS() {}
-	FLGUIHelperLineShaderVS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIHelperLineShader(Initializer)
+	FLexUIHelperLineShaderVS() {}
+	FLexUIHelperLineShaderVS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIHelperLineShader(Initializer)
 	{
 		VPParameter.Bind(Initializer.ParameterMap, TEXT("_VP"));
 	}
@@ -52,13 +51,13 @@ public:
 private:
 	LAYOUT_FIELD(FShaderParameter, VPParameter);
 };
-class FLGUIHelperLineShaderPS :public FLGUIHelperLineShader
+class FLexUIHelperLineShaderPS :public FLexUIHelperLineShader
 {
-	DECLARE_SHADER_TYPE(FLGUIHelperLineShaderPS, Global);
+	DECLARE_SHADER_TYPE(FLexUIHelperLineShaderPS, Global);
 public:
-	FLGUIHelperLineShaderPS() {}
-	FLGUIHelperLineShaderPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLGUIHelperLineShader(Initializer)
+	FLexUIHelperLineShaderPS() {}
+	FLexUIHelperLineShaderPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIHelperLineShader(Initializer)
 	{
 
 	}

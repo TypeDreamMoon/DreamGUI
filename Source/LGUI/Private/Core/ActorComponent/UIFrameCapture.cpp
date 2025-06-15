@@ -3,7 +3,7 @@
 #include "Core/ActorComponent/UIFrameCapture.h"
 #include "LGUI.h"
 #include "Engine/TextureRenderTarget2D.h"
-#include "Core/LGUIRender/LGUIRenderer.h"
+#include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
 #include "Core/UIPostProcessRenderProxy.h"
 #include "GameFramework/PlayerController.h"
 #include "RenderTargetPool.h"
@@ -93,7 +93,7 @@ public:
 	virtual void OnRenderPostProcess_RenderThread(
 		FRDGBuilder& GraphBuilder,
 		const FMinimalSceneTextures& SceneTextures,
-		FLGUIRenderer* Renderer,
+		FLexUIRenderer* Renderer,
 		FTextureRHIRef ScreenTargetTexture,
 		FGlobalShaderMap* GlobalShaderMap,
 		const FMatrix44f& ViewProjectionMatrix,

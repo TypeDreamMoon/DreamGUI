@@ -5,10 +5,10 @@
 #include "Core/UIGeometry.h"
 #include "Core/LGUISpriteData.h"
 #include "Engine/TextureRenderTarget2D.h"
-#include "Core/LGUIRender/LGUIPostProcessShaders.h"
-#include "Core/LGUIRender/LGUIVertex.h"
+#include "LGUI/Public/Core/LexUIRender/LexUIPostProcessShaders.h"
+#include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
 #include "PipelineStateCache.h"
-#include "Core/LGUIRender/LGUIRenderer.h"
+#include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
 #include "Core/ActorComponent/LGUICanvas.h"
 #include "Core/LGUISettings.h"
 #include "RenderTargetPool.h"
@@ -105,7 +105,7 @@ public:
 	virtual void OnRenderPostProcess_RenderThread(
 		FRDGBuilder& GraphBuilder,
 		const FMinimalSceneTextures& SceneTextures,
-		FLGUIRenderer* Renderer,
+		FLexUIRenderer* Renderer,
 		FTextureRHIRef ScreenTargetTexture,
 		FGlobalShaderMap* GlobalShaderMap,
 		const FMatrix44f& ViewProjectionMatrix,

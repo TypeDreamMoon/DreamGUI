@@ -1,5 +1,5 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
-#include "LGUIPostProcessVertexShader.usf"
+#include "LexUIPostProcessVertexShader.usf"
 #include "/Engine/Private/GammaCorrectionCommon.ush"
 
 Texture2D _MainTex;
@@ -27,7 +27,7 @@ void SimpleCopyTargetPS(
 )
 {
     OutColor = _MainTex.Sample(_MainTexSampler, input.uv);
-#if LGUI_COLORCORRECT
+#if LEXUI_COLORCORRECT
     OutColor.rgb = LinearizeColor(OutColor.rgb);
 #endif
 }
@@ -47,7 +47,7 @@ void CopyMeshRegionPS(
     uv.xy = uv.xy * _MainTextureScaleOffset.xy + _MainTextureScaleOffset.zw;
     uv.y = 1.0f - uv.y;
     OutColor = _MainTex.Sample(_MainTexSampler, uv);
-#if LGUI_COLORCORRECT
+#if LEXUI_COLORCORRECT
     OutColor.rgb = LinearizeColor(OutColor.rgb);
 #endif
 }

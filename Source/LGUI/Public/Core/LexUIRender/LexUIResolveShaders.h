@@ -9,12 +9,12 @@
 #include "MaterialShader.h"
 #include "Engine/Texture2D.h"
 
-class FLGUIResolveShaderVS :public FGlobalShader
+class FLexUIResolveShaderVS :public FGlobalShader
 {
-	DECLARE_SHADER_TYPE(FLGUIResolveShaderVS, Global);
+	DECLARE_SHADER_TYPE(FLexUIResolveShaderVS, Global);
 public:
-	FLGUIResolveShaderVS() {}
-	FLGUIResolveShaderVS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+	FLexUIResolveShaderVS() {}
+	FLexUIResolveShaderVS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
 		: FGlobalShader(Initializer)
 	{
 	}
@@ -24,12 +24,12 @@ public:
 	}
 };
 
-class FLGUIResolveShader2xPS :public FGlobalShader
+class FLexUIResolveShader2xPS :public FGlobalShader
 {
-	DECLARE_SHADER_TYPE(FLGUIResolveShader2xPS, Global);
+	DECLARE_SHADER_TYPE(FLexUIResolveShader2xPS, Global);
 public:
-	FLGUIResolveShader2xPS() {}
-	FLGUIResolveShader2xPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+	FLexUIResolveShader2xPS() {}
+	FLexUIResolveShader2xPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
 		: FGlobalShader(Initializer)
 	{
 		Tex.Bind(Initializer.ParameterMap, TEXT("Tex"), SPF_Mandatory);
@@ -43,17 +43,17 @@ public:
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
 		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
-		OutEnvironment.SetDefine(TEXT("LGUI_RESOLVE_2X"), 1);
+		OutEnvironment.SetDefine(TEXT("LEXUI_RESOLVE_2X"), 1);
 	}
 protected:
 	LAYOUT_FIELD(FShaderResourceParameter, Tex);
 };
-class FLGUIResolveShader4xPS :public FGlobalShader
+class FLexUIResolveShader4xPS :public FGlobalShader
 {
-	DECLARE_SHADER_TYPE(FLGUIResolveShader4xPS, Global);
+	DECLARE_SHADER_TYPE(FLexUIResolveShader4xPS, Global);
 public:
-	FLGUIResolveShader4xPS() {}
-	FLGUIResolveShader4xPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+	FLexUIResolveShader4xPS() {}
+	FLexUIResolveShader4xPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
 		: FGlobalShader(Initializer)
 	{
 		Tex.Bind(Initializer.ParameterMap, TEXT("Tex"), SPF_Mandatory);
@@ -67,17 +67,17 @@ public:
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
 		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
-		OutEnvironment.SetDefine(TEXT("LGUI_RESOLVE_4X"), 1);
+		OutEnvironment.SetDefine(TEXT("LEXUI_RESOLVE_4X"), 1);
 	}
 protected:
 	LAYOUT_FIELD(FShaderResourceParameter, Tex);
 };
-class FLGUIResolveShader8xPS :public FGlobalShader
+class FLexUIResolveShader8xPS :public FGlobalShader
 {
-	DECLARE_SHADER_TYPE(FLGUIResolveShader8xPS, Global);
+	DECLARE_SHADER_TYPE(FLexUIResolveShader8xPS, Global);
 public:
-	FLGUIResolveShader8xPS() {}
-	FLGUIResolveShader8xPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+	FLexUIResolveShader8xPS() {}
+	FLexUIResolveShader8xPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
 		: FGlobalShader(Initializer)
 	{
 		Tex.Bind(Initializer.ParameterMap, TEXT("Tex"), SPF_Mandatory);
@@ -91,7 +91,7 @@ public:
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
 		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
-		OutEnvironment.SetDefine(TEXT("LGUI_RESOLVE_8X"), 1);
+		OutEnvironment.SetDefine(TEXT("LEXUI_RESOLVE_8X"), 1);
 	}
 protected:
 	LAYOUT_FIELD(FShaderResourceParameter, Tex);

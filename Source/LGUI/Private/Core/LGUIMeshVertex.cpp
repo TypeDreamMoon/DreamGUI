@@ -24,7 +24,7 @@ void FLGUIMeshVertexDeclaration::ReleaseRHI()
 	VertexDeclarationRHI.SafeRelease();
 }
 TGlobalResource<FLGUIMeshVertexDeclaration> GLGUIVertexDeclaration;
-FVertexDeclarationRHIRef& GetLGUIMeshVertexDeclaration()
+FVertexDeclarationRHIRef& GetLexUIMeshVertexDeclaration()
 {
 	return GLGUIVertexDeclaration.VertexDeclarationRHI;
 }

@@ -3,10 +3,10 @@
 #include "/Engine/Private/Common.ush"
 #include "/Engine/Private/GammaCorrectionCommon.ush"
 #include "/Engine/Generated/Material.ush"
-#include "LGUIShaderCommon.ush"
+#include "LexUIShaderCommon.ush"
 
 
-struct FLGUIBasePassInterpolants
+struct FLexUIBasePassInterpolants
 {
 	float4 PixelPosition	: TEXCOORD8; // xyz = world position, w = clip z
 
@@ -15,25 +15,25 @@ struct FLGUIBasePassInterpolants
 #endif
 };
 
-struct FLGUIBasePassVSToPS
+struct FLexUIBasePassVSToPS
 {
-    FLGUIVertexFactoryInterpolantsVSToPS FactoryInterpolants;
-	FLGUIBasePassInterpolants BasePassInterpolants;
+    FLexUIVertexFactoryInterpolantsVSToPS FactoryInterpolants;
+	FLexUIBasePassInterpolants BasePassInterpolants;
 	float4 Position : SV_POSITION;
 };
 
-FLGUIVertexFactoryInterpolantsVSToPS VertexFactoryGetInterpolantsVSToPS(float2 TexCoord0, float2 TexCoord1
+FLexUIVertexFactoryInterpolantsVSToPS VertexFactoryGetInterpolantsVSToPS(float2 TexCoord0, float2 TexCoord1
 , FMaterialVertexParameters VertexParameters
 , HALF4_TYPE VertexColor
 , half3x3 TangentToWorld
 , float TangentToWorldSign
 )
 {
-    FLGUIVertexFactoryInterpolantsVSToPS Interpolants;
+    FLexUIVertexFactoryInterpolantsVSToPS Interpolants;
 
 	// Initialize the whole struct to 0
 	// Really only the last two components of the packed UVs have the opportunity to be uninitialized
-    Interpolants = (FLGUIVertexFactoryInterpolantsVSToPS) 0;
+    Interpolants = (FLexUIVertexFactoryInterpolantsVSToPS) 0;
 
 #if NUM_TEX_COORD_INTERPOLATORS
 	float2 CustomizedUVs[NUM_TEX_COORD_INTERPOLATORS];
@@ -93,7 +93,7 @@ void MainVS(
 	in HALF3_TYPE TangentX : ATTRIBUTE6,
 	// TangentZ.w contains sign of tangent basis determinant
 	in HALF4_TYPE TangentZ : ATTRIBUTE7,
-	out FLGUIBasePassVSToPS Output
+	out FLexUIBasePassVSToPS Output
 )
 {
 	ResolvedView = ResolveView();
@@ -136,7 +136,7 @@ void MainVS(
 
 
 
-FMaterialPixelParameters GetMaterialPixelParameters(FLGUIVertexFactoryInterpolantsVSToPS Interpolants, float4 SvPosition)
+FMaterialPixelParameters GetMaterialPixelParameters(FLexUIVertexFactoryInterpolantsVSToPS Interpolants, float4 SvPosition)
 {
 	// GetMaterialPixelParameters is responsible for fully initializing the result
 	FMaterialPixelParameters Result = MakeInitializedMaterialPixelParameters();
@@ -160,7 +160,7 @@ FMaterialPixelParameters GetMaterialPixelParameters(FLGUIVertexFactoryInterpolan
     return Result;
 }
 
-void ApplyPixelDepthOffsetForLGUIBasePass(inout FMaterialPixelParameters MaterialParameters, FPixelMaterialInputs PixelMaterialInputs, out float OutDepth)
+void ApplyPixelDepthOffsetForLexUIBasePass(inout FMaterialPixelParameters MaterialParameters, FPixelMaterialInputs PixelMaterialInputs, out float OutDepth)
 {
     float PixelDepthOffset = ApplyPixelDepthOffsetToMaterialParameters(MaterialParameters, PixelMaterialInputs, OutDepth);
 }
@@ -182,20 +182,20 @@ half3 GammaCorrect(half3 InColor, half4 GammaValues)
     return CorrectedColor;
 }
 
-#if LGUI_BLEND_DEPTH
+#if LEXUI_BLEND_DEPTH
 Texture2D _SceneDepthTex;
 SamplerState _SceneDepthTexSampler;
 float4 _SceneDepthTextureScaleOffset;
 float _SceneDepthBlend;
-#if LGUI_DEPTH_FADE
+#if LEXUI_DEPTH_FADE
 int _SceneDepthFade;
 #endif
 #endif
-HALF4_TYPE _LGUIGammaValues;
+HALF4_TYPE _LexUIGammaValues;
 
 void MainPS(
-	FLGUIVertexFactoryInterpolantsVSToPS Interpolants
-	, FLGUIBasePassInterpolants BasePassInterpolants
+	FLexUIVertexFactoryInterpolantsVSToPS Interpolants
+	, FLexUIBasePassInterpolants BasePassInterpolants
 	, in float4 SvPosition : SV_Position
 	OPTIONAL_IsFrontFace
 	, out HALF4_TYPE OutColor : SV_Target0
@@ -219,7 +219,7 @@ void MainPS(
 	}
 
 #if OUTPUT_PIXEL_DEPTH_OFFSET
-	ApplyPixelDepthOffsetForLGUIBasePass(MaterialParameters, PixelMaterialInputs, OutDepth);
+	ApplyPixelDepthOffsetForLexUIBasePass(MaterialParameters, PixelMaterialInputs, OutDepth);
 #endif
 
 
@@ -247,18 +247,18 @@ void MainPS(
 #endif // SUBSTRATE_ENABLED
 	
 	// Gamma Correct
-    OutColor.rgb = GammaCorrect(OutColor.rgb, _LGUIGammaValues);
+    OutColor.rgb = GammaCorrect(OutColor.rgb, _LexUIGammaValues);
 	
 #if MATERIALBLENDING_MASKED
     clip(GetMaterialMask(PixelMaterialInputs));
 #endif
 	
-#if LGUI_BLEND_DEPTH
+#if LEXUI_BLEND_DEPTH
     float PixelDepth = min(MaterialParameters.ScreenPosition.z / MaterialParameters.ScreenPosition.w, MaterialParameters.SvPosition.z);
 	float2 ScreenUV = MaterialParameters.ScreenPosition.xy / MaterialParameters.ScreenPosition.w;
 	ScreenUV = ScreenUV * 0.5f + float2(0.5f, 0.5f);
 	ScreenUV.y = 1.0f - ScreenUV.y;
-#if LGUI_DEPTH_FADE
+#if LEXUI_DEPTH_FADE
 	float DepthFadeValue = 0;
 	int SampleCount = 0;
 	int SampleSize = _SceneDepthFade;
