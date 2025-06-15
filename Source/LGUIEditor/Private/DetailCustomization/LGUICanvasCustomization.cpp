@@ -201,7 +201,7 @@ void FLGUICanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 
 		auto overrideParametersHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvas, overrideParameters));
 		overrideParametersHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUICanvasCustomization::ForceRefresh, &DetailBuilder));
-		if (!TargetScriptArray[0]->GetOverrideDefaultMaterials())
+		if (!TargetScriptArray[0]->GetOverrideDefaultMaterial())
 		{
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, DefaultMaterial));
 		}
@@ -213,9 +213,9 @@ void FLGUICanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 		{
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, dynamicPixelsPerUnit));
 		}
-		if (!TargetScriptArray[0]->GetOverrideAddionalShaderChannel())
+		if (!TargetScriptArray[0]->GetOverrideRequireNormalAndTangent())
 		{
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, additionalShaderChannels));
+			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, bRequireNormalAndTangent));
 		}
 
 		if (!TargetScriptArray[0]->GetOverrideBlendDepth())

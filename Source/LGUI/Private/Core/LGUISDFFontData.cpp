@@ -165,12 +165,9 @@ void ULGUISDFFontData::PrepareForPushCharData(UUIText* InText)
 	SDFRadius = FontSize * 0.25f;//use 1/4 of FontSize can get good result
 }
 
-uint8 ULGUISDFFontData::GetRequireAdditionalShaderChannels()
+bool ULGUISDFFontData::GetRequireNormalAndTangent()
 {
-	return
-		(1 << (int)ELGUICanvasAdditionalChannelType::UV1)//UV1.x = boldSize, UV1.y = richTextProperty.size * oneDivideFontSize * objectScale
-		| (1 << (int)ELGUICanvasAdditionalChannelType::Normal)//for tilt look
-		;
+	return true;//for tilt look
 }
 
 float ULGUISDFFontData::GetKerning(const TCHAR& leftCharIndex, const TCHAR& rightCharIndex, const float& charSize)
@@ -217,7 +214,7 @@ void ULGUISDFFontData::PushCharData(
 	const LGUIRichTextParser::RichTextParseResult& richTextProperty,
 	int verticesStartIndex, int indicesStartIndex,
 	int& outAdditionalVerticesCount, int& outAdditionalIndicesCount,
-	TArray<FLGUIOriginVertexData>& originVertices, TArray<FLGUIMeshVertex>& vertices, TArray<FLGUIMeshIndexBufferType>& triangleIndices
+	TArray<FLGUIOriginVertexData>& originVertices, TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndexBufferType>& triangleIndices
 )
 {
 	auto GetUnderlineOrStrikethroughCharGeo = [&](TCHAR charCode, float overrideFontSize)

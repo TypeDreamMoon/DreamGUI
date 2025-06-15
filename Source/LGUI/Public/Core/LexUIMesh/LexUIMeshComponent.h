@@ -3,41 +3,41 @@
 #pragma once
 
 #include "Components/MeshComponent.h"
-#include "Core/LGUIMeshIndex.h"
-#include "Core/LGUIMeshVertex.h"
+#include "Core/LexUIMeshIndex.h"
+#include "Core/LexUIMeshVertex.h"
 #include "LexUIMeshComponent.generated.h"
 
-struct FLGUIRenderSectionProxy;
-struct FLGUIMeshSectionProxy;
-struct FLGUIPostProcessSectionProxy;
-struct FLGUIChildCanvasSectionProxy;
+struct FLexUIRenderSectionProxy;
+struct FLexUIMeshSectionProxy;
+struct FLexUIPostProcessSectionProxy;
+struct FLexUIChildCanvasSectionProxy;
 
-enum class ELGUIRenderSectionType :uint8
+enum class ELexUIRenderSectionType :uint8
 {
 	Mesh, PostProcess, ChildCanvas,
 };
-struct FLGUIRenderSection
+struct FLexUIRenderSection
 {
-	ELGUIRenderSectionType Type;
+	ELexUIRenderSectionType Type;
 	int RenderPriority = 0;
-	FLGUIRenderSectionProxy* RenderProxy = nullptr;
+	FLexUIRenderSectionProxy* RenderProxy = nullptr;
 	FBox BoundingBox = FBox(EForceInit::ForceInit);//world space bounding box
 
 	virtual void UpdateSectionBox(const FTransform& LocalToWorld) = 0;
 };
-struct FLGUIMeshSection : public FLGUIRenderSection
+struct FLexUIMeshSection : public FLexUIRenderSection
 {
-	FLGUIMeshSection() 
+	FLexUIMeshSection() 
 	{
-		Type = ELGUIRenderSectionType::Mesh; 
+		Type = ELexUIRenderSectionType::Mesh; 
 	}
-	virtual ~FLGUIMeshSection()
+	virtual ~FLexUIMeshSection()
 	{
 
 	}
 
-	TArray<FLGUIMeshIndexBufferType> triangles;
-	TArray<FLGUIMeshVertex> vertices;
+	TArray<FLexUIMeshIndexBufferType> triangles;
+	TArray<FLexUIMeshVertex> vertices;
 
 	int prevVertexCount = 0;
 	int prevIndexCount = 0;
@@ -51,22 +51,22 @@ struct FLGUIMeshSection : public FLGUIRenderSection
 	}
 	virtual void UpdateSectionBox(const FTransform& LocalToWorld) override;
 };
-struct FLGUIPostProcessSection : public FLGUIRenderSection
+struct FLexUIPostProcessSection : public FLexUIRenderSection
 {
-	FLGUIPostProcessSection()
+	FLexUIPostProcessSection()
 	{
-		Type = ELGUIRenderSectionType::PostProcess;
+		Type = ELexUIRenderSectionType::PostProcess;
 	}
 
 	TWeakObjectPtr<class UUIPostProcessRenderable> PostProcessRenderableObject = nullptr;
 
 	virtual void UpdateSectionBox(const FTransform& LocalToWorld) override;
 };
-struct FLGUIChildCanvasSection : public FLGUIRenderSection
+struct FLexUIChildCanvasSection : public FLexUIRenderSection
 {
-	FLGUIChildCanvasSection()
+	FLexUIChildCanvasSection()
 	{
-		Type = ELGUIRenderSectionType::ChildCanvas;
+		Type = ELexUIRenderSectionType::ChildCanvas;
 	}
 
 	class ULexUIMeshComponent* ChildCanvasMeshComponent = nullptr;
@@ -78,10 +78,10 @@ class FLexUIRenderer;
 class ILexUIRendererPrimitive;
 class ULGUICanvas;
 
-DECLARE_MULTICAST_DELEGATE_TwoParams(FLGUIMeshSceneProxyCreateDeleteDelegate, class ULexUIMeshComponent*, class FLGUIRenderSceneProxy*);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FLexUIMeshSceneProxyCreateDeleteDelegate, class ULexUIMeshComponent*, class FLexUIRenderSceneProxy*);
 
-//LGUI's mesh
-//@todo: split this class to: one for UE renderer && one for LGUI renderer, will it be more efficient? or maybe a class without additional shader channels? 
+//LexUI render mesh
+//@todo: split this class to: one for UE renderer && one for LexUI renderer, will it be more efficient? or maybe a class without additional shader channels? 
 UCLASS(ClassGroup = (LGUI), Blueprintable)
 class LGUI_API ULexUIMeshComponent : public UMeshComponent
 {
@@ -89,23 +89,23 @@ class LGUI_API ULexUIMeshComponent : public UMeshComponent
 
 public:
 	ULexUIMeshComponent();
-	void CreateRenderSectionRenderData(TSharedPtr<FLGUIRenderSection> InRenderSection);
-	void UpdateMeshSectionRenderData(TSharedPtr<FLGUIRenderSection> InRenderSection, bool InVertexPositionChanged, int8 AdditionalShaderChannelFlags);
-	void DeleteRenderSection(TSharedPtr<FLGUIRenderSection> InRenderSection);
-	TSharedPtr<FLGUIRenderSection> CreateRenderSection(ELGUIRenderSectionType type);
-	void SetRenderSectionRenderPriority(TSharedPtr<FLGUIRenderSection> InRenderSection, int32 InSortPriority);
-	void SetMeshSectionMaterial(TSharedPtr<FLGUIRenderSection> InMeshSection, UMaterialInterface* InMaterial);
+	void CreateRenderSectionRenderData(TSharedPtr<FLexUIRenderSection> InRenderSection);
+	void UpdateMeshSectionRenderData(TSharedPtr<FLexUIRenderSection> InRenderSection, bool InVertexPositionChanged, bool InRequireNormalAndTangent);
+	void DeleteRenderSection(TSharedPtr<FLexUIRenderSection> InRenderSection);
+	TSharedPtr<FLexUIRenderSection> CreateRenderSection(ELexUIRenderSectionType type);
+	void SetRenderSectionRenderPriority(TSharedPtr<FLexUIRenderSection> InRenderSection, int32 InSortPriority);
+	void SetMeshSectionMaterial(TSharedPtr<FLexUIRenderSection> InMeshSection, UMaterialInterface* InMaterial);
 
 	void SetRenderCanvas(ULGUICanvas* InCanvas);
-	void SetSupportLGUIRenderer(bool InSupportOrNot, TWeakPtr<FLexUIRenderer, ESPMode::ThreadSafe> InLGUIRenderer, bool InIsRenderToWorld);
+	void SetSupportLexUIRenderer(bool InSupportOrNot, TWeakPtr<FLexUIRenderer, ESPMode::ThreadSafe> InLexUIRenderer, bool InIsRenderToWorld);
 	void SetSupportUERenderer(bool InSupportOrNot);
 	void ClearRenderData();
 
 	void SetUITranslucentSortPriority(int32 NewTranslucentSortPriority);
 
 	void VerifyMaterials();
-	void SetParentCavansMeshComp(ULexUIMeshComponent* InMesh);
-	void ClearParentCavansMeshComp(ULexUIMeshComponent* InMesh);
+	void SetParentCanvasMeshComp(ULexUIMeshComponent* InMesh);
+	void ClearParentCanvasMeshComp(ULexUIMeshComponent* InMesh);
 
 	//~ Begin UPrimitiveComponent Interface.
 	virtual FPrimitiveSceneProxy* CreateSceneProxy() override;
@@ -119,22 +119,22 @@ public:
 	void UpdateLocalBounds();
 	void UpdateChildCanvasSectionBox();
 private:
-	TArray<TSharedPtr<FLGUIRenderSection>> RenderSections;
+	TArray<TSharedPtr<FLexUIRenderSection>> RenderSections;
 	//~ Begin USceneComponent Interface.
 	virtual FBoxSphereBounds CalcBounds(const FTransform& LocalToWorld) const override;
 	//~ Begin USceneComponent Interface.
 
-	friend class FLGUIRenderSceneProxy;
+	friend class FLexUIRenderSceneProxy;
 
 protected:
-	TWeakPtr<FLexUIRenderer, ESPMode::ThreadSafe> LGUIRenderer;
-	bool bIsLGUIRenderToWorld = false;//LGUI renderer render to world or screen
+	TWeakPtr<FLexUIRenderer, ESPMode::ThreadSafe> LexUIRenderer;
+	bool bIsLexUIRenderToWorld = false;//LexUI renderer render to world or screen
 	TWeakObjectPtr<ULGUICanvas> RenderCanvas = nullptr;
 	bool bIsSupportUERenderer = true;
 	TWeakObjectPtr<ULexUIMeshComponent> ParentCanvasMeshComp = nullptr;
 
 public:
-	FLGUIMeshSceneProxyCreateDeleteDelegate OnSceneProxyCreated;
+	FLexUIMeshSceneProxyCreateDeleteDelegate OnSceneProxyCreated;
 };
 
 

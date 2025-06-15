@@ -278,7 +278,6 @@ protected:
 	virtual void OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange, bool InDiscardCache = true)override;
 	virtual void MarkAllDirty()override;
 
-	void CheckAdditionalShaderChannels();
 	void OnDataTextureChanged(class UTexture* Texture);
 	FDelegateHandle OnDataTextureChangedDelegateHandle;
 	uint8 bNeedUpdateBlockData : 1;

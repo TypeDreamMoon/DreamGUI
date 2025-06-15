@@ -6,7 +6,7 @@
 #include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "UIDirectMeshRenderable.generated.h"
 
-struct FLGUIRenderSection;
+struct FLexUIRenderSection;
 class ULexUIMeshComponent;
 /** 
  * UI element that render directly to LGUICanvas's mesh section. Each UIDirectMeshRenderable is considered as a drawcall.
@@ -39,7 +39,7 @@ protected:
 public:
 	/** Called by LGUICanvas when this UI element have valid mesh data. */
 	virtual void OnMeshDataReady();
-	virtual TWeakPtr<FLGUIRenderSection> GetMeshSection()const;
+	virtual TWeakPtr<FLexUIRenderSection> GetMeshSection()const;
 	virtual TWeakObjectPtr<ULexUIMeshComponent> GetUIMesh()const;
 	virtual void ClearMeshData();
 	virtual bool HaveValidData()const PURE_VIRTUAL(UUIDirectMeshRenderable::HaveValidData, return true;);

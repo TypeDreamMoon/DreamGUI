@@ -68,10 +68,10 @@ public:
 		const LGUIRichTextParser::RichTextParseResult& richTextProperty,
 		int verticesStartIndex, int indicesStartIndex,
 		int& outAdditionalVerticesCount, int& outAdditionalIndicesCount,
-		TArray<FLGUIOriginVertexData>& originVertices, TArray<FLGUIMeshVertex>& vertices, TArray<FLGUIMeshIndexBufferType>& triangleIndices
+		TArray<FLGUIOriginVertexData>& originVertices, TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndexBufferType>& triangleIndices
 	)override;
 	virtual void PrepareForPushCharData(UUIText* InText)override;
-	virtual uint8 GetRequireAdditionalShaderChannels()override;
+	virtual bool GetRequireNormalAndTangent()override;
 	virtual float GetKerning(const TCHAR& leftCharIndex, const TCHAR& rightCharIndex, const float& charSize) override;
 	virtual float GetLineHeight(const float& fontSize) override;
 	virtual float GetVerticalOffset(const float& fontSize) override;

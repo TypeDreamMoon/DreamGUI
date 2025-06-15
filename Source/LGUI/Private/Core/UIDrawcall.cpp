@@ -10,7 +10,7 @@
 #include "LGUI/Public/Core/Components/UIDirectMeshRenderable.h"
 #include "Core/LGUISettings.h"
 
-void UUIDrawcall::GetCombined(TArray<FLGUIMeshVertex>& vertices, TArray<FLGUIMeshIndexBufferType>& triangles)const
+void UUIDrawcall::GetCombined(TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndexBufferType>& triangles)const
 {
 	int count = RenderObjectList.Num();
 	if (count == 1)
@@ -56,5 +56,5 @@ bool UUIDrawcall::CanConsumeUIBatchMeshRenderable(UIGeometry* geo, int32 itemVer
 	return this->Type == EUIDrawcallType::BatchGeometry
 		&& this->Material == geo->material
 		&& this->Texture == geo->texture
-		&& this->VerticesCount + itemVertCount < LGUI_MAX_VERTEX_COUNT;
+		&& this->VerticesCount + itemVertCount < LEXUI_MAX_VERTEX_COUNT;
 }

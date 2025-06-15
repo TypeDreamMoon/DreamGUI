@@ -1,0 +1,30 @@
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+
+#include "Core/LexUIMeshVertex.h"
+#include "RHI.h"
+
+
+void FLGUIMeshVertexDeclaration::InitRHI(FRHICommandListBase& RHICmdList)
+{
+	FVertexDeclarationElementList Elements;
+	uint32 Stride = sizeof(FLexUIMeshVertex);
+	uint16 Index = 0;
+	Elements.Add(FVertexElement(0, STRUCT_OFFSET(FLexUIMeshVertex, Position), VET_Float3, Index++, Stride));
+	Elements.Add(FVertexElement(0, STRUCT_OFFSET(FLexUIMeshVertex, Color), VET_Color, Index++, Stride));
+	for (int i = 0; i < LEXUI_VERTEX_TEXCOORDINATE_COUNT; i++)
+	{
+		Elements.Add(FVertexElement(0, STRUCT_OFFSET(FLexUIMeshVertex, TextureCoordinate) + i * 8, VET_Float2, Index++, Stride));
+	}
+	Elements.Add(FVertexElement(0, STRUCT_OFFSET(FLexUIMeshVertex, TangentX), VET_PackedNormal, Index++, Stride));
+	Elements.Add(FVertexElement(0, STRUCT_OFFSET(FLexUIMeshVertex, TangentZ), VET_PackedNormal, Index++, Stride));
+	VertexDeclarationRHI = RHICreateVertexDeclaration(Elements);
+}
+void FLGUIMeshVertexDeclaration::ReleaseRHI()
+{
+	VertexDeclarationRHI.SafeRelease();
+}
+TGlobalResource<FLGUIMeshVertexDeclaration> GLGUIVertexDeclaration;
+FVertexDeclarationRHIRef& GetLexUIMeshVertexDeclaration()
+{
+	return GLGUIVertexDeclaration.VertexDeclarationRHI;
+}

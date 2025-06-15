@@ -98,7 +98,7 @@ public:
 	virtual float GetLineHeight(const float& fontSize) { return fontSize; }
 	virtual float GetVerticalOffset(const float& fontSize) { return 0; }
 	virtual float GetFontSizeLimit() { return MAX_FLT; }
-	virtual uint8 GetRequireAdditionalShaderChannels() { return 0; }
+	virtual bool GetRequireNormalAndTangent() { return false; }
 	virtual bool GetShouldAffectByPixelPerfect() { return true; }
 	virtual bool GetNeedObjectScale() { return false; }
 	virtual bool GetSupportDynamicPixelsPerUnit() { return false; }
@@ -111,7 +111,7 @@ public:
 		const LGUIRichTextParser::RichTextParseResult& richTextProperty,
 		int verticesStartIndex, int indicesStartIndex,
 		int& outAdditionalVerticesCount, int& outAdditionalIndicesCount,
-		TArray<FLGUIOriginVertexData>& originVertices, TArray<FLGUIMeshVertex>& vertices, TArray<FLGUIMeshIndexBufferType>& triangleIndices
+		TArray<FLGUIOriginVertexData>& originVertices, TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndexBufferType>& triangleIndices
 	) {};
 
 	virtual void AddUIText(UUIText* InText) {}

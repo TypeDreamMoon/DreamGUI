@@ -60,26 +60,12 @@ enum class ELGUICanvasRenderTargetUpdateMode : uint8
 };
 
 UENUM(BlueprintType, meta = (Bitflags), Category = LGUI)
-enum class ELGUICanvasAdditionalChannelType :uint8
-{
-	/** Lit shader may need this */
-	Normal,
-	/** Lit and normalMap may need this */
-	Tangent,
-	/** Additional textureCoordinate at uv1(first uv is uv0, which is used by LGUI. Second uv is uv1) */
-	UV1,
-	UV2,
-	UV3,
-};
-ENUM_CLASS_FLAGS(ELGUICanvasAdditionalChannelType)
-
-UENUM(BlueprintType, meta = (Bitflags), Category = LGUI)
 enum class ELGUICanvasOverrideParameters :uint8
 {
-	DefaltMaterials,
+	DefaultMaterial,
 	PixelPerfect,
 	DynamicPixelsPerUnit,
-	AdditionalShaderChannels,
+	RequireNormalAndTangent,
 	BlendDepth,
 	DepthFade,
 };
@@ -269,9 +255,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		float dynamicPixelsPerUnit = 1.0f;
 
-	/** Flags to enable/disable shader channels. Default only provide Position/Color/UV0, you can check Normal/Tangent/UV1/UV2/UV3 for your own use. */
-	UPROPERTY(EditAnywhere, Category = LGUI, meta = (Bitmask, BitmaskEnum = "/Script/LGUI.ELGUICanvasAdditionalChannelType"))
-		int8 additionalShaderChannels = 0;
+	/** Enable/disable normal and tangent in vertex data. */
+	UPROPERTY(EditAnywhere, Category = "LexUI")
+	bool bRequireNormalAndTangent = false;
 
 	/** Default materials, for render default UI elements. */
 	UPROPERTY(EditAnywhere, Category = LGUI, meta = (DisplayThumbnail = "false"))
@@ -301,10 +287,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category = LGUI, AdvancedDisplay, meta = (AllowAbstract = "true"))
 		TSubclassOf<ULexUIMeshComponent> DefaultMeshType;
 
-	FORCEINLINE bool GetOverrideDefaultMaterials()const				{ return overrideParameters & (1 << (int)ELGUICanvasOverrideParameters::DefaltMaterials); }
+	FORCEINLINE bool GetOverrideDefaultMaterial()const				{ return overrideParameters & (1 << (int)ELGUICanvasOverrideParameters::DefaultMaterial); }
 	FORCEINLINE bool GetOverridePixelPerfect()const					{ return overrideParameters & (1 << (int)ELGUICanvasOverrideParameters::PixelPerfect); }
 	FORCEINLINE bool GetOverrideDynamicPixelsPerUnit()const			{ return overrideParameters & (1 << (int)ELGUICanvasOverrideParameters::DynamicPixelsPerUnit); }
-	FORCEINLINE bool GetOverrideAddionalShaderChannel()const		{ return overrideParameters & (1 << (int)ELGUICanvasOverrideParameters::AdditionalShaderChannels); }
+	FORCEINLINE bool GetOverrideRequireNormalAndTangent()const		{ return overrideParameters & (1 << (int)ELGUICanvasOverrideParameters::RequireNormalAndTangent); }
 	FORCEINLINE bool GetOverrideBlendDepth()const					{ return overrideParameters & (1 << (int)ELGUICanvasOverrideParameters::BlendDepth); }
 	FORCEINLINE bool GetOverrideDepthFade()const					{ return overrideParameters & (1 << (int)ELGUICanvasOverrideParameters::DepthFade); }
 
@@ -418,19 +404,9 @@ public:
 		int32 GetActualSortOrder()const;
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		bool GetRequireNormal()const;
+	bool GetFinalRequireNormalAndTangent()const;
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		bool GetRequireTangent()const;
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		bool GetRequireUV1()const;
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		bool GetRequireUV2()const;
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		bool GetRequireUV3()const;
-	/** Get the shader channel flags of canvas. Actually canvas's additional shader channel flags property is inherit from parent canvas. */
-	int8 GetActualAdditionalShaderChannelFlags()const;
-	/** return calculated additional-shaderchannel-flags, not just the property value, but take consider the overrideParameters */
-	int8 GetAdditionalShaderChannelFlags()const { return additionalShaderChannels; }
+	bool GetRequireNormalAndTangent()const { return bRequireNormalAndTangent; }
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		float GetActualDynamicPixelsPerUnit()const;
@@ -473,16 +449,14 @@ public:
 	/** return all UIItem that belongs to this canvas. */
 	const TArray<UUIItem*>& GetUIItemArray()const { return UIItemList; }
 
-	/** Walk up to find the Canvas which is manage for AdditionalShaderChannel, and set it. */
-	void SetActualRequireAdditionalShaderChannels(uint8 InFlags);
-	void SetRequireAdditionalShaderChannels(uint8 InFlags);
+	void SetRequireNormalAndTangent(bool Value);
 
 	float GetLastRenderTime()const;
 	ULexUIMeshComponent* GetUIMesh()const { CheckUIMesh(); return UIMesh.Get(); }
 public:
-	static FName LGUI_MainTextureMaterialParameterName;
-	static FName LGUI_ClipDataTexture_MaterialParameterName;
-	bool IsMaterialContainsLGUIParameter(UMaterialInterface* InMaterial);
+	static FName LexUI_MainTextureMaterialParameterName;
+	static FName LexUI_ClipDataTexture_MaterialParameterName;
+	bool IsMaterialContainsLexUIParameter(UMaterialInterface* InMaterial);
 private:
 	void SetSortOrderAdditionalValueRecursive(int32 InAdditionalValue);
 	void UpdateRenderTarget(bool CallEvent);
@@ -515,7 +489,7 @@ private:
 	mutable uint32 bIsViewProjectionMatrixDirty : 1;
 	mutable FMatrix cacheViewProjectionMatrix = FMatrix::Identity;//cache to prevent multiple calculation in same frame
 	mutable float LastRenderTime = 0;
-	friend class FLGUIRenderSceneProxy;
+	friend class FLexUIRenderSceneProxy;
 	/**
 	 * RenderMode can affect UI's renderer, basically WorldSpace use UE's buildin renderer, others use LGUI's renderer. Different renderers cannot share same render data.
 	 * eg: when attach to other canvas, this will tell which render mode in old canvas, and if not compatible then recreate render data.
@@ -548,7 +522,7 @@ private:
 	TMap<UUIBaseRenderable*, FLGUICacheTransformContainer> CacheUIItemToCanvasTransformMap;//UI element relative to canvas transform
 
 	TArray<TSharedPtr<FLexUIClipData>> ClipDataList;
-	UPROPERTY(Transient, VisibleAnywhere, Category = "LexUI", AdvancedDisplay)
+	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	TObjectPtr<ULexUIDataAsTexture> ClipDataAsTexture;//clip coordinate stored in UV1.x
 	void OnClipDataTextureChanged(UTexture* NewTexture);
 public:

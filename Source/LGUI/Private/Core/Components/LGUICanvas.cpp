@@ -779,32 +779,13 @@ void ULGUICanvas::RemoveUIItem(UUIItem* InUIItem)
 	MarkCanvasUpdate(false, false, false);
 }
 
-void ULGUICanvas::SetRequireAdditionalShaderChannels(uint8 InFlags)
+void ULGUICanvas::SetRequireNormalAndTangent(bool Value)
 {
-	this->additionalShaderChannels |= InFlags;
-}
-void ULGUICanvas::SetActualRequireAdditionalShaderChannels(uint8 InFlags)
-{	
-	ULGUICanvas* TargetCanvas = this;
-	while (true)
+	if (bRequireNormalAndTangent != Value)
 	{
-		if (TargetCanvas == this->GetRootCanvas() || TargetCanvas->GetOverrideAddionalShaderChannel())
-		{
-			break;
-		}
-		else
-		{
-			if (TargetCanvas->GetParentCanvas().IsValid())
-			{
-				TargetCanvas = TargetCanvas->GetParentCanvas().Get();
-			}
-			else
-			{
-				break;
-			}
-		}
+		bRequireNormalAndTangent = Value;
+		MarkCanvasUpdate(false, false, false);
 	}
-	TargetCanvas->SetRequireAdditionalShaderChannels(InFlags);
 }
 
 bool ULGUICanvas::Is2DUITransform(const FTransform& Transform)
@@ -1181,7 +1162,7 @@ void ULGUICanvas::BatchDrawcall_Implement(const FVector2D& InCanvasLeftBottom, c
 				auto ItemGeo = UIBatchMeshRenderableItem->GetGeometry();
 				if (ItemGeo == nullptr)continue;
 				if (ItemGeo->vertices.Num() == 0)continue;
-				if (ItemGeo->vertices.Num() > LGUI_MAX_VERTEX_COUNT)continue;
+				if (ItemGeo->vertices.Num() > LEXUI_MAX_VERTEX_COUNT)continue;
 
 				int DrawcallIndexToFitin;
 				if (UIBatchMeshRenderableItem->SupportDrawcallBatching() && CanFitInDrawcall(UIBatchMeshRenderableItem, is2DUIItem, ItemGeo->vertices.Num(), UIItemToCanvasTf, DrawcallIndexToFitin))
@@ -1221,7 +1202,7 @@ void ULGUICanvas::BatchDrawcall_Implement(const FVector2D& InCanvasLeftBottom, c
 							OldDrawcall->CopyUpdateState(DrawcallItem.Get());
 						}
 					}
-					check(DrawcallItem->VerticesCount < LGUI_MAX_VERTEX_COUNT);
+					check(DrawcallItem->VerticesCount < LEXUI_MAX_VERTEX_COUNT);
 				}
 				else//cannot fit in any other drawcall
 				{
@@ -1235,7 +1216,7 @@ void ULGUICanvas::BatchDrawcall_Implement(const FVector2D& InCanvasLeftBottom, c
 					}
 					//make a new drawacll
 					PushSingleDrawcall(UIBatchMeshRenderableItem, true, ItemGeo, is2DUIItem, EUIDrawcallType::BatchGeometry, UIItemToCanvasTf);
-					check(UIBatchMeshRenderableItem->drawcall->VerticesCount < LGUI_MAX_VERTEX_COUNT);
+					check(UIBatchMeshRenderableItem->drawcall->VerticesCount < LEXUI_MAX_VERTEX_COUNT);
 				}
 			}
 			break;
@@ -1538,7 +1519,7 @@ void ULGUICanvas::UpdateDrawcallMesh_Implement()
 			auto MeshSection = DrawcallItem->DrawcallRenderSection;
 			if (!MeshSection.IsValid())
 			{
-				MeshSection = UIMesh->CreateRenderSection(ELGUIRenderSectionType::Mesh);
+				MeshSection = UIMesh->CreateRenderSection(ELexUIRenderSectionType::Mesh);
 
 				DrawcallItem->DrawcallRenderSection = MeshSection;
 				DrawcallItem->DirectMeshRenderableObject->OnMeshDataReady();
@@ -1555,7 +1536,7 @@ void ULGUICanvas::UpdateDrawcallMesh_Implement()
 			auto RenderSection = DrawcallItem->DrawcallRenderSection;
 			if (!RenderSection.IsValid())
 			{
-				RenderSection = UIMesh->CreateRenderSection(ELGUIRenderSectionType::Mesh);
+				RenderSection = UIMesh->CreateRenderSection(ELexUIRenderSectionType::Mesh);
 				DrawcallItem->DrawcallRenderSection = RenderSection;
 				//create new mesh section, need to sort it
 				bNeedToSortRenderPriority = true;
@@ -1564,8 +1545,8 @@ void ULGUICanvas::UpdateDrawcallMesh_Implement()
 			if (DrawcallItem->bNeedToUpdateVertex)
 			{
 				auto RenderSectionPtr = RenderSection.Pin();
-				check(RenderSectionPtr->Type == ELGUIRenderSectionType::Mesh);
-				auto MeshSectionPtr = (FLGUIMeshSection*)RenderSectionPtr.Get();
+				check(RenderSectionPtr->Type == ELexUIRenderSectionType::Mesh);
+				auto MeshSectionPtr = (FLexUIMeshSection*)RenderSectionPtr.Get();
 				MeshSectionPtr->vertices.Reset();
 				MeshSectionPtr->triangles.Reset();
 				DrawcallItem->GetCombined(MeshSectionPtr->vertices, MeshSectionPtr->triangles);
@@ -1577,7 +1558,7 @@ void ULGUICanvas::UpdateDrawcallMesh_Implement()
 				}
 				else
 				{
-					UIMesh->UpdateMeshSectionRenderData(RenderSectionPtr, true, GetActualAdditionalShaderChannelFlags());
+					UIMesh->UpdateMeshSectionRenderData(RenderSectionPtr, true, GetFinalRequireNormalAndTangent());
 				}
 				DrawcallItem->bNeedToUpdateVertex = false;
 				DrawcallItem->bVertexPositionChanged = false;
@@ -1596,8 +1577,8 @@ void ULGUICanvas::UpdateDrawcallMesh_Implement()
 
 			if (!DrawcallItem->DrawcallRenderSection.IsValid())
 			{
-				auto RenderSection = UIMesh->CreateRenderSection(ELGUIRenderSectionType::PostProcess);
-				auto ChildCanvasSection = (FLGUIPostProcessSection*)RenderSection.Get();
+				auto RenderSection = UIMesh->CreateRenderSection(ELexUIRenderSectionType::PostProcess);
+				auto ChildCanvasSection = (FLexUIPostProcessSection*)RenderSection.Get();
 				ChildCanvasSection->PostProcessRenderableObject = DrawcallItem->PostProcessRenderableObject;
 				UIMesh->CreateRenderSectionRenderData(RenderSection);
 				DrawcallItem->DrawcallRenderSection = RenderSection;
@@ -1612,10 +1593,10 @@ void ULGUICanvas::UpdateDrawcallMesh_Implement()
 		{
 			if (!DrawcallItem->DrawcallRenderSection.IsValid())
 			{
-				auto RenderSection = UIMesh->CreateRenderSection(ELGUIRenderSectionType::ChildCanvas);
-				auto ChildCanvasSection = (FLGUIChildCanvasSection*)RenderSection.Get();
+				auto RenderSection = UIMesh->CreateRenderSection(ELexUIRenderSectionType::ChildCanvas);
+				auto ChildCanvasSection = (FLexUIChildCanvasSection*)RenderSection.Get();
 				ChildCanvasSection->ChildCanvasMeshComponent = DrawcallItem->ChildCanvas->GetUIMesh();
-				ChildCanvasSection->ChildCanvasMeshComponent->SetParentCavansMeshComp(this->UIMesh.Get());
+				ChildCanvasSection->ChildCanvasMeshComponent->SetParentCanvasMeshComp(this->UIMesh.Get());
 				UIMesh->CreateRenderSectionRenderData(RenderSection);
 				DrawcallItem->DrawcallRenderSection = RenderSection;
 				//create new section, need to sort it
@@ -1701,7 +1682,7 @@ void ULGUICanvas::CheckUIMesh()const
 			{
 			case ELGUIRenderMode::RenderTarget:
 			{
-				UIMesh->SetSupportLGUIRenderer(true, this->GetRootCanvas()->GetRenderTargetViewExtension(), false);
+				UIMesh->SetSupportLexUIRenderer(true, this->GetRootCanvas()->GetRenderTargetViewExtension(), false);
 #if WITH_EDITOR
 				if (!GetWorld()->IsGameWorld())
 				{
@@ -1719,20 +1700,20 @@ void ULGUICanvas::CheckUIMesh()const
 #if WITH_EDITOR
 				if (!GetWorld()->IsGameWorld())
 				{
-					UIMesh->SetSupportLGUIRenderer(true, ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true), false);
+					UIMesh->SetSupportLexUIRenderer(true, ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true), false);
 					UIMesh->SetSupportUERenderer(true);
 				}
 				else
 #endif
 				{
-					UIMesh->SetSupportLGUIRenderer(true, ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true), false);
+					UIMesh->SetSupportLexUIRenderer(true, ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true), false);
 					UIMesh->SetSupportUERenderer(false);
 				}
 			}
 			break;
 			case ELGUIRenderMode::WorldSpace_LGUI:
 			{
-				UIMesh->SetSupportLGUIRenderer(true, ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true), true);
+				UIMesh->SetSupportLexUIRenderer(true, ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true), true);
 				UIMesh->SetSupportUERenderer(false);
 			}
 			break;
@@ -1740,7 +1721,7 @@ void ULGUICanvas::CheckUIMesh()const
 		}
 		else
 		{
-			UIMesh->SetSupportLGUIRenderer(false, nullptr, false);
+			UIMesh->SetSupportLexUIRenderer(false, nullptr, false);
 			UIMesh->SetSupportUERenderer(true);
 		}
 	}
@@ -1772,10 +1753,10 @@ void ULGUICanvas::SortDrawcall()
 	}
 }
 
-FName ULGUICanvas::LGUI_MainTextureMaterialParameterName = FName(TEXT("LexUI_MainTexture"));
-FName ULGUICanvas::LGUI_ClipDataTexture_MaterialParameterName = FName(TEXT("LexUI_ClipDataTexture"));
+FName ULGUICanvas::LexUI_MainTextureMaterialParameterName = FName(TEXT("LexUI_MainTexture"));
+FName ULGUICanvas::LexUI_ClipDataTexture_MaterialParameterName = FName(TEXT("LexUI_ClipDataTexture"));
 
-bool ULGUICanvas::IsMaterialContainsLGUIParameter(UMaterialInterface* InMaterial)
+bool ULGUICanvas::IsMaterialContainsLexUIParameter(UMaterialInterface* InMaterial)
 {
 	static TArray<FMaterialParameterInfo> ParameterInfos;
 	static TArray<FGuid> ParameterIds;
@@ -1783,8 +1764,8 @@ bool ULGUICanvas::IsMaterialContainsLGUIParameter(UMaterialInterface* InMaterial
 	auto FoundIndex = ParameterInfos.IndexOfByPredicate([](const FMaterialParameterInfo& Item)
 		{
 			return
-				Item.Name == LGUI_MainTextureMaterialParameterName
-				|| Item.Name == LGUI_ClipDataTexture_MaterialParameterName
+				Item.Name == LexUI_MainTextureMaterialParameterName
+				|| Item.Name == LexUI_ClipDataTexture_MaterialParameterName
 				;
 		});
 	return FoundIndex != INDEX_NONE;
@@ -1811,7 +1792,7 @@ void ULGUICanvas::UpdateDrawcallMaterial_Implement()
 						this->AddUIMaterialToPool((UMaterialInstanceDynamic*)RenderMat.Get());
 					}
 					auto SrcMaterial = DrawcallItem->Material.Get();
-					auto bContainsLGUIParam = IsMaterialContainsLGUIParameter(SrcMaterial);
+					auto bContainsLGUIParam = IsMaterialContainsLexUIParameter(SrcMaterial);
 					if (SrcMaterial->IsA(UMaterialInstanceDynamic::StaticClass()))//if custom material is UMaterialInstanceDynamic then use it directly
 					{
 						RenderMat = SrcMaterial;
@@ -1851,8 +1832,8 @@ void ULGUICanvas::UpdateDrawcallMaterial_Implement()
 				DrawcallItem->bMaterialChanged = false;
 				if (RenderMat.IsValid() && DrawcallItem->bMaterialContainsLGUIParameter)
 				{
-					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LGUI_MainTextureMaterialParameterName, DrawcallItem->Texture.Get());
-					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LGUI_ClipDataTexture_MaterialParameterName, ClipDataAsTexture->GetDataTexture());
+					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_MainTextureMaterialParameterName, DrawcallItem->Texture.Get());
+					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_ClipDataTexture_MaterialParameterName, ClipDataAsTexture->GetDataTexture());
 				}
 				DrawcallItem->bTextureChanged = false;
 				DrawcallItem->bMaterialNeedToReassign = false;
@@ -1868,7 +1849,7 @@ void ULGUICanvas::UpdateDrawcallMaterial_Implement()
 				DrawcallItem->bTextureChanged = false;
 				if (RenderMat.IsValid() && DrawcallItem->bMaterialContainsLGUIParameter)
 				{
-					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LGUI_MainTextureMaterialParameterName, DrawcallItem->Texture.Get());
+					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_MainTextureMaterialParameterName, DrawcallItem->Texture.Get());
 				}
 			}
 			if (DrawcallItem->bMaterialNeedToReassign)
@@ -2235,47 +2216,27 @@ void ULGUICanvas::SetOverrideSorting(bool value)
 	}
 }
 
-int8 ULGUICanvas::GetActualAdditionalShaderChannelFlags()const
+bool ULGUICanvas::GetFinalRequireNormalAndTangent()const
 {
 	if (IsRootCanvas())
 	{
-		return additionalShaderChannels;
+		return bRequireNormalAndTangent;
 	}
 	else
 	{
-		if (GetOverrideAddionalShaderChannel())
+		if (GetOverrideRequireNormalAndTangent())
 		{
-			return additionalShaderChannels;
+			return bRequireNormalAndTangent;
 		}
 		else
 		{
 			if (ParentCanvas.IsValid())
 			{
-				return ParentCanvas->GetActualAdditionalShaderChannelFlags();
+				return ParentCanvas->GetFinalRequireNormalAndTangent();
 			}
 		}
 	}
-	return additionalShaderChannels;
-}
-bool ULGUICanvas::GetRequireNormal()const 
-{
-	return GetActualAdditionalShaderChannelFlags() & (1 << (int)ELGUICanvasAdditionalChannelType::Normal);
-}
-bool ULGUICanvas::GetRequireTangent()const 
-{ 
-	return GetActualAdditionalShaderChannelFlags() & (1 << (int)ELGUICanvasAdditionalChannelType::Tangent);
-}
-bool ULGUICanvas::GetRequireUV1()const 
-{ 
-	return GetActualAdditionalShaderChannelFlags() & (1 << (int)ELGUICanvasAdditionalChannelType::UV1);
-}
-bool ULGUICanvas::GetRequireUV2()const 
-{
-	return GetActualAdditionalShaderChannelFlags() & (1 << (int)ELGUICanvasAdditionalChannelType::UV2);
-}
-bool ULGUICanvas::GetRequireUV3()const 
-{ 
-	return GetActualAdditionalShaderChannelFlags() & (1 << (int)ELGUICanvasAdditionalChannelType::UV3);
+	return bRequireNormalAndTangent;
 }
 
 
@@ -2671,7 +2632,7 @@ void ULGUICanvas::OnClipDataTextureChanged(UTexture* NewTexture)
 				auto RenderMat = DrawCallItem->RenderMaterial;
 				if (RenderMat.IsValid() && DrawCallItem->bMaterialContainsLGUIParameter)
 				{
-					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LGUI_ClipDataTexture_MaterialParameterName, NewTexture);
+					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_ClipDataTexture_MaterialParameterName, NewTexture);
 				}
 			}
 			break;

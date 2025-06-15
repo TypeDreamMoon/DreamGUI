@@ -34,11 +34,6 @@ void UUIEffectPositionAsUV::ModifyUIGeometry(
 	case 1:
 	{
 		if (!renderCanvas)return;
-		if (!renderCanvas->GetRequireUV1())
-		{
-			UE_LOG(LGUI, Error, TEXT("[UUIEffectPositionAsUV::ModifyUIGeometry]LGUICanvas/AdditionalShaderChannel/UV1 should be checked!"));
-			return;
-		}
 		auto& vertices = InGeometry.vertices;
 		auto vertexCount = vertices.Num();
 		for (int i = 0; i < vertexCount; i++)
@@ -51,11 +46,6 @@ void UUIEffectPositionAsUV::ModifyUIGeometry(
 	case 2:
 	{
 		if (!renderCanvas)return;
-		if (!renderCanvas->GetRequireUV2())
-		{
-			UE_LOG(LGUI, Error, TEXT("[UUIEffectPositionAsUV::ModifyUIGeometry]LGUICanvas/AdditionalShaderChannel/UV2 should be checked!"));
-			return;
-		}
 		auto& vertices = InGeometry.vertices;
 		auto vertexCount = vertices.Num();
 		for (int i = 0; i < vertexCount; i++)
@@ -68,11 +58,6 @@ void UUIEffectPositionAsUV::ModifyUIGeometry(
 	case 3:
 	{
 		if (!renderCanvas)return;
-		if (!renderCanvas->GetRequireUV3())
-		{
-			UE_LOG(LGUI, Error, TEXT("[UUIEffectPositionAsUV::ModifyUIGeometry]LGUICanvas/AdditionalShaderChannel/UV3 should be checked!"));
-			return;
-		}
 		auto& vertices = InGeometry.vertices;
 		auto vertexCount = vertices.Num();
 		for (int i = 0; i < vertexCount; i++)

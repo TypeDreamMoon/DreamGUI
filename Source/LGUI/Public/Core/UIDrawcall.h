@@ -3,19 +3,19 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "Engine/Texture.h"
-#include "Core/LGUIMeshIndex.h"
+#include "Core/LexUIMeshIndex.h"
 #include "Core/UIQuadTree.h"
 
 class UUIPostProcessRenderable;
 class UIGeometry;
-struct FLGUIMeshVertex;
+struct FLexUIMeshVertex;
 class UMaterialInterface;
 class UMaterialInstanceDynamic;
 class UUIItem;
 class UUIBatchMeshRenderable;
 class UUIDirectMeshRenderable;
 class ULexUIMeshComponent;
-struct FLGUIRenderSection;
+struct FLexUIRenderSection;
 
 enum class EUIDrawcallType :uint8
 {
@@ -47,7 +47,7 @@ public:
 	TWeakObjectPtr<UMaterialInterface> Material = nullptr;//drawcall use this material to render, can be null to use default material
 	TWeakObjectPtr<UMaterialInterface> RenderMaterial = nullptr;//material that render this drawcall
 	TWeakObjectPtr<ULexUIMeshComponent> DrawcallMesh = nullptr;//mesh for render this drawcall
-	TWeakPtr<FLGUIRenderSection> DrawcallRenderSection = nullptr;//section of mesh which render this drawcall
+	TWeakPtr<FLexUIRenderSection> DrawcallRenderSection = nullptr;//section of mesh which render this drawcall
 
 	bool bMaterialContainsLGUIParameter = false;//if Material contains LGUI's parameter, then a MaterialInstanceDynamic will be created and stored as RenderMaterial, other wise RenderMaterial is same as Material
 	bool bMaterialChanged = true;
@@ -72,7 +72,7 @@ public:
 
 	TWeakObjectPtr<class ULGUICanvas> ChildCanvas;//insert point to sort child canvas
 public:
-	void GetCombined(TArray<FLGUIMeshVertex>& vertices, TArray<FLGUIMeshIndexBufferType>& triangles)const;
+	void GetCombined(TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndexBufferType>& triangles)const;
 	void CopyUpdateState(UUIDrawcall* Target);
 	bool CanConsumeUIBatchMeshRenderable(UIGeometry* geo, int32 itemVertCount);
 };

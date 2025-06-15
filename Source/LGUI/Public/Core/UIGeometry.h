@@ -4,8 +4,8 @@
 #include "CoreMinimal.h"
 #include "Components/UIText.h"
 #include "Components/UISprite.h"
-#include "Core/LGUIMeshIndex.h"
-#include "Core/LGUIMeshVertex.h"
+#include "Core/LexUIMeshIndex.h"
+#include "Core/LexUIMeshVertex.h"
 
 struct FLGUISpriteInfo;
 struct FUITextLineProperty;
@@ -47,9 +47,9 @@ public:
 	//local space vertex position/ normal/ tangent
 	TArray<FLGUIOriginVertexData> originVertices;
 	//vertex buffer, position/normal/tangent is stored as transformed space(Canvas space), origin position/normal/tangent is stored in originVertices/originNormals/originTangents
-	TArray<FLGUIMeshVertex> vertices;
+	TArray<FLexUIMeshVertex> vertices;
 	//triangle indices
-	TArray<FLGUIMeshIndexBufferType> triangles;
+	TArray<FLexUIMeshIndexBufferType> triangles;
 
 	TWeakObjectPtr<UTexture> texture = nullptr;
 	TWeakObjectPtr<UMaterialInterface> material = nullptr;
@@ -90,7 +90,7 @@ public:
 			verticesCountChanged = true;
 		}
 		FMemory::Memcpy(Target->originVertices.GetData(), originVertices.GetData(), originVertices.Num() * sizeof(FLGUIOriginVertexData));
-		FMemory::Memcpy(Target->vertices.GetData(), vertices.GetData(), vertices.Num() * sizeof(FLGUIMeshVertex));
+		FMemory::Memcpy(Target->vertices.GetData(), vertices.GetData(), vertices.Num() * sizeof(FLexUIMeshVertex));
 
 		bool triangleCountChanged = false;
 		if (triangles.Num() != Target->triangles.Num())
@@ -98,7 +98,7 @@ public:
 			Target->triangles.SetNumUninitialized(triangles.Num());
 			triangleCountChanged = true;
 		}
-		FMemory::Memcpy(Target->triangles.GetData(), triangles.GetData(), triangles.Num() * sizeof(FLGUIMeshIndexBufferType));
+		FMemory::Memcpy(Target->triangles.GetData(), triangles.GetData(), triangles.Num() * sizeof(FLexUIMeshIndexBufferType));
 
 		return verticesCountChanged || triangleCountChanged;
 	}

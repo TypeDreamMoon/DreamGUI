@@ -114,7 +114,7 @@ void UUIText::BeginPlay()
 	if (IsValid(font))
 	{
 		font->InitFont();
-		CheckAdditionalShaderChannels();//@todo: looks this line is not necessary
+		CheckRequireNormalAndTangent();//@todo: looks this line is not necessary
 		if (!bHasAddToFont)
 		{
 			font->AddUIText(this);
@@ -275,7 +275,7 @@ UTexture* UUIText::GetTextureToCreateGeometry()
 		font = ULGUIFontData_BaseObject::GetDefaultFont();
 	}
 	font->InitFont();
-	CheckAdditionalShaderChannels();
+	CheckRequireNormalAndTangent();
 	return font->GetFontTexture();
 }
 
@@ -292,29 +292,19 @@ UMaterialInterface* UUIText::GetMaterialToCreateGeometry()
 			font = ULGUIFontData_BaseObject::GetDefaultFont();
 		}
 		font->InitFont();
-		CheckAdditionalShaderChannels();
+		CheckRequireNormalAndTangent();
 		return font->GetFontMaterial();
 	}
 }
 
-void UUIText::CheckAdditionalShaderChannels()
+void UUIText::CheckRequireNormalAndTangent()
 {
 	if (RenderCanvas.IsValid())
 	{
-		auto flags = font->GetRequireAdditionalShaderChannels();
-#if WITH_EDITOR
-		auto originFlags = RenderCanvas->GetActualAdditionalShaderChannelFlags();
-		if (flags != 0 && (originFlags & flags) == 0)
+		if (font->GetRequireNormalAndTangent())
 		{
-			auto MsgText = FText::Format(LOCTEXT("FontChangeAddtionalShaderChannels"
-				, "{0} Automatically change 'AdditionalShaderChannels' property for LGUICanvas because font need it, font object: '{1}'")
-				, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__))
-				, FText::FromString(font->GetPathName()));
-			//LGUIUtils::EditorNotification(MsgText);
-			UE_LOG(LGUI, Log, TEXT("%s"), *MsgText.ToString());
+			RenderCanvas->GetRootCanvas()->SetRequireNormalAndTangent(true);
 		}
-#endif
-		RenderCanvas->SetActualRequireAdditionalShaderChannels(flags);
 	}
 }
 

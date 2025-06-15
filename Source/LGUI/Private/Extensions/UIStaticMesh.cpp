@@ -224,7 +224,7 @@ void UUIStaticMesh::UpdateGeometry()
 		}
 		if (bColorChanged || bLocalVertexPositionChanged || bTransformChanged)
 		{
-			drawcall->DrawcallMesh->UpdateMeshSectionRenderData(drawcall->DrawcallRenderSection.Pin(), bLocalVertexPositionChanged || bTransformChanged, RenderCanvas->GetActualAdditionalShaderChannelFlags());
+			drawcall->DrawcallMesh->UpdateMeshSectionRenderData(drawcall->DrawcallRenderSection.Pin(), bLocalVertexPositionChanged || bTransformChanged, RenderCanvas->GetFinalRequireNormalAndTangent());
 			bColorChanged = false;
 			bLocalVertexPositionChanged = false;
 			bTransformChanged = false;
@@ -241,7 +241,7 @@ void UUIStaticMesh::UpdateMeshColor(bool updateToDrawcallMesh)
 	auto numIndices = sourceIndexData.Num();
 	if (numVertices > 0 && numIndices > 0)
 	{
-		auto MeshSection = (FLGUIMeshSection*)drawcall->DrawcallRenderSection.Pin().Get();
+		auto MeshSection = (FLexUIMeshSection*)drawcall->DrawcallRenderSection.Pin().Get();
 		auto& VertexData = MeshSection->vertices;
 
 		VertexData.SetNumUninitialized(numVertices);
@@ -280,7 +280,7 @@ void UUIStaticMesh::UpdateMeshColor(bool updateToDrawcallMesh)
 
 	if (updateToDrawcallMesh)
 	{
-		drawcall->DrawcallMesh->UpdateMeshSectionRenderData(drawcall->DrawcallRenderSection.Pin(), false, RenderCanvas->GetActualAdditionalShaderChannelFlags());
+		drawcall->DrawcallMesh->UpdateMeshSectionRenderData(drawcall->DrawcallRenderSection.Pin(), false, RenderCanvas->GetFinalRequireNormalAndTangent());
 	}
 }
 void UUIStaticMesh::CreateGeometry()
@@ -291,15 +291,11 @@ void UUIStaticMesh::CreateGeometry()
 	auto numIndices = sourceIndexData.Num();
 	if (numVertices > 0 && numIndices > 0)
 	{
-		auto MeshSection = (FLGUIMeshSection*)drawcall->DrawcallRenderSection.Pin().Get();
+		auto MeshSection = (FLexUIMeshSection*)drawcall->DrawcallRenderSection.Pin().Get();
 		auto& VertexData = MeshSection->vertices;
 
 		VertexData.SetNumUninitialized(numVertices);
-		bool needNormal = RenderCanvas->GetRequireNormal();
-		bool needTangent = RenderCanvas->GetRequireTangent();
-		bool needUV1 = RenderCanvas->GetRequireUV1();
-		bool needUV2 = RenderCanvas->GetRequireUV2();
-		bool needUV3 = RenderCanvas->GetRequireUV3();
+		bool RequireNormalAndTangent = RenderCanvas->GetFinalRequireNormalAndTangent();
 		auto tempVertexColorType = vertexColorType;
 
 		for (int i = 0; i < numVertices; i++)
@@ -332,25 +328,13 @@ void UUIStaticMesh::CreateGeometry()
 			}
 
 			vert.TextureCoordinate[0] = FVector2f(sourceVert.UV0);
-			if (needUV1)
-			{
-				vert.TextureCoordinate[1] = FVector2f(sourceVert.UV1);
-			}
-			if (needUV2)
-			{
-				vert.TextureCoordinate[2] = FVector2f(sourceVert.UV2);
-			}
-			if (needUV3)
-			{
-				vert.TextureCoordinate[3] = FVector2f(sourceVert.UV3);
-			}
+			vert.TextureCoordinate[1] = FVector2f(sourceVert.UV1);
+			vert.TextureCoordinate[2] = FVector2f(sourceVert.UV2);
+			vert.TextureCoordinate[3] = FVector2f(sourceVert.UV3);
 
-			if (needNormal)
+			if (RequireNormalAndTangent)
 			{
 				vert.TangentZ = sourceVert.TangentZ;
-			}
-			if (needTangent)
-			{
 				vert.TangentZ = sourceVert.TangentX;
 			}
 		}
@@ -379,25 +363,21 @@ void UUIStaticMesh::UpdateMeshTransform(bool updateToDrawcallMesh)
 	const auto& itemTf = this->GetComponentTransform();
 	FTransform::Multiply(&itemToCanvasTf, &itemTf, &inverseCanvasTf);
 
-	auto MeshSection = (FLGUIMeshSection*)drawcall->DrawcallRenderSection.Pin().Get();
+	auto MeshSection = (FLexUIMeshSection*)drawcall->DrawcallRenderSection.Pin().Get();
 
 	const auto& sourceVertexData = meshCache->GetVertexData();
 	auto numVertices = sourceVertexData.Num();
 	{
 		auto& VertexData = MeshSection->vertices;
 		VertexData.SetNumUninitialized(numVertices);
-		bool needNormal = RenderCanvas->GetRequireNormal();
-		bool needTangent = RenderCanvas->GetRequireTangent();
+		bool RequireNormalAndTangent = RenderCanvas->GetFinalRequireNormalAndTangent();
 		for (int i = 0; i < numVertices; i++)
 		{
 			auto& vert = VertexData[i];
 			vert.Position = FVector3f(sourceVertexData[i].Position);
-			if (needNormal)
+			if (RequireNormalAndTangent)
 			{
 				vert.TangentZ = sourceVertexData[i].TangentZ;
-			}
-			if (needTangent)
-			{
 				vert.TangentX = sourceVertexData[i].TangentX;
 			}
 		}
@@ -409,25 +389,19 @@ void UUIStaticMesh::UpdateMeshTransform(bool updateToDrawcallMesh)
 	{
 		vertices[i].Position = FVector3f(itemToCanvasTf.TransformPosition(FVector(vertices[i].Position)));
 	}
-	if (RenderCanvas->GetRequireNormal())
+	if (RenderCanvas->GetFinalRequireNormalAndTangent())
 	{
 		for (int i = 0; i < vertexCount; i++)
 		{
 			vertices[i].TangentZ = itemToCanvasTf.TransformVector(vertices[i].TangentZ.ToFVector());
 			vertices[i].TangentZ.Vector.W = -127;
-		}
-	}
-	if (RenderCanvas->GetRequireTangent())
-	{
-		for (int i = 0; i < vertexCount; i++)
-		{
 			vertices[i].TangentX = itemToCanvasTf.TransformVector(vertices[i].TangentX.ToFVector());
 		}
 	}
 
 	if (updateToDrawcallMesh)
 	{
-		drawcall->DrawcallMesh->UpdateMeshSectionRenderData(drawcall->DrawcallRenderSection.Pin(), true, RenderCanvas->GetActualAdditionalShaderChannelFlags());
+		drawcall->DrawcallMesh->UpdateMeshSectionRenderData(drawcall->DrawcallRenderSection.Pin(), true, RenderCanvas->GetFinalRequireNormalAndTangent());
 	}
 }
 

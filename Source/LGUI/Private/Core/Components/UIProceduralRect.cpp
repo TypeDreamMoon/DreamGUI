@@ -388,7 +388,6 @@ void UUIProceduralRect::OnBeforeCreateOrUpdateGeometry()
 
 UTexture* UUIProceduralRect::GetTextureToCreateGeometry()
 {
-	CheckAdditionalShaderChannels();
 	if (BodyTextureMode == EUIProceduralBodyTextureMode::Texture)
 	{
 		if (!IsValid(this->BodyTexture))
@@ -419,7 +418,6 @@ UMaterialInterface* UUIProceduralRect::GetMaterialToCreateGeometry()
 	else
 	{
 		check(ProceduralRectData);
-		CheckAdditionalShaderChannels();
 		return ProceduralRectData->GetMaterial();
 	}
 }
@@ -442,33 +440,6 @@ void UUIProceduralRect::MarkAllDirty()
 {
 	Super::MarkAllDirty();
 	bNeedUpdateBlockData = true;
-}
-
-void UUIProceduralRect::CheckAdditionalShaderChannels()
-{
-	if (RenderCanvas.IsValid())
-	{
-		auto flags =
-			//UV1.y: data position
-			//UV2.x: bIsOuterShadow
-			//UV3: outer shadow's full uv, or BodySpriteTexture's uv
-			(1 << (int)ELGUICanvasAdditionalChannelType::UV1)
-			| (1 << (int)ELGUICanvasAdditionalChannelType::UV2)
-			| (1 << (int)ELGUICanvasAdditionalChannelType::UV3)
-			;
-#if WITH_EDITOR
-		auto originFlags = RenderCanvas->GetActualAdditionalShaderChannelFlags();
-		if (flags != 0 && (originFlags & flags) == 0)
-		{
-			auto MsgText = FText::Format(LOCTEXT("UIProceduralRectShaderChannels"
-				, "{0} Automatically change 'AdditionalShaderChannels' property for LGUICanvas because UIProceduralRect need it")
-				, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)));
-			//LGUIUtils::EditorNotification(MsgText);
-			UE_LOG(LGUI, Log, TEXT("%s"), *MsgText.ToString());
-		}
-#endif
-		RenderCanvas->SetActualRequireAdditionalShaderChannels(flags);
-	}
 }
 
 bool UUIProceduralRect::LineTraceUI_CheckCornerRadius(const FVector2D& InLocalHitPoint)

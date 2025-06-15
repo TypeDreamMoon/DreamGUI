@@ -186,20 +186,12 @@ void UUIPolygon::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, boo
 		//additional data
 		{
 			//normal & tangent
-			if (RenderCanvas->GetRequireNormal() || RenderCanvas->GetRequireTangent())
+			if (RenderCanvas->GetFinalRequireNormalAndTangent())
 			{
 				for (int i = 0; i < vertexCount; i++)
 				{
 					originVertices[i].Normal = FVector3f(-1, 0, 0);
 					originVertices[i].Tangent = FVector3f(0, 1, 0);
-				}
-			}
-			//uv1
-			if (RenderCanvas->GetRequireUV1())
-			{
-				for (int i = 0; i < vertexCount; i++)
-				{
-					vertices[i].TextureCoordinate[1] = FVector2f(0, 1);
 				}
 			}
 		}

@@ -101,7 +101,7 @@ void ULGUICustomMesh_Cylinder::OnFillMesh(UUIBatchMeshRenderable* InRenderable, 
 	float Angle = -ArcAngle * 0.5f;
 	const FVector3f CenterPoint = FVector3f(0, HalfChordLength + PivotOffsetX, V);
 	auto OriginVert = FLGUIOriginVertexData();
-	auto Vert = FLGUIMeshVertex();
+	auto Vert = FLexUIMeshVertex();
 	Vert.Color = Color;
 	OriginVert.Position = FVector3f(0, Radius * FMath::Sin(Angle) + PivotOffsetX, V);
 	auto TangentX2D = FVector2f(CenterPoint) - FVector2f(OriginVert.Position);
@@ -211,7 +211,7 @@ void ULGUICustomMesh_CurvyPlane::OnFillMesh(UUIBatchMeshRenderable* InRenderable
 		auto OffsetByCurve = ShapeCurve.GetRichCurve()->Eval(UVX) * CurveScale;
 		auto OriginVert = FLGUIOriginVertexData();
 		OriginVert.Position = FVector3f(0, PivotOffsetX + PosX, PivotOffsetY - HalfSizeY + OffsetByCurve);
-		auto Vert = FLGUIMeshVertex();
+		auto Vert = FLexUIMeshVertex();
 		Vert.Color = Color;
 		Vert.TextureCoordinate[0] = FVector2f(UVX, 1);
 		OriginVertices[VertIndex] = OriginVert;

@@ -67,7 +67,7 @@ void UUIDirectMeshRenderable::UpdateGeometry()
 }
 
 
-TWeakPtr<FLGUIRenderSection> UUIDirectMeshRenderable::GetMeshSection()const
+TWeakPtr<FLexUIRenderSection> UUIDirectMeshRenderable::GetMeshSection()const
 {
 	if (drawcall.IsValid())
 	{
@@ -117,7 +117,7 @@ bool UUIDirectMeshRenderable::LineTraceUI(FHitResult& OutHit, const FVector& Sta
 			if (IntersectionPoint.Y > GetLocalSpaceLeft() && IntersectionPoint.Y < GetLocalSpaceRight() && IntersectionPoint.Z > GetLocalSpaceBottom() && IntersectionPoint.Z < GetLocalSpaceTop())
 			{
 				//triangle hit test
-				auto MeshSection = (FLGUIMeshSection*)drawcall->DrawcallRenderSection.Pin().Get();
+				auto MeshSection = (FLexUIMeshSection*)drawcall->DrawcallRenderSection.Pin().Get();
 				auto& vertices = MeshSection->vertices;
 				auto& triangleIndices = MeshSection->triangles;
 				int triangleCount = triangleIndices.Num() / 3;

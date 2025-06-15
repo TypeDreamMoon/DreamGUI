@@ -344,17 +344,17 @@ public:
 #pragma endregion UICanvasGroup
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UIItem", Getter, Setter, meta = (AllowPrivateAccess = true))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
 	ELexWidgetClipping Clipping = ELexWidgetClipping::Inherit;
 	TWeakPtr<FLexUIClipData> ClipData;
 
 	void MarkClipDirty_Recursive(bool InClipTypeChanged)const;
 public:
-	UFUNCTION(BlueprintCallable, Category = "Widget")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	ELexWidgetClipping GetClipping()const { return Clipping; }
-	UFUNCTION(BlueprintCallable, Category = "Widget")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	bool IsPointVisibleOnClip(const FVector& Value)const;
-	UFUNCTION(BlueprintCallable, Category = "Widget")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetClipping(ELexWidgetClipping Value);
 	
 #pragma region UIActive

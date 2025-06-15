@@ -201,7 +201,7 @@ void UIGeometry::UpdateUIRectSimpleVertex(UIGeometry* uiGeo,
 		//additional data
 		{
 			//normal & tangent
-			if (renderCanvas->GetRequireNormal() || renderCanvas->GetRequireTangent())
+			if (renderCanvas->GetFinalRequireNormalAndTangent())
 			{
 				for(int i = 0; i < originVertices.Num(); i++)
 				{
@@ -523,7 +523,7 @@ void UIGeometry::UpdateUIRectBorderVertex(UIGeometry* uiGeo, bool fillCenter,
 		//additional data
 		{
 			//normal & tangent
-			if (renderCanvas->GetRequireNormal() || renderCanvas->GetRequireTangent())
+			if (renderCanvas->GetFinalRequireNormalAndTangent())
 			{
 				for (int i = 0; i < originVertices.Num(); i++)
 				{
@@ -627,7 +627,7 @@ void UIGeometry::UpdateUIRectTiledVertex(UIGeometry* uiGeo,
 		//additional data
 		{
 			//normal & tangent
-			if (renderCanvas->GetRequireNormal() || renderCanvas->GetRequireTangent())
+			if (renderCanvas->GetFinalRequireNormalAndTangent())
 			{
 				for (int i = 0; i < originVertices.Num(); i++)
 				{
@@ -782,7 +782,7 @@ void UIGeometry::UpdateUIRectFillHorizontalVerticalVertex(UIGeometry* uiGeo, con
 		//additional data
 		{
 			//normal & tangent
-			if (renderCanvas->GetRequireNormal() || renderCanvas->GetRequireTangent())
+			if (renderCanvas->GetFinalRequireNormalAndTangent())
 			{
 				for (int i = 0; i < originVertices.Num(); i++)
 				{
@@ -1137,7 +1137,7 @@ void UIGeometry::UpdateUIRectFillRadial90Vertex(UIGeometry* uiGeo, const float& 
 		//additional data
 		{
 			//normal & tangent
-			if (renderCanvas->GetRequireNormal() || renderCanvas->GetRequireTangent())
+			if (renderCanvas->GetFinalRequireNormalAndTangent())
 			{
 				for (int i = 0; i < originVertices.Num(); i++)
 				{
@@ -1702,7 +1702,7 @@ void UIGeometry::UpdateUIRectFillRadial180Vertex(UIGeometry* uiGeo, const float&
 		//additional data
 		{
 			//normal & tangent
-			if (renderCanvas->GetRequireNormal() || renderCanvas->GetRequireTangent())
+			if (renderCanvas->GetFinalRequireNormalAndTangent())
 			{
 				for (int i = 0; i < originVertices.Num(); i++)
 				{
@@ -2238,7 +2238,7 @@ void UIGeometry::UpdateUIRectFillRadial360Vertex(UIGeometry* uiGeo, const float&
 		//additional data
 		{
 			//normal & tangent
-			if (renderCanvas->GetRequireNormal() || renderCanvas->GetRequireTangent())
+			if (renderCanvas->GetFinalRequireNormalAndTangent())
 			{
 				for (int i = 0; i < originVertices.Num(); i++)
 				{
@@ -2965,7 +2965,7 @@ void UIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, float
 	//additional data
 	{
 		//normal & tangent
-		if (renderCanvas->GetRequireNormal() || renderCanvas->GetRequireTangent())
+		if (renderCanvas->GetFinalRequireNormalAndTangent())
 		{
 			for (int i = 0; i < originVertices.Num(); i++)
 			{
@@ -3149,18 +3149,13 @@ void UIGeometry::TransformVertices(ULGUICanvas* canvas, UUIBaseRenderable* item,
 		vertices[i].Position = FVector3f(itemToCanvasTf.TransformPosition(FVector(originVertices[i].Position)));
 	}
 
-	if (canvas->GetRequireNormal())
+	if (canvas->GetFinalRequireNormalAndTangent())
 	{
 		for (int i = 0; i < vertexCount; i++)
 		{
 			vertices[i].TangentZ = itemToCanvasTf.TransformVector(FVector(originVertices[i].Normal));
 			vertices[i].TangentZ.Vector.W = -127;
-		}
-	}
-	if (canvas->GetRequireTangent())
-	{
-		for (int i = 0; i < vertexCount; i++)
-		{
+
 			vertices[i].TangentX = itemToCanvasTf.TransformVector(FVector(originVertices[i].Tangent));
 		}
 	}

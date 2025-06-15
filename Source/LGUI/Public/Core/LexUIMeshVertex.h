@@ -8,12 +8,12 @@
 #include "RenderUtils.h"
 #include "RenderMath.h"
 
-#define LGUI_VERTEX_TEXCOORDINATE_COUNT 4
+#define LEXUI_VERTEX_TEXCOORDINATE_COUNT 4
 
-struct LGUI_API FLGUIMeshVertex
+struct LGUI_API FLexUIMeshVertex
 {
-	FLGUIMeshVertex(){}
-	FLGUIMeshVertex(const FVector3f& InPosition):
+	FLexUIMeshVertex(){}
+	FLexUIMeshVertex(const FVector3f& InPosition):
 		Position(InPosition),
 		Color(FColor(255, 255, 255)),
 		TangentX(FVector3f(1, 0, 0)),
@@ -22,7 +22,7 @@ struct LGUI_API FLGUIMeshVertex
 		// basis determinant default to +1.0
 		TangentZ.Vector.W = 127;
 
-		for (int i = 0; i < LGUI_VERTEX_TEXCOORDINATE_COUNT; i++)
+		for (int i = 0; i < LEXUI_VERTEX_TEXCOORDINATE_COUNT; i++)
 		{
 			TextureCoordinate[i] = FVector2f::ZeroVector;
 		}
@@ -30,7 +30,7 @@ struct LGUI_API FLGUIMeshVertex
 
 	FVector3f Position;
 	FColor Color;
-	FVector2f TextureCoordinate[LGUI_VERTEX_TEXCOORDINATE_COUNT];
+	FVector2f TextureCoordinate[LEXUI_VERTEX_TEXCOORDINATE_COUNT];
 	FPackedNormal TangentX;
 	FPackedNormal TangentZ;
 
