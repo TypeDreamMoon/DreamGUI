@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "UIItemComponentVisualizer.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "Core/Components/UIItem.h"
 #include "LGUIComponentVisualizerModule.h"
 #include "LGUI.h"
 #include "LGUIEditorUtils.h"

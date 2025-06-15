@@ -3,7 +3,7 @@
 #pragma once
 
 #include "UIBaseActor.h"
-#include "Core/ActorComponent/UIProceduralRect.h"
+#include "Core/Components/UIProceduralRect.h"
 #include "UIProceduralRectActor.generated.h"
 
 UCLASS(ClassGroup = LGUI)

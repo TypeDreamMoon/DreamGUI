@@ -1,10 +1,10 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/ActorComponent/UIItem.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
 #include "LGUI.h"
 #include "Utils/LGUIUtils.h"
-#include "Core/ActorComponent/LGUICanvas.h"
-#include "Core/ActorComponent/UICanvasGroup.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/UICanvasGroup.h"
 #include "Core/LGUISettings.h"
 #include "Core/LGUILifeCycleUIBehaviour.h"
 #include "Core/LGUIManager.h"

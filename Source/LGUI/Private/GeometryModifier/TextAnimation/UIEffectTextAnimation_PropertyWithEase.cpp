@@ -2,7 +2,7 @@
 
 #include "GeometryModifier/TextAnimation/UIEffectTextAnimation_PropertyWithEase.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/UIText.h"
+#include "LGUI/Public/Core/Components/UIText.h"
 #include "Curves/CurveFloat.h"
 #include "Utils/LGUIUtils.h"
 

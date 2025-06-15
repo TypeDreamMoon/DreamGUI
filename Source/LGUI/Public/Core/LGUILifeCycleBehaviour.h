@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "Core/ActorComponent/UIItem.h"
+#include "Components/UIItem.h"
 #include "Components/ActorComponent.h"
 #include "LGUILifeCycleBehaviour.generated.h"
 

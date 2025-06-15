@@ -1,8 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Extensions/UIWidget.h"
-#include "Core/ActorComponent/UIItem.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "LGUI.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Slate/WidgetRenderer.h"

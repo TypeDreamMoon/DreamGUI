@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/UIBatchMeshRenderableCustomization.h"
-#include "Core/ActorComponent/UIBatchMeshRenderable.h"
+#include "Core/Components/UIBatchMeshRenderable.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"

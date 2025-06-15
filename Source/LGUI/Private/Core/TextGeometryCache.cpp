@@ -2,7 +2,7 @@
 
 #include "Core/LGUITextData.h"
 #include "Core/UIGeometry.h"
-#include "Core/ActorComponent/UIText.h"
+#include "LGUI/Public/Core/Components/UIText.h"
 #include "Core/LGUIRichTextImageData.h"
 #include "Core/LGUIFontData_BaseObject.h"
 

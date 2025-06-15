@@ -2,7 +2,7 @@
 
 #include "GeometryModifier/UIGeometryModifierBase.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/UIBatchMeshRenderable.h"
+#include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
 
 UUIGeometryModifierBase::UUIGeometryModifierBase()
 {

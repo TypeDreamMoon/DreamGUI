@@ -1,7 +1,7 @@
 // Copyright 2019-present LexLiu. All Rights Reserved.
 
 #include "Core/LGUISDFFontData.h"
-#include "Core/ActorComponent/UIText.h"
+#include "LGUI/Public/Core/Components/UIText.h"
 #include "Core/LGUIManager.h"
 #include "Utils/LGUIUtils.h"
 #include "Materials/MaterialInterface.h"

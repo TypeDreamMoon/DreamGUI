@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/ActorComponent/UICanvasGroup.h"
+#include "LGUI/Public/Core/Components/UICanvasGroup.h"
 #include "LGUI.h"
 #include "Utils/LGUIUtils.h"
 #include "LTweenManager.h"

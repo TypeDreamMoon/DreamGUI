@@ -12,7 +12,7 @@
 
 #include "Materials/MaterialInstanceDynamic.h"
 
-#include "Core/ActorComponent/UIBatchMeshRenderable.h"
+#include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(MovieSceneLGUIMaterialSystem)
 

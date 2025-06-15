@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/LGUIMesh/LGUIMeshComponent.h"
+#include "LGUI/Public/Core/LexUIMesh/LexUIMeshComponent.h"
 #include "DynamicMeshBuilder.h"
 #include "PhysicsEngine/BodySetup.h"
 #include "Containers/ResourceArray.h"
@@ -11,12 +11,12 @@
 #include "Engine/Engine.h"
 #include "LGUI.h"
 #include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "Materials/MaterialRenderProxy.h"
 #include "MaterialDomain.h"
 #include "PrimitiveSceneProxy.h"
 #include "Core/UIPostProcessRenderProxy.h"
-#include "Core/ActorComponent/UIPostProcessRenderable.h"
+#include "LGUI/Public/Core/Components/UIPostProcessRenderable.h"
 #include "PrimitiveSceneInfo.h"
 
 
@@ -198,7 +198,7 @@ public:
 		static size_t UniquePointer;
 		return reinterpret_cast<size_t>(&UniquePointer);
 	}
-	FLGUIRenderSceneProxy(ULGUIMeshComponent* InComponent, ULGUICanvas* InCanvasPtr, int32 InCanvasSortOrder, FLGUIRenderSceneProxy* InParentSceneProxy)
+	FLGUIRenderSceneProxy(ULexUIMeshComponent* InComponent, ULGUICanvas* InCanvasPtr, int32 InCanvasSortOrder, FLGUIRenderSceneProxy* InParentSceneProxy)
 		: FPrimitiveSceneProxy(InComponent)
 		, MaterialRelevance(InComponent->GetMaterialRelevance(GetScene().GetFeatureLevel()))
 		, RenderPriority(InComponent->TranslucencySortPriority)
@@ -943,14 +943,14 @@ void FLGUIChildCanvasSection::UpdateSectionBox(const FTransform& LocalToWorld)
 }
 
 
-ULGUIMeshComponent::ULGUIMeshComponent()
+ULexUIMeshComponent::ULexUIMeshComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 	this->bCanEverAffectNavigation = false;
 }
 #include "Utils/LGUIUtils.h"
-void ULGUIMeshComponent::CreateRenderSectionRenderData(TSharedPtr<FLGUIRenderSection> InRenderSection)
+void ULexUIMeshComponent::CreateRenderSectionRenderData(TSharedPtr<FLGUIRenderSection> InRenderSection)
 {
 #if WITH_EDITOR
 	for (auto& RenderSection : RenderSections)
@@ -975,7 +975,7 @@ void ULGUIMeshComponent::CreateRenderSectionRenderData(TSharedPtr<FLGUIRenderSec
 	{
 		auto ChildCanvasSection = (FLGUIChildCanvasSection*)InRenderSection.Get();
 		auto ChildCanvasMeshCom = ChildCanvasSection->ChildCanvasMeshComponent;
-		ChildCanvasMeshCom->OnSceneProxyCreated.AddWeakLambda(this, [this](ULGUIMeshComponent* InMesh, FLGUIRenderSceneProxy* InSceneProxy) {
+		ChildCanvasMeshCom->OnSceneProxyCreated.AddWeakLambda(this, [this](ULexUIMeshComponent* InMesh, FLGUIRenderSceneProxy* InSceneProxy) {
 			if (this->SceneProxy != nullptr)
 			{
 				auto ThisSceneProxy = (FLGUIRenderSceneProxy*)this->SceneProxy;//SceneProxy could change before the RENDER_COMMAND execute, so do necessary check in SetChildCanvasSectionData_RenderThread
@@ -1006,7 +1006,7 @@ void ULGUIMeshComponent::CreateRenderSectionRenderData(TSharedPtr<FLGUIRenderSec
 }
 
 DECLARE_CYCLE_STAT(TEXT("LGUIMesh UpdateMeshSection_GT"), STAT_UpdateMeshSectionGT, STATGROUP_LGUI);
-void ULGUIMeshComponent::UpdateMeshSectionRenderData(TSharedPtr<FLGUIRenderSection> InRenderSection, bool InVertexPositionChanged, int8 AdditionalShaderChannelFlags)
+void ULexUIMeshComponent::UpdateMeshSectionRenderData(TSharedPtr<FLGUIRenderSection> InRenderSection, bool InVertexPositionChanged, int8 AdditionalShaderChannelFlags)
 {
 	SCOPE_CYCLE_COUNTER(STAT_UpdateMeshSectionGT);
 	if (InVertexPositionChanged)
@@ -1060,7 +1060,7 @@ void ULGUIMeshComponent::UpdateMeshSectionRenderData(TSharedPtr<FLGUIRenderSecti
 	}
 }
 
-void ULGUIMeshComponent::DeleteRenderSection(TSharedPtr<FLGUIRenderSection> InRenderSection)
+void ULexUIMeshComponent::DeleteRenderSection(TSharedPtr<FLGUIRenderSection> InRenderSection)
 {
 	if (SceneProxy)
 	{
@@ -1090,7 +1090,7 @@ void ULGUIMeshComponent::DeleteRenderSection(TSharedPtr<FLGUIRenderSection> InRe
 	}
 }
 
-void ULGUIMeshComponent::SetRenderSectionRenderPriority(TSharedPtr<FLGUIRenderSection> InMeshSection, int32 InSortPriority)
+void ULexUIMeshComponent::SetRenderSectionRenderPriority(TSharedPtr<FLGUIRenderSection> InMeshSection, int32 InSortPriority)
 {
 	InMeshSection->RenderPriority = InSortPriority;
 	if (SceneProxy)
@@ -1108,13 +1108,13 @@ void ULGUIMeshComponent::SetRenderSectionRenderPriority(TSharedPtr<FLGUIRenderSe
 	}
 }
 
-void ULGUIMeshComponent::SetMeshSectionMaterial(TSharedPtr<FLGUIRenderSection> InRenderSection, UMaterialInterface* InMaterial)
+void ULexUIMeshComponent::SetMeshSectionMaterial(TSharedPtr<FLGUIRenderSection> InRenderSection, UMaterialInterface* InMaterial)
 {
 	check(InRenderSection->Type == ELGUIRenderSectionType::Mesh);
 	((FLGUIMeshSection*)InRenderSection.Get())->material = InMaterial;
 }
 
-void ULGUIMeshComponent::VerifyMaterials()
+void ULexUIMeshComponent::VerifyMaterials()
 {
 	this->EmptyOverrideMaterials();
 
@@ -1142,14 +1142,14 @@ void ULGUIMeshComponent::VerifyMaterials()
 	}
 }
 
-void ULGUIMeshComponent::SetParentCavansMeshComp(ULGUIMeshComponent* InMesh)
+void ULexUIMeshComponent::SetParentCavansMeshComp(ULexUIMeshComponent* InMesh)
 {
 	if (ParentCanvasMeshComp != InMesh)
 	{
 		ParentCanvasMeshComp = InMesh;
 	}
 }
-void ULGUIMeshComponent::ClearParentCavansMeshComp(ULGUIMeshComponent* InMesh)
+void ULexUIMeshComponent::ClearParentCavansMeshComp(ULexUIMeshComponent* InMesh)
 {
 	if (ParentCanvasMeshComp == InMesh)//check, incase parent already change
 	{
@@ -1157,7 +1157,7 @@ void ULGUIMeshComponent::ClearParentCavansMeshComp(ULGUIMeshComponent* InMesh)
 	}
 }
 
-void ULGUIMeshComponent::SetUITranslucentSortPriority(int32 NewTranslucentSortPriority)
+void ULexUIMeshComponent::SetUITranslucentSortPriority(int32 NewTranslucentSortPriority)
 {
 	UPrimitiveComponent::SetTranslucentSortPriority(NewTranslucentSortPriority);
 	if (SceneProxy)
@@ -1172,7 +1172,7 @@ void ULGUIMeshComponent::SetUITranslucentSortPriority(int32 NewTranslucentSortPr
 	}
 }
 
-void ULGUIMeshComponent::UpdateChildCanvasSectionBox()
+void ULexUIMeshComponent::UpdateChildCanvasSectionBox()
 {
 	struct LOCAL
 	{
@@ -1195,7 +1195,7 @@ void ULGUIMeshComponent::UpdateChildCanvasSectionBox()
 	LOCAL::UpdateChildCanvasSectionBox_Recursive(RenderSections);
 }
 
-void ULGUIMeshComponent::UpdateLocalBounds()
+void ULexUIMeshComponent::UpdateLocalBounds()
 {
 	UpdateBounds();// Update global bounds		
 	MarkRenderTransformDirty();// Need to send to render thread
@@ -1203,9 +1203,9 @@ void ULGUIMeshComponent::UpdateLocalBounds()
 
 struct FLGUIPrimitiveComponentIdTemporaryModifier
 {
-	ULGUIMeshComponent* Comp = nullptr;
+	ULexUIMeshComponent* Comp = nullptr;
 	FPrimitiveComponentId OriginId;
-	FLGUIPrimitiveComponentIdTemporaryModifier(ULGUIMeshComponent* InComp, FPrimitiveComponentId InNewId)
+	FLGUIPrimitiveComponentIdTemporaryModifier(ULexUIMeshComponent* InComp, FPrimitiveComponentId InNewId)
 	{
 		Comp = InComp;
 		OriginId = Comp->GetPrimitiveSceneId();
@@ -1218,7 +1218,7 @@ struct FLGUIPrimitiveComponentIdTemporaryModifier
 };
 
 DECLARE_CYCLE_STAT(TEXT("LGUIMesh CreateSceneProxy"), STAT_LGUIMesh_CreateSceneProxy, STATGROUP_LGUI);
-FPrimitiveSceneProxy* ULGUIMeshComponent::CreateSceneProxy()
+FPrimitiveSceneProxy* ULexUIMeshComponent::CreateSceneProxy()
 {
 	SCOPE_CYCLE_COUNTER(STAT_LGUIMesh_CreateSceneProxy);
 
@@ -1237,11 +1237,11 @@ FPrimitiveSceneProxy* ULGUIMeshComponent::CreateSceneProxy()
 	return Proxy;
 }
 
-void ULGUIMeshComponent::SetRenderCanvas(ULGUICanvas* InCanvas)
+void ULexUIMeshComponent::SetRenderCanvas(ULGUICanvas* InCanvas)
 {
 	RenderCanvas = InCanvas;
 }
-void ULGUIMeshComponent::SetSupportLGUIRenderer(bool InSupportOrNot, TWeakPtr<FLexUIRenderer, ESPMode::ThreadSafe> InLGUIRenderer, bool InIsRenderToWorld)
+void ULexUIMeshComponent::SetSupportLGUIRenderer(bool InSupportOrNot, TWeakPtr<FLexUIRenderer, ESPMode::ThreadSafe> InLGUIRenderer, bool InIsRenderToWorld)
 {
 	if (InSupportOrNot)
 	{
@@ -1254,11 +1254,11 @@ void ULGUIMeshComponent::SetSupportLGUIRenderer(bool InSupportOrNot, TWeakPtr<FL
 	}
 }
 
-void ULGUIMeshComponent::SetSupportUERenderer(bool InSupportOrNot)
+void ULexUIMeshComponent::SetSupportUERenderer(bool InSupportOrNot)
 {
 	bIsSupportUERenderer = InSupportOrNot;
 }
-void ULGUIMeshComponent::ClearRenderData()
+void ULexUIMeshComponent::ClearRenderData()
 {
 	MarkRenderStateDirty();//mark dirty to recreate SceneProxy
 	RenderSections.Reset();
@@ -1266,7 +1266,7 @@ void ULGUIMeshComponent::ClearRenderData()
 	LGUIRenderer = nullptr;
 }
 
-int32 ULGUIMeshComponent::GetNumMaterials() const
+int32 ULexUIMeshComponent::GetNumMaterials() const
 {
 	int Result = 0;
 	for (auto& RenderSectionItem : RenderSections)
@@ -1285,7 +1285,7 @@ int32 ULGUIMeshComponent::GetNumMaterials() const
 	return Result;
 }
 
-TSharedPtr<FLGUIRenderSection> ULGUIMeshComponent::CreateRenderSection(ELGUIRenderSectionType type)
+TSharedPtr<FLGUIRenderSection> ULexUIMeshComponent::CreateRenderSection(ELGUIRenderSectionType type)
 {
 	TSharedPtr<FLGUIRenderSection> Result = nullptr;
 	switch (type)
@@ -1304,7 +1304,7 @@ TSharedPtr<FLGUIRenderSection> ULGUIMeshComponent::CreateRenderSection(ELGUIRend
 	return Result;
 }
 
-FBoxSphereBounds ULGUIMeshComponent::CalcBounds(const FTransform& LocalToWorld) const
+FBoxSphereBounds ULexUIMeshComponent::CalcBounds(const FTransform& LocalToWorld) const
 {
 	if (RenderSections.Num() <= 0)
 	{

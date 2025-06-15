@@ -1,9 +1,9 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/ActorComponent/UISprite.h"
+#include "LGUI/Public/Core/Components/UISprite.h"
 #include "LGUI.h"
 #include "Core/UIGeometry.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "Core/LGUISpriteData_BaseObject.h"
 
 

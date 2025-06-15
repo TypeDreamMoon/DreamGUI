@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Extensions/UIRenderableCustomRaycastExtensions.h"
-#include "Core/ActorComponent/UIBatchMeshRenderable.h"
+#include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
 #include "Utils/LGUIUtils.h"
 
 #if 0

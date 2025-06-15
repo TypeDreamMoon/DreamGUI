@@ -2,7 +2,7 @@
 
 #include "Layout/LGUICanvasScaler.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #if WITH_EDITOR
 #include "Core/LGUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"

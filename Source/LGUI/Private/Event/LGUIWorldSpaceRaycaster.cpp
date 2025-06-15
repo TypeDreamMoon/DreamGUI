@@ -2,7 +2,7 @@
 
 #include "Event/LGUIWorldSpaceRaycaster.h"
 #include "Event/RaycasterSource/LGUIWorldSpaceRaycasterSource_Mouse.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "Core/LGUISettings.h"
 
 

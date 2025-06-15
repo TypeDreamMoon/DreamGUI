@@ -34,7 +34,7 @@
 #include "Settings/EditorProjectSettings.h"
 #include "HAL/PlatformApplicationMisc.h"
 
-#include "Core/ActorComponent/UIItem.h"
+#include "Core/Components/UIItem.h"
 
 #include "DetailCategoryBuilder.h"
 #include "Algo/Transform.h"

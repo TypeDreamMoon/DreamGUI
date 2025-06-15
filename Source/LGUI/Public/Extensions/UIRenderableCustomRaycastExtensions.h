@@ -2,7 +2,7 @@
 
 #pragma once
 #include "CoreMinimal.h"
-#include "Core/ActorComponent/UIBaseRenderable.h"
+#include "LGUI/Public/Core/Components/UIBaseRenderable.h"
 #include "UIRenderableCustomRaycastExtensions.generated.h"
 
 #if 0

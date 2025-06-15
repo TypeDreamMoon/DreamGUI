@@ -3,12 +3,12 @@
 #include "Interaction/UIDropdownComponent.h"
 #include "Event/LGUIEventSystem.h"
 #include "Core/Actor/UIBaseActor.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "LGUIBPLibrary.h"
 #include "Core/LGUISpriteData.h"
-#include "Core/ActorComponent/UIItem.h"
-#include "Core/ActorComponent/UIText.h"
-#include "Core/ActorComponent/UISprite.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/UIText.h"
+#include "LGUI/Public/Core/Components/UISprite.h"
 #include "Core/Actor/UIContainerActor.h"
 #include "Core/Actor/UITextActor.h"
 #include "Core/Actor/UISpriteActor.h"
@@ -563,9 +563,9 @@ void UUIDropdownComponent::ClearItemCustomDataFunction()
 
 #include "Interaction/UIDropdownComponent.h"
 #include "Core/Actor/UITextActor.h"
-#include "Core/ActorComponent/UIText.h"
+#include "LGUI/Public/Core/Components/UIText.h"
 #include "Core/Actor/UISpriteActor.h"
-#include "Core/ActorComponent/UISprite.h"
+#include "LGUI/Public/Core/Components/UISprite.h"
 #include "Interaction/UIToggleComponent.h"
 
 UUIDropdownItemComponent::UUIDropdownItemComponent()

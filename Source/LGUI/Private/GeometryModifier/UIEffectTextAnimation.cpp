@@ -2,7 +2,7 @@
 
 #include "GeometryModifier/UIEffectTextAnimation.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/UIText.h"
+#include "LGUI/Public/Core/Components/UIText.h"
 
 
 UUIEffectTextAnimation::UUIEffectTextAnimation()

@@ -3,10 +3,10 @@
 #include "Thumbnail/LGUIPrefabThumbnailScene.h"
 #include "Components/PrimitiveComponent.h"
 #include "ThumbnailRendering/SceneThumbnailInfo.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "Core/Components/LGUICanvas.h"
 #include "LGUIEditorModule.h"
 #include "Core/Actor/UIContainerActor.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "Core/Components/UIItem.h"
 #include "Utils/LGUIUtils.h"
 
 

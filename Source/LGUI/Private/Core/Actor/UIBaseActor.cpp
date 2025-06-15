@@ -2,9 +2,9 @@
 
 #include "Core/Actor/UIBaseActor.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/UIItem.h"
-#include "Core/ActorComponent/UIBaseRenderable.h"
-#include "Core/ActorComponent/UIPostProcessRenderable.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/UIBaseRenderable.h"
+#include "LGUI/Public/Core/Components/UIPostProcessRenderable.h"
 #if WITH_EDITOR
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "Utils/LGUIUtils.h"

@@ -3,7 +3,7 @@
 #pragma once
 
 #include "UIBaseActor.h"
-#include "Core/ActorComponent/UITexture.h"
+#include "Core/Components/UITexture.h"
 #include "UITextureActor.generated.h"
 
 UCLASS(ClassGroup = LGUI)

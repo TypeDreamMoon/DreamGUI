@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "LGUI.h"
 #include "Core/UIGeometry.h"
 #include "Utils/LGUIUtils.h"
@@ -11,13 +11,13 @@
 #include "Core/LGUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
-#include "Core/LGUIMesh/LGUIMeshComponent.h"
+#include "LGUI/Public/Core/LexUIMesh/LexUIMeshComponent.h"
 #include "Core/UIDrawcall.h"
-#include "Core/ActorComponent/UIBaseRenderable.h"
-#include "Core/ActorComponent/UIBatchMeshRenderable.h"
-#include "Core/ActorComponent/UIPostProcessRenderable.h"
-#include "Core/ActorComponent/UIDirectMeshRenderable.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "LGUI/Public/Core/Components/UIBaseRenderable.h"
+#include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
+#include "LGUI/Public/Core/Components/UIPostProcessRenderable.h"
+#include "LGUI/Public/Core/Components/UIDirectMeshRenderable.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "GameFramework/PlayerController.h"
 #include "Engine/LocalPlayer.h"
@@ -59,7 +59,7 @@ ULGUICanvas::ULGUICanvas()
 
 	bIsViewProjectionMatrixDirty = true;
 
-	DefaultMeshType = ULGUIMeshComponent::StaticClass();
+	DefaultMeshType = ULexUIMeshComponent::StaticClass();
 	DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/LexUI/Materials/LexUI_Image"));
 }
 
@@ -1306,7 +1306,7 @@ void ULGUICanvas::MarkCanvasLayoutDirty()
 	bIsViewProjectionMatrixDirty = true;
 }
 
-void ULGUICanvas::SetDefaultMeshType(TSubclassOf<ULGUIMeshComponent> InValue)
+void ULGUICanvas::SetDefaultMeshType(TSubclassOf<ULexUIMeshComponent> InValue)
 {
 	if (DefaultMeshType != InValue)
 	{
@@ -1671,9 +1671,9 @@ void ULGUICanvas::CheckUIMesh()const
 	if (!UIMesh.IsValid())
 	{
 		auto MeshType = DefaultMeshType.Get();
-		if (MeshType == nullptr)MeshType = ULGUIMeshComponent::StaticClass();
+		if (MeshType == nullptr)MeshType = ULexUIMeshComponent::StaticClass();
 		auto ObjectName = MakeUniqueObjectName(this->GetOwner(), MeshType, FName(*this->GetUIItem()->GetDisplayName()));
-		UIMesh = NewObject<ULGUIMeshComponent>(this->GetOwner(), MeshType, ObjectName, RF_Transient);
+		UIMesh = NewObject<ULexUIMeshComponent>(this->GetOwner(), MeshType, ObjectName, RF_Transient);
 		UIMesh->RegisterComponent();
 		UIMesh->AttachToComponent(this->GetOwner()->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
 		UIMesh->SetRelativeTransform(FTransform::Identity);

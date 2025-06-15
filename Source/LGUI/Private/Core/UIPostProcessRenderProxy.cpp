@@ -6,7 +6,7 @@
 #include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
 #include "Rendering/Texture2DResource.h"
 #include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
-#include "Core/ActorComponent/UIPostProcessRenderable.h"
+#include "LGUI/Public/Core/Components/UIPostProcessRenderable.h"
 
 FUIPostProcessRenderProxy::FUIPostProcessRenderProxy()
 {

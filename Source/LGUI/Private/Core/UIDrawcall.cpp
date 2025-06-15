@@ -4,10 +4,10 @@
 #include "Core/UIGeometry.h"
 #include "LGUI.h"
 #include "DynamicMeshBuilder.h"
-#include "Core/ActorComponent/LGUICanvas.h"
-#include "Core/ActorComponent/UIPostProcessRenderable.h"
-#include "Core/ActorComponent/UIBatchMeshRenderable.h"
-#include "Core/ActorComponent/UIDirectMeshRenderable.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/UIPostProcessRenderable.h"
+#include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
+#include "LGUI/Public/Core/Components/UIDirectMeshRenderable.h"
 #include "Core/LGUISettings.h"
 
 void UUIDrawcall::GetCombined(TArray<FLGUIMeshVertex>& vertices, TArray<FLGUIMeshIndexBufferType>& triangles)const

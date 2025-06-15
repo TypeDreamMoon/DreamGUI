@@ -2,7 +2,7 @@
 
 #include "Interaction/UITextInputComponent.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/UIText.h"
+#include "LGUI/Public/Core/Components/UIText.h"
 #include "Core/Actor/UITextActor.h"
 #include "Core/Actor/UISpriteActor.h"
 #include "InputCoreTypes.h"

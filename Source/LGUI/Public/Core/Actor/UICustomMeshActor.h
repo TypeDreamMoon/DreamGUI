@@ -3,7 +3,7 @@
 #pragma once
 
 #include "UIBaseActor.h"
-#include "Core/ActorComponent/UICustomMesh.h"
+#include "Core/Components/UICustomMesh.h"
 #include "UICustomMeshActor.generated.h"
 
 /**

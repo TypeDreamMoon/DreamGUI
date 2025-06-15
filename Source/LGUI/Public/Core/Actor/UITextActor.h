@@ -3,7 +3,7 @@
 #pragma once
 
 #include "UIBaseActor.h"
-#include "Core/ActorComponent/UIText.h"
+#include "LGUI/Public/Core/Components/UIText.h"
 #include "UITextActor.generated.h"
 
 UCLASS(ClassGroup = LGUI)

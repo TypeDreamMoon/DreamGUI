@@ -2,7 +2,7 @@
 
 #include "Layout/UIPanelLayoutBase.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
 
 UUIPanelLayoutBase::UUIPanelLayoutBase()
 {

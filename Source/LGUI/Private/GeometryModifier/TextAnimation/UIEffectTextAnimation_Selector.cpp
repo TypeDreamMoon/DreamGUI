@@ -2,7 +2,7 @@
 
 #include "GeometryModifier/TextAnimation/UIEffectTextAnimation_Selector.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/UIText.h"
+#include "LGUI/Public/Core/Components/UIText.h"
 
 bool UUIEffectTextAnimation_RangeSelector::Select(UUIText* InUIText, FUIEffectTextAnimation_SelectResult& OutSelection)
 {

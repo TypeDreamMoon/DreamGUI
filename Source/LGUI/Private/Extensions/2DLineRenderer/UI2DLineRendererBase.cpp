@@ -3,7 +3,7 @@
 #include "Extensions/2DLineRenderer/UI2DLineRendererBase.h"
 #include "LGUI.h"
 #include "Core/UIGeometry.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "Core/LGUISpriteData_BaseObject.h"
 #include "LTweenManager.h"
 #include "Core/LGUISettings.h"

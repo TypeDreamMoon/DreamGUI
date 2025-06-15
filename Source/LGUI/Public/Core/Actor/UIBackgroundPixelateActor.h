@@ -3,7 +3,7 @@
 #pragma once
 
 #include "UIBaseActor.h"
-#include "Core/ActorComponent/UIBackgroundPixelate.h"
+#include "Core/Components/UIBackgroundPixelate.h"
 #include "UIBackgroundPixelateActor.generated.h"
 
 /**

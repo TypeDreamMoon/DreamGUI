@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "Core/ActorComponent/UIItem.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
 #include "Components/ActorComponent.h"
 #include "LTweener.h"
 #include "UICanvasGroup.generated.h"

@@ -14,7 +14,7 @@ class UMaterialInstanceDynamic;
 class UUIItem;
 class UUIBatchMeshRenderable;
 class UUIDirectMeshRenderable;
-class ULGUIMeshComponent;
+class ULexUIMeshComponent;
 struct FLGUIRenderSection;
 
 enum class EUIDrawcallType :uint8
@@ -46,7 +46,7 @@ public:
 	TWeakObjectPtr<UTexture> Texture = nullptr;//drawcall used this texture to render
 	TWeakObjectPtr<UMaterialInterface> Material = nullptr;//drawcall use this material to render, can be null to use default material
 	TWeakObjectPtr<UMaterialInterface> RenderMaterial = nullptr;//material that render this drawcall
-	TWeakObjectPtr<ULGUIMeshComponent> DrawcallMesh = nullptr;//mesh for render this drawcall
+	TWeakObjectPtr<ULexUIMeshComponent> DrawcallMesh = nullptr;//mesh for render this drawcall
 	TWeakPtr<FLGUIRenderSection> DrawcallRenderSection = nullptr;//section of mesh which render this drawcall
 
 	bool bMaterialContainsLGUIParameter = false;//if Material contains LGUI's parameter, then a MaterialInstanceDynamic will be created and stored as RenderMaterial, other wise RenderMaterial is same as Material

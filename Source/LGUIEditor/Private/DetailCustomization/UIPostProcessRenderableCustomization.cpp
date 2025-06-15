@@ -2,7 +2,7 @@
 
 #include "DetailCustomization/UIPostProcessRenderableCustomization.h"
 #include "LGUIEditorUtils.h"
-#include "Core/ActorComponent/UIPostProcessRenderable.h"
+#include "Core/Components/UIPostProcessRenderable.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"

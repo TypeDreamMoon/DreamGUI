@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Core/ActorComponent/UIBatchMeshRenderable.h"
+#include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
 #include "UICustomMesh.generated.h"
 
 class ULGUICustomMesh;

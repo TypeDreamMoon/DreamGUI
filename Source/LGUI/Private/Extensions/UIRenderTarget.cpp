@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Extensions/UIRenderTarget.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "LGUI.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Utils/LGUIUtils.h"

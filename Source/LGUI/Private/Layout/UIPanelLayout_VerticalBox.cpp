@@ -2,7 +2,7 @@
 
 #include "Layout/UIPanelLayout_VerticalBox.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
 
 DECLARE_CYCLE_STAT(TEXT("UIPanelLayout VerticalBox RebuildLayout"), STAT_PanelLayout_Vertical, STATGROUP_LGUI);
 

@@ -13,7 +13,7 @@
 #include "PipelineStateCache.h"
 #include "SceneRendering.h"
 #include "LGUI/Public/Core/LexUIRender/ILexUIRendererPrimitive.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "MeshPassProcessor.inl"
 #include "ScenePrivate.h"
 #include "TextureResource.h"

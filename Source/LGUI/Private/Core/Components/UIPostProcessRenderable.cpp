@@ -1,8 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/ActorComponent/UIPostProcessRenderable.h"
+#include "LGUI/Public/Core/Components/UIPostProcessRenderable.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "Core/UIGeometry.h"
 #include "Core/UIPostProcessRenderProxy.h"
 

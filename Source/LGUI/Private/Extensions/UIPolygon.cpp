@@ -3,7 +3,7 @@
 #include "Extensions/UIPolygon.h"
 #include "LGUI.h"
 #include "Core/UIGeometry.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "Core/LGUISpriteData_BaseObject.h"
 #include "LTweenManager.h"
 

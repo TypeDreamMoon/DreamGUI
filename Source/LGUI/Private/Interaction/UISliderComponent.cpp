@@ -3,7 +3,7 @@
 #include "Interaction/UISliderComponent.h"
 #include "LGUI.h"
 #include "Core/Actor/UIBaseActor.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
 
 void UUISliderComponent::Awake()
 {

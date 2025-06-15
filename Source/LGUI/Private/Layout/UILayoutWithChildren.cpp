@@ -3,7 +3,7 @@
 #include "Layout/UILayoutWithChildren.h"
 #include "Layout/UILayoutElement.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
 
 UUILayoutWithChildren::UUILayoutWithChildren()
 {

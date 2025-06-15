@@ -1,9 +1,9 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/ActorComponent/UITextureBase.h"
+#include "LGUI/Public/Core/Components/UITextureBase.h"
 #include "LGUI.h"
 #include "Core/UIGeometry.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "Materials/MaterialInterface.h"
 #include "Utils/LGUIUtils.h"
 #include "TextureResource.h"

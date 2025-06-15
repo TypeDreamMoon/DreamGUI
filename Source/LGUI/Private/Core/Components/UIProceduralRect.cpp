@@ -1,14 +1,14 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/ActorComponent/UIProceduralRect.h"
+#include "LGUI/Public/Core/Components/UIProceduralRect.h"
 #include "LGUI.h"
 #include "Core/UIGeometry.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "Core/LGUISpriteInfo.h"
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Core/UIDrawcall.h"
-#include "Core/ActorComponent/UITextureBase.h"
+#include "LGUI/Public/Core/Components/UITextureBase.h"
 #include "Utils/LGUIUtils.h"
 #include "Core/LGUISpriteData.h"
 #include "Core/LGUISpriteData_BaseObject.h"

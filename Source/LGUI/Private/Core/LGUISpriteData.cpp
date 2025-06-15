@@ -3,7 +3,7 @@
 #include "Core/LGUISpriteData.h"
 #include "LGUI.h"
 #include "Core/LGUISettings.h"
-#include "Core/ActorComponent/UISpriteBase.h"
+#include "LGUI/Public/Core/Components/UISpriteBase.h"
 #include "Core/LGUIDynamicSpriteAtlasData.h"
 #include "Core/LGUIStaticSpriteAtlasData.h"
 #include "UObject/UObjectIterator.h"

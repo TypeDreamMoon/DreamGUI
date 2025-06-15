@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "Core/ActorComponent/UIItem.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
 #include "CoreMinimal.h"
 #include "Core/LGUILifeCycleUIBehaviour.h"
 #include "Layout/ILGUILayoutInterface.h"

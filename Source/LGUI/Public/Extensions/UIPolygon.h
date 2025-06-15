@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "Core/ActorComponent/UISpriteBase.h"
+#include "LGUI/Public/Core/Components/UISpriteBase.h"
 #include "Core/Actor/UIBaseActor.h"
 #include "LTweener.h"
 #include "UIPolygon.generated.h"

@@ -4,7 +4,7 @@
 #include "Event/LGUIBaseRaycaster.h"
 #include "LGUI.h"
 #include "GameFramework/Actor.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
 
 void ULGUIPointerEventData::SetHighlightedComponentForNavigation(USceneComponent* InComp)
 {

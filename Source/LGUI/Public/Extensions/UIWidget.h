@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "PrefabSystem/ILGUIPrefabInterface.h"
-#include "Core/ActorComponent/UICustomMesh.h"
+#include "LGUI/Public/Core/Components/UICustomMesh.h"
 #include "Components/WidgetComponent.h"
 #include "Core/Actor/UIBaseActor.h"
 #include "UIWidget.generated.h"

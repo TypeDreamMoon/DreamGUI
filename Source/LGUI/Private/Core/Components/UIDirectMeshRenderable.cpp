@@ -1,9 +1,9 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/ActorComponent/UIDirectMeshRenderable.h"
+#include "LGUI/Public/Core/Components/UIDirectMeshRenderable.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/LGUICanvas.h"
-#include "Core/LGUIMesh/LGUIMeshComponent.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/LexUIMesh/LexUIMeshComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Core/UIDrawcall.h"
 
@@ -75,7 +75,7 @@ TWeakPtr<FLGUIRenderSection> UUIDirectMeshRenderable::GetMeshSection()const
 	}
 	return nullptr;
 }
-TWeakObjectPtr<ULGUIMeshComponent> UUIDirectMeshRenderable::GetUIMesh()const
+TWeakObjectPtr<ULexUIMeshComponent> UUIDirectMeshRenderable::GetUIMesh()const
 {
 	if (drawcall.IsValid())
 	{

@@ -2,7 +2,7 @@
 
 #include "DetailCustomization/UITextCustomization.h"
 #include "HAL/PlatformApplicationMisc.h"
-#include "Core/ActorComponent/UIText.h"
+#include "Core/Components/UIText.h"
 
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"

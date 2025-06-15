@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "Core/ActorComponent/UIBatchMeshRenderable.h"
+#include "Components/UIBatchMeshRenderable.h"
 #include "Curves/CurveFloat.h"
 #include "LGUICustomMesh.generated.h"
 

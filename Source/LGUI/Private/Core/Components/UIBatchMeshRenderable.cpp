@@ -1,9 +1,9 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/ActorComponent/UIBatchMeshRenderable.h"
+#include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
 #include "LGUI.h"
 #include "Core/LexUIClipData.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "Utils/LGUIUtils.h"
 #include "GeometryModifier/UIGeometryModifierBase.h"
 #include "Materials/MaterialInstanceDynamic.h"

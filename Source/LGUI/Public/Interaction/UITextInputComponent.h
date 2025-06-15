@@ -11,7 +11,7 @@
 #include "Widgets/Input/IVirtualKeyboardEntry.h"
 #include "GenericPlatform/ITextInputMethodSystem.h"
 #include "LGUIDelegateHandleWrapper.h"
-#include "Core/ActorComponent/UIText.h"
+#include "LGUI/Public/Core/Components/UIText.h"
 #include "Widgets/Layout/SBox.h"
 #include "UITextInputComponent.generated.h"
 

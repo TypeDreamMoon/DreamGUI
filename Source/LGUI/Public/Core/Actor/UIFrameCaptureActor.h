@@ -3,7 +3,7 @@
 #pragma once
 
 #include "UIBaseActor.h"
-#include "Core/ActorComponent/UIFrameCapture.h"
+#include "LGUI/Public/Core/Components/UIFrameCapture.h"
 #include "UIFrameCaptureActor.generated.h"
 
 /**

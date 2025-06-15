@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/ActorComponent/UIBackgroundPixelate.h"
+#include "LGUI/Public/Core/Components/UIBackgroundPixelate.h"
 #include "LGUI.h"
 #include "Core/UIGeometry.h"
 #include "Core/LGUISpriteData.h"
@@ -9,7 +9,7 @@
 #include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
 #include "PipelineStateCache.h"
 #include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "Core/LGUISettings.h"
 #include "RenderTargetPool.h"
 #include "Core/UIPostProcessRenderProxy.h"

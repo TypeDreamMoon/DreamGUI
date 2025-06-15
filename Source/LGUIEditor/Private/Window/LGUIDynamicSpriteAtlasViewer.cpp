@@ -2,7 +2,7 @@
 
 #include "Window/LGUIDynamicSpriteAtlasViewer.h"
 #include "Widgets/Docking/SDockTab.h"
-#include "Core/ActorComponent/UISpriteBase.h"
+#include "Core/Components/UISpriteBase.h"
 #include "Core/LGUIDynamicSpriteAtlasData.h"
 #include "LGUIEditorModule.h"
 #include "ISinglePropertyView.h"

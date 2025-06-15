@@ -2,7 +2,7 @@
 
 #include "DetailCustomization/UIToggleCustomization.h"
 #include "LGUIEditorUtils.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "Core/Components/UIItem.h"
 #include "Core/Actor/UIBaseActor.h"
 #include "IDetailGroup.h"
 #include "Interaction/UIToggleGroupComponent.h"

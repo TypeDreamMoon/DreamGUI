@@ -3,7 +3,7 @@
 #pragma once
 
 #include "UIBaseActor.h"
-#include "Core/ActorComponent/UISprite.h"
+#include "LGUI/Public/Core/Components/UISprite.h"
 #include "UISpriteActor.generated.h"
 
 UCLASS(ClassGroup = LGUI)

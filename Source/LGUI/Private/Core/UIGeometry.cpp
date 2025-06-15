@@ -3,10 +3,10 @@
 #include "Core/UIGeometry.h"
 #include "LGUI.h"
 #include "Utils/LGUIUtils.h"
-#include "Core/ActorComponent/UIText.h"
-#include "Core/ActorComponent/UISprite.h"
-#include "Core/ActorComponent/LGUICanvas.h"
-#include "Core/ActorComponent/UIBaseRenderable.h"
+#include "LGUI/Public/Core/Components/UIText.h"
+#include "LGUI/Public/Core/Components/UISprite.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/UIBaseRenderable.h"
 #include "Core/LGUISpriteData.h"
 #include "Core/LGUIFontData_BaseObject.h"
 #include "Core/LGUIRichTextImageData_BaseObject.h"
@@ -2252,9 +2252,9 @@ void UIGeometry::UpdateUIRectFillRadial360Vertex(UIGeometry* uiGeo, const float&
 #pragma endregion
 
 #pragma region UIText
-#include "Core/ActorComponent/UIText.h"
+#include "LGUI/Public/Core/Components/UIText.h"
 void UIGeometry_AlignUITextLineVertex(EUITextParagraphHorizontalAlign pivotHAlign, float lineWidth, int lineUIGeoVertStart
-	, TArray<FLGUIOriginVertexData>& vertices, FUITextLineProperty& lineProperty
+                                      , TArray<FLGUIOriginVertexData>& vertices, FUITextLineProperty& lineProperty
 )
 {
 	float xOffset = 0;

@@ -2,7 +2,7 @@
 
 #include "Layout/UISizeControlByChildren.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
 PRAGMA_DISABLE_OPTIMIZATION

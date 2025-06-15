@@ -3,7 +3,7 @@
 #pragma once
 
 #include "Core/UIGeometry.h"
-#include "Core/ActorComponent/UIBatchMeshRenderable.h"
+#include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
 #include "Components/ActorComponent.h"
 #include "UIGeometryModifierBase.generated.h"
 

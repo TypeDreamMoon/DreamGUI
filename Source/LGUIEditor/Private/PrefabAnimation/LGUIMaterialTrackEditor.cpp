@@ -1,7 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "LGUIMaterialTrackEditor.h"
-#include "Core/ActorComponent/UIBatchMeshRenderable.h"
+#include "Core/Components/UIBatchMeshRenderable.h"
 #include "PrefabAnimation/MovieSceneLGUIMaterialTrack.h"
 
 

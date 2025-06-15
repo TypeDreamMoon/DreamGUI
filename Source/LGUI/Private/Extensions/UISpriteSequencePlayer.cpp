@@ -3,7 +3,7 @@
 #include "Extensions/UISpriteSequencePlayer.h"
 #include "LTweenBPLibrary.h"
 #include "Core/LGUISpriteData_BaseObject.h"
-#include "Core/ActorComponent/UISpriteBase.h"
+#include "LGUI/Public/Core/Components/UISpriteBase.h"
 
 #if WITH_EDITOR
 void UUISpriteSequencePlayer::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)

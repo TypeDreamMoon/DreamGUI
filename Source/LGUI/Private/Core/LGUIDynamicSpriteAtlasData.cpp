@@ -5,7 +5,7 @@
 #include "LGUI.h"
 #include "Core/LGUISettings.h"
 #include "Core/LGUIManager.h"
-#include "Core/ActorComponent/UISpriteBase.h"
+#include "LGUI/Public/Core/Components/UISpriteBase.h"
 #include "Core/LGUISpriteData.h"
 #include "Utils/LGUIUtils.h"
 #include "Rendering/Texture2DResource.h"

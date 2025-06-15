@@ -2,7 +2,7 @@
 
 #include "DetailCustomization/LGUICanvasCustomization.h"
 #include "LGUIEditorUtils.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "Core/Components/LGUICanvas.h"
 #include "Core/LGUIManager.h"
 #include "HAL/PlatformApplicationMisc.h"
 #include "Engine/TextureRenderTarget2D.h"

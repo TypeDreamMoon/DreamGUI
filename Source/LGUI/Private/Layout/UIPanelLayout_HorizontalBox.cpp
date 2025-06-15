@@ -2,7 +2,7 @@
 
 #include "Layout/UIPanelLayout_HorizontalBox.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
 
 DECLARE_CYCLE_STAT(TEXT("UIPanelLayout HorizontalBox RebuildLayout"), STAT_PanelLayout_Horizontal, STATGROUP_LGUI);
 

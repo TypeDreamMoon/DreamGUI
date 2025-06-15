@@ -6,7 +6,7 @@
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
-#include "Core/ActorComponent/UITexture.h"
+#include "Core/Components/UITexture.h"
 
 #define LOCTEXT_NAMESPACE "UISpriteSheetTexturePlayerCustomization"
 

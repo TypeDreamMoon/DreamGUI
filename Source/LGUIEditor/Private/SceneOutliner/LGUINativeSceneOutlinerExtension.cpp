@@ -17,7 +17,7 @@
 #include "EngineUtils.h"
 #include "Utils/LGUIUtils.h"
 #include "UObject/ObjectSaveContext.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "Core/Components/UIItem.h"
 
 UE_DISABLE_OPTIMIZATION
 

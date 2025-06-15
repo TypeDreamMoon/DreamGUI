@@ -2,7 +2,7 @@
 
 #include "Extensions/LGUIImageSequencePlayer.h"
 #include "LTweenBPLibrary.h"
-#include "Core/ActorComponent/UITexture.h"
+#include "LGUI/Public/Core/Components/UITexture.h"
 #include "Core/LGUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 

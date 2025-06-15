@@ -4,7 +4,7 @@
 #include "LGUI.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
-#include "Core/ActorComponent/UIText.h"
+#include "LGUI/Public/Core/Components/UIText.h"
 #include "Core/LGUISettings.h"
 #include "Utils/LGUIUtils.h"
 #include "TextureResource.h"

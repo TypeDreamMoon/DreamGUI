@@ -2,7 +2,7 @@
 
 #include "DetailCustomization/UIProceduralRectCustomization.h"
 #include "LGUIEditorUtils.h"
-#include "Core/ActorComponent/UIProceduralRect.h"
+#include "Core/Components/UIProceduralRect.h"
 #include "Utils/LGUIUtils.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"

@@ -7,7 +7,7 @@
 #include "EntitySystem/MovieScenePropertyComponentHandler.h"
 #include "MovieSceneTracksComponentTypes.h"
 #include "Systems/MovieScenePiecewiseDoubleBlenderSystem.h"
-#include "Core/ActorComponent/UIBatchMeshRenderable.h"
+#include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
 
 namespace UE
 {

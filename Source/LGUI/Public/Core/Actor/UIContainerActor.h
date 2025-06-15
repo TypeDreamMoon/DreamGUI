@@ -3,7 +3,7 @@
 #pragma once
 
 #include "UIBaseActor.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
 #include "UIContainerActor.generated.h"
 
 UCLASS(ClassGroup = LGUI)

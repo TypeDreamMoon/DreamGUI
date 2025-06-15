@@ -5,7 +5,7 @@
 #include "Engine/EngineTypes.h"
 #include "LGUIEditorStyle.h"
 #include "LevelEditor.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "Core/Components/UIItem.h"
 #include "LGUIEditorModule.h"
 #include "LGUIEditorTools.h"
 

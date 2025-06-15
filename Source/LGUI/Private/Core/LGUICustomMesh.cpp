@@ -1,9 +1,9 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/LGUICustomMesh.h"
-#include "Core/ActorComponent/UIBatchMeshRenderable.h"
+#include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "Core/UIGeometry.h"
 
 DECLARE_CYCLE_STAT(TEXT("LGUICustomMesh Blueprint.OnFillMesh"), STAT_LGUICustomMesh_OnFillMesh, STATGROUP_LGUI);

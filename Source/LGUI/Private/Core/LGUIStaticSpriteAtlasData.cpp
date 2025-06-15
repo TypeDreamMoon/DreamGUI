@@ -3,7 +3,7 @@
 #include "Core/LGUIStaticSpriteAtlasData.h"
 #include "LGUI.h"
 #include "Core/LGUISpriteData.h"
-#include "Core/ActorComponent/UISpriteBase.h"
+#include "LGUI/Public/Core/Components/UISpriteBase.h"
 #include "TextureCompiler.h"
 #include "Utils/LGUIUtils.h"
 #include "PrefabSystem/LGUIPrefabManager.h"

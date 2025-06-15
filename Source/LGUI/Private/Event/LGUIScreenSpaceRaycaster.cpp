@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Event/LGUIScreenSpaceRaycaster.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "LGUI.h"
 #include "Utils/LGUIUtils.h"
 #include "Core/LGUISettings.h"

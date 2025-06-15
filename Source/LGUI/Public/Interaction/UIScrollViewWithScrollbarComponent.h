@@ -3,7 +3,7 @@
 #pragma once
 
 #include "Components/ActorComponent.h"
-#include "Core/ActorComponent/UISprite.h"
+#include "Core/Components/UISprite.h"
 #include "Event/LGUIEventDelegate.h"
 #include "UIScrollViewComponent.h"
 #include "Layout/ILGUILayoutInterface.h"

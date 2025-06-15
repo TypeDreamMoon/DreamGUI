@@ -2,7 +2,7 @@
 
 #include "DetailCustomization/UITextureBaseCustomization.h"
 #include "LGUIEditorUtils.h"
-#include "Core/ActorComponent/UITextureBase.h"
+#include "Core/Components/UITextureBase.h"
 #include "Utils/LGUIUtils.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"

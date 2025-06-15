@@ -1,13 +1,13 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Utils/LGUIUtils.h"
-#include "Core/ActorComponent/UIItem.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "../Public/Core/Components/UIItem.h"
+#include "../Public/Core/Components/LGUICanvas.h"
 #include "Core/UIDrawcall.h"
 #include "Sound/SoundBase.h"
-#include "Core/ActorComponent/UIBaseRenderable.h"
-#include "Core/ActorComponent/UIPostProcessRenderable.h"
-#include "Core/ActorComponent/UIBatchMeshRenderable.h"
+#include "../Public/Core/Components/UIBaseRenderable.h"
+#include "../Public/Core/Components/UIPostProcessRenderable.h"
+#include "../Public/Core/Components/UIBatchMeshRenderable.h"
 #include "TextureResource.h"
 #include "Engine/Texture2D.h"
 #if WITH_EDITOR

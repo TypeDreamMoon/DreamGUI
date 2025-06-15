@@ -5,7 +5,7 @@
 #include "Components/MeshComponent.h"
 #include "Core/LGUIMeshIndex.h"
 #include "Core/LGUIMeshVertex.h"
-#include "LGUIMeshComponent.generated.h"
+#include "LexUIMeshComponent.generated.h"
 
 struct FLGUIRenderSectionProxy;
 struct FLGUIMeshSectionProxy;
@@ -69,7 +69,7 @@ struct FLGUIChildCanvasSection : public FLGUIRenderSection
 		Type = ELGUIRenderSectionType::ChildCanvas;
 	}
 
-	class ULGUIMeshComponent* ChildCanvasMeshComponent = nullptr;
+	class ULexUIMeshComponent* ChildCanvasMeshComponent = nullptr;
 
 	virtual void UpdateSectionBox(const FTransform& LocalToWorld) override;
 };
@@ -78,17 +78,17 @@ class FLexUIRenderer;
 class ILexUIRendererPrimitive;
 class ULGUICanvas;
 
-DECLARE_MULTICAST_DELEGATE_TwoParams(FLGUIMeshSceneProxyCreateDeleteDelegate, class ULGUIMeshComponent*, class FLGUIRenderSceneProxy*);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FLGUIMeshSceneProxyCreateDeleteDelegate, class ULexUIMeshComponent*, class FLGUIRenderSceneProxy*);
 
 //LGUI's mesh
 //@todo: split this class to: one for UE renderer && one for LGUI renderer, will it be more efficient? or maybe a class without additional shader channels? 
 UCLASS(ClassGroup = (LGUI), Blueprintable)
-class LGUI_API ULGUIMeshComponent : public UMeshComponent
+class LGUI_API ULexUIMeshComponent : public UMeshComponent
 {
 	GENERATED_BODY()
 
 public:
-	ULGUIMeshComponent();
+	ULexUIMeshComponent();
 	void CreateRenderSectionRenderData(TSharedPtr<FLGUIRenderSection> InRenderSection);
 	void UpdateMeshSectionRenderData(TSharedPtr<FLGUIRenderSection> InRenderSection, bool InVertexPositionChanged, int8 AdditionalShaderChannelFlags);
 	void DeleteRenderSection(TSharedPtr<FLGUIRenderSection> InRenderSection);
@@ -104,8 +104,8 @@ public:
 	void SetUITranslucentSortPriority(int32 NewTranslucentSortPriority);
 
 	void VerifyMaterials();
-	void SetParentCavansMeshComp(ULGUIMeshComponent* InMesh);
-	void ClearParentCavansMeshComp(ULGUIMeshComponent* InMesh);
+	void SetParentCavansMeshComp(ULexUIMeshComponent* InMesh);
+	void ClearParentCavansMeshComp(ULexUIMeshComponent* InMesh);
 
 	//~ Begin UPrimitiveComponent Interface.
 	virtual FPrimitiveSceneProxy* CreateSceneProxy() override;
@@ -131,7 +131,7 @@ protected:
 	bool bIsLGUIRenderToWorld = false;//LGUI renderer render to world or screen
 	TWeakObjectPtr<ULGUICanvas> RenderCanvas = nullptr;
 	bool bIsSupportUERenderer = true;
-	TWeakObjectPtr<ULGUIMeshComponent> ParentCanvasMeshComp = nullptr;
+	TWeakObjectPtr<ULexUIMeshComponent> ParentCanvasMeshComp = nullptr;
 
 public:
 	FLGUIMeshSceneProxyCreateDeleteDelegate OnSceneProxyCreated;

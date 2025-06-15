@@ -3,7 +3,7 @@
 #pragma once
 
 #include "UIBaseActor.h"
-#include "Core/ActorComponent/UIBackgroundBlur.h"
+#include "Core/Components/UIBackgroundBlur.h"
 #include "UIBackgroundBlurActor.generated.h"
 
 /**

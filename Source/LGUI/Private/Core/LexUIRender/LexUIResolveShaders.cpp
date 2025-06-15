@@ -1,7 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/LGUIRender/LexUIResolveShaders.h"
-#include "LGUI.h"
+#include "Core/LexUIRender/LexUIResolveShaders.h"
 #include "Materials/Material.h"
 
 IMPLEMENT_SHADER_TYPE(, FLexUIResolveShaderVS, TEXT("/Plugin/LGUI/Private/LexUIResolveShader.usf"), TEXT("LexUIResolveVS"), SF_Vertex)

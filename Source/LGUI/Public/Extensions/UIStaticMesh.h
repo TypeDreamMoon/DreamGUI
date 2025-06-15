@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "Core/ActorComponent/UIDirectMeshRenderable.h"
+#include "LGUI/Public/Core/Components/UIDirectMeshRenderable.h"
 #include "Core/Actor/UIBaseActor.h"
 #include "UIStaticMesh.generated.h"
 

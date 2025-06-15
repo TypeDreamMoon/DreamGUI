@@ -2,7 +2,7 @@
 
 #include "Core/LGUIFontData.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/UIText.h"
+#include "LGUI/Public/Core/Components/UIText.h"
 #include "TextureResource.h"
 #include "Engine/Texture2D.h"
 #if WITH_FREETYPE

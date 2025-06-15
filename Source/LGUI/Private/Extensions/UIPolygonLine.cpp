@@ -3,7 +3,7 @@
 #include "Extensions/UIPolygonLine.h"
 #include "LGUI.h"
 #include "Core/UIGeometry.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "LTweenManager.h"
 
 UUIPolygonLine::UUIPolygonLine(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)

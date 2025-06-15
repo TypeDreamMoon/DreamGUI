@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/ActorComponent/UIFrameCapture.h"
+#include "LGUI/Public/Core/Components/UIFrameCapture.h"
 #include "LGUI.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"

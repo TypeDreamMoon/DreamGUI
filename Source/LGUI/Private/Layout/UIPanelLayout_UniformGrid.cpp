@@ -2,7 +2,7 @@
 
 #include "Layout/UIPanelLayout_UniformGrid.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
 
 DECLARE_CYCLE_STAT(TEXT("UIPanelLayout UniformGrid RebuildLayout"), STAT_PanelLayout_UniformGrid, STATGROUP_LGUI);
 

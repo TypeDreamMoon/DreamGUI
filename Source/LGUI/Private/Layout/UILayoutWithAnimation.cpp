@@ -2,7 +2,7 @@
 
 #include "Layout/UILayoutWithAnimation.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
 #include "LTweenManager.h"
 #include "LTweenBPLibrary.h"
 #include "Core/LGUISettings.h"

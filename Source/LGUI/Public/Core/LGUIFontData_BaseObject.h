@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "Core/UIGeometry.h"
 #include "Core/RichTextParser.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "Components/LGUICanvas.h"
 #include "LGUIFontData_BaseObject.generated.h"
 
 

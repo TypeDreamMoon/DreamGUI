@@ -2,7 +2,7 @@
 
 #include "Layout/UISizeControlByOther.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
 #include "Core/Actor/UIBaseActor.h"
 
 DECLARE_CYCLE_STAT(TEXT("UILayout SizeControlByOtherRebuildLayout"), STAT_SizeControlByOther, STATGROUP_LGUI);

@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/UIBaseRenderableCustomization.h"
-#include "Core/ActorComponent/UIBaseRenderable.h"
+#include "Core/Components/UIBaseRenderable.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"

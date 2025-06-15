@@ -32,7 +32,7 @@ DECLARE_DELEGATE_OneParam(FPrefabAnimationOnComponentSelected, TSharedPtr<FSCSEd
 DECLARE_DELEGATE_RetVal_OneParam(bool, FPrefabAnimationIsComponentValid, UActorComponent*);
 
 
-#include "Core/ActorComponent/UIBatchMeshRenderable.h"
+#include "Core/Components/UIBatchMeshRenderable.h"
 #include "PrefabAnimation/MovieSceneLGUIMaterialTrack.h"
 
 class SLGUIPrefabSequenceEditorWidgetImpl : public SCompoundWidget, public FEditorUndoClient

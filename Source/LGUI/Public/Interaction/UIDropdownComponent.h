@@ -9,7 +9,7 @@
 #include "LGUIComponentReference.h"
 #include "Event/LGUIEventDelegate.h"
 #include "Event/LGUIDelegateDeclaration.h"
-#include "Core/ActorComponent/UICanvasGroup.h"
+#include "LGUI/Public/Core/Components/UICanvasGroup.h"
 #include "UIDropdownComponent.generated.h"
 
 class ULGUISpriteData_BaseObject;

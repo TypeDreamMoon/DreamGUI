@@ -1,9 +1,9 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/ActorComponent/UITexture.h"
+#include "LGUI/Public/Core/Components/UITexture.h"
 #include "LGUI.h"
 #include "Core/UIGeometry.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION

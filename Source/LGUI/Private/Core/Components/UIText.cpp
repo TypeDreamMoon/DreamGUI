@@ -1,9 +1,9 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/ActorComponent/UIText.h"
+#include "LGUI/Public/Core/Components/UIText.h"
 #include "LGUI.h"
 #include "Core/UIGeometry.h"
-#include "Core/ActorComponent/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "Materials/MaterialInterface.h"
 #include "Core/LGUIFontData_BaseObject.h"
 #include "Core/LGUIRichTextImageData_BaseObject.h"
@@ -12,7 +12,7 @@
 #include "Core/LGUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "Utils/LGUIUtils.h"
-#include "Core/ActorComponent/UICanvasGroup.h"
+#include "LGUI/Public/Core/Components/UICanvasGroup.h"
 #include "Engine/Texture2D.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION

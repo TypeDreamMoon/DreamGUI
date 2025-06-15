@@ -3,7 +3,7 @@
 #include "Layout/UILayoutElement.h"
 #include "LGUI.h"
 #include "Layout/UILayoutWithChildren.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
 
 void UUILayoutElement::Awake()
 {

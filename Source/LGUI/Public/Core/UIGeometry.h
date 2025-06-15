@@ -2,8 +2,8 @@
 
 #pragma once
 #include "CoreMinimal.h"
-#include "Core/ActorComponent/UIText.h"
-#include "Core/ActorComponent/UISprite.h"
+#include "Components/UIText.h"
+#include "Components/UISprite.h"
 #include "Core/LGUIMeshIndex.h"
 #include "Core/LGUIMeshVertex.h"
 

@@ -3,7 +3,7 @@
 #include "PrefabSystem/LGUIPrefabLevelManagerActor.h"
 #include "LGUI.h"
 #include "Utils/LGUIUtils.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #if WITH_EDITOR
 #include "PrefabSystem/LGUIPrefabManager.h"

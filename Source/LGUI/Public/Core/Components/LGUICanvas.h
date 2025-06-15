@@ -98,7 +98,7 @@ class UUIItem;
 class UUIBaseRenderable;
 class UUIBatchMeshRenderable;
 class UUIDirectMeshRenderable;
-class ULGUIMeshComponent;
+class ULexUIMeshComponent;
 class UUIDrawcall;
 class FUIPostProcessRenderProxy;
 class UTextureRenderTarget2D;
@@ -299,7 +299,7 @@ protected:
 	 * @todo: override this property from parent canvas?
 	 */
 	UPROPERTY(EditAnywhere, Category = LGUI, AdvancedDisplay, meta = (AllowAbstract = "true"))
-		TSubclassOf<ULGUIMeshComponent> DefaultMeshType;
+		TSubclassOf<ULexUIMeshComponent> DefaultMeshType;
 
 	FORCEINLINE bool GetOverrideDefaultMaterials()const				{ return overrideParameters & (1 << (int)ELGUICanvasOverrideParameters::DefaltMaterials); }
 	FORCEINLINE bool GetOverridePixelPerfect()const					{ return overrideParameters & (1 << (int)ELGUICanvasOverrideParameters::PixelPerfect); }
@@ -461,9 +461,9 @@ public:
 		void SetOverrideProjectionMatrix(bool InOverride, FMatrix InValue);
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		TSubclassOf<ULGUIMeshComponent> GetDefaultMeshType()const { return DefaultMeshType; }
+		TSubclassOf<ULexUIMeshComponent> GetDefaultMeshType()const { return DefaultMeshType; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetDefaultMeshType(TSubclassOf<ULGUIMeshComponent> InValue);
+		void SetDefaultMeshType(TSubclassOf<ULexUIMeshComponent> InValue);
 
 	void AddUIRenderable(UUIBaseRenderable* InUIRenderable);
 	void RemoveUIRenderable(UUIBaseRenderable* InUIRenderable);
@@ -478,7 +478,7 @@ public:
 	void SetRequireAdditionalShaderChannels(uint8 InFlags);
 
 	float GetLastRenderTime()const;
-	ULGUIMeshComponent* GetUIMesh()const { CheckUIMesh(); return UIMesh.Get(); }
+	ULexUIMeshComponent* GetUIMesh()const { CheckUIMesh(); return UIMesh.Get(); }
 public:
 	static FName LGUI_MainTextureMaterialParameterName;
 	static FName LGUI_ClipDataTexture_MaterialParameterName;
@@ -534,7 +534,7 @@ private:
 	FMatrix OverrideProjectionMatrix;
 
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
-	mutable TWeakObjectPtr<ULGUIMeshComponent> UIMesh;//current using UIMesh.
+	mutable TWeakObjectPtr<ULexUIMeshComponent> UIMesh;//current using UIMesh.
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	TArray<TObjectPtr<UMaterialInstanceDynamic>> PooledUIMaterialList;//Default material pool.
 	TArray<TSharedPtr<UUIDrawcall>> UIDrawcallList;//Drawcall collection of this Canvas.

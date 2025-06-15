@@ -2,7 +2,7 @@
 
 #include "Layout/UIPanelLayout_FlexibleGrid.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
 
 DECLARE_CYCLE_STAT(TEXT("UIPanelLayout FlexibleGrid RebuildLayout"), STAT_PanelLayout_FlexibleGrid, STATGROUP_LGUI);
 

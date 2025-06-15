@@ -3,7 +3,7 @@
 #include "Layout/UIFlexibleGridLayout.h"
 #include "Layout/UIFlexibleGridLayoutElement.h"
 #include "LGUI.h"
-#include "Core/ActorComponent/UIItem.h"
+#include "LGUI/Public/Core/Components/UIItem.h"
 
 DECLARE_CYCLE_STAT(TEXT("UILayout FlexiableGridRebuildLayout"), STAT_FlexiableGridLayout, STATGROUP_LGUI);
 
