@@ -361,7 +361,7 @@ void UUI2DLineRendererBase::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleC
 		}
 
 		//normal & tangent
-		if (RenderCanvas->GetFinalRequireNormalAndTangent())
+		if (RenderCanvas->GetActualRequireNormalAndTangent())
 		{
 			for (int i = 0; i < originVertices.Num(); i++)
 			{

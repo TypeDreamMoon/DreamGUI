@@ -427,7 +427,7 @@ bool ULGUICanvas::CheckRootCanvas(bool forceRecheck)const
 			)
 		{
 			auto FoundCanvas = ParentActor->FindComponentByClass<ULGUICanvas>();
-			if (FoundCanvas && FoundCanvas->IsRegistered())
+			if (FoundCanvas)
 			{
 				ResultCanvas = FoundCanvas;
 			}
@@ -1558,7 +1558,7 @@ void ULGUICanvas::UpdateDrawcallMesh_Implement()
 				}
 				else
 				{
-					UIMesh->UpdateMeshSectionRenderData(RenderSectionPtr, true, GetFinalRequireNormalAndTangent());
+					UIMesh->UpdateMeshSectionRenderData(RenderSectionPtr, true, GetActualRequireNormalAndTangent());
 				}
 				DrawcallItem->bNeedToUpdateVertex = false;
 				DrawcallItem->bVertexPositionChanged = false;
@@ -2216,7 +2216,7 @@ void ULGUICanvas::SetOverrideSorting(bool value)
 	}
 }
 
-bool ULGUICanvas::GetFinalRequireNormalAndTangent()const
+bool ULGUICanvas::GetActualRequireNormalAndTangent()const
 {
 	if (IsRootCanvas())
 	{
@@ -2232,7 +2232,7 @@ bool ULGUICanvas::GetFinalRequireNormalAndTangent()const
 		{
 			if (ParentCanvas.IsValid())
 			{
-				return ParentCanvas->GetFinalRequireNormalAndTangent();
+				return ParentCanvas->GetActualRequireNormalAndTangent();
 			}
 		}
 	}
@@ -2409,23 +2409,6 @@ void ULGUICanvas::SetRenderMode(ELGUIRenderMode value)
 	}
 }
 
-void ULGUICanvas::SetPixelPerfect(bool value)
-{
-	if (pixelPerfect != value)
-	{
-		pixelPerfect = value;
-		for (int i = 0; i < UIDrawcallList.Num(); i++)
-		{
-			auto DrawcallItem = UIDrawcallList[i];
-			if (DrawcallItem->Type == EUIDrawcallType::BatchGeometry)
-			{
-				DrawcallItem->bNeedToUpdateVertex = true;
-			}
-		}
-		MarkCanvasUpdate(false, true, false);
-	}
-}
-
 void ULGUICanvas::SetProjectionParameters(TEnumAsByte<ECameraProjectionMode::Type> InProjectionType, float InFovAngle, float InNearClipPlane, float InFarClipPlane)
 {
 	ProjectionType = InProjectionType;
@@ -2460,34 +2443,6 @@ ELGUIRenderMode ULGUICanvas::GetActualRenderMode()const
 		}
 	}
 	return ELGUIRenderMode::WorldSpace;
-}
-bool ULGUICanvas::GetActualPixelPerfect()const
-{
-	if (IsRootCanvas())
-	{
-		return this->RenderModeIsLGUIRendererOrUERenderer(CurrentRenderMode)
-			&& pixelPerfect;
-	}
-	else
-	{
-		if (CheckRootCanvas())
-		{
-			if (GetOverridePixelPerfect())
-			{
-				return RootCanvas->RenderModeIsLGUIRendererOrUERenderer(CurrentRenderMode)
-					&& this->pixelPerfect;
-			}
-			else
-			{
-				if (ParentCanvas.IsValid())
-				{
-					return RootCanvas->RenderModeIsLGUIRendererOrUERenderer(CurrentRenderMode)
-						&& ParentCanvas->GetActualPixelPerfect();
-				}
-			}
-		}
-	}
-	return false;
 }
 
 void ULGUICanvas::SetBlendDepth(float value)

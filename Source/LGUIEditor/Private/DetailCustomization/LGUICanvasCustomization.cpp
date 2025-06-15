@@ -153,7 +153,6 @@ void FLGUICanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, depthFade));
 			break;
 		case ELGUIRenderMode::WorldSpace:
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, pixelPerfect));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, renderTarget));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, RenderTargetUpdateMode));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, RenderTargetSizeMode));
@@ -164,7 +163,6 @@ void FLGUICanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, previewWithLGUIRenderer));
 			break;
 		case ELGUIRenderMode::WorldSpace_LGUI:
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, pixelPerfect));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, renderTarget));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, RenderTargetUpdateMode));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, RenderTargetSizeMode));
@@ -188,26 +186,12 @@ void FLGUICanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 		needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, RenderTargetResolutionScale));
 		needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, bEnableDepthTest));
 		needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, previewWithLGUIRenderer));
-		if (TargetScriptArray[0]->GetRootCanvas() != nullptr)
-		{
-			if (
-				TargetScriptArray[0]->GetRootCanvas()->renderMode == ELGUIRenderMode::WorldSpace
-				|| TargetScriptArray[0]->GetRootCanvas()->renderMode == ELGUIRenderMode::WorldSpace_LGUI
-				)
-			{
-				needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, pixelPerfect));
-			}
-		}
 
 		auto overrideParametersHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvas, overrideParameters));
 		overrideParametersHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUICanvasCustomization::ForceRefresh, &DetailBuilder));
 		if (!TargetScriptArray[0]->GetOverrideDefaultMaterial())
 		{
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, DefaultMaterial));
-		}
-		if (!TargetScriptArray[0]->GetOverridePixelPerfect())
-		{
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvas, pixelPerfect));
 		}
 		if (!TargetScriptArray[0]->GetOverrideDynamicPixelsPerUnit())
 		{
@@ -231,10 +215,6 @@ void FLGUICanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 	if (!needToHidePropertyNames.Contains(GET_MEMBER_NAME_CHECKED(ULGUICanvas, renderMode)))
 	{
 		category.AddProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvas, renderMode));
-	}
-	if (!needToHidePropertyNames.Contains(GET_MEMBER_NAME_CHECKED(ULGUICanvas, pixelPerfect)))
-	{
-		category.AddProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvas, pixelPerfect));
 	}
 	if (!needToHidePropertyNames.Contains(GET_MEMBER_NAME_CHECKED(ULGUICanvas, renderTarget)))
 	{

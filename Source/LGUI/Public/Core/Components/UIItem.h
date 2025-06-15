@@ -7,6 +7,7 @@
 #include "Components/SceneComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "LTweener.h"
+#include "Components/SlateWrapperTypes.h"
 #include "UIItem.generated.h"
 
 class FLexUIClipData;
@@ -346,6 +347,12 @@ public:
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
 	ELexWidgetClipping Clipping = ELexWidgetClipping::Inherit;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
+	ESlateVisibility UIVisibility = ESlateVisibility::Visible;
+	/** If the widget will draw snapped to the nearest pixel.  Improves clarity but might cause visible stepping in animation. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
+	EWidgetPixelSnapping PixelSnapping = EWidgetPixelSnapping::Inherit;
+	
 	TWeakPtr<FLexUIClipData> ClipData;
 
 	void MarkClipDirty_Recursive(bool InClipTypeChanged)const;
@@ -356,6 +363,24 @@ public:
 	bool IsPointVisibleOnClip(const FVector& Value)const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetClipping(ELexWidgetClipping Value);
+
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	EWidgetPixelSnapping GetPixelSnapping()const { return PixelSnapping; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	bool GetFinalPixelSnapping()const;
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetPixelSnapping(EWidgetPixelSnapping Value);
+
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	ESlateVisibility GetUIVisibility()const { return UIVisibility; }
+	UFUNCTION(BlueprintCallable, Category = "Widget")
+	bool IsVisibleForRender()const;
+	UFUNCTION(BlueprintCallable, Category = "Widget")
+	bool IsVisibleForHitTest()const;
+	UFUNCTION(BlueprintCallable, Category = "Widget")
+	bool IsVisibleForLayout()const;
+	UFUNCTION(BlueprintCallable, Category = "Widget")
+	void SetUIVisibility(ESlateVisibility Value);
 	
 #pragma region UIActive
 public:

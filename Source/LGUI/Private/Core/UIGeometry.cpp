@@ -157,7 +157,7 @@ void UIGeometry::UpdateUIRectSimpleVertex(UIGeometry* uiGeo,
 		triangles[5] = 3;
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelPerfect() && renderCanvas->GetActualPixelPerfect();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetFinalPixelSnapping();
 	auto& vertices = uiGeo->vertices;
 	auto& originVertices = uiGeo->originVertices;
 	LGUIGeometrySetArrayNum(vertices, 4);
@@ -201,7 +201,7 @@ void UIGeometry::UpdateUIRectSimpleVertex(UIGeometry* uiGeo,
 		//additional data
 		{
 			//normal & tangent
-			if (renderCanvas->GetFinalRequireNormalAndTangent())
+			if (renderCanvas->GetActualRequireNormalAndTangent())
 			{
 				for(int i = 0; i < originVertices.Num(); i++)
 				{
@@ -244,7 +244,7 @@ void UIGeometry::UpdateUIProceduralRectSimpleVertex(UIGeometry* uiGeo,
 		}
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelPerfect() && renderCanvas->GetActualPixelPerfect();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetFinalPixelSnapping();
 	auto& vertices = uiGeo->vertices;
 	auto& originVertices = uiGeo->originVertices;
 	LGUIGeometrySetArrayNum(vertices, bOuterShadow ? 8 : 4);
@@ -435,7 +435,7 @@ void UIGeometry::UpdateUIRectBorderVertex(UIGeometry* uiGeo, bool fillCenter,
 		}
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelPerfect() && renderCanvas->GetActualPixelPerfect();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetFinalPixelSnapping();
 	auto& vertices = uiGeo->vertices;
 	auto& originVertices = uiGeo->originVertices;
 	auto verticesCount = 16;
@@ -523,7 +523,7 @@ void UIGeometry::UpdateUIRectBorderVertex(UIGeometry* uiGeo, bool fillCenter,
 		//additional data
 		{
 			//normal & tangent
-			if (renderCanvas->GetFinalRequireNormalAndTangent())
+			if (renderCanvas->GetActualRequireNormalAndTangent())
 			{
 				for (int i = 0; i < originVertices.Num(); i++)
 				{
@@ -559,7 +559,7 @@ void UIGeometry::UpdateUIRectTiledVertex(UIGeometry* uiGeo,
 		}
 	}
 	
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelPerfect() && renderCanvas->GetActualPixelPerfect();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetFinalPixelSnapping();
 	auto& vertices = uiGeo->vertices;
 	auto& originVertices = uiGeo->originVertices;
 	auto verticesCount = 4 * rectangleCount;
@@ -627,7 +627,7 @@ void UIGeometry::UpdateUIRectTiledVertex(UIGeometry* uiGeo,
 		//additional data
 		{
 			//normal & tangent
-			if (renderCanvas->GetFinalRequireNormalAndTangent())
+			if (renderCanvas->GetActualRequireNormalAndTangent())
 			{
 				for (int i = 0; i < originVertices.Num(); i++)
 				{
@@ -660,7 +660,7 @@ void UIGeometry::UpdateUIRectFillHorizontalVerticalVertex(UIGeometry* uiGeo, con
 		triangles[5] = 3;
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelPerfect() && renderCanvas->GetActualPixelPerfect();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetFinalPixelSnapping();
 	auto& vertices = uiGeo->vertices;
 	auto& originVertices = uiGeo->originVertices;
 	auto verticesCount = 4;
@@ -782,7 +782,7 @@ void UIGeometry::UpdateUIRectFillHorizontalVerticalVertex(UIGeometry* uiGeo, con
 		//additional data
 		{
 			//normal & tangent
-			if (renderCanvas->GetFinalRequireNormalAndTangent())
+			if (renderCanvas->GetActualRequireNormalAndTangent())
 			{
 				for (int i = 0; i < originVertices.Num(); i++)
 				{
@@ -814,7 +814,7 @@ void UIGeometry::UpdateUIRectFillRadial90Vertex(UIGeometry* uiGeo, const float& 
 		triangles[5] = 3;
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelPerfect() && renderCanvas->GetActualPixelPerfect();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetFinalPixelSnapping();
 	auto& vertices = uiGeo->vertices;
 	auto& originVertices = uiGeo->originVertices;
 	auto verticesCount = 4;
@@ -1137,7 +1137,7 @@ void UIGeometry::UpdateUIRectFillRadial90Vertex(UIGeometry* uiGeo, const float& 
 		//additional data
 		{
 			//normal & tangent
-			if (renderCanvas->GetFinalRequireNormalAndTangent())
+			if (renderCanvas->GetActualRequireNormalAndTangent())
 			{
 				for (int i = 0; i < originVertices.Num(); i++)
 				{
@@ -1226,7 +1226,7 @@ void UIGeometry::UpdateUIRectFillRadial180Vertex(UIGeometry* uiGeo, const float&
 		}
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelPerfect() && renderCanvas->GetActualPixelPerfect();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetFinalPixelSnapping();
 	auto& vertices = uiGeo->vertices;
 	auto& originVertices = uiGeo->originVertices;
 	auto verticesCount = 5;
@@ -1702,7 +1702,7 @@ void UIGeometry::UpdateUIRectFillRadial180Vertex(UIGeometry* uiGeo, const float&
 		//additional data
 		{
 			//normal & tangent
-			if (renderCanvas->GetFinalRequireNormalAndTangent())
+			if (renderCanvas->GetActualRequireNormalAndTangent())
 			{
 				for (int i = 0; i < originVertices.Num(); i++)
 				{
@@ -1775,7 +1775,7 @@ void UIGeometry::UpdateUIRectFillRadial360Vertex(UIGeometry* uiGeo, const float&
 		}
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelPerfect() && renderCanvas->GetActualPixelPerfect();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetFinalPixelSnapping();
 	auto& vertices = uiGeo->vertices;
 	auto& originVertices = uiGeo->originVertices;
 	auto verticesCount = 10;
@@ -2238,7 +2238,7 @@ void UIGeometry::UpdateUIRectFillRadial360Vertex(UIGeometry* uiGeo, const float&
 		//additional data
 		{
 			//normal & tangent
-			if (renderCanvas->GetFinalRequireNormalAndTangent())
+			if (renderCanvas->GetActualRequireNormalAndTangent())
 			{
 				for (int i = 0; i < originVertices.Num(); i++)
 				{
@@ -2326,7 +2326,7 @@ void UIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, float
 
 	float maxFontSize = font->GetFontSizeLimit();
 	fontSize = FMath::Clamp(fontSize, 0.0f, maxFontSize);
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelPerfect() && renderCanvas->GetActualPixelPerfect();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetFinalPixelSnapping();
 	float rootCanvasScale = renderCanvas->GetRootCanvas()->GetCanvasScale();
 	float dynamicPixelsPerUnit = renderCanvas->GetActualDynamicPixelsPerUnit() * rootCanvasScale;
 	float oneDivideRootCanvasScale = 1.0f / rootCanvasScale;
@@ -2965,7 +2965,7 @@ void UIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, float
 	//additional data
 	{
 		//normal & tangent
-		if (renderCanvas->GetFinalRequireNormalAndTangent())
+		if (renderCanvas->GetActualRequireNormalAndTangent())
 		{
 			for (int i = 0; i < originVertices.Num(); i++)
 			{
@@ -3149,7 +3149,7 @@ void UIGeometry::TransformVertices(ULGUICanvas* canvas, UUIBaseRenderable* item,
 		vertices[i].Position = FVector3f(itemToCanvasTf.TransformPosition(FVector(originVertices[i].Position)));
 	}
 
-	if (canvas->GetFinalRequireNormalAndTangent())
+	if (canvas->GetActualRequireNormalAndTangent())
 	{
 		for (int i = 0; i < vertexCount; i++)
 		{

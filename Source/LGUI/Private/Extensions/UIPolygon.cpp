@@ -186,7 +186,7 @@ void UUIPolygon::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, boo
 		//additional data
 		{
 			//normal & tangent
-			if (RenderCanvas->GetFinalRequireNormalAndTangent())
+			if (RenderCanvas->GetActualRequireNormalAndTangent())
 			{
 				for (int i = 0; i < vertexCount; i++)
 				{

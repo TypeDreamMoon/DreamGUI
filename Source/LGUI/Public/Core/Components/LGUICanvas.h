@@ -63,7 +63,6 @@ UENUM(BlueprintType, meta = (Bitflags), Category = LGUI)
 enum class ELGUICanvasOverrideParameters :uint8
 {
 	DefaultMaterial,
-	PixelPerfect,
 	DynamicPixelsPerUnit,
 	RequireNormalAndTangent,
 	BlendDepth,
@@ -232,9 +231,6 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		bool previewWithLGUIRenderer = false;
 #endif
-	/** This can avoid half-pixel render */
-	UPROPERTY(EditAnywhere, Category = "LGUI")
-		bool pixelPerfect = false;
 	/**
 	 * true- Use custom sort order.
 	 * false- Use default sort order management, which is based on hierarchy order.
@@ -288,7 +284,6 @@ protected:
 		TSubclassOf<ULexUIMeshComponent> DefaultMeshType;
 
 	FORCEINLINE bool GetOverrideDefaultMaterial()const				{ return overrideParameters & (1 << (int)ELGUICanvasOverrideParameters::DefaultMaterial); }
-	FORCEINLINE bool GetOverridePixelPerfect()const					{ return overrideParameters & (1 << (int)ELGUICanvasOverrideParameters::PixelPerfect); }
 	FORCEINLINE bool GetOverrideDynamicPixelsPerUnit()const			{ return overrideParameters & (1 << (int)ELGUICanvasOverrideParameters::DynamicPixelsPerUnit); }
 	FORCEINLINE bool GetOverrideRequireNormalAndTangent()const		{ return overrideParameters & (1 << (int)ELGUICanvasOverrideParameters::RequireNormalAndTangent); }
 	FORCEINLINE bool GetOverrideBlendDepth()const					{ return overrideParameters & (1 << (int)ELGUICanvasOverrideParameters::BlendDepth); }
@@ -303,9 +298,6 @@ public:
 	/** Set render mode of this canvas. This may not take effect if the canvas is not a root cnavas. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetRenderMode(ELGUIRenderMode value);
-	/** Set pixel perfect of this canvas. This may not take effect if the canvas is not a root canvas. */
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetPixelPerfect(bool value);
 	/** Set parameters for calculating projection matrix. Only valid for ScreenSpace/RenderTarget mode. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetProjectionParameters(TEnumAsByte<ECameraProjectionMode::Type> InProjectionType, float InFovAngle, float InNearClipPlane, float InFarClipPlane);
@@ -339,19 +331,13 @@ public:
 		void SetSortOrderToLowestOfHierarchy(bool propagateToChildrenCanvas = true);
 	void GetMinMaxSortOrderOfHierarchy(int32& OutMin, int32& OutMax);
 
-	/** Get actural render mode of canvas. Actually canvas's render mode property is inherit from parent canvas. */
+	/** Get actually render mode of canvas. Canvas's render-mode is inherited from parent canvas. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		ELGUIRenderMode GetActualRenderMode()const;
 	/** Get render mode of this canvas. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		ELGUIRenderMode GetRenderMode()const { return renderMode; }
-	/** Get pixel perfect of canvas. Actually canvas's pixel perfect property is inherit from parent canvas. */
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		bool GetActualPixelPerfect()const;
-	/** Get pixel perfect of this canvas. */
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		bool GetPixelPerfect()const { return pixelPerfect; }
-	/** Get render target of canvas if render mode is RenderTarget. Actually canvas's render target property is inherit from root canvas. */
+	/** Get render target of canvas if render mode is RenderTarget. Canvas's render-target is inherited from root canvas. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		UTextureRenderTarget2D* GetActualRenderTarget()const;
 	/** Get render target of this canvas. */
@@ -370,7 +356,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		ELGUICanvasRenderTargetUpdateMode GetRenderTargetUpdateMode()const { return RenderTargetUpdateMode; }
 
-	/** Get blendDepth value of canvas. Actually canvas's blendDepth property is inherit from parent canvas. */
+	/** Get actual blendDepth value of canvas. Canvas's BlendDepth is inherited from parent canvas. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		float GetActualBlendDepth()const;
 	/** Get blendDepth value of this canvas. */
@@ -379,7 +365,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetBlendDepth(float value);
 
-	/** Get depthFade value of canvas. Actually canvas's depthFade property is inherit from parent canvas. */
+	/** Get actual depthFade value of canvas. Canvas's DepthFade is inherited from parent canvas. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		int GetActualDepthFade()const;
 	/** Get blendDepth value of this canvas. */
@@ -399,12 +385,12 @@ public:
 		void SetOverrideSorting(bool value);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		int32 GetSortOrder()const { return sortOrder; }
-	/** Get SortOrder of this canvas. Actually canvas's SortOrder property may inherit from parent canvas depend on OverrideSorting property. */
+	/** Get actual SortOrder of this canvas. Canvas's SortOrder property may inherit from parent canvas depend on OverrideSorting property. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		int32 GetActualSortOrder()const;
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-	bool GetFinalRequireNormalAndTangent()const;
+	bool GetActualRequireNormalAndTangent()const;
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	bool GetRequireNormalAndTangent()const { return bRequireNormalAndTangent; }
 

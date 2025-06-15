@@ -286,7 +286,7 @@ void UUIBatchMeshRenderable::UpdateGeometry()
 	else//if geometry is created, update data
 	{
 		//when use pixel-perfect, the pixel-perfect calculation will take consider transform matrix, so we need to recalculate geometry if pixel-perfect & bTransformChanged
-		bool pixelPerfect = this->GetShouldAffectByPixelPerfect() && this->GetRenderCanvas()->GetActualPixelPerfect();
+		bool pixelPerfect = this->GetShouldAffectByPixelSnapping() && this->GetFinalPixelSnapping();
 		bool pixelPerfectAffectTransform = pixelPerfect && bTransformChanged;
 		if (bTriangleChanged || bLocalVertexPositionChanged || pixelPerfectAffectTransform || bColorChanged || bUVChanged)
 		{

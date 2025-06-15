@@ -2,7 +2,6 @@
 
 #include "LGUI/Public/Core/Components/UIItem.h"
 #include "LGUI.h"
-#include "Utils/LGUIUtils.h"
 #include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "LGUI/Public/Core/Components/UICanvasGroup.h"
 #include "Core/LGUISettings.h"
@@ -2324,6 +2323,97 @@ void UUIItem::SetClipping(ELexWidgetClipping Value)
 	{
 		Clipping = Value;
 		MarkClipDirty_Recursive(true);
+	}
+}
+
+bool UUIItem::GetFinalPixelSnapping() const
+{
+	switch (this->PixelSnapping)
+	{
+	case EWidgetPixelSnapping::SnapToPixel:
+		return true;
+	case EWidgetPixelSnapping::Disabled:
+		return false;
+	case EWidgetPixelSnapping::Inherit:
+		if (ParentUIItem.IsValid())
+		{
+			return ParentUIItem->GetFinalPixelSnapping();
+		}
+		return false;
+	}
+	return false;
+}
+
+void UUIItem::SetPixelSnapping(EWidgetPixelSnapping Value)
+{
+	if (PixelSnapping != Value)
+	{
+		PixelSnapping = Value;
+		struct LOCAL
+		{
+			static void MarkChanged(const UUIItem* Widget)
+			{
+				// if (Widget->Visual)
+				// {
+				// 	Widget->Visual->OnPixelSnappingChanged();
+				// }
+				for (auto& Child : Widget->GetAttachUIChildren())
+				{
+					MarkChanged(Child);
+				}
+			}
+		};
+		LOCAL::MarkChanged(this);
+	}
+}
+
+bool UUIItem::IsVisibleForRender() const
+{
+	bool SelfVisibleForRender =	UIVisibility == ESlateVisibility::Visible
+	|| UIVisibility == ESlateVisibility::HitTestInvisible
+	|| UIVisibility == ESlateVisibility::SelfHitTestInvisible
+	;
+	if (SelfVisibleForRender == false)
+		return false;
+	if (ParentUIItem.IsValid())
+		return ParentUIItem->IsVisibleForRender();
+	return true;
+}
+
+bool UUIItem::IsVisibleForHitTest() const
+{
+	bool SelfVisibleForHitTest = UIVisibility == ESlateVisibility::Visible;
+	if (SelfVisibleForHitTest == false)
+		return false;
+	if (ParentUIItem.IsValid())
+	{
+		if (ParentUIItem->UIVisibility == ESlateVisibility::SelfHitTestInvisible)
+			return true;
+		return ParentUIItem->IsVisibleForHitTest();
+	}
+	return true;
+}
+
+bool UUIItem::IsVisibleForLayout() const
+{
+	bool SelfVisibleForLayout =	UIVisibility == ESlateVisibility::Visible
+	|| UIVisibility == ESlateVisibility::Hidden
+	|| UIVisibility == ESlateVisibility::HitTestInvisible
+	|| UIVisibility == ESlateVisibility::SelfHitTestInvisible
+	;
+	if (SelfVisibleForLayout == false)
+		return false;
+	if (ParentUIItem.IsValid())
+		return ParentUIItem->IsVisibleForLayout();
+	return true;
+}
+
+void UUIItem::SetUIVisibility(ESlateVisibility Value)
+{
+	if (UIVisibility != Value)
+	{
+		UIVisibility = Value;
+		check(0);
 	}
 }
 

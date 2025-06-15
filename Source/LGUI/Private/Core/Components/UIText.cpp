@@ -335,13 +335,13 @@ void UUIText::OnBeforeCreateOrUpdateGeometry()
 	if (visibleCharCount == -1)visibleCharCount = VisibleCharCountInString(text.ToString());
 }
 
-bool UUIText::GetShouldAffectByPixelPerfect()const
+bool UUIText::GetShouldAffectByPixelSnapping()const
 {
 	if (IsValid(font))
 	{
 		return font->GetShouldAffectByPixelPerfect();
 	}
-	return Super::GetShouldAffectByPixelPerfect();
+	return Super::GetShouldAffectByPixelSnapping();
 }
 
 void UUIText::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)

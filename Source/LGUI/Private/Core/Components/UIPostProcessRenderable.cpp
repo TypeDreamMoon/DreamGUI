@@ -150,7 +150,7 @@ void UUIPostProcessRenderable::OnUpdateGeometry(bool InTriangleChanged, bool InV
 				originVertices[2].Position = FVector3f(0, minX, maxY);
 				originVertices[3].Position = FVector3f(0, maxX, maxY);
 				//snap pixel
-				if (RenderCanvas->GetActualPixelPerfect())
+				if (this->GetFinalPixelSnapping())
 				{
 					UIGeometry::AdjustPixelPerfectPos(originVertices, 0, 4, RenderCanvas.Get(), this);
 				}

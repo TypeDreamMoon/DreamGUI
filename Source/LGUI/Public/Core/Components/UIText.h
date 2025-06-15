@@ -158,7 +158,7 @@ public:
 	virtual UMaterialInterface* GetMaterialToCreateGeometry()override;
 
 	virtual void OnBeforeCreateOrUpdateGeometry()override;
-	virtual bool GetShouldAffectByPixelPerfect()const override;
+	virtual bool GetShouldAffectByPixelSnapping()const override;
 	virtual void OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 	virtual void UpdateMaterialClipType()override;
 	virtual void OnCultureChanged_Implementation()override;
