@@ -7,8 +7,8 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "Slate/WidgetRenderer.h"
 #include "Widgets/SViewport.h"
-#include "Core/UIGeometry.h"
-#include "Core/LGUISpriteInfo.h"
+#include "Core/LexUIGeometry.h"
+#include "Core/LexUISpriteInfo.h"
 #include "Input/HittestGrid.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Engine/GameInstance.h"
@@ -25,7 +25,7 @@ UUIWidget::UUIWidget(const FObjectInitializer& ObjectInitializer) :Super(ObjectI
 	bTickInEditor = true;
 }
 
-bool UUIWidget::SupportDrawcallBatching()const
+bool UUIWidget::SupportDrawCallBatching()const
 {
 	if (IsValid(CustomMesh))
 	{
@@ -44,7 +44,7 @@ UTexture* UUIWidget::GetTextureToCreateGeometry()
 {
 	return RenderTarget;
 }
-void UUIWidget::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
+void UUIWidget::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
 	if (IsValid(CustomMesh))
 	{
@@ -53,8 +53,8 @@ void UUIWidget::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, bool
 	}
 	else
 	{
-		static FLGUISpriteInfo SpriteInfo;
-		UIGeometry::UpdateUIRectSimpleVertex(&InGeo,
+		static FLexUISpriteInfo SpriteInfo;
+		FLexUIGeometry::UpdateUIRectSimpleVertex(&InGeo,
 			this->GetWidth(), this->GetHeight(), FVector2f(this->GetPivot()), SpriteInfo, RenderCanvas.Get(), this, GetFinalColor(),
 			InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 		);

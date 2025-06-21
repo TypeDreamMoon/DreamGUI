@@ -2,7 +2,7 @@
 
 #include "GeometryModifier/UIEffectGradientColor.h"
 #include "LGUI.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "LGUI/Public/Core/Components/UIText.h"
 
 UUIEffectGradientColor::UUIEffectGradientColor()
@@ -13,7 +13,7 @@ void UUIEffectGradientColor::ApplyColorAndAlpha(FColor& InOutColor, FColor InTin
 {
 	if (multiplySourceAlpha)
 	{
-		InOutColor.A = (uint8)(LGUIUtils::Color255To1_Table[InOutColor.A] * InTintColor.A);
+		InOutColor.A = (uint8)(FLexUIUtils::Color255To1_Table[InOutColor.A] * InTintColor.A);
 		InOutColor.R = InTintColor.R;
 		InOutColor.G = InTintColor.G;
 		InOutColor.B = InTintColor.B;
@@ -24,11 +24,11 @@ void UUIEffectGradientColor::ApplyColorAndAlpha(FColor& InOutColor, FColor InTin
 	}
 }
 void UUIEffectGradientColor::ModifyUIGeometry(
-	UIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
+	FLexUIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 )
 {
-	auto& triangles = InGeometry.triangles;
-	auto& vertices = InGeometry.vertices;
+	auto& triangles = InGeometry.Triangles;
+	auto& vertices = InGeometry.Vertices;
 
 	auto vertexCount = vertices.Num();
 	int32 triangleCount = triangles.Num();

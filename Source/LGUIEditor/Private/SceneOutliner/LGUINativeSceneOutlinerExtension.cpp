@@ -15,7 +15,7 @@
 #include "Core/LGUISettings.h"
 #include "GameFramework/Actor.h"
 #include "EngineUtils.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "UObject/ObjectSaveContext.h"
 #include "Core/Components/UIItem.h"
 
@@ -94,7 +94,7 @@ void FLGUINativeSceneOutlinerExtension::PreserveHierarchyStateChange()
 	if (!ULGUIEditorSettings::GetPreserveHierarchyState())//no need to preseve it, just delete the actor
 	{
 		auto storageActor = FindDataStorageActor(false);
-		LGUIUtils::DestroyActorWithHierarchy(storageActor);
+		FLexUIUtils::DestroyActorWithHierarchy(storageActor);
 	}
 }
 
@@ -229,7 +229,7 @@ ALGUIEditorLevelDataStorageActor* FLGUINativeSceneOutlinerExtension::FindDataSto
 		{
 			auto msg = FText::Format(LOCTEXT("MultipleDataStorageActorError", "[ULGUINativeSceneOutlinerExtension::FindOrCreateDataStorageActor]There are {0} count of LGUIEditorLevelDataStorageActor, this is weird..."), needToDelete.Num());
 			UE_LOG(LGUIEditor, Error, TEXT("%s"), *msg.ToString());
-			LGUIUtils::EditorNotification(msg);
+			FLexUIUtils::EditorNotification(msg);
 			for (auto item : needToDelete)
 			{
 				item->Destroy();

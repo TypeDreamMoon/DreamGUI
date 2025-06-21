@@ -22,7 +22,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		FVector2D shadowOffset = FVector2D(1, -1);
 public:
-	virtual void ModifyUIGeometry(UIGeometry& InGeometry
+	virtual void ModifyUIGeometry(FLexUIGeometry& InGeometry
 		, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 	)override;
 

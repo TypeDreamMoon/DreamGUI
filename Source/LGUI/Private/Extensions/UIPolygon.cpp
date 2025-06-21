@@ -2,9 +2,9 @@
 
 #include "Extensions/UIPolygon.h"
 #include "LGUI.h"
-#include "Core/UIGeometry.h"
+#include "Core/LexUIGeometry.h"
 #include "LGUI/Public/Core/Components/LGUICanvas.h"
-#include "Core/LGUISpriteData_BaseObject.h"
+#include "Core/LexUISpriteData_BaseObject.h"
 #include "LTweenManager.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
@@ -16,13 +16,13 @@ UUIPolygon::UUIPolygon(const FObjectInitializer& ObjectInitializer):Super(Object
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-void UUIPolygon::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
+void UUIPolygon::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
 	Sides = FMath::Max(Sides, FullCycle ? 3 : 1);
 
-	auto& triangles = InGeo.triangles;
+	auto& triangles = InGeo.Triangles;
 	auto triangleCount = Sides * 3;
-	UIGeometry::LGUIGeometrySetArrayNum(triangles, triangleCount);
+	FLexUIGeometry::LexUIGeometrySetArrayNum(triangles, triangleCount);
 	if (InTriangleChanged)
 	{
 		int index = 0;
@@ -49,11 +49,11 @@ void UUIPolygon::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, boo
 		}
 	}
 
-	auto& vertices = InGeo.vertices;
-	auto& originVertices = InGeo.originVertices;
+	auto& vertices = InGeo.Vertices;
+	auto& originVertices = InGeo.OriginVertices;
 	int vertexCount = (FullCycle ? 1 : 2) + Sides;
-	UIGeometry::LGUIGeometrySetArrayNum(vertices, vertexCount);
-	UIGeometry::LGUIGeometrySetArrayNum(originVertices, vertexCount);
+	FLexUIGeometry::LexUIGeometrySetArrayNum(vertices, vertexCount);
+	FLexUIGeometry::LexUIGeometrySetArrayNum(originVertices, vertexCount);
 	if (InVertexUVChanged || InVertexPositionChanged || InVertexColorChanged)
 	{
 		//vert offset
@@ -81,7 +81,7 @@ void UUIPolygon::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, boo
 			auto pivot = FVector2f(this->GetPivot());
 			//pivot offset
 			float pivotOffsetX = 0, pivotOffsetY = 0;
-			UIGeometry::CalculatePivotOffset(width, height, pivot, pivotOffsetX, pivotOffsetY);
+			FLexUIGeometry::CalculatePivotOffset(width, height, pivot, pivotOffsetX, pivotOffsetY);
 			float halfW = width * 0.5f;
 			float halfH = height * 0.5f;
 
@@ -180,7 +180,7 @@ void UUIPolygon::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, boo
 
 		if (InVertexColorChanged)
 		{
-			UIGeometry::UpdateUIColor(&InGeo, GetFinalColor());
+			FLexUIGeometry::UpdateUIColor(&InGeo, GetFinalColor());
 		}
 
 		//additional data

@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "UIGeometry.h"
-#include "Core/LGUISpriteData_BaseObject.h"
+#include "LexUIGeometry.h"
+#include "Core/LexUISpriteData_BaseObject.h"
 #include "LexUIRender/ILexUIRendererPrimitive.h"
 #include "LexUIRender/LexUIVertex.h"
 #include "RHIStaticStates.h"

@@ -5,7 +5,7 @@
 #include "LGUI/Public/Core/Components/UIItem.h"
 #include "Layout/UILayoutElement.h"
 #include "Core/LGUIManager.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
@@ -106,7 +106,7 @@ void UUILayoutBase::ApplyUIItemWidth(UUIItem* InUIItem, const float& InWidth)
 #if WITH_EDITOR
     if (!this->GetWorld()->IsGameWorld() && bIsValueDirty)
     {
-        LGUIUtils::NotifyPropertyChanged(InUIItem, UUIItem::GetAnchorDataPropertyName());
+        FLexUIUtils::NotifyPropertyChanged(InUIItem, UUIItem::GetAnchorDataPropertyName());
     }
 #endif
 }
@@ -119,7 +119,7 @@ void UUILayoutBase::ApplyUIItemHeight(UUIItem* InUIItem, const float& InHeight)
 #if WITH_EDITOR
     if (!this->GetWorld()->IsGameWorld() && bIsValueDirty)
     {
-        LGUIUtils::NotifyPropertyChanged(InUIItem, UUIItem::GetAnchorDataPropertyName());
+        FLexUIUtils::NotifyPropertyChanged(InUIItem, UUIItem::GetAnchorDataPropertyName());
     }
 #endif
 }
@@ -132,7 +132,7 @@ void UUILayoutBase::ApplyUIItemAnchoredPosition(UUIItem* InUIItem, const FVector
 #if WITH_EDITOR
     if (!this->GetWorld()->IsGameWorld() && bIsValueDirty)
     {
-        LGUIUtils::NotifyPropertyChanged(InUIItem, UUIItem::GetAnchorDataPropertyName());
+        FLexUIUtils::NotifyPropertyChanged(InUIItem, UUIItem::GetAnchorDataPropertyName());
     }
 #endif
 }
@@ -145,7 +145,7 @@ void UUILayoutBase::ApplyUIItemSizeDelta(UUIItem* InUIItem, const FVector2D& InS
 #if WITH_EDITOR
     if (!this->GetWorld()->IsGameWorld() && bIsValueDirty)
     {
-        LGUIUtils::NotifyPropertyChanged(InUIItem, UUIItem::GetAnchorDataPropertyName());
+        FLexUIUtils::NotifyPropertyChanged(InUIItem, UUIItem::GetAnchorDataPropertyName());
     }
 #endif
 }

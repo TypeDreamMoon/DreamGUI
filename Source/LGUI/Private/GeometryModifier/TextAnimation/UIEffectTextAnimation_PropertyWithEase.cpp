@@ -4,7 +4,7 @@
 #include "LGUI.h"
 #include "LGUI/Public/Core/Components/UIText.h"
 #include "Curves/CurveFloat.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 
 const FLTweenFunction& UUIEffectTextAnimation_PropertyWithEase::GetEaseFunction()
 {
@@ -155,10 +155,10 @@ void UUIEffectTextAnimation_PropertyWithEase::SetEaseCurve(UCurveFloat* value)
 	}
 }
 
-void UUIEffectTextAnimation_PositionProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, UIGeometry* InGeometry)
+void UUIEffectTextAnimation_PositionProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	auto easeFunction = GetEaseFunction();
-	auto& originVertices = InGeometry->originVertices;
+	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
 	for (int charIndex = InSelection.startCharIndex; charIndex < InSelection.endCharCount; charIndex++)
 	{
@@ -175,11 +175,11 @@ void UUIEffectTextAnimation_PositionProperty::ApplyProperty(UUIText* InUIText, c
 	}
 }
 
-void UUIEffectTextAnimation_PositionRandomProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, UIGeometry* InGeometry)
+void UUIEffectTextAnimation_PositionRandomProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	FMath::RandInit(seed);
 	auto easeFunction = GetEaseFunction();
-	auto& originVertices = InGeometry->originVertices;
+	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
 	for (int charIndex = InSelection.startCharIndex; charIndex < InSelection.endCharCount; charIndex++)
 	{
@@ -197,10 +197,10 @@ void UUIEffectTextAnimation_PositionRandomProperty::ApplyProperty(UUIText* InUIT
 	}
 }
 
-void UUIEffectTextAnimation_RotationProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, UIGeometry* InGeometry)
+void UUIEffectTextAnimation_RotationProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	auto easeFunction = GetEaseFunction();
-	auto& originVertices = InGeometry->originVertices;
+	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
 	for (int charIndex = InSelection.startCharIndex; charIndex < InSelection.endCharCount; charIndex++)
 	{
@@ -225,11 +225,11 @@ void UUIEffectTextAnimation_RotationProperty::ApplyProperty(UUIText* InUIText, c
 	}
 }
 
-void UUIEffectTextAnimation_RotationRandomProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, UIGeometry* InGeometry)
+void UUIEffectTextAnimation_RotationRandomProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	FMath::RandInit(seed);
 	auto easeFunction = GetEaseFunction();
-	auto& originVertices = InGeometry->originVertices;
+	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
 	for (int charIndex = InSelection.startCharIndex; charIndex < InSelection.endCharCount; charIndex++)
 	{
@@ -255,10 +255,10 @@ void UUIEffectTextAnimation_RotationRandomProperty::ApplyProperty(UUIText* InUIT
 	}
 }
 
-void UUIEffectTextAnimation_ScaleProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, UIGeometry* InGeometry)
+void UUIEffectTextAnimation_ScaleProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	auto easeFunction = GetEaseFunction();
-	auto& originVertices = InGeometry->originVertices;
+	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
 	for (int charIndex = InSelection.startCharIndex; charIndex < InSelection.endCharCount; charIndex++)
 	{
@@ -283,11 +283,11 @@ void UUIEffectTextAnimation_ScaleProperty::ApplyProperty(UUIText* InUIText, cons
 	}
 }
 
-void UUIEffectTextAnimation_ScaleRandomProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, UIGeometry* InGeometry)
+void UUIEffectTextAnimation_ScaleRandomProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	FMath::RandInit(seed);
 	auto easeFunction = GetEaseFunction();
-	auto& originVertices = InGeometry->originVertices;
+	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
 	for (int charIndex = InSelection.startCharIndex; charIndex < InSelection.endCharCount; charIndex++)
 	{
@@ -313,10 +313,10 @@ void UUIEffectTextAnimation_ScaleRandomProperty::ApplyProperty(UUIText* InUIText
 	}
 }
 
-void UUIEffectTextAnimation_AlphaProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, UIGeometry* InGeometry)
+void UUIEffectTextAnimation_AlphaProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	auto easeFunction = GetEaseFunction();
-	auto& vertices = InGeometry->vertices;
+	auto& vertices = InGeometry->Vertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
 	for (int charIndex = InSelection.startCharIndex; charIndex < InSelection.endCharCount; charIndex++)
 	{
@@ -333,15 +333,15 @@ void UUIEffectTextAnimation_AlphaProperty::ApplyProperty(UUIText* InUIText, cons
 	}
 }
 
-void UUIEffectTextAnimation_ColorProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, UIGeometry* InGeometry)
+void UUIEffectTextAnimation_ColorProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	auto easeFunction = GetEaseFunction();
-	auto& vertices = InGeometry->vertices;
+	auto& vertices = InGeometry->Vertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
 	FVector colorHsv;
 	if (useHSV)
 	{
-		colorHsv = LGUIUtils::ColorRGBToColorHSVData(color);
+		colorHsv = FLexUIUtils::ColorRGBToColorHSVData(color);
 	}
 	for (int charIndex = InSelection.startCharIndex; charIndex < InSelection.endCharCount; charIndex++)
 	{
@@ -355,9 +355,9 @@ void UUIEffectTextAnimation_ColorProperty::ApplyProperty(UUIText* InUIText, cons
 			auto& vert = vertices[vertIndex];
 			if (useHSV)
 			{
-				auto vertColorHsv = LGUIUtils::ColorRGBToColorHSVData(vert.Color);
+				auto vertColorHsv = FLexUIUtils::ColorRGBToColorHSVData(vert.Color);
 				vertColorHsv = FMath::Lerp(vertColorHsv, colorHsv, lerpValue);
-				auto vertColor = LGUIUtils::ColorHSVDataToColorRGB(vertColorHsv);
+				auto vertColor = FLexUIUtils::ColorHSVDataToColorRGB(vertColorHsv);
 				vert.Color.R = vertColor.R;
 				vert.Color.G = vertColor.G;
 				vert.Color.B = vertColor.B;
@@ -384,11 +384,11 @@ void UUIEffectTextAnimation_ColorProperty::SetUseHSV(bool value)
 	}
 }
 
-void UUIEffectTextAnimation_ColorRandomProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, UIGeometry* InGeometry)
+void UUIEffectTextAnimation_ColorRandomProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	FMath::RandInit(seed);
 	auto easeFunction = GetEaseFunction();
-	auto& vertices = InGeometry->vertices;
+	auto& vertices = InGeometry->Vertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
 	for (int charIndex = InSelection.startCharIndex; charIndex < InSelection.endCharCount; charIndex++)
 	{
@@ -401,16 +401,16 @@ void UUIEffectTextAnimation_ColorRandomProperty::ApplyProperty(UUIText* InUIText
 		FVector colorHsv;
 		if (useHSV)
 		{
-			colorHsv = LGUIUtils::ColorRGBToColorHSVData(color);
+			colorHsv = FLexUIUtils::ColorRGBToColorHSVData(color);
 		}
 		for (int vertIndex = startVertIndex; vertIndex < endVertIndex; vertIndex++)
 		{
 			auto& vert = vertices[vertIndex];
 			if (useHSV)
 			{
-				auto vertColorHsv = LGUIUtils::ColorRGBToColorHSVData(vert.Color);
+				auto vertColorHsv = FLexUIUtils::ColorRGBToColorHSVData(vert.Color);
 				vertColorHsv = FMath::Lerp(vertColorHsv, colorHsv, lerpValue);
-				auto vertColor = LGUIUtils::ColorHSVDataToColorRGB(vertColorHsv);
+				auto vertColor = FLexUIUtils::ColorHSVDataToColorRGB(vertColorHsv);
 				vert.Color.R = vertColor.R;
 				vert.Color.G = vertColor.G;
 				vert.Color.B = vertColor.B;

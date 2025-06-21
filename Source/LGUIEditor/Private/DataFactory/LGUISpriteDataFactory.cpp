@@ -3,7 +3,7 @@
 #include "DataFactory/LGUISpriteDataFactory.h"
 #include "LGUIEditorModule.h"
 #include "Core/LGUISettings.h"
-#include "Core/LGUISpriteData.h"
+#include "Core/LexUISpriteData.h"
 #include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
 #include "Sound/SoundCue.h"
@@ -11,13 +11,13 @@
 #define LOCTEXT_NAMESPACE "LGUISpriteDataFactory"
 
 
-ULGUISpriteDataFactory::ULGUISpriteDataFactory()
+ULexUISpriteDataFactory::ULexUISpriteDataFactory()
 {
-	SupportedClass = ULGUISpriteData::StaticClass();
+	SupportedClass = ULexUISpriteData::StaticClass();
 	bCreateNew = true;
 	bEditAfterNew = true;
 }
-UObject* ULGUISpriteDataFactory::FactoryCreateNew(UClass* Class, UObject* InParent, FName Name, EObjectFlags Flags, UObject* Context, FFeedbackContext* Warn)
+UObject* ULexUISpriteDataFactory::FactoryCreateNew(UClass* Class, UObject* InParent, FName Name, EObjectFlags Flags, UObject* Context, FFeedbackContext* Warn)
 {
 	bool isDefaltTexture = false;
 	if (SpriteTexture == nullptr)
@@ -55,10 +55,10 @@ UObject* ULGUISpriteDataFactory::FactoryCreateNew(UClass* Class, UObject* InPare
 		}
 		// Apply setting for sprite creation
 		//SpriteTexture->MipGenSettings = TextureMipGenSettings::TMGS_NoMipmaps;
-		ULGUISpriteData::CheckAndApplySpriteTextureSetting(SpriteTexture);
+		ULexUISpriteData::CheckAndApplySpriteTextureSetting(SpriteTexture);
 	}
 
-	ULGUISpriteData* NewAsset = NewObject<ULGUISpriteData>(InParent, Class, Name, Flags | RF_Transactional);
+	ULexUISpriteData* NewAsset = NewObject<ULexUISpriteData>(InParent, Class, Name, Flags | RF_Transactional);
 	if (SpriteTexture)
 	{
 		NewAsset->spriteTexture = SpriteTexture;

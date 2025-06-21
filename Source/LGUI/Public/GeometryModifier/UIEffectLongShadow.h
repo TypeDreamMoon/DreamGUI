@@ -29,7 +29,7 @@ protected:
 		bool multiplySourceAlpha = true;
 	FORCEINLINE void ApplyColorAndAlpha(FColor& InOutColor, FColor InTintColor, uint8 InOriginAlpha);
 public:
-	virtual void ModifyUIGeometry(UIGeometry& InGeometry
+	virtual void ModifyUIGeometry(FLexUIGeometry& InGeometry
 		, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 	)override;
 

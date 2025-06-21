@@ -6,7 +6,7 @@
 #include "Core/IUISpriteRenderableInterface.h"
 #include "UISpriteBase.generated.h"
 
-class ULGUISpriteData_BaseObject;
+class ULexUISpriteData_BaseObject;
 
 /**
  * This is base class for create custom mesh based on UISprite.
@@ -44,7 +44,7 @@ protected:
 
 	/** sprite may override by UISelectable(UIButton, UIToggle, UISlider ...) */
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (DisplayThumbnail = "false"))
-		TObjectPtr<ULGUISpriteData_BaseObject> sprite = nullptr;
+		TObjectPtr<ULexUISpriteData_BaseObject> sprite = nullptr;
 
 	virtual void OnBeforeCreateOrUpdateGeometry()override;
 	virtual UTexture* GetTextureToCreateGeometry()override;
@@ -55,15 +55,15 @@ protected:
 
 public:
 
-	UFUNCTION(BlueprintCallable, Category = "LGUI") ULGUISpriteData_BaseObject* GetSprite()const { return sprite; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") ULexUISpriteData_BaseObject* GetSprite()const { return sprite; }
 #pragma region UISpriteRenderableInterface
-	virtual ULGUISpriteData_BaseObject* SpriteRenderableGetSprite_Implementation()const override{ return sprite; }
+	virtual ULexUISpriteData_BaseObject* SpriteRenderableGetSprite_Implementation()const override{ return sprite; }
 	virtual void ApplyAtlasTextureScaleUp_Implementation()override;
 	virtual void ApplyAtlasTextureChange_Implementation()override;
 #pragma endregion
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetSprite(ULGUISpriteData_BaseObject* newSprite, bool setSize = true);
+		void SetSprite(ULexUISpriteData_BaseObject* newSprite, bool setSize = true);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetSizeFromSpriteData();
 };

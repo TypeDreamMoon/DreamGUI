@@ -2,9 +2,9 @@
 
 #include "Extensions/2DLineRenderer/UI2DLineRendererBase.h"
 #include "LGUI.h"
-#include "Core/UIGeometry.h"
+#include "Core/LexUIGeometry.h"
 #include "LGUI/Public/Core/Components/LGUICanvas.h"
-#include "Core/LGUISpriteData_BaseObject.h"
+#include "Core/LexUISpriteData_BaseObject.h"
 #include "LTweenManager.h"
 #include "Core/LGUISettings.h"
 
@@ -21,9 +21,9 @@ void UUI2DLineRendererBase::BeginPlay()
 	Super::BeginPlay();
 }
 
-void UUI2DLineRendererBase::Update2DLineRendererBaseUV(UIGeometry& InGeo, const TArray<FVector2D>& InPointArray)
+void UUI2DLineRendererBase::Update2DLineRendererBaseUV(FLexUIGeometry& InGeo, const TArray<FVector2D>& InPointArray)
 {
-	auto& vertices = InGeo.vertices;
+	auto& vertices = InGeo.Vertices;
 	int pointCount = InPointArray.Num();
 
 	const auto& spriteInfo = sprite->GetSpriteInfo();
@@ -61,10 +61,10 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseUV(UIGeometry& InGeo, const 
 	}
 }
 
-void UUI2DLineRendererBase::Update2DLineRendererBaseTriangle(UIGeometry& InGeo, const TArray<FVector2D>& InPointArray)
+void UUI2DLineRendererBase::Update2DLineRendererBaseTriangle(FLexUIGeometry& InGeo, const TArray<FVector2D>& InPointArray)
 {
 	int pointCount = InPointArray.Num();
-	auto& triangles = InGeo.triangles;
+	auto& triangles = InGeo.Triangles;
 
 	int pointIndex = 0;
 	int vertIndex = 0, triangleIndex = 0;
@@ -119,16 +119,16 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseTriangle(UIGeometry& InGeo, 
 	}
 }
 
-void UUI2DLineRendererBase::Update2DLineRendererBaseVertex(UIGeometry& InGeo, const TArray<FVector2D>& InPointArray)
+void UUI2DLineRendererBase::Update2DLineRendererBaseVertex(FLexUIGeometry& InGeo, const TArray<FVector2D>& InPointArray)
 {
 	int pointCount = InPointArray.Num();
 	//pivot offset
 	float pivotOffsetX = 0, pivotOffsetY = 0;
-	UIGeometry::CalculatePivotOffset(this->GetWidth(), this->GetHeight(), FVector2f(this->GetPivot()), pivotOffsetX, pivotOffsetY);
+	FLexUIGeometry::CalculatePivotOffset(this->GetWidth(), this->GetHeight(), FVector2f(this->GetPivot()), pivotOffsetX, pivotOffsetY);
 	float halfW = this->GetWidth() * 0.5f;
 	float halfH = this->GetHeight() * 0.5f;
 	//positions
-	auto& originVertices = InGeo.originVertices;
+	auto& originVertices = InGeo.OriginVertices;
 
 	FVector2D pos0, pos1;
 	float lineLeftWidth = LineWidth * LineWidthOffset;
@@ -309,7 +309,7 @@ void UUI2DLineRendererBase::GenerateLinePoint(const FVector2D& InCurrentPoint, c
 }
 
 
-void UUI2DLineRendererBase::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
+void UUI2DLineRendererBase::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
 	SCOPE_CYCLE_COUNTER(STAT_2DLineUpdate);
 	auto& CurrentPointArray = GetCalcaultedPointArray();
@@ -320,7 +320,7 @@ void UUI2DLineRendererBase::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleC
 		return;
 	}
 	
-	auto& triangles = InGeo.triangles;
+	auto& triangles = InGeo.Triangles;
 	int triangleIndicesCount = (pointCount - 1) * 2 * 3;
 	if (CanConnectStartEndPoint(pointCount))
 	{
@@ -330,21 +330,21 @@ void UUI2DLineRendererBase::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleC
 	{
 		triangleIndicesCount += 12;
 	}
-	UIGeometry::LGUIGeometrySetArrayNum(triangles, triangleIndicesCount);
+	FLexUIGeometry::LexUIGeometrySetArrayNum(triangles, triangleIndicesCount);
 	if (InTriangleChanged)
 	{
 		Update2DLineRendererBaseTriangle(InGeo, CurrentPointArray);
 	}
 
-	auto& vertices = InGeo.vertices;
-	auto& originVertices = InGeo.originVertices;
+	auto& vertices = InGeo.Vertices;
+	auto& originVertices = InGeo.OriginVertices;
 	int vertexCount = pointCount * 2;
 	if (EndType == EUI2DLineRenderer_EndType::Cap)
 	{
 		vertexCount += 4;
 	}
-	UIGeometry::LGUIGeometrySetArrayNum(vertices, vertexCount);
-	UIGeometry::LGUIGeometrySetArrayNum(originVertices, vertexCount);
+	FLexUIGeometry::LexUIGeometrySetArrayNum(vertices, vertexCount);
+	FLexUIGeometry::LexUIGeometrySetArrayNum(originVertices, vertexCount);
 	if (InVertexUVChanged || InVertexPositionChanged || InVertexColorChanged)
 	{
 		if (InVertexPositionChanged)
@@ -357,7 +357,7 @@ void UUI2DLineRendererBase::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleC
 		}
 		if (InVertexColorChanged)
 		{
-			UIGeometry::UpdateUIColor(&InGeo, GetFinalColor());
+			FLexUIGeometry::UpdateUIColor(&InGeo, GetFinalColor());
 		}
 
 		//normal & tangent

@@ -5,7 +5,7 @@
 #include "RendererInterface.h"
 #include "SceneView.h"
 #include "Engine/EngineTypes.h"
-#include "Core/LGUISpriteData_BaseObject.h"
+#include "Core/LexUISpriteData_BaseObject.h"
 #include "CanvasItem.h"
 #include "EditorStyleSet.h"
 #include "CanvasTypes.h"
@@ -18,13 +18,13 @@ ULGUISpriteDataBaseObjectThumbnailRenderer::ULGUISpriteDataBaseObjectThumbnailRe
 }
 void ULGUISpriteDataBaseObjectThumbnailRenderer::Draw(UObject* Object, int32 X, int32 Y, uint32 Width, uint32 Height, FRenderTarget* RenderTarget, FCanvas* Canvas, bool bAdditionalViewFamily)
 {
-	if (auto sprite = Cast<ULGUISpriteData_BaseObject>(Object))
+	if (auto sprite = Cast<ULexUISpriteData_BaseObject>(Object))
 	{
 		DrawFrame(sprite, X, Y, Width, Height, RenderTarget, Canvas, nullptr);
 	}
 	
 }
-void ULGUISpriteDataBaseObjectThumbnailRenderer::DrawFrame(class ULGUISpriteData_BaseObject* Sprite, int32 X, int32 Y, uint32 Width, uint32 Height, FRenderTarget*, FCanvas* Canvas, FBoxSphereBounds* OverrideRenderBounds)
+void ULGUISpriteDataBaseObjectThumbnailRenderer::DrawFrame(class ULexUISpriteData_BaseObject* Sprite, int32 X, int32 Y, uint32 Width, uint32 Height, FRenderTarget*, FCanvas* Canvas, FBoxSphereBounds* OverrideRenderBounds)
 {
 	const UTexture2D* SourceTexture = SourceTexture = Sprite->GetAtlasTexture();
 

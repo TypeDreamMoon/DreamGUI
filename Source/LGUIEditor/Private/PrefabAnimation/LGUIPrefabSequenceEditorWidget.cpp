@@ -18,7 +18,7 @@
 #include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "Framework/Application/SlateApplication.h"
 #include "EngineUtils.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "LGUIEditorTools.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #include "PrefabAnimation/LGUIPrefabSequenceComponent.h"
@@ -384,7 +384,7 @@ public:
 			if (auto Actor = WeakSequence->GetTypedOuter<AActor>())
 			{
 				TArray<AActor*> AllChildrenActors;
-				LGUIUtils::CollectChildrenActors(Actor, AllChildrenActors);
+				FLexUIUtils::CollectChildrenActors(Actor, AllChildrenActors);
 				for (auto ActorItem : AllChildrenActors)
 				{
 					if (!AllBoundObjects.Contains(ActorItem))

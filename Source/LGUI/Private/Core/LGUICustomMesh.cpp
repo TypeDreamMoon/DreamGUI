@@ -4,7 +4,7 @@
 #include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
 #include "LGUI.h"
 #include "LGUI/Public/Core/Components/LGUICanvas.h"
-#include "Core/UIGeometry.h"
+#include "Core/LexUIGeometry.h"
 
 DECLARE_CYCLE_STAT(TEXT("LGUICustomMesh Blueprint.OnFillMesh"), STAT_LGUICustomMesh_OnFillMesh, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("LGUICustomMesh Blueprint.GetHitUV"), STAT_LGUICustomMesh_GetHitUV, STATGROUP_LGUI);
@@ -35,9 +35,9 @@ bool ULGUICustomMesh::SupportDrawcallBatching()const
 }
 bool ULGUICustomMesh::GetHitUVbyFaceIndex(const UUIBatchMeshRenderable* InRenderable, const int32& InHitFaceIndex, const FVector& InHitPoint, FVector2D& OutHitUV)const
 {
-	auto& Vertices = UIGeo->vertices;
-	auto& OriginVertices = UIGeo->originVertices;
-	auto& Triangles = UIGeo->triangles;
+	auto& Vertices = UIGeo->Vertices;
+	auto& OriginVertices = UIGeo->OriginVertices;
+	auto& Triangles = UIGeo->Triangles;
 
 	if (InHitFaceIndex >= 0)
 	{
@@ -76,9 +76,9 @@ void ULGUICustomMesh_Cylinder::OnFillMesh(UUIBatchMeshRenderable* InRenderable, 
 	const auto SizeX = InRenderable->GetWidth();
 	const auto SizeY = InRenderable->GetHeight();
 	const auto Color = InRenderable->GetFinalColor();
-	auto& Vertices = UIGeo->vertices;
-	auto& OriginVertices = UIGeo->originVertices;
-	auto& Triangles = UIGeo->triangles;
+	auto& Vertices = UIGeo->Vertices;
+	auto& OriginVertices = UIGeo->OriginVertices;
+	auto& Triangles = UIGeo->Triangles;
 
 	auto ArcAngle = FMath::Max(FMath::DegreesToRadians(FMath::Abs(CylinderArcAngle)), 0.01f);
 	auto ArcAngleSign = FMath::Sign(CylinderArcAngle);
@@ -100,7 +100,7 @@ void ULGUICustomMesh_Cylinder::OnFillMesh(UUIBatchMeshRenderable* InRenderable, 
 	const float RadiansPerStep = ArcAngle / NumSegments;
 	float Angle = -ArcAngle * 0.5f;
 	const FVector3f CenterPoint = FVector3f(0, HalfChordLength + PivotOffsetX, V);
-	auto OriginVert = FLGUIOriginVertexData();
+	auto OriginVert = FLexUIOriginVertexData();
 	auto Vert = FLexUIMeshVertex();
 	Vert.Color = Color;
 	OriginVert.Position = FVector3f(0, Radius * FMath::Sin(Angle) + PivotOffsetX, V);
@@ -178,9 +178,9 @@ void ULGUICustomMesh_CurvyPlane::OnFillMesh(UUIBatchMeshRenderable* InRenderable
 	const float HalfSizeX = SizeX * 0.5f;
 	const float HalfSizeY = SizeY * 0.5f;
 
-	auto& Triangles = UIGeo->triangles;
-	auto& Vertices = UIGeo->vertices;
-	auto& OriginVertices = UIGeo->originVertices;
+	auto& Triangles = UIGeo->Triangles;
+	auto& Vertices = UIGeo->Vertices;
+	auto& OriginVertices = UIGeo->OriginVertices;
 
 	int triangleIndicesCount = Segment * 6;
 	Triangles.SetNumUninitialized(triangleIndicesCount);
@@ -209,7 +209,7 @@ void ULGUICustomMesh_CurvyPlane::OnFillMesh(UUIBatchMeshRenderable* InRenderable
 	for (int WidthIndex = 0; WidthIndex <= Segment; WidthIndex++)
 	{
 		auto OffsetByCurve = ShapeCurve.GetRichCurve()->Eval(UVX) * CurveScale;
-		auto OriginVert = FLGUIOriginVertexData();
+		auto OriginVert = FLexUIOriginVertexData();
 		OriginVert.Position = FVector3f(0, PivotOffsetX + PosX, PivotOffsetY - HalfSizeY + OffsetByCurve);
 		auto Vert = FLexUIMeshVertex();
 		Vert.Color = Color;

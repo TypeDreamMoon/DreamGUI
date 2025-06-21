@@ -5,7 +5,7 @@
 #include "RendererInterface.h"
 #include "SceneView.h"
 #include "Engine/EngineTypes.h"
-#include "Core/LGUISpriteData.h"
+#include "Core/LexUISpriteData.h"
 #include "CanvasItem.h"
 #include "EditorStyleSet.h"
 #include "CanvasTypes.h"
@@ -18,13 +18,13 @@ ULGUISpriteThumbnailRenderer::ULGUISpriteThumbnailRenderer()
 }
 void ULGUISpriteThumbnailRenderer::Draw(UObject* Object, int32 X, int32 Y, uint32 Width, uint32 Height, FRenderTarget* RenderTarget, FCanvas* Canvas, bool bAdditionalViewFamily)
 {
-	if (ULGUISpriteData* sprite = Cast<ULGUISpriteData>(Object))
+	if (ULexUISpriteData* sprite = Cast<ULexUISpriteData>(Object))
 	{
 		DrawFrame(sprite, X, Y, Width, Height, RenderTarget, Canvas, nullptr);
 	}
 	
 }
-void ULGUISpriteThumbnailRenderer::DrawFrame(class ULGUISpriteData* Sprite, int32 X, int32 Y, uint32 Width, uint32 Height, FRenderTarget*, FCanvas* Canvas, FBoxSphereBounds* OverrideRenderBounds)
+void ULGUISpriteThumbnailRenderer::DrawFrame(class ULexUISpriteData* Sprite, int32 X, int32 Y, uint32 Width, uint32 Height, FRenderTarget*, FCanvas* Canvas, FBoxSphereBounds* OverrideRenderBounds)
 {
 	const UTexture2D* SourceTexture = SourceTexture = Sprite->GetSpriteTexture();
 

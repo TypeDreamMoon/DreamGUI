@@ -22,10 +22,10 @@ class LGUI_API UUIWidget : public UUICustomMesh, public ILGUIPrefabInterface
 public:	
 	UUIWidget(const FObjectInitializer& ObjectInitializer);
 protected:
-	virtual bool SupportDrawcallBatching()const override;
+	virtual bool SupportDrawCallBatching()const override;
 	virtual void OnBeforeCreateOrUpdateGeometry()override;
 	virtual UTexture* GetTextureToCreateGeometry()override;
-	virtual void OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
+	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 
 	virtual void BeginPlay() override;
 	// Begin ILGUIPrefabInterface

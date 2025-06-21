@@ -4,10 +4,10 @@
 #include "LGUI.h"
 #include "Core/LexUIClipData.h"
 #include "LGUI/Public/Core/Components/LGUICanvas.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "GeometryModifier/UIGeometryModifierBase.h"
 #include "Materials/MaterialInstanceDynamic.h"
-#include "Core/UIDrawcall.h"
+#include "Core/LexUIDrawCall.h"
 #include "Core/LGUIManager.h"
 
 DECLARE_CYCLE_STAT(TEXT("UIBatchMeshRenderable GeometryModifier"), STAT_ApplyModifier, STATGROUP_LGUI);
@@ -16,7 +16,7 @@ UUIBatchMeshRenderable::UUIBatchMeshRenderable(const FObjectInitializer& ObjectI
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	UIRenderableType = EUIRenderableType::UIBatchMeshRenderable;
-	geometry = TSharedPtr<UIGeometry>(new UIGeometry);
+	geometry = TSharedPtr<FLexUIGeometry>(new FLexUIGeometry);
 
 	bLocalVertexPositionChanged = true;
 	bUVChanged = true;
@@ -98,7 +98,7 @@ void UUIBatchMeshRenderable::MarkTextureDirty()
 	{
 		if (drawcall.IsValid())
 		{
-			geometry->texture = GetTextureToCreateGeometry();
+			geometry->Texture = GetTextureToCreateGeometry();
 			drawcall->bTextureChanged = true;
 		}
 		MarkCanvasUpdate(true, false, false);
@@ -110,7 +110,7 @@ void UUIBatchMeshRenderable::MarkMaterialDirty()
 	{
 		if (drawcall.IsValid())
 		{
-			geometry->material = GetMaterialToCreateGeometry();
+			geometry->Material = GetMaterialToCreateGeometry();
 			drawcall->bMaterialChanged = true;
 		}
 		MarkCanvasUpdate(true, false, false);
@@ -148,10 +148,10 @@ void UUIBatchMeshRenderable::MarkAllDirty()
 	{
 		if (drawcall.IsValid())
 		{
-			geometry->texture = GetTextureToCreateGeometry();
+			geometry->Texture = GetTextureToCreateGeometry();
 			drawcall->bTextureChanged = true;
 
-			geometry->material = GetMaterialToCreateGeometry();
+			geometry->Material = GetMaterialToCreateGeometry();
 			drawcall->bMaterialChanged = true;
 		}
 		MarkCanvasUpdate(true, false, false);
@@ -176,7 +176,7 @@ UMaterialInstanceDynamic* UUIBatchMeshRenderable::GetMaterialInstanceDynamic()co
 			return (UMaterialInstanceDynamic*)CustomUIMaterial;//if CustomUIMaterial is a MaterialInstanceDynamic then just return it directly
 		}
 	}
-	if (drawcall.IsValid() && drawcall->RenderMaterial.IsValid() && drawcall->bMaterialContainsLGUIParameter)
+	if (drawcall.IsValid() && drawcall->RenderMaterial.IsValid() && drawcall->bMaterialContainsLexUIParameter)
 	{
 		return (UMaterialInstanceDynamic*)drawcall->RenderMaterial.Get();
 	}
@@ -275,13 +275,13 @@ void UUIBatchMeshRenderable::UpdateGeometry()
 		)
 	{
 		geometry->Clear();
-		geometry->texture = GetTextureToCreateGeometry();
-		geometry->material = GetMaterialToCreateGeometry();
+		geometry->Texture = GetTextureToCreateGeometry();
+		geometry->Material = GetMaterialToCreateGeometry();
 		OnUpdateGeometry(*(geometry.Get()), true, true, true, true);
 		OnUpdateGeometryClipData(*(geometry.Get()), true);
 		ApplyGeometryModifier(true, true, true, true);
 		CalculateLocalBounds();//CalculateLocalBounds must stay before TransformVertices, because TransformVertices will also cache bounds for Canvas to check 2d overlap.
-		UIGeometry::TransformVertices(RenderCanvas.Get(), this, geometry.Get());
+		FLexUIGeometry::TransformVertices(RenderCanvas.Get(), this, geometry.Get());
 	}
 	else//if geometry is created, update data
 	{
@@ -315,15 +315,15 @@ void UUIBatchMeshRenderable::UpdateGeometry()
 		}
 		if (bLocalVertexPositionChanged || bTransformChanged)
 		{
-			UIGeometry::TransformVertices(RenderCanvas.Get(), this, geometry.Get());
+			FLexUIGeometry::TransformVertices(RenderCanvas.Get(), this, geometry.Get());
 			drawcall->bNeedToUpdateVertex = true;
 		}
 	}
-	if (geometry->vertices.Num() >= LEXUI_MAX_VERTEX_COUNT)
+	if (geometry->Vertices.Num() >= LEXUI_MAX_VERTEX_COUNT)
 	{
 		auto errorMsg = FText::Format(NSLOCTEXT("UIBatchMeshRenderable", "TooManyTrianglesInSingleUIElement", "{0} Too many vertex ({1}) in single UI element: {2}")
 			, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__))
-			, geometry->vertices.Num()
+			, geometry->Vertices.Num()
 #if WITH_EDITOR
 			, FText::FromString(this->GetOwner()->GetActorLabel())
 #else
@@ -331,7 +331,7 @@ void UUIBatchMeshRenderable::UpdateGeometry()
 #endif
 		);
 #if WITH_EDITOR
-		LGUIUtils::EditorNotification(errorMsg, 10);
+		FLexUIUtils::EditorNotification(errorMsg, 10);
 #endif
 		UE_LOG(LGUI, Error, TEXT("%s"), *errorMsg.ToString());
 	}
@@ -376,9 +376,9 @@ bool UUIBatchMeshRenderable::LineTraceVisiblePixel(float InAlphaThreshold, FHitR
 	{
 		//triangle hit test
 		//triangle hit test
-		auto& originVertices = geometry->originVertices;
-		auto& vertices = geometry->vertices;
-		auto& triangleIndices = geometry->triangles;
+		auto& originVertices = geometry->OriginVertices;
+		auto& vertices = geometry->Vertices;
+		auto& triangleIndices = geometry->Triangles;
 		const int triangleCount = triangleIndices.Num() / 3;
 		int index = 0;
 		for (int i = 0; i < triangleCount; i++)
@@ -412,7 +412,7 @@ bool UUIBatchMeshRenderable::LineTraceVisiblePixel(float InAlphaThreshold, FHitR
 				if (ReadPixelFromMainTexture(uv, Pixel))
 				{
 					auto AlphaValue = Pixel.A;
-					auto AlphaValue01 = LGUIUtils::Color255To1_Table[AlphaValue];
+					auto AlphaValue01 = FLexUIUtils::Color255To1_Table[AlphaValue];
 					if (AlphaValue01 > InAlphaThreshold)
 					{
 						return true;
@@ -434,7 +434,7 @@ bool UUIBatchMeshRenderable::LineTraceVisiblePixel(float InAlphaThreshold, FHitR
 
 void UUIBatchMeshRenderable::CalculateLocalBounds()
 {
-	auto& originVertices = geometry->originVertices;
+	auto& originVertices = geometry->OriginVertices;
 	float horizontalMin = MAX_flt, horizontalMax = -MAX_flt;
 	float verticalMin = MAX_flt, verticalMax = -MAX_flt;
 #if WITH_EDITOR
@@ -536,7 +536,7 @@ void UUIBatchMeshRenderable::OnBeforeCreateOrUpdateGeometry()
 }
 
 DECLARE_CYCLE_STAT(TEXT("UIBatchMeshRenderable Blueprint.OnFillMesh"), STAT_BatchGeometryRenderable_OnFillMesh, STATGROUP_LGUI);
-void UUIBatchMeshRenderable::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
+void UUIBatchMeshRenderable::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
 	{
@@ -550,12 +550,12 @@ void UUIBatchMeshRenderable::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangle
 	}
 }
 
-void UUIBatchMeshRenderable::OnUpdateGeometryClipData(UIGeometry& InMesh, bool InClipDataStartPositionChanged)
+void UUIBatchMeshRenderable::OnUpdateGeometryClipData(FLexUIGeometry& InMesh, bool InClipDataStartPositionChanged)
 {
 	//clip data
 	if (InClipDataStartPositionChanged)
 	{
-		auto& vertices = InMesh.vertices;
+		auto& vertices = InMesh.Vertices;
 		auto clipDataStartPos = GetClipDataStartPosition();
 		for (int i = 0; i < vertices.Num(); i++)
 		{
@@ -577,9 +577,9 @@ void ULGUIGeometryHelper::AddVertexSimple(FVector position, FColor color, FVecto
 		return;
 	}
 #endif
-	auto& originVertices = UIGeo->originVertices;
+	auto& originVertices = UIGeo->OriginVertices;
 	originVertices.Add(FVector3f(position));
-	auto& vertices = UIGeo->vertices;
+	auto& vertices = UIGeo->Vertices;
 	FLexUIMeshVertex vert(FVector3f::ZeroVector);
 	vert.Color = color;
 	vert.TextureCoordinate[0] = FVector2f(uv0);
@@ -601,9 +601,9 @@ void ULGUIGeometryHelper::AddVertexFull(FVector position, FColor color, FVector2
 		return;
 	}
 #endif
-	auto& originVertices = UIGeo->originVertices;
-	originVertices.Add(FLGUIOriginVertexData((FVector3f)position, (FVector3f)normal, (FVector3f)tangent));
-	auto& vertices = UIGeo->vertices;
+	auto& originVertices = UIGeo->OriginVertices;
+	originVertices.Add(FLexUIOriginVertexData((FVector3f)position, (FVector3f)normal, (FVector3f)tangent));
+	auto& vertices = UIGeo->Vertices;
 	FLexUIMeshVertex vert(FVector3f::ZeroVector);
 	vert.Color = color;
 	vert.TextureCoordinate[0] = FVector2f(uv0);
@@ -628,9 +628,9 @@ void ULGUIGeometryHelper::AddVertexStruct(FLGUIGeometryVertex vertex)
 		return;
 	}
 #endif
-	auto& originVertices = UIGeo->originVertices;
-	originVertices.Add(FLGUIOriginVertexData((FVector3f)vertex.position, (FVector3f)vertex.normal, (FVector3f)vertex.tangent));
-	auto& vertices = UIGeo->vertices;
+	auto& originVertices = UIGeo->OriginVertices;
+	originVertices.Add(FLexUIOriginVertexData((FVector3f)vertex.position, (FVector3f)vertex.normal, (FVector3f)vertex.tangent));
+	auto& vertices = UIGeo->Vertices;
 	FLexUIMeshVertex vert(FVector3f::ZeroVector);
 	vert.Color = vertex.color;
 	vert.TextureCoordinate[0] = FVector2f(vertex.uv0);
@@ -642,14 +642,14 @@ void ULGUIGeometryHelper::AddVertexStruct(FLGUIGeometryVertex vertex)
 void ULGUIGeometryHelper::AddTriangle(int index0, int index1, int index2)
 {
 #if !UE_BUILD_SHIPPING
-	int vertCount = UIGeo->vertices.Num();
+	int vertCount = UIGeo->Vertices.Num();
 	if (index0 >= vertCount || index1 >= vertCount || index2 >= vertCount)
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d Triangle index reference out of vertex range."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
 #endif
-	auto& triangles = UIGeo->triangles;
+	auto& triangles = UIGeo->Triangles;
 	triangles.Reserve(triangles.Num() + 3);
 	triangles.Add(index0);
 	triangles.Add(index1);
@@ -688,22 +688,22 @@ void ULGUIGeometryHelper::SetMesh(const TArray<FLGUIGeometryVertex>& InVertices,
 		}
 	}
 #endif
-	auto& triangles = UIGeo->triangles;
+	auto& triangles = UIGeo->Triangles;
 	triangles.SetNumUninitialized(InIndices.Num());
 	for (int i = 0; i < InIndices.Num(); i++)
 	{
 		triangles[i] = InIndices[i];
 	}
 
-	auto& vertices = UIGeo->vertices;
-	auto& originVertices = UIGeo->originVertices;
+	auto& vertices = UIGeo->Vertices;
+	auto& originVertices = UIGeo->OriginVertices;
 	vertices.SetNumUninitialized(vertCount);
 	originVertices.SetNumUninitialized(vertCount);
 
 	for (int i = 0; i < vertCount; i++)
 	{
 		auto& originVert = InVertices[i];
-		originVertices[i] = FLGUIOriginVertexData((FVector3f)originVert.position, (FVector3f)originVert.normal, (FVector3f)originVert.tangent);
+		originVertices[i] = FLexUIOriginVertexData((FVector3f)originVert.position, (FVector3f)originVert.normal, (FVector3f)originVert.tangent);
 		auto& vert = vertices[i];
 		vert.Color = originVert.color;
 		vert.TextureCoordinate[0] = FVector2f(originVert.uv0);
@@ -737,9 +737,9 @@ void ULGUIGeometryHelper::AddVertexTriangleStream(const TArray<FLGUIGeometryVert
 		}
 	}
 #endif
-	auto& triangles = UIGeo->triangles;
-	auto& vertices = UIGeo->vertices;
-	auto& originVertices = UIGeo->originVertices;
+	auto& triangles = UIGeo->Triangles;
+	auto& vertices = UIGeo->Vertices;
+	auto& originVertices = UIGeo->OriginVertices;
 	auto vertCount = vertices.Num();
 	triangles.Reserve(InVertexTriangleStream.Num());
 	for (int i = 0; i < InVertexTriangleStream.Num(); i++)
@@ -753,7 +753,7 @@ void ULGUIGeometryHelper::AddVertexTriangleStream(const TArray<FLGUIGeometryVert
 	for (int i = 0; i < InVertexTriangleStream.Num(); i++)
 	{
 		auto& originVert = InVertexTriangleStream[i];
-		originVertices.Add(FLGUIOriginVertexData((FVector3f)originVert.position, (FVector3f)originVert.normal, (FVector3f)originVert.tangent));
+		originVertices.Add(FLexUIOriginVertexData((FVector3f)originVert.position, (FVector3f)originVert.normal, (FVector3f)originVert.tangent));
 		FLexUIMeshVertex vert(FVector3f::ZeroVector);
 		vert.Color = originVert.color;
 		vert.TextureCoordinate[0] = FVector2f(originVert.uv0);
@@ -771,9 +771,9 @@ void ULGUIGeometryHelper::Clear()
 
 void ULGUIGeometryHelper::GetVertexTriangleStream(TArray<FLGUIGeometryVertex>& OutVertexTriangleStream)
 {
-	auto& triangles = UIGeo->triangles;
-	auto& vertices = UIGeo->vertices;
-	auto& originVertices = UIGeo->originVertices;
+	auto& triangles = UIGeo->Triangles;
+	auto& vertices = UIGeo->Vertices;
+	auto& originVertices = UIGeo->OriginVertices;
 	auto vertCount = vertices.Num();
 	OutVertexTriangleStream.Reserve(triangles.Num());
 	for (int i = 0; i < triangles.Num(); i++)

@@ -2,7 +2,7 @@
 
 #include "AssetTypeActions_LGUIRichTextImageData.h"
 #include "ContentBrowserModule.h"
-#include "Core/LGUIRichTextImageData.h"
+#include "Core/LexUIRichTextImageData.h"
 
 #define LOCTEXT_NAMESPACE "AssetTypeActions_LGUIRichTextImageData"
 
@@ -34,7 +34,7 @@ FText FAssetTypeActions_LGUIRichTextImageData::GetName()const
 
 UClass* FAssetTypeActions_LGUIRichTextImageData::GetSupportedClass()const
 {
-	return ULGUIRichTextImageData::StaticClass();
+	return ULexUIRichTextImageData::StaticClass();
 }
 
 FColor FAssetTypeActions_LGUIRichTextImageData::GetTypeColor()const

@@ -1,0 +1,138 @@
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+
+#include "Core/LexUIRichTextImageData.h"
+#include "LGUI.h"
+#include "Core/Actor/UISpriteActor.h"
+#include "Core/LexUIRichTextImageData.h"
+#include "Extensions/UISpriteSequencePlayer.h"
+#include "Utils/LexUIUtils.h"
+#include "Core/LGUIManager.h"
+#include "PrefabSystem/LGUIPrefabManager.h"
+#include "Core/LexUISpriteData_BaseObject.h"
+#include "Engine/World.h"
+#include "Core/LexUISpriteData_BaseObject.h"
+
+#if WITH_EDITOR
+void ULexUIRichTextImageData::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+	OnDataChange.Broadcast();
+}
+#endif
+
+void ULexUIRichTextImageData::SetImageMap(const TMap<FName, FLexUIRichTextImageItemData>& value)
+{
+	imageMap = value;
+	OnDataChange.Broadcast();
+}
+void ULexUIRichTextImageData::SetAnimationFps(float value)
+{
+	animationFps = value;
+	OnDataChange.Broadcast();
+}
+void ULexUIRichTextImageData::BroadcastOnDataChange()
+{
+	OnDataChange.Broadcast();
+}
+
+void ULexUIRichTextImageData::CreateOrUpdateObject(UUIItem* parent, const TArray<FUIText_RichTextImageTag>& imageTagData, TArray<TObjectPtr<UUIItem>>& createdImageObjectArray, bool listImageObjectInEditorOutliner)
+{
+	//destroy extra
+	while (createdImageObjectArray.Num() > imageTagData.Num())
+	{
+		auto lastIndex = createdImageObjectArray.Num() - 1;
+		auto imageObj = createdImageObjectArray[lastIndex];
+		FLexUIUtils::DestroyActorWithHierarchy(imageObj->GetOwner());
+		createdImageObjectArray.RemoveAt(lastIndex);
+	}
+	//create more
+	while (createdImageObjectArray.Num() < imageTagData.Num())
+	{
+		auto spriteActor = parent->GetWorld()->SpawnActor<AUISpriteActor>();
+		spriteActor->SetFlags(EObjectFlags::RF_Transient);
+		spriteActor->GetUISprite()->AttachToComponent(parent, FAttachmentTransformRules::KeepRelativeTransform);
+		createdImageObjectArray.Push(spriteActor->GetUISprite());
+	}
+	//apply data
+	for (int i = 0; i < imageTagData.Num(); i++)
+	{
+		auto imageObj = (UUISprite*)createdImageObjectArray[i].Get();
+#if WITH_EDITOR
+		imageObj->GetOwner()->SetActorLabel(FString::Printf(TEXT("[%s]"), *imageTagData[i].TagName.ToString()));
+		if (!parent->GetWorld()->IsGameWorld())//set it only in edit mode
+		{
+			auto bListedInSceneOutliner_Property = FindFProperty<FBoolProperty>(AActor::StaticClass(), TEXT("bListedInSceneOutliner"));
+			bListedInSceneOutliner_Property->SetPropertyValue_InContainer(imageObj->GetOwner(), listImageObjectInEditorOutliner);
+		}
+#endif
+		if (auto imageItemPtr = imageMap.Find(imageTagData[i].TagName))
+		{
+			auto& spriteFrames = imageItemPtr->frames;
+			auto sequencePlayerComp = imageObj->GetOwner()->FindComponentByClass<UUISpriteSequencePlayer>();
+			ULexUISpriteData_BaseObject* sprite = nullptr;
+			if (spriteFrames.Num() == 0)
+			{
+				imageObj->SetSprite(nullptr, false);
+				if (IsValid(sequencePlayerComp))
+				{
+					sequencePlayerComp->DestroyComponent();
+				}
+			}
+			else if (spriteFrames.Num() == 1)
+			{
+				sprite = spriteFrames[0];
+				if (IsValid(sequencePlayerComp))
+				{
+					sequencePlayerComp->DestroyComponent();
+				}
+			}
+			else
+			{
+				sprite = spriteFrames[0];
+				if (!IsValid(sequencePlayerComp))
+				{
+					sequencePlayerComp = NewObject<UUISpriteSequencePlayer>(imageObj->GetOwner());
+					sequencePlayerComp->SetSnapSpriteSize(false);
+					sequencePlayerComp->RegisterComponent();
+					imageObj->GetOwner()->AddInstanceComponent(sequencePlayerComp);
+				}
+				sequencePlayerComp->SetSpriteSequence(spriteFrames);
+				sequencePlayerComp->SetFps(imageItemPtr->overrideAnimationFps < 0 ? animationFps : imageItemPtr->overrideAnimationFps);
+				if (parent->GetWorld()->IsGameWorld())
+				{
+					sequencePlayerComp->Play();
+				}
+			}
+			imageObj->SetColor(imageTagData[i].TintColor);
+			imageObj->SetAnchoredPosition(imageTagData[i].Position);
+			imageObj->SetSizeDelta(imageTagData[i].Size);
+		}
+		else
+		{
+			imageObj->SetColor(imageTagData[i].TintColor);
+			imageObj->SetAnchoredPosition(imageTagData[i].Position);
+			imageObj->SetSizeDelta(FVector2D(imageTagData[i].Size));
+		}
+	}
+#if WITH_EDITOR
+	if (!parent->GetWorld()->IsGameWorld())//refresh on editor
+	{
+		ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();
+	}
+#endif
+}
+bool ULexUIRichTextImageData::GetImageSize(const FName& imageTag, FIntVector2& outSize)
+{
+	auto ImageItemData = imageMap.Find(imageTag);
+	if (!ImageItemData)return false;
+	if (ImageItemData->frames.Num() == 0)
+		return false;
+	ULexUISpriteData_BaseObject* sprite = ImageItemData->frames[0].Get();
+	if (!IsValid(sprite))
+		return false;
+
+	auto spriteWidth = sprite->GetSpriteInfo().width;
+	auto spriteHeight = sprite->GetSpriteInfo().height;
+	outSize = FIntVector2(spriteWidth, spriteHeight);
+	return true;
+}

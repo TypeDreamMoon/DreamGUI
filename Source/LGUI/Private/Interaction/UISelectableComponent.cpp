@@ -11,10 +11,10 @@
 #include "Event/LGUIEventSystem.h"
 #include "LGUI/Public/Core/Components/UISprite.h"
 #include "LGUI/Public/Core/Components/UICanvasGroup.h"
-#include "Core/LGUISpriteData_BaseObject.h"
+#include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/LGUISettings.h"
 #if WITH_EDITOR
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #endif
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
@@ -112,14 +112,14 @@ void UUISelectableComponent::PostEditChangeProperty(FPropertyChangedEvent& Prope
 					if (IsValid(TargetUISpriteComp) && IsValid(NormalSprite))
 					{
 						TargetUISpriteComp->SetSprite(isGroupAllowInteraction ? NormalSprite : DisabledSprite, false);
-						LGUIUtils::NotifyPropertyChanged(TargetUISpriteComp, UUISpriteBase::GetSpritePropertyName());
+						FLexUIUtils::NotifyPropertyChanged(TargetUISpriteComp, UUISpriteBase::GetSpritePropertyName());
 					}
 					TransitionActor->GetUIRenderable()->EditorForceUpdate();
 				}
 				else if (Transition == UISelectableTransitionType::ColorTint)
 				{
 					TransitionActor->GetUIRenderable()->SetColor(isGroupAllowInteraction ? NormalColor : DisabledColor);
-					LGUIUtils::NotifyPropertyChanged(TransitionActor->GetUIRenderable(), UUIBaseRenderable::GetColorPropertyName());
+					FLexUIUtils::NotifyPropertyChanged(TransitionActor->GetUIRenderable(), UUIBaseRenderable::GetColorPropertyName());
 					TransitionActor->GetUIRenderable()->EditorForceUpdate();
 				}
 			}
@@ -493,7 +493,7 @@ void UUISelectableComponent::SetTransitionTarget(class AUIBaseRenderableActor* v
 		ApplySelectionState(false);
 	}
 }
-void UUISelectableComponent::SetNormalSprite(ULGUISpriteData_BaseObject* NewSprite)
+void UUISelectableComponent::SetNormalSprite(ULexUISpriteData_BaseObject* NewSprite)
 {
 	if (NormalSprite != NewSprite)
 	{
@@ -515,7 +515,7 @@ void UUISelectableComponent::SetNormalColor(FColor NewColor)
 		}
 	}
 }
-void UUISelectableComponent::SetHighlightedSprite(ULGUISpriteData_BaseObject* NewSprite)
+void UUISelectableComponent::SetHighlightedSprite(ULexUISpriteData_BaseObject* NewSprite)
 {
 	if (HighlightedSprite != NewSprite)
 	{
@@ -537,7 +537,7 @@ void UUISelectableComponent::SetHighlightedColor(FColor NewColor)
 		}
 	}
 }
-void UUISelectableComponent::SetPressedSprite(ULGUISpriteData_BaseObject* NewSprite)
+void UUISelectableComponent::SetPressedSprite(ULexUISpriteData_BaseObject* NewSprite)
 {
 	if (PressedSprite != NewSprite)
 	{
@@ -559,7 +559,7 @@ void UUISelectableComponent::SetPressedColor(FColor NewColor)
 		}
 	}
 }
-void UUISelectableComponent::SetDisabledSprite(ULGUISpriteData_BaseObject* NewSprite)
+void UUISelectableComponent::SetDisabledSprite(ULexUISpriteData_BaseObject* NewSprite)
 {
 	if (DisabledSprite != NewSprite)
 	{

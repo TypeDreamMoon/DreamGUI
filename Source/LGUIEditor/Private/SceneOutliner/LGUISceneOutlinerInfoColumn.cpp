@@ -7,7 +7,7 @@
 #include "Widgets/Views/SHeaderRow.h"
 #include "Widgets/Colors/SColorBlock.h"
 #include "Widgets/Text/STextBlock.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "LGUIEditorStyle.h"
 #include "SceneOutliner/LGUISceneOutlinerButton.h"
 #include "LGUIEditorTools.h"

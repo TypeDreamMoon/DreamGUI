@@ -2,7 +2,7 @@
 
 #include "AssetTypeActions_LGUIStaticSpriteAtlasData.h"
 #include "ContentBrowserModule.h"
-#include "Core/LGUIStaticSpriteAtlasData.h"
+#include "Core/LexUIStaticSpriteAtlasData.h"
 
 #define LOCTEXT_NAMESPACE "AssetTypeActions_LGUIStaticSpriteAtlasData"
 
@@ -34,7 +34,7 @@ FText FAssetTypeActions_LGUIStaticSpriteAtlasData::GetName()const
 
 UClass* FAssetTypeActions_LGUIStaticSpriteAtlasData::GetSupportedClass()const
 {
-	return ULGUIStaticSpriteAtlasData::StaticClass();
+	return ULexUIStaticSpriteAtlasData::StaticClass();
 }
 
 FColor FAssetTypeActions_LGUIStaticSpriteAtlasData::GetTypeColor()const

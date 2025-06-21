@@ -2,7 +2,7 @@
 
 #include "AssetTypeActions_LGUIRichTextCustomStyleData.h"
 #include "ContentBrowserModule.h"
-#include "Core/LGUIRichTextCustomStyleData.h"
+#include "Core/LexUIRichTextCustomStyleData.h"
 
 #define LOCTEXT_NAMESPACE "AssetTypeActions_LGUIRichTextCustomStyleData"
 
@@ -34,7 +34,7 @@ FText FAssetTypeActions_LGUIRichTextCustomStyleData::GetName()const
 
 UClass* FAssetTypeActions_LGUIRichTextCustomStyleData::GetSupportedClass()const
 {
-	return ULGUIRichTextCustomStyleData::StaticClass();
+	return ULexUIRichTextCustomStyleData::StaticClass();
 }
 
 FColor FAssetTypeActions_LGUIRichTextCustomStyleData::GetTypeColor()const

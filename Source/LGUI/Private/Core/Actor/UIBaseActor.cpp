@@ -7,7 +7,7 @@
 #include "LGUI/Public/Core/Components/UIPostProcessRenderable.h"
 #if WITH_EDITOR
 #include "PrefabSystem/LGUIPrefabManager.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #endif
 
 
@@ -54,7 +54,7 @@ void AUIBaseActor::SetIsTemporarilyHiddenInEditor(bool bIsHidden)
 				}
 				if (bShouldNotify)
 				{
-					LGUIUtils::NotifyPropertyChanged(GetUIItem(), FName(TEXT("bIsUIActive")));
+					FLexUIUtils::NotifyPropertyChanged(GetUIItem(), FName(TEXT("bIsUIActive")));
 				}
 			}
 			ULGUIPrefabManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)] {

@@ -4,7 +4,7 @@
 
 #include "UIBaseRenderable.h"
 #include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
-#include "Core/LGUISpriteInfo.h"
+#include "Core/LexUISpriteInfo.h"
 #include "UIPostProcessRenderable.generated.h"
 
 class FUIPostProcessRenderProxy;
@@ -31,7 +31,7 @@ protected:
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
 #endif
 	virtual void OnUnregister()override;
-	TSharedPtr<UIGeometry> geometry = nullptr;
+	TSharedPtr<FLexUIGeometry> geometry = nullptr;
 	virtual void UpdateGeometry()override final;
 
 	virtual void OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange, bool InDiscardCache = true)override;
@@ -75,7 +75,7 @@ protected:
 	TSharedPtr<FUIPostProcessRenderProxy> RenderProxy = nullptr;
 	/** update ui geometry */
 	virtual void OnUpdateGeometry(bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged);
-	virtual void OnUpdateGeometryClipData(UIGeometry& InGeo, bool InClipDataStartPositionChanged);
+	virtual void OnUpdateGeometryClipData(FLexUIGeometry& InGeo, bool InClipDataStartPositionChanged);
 	/** update region vertex data */
 	virtual void UpdateRegionVertex();
 	TArray<FLexUIPostProcessCopyMeshRegionVertex> renderScreenToMeshRegionVertexArray;

@@ -11,7 +11,7 @@
 #include "Runtime/Launch/Resources/Version.h"
 #if WITH_EDITOR
 #include "Tools/UEdMode.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #endif
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
@@ -252,7 +252,7 @@ namespace LGUIPrefabSystem8
 			auto MsgText = FText::Format(NSLOCTEXT("LGUIActorSerializer8", "Warning_ActorBlueprintInPrefab", "Trying to create a prefab with ActorBlueprint '{0}', ActorBlueprint not work well with PrefabEditor, suggest to use native Actor."), FText::FromString(Actor->GetActorLabel()));
 			if (bIsEditorOrRuntime)
 			{
-				LGUIUtils::EditorNotification(MsgText, 10.0f);
+				FLexUIUtils::EditorNotification(MsgText, 10.0f);
 			}
 			UE_LOG(LGUI, Warning, TEXT("%s"), *MsgText.ToString());
 		}

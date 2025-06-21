@@ -2,7 +2,7 @@
 
 #include "Extensions/UIRenderableCustomRaycastExtensions.h"
 #include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 
 #if 0
 bool UUIRenderableCustomRaycast_Circle::Raycast(UUIBaseRenderable* InUIRenderable, const FVector& InLocalSpaceRayStart, const FVector& InLocalSpaceRayEnd, FVector& OutHitPoint, FVector& OutHitNormal)
@@ -48,7 +48,7 @@ bool UUIRenderableCustomRaycast_VisiblePixel::Raycast(UUIBaseRenderable* InUIRen
 			case 2:ChannelValue = HitPixel.B; break;
 			case 3:ChannelValue = HitPixel.A; break;
 			}
-			if (LGUIUtils::Color255To1_Table[ChannelValue] > VisibilityThreshold)
+			if (FLexUIUtils::Color255To1_Table[ChannelValue] > VisibilityThreshold)
 			{
 				return true;
 			}

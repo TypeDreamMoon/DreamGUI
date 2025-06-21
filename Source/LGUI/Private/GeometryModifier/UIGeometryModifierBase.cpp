@@ -97,7 +97,7 @@ void UUIGeometryModifierBase::SetExecuteOrder()
 
 DECLARE_CYCLE_STAT(TEXT("UIGeometryModifierBase_Blueprint.ModifyUIGeometry"), STAT_UIGeometryModifierBase_ModifyUIGeometry, STATGROUP_LGUI);
 void UUIGeometryModifierBase::ModifyUIGeometry(
-	UIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
+	FLexUIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 )
 {
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
@@ -129,7 +129,7 @@ float ULGUIGeometryModifierHelper::UITextHelperFunction_GetCharHorizontalPositio
 		return 0;
 	}
 #endif
-	auto& originVertices = UIGeo->originVertices;
+	auto& originVertices = UIGeo->OriginVertices;
 	auto& charPropertyItem = CharPropertyArray[InCharIndex];
 	int startVertIndex = charPropertyItem.StartVertIndex;
 	int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
@@ -159,7 +159,7 @@ void ULGUIGeometryModifierHelper::UITextHelperFunction_GetCharGeometry_AbsoluteP
 		return;
 	}
 #endif
-	auto& originVertices = UIGeo->originVertices;
+	auto& originVertices = UIGeo->OriginVertices;
 	auto& charPropertyItem = CharPropertyArray[InCharIndex];
 	int startVertIndex = charPropertyItem.StartVertIndex;
 	int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
@@ -193,7 +193,7 @@ void ULGUIGeometryModifierHelper::UITextHelperFunction_ModifyCharGeometry_Transf
 		return;
 	}
 #endif
-	auto& originVertices = UIGeo->originVertices;
+	auto& originVertices = UIGeo->OriginVertices;
 	auto& charPropertyItem = CharPropertyArray[InCharIndex];
 	int startVertIndex = charPropertyItem.StartVertIndex;
 	int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
@@ -265,7 +265,7 @@ void ULGUIGeometryModifierHelper::UITextHelperFunction_ModifyCharGeometry_Positi
 		return;
 	}
 #endif
-	auto& originVertices = UIGeo->originVertices;
+	auto& originVertices = UIGeo->OriginVertices;
 	auto& charPropertyItem = CharPropertyArray[InCharIndex];
 	int startVertIndex = charPropertyItem.StartVertIndex;
 	int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
@@ -315,7 +315,7 @@ void ULGUIGeometryModifierHelper::UITextHelperFunction_ModifyCharGeometry_Rotate
 		return;
 	}
 #endif
-	auto& originVertices = UIGeo->originVertices;
+	auto& originVertices = UIGeo->OriginVertices;
 	auto& charPropertyItem = CharPropertyArray[InCharIndex];
 	int startVertIndex = charPropertyItem.StartVertIndex;
 	int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
@@ -349,7 +349,7 @@ void ULGUIGeometryModifierHelper::UITextHelperFunction_ModifyCharGeometry_Scale(
 		return;
 	}
 #endif
-	auto& originVertices = UIGeo->originVertices;
+	auto& originVertices = UIGeo->OriginVertices;
 	auto& charPropertyItem = CharPropertyArray[InCharIndex];
 	int startVertIndex = charPropertyItem.StartVertIndex;
 	int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
@@ -385,7 +385,7 @@ void ULGUIGeometryModifierHelper::UITextHelperFunction_ModifyCharGeometry_Color(
 		return;
 	}
 #endif
-	auto& vertices = UIGeo->vertices;
+	auto& vertices = UIGeo->Vertices;
 	auto& charPropertyItem = CharPropertyArray[InCharIndex];
 	int startVertIndex = charPropertyItem.StartVertIndex;
 	int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
@@ -411,7 +411,7 @@ void ULGUIGeometryModifierHelper::UITextHelperFunction_ModifyCharGeometry_Alpha(
 		return;
 	}
 #endif
-	auto& vertices = UIGeo->vertices;
+	auto& vertices = UIGeo->Vertices;
 	auto& charPropertyItem = CharPropertyArray[InCharIndex];
 	int startVertIndex = charPropertyItem.StartVertIndex;
 	int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;

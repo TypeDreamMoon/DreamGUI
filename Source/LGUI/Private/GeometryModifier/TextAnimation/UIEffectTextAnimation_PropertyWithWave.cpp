@@ -31,9 +31,9 @@ void UUIEffectTextAnimation_PropertyWithWave::OnUpdate(float deltaTime)
 	}
 }
 
-void UUIEffectTextAnimation_PositionWaveProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, UIGeometry* InGeometry)
+void UUIEffectTextAnimation_PositionWaveProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
-	auto& originVertices = InGeometry->originVertices;
+	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
 	float PIxFreq = this->GetWorld()->TimeSeconds * PI * speed;
 	PIxFreq = flipDirection ? -PIxFreq : PIxFreq;
@@ -60,9 +60,9 @@ void UUIEffectTextAnimation_PositionWaveProperty::SetPosition(FVector value)
 	}
 }
 
-void UUIEffectTextAnimation_RotationWaveProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, UIGeometry* InGeometry)
+void UUIEffectTextAnimation_RotationWaveProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
-	auto& originVertices = InGeometry->originVertices;
+	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
 	float PIxFreq = this->GetWorld()->TimeSeconds * PI * speed;
 	PIxFreq = flipDirection ? -PIxFreq : PIxFreq;
@@ -97,9 +97,9 @@ void UUIEffectTextAnimation_RotationWaveProperty::SetRotator(FRotator value)
 	}
 }
 
-void UUIEffectTextAnimation_ScaleWaveProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, UIGeometry* InGeometry)
+void UUIEffectTextAnimation_ScaleWaveProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
-	auto& originVertices = InGeometry->originVertices;
+	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
 	float PIxFreq = this->GetWorld()->TimeSeconds * PI * speed;
 	PIxFreq = flipDirection ? -PIxFreq : PIxFreq;

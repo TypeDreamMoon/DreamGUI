@@ -2,16 +2,16 @@
 
 #include "LGUI/Public/Core/Components/UIProceduralRect.h"
 #include "LGUI.h"
-#include "Core/UIGeometry.h"
+#include "Core/LexUIGeometry.h"
 #include "LGUI/Public/Core/Components/LGUICanvas.h"
-#include "Core/LGUISpriteInfo.h"
+#include "Core/LexUISpriteInfo.h"
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
-#include "Core/UIDrawcall.h"
+#include "Core/LexUIDrawCall.h"
 #include "LGUI/Public/Core/Components/UITextureBase.h"
-#include "Utils/LGUIUtils.h"
-#include "Core/LGUISpriteData.h"
-#include "Core/LGUISpriteData_BaseObject.h"
+#include "Utils/LexUIUtils.h"
+#include "Core/LexUISpriteData.h"
+#include "Core/LexUISpriteData_BaseObject.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION_SHIP
@@ -400,7 +400,7 @@ UTexture* UUIProceduralRect::GetTextureToCreateGeometry()
 	{
 		if (!IsValid(BodySpriteTexture))
 		{
-			BodySpriteTexture = ULGUISpriteData::GetDefaultWhiteSolid();
+			BodySpriteTexture = ULexUISpriteData::GetDefaultWhiteSolid();
 		}
 		if (IsValid(BodySpriteTexture) && IsValid(BodySpriteTexture->GetAtlasTexture()))
 		{
@@ -423,7 +423,7 @@ UMaterialInterface* UUIProceduralRect::GetMaterialToCreateGeometry()
 }
 void UUIProceduralRect::UpdateMaterialClipType()
 {
-	geometry->material = GetMaterialToCreateGeometry();
+	geometry->Material = GetMaterialToCreateGeometry();
 	if (drawcall.IsValid())
 	{
 		drawcall->bMaterialChanged = true;
@@ -544,10 +544,10 @@ bool UUIProceduralRect::LineTraceUIRect(FHitResult& OutHit, const FVector& Start
 
 void UUIProceduralRect::OnDataTextureChanged(class UTexture* Texture)
 {
-	geometry->texture = GetTextureToCreateGeometry();
+	geometry->Texture = GetTextureToCreateGeometry();
 	if (drawcall.IsValid())
 	{
-		drawcall->Texture = geometry->texture;
+		drawcall->Texture = geometry->Texture;
 		drawcall->bTextureChanged = true;
 		drawcall->bNeedToUpdateVertex = true;
 	}
@@ -555,10 +555,10 @@ void UUIProceduralRect::OnDataTextureChanged(class UTexture* Texture)
 	MarkCanvasUpdate(true, true, false);
 }
 
-void UUIProceduralRect::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
+void UUIProceduralRect::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
-	static FLGUISpriteInfo SimpleRectSpriteData;
-	UIGeometry::UpdateUIProceduralRectSimpleVertex(&InGeo
+	static FLexUISpriteInfo SimpleRectSpriteData;
+	FLexUIGeometry::UpdateUIProceduralRectSimpleVertex(&InGeo
 		, this->bEnableBody || this->bEnableBorder || this->bEnableInnerShadow
 		, this->bEnableOuterShadow
 		, this->GetOuterShadowOffset(this->GetWidth(), this->GetHeight())
@@ -573,7 +573,7 @@ void UUIProceduralRect::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChang
 
 	if (InTriangleChanged || InVertexPositionChanged || InVertexUVChanged || InVertexColorChanged)
 	{
-		auto& vertices = InGeo.vertices;
+		auto& vertices = InGeo.Vertices;
 		if (this->bEnableOuterShadow)
 		{
 			for (int i = 0; i < 8; i++)
@@ -617,12 +617,12 @@ void UUIProceduralRect::ApplyAtlasTextureChange_Implementation()
 {
 	if (BodyTextureMode != EUIProceduralBodyTextureMode::Sprite)return;
 	check(BodySpriteTexture);
-	geometry->texture = BodySpriteTexture->GetAtlasTexture();
+	geometry->Texture = BodySpriteTexture->GetAtlasTexture();
 	if (RenderCanvas.IsValid())
 	{
 		if (drawcall.IsValid())
 		{
-			drawcall->Texture = geometry->texture;
+			drawcall->Texture = geometry->Texture;
 			drawcall->bTextureChanged = true;
 		}
 	}
@@ -632,7 +632,7 @@ void UUIProceduralRect::ApplyAtlasTextureScaleUp_Implementation()
 {
 	if (BodyTextureMode != EUIProceduralBodyTextureMode::Sprite)return;
 	check(BodySpriteTexture);
-	auto& vertices = geometry->vertices;
+	auto& vertices = geometry->Vertices;
 	if (vertices.Num() != 0)
 	{
 		for (int i = 0; i < vertices.Num(); i++)
@@ -642,12 +642,12 @@ void UUIProceduralRect::ApplyAtlasTextureScaleUp_Implementation()
 			uv.TextureCoordinate[0].Y *= 0.5f;
 		}
 	}
-	geometry->texture = BodySpriteTexture->GetAtlasTexture();
+	geometry->Texture = BodySpriteTexture->GetAtlasTexture();
 	if (RenderCanvas.IsValid())
 	{
 		if (drawcall.IsValid())
 		{
-			drawcall->Texture = geometry->texture;
+			drawcall->Texture = geometry->Texture;
 			drawcall->bTextureChanged = true;
 			drawcall->bNeedToUpdateVertex = true;
 		}
@@ -683,7 +683,7 @@ void UUIProceduralRect::SetBodyTexture(UTexture* value)
 	}
 	MarkTextureDirty();
 }
-void UUIProceduralRect::SetBodySpriteTexture(ULGUISpriteData_BaseObject* value)
+void UUIProceduralRect::SetBodySpriteTexture(ULexUISpriteData_BaseObject* value)
 {
 	if (this->BodySpriteTexture != value)
 	{
@@ -991,7 +991,7 @@ ULTweener* UUIProceduralRect::BodyColorTo(FColor endValue, float duration, float
 ULTweener* UUIProceduralRect::BodyAlphaTo(float endValue, float duration, float delay, ELTweenEase ease)
 {
 	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateWeakLambda(this, [this] {
-		return LGUIUtils::Color255To1_Table[this->BodyColor.A];
+		return FLexUIUtils::Color255To1_Table[this->BodyColor.A];
 		}), FLTweenFloatSetterFunction::CreateWeakLambda(this, [this](float value) {
 			auto PropertyValue = this->BodyColor;
 			PropertyValue.A = (uint8)(value * 255.0f);
@@ -1047,7 +1047,7 @@ ULTweener* UUIProceduralRect::Property##To(EndValueType endValue, float duration
 ULTweener* UUIProceduralRect::Function##AlphaTo(float endValue, float duration, float delay, ELTweenEase ease)\
 {\
 	auto Tweener =  ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateWeakLambda(this, [this] {\
-		return LGUIUtils::Color255To1_Table[this->BodyColor.A];\
+		return FLexUIUtils::Color255To1_Table[this->BodyColor.A];\
 		}), FLTweenFloatSetterFunction::CreateWeakLambda(this, [this](float value) {\
 			auto PropertyValue = this->Property;\
 			PropertyValue.A = (uint8)(value * 255.0f);\

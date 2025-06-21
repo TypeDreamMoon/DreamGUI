@@ -1179,7 +1179,7 @@ void LGUIEditorTools::ToggleSelectedActorsSpatiallyLoaded_Impl()
 				if (Actor->GetIsSpatiallyLoaded() != value)
 				{
 					Actor->SetIsSpatiallyLoaded(value);
-					LGUIUtils::NotifyPropertyChanged(Actor, AActor::GetIsSpatiallyLoadedPropertyName());
+					FLexUIUtils::NotifyPropertyChanged(Actor, AActor::GetIsSpatiallyLoadedPropertyName());
 				}
 			}
 			TArray<AActor*> ChildActors;
@@ -1249,16 +1249,16 @@ void LGUIEditorTools::DeleteActors_Impl(const TArray<AActor*>& InActors)
 			PrefabHelperObject->Modify();
 			PrefabHelperObject->SetAnythingDirty();
 			TArray<AActor*> ChildrenActors;
-			LGUIUtils::CollectChildrenActors(Actor, ChildrenActors);
+			FLexUIUtils::CollectChildrenActors(Actor, ChildrenActors);
 			for (auto ChildActor : ChildrenActors)
 			{
 				PrefabHelperObject->RemoveSubPrefabByAnyActorOfSubPrefab(ChildActor);
 			}
-			LGUIUtils::DestroyActorWithHierarchy(Actor);
+			FLexUIUtils::DestroyActorWithHierarchy(Actor);
 		}
 		else//common actor
 		{
-			LGUIUtils::DestroyActorWithHierarchy(Actor);
+			FLexUIUtils::DestroyActorWithHierarchy(Actor);
 		}
 	}
 	GEditor->EndTransaction();
@@ -2122,7 +2122,7 @@ int LGUIEditorTools::GetDrawcallCount(AActor* InActor)
 		{
 			if (auto canvas = InActor->FindComponentByClass<ULGUICanvas>())
 			{
-				return canvas->GetDrawcallCount();
+				return canvas->GetDrawCallCount();
 			}
 		}
 	}
@@ -2143,7 +2143,7 @@ void LGUIEditorTools::MakeCurrentLevel(AActor* InActor)
 			}
 			else
 			{
-				LGUIUtils::EditorNotification(FText::FromString(FString::Printf(TEXT("The level of selected actor:%s is locked!"), *(InActor->GetActorLabel()))));
+				FLexUIUtils::EditorNotification(FText::FromString(FString::Printf(TEXT("The level of selected actor:%s is locked!"), *(InActor->GetActorLabel()))));
 			}
 		}
 	}
@@ -2180,7 +2180,7 @@ void LGUIEditorTools::SetTraceChannel(AActor* InActor, ETraceTypeQuery InTraceTy
 	{
 		CompItem->Modify();
 		CompItem->SetTraceChannel(InTraceTypeQuery);
-		LGUIUtils::NotifyPropertyChanged(CompItem, UUIItem::GetTraceChannelPropertyName());
+		FLexUIUtils::NotifyPropertyChanged(CompItem, UUIItem::GetTraceChannelPropertyName());
 	}
 }
 

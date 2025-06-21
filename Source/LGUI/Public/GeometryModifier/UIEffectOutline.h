@@ -26,7 +26,7 @@ protected:
 		bool use8Direction = false;
 	FORCEINLINE void ApplyColorAndAlpha(FColor& InOutColor, uint8 InSourceAlpha);
 public:
-	virtual void ModifyUIGeometry(UIGeometry& InGeometry
+	virtual void ModifyUIGeometry(FLexUIGeometry& InGeometry
 		, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 	)override;
 

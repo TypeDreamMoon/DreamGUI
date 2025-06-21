@@ -4,10 +4,10 @@
 #include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "LGUI.h"
 #include "Engine/TextureRenderTarget2D.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
-#include "Core/UIGeometry.h"
-#include "Core/LGUISpriteInfo.h"
+#include "Core/LexUIGeometry.h"
+#include "Core/LexUISpriteInfo.h"
 #include "Core/LGUICustomMesh.h"
 
 #define LOCTEXT_NAMESPACE "UIRenderTarget"
@@ -20,7 +20,7 @@ UUIRenderTarget::UUIRenderTarget(const FObjectInitializer& ObjectInitializer) :S
 	TargetCanvas = FLGUIComponentReference(ULGUICanvas::StaticClass());
 }
 
-bool UUIRenderTarget::SupportDrawcallBatching()const
+bool UUIRenderTarget::SupportDrawCallBatching()const
 {
 	if (IsValid(CustomMesh))
 	{
@@ -52,7 +52,7 @@ UTexture* UUIRenderTarget::GetTextureToCreateGeometry()
 #endif
 	return Result;
 }
-void UUIRenderTarget::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
+void UUIRenderTarget::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
 	if (IsValid(CustomMesh))
 	{
@@ -61,8 +61,8 @@ void UUIRenderTarget::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged
 	}
 	else
 	{
-		static FLGUISpriteInfo SpriteInfo;
-		UIGeometry::UpdateUIRectSimpleVertex(&InGeo,
+		static FLexUISpriteInfo SpriteInfo;
+		FLexUIGeometry::UpdateUIRectSimpleVertex(&InGeo,
 			this->GetWidth(), this->GetHeight(), FVector2f(this->GetPivot()), SpriteInfo, RenderCanvas.Get(), this, GetFinalColor(),
 			InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 		);

@@ -6,10 +6,10 @@
 #include "LTweener.h"
 #include "UIBaseRenderable.generated.h"
 
-class UIGeometry;
+class FLexUIGeometry;
 class UMaterialInterface;
 class ULGUICanvas;
-class UUIDrawcall;
+class FLexUIDrawCall;
 class UUIRenderableCustomRaycast;
 class UUIBaseRenderable;
 
@@ -122,7 +122,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Raycast", meta = (EditCondition = "bRaycastTarget==true&&RaycastType==EUIRenderableRaycastType::VisiblePixel"))
 		float VisiblePixelThreadhold = 0.1f;
 
-	virtual bool LineTraceUIGeometry(UIGeometry* InGeo, FHitResult& OutHit, const FVector& Start, const FVector& End);
+	virtual bool LineTraceUIGeometry(FLexUIGeometry* InGeo, FHitResult& OutHit, const FVector& Start, const FVector& End);
 	virtual bool LineTraceUICustom(FHitResult& OutHit, const FVector& Start, const FVector& End);
 
     virtual void ApplyUIActiveState(bool InStateChange) override;
@@ -164,7 +164,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		FColor GetFinalColor()const;
 
-	TSharedPtr<UUIDrawcall> drawcall = nullptr;//drawcall that response for this UI.
+	TSharedPtr<FLexUIDrawCall> drawcall = nullptr;//drawcall that response for this UI.
 
 	int GetClipDataStartPosition()const;
 	UTexture* GetClipDataTexture()const;

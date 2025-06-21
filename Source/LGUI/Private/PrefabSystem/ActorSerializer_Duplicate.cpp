@@ -13,7 +13,7 @@
 #include "PrefabSystem/LGUIPrefabSettings.h"
 #if WITH_EDITOR
 #include "Tools/UEdMode.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #endif
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION

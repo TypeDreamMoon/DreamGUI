@@ -3,7 +3,7 @@
 #include "DetailCustomization/UISpriteCustomization.h"
 #include "LGUIEditorUtils.h"
 #include "Core/Components/UISprite.h"
-#include "Core/LGUISpriteData_BaseObject.h"
+#include "Core/LexUISpriteData_BaseObject.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"

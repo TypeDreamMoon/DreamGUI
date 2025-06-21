@@ -4,7 +4,7 @@
 #include "LGUI.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "PrefabSystem/LGUIPrefab.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "GameFramework/Actor.h"
 #include "PrefabSystem/LGUIObjectReaderAndWriter.h"
 #include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
@@ -93,7 +93,7 @@ void ULGUIPrefabHelperObject::ClearLoadedPrefab()
 {
 	if (IsValid(LoadedRootActor))
 	{
-		LGUIUtils::DestroyActorWithHierarchy(LoadedRootActor);
+		FLexUIUtils::DestroyActorWithHierarchy(LoadedRootActor);
 	}
 	MapGuidToObject.Empty();
 	SubPrefabMap.Empty();
@@ -519,7 +519,7 @@ bool ULGUIPrefabHelperObject::RefreshOnSubPrefabDirty(ULGUIPrefab* InSubPrefab, 
 				}
 				else if (auto Actor = Cast<AActor>(Item))
 				{
-					LGUIUtils::DestroyActorWithHierarchy(Actor, false);
+					FLexUIUtils::DestroyActorWithHierarchy(Actor, false);
 				}
 				else
 				{
@@ -546,7 +546,7 @@ bool ULGUIPrefabHelperObject::RefreshOnSubPrefabDirty(ULGUIPrefab* InSubPrefab, 
 				{
 					for (auto& PropName : ObjectOverrideItem.MemberPropertyNames)
 					{
-						LGUIUtils::NotifyPropertyPreChange(ObjectOverrideItem.Object.Get(), PropName);
+						FLexUIUtils::NotifyPropertyPreChange(ObjectOverrideItem.Object.Get(), PropName);
 					}
 				}
 				serializer.RestoreOverrideParameterFromData(OverrideData, SubPrefabData.ObjectOverrideParameterArray);
@@ -554,7 +554,7 @@ bool ULGUIPrefabHelperObject::RefreshOnSubPrefabDirty(ULGUIPrefab* InSubPrefab, 
 				{
 					for (auto& PropName : ObjectOverrideItem.MemberPropertyNames)
 					{
-						LGUIUtils::NotifyPropertyChanged(ObjectOverrideItem.Object.Get(), PropName);
+						FLexUIUtils::NotifyPropertyChanged(ObjectOverrideItem.Object.Get(), PropName);
 					}
 				}
 			}
@@ -769,7 +769,7 @@ void ULGUIPrefabHelperObject::OnLevelActorDeleted(AActor* Actor)
 		{
 			this->Modify();
 			this->RemoveSubPrefabByAnyActorOfSubPrefab(Actor);
-			LGUIUtils::DestroyActorWithHierarchy(Actor);
+			FLexUIUtils::DestroyActorWithHierarchy(Actor);
 			return;
 		}
 	}
@@ -831,7 +831,7 @@ You should know that using actor-blueprint inside Prefab is not a good idea, so 
 			if (bFirstTimeShow_RestructActorBlueprint)
 			{
 				bFirstTimeShow_RestructActorBlueprint = false;
-				LGUIUtils::EditorNotification(InfoText, 10);
+				FLexUIUtils::EditorNotification(InfoText, 10);
 			}
 			return false;
 		}
@@ -1077,7 +1077,7 @@ void ULGUIPrefabHelperObject::RevertPrefabPropertyValue(UObject* ContextObject, 
 							auto InfoText = FText::Format(LOCTEXT("RevertPrefabPropertyValue_MissingConditionWarning", "LGUI have not handle this condition:\nobject: '{0}'\nobjectClass: '{1}'")
 								, FText::FromString(ObjectInPrefab->GetPathName()), FText::FromString(ObjectClass->GetPathName()));
 							UE_LOG(LGUI, Log, TEXT("%s"), *InfoText.ToString());
-							LGUIUtils::EditorNotification(InfoText);
+							FLexUIUtils::EditorNotification(InfoText);
 						}
 					}
 				}
@@ -1183,14 +1183,14 @@ void ULGUIPrefabHelperObject::RevertPrefabOverride(UObject* InObject, const TArr
 			if (auto Property = FindFProperty<FProperty>(ObjectInPrefab->GetClass(), PropertyName))
 			{
 				//notify
-				LGUIUtils::NotifyPropertyPreChange(InObject, Property);//need to do PreChange here, so that actor's PostContructionScript can work
+				FLexUIUtils::NotifyPropertyPreChange(InObject, Property);//need to do PreChange here, so that actor's PostContructionScript can work
 				//set to default value
 				RevertPrefabPropertyValue(InObject, Property, InObject, ObjectInPrefab, SubPrefabData);
 				AfterObjectPropertyApplyOrRevert(InObject, PropertyName);
 				//delete item
 				RemoveMemberPropertyFromSubPrefab(Actor, InObject, PropertyName);
 				//notify
-				LGUIUtils::NotifyPropertyChanged(InObject, Property);
+				FLexUIUtils::NotifyPropertyChanged(InObject, Property);
 
 				SetAnythingDirty();
 			}
@@ -1243,14 +1243,14 @@ void ULGUIPrefabHelperObject::RevertPrefabOverride(UObject* InObject, FName InPr
 		if (auto Property = FindFProperty<FProperty>(ObjectInPrefab->GetClass(), InPropertyName))
 		{
 			//notify
-			LGUIUtils::NotifyPropertyPreChange(InObject, Property);//need to do PreChange here, so that actor's PostContructionScript can work
+			FLexUIUtils::NotifyPropertyPreChange(InObject, Property);//need to do PreChange here, so that actor's PostContructionScript can work
 			//set to default value
 			RevertPrefabPropertyValue(InObject, Property, InObject, ObjectInPrefab, SubPrefabData);
 			AfterObjectPropertyApplyOrRevert(InObject, InPropertyName);
 			//delete item
 			RemoveMemberPropertyFromSubPrefab(Actor, InObject, InPropertyName);
 			//notify
-			LGUIUtils::NotifyPropertyChanged(InObject, Property);
+			FLexUIUtils::NotifyPropertyChanged(InObject, Property);
 			SetAnythingDirty();
 		}
 
@@ -1322,12 +1322,12 @@ void ULGUIPrefabHelperObject::RevertAllPrefabOverride(UObject* InObject)
 				if (auto Property = FindFProperty<FProperty>(ObjectInPrefab->GetClass(), PropertyName))
 				{
 					//notify
-					LGUIUtils::NotifyPropertyPreChange(SourceObject, Property);//need to do PreChange here, so that actor's PostContructionScript can work
+					FLexUIUtils::NotifyPropertyPreChange(SourceObject, Property);//need to do PreChange here, so that actor's PostContructionScript can work
 					//set to default value
 					RevertPrefabPropertyValue(InObject, Property, SourceObject, ObjectInPrefab, SubPrefabData);
 					AfterObjectPropertyApplyOrRevert(InObject, PropertyName);
 					//notify
-					LGUIUtils::NotifyPropertyChanged(SourceObject, Property);
+					FLexUIUtils::NotifyPropertyChanged(SourceObject, Property);
 				}
 			}
 			for (auto& PropertyName : NamesToClear)
@@ -1430,7 +1430,7 @@ void ULGUIPrefabHelperObject::ApplyPrefabPropertyValue(UObject* ContextObject, F
 							auto InfoText = FText::Format(LOCTEXT("ApplyPrefabPropertyValue_MissingConditionWarning", "LGUI have not handle this condition:\nobject: '{0}'\nobjectClass: '{1}'")
 								, FText::FromString(ObjectInParent->GetPathName()), FText::FromString(ObjectClass->GetPathName()));
 							UE_LOG(LGUI, Warning, TEXT("%s"), *InfoText.ToString());
-							LGUIUtils::EditorNotification(InfoText);
+							FLexUIUtils::EditorNotification(InfoText);
 						}
 					}
 				}
@@ -1439,7 +1439,7 @@ void ULGUIPrefabHelperObject::ApplyPrefabPropertyValue(UObject* ContextObject, F
 					auto InfoText = FText::Format(LOCTEXT("ApplyPrefabPropertyValue_ReferencingOuterObject", "This property '{0}' is referencing object which is not belongs to this prefab, will ignore it.")
 						, FText::FromString(ObjectProperty->GetPathName()));
 					UE_LOG(LGUI, Log, TEXT("%s"), *InfoText.ToString());
-					LGUIUtils::EditorNotification(InfoText);
+					FLexUIUtils::EditorNotification(InfoText);
 				}
 			}
 		}
@@ -1552,7 +1552,7 @@ void ULGUIPrefabHelperObject::ApplyPrefabOverride(UObject* InObject, const TArra
 				//delete item
 				RemoveMemberPropertyFromSubPrefab(Actor, InObject, PropertyName);
 				//notify
-				LGUIUtils::NotifyPropertyChanged(ObjectInPrefab, Property);
+				FLexUIUtils::NotifyPropertyChanged(ObjectInPrefab, Property);
 
 				SetAnythingDirty();
 			}
@@ -1623,7 +1623,7 @@ void ULGUIPrefabHelperObject::ApplyPrefabOverride(UObject* InObject, FName InPro
 			//delete item
 			RemoveMemberPropertyFromSubPrefab(Actor, InObject, InPropertyName);
 			//notify
-			LGUIUtils::NotifyPropertyChanged(ObjectInPrefab, Property);
+			FLexUIUtils::NotifyPropertyChanged(ObjectInPrefab, Property);
 			SetAnythingDirty();
 		}
 		//save origin prefab
@@ -1718,7 +1718,7 @@ void ULGUIPrefabHelperObject::ApplyAllOverrideToPrefab(UObject* InObject)
 						ApplyPrefabPropertyValue(ObjectInPrefab, Property, SourceObject, ObjectInPrefab, SubPrefabData);
 						AfterObjectPropertyApplyOrRevert(InObject, PropertyName);
 						//notify
-						LGUIUtils::NotifyPropertyChanged(ObjectInPrefab, Property);
+						FLexUIUtils::NotifyPropertyChanged(ObjectInPrefab, Property);
 					}
 				}
 				//mark on sub prefab, because the object could belongs to subprefab's subprefab.
@@ -1782,7 +1782,7 @@ void ULGUIPrefabHelperObject::MakePrefabAsSubPrefab(ULGUIPrefab* InPrefab, AActo
 	SubPrefabData.ObjectOverrideParameterArray = InObjectOverrideParameterArray;
 
 	TArray<AActor*> ChildrenActors;
-	LGUIUtils::CollectChildrenActors(InActor, ChildrenActors, false);
+	FLexUIUtils::CollectChildrenActors(InActor, ChildrenActors, false);
 
 	auto FindOrAddSubPrefabObjectGuidInParentPrefab = [&](UObject* InObject) {
 		for (auto& KeyValue : MapGuidToObject)
@@ -1978,7 +1978,7 @@ void ULGUIPrefabHelperObject::CheckPrefabVersion()
 				this->RefreshOnSubPrefabDirty(SubPrefabData.PrefabAsset, KeyValue.Key);
 				auto InfoText = FText::Format(LOCTEXT("AutoUpdatePrefabInfo", "Auto update old version prefab to latest version:\nActor:'{0}' Prefab:'{1}'."), FText::FromString(KeyValue.Key->GetActorLabel()), FText::FromString(SubPrefabData.PrefabAsset->GetName()));
 				UE_LOG(LGUI, Log, TEXT("%s"), *InfoText.ToString());
-				LGUIUtils::EditorNotification(InfoText);
+				FLexUIUtils::EditorNotification(InfoText);
 			}
 			else
 			{

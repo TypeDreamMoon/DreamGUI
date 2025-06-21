@@ -2,7 +2,7 @@
 
 #include "Extensions/2DLineRenderer/UI2DLineRaw.h"
 #include "LGUI.h"
-#include "Core/UIGeometry.h"
+#include "Core/LexUIGeometry.h"
 #include "LGUI/Public/Core/Components/LGUICanvas.h"
 
 UUI2DLineRaw::UUI2DLineRaw(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)

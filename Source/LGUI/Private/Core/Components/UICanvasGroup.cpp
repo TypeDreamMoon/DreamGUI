@@ -2,7 +2,7 @@
 
 #include "LGUI/Public/Core/Components/UICanvasGroup.h"
 #include "LGUI.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "LTweenManager.h"
 #include "Core/LGUISettings.h"
 

@@ -2,11 +2,11 @@
 
 #include "LGUI/Public/Core/Components/UISpriteBase.h"
 #include "LGUI.h"
-#include "Core/UIGeometry.h"
+#include "Core/LexUIGeometry.h"
 #include "LGUI/Public/Core/Components/LGUICanvas.h"
-#include "Core/LGUISpriteData.h"
-#include "Core/LGUISpriteData_BaseObject.h"
-#include "Core/UIDrawcall.h"
+#include "Core/LexUISpriteData.h"
+#include "Core/LexUISpriteData_BaseObject.h"
+#include "Core/LexUIDrawCall.h"
 
 UUISpriteBase::UUISpriteBase(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
@@ -41,12 +41,12 @@ void UUISpriteBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void UUISpriteBase::ApplyAtlasTextureChange_Implementation()
 {
-	geometry->texture = sprite->GetAtlasTexture();
+	geometry->Texture = sprite->GetAtlasTexture();
 	if (RenderCanvas.IsValid())
 	{
 		if (drawcall.IsValid())
 		{
-			drawcall->Texture = geometry->texture;
+			drawcall->Texture = geometry->Texture;
 			drawcall->bTextureChanged = true;
 		}
 	}
@@ -54,7 +54,7 @@ void UUISpriteBase::ApplyAtlasTextureChange_Implementation()
 }
 void UUISpriteBase::ApplyAtlasTextureScaleUp_Implementation()
 {
-	auto& vertices = geometry->vertices;
+	auto& vertices = geometry->Vertices;
 	if (vertices.Num() != 0)
 	{
 		for (int i = 0; i < vertices.Num(); i++)
@@ -64,12 +64,12 @@ void UUISpriteBase::ApplyAtlasTextureScaleUp_Implementation()
 			uv.TextureCoordinate[0].Y *= 0.5f;
 		}
 	}
-	geometry->texture = sprite->GetAtlasTexture();
+	geometry->Texture = sprite->GetAtlasTexture();
 	if (RenderCanvas.IsValid())
 	{
 		if (drawcall.IsValid())
 		{
-			drawcall->Texture = geometry->texture;
+			drawcall->Texture = geometry->Texture;
 			drawcall->bTextureChanged = true;
 			drawcall->bNeedToUpdateVertex = true;
 		}
@@ -78,11 +78,11 @@ void UUISpriteBase::ApplyAtlasTextureScaleUp_Implementation()
 	MarkCanvasUpdate(true, true, false);
 }
 
-void UUISpriteBase::SetSprite(ULGUISpriteData_BaseObject* newSprite, bool setSize)
+void UUISpriteBase::SetSprite(ULexUISpriteData_BaseObject* newSprite, bool setSize)
 {
 	if (!IsValid(newSprite))
 	{
-		newSprite = ULGUISpriteData::GetDefaultWhiteSolid();
+		newSprite = ULexUISpriteData::GetDefaultWhiteSolid();
 	}
 	if (sprite != newSprite)
 	{
@@ -182,7 +182,7 @@ void UUISpriteBase::CheckSpriteData()
 {
 	if (!IsValid(sprite))
 	{
-		sprite = ULGUISpriteData::GetDefaultWhiteSolid();
+		sprite = ULexUISpriteData::GetDefaultWhiteSolid();
 		sprite->AddUISprite(this);
 	}
 }
@@ -203,7 +203,7 @@ UTexture* UUISpriteBase::GetTextureToCreateGeometry()
 {
 	if (!IsValid(sprite))
 	{
-		sprite = ULGUISpriteData::GetDefaultWhiteSolid();
+		sprite = ULexUISpriteData::GetDefaultWhiteSolid();
 	}
 	if (IsValid(sprite) && IsValid(sprite->GetAtlasTexture()))
 	{

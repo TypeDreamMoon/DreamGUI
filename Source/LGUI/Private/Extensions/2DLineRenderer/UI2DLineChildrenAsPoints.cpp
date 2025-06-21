@@ -2,7 +2,7 @@
 
 #include "Extensions/2DLineRenderer/UI2DLineChildrenAsPoints.h"
 #include "LGUI.h"
-#include "Core/UIGeometry.h"
+#include "Core/LexUIGeometry.h"
 #include "LGUI/Public/Core/Components/LGUICanvas.h"
 
 UUI2DLineChildrenAsPoints::UUI2DLineChildrenAsPoints(const FObjectInitializer &ObjectInitializer) : Super(ObjectInitializer)

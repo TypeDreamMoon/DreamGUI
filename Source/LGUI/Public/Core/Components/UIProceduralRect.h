@@ -44,7 +44,7 @@ enum class EUIProceduralBodyTextureMode : uint8
 	Sprite,
 };
 
-class ULGUISpriteData_BaseObject;
+class ULexUISpriteData_BaseObject;
 
 UCLASS(ClassGroup = (LGUI), NotBlueprintable, meta = (BlueprintSpawnableComponent))
 class LGUI_API UUIProceduralRect : public UUIBatchMeshRenderable
@@ -90,7 +90,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect", meta = (DisplayThumbnail = "false"))
 		TObjectPtr<class UTexture> BodyTexture = nullptr;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect", meta = (DisplayThumbnail = "false"))
-		TObjectPtr<ULGUISpriteData_BaseObject> BodySpriteTexture = nullptr;
+		TObjectPtr<ULexUISpriteData_BaseObject> BodySpriteTexture = nullptr;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect", meta = (EditCondition = "BodyTexture"))
 		EUIProceduralRectTextureScaleMode BodyTextureScaleMode = EUIProceduralRectTextureScaleMode::Stretch;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
@@ -274,7 +274,7 @@ protected:
 	virtual void OnMaterialInstanceDynamicCreated(class UMaterialInstanceDynamic* mat) override;
 
 	//virtual void OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange, bool InDiscardCache = true)override;
-	virtual void OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
+	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 	virtual void OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange, bool InDiscardCache = true)override;
 	virtual void MarkAllDirty()override;
 
@@ -287,7 +287,7 @@ protected:
 	virtual bool LineTraceUIRect(FHitResult& OutHit, const FVector& Start, const FVector& End)override;
 public:
 #pragma region UISpriteRenderableInterface
-	virtual ULGUISpriteData_BaseObject* SpriteRenderableGetSprite_Implementation()const override { return BodySpriteTexture; }
+	virtual ULexUISpriteData_BaseObject* SpriteRenderableGetSprite_Implementation()const override { return BodySpriteTexture; }
 	virtual void ApplyAtlasTextureScaleUp_Implementation()override;
 	virtual void ApplyAtlasTextureChange_Implementation()override;
 #pragma endregion
@@ -303,7 +303,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		UTexture* GetBodyTexture()const { return BodyTexture; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		ULGUISpriteData_BaseObject* GetBodySpriteTexture()const { return BodySpriteTexture; }
+		ULexUISpriteData_BaseObject* GetBodySpriteTexture()const { return BodySpriteTexture; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		EUIProceduralBodyTextureMode GetBodyTextureMode()const { return BodyTextureMode; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
@@ -412,7 +412,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetBodyTexture(UTexture* value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetBodySpriteTexture(ULGUISpriteData_BaseObject* value);
+		void SetBodySpriteTexture(ULexUISpriteData_BaseObject* value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetBodyTextureMode(EUIProceduralBodyTextureMode value);
 	/** Set size from current body texutre or sprite */

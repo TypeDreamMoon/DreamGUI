@@ -2,7 +2,7 @@
 
 #include "Widgets/SCompoundWidget.h"
 #include "Widgets/Docking/SDockTab.h"
-#include "Core/LGUISpriteData.h"
+#include "Core/LexUISpriteData.h"
 #include "Widgets/Views/STileView.h"
 #include "Widgets/Views/STableViewBase.h"
 #pragma once

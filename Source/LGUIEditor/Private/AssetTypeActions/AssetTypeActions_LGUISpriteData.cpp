@@ -2,7 +2,7 @@
 
 #include "AssetTypeActions_LGUISpriteData.h"
 #include "ContentBrowserModule.h"
-#include "Core/LGUISpriteData.h"
+#include "Core/LexUISpriteData.h"
 
 #define LOCTEXT_NAMESPACE "AssetTypeActions_LGUISpriteData"
 
@@ -34,7 +34,7 @@ FText FAssetTypeActions_LGUISpriteData::GetName()const
 
 UClass* FAssetTypeActions_LGUISpriteData::GetSupportedClass()const
 {
-	return ULGUISpriteData::StaticClass();
+	return ULexUISpriteData::StaticClass();
 }
 
 FColor FAssetTypeActions_LGUISpriteData::GetTypeColor()const

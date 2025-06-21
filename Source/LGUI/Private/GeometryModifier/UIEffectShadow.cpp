@@ -2,7 +2,7 @@
 
 #include "GeometryModifier/UIEffectShadow.h"
 #include "LGUI.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 
 
 UUIEffectShadow::UUIEffectShadow()
@@ -10,12 +10,12 @@ UUIEffectShadow::UUIEffectShadow()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 void UUIEffectShadow::ModifyUIGeometry(
-	UIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
+	FLexUIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 )
 {
-	auto& triangles = InGeometry.triangles;
-	auto& originVertices = InGeometry.originVertices;
-	auto& vertices = InGeometry.vertices;
+	auto& triangles = InGeometry.Triangles;
+	auto& originVertices = InGeometry.OriginVertices;
+	auto& vertices = InGeometry.Vertices;
 
 	auto vertexCount = originVertices.Num();
 	int32 triangleCount = triangles.Num();
@@ -47,7 +47,7 @@ void UUIEffectShadow::ModifyUIGeometry(
 		if (multiplySourceAlpha)
 		{
 			auto& vertColor = vertices[channelIndex1].Color;
-			vertColor.A = (uint8)(LGUIUtils::Color255To1_Table[vertices[channelIndexOrigin].Color.A] * shadowColor.A);
+			vertColor.A = (uint8)(FLexUIUtils::Color255To1_Table[vertices[channelIndexOrigin].Color.A] * shadowColor.A);
 			vertColor.R = shadowColor.R;
 			vertColor.G = shadowColor.G;
 			vertColor.B = shadowColor.B;

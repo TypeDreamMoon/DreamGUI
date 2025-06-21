@@ -4,7 +4,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "LGUI.h"
 
 #define BITCONVERTER_ERRORCHECK(func, bytes, byteCountNeeded, returnValueIfError)\

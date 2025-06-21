@@ -7,7 +7,7 @@
 #include "LGUIEditorModule.h"
 #include "Core/Actor/UIContainerActor.h"
 #include "Core/Components/UIItem.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 
 
 FLGUIPrefabInstanceThumbnailScene::FLGUIPrefabInstanceThumbnailScene()

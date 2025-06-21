@@ -3,7 +3,7 @@
 #include "DetailCustomization/UIProceduralRectCustomization.h"
 #include "LGUIEditorUtils.h"
 #include "Core/Components/UIProceduralRect.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
@@ -431,7 +431,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(UUIProceduralRect, Prop
 						{
 							item->Modify();
 							item->SetSizeFromBodyTexture();
-							LGUIUtils::NotifyPropertyChanged(item.Get(), UUIItem::GetAnchorDataPropertyName());
+							FLexUIUtils::NotifyPropertyChanged(item.Get(), UUIItem::GetAnchorDataPropertyName());
 							item->EditorForceUpdate();
 						}
 					}

@@ -5,7 +5,7 @@
 #include "Core/Actor/UIBaseActor.h"
 #include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "LGUIBPLibrary.h"
-#include "Core/LGUISpriteData.h"
+#include "Core/LexUISpriteData.h"
 #include "LGUI/Public/Core/Components/UIItem.h"
 #include "LGUI/Public/Core/Components/UIText.h"
 #include "LGUI/Public/Core/Components/UISprite.h"
@@ -15,7 +15,7 @@
 #include "Interaction/UIButtonComponent.h"
 #include "Layout/UILayoutBase.h"
 #if WITH_EDITOR
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #endif
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
@@ -65,12 +65,12 @@ void UUIDropdownComponent::PostEditChangeProperty(FPropertyChangedEvent& Propert
 		if (CaptionText.IsValid())
 		{
 			CaptionText->GetUIText()->SetText(Options[tempValue].Text);
-			LGUIUtils::NotifyPropertyChanged(CaptionText->GetUIText(), UUIText::GetTextPropertyName());
+			FLexUIUtils::NotifyPropertyChanged(CaptionText->GetUIText(), UUIText::GetTextPropertyName());
 		}
 		if (CaptionSprite.IsValid() && IsValid(Options[tempValue].Sprite))
 		{
 			CaptionSprite->GetUISprite()->SetSprite(Options[tempValue].Sprite);
-			LGUIUtils::NotifyPropertyChanged(CaptionText->GetUIText(), UUISpriteBase::GetSpritePropertyName());
+			FLexUIUtils::NotifyPropertyChanged(CaptionText->GetUIText(), UUISpriteBase::GetSpritePropertyName());
 		}
 	}
 }

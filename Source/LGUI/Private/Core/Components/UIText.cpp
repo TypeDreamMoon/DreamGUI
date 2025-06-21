@@ -2,16 +2,16 @@
 
 #include "LGUI/Public/Core/Components/UIText.h"
 #include "LGUI.h"
-#include "Core/UIGeometry.h"
+#include "Core/LexUIGeometry.h"
 #include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "Materials/MaterialInterface.h"
-#include "Core/LGUIFontData_BaseObject.h"
-#include "Core/LGUIRichTextImageData_BaseObject.h"
-#include "Core/LGUIRichTextCustomStyleData.h"
-#include "Core/UIDrawcall.h"
+#include "Core/LexUIFontData_BaseObject.h"
+#include "Core/LexUIRichTextImageData_BaseObject.h"
+#include "Core/LexUIRichTextCustomStyleData.h"
+#include "Core/LexUIDrawCall.h"
 #include "Core/LGUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "LGUI/Public/Core/Components/UICanvasGroup.h"
 #include "Engine/Texture2D.h"
 
@@ -22,7 +22,7 @@ UE_DISABLE_OPTIMIZATION
 #define LOCTEXT_NAMESPACE "UIText"
 
 #if WITH_EDITORONLY_DATA
-TWeakObjectPtr<ULGUIFontData_BaseObject> UUIText::CurrentUsingFontData = nullptr;
+TWeakObjectPtr<ULexUIFontData_BaseObject> UUIText::CurrentUsingFontData = nullptr;
 #endif
 UUIText::UUIText(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
@@ -33,11 +33,11 @@ UUIText::UUIText(const FObjectInitializer& ObjectInitializer):Super(ObjectInitia
 		font = CurrentUsingFontData.Get();
 	}
 #endif
-	CacheTextGeometryData = FTextGeometryCache(this);
+	CacheTextGeometryData = FLexUITextGeometryCache(this);
 }
 void UUIText::ApplyFontTextureScaleUp()
 {
-	auto& vertices = geometry->vertices;
+	auto& vertices = geometry->Vertices;
 	if (vertices.Num() != 0)
 	{
 		for (int i = 0; i < vertices.Num(); i++)
@@ -46,12 +46,12 @@ void UUIText::ApplyFontTextureScaleUp()
 			uv *= 0.5f;
 		}
 	}
-	geometry->texture = GetTextureToCreateGeometry();
+	geometry->Texture = GetTextureToCreateGeometry();
 	if (RenderCanvas.IsValid())
 	{
 		if (drawcall.IsValid())
 		{
-			drawcall->Texture = geometry->texture;
+			drawcall->Texture = geometry->Texture;
 			drawcall->bTextureChanged = true;
 			drawcall->bNeedToUpdateVertex = true;
 		}
@@ -66,12 +66,12 @@ void UUIText::ApplyFontTextureChange()
 	{
 		MarkVerticesDirty(true, true, true, true);
 		MarkTextureDirty();
-		geometry->texture = GetTextureToCreateGeometry();
+		geometry->Texture = GetTextureToCreateGeometry();
 		if (RenderCanvas.IsValid())
 		{
 			if (drawcall.IsValid())
 			{
-				drawcall->Texture = geometry->texture;
+				drawcall->Texture = geometry->Texture;
 				drawcall->bTextureChanged = true;
 				drawcall->bNeedToUpdateVertex = true;
 			}
@@ -85,12 +85,12 @@ void UUIText::ApplyFontMaterialChange()
 	{
 		MarkVerticesDirty(true, true, true, true);
 		MarkMaterialDirty();
-		geometry->material = GetMaterialToCreateGeometry();
+		geometry->Material = GetMaterialToCreateGeometry();
 		if (RenderCanvas.IsValid())
 		{
 			if (drawcall.IsValid())
 			{
-				drawcall->Material = geometry->material;
+				drawcall->Material = geometry->Material;
 				drawcall->bMaterialChanged = true;
 				drawcall->bMaterialNeedToReassign = true;
 				drawcall->bNeedToUpdateVertex = true;
@@ -238,7 +238,7 @@ void UUIText::OnComponentDestroyed(bool bDestroyingHierarchy)
 		auto item = createdRichTextImageObjectArray[i];
 		if (IsValid(item) && IsValid(item->GetOwner()))
 		{
-			LGUIUtils::DestroyActorWithHierarchy(item->GetOwner());
+			FLexUIUtils::DestroyActorWithHierarchy(item->GetOwner());
 		}
 	}
 	createdRichTextImageObjectArray.Empty();
@@ -272,7 +272,7 @@ UTexture* UUIText::GetTextureToCreateGeometry()
 {
 	if (!IsValid(font))
 	{
-		font = ULGUIFontData_BaseObject::GetDefaultFont();
+		font = ULexUIFontData_BaseObject::GetDefaultFont();
 	}
 	font->InitFont();
 	CheckRequireNormalAndTangent();
@@ -289,7 +289,7 @@ UMaterialInterface* UUIText::GetMaterialToCreateGeometry()
 	{
 		if (!IsValid(font))
 		{
-			font = ULGUIFontData_BaseObject::GetDefaultFont();
+			font = ULexUIFontData_BaseObject::GetDefaultFont();
 		}
 		font->InitFont();
 		CheckRequireNormalAndTangent();
@@ -344,7 +344,7 @@ bool UUIText::GetShouldAffectByPixelSnapping()const
 	return Super::GetShouldAffectByPixelSnapping();
 }
 
-void UUIText::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
+void UUIText::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
 	if (InTriangleChanged || InVertexPositionChanged || InVertexUVChanged || InVertexColorChanged)
 	{
@@ -354,7 +354,7 @@ void UUIText::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, bool I
 
 void UUIText::UpdateMaterialClipType()
 {
-	geometry->material = GetMaterialToCreateGeometry();
+	geometry->Material = GetMaterialToCreateGeometry();
 	if (drawcall.IsValid())
 	{
 		drawcall->bMaterialChanged = true;
@@ -473,7 +473,7 @@ void UUIText::EditorForceUpdate()
 	visibleCharCount = VisibleCharCountInString(text.ToString());
 	if (!IsValid(font))
 	{
-		font = ULGUIFontData_BaseObject::GetDefaultFont();
+		font = ULexUIFontData_BaseObject::GetDefaultFont();
 		if (IsValid(font))
 		{
 			font->AddUIText(this);
@@ -558,7 +558,7 @@ FVector2D UUIText::GetTextRealSize()const
 
 
 
-void UUIText::SetFont(ULGUIFontData_BaseObject* newFont) {
+void UUIText::SetFont(ULexUIFontData_BaseObject* newFont) {
 	if (font != newFont)
 	{
 		//remove from old
@@ -716,7 +716,7 @@ void UUIText::SetRichTextTagFilterFlags(int32 value)
 		}
 	}
 }
-void UUIText::SetRichTextImageData(ULGUIRichTextImageData_BaseObject* value)
+void UUIText::SetRichTextImageData(ULexUIRichTextImageData_BaseObject* value)
 {
 	if (richTextImageData != value)
 	{
@@ -728,7 +728,7 @@ void UUIText::SetRichTextImageData(ULGUIRichTextImageData_BaseObject* value)
 		}
 	}
 }
-void UUIText::SetRichTextCustomStyleData(ULGUIRichTextCustomStyleData* value)
+void UUIText::SetRichTextCustomStyleData(ULexUIRichTextCustomStyleData* value)
 {
 	if (richTextCustomStyleData != value)
 	{
@@ -744,7 +744,7 @@ void UUIText::ClearCreatedRichTextImageObject()
 	{
 		if (IsValid(imageObj))
 		{
-			LGUIUtils::DestroyActorWithHierarchy(imageObj->GetOwner());
+			FLexUIUtils::DestroyActorWithHierarchy(imageObj->GetOwner());
 		}
 	}
 	createdRichTextImageObjectArray.Empty();
@@ -926,11 +926,11 @@ bool UUIText::UpdateCacheTextGeometry()const
 		, this->GetRichTextTagFilterFlags()
 		, this->GetFont()
 	);
-	if (geometry->vertices.Num() == 0)//@todo: geometry is cleared before OnUpdateGeometry, consider use a cached UIGeometry
+	if (geometry->Vertices.Num() == 0)//@todo: geometry is cleared before OnUpdateGeometry, consider use a cached UIGeometry
 	{
 		CacheTextGeometryData.MarkDirty();
 	}
-	CacheTextGeometryData.ConditaionalCalculateGeometry();
+	CacheTextGeometryData.ConditionalCalculateGeometry();
 	return true;
 }
 

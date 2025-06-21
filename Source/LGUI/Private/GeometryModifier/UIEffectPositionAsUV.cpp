@@ -11,18 +11,18 @@ UUIEffectPositionAsUV::UUIEffectPositionAsUV()
 }
 
 void UUIEffectPositionAsUV::ModifyUIGeometry(
-	UIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
+	FLexUIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 )
 {
 	auto uiRenderable = GetUIRenderable();
 	if (!uiRenderable)return;
 	auto renderCanvas = uiRenderable->GetRenderCanvas();
-	auto& originVertices = InGeometry.originVertices;
+	auto& originVertices = InGeometry.OriginVertices;
 	switch (uvChannel)
 	{
 	case 0:
 	{
-		auto& vertices = InGeometry.vertices;
+		auto& vertices = InGeometry.Vertices;
 		auto vertexCount = vertices.Num();
 		for (int i = 0; i < vertexCount; i++)
 		{
@@ -34,7 +34,7 @@ void UUIEffectPositionAsUV::ModifyUIGeometry(
 	case 1:
 	{
 		if (!renderCanvas)return;
-		auto& vertices = InGeometry.vertices;
+		auto& vertices = InGeometry.Vertices;
 		auto vertexCount = vertices.Num();
 		for (int i = 0; i < vertexCount; i++)
 		{
@@ -46,7 +46,7 @@ void UUIEffectPositionAsUV::ModifyUIGeometry(
 	case 2:
 	{
 		if (!renderCanvas)return;
-		auto& vertices = InGeometry.vertices;
+		auto& vertices = InGeometry.Vertices;
 		auto vertexCount = vertices.Num();
 		for (int i = 0; i < vertexCount; i++)
 		{
@@ -58,7 +58,7 @@ void UUIEffectPositionAsUV::ModifyUIGeometry(
 	case 3:
 	{
 		if (!renderCanvas)return;
-		auto& vertices = InGeometry.vertices;
+		auto& vertices = InGeometry.Vertices;
 		auto vertexCount = vertices.Num();
 		for (int i = 0; i < vertexCount; i++)
 		{

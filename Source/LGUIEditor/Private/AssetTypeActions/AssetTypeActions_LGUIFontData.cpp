@@ -2,7 +2,7 @@
 
 #include "AssetTypeActions_LGUIFontData.h"
 #include "ContentBrowserModule.h"
-#include "Core/LGUIFontData.h"
+#include "Core/LexUIFontData_Bitmap.h"
 
 #define LOCTEXT_NAMESPACE "AssetTypeActions_LGUIFontData"
 
@@ -34,7 +34,7 @@ FText FAssetTypeActions_LGUIFontData::GetName()const
 
 UClass* FAssetTypeActions_LGUIFontData::GetSupportedClass()const
 {
-	return ULGUIFontData::StaticClass();
+	return ULexUIFontData_Bitmap::StaticClass();
 }
 
 FColor FAssetTypeActions_LGUIFontData::GetTypeColor()const

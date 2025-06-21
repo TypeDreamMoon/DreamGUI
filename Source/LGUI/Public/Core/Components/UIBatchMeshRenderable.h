@@ -5,7 +5,7 @@
 #include "UIBaseRenderable.h"
 #include "UIBatchMeshRenderable.generated.h"
 
-class UIGeometry;
+class FLexUIGeometry;
 class UMaterialInterface;
 
 USTRUCT(BlueprintType)
@@ -36,7 +36,7 @@ class LGUI_API ULGUIGeometryHelper : public UObject
 {
 	GENERATED_BODY()
 public:
-	UIGeometry* UIGeo = nullptr;
+	FLexUIGeometry* UIGeo = nullptr;
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void AddVertexSimple(FVector position, FColor color, FVector2D uv0);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
@@ -98,7 +98,7 @@ protected:
 	virtual void OnRegister()override;
 	virtual void OnUnregister()override;
 
-	TSharedPtr<UIGeometry> geometry = nullptr;
+	TSharedPtr<FLexUIGeometry> geometry = nullptr;
 
 	/** if have GeometryModifier component */
 	bool HaveGeometryModifier(bool includeDisabled = true);
@@ -149,11 +149,11 @@ public:
 	void SortGeometryModifier();
 
 	virtual void MarkAllDirty()override;
-	UIGeometry* GetGeometry()const { return geometry.Get(); }
+	FLexUIGeometry* GetGeometry()const { return geometry.Get(); }
 
 	virtual bool LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)override;
 	/** is this UI element type support drawcall batching? */
-	virtual bool SupportDrawcallBatching()const { return true; }
+	virtual bool SupportDrawCallBatching()const { return true; }
 protected:
 	virtual bool LineTraceVisiblePixel(float InAlphaThreshold, FHitResult& OutHit, const FVector& Start, const FVector& End);
 	virtual bool ReadPixelFromMainTexture(const FVector2D& InUV, FColor& OutPixel)const { return false; }
@@ -171,8 +171,8 @@ protected:
 	/** do anything before acturally create or update geometry */
 	virtual void OnBeforeCreateOrUpdateGeometry();
 	/** fill and update ui geometry */
-	virtual void OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged);
-	virtual void OnUpdateGeometryClipData(UIGeometry& InGeo, bool InClipDataStartPositionChanged);
+	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged);
+	virtual void OnUpdateGeometryClipData(FLexUIGeometry& InGeo, bool InClipDataStartPositionChanged);
 
 	virtual void UpdateGeometry()override final;
 	virtual void GetGeometryBoundsInLocalSpace(FVector2D& OutMinPoint, FVector2D& OutMaxPoint)const override;

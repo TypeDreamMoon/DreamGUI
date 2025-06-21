@@ -51,7 +51,7 @@ protected:
 public:
 	virtual void Init() {};
 	virtual void Deinit() {};
-	virtual void ApplyProperty(class UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, UIGeometry* InGeometry) PURE_VIRTUAL(UUIEffectTextAnimation_Property::ApplyEffect, );
+	virtual void ApplyProperty(class UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) PURE_VIRTUAL(UUIEffectTextAnimation_Property::ApplyEffect, );
 };
 
 //per character animation control for UIText
@@ -82,7 +82,7 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
 #endif
 public:
-	virtual void ModifyUIGeometry(UIGeometry& InGeometry
+	virtual void ModifyUIGeometry(FLexUIGeometry& InGeometry
 		, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 	)override;
 	class UUIText* GetUIText();

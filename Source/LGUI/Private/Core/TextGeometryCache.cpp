@@ -1,16 +1,16 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/LGUITextData.h"
-#include "Core/UIGeometry.h"
+#include "Core/LexUITextData.h"
+#include "Core/LexUIGeometry.h"
 #include "LGUI/Public/Core/Components/UIText.h"
-#include "Core/LGUIRichTextImageData.h"
-#include "Core/LGUIFontData_BaseObject.h"
+#include "Core/LexUIRichTextImageData.h"
+#include "Core/LexUIFontData_BaseObject.h"
 
-FTextGeometryCache::FTextGeometryCache(UUIText* InUIText)
+FLexUITextGeometryCache::FLexUITextGeometryCache(UUIText* InUIText)
 {
 	this->UIText = InUIText;
 }
-bool FTextGeometryCache::SetInputParameters(
+bool FLexUITextGeometryCache::SetInputParameters(
 	const FString& InContent,
 	int32 InVisibleCharCount,
 	float InWidth,
@@ -29,7 +29,7 @@ bool FTextGeometryCache::SetInputParameters(
 	EUITextFontStyle InFontStyle,
 	bool InRichText,
 	int32 InRichTextFilterFlags,
-	ULGUIFontData_BaseObject* InFont
+	ULexUIFontData_BaseObject* InFont
 )
 {
 	if (!this->content.Equals(InContent))
@@ -133,24 +133,24 @@ bool FTextGeometryCache::SetInputParameters(
 	return bIsDirty;
 }
 
-void FTextGeometryCache::MarkDirty()
+void FLexUITextGeometryCache::MarkDirty()
 {
 	bIsDirty = true;
 }
 
-void FTextGeometryCache::ConditaionalCalculateGeometry()
+void FLexUITextGeometryCache::ConditionalCalculateGeometry()
 {
 	if (bIsColorDirty && !bIsDirty)
 	{
 		bIsColorDirty = false;
-		UIGeometry::UpdateUIColor(this->UIText->GetGeometry(), this->color);
+		FLexUIGeometry::UpdateUIColor(this->UIText->GetGeometry(), this->color);
 	}
 	else if (bIsDirty)
 	{
 		if (!this->UIText->GetRenderCanvas())return;
 		bIsDirty = false;
 		bIsColorDirty = false;
-		UIGeometry::UpdateUIText(
+		FLexUIGeometry::UpdateUIText(
 			this->content
 			, this->visibleCharCount
 			, this->width

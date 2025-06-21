@@ -16,7 +16,7 @@
 #include "PrefabSystem/ILGUIPrefabInterface.h"
 #include "PhysicsEngine/BodyInstance.h"
 #if WITH_EDITOR
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #endif
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
@@ -272,7 +272,7 @@ namespace LGUIPrefabSystem8
 						{
 							auto MissingParentMsg = FText::Format(LOCTEXT("MissingParentMsg", "Prefab '{0}' fail to find parent for component '{1}.{2}', do you delete it? The component will attach to root")
 								, FText::FromString(PrefabAssetPath), FText::FromString(SceneComp->GetOwner()->GetActorLabel()), FText::FromString(SceneComp->GetName()));
-							LGUIUtils::EditorNotification(MissingParentMsg, 10);
+							FLexUIUtils::EditorNotification(MissingParentMsg, 10);
 							UE_LOG(LGUI, Error, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *MissingParentMsg.ToString());
 						}
 #endif

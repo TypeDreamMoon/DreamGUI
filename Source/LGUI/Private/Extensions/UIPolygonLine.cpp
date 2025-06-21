@@ -2,7 +2,7 @@
 
 #include "Extensions/UIPolygonLine.h"
 #include "LGUI.h"
-#include "Core/UIGeometry.h"
+#include "Core/LexUIGeometry.h"
 #include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "LTweenManager.h"
 

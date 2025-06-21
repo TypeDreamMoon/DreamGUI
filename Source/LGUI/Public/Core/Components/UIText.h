@@ -5,13 +5,13 @@
 #include "UIBatchMeshRenderable.h"
 #include "Core/ILGUICultureChangedInterface.h"
 #include "Layout/ILGUILayoutInterface.h"
-#include "Core/LGUITextData.h"
+#include "Core/LexUITextData.h"
 #include "UIText.generated.h"
 
 
-class ULGUIFontData_BaseObject;
-class ULGUIRichTextImageData_BaseObject;
-class ULGUIRichTextCustomStyleData;
+class ULexUIFontData_BaseObject;
+class ULexUIRichTextImageData_BaseObject;
+class ULexUIRichTextCustomStyleData;
 
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class LGUI_API UUIText : public UUIBatchMeshRenderable, public ILGUICultureChangedInterface, public ILGUILayoutInterface
@@ -49,7 +49,7 @@ protected:
 	FDelegateHandle onRichTextCustomStyleDataChangedDelegateHandle;
 #if WITH_EDITORONLY_DATA
 	/** current using font. the default font when creating new UIText */
-	static TWeakObjectPtr<ULGUIFontData_BaseObject> CurrentUsingFontData;
+	static TWeakObjectPtr<ULexUIFontData_BaseObject> CurrentUsingFontData;
 #endif
 public:
 	static const FName GetTextPropertyName()
@@ -60,7 +60,7 @@ public:
 protected:
 	friend class FUITextCustomization;
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (DisplayThumbnail = "false"))
-		TObjectPtr<ULGUIFontData_BaseObject> font;
+		TObjectPtr<ULexUIFontData_BaseObject> font;
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (MultiLine="true"))
 		FText text = FText::FromString(TEXT("New Text"));
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (ClampMin = "2", ClampMax = "200"))
@@ -118,10 +118,10 @@ protected:
 		int32 richTextTagFilterFlags = 0xffffffff;
 	/** rich text custom style data for custom tag and rendering custom style */
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (EditCondition = "richText"))
-		TObjectPtr<ULGUIRichTextCustomStyleData> richTextCustomStyleData = nullptr;
+		TObjectPtr<ULexUIRichTextCustomStyleData> richTextCustomStyleData = nullptr;
 	/** rich text image data for rendering image inside UIText */
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (EditCondition = "richText"))
-		TObjectPtr<ULGUIRichTextImageData_BaseObject> richTextImageData = nullptr;
+		TObjectPtr<ULexUIRichTextImageData_BaseObject> richTextImageData = nullptr;
 	/** created object for rich text image */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI", Transient, AdvancedDisplay)
 		TArray<TObjectPtr<class UUIItem>> createdRichTextImageObjectArray;
@@ -140,7 +140,7 @@ private:
 
 	virtual void OnUpdateLayout_Implementation()override;//@todo: should we implement ILayoutElement for AdjustWidth/AdjustHeight?
 	virtual bool GetCanLayoutControlAnchor_Implementation(class UUIItem* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
-	mutable FTextGeometryCache CacheTextGeometryData;
+	mutable FLexUITextGeometryCache CacheTextGeometryData;
 	bool UpdateCacheTextGeometry()const;
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
@@ -159,7 +159,7 @@ public:
 
 	virtual void OnBeforeCreateOrUpdateGeometry()override;
 	virtual bool GetShouldAffectByPixelSnapping()const override;
-	virtual void OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
+	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 	virtual void UpdateMaterialClipType()override;
 	virtual void OnCultureChanged_Implementation()override;
 
@@ -182,7 +182,7 @@ public:
 
 	void GenerateRichTextImageObject();
 public:
-	UFUNCTION(BlueprintCallable, Category = "LGUI") ULGUIFontData_BaseObject* GetFont()const { return font; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") ULexUIFontData_BaseObject* GetFont()const { return font; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")	const FText& GetText()const { return text; }
 	UE_DEPRECATED(4.24, "Use GetFontSize instead")
 	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (DeprecatedFunction, DeprecationMessage = "Use GetFontSize instead"))
@@ -200,8 +200,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI") EUITextFontStyle GetFontStyle()const { return fontStyle; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") bool GetRichText()const { return richText; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") int32 GetRichTextTagFilterFlags()const { return richTextTagFilterFlags; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI") ULGUIRichTextCustomStyleData* GetRichTextCustomStyleData()const { return richTextCustomStyleData; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI") ULGUIRichTextImageData_BaseObject* GetRichTextImageData()const { return richTextImageData; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") ULexUIRichTextCustomStyleData* GetRichTextCustomStyleData()const { return richTextCustomStyleData; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") ULexUIRichTextImageData_BaseObject* GetRichTextImageData()const { return richTextImageData; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") EUITextParagraphHorizontalAlign GetParagraphHorizontalAlignment()const { return hAlign; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") EUITextParagraphVerticalAlign GetParagraphVerticalAlignment()const { return vAlign; }
 
@@ -211,7 +211,7 @@ public:
 		FVector2D GetRealSize() { return GetTextRealSize(); }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetFont(ULGUIFontData_BaseObject* newFont);
+		void SetFont(ULexUIFontData_BaseObject* newFont);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetText(const FText& newText);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
@@ -241,9 +241,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetRichTextTagFilterFlags(int32 value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetRichTextImageData(ULGUIRichTextImageData_BaseObject* value);
+		void SetRichTextImageData(ULexUIRichTextImageData_BaseObject* value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetRichTextCustomStyleData(ULGUIRichTextCustomStyleData* value);
+		void SetRichTextCustomStyleData(ULexUIRichTextCustomStyleData* value);
 private:
 	void ClearCreatedRichTextImageObject();
 protected:
@@ -274,6 +274,6 @@ public:
 
 	/** range selection */
 	void GetSelectionProperty(int32 InSelectionStartCaretIndex, int32 InSelectionEndCaretIndex, TArray<FUITextSelectionProperty>& OutSelectionProeprtyArray);
-	const FTextGeometryCache& GetCacheTextGeometryData()const { UpdateCacheTextGeometry(); return CacheTextGeometryData; }
+	const FLexUITextGeometryCache& GetCacheTextGeometryData()const { UpdateCacheTextGeometry(); return CacheTextGeometryData; }
 #pragma endregion UITextInputComponent
 };

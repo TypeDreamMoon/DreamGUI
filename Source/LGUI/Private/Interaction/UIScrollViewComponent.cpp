@@ -4,7 +4,7 @@
 #include "LGUI.h"
 #include "LTweenManager.h"
 #include "Core/Actor/UIBaseActor.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "Core/LGUISettings.h"
 
 void UUIScrollViewHelper::Awake()

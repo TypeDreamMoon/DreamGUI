@@ -2,7 +2,7 @@
 
 #include "Core/LexUIDataAsTexture.h"
 #include "LGUI.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "TextureResource.h"
 #include "Engine/Texture2DDynamic.h"
@@ -27,9 +27,10 @@ void ULexUIDataAsTexture::BeginDestroy()
 }
 void ULexUIDataAsTexture::CreateTexture()
 {
+	static int TextureNameSuffix = 0;
 	auto TextureDynamic = NewObject<UTexture2DDynamic>(
 		this,
-		FName(*FString::Printf(TEXT("LexUIDataAsTexture_%d"), LGUIUtils::LGUITextureNameSuffix++))
+		FName(*FString::Printf(TEXT("LexUIDataAsTexture_%d"), TextureNameSuffix++))
 	);
 	TextureDynamic->CompressionSettings = TC_SingleFloat;
 	TextureDynamic->LODGroup = TEXTUREGROUP_UI;
@@ -65,7 +66,7 @@ bool ULexUIDataAsTexture::ExpandTexture()
 			, GetMax2DTextureDimension());
 		UE_LOG(LGUI, Error, TEXT("%s"), *WarningMsg.ToString());
 #if WITH_EDITOR
-		LGUIUtils::EditorNotification(WarningMsg);
+		FLexUIUtils::EditorNotification(WarningMsg);
 #endif
 		return false;
 	}

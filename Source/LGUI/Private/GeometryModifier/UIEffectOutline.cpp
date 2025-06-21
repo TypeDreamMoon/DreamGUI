@@ -2,7 +2,7 @@
 
 #include "GeometryModifier/UIEffectOutline.h"
 #include "LGUI.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 
 
 UUIEffectOutline::UUIEffectOutline()
@@ -14,7 +14,7 @@ void UUIEffectOutline::ApplyColorAndAlpha(FColor& InOutColor, uint8 InSourceAlph
 {
 	if (multiplySourceAlpha)
 	{
-		InOutColor.A = (uint8)(LGUIUtils::Color255To1_Table[InSourceAlpha] * outlineColor.A);
+		InOutColor.A = (uint8)(FLexUIUtils::Color255To1_Table[InSourceAlpha] * outlineColor.A);
 		InOutColor.R = outlineColor.R;
 		InOutColor.G = outlineColor.G;
 		InOutColor.B = outlineColor.B;
@@ -25,12 +25,12 @@ void UUIEffectOutline::ApplyColorAndAlpha(FColor& InOutColor, uint8 InSourceAlph
 	}
 }
 void UUIEffectOutline::ModifyUIGeometry(
-	UIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
+	FLexUIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 )
 {
-	auto& triangles = InGeometry.triangles;
-	auto& originVertices = InGeometry.originVertices;
-	auto& vertices = InGeometry.vertices;
+	auto& triangles = InGeometry.Triangles;
+	auto& originVertices = InGeometry.OriginVertices;
+	auto& vertices = InGeometry.Vertices;
 
 	auto vertexCount = originVertices.Num();
 	int32 triangleCount = triangles.Num();

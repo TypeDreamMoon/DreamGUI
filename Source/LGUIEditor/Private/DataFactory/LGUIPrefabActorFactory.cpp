@@ -7,7 +7,7 @@
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "LGUIEditorTools.h"
 #include "AssetRegistry/AssetData.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "Editor.h"
 #include "EditorActorFolders.h"
 
@@ -108,7 +108,7 @@ void ALGUIPrefabLoadHelperActor::Destroyed()
 		if (auto PrefabManagerActor = ALGUIPrefabLevelManagerActor::GetInstance(this->GetLevel()))
 		{
 			PrefabManagerActor->PrefabHelperObject->RemoveSubPrefabByAnyActorOfSubPrefab(LoadedRootActor);
-			LGUIUtils::DestroyActorWithHierarchy(LoadedRootActor, true);
+			FLexUIUtils::DestroyActorWithHierarchy(LoadedRootActor, true);
 		}
 	}
 }

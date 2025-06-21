@@ -3,7 +3,7 @@
 #include "LGUI/Public/Core/Components/UIBaseRenderable.h"
 #include "LGUI.h"
 #include "LGUI/Public/Core/Components/LGUICanvas.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "GeometryModifier/UIGeometryModifierBase.h"
 #include "LGUI/Public/Core/Components/UICanvasGroup.h"
 #include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
@@ -29,9 +29,9 @@ bool UUIRenderableCustomRaycast::GetRaycastPixelFromUIBatchMeshRenderable(UUIBat
 	if (auto UIGeo = InUIRenderable->GetGeometry())
 	{
 		//triangle hit test
-		auto& originVertices = UIGeo->originVertices;
-		auto& vertices = UIGeo->vertices;
-		auto& triangleIndices = UIGeo->triangles;
+		auto& originVertices = UIGeo->OriginVertices;
+		auto& vertices = UIGeo->Vertices;
+		auto& triangleIndices = UIGeo->Triangles;
 		const int triangleCount = triangleIndices.Num() / 3;
 		int index = 0;
 		for (int i = 0; i < triangleCount; i++)
@@ -50,7 +50,7 @@ bool UUIRenderableCustomRaycast::GetRaycastPixelFromUIBatchMeshRenderable(UUIBat
 				auto& uv2 = vertices[vertIndex2].TextureCoordinate[0];
 				OutUV = FVector2D(baryCentric.X * uv0 + baryCentric.Y * uv1 + baryCentric.Z * uv2);
 				//get pixel
-				if (auto Texture2D = Cast<UTexture2D>(UIGeo->texture.Get()))
+				if (auto Texture2D = Cast<UTexture2D>(UIGeo->Texture.Get()))
 				{
 					auto PlatformData = Texture2D->GetPlatformData();
 					if (PlatformData && PlatformData->Mips.Num() > 0)
@@ -223,7 +223,7 @@ void UUIBaseRenderable::GetGeometryBounds3DInLocalSpace(FVector& OutMinPoint, FV
 }
 #endif
 
-bool UUIBaseRenderable::LineTraceUIGeometry(UIGeometry* InGeo, FHitResult& OutHit, const FVector& Start, const FVector& End)
+bool UUIBaseRenderable::LineTraceUIGeometry(FLexUIGeometry* InGeo, FHitResult& OutHit, const FVector& Start, const FVector& End)
 {
 	const auto InverseTf = GetComponentTransform().Inverse();
 	const auto LocalSpaceRayOrigin = InverseTf.TransformPosition(Start);
@@ -235,8 +235,8 @@ bool UUIBaseRenderable::LineTraceUIGeometry(UIGeometry* InGeo, FHitResult& OutHi
 	if (FMath::Sign(LocalSpaceRayOrigin.X) != FMath::Sign(LocalSpaceRayEnd.X))
 	{
 		//triangle hit test
-		auto& vertices = InGeo->originVertices;
-		auto& triangleIndices = InGeo->triangles;
+		auto& vertices = InGeo->OriginVertices;
+		auto& triangleIndices = InGeo->Triangles;
 		const int triangleCount = triangleIndices.Num() / 3;
 		int index = 0;
 		for (int i = 0; i < triangleCount; i++)
@@ -340,7 +340,7 @@ uint8 UUIBaseRenderable::GetFinalAlpha()const
 
 float UUIBaseRenderable::GetFinalAlpha01()const
 {
-	return LGUIUtils::Color255To1_Table[GetFinalAlpha()];
+	return FLexUIUtils::Color255To1_Table[GetFinalAlpha()];
 }
 
 #pragma region TweenAnimation

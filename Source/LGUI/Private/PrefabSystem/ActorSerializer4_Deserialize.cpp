@@ -11,7 +11,7 @@
 #include "LGUI.h"
 #include "Misc/NetworkVersion.h"
 #include "PrefabSystem/ActorSerializer3.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
@@ -515,7 +515,7 @@ namespace LGUIPrefabSystem4
 					default:
 					{
 						auto MsgText = FText::Format(NSLOCTEXT("LGUIActorSerializer4", "Error_UnsupportOldPrefabVersion", "Detect old prefab version which is not support nested prefab! The prefab is: {0}"), FText::FromString(SubPrefabAsset->GetPathName()));
-						LGUIUtils::EditorNotification(MsgText, 1.0f);
+						FLexUIUtils::EditorNotification(MsgText, 1.0f);
 					}
 					break;
 					}

@@ -18,7 +18,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		uint8 uvChannel = 1;
 public:
-	virtual void ModifyUIGeometry(UIGeometry& InGeometry
+	virtual void ModifyUIGeometry(FLexUIGeometry& InGeometry
 		, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 	)override;
 	virtual void ModifierWillChangeVertexData(bool& OutTriangleIndices, bool& OutVertexPosition, bool& OutUV, bool& OutColor)override

@@ -1,7 +1,7 @@
 // Copyright 2019-present LexLiu. All Rights Reserved.
 
 #include "AssetTypeActions_LGUISDFFontData.h"
-#include "Core/LGUISDFFontData.h"
+#include "Core/LexUIFontData_DistanceField.h"
 #include "ContentBrowserModule.h"
 
 #define LOCTEXT_NAMESPACE "AssetTypeActions_LGUISDFFontData"
@@ -34,7 +34,7 @@ FText FAssetTypeActions_LGUISDFFontData::GetName()const
 
 UClass* FAssetTypeActions_LGUISDFFontData::GetSupportedClass()const
 {
-	return ULGUISDFFontData::StaticClass();
+	return ULexUIFontData_DistanceField::StaticClass();
 }
 
 FColor FAssetTypeActions_LGUISDFFontData::GetTypeColor()const

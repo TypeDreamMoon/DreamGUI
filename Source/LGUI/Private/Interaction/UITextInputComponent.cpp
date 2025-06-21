@@ -6,15 +6,15 @@
 #include "Core/Actor/UITextActor.h"
 #include "Core/Actor/UISpriteActor.h"
 #include "InputCoreTypes.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "Event/LGUIEventSystem.h"
 #include "HAL/PlatformApplicationMisc.h"
 #include "GameFramework/PlayerInput.h"
 #include "GameFramework/PlayerController.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Widgets/SWindow.h"
-#include "Core/LGUIFontData.h"
-#include "Core/LGUISpriteData.h"
+#include "Core/LexUIFontData_Bitmap.h"
+#include "Core/LexUISpriteData.h"
 #include "Engine/GameViewportClient.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
@@ -1110,7 +1110,7 @@ void UUITextInputComponent::UpdateCaretPosition(FVector2f InCaretPosition, bool 
 		CaretObject->SetWidth(CaretWidth);
 		CaretObject->SetHeight(uiText->GetFontSize());
 		CaretObject->SetColor(CaretColor);
-		CaretObject->SetSprite(ULGUISpriteData::GetDefaultWhiteSolid(), false);
+		CaretObject->SetSprite(ULexUISpriteData::GetDefaultWhiteSolid(), false);
 	}
 	CaretObject->SetRelativeLocation(FVector(0, InCaretPosition.X, InCaretPosition.Y));
 	CaretObject->SetIsUIActive(true);
@@ -1141,7 +1141,7 @@ void UUITextInputComponent::UpdateSelection()
 			uiSprite->SetHeight(uiText->GetFontSize());
 			uiSprite->SetColor(SelectionColor);
 			uiSprite->SetPivot(FVector2D(0, 0.5f));
-			uiSprite->SetSprite(ULGUISpriteData::GetDefaultWhiteSolid(), false);
+			uiSprite->SetSprite(ULexUISpriteData::GetDefaultWhiteSolid(), false);
 			SelectionMaskObjectArray.Add(uiSprite);
 		}
 	}

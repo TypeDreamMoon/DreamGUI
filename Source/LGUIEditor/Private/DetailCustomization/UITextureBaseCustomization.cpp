@@ -3,7 +3,7 @@
 #include "DetailCustomization/UITextureBaseCustomization.h"
 #include "LGUIEditorUtils.h"
 #include "Core/Components/UITextureBase.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
@@ -125,7 +125,7 @@ void FUITextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
 					{
 						item->Modify();
 						item->SetSizeFromTexture();
-						LGUIUtils::NotifyPropertyChanged(item.Get(), UUIItem::GetAnchorDataPropertyName());
+						FLexUIUtils::NotifyPropertyChanged(item.Get(), UUIItem::GetAnchorDataPropertyName());
 						item->EditorForceUpdate();
 					}
 				}

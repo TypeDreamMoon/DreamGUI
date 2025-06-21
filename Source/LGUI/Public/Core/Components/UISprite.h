@@ -110,7 +110,7 @@ protected:
 	void CalculateTiledWidth();
 	void CalculateTiledHeight();
 
-	virtual void OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
+	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI") EUISpriteType GetSpriteType()const { return type; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")	EUISpriteFillMethod GetFillMethod()const { return fillMethod; }

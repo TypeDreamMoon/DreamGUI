@@ -13,7 +13,7 @@
 #include "Core/Actor/UIContainerActor.h"
 #endif
 #include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #include "Engine/Engine.h"
@@ -815,7 +815,7 @@ FString ULGUIPrefab::GenerateOverallVersionMD5()
 	{
 		CreateTimeOverall += Item->CreateTime.ToIso8601();
 	}
-	return LGUIUtils::GetMD5String(CreateTimeOverall);
+	return FLexUIUtils::GetMD5String(CreateTimeOverall);
 }
 
 void ULGUIPrefab::SavePrefab(AActor* RootActor

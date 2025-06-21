@@ -8,7 +8,7 @@
 #include "Event/LGUIBaseRaycaster.h"
 #include "Event/Interface/LGUINavigationInterface.h"
 #include "Interaction/UISelectableComponent.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION

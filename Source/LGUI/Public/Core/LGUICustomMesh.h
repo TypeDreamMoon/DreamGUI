@@ -6,7 +6,7 @@
 #include "Curves/CurveFloat.h"
 #include "LGUICustomMesh.generated.h"
 
-class UIGeometry;
+class FLexUIGeometry;
 class ULGUICanvas;
 class UUIBatchMeshRenderable;
 

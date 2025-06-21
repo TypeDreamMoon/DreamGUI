@@ -10,7 +10,7 @@
 #include "DynamicMeshBuilder.h"
 #include "PhysicsEngine/BoxElem.h"
 #include "PhysicsEngine/BodySetup.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "PrimitiveViewRelevance.h"
 #include "PrimitiveSceneProxy.h"
 #include "StaticMeshResources.h"
@@ -500,7 +500,7 @@ bool ULGUIRenderTargetGeometrySource::CheckStaticMesh()const
 				auto ErrorMsg = LOCTEXT("StaticMeshComponentNotValid", "[ULGUIRenderTargetGeometrySource::BeginPlay]StaticMesh component not valid!");
 				UE_LOG(LGUI, Error, TEXT("%s"), *ErrorMsg.ToString());
 #if WITH_EDITOR
-				LGUIUtils::EditorNotification(ErrorMsg);
+				FLexUIUtils::EditorNotification(ErrorMsg);
 #endif
 			}
 		}

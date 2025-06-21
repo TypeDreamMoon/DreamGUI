@@ -8,7 +8,7 @@
 #include "Event/LGUIEventDelegate.h"
 #include "Event/LGUIEventDelegate_PresetParameter.h"
 #include "LTweener.h"
-#include "Core/LGUISpriteData_BaseObject.h"
+#include "Core/LexUISpriteData_BaseObject.h"
 #include "PrefabSystem/LGUIPrefab.h"
 #include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "LGUIBPLibrary.generated.h"
@@ -401,13 +401,13 @@ public:
 
 #pragma endregion
 	UFUNCTION(BlueprintPure, Category = LGUI)
-		static void GetSpriteSize(const FLGUISpriteInfo& SpriteInfo, int32& width, int32& height);
+		static void GetSpriteSize(const FLexUISpriteInfo& SpriteInfo, int32& width, int32& height);
 	UFUNCTION(BlueprintPure, Category = LGUI)
-		static void GetSpriteBorderSize(const FLGUISpriteInfo& SpriteInfo, int32& borderLeft, int32& borderRight, int32& borderTop, int32& borderBottom);
+		static void GetSpriteBorderSize(const FLexUISpriteInfo& SpriteInfo, int32& borderLeft, int32& borderRight, int32& borderTop, int32& borderBottom);
 	UFUNCTION(BlueprintPure, Category = LGUI)
-		static void GetSpriteUV(const FLGUISpriteInfo& SpriteInfo, float& UV0X, float& UV0Y, float& UV3X, float& UV3Y);
+		static void GetSpriteUV(const FLexUISpriteInfo& SpriteInfo, float& UV0X, float& UV0Y, float& UV3X, float& UV3Y);
 	UFUNCTION(BlueprintPure, Category = LGUI)
-		static void GetSpriteBorderUV(const FLGUISpriteInfo& SpriteInfo, float& borderUV0X, float& borderUV0Y, float& borderUV3X, float& borderUV3Y);
+		static void GetSpriteBorderUV(const FLexUISpriteInfo& SpriteInfo, float& borderUV0X, float& borderUV0Y, float& borderUV3X, float& borderUV3Y);
 
 
 

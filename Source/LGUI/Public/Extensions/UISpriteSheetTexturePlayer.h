@@ -4,7 +4,7 @@
 #include "LGUIImageSequencePlayer.h"
 #include "UISpriteSheetTexturePlayer.generated.h"
 
-class ULGUISpriteData;
+class ULexUISpriteData;
 
 /** Play spritesheet texture, need UITexture component. */
 UCLASS(ClassGroup = (LGUI), meta = (BlueprintSpawnableComponent))

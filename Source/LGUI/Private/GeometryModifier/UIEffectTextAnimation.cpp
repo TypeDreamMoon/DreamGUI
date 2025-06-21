@@ -64,18 +64,18 @@ void UUIEffectTextAnimation::PostEditChangeProperty(FPropertyChangedEvent& Prope
 #endif
 
 void UUIEffectTextAnimation::ModifyUIGeometry(
-	UIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
+	FLexUIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 )
 {
 	if (!CheckUIText())return;
-	if (InGeometry.vertices.Num() <= 0)return;
+	if (InGeometry.Vertices.Num() <= 0)return;
 	if (InTriangleChanged || InUVChanged || InColorChanged || InVertexPositionChanged)
 	{
 		if (IsValid(selector))
 		{
 			if (selector->Select(uiText, selection))
 			{
-				if (InGeometry.vertices.Num() <= 0)return;
+				if (InGeometry.Vertices.Num() <= 0)return;
 				for (auto propertyItem : properties)
 				{
 					if (IsValid(propertyItem))

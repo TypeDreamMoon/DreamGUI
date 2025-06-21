@@ -3,14 +3,14 @@
 #include "LGUI/Public/Core/Components/UIPostProcessRenderable.h"
 #include "LGUI.h"
 #include "LGUI/Public/Core/Components/LGUICanvas.h"
-#include "Core/UIGeometry.h"
+#include "Core/LexUIGeometry.h"
 #include "Core/UIPostProcessRenderProxy.h"
 
 UUIPostProcessRenderable::UUIPostProcessRenderable(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	UIRenderableType = EUIRenderableType::UIPostProcessRenderable;
-	geometry = TSharedPtr<UIGeometry>(new UIGeometry);
+	geometry = TSharedPtr<FLexUIGeometry>(new FLexUIGeometry);
 
 	bLocalVertexPositionChanged = true;
 	bUVChanged = true;
@@ -94,7 +94,7 @@ void UUIPostProcessRenderable::UpdateGeometry()
 	{
 		geometry->Clear();
 		OnUpdateGeometry(true, true, true, true);
-		UIGeometry::TransformVertices(RenderCanvas.Get(), this, geometry.Get());
+		FLexUIGeometry::TransformVertices(RenderCanvas.Get(), this, geometry.Get());
 
 		UpdateRegionVertex();
 	}
@@ -111,7 +111,7 @@ void UUIPostProcessRenderable::UpdateGeometry()
 		}
 		if (bLocalVertexPositionChanged || bTransformChanged)
 		{
-			UIGeometry::TransformVertices(RenderCanvas.Get(), this, geometry.Get());
+			FLexUIGeometry::TransformVertices(RenderCanvas.Get(), this, geometry.Get());
 		}
 		if (bLocalVertexPositionChanged || bUVChanged || bColorChanged || bTransformChanged || bClipDataChanged)
 		{
@@ -128,17 +128,17 @@ void UUIPostProcessRenderable::OnUpdateGeometry(bool InTriangleChanged, bool InV
 {
 	//simple rect geometry for render from screen image to mesh region and inverse
 	{
-		auto& vertices = geometry->vertices;
-		auto& originVertices = geometry->originVertices;
-		UIGeometry::LGUIGeometrySetArrayNum(vertices, 4);
-		UIGeometry::LGUIGeometrySetArrayNum(originVertices, 4);
+		auto& vertices = geometry->Vertices;
+		auto& originVertices = geometry->OriginVertices;
+		FLexUIGeometry::LexUIGeometrySetArrayNum(vertices, 4);
+		FLexUIGeometry::LexUIGeometrySetArrayNum(originVertices, 4);
 		if (InVertexUVChanged || InVertexPositionChanged || InVertexColorChanged)
 		{
 			if (InVertexPositionChanged)
 			{
 				//offset and size
 				float pivotOffsetX = 0, pivotOffsetY = 0;
-				UIGeometry::CalculatePivotOffset(this->GetWidth(), this->GetHeight(), FVector2f(this->GetPivot()), pivotOffsetX, pivotOffsetY);
+				FLexUIGeometry::CalculatePivotOffset(this->GetWidth(), this->GetHeight(), FVector2f(this->GetPivot()), pivotOffsetX, pivotOffsetY);
 				float halfW = this->GetWidth() * 0.5f, halfH = this->GetHeight() * 0.5f;
 				//positions
 				float minX = -halfW + pivotOffsetX;
@@ -152,7 +152,7 @@ void UUIPostProcessRenderable::OnUpdateGeometry(bool InTriangleChanged, bool InV
 				//snap pixel
 				if (this->GetFinalPixelSnapping())
 				{
-					UIGeometry::AdjustPixelPerfectPos(originVertices, 0, 4, RenderCanvas.Get(), this);
+					FLexUIGeometry::AdjustPixelPerfectPos(originVertices, 0, 4, RenderCanvas.Get(), this);
 				}
 			}
 
@@ -166,18 +166,18 @@ void UUIPostProcessRenderable::OnUpdateGeometry(bool InTriangleChanged, bool InV
 
 			if (InVertexColorChanged)
 			{
-				UIGeometry::UpdateUIColor(geometry.Get(), GetFinalColor());
+				FLexUIGeometry::UpdateUIColor(geometry.Get(), GetFinalColor());
 			}
 		}
 	}
 }
 
-void UUIPostProcessRenderable::OnUpdateGeometryClipData(UIGeometry& InMesh, bool InClipDataStartPositionChanged)
+void UUIPostProcessRenderable::OnUpdateGeometryClipData(FLexUIGeometry& InMesh, bool InClipDataStartPositionChanged)
 {
 	//clip data
 	if (InClipDataStartPositionChanged)
 	{
-		auto& vertices = InMesh.vertices;
+		auto& vertices = InMesh.Vertices;
 		auto clipDataStartPos = GetClipDataStartPosition();
 		for (int i = 0; i < vertices.Num(); i++)
 		{
@@ -200,7 +200,7 @@ void UUIPostProcessRenderable::UpdateRegionVertex()
 		};
 	}
 
-	auto& Vertices = geometry->vertices;
+	auto& Vertices = geometry->Vertices;
 	for (int i = 0; i < 4; i++)
 	{
 		auto& copyVert = renderScreenToMeshRegionVertexArray[i];
@@ -309,7 +309,7 @@ bool UUIPostProcessRenderable::IsRenderProxyValid()const
 
 bool UUIPostProcessRenderable::HaveValidData()const
 {
-	return geometry->vertices.Num() > 0;
+	return geometry->Vertices.Num() > 0;
 }
 
 bool UUIPostProcessRenderable::LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)

@@ -4,7 +4,7 @@
 #include "PrefabSystem/LGUIPrefab.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"

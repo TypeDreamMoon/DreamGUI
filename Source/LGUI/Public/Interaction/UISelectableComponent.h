@@ -44,7 +44,7 @@ enum class EUISelectableNavigationMode:uint8
 	Explicit,
 };
 
-class ULGUISpriteData_BaseObject;
+class ULexUISpriteData_BaseObject;
 
 UCLASS(HideCategories = (Collision, LOD, Physics, Cooking, Rendering, Activation, Actor, Input, Lighting, Mobile), ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class LGUI_API UUISelectableComponent : public ULGUILifeCycleUIBehaviour
@@ -100,13 +100,13 @@ protected:
 		float FadeDuration = 0.2f;
 
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable", meta = (DisplayThumbnail = "false"))
-		TObjectPtr<ULGUISpriteData_BaseObject> NormalSprite;
+		TObjectPtr<ULexUISpriteData_BaseObject> NormalSprite;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable", meta = (DisplayThumbnail = "false"))
-		TObjectPtr<ULGUISpriteData_BaseObject> HighlightedSprite;
+		TObjectPtr<ULexUISpriteData_BaseObject> HighlightedSprite;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable", meta = (DisplayThumbnail = "false"))
-		TObjectPtr<ULGUISpriteData_BaseObject> PressedSprite;
+		TObjectPtr<ULexUISpriteData_BaseObject> PressedSprite;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable", meta = (DisplayThumbnail = "false"))
-		TObjectPtr<ULGUISpriteData_BaseObject> DisabledSprite;
+		TObjectPtr<ULexUISpriteData_BaseObject> DisabledSprite;
 
 	EUISelectableSelectionState CurrentSelectionState = EUISelectableSelectionState::Normal;
 	void ApplySelectionState(bool immediateSet);
@@ -149,19 +149,19 @@ public:
 		class AUIBaseRenderableActor* GetTransitionTarget()const { return TransitionActor.Get(); }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
-		ULGUISpriteData_BaseObject* GetNormalSprite()const { return NormalSprite; }
+		ULexUISpriteData_BaseObject* GetNormalSprite()const { return NormalSprite; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
 		FColor GetNormalColor()const { return NormalColor; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
-		ULGUISpriteData_BaseObject* GetHighlightedSprite()const { return HighlightedSprite; }
+		ULexUISpriteData_BaseObject* GetHighlightedSprite()const { return HighlightedSprite; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
 		FColor GetHighlightedColor()const { return HighlightedColor; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
-		ULGUISpriteData_BaseObject* GetPressedSprite()const { return PressedSprite; }
+		ULexUISpriteData_BaseObject* GetPressedSprite()const { return PressedSprite; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
 		FColor GetPressedColor()const { return PressedColor; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
-		ULGUISpriteData_BaseObject* GetDisabledSprite()const { return DisabledSprite; }
+		ULexUISpriteData_BaseObject* GetDisabledSprite()const { return DisabledSprite; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
 		FColor GetDisabledColor()const { return DisabledColor; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
@@ -170,19 +170,19 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
 		void SetTransitionTarget(class AUIBaseRenderableActor* value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
-		void SetNormalSprite(ULGUISpriteData_BaseObject* NewSprite);
+		void SetNormalSprite(ULexUISpriteData_BaseObject* NewSprite);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
 		void SetNormalColor(FColor NewColor);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
-		void SetHighlightedSprite(ULGUISpriteData_BaseObject* NewSprite);
+		void SetHighlightedSprite(ULexUISpriteData_BaseObject* NewSprite);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
 		void SetHighlightedColor(FColor NewColor);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
-		void SetPressedSprite(ULGUISpriteData_BaseObject* NewSprite);
+		void SetPressedSprite(ULexUISpriteData_BaseObject* NewSprite);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
 		void SetPressedColor(FColor NewColor);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
-		void SetDisabledSprite(ULGUISpriteData_BaseObject* NewSprite);
+		void SetDisabledSprite(ULexUISpriteData_BaseObject* NewSprite);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
 		void SetDisabledColor(FColor NewColor);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")

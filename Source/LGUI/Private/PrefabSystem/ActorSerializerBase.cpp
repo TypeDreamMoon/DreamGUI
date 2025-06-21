@@ -8,7 +8,7 @@
 #include "Misc/ConfigCacheIni.h"
 #if WITH_EDITOR
 #include "Tools/UEdMode.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #endif
 
 namespace LGUIPrefabSystem

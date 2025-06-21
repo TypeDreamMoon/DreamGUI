@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "Core/LGUISpriteData.h"
+#include "Core/LexUISpriteData.h"
 #include "UITextureBase.h"
 #include "UISprite.h"
 #include "UITexture.generated.h"
@@ -46,7 +46,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		EUITextureType type = EUITextureType::Normal;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		FLGUISpriteInfo spriteData;
+		FLexUISpriteInfo spriteData;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		EUITextureUVRectControlMode UVRectControlMode = EUITextureUVRectControlMode::None;
 	/** Texture UV offset and scale info. Only get good result when Type is Normal */
@@ -72,10 +72,10 @@ protected:
 
 	virtual void OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange, bool InDiscardCache = true)override;
 
-	virtual void OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
+	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI") EUITextureType GetTextureType()const { return type; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI") FLGUISpriteInfo GetSpriteData()const { return spriteData; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") FLexUISpriteInfo GetSpriteData()const { return spriteData; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") FVector4 GetUVRect()const { return uvRect; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")	EUISpriteFillMethod GetFillMethod()const { return fillMethod; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")	uint8 GetFillOrigin()const { return fillOrigin; }
@@ -84,7 +84,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")	EUITextureUVRectControlMode GetUVRectControlMode()const { return UVRectControlMode; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI") void SetTextureType(EUITextureType newType);
-	UFUNCTION(BlueprintCallable, Category = "LGUI") void SetSpriteData(FLGUISpriteInfo newSpriteData);
+	UFUNCTION(BlueprintCallable, Category = "LGUI") void SetSpriteData(FLexUISpriteInfo newSpriteData);
 	UFUNCTION(BlueprintCallable, Category = "LGUI") void SetUVRect(FVector4 newUVRect);
 	UFUNCTION(BlueprintCallable, Category = "LGUI") void SetFillMethod(EUISpriteFillMethod newValue);
 	UFUNCTION(BlueprintCallable, Category = "LGUI") void SetFillOrigin(uint8 newValue);

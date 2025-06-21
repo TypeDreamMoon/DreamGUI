@@ -50,9 +50,9 @@
 #include "DetailCustomization/UITextCustomization.h"
 #include "DetailCustomization/UITextureBaseCustomization.h"
 #include "DetailCustomization/UIProceduralRectCustomization.h"
-#include "DetailCustomization/LGUISpriteDataCustomization.h"
-#include "DetailCustomization/LGUIStaticSpriteAtlasDataCustomization.h"
-#include "DetailCustomization/LGUIFreeTypeRenderFontDataCustomization.h"
+#include "DetailCustomization/LexUISpriteDataCustomization.h"
+#include "DetailCustomization/LexUIStaticSpriteAtlasDataCustomization.h"
+#include "DetailCustomization/LexUIFontData_FreeTypeRenderCustomization.h"
 #include "DetailCustomization/UISelectableCustomization.h"
 #include "DetailCustomization/UIToggleCustomization.h"
 #include "DetailCustomization/UITextInputCustomization.h"
@@ -262,9 +262,9 @@ void FLGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomClassLayout(UUITexture::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUITextureCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUIPostProcessRenderable::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIPostProcessRenderableCustomization::MakeInstance));
 
-		PropertyModule.RegisterCustomClassLayout(ULGUISpriteData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLGUISpriteDataCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(ULGUIStaticSpriteAtlasData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLGUIStaticSpriteAtlasDataCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(ULGUIFreeTypeRenderFontData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLGUIFreeTypeRenderFontDataCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexUISpriteData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexUISpriteDataCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexUIStaticSpriteAtlasData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexUIStaticSpriteAtlasDataCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexUIFontData_FreeTypeRender::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexUIFontData_FreeTypeRenderCustomization::MakeInstance));
 		
 		PropertyModule.RegisterCustomClassLayout(UUISelectableComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISelectableCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUIToggleComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIToggleCustomization::MakeInstance));
@@ -365,8 +365,8 @@ void FLGUIEditorModule::StartupModule()
 	//register Thumbnail
 	{
 		UThumbnailManager::Get().RegisterCustomRenderer(ULGUIPrefab::StaticClass(), ULGUIPrefabThumbnailRenderer::StaticClass());
-		UThumbnailManager::Get().RegisterCustomRenderer(ULGUISpriteData::StaticClass(), ULGUISpriteThumbnailRenderer::StaticClass());
-		UThumbnailManager::Get().RegisterCustomRenderer(ULGUISpriteData_BaseObject::StaticClass(), ULGUISpriteDataBaseObjectThumbnailRenderer::StaticClass());
+		UThumbnailManager::Get().RegisterCustomRenderer(ULexUISpriteData::StaticClass(), ULGUISpriteThumbnailRenderer::StaticClass());
+		UThumbnailManager::Get().RegisterCustomRenderer(ULexUISpriteData_BaseObject::StaticClass(), ULGUISpriteDataBaseObjectThumbnailRenderer::StaticClass());
 	}
 	//register right mouse button in content browser
 	{
@@ -486,9 +486,9 @@ void FLGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(UUIProceduralRect::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUIPostProcessRenderable::StaticClass()->GetFName());
 
-		PropertyModule.UnregisterCustomClassLayout(ULGUISpriteData::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(ULGUIStaticSpriteAtlasData::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(ULGUIFreeTypeRenderFontData::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexUISpriteData::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexUIStaticSpriteAtlasData::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexUIFontData_FreeTypeRender::StaticClass()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(UUISelectableComponent::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUIToggleComponent::StaticClass()->GetFName());
@@ -562,8 +562,8 @@ void FLGUIEditorModule::ShutdownModule()
 	if (UObjectInitialized())
 	{
 		UThumbnailManager::Get().UnregisterCustomRenderer(ULGUIPrefab::StaticClass());
-		UThumbnailManager::Get().UnregisterCustomRenderer(ULGUISpriteData::StaticClass());
-		UThumbnailManager::Get().UnregisterCustomRenderer(ULGUISpriteData_BaseObject::StaticClass());
+		UThumbnailManager::Get().UnregisterCustomRenderer(ULexUISpriteData::StaticClass());
+		UThumbnailManager::Get().UnregisterCustomRenderer(ULexUISpriteData_BaseObject::StaticClass());
 	}
 	//unregister right mouse button in content browser
 	{

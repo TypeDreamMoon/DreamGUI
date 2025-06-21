@@ -84,7 +84,7 @@ class UUIBaseRenderable;
 class UUIBatchMeshRenderable;
 class UUIDirectMeshRenderable;
 class ULexUIMeshComponent;
-class UUIDrawcall;
+class FLexUIDrawCall;
 class FUIPostProcessRenderProxy;
 class UTextureRenderTarget2D;
 class ULGUICanvasCustomClip;
@@ -116,7 +116,7 @@ public:
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy)override;
 private:
 	/** clear drawcalls */
-	void ClearDrawcall();
+	void ClearDrawCall();
 	void RemoveFromViewExtension(bool PropogateToChildrenCanvas);
 	TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> RenderTargetViewExtension = nullptr;
 	TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> GetRenderTargetViewExtension();
@@ -133,10 +133,10 @@ public:
 	 * @param	bMaterialOrTextureChanged	Material or texture change
 	 * @param	bTransformOrVertexPositionChanged	UI element's transform change, or vertex position change
 	 * @param	bHierarchyOrderChanged	UI element's hierarchy order change
-	 * @param	bForceRebuildDrawcall	Mark it rebuild no matter what parameter change.
+	 * @param	bForceRebuildDrawCall	Mark it rebuild no matter what parameter change.
 	 */
-	void MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawcall = false);
-	void MarkCanvasUpdateRecursive(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawcall = false);
+	void MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawCall = false);
+	void MarkCanvasUpdateRecursive(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawCall = false);
 	void MarkItemTransformOrVertexPositionChanged(UUIBaseRenderable* InRenderable);
 
 	static void BuildProjectionMatrix(FIntPoint InViewportSize, ECameraProjectionMode::Type InProjectionType, float FOV, float FarClipPlane, float NearClipPlane, FMatrix& OutProjectionMatrix);
@@ -174,7 +174,7 @@ public:
 	bool GetIsUIActive()const;
 	TWeakObjectPtr<ULGUICanvas> GetParentCanvas()const { return ParentCanvas; }
 
-	void SortDrawcall();
+	void SortDrawCall();
 
 	void SetParentCanvas(ULGUICanvas* InParentCanvas);
 
@@ -401,11 +401,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetDynamicPixelsPerUnit(float newValue);
 
-	int GetDrawcallCount()const;
+	int GetDrawCallCount()const;
 
 	/** Override LGUI's screen space UI render's camera location. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetOverrideViewLoation(bool InOverride, FVector InValue);
+		void SetOverrideViewLocation(bool InOverride, FVector InValue);
 	/** Override LGUI's screen space UI render's camera rotation. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetOverrideViewRotation(bool InOverride, FRotator InValue);
@@ -447,7 +447,7 @@ private:
 	void SetSortOrderAdditionalValueRecursive(int32 InAdditionalValue);
 	void UpdateRenderTarget(bool CallEvent);
 	/** Check if any invalid in list. Currently use in editor after undo check or rebuild. */
-	void EnsureDrawcallObjectReference();
+	void EnsureDrawCallObjectReference();
 public:
 	/** Called from LGUIManagerActor. Update this canvas if it is a RootCanvas */
 	void UpdateRootCanvas();
@@ -455,8 +455,8 @@ public:
 	void MarkNeedVerifyMaterials();
 private:
 	uint32 bCanTickUpdate:1;//if Canvas can update from tick
-	uint32 bShouldRebuildDrawcall : 1;
-	uint32 bShouldClearCachedDrawcall : 1;//mark this to true will delete all cached drawcall and rebuild all drawcall
+	uint32 bShouldRebuildDrawCall : 1;
+	uint32 bShouldClearCachedDrawCall : 1;//mark this to true will delete all cached drawcall and rebuild all drawcall
 	uint32 bShouldSortRenderableOrder : 1;//if any renderable UIItem's hierarchy change, then we need to sort renderable list
 	uint32 bNeedToSortRenderPriority : 1;
 	uint32 bHasAddToLGUIScreenSpaceRenderer : 1;//is this canvas added to LGUI screen space renderer
@@ -497,13 +497,13 @@ private:
 	mutable TWeakObjectPtr<ULexUIMeshComponent> UIMesh;//current using UIMesh.
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	TArray<TObjectPtr<UMaterialInstanceDynamic>> PooledUIMaterialList;//Default material pool.
-	TArray<TSharedPtr<UUIDrawcall>> UIDrawcallList;//Drawcall collection of this Canvas.
-	TArray<TSharedPtr<UUIDrawcall>> CacheUIDrawcallList;//Cached Drawcall collection.
+	TArray<TSharedPtr<FLexUIDrawCall>> UIDrawCallList;//DrawCall collection of this Canvas.
+	TArray<TSharedPtr<FLexUIDrawCall>> CacheUIDrawCallList;//Cached DrawCall collection.
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	TArray<TObjectPtr<UUIItem>> UIRenderableList;//Use UIItem instead of UIBaseRenderable, because we need UIItem to get sub-canvas.
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	TArray<TObjectPtr<UUIItem>> UIItemList;//All UIItem that belongs to this canvas
-	TSharedPtr<UUIDrawcall> DrawcallAsChildCanvas = nullptr;//Drawcall that represent this canvas when the canvas is render as child.
+	TSharedPtr<FLexUIDrawCall> DrawCallAsChildCanvas = nullptr;//DrawCall that represent this canvas when the canvas is render as child.
 
 	TMap<UUIBaseRenderable*, FLGUICacheTransformContainer> CacheUIItemToCanvasTransformMap;//UI element relative to canvas transform
 
@@ -513,11 +513,11 @@ private:
 	void OnClipDataTextureChanged(UTexture* NewTexture);
 public:
 	/** Called by UIItem to delete clip data */
-	FORCEINLINE void RemoveClipData(const TSharedPtr<FLexUIClipData>& InClipData);
-	FORCEINLINE UTexture* GetClipDataTexture()const;
+	void RemoveClipData(const TSharedPtr<FLexUIClipData>& InClipData);
+	UTexture* GetClipDataTexture()const;
 public:
 	void GetCacheUIItemToCanvasTransform(UUIBaseRenderable* item, FLGUICacheTransformContainer& outResult);
-	const TArray<TSharedPtr<UUIDrawcall>>& GetUIDrawcallList()const { return UIDrawcallList; }
+	const TArray<TSharedPtr<FLexUIDrawCall>>& GetUIDrawCallList()const { return UIDrawCallList; }
 private:
 	FTransform2D ConvertTo2DTransform(const FTransform& Transform);
 	static void CalculateUIItem2DBounds(UUIBaseRenderable* item, const FTransform2D& transform, FVector2D& min, FVector2D& max);
@@ -525,14 +525,14 @@ private:
 	/** canvas array belong to this canvas in hierarchy. */
 	UPROPERTY(Transient) TArray<TWeakObjectPtr<ULGUICanvas>> ChildrenCanvasArray;
 	/** update Canvas's drawcall */
-	bool UpdateCanvasDrawcallRecursive();
+	bool UpdateCanvasDrawCallRecursive();
 	/** mark render finish */
 	void MarkFinishRenderFrameRecursive();
 
 	void UpdateGeometry_Implement();
-	void BatchDrawcall_Implement(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, TArray<TSharedPtr<UUIDrawcall>>& InUIDrawcallList, TArray<TSharedPtr<UUIDrawcall>>& InCacheUIDrawcallList, bool& OutNeedToSortRenderPriority);
-	void UpdateDrawcallMesh_Implement();
-	void UpdateDrawcallMaterial_Implement();
+	void BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, TArray<TSharedPtr<FLexUIDrawCall>>& InUIDrawCallList, TArray<TSharedPtr<FLexUIDrawCall>>& InCacheUIDrawCallList, bool& OutNeedToSortRenderPriority);
+	void UpdateDrawCallMesh_Implement();
+	void UpdateDrawCallMaterial_Implement();
 public:
 	static bool Is2DUITransform(const FTransform& Transform);
 private:

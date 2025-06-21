@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Extensions/UIStaticMesh.h"
-#include "Core/UIGeometry.h"
+#include "Core/LexUIGeometry.h"
 #include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/Engine.h"
@@ -9,10 +9,10 @@
 #include "Rendering/ColorVertexBuffer.h"
 #include "LGUI.h"
 #include "LGUI/Public/Core/LexUIMesh/LexUIMeshComponent.h"
-#include "Core/UIDrawcall.h"
+#include "Core/LexUIDrawCall.h"
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 
 #define LOCTEXT_NAMESPACE "UIStaticMesh"
 
@@ -24,7 +24,7 @@ static void StaticMeshToLGUIMeshRenderData(const UStaticMesh* DataSource, TArray
 	{
 		auto WarningText = FText::Format(LOCTEXT("StaticMeshHasMultipleSections", "StaticMesh {0} has {1} sections. UIStaticMesh expects a static mesh with 1 section."), FText::FromString(DataSource->GetName()), NumSections);
 #if WITH_EDITOR
-		LGUIUtils::EditorNotification(WarningText, 10);
+		FLexUIUtils::EditorNotification(WarningText, 10);
 #endif
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *WarningText.ToString());
 		//@todo: support multiple sections
@@ -42,7 +42,7 @@ static void StaticMeshToLGUIMeshRenderData(const UStaticMesh* DataSource, TArray
 		{
 			auto WarningText = FText::Format(LOCTEXT("StaticMeshHasTooManyUVSets", "StaticMesh {0} has {1} UV sets; LGUI vertex data supports at most {2}."), FText::FromString(DataSource->GetName()), TexCoordsPerVertex, MAX_SUPPORTED_UV_SETS);
 #if WITH_EDITOR
-			LGUIUtils::EditorNotification(WarningText, 10);
+			FLexUIUtils::EditorNotification(WarningText, 10);
 #endif
 			UE_LOG(LGUI, Warning, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *WarningText.ToString());
 		}
@@ -224,7 +224,7 @@ void UUIStaticMesh::UpdateGeometry()
 		}
 		if (bColorChanged || bLocalVertexPositionChanged || bTransformChanged)
 		{
-			drawcall->DrawcallMesh->UpdateMeshSectionRenderData(drawcall->DrawcallRenderSection.Pin(), bLocalVertexPositionChanged || bTransformChanged, RenderCanvas->GetActualRequireNormalAndTangent());
+			drawcall->DrawCallMesh->UpdateMeshSectionRenderData(drawcall->DrawCallRenderSection.Pin(), bLocalVertexPositionChanged || bTransformChanged, RenderCanvas->GetActualRequireNormalAndTangent());
 			bColorChanged = false;
 			bLocalVertexPositionChanged = false;
 			bTransformChanged = false;
@@ -241,7 +241,7 @@ void UUIStaticMesh::UpdateMeshColor(bool updateToDrawcallMesh)
 	auto numIndices = sourceIndexData.Num();
 	if (numVertices > 0 && numIndices > 0)
 	{
-		auto MeshSection = (FLexUIMeshSection*)drawcall->DrawcallRenderSection.Pin().Get();
+		auto MeshSection = (FLexUIMeshSection*)drawcall->DrawCallRenderSection.Pin().Get();
 		auto& VertexData = MeshSection->vertices;
 
 		VertexData.SetNumUninitialized(numVertices);
@@ -280,7 +280,7 @@ void UUIStaticMesh::UpdateMeshColor(bool updateToDrawcallMesh)
 
 	if (updateToDrawcallMesh)
 	{
-		drawcall->DrawcallMesh->UpdateMeshSectionRenderData(drawcall->DrawcallRenderSection.Pin(), false, RenderCanvas->GetActualRequireNormalAndTangent());
+		drawcall->DrawCallMesh->UpdateMeshSectionRenderData(drawcall->DrawCallRenderSection.Pin(), false, RenderCanvas->GetActualRequireNormalAndTangent());
 	}
 }
 void UUIStaticMesh::CreateGeometry()
@@ -291,7 +291,7 @@ void UUIStaticMesh::CreateGeometry()
 	auto numIndices = sourceIndexData.Num();
 	if (numVertices > 0 && numIndices > 0)
 	{
-		auto MeshSection = (FLexUIMeshSection*)drawcall->DrawcallRenderSection.Pin().Get();
+		auto MeshSection = (FLexUIMeshSection*)drawcall->DrawCallRenderSection.Pin().Get();
 		auto& VertexData = MeshSection->vertices;
 
 		VertexData.SetNumUninitialized(numVertices);
@@ -346,7 +346,7 @@ void UUIStaticMesh::CreateGeometry()
 			IndexData[i] = sourceIndexData[i];
 		}
 	}
-	drawcall->DrawcallMesh->CreateRenderSectionRenderData(drawcall->DrawcallRenderSection.Pin());
+	drawcall->DrawCallMesh->CreateRenderSectionRenderData(drawcall->DrawCallRenderSection.Pin());
 	drawcall->bMaterialNeedToReassign = true;
 	drawcall->bMaterialChanged = true;
 
@@ -363,7 +363,7 @@ void UUIStaticMesh::UpdateMeshTransform(bool updateToDrawcallMesh)
 	const auto& itemTf = this->GetComponentTransform();
 	FTransform::Multiply(&itemToCanvasTf, &itemTf, &inverseCanvasTf);
 
-	auto MeshSection = (FLexUIMeshSection*)drawcall->DrawcallRenderSection.Pin().Get();
+	auto MeshSection = (FLexUIMeshSection*)drawcall->DrawCallRenderSection.Pin().Get();
 
 	const auto& sourceVertexData = meshCache->GetVertexData();
 	auto numVertices = sourceVertexData.Num();
@@ -401,7 +401,7 @@ void UUIStaticMesh::UpdateMeshTransform(bool updateToDrawcallMesh)
 
 	if (updateToDrawcallMesh)
 	{
-		drawcall->DrawcallMesh->UpdateMeshSectionRenderData(drawcall->DrawcallRenderSection.Pin(), true, RenderCanvas->GetActualRequireNormalAndTangent());
+		drawcall->DrawCallMesh->UpdateMeshSectionRenderData(drawcall->DrawCallRenderSection.Pin(), true, RenderCanvas->GetActualRequireNormalAndTangent());
 	}
 }
 
@@ -433,7 +433,7 @@ void UUIStaticMesh::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 			if (IsValid(meshCache))
 			{
 				OnMeshDataChangeDelegateHandle = meshCache->OnMeshDataChange.AddUObject(this, &UUIStaticMesh::OnStaticMeshDataChange);
-				if (drawcall.IsValid() && drawcall->DrawcallRenderSection.IsValid())
+				if (drawcall.IsValid() && drawcall->DrawCallRenderSection.IsValid())
 				{
 					if (HaveValidData())
 					{
@@ -448,7 +448,7 @@ void UUIStaticMesh::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 		}
 		else if (PropName == GET_MEMBER_NAME_CHECKED(UUIStaticMesh, ReplaceMaterial))
 		{
-			if (drawcall.IsValid() && drawcall->DrawcallRenderSection.IsValid())
+			if (drawcall.IsValid() && drawcall->DrawCallRenderSection.IsValid())
 			{
 				if (HaveValidData())
 				{
@@ -462,7 +462,7 @@ void UUIStaticMesh::OnStaticMeshDataChange()
 {
 	if (IsValid(meshCache))
 	{
-		if (drawcall.IsValid() && drawcall->DrawcallRenderSection.IsValid())
+		if (drawcall.IsValid() && drawcall->DrawCallRenderSection.IsValid())
 		{
 			if (HaveValidData())
 			{
@@ -476,7 +476,7 @@ void UUIStaticMesh::OnStaticMeshDataChange()
 void UUIStaticMesh::OnMeshDataReady()
 {
 	Super::OnMeshDataReady();
-	if (drawcall.IsValid() && drawcall->DrawcallRenderSection.IsValid())
+	if (drawcall.IsValid() && drawcall->DrawCallRenderSection.IsValid())
 	{
 		if (HaveValidData())
 		{
@@ -532,7 +532,7 @@ void UUIStaticMesh::SetMesh(ULGUIStaticMeshCacheData* value)
 		meshCache = value;
 		if (IsValid(meshCache))
 		{
-			if (drawcall.IsValid() && drawcall->DrawcallRenderSection.IsValid())
+			if (drawcall.IsValid() && drawcall->DrawCallRenderSection.IsValid())
 			{
 				if (HaveValidData())
 				{

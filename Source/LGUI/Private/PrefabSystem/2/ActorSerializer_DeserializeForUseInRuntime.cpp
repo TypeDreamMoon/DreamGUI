@@ -113,7 +113,7 @@ AActor* ActorSerializer::DeserializeActorRecursiveForUseInRuntime(USceneComponen
 				auto ErrorMsg = FString::Printf(TEXT("[ActorSerializer::DeserializeActorRecursiveForUseInRuntime]Error prefab:%s. \nComponent Class of index:%d not found!"), *(Prefab->GetPathName()), (CompData.ComponentClass));
 				UE_LOG(LGUI, Error, TEXT("%s"), *ErrorMsg); 
 #if WITH_EDITOR
-				LGUIUtils::EditorNotification(FText::FromString(ErrorMsg)); 
+				FLexUIUtils::EditorNotification(FText::FromString(ErrorMsg)); 
 #endif
 			}
 		}
@@ -156,7 +156,7 @@ AActor* ActorSerializer::DeserializeActorRecursiveForUseInRuntime(USceneComponen
 		auto ErrorMsg = FString::Printf(TEXT("[ActorSerializer::DeserializeActorRecursiveForUseInRuntime]Error prefab:%s. \nActor Class of index:%d not found!"), *(Prefab->GetPathName()), (SaveData.ActorClass));
 		UE_LOG(LGUI, Error, TEXT("%s"), *ErrorMsg);
 #if WITH_EDITOR
-		LGUIUtils::EditorNotification(FText::FromString(ErrorMsg));
+		FLexUIUtils::EditorNotification(FText::FromString(ErrorMsg));
 #endif
 		return nullptr;
 	}
@@ -486,7 +486,7 @@ bool ActorSerializer::LoadCommonPropertyForRuntime(FProperty* Property, int item
 							, *(Prefab->GetPathName()), *(Property->GetName()), *(Property->GetClass()->GetName()), Property->GetSize(), ItemPropertyData.Data.Num());
 						UE_LOG(LGUI, Error, TEXT("%s"), *ErrorMsg);
 #if WITH_EDITOR
-						LGUIUtils::EditorNotification(FText::FromString(ErrorMsg));
+						FLexUIUtils::EditorNotification(FText::FromString(ErrorMsg));
 #endif
 						return false;
 					}

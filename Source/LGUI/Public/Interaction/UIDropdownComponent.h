@@ -12,7 +12,7 @@
 #include "LGUI/Public/Core/Components/UICanvasGroup.h"
 #include "UIDropdownComponent.generated.h"
 
-class ULGUISpriteData_BaseObject;
+class ULexUISpriteData_BaseObject;
 
 /**
  * Dropdown option selection change.
@@ -62,7 +62,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
 		FText Text;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI", meta = (DisplayThumbnail = false))
-		TObjectPtr<ULGUISpriteData_BaseObject> Sprite = nullptr;
+		TObjectPtr<ULexUISpriteData_BaseObject> Sprite = nullptr;
 };
 
 UCLASS( ClassGroup=(LGUI), Blueprintable, meta=(BlueprintSpawnableComponent) )

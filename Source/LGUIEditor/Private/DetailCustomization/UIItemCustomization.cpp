@@ -178,7 +178,7 @@ void FUIItemCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 					.AutoWrapText(true)
 				]
 			;
-			LGUIUtils::EditorNotification(MessageText, 8.0f);
+			FLexUIUtils::EditorNotification(MessageText, 8.0f);
 		}
 		auto AnchorHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIItem, AnchorData));
 		auto AnchorMinHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIItem, AnchorData.AnchorMin));
@@ -930,7 +930,7 @@ FReply FUIItemCustomization::OnClickIncreaseOrDecreaseHierarchyIndex(bool Increa
 			{
 				auto HierarchyIndexProperty = FindFProperty<FIntProperty>(UUIItem::StaticClass(), GET_MEMBER_NAME_CHECKED(UUIItem, hierarchyIndex));
 				check(HierarchyIndexProperty != nullptr);
-				LGUIUtils::NotifyPropertyChanged(Child, HierarchyIndexProperty);
+				FLexUIUtils::NotifyPropertyChanged(Child, HierarchyIndexProperty);
 			}
 		}
 	}
@@ -1477,8 +1477,8 @@ void FUIItemCustomization::ApplyValueChanged(float Value, TSharedRef<IPropertyHa
 	auto RelativeLocationProperty = FindFProperty<FProperty>(USceneComponent::StaticClass(), FName(TEXT("RelativeLocation")));
 	for (auto& Item : TargetScriptArray)
 	{
-		LGUIUtils::NotifyPropertyChanged(Item.Get(), AnchorProperty);
-		LGUIUtils::NotifyPropertyChanged(Item.Get(), RelativeLocationProperty);
+		FLexUIUtils::NotifyPropertyChanged(Item.Get(), AnchorProperty);
+		FLexUIUtils::NotifyPropertyChanged(Item.Get(), RelativeLocationProperty);
 	}
 }
 void FUIItemCustomization::OnAnchorValueChanged(float Value, TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)
@@ -1728,7 +1728,7 @@ void FUIItemCustomization::OnSelectAnchor(LGUIAnchorPreviewWidget::UIAnchorHoriz
 			UIItem->SetAnchorTop(PrevAnchorAsMargin.Top);
 		}
 
-		LGUIUtils::NotifyPropertyChanged(UIItem.Get(), GET_MEMBER_NAME_CHECKED(UUIItem, AnchorData));
+		FLexUIUtils::NotifyPropertyChanged(UIItem.Get(), GET_MEMBER_NAME_CHECKED(UUIItem, AnchorData));
 	}
 	TargetScriptArray[0]->EditorForceUpdate();
 	ForceRefreshEditor(DetailBuilder);
@@ -1866,7 +1866,7 @@ FReply FUIItemCustomization::OnClickFixDisplayNameButton(bool singleOrAll, TShar
 		for (auto& RootActor : SelectedRootActors)
 		{
 			TArray<AActor*> ChildrenActors;
-			LGUIUtils::CollectChildrenActors(RootActor, ChildrenActors, true);
+			FLexUIUtils::CollectChildrenActors(RootActor, ChildrenActors, true);
 			for (auto& Actor : ChildrenActors)
 			{
 				if (auto UIItem = Cast<UUIItem>(Actor->GetRootComponent()))
@@ -1914,7 +1914,7 @@ FReply FUIItemCustomization::OnClickFixDisplayNameButton(bool singleOrAll, TShar
 		}
 		DisplayNameHandle->SetValue(DisplayName);
 
-		LGUIUtils::NotifyPropertyChanged(UIItem.Get(), GET_MEMBER_NAME_CHECKED(UUIItem, displayName));
+		FLexUIUtils::NotifyPropertyChanged(UIItem.Get(), GET_MEMBER_NAME_CHECKED(UUIItem, displayName));
 	}
 	GEditor->EndTransaction();
 
@@ -1998,7 +1998,7 @@ void FUIItemCustomization::OnPasteAnchor(IDetailLayoutBuilder* DetailBuilder)
 			{
 				auto itemWidget = item->GetAnchorData();
 				item->SetAnchorData(AnchorData);
-				LGUIUtils::NotifyPropertyChanged(item.Get(), GET_MEMBER_NAME_CHECKED(UUIItem, AnchorData));
+				FLexUIUtils::NotifyPropertyChanged(item.Get(), GET_MEMBER_NAME_CHECKED(UUIItem, AnchorData));
 				item->MarkPackageDirty();
 			}
 		}

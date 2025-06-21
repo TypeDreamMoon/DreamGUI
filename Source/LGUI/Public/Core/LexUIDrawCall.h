@@ -1,0 +1,77 @@
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+
+#pragma once
+#include "CoreMinimal.h"
+#include "Engine/Texture.h"
+#include "Core/LexUIMeshIndex.h"
+#include "Core/LexUIQuadTree.h"
+
+class UUIPostProcessRenderable;
+class FLexUIGeometry;
+struct FLexUIMeshVertex;
+class UMaterialInterface;
+class UMaterialInstanceDynamic;
+class UUIItem;
+class UUIBatchMeshRenderable;
+class UUIDirectMeshRenderable;
+class ULexUIMeshComponent;
+struct FLexUIRenderSection;
+
+enum class ELexUIDrawCallType :uint8
+{
+	BatchGeometry = 1,
+	PostProcess,
+	DirectMesh,
+	ChildCanvas,
+};
+
+class LGUI_API FLexUIDrawCall
+{
+public:
+	FLexUIDrawCall(ELexUIDrawCallType InType)
+	{
+		Type = InType;
+	}
+	FLexUIDrawCall(LexUIQuadTree::Rectangle InCanvasRect)
+	{
+		Type = ELexUIDrawCallType::BatchGeometry;
+		RenderObjectListTreeRootNode = MakeUnique<LexUIQuadTree::Node>(InCanvasRect);
+	}
+	~FLexUIDrawCall()
+	{
+		
+	}
+	ELexUIDrawCallType Type = ELexUIDrawCallType::BatchGeometry;
+
+	TWeakObjectPtr<UTexture> Texture = nullptr;//draw-call used this texture to render
+	TWeakObjectPtr<UMaterialInterface> Material = nullptr;//draw-call use this material to render, can be null to use default material
+	TWeakObjectPtr<UMaterialInterface> RenderMaterial = nullptr;//material that render this draw-call
+	TWeakObjectPtr<ULexUIMeshComponent> DrawCallMesh = nullptr;//mesh for render this draw-call
+	TWeakPtr<FLexUIRenderSection> DrawCallRenderSection = nullptr;//section of mesh which render this draw-call
+
+	bool bMaterialContainsLexUIParameter = false;//if Material contains LGUI's parameter, then a MaterialInstanceDynamic will be created and stored as RenderMaterial, otherwise RenderMaterial is same as Material
+	bool bMaterialChanged = true;
+	bool bMaterialNeedToReassign = true;//once a mesh section is recreated, and the material is still valid, then we need to re-assign the material to newly created mesh section
+	bool bTextureChanged = true;
+
+	bool bNeedToUpdateVertex = true;
+	bool bVertexPositionChanged = true;//if vertex position changed? use for update bounds
+
+	TWeakObjectPtr<UUIPostProcessRenderable> PostProcessRenderableObject;//post process object
+
+	TWeakObjectPtr<UUIDirectMeshRenderable> DirectMeshRenderableObject;
+
+	TArray<TWeakObjectPtr<UUIBatchMeshRenderable>> RenderObjectList;//render object collections belong to this draw-call, must be sorted on hierarchy-index
+	bool bNeedToSortRenderObjectList = false;//need to sort RenderObjectList?
+	TUniquePtr<LexUIQuadTree::Node> RenderObjectListTreeRootNode = nullptr;
+	int32 VerticesCount = 0;//vertices count of all renderObjectList
+	int32 IndicesCount = 0;//triangle indices count of all renderObjectList
+
+	bool bIs2DSpace = false;//transform relative to canvas is 2d or not? only 2d draw-call can batch
+
+	TWeakObjectPtr<class ULGUICanvas> ChildCanvas;//insert point to sort child canvas
+public:
+	void GetCombined(TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndexBufferType>& triangles)const;
+	void CopyUpdateState(FLexUIDrawCall* Target);
+	bool CanConsumeUIBatchMeshRenderable(FLexUIGeometry* geo, int32 itemVertCount);
+};

@@ -29,7 +29,7 @@
 #include "PrefabAnimation/LGUIPrefabSequenceEditor.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "SceneOutliner/LGUINativeSceneOutlinerExtension.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditor"
@@ -411,7 +411,7 @@ TArray<AActor*> FLGUIPrefabEditor::GetAllActors()
 	TArray<AActor*> AllActors;
 	if (PrefabHelperObject->LoadedRootActor != nullptr)
 	{
-		LGUIUtils::CollectChildrenActors(PrefabHelperObject->LoadedRootActor, AllActors, true);
+		FLexUIUtils::CollectChildrenActors(PrefabHelperObject->LoadedRootActor, AllActors, true);
 	}
 	return AllActors;
 }
@@ -510,7 +510,7 @@ void FLGUIPrefabEditor::OnApply()
 		PrefabBeingEdited->PrefabDataForPrefabEditor.ViewMode = ViewportPtr->GetViewportClient()->GetViewMode();
 		TSet<FGuid> UnexpendActorGuidArray;
 		TArray<AActor*> UnexpendActorArray;
-		LGUIUtils::CollectChildrenActors(PrefabHelperObject->LoadedRootActor, UnexpendActorArray, true);
+		FLexUIUtils::CollectChildrenActors(PrefabHelperObject->LoadedRootActor, UnexpendActorArray, true);
 		OutlinerPtr->GetUnexpendActor(UnexpendActorArray);
 		for (auto& KeyValue : PrefabHelperObject->MapGuidToObject)
 		{

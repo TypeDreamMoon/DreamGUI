@@ -2,10 +2,10 @@
 
 #include "LGUI/Public/Core/Components/UITextureBase.h"
 #include "LGUI.h"
-#include "Core/UIGeometry.h"
+#include "Core/LexUIGeometry.h"
 #include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "Materials/MaterialInterface.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "TextureResource.h"
 #include "Engine/Texture2D.h"
 
@@ -54,7 +54,7 @@ UTexture* UUITextureBase::GetDefaultWhiteTexture()
 			, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)));
 		UE_LOG(LGUI, Error, TEXT("%s"), *errMsg.ToString());
 #if WITH_EDITOR
-		LGUIUtils::EditorNotification(errMsg, 10);
+		FLexUIUtils::EditorNotification(errMsg, 10);
 #endif
 	}
 	return defaultWhiteSolid;

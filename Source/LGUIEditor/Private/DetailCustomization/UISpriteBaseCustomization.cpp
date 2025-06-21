@@ -68,7 +68,7 @@ void FUISpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 			}
 		}
 	}));
-	ULGUISpriteData_BaseObject* spriteObject = nullptr;
+	ULexUISpriteData_BaseObject* spriteObject = nullptr;
 	spriteHandle->GetValue(*(UObject**)&spriteObject);
 	if (IsValid(spriteObject))
 	{
@@ -124,7 +124,7 @@ void FUISpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 					{
 						item->Modify();
 						item->SetSizeFromSpriteData();
-						LGUIUtils::NotifyPropertyChanged(item.Get(), UUIItem::GetAnchorDataPropertyName());
+						FLexUIUtils::NotifyPropertyChanged(item.Get(), UUIItem::GetAnchorDataPropertyName());
 						item->EditorForceUpdate();
 					}
 				}

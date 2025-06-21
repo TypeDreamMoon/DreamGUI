@@ -55,7 +55,7 @@ protected:
 	virtual FVector2D GetEndPointTangentDirection();
 
 	//Begin UIBatchMeshRenderable interface
-	virtual void OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
+	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 	virtual void OnBeforeCreateOrUpdateGeometry()override;
 	//End UIBatchMeshRenderable interface
 
@@ -69,9 +69,9 @@ protected:
 		, FVector2D& OutPosA, FVector2D& OutPosB
 		, FVector2D& InOutPrevLineDir);
 	FORCEINLINE bool CanConnectStartEndPoint(int InPointCount) { return EndType == EUI2DLineRenderer_EndType::ConnectStartAndEnd && InPointCount >= 3; }
-	void Update2DLineRendererBaseTriangle(UIGeometry& InGeo, const TArray<FVector2D>& InPointArray);
-	void Update2DLineRendererBaseUV(UIGeometry& InGeo, const TArray<FVector2D>& InPointArray);
-	void Update2DLineRendererBaseVertex(UIGeometry& InGeo, const TArray<FVector2D>& InPointArray);
+	void Update2DLineRendererBaseTriangle(FLexUIGeometry& InGeo, const TArray<FVector2D>& InPointArray);
+	void Update2DLineRendererBaseUV(FLexUIGeometry& InGeo, const TArray<FVector2D>& InPointArray);
+	void Update2DLineRendererBaseVertex(FLexUIGeometry& InGeo, const TArray<FVector2D>& InPointArray);
 public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		float GetLineWidth()const { return LineWidth; }

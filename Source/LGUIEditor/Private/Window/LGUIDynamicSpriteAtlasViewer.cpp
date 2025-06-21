@@ -3,7 +3,7 @@
 #include "Window/LGUIDynamicSpriteAtlasViewer.h"
 #include "Widgets/Docking/SDockTab.h"
 #include "Core/Components/UISpriteBase.h"
-#include "Core/LGUIDynamicSpriteAtlasData.h"
+#include "Core/LexUIDynamicSpriteAtlasData.h"
 #include "LGUIEditorModule.h"
 #include "ISinglePropertyView.h"
 
@@ -12,7 +12,7 @@
 void SLGUIDynamicSpriteAtlasViewer::Construct(const FArguments& Args, TSharedPtr<SDockTab> InOwnerTab)
 {
 	InOwnerTab->SetOnTabClosed(SDockTab::FOnTabClosedCallback::CreateSP(this, &SLGUIDynamicSpriteAtlasViewer::CloseTabCallback));
-	if (ULGUIDynamicSpriteAtlasManager::Instance != nullptr)
+	if (ULexUIDynamicSpriteAtlasManager::Instance != nullptr)
 	{
 		FPropertyEditorModule& EditModule = FModuleManager::Get().GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
 		FDetailsViewArgs DetailsViewArgs;
@@ -28,7 +28,7 @@ void SLGUIDynamicSpriteAtlasViewer::Construct(const FArguments& Args, TSharedPtr
 		//Property->SetObject(ULGUIAtlasManager::Instance);
 
 		TSharedPtr<IDetailsView> DescriptorDetailView = EditModule.CreateDetailView(DetailsViewArgs);
-		DescriptorDetailView->SetObject(ULGUIDynamicSpriteAtlasManager::Instance);
+		DescriptorDetailView->SetObject(ULexUIDynamicSpriteAtlasManager::Instance);
 
 		ChildSlot
 			[

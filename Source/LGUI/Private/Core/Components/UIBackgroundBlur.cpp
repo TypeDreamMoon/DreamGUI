@@ -2,8 +2,8 @@
 
 #include "LGUI/Public/Core/Components/UIBackgroundBlur.h"
 #include "LGUI.h"
-#include "Core/UIGeometry.h"
-#include "Core/LGUISpriteData.h"
+#include "Core/LexUIGeometry.h"
+#include "Core/LexUISpriteData.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "LGUI/Public/Core/LexUIRender/LexUIPostProcessShaders.h"
 #include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"

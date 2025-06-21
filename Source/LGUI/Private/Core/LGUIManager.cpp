@@ -2,7 +2,7 @@
 
 #include "Core/LGUIManager.h"
 #include "LGUI.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "LGUI/Public/Core/Components/UIItem.h"
 #include "LGUI/Public/Core/Components/UIText.h"
 #include "LGUI/Public/Core/Components/LGUICanvas.h"
@@ -30,7 +30,7 @@
 #include "PrefabSystem/LGUIPrefab.h"
 #include "EngineUtils.h"
 #include "Layout/LGUICanvasScaler.h"
-#include "Core/LGUISpriteData.h"
+#include "Core/LexUISpriteData.h"
 #include "Core/Actor/UIContainerActor.h"
 #endif
 
@@ -246,11 +246,11 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 					//copy relative location
 					auto RelativeLocationProperty = FindFProperty<FProperty>(InObjectParent->GetClass(), USceneComponent::GetRelativeLocationPropertyName());
 					RelativeLocationProperty->CopyCompleteValue_InContainer(OriginObjectParent, InObjectParent);
-					LGUIUtils::NotifyPropertyChanged(OriginObjectParent, RelativeLocationProperty);
+					FLexUIUtils::NotifyPropertyChanged(OriginObjectParent, RelativeLocationProperty);
 					//copy anchor data
 					auto AnchorDataProperty = FindFProperty<FProperty>(InObjectParent->GetClass(), UUIItem::GetAnchorDataPropertyName());
 					AnchorDataProperty->CopyCompleteValue_InContainer(OriginObjectParent, InObjectParent);
-					LGUIUtils::NotifyPropertyChanged(OriginObjectParent, AnchorDataProperty);
+					FLexUIUtils::NotifyPropertyChanged(OriginObjectParent, AnchorDataProperty);
 				}
 			}
 			});
@@ -377,9 +377,9 @@ void ULGUIEditorManagerObject::OnAssetReimport(UObject* asset)
 		{
 			bool needToRebuildUI = false;
 			//find sprite data that reference this texture
-			for (TObjectIterator<ULGUISpriteData> Itr; Itr; ++Itr)
+			for (TObjectIterator<ULexUISpriteData> Itr; Itr; ++Itr)
 			{
-				ULGUISpriteData* spriteData = *Itr;
+				ULexUISpriteData* spriteData = *Itr;
 				if (IsValid(spriteData))
 				{
 					if (spriteData->GetSpriteTexture() == textureAsset)
@@ -433,7 +433,7 @@ void ULGUIEditorManagerObject::OnActorLabelChanged(AActor* actor)
 			}
 			rootUIComp->SetDisplayName(actorLabel);
 
-			LGUIUtils::NotifyPropertyChanged(rootUIComp, FName(TEXT("displayName")));
+			FLexUIUtils::NotifyPropertyChanged(rootUIComp, FName(TEXT("displayName")));
 		}
 	}
 }
@@ -1171,7 +1171,7 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 \n	World: {2}, type: {3}")
 			, FText::FromString(ANSI_TO_TCHAR(__FUNCTION__)), __LINE__, FText::FromString(this->GetWorld()->GetPathName()), (int)(this->GetWorld()->WorldType));
 			UE_LOG(LGUI, Error, TEXT("%s"), *errMsg.ToString());
-			LGUIUtils::EditorNotification(errMsg, 10.0f);
+			FLexUIUtils::EditorNotification(errMsg, 10.0f);
 		}
 	}
 	else
@@ -1261,7 +1261,7 @@ void ULGUIManagerWorldSubsystem::SortDrawcallOnRenderMode(ELGUIRenderMode InRend
 		{
 			if (canvasItem->IsRootCanvas() || canvasItem->GetOverrideSorting())
 			{
-				canvasItem->SortDrawcall();
+				canvasItem->SortDrawCall();
 			}
 		}
 	}
@@ -1708,7 +1708,7 @@ void ULGUIManagerWorldSubsystem::AddRaycaster(ULGUIBaseRaycaster* InRaycaster)
 #if WITH_EDITOR
 				auto ErrorNotifyMsg = LOCTEXT("MultipleLGUIBaseRaycasterWithSameDepthAndTraceChannel"
 					, "Detect multiple LGUIBaseRaycaster components with same depth and traceChannel, this may cause wrong interaction results! See output log for details.");
-				LGUIUtils::EditorNotification(ErrorNotifyMsg, 10);
+				FLexUIUtils::EditorNotification(ErrorNotifyMsg, 10);
 #endif
 				UE_LOG(LGUI, Warning, TEXT("[%s].%d \
 \nDetect multiple LGUIBaseRaycaster components with same depth and traceChannel, this may cause wrong interaction results!\

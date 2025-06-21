@@ -3,7 +3,7 @@
 #include "ContentBrowserExtensions/LGUIContentBrowserExtensions.h"
 #include "EngineModule.h"
 #include "Engine/EngineTypes.h"
-#include "Core/LGUISpriteData.h"
+#include "Core/LexUISpriteData.h"
 #include "Engine/Texture2D.h"
 #include "IContentBrowserSingleton.h"
 #include "ContentBrowserModule.h"
@@ -68,7 +68,7 @@ public:
 				for (auto Texture : Textures)
 				{
 					// Create the factory used to generate the sprite
-					ULGUISpriteDataFactory* SpriteFactory = NewObject<ULGUISpriteDataFactory>();
+					ULexUISpriteDataFactory* SpriteFactory = NewObject<ULexUISpriteDataFactory>();
 					SpriteFactory->SpriteTexture = Texture;
 
 					// Create the sprite
@@ -80,7 +80,7 @@ public:
 					AssetToolsModule.Get().CreateUniqueAssetName(Texture->GetOutermost()->GetName(), DefaultSuffix, /*out*/ PackageName, /*out*/ Name);
 					const FString PackagePath = FPackageName::GetLongPackagePath(PackageName);
 
-					if (UObject* NewAsset = AssetToolsModule.Get().CreateAsset(Name, PackagePath, ULGUISpriteData::StaticClass(), SpriteFactory))
+					if (UObject* NewAsset = AssetToolsModule.Get().CreateAsset(Name, PackagePath, ULexUISpriteData::StaticClass(), SpriteFactory))
 					{
 						ObjectsToSync.Add(NewAsset);
 					}
@@ -96,7 +96,7 @@ public:
 				// Change the compression settings and trigger a recompress
 				for (auto Texture : InTextures)
 				{
-					ULGUISpriteData::CheckAndApplySpriteTextureSetting(Texture);
+					ULexUISpriteData::CheckAndApplySpriteTextureSetting(Texture);
 				}
 			}
 		};

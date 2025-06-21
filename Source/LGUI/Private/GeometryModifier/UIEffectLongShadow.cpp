@@ -2,7 +2,7 @@
 
 #include "GeometryModifier/UIEffectLongShadow.h"
 #include "LGUI.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 
 
 UUIEffectLongShadow::UUIEffectLongShadow()
@@ -14,7 +14,7 @@ void UUIEffectLongShadow::ApplyColorAndAlpha(FColor& InOutColor, FColor InTintCo
 {
 	if (multiplySourceAlpha)
 	{
-		InOutColor.A = (uint8)(LGUIUtils::Color255To1_Table[InOriginAlpha] * InTintColor.A);
+		InOutColor.A = (uint8)(FLexUIUtils::Color255To1_Table[InOriginAlpha] * InTintColor.A);
 		InOutColor.R = InTintColor.R;
 		InOutColor.G = InTintColor.G;
 		InOutColor.B = InTintColor.B;
@@ -25,12 +25,12 @@ void UUIEffectLongShadow::ApplyColorAndAlpha(FColor& InOutColor, FColor InTintCo
 	}
 }
 void UUIEffectLongShadow::ModifyUIGeometry(
-	UIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
+	FLexUIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 )
 {
-	auto& triangles = InGeometry.triangles;
-	auto& originVertices = InGeometry.originVertices;
-	auto& vertices = InGeometry.vertices;
+	auto& triangles = InGeometry.Triangles;
+	auto& originVertices = InGeometry.OriginVertices;
+	auto& vertices = InGeometry.Vertices;
 
 	auto vertexCount = originVertices.Num();
 	int32 triangleCount = triangles.Num();

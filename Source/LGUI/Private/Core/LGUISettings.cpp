@@ -2,8 +2,8 @@
 
 #include "Core/LGUISettings.h"
 #include "LGUI.h"
-#include "Core/LGUISpriteData.h"
-#include "Core/LGUIDynamicSpriteAtlasData.h"
+#include "Core/LexUISpriteData.h"
+#include "Core/LexUIDynamicSpriteAtlasData.h"
 
 #if WITH_EDITOR
 float ULGUISettings::CacheAutoBatchThreshold = -1;
@@ -17,8 +17,8 @@ void ULGUISettings::PostEditChangeProperty(struct FPropertyChangedEvent& Propert
 			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULGUISettings, atlasSettingForSpecificPackingTag)
 			)
 		{
-			ULGUISpriteData::MarkAllSpritesNeedToReinitialize();
-			ULGUIDynamicSpriteAtlasManager::InitCheck();
+			ULexUISpriteData::MarkAllSpritesNeedToReinitialize();
+			ULexUIDynamicSpriteAtlasManager::InitCheck();
 		}
 		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULGUISettings, AutoBatchThreshold))
 		{

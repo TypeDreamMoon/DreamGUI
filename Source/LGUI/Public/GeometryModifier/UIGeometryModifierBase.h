@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "Core/UIGeometry.h"
+#include "Core/LexUIGeometry.h"
 #include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
 #include "Components/ActorComponent.h"
 #include "UIGeometryModifierBase.generated.h"
@@ -117,7 +117,7 @@ public:
 	 * @param	InTransformChanged			object's transform changed
 	 */
 	virtual void ModifyUIGeometry(
-		UIGeometry& InGeometry
+		FLexUIGeometry& InGeometry
 		, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 	);
 	/**

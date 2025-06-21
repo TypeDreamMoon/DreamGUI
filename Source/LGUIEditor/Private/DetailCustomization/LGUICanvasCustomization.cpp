@@ -343,15 +343,15 @@ FText FLGUICanvasCustomization::GetDrawcallInfo()const
 			{
 				if (TargetScriptArray[0]->renderTarget == canvasItem->renderTarget && IsValid(canvasItem->renderTarget))
 				{
-					allDrawcallCount += canvasItem->GetDrawcallCount();
+					allDrawcallCount += canvasItem->GetDrawCallCount();
 				}
 			}
 			else
 			{
-				allDrawcallCount += canvasItem->GetDrawcallCount();
+				allDrawcallCount += canvasItem->GetDrawCallCount();
 			}
 		}
-		return FText::FromString(FString::Printf(TEXT("%d/%d"), TargetScriptArray[0]->GetDrawcallCount(), allDrawcallCount));
+		return FText::FromString(FString::Printf(TEXT("%d/%d"), TargetScriptArray[0]->GetDrawCallCount(), allDrawcallCount));
 	}
 	return FText::FromString(FString::Printf(TEXT("0/0")));
 }
@@ -391,16 +391,16 @@ FText FLGUICanvasCustomization::GetDrawcallInfoTooltip()const
 			{
 				if (TargetScriptArray[0]->renderTarget == canvasItem->renderTarget && IsValid(canvasItem->renderTarget))
 				{
-					allDrawcallCount += canvasItem->GetDrawcallCount();
+					allDrawcallCount += canvasItem->GetDrawCallCount();
 				}
 			}
 			else
 			{
-				allDrawcallCount += canvasItem->GetDrawcallCount();
+				allDrawcallCount += canvasItem->GetDrawCallCount();
 			}
 		}
 		auto tooltipStr = FText::Format(LOCTEXT("DrawcallInfoTooltip", "This canvas's drawcall count:{0}, all canvas of {1} drawcall count:{2}")
-			, TargetScriptArray[0]->GetDrawcallCount(), FText::FromString(spaceText), allDrawcallCount);
+			, TargetScriptArray[0]->GetDrawCallCount(), FText::FromString(spaceText), allDrawcallCount);
 		return tooltipStr;
 	}
 	return FText::GetEmpty();

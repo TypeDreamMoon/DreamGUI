@@ -6,11 +6,11 @@
 #include "LGUISpriteDataFactory.generated.h"
 
 UCLASS()
-class ULGUISpriteDataFactory : public UFactory
+class ULexUISpriteDataFactory : public UFactory
 {
 	GENERATED_BODY()
 public:
-	ULGUISpriteDataFactory();
+	ULexUISpriteDataFactory();
 
 	class UTexture2D* SpriteTexture = nullptr;
 	// UFactory interface

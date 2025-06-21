@@ -5,7 +5,7 @@
 #include "LGUIComponentVisualizerModule.h"
 #include "LGUI.h"
 #include "LGUIEditorUtils.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "Interfaces/IPluginManager.h"
 #include "Core/LGUISettings.h"
 #include "Layout/UIPanelLayoutBase.h"
@@ -275,7 +275,7 @@ bool FUIItemComponentVisualizer::HandleInputDelta(FEditorViewportClient* Viewpor
 	}
 	if (bAnchorChanged)
 	{
-		LGUIUtils::NotifyPropertyChanged(TargetComp.Get(), UUIItem::GetAnchorDataPropertyName());
+		FLexUIUtils::NotifyPropertyChanged(TargetComp.Get(), UUIItem::GetAnchorDataPropertyName());
 	}
 	return true;
 }

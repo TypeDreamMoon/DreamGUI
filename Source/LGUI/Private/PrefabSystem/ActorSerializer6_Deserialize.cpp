@@ -21,7 +21,7 @@
 #include "PrefabSystem/ActorSerializer7.h"
 #include "PrefabSystem/ActorSerializer8.h"
 #include "PhysicsEngine/BodyInstance.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION

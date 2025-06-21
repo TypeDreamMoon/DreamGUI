@@ -13,7 +13,7 @@
 #include "Event/LGUIBaseRaycaster.h"
 #include "Event/LGUIPointerEventData.h"
 #include "Event/InputModule/LGUIBaseInputModule.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "LGUI.h"
 
 #define LOCTEXT_NAMESPACE "LGUIEventSystemActor"
@@ -63,7 +63,7 @@ void ULGUIEventSystem::BeginPlay()
 			FString errorMsg = FString::Printf(TEXT("LGUIEventSystem component is already exist in actor:%s, pathName:%s, world:%s, multiple LGUIEventSystem in same world is not allowed!"), *actorName, *instance->GetPathName(), *world->GetPathName());
 			UE_LOG(LGUI, Error, TEXT("%s"), *errorMsg);
 #if WITH_EDITOR
-			LGUIUtils::EditorNotification(FText::FromString(errorMsg), 10);
+			FLexUIUtils::EditorNotification(FText::FromString(errorMsg), 10);
 #endif
 			this->SetComponentTickEnabled(false);
 		}

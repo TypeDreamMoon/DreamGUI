@@ -3,7 +3,7 @@
 #include "Event/LGUIScreenSpaceRaycaster.h"
 #include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "LGUI.h"
-#include "Utils/LGUIUtils.h"
+#include "Utils/LexUIUtils.h"
 #include "Core/LGUISettings.h"
 
 #define LOCTEXT_NAMESPACE "LGUIScreenSpaceRaycaster"

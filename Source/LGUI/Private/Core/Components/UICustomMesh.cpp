@@ -2,8 +2,8 @@
 
 #include "LGUI/Public/Core/Components/UICustomMesh.h"
 #include "LGUI.h"
-#include "Utils/LGUIUtils.h"
-#include "Core/UIGeometry.h"
+#include "Utils/LexUIUtils.h"
+#include "Core/LexUIGeometry.h"
 #include "Core/LGUICustomMesh.h"
 #include "LGUI/Public/Core/Components/UITextureBase.h"
 
@@ -15,7 +15,7 @@ UUICustomMesh::UUICustomMesh(const FObjectInitializer& ObjectInitializer) :Super
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 }
 
-bool UUICustomMesh::SupportDrawcallBatching()const
+bool UUICustomMesh::SupportDrawCallBatching()const
 {
 	if (IsValid(CustomMesh))
 	{
@@ -31,7 +31,7 @@ UTexture* UUICustomMesh::GetTextureToCreateGeometry()
 {
 	return UUITextureBase::GetDefaultWhiteTexture();
 }
-void UUICustomMesh::OnUpdateGeometry(UIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
+void UUICustomMesh::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
 	if (IsValid(CustomMesh))
 	{
