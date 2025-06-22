@@ -73,7 +73,7 @@ bool ULGUIBaseRaycaster::RaycastUI(ULGUIPointerEventData* InPointerEventData, co
 
 		if (auto LGUIManager = ULGUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
 		{
-#if 0//could have some problemn because thread racing
+#if 0//could have some problem because thread racing
 			// use ParallelFor to speed up the hit process
 			FCriticalSection Mutex;
 			if (InRenderModeArray.Num() == 1)//most case

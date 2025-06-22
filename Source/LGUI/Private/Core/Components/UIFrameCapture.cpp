@@ -160,7 +160,7 @@ TSharedPtr<FUIPostProcessRenderProxy> UUIFrameCapture::GetRenderProxy()
 {
 	if (!RenderProxy.IsValid())
 	{
-		auto Proxy = TSharedPtr<FUIFrameCaptureRenderProxy>(new FUIFrameCaptureRenderProxy());
+		auto Proxy = MakeShared<FUIFrameCaptureRenderProxy>();
 		Proxy->OwnerIsFrameReady = &this->bIsFrameReady;
 		RenderProxy = Proxy;
 		if (this->RenderCanvas.IsValid())

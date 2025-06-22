@@ -281,7 +281,7 @@ void UUIBatchMeshRenderable::UpdateGeometry()
 		OnUpdateGeometryClipData(*(geometry.Get()), true);
 		ApplyGeometryModifier(true, true, true, true);
 		CalculateLocalBounds();//CalculateLocalBounds must stay before TransformVertices, because TransformVertices will also cache bounds for Canvas to check 2d overlap.
-		FLexUIGeometry::TransformVertices(RenderCanvas.Get(), this, geometry.Get());
+		FLexUIGeometry::TransformVertices(this->GetRenderCanvas(), this, this->geometry.Get());
 	}
 	else//if geometry is created, update data
 	{
@@ -315,15 +315,15 @@ void UUIBatchMeshRenderable::UpdateGeometry()
 		}
 		if (bLocalVertexPositionChanged || bTransformChanged)
 		{
-			FLexUIGeometry::TransformVertices(RenderCanvas.Get(), this, geometry.Get());
+			FLexUIGeometry::TransformVertices(this->GetRenderCanvas(), this, this->geometry.Get());
 			drawcall->bNeedToUpdateVertex = true;
 		}
 	}
-	if (geometry->Vertices.Num() >= LEXUI_MAX_VERTEX_COUNT)
+	if (geometry->OriginVertices.Num() >= LEXUI_MAX_VERTEX_COUNT)
 	{
 		auto errorMsg = FText::Format(NSLOCTEXT("UIBatchMeshRenderable", "TooManyTrianglesInSingleUIElement", "{0} Too many vertex ({1}) in single UI element: {2}")
 			, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__))
-			, geometry->Vertices.Num()
+			, geometry->OriginVertices.Num()
 #if WITH_EDITOR
 			, FText::FromString(this->GetOwner()->GetActorLabel())
 #else
@@ -437,15 +437,11 @@ void UUIBatchMeshRenderable::CalculateLocalBounds()
 	auto& originVertices = geometry->OriginVertices;
 	float horizontalMin = MAX_flt, horizontalMax = -MAX_flt;
 	float verticalMin = MAX_flt, verticalMax = -MAX_flt;
-#if WITH_EDITOR
 	float forwardMin = MAX_flt, forwardMax = -MAX_flt;
-#endif
 	if (originVertices.Num() == 0)
 	{
 		horizontalMin = horizontalMax = verticalMin = verticalMax = 0;
-#if WITH_EDITOR
 		forwardMin = forwardMax = 0;
-#endif
 	}
 	else
 	{
@@ -468,7 +464,6 @@ void UUIBatchMeshRenderable::CalculateLocalBounds()
 			{
 				verticalMax = VertPos.Z;
 			}
-#if WITH_EDITOR
 			if (VertPos.X < forwardMin)
 			{
 				forwardMin = VertPos.X;
@@ -477,30 +472,23 @@ void UUIBatchMeshRenderable::CalculateLocalBounds()
 			{
 				forwardMax = VertPos.X;
 			}
-#endif
 		}
 	}
-	this->LocalMinPoint = FVector2D(horizontalMin, verticalMin);
-	this->LocalMaxPoint = FVector2D(horizontalMax, verticalMax);
-#if WITH_EDITOR
 	this->LocalMinPoint3D = FVector(forwardMin, horizontalMin, verticalMin);
 	this->LocalMaxPoint3D = FVector(forwardMax, horizontalMax, verticalMax);
-#endif
 }
 
 void UUIBatchMeshRenderable::GetGeometryBoundsInLocalSpace(FVector2D& OutMinPoint, FVector2D& OutMaxPoint)const
 {
-	OutMinPoint = this->LocalMinPoint;
-	OutMaxPoint = this->LocalMaxPoint;
+	OutMinPoint = FVector2D(this->LocalMinPoint3D.Y, this->LocalMinPoint3D.Z);
+	OutMaxPoint = FVector2D(this->LocalMaxPoint3D.Y, this->LocalMaxPoint3D.Z);
 }
 
-#if WITH_EDITOR
 void UUIBatchMeshRenderable::GetGeometryBounds3DInLocalSpace(FVector& OutMinPoint, FVector& OutMaxPoint)const
 {
 	OutMinPoint = this->LocalMinPoint3D;
 	OutMaxPoint = this->LocalMaxPoint3D;
 }
-#endif
 
 UTexture* UUIBatchMeshRenderable::GetTextureToCreateGeometry()
 {

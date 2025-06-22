@@ -35,7 +35,7 @@ public:
 	FLexUIDrawCall(LexUIQuadTree::Rectangle InCanvasRect)
 	{
 		Type = ELexUIDrawCallType::BatchGeometry;
-		RenderObjectListTreeRootNode = MakeUnique<LexUIQuadTree::Node>(InCanvasRect);
+		BatchMeshTreeNode = MakeUnique<LexUIQuadTree::Node>(InCanvasRect);
 	}
 	~FLexUIDrawCall()
 	{
@@ -61,9 +61,9 @@ public:
 
 	TWeakObjectPtr<UUIDirectMeshRenderable> DirectMeshRenderableObject;
 
-	TArray<TWeakObjectPtr<UUIBatchMeshRenderable>> RenderObjectList;//render object collections belong to this draw-call, must be sorted on hierarchy-index
-	bool bNeedToSortRenderObjectList = false;//need to sort RenderObjectList?
-	TUniquePtr<LexUIQuadTree::Node> RenderObjectListTreeRootNode = nullptr;
+	TArray<TWeakObjectPtr<UUIBatchMeshRenderable>> BatchMeshRenderObjectList;//render object collections belong to this draw-call, must be sorted on hierarchy-index
+	bool bNeedToSortBatchMeshRenderObjectList = false;//need to sort RenderObjectList?
+	TUniquePtr<LexUIQuadTree::Node> BatchMeshTreeNode = nullptr;
 	int32 VerticesCount = 0;//vertices count of all renderObjectList
 	int32 IndicesCount = 0;//triangle indices count of all renderObjectList
 

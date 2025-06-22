@@ -433,7 +433,7 @@ TSharedPtr<FUIPostProcessRenderProxy> UUIBackgroundBlur::GetRenderProxy()
 {
 	if (!RenderProxy.IsValid())
 	{
-		RenderProxy = TSharedPtr<FUIBackgroundBlurRenderProxy>(new FUIBackgroundBlurRenderProxy());
+		RenderProxy = MakeShared<FUIBackgroundBlurRenderProxy>();
 		if (this->RenderCanvas.IsValid())
 		{
 			inv_SampleLevelInterval = 1.0f / MAX_BlurStrength * maxDownSampleLevel;

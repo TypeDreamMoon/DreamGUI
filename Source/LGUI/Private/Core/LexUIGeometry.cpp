@@ -3138,11 +3138,17 @@ void FLexUIGeometry::TransformVertices(ULGUICanvas* canvas, UUIBaseRenderable* i
 	{
 		originVertices.AddDefaulted(vertexCount - originVertexCount);
 	}
-	
-	FLGUICacheTransformContainer tempTf;
-	canvas->GetCacheUIItemToCanvasTransform(item, tempTf);
-	auto itemToCanvasTf = tempTf.Transform;
 
+	auto inverseCanvasTf = canvas->GetUIItem()->GetComponentTransform().Inverse();
+	const auto& itemTf = item->GetComponentTransform();
+	FTransform itemToCanvasTf;
+	FTransform::Multiply(&itemToCanvasTf, &itemTf, &inverseCanvasTf);
+	uiGeo->TransformRelativeToCanvas = itemToCanvasTf;
+	auto itemToCanvasTf2D = ULGUICanvas::ConvertTo2DTransform(itemToCanvasTf);
+	FVector2D itemMin, itemMax;
+	ULGUICanvas::CalculateUIItem2DBounds(item, itemToCanvasTf2D, itemMin, itemMax);
+	uiGeo->BoundsMin2DInCanvasSpace = itemMin;
+	uiGeo->BoundsMax2DInCanvasSpace = itemMax;
 
 	for (int i = 0; i < vertexCount; i++)
 	{

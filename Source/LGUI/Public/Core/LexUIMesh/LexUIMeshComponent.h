@@ -18,7 +18,9 @@ enum class ELexUIRenderSectionType :uint8
 };
 struct FLexUIRenderSection
 {
-	ELexUIRenderSectionType Type;
+	FLexUIRenderSection(){};
+	virtual ~FLexUIRenderSection(){}
+	ELexUIRenderSectionType Type = ELexUIRenderSectionType::Mesh;
 	int RenderPriority = 0;
 	FLexUIRenderSectionProxy* RenderProxy = nullptr;
 	FBox BoundingBox = FBox(EForceInit::ForceInit);//world space bounding box
@@ -31,10 +33,7 @@ struct FLexUIMeshSection : public FLexUIRenderSection
 	{
 		Type = ELexUIRenderSectionType::Mesh; 
 	}
-	virtual ~FLexUIMeshSection()
-	{
-
-	}
+	virtual ~FLexUIMeshSection()override{}
 
 	TArray<FLexUIMeshIndexBufferType> triangles;
 	TArray<FLexUIMeshVertex> vertices;
@@ -57,6 +56,7 @@ struct FLexUIPostProcessSection : public FLexUIRenderSection
 	{
 		Type = ELexUIRenderSectionType::PostProcess;
 	}
+	virtual ~FLexUIPostProcessSection()override{}
 
 	TWeakObjectPtr<class UUIPostProcessRenderable> PostProcessRenderableObject = nullptr;
 
@@ -68,6 +68,7 @@ struct FLexUIChildCanvasSection : public FLexUIRenderSection
 	{
 		Type = ELexUIRenderSectionType::ChildCanvas;
 	}
+	virtual ~FLexUIChildCanvasSection()override{}
 
 	class ULexUIMeshComponent* ChildCanvasMeshComponent = nullptr;
 
@@ -81,7 +82,7 @@ class ULGUICanvas;
 DECLARE_MULTICAST_DELEGATE_TwoParams(FLexUIMeshSceneProxyCreateDeleteDelegate, class ULexUIMeshComponent*, class FLexUIRenderSceneProxy*);
 
 //LexUI render mesh
-//@todo: split this class to: one for UE renderer && one for LexUI renderer, will it be more efficient? or maybe a class without additional shader channels? 
+//@todo: split this class to: one for UE renderer && one for LexUI renderer, will it be more efficient?
 UCLASS(ClassGroup = (LGUI), Blueprintable)
 class LGUI_API ULexUIMeshComponent : public UMeshComponent
 {

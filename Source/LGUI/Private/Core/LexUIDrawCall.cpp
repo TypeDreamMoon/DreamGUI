@@ -2,20 +2,14 @@
 
 #include "Core/LexUIDrawCall.h"
 #include "Core/LexUIGeometry.h"
-#include "LGUI.h"
-#include "DynamicMeshBuilder.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
-#include "LGUI/Public/Core/Components/UIPostProcessRenderable.h"
 #include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
-#include "LGUI/Public/Core/Components/UIDirectMeshRenderable.h"
-#include "Core/LGUISettings.h"
 
 void FLexUIDrawCall::GetCombined(TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndexBufferType>& triangles)const
 {
-	int count = RenderObjectList.Num();
+	int count = BatchMeshRenderObjectList.Num();
 	if (count == 1)
 	{
-		auto uiGeo = RenderObjectList[0]->GetGeometry();
+		auto uiGeo = BatchMeshRenderObjectList[0]->GetGeometry();
 		vertices = uiGeo->Vertices;
 		triangles = uiGeo->Triangles;
 	}
@@ -27,7 +21,7 @@ void FLexUIDrawCall::GetCombined(TArray<FLexUIMeshVertex>& vertices, TArray<FLex
 		triangles.SetNumUninitialized(this->IndicesCount);
 		for (int geoIndex = 0; geoIndex < count; geoIndex++)
 		{
-			auto uiGeo = RenderObjectList[geoIndex]->GetGeometry();
+			auto uiGeo = BatchMeshRenderObjectList[geoIndex]->GetGeometry();
 			auto& geomTriangles = uiGeo->Triangles;
 			int triangleCount = geomTriangles.Num();
 			if (triangleCount <= 0)continue;

@@ -110,10 +110,6 @@ void UUIBaseRenderable::OnRegister()
 void UUIBaseRenderable::OnUnregister()
 {
 	Super::OnUnregister();
-	if (RenderCanvas.IsValid())
-	{
-		RenderCanvas->MarkItemTransformOrVertexPositionChanged(this);//call this can remove the reference from canvas
-	}
 }
 
 void UUIBaseRenderable::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
@@ -148,7 +144,6 @@ void UUIBaseRenderable::OnRenderCanvasChanged(ULGUICanvas* OldCanvas, ULGUICanva
 	{
 		OldCanvas->RemoveUIItem(this);
 		OldCanvas->RemoveUIRenderable(this);
-		OldCanvas->MarkItemTransformOrVertexPositionChanged(this);//call this can remove the reference from canvas
 	}
 	if (IsValid(NewCanvas))
 	{
@@ -200,10 +195,6 @@ void UUIBaseRenderable::MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bT
 	if (RenderCanvas.IsValid())
 	{
 		RenderCanvas->MarkCanvasUpdate(bMaterialOrTextureChanged, bTransformOrVertexPositionChanged, bHierarchyOrderChanged, bForceRebuildDrawcall);
-		if(bTransformOrVertexPositionChanged)
-		{
-			RenderCanvas->MarkItemTransformOrVertexPositionChanged(this);
-		}
 	}
 }
 
@@ -213,7 +204,6 @@ void UUIBaseRenderable::GetGeometryBoundsInLocalSpace(FVector2D& OutMinPoint, FV
 	OutMaxPoint = GetLocalSpaceRightTopPoint();
 }
 
-#if WITH_EDITOR
 void UUIBaseRenderable::GetGeometryBounds3DInLocalSpace(FVector& OutMinPoint, FVector& OutMaxPoint)const
 {
 	const auto MinPoint2D = GetLocalSpaceLeftBottomPoint();
@@ -221,7 +211,6 @@ void UUIBaseRenderable::GetGeometryBounds3DInLocalSpace(FVector& OutMinPoint, FV
 	OutMinPoint = FVector(0.1f, MinPoint2D.X, MinPoint2D.Y);
 	OutMaxPoint = FVector(0.1f, MaxPoint2D.X, MaxPoint2D.Y);
 }
-#endif
 
 bool UUIBaseRenderable::LineTraceUIGeometry(FLexUIGeometry* InGeo, FHitResult& OutHit, const FVector& Start, const FVector& End)
 {

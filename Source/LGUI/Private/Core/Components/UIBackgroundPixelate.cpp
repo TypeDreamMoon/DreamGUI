@@ -206,7 +206,7 @@ TSharedPtr<FUIPostProcessRenderProxy> UUIBackgroundPixelate::GetRenderProxy()
 {
 	if (!RenderProxy.IsValid())
 	{
-		RenderProxy = TSharedPtr<FUIBackgroundPixelateRenderProxy>(new FUIBackgroundPixelateRenderProxy());
+		RenderProxy = MakeShared<FUIBackgroundPixelateRenderProxy>();
 		if (this->RenderCanvas.IsValid())
 		{
 			SendRegionVertexDataToRenderProxy();

@@ -48,6 +48,8 @@ protected:
 		FVector4 MaskTextureUVRect = FVector4(0, 0, 1, 1);
 	void SendMaskTextureToRenderProxy();
 public:
+	FLexUIGeometry* GetGeometry()const { return geometry.Get(); }
+	
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		UTexture2D* GetMaskTexture()const { return maskTexture; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")

@@ -70,15 +70,6 @@ enum class ELGUICanvasOverrideParameters :uint8
 };
 ENUM_CLASS_FLAGS(ELGUICanvasOverrideParameters);
 
-struct FLGUICacheTransformContainer
-{
-public:
-	FTransform Transform;
-
-	FVector2D BoundsMin2D;
-	FVector2D BoundsMax2D;
-};
-
 class UUIItem;
 class UUIBaseRenderable;
 class UUIBatchMeshRenderable;
@@ -137,7 +128,6 @@ public:
 	 */
 	void MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawCall = false);
 	void MarkCanvasUpdateRecursive(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawCall = false);
-	void MarkItemTransformOrVertexPositionChanged(UUIBaseRenderable* InRenderable);
 
 	static void BuildProjectionMatrix(FIntPoint InViewportSize, ECameraProjectionMode::Type InProjectionType, float FOV, float FarClipPlane, float NearClipPlane, FMatrix& OutProjectionMatrix);
 	FMatrix GetViewProjectionMatrix()const;
@@ -505,8 +495,6 @@ private:
 	TArray<TObjectPtr<UUIItem>> UIItemList;//All UIItem that belongs to this canvas
 	TSharedPtr<FLexUIDrawCall> DrawCallAsChildCanvas = nullptr;//DrawCall that represent this canvas when the canvas is render as child.
 
-	TMap<UUIBaseRenderable*, FLGUICacheTransformContainer> CacheUIItemToCanvasTransformMap;//UI element relative to canvas transform
-
 	TArray<TSharedPtr<FLexUIClipData>> ClipDataList;
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	TObjectPtr<ULexUIDataAsTexture> ClipDataAsTexture;//clip coordinate stored in UV1.x
@@ -516,15 +504,15 @@ public:
 	void RemoveClipData(const TSharedPtr<FLexUIClipData>& InClipData);
 	UTexture* GetClipDataTexture()const;
 public:
-	void GetCacheUIItemToCanvasTransform(UUIBaseRenderable* item, FLGUICacheTransformContainer& outResult);
 	const TArray<TSharedPtr<FLexUIDrawCall>>& GetUIDrawCallList()const { return UIDrawCallList; }
-private:
-	FTransform2D ConvertTo2DTransform(const FTransform& Transform);
+	
+	static FTransform2D ConvertTo2DTransform(const FTransform& Transform);
 	static void CalculateUIItem2DBounds(UUIBaseRenderable* item, const FTransform2D& transform, FVector2D& min, FVector2D& max);
+private:
 
 	/** canvas array belong to this canvas in hierarchy. */
 	UPROPERTY(Transient) TArray<TWeakObjectPtr<ULGUICanvas>> ChildrenCanvasArray;
-	/** update Canvas's drawcall */
+	/** update Canvas's draw-call */
 	bool UpdateCanvasDrawCallRecursive();
 	/** mark render finish */
 	void MarkFinishRenderFrameRecursive();

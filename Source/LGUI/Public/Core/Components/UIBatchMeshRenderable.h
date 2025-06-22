@@ -176,9 +176,7 @@ protected:
 
 	virtual void UpdateGeometry()override final;
 	virtual void GetGeometryBoundsInLocalSpace(FVector2D& OutMinPoint, FVector2D& OutMaxPoint)const override;
-#if WITH_EDITOR
 	virtual void GetGeometryBounds3DInLocalSpace(FVector& OutMinPoint, FVector& OutMaxPoint)const override;
-#endif
 
 	/** texture for render this UI element */
 	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI", meta = (DisplayName = "GetTextureToCreateGeometry"))
@@ -200,10 +198,7 @@ private:
 	uint8 bUVChanged:1;
 	/** triangle index change */
 	uint8 bTriangleChanged:1;
-	FVector2D LocalMinPoint = FVector2D(0, 0), LocalMaxPoint = FVector2D(0, 0);
-#if WITH_EDITORONLY_DATA
 	FVector LocalMinPoint3D = FVector::ZeroVector, LocalMaxPoint3D = FVector::ZeroVector;
-#endif
 	void CalculateLocalBounds();
 	UPROPERTY(Transient)TObjectPtr<ULGUIGeometryHelper> GeometryHelper = nullptr;
 };

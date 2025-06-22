@@ -54,9 +54,13 @@ public:
 	TWeakObjectPtr<UTexture> Texture = nullptr;
 	TWeakObjectPtr<UMaterialInterface> Material = nullptr;
 
+	FTransform TransformRelativeToCanvas;
+	FVector2D BoundsMin2DInCanvasSpace;
+	FVector2D BoundsMax2DInCanvasSpace;
+
 	/** 
-	 * Clear vertices and triangle indices data and keep memory, so when the data array do SetNumUninitialized (or similar function, which just change num by not memory), the origin data is still there.
-	 * eg. The following lines use InTriangleChanged to tell if we need to set actual data in triangles, after SetNumUninitialized, the old triangles value is good to use.
+	 * Clear vertices and triangle indices data and keep memory, so when the data array do SetNumUninitialized (or similar function, which just change num but not memory), the origin data is still there.
+	 * e.g. The following lines use InTriangleChanged to tell if we need to set actual data in triangles, after SetNumUninitialized, the old triangles value is good to use.
 	 *		
 			auto& triangles = uiGeo->triangles;
 			triangles.SetNumUninitialized(6);
@@ -77,7 +81,7 @@ public:
 		OriginVertices.Reset();
 	}
 	/**
-	 * Fill this data to other.
+	 * Fill this data to another.
 	 * @return true if any data size changed, false otherwise
 	 */
 	bool CopyTo(FLexUIGeometry* Target)
@@ -104,9 +108,9 @@ public:
 	}
 
 	/**
-	 * Unlike default TArray's SetNum, this LGUIGeometrySetArrayNum only Construct new item when get new memory.
+	 * Unlike default TArray's SetNum, this function only Construct new item when get new memory.
 	 * SetNum will Construct item from Num to NewNum, include old existing memory (memory between Num and Max), which is not what I want.
-	 * What I want is, use default value only on new memory, so new item will not contains NaN value.
+	 * What I want is, use default value only on new memory, so new item will not contain NaN value.
 	 */
 	template<class T>
 	static void LexUIGeometrySetArrayNum(TArray<T>& InArray, int32 NewNum, bool bAllowShrinking = true)
@@ -121,7 +125,7 @@ public:
 		{
 			InArray.SetNumUninitialized(NewNum, bAllowShrinking ? EAllowShrinking::Yes : EAllowShrinking::No);
 		}
-		//SetNum could change array max, so memzero the additional memory
+		//SetNum could change array max, so mem-zero the additional memory
 		if (InArray.Max() > PrevMax)
 		{
 			FMemory::Memzero((uint8*)InArray.GetData() + PrevMax * sizeof(T), (InArray.Max() - PrevMax) * sizeof(T));
