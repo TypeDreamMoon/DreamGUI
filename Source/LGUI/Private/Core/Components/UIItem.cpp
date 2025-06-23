@@ -704,8 +704,8 @@ void UUIItem::CalculateAnchorFromTransform()
 	bAnchorBottomCached = false;
 	bAnchorTopCached = false;
 
-	bool AnchorChanged = AnchorData.AnchoredPosition != CalculatedAnchoredPosition;
-	bool ScaleChanged = PrevScale2D != CompScale2D;
+	bool AnchorChanged = !AnchorData.AnchoredPosition.Equals(CalculatedAnchoredPosition);
+	bool ScaleChanged = !PrevScale2D.Equals(CompScale2D);
 	if (AnchorChanged || ScaleChanged)
 	{
 		AnchorData.AnchoredPosition = CalculatedAnchoredPosition;

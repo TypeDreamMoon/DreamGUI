@@ -494,12 +494,15 @@ private:
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	TArray<TObjectPtr<UUIItem>> UIItemList;//All UIItem that belongs to this canvas
 	TSharedPtr<FLexUIDrawCall> DrawCallAsChildCanvas = nullptr;//DrawCall that represent this canvas when the canvas is render as child.
+	TAtomic<int> ThreadProcessingGeometryCount;
 
 	TArray<TSharedPtr<FLexUIClipData>> ClipDataList;
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	TObjectPtr<ULexUIDataAsTexture> ClipDataAsTexture;//clip coordinate stored in UV1.x
 	void OnClipDataTextureChanged(UTexture* NewTexture);
 public:
+	void IncreaseThreadProcessingGeometry(){ThreadProcessingGeometryCount.IncrementExchange();}
+	void DecreaseThreadProcessingGeometry(){ThreadProcessingGeometryCount.DecrementExchange();}
 	/** Called by UIItem to delete clip data */
 	void RemoveClipData(const TSharedPtr<FLexUIClipData>& InClipData);
 	UTexture* GetClipDataTexture()const;

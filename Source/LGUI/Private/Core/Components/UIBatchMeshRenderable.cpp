@@ -281,7 +281,14 @@ void UUIBatchMeshRenderable::UpdateGeometry()
 		OnUpdateGeometryClipData(*(geometry.Get()), true);
 		ApplyGeometryModifier(true, true, true, true);
 		CalculateLocalBounds();//CalculateLocalBounds must stay before TransformVertices, because TransformVertices will also cache bounds for Canvas to check 2d overlap.
-		FLexUIGeometry::TransformVertices(this->GetRenderCanvas(), this, this->geometry.Get());
+
+		//it is ok to use AsyncTask here, because we can make sure it completes in current frame
+		this->GetRenderCanvas()->IncreaseThreadProcessingGeometry();
+		AsyncTask(ENamedThreads::Type::AnyBackgroundHiPriTask, [this]()
+		{
+			FLexUIGeometry::TransformVertices(this->GetRenderCanvas(), this, this->geometry.Get());
+			this->GetRenderCanvas()->DecreaseThreadProcessingGeometry();
+		});
 	}
 	else//if geometry is created, update data
 	{
@@ -315,7 +322,13 @@ void UUIBatchMeshRenderable::UpdateGeometry()
 		}
 		if (bLocalVertexPositionChanged || bTransformChanged)
 		{
-			FLexUIGeometry::TransformVertices(this->GetRenderCanvas(), this, this->geometry.Get());
+			//it is ok to use AsyncTask here, because we can make sure it completes in current frame
+			this->GetRenderCanvas()->IncreaseThreadProcessingGeometry();
+			AsyncTask(ENamedThreads::Type::AnyBackgroundHiPriTask, [this]()
+			{
+				FLexUIGeometry::TransformVertices(this->GetRenderCanvas(), this, this->geometry.Get());
+				this->GetRenderCanvas()->DecreaseThreadProcessingGeometry();
+			});
 			drawcall->bNeedToUpdateVertex = true;
 		}
 	}

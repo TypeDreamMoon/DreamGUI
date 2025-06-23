@@ -73,8 +73,8 @@ bool ULGUIBaseRaycaster::RaycastUI(ULGUIPointerEventData* InPointerEventData, co
 
 		if (auto LGUIManager = ULGUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
 		{
-#if 0//could have some problem because thread racing
-			// use ParallelFor to speed up the hit process
+#if 1
+			// use ParallelFor to speed up the hit process. ParallelFor should be safe because it blocks current thread
 			FCriticalSection Mutex;
 			if (InRenderModeArray.Num() == 1)//most case
 			{
@@ -95,7 +95,7 @@ bool ULGUIBaseRaycaster::RaycastUI(ULGUIPointerEventData* InPointerEventData, co
 							&& uiItem->LineTraceUI(thisHit, OutRayOrigin, OutRayEnd)
 							)
 						{
-							if (CanvasItem->CalculatePointVisibilityOnClip(thisHit.Location))
+							if (uiItem->IsPointVisibleOnClip(thisHit.Location))
 							{
 								Mutex.Lock();
 								multiHitResult.Add(thisHit);
@@ -126,7 +126,7 @@ bool ULGUIBaseRaycaster::RaycastUI(ULGUIPointerEventData* InPointerEventData, co
 								&& uiItem->LineTraceUI(thisHit, OutRayOrigin, OutRayEnd)
 								)
 							{
-								if (CanvasItem->CalculatePointVisibilityOnClip(thisHit.Location))
+								if (uiItem->IsPointVisibleOnClip(thisHit.Location))
 								{
 									Mutex.Lock();
 									multiHitResult.Add(thisHit);
