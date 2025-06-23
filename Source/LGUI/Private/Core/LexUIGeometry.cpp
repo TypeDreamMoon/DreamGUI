@@ -3121,11 +3121,8 @@ void FLexUIGeometry::CalculateOffsetAndSize(
 }
 
 
-DECLARE_CYCLE_STAT(TEXT("UIGeometry TransformVertices"), STAT_TransformVertices, STATGROUP_LGUI);
 void FLexUIGeometry::TransformVertices(ULGUICanvas* canvas, UUIBaseRenderable* item, FLexUIGeometry* uiGeo)
 {
-	SCOPE_CYCLE_COUNTER(STAT_TransformVertices);
-
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	auto vertexCount = vertices.Num();

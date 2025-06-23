@@ -1199,72 +1199,6 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 		UpdateCanvas(WorldSpaceLGUICanvasArray);
 		UpdateCanvas(RenderTargetSpaceLGUICanvasArray);
 	}
-
-	//sort render order
-	{
-		auto SortCanvas = [](TArray<TWeakObjectPtr<ULGUICanvas>>& InCanvasArray) {
-			InCanvasArray.Sort([](const TWeakObjectPtr<ULGUICanvas>& A, const TWeakObjectPtr<ULGUICanvas>& B)
-				{
-					auto ASortOrder = A->GetActualSortOrder();
-					auto BSortOrder = B->GetActualSortOrder();
-					if (ASortOrder == BSortOrder)
-					{
-						if (A->GetUIItem() != nullptr && B->GetUIItem() != nullptr)
-						{
-							return A->GetUIItem()->GetFlattenHierarchyIndex() < B->GetUIItem()->GetFlattenHierarchyIndex();
-						}
-					}
-					return ASortOrder < BSortOrder;
-				});
-		};
-		if (bShouldSortScreenSpaceCanvas)
-		{
-			bShouldSortScreenSpaceCanvas = false;
-			SortCanvas(ScreenSpaceCanvasArray);
-			SortDrawcallOnRenderMode(ELGUIRenderMode::ScreenSpaceOverlay, this->ScreenSpaceCanvasArray);
-			if (MainViewportViewExtension.IsValid())
-			{
-				MainViewportViewExtension->MarkNeedToSortScreenSpacePrimitiveRenderPriority();
-			}
-		}
-		if (bShouldSortWorldSpaceLGUICanvas)
-		{
-			bShouldSortWorldSpaceLGUICanvas = false;
-			SortCanvas(WorldSpaceLGUICanvasArray);
-			SortDrawcallOnRenderMode(ELGUIRenderMode::WorldSpace_LGUI, this->WorldSpaceLGUICanvasArray);
-			if (MainViewportViewExtension.IsValid())
-			{
-				MainViewportViewExtension->MarkNeedToSortWorldSpacePrimitiveRenderPriority();
-			}
-		}
-		if (bShouldSortWorldSpaceCanvas)
-		{
-			bShouldSortWorldSpaceCanvas = false;
-			SortCanvas(WorldSpaceUECanvasArray);
-			SortDrawcallOnRenderMode(ELGUIRenderMode::WorldSpace, this->WorldSpaceUECanvasArray);
-		}
-		if (bShouldSortRenderTargetSpaceCanvas)
-		{
-			bShouldSortRenderTargetSpaceCanvas = false;
-			SortCanvas(RenderTargetSpaceLGUICanvasArray);
-			SortDrawcallOnRenderMode(ELGUIRenderMode::RenderTarget, this->RenderTargetSpaceLGUICanvasArray);
-		}
-	}
-}
-
-void ULGUIManagerWorldSubsystem::SortDrawcallOnRenderMode(ELGUIRenderMode InRenderMode, const TArray<TWeakObjectPtr<ULGUICanvas>>& InCanvasArray)
-{
-	for (int i = 0; i < InCanvasArray.Num(); i++)
-	{
-		auto canvasItem = InCanvasArray[i];
-		if (canvasItem.IsValid() && canvasItem->GetIsUIActive())
-		{
-			if (canvasItem->IsRootCanvas() || canvasItem->GetOverrideSorting())
-			{
-				canvasItem->SortDrawCall();
-			}
-		}
-	}
 }
 
 void ULGUIManagerWorldSubsystem::AddLGUILifeCycleBehaviourForLifecycleEvent(ULGUILifeCycleBehaviour* InComp)
@@ -1660,22 +1594,6 @@ const TArray<TWeakObjectPtr<ULGUICanvas>>& ULGUIManagerWorldSubsystem::GetCanvas
 	case ELGUIRenderMode::RenderTarget:
 		return RenderTargetSpaceLGUICanvasArray;
 	}
-}
-void ULGUIManagerWorldSubsystem::MarkSortScreenSpaceCanvas()
-{
-	bShouldSortScreenSpaceCanvas = true;
-}
-void ULGUIManagerWorldSubsystem::MarkSortWorldSpaceLGUICanvas()
-{
-	bShouldSortWorldSpaceLGUICanvas = true;
-}
-void ULGUIManagerWorldSubsystem::MarkSortWorldSpaceCanvas()
-{
-	bShouldSortWorldSpaceCanvas = true;
-}
-void ULGUIManagerWorldSubsystem::MarkSortRenderTargetSpaceCanvas()
-{
-	bShouldSortRenderTargetSpaceCanvas = true;
 }
 
 TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> ULGUIManagerWorldSubsystem::GetViewExtension(UWorld* InWorld, bool InCreateIfNotExist)

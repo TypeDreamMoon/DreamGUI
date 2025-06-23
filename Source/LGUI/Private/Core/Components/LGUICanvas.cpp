@@ -831,6 +831,7 @@ void ULGUICanvas::UpdateGeometry_Implement()
 #define LGUI_Test_ResetRenderObjectList 0
 
 DECLARE_CYCLE_STAT(TEXT("Canvas BatchDrawCall"), STAT_BatchDrawCall, STATGROUP_LGUI);
+DECLARE_CYCLE_STAT(TEXT("Canvas OverlapTest"), STAT_OverlapTest, STATGROUP_LGUI);
 void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, TArray<TSharedPtr<FLexUIDrawCall>>& InUIDrawCallList, TArray<TSharedPtr<FLexUIDrawCall>>& InCacheUIDrawCallList, bool& OutNeedToSortRenderPriority)
 {
 	SCOPE_CYCLE_COUNTER(STAT_BatchDrawCall);
@@ -845,6 +846,7 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 			);
 	};
 	auto OverlapWithOtherDrawCall = [&](FLexUIGeometry* ThisUIGeo, const TSharedPtr<FLexUIDrawCall>& OtherDrawCallItem) {
+		SCOPE_CYCLE_COUNTER(STAT_OverlapTest);
 		switch (OtherDrawCallItem->Type)
 		{
 		case ELexUIDrawCallType::BatchGeometry:
@@ -1446,24 +1448,9 @@ bool ULGUICanvas::UpdateCanvasDrawCallRecursive()
 		if (bNeedToSortRenderPriority)
 		{
 			bNeedToSortRenderPriority = false;
-			if (auto Instance = ULGUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
+			if (this->IsRootCanvas() || this->GetOverrideSorting())
 			{
-				switch (this->GetActualRenderMode())
-				{
-				default:
-				case ELGUIRenderMode::ScreenSpaceOverlay:
-					Instance->MarkSortScreenSpaceCanvas();
-					break;
-				case ELGUIRenderMode::WorldSpace_LGUI:
-					Instance->MarkSortWorldSpaceLGUICanvas();
-					break;
-				case ELGUIRenderMode::WorldSpace:
-					Instance->MarkSortWorldSpaceCanvas();
-					break;
-				case ELGUIRenderMode::RenderTarget:
-					Instance->MarkSortRenderTargetSpaceCanvas();
-					break;
-				}
+				this->SortDrawCall();
 			}
 		}
 	}
@@ -1856,6 +1843,22 @@ void ULGUICanvas::SortDrawCall()
 		break;
 		}
 	}
+
+	if (this->IsRootCanvas())
+	{
+		switch (this->GetActualRenderMode())
+		{
+		case ELGUIRenderMode::ScreenSpaceOverlay:
+			ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true)->MarkNeedToSortScreenSpacePrimitiveRenderPriority();
+			break;
+		case ELGUIRenderMode::RenderTarget:
+			GetRenderTargetViewExtension()->MarkNeedToSortScreenSpacePrimitiveRenderPriority();
+			break;
+		case ELGUIRenderMode::WorldSpace_LGUI:
+			ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true)->MarkNeedToSortWorldSpacePrimitiveRenderPriority();
+			break;
+		}
+	}
 }
 
 FName ULGUICanvas::LexUI_MainTextureMaterialParameterName = FName(TEXT("LexUI_MainTexture"));
@@ -2115,25 +2118,7 @@ void ULGUICanvas::SetSortOrder(int32 InSortOrder, bool InPropagateToChildrenCanv
 			this->sortOrder = InSortOrder;
 		}
 
-		if (auto Instance = ULGUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
-		{
-			switch (this->GetActualRenderMode())
-			{
-			default:
-			case ELGUIRenderMode::ScreenSpaceOverlay:
-				Instance->MarkSortScreenSpaceCanvas();
-				break;
-			case ELGUIRenderMode::WorldSpace_LGUI:
-				Instance->MarkSortWorldSpaceLGUICanvas();
-				break;
-			case ELGUIRenderMode::WorldSpace:
-				Instance->MarkSortWorldSpaceCanvas();
-				break;
-			case ELGUIRenderMode::RenderTarget:
-				Instance->MarkSortRenderTargetSpaceCanvas();
-				break;
-			}
-		}
+		SortDrawCall();
 	}
 }
 void ULGUICanvas::SetSortOrderToHighestOfHierarchy(bool InPropagateToChildrenCanvas)

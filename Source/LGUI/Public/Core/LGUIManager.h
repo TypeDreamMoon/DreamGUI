@@ -134,11 +134,6 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<UObject>> AllCultureChangedArray;
 
-	bool bShouldSortScreenSpaceCanvas = true;
-	bool bShouldSortWorldSpaceLGUICanvas = true;
-	bool bShouldSortWorldSpaceCanvas = true;
-	bool bShouldSortRenderTargetSpaceCanvas = true;
-
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<ULGUILifeCycleBehaviour>> LGUILifeCycleBehavioursForUpdate;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
@@ -183,11 +178,6 @@ public:
 	static void RemoveCanvas(ULGUICanvas* InCanvas, ELGUIRenderMode InCurrentRenderMode);
 	static void CanvasRenderModeChange(ULGUICanvas* InCanvas, ELGUIRenderMode InOldRenderMode, ELGUIRenderMode InNewRenderMode);
 	const TArray<TWeakObjectPtr<ULGUICanvas>>& GetCanvasArray(ELGUIRenderMode RenderMode);
-	void MarkSortScreenSpaceCanvas();
-	void MarkSortWorldSpaceLGUICanvas();
-	void MarkSortWorldSpaceCanvas();
-	void MarkSortRenderTargetSpaceCanvas();
-	static void SortDrawcallOnRenderMode(ELGUIRenderMode InRenderMode, const TArray<TWeakObjectPtr<ULGUICanvas>>& InCanvasArray);
 
 	const TArray<TWeakObjectPtr<UObject>>& GetAllLayoutArray()const { return AllLayoutArray; }
 

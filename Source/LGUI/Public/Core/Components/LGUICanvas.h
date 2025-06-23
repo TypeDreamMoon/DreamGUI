@@ -164,8 +164,6 @@ public:
 	bool GetIsUIActive()const;
 	TWeakObjectPtr<ULGUICanvas> GetParentCanvas()const { return ParentCanvas; }
 
-	void SortDrawCall();
-
 	void SetParentCanvas(ULGUICanvas* InParentCanvas);
 
 	DECLARE_EVENT_ThreeParams(ULGUICanvas, FLGUICanvasRenderModeChangeEvent, ULGUICanvas*, ELGUIRenderMode, ELGUIRenderMode);
@@ -524,6 +522,7 @@ private:
 	void BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, TArray<TSharedPtr<FLexUIDrawCall>>& InUIDrawCallList, TArray<TSharedPtr<FLexUIDrawCall>>& InCacheUIDrawCallList, bool& OutNeedToSortRenderPriority);
 	void UpdateDrawCallMesh_Implement();
 	void UpdateDrawCallMaterial_Implement();
+	void SortDrawCall();
 public:
 	static bool Is2DUITransform(const FTransform& Transform);
 private:
