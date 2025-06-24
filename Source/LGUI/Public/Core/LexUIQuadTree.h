@@ -3,7 +3,7 @@
 #pragma once
 #include "CoreMinimal.h"
 
-/** A datastruct for efficiently check rectangle overlapping */
+/** A data-struct for efficiently check rectangle overlapping */
 namespace LexUIQuadTree
 {
 	struct Rectangle
@@ -110,7 +110,7 @@ namespace LexUIQuadTree
 				{
 					BottomRight->Insert(InRect);
 				}
-				else//not contains in all area, could be out side this rect, just put it to RectArray
+				else//not contains in all area, could be outside this rect, just put it to RectArray
 				{
 					this->RectArray.Add(InRect);
 				}

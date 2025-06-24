@@ -233,8 +233,8 @@ protected:
 		int16 sortOrder = 0;
 	
 	/**
-	 * The amount of pixels per unit to use for dynamically created bitmaps in the UI, such as UIText. 
-	 * But!!! Do not set this value too large if you already have large font size of UIText, because that will result in extreamly large texture! 
+	 * The amount of pixels per unit to use for dynamically created bitmap texture, such as BitmapFont for UIText. 
+	 * But!!! Do not set this value too large if you already have large font size of UIText, because that will result in extremely large texture! 
 	 */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		float dynamicPixelsPerUnit = 1.0f;

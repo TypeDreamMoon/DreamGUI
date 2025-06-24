@@ -828,10 +828,11 @@ void ULGUICanvas::UpdateGeometry_Implement()
 	}
 }
 
-#define LGUI_Test_ResetRenderObjectList 0
+#define LGUI_Test_ResetRenderObjectList 1
 
 DECLARE_CYCLE_STAT(TEXT("Canvas BatchDrawCall"), STAT_BatchDrawCall, STATGROUP_LGUI);
-DECLARE_CYCLE_STAT(TEXT("Canvas OverlapTest"), STAT_OverlapTest, STATGROUP_LGUI);
+DECLARE_CYCLE_STAT(TEXT("Canvas BatchDrawCall/OverlapTest"), STAT_OverlapTest, STATGROUP_LGUI);
+DECLARE_CYCLE_STAT(TEXT("Canvas BatchDrawCall/SortBatchMeshInDrawCall"), STAT_SortBatchMeshInDrawCall, STATGROUP_LGUI);
 void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, TArray<TSharedPtr<FLexUIDrawCall>>& InUIDrawCallList, TArray<TSharedPtr<FLexUIDrawCall>>& InCacheUIDrawCallList, bool& OutNeedToSortRenderPriority)
 {
 	SCOPE_CYCLE_COUNTER(STAT_BatchDrawCall);
@@ -887,7 +888,7 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 		if (!InIs2DUI)
 		{
 			//3d UI can only batch into last draw-call
-			const auto LastDrawCall = InUIDrawCallList[LastDrawCallIndex];
+			const auto& LastDrawCall = InUIDrawCallList[LastDrawCallIndex];
 			if (LastDrawCall->CanConsumeUIBatchMeshRenderable(InUIItem->GetGeometry(), InUIItemVerticesCount))
 			{
 				OutDrawCallIndexToFitin = LastDrawCallIndex;
@@ -900,15 +901,15 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 		//get all draw-call that can fit-in this UI item, then use the first one (because we iterate from tail to head)
 		for (int i = LastDrawCallIndex; i >= FitInDrawCallMinIndex; i--)//from tail to head
 		{
-			const auto DrawCallItem = InUIDrawCallList[i];
-			if (!DrawCallItem->bIs2DSpace)//draw-call is 3d, can't batch
+			const auto& OtherDrawCall = InUIDrawCallList[i];
+			if (!OtherDrawCall->bIs2DSpace)//draw-call is 3d, can't batch
 			{
 				return false;
 			}
 
-			if (!DrawCallItem->CanConsumeUIBatchMeshRenderable(InUIItem->GetGeometry(), InUIItemVerticesCount))//can't fit in this draw-call, should check overlap
+			if (!OtherDrawCall->CanConsumeUIBatchMeshRenderable(InUIItem->GetGeometry(), InUIItemVerticesCount))//can't fit in this draw-call, should check overlap
 			{
-				if (OverlapWithOtherDrawCall(InUIItem->GetGeometry(), DrawCallItem))//overlap with other draw-call, can't batch
+				if (OverlapWithOtherDrawCall(InUIItem->GetGeometry(), OtherDrawCall))//overlap with other draw-call, can't batch
 				{
 					if (CanFitinDrawCallIndexArray.Num() > 0)
 					{
@@ -981,8 +982,8 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 				DrawCallItem->Texture = InItemGeo->Texture;
 				DrawCallItem->Material = InItemGeo->Material.Get();
 #if LGUI_Test_ResetRenderObjectList
-				DrawCallItem->RenderObjectList.Reset();
-				DrawCallItem->RenderObjectList.Add((UUIBatchMeshRenderable*)InUIItem);
+				DrawCallItem->BatchMeshRenderObjectList.Reset();
+				DrawCallItem->BatchMeshRenderObjectList.Add((UUIBatchMeshRenderable*)InUIItem);
 #endif
 				DrawCallItem->BatchMeshTreeNode = MakeUnique<LexUIQuadTree::Node>(CanvasRect);
 				DrawCallItem->BatchMeshTreeNode->Insert(LexUIQuadTree::Rectangle(InItemGeo->BoundsMin2DInCanvasSpace, InItemGeo->BoundsMax2DInCanvasSpace));
@@ -1062,7 +1063,10 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 		InDrawCallItem->bNeedToUpdateVertex = true;
 		InDrawCallItem->bMaterialNeedToReassign = true;
 		int index = InDrawCallItem->BatchMeshRenderObjectList.IndexOfByKey(InUIBatchMeshRenderable);
-		InDrawCallItem->BatchMeshRenderObjectList.RemoveAt(index);
+		if (index != INDEX_NONE)
+		{
+			InDrawCallItem->BatchMeshRenderObjectList.RemoveAt(index);
+		}
 		InUIBatchMeshRenderable->drawcall = nullptr;
 	};
 	auto ClearChildCanvasFromDrawCall = [&](const TSharedPtr<FLexUIDrawCall>& InDrawCallItem, ULGUICanvas* InChildCanvas) {
@@ -1157,7 +1161,7 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 					if (UIBatchMeshRenderableItem->drawcall == DrawCallItem)//already exist in this draw-call (added previously)
 					{
 #if LGUI_Test_ResetRenderObjectList
-						DrawCallItem->RenderObjectList.Add(UIBatchMeshRenderableItem);
+						DrawCallItem->BatchMeshRenderObjectList.Add(UIBatchMeshRenderableItem);
 #else
 						//mark sort list
 						DrawCallItem->bNeedToSortBatchMeshRenderObjectList = true;
@@ -1231,17 +1235,20 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 		}
 	}
 
-	//@todo: the UIRenderableList is already sorted, so actually we better not to sort the RenderObjectList. But when I try to do it (LGUI_Test_ResetRenderObjectList), a RenderObjectList become "Invalid", that is very strange, a TArray can't just become "Invalid".
+	//@todo: the BatchMeshRenderObjectList is already sorted, so actually we better not to sort the BatchMeshRenderObjectList. But when I try to do it (LGUI_Test_ResetRenderObjectList), a BatchMeshRenderObjectList become "Invalid", that is very strange, a TArray can't just become "Invalid".
 	//check if we need to sort RenderObjectList
 #if !LGUI_Test_ResetRenderObjectList
-	for (auto& DrawCallItem : InUIDrawCallList)
 	{
-		if (DrawCallItem->bNeedToSortBatchMeshRenderObjectList)
+		SCOPE_CYCLE_COUNTER(STAT_SortBatchMeshInDrawCall);
+		for (auto& DrawCallItem : InUIDrawCallList)
 		{
-			DrawCallItem->bNeedToSortBatchMeshRenderObjectList = false;
-			DrawCallItem->BatchMeshRenderObjectList.Sort([](const TWeakObjectPtr<UUIBatchMeshRenderable>& A, const TWeakObjectPtr<UUIBatchMeshRenderable>& B) {
-				return A->GetFlattenHierarchyIndex() < B->GetFlattenHierarchyIndex();
-				});
+			if (DrawCallItem->bNeedToSortBatchMeshRenderObjectList)
+			{
+				DrawCallItem->bNeedToSortBatchMeshRenderObjectList = false;
+				DrawCallItem->BatchMeshRenderObjectList.Sort([](const TWeakObjectPtr<UUIBatchMeshRenderable>& A, const TWeakObjectPtr<UUIBatchMeshRenderable>& B) {
+					return A->GetFlattenHierarchyIndex() < B->GetFlattenHierarchyIndex();
+					});
+			}
 		}
 	}
 #endif
@@ -1878,8 +1885,10 @@ bool ULGUICanvas::IsMaterialContainsLexUIParameter(UMaterialInterface* InMateria
 		});
 	return FoundIndex != INDEX_NONE;
 }
+DECLARE_CYCLE_STAT(TEXT("Canvas UpdateDrawCallMaterial"), STAT_UpdateDrawCallMaterial, STATGROUP_LGUI);
 void ULGUICanvas::UpdateDrawCallMaterial_Implement()
 {
+	SCOPE_CYCLE_COUNTER(STAT_UpdateDrawCallMaterial);
 	for (int i = 0; i < UIDrawCallList.Num(); i++)
 	{
 		auto DrawCallItem = UIDrawCallList[i];
@@ -1984,10 +1993,7 @@ void ULGUICanvas::UpdateDrawCallMaterial_Implement()
 		}
 	}
 
-	if (bNeedToVerifyMaterials)
-	{
-		MarkNeedVerifyMaterials();//tell parent canvas to verify material
-	}
+	MarkNeedVerifyMaterials();//tell parent canvas to verify material
 	if (bNeedToVerifyMaterials)
 	{
 		bNeedToVerifyMaterials = false;

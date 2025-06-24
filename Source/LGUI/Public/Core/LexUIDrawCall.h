@@ -61,11 +61,11 @@ public:
 
 	TWeakObjectPtr<UUIDirectMeshRenderable> DirectMeshRenderableObject;
 
-	TArray<TWeakObjectPtr<UUIBatchMeshRenderable>> BatchMeshRenderObjectList;//render object collections belong to this draw-call, must be sorted on hierarchy-index
-	bool bNeedToSortBatchMeshRenderObjectList = false;//need to sort RenderObjectList?
+	TArray<TWeakObjectPtr<UUIBatchMeshRenderable>> BatchMeshRenderObjectList;//BatchMesh object collections belong to this draw-call, must be sorted on hierarchy-index
+	bool bNeedToSortBatchMeshRenderObjectList = false;//need to sort BatchMeshRenderObjectList?
 	TUniquePtr<LexUIQuadTree::Node> BatchMeshTreeNode = nullptr;
-	int32 VerticesCount = 0;//vertices count of all renderObjectList
-	int32 IndicesCount = 0;//triangle indices count of all renderObjectList
+	int32 VerticesCount = 0;//vertices count of all BatchMeshRenderObjectList
+	int32 IndicesCount = 0;//triangle indices count of all BatchMeshRenderObjectList
 
 	bool bIs2DSpace = false;//transform relative to canvas is 2d or not? only 2d draw-call can batch
 
