@@ -58,7 +58,7 @@ namespace LexUIQuadTree
 		Node* BottomRight = nullptr;
 
 		//insert a rect, and potentially create sub areas
-		void InsertWithSplit(Rectangle InRect)
+		void InsertWithSplit(const Rectangle& InRect)
 		{
 			//create sub nodes
 			if (TopLeft == nullptr)
@@ -117,7 +117,7 @@ namespace LexUIQuadTree
 			}
 		}
 	public:
-		Node(Rectangle InRect)
+		Node(const Rectangle& InRect)
 		{
 			this->NodeRect = InRect;
 			this->Center = this->NodeRect.GetCenter();
@@ -137,7 +137,7 @@ namespace LexUIQuadTree
 			}
 		}
 	public:
-		bool Overlap(Rectangle InRect)
+		bool Overlap(const Rectangle& InRect)
 		{
 			//empty node
 			if (this->RectArray.Num() == 0 && TopLeft == nullptr)
@@ -188,7 +188,7 @@ namespace LexUIQuadTree
 			}
 			return false;
 		}
-		void Insert(Rectangle InRect)
+		void Insert(const Rectangle& InRect)
 		{
 			if (this->Depth >= MaxDepth())//reach max depth, means can't split rect, just add to RectArray
 			{
@@ -221,5 +221,68 @@ namespace LexUIQuadTree
 				InsertWithSplit(InRect);
 			}
 		}
+#if 0//not tested code
+		bool Overlap(const LexUIQuadTree::Node* Other)
+		{
+			//empty node
+			if (this->RectArray.Num() == 0 && this->TopLeft == nullptr)
+			{
+				return false;
+			}
+			if (Other->RectArray.Num() == 0 && Other->TopLeft == nullptr)
+			{
+				return false;
+			}
+			if (this->NodeRect.Intersects(Other->NodeRect))//intersect with NodeRect
+			{
+				//check RectArray
+				for (auto& ItemRect : RectArray)
+				{
+					for (auto& OtherItemRect : Other->RectArray)
+					{
+						if (ItemRect.Intersects(OtherItemRect))
+						{
+							return true;
+						}
+					}
+				}
+				//check sub node
+				if (TopLeft != nullptr && Other->TopLeft != nullptr)
+				{
+					if (TopLeft->Overlap(Other->TopLeft))
+					{
+						return true;
+					}
+					if (TopRight->Overlap(Other->TopRight))
+					{
+						return true;
+					}
+					if (BottomLeft->Overlap(Other->BottomLeft))
+					{
+						return true;
+					}
+					if (BottomRight->Overlap(Other->BottomRight))
+					{
+						return true;
+					}
+				}
+			}
+			else//not intersect with NodeRect, but can still intersect with RectArray
+			{
+				//check RectArray
+				for (auto& ItemRect : RectArray)
+				{
+					for (auto& OtherItemRect : Other->RectArray)
+					{
+						if (ItemRect.Intersects(OtherItemRect))
+						{
+							return true;
+						}
+					}
+				}
+			}
+			return false;
+		}
+#endif
 	};
 };

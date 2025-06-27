@@ -907,9 +907,10 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 				return false;
 			}
 
-			if (!OtherDrawCall->CanConsumeUIBatchMeshRenderable(InUIItem->GetGeometry(), InUIItemVerticesCount))//can't fit in this draw-call, should check overlap
+			auto UIGeo = InUIItem->GetGeometry();
+			if (!OtherDrawCall->CanConsumeUIBatchMeshRenderable(UIGeo, InUIItemVerticesCount))//can't fit in this draw-call, should check overlap
 			{
-				if (OverlapWithOtherDrawCall(InUIItem->GetGeometry(), OtherDrawCall))//overlap with other draw-call, can't batch
+				if (OverlapWithOtherDrawCall(UIGeo, OtherDrawCall))//overlap with other draw-call, can't batch
 				{
 					if (CanFitinDrawCallIndexArray.Num() > 0)
 					{
@@ -919,6 +920,12 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 					return false;
 				}
 				continue;//not overlap with other draw-call, keep searching
+			}
+			//can fit-in this drawcall but also overlap with it, then no need to go deeper because it must not batch in other deeper drawcall
+			if (OtherDrawCall->BatchMeshTreeNode->Overlap(LexUIQuadTree::Rectangle(UIGeo->BoundsMin2DInCanvasSpace, UIGeo->BoundsMax2DInCanvasSpace)))
+			{
+				OutDrawCallIndexToFitin = i;
+				return true;
 			}
 			CanFitinDrawCallIndexArray.Add(i);
 		}
