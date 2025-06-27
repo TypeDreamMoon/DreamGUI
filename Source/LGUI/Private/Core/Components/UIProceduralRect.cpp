@@ -424,11 +424,11 @@ UMaterialInterface* UUIProceduralRect::GetMaterialToCreateGeometry()
 void UUIProceduralRect::UpdateMaterialClipType()
 {
 	geometry->Material = GetMaterialToCreateGeometry();
-	if (drawcall.IsValid())
+	if (DrawCall.IsValid())
 	{
-		drawcall->bMaterialChanged = true;
-		drawcall->bMaterialNeedToReassign = true;
-		drawcall->bNeedToUpdateVertex = true;
+		DrawCall->bMaterialChanged = true;
+		DrawCall->bMaterialNeedToReassign = true;
+		DrawCall->bNeedToUpdateVertex = true;
 	}
 }
 void UUIProceduralRect::OnMaterialInstanceDynamicCreated(class UMaterialInstanceDynamic* mat) 
@@ -545,11 +545,11 @@ bool UUIProceduralRect::LineTraceUIRect(FHitResult& OutHit, const FVector& Start
 void UUIProceduralRect::OnDataTextureChanged(class UTexture* Texture)
 {
 	geometry->Texture = GetTextureToCreateGeometry();
-	if (drawcall.IsValid())
+	if (DrawCall.IsValid())
 	{
-		drawcall->Texture = geometry->Texture;
-		drawcall->bTextureChanged = true;
-		drawcall->bNeedToUpdateVertex = true;
+		DrawCall->Texture = geometry->Texture;
+		DrawCall->bTextureChanged = true;
+		DrawCall->bNeedToUpdateVertex = true;
 	}
 	MarkVerticesDirty(false, true, true, false);
 	MarkCanvasUpdate(true, true, false);
@@ -620,10 +620,10 @@ void UUIProceduralRect::ApplyAtlasTextureChange_Implementation()
 	geometry->Texture = BodySpriteTexture->GetAtlasTexture();
 	if (RenderCanvas.IsValid())
 	{
-		if (drawcall.IsValid())
+		if (DrawCall.IsValid())
 		{
-			drawcall->Texture = geometry->Texture;
-			drawcall->bTextureChanged = true;
+			DrawCall->Texture = geometry->Texture;
+			DrawCall->bTextureChanged = true;
 		}
 	}
 	MarkCanvasUpdate(true, true, false);
@@ -645,11 +645,11 @@ void UUIProceduralRect::ApplyAtlasTextureScaleUp_Implementation()
 	geometry->Texture = BodySpriteTexture->GetAtlasTexture();
 	if (RenderCanvas.IsValid())
 	{
-		if (drawcall.IsValid())
+		if (DrawCall.IsValid())
 		{
-			drawcall->Texture = geometry->Texture;
-			drawcall->bTextureChanged = true;
-			drawcall->bNeedToUpdateVertex = true;
+			DrawCall->Texture = geometry->Texture;
+			DrawCall->bTextureChanged = true;
+			DrawCall->bNeedToUpdateVertex = true;
 		}
 	}
 	MarkVerticesDirty(false, true, true, false);

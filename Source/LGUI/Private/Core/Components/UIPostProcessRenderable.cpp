@@ -89,7 +89,7 @@ void UUIPostProcessRenderable::UpdateGeometry()
 	if (!RenderCanvas.IsValid())return;
 
 	Super::UpdateGeometry();
-	if (!drawcall.IsValid()//not add to render yet
+	if (!DrawCall.IsValid()//not add to render yet
 		)
 	{
 		geometry->Clear();

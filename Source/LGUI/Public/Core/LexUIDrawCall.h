@@ -43,9 +43,10 @@ public:
 	}
 	ELexUIDrawCallType Type = ELexUIDrawCallType::BatchGeometry;
 
-	TWeakObjectPtr<UTexture> Texture = nullptr;//draw-call used this texture to render
+	TWeakObjectPtr<UTexture> Texture = nullptr;//draw-call use this texture to render
+	TWeakObjectPtr<UTexture> FontTexture = nullptr;//draw-call use this texture to render font
 	TWeakObjectPtr<UMaterialInterface> Material = nullptr;//draw-call use this material to render, can be null to use default material
-	TWeakObjectPtr<UMaterialInterface> RenderMaterial = nullptr;//material that render this draw-call
+	TWeakObjectPtr<UMaterialInterface> RenderMaterial = nullptr;//actual material that render this draw-call
 	TWeakObjectPtr<ULexUIMeshComponent> DrawCallMesh = nullptr;//mesh for render this draw-call
 	TWeakPtr<FLexUIRenderSection> DrawCallRenderSection = nullptr;//section of mesh which render this draw-call
 
@@ -73,5 +74,5 @@ public:
 public:
 	void GetCombined(TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndexBufferType>& triangles)const;
 	void CopyUpdateState(FLexUIDrawCall* Target);
-	bool CanConsumeUIBatchMeshRenderable(FLexUIGeometry* geo, int32 itemVertCount);
+	bool CanConsumeUIGeometryForBatchMesh(FLexUIGeometry* geo, int32 itemVertCount);
 };

@@ -96,10 +96,10 @@ void UUIBatchMeshRenderable::MarkTextureDirty()
 {
 	if (RenderCanvas.IsValid())
 	{
-		if (drawcall.IsValid())
+		if (DrawCall.IsValid())
 		{
 			geometry->Texture = GetTextureToCreateGeometry();
-			drawcall->bTextureChanged = true;
+			DrawCall->bTextureChanged = true;
 		}
 		MarkCanvasUpdate(true, false, false);
 	}
@@ -108,10 +108,10 @@ void UUIBatchMeshRenderable::MarkMaterialDirty()
 {
 	if (RenderCanvas.IsValid())
 	{
-		if (drawcall.IsValid())
+		if (DrawCall.IsValid())
 		{
 			geometry->Material = GetMaterialToCreateGeometry();
-			drawcall->bMaterialChanged = true;
+			DrawCall->bMaterialChanged = true;
 		}
 		MarkCanvasUpdate(true, false, false);
 	}
@@ -146,13 +146,13 @@ void UUIBatchMeshRenderable::MarkAllDirty()
 	bTriangleChanged = true;
 	if (RenderCanvas.IsValid())
 	{
-		if (drawcall.IsValid())
+		if (DrawCall.IsValid())
 		{
 			geometry->Texture = GetTextureToCreateGeometry();
-			drawcall->bTextureChanged = true;
+			DrawCall->bTextureChanged = true;
 
 			geometry->Material = GetMaterialToCreateGeometry();
-			drawcall->bMaterialChanged = true;
+			DrawCall->bMaterialChanged = true;
 		}
 		MarkCanvasUpdate(true, false, false);
 	}
@@ -176,9 +176,9 @@ UMaterialInstanceDynamic* UUIBatchMeshRenderable::GetMaterialInstanceDynamic()co
 			return (UMaterialInstanceDynamic*)CustomUIMaterial;//if CustomUIMaterial is a MaterialInstanceDynamic then just return it directly
 		}
 	}
-	if (drawcall.IsValid() && drawcall->RenderMaterial.IsValid() && drawcall->bMaterialContainsLexUIParameter)
+	if (DrawCall.IsValid() && DrawCall->RenderMaterial.IsValid() && DrawCall->bMaterialContainsLexUIParameter)
 	{
-		return (UMaterialInstanceDynamic*)drawcall->RenderMaterial.Get();
+		return (UMaterialInstanceDynamic*)DrawCall->RenderMaterial.Get();
 	}
 	return nullptr;
 }
@@ -271,7 +271,7 @@ void UUIBatchMeshRenderable::UpdateGeometry()
 	Super::UpdateGeometry();
 
 	OnBeforeCreateOrUpdateGeometry();
-	if (!drawcall.IsValid()//not add to render yet
+	if (!DrawCall.IsValid()//not add to render yet
 		)
 	{
 		geometry->Clear();
@@ -309,7 +309,7 @@ void UUIBatchMeshRenderable::UpdateGeometry()
 			}
 			OnUpdateGeometry(*(geometry.Get()), bTriangleChanged, bLocalVertexPositionChanged || pixelPerfectAffectTransform, bUVChanged, bColorChanged);
 			ApplyGeometryModifier(bTriangleChanged, bUVChanged, bColorChanged, bLocalVertexPositionChanged);
-			drawcall->bNeedToUpdateVertex = true;
+			DrawCall->bNeedToUpdateVertex = true;
 			if (bLocalVertexPositionChanged || pixelPerfectAffectTransform)//pixelPerfect is affected by transform, and can affect localVertex calculation
 			{
 				CalculateLocalBounds();//CalculateLocalBounds must stay before TransformVertices, because TransformVertices will also cache bounds for Canvas to check 2d overlap.
@@ -318,7 +318,7 @@ void UUIBatchMeshRenderable::UpdateGeometry()
 		if (bClipDataChanged)
 		{
 			OnUpdateGeometryClipData(*(geometry.Get()), true);
-			drawcall->bNeedToUpdateVertex = true;
+			DrawCall->bNeedToUpdateVertex = true;
 		}
 		if (bLocalVertexPositionChanged || bTransformChanged)
 		{
@@ -329,7 +329,7 @@ void UUIBatchMeshRenderable::UpdateGeometry()
 				FLexUIGeometry::TransformVertices(this->GetRenderCanvas(), this, this->geometry.Get());
 				this->GetRenderCanvas()->DecreaseThreadProcessingGeometry();
 			});
-			drawcall->bNeedToUpdateVertex = true;
+			DrawCall->bNeedToUpdateVertex = true;
 		}
 	}
 	if (geometry->OriginVertices.Num() >= LEXUI_MAX_VERTEX_COUNT)

@@ -429,6 +429,7 @@ public:
 	ULexUIMeshComponent* GetUIMesh()const { CheckUIMesh(); return UIMesh.Get(); }
 public:
 	static FName LexUI_MainTextureMaterialParameterName;
+	static FName LexUI_FontTextureMaterialParameterName;
 	static FName LexUI_ClipDataTexture_MaterialParameterName;
 	bool IsMaterialContainsLexUIParameter(UMaterialInterface* InMaterial);
 private:

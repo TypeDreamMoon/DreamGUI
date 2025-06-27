@@ -59,7 +59,7 @@ ULGUICanvas::ULGUICanvas()
 	bIsViewProjectionMatrixDirty = true;
 
 	DefaultMeshType = ULexUIMeshComponent::StaticClass();
-	DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/LexUI_Image"));
+	DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/LexUI_ImageAndFont"));
 }
 
 void ULGUICanvas::BeginPlay()
@@ -729,7 +729,7 @@ void ULGUICanvas::RemoveUIRenderable(UUIBaseRenderable* UIRenderableItem)
 {
 	if (UIRenderableList.Remove(UIRenderableItem) > 0)
 	{
-		auto DrawCall = UIRenderableItem->drawcall;
+		auto DrawCall = UIRenderableItem->DrawCall;
 		if (DrawCall.IsValid())
 		{
 			switch (UIRenderableItem->GetUIRenderableType())
@@ -754,7 +754,7 @@ void ULGUICanvas::RemoveUIRenderable(UUIBaseRenderable* UIRenderableItem)
 			}
 			break;
 			}
-			UIRenderableItem->drawcall = nullptr;
+			UIRenderableItem->DrawCall = nullptr;
 		}
 		MarkCanvasUpdate(false, false, true);
 	}
@@ -828,8 +828,6 @@ void ULGUICanvas::UpdateGeometry_Implement()
 	}
 }
 
-#define LGUI_Test_ResetRenderObjectList 1
-
 DECLARE_CYCLE_STAT(TEXT("Canvas BatchDrawCall"), STAT_BatchDrawCall, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("Canvas BatchDrawCall/OverlapTest"), STAT_OverlapTest, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("Canvas BatchDrawCall/SortBatchMeshInDrawCall"), STAT_SortBatchMeshInDrawCall, STATGROUP_LGUI);
@@ -889,7 +887,7 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 		{
 			//3d UI can only batch into last draw-call
 			const auto& LastDrawCall = InUIDrawCallList[LastDrawCallIndex];
-			if (LastDrawCall->CanConsumeUIBatchMeshRenderable(InUIItem->GetGeometry(), InUIItemVerticesCount))
+			if (LastDrawCall->CanConsumeUIGeometryForBatchMesh(InUIItem->GetGeometry(), InUIItemVerticesCount))
 			{
 				OutDrawCallIndexToFitin = LastDrawCallIndex;
 				return true;
@@ -908,7 +906,7 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 			}
 
 			auto UIGeo = InUIItem->GetGeometry();
-			if (!OtherDrawCall->CanConsumeUIBatchMeshRenderable(UIGeo, InUIItemVerticesCount))//can't fit in this draw-call, should check overlap
+			if (!OtherDrawCall->CanConsumeUIGeometryForBatchMesh(UIGeo, InUIItemVerticesCount))//can't fit in this draw-call, should check overlap
 			{
 				if (OverlapWithOtherDrawCall(UIGeo, OtherDrawCall))//overlap with other draw-call, can't batch
 				{
@@ -985,29 +983,34 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 			switch (InDrawCallType)
 			{
 			case ELexUIDrawCallType::BatchGeometry:
-			{
-				DrawCallItem->Texture = InItemGeo->Texture;
-				DrawCallItem->Material = InItemGeo->Material.Get();
-#if LGUI_Test_ResetRenderObjectList
-				DrawCallItem->BatchMeshRenderObjectList.Reset();
-				DrawCallItem->BatchMeshRenderObjectList.Add((UUIBatchMeshRenderable*)InUIItem);
-#endif
-				DrawCallItem->BatchMeshTreeNode = MakeUnique<LexUIQuadTree::Node>(CanvasRect);
-				DrawCallItem->BatchMeshTreeNode->Insert(LexUIQuadTree::Rectangle(InItemGeo->BoundsMin2DInCanvasSpace, InItemGeo->BoundsMax2DInCanvasSpace));
-				DrawCallItem->VerticesCount = InItemGeo->Vertices.Num();
-				DrawCallItem->IndicesCount = InItemGeo->Triangles.Num();
-			}
-			break;
+				{
+					if (InItemGeo->bIsFont)
+					{
+						DrawCallItem->FontTexture = InItemGeo->Texture;
+					}
+					else
+					{
+						DrawCallItem->Texture = InItemGeo->Texture;
+					}
+					DrawCallItem->Material = InItemGeo->Material.Get();
+					DrawCallItem->BatchMeshRenderObjectList.Reset();
+					DrawCallItem->BatchMeshRenderObjectList.Add((UUIBatchMeshRenderable*)InUIItem);
+					DrawCallItem->BatchMeshTreeNode = MakeUnique<LexUIQuadTree::Node>(CanvasRect);
+					DrawCallItem->BatchMeshTreeNode->Insert(LexUIQuadTree::Rectangle(InItemGeo->BoundsMin2DInCanvasSpace, InItemGeo->BoundsMax2DInCanvasSpace));
+					DrawCallItem->VerticesCount = InItemGeo->Vertices.Num();
+					DrawCallItem->IndicesCount = InItemGeo->Triangles.Num();
+				}
+				break;
 			case ELexUIDrawCallType::PostProcess:
-			{
-				DrawCallItem->PostProcessRenderableObject = (UUIPostProcessRenderable*)InUIItem;
-			}
-			break;
+				{
+					DrawCallItem->PostProcessRenderableObject = (UUIPostProcessRenderable*)InUIItem;
+				}
+				break;
 			case ELexUIDrawCallType::DirectMesh:
-			{
-				DrawCallItem->DirectMeshRenderableObject = (UUIDirectMeshRenderable*)InUIItem;
-			}
-			break;
+				{
+					DrawCallItem->DirectMeshRenderableObject = (UUIDirectMeshRenderable*)InUIItem;
+				}
+				break;
 			}
 		}
 		else
@@ -1016,32 +1019,39 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 			{
 			default:
 			case ELexUIDrawCallType::BatchGeometry:
-			{
-				DrawCallItem = MakeShared<FLexUIDrawCall>(CanvasRect);
-				DrawCallItem->bNeedToUpdateVertex = true;
-				DrawCallItem->Texture = InItemGeo->Texture;
-				DrawCallItem->Material = InItemGeo->Material.Get();
-				DrawCallItem->BatchMeshRenderObjectList.Add((UUIBatchMeshRenderable*)InUIItem);
-				DrawCallItem->VerticesCount = InItemGeo->Vertices.Num();
-				DrawCallItem->IndicesCount = InItemGeo->Triangles.Num();
-				DrawCallItem->BatchMeshTreeNode->Insert(LexUIQuadTree::Rectangle(InItemGeo->BoundsMin2DInCanvasSpace, InItemGeo->BoundsMax2DInCanvasSpace));
-				DrawCallItem->DrawCallMesh = UIMesh;
-			}
-			break;
+				{
+					DrawCallItem = MakeShared<FLexUIDrawCall>(CanvasRect);
+					DrawCallItem->bNeedToUpdateVertex = true;
+					if (InItemGeo->bIsFont)
+					{
+						DrawCallItem->FontTexture = InItemGeo->Texture;
+					}
+					else
+					{
+						DrawCallItem->Texture = InItemGeo->Texture;
+					}
+					DrawCallItem->Material = InItemGeo->Material.Get();
+					DrawCallItem->BatchMeshRenderObjectList.Add((UUIBatchMeshRenderable*)InUIItem);
+					DrawCallItem->VerticesCount = InItemGeo->Vertices.Num();
+					DrawCallItem->IndicesCount = InItemGeo->Triangles.Num();
+					DrawCallItem->BatchMeshTreeNode->Insert(LexUIQuadTree::Rectangle(InItemGeo->BoundsMin2DInCanvasSpace, InItemGeo->BoundsMax2DInCanvasSpace));
+					DrawCallItem->DrawCallMesh = UIMesh;
+				}
+				break;
 			case ELexUIDrawCallType::PostProcess:
-			{
-				DrawCallItem = MakeShared<FLexUIDrawCall>(InDrawCallType);
-				DrawCallItem->PostProcessRenderableObject = (UUIPostProcessRenderable*)InUIItem;
-				DrawCallItem->DrawCallMesh = UIMesh;
-			}
-			break;
+				{
+					DrawCallItem = MakeShared<FLexUIDrawCall>(InDrawCallType);
+					DrawCallItem->PostProcessRenderableObject = (UUIPostProcessRenderable*)InUIItem;
+					DrawCallItem->DrawCallMesh = UIMesh;
+				}
+				break;
 			case ELexUIDrawCallType::DirectMesh:
-			{
-				DrawCallItem = MakeShared<FLexUIDrawCall>(InDrawCallType);
-				DrawCallItem->DirectMeshRenderableObject = (UUIDirectMeshRenderable*)InUIItem;
-				DrawCallItem->DrawCallMesh = UIMesh;
-			}
-			break;
+				{
+					DrawCallItem = MakeShared<FLexUIDrawCall>(InDrawCallType);
+					DrawCallItem->DirectMeshRenderableObject = (UUIDirectMeshRenderable*)InUIItem;
+					DrawCallItem->DrawCallMesh = UIMesh;
+				}
+				break;
 			}
 		}
 		DrawCallItem->bIs2DSpace = InIs2DSpace;
@@ -1050,7 +1060,7 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 			|| InDrawCallType == ELexUIDrawCallType::PostProcess
 			|| InDrawCallType == ELexUIDrawCallType::DirectMesh)
 		{
-			((UUIBaseRenderable*)InUIItem)->drawcall = DrawCallItem;
+			((UUIBaseRenderable*)InUIItem)->DrawCall = DrawCallItem;
 		}
 		InUIDrawCallList.Add(DrawCallItem);
 
@@ -1074,7 +1084,7 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 		{
 			InDrawCallItem->BatchMeshRenderObjectList.RemoveAt(index);
 		}
-		InUIBatchMeshRenderable->drawcall = nullptr;
+		InUIBatchMeshRenderable->DrawCall = nullptr;
 	};
 	auto ClearChildCanvasFromDrawCall = [&](const TSharedPtr<FLexUIDrawCall>& InDrawCallItem, ULGUICanvas* InChildCanvas) {
 		if (InDrawCallItem->DrawCallRenderSection.IsValid())
@@ -1165,14 +1175,19 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 				{
 					auto DrawCallItem = InUIDrawCallList[DrawCallIndexToFitin];
 					DrawCallItem->bIs2DSpace = DrawCallItem->bIs2DSpace && is2DUIItem;
-					if (UIBatchMeshRenderableItem->drawcall == DrawCallItem)//already exist in this draw-call (added previously)
+					if (ItemGeo->bIsFont)
 					{
-#if LGUI_Test_ResetRenderObjectList
+						DrawCallItem->FontTexture = ItemGeo->Texture;
+					}
+					else
+					{
+						DrawCallItem->Texture = ItemGeo->Texture;
+					}
+					if (UIBatchMeshRenderableItem->DrawCall == DrawCallItem)//already exist in this draw-call (added previously)
+					{
 						DrawCallItem->BatchMeshRenderObjectList.Add(UIBatchMeshRenderableItem);
-#else
 						//mark sort list
 						DrawCallItem->bNeedToSortBatchMeshRenderObjectList = true;
-#endif
 						//update tree
 						DrawCallItem->BatchMeshTreeNode->Insert(LexUIQuadTree::Rectangle(ItemGeo->BoundsMin2DInCanvasSpace, ItemGeo->BoundsMax2DInCanvasSpace));
 						DrawCallItem->VerticesCount += ItemGeo->Vertices.Num();
@@ -1180,7 +1195,7 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 					}
 					else//not exist in this draw-call
 					{
-						auto OldDrawCall = UIBatchMeshRenderableItem->drawcall;
+						auto OldDrawCall = UIBatchMeshRenderableItem->DrawCall;
 						if (OldDrawCall.IsValid())//maybe exist in other draw-call, should remove from that draw-call
 						{
 							ClearObjectFromDrawCall(OldDrawCall, UIBatchMeshRenderableItem);
@@ -1191,7 +1206,7 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 						DrawCallItem->VerticesCount += ItemGeo->Vertices.Num();
 						DrawCallItem->IndicesCount += ItemGeo->Triangles.Num();
 						DrawCallItem->bNeedToUpdateVertex = true;
-						UIBatchMeshRenderableItem->drawcall = DrawCallItem;
+						UIBatchMeshRenderableItem->DrawCall = DrawCallItem;
 						//copy update state from old to new
 						if (OldDrawCall.IsValid())
 						{
@@ -1202,7 +1217,7 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 				}
 				else//cannot fit in any other draw-call
 				{
-					auto OldDrawCall = UIBatchMeshRenderableItem->drawcall;
+					auto OldDrawCall = UIBatchMeshRenderableItem->DrawCall;
 					if (OldDrawCall.IsValid())//maybe exist in other draw-call, should remove from that draw-call
 					{
 						if (InUIDrawCallList.Contains(OldDrawCall))//if this draw-call already exist (added previously), then remove the object from the draw-call.
@@ -1212,7 +1227,7 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 					}
 					//make a new draw-call
 					PushSingleDrawCall(UIBatchMeshRenderableItem, true, ItemGeo, ELexUIDrawCallType::BatchGeometry, is2DUIItem);
-					check(UIBatchMeshRenderableItem->drawcall->VerticesCount < LEXUI_MAX_VERTEX_COUNT);
+					check(UIBatchMeshRenderableItem->DrawCall->VerticesCount < LEXUI_MAX_VERTEX_COUNT);
 				}
 			}
 			break;
@@ -1235,30 +1250,12 @@ void ULGUICanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, c
 				//every direct mesh is a draw-call
 				bool is2DUIItem = true;//post process just use true because it not matter
 				PushSingleDrawCall(UIRenderableItem, true, nullptr, ELexUIDrawCallType::DirectMesh, is2DUIItem);
-				UIDirectMeshRenderableItem->drawcall->Material = UIDirectMeshRenderableItem->GetMaterial();
+				UIDirectMeshRenderableItem->DrawCall->Material = UIDirectMeshRenderableItem->GetMaterial();
 			}
 			break;
 			}
 		}
 	}
-
-	//@todo: the BatchMeshRenderObjectList is already sorted, so actually we better not to sort the BatchMeshRenderObjectList. But when I try to do it (LGUI_Test_ResetRenderObjectList), a BatchMeshRenderObjectList become "Invalid", that is very strange, a TArray can't just become "Invalid".
-	//check if we need to sort RenderObjectList
-#if !LGUI_Test_ResetRenderObjectList
-	{
-		SCOPE_CYCLE_COUNTER(STAT_SortBatchMeshInDrawCall);
-		for (auto& DrawCallItem : InUIDrawCallList)
-		{
-			if (DrawCallItem->bNeedToSortBatchMeshRenderObjectList)
-			{
-				DrawCallItem->bNeedToSortBatchMeshRenderObjectList = false;
-				DrawCallItem->BatchMeshRenderObjectList.Sort([](const TWeakObjectPtr<UUIBatchMeshRenderable>& A, const TWeakObjectPtr<UUIBatchMeshRenderable>& B) {
-					return A->GetFlattenHierarchyIndex() < B->GetFlattenHierarchyIndex();
-					});
-			}
-		}
-	}
-#endif
 }
 
 void ULGUICanvas::SetOverrideViewLocation(bool InOverride, FVector InValue)
@@ -1578,10 +1575,10 @@ void ULGUICanvas::UpdateDrawCallMesh_Implement()
 
 			if (!DrawCallItem->DrawCallRenderSection.IsValid())
 			{
+				Mutex.Lock();
 				auto RenderSection = UIMesh->CreateRenderSection(ELexUIRenderSectionType::PostProcess);
 				auto ChildCanvasSection = (FLexUIPostProcessSection*)RenderSection.Get();
 				ChildCanvasSection->PostProcessRenderableObject = DrawCallItem->PostProcessRenderableObject;
-				Mutex.Lock();
 				UIMesh->CreateRenderSectionRenderData(RenderSection);
 				Mutex.Unlock();
 				DrawCallItem->DrawCallRenderSection = RenderSection;
@@ -1596,11 +1593,11 @@ void ULGUICanvas::UpdateDrawCallMesh_Implement()
 		{
 			if (!DrawCallItem->DrawCallRenderSection.IsValid())
 			{
+				Mutex.Lock();
 				auto RenderSection = UIMesh->CreateRenderSection(ELexUIRenderSectionType::ChildCanvas);
 				auto ChildCanvasSection = (FLexUIChildCanvasSection*)RenderSection.Get();
 				ChildCanvasSection->ChildCanvasMeshComponent = DrawCallItem->ChildCanvas->GetUIMesh();
 				ChildCanvasSection->ChildCanvasMeshComponent->SetParentCanvasMeshComp(this->UIMesh.Get());
-				Mutex.Lock();
 				UIMesh->CreateRenderSectionRenderData(RenderSection);
 				Mutex.Unlock();
 				DrawCallItem->DrawCallRenderSection = RenderSection;
@@ -1876,6 +1873,7 @@ void ULGUICanvas::SortDrawCall()
 }
 
 FName ULGUICanvas::LexUI_MainTextureMaterialParameterName = FName(TEXT("LexUI_MainTexture"));
+FName ULGUICanvas::LexUI_FontTextureMaterialParameterName = FName(TEXT("LexUI_FontTexture"));
 FName ULGUICanvas::LexUI_ClipDataTexture_MaterialParameterName = FName(TEXT("LexUI_ClipDataTexture"));
 
 bool ULGUICanvas::IsMaterialContainsLexUIParameter(UMaterialInterface* InMaterial)
@@ -1887,6 +1885,7 @@ bool ULGUICanvas::IsMaterialContainsLexUIParameter(UMaterialInterface* InMateria
 		{
 			return
 				Item.Name == LexUI_MainTextureMaterialParameterName
+				|| Item.Name == LexUI_FontTextureMaterialParameterName
 				|| Item.Name == LexUI_ClipDataTexture_MaterialParameterName
 				;
 		});
@@ -1957,6 +1956,7 @@ void ULGUICanvas::UpdateDrawCallMaterial_Implement()
 				if (RenderMat.IsValid() && DrawCallItem->bMaterialContainsLexUIParameter)
 				{
 					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_MainTextureMaterialParameterName, DrawCallItem->Texture.Get());
+					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_FontTextureMaterialParameterName, DrawCallItem->FontTexture.Get());
 					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_ClipDataTexture_MaterialParameterName, ClipDataAsTexture->GetDataTexture());
 				}
 				DrawCallItem->bTextureChanged = false;
@@ -1974,6 +1974,7 @@ void ULGUICanvas::UpdateDrawCallMaterial_Implement()
 				if (RenderMat.IsValid() && DrawCallItem->bMaterialContainsLexUIParameter)
 				{
 					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_MainTextureMaterialParameterName, DrawCallItem->Texture.Get());
+					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_FontTextureMaterialParameterName, DrawCallItem->Texture.Get());
 				}
 			}
 			if (DrawCallItem->bMaterialNeedToReassign)
@@ -2169,7 +2170,7 @@ UMaterialInterface* ULGUICanvas::GetDefaultMaterial()const
 {
 	if (!DefaultMaterial)
 	{
-		DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/LexUI_Image"));;
+		DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/LexUI_ImageAndFont"));;
 	}
 	return DefaultMaterial;
 }

@@ -34,6 +34,7 @@ UUIText::UUIText(const FObjectInitializer& ObjectInitializer):Super(ObjectInitia
 	}
 #endif
 	CacheTextGeometryData = FLexUITextGeometryCache(this);
+	geometry->bIsFont = true;
 }
 void UUIText::ApplyFontTextureScaleUp()
 {
@@ -49,11 +50,11 @@ void UUIText::ApplyFontTextureScaleUp()
 	geometry->Texture = GetTextureToCreateGeometry();
 	if (RenderCanvas.IsValid())
 	{
-		if (drawcall.IsValid())
+		if (DrawCall.IsValid())
 		{
-			drawcall->Texture = geometry->Texture;
-			drawcall->bTextureChanged = true;
-			drawcall->bNeedToUpdateVertex = true;
+			DrawCall->Texture = geometry->Texture;
+			DrawCall->bTextureChanged = true;
+			DrawCall->bNeedToUpdateVertex = true;
 		}
 	}
 	MarkVerticesDirty(false, true, true, false);
@@ -69,11 +70,11 @@ void UUIText::ApplyFontTextureChange()
 		geometry->Texture = GetTextureToCreateGeometry();
 		if (RenderCanvas.IsValid())
 		{
-			if (drawcall.IsValid())
+			if (DrawCall.IsValid())
 			{
-				drawcall->Texture = geometry->Texture;
-				drawcall->bTextureChanged = true;
-				drawcall->bNeedToUpdateVertex = true;
+				DrawCall->Texture = geometry->Texture;
+				DrawCall->bTextureChanged = true;
+				DrawCall->bNeedToUpdateVertex = true;
 			}
 		}
 	}
@@ -88,12 +89,12 @@ void UUIText::ApplyFontMaterialChange()
 		geometry->Material = GetMaterialToCreateGeometry();
 		if (RenderCanvas.IsValid())
 		{
-			if (drawcall.IsValid())
+			if (DrawCall.IsValid())
 			{
-				drawcall->Material = geometry->Material;
-				drawcall->bMaterialChanged = true;
-				drawcall->bMaterialNeedToReassign = true;
-				drawcall->bNeedToUpdateVertex = true;
+				DrawCall->Material = geometry->Material;
+				DrawCall->bMaterialChanged = true;
+				DrawCall->bMaterialNeedToReassign = true;
+				DrawCall->bNeedToUpdateVertex = true;
 			}
 		}
 	}
@@ -355,11 +356,11 @@ void UUIText::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bo
 void UUIText::UpdateMaterialClipType()
 {
 	geometry->Material = GetMaterialToCreateGeometry();
-	if (drawcall.IsValid())
+	if (DrawCall.IsValid())
 	{
-		drawcall->bMaterialChanged = true;
-		drawcall->bMaterialNeedToReassign = true;
-		drawcall->bNeedToUpdateVertex = true;
+		DrawCall->bMaterialChanged = true;
+		DrawCall->bMaterialNeedToReassign = true;
+		DrawCall->bNeedToUpdateVertex = true;
 	}
 }
 

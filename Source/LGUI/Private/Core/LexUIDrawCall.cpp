@@ -45,10 +45,20 @@ void FLexUIDrawCall::CopyUpdateState(FLexUIDrawCall* Target)
 	if (bVertexPositionChanged)Target->bVertexPositionChanged = true;
 }
 
-bool FLexUIDrawCall::CanConsumeUIBatchMeshRenderable(FLexUIGeometry* geo, int32 itemVertCount)
+bool FLexUIDrawCall::CanConsumeUIGeometryForBatchMesh(FLexUIGeometry* geo, int32 itemVertCount)
 {
-	return this->Type == ELexUIDrawCallType::BatchGeometry
-		&& this->Material == geo->Material
-		&& this->Texture == geo->Texture
-		&& this->VerticesCount + itemVertCount < LEXUI_MAX_VERTEX_COUNT;
+	if (this->Type != ELexUIDrawCallType::BatchGeometry)return false;
+	if (this->Material != geo->Material)return false;
+	if (geo->bIsFont)
+	{
+		if (this->FontTexture != nullptr && this->FontTexture != geo->Texture)
+			return false;
+	}
+	else
+	{
+		if (this->Texture != geo->Texture)
+			return false;
+	}
+	if (this->VerticesCount + itemVertCount >= LEXUI_MAX_VERTEX_COUNT)return false;
+	return true;
 }

@@ -20,7 +20,6 @@ ULexUIFontData_DistanceField::ULexUIFontData_DistanceField()
 {
 	initialSize = ELGUIAtlasTextureSizeType::SIZE_1024x1024;
 	rectPackCellSize = 1024;
-	SDFDefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/LexUI_SDF_Font"));
 }
 
 bool ULexUIFontData_DistanceField::GetCharDataFromCache(const TCHAR& charCode, const float& charSize, FLexUICharData_HighPrecision& OutResult)
@@ -204,11 +203,7 @@ float ULexUIFontData_DistanceField::GetVerticalOffset(const float& fontSize)
 }
 UMaterialInterface* ULexUIFontData_DistanceField::GetFontMaterial()
 {
-	if (!SDFDefaultMaterial)
-	{
-		SDFDefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/LexUI_SDF_Font"));
-	}
-	return SDFDefaultMaterial;
+	return nullptr;
 }
 
 void ULexUIFontData_DistanceField::PushCharData(
@@ -479,8 +474,7 @@ void ULexUIFontData_DistanceField::PostEditChangeProperty(FPropertyChangedEvent&
 			ReloadFont();
 		}
 		if (
-			PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_DistanceField, SDFDefaultMaterial)
-			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_DistanceField, ItalicAngle)
+			PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_DistanceField, ItalicAngle)
 			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_DistanceField, BoldRatio)
 			)
 		{

@@ -53,6 +53,7 @@ public:
 
 	TWeakObjectPtr<UTexture> Texture = nullptr;
 	TWeakObjectPtr<UMaterialInterface> Material = nullptr;
+	bool bIsFont = false;
 
 	FTransform TransformRelativeToCanvas;
 	FVector2D BoundsMin2DInCanvasSpace;

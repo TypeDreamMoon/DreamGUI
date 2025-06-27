@@ -164,7 +164,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		FColor GetFinalColor()const;
 
-	TSharedPtr<FLexUIDrawCall> drawcall = nullptr;//drawcall that response for this UI.
+	TSharedPtr<FLexUIDrawCall> DrawCall = nullptr;//drawcall that response for this UI.
 
 	int GetClipDataStartPosition()const;
 	UTexture* GetClipDataTexture()const;

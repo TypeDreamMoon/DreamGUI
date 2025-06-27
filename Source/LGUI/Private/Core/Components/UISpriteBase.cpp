@@ -44,10 +44,10 @@ void UUISpriteBase::ApplyAtlasTextureChange_Implementation()
 	geometry->Texture = sprite->GetAtlasTexture();
 	if (RenderCanvas.IsValid())
 	{
-		if (drawcall.IsValid())
+		if (DrawCall.IsValid())
 		{
-			drawcall->Texture = geometry->Texture;
-			drawcall->bTextureChanged = true;
+			DrawCall->Texture = geometry->Texture;
+			DrawCall->bTextureChanged = true;
 		}
 	}
 	MarkCanvasUpdate(true, true, false);
@@ -67,11 +67,11 @@ void UUISpriteBase::ApplyAtlasTextureScaleUp_Implementation()
 	geometry->Texture = sprite->GetAtlasTexture();
 	if (RenderCanvas.IsValid())
 	{
-		if (drawcall.IsValid())
+		if (DrawCall.IsValid())
 		{
-			drawcall->Texture = geometry->Texture;
-			drawcall->bTextureChanged = true;
-			drawcall->bNeedToUpdateVertex = true;
+			DrawCall->Texture = geometry->Texture;
+			DrawCall->bTextureChanged = true;
+			DrawCall->bNeedToUpdateVertex = true;
 		}
 	}
 	MarkVerticesDirty(false, true, true, false);

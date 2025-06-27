@@ -69,17 +69,17 @@ void UUIDirectMeshRenderable::UpdateGeometry()
 
 TWeakPtr<FLexUIRenderSection> UUIDirectMeshRenderable::GetMeshSection()const
 {
-	if (drawcall.IsValid())
+	if (DrawCall.IsValid())
 	{
-		return drawcall->DrawCallRenderSection;
+		return DrawCall->DrawCallRenderSection;
 	}
 	return nullptr;
 }
 TWeakObjectPtr<ULexUIMeshComponent> UUIDirectMeshRenderable::GetUIMesh()const
 {
-	if (drawcall.IsValid())
+	if (DrawCall.IsValid())
 	{
-		return drawcall->DrawCallMesh;
+		return DrawCall->DrawCallMesh;
 	}
 	return nullptr;
 }
@@ -100,8 +100,8 @@ bool UUIDirectMeshRenderable::LineTraceUI(FHitResult& OutHit, const FVector& Sta
 	}
 	else if (RaycastType == EUIRenderableRaycastType::Mesh)
 	{
-		if (!drawcall.IsValid())return false;
-		if (!drawcall->DrawCallRenderSection.IsValid())return false;
+		if (!DrawCall.IsValid())return false;
+		if (!DrawCall->DrawCallRenderSection.IsValid())return false;
 
 		auto inverseTf = GetComponentTransform().Inverse();
 		auto localSpaceRayOrigin = inverseTf.TransformPosition(Start);
@@ -117,7 +117,7 @@ bool UUIDirectMeshRenderable::LineTraceUI(FHitResult& OutHit, const FVector& Sta
 			if (IntersectionPoint.Y > GetLocalSpaceLeft() && IntersectionPoint.Y < GetLocalSpaceRight() && IntersectionPoint.Z > GetLocalSpaceBottom() && IntersectionPoint.Z < GetLocalSpaceTop())
 			{
 				//triangle hit test
-				auto MeshSection = (FLexUIMeshSection*)drawcall->DrawCallRenderSection.Pin().Get();
+				auto MeshSection = (FLexUIMeshSection*)DrawCall->DrawCallRenderSection.Pin().Get();
 				auto& vertices = MeshSection->vertices;
 				auto& triangleIndices = MeshSection->triangles;
 				int triangleCount = triangleIndices.Num() / 3;

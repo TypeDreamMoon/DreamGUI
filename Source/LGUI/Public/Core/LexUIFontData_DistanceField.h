@@ -35,9 +35,6 @@ class LGUI_API ULexUIFontData_DistanceField : public ULexUIFontData_FreeTypeRend
 public:
 	ULexUIFontData_DistanceField();
 private:
-	/** Use these material to render SDF font for UIText, include clip material. */
-	UPROPERTY(EditAnywhere, Category = "LGUI SDF Font")
-		TObjectPtr<UMaterialInterface> SDFDefaultMaterial;
 	/** Font size when render glyph. */
 	UPROPERTY(EditAnywhere, Category = "LGUI SDF Font", meta = (UIMin = "16", UIMax = "100"))
 		int FontSize = 64;
@@ -77,6 +74,7 @@ public:
 	virtual float GetVerticalOffset(const float& fontSize) override;
 	virtual bool GetShouldAffectByPixelPerfect() override{ return false; }
 	virtual bool GetNeedObjectScale() override{ return true; }//sdf font need scale value in material
+	virtual float GetFontTextureMark() override{ return 1; }
 	//End ULGUIFontDataBaseObject interface
 protected:
 	float italicSlop = 0.0f; float oneDivideFontSize = 1.0f; float objectScale = 1.0f;
