@@ -35,7 +35,7 @@ void FUISpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 			if (validItem->GetWorld() && validItem->GetWorld()->WorldType == EWorldType::Editor)
 			{
 				validItem->CheckSpriteData();
-				validItem->EditorForceUpdate();
+				validItem->GetWidget()->EditorForceUpdate();
 			}
 		}
 	}
@@ -72,7 +72,7 @@ void FUISpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 	spriteHandle->GetValue(*(UObject**)&spriteObject);
 	if (IsValid(spriteObject))
 	{
-		EUIRenderableRaycastType raycastType = EUIRenderableRaycastType::Rect;
+		ELexVisualHitTestType raycastType = ELexVisualHitTestType::Rect;
 		bool bGetRaycastTypeValue = true;
 		for (int i = 0; i < TargetScriptArray.Num(); i++)
 		{
@@ -91,7 +91,7 @@ void FUISpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		}
 		if (bGetRaycastTypeValue)
 		{
-			if (raycastType == EUIRenderableRaycastType::VisiblePixel)
+			if (raycastType == ELexVisualHitTestType::VisiblePixel)
 			{
 				if (!spriteObject->SupportReadPixel())
 				{
@@ -124,8 +124,8 @@ void FUISpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 					{
 						item->Modify();
 						item->SetSizeFromSpriteData();
-						FLexUIUtils::NotifyPropertyChanged(item.Get(), UUIItem::GetAnchorDataPropertyName());
-						item->EditorForceUpdate();
+						FLexUIUtils::NotifyPropertyChanged(item.Get(), ULexWidget::GetAnchorDataPropertyName());
+						item->GetWidget()->EditorForceUpdate();
 					}
 				}
 				GEditor->EndTransaction();

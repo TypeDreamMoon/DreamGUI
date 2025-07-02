@@ -26,11 +26,11 @@ public:
 
 	virtual void BeginSetupAnimations();
 
-	virtual void ApplyAnchoredPositionAnimation(const FVector2D& Value, UUIItem* Target);
-	virtual void ApplyRotatorAnimation(const FRotator& Value, UUIItem* Target);
-	virtual void ApplyWidthAnimation(float Value, UUIItem* Target);
-	virtual void ApplyHeightAnimation(float Value, UUIItem* Target);
-	virtual void ApplySizeDeltaAnimation(const FVector2D& Value, UUIItem* Target);
+	virtual void ApplyAnchoredPositionAnimation(const FVector2D& Value, ULexWidget* Target);
+	virtual void ApplyRotatorAnimation(const FRotator& Value, ULexWidget* Target);
+	virtual void ApplyWidthAnimation(float Value, ULexWidget* Target);
+	virtual void ApplyHeightAnimation(float Value, ULexWidget* Target);
+	virtual void ApplySizeDeltaAnimation(const FVector2D& Value, ULexWidget* Target);
 
 	virtual void EndSetupAnimations();
 protected:
@@ -40,15 +40,15 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "BeginSetupAnimations"), Category = "LGUI")
 		void ReceiveBeginSetupAnimations();
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "ApplyAnchoredPositionAnimation"), Category = "LGUI")
-		void ReceiveApplyAnchoredPositionAnimation(const FVector2D& Value, UUIItem* Target);
+		void ReceiveApplyAnchoredPositionAnimation(const FVector2D& Value, ULexWidget* Target);
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "ApplyRotatorAnimation"), Category = "LGUI")
-		void ReceiveApplyRotatorAnimation(const FRotator& Value, UUIItem* Target);
+		void ReceiveApplyRotatorAnimation(const FRotator& Value, ULexWidget* Target);
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "ApplyWidthAnimation"), Category = "LGUI")
-		void ReceiveApplyWidthAnimation(float Value, UUIItem* Target);
+		void ReceiveApplyWidthAnimation(float Value, ULexWidget* Target);
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "ApplyHeightAnimation"), Category = "LGUI")
-		void ReceiveApplyHeightAnimation(float Value, UUIItem* Target);
+		void ReceiveApplyHeightAnimation(float Value, ULexWidget* Target);
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "ApplySizeDeltaAnimation"), Category = "LGUI")
-		void ReceiveApplySizeDeltaAnimation(const FVector2D& Value, UUIItem* Target);
+		void ReceiveApplySizeDeltaAnimation(const FVector2D& Value, ULexWidget* Target);
 	/** Called after setup all animations when finish calculate layout. */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "EndSetupAnimations"), Category = "LGUI")
 		void ReceiveEndSetupAnimations();
@@ -75,11 +75,11 @@ protected:
 	bool bShouldRebuildLayoutAfterAnimation = false;
 	/** Called before setup any animation when trying to calculate layout. Use this to initialize, eg cancel previous animations. */
 	virtual void BeginSetupAnimations();
-	virtual void ApplyAnchoredPositionWithAnimation(EUILayoutAnimationType AnimationType, FVector2D Value, UUIItem* Target);
-	virtual void ApplyRotatorWithAnimation(EUILayoutAnimationType AnimationType, const FRotator& Value, UUIItem* Target);
-	virtual void ApplyWidthWithAnimation(EUILayoutAnimationType AnimationType, float Value, UUIItem* Target);
-	virtual void ApplyHeightWithAnimation(EUILayoutAnimationType AnimationType, float Value, UUIItem* Target);
-	virtual void ApplySizeDeltaWithAnimation(EUILayoutAnimationType AnimationType, FVector2D Value, UUIItem* Target);
+	virtual void ApplyAnchoredPositionWithAnimation(EUILayoutAnimationType AnimationType, FVector2D Value, ULexWidget* Target);
+	virtual void ApplyRotatorWithAnimation(EUILayoutAnimationType AnimationType, const FRotator& Value, ULexWidget* Target);
+	virtual void ApplyWidthWithAnimation(EUILayoutAnimationType AnimationType, float Value, ULexWidget* Target);
+	virtual void ApplyHeightWithAnimation(EUILayoutAnimationType AnimationType, float Value, ULexWidget* Target);
+	virtual void ApplySizeDeltaWithAnimation(EUILayoutAnimationType AnimationType, FVector2D Value, ULexWidget* Target);
 	/** Called after setup all animations when finish calculate layout. */
 	virtual void EndSetupAnimations();
 public:

@@ -2,8 +2,8 @@
 
 #include "Interaction/UIScrollbarComponent.h"
 #include "LGUI.h"
-#include "Core/Actor/UIBaseActor.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
+#include "Core/Actor/LexWidgetActor.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
 
 UUIScrollbarComponent::UUIScrollbarComponent()
 {
@@ -29,8 +29,8 @@ bool UUIScrollbarComponent::CheckHandle()
         return false;
     if (!HandleActor->GetAttachParentActor())
         return false;
-    Handle = HandleActor->FindComponentByClass<UUIItem>();
-    HandleArea = HandleActor->GetAttachParentActor()->FindComponentByClass<UUIItem>();
+    Handle = HandleActor->FindComponentByClass<ULexWidget>();
+    HandleArea = HandleActor->GetAttachParentActor()->FindComponentByClass<ULexWidget>();
     if (Handle.IsValid() && HandleArea.IsValid())
         return true;
     return false;

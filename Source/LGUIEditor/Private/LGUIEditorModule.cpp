@@ -40,16 +40,16 @@
 #include "AssetTypeActions/AssetTypeActions_LGUIRichTextImageData.h"
 #include "AssetTypeActions/AssetTypeActions_LGUISDFFontData.h"
 
-#include "DetailCustomization/UIItemCustomization.h"
+#include "DetailCustomization/LexWidgetCustomization.h"
 #include "DetailCustomization/UIBaseRenderableCustomization.h"
 #include "DetailCustomization/UIBatchMeshRenderableCustomization.h"
 #include "DetailCustomization/UISpriteBaseCustomization.h"
 #include "DetailCustomization/UISpriteCustomization.h"
 #include "DetailCustomization/UITextureCustomization.h"
-#include "DetailCustomization/LGUICanvasCustomization.h"
-#include "DetailCustomization/UITextCustomization.h"
+#include "DetailCustomization/LexCanvasCustomization.h"
+#include "DetailCustomization/LexTextCustomization.h"
 #include "DetailCustomization/UITextureBaseCustomization.h"
-#include "DetailCustomization/UIProceduralRectCustomization.h"
+#include "DetailCustomization/LexRectBlockCustomization.h"
 #include "DetailCustomization/LexUISpriteDataCustomization.h"
 #include "DetailCustomization/LexUIStaticSpriteAtlasDataCustomization.h"
 #include "DetailCustomization/LexUIFontData_FreeTypeRenderCustomization.h"
@@ -71,7 +71,7 @@
 #include "DetailCustomization/UIScrollViewWithScrollBarCustomization.h"
 #include "DetailCustomization/UISpriteSequencePlayerCustomization.h"
 #include "DetailCustomization/UISpriteSheetTexturePlayerCustomization.h"
-#include "DetailCustomization/UIPostProcessRenderableCustomization.h"
+#include "DetailCustomization/LexVisualPostProcessCustomization.h"
 
 #include "DetailCustomization/UIPanelLayoutHorizontalBoxSlotCustomization.h"
 #include "DetailCustomization/UIPanelLayoutVerticalBoxSlotCustomization.h"
@@ -250,17 +250,17 @@ void FLGUIEditorModule::StartupModule()
 	//register custom editor
 	{
 		FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
-		PropertyModule.RegisterCustomClassLayout(UUIItem::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIItemCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UUIBaseRenderable::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIBaseRenderableCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UUIBatchMeshRenderable::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIBatchMeshRenderableCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexWidget::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexWidgetCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexVisual::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexVisualCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexVisualBatchMesh::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIBatchMeshRenderableCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUISpriteBase::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteBaseCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUISprite::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(ULGUICanvas::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLGUICanvasCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UUIText::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUITextCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexCanvas::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexCanvasCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexText::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexTextCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUITextureBase::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUITextureBaseCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UUIProceduralRect::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIProceduralRectCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexRectBlock::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexRectBlockCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUITexture::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUITextureCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UUIPostProcessRenderable::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIPostProcessRenderableCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexVisualPostProcess::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexVisualPostProcessCustomization::MakeInstance));
 
 		PropertyModule.RegisterCustomClassLayout(ULexUISpriteData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexUISpriteDataCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULexUIStaticSpriteAtlasData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexUIStaticSpriteAtlasDataCustomization::MakeInstance));
@@ -412,21 +412,21 @@ void FLGUIEditorModule::StartupModule()
 		FKismetEditorUtilities::RegisterAutoGeneratedDefaultEvent(this, UUISelectableTransitionComponent::StaticClass(), TEXT("ReceiveOnDisabled"));
 		FKismetEditorUtilities::RegisterAutoGeneratedDefaultEvent(this, UUISelectableTransitionComponent::StaticClass(), TEXT("ReceiveOnStartCustomTransition"));
 
-		FKismetEditorUtilities::RegisterAutoGeneratedDefaultEvent(this, UUIRenderableCustomRaycast::StaticClass(), TEXT("ReceiveRaycast"));
-		FKismetEditorUtilities::RegisterAutoGeneratedDefaultEvent(this, UUIRenderableCustomRaycast::StaticClass(), TEXT("ReceiveInit"));
+		FKismetEditorUtilities::RegisterAutoGeneratedDefaultEvent(this, ULexVisualCustomRaycast::StaticClass(), TEXT("ReceiveRaycast"));
+		FKismetEditorUtilities::RegisterAutoGeneratedDefaultEvent(this, ULexVisualCustomRaycast::StaticClass(), TEXT("ReceiveInit"));
 
 		FKismetEditorUtilities::RegisterAutoGeneratedDefaultEvent(this, ULGUIWorldSpaceRaycasterSource::StaticClass(), TEXT("ReceiveInit"));
 		FKismetEditorUtilities::RegisterAutoGeneratedDefaultEvent(this, ULGUIWorldSpaceRaycasterSource::StaticClass(), TEXT("ReceiveGenerateRay"));
 		FKismetEditorUtilities::RegisterAutoGeneratedDefaultEvent(this, ULGUIWorldSpaceRaycasterSource::StaticClass(), TEXT("ReceiveShouldStartDrag"));
 
-		FKismetEditorUtilities::RegisterAutoGeneratedDefaultEvent(this, UUIBatchMeshRenderable::StaticClass(), TEXT("ReceiveOnBeforeCreateOrUpdateGeometry"));
-		FKismetEditorUtilities::RegisterAutoGeneratedDefaultEvent(this, UUIBatchMeshRenderable::StaticClass(), TEXT("ReceiveOnUpdateGeometry"));
+		FKismetEditorUtilities::RegisterAutoGeneratedDefaultEvent(this, ULexVisualBatchMesh::StaticClass(), TEXT("ReceiveOnBeforeCreateOrUpdateGeometry"));
+		FKismetEditorUtilities::RegisterAutoGeneratedDefaultEvent(this, ULexVisualBatchMesh::StaticClass(), TEXT("ReceiveOnUpdateGeometry"));
 
 		FKismetEditorUtilities::RegisterAutoGeneratedDefaultEvent(this, UUISpriteBase::StaticClass(), TEXT("ReceiveOnUpdateGeometry"));
 
 		FKismetEditorUtilities::RegisterAutoGeneratedDefaultEvent(this, UUITextureBase::StaticClass(), TEXT("ReceiveOnUpdateGeometry"));
 
-		FKismetEditorUtilities::RegisterAutoGeneratedDefaultEvent(this, UUIGeometryModifierBase::StaticClass(), TEXT("ReceiveModifyUIGeometry"));
+		FKismetEditorUtilities::RegisterAutoGeneratedDefaultEvent(this, ULexUIMeshModifierBase::StaticClass(), TEXT("ReceiveModifyUIGeometry"));
 	}
 
 	CheckPrefabOverrideDataViewerEntry();
@@ -475,16 +475,16 @@ void FLGUIEditorModule::ShutdownModule()
 	if (UObjectInitialized() && FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
 	{
 		FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
-		PropertyModule.UnregisterCustomClassLayout(UUIItem::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(UUIBaseRenderable::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(UUIBatchMeshRenderable::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexWidget::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexVisual::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexVisualBatchMesh::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUISpriteBase::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUISprite::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(ULGUICanvas::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(UUIText::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexCanvas::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexText::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUITextureBase::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(UUIProceduralRect::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(UUIPostProcessRenderable::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexRectBlock::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexVisualPostProcess::StaticClass()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(ULexUISpriteData::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(ULexUIStaticSpriteAtlasData::StaticClass()->GetFName());
@@ -1134,12 +1134,7 @@ void FLGUIEditorModule::CreateUIElementSubMenu(FMenuBuilder& MenuBuilder)
 
 	MenuBuilder.BeginSection("UIElement");
 	{
-		FunctionContainer::CreateUIBaseElementMenuEntry(MenuBuilder, AUIContainerActor::StaticClass());
-		FunctionContainer::CreateUIBaseElementMenuEntry(MenuBuilder, AUISpriteActor::StaticClass());
-		FunctionContainer::CreateUIBaseElementMenuEntry(MenuBuilder, AUITextActor::StaticClass());
-		FunctionContainer::CreateUIBaseElementMenuEntry(MenuBuilder, AUITextureActor::StaticClass());
-		FunctionContainer::CreateUIBaseElementMenuEntry(MenuBuilder, AUIProceduralRectActor::StaticClass());
-		FunctionContainer::CreateUIBaseElementMenuEntry(MenuBuilder, AUICustomMeshActor::StaticClass());
+		FunctionContainer::CreateUIBaseElementMenuEntry(MenuBuilder, ALexWidgetActor::StaticClass());
 
 		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, TEXT("Button"));
 		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, TEXT("Toggle"));
@@ -1481,6 +1476,7 @@ void FLGUIEditorModule::CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder)
 	{
 		for (TObjectIterator<UClass> ClassItr; ClassItr; ++ClassItr)
 		{
+#if 0
 			if (ClassItr->IsChildOf(AUIBasePostProcessActor::StaticClass()))
 			{
 				if (
@@ -1501,6 +1497,7 @@ void FLGUIEditorModule::CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder)
 					FunctionContainer::CreateUIBaseElementMenuEntry(MenuBuilder, *ClassItr);
 				}
 			}
+#endif
 		}
 	}
 	MenuBuilder.EndSection();
@@ -1532,6 +1529,7 @@ void FLGUIEditorModule::CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder)
 
 	MenuBuilder.BeginSection("UIExtension");
 	{
+#if 0
 		FunctionContainer::CreateMenuEntryByClass(MenuBuilder, AUIPolygonActor::StaticClass());
 		FunctionContainer::CreateMenuEntryByClass(MenuBuilder, AUIPolygonLineActor::StaticClass());
 		FunctionContainer::CreateMenuEntryByClass(MenuBuilder, AUIRingActor::StaticClass());
@@ -1540,6 +1538,7 @@ void FLGUIEditorModule::CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder)
 		FunctionContainer::CreateMenuEntryByClass(MenuBuilder, AUI2DLineChildrenAsPointsActor::StaticClass());
 		FunctionContainer::CreateMenuEntryByPrefab(MenuBuilder, TEXT("UIWidget"), LOCTEXT("UIWidget", "UI Widget"), AUIWidgetActor::StaticClass()->GetToolTipText());
 		FunctionContainer::CreateMenuEntryByPrefab(MenuBuilder, TEXT("UIRenderTarget"), LOCTEXT("UIRenderTarget", "UI Render Target"), AUIRenderTargetActor::StaticClass()->GetToolTipText());
+#endif
 	}
 	MenuBuilder.EndSection();
 }
@@ -1574,21 +1573,21 @@ void FLGUIEditorModule::ChangeTraceChannelSubMenu(FMenuBuilder& MenuBuilder)
 {
 	MenuBuilder.BeginSection("CollisionChannel");
 	{
-		auto CollisionProfile = UCollisionProfile::Get();
-		for (int i = 0, count = (int)ETraceTypeQuery::TraceTypeQuery_MAX; i < count; i++)
-		{
-			auto collisionChannel = UEngineTypes::ConvertToCollisionChannel((ETraceTypeQuery)i);
-			auto channelName = CollisionProfile->ReturnChannelNameFromContainerIndex(collisionChannel);
-			if (channelName != TEXT("MAX"))
-			{
-				MenuBuilder.AddMenuEntry(
-					FText::FromName(channelName),
-					FText::Format(LOCTEXT("ChangeTraceChannel_Tooltip", "Change selected UI item actor's trace channel to {0}"), FText::FromName(channelName)),
-					FSlateIcon(),
-					FUIAction(FExecuteAction::CreateStatic(&LGUIEditorTools::ChangeTraceChannel_Impl, (ETraceTypeQuery)i))
-				);
-			}
-		}
+		// auto CollisionProfile = UCollisionProfile::Get();
+		// for (int i = 0, count = (int)ETraceTypeQuery::TraceTypeQuery_MAX; i < count; i++)
+		// {
+		// 	auto collisionChannel = UEngineTypes::ConvertToCollisionChannel((ETraceTypeQuery)i);
+		// 	auto channelName = CollisionProfile->ReturnChannelNameFromContainerIndex(collisionChannel);
+		// 	if (channelName != TEXT("MAX"))
+		// 	{
+		// 		MenuBuilder.AddMenuEntry(
+		// 			FText::FromName(channelName),
+		// 			FText::Format(LOCTEXT("ChangeTraceChannel_Tooltip", "Change selected UI item actor's trace channel to {0}"), FText::FromName(channelName)),
+		// 			FSlateIcon(),
+		// 			FUIAction(FExecuteAction::CreateStatic(&LGUIEditorTools::ChangeTraceChannel_Impl, (ETraceTypeQuery)i))
+		// 		);
+		// 	}
+		// }
 	}
 	MenuBuilder.EndSection();
 }
@@ -1682,19 +1681,13 @@ void FLGUIEditorModule::ReplaceActorSubMenu(FMenuBuilder& MenuBuilder)
 
 	MenuBuilder.BeginSection("Replace");
 	{
-		FunctionContainer::ReplaceUIElement(MenuBuilder, AUIContainerActor::StaticClass());
-		FunctionContainer::ReplaceUIElement(MenuBuilder, AUISpriteActor::StaticClass());
-		FunctionContainer::ReplaceUIElement(MenuBuilder, AUITextActor::StaticClass());
-		FunctionContainer::ReplaceUIElement(MenuBuilder, AUITextureActor::StaticClass());
+		FunctionContainer::ReplaceUIElement(MenuBuilder, ALexWidgetActor::StaticClass());
 
 		for (TObjectIterator<UClass> ClassItr; ClassItr; ++ClassItr)
 		{
-			if (ClassItr->IsChildOf(AUIBaseActor::StaticClass()))
+			if (ClassItr->IsChildOf(ALexWidgetActor::StaticClass()))
 			{
-				if (*ClassItr != AUIContainerActor::StaticClass()
-					&& *ClassItr != AUISpriteActor::StaticClass()
-					&& *ClassItr != AUITextActor::StaticClass()
-					&& *ClassItr != AUITextureActor::StaticClass()
+				if (*ClassItr != ALexWidgetActor::StaticClass()
 					&& !(ClassItr->HasAnyClassFlags(CLASS_Transient))
 					&& !(ClassItr->HasAnyClassFlags(CLASS_Abstract))
 					&& !(ClassItr->HasAnyClassFlags(CLASS_Deprecated))

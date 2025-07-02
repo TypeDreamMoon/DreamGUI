@@ -7,7 +7,6 @@
 
 UUIEffectOutline::UUIEffectOutline()
 {
-	PrimaryComponentTick.bCanEverTick = false;
 }
 
 void UUIEffectOutline::ApplyColorAndAlpha(FColor& InOutColor, uint8 InSourceAlpha)
@@ -185,7 +184,7 @@ void UUIEffectOutline::SetOutlineColor(FColor newColor)
 	if (outlineColor != newColor)
 	{
 		outlineColor = newColor;
-		if (GetUIRenderable())GetUIRenderable()->MarkColorDirty();
+		if (GetLexVisual())GetLexVisual()->MarkColorDirty();
 	}
 }
 void UUIEffectOutline::SetOutlineSize(FVector2D newSize)
@@ -193,7 +192,7 @@ void UUIEffectOutline::SetOutlineSize(FVector2D newSize)
 	if (outlineSize != newSize)
 	{
 		outlineSize = newSize;
-		if (GetUIRenderable())GetUIRenderable()->MarkVertexPositionDirty();
+		if (GetLexVisual())GetLexVisual()->MarkVertexPositionDirty();
 	}
 }
 void UUIEffectOutline::SetUse8Direction(bool newValue)
@@ -201,6 +200,6 @@ void UUIEffectOutline::SetUse8Direction(bool newValue)
 	if (use8Direction != newValue)
 	{
 		use8Direction = newValue;
-		if (GetUIRenderable())GetUIRenderable()->MarkVerticesDirty(true, true, true, true);
+		if (GetLexVisual())GetLexVisual()->MarkVerticesDirty(true, true, true, true);
 	}
 }

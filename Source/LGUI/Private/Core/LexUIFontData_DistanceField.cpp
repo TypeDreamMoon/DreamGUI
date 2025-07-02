@@ -1,7 +1,7 @@
 // Copyright 2019-present LexLiu. All Rights Reserved.
 
 #include "Core/LexUIFontData_DistanceField.h"
-#include "LGUI/Public/Core/Components/UIText.h"
+#include "LGUI/Public/Core/Components/LexText.h"
 #include "Core/LGUIManager.h"
 #include "Utils/LexUIUtils.h"
 #include "Materials/MaterialInterface.h"
@@ -157,11 +157,11 @@ void ULexUIFontData_DistanceField::ApplyPackingAtlasTextureExpand(UTexture2D* ne
 	}
 }
 
-void ULexUIFontData_DistanceField::PrepareForPushCharData(UUIText* InText)
+void ULexUIFontData_DistanceField::PrepareForPushCharData(ULexText* InText)
 {
 	italicSlop = FMath::Tan(FMath::DegreesToRadians(ItalicAngle));
 	oneDivideFontSize = 1.0f / FontSize;
-	auto CompScale = InText->GetComponentScale();
+	auto CompScale = InText->GetWidget()->GetComponentScale();
 	objectScale = FMath::Max(CompScale.X, CompScale.Y);
 	SDFRadius = FontSize * 0.25f;//use 1/4 of FontSize can get good result
 }

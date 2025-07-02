@@ -20,7 +20,7 @@ protected:
 
 	struct FLayoutChild
 	{
-		TWeakObjectPtr<UUIItem> ChildUIItem;
+		TWeakObjectPtr<ULexWidget> ChildUIItem;
 		TWeakObjectPtr<UObject> LayoutInterface;
 		bool operator == (const FLayoutChild& Other)const
 		{
@@ -35,12 +35,12 @@ protected:
 	void EnsureChildValid();
 	virtual void RebuildChildrenList()const;
 	virtual void SortChildrenList()const;
-	virtual void GetLayoutElement(UUIItem* InChild, UObject*& OutLayoutElement, bool& OutIgnoreLayout)const;
+	virtual void GetLayoutElement(ULexWidget* InChild, UObject*& OutLayoutElement, bool& OutIgnoreLayout)const;
 
-	virtual void OnUIChildDimensionsChanged(UUIItem* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)override;
-	virtual void OnUIChildAcitveInHierarchy(UUIItem* InChild, bool InUIActive)override;
-	virtual void OnUIChildAttachmentChanged(UUIItem* InChild, bool attachOrDetach)override;
-	virtual void OnUIChildHierarchyIndexChanged(UUIItem* InChild)override;
+	virtual void OnUIChildDimensionsChanged(ULexWidget* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)override;
+	virtual void OnUIChildAcitveInHierarchy(ULexWidget* InChild, bool InUIActive)override;
+	virtual void OnUIChildAttachmentChanged(ULexWidget* InChild, bool attachOrDetach)override;
+	virtual void OnUIChildHierarchyIndexChanged(ULexWidget* InChild)override;
 public:
 	/** Mark layout children changed, so we need RebuildChildrenList when we need to. */
 	void MarkNeedRebuildChildrenList();

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "UIGeometryModifierBase.h"
+#include "LexUIMeshModifierBase.h"
 #include "UIEffectGradientColor.generated.h"
 
 
@@ -16,7 +16,7 @@ enum class EUIEffectGradientColorDirection :uint8
 	FourCornor,
 };
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIEffectGradientColor : public UUIGeometryModifierBase
+class LGUI_API UUIEffectGradientColor : public ULexUIMeshModifierBase
 {
 	GENERATED_BODY()
 

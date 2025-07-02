@@ -2,11 +2,11 @@
 
 #include "Layout/UIPanelLayout_VerticalBox.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
 
 DECLARE_CYCLE_STAT(TEXT("UIPanelLayout VerticalBox RebuildLayout"), STAT_PanelLayout_Vertical, STATGROUP_LGUI);
 
-void UUIPanelLayout_VerticalBox::OnUIChildDimensionsChanged(UUIItem* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
+void UUIPanelLayout_VerticalBox::OnUIChildDimensionsChanged(ULexWidget* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
 {
     //skip UILayoutBase
     Super::Super::OnUIChildDimensionsChanged(child, horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
@@ -194,7 +194,7 @@ void UUIPanelLayout_VerticalBox::OnRebuildLayout()
 	}
 }
 
-bool UUIPanelLayout_VerticalBox::GetCanLayoutControlAnchor_Implementation(class UUIItem* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
+bool UUIPanelLayout_VerticalBox::GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
 {
     if (this->GetRootUIComponent() == InUIItem)//self
     {
@@ -235,7 +235,7 @@ FText UUIPanelLayout_VerticalBox::GetCategoryDisplayName()const
 {
     return NSLOCTEXT("UIPanelLayout_VerticalBox", "CategoryDisplayName", "VerticalBox");
 }
-bool UUIPanelLayout_VerticalBox::CanMoveChildToCell(UUIItem* InChild, EMoveChildDirectionType InDirection)const
+bool UUIPanelLayout_VerticalBox::CanMoveChildToCell(ULexWidget* InChild, EMoveChildDirectionType InDirection)const
 {
     switch (InDirection)
     {
@@ -246,7 +246,7 @@ bool UUIPanelLayout_VerticalBox::CanMoveChildToCell(UUIItem* InChild, EMoveChild
         return false;
     }
 }
-void UUIPanelLayout_VerticalBox::MoveChildToCell(UUIItem* InChild, EMoveChildDirectionType InDirection)
+void UUIPanelLayout_VerticalBox::MoveChildToCell(ULexWidget* InChild, EMoveChildDirectionType InDirection)
 {
     int MoveValue = 0;
     switch (InDirection)

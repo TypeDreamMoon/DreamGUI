@@ -9,8 +9,7 @@
 #include "PrefabSystem/ActorSerializer5.h"
 #include "PrefabSystem/ActorSerializer6.h"
 #include "PrefabSystem/ActorSerializer7.h"
-#include "Core/Actor/UIBaseActor.h"
-#include "Core/Actor/UIContainerActor.h"
+#include "Core/Actor/LexWidgetActor.h"
 #endif
 #include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "Utils/LexUIUtils.h"
@@ -182,10 +181,10 @@ void ULGUIPrefab::MakeAgentObjectsInPreviewWorld()
 					{
 						if (RootPrefab->ReferenceClassList.Num() > 0)
 						{
-							if (RootPrefab->ReferenceClassList[0]->IsChildOf(AUIBaseActor::StaticClass()))
+							if (RootPrefab->ReferenceClassList[0]->IsChildOf(ALexWidgetActor::StaticClass()))
 							{
 								//root actor is UI, need to create a UI actor, or root actor may calculated wrong RelativeLocation
-								RootActorClass = AUIContainerActor::StaticClass();
+								RootActorClass = ALexWidgetActor::StaticClass();
 							}
 						}
 					}

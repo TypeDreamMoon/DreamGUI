@@ -2,7 +2,7 @@
 
 #include "Extensions/UIStaticMesh.h"
 #include "Core/LexUIGeometry.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/Engine.h"
 #include "StaticMeshResources.h"
@@ -193,15 +193,15 @@ void ULGUIStaticMeshCacheData::ClearMeshData()
 
 UUIStaticMesh::UUIStaticMesh(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
-	PrimaryComponentTick.bCanEverTick = false;
 }
 
 #define ONE_DIVIDE_255 0.0039215686274509803921568627451f
 
 void UUIStaticMesh::UpdateGeometry()
 {
-	if (GetIsUIActiveInHierarchy() == false)return;
-	if (!RenderCanvas.IsValid())return;
+	if (GetWidget()->IsVisibleForRender() == false)return;
+	auto RenderCanvas = GetWidget()->GetRenderCanvas();
+	if (!RenderCanvas)return;
 	if (!IsValid(meshCache))return;
 
 	Super::UpdateGeometry();
@@ -280,7 +280,7 @@ void UUIStaticMesh::UpdateMeshColor(bool updateToDrawcallMesh)
 
 	if (updateToDrawcallMesh)
 	{
-		DrawCall->DrawCallMesh->UpdateMeshSectionRenderData(DrawCall->DrawCallRenderSection.Pin(), false, RenderCanvas->GetActualRequireNormalAndTangent());
+		DrawCall->DrawCallMesh->UpdateMeshSectionRenderData(DrawCall->DrawCallRenderSection.Pin(), false, GetWidget()->GetRenderCanvas()->GetActualRequireNormalAndTangent());
 	}
 }
 void UUIStaticMesh::CreateGeometry()
@@ -295,7 +295,7 @@ void UUIStaticMesh::CreateGeometry()
 		auto& VertexData = MeshSection->vertices;
 
 		VertexData.SetNumUninitialized(numVertices);
-		bool RequireNormalAndTangent = RenderCanvas->GetActualRequireNormalAndTangent();
+		bool RequireNormalAndTangent = GetWidget()->GetRenderCanvas()->GetActualRequireNormalAndTangent();
 		auto tempVertexColorType = vertexColorType;
 
 		for (int i = 0; i < numVertices; i++)
@@ -352,15 +352,17 @@ void UUIStaticMesh::CreateGeometry()
 
 	UpdateMeshTransform(true);
 
-	MarkCanvasUpdate(true, false, false);
+	GetWidget()->MarkCanvasUpdate(true, false, false);
 }
 
 void UUIStaticMesh::UpdateMeshTransform(bool updateToDrawcallMesh)
 {
+	auto Widget = GetWidget();
+	auto RenderCanvas = Widget->GetRenderCanvas();
 	FTransform itemToCanvasTf;
-	auto canvasUIItem = RenderCanvas->GetUIItem();
+	auto canvasUIItem = RenderCanvas->GetLexWidget();
 	auto inverseCanvasTf = canvasUIItem->GetComponentTransform().Inverse();
-	const auto& itemTf = this->GetComponentTransform();
+	const auto& itemTf = Widget->GetComponentTransform();
 	FTransform::Multiply(&itemToCanvasTf, &itemTf, &inverseCanvasTf);
 
 	auto MeshSection = (FLexUIMeshSection*)DrawCall->DrawCallRenderSection.Pin().Get();
@@ -548,14 +550,11 @@ void UUIStaticMesh::SetReplaceMaterial(UMaterialInterface* value)
 	if (ReplaceMaterial != value)
 	{
 		ReplaceMaterial = value;
-		if (RenderCanvas.IsValid())
+		if (DrawCall.IsValid())
 		{
-			if (DrawCall.IsValid())
-			{
-				DrawCall->bMaterialChanged = true;
-			}
-			MarkCanvasUpdate(true, false, false);
+			DrawCall->bMaterialChanged = true;
 		}
+		GetWidget()->MarkCanvasUpdate(true, false, false);
 	}
 }
 
@@ -566,15 +565,6 @@ void UUIStaticMesh::SetVertexColorType(UIStaticMeshVertexColorType value)
 		vertexColorType = value;
 		MarkColorDirty();
 	}
-}
-
-
-AUIStaticMeshActor::AUIStaticMeshActor()
-{
-	PrimaryActorTick.bCanEverTick = false;
-
-	UIStaticMesh = CreateDefaultSubobject<UUIStaticMesh>(TEXT("UIStaticMeshComponent"));
-	RootComponent = UIStaticMesh;
 }
 
 #undef LOCTEXT_NAMESPACE

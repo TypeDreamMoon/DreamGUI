@@ -1,26 +1,26 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/UIBaseRenderableCustomization.h"
-#include "Core/Components/UIBaseRenderable.h"
+#include "Core/Components/LexVisual.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 
 #define LOCTEXT_NAMESPACE "UIBaseRenderableCustomization"
-FUIBaseRenderableCustomization::FUIBaseRenderableCustomization()
+FLexVisualCustomization::FLexVisualCustomization()
 {
 }
 
-FUIBaseRenderableCustomization::~FUIBaseRenderableCustomization()
+FLexVisualCustomization::~FLexVisualCustomization()
 {
 	
 }
 
-TSharedRef<IDetailCustomization> FUIBaseRenderableCustomization::MakeInstance()
+TSharedRef<IDetailCustomization> FLexVisualCustomization::MakeInstance()
 {
-	return MakeShareable(new FUIBaseRenderableCustomization);
+	return MakeShareable(new FLexVisualCustomization);
 }
-void FUIBaseRenderableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
+void FLexVisualCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
 
 }

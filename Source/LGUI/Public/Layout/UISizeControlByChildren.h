@@ -33,7 +33,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetAdditionalHeight(float Value);
 
-	virtual bool GetCanLayoutControlAnchor_Implementation(class UUIItem* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
+	virtual bool GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
 protected:
 	virtual void OnRebuildLayout()override;
 	/** This UI's width fit to max size of child */
@@ -48,5 +48,5 @@ protected:
 		float AdditionalHeight = 0;
 
 	//these will not affect this Layout
-	virtual void OnUIChildHierarchyIndexChanged(UUIItem* InChild)override {}
+	virtual void OnUIChildHierarchyIndexChanged(ULexWidget* InChild)override {}
 };

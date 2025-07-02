@@ -3,14 +3,13 @@
 #include "LGUI/Public/Core/Components/UISpriteBase.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "Core/LexUISpriteData.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/LexUIDrawCall.h"
 
 UUISpriteBase::UUISpriteBase(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
-	PrimaryComponentTick.bCanEverTick = true;
 }
 
 void UUISpriteBase::BeginPlay()
@@ -26,9 +25,9 @@ void UUISpriteBase::BeginPlay()
 	}
 }
 
-void UUISpriteBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void UUISpriteBase::EndPlay()
 {
-	Super::EndPlay(EndPlayReason);
+	Super::EndPlay();
 	if (bHasAddToSprite)
 	{
 		if (IsValid(sprite))
@@ -42,15 +41,12 @@ void UUISpriteBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void UUISpriteBase::ApplyAtlasTextureChange_Implementation()
 {
 	geometry->Texture = sprite->GetAtlasTexture();
-	if (RenderCanvas.IsValid())
+	if (DrawCall.IsValid())
 	{
-		if (DrawCall.IsValid())
-		{
-			DrawCall->Texture = geometry->Texture;
-			DrawCall->bTextureChanged = true;
-		}
+		DrawCall->Texture = geometry->Texture;
+		DrawCall->bTextureChanged = true;
 	}
-	MarkCanvasUpdate(true, true, false);
+	GetWidget()->MarkCanvasUpdate(true, true, false);
 }
 void UUISpriteBase::ApplyAtlasTextureScaleUp_Implementation()
 {
@@ -65,17 +61,14 @@ void UUISpriteBase::ApplyAtlasTextureScaleUp_Implementation()
 		}
 	}
 	geometry->Texture = sprite->GetAtlasTexture();
-	if (RenderCanvas.IsValid())
+	if (DrawCall.IsValid())
 	{
-		if (DrawCall.IsValid())
-		{
-			DrawCall->Texture = geometry->Texture;
-			DrawCall->bTextureChanged = true;
-			DrawCall->bNeedToUpdateVertex = true;
-		}
+		DrawCall->Texture = geometry->Texture;
+		DrawCall->bTextureChanged = true;
+		DrawCall->bNeedToUpdateVertex = true;
 	}
 	MarkVerticesDirty(false, true, true, false);
-	MarkCanvasUpdate(true, true, false);
+	GetWidget()->MarkCanvasUpdate(true, true, false);
 }
 
 void UUISpriteBase::SetSprite(ULexUISpriteData_BaseObject* newSprite, bool setSize)
@@ -112,8 +105,9 @@ void UUISpriteBase::SetSizeFromSpriteData()
 {
 	if (IsValid(sprite))
 	{
-		SetWidth(sprite->GetSpriteInfo().GetSourceWidth());
-		SetHeight(sprite->GetSpriteInfo().GetSourceHeight());
+		auto Widget = GetWidget();
+		Widget->SetWidth(sprite->GetSpriteInfo().GetSourceWidth());
+		Widget->SetHeight(sprite->GetSpriteInfo().GetSourceHeight());
 	}
 	else
 	{

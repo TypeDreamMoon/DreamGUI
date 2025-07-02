@@ -50,7 +50,7 @@ protected:
 		bool ReceiveShouldStartDrag(ULGUIPointerEventData* InPointerEventData);
 };
 
-enum class ELGUIRenderMode :uint8;
+enum class ELexRenderMode :uint8;
 
 /**
  * Perform a raycaster interaction for WorldSpaceUI and common world space objects.
@@ -73,8 +73,8 @@ protected:
 
 	UPROPERTY(EditAnywhere, Instanced, Category = "LGUI")
 		TObjectPtr<ULGUIWorldSpaceRaycasterSource> RaycasterSourceObject = nullptr;
-	virtual bool ShouldSkipCanvas(class ULGUICanvas* UICanvas)override;
-	TArray<ELGUIRenderMode> RenderModeArray;
+	virtual bool ShouldSkipCanvas(class ULexCanvas* UICanvas)override;
+	TArray<ELexRenderMode> RenderModeArray;
 public:
 	virtual bool GetAffectByGamePause()const override;
 	virtual bool GenerateRay(ULGUIPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection) override;

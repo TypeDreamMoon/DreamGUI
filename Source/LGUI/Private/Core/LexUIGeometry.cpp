@@ -2,11 +2,9 @@
 
 #include "Core/LexUIGeometry.h"
 #include "LGUI.h"
-#include "Utils/LexUIUtils.h"
-#include "LGUI/Public/Core/Components/UIText.h"
 #include "LGUI/Public/Core/Components/UISprite.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
-#include "LGUI/Public/Core/Components/UIBaseRenderable.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "LGUI/Public/Core/Components/LexVisual.h"
 #include "Core/LexUISpriteData.h"
 #include "Core/LexUIFontData_BaseObject.h"
 #include "Core/LexUIRichTextImageData_BaseObject.h"
@@ -23,13 +21,13 @@ FORCEINLINE float RoundToFloat(float value)
 
 DECLARE_CYCLE_STAT(TEXT("UIGeometry TransformPixelPerfectVertices"), STAT_TransformPixelPerfectVertices, STATGROUP_LGUI);
 
-void FLexUIGeometry::AdjustPixelPerfectPos(TArray<FLexUIOriginVertexData>& originVertices, int startIndex, int count, ULGUICanvas* renderCanvas, UUIBaseRenderable* uiComp)
+void FLexUIGeometry::AdjustPixelPerfectPos(TArray<FLexUIOriginVertexData>& originVertices, int startIndex, int count, ULexCanvas* renderCanvas, ULexVisual* uiComp)
 {
 	SCOPE_CYCLE_COUNTER(STAT_TransformPixelPerfectVertices);
-	auto canvasUIItem = renderCanvas->GetRootCanvas()->GetUIItem();
+	auto canvasUIItem = renderCanvas->GetRootCanvas()->GetLexWidget();
 	FTransform componentToCanvasTransform;
-	componentToCanvasTransform = uiComp->GetComponentTransform() * canvasUIItem->GetComponentTransform().Inverse();
-	if (!ULGUICanvas::Is2DUITransform(componentToCanvasTransform))return;//only 2d UI can do pixel perfect
+	componentToCanvasTransform = uiComp->GetWidget()->GetComponentTransform() * canvasUIItem->GetComponentTransform().Inverse();
+	if (!ULexCanvas::Is2DUITransform(componentToCanvasTransform))return;//only 2d UI can do pixel perfect
 	FTransform canvasToComponentTransform = componentToCanvasTransform.Inverse();
 
 	auto halfCanvasWidth = canvasUIItem->GetWidth() * 0.5f;
@@ -54,13 +52,13 @@ void FLexUIGeometry::AdjustPixelPerfectPos(TArray<FLexUIOriginVertexData>& origi
 		originVertices[i].Position = FVector3f(canvasToComponentTransform.TransformPosition(FVector(item)));
 	}
 }
-void AdjustPixelPerfectPos_For_UIRectFillRadial360(TArray<FLexUIOriginVertexData>& originVertices, ULGUICanvas* renderCanvas, UUIBaseRenderable* uiComp)
+void AdjustPixelPerfectPos_For_UIRectFillRadial360(TArray<FLexUIOriginVertexData>& originVertices, ULexCanvas* renderCanvas, ULexVisual* uiComp)
 {
 	SCOPE_CYCLE_COUNTER(STAT_TransformPixelPerfectVertices);
-	auto canvasUIItem = renderCanvas->GetRootCanvas()->GetUIItem();
+	auto canvasUIItem = renderCanvas->GetRootCanvas()->GetLexWidget();
 	FTransform componentToCanvasTransform;
-	componentToCanvasTransform = uiComp->GetComponentTransform() * canvasUIItem->GetComponentTransform().Inverse();
-	if (!ULGUICanvas::Is2DUITransform(componentToCanvasTransform))return;//only 2d UI can do pixel perfect
+	componentToCanvasTransform = uiComp->GetWidget()->GetComponentTransform() * canvasUIItem->GetComponentTransform().Inverse();
+	if (!ULexCanvas::Is2DUITransform(componentToCanvasTransform))return;//only 2d UI can do pixel perfect
 	FTransform canvasToComponentTransform = componentToCanvasTransform.Inverse();
 
 	auto halfCanvasWidth = canvasUIItem->GetWidth() * 0.5f;
@@ -87,15 +85,15 @@ void AdjustPixelPerfectPos_For_UIRectFillRadial360(TArray<FLexUIOriginVertexData
 		originVertices[vertIndex].Position = FVector3f(canvasToComponentTransform.TransformPosition(canvasSpaceLocation));
 	}
 }
-void AdjustPixelPerfectPos_For_UIText(TArray<FLexUIOriginVertexData>& originVertices, const TArray<FUITextCharProperty>& cacheCharPropertyArray, ULGUICanvas* renderCanvas, UUIBaseRenderable* uiComp)
+void AdjustPixelPerfectPos_For_UIText(TArray<FLexUIOriginVertexData>& originVertices, const TArray<FUITextCharProperty>& cacheCharPropertyArray, ULexCanvas* renderCanvas, ULexVisual* uiComp)
 {
 	SCOPE_CYCLE_COUNTER(STAT_TransformPixelPerfectVertices);
 	if (cacheCharPropertyArray.Num() <= 0)return;
 
-	auto canvasUIItem = renderCanvas->GetRootCanvas()->GetUIItem();
+	auto canvasUIItem = renderCanvas->GetRootCanvas()->GetLexWidget();
 	FTransform componentToCanvasTransform;
-	componentToCanvasTransform = uiComp->GetComponentTransform() * canvasUIItem->GetComponentTransform().Inverse();
-	if (!ULGUICanvas::Is2DUITransform(componentToCanvasTransform))return;//only 2d UI can do pixel perfect
+	componentToCanvasTransform = uiComp->GetWidget()->GetComponentTransform() * canvasUIItem->GetComponentTransform().Inverse();
+	if (!ULexCanvas::Is2DUITransform(componentToCanvasTransform))return;//only 2d UI can do pixel perfect
 	FTransform canvasToComponentTransform = componentToCanvasTransform.Inverse();
 
 	auto halfCanvasWidth = canvasUIItem->GetWidth() * 0.5f;
@@ -141,7 +139,7 @@ void AdjustPixelPerfectPos_For_UIText(TArray<FLexUIOriginVertexData>& originVert
 
 #pragma region UISprite_UITexture_Simple
 void FLexUIGeometry::UpdateUIRectSimpleVertex(FLexUIGeometry* uiGeo,
-	const float& width, const float& height, const FVector2f& pivot, const FLexUISpriteInfo& spriteInfo, ULGUICanvas* renderCanvas, UUIBaseRenderable* uiComp, const FColor& color,
+	const float& width, const float& height, const FVector2f& pivot, const FLexUISpriteInfo& spriteInfo, ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
 	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 )
 {
@@ -157,7 +155,7 @@ void FLexUIGeometry::UpdateUIRectSimpleVertex(FLexUIGeometry* uiGeo,
 		triangles[5] = 3;
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetFinalPixelSnapping();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetFinalPixelSnapping();
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	LexUIGeometrySetArrayNum(vertices, 4);
@@ -217,7 +215,7 @@ void FLexUIGeometry::UpdateUIProceduralRectSimpleVertex(FLexUIGeometry* uiGeo,
 	bool bOuterShadow, const FVector2f& outerShadowOffset, const float& outerShadowSize, const float& outerShadowBlur, bool bSoftEdge,
 	const float& width, const float& height, const FVector2f& pivot, 
 	const FLexUISpriteInfo& uniformSpriteInfo, const FLexUISpriteInfo& spriteInfo,
-	ULGUICanvas* renderCanvas, UUIBaseRenderable* uiComp, const FColor& color,
+	ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
 	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 )
 {
@@ -244,7 +242,7 @@ void FLexUIGeometry::UpdateUIProceduralRectSimpleVertex(FLexUIGeometry* uiGeo,
 		}
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetFinalPixelSnapping();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetFinalPixelSnapping();
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	LexUIGeometrySetArrayNum(vertices, bOuterShadow ? 8 : 4);
@@ -396,7 +394,7 @@ void FLexUIGeometry::UpdateUIProceduralRectSimpleVertex(FLexUIGeometry* uiGeo,
 #pragma endregion
 #pragma region UISprite_UITexture_Border
 void FLexUIGeometry::UpdateUIRectBorderVertex(FLexUIGeometry* uiGeo, bool fillCenter,
-	const float& width, const float& height, const FVector2f& pivot, const FLexUISpriteInfo& spriteInfo, ULGUICanvas* renderCanvas, UUIBaseRenderable* uiComp, const FColor& color,
+	const float& width, const float& height, const FVector2f& pivot, const FLexUISpriteInfo& spriteInfo, ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
 	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 )
 {
@@ -435,7 +433,7 @@ void FLexUIGeometry::UpdateUIRectBorderVertex(FLexUIGeometry* uiGeo, bool fillCe
 		}
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetFinalPixelSnapping();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetFinalPixelSnapping();
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	auto verticesCount = 16;
@@ -538,7 +536,7 @@ void FLexUIGeometry::UpdateUIRectBorderVertex(FLexUIGeometry* uiGeo, bool fillCe
 
 #pragma region UISprite_Tiled
 void FLexUIGeometry::UpdateUIRectTiledVertex(FLexUIGeometry* uiGeo,
-	const FLexUISpriteInfo& spriteInfo, ULGUICanvas* renderCanvas, UUIBaseRenderable* uiComp, const float& width, const float& height, const FVector2f& pivot, const int& widthRectCount, const int& heightRectCount, const float& widthRemainedRectSize, const float& heightRemainedRectSize, const FColor& color,
+	const FLexUISpriteInfo& spriteInfo, ULexCanvas* renderCanvas, ULexVisual* uiComp, const float& width, const float& height, const FVector2f& pivot, const int& widthRectCount, const int& heightRectCount, const float& widthRemainedRectSize, const float& heightRemainedRectSize, const FColor& color,
 	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 )
 {
@@ -559,7 +557,7 @@ void FLexUIGeometry::UpdateUIRectTiledVertex(FLexUIGeometry* uiGeo,
 		}
 	}
 	
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetFinalPixelSnapping();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetFinalPixelSnapping();
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	auto verticesCount = 4 * rectangleCount;
@@ -643,7 +641,7 @@ void FLexUIGeometry::UpdateUIRectTiledVertex(FLexUIGeometry* uiGeo,
 #pragma region UISprite_Fill_Horizontal_Vertial
 void FLexUIGeometry::UpdateUIRectFillHorizontalVerticalVertex(FLexUIGeometry* uiGeo, const float& width, const float& height, const FVector2f& pivot
 	, const FLexUISpriteInfo& spriteInfo, bool flipDirection, float fillAmount, bool horizontalOrVertical
-	, ULGUICanvas* renderCanvas, UUIBaseRenderable* uiComp, const FColor& color,
+	, ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
 	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 )
 {
@@ -660,7 +658,7 @@ void FLexUIGeometry::UpdateUIRectFillHorizontalVerticalVertex(FLexUIGeometry* ui
 		triangles[5] = 3;
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetFinalPixelSnapping();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetFinalPixelSnapping();
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	auto verticesCount = 4;
@@ -797,7 +795,7 @@ void FLexUIGeometry::UpdateUIRectFillHorizontalVerticalVertex(FLexUIGeometry* ui
 #pragma region UISprite_Fill_Radial90
 void FLexUIGeometry::UpdateUIRectFillRadial90Vertex(FLexUIGeometry* uiGeo, const float& width, const float& height, const FVector2f& pivot
 	, const FLexUISpriteInfo& spriteInfo, bool flipDirection, float fillAmount, EUISpriteFillOriginType_Radial90 originType
-	, ULGUICanvas* renderCanvas, UUIBaseRenderable* uiComp, const FColor& color,
+	, ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
 	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 )
 {
@@ -814,7 +812,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial90Vertex(FLexUIGeometry* uiGeo, const
 		triangles[5] = 3;
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetFinalPixelSnapping();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetFinalPixelSnapping();
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	auto verticesCount = 4;
@@ -1152,7 +1150,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial90Vertex(FLexUIGeometry* uiGeo, const
 #pragma region UISprite_Fill_Radial180
 void FLexUIGeometry::UpdateUIRectFillRadial180Vertex(FLexUIGeometry* uiGeo, const float& width, const float& height, const FVector2f& pivot
 	, const FLexUISpriteInfo& spriteInfo, bool flipDirection, float fillAmount, EUISpriteFillOriginType_Radial180 originType
-	, ULGUICanvas* renderCanvas, UUIBaseRenderable* uiComp, const FColor& color,
+	, ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
 	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 )
 {
@@ -1226,7 +1224,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial180Vertex(FLexUIGeometry* uiGeo, cons
 		}
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetFinalPixelSnapping();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetFinalPixelSnapping();
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	auto verticesCount = 5;
@@ -1717,7 +1715,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial180Vertex(FLexUIGeometry* uiGeo, cons
 #pragma region UISprite_Fill_Radial360
 void FLexUIGeometry::UpdateUIRectFillRadial360Vertex(FLexUIGeometry* uiGeo, const float& width, const float& height, const FVector2f& pivot
 	, const FLexUISpriteInfo& spriteInfo, bool flipDirection, float fillAmount, EUISpriteFillOriginType_Radial360 originType
-	, ULGUICanvas* renderCanvas, UUIBaseRenderable* uiComp, const FColor& color,
+	, ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
 	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 )
 {
@@ -1775,7 +1773,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial360Vertex(FLexUIGeometry* uiGeo, cons
 		}
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetFinalPixelSnapping();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetFinalPixelSnapping();
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	auto verticesCount = 10;
@@ -2252,7 +2250,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial360Vertex(FLexUIGeometry* uiGeo, cons
 #pragma endregion
 
 #pragma region UIText
-#include "LGUI/Public/Core/Components/UIText.h"
+#include "LGUI/Public/Core/Components/LexText.h"
 void UIGeometry_AlignUITextLineVertex(EUITextParagraphHorizontalAlign pivotHAlign, float lineWidth, int lineUIGeoVertStart
                                       , TArray<FLexUIOriginVertexData>& vertices, FUITextLineProperty& lineProperty
 )
@@ -2313,11 +2311,11 @@ void UIGeometry_AlignUITextLineVertexForRichText(EUITextParagraphHorizontalAlign
 }
 #include "Core/LexUIRichTextCustomStyleData.h"
 void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, float width, float height, const FVector2f& pivot
-                                  , const FColor& color, uint8 canvasGroupAlpha, const FVector2f& fontSpace, FLexUIGeometry* uiGeo, float fontSize
+                                  , const FColor& color, uint8 renderOpacity, const FVector2f& fontSpace, FLexUIGeometry* uiGeo, float fontSize
                                   , EUITextParagraphHorizontalAlign paragraphHAlign, EUITextParagraphVerticalAlign paragraphVAlign, EUITextOverflowType overflowType
                                   , ETextWrappingPolicy wrappingPolicy, float maxHorizontalWidth, bool kerning
                                   , EUITextFontStyle fontStyle, FVector2f& textRealSize
-                                  , ULGUICanvas* renderCanvas, UUIText* uiComp
+                                  , ULexCanvas* renderCanvas, ULexText* uiComp
                                   , TArray<FUITextLineProperty>& cacheLinePropertyArray, TArray<FUITextCharProperty>& cacheCharPropertyArray, TArray<FUIText_RichTextCustomTag>& cacheRichTextCustomTagArray
                                   , TArray<FUIText_RichTextImageTag>& cacheRichTextImageTagArray
                                   , ULexUIFontData_BaseObject* font, bool richText, int32 richTextFilterFlags)
@@ -2326,7 +2324,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 
 	float maxFontSize = font->GetFontSizeLimit();
 	fontSize = FMath::Clamp(fontSize, 0.0f, maxFontSize);
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetFinalPixelSnapping();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetFinalPixelSnapping();
 	float rootCanvasScale = renderCanvas->GetRootCanvas()->GetCanvasScale();
 	float dynamicPixelsPerUnit = renderCanvas->GetActualDynamicPixelsPerUnit() * rootCanvasScale;
 	float oneDivideRootCanvasScale = 1.0f / rootCanvasScale;
@@ -2383,7 +2381,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 		richTextParser.Clear();
 		bool bold = fontStyle == EUITextFontStyle::Bold || fontStyle == EUITextFontStyle::BoldAndItalic;
 		bool italic = fontStyle == EUITextFontStyle::Italic || fontStyle == EUITextFontStyle::BoldAndItalic;
-		richTextParser.Prepare(fontSize, color, canvasGroupAlpha, bold, italic, richTextFilterFlags, richTextParseResult);
+		richTextParser.Prepare(fontSize, color, renderOpacity, bold, italic, richTextFilterFlags, richTextParseResult);
 	}
 	else
 	{
@@ -3121,7 +3119,7 @@ void FLexUIGeometry::CalculateOffsetAndSize(
 }
 
 
-void FLexUIGeometry::TransformVertices(ULGUICanvas* canvas, UUIBaseRenderable* item, FLexUIGeometry* uiGeo)
+void FLexUIGeometry::TransformVertices(ULexCanvas* canvas, ULexVisual* item, FLexUIGeometry* uiGeo)
 {
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
@@ -3136,14 +3134,14 @@ void FLexUIGeometry::TransformVertices(ULGUICanvas* canvas, UUIBaseRenderable* i
 		originVertices.AddDefaulted(vertexCount - originVertexCount);
 	}
 
-	auto inverseCanvasTf = canvas->GetUIItem()->GetComponentTransform().Inverse();
-	const auto& itemTf = item->GetComponentTransform();
+	auto inverseCanvasTf = canvas->GetLexWidget()->GetComponentTransform().Inverse();
+	const auto& itemTf = item->GetWidget()->GetComponentTransform();
 	FTransform itemToCanvasTf;
 	FTransform::Multiply(&itemToCanvasTf, &itemTf, &inverseCanvasTf);
 	uiGeo->TransformRelativeToCanvas = itemToCanvasTf;
-	auto itemToCanvasTf2D = ULGUICanvas::ConvertTo2DTransform(itemToCanvasTf);
+	auto itemToCanvasTf2D = ULexCanvas::ConvertTo2DTransform(itemToCanvasTf);
 	FVector2D itemMin, itemMax;
-	ULGUICanvas::CalculateUIItem2DBounds(item, itemToCanvasTf2D, itemMin, itemMax);
+	ULexCanvas::CalculateUIItem2DBounds(item, itemToCanvasTf2D, itemMin, itemMax);
 	uiGeo->BoundsMin2DInCanvasSpace = itemMin;
 	uiGeo->BoundsMax2DInCanvasSpace = itemMax;
 

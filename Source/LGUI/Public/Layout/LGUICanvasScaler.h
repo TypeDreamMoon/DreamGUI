@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
 #include "Core/LGUILifeCycleBehaviour.h"
 #include "Camera/CameraTypes.h"
 #include "LGUICanvasScaler.generated.h"
@@ -129,7 +129,7 @@ protected:
 		TObjectPtr<ULGUICanvasScalerCustomScale> CustomScale;
 
 	bool CheckCanvas();
-	TWeakObjectPtr<class ULGUICanvas> Canvas = nullptr;
+	TWeakObjectPtr<class ULexCanvas> Canvas = nullptr;
 	void SetCanvasProperties();
 
 	/** Current viewport size*/

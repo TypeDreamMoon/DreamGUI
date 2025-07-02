@@ -2,7 +2,7 @@
 
 #include "Layout/UIPanelLayout_FlexibleGrid.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
 
 DECLARE_CYCLE_STAT(TEXT("UIPanelLayout FlexibleGrid RebuildLayout"), STAT_PanelLayout_FlexibleGrid, STATGROUP_LGUI);
 
@@ -15,7 +15,7 @@ UUIPanelLayout_FlexibleGrid::UUIPanelLayout_FlexibleGrid()
     };
 }
 
-void UUIPanelLayout_FlexibleGrid::OnUIChildDimensionsChanged(UUIItem* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
+void UUIPanelLayout_FlexibleGrid::OnUIChildDimensionsChanged(ULexWidget* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
 {
     //skip UILayoutBase
     Super::Super::OnUIChildDimensionsChanged(child, horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
@@ -228,7 +228,7 @@ void UUIPanelLayout_FlexibleGrid::OnRebuildLayout()
 	}
 }
 
-bool UUIPanelLayout_FlexibleGrid::GetCanLayoutControlAnchor_Implementation(class UUIItem* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
+bool UUIPanelLayout_FlexibleGrid::GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
 {
     if (this->GetRootUIComponent() == InUIItem)//self
     {
@@ -269,11 +269,11 @@ FText UUIPanelLayout_FlexibleGrid::GetCategoryDisplayName()const
 {
     return NSLOCTEXT("UIPanelLayout_FlexibleGrid", "CategoryDisplayName", "FlexibleGrid");
 }
-bool UUIPanelLayout_FlexibleGrid::CanMoveChildToCell(UUIItem* InChild, EMoveChildDirectionType InDirection)const
+bool UUIPanelLayout_FlexibleGrid::CanMoveChildToCell(ULexWidget* InChild, EMoveChildDirectionType InDirection)const
 {
     return true;
 }
-void UUIPanelLayout_FlexibleGrid::MoveChildToCell(UUIItem* InChild, EMoveChildDirectionType InDirection)
+void UUIPanelLayout_FlexibleGrid::MoveChildToCell(ULexWidget* InChild, EMoveChildDirectionType InDirection)
 {
     int MoveColumnValue = 0, MoveRowValue = 0;
     switch (InDirection)

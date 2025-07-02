@@ -27,13 +27,13 @@ protected:
 public:
 	virtual void OnRebuildLayout()override;
 
-	virtual bool GetCanLayoutControlAnchor_Implementation(class UUIItem* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
+	virtual bool GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
 
 	virtual UClass* GetPanelLayoutSlotClass()const override;
 #if WITH_EDITOR
 	virtual FText GetCategoryDisplayName()const override;
-	virtual bool CanMoveChildToCell(UUIItem* InChild, EMoveChildDirectionType InDirection)const override;
-	virtual void MoveChildToCell(UUIItem* InChild, EMoveChildDirectionType InDirection)override;
+	virtual bool CanMoveChildToCell(ULexWidget* InChild, EMoveChildDirectionType InDirection)const override;
+	virtual void MoveChildToCell(ULexWidget* InChild, EMoveChildDirectionType InDirection)override;
 #endif
 	UFUNCTION(BlueprintCallable, Category = "Panel Layout")
 		bool GetWidthFitToChildren()const { return bWidthFitToChildren; }
@@ -49,7 +49,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Panel Layout")
 		void SetHeightFitToChildrenFromMinToMax(float Value);
 protected:
-	virtual void OnUIChildDimensionsChanged(UUIItem* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)override;
+	virtual void OnUIChildDimensionsChanged(ULexWidget* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)override;
 };
 
 UCLASS(ClassGroup = LGUI, Blueprintable)

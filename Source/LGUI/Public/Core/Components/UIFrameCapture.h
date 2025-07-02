@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "UIPostProcessRenderable.h"
+#include "LexVisualPostProcess.h"
 #include "LGUIDelegateHandleWrapper.h"
 #include "UIFrameCapture.generated.h"
 
@@ -15,7 +15,7 @@ DECLARE_DELEGATE_OneParam(FUIFrameCapture_OnFrameReady_Delegate, UTextureRenderT
  * If android OpenGL ES3.1, need to enable "ProjectSettings/Platforms/Android/Build/Support Backbuffer Sampling on OpenGL".
  */
 UCLASS(ClassGroup = (LGUI), NotBlueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIFrameCapture : public UUIPostProcessRenderable
+class LGUI_API UUIFrameCapture : public ULexVisualPostProcess
 {
 	GENERATED_BODY()
 
@@ -24,7 +24,8 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
-	virtual void TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction ) override;
+	virtual void EndPlay() override;
+	void OnUpdate(float DeltaTime);
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
@@ -51,7 +52,7 @@ public:
 	void DoCapture(const FUIFrameCapture_OnFrameReady_Delegate& InDelegate);
 	void DoCapture(const TFunction<void(UTextureRenderTarget2D*)>& InFunction);
 
-	virtual TSharedPtr<FUIPostProcessRenderProxy> GetRenderProxy()override;
+	virtual TSharedPtr<FLexVisualPostProcessRenderProxy> GetRenderProxy()override;
 	virtual void MarkAllDirty()override;
 protected:
 	void MarkOneFrameCapture();

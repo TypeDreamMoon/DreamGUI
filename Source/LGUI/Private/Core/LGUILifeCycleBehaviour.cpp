@@ -29,7 +29,7 @@ void ULGUILifeCycleBehaviour::BeginPlay()
 	ULGUIManagerWorldSubsystem::AddLGUILifeCycleBehaviourForLifecycleEvent(this);
 	if (GetRootSceneComponent())
 	{
-		if (auto RootUIComp = Cast<UUIItem>(RootComp.Get()))
+		if (auto RootUIComp = Cast<ULexWidget>(RootComp.Get()))
 		{
 			UIActiveInHierarchyStateChangedDelegateHandle = RootUIComp->RegisterUIActiveStateChanged(FUIItemActiveInHierarchyStateChangedDelegate::CreateUObject(this, &ULGUILifeCycleBehaviour::OnUIActiveInHierarchyStateChanged));
 		}
@@ -58,7 +58,7 @@ void ULGUILifeCycleBehaviour::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	{
 		if (RootComp.IsValid())
 		{
-			if (auto RootUIComp = Cast<UUIItem>(RootComp.Get()))
+			if (auto RootUIComp = Cast<ULexWidget>(RootComp.Get()))
 			{
 				RootUIComp->UnregisterUIActiveStateChanged(UIActiveInHierarchyStateChangedDelegateHandle);
 			}
@@ -167,7 +167,7 @@ bool ULGUILifeCycleBehaviour::IsAllowedToCallAwake()const
 {
 	if (GetRootSceneComponent())
 	{
-		if (auto RootUIComp = Cast<UUIItem>(RootComp.Get()))
+		if (auto RootUIComp = Cast<ULexWidget>(RootComp.Get()))
 		{
 			return RootUIComp->GetIsUIActiveInHierarchy();
 		}
@@ -182,7 +182,7 @@ bool ULGUILifeCycleBehaviour::GetIsActiveAndEnable()const
 {
 	if (GetRootSceneComponent())
 	{
-		if (auto RootUIComp = Cast<UUIItem>(RootComp.Get()))
+		if (auto RootUIComp = Cast<ULexWidget>(RootComp.Get()))
 		{
 			return RootUIComp->GetIsUIActiveInHierarchy() && this->GetEnable();
 		}
@@ -201,7 +201,7 @@ bool ULGUILifeCycleBehaviour::IsAllowedToCallOnEnable()const
 {
 	if (GetRootSceneComponent())
 	{
-		if (auto RootUIComp = Cast<UUIItem>(RootComp.Get()))
+		if (auto RootUIComp = Cast<ULexWidget>(RootComp.Get()))
 		{
 			return RootUIComp->GetIsUIActiveInHierarchy();
 		}

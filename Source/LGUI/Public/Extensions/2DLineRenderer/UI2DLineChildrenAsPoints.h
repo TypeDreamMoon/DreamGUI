@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "Core/Actor/UIBaseActor.h"
+#include "Core/Actor/LexWidgetActor.h"
 #include "UI2DLineRendererBase.h"
 #include "UI2DLineChildrenAsPoints.generated.h"
 
@@ -29,23 +29,4 @@ protected:
 	}
 public:
 	void OnChildPositionChanged();
-};
-
-
-UCLASS(ClassGroup = LGUI)
-class LGUI_API AUI2DLineChildrenAsPointsActor : public AUIBaseRenderableActor
-{
-	GENERATED_BODY()
-
-public:
-	AUI2DLineChildrenAsPointsActor();
-
-	virtual UUIItem* GetUIItem()const override { return UIElement; }
-	virtual class UUIBaseRenderable* GetUIRenderable()const override { return UIElement; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		UUI2DLineChildrenAsPoints* Get2DLineChildrenAsPoints()const { return UIElement; }
-private:
-	UPROPERTY(Category = "LGUI", VisibleAnywhere, BlueprintReadOnly, Transient, meta = (AllowPrivateAccess = "true"))
-		TObjectPtr<class UUI2DLineChildrenAsPoints> UIElement;
-
 };

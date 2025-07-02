@@ -3,7 +3,7 @@
 #pragma once
 
 #include "LGUI/Public/Core/Components/UIDirectMeshRenderable.h"
-#include "Core/Actor/UIBaseActor.h"
+#include "Core/Actor/LexWidgetActor.h"
 #include "UIStaticMesh.generated.h"
 
 USTRUCT(BlueprintType)
@@ -186,22 +186,4 @@ public:
 		void SetVertexColorType(UIStaticMeshVertexColorType value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetReplaceMaterial(UMaterialInterface* value);
-};
-
-UCLASS(ClassGroup = LGUI)
-class LGUI_API AUIStaticMeshActor : public AUIBaseRenderableActor
-{
-	GENERATED_BODY()
-
-public:
-	AUIStaticMeshActor();
-
-	virtual UUIItem* GetUIItem()const override { return UIStaticMesh; }
-	virtual class UUIBaseRenderable* GetUIRenderable()const override { return UIStaticMesh; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		UUIStaticMesh* GetUIStaticMesh()const { return UIStaticMesh; }
-private:
-	UPROPERTY(Category = "LGUI", VisibleAnywhere, BlueprintReadOnly, Transient, meta = (AllowPrivateAccess = "true"))
-		TObjectPtr<class UUIStaticMesh> UIStaticMesh;
-
 };

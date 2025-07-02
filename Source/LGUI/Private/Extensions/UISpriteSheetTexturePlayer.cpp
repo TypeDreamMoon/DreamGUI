@@ -12,7 +12,10 @@ void UUISpriteSheetTexturePlayer::PostEditChangeProperty(FPropertyChangedEvent& 
 	{
 		if (!texture.IsValid())
 		{
-			texture = GetOwner()->FindComponentByClass<UUITexture>();
+			if (auto Widget = GetOwner()->FindComponentByClass<ULexWidget>())
+			{
+				texture = Cast<UUITexture>(Widget->GetVisual());
+			}
 		}
 		if (texture.IsValid())
 		{
@@ -28,21 +31,24 @@ bool UUISpriteSheetTexturePlayer::CanPlay()
 {
 	if (!texture.IsValid())
 	{
-		texture = GetOwner()->FindComponentByClass<UUITexture>();
+		if (auto Widget = GetOwner()->FindComponentByClass<ULexWidget>())
+		{
+			texture = Cast<UUITexture>(Widget->GetVisual());
+		}
 	}
 	if (!texture.IsValid())
 	{
-		UE_LOG(LGUI, Error, TEXT("[UUISpriteSheetTexturePlayer::Play]Need UITexture component!"));
+		UE_LOG(LGUI, Error, TEXT("[%s]Need UITexture component!"), ANSI_TO_TCHAR(__FUNCTION__));
 		return false;
 	}
 	if (!IsValid(texture->GetTexture()))
 	{
-		UE_LOG(LGUI, Error, TEXT("[UUISpriteSheetTexturePlayer::Play]UITexture component must have valid texture!"));
+		UE_LOG(LGUI, Error, TEXT("[%s]UITexture component must have valid texture!"), ANSI_TO_TCHAR(__FUNCTION__));
 		return false;
 	}
 	if (widthCount <= 0 || heightCount <= 0)
 	{
-		UE_LOG(LGUI, Error, TEXT("[UUISpriteSheetTexturePlayer::Play]WidthCount & HeightCount must greater then 0!"));
+		UE_LOG(LGUI, Error, TEXT("[%s]WidthCount & HeightCount must greater then 0!"), ANSI_TO_TCHAR(__FUNCTION__));
 		return false;
 	}
 	return true;

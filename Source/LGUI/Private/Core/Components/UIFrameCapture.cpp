@@ -2,27 +2,33 @@
 
 #include "LGUI/Public/Core/Components/UIFrameCapture.h"
 #include "LGUI.h"
+#include "LTweenBPLibrary.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
-#include "Core/UIPostProcessRenderProxy.h"
+#include "Core/LexVisualPostProcessRenderProxy.h"
 #include "GameFramework/PlayerController.h"
 #include "RenderTargetPool.h"
 #include "TextureResource.h"
 
 UUIFrameCapture::UUIFrameCapture(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
-	PrimaryComponentTick.bCanEverTick = true;
-	PrimaryComponentTick.bStartWithTickEnabled = true;
+	
 }
 
 void UUIFrameCapture::BeginPlay()
 {
 	Super::BeginPlay();
+	ULTweenBPLibrary::UpdateCall(this, FLTweenUpdateDelegate::CreateUObject(this, &UUIFrameCapture::OnUpdate));
 }
 
-void UUIFrameCapture::TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction )
+void UUIFrameCapture::EndPlay()
 {
-	Super::TickComponent( DeltaTime, TickType, ThisTickFunction );
+	Super::EndPlay();
+	ULTweenBPLibrary::KillAllTweensOnTarget(this, this);
+}
+
+void UUIFrameCapture::OnUpdate(float DeltaTime)
+{
 	if (bIsFrameReady)
 	{
 		bIsFrameReady = false;
@@ -50,7 +56,7 @@ bool UUIFrameCapture::CanEditChange(const FProperty* InProperty) const
 	{
 		FString PropertyName = InProperty->GetName();
 
-		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UUIFrameCapture, maskTexture))
+		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UUIFrameCapture, MaskTexture))
 		{
 			return false;//mask texture not needed here
 		}
@@ -61,15 +67,10 @@ bool UUIFrameCapture::CanEditChange(const FProperty* InProperty) const
 void UUIFrameCapture::MarkAllDirty()
 {
 	Super::MarkAllDirty();
-
-	if (this->RenderCanvas.IsValid())
-	{
-		
-	}
 }
 
 DECLARE_CYCLE_STAT(TEXT("PostProcess_UIFrameCapture"), STAT_FrameGrabber, STATGROUP_LGUI);
-class FUIFrameCaptureRenderProxy :public FUIPostProcessRenderProxy
+class FUIFrameCaptureRenderProxy :public FLexVisualPostProcessRenderProxy
 {
 public:
 	bool bCaptureFullScreen = true;
@@ -82,7 +83,7 @@ public:
 	bool* OwnerIsFrameReady = nullptr;
 public:
 	FUIFrameCaptureRenderProxy()
-		:FUIPostProcessRenderProxy()
+		:FLexVisualPostProcessRenderProxy()
 	{
 
 	}
@@ -135,12 +136,12 @@ public:
 		else
 		{
 			//copy rect area from screen image to a render target
-			auto modelViewProjectionMatrix = objectToWorldMatrix * ViewProjectionMatrix;
+			auto modelViewProjectionMatrix = ObjectToWorldMatrix * ViewProjectionMatrix;
 			Renderer->CopyRenderTargetOnMeshRegion(GraphBuilder
 				, RegisterExternalTexture(GraphBuilder, CapturedFrameTexture, TEXT("LGUI_FrameCaptureTargetTexture"))
 				, NumSamples > 1 ? ScreenResolvedTexture->GetRHI() : ScreenTargetTexture.GetReference()
 				, GlobalShaderMap
-				, renderScreenToMeshRegionVertexArray
+				, RenderScreenToMeshRegionVertexArray
 				, modelViewProjectionMatrix
 				, FIntRect(0, 0, CapturedFrameTexture->GetSizeXYZ().X, CapturedFrameTexture->GetSizeXYZ().Y)
 				, ViewTextureScaleOffset
@@ -156,17 +157,14 @@ public:
 	}
 };
 
-TSharedPtr<FUIPostProcessRenderProxy> UUIFrameCapture::GetRenderProxy()
+TSharedPtr<FLexVisualPostProcessRenderProxy> UUIFrameCapture::GetRenderProxy()
 {
 	if (!RenderProxy.IsValid())
 	{
 		auto Proxy = MakeShared<FUIFrameCaptureRenderProxy>();
 		Proxy->OwnerIsFrameReady = &this->bIsFrameReady;
 		RenderProxy = Proxy;
-		if (this->RenderCanvas.IsValid())
-		{
-			SendRegionVertexDataToRenderProxy();
-		}
+		SendRegionVertexDataToRenderProxy();
 	}
 	return RenderProxy;
 }
@@ -195,7 +193,8 @@ void UUIFrameCapture::SendOthersDataToRenderProxy()
 }
 void UUIFrameCapture::UpdateRenderTarget()
 {
-	FIntPoint DesiredRenderTargetSize(this->GetWidth(), this->GetHeight());
+	auto Widget = GetWidget();
+	FIntPoint DesiredRenderTargetSize(Widget->GetWidth(), Widget->GetHeight());
 	if (this->bCaptureFullScreen)
 	{
 		if (auto pc = this->GetWorld()->GetFirstPlayerController())

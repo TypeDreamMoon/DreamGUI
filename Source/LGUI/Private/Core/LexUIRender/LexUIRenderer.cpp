@@ -13,12 +13,12 @@
 #include "PipelineStateCache.h"
 #include "SceneRendering.h"
 #include "LGUI/Public/Core/LexUIRender/ILexUIRendererPrimitive.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "MeshPassProcessor.inl"
 #include "ScenePrivate.h"
 #include "TextureResource.h"
 #include "Engine/TextureRenderTarget2D.h"
-#include "Core/UIPostProcessRenderProxy.h"
+#include "Core/LexVisualPostProcessRenderProxy.h"
 #if WITH_EDITOR
 #include "Engine/Engine.h"
 #include "Editor/EditorEngine.h"
@@ -1149,7 +1149,7 @@ void FLexUIRenderer::AddResolvePass(
 	);
 }
 
-void FLexUIRenderer::AddWorldSpacePrimitive_RenderThread(ULGUICanvas* InCanvas, ILexUIRendererPrimitive* InPrimitive)
+void FLexUIRenderer::AddWorldSpacePrimitive_RenderThread(ULexCanvas* InCanvas, ILexUIRendererPrimitive* InPrimitive)
 {
 	if (InPrimitive != nullptr)
 	{
@@ -1167,7 +1167,7 @@ void FLexUIRenderer::AddWorldSpacePrimitive_RenderThread(ULGUICanvas* InCanvas, 
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d Add nullptr as ILexUIRendererPrimitive!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	}
 }
-void FLexUIRenderer::RemoveWorldSpacePrimitive_RenderThread(ULGUICanvas* InCanvas, ILexUIRendererPrimitive* InPrimitive)
+void FLexUIRenderer::RemoveWorldSpacePrimitive_RenderThread(ULexCanvas* InCanvas, ILexUIRendererPrimitive* InPrimitive)
 {
 	if (InPrimitive != nullptr)
 	{
@@ -1240,7 +1240,7 @@ void FLexUIRenderer::MarkNeedToSortWorldSpacePrimitiveRenderPriority()
 	);
 }
 
-void FLexUIRenderer::SetRenderCanvasDepthParameter(ULGUICanvas* InRenderCanvas, float InBlendDepth, int InDepthFade)
+void FLexUIRenderer::SetRenderCanvasDepthParameter(ULexCanvas* InRenderCanvas, float InBlendDepth, int InDepthFade)
 {
 	auto viewExtension = this;
 	ENQUEUE_RENDER_COMMAND(FLexUIRender_SortRenderPriority)(
@@ -1251,7 +1251,7 @@ void FLexUIRenderer::SetRenderCanvasDepthParameter(ULGUICanvas* InRenderCanvas, 
 	);
 }
 
-void FLexUIRenderer::SetRenderCanvasDepthFade_RenderThread(ULGUICanvas* InRenderCanvas, float InBlendDepth, int InDepthFade)
+void FLexUIRenderer::SetRenderCanvasDepthFade_RenderThread(ULexCanvas* InRenderCanvas, float InBlendDepth, int InDepthFade)
 {
 	for (auto& RenderParameter : WorldSpaceRenderCanvasParameterArray)
 	{
@@ -1263,7 +1263,7 @@ void FLexUIRenderer::SetRenderCanvasDepthFade_RenderThread(ULGUICanvas* InRender
 	}
 }
 
-void FLexUIRenderer::SetScreenSpaceRootCanvas(ULGUICanvas* InCanvas)
+void FLexUIRenderer::SetScreenSpaceRootCanvas(ULexCanvas* InCanvas)
 {
 	ScreenSpaceRenderParameter.RootCanvas = InCanvas;
 }

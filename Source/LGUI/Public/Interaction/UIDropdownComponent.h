@@ -4,14 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "Interaction/UISelectableComponent.h"
-#include "Event/Interface/LGUIPointerSelectDeselectInterface.h"
 #include "Event/Interface/LGUIPointerClickInterface.h"
 #include "LGUIComponentReference.h"
 #include "Event/LGUIEventDelegate.h"
 #include "Event/LGUIDelegateDeclaration.h"
-#include "LGUI/Public/Core/Components/UICanvasGroup.h"
 #include "UIDropdownComponent.generated.h"
 
+class UUISprite;
+class ULexText;
 class ULexUISpriteData_BaseObject;
 
 /**
@@ -80,12 +80,11 @@ protected:
 #endif
 
 	UPROPERTY(EditAnywhere, Category = "LGUI-Dropdown")
-		TWeakObjectPtr<class AUIBaseActor> ListRoot;
-	TWeakObjectPtr<class UUICanvasGroup> CanvasGroupOnListRoot;
+		TWeakObjectPtr<ALexWidgetActor> ListRoot;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Dropdown")
-		TWeakObjectPtr<class AUITextActor> CaptionText;
+		TWeakObjectPtr<ULexText> CaptionText;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Dropdown")
-		TWeakObjectPtr<class AUISpriteActor> CaptionSprite;
+		TWeakObjectPtr<UUISprite> CaptionSprite;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Dropdown")
 		FLGUIComponentReference ItemTemplate;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Dropdown")
@@ -111,8 +110,8 @@ protected:
 
 	bool bIsShow = false;
 	bool bNeedRecreate = true;
-	TWeakObjectPtr<class ULTweener> ShowOrHideTweener;
-	TWeakObjectPtr<class AUIContainerActor> BlockerActor;
+	TWeakObjectPtr<ULTweener> ShowOrHideTweener;
+	TWeakObjectPtr<ALexWidgetActor> BlockerActor;
 	UPROPERTY(Transient) TArray<TWeakObjectPtr<class UUIDropdownItemComponent>> CreatedItemArray;
 	virtual bool OnPointerClick_Implementation(ULGUIPointerEventData* eventData)override;
 	virtual bool OnPointerDeselect_Implementation(ULGUIBaseEventData* eventData)override;
@@ -150,7 +149,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Dropdown")
 		float GetMaxHeight()const { return MaxHeight; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Dropdown")
-		class AUIBaseActor* GetListRoot()const { return ListRoot.Get(); }
+		class ALexWidgetActor* GetListRoot()const { return ListRoot.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Dropdown")
 		bool GetUseInteractionBlock()const { return bUseInteractionBlock; }
 
@@ -216,9 +215,9 @@ public:
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Dropdown")
-		TWeakObjectPtr<class AUITextActor> TextActor;
+		TWeakObjectPtr<ULexText> Text;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Dropdown")
-		TWeakObjectPtr<class AUISpriteActor> SpriteActor;
+		TWeakObjectPtr<UUISprite> Sprite;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Dropdown")
 		FLGUIComponentReference Toggle;
 
@@ -255,9 +254,9 @@ public:
 	virtual bool OnPointerClick_Implementation(ULGUIPointerEventData* eventData)override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Dropdown")
-		class AUITextActor* GetTextActor()const { return TextActor.Get(); }
+	ULexText* GetTextActor()const { return Text.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Dropdown")
-		class AUISpriteActor* GetSpriteActor()const { return SpriteActor.Get(); }
+	UUISprite* GetSpriteActor()const { return Sprite.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Dropdown")
-		class UUIToggleComponent* GetToggle()const;
+	UUIToggleComponent* GetToggle()const;
 };

@@ -9,28 +9,17 @@
 #include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
 #include "PipelineStateCache.h"
 #include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "Core/LGUISettings.h"
 #include "RenderTargetPool.h"
-#include "Core/UIPostProcessRenderProxy.h"
+#include "Core/LexVisualPostProcessRenderProxy.h"
 #include "Rendering/Texture2DResource.h"
 #include "RHIStaticStates.h"
 
 UUIBackgroundBlur::UUIBackgroundBlur(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
-	PrimaryComponentTick.bCanEverTick = false;
+	
 }
-
-void UUIBackgroundBlur::BeginPlay()
-{
-	Super::BeginPlay();
-}
-
-void UUIBackgroundBlur::TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction )
-{
-	Super::TickComponent( DeltaTime, TickType, ThisTickFunction );
-}
-
 
 #if WITH_EDITOR
 void UUIBackgroundBlur::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
@@ -38,10 +27,10 @@ void UUIBackgroundBlur::PostEditChangeProperty(FPropertyChangedEvent& PropertyCh
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (auto Property = PropertyChangedEvent.Property)
 	{
-		if (Property->GetFName() == GET_MEMBER_NAME_CHECKED(UUIBackgroundBlur, maxDownSampleLevel))
+		if (Property->GetFName() == GET_MEMBER_NAME_CHECKED(UUIBackgroundBlur, MaxDownSampleLevel))
 		{
-			maxDownSampleLevel += 1;//just make it work
-			SetMaxDownSampleLevel(maxDownSampleLevel - 1);
+			MaxDownSampleLevel += 1;//just make it work
+			SetMaxDownSampleLevel(MaxDownSampleLevel - 1);
 		}
 	}
 }
@@ -52,20 +41,17 @@ void UUIBackgroundBlur::MarkAllDirty()
 {
 	Super::MarkAllDirty();
 
-	if (this->RenderCanvas.IsValid())
-	{
-		SendRegionVertexDataToRenderProxy();
-		SendStrengthTextureToRenderProxy();
-		SendMaskTextureToRenderProxy();
-		SendOthersDataToRenderProxy();
-	}
+	SendRegionVertexDataToRenderProxy();
+	SendStrengthTextureToRenderProxy();
+	SendMaskTextureToRenderProxy();
+	SendOthersDataToRenderProxy();
 }
 
 #define MAX_BlurStrength 100.0f
 #define INV_MAX_BlurStrength 0.01f
 
 DECLARE_CYCLE_STAT(TEXT("PostProcess_BackgroundBlur"), STAT_BackgroundBlur, STATGROUP_LGUI);
-class FUIBackgroundBlurRenderProxy : public FUIPostProcessRenderProxy
+class FUIBackgroundBlurRenderProxy : public FLexVisualPostProcessRenderProxy
 {
 public:
 	FTexture2DResource* strengthTexture = nullptr;
@@ -74,7 +60,7 @@ public:
 	float blurStrength = 0.0f;
 public:
 	FUIBackgroundBlurRenderProxy()
-		:FUIPostProcessRenderProxy()
+		:FLexVisualPostProcessRenderProxy()
 	{
 
 	}
@@ -153,12 +139,12 @@ public:
 		auto BlurEffectRenderTexture1 = BlurEffectRenderTarget1->GetRHI();
 		auto BlurEffectRenderTexture2 = BlurEffectRenderTarget2->GetRHI();
 
-		auto modelViewProjectionMatrix = objectToWorldMatrix * ViewProjectionMatrix;
+		auto modelViewProjectionMatrix = ObjectToWorldMatrix * ViewProjectionMatrix;
 		Renderer->CopyRenderTargetOnMeshRegion(GraphBuilder
 			, RegisterExternalTexture(GraphBuilder, BlurEffectRenderTexture1, TEXT("LGUI_BlurEffectRenderTexture1"))
 			, NumSamples > 1 ? ScreenResolvedTexture->GetRHI() : ScreenTargetTexture.GetReference()
 			, GlobalShaderMap
-			, renderScreenToMeshRegionVertexArray
+			, RenderScreenToMeshRegionVertexArray
 			, modelViewProjectionMatrix
 			, FIntRect(0, 0, BlurEffectRenderTexture1->GetSizeXYZ().X, BlurEffectRenderTexture1->GetSizeXYZ().Y)
 			, ViewTextureScaleOffset
@@ -328,7 +314,7 @@ public:
 		}
 
 		//after blur process, copy the area back to screen image
-		RenderMeshOnScreen_RenderThread(GraphBuilder, SceneTextures, ScreenTargetTexture, GlobalShaderMap, BlurEffectRenderTexture1, modelViewProjectionMatrix, objectToWorldMatrix, IsWorldSpace, BlendDepthForWorld, DepthFadeForWorld, DepthTextureScaleOffset, ViewRect);
+		RenderMeshOnScreen_RenderThread(GraphBuilder, SceneTextures, ScreenTargetTexture, GlobalShaderMap, BlurEffectRenderTexture1, modelViewProjectionMatrix, ObjectToWorldMatrix, IsWorldSpace, BlendDepthForWorld, DepthFadeForWorld, DepthTextureScaleOffset, ViewRect);
 
 		//release render target
 		ReleaseRenderTarget();
@@ -349,8 +335,8 @@ void UUIBackgroundBlur::SendOthersDataToRenderProxy()
 		};
 		auto updateData = new FUIBackgroundBlurUpdateOthersData();
 		updateData->blurStrengthWithAlpha = this->GetBlurStrengthInternal();
-		updateData->inv_SampleLevelInterval = this->inv_SampleLevelInterval;
-		updateData->maxDownSampleLevel = this->maxDownSampleLevel;
+		updateData->inv_SampleLevelInterval = this->Inv_SampleLevelInterval;
+		updateData->maxDownSampleLevel = this->MaxDownSampleLevel;
 		ENQUEUE_RENDER_COMMAND(FUIBackgroundBlur_UpdateData)
 			([BackgroundBlurRenderProxy, updateData](FRHICommandListImmediate& RHICmdList)
 				{
@@ -367,9 +353,9 @@ void UUIBackgroundBlur::SendStrengthTextureToRenderProxy()
 	{
 		auto BackgroundBlurRenderProxy = (FUIBackgroundBlurRenderProxy*)(RenderProxy.Get());
 		FTexture2DResource* strengthTextureResource = nullptr;
-		if (IsValid(this->strengthTexture) && this->strengthTexture->GetResource() != nullptr)
+		if (IsValid(this->StrengthTexture) && this->StrengthTexture->GetResource() != nullptr)
 		{
-			strengthTextureResource = (FTexture2DResource*)this->strengthTexture->GetResource();
+			strengthTextureResource = (FTexture2DResource*)this->StrengthTexture->GetResource();
 		}
 		ENQUEUE_RENDER_COMMAND(FUIBackgroundBlur_UpdateData)
 			([BackgroundBlurRenderProxy, strengthTextureResource](FRHICommandListImmediate& RHICmdList)
@@ -381,67 +367,64 @@ void UUIBackgroundBlur::SendStrengthTextureToRenderProxy()
 
 void UUIBackgroundBlur::SetBlurStrength(float newValue)
 {
-	if (blurStrength != newValue)
+	if (BlurStrength != newValue)
 	{
-		blurStrength = newValue;
-		MarkCanvasUpdate(false, false, false, false);
+		BlurStrength = newValue;
+		GetWidget()->MarkCanvasUpdate(false, false, false, false);
 		SendOthersDataToRenderProxy();
 	}
 }
 
 void UUIBackgroundBlur::SetApplyAlphaToBlur(bool newValue)
 {
-	if (applyAlphaToBlur != newValue)
+	if (ApplyAlphaToBlur != newValue)
 	{
-		applyAlphaToBlur = newValue;
-		MarkCanvasUpdate(false, false, false, false);
+		ApplyAlphaToBlur = newValue;
+		GetWidget()->MarkCanvasUpdate(false, false, false, false);
 		SendOthersDataToRenderProxy();
 	}
 }
 
 void UUIBackgroundBlur::SetMaxDownSampleLevel(int newValue)
 {
-	if (maxDownSampleLevel != newValue)
+	if (MaxDownSampleLevel != newValue)
 	{
-		maxDownSampleLevel = newValue;
-		inv_SampleLevelInterval = 1.0f / MAX_BlurStrength * maxDownSampleLevel;
-		MarkCanvasUpdate(false, false, false, false);
+		MaxDownSampleLevel = newValue;
+		Inv_SampleLevelInterval = 1.0f / MAX_BlurStrength * MaxDownSampleLevel;
+		GetWidget()->MarkCanvasUpdate(false, false, false, false);
 		SendOthersDataToRenderProxy();
 	}
 }
 
 void UUIBackgroundBlur::SetStrengthTexture(UTexture2D* newValue)
 {
-	if (strengthTexture != newValue)
+	if (StrengthTexture != newValue)
 	{
-		strengthTexture = newValue;
-		MarkCanvasUpdate(false, false, false, false);
+		StrengthTexture = newValue;
+		GetWidget()->MarkCanvasUpdate(false, false, false, false);
 		SendStrengthTextureToRenderProxy();
 	}
 }
 
 float UUIBackgroundBlur::GetBlurStrengthInternal()
 {
-	if (applyAlphaToBlur)
+	if (ApplyAlphaToBlur)
 	{
-		return GetFinalAlpha01() * blurStrength;
+		return GetFinalAlpha01() * BlurStrength;
 	}
-	return blurStrength;
+	return BlurStrength;
 }
 
-TSharedPtr<FUIPostProcessRenderProxy> UUIBackgroundBlur::GetRenderProxy()
+TSharedPtr<FLexVisualPostProcessRenderProxy> UUIBackgroundBlur::GetRenderProxy()
 {
 	if (!RenderProxy.IsValid())
 	{
 		RenderProxy = MakeShared<FUIBackgroundBlurRenderProxy>();
-		if (this->RenderCanvas.IsValid())
-		{
-			inv_SampleLevelInterval = 1.0f / MAX_BlurStrength * maxDownSampleLevel;
-			SendRegionVertexDataToRenderProxy();
-			SendStrengthTextureToRenderProxy();
-			SendMaskTextureToRenderProxy();
-			SendOthersDataToRenderProxy();
-		}
+		Inv_SampleLevelInterval = 1.0f / MAX_BlurStrength * MaxDownSampleLevel;
+		SendRegionVertexDataToRenderProxy();
+		SendStrengthTextureToRenderProxy();
+		SendMaskTextureToRenderProxy();
+		SendOthersDataToRenderProxy();
 	}
 	return RenderProxy;
 }

@@ -17,7 +17,7 @@ class LGUI_API UUIRoundedLayout : public UUILayoutWithChildren
 public:
 	virtual void OnRebuildLayout()override;
 
-	virtual bool GetCanLayoutControlAnchor_Implementation(class UUIItem* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
+	virtual bool GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
 protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		float Radius = 100;

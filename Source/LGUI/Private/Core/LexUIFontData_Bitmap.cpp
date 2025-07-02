@@ -2,7 +2,7 @@
 
 #include "Core/LexUIFontData_Bitmap.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UIText.h"
+#include "LGUI/Public/Core/Components/LexText.h"
 #include "TextureResource.h"
 #include "Engine/Texture2D.h"
 #if WITH_FREETYPE
@@ -489,7 +489,7 @@ void ULexUIFontData_Bitmap::ApplyPackingAtlasTextureExpand(UTexture2D* newTextur
 	}
 }
 
-void ULexUIFontData_Bitmap::PrepareForPushCharData(UUIText* InText)
+void ULexUIFontData_Bitmap::PrepareForPushCharData(ULexText* InText)
 {
 	boldSize = InText->GetFontSize() * boldRatio;
 	italicSlop = FMath::Tan(FMath::DegreesToRadians(italicAngle));

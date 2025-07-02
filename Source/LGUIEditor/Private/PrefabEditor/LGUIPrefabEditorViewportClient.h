@@ -10,7 +10,7 @@
 
 class FLGUIPrefabPreviewManager;
 class FLGUIPrefabEditorScene;
-class UUIBaseRenderable;
+class ULexVisual;
 class FLGUIPrefabEditor;
 class ULGUIPrefab;
 

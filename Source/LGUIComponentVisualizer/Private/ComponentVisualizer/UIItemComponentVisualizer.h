@@ -5,7 +5,7 @@
 #include "Components/ActorComponent.h"
 #include "ComponentVisualizer.h"
 
-class UUIItem;
+class ULexWidget;
 
 enum class EUIItemVisualizerSelectorType
 {
@@ -18,7 +18,7 @@ enum class EUIItemVisualizerSelectorType
 struct HUIItemAnchorVisProxy : public HComponentVisProxy
 {
 	DECLARE_HIT_PROXY();
-	HUIItemAnchorVisProxy(const UUIItem* InComponent, EUIItemVisualizerSelectorType InType);
+	HUIItemAnchorVisProxy(const ULexWidget* InComponent, EUIItemVisualizerSelectorType InType);
 	virtual EMouseCursor::Type GetMouseCursor()override
 	{
 		switch (Type)
@@ -58,5 +58,5 @@ public:
 
 private:
 	EUIItemVisualizerSelectorType SelectorType;
-	TWeakObjectPtr<UUIItem> TargetComp = nullptr;
+	TWeakObjectPtr<ULexWidget> TargetComp = nullptr;
 };

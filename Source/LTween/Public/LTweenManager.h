@@ -81,10 +81,6 @@ private:
 	bool bTickPaused = false;
 public:
 	UE_DEPRECATED(5.1, "Use Tweener->SetTickType(ELTweenTickType::Manual) then call this->ManualTick.")
-	/** Use "CustomTick" instead of UE4's default Tick to control your tween animations. Call "DisableTick" function to disable UE4's default Tick function, then call this CustomTick function.*/
-	UFUNCTION(BlueprintCallable, Category = LTween, meta=(DeprecatedFunction, DeprecationMessage = "Use Tweener->SetTickType(ELTweenTickType::Manual) then call this->ManualTick."))
-	void CustomTick(float DeltaTime);
-	UE_DEPRECATED(5.1, "Use Tweener->SetTickType(ELTweenTickType::Manual) then call this->ManualTick.")
 	/**
 	 * Disable default Tick function, so you can pause all tween or use CustomTick to do your own tick and use your own DeltaTime.
 	 * This will only pause the tick with current LTweenManager instance, so after load a new level, default Tick will work again, and you need to call DisableTick again if you want to disable tick.
@@ -107,6 +103,14 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = LTween)
 	void KillAllTweens(bool callComplete = false);
+
+	/**
+	 * Kill all tween animations created on TargetObject
+	 * @param TargetObject The object which contains the tweener
+	 * @param callComplete true- execute onComplete event.
+	 */
+	UFUNCTION(BlueprintCallable, Category = LTween)
+	static void KillAllTweensOnTarget(UObject* WorldContextObject, UObject* TargetObject, bool callComplete = false);
 
 	/**
 	 * Is the tweener is currently tweening? 
@@ -146,9 +150,4 @@ public:
 	static ULTweener* UpdateCall(UObject* WorldContextObject);
 
 	static class ULTweenerSequence* CreateSequence(UObject* WorldContextObject);
-
-	UE_DEPRECATED(5.2, "Use LTweenBPLibrary.UpdateCall instead.")
-	static FDelegateHandle RegisterUpdateEvent(UObject* WorldContextObject, const FLTweenUpdateDelegate& update);
-	UE_DEPRECATED(5.2, "Use LTweenBPLibrary.UpdateCall instead of RegisterUpdateEvent, and KillIfIsTweening for returned tweener instead of this UnregisterUpdateEvent.")
-	static void UnregisterUpdateEvent(UObject* WorldContextObject, const FDelegateHandle& delegateHandle);
 };

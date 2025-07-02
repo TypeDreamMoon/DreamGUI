@@ -1,22 +1,21 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "GeometryModifier/UIEffectPositionAsUV.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "LGUI.h"
 
 
 UUIEffectPositionAsUV::UUIEffectPositionAsUV()
 {
-	PrimaryComponentTick.bCanEverTick = false;
 }
 
 void UUIEffectPositionAsUV::ModifyUIGeometry(
 	FLexUIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 )
 {
-	auto uiRenderable = GetUIRenderable();
-	if (!uiRenderable)return;
-	auto renderCanvas = uiRenderable->GetRenderCanvas();
+	auto LexVisual = GetLexVisual();
+	if (!LexVisual)return;
+	auto RenderCanvas = LexVisual->GetWidget()->GetRenderCanvas();
 	auto& originVertices = InGeometry.OriginVertices;
 	switch (uvChannel)
 	{
@@ -33,7 +32,7 @@ void UUIEffectPositionAsUV::ModifyUIGeometry(
 	break;
 	case 1:
 	{
-		if (!renderCanvas)return;
+		if (!RenderCanvas)return;
 		auto& vertices = InGeometry.Vertices;
 		auto vertexCount = vertices.Num();
 		for (int i = 0; i < vertexCount; i++)
@@ -45,7 +44,7 @@ void UUIEffectPositionAsUV::ModifyUIGeometry(
 	break;
 	case 2:
 	{
-		if (!renderCanvas)return;
+		if (!RenderCanvas)return;
 		auto& vertices = InGeometry.Vertices;
 		auto vertexCount = vertices.Num();
 		for (int i = 0; i < vertexCount; i++)
@@ -57,7 +56,7 @@ void UUIEffectPositionAsUV::ModifyUIGeometry(
 	break;
 	case 3:
 	{
-		if (!renderCanvas)return;
+		if (!RenderCanvas)return;
 		auto& vertices = InGeometry.Vertices;
 		auto vertexCount = vertices.Num();
 		for (int i = 0; i < vertexCount; i++)

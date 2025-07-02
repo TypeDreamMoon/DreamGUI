@@ -1,8 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Extensions/LGUIRenderTargetGeometrySource.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "LGUI.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -417,7 +417,7 @@ ULGUIRenderTargetGeometrySource::ULGUIRenderTargetGeometrySource()
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 
-	TargetCanvas = FLGUIComponentReference(ULGUICanvas::StaticClass());
+	TargetCanvas = FLGUIComponentReference(ULexCanvas::StaticClass());
 }
 
 void ULGUIRenderTargetGeometrySource::BeginPlay()
@@ -932,7 +932,7 @@ void ULGUIRenderTargetGeometrySource::UpdateMeshData()
 	}
 }
 
-ULGUICanvas* ULGUIRenderTargetGeometrySource::GetTargetCanvas_Implementation()const
+ULexCanvas* ULGUIRenderTargetGeometrySource::GetTargetCanvas_Implementation()const
 {
 	return GetCanvas();
 }
@@ -991,7 +991,7 @@ void ULGUIRenderTargetGeometrySource::PostEditChangeProperty(FPropertyChangedEve
 }
 #endif
 
-ULGUICanvas* ULGUIRenderTargetGeometrySource::GetCanvas()const
+ULexCanvas* ULGUIRenderTargetGeometrySource::GetCanvas()const
 {
 	if (TargetCanvasObject.IsValid())
 	{
@@ -1002,7 +1002,7 @@ ULGUICanvas* ULGUIRenderTargetGeometrySource::GetCanvas()const
 		UE_LOG(LGUI, Warning, TEXT("[ULGUIRenderTargetGeometrySource::GetCanvas]TargetCanvas not valid!"));
 		return nullptr;
 	}
-	auto Canvas = TargetCanvas.GetComponent<ULGUICanvas>();
+	auto Canvas = TargetCanvas.GetComponent<ULexCanvas>();
 	if (Canvas == nullptr)
 	{
 		UE_LOG(LGUI, Warning, TEXT("[ULGUIRenderTargetGeometrySource::GetCanvas]TargetCanvas not valid!"));
@@ -1013,7 +1013,7 @@ ULGUICanvas* ULGUIRenderTargetGeometrySource::GetCanvas()const
 		UE_LOG(LGUI, Warning, TEXT("[ULGUIRenderTargetGeometrySource::GetCanvas]TargetCanvas must be a root canvas!"));
 		return nullptr;
 	}
-	if (Canvas->GetRenderMode() != ELGUIRenderMode::RenderTarget || !IsValid(Canvas->GetRenderTarget()))
+	if (Canvas->GetRenderMode() != ELexRenderMode::RenderTarget || !IsValid(Canvas->GetRenderTarget()))
 	{
 		UE_LOG(LGUI, Warning, TEXT("[ULGUIRenderTargetGeometrySource::GetCanvas]TargetCanvas's render mode must be RenderTarget!"));
 		return nullptr;
@@ -1022,7 +1022,7 @@ ULGUICanvas* ULGUIRenderTargetGeometrySource::GetCanvas()const
 	return Canvas;
 }
 
-void ULGUIRenderTargetGeometrySource::SetCanvas(ULGUICanvas* Value)
+void ULGUIRenderTargetGeometrySource::SetCanvas(ULexCanvas* Value)
 {
 	if (TargetCanvasObject.Get() != Value)
 	{

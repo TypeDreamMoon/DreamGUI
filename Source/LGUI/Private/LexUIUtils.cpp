@@ -1,13 +1,13 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Utils/LexUIUtils.h"
-#include "../Public/Core/Components/UIItem.h"
-#include "../Public/Core/Components/LGUICanvas.h"
+#include "../Public/Core/Components/LexWidget.h"
+#include "../Public/Core/Components/LexCanvas.h"
 #include "Core/LexUIDrawCall.h"
 #include "Sound/SoundBase.h"
-#include "../Public/Core/Components/UIBaseRenderable.h"
-#include "../Public/Core/Components/UIPostProcessRenderable.h"
-#include "../Public/Core/Components/UIBatchMeshRenderable.h"
+#include "../Public/Core/Components/LexVisual.h"
+#include "../Public/Core/Components/LexVisualPostProcess.h"
+#include "../Public/Core/Components/LexVisualBatchMesh.h"
 #include "TextureResource.h"
 #include "Engine/Texture2D.h"
 #if WITH_EDITOR

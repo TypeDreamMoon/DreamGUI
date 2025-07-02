@@ -9,7 +9,7 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "LGUIEditorUtils.h"
-#include "Core/Components/LGUICanvas.h"
+#include "Core/Components/LexCanvas.h"
 
 #define LOCTEXT_NAMESPACE "UICanvasScalarCustomization"
 
@@ -30,7 +30,7 @@ void FUICanvasScalerCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 	{
 		UE_LOG(LGUIEditor, Log, TEXT("Get TargetScript is null"));
 	}
-	LGUIEditorUtils::ShowError_RequireComponent(&DetailBuilder, TargetScriptPtr.Get(), ULGUICanvas::StaticClass());
+	LGUIEditorUtils::ShowError_RequireComponent(&DetailBuilder, TargetScriptPtr.Get(), ULexCanvas::StaticClass());
 	LGUIEditorUtils::ShowError_MultiComponentNotAllowed(&DetailBuilder, TargetScriptPtr.Get());
 
 	TargetScriptPtr->ForceUpdate();
@@ -126,7 +126,7 @@ void FUICanvasScalerCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 		}
 		else
 		{
-			if (canvas->GetRenderMode() == ELGUIRenderMode::WorldSpace || canvas->GetRenderMode() == ELGUIRenderMode::WorldSpace_LGUI)
+			if (canvas->GetRenderMode() == ELexRenderMode::WorldSpace || canvas->GetRenderMode() == ELexRenderMode::WorldSpace_LGUI)
 			{
 				lguiCategory.AddCustomRow(LOCTEXT("WorldSpaceUIInfo", "WorldSpaceUIInfo"))
 					.WholeRowContent()
@@ -140,8 +140,8 @@ void FUICanvasScalerCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 					];
 			}
 			else if (
-				canvas->GetRenderMode() == ELGUIRenderMode::ScreenSpaceOverlay
-				|| canvas->GetRenderMode() == ELGUIRenderMode::RenderTarget
+				canvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay
+				|| canvas->GetRenderMode() == ELexRenderMode::RenderTarget
 				)
 			{
 				lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, UIScaleMode));

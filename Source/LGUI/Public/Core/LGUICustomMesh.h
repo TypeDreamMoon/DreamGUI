@@ -2,20 +2,20 @@
 
 #pragma once
 
-#include "Components/UIBatchMeshRenderable.h"
+#include "Components/LexVisualBatchMesh.h"
 #include "Curves/CurveFloat.h"
 #include "LGUICustomMesh.generated.h"
 
 class FLexUIGeometry;
-class ULGUICanvas;
-class UUIBatchMeshRenderable;
+class ULexCanvas;
+class ULexVisualBatchMesh;
 
 /**
  * UI mesh generator.
  * This class only hold the method of generating mesh, the actural mesh data is stored inside outer class (UIBatchMeshRenderable) which hold this instance.
  */
 UCLASS(BlueprintType, Blueprintable, Abstract, DefaultToInstanced, EditInlineNew)
-class LGUI_API ULGUICustomMesh : public ULGUIGeometryHelper
+class LGUI_API ULGUICustomMesh : public ULexUIGeometryHelper
 {
 	GENERATED_BODY()
 public:
@@ -27,7 +27,7 @@ public:
 	 * @param InVertexUVChanged Normally just ignore this.
 	 * @param InVertexColorChanged Normally just ignore this.
 	 */
-	virtual void OnFillMesh(UUIBatchMeshRenderable* InRenderable, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged);
+	virtual void OnFillMesh(ULexVisualBatchMesh* InRenderable, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged);
 	/**
 	 * Get uv value on raycast hit point. Normally just use "GetHitUVbyFaceIndex".
 	 * @param InRenderable The UI element which will use this mesh.
@@ -38,7 +38,7 @@ public:
 	 * @param OutHitUV result uv
 	 * @return true if hit suceess
 	 */
-	virtual bool GetHitUV(const UUIBatchMeshRenderable* InRenderable, const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV)const;
+	virtual bool GetHitUV(const ULexVisualBatchMesh* InRenderable, const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV)const;
 	/**
 	 * Is this mesh type support drawcall batching? When the mesh comes in 3d then should not do drawcall batching. Normally just leave it return false.
 	 */
@@ -53,7 +53,7 @@ protected:
 	 * @param InVertexColorChanged Normally just ignore this.
 	 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI", meta = (DisplayName = "OnCreateMesh", AdvancedDisplay = 1))
-	void ReceiveOnFillMesh(UUIBatchMeshRenderable* InRenderable, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged);
+	void ReceiveOnFillMesh(ULexVisualBatchMesh* InRenderable, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged);
 	/**
 	 * Get uv value on raycast hit point. Normally just use "GetHitUVbyFaceIndex".
 	 * @param InRenderable The UI element which will use this mesh.
@@ -65,7 +65,7 @@ protected:
 	 * @return true if hit suceess
 	 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI", meta = (DisplayName = "GetHitUV"))
-	bool ReceiveGetHitUV(const UUIBatchMeshRenderable* InRenderable, const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV)const;
+	bool ReceiveGetHitUV(const ULexVisualBatchMesh* InRenderable, const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV)const;
 	/**
 	 * Is this mesh type support drawcall batching? When the mesh comes in 3d then should not do drawcall batching. Normally just leave it return false.
 	 */
@@ -73,7 +73,7 @@ protected:
 	bool ReceiveSupportDrawcallBatching()const;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	bool GetHitUVbyFaceIndex(const UUIBatchMeshRenderable* InRenderable, const int32& InHitFaceIndex, const FVector& InHitPoint, FVector2D& OutHitUV)const;
+	bool GetHitUVbyFaceIndex(const ULexVisualBatchMesh* InVisual, const int32& InHitFaceIndex, const FVector& InHitPoint, FVector2D& OutHitUV)const;
 };
 
 UCLASS(ClassGroup = LGUI, DisplayName="LGUICustomMesh Cylinder")
@@ -81,8 +81,8 @@ class LGUI_API ULGUICustomMesh_Cylinder : public ULGUICustomMesh
 {
 	GENERATED_BODY()
 public:
-	virtual void OnFillMesh(UUIBatchMeshRenderable* InRenderable, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
-	virtual bool GetHitUV(const UUIBatchMeshRenderable* InRenderable, const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV) const override;
+	virtual void OnFillMesh(ULexVisualBatchMesh* InVisual, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
+	virtual bool GetHitUV(const ULexVisualBatchMesh* InRenderable, const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV) const override;
 protected:
 	UPROPERTY(EditAnywhere, Category = LGUI, meta = (ClampMin = -180.0f, ClampMax = 180.0f))
 	float CylinderArcAngle = 45;
@@ -94,8 +94,8 @@ class LGUI_API ULGUICustomMesh_CurvyPlane : public ULGUICustomMesh
 	GENERATED_BODY()
 public:
 	ULGUICustomMesh_CurvyPlane();
-	virtual void OnFillMesh(UUIBatchMeshRenderable* InRenderable, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
-	virtual bool GetHitUV(const UUIBatchMeshRenderable* InRenderable, const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV) const override;
+	virtual void OnFillMesh(ULexVisualBatchMesh* InVisual, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
+	virtual bool GetHitUV(const ULexVisualBatchMesh* InRenderable, const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV) const override;
 protected:
 	UPROPERTY(EditAnywhere, Category = LGUI, meta = (ClampMin = 1, ClampMax = 200))
 	int Segment = 10;

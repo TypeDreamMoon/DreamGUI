@@ -10,9 +10,9 @@
 #include "Event/Interface/LGUIPointerScrollInterface.h"
 #include "LGUIRenderTargetInteraction.generated.h"
 
-class ULGUICanvas;
+class ULexCanvas;
 class ULGUIEventSystem;
-enum class ELGUIRenderMode :uint8;
+enum class ELexRenderMode :uint8;
 
 /**
  * Interface for LGUIRenderTargetInteraction to provide raycast info.
@@ -30,7 +30,7 @@ class LGUI_API ILGUIRenderTargetInteractionSourceInterface
 	GENERATED_BODY()
 public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = LGUI)
-	ULGUICanvas* GetTargetCanvas()const;
+	ULexCanvas* GetTargetCanvas()const;
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = LGUI)
 	bool PerformLineTrace(const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV);
 };
@@ -60,13 +60,13 @@ protected:
 	UPROPERTY(EditAnywhere, Category = LGUI)
 		bool bAllowEventBubbleUp = false;
 
-	UPROPERTY(VisibleAnywhere, Transient, Category = LGUI, AdvancedDisplay) TWeakObjectPtr<ULGUICanvas> TargetCanvas = nullptr;
+	UPROPERTY(VisibleAnywhere, Transient, Category = LGUI, AdvancedDisplay) TWeakObjectPtr<ULexCanvas> TargetCanvas = nullptr;
 	UPROPERTY(VisibleAnywhere, Transient, Category = LGUI, AdvancedDisplay) TObjectPtr<UActorComponent> LineTraceSource = nullptr;
 	UPROPERTY(VisibleAnywhere, Transient, Category = LGUI, AdvancedDisplay) TObjectPtr<ULGUIPointerEventData> PointerEventData = nullptr;
 	TWeakObjectPtr<ULGUIPointerEventData> InputPointerEventData = nullptr;
 
-	TArray<ELGUIRenderMode> RenderModeArray;
-	virtual bool ShouldSkipCanvas(class ULGUICanvas* UICanvas)override;
+	TArray<ELexRenderMode> RenderModeArray;
+	virtual bool ShouldSkipCanvas(class ULexCanvas* UICanvas)override;
 	virtual bool GenerateRay(ULGUIPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection)override { return true; }
 	virtual bool ShouldStartDrag(ULGUIPointerEventData* InPointerEventData)override;
 	virtual bool Raycast(ULGUIPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, FHitResult& OutHitResult, TArray<USceneComponent*>& OutHoverArray)override;

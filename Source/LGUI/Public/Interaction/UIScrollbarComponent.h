@@ -12,8 +12,8 @@
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUIScrollbarDynamicDelegate, float, InFloat);
 
-class AUIBaseActor;
-class UUIItem;
+class ALexWidgetActor;
+class ULexWidget;
 
 UENUM(BlueprintType, Category = LGUI)
 enum class UIScrollbarDirectionType:uint8
@@ -48,15 +48,15 @@ protected:
 		float Size = 0;
 	/** Handle can move inside it's parent */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Scrollbar")
-		TWeakObjectPtr<AUIBaseActor> HandleActor;
+		TWeakObjectPtr<ALexWidgetActor> HandleActor;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Scrollbar")
 		UIScrollbarDirectionType DirectionType;
 	/** When use navigation input to change the scroll value, each press will change value as NavigationChangeInterval. */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Scrollbar", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 		float NavigationChangeInterval = 0.1f;
 
-	UPROPERTY(Transient)TWeakObjectPtr<UUIItem> Handle;
-	UPROPERTY(Transient)TWeakObjectPtr<UUIItem> HandleArea;
+	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> Handle;
+	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> HandleArea;
 
 	FLGUIMulticastFloatDelegate OnValueChangeCPP;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Scrollbar")
@@ -81,7 +81,7 @@ public:
 		void SetNavigationChangeInterval(float InValue);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Scrollbar")
-		AUIBaseActor* GetHandleActor()const { return HandleActor.Get(); }
+		ALexWidgetActor* GetHandleActor()const { return HandleActor.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Scrollbar")
 		UIScrollbarDirectionType GetDirectionType()const { return DirectionType; }
 

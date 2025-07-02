@@ -2,16 +2,15 @@
 
 #include "LGUI/Public/Core/Components/UIDirectMeshRenderable.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "LGUI/Public/Core/LexUIMesh/LexUIMeshComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Core/LexUIDrawCall.h"
 
 UUIDirectMeshRenderable::UUIDirectMeshRenderable(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
-	PrimaryComponentTick.bCanEverTick = false;
 	bLocalVertexPositionChanged = true;
-	UIRenderableType = EUIRenderableType::UIDirectMeshRenderable;
+	VisualType = ELexVisualType::DirectMesh;
 }
 
 void UUIDirectMeshRenderable::BeginPlay()
@@ -20,12 +19,6 @@ void UUIDirectMeshRenderable::BeginPlay()
 	bLocalVertexPositionChanged = true;
 }
 
-void UUIDirectMeshRenderable::TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction )
-{
-	Super::TickComponent( DeltaTime, TickType, ThisTickFunction );
-}
-
-
 #if WITH_EDITOR
 void UUIDirectMeshRenderable::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
@@ -33,36 +26,25 @@ void UUIDirectMeshRenderable::PostEditChangeProperty(FPropertyChangedEvent& Prop
 }
 #endif
 
-void UUIDirectMeshRenderable::OnUnregister()
-{
-	Super::OnUnregister();
-}
-
 void UUIDirectMeshRenderable::MarkAllDirty()
 {
 	bLocalVertexPositionChanged = true;
 	Super::MarkAllDirty();
 }
 
-void UUIDirectMeshRenderable::OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange, bool InDiscardCache)
+void UUIDirectMeshRenderable::OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange)
 {
-    Super::OnAnchorChange(InPivotChange, InWidthChange, InHeightChange, InDiscardCache);
-    if (InPivotChange || InWidthChange || InHeightChange)
-    {
-        MarkVertexPositionDirty();
-    }
+    Super::OnAnchorChange(InPivotChange, InWidthChange, InHeightChange);
+	MarkVertexPositionDirty();
 }
 
 void UUIDirectMeshRenderable::MarkVertexPositionDirty()
 {
 	bLocalVertexPositionChanged = true;
-	MarkCanvasUpdate(false, false, false);//since DirectMeshRenderable will always take a drawcall, we don't need to rebuild drawcall on it
+	GetWidget()->MarkCanvasUpdate(false, false, false);//since DirectMeshRenderable will always take a drawcall, we don't need to rebuild drawcall on it
 }
 void UUIDirectMeshRenderable::UpdateGeometry()
 {
-	if (GetIsUIActiveInHierarchy() == false)return;
-	if (!RenderCanvas.IsValid())return;
-
 	Super::UpdateGeometry();
 }
 
@@ -85,25 +67,26 @@ TWeakObjectPtr<ULexUIMeshComponent> UUIDirectMeshRenderable::GetUIMesh()const
 }
 void UUIDirectMeshRenderable::ClearMeshData()
 {
-	MarkCanvasUpdate(false, false, false, true);
+	GetWidget()->MarkCanvasUpdate(false, false, false, true);
 }
 void UUIDirectMeshRenderable::OnMeshDataReady()
 {
 
 }
 
-bool UUIDirectMeshRenderable::LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)
+bool UUIDirectMeshRenderable::LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
-	if (RaycastType == EUIRenderableRaycastType::Rect)
+	if (RaycastType == ELexVisualHitTestType::Rect)
 	{
 		return Super::LineTraceUI(OutHit, Start, End);
 	}
-	else if (RaycastType == EUIRenderableRaycastType::Mesh)
+	else if (RaycastType == ELexVisualHitTestType::Mesh)
 	{
 		if (!DrawCall.IsValid())return false;
 		if (!DrawCall->DrawCallRenderSection.IsValid())return false;
 
-		auto inverseTf = GetComponentTransform().Inverse();
+		auto Widget = GetWidget();
+		auto inverseTf = Widget->GetComponentTransform().Inverse();
 		auto localSpaceRayOrigin = inverseTf.TransformPosition(Start);
 		auto localSpaceRayEnd = inverseTf.TransformPosition(End);
 
@@ -114,7 +97,7 @@ bool UUIDirectMeshRenderable::LineTraceUI(FHitResult& OutHit, const FVector& Sta
 		{
 			auto IntersectionPoint = FMath::LinePlaneIntersection(localSpaceRayOrigin, localSpaceRayEnd, FVector::ZeroVector, FVector(1, 0, 0));
 			//hit point inside rect area
-			if (IntersectionPoint.Y > GetLocalSpaceLeft() && IntersectionPoint.Y < GetLocalSpaceRight() && IntersectionPoint.Z > GetLocalSpaceBottom() && IntersectionPoint.Z < GetLocalSpaceTop())
+			if (IntersectionPoint.Y > Widget->GetLocalSpaceLeft() && IntersectionPoint.Y < Widget->GetLocalSpaceRight() && IntersectionPoint.Z > Widget->GetLocalSpaceBottom() && IntersectionPoint.Z < Widget->GetLocalSpaceTop())
 			{
 				//triangle hit test
 				auto MeshSection = (FLexUIMeshSection*)DrawCall->DrawCallRenderSection.Pin().Get();
@@ -132,9 +115,9 @@ bool UUIDirectMeshRenderable::LineTraceUI(FHitResult& OutHit, const FVector& Sta
 					{
 						OutHit.TraceStart = Start;
 						OutHit.TraceEnd = End;
-						OutHit.Component = (UPrimitiveComponent*)this;//acturally this convert is incorrect, but I need this pointer
-						OutHit.Location = GetComponentTransform().TransformPosition(HitPoint);
-						OutHit.Normal = GetComponentTransform().TransformVector(HitNormal);
+						OutHit.Component = (UPrimitiveComponent*)Widget;//acturally this convert is incorrect, but I need this pointer
+						OutHit.Location = Widget->GetComponentTransform().TransformPosition(HitPoint);
+						OutHit.Normal = Widget->GetComponentTransform().TransformVector(HitNormal);
 						OutHit.Normal.Normalize();
 						OutHit.Distance = FVector::Distance(Start, OutHit.Location);
 						OutHit.ImpactPoint = OutHit.Location;

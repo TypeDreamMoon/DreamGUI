@@ -3,7 +3,7 @@
 #pragma once
 
 #include "LGUI/Public/Core/Components/UISpriteBase.h"
-#include "Core/Actor/UIBaseActor.h"
+#include "Core/Actor/LexWidgetActor.h"
 #include "LTweener.h"
 #include "UIPolygon.generated.h"
 
@@ -74,23 +74,3 @@ public:
 		ULTweener* EndAngleTo(float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase easeType = ELTweenEase::OutCubic);
 };
 
-/**
- * render a solid polygon shape
- */
-UCLASS(ClassGroup = LGUI)
-class LGUI_API AUIPolygonActor : public AUIBaseRenderableActor
-{
-	GENERATED_BODY()
-
-public:
-	AUIPolygonActor();
-
-	virtual UUIItem* GetUIItem()const override { return UIPolygon; }
-	virtual class UUIBaseRenderable* GetUIRenderable()const override { return UIPolygon; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		UUIPolygon* GetUIPolygon()const { return UIPolygon; }
-private:
-	UPROPERTY(Category = "LGUI", VisibleAnywhere, BlueprintReadOnly, Transient, meta = (AllowPrivateAccess = "true"))
-		TObjectPtr<class UUIPolygon> UIPolygon;
-
-};

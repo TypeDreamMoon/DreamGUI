@@ -35,7 +35,7 @@ void FUITextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
 			if (validItem->GetWorld() && validItem->GetWorld()->WorldType == EWorldType::Editor)
 			{
 				validItem->CheckTexture();
-				validItem->EditorForceUpdate();
+				validItem->GetWidget()->EditorForceUpdate();
 			}
 		}
 	}
@@ -53,7 +53,7 @@ void FUITextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
 	textureHandle->GetValue((*(UObject**)&texture));
 	if(IsValid(texture))
 	{
-		EUIRenderableRaycastType raycastType = EUIRenderableRaycastType::Rect;
+		ELexVisualHitTestType raycastType = ELexVisualHitTestType::Rect;
 		bool bGetRaycastTypeValue = true;
 		for (int i = 0; i < TargetScriptArray.Num(); i++)
 		{
@@ -72,7 +72,7 @@ void FUITextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
 		}
 		if (bGetRaycastTypeValue)
 		{
-			if (raycastType == EUIRenderableRaycastType::VisiblePixel)
+			if (raycastType == ELexVisualHitTestType::VisiblePixel)
 			{
 				if (texture->CompressionSettings != TextureCompressionSettings::TC_EditorIcon)
 				{
@@ -125,8 +125,8 @@ void FUITextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
 					{
 						item->Modify();
 						item->SetSizeFromTexture();
-						FLexUIUtils::NotifyPropertyChanged(item.Get(), UUIItem::GetAnchorDataPropertyName());
-						item->EditorForceUpdate();
+						FLexUIUtils::NotifyPropertyChanged(item.Get(), ULexWidget::GetAnchorDataPropertyName());
+						item->GetWidget()->EditorForceUpdate();
 					}
 				}
 				GEditor->EndTransaction();

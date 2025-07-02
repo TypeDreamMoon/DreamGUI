@@ -2,7 +2,7 @@
 
 #include "Layout/UILayoutWithAnimation.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
 #include "LTweenManager.h"
 #include "LTweenBPLibrary.h"
 #include "Core/LGUISettings.h"
@@ -19,35 +19,35 @@ void UUILayoutWithAnimation_CustomAnimation::BeginSetupAnimations()
 		ReceiveBeginSetupAnimations();
 	}
 }
-void UUILayoutWithAnimation_CustomAnimation::ApplyAnchoredPositionAnimation(const FVector2D& Value, UUIItem* Target)
+void UUILayoutWithAnimation_CustomAnimation::ApplyAnchoredPositionAnimation(const FVector2D& Value, ULexWidget* Target)
 {
 	if (bCanExecuteBlueprintEvent)
 	{
 		ReceiveApplyAnchoredPositionAnimation(Value, Target);
 	}
 }
-void UUILayoutWithAnimation_CustomAnimation::ApplyRotatorAnimation(const FRotator& Value, UUIItem* Target)
+void UUILayoutWithAnimation_CustomAnimation::ApplyRotatorAnimation(const FRotator& Value, ULexWidget* Target)
 {
 	if (bCanExecuteBlueprintEvent)
 	{
 		ReceiveApplyRotatorAnimation(Value, Target);
 	}
 }
-void UUILayoutWithAnimation_CustomAnimation::ApplyWidthAnimation(float Value, UUIItem* Target)
+void UUILayoutWithAnimation_CustomAnimation::ApplyWidthAnimation(float Value, ULexWidget* Target)
 {
 	if (bCanExecuteBlueprintEvent)
 	{
 		ReceiveApplyWidthAnimation(Value, Target);
 	}
 }
-void UUILayoutWithAnimation_CustomAnimation::ApplyHeightAnimation(float Value, UUIItem* Target)
+void UUILayoutWithAnimation_CustomAnimation::ApplyHeightAnimation(float Value, ULexWidget* Target)
 {
 	if (bCanExecuteBlueprintEvent)
 	{
 		ReceiveApplyHeightAnimation(Value, Target);
 	}
 }
-void UUILayoutWithAnimation_CustomAnimation::ApplySizeDeltaAnimation(const FVector2D& Value, UUIItem* Target)
+void UUILayoutWithAnimation_CustomAnimation::ApplySizeDeltaAnimation(const FVector2D& Value, ULexWidget* Target)
 {
 	if (bCanExecuteBlueprintEvent)
 	{
@@ -124,7 +124,7 @@ void UUILayoutWithAnimation::EndSetupAnimations()
 	}
 }
 
-void UUILayoutWithAnimation::ApplyAnchoredPositionWithAnimation(EUILayoutAnimationType tempAnimationType, FVector2D Value, UUIItem* Target)
+void UUILayoutWithAnimation::ApplyAnchoredPositionWithAnimation(EUILayoutAnimationType tempAnimationType, FVector2D Value, ULexWidget* Target)
 {
 	switch (tempAnimationType)
 	{
@@ -139,8 +139,8 @@ void UUILayoutWithAnimation::ApplyAnchoredPositionWithAnimation(EUILayoutAnimati
 		if (Target->GetAnchoredPosition() != Value)
 		{
 			auto Tweener = ULTweenManager::To(Target
-				, FLTweenVector2DGetterFunction::CreateUObject(Target, &UUIItem::GetAnchoredPosition)
-				, FLTweenVector2DSetterFunction::CreateUObject(Target, &UUIItem::SetAnchoredPosition)
+				, FLTweenVector2DGetterFunction::CreateUObject(Target, &ULexWidget::GetAnchoredPosition)
+				, FLTweenVector2DSetterFunction::CreateUObject(Target, &ULexWidget::SetAnchoredPosition)
 				, Value, AnimationDuration);
 			if (Tweener)
 			{
@@ -180,7 +180,7 @@ void UUILayoutWithAnimation::ApplyAnchoredPositionWithAnimation(EUILayoutAnimati
 	}
 }
 
-void UUILayoutWithAnimation::ApplyRotatorWithAnimation(EUILayoutAnimationType tempAnimationType, const FRotator& Value, UUIItem* Target)
+void UUILayoutWithAnimation::ApplyRotatorWithAnimation(EUILayoutAnimationType tempAnimationType, const FRotator& Value, ULexWidget* Target)
 {
 	switch (tempAnimationType)
 	{
@@ -233,7 +233,7 @@ void UUILayoutWithAnimation::ApplyRotatorWithAnimation(EUILayoutAnimationType te
 	}
 }
 
-void UUILayoutWithAnimation::ApplyWidthWithAnimation(EUILayoutAnimationType tempAnimationType, float Value, UUIItem* Target)
+void UUILayoutWithAnimation::ApplyWidthWithAnimation(EUILayoutAnimationType tempAnimationType, float Value, ULexWidget* Target)
 {
 	switch (tempAnimationType)
 	{
@@ -248,8 +248,8 @@ void UUILayoutWithAnimation::ApplyWidthWithAnimation(EUILayoutAnimationType temp
 		if (Target->GetWidth() != Value)
 		{
 			auto Tweener = ULTweenManager::To(Target
-				, FLTweenFloatGetterFunction::CreateUObject(Target, &UUIItem::GetWidth)
-				, FLTweenFloatSetterFunction::CreateUObject(Target, &UUIItem::SetWidth)
+				, FLTweenFloatGetterFunction::CreateUObject(Target, &ULexWidget::GetWidth)
+				, FLTweenFloatSetterFunction::CreateUObject(Target, &ULexWidget::SetWidth)
 				, Value, AnimationDuration);
 			if (Tweener)
 			{
@@ -289,7 +289,7 @@ void UUILayoutWithAnimation::ApplyWidthWithAnimation(EUILayoutAnimationType temp
 	}
 }
 
-void UUILayoutWithAnimation::ApplyHeightWithAnimation(EUILayoutAnimationType tempAnimationType, float Value, UUIItem* Target)
+void UUILayoutWithAnimation::ApplyHeightWithAnimation(EUILayoutAnimationType tempAnimationType, float Value, ULexWidget* Target)
 {
 	switch (tempAnimationType)
 	{
@@ -304,8 +304,8 @@ void UUILayoutWithAnimation::ApplyHeightWithAnimation(EUILayoutAnimationType tem
 		if (Target->GetHeight() != Value)
 		{
 			auto Tweener = ULTweenManager::To(Target
-				, FLTweenFloatGetterFunction::CreateUObject(Target, &UUIItem::GetHeight)
-				, FLTweenFloatSetterFunction::CreateUObject(Target, &UUIItem::SetHeight)
+				, FLTweenFloatGetterFunction::CreateUObject(Target, &ULexWidget::GetHeight)
+				, FLTweenFloatSetterFunction::CreateUObject(Target, &ULexWidget::SetHeight)
 				, Value, AnimationDuration);
 			if (Tweener)
 			{
@@ -345,7 +345,7 @@ void UUILayoutWithAnimation::ApplyHeightWithAnimation(EUILayoutAnimationType tem
 	}
 }
 
-void UUILayoutWithAnimation::ApplySizeDeltaWithAnimation(EUILayoutAnimationType tempAnimationType, FVector2D Value, UUIItem* Target)
+void UUILayoutWithAnimation::ApplySizeDeltaWithAnimation(EUILayoutAnimationType tempAnimationType, FVector2D Value, ULexWidget* Target)
 {
 	switch (tempAnimationType)
 	{
@@ -360,8 +360,8 @@ void UUILayoutWithAnimation::ApplySizeDeltaWithAnimation(EUILayoutAnimationType 
 		if (Target->GetSizeDelta() != Value)
 		{
 			auto Tweener = ULTweenManager::To(Target
-				, FLTweenVector2DGetterFunction::CreateUObject(Target, &UUIItem::GetSizeDelta)
-				, FLTweenVector2DSetterFunction::CreateUObject(Target, &UUIItem::SetSizeDelta)
+				, FLTweenVector2DGetterFunction::CreateUObject(Target, &ULexWidget::GetSizeDelta)
+				, FLTweenVector2DSetterFunction::CreateUObject(Target, &ULexWidget::SetSizeDelta)
 				, Value, AnimationDuration);
 			if (Tweener)
 			{

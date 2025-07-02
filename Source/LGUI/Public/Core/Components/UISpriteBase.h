@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "UIBatchMeshRenderable.h"
+#include "LexVisualBatchMesh.h"
 #include "Core/IUISpriteRenderableInterface.h"
 #include "UISpriteBase.generated.h"
 
@@ -12,7 +12,7 @@ class ULexUISpriteData_BaseObject;
  * This is base class for create custom mesh based on UISprite.
  */
 UCLASS(ClassGroup = (LGUI), Abstract, NotBlueprintable)
-class LGUI_API UUISpriteBase : public UUIBatchMeshRenderable
+class LGUI_API UUISpriteBase : public ULexVisualBatchMesh
 	, public IUISpriteRenderableInterface
 {
 	GENERATED_BODY()
@@ -34,7 +34,7 @@ public:
 	}
 protected:
 	virtual void BeginPlay() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason)override;
+	virtual void EndPlay()override;
 	virtual void OnRegister()override;
 	virtual void OnUnregister()override;
 protected:

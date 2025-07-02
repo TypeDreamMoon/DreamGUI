@@ -7,7 +7,6 @@
 
 UUIEffectShadow::UUIEffectShadow()
 {
-	PrimaryComponentTick.bCanEverTick = false;
 }
 void UUIEffectShadow::ModifyUIGeometry(
 	FLexUIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
@@ -69,7 +68,7 @@ void UUIEffectShadow::SetShadowColor(FColor newColor)
 	if (shadowColor != newColor)
 	{
 		shadowColor = newColor;
-		if (GetUIRenderable())GetUIRenderable()->MarkColorDirty();
+		if (GetLexVisual())GetLexVisual()->MarkColorDirty();
 	}
 }
 void UUIEffectShadow::SetShadowOffset(FVector2D newOffset)
@@ -77,6 +76,6 @@ void UUIEffectShadow::SetShadowOffset(FVector2D newOffset)
 	if (shadowOffset != newOffset)
 	{
 		shadowOffset = newOffset;
-		if (GetUIRenderable())GetUIRenderable()->MarkVertexPositionDirty();
+		if (GetLexVisual())GetLexVisual()->MarkVertexPositionDirty();
 	}
 }

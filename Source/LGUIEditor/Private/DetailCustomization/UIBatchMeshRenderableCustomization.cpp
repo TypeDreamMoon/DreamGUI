@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/UIBatchMeshRenderableCustomization.h"
-#include "Core/Components/UIBatchMeshRenderable.h"
+#include "Core/Components/LexVisualBatchMesh.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
@@ -25,7 +25,7 @@ void FUIBatchMeshRenderableCustomization::CustomizeDetails(IDetailLayoutBuilder&
 {
 	TArray<TWeakObjectPtr<UObject>> targetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(targetObjects);
-	TargetScriptPtr = Cast<UUIBatchMeshRenderable>(targetObjects[0].Get());
+	TargetScriptPtr = Cast<ULexVisualBatchMesh>(targetObjects[0].Get());
 	if (TargetScriptPtr != nullptr)
 	{
 
@@ -37,7 +37,7 @@ void FUIBatchMeshRenderableCustomization::CustomizeDetails(IDetailLayoutBuilder&
 
 	IDetailCategoryBuilder& LGUICategory = DetailBuilder.EditCategory("LGUI");
 
-	auto CustomUIMaterialHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIBatchMeshRenderable, CustomUIMaterial));
+	auto CustomUIMaterialHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexVisualBatchMesh, CustomUIMaterial));
 	CustomUIMaterialHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, &DetailBuilder] {
 		DetailBuilder.ForceRefreshDetails();
 		}));

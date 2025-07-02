@@ -2,11 +2,11 @@
 
 #include "Layout/UIPanelLayout_UniformGrid.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
 
 DECLARE_CYCLE_STAT(TEXT("UIPanelLayout UniformGrid RebuildLayout"), STAT_PanelLayout_UniformGrid, STATGROUP_LGUI);
 
-void UUIPanelLayout_UniformGrid::OnUIChildDimensionsChanged(UUIItem* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
+void UUIPanelLayout_UniformGrid::OnUIChildDimensionsChanged(ULexWidget* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
 {
     //skip UILayoutBase
     Super::Super::OnUIChildDimensionsChanged(child, horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
@@ -194,7 +194,7 @@ void UUIPanelLayout_UniformGrid::OnRebuildLayout()
 	}
 }
 
-bool UUIPanelLayout_UniformGrid::GetCanLayoutControlAnchor_Implementation(class UUIItem* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
+bool UUIPanelLayout_UniformGrid::GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
 {
     if (this->GetRootUIComponent() == InUIItem)//self
     {
@@ -235,11 +235,11 @@ FText UUIPanelLayout_UniformGrid::GetCategoryDisplayName()const
 {
     return NSLOCTEXT("UIPanelLayout_UniformGrid", "CategoryDisplayName", "UniformGrid");
 }
-bool UUIPanelLayout_UniformGrid::CanMoveChildToCell(UUIItem* InChild, EMoveChildDirectionType InDirection)const
+bool UUIPanelLayout_UniformGrid::CanMoveChildToCell(ULexWidget* InChild, EMoveChildDirectionType InDirection)const
 {
     return true;
 }
-void UUIPanelLayout_UniformGrid::MoveChildToCell(UUIItem* InChild, EMoveChildDirectionType InDirection)
+void UUIPanelLayout_UniformGrid::MoveChildToCell(ULexWidget* InChild, EMoveChildDirectionType InDirection)
 {
     int MoveColumnValue = 0, MoveRowValue = 0;
     switch (InDirection)

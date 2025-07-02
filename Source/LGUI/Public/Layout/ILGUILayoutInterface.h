@@ -74,7 +74,7 @@ public:
 	 * @return	true if the layout take care of the InUIItem.
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LGUI Layout")
-		bool GetCanLayoutControlAnchor(class UUIItem* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const;
+		bool GetCanLayoutControlAnchor(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const;
 
 	/**
 	 * Mark this layout need to be rebuild.

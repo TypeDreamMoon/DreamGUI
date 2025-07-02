@@ -3,11 +3,10 @@
 #include "Extensions/2DLineRenderer/UI2DLineRaw.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 
 UUI2DLineRaw::UUI2DLineRaw(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
-	PrimaryComponentTick.bCanEverTick = false;
 }
 
 void UUI2DLineRaw::BeginPlay()
@@ -21,14 +20,6 @@ void UUI2DLineRaw::PostEditChangeProperty(FPropertyChangedEvent& PropertyChanged
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 #endif
-
-AUI2DLineActor::AUI2DLineActor()
-{
-	PrimaryActorTick.bCanEverTick = false;
-
-	UIElement = CreateDefaultSubobject<UUI2DLineRaw>(TEXT("UIElement"));
-	RootComponent = UIElement;
-}
 
 void UUI2DLineRaw::SetPoints(const TArray<FVector2D>& InPoints)
 {

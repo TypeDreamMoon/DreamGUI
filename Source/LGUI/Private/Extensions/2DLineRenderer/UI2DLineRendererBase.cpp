@@ -3,7 +3,7 @@
 #include "Extensions/2DLineRenderer/UI2DLineRendererBase.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "LTweenManager.h"
 #include "Core/LGUISettings.h"
@@ -13,7 +13,6 @@ DECLARE_CYCLE_STAT(TEXT("UI2DLine Update"), STAT_2DLineUpdate, STATGROUP_LGUI);
 TArray<FVector2D> UUI2DLineRendererBase::EmptyArray;
 UUI2DLineRendererBase::UUI2DLineRendererBase(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
-	PrimaryComponentTick.bCanEverTick = false;
 }
 
 void UUI2DLineRendererBase::BeginPlay()
@@ -121,12 +120,13 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseTriangle(FLexUIGeometry& InG
 
 void UUI2DLineRendererBase::Update2DLineRendererBaseVertex(FLexUIGeometry& InGeo, const TArray<FVector2D>& InPointArray)
 {
+	auto Widget = GetWidget();
 	int pointCount = InPointArray.Num();
 	//pivot offset
 	float pivotOffsetX = 0, pivotOffsetY = 0;
-	FLexUIGeometry::CalculatePivotOffset(this->GetWidth(), this->GetHeight(), FVector2f(this->GetPivot()), pivotOffsetX, pivotOffsetY);
-	float halfW = this->GetWidth() * 0.5f;
-	float halfH = this->GetHeight() * 0.5f;
+	FLexUIGeometry::CalculatePivotOffset(Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), pivotOffsetX, pivotOffsetY);
+	float halfW = Widget->GetWidth() * 0.5f;
+	float halfH = Widget->GetHeight() * 0.5f;
 	//positions
 	auto& originVertices = InGeo.OriginVertices;
 
@@ -361,7 +361,7 @@ void UUI2DLineRendererBase::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTrian
 		}
 
 		//normal & tangent
-		if (RenderCanvas->GetActualRequireNormalAndTangent())
+		if (GetWidget()->GetRenderCanvas()->GetActualRequireNormalAndTangent())
 		{
 			for (int i = 0; i < originVertices.Num(); i++)
 			{
@@ -420,7 +420,7 @@ ULTweener* UUI2DLineRendererBase::LineWidthTo(float endValue, float duration, fl
 	{
 		bool bAffectByGamePause;
 		bool bAffectByTimeDilation;
-		if (this->IsScreenSpaceOverlayUI())
+		if (GetWidget()->IsScreenSpaceOverlayUI())
 		{
 			bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
 			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;

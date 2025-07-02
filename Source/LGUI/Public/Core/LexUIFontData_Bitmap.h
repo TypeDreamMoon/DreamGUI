@@ -51,7 +51,7 @@ public:
 		int& outAdditionalVerticesCount, int& outAdditionalIndicesCount,
 		TArray<FLexUIOriginVertexData>& originVertices, TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndexBufferType>& triangleIndices
 	)override;
-	virtual void PrepareForPushCharData(UUIText* InText)override;
+	virtual void PrepareForPushCharData(ULexText* InText)override;
 	//End ULGUIFreeTypeRenderFontData interface
 protected:
 	float boldSize; float italicSlop;

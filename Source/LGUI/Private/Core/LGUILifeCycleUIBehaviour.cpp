@@ -42,14 +42,14 @@ bool ULGUILifeCycleUIBehaviour::CheckRootUIComponent() const
 	if (this->GetWorld() == nullptr)return false;
 	if (auto Owner = GetOwner())
 	{
-		RootUIComp = Cast<UUIItem>(Owner->GetRootComponent());
+		RootUIComp = Cast<ULexWidget>(Owner->GetRootComponent());
 		if(RootUIComp.IsValid())return true;
 	}
 	UE_LOG(LGUI, Warning, TEXT("[%s].%d LGUILifeCycleUIBehaviour must attach to a UI actor!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	return false;
 }
 
-UUIItem* ULGUILifeCycleUIBehaviour::GetRootUIComponent() const
+ULexWidget* ULGUILifeCycleUIBehaviour::GetRootUIComponent() const
 {
 	if (CheckRootUIComponent())
 	{
@@ -109,14 +109,14 @@ void ULGUILifeCycleUIBehaviour::OnUIDimensionsChanged(bool horizontalPositionCha
 		ReceiveOnUIDimensionsChanged(horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
 	}
 }
-void ULGUILifeCycleUIBehaviour::OnUIChildDimensionsChanged(UUIItem* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
+void ULGUILifeCycleUIBehaviour::OnUIChildDimensionsChanged(ULexWidget* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
 {
 	if (bCanExecuteBlueprintEvent)
 	{
 		ReceiveOnUIChildDimensionsChanged(child, horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
 	}
 }
-void ULGUILifeCycleUIBehaviour::OnUIChildAcitveInHierarchy(UUIItem* child, bool ativeOrInactive)
+void ULGUILifeCycleUIBehaviour::OnUIChildAcitveInHierarchy(ULexWidget* child, bool ativeOrInactive)
 {
 	if (bCanExecuteBlueprintEvent)
 	{
@@ -130,7 +130,7 @@ void ULGUILifeCycleUIBehaviour::OnUIAttachmentChanged()
 		ReceiveOnUIAttachmentChanged();
 	}
 }
-void ULGUILifeCycleUIBehaviour::OnUIChildAttachmentChanged(UUIItem* child, bool attachOrDetach) 
+void ULGUILifeCycleUIBehaviour::OnUIChildAttachmentChanged(ULexWidget* child, bool attachOrDetach) 
 { 
 	if (bCanExecuteBlueprintEvent)
 	{
@@ -144,7 +144,7 @@ void ULGUILifeCycleUIBehaviour::OnUIInteractionStateChanged(bool interactableOrN
 		ReceiveOnUIInteractionStateChanged(interactableOrNot);
 	}
 }
-void ULGUILifeCycleUIBehaviour::OnUIChildHierarchyIndexChanged(UUIItem* child)
+void ULGUILifeCycleUIBehaviour::OnUIChildHierarchyIndexChanged(ULexWidget* child)
 { 
 	if (bCanExecuteBlueprintEvent)
 	{
@@ -178,7 +178,7 @@ void ULGUILifeCycleUIBehaviour::Call_OnUIDimensionsChanged(bool horizontalPositi
 		}
 	}
 }
-void ULGUILifeCycleUIBehaviour::Call_OnUIChildDimensionsChanged(UUIItem* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
+void ULGUILifeCycleUIBehaviour::Call_OnUIChildDimensionsChanged(ULexWidget* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
 {
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())//edit mode
@@ -204,7 +204,7 @@ void ULGUILifeCycleUIBehaviour::Call_OnUIChildDimensionsChanged(UUIItem* child, 
 		}
 	}
 }
-void ULGUILifeCycleUIBehaviour::Call_OnUIChildAcitveInHierarchy(UUIItem* child, bool ativeOrInactive)
+void ULGUILifeCycleUIBehaviour::Call_OnUIChildAcitveInHierarchy(ULexWidget* child, bool ativeOrInactive)
 {
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())//edit mode
@@ -255,7 +255,7 @@ void ULGUILifeCycleUIBehaviour::Call_OnUIAttachmentChanged()
 		}
 	}
 }
-void ULGUILifeCycleUIBehaviour::Call_OnUIChildAttachmentChanged(UUIItem* child, bool attachOrDetach)
+void ULGUILifeCycleUIBehaviour::Call_OnUIChildAttachmentChanged(ULexWidget* child, bool attachOrDetach)
 {
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())//edit mode
@@ -306,7 +306,7 @@ void ULGUILifeCycleUIBehaviour::Call_OnUIInteractionStateChanged(bool interactab
 		}
 	}
 }
-void ULGUILifeCycleUIBehaviour::Call_OnUIChildHierarchyIndexChanged(UUIItem* child)
+void ULGUILifeCycleUIBehaviour::Call_OnUIChildHierarchyIndexChanged(ULexWidget* child)
 {
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())//edit mode

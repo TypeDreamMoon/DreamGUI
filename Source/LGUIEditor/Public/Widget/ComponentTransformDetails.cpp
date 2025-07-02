@@ -34,7 +34,7 @@
 #include "Settings/EditorProjectSettings.h"
 #include "HAL/PlatformApplicationMisc.h"
 
-#include "Core/Components/UIItem.h"
+#include "Core/Components/LexWidget.h"
 
 #include "DetailCategoryBuilder.h"
 #include "Algo/Transform.h"
@@ -83,7 +83,7 @@ static USceneComponent* GetSceneComponentFromDetailsObject(UObject* InObject)
 	return Cast<USceneComponent>(InObject);
 }
 
-FComponentTransformDetails::FComponentTransformDetails( const TArray< TWeakObjectPtr<UUIItem> >& InSelectedObjects, const FSelectedActorInfo& InSelectedActorInfo, IDetailLayoutBuilder& DetailBuilder )
+FComponentTransformDetails::FComponentTransformDetails( const TArray< TWeakObjectPtr<ULexWidget> >& InSelectedObjects, const FSelectedActorInfo& InSelectedActorInfo, IDetailLayoutBuilder& DetailBuilder )
 	: TNumericUnitTypeInterface(GetDefault<UEditorProjectAppearanceSettings>()->bDisplayUnitsOnComponentTransforms ? EUnit::Centimeters : EUnit::Unspecified)
 	, SelectedActorInfo( InSelectedActorInfo )
 	, SelectedObjects( InSelectedObjects )
@@ -494,7 +494,7 @@ void FComponentTransformDetails::OnLocationResetClicked()
 	const FText TransactionName = LOCTEXT("ResetLocation", "Reset Location");
 	FScopedTransaction Transaction(TransactionName);
 
-	UUIItem* Archetype = SelectedObjects[0].Get();
+	ULexWidget* Archetype = SelectedObjects[0].Get();
 	if (!IsValid(Archetype))return;
 	FVector targetLocation = FVector::ZeroVector;
 	if (!IsLocationXEnable())
@@ -525,7 +525,7 @@ void FComponentTransformDetails::OnRotationResetClicked()
 	const FText TransactionName = LOCTEXT("ResetRotation", "Reset Rotation");
 	FScopedTransaction Transaction(TransactionName);
 
-	UUIItem* Archetype = SelectedObjects[0].Get();
+	ULexWidget* Archetype = SelectedObjects[0].Get();
 	if (!IsValid(Archetype))return;
 
 	OnSetTransform(ETransformField::Rotation, EAxisList::All, FVector::ZeroVector, true);
@@ -543,7 +543,7 @@ void FComponentTransformDetails::OnScaleResetClicked()
 	const FText TransactionName = LOCTEXT("ResetScale", "Reset Scale");
 	FScopedTransaction Transaction(TransactionName);
 
-	UUIItem* Archetype = SelectedObjects[0].Get();
+	ULexWidget* Archetype = SelectedObjects[0].Get();
 	if (!IsValid(Archetype))return;
 
 	OnSetTransform(ETransformField::Scale, EAxisList::All, FVector(1.0f), true);
@@ -557,10 +557,10 @@ void FComponentTransformDetails::CacheTransform()
 
 	for( int32 ObjectIndex = 0; ObjectIndex < SelectedObjects.Num(); ++ObjectIndex )
 	{
-		TWeakObjectPtr<UUIItem> ObjectPtr = SelectedObjects[ObjectIndex];
+		TWeakObjectPtr<ULexWidget> ObjectPtr = SelectedObjects[ObjectIndex];
 		if( ObjectPtr.IsValid() )
 		{
-			UUIItem* Object = ObjectPtr.Get();
+			ULexWidget* Object = ObjectPtr.Get();
 			USceneComponent* SceneComponent = Object;
 
 			FVector Loc;
@@ -615,7 +615,7 @@ bool FComponentTransformDetails::IsLocationYEnable()const
 {
 	if (SelectedObjects.Num() > 0)
 	{
-		TWeakObjectPtr<UUIItem> uiItem = SelectedObjects[0];
+		TWeakObjectPtr<ULexWidget> uiItem = SelectedObjects[0];
 		if (uiItem.IsValid())
 		{
 			if (uiItem->GetParentUIItem() == nullptr)
@@ -631,7 +631,7 @@ bool FComponentTransformDetails::IsLocationZEnable()const
 {
 	if (SelectedObjects.Num() > 0)
 	{
-		TWeakObjectPtr<UUIItem> uiItem = SelectedObjects[0];
+		TWeakObjectPtr<ULexWidget> uiItem = SelectedObjects[0];
 		if (uiItem.IsValid())
 		{
 			if (uiItem->GetParentUIItem() == nullptr)
@@ -738,11 +738,11 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 
 	for (int32 ObjectIndex = 0; ObjectIndex < SelectedObjects.Num(); ++ObjectIndex)
 	{
-		TWeakObjectPtr<UUIItem> ObjectPtr = SelectedObjects[ObjectIndex];
+		TWeakObjectPtr<ULexWidget> ObjectPtr = SelectedObjects[ObjectIndex];
 		if (ObjectPtr.IsValid())
 		{
-			UUIItem* Object = ObjectPtr.Get();
-			UUIItem* SceneComponent = Object;
+			ULexWidget* Object = ObjectPtr.Get();
+			ULexWidget* SceneComponent = Object;
 			if (SceneComponent)
 			{
 				AActor* EditedActor = SceneComponent->GetOwner();
@@ -1004,7 +1004,7 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 void FComponentTransformDetails::OnSetTransformAxis(FVector::FReal NewValue, ETextCommit::Type CommitInfo, ETransformField::Type TransformField, EAxisList::Type Axis, bool bCommitted)
 {
 	if (SelectedObjects.Num() <= 0)return;
-	UUIItem* Archetype = SelectedObjects[0].Get();
+	ULexWidget* Archetype = SelectedObjects[0].Get();
 	if (!IsValid(Archetype))return;
 	switch (TransformField)
 	{

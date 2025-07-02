@@ -1,16 +1,14 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/LexUIRichTextImageData.h"
-#include "LGUI.h"
-#include "Core/Actor/UISpriteActor.h"
-#include "Core/LexUIRichTextImageData.h"
 #include "Extensions/UISpriteSequencePlayer.h"
 #include "Utils/LexUIUtils.h"
-#include "Core/LGUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "Core/LexUISpriteData_BaseObject.h"
+#include "Core/Actor/LexWidgetActor.h"
+#include "Core/Components/LexWidget.h"
+#include "Core/Components/UISprite.h"
 #include "Engine/World.h"
-#include "Core/LexUISpriteData_BaseObject.h"
 
 #if WITH_EDITOR
 void ULexUIRichTextImageData::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
@@ -35,7 +33,7 @@ void ULexUIRichTextImageData::BroadcastOnDataChange()
 	OnDataChange.Broadcast();
 }
 
-void ULexUIRichTextImageData::CreateOrUpdateObject(UUIItem* parent, const TArray<FUIText_RichTextImageTag>& imageTagData, TArray<TObjectPtr<UUIItem>>& createdImageObjectArray, bool listImageObjectInEditorOutliner)
+void ULexUIRichTextImageData::CreateOrUpdateObject(ULexWidget* parent, const TArray<FUIText_RichTextImageTag>& imageTagData, TArray<TObjectPtr<ULexWidget>>& createdImageObjectArray, bool listImageObjectInEditorOutliner)
 {
 	//destroy extra
 	while (createdImageObjectArray.Num() > imageTagData.Num())
@@ -48,31 +46,32 @@ void ULexUIRichTextImageData::CreateOrUpdateObject(UUIItem* parent, const TArray
 	//create more
 	while (createdImageObjectArray.Num() < imageTagData.Num())
 	{
-		auto spriteActor = parent->GetWorld()->SpawnActor<AUISpriteActor>();
+		auto spriteActor = parent->GetWorld()->SpawnActor<ALexWidgetActor>();
 		spriteActor->SetFlags(EObjectFlags::RF_Transient);
-		spriteActor->GetUISprite()->AttachToComponent(parent, FAttachmentTransformRules::KeepRelativeTransform);
-		createdImageObjectArray.Push(spriteActor->GetUISprite());
+		spriteActor->GetLexWidget()->AttachToComponent(parent, FAttachmentTransformRules::KeepRelativeTransform);
+		createdImageObjectArray.Push(spriteActor->GetLexWidget());
 	}
 	//apply data
 	for (int i = 0; i < imageTagData.Num(); i++)
 	{
-		auto imageObj = (UUISprite*)createdImageObjectArray[i].Get();
+		auto ImageWidget = createdImageObjectArray[i];
+		auto ImageVisual = (UUISprite*)ImageWidget->GetVisual();
 #if WITH_EDITOR
-		imageObj->GetOwner()->SetActorLabel(FString::Printf(TEXT("[%s]"), *imageTagData[i].TagName.ToString()));
+		ImageWidget->GetOwner()->SetActorLabel(FString::Printf(TEXT("[%s]"), *imageTagData[i].TagName.ToString()));
 		if (!parent->GetWorld()->IsGameWorld())//set it only in edit mode
 		{
 			auto bListedInSceneOutliner_Property = FindFProperty<FBoolProperty>(AActor::StaticClass(), TEXT("bListedInSceneOutliner"));
-			bListedInSceneOutliner_Property->SetPropertyValue_InContainer(imageObj->GetOwner(), listImageObjectInEditorOutliner);
+			bListedInSceneOutliner_Property->SetPropertyValue_InContainer(ImageWidget->GetOwner(), listImageObjectInEditorOutliner);
 		}
 #endif
 		if (auto imageItemPtr = imageMap.Find(imageTagData[i].TagName))
 		{
 			auto& spriteFrames = imageItemPtr->frames;
-			auto sequencePlayerComp = imageObj->GetOwner()->FindComponentByClass<UUISpriteSequencePlayer>();
+			auto sequencePlayerComp = ImageWidget->GetOwner()->FindComponentByClass<UUISpriteSequencePlayer>();
 			ULexUISpriteData_BaseObject* sprite = nullptr;
 			if (spriteFrames.Num() == 0)
 			{
-				imageObj->SetSprite(nullptr, false);
+				ImageVisual->SetSprite(nullptr, false);
 				if (IsValid(sequencePlayerComp))
 				{
 					sequencePlayerComp->DestroyComponent();
@@ -91,10 +90,10 @@ void ULexUIRichTextImageData::CreateOrUpdateObject(UUIItem* parent, const TArray
 				sprite = spriteFrames[0];
 				if (!IsValid(sequencePlayerComp))
 				{
-					sequencePlayerComp = NewObject<UUISpriteSequencePlayer>(imageObj->GetOwner());
+					sequencePlayerComp = NewObject<UUISpriteSequencePlayer>(ImageWidget->GetOwner());
 					sequencePlayerComp->SetSnapSpriteSize(false);
 					sequencePlayerComp->RegisterComponent();
-					imageObj->GetOwner()->AddInstanceComponent(sequencePlayerComp);
+					ImageWidget->GetOwner()->AddInstanceComponent(sequencePlayerComp);
 				}
 				sequencePlayerComp->SetSpriteSequence(spriteFrames);
 				sequencePlayerComp->SetFps(imageItemPtr->overrideAnimationFps < 0 ? animationFps : imageItemPtr->overrideAnimationFps);
@@ -103,15 +102,15 @@ void ULexUIRichTextImageData::CreateOrUpdateObject(UUIItem* parent, const TArray
 					sequencePlayerComp->Play();
 				}
 			}
-			imageObj->SetColor(imageTagData[i].TintColor);
-			imageObj->SetAnchoredPosition(imageTagData[i].Position);
-			imageObj->SetSizeDelta(imageTagData[i].Size);
+			ImageVisual->SetColor(imageTagData[i].TintColor);
+			ImageWidget->SetAnchoredPosition(imageTagData[i].Position);
+			ImageWidget->SetSizeDelta(imageTagData[i].Size);
 		}
 		else
 		{
-			imageObj->SetColor(imageTagData[i].TintColor);
-			imageObj->SetAnchoredPosition(imageTagData[i].Position);
-			imageObj->SetSizeDelta(FVector2D(imageTagData[i].Size));
+			ImageVisual->SetColor(imageTagData[i].TintColor);
+			ImageWidget->SetAnchoredPosition(imageTagData[i].Position);
+			ImageWidget->SetSizeDelta(FVector2D(imageTagData[i].Size));
 		}
 	}
 #if WITH_EDITOR

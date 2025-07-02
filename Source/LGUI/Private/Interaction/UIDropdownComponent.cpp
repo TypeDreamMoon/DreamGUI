@@ -2,16 +2,13 @@
 
 #include "Interaction/UIDropdownComponent.h"
 #include "Event/LGUIEventSystem.h"
-#include "Core/Actor/UIBaseActor.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "Core/Actor/LexWidgetActor.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "LGUIBPLibrary.h"
 #include "Core/LexUISpriteData.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
-#include "LGUI/Public/Core/Components/UIText.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
+#include "LGUI/Public/Core/Components/LexText.h"
 #include "LGUI/Public/Core/Components/UISprite.h"
-#include "Core/Actor/UIContainerActor.h"
-#include "Core/Actor/UITextActor.h"
-#include "Core/Actor/UISpriteActor.h"
 #include "Interaction/UIButtonComponent.h"
 #include "Layout/UILayoutBase.h"
 #if WITH_EDITOR
@@ -33,13 +30,9 @@ void UUIDropdownComponent::Awake()
 	Super::Awake();
 	if (ListRoot.IsValid())
 	{
-		ListRoot->GetUIItem()->SetIsUIActive(false);
-		CanvasGroupOnListRoot = ListRoot->GetUIItem()->GetCanvasGroup();
-		if (CanvasGroupOnListRoot != nullptr)
-		{
-			CanvasGroupOnListRoot->SetAlpha(0);
-		}
-		MaxHeight = ListRoot->GetUIItem()->GetHeight();
+		ListRoot->GetLexWidget()->SetIsUIActive(false);
+		ListRoot->GetLexWidget()->SetRenderOpacity(0);
+		MaxHeight = ListRoot->GetLexWidget()->GetHeight();
 	}
 	//set default display
 	if (Options.Num() > 0)
@@ -47,11 +40,11 @@ void UUIDropdownComponent::Awake()
 		auto tempValue = FMath::Clamp(Value, 0, Options.Num() - 1);
 		if (CaptionText.IsValid())
 		{
-			CaptionText->GetUIText()->SetText(Options[tempValue].Text);
+			CaptionText->SetText(Options[tempValue].Text);
 		}
 		if (CaptionSprite.IsValid() && IsValid(Options[tempValue].Sprite))
 		{
-			CaptionSprite->GetUISprite()->SetSprite(Options[tempValue].Sprite);
+			CaptionSprite->SetSprite(Options[tempValue].Sprite);
 		}
 	}
 }
@@ -64,13 +57,13 @@ void UUIDropdownComponent::PostEditChangeProperty(FPropertyChangedEvent& Propert
 		auto tempValue = FMath::Clamp(Value, 0, Options.Num() - 1);
 		if (CaptionText.IsValid())
 		{
-			CaptionText->GetUIText()->SetText(Options[tempValue].Text);
-			FLexUIUtils::NotifyPropertyChanged(CaptionText->GetUIText(), UUIText::GetTextPropertyName());
+			CaptionText->SetText(Options[tempValue].Text);
+			FLexUIUtils::NotifyPropertyChanged(CaptionText.Get(), ULexText::GetTextPropertyName());
 		}
 		if (CaptionSprite.IsValid() && IsValid(Options[tempValue].Sprite))
 		{
-			CaptionSprite->GetUISprite()->SetSprite(Options[tempValue].Sprite);
-			FLexUIUtils::NotifyPropertyChanged(CaptionText->GetUIText(), UUISpriteBase::GetSpritePropertyName());
+			CaptionSprite->SetSprite(Options[tempValue].Sprite);
+			FLexUIUtils::NotifyPropertyChanged(CaptionText.Get(), UUISpriteBase::GetSpritePropertyName());
 		}
 	}
 }
@@ -98,22 +91,19 @@ void UUIDropdownComponent::Show()
 		CreateBlocker();
 	}
 	//show list
-	ListRoot->GetUIItem()->SetIsUIActive(true);
-	if (CanvasGroupOnListRoot.IsValid())
-	{
-		ShowOrHideTweener = CanvasGroupOnListRoot->AlphaTo(1, 0.3f, 0, ELTweenEase::OutCubic);
-	}
-	auto canvasOnListRoot = ListRoot->FindComponentByClass<ULGUICanvas>();
+	ListRoot->GetLexWidget()->SetIsUIActive(true);
+	ShowOrHideTweener = ListRoot->GetLexWidget()->RenderOpacityTo(1, 0.3f, 0, ELTweenEase::OutCubic);
+	auto canvasOnListRoot = ListRoot->FindComponentByClass<ULexCanvas>();
 	if (!IsValid(canvasOnListRoot))
 	{
-		canvasOnListRoot = NewObject<ULGUICanvas>(ListRoot.Get());
+		canvasOnListRoot = NewObject<ULexCanvas>(ListRoot.Get());
 		canvasOnListRoot->RegisterComponent();
 	}
 
 	bool sortOrderSet = false;
 	if (BlockerActor.IsValid())
 	{
-		if (auto blockerCanvas = BlockerActor->FindComponentByClass<ULGUICanvas>())
+		if (auto blockerCanvas = BlockerActor->FindComponentByClass<ULexCanvas>())
 		{
 			canvasOnListRoot->SetSortOrder(blockerCanvas->GetSortOrder() + 1, true);
 			sortOrderSet = true;
@@ -144,7 +134,7 @@ void UUIDropdownComponent::Show()
 		CreateListItems();
 	}
 
-	auto ListRootUIItem = ListRoot->GetUIItem();
+	auto ListRootUIItem = ListRoot->GetLexWidget();
 	//set position
 	auto tempVerticalPosition = VerticalPosition;
 	auto tempHorizontalPosition = HorizontalPosition;
@@ -288,13 +278,10 @@ void UUIDropdownComponent::Hide()
 		ShowOrHideTweener->Kill();
 	}
 
-	if (CanvasGroupOnListRoot.IsValid())
-	{
-		auto ListRootUIItem = ListRoot->GetUIItem();
-		ShowOrHideTweener = CanvasGroupOnListRoot->AlphaTo(0, 0.3f, 0, ELTweenEase::InCubic)->OnComplete(FSimpleDelegate::CreateWeakLambda(CanvasGroupOnListRoot.Get(), [ListRootUIItem] {
-			ListRootUIItem->SetIsUIActive(false);
-			}));
-	}
+	auto ListRootUIItem = ListRoot->GetLexWidget();
+	ShowOrHideTweener = ListRootUIItem->RenderOpacityTo(0, 0.3f, 0, ELTweenEase::InCubic)->OnComplete(FSimpleDelegate::CreateWeakLambda(ListRootUIItem, [ListRootUIItem] {
+		ListRootUIItem->SetIsUIActive(false);
+		}));
 
 	if (BlockerActor.IsValid())
 	{
@@ -304,24 +291,23 @@ void UUIDropdownComponent::Hide()
 }
 void UUIDropdownComponent::CreateBlocker()
 {
-	AUIContainerActor* blocker = this->GetWorld()->SpawnActor<AUIContainerActor>();
+	auto blocker = this->GetWorld()->SpawnActor<ALexWidgetActor>();
 #if WITH_EDITOR
 	blocker->SetActorLabel(TEXT("UIDropdown_Blocker"));
 #endif
-	auto blockerUIItem = blocker->GetUIItem();
-	blockerUIItem->SetRaycastTarget(true);
-	blockerUIItem->SetTraceChannel(this->GetRootUIComponent()->GetTraceChannel());
-	blockerUIItem->AttachToComponent(this->GetRootUIComponent()->GetRootCanvas()->GetUIItem(), FAttachmentTransformRules::KeepRelativeTransform);
+	auto blockerUIItem = blocker->GetLexWidget();
+	blockerUIItem->AttachToComponent(this->GetRootUIComponent()->GetRootCanvas()->GetLexWidget(), FAttachmentTransformRules::KeepRelativeTransform);
 	FUIAnchorData AnchorData;
 	AnchorData.SizeDelta = FVector2D::ZeroVector;
 	AnchorData.AnchorMin = FVector2D(0.0f, 0.0f);
 	AnchorData.AnchorMax = FVector2D(1.0f, 1.0f);
 	blockerUIItem->SetAnchorData(AnchorData);
-	auto blockerCanvas = NewObject<ULGUICanvas>(blocker);
+	auto blockerCanvas = NewObject<ULexCanvas>(blocker);
 	blockerCanvas->RegisterComponent();
 	blocker->AddInstanceComponent(blockerCanvas);
 	blockerCanvas->SetOverrideSorting(true);
 	blockerCanvas->SetSortOrderToHighestOfHierarchy();
+	blockerCanvas->SetTraceChannel(this->GetRootUIComponent()->GetRootCanvas()->GetTraceChannel());
 	auto blockerButton = NewObject<UUIButtonComponent>(blocker);
 	blockerButton->RegisterComponent();
 	blocker->AddInstanceComponent(blockerButton);
@@ -332,10 +318,10 @@ void UUIDropdownComponent::CreateBlocker()
 }
 void UUIDropdownComponent::CreateListItems()
 {
-	auto templateUIItem = Cast<UUIItem>(ItemTemplate.GetActor()->GetRootComponent());
+	auto templateUIItem = Cast<ULexWidget>(ItemTemplate.GetActor()->GetRootComponent());
 	if (!IsValid(templateUIItem))
 	{
-		UE_LOG(LGUI, Error, TEXT("[UUIDropdownComponent::Show]ItemTemplate must be a UIItem!"));
+		UE_LOG(LGUI, Error, TEXT("[%s]ItemTemplate must be a UIItem!"), ANSI_TO_TCHAR(__FUNCTION__));
 		return;
 	}
 	templateUIItem->SetIsUIActive(true);
@@ -363,24 +349,24 @@ void UUIDropdownComponent::CreateListItems()
 	float heightOffset = 0;
 	if (auto viewportUIItem = contentUIItem->GetParentUIItem())
 	{
-		heightOffset = ListRoot->GetUIItem()->GetHeight() - viewportUIItem->GetHeight();
+		heightOffset = ListRoot->GetLexWidget()->GetHeight() - viewportUIItem->GetHeight();
 	}
 	//if content is larger smaller than MaxHeight, then make the ListRoot smaller too
 	if (contentUIItem->GetHeight() + heightOffset < MaxHeight)
 	{
-		ListRoot->GetUIItem()->SetHeight(contentUIItem->GetHeight() + heightOffset);
+		ListRoot->GetLexWidget()->SetHeight(contentUIItem->GetHeight() + heightOffset);
 	}
 	//if content is bigger than MaxHeight, then make the ListRoot as MaxHeight, so the scollview will work
 	else if (contentUIItem->GetHeight() + heightOffset > MaxHeight)
 	{
-		ListRoot->GetUIItem()->SetHeight(MaxHeight + heightOffset);
+		ListRoot->GetLexWidget()->SetHeight(MaxHeight + heightOffset);
 	}
 }
 FUIDropdownOptionData UUIDropdownComponent::GetOption(int index)const
 {
 	if (index >= Options.Num())
 	{
-		UE_LOG(LGUI, Error, TEXT("[UUIDropdownComponent::GetOption]index: %d out of range: %d!"), index, Options.Num());
+		UE_LOG(LGUI, Error, TEXT("[%s]index: %d out of range: %d!"), ANSI_TO_TCHAR(__FUNCTION__), index, Options.Num());
 		return FUIDropdownOptionData();
 	}
 	return Options[index];
@@ -389,7 +375,7 @@ FUIDropdownOptionData UUIDropdownComponent::GetCurrentOption()const
 {
 	if (Value >= Options.Num())
 	{
-		UE_LOG(LGUI, Error, TEXT("[UUIDropdownComponent::GetCurrentOption]Value: %d out of range: %d!"), Value, Options.Num());
+		UE_LOG(LGUI, Error, TEXT("[%s]Value: %d out of range: %d!"), ANSI_TO_TCHAR(__FUNCTION__), Value, Options.Num());
 		return FUIDropdownOptionData();
 	}
 	return Options[Value];
@@ -471,11 +457,11 @@ void UUIDropdownComponent::ApplyValueToUI()
 
 	if (CaptionText.IsValid())
 	{
-		CaptionText->GetUIText()->SetText(Options[Value].Text);
+		CaptionText->SetText(Options[Value].Text);
 	}
 	if (CaptionSprite.IsValid() && IsValid(Options[Value].Sprite))
 	{
-		CaptionSprite->GetUISprite()->SetSprite(Options[Value].Sprite);
+		CaptionSprite->SetSprite(Options[Value].Sprite);
 	}
 
 	//apply to options
@@ -561,11 +547,6 @@ void UUIDropdownComponent::ClearItemCustomDataFunction()
 
 
 
-#include "Interaction/UIDropdownComponent.h"
-#include "Core/Actor/UITextActor.h"
-#include "LGUI/Public/Core/Components/UIText.h"
-#include "Core/Actor/UISpriteActor.h"
-#include "LGUI/Public/Core/Components/UISprite.h"
 #include "Interaction/UIToggleComponent.h"
 
 UUIDropdownItemComponent::UUIDropdownItemComponent()
@@ -576,13 +557,13 @@ UUIDropdownItemComponent::UUIDropdownItemComponent()
 
 void UUIDropdownItemComponent::Init(int32 Index, const FUIDropdownOptionData& Data, const TFunction<void()>& OnSelect)
 {
-	if (TextActor.IsValid())
+	if (Text.IsValid())
 	{
-		TextActor->GetUIText()->SetText(Data.Text);
+		Text->SetText(Data.Text);
 	}
-	if (SpriteActor.IsValid() && IsValid(Data.Sprite))
+	if (Sprite.IsValid() && IsValid(Data.Sprite))
 	{
-		SpriteActor->GetUISprite()->SetSprite(Data.Sprite);
+		Sprite->SetSprite(Data.Sprite);
 	}
 	if (Toggle.IsValidComponentReference())
 	{

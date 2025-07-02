@@ -3,9 +3,9 @@
 #include "Extensions/UIPolygon.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "LTweenManager.h"
+#include "Core/Components/LexCanvas.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
@@ -13,7 +13,7 @@ UE_DISABLE_OPTIMIZATION
 
 UUIPolygon::UUIPolygon(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
-	PrimaryComponentTick.bCanEverTick = false;
+	
 }
 
 void UUIPolygon::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
@@ -49,6 +49,7 @@ void UUIPolygon::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged,
 		}
 	}
 
+	auto Widget = GetWidget();
 	auto& vertices = InGeo.Vertices;
 	auto& originVertices = InGeo.OriginVertices;
 	int vertexCount = (FullCycle ? 1 : 2) + Sides;
@@ -76,9 +77,9 @@ void UUIPolygon::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged,
 		float calcStartAngle = StartAngle, calcEndAngle = EndAngle;
 		if (InVertexPositionChanged)
 		{
-			auto width = this->GetWidth();
-			auto height = this->GetHeight();
-			auto pivot = FVector2f(this->GetPivot());
+			auto width = Widget->GetWidth();
+			auto height = Widget->GetHeight();
+			auto pivot = FVector2f(Widget->GetPivot());
 			//pivot offset
 			float pivotOffsetX = 0, pivotOffsetY = 0;
 			FLexUIGeometry::CalculatePivotOffset(width, height, pivot, pivotOffsetX, pivotOffsetY);
@@ -186,7 +187,7 @@ void UUIPolygon::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged,
 		//additional data
 		{
 			//normal & tangent
-			if (RenderCanvas->GetActualRequireNormalAndTangent())
+			if (Widget->GetRenderCanvas()->GetActualRequireNormalAndTangent())
 			{
 				for (int i = 0; i < vertexCount; i++)
 				{
@@ -255,7 +256,7 @@ ULTweener* UUIPolygon::StartAngleTo(float endValue, float duration /* = 0.5f */,
 	{
 		bool bAffectByGamePause;
 		bool bAffectByTimeDilation;
-		if (this->IsScreenSpaceOverlayUI())
+		if (GetWidget()->IsScreenSpaceOverlayUI())
 		{
 			bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
 			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
@@ -276,7 +277,7 @@ ULTweener* UUIPolygon::EndAngleTo(float endValue, float duration /* = 0.5f */, f
 	{
 		bool bAffectByGamePause;
 		bool bAffectByTimeDilation;
-		if (this->IsScreenSpaceOverlayUI())
+		if (GetWidget()->IsScreenSpaceOverlayUI())
 		{
 			bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
 			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
@@ -289,15 +290,6 @@ ULTweener* UUIPolygon::EndAngleTo(float endValue, float duration /* = 0.5f */, f
 		Tweener->SetEase(easeType)->SetDelay(delay)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
 	}
 	return Tweener;
-}
-
-
-AUIPolygonActor::AUIPolygonActor()
-{
-	PrimaryActorTick.bCanEverTick = false;
-
-	UIPolygon = CreateDefaultSubobject<UUIPolygon>(TEXT("UIPolygonComponent"));
-	RootComponent = UIPolygon;
 }
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION

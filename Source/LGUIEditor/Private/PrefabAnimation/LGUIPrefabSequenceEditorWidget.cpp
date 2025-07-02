@@ -23,7 +23,7 @@
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #include "PrefabAnimation/LGUIPrefabSequenceComponent.h"
 #include "Selection.h"
-#include "Core/Actor/UIBaseActor.h"
+#include "Core/Actor/LexWidgetActor.h"
 #include "LevelEditor.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabSequenceEditorWidget"
@@ -32,7 +32,7 @@ DECLARE_DELEGATE_OneParam(FPrefabAnimationOnComponentSelected, TSharedPtr<FSCSEd
 DECLARE_DELEGATE_RetVal_OneParam(bool, FPrefabAnimationIsComponentValid, UActorComponent*);
 
 
-#include "Core/Components/UIBatchMeshRenderable.h"
+#include "Core/Components/LexVisualBatchMesh.h"
 #include "PrefabAnimation/MovieSceneLGUIMaterialTrack.h"
 
 class SLGUIPrefabSequenceEditorWidgetImpl : public SCompoundWidget, public FEditorUndoClient
@@ -297,7 +297,7 @@ public:
 
 		UMovieSceneSequence* AnimationSequence = Sequencer->GetFocusedMovieSceneSequence();
 		UObject* BindingContext = WeakSequence.Get();
-		TSet<AUIBaseActor*> SequencerSelectedWidgets;
+		TSet<ALexWidgetActor*> SequencerSelectedWidgets;
 		for (FGuid Guid : ObjectGuids)
 		{
 			TArray<UObject*, TInlineAllocator<1>> BoundObjects;
@@ -308,7 +308,7 @@ public:
 			}
 			else
 			{
-				AUIBaseActor* BoundWidget = Cast<AUIBaseActor>(BoundObjects[0]);
+				ALexWidgetActor* BoundWidget = Cast<ALexWidgetActor>(BoundObjects[0]);
 				if (BoundWidget)
 				{
 					SequencerSelectedWidgets.Add(BoundWidget);
@@ -318,7 +318,7 @@ public:
 
 		if (SequencerSelectedWidgets.Num() != 0)
 		{
-			AUIBaseActor* SelectedActor = *SequencerSelectedWidgets.begin();
+			ALexWidgetActor* SelectedActor = *SequencerSelectedWidgets.begin();
 
 			// Sync Selection
 			GEditor->SelectNone(false, true, false);
@@ -511,13 +511,13 @@ private:
 	{
 		if (ContextObjects.Num() == 1)
 		{
-			auto Renderable = Cast<UUIBatchMeshRenderable>(ContextObjects[0]);
+			auto Renderable = Cast<ULexVisualBatchMesh>(ContextObjects[0]);
 
 			if (Renderable != nullptr)
 			{
 				if (Renderable != nullptr && Renderable->GetCustomUIMaterial() != nullptr)
 				{
-					auto MaterialProperty = Renderable->GetClass()->FindPropertyByName(UUIBatchMeshRenderable::GetCustomUIMaterialPropertyName());
+					auto MaterialProperty = Renderable->GetClass()->FindPropertyByName(ULexVisualBatchMesh::GetCustomUIMaterialPropertyName());
 					AddTrackMenuBuilder.BeginSection("Materials", LOCTEXT("MaterialsSection", "Materials"));
 					{
 						FText DisplayNameText = MaterialProperty->GetDisplayNameText();
@@ -532,7 +532,7 @@ private:
 		}
 	}
 
-	void AddMaterialTrack(UUIBatchMeshRenderable* Renderable, FProperty* MaterialProperty, FText MaterialPropertyDisplayName)
+	void AddMaterialTrack(ULexVisualBatchMesh* Renderable, FProperty* MaterialProperty, FText MaterialPropertyDisplayName)
 	{
 		FGuid WidgetHandle = Sequencer->GetHandleToObject(Renderable);
 		if (WidgetHandle.IsValid())

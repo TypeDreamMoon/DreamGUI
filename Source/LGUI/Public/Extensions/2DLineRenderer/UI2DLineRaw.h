@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "Core/Actor/UIBaseActor.h"
+#include "Core/Actor/LexWidgetActor.h"
 #include "UI2DLineRendererBase.h"
 #include "UI2DLineRaw.generated.h"
 
@@ -32,23 +32,4 @@ protected:
 public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetPoints(const TArray<FVector2D>& InPoints);
-};
-
-
-UCLASS(ClassGroup = LGUI)
-class LGUI_API AUI2DLineActor : public AUIBaseRenderableActor
-{
-	GENERATED_BODY()
-
-public:
-	AUI2DLineActor();
-
-	virtual UUIItem* GetUIItem()const override { return UIElement; }
-	virtual class UUIBaseRenderable* GetUIRenderable()const override { return UIElement; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		UUI2DLineRaw* Get2DLineRaw()const { return UIElement; }
-private:
-	UPROPERTY(Category = "LGUI", VisibleAnywhere, BlueprintReadOnly, Transient, meta = (AllowPrivateAccess = "true"))
-		TObjectPtr<class UUI2DLineRaw> UIElement;
-
 };

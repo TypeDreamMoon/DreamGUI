@@ -36,7 +36,6 @@ public:
 	UUITexture(const FObjectInitializer& ObjectInitializer);
 
 #if WITH_EDITOR
-	virtual void EditorForceUpdate() override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 protected:
@@ -70,7 +69,7 @@ protected:
 	void CheckSpriteData();
 	void ApplyUVRect();
 
-	virtual void OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange, bool InDiscardCache = true)override;
+	virtual void OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
 
 	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 public:

@@ -37,13 +37,13 @@ protected:
 	friend class FUIScrollViewWithScrollBarCustomization;
 	//For scrollbars to expand or shrink viewport
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollViewWithScrollbar")
-		TWeakObjectPtr<AUIBaseActor> Viewport;
+		TWeakObjectPtr<ALexWidgetActor> Viewport;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollViewWithScrollbar")
-		TWeakObjectPtr<AUIBaseActor> HorizontalScrollbar;
+		TWeakObjectPtr<ALexWidgetActor> HorizontalScrollbar;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollViewWithScrollbar")
 		EScrollViewScrollbarVisibility HorizontalScrollbarVisibility = EScrollViewScrollbarVisibility::AutoHideAndExpandViewport;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollViewWithScrollbar")
-		TWeakObjectPtr<AUIBaseActor> VerticalScrollbar;
+		TWeakObjectPtr<ALexWidgetActor> VerticalScrollbar;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollViewWithScrollbar")
 		EScrollViewScrollbarVisibility VerticalScrollbarVisibility = EScrollViewScrollbarVisibility::AutoHideAndExpandViewport;
 
@@ -68,24 +68,24 @@ protected:
 	EScrollbarLayoutAction HorizontalScrollbarLayoutActionType = EScrollbarLayoutAction::None;
 	EScrollbarLayoutAction VerticalScrollbarLayoutActionType = EScrollbarLayoutAction::None;
 
-	virtual void OnUIChildHierarchyIndexChanged(UUIItem* child)override;
-	virtual void OnUIChildAttachmentChanged(UUIItem* child, bool attachOrDetach)override;
+	virtual void OnUIChildHierarchyIndexChanged(ULexWidget* child)override;
+	virtual void OnUIChildAttachmentChanged(ULexWidget* child, bool attachOrDetach)override;
 	// Begin LGUILayout interface
 	virtual void OnUpdateLayout_Implementation()override;
-	virtual bool GetCanLayoutControlAnchor_Implementation(class UUIItem* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
+	virtual bool GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
 	virtual void MarkRebuildLayout_Implementation()override { MarkLayoutDirty(); }
 	// End LGUILayout interface
 	void MarkLayoutDirty();
 public:
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")
-		AUIBaseActor* GetViewport()const { return Viewport.Get(); }
+		ALexWidgetActor* GetViewport()const { return Viewport.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")
-		AUIBaseActor* GetHorizontalScrollbar()const { return HorizontalScrollbar.Get(); }
+		ALexWidgetActor* GetHorizontalScrollbar()const { return HorizontalScrollbar.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")
 		EScrollViewScrollbarVisibility GetHorizontalScrollbarVisibility()const { return HorizontalScrollbarVisibility; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")
-		AUIBaseActor* GetVerticalScrollbar()const { return VerticalScrollbar.Get(); }
+		ALexWidgetActor* GetVerticalScrollbar()const { return VerticalScrollbar.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")
 		EScrollViewScrollbarVisibility GetVerticalScrollbarVisibility()const { return VerticalScrollbarVisibility; }
 

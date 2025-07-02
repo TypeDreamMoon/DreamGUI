@@ -6,11 +6,11 @@
 /**
  * 
  */
-class FUIBaseRenderableCustomization : public IDetailCustomization
+class FLexVisualCustomization : public IDetailCustomization
 {
 public:
-	FUIBaseRenderableCustomization();
-	~FUIBaseRenderableCustomization();
+	FLexVisualCustomization();
+	~FLexVisualCustomization();
 
 	static TSharedRef<IDetailCustomization> MakeInstance();
 	/** IDetailCustomization interface */

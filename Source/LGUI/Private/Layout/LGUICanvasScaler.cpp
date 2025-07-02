@@ -2,7 +2,7 @@
 
 #include "Layout/LGUICanvasScaler.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #if WITH_EDITOR
 #include "Core/LGUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
@@ -55,13 +55,13 @@ void ULGUICanvasScaler::OnEnable()
 	{
 		if (Canvas->IsRootCanvas())
 		{
-			if (Canvas->GetRenderMode() == ELGUIRenderMode::ScreenSpaceOverlay
-				|| Canvas->GetRenderMode() == ELGUIRenderMode::RenderTarget
+			if (Canvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay
+				|| Canvas->GetRenderMode() == ELexRenderMode::RenderTarget
 				)
 			{
 				CheckAndApplyViewportParameter();
 
-				if (Canvas->GetRenderMode() == ELGUIRenderMode::ScreenSpaceOverlay)
+				if (Canvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
 				{
 					if (auto world = GetWorld())
 					{
@@ -109,13 +109,13 @@ void ULGUICanvasScaler::CheckAndApplyViewportParameter()
 	{
 		switch (Canvas->GetRenderMode())
 		{
-		case ELGUIRenderMode::ScreenSpaceOverlay:
+		case ELexRenderMode::ScreenSpaceOverlay:
 		{
 			ViewportSize = Canvas->GetViewportSize();
 			OnViewportParameterChanged();
 		}
 		break;
-		case ELGUIRenderMode::RenderTarget:
+		case ELexRenderMode::RenderTarget:
 		{
 			if (auto renderTarget = Canvas->GetRenderTarget())
 			{
@@ -145,7 +145,7 @@ void ULGUICanvasScaler::OnViewportParameterChanged()
 			{
 				if (bFixedSizeInEditMode && !World->IsGameWorld())//Edit mode
 				{
-					if (auto canvasUIItem = Canvas->GetUIItem())
+					if (auto canvasUIItem = Canvas->GetLexWidget())
 					{
 						canvasUIItem->SetWidth(SizeInEditMode.X);
 						canvasUIItem->SetHeight(SizeInEditMode.Y);
@@ -155,11 +155,11 @@ void ULGUICanvasScaler::OnViewportParameterChanged()
 				}
 			}
 #endif
-			if (Canvas->GetRenderMode() == ELGUIRenderMode::ScreenSpaceOverlay
-				|| Canvas->GetRenderMode() == ELGUIRenderMode::RenderTarget
+			if (Canvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay
+				|| Canvas->GetRenderMode() == ELexRenderMode::RenderTarget
 				)
 			{
-				auto canvasUIItem = Canvas->GetUIItem();
+				auto canvasUIItem = Canvas->GetLexWidget();
 				if (canvasUIItem != nullptr)
 				{
 					float canvasScale = 1.0f;
@@ -326,8 +326,8 @@ void ULGUICanvasScaler::OnEditorTick(float DeltaTime)
 	{
 		if (Canvas->IsRootCanvas())
 		{
-			if (Canvas->GetRenderMode() == ELGUIRenderMode::ScreenSpaceOverlay
-				|| Canvas->GetRenderMode() == ELGUIRenderMode::RenderTarget
+			if (Canvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay
+				|| Canvas->GetRenderMode() == ELexRenderMode::RenderTarget
 				)
 			{
 				DrawViewportArea();
@@ -338,7 +338,7 @@ void ULGUICanvasScaler::OnEditorTick(float DeltaTime)
 				
 				if (!GetWorld()->IsGameWorld())
 				{
-					if (Canvas->GetRenderMode() == ELGUIRenderMode::ScreenSpaceOverlay)
+					if (Canvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
 					{
 						FViewport* viewport = nullptr;
 
@@ -366,11 +366,11 @@ void ULGUICanvasScaler::OnEditorTick(float DeltaTime)
 							}
 						}
 					}
-					if (Canvas->GetRenderMode() == ELGUIRenderMode::RenderTarget && IsValid(Canvas->renderTarget))
+					if (Canvas->GetRenderMode() == ELexRenderMode::RenderTarget && IsValid(Canvas->RenderTarget))
 					{
 						auto prevSize = ViewportSize;
-						ViewportSize.X = Canvas->renderTarget->SizeX;
-						ViewportSize.Y = Canvas->renderTarget->SizeY;
+						ViewportSize.X = Canvas->RenderTarget->SizeX;
+						ViewportSize.Y = Canvas->RenderTarget->SizeY;
 						if (prevSize != ViewportSize)
 						{
 							OnViewportParameterChanged();
@@ -435,18 +435,18 @@ void ULGUICanvasScaler::DrawViewportArea()
 {
 	if (CheckCanvas())
 	{
-		auto RectExtends = FVector(0.1f, Canvas->GetUIItem()->GetWidth(), Canvas->GetUIItem()->GetHeight()) * 0.5f;
+		auto RectExtends = FVector(0.1f, Canvas->GetLexWidget()->GetWidth(), Canvas->GetLexWidget()->GetHeight()) * 0.5f;
 		auto GeometryBoundsExtends = FVector(0, 0, 0);
 		bool bCanDrawRect = false;
 		auto RectDrawColor = FColor(128, 128, 128, 128);//gray means normal object
 
-		auto WorldTransform = Canvas->GetUIItem()->GetComponentTransform();
+		auto WorldTransform = Canvas->GetLexWidget()->GetComponentTransform();
 		FVector RelativeOffset(0, 0, 0);
-		RelativeOffset.Y = (0.5f - Canvas->GetUIItem()->GetPivot().X) * Canvas->GetUIItem()->GetWidth();
-		RelativeOffset.Z = (0.5f - Canvas->GetUIItem()->GetPivot().Y) * Canvas->GetUIItem()->GetHeight();
+		RelativeOffset.Y = (0.5f - Canvas->GetLexWidget()->GetPivot().X) * Canvas->GetLexWidget()->GetWidth();
+		RelativeOffset.Z = (0.5f - Canvas->GetLexWidget()->GetPivot().Y) * Canvas->GetLexWidget()->GetHeight();
 		auto WorldLocation = WorldTransform.TransformPosition(RelativeOffset);
 
-		DrawDebugBox(Canvas->GetUIItem()->GetWorld(), WorldLocation, RectExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), RectDrawColor);
+		DrawDebugBox(Canvas->GetLexWidget()->GetWorld(), WorldLocation, RectExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), RectDrawColor);
 	}
 }
 
@@ -486,9 +486,9 @@ void ULGUICanvasScaler::DrawVirtualCamera()
 		DrawDebugLine(this->GetWorld(), rightTopEnd, rightBottomEnd, lineColor);
 		DrawDebugLine(this->GetWorld(), rightTopEnd, leftTopEnd, lineColor);
 
-		if (Canvas->UIItem.IsValid())
+		if (Canvas->LexWidget.IsValid())
 		{
-			DrawDebugCamera(this->GetWorld(), Canvas->GetViewLocation(), Canvas->GetViewRotator(), FOVAngle, Canvas->GetUIItem()->GetComponentScale().X * 3.0f, FColor::Green);
+			DrawDebugCamera(this->GetWorld(), Canvas->GetViewLocation(), Canvas->GetViewRotator(), FOVAngle, Canvas->GetLexWidget()->GetComponentScale().X * 3.0f, FColor::Green);
 		}
 	}
 }
@@ -497,7 +497,7 @@ void ULGUICanvasScaler::DrawVirtualCamera()
 bool ULGUICanvasScaler::CheckCanvas()
 {
 	if (Canvas != nullptr)return true;
-	Canvas = GetOwner()->FindComponentByClass<ULGUICanvas>();
+	Canvas = GetOwner()->FindComponentByClass<ULexCanvas>();
 	if (Canvas == nullptr)
 	{
 		UE_LOG(LGUI, Error, TEXT("UICanvasScalar component should only attach to a actor which have LGUICanvas component!"));
@@ -669,7 +669,7 @@ bool ULGUICanvasScaler::ProjectWorldToScreen(APlayerController* Player, const FV
 		auto TempFovAngle = Player->PlayerCameraManager->GetFOVAngle() * (float)PI / 360.0f;
 		auto TempViewportSize = LP->ViewportClient->Viewport->GetSizeXY();
 		FMatrix ProjectionMatrix;
-		ULGUICanvas::BuildProjectionMatrix(TempViewportSize, ECameraProjectionMode::Perspective
+		ULexCanvas::BuildProjectionMatrix(TempViewportSize, ECameraProjectionMode::Perspective
 			, TempFovAngle, 1000, 0.01f, ProjectionMatrix);
 
 		auto ViewLocation = Player->PlayerCameraManager->GetCameraLocation();

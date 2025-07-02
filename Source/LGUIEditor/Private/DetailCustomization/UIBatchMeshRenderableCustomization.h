@@ -16,5 +16,5 @@ public:
 	/** IDetailCustomization interface */
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
 private:
-	TWeakObjectPtr<class UUIBatchMeshRenderable> TargetScriptPtr;
+	TWeakObjectPtr<class ULexVisualBatchMesh> TargetScriptPtr;
 };

@@ -3,7 +3,7 @@
 #include "Interaction/UIScrollViewComponent.h"
 #include "LGUI.h"
 #include "LTweenManager.h"
-#include "Core/Actor/UIBaseActor.h"
+#include "Core/Actor/LexWidgetActor.h"
 #include "Utils/LexUIUtils.h"
 #include "Core/LGUISettings.h"
 
@@ -28,7 +28,7 @@ void UUIScrollViewHelper::OnUIDimensionsChanged(bool horizontalPositionChanged, 
         }
     }
 }
-void UUIScrollViewHelper::OnUIChildDimensionsChanged(UUIItem *child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
+void UUIScrollViewHelper::OnUIChildDimensionsChanged(ULexWidget *child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
 {
     Super::OnUIChildDimensionsChanged(child, horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
     if (!TargetComp.IsValid())
@@ -148,11 +148,11 @@ bool UUIScrollViewComponent::CheckParameters()
         return false;
     if (Content->GetAttachParentActor() == nullptr)
         return false;
-    auto contentParentActor = Cast<AUIBaseActor>(Content->GetAttachParentActor());
+    auto contentParentActor = Cast<ALexWidgetActor>(Content->GetAttachParentActor());
     if (contentParentActor == nullptr)
         return false;
-    ContentUIItem = Content->GetUIItem();
-    ContentParentUIItem = contentParentActor->GetUIItem();
+    ContentUIItem = Content->GetLexWidget();
+    ContentParentUIItem = contentParentActor->GetLexWidget();
     if (ContentParentUIItem != nullptr)
     {
         auto contentParentHelperComp = NewObject<UUIScrollViewHelper>(contentParentActor);
@@ -474,12 +474,12 @@ void UUIScrollViewComponent::SetScrollProgress(FVector2D value)
     }
 }
 
-void UUIScrollViewComponent::ScrollTo(UUIItem* InChild, bool InEaseAnimation, float InAnimationDuration)
+void UUIScrollViewComponent::ScrollTo(ULexWidget* InChild, bool InEaseAnimation, float InAnimationDuration)
 {
     if (!CheckParameters())return;
     auto CenterPos = InChild->GetLocalSpaceCenter();
     auto CenterPosWorld = InChild->GetComponentTransform().TransformPosition(FVector(0, CenterPos.X, CenterPos.Y));
-    auto PosOffset = Content->GetUIItem()->GetComponentTransform().InverseTransformPosition(CenterPosWorld);
+    auto PosOffset = Content->GetLexWidget()->GetComponentTransform().InverseTransformPosition(CenterPosWorld);
     auto TargetContentPos = FVector2D(-PosOffset.Y, -PosOffset.Z);
     TargetContentPos.X = FMath::Clamp(TargetContentPos.X, HorizontalRange.X, HorizontalRange.Y);
     TargetContentPos.Y = FMath::Clamp(TargetContentPos.Y, VerticalRange.X, VerticalRange.Y);

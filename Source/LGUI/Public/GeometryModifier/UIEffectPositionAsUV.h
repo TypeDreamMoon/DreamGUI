@@ -2,12 +2,12 @@
 
 #pragma once
 
-#include "UIGeometryModifierBase.h"
+#include "LexUIMeshModifierBase.h"
 #include "UIEffectPositionAsUV.generated.h"
 
 
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIEffectPositionAsUV : public UUIGeometryModifierBase
+class LGUI_API UUIEffectPositionAsUV : public ULexUIMeshModifierBase
 {
 	GENERATED_BODY()
 

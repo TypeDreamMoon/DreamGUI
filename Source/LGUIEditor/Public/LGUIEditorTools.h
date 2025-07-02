@@ -45,7 +45,6 @@ public:
 	static void CopyComponentValues_Impl();
 	static void PasteComponentValues_Impl();
 	static void OpenAtlasViewer_Impl();
-	static void ChangeTraceChannel_Impl(ETraceTypeQuery InTraceTypeQuery);
 	static void CreateScreenSpaceUI_BasicSetup();
 	static void CreateWorldSpaceUIUERenderer_BasicSetup();
 	static void CreateWorldSpaceUILGUIRenderer_BasicSetup();
@@ -78,9 +77,6 @@ public:
 	static bool HaveValidCopiedComponent();
 
 	static void MakeCurrentLevel(AActor* InActor);
-	static void SetTraceChannelToParent(AActor* InActor);
-	static void SetTraceChannelToParent_Recursive(AActor* InActor);
-	static void SetTraceChannel(AActor* InActor, ETraceTypeQuery InTraceTypeQuery);
 
 	static void ForceGC();
 };

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
 #include "CoreMinimal.h"
 #include "Core/LGUILifeCycleUIBehaviour.h"
 #include "Layout/ILGUILayoutInterface.h"
@@ -66,8 +66,8 @@ protected:
 
 	uint8 bNeedRebuildLayout : 1;
 
-	void ApplyUIItemWidth(UUIItem* InUIItem, const float& InWidth);
-	void ApplyUIItemHeight(UUIItem* InUIItem, const float& InHeight);
-	void ApplyUIItemAnchoredPosition(UUIItem* InUIItem, const FVector2D& InAnchoredPosition);
-	void ApplyUIItemSizeDelta(UUIItem* InUIItem, const FVector2D& InSizedDelta);
+	void ApplyUIItemWidth(ULexWidget* InUIItem, const float& InWidth);
+	void ApplyUIItemHeight(ULexWidget* InUIItem, const float& InHeight);
+	void ApplyUIItemAnchoredPosition(ULexWidget* InUIItem, const FVector2D& InAnchoredPosition);
+	void ApplyUIItemSizeDelta(ULexWidget* InUIItem, const FVector2D& InSizedDelta);
 };

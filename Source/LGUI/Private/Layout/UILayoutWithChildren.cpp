@@ -3,7 +3,7 @@
 #include "Layout/UILayoutWithChildren.h"
 #include "Layout/UILayoutElement.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
 
 UUILayoutWithChildren::UUILayoutWithChildren()
 {
@@ -45,7 +45,7 @@ void UUILayoutWithChildren::RebuildChildrenList()const
     if (CheckRootUIComponent())
     {
         LayoutUIItemChildrenArray.Reset();
-        const auto& UIChildren = RootUIComp->GetAttachUIChildren();
+        const auto& UIChildren = RootUIComp->GetUIChildren();
         for (auto UIChild : UIChildren)
         {
             if (!IsValid(UIChild))continue;
@@ -80,7 +80,7 @@ void UUILayoutWithChildren::SortChildrenList()const
         });
 }
 
-void UUILayoutWithChildren::GetLayoutElement(UUIItem* InChild, UObject*& OutLayoutElement, bool& OutIgnoreLayout)const
+void UUILayoutWithChildren::GetLayoutElement(ULexWidget* InChild, UObject*& OutLayoutElement, bool& OutIgnoreLayout)const
 {
     auto LayoutElement = InChild->GetOwner()->FindComponentByClass<UUILayoutElement>();
     if (LayoutElement != nullptr && LayoutElement->GetEnable())
@@ -106,7 +106,7 @@ const TArray<UUILayoutWithChildren::FLayoutChild>& UUILayoutWithChildren::GetLay
     return LayoutUIItemChildrenArray;
 }
 
-void UUILayoutWithChildren::OnUIChildDimensionsChanged(UUIItem* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
+void UUILayoutWithChildren::OnUIChildDimensionsChanged(ULexWidget* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
 {
     Super::OnUIChildDimensionsChanged(child, horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
     if (horizontalPositionChanged || verticalPositionChanged || widthChanged || heightChanged)
@@ -114,7 +114,7 @@ void UUILayoutWithChildren::OnUIChildDimensionsChanged(UUIItem* child, bool hori
         MarkNeedRebuildLayout();
     }
 }
-void UUILayoutWithChildren::OnUIChildAcitveInHierarchy(UUIItem* InChild, bool InUIActive)
+void UUILayoutWithChildren::OnUIChildAcitveInHierarchy(ULexWidget* InChild, bool InUIActive)
 {
     Super::OnUIChildAcitveInHierarchy(InChild, InUIActive);
     int32 index;
@@ -148,7 +148,7 @@ void UUILayoutWithChildren::OnUIChildAcitveInHierarchy(UUIItem* InChild, bool In
 
     MarkNeedRebuildLayout();
 }
-void UUILayoutWithChildren::OnUIChildAttachmentChanged(UUIItem* InChild, bool attachOrDetach)
+void UUILayoutWithChildren::OnUIChildAttachmentChanged(ULexWidget* InChild, bool attachOrDetach)
 {
     Super::OnUIChildAttachmentChanged(InChild, attachOrDetach);
     int32 index;
@@ -181,7 +181,7 @@ void UUILayoutWithChildren::OnUIChildAttachmentChanged(UUIItem* InChild, bool at
 
     MarkNeedRebuildLayout();
 }
-void UUILayoutWithChildren::OnUIChildHierarchyIndexChanged(UUIItem* InChild)
+void UUILayoutWithChildren::OnUIChildHierarchyIndexChanged(ULexWidget* InChild)
 {
     int32 index;
     FLayoutChild childData;

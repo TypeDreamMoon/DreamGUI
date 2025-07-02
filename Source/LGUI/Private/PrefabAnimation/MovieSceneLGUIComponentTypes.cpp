@@ -7,7 +7,7 @@
 #include "EntitySystem/MovieScenePropertyComponentHandler.h"
 #include "MovieSceneTracksComponentTypes.h"
 #include "Systems/MovieScenePiecewiseDoubleBlenderSystem.h"
-#include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
+#include "LGUI/Public/Core/Components/LexVisualBatchMesh.h"
 
 namespace UE
 {
@@ -45,10 +45,10 @@ FMovieSceneLGUIComponentTypes::FMovieSceneLGUIComponentTypes()
 				const int32 ParentIndex = ParentAllocationOffsets[Index];
 				const int32 ChildIndex = ChildRange.ComponentStartOffset + Index;
 
-				auto Renderable = Cast<UUIBatchMeshRenderable>(BoundObjectComponents[ChildIndex]);
+				auto Renderable = Cast<ULexVisualBatchMesh>(BoundObjectComponents[ChildIndex]);
 				if (Renderable)
 				{
-					auto Property = FindFProperty<FProperty>(Renderable->GetClass(), UUIBatchMeshRenderable::GetCustomUIMaterialPropertyName());
+					auto Property = FindFProperty<FProperty>(Renderable->GetClass(), ULexVisualBatchMesh::GetCustomUIMaterialPropertyName());
 					HandleComponents[ChildIndex] = FLGUIMaterialHandle(Property->ContainerPtrToValuePtr<void>(Renderable));
 				}
 			}

@@ -2,7 +2,7 @@
 
 #include "Event/LGUIWorldSpaceRaycaster.h"
 #include "Event/RaycasterSource/LGUIWorldSpaceRaycasterSource_Mouse.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "Core/LGUISettings.h"
 
 
@@ -55,10 +55,10 @@ void ULGUIWorldSpaceRaycaster::OnRegister()
 		RaycasterSourceObject = NewObject<ULGUIWorldSpaceRaycasterSource_Mouse>(this);
 	}
 	RaycasterSourceObject->Init(this);
-	RenderModeArray = { ELGUIRenderMode::WorldSpace, ELGUIRenderMode::WorldSpace_LGUI };
+	RenderModeArray = { ELexRenderMode::WorldSpace, ELexRenderMode::WorldSpace_LGUI };
 }
 
-bool ULGUIWorldSpaceRaycaster::ShouldSkipCanvas(class ULGUICanvas* UICanvas)
+bool ULGUIWorldSpaceRaycaster::ShouldSkipCanvas(class ULexCanvas* UICanvas)
 {
 	return false;
 }

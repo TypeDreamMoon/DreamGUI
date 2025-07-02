@@ -3,7 +3,7 @@
 #pragma once
 #include "CoreMinimal.h"
 
-class UUIItem;
+class ULexWidget;
 class ULexUIDataAsTexture;
 
 class FLexUIClipData
@@ -13,17 +13,17 @@ public:
 	static int BlockSizeInBytes;
 	static int SingleBlockSizeInBytes;
 	
-	FLexUIClipData(const TSharedPtr<FLexUIClipData>& InParent, ULexUIDataAsTexture* InDataTexture, UUIItem* InWidget);
+	FLexUIClipData(const TSharedPtr<FLexUIClipData>& InParent, ULexUIDataAsTexture* InDataTexture, ULexWidget* InWidget);
 	~FLexUIClipData();
 	int GetBufferStartPos() const{return BufferStartPos;}
-	UUIItem* GetWidget() const{return Widget.Get();}
+	ULexWidget* GetWidget() const{return Widget.Get();}
 	void UpdateData();
 	void MarkNeedUpdateData(){bNeedUpdateData = true;}
 	bool IsPointVisible(const FVector& Point)const;
 private:
 	bool bNeedUpdateData = true;
 	int BufferStartPos;
-	TWeakObjectPtr<UUIItem> Widget;
+	TWeakObjectPtr<ULexWidget> Widget;
 	TWeakObjectPtr<ULexUIDataAsTexture> DataTexture;
 	TWeakPtr<FLexUIClipData> Parent;
 };

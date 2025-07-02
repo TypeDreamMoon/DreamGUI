@@ -4,12 +4,12 @@
 #include "LGUI.h"
 #include "Interaction/UIToggleGroupComponent.h"
 #include "LTweenManager.h"
-#include "Core/Actor/UIBaseActor.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
-#include "LGUI/Public/Core/Components/UIBaseRenderable.h"
+#include "Core/Actor/LexWidgetActor.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
+#include "LGUI/Public/Core/Components/LexVisual.h"
 #include "LGUI/Public/Core/Components/UISprite.h"
 #include "Interaction/UISelectableTransitionComponent.h"
-#include "Core/Actor/UIBaseActor.h"
+#include "Core/Actor/LexWidgetActor.h"
 #include "Core/LGUISettings.h"
 
 
@@ -68,7 +68,7 @@ void UUIToggleComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 
 bool UUIToggleComponent::CheckTarget()
 {
-	if (ToggleActor.IsValid())return true;
+	if (ToggleTarget.IsValid())return true;
 	return false;
 }
 
@@ -113,16 +113,16 @@ void UUIToggleComponent::ApplyValueToUI(bool immediateSet)
 	if (!CheckTarget())return;
 	if (ToggleTransition == UIToggleTransitionType::Fade)
 	{
-		if (auto UIRenderable = ToggleActor->GetUIRenderable())
+		if (auto Visual = ToggleTarget->GetVisual())
 		{
 			if (ULTweenManager::IsTweening(this, ToggleTransitionTweener))ToggleTransitionTweener->Kill();
 			if (ToggleDuration <= 0.0f || immediateSet)
 			{
-				UIRenderable->SetAlpha(IsOn ? OnAlpha : OffAlpha);
+				Visual->SetAlpha(IsOn ? OnAlpha : OffAlpha);
 			}
 			else
 			{
-				ToggleTransitionTweener = ULTweenManager::To(UIRenderable, FLTweenFloatGetterFunction::CreateUObject(UIRenderable, &UUIBaseRenderable::GetAlpha), FLTweenFloatSetterFunction::CreateUObject(UIRenderable, &UUIBaseRenderable::SetAlpha), IsOn ? OnAlpha : OffAlpha, ToggleDuration);
+				ToggleTransitionTweener = ULTweenManager::To(Visual, FLTweenFloatGetterFunction::CreateUObject(Visual, &ULexVisual::GetAlpha), FLTweenFloatSetterFunction::CreateUObject(Visual, &ULexVisual::SetAlpha), IsOn ? OnAlpha : OffAlpha, ToggleDuration);
 				if (ToggleTransitionTweener)
 				{
 					bool bAffectByGamePause = false;
@@ -147,16 +147,16 @@ void UUIToggleComponent::ApplyValueToUI(bool immediateSet)
 	}
 	else if (ToggleTransition == UIToggleTransitionType::ColorTint)
 	{
-		if (auto UIRenderable = ToggleActor->GetUIRenderable())
+		if (auto Visual = ToggleTarget->GetVisual())
 		{
 			if (ULTweenManager::IsTweening(this, ToggleTransitionTweener))ToggleTransitionTweener->Kill();
 			if (ToggleDuration <= 0.0f || immediateSet)
 			{
-				UIRenderable->SetColor(IsOn ? OnColor : OffColor);
+				Visual->SetColor(IsOn ? OnColor : OffColor);
 			}
 			else
 			{
-				ToggleTransitionTweener = ULTweenManager::To(UIRenderable, FLTweenColorGetterFunction::CreateUObject(UIRenderable, &UUIBaseRenderable::GetColor), FLTweenColorSetterFunction::CreateUObject(UIRenderable, &UUIBaseRenderable::SetColor), IsOn ? OnColor : OffColor, ToggleDuration);
+				ToggleTransitionTweener = ULTweenManager::To(Visual, FLTweenColorGetterFunction::CreateUObject(Visual, &ULexVisual::GetColor), FLTweenColorSetterFunction::CreateUObject(Visual, &ULexVisual::SetColor), IsOn ? OnColor : OffColor, ToggleDuration);
 				if (ToggleTransitionTweener)
 				{
 					bool bAffectByGamePause = false;
@@ -183,7 +183,7 @@ void UUIToggleComponent::ApplyValueToUI(bool immediateSet)
 	{
 		if (!ToggleTransitionComp.IsValid())
 		{
-			ToggleTransitionComp = ToggleActor->FindComponentByClass<UUISelectableTransitionComponent>();
+			ToggleTransitionComp = ToggleTarget->GetOwner()->FindComponentByClass<UUISelectableTransitionComponent>();
 		}
 		if (ToggleTransitionComp.IsValid())
 		{

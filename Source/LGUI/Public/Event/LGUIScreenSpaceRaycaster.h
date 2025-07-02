@@ -6,8 +6,8 @@
 #include "LGUIBaseRaycaster.h"
 #include "LGUIScreenSpaceRaycaster.generated.h"
 
-class ULGUICanvas;
-enum class ELGUIRenderMode :uint8;
+class ULexCanvas;
+enum class ELexRenderMode :uint8;
 
 /**
  * Perform a raycaster interaction for ScreenSpaceUI.
@@ -23,10 +23,10 @@ public:
 	virtual void BeginPlay()override;
 protected:
 	
-	TWeakObjectPtr<ULGUICanvas> RootCanvas = nullptr;
+	TWeakObjectPtr<ULexCanvas> RootCanvas = nullptr;
 
-	virtual bool ShouldSkipCanvas(class ULGUICanvas* UICanvas)override;
-	TArray<ELGUIRenderMode> RenderModeArray;
+	virtual bool ShouldSkipCanvas(class ULexCanvas* UICanvas)override;
+	TArray<ELexRenderMode> RenderModeArray;
 public:
 	virtual bool GetAffectByGamePause()const override;
 	virtual bool ShouldStartDrag(ULGUIPointerEventData* InPointerEventData)override;

@@ -681,8 +681,6 @@ void LGUIEditorTools::CreateActorByClass(UClass* ActorClass, TFunction<void(AAct
 			GEditor->SelectActor(selectedActor, false, true);
 		}
 		GEditor->SelectActor(newActor, true, true);
-
-		SetTraceChannelToParent(newActor);
 	}
 	GEditor->EndTransaction();
 }
@@ -750,8 +748,6 @@ void LGUIEditorTools::CreateUIControls(FString InPrefabPath)
 			, selectedActor == nullptr ? nullptr : selectedActor->GetRootComponent());
 		GEditor->SelectActor(selectedActor, false, true);
 		GEditor->SelectActor(actor, true, true);
-
-		SetTraceChannelToParent_Recursive(actor);
 	}
 	else
 	{
@@ -775,17 +771,17 @@ void LGUIEditorTools::ReplaceActorByClass(UClass* ActorClass)
 	{
 		MakeCurrentLevel(Actor);
 		int HierarchyIndex = 0;
-		if (auto SourceUIItem = Cast<UUIItem>(Actor->GetRootComponent()))
+		if (auto SourceUIItem = Cast<ULexWidget>(Actor->GetRootComponent()))
 		{
 			HierarchyIndex = SourceUIItem->GetHierarchyIndex();
 		}
 		AActor* ReplacedActor = nullptr;
 		TArray<AActor*> ChildrenActors;
 		Actor->GetAttachedActors(ChildrenActors);
-		TMap<UUIItem*, TTuple<FUIAnchorData, int, FVector>> ChildrenOriginPositionArray;
+		TMap<ULexWidget*, TTuple<FUIAnchorData, int, FVector>> ChildrenOriginPositionArray;
 		for (auto& ChildActor : ChildrenActors)
 		{
-			if (auto UIComp = Cast<UUIItem>(ChildActor->GetRootComponent()))
+			if (auto UIComp = Cast<ULexWidget>(ChildActor->GetRootComponent()))
 			{
 				ChildrenOriginPositionArray.Add(UIComp, { UIComp->GetAnchorData(), UIComp->GetHierarchyIndex(), UIComp->GetRelativeLocation()});
 			}
@@ -864,7 +860,7 @@ void LGUIEditorTools::ReplaceActorByClass(UClass* ActorClass)
 		}
 		if (IsValid(ReplacedActor))
 		{
-			if (auto ReplaceUIItem = Cast<UUIItem>(ReplacedActor->GetRootComponent()))
+			if (auto ReplaceUIItem = Cast<ULexWidget>(ReplacedActor->GetRootComponent()))
 			{
 				ReplaceUIItem->SetHierarchyIndex(HierarchyIndex);
 			}
@@ -956,9 +952,9 @@ void LGUIEditorTools::DuplicateSelectedActors_Impl()//@todo: fix bug: duplicate 
 				}
 			}
 			copiedActor = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::DuplicateActorForEditor(Actor, Parent, PrefabHelperObject->SubPrefabMap, InMapObjectToGuid, DuplicatedSubPrefabMap, OutMapGuidToObject);
-			if (auto UIItem = Cast<UUIItem>(copiedActor->GetRootComponent()))
+			if (auto UIItem = Cast<ULexWidget>(copiedActor->GetRootComponent()))
 			{
-				if (auto UIParent = Cast<UUIItem>(Parent))
+				if (auto UIParent = Cast<ULexWidget>(Parent))
 				{
 					UIItem->SetAsLastHierarchy();
 				}
@@ -1377,41 +1373,6 @@ void LGUIEditorTools::OpenAtlasViewer_Impl()
 {
 	FGlobalTabmanager::Get()->TryInvokeTab(FLGUIEditorModule::LGUIDynamicSpriteAtlasViewerName);
 }
-void LGUIEditorTools::ChangeTraceChannel_Impl(ETraceTypeQuery InTraceTypeQuery)
-{
-	auto selectedActors = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
-	auto count = selectedActors.Num();
-	if (count == 0)
-	{
-		UE_LOG(LGUIEditor, Error, TEXT("NothingSelected"));
-		return;
-	}
-	struct FunctionContainer
-	{
-		static void ChangeTraceChannel(USceneComponent* InSceneComp, ETraceTypeQuery InChannel)
-		{
-			if (IsValid(InSceneComp))
-			{
-				if (auto uiItemComp = Cast<UUIItem>(InSceneComp))
-				{
-					uiItemComp->SetTraceChannel(InChannel);
-				}
-				auto& children = InSceneComp->GetAttachChildren();
-				for (auto itemComp : children)
-				{
-					ChangeTraceChannel(itemComp, InChannel);
-				}
-			}
-		}
-	};
-	auto RootActorList = LGUIEditorTools::GetRootActorListFromSelection(selectedActors);
-	GEditor->BeginTransaction(LOCTEXT("ChangeTraceChannel_Transaction", "LGUI Change Trace Channel"));
-	for (auto item : RootActorList)
-	{
-		FunctionContainer::ChangeTraceChannel(item->GetRootComponent(), InTraceTypeQuery);
-	}
-	GEditor->EndTransaction();
-}
 void LGUIEditorTools::CreateScreenSpaceUI_BasicSetup()
 {
 	FString prefabPath(TEXT("/LGUI/Prefabs/ScreenSpaceUI"));
@@ -1427,8 +1388,8 @@ void LGUIEditorTools::CreateScreenSpaceUI_BasicSetup()
 		actor->GetRootComponent()->SetRelativeLocation(FVector(0, 0, 250));
 		if (bIsTraceTypeQueryValid)
 		{
-			SetTraceChannel(actor, LGUITraceTypeQuery);
-			SetTraceChannelToParent_Recursive(actor);
+			auto Canvas = actor->FindComponentByClass<ULexCanvas>();
+			Canvas->SetTraceChannel(LGUITraceTypeQuery);
 		}
 		if (auto selectedActor = GetFirstSelectedActor())
 		{
@@ -1459,8 +1420,8 @@ void LGUIEditorTools::CreateWorldSpaceUIUERenderer_BasicSetup()
 		actor->GetRootComponent()->SetWorldScale3D(FVector::OneVector);
 		if (bIsTraceTypeQueryValid)
 		{
-			SetTraceChannel(actor, LGUITraceTypeQuery);
-			SetTraceChannelToParent_Recursive(actor);
+			auto Canvas = actor->FindComponentByClass<ULexCanvas>();
+			Canvas->SetTraceChannel(LGUITraceTypeQuery);
 		}
 		if (auto selectedActor = GetFirstSelectedActor())
 		{
@@ -1491,8 +1452,8 @@ void LGUIEditorTools::CreateWorldSpaceUILGUIRenderer_BasicSetup()
 		actor->GetRootComponent()->SetWorldScale3D(FVector::OneVector);
 		if (bIsTraceTypeQueryValid)
 		{
-			SetTraceChannel(actor, LGUITraceTypeQuery);
-			SetTraceChannelToParent_Recursive(actor);
+			auto Canvas = actor->FindComponentByClass<ULexCanvas>();
+			Canvas->SetTraceChannel(LGUITraceTypeQuery);
 		}
 		if (auto selectedActor = GetFirstSelectedActor())
 		{
@@ -1918,14 +1879,6 @@ void LGUIEditorTools::RefreshOnSubPrefabChange(ULGUIPrefab* InSubPrefab)
 					{
 						PrefabEditor->RefreshOnSubPrefabDirty(InSubPrefab);
 					}
-					else
-					{
-						//Why comment this? Because we don't need to refresh un-opened prefab, because prefab will reload all sub prefab when open
-						//if (Prefab->RefreshOnSubPrefabDirty(InSubPrefab))
-						//{
-						//	RefreshAllPrefabsOnSubPrefabChange(InPrefabs, Prefab);
-						//}
-					}
 					RefreshAllPrefabsOnSubPrefabChange(InPrefabs, Prefab);
 				}
 			}
@@ -1937,6 +1890,7 @@ void LGUIEditorTools::RefreshOnSubPrefabChange(ULGUIPrefab* InSubPrefab)
 
 TArray<ULGUIPrefab*> LGUIEditorTools::GetAllPrefabArray()
 {
+#if 0//Why comment this? Because we don't need to refresh not-loaded prefab, because prefab will reload all sub prefab when load
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(FName("AssetRegistry"));
 	IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
 
@@ -1965,6 +1919,9 @@ TArray<ULGUIPrefab*> LGUIEditorTools::GetAllPrefabArray()
 			}
 		}
 	}
+#else
+	TArray<ULGUIPrefab*> AllPrefabs;
+#endif
 	//collect prefabs that are not saved to disc yet
 	for (TObjectIterator<ULGUIPrefab> Itr; Itr; ++Itr)
 	{
@@ -2080,7 +2037,7 @@ bool LGUIEditorTools::IsCanvasActor(AActor* InActor)
 {
 	if (auto rootComp = InActor->GetRootComponent())
 	{
-		if (auto rootUIItem = Cast<UUIItem>(rootComp))
+		if (auto rootUIItem = Cast<ULexWidget>(rootComp))
 		{
 			if (rootUIItem->IsCanvasUIItem())
 			{
@@ -2102,7 +2059,7 @@ bool LGUIEditorTools::IsSelectUIActor()
 			{
 				if (auto rootComp = actor->GetRootComponent())
 				{
-					auto uiRootComp = Cast<UUIItem>(rootComp);
+					auto uiRootComp = Cast<ULexWidget>(rootComp);
 					if (uiRootComp == nullptr)
 					{
 						allIsUI = false;
@@ -2118,9 +2075,9 @@ int LGUIEditorTools::GetDrawcallCount(AActor* InActor)
 {
 	if (auto rootComp = InActor->GetRootComponent())
 	{
-		if (auto rootUIItem = Cast<UUIItem>(rootComp))
+		if (auto rootUIItem = Cast<ULexWidget>(rootComp))
 		{
-			if (auto canvas = InActor->FindComponentByClass<ULGUICanvas>())
+			if (auto canvas = InActor->FindComponentByClass<ULexCanvas>())
 			{
 				return canvas->GetDrawCallCount();
 			}
@@ -2148,42 +2105,6 @@ void LGUIEditorTools::MakeCurrentLevel(AActor* InActor)
 		}
 	}
 }
-void LGUIEditorTools::SetTraceChannelToParent(AActor* InActor)
-{
-	//change trace channel to same as parent
-	if (auto parentActor = InActor->GetAttachParentActor())
-	{
-		if (auto parentComp = parentActor->GetRootComponent())
-		{
-			if (auto parentUIComp = Cast<UUIItem>(parentComp))
-			{
-				SetTraceChannel(InActor, parentUIComp->GetTraceChannel());
-			}
-		}
-	}
-}
-void LGUIEditorTools::SetTraceChannelToParent_Recursive(AActor* InActor)
-{
-	SetTraceChannelToParent(InActor);
-	TArray<AActor*> childrenActors;
-	InActor->GetAttachedActors(childrenActors);
-	for (auto itemActor : childrenActors)
-	{
-		SetTraceChannelToParent_Recursive(itemActor);
-	}
-}
-void LGUIEditorTools::SetTraceChannel(AActor* InActor, ETraceTypeQuery InTraceTypeQuery)
-{
-	TArray<UUIItem*> Components;
-	InActor->GetComponents<UUIItem>(Components);
-	for (auto CompItem : Components)
-	{
-		CompItem->Modify();
-		CompItem->SetTraceChannel(InTraceTypeQuery);
-		FLexUIUtils::NotifyPropertyChanged(CompItem, UUIItem::GetTraceChannelPropertyName());
-	}
-}
-
 void LGUIEditorTools::FocusToScreenSpaceUI()
 {
 	if (!GWorld)return;
@@ -2193,23 +2114,20 @@ void LGUIEditorTools::FocusToScreenSpaceUI()
 		if (auto viewportClient = activeViewport->GetClient())
 		{
 			auto editorViewportClient = (FEditorViewportClient*)viewportClient;
-			for (TActorIterator<AUIContainerActor> ActorItr(GWorld); ActorItr; ++ActorItr)
+			for (TActorIterator<ALexWidgetActor> ActorItr(GWorld); ActorItr; ++ActorItr)
 			{
+				auto canvas = ActorItr->FindComponentByClass<ULexCanvas>();
 				auto canvasScaler = ActorItr->FindComponentByClass<ULGUICanvasScaler>();
-				if (canvasScaler != nullptr)
+				if (canvas != nullptr && canvas->IsRootCanvas() && canvas->IsRenderToScreenSpace())//make sure is screen space UI root
 				{
-					auto canvas = ActorItr->FindComponentByClass<ULGUICanvas>();
-					if (canvas != nullptr && canvas->IsRenderToScreenSpace())//make sure is screen space UI root
-					{
-						auto viewDistance = FVector::Distance(canvas->GetViewLocation(), canvas->GetUIItem()->GetComponentLocation());
-						auto halfViewWidth = viewDistance * FMath::Tan(FMath::DegreesToRadians(canvasScaler->GetFovAngle() * 0.5f));
-						auto editorViewDistance = halfViewWidth / FMath::Tan(FMath::DegreesToRadians(editorViewportClient->FOVAngle * 0.5f));
-						auto viewRotation = canvas->GetViewRotator().Quaternion();
-						editorViewportClient->SetViewLocation(canvas->GetUIItem()->GetComponentLocation() - viewRotation.GetForwardVector() * editorViewDistance);
-						editorViewportClient->SetViewRotation(viewRotation.Rotator());
-						editorViewportClient->SetLookAtLocation(canvas->GetUIItem()->GetComponentLocation());
-						break;
-					}
+					auto viewDistance = FVector::Distance(canvas->GetViewLocation(), canvas->GetLexWidget()->GetComponentLocation());
+					auto halfViewWidth = viewDistance * FMath::Tan(FMath::DegreesToRadians(canvasScaler->GetFovAngle() * 0.5f));
+					auto editorViewDistance = halfViewWidth / FMath::Tan(FMath::DegreesToRadians(editorViewportClient->FOVAngle * 0.5f));
+					auto viewRotation = canvas->GetViewRotator().Quaternion();
+					editorViewportClient->SetViewLocation(canvas->GetLexWidget()->GetComponentLocation() - viewRotation.GetForwardVector() * editorViewDistance);
+					editorViewportClient->SetViewRotation(viewRotation.Rotator());
+					editorViewportClient->SetLookAtLocation(canvas->GetLexWidget()->GetComponentLocation());
+					break;
 				}
 			}
 		}
@@ -2225,9 +2143,9 @@ void LGUIEditorTools::FocusToSelectedUI()
 			auto editorViewportClient = (FEditorViewportClient*)viewportClient;
 			if (auto selectedActor = GetFirstSelectedActor())
 			{
-				if (auto selectedUIItem = Cast<AUIBaseActor>(selectedActor))
+				if (auto selectedUIItem = Cast<ALexWidgetActor>(selectedActor))
 				{
-					if (auto renderCavnas = selectedUIItem->GetUIItem()->GetRenderCanvas())
+					if (auto renderCavnas = selectedUIItem->GetLexWidget()->GetRenderCanvas())
 					{
 						if (auto canvas = renderCavnas->GetRootCanvas())
 						{
@@ -2236,7 +2154,7 @@ void LGUIEditorTools::FocusToSelectedUI()
 								editorViewportClient->SetViewLocation(canvas->GetViewLocation());
 								auto viewRotation = canvas->GetViewRotator().Quaternion();
 								editorViewportClient->SetViewRotation(viewRotation.Rotator());
-								editorViewportClient->SetLookAtLocation(canvas->GetUIItem()->GetComponentLocation());
+								editorViewportClient->SetLookAtLocation(canvas->GetLexWidget()->GetComponentLocation());
 							}
 						}
 					}

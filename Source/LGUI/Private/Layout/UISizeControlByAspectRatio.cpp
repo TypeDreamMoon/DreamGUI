@@ -2,7 +2,7 @@
 
 #include "Layout/UISizeControlByAspectRatio.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
@@ -117,7 +117,7 @@ void UUISizeControlByAspectRatio::OnRebuildLayout()
 	}
 }
 
-bool UUISizeControlByAspectRatio::GetCanLayoutControlAnchor_Implementation(class UUIItem* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
+bool UUISizeControlByAspectRatio::GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
 {
 	if (this->GetRootUIComponent() == InUIItem)
 	{

@@ -78,9 +78,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetControlChildHeight(bool value);
 
-	virtual bool GetCanLayoutControlAnchor_Implementation(class UUIItem* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
+	virtual bool GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
 protected:
-	virtual void OnUIChildDimensionsChanged(UUIItem* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)override;
+	virtual void OnUIChildDimensionsChanged(ULexWidget* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)override;
 
 	friend class FUIVerticalLayoutCustomization;
 	UPROPERTY(EditAnywhere, Category = "LGUI")

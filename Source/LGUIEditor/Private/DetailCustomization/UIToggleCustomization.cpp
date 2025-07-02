@@ -2,8 +2,8 @@
 
 #include "DetailCustomization/UIToggleCustomization.h"
 #include "LGUIEditorUtils.h"
-#include "Core/Components/UIItem.h"
-#include "Core/Actor/UIBaseActor.h"
+#include "Core/Components/LexWidget.h"
+#include "Core/Actor/LexWidgetActor.h"
 #include "IDetailGroup.h"
 #include "Interaction/UIToggleGroupComponent.h"
 #include "Interaction/UISelectableTransitionComponent.h"
@@ -36,15 +36,15 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 	auto transitionHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleTransition));
 	transitionHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIToggleCustomization::ForceRefresh, &DetailBuilder));
 
-	auto toggleActorHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleActor));
+	auto toggleActorHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleTarget));
 	toggleActorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIToggleCustomization::ForceRefresh, &DetailBuilder));
 
-	UUIItem* targetUIItem = nullptr;
+	ULexWidget* targetUIItem = nullptr;
 	UUISelectableTransitionComponent* targetTweenComp = nullptr;
-	if (auto toggleActor = TargetScriptPtr->ToggleActor.Get())
+	if (TargetScriptPtr->ToggleTarget.IsValid())
 	{
-		targetUIItem = toggleActor->FindComponentByClass<UUIItem>();
-		targetTweenComp = toggleActor->FindComponentByClass<UUISelectableTransitionComponent>();
+		targetUIItem = TargetScriptPtr->ToggleTarget.Get();
+		targetTweenComp = TargetScriptPtr->ToggleTarget->GetOwner()->FindComponentByClass<UUISelectableTransitionComponent>();
 	}
 
 	uint8 transitionType;
@@ -54,7 +54,7 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 	transitionGroup.HeaderProperty(transitionHandle);
 	if (transitionType == (uint8)(UIToggleTransitionType::None))
 	{
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleActor));
+		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleTarget));
 		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffAlpha));
 		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnAlpha));
 		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffColor));

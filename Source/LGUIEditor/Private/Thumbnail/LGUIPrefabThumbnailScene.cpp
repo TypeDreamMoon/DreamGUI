@@ -3,11 +3,10 @@
 #include "Thumbnail/LGUIPrefabThumbnailScene.h"
 #include "Components/PrimitiveComponent.h"
 #include "ThumbnailRendering/SceneThumbnailInfo.h"
-#include "Core/Components/LGUICanvas.h"
+#include "Core/Components/LexCanvas.h"
 #include "LGUIEditorModule.h"
-#include "Core/Actor/UIContainerActor.h"
-#include "Core/Components/UIItem.h"
-#include "Utils/LexUIUtils.h"
+#include "Core/Actor/LexWidgetActor.h"
+#include "Core/Components/LexWidget.h"
 
 
 FLGUIPrefabInstanceThumbnailScene::FLGUIPrefabInstanceThumbnailScene()
@@ -52,25 +51,25 @@ void FLGUIPrefabThumbnailScene::SpawnPreviewActor()
 	{
 		if (auto RootActor = CurrentPrefab->LoadPrefabInEditor(GetWorld(), nullptr))
 		{
-			if (auto PrefabRootUIItem = Cast<UUIItem>(RootActor->GetRootComponent()))
+			if (auto PrefabRootUIItem = Cast<ULexWidget>(RootActor->GetRootComponent()))
 			{
-				auto RootCanvas = RootActor->FindComponentByClass<ULGUICanvas>();
+				auto RootCanvas = RootActor->FindComponentByClass<ULexCanvas>();
 				auto CanvasSize = CurrentPrefab->PrefabDataForPrefabEditor.CanvasSize;
-				auto AgentRootActor = GetWorld()->SpawnActor<AUIContainerActor>();
+				auto AgentRootActor = GetWorld()->SpawnActor<ALexWidgetActor>();
 				if (!RootCanvas)
 				{
-					RootCanvas = NewObject<ULGUICanvas>(AgentRootActor);
+					RootCanvas = NewObject<ULexCanvas>(AgentRootActor);
 					RootCanvas->RegisterComponent();
 					RootActor->AddInstanceComponent(RootCanvas);
 				}
-				RootActor->AttachToComponent(AgentRootActor->GetUIItem(), FAttachmentTransformRules::KeepRelativeTransform);
+				RootActor->AttachToComponent(AgentRootActor->GetLexWidget(), FAttachmentTransformRules::KeepRelativeTransform);
 				RootCanvas->MarkCanvasUpdate(true, true, true, true);
-				RootCanvas->SetRenderMode(ELGUIRenderMode::WorldSpace);
+				RootCanvas->SetRenderMode(ELexRenderMode::WorldSpace);
 
 				if (PrefabRootUIItem)
 				{
-					AgentRootActor->GetUIItem()->SetWidth(CanvasSize.X);
-					AgentRootActor->GetUIItem()->SetHeight(CanvasSize.Y);
+					AgentRootActor->GetLexWidget()->SetWidth(CanvasSize.X);
+					AgentRootActor->GetLexWidget()->SetHeight(CanvasSize.Y);
 				}
 
 				bIsUI = true;
@@ -102,7 +101,7 @@ void FLGUIPrefabThumbnailScene::GetBoundsRecursive(USceneComponent* RootComp, FB
 	bool bIsValidBounds = false;
 	if (RootComp->IsRegistered())
 	{
-		auto UIItem = Cast<UUIItem>(RootComp);
+		auto UIItem = Cast<ULexWidget>(RootComp);
 		if (UIItem != nullptr)
 		{
 			if (UIItem->GetIsUIActiveInHierarchy())

@@ -2,6 +2,7 @@
 
 #pragma once
 
+#if 0
 #include "CoreMinimal.h"
 #include "Core/LGUILifeCycleBehaviour.h"
 #include "Components/WidgetInteractionComponent.h"
@@ -258,3 +259,4 @@ private:
 	/** Returns the path to the widget that is currently beneath the pointer */
 	FWidgetPath DetermineWidgetUnderPointer();
 };
+#endif

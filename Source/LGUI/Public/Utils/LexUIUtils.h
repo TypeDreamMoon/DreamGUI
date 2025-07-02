@@ -7,8 +7,8 @@
 #include "Components/ActorComponent.h"
 #include "UObject/Package.h"
 
-class UUIItem;
-class ULGUICanvas;
+class ULexWidget;
+class ULexCanvas;
 class UTexture2D;
 
 #if !UE_BUILD_SHIPPING

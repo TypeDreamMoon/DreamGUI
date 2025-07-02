@@ -6,20 +6,20 @@
 #include "Core/LexUIMeshIndex.h"
 #include "Core/LexUIQuadTree.h"
 
-class UUIPostProcessRenderable;
+class ULexVisualPostProcess;
 class FLexUIGeometry;
 struct FLexUIMeshVertex;
 class UMaterialInterface;
 class UMaterialInstanceDynamic;
-class UUIItem;
-class UUIBatchMeshRenderable;
+class ULexWidget;
+class ULexVisualBatchMesh;
 class UUIDirectMeshRenderable;
 class ULexUIMeshComponent;
 struct FLexUIRenderSection;
 
 enum class ELexUIDrawCallType :uint8
 {
-	BatchGeometry = 1,
+	BatchMesh = 1,
 	PostProcess,
 	DirectMesh,
 	ChildCanvas,
@@ -34,14 +34,14 @@ public:
 	}
 	FLexUIDrawCall(LexUIQuadTree::Rectangle InCanvasRect)
 	{
-		Type = ELexUIDrawCallType::BatchGeometry;
+		Type = ELexUIDrawCallType::BatchMesh;
 		BatchMeshTreeNode = MakeUnique<LexUIQuadTree::Node>(InCanvasRect);
 	}
 	~FLexUIDrawCall()
 	{
 		
 	}
-	ELexUIDrawCallType Type = ELexUIDrawCallType::BatchGeometry;
+	ELexUIDrawCallType Type = ELexUIDrawCallType::BatchMesh;
 
 	TWeakObjectPtr<UTexture> Texture = nullptr;//draw-call use this texture to render
 	TWeakObjectPtr<UTexture> FontTexture = nullptr;//draw-call use this texture to render font
@@ -58,19 +58,19 @@ public:
 	bool bNeedToUpdateVertex = true;
 	bool bVertexPositionChanged = true;//if vertex position changed? use for update bounds
 
-	TWeakObjectPtr<UUIPostProcessRenderable> PostProcessRenderableObject;//post process object
+	TWeakObjectPtr<ULexVisualPostProcess> PostProcessVisualObject;//post process object
 
-	TWeakObjectPtr<UUIDirectMeshRenderable> DirectMeshRenderableObject;
+	TWeakObjectPtr<UUIDirectMeshRenderable> DirectMeshVisualObject;
 
-	TArray<TWeakObjectPtr<UUIBatchMeshRenderable>> BatchMeshRenderObjectList;//BatchMesh object collections belong to this draw-call, must be sorted on hierarchy-index
-	bool bNeedToSortBatchMeshRenderObjectList = false;//need to sort BatchMeshRenderObjectList?
+	TArray<TWeakObjectPtr<ULexVisualBatchMesh>> BatchMeshVisualObjectList;//BatchMesh object collections belong to this draw-call, must be sorted on hierarchy-index
+	bool bNeedToSortBatchMeshVisualObjectList = false;//need to sort BatchMeshRenderObjectList?
 	TUniquePtr<LexUIQuadTree::Node> BatchMeshTreeNode = nullptr;
 	int32 VerticesCount = 0;//vertices count of all BatchMeshRenderObjectList
 	int32 IndicesCount = 0;//triangle indices count of all BatchMeshRenderObjectList
 
 	bool bIs2DSpace = false;//transform relative to canvas is 2d or not? only 2d draw-call can batch
 
-	TWeakObjectPtr<class ULGUICanvas> ChildCanvas;//insert point to sort child canvas
+	TWeakObjectPtr<class ULexCanvas> ChildCanvas;//insert point to sort child canvas
 public:
 	void GetCombined(TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndexBufferType>& triangles)const;
 	void CopyUpdateState(FLexUIDrawCall* Target);

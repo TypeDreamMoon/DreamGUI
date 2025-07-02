@@ -2,7 +2,7 @@
 
 #include "Layout/UISizeControlByChildren.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
 PRAGMA_DISABLE_OPTIMIZATION
@@ -114,7 +114,7 @@ void UUISizeControlByChildren::OnRebuildLayout()
 	}
 }
 
-bool UUISizeControlByChildren::GetCanLayoutControlAnchor_Implementation(class UUIItem* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
+bool UUISizeControlByChildren::GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
 {
 	if (this->GetRootUIComponent() == InUIItem)
 	{

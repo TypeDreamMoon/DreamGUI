@@ -52,7 +52,7 @@ namespace LexUIRichTextParser
 
 		int OriginSize = 0;
 		FColor OriginColor = FColor::White;
-		uint8 OriginCanvasGroupAlpha = 255;
+		uint8 OriginRenderOpacity = 255;
 		bool OriginBold = false;
 		bool OriginItalic = false;
 
@@ -73,11 +73,11 @@ namespace LexUIRichTextParser
 		{
 			ImageTag = NAME_None;
 		}
-		void Prepare(float inOriginSize, FColor inOriginColor, uint8 inCanvasGroupAlpha, bool inBold, bool inItalic, int32 inFlags, FRichTextParseResult& result)
+		void Prepare(float inOriginSize, FColor inOriginColor, uint8 inRenderOpacity, bool inBold, bool inItalic, int32 inFlags, FRichTextParseResult& result)
 		{
 			OriginSize = inOriginSize;
 			OriginColor = inOriginColor;
-			OriginCanvasGroupAlpha = inCanvasGroupAlpha;
+			OriginRenderOpacity = inRenderOpacity;
 			OriginBold = inBold;
 			OriginItalic = inItalic;
 
@@ -540,61 +540,61 @@ namespace LexUIRichTextParser
 				if (colorString == TEXT("black"))
 				{
 					outColor = FColor::Black;
-					outColor.A = OriginCanvasGroupAlpha;
+					outColor.A = OriginRenderOpacity;
 					return true;
 				}
 				else if (colorString == TEXT("white"))
 				{
 					outColor = FColor::White;
-					outColor.A = OriginCanvasGroupAlpha;
+					outColor.A = OriginRenderOpacity;
 					return true;
 				}
 				else if (colorString == TEXT("gray"))
 				{
 					outColor = FColor(128, 128, 128);
-					outColor.A = OriginCanvasGroupAlpha;
+					outColor.A = OriginRenderOpacity;
 					return true;
 				}
 				else if (colorString == TEXT("silver"))
 				{
 					outColor = FColor(192, 192, 192);
-					outColor.A = OriginCanvasGroupAlpha;
+					outColor.A = OriginRenderOpacity;
 					return true;
 				}
 				else if (colorString == TEXT("red"))
 				{
 					outColor = FColor::Red;
-					outColor.A = OriginCanvasGroupAlpha;
+					outColor.A = OriginRenderOpacity;
 					return true;
 				}
 				else if (colorString == TEXT("green"))
 				{
 					outColor = FColor::Green;
-					outColor.A = OriginCanvasGroupAlpha;
+					outColor.A = OriginRenderOpacity;
 					return true;
 				}
 				else if (colorString == TEXT("blue"))
 				{
 					outColor = FColor::Blue;
-					outColor.A = OriginCanvasGroupAlpha;
+					outColor.A = OriginRenderOpacity;
 					return true;
 				}
 				else if (colorString == TEXT("orange"))
 				{
 					outColor = FColor(255, 165, 0);
-					outColor.A = OriginCanvasGroupAlpha;
+					outColor.A = OriginRenderOpacity;
 					return true;
 				}
 				else if (colorString == TEXT("purple"))
 				{
 					outColor = FColor(128, 0, 128);
-					outColor.A = OriginCanvasGroupAlpha;
+					outColor.A = OriginRenderOpacity;
 					return true;
 				}
 				else if (colorString == TEXT("yellow"))
 				{
 					outColor = FColor(255, 255, 0);
-					outColor.A = OriginCanvasGroupAlpha;
+					outColor.A = OriginRenderOpacity;
 					return true;
 				}
 				else if (colorString[0] == '#')
@@ -602,7 +602,7 @@ namespace LexUIRichTextParser
 					const static TArray<TCHAR> hexTable = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
 					if (colorString.Len() == 7 || colorString.Len() == 9)//#ffffff/#ffffff00
 					{
-						outColor.A = OriginCanvasGroupAlpha;
+						outColor.A = OriginRenderOpacity;
 						int colorStringLength = colorString.Len();
 						for (int i = 1; i < colorStringLength; i += 2)
 						{
@@ -618,7 +618,7 @@ namespace LexUIRichTextParser
 								case 5:outColor.B = value; break;
 								case 7:
 								{
-									outColor.A = (uint8)(FLexUIUtils::Color255To1_Table[OriginCanvasGroupAlpha] * value);
+									outColor.A = (uint8)(FLexUIUtils::Color255To1_Table[OriginRenderOpacity] * value);
 								}
 								break;
 								}

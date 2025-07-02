@@ -77,7 +77,7 @@ struct FLexUICharData_HighPrecision
 };
 
 class UTexture2D;
-class UUIText;
+class ULexText;
 
 /**
  * base font class, UIText can use a implemented asset object to render text
@@ -104,7 +104,7 @@ public:
 	virtual float GetFontTextureMark() { return 0; }
 
 	/** this is called every time before create a string of char geometry */
-	virtual void PrepareForPushCharData(UUIText* InText) {};
+	virtual void PrepareForPushCharData(ULexText* InText) {};
 	/** create char geometry and push to vertices & triangleIndices array */
 	virtual void PushCharData(
 		TCHAR charCode, const FVector2f& lineOffset, const FVector2f& fontSpace, const FLexUICharData_HighPrecision& charData,
@@ -114,8 +114,8 @@ public:
 		TArray<FLexUIOriginVertexData>& originVertices, TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndexBufferType>& triangleIndices
 	) {};
 
-	virtual void AddUIText(UUIText* InText) {}
-	virtual void RemoveUIText(UUIText* InText) {}
+	virtual void AddUIText(ULexText* InText) {}
+	virtual void RemoveUIText(ULexText* InText) {}
 
 	static ULexUIFontData_BaseObject* GetDefaultFont();
 };

@@ -1,9 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Extensions/UIWidget.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
-#include "LGUI.h"
+#include "LTweenBPLibrary.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Slate/WidgetRenderer.h"
 #include "Widgets/SViewport.h"
@@ -13,15 +11,14 @@
 #include "Framework/Application/SlateApplication.h"
 #include "Engine/GameInstance.h"
 #include "Engine/GameViewportClient.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
 #include "Core/LGUICustomMesh.h"
+#include "Core/Components/LexCanvas.h"
 
 #define LOCTEXT_NAMESPACE "UIWidget"
 
+#if 0
 UUIWidget::UUIWidget(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
-	PrimaryComponentTick.bCanEverTick = true;
-	PrimaryComponentTick.bStartWithTickEnabled = true;
 	bTickInEditor = true;
 }
 
@@ -53,9 +50,10 @@ void UUIWidget::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, 
 	}
 	else
 	{
+		auto Widget = GetWidget();
 		static FLexUISpriteInfo SpriteInfo;
 		FLexUIGeometry::UpdateUIRectSimpleVertex(&InGeo,
-			this->GetWidth(), this->GetHeight(), FVector2f(this->GetPivot()), SpriteInfo, RenderCanvas.Get(), this, GetFinalColor(),
+			Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), SpriteInfo, Widget->GetRenderCanvas(), this, GetFinalColor(),
 			InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 		);
 	}
@@ -66,20 +64,15 @@ void UUIWidget::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, 
 void UUIWidget::BeginPlay()
 {
 	Super::BeginPlay();
-	if (!ULGUIPrefabWorldSubsystem::IsLGUIPrefabSystemProcessingActor(this->GetOwner()))
-	{
-		Awake_Implementation();
-	}
-}
-void UUIWidget::Awake_Implementation()
-{
 	SetComponentTickEnabled(TickMode != ETickMode::Disabled);
 	InitWidget();
 }
-void UUIWidget::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	Super::EndPlay(EndPlayReason);
 
+void UUIWidget::EndPlay()
+{
+	Super::EndPlay();
+
+	ULTweenBPLibrary::KillAllTweensOnTarget(this, this);
 	ReleaseResources();
 }
 
@@ -118,6 +111,13 @@ void UUIWidget::OnRegister()
 #endif
 	}
 #endif // !UE_SERVER
+
+#if WITH_EDITOR
+	if (!GetWorld()->IsGameWorld())
+	{
+		
+	}
+#endif
 }
 
 void UUIWidget::SetWindowFocusable(bool bInWindowFocusable)
@@ -146,7 +146,7 @@ EVisibility UUIWidget::ConvertWindowVisibilityToVisibility(EWindowVisibility vis
 void UUIWidget::OnWidgetVisibilityChanged(ESlateVisibility InVisibility)
 {
 	ensure(TickMode != ETickMode::Enabled);
-	ensure(Widget);
+	ensure(UmgWidget);
 	ensure(bOnWidgetVisibilityChangedRegistered);
 
 	if (InVisibility != ESlateVisibility::Collapsed && InVisibility != ESlateVisibility::Hidden)
@@ -158,7 +158,7 @@ void UUIWidget::OnWidgetVisibilityChanged(ESlateVisibility InVisibility)
 
 		if (bOnWidgetVisibilityChangedRegistered)
 		{
-			Widget->OnNativeVisibilityChanged.RemoveAll(this);
+			UmgWidget->OnNativeVisibilityChanged.RemoveAll(this);
 			bOnWidgetVisibilityChangedRegistered = false;
 		}
 	}
@@ -181,9 +181,9 @@ void UUIWidget::SetWindowVisibility(EWindowVisibility InVisibility)
 
 		if (bOnWidgetVisibilityChangedRegistered)
 		{
-			if (Widget)
+			if (UmgWidget)
 			{
-				Widget->OnNativeVisibilityChanged.RemoveAll(this);
+				UmgWidget->OnNativeVisibilityChanged.RemoveAll(this);
 			}
 			bOnWidgetVisibilityChangedRegistered = false;
 		}
@@ -199,15 +199,15 @@ void UUIWidget::SetTickMode(ETickMode InTickMode)
 bool UUIWidget::IsWidgetVisible() const
 {
 	//  If we are in World Space, if the component or the SlateWindow is not visible the Widget is not visible.
-	if ((!IsVisible() || !SlateWindow.IsValid() || !SlateWindow->GetVisibility().IsVisible()))
+	if ((!GetWidget()->IsVisibleForRender() || !SlateWindow.IsValid() || !SlateWindow->GetVisibility().IsVisible()))
 	{
 		return false;
 	}
 
 	// If we have a UUserWidget check its visibility
-	if (Widget)
+	if (UmgWidget)
 	{
-		return Widget->IsVisible();
+		return UmgWidget->IsVisible();
 	}
 
 	// If we use a SlateWidget check its visibility
@@ -230,23 +230,23 @@ void UUIWidget::OnUnregister()
 	Super::OnUnregister();
 }
 
-void UUIWidget::DestroyComponent(bool bPromoteChildren/*= false*/)
+void UUIWidget::DestroyComponent()
 {
-	Super::DestroyComponent(bPromoteChildren);
+	Super::DestroyComponent();
 
 	ReleaseResources();
 }
 
 void UUIWidget::ReleaseResources()
 {
-	if (Widget)
+	if (UmgWidget)
 	{
 		if (bOnWidgetVisibilityChangedRegistered)
 		{
-			Widget->OnNativeVisibilityChanged.RemoveAll(this);
+			UmgWidget->OnNativeVisibilityChanged.RemoveAll(this);
 			bOnWidgetVisibilityChangedRegistered = false;
 		}
-		Widget = nullptr;
+		UmgWidget = nullptr;
 	}
 
 	if (SlateWidget.IsValid())
@@ -272,7 +272,7 @@ void UUIWidget::RegisterWindow()
 			FSlateApplication::Get().RegisterVirtualWindow(SlateWindow.ToSharedRef());
 		}
 
-		if (Widget && !Widget->IsDesignTime())
+		if (UmgWidget && !UmgWidget->IsDesignTime())
 		{
 			if (UWorld* LocalWorld = GetWorld())
 			{
@@ -304,10 +304,8 @@ void UUIWidget::UnregisterWindow()
 	}
 }
 
-void UUIWidget::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void UUIWidget::TickComponent(float DeltaTime)
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
 	if (IsRunningDedicatedServer())
 	{
 		SetTickMode(ETickMode::Disabled);
@@ -321,18 +319,18 @@ void UUIWidget::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorC
 		UpdateWidget();
 
 		// There is no Widget set and we already rendered an empty widget. No need to continue.
-		if (Widget == nullptr && !SlateWidget.IsValid() && bRenderCleared)
+		if (UmgWidget == nullptr && !SlateWidget.IsValid() && bRenderCleared)
 		{
 			return;
 		}
 
 		// We have a Widget, it's invisible and we are in automatic or disabled TickMode, we disable ticking and register a callback to know if visibility changes.
-		if (Widget && TickMode != ETickMode::Enabled && !IsWidgetVisible())
+		if (UmgWidget && TickMode != ETickMode::Enabled && !IsWidgetVisible())
 		{
 			SetComponentTickEnabled(false);
 			if (!bOnWidgetVisibilityChangedRegistered)
 			{
-				Widget->OnNativeVisibilityChanged.AddUObject(this, &UUIWidget::OnWidgetVisibilityChanged);
+				UmgWidget->OnNativeVisibilityChanged.AddUObject(this, &UUIWidget::OnWidgetVisibilityChanged);
 				bOnWidgetVisibilityChangedRegistered = true;
 			}
 		}
@@ -353,7 +351,7 @@ void UUIWidget::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorC
 			DrawWidgetToRenderTarget(DeltaTimeFromLastDraw);
 
 			// We draw an empty widget.
-			if (Widget == nullptr && !SlateWidget.IsValid())
+			if (UmgWidget == nullptr && !SlateWidget.IsValid())
 			{
 				bRenderCleared = true;
 			}
@@ -371,7 +369,7 @@ bool UUIWidget::ShouldReenableComponentTickWhenWidgetBecomesVisible() const
 bool UUIWidget::ShouldDrawWidget() const
 {
 	const float RenderTimeThreshold = .5f;
-	if (GetIsUIActiveInHierarchy() && RenderCanvas.IsValid())
+	if (auto RenderCanvas = GetWidget()->GetRenderCanvas())
 	{
 		auto LastRenderTime = RenderCanvas->GetLastRenderTime();
 		// If we don't tick when off-screen, don't bother ticking if it hasn't been rendered recently
@@ -404,7 +402,8 @@ void UUIWidget::DrawWidgetToRenderTarget(float DeltaTime)
 		return;
 	}
 
-	auto DrawSize = FIntPoint(this->GetWidth() * ResolutionScale, this->GetHeight() * ResolutionScale);
+	auto Widget = GetWidget();
+	auto DrawSize = FIntPoint(Widget->GetWidth() * ResolutionScale, Widget->GetHeight() * ResolutionScale);
 	static const int32 MaxAllowedDrawSize = GetMax2DTextureDimension();
 	if (DrawSize.X <= 0 || DrawSize.Y <= 0)
 	{
@@ -477,7 +476,7 @@ void UUIWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 
 		if (PropertyName == WidgetClassName)
 		{
-			Widget = nullptr;
+			UmgWidget = nullptr;
 
 			UpdateWidget();
 		}
@@ -493,7 +492,7 @@ void UUIWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 		{
 			if (IsValid(CustomMesh))//custom mesh use geometry raycast to get precise uv
 			{
-				this->SetRaycastType(EUIRenderableRaycastType::Mesh);
+				this->SetRaycastType(ELexVisualHitTestType::Mesh);
 			}
 		}
 	}
@@ -516,9 +515,9 @@ void UUIWidget::InitWidget()
 	{
 		if (UWorld* World = GetWorld())
 		{
-			if (WidgetClass && Widget == nullptr && !World->bIsTearingDown)
+			if (WidgetClass && UmgWidget == nullptr && !World->bIsTearingDown)
 			{
-				Widget = CreateWidget(World, WidgetClass);
+				UmgWidget = CreateWidget(World, WidgetClass);
 				SetTickMode(TickMode);
 			}
 		}
@@ -530,9 +529,9 @@ void UUIWidget::SetManuallyRedraw(bool bUseManualRedraw)
 	bManuallyRedraw = bUseManualRedraw;
 }
 
-UUserWidget* UUIWidget::GetWidget() const
+UUserWidget* UUIWidget::GetUMGWidget() const
 {
-	return Widget;
+	return UmgWidget;
 }
 
 void UUIWidget::SetWidget(UUserWidget* InWidget)
@@ -542,14 +541,14 @@ void UUIWidget::SetWidget(UUserWidget* InWidget)
 		SetSlateWidget(nullptr);
 	}
 
-	Widget = InWidget;
+	UmgWidget = InWidget;
 
 	UpdateWidget();
 }
 
 void UUIWidget::SetSlateWidget(const TSharedPtr<SWidget>& InSlateWidget)
 {
-	if (Widget != nullptr)
+	if (UmgWidget != nullptr)
 	{
 		SetWidget(nullptr);
 	}
@@ -571,9 +570,9 @@ void UUIWidget::UpdateWidget()
 	{
 		// Look for a UMG widget set
 		TSharedPtr<SWidget> NewSlateWidget;
-		if (Widget)
+		if (UmgWidget)
 		{
-			NewSlateWidget = Widget->TakeWidget();
+			NewSlateWidget = UmgWidget->TakeWidget();
 		}
 
 		// Create the SlateWindow if it doesn't exists
@@ -680,12 +679,13 @@ void UUIWidget::GetLocalHitLocation(int32 InHitFaceIndex, const FVector& InWorld
 	}
 	else
 	{
+		auto Widget = GetWidget();
 		// Find the hit location on the component
-		FVector ComponentHitLocation = GetComponentTransform().InverseTransformPosition(InWorldHitLocation);
+		FVector ComponentHitLocation = Widget->GetComponentTransform().InverseTransformPosition(InWorldHitLocation);
 
 		// Convert the 3D position of component space, into the 2D equivalent
-		auto LocationRelativeToLeftBottom = FVector2D(ComponentHitLocation.Y, ComponentHitLocation.Z) - this->GetLocalSpaceLeftBottomPoint();
-		auto Location01 = LocationRelativeToLeftBottom / FVector2D(this->GetWidth(), this->GetHeight());
+		auto LocationRelativeToLeftBottom = FVector2D(ComponentHitLocation.Y, ComponentHitLocation.Z) - Widget->GetLocalSpaceLeftBottomPoint();
+		auto Location01 = LocationRelativeToLeftBottom / FVector2D(Widget->GetWidth(), Widget->GetHeight());
 		Location01.Y = 1.0f - Location01.Y;
 
 		OutLocalWidgetHitLocation = Location01 * CurrentDrawSize;
@@ -694,7 +694,7 @@ void UUIWidget::GetLocalHitLocation(int32 InHitFaceIndex, const FVector& InWorld
 
 UUserWidget* UUIWidget::GetUserWidgetObject() const
 {
-	return Widget;
+	return UmgWidget;
 }
 
 UTextureRenderTarget2D* UUIWidget::GetRenderTarget() const
@@ -756,7 +756,7 @@ void UUIWidget::SetBackgroundColor(const FLinearColor NewBackgroundColor)
 	if (NewBackgroundColor != this->BackgroundColor)
 	{
 		this->BackgroundColor = NewBackgroundColor;
-		MarkRenderStateDirty();
+		GetWidget()->MarkRenderStateDirty();
 	}
 }
 
@@ -773,28 +773,18 @@ void UUIWidget::SetWidgetClass(TSubclassOf<UUserWidget> InWidgetClass)
 
 		if (FSlateApplication::IsInitialized())
 		{
-			if (HasBegunPlay() && !GetWorld()->bIsTearingDown)
+			if (WidgetClass)
 			{
-				if (WidgetClass)
-				{
-					UUserWidget* NewWidget = CreateWidget(GetWorld(), WidgetClass);
-					SetWidget(NewWidget);
-				}
-				else
-				{
-					SetWidget(nullptr);
-				}
+				UUserWidget* NewWidget = CreateWidget(GetWorld(), WidgetClass);
+				SetWidget(NewWidget);
+			}
+			else
+			{
+				SetWidget(nullptr);
 			}
 		}
 	}
 }
-
-AUIWidgetActor::AUIWidgetActor()
-{
-	PrimaryActorTick.bCanEverTick = false;
-
-	UIWidget = CreateDefaultSubobject<UUIWidget>(TEXT("UIWidget"));
-	RootComponent = UIWidget;
-}
+#endif
 
 #undef LOCTEXT_NAMESPACE

@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "UIItemComponentVisualizer.h"
-#include "Core/Components/UIItem.h"
+#include "Core/Components/LexWidget.h"
 #include "LGUIComponentVisualizerModule.h"
 #include "LGUI.h"
 #include "LGUIEditorUtils.h"
@@ -24,9 +24,9 @@ FUIItemComponentVisualizer::FUIItemComponentVisualizer()
 }
 void FUIItemComponentVisualizer::DrawVisualization(const UActorComponent* Component, const FSceneView* View, FPrimitiveDrawInterface* PDI)
 {
-	auto UIItem = Cast<UUIItem>(Component);
+	auto UIItem = Cast<ULexWidget>(Component);
 	if (!UIItem)return;
-	TargetComp = (UUIItem*)UIItem;
+	TargetComp = (ULexWidget*)UIItem;
 	if (TargetComp->GetWorld() != View->Family->Scene->GetWorld())return;
 
 	auto Center = TargetComp->GetLocalSpaceCenter();
@@ -275,7 +275,7 @@ bool FUIItemComponentVisualizer::HandleInputDelta(FEditorViewportClient* Viewpor
 	}
 	if (bAnchorChanged)
 	{
-		FLexUIUtils::NotifyPropertyChanged(TargetComp.Get(), UUIItem::GetAnchorDataPropertyName());
+		FLexUIUtils::NotifyPropertyChanged(TargetComp.Get(), ULexWidget::GetAnchorDataPropertyName());
 	}
 	return true;
 }
@@ -349,7 +349,7 @@ bool FUIItemComponentVisualizer::GetCustomInputCoordinateSystem(const FEditorVie
 }
 
 IMPLEMENT_HIT_PROXY(HUIItemAnchorVisProxy, HComponentVisProxy);
-HUIItemAnchorVisProxy::HUIItemAnchorVisProxy(const UUIItem* InComponent, EUIItemVisualizerSelectorType InType)
+HUIItemAnchorVisProxy::HUIItemAnchorVisProxy(const ULexWidget* InComponent, EUIItemVisualizerSelectorType InType)
 	: HComponentVisProxy(InComponent, HPP_Foreground)
 {
 	Type = InType;

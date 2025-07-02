@@ -2,7 +2,7 @@
 
 #include "GeometryModifier/TextAnimation/UIEffectTextAnimation_PropertyWithEase.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UIText.h"
+#include "LGUI/Public/Core/Components/LexText.h"
 #include "Curves/CurveFloat.h"
 #include "Utils/LexUIUtils.h"
 
@@ -155,7 +155,7 @@ void UUIEffectTextAnimation_PropertyWithEase::SetEaseCurve(UCurveFloat* value)
 	}
 }
 
-void UUIEffectTextAnimation_PositionProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void UUIEffectTextAnimation_PositionProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	auto easeFunction = GetEaseFunction();
 	auto& originVertices = InGeometry->OriginVertices;
@@ -175,7 +175,7 @@ void UUIEffectTextAnimation_PositionProperty::ApplyProperty(UUIText* InUIText, c
 	}
 }
 
-void UUIEffectTextAnimation_PositionRandomProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void UUIEffectTextAnimation_PositionRandomProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	FMath::RandInit(seed);
 	auto easeFunction = GetEaseFunction();
@@ -197,7 +197,7 @@ void UUIEffectTextAnimation_PositionRandomProperty::ApplyProperty(UUIText* InUIT
 	}
 }
 
-void UUIEffectTextAnimation_RotationProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void UUIEffectTextAnimation_RotationProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	auto easeFunction = GetEaseFunction();
 	auto& originVertices = InGeometry->OriginVertices;
@@ -225,7 +225,7 @@ void UUIEffectTextAnimation_RotationProperty::ApplyProperty(UUIText* InUIText, c
 	}
 }
 
-void UUIEffectTextAnimation_RotationRandomProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void UUIEffectTextAnimation_RotationRandomProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	FMath::RandInit(seed);
 	auto easeFunction = GetEaseFunction();
@@ -255,7 +255,7 @@ void UUIEffectTextAnimation_RotationRandomProperty::ApplyProperty(UUIText* InUIT
 	}
 }
 
-void UUIEffectTextAnimation_ScaleProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void UUIEffectTextAnimation_ScaleProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	auto easeFunction = GetEaseFunction();
 	auto& originVertices = InGeometry->OriginVertices;
@@ -283,7 +283,7 @@ void UUIEffectTextAnimation_ScaleProperty::ApplyProperty(UUIText* InUIText, cons
 	}
 }
 
-void UUIEffectTextAnimation_ScaleRandomProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void UUIEffectTextAnimation_ScaleRandomProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	FMath::RandInit(seed);
 	auto easeFunction = GetEaseFunction();
@@ -313,7 +313,7 @@ void UUIEffectTextAnimation_ScaleRandomProperty::ApplyProperty(UUIText* InUIText
 	}
 }
 
-void UUIEffectTextAnimation_AlphaProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void UUIEffectTextAnimation_AlphaProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	auto easeFunction = GetEaseFunction();
 	auto& vertices = InGeometry->Vertices;
@@ -333,7 +333,7 @@ void UUIEffectTextAnimation_AlphaProperty::ApplyProperty(UUIText* InUIText, cons
 	}
 }
 
-void UUIEffectTextAnimation_ColorProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void UUIEffectTextAnimation_ColorProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	auto easeFunction = GetEaseFunction();
 	auto& vertices = InGeometry->Vertices;
@@ -384,7 +384,7 @@ void UUIEffectTextAnimation_ColorProperty::SetUseHSV(bool value)
 	}
 }
 
-void UUIEffectTextAnimation_ColorRandomProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void UUIEffectTextAnimation_ColorRandomProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	FMath::RandInit(seed);
 	auto easeFunction = GetEaseFunction();

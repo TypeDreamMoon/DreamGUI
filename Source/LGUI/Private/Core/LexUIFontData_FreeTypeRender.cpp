@@ -4,7 +4,7 @@
 #include "LGUI.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
-#include "LGUI/Public/Core/Components/UIText.h"
+#include "LGUI/Public/Core/Components/LexText.h"
 #include "Core/LGUISettings.h"
 #include "Utils/LexUIUtils.h"
 #include "TextureResource.h"
@@ -416,11 +416,11 @@ float ULexUIFontData_FreeTypeRender::GetVerticalOffset(const float& fontSize)
 #endif
 }
 
-void ULexUIFontData_FreeTypeRender::AddUIText(UUIText* InText)
+void ULexUIFontData_FreeTypeRender::AddUIText(ULexText* InText)
 {
 	renderTextArray.AddUnique(InText);
 }
-void ULexUIFontData_FreeTypeRender::RemoveUIText(UUIText* InText)
+void ULexUIFontData_FreeTypeRender::RemoveUIText(ULexText* InText)
 {
 	renderTextArray.Remove(InText);
 }

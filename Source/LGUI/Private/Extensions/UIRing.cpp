@@ -3,26 +3,16 @@
 #include "Extensions/UIRing.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "LTweenManager.h"
 
 UUIRing::UUIRing(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
-	PrimaryComponentTick.bCanEverTick = false;
 }
 
 void UUIRing::BeginPlay()
 {
 	Super::BeginPlay();
-}
-
-
-AUIRingActor::AUIRingActor()
-{
-	PrimaryActorTick.bCanEverTick = false;
-
-	UIElement = CreateDefaultSubobject<UUIRing>(TEXT("UIElement"));
-	RootComponent = UIElement;
 }
 
 
@@ -32,10 +22,11 @@ void UUIRing::CalculatePoints()
 	int pointCount = Segment + 2;
 	CurrentPointArray.Reset(pointCount);
 
+	auto Widget = GetWidget();
 	float angle = FMath::DegreesToRadians(StartAngle);
 	float angleInterval = FMath::DegreesToRadians((EndAngle - StartAngle) / (Segment + 1));
-	float halfWidth = this->GetWidth() * 0.5f;
-	float halfHeight = this->GetHeight() * 0.5f;
+	float halfWidth = Widget->GetWidth() * 0.5f;
+	float halfHeight = Widget->GetHeight() * 0.5f;
 	//points
 	for (int i = 0; i < pointCount; i++)
 	{
@@ -48,17 +39,19 @@ void UUIRing::CalculatePoints()
 
 FVector2D UUIRing::GetStartPointTangentDirection()
 {
+	auto Widget = GetWidget();
 	float angle = FMath::DegreesToRadians(StartAngle);
 	auto dir = FVector2D(FMath::Cos(angle), FMath::Sin(angle));
-	auto tanDir = FVector2D(-this->GetWidth() * dir.Y, this->GetHeight() * dir.X);
+	auto tanDir = FVector2D(-Widget->GetWidth() * dir.Y, Widget->GetHeight() * dir.X);
 	tanDir.Normalize();
 	return tanDir;
 }
 FVector2D UUIRing::GetEndPointTangentDirection()
 {
+	auto Widget = GetWidget();
 	float angle = FMath::DegreesToRadians(EndAngle);
 	auto dir = FVector2D(FMath::Cos(angle), FMath::Sin(angle));
-	auto tanDir = FVector2D(-this->GetWidth() * dir.Y, this->GetHeight() * dir.X);
+	auto tanDir = FVector2D(-Widget->GetWidth() * dir.Y, Widget->GetHeight() * dir.X);
 	tanDir.Normalize();
 	return tanDir;
 }
@@ -98,7 +91,7 @@ ULTweener* UUIRing::StartAngleTo(float endValue, float duration, float delay, EL
 	{
 		bool bAffectByGamePause;
 		bool bAffectByTimeDilation;
-		if (this->IsScreenSpaceOverlayUI())
+		if (GetWidget()->IsScreenSpaceOverlayUI())
 		{
 			bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
 			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
@@ -119,7 +112,7 @@ ULTweener* UUIRing::EndAngleTo(float endValue, float duration, float delay, ELTw
 	{
 		bool bAffectByGamePause;
 		bool bAffectByTimeDilation;
-		if (this->IsScreenSpaceOverlayUI())
+		if (GetWidget()->IsScreenSpaceOverlayUI())
 		{
 			bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
 			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;

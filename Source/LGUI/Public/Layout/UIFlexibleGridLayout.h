@@ -76,12 +76,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetSpacing(const FVector2D& value);
 
-	virtual bool GetCanLayoutControlAnchor_Implementation(class UUIItem* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
+	virtual bool GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 protected:
-	virtual void GetLayoutElement(UUIItem* InChild, UObject*& OutLayoutElement, bool& OutIgnoreLayout)const override;
+	virtual void GetLayoutElement(ULexWidget* InChild, UObject*& OutLayoutElement, bool& OutIgnoreLayout)const override;
 
 
 	friend class FUIFlexibleGridLayoutCustomization;

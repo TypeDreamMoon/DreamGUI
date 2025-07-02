@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Extensions/UIRenderableCustomRaycastExtensions.h"
-#include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
+#include "LGUI/Public/Core/Components/LexVisualBatchMesh.h"
 #include "Utils/LexUIUtils.h"
 
 #if 0
@@ -32,12 +32,12 @@ bool UUIRenderableCustomRaycast_Circle::Raycast(UUIBaseRenderable* InUIRenderabl
 }
 #endif
 
-bool UUIRenderableCustomRaycast_VisiblePixel::Raycast(UUIBaseRenderable* InUIRenderable, const FVector& InLocalSpaceRayStart, const FVector& InLocalSpaceRayEnd, FVector& OutHitPoint, FVector& OutHitNormal)
+bool UUIRenderableCustomRaycast_VisiblePixel::Raycast(const ULexVisual* InVisual, const FVector& InLocalSpaceRayStart, const FVector& InLocalSpaceRayEnd, FVector& OutHitPoint, FVector& OutHitNormal)const
 {
-	if (auto BatchGeometry = Cast<UUIBatchMeshRenderable>(InUIRenderable))
+	if (auto BatchGeometry = Cast<ULexVisualBatchMesh>(InVisual))
 	{
 		FVector2D HitUV; FColor HitPixel;
-		if (UUIRenderableCustomRaycast::GetRaycastPixelFromUIBatchMeshRenderable(BatchGeometry, InLocalSpaceRayStart, InLocalSpaceRayEnd, HitUV, HitPixel, OutHitPoint, OutHitNormal))
+		if (ULexVisualCustomRaycast::GetRaycastPixelFromUIBatchMeshVisual(BatchGeometry, InLocalSpaceRayStart, InLocalSpaceRayEnd, HitUV, HitPixel, OutHitPoint, OutHitNormal))
 		{
 			uint8 ChannelValue = 0;
 			switch (PixelChannel)

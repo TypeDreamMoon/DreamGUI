@@ -10,7 +10,7 @@
 #include "Event/Interface/LGUIPointerDragInterface.h"
 #include "Event/Interface/LGUIPointerScrollInterface.h"
 #include "Core/LGUILifeCycleUIBehaviour.h"
-#include "Core/Actor/UIBaseActor.h"
+#include "Core/Actor/LexWidgetActor.h"
 #include "UIScrollViewComponent.generated.h"
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUIScrollViewDynamicDelegate, FVector2D, InVector2);
@@ -22,7 +22,7 @@ class LGUI_API UUIScrollViewHelper :public ULGUILifeCycleUIBehaviour
 private:
 	virtual void Awake()override;
 	virtual void OnUIDimensionsChanged(bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)override;
-	virtual void OnUIChildDimensionsChanged(UUIItem* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)override;
+	virtual void OnUIChildDimensionsChanged(ULexWidget* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)override;
 	friend class UUIScrollViewComponent;
 	UPROPERTY(Transient)
 		TWeakObjectPtr<class UUIScrollViewComponent> TargetComp;
@@ -47,7 +47,7 @@ protected:
 	friend class UUIScrollViewHelper;
 	/** Content can move inside it's parent area. */ 
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollView")
-		TWeakObjectPtr<AUIBaseActor> Content;
+		TWeakObjectPtr<ALexWidgetActor> Content;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollView")
 		bool Horizontal = true;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollView")
@@ -97,8 +97,8 @@ protected:
 	virtual void CalculateVerticalRange();
 	bool CheckParameters();
 	virtual bool CheckValidHit(USceneComponent* InHitComp);
-	UPROPERTY(Transient)TWeakObjectPtr<UUIItem> ContentUIItem = nullptr;//drag or scroll Content
-	UPROPERTY(Transient)TWeakObjectPtr<UUIItem> ContentParentUIItem = nullptr;//Content's parent
+	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> ContentUIItem = nullptr;//drag or scroll Content
+	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> ContentParentUIItem = nullptr;//Content's parent
 	virtual void UpdateProgress(bool InFireEvent = true);
 	FVector2D Velocity = FVector2D(0, 0);//drag speed
 	FVector2D HorizontalRange;//horizontal scroll range, x--min, y--max
@@ -133,7 +133,7 @@ public:
 	virtual bool OnPointerScroll_Implementation(ULGUIPointerEventData* eventData)override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
-		AUIBaseActor* GetContent()const { return Content.Get(); }
+		ALexWidgetActor* GetContent()const { return Content.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
 		bool GetHorizontal()const { return Horizontal; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
@@ -197,7 +197,7 @@ public:
 	 * @param InAnimationDuration Animation duration if InEaseAnimation = true.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
-		void ScrollTo(UUIItem* InChild, bool InEaseAnimation = true, float InAnimationDuration = 0.5f);
+		void ScrollTo(ULexWidget* InChild, bool InEaseAnimation = true, float InAnimationDuration = 0.5f);
 };
 
 

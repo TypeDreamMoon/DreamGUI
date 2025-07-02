@@ -6,11 +6,11 @@
 #include "Tickable.h"
 #include "LGUIManager.generated.h"
 
-class UUIItem;
+class ULexWidget;
 class UUIText;
-class UUIBatchMeshRenderable;
-class UUIBaseRenderable;
-class ULGUICanvas;
+class ULexVisualBatchMesh;
+class ULexVisual;
+class ULexCanvas;
 class ULGUIBaseRaycaster;
 class UUISelectableComponent;
 class ULGUILifeCycleBehaviour;
@@ -83,7 +83,7 @@ struct FLGUILifeCycleBehaviourArrayContainer
 };
 
 class ILGUICultureChangedInterface;
-enum class ELGUIRenderMode : uint8;
+enum class ELexRenderMode : uint8;
 
 UCLASS(NotBlueprintable, NotBlueprintType, Transient, NotPlaceable)
 class LGUI_API ULGUIManagerWorldSubsystem : public UTickableWorldSubsystem
@@ -111,15 +111,15 @@ private:
 	static bool bIsPlaying;
 #endif
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<UUIItem>> AllRootUIItemArray;
+		TArray<TWeakObjectPtr<ULexWidget>> AllRootUIItemArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<ULGUICanvas>> ScreenSpaceCanvasArray;
+		TArray<TWeakObjectPtr<ULexCanvas>> ScreenSpaceCanvasArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<ULGUICanvas>> WorldSpaceUECanvasArray;
+		TArray<TWeakObjectPtr<ULexCanvas>> WorldSpaceUECanvasArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<ULGUICanvas>> WorldSpaceLGUICanvasArray;
+		TArray<TWeakObjectPtr<ULexCanvas>> WorldSpaceLGUICanvasArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<ULGUICanvas>> RenderTargetSpaceLGUICanvasArray;
+		TArray<TWeakObjectPtr<ULexCanvas>> RenderTargetSpaceLGUICanvasArray;
 
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<ULGUIBaseRaycaster>> AllRaycasterArray;
@@ -157,9 +157,9 @@ public:
 #if WITH_EDITOR
 	static void RefreshAllUI(UWorld* InWorld = nullptr);
 #endif
-	static void AddRootUIItem(UUIItem* InItem);
-	static void RemoveRootUIItem(UUIItem* InItem);
-	const TArray<TWeakObjectPtr<UUIItem>>& GetAllRootUIItemArray()const { return AllRootUIItemArray; }
+	static void AddRootUIItem(ULexWidget* InItem);
+	static void RemoveRootUIItem(ULexWidget* InItem);
+	const TArray<TWeakObjectPtr<ULexWidget>>& GetAllRootUIItemArray()const { return AllRootUIItemArray; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	static void RegisterLGUICultureChangedEvent(TScriptInterface<ILGUICultureChangedInterface> InItem);
@@ -172,12 +172,12 @@ public:
 	static void ForceUpdateLayout(UObject* WorldContextObject);
 	/** Rebuild layout on target UIItem and all it's children */
 	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (WorldContext = "WorldContextObject"))
-	static void RebuildLayout(UUIItem* InItem);
+	static void RebuildLayout(ULexWidget* InItem);
 
-	static void AddCanvas(ULGUICanvas* InCanvas, ELGUIRenderMode InCurrentRenderMode);
-	static void RemoveCanvas(ULGUICanvas* InCanvas, ELGUIRenderMode InCurrentRenderMode);
-	static void CanvasRenderModeChange(ULGUICanvas* InCanvas, ELGUIRenderMode InOldRenderMode, ELGUIRenderMode InNewRenderMode);
-	const TArray<TWeakObjectPtr<ULGUICanvas>>& GetCanvasArray(ELGUIRenderMode RenderMode);
+	static void AddCanvas(ULexCanvas* InCanvas, ELexRenderMode InCurrentRenderMode);
+	static void RemoveCanvas(ULexCanvas* InCanvas, ELexRenderMode InCurrentRenderMode);
+	static void CanvasRenderModeChange(ULexCanvas* InCanvas, ELexRenderMode InOldRenderMode, ELexRenderMode InNewRenderMode);
+	const TArray<TWeakObjectPtr<ULexCanvas>>& GetCanvasArray(ELexRenderMode RenderMode);
 
 	const TArray<TWeakObjectPtr<UObject>>& GetAllLayoutArray()const { return AllLayoutArray; }
 
@@ -204,17 +204,17 @@ public:
 	/**
 	 * Editor raycast hit all visible UIBaseRenderable object.
 	 * @param InWorld
-	 * @param InUIItems
+	 * @param InWidgets
 	 * @param LineStart
 	 * @param LineEnd
 	 * @param ResultSelectTarget
 	 * @param InOutTargetIndexInHitArray	Pass in desired item index, and result selected item index. Default is -1, will use first one as result.
 	 * \return 
 	 */
-	static bool RaycastHitUI(UWorld* InWorld, const TArray<UUIItem*>& InUIItems, const FVector& LineStart, const FVector& LineEnd
-		, UUIBaseRenderable*& ResultSelectTarget, int& InOutTargetIndexInHitArray
+	static bool RaycastHitUI(UWorld* InWorld, const TArray<ULexWidget*>& InWidgets, const FVector& LineStart, const FVector& LineEnd
+		, ULexVisual*& ResultSelectTarget, int& InOutTargetIndexInHitArray
 	);
-	static void DrawFrameOnUIItem(UUIItem* InItem, bool IsScreenSpace = false);
+	static void DrawFrameOnUIItem(ULexWidget* InItem, bool IsScreenSpace = false);
 	static void DrawNavigationArrow(UWorld* InWorld, const TArray<FVector>& InControlPoints, const FVector& InArrowPointA, const FVector& InArrowPointB, FColor const& InColor, bool IsScreenSpace = false);
 	static void DrawNavigationVisualizerOnUISelectable(UWorld* InWorld, UUISelectableComponent* InSelectable, bool IsScreenSpace = false);
 private:

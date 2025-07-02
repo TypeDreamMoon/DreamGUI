@@ -42,7 +42,7 @@ protected:
 	friend class FUIToggleCustomization;
 	/** If not assigned, use self. must have UIItem component */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Toggle")
-		TWeakObjectPtr<class AUIBaseRenderableActor> ToggleActor;
+		TWeakObjectPtr<ULexWidget> ToggleTarget;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI-Toggle")
 		UIToggleTransitionType ToggleTransition = UIToggleTransitionType::Fade;
 	UPROPERTY(Transient) TWeakObjectPtr<class UUISelectableTransitionComponent> ToggleTransitionComp = nullptr;

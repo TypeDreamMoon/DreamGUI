@@ -2,9 +2,10 @@
 
 #include "Event/LGUIBaseRaycaster.h"
 #include "Core/LGUIManager.h"
+#include "Core/Components/LexVisual.h"
 #include "Engine/SceneCapture2D.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "Engine/World.h"
 
 ULGUIBaseRaycaster::ULGUIBaseRaycaster()
@@ -60,7 +61,7 @@ bool ULGUIBaseRaycaster::ShouldStartDrag_HoldToDrag(ULGUIPointerEventData* InPoi
 	return false;
 }
 
-bool ULGUIBaseRaycaster::RaycastUI(ULGUIPointerEventData* InPointerEventData, const TArray<ELGUIRenderMode>& InRenderModeArray, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, FHitResult& OutHitResult, TArray<USceneComponent*>& OutHoverArray)
+bool ULGUIBaseRaycaster::RaycastUI(ULGUIPointerEventData* InPointerEventData, const TArray<ELexRenderMode>& InRenderModeArray, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, FHitResult& OutHitResult, TArray<USceneComponent*>& OutHoverArray)
 {
 	OutHoverArray.Reset();
 	if (GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection))
@@ -82,17 +83,18 @@ bool ULGUIBaseRaycaster::RaycastUI(ULGUIPointerEventData* InPointerEventData, co
 				ParallelFor(AllCanvasArray.Num(), [&AllCanvasArray, &Mutex, &OutRayOrigin, &OutRayEnd, this](int32 CanvasIndex) {
 					auto& CanvasItem = AllCanvasArray[CanvasIndex];
 					if (ShouldSkipCanvas(CanvasItem.Get()))return;
-					auto& AllUIItemArray = CanvasItem->GetUIItemArray();
+					if (CanvasItem->GetTraceChannel() != traceChannel)return;
+					auto& AllUIItemArray = CanvasItem->GetVisualWidgetArray();
 					ParallelFor(AllUIItemArray.Num(), [&AllUIItemArray, &Mutex, &OutRayOrigin, &OutRayEnd, CanvasItem, this](int32 index) {
 						auto uiItem = AllUIItemArray[index];
 						FHitResult thisHit;
 						thisHit.FaceIndex = INDEX_NONE;
 						if (
-							uiItem->IsRaycastTarget()
-							&& uiItem->IsGroupAllowInteraction()
-							&& uiItem->GetTraceChannel() == traceChannel
+							uiItem->IsVisibleForHitTest()
+							&& uiItem->GetIsEnabled()
 							&& uiItem->GetIsUIActiveInHierarchy()
-							&& uiItem->LineTraceUI(thisHit, OutRayOrigin, OutRayEnd)
+							&& uiItem->GetVisual()
+							&& uiItem->GetVisual()->LineTraceUI(thisHit, OutRayOrigin, OutRayEnd)
 							)
 						{
 							if (uiItem->IsPointVisibleOnClip(thisHit.Location))
@@ -113,17 +115,18 @@ bool ULGUIBaseRaycaster::RaycastUI(ULGUIPointerEventData* InPointerEventData, co
 					ParallelFor(AllCanvasArray.Num(), [&AllCanvasArray, &Mutex, &OutRayOrigin, &OutRayEnd, this](int32 CanvasIndex) {
 						auto& CanvasItem = AllCanvasArray[CanvasIndex];
 						if (ShouldSkipCanvas(CanvasItem.Get()))return;
-						auto& AllUIItemArray = CanvasItem->GetUIItemArray();
+						if (CanvasItem->GetTraceChannel() != traceChannel)return;
+						auto& AllUIItemArray = CanvasItem->GetVisualWidgetArray();
 						ParallelFor(AllUIItemArray.Num(), [&AllUIItemArray, &Mutex, &OutRayOrigin, &OutRayEnd, CanvasItem, this](int32 index) {
 							auto uiItem = AllUIItemArray[index];
 							FHitResult thisHit;
 							thisHit.FaceIndex = INDEX_NONE;
 							if (
-								uiItem->IsRaycastTarget()
-								&& uiItem->IsGroupAllowInteraction()
-								&& uiItem->GetTraceChannel() == traceChannel
+								uiItem->IsVisibleForHitTest()
+								&& uiItem->GetIsEnabled()
 								&& uiItem->GetIsUIActiveInHierarchy()
-								&& uiItem->LineTraceUI(thisHit, OutRayOrigin, OutRayEnd)
+								&& uiItem->GetVisual()
+								&& uiItem->GetVisual()->LineTraceUI(thisHit, OutRayOrigin, OutRayEnd)
 								)
 							{
 								if (uiItem->IsPointVisibleOnClip(thisHit.Location))
@@ -179,8 +182,8 @@ bool ULGUIBaseRaycaster::RaycastUI(ULGUIPointerEventData* InPointerEventData, co
 		{
 			multiHitResult.Sort([](const FHitResult& A, const FHitResult& B)
 				{
-					auto AUIItem = (UUIItem*)(A.Component.Get());
-					auto BUIItem = (UUIItem*)(B.Component.Get());
+					auto AUIItem = (ULexWidget*)(A.Component.Get());
+					auto BUIItem = (ULexWidget*)(B.Component.Get());
 					if (AUIItem != nullptr && BUIItem != nullptr)
 					{
 						auto ACanvasSortOrder = AUIItem->GetRenderCanvas()->GetActualSortOrder();
@@ -202,7 +205,7 @@ bool ULGUIBaseRaycaster::RaycastUI(ULGUIPointerEventData* InPointerEventData, co
 			for (int i = 0; i < hitCount; i++)
 			{
 				auto hit = multiHitResult[i];
-				auto hitUIItem = (UUIItem*)(hit.Component.Get());
+				auto hitUIItem = (ULexWidget*)(hit.Component.Get());
 				if (!haveValidHitResult)
 				{
 					OutHitResult = hit;

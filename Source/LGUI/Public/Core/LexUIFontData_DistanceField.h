@@ -67,7 +67,7 @@ public:
 		int& outAdditionalVerticesCount, int& outAdditionalIndicesCount,
 		TArray<FLexUIOriginVertexData>& originVertices, TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndexBufferType>& triangleIndices
 	)override;
-	virtual void PrepareForPushCharData(UUIText* InText)override;
+	virtual void PrepareForPushCharData(ULexText* InText)override;
 	virtual bool GetRequireNormalAndTangent()override;
 	virtual float GetKerning(const TCHAR& leftCharIndex, const TCHAR& rightCharIndex, const float& charSize) override;
 	virtual float GetLineHeight(const float& fontSize) override;

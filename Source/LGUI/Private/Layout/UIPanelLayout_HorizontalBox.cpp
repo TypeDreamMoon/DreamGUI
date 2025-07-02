@@ -2,11 +2,11 @@
 
 #include "Layout/UIPanelLayout_HorizontalBox.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
 
 DECLARE_CYCLE_STAT(TEXT("UIPanelLayout HorizontalBox RebuildLayout"), STAT_PanelLayout_Horizontal, STATGROUP_LGUI);
 
-void UUIPanelLayout_HorizontalBox::OnUIChildDimensionsChanged(UUIItem* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
+void UUIPanelLayout_HorizontalBox::OnUIChildDimensionsChanged(ULexWidget* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
 {
     //skip UILayoutBase
     Super::Super::OnUIChildDimensionsChanged(child, horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
@@ -194,7 +194,7 @@ void UUIPanelLayout_HorizontalBox::OnRebuildLayout()
 	}
 }
 
-bool UUIPanelLayout_HorizontalBox::GetCanLayoutControlAnchor_Implementation(class UUIItem* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
+bool UUIPanelLayout_HorizontalBox::GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
 {
     if (this->GetRootUIComponent() == InUIItem)//self
     {
@@ -235,7 +235,7 @@ FText UUIPanelLayout_HorizontalBox::GetCategoryDisplayName()const
 {
     return NSLOCTEXT("UIPanelLayout_HorizontalBox", "CategoryDisplayName", "HorizontalBox");
 }
-bool UUIPanelLayout_HorizontalBox::CanMoveChildToCell(UUIItem* InChild, EMoveChildDirectionType InDirection)const
+bool UUIPanelLayout_HorizontalBox::CanMoveChildToCell(ULexWidget* InChild, EMoveChildDirectionType InDirection)const
 {
     switch (InDirection)
     {
@@ -246,7 +246,7 @@ bool UUIPanelLayout_HorizontalBox::CanMoveChildToCell(UUIItem* InChild, EMoveChi
         return false;
     }
 }
-void UUIPanelLayout_HorizontalBox::MoveChildToCell(UUIItem* InChild, EMoveChildDirectionType InDirection)
+void UUIPanelLayout_HorizontalBox::MoveChildToCell(ULexWidget* InChild, EMoveChildDirectionType InDirection)
 {
     int MoveValue = 0;
     switch (InDirection)

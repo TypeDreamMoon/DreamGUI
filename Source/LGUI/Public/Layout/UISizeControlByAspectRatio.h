@@ -36,7 +36,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetAspectRatio(float value);
 
-	virtual bool GetCanLayoutControlAnchor_Implementation(class UUIItem* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
+	virtual bool GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
 protected:
 	virtual void OnRebuildLayout()override;
 
@@ -46,7 +46,7 @@ protected:
 		float AspectRatio = 1.0f;
 
 	//these will not affect this Layout
-	virtual void OnUIChildAcitveInHierarchy(UUIItem* InChild, bool InUIActive)override {}
-	virtual void OnUIChildAttachmentChanged(UUIItem* InChild, bool attachOrDetach)override {}
-	virtual void OnUIChildHierarchyIndexChanged(UUIItem* InChild)override {}
+	virtual void OnUIChildAcitveInHierarchy(ULexWidget* InChild, bool InUIActive)override {}
+	virtual void OnUIChildAttachmentChanged(ULexWidget* InChild, bool attachOrDetach)override {}
+	virtual void OnUIChildHierarchyIndexChanged(ULexWidget* InChild)override {}
 };

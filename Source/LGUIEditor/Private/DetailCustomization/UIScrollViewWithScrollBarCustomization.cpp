@@ -28,7 +28,7 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 	TargetScriptPtr = Cast<UUIScrollViewWithScrollbarComponent>(targetObjects[0].Get());
 	if (TargetScriptPtr == nullptr)
 	{
-		UE_LOG(LGUIEditor, Log, TEXT("[UITextCustomization]Get TargetScript is null"));
+		UE_LOG(LGUIEditor, Log, TEXT("[%s]Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__));
 		return;
 	}
 	
@@ -39,10 +39,10 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 	ViewportHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
 	UObject* ViewportObject = nullptr;
 	ViewportHandle->GetValue(ViewportObject);
-	AUIBaseActor* Viewport = nullptr;
+	ALexWidgetActor* Viewport = nullptr;
 	if (IsValid(ViewportObject))
 	{
-		Viewport = Cast<AUIBaseActor>(ViewportObject);
+		Viewport = Cast<ALexWidgetActor>(ViewportObject);
 	}
 
 	auto HorizontalScrollbarVisibilityHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, HorizontalScrollbarVisibility));
@@ -60,20 +60,20 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 	HorizontalScrollbarHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
 	UObject* HorizontalScrollbarObject = nullptr;
 	HorizontalScrollbarHandle->GetValue(HorizontalScrollbarObject);
-	AUIBaseActor* HorizontalScrollbar = nullptr;
+	ALexWidgetActor* HorizontalScrollbar = nullptr;
 	if (IsValid(HorizontalScrollbarObject))
 	{
-		HorizontalScrollbar = Cast<AUIBaseActor>(HorizontalScrollbarObject);
+		HorizontalScrollbar = Cast<ALexWidgetActor>(HorizontalScrollbarObject);
 	}
 
 	auto VerticalScrollbarHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, VerticalScrollbar));
 	VerticalScrollbarHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
 	UObject* VerticalScrollbarObject = nullptr;
 	VerticalScrollbarHandle->GetValue(VerticalScrollbarObject);
-	AUIBaseActor* VerticalScrollbar = nullptr;
+	ALexWidgetActor* VerticalScrollbar = nullptr;
 	if (IsValid(VerticalScrollbarObject))
 	{
-		VerticalScrollbar = Cast<AUIBaseActor>(VerticalScrollbarObject);
+		VerticalScrollbar = Cast<ALexWidgetActor>(VerticalScrollbarObject);
 	}
 
 	category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, HorizontalScrollbar));
@@ -84,7 +84,7 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 		bool showWarning = false;
 		if (IsValid(Viewport))
 		{
-			if (Viewport->GetUIItem()->GetAttachParent() != TargetScriptPtr->GetRootUIComponent())
+			if (Viewport->GetLexWidget()->GetAttachParent() != TargetScriptPtr->GetRootUIComponent())
 			{
 				showWarning = true;
 			}
@@ -95,7 +95,7 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 		}
 		if (IsValid(HorizontalScrollbar))
 		{
-			if (HorizontalScrollbar->GetUIItem()->GetAttachParent() != TargetScriptPtr->GetRootUIComponent())
+			if (HorizontalScrollbar->GetLexWidget()->GetAttachParent() != TargetScriptPtr->GetRootUIComponent())
 			{
 				showWarning = true;
 			}
@@ -118,7 +118,7 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 		bool showWarning = false;
 		if (IsValid(Viewport))
 		{
-			if (Viewport->GetUIItem()->GetAttachParent() != TargetScriptPtr->GetRootUIComponent())
+			if (Viewport->GetLexWidget()->GetAttachParent() != TargetScriptPtr->GetRootUIComponent())
 			{
 				showWarning = true;
 			}
@@ -129,7 +129,7 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 		}
 		if (IsValid(VerticalScrollbar))
 		{
-			if (VerticalScrollbar->GetUIItem()->GetAttachParent() != TargetScriptPtr->GetRootUIComponent())
+			if (VerticalScrollbar->GetLexWidget()->GetAttachParent() != TargetScriptPtr->GetRootUIComponent())
 			{
 				showWarning = true;
 			}

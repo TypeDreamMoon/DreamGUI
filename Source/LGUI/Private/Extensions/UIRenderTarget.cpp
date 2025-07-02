@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Extensions/UIRenderTarget.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "LGUI.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Utils/LexUIUtils.h"
@@ -14,10 +14,7 @@
 
 UUIRenderTarget::UUIRenderTarget(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
-	PrimaryComponentTick.bCanEverTick = false;
-	PrimaryComponentTick.bStartWithTickEnabled = false;
-
-	TargetCanvas = FLGUIComponentReference(ULGUICanvas::StaticClass());
+	TargetCanvas = FLGUIComponentReference(ULexCanvas::StaticClass());
 }
 
 bool UUIRenderTarget::SupportDrawCallBatching()const
@@ -61,9 +58,10 @@ void UUIRenderTarget::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleCha
 	}
 	else
 	{
+		auto Widget = GetWidget();
 		static FLexUISpriteInfo SpriteInfo;
 		FLexUIGeometry::UpdateUIRectSimpleVertex(&InGeo,
-			this->GetWidth(), this->GetHeight(), FVector2f(this->GetPivot()), SpriteInfo, RenderCanvas.Get(), this, GetFinalColor(),
+			Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), SpriteInfo, Widget->GetRenderCanvas(), this, GetFinalColor(),
 			InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 		);
 	}
@@ -72,27 +70,16 @@ void UUIRenderTarget::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleCha
 void UUIRenderTarget::BeginPlay()
 {
 	Super::BeginPlay();
-	if (!ULGUIPrefabWorldSubsystem::IsLGUIPrefabSystemProcessingActor(this->GetOwner()))
-	{
-		Awake_Implementation();
-	}
-}
-void UUIRenderTarget::EndPlay(EEndPlayReason::Type Reason)
-{
-	Super::EndPlay(Reason);
-}
-
-void UUIRenderTarget::Awake_Implementation()
-{
 	if (auto Canvas = GetCanvas())
 	{
 		Canvas->OnRenderTargetCreatedOrChanged.AddWeakLambda(this, [this](UTextureRenderTarget2D* RenderTarget, bool CreatedOrChanged) {
-			SetIsUIActive(true);
+			GetWidget()->SetWidgetVisibility(ESlateVisibility::Visible);
 			this->MarkTextureDirty();
 			});
 	}
 }
-ULGUICanvas* UUIRenderTarget::GetTargetCanvas_Implementation()const
+
+ULexCanvas* UUIRenderTarget::GetTargetCanvas_Implementation()const
 {
 	return GetCanvas();
 }
@@ -106,12 +93,13 @@ bool UUIRenderTarget::PerformLineTrace_Implementation(const int32& InHitFaceInde
 	}
 	else
 	{
+		auto Widget = GetWidget();
 		// Find the hit location on the component
-		FVector ComponentHitLocation = GetComponentTransform().InverseTransformPosition(InHitPoint);
+		FVector ComponentHitLocation = Widget->GetComponentTransform().InverseTransformPosition(InHitPoint);
 
 		// Convert the 3D position of component space, into the 2D equivalent
-		auto LocationRelativeToLeftBottom = FVector2D(ComponentHitLocation.Y, ComponentHitLocation.Z) - this->GetLocalSpaceLeftBottomPoint();
-		auto Location01 = LocationRelativeToLeftBottom / FVector2D(this->GetWidth(), this->GetHeight());
+		auto LocationRelativeToLeftBottom = FVector2D(ComponentHitLocation.Y, ComponentHitLocation.Z) - Widget->GetLocalSpaceLeftBottomPoint();
+		auto Location01 = LocationRelativeToLeftBottom / FVector2D(Widget->GetWidth(), Widget->GetHeight());
 
 		OutHitUV = Location01;
 		return true;
@@ -147,14 +135,14 @@ void UUIRenderTarget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChan
 		{
 			if (IsValid(CustomMesh))//custom mesh use geometry raycast to get precise uv
 			{
-				this->SetRaycastType(EUIRenderableRaycastType::Mesh);
+				this->SetRaycastType(ELexVisualHitTestType::Mesh);
 			}
 		}
 	}
 }
 #endif
 
-ULGUICanvas* UUIRenderTarget::GetCanvas()const
+ULexCanvas* UUIRenderTarget::GetCanvas()const
 {
 	if (TargetCanvasObject.IsValid())
 	{
@@ -165,7 +153,7 @@ ULGUICanvas* UUIRenderTarget::GetCanvas()const
 		UE_LOG(LGUI, Warning, TEXT("[UUIRenderTarget::GetCanvas]TargetCanvas not valid!"));
 		return nullptr;
 	}
-	auto Canvas = TargetCanvas.GetComponent<ULGUICanvas>();
+	auto Canvas = TargetCanvas.GetComponent<ULexCanvas>();
 	if (Canvas == nullptr)
 	{
 		UE_LOG(LGUI, Warning, TEXT("[UUIRenderTarget::GetCanvas]TargetCanvas not valid!"));
@@ -176,7 +164,7 @@ ULGUICanvas* UUIRenderTarget::GetCanvas()const
 		UE_LOG(LGUI, Warning, TEXT("[UUIRenderTarget::GetCanvas]TargetCanvas must be a root canvas!"));
 		return nullptr;
 	}
-	if (Canvas->GetRenderMode() != ELGUIRenderMode::RenderTarget)
+	if (Canvas->GetRenderMode() != ELexRenderMode::RenderTarget)
 	{
 		UE_LOG(LGUI, Warning, TEXT("[UUIRenderTarget::GetCanvas]TargetCanvas's render mode must be RenderTarget!"));
 		return nullptr;
@@ -185,20 +173,12 @@ ULGUICanvas* UUIRenderTarget::GetCanvas()const
 	return Canvas;
 }
 
-void UUIRenderTarget::SetCanvas(ULGUICanvas* Value)
+void UUIRenderTarget::SetCanvas(ULexCanvas* Value)
 {
 	if (TargetCanvasObject.Get() != Value)
 	{
 		TargetCanvasObject = Value;
 	}
-}
-
-AUIRenderTargetActor::AUIRenderTargetActor()
-{
-	PrimaryActorTick.bCanEverTick = false;
-
-	UIRenderTarget = CreateDefaultSubobject<UUIRenderTarget>(TEXT("UIRenderTarget"));
-	RootComponent = UIRenderTarget;
 }
 
 #undef LOCTEXT_NAMESPACE

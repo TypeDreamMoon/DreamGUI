@@ -16,7 +16,7 @@ class FMenuBuilder;
 class FNotifyHook;
 class IDetailChildrenBuilder;
 class IDetailLayoutBuilder;
-class UUIItem;
+class ULexWidget;
 
 namespace ETransformField
 {
@@ -33,7 +33,7 @@ namespace ETransformField
 class FComponentTransformDetails : public TSharedFromThis<FComponentTransformDetails>, public IDetailCustomNodeBuilder, public TNumericUnitTypeInterface<FVector::FReal>
 {
 public:
-	FComponentTransformDetails( const TArray< TWeakObjectPtr<UUIItem> >& InSelectedObjects, const FSelectedActorInfo& InSelectedActorInfo, IDetailLayoutBuilder& DetailBuilder );
+	FComponentTransformDetails( const TArray< TWeakObjectPtr<ULexWidget> >& InSelectedObjects, const FSelectedActorInfo& InSelectedActorInfo, IDetailLayoutBuilder& DetailBuilder );
 
 	/**
 	 * Caches the representation of the actor transform for the user input boxes                   
@@ -231,7 +231,7 @@ private:
 	
 	FSelectedActorInfo SelectedActorInfo;
 	/** Copy of selected actor references in the details view */
-	TArray< TWeakObjectPtr<UUIItem> > SelectedObjects;
+	TArray< TWeakObjectPtr<ULexWidget> > SelectedObjects;
 	/** Cache translation value of the selected set */
 	FOptionalVector<FVector::FReal> CachedLocation;
 	/** Cache rotation value of the selected set */

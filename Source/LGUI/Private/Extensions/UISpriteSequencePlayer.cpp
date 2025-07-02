@@ -3,6 +3,7 @@
 #include "Extensions/UISpriteSequencePlayer.h"
 #include "LTweenBPLibrary.h"
 #include "Core/LexUISpriteData_BaseObject.h"
+#include "Core/Components/UISprite.h"
 #include "LGUI/Public/Core/Components/UISpriteBase.h"
 
 #if WITH_EDITOR
@@ -19,16 +20,19 @@ bool UUISpriteSequencePlayer::CanPlay()
 {
 	if (!sprite.IsValid())
 	{
-		sprite = GetOwner()->FindComponentByClass<UUISpriteBase>();
+		if (auto Widget = GetOwner()->FindComponentByClass<ULexWidget>())
+		{
+			sprite = Cast<UUISprite>(Widget->GetVisual());
+		}
 	}
 	if (!sprite.IsValid())
 	{
-		UE_LOG(LGUI, Error, TEXT("[UUISpriteSequencePlayer::Play]Need UISprite component!"));
+		UE_LOG(LGUI, Error, TEXT("[%s]Need UISprite component!"), ANSI_TO_TCHAR(__FUNCTION__));
 		return false;
 	}
 	if (spriteSequence.Num() <= 0)
 	{
-		UE_LOG(LGUI, Error, TEXT("[UUISpriteSequencePlayer::Play]SpriteSequence array is empty!"));
+		UE_LOG(LGUI, Error, TEXT("[%s]SpriteSequence array is empty!"), ANSI_TO_TCHAR(__FUNCTION__));
 		return false;
 	}
 	return true;

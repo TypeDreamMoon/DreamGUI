@@ -2,8 +2,8 @@
 
 #include "Interaction/UISliderComponent.h"
 #include "LGUI.h"
-#include "Core/Actor/UIBaseActor.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
+#include "Core/Actor/LexWidgetActor.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
 
 void UUISliderComponent::Awake()
 {
@@ -22,10 +22,10 @@ bool UUISliderComponent::CheckFill()
         return true;
     if (!FillActor.IsValid())
         return false;
-    Fill = FillActor->GetUIItem();
+    Fill = FillActor->GetLexWidget();
     if (IsValid(FillActor->GetAttachParentActor()))
     {
-        FillArea = FillActor->GetAttachParentActor()->FindComponentByClass<UUIItem>();
+        FillArea = FillActor->GetAttachParentActor()->FindComponentByClass<ULexWidget>();
     }
     if (Fill.IsValid() && FillArea.IsValid())
         return true;
@@ -37,10 +37,10 @@ bool UUISliderComponent::CheckHandle()
         return true;
     if (!HandleActor.IsValid())
         return false;
-    Handle = HandleActor->GetUIItem();
+    Handle = HandleActor->GetLexWidget();
     if (IsValid(HandleActor->GetAttachParentActor()))
     {
-        HandleArea = HandleActor->GetAttachParentActor()->FindComponentByClass<UUIItem>();
+        HandleArea = HandleActor->GetAttachParentActor()->FindComponentByClass<ULexWidget>();
     }
     if (Handle.IsValid() && HandleArea.IsValid())
         return true;
@@ -231,8 +231,8 @@ bool UUISliderComponent::OnNavigate_Implementation(ELGUINavigationDirection dire
 
 void UUISliderComponent::CalculateInputValue(ULGUIPointerEventData *eventData)
 {
-    UUIItem *mainUIItem = nullptr;
-    UUIItem *areaUIItem = nullptr;
+    ULexWidget *mainUIItem = nullptr;
+    ULexWidget *areaUIItem = nullptr;
     if (CheckHandle())
     {
         mainUIItem = Handle.Get();

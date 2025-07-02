@@ -11,8 +11,6 @@
 
 UUICustomMesh::UUICustomMesh(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
-	PrimaryComponentTick.bCanEverTick = false;
-	PrimaryComponentTick.bStartWithTickEnabled = false;
 }
 
 bool UUICustomMesh::SupportDrawCallBatching()const
@@ -38,15 +36,6 @@ void UUICustomMesh::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChang
 		CustomMesh->UIGeo = &InGeo;
 		CustomMesh->OnFillMesh(this, InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged);
 	}
-}
-
-void UUICustomMesh::BeginPlay()
-{
-	Super::BeginPlay();
-}
-void UUICustomMesh::EndPlay(EEndPlayReason::Type Reason)
-{
-	Super::EndPlay(Reason);
 }
 
 #if WITH_EDITOR

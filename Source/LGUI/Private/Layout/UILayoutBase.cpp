@@ -2,7 +2,7 @@
 
 #include "Layout/UILayoutBase.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
 #include "Layout/UILayoutElement.h"
 #include "Core/LGUIManager.h"
 #include "Utils/LexUIUtils.h"
@@ -97,7 +97,7 @@ void UUILayoutBase::OnUIActiveInHierachy(bool activeOrInactive)
     MarkNeedRebuildLayout();
 }
 
-void UUILayoutBase::ApplyUIItemWidth(UUIItem* InUIItem, const float& InWidth)
+void UUILayoutBase::ApplyUIItemWidth(ULexWidget* InUIItem, const float& InWidth)
 {
 #if WITH_EDITOR
     auto bIsValueDirty = InUIItem->GetWidth() != InWidth;
@@ -106,11 +106,11 @@ void UUILayoutBase::ApplyUIItemWidth(UUIItem* InUIItem, const float& InWidth)
 #if WITH_EDITOR
     if (!this->GetWorld()->IsGameWorld() && bIsValueDirty)
     {
-        FLexUIUtils::NotifyPropertyChanged(InUIItem, UUIItem::GetAnchorDataPropertyName());
+        FLexUIUtils::NotifyPropertyChanged(InUIItem, ULexWidget::GetAnchorDataPropertyName());
     }
 #endif
 }
-void UUILayoutBase::ApplyUIItemHeight(UUIItem* InUIItem, const float& InHeight)
+void UUILayoutBase::ApplyUIItemHeight(ULexWidget* InUIItem, const float& InHeight)
 {
 #if WITH_EDITOR
     auto bIsValueDirty = InUIItem->GetHeight() != InHeight;
@@ -119,11 +119,11 @@ void UUILayoutBase::ApplyUIItemHeight(UUIItem* InUIItem, const float& InHeight)
 #if WITH_EDITOR
     if (!this->GetWorld()->IsGameWorld() && bIsValueDirty)
     {
-        FLexUIUtils::NotifyPropertyChanged(InUIItem, UUIItem::GetAnchorDataPropertyName());
+        FLexUIUtils::NotifyPropertyChanged(InUIItem, ULexWidget::GetAnchorDataPropertyName());
     }
 #endif
 }
-void UUILayoutBase::ApplyUIItemAnchoredPosition(UUIItem* InUIItem, const FVector2D& InAnchoredPosition)
+void UUILayoutBase::ApplyUIItemAnchoredPosition(ULexWidget* InUIItem, const FVector2D& InAnchoredPosition)
 {
 #if WITH_EDITOR
     auto bIsValueDirty = InUIItem->GetAnchoredPosition() != InAnchoredPosition;
@@ -132,11 +132,11 @@ void UUILayoutBase::ApplyUIItemAnchoredPosition(UUIItem* InUIItem, const FVector
 #if WITH_EDITOR
     if (!this->GetWorld()->IsGameWorld() && bIsValueDirty)
     {
-        FLexUIUtils::NotifyPropertyChanged(InUIItem, UUIItem::GetAnchorDataPropertyName());
+        FLexUIUtils::NotifyPropertyChanged(InUIItem, ULexWidget::GetAnchorDataPropertyName());
     }
 #endif
 }
-void UUILayoutBase::ApplyUIItemSizeDelta(UUIItem* InUIItem, const FVector2D& InSizedDelta)
+void UUILayoutBase::ApplyUIItemSizeDelta(ULexWidget* InUIItem, const FVector2D& InSizedDelta)
 {
 #if WITH_EDITOR
     auto bIsValueDirty = InUIItem->GetSizeDelta() != InSizedDelta;
@@ -145,7 +145,7 @@ void UUILayoutBase::ApplyUIItemSizeDelta(UUIItem* InUIItem, const FVector2D& InS
 #if WITH_EDITOR
     if (!this->GetWorld()->IsGameWorld() && bIsValueDirty)
     {
-        FLexUIUtils::NotifyPropertyChanged(InUIItem, UUIItem::GetAnchorDataPropertyName());
+        FLexUIUtils::NotifyPropertyChanged(InUIItem, ULexWidget::GetAnchorDataPropertyName());
     }
 #endif
 }

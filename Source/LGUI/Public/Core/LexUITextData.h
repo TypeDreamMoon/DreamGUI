@@ -7,7 +7,7 @@
 #include "LexUITextData.generated.h"
 
 class FLexUIGeometry;
-class UUIText;
+class ULexText;
 class ULexUIFontData_BaseObject;
 class ULexUIRichTextImageData;
 
@@ -124,7 +124,7 @@ struct LGUI_API FLexUITextGeometryCache
 {
 public:
 	FLexUITextGeometryCache() {}
-	FLexUITextGeometryCache(UUIText* InUIText);
+	FLexUITextGeometryCache(ULexText* InUIText);
 	/**
 	 * @return true - anything change
 	 */
@@ -174,7 +174,7 @@ private:
 
 	bool bIsDirty = true;//vertex or triangle data is dirty
 	bool bIsColorDirty = true;//only color data is dirty (no include rich text's color)
-	TWeakObjectPtr<UUIText> UIText = nullptr;
+	TWeakObjectPtr<ULexText> UIText = nullptr;
 
 public:
 #pragma region OutputResults

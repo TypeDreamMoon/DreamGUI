@@ -2,11 +2,12 @@
 
 #pragma once
 
+#if 0
 #include "CoreMinimal.h"
 #include "PrefabSystem/ILGUIPrefabInterface.h"
 #include "LGUI/Public/Core/Components/UICustomMesh.h"
 #include "Components/WidgetComponent.h"
-#include "Core/Actor/UIBaseActor.h"
+#include "Core/Actor/LexWidgetActor.h"
 #include "UIWidget.generated.h"
 
 class ULGUICustomMesh;
@@ -15,7 +16,7 @@ class ULGUICustomMesh;
  * LGUI Widget can render a UMG widget as LGUI's element, and interact with it by UIWidgetInteraction component.
  */
 UCLASS(ClassGroup = (LGUI), NotBlueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIWidget : public UUICustomMesh, public ILGUIPrefabInterface
+class LGUI_API UUIWidget : public UUICustomMesh
 {
 	GENERATED_BODY()
 	
@@ -28,14 +29,11 @@ protected:
 	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 
 	virtual void BeginPlay() override;
-	// Begin ILGUIPrefabInterface
-	virtual void Awake_Implementation()override;
-	// End ILGUIPrefabInterface
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void EndPlay() override;
 	virtual void OnRegister() override;
 	virtual void OnUnregister() override;
-	virtual void DestroyComponent(bool bPromoteChildren = false) override;
-	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	virtual void DestroyComponent() override;
+	void TickComponent(float DeltaTime);
 #if WITH_EDITOR
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -88,7 +86,7 @@ public:
 	 *  Gets the widget that is used by this Widget Component. It will be null if a Slate Widget was set using SetSlateWidget function.
 	 */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-	virtual UUserWidget* GetWidget() const;
+	virtual UUserWidget* GetUMGWidget() const;
 
 	/**
 	 *  Sets the widget to use directly. This function will keep track of the widget till the next time it's called
@@ -292,7 +290,7 @@ private:
 
 	/** The User Widget object displayed and managed by this component */
 	UPROPERTY(Transient, DuplicateTransient)
-	TObjectPtr<UUserWidget> Widget;
+	TObjectPtr<UUserWidget> UmgWidget;
 
 	/** The Slate widget to be displayed by this component.  Only one of either Widget or SlateWidget can be used */
 	TSharedPtr<SWidget> SlateWidget;
@@ -308,25 +306,4 @@ private:
 	bool bRenderCleared;
 	bool bOnWidgetVisibilityChangedRegistered;
 };
-
-/**
- * LGUI Widget can render a UMG widget as LGUI's element, and interact with it by UIWidgetInteraction component.
- */
-UCLASS(ClassGroup = LGUI)
-class LGUI_API AUIWidgetActor : public AUIBaseRenderableActor
-{
-	GENERATED_BODY()
-
-public:
-	AUIWidgetActor();
-
-	virtual UUIItem* GetUIItem()const override { return UIWidget; }
-	virtual class UUIBaseRenderable* GetUIRenderable()const override { return UIWidget; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		UUIWidget* GetUIWidget()const { return UIWidget; }
-private:
-	UPROPERTY(Category = "LGUI", VisibleAnywhere, BlueprintReadOnly, Transient, meta = (AllowPrivateAccess = "true"))
-		TObjectPtr<class UUIWidget> UIWidget;
-
-};
-
+#endif

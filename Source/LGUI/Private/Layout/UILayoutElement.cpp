@@ -3,7 +3,7 @@
 #include "Layout/UILayoutElement.h"
 #include "LGUI.h"
 #include "Layout/UILayoutWithChildren.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
 
 void UUILayoutElement::Awake()
 {
@@ -43,7 +43,7 @@ void UUILayoutElement::PostEditChangeProperty(FPropertyChangedEvent& PropertyCha
 	}
 	if (auto owner = this->GetOwner())
 	{
-		if (auto uiItem = owner->FindComponentByClass<UUIItem>())
+		if (auto uiItem = owner->FindComponentByClass<ULexWidget>())
 		{
 			uiItem->EditorForceUpdate();
 		}

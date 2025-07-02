@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "Core/Actor/UIBaseActor.h"
+#include "Core/Actor/LexWidgetActor.h"
 #include "Extensions/2DLineRenderer/UI2DLineRendererBase.h"
 #include "LTweener.h"
 #include "UIPolygonLine.generated.h"
@@ -71,23 +71,3 @@ public:
 		ULTweener* EndAngleTo(float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase easeType = ELTweenEase::OutCubic);
 };
 
-/**
- * render a polygon line shape
- */
-UCLASS(ClassGroup = LGUI)
-class LGUI_API AUIPolygonLineActor : public AUIBaseRenderableActor
-{
-	GENERATED_BODY()
-
-public:
-	AUIPolygonLineActor();
-
-	virtual UUIItem* GetUIItem()const override { return UIPolygonLine; }
-	virtual class UUIBaseRenderable* GetUIRenderable()const override { return UIPolygonLine; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		UUIPolygonLine* GetUIPolygonLine()const { return UIPolygonLine; }
-private:
-	UPROPERTY(Category = "LGUI", VisibleAnywhere, BlueprintReadOnly, Transient, meta = (AllowPrivateAccess = "true"))
-		TObjectPtr<class UUIPolygonLine> UIPolygonLine;
-
-};

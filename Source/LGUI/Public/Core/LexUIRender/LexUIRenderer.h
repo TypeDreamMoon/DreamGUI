@@ -10,7 +10,7 @@
 #include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
 #include "LGUI/Public/Core/LexUIRender/ILexUIRendererPrimitive.h"
 
-class ULGUICanvas;
+class ULexCanvas;
 struct FLexUIPostProcessVertex;
 struct FLexUIPostProcessCopyMeshRegionVertex;
 class FGlobalShaderMap;
@@ -73,17 +73,17 @@ public:
 	//end ISceneViewExtension interfaces
 
 	//
-	void AddWorldSpacePrimitive_RenderThread(ULGUICanvas* InCanvas, ILexUIRendererPrimitive* InPrimitive);
-	void RemoveWorldSpacePrimitive_RenderThread(ULGUICanvas* InCanvas, ILexUIRendererPrimitive* InPrimitive);
+	void AddWorldSpacePrimitive_RenderThread(ULexCanvas* InCanvas, ILexUIRendererPrimitive* InPrimitive);
+	void RemoveWorldSpacePrimitive_RenderThread(ULexCanvas* InCanvas, ILexUIRendererPrimitive* InPrimitive);
 
 	void AddScreenSpacePrimitive_RenderThread(ILexUIRendererPrimitive* InPrimitive);
 	void RemoveScreenSpacePrimitive_RenderThread(ILexUIRendererPrimitive* InPrimitive);
 
 	void MarkNeedToSortScreenSpacePrimitiveRenderPriority();
 	void MarkNeedToSortWorldSpacePrimitiveRenderPriority();
-	void SetRenderCanvasDepthParameter(ULGUICanvas* InRenderCanvas, float InBlendDepth, int InDepthFade);
+	void SetRenderCanvasDepthParameter(ULexCanvas* InRenderCanvas, float InBlendDepth, int InDepthFade);
 
-	void SetScreenSpaceRootCanvas(ULGUICanvas* InCanvas);
+	void SetScreenSpaceRootCanvas(ULexCanvas* InCanvas);
 	void ClearScreenSpaceRootCanvas();
 
 	void UpdateRenderTargetRenderer(class UTextureRenderTarget2D* InRenderTarget);
@@ -127,7 +127,7 @@ private:
 		 * CAUTION! use this uobject pointer only in game-thread!
 		 * I use it in render-thread just as a pointer or a key, so it is safe here.
 		 */
-		ULGUICanvas* RenderCanvas = nullptr;
+		ULexCanvas* RenderCanvas = nullptr;
 		//blend depth, 0-occlude by depth, 1-all visible
 		float BlendDepth = 0.0f;
 		//depth fade effect
@@ -144,11 +144,11 @@ private:
 		bool bEnableDepthTest = false;
 		bool bNeedSortRenderPriority = true;
 
-		TWeakObjectPtr<ULGUICanvas> RootCanvas = nullptr;
+		TWeakObjectPtr<ULexCanvas> RootCanvas = nullptr;
 		TArray<ILexUIRendererPrimitive*> PrimitiveArray;
 	};
 	TArray<FWorldSpaceRenderParameter> WorldSpaceRenderCanvasParameterArray;
-	TMap<ULGUICanvas*, bool> WorldSpaceCanvasVisibilityMap;
+	TMap<ULexCanvas*, bool> WorldSpaceCanvasVisibilityMap;
 	bool bNeedSortWorldSpaceRenderCanvas = true;
 	bool bFrustumCulling = true;
 	FScreenSpaceRenderParameter ScreenSpaceRenderParameter;
@@ -157,7 +157,7 @@ private:
 	//if 'bIsRenderToRenderTarget' is true then we need a render target
 	class FTextureRenderTargetResource* RenderTargetResource = nullptr;
 	void SortScreenSpacePrimitiveRenderPriority_RenderThread();
-	void SetRenderCanvasDepthFade_RenderThread(ULGUICanvas* InRenderCanvas, float InBlendDepth, int InDepthFade);
+	void SetRenderCanvasDepthFade_RenderThread(ULexCanvas* InRenderCanvas, float InBlendDepth, int InDepthFade);
 	//render thread sample count for MSAA
 	uint8 NumSamples_MSAA = 1;
 	ELexUIRendererType RendererType = ELexUIRendererType::ScreenSpace_and_WorldSpace;

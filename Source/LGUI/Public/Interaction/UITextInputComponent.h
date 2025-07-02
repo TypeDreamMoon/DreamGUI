@@ -11,11 +11,12 @@
 #include "Widgets/Input/IVirtualKeyboardEntry.h"
 #include "GenericPlatform/ITextInputMethodSystem.h"
 #include "LGUIDelegateHandleWrapper.h"
-#include "LGUI/Public/Core/Components/UIText.h"
+#include "LGUI/Public/Core/Components/LexText.h"
 #include "Widgets/Layout/SBox.h"
 #include "UITextInputComponent.generated.h"
 
 
+class UUISprite;
 DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUITextInputDynamicDelegate, FString, InString);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUIInputActivateDynamicDelegate, bool, InActivate);
 
@@ -133,7 +134,7 @@ protected:
 protected:
 	friend class FUITextInputCustomization;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
-		TWeakObjectPtr<class AUITextActor> TextActor;
+		TWeakObjectPtr<ULexText> TextWidget;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
 		FString Text;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
@@ -153,7 +154,7 @@ protected:
 	//when use multiline mode and OverflowType is OverflowToMax, this is the max line count that can expend the input area
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input", meta=(EditCondition="OverflowType==ELGUITextInputOverflowType::OverflowToMax"))
 		int MaxLineCount = 5;
-	//when use singleline mode and OverflowType is OverflowToMax, this is the max width that can expend the input area
+	//when use SingleLine mode and OverflowType is OverflowToMax, this is the max width that can expend the input area
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input", meta=(EditCondition="OverflowType==ELGUITextInputOverflowType::OverflowToMax"))
 		float MaxLineWidth = 100;
 	/**
@@ -165,7 +166,7 @@ protected:
 		TArray<FKey> MultiLineSubmitFunctionKeys;
 	/** If PlaceHolderActor is a UITextActor, then mobile virtual keyboard's hint text will get from PlaceHolderActor. */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
-		TWeakObjectPtr<class AUIBaseActor> PlaceHolderActor;
+		TWeakObjectPtr<ULexWidget> PlaceHolder;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
 		float CaretBlinkRate = 0.5f;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
@@ -203,7 +204,7 @@ protected:
 	FLGUITextInputCustomInputTypeDelegate CustomInputTypeFunction;
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		class UUIText* GetTextComponent()const;
+		class ULexText* GetTextComponent()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		const FString& GetText()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
@@ -219,7 +220,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		const TArray<FKey>& GetMultiLineSubmitFunctionKeys()const { return MultiLineSubmitFunctionKeys; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		class AUIBaseActor* GetPlaceHolderActor()const { return PlaceHolderActor.Get(); }
+		ULexWidget* GetPlaceHolderActor()const { return PlaceHolder.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		float GetCaretBlinkRate()const { return CaretBlinkRate; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
@@ -257,7 +258,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		void SetMultiLineSubmitFunctionKeys(const TArray<FKey>& value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void SetPlaceHolderActor(class AUIBaseActor* value);
+		void SetPlaceHolder(ULexWidget* value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		void SetCaretBlinkRate(float value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
@@ -381,9 +382,9 @@ private:
 	void UpdateSelection();
 	void HideSelectionMask();
 	//a sprite for caret, can blink, can represent current caret location
-	UPROPERTY(Transient)TWeakObjectPtr<class UUISprite> CaretObject;
+	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> CaretWidget;
 	//selection mask
-	UPROPERTY(Transient)TArray<TWeakObjectPtr<class UUISprite>> SelectionMaskObjectArray;
+	UPROPERTY(Transient)TArray<TWeakObjectPtr<UUISprite>> SelectionMaskObjectArray;
 	//range selection
 	TArray<FUITextSelectionProperty> SelectionPropertyArray;
 	//Caret position of full text. caret is on left side of char

@@ -10,7 +10,7 @@
 #include "LGUIRenderTargetInteraction.h"
 #include "LGUIRenderTargetGeometrySource.generated.h"
 
-class ULGUICanvas;
+class ULexCanvas;
 class ULGUIWorldSpaceRaycasterSource;
 
 UENUM(BlueprintType, Category = LGUI)
@@ -62,7 +62,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = LGUI)
 		bool bFlipVerticalOnGLES = true;
 	mutable TWeakObjectPtr<class UStaticMeshComponent> StaticMeshComp = nullptr;
-	mutable TWeakObjectPtr<class ULGUICanvas> TargetCanvasObject = nullptr;
+	mutable TWeakObjectPtr<class ULexCanvas> TargetCanvasObject = nullptr;
 
 
 	/** The body setup of the displayed quad */
@@ -117,7 +117,7 @@ public:
 	//~ End Interface_CollisionDataProvider Interface
 
 	// Begin ILGUIRenderTargetInteractionSourceInterface
-	virtual ULGUICanvas* GetTargetCanvas_Implementation()const override;
+	virtual ULexCanvas* GetTargetCanvas_Implementation()const override;
 	virtual bool PerformLineTrace_Implementation(const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV)override;
 	// End ILGUIRenderTargetInteractionSourceInterface
 #if WITH_EDITOR
@@ -129,7 +129,7 @@ public:
 	const TArray<uint16> GetMeshIndices()const { return Triangles; }
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		ULGUICanvas* GetCanvas()const;
+		ULexCanvas* GetCanvas()const;
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		ELGUIRenderTargetGeometryMode GetGeometryMode()const { return GeometryMode; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
@@ -144,7 +144,7 @@ public:
 		bool GetFlipVerticalOnGLES()const { return bFlipVerticalOnGLES; }
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetCanvas(ULGUICanvas* Value);
+		void SetCanvas(ULexCanvas* Value);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetGeometryMode(ELGUIRenderTargetGeometryMode Value);
 	UFUNCTION(BlueprintCallable, Category = LGUI)

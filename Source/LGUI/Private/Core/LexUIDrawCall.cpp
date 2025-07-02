@@ -2,14 +2,14 @@
 
 #include "Core/LexUIDrawCall.h"
 #include "Core/LexUIGeometry.h"
-#include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
+#include "LGUI/Public/Core/Components/LexVisualBatchMesh.h"
 
 void FLexUIDrawCall::GetCombined(TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndexBufferType>& triangles)const
 {
-	int count = BatchMeshRenderObjectList.Num();
+	int count = BatchMeshVisualObjectList.Num();
 	if (count == 1)
 	{
-		auto uiGeo = BatchMeshRenderObjectList[0]->GetGeometry();
+		auto uiGeo = BatchMeshVisualObjectList[0]->GetGeometry();
 		vertices = uiGeo->Vertices;
 		triangles = uiGeo->Triangles;
 	}
@@ -21,7 +21,7 @@ void FLexUIDrawCall::GetCombined(TArray<FLexUIMeshVertex>& vertices, TArray<FLex
 		triangles.SetNumUninitialized(this->IndicesCount);
 		for (int geoIndex = 0; geoIndex < count; geoIndex++)
 		{
-			auto uiGeo = BatchMeshRenderObjectList[geoIndex]->GetGeometry();
+			auto uiGeo = BatchMeshVisualObjectList[geoIndex]->GetGeometry();
 			auto& geomTriangles = uiGeo->Triangles;
 			int triangleCount = geomTriangles.Num();
 			if (triangleCount <= 0)continue;
@@ -47,7 +47,7 @@ void FLexUIDrawCall::CopyUpdateState(FLexUIDrawCall* Target)
 
 bool FLexUIDrawCall::CanConsumeUIGeometryForBatchMesh(FLexUIGeometry* geo, int32 itemVertCount)
 {
-	if (this->Type != ELexUIDrawCallType::BatchGeometry)return false;
+	if (this->Type != ELexUIDrawCallType::BatchMesh)return false;
 	if (this->Material != geo->Material)return false;
 	if (geo->bIsFont)
 	{

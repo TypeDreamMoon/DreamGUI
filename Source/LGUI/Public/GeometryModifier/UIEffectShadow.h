@@ -2,12 +2,12 @@
 
 #pragma once
 
-#include "UIGeometryModifierBase.h"
+#include "LexUIMeshModifierBase.h"
 #include "UIEffectShadow.generated.h"
 
 
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIEffectShadow : public UUIGeometryModifierBase
+class LGUI_API UUIEffectShadow : public ULexUIMeshModifierBase
 {
 	GENERATED_BODY()
 

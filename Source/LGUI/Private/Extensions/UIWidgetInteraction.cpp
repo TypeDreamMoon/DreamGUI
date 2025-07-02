@@ -10,6 +10,7 @@
 
 #define LOCTEXT_NAMESPACE "UIWidgetInteraction"
 
+#if 0
 UUIWidgetInteractionManager* UUIWidgetInteractionManager::Instance = nullptr;
 
 UUIWidgetInteraction::UUIWidgetInteraction()
@@ -210,7 +211,9 @@ bool UUIWidgetInteraction::CanInteractWithComponent(UUIWidget* Component) const
 
 	if (Component)
 	{
-		bCanInteract = !GetWorld()->IsPaused() || Component->PrimaryComponentTick.bTickEvenWhenPaused;
+		bCanInteract = !GetWorld()->IsPaused()
+		//|| Component->PrimaryComponentTick.bTickEvenWhenPaused;
+		;
 	}
 
 	return bCanInteract;
@@ -563,5 +566,5 @@ FVector2D UUIWidgetInteraction::Get2DHitLocation() const
 {
 	return LocalHitLocation;
 }
-
+#endif
 #undef LOCTEXT_NAMESPACE

@@ -2,7 +2,7 @@
 
 #pragma once
 #include "CoreMinimal.h"
-#include "LGUI/Public/Core/Components/UIBaseRenderable.h"
+#include "LGUI/Public/Core/Components/LexVisual.h"
 #include "UIRenderableCustomRaycastExtensions.generated.h"
 
 #if 0
@@ -29,7 +29,7 @@ public:
 	 *			3. UIText which use dynamic font can not work.
  */
 UCLASS(ClassGroup = (LGUI), BlueprintType)
-class LGUI_API UUIRenderableCustomRaycast_VisiblePixel : public UUIRenderableCustomRaycast
+class LGUI_API UUIRenderableCustomRaycast_VisiblePixel : public ULexVisualCustomRaycast
 {
 	GENERATED_BODY()
 protected:
@@ -39,7 +39,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		uint8 PixelChannel = 3;
 public:
-	virtual bool Raycast(UUIBaseRenderable* InUIRenderable, const FVector& InLocalSpaceRayStart, const FVector& InLocalSpaceRayEnd, FVector& OutHitPoint, FVector& OutHitNormal)override;
+	virtual bool Raycast(const ULexVisual* InVisual, const FVector& InLocalSpaceRayStart, const FVector& InLocalSpaceRayEnd, FVector& OutHitPoint, FVector& OutHitNormal)const override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		float GetVisibilityThreshold()const { return VisibilityThreshold; }

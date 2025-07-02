@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "UIGeometryModifierBase.h"
+#include "LexUIMeshModifierBase.h"
 #include "LTweener.h"
 #include "UIEffectTextAnimation.generated.h"
 
@@ -27,12 +27,12 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, Category = "Property", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 		float offset = 0.5f;
-	class UUIText* GetUIText()const;
+	class ULexText* GetUIText()const;
 	class UUIEffectTextAnimation* GetUIEffectTextAnimation()const;
 private:
 	mutable TWeakObjectPtr<class UUIEffectTextAnimation> UIEffectTextAnimation = nullptr;
 public:
-	virtual bool Select(class UUIText* InUIText, FUIEffectTextAnimation_SelectResult& OutSelection) PURE_VIRTUAL(UUIEffectTextAnimation_Selector::Select, return false;);
+	virtual bool Select(class ULexText* InUIText, FUIEffectTextAnimation_SelectResult& OutSelection) PURE_VIRTUAL(UUIEffectTextAnimation_Selector::Select, return false;);
 	
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		float GetOffset()const { return offset; }
@@ -46,17 +46,17 @@ class LGUI_API UUIEffectTextAnimation_Property : public UObject
 {
 	GENERATED_BODY()
 protected:
-	class UUIText* GetUIText();
+	class ULexText* GetUIText();
 	void MarkUITextPositionDirty();
 public:
 	virtual void Init() {};
 	virtual void Deinit() {};
-	virtual void ApplyProperty(class UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) PURE_VIRTUAL(UUIEffectTextAnimation_Property::ApplyEffect, );
+	virtual void ApplyProperty(class ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) PURE_VIRTUAL(UUIEffectTextAnimation_Property::ApplyEffect, );
 };
 
 //per character animation control for UIText
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIEffectTextAnimation : public UUIGeometryModifierBase
+class LGUI_API UUIEffectTextAnimation : public ULexUIMeshModifierBase
 {
 	GENERATED_BODY()
 
@@ -73,11 +73,11 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		mutable float selectorOffset = 0.0f;
 
-	UPROPERTY(Transient)TObjectPtr<class UUIText> uiText;
+	UPROPERTY(Transient)TObjectPtr<class ULexText> uiText;
 	FUIEffectTextAnimation_SelectResult selection;
 	bool CheckUIText();
 	virtual void BeginPlay()override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason)override;
+	virtual void EndPlay()override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
 #endif
@@ -85,7 +85,7 @@ public:
 	virtual void ModifyUIGeometry(FLexUIGeometry& InGeometry
 		, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 	)override;
-	class UUIText* GetUIText();
+	class ULexText* GetUIText();
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		UUIEffectTextAnimation_Selector* GetSelector()const { return selector; }

@@ -2,19 +2,18 @@
 
 #include "GeometryModifier/UIEffectTextAnimation.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UIText.h"
+#include "LGUI/Public/Core/Components/LexText.h"
 
 
 UUIEffectTextAnimation::UUIEffectTextAnimation()
 {
-	PrimaryComponentTick.bCanEverTick = false;
 }
 bool UUIEffectTextAnimation::CheckUIText()
 {
 	if (IsValid(uiText))return true;
-	if (auto uiRenderable = GetUIRenderable())
+	if (auto uiRenderable = GetLexVisual())
 	{
-		uiText = Cast<UUIText>(uiRenderable);
+		uiText = Cast<ULexText>(uiRenderable);
 		if (IsValid(uiText))
 		{
 			return true;
@@ -33,9 +32,9 @@ void UUIEffectTextAnimation::BeginPlay()
 		}
 	}
 }
-void UUIEffectTextAnimation::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void UUIEffectTextAnimation::EndPlay()
 {
-	Super::EndPlay(EndPlayReason);
+	Super::EndPlay();
 	for (auto propertyItem : properties)
 	{
 		if (IsValid(propertyItem))
@@ -87,7 +86,7 @@ void UUIEffectTextAnimation::ModifyUIGeometry(
 		}
 	}
 }
-UUIText* UUIEffectTextAnimation::GetUIText()
+ULexText* UUIEffectTextAnimation::GetUIText()
 {
 	CheckUIText();
 	return uiText;
@@ -137,7 +136,7 @@ void UUIEffectTextAnimation::SetProperty(int index, UUIEffectTextAnimation_Prope
 	}
 }
 
-UUIText* UUIEffectTextAnimation_Selector::GetUIText()const
+ULexText* UUIEffectTextAnimation_Selector::GetUIText()const
 {
 	GetUIEffectTextAnimation();
 	return UIEffectTextAnimation.IsValid() ? UIEffectTextAnimation->GetUIText() : nullptr;
@@ -193,7 +192,7 @@ void UUIEffectTextAnimation::SetSelectorOffset(float value)
 	}
 }
 
-UUIText* UUIEffectTextAnimation_Property::GetUIText()
+ULexText* UUIEffectTextAnimation_Property::GetUIText()
 {
 	if (auto outter = this->GetOuter())
 	{

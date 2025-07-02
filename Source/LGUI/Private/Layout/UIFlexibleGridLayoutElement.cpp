@@ -3,7 +3,7 @@
 #include "Layout/UIFlexibleGridLayoutElement.h"
 #include "Layout/UIFlexibleGridLayout.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
 
 void UUIFlexibleGridLayoutElement::Awake()
 {

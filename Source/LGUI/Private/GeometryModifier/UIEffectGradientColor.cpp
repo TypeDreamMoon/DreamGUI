@@ -3,11 +3,10 @@
 #include "GeometryModifier/UIEffectGradientColor.h"
 #include "LGUI.h"
 #include "Utils/LexUIUtils.h"
-#include "LGUI/Public/Core/Components/UIText.h"
+#include "LGUI/Public/Core/Components/LexText.h"
 
 UUIEffectGradientColor::UUIEffectGradientColor()
 {
-	PrimaryComponentTick.bCanEverTick = false;
 }
 void UUIEffectGradientColor::ApplyColorAndAlpha(FColor& InOutColor, FColor InTintColor)
 {

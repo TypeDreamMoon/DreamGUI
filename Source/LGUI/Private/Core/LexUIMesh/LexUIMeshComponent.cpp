@@ -10,12 +10,12 @@
 #include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
 #include "Engine/Engine.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "Materials/MaterialRenderProxy.h"
 #include "MaterialDomain.h"
 #include "PrimitiveSceneProxy.h"
-#include "Core/UIPostProcessRenderProxy.h"
-#include "LGUI/Public/Core/Components/UIPostProcessRenderable.h"
+#include "Core/LexVisualPostProcessRenderProxy.h"
+#include "LGUI/Public/Core/Components/LexVisualPostProcess.h"
 #include "PrimitiveSceneInfo.h"
 
 
@@ -173,7 +173,7 @@ struct FLexUIPostProcessSectionProxy : public FLexUIRenderSectionProxy
 		Type = ELexUIRenderSectionType::PostProcess;
 	}
 
-	TWeakPtr<FUIPostProcessRenderProxy> PostProcessRenderProxy = nullptr;
+	TWeakPtr<FLexVisualPostProcessRenderProxy> PostProcessRenderProxy = nullptr;
 };
 struct FLexUIChildCanvasSectionProxy : public FLexUIRenderSectionProxy
 {
@@ -197,7 +197,7 @@ public:
 		static size_t UniquePointer;
 		return reinterpret_cast<size_t>(&UniquePointer);
 	}
-	FLexUIRenderSceneProxy(ULexUIMeshComponent* InComponent, ULGUICanvas* InCanvasPtr, int32 InCanvasSortOrder, FLexUIRenderSceneProxy* InParentSceneProxy)
+	FLexUIRenderSceneProxy(ULexUIMeshComponent* InComponent, ULexCanvas* InCanvasPtr, int32 InCanvasSortOrder, FLexUIRenderSceneProxy* InParentSceneProxy)
 		: FPrimitiveSceneProxy(InComponent)
 		, MaterialRelevance(InComponent->GetMaterialRelevance(GetScene().GetFeatureLevel()))
 		, RenderPriority(InComponent->TranslucencySortPriority)
@@ -716,7 +716,7 @@ public:
 		}
 	}
 
-	virtual FUIPostProcessRenderProxy* GetPostProcessElement(const void* SectionPtr)const override
+	virtual FLexVisualPostProcessRenderProxy* GetPostProcessElement(const void* SectionPtr)const override
 	{
 		auto RenderSection = (FLexUIRenderSectionProxy*)SectionPtr;
 		check(RenderSection->Type == ELexUIRenderSectionType::PostProcess);
@@ -865,7 +865,7 @@ private:
 	bool bIsSupportUERenderer = true;
 	bool bIsLexUIRenderToWorld = false;
 	bool bNeedToSortRenderSections = true;
-	ULGUICanvas* RenderCanvasPtr = nullptr;
+	ULexCanvas* RenderCanvasPtr = nullptr;
 #if !UE_BUILD_SHIPPING
 	FName DebugName;
 	static uint32 DebugNameIndex;
@@ -907,8 +907,8 @@ void FLexUIPostProcessSection::UpdateSectionBox(const FTransform& LocalToWorld)
 
 	FVector2D Min, Max;
 	PostProcessRenderableObject->GetGeometryBoundsInLocalSpace(Min, Max);
-	auto WorldMin = PostProcessRenderableObject->GetComponentToWorld().TransformPosition(FVector(0, Min.X, Min.Y));
-	auto WorldMax = PostProcessRenderableObject->GetComponentToWorld().TransformPosition(FVector(0, Max.X, Max.Y));
+	auto WorldMin = PostProcessRenderableObject->GetWidget()->GetComponentToWorld().TransformPosition(FVector(0, Min.X, Min.Y));
+	auto WorldMax = PostProcessRenderableObject->GetWidget()->GetComponentToWorld().TransformPosition(FVector(0, Max.X, Max.Y));
 	BoundingBox += WorldMin;
 	BoundingBox += WorldMax;
 }
@@ -1214,7 +1214,7 @@ FPrimitiveSceneProxy* ULexUIMeshComponent::CreateSceneProxy()
 	return Proxy;
 }
 
-void ULexUIMeshComponent::SetRenderCanvas(ULGUICanvas* InCanvas)
+void ULexUIMeshComponent::SetRenderCanvas(ULexCanvas* InCanvas)
 {
 	RenderCanvas = InCanvas;
 }

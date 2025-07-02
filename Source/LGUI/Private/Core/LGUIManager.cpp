@@ -3,18 +3,15 @@
 #include "Core/LGUIManager.h"
 #include "LGUI.h"
 #include "Utils/LexUIUtils.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
-#include "LGUI/Public/Core/Components/UIText.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "Event/LGUIBaseRaycaster.h"
 #include "Engine/World.h"
 #include "Interaction/UISelectableComponent.h"
 #include "Core/LGUISettings.h"
 #include "Event/InputModule/LGUIBaseInputModule.h"
-#include "Core/Actor/UIBaseActor.h"
-#include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
-#include "LGUI/Public/Core/Components/UIBaseRenderable.h"
-#include "LGUI/Public/Core/Components/UIPostProcessRenderable.h"
+#include "Core/Actor/LexWidgetActor.h"
+#include "LGUI/Public/Core/Components/LexVisual.h"
 #include "Engine/Engine.h"
 #include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
 #include "Core/ILGUICultureChangedInterface.h"
@@ -25,13 +22,10 @@
 #if WITH_EDITOR
 #include "Editor.h"
 #include "DrawDebugHelpers.h"
-#include "Engine/Selection.h"
 #include "EditorViewportClient.h"
 #include "PrefabSystem/LGUIPrefab.h"
-#include "EngineUtils.h"
 #include "Layout/LGUICanvasScaler.h"
 #include "Core/LexUISpriteData.h"
-#include "Core/Actor/UIContainerActor.h"
 #endif
 
 #define LOCTEXT_NAMESPACE "LGUIManagerObject"
@@ -56,8 +50,8 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 				auto BRoot = B->GetRootComponent();
 				if (ARoot != nullptr && BRoot != nullptr)
 				{
-					auto AUIRoot = Cast<UUIItem>(ARoot);
-					auto BUIRoot = Cast<UUIItem>(BRoot);
+					auto AUIRoot = Cast<ULexWidget>(ARoot);
+					auto BUIRoot = Cast<ULexWidget>(BRoot);
 					if (AUIRoot != nullptr && BUIRoot != nullptr)
 					{
 						return AUIRoot->GetHierarchyIndex() < BUIRoot->GetHierarchyIndex();//compare hierarch index for UI actor
@@ -74,7 +68,7 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 		ULGUIPrefabManagerObject::OnDeserialize_ProcessComponentsBeforeRerunConstructionScript.BindStatic([](const TArray<UActorComponent*>& Components) {
 			for (auto& Comp : Components)
 			{
-				if (auto UIItem = Cast<UUIItem>(Comp))
+				if (auto UIItem = Cast<ULexWidget>(Comp))
 				{
 					UIItem->CalculateTransformFromAnchor();
 				}
@@ -88,30 +82,30 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 				//find hit UIBatchMeshRenderable
 				auto LineStart = RayOrigin;
 				auto LineEnd = RayOrigin + RayDirection * LineTraceLength;
-				UUIBaseRenderable* ClickHitUI = nullptr;
-				static TArray<UUIItem*> AllUIItemArray;
+				ULexVisual* ClickHitUI = nullptr;
+				static TArray<ULexWidget*> AllUIItemArray;
 				AllUIItemArray.Reset();
 				{
-					for (auto& CanvasItem : LGUIManager->GetCanvasArray(ELGUIRenderMode::ScreenSpaceOverlay))
+					for (auto& CanvasItem : LGUIManager->GetCanvasArray(ELexRenderMode::ScreenSpaceOverlay))
 					{
-						AllUIItemArray.Append(CanvasItem->GetUIItemArray());
+						AllUIItemArray.Append(CanvasItem->GetVisualWidgetArray());
 					}
-					for (auto& CanvasItem : LGUIManager->GetCanvasArray(ELGUIRenderMode::RenderTarget))
+					for (auto& CanvasItem : LGUIManager->GetCanvasArray(ELexRenderMode::RenderTarget))
 					{
-						AllUIItemArray.Append(CanvasItem->GetUIItemArray());
+						AllUIItemArray.Append(CanvasItem->GetVisualWidgetArray());
 					}
-					for (auto& CanvasItem : LGUIManager->GetCanvasArray(ELGUIRenderMode::WorldSpace))
+					for (auto& CanvasItem : LGUIManager->GetCanvasArray(ELexRenderMode::WorldSpace))
 					{
-						AllUIItemArray.Append(CanvasItem->GetUIItemArray());
+						AllUIItemArray.Append(CanvasItem->GetVisualWidgetArray());
 					}
-					for (auto& CanvasItem : LGUIManager->GetCanvasArray(ELGUIRenderMode::WorldSpace_LGUI))
+					for (auto& CanvasItem : LGUIManager->GetCanvasArray(ELexRenderMode::WorldSpace_LGUI))
 					{
-						AllUIItemArray.Append(CanvasItem->GetUIItemArray());
+						AllUIItemArray.Append(CanvasItem->GetVisualWidgetArray());
 					}
 				}
 				if (ULGUIManagerWorldSubsystem::RaycastHitUI(World, AllUIItemArray, LineStart, LineEnd, ClickHitUI, ULGUIEditorManagerObject::IndexOfClickSelectUI))
 				{
-					ClickHitActor = ClickHitUI->GetOwner();
+					ClickHitActor = ClickHitUI->GetWidget()->GetOwner();
 				}
 			}
 			});
@@ -121,25 +115,25 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 
 		ULGUIPrefabManagerObject::OnPrefabEditor_CreateRootAgent.BindStatic([](UWorld* World, UClass* RootActorClass, ULGUIPrefab* Prefab, AActor*& OutCreatedRootAgentActor)
 			{
-				if (RootActorClass->IsChildOf(AUIBaseActor::StaticClass()))//ui
+				if (RootActorClass->IsChildOf(ALexWidgetActor::StaticClass()))//ui
 				{
 					auto CanvasSize = Prefab->PrefabDataForPrefabEditor.CanvasSize;
 					//create Canvas for UI
-					auto RootUICanvasActor = (AUIContainerActor*)(World->SpawnActor<AActor>(AUIContainerActor::StaticClass(), FTransform::Identity));
+					auto RootUICanvasActor = World->SpawnActor<ALexWidgetActor>(ALexWidgetActor::StaticClass(), FTransform::Identity);
 					RootUICanvasActor->GetRootComponent()->SetWorldLocationAndRotationNoPhysics(FVector::ZeroVector, FRotator(0, 0, 0));
 
 					if (Prefab->PrefabDataForPrefabEditor.bNeedCanvas)
 					{
-						auto RenderMode = (ELGUIRenderMode)Prefab->PrefabDataForPrefabEditor.CanvasRenderMode;
-						auto CanvasComp = NewObject<ULGUICanvas>(RootUICanvasActor);
+						auto RenderMode = (ELexRenderMode)Prefab->PrefabDataForPrefabEditor.CanvasRenderMode;
+						auto CanvasComp = NewObject<ULexCanvas>(RootUICanvasActor);
 						CanvasComp->RegisterComponent();
 						RootUICanvasActor->AddInstanceComponent(CanvasComp);
 						CanvasComp->SetRenderMode(RenderMode);
 					}
 
-					RootUICanvasActor->GetUIItem()->SetWidth(CanvasSize.X);
-					RootUICanvasActor->GetUIItem()->SetHeight(CanvasSize.Y);
-					RootUICanvasActor->GetUIItem()->SetHierarchyIndex(0);
+					RootUICanvasActor->GetLexWidget()->SetWidth(CanvasSize.X);
+					RootUICanvasActor->GetLexWidget()->SetHeight(CanvasSize.Y);
+					RootUICanvasActor->GetLexWidget()->SetHierarchyIndex(0);
 
 					OutCreatedRootAgentActor = RootUICanvasActor;
 				}
@@ -161,7 +155,7 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_GetBounds.BindStatic([](USceneComponent* SceneComp, FBox& OutBounds, bool& OutValidBounds)
 			{
-				if (auto UIItem = Cast<UUIItem>(SceneComp))
+				if (auto UIItem = Cast<ULexWidget>(SceneComp))
 				{
 					if (UIItem->GetIsUIActiveInHierarchy())
 					{
@@ -177,11 +171,11 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_SavePrefab.BindStatic([](AActor* RootAgentActor, ULGUIPrefab* Prefab)
 			{
-				if (auto UIItem = Cast<UUIItem>(RootAgentActor->GetRootComponent()))
+				if (auto UIItem = Cast<ULexWidget>(RootAgentActor->GetRootComponent()))
 				{
 					Prefab->PrefabDataForPrefabEditor.CanvasSize = FIntPoint(UIItem->GetWidth(), UIItem->GetHeight());
 				}
-				if (auto Canvas = RootAgentActor->FindComponentByClass<ULGUICanvas>())
+				if (auto Canvas = RootAgentActor->FindComponentByClass<ULexCanvas>())
 				{
 					Prefab->PrefabDataForPrefabEditor.bNeedCanvas = true;
 					Prefab->PrefabDataForPrefabEditor.CanvasRenderMode = (uint8)Canvas->GetRenderMode();
@@ -195,18 +189,18 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 			ULGUIManagerWorldSubsystem::RefreshAllUI();
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_ReplaceObjectPropertyForApplyOrRevert.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, FName& InPropertyName) {
-			if (auto UIItem = Cast<UUIItem>(InObject))
+			if (auto UIItem = Cast<ULexWidget>(InObject))
 			{
 				if (InPropertyName == USceneComponent::GetRelativeLocationPropertyName())
 				{
-					InPropertyName = UUIItem::GetAnchorDataPropertyName();
+					InPropertyName = ULexWidget::GetAnchorDataPropertyName();
 				}
 			}
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_AfterObjectPropertyApplyOrRevert.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, FName InPropertyName) {
-			if (auto UIItem = Cast<UUIItem>(InObject))
+			if (auto UIItem = Cast<ULexWidget>(InObject))
 			{
-				if (InPropertyName == UUIItem::GetAnchorDataPropertyName())
+				if (InPropertyName == ULexWidget::GetAnchorDataPropertyName())
 				{
 					UIItem->CalculateTransformFromAnchor();//calculate transform here, because when NotifyPropertyChanged the PostActorConstruction->MoveComponent will call then anchor will calculate from transform value which is wrong
 					PrefabHelper->RemoveMemberPropertyFromSubPrefab(UIItem->GetOwner(), InObject, USceneComponent::GetRelativeLocationPropertyName());//remove RelativeLocation override because UIItem use AnchorData to calculate RelativeLocation
@@ -216,27 +210,27 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 		ULGUIPrefabManagerObject::OnPrefabEditor_AfterMakePrefabAsSubPrefab.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, AActor* InRootActor) {
 			//mark HierarchyIndex as default override parameter
 			auto RootComp = InRootActor->GetRootComponent();
-			if (auto RootUIComp = Cast<UUIItem>(RootComp))
+			if (auto RootUIComp = Cast<ULexWidget>(RootComp))
 			{
-				PrefabHelper->AddMemberPropertyToSubPrefab(InRootActor, RootUIComp, UUIItem::GetHierarchyIndexPropertyName());
+				PrefabHelper->AddMemberPropertyToSubPrefab(InRootActor, RootUIComp, ULexWidget::GetHierarchyIndexPropertyName());
 			}
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_AfterCollectPropertyToOverride.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, FName InPropertyName) {
-			if (auto UIItem = Cast<UUIItem>(InObject))
+			if (auto UIItem = Cast<ULexWidget>(InObject))
 			{
 				if (InPropertyName == USceneComponent::GetRelativeLocationPropertyName())//if UI's relative location change, then record anchor data too
 				{
-					PrefabHelper->AddMemberPropertyToSubPrefab(UIItem->GetOwner(), InObject, UUIItem::GetAnchorDataPropertyName());
+					PrefabHelper->AddMemberPropertyToSubPrefab(UIItem->GetOwner(), InObject, ULexWidget::GetAnchorDataPropertyName());
 				}
-				else if (InPropertyName == UUIItem::GetAnchorDataPropertyName())//if UI's anchor data change, then record relative location too
+				else if (InPropertyName == ULexWidget::GetAnchorDataPropertyName())//if UI's anchor data change, then record relative location too
 				{
 					PrefabHelper->AddMemberPropertyToSubPrefab(UIItem->GetOwner(), InObject, USceneComponent::GetRelativeLocationPropertyName());
 				}
 			}
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_CopyRootObjectParentAnchorData.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, UObject* OriginObject) {
-			auto InObjectUIItem = Cast<UUIItem>(InObject);
-			auto OriginObjectUIItem = Cast<UUIItem>(OriginObject);
+			auto InObjectUIItem = Cast<ULexWidget>(InObject);
+			auto OriginObjectUIItem = Cast<ULexWidget>(OriginObject);
 			if (InObjectUIItem != nullptr && OriginObjectUIItem != nullptr)//if is UI item, we need to copy parent's property to origin object's parent property, to make anchor & location calculation right
 			{
 				auto InObjectParent = InObjectUIItem->GetParentUIItem();
@@ -248,7 +242,7 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 					RelativeLocationProperty->CopyCompleteValue_InContainer(OriginObjectParent, InObjectParent);
 					FLexUIUtils::NotifyPropertyChanged(OriginObjectParent, RelativeLocationProperty);
 					//copy anchor data
-					auto AnchorDataProperty = FindFProperty<FProperty>(InObjectParent->GetClass(), UUIItem::GetAnchorDataPropertyName());
+					auto AnchorDataProperty = FindFProperty<FProperty>(InObjectParent->GetClass(), ULexWidget::GetAnchorDataPropertyName());
 					AnchorDataProperty->CopyCompleteValue_InContainer(OriginObjectParent, InObjectParent);
 					FLexUIUtils::NotifyPropertyChanged(OriginObjectParent, AnchorDataProperty);
 				}
@@ -424,7 +418,7 @@ void ULGUIEditorManagerObject::OnActorLabelChanged(AActor* actor)
 	if (World->IsGameWorld())return;
 	if (auto rootComp = actor->GetRootComponent())
 	{
-		if (auto rootUIComp = Cast<UUIItem>(rootComp))
+		if (auto rootUIComp = Cast<ULexWidget>(rootComp))
 		{
 			auto actorLabel = actor->GetActorLabel();
 			if (actorLabel.StartsWith("//"))
@@ -484,7 +478,7 @@ uint32 ULGUIEditorManagerObject::GetViewportKeyFromIndex(int32 InViewportIndex)
 
 
 #if WITH_EDITOR
-void ULGUIManagerWorldSubsystem::DrawFrameOnUIItem(UUIItem* item, bool IsScreenSpace)
+void ULGUIManagerWorldSubsystem::DrawFrameOnUIItem(ULexWidget* item, bool IsScreenSpace)
 {
 	auto RectExtends = FVector(0.1f, item->GetWidth(), item->GetHeight()) * 0.5f;
 	bool bCanDrawRect = false;
@@ -495,10 +489,10 @@ void ULGUIManagerWorldSubsystem::DrawFrameOnUIItem(UUIItem* item, bool IsScreenS
 		RectExtends.X = 1;
 		bCanDrawRect = true;
 
-		if (auto UIRenderable = Cast<UUIBaseRenderable>(item))
+		if (auto Visual = Cast<ULexVisual>(item->GetVisual()))
 		{
 			FVector Min, Max;
-			UIRenderable->GetGeometryBounds3DInLocalSpace(Min, Max);
+			Visual->GetGeometryBounds3DInLocalSpace(Min, Max);
 			auto WorldTransform = item->GetComponentTransform();
 			FVector Center = (Max + Min) * 0.5f;
 			auto WorldLocation = WorldTransform.TransformPosition(Center);
@@ -526,7 +520,7 @@ void ULGUIManagerWorldSubsystem::DrawFrameOnUIItem(UUIItem* item, bool IsScreenS
 			}
 		}
 		//child selected
-		auto& childrenCompArray = item->GetAttachUIChildren();
+		auto& childrenCompArray = item->GetUIChildren();
 		for (auto& uiComp : childrenCompArray)
 		{
 			if (IsValid(uiComp) && IsValid(uiComp->GetOwner()) && ULGUIPrefabManagerObject::IsSelected(uiComp->GetOwner()))
@@ -538,7 +532,7 @@ void ULGUIManagerWorldSubsystem::DrawFrameOnUIItem(UUIItem* item, bool IsScreenS
 		//other object of same hierarchy is selected
 		if (IsValid(item->GetParentUIItem()))
 		{
-			const auto& sameLevelCompArray = item->GetParentUIItem()->GetAttachUIChildren();
+			const auto& sameLevelCompArray = item->GetParentUIItem()->GetUIChildren();
 			for (auto& uiComp : sameLevelCompArray)
 			{
 				if (IsValid(uiComp) && IsValid(uiComp->GetOwner()) && ULGUIPrefabManagerObject::IsSelected(uiComp->GetOwner()))
@@ -861,34 +855,35 @@ void ULGUIManagerWorldSubsystem::DrawDebugRectOnScreenSpace(UWorld* InWorld, FVe
 	}
 }
 
-bool ULGUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<UUIItem*>& InUIItems, const FVector& LineStart, const FVector& LineEnd
-	, UUIBaseRenderable*& ResultSelectTarget, int& InOutTargetIndexInHitArray
+bool ULGUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULexWidget*>& InWidgets, const FVector& LineStart, const FVector& LineEnd
+	, ULexVisual*& ResultSelectTarget, int& InOutTargetIndexInHitArray
 )
 {
 	TArray<FHitResult> HitResultArray;
-	for (auto uiItem : InUIItems)
+	for (auto WidgetItem : InWidgets)
 	{
-		if (!IsValid(uiItem))continue;
-		if (uiItem->GetWorld() == InWorld)
+		if (!IsValid(WidgetItem))continue;
+		if (WidgetItem->GetWorld() == InWorld)
 		{
-			if (auto uiRenderable = Cast<UUIBaseRenderable>(uiItem))
+			if (auto Visual = WidgetItem->GetVisual())
 			{
-				if (uiRenderable->GetIsUIActiveInHierarchy() && uiRenderable->GetRenderCanvas() != nullptr)
+				if (WidgetItem->IsVisibleForRender() && WidgetItem->GetRenderCanvas() != nullptr)
 				{
 					FHitResult hitInfo;
-					auto OriginRaycastType = uiRenderable->GetRaycastType();
-					auto OriginRaycastTarget = uiRenderable->IsRaycastTarget();
-					uiRenderable->SetRaycastType(EUIRenderableRaycastType::Mesh);//in editor selection, make the ray hit actural triangle
-					uiRenderable->SetRaycastTarget(true);
-					if (uiRenderable->LineTraceUI(hitInfo, LineStart, LineEnd))
+					auto OriginRaycastType = Visual->GetRaycastType();
+					auto OriginVisibility = WidgetItem->GetWidgetVisibility();
+					Visual->SetRaycastType(ELexVisualHitTestType::Mesh);//in editor selection, make the ray hit actural triangle
+					WidgetItem->SetWidgetVisibility(ESlateVisibility::Visible);
+					WidgetItem->SetWidgetVisibility(ESlateVisibility::Visible);
+					if (Visual->LineTraceUI(hitInfo, LineStart, LineEnd))
 					{
-						if (uiRenderable->IsPointVisibleOnClip(hitInfo.Location))
+						if (WidgetItem->IsPointVisibleOnClip(hitInfo.Location))
 						{
 							HitResultArray.Add(hitInfo);
 						}
 					}
-					uiRenderable->SetRaycastType(OriginRaycastType);
-					uiRenderable->SetRaycastTarget(OriginRaycastTarget);
+					Visual->SetRaycastType(OriginRaycastType);
+					WidgetItem->SetWidgetVisibility(OriginVisibility);
 				}
 			}
 		}
@@ -897,15 +892,15 @@ bool ULGUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<UUII
 	{
 		HitResultArray.Sort([](const FHitResult& A, const FHitResult& B)
 			{
-				auto AUIRenderable = (UUIBaseRenderable*)(A.Component.Get());
-				auto BUIRenderable = (UUIBaseRenderable*)(B.Component.Get());
-				if (AUIRenderable->GetRenderCanvas()->GetActualSortOrder() == BUIRenderable->GetRenderCanvas()->GetActualSortOrder())//if Canvas's sort order is equal then sort on item's depth
+				auto AWidget = (ULexWidget*)(A.Component.Get());
+				auto BWidget = (ULexWidget*)(B.Component.Get());
+				if (AWidget->GetRenderCanvas()->GetActualSortOrder() == BWidget->GetRenderCanvas()->GetActualSortOrder())//if Canvas's sort order is equal then sort on item's depth
 				{
-					return AUIRenderable->GetFlattenHierarchyIndex() > BUIRenderable->GetFlattenHierarchyIndex();
+					return AWidget->GetFlattenHierarchyIndex() > BWidget->GetFlattenHierarchyIndex();
 				}
 				else//if Canvas's depth not equal then sort on Canvas's SortOrder
 				{
-					return AUIRenderable->GetRenderCanvas()->GetActualSortOrder() > BUIRenderable->GetRenderCanvas()->GetActualSortOrder();
+					return AWidget->GetRenderCanvas()->GetActualSortOrder() > BWidget->GetRenderCanvas()->GetActualSortOrder();
 				}
 			});
 		InOutTargetIndexInHitArray++;
@@ -913,7 +908,7 @@ bool ULGUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<UUII
 		{
 			InOutTargetIndexInHitArray = 0;
 		}
-		auto uiRenderableComp = (UUIBaseRenderable*)(HitResultArray[InOutTargetIndexInHitArray].Component.Get());//target need to select
+		auto uiRenderableComp = (ULexVisual*)(HitResultArray[InOutTargetIndexInHitArray].Component.Get());//target need to select
 		ResultSelectTarget = uiRenderableComp;
 		return true;
 	}
@@ -1026,10 +1021,10 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 				)
 			{
 				auto bIsGameWorld = this->GetWorld()->IsGameWorld();
-				auto DrawFrame = [bIsGameWorld](const TArray<TWeakObjectPtr<ULGUICanvas>>& CanvasArray) {
+				auto DrawFrame = [bIsGameWorld](const TArray<TWeakObjectPtr<ULexCanvas>>& CanvasArray) {
 					for (auto& CanvasItem : CanvasArray)
 					{
-						auto& UIItemArray = CanvasItem->GetUIItemArray();
+						auto& UIItemArray = CanvasItem->GetVisualWidgetArray();
 						for (auto& UIItem : UIItemArray)
 						{
 							if (!IsValid(UIItem))continue;
@@ -1108,9 +1103,9 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 			auto item = LGUILifeCycleBehavioursForUpdate[i];
 			if (item.IsValid())
 			{
-				if (item->GetRootSceneComponent() && item->GetRootSceneComponent()->IsA(UUIItem::StaticClass()))
+				if (item->GetRootSceneComponent() && item->GetRootSceneComponent()->IsA(ULexWidget::StaticClass()))
 				{
-					auto uiItem = (UUIItem*)item->GetRootSceneComponent();
+					auto uiItem = (ULexWidget*)item->GetRootSceneComponent();
 					bool bAffectByGamePause;
 					if (uiItem->IsScreenSpaceOverlayUI())
 					{
@@ -1155,7 +1150,7 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 		{
 			if (item->IsRootCanvas())
 			{
-				if (item->GetActualRenderMode() == ELGUIRenderMode::ScreenSpaceOverlay)
+				if (item->GetActualRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
 				{
 					ScreenSpaceOverlayCanvasCount++;
 				}
@@ -1185,7 +1180,7 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 	//update drawcall
 	{
 		SCOPE_CYCLE_COUNTER(STAT_UpdateCanvas);
-		auto UpdateCanvas = [](TArray<TWeakObjectPtr<ULGUICanvas>>& InCanvasArray) {
+		auto UpdateCanvas = [](TArray<TWeakObjectPtr<ULexCanvas>>& InCanvasArray) {
 			for (auto& item : InCanvasArray)
 			{
 				if (item.IsValid())
@@ -1400,9 +1395,9 @@ void ULGUIManagerWorldSubsystem::ForceUpdateLayout(UObject* WorldContextObject)
 		}
 	}
 }
-void ULGUIManagerWorldSubsystem::RebuildLayout(UUIItem* InItem)
+void ULGUIManagerWorldSubsystem::RebuildLayout(ULexWidget* InItem)
 {
-	auto& Children = InItem->GetAttachUIChildren();
+	auto& Children = InItem->GetUIChildren();
 	for (auto& Child : Children)
 	{
 		RebuildLayout(Child);
@@ -1423,9 +1418,9 @@ void ULGUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 {
 	struct LOCAL
 	{
-		static void MarkRebuildLayoutRecursive(UUIItem* InUIItem)
+		static void MarkRebuildLayoutRecursive(ULexWidget* InUIItem)
 		{
-			auto& Children = InUIItem->GetAttachUIChildren();
+			auto& Children = InUIItem->GetUIChildren();
 			for (auto& Child : Children)
 			{
 				RebuildLayout(Child);
@@ -1463,7 +1458,7 @@ void ULGUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 }
 #endif
 
-void ULGUIManagerWorldSubsystem::AddRootUIItem(UUIItem* InItem)
+void ULGUIManagerWorldSubsystem::AddRootUIItem(ULexWidget* InItem)
 {
 	if (auto Instance = GetInstance(InItem->GetWorld()))
 	{
@@ -1477,7 +1472,7 @@ void ULGUIManagerWorldSubsystem::AddRootUIItem(UUIItem* InItem)
 		Instance->AllRootUIItemArray.AddUnique(InItem);
 	}
 }
-void ULGUIManagerWorldSubsystem::RemoveRootUIItem(UUIItem* InItem)
+void ULGUIManagerWorldSubsystem::RemoveRootUIItem(ULexWidget* InItem)
 {
 	if (auto Instance = GetInstance(InItem->GetWorld()))
 	{
@@ -1492,90 +1487,90 @@ void ULGUIManagerWorldSubsystem::RemoveRootUIItem(UUIItem* InItem)
 	}
 }
 
-void ULGUIManagerWorldSubsystem::AddCanvas(ULGUICanvas* InCanvas, ELGUIRenderMode InCurrentRenderMode)
+void ULGUIManagerWorldSubsystem::AddCanvas(ULexCanvas* InCanvas, ELexRenderMode InCurrentRenderMode)
 {
 	if (auto Instance = GetInstance(InCanvas->GetWorld()))
 	{
-		if (InCurrentRenderMode != ELGUIRenderMode::None)//none means canvas's property not ready yet, so no need to collect it, because it will be collected in "CanvasRenderModeChange" function
+		if (InCurrentRenderMode != ELexRenderMode::None)//none means canvas's property not ready yet, so no need to collect it, because it will be collected in "CanvasRenderModeChange" function
 		{
 			switch (InCurrentRenderMode)
 			{
-			case ELGUIRenderMode::ScreenSpaceOverlay:
+			case ELexRenderMode::ScreenSpaceOverlay:
 				Instance->ScreenSpaceCanvasArray.Add(InCanvas);
 				break;
-			case ELGUIRenderMode::WorldSpace:
+			case ELexRenderMode::WorldSpace:
 				Instance->WorldSpaceUECanvasArray.Add(InCanvas);
 				break;
-			case ELGUIRenderMode::WorldSpace_LGUI:
+			case ELexRenderMode::WorldSpace_LGUI:
 				Instance->WorldSpaceLGUICanvasArray.Add(InCanvas);
 				break;
-			case ELGUIRenderMode::RenderTarget:
+			case ELexRenderMode::RenderTarget:
 				Instance->RenderTargetSpaceLGUICanvasArray.Add(InCanvas);
 				break;
 			}
 		}
 	}
 }
-void ULGUIManagerWorldSubsystem::RemoveCanvas(ULGUICanvas* InCanvas, ELGUIRenderMode InCurrentRenderMode)
+void ULGUIManagerWorldSubsystem::RemoveCanvas(ULexCanvas* InCanvas, ELexRenderMode InCurrentRenderMode)
 {
 	if (auto Instance = GetInstance(InCanvas->GetWorld()))
 	{
 		switch (InCurrentRenderMode)
 		{
-		case ELGUIRenderMode::ScreenSpaceOverlay:
+		case ELexRenderMode::ScreenSpaceOverlay:
 			Instance->ScreenSpaceCanvasArray.Remove(InCanvas);
 			break;
-		case ELGUIRenderMode::WorldSpace:
+		case ELexRenderMode::WorldSpace:
 			Instance->WorldSpaceUECanvasArray.Remove(InCanvas);
 			break;
-		case ELGUIRenderMode::WorldSpace_LGUI:
+		case ELexRenderMode::WorldSpace_LGUI:
 			Instance->WorldSpaceLGUICanvasArray.Remove(InCanvas);
 			break;
-		case ELGUIRenderMode::RenderTarget:
+		case ELexRenderMode::RenderTarget:
 			Instance->RenderTargetSpaceLGUICanvasArray.Remove(InCanvas);
 			break;
 		}
 	}
 }
-void ULGUIManagerWorldSubsystem::CanvasRenderModeChange(ULGUICanvas* InCanvas, ELGUIRenderMode InOldRenderMode, ELGUIRenderMode InNewRenderMode)
+void ULGUIManagerWorldSubsystem::CanvasRenderModeChange(ULexCanvas* InCanvas, ELexRenderMode InOldRenderMode, ELexRenderMode InNewRenderMode)
 {
 	if (auto Instance = GetInstance(InCanvas->GetWorld()))
 	{
 		//remove from old
 		switch (InOldRenderMode)
 		{
-		case ELGUIRenderMode::ScreenSpaceOverlay:
+		case ELexRenderMode::ScreenSpaceOverlay:
 			Instance->ScreenSpaceCanvasArray.Remove(InCanvas);
 			break;
-		case ELGUIRenderMode::WorldSpace:
+		case ELexRenderMode::WorldSpace:
 			Instance->WorldSpaceUECanvasArray.Remove(InCanvas);
 			break;
-		case ELGUIRenderMode::WorldSpace_LGUI:
+		case ELexRenderMode::WorldSpace_LGUI:
 			Instance->WorldSpaceLGUICanvasArray.Remove(InCanvas);
 			break;
-		case ELGUIRenderMode::RenderTarget:
+		case ELexRenderMode::RenderTarget:
 			Instance->RenderTargetSpaceLGUICanvasArray.Remove(InCanvas);
 			break;
 		}
 		//add to new
 		switch (InNewRenderMode)
 		{
-		case ELGUIRenderMode::ScreenSpaceOverlay:
+		case ELexRenderMode::ScreenSpaceOverlay:
 			Instance->ScreenSpaceCanvasArray.Add(InCanvas);
 			break;
-		case ELGUIRenderMode::WorldSpace:
+		case ELexRenderMode::WorldSpace:
 			Instance->WorldSpaceUECanvasArray.Add(InCanvas);
 			break;
-		case ELGUIRenderMode::WorldSpace_LGUI:
+		case ELexRenderMode::WorldSpace_LGUI:
 			Instance->WorldSpaceLGUICanvasArray.Add(InCanvas);
 			break;
-		case ELGUIRenderMode::RenderTarget:
+		case ELexRenderMode::RenderTarget:
 			Instance->RenderTargetSpaceLGUICanvasArray.Add(InCanvas);
 			break;
 		}
 	}
 }
-const TArray<TWeakObjectPtr<ULGUICanvas>>& ULGUIManagerWorldSubsystem::GetCanvasArray(ELGUIRenderMode RenderMode)
+const TArray<TWeakObjectPtr<ULexCanvas>>& ULGUIManagerWorldSubsystem::GetCanvasArray(ELexRenderMode RenderMode)
 {
 	switch (RenderMode)
 	{
@@ -1585,13 +1580,13 @@ const TArray<TWeakObjectPtr<ULGUICanvas>>& ULGUIManagerWorldSubsystem::GetCanvas
 		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
 #endif
 		return ScreenSpaceCanvasArray;
-	case ELGUIRenderMode::ScreenSpaceOverlay:
+	case ELexRenderMode::ScreenSpaceOverlay:
 		return ScreenSpaceCanvasArray;
-	case ELGUIRenderMode::WorldSpace:
+	case ELexRenderMode::WorldSpace:
 		return WorldSpaceUECanvasArray;
-	case ELGUIRenderMode::WorldSpace_LGUI:
+	case ELexRenderMode::WorldSpace_LGUI:
 		return WorldSpaceLGUICanvasArray;
-	case ELGUIRenderMode::RenderTarget:
+	case ELexRenderMode::RenderTarget:
 		return RenderTargetSpaceLGUICanvasArray;
 	}
 }

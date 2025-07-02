@@ -2,12 +2,12 @@
 
 #include "Layout/UISizeControlByOther.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
-#include "Core/Actor/UIBaseActor.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
+#include "Core/Actor/LexWidgetActor.h"
 
 DECLARE_CYCLE_STAT(TEXT("UILayout SizeControlByOtherRebuildLayout"), STAT_SizeControlByOther, STATGROUP_LGUI);
 
-void UUISizeControlByOther::SetTargetActor(AUIBaseActor* value)
+void UUISizeControlByOther::SetTargetActor(ALexWidgetActor* value)
 {
     if (TargetActor != value)
     {
@@ -121,7 +121,7 @@ bool UUISizeControlByOther::CheckTargetUIItem()
         return false;
     if (!TargetUIItem.IsValid())
     {
-        TargetUIItem = TargetActor->GetUIItem();
+        TargetUIItem = TargetActor->GetLexWidget();
         //delete old
         if (HelperComp.IsValid())
         {
@@ -172,7 +172,7 @@ void UUISizeControlByOther::OnRebuildLayout()
     }
 }
 
-bool UUISizeControlByOther::GetCanLayoutControlAnchor_Implementation(class UUIItem* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
+bool UUISizeControlByOther::GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
 {
     if (this->GetRootUIComponent() == InUIItem)
     {

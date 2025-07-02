@@ -7,7 +7,6 @@
 
 UUIEffectLongShadow::UUIEffectLongShadow()
 {
-	PrimaryComponentTick.bCanEverTick = false;
 }
 
 void UUIEffectLongShadow::ApplyColorAndAlpha(FColor& InOutColor, FColor InTintColor, uint8 InOriginAlpha)
@@ -116,7 +115,7 @@ void UUIEffectLongShadow::SetShadowColor(FColor newColor)
 	if (shadowColor != newColor)
 	{
 		shadowColor = newColor;
-		if (GetUIRenderable())GetUIRenderable()->MarkColorDirty();
+		if (GetLexVisual())GetLexVisual()->MarkColorDirty();
 	}
 }
 void UUIEffectLongShadow::SetShadowSize(FVector newSize)
@@ -124,7 +123,7 @@ void UUIEffectLongShadow::SetShadowSize(FVector newSize)
 	if (shadowSize != newSize)
 	{
 		shadowSize = newSize;
-		if (GetUIRenderable())GetUIRenderable()->MarkVertexPositionDirty();
+		if (GetLexVisual())GetLexVisual()->MarkVertexPositionDirty();
 	}
 }
 void UUIEffectLongShadow::SetShadowSegment(uint8 newSegment)
@@ -132,7 +131,7 @@ void UUIEffectLongShadow::SetShadowSegment(uint8 newSegment)
 	if (shadowSegment != newSegment)
 	{
 		shadowSegment = newSegment;
-		if (GetUIRenderable())GetUIRenderable()->MarkVerticesDirty(true, true, true, true);
+		if (GetLexVisual())GetLexVisual()->MarkVerticesDirty(true, true, true, true);
 	}
 }
 void UUIEffectLongShadow::SetUseGradientColor(bool newBool)
@@ -140,7 +139,7 @@ void UUIEffectLongShadow::SetUseGradientColor(bool newBool)
 	if (useGradientColor != newBool)
 	{
 		useGradientColor = newBool;
-		if (GetUIRenderable())GetUIRenderable()->MarkColorDirty();
+		if (GetLexVisual())GetLexVisual()->MarkColorDirty();
 	}
 }
 void UUIEffectLongShadow::SetGradientColor(FColor newColor)
@@ -148,6 +147,6 @@ void UUIEffectLongShadow::SetGradientColor(FColor newColor)
 	if (shadowColor != newColor)
 	{
 		shadowColor = newColor;
-		if (GetUIRenderable())GetUIRenderable()->MarkColorDirty();
+		if (GetLexVisual())GetLexVisual()->MarkColorDirty();
 	}
 }

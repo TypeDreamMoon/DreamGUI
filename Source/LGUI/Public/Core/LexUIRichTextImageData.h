@@ -48,6 +48,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		float GetAnimationFps()const { return animationFps; }
 
-	virtual void CreateOrUpdateObject(class UUIItem* parent, const TArray<FUIText_RichTextImageTag>& imageTagArray, TArray<TObjectPtr<class UUIItem>>& inOutCreatedImageObjectArray, bool listImageObjectInEditorOutliner)override;
+	virtual void CreateOrUpdateObject(class ULexWidget* parent, const TArray<FUIText_RichTextImageTag>& imageTagArray, TArray<TObjectPtr<class ULexWidget>>& inOutCreatedImageObjectArray, bool listImageObjectInEditorOutliner)override;
 	virtual bool GetImageSize(const FName& imageTag, FIntVector2& outSize);
 };

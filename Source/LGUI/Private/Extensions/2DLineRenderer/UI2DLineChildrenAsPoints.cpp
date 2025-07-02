@@ -3,24 +3,15 @@
 #include "Extensions/2DLineRenderer/UI2DLineChildrenAsPoints.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 
 UUI2DLineChildrenAsPoints::UUI2DLineChildrenAsPoints(const FObjectInitializer &ObjectInitializer) : Super(ObjectInitializer)
 {
-    PrimaryComponentTick.bCanEverTick = false;
 }
 
 void UUI2DLineChildrenAsPoints::BeginPlay()
 {
     Super::BeginPlay();
-}
-
-AUI2DLineChildrenAsPointsActor::AUI2DLineChildrenAsPointsActor()
-{
-    PrimaryActorTick.bCanEverTick = false;
-
-    UIElement = CreateDefaultSubobject<UUI2DLineChildrenAsPoints>(TEXT("UIElement"));
-    RootComponent = UIElement;
 }
 
 void UUI2DLineChildrenAsPoints::OnRegister()
@@ -30,7 +21,7 @@ void UUI2DLineChildrenAsPoints::OnRegister()
 
 void UUI2DLineChildrenAsPoints::CalculatePoints()
 {
-    auto& SortedItemArray = this->GetAttachUIChildren();
+    auto& SortedItemArray = GetWidget()->GetUIChildren();
     int pointCount = SortedItemArray.Num();
     CurrentPointArray.Reset(pointCount);
     for (int i = 0; i < pointCount; i++)

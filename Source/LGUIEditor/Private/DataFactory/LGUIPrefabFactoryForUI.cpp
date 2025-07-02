@@ -1,11 +1,10 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DataFactory/LGUIPrefabFactoryForUI.h"
-#include "LGUIEditorModule.h"
+#include "Core/Actor/LexWidgetActor.h"
 #include "PrefabSystem/LGUIPrefab.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
-#include "Core/Actor/UIContainerActor.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabFactoryForUI"
 
@@ -21,7 +20,7 @@ UObject* ULGUIPrefabFactoryForUI::FactoryCreateNew(UClass* Class, UObject* InPar
 	ULGUIPrefab* NewAsset = NewObject<ULGUIPrefab>(InParent, ULGUIPrefab::StaticClass(), Name, Flags | RF_Transactional);
 	ULGUIPrefabHelperObject* HelperObject = NewObject<ULGUIPrefabHelperObject>(GetTransientPackage());
 	HelperObject->PrefabAsset = NewAsset;
-	HelperObject->LoadedRootActor = ULGUIPrefabManagerObject::GetPreviewWorldForPrefabPackage()->SpawnActor<AUIContainerActor>();
+	HelperObject->LoadedRootActor = ULGUIPrefabManagerObject::GetPreviewWorldForPrefabPackage()->SpawnActor<ALexWidgetActor>();
 	HelperObject->LoadedRootActor->SetActorLabel(TEXT("RootActor"));
 	if (!HelperObject->LoadedRootActor->GetRootComponent())
 	{

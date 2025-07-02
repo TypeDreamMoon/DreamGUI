@@ -2,12 +2,12 @@
 
 #include "Layout/UIPanelLayoutBase.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
 
 UUIPanelLayoutBase::UUIPanelLayoutBase()
 {
 }
-void UUIPanelLayoutBase::GetLayoutElement(UUIItem* InChild, UObject*& OutLayoutElement, bool& OutIgnoreLayout)const
+void UUIPanelLayoutBase::GetLayoutElement(ULexWidget* InChild, UObject*& OutLayoutElement, bool& OutIgnoreLayout)const
 {
     UUIPanelLayoutSlotBase* LayoutElement = nullptr;
     if (auto LayoutElementPtr = MapChildToSlot.Find(InChild))
@@ -28,23 +28,23 @@ void UUIPanelLayoutBase::RebuildChildrenList()const
     Super::RebuildChildrenList();
     const_cast<UUIPanelLayoutBase*>(this)->CleanMapChildToSlot();
 }
-void UUIPanelLayoutBase::OnUIChildAcitveInHierarchy(UUIItem* InChild, bool InUIActive)
+void UUIPanelLayoutBase::OnUIChildAcitveInHierarchy(ULexWidget* InChild, bool InUIActive)
 {
     Super::OnUIChildAcitveInHierarchy(InChild, InUIActive);
 }
-void UUIPanelLayoutBase::OnUIChildAttachmentChanged(UUIItem* InChild, bool attachOrDetach)
+void UUIPanelLayoutBase::OnUIChildAttachmentChanged(ULexWidget* InChild, bool attachOrDetach)
 {
     Super::OnUIChildAttachmentChanged(InChild, attachOrDetach);
 }
-void UUIPanelLayoutBase::OnUIChildHierarchyIndexChanged(UUIItem* InChild)
+void UUIPanelLayoutBase::OnUIChildHierarchyIndexChanged(ULexWidget* InChild)
 {
     Super::OnUIChildHierarchyIndexChanged(InChild);
 }
 void UUIPanelLayoutBase::CleanMapChildToSlot()
 {
     //check map if child not exist
-    TSet<UUIItem*> KeysToRemove;
-    const auto& UIChildren = RootUIComp->GetAttachUIChildren();
+    TSet<ULexWidget*> KeysToRemove;
+    const auto& UIChildren = RootUIComp->GetUIChildren();
     for (auto& KeyValue : MapChildToSlot)
     {
         auto FoundIndex = UIChildren.IndexOfByKey(KeyValue.Key);
@@ -63,7 +63,7 @@ void UUIPanelLayoutBase::Awake()
 {
     Super::Awake();
 }
-TObjectPtr<UUIPanelLayoutSlotBase> UUIPanelLayoutBase::GetChildSlot(UUIItem* InChild)
+TObjectPtr<UUIPanelLayoutSlotBase> UUIPanelLayoutBase::GetChildSlot(ULexWidget* InChild)
 {
     if (auto LayoutElementPtr = MapChildToSlot.Find(InChild))
     {

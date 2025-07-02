@@ -24,6 +24,5 @@ void FUIEffectTextAnimationCustomization::CustomizeDetails(IDetailLayoutBuilder&
 		UE_LOG(LGUIEditor, Log, TEXT("Get TargetScript is null"));
 		return;
 	}
-	LGUIEditorUtils::ShowError_RequireComponent(&DetailBuilder, TargetScriptPtr.Get(), UUIText::StaticClass());
 }
 #undef LOCTEXT_NAMESPACE

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "Core/Actor/UIBaseActor.h"
+#include "Core/Actor/LexWidgetActor.h"
 #include "Extensions/2DLineRenderer/UI2DLineRendererBase.h"
 #include "LTweener.h"
 #include "UIRing.generated.h"
@@ -55,24 +55,3 @@ public:
 		ULTweener* EndAngleTo(float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase easeType = ELTweenEase::OutCubic);
 };
 
-
-UCLASS(ClassGroup = LGUI)
-class LGUI_API AUIRingActor : public AUIBaseRenderableActor
-{
-	GENERATED_BODY()
-
-public:
-	AUIRingActor();
-
-	virtual UUIItem* GetUIItem()const override { return UIElement; }
-	virtual class UUIBaseRenderable* GetUIRenderable()const override { return UIElement; }
-	UE_DEPRECATED(5.0, "Use GetUIRing instead.")
-	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (DeprecatedFunction, DeprecationMessage = "Use GetUIRing instead."))
-		UUIRing* Get2DLineRing()const { return UIElement; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		UUIRing* GetUIRing()const { return UIElement; }
-private:
-	UPROPERTY(Category = "LGUI", VisibleAnywhere, BlueprintReadOnly, Transient, meta = (AllowPrivateAccess = "true"))
-		TObjectPtr<class UUIRing> UIElement;
-
-};

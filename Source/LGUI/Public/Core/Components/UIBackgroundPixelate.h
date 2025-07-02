@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "UIPostProcessRenderable.h"
+#include "LexVisualPostProcess.h"
 #include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
 #include "UIBackgroundPixelate.generated.h"
 
@@ -12,7 +12,7 @@
  * If android OpenGL ES3.1, need to enable "ProjectSettings/Platforms/Android/Build/Support Backbuffer Sampling on OpenGL".
  */
 UCLASS(ClassGroup = (LGUI), NotBlueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIBackgroundPixelate : public UUIPostProcessRenderable
+class LGUI_API UUIBackgroundPixelate : public ULexVisualPostProcess
 {
 	GENERATED_BODY()
 
@@ -21,7 +21,6 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
-	virtual void TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction ) override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
@@ -41,7 +40,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetApplyAlphaToStrength(bool newValue);
 
-	virtual TSharedPtr<FUIPostProcessRenderProxy> GetRenderProxy()override;
+	virtual TSharedPtr<FLexVisualPostProcessRenderProxy> GetRenderProxy()override;
 	virtual void MarkAllDirty()override;
 protected:
 	FORCEINLINE float GetStrengthInternal();

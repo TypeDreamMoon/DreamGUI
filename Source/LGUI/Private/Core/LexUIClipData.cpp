@@ -2,9 +2,9 @@
 
 #include "Core/LexUIClipData.h"
 
-#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
 #include "Core/LexUIDataAsTexture.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 
 int FLexUIClipData::InheritClipDepth = 16;
 int FLexUIClipData::SingleBlockSizeInBytes =
@@ -12,7 +12,7 @@ int FLexUIClipData::SingleBlockSizeInBytes =
 	;
 int FLexUIClipData::BlockSizeInBytes = SingleBlockSizeInBytes * FLexUIClipData::InheritClipDepth;
 
-FLexUIClipData::FLexUIClipData(const TSharedPtr<FLexUIClipData>& InParent, ULexUIDataAsTexture* InDataTexture, UUIItem* InWidget)
+FLexUIClipData::FLexUIClipData(const TSharedPtr<FLexUIClipData>& InParent, ULexUIDataAsTexture* InDataTexture, ULexWidget* InWidget)
 {
 	this->Parent = InParent;
 	this->DataTexture = InDataTexture;
@@ -33,7 +33,7 @@ void FLexUIClipData::UpdateData()
 	uint8* BlockBuffer = new uint8[BlockSizeInBytes];
 	FMemory::Memzero(BlockBuffer, BlockSizeInBytes);
 	int BlockDataOffset = 0;
-	auto CanvasToWorldMatrix = this->GetWidget()->GetRenderCanvas()->GetUIItem()->GetComponentTransform().ToMatrixWithScale();
+	auto CanvasToWorldMatrix = this->GetWidget()->GetRenderCanvas()->GetLexWidget()->GetComponentTransform().ToMatrixWithScale();
 	FLexUIClipData* TargetClip = this;
 	for (int i = 0; i < InheritClipDepth; i++)
 	{

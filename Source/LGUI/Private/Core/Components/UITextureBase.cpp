@@ -3,7 +3,7 @@
 #include "LGUI/Public/Core/Components/UITextureBase.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "Materials/MaterialInterface.h"
 #include "Utils/LexUIUtils.h"
 #include "TextureResource.h"
@@ -13,7 +13,6 @@
 
 UUITextureBase::UUITextureBase(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
-	PrimaryComponentTick.bCanEverTick = false;
 }
 
 void UUITextureBase::BeginPlay()
@@ -108,8 +107,9 @@ void UUITextureBase::SetSizeFromTexture()
 {
 	if (IsValid(texture))
 	{
-		SetWidth(texture->GetSurfaceWidth());
-		SetHeight(texture->GetSurfaceHeight());
+		auto Widget = GetWidget();
+		Widget->SetWidth(texture->GetSurfaceWidth());
+		Widget->SetHeight(texture->GetSurfaceHeight());
 	}
 	else
 	{

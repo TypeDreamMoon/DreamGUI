@@ -2,7 +2,7 @@
 
 #include "Layout/UIRoundedLayout.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
 #include "Layout/UILayoutElement.h"
 #include "Layout/ILGUILayoutElementInterface.h"
 
@@ -56,7 +56,7 @@ void UUIRoundedLayout::OnRebuildLayout()
 	}
 }
 
-bool UUIRoundedLayout::GetCanLayoutControlAnchor_Implementation(class UUIItem* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
+bool UUIRoundedLayout::GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
 {
 	if (this->GetRootUIComponent() == InUIItem)
 	{

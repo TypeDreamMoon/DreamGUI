@@ -15,7 +15,7 @@
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #include "PrefabEditor/LGUIPrefabEditor.h"
 #include "SceneOutlinerStandaloneTypes.h"
-#include "Core/Components/UIItem.h"
+#include "Core/Components/LexWidget.h"
 
 #define LOCTEXT_NAMESPACE "LGUISceneOutlinerInfoColumn"
 
@@ -208,8 +208,8 @@ namespace LGUISceneOutliner
 				USceneComponent* RootCompB = ActorB->GetRootComponent();
 				if (RootCompA != nullptr && RootCompB != nullptr)
 				{
-					UUIItem* UIItemA = Cast<UUIItem>(RootCompA);
-					UUIItem* UIItemB = Cast<UUIItem>(RootCompB);
+					ULexWidget* UIItemA = Cast<ULexWidget>(RootCompA);
+					ULexWidget* UIItemB = Cast<ULexWidget>(RootCompB);
 					if (UIItemA != nullptr && UIItemB != nullptr)
 					{
 						if (UIItemA->GetHierarchyIndex() == UIItemB->GetHierarchyIndex())

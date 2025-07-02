@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Event/LGUIScreenSpaceRaycaster.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "LGUI.h"
 #include "Utils/LexUIUtils.h"
 #include "Core/LGUISettings.h"
@@ -16,10 +16,10 @@ ULGUIScreenSpaceRaycaster::ULGUIScreenSpaceRaycaster()
 void ULGUIScreenSpaceRaycaster::BeginPlay()
 {
 	Super::BeginPlay();
-	RenderModeArray = { ELGUIRenderMode::ScreenSpaceOverlay };
+	RenderModeArray = { ELexRenderMode::ScreenSpaceOverlay };
 }
 
-bool ULGUIScreenSpaceRaycaster::ShouldSkipCanvas(class ULGUICanvas* UICanvas)
+bool ULGUIScreenSpaceRaycaster::ShouldSkipCanvas(class ULexCanvas* UICanvas)
 {
 	return false;
 }
@@ -39,7 +39,7 @@ bool ULGUIScreenSpaceRaycaster::GenerateRay(ULGUIPointerEventData* InPointerEven
 {
 	if (!RootCanvas.IsValid())
 	{
-		auto Canvas = GetOwner()->FindComponentByClass<ULGUICanvas>();
+		auto Canvas = GetOwner()->FindComponentByClass<ULexCanvas>();
 		if (!IsValid(Canvas) || !Canvas->IsRootCanvas())
 		{
 			auto ErrorMsg = LOCTEXT("CanvasNotValid", "[ULGUIScreenSpaceRaycaster::GenerateRay]Canvas is not valid! LGUIScreenSpaceRaycaster can only attach to ScreenSpaceUIRoot!");
@@ -51,7 +51,7 @@ bool ULGUIScreenSpaceRaycaster::GenerateRay(ULGUIPointerEventData* InPointerEven
 			RootCanvas = Canvas;
 		}
 	}
-	if (RootCanvas->GetActualRenderMode() != ELGUIRenderMode::ScreenSpaceOverlay)
+	if (RootCanvas->GetActualRenderMode() != ELexRenderMode::ScreenSpaceOverlay)
 		return false;
 
 	auto ViewProjectionMatrix = RootCanvas->GetViewProjectionMatrix();

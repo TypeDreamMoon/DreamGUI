@@ -12,13 +12,6 @@ DECLARE_DELEGATE_RetVal_FourParams(float, FLTweenFunction, float, float, float, 
 DECLARE_DELEGATE_OneParam(FLTweenUpdateDelegate, float);
 DECLARE_MULTICAST_DELEGATE_OneParam(FLTweenUpdateMulticastDelegate, float);
 
-#ifndef LTweenUpdateDelegate
-#define LTweenUpdateDelegate UE_DEPRECATED_MACRO(5.0, "LTweenUpdateDelegate has been renamed to FLTweenUpdateDelegate") FLTweenUpdateDelegate
-#endif
-#ifndef LTweenUpdateMulticastDelegate
-#define LTweenUpdateMulticastDelegate UE_DEPRECATED_MACRO(5.0, "LTweenUpdateMulticastDelegate has been renamed to FLTweenUpdateMulticastDelegate") FLTweenUpdateMulticastDelegate
-#endif
-
 DECLARE_DELEGATE_RetVal(float, FLTweenFloatGetterFunction);
 DECLARE_DELEGATE_OneParam(FLTweenFloatSetterFunction, float);
 

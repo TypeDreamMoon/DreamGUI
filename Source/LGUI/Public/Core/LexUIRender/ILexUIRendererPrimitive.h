@@ -11,7 +11,7 @@
 
 class FLexUIRenderer;
 class FSceneViewFamily;
-class FUIPostProcessRenderProxy;
+class FLexVisualPostProcessRenderProxy;
 enum class ELGUICanvasDepthMode :uint8;
 
 struct FLexUIMeshBatchContainer
@@ -54,5 +54,5 @@ public:
 
 	virtual void CollectRenderData(TArray<FLexUIPrimitiveDataContainer>& OutRenderData, float CurrentWorldTime) = 0;
 	virtual void GetMeshElements(const FSceneViewFamily& ViewFamily, FMeshElementCollector* Collector, const FLexUIPrimitiveDataContainer& PrimitiveData, TArray<FLexUIMeshBatchContainer>& ResultArray) = 0;
-	virtual FUIPostProcessRenderProxy* GetPostProcessElement(const void* SectionPtr)const = 0;
+	virtual FLexVisualPostProcessRenderProxy* GetPostProcessElement(const void* SectionPtr)const = 0;
 };

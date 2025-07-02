@@ -2,11 +2,11 @@
 
 #include "Core/LexUITextData.h"
 #include "Core/LexUIGeometry.h"
-#include "LGUI/Public/Core/Components/UIText.h"
+#include "LGUI/Public/Core/Components/LexText.h"
 #include "Core/LexUIRichTextImageData.h"
 #include "Core/LexUIFontData_BaseObject.h"
 
-FLexUITextGeometryCache::FLexUITextGeometryCache(UUIText* InUIText)
+FLexUITextGeometryCache::FLexUITextGeometryCache(ULexText* InUIText)
 {
 	this->UIText = InUIText;
 }
@@ -147,7 +147,8 @@ void FLexUITextGeometryCache::ConditionalCalculateGeometry()
 	}
 	else if (bIsDirty)
 	{
-		if (!this->UIText->GetRenderCanvas())return;
+		auto RenderCanvas = this->UIText->GetWidget()->GetRenderCanvas();
+		if (!RenderCanvas)return;
 		bIsDirty = false;
 		bIsColorDirty = false;
 		FLexUIGeometry::UpdateUIText(
@@ -169,7 +170,7 @@ void FLexUITextGeometryCache::ConditionalCalculateGeometry()
 			, this->useKerning
 			, this->fontStyle
 			, this->textRealSize
-			, this->UIText->GetRenderCanvas()
+			, RenderCanvas
 			, this->UIText.Get()
 			, this->cacheLinePropertyArray
 			, this->cacheCharPropertyArray

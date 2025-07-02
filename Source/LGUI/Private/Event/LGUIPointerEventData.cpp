@@ -4,7 +4,7 @@
 #include "Event/LGUIBaseRaycaster.h"
 #include "LGUI.h"
 #include "GameFramework/Actor.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
 
 void ULGUIPointerEventData::SetHighlightedComponentForNavigation(USceneComponent* InComp)
 {
@@ -17,7 +17,7 @@ bool ULGUIPointerEventData::IsPointerOverUI()
 	if (this->enterComponentStack.Num() > 0)
 	{
 		auto firstEnterComp = this->enterComponentStack[0];
-		if (auto UIItem = Cast<UUIItem>(firstEnterComp))
+		if (auto UIItem = Cast<ULexWidget>(firstEnterComp))
 		{
 			return true;
 		}

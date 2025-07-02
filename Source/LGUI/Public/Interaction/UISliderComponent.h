@@ -12,8 +12,8 @@
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUISliderDynamicDelegate, float, InFloat);
 
-class AUIBaseActor;
-class UUIItem;
+class ALexWidgetActor;
+class ULexWidget;
 
 UENUM(BlueprintType, Category = LGUI)
 enum class UISliderDirectionType:uint8
@@ -51,20 +51,20 @@ protected:
 		bool WholeNumbers = false;
 	/** "Fill" can fill inside it's parent */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Slider")
-		TWeakObjectPtr<AUIBaseActor> FillActor;
+		TWeakObjectPtr<ALexWidgetActor> FillActor;
 	/** Handle can move inside it's parent */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Slider")
-		TWeakObjectPtr<AUIBaseActor> HandleActor;
+		TWeakObjectPtr<ALexWidgetActor> HandleActor;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Slider")
 		UISliderDirectionType DirectionType;
 	/** When use navigation input to change the slider value, each press will change value as (MaxValue - MinValue) * NavigationChangeInterval. */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Slider", meta=(ClampMin = "0.0", ClampMax = "1.0"))
 		float NavigationChangeInterval = 0.1f;
 
-	UPROPERTY(Transient)TWeakObjectPtr<UUIItem> Fill;
-	UPROPERTY(Transient)TWeakObjectPtr<UUIItem> FillArea;
-	UPROPERTY(Transient)TWeakObjectPtr<UUIItem> Handle;
-	UPROPERTY(Transient)TWeakObjectPtr<UUIItem> HandleArea;
+	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> Fill;
+	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> FillArea;
+	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> Handle;
+	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> HandleArea;
 
 	FLGUIMulticastFloatDelegate OnValueChangeCPP;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Slider")
@@ -81,9 +81,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
 		bool GetWholeNumber()const { return WholeNumbers; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
-		AUIBaseActor* GetFillActor()const { return FillActor.Get(); }
+		ALexWidgetActor* GetFillActor()const { return FillActor.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
-		AUIBaseActor* GetHandleActor()const { return HandleActor.Get(); }
+		ALexWidgetActor* GetHandleActor()const { return HandleActor.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
 		UISliderDirectionType GetDirectionType()const { return DirectionType; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")

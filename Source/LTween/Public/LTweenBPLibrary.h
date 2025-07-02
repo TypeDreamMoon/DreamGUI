@@ -298,6 +298,11 @@ public:
 	{
 		ULTweenManager::KillIfIsTweening(WorldContextObject, inTweener, callComplete);
 	}
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "callComplete", WorldContext = "WorldContextObject"), Category = LTween)
+	static void KillAllTweensOnTarget(UObject* WorldContextObject, UObject* Target, bool callComplete = false)
+	{
+		ULTweenManager::KillAllTweensOnTarget(WorldContextObject, Target, callComplete);
+	}
 	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Kill If Is Tweening (Array)", AdvancedDisplay = "callComplete", WorldContext = "WorldContextObject"), Category = LTween)
 		static void ArrayKillIfIsTweening(UObject* WorldContextObject, const TArray<ULTweener*>& inTweenerArray, bool callComplete = false)
 	{
@@ -308,55 +313,6 @@ public:
 		{
 			Instance->KillIfIsTweening(WorldContextObject, tweener, callComplete);
 		}
-	}
-
-	UE_DEPRECATED(5.2, "Use UpdateCall instead.")
-	static FDelegateHandle RegisterUpdateEvent(UObject* WorldContextObject, const FLTweenUpdateDelegate& update)
-	{
-		// Disable deprecation warnings so we can call the deprecated function to support this function (which is also deprecated)
-		PRAGMA_DISABLE_DEPRECATION_WARNINGS
-		auto delegateHandle = ULTweenManager::RegisterUpdateEvent(WorldContextObject, update);
-		PRAGMA_ENABLE_DEPRECATION_WARNINGS
-		return delegateHandle;
-	}
-	UE_DEPRECATED(5.2, "Use UpdateCall instead.")
-	static FDelegateHandle RegisterUpdateEvent(UObject* WorldContextObject, const TFunction<void(float)>& update)
-	{
-		FLTweenUpdateDelegate updateDelegate = FLTweenUpdateDelegate::CreateLambda(update);
-		// Disable deprecation warnings so we can call the deprecated function to support this function (which is also deprecated)
-		PRAGMA_DISABLE_DEPRECATION_WARNINGS
-		ULTweenManager::RegisterUpdateEvent(WorldContextObject, updateDelegate);
-		PRAGMA_ENABLE_DEPRECATION_WARNINGS
-		return updateDelegate.GetHandle();
-	}
-	UE_DEPRECATED(5.2, "Use UpdateCall instead.")
-	UFUNCTION(BlueprintCallable, meta = (ToolTip = "Registerred update function will be called every frame from mainthread.", WorldContext = "WorldContextObject", DeprecatedFunction, DeprecationMessage = "Use UpdateCall instead."), Category = LTween)
-		static FLTweenDelegateHandleWrapper RegisterUpdateEvent(UObject* WorldContextObject, const FLTweenerFloatDynamicDelegate& update)
-	{
-		FLTweenUpdateDelegate updateDelegate = FLTweenUpdateDelegate::CreateLambda([update](float deltaTime) {update.ExecuteIfBound(deltaTime); });
-		FLTweenDelegateHandleWrapper delegateHandle(updateDelegate.GetHandle());
-		// Disable deprecation warnings so we can call the deprecated function to support this function (which is also deprecated)
-		PRAGMA_DISABLE_DEPRECATION_WARNINGS
-		ULTweenManager::RegisterUpdateEvent(WorldContextObject, updateDelegate);
-		PRAGMA_ENABLE_DEPRECATION_WARNINGS
-		return delegateHandle;
-	}
-	UE_DEPRECATED(5.2, "Use UpdateCall instead of RegisterUpdateEvent, and KillIfIsTweening for returned tweener instead of this UnregisterUpdateEvent.")
-	static void UnregisterUpdateEvent(UObject* WorldContextObject, const FDelegateHandle& handle)
-	{
-		// Disable deprecation warnings so we can call the deprecated function to support this function (which is also deprecated)
-		PRAGMA_DISABLE_DEPRECATION_WARNINGS
-		ULTweenManager::UnregisterUpdateEvent(WorldContextObject, handle);
-		PRAGMA_ENABLE_DEPRECATION_WARNINGS
-	}
-	UE_DEPRECATED(5.2, "Use UpdateCall instead of RegisterUpdateEvent, and KillIfIsTweening for returned tweener instead of this UnregisterUpdateEvent.")
-	UFUNCTION(BlueprintCallable, meta = (ToolTip = "Unregister the update function. \"delegateHandle\" is the return value when use RegisterUpdateEvent.", WorldContext = "WorldContextObject", DeprecatedFunction, DeprecationMessage = "Use UpdateCall instead of RegisterUpdateEvent, and KillIfIsTweening for returned tweener instead of this UnregisterUpdateEvent."), Category = LTween)
-		static void UnregisterUpdateEvent(UObject* WorldContextObject, const FLTweenDelegateHandleWrapper& delegateHandle)
-	{
-		// Disable deprecation warnings so we can call the deprecated function to support this function (which is also deprecated)
-		PRAGMA_DISABLE_DEPRECATION_WARNINGS
-		ULTweenManager::UnregisterUpdateEvent(WorldContextObject, delegateHandle.DelegateHandle);
-		PRAGMA_ENABLE_DEPRECATION_WARNINGS
 	}
 
 	/**

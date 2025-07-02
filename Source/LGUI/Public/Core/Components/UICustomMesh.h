@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
+#include "LGUI/Public/Core/Components/LexVisualBatchMesh.h"
 #include "UICustomMesh.generated.h"
 
 class ULGUICustomMesh;
@@ -12,7 +12,7 @@ class ULGUICustomMesh;
  * Render UI element with LGUICustomMesh.
  */
 UCLASS(ClassGroup = LGUI, NotBlueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUICustomMesh : public UUIBatchMeshRenderable
+class LGUI_API UUICustomMesh : public ULexVisualBatchMesh
 {
 	GENERATED_BODY()
 	
@@ -23,9 +23,6 @@ protected:
 	virtual void OnBeforeCreateOrUpdateGeometry()override;
 	virtual UTexture* GetTextureToCreateGeometry()override;
 	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
-
-	virtual void BeginPlay()override;
-	virtual void EndPlay(EEndPlayReason::Type Reason)override;
 
 	/** Use a mesh generator to create your own mesh instead of a simple rect */
 	UPROPERTY(EditAnywhere, Instanced, Category = LGUI)

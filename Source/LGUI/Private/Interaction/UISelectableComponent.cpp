@@ -2,15 +2,13 @@
 
 #include "Interaction/UISelectableComponent.h"
 #include "LGUI.h"
-#include "Core/Actor/UIBaseActor.h"
-#include "LGUI/Public/Core/Components/UIBaseRenderable.h"
+#include "LGUI/Public/Core/Components/LexVisual.h"
 #include "Core/LGUIManager.h"
 #include "LTweenManager.h"
 #include "Interaction/UISelectableTransitionComponent.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "Event/LGUIEventSystem.h"
 #include "LGUI/Public/Core/Components/UISprite.h"
-#include "LGUI/Public/Core/Components/UICanvasGroup.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/LGUISettings.h"
 #if WITH_EDITOR
@@ -79,13 +77,13 @@ void UUISelectableComponent::PostEditChangeProperty(FPropertyChangedEvent& Prope
 	if (PropertyChangedEvent.Property)
 	{
 		auto propertyName = PropertyChangedEvent.Property->GetFName();
-		if (TransitionActor.IsValid())
+		if (TransitionTarget.IsValid())
 		{
-			auto TargetUISpriteComp = Cast<UUISpriteBase>(TransitionActor->GetUIRenderable());
-			if (propertyName == GET_MEMBER_NAME_CHECKED(UUISelectableComponent, TransitionActor))
+			auto TargetUISpriteComp = Cast<UUISpriteBase>(TransitionTarget);
+			if (propertyName == GET_MEMBER_NAME_CHECKED(UUISelectableComponent, TransitionTarget))
 			{
 				if (TargetUISpriteComp) NormalSprite = TargetUISpriteComp->GetSprite();
-				NormalColor = TransitionActor->GetUIRenderable()->GetColor();
+				NormalColor = TransitionTarget->GetColor();
 			}
 			else if (propertyName == GET_MEMBER_NAME_CHECKED(UUISelectableComponent, bInteractable))
 			{
@@ -106,21 +104,21 @@ void UUISelectableComponent::PostEditChangeProperty(FPropertyChangedEvent& Prope
 			}
 			else
 			{
-				bool isGroupAllowInteraction = RootUIComp->IsGroupAllowInteraction();
+				bool bIsEnabled = RootUIComp->GetFinalIsEnabled();
 				if (Transition == UISelectableTransitionType::SpriteSwap)
 				{
 					if (IsValid(TargetUISpriteComp) && IsValid(NormalSprite))
 					{
-						TargetUISpriteComp->SetSprite(isGroupAllowInteraction ? NormalSprite : DisabledSprite, false);
+						TargetUISpriteComp->SetSprite(bIsEnabled ? NormalSprite : DisabledSprite, false);
 						FLexUIUtils::NotifyPropertyChanged(TargetUISpriteComp, UUISpriteBase::GetSpritePropertyName());
 					}
-					TransitionActor->GetUIRenderable()->EditorForceUpdate();
+					TransitionTarget->GetWidget()->EditorForceUpdate();
 				}
 				else if (Transition == UISelectableTransitionType::ColorTint)
 				{
-					TransitionActor->GetUIRenderable()->SetColor(isGroupAllowInteraction ? NormalColor : DisabledColor);
-					FLexUIUtils::NotifyPropertyChanged(TransitionActor->GetUIRenderable(), UUIBaseRenderable::GetColorPropertyName());
-					TransitionActor->GetUIRenderable()->EditorForceUpdate();
+					TransitionTarget->SetColor(bIsEnabled ? NormalColor : DisabledColor);
+					FLexUIUtils::NotifyPropertyChanged(TransitionTarget.Get(), ULexVisual::GetColorPropertyName());
+					TransitionTarget->GetWidget()->EditorForceUpdate();
 				}
 			}
 		}
@@ -152,7 +150,7 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 	if (!this->GetIsActiveAndEnable())return;
 	if (Transition != UISelectableTransitionType::TransitionComponent)
 	{
-		if (!TransitionActor.IsValid())return;
+		if (!TransitionTarget.IsValid())return;
 	}
 
 	switch (CurrentSelectionState)
@@ -163,15 +161,14 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 		{
 		case UISelectableTransitionType::ColorTint:
 		{
-			auto TransitionTargetUIItemComp = TransitionActor->GetUIRenderable();
 			if(FadeDuration <= 0.0f || immediateSet)
 			{
-				TransitionTargetUIItemComp->SetColor(NormalColor);
+				TransitionTarget->SetColor(NormalColor);
 			}
 			else
 			{
 				if (ULTweenManager::IsTweening(this, TransitionTweener))TransitionTweener->Kill();
-				TransitionTweener = ULTweenManager::To(TransitionTargetUIItemComp, FLTweenColorGetterFunction::CreateUObject(TransitionTargetUIItemComp, &UUIBaseRenderable::GetColor), FLTweenColorSetterFunction::CreateUObject(TransitionTargetUIItemComp, &UUIBaseRenderable::SetColor), NormalColor, FadeDuration);
+				TransitionTweener = ULTweenManager::To(TransitionTarget.Get(), FLTweenColorGetterFunction::CreateUObject(TransitionTarget.Get(), &ULexVisual::GetColor), FLTweenColorSetterFunction::CreateUObject(TransitionTarget.Get(), &ULexVisual::SetColor), NormalColor, FadeDuration);
 				if (TransitionTweener)
 				{
 					bool bAffectByGamePause = false;
@@ -196,8 +193,7 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 		break;
 		case UISelectableTransitionType::SpriteSwap:
 		{
-			auto TransitionTargetUIItemComp = TransitionActor->GetUIRenderable();
-			if (auto TargetUISpriteComp = Cast<UUISpriteBase>(TransitionTargetUIItemComp))
+			if (auto TargetUISpriteComp = Cast<UUISpriteBase>(TransitionTarget))
 			{
 				TargetUISpriteComp->SetSprite(NormalSprite, false);
 			}
@@ -229,15 +225,14 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 		{
 		case UISelectableTransitionType::ColorTint:
 		{
-			auto TransitionTargetUIItemComp = TransitionActor->GetUIRenderable();
 			if (FadeDuration <= 0.0f || immediateSet)
 			{
-				TransitionTargetUIItemComp->SetColor(HighlightedColor);
+				TransitionTarget->SetColor(HighlightedColor);
 			}
 			else
 			{
 				if (ULTweenManager::IsTweening(this, TransitionTweener))TransitionTweener->Kill();
-				TransitionTweener = ULTweenManager::To(TransitionTargetUIItemComp, FLTweenColorGetterFunction::CreateUObject(TransitionTargetUIItemComp, &UUIBaseRenderable::GetColor), FLTweenColorSetterFunction::CreateUObject(TransitionTargetUIItemComp, &UUIBaseRenderable::SetColor), HighlightedColor, FadeDuration);
+				TransitionTweener = ULTweenManager::To(TransitionTarget.Get(), FLTweenColorGetterFunction::CreateUObject(TransitionTarget.Get(), &ULexVisual::GetColor), FLTweenColorSetterFunction::CreateUObject(TransitionTarget.Get(), &ULexVisual::SetColor), HighlightedColor, FadeDuration);
 				if (TransitionTweener)
 				{
 					bool bAffectByGamePause = false;
@@ -262,8 +257,7 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 		break;
 		case UISelectableTransitionType::SpriteSwap:
 		{
-			auto TransitionTargetUIItemComp = TransitionActor->GetUIRenderable();
-			if (auto TargetUISpriteComp = Cast<UUISpriteBase>(TransitionTargetUIItemComp))
+			if (auto TargetUISpriteComp = Cast<UUISpriteBase>(TransitionTarget))
 			{
 				if (IsValid(HighlightedSprite))
 				{
@@ -298,15 +292,14 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 		{
 		case UISelectableTransitionType::ColorTint:
 		{
-			auto TransitionTargetUIItemComp = TransitionActor->GetUIRenderable();
 			if (FadeDuration <= 0.0f || immediateSet)
 			{
-				TransitionTargetUIItemComp->SetColor(PressedColor);
+				TransitionTarget->SetColor(PressedColor);
 			}
 			else
 			{
 				if (ULTweenManager::IsTweening(this, TransitionTweener))TransitionTweener->Kill();
-				TransitionTweener = ULTweenManager::To(TransitionTargetUIItemComp, FLTweenColorGetterFunction::CreateUObject(TransitionTargetUIItemComp, &UUIBaseRenderable::GetColor), FLTweenColorSetterFunction::CreateUObject(TransitionTargetUIItemComp, &UUIBaseRenderable::SetColor), PressedColor, FadeDuration);
+				TransitionTweener = ULTweenManager::To(TransitionTarget.Get(), FLTweenColorGetterFunction::CreateUObject(TransitionTarget.Get(), &ULexVisual::GetColor), FLTweenColorSetterFunction::CreateUObject(TransitionTarget.Get(), &ULexVisual::SetColor), PressedColor, FadeDuration);
 				if (TransitionTweener)
 				{
 					bool bAffectByGamePause = false;
@@ -331,8 +324,7 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 		break;
 		case UISelectableTransitionType::SpriteSwap:
 		{
-			auto TransitionTargetUIItemComp = TransitionActor->GetUIRenderable();
-			if (auto TargetUISpriteComp = Cast<UUISpriteBase>(TransitionTargetUIItemComp))
+			if (auto TargetUISpriteComp = Cast<UUISpriteBase>(TransitionTarget))
 			{
 				if (IsValid(PressedSprite))
 				{
@@ -367,15 +359,14 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 		{
 		case UISelectableTransitionType::ColorTint:
 		{
-			auto TransitionTargetUIItemComp = TransitionActor->GetUIRenderable();
 			if (FadeDuration <= 0.0f || immediateSet)
 			{
-				TransitionTargetUIItemComp->SetColor(DisabledColor);
+				TransitionTarget->SetColor(DisabledColor);
 			}
 			else
 			{
 				if (ULTweenManager::IsTweening(this, TransitionTweener))TransitionTweener->Kill();
-				TransitionTweener = ULTweenManager::To(TransitionTargetUIItemComp, FLTweenColorGetterFunction::CreateUObject(TransitionTargetUIItemComp, &UUIBaseRenderable::GetColor), FLTweenColorSetterFunction::CreateUObject(TransitionTargetUIItemComp, &UUIBaseRenderable::SetColor), DisabledColor, FadeDuration);
+				TransitionTweener = ULTweenManager::To(TransitionTarget.Get(), FLTweenColorGetterFunction::CreateUObject(TransitionTarget.Get(), &ULexVisual::GetColor), FLTweenColorSetterFunction::CreateUObject(TransitionTarget.Get(), &ULexVisual::SetColor), DisabledColor, FadeDuration);
 				if (TransitionTweener)
 				{
 					bool bAffectByGamePause = false;
@@ -400,8 +391,7 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 		break;
 		case UISelectableTransitionType::SpriteSwap:
 		{
-			auto TransitionTargetUIItemComp = TransitionActor->GetUIRenderable();
-			if (auto TargetUISpriteComp = Cast<UUISpriteBase>(TransitionTargetUIItemComp))
+			if (auto TargetUISpriteComp = Cast<UUISpriteBase>(TransitionTarget))
 			{
 				if (IsValid(DisabledSprite))
 				{
@@ -485,11 +475,11 @@ EUISelectableSelectionState UUISelectableComponent::GetSelectionState()const
 	return EUISelectableSelectionState::Normal;
 }
 
-void UUISelectableComponent::SetTransitionTarget(class AUIBaseRenderableActor* value)
+void UUISelectableComponent::SetTransitionTarget(ULexVisual* value)
 {
-	if (TransitionActor != value)
+	if (TransitionTarget != value)
 	{
-		TransitionActor = value;
+		TransitionTarget = value;
 		ApplySelectionState(false);
 	}
 }
@@ -593,7 +583,7 @@ bool UUISelectableComponent::IsInteractable()const
 {
 	if (CheckRootUIComponent())
 	{
-		return RootUIComp->IsGroupAllowInteraction() && bInteractable;
+		return RootUIComp->GetFinalIsEnabled() && bInteractable;
 	}
 	return bInteractable;
 }
@@ -641,7 +631,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 		}
 		if (RootUIComp->IsScreenSpaceOverlayUI() || RootUIComp->IsRenderTargetUI())
 		{
-			auto rootCanvasUIItem = RootUIComp->GetRootCanvas()->GetUIItem();
+			auto rootCanvasUIItem = RootUIComp->GetRootCanvas()->GetLexWidget();
 			return FindSelectable(InDirection, rootCanvasUIItem);
 		}
 		else
@@ -661,7 +651,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 	if (LGUIManagerActor == nullptr)return nullptr;
 	const auto& SelectableArray = LGUIManagerActor->GetAllSelectableArray();
 
-	auto GetPointOnRectEdge = [](UUIItem* rect, FVector2D dir)
+	auto GetPointOnRectEdge = [](ULexWidget* rect, FVector2D dir)
 	{
 		if (dir != FVector2D::ZeroVector)
 			dir /= FMath::Max(FMath::Abs(dir.X), FMath::Abs(dir.Y));
@@ -671,17 +661,14 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 	};
 
 	auto LocalPos = FVector::ZeroVector;
-	USceneComponent* RestrictNavNode = nullptr;
+	const USceneComponent* RestrictNavNode = nullptr;
 	if (CheckRootUIComponent())
 	{
 		auto localDir = RootUIComp->GetComponentTransform().InverseTransformVectorNoScale(InDirection);
 		LocalPos = GetPointOnRectEdge(RootUIComp.Get(), FVector2D(localDir.Y, localDir.Z));
-		if (auto CanvasGroup = RootUIComp->GetCanvasGroup())
+		if (auto RestrictNavWidget = RootUIComp->GetRestrictNavigationAreaWidget())
 		{
-			if (auto RestrictNavCanvasGroup = CanvasGroup->GetRestrictNavigationAreaCanvasGroup())
-			{
-				RestrictNavNode = RestrictNavCanvasGroup->GetOwner()->GetRootComponent();
-			}
+			RestrictNavNode = RestrictNavWidget;
 		}
 	}
 	auto pos = GetRootSceneComponent()->GetComponentTransform().TransformPosition(LocalPos);

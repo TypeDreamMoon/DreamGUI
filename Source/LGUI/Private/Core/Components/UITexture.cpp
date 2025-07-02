@@ -3,14 +3,13 @@
 #include "LGUI/Public/Core/Components/UITexture.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
 #endif
 UUITexture::UUITexture(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
-	PrimaryComponentTick.bCanEverTick = false;
 }
 
 void UUITexture::BeginPlay()
@@ -45,11 +44,6 @@ void UUITexture::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		}
 	}
 }
-void UUITexture::EditorForceUpdate()
-{
-	Super::EditorForceUpdate();
-	CheckSpriteData();
-}
 #endif
 
 void UUITexture::CheckSpriteData()
@@ -75,59 +69,63 @@ void UUITexture::ApplyUVRect()
 	case EUITextureUVRectControlMode::None:
 		break;
 	case EUITextureUVRectControlMode::KeepAspectRatio_FitIn:
-	{
-		auto TextureWidth = texture->GetSurfaceWidth();
-		auto TextureHeight = texture->GetSurfaceHeight();
-		auto TextureAspect = TextureWidth / TextureHeight;
-		auto ThisWidth = this->GetWidth();
-		auto ThisHeight = this->GetHeight();
-		auto ThisAspect = ThisWidth / ThisHeight;
-		if (TextureAspect > ThisAspect)
 		{
-			auto VerticalScale = TextureAspect / ThisAspect;
-			auto VerticalOffset = (1.0f - VerticalScale) * 0.5f;
-			uvRect = FVector4(0, VerticalOffset, 1, VerticalScale);
+			auto Widget = GetWidget();
+			auto TextureWidth = texture->GetSurfaceWidth();
+			auto TextureHeight = texture->GetSurfaceHeight();
+			auto TextureAspect = TextureWidth / TextureHeight;
+			auto ThisWidth = Widget->GetWidth();
+			auto ThisHeight = Widget->GetHeight();
+			auto ThisAspect = ThisWidth / ThisHeight;
+			if (TextureAspect > ThisAspect)
+			{
+				auto VerticalScale = TextureAspect / ThisAspect;
+				auto VerticalOffset = (1.0f - VerticalScale) * 0.5f;
+				uvRect = FVector4(0, VerticalOffset, 1, VerticalScale);
+			}
+			else
+			{
+				auto HorizontalScale = ThisAspect / TextureAspect;
+				auto HorizontalOffset = (1.0f - HorizontalScale) * 0.5f;
+				uvRect = FVector4(HorizontalOffset, 0, HorizontalScale, 1);
+			}
 		}
-		else
-		{
-			auto HorizontalScale = ThisAspect / TextureAspect;
-			auto HorizontalOffset = (1.0f - HorizontalScale) * 0.5f;
-			uvRect = FVector4(HorizontalOffset, 0, HorizontalScale, 1);
-		}
-	}
-	break;
+		break;
 	case EUITextureUVRectControlMode::KeepAspectRatio_Envelope:
-	{
-		auto TextureWidth = texture->GetSurfaceWidth();
-		auto TextureHeight = texture->GetSurfaceHeight();
-		auto TextureAspect = TextureWidth / TextureHeight;
-		auto ThisWidth = this->GetWidth();
-		auto ThisHeight = this->GetHeight();
-		auto ThisAspect = ThisWidth / ThisHeight;
-		if (TextureAspect > ThisAspect)
 		{
-			auto HorizontalScale = ThisAspect / TextureAspect;
-			auto HorizontalOffset = (1.0f - HorizontalScale) * 0.5f;
-			uvRect = FVector4(HorizontalOffset, 0, HorizontalScale, 1);
+			auto Widget = GetWidget();
+			auto TextureWidth = texture->GetSurfaceWidth();
+			auto TextureHeight = texture->GetSurfaceHeight();
+			auto TextureAspect = TextureWidth / TextureHeight;
+			auto ThisWidth = Widget->GetWidth();
+			auto ThisHeight = Widget->GetHeight();
+			auto ThisAspect = ThisWidth / ThisHeight;
+			if (TextureAspect > ThisAspect)
+			{
+				auto HorizontalScale = ThisAspect / TextureAspect;
+				auto HorizontalOffset = (1.0f - HorizontalScale) * 0.5f;
+				uvRect = FVector4(HorizontalOffset, 0, HorizontalScale, 1);
+			}
+			else
+			{
+				auto VerticalScale = TextureAspect / ThisAspect;
+				auto VerticalOffset = (1.0f - VerticalScale) * 0.5f;
+				uvRect = FVector4(0, VerticalOffset, 1, VerticalScale);
+			}
 		}
-		else
-		{
-			auto VerticalScale = TextureAspect / ThisAspect;
-			auto VerticalOffset = (1.0f - VerticalScale) * 0.5f;
-			uvRect = FVector4(0, VerticalOffset, 1, VerticalScale);
-		}
-	}
-	break;
+		break;
 	}
 }
 
 void UUITexture::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
+	auto Widget = GetWidget();
+	auto RenderCanvas = Widget->GetRenderCanvas();
 	switch (type)
 	{
 	case EUITextureType::Normal:
 		FLexUIGeometry::UpdateUIRectSimpleVertex(&InGeo,
-			this->GetWidth(), this->GetHeight(), FVector2f(this->GetPivot()), spriteData, RenderCanvas.Get(), this, GetFinalColor(),
+			Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), spriteData, RenderCanvas, this, GetFinalColor(),
 			InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 		);
 		break;
@@ -135,21 +133,21 @@ void UUITexture::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged,
 	case EUITextureType::SlicedFrame:
 		if (spriteData.HasBorder())
 		{
-			FLexUIGeometry::UpdateUIRectBorderVertex(&InGeo, type == EUITextureType::Sliced, this->GetWidth(), this->GetHeight(), FVector2f(this->GetPivot()), spriteData, RenderCanvas.Get(), this, GetFinalColor(),
+			FLexUIGeometry::UpdateUIRectBorderVertex(&InGeo, type == EUITextureType::Sliced, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), spriteData, RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 		}
 		else
 		{
 			FLexUIGeometry::UpdateUIRectSimpleVertex(&InGeo,
-				this->GetWidth(), this->GetHeight(), FVector2f(this->GetPivot()), spriteData, RenderCanvas.Get(), this, GetFinalColor(),
+				Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), spriteData, RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 		}
 		break;
 	case EUITextureType::Tiled:
 		FLexUIGeometry::UpdateUIRectSimpleVertex(&InGeo,
-			this->GetWidth(), this->GetHeight(), FVector2f(this->GetPivot()), spriteData, RenderCanvas.Get(), this, GetFinalColor(),
+			Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), spriteData, RenderCanvas, this, GetFinalColor(),
 			InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 		);
 		break;
@@ -159,22 +157,22 @@ void UUITexture::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged,
 		{
 		case EUISpriteFillMethod::Horizontal:
 		case EUISpriteFillMethod::Vertical:
-			FLexUIGeometry::UpdateUIRectFillHorizontalVerticalVertex(&InGeo, this->GetWidth(), this->GetHeight(), FVector2f(this->GetPivot()), spriteData, fillDirectionFlip, fillAmount, fillMethod == EUISpriteFillMethod::Horizontal, RenderCanvas.Get(), this, GetFinalColor(),
+			FLexUIGeometry::UpdateUIRectFillHorizontalVerticalVertex(&InGeo, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), spriteData, fillDirectionFlip, fillAmount, fillMethod == EUISpriteFillMethod::Horizontal, RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 			break;
 		case EUISpriteFillMethod::Radial90:
-			FLexUIGeometry::UpdateUIRectFillRadial90Vertex(&InGeo, this->GetWidth(), this->GetHeight(), FVector2f(this->GetPivot()), spriteData, fillDirectionFlip, fillAmount, (EUISpriteFillOriginType_Radial90)fillOrigin, RenderCanvas.Get(), this, GetFinalColor(),
+			FLexUIGeometry::UpdateUIRectFillRadial90Vertex(&InGeo, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), spriteData, fillDirectionFlip, fillAmount, (EUISpriteFillOriginType_Radial90)fillOrigin, RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 			break;
 		case EUISpriteFillMethod::Radial180:
-			FLexUIGeometry::UpdateUIRectFillRadial180Vertex(&InGeo, this->GetWidth(), this->GetHeight(), FVector2f(this->GetPivot()), spriteData, fillDirectionFlip, fillAmount, (EUISpriteFillOriginType_Radial180)fillOrigin, RenderCanvas.Get(), this, GetFinalColor(),
+			FLexUIGeometry::UpdateUIRectFillRadial180Vertex(&InGeo, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), spriteData, fillDirectionFlip, fillAmount, (EUISpriteFillOriginType_Radial180)fillOrigin, RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 			break;
 		case EUISpriteFillMethod::Radial360:
-			FLexUIGeometry::UpdateUIRectFillRadial360Vertex(&InGeo, this->GetWidth(), this->GetHeight(), FVector2f(this->GetPivot()), spriteData, fillDirectionFlip, fillAmount, (EUISpriteFillOriginType_Radial360)fillOrigin, RenderCanvas.Get(), this, GetFinalColor(),
+			FLexUIGeometry::UpdateUIRectFillRadial360Vertex(&InGeo, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), spriteData, fillDirectionFlip, fillAmount, (EUISpriteFillOriginType_Radial360)fillOrigin, RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 			break;
@@ -184,15 +182,16 @@ void UUITexture::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged,
 	}
 }
 
-void UUITexture::OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange, bool InDiscardCache)
+void UUITexture::OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange)
 {
-    Super::OnAnchorChange(InPivotChange, InWidthChange, InHeightChange, InDiscardCache);
+    Super::OnAnchorChange(InPivotChange, InWidthChange, InHeightChange);
 	if (!IsValid(texture))return;
 	if (type == EUITextureType::Tiled)
 	{
         if (InWidthChange || InHeightChange)
         {
-            spriteData.ApplyUV(0, 0, this->GetWidth(), this->GetHeight(), 1.0f / spriteData.width, 1.0f / spriteData.height);
+        	auto Widget = GetWidget();
+            spriteData.ApplyUV(0, 0, Widget->GetWidth(), Widget->GetHeight(), 1.0f / spriteData.width, 1.0f / spriteData.height);
             MarkUVDirty();
         }
 	}

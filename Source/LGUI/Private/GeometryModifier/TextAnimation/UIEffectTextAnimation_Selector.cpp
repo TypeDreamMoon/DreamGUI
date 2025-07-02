@@ -2,9 +2,9 @@
 
 #include "GeometryModifier/TextAnimation/UIEffectTextAnimation_Selector.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UIText.h"
+#include "LGUI/Public/Core/Components/LexText.h"
 
-bool UUIEffectTextAnimation_RangeSelector::Select(UUIText* InUIText, FUIEffectTextAnimation_SelectResult& OutSelection)
+bool UUIEffectTextAnimation_RangeSelector::Select(ULexText* InUIText, FUIEffectTextAnimation_SelectResult& OutSelection)
 {
 	if (FMath::Abs(range) < KINDA_SMALL_NUMBER)return false;
 	if (end <= start)return false;
@@ -74,7 +74,7 @@ void UUIEffectTextAnimation_RangeSelector::SetEnd(float value)
 	}
 }
 
-bool UUIEffectTextAnimation_RandomSelector::Select(UUIText* InUIText, FUIEffectTextAnimation_SelectResult& OutSelection)
+bool UUIEffectTextAnimation_RandomSelector::Select(ULexText* InUIText, FUIEffectTextAnimation_SelectResult& OutSelection)
 {
 	if (end <= start)return false;
 	FMath::RandInit(seed);
@@ -129,7 +129,7 @@ void UUIEffectTextAnimation_RandomSelector::SetEnd(float value)
 	}
 }
 
-bool UUIEffectTextAnimation_RichTextTagSelector::Select(class UUIText* InUIText, FUIEffectTextAnimation_SelectResult& OutSelection)
+bool UUIEffectTextAnimation_RichTextTagSelector::Select(class ULexText* InUIText, FUIEffectTextAnimation_SelectResult& OutSelection)
 {
 	if (FMath::Abs(range) < KINDA_SMALL_NUMBER)return false;
 	auto& charProperties = InUIText->GetCharPropertyArray();

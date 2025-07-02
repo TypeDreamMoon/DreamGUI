@@ -2,7 +2,7 @@
 
 #include "GeometryModifier/TextAnimation/UIEffectTextAnimation_PropertyWithWave.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UIText.h"
+#include "LGUI/Public/Core/Components/LexText.h"
 #include "LTweenBPLibrary.h"
 #include "Engine/World.h"
 
@@ -31,7 +31,7 @@ void UUIEffectTextAnimation_PropertyWithWave::OnUpdate(float deltaTime)
 	}
 }
 
-void UUIEffectTextAnimation_PositionWaveProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void UUIEffectTextAnimation_PositionWaveProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
@@ -60,7 +60,7 @@ void UUIEffectTextAnimation_PositionWaveProperty::SetPosition(FVector value)
 	}
 }
 
-void UUIEffectTextAnimation_RotationWaveProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void UUIEffectTextAnimation_RotationWaveProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
@@ -97,7 +97,7 @@ void UUIEffectTextAnimation_RotationWaveProperty::SetRotator(FRotator value)
 	}
 }
 
-void UUIEffectTextAnimation_ScaleWaveProperty::ApplyProperty(UUIText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void UUIEffectTextAnimation_ScaleWaveProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();

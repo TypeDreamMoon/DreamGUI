@@ -17,7 +17,7 @@
 #include "EngineUtils.h"
 #include "Utils/LexUIUtils.h"
 #include "UObject/ObjectSaveContext.h"
-#include "Core/Components/UIItem.h"
+#include "Core/Components/LexWidget.h"
 
 UE_DISABLE_OPTIMIZATION
 
@@ -307,7 +307,7 @@ void FLGUINativeSceneOutlinerExtension::RestoreSceneOutlinerState()
 			for (TActorIterator<AActor> ActorItr(world); ActorItr; ++ActorItr)
 			{
 				if (!IsValid(*ActorItr))continue;
-				if (ActorItr->GetRootComponent() && Cast<UUIItem>(ActorItr->GetRootComponent()) != nullptr)//skip UI
+				if (ActorItr->GetRootComponent() && Cast<ULexWidget>(ActorItr->GetRootComponent()) != nullptr)//skip UI
 					continue;
 				if (storageActor->GetLevel() == (ActorItr->GetLevel()))
 				{

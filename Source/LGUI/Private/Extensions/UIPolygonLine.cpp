@@ -3,12 +3,11 @@
 #include "Extensions/UIPolygonLine.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "LTweenManager.h"
 
 UUIPolygonLine::UUIPolygonLine(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
-	PrimaryComponentTick.bCanEverTick = false;
 	EndType = EUI2DLineRenderer_EndType::ConnectStartAndEnd;
 }
 
@@ -34,12 +33,13 @@ void UUIPolygonLine::CalculatePoints()
 		}
 	}
 
+	auto Widget = GetWidget();
 	float calcEndAngle = EndAngle;
 	if (FullCycle)calcEndAngle = StartAngle + 360.0f;
 	float angle = FMath::DegreesToRadians(StartAngle);
 	float angleInterval = FMath::DegreesToRadians((calcEndAngle - StartAngle) / Sides);
-	float halfWidth = this->GetWidth() * 0.5f;
-	float halfHeight = this->GetHeight() * 0.5f;
+	float halfWidth = Widget->GetWidth() * 0.5f;
+	float halfHeight = Widget->GetHeight() * 0.5f;
 	if (!FullCycle)
 	{
 		CurrentPointArray.Add(FVector2D(0, 0));
@@ -56,9 +56,10 @@ void UUIPolygonLine::CalculatePoints()
 
 FVector2D UUIPolygonLine::GetStartPointTangentDirection()
 {
+	auto Widget = GetWidget();
 	float angle = FMath::DegreesToRadians(StartAngle);
 	auto dir = FVector2D(FMath::Cos(angle), FMath::Sin(angle));
-	auto tanDir = FVector2D(-this->GetWidth() * dir.Y, this->GetHeight() * dir.X);
+	auto tanDir = FVector2D(-Widget->GetWidth() * dir.Y, Widget->GetHeight() * dir.X);
 	tanDir.Normalize();
 	return tanDir;
 }
@@ -70,9 +71,10 @@ FVector2D UUIPolygonLine::GetEndPointTangentDirection()
 	}
 	else
 	{
+		auto Widget = GetWidget();
 		float angle = FMath::DegreesToRadians(EndAngle);
 		auto dir = FVector2D(FMath::Cos(angle), FMath::Sin(angle));
-		auto tanDir = FVector2D(-this->GetWidth() * dir.Y, this->GetHeight() * dir.X);
+		auto tanDir = FVector2D(-Widget->GetWidth() * dir.Y, Widget->GetHeight() * dir.X);
 		tanDir.Normalize();
 		return tanDir;
 	}
@@ -127,7 +129,7 @@ ULTweener* UUIPolygonLine::StartAngleTo(float endValue, float duration /* = 0.5f
 	{
 		bool bAffectByGamePause;
 		bool bAffectByTimeDilation;
-		if (this->IsScreenSpaceOverlayUI())
+		if (GetWidget()->IsScreenSpaceOverlayUI())
 		{
 			bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
 			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
@@ -148,7 +150,7 @@ ULTweener* UUIPolygonLine::EndAngleTo(float endValue, float duration /* = 0.5f *
 	{
 		bool bAffectByGamePause;
 		bool bAffectByTimeDilation;
-		if (this->IsScreenSpaceOverlayUI())
+		if (GetWidget()->IsScreenSpaceOverlayUI())
 		{
 			bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
 			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
@@ -161,13 +163,4 @@ ULTweener* UUIPolygonLine::EndAngleTo(float endValue, float duration /* = 0.5f *
 		Tweener->SetEase(easeType)->SetDelay(delay)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
 	}
 	return Tweener;
-}
-
-
-AUIPolygonLineActor::AUIPolygonLineActor()
-{
-	PrimaryActorTick.bCanEverTick = false;
-
-	UIPolygonLine = CreateDefaultSubobject<UUIPolygonLine>(TEXT("UIPolygonLineComponent"));
-	RootComponent = UIPolygonLine;
 }

@@ -9,27 +9,21 @@
 #include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
 #include "PipelineStateCache.h"
 #include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "Core/LGUISettings.h"
 #include "RenderTargetPool.h"
-#include "Core/UIPostProcessRenderProxy.h"
+#include "Core/LexVisualPostProcessRenderProxy.h"
 #include "RHIStaticStates.h"
 
 UUIBackgroundPixelate::UUIBackgroundPixelate(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
-	PrimaryComponentTick.bCanEverTick = false;
+	
 }
 
 void UUIBackgroundPixelate::BeginPlay()
 {
 	Super::BeginPlay();
 }
-
-void UUIBackgroundPixelate::TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction )
-{
-	Super::TickComponent( DeltaTime, TickType, ThisTickFunction );
-}
-
 
 #if WITH_EDITOR
 void UUIBackgroundPixelate::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
@@ -45,11 +39,8 @@ void UUIBackgroundPixelate::MarkAllDirty()
 {
 	Super::MarkAllDirty();
 
-	if (this->RenderCanvas.IsValid())
-	{
-		SendRegionVertexDataToRenderProxy();
-		SendMaskTextureToRenderProxy();
-	}
+	SendRegionVertexDataToRenderProxy();
+	SendMaskTextureToRenderProxy();
 }
 
 
@@ -59,7 +50,7 @@ void UUIBackgroundPixelate::SetPixelateStrength(float newValue)
 	if (pixelateStrength != newValue)
 	{
 		pixelateStrength = newValue;
-		MarkCanvasUpdate(false, false, false, false);
+		GetWidget()->MarkCanvasUpdate(false, false, false, false);
 		SendOthersDataToRenderProxy();
 	}
 }
@@ -69,7 +60,7 @@ void UUIBackgroundPixelate::SetApplyAlphaToStrength(bool newValue)
 	if (applyAlphaToStrength != newValue)
 	{
 		applyAlphaToStrength = newValue;
-		MarkCanvasUpdate(false, false, false, false);
+		GetWidget()->MarkCanvasUpdate(false, false, false, false);
 		SendOthersDataToRenderProxy();
 	}
 }
@@ -88,13 +79,13 @@ float UUIBackgroundPixelate::GetStrengthInternal()
 #define INV_MAX_PixelateStrength 0.01f
 
 DECLARE_CYCLE_STAT(TEXT("PostProcess_BackgroundPixelate"), STAT_BackgroundPixelate, STATGROUP_LGUI);
-class FUIBackgroundPixelateRenderProxy :public FUIPostProcessRenderProxy
+class FUIBackgroundPixelateRenderProxy :public FLexVisualPostProcessRenderProxy
 {
 public:
 	float pixelateStrength = 0.0f;
 public:
 	FUIBackgroundPixelateRenderProxy()
-		:FUIPostProcessRenderProxy()
+		:FLexVisualPostProcessRenderProxy()
 	{
 
 	}
@@ -170,18 +161,18 @@ public:
 		auto PixelateEffectRenderTargetTexture = PixelateEffectRenderTarget->GetRHI();
 
 		//copy rect area from screen image to a render target, so we can just process this area
-		auto modelViewProjectionMatrix = objectToWorldMatrix * ViewProjectionMatrix;
+		auto modelViewProjectionMatrix = ObjectToWorldMatrix * ViewProjectionMatrix;
 		Renderer->CopyRenderTargetOnMeshRegion(GraphBuilder
 			, RegisterExternalTexture(GraphBuilder, PixelateEffectRenderTargetTexture, TEXT("LGUI_PixelateEffectRenderTargetTexture"))
 			, NumSamples > 1 ? ScreenResolvedTexture->GetRHI() : ScreenTargetTexture.GetReference()
 			, GlobalShaderMap
-			, renderScreenToMeshRegionVertexArray
+			, RenderScreenToMeshRegionVertexArray
 			, modelViewProjectionMatrix
 			, FIntRect(0, 0, PixelateEffectRenderTargetTexture->GetSizeXYZ().X, PixelateEffectRenderTargetTexture->GetSizeXYZ().Y)
 			, ViewTextureScaleOffset
 		);
 		//after pixelate process, copy the area back to screen image
-		RenderMeshOnScreen_RenderThread(GraphBuilder, SceneTextures, ScreenTargetTexture, GlobalShaderMap, PixelateEffectRenderTargetTexture, modelViewProjectionMatrix, objectToWorldMatrix, IsWorldSpace, BlendDepthForWorld, BlendDepthForWorld, DepthTextureScaleOffset, ViewRect, TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
+		RenderMeshOnScreen_RenderThread(GraphBuilder, SceneTextures, ScreenTargetTexture, GlobalShaderMap, PixelateEffectRenderTargetTexture, modelViewProjectionMatrix, ObjectToWorldMatrix, IsWorldSpace, BlendDepthForWorld, BlendDepthForWorld, DepthTextureScaleOffset, ViewRect, TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
 
 		//release render target
 		ReleaseRenderTarget();
@@ -202,16 +193,13 @@ void UUIBackgroundPixelate::SendOthersDataToRenderProxy()
 	}
 }
 
-TSharedPtr<FUIPostProcessRenderProxy> UUIBackgroundPixelate::GetRenderProxy()
+TSharedPtr<FLexVisualPostProcessRenderProxy> UUIBackgroundPixelate::GetRenderProxy()
 {
 	if (!RenderProxy.IsValid())
 	{
 		RenderProxy = MakeShared<FUIBackgroundPixelateRenderProxy>();
-		if (this->RenderCanvas.IsValid())
-		{
-			SendRegionVertexDataToRenderProxy();
-			SendMaskTextureToRenderProxy();
-		}
+		SendRegionVertexDataToRenderProxy();
+		SendMaskTextureToRenderProxy();
 	}
 	return RenderProxy;
 }

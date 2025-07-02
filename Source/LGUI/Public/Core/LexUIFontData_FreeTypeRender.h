@@ -12,7 +12,7 @@
 
 
 class UTexture2D;
-class UUIText;
+class ULexText;
 #if WITH_FREETYPE
 struct FT_GlyphSlotRec_;
 struct FT_LibraryRec_;
@@ -127,13 +127,13 @@ public:
 	virtual float GetVerticalOffset(const float& fontSize)override;
 	virtual float GetFontSizeLimit() { return 200.0f; }//limit font size to 200. too large font size will result in extream large texture
 
-	virtual void AddUIText(UUIText* InText)override;
-	virtual void RemoveUIText(UUIText* InText)override;
+	virtual void AddUIText(ULexText* InText)override;
+	virtual void RemoveUIText(ULexText* InText)override;
 	//End ULGUIFontData_BaseObject interface
 protected:
 	/** Collection of UIText which use this font to render. */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI")
-		TArray<TWeakObjectPtr<UUIText>> renderTextArray;
+		TArray<TWeakObjectPtr<ULexText>> renderTextArray;
 
 	friend class FLexUIFontData_FreeTypeRenderCustomization;
 	/** save data when useExternalFileOrEmbedInToUAsset=false */

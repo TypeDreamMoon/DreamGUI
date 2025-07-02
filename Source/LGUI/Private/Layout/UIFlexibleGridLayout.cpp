@@ -3,7 +3,7 @@
 #include "Layout/UIFlexibleGridLayout.h"
 #include "Layout/UIFlexibleGridLayoutElement.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
 
 DECLARE_CYCLE_STAT(TEXT("UILayout FlexiableGridRebuildLayout"), STAT_FlexiableGridLayout, STATGROUP_LGUI);
 
@@ -24,7 +24,7 @@ void UUIFlexibleGridLayout::PostEditChangeProperty(FPropertyChangedEvent& Proper
 }
 #endif
 
-void UUIFlexibleGridLayout::GetLayoutElement(UUIItem* InChild, UObject*& OutLayoutElement, bool& OutIgnoreLayout)const
+void UUIFlexibleGridLayout::GetLayoutElement(ULexWidget* InChild, UObject*& OutLayoutElement, bool& OutIgnoreLayout)const
 {
 	auto LayoutElement = InChild->GetOwner()->FindComponentByClass<UUIFlexibleGridLayoutElement>();
 	if (LayoutElement == nullptr || !LayoutElement->GetEnable())
@@ -214,7 +214,7 @@ void UUIFlexibleGridLayout::OnRebuildLayout()
 	}
 }
 
-bool UUIFlexibleGridLayout::GetCanLayoutControlAnchor_Implementation(class UUIItem* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
+bool UUIFlexibleGridLayout::GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
 {
 	if (this->GetRootUIComponent() == InUIItem)
 	{

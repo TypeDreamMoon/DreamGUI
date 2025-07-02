@@ -12,7 +12,7 @@
 
 #include "Materials/MaterialInstanceDynamic.h"
 
-#include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
+#include "LGUI/Public/Core/Components/LexVisualBatchMesh.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(MovieSceneLGUIMaterialSystem)
 
@@ -20,7 +20,7 @@ namespace UE::MovieScene
 {
 
 FLGUIMaterialAccessor::FLGUIMaterialAccessor(const FLGUIMaterialKey& InKey)
-	: Renderable(CastChecked<UUIBatchMeshRenderable>(InKey.Object.ResolveObjectPtr(), ECastCheckedType::NullAllowed))
+	: Renderable(CastChecked<ULexVisualBatchMesh>(InKey.Object.ResolveObjectPtr(), ECastCheckedType::NullAllowed))
 {
 	if (Renderable)
 	{
@@ -29,7 +29,7 @@ FLGUIMaterialAccessor::FLGUIMaterialAccessor(const FLGUIMaterialKey& InKey)
 }
 
 FLGUIMaterialAccessor::FLGUIMaterialAccessor(UObject* InObject, FLGUIMaterialHandle InLGUIMaterialHandle)
-	: Renderable(Cast<UUIBatchMeshRenderable>(InObject))
+	: Renderable(Cast<ULexVisualBatchMesh>(InObject))
 	, LGUIMaterialHandle(MoveTemp(InLGUIMaterialHandle))
 {
 	check(!InObject || Renderable);

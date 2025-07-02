@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "UIBaseRenderable.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LexVisual.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "UIDirectMeshRenderable.generated.h"
 
 struct FLexUIRenderSection;
@@ -12,7 +12,7 @@ class ULexUIMeshComponent;
  * UI element that render directly to LGUICanvas's mesh section. Each UIDirectMeshRenderable is considered as a drawcall.
  */
 UCLASS(Abstract, NotBlueprintable)
-class LGUI_API UUIDirectMeshRenderable : public UUIBaseRenderable
+class LGUI_API UUIDirectMeshRenderable : public ULexVisual
 {
 	GENERATED_BODY()
 
@@ -21,21 +21,18 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
-	virtual void TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction ) override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
-	virtual void OnUnregister()override;
-
 	virtual void UpdateGeometry()override;
 
-	virtual void OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange, bool InDiscardCache = true)override;
+	virtual void OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
 
 	void MarkVertexPositionDirty();
 
 	virtual void MarkAllDirty()override;
 
-	virtual bool LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)override;
+	virtual bool LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const override;
 public:
 	/** Called by LGUICanvas when this UI element have valid mesh data. */
 	virtual void OnMeshDataReady();

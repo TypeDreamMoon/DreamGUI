@@ -1,14 +1,14 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/LGUICustomMesh.h"
-#include "LGUI/Public/Core/Components/UIBatchMeshRenderable.h"
+#include "LGUI/Public/Core/Components/LexVisualBatchMesh.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "Core/LexUIGeometry.h"
 
 DECLARE_CYCLE_STAT(TEXT("LGUICustomMesh Blueprint.OnFillMesh"), STAT_LGUICustomMesh_OnFillMesh, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("LGUICustomMesh Blueprint.GetHitUV"), STAT_LGUICustomMesh_GetHitUV, STATGROUP_LGUI);
-void ULGUICustomMesh::OnFillMesh(UUIBatchMeshRenderable* InRenderable, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
+void ULGUICustomMesh::OnFillMesh(ULexVisualBatchMesh* InRenderable, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
 	{
@@ -16,7 +16,7 @@ void ULGUICustomMesh::OnFillMesh(UUIBatchMeshRenderable* InRenderable, bool InTr
 		ReceiveOnFillMesh(InRenderable, InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged);
 	}
 }
-bool ULGUICustomMesh::GetHitUV(const UUIBatchMeshRenderable* InRenderable, const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV)const
+bool ULGUICustomMesh::GetHitUV(const ULexVisualBatchMesh* InRenderable, const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV)const
 {
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
 	{
@@ -33,7 +33,7 @@ bool ULGUICustomMesh::SupportDrawcallBatching()const
 	}
 	return false;
 }
-bool ULGUICustomMesh::GetHitUVbyFaceIndex(const UUIBatchMeshRenderable* InRenderable, const int32& InHitFaceIndex, const FVector& InHitPoint, FVector2D& OutHitUV)const
+bool ULGUICustomMesh::GetHitUVbyFaceIndex(const ULexVisualBatchMesh* InVisual, const int32& InHitFaceIndex, const FVector& InHitPoint, FVector2D& OutHitUV)const
 {
 	auto& Vertices = UIGeo->Vertices;
 	auto& OriginVertices = UIGeo->OriginVertices;
@@ -41,7 +41,7 @@ bool ULGUICustomMesh::GetHitUVbyFaceIndex(const UUIBatchMeshRenderable* InRender
 
 	if (InHitFaceIndex >= 0)
 	{
-		auto InverseTf = InRenderable->GetComponentTransform().Inverse();
+		auto InverseTf = InVisual->GetWidget()->GetComponentTransform().Inverse();
 		auto LocalHitPoint = InverseTf.TransformPosition(InHitPoint);
 		if (Triangles.IsValidIndex(InHitFaceIndex * 3 + 2))
 		{
@@ -70,12 +70,13 @@ bool ULGUICustomMesh::GetHitUVbyFaceIndex(const UUIBatchMeshRenderable* InRender
 
 #define MIN_SEG 4
 #define MAX_SEG 32
-void ULGUICustomMesh_Cylinder::OnFillMesh(UUIBatchMeshRenderable* InRenderable, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
+void ULGUICustomMesh_Cylinder::OnFillMesh(ULexVisualBatchMesh* InVisual, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
-	const auto Pivot = InRenderable->GetPivot();
-	const auto SizeX = InRenderable->GetWidth();
-	const auto SizeY = InRenderable->GetHeight();
-	const auto Color = InRenderable->GetFinalColor();
+	auto Widget = InVisual->GetWidget();
+	const auto Pivot = Widget->GetPivot();
+	const auto SizeX = Widget->GetWidth();
+	const auto SizeY = Widget->GetHeight();
+	const auto Color = InVisual->GetFinalColor();
 	auto& Vertices = UIGeo->Vertices;
 	auto& OriginVertices = UIGeo->OriginVertices;
 	auto& Triangles = UIGeo->Triangles;
@@ -151,7 +152,7 @@ void ULGUICustomMesh_Cylinder::OnFillMesh(UUIBatchMeshRenderable* InRenderable, 
 		TriangleIndex += 2;
 	}
 }
-bool ULGUICustomMesh_Cylinder::GetHitUV(const UUIBatchMeshRenderable* InRenderable, const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV)const
+bool ULGUICustomMesh_Cylinder::GetHitUV(const ULexVisualBatchMesh* InRenderable, const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV)const
 {
 	return GetHitUVbyFaceIndex(InRenderable, InHitFaceIndex, InHitPoint, OutHitUV);
 }
@@ -165,13 +166,14 @@ ULGUICustomMesh_CurvyPlane::ULGUICustomMesh_CurvyPlane()
 		FRichCurveKey(1, 0, 0, 0, ERichCurveInterpMode::RCIM_Cubic)
 		});
 }
-void ULGUICustomMesh_CurvyPlane::OnFillMesh(UUIBatchMeshRenderable* InRenderable, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
+void ULGUICustomMesh_CurvyPlane::OnFillMesh(ULexVisualBatchMesh* InVisual, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
+	auto Widget = InVisual->GetWidget();
 	Segment = FMath::Clamp(Segment, 1, 200);
-	const auto Pivot = InRenderable->GetPivot();
-	const auto SizeX = InRenderable->GetWidth();
-	const auto SizeY = InRenderable->GetHeight();
-	const auto Color = InRenderable->GetFinalColor();
+	const auto Pivot = Widget->GetPivot();
+	const auto SizeX = Widget->GetWidth();
+	const auto SizeY = Widget->GetHeight();
+	const auto Color = InVisual->GetFinalColor();
 
 	const auto PivotOffsetX = SizeX * (0.5f - Pivot.X);
 	const auto PivotOffsetY = SizeY * (0.5f - Pivot.Y);
@@ -224,7 +226,7 @@ void ULGUICustomMesh_CurvyPlane::OnFillMesh(UUIBatchMeshRenderable* InRenderable
 		UVX += UVXInterval;
 	}
 }
-bool ULGUICustomMesh_CurvyPlane::GetHitUV(const UUIBatchMeshRenderable* InRenderable, const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV) const
+bool ULGUICustomMesh_CurvyPlane::GetHitUV(const ULexVisualBatchMesh* InRenderable, const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV) const
 {
 	return GetHitUVbyFaceIndex(InRenderable, InHitFaceIndex, InHitPoint, OutHitUV);
 }

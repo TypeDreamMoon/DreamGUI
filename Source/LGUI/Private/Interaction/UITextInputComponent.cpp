@@ -2,11 +2,8 @@
 
 #include "Interaction/UITextInputComponent.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UIText.h"
-#include "Core/Actor/UITextActor.h"
-#include "Core/Actor/UISpriteActor.h"
+#include "LGUI/Public/Core/Components/LexText.h"
 #include "InputCoreTypes.h"
-#include "Utils/LexUIUtils.h"
 #include "Event/LGUIEventSystem.h"
 #include "HAL/PlatformApplicationMisc.h"
 #include "GameFramework/PlayerInput.h"
@@ -15,6 +12,7 @@
 #include "Widgets/SWindow.h"
 #include "Core/LexUIFontData_Bitmap.h"
 #include "Core/LexUISpriteData.h"
+#include "Core/Actor/LexWidgetActor.h"
 #include "Engine/GameViewportClient.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
@@ -54,12 +52,12 @@ void UUITextInputComponent::Update(float DeltaTime)
 	if (bInputActive)
 	{
 		//blink caret
-		if (CaretObject.IsValid())
+		if (CaretWidget.IsValid())
 		{
 			ElapseTime += DeltaTime;
 			if (NextCaretBlinkTime < ElapseTime)
 			{
-				CaretObject->SetAlpha(1.0f - CaretObject->GetAlpha());
+				CaretWidget->SetRenderOpacity(1.0f - CaretWidget->GetRenderOpacity());
 				NextCaretBlinkTime = ElapseTime + CaretBlinkRate;
 			}
 		}
@@ -125,12 +123,12 @@ void UUITextInputComponent::PostEditChangeProperty(FPropertyChangedEvent& Proper
 			}
 		}
 	}
-	if (TextActor != nullptr)
+	if (TextWidget != nullptr)
 	{
-		TextActor->GetUIText()->SetOverflowType(bAllowMultiLine ? EUITextOverflowType::VerticalOverflow : EUITextOverflowType::HorizontalOverflow);
-		if (!TextActor->GetUIText()->GetText().IsCultureInvariant())
+		TextWidget->SetOverflowType(bAllowMultiLine ? EUITextOverflowType::VerticalOverflow : EUITextOverflowType::HorizontalOverflow);
+		if (!TextWidget->GetText().IsCultureInvariant())
 		{
-			TextActor->GetUIText()->SetText(FText::AsCultureInvariant(Text));
+			TextWidget->SetText(FText::AsCultureInvariant(Text));
 			UE_LOG(LGUI, Error, TEXT("[UUITextInputComponent::PostEditChangeProperty]Input text should not change by culture, set it to not localizable."));
 		}
 	}
@@ -149,7 +147,7 @@ void UUITextInputComponent::AnyKeyPressed(FKey Key)
 {
 	if (bInputActive == false)return;
 	if (!CheckPlayerController())return;
-	if (TextActor == nullptr)return;
+	if (TextWidget == nullptr)return;
 
 	TCHAR inputChar = 127;
 	bool ctrl = PlayerController->PlayerInput->IsCtrlPressed();
@@ -742,22 +740,22 @@ bool UUITextInputComponent::DeleteSelection(bool InFireEvent)
 void UUITextInputComponent::InsertCharAtCaretPosition(TCHAR c)
 {
 	if (bReadOnly)return;
-	TextActor->GetUIText()->SetText(FText::FromString(GetReplaceText()));
-	auto CharIndex = TextActor->GetUIText()->GetCharIndexByCaretIndex(CaretPositionIndex);
+	TextWidget->SetText(FText::FromString(GetReplaceText()));
+	auto CharIndex = TextWidget->GetCharIndexByCaretIndex(CaretPositionIndex);
 	Text.InsertAt(CharIndex, c);
-	TextActor->GetUIText()->SetText(FText::FromString(GetReplaceText()));
-	CaretPositionIndex = TextActor->GetUIText()->GetCaretIndexByCharIndex(CharIndex) + 1;
+	TextWidget->SetText(FText::FromString(GetReplaceText()));
+	CaretPositionIndex = TextWidget->GetCaretIndexByCharIndex(CharIndex) + 1;
 	PressCaretPositionIndex = CaretPositionIndex;
 }
 void UUITextInputComponent::InsertStringAtCaretPosition(const FString& value)
 {
 	if (bReadOnly)return;
-	TextActor->GetUIText()->SetText(FText::FromString(GetReplaceText()));
-	auto CharIndex = TextActor->GetUIText()->GetCharIndexByCaretIndex(CaretPositionIndex);
+	TextWidget->SetText(FText::FromString(GetReplaceText()));
+	auto CharIndex = TextWidget->GetCharIndexByCaretIndex(CaretPositionIndex);
 	Text.InsertAt(CharIndex, value);
 	CharIndex += value.Len();
-	TextActor->GetUIText()->SetText(FText::FromString(GetReplaceText()));
-	CaretPositionIndex = TextActor->GetUIText()->GetCaretIndexByCharIndex(CharIndex) + 1;
+	TextWidget->SetText(FText::FromString(GetReplaceText()));
+	CaretPositionIndex = TextWidget->GetCaretIndexByCharIndex(CharIndex) + 1;
 	PressCaretPositionIndex = CaretPositionIndex;
 }
 
@@ -769,12 +767,12 @@ void UUITextInputComponent::BackSpace()
 		if (CaretPositionIndex > 0)
 		{
 			CaretPositionIndex--;
-			TextActor->GetUIText()->SetText(FText::FromString(GetReplaceText()));
-			auto CharIndex = TextActor->GetUIText()->GetCharIndexByCaretIndex(CaretPositionIndex);
+			TextWidget->SetText(FText::FromString(GetReplaceText()));
+			auto CharIndex = TextWidget->GetCharIndexByCaretIndex(CaretPositionIndex);
 			int RemoveCount = 1;
 			if (CharIndex + 1 < Text.Len())//not end char, could be rich text, so check delete count
 			{
-				auto NextCharIndex = TextActor->GetUIText()->GetCharIndexByCaretIndex(CaretPositionIndex + 1);
+				auto NextCharIndex = TextWidget->GetCharIndexByCaretIndex(CaretPositionIndex + 1);
 				RemoveCount = NextCharIndex - CharIndex;
 			}
 			Text.RemoveAt(CharIndex, RemoveCount);
@@ -784,9 +782,9 @@ void UUITextInputComponent::BackSpace()
 	}
 	else//selection mask, delete 
 	{
-		TextActor->GetUIText()->SetText(FText::FromString(GetReplaceText()));
-		auto CharIndexAtPressCaretPosition = TextActor->GetUIText()->GetCharIndexByCaretIndex(PressCaretPositionIndex);
-		auto CharIndexAtCaretPosition = TextActor->GetUIText()->GetCharIndexByCaretIndex(CaretPositionIndex);
+		TextWidget->SetText(FText::FromString(GetReplaceText()));
+		auto CharIndexAtPressCaretPosition = TextWidget->GetCharIndexByCaretIndex(PressCaretPositionIndex);
+		auto CharIndexAtCaretPosition = TextWidget->GetCharIndexByCaretIndex(CaretPositionIndex);
 		int32 TempCharIndex = CharIndexAtPressCaretPosition > CharIndexAtCaretPosition ? CharIndexAtCaretPosition : CharIndexAtPressCaretPosition;
 		Text.RemoveAt(TempCharIndex, FMath::Abs(CharIndexAtPressCaretPosition - CharIndexAtCaretPosition));
 		CaretPositionIndex = PressCaretPositionIndex > CaretPositionIndex ? CaretPositionIndex : PressCaretPositionIndex;
@@ -799,12 +797,12 @@ void UUITextInputComponent::ForwardSpace()
 	if (bReadOnly)return;
 	if (SelectionPropertyArray.Num() == 0)//no selection mask, use caret
 	{
-		TextActor->GetUIText()->SetText(FText::FromString(GetReplaceText()));
-		auto CharIndex = TextActor->GetUIText()->GetCharIndexByCaretIndex(CaretPositionIndex);
+		TextWidget->SetText(FText::FromString(GetReplaceText()));
+		auto CharIndex = TextWidget->GetCharIndexByCaretIndex(CaretPositionIndex);
 		int RemoveCount = 1;
 		if (CharIndex + 1 < Text.Len())//not end char, could be rich text, so check delete count
 		{
-			auto NextCharIndex = TextActor->GetUIText()->GetCharIndexByCaretIndex(CaretPositionIndex + 1);
+			auto NextCharIndex = TextWidget->GetCharIndexByCaretIndex(CaretPositionIndex + 1);
 			RemoveCount = NextCharIndex - CharIndex;
 		}
 		if (CharIndex < Text.Len() && CharIndex + RemoveCount <= Text.Len())
@@ -816,9 +814,9 @@ void UUITextInputComponent::ForwardSpace()
 	}
 	else//selection mask, delete 
 	{
-		TextActor->GetUIText()->SetText(FText::FromString(GetReplaceText()));
-		auto CharIndexAtPressCaretPosition = TextActor->GetUIText()->GetCharIndexByCaretIndex(PressCaretPositionIndex);
-		auto CharIndexAtCaretPosition = TextActor->GetUIText()->GetCharIndexByCaretIndex(CaretPositionIndex);
+		TextWidget->SetText(FText::FromString(GetReplaceText()));
+		auto CharIndexAtPressCaretPosition = TextWidget->GetCharIndexByCaretIndex(PressCaretPositionIndex);
+		auto CharIndexAtCaretPosition = TextWidget->GetCharIndexByCaretIndex(CaretPositionIndex);
 		int32 TempCharIndex = CharIndexAtPressCaretPosition > CharIndexAtCaretPosition ? CharIndexAtCaretPosition : CharIndexAtPressCaretPosition;
 		Text.RemoveAt(TempCharIndex, FMath::Abs(CharIndexAtPressCaretPosition - CharIndexAtCaretPosition));
 		CaretPositionIndex = PressCaretPositionIndex > CaretPositionIndex ? CaretPositionIndex : PressCaretPositionIndex;
@@ -833,9 +831,9 @@ void UUITextInputComponent::Copy()
 		)return;//not allow copy password
 	if (SelectionPropertyArray.Num() != 0)//have selection
 	{
-		TextActor->GetUIText()->SetText(FText::FromString(Text));
-		auto CharIndexAtPressCaretPosition = TextActor->GetUIText()->GetCharIndexByCaretIndex(PressCaretPositionIndex);
-		auto CharIndexAtCaretPosition = TextActor->GetUIText()->GetCharIndexByCaretIndex(CaretPositionIndex);
+		TextWidget->SetText(FText::FromString(Text));
+		auto CharIndexAtPressCaretPosition = TextWidget->GetCharIndexByCaretIndex(PressCaretPositionIndex);
+		auto CharIndexAtCaretPosition = TextWidget->GetCharIndexByCaretIndex(CaretPositionIndex);
 		int32 TempCharIndex = CharIndexAtPressCaretPosition > CharIndexAtCaretPosition ? CharIndexAtCaretPosition : CharIndexAtPressCaretPosition;
 		auto CopyText = Text.Mid(TempCharIndex, FMath::Abs(CharIndexAtPressCaretPosition - CharIndexAtCaretPosition));
 		FPlatformApplicationMisc::ClipboardCopy(*CopyText);
@@ -897,7 +895,7 @@ void UUITextInputComponent::SelectAll()
 	CaretPositionIndex = Text.Len() * 2;//just a large enough value to make sure it is the last caret
 	PressCaretPositionIndex = 0;
 	UpdateUITextComponent();
-	TextActor->GetUIText()->GetSelectionProperty(PressCaretPositionIndex, CaretPositionIndex, SelectionPropertyArray);
+	TextWidget->GetSelectionProperty(PressCaretPositionIndex, CaretPositionIndex, SelectionPropertyArray);
 	UpdateCaretPosition(false);
 	UpdateSelection();
 }
@@ -968,12 +966,12 @@ FString UUITextInputComponent::GetReplaceText()const
 
 void UUITextInputComponent::MoveCaret(int32 moveType, bool withSelection)
 {
-	auto uiText = TextActor->GetUIText();
+	auto uiText = TextWidget;
 	auto originText = uiText->GetText();
 	auto replaceText = GetReplaceText();
 	uiText->SetText(FText::FromString(replaceText));
 
-	auto CaretPosition3D = CaretObject->GetRelativeLocation();
+	auto CaretPosition3D = CaretWidget->GetRelativeLocation();
 	auto CaretPosition = FVector2f(CaretPosition3D.Y, CaretPosition3D.Z);
 	if (uiText->MoveCaret(moveType, CaretPositionIndex, CaretPositionLineIndex, CaretPosition))
 	{
@@ -1004,27 +1002,27 @@ void UUITextInputComponent::FireOnValueChangeEvent()
 }
 void UUITextInputComponent::UpdateUITextComponent()
 {
-	if (TextActor != nullptr)
+	if (TextWidget.IsValid())
 	{
-		auto uiText = TextActor->GetUIText();
-		if (!uiText->GetRenderCanvas())return;//need render canvas to calculate geometry
+		auto Widget = TextWidget->GetWidget();
+		if (!Widget->GetRenderCanvas())return;//need render canvas to calculate geometry
 		auto replaceText = GetReplaceText();
 		//set to full text
-		uiText->SetText(FText::FromString(replaceText));
+		TextWidget->SetText(FText::FromString(replaceText));
 		
 		if (bAllowMultiLine)//multi line, handle out of range chars
 		{
 			//recalculate MaxVisibleLineCount
 			if (OverflowType == ELGUITextInputOverflowType::ClampContent)
 			{
-				auto SingleLineHeight = uiText->GetFont()->GetLineHeight(uiText->GetFontSize());
-				MaxLineCount = (int)(uiText->GetHeight()
-					/ (SingleLineHeight + uiText->GetFontSpace().Y));
+				auto SingleLineHeight = TextWidget->GetFont()->GetLineHeight(TextWidget->GetFontSize());
+				MaxLineCount = (int)(Widget->GetHeight()
+					/ (SingleLineHeight + TextWidget->GetFontSpace().Y));
 			}
 
 			int VisibleCharStartIndex = 0;
 			int VisibleCharCount = 0;
-			if (uiText->GetVisibleCharRangeForMultiLine(CaretPositionIndex, CaretPositionLineIndex, VisibleCaretStartLineIndex, VisibleCaretStartIndex, MaxLineCount, VisibleCharStartIndex, VisibleCharCount))
+			if (TextWidget->GetVisibleCharRangeForMultiLine(CaretPositionIndex, CaretPositionLineIndex, VisibleCaretStartLineIndex, VisibleCaretStartIndex, MaxLineCount, VisibleCharStartIndex, VisibleCharCount))
 			{
 				replaceText = replaceText.Mid(VisibleCharStartIndex, VisibleCharCount);
 			}
@@ -1032,25 +1030,25 @@ void UUITextInputComponent::UpdateUITextComponent()
 		else//single line, handle out of range chars
 		{
 			float maxWidth = OverflowType == ELGUITextInputOverflowType::ClampContent
-				? uiText->GetWidth()
+				? Widget->GetWidth()
 				: MaxLineWidth
 				;
 
 			int VisibleCharStartIndex = 0;
 			int VisibleCharCount = 0;
-			if (uiText->GetVisibleCharRangeForSingleLine(CaretPositionIndex, VisibleCaretStartIndex, maxWidth, VisibleCharStartIndex, VisibleCharCount))
+			if (TextWidget->GetVisibleCharRangeForSingleLine(CaretPositionIndex, VisibleCaretStartIndex, maxWidth, VisibleCharStartIndex, VisibleCharCount))
 			{
 				replaceText = replaceText.Mid(VisibleCharStartIndex, VisibleCharCount);
 			}
 		}
-		uiText->SetText(FText::FromString(replaceText));
+		TextWidget->SetText(FText::FromString(replaceText));
 		
 #if WITH_EDITOR
 		if (auto world = this->GetWorld())
 		{
 			if (world->WorldType == EWorldType::Editor || world->WorldType == EWorldType::EditorPreview)
 			{
-				uiText->EditorForceUpdate();
+				Widget->EditorForceUpdate();
 			}
 		}
 #endif
@@ -1060,16 +1058,16 @@ void UUITextInputComponent::UpdatePlaceHolderComponent()
 {
 	if (bInputActive || !Text.IsEmpty())
 	{
-		if (PlaceHolderActor.IsValid())
+		if (PlaceHolder.IsValid())
 		{
-			PlaceHolderActor->GetUIItem()->SetIsUIActive(false);
+			PlaceHolder->SetWidgetVisibility(ESlateVisibility::Collapsed);
 		}
 	}
 	else
 	{
-		if (PlaceHolderActor.IsValid())
+		if (PlaceHolder.IsValid())
 		{
-			PlaceHolderActor->GetUIItem()->SetIsUIActive(true);
+			PlaceHolder->SetWidgetVisibility(ESlateVisibility::Visible);
 		}
 	}
 }
@@ -1078,9 +1076,9 @@ void UUITextInputComponent::UpdateCaretPosition(bool InHideSelection)
 {
 	if (!bInputActive)
 	{
-		if (CaretObject.IsValid())
+		if (CaretWidget.IsValid())
 		{
-			CaretObject->SetIsUIActive(false);
+			CaretWidget->SetIsUIActive(false);
 		}
 	}
 	else
@@ -1089,7 +1087,7 @@ void UUITextInputComponent::UpdateCaretPosition(bool InHideSelection)
 		int tempCaretPositionLineIndex = 0;
 		int tempVisibleCaretStartIndex = 0;
 		int tempCaretPositionIndex = CaretPositionIndex - VisibleCaretStartIndex;
-		TextActor->GetUIText()->FindCaretByIndex(tempCaretPositionIndex, caretPos, tempCaretPositionLineIndex, tempVisibleCaretStartIndex);
+		TextWidget->FindCaretByIndex(tempCaretPositionIndex, caretPos, tempCaretPositionLineIndex, tempVisibleCaretStartIndex);
 		CaretPositionLineIndex = tempCaretPositionLineIndex + VisibleCaretStartLineIndex;
 
 		UpdateCaretPosition(caretPos, InHideSelection);
@@ -1097,52 +1095,53 @@ void UUITextInputComponent::UpdateCaretPosition(bool InHideSelection)
 }
 void UUITextInputComponent::UpdateCaretPosition(FVector2f InCaretPosition, bool InHideSelection)
 {
-	if (!TextActor.IsValid())return;
-	if (!CaretObject.IsValid())
+	if (!TextWidget.IsValid())return;
+	if (!CaretWidget.IsValid())
 	{
-		auto caretActor = this->GetWorld()->SpawnActor<AUISpriteActor>();
-		caretActor->AttachToActor(TextActor.Get(), FAttachmentTransformRules::KeepRelativeTransform);
+		auto CaretActor = this->GetWorld()->SpawnActor<ALexWidgetActor>();
+		CaretActor->AttachToActor(TextWidget->GetWidget()->GetOwner(), FAttachmentTransformRules::KeepRelativeTransform);
 #if WITH_EDITOR
-		caretActor->SetActorLabel(TEXT("Caret"));
+		CaretActor->SetActorLabel(TEXT("Caret"));
 #endif
-		CaretObject = caretActor->GetUISprite();
-		auto uiText = TextActor->GetUIText();
-		CaretObject->SetWidth(CaretWidth);
-		CaretObject->SetHeight(uiText->GetFontSize());
-		CaretObject->SetColor(CaretColor);
-		CaretObject->SetSprite(ULexUISpriteData::GetDefaultWhiteSolid(), false);
+		CaretWidget = CaretActor->GetLexWidget();
+		auto uiText = TextWidget;
+		CaretWidget->SetWidth(CaretWidth);
+		CaretWidget->SetHeight(uiText->GetFontSize());
+		auto CaretVisual = NewObject<UUISprite>(CaretWidget.Get());
+		CaretVisual->SetColor(CaretColor);
+		CaretVisual->SetSprite(ULexUISpriteData::GetDefaultWhiteSolid(), false);
 	}
-	CaretObject->SetRelativeLocation(FVector(0, InCaretPosition.X, InCaretPosition.Y));
-	CaretObject->SetIsUIActive(true);
+	CaretWidget->SetRelativeLocation(FVector(0, InCaretPosition.X, InCaretPosition.Y));
+	CaretWidget->SetIsUIActive(true);
 	
 	//force display caret
 	NextCaretBlinkTime = 0.8f;
 	ElapseTime = 0.0f;
-	CaretObject->SetAlpha(1.0f);
+	CaretWidget->SetRenderOpacity(1.0f);
 
 	if (InHideSelection) HideSelectionMask();//if use caret, then hide selection mask
 }
 void UUITextInputComponent::UpdateSelection()
 {
-	if (!TextActor.IsValid())return;
+	if (!TextWidget.IsValid())return;
 	int32 createdSelectionMaskCount = SelectionMaskObjectArray.Num();
 	if (SelectionPropertyArray.Num() > createdSelectionMaskCount)//need more selection mask object
 	{
 		int32 needToCreateSelectionMaskCount = SelectionPropertyArray.Num() - createdSelectionMaskCount;
 		for (int32 i = 0; i < needToCreateSelectionMaskCount; i++)
 		{
-			auto spriteActor = this->GetWorld()->SpawnActor<AUISpriteActor>();
-			spriteActor->AttachToActor(TextActor.Get(), FAttachmentTransformRules::KeepRelativeTransform);
+			auto SpriteActor = this->GetWorld()->SpawnActor<ALexWidgetActor>();
+			SpriteActor->AttachToActor(TextWidget->GetWidget()->GetOwner(), FAttachmentTransformRules::KeepRelativeTransform);
 #if WITH_EDITOR
-			spriteActor->SetActorLabel(FString::Printf(TEXT("Selection%d"), i + createdSelectionMaskCount));
+			SpriteActor->SetActorLabel(FString::Printf(TEXT("Selection%d"), i + createdSelectionMaskCount));
 #endif
-			auto uiSprite = spriteActor->GetUISprite();
-			auto uiText = TextActor->GetUIText();
-			uiSprite->SetHeight(uiText->GetFontSize());
-			uiSprite->SetColor(SelectionColor);
-			uiSprite->SetPivot(FVector2D(0, 0.5f));
-			uiSprite->SetSprite(ULexUISpriteData::GetDefaultWhiteSolid(), false);
-			SelectionMaskObjectArray.Add(uiSprite);
+			auto SpriteWidget = SpriteActor->GetLexWidget();
+			SpriteWidget->SetHeight(TextWidget->GetFontSize());
+			SpriteWidget->SetPivot(FVector2D(0, 0.5f));
+			auto SpriteVisual = NewObject<UUISprite>(SpriteWidget);
+			SpriteVisual->SetColor(SelectionColor);
+			SpriteVisual->SetSprite(ULexUISpriteData::GetDefaultWhiteSolid(), false);
+			SelectionMaskObjectArray.Add(SpriteVisual);
 		}
 	}
 	else if (SelectionPropertyArray.Num() < createdSelectionMaskCount)//hide extra selection mask object
@@ -1153,7 +1152,7 @@ void UUITextInputComponent::UpdateSelection()
 			auto uiSprite = SelectionMaskObjectArray[i + SelectionPropertyArray.Num()];
 			if (uiSprite.IsValid())
 			{
-				uiSprite->SetIsUIActive(false);
+				uiSprite->GetWidget()->SetIsUIActive(false);
 			}
 		}
 	}
@@ -1163,10 +1162,10 @@ void UUITextInputComponent::UpdateSelection()
 		auto uiSprite = SelectionMaskObjectArray[i];
 		if (uiSprite.IsValid())
 		{
-			uiSprite->SetIsUIActive(true);
+			uiSprite->GetWidget()->SetIsUIActive(true);
 			auto& selectionProperty = SelectionPropertyArray[i];
-			uiSprite->SetRelativeLocation(FVector(0, selectionProperty.Pos.X, selectionProperty.Pos.Y));
-			uiSprite->SetWidth(selectionProperty.Size);
+			uiSprite->GetWidget()->SetRelativeLocation(FVector(0, selectionProperty.Pos.X, selectionProperty.Pos.Y));
+			uiSprite->GetWidget()->SetWidth(selectionProperty.Size);
 		}
 	}
 }
@@ -1177,7 +1176,7 @@ void UUITextInputComponent::HideSelectionMask()
 		auto uiSprite = SelectionMaskObjectArray[i];
 		if (uiSprite.IsValid())
 		{
-			SelectionMaskObjectArray[i]->SetIsUIActive(false);
+			SelectionMaskObjectArray[i]->GetWidget()->SetIsUIActive(false);
 		}
 	}
 	SelectionPropertyArray.Reset();//clear selection mask
@@ -1263,12 +1262,12 @@ bool UUITextInputComponent::OnPointerDrag_Implementation(ULGUIPointerEventData* 
 {
 	if (bInputActive)
 	{
-		if (TextActor != nullptr)
+		if (TextWidget != nullptr)
 		{
 			FVector2f caretPosition;
 			int tempCaretPositionLineIndex;
-			TextActor->GetUIText()->FindCaretByWorldPosition(eventData->GetWorldPointInPlane(), caretPosition, tempCaretPositionLineIndex, CaretPositionIndex);
-			auto displayCaretCount = TextActor->GetUIText()->GetLastCaret() + 1;
+			TextWidget->FindCaretByWorldPosition(eventData->GetWorldPointInPlane(), caretPosition, tempCaretPositionLineIndex, CaretPositionIndex);
+			auto displayCaretCount = TextWidget->GetLastCaret() + 1;
 
 			//@todo:caret move speed depend on drag distance
 			if (CaretPositionIndex == 0)//caret position at left most
@@ -1299,7 +1298,7 @@ bool UUITextInputComponent::OnPointerDrag_Implementation(ULGUIPointerEventData* 
 
 			UpdateUITextComponent();
 			//selectionStartCaretIndex may out of range, need clamp.
-			TextActor->GetUIText()->GetSelectionProperty(PressCaretPositionIndex - VisibleCaretStartIndex, CaretPositionIndex - VisibleCaretStartIndex, SelectionPropertyArray);
+			TextWidget->GetSelectionProperty(PressCaretPositionIndex - VisibleCaretStartIndex, CaretPositionIndex - VisibleCaretStartIndex, SelectionPropertyArray);
 			UpdateSelection();
 			UpdateCaretPosition(false);
 		}
@@ -1326,11 +1325,11 @@ bool UUITextInputComponent::OnPointerDown_Implementation(ULGUIPointerEventData* 
 	Super::OnPointerDown_Implementation(eventData);
 	if (bInputActive)//if already active, then put caret position at mouse position
 	{
-		if (TextActor != nullptr)
+		if (TextWidget != nullptr)
 		{
 			//caret position when press, UIText space
 			auto PressCaretPosition = FVector2f(0, 0);
-			TextActor->GetUIText()->FindCaretByWorldPosition(eventData->GetWorldPointInPlane(), PressCaretPosition, PressCaretPositionLineIndex, PressCaretPositionIndex);
+			TextWidget->FindCaretByWorldPosition(eventData->GetWorldPointInPlane(), PressCaretPosition, PressCaretPositionLineIndex, PressCaretPositionIndex);
 			PressCaretPositionIndex = PressCaretPositionIndex + VisibleCaretStartIndex;
 			CaretPositionIndex = PressCaretPositionIndex;
 			PressCaretPositionLineIndex = PressCaretPositionLineIndex + VisibleCaretStartLineIndex;
@@ -1349,7 +1348,7 @@ bool UUITextInputComponent::OnPointerUp_Implementation(ULGUIPointerEventData* ev
 }
 void UUITextInputComponent::ActivateInput(ULGUIPointerEventData* eventData)
 {
-	if (TextActor == nullptr)
+	if (TextWidget == nullptr)
 	{
 		UE_LOG(LGUI, Error, TEXT("[UUITextInputComponent::ActivateInput]TextActor is null!"));
 		return;
@@ -1361,8 +1360,8 @@ void UUITextInputComponent::ActivateInput(ULGUIPointerEventData* eventData)
 	if (bInputActive)
 	{
 		//if already active, then update caret position
-		TextActor->GetUIText()->SetText(FText::FromString(GetReplaceText()));
-		CaretPositionIndex = TextActor->GetUIText()->GetLastCaret();
+		TextWidget->SetText(FText::FromString(GetReplaceText()));
+		CaretPositionIndex = TextWidget->GetLastCaret();
 		UpdateUITextComponent();
 		UpdateCaretPosition();
 		return;
@@ -1587,9 +1586,9 @@ void UUITextInputComponent::DeactivateInput(bool InFireEvent)
 	}
 	bInputActive = false;
 	//hide caret
-	if (CaretObject.IsValid())
+	if (CaretWidget.IsValid())
 	{
-		CaretObject->SetIsUIActive(false);
+		CaretWidget->SetIsUIActive(false);
 	}
 	//hide selection
 	HideSelectionMask();
@@ -1603,11 +1602,11 @@ void UUITextInputComponent::DeactivateInput(bool InFireEvent)
 		OnInputActivate.FireEvent(bInputActive);
 	}
 }
-UUIText* UUITextInputComponent::GetTextComponent()const
+ULexText* UUITextInputComponent::GetTextComponent()const
 {
-	if (TextActor != nullptr)
+	if (TextWidget != nullptr)
 	{
-		return TextActor->GetUIText();
+		return TextWidget.Get();
 	}
 	return nullptr;
 }
@@ -1698,9 +1697,9 @@ void UUITextInputComponent::SetMultiLineSubmitFunctionKeys(const TArray<FKey>& v
 {
 	MultiLineSubmitFunctionKeys = value;
 }
-void UUITextInputComponent::SetPlaceHolderActor(class AUIBaseActor* value)
+void UUITextInputComponent::SetPlaceHolder(ULexWidget* value)
 {
-	PlaceHolderActor = value;
+	PlaceHolder = value;
 }
 void UUITextInputComponent::SetCaretBlinkRate(float value)
 {
@@ -1711,9 +1710,9 @@ void UUITextInputComponent::SetCaretWidth(float value)
 	if (CaretWidth != value)
 	{
 		CaretWidth = value;
-		if (CaretObject.IsValid())
+		if (CaretWidget.IsValid())
 		{
-			CaretObject->SetWidth(CaretWidth);
+			CaretWidget->SetWidth(CaretWidth);
 		}
 	}
 }
@@ -1722,9 +1721,9 @@ void UUITextInputComponent::SetCaretColor(FColor value)
 	if (CaretColor != value)
 	{
 		CaretColor = value;
-		if (CaretObject.IsValid())
+		if (CaretWidget.IsValid())
 		{
-			CaretObject->SetColor(CaretColor);
+			CaretWidget->GetVisual()->SetColor(CaretColor);
 		}
 	}
 }
@@ -1897,9 +1896,9 @@ FText UUITextInputComponent::FVirtualKeyboardEntry::GetText() const
 }
 FText UUITextInputComponent::FVirtualKeyboardEntry::GetHintText() const
 {
-	if (InputComp->PlaceHolderActor.IsValid())
+	if (InputComp->PlaceHolder.IsValid())
 	{
-		if (auto uiText = Cast<UUIText>(InputComp->PlaceHolderActor->GetUIItem()))
+		if (auto uiText = Cast<ULexText>(InputComp->PlaceHolder->GetVisual()))
 		{
 			return uiText->GetText();
 		}

@@ -1,8 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Extensions/LGUIRenderTargetInteraction.h"
-#include "LGUI/Public/Core/Components/UIItem.h"
-#include "LGUI/Public/Core/Components/LGUICanvas.h"
+#include "LGUI/Public/Core/Components/LexWidget.h"
+#include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "LGUI.h"
 #include "Event/LGUIWorldSpaceRaycaster.h"
 #include "Extensions/LGUIRenderTargetGeometrySource.h"
@@ -24,7 +24,7 @@ void ULGUIRenderTargetInteraction::BeginPlay()
 	Super::BeginPlay();
 	PointerEventData = NewObject<ULGUIPointerEventData>(this);
 	PointerEventData->pointerID = -1;//make it -1, different from LGUIEventSystem created
-	RenderModeArray = { ELGUIRenderMode::RenderTarget };
+	RenderModeArray = { ELexRenderMode::RenderTarget };
 }
 
 void ULGUIRenderTargetInteraction::OnRegister()
@@ -114,7 +114,7 @@ bool ULGUIRenderTargetInteraction::LineTrace(FLGUIHitResult& hitResult)
 	return false;
 }
 
-bool ULGUIRenderTargetInteraction::ShouldSkipCanvas(class ULGUICanvas* UICanvas)
+bool ULGUIRenderTargetInteraction::ShouldSkipCanvas(class ULexCanvas* UICanvas)
 {
 	if (TargetCanvas.IsValid())
 	{

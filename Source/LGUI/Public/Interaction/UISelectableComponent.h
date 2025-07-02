@@ -74,7 +74,7 @@ protected:
 	friend class FUISelectableCustomization;
 	/** If not assigned, then use self. */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable")
-		TWeakObjectPtr<class AUIBaseRenderableActor> TransitionActor;
+		TWeakObjectPtr<ULexVisual> TransitionTarget;
 	/** inherited events of this component can bubble up? */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable")
 		bool AllowEventBubbleUp = false;
@@ -146,7 +146,7 @@ protected:
 		FLGUIComponentReference NavigationPrevSpecific = FLGUIComponentReference(UUISelectableComponent::StaticClass());
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
-		class AUIBaseRenderableActor* GetTransitionTarget()const { return TransitionActor.Get(); }
+		ULexVisual* GetTransitionTarget()const { return TransitionTarget.Get(); }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
 		ULexUISpriteData_BaseObject* GetNormalSprite()const { return NormalSprite; }
@@ -168,7 +168,7 @@ public:
 		EUISelectableSelectionState GetSelectionState()const;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
-		void SetTransitionTarget(class AUIBaseRenderableActor* value);
+		void SetTransitionTarget(ULexVisual* value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
 		void SetNormalSprite(ULexUISpriteData_BaseObject* NewSprite);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")

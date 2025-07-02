@@ -216,11 +216,6 @@ void ULTweenManager::OnTick(ELTweenTickType TickType, float DeltaTime, float Uns
 	}
 }
 
-void ULTweenManager::CustomTick(float DeltaTime)
-{
-	OnTick(ELTweenTickType::DuringPhysics, DeltaTime, DeltaTime);
-}
-
 void ULTweenManager::DisableTick()
 {
 	bTickPaused = true;
@@ -244,6 +239,23 @@ void ULTweenManager::KillAllTweens(bool callComplete)
 	}
 	tweenerList.Reset();
 }
+
+void ULTweenManager::KillAllTweensOnTarget(UObject* WorldContextObject, UObject* TargetObject, bool callComplete)
+{
+	auto Instance = GetLTweenInstance(WorldContextObject);
+	if (!IsValid(Instance))return;
+	for (auto item : Instance->tweenerList)
+	{
+		if (IsValid(item))
+		{
+			if (item->IsInOuter(TargetObject))
+			{
+				item->Kill(callComplete);
+			}
+		}
+	}
+}
+
 bool ULTweenManager::IsTweening(UObject* WorldContextObject, ULTweener* item)
 {
 	if (!IsValid(item))return false;
@@ -474,19 +486,4 @@ ULTweenerSequence* ULTweenManager::CreateSequence(UObject* WorldContextObject)
 	auto tweener = NewObject<ULTweenerSequence>(WorldContextObject);
 	Instance->tweenerList.Add(tweener);
 	return tweener;
-}
-
-FDelegateHandle ULTweenManager::RegisterUpdateEvent(UObject* WorldContextObject, const FLTweenUpdateDelegate& update)
-{
-	auto Instance = GetLTweenInstance(WorldContextObject);
-	if (!IsValid(Instance))return FDelegateHandle();
-
-	return Instance->updateEvent.Add(update);
-}
-void ULTweenManager::UnregisterUpdateEvent(UObject* WorldContextObject, const FDelegateHandle& delegateHandle)
-{
-	auto Instance = GetLTweenInstance(WorldContextObject);
-	if (!IsValid(Instance))return;
-
-	Instance->updateEvent.Remove(delegateHandle);
 }

@@ -4,8 +4,8 @@
 #include "Utils/LexUIUtils.h"
 #include "LTweenManager.h"
 #include "LTweenBPLibrary.h"
-#include "../Public/Core/Components/UIItem.h"
-#include "../Public/Core/Components/UIBaseRenderable.h"
+#include "../Public/Core/Components/LexWidget.h"
+#include "../Public/Core/Components/LexVisual.h"
 #include "Framework/Application/SlateApplication.h"
 #include "LGUI.h"
 #include "PrefabSystem/LGUIPrefab.h"
@@ -239,7 +239,7 @@ void ULGUIBPLibrary::K2_LGUICompRef_GetComponent(const FLGUIComponentReference& 
 #pragma region LTween
 
 #pragma region UIItem
-ULTweener* ULGUIBPLibrary::WidthTo(UUIItem* target, float endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::WidthTo(ULexWidget* target, float endValue, float duration, float delay, ELTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -248,7 +248,7 @@ ULTweener* ULGUIBPLibrary::WidthTo(UUIItem* target, float endValue, float durati
 	}
 	return target->WidthTo(endValue, duration, delay, ease);
 }
-ULTweener* ULGUIBPLibrary::HeightTo(UUIItem* target, float endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::HeightTo(ULexWidget* target, float endValue, float duration, float delay, ELTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -258,7 +258,7 @@ ULTweener* ULGUIBPLibrary::HeightTo(UUIItem* target, float endValue, float durat
 	return target->HeightTo(endValue, duration, delay, ease);
 }
 
-ULTweener* ULGUIBPLibrary::ColorTo(UUIBaseRenderable* target, FColor endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::ColorTo(ULexVisual* target, FColor endValue, float duration, float delay, ELTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -267,7 +267,7 @@ ULTweener* ULGUIBPLibrary::ColorTo(UUIBaseRenderable* target, FColor endValue, f
 	}
 	return target->ColorTo(endValue, duration, delay, ease);
 }
-ULTweener* ULGUIBPLibrary::ColorFrom(UUIBaseRenderable* target, FColor startValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::ColorFrom(ULexVisual* target, FColor startValue, float duration, float delay, ELTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -279,7 +279,7 @@ ULTweener* ULGUIBPLibrary::ColorFrom(UUIBaseRenderable* target, FColor startValu
 	return target->ColorTo(endValue, duration, delay, ease);
 }
 
-ULTweener* ULGUIBPLibrary::AlphaTo(UUIBaseRenderable* target, float endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::AlphaTo(ULexVisual* target, float endValue, float duration, float delay, ELTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -288,7 +288,7 @@ ULTweener* ULGUIBPLibrary::AlphaTo(UUIBaseRenderable* target, float endValue, fl
 	}
 	return target->AlphaTo(endValue, duration, delay, ease);
 }
-ULTweener* ULGUIBPLibrary::AlphaFrom(UUIBaseRenderable* target, float startValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::AlphaFrom(ULexVisual* target, float startValue, float duration, float delay, ELTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -300,7 +300,7 @@ ULTweener* ULGUIBPLibrary::AlphaFrom(UUIBaseRenderable* target, float startValue
 	return target->AlphaTo(endValue, duration, delay, ease);
 }
 
-ULTweener* ULGUIBPLibrary::HorizontalAnchoredPositionTo(UUIItem* target, float endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::HorizontalAnchoredPositionTo(ULexWidget* target, float endValue, float duration, float delay, ELTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -309,7 +309,7 @@ ULTweener* ULGUIBPLibrary::HorizontalAnchoredPositionTo(UUIItem* target, float e
 	}
 	return target->HorizontalAnchoredPositionTo(endValue, duration, delay, ease);
 }
-ULTweener* ULGUIBPLibrary::VerticalAnchoredPositionTo(UUIItem* target, float endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::VerticalAnchoredPositionTo(ULexWidget* target, float endValue, float duration, float delay, ELTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -318,7 +318,7 @@ ULTweener* ULGUIBPLibrary::VerticalAnchoredPositionTo(UUIItem* target, float end
 	}
 	return target->VerticalAnchoredPositionTo(endValue, duration, delay, ease);
 }
-ULTweener* ULGUIBPLibrary::AnchoredPositionTo(UUIItem* target, FVector2D endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::AnchoredPositionTo(ULexWidget* target, FVector2D endValue, float duration, float delay, ELTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -327,7 +327,7 @@ ULTweener* ULGUIBPLibrary::AnchoredPositionTo(UUIItem* target, FVector2D endValu
 	}
 	return target->AnchoredPositionTo(endValue, duration, delay, ease);
 }
-ULTweener* ULGUIBPLibrary::PivotTo(UUIItem* target, FVector2D endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::PivotTo(ULexWidget* target, FVector2D endValue, float duration, float delay, ELTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -337,7 +337,7 @@ ULTweener* ULGUIBPLibrary::PivotTo(UUIItem* target, FVector2D endValue, float du
 	return target->PivotTo(endValue, duration, delay, ease);
 }
 
-ULTweener* ULGUIBPLibrary::AnchorLeftTo(UUIItem* target, float endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::AnchorLeftTo(ULexWidget* target, float endValue, float duration, float delay, ELTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -346,7 +346,7 @@ ULTweener* ULGUIBPLibrary::AnchorLeftTo(UUIItem* target, float endValue, float d
 	}
 	return target->AnchorLeftTo(endValue, duration, delay, ease);
 }
-ULTweener* ULGUIBPLibrary::AnchorRightTo(UUIItem* target, float endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::AnchorRightTo(ULexWidget* target, float endValue, float duration, float delay, ELTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -355,7 +355,7 @@ ULTweener* ULGUIBPLibrary::AnchorRightTo(UUIItem* target, float endValue, float 
 	}
 	return target->AnchorRightTo(endValue, duration, delay, ease);
 }
-ULTweener* ULGUIBPLibrary::AnchorTopTo(UUIItem* target, float endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::AnchorTopTo(ULexWidget* target, float endValue, float duration, float delay, ELTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -364,7 +364,7 @@ ULTweener* ULGUIBPLibrary::AnchorTopTo(UUIItem* target, float endValue, float du
 	}
 	return target->AnchorTopTo(endValue, duration, delay, ease);
 }
-ULTweener* ULGUIBPLibrary::AnchorBottomTo(UUIItem* target, float endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::AnchorBottomTo(ULexWidget* target, float endValue, float duration, float delay, ELTweenEase ease)
 {
 	if (!IsValid(target))
 	{
@@ -493,12 +493,12 @@ void ULGUIBPLibrary::GetSpriteBorderUV(const FLexUISpriteInfo& SpriteInfo, float
 }
 
 
-ULTweener* ULGUIBPLibrary::UILocalPositionTo(UUIItem* target, FVector endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::UILocalPositionTo(ULexWidget* target, FVector endValue, float duration, float delay, ELTweenEase ease)
 {
 	return ULTweenBPLibrary::LocalPositionTo(target, endValue, duration, delay, ease);
 }
 
-ULTweener* ULGUIBPLibrary::AnchorOffsetXTo(UUIItem* target, float endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::AnchorOffsetXTo(ULexWidget* target, float endValue, float duration, float delay, ELTweenEase ease)
 {
 	// Disable deprecation warnings so we can call the deprecated function to support this function (which is also deprecated)
 	PRAGMA_DISABLE_DEPRECATION_WARNINGS
@@ -506,7 +506,7 @@ ULTweener* ULGUIBPLibrary::AnchorOffsetXTo(UUIItem* target, float endValue, floa
 	PRAGMA_ENABLE_DEPRECATION_WARNINGS
 	return tweener;
 }
-ULTweener* ULGUIBPLibrary::AnchorOffsetYTo(UUIItem* target, float endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::AnchorOffsetYTo(ULexWidget* target, float endValue, float duration, float delay, ELTweenEase ease)
 {
 	// Disable deprecation warnings so we can call the deprecated function to support this function (which is also deprecated)
 	PRAGMA_DISABLE_DEPRECATION_WARNINGS
@@ -514,7 +514,7 @@ ULTweener* ULGUIBPLibrary::AnchorOffsetYTo(UUIItem* target, float endValue, floa
 	PRAGMA_ENABLE_DEPRECATION_WARNINGS
 	return tweener;
 }
-ULTweener* ULGUIBPLibrary::AnchorOffsetTo(UUIItem* target, FVector2D endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::AnchorOffsetTo(ULexWidget* target, FVector2D endValue, float duration, float delay, ELTweenEase ease)
 {
 	// Disable deprecation warnings so we can call the deprecated function to support this function (which is also deprecated)
 	PRAGMA_DISABLE_DEPRECATION_WARNINGS
@@ -522,7 +522,7 @@ ULTweener* ULGUIBPLibrary::AnchorOffsetTo(UUIItem* target, FVector2D endValue, f
 	PRAGMA_ENABLE_DEPRECATION_WARNINGS
 	return tweener;
 }
-ULTweener* ULGUIBPLibrary::StretchLeftTo(UUIItem* target, float endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::StretchLeftTo(ULexWidget* target, float endValue, float duration, float delay, ELTweenEase ease)
 {
 	// Disable deprecation warnings so we can call the deprecated function to support this function (which is also deprecated)
 	PRAGMA_DISABLE_DEPRECATION_WARNINGS
@@ -530,7 +530,7 @@ ULTweener* ULGUIBPLibrary::StretchLeftTo(UUIItem* target, float endValue, float 
 	PRAGMA_ENABLE_DEPRECATION_WARNINGS
 	return tweener;
 }
-ULTweener* ULGUIBPLibrary::StretchRightTo(UUIItem* target, float endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::StretchRightTo(ULexWidget* target, float endValue, float duration, float delay, ELTweenEase ease)
 {
 	// Disable deprecation warnings so we can call the deprecated function to support this function (which is also deprecated)
 	PRAGMA_DISABLE_DEPRECATION_WARNINGS
@@ -538,7 +538,7 @@ ULTweener* ULGUIBPLibrary::StretchRightTo(UUIItem* target, float endValue, float
 	PRAGMA_ENABLE_DEPRECATION_WARNINGS
 	return tweener;
 }
-ULTweener* ULGUIBPLibrary::StretchTopTo(UUIItem* target, float endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::StretchTopTo(ULexWidget* target, float endValue, float duration, float delay, ELTweenEase ease)
 {
 	// Disable deprecation warnings so we can call the deprecated function to support this function (which is also deprecated)
 	PRAGMA_DISABLE_DEPRECATION_WARNINGS
@@ -546,7 +546,7 @@ ULTweener* ULGUIBPLibrary::StretchTopTo(UUIItem* target, float endValue, float d
 	PRAGMA_ENABLE_DEPRECATION_WARNINGS
 	return tweener;
 }
-ULTweener* ULGUIBPLibrary::StretchBottomTo(UUIItem* target, float endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULGUIBPLibrary::StretchBottomTo(ULexWidget* target, float endValue, float duration, float delay, ELTweenEase ease)
 {
 	// Disable deprecation warnings so we can call the deprecated function to support this function (which is also deprecated)
 	PRAGMA_DISABLE_DEPRECATION_WARNINGS

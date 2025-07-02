@@ -2,12 +2,12 @@
 
 #pragma once
 
-#include "Components/UIItem.h"
+#include "Components/LexWidget.h"
 #include "Components/ActorComponent.h"
 #include "Core/LGUILifeCycleBehaviour.h"
 #include "LGUILifeCycleUIBehaviour.generated.h"
 
-class UUIItem;
+class ULexWidget;
 /**
  * Base class for LGUI's life cycle behviour related component, which is special made for UI, contains some easy-to-use event/functions.
  * This type of component should be attached to an actor which have UIItem as RootComponent, so the UI's callback will execute (OnUIXXX).
@@ -19,7 +19,7 @@ class LGUI_API ULGUILifeCycleUIBehaviour : public ULGUILifeCycleBehaviour
 public:	
 	ULGUILifeCycleUIBehaviour();
 protected:
-	friend class UUIItem;
+	friend class ULexWidget;
 
 	virtual void OnRegister()override;
 	virtual void OnUnregister()override;
@@ -27,9 +27,9 @@ public:
 
 	UE_DEPRECATED(4.24, "GetRootComponent not valid anymore, use GetRootUIComponent instead")
 	UFUNCTION(BlueprintCallable, Category = "LGUILifeCycleBehaviour", meta = (DeprecatedFunction, DeprecationMessage = "GetRootComponent not valid anymore, use GetRootUIComponent instead"))
-		UUIItem* GetRootComponent() const { return GetRootUIComponent(); }
+		ULexWidget* GetRootComponent() const { return GetRootUIComponent(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUILifeCycleBehaviour", meta = (DisplayName="Get Root UI Component"))
-		UUIItem* GetRootUIComponent() const;
+		ULexWidget* GetRootUIComponent() const;
 private:
 	enum class ECallbackFunctionType :int32
 	{
@@ -48,9 +48,9 @@ protected:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
-	friend class UUIItem;
+	friend class ULexWidget;
 	/** This owner's RootComponent cast to UIItem */
-	UPROPERTY(Transient) mutable TWeakObjectPtr<UUIItem> RootUIComp = nullptr;
+	UPROPERTY(Transient) mutable TWeakObjectPtr<ULexWidget> RootUIComp = nullptr;
 	/** Check and get RootUIItem */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	bool CheckRootUIComponent() const;
@@ -67,25 +67,25 @@ protected:
 	/**
 	 * Called when RootUIComp's attachchildren->AnchorData is changed or scale is changed.
 	 */
-	virtual void OnUIChildDimensionsChanged(UUIItem* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged);
+	virtual void OnUIChildDimensionsChanged(ULexWidget* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged);
 	/** Called when RootUIComp's attachchildren IsActiveInHierarchy state is changed */
-	virtual void OnUIChildAcitveInHierarchy(UUIItem* child, bool ativeOrInactive);
+	virtual void OnUIChildAcitveInHierarchy(ULexWidget* child, bool ativeOrInactive);
 	/** Called when RootUIComp attach to a new parent */
 	virtual void OnUIAttachmentChanged();
 	/** Called when RootUIComp's attachchildren is attached to RootUIComp or detached from RootUIComp  */
-	virtual void OnUIChildAttachmentChanged(UUIItem* child, bool attachOrDetach);
+	virtual void OnUIChildAttachmentChanged(ULexWidget* child, bool attachOrDetach);
 	/** Called when RootUIComp's interaction state changed(when UICanvasGroup component allow interaction or not) */
 	virtual void OnUIInteractionStateChanged(bool interactableOrNot);
 	/** Called when RootUIComp's attachchildren->SetHierarchyIndex() is called, usually used for layout to sort children */
-	virtual void OnUIChildHierarchyIndexChanged(UUIItem* child);
+	virtual void OnUIChildHierarchyIndexChanged(ULexWidget* child);
 
 	void Call_OnUIDimensionsChanged(bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged);
-	void Call_OnUIChildDimensionsChanged(UUIItem* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged);
-	void Call_OnUIChildAcitveInHierarchy(UUIItem* child, bool ativeOrInactive);
+	void Call_OnUIChildDimensionsChanged(ULexWidget* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged);
+	void Call_OnUIChildAcitveInHierarchy(ULexWidget* child, bool ativeOrInactive);
 	void Call_OnUIAttachmentChanged();
-	void Call_OnUIChildAttachmentChanged(UUIItem* child, bool attachOrDetach);
+	void Call_OnUIChildAttachmentChanged(ULexWidget* child, bool attachOrDetach);
 	void Call_OnUIInteractionStateChanged(bool interactableOrNot);
-	void Call_OnUIChildHierarchyIndexChanged(UUIItem* child);
+	void Call_OnUIChildHierarchyIndexChanged(ULexWidget* child);
 
 
 	/** Called when RootUIComp IsActiveInHierarchy state is changed */
@@ -97,15 +97,15 @@ protected:
 	/** 
 	 * Called when RootUIComp's attachchildren->AnchorData is changed or scale is changed.
 	 */
-	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnUIChildDimensionsChanged"), Category = "LGUILifeCycleBehaviour") void ReceiveOnUIChildDimensionsChanged(UUIItem* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged);
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnUIChildDimensionsChanged"), Category = "LGUILifeCycleBehaviour") void ReceiveOnUIChildDimensionsChanged(ULexWidget* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged);
 	/** Called when RootUIComp's attachchildren IsActiveInHierarchy state is changed */
-	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnUIChildAcitveInHierarchy"), Category = "LGUILifeCycleBehaviour") void ReceiveOnUIChildAcitveInHierarchy(UUIItem* child, bool ativeOrInactive);
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnUIChildAcitveInHierarchy"), Category = "LGUILifeCycleBehaviour") void ReceiveOnUIChildAcitveInHierarchy(ULexWidget* child, bool ativeOrInactive);
 	/** Called when RootUIComp attach to a new parent */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnUIAttachmentChanged"), Category = "LGUILifeCycleBehaviour") void ReceiveOnUIAttachmentChanged();
 	/** Called when RootUIComp's attachchildren is attached to RootUIComp or detached from RootUIComp  */
-	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnUIChildAttachmentChanged"), Category = "LGUILifeCycleBehaviour") void ReceiveOnUIChildAttachmentChanged(UUIItem* child, bool attachOrDetach);
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnUIChildAttachmentChanged"), Category = "LGUILifeCycleBehaviour") void ReceiveOnUIChildAttachmentChanged(ULexWidget* child, bool attachOrDetach);
 	/** Called when RootUIComp's interaction state changed(when UICanvasGroup component allow interaction or not) */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnUIInteractionStateChanged"), Category = "LGUILifeCycleBehaviour") void ReceiveOnUIInteractionStateChanged(bool interactableOrNot);
 	/** Called when RootUIComp's attachchildren->SetHierarchyIndex() is called, usually used for layout to sort children */
-	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnUIChildHierarchyIndexChanged"), Category = "LGUILifeCycleBehaviour") void ReceiveOnUIChildHierarchyIndexChanged(UUIItem* child);
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnUIChildHierarchyIndexChanged"), Category = "LGUILifeCycleBehaviour") void ReceiveOnUIChildHierarchyIndexChanged(ULexWidget* child);
 };

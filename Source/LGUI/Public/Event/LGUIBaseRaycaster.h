@@ -9,7 +9,7 @@
 #include "Engine/HitResult.h"
 #include "LGUIBaseRaycaster.generated.h"
 
-enum class ELGUIRenderMode :uint8;
+enum class ELexRenderMode :uint8;
 
 /** 
  * Base interaction component that perform a raycast hit test
@@ -105,10 +105,10 @@ public:
 		void SetHoldToDragTime(float value);
 protected:
 	bool ShouldStartDrag_HoldToDrag(ULGUIPointerEventData* InPointerEventData);
-	virtual bool ShouldSkipCanvas(class ULGUICanvas* UICanvas) { return false; }
+	virtual bool ShouldSkipCanvas(class ULexCanvas* UICanvas) { return false; }
 	TArray<FHitResult> multiUIHitResult;
-	bool IsHitVisibleUI(class UUIItem* HitUI, const FVector& HitPoint);
+	bool IsHitVisibleUI(class ULexWidget* HitUI, const FVector& HitPoint);
 
-	bool RaycastUI(ULGUIPointerEventData* InPointerEventData, const TArray<ELGUIRenderMode>& InRenderModeArray, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, FHitResult& OutHitResult, TArray<USceneComponent*>& OutHoverArray);
+	bool RaycastUI(ULGUIPointerEventData* InPointerEventData, const TArray<ELexRenderMode>& InRenderModeArray, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, FHitResult& OutHitResult, TArray<USceneComponent*>& OutHoverArray);
 	bool RaycastWorld(bool InRequireFaceIndex, ULGUIPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, FHitResult& OutHitResult, TArray<USceneComponent*>& OutHoverArray);
 };

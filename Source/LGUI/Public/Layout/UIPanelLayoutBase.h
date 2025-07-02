@@ -16,20 +16,20 @@ class LGUI_API UUIPanelLayoutBase : public UUILayoutWithChildren
 public:
 	UUIPanelLayoutBase();
 protected:
-	virtual void GetLayoutElement(UUIItem* InChild, UObject*& OutLayoutElement, bool& OutIgnoreLayout)const;
+	virtual void GetLayoutElement(ULexWidget* InChild, UObject*& OutLayoutElement, bool& OutIgnoreLayout)const;
 	virtual void RebuildChildrenList()const override;
 	virtual void Awake() override;
 
-	virtual void OnUIChildAcitveInHierarchy(UUIItem* InChild, bool InUIActive)override;
-	virtual void OnUIChildAttachmentChanged(UUIItem* InChild, bool attachOrDetach)override;
-	virtual void OnUIChildHierarchyIndexChanged(UUIItem* InChild)override;
+	virtual void OnUIChildAcitveInHierarchy(ULexWidget* InChild, bool InUIActive)override;
+	virtual void OnUIChildAttachmentChanged(ULexWidget* InChild, bool attachOrDetach)override;
+	virtual void OnUIChildHierarchyIndexChanged(ULexWidget* InChild)override;
 
 	void CleanMapChildToSlot();
 
 	UPROPERTY(VisibleAnywhere, Instanced, Category = "Panel Layout", AdvancedDisplay)
-		mutable TMap<TObjectPtr<UUIItem>, TObjectPtr<UUIPanelLayoutSlotBase>> MapChildToSlot;
+		mutable TMap<TObjectPtr<ULexWidget>, TObjectPtr<UUIPanelLayoutSlotBase>> MapChildToSlot;
 public:
-	TObjectPtr<UUIPanelLayoutSlotBase> GetChildSlot(UUIItem* InChild);
+	TObjectPtr<UUIPanelLayoutSlotBase> GetChildSlot(ULexWidget* InChild);
 	virtual UClass* GetPanelLayoutSlotClass()const PURE_VIRTUAL(UUIPanelLayoutBase::GeneratePanelLayoutSlot, return nullptr;);
 #if WITH_EDITOR
 	/** Return category name for editor display */
@@ -38,8 +38,8 @@ public:
 	{
 		Left, Right, Top, Bottom,
 	};
-	virtual bool CanMoveChildToCell(UUIItem* InChild, EMoveChildDirectionType InDirection)const { return false; }
-	virtual void MoveChildToCell(UUIItem* InChild, EMoveChildDirectionType InDirection) {}
+	virtual bool CanMoveChildToCell(ULexWidget* InChild, EMoveChildDirectionType InDirection)const { return false; }
+	virtual void MoveChildToCell(ULexWidget* InChild, EMoveChildDirectionType InDirection) {}
 #endif
 };
 

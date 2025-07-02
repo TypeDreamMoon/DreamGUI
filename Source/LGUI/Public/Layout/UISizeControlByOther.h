@@ -33,7 +33,7 @@ public:
 	virtual void Awake()override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		class AUIBaseActor* GetTargetActor()const { return TargetActor.Get(); }
+		class ALexWidgetActor* GetTargetActor()const { return TargetActor.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		bool GetControlWidth()const { return ControlWidth; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
@@ -45,7 +45,7 @@ public:
 
 	//Set TargetActor which will control size of this UI
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetTargetActor(class AUIBaseActor* value);
+		void SetTargetActor(class ALexWidgetActor* value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetControlWidth(bool value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
@@ -55,7 +55,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetAdditionalHeight(float value);
 
-	virtual bool GetCanLayoutControlAnchor_Implementation(class UUIItem* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
+	virtual bool GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
 protected:
 	friend class UUISizeControlByOtherHelper;
 	virtual void OnRebuildLayout()override;
@@ -65,7 +65,7 @@ protected:
 
 	//Target object's will control this UI's size
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		TWeakObjectPtr<class AUIBaseActor> TargetActor;
+		TWeakObjectPtr<class ALexWidgetActor> TargetActor;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		bool ControlWidth = false;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
@@ -75,7 +75,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		float AdditionalHeight = 0;
 
-	UPROPERTY(Transient) TWeakObjectPtr<class UUIItem> TargetUIItem = nullptr;
+	UPROPERTY(Transient) TWeakObjectPtr<class ULexWidget> TargetUIItem = nullptr;
 	UPROPERTY(Transient) TWeakObjectPtr<class UUISizeControlByOtherHelper> HelperComp = nullptr;
 	bool CheckTargetUIItem();
 
@@ -83,7 +83,7 @@ protected:
 	virtual void OnUIAttachmentChanged()override;
 
 	//these will not affect this Layout
-	virtual void OnUIChildAcitveInHierarchy(UUIItem* InChild, bool InUIActive)override {}
-	virtual void OnUIChildAttachmentChanged(UUIItem* InChild, bool attachOrDetach)override {}
-	virtual void OnUIChildHierarchyIndexChanged(UUIItem* InChild)override {}
+	virtual void OnUIChildAcitveInHierarchy(ULexWidget* InChild, bool InUIActive)override {}
+	virtual void OnUIChildAttachmentChanged(ULexWidget* InChild, bool attachOrDetach)override {}
+	virtual void OnUIChildHierarchyIndexChanged(ULexWidget* InChild)override {}
 };

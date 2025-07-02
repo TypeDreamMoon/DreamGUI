@@ -58,7 +58,7 @@ struct FLexUIPostProcessSection : public FLexUIRenderSection
 	}
 	virtual ~FLexUIPostProcessSection()override{}
 
-	TWeakObjectPtr<class UUIPostProcessRenderable> PostProcessRenderableObject = nullptr;
+	TWeakObjectPtr<class ULexVisualPostProcess> PostProcessRenderableObject = nullptr;
 
 	virtual void UpdateSectionBox(const FTransform& LocalToWorld) override;
 };
@@ -77,7 +77,7 @@ struct FLexUIChildCanvasSection : public FLexUIRenderSection
 
 class FLexUIRenderer;
 class ILexUIRendererPrimitive;
-class ULGUICanvas;
+class ULexCanvas;
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(FLexUIMeshSceneProxyCreateDeleteDelegate, class ULexUIMeshComponent*, class FLexUIRenderSceneProxy*);
 
@@ -97,7 +97,7 @@ public:
 	void SetRenderSectionRenderPriority(TSharedPtr<FLexUIRenderSection> InRenderSection, int32 InSortPriority);
 	void SetMeshSectionMaterial(TSharedPtr<FLexUIRenderSection> InMeshSection, UMaterialInterface* InMaterial);
 
-	void SetRenderCanvas(ULGUICanvas* InCanvas);
+	void SetRenderCanvas(ULexCanvas* InCanvas);
 	void SetSupportLexUIRenderer(bool InSupportOrNot, TWeakPtr<FLexUIRenderer, ESPMode::ThreadSafe> InLexUIRenderer, bool InIsRenderToWorld);
 	void SetSupportUERenderer(bool InSupportOrNot);
 	void ClearRenderData();
@@ -130,7 +130,7 @@ private:
 protected:
 	TWeakPtr<FLexUIRenderer, ESPMode::ThreadSafe> LexUIRenderer;
 	bool bIsLexUIRenderToWorld = false;//LexUI renderer render to world or screen
-	TWeakObjectPtr<ULGUICanvas> RenderCanvas = nullptr;
+	TWeakObjectPtr<ULexCanvas> RenderCanvas = nullptr;
 	bool bIsSupportUERenderer = true;
 	TWeakObjectPtr<ULexUIMeshComponent> ParentCanvasMeshComp = nullptr;
 
