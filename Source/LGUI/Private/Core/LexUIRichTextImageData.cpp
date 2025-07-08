@@ -6,6 +6,7 @@
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/Actor/LexWidgetActor.h"
+#include "Core/Components/LexLayoutAnchor.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/UISprite.h"
 #include "Engine/World.h"
@@ -56,6 +57,7 @@ void ULexUIRichTextImageData::CreateOrUpdateObject(ULexWidget* parent, const TAr
 	{
 		auto ImageWidget = createdImageObjectArray[i];
 		auto ImageVisual = (UUISprite*)ImageWidget->GetVisual();
+		auto ImageLayoutAnchor = (ULexLayoutAnchorSlot*)ImageWidget->GetLayoutSlot();
 #if WITH_EDITOR
 		ImageWidget->GetOwner()->SetActorLabel(FString::Printf(TEXT("[%s]"), *imageTagData[i].TagName.ToString()));
 		if (!parent->GetWorld()->IsGameWorld())//set it only in edit mode
@@ -103,14 +105,14 @@ void ULexUIRichTextImageData::CreateOrUpdateObject(ULexWidget* parent, const TAr
 				}
 			}
 			ImageVisual->SetColor(imageTagData[i].TintColor);
-			ImageWidget->SetAnchoredPosition(imageTagData[i].Position);
-			ImageWidget->SetSizeDelta(imageTagData[i].Size);
+			ImageLayoutAnchor->SetAnchoredPosition(imageTagData[i].Position);
+			ImageLayoutAnchor->SetSizeDelta(imageTagData[i].Size);
 		}
 		else
 		{
 			ImageVisual->SetColor(imageTagData[i].TintColor);
-			ImageWidget->SetAnchoredPosition(imageTagData[i].Position);
-			ImageWidget->SetSizeDelta(FVector2D(imageTagData[i].Size));
+			ImageLayoutAnchor->SetAnchoredPosition(imageTagData[i].Position);
+			ImageLayoutAnchor->SetSizeDelta(FVector2D(imageTagData[i].Size));
 		}
 	}
 #if WITH_EDITOR

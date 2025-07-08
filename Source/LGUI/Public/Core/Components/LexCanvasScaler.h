@@ -6,7 +6,7 @@
 #include "LGUI/Public/Core/Components/LexWidget.h"
 #include "Core/LGUILifeCycleBehaviour.h"
 #include "Camera/CameraTypes.h"
-#include "LGUICanvasScaler.generated.h"
+#include "LexCanvasScaler.generated.h"
 
 UENUM(BlueprintType, Category = LGUI)
 enum class ELGUICanvasScaleMode:uint8
@@ -21,10 +21,6 @@ enum class ELGUICanvasScaleMode:uint8
 	Custom,
 };
 
-#ifndef LGUIScaleMode
-#define LGUIScaleMode UE_DEPRECATED_MACRO(5.0, "LGUIScaleMode has been renamed to ELGUICanvasScaleMode") ELGUICanvasScaleMode
-#endif
-
 UENUM(BlueprintType, Category = LGUI)
 enum class ELGUICanvasScreenMatchMode :uint8
 {
@@ -36,26 +32,22 @@ enum class ELGUICanvasScreenMatchMode :uint8
 	Shrink,
 };
 
-#ifndef LGUIScreenMatchMode
-#define LGUIScreenMatchMode UE_DEPRECATED_MACRO(5.0, "LGUIScreenMatchMode has been renamed to ELGUICanvasScreenMatchMode") ELGUICanvasScreenMatchMode
-#endif
-
 UCLASS(BlueprintType, Blueprintable, Abstract, DefaultToInstanced, EditInlineNew)
 class LGUI_API ULGUICanvasScalerCustomScale: public UObject
 {
 	GENERATED_BODY()
 public:
 	/** Initialize, called when LGUICanvasScaler Awake. */
-	virtual void Init(class ULGUICanvasScaler* InCanvasScaler);
+	virtual void Init(class ULexCanvasScaler* InCanvasScaler);
 	/** Called when LGUICanvasScaler calculate viewport size and scale. */
-	virtual void CalculateSizeAndScale(class ULGUICanvasScaler* InCanvasScaler, const FIntPoint& InViewportSize, FIntPoint& OutLGUICanvasSize, float& OutScale);
+	virtual void CalculateSizeAndScale(class ULexCanvasScaler* InCanvasScaler, const FIntPoint& InViewportSize, FIntPoint& OutLGUICanvasSize, float& OutScale);
 protected:
 	/** Initialize, called when LGUICanvasScaler Awake. */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "CalculateSizeAndScale"), Category = "LGUI")
-	void ReceiveInit(class ULGUICanvasScaler* InCanvasScaler);
+	void ReceiveInit(class ULexCanvasScaler* InCanvasScaler);
 	/** Called when LGUICanvasScaler calculate viewport size and scale. */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "CalculateSizeAndScale"), Category = "LGUI")
-	void ReceiveCalculateSizeAndScale(class ULGUICanvasScaler* InCanvasScaler, const FIntPoint& InViewportSize, FIntPoint& OutLGUICanvasSize, float& OutScale);
+	void ReceiveCalculateSizeAndScale(class ULexCanvasScaler* InCanvasScaler, const FIntPoint& InViewportSize, FIntPoint& OutLGUICanvasSize, float& OutScale);
 };
 
 /**
@@ -63,12 +55,12 @@ protected:
  * One hierarchy should only have one UICanvasScalar.
  */
 UCLASS(ClassGroup = (LGUI), meta = (BlueprintSpawnableComponent), Blueprintable)
-class LGUI_API ULGUICanvasScaler :public ULGUILifeCycleBehaviour
+class LGUI_API ULexCanvasScaler :public ULGUILifeCycleBehaviour
 {
 	GENERATED_BODY()
 
 public:
-	ULGUICanvasScaler();
+	ULexCanvasScaler();
 
 protected:
 	virtual void Awake()override;

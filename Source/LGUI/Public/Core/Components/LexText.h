@@ -4,7 +4,6 @@
 
 #include "LexVisualBatchMesh.h"
 #include "Core/ILGUICultureChangedInterface.h"
-#include "Layout/ILGUILayoutInterface.h"
 #include "Core/LexUITextData.h"
 #include "LexText.generated.h"
 
@@ -14,7 +13,7 @@ class ULexUIRichTextImageData_BaseObject;
 class ULexUIRichTextCustomStyleData;
 
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API ULexText : public ULexVisualBatchMesh, public ILGUICultureChangedInterface, public ILGUILayoutInterface
+class LGUI_API ULexText : public ULexVisualBatchMesh, public ILGUICultureChangedInterface
 {
 	GENERATED_BODY()
 
@@ -135,8 +134,8 @@ private:
 	void ConditionalMarkTextLayoutDirty();
 	FVector2f PrevScale2DForUIText = FVector2f::One();
 
-	virtual void OnUpdateLayout_Implementation()override;//@todo: should we implement ILayoutElement for AdjustWidth/AdjustHeight?
-	virtual bool GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
+	//virtual void OnUpdateLayout_Implementation()override;//@todo: should we implement ILayoutElement for AdjustWidth/AdjustHeight?
+	//virtual bool GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
 	mutable FLexUITextGeometryCache CacheTextGeometryData;
 	bool UpdateCacheTextGeometry()const;
 public:
@@ -244,7 +243,7 @@ public:
 private:
 	void ClearCreatedRichTextImageObject();
 protected:
-	virtual void OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
+	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
 public:
 #pragma region UITextInputComponent
 	/**

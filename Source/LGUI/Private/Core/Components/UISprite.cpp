@@ -138,9 +138,9 @@ void UUISprite::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, 
 	}
 }
 
-void UUISprite::OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange)
+void UUISprite::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
 {
-    Super::OnAnchorChange(InPivotChange, InWidthChange, InHeightChange);
+    Super::OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
 	if (!IsValid(sprite))return;
 	if (type == EUISpriteType::Tiled)
 	{

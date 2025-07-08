@@ -618,7 +618,7 @@ bool FComponentTransformDetails::IsLocationYEnable()const
 		TWeakObjectPtr<ULexWidget> uiItem = SelectedObjects[0];
 		if (uiItem.IsValid())
 		{
-			if (uiItem->GetParentUIItem() == nullptr)
+			if (uiItem->GetUIParent() == nullptr)
 			{
 				return true;
 			}
@@ -634,7 +634,7 @@ bool FComponentTransformDetails::IsLocationZEnable()const
 		TWeakObjectPtr<ULexWidget> uiItem = SelectedObjects[0];
 		if (uiItem.IsValid())
 		{
-			if (uiItem->GetParentUIItem() == nullptr)
+			if (uiItem->GetUIParent() == nullptr)
 			{
 				return true;
 			}

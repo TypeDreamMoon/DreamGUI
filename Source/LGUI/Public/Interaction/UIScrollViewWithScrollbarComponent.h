@@ -6,7 +6,6 @@
 #include "Core/Components/UISprite.h"
 #include "Event/LGUIEventDelegate.h"
 #include "UIScrollViewComponent.h"
-#include "Layout/ILGUILayoutInterface.h"
 #include "UIScrollViewWithScrollbarComponent.generated.h"
 
 UENUM(BlueprintType, Category = LGUI)
@@ -23,7 +22,7 @@ enum class EScrollViewScrollbarVisibility :uint8
 
 //ScrollView with scrollbars
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIScrollViewWithScrollbarComponent : public UUIScrollViewComponent, public ILGUILayoutInterface
+class LGUI_API UUIScrollViewWithScrollbarComponent : public UUIScrollViewComponent
 {
 	GENERATED_BODY()
 
@@ -31,8 +30,6 @@ public:
 	UUIScrollViewWithScrollbarComponent();
 protected:
 	virtual void OnUIDimensionsChanged(bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)override;
-	virtual void OnRegister()override;
-	virtual void OnUnregister()override;
 protected:
 	friend class FUIScrollViewWithScrollBarCustomization;
 	//For scrollbars to expand or shrink viewport
@@ -71,11 +68,11 @@ protected:
 	virtual void OnUIChildHierarchyIndexChanged(ULexWidget* child)override;
 	virtual void OnUIChildAttachmentChanged(ULexWidget* child, bool attachOrDetach)override;
 	// Begin LGUILayout interface
-	virtual void OnUpdateLayout_Implementation()override;
-	virtual bool GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
-	virtual void MarkRebuildLayout_Implementation()override { MarkLayoutDirty(); }
+	//virtual void OnUpdateLayout_Implementation()override;
+	//virtual bool GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
+	//virtual void MarkRebuildLayout_Implementation()override { MarkLayoutDirty(); }
 	// End LGUILayout interface
-	void MarkLayoutDirty();
+	void MarkLayoutDirty(){};
 public:
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")

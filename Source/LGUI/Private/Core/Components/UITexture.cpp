@@ -182,9 +182,9 @@ void UUITexture::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged,
 	}
 }
 
-void UUITexture::OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange)
+void UUITexture::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
 {
-    Super::OnAnchorChange(InPivotChange, InWidthChange, InHeightChange);
+    Super::OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
 	if (!IsValid(texture))return;
 	if (type == EUITextureType::Tiled)
 	{

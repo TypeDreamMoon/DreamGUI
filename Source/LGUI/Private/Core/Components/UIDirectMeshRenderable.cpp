@@ -32,9 +32,9 @@ void UUIDirectMeshRenderable::MarkAllDirty()
 	Super::MarkAllDirty();
 }
 
-void UUIDirectMeshRenderable::OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange)
+void UUIDirectMeshRenderable::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
 {
-    Super::OnAnchorChange(InPivotChange, InWidthChange, InHeightChange);
+    Super::OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
 	MarkVertexPositionDirty();
 }
 

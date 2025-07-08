@@ -43,9 +43,9 @@ bool ULexVisualPostProcess::CanEditChange(const FProperty* InProperty) const
 #endif
 
 
-void ULexVisualPostProcess::OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange)
+void ULexVisualPostProcess::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
 {
-    Super::OnAnchorChange(InPivotChange, InWidthChange, InHeightChange);
+    Super::OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
     if (InPivotChange || InWidthChange || InHeightChange)
     {
 	    MarkVertexPositionDirty();

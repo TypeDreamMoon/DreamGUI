@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Layout/LGUICanvasScaler.h"
+#include "Core/Components/LexCanvasScaler.h"
 #include "LGUI.h"
 #include "LGUI/Public/Core/Components/LexCanvas.h"
 #if WITH_EDITOR
@@ -18,14 +18,14 @@
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
 
-void ULGUICanvasScalerCustomScale::Init(class ULGUICanvasScaler* InCanvasScaler)
+void ULGUICanvasScalerCustomScale::Init(class ULexCanvasScaler* InCanvasScaler)
 {
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
 	{
 		ReceiveInit(InCanvasScaler);
 	}
 }
-void ULGUICanvasScalerCustomScale::CalculateSizeAndScale(class ULGUICanvasScaler* InCanvasScaler, const FIntPoint& InViewportSize, FIntPoint& OutLGUICanvasSize, float& OutScale)
+void ULGUICanvasScalerCustomScale::CalculateSizeAndScale(class ULexCanvasScaler* InCanvasScaler, const FIntPoint& InViewportSize, FIntPoint& OutLGUICanvasSize, float& OutScale)
 {
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
 	{
@@ -33,12 +33,12 @@ void ULGUICanvasScalerCustomScale::CalculateSizeAndScale(class ULGUICanvasScaler
 	}
 }
 
-ULGUICanvasScaler::ULGUICanvasScaler()
+ULexCanvasScaler::ULexCanvasScaler()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-void ULGUICanvasScaler::Awake()
+void ULexCanvasScaler::Awake()
 {
 	Super::Awake();
 	if (IsValid(CustomScale))
@@ -46,7 +46,7 @@ void ULGUICanvasScaler::Awake()
 		CustomScale->Init(this);
 	}
 }
-void ULGUICanvasScaler::OnEnable()
+void ULexCanvasScaler::OnEnable()
 {
 	Super::OnEnable();
 	CheckCanvas();
@@ -69,7 +69,7 @@ void ULGUICanvasScaler::OnEnable()
 						{
 							if (auto viewport = gameViewport->Viewport)
 							{
-								_ViewportResizeDelegateHandle = viewport->ViewportResizedEvent.AddUObject(this, &ULGUICanvasScaler::OnViewportResized);
+								_ViewportResizeDelegateHandle = viewport->ViewportResizedEvent.AddUObject(this, &ULexCanvasScaler::OnViewportResized);
 							}
 						}
 					}
@@ -79,7 +79,7 @@ void ULGUICanvasScaler::OnEnable()
 	}
 }
 
-void ULGUICanvasScaler::OnDisable()
+void ULexCanvasScaler::OnDisable()
 {
 	Super::OnDisable();
 	if (_ViewportResizeDelegateHandle.IsValid())
@@ -97,13 +97,13 @@ void ULGUICanvasScaler::OnDisable()
 	}
 }
 
-void ULGUICanvasScaler::ForceUpdate()
+void ULexCanvasScaler::ForceUpdate()
 {
 	CheckAndApplyViewportParameter();
 }
 
 
-void ULGUICanvasScaler::CheckAndApplyViewportParameter()
+void ULexCanvasScaler::CheckAndApplyViewportParameter()
 {
 	if (CheckCanvas())
 	{
@@ -128,12 +128,12 @@ void ULGUICanvasScaler::CheckAndApplyViewportParameter()
 		}
 	}
 }
-void ULGUICanvasScaler::OnViewportResized(FViewport* viewport, uint32)
+void ULexCanvasScaler::OnViewportResized(FViewport* viewport, uint32)
 {
 	ViewportSize = Canvas->GetViewportSize();//why not just get the viewport size from "viewport" parameter? because assets editor's viewport(ie. material, texture editor viewport) can fire the same event, and size is assets editor's viewport size
 	OnViewportParameterChanged();
 }
-void ULGUICanvasScaler::OnViewportParameterChanged()
+void ULexCanvasScaler::OnViewportParameterChanged()
 {
 	if (ViewportSize.X <= 0 || ViewportSize.Y <= 0)return;
 	if (CheckCanvas())
@@ -268,7 +268,7 @@ void ULGUICanvasScaler::OnViewportParameterChanged()
 }
 
 
-void ULGUICanvasScaler::OnRegister()
+void ULexCanvasScaler::OnRegister()
 {
 	Super::OnRegister();
 #if WITH_EDITOR
@@ -280,11 +280,11 @@ void ULGUICanvasScaler::OnRegister()
 		EditorViewportIndexAndKeyChangeDelegateHandle = ULGUIEditorManagerObject::RegisterEditorViewportIndexAndKeyChange([this] {
 			this->OnEditorViewportIndexAndKeyChange();
 			});
-		LGUIPreview_ViewportIndexChangeDelegateHandle = ULGUIEditorSettings::LGUIPreviewSetting_EditorPreviewViewportIndexChange.AddUObject(this, &ULGUICanvasScaler::OnPreviewSetting_EditorPreviewViewportIndexChange);
+		LGUIPreview_ViewportIndexChangeDelegateHandle = ULGUIEditorSettings::LGUIPreviewSetting_EditorPreviewViewportIndexChange.AddUObject(this, &ULexCanvasScaler::OnPreviewSetting_EditorPreviewViewportIndexChange);
 	}
 #endif
 }
-void ULGUICanvasScaler::OnUnregister()
+void ULexCanvasScaler::OnUnregister()
 {
 	Super::OnUnregister();
 #if WITH_EDITOR
@@ -309,7 +309,7 @@ void ULGUICanvasScaler::OnUnregister()
 }
 
 #if WITH_EDITOR
-void ULGUICanvasScaler::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void ULexCanvasScaler::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (auto property = PropertyChangedEvent.Property)
@@ -318,7 +318,7 @@ void ULGUICanvasScaler::PostEditChangeProperty(FPropertyChangedEvent& PropertyCh
 		OnViewportParameterChanged();
 	}
 }
-void ULGUICanvasScaler::OnEditorTick(float DeltaTime)
+void ULexCanvasScaler::OnEditorTick(float DeltaTime)
 {
 	if (ULGUIManagerWorldSubsystem::GetIsPlaying())//When hit play there is still a editor world and DrawViewportArea is called, which could cause frame dropdown, so skip it when playing
 		return;
@@ -390,11 +390,11 @@ void ULGUICanvasScaler::OnEditorTick(float DeltaTime)
 		}
 	}
 }
-void ULGUICanvasScaler::OnEditorViewportIndexAndKeyChange()
+void ULexCanvasScaler::OnEditorViewportIndexAndKeyChange()
 {
 	
 }
-void ULGUICanvasScaler::OnPreviewSetting_EditorPreviewViewportIndexChange()
+void ULexCanvasScaler::OnPreviewSetting_EditorPreviewViewportIndexChange()
 {
 	int32 editorViewIndex = ULGUIEditorSettings::GetLGUIPreview_EditorViewIndex();
 	FLexUIRenderer::EditorPreview_ViewKey = ULGUIEditorManagerObject::Instance->GetViewportKeyFromIndex(editorViewIndex);
@@ -431,7 +431,7 @@ void DeprojectViewPointToWorld(const FMatrix& InViewProjectionMatrix, const FVec
 	OutWorldEnd = RayEndWorldSpace;
 }
 
-void ULGUICanvasScaler::DrawViewportArea()
+void ULexCanvasScaler::DrawViewportArea()
 {
 	if (CheckCanvas())
 	{
@@ -450,7 +450,7 @@ void ULGUICanvasScaler::DrawViewportArea()
 	}
 }
 
-void ULGUICanvasScaler::DrawVirtualCamera()
+void ULexCanvasScaler::DrawVirtualCamera()
 {
 	if (CheckCanvas())
 	{
@@ -494,7 +494,7 @@ void ULGUICanvasScaler::DrawVirtualCamera()
 }
 #endif
 
-bool ULGUICanvasScaler::CheckCanvas()
+bool ULexCanvasScaler::CheckCanvas()
 {
 	if (Canvas != nullptr)return true;
 	Canvas = GetOwner()->FindComponentByClass<ULexCanvas>();
@@ -509,7 +509,7 @@ bool ULGUICanvasScaler::CheckCanvas()
 		return true;
 	}
 }
-void ULGUICanvasScaler::SetCanvasProperties()
+void ULexCanvasScaler::SetCanvasProperties()
 {
 	if (CheckCanvas())
 	{
@@ -517,7 +517,7 @@ void ULGUICanvasScaler::SetCanvasProperties()
 	}
 }
 
-void ULGUICanvasScaler::SetProjectionType(TEnumAsByte<ECameraProjectionMode::Type> value)
+void ULexCanvasScaler::SetProjectionType(TEnumAsByte<ECameraProjectionMode::Type> value)
 {
 	if (ProjectionType != value)
 	{
@@ -526,7 +526,7 @@ void ULGUICanvasScaler::SetProjectionType(TEnumAsByte<ECameraProjectionMode::Typ
 		SetCanvasProperties();
 	}
 }
-void ULGUICanvasScaler::SetFovAngle(float value)
+void ULexCanvasScaler::SetFovAngle(float value)
 {
 	if (FOVAngle != value)
 	{
@@ -535,7 +535,7 @@ void ULGUICanvasScaler::SetFovAngle(float value)
 		SetCanvasProperties();
 	}
 }
-void ULGUICanvasScaler::SetNearClipPlane(float value)
+void ULexCanvasScaler::SetNearClipPlane(float value)
 {
 	if (NearClipPlane != value)
 	{
@@ -544,7 +544,7 @@ void ULGUICanvasScaler::SetNearClipPlane(float value)
 		SetCanvasProperties();
 	}
 }
-void ULGUICanvasScaler::SetFarClipPlane(float value)
+void ULexCanvasScaler::SetFarClipPlane(float value)
 {
 	if (FarClipPlane != value)
 	{
@@ -554,7 +554,7 @@ void ULGUICanvasScaler::SetFarClipPlane(float value)
 	}
 }
 
-void ULGUICanvasScaler::SetUIScaleMode(ELGUICanvasScaleMode value)
+void ULexCanvasScaler::SetUIScaleMode(ELGUICanvasScaleMode value)
 {
 	if (UIScaleMode != value)
 	{
@@ -562,7 +562,7 @@ void ULGUICanvasScaler::SetUIScaleMode(ELGUICanvasScaleMode value)
 		OnViewportParameterChanged();
 	}
 }
-void ULGUICanvasScaler::SetReferenceResolution(FVector2D value)
+void ULexCanvasScaler::SetReferenceResolution(FVector2D value)
 {
 	if (ReferenceResolution != value)
 	{
@@ -570,7 +570,7 @@ void ULGUICanvasScaler::SetReferenceResolution(FVector2D value)
 		OnViewportParameterChanged();
 	}
 }
-void ULGUICanvasScaler::SetMatchFromWidthToHeight(float value)
+void ULexCanvasScaler::SetMatchFromWidthToHeight(float value)
 {
 	if (MatchFromWidthToHeight != value)
 	{
@@ -578,7 +578,7 @@ void ULGUICanvasScaler::SetMatchFromWidthToHeight(float value)
 		OnViewportParameterChanged();
 	}
 }
-void ULGUICanvasScaler::SetScreenMatchMode(ELGUICanvasScreenMatchMode value)
+void ULexCanvasScaler::SetScreenMatchMode(ELGUICanvasScreenMatchMode value)
 {
 	if (ScreenMatchMode != value)
 	{
@@ -586,7 +586,7 @@ void ULGUICanvasScaler::SetScreenMatchMode(ELGUICanvasScreenMatchMode value)
 		OnViewportParameterChanged();
 	}
 }
-void ULGUICanvasScaler::SetCustomScale(ULGUICanvasScalerCustomScale* value)
+void ULexCanvasScaler::SetCustomScale(ULGUICanvasScalerCustomScale* value)
 {
 	if (CustomScale != value)
 	{
@@ -599,7 +599,7 @@ void ULGUICanvasScaler::SetCustomScale(ULGUICanvasScalerCustomScale* value)
 	}
 }
 
-FVector2D ULGUICanvasScaler::ConvertPositionFromViewportToLGUICanvas(const FVector2D& position)const
+FVector2D ULexCanvasScaler::ConvertPositionFromViewportToLGUICanvas(const FVector2D& position)const
 {
 	switch (UIScaleMode)
 	{
@@ -617,7 +617,7 @@ FVector2D ULGUICanvasScaler::ConvertPositionFromViewportToLGUICanvas(const FVect
 	break;
 	}
 }
-FVector2D ULGUICanvasScaler::ConvertPositionFromLGUICanvasToViewport(const FVector2D& position)const
+FVector2D ULexCanvasScaler::ConvertPositionFromLGUICanvasToViewport(const FVector2D& position)const
 {
 	switch (UIScaleMode)
 	{
@@ -635,7 +635,7 @@ FVector2D ULGUICanvasScaler::ConvertPositionFromLGUICanvasToViewport(const FVect
 	break;
 	}
 }
-bool ULGUICanvasScaler::Project3DToScreen(const FVector& Position3D, FVector2D& OutPosition2D)const
+bool ULexCanvasScaler::Project3DToScreen(const FVector& Position3D, FVector2D& OutPosition2D)const
 {
 	if (!Canvas.IsValid())return false;
 	auto viewProjectionMatrix = Canvas->GetViewProjectionMatrix();
@@ -661,7 +661,7 @@ bool ULGUICanvasScaler::Project3DToScreen(const FVector& Position3D, FVector2D& 
 #if 1
 #include "GameFramework/PlayerController.h"
 #include "Engine/LocalPlayer.h"
-bool ULGUICanvasScaler::ProjectWorldToScreen(APlayerController* Player, const FVector& Position3D, FVector2D& OutPosition2D)const
+bool ULexCanvasScaler::ProjectWorldToScreen(APlayerController* Player, const FVector& Position3D, FVector2D& OutPosition2D)const
 {
 	ULocalPlayer* const LP = Player ? Player->GetLocalPlayer() : nullptr;
 	if (LP && LP->ViewportClient)

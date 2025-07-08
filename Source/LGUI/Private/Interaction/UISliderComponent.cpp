@@ -3,6 +3,7 @@
 #include "Interaction/UISliderComponent.h"
 #include "LGUI.h"
 #include "Core/Actor/LexWidgetActor.h"
+#include "Core/Components/LexLayoutAnchor.h"
 #include "LGUI/Public/Core/Components/LexWidget.h"
 
 void UUISliderComponent::Awake()
@@ -61,13 +62,13 @@ void UUISliderComponent::PostEditChangeProperty(FPropertyChangedEvent &PropertyC
     HandleArea = nullptr;
     if (CheckHandle())
     {
-        Handle->EditorForceUpdate();
+        HandleArea->EditorForceUpdate();
     }
     Fill = nullptr;
     FillArea = nullptr;
     if (CheckFill())
     {
-        Fill->EditorForceUpdate();
+        FillArea->EditorForceUpdate();
     }
     Value = FMath::Clamp(Value, MinValue, MaxValue);
 }
@@ -250,7 +251,6 @@ void UUISliderComponent::CalculateInputValue(ULGUIPointerEventData *eventData)
     {
         //calculate value to 0-1 range
         auto localPointerPosition = areaUIItem->GetComponentTransform().InverseTransformPosition(eventData->GetWorldPointInPlane());
-        auto AnchorData = areaUIItem->GetAnchorData();
         float MinPosition = 0;
         float value01 = 0;
         switch (DirectionType)
@@ -302,11 +302,11 @@ void UUISliderComponent::ApplyValueToUI()
         {
             if (CheckHandle())
             {
-                Handle->SetHorizontalAnchorMinMax(FVector2D(value01, value01));
+                HandleLayoutAnchor->SetHorizontalAnchorMinMax(FVector2D(value01, value01));
             }
             if (CheckFill())
             {
-                Fill->SetHorizontalAnchorMinMax(FVector2D(0, value01));
+                FillLayoutAnchor->SetHorizontalAnchorMinMax(FVector2D(0, value01));
             }
         }
         break;
@@ -315,11 +315,11 @@ void UUISliderComponent::ApplyValueToUI()
             if (CheckHandle())
             {
                 float invValue01 = 1.0f - value01;
-                Handle->SetHorizontalAnchorMinMax(FVector2D(invValue01, invValue01));
+                HandleLayoutAnchor->SetHorizontalAnchorMinMax(FVector2D(invValue01, invValue01));
             }
             if (CheckFill())
             {
-                Fill->SetHorizontalAnchorMinMax(FVector2D(1.0f - value01, 1));
+                FillLayoutAnchor->SetHorizontalAnchorMinMax(FVector2D(1.0f - value01, 1));
             }
         }
         break;
@@ -327,11 +327,11 @@ void UUISliderComponent::ApplyValueToUI()
         {
             if (CheckHandle())
             {
-                Handle->SetVerticalAnchorMinMax(FVector2D(value01, value01));
+                HandleLayoutAnchor->SetVerticalAnchorMinMax(FVector2D(value01, value01));
             }
             if (CheckFill())
             {
-                Fill->SetVerticalAnchorMinMax(FVector2D(0, value01));
+                FillLayoutAnchor->SetVerticalAnchorMinMax(FVector2D(0, value01));
             }
         }
         break;
@@ -340,11 +340,11 @@ void UUISliderComponent::ApplyValueToUI()
             if (CheckHandle())
             {
                 float invValue01 = 1.0f - value01;
-                Handle->SetVerticalAnchorMinMax(FVector2D(invValue01, invValue01));
+                HandleLayoutAnchor->SetVerticalAnchorMinMax(FVector2D(invValue01, invValue01));
             }
             if (CheckFill())
             {
-                Fill->SetVerticalAnchorMinMax(FVector2D(1.0f - value01, 1));
+                FillLayoutAnchor->SetVerticalAnchorMinMax(FVector2D(1.0f - value01, 1));
             }
         }
         break;

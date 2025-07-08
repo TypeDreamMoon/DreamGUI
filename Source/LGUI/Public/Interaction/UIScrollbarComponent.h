@@ -10,6 +10,7 @@
 #include "UIScrollbarComponent.generated.h"
 
 
+class ULexLayoutAnchorSlot;
 DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUIScrollbarDynamicDelegate, float, InFloat);
 
 class ALexWidgetActor;
@@ -56,6 +57,7 @@ protected:
 		float NavigationChangeInterval = 0.1f;
 
 	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> Handle;
+	UPROPERTY(Transient)TWeakObjectPtr<ULexLayoutAnchorSlot> HandleLayout;
 	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> HandleArea;
 
 	FLGUIMulticastFloatDelegate OnValueChangeCPP;

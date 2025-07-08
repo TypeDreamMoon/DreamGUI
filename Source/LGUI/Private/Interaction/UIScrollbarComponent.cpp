@@ -3,6 +3,7 @@
 #include "Interaction/UIScrollbarComponent.h"
 #include "LGUI.h"
 #include "Core/Actor/LexWidgetActor.h"
+#include "Core/Components/LexLayoutAnchor.h"
 #include "LGUI/Public/Core/Components/LexWidget.h"
 
 UUIScrollbarComponent::UUIScrollbarComponent()
@@ -322,25 +323,25 @@ void UUIScrollbarComponent::ApplyValueToUI()
         case UIScrollbarDirectionType::LeftToRight:
         {
             auto HorizontalMinMax = FVector2D((1.0f - Size) * value01, FMath::Lerp(Size, 1.0f, value01));
-            Handle->SetHorizontalAnchorMinMax(HorizontalMinMax);
+            HandleLayout->SetHorizontalAnchorMinMax(HorizontalMinMax);
         }
         break;
         case UIScrollbarDirectionType::RightToLeft:
         {
             auto HorizontalMinMax = FVector2D((1.0f - Size) * (1.0f - value01), FMath::Lerp(1.0f, Size, value01));
-            Handle->SetHorizontalAnchorMinMax(HorizontalMinMax);
+            HandleLayout->SetHorizontalAnchorMinMax(HorizontalMinMax);
         }
         break;
         case UIScrollbarDirectionType::BottomToTop:
         {
             auto VerticalMinMax = FVector2D((1.0f - Size) * value01, FMath::Lerp(Size, 1.0f, value01));
-            Handle->SetVerticalAnchorMinMax(VerticalMinMax);
+            HandleLayout->SetVerticalAnchorMinMax(VerticalMinMax);
         }
         break;
         case UIScrollbarDirectionType::TopToBottom:
         {
             auto VerticalMinMax = FVector2D((1.0f - Size) * (1.0f - value01), FMath::Lerp(1.0f, Size, value01));
-            Handle->SetVerticalAnchorMinMax(VerticalMinMax);
+            HandleLayout->SetVerticalAnchorMinMax(VerticalMinMax);
         }
         break;
         }

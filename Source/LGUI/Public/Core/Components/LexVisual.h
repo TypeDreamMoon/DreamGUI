@@ -3,6 +3,7 @@
 #pragma once
 
 #include "LexWidget.h"
+#include "LexWidgetSubObjectBehaviour.h"
 #include "LTweener.h"
 #include "Utils/LexUIUtils.h"
 #include "LexVisual.generated.h"
@@ -88,27 +89,21 @@ enum class ELexVisualHitTestType :uint8
 
 /** Base class of UI element that can be renderred by LGUICanvas */
 UCLASS(Blueprintable, BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)
-class LGUI_API ULexVisual : public UObject
+class LGUI_API ULexVisual : public ULexWidgetSubObjectBehaviour
 {
 	GENERATED_BODY()
 
 public:	
 	ULexVisual(const FObjectInitializer& ObjectInitializer);
-
+	void BeginPlay();
 protected:
 	friend class FLexVisualCustomization;
 	friend class ULexWidget;
-	virtual void BeginPlay();
-	virtual void EndPlay(){};
-	virtual void OnRegister(){};
-	virtual void OnUnregister(){};
-	virtual void DestroyComponent(){};
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
 #endif
 	ELexVisualType VisualType = ELexVisualType::None;
-	mutable TWeakObjectPtr<ULexWidget> CacheWidget;
 
 	/**
 	 * Render color of UI element.
@@ -134,9 +129,6 @@ public:
 	{
 		return GET_MEMBER_NAME_CHECKED(ULexVisual, Color);
 	}
-
-	UFUNCTION(BlueprintCallable, Category = "Widget")
-	ULexWidget* GetWidget()const;
 	
 	/** get UI renderable type */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
@@ -177,10 +169,7 @@ public:
 	int GetClipDataStartPosition()const;
 	UTexture* GetClipDataTexture()const;
 
-	virtual void OnTransformChanged();
-	virtual void OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange){};
-	virtual void OnPixelSnappingChanged(){}
-	virtual void OnClipDataChanged(){bClipDataChanged=true;}
+	virtual void OnTransformChanged()override;
 	
 	void MarkColorDirty();
 	virtual void MarkAllDirty();

@@ -346,54 +346,6 @@ public:
 
 #pragma region LTween
 
-#pragma region UIItem
-	UE_DEPRECATED(5.1, "Use UIItem's tween function instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DeprecatedFunction, DeprecationMessage = "Use UIItem's tween function instead."), Category = "LTweenLGUI")
-		static ULTweener* WidthTo(ULexWidget* target, float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-	UE_DEPRECATED(5.1, "Use UIItem's tween function instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DeprecatedFunction, DeprecationMessage = "Use UIItem's tween function instead."), Category = "LTweenLGUI")
-		static ULTweener* HeightTo(ULexWidget* target, float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-
-	UE_DEPRECATED(5.1, "Use UIItem's tween function instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DeprecatedFunction, DeprecationMessage = "Use UIItem's tween function instead."), Category = "LTweenLGUI")
-		static ULTweener* ColorTo(ULexVisual* target, FColor endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-	UE_DEPRECATED(5.1, "Use UIItem's tween function instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DeprecatedFunction, DeprecationMessage = "Use UIItem's tween function instead."), Category = "LTweenLGUI")
-		static ULTweener* ColorFrom(ULexVisual* target, FColor startValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-
-	UE_DEPRECATED(5.1, "Use UIItem's tween function instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DeprecatedFunction, DeprecationMessage = "Use UIItem's tween function instead."), Category = "LTweenLGUI")
-		static ULTweener* AlphaTo(ULexVisual* target, float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-	UE_DEPRECATED(5.1, "Use UIItem's tween function instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DeprecatedFunction, DeprecationMessage = "Use UIItem's tween function instead."), Category = "LTweenLGUI")
-		static ULTweener* AlphaFrom(ULexVisual* target, float startValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-
-	UE_DEPRECATED(5.1, "Use UIItem's tween function instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DeprecatedFunction, DeprecationMessage = "Use UIItem's tween function instead."), Category = "LTweenLGUI")
-		static ULTweener* HorizontalAnchoredPositionTo(ULexWidget* target, float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-	UE_DEPRECATED(5.1, "Use UIItem's tween function instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DeprecatedFunction, DeprecationMessage = "Use UIItem's tween function instead."), Category = "LTweenLGUI")
-		static ULTweener* VerticalAnchoredPositionTo(ULexWidget* target, float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-	UE_DEPRECATED(5.1, "Use UIItem's tween function instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DeprecatedFunction, DeprecationMessage = "Use UIItem's tween function instead."), Category = "LTweenLGUI")
-		static ULTweener* AnchoredPositionTo(ULexWidget* target, FVector2D endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-	UE_DEPRECATED(5.1, "Use UIItem's tween function instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DeprecatedFunction, DeprecationMessage = "Use UIItem's tween function instead."), Category = "LTweenLGUI")
-		static ULTweener* PivotTo(ULexWidget* target, FVector2D endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-	UE_DEPRECATED(5.1, "Use UIItem's tween function instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DeprecatedFunction, DeprecationMessage = "Use UIItem's tween function instead."), Category = "LTweenLGUI")
-		static ULTweener* AnchorLeftTo(ULexWidget* target, float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-	UE_DEPRECATED(5.1, "Use UIItem's tween function instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DeprecatedFunction, DeprecationMessage = "Use UIItem's tween function instead."), Category = "LTweenLGUI")
-		static ULTweener* AnchorRightTo(ULexWidget* target, float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-	UE_DEPRECATED(5.1, "Use UIItem's tween function instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DeprecatedFunction, DeprecationMessage = "Use UIItem's tween function instead."), Category = "LTweenLGUI")
-		static ULTweener* AnchorTopTo(ULexWidget* target, float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-	UE_DEPRECATED(5.1, "Use UIItem's tween function instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DeprecatedFunction, DeprecationMessage = "Use UIItem's tween function instead."), Category = "LTweenLGUI")
-		static ULTweener* AnchorBottomTo(ULexWidget* target, float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-#pragma endregion
-
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		static void LGUIExecuteControllerInputAxis(FKey inputKey, float value);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
@@ -408,47 +360,4 @@ public:
 		static void GetSpriteUV(const FLexUISpriteInfo& SpriteInfo, float& UV0X, float& UV0Y, float& UV3X, float& UV3Y);
 	UFUNCTION(BlueprintPure, Category = LGUI)
 		static void GetSpriteBorderUV(const FLexUISpriteInfo& SpriteInfo, float& borderUV0X, float& borderUV0Y, float& borderUV3X, float& borderUV3Y);
-
-
-
-	UE_DEPRECATED(4.23, "Use LTween's LocalPositionTo instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "UI Local Position To", DeprecatedFunction, DeprecationMessage = "Use LTween's LocalPositionTo instead."), Category = "LTweenLGUI")
-		static ULTweener* UILocalPositionTo(ULexWidget* target, FVector endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-	UE_DEPRECATED(4.24, "This node is not valid any more. Use LGUIExecuteControllerInputAxis instead.")
-	UFUNCTION(BlueprintCallable, Category = LGUI, meta = (DeprecatedFunction, DeprecationMessage = "This node is not valid any more. Use LGUIExecuteControllerInputAxis instead"))
-		static void LGUIExecuteInputAxis(FKey inputKey, float value) 
-	{ 
-		LGUIExecuteControllerInputAxis(inputKey, value);
-	}
-	UE_DEPRECATED(4.24, "This node is not valid any more. Use LGUIExecuteControllerInputAction instead.")
-	UFUNCTION(BlueprintCallable, Category = LGUI, meta = (DeprecatedFunction, DeprecationMessage = "This node is not valid any more. Use LGUIExecuteControllerInputAction instead"))
-		static void LGUIExecuteInputAction(FKey inputKey, bool pressOrRelease)
-	{
-		LGUIExecuteControllerInputAction(inputKey, pressOrRelease);
-	}
-	UE_DEPRECATED(4.24, "Use HorizontalAnchoredPositionTo instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "Anchor Offset X To", DeprecatedFunction, DeprecationMessage = "Use HorizontalAnchoredPositionTo instead."), Category = "LTweenLGUI")
-		static ULTweener* AnchorOffsetXTo(ULexWidget* target, float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-	UE_DEPRECATED(4.24, "Use VerticalAnchoredPositionTo instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "Anchor Offset Y To", DeprecatedFunction, DeprecationMessage = "Use VerticalAnchoredPositionTo instead."), Category = "LTweenLGUI")
-		static ULTweener* AnchorOffsetYTo(ULexWidget* target, float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-	UE_DEPRECATED(4.24, "Use AnchoredPositionTo instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "Anchor Offset To", DeprecatedFunction, DeprecationMessage = "Use AnchoredPositionTo instead."), Category = "LTweenLGUI")
-		static ULTweener* AnchorOffsetTo(ULexWidget* target, FVector2D endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-	UE_DEPRECATED(4.24, "Use AnchorLeftTo instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DeprecatedFunction, DeprecationMessage = "Use AnchorLeftTo instead."), Category = "LTweenLGUI")
-		static ULTweener* StretchLeftTo(ULexWidget* target, float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-	UE_DEPRECATED(4.24, "Use AnchorRightTo instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DeprecatedFunction, DeprecationMessage = "Use AnchorRightTo instead."), Category = "LTweenLGUI")
-		static ULTweener* StretchRightTo(ULexWidget* target, float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-	UE_DEPRECATED(4.24, "Use AnchorTopTo instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DeprecatedFunction, DeprecationMessage = "Use AnchorTopTo instead."), Category = "LTweenLGUI")
-		static ULTweener* StretchTopTo(ULexWidget* target, float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-	UE_DEPRECATED(4.24, "Use AnchorBottomTo instead.")
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DeprecatedFunction, DeprecationMessage = "Use AnchorBottomTo instead."), Category = "LTweenLGUI")
-		static ULTweener* StretchBottomTo(ULexWidget* target, float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-
-	UE_DEPRECATED(4.24, "LGUIComponentReference now can direct reference ActorComponent, so no need to store component class.")
-	UFUNCTION(BlueprintPure, Category = LGUI, meta = (DisplayName = "Get Component Class", CompactNodeTitle = "Class", BlueprintAutocast, DeprecatedFunction, DeprecationMessage = "LGUIComponentReference now can direct reference ActorComponent, so no need to store component class."))
-		static TSubclassOf<UActorComponent> LGUICompRef_GetComponentClass(const FLGUIComponentReference& InLGUIComponentReference);
 };

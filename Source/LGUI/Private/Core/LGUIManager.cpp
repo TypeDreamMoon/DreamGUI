@@ -16,7 +16,7 @@
 #include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
 #include "Core/ILGUICultureChangedInterface.h"
 #include "Core/LGUILifeCycleBehaviour.h"
-#include "Layout/ILGUILayoutInterface.h"
+#include "Core/Components/LexLayoutAnchor.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #if WITH_EDITOR
@@ -24,7 +24,7 @@
 #include "DrawDebugHelpers.h"
 #include "EditorViewportClient.h"
 #include "PrefabSystem/LGUIPrefab.h"
-#include "Layout/LGUICanvasScaler.h"
+#include "Core/Components/LexCanvasScaler.h"
 #include "Core/LexUISpriteData.h"
 #endif
 
@@ -70,7 +70,10 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 			{
 				if (auto UIItem = Cast<ULexWidget>(Comp))
 				{
-					UIItem->CalculateTransformFromAnchor();
+					if (auto LayoutSlot = UIItem->GetLayoutSlot())
+					{
+						LayoutSlot->CalculateTransformFromLayout();
+					}
 				}
 			}
 			});
@@ -82,7 +85,7 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 				//find hit UIBatchMeshRenderable
 				auto LineStart = RayOrigin;
 				auto LineEnd = RayOrigin + RayDirection * LineTraceLength;
-				ULexVisual* ClickHitUI = nullptr;
+				ULexWidget* ClickHitUI = nullptr;
 				static TArray<ULexWidget*> AllUIItemArray;
 				AllUIItemArray.Reset();
 				{
@@ -105,7 +108,7 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 				}
 				if (ULGUIManagerWorldSubsystem::RaycastHitUI(World, AllUIItemArray, LineStart, LineEnd, ClickHitUI, ULGUIEditorManagerObject::IndexOfClickSelectUI))
 				{
-					ClickHitActor = ClickHitUI->GetWidget()->GetOwner();
+					ClickHitActor = ClickHitUI->GetOwner();
 				}
 			}
 			});
@@ -191,20 +194,20 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 		ULGUIPrefabManagerObject::OnPrefabEditor_ReplaceObjectPropertyForApplyOrRevert.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, FName& InPropertyName) {
 			if (auto UIItem = Cast<ULexWidget>(InObject))
 			{
-				if (InPropertyName == USceneComponent::GetRelativeLocationPropertyName())
-				{
-					InPropertyName = ULexWidget::GetAnchorDataPropertyName();
-				}
+				// if (InPropertyName == USceneComponent::GetRelativeLocationPropertyName())
+				// {
+				// 	InPropertyName = ULexWidget::GetAnchorDataPropertyName();
+				// }
 			}
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_AfterObjectPropertyApplyOrRevert.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, FName InPropertyName) {
 			if (auto UIItem = Cast<ULexWidget>(InObject))
 			{
-				if (InPropertyName == ULexWidget::GetAnchorDataPropertyName())
-				{
-					UIItem->CalculateTransformFromAnchor();//calculate transform here, because when NotifyPropertyChanged the PostActorConstruction->MoveComponent will call then anchor will calculate from transform value which is wrong
-					PrefabHelper->RemoveMemberPropertyFromSubPrefab(UIItem->GetOwner(), InObject, USceneComponent::GetRelativeLocationPropertyName());//remove RelativeLocation override because UIItem use AnchorData to calculate RelativeLocation
-				}
+				// if (InPropertyName == ULexWidget::GetAnchorDataPropertyName())
+				// {
+				// 	UIItem->CalculateTransformFromAnchor();//calculate transform here, because when NotifyPropertyChanged the PostActorConstruction->MoveComponent will call then anchor will calculate from transform value which is wrong
+				// 	PrefabHelper->RemoveMemberPropertyFromSubPrefab(UIItem->GetOwner(), InObject, USceneComponent::GetRelativeLocationPropertyName());//remove RelativeLocation override because UIItem use AnchorData to calculate RelativeLocation
+				// }
 			}
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_AfterMakePrefabAsSubPrefab.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, AActor* InRootActor) {
@@ -218,14 +221,14 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 		ULGUIPrefabManagerObject::OnPrefabEditor_AfterCollectPropertyToOverride.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, FName InPropertyName) {
 			if (auto UIItem = Cast<ULexWidget>(InObject))
 			{
-				if (InPropertyName == USceneComponent::GetRelativeLocationPropertyName())//if UI's relative location change, then record anchor data too
-				{
-					PrefabHelper->AddMemberPropertyToSubPrefab(UIItem->GetOwner(), InObject, ULexWidget::GetAnchorDataPropertyName());
-				}
-				else if (InPropertyName == ULexWidget::GetAnchorDataPropertyName())//if UI's anchor data change, then record relative location too
-				{
-					PrefabHelper->AddMemberPropertyToSubPrefab(UIItem->GetOwner(), InObject, USceneComponent::GetRelativeLocationPropertyName());
-				}
+				// if (InPropertyName == USceneComponent::GetRelativeLocationPropertyName())//if UI's relative location change, then record anchor data too
+				// {
+				// 	PrefabHelper->AddMemberPropertyToSubPrefab(UIItem->GetOwner(), InObject, ULexWidget::GetAnchorDataPropertyName());
+				// }
+				// else if (InPropertyName == ULexWidget::GetAnchorDataPropertyName())//if UI's anchor data change, then record relative location too
+				// {
+				// 	PrefabHelper->AddMemberPropertyToSubPrefab(UIItem->GetOwner(), InObject, USceneComponent::GetRelativeLocationPropertyName());
+				// }
 			}
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_CopyRootObjectParentAnchorData.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, UObject* OriginObject) {
@@ -233,8 +236,8 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 			auto OriginObjectUIItem = Cast<ULexWidget>(OriginObject);
 			if (InObjectUIItem != nullptr && OriginObjectUIItem != nullptr)//if is UI item, we need to copy parent's property to origin object's parent property, to make anchor & location calculation right
 			{
-				auto InObjectParent = InObjectUIItem->GetParentUIItem();
-				auto OriginObjectParent = OriginObjectUIItem->GetParentUIItem();
+				auto InObjectParent = InObjectUIItem->GetUIParent();
+				auto OriginObjectParent = OriginObjectUIItem->GetUIParent();
 				if (InObjectParent != nullptr && OriginObjectParent != nullptr)
 				{
 					//copy relative location
@@ -242,9 +245,9 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 					RelativeLocationProperty->CopyCompleteValue_InContainer(OriginObjectParent, InObjectParent);
 					FLexUIUtils::NotifyPropertyChanged(OriginObjectParent, RelativeLocationProperty);
 					//copy anchor data
-					auto AnchorDataProperty = FindFProperty<FProperty>(InObjectParent->GetClass(), ULexWidget::GetAnchorDataPropertyName());
-					AnchorDataProperty->CopyCompleteValue_InContainer(OriginObjectParent, InObjectParent);
-					FLexUIUtils::NotifyPropertyChanged(OriginObjectParent, AnchorDataProperty);
+					// auto AnchorDataProperty = FindFProperty<FProperty>(InObjectParent->GetClass(), ULexWidget::GetAnchorDataPropertyName());
+					// AnchorDataProperty->CopyCompleteValue_InContainer(OriginObjectParent, InObjectParent);
+					// FLexUIUtils::NotifyPropertyChanged(OriginObjectParent, AnchorDataProperty);
 				}
 			}
 			});
@@ -512,9 +515,9 @@ void ULGUIManagerWorldSubsystem::DrawFrameOnUIItem(ULexWidget* item, bool IsScre
 	else
 	{
 		//parent selected
-		if (IsValid(item->GetParentUIItem()))
+		if (IsValid(item->GetUIParent()))
 		{
-			if (ULGUIPrefabManagerObject::IsSelected(item->GetParentUIItem()->GetOwner()))
+			if (ULGUIPrefabManagerObject::IsSelected(item->GetUIParent()->GetOwner()))
 			{
 				bCanDrawRect = true;
 			}
@@ -530,9 +533,9 @@ void ULGUIManagerWorldSubsystem::DrawFrameOnUIItem(ULexWidget* item, bool IsScre
 			}
 		}
 		//other object of same hierarchy is selected
-		if (IsValid(item->GetParentUIItem()))
+		if (IsValid(item->GetUIParent()))
 		{
-			const auto& sameLevelCompArray = item->GetParentUIItem()->GetUIChildren();
+			const auto& sameLevelCompArray = item->GetUIParent()->GetUIChildren();
 			for (auto& uiComp : sameLevelCompArray)
 			{
 				if (IsValid(uiComp) && IsValid(uiComp->GetOwner()) && ULGUIPrefabManagerObject::IsSelected(uiComp->GetOwner()))
@@ -548,7 +551,7 @@ void ULGUIManagerWorldSubsystem::DrawFrameOnUIItem(ULexWidget* item, bool IsScre
 	{
 		if (item->IsCanvasUIItem())
 		{
-			if (auto canvasScaler = item->GetOwner()->FindComponentByClass<ULGUICanvasScaler>())
+			if (auto canvasScaler = item->GetOwner()->FindComponentByClass<ULexCanvasScaler>())
 			{
 				if (ULGUIPrefabManagerObject::AnySelectedIsChildOf(item->GetOwner()))
 				{
@@ -856,7 +859,7 @@ void ULGUIManagerWorldSubsystem::DrawDebugRectOnScreenSpace(UWorld* InWorld, FVe
 }
 
 bool ULGUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULexWidget*>& InWidgets, const FVector& LineStart, const FVector& LineEnd
-	, ULexVisual*& ResultSelectTarget, int& InOutTargetIndexInHitArray
+	, ULexWidget*& ResultSelectTarget, int& InOutTargetIndexInHitArray
 )
 {
 	TArray<FHitResult> HitResultArray;
@@ -908,8 +911,8 @@ bool ULGUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULex
 		{
 			InOutTargetIndexInHitArray = 0;
 		}
-		auto uiRenderableComp = (ULexVisual*)(HitResultArray[InOutTargetIndexInHitArray].Component.Get());//target need to select
-		ResultSelectTarget = uiRenderableComp;
+		auto HitWidget = (ULexWidget*)(HitResultArray[InOutTargetIndexInHitArray].Component.Get());//target need to select
+		ResultSelectTarget = HitWidget;
 		return true;
 	}
 	return false;
@@ -1003,7 +1006,6 @@ bool ULGUIManagerWorldSubsystem::bIsPlaying = false;
 
 DECLARE_CYCLE_STAT(TEXT("LGUILifeCycleBehaviour Update"), STAT_LGUILifeCycleBehaviourUpdate, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("LGUILifeCycleBehaviour Start"), STAT_LGUILifeCycleBehaviourStart, STATGROUP_LGUI);
-DECLARE_CYCLE_STAT(TEXT("UpdateLayoutInterface"), STAT_UpdateLayoutInterface, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("Canvas Update"), STAT_UpdateCanvas, STATGROUP_LGUI);
 void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 {
@@ -1174,8 +1176,6 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 		PrevScreenSpaceOverlayCanvasCount = 0;
 	}
 #endif
-
-	UpdateLayout();
 
 	//update drawcall
 	{
@@ -1368,70 +1368,9 @@ void ULGUIManagerWorldSubsystem::UnregisterLGUICultureChangedEvent(TScriptInterf
 	}
 }
 
-void ULGUIManagerWorldSubsystem::UpdateLayout()
-{
-	SCOPE_CYCLE_COUNTER(STAT_UpdateLayoutInterface);
-
-	//update Layout
-	if (bNeedUpdateLayout)
-	{
-		bNeedUpdateLayout = false;
-		for (auto& RootUIItem : AllRootUIItemArray)
-		{
-			if (RootUIItem.IsValid())
-			{
-				RebuildLayout(RootUIItem.Get());
-			}
-		}
-	}
-}
-void ULGUIManagerWorldSubsystem::ForceUpdateLayout(UObject* WorldContextObject)
-{
-	if (auto world = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull))
-	{
-		if (auto Instance = GetInstance(world))
-		{
-			Instance->UpdateLayout();
-		}
-	}
-}
-void ULGUIManagerWorldSubsystem::RebuildLayout(ULexWidget* InItem)
-{
-	auto& Children = InItem->GetUIChildren();
-	for (auto& Child : Children)
-	{
-		RebuildLayout(Child);
-	}
-
-	auto& Components = InItem->GetOwner()->GetComponents();
-	for (auto Component : Components)
-	{
-		if (Component && Component->GetClass()->ImplementsInterface(ULGUILayoutInterface::StaticClass()))
-		{
-			ILGUILayoutInterface::Execute_OnUpdateLayout(Component);
-		}
-	}
-}
-
 #if WITH_EDITOR
 void ULGUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 {
-	struct LOCAL
-	{
-		static void MarkRebuildLayoutRecursive(ULexWidget* InUIItem)
-		{
-			auto& Children = InUIItem->GetUIChildren();
-			for (auto& Child : Children)
-			{
-				RebuildLayout(Child);
-			}
-			if (auto LayoutComp = InUIItem->GetOwner()->FindComponentByInterface(ULGUILayoutInterface::StaticClass()))
-			{
-				ILGUILayoutInterface::Execute_MarkRebuildLayout(LayoutComp);
-			}
-		}
-	};
-
 	for (auto InstanceItem : InstanceArray)
 	{
 		if (InstanceItem != nullptr)
@@ -1442,10 +1381,6 @@ void ULGUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 			}
 		}
 		auto Instance = InstanceItem;
-		for (auto& RootUIItem : Instance->AllRootUIItemArray)
-		{
-			LOCAL::MarkRebuildLayoutRecursive(RootUIItem.Get());
-		}
 		for (auto& RootUIItem : Instance->AllRootUIItemArray)
 		{
 			if (RootUIItem.IsValid())
@@ -1697,42 +1632,6 @@ void ULGUIManagerWorldSubsystem::RemoveSelectable(UUISelectableComponent* InSele
 		}
 	}
 }
-void ULGUIManagerWorldSubsystem::RegisterLGUILayout(TScriptInterface<ILGUILayoutInterface> InItem)
-{
-	if (auto Instance = GetInstance(InItem.GetObject()->GetWorld()))
-	{
-#if !UE_BUILD_SHIPPING
-		if (Instance->AllLayoutArray.Contains(InItem.GetObject()))
-		{
-			UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
-		}
-#endif
-		Instance->AllLayoutArray.AddUnique(InItem.GetObject());
-	}
-}
-void ULGUIManagerWorldSubsystem::UnregisterLGUILayout(TScriptInterface<ILGUILayoutInterface> InItem)
-{
-	if (auto Instance = GetInstance(InItem.GetObject()->GetWorld()))
-	{
-#if !UE_BUILD_SHIPPING
-		if (!Instance->AllLayoutArray.Contains(InItem.GetObject()))
-		{
-			UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
-		}
-#endif
-		Instance->AllLayoutArray.RemoveSingle(InItem.GetObject());
-	}
-}
-void ULGUIManagerWorldSubsystem::MarkUpdateLayout(UWorld* InWorld)
-{
-	if (auto Instance = GetInstance(InWorld))
-	{
-		Instance->bNeedUpdateLayout = true;
-	}
-}
-
 
 void ULGUIManagerWorldSubsystem::ProcessLGUILifecycleEvent(ULGUILifeCycleBehaviour* InComp)
 {

@@ -69,7 +69,7 @@ protected:
 	void CheckSpriteData();
 	void ApplyUVRect();
 
-	virtual void OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
+	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
 
 	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 public:

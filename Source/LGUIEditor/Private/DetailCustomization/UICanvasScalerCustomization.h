@@ -14,7 +14,7 @@ public:
 	/** IDetailCustomization interface */
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
 private:
-	TWeakObjectPtr<class ULGUICanvasScaler> TargetScriptPtr;
+	TWeakObjectPtr<class ULexCanvasScaler> TargetScriptPtr;
 	TSharedPtr<SHorizontalBox> ValueBox;
 	FOptionalSize GetValueWidth()const;
 };

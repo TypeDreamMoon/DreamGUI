@@ -8,9 +8,10 @@
 #include "Core/LGUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "PhysicsEngine/BodySetup.h"
-#include "Layout/LGUICanvasScaler.h"
+#include "Core/Components/LexCanvasScaler.h"
 #include "LTweenManager.h"
 #include "Core/LexUIClipData.h"
+#include "Core/Components/LexLayout.h"
 #include "Core/Components/LexVisual.h"
 #if WITH_EDITOR
 #include "DrawDebugHelpers.h"
@@ -31,16 +32,9 @@ ULexWidget::ULexWidget(const FObjectInitializer& ObjectInitializer) :Super(Objec
 	SetUsingAbsoluteRotation(false);
 	SetUsingAbsoluteScale(false);
 	SetVisibility(false);
-	bCanSetAnchorFromTransform = false;//skip construction
 
 	bWantsOnUpdateTransform = true;
 	bFlattenHierarchyIndexDirty = true;
-	bWidthCached = false;
-	bHeightCached = false;
-	bAnchorLeftCached = false;
-	bAnchorRightCached = false;
-	bAnchorBottomCached = false;
-	bAnchorTopCached = false;
 	bNeedSortUIChildren = true;
 	bIsDetaching = false;
 #if WITH_EDITOR
@@ -74,7 +68,6 @@ void ULexWidget::CallUILifeCycleBehavioursActiveInHierarchyStateChanged()
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
 	bool TempIsUIActive = GetIsUIActiveInHierarchy();
-	OnUIActiveInHierachy(TempIsUIActive);
 	if (this->GetOwner()->GetRootComponent() != this)return;
 	if (UIActiveInHierarchyStateChangedDelegate.IsBound())UIActiveInHierarchyStateChangedDelegate.Broadcast(TempIsUIActive);
 }
@@ -82,7 +75,6 @@ void ULexWidget::CallUILifeCycleBehavioursChildDimensionsChanged(ULexWidget* chi
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
-	OnUIChildDimensionsChanged(child, horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
 	if (this->GetOwner()->GetRootComponent() != this)return;
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())
@@ -100,7 +92,6 @@ void ULexWidget::CallUILifeCycleBehavioursChildActiveInHierarchyStateChanged(ULe
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
-	OnUIChildAcitveInHierarchy(child, activeOrInactive);
 	if (this->GetOwner()->GetRootComponent() != this)return;
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())
@@ -118,7 +109,6 @@ void ULexWidget::CallUILifeCycleBehavioursDimensionsChanged(bool horizontalPosit
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
-	OnUIDimensionsChanged(horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
 	if (this->GetOwner()->GetRootComponent() != this)return;
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())
@@ -142,7 +132,6 @@ void ULexWidget::CallUILifeCycleBehavioursAttachmentChanged()
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
-	OnUIAttachmentChanged();
 	if (this->GetOwner()->GetRootComponent() != this)return;
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())
@@ -160,7 +149,6 @@ void ULexWidget::CallUILifeCycleBehavioursChildAttachmentChanged(ULexWidget* chi
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
-	OnUIChildAttachmentChanged(child, attachOrDettach);
 	if (this->GetOwner()->GetRootComponent() != this)return;
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())
@@ -178,7 +166,6 @@ void ULexWidget::CallUILifeCycleBehavioursInteractionStateChanged()
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
-	OnUIInteractionStateChanged(GetFinalIsEnabled());
 	if (this->GetOwner()->GetRootComponent() != this)return;
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())
@@ -196,7 +183,6 @@ void ULexWidget::CallUILifeCycleBehavioursChildHierarchyIndexChanged(ULexWidget*
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
-	OnUIChildHierarchyIndexChanged(child);
 	if (this->GetOwner()->GetRootComponent() != this)return;
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())
@@ -204,6 +190,10 @@ void ULexWidget::CallUILifeCycleBehavioursChildHierarchyIndexChanged(ULexWidget*
 		GetOwner()->GetComponents(LGUILifeCycleUIBehaviourArray, false);
 	}
 #endif
+	if (IsValid(Layout))
+	{
+		Layout->MarkLayoutDirty();
+	}
 	for (int i = 0; i < LGUILifeCycleUIBehaviourArray.Num(); i++)
 	{
 		auto& CompItem = LGUILifeCycleUIBehaviourArray[i];
@@ -277,9 +267,9 @@ void ULexWidget::MarkFlattenHierarchyIndexDirty()
 
 void ULexWidget::SetHierarchyIndex(int32 InInt) 
 { 
-	if (InInt != hierarchyIndex)
+	if (InInt != HierarchyIndex)
 	{
-		hierarchyIndex = InInt;
+		HierarchyIndex = InInt;
 		ApplyHierarchyIndex();
 	}
 }
@@ -291,22 +281,22 @@ void ULexWidget::ApplyHierarchyIndex()
 		if (UIParent->UIChildren.Num() == 0)
 		{
 			UIParent->UIChildren.Add(this);
-			this->hierarchyIndex = 0;
+			this->HierarchyIndex = 0;
 			UIParent->CallUILifeCycleBehavioursChildHierarchyIndexChanged(this);
 		}
 		else
 		{
 			UIParent->EnsureUIChildrenValid();
 			UIParent->EnsureUIChildrenSorted();
-			hierarchyIndex = FMath::Clamp(hierarchyIndex, 0, UIParent->UIChildren.Num() - 1);
+			HierarchyIndex = FMath::Clamp(HierarchyIndex, 0, UIParent->UIChildren.Num() - 1);
 			UIParent->UIChildren.Remove(this);
-			UIParent->UIChildren.Insert(this, hierarchyIndex);
+			UIParent->UIChildren.Insert(this, HierarchyIndex);
 			bool anythingChange = false;
 			for (int i = 0; i < UIParent->UIChildren.Num(); i++)
 			{
-				if (UIParent->UIChildren[i]->hierarchyIndex != i)
+				if (UIParent->UIChildren[i]->HierarchyIndex != i)
 				{
-					UIParent->UIChildren[i]->hierarchyIndex = i;
+					UIParent->UIChildren[i]->HierarchyIndex = i;
 					anythingChange = true;
 				}
 			}
@@ -320,7 +310,7 @@ void ULexWidget::ApplyHierarchyIndex()
 	}
 	else
 	{
-		hierarchyIndex = 0;
+		HierarchyIndex = 0;
 	}
 }
 
@@ -455,12 +445,6 @@ void ULexWidget::MarkAllDirtyRecursive()
 void ULexWidget::MarkAllDirty()
 {
 	bFlattenHierarchyIndexDirty = true;
-	bWidthCached = false;
-	bHeightCached = false;
-	bAnchorLeftCached = false;
-	bAnchorRightCached = false;
-	bAnchorTopCached = false;
-	bAnchorBottomCached = false;
 #if WITH_EDITOR
 	bUIActiveStateDirty = true;
 #endif
@@ -508,18 +492,13 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 			SetIsUIActive(!bIsUIActive);
 		}
 
-		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexWidget, hierarchyIndex))
+		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexWidget, HierarchyIndex))
 		{
 			ApplyHierarchyIndex();
 		}
 		else if (PropertyName == FName(TEXT("RelativeLocation")))
 		{
-			CalculateAnchorFromTransform();
-			UpdateComponentToWorld();
-		}
-		else if (PropertyName == FName(TEXT("AnchorData")))
-		{
-			CalculateTransformFromAnchor();
+			OnTransformChanged.Broadcast();
 			UpdateComponentToWorld();
 		}
 		else if (PropertyName == VisualName)
@@ -551,6 +530,30 @@ void ULexWidget::PreEditChange(FProperty* PropertyAboutToChange)
 			RenderCanvas->MarkVisualWillChange(Visual);
 		}
 	}
+}
+
+bool ULexWidget::CanEditChange(const FProperty* InProperty) const
+{
+	bool bIsEditable = Super::CanEditChange(InProperty);
+	if (InProperty->GetFName() == TEXT("bAbsoluteLocation"))
+	{
+		bIsEditable = false;
+	}
+	else if (InProperty->GetFName() == TEXT("bAbsoluteRotation"))
+	{
+		bIsEditable = false;
+	}
+	else if (InProperty->GetFName() == TEXT("bAbsoluteScale"))
+	{
+		bIsEditable = false;
+	}
+	return bIsEditable;
+}
+
+bool ULexWidget::CanEditChange(const FEditPropertyChain& PropertyChain) const
+{
+	bool bIsEditable = UObject::CanEditChange( PropertyChain );
+	return bIsEditable;
 }
 
 void ULexWidget::PostEditComponentMove(bool bFinished)
@@ -655,7 +658,6 @@ void ULexWidget::EnsureDataForRebuild()
 		static void UpdateComponentToWorldRecursive(ULexWidget* UIItem)
 		{
 			if (!IsValid(UIItem))return;
-			UIItem->CalculateTransformFromAnchor();
 			UIItem->UpdateComponentToWorld();
 			auto& Children = UIItem->GetUIChildren();
 			for (auto& Child : Children)
@@ -677,11 +679,10 @@ void ULexWidget::EnsureDataForRebuild()
 bool ULexWidget::MoveComponentImpl(const FVector& Delta, const FQuat& NewRotation, bool bSweep, FHitResult* Hit, EMoveComponentFlags MoveFlags, ETeleportType Teleport)
 {
 	auto result = Super::MoveComponentImpl(Delta, NewRotation, bSweep, Hit, MoveFlags, Teleport);
-	if (bCanSetAnchorFromTransform
-		&& this->IsRegistered()//check if registerred, because it may called from reconstruction.
+	if (this->IsRegistered()//check if registerred, because it may called from reconstruction.
 		)
 	{
-		CalculateAnchorFromTransform();
+		
 	}
 	return result;
 }
@@ -695,54 +696,20 @@ void ULexWidget::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, E
 		//For the condition LGUI_Tutorials/Tutorials/UIRenderTarget, when move LGUIRenderTarget1 at runtime, the LGUICanvas's RenderTarget's matrix not update, result in wrong interaction.
 		this->RenderCanvas->MarkCanvasLayoutDirty();
 	}
+	MarkTransformChanged(true, true);
+	OnTransformChanged.Broadcast();
+	if (IsValid(Layout))
+	{
+		Layout->OnTransformChanged();
+	}
+	if (CheckAndGetLayoutSlot())
+	{
+		LayoutSlot->OnTransformChanged();
+	}
 	if (IsValid(Visual))
 	{
 		Visual->OnTransformChanged();
 	}
-}
-void ULexWidget::CalculateAnchorFromTransform()
-{
-	auto TempRelativeLocation = this->GetRelativeLocation();
-	FVector2D CalculatedAnchoredPosition;
-	if (UIParent.IsValid())
-	{
-		//just a reverse operation from CalculateTransformFromAnchor
-		float LocalLeftPoint =
-			UIParent->GetLocalSpaceLeft()
-			+ (UIParent->GetWidth() * this->AnchorData.AnchorMin.X);
-
-		float LocalBottomPoint =
-			UIParent->GetLocalSpaceBottom()
-			+ (UIParent->GetHeight() * this->AnchorData.AnchorMin.Y);
-
-		CalculatedAnchoredPosition.X = TempRelativeLocation.Y
-			- LocalLeftPoint
-			- +(UIParent->GetWidth() * (this->AnchorData.AnchorMax.X - this->AnchorData.AnchorMin.X)) * this->AnchorData.Pivot.X;
-		CalculatedAnchoredPosition.Y = TempRelativeLocation.Z
-			- LocalBottomPoint
-			- (UIParent->GetHeight() * (this->AnchorData.AnchorMax.Y - this->AnchorData.AnchorMin.Y)) * this->AnchorData.Pivot.Y;
-	}
-	else
-	{
-		CalculatedAnchoredPosition.X = TempRelativeLocation.Y;
-		CalculatedAnchoredPosition.Y = TempRelativeLocation.Z;
-	}
-	auto CompScale3D = this->GetComponentScale();
-	auto CompScale2D = FVector2f(CompScale3D.Y, CompScale3D.Z);
-
-	bAnchorLeftCached = false;
-	bAnchorRightCached = false;
-	bAnchorBottomCached = false;
-	bAnchorTopCached = false;
-
-	bool AnchorChanged = !AnchorData.AnchoredPosition.Equals(CalculatedAnchoredPosition);
-	bool ScaleChanged = !PrevScale2D.Equals(CompScale2D);
-	if (AnchorChanged || ScaleChanged)
-	{
-		AnchorData.AnchoredPosition = CalculatedAnchoredPosition;
-		PrevScale2D = CompScale2D;
-	}
-	SetOnTransformChange(AnchorChanged, ScaleChanged);
 }
 
 void ULexWidget::OnChildAttached(USceneComponent* ChildComponent)
@@ -769,7 +736,7 @@ void ULexWidget::OnChildAttached(USceneComponent* ChildComponent)
 
 			if (childUIItem->IsRegistered())
 			{
-				childUIItem->hierarchyIndex = UIChildren.Num() - 1;
+				childUIItem->HierarchyIndex = UIChildren.Num() - 1;
 				this->CallUILifeCycleBehavioursChildHierarchyIndexChanged(childUIItem);
 			}
 			else//not registered means is loading from level. then no need to set hierarchy index
@@ -779,14 +746,14 @@ void ULexWidget::OnChildAttached(USceneComponent* ChildComponent)
 		}
 
 		//make sure hierarchyindex all good
-		if (childUIItem->hierarchyIndex == INDEX_NONE)
+		if (childUIItem->HierarchyIndex == INDEX_NONE)
 		{
 			for (int i = 0; i < UIChildren.Num(); i++)
 			{
 				auto& UIChild = UIChildren[i];
-				if (UIChild->hierarchyIndex != i)
+				if (UIChild->HierarchyIndex != i)
 				{
-					UIChild->hierarchyIndex = i;
+					UIChild->HierarchyIndex = i;
 					this->CallUILifeCycleBehavioursChildHierarchyIndexChanged(UIChild);
 				}
 			}
@@ -824,12 +791,17 @@ void ULexWidget::OnUIAttachedToParent()
 
 		if (this->IsRegistered())//not registered means is loading from level.
 		{
-			this->CalculateAnchorFromTransform();//if not from PrefabSystem, then calculate anchors on transform, so when use AttachComponent, the KeepRelative or KeepWorld will work. If from PrefabSystem, then anchor will automatically do the job
+			OnTransformChanged.Broadcast();
+			//this->CalculateAnchorFromTransform();//if not from PrefabSystem, then calculate anchors on transform, so when use AttachComponent, the KeepRelative or KeepWorld will work. If from PrefabSystem, then anchor will automatically do the job
 		}
 	}
 
 	ULexCanvas* ParentCanvas = ULexWidget::GetComponentInParentUI<ULexCanvas>(GetOwner()->GetAttachParentActor(), false);
 	UIHierarchyChanged(ParentCanvas, UIParent->RootUIItem.Get());
+	if (IsValid(Layout))
+	{
+		Layout->MarkLayoutDirty();
+	}
 	MarkClipDirty_Recursive(true);
 	//callback
 	CallUILifeCycleBehavioursAttachmentChanged();
@@ -850,9 +822,9 @@ void ULexWidget::OnChildDetached(USceneComponent* ChildComponent)
 		for (int i = 0; i < UIChildren.Num(); i++)
 		{
 			auto& UIChild = UIChildren[i];
-			if (UIChild->hierarchyIndex != i)
+			if (UIChild->HierarchyIndex != i)
 			{
-				UIChild->hierarchyIndex = i;
+				UIChild->HierarchyIndex = i;
 				this->CallUILifeCycleBehavioursChildHierarchyIndexChanged(UIChild);
 			}
 		}
@@ -895,11 +867,16 @@ void ULexWidget::OnUIDetachedFromParent()
 
 		if (this->IsRegistered())//not registered means is loading from level.
 		{
-			this->CalculateAnchorFromTransform();//if not from PrefabSystem, then calculate anchors on transform, so when use AttachComponent, the KeepRelative or KeepWorld will work. If from PrefabSystem, then anchor will automatically do the job
+			OnTransformChanged.Broadcast();
+			//this->CalculateAnchorFromTransform();//if not from PrefabSystem, then calculate anchors on transform, so when use AttachComponent, the KeepRelative or KeepWorld will work. If from PrefabSystem, then anchor will automatically do the job
 		}
 	}
 
 	UIHierarchyChanged(nullptr, nullptr);
+	if (IsValid(Layout))
+	{
+		Layout->MarkLayoutDirty();
+	}
 	MarkClipDirty_Recursive(true);
 	//callback
 	CallUILifeCycleBehavioursAttachmentChanged();
@@ -963,9 +940,16 @@ void ULexWidget::OnRegister()
 	}
 #endif
 
-	bCanSetAnchorFromTransform = true;
 	CheckRootUIItem();
 
+	if (IsValid(Layout))
+	{
+		Layout->OnRegister();
+	}
+	if (CheckAndGetLayoutSlot())
+	{
+		LayoutSlot->OnRegister();
+	}
 	if (IsValid(Visual))
 	{
 		Visual->OnRegister();
@@ -974,9 +958,9 @@ void ULexWidget::OnRegister()
 void ULexWidget::OnUnregister()
 {
 	Super::OnUnregister();
+#if WITH_EDITOR
 	if (auto world = this->GetWorld())
 	{
-#if WITH_EDITOR
 		if (!world->IsGameWorld())
 		{
 			if (this->GetName().StartsWith(TEXT("REINST_")))//when recompile a blueprint object, the old one will become REINST_XXX and not valid
@@ -988,26 +972,27 @@ void ULexWidget::OnUnregister()
 				}
 			}
 		}
-#endif
 	}
-	CheckRootUIItem();
-
-	if (IsValid(Visual))
-	{
-		Visual->OnUnregister();
-	}
-}
-
-void ULexWidget::OnComponentDestroyed(bool bDestroyingHierarchy)
-{
-	Super::OnComponentDestroyed(bDestroyingHierarchy);
-#if WITH_EDITORONLY_DATA
 	if (HelperComp)
 	{
 		HelperComp->DestroyComponent();
 		HelperComp = nullptr;
 	}
 #endif
+	CheckRootUIItem();
+
+	if (IsValid(Layout))
+	{
+		Layout->OnUnregister();
+	}
+	if (CheckAndGetLayoutSlot())
+	{
+		LayoutSlot->OnRegister();
+	}
+	if (IsValid(Visual))
+	{
+		Visual->OnUnregister();
+	}
 }
 
 void ULexWidget::EnsureUIChildrenValid()
@@ -1032,6 +1017,15 @@ void ULexWidget::EnsureUIChildrenSorted()const
 					return true;
 				return false;
 			});
+	}
+}
+
+void ULexWidget::SetPivot(FVector2D Value) 
+{
+	if (!Pivot.Equals(Value, 0.0f))
+	{
+		Pivot = Value;
+		MarkDimensionChanged(true, false, false);
 	}
 }
 
@@ -1103,6 +1097,14 @@ void ULexWidget::UnregisterRenderCanvas()
 	}
 }
 
+void ULexWidget::UpdateLayout()
+{
+	if (IsValid(Layout))
+	{
+		Layout->UpdateLayout();
+	}
+}
+
 void ULexWidget::UpdateClip(ULexUIDataAsTexture* ClipDataTexture, TArray<TSharedPtr<FLexUIClipData>>& ClipDataList)
 {
 	if (!bClipDirty)return;
@@ -1159,6 +1161,14 @@ void ULexWidget::UpdateClip(ULexUIDataAsTexture* ClipDataTexture, TArray<TShared
 	if (IsValid(Visual))
 	{
 		Visual->OnClipDataChanged();
+	}
+}
+
+void ULexWidget::UpdateVisual() const
+{
+	if (IsValid(Visual))
+	{
+		Visual->UpdateGeometry();
 	}
 }
 
@@ -1236,14 +1246,7 @@ void ULexWidget::UIHierarchyChanged(ULexCanvas* ParentRenderCanvas, ULexWidget* 
 
 	//if (this->IsRegistered())//not registerd means could be load from level
 	{
-		bWidthCached = false;
-		bHeightCached = false;
-		bAnchorLeftCached = false;
-		bAnchorRightCached = false;
-		bAnchorBottomCached = false;
-		bAnchorTopCached = false;
-
-		SetOnAnchorChange(false, true, true);
+		MarkDimensionChanged(false, true, true);
 	}
 }
 
@@ -1295,692 +1298,57 @@ void ULexWidget::UnregisterUIHierarchyChanged(const FDelegateHandle& InHandle)
 	UIHierarchyChangedDelegate.Remove(InHandle);
 }
 
-void ULexWidget::CalculateTransformFromAnchor()
-{
-	bool HorizontalPositionChanged = false, VerticalPositionChanged = false;
-	CalculateTransformFromAnchor(HorizontalPositionChanged, VerticalPositionChanged);
-}
-void ULexWidget::CalculateTransformFromAnchor(bool& OutHorizontalPositionChanged, bool& OutVerticalPositionChanged)
-{
-	bCanSetAnchorFromTransform = false;
-	FVector ResultLocation = this->GetRelativeLocation();
-	if (UIParent.IsValid())
-	{
-		float LocalLeftPoint = //this left point anchor position in parent's space
-			UIParent->GetLocalSpaceLeft()//parent's left position
-			+ (UIParent->GetWidth() * this->AnchorData.AnchorMin.X);//add anchor offset
-		float LocalLeftPivotPoint = //to pivot point, with anchor offset
-			LocalLeftPoint
-			+ (UIParent->GetWidth() * (this->AnchorData.AnchorMax.X - this->AnchorData.AnchorMin.X))//parent anchor width (width without SizeDelta)
-				* this->AnchorData.Pivot.X
-			+ this->AnchorData.AnchoredPosition.X;
-
-		float LocalBottomPoint = //this bottom point anchor position in parent's space
-			UIParent->GetLocalSpaceBottom()//parent's bottom position
-			+ (UIParent->GetHeight() * this->AnchorData.AnchorMin.Y);//add anchor offset
-		float LocalBottomPivotPoint = //to pivot point, with anchor offset
-			LocalBottomPoint
-			+ (UIParent->GetHeight() * (this->AnchorData.AnchorMax.Y - this->AnchorData.AnchorMin.Y))//parent anchor width (width without SizeDelta)
-				* this->AnchorData.Pivot.Y
-			+ this->AnchorData.AnchoredPosition.Y;
-
-		ResultLocation.Y = LocalLeftPivotPoint;
-		ResultLocation.Z = LocalBottomPivotPoint;
-	}
-	else
-	{
-		ResultLocation.Y = this->AnchorData.AnchoredPosition.X;
-		ResultLocation.Z = this->AnchorData.AnchoredPosition.Y;
-	}
-
-	auto OriginRelativeLocation = this->GetRelativeLocation();
-	double Tolerance = 0.0f;
-	if (FMath::Abs(OriginRelativeLocation.Y - ResultLocation.Y) > Tolerance)
-	{
-		OutHorizontalPositionChanged = true;
-	}
-	if (FMath::Abs(OriginRelativeLocation.Z - ResultLocation.Z) > Tolerance)
-	{
-		OutVerticalPositionChanged = true;
-	}
-	if (OutHorizontalPositionChanged || OutVerticalPositionChanged)
-	{
-		GetRelativeLocation_DirectMutable() = ResultLocation;
-		UpdateComponentToWorld();
-	}
-	bCanSetAnchorFromTransform = true;
-}
-
-
-#pragma region AnchorData
-
-float ULexWidget::GetWidth() const
-{
-	if (!bWidthCached)
-	{
-		bWidthCached = true;
-		if (UIParent.IsValid())
-		{
-			if (AnchorData.IsHorizontalStretched())
-			{
-				CacheWidth = AnchorData.SizeDelta.X + UIParent->GetWidth() * (AnchorData.AnchorMax.X - AnchorData.AnchorMin.X);
-			}
-			else
-			{
-				CacheWidth = AnchorData.SizeDelta.X;
-			}
-		}
-		else
-		{
-			CacheWidth = AnchorData.SizeDelta.X;
-		}
-	}
-	return CacheWidth;
-}
-float ULexWidget::GetHeight() const
-{
-	if (!bHeightCached)
-	{
-		bHeightCached = true;
-		if (UIParent.IsValid())
-		{
-			if (AnchorData.IsVerticalStretched())
-			{
-				CacheHeight = AnchorData.SizeDelta.Y + UIParent->GetHeight() * (AnchorData.AnchorMax.Y - AnchorData.AnchorMin.Y);
-			}
-			else
-			{
-				CacheHeight = AnchorData.SizeDelta.Y;
-			}
-		}
-		else
-		{
-			CacheHeight = AnchorData.SizeDelta.Y;
-		}
-	}
-	return CacheHeight;
-}
-
-void ULexWidget::SetAnchorData(const FUIAnchorData& InAnchorData)
-{
-	AnchorData.Pivot = InAnchorData.Pivot;
-	AnchorData.AnchorMin = InAnchorData.AnchorMin;
-	AnchorData.AnchorMax = InAnchorData.AnchorMax;
-	AnchorData.AnchoredPosition = InAnchorData.AnchoredPosition;
-	AnchorData.SizeDelta = InAnchorData.SizeDelta;
-
-	bWidthCached = false;
-	bHeightCached = false;
-	bAnchorLeftCached = false;
-	bAnchorRightCached = false;
-	bAnchorBottomCached = false;
-	bAnchorTopCached = false;
-
-	SetOnAnchorChange(true, true, true);
-}
-
-void ULexWidget::SetPivot(FVector2D Value) 
-{
-	if (!AnchorData.Pivot.Equals(Value, 0.0f))
-	{
-		AnchorData.Pivot = Value;
-		bAnchorLeftCached = false;
-		bAnchorRightCached = false;
-		bAnchorBottomCached = false;
-		bAnchorTopCached = false;
-		SetOnAnchorChange(true, false, false);
-	}
-}
-
-void ULexWidget::SetAnchorMin(FVector2D Value)
-{
-	if (this->UIParent.IsValid())
-	{
-		if (!AnchorData.AnchorMin.Equals(Value, 0.0f))
-		{
-			auto CurrentLeft = this->GetAnchorLeft();
-			auto CurrentBottom = this->GetAnchorBottom();
-
-			AnchorData.AnchorMin = Value;
-			
-			//SetAnchorLeft
-			{
-				auto CurrentRight = this->GetAnchorRight();
-				CacheWidth = this->UIParent->GetWidth() * (this->AnchorData.AnchorMax.X - this->AnchorData.AnchorMin.X) - CurrentRight - CurrentLeft;
-				//SetWidth
-				{
-					auto CalculatedSizeDeltaX = CacheWidth - (UIParent->GetWidth() * (AnchorData.AnchorMax.X - AnchorData.AnchorMin.X));
-					AnchorData.SizeDelta.X = CalculatedSizeDeltaX;
-				}
-				this->AnchorData.AnchoredPosition.X = FMath::Lerp(CurrentLeft, -CurrentRight, this->AnchorData.Pivot.X);
-			}
-
-			//SetAnchorBottom
-			{
-				auto CurrentTop = this->GetAnchorTop();
-				CacheHeight = this->UIParent->GetHeight() * (this->AnchorData.AnchorMax.Y - this->AnchorData.AnchorMin.Y) - CurrentTop - CurrentBottom;
-				//SetHeight
-				{
-					auto CalculatedSizeDeltaY = CacheHeight - (UIParent->GetHeight() * (AnchorData.AnchorMax.Y - AnchorData.AnchorMin.Y));
-					AnchorData.SizeDelta.Y = CalculatedSizeDeltaY;
-				}
-				this->AnchorData.AnchoredPosition.Y = FMath::Lerp(CurrentBottom, -CurrentTop, this->AnchorData.Pivot.Y);
-			}
-
-			SetOnAnchorChange(false, true, true);
-		}
-	}
-	else
-	{
-		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
-#if !UE_BUILD_SHIPPING
-		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
-#endif
-	}
-}
-void ULexWidget::SetAnchorMax(FVector2D Value)
-{
-	if (this->UIParent.IsValid())
-	{
-		if (!AnchorData.AnchorMax.Equals(Value, 0.0f))
-		{
-			auto CurrentRight = this->GetAnchorRight();
-			auto CurrentTop = this->GetAnchorTop();
-
-			AnchorData.AnchorMax = Value;
-
-			//SetAnchorRight
-			{
-				auto CurrentLeft = this->GetAnchorLeft();
-				CacheWidth = this->UIParent->GetWidth() * (this->AnchorData.AnchorMax.X - this->AnchorData.AnchorMin.X) - CurrentRight - CurrentLeft;
-				//SetWidth
-				{
-					auto CalculatedSizeDeltaX = CacheWidth - (UIParent->GetWidth() * (AnchorData.AnchorMax.X - AnchorData.AnchorMin.X));
-					AnchorData.SizeDelta.X = CalculatedSizeDeltaX;
-				}
-				this->AnchorData.AnchoredPosition.X = FMath::Lerp(CurrentLeft, -CurrentRight, this->AnchorData.Pivot.X);
-			}
-			//SetAnchorTop
-			{
-				auto CurrentBottom = this->GetAnchorBottom();
-				CacheHeight = this->UIParent->GetHeight() * (this->AnchorData.AnchorMax.Y - this->AnchorData.AnchorMin.Y) - CurrentTop - CurrentBottom;
-				//SetHeight
-				{
-					auto CalculatedSizeDeltaY = CacheHeight - (UIParent->GetHeight() * (AnchorData.AnchorMax.Y - AnchorData.AnchorMin.Y));
-					AnchorData.SizeDelta.Y = CalculatedSizeDeltaY;
-				}
-				this->AnchorData.AnchoredPosition.Y = FMath::Lerp(CurrentBottom, -CurrentTop, this->AnchorData.Pivot.Y);
-			}
-
-			SetOnAnchorChange(false, true, true);
-		}
-	}
-	else
-	{
-		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
-#if !UE_BUILD_SHIPPING
-		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
-#endif
-	}
-}
-
-void ULexWidget::SetHorizontalAndVerticalAnchorMinMax(FVector2D MinValue, FVector2D MaxValue, bool bKeepSize, bool bKeepRelativeLocation)
-{
-	if (this->UIParent.IsValid())
-	{
-		if (!AnchorData.AnchorMin.Equals(MinValue, 0.0f) || !AnchorData.AnchorMax.Equals(MaxValue, 0.0f))
-		{
-			auto PrevRelativeLocation = this->GetRelativeLocation();
-			auto PrevWidth = this->GetWidth();
-			auto PrevHeight = this->GetHeight();
-			this->SetAnchorMin(MinValue);
-			this->SetAnchorMax(MaxValue);
-			if (bKeepSize)
-			{
-				this->SetWidth(PrevWidth);
-				this->SetHeight(PrevHeight);
-			}
-			if (bKeepRelativeLocation)
-			{
-				this->SetRelativeLocation(PrevRelativeLocation);
-			}
-		}
-	}
-	else
-	{
-		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
-#if !UE_BUILD_SHIPPING
-		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
-#endif
-	}
-}
-
-void ULexWidget::SetHorizontalAnchorMinMax(FVector2D Value, bool bKeepSize, bool bKeepRelativeLocation)
-{
-	if (this->UIParent.IsValid())
-	{
-		if (AnchorData.AnchorMin.X != Value.X || AnchorData.AnchorMax.X != Value.Y)
-		{
-			auto CurrentLeft = this->GetAnchorLeft();
-			auto CurrentRight = this->GetAnchorRight();
-
-			if (bKeepSize)
-			{
-				CacheWidth = this->GetWidth();
-			}
-			auto PrevRelativeLocation = this->GetRelativeLocation();
-
-			AnchorData.AnchorMin.X = Value.X;
-			AnchorData.AnchorMax.X = Value.Y;
-
-			//SetAnchorLeft & SetAnchorRight
-			{
-				if (!bKeepSize)//recalculate size on new anchor if not keep size
-				{
-					CacheWidth = this->UIParent->GetWidth() * (this->AnchorData.AnchorMax.X - this->AnchorData.AnchorMin.X) - CurrentRight - CurrentLeft;
-				}
-				//SetWidth
-				{
-					auto CalculatedSizeDeltaX = CacheWidth - (UIParent->GetWidth() * (AnchorData.AnchorMax.X - AnchorData.AnchorMin.X));
-					AnchorData.SizeDelta.X = CalculatedSizeDeltaX;
-				}
-				this->AnchorData.AnchoredPosition.X = FMath::Lerp(CurrentLeft, -CurrentRight, this->AnchorData.Pivot.X);
-			}
-			if (bKeepRelativeLocation)
-			{
-				this->SetRelativeLocation(PrevRelativeLocation);
-			}
-
-			SetOnAnchorChange(false, !bKeepSize, !bKeepSize);
-		}
-	}
-	else
-	{
-		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
-#if !UE_BUILD_SHIPPING
-		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
-#endif
-	}
-}
-void ULexWidget::SetVerticalAnchorMinMax(FVector2D Value, bool bKeepSize, bool bKeepRelativeLocation)
-{
-	if (this->UIParent.IsValid())
-	{
-		if (AnchorData.AnchorMin.Y != Value.X || AnchorData.AnchorMax.Y != Value.Y)
-		{
-			auto CurrentBottom = this->GetAnchorBottom();
-			auto CurrentTop = this->GetAnchorTop();
-
-			if (bKeepSize)
-			{
-				CacheHeight = this->GetHeight();
-			}
-			auto PrevRelativeLocation = this->GetRelativeLocation();
-
-			AnchorData.AnchorMin.Y = Value.X;
-			AnchorData.AnchorMax.Y = Value.Y;
-
-			//SetAnchorBottom && SetAnchorTop
-			{
-				if (!bKeepSize)//recalculate size on new anchor if not keep size
-				{
-					CacheHeight = this->UIParent->GetHeight() * (this->AnchorData.AnchorMax.Y - this->AnchorData.AnchorMin.Y) - CurrentTop - CurrentBottom;
-				}
-				//SetHeight
-				{
-					auto CalculatedSizeDeltaY = CacheHeight - (UIParent->GetHeight() * (AnchorData.AnchorMax.Y - AnchorData.AnchorMin.Y));
-					AnchorData.SizeDelta.Y = CalculatedSizeDeltaY;
-				}
-				this->AnchorData.AnchoredPosition.Y = FMath::Lerp(CurrentBottom, -CurrentTop, this->AnchorData.Pivot.Y);
-			}
-			if (bKeepRelativeLocation)
-			{
-				this->SetRelativeLocation(PrevRelativeLocation);
-			}
-
-			SetOnAnchorChange(false, !bKeepSize, !bKeepSize);
-		}
-	}
-	else
-	{
-		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
-#if !UE_BUILD_SHIPPING
-		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
-#endif
-	}
-}
-
-void ULexWidget::SetAnchoredPosition(FVector2D Value)
-{
-	if (!AnchorData.AnchoredPosition.Equals(Value, 0.0f))
-	{
-		AnchorData.AnchoredPosition = Value;
-		SetOnAnchorChange(false, false, false);
-	}
-}
-
-void ULexWidget::SetHorizontalAnchoredPosition(float Value)
-{
-	if (AnchorData.AnchoredPosition.X != Value)
-	{
-		AnchorData.AnchoredPosition.X = Value;
-		SetOnAnchorChange(false, false, false);
-	}
-}
-void ULexWidget::SetVerticalAnchoredPosition(float Value)
-{
-	if (AnchorData.AnchoredPosition.Y != Value)
-	{
-		AnchorData.AnchoredPosition.Y = Value;
-		SetOnAnchorChange(false, false, false);
-	}
-}
-
-void ULexWidget::SetSizeDelta(FVector2D Value)
-{
-	if (!AnchorData.SizeDelta.Equals(Value, 0.0f))
-	{
-		AnchorData.SizeDelta = Value;
-		bWidthCached = false;
-		bHeightCached = false;
-		SetOnAnchorChange(false, true, true);
-	}
-}
-
-float ULexWidget::GetAnchorLeft()const
-{
-	if (!bAnchorLeftCached)
-	{
-		bAnchorLeftCached = true;
-		if (this->UIParent.IsValid())
-		{
-			CacheAnchorLeft =
-				this->GetLocalSpaceLeft()//local space left
-				+ this->GetRelativeLocation().Y//convert to parent space
-				-
-				(this->UIParent->GetLocalSpaceLeft()//parent space left
-					+ this->UIParent->GetWidth() * this->AnchorData.AnchorMin.X)//to parent anchor min point
-				;
-		}
-		else
-		{
-			CacheAnchorLeft = this->GetLocalSpaceLeft();//local space left
-		}
-	}
-	return CacheAnchorLeft;
-}
-float ULexWidget::GetAnchorTop()const
-{
-	if (!bAnchorTopCached)
-	{
-		bAnchorTopCached = true;
-		if (this->UIParent.IsValid())
-		{
-			CacheAnchorTop =
-				-(
-					this->GetLocalSpaceTop()
-					+ this->GetRelativeLocation().Z
-					-
-					(this->UIParent->GetLocalSpaceTop()
-						- this->UIParent->GetHeight() * (1.0f - this->AnchorData.AnchorMax.Y))
-					)
-				;
-		}
-		else
-		{
-			CacheAnchorTop = this->GetLocalSpaceTop();
-		}
-	}
-	return CacheAnchorTop;
-}
-float ULexWidget::GetAnchorRight()const
-{
-	if (!bAnchorRightCached)
-	{
-		bAnchorRightCached = true;
-		if (this->UIParent.IsValid())
-		{
-			CacheAnchorRight =
-				-(
-					this->GetLocalSpaceRight()
-					+ this->GetRelativeLocation().Y
-					-
-					(this->UIParent->GetLocalSpaceRight()
-						- this->UIParent->GetWidth() * (1.0f - this->AnchorData.AnchorMax.X))
-					)
-				;
-		}
-		else
-		{
-			CacheAnchorRight = this->GetLocalSpaceRight();
-		}
-	}
-	return CacheAnchorRight;
-}
-float ULexWidget::GetAnchorBottom()const
-{
-	if (!bAnchorBottomCached)
-	{
-		bAnchorBottomCached = true;
-		if (this->UIParent.IsValid())
-		{
-			CacheAnchorBottom =
-				this->GetLocalSpaceBottom()
-				+ this->GetRelativeLocation().Z
-				-
-				(this->UIParent->GetLocalSpaceBottom()
-					+ this->UIParent->GetHeight() * this->AnchorData.AnchorMin.Y)
-				;
-		}
-		else
-		{
-			CacheAnchorBottom = this->GetLocalSpaceBottom();
-		}
-	}
-	return CacheAnchorBottom;
-}
-
-void ULexWidget::SetAnchorLeft(float Value)
-{
-	if (this->UIParent.IsValid())
-	{
-		if (CacheAnchorLeft != Value || !bAnchorLeftCached)
-		{
-			bAnchorLeftCached = true;
-			CacheAnchorLeft = Value;
-			auto CurrentRight = this->GetAnchorRight();
-			CacheWidth = this->UIParent->GetWidth() * (this->AnchorData.AnchorMax.X - this->AnchorData.AnchorMin.X) - CurrentRight - Value;
-			//SetWdith
-			{
-				if (AnchorData.IsHorizontalStretched())
-				{
-					auto CalculatedSizeDeltaX = CacheWidth - (UIParent->GetWidth() * (AnchorData.AnchorMax.X - AnchorData.AnchorMin.X));
-					AnchorData.SizeDelta.X = CalculatedSizeDeltaX;
-				}
-				else
-				{
-					AnchorData.SizeDelta.X = CacheWidth;
-				}
-			}
-			this->AnchorData.AnchoredPosition.X = FMath::Lerp(Value, -CurrentRight, this->AnchorData.Pivot.X);
-			SetOnAnchorChange(false, true, false);
-		}
-	}
-	else
-	{
-		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)
-	}
-}
-void ULexWidget::SetAnchorTop(float Value)
-{
-	if (this->UIParent.IsValid())
-	{
-		if (CacheAnchorTop != Value || !bAnchorTopCached)
-		{
-			bAnchorTopCached = true;
-			CacheAnchorTop = Value;
-			auto CurrentBottom = this->GetAnchorBottom();
-			CacheHeight = this->UIParent->GetHeight() * (this->AnchorData.AnchorMax.Y - this->AnchorData.AnchorMin.Y) - Value - CurrentBottom;
-			//SetHeight
-			{
-				if (AnchorData.IsVerticalStretched())
-				{
-					auto CalculatedSizeDeltaY = CacheHeight - (UIParent->GetHeight() * (AnchorData.AnchorMax.Y - AnchorData.AnchorMin.Y));
-					AnchorData.SizeDelta.Y = CalculatedSizeDeltaY;
-				}
-				else
-				{
-					AnchorData.SizeDelta.Y = CacheHeight;
-				}
-			}
-			this->AnchorData.AnchoredPosition.Y = FMath::Lerp(CurrentBottom, -Value, this->AnchorData.Pivot.Y);
-			SetOnAnchorChange(false, false, true);
-		}
-	}
-	else
-	{
-		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)
-	}
-}
-void ULexWidget::SetAnchorRight(float Value)
-{
-	if (this->UIParent.IsValid())
-	{
-		if (CacheAnchorRight != Value || !bAnchorRightCached)
-		{
-			bAnchorRightCached = true;
-			CacheAnchorRight = Value;
-			auto CurrentLeft = this->GetAnchorLeft();
-			CacheWidth = this->UIParent->GetWidth() * (this->AnchorData.AnchorMax.X - this->AnchorData.AnchorMin.X) - Value - CurrentLeft;
-			//SetWdith
-			{
-				if (AnchorData.IsHorizontalStretched())
-				{
-					auto CalculatedSizeDeltaX = CacheWidth - (UIParent->GetWidth() * (AnchorData.AnchorMax.X - AnchorData.AnchorMin.X));
-					AnchorData.SizeDelta.X = CalculatedSizeDeltaX;
-				}
-				else
-				{
-					AnchorData.SizeDelta.X = CacheWidth;
-				}
-			}
-			this->AnchorData.AnchoredPosition.X = FMath::Lerp(CurrentLeft, -Value, this->AnchorData.Pivot.X);
-			SetOnAnchorChange(false, true, false);
-		}
-	}
-	else
-	{
-		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)
-	}
-}
-void ULexWidget::SetAnchorBottom(float Value)
-{
-	if (this->UIParent.IsValid())
-	{
-		if (CacheAnchorBottom != Value || !bAnchorBottomCached)
-		{
-			bAnchorBottomCached = true;
-			CacheAnchorBottom = Value;
-			auto CurrentTop = this->GetAnchorTop();
-			CacheHeight = this->UIParent->GetHeight() * (this->AnchorData.AnchorMax.Y - this->AnchorData.AnchorMin.Y) - CurrentTop - Value;
-			//SetHeight
-			{
-				if (AnchorData.IsVerticalStretched())
-				{
-					auto CalculatedSizeDeltaY = CacheHeight - (UIParent->GetHeight() * (AnchorData.AnchorMax.Y - AnchorData.AnchorMin.Y));
-					AnchorData.SizeDelta.Y = CalculatedSizeDeltaY;
-				}
-				else
-				{
-					AnchorData.SizeDelta.Y = CacheHeight;
-				}
-			}
-			this->AnchorData.AnchoredPosition.Y = FMath::Lerp(Value, -CurrentTop, this->AnchorData.Pivot.Y);
-			SetOnAnchorChange(false, false, true);
-		}
-	}
-	else
-	{
-		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)
-	}
-}
-
 void ULexWidget::SetWidth(float Value)
 {
-	if (CacheWidth != Value || !bWidthCached)
+	if (CheckAndGetLayoutSlot())
 	{
-		bWidthCached = true;
-		CacheWidth = Value;
-		if (UIParent.IsValid())
+		if (LayoutSlot->GetLayoutControlWidth())
 		{
-			if (AnchorData.IsHorizontalStretched())
-			{
-				auto CalculatedSizeDeltaX = Value - (UIParent->GetWidth() * (AnchorData.AnchorMax.X - AnchorData.AnchorMin.X));
-				if (AnchorData.SizeDelta.X != CalculatedSizeDeltaX)
-				{
-					AnchorData.SizeDelta.X = CalculatedSizeDeltaX;
-					SetOnAnchorChange(false, true, false);
-				}
-			}
-			else
-			{
-				if (AnchorData.SizeDelta.X != Value)
-				{
-					AnchorData.SizeDelta.X = Value;
-					SetOnAnchorChange(false, true, false);
-				}
-			}
+			UE_LOG(LGUI, Warning, TEXT("[%s] Width is controlled by LayoutSlot"), ANSI_TO_TCHAR(__FUNCTION__));
+			return;
 		}
-		else
-		{
-			if (AnchorData.SizeDelta.X != Value)
-			{
-				AnchorData.SizeDelta.X = Value;
-				SetOnAnchorChange(false, true, false);
-			}
-		}
+	}
+	if (Size.X != Value)
+	{
+		Size.X = Value;
+		MarkDimensionChanged(false, true, false);
 	}
 }
 void ULexWidget::SetHeight(float Value)
 {
-	if (CacheHeight != Value || !bHeightCached)
+	if (CheckAndGetLayoutSlot())
 	{
-		bHeightCached = true;
-		CacheHeight = Value;
-		if (UIParent.IsValid())
+		if (LayoutSlot->GetLayoutControlHeight())
 		{
-			if (AnchorData.IsVerticalStretched())
-			{
-				auto CalculatedSizeDeltaY = Value - (UIParent->GetHeight() * (AnchorData.AnchorMax.Y - AnchorData.AnchorMin.Y));
-				if (AnchorData.SizeDelta.Y != CalculatedSizeDeltaY)
-				{
-					AnchorData.SizeDelta.Y = CalculatedSizeDeltaY;
-					SetOnAnchorChange(false, false, true);
-				}
-			}
-			else
-			{
-				if (AnchorData.SizeDelta.Y != Value)
-				{
-					AnchorData.SizeDelta.Y = Value;
-					SetOnAnchorChange(false, false, true);
-				}
-			}
+			UE_LOG(LGUI, Warning, TEXT("[%s] Height is controlled by LayoutSlot"), ANSI_TO_TCHAR(__FUNCTION__));
+			return;
 		}
-		else
-		{
-			if (AnchorData.SizeDelta.Y != Value)
-			{
-				AnchorData.SizeDelta.Y = Value;
-				SetOnAnchorChange(false, false, true);
-			}
-		}
+	}
+	if (Size.Y != Value)
+	{
+		Size.Y = Value;
+		MarkDimensionChanged(false, false, true);
 	}
 }
 
-#pragma endregion
+void ULexWidget::SetSize(FVector2D Value)
+{
+	if (CheckAndGetLayoutSlot())
+	{
+		if (LayoutSlot->GetLayoutControlHeight() || LayoutSlot->GetLayoutControlWidth())
+		{
+			UE_LOG(LGUI, Warning, TEXT("[%s] Width or Height is controlled by LayoutSlot"), ANSI_TO_TCHAR(__FUNCTION__));
+			return;
+		}
+	}
+	if (Size != Value)
+	{
+		Size = Value;
+		MarkDimensionChanged(false, true, true);
+	}
+}
 
-ULexWidget* ULexWidget::GetAttachUIChild(int index)const
+ULexWidget* ULexWidget::GetUIChild(int index)const
 {
 	if (index < 0 || index >= UIChildren.Num())
 	{
@@ -1998,11 +1366,11 @@ ULexCanvas* ULexWidget::GetRootCanvas()const
 	}
 	return nullptr;
 }
-ULGUICanvasScaler* ULexWidget::GetCanvasScaler()const
+ULexCanvasScaler* ULexWidget::GetCanvasScaler()const
 {
 	if (auto canvas = GetRootCanvas())
 	{
-		return canvas->GetOwner()->FindComponentByClass<ULGUICanvasScaler>();
+		return canvas->GetOwner()->FindComponentByClass<ULexCanvasScaler>();
 	}
 	return nullptr;
 }
@@ -2010,45 +1378,95 @@ ULGUICanvasScaler* ULexWidget::GetCanvasScaler()const
 FVector2D ULexWidget::GetLocalSpaceLeftBottomPoint()const
 {
 	FVector2D leftBottomPoint;
-	leftBottomPoint.X = GetWidth() * -AnchorData.Pivot.X;
-	leftBottomPoint.Y = GetHeight() * -AnchorData.Pivot.Y;
+	leftBottomPoint.X = GetWidth() * -Pivot.X;
+	leftBottomPoint.Y = GetHeight() * -Pivot.Y;
 	return leftBottomPoint;
 }
 FVector2D ULexWidget::GetLocalSpaceRightTopPoint()const
 {
 	FVector2D rightTopPoint;
-	rightTopPoint.X = GetWidth() * (1.0f - AnchorData.Pivot.X);
-	rightTopPoint.Y = GetHeight() * (1.0f - AnchorData.Pivot.Y);
+	rightTopPoint.X = GetWidth() * (1.0f - Pivot.X);
+	rightTopPoint.Y = GetHeight() * (1.0f - Pivot.Y);
 	return rightTopPoint;
 }
 FVector2D ULexWidget::GetLocalSpaceCenter()const
 {
-	return FVector2D(this->GetWidth() * (0.5f - AnchorData.Pivot.X), this->GetHeight() * (0.5f - AnchorData.Pivot.Y));
+	return FVector2D(this->GetWidth() * (0.5f - Pivot.X), this->GetHeight() * (0.5f - Pivot.Y));
 }
 
 float ULexWidget::GetLocalSpaceLeft()const
 {
-	return this->GetWidth() * -AnchorData.Pivot.X;
+	return this->GetWidth() * -Pivot.X;
 }
 float ULexWidget::GetLocalSpaceRight()const
 {
-	return this->GetWidth() * (1.0f - AnchorData.Pivot.X);
+	return this->GetWidth() * (1.0f - Pivot.X);
 }
 float ULexWidget::GetLocalSpaceBottom()const
 {
-	return this->GetHeight() * -AnchorData.Pivot.Y;
+	return this->GetHeight() * -Pivot.Y;
 }
 float ULexWidget::GetLocalSpaceTop()const
 {
-	return this->GetHeight() * (1.0f - AnchorData.Pivot.Y);
+	return this->GetHeight() * (1.0f - Pivot.Y);
 }
 
-void ULexWidget::SetOnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange)
+void ULexWidget::MarkDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
 {
-	OnAnchorChange(InPivotChange, InWidthChange, InHeightChange, false);
+	if (ClipData.IsValid() && ClipData.Pin()->GetWidget() == this)
+	{
+		ClipData.Pin()->MarkNeedUpdateData();
+	}
+
+	if (IsValid(Layout))
+	{
+		Layout->OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
+	}
+	if (CheckAndGetLayoutSlot())
+	{
+		LayoutSlot->OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
+	}
+	if (IsValid(Visual))
+	{
+		Visual->OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
+	}
+
+	if (this->RenderCanvas.IsValid())
+	{
+		this->RenderCanvas->MarkCanvasUpdate(false, InPivotChange || InWidthChange || InHeightChange, false);//mark canvas to update
+		if (this->IsCanvasUIItem())
+		{
+			this->RenderCanvas->MarkCanvasLayoutDirty();
+		}
+	}
+
+	if (InWidthChange || InHeightChange)
+	{
+		//CallUILifeCycleBehavioursDimensionsChanged(HorizontalPositionChanged, VerticalPositionChanged, InWidthChange, InHeightChange);
+	}
+
+	for (auto& UIChild : UIChildren)
+	{
+		if (IsValid(UIChild))
+		{
+			UIChild->MarkParentDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
+		}
+	}
 }
 
-void ULexWidget::SetOnTransformChange(bool InPositionChanged, bool InScaleChanged)
+void ULexWidget::MarkParentDimensionChanged(bool InParentPivotChange, bool InParentWidthChange, bool InParentHeightChange)
+{
+	if (IsValid(Layout))
+	{
+		Layout->OnParentDimensionChanged(false, false, false);
+	}
+	if (CheckAndGetLayoutSlot())
+	{
+		LayoutSlot->OnParentDimensionChanged(InParentPivotChange, InParentWidthChange, InParentHeightChange);
+	}
+}
+
+void ULexWidget::MarkTransformChanged(bool InPositionChanged, bool InScaleChanged)
 {
 	if (ClipData.IsValid() && ClipData.Pin()->GetWidget() == this)
 	{
@@ -2072,69 +1490,7 @@ void ULexWidget::SetOnTransformChange(bool InPositionChanged, bool InScaleChange
 	{
 		if (IsValid(UIChild))
 		{
-			UIChild->SetOnTransformChange(InPositionChanged, InScaleChanged);
-		}
-	}
-}
-
-void ULexWidget::OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange, bool InDiscardCache)
-{
-	if (ClipData.IsValid() && ClipData.Pin()->GetWidget() == this)
-	{
-		ClipData.Pin()->MarkNeedUpdateData();
-	}
-	bool HorizontalPositionChanged = false, VerticalPositionChanged = false;
-	CalculateTransformFromAnchor(HorizontalPositionChanged, VerticalPositionChanged);
-
-	if (InDiscardCache)
-	{
-		if (InWidthChange)
-		{
-			bWidthCached = false;
-		}
-		if (InHeightChange)
-		{
-			bHeightCached = false;
-		}
-		bAnchorLeftCached = false;
-		bAnchorRightCached = false;
-		bAnchorBottomCached = false;
-		bAnchorTopCached = false;
-	}
-
-	if (IsValid(Visual))
-	{
-		Visual->OnAnchorChange(InPivotChange, InWidthChange, InHeightChange);
-	}
-
-	if (this->RenderCanvas.IsValid())
-	{
-		this->RenderCanvas->MarkCanvasUpdate(false, HorizontalPositionChanged || VerticalPositionChanged, false);//mark canvas to update
-		if (this->IsCanvasUIItem())
-		{
-			this->RenderCanvas->MarkCanvasLayoutDirty();
-		}
-	}
-
-	if (HorizontalPositionChanged || VerticalPositionChanged || InWidthChange || InHeightChange)
-	{
-		CallUILifeCycleBehavioursDimensionsChanged(HorizontalPositionChanged, VerticalPositionChanged, InWidthChange, InHeightChange);
-	}
-
-	for (auto& UIChild : UIChildren)
-	{
-		if (IsValid(UIChild))
-		{
-			bool ChildWidthChange = false, ChildHeightChange = false;
-			if (InWidthChange && UIChild->AnchorData.IsHorizontalStretched())
-			{
-				ChildWidthChange = true;
-			}
-			if (InHeightChange && UIChild->AnchorData.IsVerticalStretched())
-			{
-				ChildHeightChange = true;
-			}
-			UIChild->OnAnchorChange(false, ChildWidthChange, ChildHeightChange);
+			UIChild->MarkTransformChanged(InPositionChanged, InScaleChanged);
 		}
 	}
 }
@@ -2416,6 +1772,36 @@ void ULexWidget::SetVisual(ULexVisual* Value)
 	}
 }
 
+ULexLayoutSlot* ULexWidget::CheckAndGetLayoutSlot()
+{
+	auto ClearLayoutSlot = [this]
+	{
+		if (IsValid(LayoutSlot))
+		{
+			LayoutSlot->MarkAsGarbage();
+			LayoutSlot = nullptr;
+		}
+	};
+	if (!UIParent.IsValid())
+	{
+		ClearLayoutSlot();
+		return nullptr;
+	}
+	auto ParentLayout = UIParent->GetLayout();
+	if (!ParentLayout)
+	{
+		ClearLayoutSlot();
+		return nullptr;
+	}
+
+	auto LayoutSlotClass = ParentLayout->GetSlotClass();
+	if (!IsValid(LayoutSlot) || LayoutSlot->GetClass() != LayoutSlotClass)
+	{
+		LayoutSlot = NewObject<ULexLayoutSlot>(this, LayoutSlotClass, NAME_None, RF_Public | RF_Transactional);
+	}
+	return LayoutSlot;
+}
+
 void ULexWidget::CheckUIActiveState()
 {
 	auto thisUIActiveState = this->GetIsUIActiveInHierarchy();
@@ -2576,92 +1962,6 @@ ULTweener* ULexWidget::HeightTo(float endValue, float duration, float delay, ELT
 	}
 	return Tweener;
 }
-
-ULTweener* ULexWidget::RenderOpacityTo(float endValue, float duration, float delay, ELTweenEase ease)
-{
-	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexWidget::GetRenderOpacity), FLTweenFloatSetterFunction::CreateUObject(this, &ULexWidget::SetRenderOpacity), endValue, duration);
-	if (Tweener)
-	{
-		bool bAffectByGamePause;
-		bool bAffectByTimeDilation;
-		if (this->IsScreenSpaceOverlayUI())
-		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-		}
-		else
-		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-		}
-		Tweener->SetEase(ease)->SetDelay(delay)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
-	}
-	return Tweener;
-}
-
-ULTweener* ULexWidget::HorizontalAnchoredPositionTo(float endValue, float duration, float delay, ELTweenEase ease)
-{
-	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexWidget::GetHorizontalAnchoredPosition), FLTweenFloatSetterFunction::CreateUObject(this, &ULexWidget::SetHorizontalAnchoredPosition), endValue, duration);
-	if (Tweener)
-	{
-		bool bAffectByGamePause;
-		bool bAffectByTimeDilation;
-		if (this->IsScreenSpaceOverlayUI())
-		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-		}
-		else
-		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-		}
-		Tweener->SetEase(ease)->SetDelay(delay)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
-	}
-	return Tweener;
-}
-ULTweener* ULexWidget::VerticalAnchoredPositionTo(float endValue, float duration, float delay, ELTweenEase ease)
-{
-	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexWidget::GetVerticalAnchoredPosition), FLTweenFloatSetterFunction::CreateUObject(this, &ULexWidget::SetVerticalAnchoredPosition), endValue, duration);
-	if (Tweener)
-	{
-		bool bAffectByGamePause;
-		bool bAffectByTimeDilation;
-		if (this->IsScreenSpaceOverlayUI())
-		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-		}
-		else
-		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-		}
-		Tweener->SetEase(ease)->SetDelay(delay)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
-	}
-	return Tweener;
-}
-ULTweener* ULexWidget::AnchoredPositionTo(FVector2D endValue, float duration, float delay, ELTweenEase ease)
-{
-	auto Tweener = ULTweenManager::To(this, FLTweenVector2DGetterFunction::CreateUObject(this, &ULexWidget::GetAnchoredPosition), FLTweenVector2DSetterFunction::CreateUObject(this, &ULexWidget::SetAnchoredPosition), endValue, duration);
-	if (Tweener)
-	{
-		bool bAffectByGamePause;
-		bool bAffectByTimeDilation;
-		if (this->IsScreenSpaceOverlayUI())
-		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-		}
-		else
-		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-		}
-		Tweener->SetEase(ease)->SetDelay(delay)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
-	}
-	return Tweener;
-}
 ULTweener* ULexWidget::PivotTo(FVector2D endValue, float duration, float delay, ELTweenEase ease)
 {
 	auto Tweener = ULTweenManager::To(this, FLTweenVector2DGetterFunction::CreateUObject(this, &ULexWidget::GetPivot), FLTweenVector2DSetterFunction::CreateUObject(this, &ULexWidget::SetPivot), endValue, duration);
@@ -2684,72 +1984,9 @@ ULTweener* ULexWidget::PivotTo(FVector2D endValue, float duration, float delay, 
 	return Tweener;
 }
 
-ULTweener* ULexWidget::AnchorLeftTo(float endValue, float duration, float delay, ELTweenEase ease)
+ULTweener* ULexWidget::RenderOpacityTo(float endValue, float duration, float delay, ELTweenEase ease)
 {
-	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexWidget::GetAnchorLeft), FLTweenFloatSetterFunction::CreateUObject(this, &ULexWidget::SetAnchorLeft), endValue, duration);
-	if (Tweener)
-	{
-		bool bAffectByGamePause;
-		bool bAffectByTimeDilation;
-		if (this->IsScreenSpaceOverlayUI())
-		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-		}
-		else
-		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-		}
-		Tweener->SetEase(ease)->SetDelay(delay)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
-	}
-	return Tweener;
-}
-ULTweener* ULexWidget::AnchorRightTo(float endValue, float duration, float delay, ELTweenEase ease)
-{
-	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexWidget::GetAnchorRight), FLTweenFloatSetterFunction::CreateUObject(this, &ULexWidget::SetAnchorRight), endValue, duration);
-	if (Tweener)
-	{
-		bool bAffectByGamePause;
-		bool bAffectByTimeDilation;
-		if (this->IsScreenSpaceOverlayUI())
-		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-		}
-		else
-		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-		}
-		Tweener->SetEase(ease)->SetDelay(delay)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
-	}
-	return Tweener;
-}
-ULTweener* ULexWidget::AnchorTopTo(float endValue, float duration, float delay, ELTweenEase ease)
-{
-	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexWidget::GetAnchorTop), FLTweenFloatSetterFunction::CreateUObject(this, &ULexWidget::SetAnchorTop), endValue, duration);
-	if (Tweener)
-	{
-		bool bAffectByGamePause;
-		bool bAffectByTimeDilation;
-		if (this->IsScreenSpaceOverlayUI())
-		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-		}
-		else
-		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-		}
-		Tweener->SetEase(ease)->SetDelay(delay)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
-	}
-	return Tweener;
-}
-ULTweener* ULexWidget::AnchorBottomTo(float endValue, float duration, float delay, ELTweenEase ease)
-{
-	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexWidget::GetAnchorBottom), FLTweenFloatSetterFunction::CreateUObject(this, &ULexWidget::SetAnchorBottom), endValue, duration);
+	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexWidget::GetRenderOpacity), FLTweenFloatSetterFunction::CreateUObject(this, &ULexWidget::SetRenderOpacity), endValue, duration);
 	if (Tweener)
 	{
 		bool bAffectByGamePause;
@@ -2781,7 +2018,6 @@ UUIItemEditorHelperComp::UUIItemEditorHelperComp()
 }
 
 #if WITH_EDITOR
-#include "Layout/LGUICanvasScaler.h"
 FPrimitiveSceneProxy* UUIItemEditorHelperComp::CreateSceneProxy()
 {
 	class FUIItemSceneProxy : public FPrimitiveSceneProxy

@@ -2,11 +2,11 @@
 
 #pragma once
 
-#include "UIAnchorData.generated.h"
+#include "LexLayoutAnchorData.generated.h"
 
 /** UI rect transform anchor data */
 USTRUCT(BlueprintType)
-struct LGUI_API FUIAnchorData
+struct LGUI_API FLexLayoutAnchorData
 {
 	GENERATED_BODY()
 public:

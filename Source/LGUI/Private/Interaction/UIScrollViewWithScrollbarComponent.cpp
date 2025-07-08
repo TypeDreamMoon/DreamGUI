@@ -13,17 +13,6 @@ UUIScrollViewWithScrollbarComponent::UUIScrollViewWithScrollbarComponent()
 	bLayoutDirty = false;
 }
 
-void UUIScrollViewWithScrollbarComponent::OnRegister()
-{
-	Super::OnRegister();
-	ULGUIManagerWorldSubsystem::RegisterLGUILayout(this);
-}
-void UUIScrollViewWithScrollbarComponent::OnUnregister()
-{
-	Super::OnUnregister();
-	ULGUIManagerWorldSubsystem::UnregisterLGUILayout(this);
-}
-
 void UUIScrollViewWithScrollbarComponent::OnUIDimensionsChanged(bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
 {
 	Super::OnUIDimensionsChanged(horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
@@ -207,212 +196,212 @@ void UUIScrollViewWithScrollbarComponent::OnUIChildAttachmentChanged(ULexWidget*
 	MarkLayoutDirty();
 }
 
-bool UUIScrollViewWithScrollbarComponent::GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
-{
-	if (Viewport.IsValid())
-	{
-		if (InUIItem == Viewport->GetLexWidget())
-		{
-			if (HorizontalScrollbar.IsValid())
-			{
-				if (HorizontalScrollbarVisibility == EScrollViewScrollbarVisibility::AutoHideAndExpandViewport)
-				{
-					OutResult.bCanControlVerticalAnchor = true;
-					OutResult.bCanControlVerticalAnchoredPosition = true;
-					OutResult.bCanControlVerticalSizeDelta = true;
-					return true;
-				}
-			}
-			if (VerticalScrollbar.IsValid())
-			{
-				if (VerticalScrollbarVisibility == EScrollViewScrollbarVisibility::AutoHideAndExpandViewport)
-				{
-					OutResult.bCanControlHorizontalAnchor = true;
-					OutResult.bCanControlHorizontalAnchoredPosition = true;
-					OutResult.bCanControlHorizontalSizeDelta = true;
-					return true;
-				}
-			}
-		}
-	}
-	if (HorizontalScrollbar.IsValid())
-	{
-		if (InUIItem == HorizontalScrollbar->GetLexWidget())
-		{
-			if (HorizontalScrollbarVisibility == EScrollViewScrollbarVisibility::AutoHideAndExpandViewport)
-			{
-				OutResult.bCanControlVerticalAnchor = true;
-				OutResult.bCanControlVerticalAnchoredPosition = true;
-				return true;
-			}
-		}
-	}
-	if (VerticalScrollbar.IsValid())
-	{
-		if (InUIItem == VerticalScrollbar->GetLexWidget())
-		{
-			if (VerticalScrollbarVisibility == EScrollViewScrollbarVisibility::AutoHideAndExpandViewport)
-			{
-				OutResult.bCanControlHorizontalAnchor = true;
-				OutResult.bCanControlHorizontalAnchoredPosition = true;
-				return true;
-			}
-		}
-	}
-	return false;
-}
-
-void UUIScrollViewWithScrollbarComponent::MarkLayoutDirty()
-{
-	bLayoutDirty = true;
-	if (auto World = this->GetWorld())
-	{
-#if WITH_EDITOR
-		if (!World->IsGameWorld())
-		{
-
-		}
-		else
-#endif
-		{
-			ULGUIManagerWorldSubsystem::MarkUpdateLayout(World);
-		}
-	}
-}
-
-void UUIScrollViewWithScrollbarComponent::OnUpdateLayout_Implementation()
-{
-	if (bLayoutDirty)
-	{
-		if (!Viewport.IsValid())return;
-		if (!CheckParameters())return;
-		if (!CheckScrollbarParameter())return;
-
-		bLayoutDirty = false;
-
-		auto ViewportUIItem = Viewport->GetLexWidget();
-		if (ViewportUIItem->GetAttachParent() != this->GetRootUIComponent())
-		{
-			ViewportUIItem->AttachToComponent(this->GetRootUIComponent(), FAttachmentTransformRules::KeepWorldTransform);
-		}
-
-		if (VerticalScrollbar.IsValid())
-		{
-			auto VerticalScrollbarUIItem = VerticalScrollbar->GetLexWidget();
-			if (VerticalScrollbarUIItem->GetAttachParent() != this->GetRootUIComponent())
-			{
-				VerticalScrollbarUIItem->AttachToComponent(this->GetRootUIComponent(), FAttachmentTransformRules::KeepWorldTransform);
-			}
-			auto parentHeight = ContentParentUIItem->GetHeight();
-			auto contentHeight = ContentUIItem->GetHeight();
-			switch (VerticalScrollbarLayoutActionType)
-			{
-			case UUIScrollViewWithScrollbarComponent::EScrollbarLayoutAction::NeedToShow:
-			{
-				VerticalScrollbarUIItem->SetIsUIActive(true);
-			}
-			break;
-			case UUIScrollViewWithScrollbarComponent::EScrollbarLayoutAction::NeedToHide:
-			{
-				VerticalScrollbarUIItem->SetIsUIActive(false);
-			}
-			break;
-			}
-			if (VerticalScrollbarVisibility == EScrollViewScrollbarVisibility::AutoHideAndExpandViewport)
-			{
-				if (VerticalScrollbarUIItem->GetIsUIActiveInHierarchy())
-				{
-					if (VerticalScrollbarUIItem->GetFlattenHierarchyIndex() > ViewportUIItem->GetFlattenHierarchyIndex())
-					{
-						ViewportUIItem->SetAnchorRight(VerticalScrollbarUIItem->GetWidth());
-						ViewportUIItem->SetAnchorLeft(0);
-
-						VerticalScrollbarUIItem->SetHorizontalAnchorMinMax(FVector2D(1, 1), true);
-						float AnchorOffset = (VerticalScrollbarUIItem->GetPivot().X - 1.0f) * VerticalScrollbarUIItem->GetWidth();
-						VerticalScrollbarUIItem->SetHorizontalAnchoredPosition(AnchorOffset);
-					}
-					else
-					{
-						ViewportUIItem->SetAnchorLeft(VerticalScrollbarUIItem->GetWidth());
-						ViewportUIItem->SetAnchorRight(0);
-
-						VerticalScrollbarUIItem->SetHorizontalAnchorMinMax(FVector2D(0, 0), true);
-						float AnchorOffset = VerticalScrollbarUIItem->GetPivot().X * VerticalScrollbarUIItem->GetWidth();
-						VerticalScrollbarUIItem->SetHorizontalAnchoredPosition(AnchorOffset);
-					}
-				}
-				else
-				{
-					ViewportUIItem->SetAnchorLeft(0);
-					ViewportUIItem->SetAnchorRight(0);
-				}
-			}
-			if (VerticalScrollbarComp.IsValid())
-			{
-				VerticalScrollbarComp->SetValueAndSize(Progress.Y, parentHeight / contentHeight, false);
-			}
-			VerticalScrollbarLayoutActionType = EScrollbarLayoutAction::None;
-		}
-
-		if (HorizontalScrollbar.IsValid())
-		{
-			auto HorizontalScrollbarUIItem = HorizontalScrollbar->GetLexWidget();
-			if (HorizontalScrollbarUIItem->GetAttachParent() != this->GetRootUIComponent())
-			{
-				HorizontalScrollbarUIItem->AttachToComponent(this->GetRootUIComponent(), FAttachmentTransformRules::KeepWorldTransform);
-			}
-			auto parentWidth = ContentParentUIItem->GetWidth();
-			auto contentWidth = ContentUIItem->GetWidth();
-			switch (HorizontalScrollbarLayoutActionType)
-			{
-			case UUIScrollViewWithScrollbarComponent::EScrollbarLayoutAction::NeedToShow:
-			{
-				HorizontalScrollbarUIItem->SetIsUIActive(true);
-			}
-			break;
-			case UUIScrollViewWithScrollbarComponent::EScrollbarLayoutAction::NeedToHide:
-			{
-				HorizontalScrollbar->GetLexWidget()->SetIsUIActive(false);
-			}
-			break;
-			}
-			if (HorizontalScrollbarVisibility == EScrollViewScrollbarVisibility::AutoHideAndExpandViewport)
-			{
-				if (HorizontalScrollbarUIItem->GetIsUIActiveInHierarchy())
-				{
-					if (HorizontalScrollbarUIItem->GetFlattenHierarchyIndex() > ViewportUIItem->GetFlattenHierarchyIndex())
-					{
-						ViewportUIItem->SetAnchorBottom(HorizontalScrollbarUIItem->GetHeight());
-						ViewportUIItem->SetAnchorTop(0);
-
-						HorizontalScrollbarUIItem->SetVerticalAnchorMinMax(FVector2D(0, 0), true);
-						float AnchorOffset = HorizontalScrollbarUIItem->GetPivot().Y * HorizontalScrollbarUIItem->GetHeight();
-						HorizontalScrollbarUIItem->SetVerticalAnchoredPosition(AnchorOffset);
-					}
-					else
-					{
-						ViewportUIItem->SetAnchorTop(HorizontalScrollbarUIItem->GetHeight());
-						ViewportUIItem->SetAnchorBottom(0);
-
-						HorizontalScrollbarUIItem->SetVerticalAnchorMinMax(FVector2D(1, 1), true);
-						float AnchorOffset = (HorizontalScrollbarUIItem->GetPivot().Y - 1.0f) * HorizontalScrollbarUIItem->GetHeight();
-						HorizontalScrollbarUIItem->SetVerticalAnchoredPosition(AnchorOffset);
-					}
-				}
-				else
-				{
-					ViewportUIItem->SetAnchorTop(0);
-					ViewportUIItem->SetAnchorBottom(0);
-				}
-			}
-			if (HorizontalScrollbarComp.IsValid())
-			{
-				HorizontalScrollbarComp->SetValueAndSize(Progress.X, parentWidth / contentWidth, false);
-			}
-			HorizontalScrollbarLayoutActionType = EScrollbarLayoutAction::None;
-		}
-	}
-}
+// bool UUIScrollViewWithScrollbarComponent::GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
+// {
+// 	if (Viewport.IsValid())
+// 	{
+// 		if (InUIItem == Viewport->GetLexWidget())
+// 		{
+// 			if (HorizontalScrollbar.IsValid())
+// 			{
+// 				if (HorizontalScrollbarVisibility == EScrollViewScrollbarVisibility::AutoHideAndExpandViewport)
+// 				{
+// 					OutResult.bCanControlVerticalAnchor = true;
+// 					OutResult.bCanControlVerticalAnchoredPosition = true;
+// 					OutResult.bCanControlVerticalSizeDelta = true;
+// 					return true;
+// 				}
+// 			}
+// 			if (VerticalScrollbar.IsValid())
+// 			{
+// 				if (VerticalScrollbarVisibility == EScrollViewScrollbarVisibility::AutoHideAndExpandViewport)
+// 				{
+// 					OutResult.bCanControlHorizontalAnchor = true;
+// 					OutResult.bCanControlHorizontalAnchoredPosition = true;
+// 					OutResult.bCanControlHorizontalSizeDelta = true;
+// 					return true;
+// 				}
+// 			}
+// 		}
+// 	}
+// 	if (HorizontalScrollbar.IsValid())
+// 	{
+// 		if (InUIItem == HorizontalScrollbar->GetLexWidget())
+// 		{
+// 			if (HorizontalScrollbarVisibility == EScrollViewScrollbarVisibility::AutoHideAndExpandViewport)
+// 			{
+// 				OutResult.bCanControlVerticalAnchor = true;
+// 				OutResult.bCanControlVerticalAnchoredPosition = true;
+// 				return true;
+// 			}
+// 		}
+// 	}
+// 	if (VerticalScrollbar.IsValid())
+// 	{
+// 		if (InUIItem == VerticalScrollbar->GetLexWidget())
+// 		{
+// 			if (VerticalScrollbarVisibility == EScrollViewScrollbarVisibility::AutoHideAndExpandViewport)
+// 			{
+// 				OutResult.bCanControlHorizontalAnchor = true;
+// 				OutResult.bCanControlHorizontalAnchoredPosition = true;
+// 				return true;
+// 			}
+// 		}
+// 	}
+// 	return false;
+// }
+//
+// void UUIScrollViewWithScrollbarComponent::MarkLayoutDirty()
+// {
+// 	bLayoutDirty = true;
+// 	if (auto World = this->GetWorld())
+// 	{
+// #if WITH_EDITOR
+// 		if (!World->IsGameWorld())
+// 		{
+//
+// 		}
+// 		else
+// #endif
+// 		{
+// 			ULGUIManagerWorldSubsystem::MarkUpdateLayout(World);
+// 		}
+// 	}
+// }
+//
+// void UUIScrollViewWithScrollbarComponent::OnUpdateLayout_Implementation()
+// {
+// 	if (bLayoutDirty)
+// 	{
+// 		if (!Viewport.IsValid())return;
+// 		if (!CheckParameters())return;
+// 		if (!CheckScrollbarParameter())return;
+//
+// 		bLayoutDirty = false;
+//
+// 		auto ViewportUIItem = Viewport->GetLexWidget();
+// 		if (ViewportUIItem->GetAttachParent() != this->GetRootUIComponent())
+// 		{
+// 			ViewportUIItem->AttachToComponent(this->GetRootUIComponent(), FAttachmentTransformRules::KeepWorldTransform);
+// 		}
+//
+// 		if (VerticalScrollbar.IsValid())
+// 		{
+// 			auto VerticalScrollbarUIItem = VerticalScrollbar->GetLexWidget();
+// 			if (VerticalScrollbarUIItem->GetAttachParent() != this->GetRootUIComponent())
+// 			{
+// 				VerticalScrollbarUIItem->AttachToComponent(this->GetRootUIComponent(), FAttachmentTransformRules::KeepWorldTransform);
+// 			}
+// 			auto parentHeight = ContentParentUIItem->GetHeight();
+// 			auto contentHeight = ContentUIItem->GetHeight();
+// 			switch (VerticalScrollbarLayoutActionType)
+// 			{
+// 			case UUIScrollViewWithScrollbarComponent::EScrollbarLayoutAction::NeedToShow:
+// 			{
+// 				VerticalScrollbarUIItem->SetIsUIActive(true);
+// 			}
+// 			break;
+// 			case UUIScrollViewWithScrollbarComponent::EScrollbarLayoutAction::NeedToHide:
+// 			{
+// 				VerticalScrollbarUIItem->SetIsUIActive(false);
+// 			}
+// 			break;
+// 			}
+// 			if (VerticalScrollbarVisibility == EScrollViewScrollbarVisibility::AutoHideAndExpandViewport)
+// 			{
+// 				if (VerticalScrollbarUIItem->GetIsUIActiveInHierarchy())
+// 				{
+// 					if (VerticalScrollbarUIItem->GetFlattenHierarchyIndex() > ViewportUIItem->GetFlattenHierarchyIndex())
+// 					{
+// 						ViewportUIItem->SetAnchorRight(VerticalScrollbarUIItem->GetWidth());
+// 						ViewportUIItem->SetAnchorLeft(0);
+//
+// 						VerticalScrollbarUIItem->SetHorizontalAnchorMinMax(FVector2D(1, 1), true);
+// 						float AnchorOffset = (VerticalScrollbarUIItem->GetPivot().X - 1.0f) * VerticalScrollbarUIItem->GetWidth();
+// 						VerticalScrollbarUIItem->SetHorizontalAnchoredPosition(AnchorOffset);
+// 					}
+// 					else
+// 					{
+// 						ViewportUIItem->SetAnchorLeft(VerticalScrollbarUIItem->GetWidth());
+// 						ViewportUIItem->SetAnchorRight(0);
+//
+// 						VerticalScrollbarUIItem->SetHorizontalAnchorMinMax(FVector2D(0, 0), true);
+// 						float AnchorOffset = VerticalScrollbarUIItem->GetPivot().X * VerticalScrollbarUIItem->GetWidth();
+// 						VerticalScrollbarUIItem->SetHorizontalAnchoredPosition(AnchorOffset);
+// 					}
+// 				}
+// 				else
+// 				{
+// 					ViewportUIItem->SetAnchorLeft(0);
+// 					ViewportUIItem->SetAnchorRight(0);
+// 				}
+// 			}
+// 			if (VerticalScrollbarComp.IsValid())
+// 			{
+// 				VerticalScrollbarComp->SetValueAndSize(Progress.Y, parentHeight / contentHeight, false);
+// 			}
+// 			VerticalScrollbarLayoutActionType = EScrollbarLayoutAction::None;
+// 		}
+//
+// 		if (HorizontalScrollbar.IsValid())
+// 		{
+// 			auto HorizontalScrollbarUIItem = HorizontalScrollbar->GetLexWidget();
+// 			if (HorizontalScrollbarUIItem->GetAttachParent() != this->GetRootUIComponent())
+// 			{
+// 				HorizontalScrollbarUIItem->AttachToComponent(this->GetRootUIComponent(), FAttachmentTransformRules::KeepWorldTransform);
+// 			}
+// 			auto parentWidth = ContentParentUIItem->GetWidth();
+// 			auto contentWidth = ContentUIItem->GetWidth();
+// 			switch (HorizontalScrollbarLayoutActionType)
+// 			{
+// 			case UUIScrollViewWithScrollbarComponent::EScrollbarLayoutAction::NeedToShow:
+// 			{
+// 				HorizontalScrollbarUIItem->SetIsUIActive(true);
+// 			}
+// 			break;
+// 			case UUIScrollViewWithScrollbarComponent::EScrollbarLayoutAction::NeedToHide:
+// 			{
+// 				HorizontalScrollbar->GetLexWidget()->SetIsUIActive(false);
+// 			}
+// 			break;
+// 			}
+// 			if (HorizontalScrollbarVisibility == EScrollViewScrollbarVisibility::AutoHideAndExpandViewport)
+// 			{
+// 				if (HorizontalScrollbarUIItem->GetIsUIActiveInHierarchy())
+// 				{
+// 					if (HorizontalScrollbarUIItem->GetFlattenHierarchyIndex() > ViewportUIItem->GetFlattenHierarchyIndex())
+// 					{
+// 						ViewportUIItem->SetAnchorBottom(HorizontalScrollbarUIItem->GetHeight());
+// 						ViewportUIItem->SetAnchorTop(0);
+//
+// 						HorizontalScrollbarUIItem->SetVerticalAnchorMinMax(FVector2D(0, 0), true);
+// 						float AnchorOffset = HorizontalScrollbarUIItem->GetPivot().Y * HorizontalScrollbarUIItem->GetHeight();
+// 						HorizontalScrollbarUIItem->SetVerticalAnchoredPosition(AnchorOffset);
+// 					}
+// 					else
+// 					{
+// 						ViewportUIItem->SetAnchorTop(HorizontalScrollbarUIItem->GetHeight());
+// 						ViewportUIItem->SetAnchorBottom(0);
+//
+// 						HorizontalScrollbarUIItem->SetVerticalAnchorMinMax(FVector2D(1, 1), true);
+// 						float AnchorOffset = (HorizontalScrollbarUIItem->GetPivot().Y - 1.0f) * HorizontalScrollbarUIItem->GetHeight();
+// 						HorizontalScrollbarUIItem->SetVerticalAnchoredPosition(AnchorOffset);
+// 					}
+// 				}
+// 				else
+// 				{
+// 					ViewportUIItem->SetAnchorTop(0);
+// 					ViewportUIItem->SetAnchorBottom(0);
+// 				}
+// 			}
+// 			if (HorizontalScrollbarComp.IsValid())
+// 			{
+// 				HorizontalScrollbarComp->SetValueAndSize(Progress.X, parentWidth / contentWidth, false);
+// 			}
+// 			HorizontalScrollbarLayoutActionType = EScrollbarLayoutAction::None;
+// 		}
+// 	}
+// }
 
 void UUIScrollViewWithScrollbarComponent::OnHorizontalScrollbar(float InScrollValue)
 {

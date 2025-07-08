@@ -1,7 +1,7 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/UICanvasScalerCustomization.h"
-#include "Layout/LGUICanvasScaler.h"
+#include "Core/Components/LexCanvasScaler.h"
 #include "Widgets/Input/SNumericEntryBox.h"
 #include "Widgets/Input/SSlider.h"
 
@@ -21,7 +21,7 @@ void FUICanvasScalerCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 {
 	TArray<TWeakObjectPtr<UObject>> targetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(targetObjects);
-	TargetScriptPtr = Cast<ULGUICanvasScaler>(targetObjects[0].Get());
+	TargetScriptPtr = Cast<ULexCanvasScaler>(targetObjects[0].Get());
 	if (TargetScriptPtr != nullptr)
 	{
 
@@ -38,16 +38,16 @@ void FUICanvasScalerCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 	IDetailCategoryBuilder& lguiCategory = DetailBuilder.EditCategory("LGUI");
 	TArray<FName> needToHidePropertyNameArray;
 	//add all property
-	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, ProjectionType));
-	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, FOVAngle));
-	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, NearClipPlane));
-	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, FarClipPlane));
+	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, ProjectionType));
+	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, FOVAngle));
+	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, NearClipPlane));
+	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, FarClipPlane));
 
-	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, UIScaleMode));
-	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, ReferenceResolution));
-	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, ScreenMatchMode));
-	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, MatchFromWidthToHeight));
-	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, CustomScale));
+	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, UIScaleMode));
+	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, ReferenceResolution));
+	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, ScreenMatchMode));
+	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, MatchFromWidthToHeight));
+	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, CustomScale));
 
 	auto CreateSlider = [this, &lguiCategory](const FText& FilterString, TSharedPtr<IPropertyHandle> Property) {
 		lguiCategory.AddCustomRow(FilterString)
@@ -144,15 +144,15 @@ void FUICanvasScalerCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 				|| canvas->GetRenderMode() == ELexRenderMode::RenderTarget
 				)
 			{
-				lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, UIScaleMode));
+				lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, UIScaleMode));
 
-				DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, UIScaleMode))
+				DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, UIScaleMode))
 					->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&] { DetailBuilder.ForceRefreshDetails(); }));
 				if (TargetScriptPtr->UIScaleMode == ELGUICanvasScaleMode::ScaleWithScreenSize)
 				{
-					lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, ReferenceResolution));
-					lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, ScreenMatchMode));
-					DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, ScreenMatchMode))
+					lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, ReferenceResolution));
+					lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, ScreenMatchMode));
+					DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, ScreenMatchMode))
 						->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&] { DetailBuilder.ForceRefreshDetails(); }));
 					switch (TargetScriptPtr->ScreenMatchMode)
 					{
@@ -164,39 +164,39 @@ void FUICanvasScalerCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 					break;
 					case ELGUICanvasScreenMatchMode::MatchWidthOrHeight:
 					{
-						auto matchProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, MatchFromWidthToHeight));
+						auto matchProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, MatchFromWidthToHeight));
 						CreateSlider(LOCTEXT("MatchSlider", "MatchSlider"), matchProperty);
 					}
 					break;
 					}
-					needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, CustomScale));
+					needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, CustomScale));
 				}
 				else if (TargetScriptPtr->UIScaleMode == ELGUICanvasScaleMode::ConstantPixelSize)
 				{
-					needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, ReferenceResolution));
-					needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, ScreenMatchMode));
-					needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, MatchFromWidthToHeight));
-					needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, CustomScale));
+					needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, ReferenceResolution));
+					needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, ScreenMatchMode));
+					needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, MatchFromWidthToHeight));
+					needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, CustomScale));
 				}
 				else
 				{
-					lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, CustomScale));
-					needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, ReferenceResolution));
-					needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, ScreenMatchMode));
-					needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, MatchFromWidthToHeight));
+					lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, CustomScale));
+					needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, ReferenceResolution));
+					needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, ScreenMatchMode));
+					needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, MatchFromWidthToHeight));
 				}
 
-				auto projectionTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, ProjectionType));
+				auto projectionTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, ProjectionType));
 				projectionTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&] { DetailBuilder.ForceRefreshDetails(); }));
 				if (TargetScriptPtr->ProjectionType == ECameraProjectionMode::Orthographic)
 				{
-					needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, FOVAngle));
+					needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, FOVAngle));
 				}
 
-				lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, ProjectionType));
-				lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, FOVAngle));
-				lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, NearClipPlane));
-				lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, FarClipPlane));
+				lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, ProjectionType));
+				lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, FOVAngle));
+				lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, NearClipPlane));
+				lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, FarClipPlane));
 			}
 		}
 	}

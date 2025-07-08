@@ -45,7 +45,6 @@ private:
 	void BasicSetupSubMenu(FMenuBuilder& MenuBuilder);
 	void ReplaceActorSubMenu(FMenuBuilder& MenuBuilder);
 	void ChangeTraceChannelSubMenu(FMenuBuilder& MenuBuilder);
-	void AttachLayout(FMenuBuilder& MenuBuilder);
 	void UseActiveViewportAsPreview();
 	void ClearViewportPreview();
 	void ToggleActiveViewportAsPreview();
@@ -56,7 +55,6 @@ private:
 	bool CanCreatePrefab();
 	bool CanCheckPrefabOverrideParameter()const;
 	bool CanReplaceActor();
-	bool CanAttachLayout();
 	bool CanCreateActor();
 
 	void AddEditorToolsToToolbarExtension(FToolBarBuilder& Builder);

@@ -186,7 +186,6 @@ void ULexText::OnRegister()
 		{
 			ULGUIManagerWorldSubsystem::RegisterLGUICultureChangedEvent(this);
 		}
-		ULGUIManagerWorldSubsystem::RegisterLGUILayout(this);
 	}
 }
 void ULexText::OnUnregister()
@@ -222,7 +221,6 @@ void ULexText::OnUnregister()
 		{
 			ULGUIManagerWorldSubsystem::UnregisterLGUICultureChangedEvent(this);
 		}
-		ULGUIManagerWorldSubsystem::UnregisterLGUILayout(this);
 	}
 }
 
@@ -241,9 +239,9 @@ void ULexText::OnTransformChanged()
 	}
 }
 
-void ULexText::OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange)
+void ULexText::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
 {
-	Super::OnAnchorChange(InPivotChange, InWidthChange, InHeightChange);
+	Super::OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
 	MarkVertexPositionDirty();
 	MarkUVDirty();
 }
@@ -718,7 +716,6 @@ void ULexText::ClearCreatedRichTextImageObject()
 void ULexText::MarkTextLayoutDirty()
 {
 	bTextLayoutDirty = true;
-	ULGUIManagerWorldSubsystem::MarkUpdateLayout(this->GetWorld());
 }
 void ULexText::ConditionalMarkTextLayoutDirty()
 {
@@ -749,119 +746,119 @@ void ULexText::ConditionalMarkTextLayoutDirty()
 	}
 }
 
-void ULexText::OnUpdateLayout_Implementation()
-{
-	if (bTextLayoutDirty)
-	{
-		if (UpdateCacheTextGeometry())
-		{
-			bTextLayoutDirty = false;
-			auto tempAdjustWidth = false, tempAdjustHeight = false;
-			if (overflowType == EUITextOverflowType::HorizontalOverflow)
-			{
-				if (adjustWidth)
-				{
-					tempAdjustWidth = true;
-				}
-			}
-			else if (overflowType == EUITextOverflowType::VerticalOverflow)
-			{
-				if (adjustHeight)
-				{
-					tempAdjustHeight = true;
-				}
-			}
-			else if (overflowType == EUITextOverflowType::HorizontalAndVerticalOverflow)
-			{
-				if (adjustWidth)
-				{
-					tempAdjustWidth = true;
-				}
-				if (adjustHeight)
-				{
-					tempAdjustHeight = true;
-				}
-			}
-			if (tempAdjustWidth)
-			{
-				if (adjustWidthRange == FVector2D::ZeroVector
-					|| (CacheTextGeometryData.textRealSize.X >= adjustWidthRange.X && CacheTextGeometryData.textRealSize.X <= adjustWidthRange.Y)
-					)
-				{
-					GetWidget()->SetWidth(CacheTextGeometryData.textRealSize.X);
-				}
-			}
-			if (tempAdjustHeight)
-			{
-				if (adjustHeightRange == FVector2D::ZeroVector
-					|| (CacheTextGeometryData.textRealSize.Y >= adjustHeightRange.X && CacheTextGeometryData.textRealSize.Y <= adjustHeightRange.Y)
-					)
-				{
-					GetWidget()->SetHeight(CacheTextGeometryData.textRealSize.Y);
-				}
-			}
-		}
-	}
-}
-bool ULexText::GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
-{
-	auto Widget = GetWidget();
-	if (Widget == InUIItem)
-	{
-		if (overflowType == EUITextOverflowType::HorizontalOverflow)
-		{
-			if (adjustWidth)
-			{
-				if (adjustWidthRange == FVector2D::ZeroVector
-					|| (Widget->GetWidth() >= adjustWidthRange.X && Widget->GetWidth() <= adjustWidthRange.Y)
-					)
-				{
-					OutResult.bCanControlHorizontalSizeDelta = true;
-				}
-				return true;
-			}
-		}
-		else if (overflowType == EUITextOverflowType::VerticalOverflow)
-		{
-			if (adjustHeight)
-			{
-				if (adjustHeightRange == FVector2D::ZeroVector
-					|| (Widget->GetHeight() >= adjustHeightRange.X && Widget->GetHeight() <= adjustHeightRange.Y)
-					)
-				{
-					OutResult.bCanControlVerticalSizeDelta = true;
-				}
-				return true;
-			}
-		}
-		else if (overflowType == EUITextOverflowType::HorizontalAndVerticalOverflow)
-		{
-			if (adjustWidth)
-			{
-				if (adjustWidthRange == FVector2D::ZeroVector
-					|| (Widget->GetWidth() >= adjustWidthRange.X && Widget->GetWidth() <= adjustWidthRange.Y)
-					)
-				{
-					OutResult.bCanControlHorizontalSizeDelta = true;
-				}
-			}
-			if (adjustHeight)
-			{
-				if (adjustHeightRange == FVector2D::ZeroVector
-					|| (Widget->GetHeight() >= adjustHeightRange.X && Widget->GetHeight() <= adjustHeightRange.Y)
-					)
-				{
-					OutResult.bCanControlVerticalSizeDelta = true;
-				}
-			}
-			if (adjustWidth || adjustHeight)
-			{
-				return true;
-			}
-		}
-	}
-	return false;
-}
+// void ULexText::OnUpdateLayout_Implementation()
+// {
+// 	if (bTextLayoutDirty)
+// 	{
+// 		if (UpdateCacheTextGeometry())
+// 		{
+// 			bTextLayoutDirty = false;
+// 			auto tempAdjustWidth = false, tempAdjustHeight = false;
+// 			if (overflowType == EUITextOverflowType::HorizontalOverflow)
+// 			{
+// 				if (adjustWidth)
+// 				{
+// 					tempAdjustWidth = true;
+// 				}
+// 			}
+// 			else if (overflowType == EUITextOverflowType::VerticalOverflow)
+// 			{
+// 				if (adjustHeight)
+// 				{
+// 					tempAdjustHeight = true;
+// 				}
+// 			}
+// 			else if (overflowType == EUITextOverflowType::HorizontalAndVerticalOverflow)
+// 			{
+// 				if (adjustWidth)
+// 				{
+// 					tempAdjustWidth = true;
+// 				}
+// 				if (adjustHeight)
+// 				{
+// 					tempAdjustHeight = true;
+// 				}
+// 			}
+// 			if (tempAdjustWidth)
+// 			{
+// 				if (adjustWidthRange == FVector2D::ZeroVector
+// 					|| (CacheTextGeometryData.textRealSize.X >= adjustWidthRange.X && CacheTextGeometryData.textRealSize.X <= adjustWidthRange.Y)
+// 					)
+// 				{
+// 					GetWidget()->SetWidth(CacheTextGeometryData.textRealSize.X);
+// 				}
+// 			}
+// 			if (tempAdjustHeight)
+// 			{
+// 				if (adjustHeightRange == FVector2D::ZeroVector
+// 					|| (CacheTextGeometryData.textRealSize.Y >= adjustHeightRange.X && CacheTextGeometryData.textRealSize.Y <= adjustHeightRange.Y)
+// 					)
+// 				{
+// 					GetWidget()->SetHeight(CacheTextGeometryData.textRealSize.Y);
+// 				}
+// 			}
+// 		}
+// 	}
+// }
+// bool ULexText::GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
+// {
+// 	auto Widget = GetWidget();
+// 	if (Widget == InUIItem)
+// 	{
+// 		if (overflowType == EUITextOverflowType::HorizontalOverflow)
+// 		{
+// 			if (adjustWidth)
+// 			{
+// 				if (adjustWidthRange == FVector2D::ZeroVector
+// 					|| (Widget->GetWidth() >= adjustWidthRange.X && Widget->GetWidth() <= adjustWidthRange.Y)
+// 					)
+// 				{
+// 					OutResult.bCanControlHorizontalSizeDelta = true;
+// 				}
+// 				return true;
+// 			}
+// 		}
+// 		else if (overflowType == EUITextOverflowType::VerticalOverflow)
+// 		{
+// 			if (adjustHeight)
+// 			{
+// 				if (adjustHeightRange == FVector2D::ZeroVector
+// 					|| (Widget->GetHeight() >= adjustHeightRange.X && Widget->GetHeight() <= adjustHeightRange.Y)
+// 					)
+// 				{
+// 					OutResult.bCanControlVerticalSizeDelta = true;
+// 				}
+// 				return true;
+// 			}
+// 		}
+// 		else if (overflowType == EUITextOverflowType::HorizontalAndVerticalOverflow)
+// 		{
+// 			if (adjustWidth)
+// 			{
+// 				if (adjustWidthRange == FVector2D::ZeroVector
+// 					|| (Widget->GetWidth() >= adjustWidthRange.X && Widget->GetWidth() <= adjustWidthRange.Y)
+// 					)
+// 				{
+// 					OutResult.bCanControlHorizontalSizeDelta = true;
+// 				}
+// 			}
+// 			if (adjustHeight)
+// 			{
+// 				if (adjustHeightRange == FVector2D::ZeroVector
+// 					|| (Widget->GetHeight() >= adjustHeightRange.X && Widget->GetHeight() <= adjustHeightRange.Y)
+// 					)
+// 				{
+// 					OutResult.bCanControlVerticalSizeDelta = true;
+// 				}
+// 			}
+// 			if (adjustWidth || adjustHeight)
+// 			{
+// 				return true;
+// 			}
+// 		}
+// 	}
+// 	return false;
+// }
 
 bool ULexText::UpdateCacheTextGeometry()const
 {

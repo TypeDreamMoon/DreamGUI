@@ -74,9 +74,9 @@ FLGUIPrefabEditorViewportClient::FLGUIPrefabEditorViewportClient(FLGUIPrefabEdit
 
 	// DrawHelper set up
 
-	//DrawHelper.PerspectiveGridSize = HALF_WORLD_MAX1;
-	//DrawHelper.AxesLineThickness = 0.0f;
-	//DrawHelper.bDrawGrid = true;
+	DrawHelper.PerspectiveGridSize = HALF_WORLD_MAX1;
+	DrawHelper.AxesLineThickness = 0.0f;
+	DrawHelper.bDrawGrid = true;
 
 	EngineShowFlags.Game = 0;
 	EngineShowFlags.ScreenSpaceReflections = 1;

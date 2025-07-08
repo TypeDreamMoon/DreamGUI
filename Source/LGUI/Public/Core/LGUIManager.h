@@ -150,9 +150,6 @@ private:
 	FDelegateHandle OnCultureChangedDelegateHandle;
 
 	TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> MainViewportViewExtension;
-
-	void UpdateLayout();
-	bool bNeedUpdateLayout = false;
 public:
 #if WITH_EDITOR
 	static void RefreshAllUI(UWorld* InWorld = nullptr);
@@ -165,14 +162,6 @@ public:
 	static void RegisterLGUICultureChangedEvent(TScriptInterface<ILGUICultureChangedInterface> InItem);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	static void UnregisterLGUICultureChangedEvent(TScriptInterface<ILGUICultureChangedInterface> InItem);
-
-	/** Force LGUI to update layout immediately */
-	UE_DEPRECATED(5.1, "Use RebuildLayout instead.")
-	UFUNCTION(BlueprintCallable, Category = "LGUI", meta=(WorldContext = "WorldContextObject", DeprecatedFunction, DeprecationMessage = "Use RebuildLayout instead."))
-	static void ForceUpdateLayout(UObject* WorldContextObject);
-	/** Rebuild layout on target UIItem and all it's children */
-	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (WorldContext = "WorldContextObject"))
-	static void RebuildLayout(ULexWidget* InItem);
 
 	static void AddCanvas(ULexCanvas* InCanvas, ELexRenderMode InCurrentRenderMode);
 	static void RemoveCanvas(ULexCanvas* InCanvas, ELexRenderMode InCurrentRenderMode);
@@ -194,12 +183,7 @@ public:
 	const TArray<TWeakObjectPtr<UUISelectableComponent>>& GetAllSelectableArray() { return AllSelectableArray; }
 	static void AddSelectable(UUISelectableComponent* InSelectable);
 	static void RemoveSelectable(UUISelectableComponent* InSelectable);
-
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	static void RegisterLGUILayout(TScriptInterface<ILGUILayoutInterface> InItem);
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	static void UnregisterLGUILayout(TScriptInterface<ILGUILayoutInterface> InItem);
-	static void MarkUpdateLayout(UWorld* InWorld);
+	
 #if WITH_EDITOR
 	/**
 	 * Editor raycast hit all visible UIBaseRenderable object.
@@ -212,7 +196,7 @@ public:
 	 * \return 
 	 */
 	static bool RaycastHitUI(UWorld* InWorld, const TArray<ULexWidget*>& InWidgets, const FVector& LineStart, const FVector& LineEnd
-		, ULexVisual*& ResultSelectTarget, int& InOutTargetIndexInHitArray
+		, ULexWidget*& ResultSelectTarget, int& InOutTargetIndexInHitArray
 	);
 	static void DrawFrameOnUIItem(ULexWidget* InItem, bool IsScreenSpace = false);
 	static void DrawNavigationArrow(UWorld* InWorld, const TArray<FVector>& InControlPoints, const FVector& InArrowPointA, const FVector& InArrowPointB, FColor const& InColor, bool IsScreenSpace = false);

@@ -721,8 +721,7 @@ void ULexRectBlock::SetSizeFromBodyTexture()
 	{
 		if (IsValid(this->BodySpriteTexture))
 		{
-			GetWidget()->SetWidth(this->BodySpriteTexture->GetSpriteInfo().GetSourceWidth());
-			GetWidget()->SetHeight(this->BodySpriteTexture->GetSpriteInfo().GetSourceHeight());
+			GetWidget()->SetSize(FVector2D(this->BodySpriteTexture->GetSpriteInfo().GetSourceWidth(), this->BodySpriteTexture->GetSpriteInfo().GetSourceHeight()));
 		}
 		else
 		{
@@ -733,8 +732,7 @@ void ULexRectBlock::SetSizeFromBodyTexture()
 	{
 		if (IsValid(this->BodyTexture))
 		{
-			GetWidget()->SetWidth(this->BodyTexture->GetSurfaceWidth());
-			GetWidget()->SetHeight(this->BodyTexture->GetSurfaceHeight());
+			GetWidget()->SetSize(FVector2D(this->BodyTexture->GetSurfaceWidth(), this->BodyTexture->GetSurfaceHeight()));
 		}
 		else
 		{

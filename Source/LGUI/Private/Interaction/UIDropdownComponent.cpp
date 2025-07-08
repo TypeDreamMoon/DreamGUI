@@ -6,11 +6,11 @@
 #include "LGUI/Public/Core/Components/LexCanvas.h"
 #include "LGUIBPLibrary.h"
 #include "Core/LexUISpriteData.h"
+#include "Core/Components/LexLayoutAnchor.h"
 #include "LGUI/Public/Core/Components/LexWidget.h"
 #include "LGUI/Public/Core/Components/LexText.h"
 #include "LGUI/Public/Core/Components/UISprite.h"
 #include "Interaction/UIButtonComponent.h"
-#include "Layout/UILayoutBase.h"
 #if WITH_EDITOR
 #include "Utils/LexUIUtils.h"
 #endif
@@ -135,6 +135,7 @@ void UUIDropdownComponent::Show()
 	}
 
 	auto ListRootUIItem = ListRoot->GetLexWidget();
+	auto ListRootUILayout = Cast<ULexLayoutAnchorSlot>(ListRootUIItem->GetLayoutSlot());
 	//set position
 	auto tempVerticalPosition = VerticalPosition;
 	auto tempHorizontalPosition = HorizontalPosition;
@@ -152,7 +153,7 @@ void UUIDropdownComponent::Show()
 			}
 			else
 			{
-				auto upperCanvas = clipUIItem->GetParentUIItem();
+				auto upperCanvas = clipUIItem->GetUIParent();
 				if (!upperCanvas)
 				{
 					break;
@@ -215,52 +216,52 @@ void UUIDropdownComponent::Show()
 		pivot.Y = 0.0f;
 		if (VerticalOverlap)
 		{
-			ListRootUIItem->SetVerticalAnchorMinMax(FVector2D(0.0f, 0.0f), true);
+			ListRootUILayout->SetVerticalAnchorMinMax(FVector2D(0.0f, 0.0f), true);
 		}
 		else
 		{
-			ListRootUIItem->SetVerticalAnchorMinMax(FVector2D(1.0f, 1.0f), true);
+			ListRootUILayout->SetVerticalAnchorMinMax(FVector2D(1.0f, 1.0f), true);
 		}
 	}break;
 	case EUIDropdownVerticalPosition::Middle:
 	{
 		pivot.Y = 0.5f;
-		ListRootUIItem->SetVerticalAnchorMinMax(FVector2D(0.5f, 0.5f), true);
+		ListRootUILayout->SetVerticalAnchorMinMax(FVector2D(0.5f, 0.5f), true);
 	}break;
 	case EUIDropdownVerticalPosition::Bottom:
 	{
 		pivot.Y = 1.0f;
 		if (VerticalOverlap)
 		{
-			ListRootUIItem->SetVerticalAnchorMinMax(FVector2D(1.0f, 1.0f), true);
+			ListRootUILayout->SetVerticalAnchorMinMax(FVector2D(1.0f, 1.0f), true);
 		}
 		else
 		{
-			ListRootUIItem->SetVerticalAnchorMinMax(FVector2D(0.0f, 0.0f), true);
+			ListRootUILayout->SetVerticalAnchorMinMax(FVector2D(0.0f, 0.0f), true);
 		}
 	}break;
 	}
-	ListRootUIItem->SetVerticalAnchoredPosition(0);
+	ListRootUILayout->SetVerticalAnchoredPosition(0);
 
 	switch (tempHorizontalPosition)
 	{
 	case EUIDropdownHorizontalPosition::Left:
 	{
 		pivot.X = 1.0f;
-		ListRootUIItem->SetHorizontalAnchorMinMax(FVector2D(0.0f, 0.0f), true);
+		ListRootUILayout->SetHorizontalAnchorMinMax(FVector2D(0.0f, 0.0f), true);
 	}break;
 	case EUIDropdownHorizontalPosition::Center:
 	{
 		pivot.X = 0.5f;
-		ListRootUIItem->SetHorizontalAnchorMinMax(FVector2D(0.5f, 0.5f), true);
+		ListRootUILayout->SetHorizontalAnchorMinMax(FVector2D(0.5f, 0.5f), true);
 	}break;
 	case EUIDropdownHorizontalPosition::Right:
 	{
 		pivot.X = 0.0f;
-		ListRootUIItem->SetHorizontalAnchorMinMax(FVector2D(1.0f, 1.0f), true);
+		ListRootUILayout->SetHorizontalAnchorMinMax(FVector2D(1.0f, 1.0f), true);
 	}break;
 	}
-	ListRootUIItem->SetHorizontalAnchoredPosition(0);
+	ListRootUILayout->SetHorizontalAnchoredPosition(0);
 
 	ListRootUIItem->SetPivot(pivot);
 }
@@ -297,11 +298,10 @@ void UUIDropdownComponent::CreateBlocker()
 #endif
 	auto blockerUIItem = blocker->GetLexWidget();
 	blockerUIItem->AttachToComponent(this->GetRootUIComponent()->GetRootCanvas()->GetLexWidget(), FAttachmentTransformRules::KeepRelativeTransform);
-	FUIAnchorData AnchorData;
-	AnchorData.SizeDelta = FVector2D::ZeroVector;
-	AnchorData.AnchorMin = FVector2D(0.0f, 0.0f);
-	AnchorData.AnchorMax = FVector2D(1.0f, 1.0f);
-	blockerUIItem->SetAnchorData(AnchorData);
+	auto blockerLayout = Cast<ULexLayoutAnchorSlot>(blockerUIItem->GetLayoutSlot());
+	blockerLayout->SetSizeDelta(FVector2D::ZeroVector);
+	blockerLayout->SetAnchorMin(FVector2D(0.0f, 0.0f));
+	blockerLayout->SetAnchorMax(FVector2D(1.0f, 1.0f));
 	auto blockerCanvas = NewObject<ULexCanvas>(blocker);
 	blockerCanvas->RegisterComponent();
 	blocker->AddInstanceComponent(blockerCanvas);
@@ -325,7 +325,7 @@ void UUIDropdownComponent::CreateListItems()
 		return;
 	}
 	templateUIItem->SetIsUIActive(true);
-	auto contentUIItem = templateUIItem->GetParentUIItem();
+	auto contentUIItem = templateUIItem->GetUIParent();
 	for (int i = 0, count = Options.Num(); i < count; i++)
 	{
 		auto copiedItemActor = ULGUIBPLibrary::DuplicateActor(ItemTemplate.GetActor(), contentUIItem);
@@ -342,12 +342,12 @@ void UUIDropdownComponent::CreateListItems()
 		CreatedItemArray.Add(script);
 	}
 	templateUIItem->SetIsUIActive(false);
-	if (auto contentLayout = contentUIItem->GetOwner()->FindComponentByClass<UUILayoutBase>())
-	{
-		contentLayout->OnRebuildLayout();
-	}
+	// if (auto contentLayout = contentUIItem->GetOwner()->FindComponentByClass<UUILayoutBase>())
+	// {
+	// 	contentLayout->OnRebuildLayout();
+	// }
 	float heightOffset = 0;
-	if (auto viewportUIItem = contentUIItem->GetParentUIItem())
+	if (auto viewportUIItem = contentUIItem->GetUIParent())
 	{
 		heightOffset = ListRoot->GetLexWidget()->GetHeight() - viewportUIItem->GetHeight();
 	}

@@ -143,7 +143,7 @@ public:
 	/** get scale value of canvas. only valid for root canvas. */
 	FORCEINLINE float GetCanvasScale()const { return canvasScale; }
 private:
-	friend class ULGUICanvasScaler;
+	friend class ULexCanvasScaler;
 	float canvasScale = 1.0f;//for screen space UI, screen size / root canvas size
 
 	FDelegateHandle UIHierarchyChangedDelegateHandle;

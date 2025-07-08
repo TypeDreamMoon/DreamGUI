@@ -5,13 +5,12 @@
 #include "Widgets/Docking/SDockTab.h"
 #include "Misc/FileHelper.h"
 #include "Misc/MessageDialog.h"
-#include "PropertyCustomizationHelpers.h"
 #include "DesktopPlatformModule.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/EngineTypes.h"
 #include "Kismet2/ComponentEditorUtils.h"
 #include "Widgets/SViewport.h"
-#include "Layout/LGUICanvasScaler.h"
+#include "Core/Components/LexCanvasScaler.h"
 #include "EditorViewportClient.h"
 #include "Engine/Selection.h"
 #include "EngineUtils.h"
@@ -778,12 +777,12 @@ void LGUIEditorTools::ReplaceActorByClass(UClass* ActorClass)
 		AActor* ReplacedActor = nullptr;
 		TArray<AActor*> ChildrenActors;
 		Actor->GetAttachedActors(ChildrenActors);
-		TMap<ULexWidget*, TTuple<FUIAnchorData, int, FVector>> ChildrenOriginPositionArray;
+		TMap<ULexWidget*, TTuple<int, FVector>> ChildrenOriginPositionArray;
 		for (auto& ChildActor : ChildrenActors)
 		{
 			if (auto UIComp = Cast<ULexWidget>(ChildActor->GetRootComponent()))
 			{
-				ChildrenOriginPositionArray.Add(UIComp, { UIComp->GetAnchorData(), UIComp->GetHierarchyIndex(), UIComp->GetRelativeLocation()});
+				ChildrenOriginPositionArray.Add(UIComp, { UIComp->GetHierarchyIndex(), UIComp->GetRelativeLocation()});
 			}
 		}
 		if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(Actor))
@@ -868,9 +867,8 @@ void LGUIEditorTools::ReplaceActorByClass(UClass* ActorClass)
 			{
 				auto UIItem = KeyValue.Key;
 				auto& Value = KeyValue.Value;
-				UIItem->SetRelativeLocation(Value.Get<2>());
-				UIItem->SetAnchorData(Value.Get<0>());
-				UIItem->SetHierarchyIndex(Value.Get<1>());
+				UIItem->SetRelativeLocation(Value.Get<1>());
+				UIItem->SetHierarchyIndex(Value.Get<0>());
 			}
 		}
 	}
@@ -2117,7 +2115,7 @@ void LGUIEditorTools::FocusToScreenSpaceUI()
 			for (TActorIterator<ALexWidgetActor> ActorItr(GWorld); ActorItr; ++ActorItr)
 			{
 				auto canvas = ActorItr->FindComponentByClass<ULexCanvas>();
-				auto canvasScaler = ActorItr->FindComponentByClass<ULGUICanvasScaler>();
+				auto canvasScaler = ActorItr->FindComponentByClass<ULexCanvasScaler>();
 				if (canvas != nullptr && canvas->IsRootCanvas() && canvas->IsRenderToScreenSpace())//make sure is screen space UI root
 				{
 					auto viewDistance = FVector::Distance(canvas->GetViewLocation(), canvas->GetLexWidget()->GetComponentLocation());

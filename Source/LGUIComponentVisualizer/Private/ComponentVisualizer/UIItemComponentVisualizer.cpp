@@ -8,7 +8,6 @@
 #include "Utils/LexUIUtils.h"
 #include "Interfaces/IPluginManager.h"
 #include "Core/LGUISettings.h"
-#include "Layout/UIPanelLayoutBase.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
@@ -64,39 +63,9 @@ void FUIItemComponentVisualizer::DrawVisualization(const UActorComponent* Compon
 
 	//draw panel layout button
 	bool bHaveDrawPanelLayout = false;
-	if (auto Parent = TargetComp->GetParentUIItem())
+	if (auto Parent = TargetComp->GetUIParent())
 	{
-		if (auto PanelLayout = Parent->GetOwner()->FindComponentByClass<UUIPanelLayoutBase>())
-		{
-			if (auto Slot = PanelLayout->GetChildSlot(TargetComp.Get()))
-			{
-				if (!Slot->GetIgnoreLayout())
-				{
-					const float AreaScale = 3.0f;
-					static auto PanelLayoutReorderButton_Left_Texture = LGUIEditorUtils::LoadTexture(LGUIBasePath + TEXT("/Resources/Icons/PanelLayoutReorderButton_Left.png"));
-					static auto PanelLayoutReorderButton_Right_Texture = LGUIEditorUtils::LoadTexture(LGUIBasePath + TEXT("/Resources/Icons/PanelLayoutReorderButton_Right.png"));
-					static auto PanelLayoutReorderButton_Top_Texture = LGUIEditorUtils::LoadTexture(LGUIBasePath + TEXT("/Resources/Icons/PanelLayoutReorderButton_Top.png"));
-					static auto PanelLayoutReorderButton_Bottom_Texture = LGUIEditorUtils::LoadTexture(LGUIBasePath + TEXT("/Resources/Icons/PanelLayoutReorderButton_Bottom.png"));
-					if (PanelLayout->CanMoveChildToCell(TargetComp.Get(), UUIPanelLayoutBase::EMoveChildDirectionType::Left))
-					{
-						DrawHitProxy(LeftPoint, EUIItemVisualizerSelectorType::PanelLayout_Left, PanelLayoutReorderButton_Left_Texture, AreaScale);
-					}
-					if (PanelLayout->CanMoveChildToCell(TargetComp.Get(), UUIPanelLayoutBase::EMoveChildDirectionType::Right))
-					{
-						DrawHitProxy(RightPoint, EUIItemVisualizerSelectorType::PanelLayout_Right, PanelLayoutReorderButton_Right_Texture, AreaScale);
-					}
-					if (PanelLayout->CanMoveChildToCell(TargetComp.Get(), UUIPanelLayoutBase::EMoveChildDirectionType::Top))
-					{
-						DrawHitProxy(TopPoint, EUIItemVisualizerSelectorType::PanelLayout_Top, PanelLayoutReorderButton_Top_Texture, AreaScale);
-					}
-					if (PanelLayout->CanMoveChildToCell(TargetComp.Get(), UUIPanelLayoutBase::EMoveChildDirectionType::Bottom))
-					{
-						DrawHitProxy(BottomPoint, EUIItemVisualizerSelectorType::PanelLayout_Bottom, PanelLayoutReorderButton_Bottom_Texture, AreaScale);
-					}
-					bHaveDrawPanelLayout = true;
-				}
-			}
-		}
+		
 	}
 
 	//draw anchor tool
@@ -147,20 +116,9 @@ bool FUIItemComponentVisualizer::VisProxyHandleClick(FEditorViewportClient* InVi
 		case EUIItemVisualizerSelectorType::PanelLayout_Top:
 		case EUIItemVisualizerSelectorType::PanelLayout_Bottom:
 		{
-			if (auto Parent = TargetComp->GetParentUIItem())
+			if (auto Parent = TargetComp->GetUIParent())
 			{
-				if (auto PanelLayout = Parent->GetOwner()->FindComponentByClass<UUIPanelLayoutBase>())
-				{
-					GEditor->BeginTransaction(LOCTEXT("ChangeLayoutOrder", "Change Layout Order"));
-					TargetComp->Modify();
-					PanelLayout->GetChildSlot(TargetComp.Get())->Modify();
-					auto Direction = (int)Proxy->Type - (int)EUIItemVisualizerSelectorType::PanelLayout_Left;
-					PanelLayout->MoveChildToCell(TargetComp.Get(), (UUIPanelLayoutBase::EMoveChildDirectionType)Direction);
-					GEditor->EndTransaction();
-					ULGUIPrefabManagerObject::AddOneShotTickFunction([] {
-						GEditor->RedrawAllViewports();
-						}, 1);
-				}
+
 			}
 		}
 		break;
@@ -214,12 +172,12 @@ bool FUIItemComponentVisualizer::HandleInputDelta(FEditorViewportClient* Viewpor
 		if (LocalSpaceDeltaTranslate.Y != 0 || LocalSpaceDeltaTranslate.Z != 0)
 		{
 			auto DeltaTranslatePivot = FVector2D(LocalSpaceDeltaTranslate.Y / TargetComp->GetWidth(), LocalSpaceDeltaTranslate.Z / TargetComp->GetHeight());
-			FMargin PrevAnchorAsMargin(TargetComp->GetAnchorLeft(), TargetComp->GetAnchorTop(), TargetComp->GetAnchorRight(), TargetComp->GetAnchorBottom());
-			TargetComp->SetPivot(TargetComp->GetPivot() + DeltaTranslatePivot);
-			TargetComp->SetAnchorLeft(PrevAnchorAsMargin.Left);
-			TargetComp->SetAnchorRight(PrevAnchorAsMargin.Right);
-			TargetComp->SetAnchorBottom(PrevAnchorAsMargin.Bottom);
-			TargetComp->SetAnchorTop(PrevAnchorAsMargin.Top);
+			// FMargin PrevAnchorAsMargin(TargetComp->GetAnchorLeft(), TargetComp->GetAnchorTop(), TargetComp->GetAnchorRight(), TargetComp->GetAnchorBottom());
+			// TargetComp->SetPivot(TargetComp->GetPivot() + DeltaTranslatePivot);
+			// TargetComp->SetAnchorLeft(PrevAnchorAsMargin.Left);
+			// TargetComp->SetAnchorRight(PrevAnchorAsMargin.Right);
+			// TargetComp->SetAnchorBottom(PrevAnchorAsMargin.Bottom);
+			// TargetComp->SetAnchorTop(PrevAnchorAsMargin.Top);
 			bAnchorChanged = true;
 		}
 	}
@@ -229,11 +187,11 @@ bool FUIItemComponentVisualizer::HandleInputDelta(FEditorViewportClient* Viewpor
 	{
 		if (LocalSpaceDeltaTranslate.Y != 0)
 		{
-			TargetComp->SetAnchorLeft(TargetComp->GetAnchorLeft() + LocalSpaceDeltaTranslate.Y);
-			if (IsAltDown(Viewport))
-			{
-				TargetComp->SetAnchorRight(TargetComp->GetAnchorRight() + LocalSpaceDeltaTranslate.Y);
-			}
+			// TargetComp->SetAnchorLeft(TargetComp->GetAnchorLeft() + LocalSpaceDeltaTranslate.Y);
+			// if (IsAltDown(Viewport))
+			// {
+			// 	TargetComp->SetAnchorRight(TargetComp->GetAnchorRight() + LocalSpaceDeltaTranslate.Y);
+			// }
 			bAnchorChanged = true;
 		}
 	}
@@ -241,11 +199,11 @@ bool FUIItemComponentVisualizer::HandleInputDelta(FEditorViewportClient* Viewpor
 	{
 		if (LocalSpaceDeltaTranslate.Y != 0)
 		{
-			TargetComp->SetAnchorRight(TargetComp->GetAnchorRight() - LocalSpaceDeltaTranslate.Y);
-			if (IsAltDown(Viewport))
-			{
-				TargetComp->SetAnchorLeft(TargetComp->GetAnchorLeft() - LocalSpaceDeltaTranslate.Y);
-			}
+			// TargetComp->SetAnchorRight(TargetComp->GetAnchorRight() - LocalSpaceDeltaTranslate.Y);
+			// if (IsAltDown(Viewport))
+			// {
+			// 	TargetComp->SetAnchorLeft(TargetComp->GetAnchorLeft() - LocalSpaceDeltaTranslate.Y);
+			// }
 			bAnchorChanged = true;
 		}
 	}
@@ -253,11 +211,11 @@ bool FUIItemComponentVisualizer::HandleInputDelta(FEditorViewportClient* Viewpor
 	{
 		if (LocalSpaceDeltaTranslate.Z != 0)
 		{
-			TargetComp->SetAnchorBottom(TargetComp->GetAnchorBottom() + LocalSpaceDeltaTranslate.Z);
-			if (IsAltDown(Viewport))
-			{
-				TargetComp->SetAnchorTop(TargetComp->GetAnchorTop() + LocalSpaceDeltaTranslate.Z);
-			}
+			// TargetComp->SetAnchorBottom(TargetComp->GetAnchorBottom() + LocalSpaceDeltaTranslate.Z);
+			// if (IsAltDown(Viewport))
+			// {
+			// 	TargetComp->SetAnchorTop(TargetComp->GetAnchorTop() + LocalSpaceDeltaTranslate.Z);
+			// }
 			bAnchorChanged = true;
 		}
 	}
@@ -265,17 +223,17 @@ bool FUIItemComponentVisualizer::HandleInputDelta(FEditorViewportClient* Viewpor
 	{
 		if (LocalSpaceDeltaTranslate.Z != 0)
 		{
-			TargetComp->SetAnchorTop(TargetComp->GetAnchorTop() - LocalSpaceDeltaTranslate.Z);
-			if (IsAltDown(Viewport))
-			{
-				TargetComp->SetAnchorBottom(TargetComp->GetAnchorBottom() - LocalSpaceDeltaTranslate.Z);
-			}
+			// TargetComp->SetAnchorTop(TargetComp->GetAnchorTop() - LocalSpaceDeltaTranslate.Z);
+			// if (IsAltDown(Viewport))
+			// {
+			// 	TargetComp->SetAnchorBottom(TargetComp->GetAnchorBottom() - LocalSpaceDeltaTranslate.Z);
+			// }
 			bAnchorChanged = true;
 		}
 	}
 	if (bAnchorChanged)
 	{
-		FLexUIUtils::NotifyPropertyChanged(TargetComp.Get(), ULexWidget::GetAnchorDataPropertyName());
+		//FLexUIUtils::NotifyPropertyChanged(TargetComp.Get(), ULexWidget::GetAnchorDataPropertyName());
 	}
 	return true;
 }

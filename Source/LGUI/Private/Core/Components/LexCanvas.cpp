@@ -1377,12 +1377,9 @@ bool ULexCanvas::UpdateCanvasDrawCallRecursive()
 		}
 		for (const auto& Widget : RenderWidgetList)
 		{
-			// Widget->UpdateLayout();
+			Widget->UpdateLayout();
 			Widget->UpdateClip(ClipDataAsTexture, ClipDataList);
-			if (auto Visual = Widget->GetVisual())
-			{
-				Visual->UpdateGeometry();
-			}
+			Widget->UpdateVisual();
 		}
 		for (const auto& ClipData : ClipDataList)
 		{

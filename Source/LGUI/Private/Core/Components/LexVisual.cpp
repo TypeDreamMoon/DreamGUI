@@ -126,15 +126,6 @@ bool ULexVisual::CanEditChange(const FProperty* InProperty) const
 }
 #endif
 
-ULexWidget* ULexVisual::GetWidget()const
-{
-	if (!CacheWidget.IsValid())
-	{
-		CacheWidget = Cast<ULexWidget>(this->GetOuter());
-	}
-	return CacheWidget.Get();
-}
-
 int ULexVisual::GetClipDataStartPosition() const
 {
 	if (auto ClipData = GetWidget()->GetClipData().Pin())

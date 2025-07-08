@@ -56,13 +56,6 @@
 #include "DetailCustomization/UISelectableCustomization.h"
 #include "DetailCustomization/UIToggleCustomization.h"
 #include "DetailCustomization/UITextInputCustomization.h"
-#include "DetailCustomization/UILayoutBaseCustomization.h"
-#include "DetailCustomization/UIVerticalLayoutCustomization.h"
-#include "DetailCustomization/UIHorizontalLayoutCustomization.h"
-#include "DetailCustomization/UIGridLayoutCustomization.h"
-#include "DetailCustomization/UIFlexibleGridLayoutCustomization.h"
-#include "DetailCustomization/UILayoutElementCustomization.h"
-#include "DetailCustomization/UICanvasScalerCustomization.h"
 #include "DetailCustomization/LGUIPrefabCustomization.h"
 #include "DetailCustomization/LGUIEventDelegateCustomization.h"
 #include "DetailCustomization/LGUIEventDelegatePresetParamCustomization.h"
@@ -72,11 +65,6 @@
 #include "DetailCustomization/UISpriteSequencePlayerCustomization.h"
 #include "DetailCustomization/UISpriteSheetTexturePlayerCustomization.h"
 #include "DetailCustomization/LexVisualPostProcessCustomization.h"
-
-#include "DetailCustomization/UIPanelLayoutHorizontalBoxSlotCustomization.h"
-#include "DetailCustomization/UIPanelLayoutVerticalBoxSlotCustomization.h"
-#include "DetailCustomization/UIPanelLayoutUniformGridSlotCustomization.h"
-#include "DetailCustomization/UIPanelLayoutFlexibleGridSlotCustomization.h"
 
 #include "PrefabEditor/LGUIPrefabOverrideDataViewer.h"
 #include "Engine/Selection.h"
@@ -270,15 +258,7 @@ void FLGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomClassLayout(UUIToggleComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIToggleCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUITextInputComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUITextInputCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUIScrollViewWithScrollbarComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIScrollViewWithScrollBarCustomization::MakeInstance));
-
-		PropertyModule.RegisterCustomClassLayout(UUILayoutBase::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUILayoutBaseCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UUIVerticalLayout::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIVerticalLayoutCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UUIHorizontalLayout::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIHorizontalLayoutCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UUIGridLayout::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIGridLayoutCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UUIFlexibleGridLayout::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIFlexibleGridLayoutCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UUILayoutElement::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUILayoutElementCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(ULGUICanvasScaler::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUICanvasScalerCustomization::MakeInstance));
-
+		
 		PropertyModule.RegisterCustomClassLayout(ULGUIPrefab::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLGUIPrefabCustomization::MakeInstance));
 
 		PropertyModule.RegisterCustomClassLayout(UUIEffectTextAnimation::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIEffectTextAnimationCustomization::MakeInstance));
@@ -318,11 +298,6 @@ void FLGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIComponentReference::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLGUIComponentReferenceCustomization::MakeInstance));
 
 		PropertyModule.RegisterCustomClassLayout(ULGUIPrefabSequenceComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLGUIPrefabSequenceComponentCustomization::MakeInstance));
-
-		PropertyModule.RegisterCustomClassLayout(UUIPanelLayout_HorizontalBox_Slot::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIPanelLayoutHorizontalBoxSlotCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UUIPanelLayout_VerticalBox_Slot::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIPanelLayoutVerticalBoxSlotCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UUIPanelLayout_UniformGrid_Slot::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIPanelLayoutUniformGridSlotCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UUIPanelLayout_FlexibleGrid_Slot::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIPanelLayoutFlexibleGridSlotCustomization::MakeInstance));
 	}
 	//register asset
 	{
@@ -494,14 +469,6 @@ void FLGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(UUIToggleComponent::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUITextInputComponent::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUIScrollViewWithScrollbarComponent::StaticClass()->GetFName());
-
-		PropertyModule.UnregisterCustomClassLayout(UUILayoutBase::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(UUIVerticalLayout::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(UUIHorizontalLayout::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(UUIGridLayout::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(UUIFlexibleGridLayout::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(UUILayoutElement::StaticClass()->GetFName());
-
 		PropertyModule.UnregisterCustomClassLayout(ULGUIPrefab::StaticClass()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(UUIEffectTextAnimation_Property::StaticClass()->GetFName());
@@ -540,11 +507,6 @@ void FLGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIComponentReference::StaticStruct()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(ULGUIPrefabSequenceComponent::StaticClass()->GetFName());
-
-		PropertyModule.UnregisterCustomClassLayout(UUIPanelLayout_HorizontalBox_Slot::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(UUIPanelLayout_VerticalBox_Slot::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(UUIPanelLayout_UniformGrid_Slot::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(UUIPanelLayout_FlexibleGrid_Slot::StaticClass()->GetFName());
 	}
 	//unregister asset
 	{
@@ -751,29 +713,6 @@ bool FLGUIEditorModule::CanReplaceActor()
 		}
 	}
 	return true;
-}
-
-bool FLGUIEditorModule::CanAttachLayout()
-{
-	if (LGUIEditorTools::IsSelectUIActor())
-	{
-		auto SelectedActor = LGUIEditorTools::GetFirstSelectedActor();
-		if (SelectedActor == nullptr)return false;
-		if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
-		{
-			if (PrefabHelperObject->IsActorBelongsToSubPrefab(SelectedActor))//sub prefab's actor not allowed
-			{
-				return false;
-			}
-			else if (PrefabHelperObject->IsActorBelongsToMissingSubPrefab(SelectedActor))//missing sub prefab's actor not allowed
-			{
-				return false;
-			}
-		}
-		auto LayoutComponents = SelectedActor->GetComponentsByInterface(ULGUILayoutInterface::StaticClass());
-		return LayoutComponents.Num() == 0;
-	}
-	return false;
 }
 
 bool FLGUIEditorModule::CanCreatePrefab()
@@ -1007,16 +946,6 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(bool InitialSetup, bo
 				, FIsActionButtonVisible::CreateRaw(this, &FLGUIEditorModule::CanReplaceActor)),
 			NAME_None,
 			EUserInterfaceActionType::None
-		);
-		MenuBuilder.AddSubMenu(
-			LOCTEXT("Layout", "Attach Layout"),
-			LOCTEXT("Layout_Tooltip", "Attach Layout to selected UI Element"),
-			FNewMenuDelegate::CreateRaw(this, &FLGUIEditorModule::AttachLayout),
-			FUIAction(FExecuteAction()
-				, FCanExecuteAction()
-				, FGetActionCheckState()
-				, FIsActionButtonVisible::CreateRaw(this, &FLGUIEditorModule::CanAttachLayout)),
-			NAME_None, EUserInterfaceActionType::None
 		);
 	}
 	MenuBuilder.EndSection();
@@ -1588,56 +1517,6 @@ void FLGUIEditorModule::ChangeTraceChannelSubMenu(FMenuBuilder& MenuBuilder)
 		// 		);
 		// 	}
 		// }
-	}
-	MenuBuilder.EndSection();
-}
-
-void FLGUIEditorModule::AttachLayout(FMenuBuilder& MenuBuilder)
-{
-	MenuBuilder.BeginSection("Layout");
-	{
-		MenuBuilder.AddMenuEntry(
-			LOCTEXT("AttachLayout_HorizontalLayout", "Horizontal Layout"),
-			LOCTEXT("AttachLayout_HorizontalLayout_Tooltip", "Layout child elements side by side horizontally"),
-			FSlateIcon(),
-			FUIAction(FExecuteAction::CreateStatic(&LGUIEditorTools::AttachComponentToSelectedActor, TSubclassOf<UActorComponent>(UUIHorizontalLayout::StaticClass())))
-		);
-		MenuBuilder.AddMenuEntry(
-			LOCTEXT("AttachLayout_VerticalLayout", "Vertical Layout"),
-			LOCTEXT("AttachLayout_VerticalLayout_Tooltip", "Layout child elements side by side vertically"),
-			FSlateIcon(),
-			FUIAction(FExecuteAction::CreateStatic(&LGUIEditorTools::AttachComponentToSelectedActor, TSubclassOf<UActorComponent>(UUIVerticalLayout::StaticClass())))
-		);
-		MenuBuilder.AddMenuEntry(
-			LOCTEXT("AttachLayout_GridLayout", "Grid Layout"),
-			LOCTEXT("AttachLayout_GridLayout_Tooltip", "Layout child elements in grid"),
-			FSlateIcon(),
-			FUIAction(FExecuteAction::CreateStatic(&LGUIEditorTools::AttachComponentToSelectedActor, TSubclassOf<UActorComponent>(UUIGridLayout::StaticClass())))
-		);
-		MenuBuilder.AddMenuEntry(
-			LOCTEXT("AttachLayout_RoundedLayout", "Rounded Layout"),
-			LOCTEXT("AttachLayout_RoundedLayout_Tooltip", "Rounded layout, only affect children's position and angle, not affect size"),
-			FSlateIcon(),
-			FUIAction(FExecuteAction::CreateStatic(&LGUIEditorTools::AttachComponentToSelectedActor, TSubclassOf<UActorComponent>(UUIRoundedLayout::StaticClass())))
-		);
-		MenuBuilder.AddMenuEntry(
-			LOCTEXT("AttachLayout_LayoutElement", "Layout Element"),
-			LOCTEXT("AttachLayout_LayoutElement_Tooltip", "Attach to layout's child, make it specific or ignore layout"),
-			FSlateIcon(),
-			FUIAction(FExecuteAction::CreateStatic(&LGUIEditorTools::AttachComponentToSelectedActor, TSubclassOf<UActorComponent>(UUILayoutElement::StaticClass())))
-		);
-		MenuBuilder.AddMenuEntry(
-			LOCTEXT("AttachLayout_SizeControlByAspectRatio", "Size Control by Aspect Ratio"),
-			LOCTEXT("AttachLayout_SizeControlByAspectRatio_Tooltip", "Use aspect ratio to control with and height"),
-			FSlateIcon(),
-			FUIAction(FExecuteAction::CreateStatic(&LGUIEditorTools::AttachComponentToSelectedActor, TSubclassOf<UActorComponent>(UUISizeControlByAspectRatio::StaticClass())))
-		);
-		MenuBuilder.AddMenuEntry(
-			LOCTEXT("AttachLayout_SizeControlByChildren", "Size Control by Children"),
-			LOCTEXT("AttachLayout_SizeControlByyChildren_Tooltip", "Control this UI's size by biggest size of it's children"),
-			FSlateIcon(),
-			FUIAction(FExecuteAction::CreateStatic(&LGUIEditorTools::AttachComponentToSelectedActor, TSubclassOf<UActorComponent>(UUISizeControlByChildren::StaticClass())))
-		);
 	}
 	MenuBuilder.EndSection();
 }

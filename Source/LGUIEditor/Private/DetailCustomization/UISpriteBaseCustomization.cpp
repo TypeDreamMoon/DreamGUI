@@ -124,7 +124,7 @@ void FUISpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 					{
 						item->Modify();
 						item->SetSizeFromSpriteData();
-						FLexUIUtils::NotifyPropertyChanged(item.Get(), ULexWidget::GetAnchorDataPropertyName());
+						FLexUIUtils::NotifyPropertyChanged(item.Get(), ULexWidget::GetSizePropertyName());
 						item->GetWidget()->EditorForceUpdate();
 					}
 				}

@@ -26,7 +26,7 @@ protected:
 #endif
 	virtual void UpdateGeometry()override;
 
-	virtual void OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
+	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
 
 	void MarkVertexPositionDirty();
 

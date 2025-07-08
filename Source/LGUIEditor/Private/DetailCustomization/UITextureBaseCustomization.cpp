@@ -125,7 +125,7 @@ void FUITextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
 					{
 						item->Modify();
 						item->SetSizeFromTexture();
-						FLexUIUtils::NotifyPropertyChanged(item.Get(), ULexWidget::GetAnchorDataPropertyName());
+						FLexUIUtils::NotifyPropertyChanged(item.Get(), ULexWidget::GetSizePropertyName());
 						item->GetWidget()->EditorForceUpdate();
 					}
 				}

@@ -32,7 +32,7 @@ protected:
 	TSharedPtr<FLexUIGeometry> geometry = nullptr;
 	virtual void UpdateGeometry()override final;
 
-	virtual void OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
+	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
 
 	virtual void MarkAllDirty()override;
 

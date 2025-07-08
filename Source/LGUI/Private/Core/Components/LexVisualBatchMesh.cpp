@@ -56,9 +56,9 @@ void ULexVisualBatchMesh::PostEditChangeProperty(FPropertyChangedEvent& Property
 }
 #endif
 
-void ULexVisualBatchMesh::OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange)
+void ULexVisualBatchMesh::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
 {
-    Super::OnAnchorChange(InPivotChange, InWidthChange, InHeightChange);
+    Super::OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
 	if (InPivotChange || InWidthChange || InHeightChange)
     {
         MarkVertexPositionDirty();
