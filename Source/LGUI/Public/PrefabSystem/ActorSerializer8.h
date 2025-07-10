@@ -81,28 +81,28 @@ namespace LGUIPrefabSystem8
 	{
 	public:
 		FGuid RootActorGuidInParentPrefab;
-		FGuid ObjectGuidInOrignPrefab;
+		FGuid ObjectGuidInOriginPrefab;
 
 		bool operator==(const FLGUISubPrefabObjectUniqueIdSaveData& other)const
 		{
-			return this->RootActorGuidInParentPrefab == other.RootActorGuidInParentPrefab && this->ObjectGuidInOrignPrefab == other.ObjectGuidInOrignPrefab;
+			return this->RootActorGuidInParentPrefab == other.RootActorGuidInParentPrefab && this->ObjectGuidInOriginPrefab == other.ObjectGuidInOriginPrefab;
 		}
 		friend FORCEINLINE uint32 GetTypeHash(const FLGUISubPrefabObjectUniqueIdSaveData& other)
 		{
-			return HashCombine(GetTypeHash(other.RootActorGuidInParentPrefab), GetTypeHash(other.ObjectGuidInOrignPrefab));
+			return HashCombine(GetTypeHash(other.RootActorGuidInParentPrefab), GetTypeHash(other.ObjectGuidInOriginPrefab));
 		}
 
 		friend FArchive& operator<<(FArchive& Ar, FLGUISubPrefabObjectUniqueIdSaveData& Data)
 		{
 			Ar << Data.RootActorGuidInParentPrefab;
-			Ar << Data.ObjectGuidInOrignPrefab;
+			Ar << Data.ObjectGuidInOriginPrefab;
 			return Ar;
 		}
 		friend void operator<<(FStructuredArchive::FSlot Slot, FLGUISubPrefabObjectUniqueIdSaveData& Data)
 		{
 			FStructuredArchive::FRecord Record = Slot.EnterRecord();
 			Record << SA_VALUE(TEXT("RootActorGuidInParentPrefab"), Data.RootActorGuidInParentPrefab);
-			Record << SA_VALUE(TEXT("ObjectGuidInOrignPrefab"), Data.ObjectGuidInOrignPrefab);
+			Record << SA_VALUE(TEXT("ObjectGuidInOriginPrefab"), Data.ObjectGuidInOriginPrefab);
 		}
 	};
 

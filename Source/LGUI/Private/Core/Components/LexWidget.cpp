@@ -482,11 +482,30 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 	if (PropertyChangedEvent.Property != nullptr)
 	{
 		MarkAllDirtyRecursive();
-		auto PropertyName = PropertyChangedEvent.Property->GetFName();
+		auto MemberName = PropertyChangedEvent.GetMemberPropertyName();
+		auto PropertyName = PropertyChangedEvent.GetPropertyName();
 
+		static const FName AspectRatioName = GET_MEMBER_NAME_CHECKED(ULexWidget, AspectRatio);
+		static const FName WidthName = GET_MEMBER_NAME_CHECKED(ULexWidget, Width);
+		static const FName HeightName = GET_MEMBER_NAME_CHECKED(ULexWidget, Height);
+		static const FName VisibilityName = GET_MEMBER_NAME_CHECKED(ULexWidget, WidgetVisibility);
+		static const FName ClippingName = GET_MEMBER_NAME_CHECKED(ULexWidget, Clipping);
 		static const FName VisualName = GET_MEMBER_NAME_CHECKED(ULexWidget, Visual);
-		
-		if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexWidget, bIsUIActive))
+
+		if (MemberName == AspectRatioName
+		|| MemberName == WidthName
+		|| MemberName == HeightName
+		|| MemberName == VisibilityName
+		)
+		{
+			this->MarkSizeDirty_Recursive();
+			this->MarkClipDirty_Recursive(false);
+		}
+		else if (PropertyName == ClippingName)
+		{
+			MarkClipDirty_Recursive(true);
+		}
+		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexWidget, bIsUIActive))
 		{
 			bIsUIActive = !bIsUIActive;//make it work
 			SetIsUIActive(!bIsUIActive);
@@ -507,14 +526,6 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		}
 		EditorForceUpdate();
 		UpdateBounds();
-		if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexWidget, Clipping))
-		{
-			MarkClipDirty_Recursive(true);
-		}
-		else
-		{
-			MarkClipDirty_Recursive(false);
-		}
 	}
 }
 
@@ -583,7 +594,7 @@ FBoxSphereBounds ULexWidget::CalcBounds(const FTransform& LocalToWorld) const
 {
 	auto Center = this->GetLocalSpaceCenter();
 	auto Origin = FVector(0, Center.X, Center.Y);
-	return FBoxSphereBounds(Origin, FVector(1, this->GetWidth() * 0.5f, this->GetHeight() * 0.5f), (this->GetWidth() > this->GetHeight() ? this->GetWidth() : this->GetHeight()) * 0.5f).TransformBy(LocalToWorld);
+	return FBoxSphereBounds(Origin, FVector(1, this->GetRenderWidth() * 0.5f, this->GetRenderHeight() * 0.5f), (this->GetRenderWidth() > this->GetRenderHeight() ? this->GetRenderWidth() : this->GetRenderHeight()) * 0.5f).TransformBy(LocalToWorld);
 }
 void ULexWidget::EditorForceUpdate()
 {
@@ -694,7 +705,7 @@ void ULexWidget::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, E
 	{
 		//This is mainly to mark LGUICanvas's bIsViewProjectionMatrixDirty to true.
 		//For the condition LGUI_Tutorials/Tutorials/UIRenderTarget, when move LGUIRenderTarget1 at runtime, the LGUICanvas's RenderTarget's matrix not update, result in wrong interaction.
-		this->RenderCanvas->MarkCanvasLayoutDirty();
+		this->RenderCanvas->MarkSizeChanged();
 	}
 	MarkTransformChanged(true, true);
 	OnTransformChanged.Broadcast();
@@ -1262,6 +1273,132 @@ void ULexWidget::OnRenderCanvasChanged(ULexCanvas* OldCanvas, ULexCanvas* NewCan
 	}
 }
 
+void ULexWidget::CalculateRenderSize()
+{
+	bool LayoutSlotValid = CheckAndGetLayoutSlot() != nullptr;
+	if (!LayoutSlotValid || !LayoutSlot->GetLayoutControlWidth())
+	{
+		switch (Width.Type)
+		{
+		case ELexWidgetSizeType::Fixed:
+			RenderSize.X = Width.Value;
+			break;
+		case ELexWidgetSizeType::ExpandToParent:
+			if (UIParent.IsValid())
+			{
+				if (UIParent->Width.Type == ELexWidgetSizeType::ShrinkToChildren)
+				{
+					RenderSize.X = Width.Value;
+				}
+				else
+				{
+					RenderSize.X = UIParent->GetRenderSize().X
+					- (UIParent->GetPadding().Left + UIParent->GetPadding().Right);
+					RenderSize.X *= Width.Percent * 0.01f;
+				}
+			}
+			else
+			{
+				RenderSize.X = Width.Value;
+			}
+			break;
+		case ELexWidgetSizeType::ShrinkToChildren:
+			if (IsValid(Layout) && Layout->SupportShrinkToChildrenWidth() && this->IsVisibleForLayout())
+			{
+				RenderSize.X = Layout->GetShrinkToChildrenWidth();
+			}
+			else if (UIChildren.Num() > 0)
+			{
+				float MaxSize = 0;
+				for (auto& Child : UIChildren)
+				{
+					auto ChildSize = Child->GetRenderSize().X + (Child->GetMargin().Left + Child->GetMargin().Right);
+					if (MaxSize < ChildSize)
+					{
+						MaxSize = ChildSize;
+					}
+				}
+				RenderSize.X = MaxSize + (this->GetPadding().Left + this->GetPadding().Right);
+			}
+			else if (IsValid(Visual))
+			{
+				RenderSize.X = Visual->GetShrinkToContentWidth();
+			}
+			else
+			{
+				RenderSize.X = Width.Value;
+			}
+			break;
+		}
+	}
+	if (!LayoutSlotValid || !LayoutSlot->GetLayoutControlHeight())
+	{
+		switch (Height.Type)
+		{
+		case ELexWidgetSizeType::Fixed:
+			RenderSize.Y = Height.Value;
+			break;
+		case ELexWidgetSizeType::ExpandToParent:
+			if (UIParent.IsValid())
+			{
+				if (UIParent->Height.Type == ELexWidgetSizeType::ShrinkToChildren)
+				{
+					RenderSize.Y = Height.Value;
+				}
+				else
+				{
+					RenderSize.Y = UIParent->GetRenderSize().Y
+					- (UIParent->GetPadding().Bottom + UIParent->GetPadding().Top);
+					RenderSize.Y *= Height.Percent * 0.01f;
+				}
+			}
+			else
+			{
+				RenderSize.Y = Height.Value;
+			}
+			break;
+		case ELexWidgetSizeType::ShrinkToChildren:
+			if (IsValid(Layout) && Layout->SupportShrinkToChildrenHeight() && this->IsVisibleForLayout())
+			{
+				RenderSize.Y = Layout->GetShrinkToChildrenHeight();
+			}
+			else if (UIChildren.Num() > 0)
+			{
+				float MaxSize = 0;
+				for (auto& Child : UIChildren)
+				{
+					auto ChildSize = Child->GetRenderSize().Y + (Child->GetMargin().Bottom + Child->GetMargin().Top);
+					if (MaxSize < ChildSize)
+					{
+						MaxSize = ChildSize;
+					}
+				}
+				RenderSize.Y = MaxSize + (this->GetPadding().Bottom + this->GetPadding().Top);
+			}
+			else if (IsValid(Visual))
+			{
+				RenderSize.Y = Visual->GetShrinkToContentHeight();
+			}
+			else
+			{
+				RenderSize.Y = Height.Value;
+			}
+			break;
+		}
+	}
+	switch (AspectRatio.Type)
+	{
+	case ELexWidgetAspectRatioType::None:
+		break;
+	case ELexWidgetAspectRatioType::HeightControlWidth:
+		RenderSize.X = RenderSize.Y * AspectRatio.Value;
+		break;
+	case ELexWidgetAspectRatioType::WidthControlHeight:
+		RenderSize.Y = RenderSize.X / AspectRatio.Value;
+		break;
+	}
+} 
+
 void ULexWidget::CheckRootUIItem(ULexWidget* RootUIItemInParent)
 {
 	auto oldRootUIItem = RootUIItem;
@@ -1298,53 +1435,87 @@ void ULexWidget::UnregisterUIHierarchyChanged(const FDelegateHandle& InHandle)
 	UIHierarchyChangedDelegate.Remove(InHandle);
 }
 
-void ULexWidget::SetWidth(float Value)
+float ULexWidget::GetRenderWidth() const
 {
-	if (CheckAndGetLayoutSlot())
-	{
-		if (LayoutSlot->GetLayoutControlWidth())
-		{
-			UE_LOG(LGUI, Warning, TEXT("[%s] Width is controlled by LayoutSlot"), ANSI_TO_TCHAR(__FUNCTION__));
-			return;
-		}
-	}
-	if (Size.X != Value)
-	{
-		Size.X = Value;
-		MarkDimensionChanged(false, true, false);
-	}
+	return GetRenderSize().X;
 }
-void ULexWidget::SetHeight(float Value)
+
+float ULexWidget::GetRenderHeight() const
 {
-	if (CheckAndGetLayoutSlot())
+	return GetRenderSize().Y;
+}
+FVector2D ULexWidget::GetRenderSize() const
+{
+	if (bRenderSizeDirty)
 	{
-		if (LayoutSlot->GetLayoutControlHeight())
-		{
-			UE_LOG(LGUI, Warning, TEXT("[%s] Height is controlled by LayoutSlot"), ANSI_TO_TCHAR(__FUNCTION__));
-			return;
-		}
+		bRenderSizeDirty = false;
+		const_cast<ULexWidget*>(this)->CalculateRenderSize();
 	}
-	if (Size.Y != Value)
+	return RenderSize;
+}
+
+void ULexWidget::SetRenderSizeByLayout(FVector2D Value)
+{
+	if (RenderSize != Value)
 	{
-		Size.Y = Value;
-		MarkDimensionChanged(false, false, true);
+		RenderSize = Value;
+		bRenderSizeDirty = false;
+		MarkDimensionChanged(false, true, true);
 	}
 }
 
-void ULexWidget::SetSize(FVector2D Value)
+void ULexWidget::SetAspectRatio(const FLexWidgetAspectRatio& Value)
 {
-	if (CheckAndGetLayoutSlot())
+	if (AspectRatio != Value)
 	{
-		if (LayoutSlot->GetLayoutControlHeight() || LayoutSlot->GetLayoutControlWidth())
-		{
-			UE_LOG(LGUI, Warning, TEXT("[%s] Width or Height is controlled by LayoutSlot"), ANSI_TO_TCHAR(__FUNCTION__));
-			return;
-		}
+		AspectRatio = Value;
+		MarkSizeDirty_Recursive();
 	}
-	if (Size != Value)
+}
+
+void ULexWidget::SetWidth(const FLexWidgetSize& Value)
+{
+	if (Width != Value)
 	{
-		Size = Value;
-		MarkDimensionChanged(false, true, true);
+		Width = Value;
+		MarkSizeDirty_Recursive();
+	}
+}
+
+void ULexWidget::SetHeight(const FLexWidgetSize& Value)
+{
+	if (Height != Value)
+	{
+		Height = Value;
+		MarkSizeDirty_Recursive();
+	}
+}
+
+void ULexWidget::SetSize(const FLexWidgetSize2& Value)
+{
+	if (Width != Value.X || Height != Value.Y)
+	{
+		Width = Value.X;
+		Height = Value.Y;
+		MarkSizeDirty_Recursive();
+	}
+}
+
+void ULexWidget::SetPadding(const FMargin& Value)
+{
+	if (Padding != Value)
+	{
+		Padding = Value;
+		MarkSizeDirty_Recursive();
+	}
+}
+
+void ULexWidget::SetMargin(const FMargin& Value)
+{
+	if (Margin != Value)
+	{
+		Margin = Value;
+		MarkSizeDirty_Recursive();
 	}
 }
 
@@ -1378,37 +1549,37 @@ ULexCanvasScaler* ULexWidget::GetCanvasScaler()const
 FVector2D ULexWidget::GetLocalSpaceLeftBottomPoint()const
 {
 	FVector2D leftBottomPoint;
-	leftBottomPoint.X = GetWidth() * -Pivot.X;
-	leftBottomPoint.Y = GetHeight() * -Pivot.Y;
+	leftBottomPoint.X = GetRenderWidth() * -Pivot.X;
+	leftBottomPoint.Y = GetRenderHeight() * -Pivot.Y;
 	return leftBottomPoint;
 }
 FVector2D ULexWidget::GetLocalSpaceRightTopPoint()const
 {
 	FVector2D rightTopPoint;
-	rightTopPoint.X = GetWidth() * (1.0f - Pivot.X);
-	rightTopPoint.Y = GetHeight() * (1.0f - Pivot.Y);
+	rightTopPoint.X = GetRenderWidth() * (1.0f - Pivot.X);
+	rightTopPoint.Y = GetRenderHeight() * (1.0f - Pivot.Y);
 	return rightTopPoint;
 }
 FVector2D ULexWidget::GetLocalSpaceCenter()const
 {
-	return FVector2D(this->GetWidth() * (0.5f - Pivot.X), this->GetHeight() * (0.5f - Pivot.Y));
+	return FVector2D(this->GetRenderWidth() * (0.5f - Pivot.X), this->GetRenderHeight() * (0.5f - Pivot.Y));
 }
 
 float ULexWidget::GetLocalSpaceLeft()const
 {
-	return this->GetWidth() * -Pivot.X;
+	return this->GetRenderWidth() * -Pivot.X;
 }
 float ULexWidget::GetLocalSpaceRight()const
 {
-	return this->GetWidth() * (1.0f - Pivot.X);
+	return this->GetRenderWidth() * (1.0f - Pivot.X);
 }
 float ULexWidget::GetLocalSpaceBottom()const
 {
-	return this->GetHeight() * -Pivot.Y;
+	return this->GetRenderHeight() * -Pivot.Y;
 }
 float ULexWidget::GetLocalSpaceTop()const
 {
-	return this->GetHeight() * (1.0f - Pivot.Y);
+	return this->GetRenderHeight() * (1.0f - Pivot.Y);
 }
 
 void ULexWidget::MarkDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
@@ -1436,13 +1607,18 @@ void ULexWidget::MarkDimensionChanged(bool InPivotChange, bool InWidthChange, bo
 		this->RenderCanvas->MarkCanvasUpdate(false, InPivotChange || InWidthChange || InHeightChange, false);//mark canvas to update
 		if (this->IsCanvasUIItem())
 		{
-			this->RenderCanvas->MarkCanvasLayoutDirty();
+			this->RenderCanvas->MarkSizeChanged();
 		}
 	}
 
 	if (InWidthChange || InHeightChange)
 	{
-		//CallUILifeCycleBehavioursDimensionsChanged(HorizontalPositionChanged, VerticalPositionChanged, InWidthChange, InHeightChange);
+		CallUILifeCycleBehavioursDimensionsChanged(false, false, InWidthChange, InHeightChange);
+	}
+
+	if (UIParent.IsValid())
+	{
+		UIParent->OnChildDimensionChanged(this);
 	}
 
 	for (auto& UIChild : UIChildren)
@@ -1466,6 +1642,11 @@ void ULexWidget::MarkParentDimensionChanged(bool InParentPivotChange, bool InPar
 	}
 }
 
+void ULexWidget::MarkNeedUpdateLayout()
+{
+	GetRenderCanvas()->MarkCanvasUpdate(false, true, false, false);
+}
+
 void ULexWidget::MarkTransformChanged(bool InPositionChanged, bool InScaleChanged)
 {
 	if (ClipData.IsValid() && ClipData.Pin()->GetWidget() == this)
@@ -1477,7 +1658,7 @@ void ULexWidget::MarkTransformChanged(bool InPositionChanged, bool InScaleChange
 		this->RenderCanvas->MarkCanvasUpdate(false, true, false);//mark canvas to update
 		if (this->IsCanvasUIItem())
 		{
-			this->RenderCanvas->MarkCanvasLayoutDirty();
+			this->RenderCanvas->MarkSizeChanged();
 		}
 	}
 
@@ -1492,6 +1673,65 @@ void ULexWidget::MarkTransformChanged(bool InPositionChanged, bool InScaleChange
 		{
 			UIChild->MarkTransformChanged(InPositionChanged, InScaleChanged);
 		}
+	}
+}
+
+void ULexWidget::MarkSizeDirty_Recursive()
+{
+	struct LOCAL
+	{
+		static void MarkChildrenDirty(ULexWidget* Target)
+		{
+			Target->bRenderSizeDirty = true;
+			Target->MarkDimensionChanged(false, true, true);
+			if (IsValid(Target->Layout))
+			{
+				for (auto& Child : Target->GetUIChildren())
+				{
+					MarkChildrenDirty(Child);
+				}
+			}
+			else
+			{
+				for (auto& Child : Target->GetUIChildren())
+				{
+					if (Child->Width.Type == ELexWidgetSizeType::ExpandToParent
+						|| Child->Height.Type == ELexWidgetSizeType::ExpandToParent)
+					{
+						MarkChildrenDirty(Child);
+					}
+				}
+			}
+		}
+	};
+	auto ParentWithLayout = this;
+	while (ParentWithLayout)
+	{
+		auto TempParent = ParentWithLayout->GetUIParent();
+		if (TempParent && TempParent->GetLayout())
+		{
+			ParentWithLayout = TempParent;
+		}
+		else
+		{
+			break;
+		}
+	}
+	LOCAL::MarkChildrenDirty(ParentWithLayout);
+}
+
+void ULexWidget::OnChildDimensionChanged(ULexWidget* InChild)
+{
+	if (IsValid(Layout))
+	{
+		Layout->MarkLayoutDirty();
+	}
+
+	if (this->Width.Type == ELexWidgetSizeType::ShrinkToChildren
+		|| this->Height.Type == ELexWidgetSizeType::ShrinkToChildren)
+	{
+		this->bRenderSizeDirty = true;
+		this->MarkDimensionChanged(false, true, true);
 	}
 }
 
@@ -1772,7 +2012,7 @@ void ULexWidget::SetVisual(ULexVisual* Value)
 	}
 }
 
-ULexLayoutSlot* ULexWidget::CheckAndGetLayoutSlot()
+ULexLayoutSlot* ULexWidget::CheckAndGetLayoutSlot()const
 {
 	auto ClearLayoutSlot = [this]
 	{
@@ -1797,7 +2037,7 @@ ULexLayoutSlot* ULexWidget::CheckAndGetLayoutSlot()
 	auto LayoutSlotClass = ParentLayout->GetSlotClass();
 	if (!IsValid(LayoutSlot) || LayoutSlot->GetClass() != LayoutSlotClass)
 	{
-		LayoutSlot = NewObject<ULexLayoutSlot>(this, LayoutSlotClass, NAME_None, RF_Public | RF_Transactional);
+		LayoutSlot = NewObject<ULexLayoutSlot>(const_cast<ULexWidget*>(this), LayoutSlotClass, NAME_None, RF_Public | RF_Transactional);
 	}
 	return LayoutSlot;
 }
@@ -1920,69 +2160,6 @@ void ULexWidget::UnregisterUIActiveStateChanged(const FDelegateHandle& InHandle)
 
 #pragma region TweenAnimation
 #include "LTweenManager.h"
-ULTweener* ULexWidget::WidthTo(float endValue, float duration, float delay, ELTweenEase ease)
-{
-	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexWidget::GetWidth), FLTweenFloatSetterFunction::CreateUObject(this, &ULexWidget::SetWidth), endValue, duration);
-	if (Tweener)
-	{
-		bool bAffectByGamePause;
-		bool bAffectByTimeDilation;
-		if (this->IsScreenSpaceOverlayUI())
-		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-		}
-		else
-		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-		}
-		Tweener->SetEase(ease)->SetDelay(delay)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
-	}
-	return Tweener;
-}
-ULTweener* ULexWidget::HeightTo(float endValue, float duration, float delay, ELTweenEase ease)
-{
-	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexWidget::GetHeight), FLTweenFloatSetterFunction::CreateUObject(this, &ULexWidget::SetHeight), endValue, duration);
-	if (Tweener)
-	{
-		bool bAffectByGamePause;
-		bool bAffectByTimeDilation;
-		if (this->IsScreenSpaceOverlayUI())
-		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-		}
-		else
-		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-		}
-		Tweener->SetEase(ease)->SetDelay(delay)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
-	}
-	return Tweener;
-}
-ULTweener* ULexWidget::PivotTo(FVector2D endValue, float duration, float delay, ELTweenEase ease)
-{
-	auto Tweener = ULTweenManager::To(this, FLTweenVector2DGetterFunction::CreateUObject(this, &ULexWidget::GetPivot), FLTweenVector2DSetterFunction::CreateUObject(this, &ULexWidget::SetPivot), endValue, duration);
-	if (Tweener)
-	{
-		bool bAffectByGamePause;
-		bool bAffectByTimeDilation;
-		if (this->IsScreenSpaceOverlayUI())
-		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-		}
-		else
-		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-		}
-		Tweener->SetEase(ease)->SetDelay(delay)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
-	}
-	return Tweener;
-}
 
 ULTweener* ULexWidget::RenderOpacityTo(float endValue, float duration, float delay, ELTweenEase ease)
 {
@@ -2082,8 +2259,8 @@ void UUIItemEditorHelperComp::UpdateBodySetup()
 	auto Origin = FVector(0, Center.X, Center.Y);
 
 	BoxElem->X = 0.0f;
-	BoxElem->Y = Parent->GetWidth();
-	BoxElem->Z = Parent->GetHeight();
+	BoxElem->Y = Parent->GetRenderWidth();
+	BoxElem->Z = Parent->GetRenderHeight();
 
 	BoxElem->Center = Origin;
 }
@@ -2092,7 +2269,7 @@ FBoxSphereBounds UUIItemEditorHelperComp::CalcBounds(const FTransform& LocalToWo
 	if (!IsValid(Parent))return FBoxSphereBounds(EForceInit::ForceInit);
 	auto Center = Parent->GetLocalSpaceCenter();
 	auto Origin = FVector(0, Center.X, Center.Y);
-	return FBoxSphereBounds(Origin, FVector(1, Parent->GetWidth() * 0.5f, Parent->GetHeight() * 0.5f), (Parent->GetWidth() > Parent->GetHeight() ? Parent->GetWidth() : Parent->GetHeight()) * 0.5f).TransformBy(LocalToWorld);
+	return FBoxSphereBounds(Origin, FVector(1, Parent->GetRenderWidth() * 0.5f, Parent->GetRenderHeight() * 0.5f), (Parent->GetRenderWidth() > Parent->GetRenderHeight() ? Parent->GetRenderWidth() : Parent->GetRenderHeight()) * 0.5f).TransformBy(LocalToWorld);
 }
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION

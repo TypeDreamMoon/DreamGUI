@@ -87,7 +87,7 @@ float ULexUIMeshModifierHelper::UITextHelperFunction_GetCharHorizontalPositionRa
 		charPivotPos += originVertices[vertIndex].Position.Y;
 	}
 	charPivotPos /= charPropertyItem.VertCount;
-	return (charPivotPos - leftPos) / Widget->GetWidth();
+	return (charPivotPos - leftPos) / Widget->GetRenderWidth();
 }
 
 void ULexUIMeshModifierHelper::UITextHelperFunction_GetCharGeometry_AbsolutePosition(ULexText* InUIText, int InCharIndex, FVector& OutPosition)const

@@ -467,8 +467,8 @@ void UUIRecyclableScrollViewComponent::InitializeOnDataSource()
     }
         break;
     }
-    WorkingCellTemplateSize.X = WorkingCellTemplate->GetLexWidget()->GetWidth();
-    WorkingCellTemplateSize.Y = WorkingCellTemplate->GetLexWidget()->GetHeight();
+    WorkingCellTemplateSize.X = WorkingCellTemplate->GetLexWidget()->GetRenderWidth();
+    WorkingCellTemplateSize.Y = WorkingCellTemplate->GetLexWidget()->GetRenderHeight();
 
 
     if (OnScrollEventDelegateHandle.IsValid())
@@ -500,7 +500,7 @@ void UUIRecyclableScrollViewComponent::InitializeOnDataSource()
         VisibleCellCount = FMath::Min(VisibleCellCount, DataItemCount);
         int HorizontalCellCount = FMath::CeilToInt((float)DataItemCount / Rows);
         float ContentSize = HorizontalCellCount * CellWidth + (HorizontalCellCount - 1) * Space.X + Padding.Left + Padding.Right;
-        ContentUIItem->SetWidth(ContentSize);
+        ContentUIItem->SetWidth(FLexWidgetSize::MakeFixed(ContentSize));
     }
     else
     {
@@ -524,7 +524,7 @@ void UUIRecyclableScrollViewComponent::InitializeOnDataSource()
         VisibleCellCount = FMath::Min(VisibleCellCount, DataItemCount);
         int VerticalCellCount = FMath::CeilToInt((float)DataItemCount / Columns);
         float ContentSize = VerticalCellCount * CellHeight + (VerticalCellCount - 1) * Space.Y + Padding.Bottom + Padding.Top;
-        ContentUIItem->SetHeight(ContentSize);
+        ContentUIItem->SetHeight(FLexWidgetSize::MakeFixed(ContentSize));
     }
     auto WorkingCellLayout = Cast<ULexLayoutAnchorSlot>(WorkingCellTemplate->GetLexWidget()->GetLayoutSlot());
     WorkingCellLayout->SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.0f, 1.0f), FVector2D(0.0f, 1.0f), true, true);
@@ -535,14 +535,14 @@ void UUIRecyclableScrollViewComponent::InitializeOnDataSource()
     if (Horizontal)
     {
         CellWidth = WorkingCellTemplateSize.X;
-        CellHeight = (ContentUIItem->GetHeight() 
+        CellHeight = (ContentUIItem->GetRenderHeight() 
             - (Padding.Top + Padding.Bottom)//padding
             - (Rows - 1) * Space.Y//space
             ) / Rows;
     }
     else
     {
-        CellWidth = (ContentUIItem->GetWidth()
+        CellWidth = (ContentUIItem->GetRenderWidth()
             - (Padding.Left + Padding.Right)//padding
             - (Columns - 1) * Space.X//space
             ) / Columns;
@@ -590,7 +590,7 @@ void UUIRecyclableScrollViewComponent::InitializeOnDataSource()
         IUIRecyclableScrollViewDataSource::Execute_SetCell(DataSource, CellItem.CellComponent, i);
         if (Horizontal)
         {
-            CellItem.UIItem->SetHeight(CellHeight);
+            CellItem.UIItem->SetHeight(FLexWidgetSize::MakeFixed(CellHeight));
             auto AnchoredPosition = FVector2D(
                 PosX + CellItem.UIItem->GetPivot().X * CellWidth
                 , PosY - (1.0f - CellItem.UIItem->GetPivot().Y) * CellHeight);
@@ -609,7 +609,7 @@ void UUIRecyclableScrollViewComponent::InitializeOnDataSource()
         }
         else
         {
-            CellItem.UIItem->SetWidth(CellWidth);
+            CellItem.UIItem->SetWidth(FLexWidgetSize::MakeFixed(CellWidth));
             auto AnchoredPosition = FVector2D(
                 PosX + CellItem.UIItem->GetPivot().X * CellWidth
                 , PosY - (1.0f - CellItem.UIItem->GetPivot().Y) * CellHeight);

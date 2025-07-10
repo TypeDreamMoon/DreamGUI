@@ -118,7 +118,7 @@ private:
 	TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> GetRenderTargetViewExtension();
 public:
 	/** mark canvas layout dirty */
-	void MarkCanvasLayoutDirty();
+	void MarkSizeChanged();
 	/**
 	 * Mark update this Canvas. Canvas dont need to update every frame, only update when need to.
 	 * Some rules if update could trigger drawcall's rebuild:
@@ -437,6 +437,7 @@ public:
 	void RemoveLexWidget(ULexWidget* InUIItem);
 	/** return all UIItem that belongs to this canvas. */
 	const TArray<ULexWidget*>& GetVisualWidgetArray()const { return VisualWidgetList; }
+	const TArray<ULexWidget*>& GetWidgetArray()const { return WidgetList; }
 
 	void SetRequireNormalAndTangent(bool Value);
 
@@ -505,9 +506,9 @@ private:
 	TArray<TSharedPtr<FLexUIDrawCall>> CacheUIDrawCallList;//Cached DrawCall collection.
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	TArray<TObjectPtr<ULexWidget>> VisualWidgetList;//Use UIItem instead of UIBaseRenderable, because we need UIItem to get sub-canvas.
-	bool bNeedToGenerateRenderWidgetList = true;
+	bool bNeedToGenerateWidgetList = true;
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
-	TArray<TObjectPtr<ULexWidget>> RenderWidgetList;//All UIItem that belongs to this canvas
+	TArray<TObjectPtr<ULexWidget>> WidgetList;//All UIItem that belongs to this canvas
 	TSharedPtr<FLexUIDrawCall> DrawCallAsChildCanvas = nullptr;//DrawCall that represent this canvas when the canvas is render as child.
 	TAtomic<int> ThreadProcessingGeometryCount;
 

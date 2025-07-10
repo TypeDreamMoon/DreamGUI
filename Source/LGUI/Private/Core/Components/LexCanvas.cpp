@@ -220,7 +220,7 @@ void ULexCanvas::UpdateRootCanvas()
 
 void ULexCanvas::UpdateRenderTarget(bool CallEvent)
 {
-	FIntPoint DesiredRenderTargetSize(LexWidget->GetWidth() * RenderTargetResolutionScale, LexWidget->GetHeight() * RenderTargetResolutionScale);
+	FIntPoint DesiredRenderTargetSize(LexWidget->GetRenderWidth() * RenderTargetResolutionScale, LexWidget->GetRenderHeight() * RenderTargetResolutionScale);
 	static const int32 MaxAllowedDrawSize = GetMax2DTextureDimension();
 	if (DesiredRenderTargetSize.X <= 0 || DesiredRenderTargetSize.Y <= 0)
 	{
@@ -449,13 +449,13 @@ void ULexCanvas::SetParentCanvas(ULexCanvas* InParentCanvas)
 			this->DrawCallAsChildCanvas = nullptr;
 
 			ParentCanvas->ChildrenCanvasArray.Remove(this);
-			ParentCanvas->bNeedToGenerateRenderWidgetList = true;
+			ParentCanvas->bNeedToGenerateWidgetList = true;
 			ParentCanvas->MarkCanvasUpdate(false, false, true, true);
 		}
 		ParentCanvas = InParentCanvas;
 		if (ParentCanvas.IsValid())
 		{
-			ParentCanvas->bNeedToGenerateRenderWidgetList = true;
+			ParentCanvas->bNeedToGenerateWidgetList = true;
 			ParentCanvas->ChildrenCanvasArray.AddUnique(this);
 			ParentCanvas->MarkCanvasUpdate(false, false, true, true);
 		}
@@ -547,7 +547,7 @@ void ULexCanvas::OnUIActiveStateChanged(bool value)
 	{
 		if (ParentCanvas.IsValid())
 		{
-			ParentCanvas->bNeedToGenerateRenderWidgetList = true;
+			ParentCanvas->bNeedToGenerateWidgetList = true;
 			ParentCanvas->MarkCanvasUpdate(false, false, true//why make this to true? becase we need to sort UIRenderableList, and set bShouldSortRenderableOrder to true can do it
 				, true);
 
@@ -557,7 +557,7 @@ void ULexCanvas::OnUIActiveStateChanged(bool value)
 	{
 		if (ParentCanvas.IsValid())
 		{
-			ParentCanvas->bNeedToGenerateRenderWidgetList = true;
+			ParentCanvas->bNeedToGenerateWidgetList = true;
 			ParentCanvas->MarkCanvasUpdate(false, false, false, true);
 		}
 	}
@@ -755,12 +755,12 @@ void ULexCanvas::UnregisterVisual(ULexWidget* InWidget)
 
 void ULexCanvas::AddLexWidget(ULexWidget* InUIItem)
 {
-	bNeedToGenerateRenderWidgetList = true;
+	bNeedToGenerateWidgetList = true;
 	MarkCanvasUpdate(false, false, false);
 }
 void ULexCanvas::RemoveLexWidget(ULexWidget* InUIItem)
 {
-	bNeedToGenerateRenderWidgetList = true;
+	bNeedToGenerateWidgetList = true;
 	MarkCanvasUpdate(false, false, false);
 }
 
@@ -1077,9 +1077,9 @@ void ULexCanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, co
 	};
 
 	//for sorted ui items, iterate from head to tail, compare draw-call from tail to head
-	for (int i = 0; i < RenderWidgetList.Num(); i++)
+	for (int i = 0; i < WidgetList.Num(); i++)
 	{
-		auto& Item = RenderWidgetList[i];
+		auto& Item = WidgetList[i];
 		//check(Item->GetIsUIActiveInHierarchy());
 		if (!Item->GetIsUIActiveInHierarchy())continue;
 		
@@ -1271,7 +1271,7 @@ void ULexCanvas::SetOverrideProjectionMatrix(bool InOverride, FMatrix InValue)
 	OverrideProjectionMatrix = InValue;
 }
 
-void ULexCanvas::MarkCanvasLayoutDirty()
+void ULexCanvas::MarkSizeChanged()
 {
 	bIsViewProjectionMatrixDirty = true;
 }
@@ -1357,9 +1357,9 @@ bool ULexCanvas::UpdateCanvasDrawCallRecursive()
 			{
 				if (Widget->GetIsUIActiveInHierarchy())
 				{
-					if ((Widget->IsCanvasUIItem() && Widget->GetRenderCanvas() != ThisCanvas)//is child canvas
-					|| Widget->GetVisual()//is visual
-					)
+					// if ((Widget->IsCanvasUIItem() && Widget->GetRenderCanvas() != ThisCanvas)//is child canvas
+					// || Widget->GetVisual()//is visual
+					// )
 					{
 						WidgetCollection.Add(Widget);
 					}
@@ -1370,12 +1370,12 @@ bool ULexCanvas::UpdateCanvasDrawCallRecursive()
 				}
 			}
 		};
-		if (bNeedToGenerateRenderWidgetList)
+		if (bNeedToGenerateWidgetList)
 		{
-			RenderWidgetList.Reset();
-			LOCAL::CollectRenderWidget(this->LexWidget.Get(), this, RenderWidgetList);
+			WidgetList.Reset();
+			LOCAL::CollectRenderWidget(this->LexWidget.Get(), this, WidgetList);
 		}
-		for (const auto& Widget : RenderWidgetList)
+		for (const auto& Widget : WidgetList)
 		{
 			Widget->UpdateLayout();
 			Widget->UpdateClip(ClipDataAsTexture, ClipDataList);
@@ -1433,8 +1433,8 @@ bool ULexCanvas::UpdateCanvasDrawCallRecursive()
 
 			//rect size minimal at 100, so UIQuadTree can work properly (prevent too small rect)
 			//@todo: use a better size, maybe screen size (only for screen space UI)
-			const auto Width = FMath::Max(LexWidget->GetWidth(), 100.0f);
-			const auto Height = FMath::Max(LexWidget->GetHeight(), 100.0f);
+			const auto Width = FMath::Max(LexWidget->GetRenderWidth(), 100.0f);
+			const auto Height = FMath::Max(LexWidget->GetRenderHeight(), 100.0f);
 			FVector2D LeftBottomPoint;
 			LeftBottomPoint.X = Width * -LexWidget->GetPivot().X;
 			LeftBottomPoint.Y = Height * -LexWidget->GetPivot().Y;
@@ -2433,7 +2433,7 @@ float ULexCanvas::CalculateDistanceToCamera()const
 	}
 	else
 	{
-		return LexWidget->GetWidth() * 0.5f / FMath::Tan(FMath::DegreesToRadians(FOVAngle * 0.5f)) * LexWidget->GetComponentScale().X;
+		return LexWidget->GetRenderWidth() * 0.5f / FMath::Tan(FMath::DegreesToRadians(FOVAngle * 0.5f)) * LexWidget->GetComponentScale().X;
 	}
 }
 FMatrix ULexCanvas::GetViewProjectionMatrix()const
@@ -2467,7 +2467,7 @@ FMatrix ULexCanvas::GetProjectionMatrix()const
 
 	FMatrix ProjectionMatrix = FMatrix::Identity;
 	const float FOV = (bOverrideFovAngle ? OverrideFovAngle : FOVAngle) * (float)PI / 360.0f;
-	BuildProjectionMatrix(FIntPoint(LexWidget->GetWidth(), LexWidget->GetHeight()), ProjectionType, FOV, FarClipPlane, NearClipPlane, ProjectionMatrix);
+	BuildProjectionMatrix(FIntPoint(LexWidget->GetRenderWidth(), LexWidget->GetRenderHeight()), ProjectionType, FOV, FarClipPlane, NearClipPlane, ProjectionMatrix);
 	return ProjectionMatrix;
 }
 FVector ULexCanvas::GetViewLocation()const
@@ -2494,8 +2494,8 @@ FIntPoint ULexCanvas::GetViewportSize()const
 		{
 			if (CheckUIItem())
 			{
-				ViewportSize.X = LexWidget->GetWidth();
-				ViewportSize.Y = LexWidget->GetHeight();
+				ViewportSize.X = LexWidget->GetRenderWidth();
+				ViewportSize.Y = LexWidget->GetRenderHeight();
 			}
 		}
 		else

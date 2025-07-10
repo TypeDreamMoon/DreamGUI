@@ -89,7 +89,7 @@ namespace LGUIPrefabSystem8
 		{
 			auto& Actor = TrySerializeActorArray[i];
 			FLGUIActorSaveData ActorSaveData;
-			if (auto SubPrefabDataPtr = SubPrefabMap.Find(Actor))//sub prefab's actor is not collected in WillSerailizeActorArray
+			if (auto SubPrefabDataPtr = SubPrefabMap.Find(Actor))//sub prefab's actor is not collected in WillSerializeActorArray
 			{
 				ActorSaveData.bIsPrefab = true;
 				ActorSaveData.PrefabAssetIndex = FindOrAddAssetIdFromList(SubPrefabDataPtr->PrefabAsset);
@@ -111,7 +111,7 @@ namespace LGUIPrefabSystem8
 				}
 				for (auto& DataItem : SubPrefabDataPtr->MapObjectIdToNewlyCreatedId)
 				{
-					ActorSaveData.MapObjectIdToNewlyCreatedId.Add({ DataItem.Key.RootActorGuidInParentPrefab, DataItem.Key.ObjectGuidInOrignPrefab }, DataItem.Value);
+					ActorSaveData.MapObjectIdToNewlyCreatedId.Add({ DataItem.Key.RootActorGuidInParentPrefab, DataItem.Key.ObjectGuidInOriginPrefab }, DataItem.Value);
 				}
 
 				if (auto RootComp = Actor->GetRootComponent())
@@ -157,7 +157,7 @@ namespace LGUIPrefabSystem8
 			LGUIPrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(OriginRootActor->GetWorld());
 		}
 		CollectActorRecursive(OriginRootActor);
-		//serailize actor
+		//serialize actor
 		SerializeActorArray(OutData.MapSceneComponentToParent, OutData.SavedActors, OutData.SavedObjectData);
 		//serialize objects and components
 		SerializeObjectArray(OutData.SavedObjects, OutData.SavedObjectData, OutData.MapSceneComponentToParent);
@@ -265,8 +265,8 @@ namespace LGUIPrefabSystem8
 			if (Actor->bIsEditorOnlyActor)return;
 		}
 		//collect actor
-		bool bIsSubprefabActor = SubPrefabActorArray.Contains(Actor);
-		if (!bIsSubprefabActor)//sub prefab's actor should not put to the list
+		bool bIsSubPrefabActor = SubPrefabActorArray.Contains(Actor);
+		if (!bIsSubPrefabActor)//sub prefab's actor should not put to the list
 		{
 			WillSerializeActorArray.Add(Actor);//sub-prefab just keep a reference, no need to serialize
 			TrySerializeActorArray.Add(Actor);

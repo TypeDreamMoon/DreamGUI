@@ -7,14 +7,11 @@
 UE_DISABLE_OPTIMIZATION
 #endif
 
-ULexLayout::ULexLayout()
-{
-}
-
 #if WITH_EDITOR
 void ULexLayout::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	UObject::PostEditChangeProperty(PropertyChangedEvent);
+	GetWidget()->MarkSizeDirty_Recursive();
 }
 bool ULexLayout::CanEditChange(const FProperty* InProperty) const
 {
@@ -40,6 +37,7 @@ void ULexLayout::UpdateLayout()
 void ULexLayoutSlot::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
 {
 	UObject::PostEditChangeProperty(PropertyChangedEvent);
+	GetWidget()->MarkSizeDirty_Recursive();
 }
 #endif
 

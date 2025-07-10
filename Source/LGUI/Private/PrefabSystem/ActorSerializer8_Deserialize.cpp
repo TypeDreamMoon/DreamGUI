@@ -684,7 +684,7 @@ namespace LGUIPrefabSystem8
 									//convert data to save
 									for (auto& DataItem : InActorData.MapObjectIdToNewlyCreatedId)
 									{
-										SubPrefabData.MapObjectIdToNewlyCreatedId.Add({ DataItem.Key.RootActorGuidInParentPrefab, DataItem.Key.ObjectGuidInOrignPrefab }, DataItem.Value);
+										SubPrefabData.MapObjectIdToNewlyCreatedId.Add({ DataItem.Key.RootActorGuidInParentPrefab, DataItem.Key.ObjectGuidInOriginPrefab }, DataItem.Value);
 									}
 								}
 								//collect sub-prefab's actor to parent prefab

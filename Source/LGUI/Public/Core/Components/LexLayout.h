@@ -11,12 +11,7 @@ UCLASS(Blueprintable, BlueprintType, Abstract, DefaultToInstanced, EditInlineNew
 class LGUI_API ULexLayout : public ULexWidgetSubObjectBehaviour
 {
 	GENERATED_BODY()
-
-public:	
-	ULexLayout();
-
 protected:
-
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
@@ -29,8 +24,12 @@ public:
 	void UpdateLayout();
 	void MarkLayoutDirty(){bIsLayoutDirty = true;}
 	
-	UFUNCTION(BlueprintCallable, Category="LGUI")
 	virtual TSubclassOf<ULexLayoutSlot> GetSlotClass()const PURE_VIRTUAL(ULexLayout::GetSlotClass, return nullptr;)
+
+	virtual bool SupportShrinkToChildrenWidth(){return false;}
+	virtual bool SupportShrinkToChildrenHeight(){return false;}
+	virtual float GetShrinkToChildrenWidth(){return 0;}
+	virtual float GetShrinkToChildrenHeight(){return 0;}
 private:
 	bool bIsLayoutDirty = true;
 };

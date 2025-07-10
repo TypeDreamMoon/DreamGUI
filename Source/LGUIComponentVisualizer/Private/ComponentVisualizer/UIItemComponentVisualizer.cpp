@@ -43,7 +43,7 @@ void FUIItemComponentVisualizer::DrawVisualization(const UActorComponent* Compon
 	auto RightBottomPoint = TargetComp->GetComponentTransform().TransformPosition(FVector(0, Right, Bottom));
 	auto RightTopPoint = TargetComp->GetComponentTransform().TransformPosition(FVector(0, Right, Top));
 
-	auto Area = TargetComp->GetWidth() * TargetComp->GetHeight();
+	auto Area = TargetComp->GetRenderWidth() * TargetComp->GetRenderHeight();
 	Area = FMath::Sqrt(Area);
 	auto DrawHitProxy = [=, this](FVector Position, EUIItemVisualizerSelectorType Type, UTexture2D* IconTexture, float AreaMultiply = 1.0f) {
 		float DistScale = View->WorldToScreen(Position).W * (4.0f / View->UnscaledViewRect.Width() / View->ViewMatrices.GetProjectionMatrix().M[0][0]);
@@ -171,7 +171,7 @@ bool FUIItemComponentVisualizer::HandleInputDelta(FEditorViewportClient* Viewpor
 	{
 		if (LocalSpaceDeltaTranslate.Y != 0 || LocalSpaceDeltaTranslate.Z != 0)
 		{
-			auto DeltaTranslatePivot = FVector2D(LocalSpaceDeltaTranslate.Y / TargetComp->GetWidth(), LocalSpaceDeltaTranslate.Z / TargetComp->GetHeight());
+			auto DeltaTranslatePivot = FVector2D(LocalSpaceDeltaTranslate.Y / TargetComp->GetRenderWidth(), LocalSpaceDeltaTranslate.Z / TargetComp->GetRenderHeight());
 			// FMargin PrevAnchorAsMargin(TargetComp->GetAnchorLeft(), TargetComp->GetAnchorTop(), TargetComp->GetAnchorRight(), TargetComp->GetAnchorBottom());
 			// TargetComp->SetPivot(TargetComp->GetPivot() + DeltaTranslatePivot);
 			// TargetComp->SetAnchorLeft(PrevAnchorAsMargin.Left);

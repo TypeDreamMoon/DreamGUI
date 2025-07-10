@@ -124,9 +124,9 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseVertex(FLexUIGeometry& InGeo
 	int pointCount = InPointArray.Num();
 	//pivot offset
 	float pivotOffsetX = 0, pivotOffsetY = 0;
-	FLexUIGeometry::CalculatePivotOffset(Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), pivotOffsetX, pivotOffsetY);
-	float halfW = Widget->GetWidth() * 0.5f;
-	float halfH = Widget->GetHeight() * 0.5f;
+	FLexUIGeometry::CalculatePivotOffset(Widget->GetRenderWidth(), Widget->GetRenderHeight(), FVector2f(Widget->GetPivot()), pivotOffsetX, pivotOffsetY);
+	float halfW = Widget->GetRenderWidth() * 0.5f;
+	float halfH = Widget->GetRenderHeight() * 0.5f;
 	//positions
 	auto& originVertices = InGeo.OriginVertices;
 

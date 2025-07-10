@@ -134,8 +134,7 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 						CanvasComp->SetRenderMode(RenderMode);
 					}
 
-					RootUICanvasActor->GetLexWidget()->SetWidth(CanvasSize.X);
-					RootUICanvasActor->GetLexWidget()->SetHeight(CanvasSize.Y);
+					RootUICanvasActor->GetLexWidget()->SetSize(FLexWidgetSize2::MakeFixed(CanvasSize));
 					RootUICanvasActor->GetLexWidget()->SetHierarchyIndex(0);
 
 					OutCreatedRootAgentActor = RootUICanvasActor;
@@ -176,7 +175,7 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 			{
 				if (auto UIItem = Cast<ULexWidget>(RootAgentActor->GetRootComponent()))
 				{
-					Prefab->PrefabDataForPrefabEditor.CanvasSize = FIntPoint(UIItem->GetWidth(), UIItem->GetHeight());
+					Prefab->PrefabDataForPrefabEditor.CanvasSize = FIntPoint(UIItem->GetRenderWidth(), UIItem->GetRenderHeight());
 				}
 				if (auto Canvas = RootAgentActor->FindComponentByClass<ULexCanvas>())
 				{
@@ -483,7 +482,7 @@ uint32 ULGUIEditorManagerObject::GetViewportKeyFromIndex(int32 InViewportIndex)
 #if WITH_EDITOR
 void ULGUIManagerWorldSubsystem::DrawFrameOnUIItem(ULexWidget* item, bool IsScreenSpace)
 {
-	auto RectExtends = FVector(0.1f, item->GetWidth(), item->GetHeight()) * 0.5f;
+	auto RectExtends = FVector(0.1f, item->GetRenderWidth(), item->GetRenderHeight()) * 0.5f;
 	bool bCanDrawRect = false;
 	auto RectDrawColor = FColor(128, 128, 128, 128);//gray means normal object
 	if (ULGUIPrefabManagerObject::IsSelected(item->GetOwner()))//select self
@@ -566,8 +565,8 @@ void ULGUIManagerWorldSubsystem::DrawFrameOnUIItem(ULexWidget* item, bool IsScre
 	{
 		auto WorldTransform = item->GetComponentTransform();
 		FVector RelativeOffset(0, 0, 0);
-		RelativeOffset.Y = (0.5f - item->GetPivot().X) * item->GetWidth();
-		RelativeOffset.Z = (0.5f - item->GetPivot().Y) * item->GetHeight();
+		RelativeOffset.Y = (0.5f - item->GetPivot().X) * item->GetRenderWidth();
+		RelativeOffset.Z = (0.5f - item->GetPivot().Y) * item->GetRenderHeight();
 		auto WorldLocation = WorldTransform.TransformPosition(RelativeOffset);
 
 		if (IsScreenSpace)
@@ -1026,7 +1025,7 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 				auto DrawFrame = [bIsGameWorld](const TArray<TWeakObjectPtr<ULexCanvas>>& CanvasArray) {
 					for (auto& CanvasItem : CanvasArray)
 					{
-						auto& UIItemArray = CanvasItem->GetVisualWidgetArray();
+						auto& UIItemArray = CanvasItem->GetWidgetArray();
 						for (auto& UIItem : UIItemArray)
 						{
 							if (!IsValid(UIItem))continue;

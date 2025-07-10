@@ -141,6 +141,16 @@ TSharedRef< FSlateStyleSet > FLGUIEditorStyle::Create()
 	Style->Set("PrefabMarkBroken", new IMAGE_BRUSH("PrefabMarkBroken_16x", Icon16x16));
 	Style->Set("CanvasMark", new IMAGE_BRUSH("CanvasMark_16x", Icon16x16));
 
+	Style->Set("WidgetSize_ExpandToParent", new IMAGE_BRUSH("WidgetSize_ExpandToParent", Icon16x16));
+	Style->Set("WidgetSize_ShrinkToChildren", new IMAGE_BRUSH("WidgetSize_ShrinkToChildren", Icon16x16));
+	Style->Set("WidgetSize_ExpandToParent_V", new IMAGE_BRUSH("WidgetSize_ExpandToParent_V", Icon16x16));
+	Style->Set("WidgetSize_ShrinkToChildren_V", new IMAGE_BRUSH("WidgetSize_ShrinkToChildren_V", Icon16x16));
+	Style->Set("WidgetSize_Off", new IMAGE_BRUSH("WidgetSize_Off", Icon16x16));
+	Style->Set("LayoutDirection_Horizontal", new IMAGE_BRUSH("LayoutDirection_Horizontal", Icon16x16));
+	Style->Set("LayoutDirection_HorizontalReverse", new IMAGE_BRUSH("LayoutDirection_HorizontalReverse", Icon16x16));
+	Style->Set("LayoutDirection_Vertical", new IMAGE_BRUSH("LayoutDirection_Vertical", Icon16x16));
+	Style->Set("LayoutDirection_VerticalReverse", new IMAGE_BRUSH("LayoutDirection_VerticalReverse", Icon16x16));
+	
 	return Style;
 }
 

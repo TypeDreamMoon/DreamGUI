@@ -36,11 +36,11 @@ void UUIScrollViewWithScrollbarComponent::UpdateProgress(bool InFireEvent)
 		{
 			if (Progress.X > 1.0f)
 			{
-				HorizontalScrollbarComp->SetValueAndSize(1.0f, ContentParentUIItem->GetWidth() / (ContentUIItem->GetWidth() + (HorizontalRange.Y - HorizontalRange.X) * (Progress.X - 1.0f)), false);
+				HorizontalScrollbarComp->SetValueAndSize(1.0f, ContentParentUIItem->GetRenderWidth() / (ContentUIItem->GetRenderWidth() + (HorizontalRange.Y - HorizontalRange.X) * (Progress.X - 1.0f)), false);
 			}
 			else if (Progress.X < 0.0f)
 			{
-				HorizontalScrollbarComp->SetValueAndSize(0.0f, ContentParentUIItem->GetWidth() / (ContentUIItem->GetWidth() + (HorizontalRange.Y - HorizontalRange.X) * (0.0f - Progress.X)), false);
+				HorizontalScrollbarComp->SetValueAndSize(0.0f, ContentParentUIItem->GetRenderWidth() / (ContentUIItem->GetRenderWidth() + (HorizontalRange.Y - HorizontalRange.X) * (0.0f - Progress.X)), false);
 			}
 			else
 			{
@@ -51,11 +51,11 @@ void UUIScrollViewWithScrollbarComponent::UpdateProgress(bool InFireEvent)
 		{
 			if (Progress.Y > 1.0f)
 			{
-				VerticalScrollbarComp->SetValueAndSize(1.0f, ContentParentUIItem->GetHeight() / (ContentUIItem->GetHeight() + (VerticalRange.Y - VerticalRange.X) * (Progress.Y - 1.0f)), false);
+				VerticalScrollbarComp->SetValueAndSize(1.0f, ContentParentUIItem->GetRenderHeight() / (ContentUIItem->GetRenderHeight() + (VerticalRange.Y - VerticalRange.X) * (Progress.Y - 1.0f)), false);
 			}
 			else if (Progress.Y < 0.0f)
 			{
-				VerticalScrollbarComp->SetValueAndSize(0.0f, ContentParentUIItem->GetHeight() / (ContentUIItem->GetHeight() + (VerticalRange.Y - VerticalRange.X) * (0.0f - Progress.Y)), false);
+				VerticalScrollbarComp->SetValueAndSize(0.0f, ContentParentUIItem->GetRenderHeight() / (ContentUIItem->GetRenderHeight() + (VerticalRange.Y - VerticalRange.X) * (0.0f - Progress.Y)), false);
 			}
 			else
 			{
@@ -141,8 +141,8 @@ void UUIScrollViewWithScrollbarComponent::CalculateHorizontalRange()
 	Super::CalculateHorizontalRange();
 	if (CheckScrollbarParameter())
 	{
-		auto parentWidth = ContentParentUIItem->GetWidth();
-		auto contentWidth = ContentUIItem->GetWidth();
+		auto parentWidth = ContentParentUIItem->GetRenderWidth();
+		auto contentWidth = ContentUIItem->GetRenderWidth();
 		if (parentWidth >= contentWidth)
 		{
 			if (HorizontalScrollbarVisibility != EScrollViewScrollbarVisibility::Permanent)
@@ -165,8 +165,8 @@ void UUIScrollViewWithScrollbarComponent::CalculateVerticalRange()
 	Super::CalculateVerticalRange();
 	if (CheckScrollbarParameter())
 	{
-		auto parentHeight = ContentParentUIItem->GetHeight();
-		auto contentHeight = ContentUIItem->GetHeight();
+		auto parentHeight = ContentParentUIItem->GetRenderHeight();
+		auto contentHeight = ContentUIItem->GetRenderHeight();
 		if (parentHeight >= contentHeight)
 		{
 			if (VerticalScrollbarVisibility != EScrollViewScrollbarVisibility::Permanent)

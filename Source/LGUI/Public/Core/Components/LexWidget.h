@@ -8,6 +8,7 @@
 #include "Components/PrimitiveComponent.h"
 #include "LTweener.h"
 #include "Components/SlateWrapperTypes.h"
+#include "Core/LexWidgetTypes.h"
 #include "LexWidget.generated.h"
 
 class ULexVisual;
@@ -75,7 +76,7 @@ public:
 #endif
 	static const FName GetSizePropertyName()
 	{
-		return GET_MEMBER_NAME_CHECKED(ULexWidget, Size);
+		return GET_MEMBER_NAME_CHECKED(ULexWidget, RenderSize);
 	}
 	static const FName GetHierarchyIndexPropertyName()
 	{
@@ -171,10 +172,22 @@ protected:
 	void EnsureUIChildrenValid();
 	void EnsureUIChildrenSorted()const;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Size", Getter, Setter, meta = (AllowPrivateAccess = true))
+	FLexWidgetAspectRatio AspectRatio;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Size", Getter, Setter, meta = (AllowPrivateAccess = true))
+	FLexWidgetSize Width;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Size", Getter, Setter, meta = (AllowPrivateAccess = true))
+	FLexWidgetSize Height;
+	// Expand inward
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Size", Getter, Setter, meta = (AllowPrivateAccess = true))
+	FMargin Padding;
+	// Expand outward
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Size", Getter, Setter, meta = (AllowPrivateAccess = true))
+	FMargin Margin;
+	UPROPERTY(EditAnywhere, Getter, Setter, Category = "LGUI")
 	FVector2D Pivot = FVector2D(0.5f, 0.5f);
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
-	FVector2D Size = FVector2D(100, 100);
+	UPROPERTY(EditAnywhere, Getter, Category = "LGUI")
+	FVector2D RenderSize = FVector2D(100, 100);
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
 	FVector2D GetPivot()const {return Pivot;}
@@ -182,18 +195,37 @@ public:
 	void SetPivot(FVector2D Value);
 	
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-	float GetWidth() const{return Size.X;}
+	float GetRenderWidth() const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-	float GetHeight() const{return Size.Y;}
+	float GetRenderHeight() const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-	FVector2D GetSize() const{return Size;}
+	FVector2D GetRenderSize() const;
 
-	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-	void SetWidth(float Value);
-	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-	void SetHeight(float Value);
-	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-	void SetSize(FVector2D Value);
+	void SetRenderSizeByLayout(FVector2D Value);
+
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	FLexWidgetAspectRatio GetAspectRatio()const{return AspectRatio;}
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	FLexWidgetSize GetWidth()const { return Width; }
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	FLexWidgetSize GetHeight()const { return Height; }
+	UFUNCTION(BlueprintCallable, Category = "Size")
+	const FMargin& GetPadding()const{return Padding;}
+	UFUNCTION(BlueprintCallable, Category = "Size")
+	const FMargin& GetMargin()const{return Margin;}
+
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	void SetAspectRatio(const FLexWidgetAspectRatio& Value);
+	UFUNCTION(BlueprintCallable, Category = "Size")
+	void SetWidth(const FLexWidgetSize& Value);
+	UFUNCTION(BlueprintCallable, Category = "Size")
+	void SetHeight(const FLexWidgetSize& Value);
+	UFUNCTION(BlueprintCallable, Category = "Size")
+	void SetSize(const FLexWidgetSize2& InValue);
+	UFUNCTION(BlueprintCallable, Category = "Size")
+	void SetPadding(const FMargin& Value);
+	UFUNCTION(BlueprintCallable, Category = "Size")
+	void SetMargin(const FMargin& Value);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
 	FVector2D GetLocalSpaceLeftBottomPoint()const;
@@ -232,14 +264,16 @@ public:
 	void MarkTransformChanged(bool InPositionChanged, bool InScaleChanged);
 	void MarkDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange);
 	void MarkParentDimensionChanged(bool InParentPivotChange, bool InParentWidthChange, bool InParentHeightChange);
-
+	void MarkNeedUpdateLayout();
+	void MarkSizeDirty_Recursive();
+	void OnChildDimensionChanged(ULexWidget* InChild);
 	virtual void MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawcall = false);
 private:
 	mutable uint8 bNeedSortUIChildren : 1;
 	uint8 bIsDetaching : 1;
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Widget", Getter, Setter, meta = (AllowPrivateAccess = true, UIMin="0", UIMax="1"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true, UIMin="0", UIMax="1"))
 	float RenderOpacity = 1.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
 	ELexWidgetClipping Clipping = ELexWidgetClipping::Inherit;
@@ -248,12 +282,12 @@ protected:
 	/** If the widget will draw snapped to the nearest pixel.  Improves clarity but might cause visible stepping in animation. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
 	EWidgetPixelSnapping PixelSnapping = EWidgetPixelSnapping::Inherit;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Widget", Getter = "GetIsEnabled", Setter = "SetIsEnabled", meta = (AllowPrivateAccess = true))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter = "GetIsEnabled", Setter = "SetIsEnabled", meta = (AllowPrivateAccess = true))
 	uint8 bIsEnabled : 1 = true;
 	/**
 	 * Restrict navigation area to only children of this UI node, to forbid it navigate out.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Widget", Getter = "GetRestrictNavigationArea", Setter = "SetRestrictNavigationArea", meta = (AllowPrivateAccess = true))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter = "GetRestrictNavigationArea", Setter = "SetRestrictNavigationArea", meta = (AllowPrivateAccess = true))
 	uint8 bRestrictNavigationArea : 1 = false;
 
 	UPROPERTY(EditAnywhere, Instanced, Category = "Visual", Getter, meta = (AllowPrivateAccess = true))
@@ -261,12 +295,10 @@ protected:
 	UPROPERTY(EditAnywhere, Instanced, Category = "Layout", Getter, meta = (AllowPrivateAccess = true))
 	TObjectPtr<ULexLayout> Layout = nullptr;
 	UPROPERTY(VisibleAnywhere, Instanced, Category = "LayoutSlot", Getter, meta = (AllowPrivateAccess = true))
-	TObjectPtr<ULexLayoutSlot> LayoutSlot = nullptr;
+	mutable TObjectPtr<ULexLayoutSlot> LayoutSlot = nullptr;
 	
 	TWeakPtr<FLexUIClipData> ClipData;
 	
-	void MarkClipDirty_Recursive(bool InClipTypeChanged)const;
-
 	uint8 bCacheFinalIsEnabled : 1 = true;
 	bool CalculateCacheFinalIsEnabled();
 	void CheckIsEnabled_Recursive();
@@ -278,7 +310,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetClipping(ELexWidgetClipping Value);
 
-	UFUNCTION(BlueprintCallable, Category = "Widget")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	float GetRenderOpacity()const { return RenderOpacity; }
 	/**
 	 * Retrieves the final opacity value used during rendering for this widget, considering all relevant settings and parent opacity.
@@ -286,9 +318,9 @@ public:
 	 *
 	 * @return The calculated final opacity value for rendering this widget.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Widget")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	float GetFinalRenderOpacity()const;
-	UFUNCTION(BlueprintCallable, Category = "Widget")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetRenderOpacity(float Value);
 	
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
@@ -300,46 +332,46 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	ESlateVisibility GetWidgetVisibility()const { return WidgetVisibility; }
-	UFUNCTION(BlueprintCallable, Category = "Widget")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	bool IsVisibleForRender()const;
-	UFUNCTION(BlueprintCallable, Category = "Widget")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	bool IsVisibleForHitTest()const;
-	UFUNCTION(BlueprintCallable, Category = "Widget")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	bool IsVisibleForLayout()const;
-	UFUNCTION(BlueprintCallable, Category = "Widget")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetWidgetVisibility(ESlateVisibility Value);
 
-	UFUNCTION(BlueprintCallable, Category = "Widget")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	bool GetIsEnabled()const { return bIsEnabled; }
 	/**
 	 * Get if this widget is interactable when use input interaction, considering all parent settings.
 	 * @return If this widget is interactable
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Widget")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	bool GetFinalIsEnabled()const{return bCacheFinalIsEnabled;}
-	UFUNCTION(BlueprintCallable, Category = "Widget")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetIsEnabled(bool Value);
-	UFUNCTION(BlueprintCallable, Category = "Widget")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	bool GetRestrictNavigationArea()const{return bRestrictNavigationArea;}
 
 	/**
 	 * Search up parent LexWidget which bRestrictNavigationArea is true and return it, include this LexWidget self
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Widget")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	const ULexWidget* GetRestrictNavigationAreaWidget()const;
-	UFUNCTION(BlueprintCallable, Category = "Widget")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetRestrictNavigationArea(bool Value);
 
-	UFUNCTION(BlueprintCallable, Category = "Widget")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	ULexVisual* GetVisual()const { return Visual; }
-	UFUNCTION(BlueprintCallable, Category = "Widget")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetVisual(ULexVisual* Value);
 
-	UFUNCTION(BlueprintCallable, Category = "Widget")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	ULexLayout* GetLayout()const { return Layout; }
-	UFUNCTION(BlueprintCallable, Category = "Widget")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	ULexLayoutSlot* GetLayoutSlot()const{return LayoutSlot;}
-	ULexLayoutSlot* CheckAndGetLayoutSlot();
+	ULexLayoutSlot* CheckAndGetLayoutSlot()const;
 
 	const TWeakPtr<FLexUIClipData>& GetClipData()const{return ClipData;}
 #pragma region UIActive
@@ -458,7 +490,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		bool IsWorldSpaceUI()const;
 
-	bool IsCanvasUIItem() { return bIsCanvasUIItem; }
+	bool IsCanvasUIItem()const { return bIsCanvasUIItem; }
 
 	/** return root UIItem in hierarchy, could be null if not initialized yet. */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
@@ -470,7 +502,8 @@ protected:
 	UPROPERTY(Transient) mutable TWeakObjectPtr<ULexCanvas> RenderCanvas = nullptr;
 	/** is this UIItem's actor have LGUICanvas component */
 	UPROPERTY(Transient) mutable uint8 bIsCanvasUIItem:1;
-	
+
+	mutable uint8 bRenderSizeDirty : 1 = true;
 	mutable uint8 bClipDirty : 1 = true;
 	mutable uint8 bNeedRecreateClip : 1 = true;
 	uint8 bClipDataChanged : 1 = true;
@@ -481,17 +514,13 @@ protected:
 	uint8 bUIActiveStateDirty : 1;
 #endif
 
+	void CalculateRenderSize();
+	void MarkClipDirty_Recursive(bool InClipTypeChanged)const;
+	
 	/** find root UIItem of hierarchy */
 	void CheckRootUIItem(ULexWidget* RootUIItemInParent = nullptr);
 public:
 #pragma region TweenAnimation
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")
-	ULTweener* WidthTo(float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")
-	ULTweener* HeightTo(float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")
-	ULTweener* PivotTo(FVector2D endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
-
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")
 	ULTweener* RenderOpacityTo(float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
 

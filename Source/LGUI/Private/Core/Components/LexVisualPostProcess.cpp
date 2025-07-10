@@ -129,8 +129,8 @@ void ULexVisualPostProcess::OnUpdateGeometry(bool InTriangleChanged, bool InVert
 				auto Widget = GetWidget();
 				//offset and size
 				float pivotOffsetX = 0, pivotOffsetY = 0;
-				FLexUIGeometry::CalculatePivotOffset(Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), pivotOffsetX, pivotOffsetY);
-				float halfW = Widget->GetWidth() * 0.5f, halfH = Widget->GetHeight() * 0.5f;
+				FLexUIGeometry::CalculatePivotOffset(Widget->GetRenderWidth(), Widget->GetRenderHeight(), FVector2f(Widget->GetPivot()), pivotOffsetX, pivotOffsetY);
+				float halfW = Widget->GetRenderWidth() * 0.5f, halfH = Widget->GetRenderHeight() * 0.5f;
 				//positions
 				float minX = -halfW + pivotOffsetX;
 				float minY = -halfH + pivotOffsetY;
@@ -232,7 +232,7 @@ void ULexVisualPostProcess::SendRegionVertexDataToRenderProxy()
 		auto updateData = new FUIPostProcess_SendRegionVertexDataToRenderProxy();
 		updateData->renderMeshRegionToScreenVertexArray = this->RenderMeshRegionToScreenVertexArray;
 		updateData->renderScreenToMeshRegionVertexArray = this->RenderScreenToMeshRegionVertexArray;
-		updateData->RectSize = FVector2f(Widget->GetWidth(), Widget->GetHeight());
+		updateData->RectSize = FVector2f(Widget->GetRenderWidth(), Widget->GetRenderHeight());
 		updateData->objectToWorldMatrix = FMatrix44f(Widget->GetRenderCanvas()->GetLexWidget()->GetComponentTransform().ToMatrixWithScale());
 		auto ClipDataTex = this->GetClipDataTexture();
 		if (IsValid(ClipDataTex) && ClipDataTex->GetResource() != nullptr)

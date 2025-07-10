@@ -177,6 +177,9 @@ public:
 	static int VisibleCharCountInString(const FString& srcStr);
 
 	void GenerateRichTextImageObject();
+
+	virtual float GetShrinkToContentWidth()const override;
+	virtual float GetShrinkToContentHeight()const override;
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI") ULexUIFontData_BaseObject* GetFont()const { return font; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")	const FText& GetText()const { return text; }

@@ -194,7 +194,7 @@ void UUIFrameCapture::SendOthersDataToRenderProxy()
 void UUIFrameCapture::UpdateRenderTarget()
 {
 	auto Widget = GetWidget();
-	FIntPoint DesiredRenderTargetSize(Widget->GetWidth(), Widget->GetHeight());
+	FIntPoint DesiredRenderTargetSize(Widget->GetRenderWidth(), Widget->GetRenderHeight());
 	if (this->bCaptureFullScreen)
 	{
 		if (auto pc = this->GetWorld()->GetFirstPlayerController())

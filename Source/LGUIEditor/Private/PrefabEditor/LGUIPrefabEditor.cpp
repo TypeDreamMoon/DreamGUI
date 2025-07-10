@@ -24,6 +24,7 @@
 #include "LGUIEditorUtils.h"
 #include "Editor.h"
 #include "EditorStyleSet.h"
+#include "Framework/Commands/GenericCommands.h"
 #include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
 #include "PrefabAnimation/LGUIPrefabSequenceEditor.h"
@@ -606,35 +607,35 @@ void FLGUIPrefabEditor::BindCommands()
 	);
 
 	ToolkitCommands->MapAction(
-		PrefabEditorCommands.CopyActor,
+		FGenericCommands::Get().Copy,
 		FExecuteAction::CreateStatic(&LGUIEditorTools::CopySelectedActors_Impl),
 		FCanExecuteAction::CreateStatic(&LGUIEditorTools::CanCopyActor),
 		FGetActionCheckState(),
 		FIsActionButtonVisible::CreateStatic(&LGUIEditorTools::CanCopyActor)
 	);
 	ToolkitCommands->MapAction(
-		PrefabEditorCommands.CutActor,
+		FGenericCommands::Get().Cut,
 		FExecuteAction::CreateStatic(&LGUIEditorTools::CutSelectedActors_Impl),
 		FCanExecuteAction::CreateStatic(&LGUIEditorTools::CanCutActor),
 		FGetActionCheckState(),
 		FIsActionButtonVisible::CreateStatic(&LGUIEditorTools::CanCutActor)
 	);
 	ToolkitCommands->MapAction(
-		PrefabEditorCommands.PasteActor,
+		FGenericCommands::Get().Paste,
 		FExecuteAction::CreateStatic(&LGUIEditorTools::PasteSelectedActors_Impl),
 		FCanExecuteAction::CreateStatic(&LGUIEditorTools::CanPasteActor),
 		FGetActionCheckState(),
 		FIsActionButtonVisible::CreateStatic(&LGUIEditorTools::CanPasteActor)
 	);
 	ToolkitCommands->MapAction(
-		PrefabEditorCommands.DuplicateActor,
+		FGenericCommands::Get().Duplicate,
 		FExecuteAction::CreateStatic(&LGUIEditorTools::DuplicateSelectedActors_Impl),
 		FCanExecuteAction::CreateStatic(&LGUIEditorTools::CanDuplicateActor),
 		FGetActionCheckState(),
 		FIsActionButtonVisible::CreateStatic(&LGUIEditorTools::CanDuplicateActor)
 	);
 	ToolkitCommands->MapAction(
-		PrefabEditorCommands.DestroyActor,
+		FGenericCommands::Get().Delete,
 		FExecuteAction::CreateStatic(&LGUIEditorTools::DeleteSelectedActors_Impl),
 		FCanExecuteAction::CreateStatic(&LGUIEditorTools::CanDeleteActor),
 		FGetActionCheckState(),

@@ -40,7 +40,7 @@ void FLexUIClipData::UpdateData()
 		auto WorldToWidgetMatrix = TargetClip->Widget->GetComponentTransform().ToInverseMatrixWithScale();
 		auto CanvasToWidgetMatrix = FMatrix44f(CanvasToWorldMatrix * WorldToWidgetMatrix);
 		auto Column3 = CanvasToWidgetMatrix.GetColumn(3);
-		auto RenderSize = FVector2f(TargetClip->Widget->GetWidth(), TargetClip->Widget->GetHeight());
+		auto RenderSize = FVector2f(TargetClip->Widget->GetRenderWidth(), TargetClip->Widget->GetRenderHeight());
 		Column3.X = RenderSize.X * 0.5f;
 		Column3.Y = RenderSize.Y * 0.5f;
 		Column3.Z = 1;
@@ -64,7 +64,7 @@ bool FLexUIClipData::IsPointVisible(const FVector& Point) const
 	{
 		auto TargetWidget = TargetClip->Widget;
 		auto LocalPoint = TargetWidget->GetComponentTransform().InverseTransformPosition(Point);
-		auto LocalSize = FVector2f(TargetWidget->GetWidth(), TargetWidget->GetHeight());
+		auto LocalSize = FVector2f(TargetWidget->GetRenderWidth(), TargetWidget->GetRenderHeight());
 		auto HalfLocalSize = LocalSize * 0.5f;
 		FVector2D clipRectMin, clipRectMax;
 		clipRectMin.X = -HalfLocalSize.X;

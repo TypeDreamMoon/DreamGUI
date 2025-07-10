@@ -38,8 +38,8 @@ void UUIPolygonLine::CalculatePoints()
 	if (FullCycle)calcEndAngle = StartAngle + 360.0f;
 	float angle = FMath::DegreesToRadians(StartAngle);
 	float angleInterval = FMath::DegreesToRadians((calcEndAngle - StartAngle) / Sides);
-	float halfWidth = Widget->GetWidth() * 0.5f;
-	float halfHeight = Widget->GetHeight() * 0.5f;
+	float halfWidth = Widget->GetRenderWidth() * 0.5f;
+	float halfHeight = Widget->GetRenderHeight() * 0.5f;
 	if (!FullCycle)
 	{
 		CurrentPointArray.Add(FVector2D(0, 0));
@@ -59,7 +59,7 @@ FVector2D UUIPolygonLine::GetStartPointTangentDirection()
 	auto Widget = GetWidget();
 	float angle = FMath::DegreesToRadians(StartAngle);
 	auto dir = FVector2D(FMath::Cos(angle), FMath::Sin(angle));
-	auto tanDir = FVector2D(-Widget->GetWidth() * dir.Y, Widget->GetHeight() * dir.X);
+	auto tanDir = FVector2D(-Widget->GetRenderWidth() * dir.Y, Widget->GetRenderHeight() * dir.X);
 	tanDir.Normalize();
 	return tanDir;
 }
@@ -74,7 +74,7 @@ FVector2D UUIPolygonLine::GetEndPointTangentDirection()
 		auto Widget = GetWidget();
 		float angle = FMath::DegreesToRadians(EndAngle);
 		auto dir = FVector2D(FMath::Cos(angle), FMath::Sin(angle));
-		auto tanDir = FVector2D(-Widget->GetWidth() * dir.Y, Widget->GetHeight() * dir.X);
+		auto tanDir = FVector2D(-Widget->GetRenderWidth() * dir.Y, Widget->GetRenderHeight() * dir.X);
 		tanDir.Normalize();
 		return tanDir;
 	}

@@ -90,6 +90,8 @@ public:
 
 	ULGUIPrefabHelperObject* GetPrefabManagerObject()const { return PrefabHelperObject; }
 	void ApplyPrefab();
+
+	TSharedPtr<FUICommandList> EditorCommandList;
 private:
 	TObjectPtr<ULGUIPrefab> PrefabBeingEdited = nullptr;
 	TObjectPtr<ULGUIPrefabHelperObject> PrefabHelperObject = nullptr;

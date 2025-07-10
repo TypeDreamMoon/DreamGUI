@@ -32,7 +32,7 @@ void UUIDropdownComponent::Awake()
 	{
 		ListRoot->GetLexWidget()->SetIsUIActive(false);
 		ListRoot->GetLexWidget()->SetRenderOpacity(0);
-		MaxHeight = ListRoot->GetLexWidget()->GetHeight();
+		MaxHeight = ListRoot->GetLexWidget()->GetRenderHeight();
 	}
 	//set default display
 	if (Options.Num() > 0)
@@ -175,13 +175,13 @@ void UUIDropdownComponent::Show()
 			if (VerticalOverlap)
 			{
 				auto selfTop = GetRootUIComponent()->GetLocalSpaceTop();
-				auto listBottomInSelfSpace = selfTop - ListRootUIItem->GetHeight();
+				auto listBottomInSelfSpace = selfTop - ListRootUIItem->GetRenderHeight();
 				listBottomInClipSpace = selfToClipSpaceTf.TransformPosition(FVector(0, 0, listBottomInSelfSpace));
 			}
 			else
 			{
 				auto selfBottom = GetRootUIComponent()->GetLocalSpaceBottom();
-				auto listBottomInSelfSpace = selfBottom - ListRootUIItem->GetHeight();
+				auto listBottomInSelfSpace = selfBottom - ListRootUIItem->GetRenderHeight();
 				listBottomInClipSpace = selfToClipSpaceTf.TransformPosition(FVector(0, 0, listBottomInSelfSpace));
 			}
 			if (listBottomInClipSpace.Z < clipUIItem->GetLocalSpaceBottom())
@@ -196,7 +196,7 @@ void UUIDropdownComponent::Show()
 		if (tempHorizontalPosition == EUIDropdownHorizontalPosition::Automatic)
 		{
 			auto selfRight = GetRootUIComponent()->GetLocalSpaceRight();
-			auto listRightInCanvasSpace = selfToClipSpaceTf.TransformPosition(FVector(0, selfRight + ListRootUIItem->GetWidth(), 0));
+			auto listRightInCanvasSpace = selfToClipSpaceTf.TransformPosition(FVector(0, selfRight + ListRootUIItem->GetRenderWidth(), 0));
 			if (listRightInCanvasSpace.Y > clipUIItem->GetLocalSpaceRight())
 			{
 				tempHorizontalPosition = EUIDropdownHorizontalPosition::Left;
@@ -349,17 +349,17 @@ void UUIDropdownComponent::CreateListItems()
 	float heightOffset = 0;
 	if (auto viewportUIItem = contentUIItem->GetUIParent())
 	{
-		heightOffset = ListRoot->GetLexWidget()->GetHeight() - viewportUIItem->GetHeight();
+		heightOffset = ListRoot->GetLexWidget()->GetRenderHeight() - viewportUIItem->GetRenderHeight();
 	}
 	//if content is larger smaller than MaxHeight, then make the ListRoot smaller too
-	if (contentUIItem->GetHeight() + heightOffset < MaxHeight)
+	if (contentUIItem->GetRenderHeight() + heightOffset < MaxHeight)
 	{
-		ListRoot->GetLexWidget()->SetHeight(contentUIItem->GetHeight() + heightOffset);
+		ListRoot->GetLexWidget()->SetHeight(FLexWidgetSize::MakeFixed(contentUIItem->GetRenderHeight() + heightOffset));
 	}
 	//if content is bigger than MaxHeight, then make the ListRoot as MaxHeight, so the scollview will work
-	else if (contentUIItem->GetHeight() + heightOffset > MaxHeight)
+	else if (contentUIItem->GetRenderHeight() + heightOffset > MaxHeight)
 	{
-		ListRoot->GetLexWidget()->SetHeight(MaxHeight + heightOffset);
+		ListRoot->GetLexWidget()->SetHeight(FLexWidgetSize::MakeFixed(MaxHeight + heightOffset));
 	}
 }
 FUIDropdownOptionData UUIDropdownComponent::GetOption(int index)const

@@ -257,26 +257,26 @@ void UUISliderComponent::CalculateInputValue(ULGUIPointerEventData *eventData)
         {
         case UISliderDirectionType::LeftToRight:
         {
-            MinPosition = -areaUIItem->GetPivot().X * areaUIItem->GetWidth();
-            value01 = (localPointerPosition.Y - MinPosition) / areaUIItem->GetWidth();
+            MinPosition = -areaUIItem->GetPivot().X * areaUIItem->GetRenderWidth();
+            value01 = (localPointerPosition.Y - MinPosition) / areaUIItem->GetRenderWidth();
         }
         break;
         case UISliderDirectionType::RightToLeft:
         {
-            MinPosition = -areaUIItem->GetPivot().X * areaUIItem->GetWidth();
-            value01 = 1.0f - (localPointerPosition.Y - MinPosition) / areaUIItem->GetWidth();
+            MinPosition = -areaUIItem->GetPivot().X * areaUIItem->GetRenderWidth();
+            value01 = 1.0f - (localPointerPosition.Y - MinPosition) / areaUIItem->GetRenderWidth();
         }
         break;
         case UISliderDirectionType::BottomToTop:
         {
-            MinPosition = -areaUIItem->GetPivot().Y * areaUIItem->GetHeight();
-            value01 = (localPointerPosition.Z - MinPosition) / areaUIItem->GetHeight();
+            MinPosition = -areaUIItem->GetPivot().Y * areaUIItem->GetRenderHeight();
+            value01 = (localPointerPosition.Z - MinPosition) / areaUIItem->GetRenderHeight();
         }
         break;
         case UISliderDirectionType::TopToBottom:
         {
-            MinPosition = -areaUIItem->GetPivot().Y * areaUIItem->GetHeight();
-            value01 = 1.0f - (localPointerPosition.Z - MinPosition) / areaUIItem->GetHeight();
+            MinPosition = -areaUIItem->GetPivot().Y * areaUIItem->GetRenderHeight();
+            value01 = 1.0f - (localPointerPosition.Z - MinPosition) / areaUIItem->GetRenderHeight();
         }
         break;
         }

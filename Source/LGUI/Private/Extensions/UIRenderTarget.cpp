@@ -61,7 +61,7 @@ void UUIRenderTarget::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleCha
 		auto Widget = GetWidget();
 		static FLexUISpriteInfo SpriteInfo;
 		FLexUIGeometry::UpdateUIRectSimpleVertex(&InGeo,
-			Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), SpriteInfo, Widget->GetRenderCanvas(), this, GetFinalColor(),
+			Widget->GetRenderWidth(), Widget->GetRenderHeight(), FVector2f(Widget->GetPivot()), SpriteInfo, Widget->GetRenderCanvas(), this, GetFinalColor(),
 			InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 		);
 	}
@@ -99,7 +99,7 @@ bool UUIRenderTarget::PerformLineTrace_Implementation(const int32& InHitFaceInde
 
 		// Convert the 3D position of component space, into the 2D equivalent
 		auto LocationRelativeToLeftBottom = FVector2D(ComponentHitLocation.Y, ComponentHitLocation.Z) - Widget->GetLocalSpaceLeftBottomPoint();
-		auto Location01 = LocationRelativeToLeftBottom / FVector2D(Widget->GetWidth(), Widget->GetHeight());
+		auto Location01 = LocationRelativeToLeftBottom / FVector2D(Widget->GetRenderWidth(), Widget->GetRenderHeight());
 
 		OutHitUV = Location01;
 		return true;

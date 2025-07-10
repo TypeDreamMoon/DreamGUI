@@ -16,10 +16,10 @@ enum class ELGUIPrefabVersion : uint16
 	/**
 	 * Version 3: Use UE's build-in FArchive to serialize/deserialize.
 	 *		Compare to version2: 1. About 2~3 times faster when deserialize.
-	 *							 2. Smaller disc space take.
+	 *							 2. Smaller disc space.
 	 *							 3. Support CoreRedirects.
 	 *							 4. Support object flags.
-	 *							 5. Support all object serialization and reference, inlude default sub object and component.
+	 *							 5. Support all object serialization and reference, include default sub object and component.
 	 */
 	BuildinFArchive = 3,
 	/** Support nested default sub object. */
@@ -28,17 +28,17 @@ enum class ELGUIPrefabVersion : uint16
 	ObjectName = 5,
 	/** Support common actor types, not just UI actor. */
 	CommonActor = 6,
-	/** Support add new actor under subprefab's actor. */
+	/** Support new actor under sub-prefab's actor. */
 	ActorAttachToSubPrefab = 7,
 	/**
 	 * This version is mainly to solve the case:
 	 *		There are Prefabs, A is origin prefab, B contains A, C contains B,
 	 *		open A and add a new object O to A (new Actor or ActorComponent or other UObject), apply A then close,
 	 *		then open C and modify property on object O, apply C then close,
-	 *		open C again, here error happens, because O is not exist in B yet, so B will alway create new guid for O, then pass to C as subprefab, so when open C again, the modified property on O will missing, because subprefab's guid on O is changed.
-	 * Solusion:
-	 *		Use a map data D, map from object's unique id (subprefab's root actor's guid and new created object's origin guid --origin guid means the object's guid in root prefab) to created guid,
-	 *		when load subprefab, if not find guid then create a new guid and store it in data D, next time when load subprefab if still don't find the guid (because B create a new guid for it) then search in data D and use existing guid,
+	 *		open C again, here error happens, because O is not exist in B yet, so B will always create new guid for O, then pass to C as sub-prefab, so when open C again, the modified property on O will not serialize, because sub-prefab's guid on O is changed.
+	 * Solution:
+	 *		Use a map data D, map from object's unique id (sub-prefab's root actor's guid and new created object's origin guid --origin guid means the object's guid in root prefab) to created guid,
+	 *		when load sub-prefab, if not find guid then create a new guid and store it in data D, next time when load sub-prefab if still don't find the guid (because B create a new guid for it) then search in data D and use existing guid,
 	 *		so the guid can persist.
 	 */
 	NewObjectOnNestedPrefab = 8,
@@ -79,15 +79,15 @@ public:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		FGuid RootActorGuidInParentPrefab;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		FGuid ObjectGuidInOrignPrefab;
+		FGuid ObjectGuidInOriginPrefab;
 
 	bool operator==(const FLGUISubPrefabObjectUniqueId& other)const
 	{
-		return this->RootActorGuidInParentPrefab == other.RootActorGuidInParentPrefab && this->ObjectGuidInOrignPrefab == other.ObjectGuidInOrignPrefab;
+		return this->RootActorGuidInParentPrefab == other.RootActorGuidInParentPrefab && this->ObjectGuidInOriginPrefab == other.ObjectGuidInOriginPrefab;
 	}
 	friend FORCEINLINE uint32 GetTypeHash(const FLGUISubPrefabObjectUniqueId& other)
 	{
-		return HashCombine(GetTypeHash(other.RootActorGuidInParentPrefab), GetTypeHash(other.ObjectGuidInOrignPrefab));
+		return HashCombine(GetTypeHash(other.RootActorGuidInParentPrefab), GetTypeHash(other.ObjectGuidInOriginPrefab));
 	}
 };
 
@@ -100,6 +100,7 @@ public:
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")TObjectPtr<ULGUIPrefab> PrefabAsset = nullptr;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")TArray<FLGUIPrefabOverrideParameterData> ObjectOverrideParameterArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")TMap<FGuid, FGuid> MapObjectGuidFromParentPrefabToSubPrefab;
+	/** Check description on ELGUIPrefabVersion.NewObjectOnNestedPrefab */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")TMap<FLGUISubPrefabObjectUniqueId, FGuid> MapObjectIdToNewlyCreatedId;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")TMap<FGuid, TObjectPtr<UObject>> MapGuidToObject;
 #if WITH_EDITORONLY_DATA
@@ -148,7 +149,7 @@ public:
 DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUIPrefab_LoadPrefabCallback, AActor*, LoadedRootActor);
 
 /**
- * Similar to Unity3D's Prefab. Store actor and it's hierarchy and serailize to asset, deserialize and restore when needed.
+ * Similar to Unity3D's Prefab. Store actor and it's hierarchy then serialize to asset, deserialize and restore when needed.
  * If you don't want to package the prefab for runtime (only use in editor), you can put the prefab in a folder named "EditorOnly".
  */
 UCLASS(ClassGroup = (LGUI), BlueprintType)
@@ -166,20 +167,20 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		bool bIsPrefabVariant = false;
 public:
-	/** put actural UObject in this array, and store index in prefab */
+	/** put actual UObject in this array, and store index in prefab */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
 		TArray<TObjectPtr<UObject>> ReferenceAssetList;
-	/** put actural UClass in this array, and store index in prefab */
+	/** put actual UClass in this array, and store index in prefab */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
 		TArray<TObjectPtr<UClass>> ReferenceClassList;
-	/** put actural FName in this array, and store index in prefab */
+	/** put actual FName in this array, and store index in prefab */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
 		TArray<FName> ReferenceNameList;
 #pragma region Before Prefab-Version 3
-	/** put actural FString in this array, and store index in prefab */
+	/** put actual FString in this array, and store index in prefab */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
 		TArray<FString> ReferenceStringList;
-	/** put actural FText in this array, and store index in prefab */
+	/** put actual FText in this array, and store index in prefab */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
 		TArray<FText> ReferenceTextList;
 #pragma endregion Before Prefab-Version 3

@@ -74,8 +74,8 @@ void ULGUICustomMesh_Cylinder::OnFillMesh(ULexVisualBatchMesh* InVisual, bool In
 {
 	auto Widget = InVisual->GetWidget();
 	const auto Pivot = Widget->GetPivot();
-	const auto SizeX = Widget->GetWidth();
-	const auto SizeY = Widget->GetHeight();
+	const auto SizeX = Widget->GetRenderWidth();
+	const auto SizeY = Widget->GetRenderHeight();
 	const auto Color = InVisual->GetFinalColor();
 	auto& Vertices = UIGeo->Vertices;
 	auto& OriginVertices = UIGeo->OriginVertices;
@@ -171,8 +171,8 @@ void ULGUICustomMesh_CurvyPlane::OnFillMesh(ULexVisualBatchMesh* InVisual, bool 
 	auto Widget = InVisual->GetWidget();
 	Segment = FMath::Clamp(Segment, 1, 200);
 	const auto Pivot = Widget->GetPivot();
-	const auto SizeX = Widget->GetWidth();
-	const auto SizeY = Widget->GetHeight();
+	const auto SizeX = Widget->GetRenderWidth();
+	const auto SizeY = Widget->GetRenderHeight();
 	const auto Color = InVisual->GetFinalColor();
 
 	const auto PivotOffsetX = SizeX * (0.5f - Pivot.X);

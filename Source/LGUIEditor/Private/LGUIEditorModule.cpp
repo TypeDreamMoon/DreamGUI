@@ -85,6 +85,9 @@
 #include "UnrealEdGlobals.h"
 #include "Editor/UnrealEdEngine.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "Core/Components/LexLayoutHorizontalAndVertical.h"
+#include "DetailCustomization/LexLayoutHorizontalAndVerticalCustomization.h"
+#include "DetailCustomization/LexLayoutHorizontalAndVerticalSlotCustomization.h"
 
 const FName FLGUIEditorModule::LGUIDynamicSpriteAtlasViewerName(TEXT("LGUIDynamicSpriteAtlasViewerName"));
 const FName FLGUIEditorModule::LGUIPrefabSequenceTabName(TEXT("LGUIPrefabSequenceTabName"));
@@ -298,6 +301,9 @@ void FLGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIComponentReference::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLGUIComponentReferenceCustomization::MakeInstance));
 
 		PropertyModule.RegisterCustomClassLayout(ULGUIPrefabSequenceComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLGUIPrefabSequenceComponentCustomization::MakeInstance));
+		
+		PropertyModule.RegisterCustomClassLayout(ULexLayoutHorizontalAndVerticalSlot::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutHorizontalAndVerticalSlotCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexLayoutHorizontalAndVertical::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutHorizontalAndVerticalCustomization::MakeInstance));
 	}
 	//register asset
 	{
@@ -507,6 +513,9 @@ void FLGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIComponentReference::StaticStruct()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(ULGUIPrefabSequenceComponent::StaticClass()->GetFName());
+
+		PropertyModule.UnregisterCustomClassLayout(ULexLayoutHorizontalAndVerticalSlot::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexLayoutHorizontalAndVertical::StaticClass()->GetFName());
 	}
 	//unregister asset
 	{

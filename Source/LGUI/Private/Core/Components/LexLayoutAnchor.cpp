@@ -97,18 +97,18 @@ void ULexLayoutAnchorSlot::CalculateAnchorFromTransform()
 		//just a reverse operation from CalculateTransformFromAnchor
 		float LocalLeftPoint =
 			UIParent->GetLocalSpaceLeft()
-			+ (UIParent->GetWidth() * this->AnchorMin.X);
+			+ (UIParent->GetRenderWidth() * this->AnchorMin.X);
 
 		float LocalBottomPoint =
 			UIParent->GetLocalSpaceBottom()
-			+ (UIParent->GetHeight() * this->AnchorMin.Y);
+			+ (UIParent->GetRenderHeight() * this->AnchorMin.Y);
 
 		CalculatedAnchoredPosition.X = TempRelativeLocation.Y
 			- LocalLeftPoint
-			- +(UIParent->GetWidth() * (this->AnchorMax.X - this->AnchorMin.X)) * Widget->GetPivot().X;
+			- +(UIParent->GetRenderWidth() * (this->AnchorMax.X - this->AnchorMin.X)) * Widget->GetPivot().X;
 		CalculatedAnchoredPosition.Y = TempRelativeLocation.Z
 			- LocalBottomPoint
-			- (UIParent->GetHeight() * (this->AnchorMax.Y - this->AnchorMin.Y)) * Widget->GetPivot().Y;
+			- (UIParent->GetRenderHeight() * (this->AnchorMax.Y - this->AnchorMin.Y)) * Widget->GetPivot().Y;
 	}
 	else
 	{
@@ -145,19 +145,19 @@ void ULexLayoutAnchorSlot::CalculateTransformFromAnchor(bool& OutHorizontalPosit
 	{
 		float LocalLeftPoint = //this left point anchor position in parent's space
 			UIParent->GetLocalSpaceLeft()//parent's left position
-			+ (UIParent->GetWidth() * this->AnchorMin.X);//add anchor offset
+			+ (UIParent->GetRenderWidth() * this->AnchorMin.X);//add anchor offset
 		float LocalLeftPivotPoint = //to pivot point, with anchor offset
 			LocalLeftPoint
-			+ (UIParent->GetWidth() * (this->AnchorMax.X - this->AnchorMin.X))//parent anchor width (width without SizeDelta)
+			+ (UIParent->GetRenderWidth() * (this->AnchorMax.X - this->AnchorMin.X))//parent anchor width (width without SizeDelta)
 				* Widget->GetPivot().X
 			+ this->AnchoredPosition.X;
 
 		float LocalBottomPoint = //this bottom point anchor position in parent's space
 			UIParent->GetLocalSpaceBottom()//parent's bottom position
-			+ (UIParent->GetHeight() * this->AnchorMin.Y);//add anchor offset
+			+ (UIParent->GetRenderHeight() * this->AnchorMin.Y);//add anchor offset
 		float LocalBottomPivotPoint = //to pivot point, with anchor offset
 			LocalBottomPoint
-			+ (UIParent->GetHeight() * (this->AnchorMax.Y - this->AnchorMin.Y))//parent anchor width (width without SizeDelta)
+			+ (UIParent->GetRenderHeight() * (this->AnchorMax.Y - this->AnchorMin.Y))//parent anchor width (width without SizeDelta)
 				* Widget->GetPivot().Y
 			+ this->AnchoredPosition.Y;
 
@@ -198,7 +198,7 @@ float ULexLayoutAnchorSlot::GetWidth() const
 		{
 			if (IsHorizontalStretched())
 			{
-				CacheWidth = SizeDelta.X + UIParent->GetWidth() * (AnchorMax.X - AnchorMin.X);
+				CacheWidth = SizeDelta.X + UIParent->GetRenderWidth() * (AnchorMax.X - AnchorMin.X);
 			}
 			else
 			{
@@ -222,7 +222,7 @@ float ULexLayoutAnchorSlot::GetHeight() const
 		{
 			if (IsVerticalStretched())
 			{
-				CacheHeight = SizeDelta.Y + UIParent->GetHeight() * (AnchorMax.Y - AnchorMin.Y);
+				CacheHeight = SizeDelta.Y + UIParent->GetRenderHeight() * (AnchorMax.Y - AnchorMin.Y);
 			}
 			else
 			{
@@ -252,10 +252,10 @@ void ULexLayoutAnchorSlot::SetAnchorMin(FVector2D Value)
 			//SetAnchorLeft
 			{
 				auto CurrentRight = this->GetAnchorRight();
-				CacheWidth = UIParent->GetWidth() * (this->AnchorMax.X - this->AnchorMin.X) - CurrentRight - CurrentLeft;
+				CacheWidth = UIParent->GetRenderWidth() * (this->AnchorMax.X - this->AnchorMin.X) - CurrentRight - CurrentLeft;
 				//SetWidth
 				{
-					auto CalculatedSizeDeltaX = CacheWidth - (UIParent->GetWidth() * (AnchorMax.X - AnchorMin.X));
+					auto CalculatedSizeDeltaX = CacheWidth - (UIParent->GetRenderWidth() * (AnchorMax.X - AnchorMin.X));
 					SizeDelta.X = CalculatedSizeDeltaX;
 				}
 				this->AnchoredPosition.X = FMath::Lerp(CurrentLeft, -CurrentRight, Widget->GetPivot().X);
@@ -264,17 +264,17 @@ void ULexLayoutAnchorSlot::SetAnchorMin(FVector2D Value)
 			//SetAnchorBottom
 			{
 				auto CurrentTop = this->GetAnchorTop();
-				CacheHeight = UIParent->GetHeight() * (this->AnchorMax.Y - this->AnchorMin.Y) - CurrentTop - CurrentBottom;
+				CacheHeight = UIParent->GetRenderHeight() * (this->AnchorMax.Y - this->AnchorMin.Y) - CurrentTop - CurrentBottom;
 				//SetHeight
 				{
-					auto CalculatedSizeDeltaY = CacheHeight - (UIParent->GetHeight() * (AnchorMax.Y - AnchorMin.Y));
+					auto CalculatedSizeDeltaY = CacheHeight - (UIParent->GetRenderHeight() * (AnchorMax.Y - AnchorMin.Y));
 					SizeDelta.Y = CalculatedSizeDeltaY;
 				}
 				this->AnchoredPosition.Y = FMath::Lerp(CurrentBottom, -CurrentTop, Widget->GetPivot().Y);
 			}
 
 			CalculateTransformFromAnchor();
-			Widget->SetSize(FVector2D(CacheWidth, CacheHeight));
+			Widget->SetRenderSizeByLayout(FVector2D(CacheWidth, CacheHeight));
 		}
 	}
 	else
@@ -300,10 +300,10 @@ void ULexLayoutAnchorSlot::SetAnchorMax(FVector2D Value)
 			//SetAnchorRight
 			{
 				auto CurrentLeft = this->GetAnchorLeft();
-				CacheWidth = UIParent->GetWidth() * (this->AnchorMax.X - this->AnchorMin.X) - CurrentRight - CurrentLeft;
+				CacheWidth = UIParent->GetRenderWidth() * (this->AnchorMax.X - this->AnchorMin.X) - CurrentRight - CurrentLeft;
 				//SetWidth
 				{
-					auto CalculatedSizeDeltaX = CacheWidth - (UIParent->GetWidth() * (AnchorMax.X - AnchorMin.X));
+					auto CalculatedSizeDeltaX = CacheWidth - (UIParent->GetRenderWidth() * (AnchorMax.X - AnchorMin.X));
 					SizeDelta.X = CalculatedSizeDeltaX;
 				}
 				this->AnchoredPosition.X = FMath::Lerp(CurrentLeft, -CurrentRight, Widget->GetPivot().X);
@@ -311,17 +311,17 @@ void ULexLayoutAnchorSlot::SetAnchorMax(FVector2D Value)
 			//SetAnchorTop
 			{
 				auto CurrentBottom = this->GetAnchorBottom();
-				CacheHeight = UIParent->GetHeight() * (this->AnchorMax.Y - this->AnchorMin.Y) - CurrentTop - CurrentBottom;
+				CacheHeight = UIParent->GetRenderHeight() * (this->AnchorMax.Y - this->AnchorMin.Y) - CurrentTop - CurrentBottom;
 				//SetHeight
 				{
-					auto CalculatedSizeDeltaY = CacheHeight - (UIParent->GetHeight() * (AnchorMax.Y - AnchorMin.Y));
+					auto CalculatedSizeDeltaY = CacheHeight - (UIParent->GetRenderHeight() * (AnchorMax.Y - AnchorMin.Y));
 					SizeDelta.Y = CalculatedSizeDeltaY;
 				}
 				this->AnchoredPosition.Y = FMath::Lerp(CurrentBottom, -CurrentTop, Widget->GetPivot().Y);
 			}
 
 			CalculateTransformFromAnchor();
-			Widget->SetSize(FVector2D(CacheWidth, CacheHeight));
+			Widget->SetRenderSizeByLayout(FVector2D(CacheWidth, CacheHeight));
 		}
 	}
 	else
@@ -341,14 +341,13 @@ void ULexLayoutAnchorSlot::SetHorizontalAndVerticalAnchorMinMax(FVector2D MinVal
 		if (!AnchorMin.Equals(MinValue, 0.0f) || !AnchorMax.Equals(MaxValue, 0.0f))
 		{
 			auto PrevRelativeLocation = Widget->GetRelativeLocation();
-			auto PrevWidth = Widget->GetWidth();
-			auto PrevHeight = Widget->GetHeight();
+			auto PrevWidth = Widget->GetRenderWidth();
+			auto PrevHeight = Widget->GetRenderHeight();
 			this->SetAnchorMin(MinValue);
 			this->SetAnchorMax(MaxValue);
 			if (bKeepSize)
 			{
-				Widget->SetWidth(PrevWidth);
-				Widget->SetHeight(PrevHeight);
+				Widget->SetRenderSizeByLayout(FVector2D(PrevWidth, PrevHeight));
 			}
 			if (bKeepRelativeLocation)
 			{
@@ -377,7 +376,7 @@ void ULexLayoutAnchorSlot::SetHorizontalAnchorMinMax(FVector2D Value, bool bKeep
 
 			if (bKeepSize)
 			{
-				CacheWidth = Widget->GetWidth();
+				CacheWidth = Widget->GetRenderWidth();
 			}
 			auto PrevRelativeLocation = Widget->GetRelativeLocation();
 
@@ -388,11 +387,11 @@ void ULexLayoutAnchorSlot::SetHorizontalAnchorMinMax(FVector2D Value, bool bKeep
 			{
 				if (!bKeepSize)//recalculate size on new anchor if not keep size
 				{
-					CacheWidth = UIParent->GetWidth() * (this->AnchorMax.X - this->AnchorMin.X) - CurrentRight - CurrentLeft;
+					CacheWidth = UIParent->GetRenderWidth() * (this->AnchorMax.X - this->AnchorMin.X) - CurrentRight - CurrentLeft;
 				}
 				//SetWidth
 				{
-					auto CalculatedSizeDeltaX = CacheWidth - (UIParent->GetWidth() * (AnchorMax.X - AnchorMin.X));
+					auto CalculatedSizeDeltaX = CacheWidth - (UIParent->GetRenderWidth() * (AnchorMax.X - AnchorMin.X));
 					SizeDelta.X = CalculatedSizeDeltaX;
 				}
 				this->AnchoredPosition.X = FMath::Lerp(CurrentLeft, -CurrentRight, Widget->GetPivot().X);
@@ -407,7 +406,7 @@ void ULexLayoutAnchorSlot::SetHorizontalAnchorMinMax(FVector2D Value, bool bKeep
 			}
 			if (!bKeepSize)
 			{
-				Widget->SetSize(FVector2D(CacheWidth, CacheHeight));
+				Widget->SetRenderSizeByLayout(FVector2D(CacheWidth, CacheHeight));
 			}
 		}
 	}
@@ -431,7 +430,7 @@ void ULexLayoutAnchorSlot::SetVerticalAnchorMinMax(FVector2D Value, bool bKeepSi
 
 			if (bKeepSize)
 			{
-				CacheHeight = Widget->GetHeight();
+				CacheHeight = Widget->GetRenderHeight();
 			}
 			auto PrevRelativeLocation = Widget->GetRelativeLocation();
 
@@ -442,11 +441,11 @@ void ULexLayoutAnchorSlot::SetVerticalAnchorMinMax(FVector2D Value, bool bKeepSi
 			{
 				if (!bKeepSize)//recalculate size on new anchor if not keep size
 				{
-					CacheHeight = UIParent->GetHeight() * (this->AnchorMax.Y - this->AnchorMin.Y) - CurrentTop - CurrentBottom;
+					CacheHeight = UIParent->GetRenderHeight() * (this->AnchorMax.Y - this->AnchorMin.Y) - CurrentTop - CurrentBottom;
 				}
 				//SetHeight
 				{
-					auto CalculatedSizeDeltaY = CacheHeight - (UIParent->GetHeight() * (AnchorMax.Y - AnchorMin.Y));
+					auto CalculatedSizeDeltaY = CacheHeight - (UIParent->GetRenderHeight() * (AnchorMax.Y - AnchorMin.Y));
 					SizeDelta.Y = CalculatedSizeDeltaY;
 				}
 				this->AnchoredPosition.Y = FMath::Lerp(CurrentBottom, -CurrentTop, Widget->GetPivot().Y);
@@ -461,7 +460,7 @@ void ULexLayoutAnchorSlot::SetVerticalAnchorMinMax(FVector2D Value, bool bKeepSi
 			}
 			if (!bKeepSize)
 			{
-				Widget->SetSize(FVector2D(CacheWidth, CacheHeight));
+				Widget->SetRenderSizeByLayout(FVector2D(CacheWidth, CacheHeight));
 			}
 		}
 	}
@@ -509,7 +508,7 @@ void ULexLayoutAnchorSlot::SetSizeDelta(FVector2D Value)
 		bHeightCached = false;
 		CalculateTransformFromAnchor();
 		auto Widget = GetWidget();
-		Widget->SetSize(FVector2D(GetWidth(), GetHeight()));
+		Widget->SetRenderSizeByLayout(FVector2D(GetWidth(), GetHeight()));
 	}
 }
 
@@ -526,7 +525,7 @@ float ULexLayoutAnchorSlot::GetAnchorLeft()const
 				+ Widget->GetRelativeLocation().Y//convert to parent space
 				-
 				(UIParent->GetLocalSpaceLeft()//parent space left
-					+ UIParent->GetWidth() * this->AnchorMin.X)//to parent anchor min point
+					+ UIParent->GetRenderWidth() * this->AnchorMin.X)//to parent anchor min point
 				;
 		}
 		else
@@ -550,7 +549,7 @@ float ULexLayoutAnchorSlot::GetAnchorTop()const
 					+ Widget->GetRelativeLocation().Z
 					-
 					(UIParent->GetLocalSpaceTop()
-						- UIParent->GetHeight() * (1.0f - this->AnchorMax.Y))
+						- UIParent->GetRenderHeight() * (1.0f - this->AnchorMax.Y))
 					)
 				;
 		}
@@ -575,7 +574,7 @@ float ULexLayoutAnchorSlot::GetAnchorRight()const
 					+ Widget->GetRelativeLocation().Y
 					-
 					(UIParent->GetLocalSpaceRight()
-						- UIParent->GetWidth() * (1.0f - this->AnchorMax.X))
+						- UIParent->GetRenderWidth() * (1.0f - this->AnchorMax.X))
 					)
 				;
 		}
@@ -599,7 +598,7 @@ float ULexLayoutAnchorSlot::GetAnchorBottom()const
 				+ Widget->GetRelativeLocation().Z
 				-
 				(UIParent->GetLocalSpaceBottom()
-					+ UIParent->GetHeight() * this->AnchorMin.Y)
+					+ UIParent->GetRenderHeight() * this->AnchorMin.Y)
 				;
 		}
 		else
@@ -620,12 +619,12 @@ void ULexLayoutAnchorSlot::SetAnchorLeft(float Value)
 			bAnchorLeftCached = true;
 			CacheAnchorLeft = Value;
 			auto CurrentRight = this->GetAnchorRight();
-			CacheWidth = UIParent->GetWidth() * (this->AnchorMax.X - this->AnchorMin.X) - CurrentRight - Value;
+			CacheWidth = UIParent->GetRenderWidth() * (this->AnchorMax.X - this->AnchorMin.X) - CurrentRight - Value;
 			//SetWdith
 			{
 				if (IsHorizontalStretched())
 				{
-					auto CalculatedSizeDeltaX = CacheWidth - (UIParent->GetWidth() * (AnchorMax.X - AnchorMin.X));
+					auto CalculatedSizeDeltaX = CacheWidth - (UIParent->GetRenderWidth() * (AnchorMax.X - AnchorMin.X));
 					SizeDelta.X = CalculatedSizeDeltaX;
 				}
 				else
@@ -635,7 +634,7 @@ void ULexLayoutAnchorSlot::SetAnchorLeft(float Value)
 			}
 			this->AnchoredPosition.X = FMath::Lerp(Value, -CurrentRight, Widget->GetPivot().X);
 			CalculateTransformFromAnchor();
-			Widget->SetWidth(CacheWidth);
+			Widget->SetRenderSizeByLayout(FVector2D(CacheWidth, CacheHeight));
 		}
 	}
 	else
@@ -653,12 +652,12 @@ void ULexLayoutAnchorSlot::SetAnchorTop(float Value)
 			bAnchorTopCached = true;
 			CacheAnchorTop = Value;
 			auto CurrentBottom = this->GetAnchorBottom();
-			CacheHeight = UIParent->GetHeight() * (this->AnchorMax.Y - this->AnchorMin.Y) - Value - CurrentBottom;
+			CacheHeight = UIParent->GetRenderHeight() * (this->AnchorMax.Y - this->AnchorMin.Y) - Value - CurrentBottom;
 			//SetHeight
 			{
 				if (IsVerticalStretched())
 				{
-					auto CalculatedSizeDeltaY = CacheHeight - (UIParent->GetHeight() * (AnchorMax.Y - AnchorMin.Y));
+					auto CalculatedSizeDeltaY = CacheHeight - (UIParent->GetRenderHeight() * (AnchorMax.Y - AnchorMin.Y));
 					SizeDelta.Y = CalculatedSizeDeltaY;
 				}
 				else
@@ -668,7 +667,7 @@ void ULexLayoutAnchorSlot::SetAnchorTop(float Value)
 			}
 			this->AnchoredPosition.Y = FMath::Lerp(CurrentBottom, -Value, Widget->GetPivot().Y);
 			CalculateTransformFromAnchor();
-			Widget->SetHeight(CacheHeight);
+			Widget->SetRenderSizeByLayout(FVector2D(CacheWidth, CacheHeight));
 		}
 	}
 	else
@@ -686,12 +685,12 @@ void ULexLayoutAnchorSlot::SetAnchorRight(float Value)
 			bAnchorRightCached = true;
 			CacheAnchorRight = Value;
 			auto CurrentLeft = this->GetAnchorLeft();
-			CacheWidth = UIParent->GetWidth() * (this->AnchorMax.X - this->AnchorMin.X) - Value - CurrentLeft;
+			CacheWidth = UIParent->GetRenderWidth() * (this->AnchorMax.X - this->AnchorMin.X) - Value - CurrentLeft;
 			//SetWdith
 			{
 				if (IsHorizontalStretched())
 				{
-					auto CalculatedSizeDeltaX = CacheWidth - (UIParent->GetWidth() * (AnchorMax.X - AnchorMin.X));
+					auto CalculatedSizeDeltaX = CacheWidth - (UIParent->GetRenderWidth() * (AnchorMax.X - AnchorMin.X));
 					SizeDelta.X = CalculatedSizeDeltaX;
 				}
 				else
@@ -701,7 +700,7 @@ void ULexLayoutAnchorSlot::SetAnchorRight(float Value)
 			}
 			this->AnchoredPosition.X = FMath::Lerp(CurrentLeft, -Value, Widget->GetPivot().X);
 			CalculateTransformFromAnchor();
-			Widget->SetWidth(CacheWidth);
+			Widget->SetRenderSizeByLayout(FVector2D(CacheWidth, CacheHeight));
 		}
 	}
 	else
@@ -719,12 +718,12 @@ void ULexLayoutAnchorSlot::SetAnchorBottom(float Value)
 			bAnchorBottomCached = true;
 			CacheAnchorBottom = Value;
 			auto CurrentTop = this->GetAnchorTop();
-			CacheHeight = UIParent->GetHeight() * (this->AnchorMax.Y - this->AnchorMin.Y) - CurrentTop - Value;
+			CacheHeight = UIParent->GetRenderHeight() * (this->AnchorMax.Y - this->AnchorMin.Y) - CurrentTop - Value;
 			//SetHeight
 			{
 				if (IsVerticalStretched())
 				{
-					auto CalculatedSizeDeltaY = CacheHeight - (UIParent->GetHeight() * (AnchorMax.Y - AnchorMin.Y));
+					auto CalculatedSizeDeltaY = CacheHeight - (UIParent->GetRenderHeight() * (AnchorMax.Y - AnchorMin.Y));
 					SizeDelta.Y = CalculatedSizeDeltaY;
 				}
 				else
@@ -734,7 +733,7 @@ void ULexLayoutAnchorSlot::SetAnchorBottom(float Value)
 			}
 			this->AnchoredPosition.Y = FMath::Lerp(Value, -CurrentTop, Widget->GetPivot().Y);
 			CalculateTransformFromAnchor();
-			Widget->SetHeight(CacheHeight);
+			Widget->SetRenderSizeByLayout(FVector2D(CacheWidth, CacheHeight));
 		}
 	}
 	else

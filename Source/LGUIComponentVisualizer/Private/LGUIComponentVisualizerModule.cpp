@@ -16,9 +16,9 @@ void FLGUIComponentVisualizerModule::StartupModule()
 	{
 		if (GUnrealEd)
 		{
-			TSharedPtr<FUIItemComponentVisualizer> UIItemVisualizer = MakeShareable(new FUIItemComponentVisualizer);
-			GUnrealEd->RegisterComponentVisualizer(ULexWidget::StaticClass()->GetFName(), UIItemVisualizer);
-			UIItemVisualizer->OnRegister();
+			// TSharedPtr<FUIItemComponentVisualizer> UIItemVisualizer = MakeShareable(new FUIItemComponentVisualizer);
+			// GUnrealEd->RegisterComponentVisualizer(ULexWidget::StaticClass()->GetFName(), UIItemVisualizer);
+			// UIItemVisualizer->OnRegister();
 		}
 	}
 }
@@ -29,7 +29,7 @@ void FLGUIComponentVisualizerModule::ShutdownModule()
 	{
 		if (GUnrealEd)
 		{
-			GUnrealEd->UnregisterComponentVisualizer(ULexWidget::StaticClass()->GetFName());
+			// GUnrealEd->UnregisterComponentVisualizer(ULexWidget::StaticClass()->GetFName());
 		}
 	}
 }

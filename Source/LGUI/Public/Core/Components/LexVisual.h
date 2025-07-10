@@ -187,6 +187,9 @@ public:
 	virtual void GetGeometryBoundsInLocalSpace(FVector2D& OutMinPoint, FVector2D& OutMaxPoint)const;
 	/** editor only, return 3d bounds in self local space */
 	virtual void GetGeometryBounds3DInLocalSpace(FVector& OutMinPoint, FVector& OutMaxPoint)const;
+
+	virtual float GetShrinkToContentWidth()const{return 0;}
+	virtual float GetShrinkToContentHeight()const{return 0;}
 protected:
 	uint8 bColorChanged : 1;
 	uint8 bTransformChanged : 1;

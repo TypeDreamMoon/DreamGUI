@@ -18,6 +18,8 @@
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
+#include "PropertyType/LexWidgetAspectRatioCustomization.h"
+#include "PropertyType/LexWidgetSizeCustomization.h"
 
 #include "Widgets/Input/SNumericEntryBox.h"
 
@@ -87,6 +89,10 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	}
 
 	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, bIsUIActive));
+
+	DetailBuilder.GetDetailsView()->RegisterInstancedCustomPropertyTypeLayout(TEXT("LexWidgetAspectRatio"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexWidgetAspectRatioCustomization::MakeInstance));
+	auto AspectRatio_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AspectRatio));
+	DetailBuilder.GetDetailsView()->RegisterInstancedCustomPropertyTypeLayout(TEXT("LexWidgetSize"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexWidgetSizeCustomization::MakeInstance, AspectRatio_PH.ToSharedPtr()));
 	
 	//pivot
 	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, Pivot));
@@ -104,7 +110,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		this->OnPivotChanged();
 		}));
 
-	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, Size));
+	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, RenderSize));
 	//HierarchyIndex
 	{
 		auto HierarchyIndexHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, HierarchyIndex));
