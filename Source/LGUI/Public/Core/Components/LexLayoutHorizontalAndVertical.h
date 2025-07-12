@@ -118,16 +118,21 @@ private:
 	FVector2D PositionOffset;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LayoutSlot", Getter, Setter, meta = (AllowPrivateAccess = true))
 	int32 Order = 0;
+	/** Grow the size if there is extra space.
+	 * Will be ignored if parent widget's size is ShrinkToChildren.
+	 **/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LayoutSlot", Getter, Setter, meta = (AllowPrivateAccess = true, UIMin=0))
 	float Grow = 0;
+	/** Shrink the size if there is no space but others need more space.
+	 * Will be ignored if parent widget's size is ShrinkToChildren.
+	 **/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LayoutSlot", Getter, Setter, meta = (AllowPrivateAccess = true, UIMin=0))
 	float Shrink = 0;
 	
 	TWeakObjectPtr<ULexLayoutHorizontalAndVertical> CacheLayout;
 public:
-	virtual bool GetLayoutControlWidth() const override{return true;}
-	virtual bool GetLayoutControlHeight() const override{return true;}
-	void UpdateChildLayout(ULexLayoutHorizontalAndVertical* ParentLayout);
+	virtual bool GetLayoutControlWidth() const override;
+	virtual bool GetLayoutControlHeight() const override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif

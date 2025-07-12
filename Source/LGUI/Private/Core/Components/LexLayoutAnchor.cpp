@@ -32,7 +32,16 @@ bool ULexLayoutAnchor::CanEditChange(const FProperty* InProperty) const
 
 void ULexLayoutAnchor::OnUpdateLayout()
 {
-	
+	auto Widget = GetWidget();
+	if (!Widget)return;
+	auto& Children = Widget->GetUIChildren();
+	for (int i = 0; i < Children.Num(); i++)
+	{
+		auto Child = Children[i];
+		if (!Child->IsVisibleForLayout())continue;
+		auto LayoutSlot = (ULexLayoutAnchorSlot*)Child->GetLayoutSlot();//make sure layout slot is created
+		LayoutSlot->CalculateLayout();
+	}
 }
 
 ULexLayoutAnchorSlot::ULexLayoutAnchorSlot()
@@ -186,6 +195,12 @@ void ULexLayoutAnchorSlot::CalculateTransformFromAnchor(bool& OutHorizontalPosit
 		Widget->UpdateComponentToWorld();
 	}
 	bCanSetAnchorFromTransform = true;
+}
+
+void ULexLayoutAnchorSlot::CalculateLayout()
+{
+	CalculateTransformFromAnchor();
+	GetWidget()->SetRenderSizeByLayout(FVector2D(GetWidth(), GetHeight()));
 }
 
 float ULexLayoutAnchorSlot::GetWidth() const
@@ -686,7 +701,7 @@ void ULexLayoutAnchorSlot::SetAnchorRight(float Value)
 			CacheAnchorRight = Value;
 			auto CurrentLeft = this->GetAnchorLeft();
 			CacheWidth = UIParent->GetRenderWidth() * (this->AnchorMax.X - this->AnchorMin.X) - Value - CurrentLeft;
-			//SetWdith
+			//SetWidth
 			{
 				if (IsHorizontalStretched())
 				{

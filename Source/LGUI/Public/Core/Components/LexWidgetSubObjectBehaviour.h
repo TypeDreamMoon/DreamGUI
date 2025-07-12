@@ -25,7 +25,7 @@ public:
 	virtual void OnClipDataChanged(){}
 
 	UFUNCTION(BlueprintCallable, Category="LGUI")
-	ULexWidget* GetWidget()const;
-private:
+	virtual ULexWidget* GetWidget()const;
+protected:
 	mutable TWeakObjectPtr<ULexWidget> CacheWidget;
 };

@@ -488,18 +488,29 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		static const FName AspectRatioName = GET_MEMBER_NAME_CHECKED(ULexWidget, AspectRatio);
 		static const FName WidthName = GET_MEMBER_NAME_CHECKED(ULexWidget, Width);
 		static const FName HeightName = GET_MEMBER_NAME_CHECKED(ULexWidget, Height);
+		static const FName PaddingName = GET_MEMBER_NAME_CHECKED(ULexWidget, Padding);
+		static const FName MarginName = GET_MEMBER_NAME_CHECKED(ULexWidget, Margin);
 		static const FName VisibilityName = GET_MEMBER_NAME_CHECKED(ULexWidget, WidgetVisibility);
 		static const FName ClippingName = GET_MEMBER_NAME_CHECKED(ULexWidget, Clipping);
 		static const FName VisualName = GET_MEMBER_NAME_CHECKED(ULexWidget, Visual);
+		static const FName LayoutName = GET_MEMBER_NAME_CHECKED(ULexWidget, Layout);
 
 		if (MemberName == AspectRatioName
 		|| MemberName == WidthName
 		|| MemberName == HeightName
+		|| MemberName == PaddingName
+		|| MemberName == MarginName
 		|| MemberName == VisibilityName
 		)
 		{
 			this->MarkSizeDirty_Recursive();
 			this->MarkClipDirty_Recursive(false);
+			ULGUIPrefabManagerObject::AddOneShotTickFunction([this]()
+			{
+				this->MarkSizeDirty_Recursive();
+				this->MarkClipDirty_Recursive(false);
+				EditorForceUpdate();
+			}, 1);
 		}
 		else if (PropertyName == ClippingName)
 		{
@@ -524,8 +535,22 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		{
 			
 		}
-		EditorForceUpdate();
-		UpdateBounds();
+		else if (PropertyName == LayoutName)
+		{
+			if (!IsValid(Layout))
+			{
+				for (auto Child : GetUIChildren())
+				{
+					Child->GetLayoutSlot();//use this to refresh layout-slot
+				}
+			}
+			MarkSizeDirty_Recursive();
+		}
+		ULGUIPrefabManagerObject::AddOneShotTickFunction([this]()
+		{
+			EditorForceUpdate();
+			UpdateBounds();
+		}, 1);
 	}
 }
 
@@ -546,6 +571,8 @@ void ULexWidget::PreEditChange(FProperty* PropertyAboutToChange)
 bool ULexWidget::CanEditChange(const FProperty* InProperty) const
 {
 	bool bIsEditable = Super::CanEditChange(InProperty);
+	static auto WidthName = GET_MEMBER_NAME_CHECKED(ULexWidget, Width);
+	static auto HeightName = GET_MEMBER_NAME_CHECKED(ULexWidget, Height);
 	if (InProperty->GetFName() == TEXT("bAbsoluteLocation"))
 	{
 		bIsEditable = false;
@@ -557,6 +584,26 @@ bool ULexWidget::CanEditChange(const FProperty* InProperty) const
 	else if (InProperty->GetFName() == TEXT("bAbsoluteScale"))
 	{
 		bIsEditable = false;
+	}
+	else if (InProperty->GetFName() == WidthName)
+	{
+		if (IsValid(LayoutSlot))
+		{
+			if (LayoutSlot->GetLayoutControlWidth())
+			{
+				bIsEditable = false;
+			}
+		}
+	}
+	else if (InProperty->GetFName() == HeightName)
+	{
+		if (IsValid(LayoutSlot))
+		{
+			if (LayoutSlot->GetLayoutControlHeight())
+			{
+				bIsEditable = false;
+			}
+		}
 	}
 	return bIsEditable;
 }
@@ -713,10 +760,6 @@ void ULexWidget::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, E
 	{
 		Layout->OnTransformChanged();
 	}
-	if (CheckAndGetLayoutSlot())
-	{
-		LayoutSlot->OnTransformChanged();
-	}
 	if (IsValid(Visual))
 	{
 		Visual->OnTransformChanged();
@@ -824,12 +867,12 @@ void ULexWidget::OnChildDetached(USceneComponent* ChildComponent)
 	if (!IsValid(this) || this->IsUnreachable())return;
 	if (GetWorld() == nullptr)return;
 
-	if (auto childUIItem = Cast<ULexWidget>(ChildComponent))
+	if (auto ChildWidget = Cast<ULexWidget>(ChildComponent))
 	{
-		childUIItem->bIsDetaching = true;
+		ChildWidget->bIsDetaching = true;
 		//hierarchy index
 		EnsureUIChildrenValid();
-		UIChildren.Remove(childUIItem);
+		UIChildren.Remove(ChildWidget);
 		for (int i = 0; i < UIChildren.Num(); i++)
 		{
 			auto& UIChild = UIChildren[i];
@@ -838,6 +881,10 @@ void ULexWidget::OnChildDetached(USceneComponent* ChildComponent)
 				UIChild->HierarchyIndex = i;
 				this->CallUILifeCycleBehavioursChildHierarchyIndexChanged(UIChild);
 			}
+		}
+		if (IsValid(Layout))
+		{
+			Layout->OnChildDetached(ChildWidget);
 		}
 		MarkCanvasUpdate(false, false, false);
 	}
@@ -957,7 +1004,7 @@ void ULexWidget::OnRegister()
 	{
 		Layout->OnRegister();
 	}
-	if (CheckAndGetLayoutSlot())
+	if (IsValid(LayoutSlot))
 	{
 		LayoutSlot->OnRegister();
 	}
@@ -996,7 +1043,7 @@ void ULexWidget::OnUnregister()
 	{
 		Layout->OnUnregister();
 	}
-	if (CheckAndGetLayoutSlot())
+	if (IsValid(LayoutSlot))
 	{
 		LayoutSlot->OnRegister();
 	}
@@ -1113,6 +1160,28 @@ void ULexWidget::UpdateLayout()
 	if (IsValid(Layout))
 	{
 		Layout->UpdateLayout();
+	}
+
+	if (!IsValid(LayoutSlot))
+	{
+		SetRenderSizeByLayout(GetPreferredSize());
+		if (UIParent.IsValid())
+		{
+			auto Position = this->GetRelativeLocation();
+			{
+				float PaddingAndMarginOffset = UIParent->GetPadding().Left - UIParent->GetPadding().Right + (this->GetMargin().Left - this->GetMargin().Right);
+				PaddingAndMarginOffset *= 0.5f;
+				
+				Position.Y = PaddingAndMarginOffset;
+			}
+			{
+				float PaddingAndMarginOffset = UIParent->GetPadding().Bottom - UIParent->GetPadding().Top + (this->GetMargin().Bottom - this->GetMargin().Top);
+				PaddingAndMarginOffset *= 0.5f;
+				
+				Position.Z = PaddingAndMarginOffset;
+			}
+			this->SetRelativeLocation(Position);
+		}
 	}
 }
 
@@ -1275,127 +1344,14 @@ void ULexWidget::OnRenderCanvasChanged(ULexCanvas* OldCanvas, ULexCanvas* NewCan
 
 void ULexWidget::CalculateRenderSize()
 {
-	bool LayoutSlotValid = CheckAndGetLayoutSlot() != nullptr;
+	bool LayoutSlotValid = IsValid(LayoutSlot);
 	if (!LayoutSlotValid || !LayoutSlot->GetLayoutControlWidth())
 	{
-		switch (Width.Type)
-		{
-		case ELexWidgetSizeType::Fixed:
-			RenderSize.X = Width.Value;
-			break;
-		case ELexWidgetSizeType::ExpandToParent:
-			if (UIParent.IsValid())
-			{
-				if (UIParent->Width.Type == ELexWidgetSizeType::ShrinkToChildren)
-				{
-					RenderSize.X = Width.Value;
-				}
-				else
-				{
-					RenderSize.X = UIParent->GetRenderSize().X
-					- (UIParent->GetPadding().Left + UIParent->GetPadding().Right);
-					RenderSize.X *= Width.Percent * 0.01f;
-				}
-			}
-			else
-			{
-				RenderSize.X = Width.Value;
-			}
-			break;
-		case ELexWidgetSizeType::ShrinkToChildren:
-			if (IsValid(Layout) && Layout->SupportShrinkToChildrenWidth() && this->IsVisibleForLayout())
-			{
-				RenderSize.X = Layout->GetShrinkToChildrenWidth();
-			}
-			else if (UIChildren.Num() > 0)
-			{
-				float MaxSize = 0;
-				for (auto& Child : UIChildren)
-				{
-					auto ChildSize = Child->GetRenderSize().X + (Child->GetMargin().Left + Child->GetMargin().Right);
-					if (MaxSize < ChildSize)
-					{
-						MaxSize = ChildSize;
-					}
-				}
-				RenderSize.X = MaxSize + (this->GetPadding().Left + this->GetPadding().Right);
-			}
-			else if (IsValid(Visual))
-			{
-				RenderSize.X = Visual->GetShrinkToContentWidth();
-			}
-			else
-			{
-				RenderSize.X = Width.Value;
-			}
-			break;
-		}
+		RenderSize.X = GetPreferredWidth();
 	}
 	if (!LayoutSlotValid || !LayoutSlot->GetLayoutControlHeight())
 	{
-		switch (Height.Type)
-		{
-		case ELexWidgetSizeType::Fixed:
-			RenderSize.Y = Height.Value;
-			break;
-		case ELexWidgetSizeType::ExpandToParent:
-			if (UIParent.IsValid())
-			{
-				if (UIParent->Height.Type == ELexWidgetSizeType::ShrinkToChildren)
-				{
-					RenderSize.Y = Height.Value;
-				}
-				else
-				{
-					RenderSize.Y = UIParent->GetRenderSize().Y
-					- (UIParent->GetPadding().Bottom + UIParent->GetPadding().Top);
-					RenderSize.Y *= Height.Percent * 0.01f;
-				}
-			}
-			else
-			{
-				RenderSize.Y = Height.Value;
-			}
-			break;
-		case ELexWidgetSizeType::ShrinkToChildren:
-			if (IsValid(Layout) && Layout->SupportShrinkToChildrenHeight() && this->IsVisibleForLayout())
-			{
-				RenderSize.Y = Layout->GetShrinkToChildrenHeight();
-			}
-			else if (UIChildren.Num() > 0)
-			{
-				float MaxSize = 0;
-				for (auto& Child : UIChildren)
-				{
-					auto ChildSize = Child->GetRenderSize().Y + (Child->GetMargin().Bottom + Child->GetMargin().Top);
-					if (MaxSize < ChildSize)
-					{
-						MaxSize = ChildSize;
-					}
-				}
-				RenderSize.Y = MaxSize + (this->GetPadding().Bottom + this->GetPadding().Top);
-			}
-			else if (IsValid(Visual))
-			{
-				RenderSize.Y = Visual->GetShrinkToContentHeight();
-			}
-			else
-			{
-				RenderSize.Y = Height.Value;
-			}
-			break;
-		}
-	}
-	switch (AspectRatio.Type)
-	{
-	case ELexWidgetAspectRatioType::None:
-		break;
-	case ELexWidgetAspectRatioType::HeightControlWidth:
-		RenderSize.X = RenderSize.Y * AspectRatio.Value;
-		break;
-	case ELexWidgetAspectRatioType::WidthControlHeight:
-		RenderSize.Y = RenderSize.X / AspectRatio.Value;
-		break;
+		RenderSize.Y = GetPreferredHeight();
 	}
 } 
 
@@ -1452,6 +1408,145 @@ FVector2D ULexWidget::GetRenderSize() const
 		const_cast<ULexWidget*>(this)->CalculateRenderSize();
 	}
 	return RenderSize;
+}
+
+float ULexWidget::GetPreferredWidth() const
+{
+	float PreferredWidth = 0;
+	if (AspectRatio.Type == ELexWidgetAspectRatioType::HeightControlWidth)
+	{
+		PreferredWidth = GetPreferredHeight() * AspectRatio.Value;
+	}
+	else
+	{
+		switch (Width.Type)
+		{
+		case ELexWidgetSizeType::Fixed:
+			PreferredWidth = Width.Value;
+			break;
+		case ELexWidgetSizeType::ExpandToParent:
+			if (UIParent.IsValid())
+			{
+				if (UIParent->Width.Type == ELexWidgetSizeType::ShrinkToChildren)//size conflict, fallback to fixed value
+				{
+					PreferredWidth = Width.Value;
+				}
+				else
+				{
+					PreferredWidth = UIParent->GetRenderSize().X
+					- (UIParent->GetPadding().Left + UIParent->GetPadding().Right)
+					- (this->GetMargin().Left + this->GetMargin().Right)
+					;
+					PreferredWidth *= Width.Percent * 0.01f;
+				}
+			}
+			else
+			{
+				PreferredWidth = Width.Value;
+			}
+			break;
+		case ELexWidgetSizeType::ShrinkToChildren:
+			if (IsValid(Layout) && Layout->SupportShrinkToChildrenWidth() && this->IsVisibleForLayout())
+			{
+				PreferredWidth = Layout->GetShrinkToChildrenWidth();
+			}
+			else if (UIChildren.Num() > 0)
+			{
+				float MaxSize = 0;
+				for (auto& Child : UIChildren)
+				{
+					auto ChildSize = Child->GetRenderSize().X + (Child->GetMargin().Left + Child->GetMargin().Right);
+					if (MaxSize < ChildSize)
+					{
+						MaxSize = ChildSize;
+					}
+				}
+				PreferredWidth = MaxSize + (this->GetPadding().Left + this->GetPadding().Right);
+			}
+			else if (IsValid(Visual))
+			{
+				PreferredWidth = Visual->GetShrinkToContentWidth();
+			}
+			else
+			{
+				PreferredWidth = Width.Value;
+			}
+			break;
+		}
+	}
+	return PreferredWidth;
+}
+
+float ULexWidget::GetPreferredHeight() const
+{
+	float PreferredHeight = 0;
+	if (AspectRatio.Type == ELexWidgetAspectRatioType::WidthControlHeight)
+	{
+		PreferredHeight = GetPreferredWidth() / AspectRatio.Value;
+	}
+	else
+	{
+		switch (Height.Type)
+		{
+		case ELexWidgetSizeType::Fixed:
+			PreferredHeight = Height.Value;
+			break;
+		case ELexWidgetSizeType::ExpandToParent:
+			if (UIParent.IsValid())
+			{
+				if (UIParent->Height.Type == ELexWidgetSizeType::ShrinkToChildren)//size conflict, fallback to fixed value
+				{
+					PreferredHeight = Height.Value;
+				}
+				else
+				{
+					PreferredHeight = UIParent->GetRenderSize().Y
+					- (UIParent->GetPadding().Bottom + UIParent->GetPadding().Top)
+					- (this->GetMargin().Bottom + this->GetMargin().Top)
+					;
+					PreferredHeight *= Height.Percent * 0.01f;
+				}
+			}
+			else
+			{
+				PreferredHeight = Height.Value;
+			}
+			break;
+		case ELexWidgetSizeType::ShrinkToChildren:
+			if (IsValid(Layout) && Layout->SupportShrinkToChildrenHeight() && this->IsVisibleForLayout())
+			{
+				PreferredHeight = Layout->GetShrinkToChildrenHeight();
+			}
+			else if (UIChildren.Num() > 0)
+			{
+				float MaxSize = 0;
+				for (auto& Child : UIChildren)
+				{
+					auto ChildSize = Child->GetRenderSize().Y + (Child->GetMargin().Bottom + Child->GetMargin().Top);
+					if (MaxSize < ChildSize)
+					{
+						MaxSize = ChildSize;
+					}
+				}
+				PreferredHeight = MaxSize + (this->GetPadding().Bottom + this->GetPadding().Top);
+			}
+			else if (IsValid(Visual))
+			{
+				PreferredHeight = Visual->GetShrinkToContentHeight();
+			}
+			else
+			{
+				PreferredHeight = Height.Value;
+			}
+			break;
+		}
+	}
+	return PreferredHeight;
+}
+
+FVector2D ULexWidget::GetPreferredSize() const
+{
+	return FVector2D(GetPreferredWidth(), GetPreferredHeight());
 }
 
 void ULexWidget::SetRenderSizeByLayout(FVector2D Value)
@@ -1593,10 +1688,6 @@ void ULexWidget::MarkDimensionChanged(bool InPivotChange, bool InWidthChange, bo
 	{
 		Layout->OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
 	}
-	if (CheckAndGetLayoutSlot())
-	{
-		LayoutSlot->OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
-	}
 	if (IsValid(Visual))
 	{
 		Visual->OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
@@ -1635,10 +1726,6 @@ void ULexWidget::MarkParentDimensionChanged(bool InParentPivotChange, bool InPar
 	if (IsValid(Layout))
 	{
 		Layout->OnParentDimensionChanged(false, false, false);
-	}
-	if (CheckAndGetLayoutSlot())
-	{
-		LayoutSlot->OnParentDimensionChanged(InParentPivotChange, InParentWidthChange, InParentHeightChange);
 	}
 }
 
@@ -1705,16 +1792,12 @@ void ULexWidget::MarkSizeDirty_Recursive()
 		}
 	};
 	auto ParentWithLayout = this;
-	while (ParentWithLayout)
+	if (UIParent.IsValid())
 	{
-		auto TempParent = ParentWithLayout->GetUIParent();
-		if (TempParent && TempParent->GetLayout())
+		if (UIParent->GetWidth().Type == ELexWidgetSizeType::ShrinkToChildren
+			|| UIParent->GetHeight().Type == ELexWidgetSizeType::ShrinkToChildren)
 		{
-			ParentWithLayout = TempParent;
-		}
-		else
-		{
-			break;
+			ParentWithLayout = UIParent.Get();
 		}
 	}
 	LOCAL::MarkChildrenDirty(ParentWithLayout);
@@ -2012,7 +2095,7 @@ void ULexWidget::SetVisual(ULexVisual* Value)
 	}
 }
 
-ULexLayoutSlot* ULexWidget::CheckAndGetLayoutSlot()const
+ULexLayoutSlot* ULexWidget::GetLayoutSlot() const
 {
 	auto ClearLayoutSlot = [this]
 	{
@@ -2037,9 +2120,9 @@ ULexLayoutSlot* ULexWidget::CheckAndGetLayoutSlot()const
 	auto LayoutSlotClass = ParentLayout->GetSlotClass();
 	if (!IsValid(LayoutSlot) || LayoutSlot->GetClass() != LayoutSlotClass)
 	{
-		LayoutSlot = NewObject<ULexLayoutSlot>(const_cast<ULexWidget*>(this), LayoutSlotClass, NAME_None, RF_Public | RF_Transactional);
+		LayoutSlot = ParentLayout->GetOrCreateSlot(this, ParentLayout->GetSlotClass());
 	}
-	return LayoutSlot;
+	return LayoutSlot.Get();
 }
 
 void ULexWidget::CheckUIActiveState()

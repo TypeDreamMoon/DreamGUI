@@ -38,6 +38,7 @@ public:
 		HeaderRow
 		.IsEnabled(TAttribute<bool>::CreateSPLambda(this, [=, this]
 		{
+			if (!PropertyHandle->IsEditable())return false;
 			if (!AspectRatioType_PH.IsValid())return false;
 			ELexWidgetAspectRatioType AspectRatioFitType = ELexWidgetAspectRatioType::None;
 			if (AspectRatioType_PH.Pin()->GetValue(*(uint8*)&AspectRatioFitType) == FPropertyAccess::Success)

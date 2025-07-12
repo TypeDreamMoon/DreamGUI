@@ -12,7 +12,7 @@ ULexWidget* ULexWidgetSubObjectBehaviour::GetWidget() const
 {
 	if (!CacheWidget.IsValid())
 	{
-		CacheWidget = Cast<ULexWidget>(this->GetOuter());
+		CacheWidget = this->GetTypedOuter<ULexWidget>();
 	}
 	return CacheWidget.Get();
 }

@@ -74,9 +74,13 @@ public:
 	virtual void EditorForceUpdate();//@todo: remove this
 	void EnsureDataForRebuild();
 #endif
-	static const FName GetSizePropertyName()
+	static const FName GetWidthPropertyName()
 	{
-		return GET_MEMBER_NAME_CHECKED(ULexWidget, RenderSize);
+		return GET_MEMBER_NAME_CHECKED(ULexWidget, Width);
+	}
+	static const FName GetHeightPropertyName()
+	{
+		return GET_MEMBER_NAME_CHECKED(ULexWidget, Height);
 	}
 	static const FName GetHierarchyIndexPropertyName()
 	{
@@ -186,7 +190,7 @@ protected:
 	FMargin Margin;
 	UPROPERTY(EditAnywhere, Getter, Setter, Category = "LGUI")
 	FVector2D Pivot = FVector2D(0.5f, 0.5f);
-	UPROPERTY(EditAnywhere, Getter, Category = "LGUI")
+	UPROPERTY(VisibleAnywhere, Getter, Category = "LGUI", AdvancedDisplay)
 	FVector2D RenderSize = FVector2D(100, 100);
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
@@ -200,6 +204,9 @@ public:
 	float GetRenderHeight() const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
 	FVector2D GetRenderSize() const;
+	float GetPreferredWidth() const;
+	float GetPreferredHeight() const;
+	FVector2D GetPreferredSize() const;
 
 	void SetRenderSizeByLayout(FVector2D Value);
 
@@ -290,11 +297,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter = "GetRestrictNavigationArea", Setter = "SetRestrictNavigationArea", meta = (AllowPrivateAccess = true))
 	uint8 bRestrictNavigationArea : 1 = false;
 
-	UPROPERTY(EditAnywhere, Instanced, Category = "Visual", Getter, meta = (AllowPrivateAccess = true))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Instanced, Category = "Visual", Getter, meta = (AllowPrivateAccess = true))
 	TObjectPtr<ULexVisual> Visual = nullptr;
-	UPROPERTY(EditAnywhere, Instanced, Category = "Layout", Getter, meta = (AllowPrivateAccess = true))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Instanced, Category = "Layout", Getter, meta = (AllowPrivateAccess = true))
 	TObjectPtr<ULexLayout> Layout = nullptr;
-	UPROPERTY(VisibleAnywhere, Instanced, Category = "LayoutSlot", Getter, meta = (AllowPrivateAccess = true))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Transient, Instanced, Category = "LayoutSlot", Getter, meta = (AllowPrivateAccess = true))
 	mutable TObjectPtr<ULexLayoutSlot> LayoutSlot = nullptr;
 	
 	TWeakPtr<FLexUIClipData> ClipData;
@@ -370,8 +377,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	ULexLayout* GetLayout()const { return Layout; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	ULexLayoutSlot* GetLayoutSlot()const{return LayoutSlot;}
-	ULexLayoutSlot* CheckAndGetLayoutSlot()const;
+	ULexLayoutSlot* GetLayoutSlot()const;
 
 	const TWeakPtr<FLexUIClipData>& GetClipData()const{return ClipData;}
 #pragma region UIActive

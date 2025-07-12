@@ -105,7 +105,7 @@ struct FLexWidgetSize
 	GENERATED_BODY()
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	ELexWidgetSizeType Type = ELexWidgetSizeType::Fixed;
-	/** Pixel value */
+	/** Fixed pixel value */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Value = 100.0f;
 	/** Percent value relative to parent, valid when Type is ExpandToParent */

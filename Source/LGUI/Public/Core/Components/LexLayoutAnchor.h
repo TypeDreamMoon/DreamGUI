@@ -23,11 +23,6 @@ private:
 
 	virtual TSubclassOf<ULexLayoutSlot> GetSlotClass()const;
 
-#if WITH_EDITORONLY_DATA
-	/** This is nothing but just a place-holder to display Layout in editor */
-	UPROPERTY(VisibleAnywhere, Category = "Layout")
-	FString PlaceHolder;
-#endif
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
@@ -84,6 +79,8 @@ private:
 	void CalculateTransformFromAnchor(bool& OutHorizontalPositionChanged, bool& OutVerticalPositionChanged);
 
 public:
+	void CalculateLayout();
+	
 	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
 	float GetWidth() const;
 	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")

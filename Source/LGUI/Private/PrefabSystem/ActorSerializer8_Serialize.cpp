@@ -8,6 +8,7 @@
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "LGUI.h"
 #include "Misc/NetworkVersion.h"
+#include "PrefabSystem/ILGUIPrefabInterface.h"
 #include "Runtime/Launch/Resources/Version.h"
 #if WITH_EDITOR
 #include "Tools/UEdMode.h"
@@ -88,6 +89,10 @@ namespace LGUIPrefabSystem8
 		for (int i = 0; i < TrySerializeActorArray.Num(); i++)
 		{
 			auto& Actor = TrySerializeActorArray[i];
+			if (Actor->GetClass()->ImplementsInterface(ULGUIPrefabInterface::StaticClass()))
+			{
+				ILGUIPrefabInterface::Execute_OnPreSavePrefab(Actor);
+			}
 			FLGUIActorSaveData ActorSaveData;
 			if (auto SubPrefabDataPtr = SubPrefabMap.Find(Actor))//sub prefab's actor is not collected in WillSerializeActorArray
 			{
@@ -307,6 +312,10 @@ namespace LGUIPrefabSystem8
 		for (int i = 0; i < WillSerializeObjectArray.Num(); i++)
 		{
 			auto Object = WillSerializeObjectArray[i];
+			if (Object->GetClass()->ImplementsInterface(ULGUIPrefabInterface::StaticClass()))
+			{
+				ILGUIPrefabInterface::Execute_OnPreSavePrefab(Object);
+			}
 			auto Class = Object->GetClass();
 			FLGUIObjectSaveData ObjectSaveDataItem;
 			ObjectSaveDataItem.ObjectClass = FindOrAddClassFromList(Class);

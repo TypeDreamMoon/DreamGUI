@@ -53,19 +53,24 @@ void FLexWidgetCustomization::ForceUpdateUI()
 
 void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
-	TArray<TWeakObjectPtr<UObject>> targetObjects;
-	DetailBuilder.GetObjectsBeingCustomized(targetObjects);
+	TArray<TWeakObjectPtr<UObject>> TargetObjects;
+	DetailBuilder.GetObjectsBeingCustomized(TargetObjects);
 	TargetScriptArray.Empty();
-	for (auto item : targetObjects)
+	bool bIsSubPrefab = false;
+	for (auto Item : TargetObjects)
 	{
-		if (auto validItem = Cast<ULexWidget>(item.Get()))
+		if (auto ValidItem = Cast<ULexWidget>(Item.Get()))
 		{
-			TargetScriptArray.Add(validItem);
-			if (validItem->GetWorld() != nullptr)
+			TargetScriptArray.Add(ValidItem);
+			if (ValidItem->GetWorld() != nullptr)
 			{
-				if (validItem->GetWorld()->WorldType == EWorldType::Editor)
+				if (ValidItem->GetWorld()->WorldType == EWorldType::Editor)
 				{
-					validItem->EditorForceUpdate();
+					if (auto PrefabHelper = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(ValidItem->GetOwner()))
+					{
+						bIsSubPrefab = PrefabHelper->IsActorBelongsToSubPrefab(ValidItem->GetOwner());
+					}
+					ValidItem->EditorForceUpdate();
 				}
 			}
 		}
@@ -225,6 +230,10 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	LayoutProperty->GetValue(Layout);
 	IDetailCategoryBuilder& LayoutCategory = DetailBuilder.EditCategory("Layout");
 	auto LayoutPropertyValueWidget = LayoutProperty->CreatePropertyValueWidget();
+	if (bIsSubPrefab)
+	{
+		LayoutPropertyValueWidget->SetEnabled(false);
+	}
 	LayoutCategory.HeaderContent(LayoutPropertyValueWidget);
 	LayoutCategory.SetIsEmpty(!IsValid(Layout));
 	LayoutCategory.AddCustomRow(LOCTEXT("LayoutPlaceholder", "Placeholder"))
@@ -254,6 +263,10 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	VisualProperty->GetValue(Visual);
 	IDetailCategoryBuilder& VisualCategory = DetailBuilder.EditCategory("Visual");
 	auto VisualPropertyValueWidget = VisualProperty->CreatePropertyValueWidget();
+	if (bIsSubPrefab)
+	{
+		VisualPropertyValueWidget->SetEnabled(false);
+	}
 	VisualCategory.HeaderContent(VisualPropertyValueWidget);
 	VisualCategory.SetIsEmpty(Visual == nullptr);
 	VisualCategory.AddCustomRow(LOCTEXT("VisualPlaceholder", "Placeholder"))

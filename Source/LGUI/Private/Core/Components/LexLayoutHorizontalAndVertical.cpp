@@ -16,31 +16,55 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 	float TotalChildrenSize = 0;
 	int NumLayoutChildren = 0;
 	bool ShouldSortChildren = false;
-	TArray<ULexWidget*> GrowChildWidgets;
-	TArray<ULexWidget*> ShrinkChildWidgets;
+	bool ShouldIgnoreChildrenGrowOrShrink = false;
+	switch (Direction)
+	{
+	case ELexLayoutDirection::Horizontal:
+	case ELexLayoutDirection::HorizontalReverse:
+		ShouldIgnoreChildrenGrowOrShrink = Widget->GetWidth().Type == ELexWidgetSizeType::ShrinkToChildren;
+		break;
+	case ELexLayoutDirection::Vertical:
+	case ELexLayoutDirection::VerticalReverse:
+		ShouldIgnoreChildrenGrowOrShrink = Widget->GetHeight().Type == ELexWidgetSizeType::ShrinkToChildren;
+		break;
+	}
+	TArray<ULexWidget*> WidgetsWithGrow;
+	TArray<ULexWidget*> WidgetsWithShrink;
+	TArray<ULexWidget*> WidgetsWithoutGrowOrShrink;
 	float AccumulatedGrowValue = 0.0f;
 	float AccumulatedShrinkValue = 0.0f;
+	//use PreferredSize to calculate RenderSize
 	for (int i = 0; i < Children.Num(); i++)
 	{
 		auto Child = Children[i];
-		auto LayoutSlot = (ULexLayoutHorizontalAndVerticalSlot*)Child->CheckAndGetLayoutSlot();//make sure layout slot is created
+		auto LayoutSlot = (ULexLayoutHorizontalAndVerticalSlot*)Child->GetLayoutSlot();//make sure layout slot is created
 		if (!Child->IsVisibleForLayout())continue;
 		if (LayoutSlot->GetOrder() != 0)
 		{
 			ShouldSortChildren = true;
 		}
-		if (LayoutSlot->GetGrow() > 0)
+		if (!ShouldIgnoreChildrenGrowOrShrink)
 		{
-			AccumulatedGrowValue += LayoutSlot->GetGrow();
-			GrowChildWidgets.Add(Child);
+			if (LayoutSlot->GetGrow() > 0)
+			{
+				AccumulatedGrowValue += LayoutSlot->GetGrow();
+				WidgetsWithGrow.Add(Child);
+			}
 		}
-		if (LayoutSlot->GetShrink() > 0)
+		if (!ShouldIgnoreChildrenGrowOrShrink)
 		{
-			AccumulatedShrinkValue += LayoutSlot->GetShrink();
-			ShrinkChildWidgets.Add(Child);
+			if (LayoutSlot->GetShrink() > 0)
+			{
+				AccumulatedShrinkValue += LayoutSlot->GetShrink();
+				WidgetsWithShrink.Add(Child);
+			}
+		}
+		if (ShouldIgnoreChildrenGrowOrShrink || (LayoutSlot->GetGrow() == 0 && LayoutSlot->GetShrink() == 0))
+		{
+			WidgetsWithoutGrowOrShrink.Add(Child);
 		}
 		NumLayoutChildren++;
-		auto ChildSize = Child->GetRenderSize();
+		auto ChildSize = Child->GetPreferredSize();
 		switch (Direction)
 		{
 		case ELexLayoutDirection::Horizontal:
@@ -62,7 +86,7 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 		case ELexLayoutDirection::HorizontalReverse:
 			if (ThisSize.X > TotalChildrenSize)
 			{
-				if (GrowChildWidgets.Num() <= 0)//if child can grow then space will be 0 
+				if (WidgetsWithGrow.Num() <= 0)//if child can grow then space will be 0 
 				{
 					SpaceValue = (ThisSize.X - TotalChildrenSize) / (Spacing.Type == ELexLayoutSpacingType::Around ? NumLayoutChildren : (NumLayoutChildren - 1));
 				}
@@ -72,7 +96,7 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 		case ELexLayoutDirection::VerticalReverse:
 			if (ThisSize.Y > TotalChildrenSize)
 			{
-				if (GrowChildWidgets.Num() <= 0)//if child can grow then space will be 0 
+				if (WidgetsWithGrow.Num() <= 0)//if child can grow then space will be 0 
 				{
 					SpaceValue = (ThisSize.Y - TotalChildrenSize) / (Spacing.Type == ELexLayoutSpacingType::Around ? NumLayoutChildren : (NumLayoutChildren - 1));
 				}
@@ -93,15 +117,15 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 	{
 		if (ThisSize.X > TotalChildrenSize)
 		{
-			if (GrowChildWidgets.Num() > 0)
+			if (WidgetsWithGrow.Num() > 0)
 			{
 				auto ExtraSize = ThisSize.X - TotalChildrenSize;
 				auto AverageExtraSize = ExtraSize / AccumulatedGrowValue;
-				for (auto Child : GrowChildWidgets)
+				for (auto Child : WidgetsWithGrow)
 				{
 					auto LayoutSlot = (ULexLayoutHorizontalAndVerticalSlot*)(Child->GetLayoutSlot());
 					auto GrowSize = LayoutSlot->GetGrow() * AverageExtraSize;
-					auto RenderSize = Child->GetRenderSize();
+					auto RenderSize = Child->GetPreferredSize();
 					RenderSize.X += GrowSize;
 					Child->SetRenderSizeByLayout(RenderSize);
 				}
@@ -110,15 +134,15 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 		}
 		else if (ThisSize.X < TotalChildrenSize)
 		{
-			if (ShrinkChildWidgets.Num() > 0)
+			if (WidgetsWithShrink.Num() > 0)
 			{
 				auto ExtraSize = TotalChildrenSize - ThisSize.X;
 				auto AverageExtraSize = ExtraSize / AccumulatedShrinkValue;
-				for (auto Child : ShrinkChildWidgets)
+				for (auto Child : WidgetsWithShrink)
 				{
 					auto LayoutSlot = (ULexLayoutHorizontalAndVerticalSlot*)(Child->GetLayoutSlot());
 					auto ShrinkSize = LayoutSlot->GetShrink() * AverageExtraSize;
-					auto RenderSize = Child->GetRenderSize();
+					auto RenderSize = Child->GetPreferredSize();
 					RenderSize.X -= ShrinkSize;
 					Child->SetRenderSizeByLayout(RenderSize);
 				}
@@ -130,15 +154,15 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 	{
 		if (ThisSize.Y > TotalChildrenSize)
 		{
-			if (GrowChildWidgets.Num() > 0)
+			if (WidgetsWithGrow.Num() > 0)
 			{
 				auto ExtraSize = ThisSize.Y - TotalChildrenSize;
 				auto AverageExtraSize = ExtraSize / AccumulatedGrowValue;
-				for (auto Child : GrowChildWidgets)
+				for (auto Child : WidgetsWithGrow)
 				{
 					auto LayoutSlot = (ULexLayoutHorizontalAndVerticalSlot*)(Child->GetLayoutSlot());
 					auto GrowSize = LayoutSlot->GetGrow() * AverageExtraSize;
-					auto RenderSize = Child->GetRenderSize();
+					auto RenderSize = Child->GetPreferredSize();
 					RenderSize.Y += GrowSize;
 					Child->SetRenderSizeByLayout(RenderSize);
 				}
@@ -147,15 +171,15 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 		}
 		else if (ThisSize.Y < TotalChildrenSize)
 		{
-			if (ShrinkChildWidgets.Num() > 0)
+			if (WidgetsWithShrink.Num() > 0)
 			{
 				auto ExtraSize = TotalChildrenSize - ThisSize.Y;
 				auto AverageExtraSize = ExtraSize / AccumulatedShrinkValue;
-				for (auto Child : ShrinkChildWidgets)
+				for (auto Child : WidgetsWithShrink)
 				{
 					auto LayoutSlot = (ULexLayoutHorizontalAndVerticalSlot*)(Child->GetLayoutSlot());
 					auto ShrinkSize = LayoutSlot->GetShrink() * AverageExtraSize;
-					auto RenderSize = Child->GetRenderSize();
+					auto RenderSize = Child->GetPreferredSize();
 					RenderSize.Y -= ShrinkSize;
 					Child->SetRenderSizeByLayout(RenderSize);
 				}
@@ -163,7 +187,12 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 			}
 		}
 	}
-	
+	for (auto Child : WidgetsWithoutGrowOrShrink)
+	{
+		Child->SetRenderSizeByLayout(Child->GetPreferredSize());
+	}
+
+	//after set children's RenderSize, we can use RenderSize to calculate location	
 	FVector ChildPosition = FVector(0, 0, 0);
 	switch (Direction)
 	{
@@ -227,10 +256,9 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 		auto Child = ReorderedChildren[ReverseDirection ? ReorderedChildren.Num() - i - 1 : i];
 		if (!Child->IsVisibleForLayout())continue;
 		auto ChildLayoutSlot = (ULexLayoutHorizontalAndVerticalSlot*)Child->GetLayoutSlot();
-		ChildLayoutSlot->UpdateChildLayout(this);
 		auto ChildSize = Child->GetRenderSize();
-		ChildSize.X += Child->GetMargin().Left + Child->GetMargin().Right;
-		ChildSize.Y += Child->GetMargin().Top + Child->GetMargin().Bottom;
+		// ChildSize.X += Child->GetMargin().Left + Child->GetMargin().Right;
+		// ChildSize.Y += Child->GetMargin().Top + Child->GetMargin().Bottom;
 		switch (Direction)
 		{
 		case ELexLayoutDirection::Horizontal:
@@ -249,14 +277,14 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 					ChildVOffset += -(ThisSize.Y - ChildSize.Y) * 0.5f;
 					break;
 				}
-				float OffsetByMargin = (Child->GetMargin().Left - Child->GetMargin().Right) * 0.5f;
+				float OffsetByMargin = Child->GetMargin().Left;
 				auto Pos = Child->GetRelativeLocation();
 				Pos.Y = ChildPosition.Y + HalfChildWidth + OffsetByMargin;
 				float OffsetV = Widget->GetPadding().Bottom - Widget->GetPadding().Top + (Child->GetMargin().Bottom - Child->GetMargin().Top);
 				OffsetV *= 0.5f;
 				Pos.Z = ChildVOffset + OffsetV;
 				Child->SetRelativeLocation(Pos);
-				ChildPosition.Y += ChildSize.X + SpaceValue;
+				ChildPosition.Y += ChildSize.X + (Child->GetMargin().Left + Child->GetMargin().Right) + SpaceValue;
 			}
 			break;
 		case ELexLayoutDirection::Vertical:
@@ -275,14 +303,14 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 					ChildHOffset += (ThisSize.X - ChildSize.X) * 0.5f;
 					break;
 				}
-				float OffsetByMargin = (Child->GetMargin().Bottom - Child->GetMargin().Top) * 0.5f;
+				float OffsetByMargin = Child->GetMargin().Bottom;
 				auto Pos = Child->GetRelativeLocation();
 				Pos.Z = ChildPosition.Z - HalfChildHeight + OffsetByMargin;
 				float OffsetH = Widget->GetPadding().Left - Widget->GetPadding().Right + (Child->GetMargin().Left - Child->GetMargin().Right);
 				OffsetH *= 0.5f;
 				Pos.Y = ChildHOffset + OffsetH;
 				Child->SetRelativeLocation(Pos);
-				ChildPosition.Z -= ChildSize.Y + SpaceValue;
+				ChildPosition.Z -= ChildSize.Y + (Child->GetMargin().Top + Child->GetMargin().Bottom) + SpaceValue;
 			}
 			break;
 		}
@@ -313,7 +341,7 @@ float ULexLayoutHorizontalAndVertical::GetShrinkToChildrenWidth()
 		auto Child = Children[i];
 		if (!Child->IsVisibleForLayout())continue;
 		NumLayoutChildren++;
-		auto ChildSize = Child->GetRenderSize();
+		auto ChildSize = Child->GetPreferredSize();
 		switch (Direction)
 		{
 		case ELexLayoutDirection::Horizontal:
@@ -361,7 +389,7 @@ float ULexLayoutHorizontalAndVertical::GetShrinkToChildrenHeight()
 		auto Child = Children[i];
 		if (!Child->IsVisibleForLayout())continue;
 		NumLayoutChildren++;
-		auto ChildSize = Child->GetRenderSize();
+		auto ChildSize = Child->GetPreferredSize();
 		ChildSize.X += Child->GetMargin().Left + Child->GetMargin().Right;
 		ChildSize.Y += Child->GetMargin().Top + Child->GetMargin().Bottom;
 		switch (Direction)
@@ -505,66 +533,12 @@ void ULexLayoutHorizontalAndVerticalSlot::SetShrink(float Value)
 	}
 }
 
-void ULexLayoutHorizontalAndVerticalSlot::UpdateChildLayout(ULexLayoutHorizontalAndVertical* Layout)
+bool ULexLayoutHorizontalAndVerticalSlot::GetLayoutControlWidth() const
 {
-	auto Widget = GetWidget();
-	if (!Widget)return;
-	if (!Layout)return;
-	auto Parent = Widget->GetUIParent();
-	if (!Parent)return;
-	
-	bool ShouldSetPositionX = true;
-	bool ShouldSetPositionY = true;
-	auto Direction = Layout->GetDirection();
-	if (Direction == ELexLayoutDirection::Horizontal || Direction == ELexLayoutDirection::HorizontalReverse)
-	{
-		ShouldSetPositionX = false;
-	}
-	if (Direction == ELexLayoutDirection::Vertical || Direction == ELexLayoutDirection::VerticalReverse)
-	{
-		ShouldSetPositionY = false;
-	}
-
-	auto Position = Widget->GetRelativeLocation();
-	if (ShouldSetPositionX)
-	{
-		float PaddingAndMarginOffsetX = Parent->GetPadding().Left - Parent->GetPadding().Right + (Widget->GetMargin().Left - Widget->GetMargin().Right);
-		PaddingAndMarginOffsetX *= 0.5f;
-		float SizeOffsetX = 0;
-		switch (HorizontalAlignment)
-		{
-		case ELexLayoutHorizontalAlignment::Left:
-			SizeOffsetX = (Parent->GetRenderSize().X - Widget->GetRenderSize().X) * -0.5f;
-			break;
-		case ELexLayoutHorizontalAlignment::Right:
-			SizeOffsetX = (Parent->GetRenderSize().X - Widget->GetRenderSize().X) * 0.5f;
-			break;
-		case ELexLayoutHorizontalAlignment::Center:
-			break;
-		}
-		float OffsetX = PaddingAndMarginOffsetX + SizeOffsetX + PositionOffset.X;
-		Position.Y = OffsetX;
-	}
-	if (ShouldSetPositionY)
-	{
-		float PaddingAndMarginOffsetY = Parent->GetPadding().Bottom - Parent->GetPadding().Top + (Widget->GetMargin().Bottom - Widget->GetMargin().Top);
-		PaddingAndMarginOffsetY *= 0.5f;
-		float SizeOffsetY = 0;
-		switch (VerticalAlignment)
-		{
-		case ELexLayoutVerticalAlignment::Top:
-			SizeOffsetY = (Parent->GetRenderSize().Y - Widget->GetRenderSize().Y) * 0.5f;
-			break;
-		case ELexLayoutVerticalAlignment::Bottom:
-			SizeOffsetY = (Parent->GetRenderSize().Y - Widget->GetRenderSize().Y)* -0.5f;
-			break;
-		case ELexLayoutVerticalAlignment::Middle:
-			break;
-		}
-		float OffsetY = PaddingAndMarginOffsetY + SizeOffsetY + PositionOffset.Y;
-		Position.Z = OffsetY;
-	}
-	Widget->SetRelativeLocation(Position);
+	return Grow != 0 || Shrink != 0;
 }
 
-
+bool ULexLayoutHorizontalAndVerticalSlot::GetLayoutControlHeight() const
+{
+	return Grow != 0 || Shrink != 0;
+}
