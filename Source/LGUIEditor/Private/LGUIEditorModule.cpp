@@ -85,7 +85,9 @@
 #include "UnrealEdGlobals.h"
 #include "Editor/UnrealEdEngine.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "Core/LexUIImageBrush.h"
 #include "Core/Components/LexLayoutHorizontalAndVertical.h"
+#include "DetailCustomization/LexImageBrushStructCustomization.h"
 #include "DetailCustomization/LexLayoutHorizontalAndVerticalCustomization.h"
 #include "DetailCustomization/LexLayoutHorizontalAndVerticalSlotCustomization.h"
 
@@ -244,7 +246,7 @@ void FLGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomClassLayout(ULexWidget::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexWidgetCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULexVisual::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexVisualCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULexVisualBatchMesh::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIBatchMeshRenderableCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(UUISpriteBase::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteBaseCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(UUISpriteBase::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexUISpriteBaseCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUISprite::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULexCanvas::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexCanvasCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULexText::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexTextCustomization::MakeInstance));
@@ -304,6 +306,8 @@ void FLGUIEditorModule::StartupModule()
 		
 		PropertyModule.RegisterCustomClassLayout(ULexLayoutHorizontalAndVerticalSlot::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutHorizontalAndVerticalSlotCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULexLayoutHorizontalAndVertical::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutHorizontalAndVerticalCustomization::MakeInstance));
+
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIImageBrush::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexImageBrushStructCustomization::MakeInstance));
 	}
 	//register asset
 	{
@@ -516,6 +520,8 @@ void FLGUIEditorModule::ShutdownModule()
 
 		PropertyModule.UnregisterCustomClassLayout(ULexLayoutHorizontalAndVerticalSlot::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(ULexLayoutHorizontalAndVertical::StaticClass()->GetFName());
+
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIImageBrush::StaticStruct()->GetFName());
 	}
 	//unregister asset
 	{

@@ -41,7 +41,7 @@ public:
 #endif
 protected:
 	virtual void OnUIActiveInHierachy(bool ativeOrInactive)override;
-	virtual void OnUIDimensionsChanged(bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)override;
+	virtual void OnUIDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
 
 	UPROPERTY(EditAnywhere, Category = "LGUI-Scrollbar", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 		float Value = 0;

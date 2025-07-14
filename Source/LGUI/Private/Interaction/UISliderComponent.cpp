@@ -79,9 +79,9 @@ void UUISliderComponent::OnUIActiveInHierachy(bool ativeOrInactive)
     Super::OnUIActiveInHierachy(ativeOrInactive);
     ApplyValueToUI();
 }
-void UUISliderComponent::OnUIDimensionsChanged(bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
+void UUISliderComponent::OnUIDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
-    Super::OnUIDimensionsChanged(horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
+    Super::OnUIDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
     ApplyValueToUI();
 }
 

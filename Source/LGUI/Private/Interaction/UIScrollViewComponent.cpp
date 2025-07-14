@@ -12,32 +12,29 @@ void UUIScrollViewHelper::Awake()
     Super::Awake();
     this->SetCanExecuteUpdate(false);
 }
-void UUIScrollViewHelper::OnUIDimensionsChanged(bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
+void UUIScrollViewHelper::OnUIDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
-    Super::OnUIDimensionsChanged(horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
+    Super::OnUIDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
     if (!TargetComp.IsValid())
     {
         this->DestroyComponent();
     }
     else
     {
-        if (widthChanged || heightChanged)
-        {
-            TargetComp->bRangeCalculated = false;
-            TargetComp->RecalculateRange();
-        }
+        TargetComp->bRangeCalculated = false;
+        TargetComp->RecalculateRange();
     }
 }
-void UUIScrollViewHelper::OnUIChildDimensionsChanged(ULexWidget *child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
+void UUIScrollViewHelper::OnUIChildDimensionsChanged(ULexWidget *Child, bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
-    Super::OnUIChildDimensionsChanged(child, horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
+    Super::OnUIChildDimensionsChanged(Child, PivotChanged, WidthChanged, HeightChanged);
     if (!TargetComp.IsValid())
     {
         this->DestroyComponent();
     }
     else
     {
-        if (widthChanged || heightChanged)
+        if (WidthChanged || HeightChanged)
         {
             TargetComp->bRangeCalculated = false;
             TargetComp->RecalculateRange();
@@ -130,14 +127,11 @@ void UUIScrollViewComponent::OnUIActiveInHierachy(bool ativeOrInactive)
         RecalculateRange();
     }
 }
-void UUIScrollViewComponent::OnUIDimensionsChanged(bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
+void UUIScrollViewComponent::OnUIDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
-    Super::OnUIDimensionsChanged(horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
-    if (widthChanged || heightChanged)
-    {
-        bRangeCalculated = false;
-        RecalculateRange();
-    }
+    Super::OnUIDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
+    bRangeCalculated = false;
+    RecalculateRange();
 }
 
 bool UUIScrollViewComponent::CheckParameters()

@@ -31,7 +31,7 @@ void ULGUILifeCycleBehaviour::BeginPlay()
 	{
 		if (auto RootUIComp = Cast<ULexWidget>(RootComp.Get()))
 		{
-			UIActiveInHierarchyStateChangedDelegateHandle = RootUIComp->RegisterUIActiveStateChanged(FUIItemActiveInHierarchyStateChangedDelegate::CreateUObject(this, &ULGUILifeCycleBehaviour::OnUIActiveInHierarchyStateChanged));
+			UIActiveInHierarchyStateChangedDelegateHandle = RootUIComp->RegisterUIActiveStateChanged(FLexWidgetActiveInHierarchyStateChangedDelegate::CreateUObject(this, &ULGUILifeCycleBehaviour::OnUIActiveInHierarchyStateChanged));
 		}
 		else
 		{

@@ -772,7 +772,7 @@ void LGUIEditorTools::ReplaceActorByClass(UClass* ActorClass)
 		int HierarchyIndex = 0;
 		if (auto SourceUIItem = Cast<ULexWidget>(Actor->GetRootComponent()))
 		{
-			HierarchyIndex = SourceUIItem->GetHierarchyIndex();
+			HierarchyIndex = SourceUIItem->GetSiblingIndex();
 		}
 		AActor* ReplacedActor = nullptr;
 		TArray<AActor*> ChildrenActors;
@@ -782,7 +782,7 @@ void LGUIEditorTools::ReplaceActorByClass(UClass* ActorClass)
 		{
 			if (auto UIComp = Cast<ULexWidget>(ChildActor->GetRootComponent()))
 			{
-				ChildrenOriginPositionArray.Add(UIComp, { UIComp->GetHierarchyIndex(), UIComp->GetRelativeLocation()});
+				ChildrenOriginPositionArray.Add(UIComp, { UIComp->GetSiblingIndex(), UIComp->GetRelativeLocation()});
 			}
 		}
 		if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(Actor))
@@ -861,14 +861,14 @@ void LGUIEditorTools::ReplaceActorByClass(UClass* ActorClass)
 		{
 			if (auto ReplaceUIItem = Cast<ULexWidget>(ReplacedActor->GetRootComponent()))
 			{
-				ReplaceUIItem->SetHierarchyIndex(HierarchyIndex);
+				ReplaceUIItem->SetSiblingIndex(HierarchyIndex);
 			}
 			for (auto& KeyValue : ChildrenOriginPositionArray)
 			{
 				auto UIItem = KeyValue.Key;
 				auto& Value = KeyValue.Value;
 				UIItem->SetRelativeLocation(Value.Get<1>());
-				UIItem->SetHierarchyIndex(Value.Get<0>());
+				UIItem->SetSiblingIndex(Value.Get<0>());
 			}
 		}
 	}
@@ -954,7 +954,7 @@ void LGUIEditorTools::DuplicateSelectedActors_Impl()//@todo: fix bug: duplicate 
 			{
 				if (auto UIParent = Cast<ULexWidget>(Parent))
 				{
-					UIItem->SetAsLastHierarchy();
+					UIItem->SetAsLastSibling();
 				}
 			}
 			for (auto& KeyValue : DuplicatedSubPrefabMap)
@@ -2038,7 +2038,7 @@ bool LGUIEditorTools::IsCanvasActor(AActor* InActor)
 	{
 		if (auto rootUIItem = Cast<ULexWidget>(rootComp))
 		{
-			if (rootUIItem->IsCanvasUIItem())
+			if (rootUIItem->IsCanvasWidget())
 			{
 				return true;
 			}

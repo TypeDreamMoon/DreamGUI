@@ -10,17 +10,17 @@
 
 
 class ULexUISpriteData;
-class IUISpriteRenderableInterface;
+class ILexUISpriteRenderInterface;
 
-/** Data container for dynamically generated sprite atlas */
+/** Data container for dynamically generated Sprite atlas */
 USTRUCT()
 struct LGUI_API FLexUIDynamicSpriteAtlasData
 {
 	GENERATED_BODY()
-	/** atlasTexture is the real texture for render */
+	/** AtlasTexture is the real texture for render */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI")
 	TObjectPtr<UTexture2D> AtlasTexture = nullptr;
-	/** information needed when insert a sprite */
+	/** information needed when insert a Sprite */
 	rbp::MaxRectsBinPack AtlasBinPack;
 	/** sprites belong to this atlas */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
@@ -63,14 +63,14 @@ public:
 	static void ResetAtlasMap();
 
 	/**
-	 * Dispose and release atlas by packingTag.
-	 * This will not dispose the LGUISpriteData.
+	 * Dispose and release atlas by PackingTag.
+	 * This will not dispose the LexUISpriteData.
 	 * Default "Main" tag is not allowed to be disposed.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (WorldContext = "WorldContextObject"))
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		static void DisposeAtlasByPackingTag(FName inPackingTag);
 
-	DECLARE_EVENT(ULexUIDynamicSpriteAtlasManager, FLGUIAtlasMapChangeEvent);
+	DECLARE_EVENT(ULexUIDynamicSpriteAtlasManager, FLexUIAtlasMapChangeEvent);
 
-	FLGUIAtlasMapChangeEvent OnAtlasMapChanged;
+	FLexUIAtlasMapChangeEvent OnAtlasMapChanged;
 };

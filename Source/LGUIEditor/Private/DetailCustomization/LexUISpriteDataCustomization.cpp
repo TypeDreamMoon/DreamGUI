@@ -33,9 +33,9 @@ void FLexUISpriteDataCustomization::CustomizeDetails(IDetailLayoutBuilder& Detai
 		UE_LOG(LGUIEditor, Log, TEXT("Get TargetScript is null"));
 		return;
 	}
-	DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, spriteInfo));
+	DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo));
 	IDetailCategoryBuilder& lguiCategory = DetailBuilder.EditCategory("LGUI");
-	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, spriteTexture));
+	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteTexture));
 	if (IsValid(TargetScriptPtr->packingAtlas))
 	{
 		lguiCategory.AddCustomRow(LOCTEXT("TextureRecommend_Row", "TextureRecommend"))
@@ -64,8 +64,8 @@ this can reduce the package size, because AtlasPacking already pack this SpriteT
 				return FReply::Handled();
 			})
 		];
-	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, spriteInfo.width));
-	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, spriteInfo.height));
+	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.width));
+	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.height));
 	IDetailCategoryBuilder& atlasPackingCategory = DetailBuilder.EditCategory("AtlasPacking");
 	auto PackingAtlasProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, packingAtlas));
 	atlasPackingCategory.AddProperty(PackingAtlasProperty);
@@ -84,7 +84,7 @@ this can reduce the package size, because AtlasPacking already pack this SpriteT
 		TargetScriptPtr->InitSpriteData();
 		DetailBuilder.ForceRefreshDetails();
 		}));
-	auto PackingTagProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, packingTag));
+	auto PackingTagProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, PackingTag));
 	DetailBuilder.HideProperty(PackingTagProperty);
 	
 	RefreshNameList(nullptr);
@@ -154,20 +154,20 @@ this can reduce the package size, because AtlasPacking already pack this SpriteT
 		]
 	]
 	;
-	atlasPackingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, useEdgePixelPadding));
+	atlasPackingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, bUseEdgePixelPadding));
 
-	//if change packingTag, clear all sprites and repack
-	auto packingTagHangle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, packingTag));
+	//if change PackingTag, clear all sprites and repack
+	auto packingTagHangle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, PackingTag));
 	packingTagHangle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([] {ULexUISpriteData::MarkAllSpritesNeedToReinitialize(); }));
-	//if change spriteTexture, clear all sprites and repack
-	auto spriteTextureHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, spriteTexture));
+	//if change SpriteTexture, clear all sprites and repack
+	auto spriteTextureHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteTexture));
 	spriteTextureHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {ULexUISpriteData::MarkAllSpritesNeedToReinitialize(); DetailBuilder.ForceRefreshDetails(); }));
 	UObject* spriteTextureObject;
 	spriteTextureHandle->GetValue(spriteTextureObject);
 	if (auto spriteTexture = Cast<UTexture2D>(spriteTextureObject))
 	{
-		int32 atlasPadding = ULGUISettings::GetAtlasTexturePadding(TargetScriptPtr->packingTag);
-		if (TargetScriptPtr->spriteTexture->GetSurfaceWidth() + atlasPadding * 2 > WARNING_ATLAS_SIZE || TargetScriptPtr->spriteTexture->GetSurfaceHeight() + atlasPadding * 2 > WARNING_ATLAS_SIZE)
+		int32 atlasPadding = ULGUISettings::GetAtlasTexturePadding(TargetScriptPtr->PackingTag);
+		if (TargetScriptPtr->SpriteTexture->GetSurfaceWidth() + atlasPadding * 2 > WARNING_ATLAS_SIZE || TargetScriptPtr->SpriteTexture->GetSurfaceHeight() + atlasPadding * 2 > WARNING_ATLAS_SIZE)
 		{
 			UE_LOG(LGUIEditor, Error, TEXT("Target texture width or height is too large! Consider use UITexture to render this texture."));
 			FNotificationInfo Info(LOCTEXT("TextureSizeError", "Target texture width or height is too large! Consider use UITexture to render this texture."));
@@ -188,25 +188,25 @@ this can reduce the package size, because AtlasPacking already pack this SpriteT
 			GEditor->PlayEditorSound(CompileFailSound);
 			spriteTextureObject = nullptr;
 			spriteTextureHandle->SetValue(spriteTextureObject);
-			TargetScriptPtr->isInitialized = false;
+			TargetScriptPtr->bIsInitialized = false;
 		}
 	}
 
-	if(TargetScriptPtr->spriteTexture != nullptr)
+	if(TargetScriptPtr->SpriteTexture != nullptr)
 	{
 		IDetailCategoryBuilder& paddingCategory = DetailBuilder.EditCategory("Padding");
-		paddingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, spriteInfo.paddingLeft));
-		paddingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, spriteInfo.paddingRight));
-		paddingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, spriteInfo.paddingTop));
-		paddingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, spriteInfo.paddingBottom));
+		paddingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.paddingLeft));
+		paddingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.paddingRight));
+		paddingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.paddingTop));
+		paddingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.paddingBottom));
 
 		IDetailCategoryBuilder& borderEditorCategory = DetailBuilder.EditCategory("BorderEditor");
 		spriteSlateBrush = TSharedPtr<FSlateBrush>(new FSlateBrush);
-		spriteSlateBrush->SetResourceObject(TargetScriptPtr->spriteTexture);
-		borderEditorCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, spriteInfo.borderLeft));
-		borderEditorCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, spriteInfo.borderRight));
-		borderEditorCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, spriteInfo.borderTop));
-		borderEditorCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, spriteInfo.borderBottom));
+		spriteSlateBrush->SetResourceObject(TargetScriptPtr->SpriteTexture);
+		borderEditorCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.borderLeft));
+		borderEditorCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.borderRight));
+		borderEditorCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.borderTop));
+		borderEditorCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.borderBottom));
 		borderEditorCategory.AddCustomRow(LOCTEXT("BorderEditor", "BorderEditor"))
 		.WholeRowContent()
 		[
@@ -344,9 +344,9 @@ void FLexUISpriteDataCustomization::CheckSprite()
 	{
 		TargetScriptPtr->packingAtlas->CheckSprite();
 	}
-	if (auto spriteAtlasData = ULexUIDynamicSpriteAtlasManager::Find(TargetScriptPtr->packingTag))
+	if (auto spriteAtlasData = ULexUIDynamicSpriteAtlasManager::Find(TargetScriptPtr->PackingTag))
 	{
-		spriteAtlasData->CheckSprite(TargetScriptPtr->packingTag);
+		spriteAtlasData->CheckSprite(TargetScriptPtr->PackingTag);
 	}
 }
 
@@ -406,7 +406,7 @@ FText FLexUISpriteDataCustomization::GetPackingTagText(TSharedRef<IPropertyHandl
 
 FOptionalSize FLexUISpriteDataCustomization::GetImageWidth()const
 {
-	float imageAspect = (float)(TargetScriptPtr->spriteTexture->GetSurfaceWidth()) / TargetScriptPtr->spriteTexture->GetSurfaceHeight();
+	float imageAspect = (float)(TargetScriptPtr->SpriteTexture->GetSurfaceWidth()) / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	auto imageBoxSize = ImageBox->GetCachedGeometry().GetLocalSize();
 	float imageBoxAspect = (float)(imageBoxSize.X / imageBoxSize.Y);
 	if (imageAspect > imageBoxAspect)
@@ -420,7 +420,7 @@ FOptionalSize FLexUISpriteDataCustomization::GetImageWidth()const
 }
 FOptionalSize FLexUISpriteDataCustomization::GetImageHeight()const
 {
-	float imageAspect = (float)(TargetScriptPtr->spriteTexture->GetSurfaceWidth()) / TargetScriptPtr->spriteTexture->GetSurfaceHeight();
+	float imageAspect = (float)(TargetScriptPtr->SpriteTexture->GetSurfaceWidth()) / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	auto imageBoxSize = ImageBox->GetCachedGeometry().GetLocalSize();
 	float imageBoxAspect = (float)(imageBoxSize.X / imageBoxSize.Y);
 	if (imageAspect > imageBoxAspect)
@@ -439,61 +439,61 @@ FOptionalSize FLexUISpriteDataCustomization::GetMinDesiredHeight(IDetailLayoutBu
 FOptionalSize FLexUISpriteDataCustomization::GetBorderLeftSize()const
 {
 	if (TargetScriptPtr.Get() == nullptr)return 0;
-	float imageAspect = (float)(TargetScriptPtr->spriteTexture->GetSurfaceWidth()) / TargetScriptPtr->spriteTexture->GetSurfaceHeight();
+	float imageAspect = (float)(TargetScriptPtr->SpriteTexture->GetSurfaceWidth()) / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	auto imageBoxSize = ImageBox->GetCachedGeometry().GetLocalSize();
 	float imageBoxAspect = (float)(imageBoxSize.X / imageBoxSize.Y);
 	if (imageAspect > imageBoxAspect)
 	{
-		return TargetScriptPtr->spriteInfo.borderLeft * imageBoxSize.X / TargetScriptPtr->spriteTexture->GetSurfaceWidth();
+		return TargetScriptPtr->SpriteInfo.borderLeft * imageBoxSize.X / TargetScriptPtr->SpriteTexture->GetSurfaceWidth();
 	}
 	else
 	{
-		return TargetScriptPtr->spriteInfo.borderLeft * imageBoxSize.Y / TargetScriptPtr->spriteTexture->GetSurfaceHeight();
+		return TargetScriptPtr->SpriteInfo.borderLeft * imageBoxSize.Y / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	}
 }
 FOptionalSize FLexUISpriteDataCustomization::GetBorderRightSize()const
 {
 	if (TargetScriptPtr.Get() == nullptr)return 0;
-	float imageAspect = (float)(TargetScriptPtr->spriteTexture->GetSurfaceWidth()) / TargetScriptPtr->spriteTexture->GetSurfaceHeight();
+	float imageAspect = (float)(TargetScriptPtr->SpriteTexture->GetSurfaceWidth()) / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	auto imageBoxSize = ImageBox->GetCachedGeometry().GetLocalSize();
 	float imageBoxAspect = (float)(imageBoxSize.X / imageBoxSize.Y);
 	if (imageAspect > imageBoxAspect)
 	{
-		return TargetScriptPtr->spriteInfo.borderRight * imageBoxSize.X / TargetScriptPtr->spriteTexture->GetSurfaceWidth();
+		return TargetScriptPtr->SpriteInfo.borderRight * imageBoxSize.X / TargetScriptPtr->SpriteTexture->GetSurfaceWidth();
 	}
 	else
 	{
-		return TargetScriptPtr->spriteInfo.borderRight * imageBoxSize.Y / TargetScriptPtr->spriteTexture->GetSurfaceHeight();
+		return TargetScriptPtr->SpriteInfo.borderRight * imageBoxSize.Y / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	}
 }
 FOptionalSize FLexUISpriteDataCustomization::GetBorderTopSize()const
 {
 	if (TargetScriptPtr.Get() == nullptr)return 0;
-	float imageAspect = (float)(TargetScriptPtr->spriteTexture->GetSurfaceWidth()) / TargetScriptPtr->spriteTexture->GetSurfaceHeight();
+	float imageAspect = (float)(TargetScriptPtr->SpriteTexture->GetSurfaceWidth()) / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	auto imageBoxSize = ImageBox->GetCachedGeometry().GetLocalSize();
 	float imageBoxAspect = (float)(imageBoxSize.X / imageBoxSize.Y);
 	if (imageAspect > imageBoxAspect)
 	{
-		return TargetScriptPtr->spriteInfo.borderTop * imageBoxSize.X / TargetScriptPtr->spriteTexture->GetSurfaceWidth();
+		return TargetScriptPtr->SpriteInfo.borderTop * imageBoxSize.X / TargetScriptPtr->SpriteTexture->GetSurfaceWidth();
 	}
 	else
 	{
-		return TargetScriptPtr->spriteInfo.borderTop * imageBoxSize.Y / TargetScriptPtr->spriteTexture->GetSurfaceHeight();
+		return TargetScriptPtr->SpriteInfo.borderTop * imageBoxSize.Y / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	}
 }
 FOptionalSize FLexUISpriteDataCustomization::GetBorderBottomSize()const
 {
 	if (TargetScriptPtr.Get() == nullptr)return 0;
-	float imageAspect = (float)(TargetScriptPtr->spriteTexture->GetSurfaceWidth()) / TargetScriptPtr->spriteTexture->GetSurfaceHeight();
+	float imageAspect = (float)(TargetScriptPtr->SpriteTexture->GetSurfaceWidth()) / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	auto imageBoxSize = ImageBox->GetCachedGeometry().GetLocalSize();
 	float imageBoxAspect = (float)(imageBoxSize.X / imageBoxSize.Y);
 	if (imageAspect > imageBoxAspect)
 	{
-		return TargetScriptPtr->spriteInfo.borderBottom * imageBoxSize.X / TargetScriptPtr->spriteTexture->GetSurfaceWidth();
+		return TargetScriptPtr->SpriteInfo.borderBottom * imageBoxSize.X / TargetScriptPtr->SpriteTexture->GetSurfaceWidth();
 	}
 	else
 	{
-		return TargetScriptPtr->spriteInfo.borderBottom * imageBoxSize.Y / TargetScriptPtr->spriteTexture->GetSurfaceHeight();
+		return TargetScriptPtr->SpriteInfo.borderBottom * imageBoxSize.Y / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	}
 }
 

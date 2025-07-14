@@ -169,7 +169,9 @@ public:
 	int GetClipDataStartPosition()const;
 	UTexture* GetClipDataTexture()const;
 
-	virtual void OnTransformChanged()override;
+	virtual void OnPixelSnappingChanged(){};
+	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange){};
+	virtual void OnTransformChanged();
 	
 	void MarkColorDirty();
 	virtual void MarkAllDirty();

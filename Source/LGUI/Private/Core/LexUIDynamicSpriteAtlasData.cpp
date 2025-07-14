@@ -9,7 +9,7 @@
 #include "Core/LexUISpriteData.h"
 #include "Utils/LexUIUtils.h"
 #include "Rendering/Texture2DResource.h"
-#include "Core/IUISpriteRenderableInterface.h"
+#include "Core/ILexUISpriteRenderInterface.h"
 #include "RenderingThread.h"
 
 
@@ -20,7 +20,7 @@ void FLexUIDynamicSpriteAtlasData::EnsureAtlasTexture(const FName& packingTag)
 #if WITH_EDITOR
 		int32 defaultAtlasTextureSize = ULGUISettings::GetAtlasTextureInitialSize(packingTag);
 #else
-		static int32 defaultAtlasTextureSize = ULGUISettings::GetAtlasTextureInitialSize(packingTag);
+		static int32 defaultAtlasTextureSize = ULGUISettings::GetAtlasTextureInitialSize(PackingTag);
 #endif
 		AtlasBinPack.Init(defaultAtlasTextureSize, defaultAtlasTextureSize);
 		CreateAtlasTexture(packingTag, 0, defaultAtlasTextureSize);
@@ -32,13 +32,13 @@ void FLexUIDynamicSpriteAtlasData::CreateAtlasTexture(const FName& packingTag, i
 	bool atlasSRGB = ULGUISettings::GetAtlasTextureSRGB(packingTag);
 	auto filter = ULGUISettings::GetAtlasTextureFilter(packingTag);
 #else
-	static bool atlasSRGB = ULGUISettings::GetAtlasTextureSRGB(packingTag);
-	static auto filter = ULGUISettings::GetAtlasTextureFilter(packingTag);
+	static bool atlasSRGB = ULGUISettings::GetAtlasTextureSRGB(PackingTag);
+	static auto filter = ULGUISettings::GetAtlasTextureFilter(PackingTag);
 #endif
 	static int TextureNameSuffix = 0;
 	auto texture = FLexUIUtils::CreateTexture(newTextureSize, FColor::Transparent
 		, GetTransientPackage()
-		, FName(*FString::Printf(TEXT("LGUIDynamicSpriteAtlasData_Texture_%d"), TextureNameSuffix++))
+		, FName(*FString::Printf(TEXT("LexUIDynamicSpriteAtlasData_Texture_%d"), TextureNameSuffix++))
 	);
 
 	texture->CompressionSettings = TextureCompressionSettings::TC_EditorIcon;
@@ -85,13 +85,13 @@ int32 FLexUIDynamicSpriteAtlasData::ExpendTextureSize(const FName& packingTag)
 	this->AtlasBinPack.ExpendSize(newTextureSize, newTextureSize);
 	//create new texture
 	this->CreateAtlasTexture(packingTag, oldTextureSize, newTextureSize);
-	//scale down sprite uv
+	//scale down Sprite uv
 	for (ULexUISpriteData* spriteItem : this->SpriteDataArray)
 	{
 		if (IsValid(spriteItem))
 		{
-			spriteItem->atlasTexture = this->AtlasTexture;
-			spriteItem->spriteInfo.ScaleUV(0.5f);
+			spriteItem->AtlasTexture = this->AtlasTexture;
+			spriteItem->SpriteInfo.ScaleUV(0.5f);
 		}
 	}
 	//tell UISprite to scale down uv
@@ -99,7 +99,7 @@ int32 FLexUIDynamicSpriteAtlasData::ExpendTextureSize(const FName& packingTag)
 	{
 		if (itemSprite.IsValid())
 		{
-			IUISpriteRenderableInterface::Execute_ApplyAtlasTextureScaleUp(itemSprite.Get());
+			ILexUISpriteRenderInterface::Execute_ApplyAtlasTextureScaleUp(itemSprite.Get());
 		}
 	}
 	//callback function
@@ -144,13 +144,13 @@ void FLexUIDynamicSpriteAtlasData::CheckSprite(const FName& packingTag)
 		auto itemSprite = this->RenderSpriteArray[i];
 		if (itemSprite.IsValid())
 		{
-			if (!IsValid(IUISpriteRenderableInterface::Execute_SpriteRenderableGetSprite(itemSprite.Get())))
+			if (!IsValid(ILexUISpriteRenderInterface::Execute_SpriteRenderGetSprite(itemSprite.Get())))
 			{
 				this->RenderSpriteArray.RemoveAt(i);
 			}
 			else
 			{
-				if (auto spriteData = Cast<ULexUISpriteData>(IUISpriteRenderableInterface::Execute_SpriteRenderableGetSprite(itemSprite.Get())))
+				if (auto spriteData = Cast<ULexUISpriteData>(ILexUISpriteRenderInterface::Execute_SpriteRenderGetSprite(itemSprite.Get())))
 				{
 					if (spriteData->GetPackingTag() != packingTag)
 					{

@@ -8,7 +8,7 @@
 
 
 /**
- * Interface for handling LGUI's culture changed.
+ * Interface for LGUI Widget to handle culture change event.
  * Need to register UObject with RegisterLGUICultureChangedEvent, check UIText for reference
  */
 UINTERFACE(Blueprintable, MinimalAPI)
@@ -17,9 +17,9 @@ class ULGUICultureChangedInterface : public UInterface
 	GENERATED_BODY()
 };
 /**
- * Interface for handling LGUI's culture changed.
+ * Interface for LGUI Widget to handle culture change event.
  * Need to register UObject with RegisterLGUICultureChangedEvent, check UIText for reference
- */ 
+ */
 class LGUI_API ILGUICultureChangedInterface
 {
 	GENERATED_BODY()

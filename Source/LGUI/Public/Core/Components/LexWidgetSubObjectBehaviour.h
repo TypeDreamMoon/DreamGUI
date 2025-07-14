@@ -16,16 +16,8 @@ public:
 	virtual void EndPlay(){};
 	virtual void OnRegister(){};
 	virtual void OnUnregister(){};
-
-	virtual void OnParentTransformChanged(){}
-	virtual void OnParentDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange){};
-	virtual void OnTransformChanged(){}
-	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange){};
-	virtual void OnPixelSnappingChanged(){}
-	virtual void OnClipDataChanged(){}
-
-	UFUNCTION(BlueprintCallable, Category="LGUI")
+	
 	virtual ULexWidget* GetWidget()const;
-protected:
+private:
 	mutable TWeakObjectPtr<ULexWidget> CacheWidget;
 };

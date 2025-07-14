@@ -1192,13 +1192,10 @@ void UUITextInputComponent::OnUIInteractionStateChanged(bool interactableOrNot)
 	Super::OnUIInteractionStateChanged(interactableOrNot);
 	DeactivateInput();
 }
-void UUITextInputComponent::OnUIDimensionsChanged(bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
+void UUITextInputComponent::OnUIDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
-	Super::OnUIDimensionsChanged(horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
-	if (widthChanged || heightChanged)
-	{
-		this->UpdateAfterTextChange(false);//if size change, need to recalculate text input area
-	}
+	Super::OnUIDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
+	this->UpdateAfterTextChange(false);//if size change, need to recalculate text input area
 }
 
 bool UUITextInputComponent::OnPointerEnter_Implementation(ULGUIPointerEventData* eventData)

@@ -54,7 +54,7 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 					auto BUIRoot = Cast<ULexWidget>(BRoot);
 					if (AUIRoot != nullptr && BUIRoot != nullptr)
 					{
-						return AUIRoot->GetHierarchyIndex() < BUIRoot->GetHierarchyIndex();//compare hierarch index for UI actor
+						return AUIRoot->GetSiblingIndex() < BUIRoot->GetSiblingIndex();//compare hierarch index for UI actor
 					}
 				}
 				else
@@ -68,9 +68,9 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 		ULGUIPrefabManagerObject::OnDeserialize_ProcessComponentsBeforeRerunConstructionScript.BindStatic([](const TArray<UActorComponent*>& Components) {
 			for (auto& Comp : Components)
 			{
-				if (auto UIItem = Cast<ULexWidget>(Comp))
+				if (auto Widget = Cast<ULexWidget>(Comp))
 				{
-					if (auto LayoutSlot = UIItem->GetLayoutSlot())
+					if (auto LayoutSlot = Widget->GetLayoutSlot())
 					{
 						LayoutSlot->CalculateTransformFromLayout();
 					}
@@ -86,27 +86,27 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 				auto LineStart = RayOrigin;
 				auto LineEnd = RayOrigin + RayDirection * LineTraceLength;
 				ULexWidget* ClickHitUI = nullptr;
-				static TArray<ULexWidget*> AllUIItemArray;
-				AllUIItemArray.Reset();
+				static TArray<ULexWidget*> AllWidgetArray;
+				AllWidgetArray.Reset();
 				{
 					for (auto& CanvasItem : LGUIManager->GetCanvasArray(ELexRenderMode::ScreenSpaceOverlay))
 					{
-						AllUIItemArray.Append(CanvasItem->GetVisualWidgetArray());
+						AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
 					}
 					for (auto& CanvasItem : LGUIManager->GetCanvasArray(ELexRenderMode::RenderTarget))
 					{
-						AllUIItemArray.Append(CanvasItem->GetVisualWidgetArray());
+						AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
 					}
 					for (auto& CanvasItem : LGUIManager->GetCanvasArray(ELexRenderMode::WorldSpace))
 					{
-						AllUIItemArray.Append(CanvasItem->GetVisualWidgetArray());
+						AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
 					}
 					for (auto& CanvasItem : LGUIManager->GetCanvasArray(ELexRenderMode::WorldSpace_LGUI))
 					{
-						AllUIItemArray.Append(CanvasItem->GetVisualWidgetArray());
+						AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
 					}
 				}
-				if (ULGUIManagerWorldSubsystem::RaycastHitUI(World, AllUIItemArray, LineStart, LineEnd, ClickHitUI, ULGUIEditorManagerObject::IndexOfClickSelectUI))
+				if (ULGUIManagerWorldSubsystem::RaycastHitUI(World, AllWidgetArray, LineStart, LineEnd, ClickHitUI, ULGUIEditorManagerObject::IndexOfClickSelectUI))
 				{
 					ClickHitActor = ClickHitUI->GetOwner();
 				}
@@ -135,7 +135,7 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 					}
 
 					RootUICanvasActor->GetLexWidget()->SetSize(FLexWidgetSize2::MakeFixed(CanvasSize));
-					RootUICanvasActor->GetLexWidget()->SetHierarchyIndex(0);
+					RootUICanvasActor->GetLexWidget()->SetSiblingIndex(0);
 
 					OutCreatedRootAgentActor = RootUICanvasActor;
 				}
@@ -157,11 +157,11 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_GetBounds.BindStatic([](USceneComponent* SceneComp, FBox& OutBounds, bool& OutValidBounds)
 			{
-				if (auto UIItem = Cast<ULexWidget>(SceneComp))
+				if (auto Widget = Cast<ULexWidget>(SceneComp))
 				{
-					if (UIItem->GetIsUIActiveInHierarchy())
+					if (Widget->GetIsUIActiveInHierarchy())
 					{
-						OutBounds = UIItem->Bounds.GetBox();
+						OutBounds = Widget->Bounds.GetBox();
 						OutValidBounds = true;
 					}
 				}
@@ -173,9 +173,9 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_SavePrefab.BindStatic([](AActor* RootAgentActor, ULGUIPrefab* Prefab)
 			{
-				if (auto UIItem = Cast<ULexWidget>(RootAgentActor->GetRootComponent()))
+				if (auto Widget = Cast<ULexWidget>(RootAgentActor->GetRootComponent()))
 				{
-					Prefab->PrefabDataForPrefabEditor.CanvasSize = FIntPoint(UIItem->GetRenderWidth(), UIItem->GetRenderHeight());
+					Prefab->PrefabDataForPrefabEditor.CanvasSize = FIntPoint(Widget->GetRenderWidth(), Widget->GetRenderHeight());
 				}
 				if (auto Canvas = RootAgentActor->FindComponentByClass<ULexCanvas>())
 				{
@@ -191,7 +191,7 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 			ULGUIManagerWorldSubsystem::RefreshAllUI();
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_ReplaceObjectPropertyForApplyOrRevert.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, FName& InPropertyName) {
-			if (auto UIItem = Cast<ULexWidget>(InObject))
+			if (auto Widget = Cast<ULexWidget>(InObject))
 			{
 				// if (InPropertyName == USceneComponent::GetRelativeLocationPropertyName())
 				// {
@@ -200,12 +200,12 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 			}
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_AfterObjectPropertyApplyOrRevert.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, FName InPropertyName) {
-			if (auto UIItem = Cast<ULexWidget>(InObject))
+			if (auto Widget = Cast<ULexWidget>(InObject))
 			{
 				// if (InPropertyName == ULexWidget::GetAnchorDataPropertyName())
 				// {
-				// 	UIItem->CalculateTransformFromAnchor();//calculate transform here, because when NotifyPropertyChanged the PostActorConstruction->MoveComponent will call then anchor will calculate from transform value which is wrong
-				// 	PrefabHelper->RemoveMemberPropertyFromSubPrefab(UIItem->GetOwner(), InObject, USceneComponent::GetRelativeLocationPropertyName());//remove RelativeLocation override because UIItem use AnchorData to calculate RelativeLocation
+				// 	Widget->CalculateTransformFromAnchor();//calculate transform here, because when NotifyPropertyChanged the PostActorConstruction->MoveComponent will call then anchor will calculate from transform value which is wrong
+				// 	PrefabHelper->RemoveMemberPropertyFromSubPrefab(Widget->GetOwner(), InObject, USceneComponent::GetRelativeLocationPropertyName());//remove RelativeLocation override because Widget use AnchorData to calculate RelativeLocation
 				// }
 			}
 			});
@@ -218,25 +218,25 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 			}
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_AfterCollectPropertyToOverride.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, FName InPropertyName) {
-			if (auto UIItem = Cast<ULexWidget>(InObject))
+			if (auto Widget = Cast<ULexWidget>(InObject))
 			{
 				// if (InPropertyName == USceneComponent::GetRelativeLocationPropertyName())//if UI's relative location change, then record anchor data too
 				// {
-				// 	PrefabHelper->AddMemberPropertyToSubPrefab(UIItem->GetOwner(), InObject, ULexWidget::GetAnchorDataPropertyName());
+				// 	PrefabHelper->AddMemberPropertyToSubPrefab(Widget->GetOwner(), InObject, ULexWidget::GetAnchorDataPropertyName());
 				// }
 				// else if (InPropertyName == ULexWidget::GetAnchorDataPropertyName())//if UI's anchor data change, then record relative location too
 				// {
-				// 	PrefabHelper->AddMemberPropertyToSubPrefab(UIItem->GetOwner(), InObject, USceneComponent::GetRelativeLocationPropertyName());
+				// 	PrefabHelper->AddMemberPropertyToSubPrefab(Widget->GetOwner(), InObject, USceneComponent::GetRelativeLocationPropertyName());
 				// }
 			}
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_CopyRootObjectParentAnchorData.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, UObject* OriginObject) {
-			auto InObjectUIItem = Cast<ULexWidget>(InObject);
-			auto OriginObjectUIItem = Cast<ULexWidget>(OriginObject);
-			if (InObjectUIItem != nullptr && OriginObjectUIItem != nullptr)//if is UI item, we need to copy parent's property to origin object's parent property, to make anchor & location calculation right
+			auto InObjectWidget = Cast<ULexWidget>(InObject);
+			auto OriginObjectWidget = Cast<ULexWidget>(OriginObject);
+			if (InObjectWidget != nullptr && OriginObjectWidget != nullptr)//if is Widget, we need to copy parent's property to origin object's parent property, to make anchor & location calculation right
 			{
-				auto InObjectParent = InObjectUIItem->GetUIParent();
-				auto OriginObjectParent = OriginObjectUIItem->GetUIParent();
+				auto InObjectParent = InObjectWidget->GetUIParent();
+				auto OriginObjectParent = OriginObjectWidget->GetUIParent();
 				if (InObjectParent != nullptr && OriginObjectParent != nullptr)
 				{
 					//copy relative location
@@ -480,22 +480,22 @@ uint32 ULGUIEditorManagerObject::GetViewportKeyFromIndex(int32 InViewportIndex)
 
 
 #if WITH_EDITOR
-void ULGUIManagerWorldSubsystem::DrawFrameOnUIItem(ULexWidget* item, bool IsScreenSpace)
+void ULGUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool IsScreenSpace)
 {
-	auto RectExtends = FVector(0.1f, item->GetRenderWidth(), item->GetRenderHeight()) * 0.5f;
+	auto RectExtends = FVector(0.1f, Widget->GetRenderWidth(), Widget->GetRenderHeight()) * 0.5f;
 	bool bCanDrawRect = false;
 	auto RectDrawColor = FColor(128, 128, 128, 128);//gray means normal object
-	if (ULGUIPrefabManagerObject::IsSelected(item->GetOwner()))//select self
+	if (ULGUIPrefabManagerObject::IsSelected(Widget->GetOwner()))//select self
 	{
 		RectDrawColor = FColor(0, 255, 0, 255);//green means selected object
 		RectExtends.X = 1;
 		bCanDrawRect = true;
 
-		if (auto Visual = Cast<ULexVisual>(item->GetVisual()))
+		if (auto Visual = Cast<ULexVisual>(Widget->GetVisual()))
 		{
 			FVector Min, Max;
 			Visual->GetGeometryBounds3DInLocalSpace(Min, Max);
-			auto WorldTransform = item->GetComponentTransform();
+			auto WorldTransform = Widget->GetComponentTransform();
 			FVector Center = (Max + Min) * 0.5f;
 			auto WorldLocation = WorldTransform.TransformPosition(Center);
 
@@ -503,26 +503,26 @@ void ULGUIManagerWorldSubsystem::DrawFrameOnUIItem(ULexWidget* item, bool IsScre
 			auto GeometryBoundsExtends = (Max - Min) * 0.5f;
 			if (IsScreenSpace)
 			{
-				ULGUIManagerWorldSubsystem::DrawDebugRectOnScreenSpace(item->GetWorld(), WorldLocation, GeometryBoundsExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), GeometryBoundsDrawColor);
+				ULGUIManagerWorldSubsystem::DrawDebugRectOnScreenSpace(Widget->GetWorld(), WorldLocation, GeometryBoundsExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), GeometryBoundsDrawColor);
 			}
 			else
 			{
-				DrawDebugBox(item->GetWorld(), WorldLocation, GeometryBoundsExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), GeometryBoundsDrawColor);
+				DrawDebugBox(Widget->GetWorld(), WorldLocation, GeometryBoundsExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), GeometryBoundsDrawColor);
 			}
 		}
 	}
 	else
 	{
 		//parent selected
-		if (IsValid(item->GetUIParent()))
+		if (IsValid(Widget->GetUIParent()))
 		{
-			if (ULGUIPrefabManagerObject::IsSelected(item->GetUIParent()->GetOwner()))
+			if (ULGUIPrefabManagerObject::IsSelected(Widget->GetUIParent()->GetOwner()))
 			{
 				bCanDrawRect = true;
 			}
 		}
 		//child selected
-		auto& childrenCompArray = item->GetUIChildren();
+		auto& childrenCompArray = Widget->GetUIChildren();
 		for (auto& uiComp : childrenCompArray)
 		{
 			if (IsValid(uiComp) && IsValid(uiComp->GetOwner()) && ULGUIPrefabManagerObject::IsSelected(uiComp->GetOwner()))
@@ -532,9 +532,9 @@ void ULGUIManagerWorldSubsystem::DrawFrameOnUIItem(ULexWidget* item, bool IsScre
 			}
 		}
 		//other object of same hierarchy is selected
-		if (IsValid(item->GetUIParent()))
+		if (IsValid(Widget->GetUIParent()))
 		{
-			const auto& sameLevelCompArray = item->GetUIParent()->GetUIChildren();
+			const auto& sameLevelCompArray = Widget->GetUIParent()->GetUIChildren();
 			for (auto& uiComp : sameLevelCompArray)
 			{
 				if (IsValid(uiComp) && IsValid(uiComp->GetOwner()) && ULGUIPrefabManagerObject::IsSelected(uiComp->GetOwner()))
@@ -548,11 +548,11 @@ void ULGUIManagerWorldSubsystem::DrawFrameOnUIItem(ULexWidget* item, bool IsScre
 	//canvas scaler
 	if (!bCanDrawRect)
 	{
-		if (item->IsCanvasUIItem())
+		if (Widget->IsCanvasWidget())
 		{
-			if (auto canvasScaler = item->GetOwner()->FindComponentByClass<ULexCanvasScaler>())
+			if (auto canvasScaler = Widget->GetOwner()->FindComponentByClass<ULexCanvasScaler>())
 			{
-				if (ULGUIPrefabManagerObject::AnySelectedIsChildOf(item->GetOwner()))
+				if (ULGUIPrefabManagerObject::AnySelectedIsChildOf(Widget->GetOwner()))
 				{
 					bCanDrawRect = true;
 					RectDrawColor = FColor(255, 227, 124);
@@ -563,19 +563,19 @@ void ULGUIManagerWorldSubsystem::DrawFrameOnUIItem(ULexWidget* item, bool IsScre
 
 	if (bCanDrawRect)
 	{
-		auto WorldTransform = item->GetComponentTransform();
+		auto WorldTransform = Widget->GetComponentTransform();
 		FVector RelativeOffset(0, 0, 0);
-		RelativeOffset.Y = (0.5f - item->GetPivot().X) * item->GetRenderWidth();
-		RelativeOffset.Z = (0.5f - item->GetPivot().Y) * item->GetRenderHeight();
+		RelativeOffset.Y = (0.5f - Widget->GetPivot().X) * Widget->GetRenderWidth();
+		RelativeOffset.Z = (0.5f - Widget->GetPivot().Y) * Widget->GetRenderHeight();
 		auto WorldLocation = WorldTransform.TransformPosition(RelativeOffset);
 
 		if (IsScreenSpace)
 		{
-			ULGUIManagerWorldSubsystem::DrawDebugRectOnScreenSpace(item->GetWorld(), WorldLocation, RectExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), RectDrawColor);
+			ULGUIManagerWorldSubsystem::DrawDebugRectOnScreenSpace(Widget->GetWorld(), WorldLocation, RectExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), RectDrawColor);
 		}
 		else
 		{
-			DrawDebugBox(item->GetWorld(), WorldLocation, RectExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), RectDrawColor);
+			DrawDebugBox(Widget->GetWorld(), WorldLocation, RectExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), RectDrawColor);
 		}
 	}
 }
@@ -650,106 +650,106 @@ void ULGUIManagerWorldSubsystem::DrawNavigationArrow(UWorld* InWorld, const TArr
 
 void ULGUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld* InWorld, UUISelectableComponent* InSelectable, bool IsScreenSpace)
 {
-	auto SourceUIItem = InSelectable->GetRootUIComponent();
-	if (!IsValid(SourceUIItem))return;
-	const FColor Drawcall = ULGUIPrefabManagerObject::IsSelected(SourceUIItem->GetOwner()) ? FColor(255, 255, 0, 255) : FColor(140, 140, 0, 255);
-	const float Offset = 2;
-	const float ArrowSize = 2;
+	auto SourceWidget = InSelectable->GetRootUIComponent();
+	if (!IsValid(SourceWidget))return;
+	const FColor Color = ULGUIPrefabManagerObject::IsSelected(SourceWidget->GetOwner()) ? FColor(255, 255, 0, 255) : FColor(140, 140, 0, 255);
+	constexpr float Offset = 2;
+	constexpr float ArrowSize = 2;
 
 	if (auto ToLeftComp = InSelectable->FindSelectableOnLeft())
 	{
 		if (ToLeftComp != InSelectable)
 		{
-			auto SourceLeftPoint = FVector(0, SourceUIItem->GetLocalSpaceLeft(), 0.5f * (SourceUIItem->GetLocalSpaceTop() + SourceUIItem->GetLocalSpaceBottom()) + Offset);
-			SourceLeftPoint = SourceUIItem->GetComponentTransform().TransformPosition(SourceLeftPoint);
-			auto DestUIItem = ToLeftComp->GetRootUIComponent();
-			auto LocalDestRightPoint = FVector(0, DestUIItem->GetLocalSpaceRight(), 0.5f * (DestUIItem->GetLocalSpaceTop() + DestUIItem->GetLocalSpaceBottom()) + Offset);
-			auto DestRightPoint = DestUIItem->GetComponentTransform().TransformPosition(LocalDestRightPoint);
+			auto SourceLeftPoint = FVector(0, SourceWidget->GetLocalSpaceLeft(), 0.5f * (SourceWidget->GetLocalSpaceTop() + SourceWidget->GetLocalSpaceBottom()) + Offset);
+			SourceLeftPoint = SourceWidget->GetComponentTransform().TransformPosition(SourceLeftPoint);
+			auto DestWidget = ToLeftComp->GetRootUIComponent();
+			auto LocalDestRightPoint = FVector(0, DestWidget->GetLocalSpaceRight(), 0.5f * (DestWidget->GetLocalSpaceTop() + DestWidget->GetLocalSpaceBottom()) + Offset);
+			auto DestRightPoint = DestWidget->GetComponentTransform().TransformPosition(LocalDestRightPoint);
 			float Distance = FVector::Distance(SourceLeftPoint, DestRightPoint);
 			Distance *= 0.2f;
-			auto ArrowPointA = DestUIItem->GetComponentTransform().TransformPosition(LocalDestRightPoint + FVector(0, ArrowSize, ArrowSize));
-			auto ArrowPointB = DestUIItem->GetComponentTransform().TransformPosition(LocalDestRightPoint + FVector(0, ArrowSize, -ArrowSize));
+			auto ArrowPointA = DestWidget->GetComponentTransform().TransformPosition(LocalDestRightPoint + FVector(0, ArrowSize, ArrowSize));
+			auto ArrowPointB = DestWidget->GetComponentTransform().TransformPosition(LocalDestRightPoint + FVector(0, ArrowSize, -ArrowSize));
 			DrawNavigationArrow(InWorld
 				, {
 					SourceLeftPoint,
-					SourceLeftPoint - SourceUIItem->GetRightVector() * Distance,
-					DestRightPoint + DestUIItem->GetRightVector() * Distance,
+					SourceLeftPoint - SourceWidget->GetRightVector() * Distance,
+					DestRightPoint + DestWidget->GetRightVector() * Distance,
 					DestRightPoint,
 				}
 				, ArrowPointA, ArrowPointB
-				, Drawcall, IsScreenSpace);
+				, Color, IsScreenSpace);
 		}
 	}
 	if (auto ToRightComp = InSelectable->FindSelectableOnRight())
 	{
 		if (ToRightComp != InSelectable)
 		{
-			auto SourceRightPoint = FVector(0, SourceUIItem->GetLocalSpaceRight(), 0.5f * (SourceUIItem->GetLocalSpaceTop() + SourceUIItem->GetLocalSpaceBottom()) - Offset);
-			SourceRightPoint = SourceUIItem->GetComponentTransform().TransformPosition(SourceRightPoint);
-			auto DestUIItem = ToRightComp->GetRootUIComponent();
-			auto LocalDestLeftPoint = FVector(0, DestUIItem->GetLocalSpaceLeft(), 0.5f * (DestUIItem->GetLocalSpaceTop() + DestUIItem->GetLocalSpaceBottom()) - Offset);
-			auto DestLeftPoint = DestUIItem->GetComponentTransform().TransformPosition(LocalDestLeftPoint);
+			auto SourceRightPoint = FVector(0, SourceWidget->GetLocalSpaceRight(), 0.5f * (SourceWidget->GetLocalSpaceTop() + SourceWidget->GetLocalSpaceBottom()) - Offset);
+			SourceRightPoint = SourceWidget->GetComponentTransform().TransformPosition(SourceRightPoint);
+			auto DestWidget = ToRightComp->GetRootUIComponent();
+			auto LocalDestLeftPoint = FVector(0, DestWidget->GetLocalSpaceLeft(), 0.5f * (DestWidget->GetLocalSpaceTop() + DestWidget->GetLocalSpaceBottom()) - Offset);
+			auto DestLeftPoint = DestWidget->GetComponentTransform().TransformPosition(LocalDestLeftPoint);
 			float Distance = FVector::Distance(SourceRightPoint, DestLeftPoint);
 			Distance *= 0.2f;
-			auto ArrowPointA = DestUIItem->GetComponentTransform().TransformPosition(LocalDestLeftPoint + FVector(0, -ArrowSize, ArrowSize));
-			auto ArrowPointB = DestUIItem->GetComponentTransform().TransformPosition(LocalDestLeftPoint + FVector(0, -ArrowSize, -ArrowSize));
+			auto ArrowPointA = DestWidget->GetComponentTransform().TransformPosition(LocalDestLeftPoint + FVector(0, -ArrowSize, ArrowSize));
+			auto ArrowPointB = DestWidget->GetComponentTransform().TransformPosition(LocalDestLeftPoint + FVector(0, -ArrowSize, -ArrowSize));
 			DrawNavigationArrow(InWorld
 				, {
 					SourceRightPoint,
-					SourceRightPoint + SourceUIItem->GetRightVector() * Distance,
-					DestLeftPoint - DestUIItem->GetRightVector() * Distance,
+					SourceRightPoint + SourceWidget->GetRightVector() * Distance,
+					DestLeftPoint - DestWidget->GetRightVector() * Distance,
 					DestLeftPoint,
 				}
 				, ArrowPointA, ArrowPointB
-				, Drawcall, IsScreenSpace);
+				, Color, IsScreenSpace);
 		}
 	}
 	if (auto ToDownComp = InSelectable->FindSelectableOnDown())
 	{
 		if (ToDownComp != InSelectable)
 		{
-			auto SourceDownPoint = FVector(0, 0.5f * (SourceUIItem->GetLocalSpaceLeft() + SourceUIItem->GetLocalSpaceRight()) - Offset, SourceUIItem->GetLocalSpaceBottom());
-			SourceDownPoint = SourceUIItem->GetComponentTransform().TransformPosition(SourceDownPoint);
-			auto DestUIItem = ToDownComp->GetRootUIComponent();
-			auto LocalDestUpPoint = FVector(0, 0.5f * (DestUIItem->GetLocalSpaceLeft() + DestUIItem->GetLocalSpaceRight()) - Offset, DestUIItem->GetLocalSpaceTop());
-			auto DestUpPoint = DestUIItem->GetComponentTransform().TransformPosition(LocalDestUpPoint);
+			auto SourceDownPoint = FVector(0, 0.5f * (SourceWidget->GetLocalSpaceLeft() + SourceWidget->GetLocalSpaceRight()) - Offset, SourceWidget->GetLocalSpaceBottom());
+			SourceDownPoint = SourceWidget->GetComponentTransform().TransformPosition(SourceDownPoint);
+			auto DestWidget = ToDownComp->GetRootUIComponent();
+			auto LocalDestUpPoint = FVector(0, 0.5f * (DestWidget->GetLocalSpaceLeft() + DestWidget->GetLocalSpaceRight()) - Offset, DestWidget->GetLocalSpaceTop());
+			auto DestUpPoint = DestWidget->GetComponentTransform().TransformPosition(LocalDestUpPoint);
 			float Distance = FVector::Distance(SourceDownPoint, DestUpPoint);
 			Distance *= 0.2f;
-			auto ArrowPointA = DestUIItem->GetComponentTransform().TransformPosition(LocalDestUpPoint + FVector(0, ArrowSize, ArrowSize));
-			auto ArrowPointB = DestUIItem->GetComponentTransform().TransformPosition(LocalDestUpPoint + FVector(0, -ArrowSize, ArrowSize));
+			auto ArrowPointA = DestWidget->GetComponentTransform().TransformPosition(LocalDestUpPoint + FVector(0, ArrowSize, ArrowSize));
+			auto ArrowPointB = DestWidget->GetComponentTransform().TransformPosition(LocalDestUpPoint + FVector(0, -ArrowSize, ArrowSize));
 			DrawNavigationArrow(InWorld
 				, {
 					SourceDownPoint,
-					SourceDownPoint - SourceUIItem->GetUpVector() * Distance,
-					DestUpPoint + DestUIItem->GetUpVector() * Distance,
+					SourceDownPoint - SourceWidget->GetUpVector() * Distance,
+					DestUpPoint + DestWidget->GetUpVector() * Distance,
 					DestUpPoint,
 				}
 				, ArrowPointA, ArrowPointB
-				, Drawcall, IsScreenSpace);
+				, Color, IsScreenSpace);
 		}
 	}
 	if (auto ToUpComp = InSelectable->FindSelectableOnUp())
 	{
 		if (ToUpComp != InSelectable)
 		{
-			auto SourceUpPoint = FVector(0, 0.5f * (SourceUIItem->GetLocalSpaceLeft() + SourceUIItem->GetLocalSpaceRight()) + Offset, SourceUIItem->GetLocalSpaceTop());
-			SourceUpPoint = SourceUIItem->GetComponentTransform().TransformPosition(SourceUpPoint);
-			auto DestUIItem = ToUpComp->GetRootUIComponent();
-			auto LocalDestDownPoint = FVector(0, 0.5f * (DestUIItem->GetLocalSpaceLeft() + DestUIItem->GetLocalSpaceRight()) + Offset, DestUIItem->GetLocalSpaceBottom());
-			auto DestDownPoint = DestUIItem->GetComponentTransform().TransformPosition(LocalDestDownPoint);
+			auto SourceUpPoint = FVector(0, 0.5f * (SourceWidget->GetLocalSpaceLeft() + SourceWidget->GetLocalSpaceRight()) + Offset, SourceWidget->GetLocalSpaceTop());
+			SourceUpPoint = SourceWidget->GetComponentTransform().TransformPosition(SourceUpPoint);
+			auto DestWidget = ToUpComp->GetRootUIComponent();
+			auto LocalDestDownPoint = FVector(0, 0.5f * (DestWidget->GetLocalSpaceLeft() + DestWidget->GetLocalSpaceRight()) + Offset, DestWidget->GetLocalSpaceBottom());
+			auto DestDownPoint = DestWidget->GetComponentTransform().TransformPosition(LocalDestDownPoint);
 			float Distance = FVector::Distance(SourceUpPoint, DestDownPoint);
 			Distance *= 0.2f;
-			auto ArrowPointA = DestUIItem->GetComponentTransform().TransformPosition(LocalDestDownPoint + FVector(0, ArrowSize, -ArrowSize));
-			auto ArrowPointB = DestUIItem->GetComponentTransform().TransformPosition(LocalDestDownPoint + FVector(0, -ArrowSize, -ArrowSize));
+			auto ArrowPointA = DestWidget->GetComponentTransform().TransformPosition(LocalDestDownPoint + FVector(0, ArrowSize, -ArrowSize));
+			auto ArrowPointB = DestWidget->GetComponentTransform().TransformPosition(LocalDestDownPoint + FVector(0, -ArrowSize, -ArrowSize));
 			DrawNavigationArrow(InWorld
 				, {
 					SourceUpPoint,
-					SourceUpPoint + SourceUIItem->GetUpVector() * Distance,
-					DestDownPoint - DestUIItem->GetUpVector() * Distance,
+					SourceUpPoint + SourceWidget->GetUpVector() * Distance,
+					DestDownPoint - DestWidget->GetUpVector() * Distance,
 					DestDownPoint,
 				}
 				, ArrowPointA, ArrowPointB
-				, Drawcall, IsScreenSpace);
+				, Color, IsScreenSpace);
 		}
 	}
 }
@@ -862,30 +862,30 @@ bool ULGUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULex
 )
 {
 	TArray<FHitResult> HitResultArray;
-	for (auto WidgetItem : InWidgets)
+	for (auto Widget : InWidgets)
 	{
-		if (!IsValid(WidgetItem))continue;
-		if (WidgetItem->GetWorld() == InWorld)
+		if (!IsValid(Widget))continue;
+		if (Widget->GetWorld() == InWorld)
 		{
-			if (auto Visual = WidgetItem->GetVisual())
+			if (auto Visual = Widget->GetVisual())
 			{
-				if (WidgetItem->IsVisibleForRender() && WidgetItem->GetRenderCanvas() != nullptr)
+				if (Widget->IsVisibleForRender() && Widget->GetRenderCanvas() != nullptr)
 				{
 					FHitResult hitInfo;
 					auto OriginRaycastType = Visual->GetRaycastType();
-					auto OriginVisibility = WidgetItem->GetWidgetVisibility();
+					auto OriginVisibility = Widget->GetWidgetVisibility();
 					Visual->SetRaycastType(ELexVisualHitTestType::Mesh);//in editor selection, make the ray hit actural triangle
-					WidgetItem->SetWidgetVisibility(ESlateVisibility::Visible);
-					WidgetItem->SetWidgetVisibility(ESlateVisibility::Visible);
+					Widget->SetWidgetVisibility(ESlateVisibility::Visible);
+					Widget->SetWidgetVisibility(ESlateVisibility::Visible);
 					if (Visual->LineTraceUI(hitInfo, LineStart, LineEnd))
 					{
-						if (WidgetItem->IsPointVisibleOnClip(hitInfo.Location))
+						if (Widget->IsPointVisibleOnClip(hitInfo.Location))
 						{
 							HitResultArray.Add(hitInfo);
 						}
 					}
 					Visual->SetRaycastType(OriginRaycastType);
-					WidgetItem->SetWidgetVisibility(OriginVisibility);
+					Widget->SetWidgetVisibility(OriginVisibility);
 				}
 			}
 		}
@@ -1023,14 +1023,14 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 			{
 				auto bIsGameWorld = this->GetWorld()->IsGameWorld();
 				auto DrawFrame = [bIsGameWorld](const TArray<TWeakObjectPtr<ULexCanvas>>& CanvasArray) {
-					for (auto& CanvasItem : CanvasArray)
+					for (auto& Canvas : CanvasArray)
 					{
-						auto& UIItemArray = CanvasItem->GetWidgetArray();
-						for (auto& UIItem : UIItemArray)
+						auto& WidgetArray = Canvas->GetWidgetArray();
+						for (auto& Widget : WidgetArray)
 						{
-							if (!IsValid(UIItem))continue;
+							if (!IsValid(Widget))continue;
 
-							ULGUIManagerWorldSubsystem::DrawFrameOnUIItem(UIItem, bIsGameWorld ? UIItem->IsScreenSpaceOverlayUI() : false);
+							ULGUIManagerWorldSubsystem::DrawFrameOnWidget(Widget, bIsGameWorld ? Widget->IsScreenSpaceOverlayUI() : false);
 						}
 					}
 					};
@@ -1043,14 +1043,14 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 
 		if (Settings->bDrawSelectableNavigationVisualizer)
 		{
-			for (auto& item : AllSelectableArray)
+			for (auto& Selectable : AllSelectableArray)
 			{
-				if (!item.IsValid())continue;
-				if (!IsValid(item->GetWorld()))continue;
-				if (!IsValid(item->GetRootUIComponent()))continue;
-				if (!item->GetRootUIComponent()->GetIsUIActiveInHierarchy())continue;
+				if (!Selectable.IsValid())continue;
+				if (!IsValid(Selectable->GetWorld()))continue;
+				if (!IsValid(Selectable->GetRootUIComponent()))continue;
+				if (!Selectable->GetRootUIComponent()->GetIsUIActiveInHierarchy())continue;
 
-				ULGUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(item->GetWorld(), item.Get(), this->GetWorld()->IsGameWorld() ? item->GetRootUIComponent()->IsScreenSpaceOverlayUI() : false);
+				ULGUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(Selectable->GetWorld(), Selectable.Get(), this->GetWorld()->IsGameWorld() ? Selectable->GetRootUIComponent()->IsScreenSpaceOverlayUI() : false);
 			}
 		}
 	}
@@ -1061,9 +1061,9 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 		if (bShouldUpdateOnCultureChanged)
 		{
 			bShouldUpdateOnCultureChanged = false;
-			for (auto& item : AllCultureChangedArray)
+			for (auto& Culture : AllCultureChangedArray)
 			{
-				ILGUICultureChangedInterface::Execute_OnCultureChanged(item.Get());
+				ILGUICultureChangedInterface::Execute_OnCultureChanged(Culture.Get());
 			}
 		}
 	}
@@ -1145,13 +1145,13 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 
 #if WITH_EDITOR
 	int ScreenSpaceOverlayCanvasCount = 0;
-	for (auto& item : ScreenSpaceCanvasArray)
+	for (auto& Canvas : ScreenSpaceCanvasArray)
 	{
-		if (item.IsValid())
+		if (Canvas.IsValid())
 		{
-			if (item->IsRootCanvas())
+			if (Canvas->IsRootCanvas())
 			{
-				if (item->GetActualRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
+				if (Canvas->GetActualRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
 				{
 					ScreenSpaceOverlayCanvasCount++;
 				}
@@ -1180,11 +1180,11 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 	{
 		SCOPE_CYCLE_COUNTER(STAT_UpdateCanvas);
 		auto UpdateCanvas = [](TArray<TWeakObjectPtr<ULexCanvas>>& InCanvasArray) {
-			for (auto& item : InCanvasArray)
+			for (auto& Canvas : InCanvasArray)
 			{
-				if (item.IsValid())
+				if (Canvas.IsValid())
 				{
-					item->UpdateRootCanvas();
+					Canvas->UpdateRootCanvas();
 				}
 			}
 		};
@@ -1380,46 +1380,46 @@ void ULGUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 			}
 		}
 		auto Instance = InstanceItem;
-		for (auto& RootUIItem : Instance->AllRootUIItemArray)
+		for (auto& RootWidget : Instance->AllRootWidgetArray)
 		{
-			if (RootUIItem.IsValid())
+			if (RootWidget.IsValid())
 			{
-				RootUIItem->EnsureDataForRebuild();
-				RootUIItem->EditorForceUpdate();
+				RootWidget->EnsureDataForRebuild();
+				RootWidget->EditorForceUpdate();
 			}
 		}
 	}
 }
-#endif
 
-void ULGUIManagerWorldSubsystem::AddRootUIItem(ULexWidget* InItem)
+void ULGUIManagerWorldSubsystem::AddRootWidget(ULexWidget* InWidget)
 {
-	if (auto Instance = GetInstance(InItem->GetWorld()))
+	if (auto Instance = GetInstance(InWidget->GetWorld()))
 	{
 #if !UE_BUILD_SHIPPING
-		if (Instance->AllRootUIItemArray.Contains(InItem))
+		if (Instance->AllRootWidgetArray.Contains(InWidget))
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
 		}
 #endif
-		Instance->AllRootUIItemArray.AddUnique(InItem);
+		Instance->AllRootWidgetArray.AddUnique(InWidget);
 	}
 }
-void ULGUIManagerWorldSubsystem::RemoveRootUIItem(ULexWidget* InItem)
+void ULGUIManagerWorldSubsystem::RemoveRootWidget(ULexWidget* InWidget)
 {
-	if (auto Instance = GetInstance(InItem->GetWorld()))
+	if (auto Instance = GetInstance(InWidget->GetWorld()))
 	{
 #if !UE_BUILD_SHIPPING
-		if (!Instance->AllRootUIItemArray.Contains(InItem))
+		if (!Instance->AllRootWidgetArray.Contains(InWidget))
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
 		}
 #endif
-		Instance->AllRootUIItemArray.RemoveSingle(InItem);
+		Instance->AllRootWidgetArray.RemoveSingle(InWidget);
 	}
 }
+#endif
 
 void ULGUIManagerWorldSubsystem::AddCanvas(ULexCanvas* InCanvas, ELexRenderMode InCurrentRenderMode)
 {

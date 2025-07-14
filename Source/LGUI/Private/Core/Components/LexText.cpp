@@ -32,11 +32,11 @@ ULexText::ULexText(const FObjectInitializer& ObjectInitializer):Super(ObjectInit
 	}
 #endif
 	CacheTextGeometryData = FLexUITextGeometryCache(this);
-	geometry->bIsFont = true;
+	UIGeometry->bIsFont = true;
 }
 void ULexText::ApplyFontTextureScaleUp()
 {
-	auto& vertices = geometry->Vertices;
+	auto& vertices = UIGeometry->Vertices;
 	if (vertices.Num() != 0)
 	{
 		for (int i = 0; i < vertices.Num(); i++)
@@ -45,10 +45,10 @@ void ULexText::ApplyFontTextureScaleUp()
 			uv *= 0.5f;
 		}
 	}
-	geometry->Texture = GetTextureToCreateGeometry();
+	UIGeometry->Texture = GetTextureToCreateGeometry();
 		if (DrawCall.IsValid())
 		{
-			DrawCall->Texture = geometry->Texture;
+			DrawCall->Texture = UIGeometry->Texture;
 			DrawCall->bTextureChanged = true;
 			DrawCall->bNeedToUpdateVertex = true;
 		}
@@ -62,10 +62,10 @@ void ULexText::ApplyFontTextureChange()
 	{
 		MarkVerticesDirty(true, true, true, true);
 		MarkTextureDirty();
-		geometry->Texture = GetTextureToCreateGeometry();
+		UIGeometry->Texture = GetTextureToCreateGeometry();
 		if (DrawCall.IsValid())
 		{
-			DrawCall->Texture = geometry->Texture;
+			DrawCall->Texture = UIGeometry->Texture;
 			DrawCall->bTextureChanged = true;
 			DrawCall->bNeedToUpdateVertex = true;
 		}
@@ -78,10 +78,10 @@ void ULexText::ApplyFontMaterialChange()
 	{
 		MarkVerticesDirty(true, true, true, true);
 		MarkMaterialDirty();
-		geometry->Material = GetMaterialToCreateGeometry();
+		UIGeometry->Material = GetMaterialToCreateGeometry();
 		if (DrawCall.IsValid())
 		{
-			DrawCall->Material = geometry->Material;
+			DrawCall->Material = UIGeometry->Material;
 			DrawCall->bMaterialChanged = true;
 			DrawCall->bMaterialNeedToReassign = true;
 			DrawCall->bNeedToUpdateVertex = true;
@@ -332,7 +332,7 @@ void ULexText::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, b
 
 void ULexText::UpdateMaterialClipType()
 {
-	geometry->Material = GetMaterialToCreateGeometry();
+	UIGeometry->Material = GetMaterialToCreateGeometry();
 	if (DrawCall.IsValid())
 	{
 		DrawCall->bMaterialChanged = true;
@@ -888,7 +888,7 @@ bool ULexText::UpdateCacheTextGeometry()const
 		, this->GetRichTextTagFilterFlags()
 		, this->GetFont()
 	);
-	if (geometry->Vertices.Num() == 0)//@todo: geometry is cleared before OnUpdateGeometry, consider use a cached UIGeometry
+	if (UIGeometry->Vertices.Num() == 0)//@todo: geometry is cleared before OnUpdateGeometry, consider use a cached UIGeometry
 	{
 		CacheTextGeometryData.MarkDirty();
 	}

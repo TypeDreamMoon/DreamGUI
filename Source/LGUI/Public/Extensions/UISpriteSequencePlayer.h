@@ -6,7 +6,7 @@
 
 class ULexUISpriteData_BaseObject;
 
-/** Play sprite sequence, need UISprite component. */
+/** Play Sprite sequence, need UISprite component. */
 UCLASS(ClassGroup = (LGUI), meta = (BlueprintSpawnableComponent))
 class LGUI_API UUISpriteSequencePlayer : public ULGUIImageSequencePlayer
 {
@@ -19,7 +19,7 @@ protected:
 		TWeakObjectPtr<class UUISpriteBase> sprite;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		TArray<TObjectPtr<ULexUISpriteData_BaseObject>> spriteSequence;
-	/** should also set size to sprite-data? */
+	/** should also set size to Sprite-data? */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		bool snapSpriteSize = true;
 

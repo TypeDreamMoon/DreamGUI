@@ -21,7 +21,7 @@ UObject* ULGUIPrefabFactoryForUI::FactoryCreateNew(UClass* Class, UObject* InPar
 	ULGUIPrefabHelperObject* HelperObject = NewObject<ULGUIPrefabHelperObject>(GetTransientPackage());
 	HelperObject->PrefabAsset = NewAsset;
 	HelperObject->LoadedRootActor = ULGUIPrefabManagerObject::GetPreviewWorldForPrefabPackage()->SpawnActor<ALexWidgetActor>();
-	HelperObject->LoadedRootActor->SetActorLabel(TEXT("RootActor"));
+	HelperObject->LoadedRootActor->SetActorLabel(Name.ToString());
 	if (!HelperObject->LoadedRootActor->GetRootComponent())
 	{
 		USceneComponent* RootComponent = NewObject<USceneComponent>(HelperObject->LoadedRootActor, USceneComponent::GetDefaultSceneRootVariableName(), RF_Transactional);

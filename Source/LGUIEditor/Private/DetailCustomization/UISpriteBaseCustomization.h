@@ -6,11 +6,11 @@
 /**
  * 
  */
-class FUISpriteBaseCustomization : public IDetailCustomization
+class FLexUISpriteBaseCustomization : public IDetailCustomization
 {
 public:
-	FUISpriteBaseCustomization();
-	~FUISpriteBaseCustomization();
+	FLexUISpriteBaseCustomization();
+	~FLexUISpriteBaseCustomization();
 
 	static TSharedRef<IDetailCustomization> MakeInstance();
 	/** IDetailCustomization interface */

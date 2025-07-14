@@ -7,7 +7,7 @@
 #include "TextureCompiler.h"
 #include "Utils/LexUIUtils.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
-#include "Core/IUISpriteRenderableInterface.h"
+#include "Core/ILexUISpriteRenderInterface.h"
 #include "TextureResource.h"
 
 #define LOCTEXT_NAMESPACE "LGUIStaticSpriteAtlasData"
@@ -88,7 +88,7 @@ void ULexUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChanged
 					spriteData->packingAtlas->RemoveSpriteData(spriteData);
 				}
 				spriteData->packingAtlas = this;
-				spriteData->isInitialized = false;
+				spriteData->bIsInitialized = false;
 				spriteData->MarkPackageDirty();
 			};
 			auto KeepOldSprite = [this](ULexUISpriteData* spriteData) {
@@ -115,7 +115,7 @@ void ULexUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChanged
 					}
 					else
 					{
-						auto WarningMsg = FText::Format(LOCTEXT("TransferSpriteWarning", "Sprite: '{0}' was belongs to atlas: '{1}', do you want to transfer the sprite to this atlas?")
+						auto WarningMsg = FText::Format(LOCTEXT("TransferSpriteWarning", "Sprite: '{0}' was belongs to atlas: '{1}', do you want to transfer the Sprite to this atlas?")
 							, FText::FromString(Item->GetPathName()), FText::FromString(Item->packingAtlas->GetPathName()));
 						auto Result = FMessageDialog::Open(EAppMsgType::YesNoYesAllNoAll, WarningMsg);
 						switch (Result)
@@ -151,7 +151,7 @@ void ULexUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChanged
 			{
 				Item->Modify();
 				Item->packingAtlas = nullptr;
-				Item->isInitialized = false;
+				Item->bIsInitialized = false;
 				Item->MarkPackageDirty();
 			}
 
@@ -196,11 +196,11 @@ void ULexUIStaticSpriteAtlasData::RemoveSpriteData(ULexUISpriteData* InSpriteDat
 		MarkNotInitialized();
 	}
 }
-void ULexUIStaticSpriteAtlasData::AddRenderSprite(TScriptInterface<IUISpriteRenderableInterface> InSprite)
+void ULexUIStaticSpriteAtlasData::AddRenderSprite(TScriptInterface<ILexUISpriteRenderInterface> InSprite)
 {
 	RenderSpriteArray.AddUnique(InSprite.GetObject());
 }
-void ULexUIStaticSpriteAtlasData::RemoveRenderSprite(TScriptInterface<IUISpriteRenderableInterface> InSprite)
+void ULexUIStaticSpriteAtlasData::RemoveRenderSprite(TScriptInterface<ILexUISpriteRenderInterface> InSprite)
 {
 	RenderSpriteArray.Remove(InSprite.GetObject());
 }
@@ -226,13 +226,13 @@ void ULexUIStaticSpriteAtlasData::CheckSprite()
 		auto itemSprite = this->RenderSpriteArray[i];
 		if (itemSprite.IsValid())
 		{
-			if (!IsValid(IUISpriteRenderableInterface::Execute_SpriteRenderableGetSprite(itemSprite.Get())))
+			if (!IsValid(ILexUISpriteRenderInterface::Execute_SpriteRenderGetSprite(itemSprite.Get())))
 			{
 				this->RenderSpriteArray.RemoveAt(i);
 			}
 			else
 			{
-				if (auto spriteData = Cast<ULexUISpriteData>(IUISpriteRenderableInterface::Execute_SpriteRenderableGetSprite(itemSprite.Get())))
+				if (auto spriteData = Cast<ULexUISpriteData>(ILexUISpriteRenderInterface::Execute_SpriteRenderGetSprite(itemSprite.Get())))
 				{
 					if (spriteData->GetPackingAtlas() != this)
 					{
@@ -313,7 +313,7 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 		if (!bWarningIsAlreadyAppearedAtCurrentPackingSession)
 		{
 			bWarningIsAlreadyAppearedAtCurrentPackingSession = true;
-			auto ErrMsg = FText::Format(LOCTEXT("AtlasSizeTooLargeError", "{0} Package sprite atlas fail! Atlas texture size {1} larger than {2}: {3}! Please remove some large size sprite, or split to multiple atlas.")
+			auto ErrMsg = FText::Format(LOCTEXT("AtlasSizeTooLargeError", "{0} Package Sprite atlas fail! Atlas texture size {1} larger than {2}: {3}! Please remove some large size Sprite, or split to multiple atlas.")
 				, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__))
 				, packSize
 				, FText::FromName(GET_MEMBER_NAME_CHECKED(ULexUIStaticSpriteAtlasData, MaxAtlasTextureSize))
@@ -616,7 +616,7 @@ void ULexUIStaticSpriteAtlasData::BeginDestroy()
 {
 	for (auto& item : SpriteArray)
 	{
-		item->isInitialized = false;
+		item->bIsInitialized = false;
 	}
 	Super::BeginDestroy();
 }
@@ -689,7 +689,7 @@ bool ULexUIStaticSpriteAtlasData::InitCheck()
 		{
 			if (sprite.IsValid())
 			{
-				IUISpriteRenderableInterface::Execute_ApplyAtlasTextureChange(sprite.Get());
+				ILexUISpriteRenderInterface::Execute_ApplyAtlasTextureChange(sprite.Get());
 			}
 		}
 #endif

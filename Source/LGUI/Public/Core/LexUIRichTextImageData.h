@@ -18,7 +18,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		float overrideAnimationFps = -1;
 };
-/** use sprite to render image for UIText */
+/** use Sprite to render image for UIText */
 UCLASS(NotBlueprintable, BlueprintType)
 class LGUI_API ULexUIRichTextImageData :public ULexUIRichTextImageData_BaseObject
 {

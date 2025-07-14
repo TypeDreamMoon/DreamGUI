@@ -42,7 +42,7 @@ enum class ELexWidgetClipping : uint8
 };
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FUIItemActiveInHierarchyStateChangedMulticastDelegate, bool);
-DECLARE_DELEGATE_OneParam(FUIItemActiveInHierarchyStateChangedDelegate, bool);
+DECLARE_DELEGATE_OneParam(FLexWidgetActiveInHierarchyStateChangedDelegate, bool);
 
 /**
  * Base class for almost all UI related things.
@@ -52,7 +52,8 @@ class LGUI_API ULexWidget : public USceneComponent
 {
 	GENERATED_BODY()
 
-public:	
+public:
+	DECLARE_EVENT_ThreeParams(ULexWidget, FDimensionChangedEvent, bool/*PivotChanged*/, bool/*WidthChanged*/, bool/*HeightChanged*/);
 	ULexWidget(const FObjectInitializer& ObjectInitializer);
 
 	virtual void BeginPlay() override;
@@ -84,7 +85,7 @@ public:
 	}
 	static const FName GetHierarchyIndexPropertyName()
 	{
-		return GET_MEMBER_NAME_CHECKED(ULexWidget, HierarchyIndex);
+		return GET_MEMBER_NAME_CHECKED(ULexWidget, SiblingIndex);
 	}
 	template<class T>
 	static T* GetComponentInParentUI(AActor* InActor, bool IncludeUnregisteredComponent = true)
@@ -119,14 +120,15 @@ public:
 #pragma region LGUILifeCycleUIBehaviour
 private:
 	TInlineComponentArray<class ULGUILifeCycleUIBehaviour*> LGUILifeCycleUIBehaviourArray;
-	void CallUILifeCycleBehavioursActiveInHierarchyStateChanged();
-	void CallUILifeCycleBehavioursChildActiveInHierarchyStateChanged(ULexWidget* child, bool activeOrInactive);
-	void CallUILifeCycleBehavioursDimensionsChanged(bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged);
-	void CallUILifeCycleBehavioursChildDimensionsChanged(ULexWidget* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged);
-	void CallUILifeCycleBehavioursAttachmentChanged();
-	void CallUILifeCycleBehavioursChildAttachmentChanged(ULexWidget* child, bool attachOrDetach);
-	void CallUILifeCycleBehavioursInteractionStateChanged();
-	void CallUILifeCycleBehavioursChildHierarchyIndexChanged(ULexWidget* child);
+	void Call_ActiveInHierarchyStateChanged();
+	void Call_ChildActiveInHierarchyStateChanged(ULexWidget* child, bool activeOrInactive);
+	void Call_TransformChanged();
+	void Call_DimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged);
+	void Call_ChildDimensionsChanged(ULexWidget* Child, bool PivotChanged, bool WidthChanged, bool HeightChanged);
+	void Call_AttachmentChanged();
+	void Call_ChildAttachmentChanged(ULexWidget* child, bool attachOrDetach);
+	void Call_InteractionStateChanged();
+	void Call_ChildSiblingIndexChanged(ULexWidget* child);
 public:
 	void AddLGUILifeCycleUIBehaviourComponent(class ULGUILifeCycleUIBehaviour* InComp) { LGUILifeCycleUIBehaviourArray.AddUnique(InComp); }
 	void RemoveLGUILifeCycleUIBehaviourComponent(class ULGUILifeCycleUIBehaviour* InComp) { LGUILifeCycleUIBehaviourArray.RemoveSingleSwap(InComp); }
@@ -169,7 +171,7 @@ protected:
 	/** parent in hierarchy */
 	UPROPERTY(Transient) mutable TWeakObjectPtr<ULexWidget> UIParent = nullptr;
 	/** root in hierarchy */
-	mutable TWeakObjectPtr<ULexWidget> RootUIItem = nullptr;//don't mark this Transactional, because undo or redo will call register/unregister, which will trigger check RootUIItem
+	mutable TWeakObjectPtr<ULexWidget> RootWidget = nullptr;//don't mark this Transactional, because undo or redo will call register/unregister, which will trigger check RootUIItem
 	/** UI children array, sorted by hierarchy index */
 	UPROPERTY(Transient) mutable TArray<TObjectPtr<ULexWidget>> UIChildren;
 	/** check valid, incase unnormally deleting actor, like undo */
@@ -269,11 +271,8 @@ public:
 	virtual void MarkRenderModeChangeRecursive(ULexCanvas* Canvas, ELexRenderMode OldRenderMode, ELexRenderMode NewRenderMode);
 	
 	void MarkTransformChanged(bool InPositionChanged, bool InScaleChanged);
-	void MarkDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange);
-	void MarkParentDimensionChanged(bool InParentPivotChange, bool InParentWidthChange, bool InParentHeightChange);
-	void MarkNeedUpdateLayout();
-	void MarkSizeDirty_Recursive();
-	void OnChildDimensionChanged(ULexWidget* InChild);
+	void MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged);
+	void MarkRenderSizeChanged();
 	virtual void MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawcall = false);
 private:
 	mutable uint8 bNeedSortUIChildren : 1;
@@ -371,11 +370,26 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	ULexVisual* GetVisual()const { return Visual; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	void SetVisual(ULexVisual* Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI", meta=(DeterminesOutputType="VisualClass"))
+	ULexVisual* CreateNewVisual(TSubclassOf<ULexVisual> VisualClass);
+	template<class T>
+	T* CreateNewVisual()
+	{
+		static_assert(TPointerIsConvertibleFromTo<T, const ULexVisual>::Value, "'T' template parameter to CreateNewVisual must be derived from ULexVisual");
+		return (T*)CreateNewVisual(T::GetClass());
+	}
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	ULexLayout* GetLayout()const { return Layout; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI", meta=(DeterminesOutputType="LayoutClass"))
+	ULexLayout* CreateNewLayout(TSubclassOf<ULexLayout> LayoutClass);
+	template<class T>
+	T* CreateNewLayout()
+	{
+		static_assert(TPointerIsConvertibleFromTo<T, const ULexLayout>::Value, "'T' template parameter to CreateNewLayout must be derived from ULexLayout");
+		return (T*)CreateNewLayout(T::GetClass());
+	}
+	
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	ULexLayoutSlot* GetLayoutSlot()const;
 
@@ -399,12 +413,14 @@ protected:
 
 	FUIItemActiveInHierarchyStateChangedMulticastDelegate UIActiveInHierarchyStateChangedDelegate;
 	FSimpleMulticastDelegate OnTransformChanged;
+	FDimensionChangedEvent OnDimensionChangedEvent;
 public:
-	FDelegateHandle RegisterUIActiveStateChanged(const FUIItemActiveInHierarchyStateChangedDelegate& InCallback);
+	FDelegateHandle RegisterUIActiveStateChanged(const FLexWidgetActiveInHierarchyStateChangedDelegate& InCallback);
 	FDelegateHandle RegisterUIActiveStateChanged(const TFunction<void(bool)>& InCallback);
 	void UnregisterUIActiveStateChanged(const FDelegateHandle& InHandle);
 
 	FSimpleMulticastDelegate& GetTransformChangedEvent(){return OnTransformChanged;}
+	FDimensionChangedEvent& GetDimensionChangedEvent(){return OnDimensionChangedEvent;}
 
 	/** Set this UI element's bIsUIActive */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
@@ -420,32 +436,32 @@ public:
 #endif
 #pragma endregion UIActive
 
-#pragma region HierarchyIndex
+#pragma region SiblingIndex
 protected:
 	/** hierarchy index, hierarchy order, render order */
 	UPROPERTY(EditAnywhere, Category = LGUI)
-		int32 HierarchyIndex = INDEX_NONE;
+		int32 SiblingIndex = INDEX_NONE;
 	UPROPERTY(Transient, VisibleAnywhere, Category = LGUI, AdvancedDisplay)
-	mutable int32 flattenHierarchyIndex = 0;
+	mutable int32 FlattenHierarchyIndex = 0;
 	void MarkFlattenHierarchyIndexDirty();
 private:
 	/** Only for RootUIItem */
 	void RecalculateFlattenHierarchyIndex()const;
 	void CalculateFlattenHierarchyIndex_Recursive(int& index)const;
-	void ApplyHierarchyIndex();
+	void ApplySiblingIndex();
 public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		int32 GetHierarchyIndex() const { return HierarchyIndex; }
-	/** Get flatten hierarchy index, calculate from the first top most UIItem. */
+		int32 GetSiblingIndex() const { return SiblingIndex; }
+	/** Get index order of the widget from top most widget in flatten hierarchy. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		int32 GetFlattenHierarchyIndex()const;
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetHierarchyIndex(int32 InInt);
+		void SetSiblingIndex(int32 InInt);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetAsFirstHierarchy();
+		void SetAsFirstSibling();
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetAsLastHierarchy();
-#pragma endregion HierarchyIndex
+		void SetAsLastSibling();
+#pragma endregion SiblingIndex
 
 #pragma region Name
 private:
@@ -496,19 +512,22 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		bool IsWorldSpaceUI()const;
 
-	bool IsCanvasUIItem()const { return bIsCanvasUIItem; }
+	bool IsCanvasWidget()const { return bIsCanvasWidget; }
 
 	/** return root UIItem in hierarchy, could be null if not initialized yet. */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		ULexWidget* GetRootUIItemInHierarchy()const { return RootUIItem.Get(); }
+		ULexWidget* GetRootUIItemInHierarchy()const { return RootWidget.Get(); }
+
+	void MarkLayoutDirty();
 protected:
 	friend class FLexWidgetCustomization;
 	friend class ULexCanvas;
 	/** LGUICanvas which render this UI element */
 	UPROPERTY(Transient) mutable TWeakObjectPtr<ULexCanvas> RenderCanvas = nullptr;
 	/** is this UIItem's actor have LGUICanvas component */
-	UPROPERTY(Transient) mutable uint8 bIsCanvasUIItem:1;
+	UPROPERTY(Transient) mutable uint8 bIsCanvasWidget:1;
 
+	mutable uint8 bLayoutDirty : 1 = true;
 	mutable uint8 bRenderSizeDirty : 1 = true;
 	mutable uint8 bClipDirty : 1 = true;
 	mutable uint8 bNeedRecreateClip : 1 = true;
@@ -521,10 +540,10 @@ protected:
 #endif
 
 	void CalculateRenderSize();
-	void MarkClipDirty_Recursive(bool InClipTypeChanged)const;
+	void MarkClipDirty(bool InClipTypeChanged)const;
 	
 	/** find root UIItem of hierarchy */
-	void CheckRootUIItem(ULexWidget* RootUIItemInParent = nullptr);
+	void CheckRootWidget(ULexWidget* RootWidgetInParent = nullptr);
 public:
 #pragma region TweenAnimation
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")
@@ -534,7 +553,7 @@ public:
 public:
 #if WITH_EDITORONLY_DATA
 	/** This is a helper component for calculate bounds, so we can double click to focus on this UIItem */
-	UPROPERTY(Transient, NonTransactional)TObjectPtr<class UUIItemEditorHelperComp> HelperComp = nullptr;//@todo: better way to replace this?
+	UPROPERTY(Transient, NonTransactional)TObjectPtr<class ULexWidgetEditorHelperComp> HelperComp = nullptr;//@todo: better way to replace this?
 #endif
 };
 
@@ -543,11 +562,11 @@ public:
 //This component is only a helper component for UIItem! Don't use this!
 //For UIItem's bounds, so we can double click a UIItem and focus on it.
 UCLASS(HideCategories = (LOD, Physics, Collision, Activation, Cooking, Rendering, Actor, Input, Lighting, Mobile), NotBlueprintable, NotBlueprintType, Transient)
-class LGUI_API UUIItemEditorHelperComp : public UPrimitiveComponent
+class LGUI_API ULexWidgetEditorHelperComp : public UPrimitiveComponent
 {
 	GENERATED_BODY()
 public:
-	UUIItemEditorHelperComp();
+	ULexWidgetEditorHelperComp();
 	virtual FBoxSphereBounds CalcBounds(const FTransform& LocalToWorld) const override;
 #if WITH_EDITOR
 	virtual FPrimitiveSceneProxy* CreateSceneProxy()override;

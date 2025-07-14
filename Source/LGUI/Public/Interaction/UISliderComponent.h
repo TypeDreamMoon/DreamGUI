@@ -39,7 +39,7 @@ protected:
 #endif
 protected:
 	virtual void OnUIActiveInHierachy(bool ativeOrInactive)override;
-	virtual void OnUIDimensionsChanged(bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)override;
+	virtual void OnUIDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
 
 	UPROPERTY(EditAnywhere, Category = "LGUI-Slider")
 		float Value = 0;

@@ -46,7 +46,7 @@ struct LGUI_API FLGUIAtlasSettings
 	GENERATED_BODY()
 public:
 	/**
-	 * when packing sprites into one single texture, we will use this size to create a blank texture, then insert sprites. if texture is full(cannot insert anymore sprite), a new larger texture will be created. 
+	 * when packing sprites into one single texture, we will use this size to create a blank texture, then insert sprites. if texture is full(cannot insert anymore Sprite), a new larger texture will be created. 
 	 * if initialSize is too small, some lag or freeze may happen when creating new texture.
 	 * if initialSize is too large, it is not efficient to sample large texture on GPU.
 	*/
@@ -71,7 +71,7 @@ public:
 	/** default atlas setting */
 	UPROPERTY(EditAnywhere, config, Category = Sprite)
 		FLGUIAtlasSettings defaultAtlasSetting;
-	/** override atlasSettings for your packingTag, otherwise use defaultAtlasSettings */
+	/** override atlasSettings for your PackingTag, otherwise use defaultAtlasSettings */
 	UPROPERTY(EditAnywhere, config, Category = Sprite)
 		TMap<FName, FLGUIAtlasSettings> atlasSettingForSpecificPackingTag;
 

@@ -378,7 +378,7 @@ void FLexUIGeometry::UpdateUIProceduralRectSimpleVertex(FLexUIGeometry* uiGeo,
 				vertices[vertStartIndex + 2].TextureCoordinate[0] = uniformSpriteInfo.GetUV2();
 				vertices[vertStartIndex + 3].TextureCoordinate[0] = uniformSpriteInfo.GetUV3();
 			}
-			//uv3 store the info for sampling texture and sprite
+			//uv3 store the info for sampling texture and Sprite
 			vertices[vertStartIndex].TextureCoordinate[3] = spriteInfo.GetUV0();
 			vertices[vertStartIndex + 1].TextureCoordinate[3] = spriteInfo.GetUV1();
 			vertices[vertStartIndex + 2].TextureCoordinate[3] = spriteInfo.GetUV2();

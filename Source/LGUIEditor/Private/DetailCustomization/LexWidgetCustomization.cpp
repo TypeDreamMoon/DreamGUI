@@ -118,7 +118,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, RenderSize));
 	//HierarchyIndex
 	{
-		auto HierarchyIndexHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, HierarchyIndex));
+		auto HierarchyIndexHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, SiblingIndex));
 		DetailBuilder.HideProperty(HierarchyIndexHandle);
 		HierarchyIndexHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
 			ForceUpdateUI();
@@ -182,7 +182,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		.PropertyHandleList({ HierarchyIndexHandle })
 		;
 
-		LGUICategory.AddProperty(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, flattenHierarchyIndex)), EPropertyLocation::Advanced);
+		LGUICategory.AddProperty(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, FlattenHierarchyIndex)), EPropertyLocation::Advanced);
 	}
 		
 	//displayName
@@ -367,13 +367,13 @@ FReply FLexWidgetCustomization::OnClickIncreaseOrDecreaseHierarchyIndex(bool Inc
 
 	for (auto& Item : TargetScriptArray)
 	{
-		HierarchyIndexHandle->SetValue(Item->HierarchyIndex + (IncreaseOrDecrease ? 1 : -1));
+		HierarchyIndexHandle->SetValue(Item->SiblingIndex + (IncreaseOrDecrease ? 1 : -1));
 		//notify others
 		if (auto Parent = Item->GetUIParent())
 		{
 			for (auto Child : Parent->UIChildren)
 			{
-				auto HierarchyIndexProperty = FindFProperty<FIntProperty>(ULexWidget::StaticClass(), GET_MEMBER_NAME_CHECKED(ULexWidget, HierarchyIndex));
+				auto HierarchyIndexProperty = FindFProperty<FIntProperty>(ULexWidget::StaticClass(), GET_MEMBER_NAME_CHECKED(ULexWidget, SiblingIndex));
 				check(HierarchyIndexProperty != nullptr);
 				FLexUIUtils::NotifyPropertyChanged(Child, HierarchyIndexProperty);
 			}
@@ -468,7 +468,7 @@ void FLexWidgetCustomization::OnCopyHierarchyIndex()
 	{
 		if (TargetScriptArray[0].IsValid())
 		{
-			FPlatformApplicationMisc::ClipboardCopy(*FString::Printf(TEXT("%d"), TargetScriptArray[0]->GetHierarchyIndex()));
+			FPlatformApplicationMisc::ClipboardCopy(*FString::Printf(TEXT("%d"), TargetScriptArray[0]->GetSiblingIndex()));
 		}
 	}
 }

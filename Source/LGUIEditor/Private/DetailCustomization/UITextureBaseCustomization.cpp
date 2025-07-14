@@ -46,9 +46,9 @@ void FUITextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
 	}
 
 	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("LGUI");
-	auto textureHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUITextureBase, texture));
+	auto textureHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUITextureBase, Texture));
 	textureHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUITextureBaseCustomization::ForceRefresh, &DetailBuilder));
-	category.AddProperty(GET_MEMBER_NAME_CHECKED(UUITextureBase, texture));
+	category.AddProperty(GET_MEMBER_NAME_CHECKED(UUITextureBase, Texture));
 	UTexture* texture = nullptr;
 	textureHandle->GetValue((*(UObject**)&texture));
 	if(IsValid(texture))

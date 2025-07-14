@@ -297,6 +297,7 @@ public:
 private:
 #if WITH_EDITOR
 	TWeakObjectPtr<AActor> TempAgentActor;//actor for agent objects in preview world
+	void SetRootActorNameFromPrefab();
 public:
 	void MakeAgentObjectsInPreviewWorld();
 	void ClearAgentObjectsInPreviewWorld();

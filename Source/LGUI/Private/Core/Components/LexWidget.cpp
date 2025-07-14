@@ -41,12 +41,16 @@ ULexWidget::ULexWidget(const FObjectInitializer& ObjectInitializer) :Super(Objec
 	bUIActiveStateDirty = true;
 #endif
 
-	bIsCanvasUIItem = false;
+	bIsCanvasWidget = false;
 }
 
 void ULexWidget::BeginPlay()
 {
 	Super::BeginPlay();
+	if (IsValid(Layout))
+	{
+		Layout->BeginPlay();
+	}
 	if (IsValid(Visual))
 	{
 		Visual->BeginPlay();
@@ -56,6 +60,10 @@ void ULexWidget::BeginPlay()
 void ULexWidget::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
+	if (IsValid(Layout))
+	{
+		Layout->EndPlay();
+	}
 	if (IsValid(Visual))
 	{
 		Visual->EndPlay();
@@ -63,7 +71,7 @@ void ULexWidget::EndPlay(const EEndPlayReason::Type EndPlayReason)
 }
 
 #pragma region LGUILifeCycleUIBehaviour
-void ULexWidget::CallUILifeCycleBehavioursActiveInHierarchyStateChanged()
+void ULexWidget::Call_ActiveInHierarchyStateChanged()
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
@@ -71,7 +79,7 @@ void ULexWidget::CallUILifeCycleBehavioursActiveInHierarchyStateChanged()
 	if (this->GetOwner()->GetRootComponent() != this)return;
 	if (UIActiveInHierarchyStateChangedDelegate.IsBound())UIActiveInHierarchyStateChangedDelegate.Broadcast(TempIsUIActive);
 }
-void ULexWidget::CallUILifeCycleBehavioursChildDimensionsChanged(ULexWidget* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
+void ULexWidget::Call_ChildDimensionsChanged(ULexWidget* Child, bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
@@ -85,10 +93,10 @@ void ULexWidget::CallUILifeCycleBehavioursChildDimensionsChanged(ULexWidget* chi
 	for (int i = 0; i < LGUILifeCycleUIBehaviourArray.Num(); i++)
 	{
 		auto& CompItem = LGUILifeCycleUIBehaviourArray[i];
-		CompItem->Call_OnUIChildDimensionsChanged(child, horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
+		CompItem->Call_OnUIChildDimensionsChanged(Child, PivotChanged, WidthChanged, HeightChanged);
 	}
 }
-void ULexWidget::CallUILifeCycleBehavioursChildActiveInHierarchyStateChanged(ULexWidget* child, bool activeOrInactive)
+void ULexWidget::Call_ChildActiveInHierarchyStateChanged(ULexWidget* child, bool activeOrInactive)
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
@@ -105,7 +113,13 @@ void ULexWidget::CallUILifeCycleBehavioursChildActiveInHierarchyStateChanged(ULe
 		CompItem->Call_OnUIChildAcitveInHierarchy(child, activeOrInactive);
 	}
 }
-void ULexWidget::CallUILifeCycleBehavioursDimensionsChanged(bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
+
+void ULexWidget::Call_TransformChanged()
+{
+	
+}
+
+void ULexWidget::Call_DimensionsChanged(bool InPivotChanged, bool WidthChanged, bool HeightChanged)
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
@@ -119,16 +133,16 @@ void ULexWidget::CallUILifeCycleBehavioursDimensionsChanged(bool horizontalPosit
 	for (int i = 0; i < LGUILifeCycleUIBehaviourArray.Num(); i++)
 	{
 		auto& CompItem = LGUILifeCycleUIBehaviourArray[i];
-		CompItem->Call_OnUIDimensionsChanged(horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
+		CompItem->Call_OnUIDimensionsChanged(InPivotChanged, WidthChanged, HeightChanged);
 	}
 
 	//call parent
 	if (UIParent.IsValid())
 	{
-		UIParent->CallUILifeCycleBehavioursChildDimensionsChanged(this, horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
+		UIParent->Call_ChildDimensionsChanged(this, InPivotChanged, WidthChanged, HeightChanged);
 	}
 }
-void ULexWidget::CallUILifeCycleBehavioursAttachmentChanged()
+void ULexWidget::Call_AttachmentChanged()
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
@@ -145,7 +159,7 @@ void ULexWidget::CallUILifeCycleBehavioursAttachmentChanged()
 		CompItem->Call_OnUIAttachmentChanged();
 	}
 }
-void ULexWidget::CallUILifeCycleBehavioursChildAttachmentChanged(ULexWidget* child, bool attachOrDettach)
+void ULexWidget::Call_ChildAttachmentChanged(ULexWidget* child, bool attachOrDettach)
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
@@ -162,7 +176,7 @@ void ULexWidget::CallUILifeCycleBehavioursChildAttachmentChanged(ULexWidget* chi
 		CompItem->Call_OnUIChildAttachmentChanged(child, attachOrDettach);
 	}
 }
-void ULexWidget::CallUILifeCycleBehavioursInteractionStateChanged()
+void ULexWidget::Call_InteractionStateChanged()
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
@@ -179,7 +193,7 @@ void ULexWidget::CallUILifeCycleBehavioursInteractionStateChanged()
 		CompItem->Call_OnUIInteractionStateChanged(GetFinalIsEnabled());
 	}
 }
-void ULexWidget::CallUILifeCycleBehavioursChildHierarchyIndexChanged(ULexWidget* child)
+void ULexWidget::Call_ChildSiblingIndexChanged(ULexWidget* child)
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
@@ -190,10 +204,7 @@ void ULexWidget::CallUILifeCycleBehavioursChildHierarchyIndexChanged(ULexWidget*
 		GetOwner()->GetComponents(LGUILifeCycleUIBehaviourArray, false);
 	}
 #endif
-	if (IsValid(Layout))
-	{
-		Layout->MarkLayoutDirty();
-	}
+	MarkLayoutDirty();
 	for (int i = 0; i < LGUILifeCycleUIBehaviourArray.Num(); i++)
 	{
 		auto& CompItem = LGUILifeCycleUIBehaviourArray[i];
@@ -205,9 +216,9 @@ void ULexWidget::CallUILifeCycleBehavioursChildHierarchyIndexChanged(ULexWidget*
 
 void ULexWidget::CalculateFlattenHierarchyIndex_Recursive(int& index)const
 {
-	if (this->flattenHierarchyIndex != index)
+	if (this->FlattenHierarchyIndex != index)
 	{
-		this->flattenHierarchyIndex = index;
+		this->FlattenHierarchyIndex = index;
 	}
 	EnsureUIChildrenSorted();
 	for (auto& child : UIChildren)
@@ -220,33 +231,33 @@ void ULexWidget::CalculateFlattenHierarchyIndex_Recursive(int& index)const
 	}
 }
 
-DECLARE_CYCLE_STAT(TEXT("UIItem CalculateFlattenHierarchyIndex"), STAT_UIItemCalculateFlattenHierarchyIndex, STATGROUP_LGUI);
+DECLARE_CYCLE_STAT(TEXT("LexWidget CalculateFlattenHierarchyIndex"), STAT_LexWidgetCalculateFlattenHierarchyIndex, STATGROUP_LGUI);
 void ULexWidget::RecalculateFlattenHierarchyIndex()const
 {
-	SCOPE_CYCLE_COUNTER(STAT_UIItemCalculateFlattenHierarchyIndex);
+	SCOPE_CYCLE_COUNTER(STAT_LexWidgetCalculateFlattenHierarchyIndex);
 
 	this->bFlattenHierarchyIndexDirty = false;
-	int tempIndex = this->flattenHierarchyIndex;
+	int tempIndex = this->FlattenHierarchyIndex;
 	this->CalculateFlattenHierarchyIndex_Recursive(tempIndex);
 }
 
 int32 ULexWidget::GetFlattenHierarchyIndex()const
 {
-	if (RootUIItem.IsValid())
+	if (RootWidget.IsValid())
 	{
-		if (RootUIItem->bFlattenHierarchyIndexDirty)
+		if (RootWidget->bFlattenHierarchyIndexDirty)
 		{
-			RootUIItem->RecalculateFlattenHierarchyIndex();
+			RootWidget->RecalculateFlattenHierarchyIndex();
 		}
 	}
-	return this->flattenHierarchyIndex;
+	return this->FlattenHierarchyIndex;
 }
 
 void ULexWidget::MarkFlattenHierarchyIndexDirty()
 {
-	if (RootUIItem.IsValid())
+	if (RootWidget.IsValid())
 	{
-		RootUIItem->bFlattenHierarchyIndexDirty = true;
+		RootWidget->bFlattenHierarchyIndexDirty = true;
 	}
 	//tell canvas to update
 	if (RenderCanvas.IsValid()
@@ -254,8 +265,8 @@ void ULexWidget::MarkFlattenHierarchyIndexDirty()
 		)
 	{
 		RenderCanvas->MarkCanvasUpdate(false, false, true);
-		//if this UIItem have a LGUICanvas, then we need to tell the upper canvas that hierarchy order change, in order to sort render order between canvas
-		if (this->bIsCanvasUIItem)
+		//if this LexWidget have a LGUICanvas, then we need to tell the upper canvas that hierarchy order change, in order to sort render order between canvas
+		if (this->bIsCanvasWidget)
 		{
 			if (RenderCanvas->GetParentCanvas().IsValid())
 			{
@@ -265,38 +276,38 @@ void ULexWidget::MarkFlattenHierarchyIndexDirty()
 	}
 }
 
-void ULexWidget::SetHierarchyIndex(int32 InInt) 
+void ULexWidget::SetSiblingIndex(int32 InInt) 
 { 
-	if (InInt != HierarchyIndex)
+	if (InInt != SiblingIndex)
 	{
-		HierarchyIndex = InInt;
-		ApplyHierarchyIndex();
+		SiblingIndex = InInt;
+		ApplySiblingIndex();
 	}
 }
 
-void ULexWidget::ApplyHierarchyIndex()
+void ULexWidget::ApplySiblingIndex()
 {
 	if (UIParent.IsValid())
 	{
 		if (UIParent->UIChildren.Num() == 0)
 		{
 			UIParent->UIChildren.Add(this);
-			this->HierarchyIndex = 0;
-			UIParent->CallUILifeCycleBehavioursChildHierarchyIndexChanged(this);
+			this->SiblingIndex = 0;
+			UIParent->Call_ChildSiblingIndexChanged(this);
 		}
 		else
 		{
 			UIParent->EnsureUIChildrenValid();
 			UIParent->EnsureUIChildrenSorted();
-			HierarchyIndex = FMath::Clamp(HierarchyIndex, 0, UIParent->UIChildren.Num() - 1);
+			SiblingIndex = FMath::Clamp(SiblingIndex, 0, UIParent->UIChildren.Num() - 1);
 			UIParent->UIChildren.Remove(this);
-			UIParent->UIChildren.Insert(this, HierarchyIndex);
+			UIParent->UIChildren.Insert(this, SiblingIndex);
 			bool anythingChange = false;
 			for (int i = 0; i < UIParent->UIChildren.Num(); i++)
 			{
-				if (UIParent->UIChildren[i]->HierarchyIndex != i)
+				if (UIParent->UIChildren[i]->SiblingIndex != i)
 				{
-					UIParent->UIChildren[i]->HierarchyIndex = i;
+					UIParent->UIChildren[i]->SiblingIndex = i;
 					anythingChange = true;
 				}
 			}
@@ -304,25 +315,25 @@ void ULexWidget::ApplyHierarchyIndex()
 			if (anythingChange)
 			{
 				MarkFlattenHierarchyIndexDirty();
-				UIParent->CallUILifeCycleBehavioursChildHierarchyIndexChanged(this);
+				UIParent->Call_ChildSiblingIndexChanged(this);
 			}
 		}
 	}
 	else
 	{
-		HierarchyIndex = 0;
+		SiblingIndex = 0;
 	}
 }
 
-void ULexWidget::SetAsFirstHierarchy()
+void ULexWidget::SetAsFirstSibling()
 {
-	SetHierarchyIndex(0);
+	SetSiblingIndex(0);
 }
-void ULexWidget::SetAsLastHierarchy()
+void ULexWidget::SetAsLastSibling()
 {
 	if (UIParent.IsValid())
 	{
-		SetHierarchyIndex(UIParent->UIChildren.Num() - 1);
+		SetSiblingIndex(UIParent->UIChildren.Num() - 1);
 	}
 }
 
@@ -486,6 +497,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		auto PropertyName = PropertyChangedEvent.GetPropertyName();
 
 		static const FName AspectRatioName = GET_MEMBER_NAME_CHECKED(ULexWidget, AspectRatio);
+		static const FName PivotName = GET_MEMBER_NAME_CHECKED(ULexWidget, Pivot);
 		static const FName WidthName = GET_MEMBER_NAME_CHECKED(ULexWidget, Width);
 		static const FName HeightName = GET_MEMBER_NAME_CHECKED(ULexWidget, Height);
 		static const FName PaddingName = GET_MEMBER_NAME_CHECKED(ULexWidget, Padding);
@@ -496,6 +508,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		static const FName LayoutName = GET_MEMBER_NAME_CHECKED(ULexWidget, Layout);
 
 		if (MemberName == AspectRatioName
+		|| MemberName == PivotName
 		|| MemberName == WidthName
 		|| MemberName == HeightName
 		|| MemberName == PaddingName
@@ -503,18 +516,18 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		|| MemberName == VisibilityName
 		)
 		{
-			this->MarkSizeDirty_Recursive();
-			this->MarkClipDirty_Recursive(false);
+			this->MarkRenderSizeChanged();
+			this->MarkClipDirty(false);
 			ULGUIPrefabManagerObject::AddOneShotTickFunction([this]()
 			{
-				this->MarkSizeDirty_Recursive();
-				this->MarkClipDirty_Recursive(false);
+				this->MarkRenderSizeChanged();
+				this->MarkClipDirty(false);
 				EditorForceUpdate();
 			}, 1);
 		}
 		else if (PropertyName == ClippingName)
 		{
-			MarkClipDirty_Recursive(true);
+			MarkClipDirty(true);
 		}
 		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexWidget, bIsUIActive))
 		{
@@ -522,9 +535,9 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 			SetIsUIActive(!bIsUIActive);
 		}
 
-		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexWidget, HierarchyIndex))
+		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexWidget, SiblingIndex))
 		{
-			ApplyHierarchyIndex();
+			ApplySiblingIndex();
 		}
 		else if (PropertyName == FName(TEXT("RelativeLocation")))
 		{
@@ -533,7 +546,18 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		}
 		else if (PropertyName == VisualName)
 		{
-			
+			if (RenderCanvas.IsValid() && IsValid(Visual))
+			{
+				RenderCanvas->RegisterVisual(this);
+			}
+			if (GetWorld()->IsGameWorld())
+			{
+				if (this->HasBegunPlay())
+				{
+					Visual->BeginPlay();
+				}
+				Visual->OnRegister();
+			}
 		}
 		else if (PropertyName == LayoutName)
 		{
@@ -544,7 +568,15 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 					Child->GetLayoutSlot();//use this to refresh layout-slot
 				}
 			}
-			MarkSizeDirty_Recursive();
+			if (GetWorld()->IsGameWorld())
+			{
+				if (this->HasBegunPlay())
+				{
+					Layout->BeginPlay();
+				}
+				Layout->OnRegister();
+			}
+			MarkRenderSizeChanged();
 		}
 		ULGUIPrefabManagerObject::AddOneShotTickFunction([this]()
 		{
@@ -564,6 +596,26 @@ void ULexWidget::PreEditChange(FProperty* PropertyAboutToChange)
 		if (RenderCanvas.IsValid() && IsValid(Visual))
 		{
 			RenderCanvas->MarkVisualWillChange(Visual);
+			RenderCanvas->UnregisterVisual(this);
+		}
+		if (GetWorld()->IsGameWorld())
+		{
+			if (this->HasBegunPlay())
+			{
+				Visual->EndPlay();
+			}
+			Visual->OnUnregister();
+		}
+	}
+	else if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, Layout))
+	{
+		if (GetWorld()->IsGameWorld())
+		{
+			if (this->HasBegunPlay())
+			{
+				Layout->EndPlay();
+			}
+			Layout->OnUnregister();
 		}
 	}
 }
@@ -626,12 +678,6 @@ void ULexWidget::PostEditUndo()
 	ULGUIManagerWorldSubsystem::RefreshAllUI(this->GetWorld());
 }
 
-//void UUIItem::PostEditUndo(TSharedPtr<ITransactionObjectAnnotation> TransactionAnnotation)
-//{
-//	Super::PostEditUndo(TransactionAnnotation);
-//	EditorForceUpdate();
-//}
-
 void ULexWidget::PostTransacted(const FTransactionObjectEvent& TransactionEvent)
 {
 	Super::PostTransacted(TransactionEvent);
@@ -649,25 +695,25 @@ void ULexWidget::EditorForceUpdate()
 }
 void ULexWidget::EnsureDataForRebuild()
 {
-	check(this == RootUIItem);
+	check(this == RootWidget);
 	struct LOCAL
 	{
-		static void RenewRenderCanvas(ULexWidget* UIItem)
+		static void RenewRenderCanvas(ULexWidget* Widget)
 		{
-			auto ThisRenderCanvas = UIItem->GetOwner()->FindComponentByClass<ULexCanvas>();
-			UIItem->RenewRenderCanvasRecursive(ThisRenderCanvas);
+			auto ThisRenderCanvas = Widget->GetOwner()->FindComponentByClass<ULexCanvas>();
+			Widget->RenewRenderCanvasRecursive(ThisRenderCanvas);
 		}
-		static void EnsureDataForRebuildRecursive(ULexWidget* UIItem)
+		static void EnsureDataForRebuildRecursive(ULexWidget* Widget)
 		{
-			UIItem->EnsureUIChildrenValid();
-			UIItem->bNeedSortUIChildren = true;
-			UIItem->EnsureUIChildrenSorted();
-			if (UIItem->bIsCanvasUIItem && UIItem->RenderCanvas.IsValid())
+			Widget->EnsureUIChildrenValid();
+			Widget->bNeedSortUIChildren = true;
+			Widget->EnsureUIChildrenSorted();
+			if (Widget->bIsCanvasWidget && Widget->RenderCanvas.IsValid())
 			{
-				UIItem->RenderCanvas->EnsureDataForRebuild();
+				Widget->RenderCanvas->EnsureDataForRebuild();
 			}
 
-			for (auto& uiChild : UIItem->UIChildren)
+			for (auto& uiChild : Widget->UIChildren)
 			{
 				if (IsValid(uiChild))
 				{
@@ -676,12 +722,12 @@ void ULexWidget::EnsureDataForRebuild()
 			}
 		}
 		/** force refresh render canvas, remove from old and add to new */
-		static void ForceRefreshRenderCanvasRecursive(ULexWidget* UIItem)
+		static void ForceRefreshRenderCanvasRecursive(ULexWidget* Widget)
 		{
-			auto NewRenderCanvas = ULexWidget::GetComponentInParentUI<ULexCanvas>(UIItem->GetOwner(), false);
-			UIItem->SetRenderCanvas(NewRenderCanvas);
+			auto NewRenderCanvas = ULexWidget::GetComponentInParentUI<ULexCanvas>(Widget->GetOwner(), false);
+			Widget->SetRenderCanvas(NewRenderCanvas);
 
-			for (auto& uiChild : UIItem->UIChildren)
+			for (auto& uiChild : Widget->UIChildren)
 			{
 				if (IsValid(uiChild))
 				{
@@ -689,23 +735,23 @@ void ULexWidget::EnsureDataForRebuild()
 				}
 			}
 		}
-		static void ForceRefreshUIActiveStateRecursive(ULexWidget* UIItem)
+		static void ForceRefreshUIActiveStateRecursive(ULexWidget* Widget)
 		{
-			if (UIItem->bUIActiveStateDirty)
+			if (Widget->bUIActiveStateDirty)
 			{
-				UIItem->bUIActiveStateDirty = false;
+				Widget->bUIActiveStateDirty = false;
 
-				UIItem->ApplyUIActiveState(true);
+				Widget->ApplyUIActiveState(true);
 				//affect children
-				UIItem->CheckChildrenUIActiveRecursive(UIItem->GetIsUIActiveInHierarchy());
+				Widget->CheckChildrenUIActiveRecursive(Widget->GetIsUIActiveInHierarchy());
 				//callback for parent
-				if (UIItem->UIParent.IsValid())
+				if (Widget->UIParent.IsValid())
 				{
-					UIItem->UIParent->OnChildActiveStateChanged(UIItem);
+					Widget->UIParent->OnChildActiveStateChanged(Widget);
 				}
 			}
 
-			for (auto& uiChild : UIItem->UIChildren)
+			for (auto& uiChild : Widget->UIChildren)
 			{
 				if (IsValid(uiChild))
 				{
@@ -713,11 +759,11 @@ void ULexWidget::EnsureDataForRebuild()
 				}
 			}
 		}
-		static void UpdateComponentToWorldRecursive(ULexWidget* UIItem)
+		static void UpdateComponentToWorldRecursive(ULexWidget* Widget)
 		{
-			if (!IsValid(UIItem))return;
-			UIItem->UpdateComponentToWorld();
-			auto& Children = UIItem->GetUIChildren();
+			if (!IsValid(Widget))return;
+			Widget->UpdateComponentToWorld();
+			auto& Children = Widget->GetUIChildren();
 			for (auto& Child : Children)
 			{
 				UpdateComponentToWorldRecursive(Child);
@@ -748,7 +794,7 @@ void ULexWidget::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, E
 {
 	Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
 
-	if (this->IsCanvasUIItem() && this->RenderCanvas.IsValid())
+	if (this->IsCanvasWidget() && this->RenderCanvas.IsValid())
 	{
 		//This is mainly to mark LGUICanvas's bIsViewProjectionMatrixDirty to true.
 		//For the condition LGUI_Tutorials/Tutorials/UIRenderTarget, when move LGUIRenderTarget1 at runtime, the LGUICanvas's RenderTarget's matrix not update, result in wrong interaction.
@@ -771,12 +817,12 @@ void ULexWidget::OnChildAttached(USceneComponent* ChildComponent)
 	Super::OnChildAttached(ChildComponent);
 	if (!IsValid(this) || this->IsUnreachable())return;
 	if (GetWorld() == nullptr)return;
-	if (ULexWidget* childUIItem = Cast<ULexWidget>(ChildComponent))
+	if (ULexWidget* ChildWidget = Cast<ULexWidget>(ChildComponent))
 	{
-		childUIItem->OnUIAttachedToParent();
+		ChildWidget->OnUIAttachedToParent();
 
 		EnsureUIChildrenValid();//check
-		UIChildren.Add(childUIItem);
+		UIChildren.Add(ChildWidget);
 		
 		auto PrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(this->GetWorld());
 		if (PrefabManager && PrefabManager->IsPrefabSystemProcessingActor(this->GetOwner()))//load from prefab or duplicated by LGUI PrefabSystem, then not set hierarchy index
@@ -788,10 +834,10 @@ void ULexWidget::OnChildAttached(USceneComponent* ChildComponent)
 			//need sort children here, make it true so we can sort children if we need to
 			bNeedSortUIChildren = true;
 
-			if (childUIItem->IsRegistered())
+			if (ChildWidget->IsRegistered())
 			{
-				childUIItem->HierarchyIndex = UIChildren.Num() - 1;
-				this->CallUILifeCycleBehavioursChildHierarchyIndexChanged(childUIItem);
+				ChildWidget->SiblingIndex = UIChildren.Num() - 1;
+				this->Call_ChildSiblingIndexChanged(ChildWidget);
 			}
 			else//not registered means is loading from level. then no need to set hierarchy index
 			{
@@ -800,15 +846,15 @@ void ULexWidget::OnChildAttached(USceneComponent* ChildComponent)
 		}
 
 		//make sure hierarchyindex all good
-		if (childUIItem->HierarchyIndex == INDEX_NONE)
+		if (ChildWidget->SiblingIndex == INDEX_NONE)
 		{
 			for (int i = 0; i < UIChildren.Num(); i++)
 			{
 				auto& UIChild = UIChildren[i];
-				if (UIChild->HierarchyIndex != i)
+				if (UIChild->SiblingIndex != i)
 				{
-					UIChild->HierarchyIndex = i;
-					this->CallUILifeCycleBehavioursChildHierarchyIndexChanged(UIChild);
+					UIChild->SiblingIndex = i;
+					this->Call_ChildSiblingIndexChanged(UIChild);
 				}
 			}
 		}
@@ -830,7 +876,7 @@ void ULexWidget::OnUIAttachedToParent()
 				LGUIManager->AddFunctionForPrefabSystemExecutionBeforeAwake(this->GetOwner(), [Child = MakeWeakObjectPtr(this), Parent = UIParent]() {
 					if (Child.IsValid() && Parent.IsValid())
 					{
-						Parent->CallUILifeCycleBehavioursChildAttachmentChanged(Child.Get(), true);
+						Parent->Call_ChildAttachmentChanged(Child.Get(), true);
 					}});
 			}
 		}
@@ -840,7 +886,7 @@ void ULexWidget::OnUIAttachedToParent()
 		UIParent = Cast<ULexWidget>(this->GetAttachParent());
 		check(UIParent.IsValid());
 		{
-			UIParent->CallUILifeCycleBehavioursChildAttachmentChanged(this, true);
+			UIParent->Call_ChildAttachmentChanged(this, true);
 		}
 
 		if (this->IsRegistered())//not registered means is loading from level.
@@ -851,14 +897,11 @@ void ULexWidget::OnUIAttachedToParent()
 	}
 
 	ULexCanvas* ParentCanvas = ULexWidget::GetComponentInParentUI<ULexCanvas>(GetOwner()->GetAttachParentActor(), false);
-	UIHierarchyChanged(ParentCanvas, UIParent->RootUIItem.Get());
-	if (IsValid(Layout))
-	{
-		Layout->MarkLayoutDirty();
-	}
-	MarkClipDirty_Recursive(true);
+	UIHierarchyChanged(ParentCanvas, UIParent->RootWidget.Get());
+	MarkLayoutDirty();
+	MarkClipDirty(true);
 	//callback
-	CallUILifeCycleBehavioursAttachmentChanged();
+	Call_AttachmentChanged();
 }
 
 void ULexWidget::OnChildDetached(USceneComponent* ChildComponent)
@@ -876,12 +919,13 @@ void ULexWidget::OnChildDetached(USceneComponent* ChildComponent)
 		for (int i = 0; i < UIChildren.Num(); i++)
 		{
 			auto& UIChild = UIChildren[i];
-			if (UIChild->HierarchyIndex != i)
+			if (UIChild->SiblingIndex != i)
 			{
-				UIChild->HierarchyIndex = i;
-				this->CallUILifeCycleBehavioursChildHierarchyIndexChanged(UIChild);
+				UIChild->SiblingIndex = i;
+				this->Call_ChildSiblingIndexChanged(UIChild);
 			}
 		}
+		MarkLayoutDirty();
 		if (IsValid(Layout))
 		{
 			Layout->OnChildDetached(ChildWidget);
@@ -911,7 +955,7 @@ void ULexWidget::OnUIDetachedFromParent()
 				LGUIManager->AddFunctionForPrefabSystemExecutionBeforeAwake(this->GetOwner(), [Child = MakeWeakObjectPtr(this), Parent = UIParent]() {
 					if (Child.IsValid() && Parent.IsValid())
 					{
-						Parent->CallUILifeCycleBehavioursChildAttachmentChanged(Child.Get(), false);
+						Parent->Call_ChildAttachmentChanged(Child.Get(), false);
 					}});
 			}
 		}
@@ -920,7 +964,7 @@ void ULexWidget::OnUIDetachedFromParent()
 	{
 		if (UIParent.IsValid())//tell old parent
 		{
-			UIParent->CallUILifeCycleBehavioursChildAttachmentChanged(this, false);
+			UIParent->Call_ChildAttachmentChanged(this, false);
 		}
 
 		if (this->IsRegistered())//not registered means is loading from level.
@@ -931,13 +975,10 @@ void ULexWidget::OnUIDetachedFromParent()
 	}
 
 	UIHierarchyChanged(nullptr, nullptr);
-	if (IsValid(Layout))
-	{
-		Layout->MarkLayoutDirty();
-	}
-	MarkClipDirty_Recursive(true);
+	MarkLayoutDirty();
+	MarkClipDirty(true);
 	//callback
-	CallUILifeCycleBehavioursAttachmentChanged();
+	Call_AttachmentChanged();
 }
 
 void ULexWidget::OnRegister()
@@ -955,7 +996,7 @@ void ULexWidget::OnRegister()
 			{
 				if (!HelperComp)
 				{
-					HelperComp = NewObject<UUIItemEditorHelperComp>(GetOwner(), NAME_None, RF_Transient | RF_TextExportTransient);
+					HelperComp = NewObject<ULexWidgetEditorHelperComp>(GetOwner(), NAME_None, RF_Transient | RF_TextExportTransient);
 					HelperComp->Parent = this;
 					HelperComp->Mobility = EComponentMobility::Movable;
 					HelperComp->SetIsVisualizationComponent(true);
@@ -998,15 +1039,11 @@ void ULexWidget::OnRegister()
 	}
 #endif
 
-	CheckRootUIItem();
+	CheckRootWidget();
 
 	if (IsValid(Layout))
 	{
 		Layout->OnRegister();
-	}
-	if (IsValid(LayoutSlot))
-	{
-		LayoutSlot->OnRegister();
 	}
 	if (IsValid(Visual))
 	{
@@ -1037,15 +1074,11 @@ void ULexWidget::OnUnregister()
 		HelperComp = nullptr;
 	}
 #endif
-	CheckRootUIItem();
+	CheckRootWidget();
 
 	if (IsValid(Layout))
 	{
 		Layout->OnUnregister();
-	}
-	if (IsValid(LayoutSlot))
-	{
-		LayoutSlot->OnRegister();
 	}
 	if (IsValid(Visual))
 	{
@@ -1071,7 +1104,7 @@ void ULexWidget::EnsureUIChildrenSorted()const
 		bNeedSortUIChildren = false;
 		UIChildren.Sort([](const ULexWidget& A, const ULexWidget& B)
 			{
-				if (A.GetHierarchyIndex() < B.GetHierarchyIndex())
+				if (A.GetSiblingIndex() < B.GetSiblingIndex())
 					return true;
 				return false;
 			});
@@ -1089,18 +1122,18 @@ void ULexWidget::SetPivot(FVector2D Value)
 
 void ULexWidget::RegisterRenderCanvas(ULexCanvas* InRenderCanvas)
 {
-	bIsCanvasUIItem = true;
+	bIsCanvasWidget = true;
 	auto ParentCanvas = ULexWidget::GetComponentInParentUI<ULexCanvas>(GetOwner()->GetAttachParentActor(), false);//@todo: replace with Canvas's ParentCanvas?
 	if (RenderCanvas != InRenderCanvas)
 	{
 		SetRenderCanvas(InRenderCanvas);
 	}
 	InRenderCanvas->SetParentCanvas(ParentCanvas);
-	for (auto& uiItem : UIChildren)
+	for (auto& Child : UIChildren)
 	{
-		if (IsValid(uiItem))
+		if (IsValid(Child))
 		{
-			uiItem->RenewRenderCanvasRecursive(InRenderCanvas);
+			Child->RenewRenderCanvasRecursive(InRenderCanvas);
 		}
 	}
 }
@@ -1125,18 +1158,18 @@ void ULexWidget::RenewRenderCanvasRecursive(ULexCanvas* InParentRenderCanvas)
 		SetRenderCanvas(InParentRenderCanvas);
 	}
 
-	for (auto& uiItem : UIChildren)
+	for (auto& Child : UIChildren)
 	{
-		if (IsValid(uiItem))
+		if (IsValid(Child))
 		{
-			uiItem->RenewRenderCanvasRecursive(InParentRenderCanvas);
+			Child->RenewRenderCanvasRecursive(InParentRenderCanvas);
 		}
 	}
 }
 
 void ULexWidget::UnregisterRenderCanvas()
 {
-	bIsCanvasUIItem = false;
+	bIsCanvasWidget = false;
 	auto ParentCanvas = ULexWidget::GetComponentInParentUI<ULexCanvas>(GetOwner()->GetAttachParentActor(), false);
 	if (RenderCanvas.IsValid())
 	{
@@ -1146,17 +1179,19 @@ void ULexWidget::UnregisterRenderCanvas()
 	{
 		SetRenderCanvas(ParentCanvas);
 	}
-	for (auto& uiItem : UIChildren)
+	for (auto& Child : UIChildren)
 	{
-		if (IsValid(uiItem))
+		if (IsValid(Child))
 		{
-			uiItem->RenewRenderCanvasRecursive(ParentCanvas);
+			Child->RenewRenderCanvasRecursive(ParentCanvas);
 		}
 	}
 }
 
 void ULexWidget::UpdateLayout()
 {
+	if (!bLayoutDirty)return;
+	bLayoutDirty = false;
 	if (IsValid(Layout))
 	{
 		Layout->UpdateLayout();
@@ -1171,14 +1206,18 @@ void ULexWidget::UpdateLayout()
 			{
 				float PaddingAndMarginOffset = UIParent->GetPadding().Left - UIParent->GetPadding().Right + (this->GetMargin().Left - this->GetMargin().Right);
 				PaddingAndMarginOffset *= 0.5f;
-				
-				Position.Y = PaddingAndMarginOffset;
+				auto PivotOffset =
+					this->GetRenderSize().X * (this->GetPivot().X - 0.5f)//this pivot
+				+ UIParent->GetRenderSize().X * (0.5f - UIParent->GetPivot().X);//parent pivot
+				Position.Y = PaddingAndMarginOffset + PivotOffset;
 			}
 			{
 				float PaddingAndMarginOffset = UIParent->GetPadding().Bottom - UIParent->GetPadding().Top + (this->GetMargin().Bottom - this->GetMargin().Top);
 				PaddingAndMarginOffset *= 0.5f;
-				
-				Position.Z = PaddingAndMarginOffset;
+				auto PivotOffset =
+					this->GetRenderSize().Y * (this->GetPivot().Y - 0.5f)//this pivot
+				+ UIParent->GetRenderSize().Y * (0.5f - UIParent->GetPivot().Y);//parent pivot
+				Position.Z = PaddingAndMarginOffset + PivotOffset;
 			}
 			this->SetRelativeLocation(Position);
 		}
@@ -1238,10 +1277,6 @@ void ULexWidget::UpdateClip(ULexUIDataAsTexture* ClipDataTexture, TArray<TShared
 		break;
 	}
 	this->bClipDataChanged = true;
-	if (IsValid(Visual))
-	{
-		Visual->OnClipDataChanged();
-	}
 }
 
 void ULexWidget::UpdateVisual() const
@@ -1300,12 +1335,12 @@ void ULexWidget::UIHierarchyChanged(ULexCanvas* ParentRenderCanvas, ULexWidget* 
 		UIHierarchyChangedDelegate.Broadcast();
 	}
 
-	CheckRootUIItem(ParentRoot);
-	for (auto& uiItem : UIChildren)
+	CheckRootWidget(ParentRoot);
+	for (auto& Child : UIChildren)
 	{
-		if (IsValid(uiItem))
+		if (IsValid(Child))
 		{
-			uiItem->UIHierarchyChanged(ParentRenderCanvas, ParentRoot);
+			Child->UIHierarchyChanged(ParentRenderCanvas, ParentRoot);
 		}
 	}
 
@@ -1355,30 +1390,30 @@ void ULexWidget::CalculateRenderSize()
 	}
 } 
 
-void ULexWidget::CheckRootUIItem(ULexWidget* RootUIItemInParent)
+void ULexWidget::CheckRootWidget(ULexWidget* RootWidgetInParent)
 {
-	auto oldRootUIItem = RootUIItem;
-	if (oldRootUIItem == this && oldRootUIItem != nullptr)
+	auto OldRootWidget = RootWidget;
+	if (OldRootWidget == this && OldRootWidget != nullptr)
 	{
-		ULGUIManagerWorldSubsystem::RemoveRootUIItem(this);
+		ULGUIManagerWorldSubsystem::RemoveRootWidget(this);
 	}
 
-	if (RootUIItemInParent == nullptr)
+	if (RootWidgetInParent == nullptr)
 	{
-		ULexWidget* topUIItem = this;
-		ULexWidget* tempRootUIItem = nullptr;
-		while (topUIItem != nullptr && topUIItem->IsRegistered())
+		ULexWidget* TopWidget = this;
+		ULexWidget* TempRootWidget = nullptr;
+		while (TopWidget != nullptr && TopWidget->IsRegistered())
 		{
-			tempRootUIItem = topUIItem;
-			topUIItem = Cast<ULexWidget>(topUIItem->GetAttachParent());
+			TempRootWidget = TopWidget;
+			TopWidget = Cast<ULexWidget>(TopWidget->GetAttachParent());
 		}
-		RootUIItemInParent = tempRootUIItem;
+		RootWidgetInParent = TempRootWidget;
 	}
-	RootUIItem = RootUIItemInParent;
+	RootWidget = RootWidgetInParent;
 
-	if (RootUIItem == this && RootUIItem != nullptr)
+	if (RootWidget == this && RootWidget != nullptr)
 	{
-		ULGUIManagerWorldSubsystem::AddRootUIItem(this);
+		ULGUIManagerWorldSubsystem::AddRootWidget(this);
 	}
 }
 
@@ -1564,7 +1599,7 @@ void ULexWidget::SetAspectRatio(const FLexWidgetAspectRatio& Value)
 	if (AspectRatio != Value)
 	{
 		AspectRatio = Value;
-		MarkSizeDirty_Recursive();
+		MarkRenderSizeChanged();
 	}
 }
 
@@ -1573,7 +1608,7 @@ void ULexWidget::SetWidth(const FLexWidgetSize& Value)
 	if (Width != Value)
 	{
 		Width = Value;
-		MarkSizeDirty_Recursive();
+		MarkRenderSizeChanged();
 	}
 }
 
@@ -1582,7 +1617,7 @@ void ULexWidget::SetHeight(const FLexWidgetSize& Value)
 	if (Height != Value)
 	{
 		Height = Value;
-		MarkSizeDirty_Recursive();
+		MarkRenderSizeChanged();
 	}
 }
 
@@ -1592,7 +1627,7 @@ void ULexWidget::SetSize(const FLexWidgetSize2& Value)
 	{
 		Width = Value.X;
 		Height = Value.Y;
-		MarkSizeDirty_Recursive();
+		MarkRenderSizeChanged();
 	}
 }
 
@@ -1601,7 +1636,7 @@ void ULexWidget::SetPadding(const FMargin& Value)
 	if (Padding != Value)
 	{
 		Padding = Value;
-		MarkSizeDirty_Recursive();
+		MarkRenderSizeChanged();
 	}
 }
 
@@ -1610,7 +1645,7 @@ void ULexWidget::SetMargin(const FMargin& Value)
 	if (Margin != Value)
 	{
 		Margin = Value;
-		MarkSizeDirty_Recursive();
+		MarkRenderSizeChanged();
 	}
 }
 
@@ -1677,61 +1712,33 @@ float ULexWidget::GetLocalSpaceTop()const
 	return this->GetRenderHeight() * (1.0f - Pivot.Y);
 }
 
-void ULexWidget::MarkDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
+void ULexWidget::MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged)
 {
 	if (ClipData.IsValid() && ClipData.Pin()->GetWidget() == this)
 	{
 		ClipData.Pin()->MarkNeedUpdateData();
 	}
 
+	OnDimensionChangedEvent.Broadcast(InPivotChanged, InWidthChanged, InHeightChanged);
 	if (IsValid(Layout))
 	{
-		Layout->OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
+		Layout->OnDimensionChanged(InPivotChanged, InWidthChanged, InHeightChanged);
 	}
 	if (IsValid(Visual))
 	{
-		Visual->OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
+		Visual->OnDimensionChanged(InPivotChanged, InWidthChanged, InHeightChanged);
 	}
 
 	if (this->RenderCanvas.IsValid())
 	{
-		this->RenderCanvas->MarkCanvasUpdate(false, InPivotChange || InWidthChange || InHeightChange, false);//mark canvas to update
-		if (this->IsCanvasUIItem())
+		this->RenderCanvas->MarkCanvasUpdate(false, InPivotChanged || InWidthChanged || InHeightChanged, false);//mark canvas to update
+		if (this->IsCanvasWidget())
 		{
 			this->RenderCanvas->MarkSizeChanged();
 		}
 	}
 
-	if (InWidthChange || InHeightChange)
-	{
-		CallUILifeCycleBehavioursDimensionsChanged(false, false, InWidthChange, InHeightChange);
-	}
-
-	if (UIParent.IsValid())
-	{
-		UIParent->OnChildDimensionChanged(this);
-	}
-
-	for (auto& UIChild : UIChildren)
-	{
-		if (IsValid(UIChild))
-		{
-			UIChild->MarkParentDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
-		}
-	}
-}
-
-void ULexWidget::MarkParentDimensionChanged(bool InParentPivotChange, bool InParentWidthChange, bool InParentHeightChange)
-{
-	if (IsValid(Layout))
-	{
-		Layout->OnParentDimensionChanged(false, false, false);
-	}
-}
-
-void ULexWidget::MarkNeedUpdateLayout()
-{
-	GetRenderCanvas()->MarkCanvasUpdate(false, true, false, false);
+	Call_DimensionsChanged(InPivotChanged, InWidthChanged, InHeightChanged);
 }
 
 void ULexWidget::MarkTransformChanged(bool InPositionChanged, bool InScaleChanged)
@@ -1743,16 +1750,13 @@ void ULexWidget::MarkTransformChanged(bool InPositionChanged, bool InScaleChange
 	if (this->RenderCanvas.IsValid())
 	{
 		this->RenderCanvas->MarkCanvasUpdate(false, true, false);//mark canvas to update
-		if (this->IsCanvasUIItem())
+		if (this->IsCanvasWidget())
 		{
 			this->RenderCanvas->MarkSizeChanged();
 		}
 	}
 
-	if (InPositionChanged || InScaleChanged)
-	{
-		CallUILifeCycleBehavioursDimensionsChanged(InPositionChanged, InPositionChanged, InScaleChanged, InScaleChanged);
-	}
+	Call_TransformChanged();
 
 	for (auto& UIChild : UIChildren)
 	{
@@ -1763,19 +1767,20 @@ void ULexWidget::MarkTransformChanged(bool InPositionChanged, bool InScaleChange
 	}
 }
 
-void ULexWidget::MarkSizeDirty_Recursive()
+void ULexWidget::MarkRenderSizeChanged()
 {
 	struct LOCAL
 	{
-		static void MarkChildrenDirty(ULexWidget* Target)
+		static void MarkDirty(ULexWidget* Target)
 		{
 			Target->bRenderSizeDirty = true;
 			Target->MarkDimensionChanged(false, true, true);
 			if (IsValid(Target->Layout))
 			{
+				Target->MarkLayoutDirty();
 				for (auto& Child : Target->GetUIChildren())
 				{
-					MarkChildrenDirty(Child);
+					MarkDirty(Child);
 				}
 			}
 			else
@@ -1785,37 +1790,39 @@ void ULexWidget::MarkSizeDirty_Recursive()
 					if (Child->Width.Type == ELexWidgetSizeType::ExpandToParent
 						|| Child->Height.Type == ELexWidgetSizeType::ExpandToParent)
 					{
-						MarkChildrenDirty(Child);
+						MarkDirty(Child);
 					}
 				}
 			}
 		}
 	};
-	auto ParentWithLayout = this;
-	if (UIParent.IsValid())
+	//search up in hierarchy to find the first widget which is affected by the size change
+	auto ParentWillBeAffected = this;
+	while (ParentWillBeAffected != nullptr)
 	{
-		if (UIParent->GetWidth().Type == ELexWidgetSizeType::ShrinkToChildren
-			|| UIParent->GetHeight().Type == ELexWidgetSizeType::ShrinkToChildren)
+		auto TempParent = ParentWillBeAffected->GetUIParent();
+		if (!TempParent)
 		{
-			ParentWithLayout = UIParent.Get();
+			break;
+		}
+		if (TempParent->GetLayout())
+		{
+			ParentWillBeAffected = TempParent;
+		}
+		else
+		{
+			if (TempParent->GetWidth().Type == ELexWidgetSizeType::ShrinkToChildren
+			|| TempParent->GetHeight().Type == ELexWidgetSizeType::ShrinkToChildren)
+			{
+				ParentWillBeAffected = TempParent;
+			}
+			else
+			{
+				break;
+			}
 		}
 	}
-	LOCAL::MarkChildrenDirty(ParentWithLayout);
-}
-
-void ULexWidget::OnChildDimensionChanged(ULexWidget* InChild)
-{
-	if (IsValid(Layout))
-	{
-		Layout->MarkLayoutDirty();
-	}
-
-	if (this->Width.Type == ELexWidgetSizeType::ShrinkToChildren
-		|| this->Height.Type == ELexWidgetSizeType::ShrinkToChildren)
-	{
-		this->bRenderSizeDirty = true;
-		this->MarkDimensionChanged(false, true, true);
-	}
+	LOCAL::MarkDirty(ParentWillBeAffected);
 }
 
 void ULexWidget::MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawcall)
@@ -1847,14 +1854,20 @@ bool ULexWidget::IsWorldSpaceUI()const
 	return RenderCanvas->IsRenderToWorldSpace();
 }
 
+void ULexWidget::MarkLayoutDirty()
+{
+	bLayoutDirty = true;
+	MarkCanvasUpdate(false, true, false);
+}
+
 #pragma region UIActive
 
 void ULexWidget::OnChildActiveStateChanged(ULexWidget* child)
 {
-	CallUILifeCycleBehavioursChildActiveInHierarchyStateChanged(child, child->GetIsUIActiveInHierarchy());
+	Call_ChildActiveInHierarchyStateChanged(child, child->GetIsUIActiveInHierarchy());
 }
 
-void ULexWidget::MarkClipDirty_Recursive(bool InClipTypeChanged) const
+void ULexWidget::MarkClipDirty(bool InClipTypeChanged) const
 {
 	bClipDirty = true;
 	if (InClipTypeChanged)bNeedRecreateClip = true;
@@ -1897,7 +1910,7 @@ void ULexWidget::SetClipping(ELexWidgetClipping Value)
 	if (Clipping != Value)
 	{
 		Clipping = Value;
-		MarkClipDirty_Recursive(true);
+		MarkClipDirty(true);
 	}
 }
 
@@ -1917,7 +1930,7 @@ void ULexWidget::CheckIsEnabled_Recursive()
 	if (bCacheFinalIsEnabled != NowFinalIsEnabled)
 	{
 		bCacheFinalIsEnabled = NowFinalIsEnabled;
-		CallUILifeCycleBehavioursActiveInHierarchyStateChanged();
+		Call_ActiveInHierarchyStateChanged();
 		for (auto Child : GetUIChildren())
 		{
 			Child->CheckIsEnabled_Recursive();
@@ -2075,24 +2088,66 @@ void ULexWidget::SetRestrictNavigationArea(bool Value)
 	bRestrictNavigationArea = Value;
 }
 
-void ULexWidget::SetVisual(ULexVisual* Value)
+ULexVisual* ULexWidget::CreateNewVisual(TSubclassOf<ULexVisual> VisualClass)
 {
-	if (Visual != Value)
+	auto OldVisual = Visual;
+	auto NewVisual = NewObject<ULexVisual>(this, VisualClass);
+	if (RenderCanvas.IsValid())
 	{
-		if (RenderCanvas.IsValid())
+		if (IsValid(OldVisual))
 		{
-			if (IsValid(Visual))
-			{
-				RenderCanvas->MarkVisualWillChange(Visual);
-				RenderCanvas->UnregisterVisual(this);
-			}
-			if (Value)
-			{
-				RenderCanvas->RegisterVisual(this);
-			}
+			RenderCanvas->MarkVisualWillChange(OldVisual);
+			RenderCanvas->UnregisterVisual(this);
 		}
-		Visual = Value;
+		if (NewVisual)
+		{
+			RenderCanvas->RegisterVisual(this);
+		}
 	}
+	if (GetWorld()->IsGameWorld())
+	{
+		if (this->HasBegunPlay())
+		{
+			OldVisual->EndPlay();
+		}
+	}
+	OldVisual->OnUnregister();
+	
+	NewVisual->OnRegister();
+	if (GetWorld()->IsGameWorld())
+	{
+		if (this->HasBegunPlay())
+		{
+			NewVisual->BeginPlay();
+		}
+	}
+	Visual = NewVisual;
+	return NewVisual;
+}
+
+ULexLayout* ULexWidget::CreateNewLayout(TSubclassOf<ULexLayout> LayoutClass)
+{
+	auto OldLayout = Layout;
+	auto NewLayout = NewObject<ULexLayout>(this, LayoutClass);
+	if (GetWorld()->IsGameWorld())
+	{
+		if (this->HasBegunPlay())
+		{
+			OldLayout->EndPlay();
+		}
+	}
+	OldLayout->OnUnregister();
+	
+	NewLayout->OnRegister();
+	if (GetWorld()->IsGameWorld())
+	{
+		if (this->HasBegunPlay())
+		{
+			NewLayout->BeginPlay();
+		}
+	}
+	Layout = NewLayout;
+	return NewLayout;
 }
 
 ULexLayoutSlot* ULexWidget::GetLayoutSlot() const
@@ -2205,7 +2260,7 @@ void ULexWidget::ApplyUIActiveState(bool InStateChange)
 	if (InStateChange)
 	{
 		//callback
-		CallUILifeCycleBehavioursActiveInHierarchyStateChanged();
+		Call_ActiveInHierarchyStateChanged();
 		//canvas update
 		MarkCanvasUpdate(false, false, false, true);
 	}
@@ -2226,7 +2281,7 @@ void ULexWidget::SetIsTemporarilyHiddenInEditor_Recursive_By_IsUIActiveState()
 }
 #endif
 
-FDelegateHandle ULexWidget::RegisterUIActiveStateChanged(const FUIItemActiveInHierarchyStateChangedDelegate& InCallback)\
+FDelegateHandle ULexWidget::RegisterUIActiveStateChanged(const FLexWidgetActiveInHierarchyStateChangedDelegate& InCallback)\
 {
 	return UIActiveInHierarchyStateChangedDelegate.Add(InCallback);
 }
@@ -2270,7 +2325,7 @@ ULTweener* ULexWidget::RenderOpacityTo(float endValue, float duration, float del
 
 
 
-UUIItemEditorHelperComp::UUIItemEditorHelperComp()
+ULexWidgetEditorHelperComp::ULexWidgetEditorHelperComp()
 {
 	bSelectable = false;
 	bIsEditorOnly = true;
@@ -2278,9 +2333,9 @@ UUIItemEditorHelperComp::UUIItemEditorHelperComp()
 }
 
 #if WITH_EDITOR
-FPrimitiveSceneProxy* UUIItemEditorHelperComp::CreateSceneProxy()
+FPrimitiveSceneProxy* ULexWidgetEditorHelperComp::CreateSceneProxy()
 {
-	class FUIItemSceneProxy : public FPrimitiveSceneProxy
+	class FWidgetSceneProxy : public FPrimitiveSceneProxy
 	{
 	public:
 		SIZE_T GetTypeHash() const override
@@ -2289,7 +2344,7 @@ FPrimitiveSceneProxy* UUIItemEditorHelperComp::CreateSceneProxy()
 			return reinterpret_cast<size_t>(&UniquePointer);
 		}
 
-		FUIItemSceneProxy(ULexWidget* InComponent, UPrimitiveComponent* InPrimitive)
+		FWidgetSceneProxy(ULexWidget* InComponent, UPrimitiveComponent* InPrimitive)
 			: FPrimitiveSceneProxy(InPrimitive)
 		{
 			bWillEverBeLit = false;
@@ -2316,16 +2371,16 @@ FPrimitiveSceneProxy* UUIItemEditorHelperComp::CreateSceneProxy()
 		TWeakObjectPtr<ULexWidget> Component;
 	};
 
-	return new FUIItemSceneProxy(this->Parent, this);
+	return new FWidgetSceneProxy(this->Parent, this);
 }
 #endif
 
-UBodySetup* UUIItemEditorHelperComp::GetBodySetup()
+UBodySetup* ULexWidgetEditorHelperComp::GetBodySetup()
 {
 	UpdateBodySetup();
 	return BodySetup;
 }
-void UUIItemEditorHelperComp::UpdateBodySetup()
+void ULexWidgetEditorHelperComp::UpdateBodySetup()
 {
 	if (!IsValid(Parent))return;
 	if (!IsValid(BodySetup))
@@ -2347,7 +2402,7 @@ void UUIItemEditorHelperComp::UpdateBodySetup()
 
 	BoxElem->Center = Origin;
 }
-FBoxSphereBounds UUIItemEditorHelperComp::CalcBounds(const FTransform& LocalToWorld) const
+FBoxSphereBounds ULexWidgetEditorHelperComp::CalcBounds(const FTransform& LocalToWorld) const
 {
 	if (!IsValid(Parent))return FBoxSphereBounds(EForceInit::ForceInit);
 	auto Center = Parent->GetLocalSpaceCenter();

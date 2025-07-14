@@ -3,7 +3,7 @@
 #pragma once
 
 #include "LexVisualBatchMesh.h"
-#include "Core/IUISpriteRenderableInterface.h"
+#include "Core/ILexUISpriteRenderInterface.h"
 #include "Core/LexUIDataAsTexture.h"
 #include "LexRectBlock.generated.h"
 
@@ -48,7 +48,7 @@ class ULexUISpriteData_BaseObject;
 
 UCLASS(ClassGroup = (LGUI), NotBlueprintable, meta = (BlueprintSpawnableComponent))
 class LGUI_API ULexRectBlock : public ULexVisualBatchMesh
-	, public IUISpriteRenderableInterface
+	, public ILexUISpriteRenderInterface
 {
 	GENERATED_BODY()
 
@@ -285,7 +285,7 @@ protected:
 	virtual bool LineTraceUIRect(FHitResult& OutHit, const FVector& Start, const FVector& End)const override;
 public:
 #pragma region UISpriteRenderableInterface
-	virtual ULexUISpriteData_BaseObject* SpriteRenderableGetSprite_Implementation()const override { return BodySpriteTexture; }
+	virtual ULexUISpriteData_BaseObject* SpriteRenderGetSprite_Implementation()const override { return BodySpriteTexture; }
 	virtual void ApplyAtlasTextureScaleUp_Implementation()override;
 	virtual void ApplyAtlasTextureChange_Implementation()override;
 #pragma endregion
@@ -413,7 +413,7 @@ public:
 		void SetBodySpriteTexture(ULexUISpriteData_BaseObject* value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetBodyTextureMode(EUIProceduralBodyTextureMode value);
-	/** Set size from current body texutre or sprite */
+	/** Set size from current body texutre or Sprite */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetSizeFromBodyTexture();
 	UFUNCTION(BlueprintCallable, Category = "LGUI")

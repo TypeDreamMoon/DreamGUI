@@ -13,9 +13,9 @@ UUIScrollViewWithScrollbarComponent::UUIScrollViewWithScrollbarComponent()
 	bLayoutDirty = false;
 }
 
-void UUIScrollViewWithScrollbarComponent::OnUIDimensionsChanged(bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
+void UUIScrollViewWithScrollbarComponent::OnUIDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
-	Super::OnUIDimensionsChanged(horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
+	Super::OnUIDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
 	CheckScrollbarParameter();//Check and register scrollbar event
 }
 

@@ -28,6 +28,8 @@ private:
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
 #endif
 	virtual void OnUpdateLayout()override;
+
+	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
 };
 
 UCLASS(BlueprintType)
@@ -64,9 +66,6 @@ private:
 	bool IsHorizontalStretched()const { return AnchorMin.X != AnchorMax.X; }
 	bool IsVerticalStretched()const { return AnchorMin.Y != AnchorMax.Y; }
 
-	virtual void OnParentTransformChanged()override;
-	virtual void OnParentDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
-
 	virtual bool GetLayoutControlWidth() const override{return true;}
 	virtual bool GetLayoutControlHeight() const override{return true;}
 	virtual bool GetLayoutControlHorizontalPosition() const override{return true;}
@@ -79,6 +78,7 @@ private:
 	void CalculateTransformFromAnchor(bool& OutHorizontalPositionChanged, bool& OutVerticalPositionChanged);
 
 public:
+	void MarkParentDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange);
 	void CalculateLayout();
 	
 	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")

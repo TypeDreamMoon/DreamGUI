@@ -3,7 +3,7 @@
 #pragma once
 
 #include "LexVisualBatchMesh.h"
-#include "Core/IUISpriteRenderableInterface.h"
+#include "Core/ILexUISpriteRenderInterface.h"
 #include "UISpriteBase.generated.h"
 
 class ULexUISpriteData_BaseObject;
@@ -13,7 +13,7 @@ class ULexUISpriteData_BaseObject;
  */
 UCLASS(ClassGroup = (LGUI), Abstract, NotBlueprintable)
 class LGUI_API UUISpriteBase : public ULexVisualBatchMesh
-	, public IUISpriteRenderableInterface
+	, public ILexUISpriteRenderInterface
 {
 	GENERATED_BODY()
 
@@ -30,7 +30,7 @@ public:
 	void CheckSpriteData();
 	static const FName GetSpritePropertyName()
 	{
-		return GET_MEMBER_NAME_CHECKED(UUISpriteBase, sprite);
+		return GET_MEMBER_NAME_CHECKED(UUISpriteBase, Sprite);
 	}
 protected:
 	virtual void BeginPlay() override;
@@ -38,13 +38,12 @@ protected:
 	virtual void OnRegister()override;
 	virtual void OnUnregister()override;
 protected:
-	friend class SLGUISpriteBorderEditor;
-	friend class SLGUISpriteSelector;
-	friend class FUISpriteBaseCustomization;
+	friend class SLexUISpriteBorderEditor;
+	friend class FLexUISpriteBaseCustomization;
 
-	/** sprite may override by UISelectable(UIButton, UIToggle, UISlider ...) */
+	/** Sprite may override by UISelectable(UIButton, UIToggle, UISlider ...) */
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (DisplayThumbnail = "false"))
-		TObjectPtr<ULexUISpriteData_BaseObject> sprite = nullptr;
+		TObjectPtr<ULexUISpriteData_BaseObject> Sprite = nullptr;
 
 	virtual void OnBeforeCreateOrUpdateGeometry()override;
 	virtual UTexture* GetTextureToCreateGeometry()override;
@@ -55,9 +54,9 @@ protected:
 
 public:
 
-	UFUNCTION(BlueprintCallable, Category = "LGUI") ULexUISpriteData_BaseObject* GetSprite()const { return sprite; }
-#pragma region UISpriteRenderableInterface
-	virtual ULexUISpriteData_BaseObject* SpriteRenderableGetSprite_Implementation()const override{ return sprite; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") ULexUISpriteData_BaseObject* GetSprite()const { return Sprite; }
+#pragma region LexUISpriteRenderInterface
+	virtual ULexUISpriteData_BaseObject* SpriteRenderGetSprite_Implementation()const override{ return Sprite; }
 	virtual void ApplyAtlasTextureScaleUp_Implementation()override;
 	virtual void ApplyAtlasTextureChange_Implementation()override;
 #pragma endregion

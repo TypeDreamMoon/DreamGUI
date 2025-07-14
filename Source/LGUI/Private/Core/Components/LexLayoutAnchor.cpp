@@ -44,6 +44,21 @@ void ULexLayoutAnchor::OnUpdateLayout()
 	}
 }
 
+void ULexLayoutAnchor::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
+{
+	auto Widget = GetWidget();
+	if (!Widget)return;
+	auto& Children = Widget->GetUIChildren();
+	for (int i = 0; i < Children.Num(); i++)
+	{
+		auto Child = Children[i];
+		if (!Child->IsVisibleForLayout())continue;
+		auto LayoutSlot = (ULexLayoutAnchorSlot*)Child->GetLayoutSlot();//make sure layout slot is created
+		LayoutSlot->MarkParentDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
+	}
+}
+
+
 ULexLayoutAnchorSlot::ULexLayoutAnchorSlot()
 {
 }
@@ -69,25 +84,6 @@ void ULexLayoutAnchorSlot::PostInitProperties()
 void ULexLayoutAnchorSlot::BeginDestroy()
 {
 	Super::BeginDestroy();
-}
-
-void ULexLayoutAnchorSlot::OnParentTransformChanged()
-{
-	
-}
-
-void ULexLayoutAnchorSlot::OnParentDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
-{
-	bool ChildWidthChange = false, ChildHeightChange = false;
-	if (InWidthChange && IsHorizontalStretched())
-	{
-		ChildWidthChange = true;
-	}
-	if (InHeightChange && IsVerticalStretched())
-	{
-		ChildHeightChange = true;
-	}
-	GetWidget()->MarkDimensionChanged(false, ChildWidthChange, ChildHeightChange);
 }
 
 void ULexLayoutAnchorSlot::CalculateTransformFromLayout()
@@ -195,6 +191,20 @@ void ULexLayoutAnchorSlot::CalculateTransformFromAnchor(bool& OutHorizontalPosit
 		Widget->UpdateComponentToWorld();
 	}
 	bCanSetAnchorFromTransform = true;
+}
+
+void ULexLayoutAnchorSlot::MarkParentDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
+{
+	bool ChildWidthChange = false, ChildHeightChange = false;
+	if (InWidthChange && IsHorizontalStretched())
+	{
+		ChildWidthChange = true;
+	}
+	if (InHeightChange && IsVerticalStretched())
+	{
+		ChildHeightChange = true;
+	}
+	GetWidget()->MarkDimensionChanged(false, ChildWidthChange, ChildHeightChange);
 }
 
 void ULexLayoutAnchorSlot::CalculateLayout()

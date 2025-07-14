@@ -12,7 +12,7 @@ UE_DISABLE_OPTIMIZATION
 void ULexLayout::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	UObject::PostEditChangeProperty(PropertyChangedEvent);
-	GetWidget()->MarkSizeDirty_Recursive();
+	GetWidget()->MarkRenderSizeChanged();
 }
 bool ULexLayout::CanEditChange(const FProperty* InProperty) const
 {
@@ -60,18 +60,9 @@ const ULexWidget* ULexLayout::GetWidgetBySlot(const ULexLayoutSlot* Slot)
 	return nullptr;
 }
 
-void ULexLayout::OnTransformChanged()
-{
-	MarkLayoutDirty();
-}
-
 void ULexLayout::UpdateLayout()
 {
-	if (bIsLayoutDirty)
-	{
-		bIsLayoutDirty = false;
-		OnUpdateLayout();
-	}
+	OnUpdateLayout();
 }
 
 ULexLayoutSlot* ULexLayout::GetSlot(const ULexWidget* Child) const
@@ -101,7 +92,6 @@ ULexLayoutSlot* ULexLayout::GetOrCreateSlot(const ULexWidget* Child, TSubclassOf
 void ULexLayout::OnChildDetached(const ULexWidget* Child)
 {
 	Slots.Remove(Child);
-	MarkLayoutDirty();
 }
 
 #if WITH_EDITOR
@@ -109,7 +99,7 @@ void ULexLayout::OnChildDetached(const ULexWidget* Child)
 void ULexLayoutSlot::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
 {
 	UObject::PostEditChangeProperty(PropertyChangedEvent);
-	GetWidget()->MarkSizeDirty_Recursive();
+	GetWidget()->MarkRenderSizeChanged();
 }
 #endif
 

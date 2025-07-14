@@ -7,7 +7,7 @@
 
 
 /**
- * SpriteInfo contains information for render a sprite
+ * SpriteInfo contains information for render a Sprite
  */
 USTRUCT(BlueprintType)
 struct LGUI_API FLexUISpriteInfo

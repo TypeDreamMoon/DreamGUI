@@ -61,9 +61,9 @@ UObject* ULexUISpriteDataFactory::FactoryCreateNew(UClass* Class, UObject* InPar
 	ULexUISpriteData* NewAsset = NewObject<ULexUISpriteData>(InParent, Class, Name, Flags | RF_Transactional);
 	if (SpriteTexture)
 	{
-		NewAsset->spriteTexture = SpriteTexture;
-		NewAsset->spriteInfo.width = SpriteTexture->GetSurfaceWidth();
-		NewAsset->spriteInfo.height = SpriteTexture->GetSurfaceHeight();
+		NewAsset->SpriteTexture = SpriteTexture;
+		NewAsset->SpriteInfo.width = SpriteTexture->GetSurfaceWidth();
+		NewAsset->SpriteInfo.height = SpriteTexture->GetSurfaceHeight();
 	}
 	return NewAsset;
 }

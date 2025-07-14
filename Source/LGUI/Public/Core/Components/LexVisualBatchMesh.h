@@ -95,7 +95,7 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 
-	TSharedPtr<FLexUIGeometry> geometry = nullptr;
+	TSharedPtr<FLexUIGeometry> UIGeometry = nullptr;
 	
 	/** Will any geometry modifier change these data? */
 	void GeometryModifierWillChangeVertexData(bool& OutTriangleIndices, bool& OutVertexPosition, bool& OutUV, bool& OutColor);
@@ -138,7 +138,7 @@ public:
 		void MarkVerticesDirty();
 
 	virtual void MarkAllDirty()override;
-	FLexUIGeometry* GetGeometry()const { return geometry.Get(); }
+	FLexUIGeometry* GetGeometry()const { return UIGeometry.Get(); }
 
 	virtual bool LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const override;
 	/** is this UI element type support drawcall batching? */

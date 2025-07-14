@@ -44,9 +44,9 @@ void FUISpriteCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 	EUISpriteType spriteType = TargetScriptPtr->type;
 	if (spriteType == EUISpriteType::Sliced || spriteType == EUISpriteType::SlicedFrame)
 	{
-		if (TargetScriptPtr->sprite != nullptr)
+		if (TargetScriptPtr->Sprite != nullptr)
 		{
-			if (TargetScriptPtr->sprite->GetSpriteInfo().HasBorder() == false)
+			if (TargetScriptPtr->Sprite->GetSpriteInfo().HasBorder() == false)
 			{
 				category.AddCustomRow(LOCTEXT("NoBorderWarning", "NoBorderWarning"))
 					.WholeRowContent()
@@ -54,7 +54,7 @@ void FUISpriteCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 					[
 						SNew(STextBlock)
 						.AutoWrapText(true)
-						.Text(LOCTEXT("Warning", "Target sprite does not have any border information!"))
+						.Text(LOCTEXT("Warning", "Target Sprite does not have any border information!"))
 						.ColorAndOpacity(FSlateColor(FLinearColor::Red))
 						.Font(IDetailLayoutBuilder::GetDetailFont())
 					];

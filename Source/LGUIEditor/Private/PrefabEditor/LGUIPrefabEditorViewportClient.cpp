@@ -70,13 +70,13 @@ FLGUIPrefabEditorViewportClient::FLGUIPrefabEditorViewportClient(FLGUIPrefabEdit
 	Widget->SetUsesEditorModeTools(ModeTools.Get());
 
 	// GEditorModeTools serves as our draw helper
-	bUsesDrawHelper = false;
+	bUsesDrawHelper = true;
 
 	// DrawHelper set up
 
 	DrawHelper.PerspectiveGridSize = HALF_WORLD_MAX1;
 	DrawHelper.AxesLineThickness = 0.0f;
-	DrawHelper.bDrawGrid = true;
+	DrawHelper.bDrawGrid = false;
 
 	EngineShowFlags.Game = 0;
 	EngineShowFlags.ScreenSpaceReflections = 1;

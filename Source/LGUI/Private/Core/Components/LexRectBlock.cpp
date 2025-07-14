@@ -400,7 +400,7 @@ UTexture* ULexRectBlock::GetTextureToCreateGeometry()
 	{
 		if (!IsValid(this->BodyTexture))
 		{
-			this->BodyTexture = UUITextureBase::GetDefaultWhiteTexture();
+			this->BodyTexture = FLexUIUtils::GetDefaultWhiteTexture();
 		}
 		return this->BodyTexture;
 	}
@@ -431,7 +431,7 @@ UMaterialInterface* ULexRectBlock::GetMaterialToCreateGeometry()
 }
 void ULexRectBlock::UpdateMaterialClipType()
 {
-	geometry->Material = GetMaterialToCreateGeometry();
+	UIGeometry->Material = GetMaterialToCreateGeometry();
 	if (DrawCall.IsValid())
 	{
 		DrawCall->bMaterialChanged = true;
@@ -554,10 +554,10 @@ bool ULexRectBlock::LineTraceUIRect(FHitResult& OutHit, const FVector& Start, co
 
 void ULexRectBlock::OnDataTextureChanged(class UTexture* Texture)
 {
-	geometry->Texture = GetTextureToCreateGeometry();
+	UIGeometry->Texture = GetTextureToCreateGeometry();
 	if (DrawCall.IsValid())
 	{
-		DrawCall->Texture = geometry->Texture;
+		DrawCall->Texture = UIGeometry->Texture;
 		DrawCall->bTextureChanged = true;
 		DrawCall->bNeedToUpdateVertex = true;
 	}
@@ -623,10 +623,10 @@ void ULexRectBlock::ApplyAtlasTextureChange_Implementation()
 {
 	if (BodyTextureMode != EUIProceduralBodyTextureMode::Sprite)return;
 	check(BodySpriteTexture);
-	geometry->Texture = BodySpriteTexture->GetAtlasTexture();
+	UIGeometry->Texture = BodySpriteTexture->GetAtlasTexture();
 	if (DrawCall.IsValid())
 	{
-		DrawCall->Texture = geometry->Texture;
+		DrawCall->Texture = UIGeometry->Texture;
 		DrawCall->bTextureChanged = true;
 	}
 	GetWidget()->MarkCanvasUpdate(true, true, false);
@@ -635,7 +635,7 @@ void ULexRectBlock::ApplyAtlasTextureScaleUp_Implementation()
 {
 	if (BodyTextureMode != EUIProceduralBodyTextureMode::Sprite)return;
 	check(BodySpriteTexture);
-	auto& vertices = geometry->Vertices;
+	auto& vertices = UIGeometry->Vertices;
 	if (vertices.Num() != 0)
 	{
 		for (int i = 0; i < vertices.Num(); i++)
@@ -645,10 +645,10 @@ void ULexRectBlock::ApplyAtlasTextureScaleUp_Implementation()
 			uv.TextureCoordinate[0].Y *= 0.5f;
 		}
 	}
-	geometry->Texture = BodySpriteTexture->GetAtlasTexture();
+	UIGeometry->Texture = BodySpriteTexture->GetAtlasTexture();
 	if (DrawCall.IsValid())
 	{
-		DrawCall->Texture = geometry->Texture;
+		DrawCall->Texture = UIGeometry->Texture;
 		DrawCall->bTextureChanged = true;
 		DrawCall->bNeedToUpdateVertex = true;
 	}
@@ -679,7 +679,7 @@ void ULexRectBlock::SetBodyTexture(UTexture* value)
 	this->BodyTexture = value;
 	if (this->BodyTexture == nullptr)
 	{
-		this->BodyTexture = UUITextureBase::GetDefaultWhiteTexture();
+		this->BodyTexture = FLexUIUtils::GetDefaultWhiteTexture();
 	}
 	MarkTextureDirty();
 }

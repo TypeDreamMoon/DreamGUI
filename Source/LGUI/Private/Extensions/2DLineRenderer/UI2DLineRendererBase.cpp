@@ -25,7 +25,7 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseUV(FLexUIGeometry& InGeo, co
 	auto& vertices = InGeo.Vertices;
 	int pointCount = InPointArray.Num();
 
-	const auto& spriteInfo = sprite->GetSpriteInfo();
+	const auto& spriteInfo = Sprite->GetSpriteInfo();
 	float uvY = (spriteInfo.uv0Y + spriteInfo.uv3Y) * 0.5f;
 	int i = 0; 
 	for (; i < pointCount; i++)
@@ -173,7 +173,7 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseVertex(FLexUIGeometry& InGeo
 		if (EndType == EUI2DLineRenderer_EndType::Cap)
 		{	
 			//start point cap
-			auto spriteInfo = sprite->GetSpriteInfo();
+			auto spriteInfo = Sprite->GetSpriteInfo();
 			auto capSize = spriteInfo.HasBorder() ? spriteInfo.borderBottom : spriteInfo.height * 0.5f;
 			if (bEndCapSizeAffectByLineWidth)
 			{
@@ -250,7 +250,7 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseVertex(FLexUIGeometry& InGeo
 			if (EndType == EUI2DLineRenderer_EndType::Cap)
 			{
 				//end point cap
-				auto spriteInfo = sprite->GetSpriteInfo();
+				auto spriteInfo = Sprite->GetSpriteInfo();
 				auto capSize = spriteInfo.HasBorder() ? spriteInfo.borderTop : spriteInfo.height * 0.5f;
 				if (bEndCapSizeAffectByLineWidth)
 				{
@@ -316,7 +316,7 @@ void UUI2DLineRendererBase::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTrian
 	int pointCount = CurrentPointArray.Num();
 	if (pointCount < 2)
 	{
-		geometry->Clear();
+		UIGeometry->Clear();
 		return;
 	}
 	

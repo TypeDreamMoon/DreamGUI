@@ -35,7 +35,7 @@ protected:
 	//Draw extra quad at start and end.
 	UPROPERTY(EditAnywhere, Category = LGUI)
 		EUI2DLineRenderer_EndType EndType = EUI2DLineRenderer_EndType::Cap;
-	/** When EndType is Cap, if LineWidth bigger or smaller than sprite's width, then cap size will scale with it. */
+	/** When EndType is Cap, if LineWidth bigger or smaller than Sprite's width, then cap size will scale with it. */
 	UPROPERTY(EditAnywhere, Category = LGUI, meta = (EditCondition="EndType==EUI2DLineRenderer_EndType::Cap"))
 		bool bEndCapSizeAffectByLineWidth = false;
 	//This will slide line's width from left to right.

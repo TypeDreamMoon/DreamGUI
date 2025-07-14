@@ -21,11 +21,13 @@
 UE_DISABLE_OPTIMIZATION
 #endif
 
+#define LOCTEXT_NAMESPACE "LexUIUtils"
+
 void FLexUIUtils::DestroyActorWithHierarchy(AActor* Target, bool WithHierarchy)
 {
 	if (!Target->IsValidLowLevelFast())
 	{
-		UE_LOG(LGUI, Error, TEXT("[LGUIUtils::DestroyActorWithHierarchy]Try to delete not valid actor"));
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Try to delete not valid actor"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
 	if (WithHierarchy)
@@ -210,6 +212,21 @@ FColor FLexUIUtils::MultiplyColor(FColor A, FColor B)
 	return result;
 }
 
+UTexture* FLexUIUtils::GetDefaultWhiteTexture()
+{
+	auto defaultWhiteSolid = LoadObject<UTexture2D>(NULL, TEXT("/LGUI/Textures/LGUIPreset_WhiteSolid"));
+	if (!IsValid(defaultWhiteSolid))
+	{
+		auto errMsg = FText::Format(LOCTEXT("MissingDefaultContent", "{0} Load default texture error! Missing some content of LGUI plugin, reinstall this plugin may fix the issue.")
+			, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)));
+		UE_LOG(LGUI, Error, TEXT("%s"), *errMsg.ToString());
+#if WITH_EDITOR
+		FLexUIUtils::EditorNotification(errMsg, 10);
+#endif
+	}
+	return defaultWhiteSolid;
+}
+
 #if WITH_EDITOR
 //nodify some informations in editor
 void FLexUIUtils::EditorNotification(FText NofityText, float ExpireDuration)
@@ -383,6 +400,8 @@ float FLexUIUtils::Color255To1_Table[256] =
 	,0.8901961,0.8941177,0.8980392,0.9019608,0.9058824,0.9098039,0.9137255,0.9176471,0.9215686,0.9254902,0.9294118,0.9333333,0.9372549,0.9411765,0.945098,0.9490196,0.9529412,0.9568627,0.9607843,0.9647059
 	,0.9686275,0.972549,0.9764706,0.9803922,0.9843137,0.9882353,0.9921569,0.9960784,1
 };
+
+#undef LOCTEXT_NAMESPACE
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_ENABLE_OPTIMIZATION

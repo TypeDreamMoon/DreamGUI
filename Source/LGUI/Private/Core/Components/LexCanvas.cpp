@@ -303,7 +303,7 @@ void ULexCanvas::OnRegister()
 		//tell UIItem
 		LexWidget->RegisterRenderCanvas(this);
 		UIHierarchyChangedDelegateHandle = LexWidget->RegisterUIHierarchyChanged(FSimpleDelegate::CreateUObject(this, &ULexCanvas::OnUIHierarchyChanged));
-		UIActiveStateChangedDelegateHandle = LexWidget->RegisterUIActiveStateChanged(FUIItemActiveInHierarchyStateChangedDelegate::CreateUObject(this, &ULexCanvas::OnUIActiveStateChanged));
+		UIActiveStateChangedDelegateHandle = LexWidget->RegisterUIActiveStateChanged(FLexWidgetActiveInHierarchyStateChangedDelegate::CreateUObject(this, &ULexCanvas::OnUIActiveStateChanged));
 
 		OnUIHierarchyChanged();
 	}
@@ -1083,7 +1083,7 @@ void ULexCanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, co
 		//check(Item->GetIsUIActiveInHierarchy());
 		if (!Item->GetIsUIActiveInHierarchy())continue;
 		
-		if (Item->IsCanvasUIItem() && Item->GetRenderCanvas() != this)//is child canvas
+		if (Item->IsCanvasWidget() && Item->GetRenderCanvas() != this)//is child canvas
 		{
 			auto ChildCanvas = Item->GetRenderCanvas();
 			if (ChildCanvas == nullptr)continue;//normally this won't be nullptr, but when redo in editor this breaks

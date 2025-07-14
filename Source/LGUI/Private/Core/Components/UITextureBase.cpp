@@ -25,7 +25,7 @@ void UUITextureBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChang
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (auto Property = PropertyChangedEvent.Property)
 	{
-		if (Property->GetFName() == GET_MEMBER_NAME_CHECKED(UUITextureBase, texture))
+		if (Property->GetFName() == GET_MEMBER_NAME_CHECKED(UUITextureBase, Texture))
 		{
 			MarkTextureDirty();
 		}
@@ -33,46 +33,31 @@ void UUITextureBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChang
 }
 void UUITextureBase::CheckTexture()
 {
-	if (!IsValid(texture))
+	if (!IsValid(Texture))
 	{
-		auto defaultWhiteSolid = GetDefaultWhiteTexture();
+		auto defaultWhiteSolid = FLexUIUtils::GetDefaultWhiteTexture();
 		if (IsValid(defaultWhiteSolid))
 		{
-			texture = defaultWhiteSolid;
+			Texture = defaultWhiteSolid;
 		}
 	}
 }
 #endif
 
-UTexture* UUITextureBase::GetDefaultWhiteTexture()
-{
-	auto defaultWhiteSolid = LoadObject<UTexture2D>(NULL, TEXT("/LGUI/Textures/LGUIPreset_WhiteSolid"));
-	if (!IsValid(defaultWhiteSolid))
-	{
-		auto errMsg = FText::Format(LOCTEXT("MissingDefaultContent", "{0} Load default texture error! Missing some content of LGUI plugin, reinstall this plugin may fix the issue.")
-			, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)));
-		UE_LOG(LGUI, Error, TEXT("%s"), *errMsg.ToString());
-#if WITH_EDITOR
-		FLexUIUtils::EditorNotification(errMsg, 10);
-#endif
-	}
-	return defaultWhiteSolid;
-}
-
 UTexture* UUITextureBase::GetTextureToCreateGeometry()
 {
-	if (!IsValid(texture))
+	if (!IsValid(Texture))
 	{
-		texture = GetDefaultWhiteTexture();
+		Texture = FLexUIUtils::GetDefaultWhiteTexture();
 	}
-	return texture;
+	return Texture;
 }
 
 bool UUITextureBase::ReadPixelFromMainTexture(const FVector2D& InUV, FColor& OutPixel)const
 {
-	if (IsValid(texture))
+	if (IsValid(Texture))
 	{
-		if (auto texture2D = Cast<UTexture2D>(texture))
+		if (auto texture2D = Cast<UTexture2D>(Texture))
 		{
 			auto PlatformData = texture2D->GetPlatformData();
 			if (PlatformData && PlatformData->Mips.Num() > 0)
@@ -93,22 +78,22 @@ bool UUITextureBase::ReadPixelFromMainTexture(const FVector2D& InUV, FColor& Out
 
 void UUITextureBase::SetTexture(UTexture* newTexture)
 {
-	if (texture != newTexture)
+	if (Texture != newTexture)
 	{
-		texture = newTexture;
-		if (texture == nullptr)
+		Texture = newTexture;
+		if (Texture == nullptr)
 		{
-			texture = GetDefaultWhiteTexture();
+			Texture = FLexUIUtils::GetDefaultWhiteTexture();
 		}
 		MarkTextureDirty();
 	}
 }
 void UUITextureBase::SetSizeFromTexture()
 {
-	if (IsValid(texture))
+	if (IsValid(Texture))
 	{
 		auto Widget = GetWidget();
-		Widget->SetSize(FLexWidgetSize2::MakeFixed(FVector2f(texture->GetSurfaceWidth(), texture->GetSurfaceHeight())));
+		Widget->SetSize(FLexWidgetSize2::MakeFixed(FVector2f(Texture->GetSurfaceWidth(), Texture->GetSurfaceHeight())));
 	}
 	else
 	{

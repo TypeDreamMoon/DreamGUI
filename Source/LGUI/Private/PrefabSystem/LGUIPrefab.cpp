@@ -148,6 +148,30 @@ void ULGUIPrefab::RefreshAgentObjectsInPreviewWorld()
 	ClearAgentObjectsInPreviewWorld();
 	MakeAgentObjectsInPreviewWorld();
 }
+
+void ULGUIPrefab::SetRootActorNameFromPrefab()
+{
+	if (GetPrefabHelperObject() && PrefabHelperObject->LoadedRootActor)
+	{
+		auto RootWidgetDisplayName = this->GetName();
+		if (RootWidgetDisplayName.RemoveFromStart(TEXT("Default__")))
+		{
+			UE_LOG(LGUI, Display, TEXT("[%s] Rename Default__"), ANSI_TO_TCHAR(__FUNCTION__));
+		}
+		if (RootWidgetDisplayName.RemoveFromStart(TEXT("REINST__")))
+		{
+			UE_LOG(LGUI, Display, TEXT("[%s] Rename REINST__"), ANSI_TO_TCHAR(__FUNCTION__));
+		}
+		auto FindIndex = RootWidgetDisplayName.Find("_C", ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+		if (FindIndex != INDEX_NONE)
+		{
+			RootWidgetDisplayName = RootWidgetDisplayName.Left(FindIndex);
+		}
+		PrefabHelperObject->LoadedRootActor->SetActorLabel(RootWidgetDisplayName);
+		PrefabHelperObject->SavePrefab();
+	}
+}
+
 void ULGUIPrefab::MakeAgentObjectsInPreviewWorld()
 {
 	if (PrefabVersion >= (uint16)ELGUIPrefabVersion::BuildinFArchive)
@@ -332,6 +356,12 @@ void ULGUIPrefab::PostCDOContruct()
 void ULGUIPrefab::PostRename(UObject* OldOuter, const FName OldName)
 {
 	Super::PostRename(OldOuter, OldName);
+	if (this->GetName().Contains(TEXT("SKEL_")) || this->GetName().Contains(TEXT("TRASH_")))
+		return;
+	if (OldOuter->IsA(UPackage::StaticClass()))//is asset
+	{
+		SetRootActorNameFromPrefab();
+	}
 }
 void ULGUIPrefab::PreDuplicate(FObjectDuplicationParameters& DupParams)
 {
@@ -343,7 +373,12 @@ void ULGUIPrefab::PostDuplicate(bool bDuplicateForPIE)
 	Super::PostDuplicate(bDuplicateForPIE);
 	if (PrefabVersion >= (uint16)ELGUIPrefabVersion::BuildinFArchive)
 	{
-
+		if (this->GetName().Contains(TEXT("SKEL_")) || this->GetName().Contains(TEXT("TRASH_")))
+			return;
+		if (GetOuter()->IsA(UPackage::StaticClass()))//is asset
+		{
+			SetRootActorNameFromPrefab();
+		}
 	}
 	else
 	{

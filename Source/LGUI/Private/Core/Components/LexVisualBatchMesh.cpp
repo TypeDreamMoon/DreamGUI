@@ -15,7 +15,7 @@ DECLARE_CYCLE_STAT(TEXT("UIBatchMeshRenderable GeometryModifier"), STAT_ApplyMod
 ULexVisualBatchMesh::ULexVisualBatchMesh(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
 	VisualType = ELexVisualType::BatchMesh;
-	geometry = TSharedPtr<FLexUIGeometry>(new FLexUIGeometry);
+	UIGeometry = TSharedPtr<FLexUIGeometry>(new FLexUIGeometry);
 
 	bLocalVertexPositionChanged = true;
 	bUVChanged = true;
@@ -96,7 +96,7 @@ void ULexVisualBatchMesh::MarkTextureDirty()
 {
 	if (DrawCall.IsValid())
 	{
-		geometry->Texture = GetTextureToCreateGeometry();
+		UIGeometry->Texture = GetTextureToCreateGeometry();
 		DrawCall->bTextureChanged = true;
 	}
 	GetWidget()->MarkCanvasUpdate(true, false, false);
@@ -105,7 +105,7 @@ void ULexVisualBatchMesh::MarkMaterialDirty()
 {
 	if (DrawCall.IsValid())
 	{
-		geometry->Material = GetMaterialToCreateGeometry();
+		UIGeometry->Material = GetMaterialToCreateGeometry();
 		DrawCall->bMaterialChanged = true;
 	}
 	GetWidget()->MarkCanvasUpdate(true, false, false);
@@ -118,10 +118,10 @@ void ULexVisualBatchMesh::MarkAllDirty()
 	bTriangleChanged = true;
 	if (DrawCall.IsValid())
 	{
-		geometry->Texture = GetTextureToCreateGeometry();
+		UIGeometry->Texture = GetTextureToCreateGeometry();
 		DrawCall->bTextureChanged = true;
 
-		geometry->Material = GetMaterialToCreateGeometry();
+		UIGeometry->Material = GetMaterialToCreateGeometry();
 		DrawCall->bMaterialChanged = true;
 	}
 	GetWidget()->MarkCanvasUpdate(true, false, false);
@@ -185,7 +185,7 @@ void ULexVisualBatchMesh::ApplyGeometryModifier(bool triangleChanged, bool uvCha
 			auto modifierComp = MeshModifierArray[i];
 			if (modifierComp->GetEnable())
 			{
-				modifierComp->ModifyUIGeometry(*(geometry.Get()), triangleChanged, uvChanged, colorChanged, vertexPositionChanged);
+				modifierComp->ModifyUIGeometry(*(UIGeometry.Get()), triangleChanged, uvChanged, colorChanged, vertexPositionChanged);
 			}
 		}
 	}
@@ -207,11 +207,11 @@ void ULexVisualBatchMesh::UpdateGeometry()
 	if (!DrawCall.IsValid()//not add to render yet
 		)
 	{
-		geometry->Clear();
-		geometry->Texture = GetTextureToCreateGeometry();
-		geometry->Material = GetMaterialToCreateGeometry();
-		OnUpdateGeometry(*(geometry.Get()), true, true, true, true);
-		OnUpdateGeometryClipData(*(geometry.Get()), true);
+		UIGeometry->Clear();
+		UIGeometry->Texture = GetTextureToCreateGeometry();
+		UIGeometry->Material = GetMaterialToCreateGeometry();
+		OnUpdateGeometry(*(UIGeometry.Get()), true, true, true, true);
+		OnUpdateGeometryClipData(*(UIGeometry.Get()), true);
 		ApplyGeometryModifier(true, true, true, true);
 		CalculateLocalBounds();//CalculateLocalBounds must stay before TransformVertices, because TransformVertices will also cache bounds for Canvas to check 2d overlap.
 
@@ -219,7 +219,7 @@ void ULexVisualBatchMesh::UpdateGeometry()
 		Canvas->IncreaseThreadProcessingGeometry();
 		AsyncTask(ENamedThreads::Type::AnyBackgroundHiPriTask, [this, Canvas]()
 		{
-			FLexUIGeometry::TransformVertices(Canvas, this, this->geometry.Get());
+			FLexUIGeometry::TransformVertices(Canvas, this, this->UIGeometry.Get());
 			Canvas->DecreaseThreadProcessingGeometry();
 		});
 	}
@@ -230,7 +230,7 @@ void ULexVisualBatchMesh::UpdateGeometry()
 		bool pixelPerfectAffectTransform = pixelPerfect && bTransformChanged;
 		if (bTriangleChanged || bLocalVertexPositionChanged || pixelPerfectAffectTransform || bColorChanged || bUVChanged)
 		{
-			geometry->Clear();
+			UIGeometry->Clear();
 			//check if GeometryModifier will affect vertex data, if so we need to update these data in OnUpdateGeometry
 			{
 				bool TempTriangleIndices = false, TempVertexPosition = false, TempUV = false, TempColor = false;
@@ -240,7 +240,7 @@ void ULexVisualBatchMesh::UpdateGeometry()
 				if (TempUV)bUVChanged = true;
 				if (TempColor)bColorChanged = true;
 			}
-			OnUpdateGeometry(*(geometry.Get()), bTriangleChanged, bLocalVertexPositionChanged || pixelPerfectAffectTransform, bUVChanged, bColorChanged);
+			OnUpdateGeometry(*(UIGeometry.Get()), bTriangleChanged, bLocalVertexPositionChanged || pixelPerfectAffectTransform, bUVChanged, bColorChanged);
 			ApplyGeometryModifier(bTriangleChanged, bUVChanged, bColorChanged, bLocalVertexPositionChanged);
 			DrawCall->bNeedToUpdateVertex = true;
 			if (bLocalVertexPositionChanged || pixelPerfectAffectTransform)//pixelPerfect is affected by transform, and can affect localVertex calculation
@@ -250,7 +250,7 @@ void ULexVisualBatchMesh::UpdateGeometry()
 		}
 		if (bClipDataChanged)
 		{
-			OnUpdateGeometryClipData(*(geometry.Get()), true);
+			OnUpdateGeometryClipData(*(UIGeometry.Get()), true);
 			DrawCall->bNeedToUpdateVertex = true;
 		}
 		if (bLocalVertexPositionChanged || bTransformChanged)
@@ -259,17 +259,17 @@ void ULexVisualBatchMesh::UpdateGeometry()
 			Canvas->IncreaseThreadProcessingGeometry();
 			AsyncTask(ENamedThreads::Type::AnyBackgroundHiPriTask, [this, Canvas]()
 			{
-				FLexUIGeometry::TransformVertices(Canvas, this, this->geometry.Get());
+				FLexUIGeometry::TransformVertices(Canvas, this, this->UIGeometry.Get());
 				Canvas->DecreaseThreadProcessingGeometry();
 			});
 			DrawCall->bNeedToUpdateVertex = true;
 		}
 	}
-	if (geometry->OriginVertices.Num() >= LEXUI_MAX_VERTEX_COUNT)
+	if (UIGeometry->OriginVertices.Num() >= LEXUI_MAX_VERTEX_COUNT)
 	{
 		auto errorMsg = FText::Format(NSLOCTEXT("UIBatchMeshRenderable", "TooManyTrianglesInSingleUIElement", "{0} Too many vertex ({1}) in single UI element: {2}")
 			, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__))
-			, geometry->OriginVertices.Num()
+			, UIGeometry->OriginVertices.Num()
 #if WITH_EDITOR
 			, FText::FromString(Widget->GetOwner()->GetActorLabel())
 #else
@@ -299,7 +299,7 @@ bool ULexVisualBatchMesh::LineTraceUI(FHitResult& OutHit, const FVector& Start, 
 		return LineTraceUIRect(OutHit, Start, End);
 		break;
 	case ELexVisualHitTestType::Mesh:
-		return LineTraceUIGeometry(geometry.Get(), OutHit, Start, End);
+		return LineTraceUIGeometry(UIGeometry.Get(), OutHit, Start, End);
 		break;
 	case ELexVisualHitTestType::VisiblePixel:
 		return LineTraceVisiblePixel(VisiblePixelThreshold, OutHit, Start, End);
@@ -323,9 +323,9 @@ bool ULexVisualBatchMesh::LineTraceVisiblePixel(float InAlphaThreshold, FHitResu
 	{
 		//triangle hit test
 		//triangle hit test
-		auto& originVertices = geometry->OriginVertices;
-		auto& vertices = geometry->Vertices;
-		auto& triangleIndices = geometry->Triangles;
+		auto& originVertices = UIGeometry->OriginVertices;
+		auto& vertices = UIGeometry->Vertices;
+		auto& triangleIndices = UIGeometry->Triangles;
 		const int triangleCount = triangleIndices.Num() / 3;
 		int index = 0;
 		for (int i = 0; i < triangleCount; i++)
@@ -381,7 +381,7 @@ bool ULexVisualBatchMesh::LineTraceVisiblePixel(float InAlphaThreshold, FHitResu
 
 void ULexVisualBatchMesh::CalculateLocalBounds()
 {
-	auto& originVertices = geometry->OriginVertices;
+	auto& originVertices = UIGeometry->OriginVertices;
 	float horizontalMin = MAX_flt, horizontalMax = -MAX_flt;
 	float verticalMin = MAX_flt, verticalMax = -MAX_flt;
 	float forwardMin = MAX_flt, forwardMax = -MAX_flt;

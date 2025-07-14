@@ -48,10 +48,10 @@ void UUITexture::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 
 void UUITexture::CheckSpriteData()
 {
-	if (IsValid(texture))
+	if (IsValid(Texture))
 	{
-		spriteData.width = texture->GetSurfaceWidth();
-		spriteData.height = texture->GetSurfaceHeight();
+		spriteData.width = Texture->GetSurfaceWidth();
+		spriteData.height = Texture->GetSurfaceHeight();
 		if (type != EUITextureType::Tiled)
 		{
 			ApplyUVRect();
@@ -71,8 +71,8 @@ void UUITexture::ApplyUVRect()
 	case EUITextureUVRectControlMode::KeepAspectRatio_FitIn:
 		{
 			auto Widget = GetWidget();
-			auto TextureWidth = texture->GetSurfaceWidth();
-			auto TextureHeight = texture->GetSurfaceHeight();
+			auto TextureWidth = Texture->GetSurfaceWidth();
+			auto TextureHeight = Texture->GetSurfaceHeight();
 			auto TextureAspect = TextureWidth / TextureHeight;
 			auto ThisWidth = Widget->GetRenderWidth();
 			auto ThisHeight = Widget->GetRenderHeight();
@@ -94,8 +94,8 @@ void UUITexture::ApplyUVRect()
 	case EUITextureUVRectControlMode::KeepAspectRatio_Envelope:
 		{
 			auto Widget = GetWidget();
-			auto TextureWidth = texture->GetSurfaceWidth();
-			auto TextureHeight = texture->GetSurfaceHeight();
+			auto TextureWidth = Texture->GetSurfaceWidth();
+			auto TextureHeight = Texture->GetSurfaceHeight();
 			auto TextureAspect = TextureWidth / TextureHeight;
 			auto ThisWidth = Widget->GetRenderWidth();
 			auto ThisHeight = Widget->GetRenderHeight();
@@ -185,7 +185,7 @@ void UUITexture::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged,
 void UUITexture::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
 {
     Super::OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
-	if (!IsValid(texture))return;
+	if (!IsValid(Texture))return;
 	if (type == EUITextureType::Tiled)
 	{
         if (InWidthChange || InHeightChange)
@@ -240,7 +240,7 @@ void UUITexture::SetUVRect(FVector4 newUVRect)
 
 void UUITexture::SetTexture(UTexture* newTexture)
 {
-	if (texture != newTexture)
+	if (Texture != newTexture)
 	{
 		Super::SetTexture(newTexture);
 		if (UVRectControlMode == EUITextureUVRectControlMode::KeepAspectRatio_FitIn

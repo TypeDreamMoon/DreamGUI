@@ -381,7 +381,7 @@ private:
 	void UpdateCaretPosition(FVector2f InCaretPosition, bool InHideSelection = true);
 	void UpdateSelection();
 	void HideSelectionMask();
-	//a sprite for caret, can blink, can represent current caret location
+	//a Sprite for caret, can blink, can represent current caret location
 	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> CaretWidget;
 	//selection mask
 	UPROPERTY(Transient)TArray<TWeakObjectPtr<UUISprite>> SelectionMaskObjectArray;
@@ -402,7 +402,7 @@ private:
 protected:
 	virtual void OnUIActiveInHierachy(bool ativeOrInactive)override;
 	virtual void OnUIInteractionStateChanged(bool interactableOrNot)override;
-	virtual void OnUIDimensionsChanged(bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)override;
+	virtual void OnUIDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
 
 	virtual bool OnPointerEnter_Implementation(ULGUIPointerEventData* eventData)override;
 	virtual bool OnPointerExit_Implementation(ULGUIPointerEventData* eventData)override;

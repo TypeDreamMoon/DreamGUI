@@ -29,7 +29,7 @@ class LGUI_API UUIScrollViewWithScrollbarComponent : public UUIScrollViewCompone
 public:
 	UUIScrollViewWithScrollbarComponent();
 protected:
-	virtual void OnUIDimensionsChanged(bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)override;
+	virtual void OnUIDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
 protected:
 	friend class FUIScrollViewWithScrollBarCustomization;
 	//For scrollbars to expand or shrink viewport

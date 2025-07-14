@@ -212,13 +212,13 @@ namespace LGUISceneOutliner
 					ULexWidget* UIItemB = Cast<ULexWidget>(RootCompB);
 					if (UIItemA != nullptr && UIItemB != nullptr)
 					{
-						if (UIItemA->GetHierarchyIndex() == UIItemB->GetHierarchyIndex())
+						if (UIItemA->GetSiblingIndex() == UIItemB->GetSiblingIndex())
 						{
 							result = ActorA->GetActorLabel().Compare(ActorB->GetActorLabel()) > 0;
 						}
 						else
 						{
-							result = UIItemA->GetHierarchyIndex() > UIItemB->GetHierarchyIndex();
+							result = UIItemA->GetSiblingIndex() > UIItemB->GetSiblingIndex();
 						}
 					}
 					else

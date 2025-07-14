@@ -9,20 +9,20 @@
 #include "DetailCategoryBuilder.h"
 
 #define LOCTEXT_NAMESPACE "UISpriteBaseCustomization"
-FUISpriteBaseCustomization::FUISpriteBaseCustomization()
+FLexUISpriteBaseCustomization::FLexUISpriteBaseCustomization()
 {
 }
 
-FUISpriteBaseCustomization::~FUISpriteBaseCustomization()
+FLexUISpriteBaseCustomization::~FLexUISpriteBaseCustomization()
 {
 	
 }
 
-TSharedRef<IDetailCustomization> FUISpriteBaseCustomization::MakeInstance()
+TSharedRef<IDetailCustomization> FLexUISpriteBaseCustomization::MakeInstance()
 {
-	return MakeShareable(new FUISpriteBaseCustomization);
+	return MakeShareable(new FLexUISpriteBaseCustomization);
 }
-void FUISpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
+void FLexUISpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
 	TArray<TWeakObjectPtr<UObject>> targetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(targetObjects);
@@ -47,8 +47,8 @@ void FUISpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 
 	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("LGUI");
 
-	category.AddProperty(GET_MEMBER_NAME_CHECKED(UUISpriteBase, sprite));
-	auto spriteHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISpriteBase, sprite));
+	category.AddProperty(GET_MEMBER_NAME_CHECKED(UUISpriteBase, Sprite));
+	auto spriteHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISpriteBase, Sprite));
 	spriteHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this, &DetailBuilder] {
 		for (auto item : TargetScriptArray)
 		{
@@ -101,7 +101,7 @@ void FUISpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 						[
 							SNew(STextBlock)
 							.ColorAndOpacity(FLinearColor::Yellow)
-							.Text(LOCTEXT("NotSupportVisiblePixelRaycast_Text", "Use RaycastType of VisiblePixel, but this sprite does not support this type."))
+							.Text(LOCTEXT("NotSupportVisiblePixelRaycast_Text", "Use RaycastType of VisiblePixel, but this Sprite does not support this type."))
 							.Font(IDetailLayoutBuilder::GetDetailFont())
 						]
 					;
@@ -140,7 +140,7 @@ void FUISpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		];
 	}
 }
-void FUISpriteBaseCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
+void FLexUISpriteBaseCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
 {
 	if (DetailBuilder)
 	{

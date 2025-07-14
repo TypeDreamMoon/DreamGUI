@@ -111,7 +111,7 @@ private:
 	static bool bIsPlaying;
 #endif
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<ULexWidget>> AllRootUIItemArray;
+		TArray<TWeakObjectPtr<ULexWidget>> AllRootWidgetArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<ULexCanvas>> ScreenSpaceCanvasArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
@@ -153,10 +153,10 @@ private:
 public:
 #if WITH_EDITOR
 	static void RefreshAllUI(UWorld* InWorld = nullptr);
+	static void AddRootWidget(ULexWidget* InWidget);
+	static void RemoveRootWidget(ULexWidget* InWidget);
+	const TArray<TWeakObjectPtr<ULexWidget>>& GetAllRootUIItemArray()const { return AllRootWidgetArray; }
 #endif
-	static void AddRootUIItem(ULexWidget* InItem);
-	static void RemoveRootUIItem(ULexWidget* InItem);
-	const TArray<TWeakObjectPtr<ULexWidget>>& GetAllRootUIItemArray()const { return AllRootUIItemArray; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	static void RegisterLGUICultureChangedEvent(TScriptInterface<ILGUICultureChangedInterface> InItem);
@@ -198,7 +198,7 @@ public:
 	static bool RaycastHitUI(UWorld* InWorld, const TArray<ULexWidget*>& InWidgets, const FVector& LineStart, const FVector& LineEnd
 		, ULexWidget*& ResultSelectTarget, int& InOutTargetIndexInHitArray
 	);
-	static void DrawFrameOnUIItem(ULexWidget* InItem, bool IsScreenSpace = false);
+	static void DrawFrameOnWidget(ULexWidget* InItem, bool IsScreenSpace = false);
 	static void DrawNavigationArrow(UWorld* InWorld, const TArray<FVector>& InControlPoints, const FVector& InArrowPointA, const FVector& InArrowPointB, FColor const& InColor, bool IsScreenSpace = false);
 	static void DrawNavigationVisualizerOnUISelectable(UWorld* InWorld, UUISelectableComponent* InSelectable, bool IsScreenSpace = false);
 private:

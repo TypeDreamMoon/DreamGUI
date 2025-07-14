@@ -10,9 +10,9 @@
 
 class ULexUISpriteData;
 class UUISpriteBase;
-class IUISpriteRenderableInterface;
+class ILexUISpriteRenderInterface;
 
-//Static packing sprite into atlas
+//Static packing Sprite into atlas
 UCLASS(NotBlueprintable, NotBlueprintType, Experimental)
 class LGUI_API ULexUIStaticSpriteAtlasData :public UObject
 {
@@ -39,7 +39,7 @@ private:
 	/** Generated atlas texture. */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI")
 		TObjectPtr<UTexture2D> AtlasTexture = nullptr;
-	/** Collected sprite array to pack. */
+	/** Collected Sprite array to pack. */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		TArray<TObjectPtr<ULexUISpriteData>> SpriteArray;
 #if WITH_EDITORONLY_DATA
@@ -63,9 +63,9 @@ public:
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)override;
 	void AddSpriteData(ULexUISpriteData* InSpriteData);
 	void RemoveSpriteData(ULexUISpriteData* InSpriteData);
-	void AddRenderSprite(TScriptInterface<IUISpriteRenderableInterface> InSprite);
-	void RemoveRenderSprite(TScriptInterface<IUISpriteRenderableInterface> InSprite);
-	/** Check sprite and render sprite, remove not valid. */
+	void AddRenderSprite(TScriptInterface<ILexUISpriteRenderInterface> InSprite);
+	void RemoveRenderSprite(TScriptInterface<ILexUISpriteRenderInterface> InSprite);
+	/** Check Sprite and render Sprite, remove not valid. */
 	void CheckSprite();
 	bool PackAtlas();
 	void MarkNotInitialized();

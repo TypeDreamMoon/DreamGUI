@@ -28,10 +28,10 @@ protected:
 public:
 	const ULexWidget* GetWidgetBySlot(const ULexLayoutSlot* Slot);
 	
-	virtual void OnTransformChanged()override;
+	virtual void OnTransformChanged(){}
+	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange){};
 	
 	void UpdateLayout();
-	void MarkLayoutDirty(){bIsLayoutDirty = true;}
 	
 	virtual TSubclassOf<ULexLayoutSlot> GetSlotClass()const PURE_VIRTUAL(ULexLayout::GetSlotClass, return nullptr;)
 	virtual ULexLayoutSlot* GetSlot(const ULexWidget* Child)const;
@@ -43,12 +43,10 @@ public:
 	virtual float GetShrinkToChildrenHeight(){return 0;}
 	
 	virtual void OnChildDetached(const ULexWidget* Child);
-private:
-	bool bIsLayoutDirty = true;
 };
 
 UCLASS(Blueprintable, BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)
-class LGUI_API ULexLayoutSlot : public ULexWidgetSubObjectBehaviour
+class LGUI_API ULexLayoutSlot : public UObject
 {
 	GENERATED_BODY()
 
@@ -56,11 +54,13 @@ public:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
-	virtual ULexWidget* GetWidget() const override;
+	ULexWidget* GetWidget() const;
 	virtual bool GetLayoutControlWidth()const { return false; }
 	virtual bool GetLayoutControlHeight()const { return false; }
 	virtual bool GetLayoutControlHorizontalPosition()const { return false; }
 	virtual bool GetLayoutControlVerticalPosition()const { return false; }
 	
 	virtual void CalculateTransformFromLayout(){};
+private:
+	mutable TWeakObjectPtr<ULexWidget> CacheWidget;
 };

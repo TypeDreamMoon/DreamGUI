@@ -145,6 +145,8 @@ public:
 	static void LogClassFlags(UClass* cls);
 
 	static float Color255To1_Table[256];
+
+	static UTexture* GetDefaultWhiteTexture();
 private:
 	template<class T>
 	static void CollectComponentsInChildrenRecursive(AActor* InActor, TArray<T*>& InOutArray)

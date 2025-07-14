@@ -27,7 +27,7 @@ void UUICustomMesh::OnBeforeCreateOrUpdateGeometry()
 }
 UTexture* UUICustomMesh::GetTextureToCreateGeometry()
 {
-	return UUITextureBase::GetDefaultWhiteTexture();
+	return FLexUIUtils::GetDefaultWhiteTexture();
 }
 void UUICustomMesh::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {

@@ -102,25 +102,25 @@ void ULGUILifeCycleUIBehaviour::Call_Awake()
 	Super::Call_Awake();
 }
 
-void ULGUILifeCycleUIBehaviour::OnUIDimensionsChanged(bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
+void ULGUILifeCycleUIBehaviour::OnUIDimensionsChanged(bool PivotChanged, bool widthChanged, bool heightChanged)
 {
 	if (bCanExecuteBlueprintEvent)
 	{
-		ReceiveOnUIDimensionsChanged(horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
+		ReceiveOnUIDimensionsChanged(PivotChanged, widthChanged, heightChanged);
 	}
 }
-void ULGUILifeCycleUIBehaviour::OnUIChildDimensionsChanged(ULexWidget* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
+void ULGUILifeCycleUIBehaviour::OnUIChildDimensionsChanged(ULexWidget* Child, bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
 	if (bCanExecuteBlueprintEvent)
 	{
-		ReceiveOnUIChildDimensionsChanged(child, horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
+		ReceiveOnUIChildDimensionsChanged(Child, PivotChanged, WidthChanged, HeightChanged);
 	}
 }
-void ULGUILifeCycleUIBehaviour::OnUIChildAcitveInHierarchy(ULexWidget* child, bool ativeOrInactive)
+void ULGUILifeCycleUIBehaviour::OnUIChildAcitveInHierarchy(ULexWidget* Child, bool ativeOrInactive)
 {
 	if (bCanExecuteBlueprintEvent)
 	{
-		ReceiveOnUIChildAcitveInHierarchy(child, ativeOrInactive);
+		ReceiveOnUIChildAcitveInHierarchy(Child, ativeOrInactive);
 	}
 }
 void ULGUILifeCycleUIBehaviour::OnUIAttachmentChanged()
@@ -130,11 +130,11 @@ void ULGUILifeCycleUIBehaviour::OnUIAttachmentChanged()
 		ReceiveOnUIAttachmentChanged();
 	}
 }
-void ULGUILifeCycleUIBehaviour::OnUIChildAttachmentChanged(ULexWidget* child, bool attachOrDetach) 
+void ULGUILifeCycleUIBehaviour::OnUIChildAttachmentChanged(ULexWidget* Child, bool attachOrDetach) 
 { 
 	if (bCanExecuteBlueprintEvent)
 	{
-		ReceiveOnUIChildAttachmentChanged(child, attachOrDetach);
+		ReceiveOnUIChildAttachmentChanged(Child, attachOrDetach);
 	}
 }
 void ULGUILifeCycleUIBehaviour::OnUIInteractionStateChanged(bool interactableOrNot)
@@ -144,28 +144,28 @@ void ULGUILifeCycleUIBehaviour::OnUIInteractionStateChanged(bool interactableOrN
 		ReceiveOnUIInteractionStateChanged(interactableOrNot);
 	}
 }
-void ULGUILifeCycleUIBehaviour::OnUIChildHierarchyIndexChanged(ULexWidget* child)
+void ULGUILifeCycleUIBehaviour::OnUIChildHierarchyIndexChanged(ULexWidget* Child)
 { 
 	if (bCanExecuteBlueprintEvent)
 	{
-		ReceiveOnUIChildHierarchyIndexChanged(child);
+		ReceiveOnUIChildHierarchyIndexChanged(Child);
 	}
 }
 
 
-void ULGUILifeCycleUIBehaviour::Call_OnUIDimensionsChanged(bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
+void ULGUILifeCycleUIBehaviour::Call_OnUIDimensionsChanged(bool PivotChanged, bool widthChanged, bool heightChanged)
 {
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())//edit mode
 	{
-		OnUIDimensionsChanged(horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
+		OnUIDimensionsChanged(PivotChanged, widthChanged, heightChanged);
 	}
 	else
 #endif
 	{
 		if (bIsAwakeCalled)
 		{
-			OnUIDimensionsChanged(horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
+			OnUIDimensionsChanged(PivotChanged, widthChanged, heightChanged);
 		}
 		else
 		{
@@ -173,33 +173,33 @@ void ULGUILifeCycleUIBehaviour::Call_OnUIDimensionsChanged(bool horizontalPositi
 			CallbacksBeforeAwake[(int)ECallbackFunctionType::Call_OnUIDimensionsChanged] = [=]() {
 				if (ThisPtr.IsValid())
 				{
-					ThisPtr->OnUIDimensionsChanged(horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
+					ThisPtr->OnUIDimensionsChanged(PivotChanged, widthChanged, heightChanged);
 				}};
 		}
 	}
 }
-void ULGUILifeCycleUIBehaviour::Call_OnUIChildDimensionsChanged(ULexWidget* child, bool horizontalPositionChanged, bool verticalPositionChanged, bool widthChanged, bool heightChanged)
+void ULGUILifeCycleUIBehaviour::Call_OnUIChildDimensionsChanged(ULexWidget* Child, bool Pivot, bool WidthChanged, bool HeightChanged)
 {
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())//edit mode
 	{
-		OnUIChildDimensionsChanged(child, horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
+		OnUIChildDimensionsChanged(Child, Pivot, WidthChanged, HeightChanged);
 	}
 	else
 #endif
 	{
 		if (bIsAwakeCalled)
 		{
-			OnUIChildDimensionsChanged(child, horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
+			OnUIChildDimensionsChanged(Child, Pivot, WidthChanged, HeightChanged);
 		}
 		else
 		{
 			auto ThisPtr = MakeWeakObjectPtr(this);
-			auto ChildPtr = MakeWeakObjectPtr(child);
+			auto ChildPtr = MakeWeakObjectPtr(Child);
 			CallbacksBeforeAwake[(int)ECallbackFunctionType::Call_OnUIChildDimensionsChanged] = [=]() {
 				if (ThisPtr.IsValid() && ChildPtr.IsValid())
 				{
-					ThisPtr->OnUIChildDimensionsChanged(ChildPtr.Get(), horizontalPositionChanged, verticalPositionChanged, widthChanged, heightChanged);
+					ThisPtr->OnUIChildDimensionsChanged(ChildPtr.Get(), Pivot, WidthChanged, HeightChanged);
 				}};
 		}
 	}

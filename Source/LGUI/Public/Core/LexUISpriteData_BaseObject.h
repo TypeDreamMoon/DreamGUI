@@ -9,11 +9,11 @@
 #include "LexUISpriteData_BaseObject.generated.h"
 
 class UUISpriteBase;
-class IUISpriteRenderableInterface;
+class ILexUISpriteRenderInterface;
 
 /**
- * Base class for sprite data.
- * A sprite is a small area renderred in a big atlas texture.
+ * Base class for Sprite data.
+ * A Sprite is a small area rendered in a big atlas texture.
  */
 UCLASS(Abstract, BlueprintType)
 class LGUI_API ULexUISpriteData_BaseObject :public UObject
@@ -24,7 +24,7 @@ public:
 		virtual UTexture2D* GetAtlasTexture()PURE_VIRTUAL(ULGUISpriteData_BaseObject::GetAtlasTexture, return nullptr;);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		virtual const FLexUISpriteInfo& GetSpriteInfo()PURE_VIRTUAL(ULGUISpriteData_BaseObject::GetSpriteInfo, static FLexUISpriteInfo ForReturn; return ForReturn;);
-	/** This sprite-data is a individal one? Means it will not pack into any atlas texture. */
+	/** This Sprite-data is a individual one? Means it will not pack into any atlas texture. */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		virtual bool IsIndividual()const PURE_VIRTUAL(ULGUISpriteData_BaseObject::IsIndividual, return false;);
 	/**
@@ -36,12 +36,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		virtual bool ReadPixel(const FVector2D& InUV, FColor& OutPixel)const PURE_VIRTUAL(ULGUISpriteData_BaseObject::ReadPixel, return false;);
 	/**
-	 * Can we read texture's pixel from this sprite object?
+	 * Can we read texture's pixel from this Sprite object?
 	 */
 	virtual bool SupportReadPixel()const PURE_VIRTUAL(ULGUISpriteData_BaseObject::SupportReadPixel, return false;);
 
-	virtual void AddUISprite(TScriptInterface<IUISpriteRenderableInterface> InUISprite) {};
-	virtual void RemoveUISprite(TScriptInterface<IUISpriteRenderableInterface> InUISprite) {};
+	virtual void AddUISprite(TScriptInterface<ILexUISpriteRenderInterface> InUISprite) {};
+	virtual void RemoveUISprite(TScriptInterface<ILexUISpriteRenderInterface> InUISprite) {};
 
 //#if WITH_EDITOR
 //	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)override;

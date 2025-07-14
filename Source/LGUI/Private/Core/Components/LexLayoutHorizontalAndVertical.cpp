@@ -246,7 +246,7 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 			auto LayoutSlotA = (ULexLayoutHorizontalAndVerticalSlot*)A.GetLayoutSlot();
 			auto LayoutSlotB = (ULexLayoutHorizontalAndVerticalSlot*)B.GetLayoutSlot();
 			if (LayoutSlotA->GetOrder() == LayoutSlotB->GetOrder())
-				return A.GetHierarchyIndex() < B.GetHierarchyIndex();
+				return A.GetSiblingIndex() < B.GetSiblingIndex();
 			return LayoutSlotA->GetOrder() < LayoutSlotB->GetOrder();
 		});
 	}
@@ -279,10 +279,16 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 				}
 				float OffsetByMargin = Child->GetMargin().Left;
 				auto Pos = Child->GetRelativeLocation();
-				Pos.Y = ChildPosition.Y + HalfChildWidth + OffsetByMargin;
+				auto PivotOffsetX =
+					Child->GetRenderSize().X * (Child->GetPivot().X - 0.5f)//this pivot
+				+ Widget->GetRenderSize().X * (0.5f - Widget->GetPivot().X);//parent pivot
+				Pos.Y = ChildPosition.Y + HalfChildWidth + OffsetByMargin + PivotOffsetX;
 				float OffsetV = Widget->GetPadding().Bottom - Widget->GetPadding().Top + (Child->GetMargin().Bottom - Child->GetMargin().Top);
 				OffsetV *= 0.5f;
-				Pos.Z = ChildVOffset + OffsetV;
+				auto PivotOffsetY =
+					Child->GetRenderSize().Y * (Child->GetPivot().Y - 0.5f)//this pivot
+				+ Widget->GetRenderSize().Y * (0.5f - Widget->GetPivot().Y);//parent pivot
+				Pos.Z = ChildVOffset + OffsetV + PivotOffsetY;
 				Child->SetRelativeLocation(Pos);
 				ChildPosition.Y += ChildSize.X + (Child->GetMargin().Left + Child->GetMargin().Right) + SpaceValue;
 			}
@@ -305,10 +311,16 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 				}
 				float OffsetByMargin = Child->GetMargin().Bottom;
 				auto Pos = Child->GetRelativeLocation();
-				Pos.Z = ChildPosition.Z - HalfChildHeight + OffsetByMargin;
+				auto PivotOffsetY =
+					Child->GetRenderSize().Y * (Child->GetPivot().Y - 0.5f)//this pivot
+				+ Widget->GetRenderSize().Y * (0.5f - Widget->GetPivot().Y);//parent pivot
+				Pos.Z = ChildPosition.Z - HalfChildHeight + OffsetByMargin + PivotOffsetY;
 				float OffsetH = Widget->GetPadding().Left - Widget->GetPadding().Right + (Child->GetMargin().Left - Child->GetMargin().Right);
 				OffsetH *= 0.5f;
-				Pos.Y = ChildHOffset + OffsetH;
+				auto PivotOffsetX =
+					Child->GetRenderSize().X * (Child->GetPivot().X - 0.5f)//this pivot
+				+ Widget->GetRenderSize().X * (0.5f - Widget->GetPivot().X);//parent pivot
+				Pos.Y = ChildHOffset + OffsetH + PivotOffsetX;
 				Child->SetRelativeLocation(Pos);
 				ChildPosition.Z -= ChildSize.Y + (Child->GetMargin().Top + Child->GetMargin().Bottom) + SpaceValue;
 			}
@@ -432,7 +444,7 @@ void ULexLayoutHorizontalAndVertical::SetDirection(ELexLayoutDirection Value)
 	if (Direction != Value)
 	{
 		Direction = Value;
-		GetWidget()->MarkSizeDirty_Recursive();
+		GetWidget()->MarkRenderSizeChanged();
 	}
 }
 
@@ -441,7 +453,7 @@ void ULexLayoutHorizontalAndVertical::SetHorizontalAlignment(ELexLayoutHorizonta
 	if (HorizontalAlignment != Value)
 	{
 		HorizontalAlignment = Value;
-		GetWidget()->MarkSizeDirty_Recursive();
+		GetWidget()->MarkRenderSizeChanged();
 	}
 }
 void ULexLayoutHorizontalAndVertical::SetVerticalAlignment(ELexLayoutVerticalAlignment Value)
@@ -449,7 +461,7 @@ void ULexLayoutHorizontalAndVertical::SetVerticalAlignment(ELexLayoutVerticalAli
 	if (VerticalAlignment != Value)
 	{
 		VerticalAlignment = Value;
-		GetWidget()->MarkSizeDirty_Recursive();
+		GetWidget()->MarkRenderSizeChanged();
 	}
 }
 void ULexLayoutHorizontalAndVertical::SetSpacing(const FLexLayoutSpacing& Value)
@@ -457,7 +469,7 @@ void ULexLayoutHorizontalAndVertical::SetSpacing(const FLexLayoutSpacing& Value)
 	if (Spacing != Value)
 	{
 		Spacing = Value;
-		GetWidget()->MarkSizeDirty_Recursive();
+		GetWidget()->MarkRenderSizeChanged();
 	}
 }
 
@@ -486,7 +498,7 @@ void ULexLayoutHorizontalAndVerticalSlot::SetHorizontalAlignment(ELexLayoutHoriz
 	if (HorizontalAlignment != Value)
 	{
 		HorizontalAlignment = Value;
-		GetWidget()->MarkSizeDirty_Recursive();
+		GetWidget()->MarkRenderSizeChanged();
 	}
 }
 void ULexLayoutHorizontalAndVerticalSlot::SetVerticalAlignment(ELexLayoutVerticalAlignment Value)
@@ -494,7 +506,7 @@ void ULexLayoutHorizontalAndVerticalSlot::SetVerticalAlignment(ELexLayoutVertica
 	if (VerticalAlignment != Value)
 	{
 		VerticalAlignment = Value;
-		GetWidget()->MarkSizeDirty_Recursive();
+		GetWidget()->MarkRenderSizeChanged();
 	}
 }
 void ULexLayoutHorizontalAndVerticalSlot::SetPositionOffset(const FVector2D& Value)
@@ -502,7 +514,7 @@ void ULexLayoutHorizontalAndVerticalSlot::SetPositionOffset(const FVector2D& Val
 	if (PositionOffset != Value)
 	{
 		PositionOffset = Value;
-		GetWidget()->MarkSizeDirty_Recursive();
+		GetWidget()->MarkRenderSizeChanged();
 	}
 }
 
@@ -511,7 +523,7 @@ void ULexLayoutHorizontalAndVerticalSlot::SetOrder(int32 Value)
 	if (Order != Value)
 	{
 		Order = Value;
-		GetWidget()->MarkSizeDirty_Recursive();
+		GetWidget()->MarkRenderSizeChanged();
 	}
 }
 
@@ -520,7 +532,7 @@ void ULexLayoutHorizontalAndVerticalSlot::SetGrow(float Value)
 	if (Grow != Value)
 	{
 		Grow = Value;
-		GetWidget()->MarkSizeDirty_Recursive();
+		GetWidget()->MarkRenderSizeChanged();
 	}
 }
 
@@ -529,7 +541,7 @@ void ULexLayoutHorizontalAndVerticalSlot::SetShrink(float Value)
 	if (Shrink != Value)
 	{
 		Shrink = Value;
-		GetWidget()->MarkSizeDirty_Recursive();
+		GetWidget()->MarkRenderSizeChanged();
 	}
 }
 
