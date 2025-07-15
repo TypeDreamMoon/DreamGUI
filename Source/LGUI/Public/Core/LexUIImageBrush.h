@@ -30,6 +30,10 @@ private:
 		, AllowedClasses = "/Script/Engine.Texture,/Script/Engine.MaterialInterface,/Script/Engine.SlateTextureAtlasInterface,/Script/LGUI.LexUISpriteData_BaseObject"))
 	TObjectPtr<UObject> ResourceObject;
 public:
+	static FName GetPropertyName_ResourceObject()
+	{
+		return GET_MEMBER_NAME_CHECKED(FLexUIImageBrush, ResourceObject);
+	}
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush")
 	FColor TintColor = FColor::White;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush")

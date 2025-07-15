@@ -2,14 +2,14 @@
 
 #include "Core/Components/LexCanvasScaler.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/Components/LexCanvas.h"
 #if WITH_EDITOR
 #include "Core/LGUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "DrawDebugHelpers.h"
 #include "Editor.h"
 #include "Core/LGUISettings.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
+#include "Core/LexUIRender/LexUIRenderer.h"
 #include "EditorViewportClient.h"
 #include "LevelEditorViewport.h"
 #endif
@@ -44,56 +44,6 @@ void ULexCanvasScaler::Awake()
 	if (IsValid(CustomScale))
 	{
 		CustomScale->Init(this);
-	}
-}
-void ULexCanvasScaler::OnEnable()
-{
-	Super::OnEnable();
-	CheckCanvas();
-	SetCanvasProperties();
-	if (CheckCanvas())
-	{
-		if (Canvas->IsRootCanvas())
-		{
-			if (Canvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay
-				|| Canvas->GetRenderMode() == ELexRenderMode::RenderTarget
-				)
-			{
-				CheckAndApplyViewportParameter();
-
-				if (Canvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
-				{
-					if (auto world = GetWorld())
-					{
-						if (auto gameViewport = world->GetGameViewport())
-						{
-							if (auto viewport = gameViewport->Viewport)
-							{
-								_ViewportResizeDelegateHandle = viewport->ViewportResizedEvent.AddUObject(this, &ULexCanvasScaler::OnViewportResized);
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
-void ULexCanvasScaler::OnDisable()
-{
-	Super::OnDisable();
-	if (_ViewportResizeDelegateHandle.IsValid())
-	{
-		if (auto world = GetWorld())
-		{
-			if (auto gameViewport = world->GetGameViewport())
-			{
-				if (auto viewport = gameViewport->Viewport)
-				{
-					viewport->ViewportResizedEvent.Remove(_ViewportResizeDelegateHandle);
-				}
-			}
-		}
 	}
 }
 
@@ -283,6 +233,35 @@ void ULexCanvasScaler::OnRegister()
 		LGUIPreview_ViewportIndexChangeDelegateHandle = ULGUIEditorSettings::LGUIPreviewSetting_EditorPreviewViewportIndexChange.AddUObject(this, &ULexCanvasScaler::OnPreviewSetting_EditorPreviewViewportIndexChange);
 	}
 #endif
+
+	CheckCanvas();
+	SetCanvasProperties();
+	if (CheckCanvas())
+	{
+		if (Canvas->IsRootCanvas())
+		{
+			if (Canvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay
+				|| Canvas->GetRenderMode() == ELexRenderMode::RenderTarget
+				)
+			{
+				CheckAndApplyViewportParameter();
+
+				if (Canvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
+				{
+					if (auto world = GetWorld())
+					{
+						if (auto gameViewport = world->GetGameViewport())
+						{
+							if (auto viewport = gameViewport->Viewport)
+							{
+								_ViewportResizeDelegateHandle = viewport->ViewportResizedEvent.AddUObject(this, &ULexCanvasScaler::OnViewportResized);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }
 void ULexCanvasScaler::OnUnregister()
 {
@@ -305,6 +284,20 @@ void ULexCanvasScaler::OnUnregister()
 	if (Canvas.IsValid())
 	{
 		Canvas->canvasScale = 1.0f;
+	}
+
+	if (_ViewportResizeDelegateHandle.IsValid())
+	{
+		if (auto world = GetWorld())
+		{
+			if (auto gameViewport = world->GetGameViewport())
+			{
+				if (auto viewport = gameViewport->Viewport)
+				{
+					viewport->ViewportResizedEvent.Remove(_ViewportResizeDelegateHandle);
+				}
+			}
+		}
 	}
 }
 

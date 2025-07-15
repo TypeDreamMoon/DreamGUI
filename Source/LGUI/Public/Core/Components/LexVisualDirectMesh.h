@@ -3,8 +3,8 @@
 #pragma once
 
 #include "LexVisual.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
-#include "UIDirectMeshRenderable.generated.h"
+#include "Core/Components/LexCanvas.h"
+#include "LexVisualDirectMesh.generated.h"
 
 struct FLexUIRenderSection;
 class ULexUIMeshComponent;
@@ -12,12 +12,12 @@ class ULexUIMeshComponent;
  * UI element that render directly to LGUICanvas's mesh section. Each UIDirectMeshRenderable is considered as a drawcall.
  */
 UCLASS(Abstract, NotBlueprintable)
-class LGUI_API UUIDirectMeshRenderable : public ULexVisual
+class LGUI_API ULexVisualDirectMesh : public ULexVisual
 {
 	GENERATED_BODY()
 
 public:	
-	UUIDirectMeshRenderable(const FObjectInitializer& ObjectInitializer);
+	ULexVisualDirectMesh(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	virtual void BeginPlay() override;
@@ -34,7 +34,7 @@ protected:
 
 	virtual bool LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const override;
 public:
-	/** Called by LGUICanvas when this UI element have valid mesh data. */
+	/** Called by Canvas when this UI element have valid mesh data. */
 	virtual void OnMeshDataReady();
 	virtual TWeakPtr<FLexUIRenderSection> GetMeshSection()const;
 	virtual TWeakObjectPtr<ULexUIMeshComponent> GetUIMesh()const;

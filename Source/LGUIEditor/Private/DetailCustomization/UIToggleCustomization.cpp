@@ -3,10 +3,8 @@
 #include "DetailCustomization/UIToggleCustomization.h"
 #include "LGUIEditorUtils.h"
 #include "Core/Components/LexWidget.h"
-#include "Core/Actor/LexWidgetActor.h"
 #include "IDetailGroup.h"
 #include "Interaction/UIToggleGroupComponent.h"
-#include "Interaction/UISelectableTransitionComponent.h"
 #include "Interaction/UIToggleComponent.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
@@ -40,12 +38,9 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 	toggleActorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIToggleCustomization::ForceRefresh, &DetailBuilder));
 
 	ULexWidget* targetUIItem = nullptr;
-	UUISelectableTransitionComponent* targetTweenComp = nullptr;
-	if (TargetScriptPtr->ToggleTarget.IsValid())
-	{
-		targetUIItem = TargetScriptPtr->ToggleTarget.Get();
-		targetTweenComp = TargetScriptPtr->ToggleTarget->GetOwner()->FindComponentByClass<UUISelectableTransitionComponent>();
-	}
+	UUISelectableTransitionComponent* ToggleTransitionComp = nullptr;
+	auto CustomTransition_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleTransitionComp));
+	CustomTransition_PH->GetValue(*(UObject**)&ToggleTransitionComp);
 
 	uint8 transitionType;
 	transitionHandle->GetValue(transitionType);
@@ -115,7 +110,7 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 	else if (transitionType == (uint8)(UIToggleTransitionType::TransitionComponent))
 	{
 		transitionGroup.AddPropertyRow(toggleActorHandle);
-		if (!targetTweenComp)
+		if (!ToggleTransitionComp)
 		{
 			transitionGroup.AddWidgetRow()
 				.ValueContent()

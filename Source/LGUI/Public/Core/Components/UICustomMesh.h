@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "LGUI/Public/Core/Components/LexVisualBatchMesh.h"
+#include "Core/Components/LexVisualBatchMesh.h"
 #include "UICustomMesh.generated.h"
 
 class ULGUICustomMesh;

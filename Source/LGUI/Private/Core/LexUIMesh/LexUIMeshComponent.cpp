@@ -1,21 +1,21 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUI/Public/Core/LexUIMesh/LexUIMeshComponent.h"
+#include "Core/LexUIMesh/LexUIMeshComponent.h"
 #include "DynamicMeshBuilder.h"
 #include "PhysicsEngine/BodySetup.h"
 #include "Containers/ResourceArray.h"
 #include "StaticMeshResources.h"
 #include "Materials/Material.h"
-#include "LGUI/Public/Core/LexUIRender/ILexUIRendererPrimitive.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
+#include "Core/LexUIRender/ILexUIRendererPrimitive.h"
+#include "Core/LexUIRender/LexUIRenderer.h"
 #include "Engine/Engine.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/Components/LexCanvas.h"
 #include "Materials/MaterialRenderProxy.h"
 #include "MaterialDomain.h"
 #include "PrimitiveSceneProxy.h"
 #include "Core/LexVisualPostProcessRenderProxy.h"
-#include "LGUI/Public/Core/Components/LexVisualPostProcess.h"
+#include "Core/Components/LexVisualPostProcess.h"
 #include "PrimitiveSceneInfo.h"
 
 

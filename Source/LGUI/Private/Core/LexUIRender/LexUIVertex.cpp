@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
+#include "Core/LexUIRender/LexUIVertex.h"
 #include "RHI.h"
 
 

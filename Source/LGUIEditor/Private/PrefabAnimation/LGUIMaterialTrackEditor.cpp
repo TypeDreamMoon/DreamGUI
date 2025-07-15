@@ -1,6 +1,9 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "LGUIMaterialTrackEditor.h"
+
+#include "Core/Components/LexImage.h"
+#include "Core/Components/LexText.h"
 #include "Core/Components/LexVisualBatchMesh.h"
 #include "PrefabAnimation/MovieSceneLGUIMaterialTrack.h"
 
@@ -27,10 +30,14 @@ UMaterialInterface* FLGUIMaterialTrackEditor::GetMaterialInterfaceForTrack( FGui
 {
 	for (TWeakObjectPtr<> WeakObjectPtr : GetSequencer()->FindObjectsInCurrentSequence(ObjectBinding))
 	{
-		auto Renderable = Cast<ULexVisualBatchMesh>( WeakObjectPtr.Get() );
-		if (Renderable != nullptr)
+		auto Visual = Cast<ULexVisualBatchMesh>( WeakObjectPtr.Get() );
+		if (auto Text = Cast<ULexText>(Visual))
 		{
-			return Renderable->GetCustomUIMaterial();
+			return Text->GetOverrideMaterial();
+		}
+		if (auto Image = Cast<ULexImage>(Visual))
+		{
+			return Cast<UMaterialInterface>(Image->GetBrush().GetResourceObject());
 		}
 	}
 	return nullptr;

@@ -12,9 +12,9 @@ void UUIScrollViewHelper::Awake()
     Super::Awake();
     this->SetCanExecuteUpdate(false);
 }
-void UUIScrollViewHelper::OnUIDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
+void UUIScrollViewHelper::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
-    Super::OnUIDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
+    Super::OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
     if (!TargetComp.IsValid())
     {
         this->DestroyComponent();
@@ -25,9 +25,9 @@ void UUIScrollViewHelper::OnUIDimensionsChanged(bool PivotChanged, bool WidthCha
         TargetComp->RecalculateRange();
     }
 }
-void UUIScrollViewHelper::OnUIChildDimensionsChanged(ULexWidget *Child, bool PivotChanged, bool WidthChanged, bool HeightChanged)
+void UUIScrollViewHelper::OnChildDimensionsChanged(ULexWidget *Child, bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
-    Super::OnUIChildDimensionsChanged(Child, PivotChanged, WidthChanged, HeightChanged);
+    Super::OnChildDimensionsChanged(Child, PivotChanged, WidthChanged, HeightChanged);
     if (!TargetComp.IsValid())
     {
         this->DestroyComponent();
@@ -118,18 +118,24 @@ void UUIScrollViewComponent::RecalculateRange()
         }
     }
 }
-void UUIScrollViewComponent::OnUIActiveInHierachy(bool ativeOrInactive)
+
+void UUIScrollViewComponent::OnLayoutVisibilityChanged()
 {
-    Super::OnUIActiveInHierachy(ativeOrInactive);
-    if (ativeOrInactive)
-    {
-        bRangeCalculated = false;
-        RecalculateRange();
-    }
+    Super::OnLayoutVisibilityChanged();
+    bRangeCalculated = false;
+    RecalculateRange();
 }
-void UUIScrollViewComponent::OnUIDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
+
+void UUIScrollViewComponent::OnTransformChanged()
 {
-    Super::OnUIDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
+    Super::OnTransformChanged();
+    bRangeCalculated = false;
+    RecalculateRange();
+}
+
+void UUIScrollViewComponent::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
+{
+    Super::OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
     bRangeCalculated = false;
     RecalculateRange();
 }
@@ -142,16 +148,16 @@ bool UUIScrollViewComponent::CheckParameters()
         return false;
     if (Content->GetAttachParentActor() == nullptr)
         return false;
-    auto contentParentActor = Cast<ALexWidgetActor>(Content->GetAttachParentActor());
-    if (contentParentActor == nullptr)
+    auto ContentParentActor = Cast<ALexWidgetActor>(Content->GetAttachParentActor());
+    if (ContentParentActor == nullptr)
         return false;
     ContentUIItem = Content->GetLexWidget();
-    ContentParentUIItem = contentParentActor->GetLexWidget();
+    ContentParentUIItem = ContentParentActor->GetLexWidget();
     if (ContentParentUIItem != nullptr)
     {
-        auto contentParentHelperComp = NewObject<UUIScrollViewHelper>(contentParentActor);
-        contentParentHelperComp->TargetComp = this;
-        contentParentHelperComp->RegisterComponent();
+        auto ContentParentHelperComp = NewObject<UUIScrollViewHelper>(ContentParentActor);
+        ContentParentHelperComp->TargetComp = this;
+        ContentParentHelperComp->RegisterComponent();
     }
     CheckRootUIComponent();
     if (ContentUIItem.IsValid() && ContentParentUIItem.IsValid() && RootUIComp.IsValid())

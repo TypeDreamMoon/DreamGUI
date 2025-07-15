@@ -2,13 +2,13 @@
 
 #include "Interaction/UISelectableComponent.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/LexVisual.h"
+#include "LTweenBPLibrary.h"
+#include "Core/Components/LexVisual.h"
 #include "Core/LGUIManager.h"
 #include "LTweenManager.h"
-#include "Interaction/UISelectableTransitionComponent.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/Components/LexCanvas.h"
 #include "Event/LGUIEventSystem.h"
-#include "LGUI/Public/Core/Components/UISprite.h"
+#include "Core/Components/UISprite.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/LGUISettings.h"
 #if WITH_EDITOR
@@ -19,55 +19,89 @@
 UE_DISABLE_OPTIMIZATION
 #endif
 
+
+void UUISelectableTransitionComponent::StopTransition() 
+{ 
+	for (auto tweener : TweenerCollection)
+	{
+		ULTweenBPLibrary::KillIfIsTweening(this, tweener);
+	}
+	TweenerCollection.Reset();
+}
+void UUISelectableTransitionComponent::CollectTweener(ULTweener* InItem)
+{
+	TweenerCollection.Add(InItem);
+}
+void UUISelectableTransitionComponent::CollectTweeners(const TSet<ULTweener*>& InItems)
+{
+	TweenerCollection.Reserve(TweenerCollection.Num() + InItems.Num());
+	for (auto item : InItems)
+	{
+		TweenerCollection.Add(item);
+	}
+}
+
+void UUISelectableTransitionComponent::OnInitialize()
+{
+	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
+	{
+		ReceiveOnInitialize();
+	}
+}
+
+void UUISelectableTransitionComponent::OnNormal(bool InImmediateSet)
+{ 
+	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
+	{
+		ReceiveOnNormal(InImmediateSet);
+	}
+}
+void UUISelectableTransitionComponent::OnHighlighted(bool InImmediateSet)
+{
+	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
+	{
+		ReceiveOnHighlighted(InImmediateSet);
+	}
+}
+void UUISelectableTransitionComponent::OnPressed(bool InImmediateSet)
+{
+	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
+	{
+		ReceiveOnPressed(InImmediateSet);
+	}
+}
+void UUISelectableTransitionComponent::OnDisabled(bool InImmediateSet)
+{
+	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
+	{
+		ReceiveOnDisabled(InImmediateSet);
+	}
+}
+void UUISelectableTransitionComponent::OnStartCustomTransition(FName InTransitionName, bool InImmediateSet)
+{
+	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
+	{
+		ReceiveOnStartCustomTransition(InTransitionName, InImmediateSet);
+	}
+}
+
 void UUISelectableComponent::Awake()
 {
 	Super::Awake();
 	this->SetCanExecuteUpdate(false);
 }
 
-void UUISelectableComponent::OnEnable()
+void UUISelectableComponent::OnRegister()
 {
-	Super::OnEnable();
+	Super::OnRegister();
 	ULGUIManagerWorldSubsystem::AddSelectable(this);
 	CurrentSelectionState = GetSelectionState();
 	ApplySelectionState(true);
 }
-
-void UUISelectableComponent::Start()
-{
-	Super::Start();
-}
-
-void UUISelectableComponent::OnDisable()
-{
-	Super::OnDisable();
-	ULGUIManagerWorldSubsystem::RemoveSelectable(this);
-}
-void UUISelectableComponent::OnDestroy()
-{
-	Super::OnDestroy();
-}
-
-void UUISelectableComponent::OnRegister()
-{
-	Super::OnRegister();
-#if WITH_EDITOR
-	//Add/Remove selectable inside OnRegister/OnUnregister in edit mode, and inside OnEnable/OnDisable in runtime mode
-	if (this->GetWorld() && !this->GetWorld()->IsGameWorld())
-	{
-		ULGUIManagerWorldSubsystem::AddSelectable(this);
-	}
-#endif
-}
 void UUISelectableComponent::OnUnregister()
 {
 	Super::OnUnregister();
-#if WITH_EDITOR
-	if (this->GetWorld() && !this->GetWorld()->IsGameWorld())
-	{
-		ULGUIManagerWorldSubsystem::RemoveSelectable(this);
-	}
-#endif
+	ULGUIManagerWorldSubsystem::RemoveSelectable(this);
 }
 
 #if WITH_EDITOR
@@ -105,7 +139,7 @@ void UUISelectableComponent::PostEditChangeProperty(FPropertyChangedEvent& Prope
 			else
 			{
 				bool bIsEnabled = RootUIComp->GetFinalIsEnabled();
-				if (Transition == UISelectableTransitionType::SpriteSwap)
+				if (Transition == ELexUISelectableTransitionType::SpriteSwap)
 				{
 					if (IsValid(TargetUISpriteComp) && IsValid(NormalSprite))
 					{
@@ -114,7 +148,7 @@ void UUISelectableComponent::PostEditChangeProperty(FPropertyChangedEvent& Prope
 					}
 					TransitionTarget->GetWidget()->EditorForceUpdate();
 				}
-				else if (Transition == UISelectableTransitionType::ColorTint)
+				else if (Transition == ELexUISelectableTransitionType::ColorTint)
 				{
 					TransitionTarget->SetColor(bIsEnabled ? NormalColor : DisabledColor);
 					FLexUIUtils::NotifyPropertyChanged(TransitionTarget.Get(), ULexVisual::GetColorPropertyName());
@@ -126,9 +160,9 @@ void UUISelectableComponent::PostEditChangeProperty(FPropertyChangedEvent& Prope
 }
 #endif
 
-void UUISelectableComponent::OnUIInteractionStateChanged(bool interactableOrNot)
+void UUISelectableComponent::OnIsEnabledChanged(bool IsEnabled)
 {
-	Super::OnUIInteractionStateChanged(interactableOrNot);
+	Super::OnIsEnabledChanged(IsEnabled);
 	if (CheckRootUIComponent())
 	{
 		CurrentSelectionState = GetSelectionState();
@@ -147,8 +181,7 @@ void UUISelectableComponent::OnUIInteractionStateChanged(bool interactableOrNot)
 
 void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 {
-	if (!this->GetIsActiveAndEnable())return;
-	if (Transition != UISelectableTransitionType::TransitionComponent)
+	if (Transition != ELexUISelectableTransitionType::TransitionComponent)
 	{
 		if (!TransitionTarget.IsValid())return;
 	}
@@ -159,7 +192,7 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 	{
 		switch (Transition)
 		{
-		case UISelectableTransitionType::ColorTint:
+		case ELexUISelectableTransitionType::ColorTint:
 		{
 			if(FadeDuration <= 0.0f || immediateSet)
 			{
@@ -191,7 +224,7 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 			}
 		}
 		break;
-		case UISelectableTransitionType::SpriteSwap:
+		case ELexUISelectableTransitionType::SpriteSwap:
 		{
 			if (auto TargetUISpriteComp = Cast<UUISpriteBase>(TransitionTarget))
 			{
@@ -199,17 +232,13 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 			}
 		}
 		break;
-		case UISelectableTransitionType::TransitionComponent:
+		case ELexUISelectableTransitionType::TransitionComponent:
 		{
 #if WITH_EDITOR
 			if (this->GetWorld()->IsGameWorld())
 #endif
 			{
-				if (!TransitionComp.IsValid())
-				{
-					TransitionComp = this->GetOwner()->FindComponentByClass<UUISelectableTransitionComponent>();
-				}
-				if (TransitionComp.IsValid() && TransitionComp->GetIsActiveAndEnable())
+				if (IsValid(TransitionComp))
 				{
 					TransitionComp->OnNormal(immediateSet);
 				}
@@ -223,7 +252,7 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 	{
 		switch (Transition)
 		{
-		case UISelectableTransitionType::ColorTint:
+		case ELexUISelectableTransitionType::ColorTint:
 		{
 			if (FadeDuration <= 0.0f || immediateSet)
 			{
@@ -255,7 +284,7 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 			}
 		}
 		break;
-		case UISelectableTransitionType::SpriteSwap:
+		case ELexUISelectableTransitionType::SpriteSwap:
 		{
 			if (auto TargetUISpriteComp = Cast<UUISpriteBase>(TransitionTarget))
 			{
@@ -266,17 +295,13 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 			}
 		}
 		break;
-		case UISelectableTransitionType::TransitionComponent:
+		case ELexUISelectableTransitionType::TransitionComponent:
 		{
 #if WITH_EDITOR
 			if (this->GetWorld()->IsGameWorld())
 #endif
 			{
-				if (!TransitionComp.IsValid())
-				{
-					TransitionComp = this->GetOwner()->FindComponentByClass<UUISelectableTransitionComponent>();
-				}
-				if (TransitionComp.IsValid() && TransitionComp->GetIsActiveAndEnable())
+				if (IsValid(TransitionComp))
 				{
 					TransitionComp->OnHighlighted(immediateSet);
 				}
@@ -290,7 +315,7 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 	{
 		switch (Transition)
 		{
-		case UISelectableTransitionType::ColorTint:
+		case ELexUISelectableTransitionType::ColorTint:
 		{
 			if (FadeDuration <= 0.0f || immediateSet)
 			{
@@ -322,7 +347,7 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 			}
 		}
 		break;
-		case UISelectableTransitionType::SpriteSwap:
+		case ELexUISelectableTransitionType::SpriteSwap:
 		{
 			if (auto TargetUISpriteComp = Cast<UUISpriteBase>(TransitionTarget))
 			{
@@ -333,17 +358,13 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 			}
 		}
 		break;
-		case UISelectableTransitionType::TransitionComponent:
+		case ELexUISelectableTransitionType::TransitionComponent:
 		{
 #if WITH_EDITOR
 			if (this->GetWorld()->IsGameWorld())
 #endif
 			{
-				if (!TransitionComp.IsValid())
-				{
-					TransitionComp = this->GetOwner()->FindComponentByClass<UUISelectableTransitionComponent>();
-				}
-				if (TransitionComp.IsValid() && TransitionComp->GetIsActiveAndEnable())
+				if (IsValid(TransitionComp))
 				{
 					TransitionComp->OnPressed(immediateSet);
 				}
@@ -357,7 +378,7 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 	{
 		switch (Transition)
 		{
-		case UISelectableTransitionType::ColorTint:
+		case ELexUISelectableTransitionType::ColorTint:
 		{
 			if (FadeDuration <= 0.0f || immediateSet)
 			{
@@ -389,7 +410,7 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 			}
 		}
 		break;
-		case UISelectableTransitionType::SpriteSwap:
+		case ELexUISelectableTransitionType::SpriteSwap:
 		{
 			if (auto TargetUISpriteComp = Cast<UUISpriteBase>(TransitionTarget))
 			{
@@ -400,17 +421,13 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 			}
 		}
 		break;
-		case UISelectableTransitionType::TransitionComponent:
+		case ELexUISelectableTransitionType::TransitionComponent:
 		{
 #if WITH_EDITOR
 			if (this->GetWorld()->IsGameWorld())
 #endif
 			{
-				if (!TransitionComp.IsValid())
-				{
-					TransitionComp = this->GetOwner()->FindComponentByClass<UUISelectableTransitionComponent>();
-				}
-				if (TransitionComp.IsValid() && TransitionComp->GetIsActiveAndEnable())
+				if (IsValid(TransitionComp))
 				{
 					TransitionComp->OnDisabled(immediateSet);
 				}
@@ -692,7 +709,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 
 		//if is UI node, not allow inactive one
 		auto selRootUIComp = sel->GetRootUIComponent();
-		if (selRootUIComp && !sel->GetRootUIComponent()->GetIsUIActiveInHierarchy())
+		if (selRootUIComp && !sel->GetRootUIComponent()->IsVisibleForHitTest())
 		{
 			continue;
 		}

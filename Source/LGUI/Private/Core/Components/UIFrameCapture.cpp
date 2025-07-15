@@ -1,10 +1,10 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUI/Public/Core/Components/UIFrameCapture.h"
+#include "Core/Components/UIFrameCapture.h"
 #include "LGUI.h"
 #include "LTweenBPLibrary.h"
 #include "Engine/TextureRenderTarget2D.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
+#include "Core/LexUIRender/LexUIRenderer.h"
 #include "Core/LexVisualPostProcessRenderProxy.h"
 #include "GameFramework/PlayerController.h"
 #include "RenderTargetPool.h"

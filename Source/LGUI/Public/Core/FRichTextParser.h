@@ -86,16 +86,16 @@ namespace LexUIRichTextParser
 			result.Size = inOriginSize;
 			result.Color = inOriginColor;
 
-			bEnableBold = inFlags & (1 << (int)EUIText_RichTextTagFilterFlags::Bold);
-			bEnableItalic = inFlags & (1 << (int)EUIText_RichTextTagFilterFlags::Italic);
-			bEnableUnderline = inFlags & (1 << (int)EUIText_RichTextTagFilterFlags::Underline);
-			bEnableStrikethrough = inFlags & (1 << (int)EUIText_RichTextTagFilterFlags::Strikethrough);
-			bEnableSize = inFlags & (1 << (int)EUIText_RichTextTagFilterFlags::Size);
-			bEnableColor = inFlags & (1 << (int)EUIText_RichTextTagFilterFlags::Color);
-			bEnableSuperscript = inFlags & (1 << (int)EUIText_RichTextTagFilterFlags::Superscript);
-			bEnableSubscript = inFlags & (1 << (int)EUIText_RichTextTagFilterFlags::Subscript);
-			bEnableCustomTag = inFlags & (1 << (int)EUIText_RichTextTagFilterFlags::CustomTag);
-			bEnableImage = inFlags & (1 << (int)EUIText_RichTextTagFilterFlags::Image);
+			bEnableBold = inFlags & (1 << (int)ELexUIText_RichTextTagFilterFlags::Bold);
+			bEnableItalic = inFlags & (1 << (int)ELexUIText_RichTextTagFilterFlags::Italic);
+			bEnableUnderline = inFlags & (1 << (int)ELexUIText_RichTextTagFilterFlags::Underline);
+			bEnableStrikethrough = inFlags & (1 << (int)ELexUIText_RichTextTagFilterFlags::Strikethrough);
+			bEnableSize = inFlags & (1 << (int)ELexUIText_RichTextTagFilterFlags::Size);
+			bEnableColor = inFlags & (1 << (int)ELexUIText_RichTextTagFilterFlags::Color);
+			bEnableSuperscript = inFlags & (1 << (int)ELexUIText_RichTextTagFilterFlags::Superscript);
+			bEnableSubscript = inFlags & (1 << (int)ELexUIText_RichTextTagFilterFlags::Subscript);
+			bEnableCustomTag = inFlags & (1 << (int)ELexUIText_RichTextTagFilterFlags::CustomTag);
+			bEnableImage = inFlags & (1 << (int)ELexUIText_RichTextTagFilterFlags::Image);
 		}
 		void Clear()
 		{

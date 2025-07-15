@@ -1,11 +1,11 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUI/Public/Core/Components/LexVisual.h"
+#include "Core/Components/LexVisual.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/Components/LexCanvas.h"
 #include "Utils/LexUIUtils.h"
 #include "GeometryModifier/LexUIMeshModifierBase.h"
-#include "LGUI/Public/Core/Components/LexVisualBatchMesh.h"
+#include "Core/Components/LexVisualBatchMesh.h"
 #include "TextureResource.h"
 #include "Core/LexUIClipData.h"
 #include "Engine/Texture2D.h"

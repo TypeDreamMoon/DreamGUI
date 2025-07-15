@@ -85,16 +85,6 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	
 	IDetailCategoryBuilder& LGUICategory = DetailBuilder.EditCategory("LGUI");
 
-	//base
-	{
-		auto uiActiveHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, bIsUIActive));
-		uiActiveHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([this] {
-			ForceUpdateUI();
-		}));
-	}
-
-	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, bIsUIActive));
-
 	DetailBuilder.GetDetailsView()->RegisterInstancedCustomPropertyTypeLayout(TEXT("LexWidgetAspectRatio"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexWidgetAspectRatioCustomization::MakeInstance));
 	auto AspectRatio_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AspectRatio));
 	DetailBuilder.GetDetailsView()->RegisterInstancedCustomPropertyTypeLayout(TEXT("LexWidgetSize"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexWidgetSizeCustomization::MakeInstance, AspectRatio_PH.ToSharedPtr()));

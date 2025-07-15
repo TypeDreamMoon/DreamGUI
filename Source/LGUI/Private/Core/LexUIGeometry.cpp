@@ -2,9 +2,9 @@
 
 #include "Core/LexUIGeometry.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/UISprite.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
-#include "LGUI/Public/Core/Components/LexVisual.h"
+#include "Core/Components/UISprite.h"
+#include "Core/Components/LexCanvas.h"
+#include "Core/Components/LexVisual.h"
 #include "Core/LexUISpriteData.h"
 #include "Core/LexUIFontData_BaseObject.h"
 #include "Core/LexUIRichTextImageData_BaseObject.h"
@@ -85,7 +85,7 @@ void AdjustPixelPerfectPos_For_UIRectFillRadial360(TArray<FLexUIOriginVertexData
 		originVertices[vertIndex].Position = FVector3f(canvasToComponentTransform.TransformPosition(canvasSpaceLocation));
 	}
 }
-void AdjustPixelPerfectPos_For_UIText(TArray<FLexUIOriginVertexData>& originVertices, const TArray<FUITextCharProperty>& cacheCharPropertyArray, ULexCanvas* renderCanvas, ULexVisual* uiComp)
+void AdjustPixelPerfectPos_For_UIText(TArray<FLexUIOriginVertexData>& originVertices, const TArray<FLexUITextCharProperty>& cacheCharPropertyArray, ULexCanvas* renderCanvas, ULexVisual* uiComp)
 {
 	SCOPE_CYCLE_COUNTER(STAT_TransformPixelPerfectVertices);
 	if (cacheCharPropertyArray.Num() <= 0)return;
@@ -2250,18 +2250,18 @@ void FLexUIGeometry::UpdateUIRectFillRadial360Vertex(FLexUIGeometry* uiGeo, cons
 #pragma endregion
 
 #pragma region UIText
-#include "LGUI/Public/Core/Components/LexText.h"
-void UIGeometry_AlignUITextLineVertex(EUITextParagraphHorizontalAlign pivotHAlign, float lineWidth, int lineUIGeoVertStart
-                                      , TArray<FLexUIOriginVertexData>& vertices, FUITextLineProperty& lineProperty
+#include "Core/Components/LexText.h"
+void UIGeometry_AlignUITextLineVertex(ELexUITextParagraphHorizontalAlign pivotHAlign, float lineWidth, int lineUIGeoVertStart
+                                      , TArray<FLexUIOriginVertexData>& vertices, FLexUITextLineProperty& lineProperty
 )
 {
 	float xOffset = 0;
 	switch (pivotHAlign)
 	{
-	case EUITextParagraphHorizontalAlign::Center:
+	case ELexUITextParagraphHorizontalAlign::Center:
 		xOffset = -lineWidth * 0.5f;
 		break;
-	case EUITextParagraphHorizontalAlign::Right:
+	case ELexUITextParagraphHorizontalAlign::Right:
 		xOffset = -lineWidth;
 		break;
 	}
@@ -2272,24 +2272,24 @@ void UIGeometry_AlignUITextLineVertex(EUITextParagraphHorizontalAlign pivotHAlig
 		vertex.Y += xOffset;
 	}
 
-	auto& charList = lineProperty.caretPropertyList;
+	auto& charList = lineProperty.CaretPropertyList;
 	for (auto& item : charList)
 	{
-		item.caretPosition.X += xOffset;
+		item.CaretPosition.X += xOffset;
 	}
 }
-void UIGeometry_AlignUITextLineVertexForRichText(EUITextParagraphHorizontalAlign pivotHAlign, float lineWidth, float lineHeight, float fontSize, int lineUIGeoVertStart
+void UIGeometry_AlignUITextLineVertexForRichText(ELexUITextParagraphHorizontalAlign pivotHAlign, float lineWidth, float lineHeight, float fontSize, int lineUIGeoVertStart
 	, TArray<FLexUIOriginVertexData>& vertices
-	, int lineImageStartIndex, TArray<FUIText_RichTextImageTag>& imageArray
+	, int lineImageStartIndex, TArray<FLexUIText_RichTextImageTag>& imageArray
 )
 {
 	float xOffset = 0;
 	switch (pivotHAlign)
 	{
-	case EUITextParagraphHorizontalAlign::Center:
+	case ELexUITextParagraphHorizontalAlign::Center:
 		xOffset = -lineWidth * 0.5f;
 		break;
-	case EUITextParagraphHorizontalAlign::Right:
+	case ELexUITextParagraphHorizontalAlign::Right:
 		xOffset = -lineWidth;
 		break;
 	}
@@ -2312,12 +2312,12 @@ void UIGeometry_AlignUITextLineVertexForRichText(EUITextParagraphHorizontalAlign
 #include "Core/LexUIRichTextCustomStyleData.h"
 void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, float width, float height, const FVector2f& pivot
                                   , const FColor& color, uint8 renderOpacity, const FVector2f& fontSpace, FLexUIGeometry* uiGeo, float fontSize
-                                  , EUITextParagraphHorizontalAlign paragraphHAlign, EUITextParagraphVerticalAlign paragraphVAlign, EUITextOverflowType overflowType
+                                  , ELexUITextParagraphHorizontalAlign paragraphHAlign, ELexUITextParagraphVerticalAlign paragraphVAlign, ELexUITextOverflowType overflowType
                                   , ETextWrappingPolicy wrappingPolicy, float maxHorizontalWidth, bool kerning
-                                  , EUITextFontStyle fontStyle, FVector2f& textRealSize
+                                  , ELexUITextFontStyle fontStyle, FVector2f& textRealSize
                                   , ULexCanvas* renderCanvas, ULexText* uiComp
-                                  , TArray<FUITextLineProperty>& cacheLinePropertyArray, TArray<FUITextCharProperty>& cacheCharPropertyArray, TArray<FUIText_RichTextCustomTag>& cacheRichTextCustomTagArray
-                                  , TArray<FUIText_RichTextImageTag>& cacheRichTextImageTagArray
+                                  , TArray<FLexUITextLineProperty>& cacheLinePropertyArray, TArray<FLexUITextCharProperty>& cacheCharPropertyArray, TArray<FLexUIText_RichTextCustomTag>& cacheRichTextCustomTagArray
+                                  , TArray<FLexUIText_RichTextImageTag>& cacheRichTextImageTagArray
                                   , ULexUIFontData_BaseObject* font, bool richText, int32 richTextFilterFlags)
 {
 	FString content = text;
@@ -2379,15 +2379,15 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 	if (richText)
 	{
 		richTextParser.Clear();
-		bool bold = fontStyle == EUITextFontStyle::Bold || fontStyle == EUITextFontStyle::BoldAndItalic;
-		bool italic = fontStyle == EUITextFontStyle::Italic || fontStyle == EUITextFontStyle::BoldAndItalic;
+		bool bold = fontStyle == ELexUITextFontStyle::Bold || fontStyle == ELexUITextFontStyle::BoldAndItalic;
+		bool italic = fontStyle == ELexUITextFontStyle::Italic || fontStyle == ELexUITextFontStyle::BoldAndItalic;
 		richTextParser.Prepare(fontSize, color, renderOpacity, bold, italic, richTextFilterFlags, richTextParseResult);
 	}
 	else
 	{
 		richTextParseResult.Color = color;
-		richTextParseResult.Bold = fontStyle == EUITextFontStyle::Bold || fontStyle == EUITextFontStyle::BoldAndItalic;
-		richTextParseResult.Italic = fontStyle == EUITextFontStyle::Italic || fontStyle == EUITextFontStyle::BoldAndItalic;
+		richTextParseResult.Bold = fontStyle == ELexUITextFontStyle::Bold || fontStyle == ELexUITextFontStyle::BoldAndItalic;
+		richTextParseResult.Italic = fontStyle == ELexUITextFontStyle::Italic || fontStyle == ELexUITextFontStyle::BoldAndItalic;
 		richTextParseResult.Size = fontSize;
 	}
 
@@ -2406,7 +2406,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 	int lineUIGeoVertStart = 0;//vertex index in originVertices of current line
 	int currentVisibleCharCount = 0;//visible char count, skip invisible char(\r,\n,\t)
 	int imageStartIndexInCurrentLine = 0;//
-	FUITextLineProperty lineProperty;
+	FLexUITextLineProperty lineProperty;
 	FVector2f caretPosition(0, 0);
 	float halfFontSpaceX = fontSpace.X * 0.5f;
 	int linesCount = 0;//how many lines, default is 1
@@ -2432,10 +2432,10 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 		currentLineWidth -= fontSpace.X;//last char of a line don't need space
 		maxLineWidth = FMath::Max(maxLineWidth, currentLineWidth);
 
-		FUITextCaretProperty caretProperty;
-		caretProperty.caretPosition = caretPosition;
-		caretProperty.charIndex = withCaret ? charIndex : -1;
-		lineProperty.caretPropertyList.Add(caretProperty);
+		FLexUITextCaretProperty caretProperty;
+		caretProperty.CaretPosition = caretPosition;
+		caretProperty.CharIndex = withCaret ? charIndex : -1;
+		lineProperty.CaretPropertyList.Add(caretProperty);
 		if (richText)
 		{
 			UIGeometry_AlignUITextLineVertexForRichText(paragraphHAlign, currentLineWidth, currentLineHeight, fontSize, lineUIGeoVertStart, originVertices, imageStartIndexInCurrentLine, cacheRichTextImageTagArray);
@@ -2446,7 +2446,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 			UIGeometry_AlignUITextLineVertex(paragraphHAlign, currentLineWidth, lineUIGeoVertStart, originVertices, lineProperty);
 		}
 		cacheLinePropertyArray.Add(lineProperty);
-		lineProperty = FUITextLineProperty();
+		lineProperty = FLexUITextLineProperty();
 		lineUIGeoVertStart = verticesCount;
 
 		currentLineWidth = 0;
@@ -2720,17 +2720,17 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 		//caret property
 		caretPosition.X = currentLineOffset.X - halfFontSpaceX;
 		caretPosition.Y = currentLineOffset.Y;
-		FUITextCaretProperty caretProperty;
-		caretProperty.caretPosition = caretPosition;
-		caretProperty.charIndex = caretCharIndex;
-		lineProperty.caretPropertyList.Add(caretProperty);
+		FLexUITextCaretProperty caretProperty;
+		caretProperty.CaretPosition = caretPosition;
+		caretProperty.CharIndex = caretCharIndex;
+		lineProperty.CaretPropertyList.Add(caretProperty);
 
 		caretPosition.X += fontSpace.X + charGeo.xadvance;//for line's last char's caret position
 
 		if (IsSpace(charCode, richTextParseResult))//char is space
 		{
-			if (overflowType == EUITextOverflowType::VerticalOverflow//char is space and UIText can have multi line, then we need to calculate if the following words can fit the rest space, if not means new line
-				|| overflowType == EUITextOverflowType::HorizontalAndVerticalOverflow
+			if (overflowType == ELexUITextOverflowType::VerticalOverflow//char is space and UIText can have multi line, then we need to calculate if the following words can fit the rest space, if not means new line
+				|| overflowType == ELexUITextOverflowType::HorizontalAndVerticalOverflow
 				)
 			{
 				auto prevCharCodeOfForwardChar = prevCharCode;
@@ -2753,7 +2753,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 					forwardVisibleCharIndex++;
 					prevCharCodeOfForwardChar = charCodeOfForwardChar;
 				}
-				float maxWidthToCompare = overflowType == EUITextOverflowType::HorizontalAndVerticalOverflow ? maxHorizontalWidth : width;
+				float maxWidthToCompare = overflowType == ELexUITextOverflowType::HorizontalAndVerticalOverflow ? maxHorizontalWidth : width;
 				if (currentLineOffset.X + spaceNeeded > maxWidthToCompare)
 				{
 					NewLine(caretCharIndex, false);
@@ -2767,7 +2767,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 		//char geometry
 		if (IsRichTextImageSpace(charCode, richTextParseResult))
 		{
-			FUIText_RichTextImageTag imageTagData;
+			FLexUIText_RichTextImageTag imageTagData;
 			imageTagData.TagName = richTextParseResult.ImageTag;
 			imageTagData.Position = FVector2D(currentLineOffset.X + charGeo.xadvance * 0.5f, currentLineOffset.Y);
 			imageTagData.Size = FVector2D(charGeo.width, charGeo.height);
@@ -2795,7 +2795,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 
 				//collect char property
 				{
-					FUITextCharProperty charProperty;
+					FLexUITextCharProperty charProperty;
 					charProperty.StartVertIndex = verticesCount;
 					charProperty.VertCount = additionalVerticesCount;
 					charProperty.StartTriangleIndex = indicesCount;
@@ -2817,7 +2817,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 			{
 			case LexUIRichTextParser::ECustomTagMode::Start:
 			{
-				FUIText_RichTextCustomTag customTag;
+				FLexUIText_RichTextCustomTag customTag;
 				customTag.TagName = richTextParseResult.CustomTag;
 				customTag.CharIndexStart = currentVisibleCharCount - 1;//-1 as index
 				customTag.CharIndexStart = FMath::Max(0, customTag.CharIndexStart);//incase first char is invisible char, that makes index == -1
@@ -2827,7 +2827,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 			break;
 			case LexUIRichTextParser::ECustomTagMode::End:
 			{
-				int foundIndex = cacheRichTextCustomTagArray.IndexOfByPredicate([richTextParseResult](const FUIText_RichTextCustomTag& A) {
+				int foundIndex = cacheRichTextCustomTagArray.IndexOfByPredicate([richTextParseResult](const FLexUIText_RichTextCustomTag& A) {
 					return A.TagName == richTextParseResult.CustomTag;
 					});
 				if (foundIndex != -1)
@@ -2846,12 +2846,12 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 		{
 			switch (overflowType)
 			{
-			case EUITextOverflowType::HorizontalOverflow:
+			case ELexUITextOverflowType::HorizontalOverflow:
 			{
 				//no need to do anything
 			}
 			break;
-			case EUITextOverflowType::VerticalOverflow:
+			case ELexUITextOverflowType::VerticalOverflow:
 			{
 				if (charIndex + 1 == contentLength)continue;//last char
 				int nextCharXAdv = GetCharGeoXAdv(content[charIndex], content[charIndex + 1], richText ? richTextPropertyArray[charIndex + 1] : richTextParseResult);
@@ -2896,7 +2896,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 				}
 			}
 			break;
-			case EUITextOverflowType::HorizontalAndVerticalOverflow:
+			case ELexUITextOverflowType::HorizontalAndVerticalOverflow:
 			{
 				if (charIndex + 1 == contentLength)continue;//last char
 				int nextCharXAdv = GetCharGeoXAdv(content[charIndex], content[charIndex + 1], richText ? richTextPropertyArray[charIndex + 1] : richTextParseResult);
@@ -2941,7 +2941,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 				}
 			}
 			break;
-			case EUITextOverflowType::ClampContent:
+			case ELexUITextOverflowType::ClampContent:
 			{
 				if (charIndex + 1 == contentLength)continue;//last char
 				if (hasClampContent)continue;
@@ -3013,36 +3013,36 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 	float xOffset = pivotOffsetX;
 	switch (paragraphHAlign)
 	{
-	case EUITextParagraphHorizontalAlign::Left:
+	case ELexUITextParagraphHorizontalAlign::Left:
 		xOffset += -width * 0.5f;
 		break;
-	case EUITextParagraphHorizontalAlign::Center:
+	case ELexUITextParagraphHorizontalAlign::Center:
 
 		break;
-	case EUITextParagraphHorizontalAlign::Right:
+	case ELexUITextParagraphHorizontalAlign::Right:
 		xOffset += width * 0.5f;
 		break;
 	}
 	float yOffset = pivotOffsetY - firstLineHeight * 0.5f;
 	switch (paragraphVAlign)
 	{
-	case EUITextParagraphVerticalAlign::Top:
+	case ELexUITextParagraphVerticalAlign::Top:
 		yOffset += height * 0.5f;
 		break;
-	case EUITextParagraphVerticalAlign::Middle:
+	case ELexUITextParagraphVerticalAlign::Middle:
 		yOffset += paragraphHeight * 0.5f;
 		break;
-	case EUITextParagraphVerticalAlign::Bottom:
+	case ELexUITextParagraphVerticalAlign::Bottom:
 		yOffset += paragraphHeight - height * 0.5f;
 		break;
 	}
 	//caret property
 	for (auto& linePropertyItem : cacheLinePropertyArray)
 	{
-		for (auto& charItem : linePropertyItem.caretPropertyList)
+		for (auto& charItem : linePropertyItem.CaretPropertyList)
 		{
-			charItem.caretPosition.X += xOffset;
-			charItem.caretPosition.Y += yOffset;
+			charItem.CaretPosition.X += xOffset;
+			charItem.CaretPosition.Y += yOffset;
 		}
 	}
 	//image

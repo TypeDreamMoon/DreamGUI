@@ -3,7 +3,7 @@
 #include "Core/LexUISpriteData.h"
 #include "LGUI.h"
 #include "Core/LGUISettings.h"
-#include "LGUI/Public/Core/Components/UISpriteBase.h"
+#include "Core/Components/UISpriteBase.h"
 #include "Core/LexUIDynamicSpriteAtlasData.h"
 #include "Core/LexUIStaticSpriteAtlasData.h"
 #include "UObject/UObjectIterator.h"

@@ -7,9 +7,6 @@
 #include "ISequencerModule.h"
 #include "LevelEditorSequencerIntegration.h"
 #include "SSCSEditor.h"
-#include "Styling/SlateIconFinder.h"
-#include "Kismet2/BlueprintEditorUtils.h"
-#include "EditorStyleSet.h"
 #include "EditorUndoClient.h"
 #include "Widgets/Images/SImage.h"
 #include "Editor.h"
@@ -17,14 +14,14 @@
 #include "Widgets/Docking/SDockTab.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "Framework/Application/SlateApplication.h"
-#include "EngineUtils.h"
 #include "Utils/LexUIUtils.h"
 #include "LGUIEditorTools.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #include "PrefabAnimation/LGUIPrefabSequenceComponent.h"
-#include "Selection.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "LevelEditor.h"
+#include "Core/Components/LexImage.h"
+#include "Core/Components/LexText.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabSequenceEditorWidget"
 
@@ -511,30 +508,54 @@ private:
 	{
 		if (ContextObjects.Num() == 1)
 		{
-			auto Renderable = Cast<ULexVisualBatchMesh>(ContextObjects[0]);
-
-			if (Renderable != nullptr)
+			if (auto Image = Cast<ULexImage>(ContextObjects[0]))
 			{
-				if (Renderable != nullptr && Renderable->GetCustomUIMaterial() != nullptr)
+				if (Image != nullptr && Cast<UMaterialInterface>(Image->GetBrush().GetResourceObject()) != nullptr)
 				{
-					auto MaterialProperty = Renderable->GetClass()->FindPropertyByName(ULexVisualBatchMesh::GetCustomUIMaterialPropertyName());
-					AddTrackMenuBuilder.BeginSection("Materials", LOCTEXT("MaterialsSection", "Materials"));
+					if (auto BrushStructProperty = FindFProperty<FStructProperty>(Image->GetClass(), ULexImage::GetPropertyName_Brush()))
 					{
-						FText DisplayNameText = MaterialProperty->GetDisplayNameText();
-						FUIAction AddMaterialAction(FExecuteAction::CreateRaw(this, &SLGUIPrefabSequenceEditorWidgetImpl::AddMaterialTrack, Renderable, MaterialProperty, DisplayNameText));
-						FText AddMaterialLabel = DisplayNameText;
-						FText AddMaterialToolTip = FText::Format(LOCTEXT("MaterialToolTipFormat", "Add a material track for the {0} property."), DisplayNameText);
-						AddTrackMenuBuilder.AddMenuEntry(AddMaterialLabel, AddMaterialToolTip, FSlateIcon(), AddMaterialAction);
+						auto BrushStructValuePtr = BrushStructProperty->ContainerPtrToValuePtr<void>(Image);
+						if (auto ResourceObjectProperty = FindFProperty<FProperty>(Image->GetClass(), FLexUIImageBrush::GetPropertyName_ResourceObject()))
+						{
+							AddTrackMenuBuilder.BeginSection("Materials", LOCTEXT("MaterialsSection", "Materials"));
+							{
+								FText DisplayNameText = ResourceObjectProperty->GetDisplayNameText();
+								FUIAction AddMaterialAction(FExecuteAction::CreateRaw(this, &SLGUIPrefabSequenceEditorWidgetImpl::AddMaterialTrack, (UObject*)Image, ResourceObjectProperty, DisplayNameText));
+								FText AddMaterialLabel = DisplayNameText;
+								FText AddMaterialToolTip = FText::Format(LOCTEXT("ImageBrushMaterialToolTipFormat", "Add a material track for the {0} property."), DisplayNameText);
+								AddTrackMenuBuilder.AddMenuEntry(AddMaterialLabel, AddMaterialToolTip, FSlateIcon(), AddMaterialAction);
+							}
+							AddTrackMenuBuilder.EndSection();
+						}
 					}
-					AddTrackMenuBuilder.EndSection();
+				}
+			}
+			else if (auto Text = Cast<ULexText>(ContextObjects[0]))
+			{
+				if (Text != nullptr && Text->GetOverrideMaterial() != nullptr)
+				{
+					{
+						if (auto MaterialProperty = FindFProperty<FProperty>(Text->GetClass(), ULexText::GetPropertyName_OverrideMaterial()))
+						{
+							AddTrackMenuBuilder.BeginSection("Materials", LOCTEXT("MaterialsSection", "Materials"));
+							{
+								FText DisplayNameText = MaterialProperty->GetDisplayNameText();
+								FUIAction AddMaterialAction(FExecuteAction::CreateRaw(this, &SLGUIPrefabSequenceEditorWidgetImpl::AddMaterialTrack, (UObject*)Image, MaterialProperty, DisplayNameText));
+								FText AddMaterialLabel = DisplayNameText;
+								FText AddMaterialToolTip = FText::Format(LOCTEXT("TextMaterialToolTipFormat", "Add a material track for the {0} property."), DisplayNameText);
+								AddTrackMenuBuilder.AddMenuEntry(AddMaterialLabel, AddMaterialToolTip, FSlateIcon(), AddMaterialAction);
+							}
+							AddTrackMenuBuilder.EndSection();
+						}
+					}
 				}
 			}
 		}
 	}
 
-	void AddMaterialTrack(ULexVisualBatchMesh* Renderable, FProperty* MaterialProperty, FText MaterialPropertyDisplayName)
+	void AddMaterialTrack(UObject* Object, FProperty* MaterialProperty, FText MaterialPropertyDisplayName)
 	{
-		FGuid WidgetHandle = Sequencer->GetHandleToObject(Renderable);
+		FGuid WidgetHandle = Sequencer->GetHandleToObject(Object);
 		if (WidgetHandle.IsValid())
 		{
 			UMovieScene* MovieScene = Sequencer->GetFocusedMovieSceneSequence()->GetMovieScene();

@@ -9,6 +9,7 @@
 #include "LTweener.h"
 #include "Components/SlateWrapperTypes.h"
 #include "Core/LexWidgetTypes.h"
+#include "PrefabSystem/ILGUIPrefabInterface.h"
 #include "LexWidget.generated.h"
 
 class ULexVisual;
@@ -41,23 +42,33 @@ enum class ELexWidgetClipping : uint8
 	Disabled UMETA(DisplayName = "No Clip"),
 };
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FUIItemActiveInHierarchyStateChangedMulticastDelegate, bool);
-DECLARE_DELEGATE_OneParam(FLexWidgetActiveInHierarchyStateChangedDelegate, bool);
-
 /**
  * Base class for almost all UI related things.
  */
 UCLASS(HideCategories = ( LOD, Physics, Collision, Activation, Cooking, Rendering, Actor, Input, Lighting, Mobile, Navigation), ClassGroup = (LGUI), NotBlueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API ULexWidget : public USceneComponent
+class LGUI_API ULexWidget : public USceneComponent, public ILGUIPrefabInterface
 {
 	GENERATED_BODY()
 
 public:
 	DECLARE_EVENT_ThreeParams(ULexWidget, FDimensionChangedEvent, bool/*PivotChanged*/, bool/*WidthChanged*/, bool/*HeightChanged*/);
+	DECLARE_EVENT_FourParams(ULexWidget, FChildDimensionChangedEvent, ULexWidget*/*Child*/, bool/*PivotChanged*/, bool/*WidthChanged*/, bool/*HeightChanged*/);
+	DECLARE_EVENT_OneParam(ULexWidget, FIsEnabledChangedEvent, bool/*IsEnabled*/);
+	DECLARE_EVENT(ULexWidget, FAttachmentChangedEvent);
+	DECLARE_EVENT(ULexWidget, FTransformChangedEvent);
+	DECLARE_EVENT(ULexWidget, FSiblingIndexChangedEvent);
+	DECLARE_EVENT(ULexWidget, FRenderVisibilityChangedEvent)
+	DECLARE_EVENT(ULexWidget, FLayoutVisibilityChangedEvent)
+	DECLARE_EVENT(ULexWidget, FHitTestVisibilityChangedEvent)
+	
 	ULexWidget(const FObjectInitializer& ObjectInitializer);
 
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	//begin LGUIPrefabInterface
+	virtual void Awake_Implementation() override;
+	virtual void EditorAwake_Implementation() override;
+	//end LGUIPrefabInterface
 
 	virtual void PostLoad()override;
 #if WITH_EDITOR
@@ -75,17 +86,21 @@ public:
 	virtual void EditorForceUpdate();//@todo: remove this
 	void EnsureDataForRebuild();
 #endif
-	static const FName GetWidthPropertyName()
+	static FName GetPropertyName_Width()
 	{
 		return GET_MEMBER_NAME_CHECKED(ULexWidget, Width);
 	}
-	static const FName GetHeightPropertyName()
+	static FName GetPropertyName_Height()
 	{
 		return GET_MEMBER_NAME_CHECKED(ULexWidget, Height);
 	}
-	static const FName GetHierarchyIndexPropertyName()
+	static FName GetPropertyName_SiblingIndex()
 	{
 		return GET_MEMBER_NAME_CHECKED(ULexWidget, SiblingIndex);
+	}
+	static FName GetPropertyName_WidgetVisibility()
+	{
+		return GET_MEMBER_NAME_CHECKED(ULexWidget, WidgetVisibility);
 	}
 	template<class T>
 	static T* GetComponentInParentUI(AActor* InActor, bool IncludeUnregisteredComponent = true)
@@ -117,22 +132,18 @@ public:
 		return nullptr;
 	}
 	
-#pragma region LGUILifeCycleUIBehaviour
+#pragma region CallbackEvents
 private:
-	TInlineComponentArray<class ULGUILifeCycleUIBehaviour*> LGUILifeCycleUIBehaviourArray;
-	void Call_ActiveInHierarchyStateChanged();
-	void Call_ChildActiveInHierarchyStateChanged(ULexWidget* child, bool activeOrInactive);
+	void Call_IsEnabledChanged();
 	void Call_TransformChanged();
-	void Call_DimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged);
-	void Call_ChildDimensionsChanged(ULexWidget* Child, bool PivotChanged, bool WidthChanged, bool HeightChanged);
+	void Call_DimensionsChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged);
+	void Call_ChildDimensionsChanged(ULexWidget* Child, bool InPivotChanged, bool InWidthChanged, bool InHeightChanged);
 	void Call_AttachmentChanged();
-	void Call_ChildAttachmentChanged(ULexWidget* child, bool attachOrDetach);
-	void Call_InteractionStateChanged();
-	void Call_ChildSiblingIndexChanged(ULexWidget* child);
-public:
-	void AddLGUILifeCycleUIBehaviourComponent(class ULGUILifeCycleUIBehaviour* InComp) { LGUILifeCycleUIBehaviourArray.AddUnique(InComp); }
-	void RemoveLGUILifeCycleUIBehaviourComponent(class ULGUILifeCycleUIBehaviour* InComp) { LGUILifeCycleUIBehaviourArray.RemoveSingleSwap(InComp); }
-#pragma endregion LGUILifeCycleUIBehaviour
+	void Call_SiblingIndexChanged();
+	void Call_RenderVisibilityChanged();
+	void Call_LayoutVisibilityChanged();
+	void Call_HitTestVisibilityChanged();
+#pragma endregion
 protected:
 	virtual bool MoveComponentImpl(const FVector& Delta, const FQuat& NewRotation, bool bSweep, FHitResult* Hit /* = NULL */, EMoveComponentFlags MoveFlags /* = MOVECOMP_NoFlags */, ETeleportType Teleport /* = ETeleportType::None */)override;
 	virtual void OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport = ETeleportType::None)override;
@@ -144,21 +155,16 @@ protected:
 
 	void OnUIDetachedFromParent();
 	void OnUIAttachedToParent();
-public:
 
-	FDelegateHandle RegisterUIHierarchyChanged(const FSimpleDelegate& InCallback);
-	void UnregisterUIHierarchyChanged(const FDelegateHandle& InHandle);
-protected:
 	/** UIItem's hierarchy changed */
-	void UIHierarchyChanged(ULexCanvas* ParentRenderCanvas, ULexWidget* ParentRoot);
-	FSimpleMulticastDelegate UIHierarchyChangedDelegate;
+	void UIHierarchyAttachmentChanged(ULexCanvas* ParentRenderCanvas, ULexWidget* ParentRoot);
 	/** called when RenderCanvas changed. */
 	virtual void OnRenderCanvasChanged(ULexCanvas* OldCanvas, ULexCanvas* NewCanvas);
 	void SetRenderCanvas(ULexCanvas* InNewCanvas);
 public:
-	/** Called by LGUICanvas, when a new LGUICanvas is registerred on self actor */
+	/** Called by LexCanvas, when a new LexCanvas is registered on self actor */
 	void RegisterRenderCanvas(ULexCanvas* InRenderCanvas);
-	/** Called by LGUICanvas, when LGUICanvas is unregisterred on self actor */
+	/** Called by LexCanvas, when LexCanvas is unregistered on self actor */
 	void UnregisterRenderCanvas();
 
 	void UpdateLayout();
@@ -167,6 +173,26 @@ public:
 protected:
 	void RenewRenderCanvasRecursive(ULexCanvas* InParentRenderCanvas);
 
+private:
+	FIsEnabledChangedEvent OnIsEnabledChangedEvent;
+	FTransformChangedEvent OnTransformChangedEvent;
+	FDimensionChangedEvent OnDimensionChangedEvent;
+	FChildDimensionChangedEvent OnChildDimensionChangedEvent;
+	FAttachmentChangedEvent OnAttachmentChangedEvent;
+	FSiblingIndexChangedEvent OnSiblingIndexChangedEvent;
+	FRenderVisibilityChangedEvent OnRenderVisibilityChangedEvent;
+	FRenderVisibilityChangedEvent OnLayoutVisibilityChangedEvent;
+	FRenderVisibilityChangedEvent OnHitTestVisibilityChangedEvent;
+public:
+	FIsEnabledChangedEvent& GetIsEnabledChangedEvent(){return OnIsEnabledChangedEvent;}
+	FTransformChangedEvent& GetTransformChangedEvent(){return OnTransformChangedEvent;}
+	FDimensionChangedEvent& GetDimensionChangedEvent(){return OnDimensionChangedEvent;}
+	FChildDimensionChangedEvent& GetChildDimensionChangedEvent(){return OnChildDimensionChangedEvent;}
+	FAttachmentChangedEvent& GetAttachmentChangedEvent(){return OnAttachmentChangedEvent;}
+	FSiblingIndexChangedEvent& GetSiblingIndexChangedEvent(){return OnSiblingIndexChangedEvent;}
+	FRenderVisibilityChangedEvent& GetRenderVisibilityChangedEvent(){return OnRenderVisibilityChangedEvent;}
+	FRenderVisibilityChangedEvent& GetLayoutVisibilityChangedEvent(){return OnLayoutVisibilityChangedEvent;}
+	FRenderVisibilityChangedEvent& GetHitTestVisibilityChangedEvent(){return OnHitTestVisibilityChangedEvent;}
 protected:
 	/** parent in hierarchy */
 	UPROPERTY(Transient) mutable TWeakObjectPtr<ULexWidget> UIParent = nullptr;
@@ -201,9 +227,9 @@ public:
 	void SetPivot(FVector2D Value);
 	
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-	float GetRenderWidth() const;
+	float GetRenderWidth() const{return GetRenderSize().X;}
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-	float GetRenderHeight() const;
+	float GetRenderHeight() const{return GetRenderSize().Y;}
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
 	FVector2D GetRenderSize() const;
 	float GetPreferredWidth() const;
@@ -261,7 +287,7 @@ public:
 	/** Get root canvas of hierarchy */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		ULexCanvas* GetRootCanvas()const;
-	/** Get LGUICanvasScaler from root canvas, return null if not have one */
+	/** Get LexCanvasScaler from root canvas, return null if not have one */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		class ULexCanvasScaler* GetCanvasScaler()const;
 
@@ -288,6 +314,7 @@ protected:
 	/** If the widget will draw snapped to the nearest pixel.  Improves clarity but might cause visible stepping in animation. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
 	EWidgetPixelSnapping PixelSnapping = EWidgetPixelSnapping::Inherit;
+	/** If the widget enable for interaction? */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter = "GetIsEnabled", Setter = "SetIsEnabled", meta = (AllowPrivateAccess = true))
 	uint8 bIsEnabled : 1 = true;
 	/**
@@ -306,8 +333,7 @@ protected:
 	TWeakPtr<FLexUIClipData> ClipData;
 	
 	uint8 bCacheFinalIsEnabled : 1 = true;
-	bool CalculateCacheFinalIsEnabled();
-	void CheckIsEnabled_Recursive();
+	void CalculateIsEnabled_Recursive();
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	ELexWidgetClipping GetClipping()const { return Clipping; }
@@ -394,47 +420,10 @@ public:
 	ULexLayoutSlot* GetLayoutSlot()const;
 
 	const TWeakPtr<FLexUIClipData>& GetClipData()const{return ClipData;}
-#pragma region UIActive
-public:
-	void CheckUIActiveState();
-protected:
-	/** all up parent IsUIActive is true, then this is true. if any up parent is false, then this is false */
-	bool bAllUpParentUIActive = true;
-	void CheckChildrenUIActiveRecursive(bool InUpParentUIActive);
-	/**
-	 * Active ui is visible and interactable.
-	 * If parent or parent's parent... IsUIActive is false, then this ui is not visible and not interactable.
-	 */
-	UPROPERTY(EditAnywhere, Category = LGUI, meta = (DisplayName = "Is UI Active"))
-		bool bIsUIActive = true;
-	/** apply IsUIActive state */
-	virtual void ApplyUIActiveState(bool InStateChange);
-	void OnChildActiveStateChanged(ULexWidget* child);
 
-	FUIItemActiveInHierarchyStateChangedMulticastDelegate UIActiveInHierarchyStateChangedDelegate;
-	FSimpleMulticastDelegate OnTransformChanged;
-	FDimensionChangedEvent OnDimensionChangedEvent;
-public:
-	FDelegateHandle RegisterUIActiveStateChanged(const FLexWidgetActiveInHierarchyStateChangedDelegate& InCallback);
-	FDelegateHandle RegisterUIActiveStateChanged(const TFunction<void(bool)>& InCallback);
-	void UnregisterUIActiveStateChanged(const FDelegateHandle& InHandle);
-
-	FSimpleMulticastDelegate& GetTransformChangedEvent(){return OnTransformChanged;}
-	FDimensionChangedEvent& GetDimensionChangedEvent(){return OnDimensionChangedEvent;}
-
-	/** Set this UI element's bIsUIActive */
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		virtual void SetIsUIActive(bool active);
-	/** is UI active itself, parent not count */
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		bool GetIsUIActiveSelf()const { return bIsUIActive; }
-	/** is UI active hierarchy. if all up parent of this ui item is active then return this->IsUIActive. if any up parent ui item is not active then return false */
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		bool GetIsUIActiveInHierarchy()const { return bIsUIActive && bAllUpParentUIActive; };
 #if WITH_EDITOR
-	void SetIsTemporarilyHiddenInEditor_Recursive_By_IsUIActiveState();
+	void SetIsTemporarilyHiddenInEditor_Recursive_By_RenderVisibility();
 #endif
-#pragma endregion UIActive
 
 #pragma region SiblingIndex
 protected:
@@ -516,34 +505,37 @@ public:
 
 	/** return root UIItem in hierarchy, could be null if not initialized yet. */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		ULexWidget* GetRootUIItemInHierarchy()const { return RootWidget.Get(); }
+		ULexWidget* GetRootWidgetInHierarchy()const { return RootWidget.Get(); }
 
 	void MarkLayoutDirty();
 protected:
 	friend class FLexWidgetCustomization;
 	friend class ULexCanvas;
-	/** LGUICanvas which render this UI element */
+	/** LexCanvas which render this UI element */
 	UPROPERTY(Transient) mutable TWeakObjectPtr<ULexCanvas> RenderCanvas = nullptr;
-	/** is this UIItem's actor have LGUICanvas component */
-	UPROPERTY(Transient) mutable uint8 bIsCanvasWidget:1;
+	/** is this widget actor contains LexCanvas component */
+	UPROPERTY(Transient) mutable uint32 bIsCanvasWidget:1;
 
-	mutable uint8 bLayoutDirty : 1 = true;
-	mutable uint8 bRenderSizeDirty : 1 = true;
-	mutable uint8 bClipDirty : 1 = true;
-	mutable uint8 bNeedRecreateClip : 1 = true;
-	uint8 bClipDataChanged : 1 = true;
+	mutable uint32 bLayoutDirty : 1 = true;
+	mutable uint32 bRenderSizeDirty : 1 = true;
+	mutable uint32 bClipDirty : 1 = true;
+	mutable uint32 bNeedRecreateClip : 1 = true;
+	uint32 bClipDataChanged : 1 = true;
+	
+	uint32 bCacheIsVisibleForRender : 1 = true;
+	uint32 bCacheIsVisibleForLayout : 1 = true;
+	uint32 bCacheIsVisibleForHitTest : 1 = true;
 
-	/** Only for RootUIItem, if dirty then we need to recalculate it */
-	mutable uint8 bFlattenHierarchyIndexDirty : 1;
-#if WITH_EDITOR
-	uint8 bUIActiveStateDirty : 1;
-#endif
+	/** Only for root widget, if dirty then we need to recalculate flatten hierarchy index */
+	mutable uint32 bFlattenHierarchyIndexDirty : 1;
 
 	void CalculateRenderSize();
 	void MarkClipDirty(bool InClipTypeChanged)const;
 	
 	/** find root UIItem of hierarchy */
 	void CheckRootWidget(ULexWidget* RootWidgetInParent = nullptr);
+
+	void CalculateVisibility_Recursive();
 public:
 #pragma region TweenAnimation
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")
@@ -552,15 +544,15 @@ public:
 #pragma endregion
 public:
 #if WITH_EDITORONLY_DATA
-	/** This is a helper component for calculate bounds, so we can double click to focus on this UIItem */
+	/** This is a helper component for calculate bounds, so we can double-click to focus on this UIItem */
 	UPROPERTY(Transient, NonTransactional)TObjectPtr<class ULexWidgetEditorHelperComp> HelperComp = nullptr;//@todo: better way to replace this?
 #endif
 };
 
 
 //Editor only
-//This component is only a helper component for UIItem! Don't use this!
-//For UIItem's bounds, so we can double click a UIItem and focus on it.
+//This component is only a helper component for widget! Don't use this!
+//For widget's bounds, so we can double-click a widget and focus on it.
 UCLASS(HideCategories = (LOD, Physics, Collision, Activation, Cooking, Rendering, Actor, Input, Lighting, Mobile), NotBlueprintable, NotBlueprintType, Transient)
 class LGUI_API ULexWidgetEditorHelperComp : public UPrimitiveComponent
 {

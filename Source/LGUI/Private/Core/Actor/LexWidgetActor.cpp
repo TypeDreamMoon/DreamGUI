@@ -2,9 +2,9 @@
 
 #include "Core/Actor/LexWidgetActor.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/LexWidget.h"
-#include "LGUI/Public/Core/Components/LexVisual.h"
-#include "LGUI/Public/Core/Components/LexVisualPostProcess.h"
+#include "Core/Components/LexWidget.h"
+#include "Core/Components/LexVisual.h"
+#include "Core/Components/LexVisualPostProcess.h"
 #if WITH_EDITOR
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "Utils/LexUIUtils.h"
@@ -41,30 +41,30 @@ void ALexWidgetActor::SetIsTemporarilyHiddenInEditor(bool bIsHidden)
 				bool bShouldNotify = false;
 				if (bIsHidden)
 				{
-					if (GetLexWidget()->GetIsUIActiveSelf() != false)
+					if (GetLexWidget()->IsVisibleForRender())
 					{
 						bShouldNotify = true;
 					}
-					GetLexWidget()->SetIsUIActive(false);
+					GetLexWidget()->SetWidgetVisibility(ESlateVisibility::Collapsed);
 				}
 				else
 				{
-					if (GetLexWidget()->GetIsUIActiveSelf() != true)
+					if (!GetLexWidget()->IsVisibleForRender())
 					{
 						bShouldNotify = true;
 					}
-					GetLexWidget()->SetIsUIActive(true);
+					GetLexWidget()->SetWidgetVisibility(ESlateVisibility::Visible);
 				}
 				if (bShouldNotify)
 				{
-					FLexUIUtils::NotifyPropertyChanged(GetLexWidget(), FName(TEXT("bIsUIActive")));
+					FLexUIUtils::NotifyPropertyChanged(GetLexWidget(), ULexWidget::GetPropertyName_WidgetVisibility());
 				}
 			}
 			ULGUIPrefabManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)] {
 				FirstTemporarilyHiddenActor = nullptr;
 				if (WeakThis.IsValid())
 				{
-					WeakThis->GetLexWidget()->SetIsTemporarilyHiddenInEditor_Recursive_By_IsUIActiveState();//restore Temporary hidden state by UI item's IsUIActive state.
+					WeakThis->GetLexWidget()->SetIsTemporarilyHiddenInEditor_Recursive_By_RenderVisibility();//restore Temporary hidden state by UI item's IsUIActive state.
 				}
 				});
 		}

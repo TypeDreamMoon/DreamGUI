@@ -8,6 +8,8 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "IDetailGroup.h"
+#include "MaterialDomain.h"
+#include "PropertyType/LexTextAlignmentCustomization.h"
 
 #define LOCTEXT_NAMESPACE "UITextCustomization"
 FLexTextCustomization::FLexTextCustomization()
@@ -33,249 +35,59 @@ void FLexTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder
 		return;
 	}
 	
-	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("LGUI");
-	category.AddProperty(GET_MEMBER_NAME_CHECKED(ULexText, font));
-	category.AddProperty(GET_MEMBER_NAME_CHECKED(ULexText, text));
+	IDetailCategoryBuilder& LGUICategory = DetailBuilder.EditCategory("LGUI");
+	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexText, Font));
+	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexText, Text));
 
-	category.AddProperty(GET_MEMBER_NAME_CHECKED(ULexText, size));
-	category.AddProperty(GET_MEMBER_NAME_CHECKED(ULexText, space));
+	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexText, FontSize));
+	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexText, FontSpace));
 
 	//text alignment
 	{
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexText, hAlign));
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexText, vAlign));
-		const FMargin OuterPadding(2, 0);
-		const FMargin ContentPadding(2);
-		auto hAlignPropertyHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, hAlign));
-		auto vAlignPropertyHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, vAlign));
-		category.AddCustomRow(LOCTEXT("Alignment", "Alignment"))
-		.PropertyHandleList({ hAlignPropertyHandle, vAlignPropertyHandle })
-		.CopyAction(FUIAction(
-			FExecuteAction::CreateSP(this, &FLexTextCustomization::OnCopyAlignment)
-		))
-		.PasteAction(FUIAction(
-			FExecuteAction::CreateSP(this, &FLexTextCustomization::OnPasteAlignment, hAlignPropertyHandle, vAlignPropertyHandle),
-			FCanExecuteAction::CreateSP(this, &FLexTextCustomization::OnCanPasteAlignment)
-		))
-		.NameContent()
-		[
-			SNew(STextBlock)
-			.Text(LOCTEXT("Alignment", "Alignment"))
-			.Font(IDetailLayoutBuilder::GetDetailFont())
-		]
-		.ValueContent()
-		[
-			SNew(SHorizontalBox)
-			+SHorizontalBox::Slot()
-			.AutoWidth()
-			[
-				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot()
-				.AutoWidth()
-				.Padding(OuterPadding)
-				[
-					SNew( SCheckBox )
-					.Style(FAppStyle::Get(), "ToggleButtonCheckbox")
-					.ToolTipText(LOCTEXT("AlignTextLeft", "Align Text Left"))
-					.Padding(ContentPadding)
-					.OnCheckStateChanged(this, &FLexTextCustomization::HandleHorizontalAlignmentCheckStateChanged, hAlignPropertyHandle, EUITextParagraphHorizontalAlign::Left)
-					.IsChecked(this, &FLexTextCustomization::GetHorizontalAlignmentCheckState, hAlignPropertyHandle, EUITextParagraphHorizontalAlign::Left)
-					[
-						SNew(SImage)
-						.Image(FAppStyle::GetBrush("HorizontalAlignment_Left"))
-					]
-				]
-
-				+ SHorizontalBox::Slot()
-				.AutoWidth()
-				.Padding(OuterPadding)
-				[
-					SNew(SCheckBox)
-					.Style(FAppStyle::Get(), "ToggleButtonCheckbox")
-					.ToolTipText(LOCTEXT("AlignTextCenter", "Align Text Center"))
-					.Padding(ContentPadding)
-					.OnCheckStateChanged(this, &FLexTextCustomization::HandleHorizontalAlignmentCheckStateChanged, hAlignPropertyHandle, EUITextParagraphHorizontalAlign::Center)
-					.IsChecked(this, &FLexTextCustomization::GetHorizontalAlignmentCheckState, hAlignPropertyHandle, EUITextParagraphHorizontalAlign::Center)
-					[
-						SNew(SImage)
-						.Image(FAppStyle::GetBrush("HorizontalAlignment_Center"))
-					]
-				]
-
-				+ SHorizontalBox::Slot()
-				.AutoWidth()
-				.Padding(OuterPadding)
-				[
-					SNew(SCheckBox)
-					.Style(FAppStyle::Get(), "ToggleButtonCheckbox")
-					.ToolTipText(LOCTEXT("AlignTextRight", "Align Text Right"))
-					.Padding(ContentPadding)
-					.OnCheckStateChanged(this, &FLexTextCustomization::HandleHorizontalAlignmentCheckStateChanged, hAlignPropertyHandle, EUITextParagraphHorizontalAlign::Right)
-					.IsChecked(this, &FLexTextCustomization::GetHorizontalAlignmentCheckState, hAlignPropertyHandle, EUITextParagraphHorizontalAlign::Right)
-					[
-						SNew(SImage)
-						.Image(FAppStyle::GetBrush("HorizontalAlignment_Right"))
-					]
-				]
-			]
-			+SHorizontalBox::Slot()
-			.AutoWidth()
-			.Padding(FMargin(2, 0))
-			[
-				SNew(SBox)
-				.WidthOverride(1)
-				[
-					SNew(SImage)
-					.Image(FAppStyle::GetBrush("PropertyEditor.VerticalDottedLine"))
-					.ColorAndOpacity(FLinearColor(1, 1, 1, 0.2f))
-				]
-			]
-			+SHorizontalBox::Slot()
-			.AutoWidth()
-			[
-				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot()
-				.AutoWidth()
-				.Padding(OuterPadding)
-				[
-					SNew( SCheckBox )
-					.Style(FAppStyle::Get(), "ToggleButtonCheckbox")
-					.ToolTipText(LOCTEXT("VAlignTop", "Vertically Align Top"))
-					.Padding(ContentPadding)
-					.OnCheckStateChanged(this, &FLexTextCustomization::HandleVerticalAlignmentCheckStateChanged, vAlignPropertyHandle, EUITextParagraphVerticalAlign::Top)
-					.IsChecked(this, &FLexTextCustomization::GetVerticalAlignmentCheckState, vAlignPropertyHandle, EUITextParagraphVerticalAlign::Top)
-					[
-						SNew(SImage)
-						.Image(FAppStyle::GetBrush("VerticalAlignment_Top"))
-					]
-				]
-
-				+ SHorizontalBox::Slot()
-				.AutoWidth()
-				.Padding(OuterPadding)
-				[
-					SNew(SCheckBox)
-					.Style(FAppStyle::Get(), "ToggleButtonCheckbox")
-					.ToolTipText(LOCTEXT("VAlignMiddle", "Vertically Align Middle"))
-					.Padding(ContentPadding)
-					.OnCheckStateChanged(this, &FLexTextCustomization::HandleVerticalAlignmentCheckStateChanged, vAlignPropertyHandle, EUITextParagraphVerticalAlign::Middle)
-					.IsChecked(this, &FLexTextCustomization::GetVerticalAlignmentCheckState, vAlignPropertyHandle, EUITextParagraphVerticalAlign::Middle)
-					[
-						SNew(SImage)
-						.Image(FAppStyle::GetBrush("VerticalAlignment_Center"))
-					]
-				]
-
-				+ SHorizontalBox::Slot()
-				.AutoWidth()
-				.Padding(OuterPadding)
-				[
-					SNew(SCheckBox)
-					.Style(FAppStyle::Get(), "ToggleButtonCheckbox")
-					.ToolTipText(LOCTEXT("VAlignBottom", "Vertically Align Bottom"))
-					.Padding(ContentPadding)
-					.OnCheckStateChanged(this, &FLexTextCustomization::HandleVerticalAlignmentCheckStateChanged, vAlignPropertyHandle, EUITextParagraphVerticalAlign::Bottom)
-					.IsChecked(this, &FLexTextCustomization::GetVerticalAlignmentCheckState, vAlignPropertyHandle, EUITextParagraphVerticalAlign::Bottom)
-					[
-						SNew(SImage)
-						.Image(FAppStyle::GetBrush("VerticalAlignment_Bottom"))
-					]
-				]
-			]
-		]
-		.OverrideResetToDefault(FResetToDefaultOverride::Create(
-			TAttribute<bool>::CreateLambda([=]
-				{
-					return hAlignPropertyHandle->CanResetToDefault() || vAlignPropertyHandle->CanResetToDefault();
-				}),
-				FSimpleDelegate::CreateLambda([=]() 
-				{
-					hAlignPropertyHandle->ResetToDefault(); vAlignPropertyHandle->ResetToDefault();
-				})
-		))
-		;
+		DetailBuilder.GetDetailsView()->RegisterInstancedCustomPropertyTypeLayout(TEXT("ELexUITextParagraphHorizontalAlign"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexTextAlignmentCustomization::MakeInstance, true));
+		DetailBuilder.GetDetailsView()->RegisterInstancedCustomPropertyTypeLayout(TEXT("ELexUITextParagraphVerticalAlign"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexTextAlignmentCustomization::MakeInstance, false));
+		LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexText, HAlign));
+		LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexText, VAlign));
 	}
 
-	auto OverflowTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, overflowType));
+	auto OverflowTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, OverflowType));
 	OverflowTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexTextCustomization::ForceRefresh, &DetailBuilder));
-	auto AdjustWidthHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, adjustWidth));
-	AdjustWidthHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexTextCustomization::ForceRefresh, &DetailBuilder));
-	auto AdjustHeightHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, adjustHeight));
-	AdjustHeightHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexTextCustomization::ForceRefresh, &DetailBuilder));
-
-	EUITextOverflowType OverflowType;
-	OverflowTypeHandle->GetValue(*(uint8*)&OverflowType);
+	LGUICategory.AddProperty(OverflowTypeHandle);
+	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexText, MaxHorizontalWidth))
+	.Visibility(TAttribute<EVisibility>::CreateSPLambda(this, [=]()
+	{
+		ELexUITextOverflowType OverflowType;
+		OverflowTypeHandle->GetValue(*(uint8*)&OverflowType);
+		if (OverflowType == ELexUITextOverflowType::HorizontalAndVerticalOverflow)
+		{
+			return EVisibility::Visible;
+		}
+		return EVisibility::Collapsed;
+	}));
+	
 	TArray<FName> needToHidePropertyName;
-	if (OverflowType == EUITextOverflowType::HorizontalOverflow)
-	{
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, adjustHeight));
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, adjustHeightRange));
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, maxHorizontalWidth));
-		bool AdjustWidth;
-		AdjustWidthHandle->GetValue(AdjustWidth);
-		if (!AdjustWidth)
-		{
-			needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, adjustWidthRange));
-		}
-	}
-	else if (OverflowType == EUITextOverflowType::VerticalOverflow)
-	{
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, adjustWidth));
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, adjustWidthRange));
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, maxHorizontalWidth));
-		bool AdjustHeight;
-		AdjustHeightHandle->GetValue(AdjustHeight);
-		if (!AdjustHeight)
-		{
-			needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, adjustHeightRange));
-		}
-	}
-	else if (OverflowType == EUITextOverflowType::HorizontalAndVerticalOverflow)
-	{
-		bool AdjustWidth;
-		AdjustWidthHandle->GetValue(AdjustWidth);
-		if (!AdjustWidth)
-		{
-			needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, adjustWidthRange));
-		}
-		bool AdjustHeight;
-		AdjustHeightHandle->GetValue(AdjustHeight);
-		if (!AdjustHeight)
-		{
-			needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, adjustHeightRange));
-		}
-	}
-	else
-	{
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, adjustHeight));
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, adjustWidth));
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, adjustHeightRange));
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, adjustWidthRange));
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, maxHorizontalWidth));
-	}
-
-	auto RichTextHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, richText));
+	auto RichTextHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, bRichText));
 	RichTextHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexTextCustomization::ForceRefresh, &DetailBuilder));
 	bool richText = false;
 	RichTextHandle->GetValue(richText);
 	if (richText)
 	{
-		IDetailGroup& RichTextGroup = category.AddGroup(FName("RichText"), RichTextHandle->GetPropertyDisplayName());
+		IDetailGroup& RichTextGroup = LGUICategory.AddGroup(FName("RichText"), RichTextHandle->GetPropertyDisplayName());
 		RichTextGroup.HeaderProperty(RichTextHandle);
-		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, richTextTagFilterFlags)));
-		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, richTextCustomStyleData)));
-		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, richTextImageData)));
-		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, listRichTextImageObjectInOutliner)));
-		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, createdRichTextImageObjectArray)));
+		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, RichTextTagFilterFlags)));
+		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, RichTextCustomStyleData)));
+		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, RichTextImageData)));
+		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, bListRichTextImageObjectInOutliner)));
+		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, CreatedRichTextImageObjectArray)));
 	}
 	else
 	{
-		category.AddProperty(RichTextHandle);
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, richTextCustomStyleData));
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, richTextImageData));
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, listRichTextImageObjectInOutliner));
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, createdRichTextImageObjectArray));
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, richTextTagFilterFlags));
+		LGUICategory.AddProperty(RichTextHandle);
+		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, RichTextCustomStyleData));
+		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, RichTextImageData));
+		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, bListRichTextImageObjectInOutliner));
+		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, CreatedRichTextImageObjectArray));
+		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, RichTextTagFilterFlags));
 	}
 
 	for (auto item : needToHidePropertyName)
@@ -283,7 +95,7 @@ void FLexTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder
 		DetailBuilder.HideProperty(item);
 	}
 
-	auto fontHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, font));
+	auto fontHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, Font));
 	fontHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
 		TargetScriptPtr->OnPostChangeFontProperty();
 	}));
@@ -291,7 +103,7 @@ void FLexTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder
 		TargetScriptPtr->OnPreChangeFontProperty();
 	}));
 
-	auto richTextImageDataHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, richTextImageData));
+	auto richTextImageDataHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, RichTextImageData));
 	richTextImageDataHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
 		TargetScriptPtr->OnPostChangeRichTextImageDataProperty();
 		}));
@@ -299,13 +111,50 @@ void FLexTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder
 		TargetScriptPtr->OnPreChangeRichTextImageDataProperty();
 		}));
 
-	auto richTextCustomStyleDataHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, richTextCustomStyleData));
+	auto richTextCustomStyleDataHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, RichTextCustomStyleData));
 	richTextCustomStyleDataHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
 		TargetScriptPtr->OnPostChangeRichTextCustomStyleDataProperty();
 		}));
 	richTextCustomStyleDataHandle->SetOnPropertyValuePreChange(FSimpleDelegate::CreateLambda([=, this] {
 		TargetScriptPtr->OnPreChangeRichTextCustomStyleDataProperty();
 		}));
+
+	auto OverrideMaterial_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, OverrideMaterial));
+	OverrideMaterial_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, &DetailBuilder] {
+		DetailBuilder.ForceRefreshDetails();
+		}));
+	LGUICategory.AddProperty(OverrideMaterial_PH);
+	LGUICategory.AddCustomRow(LOCTEXT("MaterialDomainErrorTipRow", "MaterialDomainErrorTip"))
+	.Visibility(TAttribute<EVisibility>::CreateSPLambda(this, [=]()
+	{
+		UMaterialInterface* OverrideMaterial = nullptr;
+		OverrideMaterial_PH->GetValue((UObject*&)OverrideMaterial);
+		if (!OverrideMaterial)
+		{
+			return EVisibility::Collapsed;
+		}
+		auto Mat = OverrideMaterial->GetMaterial();
+		if (!Mat)
+		{
+			return EVisibility::Collapsed;
+		}
+		if (Mat->MaterialDomain == EMaterialDomain::MD_Surface)
+		{
+			return EVisibility::Collapsed;
+		}
+		return EVisibility::Visible;
+	}))
+	.WholeRowContent()
+	.MinDesiredWidth(500)
+	.VAlign(VAlign_Center)
+	[
+		SNew(STextBlock)
+		.Font(IDetailLayoutBuilder::GetDetailFont())
+		.Text(LOCTEXT("MaterialDomainErrorTip", "OverrideMaterial should use Surface domain!"))
+		.ColorAndOpacity(FLinearColor(FColor::Yellow))
+		.AutoWrapText(true)
+	]
+	;
 }
 void FLexTextCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
 {
@@ -313,62 +162,5 @@ void FLexTextCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
 	{
 		DetailBuilder->ForceRefreshDetails();
 	}
-}
-void FLexTextCustomization::HandleHorizontalAlignmentCheckStateChanged(ECheckBoxState InCheckboxState, TSharedRef<IPropertyHandle> PropertyHandle, EUITextParagraphHorizontalAlign ToAlignment)
-{
-	PropertyHandle->SetValue((uint8)ToAlignment);
-}
-void FLexTextCustomization::HandleVerticalAlignmentCheckStateChanged(ECheckBoxState InCheckboxState, TSharedRef<IPropertyHandle> PropertyHandle, EUITextParagraphVerticalAlign ToAlignment)
-{
-	PropertyHandle->SetValue((uint8)ToAlignment);
-}
-ECheckBoxState FLexTextCustomization::GetHorizontalAlignmentCheckState(TSharedRef<IPropertyHandle> PropertyHandle, EUITextParagraphHorizontalAlign ForAlignment) const
-{
-	uint8 Value;
-	if (PropertyHandle->GetValue(Value) == FPropertyAccess::Result::Success)
-	{
-		return Value == (uint8)ForAlignment ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
-	}
-
-	return ECheckBoxState::Unchecked;
-}
-ECheckBoxState FLexTextCustomization::GetVerticalAlignmentCheckState(TSharedRef<IPropertyHandle> PropertyHandle, EUITextParagraphVerticalAlign ForAlignment) const
-{
-	uint8 Value;
-	if (PropertyHandle->GetValue(Value) == FPropertyAccess::Result::Success)
-	{
-		return Value == (uint8)ForAlignment ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
-	}
-
-	return ECheckBoxState::Unchecked;
-}
-
-#define BEGIN_ALIGNMENT_CLIPBOARD TEXT("Begin LGUI UIWidget")
-void FLexTextCustomization::OnCopyAlignment()
-{
-	if (TargetScriptPtr.IsValid())
-	{
-		FString CopiedText = FString::Printf(TEXT("%s, hAlign=%d, vAlign=%d"), BEGIN_ALIGNMENT_CLIPBOARD, (int)TargetScriptPtr->hAlign, (int)TargetScriptPtr->vAlign);
-		FPlatformApplicationMisc::ClipboardCopy(*CopiedText);
-	}
-}
-void FLexTextCustomization::OnPasteAlignment(TSharedRef<IPropertyHandle> HAlignPropertyHandle, TSharedRef<IPropertyHandle> VAlignPropertyHandle)
-{
-	FString PastedText;
-	FPlatformApplicationMisc::ClipboardPaste(PastedText);
-	if (PastedText.StartsWith(BEGIN_ALIGNMENT_CLIPBOARD))
-	{
-		uint8 tempUInt8;
-		FParse::Value(*PastedText, TEXT("hAlign="), tempUInt8);
-		HAlignPropertyHandle->SetValue(tempUInt8);
-		FParse::Value(*PastedText, TEXT("vAlign="), tempUInt8);
-		VAlignPropertyHandle->SetValue(tempUInt8);
-	}
-}
-bool FLexTextCustomization::OnCanPasteAlignment()const
-{
-	FString PastedText;
-	FPlatformApplicationMisc::ClipboardPaste(PastedText);
-	return PastedText.StartsWith(BEGIN_ALIGNMENT_CLIPBOARD);
 }
 #undef LOCTEXT_NAMESPACE

@@ -1,14 +1,14 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUI/Public/Core/Components/LexRectBlock.h"
+#include "Core/Components/LexRectBlock.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/Components/LexCanvas.h"
 #include "Core/LexUISpriteInfo.h"
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Core/LexUIDrawCall.h"
-#include "LGUI/Public/Core/Components/UITextureBase.h"
+#include "Core/Components/UITextureBase.h"
 #include "Utils/LexUIUtils.h"
 #include "Core/LexUISpriteData.h"
 #include "Core/LexUISpriteData_BaseObject.h"

@@ -11,10 +11,9 @@
 #include "UISelectableComponent.generated.h"
 
 UENUM(BlueprintType, Category = LGUI)
-enum class UISelectableTransitionType:uint8
+enum class ELexUISelectableTransitionType:uint8
 {
 	None,
-	/** In this mode, TransitionActor must be a UIBaseRenderable Actor (UISprite, UITexture, UIText), the color property will be override by this component. */
 	ColorTint,
 	/** In this mode, RootComponent of TransitionActor must be a UISpriteBase Actor. The Sprite property will be override by this component. */
 	SpriteSwap,
@@ -44,6 +43,98 @@ enum class EUISelectableNavigationMode:uint8
 	Explicit,
 };
 
+UCLASS(ClassGroup = (LexUI), Abstract, DefaultToInstanced, EditInlineNew)
+class LGUI_API UUISelectableTransitionComponent :public UObject
+{
+	GENERATED_BODY()
+public:
+	void OnInitialize();
+protected:
+	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI-Transition", meta = (DisplayName = "OnInitialize"))
+	void ReceiveOnInitialize();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "LGUI-Transition")
+		TArray<TObjectPtr<ULTweener>> TweenerCollection;
+
+	/** 
+	 * Called when UISelectableComponent's transition state = normal.
+	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI-Transition", meta = (DisplayName = "OnNormal"))
+		void ReceiveOnNormal(bool InImmediateSet);
+	/**
+	 * Called when UISelectableComponent's transition state = highlighted.
+	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI-Transition", meta = (DisplayName = "OnHighlighted"))
+		void ReceiveOnHighlighted(bool InImmediateSet);
+	/**
+	 * Called when UISelectableComponent's transition state = pressed.
+	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI-Transition", meta = (DisplayName = "OnPressed"))
+		void ReceiveOnPressed(bool InImmediateSet);
+	/**
+	 * Called when UISelectableComponent's transition state = disabled.
+	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI-Transition", meta = (DisplayName = "OnDisabled"))
+		void ReceiveOnDisabled(bool InImmediateSet);
+	/**
+	 * This gives us an opportunity to do transition on more case than just provided above
+	 * @param InTransitionName	use this to tell different event type. eg.UIToggleComponent, "On"/"Off" for toggle on/off
+	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI-Transition", meta = (DisplayName = "OnStartCustomTransition"))
+		void ReceiveOnStartCustomTransition(FName InTransitionName, bool InImmediateSet);
+public:
+	/**
+	 * Called when UISelectableComponent's transition state = normal.
+	 * Default will call blueprint implemented function. If you dont want that, just not use Super::OnNormal();
+	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
+	 */
+	virtual void OnNormal(bool InImmediateSet);
+	/**
+	 * Called when UISelectableComponent's transition state = highlighted.
+	 * Default will call blueprint implemented function. If you dont want that, just not use Super::OnHighlighted();
+	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
+	 */
+	virtual void OnHighlighted(bool InImmediateSet);
+	/**
+	 * Called when UISelectableComponent's transition state = pressed.
+	 * Default will call blueprint implemented function. If you dont want that, just not use Super::OnPressed();
+	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
+	 */
+	virtual void OnPressed(bool InImmediateSet);
+	/**
+	 * Called when UISelectableComponent's transition state = disabled.
+	 * Default will call blueprint implemented function. If you dont want that, just not use Super::OnDisabled();
+	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
+	 */
+	virtual void OnDisabled(bool InImmediateSet);
+
+	/**
+	 * This gives us an opportunity to do transition on more case than just provided above.
+	 * Default will call blueprint implemented function. If you dont want that, just not use Super::OnStartCustomTransition();
+	 * @param InTransitionName: use this to tell different event type. eg.UIToggleComponent, "On"/"Off" for toggle on/off
+	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
+	 */
+	virtual void OnStartCustomTransition(FName InTransitionName, bool InImmediateSet);
+
+	/**
+	 * Stop any transition inside TweenerCollection if is playing, so remember to collect your tweener object by calling function CollectTweener.
+	 * Call this before start any transition, in case of other transition is in progress.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "LGUI-Transition")
+	virtual void StopTransition();
+	/** Add tweener to TweenerCollection, so the function StopTransition will take effect. */
+	UFUNCTION(BlueprintCallable, Category = "LGUI-Transition")
+	virtual void CollectTweener(ULTweener* InItem);
+	/** Add tweener set to TweenerCollection, so the function StopTransition will take effect. */
+	UFUNCTION(BlueprintCallable, Category = "LGUI-Transition")
+	virtual void CollectTweeners(const TSet<ULTweener*>& InItems);
+};
+
 class ULexUISpriteData_BaseObject;
 
 UCLASS(HideCategories = (Collision, LOD, Physics, Cooking, Rendering, Activation, Actor, Input, Lighting, Mobile), ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
@@ -63,10 +154,6 @@ protected:
 
 protected:
 	virtual void Awake() override;
-	virtual void OnEnable() override;
-	virtual void Start() override;
-	virtual void OnDisable()override;
-	virtual void OnDestroy()override;
 
 	virtual void OnRegister()override;
 	virtual void OnUnregister()override;
@@ -81,11 +168,11 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable")
 		bool bInteractable = true;
 
-	virtual void OnUIInteractionStateChanged(bool interactableOrNot)override;
+	virtual void OnIsEnabledChanged(bool IsEnabled) override;
 
 #pragma region Transition
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable")
-		UISelectableTransitionType Transition;
+		ELexUISelectableTransitionType Transition;
 
 	UPROPERTY(Transient)TObjectPtr<class ULTweener> TransitionTweener = nullptr;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable")
@@ -107,12 +194,13 @@ protected:
 		TObjectPtr<ULexUISpriteData_BaseObject> PressedSprite;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable", meta = (DisplayThumbnail = "false"))
 		TObjectPtr<ULexUISpriteData_BaseObject> DisabledSprite;
+	UPROPERTY(EditAnywhere, Instanced, Category="LGUI-Selectable")
+	TObjectPtr<UUISelectableTransitionComponent> TransitionComp = nullptr;
 
 	EUISelectableSelectionState CurrentSelectionState = EUISelectableSelectionState::Normal;
 	void ApplySelectionState(bool immediateSet);
 	bool IsPointerInsideThis = false;
 	bool IsPointerDown = false;
-	UPROPERTY(Transient) TWeakObjectPtr<class UUISelectableTransitionComponent> TransitionComp = nullptr;
 #pragma endregion
 	/**
 	 * Can we navigate from other selectable object to this one?

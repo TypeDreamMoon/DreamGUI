@@ -33,8 +33,7 @@ class LGUI_API UUIToggleComponent : public UUISelectableComponent, public ILGUIP
 protected:
 	virtual void Awake() override;
 	virtual void Start() override;
-	virtual void OnEnable()override;
-	virtual void OnDisable()override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
@@ -45,7 +44,8 @@ protected:
 		TWeakObjectPtr<ULexWidget> ToggleTarget;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI-Toggle")
 		UIToggleTransitionType ToggleTransition = UIToggleTransitionType::Fade;
-	UPROPERTY(Transient) TWeakObjectPtr<class UUISelectableTransitionComponent> ToggleTransitionComp = nullptr;
+	UPROPERTY(EditAnywhere, Instanced, Category="LGUI-Toggle")
+	TObjectPtr<class UUISelectableTransitionComponent> ToggleTransitionComp = nullptr;
 	bool CheckTarget();
 #pragma region Transition
 	UPROPERTY(Transient) TObjectPtr<class ULTweener> ToggleTransitionTweener = nullptr;

@@ -1,10 +1,10 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIShaders.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIPostProcessShaders.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIResolveShaders.h"
+#include "Core/LexUIRender/LexUIRenderer.h"
+#include "Core/LexUIRender/LexUIShaders.h"
+#include "Core/LexUIRender/LexUIVertex.h"
+#include "Core/LexUIRender/LexUIPostProcessShaders.h"
+#include "Core/LexUIRender/LexUIResolveShaders.h"
 #include "Modules/ModuleManager.h"
 #include "LGUI.h"
 #include "SceneView.h"
@@ -12,8 +12,8 @@
 #include "StaticMeshVertexData.h"
 #include "PipelineStateCache.h"
 #include "SceneRendering.h"
-#include "LGUI/Public/Core/LexUIRender/ILexUIRendererPrimitive.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/LexUIRender/ILexUIRendererPrimitive.h"
+#include "Core/Components/LexCanvas.h"
 #include "MeshPassProcessor.inl"
 #include "ScenePrivate.h"
 #include "TextureResource.h"
@@ -29,7 +29,7 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "ClearQuad.h"
 #if WITH_EDITOR
-#include "LGUI/Public/Core/LexUIRender/LexUIHelperLineShaders.h"
+#include "Core/LexUIRender/LexUIHelperLineShaders.h"
 #endif
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION

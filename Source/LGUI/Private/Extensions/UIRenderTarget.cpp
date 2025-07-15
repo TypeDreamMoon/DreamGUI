@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Extensions/UIRenderTarget.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/Components/LexCanvas.h"
 #include "LGUI.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Utils/LexUIUtils.h"

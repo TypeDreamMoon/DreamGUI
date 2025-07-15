@@ -2,9 +2,9 @@
 
 #include "Core/LexUIClipData.h"
 
-#include "LGUI/Public/Core/Components/LexWidget.h"
+#include "Core/Components/LexWidget.h"
 #include "Core/LexUIDataAsTexture.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/Components/LexCanvas.h"
 
 int FLexUIClipData::InheritClipDepth = 16;
 int FLexUIClipData::SingleBlockSizeInBytes =

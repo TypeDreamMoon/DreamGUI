@@ -3,7 +3,7 @@
 #pragma once
 
 #include "Core/LexUIGeometry.h"
-#include "LGUI/Public/Core/Components/LexVisualBatchMesh.h"
+#include "Core/Components/LexVisualBatchMesh.h"
 #include "Components/ActorComponent.h"
 #include "LexUIMeshModifierBase.generated.h"
 

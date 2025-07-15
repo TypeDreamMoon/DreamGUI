@@ -6,8 +6,10 @@
 #include "EntitySystem/MovieSceneEntityFactoryTemplates.h"
 #include "EntitySystem/MovieScenePropertyComponentHandler.h"
 #include "MovieSceneTracksComponentTypes.h"
+#include "Core/Components/LexImage.h"
+#include "Core/Components/LexText.h"
 #include "Systems/MovieScenePiecewiseDoubleBlenderSystem.h"
-#include "LGUI/Public/Core/Components/LexVisualBatchMesh.h"
+#include "Core/Components/LexVisualBatchMesh.h"
 
 namespace UE
 {
@@ -45,11 +47,26 @@ FMovieSceneLGUIComponentTypes::FMovieSceneLGUIComponentTypes()
 				const int32 ParentIndex = ParentAllocationOffsets[Index];
 				const int32 ChildIndex = ChildRange.ComponentStartOffset + Index;
 
-				auto Renderable = Cast<ULexVisualBatchMesh>(BoundObjectComponents[ChildIndex]);
-				if (Renderable)
+				if (auto Image = Cast<ULexImage>(BoundObjectComponents[ChildIndex]))
 				{
-					auto Property = FindFProperty<FProperty>(Renderable->GetClass(), ULexVisualBatchMesh::GetCustomUIMaterialPropertyName());
-					HandleComponents[ChildIndex] = FLGUIMaterialHandle(Property->ContainerPtrToValuePtr<void>(Renderable));
+					if (auto ResourceMat = Cast<UMaterialInterface>(Image->GetBrush().GetResourceObject()))
+					{
+						if (auto BrushStructProperty = FindFProperty<FStructProperty>(Image->GetClass(), ULexImage::GetPropertyName_Brush()))
+						{
+							auto BrushStructValuePtr = BrushStructProperty->ContainerPtrToValuePtr<void>(Image);
+							if (auto ResourceObjectProperty = FindFProperty<FProperty>(Image->GetClass(), FLexUIImageBrush::GetPropertyName_ResourceObject()))
+							{
+								HandleComponents[ChildIndex] = FLGUIMaterialHandle(ResourceObjectProperty->ContainerPtrToValuePtr<void>(BrushStructValuePtr));
+							}
+						}
+					}
+				}
+				else if (auto Text = Cast<ULexText>(BoundObjectComponents[ChildIndex]))
+				{
+					if (auto OverrideMatProperty = FindFProperty<FProperty>(Text->GetClass(), ULexText::GetPropertyName_OverrideMaterial()))
+					{
+						HandleComponents[ChildIndex] = FLGUIMaterialHandle(OverrideMatProperty->ContainerPtrToValuePtr<void>(Text));
+					}
 				}
 			}
 		}

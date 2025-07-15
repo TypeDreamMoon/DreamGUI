@@ -3,17 +3,17 @@
 #include "Core/LGUIManager.h"
 #include "LGUI.h"
 #include "Utils/LexUIUtils.h"
-#include "LGUI/Public/Core/Components/LexWidget.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/Components/LexWidget.h"
+#include "Core/Components/LexCanvas.h"
 #include "Event/LGUIBaseRaycaster.h"
 #include "Engine/World.h"
 #include "Interaction/UISelectableComponent.h"
 #include "Core/LGUISettings.h"
 #include "Event/InputModule/LGUIBaseInputModule.h"
 #include "Core/Actor/LexWidgetActor.h"
-#include "LGUI/Public/Core/Components/LexVisual.h"
+#include "Core/Components/LexVisual.h"
 #include "Engine/Engine.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
+#include "Core/LexUIRender/LexUIRenderer.h"
 #include "Core/ILGUICultureChangedInterface.h"
 #include "Core/LGUILifeCycleBehaviour.h"
 #include "Core/Components/LexLayoutAnchor.h"
@@ -159,7 +159,7 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 			{
 				if (auto Widget = Cast<ULexWidget>(SceneComp))
 				{
-					if (Widget->GetIsUIActiveInHierarchy())
+					if (Widget->IsVisibleForRender())
 					{
 						OutBounds = Widget->Bounds.GetBox();
 						OutValidBounds = true;
@@ -214,7 +214,7 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 			auto RootComp = InRootActor->GetRootComponent();
 			if (auto RootUIComp = Cast<ULexWidget>(RootComp))
 			{
-				PrefabHelper->AddMemberPropertyToSubPrefab(InRootActor, RootUIComp, ULexWidget::GetHierarchyIndexPropertyName());
+				PrefabHelper->AddMemberPropertyToSubPrefab(InRootActor, RootUIComp, ULexWidget::GetPropertyName_SiblingIndex());
 			}
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_AfterCollectPropertyToOverride.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, FName InPropertyName) {
@@ -1048,7 +1048,7 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 				if (!Selectable.IsValid())continue;
 				if (!IsValid(Selectable->GetWorld()))continue;
 				if (!IsValid(Selectable->GetRootUIComponent()))continue;
-				if (!Selectable->GetRootUIComponent()->GetIsUIActiveInHierarchy())continue;
+				if (!Selectable->GetRootUIComponent()->IsVisibleForHitTest())continue;
 
 				ULGUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(Selectable->GetWorld(), Selectable.Get(), this->GetWorld()->IsGameWorld() ? Selectable->GetRootUIComponent()->IsScreenSpaceOverlayUI() : false);
 			}
@@ -1080,10 +1080,9 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 				if (item.IsValid())
 				{
 					item->Call_Start();
-					if (item->bCanExecuteUpdate && !item->bIsAddedToUpdate)
+					if (item->bCanExecuteUpdate)
 					{
-						item->bIsAddedToUpdate = true;
-						LGUILifeCycleBehavioursForUpdate.Add(item);
+						LGUILifeCycleBehavioursForUpdate.AddUnique(item);
 					}
 				}
 			}
@@ -1220,7 +1219,7 @@ void ULGUIManagerWorldSubsystem::AddLGUILifeCycleBehaviourForLifecycleEvent(ULGU
 			}
 			else//not processed by prefab system, just do immediately
 			{
-				ProcessLGUILifecycleEvent(InComp);
+				Instance->ProcessLGUILifecycleEvent(InComp);
 			}
 		}
 	}
@@ -1286,67 +1285,6 @@ void ULGUIManagerWorldSubsystem::RemoveLGUILifeCycleBehavioursFromUpdate(ULGUILi
 			if (inValidCount > 0)
 			{
 				UE_LOG(LGUI, Warning, TEXT("[ULGUIManagerWorldSubsystem::RemoveLGUILifeCycleBehavioursFromUpdate]Cleanup %d invalid LGUILifeCycleBehaviour"), inValidCount);
-			}
-		}
-	}
-}
-
-void ULGUIManagerWorldSubsystem::AddLGUILifeCycleBehavioursForStart(ULGUILifeCycleBehaviour* InComp)
-{
-	if (IsValid(InComp))
-	{
-		if (auto Instance = GetInstance(InComp->GetWorld()))
-		{
-			int32 index = INDEX_NONE;
-			if (!Instance->LGUILifeCycleBehavioursForStart.Find(InComp, index))
-			{
-				Instance->LGUILifeCycleBehavioursForStart.Add(InComp);
-				return;
-			}
-			UE_LOG(LGUI, Warning, TEXT("[ULGUIManagerWorldSubsystem::AddLGUILifeCycleBehavioursForStart]Already exist, comp:%s"), *(InComp->GetPathName()));
-		}
-	}
-}
-void ULGUIManagerWorldSubsystem::RemoveLGUILifeCycleBehavioursFromStart(ULGUILifeCycleBehaviour* InComp)
-{
-	if (IsValid(InComp))
-	{
-		if (auto Instance = GetInstance(InComp->GetWorld()))
-		{
-			auto& startArray = Instance->LGUILifeCycleBehavioursForStart;
-			int32 index = INDEX_NONE;
-			if (startArray.Find(InComp, index))
-			{
-				if (Instance->bIsExecutingStart)
-				{
-					if (!InComp->bIsStartCalled)//if already called start then nothing to do, because start array will be cleared after execute start
-					{
-						startArray.RemoveAt(index);//not execute start yet, safe to remove
-					}
-				}
-				else
-				{
-					startArray.RemoveAt(index);//not executing start, safe to remove
-				}
-			}
-			else
-			{
-				UE_LOG(LGUI, Warning, TEXT("[ULGUIManagerWorldSubsystem::RemoveLGUILifeCycleBehavioursFromStart]Not exist, comp:%s"), *(InComp->GetPathName()));
-			}
-
-			//cleanup array
-			int inValidCount = 0;
-			for (int i = startArray.Num() - 1; i >= 0; i--)
-			{
-				if (!startArray[i].IsValid())
-				{
-					startArray.RemoveAt(i);
-					inValidCount++;
-				}
-			}
-			if (inValidCount > 0)
-			{
-				UE_LOG(LGUI, Warning, TEXT("[ULGUIManagerWorldSubsystem::RemoveLGUILifeCycleBehavioursFromStart]Cleanup %d invalid LGUILifeCycleBehaviour"), inValidCount);
 			}
 		}
 	}
@@ -1636,19 +1574,13 @@ void ULGUIManagerWorldSubsystem::ProcessLGUILifecycleEvent(ULGUILifeCycleBehavio
 {
 	if (InComp)
 	{
-		if (InComp->IsAllowedToCallAwake())
+		if (!InComp->bIsAwakeCalled)
 		{
-			if (!InComp->bIsAwakeCalled)
-			{
-				InComp->Call_Awake();
-			}
-			if (InComp->IsAllowedToCallOnEnable() && InComp->GetEnable())
-			{
-				if (!InComp->bIsEnableCalled)
-				{
-					InComp->Call_OnEnable();
-				}
-			}
+			InComp->Call_Awake();
+#if !UE_BUILD_SHIPPING
+			check(!LGUILifeCycleBehavioursForStart.Contains(InComp));
+#endif
+			LGUILifeCycleBehavioursForStart.Add(InComp);
 		}
 	}
 }

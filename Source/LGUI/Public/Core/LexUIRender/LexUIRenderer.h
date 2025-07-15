@@ -7,8 +7,8 @@
 #include "RendererInterface.h"
 #include "RenderResource.h"
 #include "StaticMeshVertexData.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
-#include "LGUI/Public/Core/LexUIRender/ILexUIRendererPrimitive.h"
+#include "Core/LexUIRender/LexUIVertex.h"
+#include "Core/LexUIRender/ILexUIRendererPrimitive.h"
 
 class ULexCanvas;
 struct FLexUIPostProcessVertex;

@@ -2,7 +2,7 @@
 
 #include "GeometryModifier/LexUIMeshModifierBase.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/LexVisualBatchMesh.h"
+#include "Core/Components/LexVisualBatchMesh.h"
 
 ULexUIMeshModifierBase::ULexUIMeshModifierBase()
 {

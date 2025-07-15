@@ -5,7 +5,7 @@
 #if 0
 #include "CoreMinimal.h"
 #include "PrefabSystem/ILGUIPrefabInterface.h"
-#include "LGUI/Public/Core/Components/UICustomMesh.h"
+#include "Core/Components/UICustomMesh.h"
 #include "Components/WidgetComponent.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "UIWidget.generated.h"

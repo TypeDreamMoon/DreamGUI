@@ -3,7 +3,7 @@
 #include "Extensions/UIRing.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/Components/LexCanvas.h"
 #include "LTweenManager.h"
 
 UUIRing::UUIRing(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)

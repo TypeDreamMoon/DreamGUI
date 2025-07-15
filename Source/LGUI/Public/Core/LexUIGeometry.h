@@ -8,7 +8,7 @@
 #include "Core/LexUIMeshVertex.h"
 
 struct FLexUISpriteInfo;
-struct FUITextLineProperty;
+struct FLexUITextLineProperty;
 class ULexUIFontData_BaseObject;
 class ULexCanvas;
 class ULexWidget;
@@ -198,12 +198,12 @@ public:
 public:
 	static void UpdateUIText(const FString& text, int32 visibleCharCount, float width, float height, const FVector2f& pivot
 		, const FColor& color, uint8 renderOpacity, const FVector2f& fontSpace, FLexUIGeometry* uiGeo, float fontSize
-		, EUITextParagraphHorizontalAlign paragraphHAlign, EUITextParagraphVerticalAlign paragraphVAlign, EUITextOverflowType overflowType
+		, ELexUITextParagraphHorizontalAlign paragraphHAlign, ELexUITextParagraphVerticalAlign paragraphVAlign, ELexUITextOverflowType overflowType
 		, ETextWrappingPolicy wrappingPolicy, float maxHorizontalWidth, bool kerning
-		, EUITextFontStyle fontStyle, FVector2f& textRealSize
+		, ELexUITextFontStyle fontStyle, FVector2f& textRealSize
 		, ULexCanvas* renderCanvas, class ULexText* uiComp
-		, TArray<FUITextLineProperty>& cacheLinePropertyArray, TArray<FUITextCharProperty>& cacheCharPropertyArray, TArray<FUIText_RichTextCustomTag>& cacheRichTextCustomTagArray
-		, TArray<FUIText_RichTextImageTag>& cacheRichTextImageTagArray
+		, TArray<FLexUITextLineProperty>& cacheLinePropertyArray, TArray<FLexUITextCharProperty>& cacheCharPropertyArray, TArray<FLexUIText_RichTextCustomTag>& cacheRichTextCustomTagArray
+		, TArray<FLexUIText_RichTextImageTag>& cacheRichTextImageTagArray
 		, ULexUIFontData_BaseObject* font, bool richText, int32 richTextFilterFlags);
 #pragma endregion
 

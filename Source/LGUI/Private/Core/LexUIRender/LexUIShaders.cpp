@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUI/Public/Core/LexUIRender/LexUIShaders.h"
+#include "Core/LexUIRender/LexUIShaders.h"
 #include "LGUI.h"
 #include "PipelineStateCache.h"
 #include "Materials/Material.h"

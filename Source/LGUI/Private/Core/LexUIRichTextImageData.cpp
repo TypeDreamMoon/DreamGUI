@@ -34,7 +34,7 @@ void ULexUIRichTextImageData::BroadcastOnDataChange()
 	OnDataChange.Broadcast();
 }
 
-void ULexUIRichTextImageData::CreateOrUpdateObject(ULexWidget* parent, const TArray<FUIText_RichTextImageTag>& imageTagData, TArray<TObjectPtr<ULexWidget>>& createdImageObjectArray, bool listImageObjectInEditorOutliner)
+void ULexUIRichTextImageData::CreateOrUpdateObject(ULexWidget* parent, const TArray<FLexUIText_RichTextImageTag>& imageTagData, TArray<TObjectPtr<ULexWidget>>& createdImageObjectArray, bool listImageObjectInEditorOutliner)
 {
 	//destroy extra
 	while (createdImageObjectArray.Num() > imageTagData.Num())

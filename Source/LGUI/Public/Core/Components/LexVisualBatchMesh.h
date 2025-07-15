@@ -82,13 +82,8 @@ class LGUI_API ULexVisualBatchMesh : public ULexVisual
 public:	
 	ULexVisualBatchMesh(const FObjectInitializer& ObjectInitializer);
 
-public:
-	static const FName GetCustomUIMaterialPropertyName()
-	{
-		return GET_MEMBER_NAME_CHECKED(ULexVisualBatchMesh, CustomUIMaterial);
-	}
 protected:
-	friend class FUIBatchMeshRenderableCustomization;
+	friend class FLexVisualBatchMeshCustomization;
 	virtual void BeginPlay() override;
 	virtual void EndPlay() override;
 #if WITH_EDITOR
@@ -105,18 +100,9 @@ protected:
 	void ApplyGeometryModifier(bool triangleChanged, bool uvChanged, bool colorChanged, bool vertexPositionChanged);
 
 public:
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		UMaterialInterface* GetCustomUIMaterial()const { return CustomUIMaterial; }
 	/** 
-	 * if inMat is a UMaterialInstanceDynamic, then it will directly use for render.
-	 * if not, then a new MaterialInstanceDynamic will be created to render this UI item, and the created MaterialInstanceDynamic may shared with others UI items.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetCustomUIMaterial(UMaterialInterface* inMat);
-	/** 
-	 * If CustomUIMaterial is a UMaterialInstanceDynamic, then will return it directly.
-	 * If not, then return a created MaterialInstanceDynamic that renderring this UI item, may shared by other UI item. if this UI item is not renderred yet, then return nullptr.
-	 * LGUI only create MaterialInstanceDynamic when specified material have one of these LGUI material parameter: [MainTexture, RectClipOffsetAndSize, RectClipFeather, ClipTexture, TextureClipOffsetAndSize].
+	 * Return a created MaterialInstanceDynamic that renderring this UI item, may shared by other UI item. if this UI item is not renderred yet, then return nullptr.
+	 * LGUI only create MaterialInstanceDynamic when specified material have one of these LGUI material parameter: [LexUI_MainTexture, LexUI_FontTexture, LexUI_ClipDataTexture].
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		UMaterialInstanceDynamic* GetMaterialInstanceDynamic()const;
@@ -151,10 +137,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, Instanced, Category = "LGUI")
 	TArray<TObjectPtr<ULexUIMeshModifierBase>> MeshModifierArray;
-	
-	/** Use custom material to render this element */
-	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (DisplayThumbnail = "false"))
-		TObjectPtr<UMaterialInterface> CustomUIMaterial = nullptr;
 
 	/** texture for render this UI element */
 	virtual UTexture* GetTextureToCreateGeometry();

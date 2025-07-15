@@ -2,7 +2,7 @@
 
 #include "Core/LexUIDrawCall.h"
 #include "Core/LexUIGeometry.h"
-#include "LGUI/Public/Core/Components/LexVisualBatchMesh.h"
+#include "Core/Components/LexVisualBatchMesh.h"
 
 void FLexUIDrawCall::GetCombined(TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndexBufferType>& triangles)const
 {

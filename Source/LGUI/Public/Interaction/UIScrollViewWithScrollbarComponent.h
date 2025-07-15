@@ -29,7 +29,7 @@ class LGUI_API UUIScrollViewWithScrollbarComponent : public UUIScrollViewCompone
 public:
 	UUIScrollViewWithScrollbarComponent();
 protected:
-	virtual void OnUIDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
+	virtual void OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
 protected:
 	friend class FUIScrollViewWithScrollBarCustomization;
 	//For scrollbars to expand or shrink viewport
@@ -65,14 +65,11 @@ protected:
 	EScrollbarLayoutAction HorizontalScrollbarLayoutActionType = EScrollbarLayoutAction::None;
 	EScrollbarLayoutAction VerticalScrollbarLayoutActionType = EScrollbarLayoutAction::None;
 
-	virtual void OnUIChildHierarchyIndexChanged(ULexWidget* child)override;
-	virtual void OnUIChildAttachmentChanged(ULexWidget* child, bool attachOrDetach)override;
-	// Begin LGUILayout interface
-	//virtual void OnUpdateLayout_Implementation()override;
-	//virtual bool GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
-	//virtual void MarkRebuildLayout_Implementation()override { MarkLayoutDirty(); }
-	// End LGUILayout interface
-	void MarkLayoutDirty(){};
+	void OnChildSiblingIndexChanged();
+	void OnChildAttachmentChanged();
+	
+	void OnUpdateLayout_Implementation();
+	void MarkLayoutDirty(){bLayoutDirty = true;}
 public:
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")

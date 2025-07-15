@@ -2,7 +2,7 @@
 
 #include "Extensions/UISpriteSheetTexturePlayer.h"
 #include "LTweenBPLibrary.h"
-#include "LGUI/Public/Core/Components/UITexture.h"
+#include "Core/Components/UITexture.h"
 
 #if WITH_EDITOR
 void UUISpriteSheetTexturePlayer::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)

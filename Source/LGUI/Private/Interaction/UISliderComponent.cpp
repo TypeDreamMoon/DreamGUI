@@ -4,7 +4,7 @@
 #include "LGUI.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexLayoutAnchor.h"
-#include "LGUI/Public/Core/Components/LexWidget.h"
+#include "Core/Components/LexWidget.h"
 
 void UUISliderComponent::Awake()
 {
@@ -74,14 +74,9 @@ void UUISliderComponent::PostEditChangeProperty(FPropertyChangedEvent &PropertyC
 }
 #endif
 
-void UUISliderComponent::OnUIActiveInHierachy(bool ativeOrInactive)
+void UUISliderComponent::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
-    Super::OnUIActiveInHierachy(ativeOrInactive);
-    ApplyValueToUI();
-}
-void UUISliderComponent::OnUIDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
-{
-    Super::OnUIDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
+    Super::OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
     ApplyValueToUI();
 }
 

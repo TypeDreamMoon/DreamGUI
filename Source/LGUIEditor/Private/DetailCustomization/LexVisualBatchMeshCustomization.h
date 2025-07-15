@@ -6,11 +6,11 @@
 /**
  * 
  */
-class FUIBatchMeshRenderableCustomization : public IDetailCustomization
+class FLexVisualBatchMeshCustomization : public IDetailCustomization
 {
 public:
-	FUIBatchMeshRenderableCustomization();
-	~FUIBatchMeshRenderableCustomization();
+	FLexVisualBatchMeshCustomization();
+	~FLexVisualBatchMeshCustomization();
 
 	static TSharedRef<IDetailCustomization> MakeInstance();
 	/** IDetailCustomization interface */

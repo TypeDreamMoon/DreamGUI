@@ -42,7 +42,7 @@
 
 #include "DetailCustomization/LexWidgetCustomization.h"
 #include "DetailCustomization/UIBaseRenderableCustomization.h"
-#include "DetailCustomization/UIBatchMeshRenderableCustomization.h"
+#include "DetailCustomization/LexVisualBatchMeshCustomization.h"
 #include "DetailCustomization/UISpriteBaseCustomization.h"
 #include "DetailCustomization/UISpriteCustomization.h"
 #include "DetailCustomization/UITextureCustomization.h"
@@ -245,7 +245,7 @@ void FLGUIEditorModule::StartupModule()
 		FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
 		PropertyModule.RegisterCustomClassLayout(ULexWidget::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexWidgetCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULexVisual::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexVisualCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(ULexVisualBatchMesh::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIBatchMeshRenderableCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexVisualBatchMesh::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexVisualBatchMeshCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUISpriteBase::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexUISpriteBaseCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUISprite::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULexCanvas::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexCanvasCustomization::MakeInstance));

@@ -2,7 +2,7 @@
 
 #include "Interaction/UITextInputComponent.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/LexText.h"
+#include "Core/Components/LexText.h"
 #include "InputCoreTypes.h"
 #include "Event/LGUIEventSystem.h"
 #include "HAL/PlatformApplicationMisc.h"
@@ -125,7 +125,7 @@ void UUITextInputComponent::PostEditChangeProperty(FPropertyChangedEvent& Proper
 	}
 	if (TextWidget != nullptr)
 	{
-		TextWidget->SetOverflowType(bAllowMultiLine ? EUITextOverflowType::VerticalOverflow : EUITextOverflowType::HorizontalOverflow);
+		TextWidget->SetOverflowType(bAllowMultiLine ? ELexUITextOverflowType::VerticalOverflow : ELexUITextOverflowType::HorizontalOverflow);
 		if (!TextWidget->GetText().IsCultureInvariant())
 		{
 			TextWidget->SetText(FText::AsCultureInvariant(Text));
@@ -1078,7 +1078,7 @@ void UUITextInputComponent::UpdateCaretPosition(bool InHideSelection)
 	{
 		if (CaretWidget.IsValid())
 		{
-			CaretWidget->SetIsUIActive(false);
+			CaretWidget->SetWidgetVisibility(ESlateVisibility::Collapsed);
 		}
 	}
 	else
@@ -1111,7 +1111,7 @@ void UUITextInputComponent::UpdateCaretPosition(FVector2f InCaretPosition, bool 
 		CaretVisual->SetSprite(ULexUISpriteData::GetDefaultWhiteSolid(), false);
 	}
 	CaretWidget->SetRelativeLocation(FVector(0, InCaretPosition.X, InCaretPosition.Y));
-	CaretWidget->SetIsUIActive(true);
+	CaretWidget->SetWidgetVisibility(ESlateVisibility::Visible);
 	
 	//force display caret
 	NextCaretBlinkTime = 0.8f;
@@ -1151,7 +1151,7 @@ void UUITextInputComponent::UpdateSelection()
 			auto uiSprite = SelectionMaskObjectArray[i + SelectionPropertyArray.Num()];
 			if (uiSprite.IsValid())
 			{
-				uiSprite->GetWidget()->SetIsUIActive(false);
+				uiSprite->GetWidget()->SetWidgetVisibility(ESlateVisibility::Collapsed);
 			}
 		}
 	}
@@ -1161,7 +1161,7 @@ void UUITextInputComponent::UpdateSelection()
 		auto uiSprite = SelectionMaskObjectArray[i];
 		if (uiSprite.IsValid())
 		{
-			uiSprite->GetWidget()->SetIsUIActive(true);
+			uiSprite->GetWidget()->SetWidgetVisibility(ESlateVisibility::Visible);
 			auto& selectionProperty = SelectionPropertyArray[i];
 			uiSprite->GetWidget()->SetRelativeLocation(FVector(0, selectionProperty.Pos.X, selectionProperty.Pos.Y));
 			uiSprite->GetWidget()->SetWidth(FLexWidgetSize::MakeFixed(selectionProperty.Size));
@@ -1175,26 +1175,28 @@ void UUITextInputComponent::HideSelectionMask()
 		auto uiSprite = SelectionMaskObjectArray[i];
 		if (uiSprite.IsValid())
 		{
-			SelectionMaskObjectArray[i]->GetWidget()->SetIsUIActive(false);
+			SelectionMaskObjectArray[i]->GetWidget()->SetWidgetVisibility(ESlateVisibility::Collapsed);
 		}
 	}
 	SelectionPropertyArray.Reset();//clear selection mask
 	//TextInputMethodContext->SetSelectionRange(0, 0, ITextInputMethodContext::ECaretPosition::Beginning);
 }
 
-void UUITextInputComponent::OnUIActiveInHierachy(bool ativeOrInactive)
+void UUITextInputComponent::OnRenderVisibilityChanged()
 {
-	Super::OnUIActiveInHierachy(ativeOrInactive);
+	Super::OnRenderVisibilityChanged();
 	DeactivateInput();
 }
-void UUITextInputComponent::OnUIInteractionStateChanged(bool interactableOrNot)
+
+void UUITextInputComponent::OnIsEnabledChanged(bool IsEnabled)
 {
-	Super::OnUIInteractionStateChanged(interactableOrNot);
+	Super::OnIsEnabledChanged(IsEnabled);
 	DeactivateInput();
 }
-void UUITextInputComponent::OnUIDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
+
+void UUITextInputComponent::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
-	Super::OnUIDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
+	Super::OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
 	this->UpdateAfterTextChange(false);//if size change, need to recalculate text input area
 }
 
@@ -1584,7 +1586,7 @@ void UUITextInputComponent::DeactivateInput(bool InFireEvent)
 	//hide caret
 	if (CaretWidget.IsValid())
 	{
-		CaretWidget->SetIsUIActive(false);
+		CaretWidget->SetWidgetVisibility(ESlateVisibility::Collapsed);
 	}
 	//hide selection
 	HideSelectionMask();

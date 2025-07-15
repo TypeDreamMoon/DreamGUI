@@ -1,8 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Extensions/LGUIRenderTargetGeometrySource.h"
-#include "LGUI/Public/Core/Components/LexWidget.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/Components/LexWidget.h"
+#include "Core/Components/LexCanvas.h"
 #include "LGUI.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Materials/MaterialInstanceDynamic.h"

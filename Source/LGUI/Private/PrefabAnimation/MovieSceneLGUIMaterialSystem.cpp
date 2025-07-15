@@ -1,6 +1,9 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "PrefabAnimation/MovieSceneLGUIMaterialSystem.h"
+
+#include "Core/Components/LexImage.h"
+#include "Core/Components/LexText.h"
 #include "PrefabAnimation/MovieSceneLGUIComponentTypes.h"
 
 #include "EntitySystem/MovieSceneEntityMutations.h"
@@ -12,7 +15,7 @@
 
 #include "Materials/MaterialInstanceDynamic.h"
 
-#include "LGUI/Public/Core/Components/LexVisualBatchMesh.h"
+#include "Core/Components/LexVisualBatchMesh.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(MovieSceneLGUIMaterialSystem)
 
@@ -20,45 +23,55 @@ namespace UE::MovieScene
 {
 
 FLGUIMaterialAccessor::FLGUIMaterialAccessor(const FLGUIMaterialKey& InKey)
-	: Renderable(CastChecked<ULexVisualBatchMesh>(InKey.Object.ResolveObjectPtr(), ECastCheckedType::NullAllowed))
+	: Visual(CastChecked<ULexVisualBatchMesh>(InKey.Object.ResolveObjectPtr(), ECastCheckedType::NullAllowed))
 {
-	if (Renderable)
+	if (Visual)
 	{
 		LGUIMaterialHandle = InKey.LGUIMaterialHandle;
 	}
 }
 
 FLGUIMaterialAccessor::FLGUIMaterialAccessor(UObject* InObject, FLGUIMaterialHandle InLGUIMaterialHandle)
-	: Renderable(Cast<ULexVisualBatchMesh>(InObject))
+	: Visual(Cast<ULexVisualBatchMesh>(InObject))
 	, LGUIMaterialHandle(MoveTemp(InLGUIMaterialHandle))
 {
-	check(!InObject || Renderable);
+	check(!InObject || Visual);
 }
 
 FLGUIMaterialAccessor::operator bool() const
 {
-	return Renderable != nullptr;
+	return Visual != nullptr;
 }
 
 FString FLGUIMaterialAccessor::ToString() const
 {
-	return FString::Printf(TEXT("CustomUIMaterial %s"), *Renderable->GetPathName());
+	return FString::Printf(TEXT("CustomUIMaterial %s"), *Visual->GetPathName());
 }
 
 UMaterialInterface* FLGUIMaterialAccessor::GetMaterial() const
 {
-	if (Renderable)
+	if (auto Text = Cast<ULexText>(Visual))
 	{
-		return Renderable->GetCustomUIMaterial();
+		return Text->GetOverrideMaterial();
+	}
+	else if (auto Image = Cast<ULexImage>(Visual))
+	{
+		return Cast<UMaterialInterface>(Image->GetBrush().GetResourceObject());
 	}
 	return nullptr;
 }
 
 void FLGUIMaterialAccessor::SetMaterial(UMaterialInterface* InMaterial) const
 {
-	if (Renderable)
+	if (auto Text = Cast<ULexText>(Visual))
 	{
-		Renderable->SetCustomUIMaterial(InMaterial);
+		Text->SetOverrideMaterial(InMaterial);
+	}
+	else if (auto Image = Cast<ULexImage>(Visual))
+	{
+		auto Brush = Image->GetBrush();
+		Brush.SetResourceObject(InMaterial);
+		Image->SetBrush(Brush);
 	}
 }
 
@@ -68,9 +81,9 @@ UMaterialInstanceDynamic* FLGUIMaterialAccessor::CreateDynamicMaterial(UMaterial
 	TStringBuilder<128> DynamicName;
 	InMaterial->GetFName().ToString(DynamicName);
 	DynamicName.Append(TEXT("_Animated"));
-	FName UniqueDynamicName = MakeUniqueObjectName(Renderable, UMaterialInstanceDynamic::StaticClass() , DynamicName.ToString());
+	FName UniqueDynamicName = MakeUniqueObjectName(Visual, UMaterialInstanceDynamic::StaticClass() , DynamicName.ToString());
 
-	UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(InMaterial, Renderable, UniqueDynamicName);
+	UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(InMaterial, Visual, UniqueDynamicName);
 	SetMaterial(MID);
 	return MID;
 }

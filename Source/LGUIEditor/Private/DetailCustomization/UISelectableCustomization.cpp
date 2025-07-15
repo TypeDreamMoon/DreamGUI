@@ -3,10 +3,8 @@
 #include "DetailCustomization/UISelectableCustomization.h"
 #include "LGUIEditorUtils.h"
 #include "Core/Components/LexWidget.h"
-#include "Core/Actor/LexWidgetActor.h"
 #include "IDetailGroup.h"
 #include "Interaction/UISelectableComponent.h"
-#include "Interaction/UISelectableTransitionComponent.h"
 #include "Core/Components/UISprite.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
@@ -48,23 +46,21 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 
 	ULexWidget* TargetWidget = nullptr;
 	UUISprite* TargetSprite = nullptr;
-	UUISelectableTransitionComponent* targetTweenComp = nullptr;
 	if (auto TransitionTarget = TargetScriptPtr->TransitionTarget.Get())
 	{
 		TargetWidget = TransitionTarget->GetWidget();
 		TargetSprite = Cast<UUISprite>(TransitionTarget);
 	}
-	if (auto Actor = TargetScriptPtr->GetOwner())
-	{
-		targetTweenComp = TargetScriptPtr->GetOwner()->FindComponentByClass<UUISelectableTransitionComponent>();
-	}
+	UUISelectableTransitionComponent* TargetTweenComp = nullptr;
+	auto CustomTransition_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, TransitionComp));
+	CustomTransition_PH->GetValue(*(UObject**)&TargetTweenComp);
 
 	uint8 transitionType;
 	transitionHandle->GetValue(transitionType);
 	TArray<FName> needToHidePropertyNameForTransition;
 	IDetailGroup& transitionGroup = category.AddGroup(FName("Transition"), transitionHandle->GetPropertyDisplayName());
 	transitionGroup.HeaderProperty(transitionHandle);
-	if (transitionType == (uint8)(UISelectableTransitionType::None))
+	if (transitionType == (uint8)(ELexUISelectableTransitionType::None))
 	{
 		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, TransitionTarget));
 
@@ -79,7 +75,7 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, PressedSprite));
 		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledSprite));
 	}
-	else if (transitionType == (uint8)(UISelectableTransitionType::ColorTint))
+	else if (transitionType == (uint8)(ELexUISelectableTransitionType::ColorTint))
 	{
 		transitionGroup.AddPropertyRow(transitionActorHandle);
 		if (!TargetWidget)
@@ -106,7 +102,7 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		transitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledColor)));
 		transitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, FadeDuration)));
 	}
-	else if (transitionType == (uint8)(UISelectableTransitionType::SpriteSwap))
+	else if (transitionType == (uint8)(ELexUISelectableTransitionType::SpriteSwap))
 	{
 		transitionGroup.AddPropertyRow(transitionActorHandle);
 		if (!TargetSprite)
@@ -133,9 +129,9 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		transitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, PressedSprite)));
 		transitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledSprite)));
 	}
-	else if (transitionType == (uint8)(UISelectableTransitionType::TransitionComponent))
+	else if (transitionType == (uint8)(ELexUISelectableTransitionType::TransitionComponent))
 	{
-		if (!targetTweenComp)
+		if (!TargetTweenComp)
 		{
 			transitionGroup.AddWidgetRow()
 				.ValueContent()

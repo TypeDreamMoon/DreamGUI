@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "LGUI/Public/Core/Components/UIDirectMeshRenderable.h"
+#include "Core/Components/LexVisualDirectMesh.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "UIStaticMesh.generated.h"
 
@@ -134,7 +134,7 @@ enum class UIStaticMeshVertexColorType :uint8
  * render a StaticMesh as UI element
  */
 UCLASS(ClassGroup = (LGUI), Blueprintable, Experimental, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIStaticMesh : public UUIDirectMeshRenderable
+class LGUI_API UUIStaticMesh : public ULexVisualDirectMesh
 {
 	GENERATED_BODY()
 

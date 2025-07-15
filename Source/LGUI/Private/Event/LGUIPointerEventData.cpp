@@ -4,7 +4,7 @@
 #include "Event/LGUIBaseRaycaster.h"
 #include "LGUI.h"
 #include "GameFramework/Actor.h"
-#include "LGUI/Public/Core/Components/LexWidget.h"
+#include "Core/Components/LexWidget.h"
 
 void ULGUIPointerEventData::SetHighlightedComponentForNavigation(USceneComponent* InComp)
 {

@@ -2,7 +2,7 @@
 
 #pragma once
 #include "CoreMinimal.h"
-#include "LGUI/Public/Core/Components/LexVisual.h"
+#include "Core/Components/LexVisual.h"
 #include "UIRenderableCustomRaycastExtensions.generated.h"
 
 #if 0

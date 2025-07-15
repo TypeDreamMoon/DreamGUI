@@ -11,7 +11,7 @@
 #include "Widgets/Input/IVirtualKeyboardEntry.h"
 #include "GenericPlatform/ITextInputMethodSystem.h"
 #include "LGUIDelegateHandleWrapper.h"
-#include "LGUI/Public/Core/Components/LexText.h"
+#include "Core/Components/LexText.h"
 #include "Widgets/Layout/SBox.h"
 #include "UITextInputComponent.generated.h"
 
@@ -386,7 +386,7 @@ private:
 	//selection mask
 	UPROPERTY(Transient)TArray<TWeakObjectPtr<UUISprite>> SelectionMaskObjectArray;
 	//range selection
-	TArray<FUITextSelectionProperty> SelectionPropertyArray;
+	TArray<FLexUITextSelectionProperty> SelectionPropertyArray;
 	//Caret position of full text. caret is on left side of char
 	int CaretPositionIndex = 0;
 	//caret position line index of full text
@@ -400,9 +400,9 @@ private:
 
 	int PressCaretPositionIndex = 0, PressCaretPositionLineIndex = 0;
 protected:
-	virtual void OnUIActiveInHierachy(bool ativeOrInactive)override;
-	virtual void OnUIInteractionStateChanged(bool interactableOrNot)override;
-	virtual void OnUIDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
+	virtual void OnRenderVisibilityChanged() override;
+	virtual void OnIsEnabledChanged(bool IsEnabled) override;
+	virtual void OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
 
 	virtual bool OnPointerEnter_Implementation(ULGUIPointerEventData* eventData)override;
 	virtual bool OnPointerExit_Implementation(ULGUIPointerEventData* eventData)override;

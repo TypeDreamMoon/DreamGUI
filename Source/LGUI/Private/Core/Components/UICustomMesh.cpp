@@ -1,11 +1,11 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUI/Public/Core/Components/UICustomMesh.h"
+#include "Core/Components/UICustomMesh.h"
 #include "LGUI.h"
 #include "Utils/LexUIUtils.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/LGUICustomMesh.h"
-#include "LGUI/Public/Core/Components/UITextureBase.h"
+#include "Core/Components/UITextureBase.h"
 
 #define LOCTEXT_NAMESPACE "UICustomMesh"
 

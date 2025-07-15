@@ -1,9 +1,9 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUI/Public/Core/Components/LexVisualBatchMesh.h"
+#include "Core/Components/LexVisualBatchMesh.h"
 #include "LGUI.h"
 #include "Core/LexUIClipData.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/Components/LexCanvas.h"
 #include "Utils/LexUIUtils.h"
 #include "GeometryModifier/LexUIMeshModifierBase.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -127,24 +127,9 @@ void ULexVisualBatchMesh::MarkAllDirty()
 	GetWidget()->MarkCanvasUpdate(true, false, false);
 	Super::MarkAllDirty();
 }
-void ULexVisualBatchMesh::SetCustomUIMaterial(UMaterialInterface* inMat)
-{
-	if (CustomUIMaterial != inMat)
-	{
-		CustomUIMaterial = inMat;
-		MarkMaterialDirty();
-	}
-}
 
 UMaterialInstanceDynamic* ULexVisualBatchMesh::GetMaterialInstanceDynamic()const
 {
-	if (IsValid(CustomUIMaterial))
-	{
-		if (CustomUIMaterial->IsA(UMaterialInstanceDynamic::StaticClass()))
-		{
-			return (UMaterialInstanceDynamic*)CustomUIMaterial;//if CustomUIMaterial is a MaterialInstanceDynamic then just return it directly
-		}
-	}
 	if (DrawCall.IsValid() && DrawCall->RenderMaterial.IsValid() && DrawCall->bMaterialContainsLexUIParameter)
 	{
 		return (UMaterialInstanceDynamic*)DrawCall->RenderMaterial.Get();
@@ -448,16 +433,9 @@ UTexture* ULexVisualBatchMesh::GetTextureToCreateGeometry()
 
 UMaterialInterface* ULexVisualBatchMesh::GetMaterialToCreateGeometry()
 {
-	if (IsValid(CustomUIMaterial))
+	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
 	{
-		return CustomUIMaterial;
-	}
-	else
-	{
-		if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
-		{
-			return ReceiveGetMaterialToCreateGeometry();
-		}
+		return ReceiveGetMaterialToCreateGeometry();
 	}
 	return nullptr;
 }

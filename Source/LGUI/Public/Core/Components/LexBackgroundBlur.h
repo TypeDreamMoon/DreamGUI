@@ -3,20 +3,20 @@
 #pragma once
 
 #include "LexVisualPostProcess.h"
-#include "UIBackgroundBlur.generated.h"
+#include "LexBackgroundBlur.generated.h"
 
 /** 
- * UI element that can add blur effect on background renderred image, just like UMG's BackgroundBlur.
+ * UI element that can add blur effect on background image, just like UMG's BackgroundBlur.
  * Use it in ScreenSpace or WorldSpace-LGUIRenderer.
  * If android OpenGL ES3.1, need to enable "ProjectSettings/Platforms/Android/Build/Support Backbuffer Sampling on OpenGL".
  */
 UCLASS(ClassGroup = (LGUI), NotBlueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIBackgroundBlur : public ULexVisualPostProcess
+class LGUI_API ULexBackgroundBlur : public ULexVisualPostProcess
 {
 	GENERATED_BODY()
 
 public:	
-	UUIBackgroundBlur(const FObjectInitializer& ObjectInitializer);
+	ULexBackgroundBlur(const FObjectInitializer& ObjectInitializer);
 
 protected:
 #if WITH_EDITOR

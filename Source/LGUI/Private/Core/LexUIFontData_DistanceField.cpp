@@ -1,7 +1,7 @@
 // Copyright 2019-present LexLiu. All Rights Reserved.
 
 #include "Core/LexUIFontData_DistanceField.h"
-#include "LGUI/Public/Core/Components/LexText.h"
+#include "Core/Components/LexText.h"
 #include "Core/LGUIManager.h"
 #include "Utils/LexUIUtils.h"
 #include "Materials/MaterialInterface.h"

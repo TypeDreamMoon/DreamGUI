@@ -15,6 +15,11 @@ class LGUI_API ULexImage : public ULexVisualBatchMesh, public ILexUISpriteRender
 	GENERATED_BODY()
 public:
 	ULexImage(const FObjectInitializer& ObjectInitializer);
+
+	static FName GetPropertyName_Brush()
+	{
+		return GET_MEMBER_NAME_CHECKED(ULexImage, Brush);
+	}
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Image", Getter, Setter, meta = (AllowPrivateAccess = true))
 	FLexUIImageBrush Brush;

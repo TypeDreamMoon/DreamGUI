@@ -96,7 +96,7 @@ public:
 	virtual void Deinitialize()override;
 
 	virtual TStatId GetStatId() const override;
-	virtual bool IsTickableInEditor()const { return false; }//use Ticker in editor, because Ticker can also tick when drag vector2/3 value while normal tick can't
+	virtual bool IsTickableInEditor()const override{ return false; }//use Ticker in editor, because Ticker can also tick when drag vector2/3 value while normal tick can't
 	virtual void Tick(float DeltaTime) override;
 	virtual bool IsTickableWhenPaused() const override;
 
@@ -208,6 +208,7 @@ private:
 private:
 	/** Map prefab-deserialize-settion-id to LGUILifeCycleBehaviour array */
 	TMap<FGuid, FLGUILifeCycleBehaviourArrayContainer> LGUILifeCycleBehaviours_PrefabSystemProcessing;
+	void ProcessLGUILifecycleEvent(ULGUILifeCycleBehaviour* InComp);
 public:
 	void BeginPrefabSystemProcessingActor(const FGuid& InSessionId);
 	void EndPrefabSystemProcessingActor(const FGuid& InSessionId);
@@ -221,7 +222,4 @@ public:
 	static void AddLGUILifeCycleBehaviourForLifecycleEvent(ULGUILifeCycleBehaviour* InComp);
 	static void AddLGUILifeCycleBehavioursForUpdate(ULGUILifeCycleBehaviour* InComp);
 	static void RemoveLGUILifeCycleBehavioursFromUpdate(ULGUILifeCycleBehaviour* InComp);
-	static void AddLGUILifeCycleBehavioursForStart(ULGUILifeCycleBehaviour* InComp);
-	static void RemoveLGUILifeCycleBehavioursFromStart(ULGUILifeCycleBehaviour* InComp);
-	static void ProcessLGUILifecycleEvent(ULGUILifeCycleBehaviour* InComp);
 };

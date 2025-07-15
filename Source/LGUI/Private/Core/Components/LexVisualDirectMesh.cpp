@@ -1,55 +1,55 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUI/Public/Core/Components/UIDirectMeshRenderable.h"
+#include "Core/Components/LexVisualDirectMesh.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
-#include "LGUI/Public/Core/LexUIMesh/LexUIMeshComponent.h"
+#include "Core/Components/LexCanvas.h"
+#include "Core/LexUIMesh/LexUIMeshComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Core/LexUIDrawCall.h"
 
-UUIDirectMeshRenderable::UUIDirectMeshRenderable(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
+ULexVisualDirectMesh::ULexVisualDirectMesh(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
 	bLocalVertexPositionChanged = true;
 	VisualType = ELexVisualType::DirectMesh;
 }
 
-void UUIDirectMeshRenderable::BeginPlay()
+void ULexVisualDirectMesh::BeginPlay()
 {
 	Super::BeginPlay();
 	bLocalVertexPositionChanged = true;
 }
 
 #if WITH_EDITOR
-void UUIDirectMeshRenderable::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void ULexVisualDirectMesh::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 #endif
 
-void UUIDirectMeshRenderable::MarkAllDirty()
+void ULexVisualDirectMesh::MarkAllDirty()
 {
 	bLocalVertexPositionChanged = true;
 	Super::MarkAllDirty();
 }
 
-void UUIDirectMeshRenderable::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
+void ULexVisualDirectMesh::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
 {
     Super::OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
 	MarkVertexPositionDirty();
 }
 
-void UUIDirectMeshRenderable::MarkVertexPositionDirty()
+void ULexVisualDirectMesh::MarkVertexPositionDirty()
 {
 	bLocalVertexPositionChanged = true;
 	GetWidget()->MarkCanvasUpdate(false, false, false);//since DirectMeshRenderable will always take a drawcall, we don't need to rebuild drawcall on it
 }
-void UUIDirectMeshRenderable::UpdateGeometry()
+void ULexVisualDirectMesh::UpdateGeometry()
 {
 	Super::UpdateGeometry();
 }
 
 
-TWeakPtr<FLexUIRenderSection> UUIDirectMeshRenderable::GetMeshSection()const
+TWeakPtr<FLexUIRenderSection> ULexVisualDirectMesh::GetMeshSection()const
 {
 	if (DrawCall.IsValid())
 	{
@@ -57,7 +57,7 @@ TWeakPtr<FLexUIRenderSection> UUIDirectMeshRenderable::GetMeshSection()const
 	}
 	return nullptr;
 }
-TWeakObjectPtr<ULexUIMeshComponent> UUIDirectMeshRenderable::GetUIMesh()const
+TWeakObjectPtr<ULexUIMeshComponent> ULexVisualDirectMesh::GetUIMesh()const
 {
 	if (DrawCall.IsValid())
 	{
@@ -65,16 +65,16 @@ TWeakObjectPtr<ULexUIMeshComponent> UUIDirectMeshRenderable::GetUIMesh()const
 	}
 	return nullptr;
 }
-void UUIDirectMeshRenderable::ClearMeshData()
+void ULexVisualDirectMesh::ClearMeshData()
 {
 	GetWidget()->MarkCanvasUpdate(false, false, false, true);
 }
-void UUIDirectMeshRenderable::OnMeshDataReady()
+void ULexVisualDirectMesh::OnMeshDataReady()
 {
 
 }
 
-bool UUIDirectMeshRenderable::LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const
+bool ULexVisualDirectMesh::LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
 	if (RaycastType == ELexVisualHitTestType::Rect)
 	{

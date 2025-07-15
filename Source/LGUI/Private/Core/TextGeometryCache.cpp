@@ -2,7 +2,7 @@
 
 #include "Core/LexUITextData.h"
 #include "Core/LexUIGeometry.h"
-#include "LGUI/Public/Core/Components/LexText.h"
+#include "Core/Components/LexText.h"
 #include "Core/LexUIRichTextImageData.h"
 #include "Core/LexUIFontData_BaseObject.h"
 
@@ -20,13 +20,13 @@ bool FLexUITextGeometryCache::SetInputParameters(
 	float InCanvasGroupAlpha,
 	FVector2f InFontSpace,
 	float InFontSize,
-	EUITextParagraphHorizontalAlign InParagraphHAlign,
-	EUITextParagraphVerticalAlign InParagraphVAlign,
-	EUITextOverflowType InOverflowType,
+	ELexUITextParagraphHorizontalAlign InParagraphHAlign,
+	ELexUITextParagraphVerticalAlign InParagraphVAlign,
+	ELexUITextOverflowType InOverflowType,
 	ETextWrappingPolicy InWrappingPolicy,
 	float InMaxHorizontalWidth,
 	bool InUseKerning,
-	EUITextFontStyle InFontStyle,
+	ELexUITextFontStyle InFontStyle,
 	bool InRichText,
 	int32 InRichTextFilterFlags,
 	ULexUIFontData_BaseObject* InFont

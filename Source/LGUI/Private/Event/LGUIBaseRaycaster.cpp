@@ -4,8 +4,8 @@
 #include "Core/LGUIManager.h"
 #include "Core/Components/LexVisual.h"
 #include "Engine/SceneCapture2D.h"
-#include "LGUI/Public/Core/Components/LexWidget.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/Components/LexWidget.h"
+#include "Core/Components/LexCanvas.h"
 #include "Engine/World.h"
 
 ULGUIBaseRaycaster::ULGUIBaseRaycaster()
@@ -92,7 +92,6 @@ bool ULGUIBaseRaycaster::RaycastUI(ULGUIPointerEventData* InPointerEventData, co
 						if (
 							uiItem->IsVisibleForHitTest()
 							&& uiItem->GetIsEnabled()
-							&& uiItem->GetIsUIActiveInHierarchy()
 							&& uiItem->GetVisual()
 							&& uiItem->GetVisual()->LineTraceUI(thisHit, OutRayOrigin, OutRayEnd)
 							)
@@ -124,7 +123,6 @@ bool ULGUIBaseRaycaster::RaycastUI(ULGUIPointerEventData* InPointerEventData, co
 							if (
 								uiItem->IsVisibleForHitTest()
 								&& uiItem->GetIsEnabled()
-								&& uiItem->GetIsUIActiveInHierarchy()
 								&& uiItem->GetVisual()
 								&& uiItem->GetVisual()->LineTraceUI(thisHit, OutRayOrigin, OutRayEnd)
 								)
@@ -158,7 +156,6 @@ bool ULGUIBaseRaycaster::RaycastUI(ULGUIPointerEventData* InPointerEventData, co
 							uiItem->IsRaycastTarget()
 							&& uiItem->IsGroupAllowInteraction()
 							&& uiItem->GetTraceChannel() == traceChannel
-							&& uiItem->GetIsUIActiveInHierarchy()
 							&& uiItem->LineTraceUI(thisHit, OutRayOrigin, OutRayEnd)
 							)
 						{

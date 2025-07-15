@@ -1,33 +1,33 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUI/Public/Core/Components/UIBackgroundBlur.h"
+#include "Core/Components/LexBackgroundBlur.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/LexUISpriteData.h"
 #include "Engine/TextureRenderTarget2D.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIPostProcessShaders.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
+#include "Core/LexUIRender/LexUIPostProcessShaders.h"
+#include "Core/LexUIRender/LexUIVertex.h"
 #include "PipelineStateCache.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/LexUIRender/LexUIRenderer.h"
+#include "Core/Components/LexCanvas.h"
 #include "Core/LGUISettings.h"
 #include "RenderTargetPool.h"
 #include "Core/LexVisualPostProcessRenderProxy.h"
 #include "Rendering/Texture2DResource.h"
 #include "RHIStaticStates.h"
 
-UUIBackgroundBlur::UUIBackgroundBlur(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
+ULexBackgroundBlur::ULexBackgroundBlur(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
 	
 }
 
 #if WITH_EDITOR
-void UUIBackgroundBlur::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void ULexBackgroundBlur::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (auto Property = PropertyChangedEvent.Property)
 	{
-		if (Property->GetFName() == GET_MEMBER_NAME_CHECKED(UUIBackgroundBlur, MaxDownSampleLevel))
+		if (Property->GetFName() == GET_MEMBER_NAME_CHECKED(ULexBackgroundBlur, MaxDownSampleLevel))
 		{
 			MaxDownSampleLevel += 1;//just make it work
 			SetMaxDownSampleLevel(MaxDownSampleLevel - 1);
@@ -37,7 +37,7 @@ void UUIBackgroundBlur::PostEditChangeProperty(FPropertyChangedEvent& PropertyCh
 #endif
 
 
-void UUIBackgroundBlur::MarkAllDirty()
+void ULexBackgroundBlur::MarkAllDirty()
 {
 	Super::MarkAllDirty();
 
@@ -322,7 +322,7 @@ public:
 };
 
 
-void UUIBackgroundBlur::SendOthersDataToRenderProxy()
+void ULexBackgroundBlur::SendOthersDataToRenderProxy()
 {
 	if (RenderProxy.IsValid())
 	{
@@ -347,7 +347,7 @@ void UUIBackgroundBlur::SendOthersDataToRenderProxy()
 				});
 	}
 }
-void UUIBackgroundBlur::SendStrengthTextureToRenderProxy()
+void ULexBackgroundBlur::SendStrengthTextureToRenderProxy()
 {
 	if (RenderProxy.IsValid())
 	{
@@ -365,7 +365,7 @@ void UUIBackgroundBlur::SendStrengthTextureToRenderProxy()
 	}
 }
 
-void UUIBackgroundBlur::SetBlurStrength(float newValue)
+void ULexBackgroundBlur::SetBlurStrength(float newValue)
 {
 	if (BlurStrength != newValue)
 	{
@@ -375,7 +375,7 @@ void UUIBackgroundBlur::SetBlurStrength(float newValue)
 	}
 }
 
-void UUIBackgroundBlur::SetApplyAlphaToBlur(bool newValue)
+void ULexBackgroundBlur::SetApplyAlphaToBlur(bool newValue)
 {
 	if (ApplyAlphaToBlur != newValue)
 	{
@@ -385,7 +385,7 @@ void UUIBackgroundBlur::SetApplyAlphaToBlur(bool newValue)
 	}
 }
 
-void UUIBackgroundBlur::SetMaxDownSampleLevel(int newValue)
+void ULexBackgroundBlur::SetMaxDownSampleLevel(int newValue)
 {
 	if (MaxDownSampleLevel != newValue)
 	{
@@ -396,7 +396,7 @@ void UUIBackgroundBlur::SetMaxDownSampleLevel(int newValue)
 	}
 }
 
-void UUIBackgroundBlur::SetStrengthTexture(UTexture2D* newValue)
+void ULexBackgroundBlur::SetStrengthTexture(UTexture2D* newValue)
 {
 	if (StrengthTexture != newValue)
 	{
@@ -406,7 +406,7 @@ void UUIBackgroundBlur::SetStrengthTexture(UTexture2D* newValue)
 	}
 }
 
-float UUIBackgroundBlur::GetBlurStrengthInternal()
+float ULexBackgroundBlur::GetBlurStrengthInternal()
 {
 	if (ApplyAlphaToBlur)
 	{
@@ -415,7 +415,7 @@ float UUIBackgroundBlur::GetBlurStrengthInternal()
 	return BlurStrength;
 }
 
-TSharedPtr<FLexVisualPostProcessRenderProxy> UUIBackgroundBlur::GetRenderProxy()
+TSharedPtr<FLexVisualPostProcessRenderProxy> ULexBackgroundBlur::GetRenderProxy()
 {
 	if (!RenderProxy.IsValid())
 	{
@@ -429,7 +429,7 @@ TSharedPtr<FLexVisualPostProcessRenderProxy> UUIBackgroundBlur::GetRenderProxy()
 	return RenderProxy;
 }
 
-void UUIBackgroundBlur::SendRegionVertexDataToRenderProxy()
+void ULexBackgroundBlur::SendRegionVertexDataToRenderProxy()
 {
 	Super::SendRegionVertexDataToRenderProxy();
 	if (RenderProxy.IsValid())

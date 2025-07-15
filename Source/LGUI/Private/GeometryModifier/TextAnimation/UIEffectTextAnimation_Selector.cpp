@@ -2,7 +2,7 @@
 
 #include "GeometryModifier/TextAnimation/UIEffectTextAnimation_Selector.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/LexText.h"
+#include "Core/Components/LexText.h"
 
 bool UUIEffectTextAnimation_RangeSelector::Select(ULexText* InUIText, FUIEffectTextAnimation_SelectResult& OutSelection)
 {
@@ -134,7 +134,7 @@ bool UUIEffectTextAnimation_RichTextTagSelector::Select(class ULexText* InUIText
 	if (FMath::Abs(range) < KINDA_SMALL_NUMBER)return false;
 	auto& charProperties = InUIText->GetCharPropertyArray();
 	auto& richTextCustomTagArray = InUIText->GetRichTextCustomTagArray();
-	int foundIndex = richTextCustomTagArray.IndexOfByPredicate([this](const FUIText_RichTextCustomTag& A) {
+	int foundIndex = richTextCustomTagArray.IndexOfByPredicate([this](const FLexUIText_RichTextCustomTag& A) {
 		return A.TagName == tagName;
 		});
 	if (foundIndex == -1)return false;

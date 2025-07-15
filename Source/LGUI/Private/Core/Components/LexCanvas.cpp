@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/Components/LexCanvas.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
 #include "Utils/LexUIUtils.h"
@@ -10,13 +10,13 @@
 #include "Core/LGUISettings.h"
 #include "Core/LGUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
-#include "LGUI/Public/Core/LexUIMesh/LexUIMeshComponent.h"
+#include "Core/LexUIRender/LexUIRenderer.h"
+#include "Core/LexUIMesh/LexUIMeshComponent.h"
 #include "Core/LexUIDrawCall.h"
-#include "LGUI/Public/Core/Components/LexVisual.h"
-#include "LGUI/Public/Core/Components/LexVisualPostProcess.h"
-#include "LGUI/Public/Core/Components/UIDirectMeshRenderable.h"
-#include "LGUI/Public/Core/Components/LexWidget.h"
+#include "Core/Components/LexVisual.h"
+#include "Core/Components/LexVisualPostProcess.h"
+#include "Core/Components/LexVisualDirectMesh.h"
+#include "Core/Components/LexWidget.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "GameFramework/PlayerController.h"
 #include "Engine/LocalPlayer.h"
@@ -44,7 +44,7 @@ ULexCanvas::ULexCanvas()
 	bOverrideViewRotation = false;
 	bOverrideProjectionMatrix = false;
 	bOverrideFovAngle = false;
-	bPrevUIItemIsActive = true;
+	bPrevIsVisible = true;
 	bNeedToVerifyMaterials = true;
 	bRootCanvasNeedToUpdateChildrenCanvasBounds = false;
 	bUIMeshNeedToSetInitialParameters = true;
@@ -66,13 +66,13 @@ void ULexCanvas::BeginPlay()
 	Super::BeginPlay();
 	CheckRootCanvas();
 	CurrentRenderMode = this->GetActualRenderMode();
-	if (CheckUIItem())
+	if (CheckLexWidget())
 	{
-		bPrevUIItemIsActive = LexWidget->GetIsUIActiveInHierarchy();
+		bPrevIsVisible = LexWidget->IsVisibleForRender();
 	}
 	else
 	{
-		bPrevUIItemIsActive = false;
+		bPrevIsVisible = false;
 	}
 	MarkCanvasUpdate(true, true, true, true);
 
@@ -159,7 +159,7 @@ void ULexCanvas::UpdateRootCanvas()
 			}
 		}
 		
-		if (CheckUIItem())
+		if (CheckLexWidget())
 		{
 			if (UpdateCanvasDrawCallRecursive())
 			{
@@ -297,13 +297,13 @@ void ULexCanvas::EnsureDrawCallObjectReference()
 void ULexCanvas::OnRegister()
 {
 	Super::OnRegister();
-	if (CheckUIItem())
+	if (CheckLexWidget())
 	{
 		ULGUIManagerWorldSubsystem::AddCanvas(this, CurrentRenderMode);
 		//tell UIItem
 		LexWidget->RegisterRenderCanvas(this);
-		UIHierarchyChangedDelegateHandle = LexWidget->RegisterUIHierarchyChanged(FSimpleDelegate::CreateUObject(this, &ULexCanvas::OnUIHierarchyChanged));
-		UIActiveStateChangedDelegateHandle = LexWidget->RegisterUIActiveStateChanged(FLexWidgetActiveInHierarchyStateChangedDelegate::CreateUObject(this, &ULexCanvas::OnUIActiveStateChanged));
+		LexWidget->GetAttachmentChangedEvent().AddUObject(this, &ULexCanvas::OnUIHierarchyChanged);
+		LexWidget->GetRenderVisibilityChangedEvent().AddUObject(this, &ULexCanvas::OnRenderVisibilityChanged);
 
 		OnUIHierarchyChanged();
 	}
@@ -334,8 +334,8 @@ void ULexCanvas::OnUnregister()
 	if (LexWidget.IsValid())
 	{
 		LexWidget->UnregisterRenderCanvas();
-		LexWidget->UnregisterUIHierarchyChanged(UIHierarchyChangedDelegateHandle);
-		LexWidget->UnregisterUIActiveStateChanged(UIActiveStateChangedDelegateHandle);
+		LexWidget->GetAttachmentChangedEvent().RemoveAll(this);
+		LexWidget->GetRenderVisibilityChangedEvent().RemoveAll(this);
 	}
 }
 void ULexCanvas::OnComponentDestroyed(bool bDestroyingHierarchy)
@@ -462,7 +462,7 @@ void ULexCanvas::SetParentCanvas(ULexCanvas* InParentCanvas)
 	}
 }
 
-bool ULexCanvas::CheckUIItem()const
+bool ULexCanvas::CheckLexWidget()const
 {
 	if (LexWidget.IsValid())return true;
 	if (this->GetWorld() == nullptr)return false;
@@ -504,7 +504,7 @@ void ULexCanvas::CheckRenderMode(bool PropogateToChildrenCanvas)
 	//if render space changed, we need to change recreate all render data
 	if (CurrentRenderMode != OldRenderMode)
 	{
-		if (CheckUIItem())
+		if (CheckLexWidget())
 		{
 			LexWidget->MarkRenderModeChangeRecursive(this, OldRenderMode, CurrentRenderMode);
 		}
@@ -541,14 +541,14 @@ void ULexCanvas::OnUIHierarchyChanged()
 	SetParentCanvas(NewParentCanvas);
 }
 
-void ULexCanvas::OnUIActiveStateChanged(bool value)
+void ULexCanvas::OnRenderVisibilityChanged()
 {
-	if (value)
+	if (LexWidget->IsVisibleForRender())
 	{
 		if (ParentCanvas.IsValid())
 		{
 			ParentCanvas->bNeedToGenerateWidgetList = true;
-			ParentCanvas->MarkCanvasUpdate(false, false, true//why make this to true? becase we need to sort UIRenderableList, and set bShouldSortRenderableOrder to true can do it
+			ParentCanvas->MarkCanvasUpdate(false, false, true//why make this to true? because we need to sort UIRenderableList, and set bShouldSortRenderableOrder to true can do it
 				, true);
 
 		}
@@ -637,7 +637,7 @@ void ULexCanvas::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
-	if (CheckUIItem())
+	if (CheckLexWidget())
 	{
 		LexWidget->MarkAllDirtyRecursive();
 	}
@@ -698,15 +698,6 @@ ULexCanvas* ULexCanvas::GetRootCanvas() const
 bool ULexCanvas::IsRootCanvas()const
 {
 	return GetRootCanvas() == this;
-}
-
-bool ULexCanvas::GetIsUIActive()const
-{
-	if (LexWidget.IsValid())
-	{
-		return LexWidget->GetIsUIActiveInHierarchy();
-	}
-	return false;
 }
 
 void ULexCanvas::MarkVisualWillChange(ULexVisual* InOldVisual)
@@ -972,7 +963,7 @@ void ULexCanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, co
 				break;
 			case ELexUIDrawCallType::DirectMesh:
 				{
-					DrawCallItem->DirectMeshVisualObject = (UUIDirectMeshRenderable*)InUIItem;
+					DrawCallItem->DirectMeshVisualObject = (ULexVisualDirectMesh*)InUIItem;
 				}
 				break;
 			}
@@ -1012,7 +1003,7 @@ void ULexCanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, co
 			case ELexUIDrawCallType::DirectMesh:
 				{
 					DrawCallItem = MakeShared<FLexUIDrawCall>(InDrawCallType);
-					DrawCallItem->DirectMeshVisualObject = (UUIDirectMeshRenderable*)InUIItem;
+					DrawCallItem->DirectMeshVisualObject = (ULexVisualDirectMesh*)InUIItem;
 					DrawCallItem->DrawCallMesh = UIMesh;
 				}
 				break;
@@ -1080,8 +1071,6 @@ void ULexCanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, co
 	for (int i = 0; i < WidgetList.Num(); i++)
 	{
 		auto& Item = WidgetList[i];
-		//check(Item->GetIsUIActiveInHierarchy());
-		if (!Item->GetIsUIActiveInHierarchy())continue;
 		
 		if (Item->IsCanvasWidget() && Item->GetRenderCanvas() != this)//is child canvas
 		{
@@ -1237,7 +1226,7 @@ void ULexCanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, co
 			break;
 			case ELexVisualType::DirectMesh:
 			{
-				auto UIDirectMeshRenderableItem = (UUIDirectMeshRenderable*)Visual;
+				auto UIDirectMeshRenderableItem = (ULexVisualDirectMesh*)Visual;
 				if (!UIDirectMeshRenderableItem->HaveValidData())continue;
 				//every direct mesh is a draw-call
 				bool is2DUIItem = true;//post process just use true because it not matter
@@ -1311,7 +1300,7 @@ void ULexCanvas::MarkFinishRenderFrameRecursive()
 	//mark children canvas
 	for (const auto& ChildCanvas : ChildrenCanvasArray)
 	{
-		if (ChildCanvas.IsValid() && ChildCanvas->GetIsUIActive())
+		if (ChildCanvas.IsValid())
 		{
 			ChildCanvas->MarkFinishRenderFrameRecursive();
 		}
@@ -1323,16 +1312,16 @@ void ULexCanvas::MarkFinishRenderFrameRecursive()
 bool ULexCanvas::UpdateCanvasDrawCallRecursive()
 {
 	/**
-	 * Why use bPrevUIItemIsActive?:
+	 * Why use bPrevIsVisible?:
 	 * If Canvas is rendering in frame 1, but when in frame 2 the Canvas is disabled(by disable UIItem), then the Canvas will not do draw-call calculation, and the prev existing draw-call mesh is still there and render,
-	 * so we check bPrevUIItemIsActive, then we can still do draw-call calculation at this frame, and the prev existing draw-call will be removed.
+	 * so we check bPrevIsVisible, then we can still do draw-call calculation at this frame, and the prev existing draw-call will be removed.
 	 */
 	bool bResult = false;
-	const bool bNowUIItemIsActive = LexWidget->GetIsUIActiveInHierarchy();
-	if (bNowUIItemIsActive || bPrevUIItemIsActive)
+	const bool bNowIsVisible = LexWidget->IsVisibleForRender();
+	if (bNowIsVisible || bPrevIsVisible)
 	{
 		bResult = true;
-		bPrevUIItemIsActive = bNowUIItemIsActive;
+		bPrevIsVisible = bNowIsVisible;
 		//update children canvas
 		for (auto& item : ChildrenCanvasArray)
 		{
@@ -1355,18 +1344,13 @@ bool ULexCanvas::UpdateCanvasDrawCallRecursive()
 				, ULexCanvas* ThisCanvas
 				, TArray<TObjectPtr<ULexWidget>>& WidgetCollection)
 			{
-				if (Widget->GetIsUIActiveInHierarchy())
+				WidgetCollection.Add(Widget);
+				if (Widget->GetRenderCanvas() == ThisCanvas)
 				{
-					// if ((Widget->IsCanvasUIItem() && Widget->GetRenderCanvas() != ThisCanvas)//is child canvas
-					// || Widget->GetVisual()//is visual
-					// )
+					for (auto Child : Widget->GetUIChildren())
 					{
-						WidgetCollection.Add(Widget);
+						CollectRenderWidget(Child, ThisCanvas, WidgetCollection);
 					}
-				}
-				for (auto Child : Widget->GetUIChildren())
-				{
-					CollectRenderWidget(Child, ThisCanvas, WidgetCollection);
 				}
 			}
 		};
@@ -2440,7 +2424,7 @@ FMatrix ULexCanvas::GetViewProjectionMatrix()const
 {
 	if (bIsViewProjectionMatrixDirty)
 	{
-		if (!CheckUIItem())
+		if (!CheckLexWidget())
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d UIItem not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			return CacheViewProjectionMatrix;
@@ -2492,7 +2476,7 @@ FIntPoint ULexCanvas::GetViewportSize()const
 #if WITH_EDITOR
 		if (!world->IsGameWorld())
 		{
-			if (CheckUIItem())
+			if (CheckLexWidget())
 			{
 				ViewportSize.X = LexWidget->GetRenderWidth();
 				ViewportSize.Y = LexWidget->GetRenderHeight();

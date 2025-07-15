@@ -3,7 +3,7 @@
 #include "Extensions/2DLineRenderer/UI2DLineRendererBase.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/Components/LexCanvas.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "LTweenManager.h"
 #include "Core/LGUISettings.h"

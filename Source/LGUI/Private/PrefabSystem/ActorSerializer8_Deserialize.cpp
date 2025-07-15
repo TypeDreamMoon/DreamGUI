@@ -389,7 +389,7 @@ namespace LGUIPrefabSystem8
 						}
 					}
 				}
-		}
+			}
 			else
 #endif
 			{
@@ -789,7 +789,7 @@ namespace LGUIPrefabSystem8
 						CollectDefaultSubobjects(NewActor);
 						bNeedFinishSpawn = true;
 					}
-					//add actor before FinishSpawing, so it's good for component (or other default subobject) to check if actor is processing by prefab system
+					//add actor before FinishSpawning, so it's good for component (or other default sub-object) to check if actor is processing by prefab system
 					LGUIPrefabManager->AddActorForPrefabSystem(NewActor, DeserializationSessionId);
 					if (bNeedFinishSpawn)
 					{

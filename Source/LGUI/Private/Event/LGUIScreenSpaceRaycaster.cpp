@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Event/LGUIScreenSpaceRaycaster.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/Components/LexCanvas.h"
 #include "LGUI.h"
 #include "Utils/LexUIUtils.h"
 #include "Core/LGUISettings.h"

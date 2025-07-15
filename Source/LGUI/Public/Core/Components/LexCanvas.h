@@ -73,7 +73,7 @@ ENUM_CLASS_FLAGS(ELexCanvasOverrideParameters);
 class ULexWidget;
 class ULexVisual;
 class ULexVisualBatchMesh;
-class UUIDirectMeshRenderable;
+class ULexVisualDirectMesh;
 class ULexUIMeshComponent;
 class FLexUIDrawCall;
 class FLexVisualPostProcessRenderProxy;
@@ -146,12 +146,9 @@ private:
 	friend class ULexCanvasScaler;
 	float canvasScale = 1.0f;//for screen space UI, screen size / root canvas size
 
-	FDelegateHandle UIHierarchyChangedDelegateHandle;
 	/** hierarchy changed */
 	void OnUIHierarchyChanged();
-
-	FDelegateHandle UIActiveStateChangedDelegateHandle;
-	void OnUIActiveStateChanged(bool value);
+	void OnRenderVisibilityChanged();
 public:
 	/** get root LGUICanvas on hierarchy */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
@@ -166,7 +163,6 @@ public:
 	/** Return UIItem component which this LGUICanvas attach to. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	ULexWidget* GetLexWidget()const { return LexWidget.Get(); }
-	bool GetIsUIActive()const;
 	TWeakObjectPtr<ULexCanvas> GetParentCanvas()const { return ParentCanvas; }
 
 	void SetParentCanvas(ULexCanvas* InParentCanvas);
@@ -183,7 +179,7 @@ protected:
 	UPROPERTY(Transient) TWeakObjectPtr<ULexCanvas> ParentCanvas = nullptr;
 
 	UPROPERTY(Transient) mutable TWeakObjectPtr<ULexWidget> LexWidget = nullptr;
-	bool CheckUIItem()const;
+	bool CheckLexWidget()const;
 protected:
 	friend class FLexCanvasCustomization;
 	friend class FLexWidgetCustomization;
@@ -472,7 +468,7 @@ private:
 	uint32 bNeedToVerifyMaterials : 1;
 	uint32 bRootCanvasNeedToUpdateChildrenCanvasBounds : 1;//if child canvas's UIMesh's bounds change, then need to notify root canvas to update it's UIMesh's bounds
 
-	uint32 bPrevUIItemIsActive : 1;//is UIItem active in prev frame?
+	uint32 bPrevIsVisible : 1;//is UIItem active in prev frame?
 
 	uint32 bOverrideViewLocation:1, bOverrideViewRotation:1, bOverrideProjectionMatrix:1, bOverrideFovAngle :1;
 

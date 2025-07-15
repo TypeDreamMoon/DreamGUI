@@ -3,7 +3,7 @@
 #pragma once
 
 #include "LexVisual.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
+#include "Core/LexUIRender/LexUIVertex.h"
 #include "Core/LexUISpriteInfo.h"
 #include "LexVisualPostProcess.generated.h"
 

@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "LGUI/Public/Core/Components/LexWidget.h"
+#include "Core/Components/LexWidget.h"
 #include "Core/LGUILifeCycleBehaviour.h"
 #include "Camera/CameraTypes.h"
 #include "LexCanvasScaler.generated.h"
@@ -64,11 +64,8 @@ public:
 
 protected:
 	virtual void Awake()override;
-	virtual void OnEnable() override;
-	virtual void OnDisable()override;
-
-	void OnRegister();
-	void OnUnregister();
+	virtual void OnRegister()override;
+	virtual void OnUnregister()override;
 #if WITH_EDITOR
 	FDelegateHandle EditorTickDelegateHandle;
 	FDelegateHandle EditorViewportIndexAndKeyChangeDelegateHandle;

@@ -2,7 +2,7 @@
 
 #include "GeometryModifier/TextAnimation/UIEffectTextAnimation_PropertyWithWave.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/LexText.h"
+#include "Core/Components/LexText.h"
 #include "LTweenBPLibrary.h"
 #include "Engine/World.h"
 

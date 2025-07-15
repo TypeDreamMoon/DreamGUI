@@ -1,9 +1,9 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUI/Public/Core/Components/LexText.h"
+#include "Core/Components/LexText.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/Components/LexCanvas.h"
 #include "Materials/MaterialInterface.h"
 #include "Core/LexUIFontData_BaseObject.h"
 #include "Core/LexUIRichTextImageData_BaseObject.h"
@@ -28,7 +28,7 @@ ULexText::ULexText(const FObjectInitializer& ObjectInitializer):Super(ObjectInit
 #if WITH_EDITORONLY_DATA
 	if (ULexText::CurrentUsingFontData.IsValid())
 	{
-		font = CurrentUsingFontData.Get();
+		Font = CurrentUsingFontData.Get();
 	}
 #endif
 	CacheTextGeometryData = FLexUITextGeometryCache(this);
@@ -58,7 +58,7 @@ void ULexText::ApplyFontTextureScaleUp()
 
 void ULexText::ApplyFontTextureChange()
 {
-	if (IsValid(font))
+	if (IsValid(Font))
 	{
 		MarkVerticesDirty(true, true, true, true);
 		MarkTextureDirty();
@@ -74,7 +74,7 @@ void ULexText::ApplyFontTextureChange()
 
 void ULexText::ApplyFontMaterialChange()
 {
-	if (IsValid(font))
+	if (IsValid(Font))
 	{
 		MarkVerticesDirty(true, true, true, true);
 		MarkMaterialDirty();
@@ -91,7 +91,7 @@ void ULexText::ApplyFontMaterialChange()
 
 void ULexText::ApplyRecreateText()
 {
-	if (IsValid(font))
+	if (IsValid(Font))
 	{
 		CacheTextGeometryData.MarkDirty();
 		MarkVertexPositionDirty();
@@ -101,53 +101,53 @@ void ULexText::ApplyRecreateText()
 void ULexText::BeginPlay()
 {
 	Super::BeginPlay();
-	if (IsValid(font))
+	if (IsValid(Font))
 	{
-		font->InitFont();
+		Font->InitFont();
 		CheckRequireNormalAndTangent();//@todo: looks this line is not necessary
 		if (!bHasAddToFont)
 		{
-			font->AddUIText(this);
+			Font->AddUIText(this);
 			bHasAddToFont = true;
 		}
 	}
-	if (IsValid(richTextImageData))
+	if (IsValid(RichTextImageData))
 	{
 		this->RegisterOnRichTextImageDataChange();
 	}
-	if (IsValid(richTextCustomStyleData))
+	if (IsValid(RichTextCustomStyleData))
 	{
 		this->RegisterOnRichTextCustomStyleDataChange();
 	}
-	visibleCharCount = VisibleCharCountInString(text.ToString());
+	VisibleCharCount = VisibleCharCountInString(Text.ToString());
 }
 
 void ULexText::EndPlay()
 {
 	Super::EndPlay();
-	if (IsValid(font))
+	if (IsValid(Font))
 	{
-		font->RemoveUIText(this);
+		Font->RemoveUIText(this);
 		bHasAddToFont = false;
 	}
-	if (IsValid(richTextImageData))
+	if (IsValid(RichTextImageData))
 	{
 		this->UnregisterOnRichTextImageDataChange();
 	}
-	if (IsValid(richTextCustomStyleData))
+	if (IsValid(RichTextCustomStyleData))
 	{
 		this->UnregisterOnRichTextCustomStyleDataChange();
 	}
 
-	for (int i = 0; i < createdRichTextImageObjectArray.Num(); i++)
+	for (int i = 0; i < CreatedRichTextImageObjectArray.Num(); i++)
 	{
-		auto item = createdRichTextImageObjectArray[i];
+		auto item = CreatedRichTextImageObjectArray[i];
 		if (IsValid(item) && IsValid(item->GetOwner()))
 		{
 			FLexUIUtils::DestroyActorWithHierarchy(item->GetOwner());
 		}
 	}
-	createdRichTextImageObjectArray.Empty();
+	CreatedRichTextImageObjectArray.Empty();
 }
 
 void ULexText::OnRegister()
@@ -160,22 +160,22 @@ void ULexText::OnRegister()
 		{
 			if (!bHasAddToFont)
 			{
-				if (IsValid(font))
+				if (IsValid(Font))
 				{
-					font->AddUIText(this);
+					Font->AddUIText(this);
 					bHasAddToFont = true;
 				}
 			}
 			if (!onRichTextImageDataChangedDelegateHandle.IsValid())
 			{
-				if (IsValid(richTextImageData))
+				if (IsValid(RichTextImageData))
 				{
 					this->RegisterOnRichTextImageDataChange();
 				}
 			}
 			if (!onRichTextCustomStyleDataChangedDelegateHandle.IsValid())
 			{
-				if (IsValid(richTextCustomStyleData))
+				if (IsValid(RichTextCustomStyleData))
 				{
 					this->RegisterOnRichTextCustomStyleDataChange();
 				}
@@ -196,19 +196,19 @@ void ULexText::OnUnregister()
 #if WITH_EDITOR
 		if (!World->IsGameWorld())
 		{
-			if (IsValid(font))
+			if (IsValid(Font))
 			{
-				font->RemoveUIText(this);
+				Font->RemoveUIText(this);
 				bHasAddToFont = false;
 			}
-			if (IsValid(richTextImageData))
+			if (IsValid(RichTextImageData))
 			{
 				if (onRichTextImageDataChangedDelegateHandle.IsValid())
 				{
 					this->UnregisterOnRichTextImageDataChange();
 				}
 			}
-			if (IsValid(richTextCustomStyleData))
+			if (IsValid(RichTextCustomStyleData))
 			{
 				if (onRichTextCustomStyleDataChangedDelegateHandle.IsValid())
 				{
@@ -227,7 +227,7 @@ void ULexText::OnUnregister()
 void ULexText::OnTransformChanged()
 {
 	Super::OnTransformChanged();
-	if (IsValid(font) && font->GetNeedObjectScale())//some font need object scale (SDF font), so detect scale change and mark update
+	if (IsValid(Font) && Font->GetNeedObjectScale())//some font need object scale (SDF font), so detect scale change and mark update
 	{
 		auto CompScale3D = GetWidget()->GetComponentScale();
 		auto CompScale2D = FVector2f(CompScale3D.Y, CompScale3D.Z);
@@ -248,38 +248,35 @@ void ULexText::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool I
 
 UTexture* ULexText::GetTextureToCreateGeometry()
 {
-	if (!IsValid(font))
+	if (!IsValid(Font))
 	{
-		font = ULexUIFontData_BaseObject::GetDefaultFont();
+		Font = ULexUIFontData_BaseObject::GetDefaultFont();
 	}
-	font->InitFont();
+	Font->InitFont();
 	CheckRequireNormalAndTangent();
-	return font->GetFontTexture();
+	return Font->GetFontTexture();
 }
 
 UMaterialInterface* ULexText::GetMaterialToCreateGeometry()
 {
-	if (IsValid(CustomUIMaterial))
+	if (IsValid(OverrideMaterial))
 	{
-		return CustomUIMaterial;
+		return OverrideMaterial;
 	}
-	else
+	if (!IsValid(Font))
 	{
-		if (!IsValid(font))
-		{
-			font = ULexUIFontData_BaseObject::GetDefaultFont();
-		}
-		font->InitFont();
-		CheckRequireNormalAndTangent();
-		return font->GetFontMaterial();
+		Font = ULexUIFontData_BaseObject::GetDefaultFont();
 	}
+	Font->InitFont();
+	CheckRequireNormalAndTangent();
+	return Font->GetFontMaterial();
 }
 
 void ULexText::CheckRequireNormalAndTangent()
 {
 	if (auto RenderCanvas = GetWidget()->GetRenderCanvas())
 	{
-		if (font->GetRequireNormalAndTangent())
+		if (Font->GetRequireNormalAndTangent())
 		{
 			RenderCanvas->GetRootCanvas()->SetRequireNormalAndTangent(true);
 		}
@@ -290,34 +287,34 @@ void ULexText::OnBeforeCreateOrUpdateGeometry()
 {
 	if (!bHasAddToFont)
 	{
-		if (IsValid(font))
+		if (IsValid(Font))
 		{
-			font->AddUIText(this);
+			Font->AddUIText(this);
 			bHasAddToFont = true;
 		}
 	}
-	if (richText && !onRichTextImageDataChangedDelegateHandle.IsValid())
+	if (bRichText && !onRichTextImageDataChangedDelegateHandle.IsValid())
 	{
-		if (IsValid(richTextImageData))
+		if (IsValid(RichTextImageData))
 		{
 			this->RegisterOnRichTextImageDataChange();
 		}
 	}
-	if (richText && !onRichTextCustomStyleDataChangedDelegateHandle.IsValid())
+	if (bRichText && !onRichTextCustomStyleDataChangedDelegateHandle.IsValid())
 	{
-		if (IsValid(richTextCustomStyleData))
+		if (IsValid(RichTextCustomStyleData))
 		{
 			this->RegisterOnRichTextCustomStyleDataChange();
 		}
 	}
-	if (visibleCharCount == -1)visibleCharCount = VisibleCharCountInString(text.ToString());
+	if (VisibleCharCount == -1)VisibleCharCount = VisibleCharCountInString(Text.ToString());
 }
 
 bool ULexText::GetShouldAffectByPixelSnapping()const
 {
-	if (IsValid(font))
+	if (IsValid(Font))
 	{
-		return font->GetShouldAffectByPixelPerfect();
+		return Font->GetShouldAffectByPixelPerfect();
 	}
 	return Super::GetShouldAffectByPixelSnapping();
 }
@@ -343,8 +340,8 @@ void ULexText::UpdateMaterialClipType()
 
 void ULexText::OnCultureChanged_Implementation()
 {
-	auto originText = text;
-	text = FText::GetEmpty();//just make it work, because SetText will compare text value
+	auto originText = Text;
+	Text = FText::GetEmpty();//just make it work, because SetText will compare text value
 	SetText(originText);
 }
 
@@ -358,85 +355,50 @@ void ULexText::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEven
 	{
 		auto PropertyName = Property->GetFName();
 		auto MemberPropertyName = MemberProperty->GetFName();
-		if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, text))
+		if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, Text))
 		{
 			
 		}
-		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, font))
+		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, Font))
 		{
-			ULexText::CurrentUsingFontData = font;
+			ULexText::CurrentUsingFontData = Font;
 		}
-		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, useKerning))
+		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, bUseKerning))
 		{
 			MarkVertexPositionDirty();
 			CacheTextGeometryData.MarkDirty();
 		}
-		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, adjustWidthRange))
+		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, bListRichTextImageObjectInOutliner))
 		{
-			if (PropertyName == "X")
-			{
-				if (adjustWidthRange.Y < adjustWidthRange.X)
-				{
-					adjustWidthRange.Y = adjustWidthRange.X;
-				}
-			}
-			else if (PropertyName == "Y")
-			{
-				if (adjustWidthRange.X > adjustWidthRange.Y)
-				{
-					adjustWidthRange.X = adjustWidthRange.Y;
-				}
-			}
-		}
-		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, adjustHeightRange))
-		{
-			if (PropertyName == "X")
-			{
-				if (adjustHeightRange.Y < adjustHeightRange.X)
-				{
-					adjustHeightRange.Y = adjustHeightRange.X;
-				}
-			}
-			else if (PropertyName == "Y")
-			{
-				if (adjustHeightRange.X > adjustHeightRange.Y)
-				{
-					adjustHeightRange.X = adjustHeightRange.Y;
-				}
-			}
-		}
-		
-		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, listRichTextImageObjectInOutliner))
-		{
-			for (auto& imageObj : createdRichTextImageObjectArray)
+			for (auto& imageObj : CreatedRichTextImageObjectArray)
 			{
 				if (IsValid(imageObj))
 				{
 					auto bListedInSceneOutliner_Property = FindFProperty<FBoolProperty>(AActor::StaticClass(), TEXT("bListedInSceneOutliner"));
-					bListedInSceneOutliner_Property->SetPropertyValue_InContainer(imageObj->GetOwner(), listRichTextImageObjectInOutliner);
+					bListedInSceneOutliner_Property->SetPropertyValue_InContainer(imageObj->GetOwner(), bListRichTextImageObjectInOutliner);
 				}
 			}
 #if WITH_EDITOR
 			ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();
 #endif
 		}
-		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, richText))
+		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, bRichText))
 		{
-			if (!richText)
+			if (!bRichText)
 			{
 				ClearCreatedRichTextImageObject();
 			}
 		}
-		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, richTextImageData))
+		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, RichTextImageData))
 		{
-			if (!IsValid(richTextImageData))//clear richTextImageData, then need to delete created object
+			if (!IsValid(RichTextImageData))//clear richTextImageData, then need to delete created object
 			{
 				ClearCreatedRichTextImageObject();
 			}
 		}
-		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, richTextTagFilterFlags))
+		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, RichTextTagFilterFlags))
 		{
-			if (!(richTextTagFilterFlags & (1 << (int)EUIText_RichTextTagFilterFlags::Image)))
+			if (!(RichTextTagFilterFlags & (1 << (int)ELexUIText_RichTextTagFilterFlags::Image)))
 			{
 				ClearCreatedRichTextImageObject();
 			}
@@ -446,44 +408,44 @@ void ULexText::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEven
 }
 void ULexText::OnPreChangeFontProperty()
 {
-	if (IsValid(font))
+	if (IsValid(Font))
 	{
-		font->RemoveUIText(this);
+		Font->RemoveUIText(this);
 		bHasAddToFont = false;
 	}
 }
 void ULexText::OnPostChangeFontProperty()
 {
-	if (IsValid(font))
+	if (IsValid(Font))
 	{
-		font->AddUIText(this);
+		Font->AddUIText(this);
 		bHasAddToFont = true;
 	}
 }
 void ULexText::OnPreChangeRichTextImageDataProperty()
 {
-	if (IsValid(richTextImageData))//unregister event from prev
+	if (IsValid(RichTextImageData))//unregister event from prev
 	{
 		UnregisterOnRichTextImageDataChange();
 	}
 }
 void ULexText::OnPostChangeRichTextImageDataProperty()
 {
-	if (IsValid(richTextImageData))
+	if (IsValid(RichTextImageData))
 	{
 		RegisterOnRichTextImageDataChange();
 	}
 }
 void ULexText::OnPreChangeRichTextCustomStyleDataProperty()
 {
-	if (IsValid(richTextCustomStyleData))
+	if (IsValid(RichTextCustomStyleData))
 	{
 		UnregisterOnRichTextCustomStyleDataChange();
 	}
 }
 void ULexText::OnPostChangeRichTextCustomStyleDataProperty()
 {
-	if (IsValid(richTextCustomStyleData))
+	if (IsValid(RichTextCustomStyleData))
 	{
 		RegisterOnRichTextCustomStyleDataChange();
 	}
@@ -491,25 +453,25 @@ void ULexText::OnPostChangeRichTextCustomStyleDataProperty()
 #endif
 void ULexText::RegisterOnRichTextImageDataChange()
 {
-	onRichTextImageDataChangedDelegateHandle = richTextImageData->OnDataChange.AddWeakLambda(this, [this] {
+	onRichTextImageDataChangedDelegateHandle = RichTextImageData->OnDataChange.AddWeakLambda(this, [this] {
 		this->MarkVerticesDirty(false, true, true, false);
 		});
 }
 void ULexText::UnregisterOnRichTextImageDataChange()
 {
-	richTextImageData->OnDataChange.Remove(onRichTextImageDataChangedDelegateHandle);
+	RichTextImageData->OnDataChange.Remove(onRichTextImageDataChangedDelegateHandle);
 	onRichTextImageDataChangedDelegateHandle.Reset();
 }
 
 void ULexText::RegisterOnRichTextCustomStyleDataChange()
 {
-	onRichTextCustomStyleDataChangedDelegateHandle = richTextCustomStyleData->OnDataChange.AddWeakLambda(this, [this] {
+	onRichTextCustomStyleDataChangedDelegateHandle = RichTextCustomStyleData->OnDataChange.AddWeakLambda(this, [this] {
 		this->MarkVerticesDirty(false, true, true, false);
 		});
 }
 void ULexText::UnregisterOnRichTextCustomStyleDataChange()
 {
-	richTextCustomStyleData->OnDataChange.Remove(onRichTextCustomStyleDataChangedDelegateHandle);
+	RichTextCustomStyleData->OnDataChange.Remove(onRichTextCustomStyleDataChangedDelegateHandle);
 	onRichTextCustomStyleDataChangedDelegateHandle.Reset();
 }
 
@@ -521,36 +483,36 @@ FVector2D ULexText::GetTextRealSize()const
 
 
 
-void ULexText::SetFont(ULexUIFontData_BaseObject* newFont) {
-	if (font != newFont)
+void ULexText::SetFont(ULexUIFontData_BaseObject* Value) {
+	if (Font != Value)
 	{
 		//remove from old
-		if (IsValid(font))
+		if (IsValid(Font))
 		{
-			font->RemoveUIText(this);
+			Font->RemoveUIText(this);
 			bHasAddToFont = false;
 		}
-		font = newFont;
+		Font = Value;
 
 		MarkTextureDirty();
 		//add to new
-		if (IsValid(font))
+		if (IsValid(Font))
 		{
-			font->AddUIText(this);
+			Font->AddUIText(this);
 			bHasAddToFont = true;
 		}
 	}
 }
-void ULexText::SetText(const FText& newText) {
-	if (!text.EqualTo(newText))
+void ULexText::SetText(const FText& Value) {
+	if (!Text.EqualTo(Value))
 	{
-		text = newText;
+		Text = Value;
 
-		int newVisibleCharCount = VisibleCharCountInString(text.ToString());
-		if (newVisibleCharCount != visibleCharCount)//visible char count change
+		int newVisibleCharCount = VisibleCharCountInString(Text.ToString());
+		if (newVisibleCharCount != VisibleCharCount)//visible char count change
 		{
 			MarkVerticesDirty(true, true, true, true);
-			visibleCharCount = newVisibleCharCount;
+			VisibleCharCount = newVisibleCharCount;
 		}
 		else//visible char count not change, just mark update vertex and uv
 		{
@@ -560,91 +522,77 @@ void ULexText::SetText(const FText& newText) {
 }
 
 
-void ULexText::SetFontSize(float newSize) {
-	if (size != newSize)
+void ULexText::SetFontSize(float Value) {
+	if (FontSize != Value)
 	{
 		MarkVertexPositionDirty();
-		size = newSize;
+		FontSize = Value;
 	}
 }
-void ULexText::SetUseKerning(bool value)
+void ULexText::SetUseKerning(bool Value)
 {
-	if (useKerning != value)
+	if (bUseKerning != Value)
 	{
-		useKerning = value;
+		bUseKerning = Value;
 		MarkVertexPositionDirty();
 	}
 }
-void ULexText::SetFontSpace(FVector2D newSpace) {
-	if (space != newSpace)
+void ULexText::SetFontSpace(FVector2D Value) {
+	if (FontSpace != Value)
 	{
 		MarkVertexPositionDirty();
-		space = newSpace;
+		FontSpace = Value;
 	}
 }
-void ULexText::SetParagraphHorizontalAlignment(EUITextParagraphHorizontalAlign newHAlign) {
-	if (hAlign != newHAlign)
+void ULexText::SetParagraphHorizontalAlignment(ELexUITextParagraphHorizontalAlign Value) {
+	if (HAlign != Value)
 	{
 		MarkVertexPositionDirty();
-		hAlign = newHAlign;
+		HAlign = Value;
 	}
 }
-void ULexText::SetParagraphVerticalAlignment(EUITextParagraphVerticalAlign newVAlign) {
-	if (vAlign != newVAlign)
+void ULexText::SetParagraphVerticalAlignment(ELexUITextParagraphVerticalAlign Value) {
+	if (VAlign != Value)
 	{
 		MarkVertexPositionDirty();
-		vAlign = newVAlign;
+		VAlign = Value;
 	}
 }
-void ULexText::SetOverflowType(EUITextOverflowType newOverflowType) {
-	if (overflowType != newOverflowType)
+void ULexText::SetOverflowType(ELexUITextOverflowType Value) {
+	if (OverflowType != Value)
 	{
-		if (overflowType == EUITextOverflowType::ClampContent
-			|| newOverflowType == EUITextOverflowType::ClampContent
+		if (OverflowType == ELexUITextOverflowType::ClampContent
+			|| Value == ELexUITextOverflowType::ClampContent
 			)
 			MarkVerticesDirty(true, true, true, true);
 		else
 			MarkVertexPositionDirty();
-		overflowType = newOverflowType;
+		OverflowType = Value;
 	}
 }
 
-void ULexText::SetWrappingPolicy(ETextWrappingPolicy newWrappingPolicy)
+void ULexText::SetWrappingPolicy(ETextWrappingPolicy Value)
 {
-	if (WrappingPolicy != newWrappingPolicy)
+	if (WrappingPolicy != Value)
 	{
-		WrappingPolicy = newWrappingPolicy;
+		WrappingPolicy = Value;
 		MarkVertexPositionDirty();
 	}
 }
 
-void ULexText::SetAdjustWidth(bool newAdjustWidth) {
-	if (adjustWidth != newAdjustWidth)
-	{
-		adjustWidth = newAdjustWidth;
-		MarkVertexPositionDirty();
-	}
-}
-void ULexText::SetAdjustHeight(bool newAdjustHeight) {
-	if (adjustHeight != newAdjustHeight)
-	{
-		adjustHeight = newAdjustHeight;
-		MarkVertexPositionDirty();
-	}
-}
-void ULexText::SetMaxHorizontalWidth(float value)
+void ULexText::SetMaxHorizontalWidth(float Value)
 {
-	if (maxHorizontalWidth != value)
+	if (MaxHorizontalWidth != Value)
 	{
-		maxHorizontalWidth = value;
+		MaxHorizontalWidth = Value;
 		MarkVertexPositionDirty();
 	}
 }
-void ULexText::SetFontStyle(EUITextFontStyle newFontStyle) {
-	if (fontStyle != newFontStyle)
+void ULexText::SetFontStyle(ELexUITextFontStyle Value) {
+	if (FontStyle != Value)
 	{
-		if ((fontStyle == EUITextFontStyle::None || fontStyle == EUITextFontStyle::Italic)
-			&& (newFontStyle == EUITextFontStyle::None || newFontStyle == EUITextFontStyle::Italic))//these only affect vertex position
+		if ((FontStyle == ELexUITextFontStyle::None || FontStyle == ELexUITextFontStyle::Italic)
+			&& (Value == ELexUITextFontStyle::None || Value == ELexUITextFontStyle::Italic))//these only affect vertex position
 		{
 			MarkVertexPositionDirty();
 		}
@@ -652,224 +600,85 @@ void ULexText::SetFontStyle(EUITextFontStyle newFontStyle) {
 		{
 			MarkVerticesDirty(true, true, true, true);
 		}
-		fontStyle = newFontStyle;
+		FontStyle = Value;
 	}
 }
-void ULexText::SetRichText(bool newRichText)
+void ULexText::SetRichText(bool Value)
 {
-	if (richText != newRichText)
+	if (bRichText != Value)
 	{
 		MarkVerticesDirty(true, true, true, true);
-		richText = newRichText;
-		if (!richText)
+		bRichText = Value;
+		if (!bRichText)
 		{
 			ClearCreatedRichTextImageObject();
 		}
 	}
 }
-void ULexText::SetRichTextTagFilterFlags(int32 value)
+void ULexText::SetRichTextTagFilterFlags(int32 Value)
 {
-	if (richTextTagFilterFlags != value)
+	if (RichTextTagFilterFlags != Value)
 	{
 		MarkVerticesDirty(true, true, true, true);
-		richTextTagFilterFlags = value;
-		if (!(richTextTagFilterFlags & (1 << (int)EUIText_RichTextTagFilterFlags::Image)))
+		RichTextTagFilterFlags = Value;
+		if (!(RichTextTagFilterFlags & (1 << (int)ELexUIText_RichTextTagFilterFlags::Image)))
 		{
 			ClearCreatedRichTextImageObject();
 		}
 	}
 }
-void ULexText::SetRichTextImageData(ULexUIRichTextImageData_BaseObject* value)
+void ULexText::SetRichTextImageData(ULexUIRichTextImageData_BaseObject* Value)
 {
-	if (richTextImageData != value)
+	if (RichTextImageData != Value)
 	{
 		MarkVerticesDirty(true, true, true, true);
-		richTextImageData = value;
-		if (!IsValid(richTextImageData))//clear richTextImageData, then need to delete created object
+		RichTextImageData = Value;
+		if (!IsValid(RichTextImageData))//clear richTextImageData, then need to delete created object
 		{
 			ClearCreatedRichTextImageObject();
 		}
 	}
 }
-void ULexText::SetRichTextCustomStyleData(ULexUIRichTextCustomStyleData* value)
+void ULexText::SetRichTextCustomStyleData(ULexUIRichTextCustomStyleData* Value)
 {
-	if (richTextCustomStyleData != value)
+	if (RichTextCustomStyleData != Value)
 	{
 		MarkVerticesDirty(true, true, true, true);
-		richTextCustomStyleData = value;
+		RichTextCustomStyleData = Value;
 	}
 }
 
+void ULexText::SetOverrideMaterial(UMaterialInterface* Value)
+{
+	if (OverrideMaterial != Value)
+	{
+		OverrideMaterial = Value;
+		MarkMaterialDirty();
+	}
+}
 
 void ULexText::ClearCreatedRichTextImageObject()
 {
-	for (auto& imageObj : createdRichTextImageObjectArray)
+	for (auto& imageObj : CreatedRichTextImageObjectArray)
 	{
 		if (IsValid(imageObj))
 		{
 			FLexUIUtils::DestroyActorWithHierarchy(imageObj->GetOwner());
 		}
 	}
-	createdRichTextImageObjectArray.Empty();
+	CreatedRichTextImageObjectArray.Empty();
 }
-
-void ULexText::MarkTextLayoutDirty()
-{
-	bTextLayoutDirty = true;
-}
-void ULexText::ConditionalMarkTextLayoutDirty()
-{
-	if (overflowType == EUITextOverflowType::HorizontalOverflow)
-	{
-		if (adjustWidth)
-		{
-			MarkTextLayoutDirty();
-		}
-	}
-	else if (overflowType == EUITextOverflowType::VerticalOverflow)
-	{
-		if (adjustHeight)
-		{
-			MarkTextLayoutDirty();
-		}
-	}
-	else if (overflowType == EUITextOverflowType::HorizontalAndVerticalOverflow)
-	{
-		if (adjustWidth)
-		{
-			MarkTextLayoutDirty();
-		}
-		if (adjustHeight)
-		{
-			MarkTextLayoutDirty();
-		}
-	}
-}
-
-// void ULexText::OnUpdateLayout_Implementation()
-// {
-// 	if (bTextLayoutDirty)
-// 	{
-// 		if (UpdateCacheTextGeometry())
-// 		{
-// 			bTextLayoutDirty = false;
-// 			auto tempAdjustWidth = false, tempAdjustHeight = false;
-// 			if (overflowType == EUITextOverflowType::HorizontalOverflow)
-// 			{
-// 				if (adjustWidth)
-// 				{
-// 					tempAdjustWidth = true;
-// 				}
-// 			}
-// 			else if (overflowType == EUITextOverflowType::VerticalOverflow)
-// 			{
-// 				if (adjustHeight)
-// 				{
-// 					tempAdjustHeight = true;
-// 				}
-// 			}
-// 			else if (overflowType == EUITextOverflowType::HorizontalAndVerticalOverflow)
-// 			{
-// 				if (adjustWidth)
-// 				{
-// 					tempAdjustWidth = true;
-// 				}
-// 				if (adjustHeight)
-// 				{
-// 					tempAdjustHeight = true;
-// 				}
-// 			}
-// 			if (tempAdjustWidth)
-// 			{
-// 				if (adjustWidthRange == FVector2D::ZeroVector
-// 					|| (CacheTextGeometryData.textRealSize.X >= adjustWidthRange.X && CacheTextGeometryData.textRealSize.X <= adjustWidthRange.Y)
-// 					)
-// 				{
-// 					GetWidget()->SetWidth(CacheTextGeometryData.textRealSize.X);
-// 				}
-// 			}
-// 			if (tempAdjustHeight)
-// 			{
-// 				if (adjustHeightRange == FVector2D::ZeroVector
-// 					|| (CacheTextGeometryData.textRealSize.Y >= adjustHeightRange.X && CacheTextGeometryData.textRealSize.Y <= adjustHeightRange.Y)
-// 					)
-// 				{
-// 					GetWidget()->SetHeight(CacheTextGeometryData.textRealSize.Y);
-// 				}
-// 			}
-// 		}
-// 	}
-// }
-// bool ULexText::GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const
-// {
-// 	auto Widget = GetWidget();
-// 	if (Widget == InUIItem)
-// 	{
-// 		if (overflowType == EUITextOverflowType::HorizontalOverflow)
-// 		{
-// 			if (adjustWidth)
-// 			{
-// 				if (adjustWidthRange == FVector2D::ZeroVector
-// 					|| (Widget->GetWidth() >= adjustWidthRange.X && Widget->GetWidth() <= adjustWidthRange.Y)
-// 					)
-// 				{
-// 					OutResult.bCanControlHorizontalSizeDelta = true;
-// 				}
-// 				return true;
-// 			}
-// 		}
-// 		else if (overflowType == EUITextOverflowType::VerticalOverflow)
-// 		{
-// 			if (adjustHeight)
-// 			{
-// 				if (adjustHeightRange == FVector2D::ZeroVector
-// 					|| (Widget->GetHeight() >= adjustHeightRange.X && Widget->GetHeight() <= adjustHeightRange.Y)
-// 					)
-// 				{
-// 					OutResult.bCanControlVerticalSizeDelta = true;
-// 				}
-// 				return true;
-// 			}
-// 		}
-// 		else if (overflowType == EUITextOverflowType::HorizontalAndVerticalOverflow)
-// 		{
-// 			if (adjustWidth)
-// 			{
-// 				if (adjustWidthRange == FVector2D::ZeroVector
-// 					|| (Widget->GetWidth() >= adjustWidthRange.X && Widget->GetWidth() <= adjustWidthRange.Y)
-// 					)
-// 				{
-// 					OutResult.bCanControlHorizontalSizeDelta = true;
-// 				}
-// 			}
-// 			if (adjustHeight)
-// 			{
-// 				if (adjustHeightRange == FVector2D::ZeroVector
-// 					|| (Widget->GetHeight() >= adjustHeightRange.X && Widget->GetHeight() <= adjustHeightRange.Y)
-// 					)
-// 				{
-// 					OutResult.bCanControlVerticalSizeDelta = true;
-// 				}
-// 			}
-// 			if (adjustWidth || adjustHeight)
-// 			{
-// 				return true;
-// 			}
-// 		}
-// 	}
-// 	return false;
-// }
 
 bool ULexText::UpdateCacheTextGeometry()const
 {
 	if (!IsValid(this->GetFont()))return false;
 	auto Widget = GetWidget();
 
-	if (visibleCharCount == -1)visibleCharCount = VisibleCharCountInString(text.ToString());
+	if (VisibleCharCount == -1)VisibleCharCount = VisibleCharCountInString(Text.ToString());
 	auto RenderOpacityForRichText = this->GetRichText() ? Widget->GetFinalRenderOpacity() : 1.0f;
 	CacheTextGeometryData.SetInputParameters(
-		this->text.ToString()
-		, this->visibleCharCount
+		this->Text.ToString()
+		, this->VisibleCharCount
 		, Widget->GetRenderWidth()
 		, Widget->GetRenderHeight()
 		, FVector2f(Widget->GetPivot())
@@ -898,24 +707,17 @@ bool ULexText::UpdateCacheTextGeometry()const
 
 void ULexText::MarkVerticesDirty(bool InTriangleDirty, bool InVertexPositionDirty, bool InVertexUVDirty, bool InVertexColorDirty)
 {
-	if (InVertexPositionDirty)//position change, could cause layout change
-	{
-		ConditionalMarkTextLayoutDirty();
-	}
 	CacheTextGeometryData.MarkDirty();
 	Super::MarkVerticesDirty(InTriangleDirty, InVertexPositionDirty, InVertexUVDirty, InVertexColorDirty);
 }
 void ULexText::MarkTextureDirty()
 {
-	//texture dirty, could because font change, then text's geometry will be recreate, so layout will change
-	ConditionalMarkTextLayoutDirty();
 	CacheTextGeometryData.MarkDirty();
 	Super::MarkTextureDirty();
 }
 
 void ULexText::MarkAllDirty()
 {
-	ConditionalMarkTextLayoutDirty();
 	CacheTextGeometryData.MarkDirty();
 	Super::MarkAllDirty();
 }
@@ -936,7 +738,7 @@ int ULexText::VisibleCharCountInString(const FString& srcStr)
 	return result;
 }
 
-const TArray<FUITextCharProperty>& ULexText::GetCharPropertyArray()const
+const TArray<FLexUITextCharProperty>& ULexText::GetCharPropertyArray()const
 {
 	UpdateCacheTextGeometry();
 	return CacheTextGeometryData.cacheCharPropertyArray;
@@ -946,12 +748,12 @@ int32 ULexText::GetVisibleCharCount()const
 	UpdateCacheTextGeometry();
 	return CacheTextGeometryData.cacheCharPropertyArray.Num();
 }
-const TArray<FUIText_RichTextCustomTag>& ULexText::GetRichTextCustomTagArray()const
+const TArray<FLexUIText_RichTextCustomTag>& ULexText::GetRichTextCustomTagArray()const
 {
 	UpdateCacheTextGeometry();
 	return CacheTextGeometryData.cacheRichTextCustomTagArray;
 }
-const TArray<FUIText_RichTextImageTag>& ULexText::GetRichTextImageTagArray()const
+const TArray<FLexUIText_RichTextImageTag>& ULexText::GetRichTextImageTagArray()const
 {
 	UpdateCacheTextGeometry();
 	return CacheTextGeometryData.cacheRichTextImageTagArray;
@@ -959,10 +761,10 @@ const TArray<FUIText_RichTextImageTag>& ULexText::GetRichTextImageTagArray()cons
 
 void ULexText::GenerateRichTextImageObject()
 {
-	if (!IsValid(richTextImageData))return;
-	richTextImageData->CreateOrUpdateObject(this->GetWidget(), CacheTextGeometryData.cacheRichTextImageTagArray, createdRichTextImageObjectArray, 
+	if (!IsValid(RichTextImageData))return;
+	RichTextImageData->CreateOrUpdateObject(this->GetWidget(), CacheTextGeometryData.cacheRichTextImageTagArray, CreatedRichTextImageObjectArray, 
 #if WITH_EDITOR
-		listRichTextImageObjectInOutliner
+		bListRichTextImageObjectInOutliner
 #else
 		false
 #endif
@@ -1015,15 +817,15 @@ bool ULexText::MoveCaret(int32 moveType, int32& inOutCaretPositionIndex, int32& 
 		for (int lineIndex = 0; lineIndex < cacheLinePropertyArray.Num(); lineIndex++)
 		{
 			auto& lineProperty = cacheLinePropertyArray[lineIndex];
-			for (int caretIndex = 0; caretIndex < lineProperty.caretPropertyList.Num(); caretIndex++)
+			for (int caretIndex = 0; caretIndex < lineProperty.CaretPropertyList.Num(); caretIndex++)
 			{
 				if (totalCaretIndex == inOutCaretPositionIndex)//find caret
 				{
 					inOutCaretPositionLineIndex = lineIndex;
-					inOutCaretPosition = lineProperty.caretPropertyList[caretIndex].caretPosition;
+					inOutCaretPosition = lineProperty.CaretPropertyList[caretIndex].CaretPosition;
 					//stop loop
 					foundCaret = true;
-					caretIndex = lineProperty.caretPropertyList.Num();
+					caretIndex = lineProperty.CaretPropertyList.Num();
 					lineIndex = cacheLinePropertyArray.Num();
 				}
 				else
@@ -1037,7 +839,7 @@ bool ULexText::MoveCaret(int32 moveType, int32& inOutCaretPositionIndex, int32& 
 			inOutCaretPositionIndex = totalCaretIndex - 1;
 			inOutCaretPositionLineIndex = cacheLinePropertyArray.Num() - 1;
 			auto& lastLineProperty = cacheLinePropertyArray[cacheLinePropertyArray.Num() - 1];
-			inOutCaretPosition = lastLineProperty.caretPropertyList[lastLineProperty.caretPropertyList.Num() - 1].caretPosition;
+			inOutCaretPosition = lastLineProperty.CaretPropertyList[lastLineProperty.CaretPropertyList.Num() - 1].CaretPosition;
 		}
 	}
 	break;
@@ -1063,18 +865,18 @@ bool ULexText::MoveCaret(int32 moveType, int32& inOutCaretPositionIndex, int32& 
 		int accumulatedCaretIndex = 0;
 		for (int lineIndex = 0; lineIndex < inOutCaretPositionLineIndex; lineIndex++)
 		{
-			accumulatedCaretIndex += cacheLinePropertyArray[lineIndex].caretPropertyList.Num();
+			accumulatedCaretIndex += cacheLinePropertyArray[lineIndex].CaretPropertyList.Num();
 		}
 		auto originCaretPosition = inOutCaretPosition;
-		for (int caretIndex = 0; caretIndex < lineProperty.caretPropertyList.Num(); caretIndex++)
+		for (int caretIndex = 0; caretIndex < lineProperty.CaretPropertyList.Num(); caretIndex++)
 		{
-			auto& caretProperty = lineProperty.caretPropertyList[caretIndex];
-			auto distance = FMath::Abs(originCaretPosition.X - caretProperty.caretPosition.X);
+			auto& caretProperty = lineProperty.CaretPropertyList[caretIndex];
+			auto distance = FMath::Abs(originCaretPosition.X - caretProperty.CaretPosition.X);
 			if (distance < minDistance)
 			{
 				minDistance = distance;
 				inOutCaretPositionIndex = accumulatedCaretIndex;
-				inOutCaretPosition = caretProperty.caretPosition;
+				inOutCaretPosition = caretProperty.CaretPosition;
 			}
 			else//found min distance at prev
 			{
@@ -1088,7 +890,7 @@ bool ULexText::MoveCaret(int32 moveType, int32& inOutCaretPositionIndex, int32& 
 	{
 		inOutCaretPositionIndex = 0;
 		inOutCaretPositionLineIndex = 0;
-		inOutCaretPosition = cacheLinePropertyArray[0].caretPropertyList[0].caretPosition;
+		inOutCaretPosition = cacheLinePropertyArray[0].CaretPropertyList[0].CaretPosition;
 	}
 	break;
 	case 5:
@@ -1096,12 +898,12 @@ bool ULexText::MoveCaret(int32 moveType, int32& inOutCaretPositionIndex, int32& 
 		int32 accumulatedCaretIndex = 0;
 		for (int lineIndex = 0; lineIndex < cacheLinePropertyArray.Num(); lineIndex++)
 		{
-			accumulatedCaretIndex += cacheLinePropertyArray[lineIndex].caretPropertyList.Num();
+			accumulatedCaretIndex += cacheLinePropertyArray[lineIndex].CaretPropertyList.Num();
 		}
 		inOutCaretPositionIndex = accumulatedCaretIndex - 1;
 		inOutCaretPositionLineIndex = cacheLinePropertyArray.Num() - 1;
 		auto& lastLineProperty = cacheLinePropertyArray[cacheLinePropertyArray.Num() - 1];
-		inOutCaretPosition = lastLineProperty.caretPropertyList[lastLineProperty.caretPropertyList.Num() - 1].caretPosition;
+		inOutCaretPosition = lastLineProperty.CaretPropertyList[lastLineProperty.CaretPropertyList.Num() - 1].CaretPosition;
 	}
 	break;
 	}
@@ -1120,18 +922,18 @@ int ULexText::GetCharIndexByCaretIndex(int32 inCaretPositionIndex)
 	for (int lineIndex = 0; lineIndex < cacheLinePropertyArray.Num(); lineIndex++)
 	{
 		auto& lineProperty = cacheLinePropertyArray[lineIndex];
-		for (int caretIndex = 0; caretIndex < lineProperty.caretPropertyList.Num(); caretIndex++)
+		for (int caretIndex = 0; caretIndex < lineProperty.CaretPropertyList.Num(); caretIndex++)
 		{
 			if (accumulatedCaretIndex == inCaretPositionIndex)//find caret
 			{
-				return lineProperty.caretPropertyList[caretIndex].charIndex;
+				return lineProperty.CaretPropertyList[caretIndex].CharIndex;
 			}
 			accumulatedCaretIndex++;
 		}
 	}
 	//not found caret, use last one
 	auto& lastLineProperty = cacheLinePropertyArray[cacheLinePropertyArray.Num() - 1];
-	return lastLineProperty.caretPropertyList[lastLineProperty.caretPropertyList.Num() - 1].charIndex;
+	return lastLineProperty.CaretPropertyList[lastLineProperty.CaretPropertyList.Num() - 1].CharIndex;
 }
 int ULexText::GetLastCaret()
 {
@@ -1141,7 +943,7 @@ int ULexText::GetLastCaret()
 	for (int lineIndex = 0; lineIndex < cacheLinePropertyArray.Num(); lineIndex++)
 	{
 		auto& lineProperty = cacheLinePropertyArray[lineIndex];
-		totalCaretIndex += lineProperty.caretPropertyList.Num();
+		totalCaretIndex += lineProperty.CaretPropertyList.Num();
 	}
 	return totalCaretIndex - 1;
 }
@@ -1160,39 +962,39 @@ void ULexText::FindCaretByIndex(int32& inOutCaretPositionIndex, FVector2f& outCa
 	{
 		float pivotOffsetX = Widget->GetRenderWidth() * (0.5f - Widget->GetPivot().X);
 		float pivotOffsetY = Widget->GetRenderHeight() * (0.5f - Widget->GetPivot().Y);
-		switch (hAlign)
+		switch (HAlign)
 		{
-		case EUITextParagraphHorizontalAlign::Left:
+		case ELexUITextParagraphHorizontalAlign::Left:
 		{
 			outCaretPosition.X = pivotOffsetX - Widget->GetRenderWidth() * 0.5f;
 		}
 			break;
-		case EUITextParagraphHorizontalAlign::Center:
+		case ELexUITextParagraphHorizontalAlign::Center:
 		{
 			outCaretPosition.X = pivotOffsetX;
 		}
 			break;
-		case EUITextParagraphHorizontalAlign::Right:
+		case ELexUITextParagraphHorizontalAlign::Right:
 		{
 			outCaretPosition.X = pivotOffsetX + Widget->GetRenderWidth() * 0.5f;
 		}
 			break;
 		}
-		switch (vAlign)
+		switch (VAlign)
 		{
-		case EUITextParagraphVerticalAlign::Top:
+		case ELexUITextParagraphVerticalAlign::Top:
 		{
-			outCaretPosition.Y = pivotOffsetY + Widget->GetRenderHeight() * 0.5f - size * 0.5f;//fixed offset
+			outCaretPosition.Y = pivotOffsetY + Widget->GetRenderHeight() * 0.5f - FontSize * 0.5f;//fixed offset
 		}
 			break;
-		case EUITextParagraphVerticalAlign::Middle:
+		case ELexUITextParagraphVerticalAlign::Middle:
 		{
 			outCaretPosition.Y = pivotOffsetY;
 		}
 			break;
-		case EUITextParagraphVerticalAlign::Bottom:
+		case ELexUITextParagraphVerticalAlign::Bottom:
 		{
-			outCaretPosition.Y = pivotOffsetY - Widget->GetRenderHeight() * 0.5f + size * 0.5f;//fixed offset
+			outCaretPosition.Y = pivotOffsetY - Widget->GetRenderHeight() * 0.5f + FontSize * 0.5f;//fixed offset
 		}
 			break;
 		}
@@ -1201,7 +1003,7 @@ void ULexText::FindCaretByIndex(int32& inOutCaretPositionIndex, FVector2f& outCa
 	{
 		if (inOutCaretPositionIndex == 0)//first char
 		{
-			outCaretPosition = cacheLinePropertyArray[0].caretPropertyList[0].caretPosition;
+			outCaretPosition = cacheLinePropertyArray[0].CaretPropertyList[0].CaretPosition;
 			outCaretPositionLineIndex = 0;
 			outVisibleCaretStartIndex = 0;
 		}
@@ -1212,16 +1014,16 @@ void ULexText::FindCaretByIndex(int32& inOutCaretPositionIndex, FVector2f& outCa
 			for (int lineIndex = 0; lineIndex < cacheLinePropertyArray.Num(); lineIndex++)
 			{
 				auto& lineProperty = cacheLinePropertyArray[lineIndex];
-				for (int caretIndex = 0; caretIndex < lineProperty.caretPropertyList.Num(); caretIndex++)
+				for (int caretIndex = 0; caretIndex < lineProperty.CaretPropertyList.Num(); caretIndex++)
 				{
 					if (accumulatedCaretIndex == inOutCaretPositionIndex)//find caret
 					{
 						outCaretPositionLineIndex = lineIndex;
-						outCaretPosition = lineProperty.caretPropertyList[caretIndex].caretPosition;
+						outCaretPosition = lineProperty.CaretPropertyList[caretIndex].CaretPosition;
 						outVisibleCaretStartIndex = accumulatedCaretIndex;
 						//stop loop
 						foundCaret = true;
-						caretIndex = lineProperty.caretPropertyList.Num();
+						caretIndex = lineProperty.CaretPropertyList.Num();
 						lineIndex = cacheLinePropertyArray.Num();
 					}
 					else
@@ -1234,7 +1036,7 @@ void ULexText::FindCaretByIndex(int32& inOutCaretPositionIndex, FVector2f& outCa
 			{
 				auto& lastLineProperty = cacheLinePropertyArray[cacheLinePropertyArray.Num() - 1];
 				inOutCaretPositionIndex = accumulatedCaretIndex - 1;
-				outCaretPosition = lastLineProperty.caretPropertyList[lastLineProperty.caretPropertyList.Num() - 1].caretPosition;
+				outCaretPosition = lastLineProperty.CaretPropertyList[lastLineProperty.CaretPropertyList.Num() - 1].CaretPosition;
 				outCaretPositionLineIndex = cacheLinePropertyArray.Num() - 1;
 				outVisibleCaretStartIndex = 0;
 			}
@@ -1243,7 +1045,7 @@ void ULexText::FindCaretByIndex(int32& inOutCaretPositionIndex, FVector2f& outCa
 }
 void ULexText::FindCaret(FVector2f& inOutCaretPosition, int32 inCaretPositionLineIndex, int32& outCaretPositionIndex)
 {
-	if (text.ToString().Len() == 0)//no text
+	if (Text.ToString().Len() == 0)//no text
 		return;
 	UpdateCacheTextGeometry();
 	auto& cacheTextPropertyArray = CacheTextGeometryData.cacheLinePropertyArray;
@@ -1252,26 +1054,26 @@ void ULexText::FindCaret(FVector2f& inOutCaretPosition, int32 inCaretPositionLin
 
 	//find nearest char to caret from this line
 	auto& lineItem = cacheTextPropertyArray[inCaretPositionLineIndex];
-	int charPropertyCount = lineItem.caretPropertyList.Num();//char count of this line
+	int charPropertyCount = lineItem.CaretPropertyList.Num();//char count of this line
 	float nearestDistance = MAX_FLT;
 	int32 nearestIndex = -1;
 	for (int charPropertyIndex = 0; charPropertyIndex < charPropertyCount; charPropertyIndex++)
 	{
-		auto& charItem = lineItem.caretPropertyList[charPropertyIndex];
-		float distance = FMath::Abs(charItem.caretPosition.X - inOutCaretPosition.X);
+		auto& charItem = lineItem.CaretPropertyList[charPropertyIndex];
+		float distance = FMath::Abs(charItem.CaretPosition.X - inOutCaretPosition.X);
 		if (distance <= nearestDistance)
 		{
 			nearestDistance = distance;
 			nearestIndex = charPropertyIndex;
-			outCaretPositionIndex = charItem.charIndex;
+			outCaretPositionIndex = charItem.CharIndex;
 		}
 	}
-	inOutCaretPosition = lineItem.caretPropertyList[nearestIndex].caretPosition;
+	inOutCaretPosition = lineItem.CaretPropertyList[nearestIndex].CaretPosition;
 }
 //find caret by position, caret is on left side of char
 void ULexText::FindCaretByWorldPosition(FVector inWorldPosition, FVector2f& outCaretPosition, int32& outCaretPositionLineIndex, int32& outCaretPositionIndex)
 {
-	if (text.ToString().Len() == 0)//no text
+	if (Text.ToString().Len() == 0)//no text
 	{
 		outCaretPositionIndex = 0;
 		int tempVisibleCharStartIndex = 0;
@@ -1292,12 +1094,12 @@ void ULexText::FindCaretByWorldPosition(FVector inWorldPosition, FVector2f& outC
 		for (int lineIndex = 0; lineIndex < cacheLinePropertyArray.Num(); lineIndex++)
 		{
 			auto& lineItem = cacheLinePropertyArray[lineIndex];
-			float distance = FMath::Abs(lineItem.caretPropertyList[0].caretPosition.Y - localPosition2D.Y);
+			float distance = FMath::Abs(lineItem.CaretPropertyList[0].CaretPosition.Y - localPosition2D.Y);
 			if (distance <= nearestDistance)
 			{
 				nearestDistance = distance;
 				outCaretPositionLineIndex = lineIndex;
-				accumulatedCaretIndex += lineItem.caretPropertyList.Num();
+				accumulatedCaretIndex += lineItem.CaretPropertyList.Num();
 			}
 			else
 			{
@@ -1309,19 +1111,19 @@ void ULexText::FindCaretByWorldPosition(FVector inWorldPosition, FVector2f& outC
 		{
 			foundLineIndex = cacheLinePropertyArray.Num() - 1;
 		}
-		accumulatedCaretIndex -= cacheLinePropertyArray[foundLineIndex].caretPropertyList.Num();//remove prev line's caret count, because we need to add it when compare X pos
+		accumulatedCaretIndex -= cacheLinePropertyArray[foundLineIndex].CaretPropertyList.Num();//remove prev line's caret count, because we need to add it when compare X pos
 		//then find nearest char, only need to compare X
 		nearestDistance = MAX_FLT;
 		auto& nearestLine = cacheLinePropertyArray[outCaretPositionLineIndex];
-		for (int caretIndex = 0; caretIndex < nearestLine.caretPropertyList.Num(); caretIndex++)
+		for (int caretIndex = 0; caretIndex < nearestLine.CaretPropertyList.Num(); caretIndex++)
 		{
-			auto& caretItem = nearestLine.caretPropertyList[caretIndex];
-			float distance = FMath::Abs(caretItem.caretPosition.X - localPosition2D.X);
+			auto& caretItem = nearestLine.CaretPropertyList[caretIndex];
+			float distance = FMath::Abs(caretItem.CaretPosition.X - localPosition2D.X);
 			if (distance <= nearestDistance)
 			{
 				nearestDistance = distance;
 				outCaretPositionIndex = accumulatedCaretIndex + caretIndex;
-				outCaretPosition = caretItem.caretPosition;
+				outCaretPosition = caretItem.CaretPosition;
 			}
 			else
 			{
@@ -1339,9 +1141,9 @@ int ULexText::GetCaretIndexByCharIndex(int32 inCharIndex)
 	for (int lineIndex = 0; lineIndex < cacheLinePropertyArray.Num(); lineIndex++)
 	{
 		auto& lineProperty = cacheLinePropertyArray[lineIndex];
-		for (int caretIndex = 0; caretIndex < lineProperty.caretPropertyList.Num(); caretIndex++)
+		for (int caretIndex = 0; caretIndex < lineProperty.CaretPropertyList.Num(); caretIndex++)
 		{
-			if (lineProperty.caretPropertyList[caretIndex].charIndex == inCharIndex)//find char
+			if (lineProperty.CaretPropertyList[caretIndex].CharIndex == inCharIndex)//find char
 			{
 				return accumulatedCaretIndex;
 			}
@@ -1363,7 +1165,7 @@ bool ULexText::GetVisibleCharRangeForMultiLine(int32& inOutCaretPositionIndex, i
 	for (int lineIndex = 0; lineIndex < cacheLinePropertyArray.Num(); lineIndex++)
 	{
 		auto& lineProperty = cacheLinePropertyArray[lineIndex];
-		for (int caretIndex = 0; caretIndex < lineProperty.caretPropertyList.Num(); caretIndex++)
+		for (int caretIndex = 0; caretIndex < lineProperty.CaretPropertyList.Num(); caretIndex++)
 		{
 			if (inOutCaretPositionIndex == accumulatedCaretIndex)//find caret
 			{
@@ -1444,16 +1246,16 @@ bool ULexText::GetVisibleCharRangeForMultiLine(int32& inOutCaretPositionIndex, i
 	for (int lineIndex = 0; lineIndex < inOutVisibleCaretStartLineIndex; lineIndex++)
 	{
 		auto& lineProperty = cacheLinePropertyArray[lineIndex];
-		inOutVisibleCaretStartIndex += lineProperty.caretPropertyList.Num();
+		inOutVisibleCaretStartIndex += lineProperty.CaretPropertyList.Num();
 	}
 	auto& startLineProperty = cacheLinePropertyArray[inOutVisibleCaretStartLineIndex];
 	auto& endLineProperty = cacheLinePropertyArray[VisibleCaretEndLineIndex];
-	outVisibleCharStartIndex = startLineProperty.caretPropertyList[0].charIndex;
-	auto lastIndex = endLineProperty.caretPropertyList.Num() - 1;
-	auto lastCharIndex = endLineProperty.caretPropertyList[lastIndex].charIndex;
+	outVisibleCharStartIndex = startLineProperty.CaretPropertyList[0].CharIndex;
+	auto lastIndex = endLineProperty.CaretPropertyList.Num() - 1;
+	auto lastCharIndex = endLineProperty.CaretPropertyList[lastIndex].CharIndex;
 	if (lastCharIndex == -1)//-1 means newline break, so use next caret's char index
 	{
-		lastCharIndex = endLineProperty.caretPropertyList[lastIndex - 1].charIndex + 1;
+		lastCharIndex = endLineProperty.CaretPropertyList[lastIndex - 1].CharIndex + 1;
 	}
 	outVisibleCharCount = lastCharIndex - outVisibleCharStartIndex;
 	return outOfRange;
@@ -1464,7 +1266,7 @@ bool ULexText::GetVisibleCharRangeForSingleLine(int32& inOutCaretPositionIndex, 
 	UpdateCacheTextGeometry();
 	auto& cacheTextPropertyArray = CacheTextGeometryData.cacheLinePropertyArray;
 	auto& lineProperty = cacheTextPropertyArray[0];//just single line
-	inOutCaretPositionIndex = FMath::Clamp(inOutCaretPositionIndex, 0, lineProperty.caretPropertyList.Num() - 1);
+	inOutCaretPositionIndex = FMath::Clamp(inOutCaretPositionIndex, 0, lineProperty.CaretPropertyList.Num() - 1);
 
 	if (inOutVisibleCaretStartIndex > inOutCaretPositionIndex)
 	{
@@ -1474,12 +1276,12 @@ bool ULexText::GetVisibleCharRangeForSingleLine(int32& inOutCaretPositionIndex, 
 	float calculatedSize = 0;
 	bool outOfRange = false;
 	int VisibleCaretEndIndex = inOutCaretPositionIndex;
-	auto caretPosition = lineProperty.caretPropertyList[inOutCaretPositionIndex].caretPosition;
+	auto caretPosition = lineProperty.CaretPropertyList[inOutCaretPositionIndex].CaretPosition;
 	//check from caret to VisibleCaretStartIndex
 	for (int caretIndex = inOutCaretPositionIndex; caretIndex >= 0 && caretIndex >= inOutVisibleCaretStartIndex; caretIndex--)
 	{
-		auto& caretProperty = lineProperty.caretPropertyList[caretIndex];
-		calculatedSize = caretPosition.X - caretProperty.caretPosition.X;
+		auto& caretProperty = lineProperty.CaretPropertyList[caretIndex];
+		calculatedSize = caretPosition.X - caretProperty.CaretPosition.X;
 		if (calculatedSize >= inMaxWidth)
 		{
 			outOfRange = true;
@@ -1491,10 +1293,10 @@ bool ULexText::GetVisibleCharRangeForSingleLine(int32& inOutCaretPositionIndex, 
 	{
 		//check from caret to right end
 		float tempWidth = calculatedSize;
-		for (int caretIndex = inOutCaretPositionIndex; caretIndex < lineProperty.caretPropertyList.Num(); caretIndex++)
+		for (int caretIndex = inOutCaretPositionIndex; caretIndex < lineProperty.CaretPropertyList.Num(); caretIndex++)
 		{
-			auto& caretProperty = lineProperty.caretPropertyList[caretIndex];
-			auto dist = caretProperty.caretPosition.X - caretPosition.X;
+			auto& caretProperty = lineProperty.CaretPropertyList[caretIndex];
+			auto dist = caretProperty.CaretPosition.X - caretPosition.X;
 			tempWidth = calculatedSize + dist;
 			if (tempWidth > inMaxWidth)
 			{
@@ -1511,8 +1313,8 @@ bool ULexText::GetVisibleCharRangeForSingleLine(int32& inOutCaretPositionIndex, 
 			//check from VisibleCaretStartIndex to left
 			for (int caretIndex = inOutVisibleCaretStartIndex - 1; caretIndex >= 0; caretIndex--)
 			{
-				auto& caretProperty = lineProperty.caretPropertyList[caretIndex];
-				auto dist = caretPosition.X - caretProperty.caretPosition.X;
+				auto& caretProperty = lineProperty.CaretPropertyList[caretIndex];
+				auto dist = caretPosition.X - caretProperty.CaretPosition.X;
 				tempWidth = calculatedSize + dist;
 				if (tempWidth >= inMaxWidth)
 				{
@@ -1524,12 +1326,12 @@ bool ULexText::GetVisibleCharRangeForSingleLine(int32& inOutCaretPositionIndex, 
 			calculatedSize = tempWidth;
 		}
 	}
-	outVisibleCharStartIndex = lineProperty.caretPropertyList[inOutVisibleCaretStartIndex].charIndex;
-	outVisibleCharCount = lineProperty.caretPropertyList[VisibleCaretEndIndex].charIndex - outVisibleCharStartIndex;
+	outVisibleCharStartIndex = lineProperty.CaretPropertyList[inOutVisibleCaretStartIndex].CharIndex;
+	outVisibleCharCount = lineProperty.CaretPropertyList[VisibleCaretEndIndex].CharIndex - outVisibleCharStartIndex;
 	return outOfRange;
 }
 
-void ULexText::GetSelectionProperty(int32 InSelectionStartCaretIndex, int32 InSelectionEndCaretIndex, TArray<FUITextSelectionProperty>& OutSelectionProeprtyArray)
+void ULexText::GetSelectionProperty(int32 InSelectionStartCaretIndex, int32 InSelectionEndCaretIndex, TArray<FLexUITextSelectionProperty>& OutSelectionProeprtyArray)
 {
 	OutSelectionProeprtyArray.Reset();
 	UpdateCacheTextGeometry();
@@ -1556,7 +1358,7 @@ void ULexText::GetSelectionProperty(int32 InSelectionStartCaretIndex, int32 InSe
 	
 	if (startCaretPositionLineIndex == endCaretPositionLineIndex)//same line
 	{
-		FUITextSelectionProperty selectionProperty;
+		FLexUITextSelectionProperty selectionProperty;
 		selectionProperty.Pos = startCaretPosition;
 		selectionProperty.Size = endCaretPosition.X - startCaretPosition.X;
 		OutSelectionProeprtyArray.Add(selectionProperty);
@@ -1564,26 +1366,26 @@ void ULexText::GetSelectionProperty(int32 InSelectionStartCaretIndex, int32 InSe
 	else//different line
 	{
 		//first line
-		FUITextSelectionProperty selectionProperty;
+		FLexUITextSelectionProperty selectionProperty;
 		selectionProperty.Pos = startCaretPosition;
-		auto& firstLineCharPropertyList = cacheTextPropertyArray[startCaretPositionLineIndex].caretPropertyList;
+		auto& firstLineCharPropertyList = cacheTextPropertyArray[startCaretPositionLineIndex].CaretPropertyList;
 		auto& firstLineLastCharProperty = firstLineCharPropertyList[firstLineCharPropertyList.Num() - 1];
-		selectionProperty.Size = FMath::RoundToInt(firstLineLastCharProperty.caretPosition.X - startCaretPosition.X);
+		selectionProperty.Size = FMath::RoundToInt(firstLineLastCharProperty.CaretPosition.X - startCaretPosition.X);
 		//selectionProperty.Size = (1.0f - this->GetPivot().X) * this->GetWidth() - startCaretPosition.X;
 		OutSelectionProeprtyArray.Add(selectionProperty);
 		//middle line, use this->GetWidth() as size
 		int middleLineCount = endCaretPositionLineIndex - startCaretPositionLineIndex - 1;
 		for (int i = 0; i < middleLineCount; i++)
 		{
-			auto& charPropertyList = cacheTextPropertyArray[startCaretPositionLineIndex + i + 1].caretPropertyList;
-			auto& firstPosition = charPropertyList[0].caretPosition;
-			auto& lasPosition = charPropertyList[charPropertyList.Num() - 1].caretPosition;
+			auto& charPropertyList = cacheTextPropertyArray[startCaretPositionLineIndex + i + 1].CaretPropertyList;
+			auto& firstPosition = charPropertyList[0].CaretPosition;
+			auto& lasPosition = charPropertyList[charPropertyList.Num() - 1].CaretPosition;
 			selectionProperty.Pos = firstPosition;
 			selectionProperty.Size = FMath::RoundToInt(lasPosition.X - firstPosition.X);
 			OutSelectionProeprtyArray.Add(selectionProperty);
 		}
 		//end line
-		auto& firstPosition = cacheTextPropertyArray[endCaretPositionLineIndex].caretPropertyList[0].caretPosition;
+		auto& firstPosition = cacheTextPropertyArray[endCaretPositionLineIndex].CaretPropertyList[0].CaretPosition;
 		selectionProperty.Pos = firstPosition;
 		selectionProperty.Size = FMath::RoundToInt(endCaretPosition.X - firstPosition.X);
 		OutSelectionProeprtyArray.Add(selectionProperty);

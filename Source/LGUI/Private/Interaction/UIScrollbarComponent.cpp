@@ -4,7 +4,7 @@
 #include "LGUI.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexLayoutAnchor.h"
-#include "LGUI/Public/Core/Components/LexWidget.h"
+#include "Core/Components/LexWidget.h"
 
 UUIScrollbarComponent::UUIScrollbarComponent()
 {
@@ -51,14 +51,14 @@ void UUIScrollbarComponent::PostEditChangeProperty(FPropertyChangedEvent &Proper
 }
 #endif
 
-void UUIScrollbarComponent::OnUIActiveInHierachy(bool ativeOrInactive)
+void UUIScrollbarComponent::OnRenderVisibilityChanged()
 {
-    Super::OnUIActiveInHierachy(ativeOrInactive);
+    Super::OnRenderVisibilityChanged();
     ApplyValueToUI();
 }
-void UUIScrollbarComponent::OnUIDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
+void UUIScrollbarComponent::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
-    Super::OnUIDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
+    Super::OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
     ApplyValueToUI();
 }
 

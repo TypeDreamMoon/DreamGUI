@@ -2,11 +2,11 @@
 
 #include "Core/LexVisualPostProcessRenderProxy.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIPostProcessShaders.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
+#include "Core/LexUIRender/LexUIPostProcessShaders.h"
+#include "Core/LexUIRender/LexUIVertex.h"
 #include "Rendering/Texture2DResource.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
-#include "LGUI/Public/Core/Components/LexVisualPostProcess.h"
+#include "Core/LexUIRender/LexUIRenderer.h"
+#include "Core/Components/LexVisualPostProcess.h"
 
 FLexVisualPostProcessRenderProxy::FLexVisualPostProcessRenderProxy()
 {

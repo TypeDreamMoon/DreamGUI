@@ -1,8 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUI/Public/Core/Components/LexVisualPostProcess.h"
+#include "Core/Components/LexVisualPostProcess.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/Components/LexCanvas.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/LexVisualPostProcessRenderProxy.h"
 

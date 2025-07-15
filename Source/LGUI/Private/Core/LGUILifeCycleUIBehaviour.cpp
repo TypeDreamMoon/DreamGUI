@@ -17,7 +17,14 @@ void ULGUILifeCycleUIBehaviour::OnRegister()
 	Super::OnRegister();
 	if (CheckRootUIComponent())
 	{
-		RootUIComp->AddLGUILifeCycleUIBehaviourComponent(this);
+		RootUIComp->GetIsEnabledChangedEvent().AddUObject(this, &ULGUILifeCycleUIBehaviour::Call_OnIsEnabledChanged);
+		RootUIComp->GetTransformChangedEvent().AddUObject(this, &ULGUILifeCycleUIBehaviour::Call_OnTransformChanged);
+		RootUIComp->GetDimensionChangedEvent().AddUObject(this, &ULGUILifeCycleUIBehaviour::Call_OnDimensionsChanged);
+		RootUIComp->GetAttachmentChangedEvent().AddUObject(this, &ULGUILifeCycleUIBehaviour::Call_OnAttachmentChanged);
+		RootUIComp->GetSiblingIndexChangedEvent().AddUObject(this, &ULGUILifeCycleUIBehaviour::Call_OnSiblingIndexChanged);
+		RootUIComp->GetRenderVisibilityChangedEvent().AddUObject(this, &ULGUILifeCycleUIBehaviour::Call_OnRenderVisibilityChanged);
+		RootUIComp->GetLayoutVisibilityChangedEvent().AddUObject(this, &ULGUILifeCycleUIBehaviour::Call_OnLayoutVisibilityChanged);
+		RootUIComp->GetHitTestVisibilityChangedEvent().AddUObject(this, &ULGUILifeCycleUIBehaviour::Call_OnHitTestVisibilityChanged);
 	}
 }
 void ULGUILifeCycleUIBehaviour::OnUnregister()
@@ -25,7 +32,14 @@ void ULGUILifeCycleUIBehaviour::OnUnregister()
 	Super::OnUnregister();
 	if (RootUIComp.IsValid())
 	{
-		RootUIComp->RemoveLGUILifeCycleUIBehaviourComponent(this);
+		RootUIComp->GetIsEnabledChangedEvent().RemoveAll(this);
+		RootUIComp->GetTransformChangedEvent().RemoveAll(this);
+		RootUIComp->GetDimensionChangedEvent().RemoveAll(this);
+		RootUIComp->GetAttachmentChangedEvent().RemoveAll(this);
+		RootUIComp->GetSiblingIndexChangedEvent().RemoveAll(this);
+		RootUIComp->GetRenderVisibilityChangedEvent().RemoveAll(this);
+		RootUIComp->GetLayoutVisibilityChangedEvent().RemoveAll(this);
+		RootUIComp->GetHitTestVisibilityChangedEvent().RemoveAll(this);
 	}
 }
 #if WITH_EDITOR
@@ -58,35 +72,21 @@ ULexWidget* ULGUILifeCycleUIBehaviour::GetRootUIComponent() const
 	return nullptr;
 }
 
-void ULGUILifeCycleUIBehaviour::OnUIActiveInHierachy(bool activeOrInactive) 
+void ULGUILifeCycleUIBehaviour::OnIsEnabledChanged(bool IsEnabled) 
 { 
 	auto PrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(this->GetWorld());
 	if (PrefabManager && PrefabManager->IsPrefabSystemProcessingActor(this->GetOwner()))
 	{
 		return;
 	}
-
-	if (activeOrInactive)
-	{
-		if (!bIsAwakeCalled)
-		{
-#if WITH_EDITOR
-			if (!this->GetWorld()->IsGameWorld())//edit mode
-			{
-
-			}
-			else
-#endif
-			{
-				Call_Awake();
-			}
-		}
-	}
-	SetActiveStateForEnableAndDisable(activeOrInactive);
 	if (bCanExecuteBlueprintEvent)
 	{
-		ReceiveOnUIActiveInHierarchy(activeOrInactive);
+		ReceiveOnIsEnabledChanged(IsEnabled);
 	}
+}
+
+void ULGUILifeCycleUIBehaviour::OnTransformChanged()
+{
 }
 
 void ULGUILifeCycleUIBehaviour::Call_Awake()
@@ -102,232 +102,293 @@ void ULGUILifeCycleUIBehaviour::Call_Awake()
 	Super::Call_Awake();
 }
 
-void ULGUILifeCycleUIBehaviour::OnUIDimensionsChanged(bool PivotChanged, bool widthChanged, bool heightChanged)
+void ULGUILifeCycleUIBehaviour::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
 	if (bCanExecuteBlueprintEvent)
 	{
-		ReceiveOnUIDimensionsChanged(PivotChanged, widthChanged, heightChanged);
-	}
-}
-void ULGUILifeCycleUIBehaviour::OnUIChildDimensionsChanged(ULexWidget* Child, bool PivotChanged, bool WidthChanged, bool HeightChanged)
-{
-	if (bCanExecuteBlueprintEvent)
-	{
-		ReceiveOnUIChildDimensionsChanged(Child, PivotChanged, WidthChanged, HeightChanged);
-	}
-}
-void ULGUILifeCycleUIBehaviour::OnUIChildAcitveInHierarchy(ULexWidget* Child, bool ativeOrInactive)
-{
-	if (bCanExecuteBlueprintEvent)
-	{
-		ReceiveOnUIChildAcitveInHierarchy(Child, ativeOrInactive);
-	}
-}
-void ULGUILifeCycleUIBehaviour::OnUIAttachmentChanged()
-{ 
-	if (bCanExecuteBlueprintEvent)
-	{
-		ReceiveOnUIAttachmentChanged();
-	}
-}
-void ULGUILifeCycleUIBehaviour::OnUIChildAttachmentChanged(ULexWidget* Child, bool attachOrDetach) 
-{ 
-	if (bCanExecuteBlueprintEvent)
-	{
-		ReceiveOnUIChildAttachmentChanged(Child, attachOrDetach);
-	}
-}
-void ULGUILifeCycleUIBehaviour::OnUIInteractionStateChanged(bool interactableOrNot)
-{ 
-	if (bCanExecuteBlueprintEvent)
-	{
-		ReceiveOnUIInteractionStateChanged(interactableOrNot);
-	}
-}
-void ULGUILifeCycleUIBehaviour::OnUIChildHierarchyIndexChanged(ULexWidget* Child)
-{ 
-	if (bCanExecuteBlueprintEvent)
-	{
-		ReceiveOnUIChildHierarchyIndexChanged(Child);
+		ReceiveOnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
 	}
 }
 
+void ULGUILifeCycleUIBehaviour::OnChildDimensionsChanged(ULexWidget* Child, bool PivotChanged, bool WidthChanged,
+	bool HeightChanged)
+{
+	if (bCanExecuteBlueprintEvent)
+	{
+		ReceiveOnChildDimensionsChanged(Child, PivotChanged, WidthChanged, HeightChanged);
+	}
+}
 
-void ULGUILifeCycleUIBehaviour::Call_OnUIDimensionsChanged(bool PivotChanged, bool widthChanged, bool heightChanged)
+void ULGUILifeCycleUIBehaviour::OnAttachmentChanged()
+{ 
+	if (bCanExecuteBlueprintEvent)
+	{
+		ReceiveOnAttachmentChanged();
+	}
+}
+
+void ULGUILifeCycleUIBehaviour::OnSiblingIndexChanged()
+{
+	if (bCanExecuteBlueprintEvent)
+	{
+		ReceiveOnSiblingIndexChanged();
+	}
+}
+
+void ULGUILifeCycleUIBehaviour::OnRenderVisibilityChanged()
+{
+	if (bCanExecuteBlueprintEvent)
+	{
+		ReceiveOnRenderVisibilityChanged();
+	}
+}
+
+void ULGUILifeCycleUIBehaviour::OnLayoutVisibilityChanged()
+{
+	if (bCanExecuteBlueprintEvent)
+	{
+		ReceiveOnLayoutVisibilityChanged();
+	}
+}
+
+void ULGUILifeCycleUIBehaviour::OnHitTestVisibilityChanged()
+{
+	if (bCanExecuteBlueprintEvent)
+	{
+		ReceiveOnHitTestVisibilityChanged();
+	}
+}
+
+void ULGUILifeCycleUIBehaviour::Call_OnIsEnabledChanged(bool IsEnabled)
 {
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())//edit mode
 	{
-		OnUIDimensionsChanged(PivotChanged, widthChanged, heightChanged);
+		OnIsEnabledChanged(IsEnabled);
 	}
 	else
 #endif
 	{
 		if (bIsAwakeCalled)
 		{
-			OnUIDimensionsChanged(PivotChanged, widthChanged, heightChanged);
+			OnIsEnabledChanged(IsEnabled);
 		}
 		else
 		{
 			auto ThisPtr = MakeWeakObjectPtr(this);
-			CallbacksBeforeAwake[(int)ECallbackFunctionType::Call_OnUIDimensionsChanged] = [=]() {
+			CallbacksBeforeAwake[(int)ECallbackFunctionType::OnIsEnabledChanged] = [=]() {
 				if (ThisPtr.IsValid())
 				{
-					ThisPtr->OnUIDimensionsChanged(PivotChanged, widthChanged, heightChanged);
+					ThisPtr->OnIsEnabledChanged(IsEnabled);
 				}};
 		}
 	}
 }
-void ULGUILifeCycleUIBehaviour::Call_OnUIChildDimensionsChanged(ULexWidget* Child, bool Pivot, bool WidthChanged, bool HeightChanged)
+
+void ULGUILifeCycleUIBehaviour::Call_OnTransformChanged()
 {
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())//edit mode
 	{
-		OnUIChildDimensionsChanged(Child, Pivot, WidthChanged, HeightChanged);
+		OnTransformChanged();
 	}
 	else
 #endif
 	{
 		if (bIsAwakeCalled)
 		{
-			OnUIChildDimensionsChanged(Child, Pivot, WidthChanged, HeightChanged);
+			OnTransformChanged();
 		}
 		else
 		{
 			auto ThisPtr = MakeWeakObjectPtr(this);
-			auto ChildPtr = MakeWeakObjectPtr(Child);
-			CallbacksBeforeAwake[(int)ECallbackFunctionType::Call_OnUIChildDimensionsChanged] = [=]() {
-				if (ThisPtr.IsValid() && ChildPtr.IsValid())
-				{
-					ThisPtr->OnUIChildDimensionsChanged(ChildPtr.Get(), Pivot, WidthChanged, HeightChanged);
-				}};
-		}
-	}
-}
-void ULGUILifeCycleUIBehaviour::Call_OnUIChildAcitveInHierarchy(ULexWidget* child, bool ativeOrInactive)
-{
-#if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())//edit mode
-	{
-		OnUIChildAcitveInHierarchy(child, ativeOrInactive);
-	}
-	else
-#endif
-	{
-		if (bIsAwakeCalled)
-		{
-			OnUIChildAcitveInHierarchy(child, ativeOrInactive);
-		}
-		else
-		{
-			auto ThisPtr = MakeWeakObjectPtr(this);
-			auto ChildPtr = MakeWeakObjectPtr(child);
-			CallbacksBeforeAwake[(int)ECallbackFunctionType::Call_OnUIChildAcitveInHierarchy] = [=]() {
-				if (ThisPtr.IsValid() && ChildPtr.IsValid())
-				{
-					ThisPtr->OnUIChildAcitveInHierarchy(ChildPtr.Get(), ativeOrInactive);
-				}};
-		}
-	}
-}
-void ULGUILifeCycleUIBehaviour::Call_OnUIAttachmentChanged()
-{
-#if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())//edit mode
-	{
-		OnUIAttachmentChanged();
-	}
-	else
-#endif
-	{
-		if (bIsAwakeCalled)
-		{
-			OnUIAttachmentChanged();
-		}
-		else
-		{
-			auto ThisPtr = MakeWeakObjectPtr(this);
-			CallbacksBeforeAwake[(int)ECallbackFunctionType::Call_OnUIAttachmentChanged] = [=]() {
+			CallbacksBeforeAwake[(int)ECallbackFunctionType::OnTransformChanged] = [=]() {
 				if (ThisPtr.IsValid())
 				{
-					ThisPtr->OnUIAttachmentChanged();
+					ThisPtr->OnTransformChanged();
 				}};
 		}
 	}
 }
-void ULGUILifeCycleUIBehaviour::Call_OnUIChildAttachmentChanged(ULexWidget* child, bool attachOrDetach)
+
+void ULGUILifeCycleUIBehaviour::Call_OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())//edit mode
 	{
-		OnUIChildAttachmentChanged(child, attachOrDetach);
+		OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
 	}
 	else
 #endif
 	{
 		if (bIsAwakeCalled)
 		{
-			OnUIChildAttachmentChanged(child, attachOrDetach);
+			OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
 		}
 		else
 		{
 			auto ThisPtr = MakeWeakObjectPtr(this);
-			auto ChildPtr = MakeWeakObjectPtr(child);
-			CallbacksBeforeAwake[(int)ECallbackFunctionType::Call_OnUIChildAttachmentChanged] = [=]() {
-				if (ThisPtr.IsValid() && ChildPtr.IsValid())
-				{
-					ThisPtr->OnUIChildAttachmentChanged(ChildPtr.Get(), attachOrDetach);
-				}};
-		}
-	}
-}
-void ULGUILifeCycleUIBehaviour::Call_OnUIInteractionStateChanged(bool interactableOrNot)
-{
-#if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())//edit mode
-	{
-		OnUIInteractionStateChanged(interactableOrNot);
-	}
-	else
-#endif
-	{
-		if (bIsAwakeCalled)
-		{
-			OnUIInteractionStateChanged(interactableOrNot);
-		}
-		else
-		{
-			auto ThisPtr = MakeWeakObjectPtr(this);
-			CallbacksBeforeAwake[(int)ECallbackFunctionType::Call_OnUIInteractionStateChanged] = [=]() {
+			CallbacksBeforeAwake[(int)ECallbackFunctionType::OnDimensionsChanged] = [=]() {
 				if (ThisPtr.IsValid())
 				{
-					ThisPtr->OnUIInteractionStateChanged(interactableOrNot);
+					ThisPtr->OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
 				}};
 		}
 	}
 }
-void ULGUILifeCycleUIBehaviour::Call_OnUIChildHierarchyIndexChanged(ULexWidget* child)
+
+void ULGUILifeCycleUIBehaviour::Call_OnChildDimensionsChanged(ULexWidget* Child, bool PivotChanged, bool WidthChanged,
+	bool HeightChanged)
 {
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())//edit mode
 	{
-		OnUIChildHierarchyIndexChanged(child);
+		OnChildDimensionsChanged(Child, PivotChanged, WidthChanged, HeightChanged);
 	}
 	else
 #endif
 	{
 		if (bIsAwakeCalled)
 		{
-			OnUIChildHierarchyIndexChanged(child);
+			OnChildDimensionsChanged(Child, PivotChanged, WidthChanged, HeightChanged);
 		}
 		else
 		{
 			auto ThisPtr = MakeWeakObjectPtr(this);
-			auto ChildPtr = MakeWeakObjectPtr(child);
-			CallbacksBeforeAwake[(int)ECallbackFunctionType::Call_OnUIChildHierarchyIndexChanged] = [=]() {
-				if (ThisPtr.IsValid() && ChildPtr.IsValid())
+			CallbacksBeforeAwake[(int)ECallbackFunctionType::OnChildDimensionsChanged] = [=]() {
+				if (ThisPtr.IsValid())
 				{
-					ThisPtr->OnUIChildHierarchyIndexChanged(ChildPtr.Get());
+					ThisPtr->OnChildDimensionsChanged(Child, PivotChanged, WidthChanged, HeightChanged);
+				}};
+		}
+	}
+}
+
+void ULGUILifeCycleUIBehaviour::Call_OnAttachmentChanged()
+{
+#if WITH_EDITOR
+	if (!this->GetWorld()->IsGameWorld())//edit mode
+	{
+		OnAttachmentChanged();
+	}
+	else
+#endif
+	{
+		if (bIsAwakeCalled)
+		{
+			OnAttachmentChanged();
+		}
+		else
+		{
+			auto ThisPtr = MakeWeakObjectPtr(this);
+			CallbacksBeforeAwake[(int)ECallbackFunctionType::OnAttachmentChanged] = [=]() {
+				if (ThisPtr.IsValid())
+				{
+					ThisPtr->OnAttachmentChanged();
+				}};
+		}
+	}
+}
+
+void ULGUILifeCycleUIBehaviour::Call_OnSiblingIndexChanged()
+{
+#if WITH_EDITOR
+	if (!this->GetWorld()->IsGameWorld())//edit mode
+	{
+		OnSiblingIndexChanged();
+	}
+	else
+#endif
+	{
+		if (bIsAwakeCalled)
+		{
+			OnSiblingIndexChanged();
+		}
+		else
+		{
+			auto ThisPtr = MakeWeakObjectPtr(this);
+			CallbacksBeforeAwake[(int)ECallbackFunctionType::OnSiblingIndexChanged] = [=]() {
+				if (ThisPtr.IsValid())
+				{
+					ThisPtr->OnSiblingIndexChanged();
+				}};
+		}
+	}
+}
+
+void ULGUILifeCycleUIBehaviour::Call_OnRenderVisibilityChanged()
+{
+#if WITH_EDITOR
+	if (!this->GetWorld()->IsGameWorld())//edit mode
+	{
+		OnRenderVisibilityChanged();
+	}
+	else
+#endif
+	{
+		if (bIsAwakeCalled)
+		{
+			OnRenderVisibilityChanged();
+		}
+		else
+		{
+			auto ThisPtr = MakeWeakObjectPtr(this);
+			CallbacksBeforeAwake[(int)ECallbackFunctionType::OnRenderVisibilityChanged] = [=]() {
+				if (ThisPtr.IsValid())
+				{
+					ThisPtr->OnRenderVisibilityChanged();
+				}};
+		}
+	}
+}
+
+void ULGUILifeCycleUIBehaviour::Call_OnLayoutVisibilityChanged()
+{
+#if WITH_EDITOR
+	if (!this->GetWorld()->IsGameWorld())//edit mode
+	{
+		OnLayoutVisibilityChanged();
+	}
+	else
+#endif
+	{
+		if (bIsAwakeCalled)
+		{
+			OnLayoutVisibilityChanged();
+		}
+		else
+		{
+			auto ThisPtr = MakeWeakObjectPtr(this);
+			CallbacksBeforeAwake[(int)ECallbackFunctionType::OnLayoutVisibilityChanged] = [=]() {
+				if (ThisPtr.IsValid())
+				{
+					ThisPtr->OnLayoutVisibilityChanged();
+				}};
+		}
+	}
+}
+
+void ULGUILifeCycleUIBehaviour::Call_OnHitTestVisibilityChanged()
+{
+#if WITH_EDITOR
+	if (!this->GetWorld()->IsGameWorld())//edit mode
+	{
+		OnHitTestVisibilityChanged();
+	}
+	else
+#endif
+	{
+		if (bIsAwakeCalled)
+		{
+			OnHitTestVisibilityChanged();
+		}
+		else
+		{
+			auto ThisPtr = MakeWeakObjectPtr(this);
+			CallbacksBeforeAwake[(int)ECallbackFunctionType::OnHitTestVisibilityChanged] = [=]() {
+				if (ThisPtr.IsValid())
+				{
+					ThisPtr->OnHitTestVisibilityChanged();
 				}};
 		}
 	}

@@ -1,8 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUI/Public/Core/Components/LexWidget.h"
+#include "Core/Components/LexWidget.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/Components/LexCanvas.h"
 #include "Core/LGUISettings.h"
 #include "Core/LGUILifeCycleUIBehaviour.h"
 #include "Core/LGUIManager.h"
@@ -37,23 +37,15 @@ ULexWidget::ULexWidget(const FObjectInitializer& ObjectInitializer) :Super(Objec
 	bFlattenHierarchyIndexDirty = true;
 	bNeedSortUIChildren = true;
 	bIsDetaching = false;
-#if WITH_EDITOR
-	bUIActiveStateDirty = true;
-#endif
-
 	bIsCanvasWidget = false;
 }
 
 void ULexWidget::BeginPlay()
 {
 	Super::BeginPlay();
-	if (IsValid(Layout))
+	if (!ULGUIPrefabWorldSubsystem::GetInstance(this->GetWorld())->IsPrefabSystemProcessingActor(this->GetOwner()))
 	{
-		Layout->BeginPlay();
-	}
-	if (IsValid(Visual))
-	{
-		Visual->BeginPlay();
+		Awake_Implementation();
 	}
 }
 
@@ -70,148 +62,92 @@ void ULexWidget::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 }
 
-#pragma region LGUILifeCycleUIBehaviour
-void ULexWidget::Call_ActiveInHierarchyStateChanged()
+void ULexWidget::Awake_Implementation()
 {
-	if (this->GetOwner() == nullptr)return;
-	if (this->GetWorld() == nullptr)return;
-	bool TempIsUIActive = GetIsUIActiveInHierarchy();
-	if (this->GetOwner()->GetRootComponent() != this)return;
-	if (UIActiveInHierarchyStateChangedDelegate.IsBound())UIActiveInHierarchyStateChangedDelegate.Broadcast(TempIsUIActive);
-}
-void ULexWidget::Call_ChildDimensionsChanged(ULexWidget* Child, bool PivotChanged, bool WidthChanged, bool HeightChanged)
-{
-	if (this->GetOwner() == nullptr)return;
-	if (this->GetWorld() == nullptr)return;
-	if (this->GetOwner()->GetRootComponent() != this)return;
-#if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())
+	CalculateVisibility_Recursive();
+	CalculateIsEnabled_Recursive();
+	if (IsValid(Layout))
 	{
-		GetOwner()->GetComponents(LGUILifeCycleUIBehaviourArray, false);
+		Layout->BeginPlay();
 	}
-#endif
-	for (int i = 0; i < LGUILifeCycleUIBehaviourArray.Num(); i++)
+	if (IsValid(Visual))
 	{
-		auto& CompItem = LGUILifeCycleUIBehaviourArray[i];
-		CompItem->Call_OnUIChildDimensionsChanged(Child, PivotChanged, WidthChanged, HeightChanged);
-	}
-}
-void ULexWidget::Call_ChildActiveInHierarchyStateChanged(ULexWidget* child, bool activeOrInactive)
-{
-	if (this->GetOwner() == nullptr)return;
-	if (this->GetWorld() == nullptr)return;
-	if (this->GetOwner()->GetRootComponent() != this)return;
-#if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())
-	{
-		GetOwner()->GetComponents(LGUILifeCycleUIBehaviourArray, false);
-	}
-#endif
-	for (int i = 0; i < LGUILifeCycleUIBehaviourArray.Num(); i++)
-	{
-		auto& CompItem = LGUILifeCycleUIBehaviourArray[i];
-		CompItem->Call_OnUIChildAcitveInHierarchy(child, activeOrInactive);
+		Visual->BeginPlay();
 	}
 }
 
-void ULexWidget::Call_TransformChanged()
+void ULexWidget::EditorAwake_Implementation()
 {
 	
 }
 
-void ULexWidget::Call_DimensionsChanged(bool InPivotChanged, bool WidthChanged, bool HeightChanged)
+#pragma region CallbackEvents
+void ULexWidget::Call_IsEnabledChanged()
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
-	if (this->GetOwner()->GetRootComponent() != this)return;
-#if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())
-	{
-		GetOwner()->GetComponents(LGUILifeCycleUIBehaviourArray, false);
-	}
-#endif
-	for (int i = 0; i < LGUILifeCycleUIBehaviourArray.Num(); i++)
-	{
-		auto& CompItem = LGUILifeCycleUIBehaviourArray[i];
-		CompItem->Call_OnUIDimensionsChanged(InPivotChanged, WidthChanged, HeightChanged);
-	}
+	OnIsEnabledChangedEvent.Broadcast(this->GetFinalIsEnabled());
+}
+void ULexWidget::Call_TransformChanged()
+{
+	if (this->GetOwner() == nullptr)return;
+	if (this->GetWorld() == nullptr)return;
+	OnTransformChangedEvent.Broadcast();
+}
 
-	//call parent
+void ULexWidget::Call_DimensionsChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged)
+{
+	if (this->GetOwner() == nullptr)return;
+	if (this->GetWorld() == nullptr)return;
+	OnDimensionChangedEvent.Broadcast(InPivotChanged, InWidthChanged, InHeightChanged);
+
 	if (UIParent.IsValid())
 	{
-		UIParent->Call_ChildDimensionsChanged(this, InPivotChanged, WidthChanged, HeightChanged);
+		UIParent->Call_ChildDimensionsChanged(this, InPivotChanged, InWidthChanged, InHeightChanged);
 	}
 }
+
+void ULexWidget::Call_ChildDimensionsChanged(ULexWidget* Child, bool InPivotChanged, bool InWidthChanged, bool InHeightChanged)
+{
+	if (this->GetOwner() == nullptr)return;
+	if (this->GetWorld() == nullptr)return;
+	OnChildDimensionChangedEvent.Broadcast(Child, InPivotChanged, InWidthChanged, InHeightChanged);
+}
+
 void ULexWidget::Call_AttachmentChanged()
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
-	if (this->GetOwner()->GetRootComponent() != this)return;
-#if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())
-	{
-		GetOwner()->GetComponents(LGUILifeCycleUIBehaviourArray, false);
-	}
-#endif
-	for (int i = 0; i < LGUILifeCycleUIBehaviourArray.Num(); i++)
-	{
-		auto& CompItem = LGUILifeCycleUIBehaviourArray[i];
-		CompItem->Call_OnUIAttachmentChanged();
-	}
+	OnAttachmentChangedEvent.Broadcast();
 }
-void ULexWidget::Call_ChildAttachmentChanged(ULexWidget* child, bool attachOrDettach)
+
+void ULexWidget::Call_SiblingIndexChanged()
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
-	if (this->GetOwner()->GetRootComponent() != this)return;
-#if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())
-	{
-		GetOwner()->GetComponents(LGUILifeCycleUIBehaviourArray, false);
-	}
-#endif
-	for (int i = 0; i < LGUILifeCycleUIBehaviourArray.Num(); i++)
-	{
-		auto& CompItem = LGUILifeCycleUIBehaviourArray[i];
-		CompItem->Call_OnUIChildAttachmentChanged(child, attachOrDettach);
-	}
+	OnSiblingIndexChangedEvent.Broadcast();
 }
-void ULexWidget::Call_InteractionStateChanged()
+void ULexWidget::Call_RenderVisibilityChanged()
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
-	if (this->GetOwner()->GetRootComponent() != this)return;
-#if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())
-	{
-		GetOwner()->GetComponents(LGUILifeCycleUIBehaviourArray, false);
-	}
-#endif
-	for (int i = 0; i < LGUILifeCycleUIBehaviourArray.Num(); i++)
-	{
-		auto& CompItem = LGUILifeCycleUIBehaviourArray[i];
-		CompItem->Call_OnUIInteractionStateChanged(GetFinalIsEnabled());
-	}
+	OnRenderVisibilityChangedEvent.Broadcast();
 }
-void ULexWidget::Call_ChildSiblingIndexChanged(ULexWidget* child)
+
+void ULexWidget::Call_LayoutVisibilityChanged()
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
-	if (this->GetOwner()->GetRootComponent() != this)return;
-#if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())
-	{
-		GetOwner()->GetComponents(LGUILifeCycleUIBehaviourArray, false);
-	}
-#endif
-	MarkLayoutDirty();
-	for (int i = 0; i < LGUILifeCycleUIBehaviourArray.Num(); i++)
-	{
-		auto& CompItem = LGUILifeCycleUIBehaviourArray[i];
-		CompItem->Call_OnUIChildHierarchyIndexChanged(child);
-	}
+	OnLayoutVisibilityChangedEvent.Broadcast();
 }
-#pragma endregion LGUILifeCycleUIBehaviour
+
+void ULexWidget::Call_HitTestVisibilityChanged()
+{
+	if (this->GetOwner() == nullptr)return;
+	if (this->GetWorld() == nullptr)return;
+	OnHitTestVisibilityChangedEvent.Broadcast();
+}
+#pragma endregion
 
 
 void ULexWidget::CalculateFlattenHierarchyIndex_Recursive(int& index)const
@@ -281,6 +217,7 @@ void ULexWidget::SetSiblingIndex(int32 InInt)
 	if (InInt != SiblingIndex)
 	{
 		SiblingIndex = InInt;
+		this->Call_SiblingIndexChanged();
 		ApplySiblingIndex();
 	}
 }
@@ -292,8 +229,11 @@ void ULexWidget::ApplySiblingIndex()
 		if (UIParent->UIChildren.Num() == 0)
 		{
 			UIParent->UIChildren.Add(this);
-			this->SiblingIndex = 0;
-			UIParent->Call_ChildSiblingIndexChanged(this);
+			if (SiblingIndex != 0)
+			{
+				this->SiblingIndex = 0;
+				this->Call_SiblingIndexChanged();
+			}
 		}
 		else
 		{
@@ -308,6 +248,7 @@ void ULexWidget::ApplySiblingIndex()
 				if (UIParent->UIChildren[i]->SiblingIndex != i)
 				{
 					UIParent->UIChildren[i]->SiblingIndex = i;
+					UIParent->UIChildren[i]->Call_SiblingIndexChanged();
 					anythingChange = true;
 				}
 			}
@@ -315,13 +256,16 @@ void ULexWidget::ApplySiblingIndex()
 			if (anythingChange)
 			{
 				MarkFlattenHierarchyIndexDirty();
-				UIParent->Call_ChildSiblingIndexChanged(this);
 			}
 		}
 	}
 	else
 	{
-		SiblingIndex = 0;
+		if (SiblingIndex != 0)
+		{
+			SiblingIndex = 0;
+			this->Call_SiblingIndexChanged();
+		}
 	}
 }
 
@@ -456,9 +400,6 @@ void ULexWidget::MarkAllDirtyRecursive()
 void ULexWidget::MarkAllDirty()
 {
 	bFlattenHierarchyIndexDirty = true;
-#if WITH_EDITOR
-	bUIActiveStateDirty = true;
-#endif
 	if (IsValid(Visual))
 	{
 		Visual->MarkAllDirty();
@@ -506,6 +447,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		static const FName ClippingName = GET_MEMBER_NAME_CHECKED(ULexWidget, Clipping);
 		static const FName VisualName = GET_MEMBER_NAME_CHECKED(ULexWidget, Visual);
 		static const FName LayoutName = GET_MEMBER_NAME_CHECKED(ULexWidget, Layout);
+		static const FName IsEnabledName = GET_MEMBER_NAME_CHECKED(ULexWidget, bIsEnabled);
 
 		if (MemberName == AspectRatioName
 		|| MemberName == PivotName
@@ -529,19 +471,13 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		{
 			MarkClipDirty(true);
 		}
-		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexWidget, bIsUIActive))
-		{
-			bIsUIActive = !bIsUIActive;//make it work
-			SetIsUIActive(!bIsUIActive);
-		}
-
 		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexWidget, SiblingIndex))
 		{
+			this->Call_SiblingIndexChanged();
 			ApplySiblingIndex();
 		}
 		else if (PropertyName == FName(TEXT("RelativeLocation")))
 		{
-			OnTransformChanged.Broadcast();
 			UpdateComponentToWorld();
 		}
 		else if (PropertyName == VisualName)
@@ -577,6 +513,14 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 				Layout->OnRegister();
 			}
 			MarkRenderSizeChanged();
+		}
+		if (PropertyName == VisibilityName)
+		{
+			CalculateVisibility_Recursive();
+		}
+		if (PropertyName == IsEnabledName)
+		{
+			CalculateIsEnabled_Recursive();
 		}
 		ULGUIPrefabManagerObject::AddOneShotTickFunction([this]()
 		{
@@ -735,30 +679,6 @@ void ULexWidget::EnsureDataForRebuild()
 				}
 			}
 		}
-		static void ForceRefreshUIActiveStateRecursive(ULexWidget* Widget)
-		{
-			if (Widget->bUIActiveStateDirty)
-			{
-				Widget->bUIActiveStateDirty = false;
-
-				Widget->ApplyUIActiveState(true);
-				//affect children
-				Widget->CheckChildrenUIActiveRecursive(Widget->GetIsUIActiveInHierarchy());
-				//callback for parent
-				if (Widget->UIParent.IsValid())
-				{
-					Widget->UIParent->OnChildActiveStateChanged(Widget);
-				}
-			}
-
-			for (auto& uiChild : Widget->UIChildren)
-			{
-				if (IsValid(uiChild))
-				{
-					ForceRefreshUIActiveStateRecursive(uiChild);
-				}
-			}
-		}
 		static void UpdateComponentToWorldRecursive(ULexWidget* Widget)
 		{
 			if (!IsValid(Widget))return;
@@ -774,7 +694,7 @@ void ULexWidget::EnsureDataForRebuild()
 	LOCAL::RenewRenderCanvas(this);
 	LOCAL::EnsureDataForRebuildRecursive(this);
 	LOCAL::ForceRefreshRenderCanvasRecursive(this);
-	LOCAL::ForceRefreshUIActiveStateRecursive(this);
+	CalculateVisibility_Recursive();
 	LOCAL::UpdateComponentToWorldRecursive(this);
 }
 
@@ -801,7 +721,6 @@ void ULexWidget::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, E
 		this->RenderCanvas->MarkSizeChanged();
 	}
 	MarkTransformChanged(true, true);
-	OnTransformChanged.Broadcast();
 	if (IsValid(Layout))
 	{
 		Layout->OnTransformChanged();
@@ -837,7 +756,7 @@ void ULexWidget::OnChildAttached(USceneComponent* ChildComponent)
 			if (ChildWidget->IsRegistered())
 			{
 				ChildWidget->SiblingIndex = UIChildren.Num() - 1;
-				this->Call_ChildSiblingIndexChanged(ChildWidget);
+				ChildWidget->Call_SiblingIndexChanged();
 			}
 			else//not registered means is loading from level. then no need to set hierarchy index
 			{
@@ -854,7 +773,7 @@ void ULexWidget::OnChildAttached(USceneComponent* ChildComponent)
 				if (UIChild->SiblingIndex != i)
 				{
 					UIChild->SiblingIndex = i;
-					this->Call_ChildSiblingIndexChanged(UIChild);
+					UIChild->Call_SiblingIndexChanged();
 				}
 			}
 		}
@@ -868,40 +787,21 @@ void ULexWidget::OnUIAttachedToParent()
 	auto PrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(this->GetWorld());
 	if (PrefabManager && PrefabManager->IsPrefabSystemProcessingActor(this->GetOwner()))//when load from prefab or duplicate by LGUI PrefabSystem, the ChildAttachmentChanged callback should execute til prefab serialization ready
 	{
-		UIParent = Cast<ULexWidget>(this->GetAttachParent());
-		check(UIParent.IsValid());
-		{
-			if (auto LGUIManager = ULGUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
-			{
-				LGUIManager->AddFunctionForPrefabSystemExecutionBeforeAwake(this->GetOwner(), [Child = MakeWeakObjectPtr(this), Parent = UIParent]() {
-					if (Child.IsValid() && Parent.IsValid())
-					{
-						Parent->Call_ChildAttachmentChanged(Child.Get(), true);
-					}});
-			}
-		}
+
 	}
 	else
 	{
-		UIParent = Cast<ULexWidget>(this->GetAttachParent());
-		check(UIParent.IsValid());
-		{
-			UIParent->Call_ChildAttachmentChanged(this, true);
-		}
-
 		if (this->IsRegistered())//not registered means is loading from level.
 		{
-			OnTransformChanged.Broadcast();
+			Call_TransformChanged();
 			//this->CalculateAnchorFromTransform();//if not from PrefabSystem, then calculate anchors on transform, so when use AttachComponent, the KeepRelative or KeepWorld will work. If from PrefabSystem, then anchor will automatically do the job
 		}
 	}
 
 	ULexCanvas* ParentCanvas = ULexWidget::GetComponentInParentUI<ULexCanvas>(GetOwner()->GetAttachParentActor(), false);
-	UIHierarchyChanged(ParentCanvas, UIParent->RootWidget.Get());
+	UIHierarchyAttachmentChanged(ParentCanvas, UIParent->RootWidget.Get());
 	MarkLayoutDirty();
 	MarkClipDirty(true);
-	//callback
-	Call_AttachmentChanged();
 }
 
 void ULexWidget::OnChildDetached(USceneComponent* ChildComponent)
@@ -922,7 +822,7 @@ void ULexWidget::OnChildDetached(USceneComponent* ChildComponent)
 			if (UIChild->SiblingIndex != i)
 			{
 				UIChild->SiblingIndex = i;
-				this->Call_ChildSiblingIndexChanged(UIChild);
+				UIChild->Call_SiblingIndexChanged();
 			}
 		}
 		MarkLayoutDirty();
@@ -948,37 +848,20 @@ void ULexWidget::OnUIDetachedFromParent()
 	auto PrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(this->GetWorld());
 	if (PrefabManager && PrefabManager->IsPrefabSystemProcessingActor(this->GetOwner()))//when load from prefab or duplicate by LGUI PrefabSystem, the ChildAttachmentChanged callback should execute til prefab serialization ready
 	{
-		if (UIParent.IsValid())//tell old parent
-		{
-			if (auto LGUIManager = ULGUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
-			{
-				LGUIManager->AddFunctionForPrefabSystemExecutionBeforeAwake(this->GetOwner(), [Child = MakeWeakObjectPtr(this), Parent = UIParent]() {
-					if (Child.IsValid() && Parent.IsValid())
-					{
-						Parent->Call_ChildAttachmentChanged(Child.Get(), false);
-					}});
-			}
-		}
+		
 	}
 	else
 	{
-		if (UIParent.IsValid())//tell old parent
-		{
-			UIParent->Call_ChildAttachmentChanged(this, false);
-		}
-
 		if (this->IsRegistered())//not registered means is loading from level.
 		{
-			OnTransformChanged.Broadcast();
+			Call_TransformChanged();
 			//this->CalculateAnchorFromTransform();//if not from PrefabSystem, then calculate anchors on transform, so when use AttachComponent, the KeepRelative or KeepWorld will work. If from PrefabSystem, then anchor will automatically do the job
 		}
 	}
 
-	UIHierarchyChanged(nullptr, nullptr);
+	UIHierarchyAttachmentChanged(nullptr, nullptr);
 	MarkLayoutDirty();
 	MarkClipDirty(true);
-	//callback
-	Call_AttachmentChanged();
 }
 
 void ULexWidget::OnRegister()
@@ -1030,11 +913,11 @@ void ULexWidget::OnRegister()
 
 #if WITH_EDITOR
 	//apply inactive actor's visibility state in editor scene outliner
-	if (auto ownerActor = GetOwner())
+	if (auto OwnerActor = GetOwner())
 	{
-		if (!GetIsUIActiveInHierarchy())
+		if (!IsVisibleForRender())
 		{
-			ownerActor->SetIsTemporarilyHiddenInEditor(true);
+			OwnerActor->SetIsTemporarilyHiddenInEditor(true);
 		}
 	}
 #endif
@@ -1317,7 +1200,7 @@ void ULexWidget::SetRenderCanvas(ULexCanvas* InNewCanvas)
 	}
 }
 
-void ULexWidget::UIHierarchyChanged(ULexCanvas* ParentRenderCanvas, ULexWidget* ParentRoot)
+void ULexWidget::UIHierarchyAttachmentChanged(ULexCanvas* ParentRenderCanvas, ULexWidget* ParentRoot)
 {
 	auto ThisRenderCanvas = GetOwner()->FindComponentByClass<ULexCanvas>();
 	if (ThisRenderCanvas != nullptr)
@@ -1330,39 +1213,26 @@ void ULexWidget::UIHierarchyChanged(ULexCanvas* ParentRenderCanvas, ULexWidget* 
 		SetRenderCanvas(ParentRenderCanvas);
 	}
 
-	if (UIHierarchyChangedDelegate.IsBound())
-	{
-		UIHierarchyChangedDelegate.Broadcast();
-	}
-
 	CheckRootWidget(ParentRoot);
 	for (auto& Child : UIChildren)
 	{
 		if (IsValid(Child))
 		{
-			Child->UIHierarchyChanged(ParentRenderCanvas, ParentRoot);
+			Child->UIHierarchyAttachmentChanged(ParentRenderCanvas, ParentRoot);
 		}
 	}
 
 	//flatten hierarchy index
 	MarkFlattenHierarchyIndexDirty();
 
-	if (UIParent.IsValid())
-	{
-		//active state
-		this->bAllUpParentUIActive = UIParent->GetIsUIActiveInHierarchy();
-		this->CheckUIActiveState();
-	}
-	else
-	{
-		this->bAllUpParentUIActive = true;
-		this->CheckUIActiveState();
-	}
+	CalculateVisibility_Recursive();
 
-	//if (this->IsRegistered())//not registerd means could be load from level
+	//if (this->IsRegistered())//not register means could be load from level
 	{
 		MarkDimensionChanged(false, true, true);
 	}
+
+	Call_AttachmentChanged();
 }
 
 void ULexWidget::OnRenderCanvasChanged(ULexCanvas* OldCanvas, ULexCanvas* NewCanvas)
@@ -1417,24 +1287,92 @@ void ULexWidget::CheckRootWidget(ULexWidget* RootWidgetInParent)
 	}
 }
 
-FDelegateHandle ULexWidget::RegisterUIHierarchyChanged(const FSimpleDelegate& InCallback)
+void ULexWidget::CalculateVisibility_Recursive()
 {
-	return UIHierarchyChangedDelegate.Add(InCallback);
-}
-void ULexWidget::UnregisterUIHierarchyChanged(const FDelegateHandle& InHandle)
-{
-	UIHierarchyChangedDelegate.Remove(InHandle);
+	struct LOCAL
+	{
+		static void CalculateRenderVisibility(ULexWidget* Widget)
+		{
+			auto WidgetVisibility = Widget->WidgetVisibility;
+			bool bResultVisibility = true;
+			bool bSelfVisibleForRender = WidgetVisibility == ESlateVisibility::Visible
+			|| WidgetVisibility == ESlateVisibility::HitTestInvisible
+			|| WidgetVisibility == ESlateVisibility::SelfHitTestInvisible
+			;
+			if (!bSelfVisibleForRender)
+				bResultVisibility = false;
+			else if (Widget->UIParent.IsValid())
+				bResultVisibility = Widget->UIParent->IsVisibleForRender();
+			else
+				bResultVisibility = true;
+
+			if (Widget->bCacheIsVisibleForRender != bResultVisibility)
+			{
+				Widget->bCacheIsVisibleForRender = bResultVisibility;
+				Widget->Call_RenderVisibilityChanged();
+				for (auto& Child : Widget->GetUIChildren())
+				{
+					CalculateRenderVisibility(Child);
+				}
+			}
+		}
+		static void CalculateLayoutVisibility(ULexWidget* Widget)
+		{
+			auto WidgetVisibility = Widget->WidgetVisibility;
+			bool bResultVisibility = true;
+			bool bSelfVisibleForLayout = WidgetVisibility == ESlateVisibility::Visible
+			|| WidgetVisibility == ESlateVisibility::Hidden
+			|| WidgetVisibility == ESlateVisibility::HitTestInvisible
+			|| WidgetVisibility == ESlateVisibility::SelfHitTestInvisible
+			;
+			if (bSelfVisibleForLayout == false)
+				bResultVisibility = false;
+			else if (Widget->UIParent.IsValid())
+				bResultVisibility = Widget->UIParent->IsVisibleForLayout();
+			else
+				bResultVisibility = true;
+
+			if (Widget->bCacheIsVisibleForLayout != bResultVisibility)
+			{
+				Widget->bCacheIsVisibleForLayout = bResultVisibility;
+				Widget->Call_LayoutVisibilityChanged();
+				for (auto& Child : Widget->GetUIChildren())
+				{
+					CalculateLayoutVisibility(Child);
+				}
+			}
+		}
+		static void CalculateHitTestVisibility(ULexWidget* Widget)
+		{
+			auto WidgetVisibility = Widget->WidgetVisibility;
+			bool bResultVisibility = true;
+			bool SelfVisibleForHitTest = WidgetVisibility == ESlateVisibility::Visible;
+			if (SelfVisibleForHitTest == false)
+				bResultVisibility = false;
+			else if (Widget->UIParent.IsValid())
+				if (Widget->UIParent->WidgetVisibility == ESlateVisibility::SelfHitTestInvisible)
+					bResultVisibility = true;
+				else
+					bResultVisibility = Widget->UIParent->IsVisibleForHitTest();
+			else
+				bResultVisibility = true;
+
+			if (Widget->bCacheIsVisibleForHitTest != bResultVisibility)
+			{
+				Widget->bCacheIsVisibleForHitTest = bResultVisibility;
+				Widget->Call_HitTestVisibilityChanged();
+				for (auto& Child : Widget->GetUIChildren())
+				{
+					CalculateHitTestVisibility(Child);
+				}
+			}
+		}
+	};
+	LOCAL::CalculateRenderVisibility(this);
+	LOCAL::CalculateLayoutVisibility(this);
+	LOCAL::CalculateHitTestVisibility(this);
 }
 
-float ULexWidget::GetRenderWidth() const
-{
-	return GetRenderSize().X;
-}
-
-float ULexWidget::GetRenderHeight() const
-{
-	return GetRenderSize().Y;
-}
 FVector2D ULexWidget::GetRenderSize() const
 {
 	if (bRenderSizeDirty)
@@ -1860,13 +1798,6 @@ void ULexWidget::MarkLayoutDirty()
 	MarkCanvasUpdate(false, true, false);
 }
 
-#pragma region UIActive
-
-void ULexWidget::OnChildActiveStateChanged(ULexWidget* child)
-{
-	Call_ChildActiveInHierarchyStateChanged(child, child->GetIsUIActiveInHierarchy());
-}
-
 void ULexWidget::MarkClipDirty(bool InClipTypeChanged) const
 {
 	bClipDirty = true;
@@ -1914,28 +1845,38 @@ void ULexWidget::SetClipping(ELexWidgetClipping Value)
 	}
 }
 
-bool ULexWidget::CalculateCacheFinalIsEnabled()
+void ULexWidget::CalculateIsEnabled_Recursive()
 {
-	if (bIsEnabled)
+	struct LOCAL
 	{
-		if (UIParent.IsValid())
-			return UIParent->CalculateCacheFinalIsEnabled();
-		return true;
-	}
-	return false;
-}
-void ULexWidget::CheckIsEnabled_Recursive()
-{
-	bool NowFinalIsEnabled = CalculateCacheFinalIsEnabled();
-	if (bCacheFinalIsEnabled != NowFinalIsEnabled)
-	{
-		bCacheFinalIsEnabled = NowFinalIsEnabled;
-		Call_ActiveInHierarchyStateChanged();
-		for (auto Child : GetUIChildren())
+		static void CalculateIsEnabled(ULexWidget* Widget)
 		{
-			Child->CheckIsEnabled_Recursive();
+			bool bResult = true;
+			if (!Widget->bIsEnabled)
+			{
+				bResult = false;
+			}
+			else if (Widget->UIParent.IsValid())
+			{
+				bResult = Widget->UIParent->GetFinalIsEnabled();
+			}
+			else
+			{
+				bResult = true;
+			}
+
+			if (Widget->bCacheFinalIsEnabled != bResult)
+			{
+				Widget->bCacheFinalIsEnabled = bResult;
+				Widget->Call_IsEnabledChanged();
+				for (auto& Child : Widget->GetUIChildren())
+				{
+					CalculateIsEnabled(Child);
+				}
+			}
 		}
-	}
+	};
+	LOCAL::CalculateIsEnabled(this);
 }
 
 float ULexWidget::GetFinalRenderOpacity()const
@@ -2013,43 +1954,17 @@ void ULexWidget::SetPixelSnapping(EWidgetPixelSnapping Value)
 
 bool ULexWidget::IsVisibleForRender() const
 {
-	bool SelfVisibleForRender =	WidgetVisibility == ESlateVisibility::Visible
-	|| WidgetVisibility == ESlateVisibility::HitTestInvisible
-	|| WidgetVisibility == ESlateVisibility::SelfHitTestInvisible
-	;
-	if (SelfVisibleForRender == false)
-		return false;
-	if (UIParent.IsValid())
-		return UIParent->IsVisibleForRender();
-	return true;
+	return bCacheIsVisibleForRender;
 }
 
 bool ULexWidget::IsVisibleForHitTest() const
 {
-	bool SelfVisibleForHitTest = WidgetVisibility == ESlateVisibility::Visible;
-	if (SelfVisibleForHitTest == false)
-		return false;
-	if (UIParent.IsValid())
-	{
-		if (UIParent->WidgetVisibility == ESlateVisibility::SelfHitTestInvisible)
-			return true;
-		return UIParent->IsVisibleForHitTest();
-	}
-	return true;
+	return bCacheIsVisibleForHitTest;
 }
 
 bool ULexWidget::IsVisibleForLayout() const
 {
-	bool SelfVisibleForLayout =	WidgetVisibility == ESlateVisibility::Visible
-	|| WidgetVisibility == ESlateVisibility::Hidden
-	|| WidgetVisibility == ESlateVisibility::HitTestInvisible
-	|| WidgetVisibility == ESlateVisibility::SelfHitTestInvisible
-	;
-	if (SelfVisibleForLayout == false)
-		return false;
-	if (UIParent.IsValid())
-		return UIParent->IsVisibleForLayout();
-	return true;
+	return bCacheIsVisibleForLayout;
 }
 
 void ULexWidget::SetWidgetVisibility(ESlateVisibility Value)
@@ -2057,7 +1972,7 @@ void ULexWidget::SetWidgetVisibility(ESlateVisibility Value)
 	if (WidgetVisibility != Value)
 	{
 		WidgetVisibility = Value;
-		check(0);
+		CalculateVisibility_Recursive();
 	}
 }
 
@@ -2066,7 +1981,7 @@ void ULexWidget::SetIsEnabled(bool Value)
 	if (bIsEnabled != Value)
 	{
 		bIsEnabled = Value;
-		CheckIsEnabled_Recursive();
+		CalculateIsEnabled_Recursive();
 	}
 }
 
@@ -2180,72 +2095,8 @@ ULexLayoutSlot* ULexWidget::GetLayoutSlot() const
 	return LayoutSlot.Get();
 }
 
-void ULexWidget::CheckUIActiveState()
-{
-	auto thisUIActiveState = this->GetIsUIActiveInHierarchy();
-	CheckChildrenUIActiveRecursive(thisUIActiveState);
-}
-
-void ULexWidget::CheckChildrenUIActiveRecursive(bool InUpParentUIActive)
-{
-	for (auto& uiChild : UIChildren)
-	{
-		if (IsValid(uiChild))
-		{		//state is changed
-			if ((uiChild->bIsUIActive &&//when child is active, then parent's active state can affect child
-				(uiChild->bAllUpParentUIActive != InUpParentUIActive))//state change
 #if WITH_EDITOR
-				|| bUIActiveStateDirty
-#endif
-				)
-			{
-#if WITH_EDITOR
-				bUIActiveStateDirty = false;
-#endif
-				uiChild->bAllUpParentUIActive = InUpParentUIActive;
-				//apply for state change
-				uiChild->ApplyUIActiveState(true);
-				//affect children
-				uiChild->CheckChildrenUIActiveRecursive(uiChild->GetIsUIActiveInHierarchy());
-				//callback for parent
-				this->OnChildActiveStateChanged(uiChild);
-			}
-			//state not changed
-			else
-			{
-				uiChild->bAllUpParentUIActive = InUpParentUIActive;
-				//apply for state change
-				uiChild->ApplyUIActiveState(false);
-				//affect children
-				uiChild->CheckChildrenUIActiveRecursive(uiChild->GetIsUIActiveInHierarchy());
-			}
-		}
-	}
-}
-void ULexWidget::SetIsUIActive(bool active)
-{
-	if (bIsUIActive != active)
-	{
-		bIsUIActive = active;
-		if (bAllUpParentUIActive)//state change only happens when up parent is active
-		{
-			ApplyUIActiveState(true);
-			//affect children
-			CheckChildrenUIActiveRecursive(bIsUIActive);
-			//callback for parent
-			if (UIParent.IsValid())
-			{
-				UIParent->OnChildActiveStateChanged(this);
-			}
-		}
-		else
-		{
-			//nothing
-		}
-	}
-}
-
-void ULexWidget::ApplyUIActiveState(bool InStateChange)
+void ULexWidget::SetIsTemporarilyHiddenInEditor_Recursive_By_RenderVisibility()
 {
 #if WITH_EDITOR
 	//modify inactive actor's name
@@ -2253,48 +2104,27 @@ void ULexWidget::ApplyUIActiveState(bool InStateChange)
 	if (Actor != nullptr && this == Actor->GetRootComponent())
 	{
 		auto bHiddenEdTemporary_Property = FindFProperty<FBoolProperty>(AActor::StaticClass(), TEXT("bHiddenEdTemporary"));
-		bHiddenEdTemporary_Property->SetPropertyValue_InContainer(Actor, !GetIsUIActiveInHierarchy());
-		//Actor->SetIsTemporarilyHiddenInEditor(!GetIsUIActiveInHierarchy());
+		bHiddenEdTemporary_Property->SetPropertyValue_InContainer(Actor, !IsVisibleForRender());
+		//Actor->SetIsTemporarilyHiddenInEditor(!IsVisibleForRender());
 	}
 #endif
-	if (InStateChange)
-	{
-		//callback
-		Call_ActiveInHierarchyStateChanged();
-		//canvas update
-		MarkCanvasUpdate(false, false, false, true);
-	}
-}
+	//callback
+	Call_RenderVisibilityChanged();
+	Call_LayoutVisibilityChanged();
+	Call_HitTestVisibilityChanged();
+	//canvas update
+	MarkCanvasUpdate(false, false, false, true);
 
-#if WITH_EDITOR
-void ULexWidget::SetIsTemporarilyHiddenInEditor_Recursive_By_IsUIActiveState()
-{
-	ApplyUIActiveState(true);
 	//affect children
 	for (auto& uiChild : UIChildren)
 	{
 		if (IsValid(uiChild))
 		{
-			uiChild->SetIsTemporarilyHiddenInEditor_Recursive_By_IsUIActiveState();
+			uiChild->SetIsTemporarilyHiddenInEditor_Recursive_By_RenderVisibility();
 		}
 	}
 }
 #endif
-
-FDelegateHandle ULexWidget::RegisterUIActiveStateChanged(const FLexWidgetActiveInHierarchyStateChangedDelegate& InCallback)\
-{
-	return UIActiveInHierarchyStateChangedDelegate.Add(InCallback);
-}
-FDelegateHandle ULexWidget::RegisterUIActiveStateChanged(const TFunction<void(bool)>& InCallback)
-{
-	return UIActiveInHierarchyStateChangedDelegate.AddLambda(InCallback);
-}
-void ULexWidget::UnregisterUIActiveStateChanged(const FDelegateHandle& InHandle)
-{
-	UIActiveInHierarchyStateChangedDelegate.Remove(InHandle);
-}
-
-#pragma endregion UIActive
 
 #pragma region TweenAnimation
 #include "LTweenManager.h"

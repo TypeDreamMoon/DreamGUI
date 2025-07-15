@@ -37,7 +37,7 @@ struct FLGUIMaterialAccessor
 {
 	using KeyType = FLGUIMaterialKey;
 
-	ULexVisualBatchMesh* Renderable;
+	ULexVisualBatchMesh* Visual;
 	FLGUIMaterialHandle LGUIMaterialHandle;
 
 	FLGUIMaterialAccessor(const FLGUIMaterialKey& InKey);

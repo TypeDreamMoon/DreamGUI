@@ -2,7 +2,7 @@
 
 #include "GeometryModifier/TextAnimation/UIEffectTextAnimation_PropertyWithEase.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/LexText.h"
+#include "Core/Components/LexText.h"
 #include "Curves/CurveFloat.h"
 #include "Utils/LexUIUtils.h"
 

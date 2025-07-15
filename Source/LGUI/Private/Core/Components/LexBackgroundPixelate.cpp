@@ -1,32 +1,32 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUI/Public/Core/Components/UIBackgroundPixelate.h"
+#include "Core/Components/LexBackgroundPixelate.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/LexUISpriteData.h"
 #include "Engine/TextureRenderTarget2D.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIPostProcessShaders.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
+#include "Core/LexUIRender/LexUIPostProcessShaders.h"
+#include "Core/LexUIRender/LexUIVertex.h"
 #include "PipelineStateCache.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIRenderer.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/LexUIRender/LexUIRenderer.h"
+#include "Core/Components/LexCanvas.h"
 #include "Core/LGUISettings.h"
 #include "RenderTargetPool.h"
 #include "Core/LexVisualPostProcessRenderProxy.h"
 #include "RHIStaticStates.h"
 
-UUIBackgroundPixelate::UUIBackgroundPixelate(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
+ULexBackgroundPixelate::ULexBackgroundPixelate(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
 	
 }
 
-void UUIBackgroundPixelate::BeginPlay()
+void ULexBackgroundPixelate::BeginPlay()
 {
 	Super::BeginPlay();
 }
 
 #if WITH_EDITOR
-void UUIBackgroundPixelate::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void ULexBackgroundPixelate::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (auto Property = PropertyChangedEvent.Property)
@@ -35,7 +35,7 @@ void UUIBackgroundPixelate::PostEditChangeProperty(FPropertyChangedEvent& Proper
 	}
 }
 #endif
-void UUIBackgroundPixelate::MarkAllDirty()
+void ULexBackgroundPixelate::MarkAllDirty()
 {
 	Super::MarkAllDirty();
 
@@ -45,7 +45,7 @@ void UUIBackgroundPixelate::MarkAllDirty()
 
 
 
-void UUIBackgroundPixelate::SetPixelateStrength(float newValue)
+void ULexBackgroundPixelate::SetPixelateStrength(float newValue)
 {
 	if (pixelateStrength != newValue)
 	{
@@ -55,7 +55,7 @@ void UUIBackgroundPixelate::SetPixelateStrength(float newValue)
 	}
 }
 
-void UUIBackgroundPixelate::SetApplyAlphaToStrength(bool newValue)
+void ULexBackgroundPixelate::SetApplyAlphaToStrength(bool newValue)
 {
 	if (applyAlphaToStrength != newValue)
 	{
@@ -65,7 +65,7 @@ void UUIBackgroundPixelate::SetApplyAlphaToStrength(bool newValue)
 	}
 }
 
-float UUIBackgroundPixelate::GetStrengthInternal()
+float ULexBackgroundPixelate::GetStrengthInternal()
 {
 	if (applyAlphaToStrength)
 	{
@@ -179,7 +179,7 @@ public:
 	}
 };
 
-void UUIBackgroundPixelate::SendOthersDataToRenderProxy()
+void ULexBackgroundPixelate::SendOthersDataToRenderProxy()
 {
 	if (RenderProxy.IsValid())
 	{
@@ -193,7 +193,7 @@ void UUIBackgroundPixelate::SendOthersDataToRenderProxy()
 	}
 }
 
-TSharedPtr<FLexVisualPostProcessRenderProxy> UUIBackgroundPixelate::GetRenderProxy()
+TSharedPtr<FLexVisualPostProcessRenderProxy> ULexBackgroundPixelate::GetRenderProxy()
 {
 	if (!RenderProxy.IsValid())
 	{
@@ -204,7 +204,7 @@ TSharedPtr<FLexVisualPostProcessRenderProxy> UUIBackgroundPixelate::GetRenderPro
 	return RenderProxy;
 }
 
-void UUIBackgroundPixelate::SendRegionVertexDataToRenderProxy()
+void ULexBackgroundPixelate::SendRegionVertexDataToRenderProxy()
 {
 	Super::SendRegionVertexDataToRenderProxy();
 	SendOthersDataToRenderProxy();

@@ -3,13 +3,13 @@
 #include "Interaction/UIDropdownComponent.h"
 #include "Event/LGUIEventSystem.h"
 #include "Core/Actor/LexWidgetActor.h"
-#include "LGUI/Public/Core/Components/LexCanvas.h"
+#include "Core/Components/LexCanvas.h"
 #include "LGUIBPLibrary.h"
 #include "Core/LexUISpriteData.h"
 #include "Core/Components/LexLayoutAnchor.h"
-#include "LGUI/Public/Core/Components/LexWidget.h"
-#include "LGUI/Public/Core/Components/LexText.h"
-#include "LGUI/Public/Core/Components/UISprite.h"
+#include "Core/Components/LexWidget.h"
+#include "Core/Components/LexText.h"
+#include "Core/Components/UISprite.h"
 #include "Interaction/UIButtonComponent.h"
 #if WITH_EDITOR
 #include "Utils/LexUIUtils.h"
@@ -30,7 +30,7 @@ void UUIDropdownComponent::Awake()
 	Super::Awake();
 	if (ListRoot.IsValid())
 	{
-		ListRoot->GetLexWidget()->SetIsUIActive(false);
+		ListRoot->GetLexWidget()->SetWidgetVisibility(ESlateVisibility::Collapsed);
 		ListRoot->GetLexWidget()->SetRenderOpacity(0);
 		MaxHeight = ListRoot->GetLexWidget()->GetRenderHeight();
 	}
@@ -58,7 +58,7 @@ void UUIDropdownComponent::PostEditChangeProperty(FPropertyChangedEvent& Propert
 		if (CaptionText.IsValid())
 		{
 			CaptionText->SetText(Options[tempValue].Text);
-			FLexUIUtils::NotifyPropertyChanged(CaptionText.Get(), ULexText::GetTextPropertyName());
+			FLexUIUtils::NotifyPropertyChanged(CaptionText.Get(), ULexText::GetPropertyName_Text());
 		}
 		if (CaptionSprite.IsValid() && IsValid(Options[tempValue].Sprite))
 		{
@@ -91,7 +91,7 @@ void UUIDropdownComponent::Show()
 		CreateBlocker();
 	}
 	//show list
-	ListRoot->GetLexWidget()->SetIsUIActive(true);
+	ListRoot->GetLexWidget()->SetWidgetVisibility(ESlateVisibility::Visible);
 	ShowOrHideTweener = ListRoot->GetLexWidget()->RenderOpacityTo(1, 0.3f, 0, ELTweenEase::OutCubic);
 	auto canvasOnListRoot = ListRoot->FindComponentByClass<ULexCanvas>();
 	if (!IsValid(canvasOnListRoot))
@@ -269,7 +269,7 @@ void UUIDropdownComponent::Hide()
 {
 	if (!ListRoot.IsValid())
 	{
-		UE_LOG(LGUI, Error, TEXT("[UUIDropdownComponent::Show]ListRoot is not valid!"));
+		UE_LOG(LGUI, Error, TEXT("[%s].%d ListRoot is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
 	if (!bIsShow)return;
@@ -281,7 +281,7 @@ void UUIDropdownComponent::Hide()
 
 	auto ListRootUIItem = ListRoot->GetLexWidget();
 	ShowOrHideTweener = ListRootUIItem->RenderOpacityTo(0, 0.3f, 0, ELTweenEase::InCubic)->OnComplete(FSimpleDelegate::CreateWeakLambda(ListRootUIItem, [ListRootUIItem] {
-		ListRootUIItem->SetIsUIActive(false);
+		ListRootUIItem->SetWidgetVisibility(ESlateVisibility::Collapsed);
 		}));
 
 	if (BlockerActor.IsValid())
@@ -324,7 +324,7 @@ void UUIDropdownComponent::CreateListItems()
 		UE_LOG(LGUI, Error, TEXT("[%s]ItemTemplate must be a UIItem!"), ANSI_TO_TCHAR(__FUNCTION__));
 		return;
 	}
-	templateUIItem->SetIsUIActive(true);
+	templateUIItem->SetWidgetVisibility(ESlateVisibility::Visible);
 	auto contentUIItem = templateUIItem->GetUIParent();
 	for (int i = 0, count = Options.Num(); i < count; i++)
 	{
@@ -341,7 +341,7 @@ void UUIDropdownComponent::CreateListItems()
 		OnSetItemCustomDataFunction.ExecuteIfBound(i, script, copiedItemActor);
 		CreatedItemArray.Add(script);
 	}
-	templateUIItem->SetIsUIActive(false);
+	templateUIItem->SetWidgetVisibility(ESlateVisibility::Collapsed);
 	// if (auto contentLayout = contentUIItem->GetOwner()->FindComponentByClass<UUILayoutBase>())
 	// {
 	// 	contentLayout->OnRebuildLayout();

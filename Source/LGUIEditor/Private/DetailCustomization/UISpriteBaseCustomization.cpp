@@ -124,8 +124,8 @@ void FLexUISpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& Detai
 					{
 						item->Modify();
 						item->SetSizeFromSpriteData();
-						FLexUIUtils::NotifyPropertyChanged(item.Get(), ULexWidget::GetWidthPropertyName());
-						FLexUIUtils::NotifyPropertyChanged(item.Get(), ULexWidget::GetHeightPropertyName());
+						FLexUIUtils::NotifyPropertyChanged(item.Get(), ULexWidget::GetPropertyName_Width());
+						FLexUIUtils::NotifyPropertyChanged(item.Get(), ULexWidget::GetPropertyName_Height());
 						item->GetWidget()->EditorForceUpdate();
 					}
 				}

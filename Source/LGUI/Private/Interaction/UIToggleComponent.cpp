@@ -1,15 +1,10 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Interaction/UIToggleComponent.h"
-#include "LGUI.h"
 #include "Interaction/UIToggleGroupComponent.h"
 #include "LTweenManager.h"
-#include "Core/Actor/LexWidgetActor.h"
-#include "LGUI/Public/Core/Components/LexWidget.h"
-#include "LGUI/Public/Core/Components/LexVisual.h"
-#include "LGUI/Public/Core/Components/UISprite.h"
-#include "Interaction/UISelectableTransitionComponent.h"
-#include "Core/Actor/LexWidgetActor.h"
+#include "Core/Components/LexWidget.h"
+#include "Core/Components/LexVisual.h"
 #include "Core/LGUISettings.h"
 
 
@@ -21,6 +16,10 @@ void UUIToggleComponent::Awake()
 	if (UIToggleGroupActor.IsValid())
 	{
 		GroupComp = UIToggleGroupActor->FindComponentByClass<UUIToggleGroupComponent>();
+	}
+	if (GroupComp.IsValid())
+	{
+		GroupComp->AddToggleComponent(this);
 	}
 }
 
@@ -34,17 +33,9 @@ void UUIToggleComponent::Start()
 	ApplyValueToUI(true);
 }
 
-void UUIToggleComponent::OnEnable()
+void UUIToggleComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	Super::OnEnable();
-	if (GroupComp.IsValid())
-	{
-		GroupComp->AddToggleComponent(this);
-	}
-}
-void UUIToggleComponent::OnDisable()
-{
-	Super::OnDisable();
+	Super::EndPlay(EndPlayReason);
 	if (GroupComp.IsValid())
 	{
 		GroupComp->RemoveToggleComponent(this);
@@ -181,11 +172,7 @@ void UUIToggleComponent::ApplyValueToUI(bool immediateSet)
 	}
 	else if (ToggleTransition == UIToggleTransitionType::TransitionComponent)
 	{
-		if (!ToggleTransitionComp.IsValid())
-		{
-			ToggleTransitionComp = ToggleTarget->GetOwner()->FindComponentByClass<UUISelectableTransitionComponent>();
-		}
-		if (ToggleTransitionComp.IsValid())
+		if (ToggleTransitionComp)
 		{
 			ToggleTransitionComp->OnStartCustomTransition(IsOn ? OnTransitionName : OffTransitionName, immediateSet);
 		}

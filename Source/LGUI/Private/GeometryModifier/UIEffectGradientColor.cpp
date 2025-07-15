@@ -3,7 +3,7 @@
 #include "GeometryModifier/UIEffectGradientColor.h"
 #include "LGUI.h"
 #include "Utils/LexUIUtils.h"
-#include "LGUI/Public/Core/Components/LexText.h"
+#include "Core/Components/LexText.h"
 
 UUIEffectGradientColor::UUIEffectGradientColor()
 {

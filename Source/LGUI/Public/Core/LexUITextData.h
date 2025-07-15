@@ -13,7 +13,7 @@ class ULexUIRichTextImageData;
 
 
 UENUM(BlueprintType, Category = LGUI)
-enum class EUITextParagraphHorizontalAlign : uint8
+enum class ELexUITextParagraphHorizontalAlign : uint8
 {
 	Left,
 	Center,
@@ -21,7 +21,7 @@ enum class EUITextParagraphHorizontalAlign : uint8
 };
 
 UENUM(BlueprintType, Category = LGUI)
-enum class EUITextParagraphVerticalAlign : uint8
+enum class ELexUITextParagraphVerticalAlign : uint8
 {
 	Top,
 	Middle,
@@ -29,7 +29,7 @@ enum class EUITextParagraphVerticalAlign : uint8
 };
 
 UENUM(BlueprintType, Category = LGUI)
-enum class EUITextFontStyle :uint8
+enum class ELexUITextFontStyle :uint8
 {
 	None,
 	Bold,
@@ -38,7 +38,7 @@ enum class EUITextFontStyle :uint8
 };
 
 UENUM(BlueprintType, Category = LGUI)
-enum class EUITextOverflowType :uint8
+enum class ELexUITextOverflowType :uint8
 {
 	/** chars will go out of rect range horizontally */
 	HorizontalOverflow = 0,
@@ -51,27 +51,27 @@ enum class EUITextOverflowType :uint8
 };
 
 /** single char property */
-struct FUITextCaretProperty
+struct FLexUITextCaretProperty
 {
 	/** caret position. caret is on left side of char */
-	FVector2f caretPosition = FVector2f::ZeroVector;
+	FVector2f CaretPosition = FVector2f::ZeroVector;
 	/** char index in text, -1 means line end caret */
-	int32 charIndex = 0;
+	int32 CharIndex = 0;
 };
 /** a line of text property */
-struct FUITextLineProperty
+struct FLexUITextLineProperty
 {
-	TArray<FUITextCaretProperty> caretPropertyList;
+	TArray<FLexUITextCaretProperty> CaretPropertyList;
 };
 /** for range selection in TextInputComponent */
-struct FUITextSelectionProperty
+struct FLexUITextSelectionProperty
 {
 	FVector2f Pos = FVector2f::ZeroVector;
 	int32 Size = 0;
 };
 /** char property */
 USTRUCT(BlueprintType, Category = LGUI)
-struct FUITextCharProperty
+struct FLexUITextCharProperty
 {
 	GENERATED_BODY()
 	/** char index in string */
@@ -90,7 +90,7 @@ struct FUITextCharProperty
 };
 
 USTRUCT(BlueprintType, Category = LGUI)
-struct FUIText_RichTextCustomTag
+struct FLexUIText_RichTextCustomTag
 {
 	GENERATED_BODY()
 	/** Tag name */
@@ -102,7 +102,7 @@ struct FUIText_RichTextCustomTag
 };
 
 USTRUCT(BlueprintType, Category = LGUI)
-struct FUIText_RichTextImageTag
+struct FLexUIText_RichTextImageTag
 {
 	GENERATED_BODY()
 	/** Tag name */
@@ -114,11 +114,11 @@ struct FUIText_RichTextImageTag
 };
 
 UENUM(BlueprintType, meta = (Bitflags), Category = LGUI)
-enum class EUIText_RichTextTagFilterFlags : uint8
+enum class ELexUIText_RichTextTagFilterFlags : uint8
 {
 	Bold, Italic, Underline, Strikethrough, Size, Color, Superscript, Subscript, CustomTag, Image
 };
-ENUM_CLASS_FLAGS(EUIText_RichTextTagFilterFlags);
+ENUM_CLASS_FLAGS(ELexUIText_RichTextTagFilterFlags);
 
 struct LGUI_API FLexUITextGeometryCache
 {
@@ -138,13 +138,13 @@ public:
 		float InCanvasGroupAlpha,
 		FVector2f InFontSpace,
 		float InFontSize,
-		EUITextParagraphHorizontalAlign InParagraphHAlign,
-		EUITextParagraphVerticalAlign InParagraphVAlign,
-		EUITextOverflowType InOverflowType,
+		ELexUITextParagraphHorizontalAlign InParagraphHAlign,
+		ELexUITextParagraphVerticalAlign InParagraphVAlign,
+		ELexUITextOverflowType InOverflowType,
 		ETextWrappingPolicy InWrappingPolicy,
 		float InMaxHorizontalWidth,
 		bool InUseKerning,
-		EUITextFontStyle InFontStyle,
+		ELexUITextFontStyle InFontStyle,
 		bool InRichText,
 		int32 InRichTextFilterFlags,
 		ULexUIFontData_BaseObject* InFont
@@ -160,13 +160,13 @@ private:
 	float canvasGroupAlpha = 1.0f;
 	FVector2f fontSpace = FVector2f::ZeroVector;
 	float fontSize = 0;
-	EUITextParagraphHorizontalAlign paragraphHAlign = EUITextParagraphHorizontalAlign::Left;
-	EUITextParagraphVerticalAlign paragraphVAlign = EUITextParagraphVerticalAlign::Bottom;
-	EUITextOverflowType overflowType = EUITextOverflowType::HorizontalOverflow;
+	ELexUITextParagraphHorizontalAlign paragraphHAlign = ELexUITextParagraphHorizontalAlign::Left;
+	ELexUITextParagraphVerticalAlign paragraphVAlign = ELexUITextParagraphVerticalAlign::Bottom;
+	ELexUITextOverflowType overflowType = ELexUITextOverflowType::HorizontalOverflow;
 	ETextWrappingPolicy WrappingPolicy = ETextWrappingPolicy::AllowPerCharacterWrapping;
 	float maxHorizontalWidth = 100;
 	bool useKerning = false;
-	EUITextFontStyle fontStyle = EUITextFontStyle::None;
+	ELexUITextFontStyle fontStyle = ELexUITextFontStyle::None;
 	bool richText = false;
 	int32 richTextFilterFlags = 0xffffffff;
 	TWeakObjectPtr<ULexUIFontData_BaseObject> font = nullptr;
@@ -180,11 +180,11 @@ public:
 #pragma region OutputResults
 	FVector2f textRealSize = FVector2f::ZeroVector;
 	/** line properties, from first line to last one in array */
-	TArray<FUITextLineProperty> cacheLinePropertyArray;
+	TArray<FLexUITextLineProperty> cacheLinePropertyArray;
 	/** char properties, from first char to last one in array */
-	TArray<FUITextCharProperty> cacheCharPropertyArray;
-	TArray<FUIText_RichTextCustomTag> cacheRichTextCustomTagArray;
-	TArray<FUIText_RichTextImageTag> cacheRichTextImageTagArray;
+	TArray<FLexUITextCharProperty> cacheCharPropertyArray;
+	TArray<FLexUIText_RichTextCustomTag> cacheRichTextCustomTagArray;
+	TArray<FLexUIText_RichTextImageTag> cacheRichTextImageTagArray;
 #pragma endregion OutputResults
 public:
 	void MarkDirty();

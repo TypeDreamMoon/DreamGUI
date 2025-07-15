@@ -3,8 +3,8 @@
 #pragma once
 
 #include "LexVisualPostProcess.h"
-#include "LGUI/Public/Core/LexUIRender/LexUIVertex.h"
-#include "UIBackgroundPixelate.generated.h"
+#include "Core/LexUIRender/LexUIVertex.h"
+#include "LexBackgroundPixelate.generated.h"
 
 /** 
  * UI element that can make the background look pixelated
@@ -12,12 +12,12 @@
  * If android OpenGL ES3.1, need to enable "ProjectSettings/Platforms/Android/Build/Support Backbuffer Sampling on OpenGL".
  */
 UCLASS(ClassGroup = (LGUI), NotBlueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIBackgroundPixelate : public ULexVisualPostProcess
+class LGUI_API ULexBackgroundPixelate : public ULexVisualPostProcess
 {
 	GENERATED_BODY()
 
 public:	
-	UUIBackgroundPixelate(const FObjectInitializer& ObjectInitializer);
+	ULexBackgroundPixelate(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	virtual void BeginPlay() override;

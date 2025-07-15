@@ -48,49 +48,44 @@ protected:
 	static TWeakObjectPtr<ULexUIFontData_BaseObject> CurrentUsingFontData;
 #endif
 public:
-	static const FName GetTextPropertyName()
+	static FName GetPropertyName_Text()
 	{
-		return GET_MEMBER_NAME_CHECKED(ULexText, text);
+		return GET_MEMBER_NAME_CHECKED(ULexText, Text);
+	}
+	static FName GetPropertyName_OverrideMaterial()
+	{
+		return GET_MEMBER_NAME_CHECKED(ULexText, OverrideMaterial);
 	}
 
 protected:
 	friend class FLexTextCustomization;
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (DisplayThumbnail = "false"))
-		TObjectPtr<ULexUIFontData_BaseObject> font;
+		TObjectPtr<ULexUIFontData_BaseObject> Font;
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (MultiLine="true"))
-		FText text = FText::FromString(TEXT("New Text"));
+		FText Text = FText::FromString(TEXT("New Text"));
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (ClampMin = "2", ClampMax = "200"))
-		float size = 16;
+		float FontSize = 16;
 	/** use font kerning for better text layout. */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		bool useKerning = true;
+		bool bUseKerning = true;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		FVector2D space = FVector2D(0, 0);
+		FVector2D FontSpace = FVector2D(0, 0);
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		EUITextParagraphHorizontalAlign hAlign = EUITextParagraphHorizontalAlign::Center;
+		ELexUITextParagraphHorizontalAlign HAlign = ELexUITextParagraphHorizontalAlign::Center;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		EUITextParagraphVerticalAlign vAlign = EUITextParagraphVerticalAlign::Middle;
+		ELexUITextParagraphVerticalAlign VAlign = ELexUITextParagraphVerticalAlign::Middle;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		EUITextOverflowType overflowType = EUITextOverflowType::VerticalOverflow;
+		ELexUITextOverflowType OverflowType = ELexUITextOverflowType::VerticalOverflow;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 	ETextWrappingPolicy WrappingPolicy = ETextWrappingPolicy::AllowPerCharacterWrapping;
-	/** adjust AnchorData width to true text content width */
-	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (EditCondition = "overflowType==EUITextOverflowType::HorizontalOverflow||overflowType==EUITextOverflowType::HorizontalAndVerticalOverflow"))
-		bool adjustWidth = false;
-	/** adjust when width in this range: adjustWidthRange.X < width < adjustWidthRange.Y, Zero means no range limit */
-	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (EditCondition = "overflowType==EUITextOverflowType::HorizontalOverflow||overflowType==EUITextOverflowType::HorizontalAndVerticalOverflow"))
-		FVector2D adjustWidthRange = FVector2D::ZeroVector;
-	/** adjust AnchorData height to true text content height */
-	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (EditCondition = "overflowType==EUITextOverflowType::VerticalOverflow||overflowType==EUITextOverflowType::HorizontalAndVerticalOverflow"))
-		bool adjustHeight = false;
-	/** adjust when height in this range: adjustHeightRange.X < height < adjustHeightRange.Y, Zero means no range limit */
-	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (EditCondition = "overflowType==EUITextOverflowType::VerticalOverflow||overflowType==EUITextOverflowType::HorizontalAndVerticalOverflow"))
-		FVector2D adjustHeightRange = FVector2D::ZeroVector;
+	/** Use a custom material to render this text */
+    UPROPERTY(EditAnywhere, Category = "LexUI")
+    UMaterialInterface* OverrideMaterial = nullptr;
 	/** if overflowType is HorizontalAndVerticalOverflow, this parameter will limit width for horizontal overflow */
-	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (EditCondition = "overflowType==EUITextOverflowType::HorizontalAndVerticalOverflow"))
-		float maxHorizontalWidth = 100;
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (EditCondition = "OverflowType==ELexUITextOverflowType::HorizontalAndVerticalOverflow"))
+		float MaxHorizontalWidth = 100;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		EUITextFontStyle fontStyle = EUITextFontStyle::None;
+		ELexUITextFontStyle FontStyle = ELexUITextFontStyle::None;
 	/**
 	 * rich text support, eg:
 	 * <b>Bold</b>
@@ -108,45 +103,40 @@ protected:
 	 * <img=smile/> display a image with key "smile" which defined in RichTextImageData property, can be used for emoji. @todo: image size option
 	 */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		bool richText = false;
+		bool bRichText = false;
 	/** Flags to enable/disable rich text tag. */
-	UPROPERTY(EditAnywhere, Category = LGUI, meta = (Bitmask, BitmaskEnum = "/Script/LGUI.EUIText_RichTextTagFilterFlags", EditCondition = "richText"))
-		int32 richTextTagFilterFlags = 0xffffffff;
+	UPROPERTY(EditAnywhere, Category = LGUI, meta = (Bitmask, BitmaskEnum = "/Script/LGUI.EUIText_RichTextTagFilterFlags", EditCondition = "bRichText"))
+		int32 RichTextTagFilterFlags = 0xffffffff;
 	/** rich text custom style data for custom tag and rendering custom style */
-	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (EditCondition = "richText"))
-		TObjectPtr<ULexUIRichTextCustomStyleData> richTextCustomStyleData = nullptr;
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (EditCondition = "bRichText"))
+		TObjectPtr<ULexUIRichTextCustomStyleData> RichTextCustomStyleData = nullptr;
 	/** rich text image data for rendering image inside UIText */
-	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (EditCondition = "richText"))
-		TObjectPtr<ULexUIRichTextImageData_BaseObject> richTextImageData = nullptr;
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (EditCondition = "bRichText"))
+		TObjectPtr<ULexUIRichTextImageData_BaseObject> RichTextImageData = nullptr;
 	/** created object for rich text image */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI", Transient, AdvancedDisplay)
-		TArray<TObjectPtr<class ULexWidget>> createdRichTextImageObjectArray;
+		TArray<TObjectPtr<class ULexWidget>> CreatedRichTextImageObjectArray;
 #if WITH_EDITORONLY_DATA
 	UPROPERTY(EditAnywhere, Category = "LGUI", AdvancedDisplay)
-		bool listRichTextImageObjectInOutliner = false;
+		bool bListRichTextImageObjectInOutliner = false;
 #endif
 private:
 	bool bHasAddToFont = false;
 	/** visible/readable char count of current text. -1 means not set yet */
-	mutable int visibleCharCount = -1;
-	bool bTextLayoutDirty = false;
-	void MarkTextLayoutDirty();
-	void ConditionalMarkTextLayoutDirty();
+	mutable int VisibleCharCount = -1;
 	FVector2f PrevScale2DForUIText = FVector2f::One();
 
-	//virtual void OnUpdateLayout_Implementation()override;//@todo: should we implement ILayoutElement for AdjustWidth/AdjustHeight?
-	//virtual bool GetCanLayoutControlAnchor_Implementation(class ULexWidget* InUIItem, FLGUICanLayoutControlAnchor& OutResult)const override;
 	mutable FLexUITextGeometryCache CacheTextGeometryData;
 	bool UpdateCacheTextGeometry()const;
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		const TArray<FUITextCharProperty>& GetCharPropertyArray()const;
+		const TArray<FLexUITextCharProperty>& GetCharPropertyArray()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		int32 GetVisibleCharCount()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		const TArray<FUIText_RichTextCustomTag>& GetRichTextCustomTagArray()const;
+		const TArray<FLexUIText_RichTextCustomTag>& GetRichTextCustomTagArray()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		const TArray<FUIText_RichTextImageTag>& GetRichTextImageTagArray()const;
+		const TArray<FLexUIText_RichTextImageTag>& GetRichTextImageTagArray()const;
 public:
 	virtual void MarkAllDirty()override;
 
@@ -181,68 +171,57 @@ public:
 	virtual float GetShrinkToContentWidth()const override;
 	virtual float GetShrinkToContentHeight()const override;
 public:
-	UFUNCTION(BlueprintCallable, Category = "LGUI") ULexUIFontData_BaseObject* GetFont()const { return font; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI")	const FText& GetText()const { return text; }
-	UE_DEPRECATED(4.24, "Use GetFontSize instead")
-	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (DeprecatedFunction, DeprecationMessage = "Use GetFontSize instead"))
-		float GetSize()const { return size; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI") float GetFontSize()const { return size; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI") bool GetUseKerning()const { return useKerning; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI") FVector2D GetFontSpace()const { return space; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI") EUITextOverflowType GetOverflowType()const { return overflowType; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") ULexUIFontData_BaseObject* GetFont()const { return Font; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI")	const FText& GetText()const { return Text; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") float GetFontSize()const { return FontSize; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") bool GetUseKerning()const { return bUseKerning; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") FVector2D GetFontSpace()const { return FontSpace; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") ELexUITextOverflowType GetOverflowType()const { return OverflowType; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") ETextWrappingPolicy GetWrappingPolicy()const{return WrappingPolicy;}
-	UFUNCTION(BlueprintCallable, Category = "LGUI") bool GetAdjustWidth()const { return adjustWidth; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI") FVector2D GetAdjustWidthRange()const { return adjustWidthRange; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI") bool GetAdjustHeight()const { return adjustHeight; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI") FVector2D GetAdjustHeightRange()const { return adjustHeightRange; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI") float GetMaxHorizontalWidth()const { return maxHorizontalWidth; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI") EUITextFontStyle GetFontStyle()const { return fontStyle; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI") bool GetRichText()const { return richText; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI") int32 GetRichTextTagFilterFlags()const { return richTextTagFilterFlags; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI") ULexUIRichTextCustomStyleData* GetRichTextCustomStyleData()const { return richTextCustomStyleData; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI") ULexUIRichTextImageData_BaseObject* GetRichTextImageData()const { return richTextImageData; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI") EUITextParagraphHorizontalAlign GetParagraphHorizontalAlignment()const { return hAlign; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI") EUITextParagraphVerticalAlign GetParagraphVerticalAlignment()const { return vAlign; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") float GetMaxHorizontalWidth()const { return MaxHorizontalWidth; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") ELexUITextFontStyle GetFontStyle()const { return FontStyle; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") bool GetRichText()const { return bRichText; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") int32 GetRichTextTagFilterFlags()const { return RichTextTagFilterFlags; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") ULexUIRichTextCustomStyleData* GetRichTextCustomStyleData()const { return RichTextCustomStyleData; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") ULexUIRichTextImageData_BaseObject* GetRichTextImageData()const { return RichTextImageData; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") ELexUITextParagraphHorizontalAlign GetParagraphHorizontalAlignment()const { return HAlign; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") ELexUITextParagraphVerticalAlign GetParagraphVerticalAlignment()const { return VAlign; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") UMaterialInterface* GetOverrideMaterial()const{return OverrideMaterial;}
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI") FVector2D GetTextRealSize()const;
-	UE_DEPRECATED(4.24, "Use GetTextRealSize instead")
-	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (DeprecatedFunction, DeprecationMessage = "Use GetTextRealSize instead"))
-		FVector2D GetRealSize() { return GetTextRealSize(); }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetFont(ULexUIFontData_BaseObject* newFont);
+		void SetFont(ULexUIFontData_BaseObject* Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetText(const FText& newText);
+		void SetText(const FText& Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetFontSize(float newSize);
+		void SetFontSize(float Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetUseKerning(bool value);
+		void SetUseKerning(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetFontSpace(FVector2D newSpace);
+		void SetFontSpace(FVector2D Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetParagraphHorizontalAlignment(EUITextParagraphHorizontalAlign newHAlign);
+		void SetParagraphHorizontalAlignment(ELexUITextParagraphHorizontalAlign Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetParagraphVerticalAlignment(EUITextParagraphVerticalAlign newVAlign);
+		void SetParagraphVerticalAlignment(ELexUITextParagraphVerticalAlign Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetOverflowType(EUITextOverflowType newOverflowType);
+		void SetOverflowType(ELexUITextOverflowType Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	void SetWrappingPolicy(ETextWrappingPolicy newWrappingPolicy);
+	void SetWrappingPolicy(ETextWrappingPolicy Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetAdjustWidth(bool newAdjustWidth);
+		void SetMaxHorizontalWidth(float Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetAdjustHeight(bool newAdjustHeight);
+		void SetFontStyle(ELexUITextFontStyle Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetMaxHorizontalWidth(float value);
+		void SetRichText(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetFontStyle(EUITextFontStyle newFontStyle);
+		void SetRichTextTagFilterFlags(int32 Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetRichText(bool newRichText);
+		void SetRichTextImageData(ULexUIRichTextImageData_BaseObject* Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetRichTextTagFilterFlags(int32 value);
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetRichTextImageData(ULexUIRichTextImageData_BaseObject* value);
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetRichTextCustomStyleData(ULexUIRichTextCustomStyleData* value);
+		void SetRichTextCustomStyleData(ULexUIRichTextCustomStyleData* Value);
+	UFUNCTION(BlueprintCallable, Category = "LexUI")
+    	void SetOverrideMaterial(UMaterialInterface* Value);
 private:
 	void ClearCreatedRichTextImageObject();
 protected:
@@ -272,7 +251,7 @@ public:
 	bool GetVisibleCharRangeForSingleLine(int32& inOutCaretPositionIndex, int32& inOutVisibleCaretStartIndex, float inMaxWidth, int32& outVisibleCharStartIndex, int32& outVisibleCharCount);
 
 	/** range selection */
-	void GetSelectionProperty(int32 InSelectionStartCaretIndex, int32 InSelectionEndCaretIndex, TArray<FUITextSelectionProperty>& OutSelectionProeprtyArray);
+	void GetSelectionProperty(int32 InSelectionStartCaretIndex, int32 InSelectionEndCaretIndex, TArray<FLexUITextSelectionProperty>& OutSelectionProeprtyArray);
 	const FLexUITextGeometryCache& GetCacheTextGeometryData()const { UpdateCacheTextGeometry(); return CacheTextGeometryData; }
 #pragma endregion UITextInputComponent
 };

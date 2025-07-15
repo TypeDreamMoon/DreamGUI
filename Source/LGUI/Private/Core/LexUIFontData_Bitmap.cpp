@@ -2,7 +2,7 @@
 
 #include "Core/LexUIFontData_Bitmap.h"
 #include "LGUI.h"
-#include "LGUI/Public/Core/Components/LexText.h"
+#include "Core/Components/LexText.h"
 #include "TextureResource.h"
 #include "Engine/Texture2D.h"
 #if WITH_FREETYPE

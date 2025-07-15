@@ -4,7 +4,7 @@
 #include "LGUI.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
-#include "LGUI/Public/Core/Components/LexText.h"
+#include "Core/Components/LexText.h"
 #include "Core/LGUISettings.h"
 #include "Utils/LexUIUtils.h"
 #include "TextureResource.h"

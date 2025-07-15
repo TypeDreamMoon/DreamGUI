@@ -13,7 +13,7 @@ class UMaterialInterface;
 class UMaterialInstanceDynamic;
 class ULexWidget;
 class ULexVisualBatchMesh;
-class UUIDirectMeshRenderable;
+class ULexVisualDirectMesh;
 class ULexUIMeshComponent;
 struct FLexUIRenderSection;
 
@@ -60,7 +60,7 @@ public:
 
 	TWeakObjectPtr<ULexVisualPostProcess> PostProcessVisualObject;//post process object
 
-	TWeakObjectPtr<UUIDirectMeshRenderable> DirectMeshVisualObject;
+	TWeakObjectPtr<ULexVisualDirectMesh> DirectMeshVisualObject;
 
 	TArray<TWeakObjectPtr<ULexVisualBatchMesh>> BatchMeshVisualObjectList;//BatchMesh object collections belong to this draw-call, must be sorted on hierarchy-index
 	bool bNeedToSortBatchMeshVisualObjectList = false;//need to sort BatchMeshRenderObjectList?

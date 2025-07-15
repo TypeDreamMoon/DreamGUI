@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "LGUIComponentReference.h"
 #include "PrefabSystem/ILGUIPrefabInterface.h"
-#include "LGUI/Public/Core/Components/UICustomMesh.h"
+#include "Core/Components/UICustomMesh.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "LGUIRenderTargetInteraction.h"
 #include "UIRenderTarget.generated.h"
