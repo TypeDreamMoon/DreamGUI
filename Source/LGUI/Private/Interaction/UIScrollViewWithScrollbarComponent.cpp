@@ -44,7 +44,7 @@ void UUIScrollViewWithScrollbarComponent::UpdateProgress(bool InFireEvent)
 			}
 			else
 			{
-				HorizontalScrollbarComp->SetValue(Progress.X, false);
+				HorizontalScrollbarComp->SetValueWithoutNotify(Progress.X);
 			}
 		}
 		if (bAllowVerticalScroll && VerticalScrollbar->GetLexWidget()->IsVisibleForLayout())
@@ -59,7 +59,7 @@ void UUIScrollViewWithScrollbarComponent::UpdateProgress(bool InFireEvent)
 			}
 			else
 			{
-				VerticalScrollbarComp->SetValue(Progress.Y, false);
+				VerticalScrollbarComp->SetValueWithoutNotify(Progress.Y);
 			}
 		}
 	}
@@ -226,12 +226,12 @@ void UUIScrollViewWithScrollbarComponent::OnUpdateLayout_Implementation()
 			{
 			case UUIScrollViewWithScrollbarComponent::EScrollbarLayoutAction::NeedToShow:
 			{
-				VerticalScrollbarUIItem->SetWidgetVisibility(ESlateVisibility::Visible);
+				VerticalScrollbarUIItem->SetWidgetVisibility(ELexWidgetVisibility::Visible);
 			}
 			break;
 			case UUIScrollViewWithScrollbarComponent::EScrollbarLayoutAction::NeedToHide:
 			{
-				VerticalScrollbarUIItem->SetWidgetVisibility(ESlateVisibility::Collapsed);
+				VerticalScrollbarUIItem->SetWidgetVisibility(ELexWidgetVisibility::Collapsed);
 			}
 			break;
 			}

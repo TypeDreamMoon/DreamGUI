@@ -25,6 +25,7 @@ public:
 	static FString GetUniqueNumetricName(const FString& InPrefix, const TArray<FString>& InExistNames);
 	static TArray<AActor*> GetRootActorListFromSelection(const TArray<AActor*>& selectedActors);
 	static void CreateActorByClass(UClass* ActorClass, TFunction<void(AActor*)> Callback);
+	static void CreateLexWidget(FString Name, UClass* VisualClass, TFunction<void(class ULexWidget*)> Callback);
 	static void CreateEmptyActor();
 	static void CreateUIControls(FString InPrefabPath);
 	static void ReplaceActorByClass(UClass* ActorClass);
@@ -45,6 +46,12 @@ public:
 	static void CopyComponentValues_Impl();
 	static void PasteComponentValues_Impl();
 	static void OpenAtlasViewer_Impl();
+	static bool CanCopyWidgetReference();
+	static void CopyReference_Widget();
+	static void CopyReference_Visual();
+	static void CopyReference_Layout();
+	static bool CanCopyComponentReference();
+	static void CopyReference_Component(UActorComponent* Comp);
 	static void CreateScreenSpaceUI_BasicSetup();
 	static void CreateWorldSpaceUIUERenderer_BasicSetup();
 	static void CreateWorldSpaceUILGUIRenderer_BasicSetup();

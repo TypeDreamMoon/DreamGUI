@@ -149,7 +149,7 @@ void FLGUIComponentReferenceCustomization::RegenerateContentWidget()
 					.ColorAndOpacity(FSlateColor(FLinearColor::Red))
 					.AutoWrapText(true)
 					.Font(IDetailLayoutBuilder::GetDetailFont())
-					.Text(LOCTEXT("ComponnetCheckTip", "You must set your component class in variable declaration!"))
+					.Text(LOCTEXT("ComponentCheckTip", "You must set your component class in variable declaration!"))
 				];
 		}
 		else

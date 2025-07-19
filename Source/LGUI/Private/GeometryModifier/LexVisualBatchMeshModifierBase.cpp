@@ -1,15 +1,15 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "GeometryModifier/LexUIMeshModifierBase.h"
+#include "GeometryModifier/LexVisualBatchMeshModifierBase.h"
 #include "LGUI.h"
 #include "Core/Components/LexVisualBatchMesh.h"
 
-ULexUIMeshModifierBase::ULexUIMeshModifierBase()
+ULexVisualBatchMeshModifierBase::ULexVisualBatchMeshModifierBase()
 {
 	
 }
 
-ULexVisualBatchMesh* ULexUIMeshModifierBase::GetLexVisual()const
+ULexVisualBatchMesh* ULexVisualBatchMeshModifierBase::GetLexVisual()const
 {
 	if(!CacheLexVisual.IsValid())
 	{
@@ -18,7 +18,7 @@ ULexVisualBatchMesh* ULexUIMeshModifierBase::GetLexVisual()const
 	return CacheLexVisual.Get();
 }
 #if WITH_EDITOR
-void ULexUIMeshModifierBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void ULexVisualBatchMeshModifierBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (GetLexVisual())
@@ -28,7 +28,7 @@ void ULexUIMeshModifierBase::PostEditChangeProperty(FPropertyChangedEvent& Prope
 }
 #endif
 
-void ULexUIMeshModifierBase::SetEnable(bool value)
+void ULexVisualBatchMeshModifierBase::SetEnable(bool value)
 { 
 	if (bEnable != value)
 	{
@@ -41,7 +41,7 @@ void ULexUIMeshModifierBase::SetEnable(bool value)
 }
 
 DECLARE_CYCLE_STAT(TEXT("UIGeometryModifierBase_Blueprint.ModifyUIGeometry"), STAT_UIGeometryModifierBase_ModifyUIGeometry, STATGROUP_LGUI);
-void ULexUIMeshModifierBase::ModifyUIGeometry(
+void ULexVisualBatchMeshModifierBase::ModifyUIGeometry(
 	FLexUIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 )
 {
@@ -49,7 +49,7 @@ void ULexUIMeshModifierBase::ModifyUIGeometry(
 	{
 		if (GeometryModifierHelper == nullptr)
 		{
-			GeometryModifierHelper = NewObject<ULexUIMeshModifierHelper>(this);
+			GeometryModifierHelper = NewObject<ULexVisualBatchMeshModifierHelper>(this);
 		}
 		GeometryModifierHelper->UIGeo = &InGeometry;
 		SCOPE_CYCLE_COUNTER(STAT_UIGeometryModifierBase_ModifyUIGeometry);
@@ -59,7 +59,7 @@ void ULexUIMeshModifierBase::ModifyUIGeometry(
 
 
 
-float ULexUIMeshModifierHelper::UITextHelperFunction_GetCharHorizontalPositionRatio01(ULexText* InUIText, int InCharIndex)const
+float ULexVisualBatchMeshModifierHelper::UITextHelperFunction_GetCharHorizontalPositionRatio01(ULexText* InUIText, int InCharIndex)const
 {
 	if (InUIText == nullptr)
 	{
@@ -90,7 +90,7 @@ float ULexUIMeshModifierHelper::UITextHelperFunction_GetCharHorizontalPositionRa
 	return (charPivotPos - leftPos) / Widget->GetRenderWidth();
 }
 
-void ULexUIMeshModifierHelper::UITextHelperFunction_GetCharGeometry_AbsolutePosition(ULexText* InUIText, int InCharIndex, FVector& OutPosition)const
+void ULexVisualBatchMeshModifierHelper::UITextHelperFunction_GetCharGeometry_AbsolutePosition(ULexText* InUIText, int InCharIndex, FVector& OutPosition)const
 {
 	if (InUIText == nullptr)
 	{
@@ -119,7 +119,7 @@ void ULexUIMeshModifierHelper::UITextHelperFunction_GetCharGeometry_AbsolutePosi
 	OutPosition = FVector(0, charPivotPosH, 0);
 }
 
-void ULexUIMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_Transform(ULexText* InUIText, int InCharIndex
+void ULexVisualBatchMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_Transform(ULexText* InUIText, int InCharIndex
 	, ELexUIMeshModifierHelper_UITextModifyPositionType InPositionType
 	, const FVector& InPosition
 	, const FRotator& InRotator
@@ -196,7 +196,7 @@ void ULexUIMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_Transform
 		}
 	}
 }
-void ULexUIMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_Position(ULexText* InUIText, int InCharIndex, const FVector& InPosition, ELexUIMeshModifierHelper_UITextModifyPositionType InPositionType)
+void ULexVisualBatchMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_Position(ULexText* InUIText, int InCharIndex, const FVector& InPosition, ELexUIMeshModifierHelper_UITextModifyPositionType InPositionType)
 {
 	if (InUIText == nullptr)
 	{
@@ -246,7 +246,7 @@ void ULexUIMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_Position(
 	break;
 	}
 }
-void ULexUIMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_Rotate(ULexText* InUIText, int InCharIndex, const FRotator& InRotator)
+void ULexVisualBatchMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_Rotate(ULexText* InUIText, int InCharIndex, const FRotator& InRotator)
 {
 	if (InUIText == nullptr)
 	{
@@ -280,7 +280,7 @@ void ULexUIMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_Rotate(UL
 		pos = FVector3f(0, charPivotPos, 0) + calcRotationMatrix.TransformPosition(vector);
 	}
 }
-void ULexUIMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_Scale(ULexText* InUIText, int InCharIndex, const FVector& InScale)
+void ULexVisualBatchMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_Scale(ULexText* InUIText, int InCharIndex, const FVector& InScale)
 {
 	if (InUIText == nullptr)
 	{
@@ -316,7 +316,7 @@ void ULexUIMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_Scale(ULe
 		pos = charPivotPos + vector * calcScale;
 	}
 }
-void ULexUIMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_Color(ULexText* InUIText, int InCharIndex, const FColor& InColor)
+void ULexVisualBatchMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_Color(ULexText* InUIText, int InCharIndex, const FColor& InColor)
 {
 	if (InUIText == nullptr)
 	{
@@ -342,7 +342,7 @@ void ULexUIMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_Color(ULe
 		color = InColor;
 	}
 }
-void ULexUIMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_Alpha(ULexText* InUIText, int InCharIndex, const float& InAlpha)
+void ULexVisualBatchMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_Alpha(ULexText* InUIText, int InCharIndex, const float& InAlpha)
 {
 	if (InUIText == nullptr)
 	{

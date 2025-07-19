@@ -6,6 +6,7 @@
 bool UUIButtonComponent::OnPointerClick_Implementation(ULGUIPointerEventData* eventData)
 {
 	OnClickCPP.Broadcast();
+	OnClickBP.Broadcast();
 	OnClick.FireEvent();
 	return AllowEventBubbleUp;
 }
@@ -22,7 +23,7 @@ void UUIButtonComponent::UnregisterClickEvent(const FDelegateHandle& InHandle)
 	OnClickCPP.Remove(InHandle);
 }
 
-FLGUIDelegateHandleWrapper UUIButtonComponent::RegisterClickEvent(const FLGUIButtonDynamicDelegate& InDelegate)
+FLGUIDelegateHandleWrapper UUIButtonComponent::RegisterClickEvent(const FUIButtonClickedDelegate& InDelegate)
 {
 	auto delegateHandle = OnClickCPP.AddLambda([InDelegate] {
 		InDelegate.ExecuteIfBound();

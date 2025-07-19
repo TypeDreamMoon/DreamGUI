@@ -14,12 +14,12 @@ void UUIToggleGroupComponent::AddToggleComponent(UUIToggleComponent* InComp)
 	int32 foundIndex = ToggleCollection.IndexOfByKey(InComp);
 	if (foundIndex != INDEX_NONE)
 	{
-		UE_LOG(LGUI, Warning, TEXT("[UUIToggleGroupComponent::AddToggleComponent]Already exist!"));
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d Already exist!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
 	if (!IsValid(InComp->GetRootUIComponent()))
 	{
-		UE_LOG(LGUI, Warning, TEXT("[UUIToggleGroupComponent::AddToggleComponent]InComp must have UIItem as root component!"));
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d InComp must have UIItem as root component!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
 	ToggleCollection.Add(InComp);
@@ -30,7 +30,7 @@ void UUIToggleGroupComponent::RemoveToggleComponent(UUIToggleComponent* InComp)
 	int32 foundIndex = ToggleCollection.IndexOfByKey(InComp);
 	if (foundIndex == INDEX_NONE)
 	{
-		UE_LOG(LGUI, Warning, TEXT("[UUIToggleGroupComponent::RemoveToggleComponent]Not exist!"));
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d Not exist!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
 	ToggleCollection.RemoveAt(foundIndex);
@@ -49,7 +49,7 @@ void UUIToggleGroupComponent::SetSelection(UUIToggleComponent* Target)
 {
 	if (!IsValid(Target))
 	{
-		UE_LOG(LGUI, Error, TEXT("[UUIToggleGroupComponent::SelectItem]Toggle item is not valid!"));
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Toggle item is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
 	if (LastSelect.Get() != Target)
@@ -62,6 +62,7 @@ void UUIToggleGroupComponent::SetSelection(UUIToggleComponent* Target)
 		}
 		int index = GetToggleIndex(Target);
 		OnToggleCPP.Broadcast(index);
+		OnToggleValueChanged.Broadcast(index);
 		OnToggle.FireEvent(index);
 	}
 }
@@ -81,7 +82,7 @@ UUIToggleComponent* UUIToggleGroupComponent::GetSelectedItem()const
 	return LastSelect.Get();
 }
 
-FDelegateHandle UUIToggleGroupComponent::RegisterToggleEvent(const FLGUIToggleGroupDelegate& InDelegate)
+FDelegateHandle UUIToggleGroupComponent::RegisterToggleEvent(const FLGUIInt32Delegate& InDelegate)
 {
 	return OnToggleCPP.Add(InDelegate);
 }
@@ -94,7 +95,7 @@ void UUIToggleGroupComponent::UnregisterToggleEvent(const FDelegateHandle& InHan
 	OnToggleCPP.Remove(InHandle);
 }
 
-FLGUIDelegateHandleWrapper UUIToggleGroupComponent::RegisterToggleEvent(const FLGUIToggleGroupDynamicDelegate& InDelegate)
+FLGUIDelegateHandleWrapper UUIToggleGroupComponent::RegisterToggleEvent(const FUIToggleGroupValueChangedDelegate& InDelegate)
 {
 	auto delegateHandle = OnToggleCPP.AddLambda([InDelegate, this](int32 Value) {
 		InDelegate.ExecuteIfBound(Value);
@@ -119,7 +120,7 @@ UUIToggleComponent* UUIToggleGroupComponent::GetToggleByIndex(int32 InIndex)cons
 {
 	if (InIndex < 0 || InIndex >= ToggleCollection.Num())
 	{
-		UE_LOG(LGUI, Error, TEXT("[UUIToggleGroupComponent::GetToggleByIndex]Index:%d out of range:%d"), InIndex, ToggleCollection.Num());
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Index:%d out of range:%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, InIndex, ToggleCollection.Num());
 		return nullptr;
 	}
 	(const_cast<UUIToggleGroupComponent*>(this))->SortToggleCollection();

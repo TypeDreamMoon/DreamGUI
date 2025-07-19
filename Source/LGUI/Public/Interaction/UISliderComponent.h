@@ -11,7 +11,8 @@
 
 
 class ULexLayoutAnchorSlot;
-DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUISliderDynamicDelegate, float, InFloat);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FUISliderValueChangedDelegate, float, Value);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUISliderValueChangedEvent, float, Value);
 
 class ALexWidgetActor;
 class ULexWidget;
@@ -69,11 +70,14 @@ protected:
 	UPROPERTY(Transient)TWeakObjectPtr<ULexLayoutAnchorSlot> HandleLayoutAnchor;
 	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> HandleArea;
 
-	FLGUIMulticastFloatDelegate OnValueChangeCPP;
+	FLGUIMulticastFloatDelegate OnValueChangedCPP;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Slider")
-		FLGUIEventDelegate OnValueChange = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Double);
+		FLGUIEventDelegate OnValueChanged = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Double);
 	
 public:
+	UPROPERTY(BlueprintAssignable, Category = "LGUI-Toggle", DisplayName="OnValueChanged")
+	FUISliderValueChangedEvent OnValueChangedBP;
+	
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
 		float GetValue()const { return Value; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
@@ -94,33 +98,34 @@ public:
 
 	/**
 	 * @param	InValue				New value set for Value
-	 * @param	FireEvent			Should execute callback event?
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
-		void SetValue(float InValue, bool FireEvent = true);
+	void SetValue(float InValue);
+	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
+	void SetValueWithoutNotify(float InValue);
 	/** 
 	 * @param	InMinValue			New value set for MinValue
 	 * @param	KeepRelativeValue	Keep percentage value, eg: if origin value is 0.25 from 0.0 to 1.0, then it will be 25.0 from 0.0 to 100.0, or be -7.5 from -10.0 to 0.0
 	 * @param	FireEvent			Should execute callback event?
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
-		void SetMinValue(float InMinValue, bool KeepRelativeValue, bool FireEvent = true);
+	void SetMinValue(float InMinValue, bool KeepRelativeValue, bool FireEvent = true);
 	/**
 	 * @param	InMaxValue			New value set for MaxValue
 	 * @param	KeepRelativeValue	Keep percentage value, eg: if origin value is 0.25 from 0.0 to 1.0, then it will be 25.0 from 0.0 to 100.0, or be -7.5 from -10.0 to 0.0
 	 * @param	FireEvent			Should execute callback event?
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
-		void SetMaxValue(float InMaxValue, bool KeepRelativeValue, bool FireEvent = true);
+	void SetMaxValue(float InMaxValue, bool KeepRelativeValue, bool FireEvent = true);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
-		void SetNavigationChangeInterval(float InValue);
+	void SetNavigationChangeInterval(float InValue);
 
 	FDelegateHandle RegisterSlideEvent(const FLGUIFloatDelegate& InDelegate);
 	FDelegateHandle RegisterSlideEvent(const TFunction<void(float)>& InFunction);
 	void UnregisterSlideEvent(const FDelegateHandle& InHandle);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
-		FLGUIDelegateHandleWrapper RegisterSlideEvent(const FLGUISliderDynamicDelegate& InDelegate);
+		FLGUIDelegateHandleWrapper RegisterSlideEvent(const FUISliderValueChangedDelegate& InDelegate);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
 		void UnregisterSlideEvent(const FLGUIDelegateHandleWrapper& InDelegateHandle);
 public:
@@ -134,6 +139,7 @@ private:
 	bool CheckFill();
 	bool CheckHandle();
 	void CalculateInputValue(ULGUIPointerEventData* eventData);
+	void SetValue(float InValue, bool FireEvent);
 	void ApplyValueToUI();
 #if WITH_EDITOR
 public:

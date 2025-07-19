@@ -45,7 +45,7 @@ void ALexWidgetActor::SetIsTemporarilyHiddenInEditor(bool bIsHidden)
 					{
 						bShouldNotify = true;
 					}
-					GetLexWidget()->SetWidgetVisibility(ESlateVisibility::Collapsed);
+					GetLexWidget()->SetWidgetVisibility(ELexWidgetVisibility::Collapsed);
 				}
 				else
 				{
@@ -53,7 +53,7 @@ void ALexWidgetActor::SetIsTemporarilyHiddenInEditor(bool bIsHidden)
 					{
 						bShouldNotify = true;
 					}
-					GetLexWidget()->SetWidgetVisibility(ESlateVisibility::Visible);
+					GetLexWidget()->SetWidgetVisibility(ELexWidgetVisibility::Visible);
 				}
 				if (bShouldNotify)
 				{

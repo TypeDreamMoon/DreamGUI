@@ -8,32 +8,33 @@
 #include "Event/Interface/LGUINavigationInterface.h"
 #include "Core/LGUILifeCycleUIBehaviour.h"
 #include "LGUIComponentReference.h"
+#include "Core/LexUIImageBrush.h"
 #include "UISelectableComponent.generated.h"
 
 UENUM(BlueprintType, Category = LGUI)
 enum class ELexUISelectableTransitionType:uint8
 {
 	None,
-	ColorTint,
-	/** In this mode, RootComponent of TransitionActor must be a UISpriteBase Actor. The Sprite property will be override by this component. */
-	SpriteSwap,
-	/** You can implement a UISelectableTransitionComponent in c++ or blueprint to do the transition, and add this component to this actor */
-	TransitionComponent,
+	Color,
+	/** This mode need a LexImage as TransitionTarget */
+	ImageBrush,
+	/** You can implement custom class to do the transition */
+	Custom,
 };
 UENUM(BlueprintType, Category = LGUI)
-enum class EUISelectableSelectionState :uint8
+enum class ELexUISelectableSelectionState :uint8
 {
 	/** Not hovered by pointer, just a normal state. */
 	Normal,
 	/** Hovered by pointer. */
-	Highlighted,
+	Hovered,
 	/** Pressed by pointer. */
 	Pressed,
-	/** Disabled, not interactable. Check the "OnUIInteractionStateChanged" function of UISelectableComponent, to see why it is disabled. */
+	/** Disabled, not interactable. */
 	Disabled,
 };
 UENUM(BlueprintType, Category = LGUI)
-enum class EUISelectableNavigationMode:uint8
+enum class ELexUISelectableNavigationMode:uint8
 {
 	/** No navigation. */
 	None,
@@ -48,10 +49,13 @@ class LGUI_API UUISelectableTransitionComponent :public UObject
 {
 	GENERATED_BODY()
 public:
-	void OnInitialize();
+	virtual void BeginPlay();
+	virtual void EndPlay();
 protected:
-	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI-Transition", meta = (DisplayName = "OnInitialize"))
-	void ReceiveOnInitialize();
+	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI-Transition", meta = (DisplayName = "BeginPlay"))
+	void ReceiveBeginPlay();
+	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI-Transition", meta = (DisplayName = "EndPlay"))
+	void ReceiveEndPlay();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "LGUI-Transition")
 		TArray<TObjectPtr<ULTweener>> TweenerCollection;
@@ -66,8 +70,8 @@ protected:
 	 * Called when UISelectableComponent's transition state = highlighted.
 	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
 	 */
-	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI-Transition", meta = (DisplayName = "OnHighlighted"))
-		void ReceiveOnHighlighted(bool InImmediateSet);
+	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI-Transition", meta = (DisplayName = "OnHovered"))
+		void ReceiveOnHovered(bool InImmediateSet);
 	/**
 	 * Called when UISelectableComponent's transition state = pressed.
 	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
@@ -99,7 +103,7 @@ public:
 	 * Default will call blueprint implemented function. If you dont want that, just not use Super::OnHighlighted();
 	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
 	 */
-	virtual void OnHighlighted(bool InImmediateSet);
+	virtual void OnHovered(bool InImmediateSet);
 	/**
 	 * Called when UISelectableComponent's transition state = pressed.
 	 * Default will call blueprint implemented function. If you dont want that, just not use Super::OnPressed();
@@ -145,7 +149,8 @@ class LGUI_API UUISelectableComponent : public ULGUILifeCycleUIBehaviour
 	, public ILGUINavigationInterface
 {
 	GENERATED_BODY()
-	
+public:
+	UUISelectableComponent();
 protected:
 
 #if WITH_EDITOR
@@ -154,14 +159,13 @@ protected:
 
 protected:
 	virtual void Awake() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	virtual void OnRegister()override;
 	virtual void OnUnregister()override;
 
 	friend class FUISelectableCustomization;
-	/** If not assigned, then use self. */
-	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable")
-		TWeakObjectPtr<ULexVisual> TransitionTarget;
+	
 	/** inherited events of this component can bubble up? */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable")
 		bool AllowEventBubbleUp = false;
@@ -172,33 +176,38 @@ protected:
 
 #pragma region Transition
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable")
-		ELexUISelectableTransitionType Transition;
+	TWeakObjectPtr<ULexVisual> TransitionTarget;
+	
+	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable")
+	ELexUISelectableTransitionType Transition = ELexUISelectableTransitionType::Color;
 
+	UPROPERTY(EditAnywhere, Instanced, Category="LGUI-Selectable")
+	TObjectPtr<UUISelectableTransitionComponent> CustomTransition = nullptr;
 	UPROPERTY(Transient)TObjectPtr<class ULTweener> TransitionTweener = nullptr;
+	
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable")
 		FColor NormalColor = FColor(255, 255, 255, 255);
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable")
-		FColor HighlightedColor = FColor(200, 200, 200, 255);
+		FColor HoveredColor = FColor(200, 200, 200, 255);
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable")
 		FColor PressedColor = FColor(150, 150, 150, 255);
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable")
 		FColor DisabledColor = FColor(150, 150, 150, 128);
+
+	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable", meta = (DisplayThumbnail = "false"))
+		FLexUIImageBrush NormalImageBrush;
+	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable", meta = (DisplayThumbnail = "false"))
+		FLexUIImageBrush HoveredImageBrush;
+	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable", meta = (DisplayThumbnail = "false"))
+		FLexUIImageBrush PressedImageBrush;
+	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable", meta = (DisplayThumbnail = "false"))
+		FLexUIImageBrush DisabledImageBrush;
+
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable", meta = (ClampMin = "0.0"))
-		float FadeDuration = 0.2f;
+	float AnimDuration = 0.2f;
 
-	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable", meta = (DisplayThumbnail = "false"))
-		TObjectPtr<ULexUISpriteData_BaseObject> NormalSprite;
-	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable", meta = (DisplayThumbnail = "false"))
-		TObjectPtr<ULexUISpriteData_BaseObject> HighlightedSprite;
-	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable", meta = (DisplayThumbnail = "false"))
-		TObjectPtr<ULexUISpriteData_BaseObject> PressedSprite;
-	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable", meta = (DisplayThumbnail = "false"))
-		TObjectPtr<ULexUISpriteData_BaseObject> DisabledSprite;
-	UPROPERTY(EditAnywhere, Instanced, Category="LGUI-Selectable")
-	TObjectPtr<UUISelectableTransitionComponent> TransitionComp = nullptr;
-
-	EUISelectableSelectionState CurrentSelectionState = EUISelectableSelectionState::Normal;
-	void ApplySelectionState(bool immediateSet);
+	ELexUISelectableSelectionState CurrentSelectionState = ELexUISelectableSelectionState::Normal;
+	void ApplySelectionState(bool ImmediateSet);
 	bool IsPointerInsideThis = false;
 	bool IsPointerDown = false;
 #pragma endregion
@@ -209,27 +218,27 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
 		bool bCanNavigateHere = true;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
-		EUISelectableNavigationMode NavigationLeft = EUISelectableNavigationMode::Auto;
+		ELexUISelectableNavigationMode NavigationLeft = ELexUISelectableNavigationMode::Auto;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
 		FLGUIComponentReference NavigationLeftSpecific = FLGUIComponentReference(UUISelectableComponent::StaticClass());
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
-		EUISelectableNavigationMode NavigationRight = EUISelectableNavigationMode::Auto;
+		ELexUISelectableNavigationMode NavigationRight = ELexUISelectableNavigationMode::Auto;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
 		FLGUIComponentReference NavigationRightSpecific = FLGUIComponentReference(UUISelectableComponent::StaticClass());
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
-		EUISelectableNavigationMode NavigationUp = EUISelectableNavigationMode::Auto;
+		ELexUISelectableNavigationMode NavigationUp = ELexUISelectableNavigationMode::Auto;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
 		FLGUIComponentReference NavigationUpSpecific = FLGUIComponentReference(UUISelectableComponent::StaticClass());
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
-		EUISelectableNavigationMode NavigationDown = EUISelectableNavigationMode::Auto;
+		ELexUISelectableNavigationMode NavigationDown = ELexUISelectableNavigationMode::Auto;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
 		FLGUIComponentReference NavigationDownSpecific = FLGUIComponentReference(UUISelectableComponent::StaticClass());
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
-		EUISelectableNavigationMode NavigationNext = EUISelectableNavigationMode::Auto;
+		ELexUISelectableNavigationMode NavigationNext = ELexUISelectableNavigationMode::Auto;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
 		FLGUIComponentReference NavigationNextSpecific = FLGUIComponentReference(UUISelectableComponent::StaticClass());
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
-		EUISelectableNavigationMode NavigationPrev = EUISelectableNavigationMode::Auto;
+		ELexUISelectableNavigationMode NavigationPrev = ELexUISelectableNavigationMode::Auto;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
 		FLGUIComponentReference NavigationPrevSpecific = FLGUIComponentReference(UUISelectableComponent::StaticClass());
 public:
@@ -237,44 +246,48 @@ public:
 		ULexVisual* GetTransitionTarget()const { return TransitionTarget.Get(); }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
-		ULexUISpriteData_BaseObject* GetNormalSprite()const { return NormalSprite; }
+	FColor GetNormalColor()const { return NormalColor; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
-		FColor GetNormalColor()const { return NormalColor; }
+	FColor GetHoveredColor()const { return HoveredColor; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
-		ULexUISpriteData_BaseObject* GetHighlightedSprite()const { return HighlightedSprite; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
-		FColor GetHighlightedColor()const { return HighlightedColor; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
-		ULexUISpriteData_BaseObject* GetPressedSprite()const { return PressedSprite; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
-		FColor GetPressedColor()const { return PressedColor; }
+	FColor GetPressedColor()const { return PressedColor; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
-		ULexUISpriteData_BaseObject* GetDisabledSprite()const { return DisabledSprite; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
-		FColor GetDisabledColor()const { return DisabledColor; }
+	FColor GetDisabledColor()const { return DisabledColor; }
+
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
-		EUISelectableSelectionState GetSelectionState()const;
+	const FLexUIImageBrush& GetNormalImageBrush()const { return NormalImageBrush; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
+	const FLexUIImageBrush& GetHoveredImageBrush()const { return HoveredImageBrush; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
+	const FLexUIImageBrush& GetPressedImageBrush()const { return PressedImageBrush; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
+	const FLexUIImageBrush& GetDisabledImageBrush()const { return DisabledImageBrush; }
+	
+	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
+		ELexUISelectableSelectionState GetSelectionState()const;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
 		void SetTransitionTarget(ULexVisual* value);
+	
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
-		void SetNormalSprite(ULexUISpriteData_BaseObject* NewSprite);
+	void SetNormalColor(FColor Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
-		void SetNormalColor(FColor NewColor);
+	void SetHoveredColor(FColor Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
-		void SetHighlightedSprite(ULexUISpriteData_BaseObject* NewSprite);
+	void SetPressedColor(FColor Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
-		void SetHighlightedColor(FColor NewColor);
+	void SetDisabledColor(FColor Value);
+	
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
-		void SetPressedSprite(ULexUISpriteData_BaseObject* NewSprite);
+	void SetNormalImageBrush(const FLexUIImageBrush& Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
-		void SetPressedColor(FColor NewColor);
+	void SetHoveredImageBrush(const FLexUIImageBrush& Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
-		void SetDisabledSprite(ULexUISpriteData_BaseObject* NewSprite);
+	void SetPressedImageBrush(const FLexUIImageBrush& Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
-		void SetDisabledColor(FColor NewColor);
+	void SetDisabledImageBrush(const FLexUIImageBrush& Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
-		void SetSelectionState(EUISelectableSelectionState NewState);
+		void SetSelectionState(ELexUISelectableSelectionState NewState);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
 		bool IsInteractable()const;
@@ -283,17 +296,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
 		bool GetCanNavigateHere()const { return bCanNavigateHere; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		EUISelectableNavigationMode GetNavigationLeft()const { return NavigationLeft; }
+		ELexUISelectableNavigationMode GetNavigationLeft()const { return NavigationLeft; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		EUISelectableNavigationMode GetNavigationRight()const { return NavigationRight; }
+		ELexUISelectableNavigationMode GetNavigationRight()const { return NavigationRight; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		EUISelectableNavigationMode GetNavigationUp()const { return NavigationUp; }
+		ELexUISelectableNavigationMode GetNavigationUp()const { return NavigationUp; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		EUISelectableNavigationMode GetNavigationDown()const { return NavigationDown; }
+		ELexUISelectableNavigationMode GetNavigationDown()const { return NavigationDown; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		EUISelectableNavigationMode GetNavigationPrev()const { return NavigationPrev; }
+		ELexUISelectableNavigationMode GetNavigationPrev()const { return NavigationPrev; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		EUISelectableNavigationMode GetNavigationNext()const { return NavigationNext; }
+		ELexUISelectableNavigationMode GetNavigationNext()const { return NavigationNext; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
 		UUISelectableComponent* GetNavigationLeftExplicit()const { return NavigationLeftSpecific.GetComponent<UUISelectableComponent>(); }
@@ -311,17 +324,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
 		void SetCanNavigateHere(bool value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		void SetNavigationLeft(EUISelectableNavigationMode value);
+		void SetNavigationLeft(ELexUISelectableNavigationMode value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		void SetNavigationRight(EUISelectableNavigationMode value);
+		void SetNavigationRight(ELexUISelectableNavigationMode value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		void SetNavigationUp(EUISelectableNavigationMode value);
+		void SetNavigationUp(ELexUISelectableNavigationMode value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		void SetNavigationDown(EUISelectableNavigationMode value);
+		void SetNavigationDown(ELexUISelectableNavigationMode value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		void SetNavigationPrev(EUISelectableNavigationMode value);
+		void SetNavigationPrev(ELexUISelectableNavigationMode value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		void SetNavigationNext(EUISelectableNavigationMode value);
+		void SetNavigationNext(ELexUISelectableNavigationMode value);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
 		void SetNavigationLeftExplicit(UUISelectableComponent* value);

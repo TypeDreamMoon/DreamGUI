@@ -10,26 +10,15 @@
 #include "UIToggleComponent.generated.h"
 
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUIToggleDynamicDelegate, bool, InBool);
-
-UENUM(BlueprintType, Category = LGUI)
-enum class UIToggleTransitionType :uint8
-{
-	None,
-	Fade,
-	ColorTint,
-	/**
-	 * You can implement a UISelectableTransitionComponent in c++ or blueprint to do the transition, and add this component to toggle actor.
-	 * Use OnStartCustomTransition event in UISelectableTransitionComponent, and switch "On"/"Off" condition to do the transition.
-	 */
-	TransitionComponent,
-};
+DECLARE_DYNAMIC_DELEGATE_OneParam(FUIToggleValueChangedDelegate, bool, Value);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIToggleValueChangedEvent, bool, Value);
 
 UCLASS(ClassGroup = LGUI, Blueprintable, meta = (BlueprintSpawnableComponent))
 class LGUI_API UUIToggleComponent : public UUISelectableComponent, public ILGUIPointerClickInterface
 {
 	GENERATED_BODY()
-	
+
+	UUIToggleComponent();
 protected:
 	virtual void Awake() override;
 	virtual void Start() override;
@@ -39,25 +28,29 @@ protected:
 #endif
 protected:
 	friend class FUIToggleCustomization;
-	/** If not assigned, use self. must have UIItem component */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Toggle")
-		TWeakObjectPtr<ULexWidget> ToggleTarget;
+	TWeakObjectPtr<ULexVisual> ToggleTransitionTarget;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI-Toggle")
-		UIToggleTransitionType ToggleTransition = UIToggleTransitionType::Fade;
-	UPROPERTY(EditAnywhere, Instanced, Category="LGUI-Toggle")
-	TObjectPtr<class UUISelectableTransitionComponent> ToggleTransitionComp = nullptr;
+	ELexUISelectableTransitionType ToggleTransition = ELexUISelectableTransitionType::Color;
+	UPROPERTY(EditAnywhere, Category="LGUI-Toggle", Instanced, meta = (EditCondition = "Transition==ELexUISelectableSelectionState::Custom"))
+	TObjectPtr<class UUISelectableTransitionComponent> CustomToggleTransition = nullptr;
 	bool CheckTarget();
 #pragma region Transition
 	UPROPERTY(Transient) TObjectPtr<class ULTweener> ToggleTransitionTweener = nullptr;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI-Toggle")
-		float OnAlpha = 1.0f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI-Toggle")
-		float OffAlpha = 0.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI-Toggle")
-		FColor OnColor = FColor(255, 255, 255, 255);
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI-Toggle")
-		FColor OffColor = FColor(128, 128, 128, 255);
+	/** Appearance when this is checked */
+	UPROPERTY(EditAnywhere, Category = "LGUI-Toggle")
+	FColor OnColor;
+	/** Appearance when this is unchecked */
+	UPROPERTY(EditAnywhere, Category = "LGUI-Toggle")
+	FColor OffColor;
+	
+	/** Appearance when this is checked */
+	UPROPERTY(EditAnywhere, Category = "LGUI-Toggle")
+	FLexUIImageBrush OnImageBrush;
+	/** Appearance when this is unchecked */
+	UPROPERTY(EditAnywhere, Category = "LGUI-Toggle")
+	FLexUIImageBrush OffImageBrush;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI-Toggle")
 		float ToggleDuration = 0.2f;
@@ -68,27 +61,33 @@ protected:
 		FName OffTransitionName = TEXT("Off");
 #pragma endregion
 	UPROPERTY(EditAnywhere, Category = "LGUI-Toggle")
-		bool IsOn = true;
-	/** Must have UIToggleGroupComponent */
+		bool bIsOn = true;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Toggle")
-		TWeakObjectPtr<AActor> UIToggleGroupActor;
-	UPROPERTY(Transient) TWeakObjectPtr<class UUIToggleGroupComponent> GroupComp = nullptr;
+	TWeakObjectPtr<class UUIToggleGroupComponent> ToggleGroup = nullptr;
 
-	FLGUIMulticastBoolDelegate OnToggleCPP;
+	FLGUIMulticastBoolDelegate OnValueChangedCPP;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Toggle")
-		FLGUIEventDelegate OnToggle = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Bool);
+	FLGUIEventDelegate OnValueChanged = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Bool);
 
-	void ApplyValueToUI(bool immediateSet);
+	void SetValue(bool Value, bool SendCallback);
+	void ApplyValueToUI(bool ImmediateSet);
 	virtual bool OnPointerClick_Implementation(ULGUIPointerEventData* eventData)override;
 public:
+	UPROPERTY(BlueprintAssignable, Category = "LGUI-Toggle", DisplayName="OnValueChanged")
+	FUIToggleValueChangedEvent OnValueChangedBP;
+
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Toggle")
-		AActor* GetToggleGroupActor()const { return UIToggleGroupActor.Get(); }
+	UUIToggleGroupComponent* GetToggleGroup()const { return ToggleGroup.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Toggle")
-		void SetToggleGroup(UUIToggleGroupComponent* InGroupComp);
+	void SetToggleGroup(UUIToggleGroupComponent* InGroupComp);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Toggle")
-		bool GetValue()const { return IsOn; }
+	bool GetValue()const { return bIsOn; }
+	/** Set IsChecked value and send callback event */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Toggle")
-		virtual void SetValue(bool newValue, bool fireEvent = true);
+	virtual void SetValue(bool Value);
+	/** Set IsChecked value and NOT send callback event */
+	UFUNCTION(BlueprintCallable, Category = "LGUI-Toggle")
+	void SetValueWithoutNotify(bool Value);
 	/**
 	 * If this toggle added to a ToggleGroup, then return index in group. Return -1 if not add to ToggleGroup.
 	 * Index is sorted by flatten-hierarchy-index, from RootComponent(UIItem).
@@ -101,7 +100,7 @@ public:
 	void UnregisterToggleEvent(const FDelegateHandle& InHandle);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Toggle")
-		FLGUIDelegateHandleWrapper RegisterToggleEvent(const FLGUIToggleDynamicDelegate& InDelegate);
+		FLGUIDelegateHandleWrapper RegisterToggleEvent(const FUIToggleValueChangedDelegate& InDelegate);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Toggle")
 		void UnregisterToggleEvent(const FLGUIDelegateHandleWrapper& InDelegateHandle);
 };

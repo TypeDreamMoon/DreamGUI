@@ -89,11 +89,23 @@ void UUISliderComponent::SetValue(float InValue, bool FireEvent)
         ApplyValueToUI();
         if (FireEvent)
         {
-            OnValueChangeCPP.Broadcast(Value);
-            OnValueChange.FireEvent((double)Value);
+            OnValueChangedCPP.Broadcast(Value);
+            OnValueChangedBP.Broadcast(Value);
+            OnValueChanged.FireEvent((double)Value);
         }
     }
 }
+
+void UUISliderComponent::SetValue(float InValue)
+{
+    SetValue(InValue, true);
+}
+
+void UUISliderComponent::SetValueWithoutNotify(float InValue)
+{
+    SetValue(InValue, false);
+}
+
 void UUISliderComponent::SetMinValue(float InMinValue, bool KeepRelativeValue, bool FireEvent)
 {
     if (MinValue != InMinValue)
@@ -111,8 +123,8 @@ void UUISliderComponent::SetMinValue(float InMinValue, bool KeepRelativeValue, b
         ApplyValueToUI();
 		if (FireEvent)
 		{
-			OnValueChangeCPP.Broadcast(Value);
-			OnValueChange.FireEvent((double)Value);
+			OnValueChangedCPP.Broadcast(Value);
+			OnValueChanged.FireEvent((double)Value);
 		}
     }
 }
@@ -133,8 +145,8 @@ void UUISliderComponent::SetMaxValue(float InMaxValue, bool KeepRelativeValue, b
 		ApplyValueToUI();
 		if (FireEvent)
 		{
-			OnValueChangeCPP.Broadcast(Value);
-			OnValueChange.FireEvent((double)Value);
+			OnValueChangedCPP.Broadcast(Value);
+			OnValueChanged.FireEvent((double)Value);
 		}
 	}
 }
@@ -146,27 +158,27 @@ void UUISliderComponent::SetNavigationChangeInterval(float InValue)
 
 FDelegateHandle UUISliderComponent::RegisterSlideEvent(const FLGUIFloatDelegate &InDelegate)
 {
-    return OnValueChangeCPP.Add(InDelegate);
+    return OnValueChangedCPP.Add(InDelegate);
 }
 FDelegateHandle UUISliderComponent::RegisterSlideEvent(const TFunction<void(float)> &InFunction)
 {
-    return OnValueChangeCPP.AddLambda(InFunction);
+    return OnValueChangedCPP.AddLambda(InFunction);
 }
 void UUISliderComponent::UnregisterSlideEvent(const FDelegateHandle &InHandle)
 {
-    OnValueChangeCPP.Remove(InHandle);
+    OnValueChangedCPP.Remove(InHandle);
 }
 
-FLGUIDelegateHandleWrapper UUISliderComponent::RegisterSlideEvent(const FLGUISliderDynamicDelegate &InDelegate)
+FLGUIDelegateHandleWrapper UUISliderComponent::RegisterSlideEvent(const FUISliderValueChangedDelegate &InDelegate)
 {
-    auto delegateHandle = OnValueChangeCPP.AddLambda([InDelegate](float InValue) {
+    auto delegateHandle = OnValueChangedCPP.AddLambda([InDelegate](float InValue) {
         InDelegate.ExecuteIfBound(InValue);
     });
     return FLGUIDelegateHandleWrapper(delegateHandle);
 }
 void UUISliderComponent::UnregisterSlideEvent(const FLGUIDelegateHandleWrapper &InDelegateHandle)
 {
-    OnValueChangeCPP.Remove(InDelegateHandle.DelegateHandle);
+    OnValueChangedCPP.Remove(InDelegateHandle.DelegateHandle);
 }
 
 bool UUISliderComponent::OnPointerDown_Implementation(ULGUIPointerEventData *eventData)

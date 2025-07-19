@@ -44,6 +44,8 @@ private:
 	void CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder);
 	void BasicSetupSubMenu(FMenuBuilder& MenuBuilder);
 	void ReplaceActorSubMenu(FMenuBuilder& MenuBuilder);
+	void CopyWidgetReferenceSubMenu(FMenuBuilder& MenuBuilder);
+	void CopyComponentReferenceSubMenu(FMenuBuilder& MenuBuilder);
 	void ChangeTraceChannelSubMenu(FMenuBuilder& MenuBuilder);
 	void UseActiveViewportAsPreview();
 	void ClearViewportPreview();

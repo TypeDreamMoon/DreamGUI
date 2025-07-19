@@ -529,7 +529,7 @@ void UUIRecyclableScrollViewComponent::InitializeOnDataSource()
     auto WorkingCellLayout = Cast<ULexLayoutAnchorSlot>(WorkingCellTemplate->GetLexWidget()->GetLayoutSlot());
     WorkingCellLayout->SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.0f, 1.0f), FVector2D(0.0f, 1.0f), true, true);
 
-    WorkingCellTemplate->GetLexWidget()->SetWidgetVisibility(ESlateVisibility::Visible);
+    WorkingCellTemplate->GetLexWidget()->SetWidgetVisibility(ELexWidgetVisibility::Visible);
     float CellWidth;
     float CellHeight;
     if (Horizontal)
@@ -567,7 +567,7 @@ void UUIRecyclableScrollViewComponent::InitializeOnDataSource()
         IUIRecyclableScrollViewDataSource::Execute_InitOnCreate(DataSource, CellInterfaceComponent);
         CacheCellList.Add(CellContainer);
     }
-    WorkingCellTemplate->GetLexWidget()->SetWidgetVisibility(ESlateVisibility::Collapsed);
+    WorkingCellTemplate->GetLexWidget()->SetWidgetVisibility(ELexWidgetVisibility::Collapsed);
     //delete extra cells
     while (CacheCellList.Num() > VisibleCellCount)
     {
@@ -681,12 +681,12 @@ void UUIRecyclableScrollViewComponent::OnScrollCallback(FVector2D value)
                         CellDataIndex = GetValidCellDataIndex(CellDataIndex + i);
                         if (CellDataIndex < DataItemCount)
                         {
-                            CellItem.UIItem->SetWidgetVisibility(ESlateVisibility::Visible);
+                            CellItem.UIItem->SetWidgetVisibility(ELexWidgetVisibility::Visible);
                             IUIRecyclableScrollViewDataSource::Execute_SetCell(DataSource, CellItem.CellComponent, CellDataIndex);
                         }
                         else
                         {
-                            CellItem.UIItem->SetWidgetVisibility(ESlateVisibility::Visible);
+                            CellItem.UIItem->SetWidgetVisibility(ELexWidgetVisibility::Visible);
                         }
                     }
                     //decrease index
@@ -724,12 +724,12 @@ void UUIRecyclableScrollViewComponent::OnScrollCallback(FVector2D value)
                         //set data
                         if (RightCellIndexInData < DataItemCount)
                         {
-                            CellItem.UIItem->SetWidgetVisibility(ESlateVisibility::Visible);
+                            CellItem.UIItem->SetWidgetVisibility(ELexWidgetVisibility::Visible);
                             IUIRecyclableScrollViewDataSource::Execute_SetCell(DataSource, CellItem.CellComponent, RightCellIndexInData);
                         }
                         else
                         {
-                            CellItem.UIItem->SetWidgetVisibility(ESlateVisibility::Collapsed);
+                            CellItem.UIItem->SetWidgetVisibility(ELexWidgetVisibility::Collapsed);
                         }
                     }
                     //increase index
@@ -772,12 +772,12 @@ void UUIRecyclableScrollViewComponent::OnScrollCallback(FVector2D value)
                         CellDataIndex = GetValidCellDataIndex(CellDataIndex + i);
                         if (CellDataIndex < DataItemCount)
                         {
-                            CellItem.UIItem->SetWidgetVisibility(ESlateVisibility::Visible);
+                            CellItem.UIItem->SetWidgetVisibility(ELexWidgetVisibility::Visible);
                             IUIRecyclableScrollViewDataSource::Execute_SetCell(DataSource, CellItem.CellComponent, CellDataIndex);
                         }
                         else
                         {
-                            CellItem.UIItem->SetWidgetVisibility(ESlateVisibility::Collapsed);
+                            CellItem.UIItem->SetWidgetVisibility(ELexWidgetVisibility::Collapsed);
                         }
                     }
                     //decrease index
@@ -815,12 +815,12 @@ void UUIRecyclableScrollViewComponent::OnScrollCallback(FVector2D value)
                         //set data
                         if (BottomCellIndexInData < DataItemCount)
                         {
-                            CellItem.UIItem->SetWidgetVisibility(ESlateVisibility::Visible);
+                            CellItem.UIItem->SetWidgetVisibility(ELexWidgetVisibility::Visible);
                             IUIRecyclableScrollViewDataSource::Execute_SetCell(DataSource, CellItem.CellComponent, BottomCellIndexInData);
                         }
                         else
                         {
-                            CellItem.UIItem->SetWidgetVisibility(ESlateVisibility::Collapsed);
+                            CellItem.UIItem->SetWidgetVisibility(ELexWidgetVisibility::Collapsed);
                         }
                     }
                     //increase index

@@ -65,6 +65,7 @@ void ULexWidget::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void ULexWidget::Awake_Implementation()
 {
 	CalculateVisibility_Recursive();
+	CalculateHitTest_Recursive();
 	CalculateIsEnabled_Recursive();
 	if (IsValid(Layout))
 	{
@@ -444,6 +445,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		static const FName PaddingName = GET_MEMBER_NAME_CHECKED(ULexWidget, Padding);
 		static const FName MarginName = GET_MEMBER_NAME_CHECKED(ULexWidget, Margin);
 		static const FName VisibilityName = GET_MEMBER_NAME_CHECKED(ULexWidget, WidgetVisibility);
+		static const FName HitTestTypeName = GET_MEMBER_NAME_CHECKED(ULexWidget, HitTestType);
 		static const FName ClippingName = GET_MEMBER_NAME_CHECKED(ULexWidget, Clipping);
 		static const FName VisualName = GET_MEMBER_NAME_CHECKED(ULexWidget, Visual);
 		static const FName LayoutName = GET_MEMBER_NAME_CHECKED(ULexWidget, Layout);
@@ -517,6 +519,10 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		if (PropertyName == VisibilityName)
 		{
 			CalculateVisibility_Recursive();
+		}
+		if (PropertyName == HitTestTypeName)
+		{
+			CalculateHitTest_Recursive();
 		}
 		if (PropertyName == IsEnabledName)
 		{
@@ -695,6 +701,7 @@ void ULexWidget::EnsureDataForRebuild()
 	LOCAL::EnsureDataForRebuildRecursive(this);
 	LOCAL::ForceRefreshRenderCanvasRecursive(this);
 	CalculateVisibility_Recursive();
+	CalculateHitTest_Recursive();
 	LOCAL::UpdateComponentToWorldRecursive(this);
 }
 
@@ -738,6 +745,7 @@ void ULexWidget::OnChildAttached(USceneComponent* ChildComponent)
 	if (GetWorld() == nullptr)return;
 	if (ULexWidget* ChildWidget = Cast<ULexWidget>(ChildComponent))
 	{
+		ChildWidget->UIParent = this;
 		ChildWidget->OnUIAttachedToParent();
 
 		EnsureUIChildrenValid();//check
@@ -825,6 +833,7 @@ void ULexWidget::OnChildDetached(USceneComponent* ChildComponent)
 				UIChild->Call_SiblingIndexChanged();
 			}
 		}
+		ChildWidget->UIParent = nullptr;
 		MarkLayoutDirty();
 		if (IsValid(Layout))
 		{
@@ -1226,6 +1235,7 @@ void ULexWidget::UIHierarchyAttachmentChanged(ULexCanvas* ParentRenderCanvas, UL
 	MarkFlattenHierarchyIndexDirty();
 
 	CalculateVisibility_Recursive();
+	CalculateHitTest_Recursive();
 
 	//if (this->IsRegistered())//not register means could be load from level
 	{
@@ -1295,10 +1305,7 @@ void ULexWidget::CalculateVisibility_Recursive()
 		{
 			auto WidgetVisibility = Widget->WidgetVisibility;
 			bool bResultVisibility = true;
-			bool bSelfVisibleForRender = WidgetVisibility == ESlateVisibility::Visible
-			|| WidgetVisibility == ESlateVisibility::HitTestInvisible
-			|| WidgetVisibility == ESlateVisibility::SelfHitTestInvisible
-			;
+			bool bSelfVisibleForRender = WidgetVisibility == ELexWidgetVisibility::Visible;
 			if (!bSelfVisibleForRender)
 				bResultVisibility = false;
 			else if (Widget->UIParent.IsValid())
@@ -1320,11 +1327,8 @@ void ULexWidget::CalculateVisibility_Recursive()
 		{
 			auto WidgetVisibility = Widget->WidgetVisibility;
 			bool bResultVisibility = true;
-			bool bSelfVisibleForLayout = WidgetVisibility == ESlateVisibility::Visible
-			|| WidgetVisibility == ESlateVisibility::Hidden
-			|| WidgetVisibility == ESlateVisibility::HitTestInvisible
-			|| WidgetVisibility == ESlateVisibility::SelfHitTestInvisible
-			;
+			bool bSelfVisibleForLayout = WidgetVisibility == ELexWidgetVisibility::Visible
+			|| WidgetVisibility == ELexWidgetVisibility::Hidden;
 			if (bSelfVisibleForLayout == false)
 				bResultVisibility = false;
 			else if (Widget->UIParent.IsValid())
@@ -1342,24 +1346,36 @@ void ULexWidget::CalculateVisibility_Recursive()
 				}
 			}
 		}
+	};
+	LOCAL::CalculateRenderVisibility(this);
+	LOCAL::CalculateLayoutVisibility(this);
+}
+
+void ULexWidget::CalculateHitTest_Recursive()
+{
+	struct LOCAL
+	{
 		static void CalculateHitTestVisibility(ULexWidget* Widget)
 		{
-			auto WidgetVisibility = Widget->WidgetVisibility;
-			bool bResultVisibility = true;
-			bool SelfVisibleForHitTest = WidgetVisibility == ESlateVisibility::Visible;
-			if (SelfVisibleForHitTest == false)
-				bResultVisibility = false;
-			else if (Widget->UIParent.IsValid())
-				if (Widget->UIParent->WidgetVisibility == ESlateVisibility::SelfHitTestInvisible)
-					bResultVisibility = true;
-				else
-					bResultVisibility = Widget->UIParent->IsVisibleForHitTest();
-			else
-				bResultVisibility = true;
-
-			if (Widget->bCacheIsVisibleForHitTest != bResultVisibility)
+			auto HitTestType = Widget->HitTestType;
+			bool bResult = true;
+			if (HitTestType == ELexWidgetHitTestType::NotHitTestable)
+				bResult = false;
+			else if (HitTestType == ELexWidgetHitTestType::HitTestable)
+				bResult = true;
+			else if (HitTestType == ELexWidgetHitTestType::Inherit)
 			{
-				Widget->bCacheIsVisibleForHitTest = bResultVisibility;
+				if (Widget->UIParent.IsValid())
+					bResult = Widget->UIParent->IsVisibleForHitTest();
+				else
+					bResult = true;
+			}
+			else
+				bResult = true;
+
+			if (Widget->bCacheIsVisibleForHitTest != bResult)
+			{
+				Widget->bCacheIsVisibleForHitTest = bResult;
 				Widget->Call_HitTestVisibilityChanged();
 				for (auto& Child : Widget->GetUIChildren())
 				{
@@ -1368,8 +1384,6 @@ void ULexWidget::CalculateVisibility_Recursive()
 			}
 		}
 	};
-	LOCAL::CalculateRenderVisibility(this);
-	LOCAL::CalculateLayoutVisibility(this);
 	LOCAL::CalculateHitTestVisibility(this);
 }
 
@@ -1967,12 +1981,21 @@ bool ULexWidget::IsVisibleForLayout() const
 	return bCacheIsVisibleForLayout;
 }
 
-void ULexWidget::SetWidgetVisibility(ESlateVisibility Value)
+void ULexWidget::SetWidgetVisibility(ELexWidgetVisibility Value)
 {
 	if (WidgetVisibility != Value)
 	{
 		WidgetVisibility = Value;
 		CalculateVisibility_Recursive();
+	}
+}
+
+void ULexWidget::SetHitTestType(ELexWidgetHitTestType Value)
+{
+	if (HitTestType != Value)
+	{
+		HitTestType = Value;
+		CalculateHitTest_Recursive();
 	}
 }
 
@@ -2019,14 +2042,17 @@ ULexVisual* ULexWidget::CreateNewVisual(TSubclassOf<ULexVisual> VisualClass)
 			RenderCanvas->RegisterVisual(this);
 		}
 	}
-	if (GetWorld()->IsGameWorld())
+	if (IsValid(OldVisual))
 	{
-		if (this->HasBegunPlay())
+		if (GetWorld()->IsGameWorld())
 		{
-			OldVisual->EndPlay();
+			if (this->HasBegunPlay())
+			{
+				OldVisual->EndPlay();
+			}
 		}
+		OldVisual->OnUnregister();
 	}
-	OldVisual->OnUnregister();
 	
 	NewVisual->OnRegister();
 	if (GetWorld()->IsGameWorld())
@@ -2044,14 +2070,17 @@ ULexLayout* ULexWidget::CreateNewLayout(TSubclassOf<ULexLayout> LayoutClass)
 {
 	auto OldLayout = Layout;
 	auto NewLayout = NewObject<ULexLayout>(this, LayoutClass);
-	if (GetWorld()->IsGameWorld())
+	if (IsValid(OldLayout))
 	{
-		if (this->HasBegunPlay())
+		if (GetWorld()->IsGameWorld())
 		{
-			OldLayout->EndPlay();
+			if (this->HasBegunPlay())
+			{
+				OldLayout->EndPlay();
+			}
 		}
+		OldLayout->OnUnregister();
 	}
-	OldLayout->OnUnregister();
 	
 	NewLayout->OnRegister();
 	if (GetWorld()->IsGameWorld())

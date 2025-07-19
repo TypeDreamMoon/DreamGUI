@@ -24,9 +24,11 @@
 #include "Settings/LevelEditorMiscSettings.h"
 #include "Layers/LayersSubsystem.h"
 #include "ActorEditorUtils.h"
+#include "Core/Components/LexLayout.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Serialization/ArchiveReplaceObjectRef.h"
 #include "Logging/MessageLog.h"
+#include "Windows/WindowsPlatformApplicationMisc.h"
 
 #define LOCTEXT_NAMESPACE "LGUIEditorTools"
 
@@ -683,6 +685,35 @@ void LGUIEditorTools::CreateActorByClass(UClass* ActorClass, TFunction<void(AAct
 	}
 	GEditor->EndTransaction();
 }
+
+void LGUIEditorTools::CreateLexWidget(FString Name, UClass* VisualClass, TFunction<void(ULexWidget*)> Callback)
+{
+	auto SelectedActor = GetFirstSelectedActor();
+	if (SelectedActor == nullptr)return;
+	GEditor->BeginTransaction(LOCTEXT("CreateChildWidget_Transaction", "Create Child Widget"));
+	MakeCurrentLevel(SelectedActor);
+	auto NewActor = GetWorldFromSelection()->SpawnActor<ALexWidgetActor>(ALexWidgetActor::StaticClass(), FTransform::Identity, FActorSpawnParameters());
+	if (IsValid(NewActor))
+	{
+		NewActor->SetActorLabel(Name);
+		if (SelectedActor != nullptr)
+		{
+			NewActor->AttachToActor(SelectedActor, FAttachmentTransformRules::KeepRelativeTransform);
+			GEditor->SelectActor(SelectedActor, false, true);
+		}
+		if (VisualClass)
+		{
+			NewActor->GetLexWidget()->CreateNewVisual(VisualClass);
+		}
+		if (Callback)
+		{
+			Callback(NewActor->GetLexWidget());
+		}
+		GEditor->SelectActor(NewActor, true, true);
+	}
+	GEditor->EndTransaction();
+}
+
 void LGUIEditorTools::CreateEmptyActor()
 {
 	auto selectedActor = GetFirstSelectedActor();
@@ -1372,6 +1403,80 @@ void LGUIEditorTools::OpenAtlasViewer_Impl()
 {
 	FGlobalTabmanager::Get()->TryInvokeTab(FLGUIEditorModule::LGUIDynamicSpriteAtlasViewerName);
 }
+
+bool LGUIEditorTools::CanCopyWidgetReference()
+{
+	auto SelectedActors = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
+	if (SelectedActors.Num() == 1)
+	{
+		if (Cast<ALexWidgetActor>(SelectedActors[0]) != nullptr)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void LGUIEditorTools::CopyReference_Widget()
+{
+	auto SelectedActors = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
+	if (SelectedActors.Num() == 1)
+	{
+		if (auto WidgetActor = Cast<ALexWidgetActor>(SelectedActors[0]))
+		{
+			auto Widget = WidgetActor->GetLexWidget();
+			auto ValueAsPathString = FString::Printf(TEXT("%s'%s'"), *Widget->GetClass()->GetPathName(), *Widget->GetPathName());
+			FPlatformApplicationMisc::ClipboardCopy(*ValueAsPathString);
+		}
+	}
+}
+
+void LGUIEditorTools::CopyReference_Visual()
+{
+	auto SelectedActors = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
+	if (SelectedActors.Num() == 1)
+	{
+		if (auto WidgetActor = Cast<ALexWidgetActor>(SelectedActors[0]))
+		{
+			auto Widget = WidgetActor->GetLexWidget();
+			if (auto Visual = Widget->GetVisual())
+			{
+				auto ValueAsPathString = FString::Printf(TEXT("%s'%s'"), *Visual->GetClass()->GetPathName(), *Visual->GetPathName());
+				FPlatformApplicationMisc::ClipboardCopy(*ValueAsPathString);
+			}
+		}
+	}
+}
+
+void LGUIEditorTools::CopyReference_Layout()
+{
+	auto SelectedActors = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
+	if (SelectedActors.Num() == 1)
+	{
+		if (auto WidgetActor = Cast<ALexWidgetActor>(SelectedActors[0]))
+		{
+			auto Widget = WidgetActor->GetLexWidget();
+			if (auto Layout = Widget->GetLayout())
+			{
+				auto ValueAsPathString = FString::Printf(TEXT("%s'%s'"), *Layout->GetClass()->GetPathName(), *Layout->GetPathName());
+				FPlatformApplicationMisc::ClipboardCopy(*ValueAsPathString);
+			}
+		}
+	}
+}
+
+bool LGUIEditorTools::CanCopyComponentReference()
+{
+	auto SelectedActors = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
+	return SelectedActors.Num() == 1;
+}
+
+void LGUIEditorTools::CopyReference_Component(UActorComponent* Comp)
+{
+	auto ValueAsPathString = FString::Printf(TEXT("%s'%s'"), *Comp->GetClass()->GetPathName(), *Comp->GetPathName());
+	FPlatformApplicationMisc::ClipboardCopy(*ValueAsPathString);
+}
+
 void LGUIEditorTools::CreateScreenSpaceUI_BasicSetup()
 {
 	FString prefabPath(TEXT("/LGUI/Prefabs/ScreenSpaceUI"));

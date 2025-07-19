@@ -10,6 +10,7 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "Core/LGUISettings.h"
+#include "Core/Components/LexImage.h"
 
 #define LOCTEXT_NAMESPACE "UISelectableCustomization"
 
@@ -38,128 +39,121 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 	LGUIEditorUtils::ShowError_MultiComponentNotAllowed(&DetailBuilder, TargetScriptPtr.Get(), LOCTEXT("MultipleUISelectableComponentError", "Multiple UISelectable component in one actor is not allowed!"));
 
 	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("LGUI-Selectable");
-	auto transitionHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, Transition));
-	transitionHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
+	auto Transition_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, Transition));
+	Transition_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
 
-	auto transitionActorHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, TransitionTarget));
-	transitionActorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
+	auto TransitionTarget_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, TransitionTarget));
+	TransitionTarget_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
 
-	ULexWidget* TargetWidget = nullptr;
-	UUISprite* TargetSprite = nullptr;
-	if (auto TransitionTarget = TargetScriptPtr->TransitionTarget.Get())
-	{
-		TargetWidget = TransitionTarget->GetWidget();
-		TargetSprite = Cast<UUISprite>(TransitionTarget);
-	}
+	ULexVisual* TransitionTarget_Visual = nullptr;
+	TransitionTarget_PH->GetValue(*(UObject**)&TransitionTarget_Visual);
+	auto TransitionTarget_Image = Cast<ULexImage>(TransitionTarget_Visual);
+
 	UUISelectableTransitionComponent* TargetTweenComp = nullptr;
-	auto CustomTransition_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, TransitionComp));
+	auto CustomTransition_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, CustomTransition));
 	CustomTransition_PH->GetValue(*(UObject**)&TargetTweenComp);
 
-	uint8 transitionType;
-	transitionHandle->GetValue(transitionType);
-	TArray<FName> needToHidePropertyNameForTransition;
-	IDetailGroup& transitionGroup = category.AddGroup(FName("Transition"), transitionHandle->GetPropertyDisplayName());
-	transitionGroup.HeaderProperty(transitionHandle);
-	if (transitionType == (uint8)(ELexUISelectableTransitionType::None))
+	uint8 TransitionType;
+	Transition_PH->GetValue(TransitionType);
+	TArray<FName> NeedToHidePropertyNamesForTransition;
+	IDetailGroup& TransitionGroup = category.AddGroup(FName("Transition"), Transition_PH->GetPropertyDisplayName());
+	TransitionGroup.HeaderProperty(Transition_PH);
+	if (TransitionType == (uint8)(ELexUISelectableTransitionType::None))
 	{
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, TransitionTarget));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, TransitionTarget));
 
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NormalColor));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, HighlightedColor));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, PressedColor));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledColor));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, FadeDuration));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NormalColor));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, HoveredColor));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, PressedColor));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledColor));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, AnimDuration));
 
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NormalSprite));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, HighlightedSprite));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, PressedSprite));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledSprite));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NormalImageBrush));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, HoveredImageBrush));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, PressedImageBrush));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledImageBrush));
+		
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, CustomTransition));
 	}
-	else if (transitionType == (uint8)(ELexUISelectableTransitionType::ColorTint))
+	else if (TransitionType == (uint8)(ELexUISelectableTransitionType::Color))
 	{
-		transitionGroup.AddPropertyRow(transitionActorHandle);
-		if (!TargetWidget)
+		TransitionGroup.AddPropertyRow(TransitionTarget_PH);
+		if (!TransitionTarget_Visual)
 		{
-			transitionGroup.AddWidgetRow()
+			TransitionGroup.AddWidgetRow()
 				.ValueContent()
 				.MinDesiredWidth(500)
 				[
 					SNew(STextBlock)
 					.AutoWrapText(true)
-					.Text(LOCTEXT("TransitionActor_ColorTint_Tip", "If use ColorTint, Target must be a UIBaseRenderable Actor (UISprite, UITexture, UIText)"))
+					.Text(LOCTEXT("TransitionActor_Color_Tip", "If use Color transition, Target must be a LexVisual"))
 					.ColorAndOpacity(FLinearColor(FColor::Red))
 					.Font(IDetailLayoutBuilder::GetDetailFont())
 				];
 		}
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NormalSprite));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, HighlightedSprite));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, PressedSprite));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledSprite));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NormalImageBrush));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, HoveredImageBrush));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, PressedImageBrush));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledImageBrush));
 
-		transitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NormalColor)));
-		transitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, HighlightedColor)));
-		transitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, PressedColor)));
-		transitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledColor)));
-		transitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, FadeDuration)));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, CustomTransition));
+
+		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NormalColor)));
+		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, HoveredColor)));
+		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, PressedColor)));
+		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledColor)));
+		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, AnimDuration)));
 	}
-	else if (transitionType == (uint8)(ELexUISelectableTransitionType::SpriteSwap))
+	else if (TransitionType == (uint8)(ELexUISelectableTransitionType::ImageBrush))
 	{
-		transitionGroup.AddPropertyRow(transitionActorHandle);
-		if (!TargetSprite)
+		TransitionGroup.AddPropertyRow(TransitionTarget_PH);
+		if (!TransitionTarget_Image)
 		{
-			transitionGroup.AddWidgetRow()
+			TransitionGroup.AddWidgetRow()
 				.ValueContent()
 				.MinDesiredWidth(500)
 				[
 					SNew(STextBlock)
 					.AutoWrapText(true)
-					.Text(LOCTEXT("TransitionActor_SpriteSwap_Tip", "If use SpriteSwap, Target must be a UISprite Actor"))
+					.Text(LOCTEXT("TransitionTarget_ImageBrush_Tip", "If use ImageBrush, Target must be a LexImage"))
 					.ColorAndOpacity(FLinearColor(FColor::Red))
 					.Font(IDetailLayoutBuilder::GetDetailFont())
 				];
 		}
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NormalColor));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, HighlightedColor));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, PressedColor));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledColor));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, FadeDuration));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NormalColor));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, HoveredColor));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, PressedColor));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledColor));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, AnimDuration));
 
-		transitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NormalSprite)));
-		transitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, HighlightedSprite)));
-		transitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, PressedSprite)));
-		transitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledSprite)));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, CustomTransition));
+		
+		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NormalImageBrush)));
+		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, HoveredImageBrush)));
+		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, PressedImageBrush)));
+		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledImageBrush)));
 	}
-	else if (transitionType == (uint8)(ELexUISelectableTransitionType::TransitionComponent))
+	else if (TransitionType == (uint8)(ELexUISelectableTransitionType::Custom))
 	{
-		if (!TargetTweenComp)
-		{
-			transitionGroup.AddWidgetRow()
-				.ValueContent()
-				.MinDesiredWidth(500)
-				[
-					SNew(STextBlock)
-					.AutoWrapText(true)
-					.Text(LOCTEXT("TransitionActor_TransitionComponent_Tip", "If use TransitionComponent, This actor must have UISelectableTransitionComponent"))
-					.ColorAndOpacity(FLinearColor(FColor::Red))
-					.Font(IDetailLayoutBuilder::GetDetailFont())
-				];
-		}
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, TransitionTarget));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, TransitionTarget));
 
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NormalColor));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, HighlightedColor));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, PressedColor));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledColor));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, FadeDuration));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NormalColor));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, HoveredColor));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, PressedColor));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledColor));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, AnimDuration));
 
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NormalSprite));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, HighlightedSprite));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, PressedSprite));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledSprite));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NormalImageBrush));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, HoveredImageBrush));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, PressedImageBrush));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledImageBrush));
+
+		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, CustomTransition)));
 	}
 
 	IDetailCategoryBuilder& NavigationCategory = DetailBuilder.EditCategory("LGUI-Selectable-Navigation");
-
+	NavigationCategory.AddProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, bCanNavigateHere));
+	
 	auto navigationLeftHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationLeft));
 	auto navigationRightHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationRight));
 	auto navigationUpHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationUp));
@@ -167,58 +161,57 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 	auto navigationPrevHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationPrev));
 	auto navigationNextHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationNext));
 	
-	uint8 tempEnumValue;
-	navigationLeftHandle->GetValue(tempEnumValue);
+	ELexUISelectableNavigationMode tempEnumValue;
+	navigationLeftHandle->GetValue(*(uint8*)&tempEnumValue);
 	navigationLeftHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
-	auto navigationLeftValue = (EUISelectableNavigationMode)tempEnumValue;
-	navigationRightHandle->GetValue(tempEnumValue);
+	auto navigationLeftValue = tempEnumValue;
+	navigationRightHandle->GetValue(*(uint8*)&tempEnumValue);
 	navigationRightHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
-	auto navigationRightValue = (EUISelectableNavigationMode)tempEnumValue;
-	navigationUpHandle->GetValue(tempEnumValue);
+	auto navigationRightValue = tempEnumValue;
+	navigationUpHandle->GetValue(*(uint8*)&tempEnumValue);
 	navigationUpHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
-	auto navigationUpValue = (EUISelectableNavigationMode)tempEnumValue;
-	navigationDownHandle->GetValue(tempEnumValue);
+	auto navigationUpValue = tempEnumValue;
+	navigationDownHandle->GetValue(*(uint8*)&tempEnumValue);
 	navigationDownHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
-	auto navigationDownValue = (EUISelectableNavigationMode)tempEnumValue;
+	auto navigationDownValue = tempEnumValue;
 
 	NavigationCategory.AddProperty(navigationLeftHandle);
-	if (navigationLeftValue == EUISelectableNavigationMode::Explicit)
+	if (navigationLeftValue == ELexUISelectableNavigationMode::Explicit)
 	{
 		LGUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationLeftSpecific)));
 	}
 	NavigationCategory.AddProperty(navigationRightHandle);
-	if (navigationRightValue == EUISelectableNavigationMode::Explicit)
+	if (navigationRightValue == ELexUISelectableNavigationMode::Explicit)
 	{
 		LGUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationRightSpecific)));
 	}
 	NavigationCategory.AddProperty(navigationUpHandle);
-	if (navigationUpValue == EUISelectableNavigationMode::Explicit)
+	if (navigationUpValue == ELexUISelectableNavigationMode::Explicit)
 	{
 		LGUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationUpSpecific)));
 	}
 	NavigationCategory.AddProperty(navigationDownHandle);
-	if (navigationDownValue == EUISelectableNavigationMode::Explicit)
+	if (navigationDownValue == ELexUISelectableNavigationMode::Explicit)
 	{
 		LGUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationDownSpecific)));
 	}
 
-	navigationNextHandle->GetValue(tempEnumValue);
+	navigationNextHandle->GetValue(*(uint8*)&tempEnumValue);
 	navigationNextHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
-	auto navigationNextValue = (EUISelectableNavigationMode)tempEnumValue;
-	navigationPrevHandle->GetValue(tempEnumValue);
+	auto navigationNextValue = (ELexUISelectableNavigationMode)tempEnumValue;
+	navigationPrevHandle->GetValue(*(uint8*)&tempEnumValue);
 	navigationPrevHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
-	auto navigationPrevValue = (EUISelectableNavigationMode)tempEnumValue;
+	auto navigationPrevValue = (ELexUISelectableNavigationMode)tempEnumValue;
 	NavigationCategory.AddProperty(navigationPrevHandle);
-	if (navigationPrevValue == EUISelectableNavigationMode::Explicit)
+	if (navigationPrevValue == ELexUISelectableNavigationMode::Explicit)
 	{
 		LGUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationPrevSpecific)));
 	}
 	NavigationCategory.AddProperty(navigationNextHandle);
-	if (navigationNextValue == EUISelectableNavigationMode::Explicit)
+	if (navigationNextValue == ELexUISelectableNavigationMode::Explicit)
 	{
 		LGUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationNextSpecific)));
 	}
-	NavigationCategory.AddProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, bCanNavigateHere));
 	NavigationCategory.AddCustomRow(LOCTEXT("VisualizeNavigation", "VisualizeNavigation"))
 		.NameContent()
 		[
@@ -243,32 +236,32 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		]
 	;
 	
-	if (navigationLeftValue != EUISelectableNavigationMode::Explicit)
+	if (navigationLeftValue != ELexUISelectableNavigationMode::Explicit)
 	{
-		needToHidePropertyNameForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationLeftSpecific)));
+		NeedToHidePropertyNamesForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationLeftSpecific)));
 	}
-	if (navigationRightValue != EUISelectableNavigationMode::Explicit)
+	if (navigationRightValue != ELexUISelectableNavigationMode::Explicit)
 	{
-		needToHidePropertyNameForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationRightSpecific)));
+		NeedToHidePropertyNamesForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationRightSpecific)));
 	}
-	if (navigationUpValue != EUISelectableNavigationMode::Explicit)
+	if (navigationUpValue != ELexUISelectableNavigationMode::Explicit)
 	{
-		needToHidePropertyNameForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationUpSpecific)));
+		NeedToHidePropertyNamesForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationUpSpecific)));
 	}
-	if (navigationDownValue != EUISelectableNavigationMode::Explicit)
+	if (navigationDownValue != ELexUISelectableNavigationMode::Explicit)
 	{
-		needToHidePropertyNameForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationDownSpecific)));
+		NeedToHidePropertyNamesForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationDownSpecific)));
 	}
-	if (navigationNextValue != EUISelectableNavigationMode::Explicit)
+	if (navigationNextValue != ELexUISelectableNavigationMode::Explicit)
 	{
-		needToHidePropertyNameForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationNextSpecific)));
+		NeedToHidePropertyNamesForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationNextSpecific)));
 	}
-	if (navigationPrevValue != EUISelectableNavigationMode::Explicit)
+	if (navigationPrevValue != ELexUISelectableNavigationMode::Explicit)
 	{
-		needToHidePropertyNameForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationPrevSpecific)));
+		NeedToHidePropertyNamesForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationPrevSpecific)));
 	}
 	
-	for (auto item : needToHidePropertyNameForTransition)
+	for (auto item : NeedToHidePropertyNamesForTransition)
 	{
 		DetailBuilder.HideProperty(item);
 	}

@@ -5,7 +5,7 @@
 #include "Core/LexUIClipData.h"
 #include "Core/Components/LexCanvas.h"
 #include "Utils/LexUIUtils.h"
-#include "GeometryModifier/LexUIMeshModifierBase.h"
+#include "GeometryModifier/LexVisualBatchMeshModifierBase.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Core/LexUIDrawCall.h"
 #include "Core/LGUIManager.h"

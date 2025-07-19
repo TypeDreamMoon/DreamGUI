@@ -5,7 +5,7 @@
 #include "Core/LexUIGeometry.h"
 #include "Core/Components/LexVisualBatchMesh.h"
 #include "Components/ActorComponent.h"
-#include "LexUIMeshModifierBase.generated.h"
+#include "LexVisualBatchMeshModifierBase.generated.h"
 
 class ULexVisualBatchMesh;
 class ULexText;
@@ -20,7 +20,7 @@ enum class ELexUIMeshModifierHelper_UITextModifyPositionType:uint8
 };
 /** a helper class for UIGeometryModifierBase to easily modify ui geometry */
 UCLASS(BlueprintType)
-class LGUI_API ULexUIMeshModifierHelper : public ULexUIGeometryHelper
+class LGUI_API ULexVisualBatchMeshModifierHelper : public ULexUIGeometryHelper
 {
 	GENERATED_BODY()
 public:
@@ -66,12 +66,12 @@ public:
  * Need UIBatchMeshRenderable component.
  */
 UCLASS(Abstract, BlueprintType, DefaultToInstanced, EditInlineNew)
-class LGUI_API ULexUIMeshModifierBase : public UObject
+class LGUI_API ULexVisualBatchMeshModifierBase : public UObject
 {
 	GENERATED_BODY()
 
 public:	
-	ULexUIMeshModifierBase();
+	ULexVisualBatchMeshModifierBase();
 
 protected:
 	friend class ULexVisualBatchMesh;
@@ -118,10 +118,10 @@ public:
 		OutColor = true;
 	}
 protected:
-	UPROPERTY(Transient) TObjectPtr<ULexUIMeshModifierHelper> GeometryModifierHelper = nullptr;
+	UPROPERTY(Transient) TObjectPtr<ULexVisualBatchMeshModifierHelper> GeometryModifierHelper = nullptr;
 	/**
 	 * Modify UI geometry's vertex and triangle.
 	 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI", meta = (DisplayName = "ModifyUIGeometry"))
-		void ReceiveModifyUIGeometry(ULexUIMeshModifierHelper* InGeometryModifierHelper);
+		void ReceiveModifyUIGeometry(ULexVisualBatchMeshModifierHelper* InGeometryModifierHelper);
 };

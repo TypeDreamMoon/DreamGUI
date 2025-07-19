@@ -11,6 +11,7 @@
 #include "Core/Components/UISprite.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/LGUISettings.h"
+#include "Core/Components/LexImage.h"
 #if WITH_EDITOR
 #include "Utils/LexUIUtils.h"
 #endif
@@ -41,11 +42,19 @@ void UUISelectableTransitionComponent::CollectTweeners(const TSet<ULTweener*>& I
 	}
 }
 
-void UUISelectableTransitionComponent::OnInitialize()
+void UUISelectableTransitionComponent::BeginPlay()
 {
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
 	{
-		ReceiveOnInitialize();
+		ReceiveBeginPlay();
+	}
+}
+
+void UUISelectableTransitionComponent::EndPlay()
+{
+	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
+	{
+		ReceiveEndPlay();
 	}
 }
 
@@ -56,11 +65,11 @@ void UUISelectableTransitionComponent::OnNormal(bool InImmediateSet)
 		ReceiveOnNormal(InImmediateSet);
 	}
 }
-void UUISelectableTransitionComponent::OnHighlighted(bool InImmediateSet)
+void UUISelectableTransitionComponent::OnHovered(bool InImmediateSet)
 {
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
 	{
-		ReceiveOnHighlighted(InImmediateSet);
+		ReceiveOnHovered(InImmediateSet);
 	}
 }
 void UUISelectableTransitionComponent::OnPressed(bool InImmediateSet)
@@ -85,10 +94,31 @@ void UUISelectableTransitionComponent::OnStartCustomTransition(FName InTransitio
 	}
 }
 
+UUISelectableComponent::UUISelectableComponent()
+{
+	NormalColor = FColor(255, 255, 255, 255);
+	HoveredColor = FColor(200, 200, 200, 255);
+	PressedColor = FColor(150, 150, 150, 255);
+	DisabledColor = FColor(150, 150, 150, 128);
+}
+
 void UUISelectableComponent::Awake()
 {
 	Super::Awake();
 	this->SetCanExecuteUpdate(false);
+	if (IsValid(CustomTransition))
+	{
+		CustomTransition->BeginPlay();
+	}
+}
+
+void UUISelectableComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+	if (IsValid(CustomTransition))
+	{
+		CustomTransition->EndPlay();
+	}
 }
 
 void UUISelectableComponent::OnRegister()
@@ -110,52 +140,7 @@ void UUISelectableComponent::PostEditChangeProperty(FPropertyChangedEvent& Prope
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (PropertyChangedEvent.Property)
 	{
-		auto propertyName = PropertyChangedEvent.Property->GetFName();
-		if (TransitionTarget.IsValid())
-		{
-			auto TargetUISpriteComp = Cast<UUISpriteBase>(TransitionTarget);
-			if (propertyName == GET_MEMBER_NAME_CHECKED(UUISelectableComponent, TransitionTarget))
-			{
-				if (TargetUISpriteComp) NormalSprite = TargetUISpriteComp->GetSprite();
-				NormalColor = TransitionTarget->GetColor();
-			}
-			else if (propertyName == GET_MEMBER_NAME_CHECKED(UUISelectableComponent, bInteractable))
-			{
-				if (CheckRootUIComponent())
-				{
-					CurrentSelectionState = GetSelectionState();
-#if WITH_EDITOR
-					if (!this->GetWorld()->IsGameWorld())//is editor, just set properties immediately
-					{
-						ApplySelectionState(true);
-					}
-					else
-#endif
-					{
-						ApplySelectionState(false);
-					}
-				}
-			}
-			else
-			{
-				bool bIsEnabled = RootUIComp->GetFinalIsEnabled();
-				if (Transition == ELexUISelectableTransitionType::SpriteSwap)
-				{
-					if (IsValid(TargetUISpriteComp) && IsValid(NormalSprite))
-					{
-						TargetUISpriteComp->SetSprite(bIsEnabled ? NormalSprite : DisabledSprite, false);
-						FLexUIUtils::NotifyPropertyChanged(TargetUISpriteComp, UUISpriteBase::GetSpritePropertyName());
-					}
-					TransitionTarget->GetWidget()->EditorForceUpdate();
-				}
-				else if (Transition == ELexUISelectableTransitionType::ColorTint)
-				{
-					TransitionTarget->SetColor(bIsEnabled ? NormalColor : DisabledColor);
-					FLexUIUtils::NotifyPropertyChanged(TransitionTarget.Get(), ULexVisual::GetColorPropertyName());
-					TransitionTarget->GetWidget()->EditorForceUpdate();
-				}
-			}
-		}
+		ApplySelectionState(true);
 	}
 }
 #endif
@@ -179,35 +164,201 @@ void UUISelectableComponent::OnIsEnabledChanged(bool IsEnabled)
 	}
 }
 
-void UUISelectableComponent::ApplySelectionState(bool immediateSet)
+void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 {
-	if (Transition != ELexUISelectableTransitionType::TransitionComponent)
+	if (Transition != ELexUISelectableTransitionType::Custom)
 	{
 		if (!TransitionTarget.IsValid())return;
 	}
 
+	TOptional<FColor> Color;
+	TOptional<FLexUIImageBrush> Brush;
 	switch (CurrentSelectionState)
 	{
-	case EUISelectableSelectionState::Normal:
-	{
-		switch (Transition)
+	case ELexUISelectableSelectionState::Normal:
 		{
-		case ELexUISelectableTransitionType::ColorTint:
-		{
-			if(FadeDuration <= 0.0f || immediateSet)
+			switch (Transition)
 			{
-				TransitionTarget->SetColor(NormalColor);
+			case ELexUISelectableTransitionType::None:break;
+			case ELexUISelectableTransitionType::Color:
+				{
+					Color = NormalColor;
+				}
+				break;
+			case ELexUISelectableTransitionType::ImageBrush:
+				{
+					Brush = NormalImageBrush;
+				}
+				break;
+			case ELexUISelectableTransitionType::Custom:
+				{
+#if WITH_EDITOR
+					if (this->GetWorld() && this->GetWorld()->IsGameWorld())
+#endif
+					{
+						if (IsValid(CustomTransition))
+						{
+							CustomTransition->OnNormal(ImmediateSet);
+						}
+					}
+				}
+				break;
+			}
+		}
+		break;
+	case ELexUISelectableSelectionState::Hovered:
+		{
+			switch (Transition)
+			{
+			case ELexUISelectableTransitionType::None:break;
+			case ELexUISelectableTransitionType::Color:
+				{
+					Color = HoveredColor;
+				}
+				break;
+			case ELexUISelectableTransitionType::ImageBrush:
+				{
+					Brush = HoveredImageBrush;
+				}
+				break;
+			case ELexUISelectableTransitionType::Custom:
+				{
+#if WITH_EDITOR
+					if (this->GetWorld() && this->GetWorld()->IsGameWorld())
+#endif
+					{
+						if (IsValid(CustomTransition))
+						{
+							CustomTransition->OnHovered(ImmediateSet);
+						}
+					}
+				}
+				break;
+			}
+		}
+		break;
+	case ELexUISelectableSelectionState::Pressed:
+		{
+			switch (Transition)
+			{
+			case ELexUISelectableTransitionType::None:break;
+			case ELexUISelectableTransitionType::Color:
+				{
+					Color = PressedColor;
+				}
+				break;
+			case ELexUISelectableTransitionType::ImageBrush:
+				{
+					Brush = PressedImageBrush;
+				}
+				break;
+			case ELexUISelectableTransitionType::Custom:
+				{
+#if WITH_EDITOR
+					if (this->GetWorld() && this->GetWorld()->IsGameWorld())
+#endif
+					{
+						if (IsValid(CustomTransition))
+						{
+							CustomTransition->OnPressed(ImmediateSet);
+						}
+					}
+				}
+				break;
+			}
+		}
+		break;
+	case ELexUISelectableSelectionState::Disabled:
+		{
+			switch (Transition)
+			{
+			case ELexUISelectableTransitionType::None:break;
+			case ELexUISelectableTransitionType::Color:
+				{
+					Color = DisabledColor;
+				}
+				break;
+			case ELexUISelectableTransitionType::ImageBrush:
+				{
+					Brush =  DisabledImageBrush;
+				}
+				break;
+			case ELexUISelectableTransitionType::Custom:
+				{
+#if WITH_EDITOR
+					if (this->GetWorld() && this->GetWorld()->IsGameWorld())
+#endif
+					{
+						if (IsValid(CustomTransition))
+						{
+							CustomTransition->OnDisabled(ImmediateSet);
+						}
+					}
+				}
+				break;
+			}
+		}
+		break;
+	}
+
+	if (Color.IsSet())
+	{
+		if (AnimDuration <= 0.0f || ImmediateSet)
+		{
+			TransitionTarget->SetColor(Color.GetValue());
+		}
+		else
+		{
+			if (ULTweenManager::IsTweening(this, TransitionTweener))TransitionTweener->Kill();
+			TransitionTweener = ULTweenManager::To(TransitionTarget.Get()
+				, FLTweenColorGetterFunction::CreateWeakLambda(TransitionTarget.Get(), [=, this]()
+			{
+				return TransitionTarget->GetColor();
+			}), FLTweenColorSetterFunction::CreateUObject(TransitionTarget.Get(), &ULexVisual::SetColor), Color.GetValue(), AnimDuration);
+			if (TransitionTweener)
+			{
+				bool bAffectByGamePause = false;
+				bool bAffectByTimeDilation = false;
+				if (this->GetRootUIComponent()->IsScreenSpaceOverlayUI())
+				{
+					bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
+					bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
+				}
+				else
+				{
+					bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
+					bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
+				}
+				TransitionTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
+			}
+		}
+	}
+	if (Brush.IsSet())
+	{
+		if (auto TransitionTargetAsLexImage = Cast<ULexImage>(TransitionTarget.Get()))
+		{
+			if (IsValid(Brush.GetValue().GetResourceObject()))
+			{
+				TransitionTargetAsLexImage->SetBrush(Brush.GetValue());
 			}
 			else
 			{
-				if (ULTweenManager::IsTweening(this, TransitionTweener))TransitionTweener->Kill();
-				TransitionTweener = ULTweenManager::To(TransitionTarget.Get(), FLTweenColorGetterFunction::CreateUObject(TransitionTarget.Get(), &ULexVisual::GetColor), FLTweenColorSetterFunction::CreateUObject(TransitionTarget.Get(), &ULexVisual::SetColor), NormalColor, FadeDuration);
-				if (TransitionTweener)
+				if (AnimDuration <= 0.0f || ImmediateSet)
 				{
-					bool bAffectByGamePause = false;
-					bool bAffectByTimeDilation = false;
-					if (this->GetRootUIComponent())
+					TransitionTargetAsLexImage->SetBrushTintColor(Brush.GetValue().TintColor);
+				}
+				else
+				{
+					if (ULTweenManager::IsTweening(this, TransitionTweener))TransitionTweener->Kill();
+					TransitionTweener = ULTweenManager::To(TransitionTargetAsLexImage
+						, FLTweenColorGetterFunction::CreateWeakLambda(TransitionTargetAsLexImage, [=, this]()
 					{
+						return TransitionTargetAsLexImage->GetBrush().TintColor;
+					}), FLTweenColorSetterFunction::CreateUObject(TransitionTargetAsLexImage, &ULexImage::SetBrushTintColor), Brush.GetValue().TintColor, AnimDuration);
+					if (TransitionTweener)
+					{
+						bool bAffectByGamePause = false;
+						bool bAffectByTimeDilation = false;
 						if (this->GetRootUIComponent()->IsScreenSpaceOverlayUI())
 						{
 							bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
@@ -218,225 +369,11 @@ void UUISelectableComponent::ApplySelectionState(bool immediateSet)
 							bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
 							bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
 						}
+						TransitionTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
 					}
-					TransitionTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
 				}
 			}
 		}
-		break;
-		case ELexUISelectableTransitionType::SpriteSwap:
-		{
-			if (auto TargetUISpriteComp = Cast<UUISpriteBase>(TransitionTarget))
-			{
-				TargetUISpriteComp->SetSprite(NormalSprite, false);
-			}
-		}
-		break;
-		case ELexUISelectableTransitionType::TransitionComponent:
-		{
-#if WITH_EDITOR
-			if (this->GetWorld()->IsGameWorld())
-#endif
-			{
-				if (IsValid(TransitionComp))
-				{
-					TransitionComp->OnNormal(immediateSet);
-				}
-			}
-		}
-		break;
-		}
-	}
-	break;
-	case EUISelectableSelectionState::Highlighted:
-	{
-		switch (Transition)
-		{
-		case ELexUISelectableTransitionType::ColorTint:
-		{
-			if (FadeDuration <= 0.0f || immediateSet)
-			{
-				TransitionTarget->SetColor(HighlightedColor);
-			}
-			else
-			{
-				if (ULTweenManager::IsTweening(this, TransitionTweener))TransitionTweener->Kill();
-				TransitionTweener = ULTweenManager::To(TransitionTarget.Get(), FLTweenColorGetterFunction::CreateUObject(TransitionTarget.Get(), &ULexVisual::GetColor), FLTweenColorSetterFunction::CreateUObject(TransitionTarget.Get(), &ULexVisual::SetColor), HighlightedColor, FadeDuration);
-				if (TransitionTweener)
-				{
-					bool bAffectByGamePause = false;
-					bool bAffectByTimeDilation = false;
-					if (this->GetRootUIComponent())
-					{
-						if (this->GetRootUIComponent()->IsScreenSpaceOverlayUI())
-						{
-							bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
-							bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-						}
-						else
-						{
-							bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
-							bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-						}
-					}
-					TransitionTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
-				}
-			}
-		}
-		break;
-		case ELexUISelectableTransitionType::SpriteSwap:
-		{
-			if (auto TargetUISpriteComp = Cast<UUISpriteBase>(TransitionTarget))
-			{
-				if (IsValid(HighlightedSprite))
-				{
-					TargetUISpriteComp->SetSprite(HighlightedSprite, false);
-				}
-			}
-		}
-		break;
-		case ELexUISelectableTransitionType::TransitionComponent:
-		{
-#if WITH_EDITOR
-			if (this->GetWorld()->IsGameWorld())
-#endif
-			{
-				if (IsValid(TransitionComp))
-				{
-					TransitionComp->OnHighlighted(immediateSet);
-				}
-			}
-		}
-		break;
-		}
-	}
-	break;
-	case EUISelectableSelectionState::Pressed:
-	{
-		switch (Transition)
-		{
-		case ELexUISelectableTransitionType::ColorTint:
-		{
-			if (FadeDuration <= 0.0f || immediateSet)
-			{
-				TransitionTarget->SetColor(PressedColor);
-			}
-			else
-			{
-				if (ULTweenManager::IsTweening(this, TransitionTweener))TransitionTweener->Kill();
-				TransitionTweener = ULTweenManager::To(TransitionTarget.Get(), FLTweenColorGetterFunction::CreateUObject(TransitionTarget.Get(), &ULexVisual::GetColor), FLTweenColorSetterFunction::CreateUObject(TransitionTarget.Get(), &ULexVisual::SetColor), PressedColor, FadeDuration);
-				if (TransitionTweener)
-				{
-					bool bAffectByGamePause = false;
-					bool bAffectByTimeDilation = false;
-					if (this->GetRootUIComponent())
-					{
-						if (this->GetRootUIComponent()->IsScreenSpaceOverlayUI())
-						{
-							bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
-							bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-						}
-						else
-						{
-							bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
-							bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-						}
-					}
-					TransitionTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
-				}
-			}
-		}
-		break;
-		case ELexUISelectableTransitionType::SpriteSwap:
-		{
-			if (auto TargetUISpriteComp = Cast<UUISpriteBase>(TransitionTarget))
-			{
-				if (IsValid(PressedSprite))
-				{
-					TargetUISpriteComp->SetSprite(PressedSprite, false);
-				}
-			}
-		}
-		break;
-		case ELexUISelectableTransitionType::TransitionComponent:
-		{
-#if WITH_EDITOR
-			if (this->GetWorld()->IsGameWorld())
-#endif
-			{
-				if (IsValid(TransitionComp))
-				{
-					TransitionComp->OnPressed(immediateSet);
-				}
-			}
-		}
-		break;
-		}
-	}
-	break;
-	case EUISelectableSelectionState::Disabled:
-	{
-		switch (Transition)
-		{
-		case ELexUISelectableTransitionType::ColorTint:
-		{
-			if (FadeDuration <= 0.0f || immediateSet)
-			{
-				TransitionTarget->SetColor(DisabledColor);
-			}
-			else
-			{
-				if (ULTweenManager::IsTweening(this, TransitionTweener))TransitionTweener->Kill();
-				TransitionTweener = ULTweenManager::To(TransitionTarget.Get(), FLTweenColorGetterFunction::CreateUObject(TransitionTarget.Get(), &ULexVisual::GetColor), FLTweenColorSetterFunction::CreateUObject(TransitionTarget.Get(), &ULexVisual::SetColor), DisabledColor, FadeDuration);
-				if (TransitionTweener)
-				{
-					bool bAffectByGamePause = false;
-					bool bAffectByTimeDilation = false;
-					if (this->GetRootUIComponent())
-					{
-						if (this->GetRootUIComponent()->IsScreenSpaceOverlayUI())
-						{
-							bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
-							bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-						}
-						else
-						{
-							bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
-							bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-						}
-					}
-					TransitionTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
-				}
-			}
-		}
-		break;
-		case ELexUISelectableTransitionType::SpriteSwap:
-		{
-			if (auto TargetUISpriteComp = Cast<UUISpriteBase>(TransitionTarget))
-			{
-				if (IsValid(DisabledSprite))
-				{
-					TargetUISpriteComp->SetSprite(DisabledSprite, false);
-				}
-			}
-		}
-		break;
-		case ELexUISelectableTransitionType::TransitionComponent:
-		{
-#if WITH_EDITOR
-			if (this->GetWorld()->IsGameWorld())
-#endif
-			{
-				if (IsValid(TransitionComp))
-				{
-					TransitionComp->OnDisabled(immediateSet);
-				}
-			}
-		}
-		break;
-		}
-	}
-	break;
 	}
 }
 
@@ -481,15 +418,15 @@ bool UUISelectableComponent::OnPointerDeselect_Implementation(ULGUIBaseEventData
 	return AllowEventBubbleUp;
 }
 
-EUISelectableSelectionState UUISelectableComponent::GetSelectionState()const
+ELexUISelectableSelectionState UUISelectableComponent::GetSelectionState()const
 {
 	if (!IsInteractable())
-		return EUISelectableSelectionState::Disabled;
+		return ELexUISelectableSelectionState::Disabled;
 	if (IsPointerDown)
-		return EUISelectableSelectionState::Pressed;
+		return ELexUISelectableSelectionState::Pressed;
 	if (IsPointerInsideThis)
-		return EUISelectableSelectionState::Highlighted;
-	return EUISelectableSelectionState::Normal;
+		return ELexUISelectableSelectionState::Hovered;
+	return ELexUISelectableSelectionState::Normal;
 }
 
 void UUISelectableComponent::SetTransitionTarget(ULexVisual* value)
@@ -500,95 +437,71 @@ void UUISelectableComponent::SetTransitionTarget(ULexVisual* value)
 		ApplySelectionState(false);
 	}
 }
-void UUISelectableComponent::SetNormalSprite(ULexUISpriteData_BaseObject* NewSprite)
+void UUISelectableComponent::SetNormalColor(FColor Value)
 {
-	if (NormalSprite != NewSprite)
+	NormalColor = Value;
+	if (CurrentSelectionState == ELexUISelectableSelectionState::Normal)
 	{
-		NormalSprite = NewSprite;
-		if (CurrentSelectionState == EUISelectableSelectionState::Normal)
-		{
-			ApplySelectionState(false);
-		}
+		ApplySelectionState(false);
 	}
 }
-void UUISelectableComponent::SetNormalColor(FColor NewColor)
+void UUISelectableComponent::SetHoveredColor(FColor Value)
 {
-	if (NormalColor != NewColor)
+	HoveredColor = Value;
+	if (CurrentSelectionState == ELexUISelectableSelectionState::Hovered)
 	{
-		NormalColor = NewColor;
-		if (CurrentSelectionState == EUISelectableSelectionState::Normal)
-		{
-			ApplySelectionState(false);
-		}
+		ApplySelectionState(false);
 	}
 }
-void UUISelectableComponent::SetHighlightedSprite(ULexUISpriteData_BaseObject* NewSprite)
+void UUISelectableComponent::SetPressedColor(FColor Value)
 {
-	if (HighlightedSprite != NewSprite)
+	PressedColor = Value;
+	if (CurrentSelectionState == ELexUISelectableSelectionState::Pressed)
 	{
-		HighlightedSprite = NewSprite;
-		if (CurrentSelectionState == EUISelectableSelectionState::Highlighted)
-		{
-			ApplySelectionState(false);
-		}
+		ApplySelectionState(false);
 	}
 }
-void UUISelectableComponent::SetHighlightedColor(FColor NewColor)
+void UUISelectableComponent::SetDisabledColor(FColor Value)
 {
-	if (HighlightedColor != NewColor)
+	DisabledColor = Value;
+	if (CurrentSelectionState == ELexUISelectableSelectionState::Disabled)
 	{
-		HighlightedColor = NewColor;
-		if (CurrentSelectionState == EUISelectableSelectionState::Highlighted)
-		{
-			ApplySelectionState(false);
-		}
+		ApplySelectionState(false);
 	}
 }
-void UUISelectableComponent::SetPressedSprite(ULexUISpriteData_BaseObject* NewSprite)
+void UUISelectableComponent::SetNormalImageBrush(const FLexUIImageBrush& Value)
 {
-	if (PressedSprite != NewSprite)
+	NormalImageBrush = Value;
+	if (CurrentSelectionState == ELexUISelectableSelectionState::Normal)
 	{
-		PressedSprite = NewSprite;
-		if (CurrentSelectionState == EUISelectableSelectionState::Pressed)
-		{
-			ApplySelectionState(false);
-		}
+		ApplySelectionState(false);
 	}
 }
-void UUISelectableComponent::SetPressedColor(FColor NewColor)
+void UUISelectableComponent::SetHoveredImageBrush(const FLexUIImageBrush& Value)
 {
-	if (PressedColor != NewColor)
+	HoveredImageBrush = Value;
+	if (CurrentSelectionState == ELexUISelectableSelectionState::Hovered)
 	{
-		PressedColor = NewColor;
-		if (CurrentSelectionState == EUISelectableSelectionState::Pressed)
-		{
-			ApplySelectionState(false);
-		}
+		ApplySelectionState(false);
 	}
 }
-void UUISelectableComponent::SetDisabledSprite(ULexUISpriteData_BaseObject* NewSprite)
+void UUISelectableComponent::SetPressedImageBrush(const FLexUIImageBrush& Value)
 {
-	if (DisabledSprite != NewSprite)
+	PressedImageBrush = Value;
+	if (CurrentSelectionState == ELexUISelectableSelectionState::Pressed)
 	{
-		DisabledSprite = NewSprite;
-		if (CurrentSelectionState == EUISelectableSelectionState::Disabled)
-		{
-			ApplySelectionState(false);
-		}
+		ApplySelectionState(false);
 	}
 }
-void UUISelectableComponent::SetDisabledColor(FColor NewColor)
+void UUISelectableComponent::SetDisabledImageBrush(const FLexUIImageBrush& Value)
 {
-	if (DisabledColor != NewColor)
+	DisabledImageBrush = Value;
+	if (CurrentSelectionState == ELexUISelectableSelectionState::Disabled)
 	{
-		DisabledColor = NewColor;
-		if (CurrentSelectionState == EUISelectableSelectionState::Disabled)
-		{
-			ApplySelectionState(false);
-		}
+		ApplySelectionState(false);
 	}
 }
-void UUISelectableComponent::SetSelectionState(EUISelectableSelectionState NewState)
+void UUISelectableComponent::SetSelectionState(ELexUISelectableSelectionState NewState)
 {
 	if (CurrentSelectionState != NewState)
 	{
@@ -775,9 +688,9 @@ UUISelectableComponent* UUISelectableComponent::FindDefaultSelectable(UObject* W
 				auto OriginNavigationLeftMode = Selectable->NavigationLeft;
 				auto OriginNavigationUpMode = Selectable->NavigationUp;
 				auto OriginNavigationPrevMode = Selectable->NavigationPrev;
-				Selectable->NavigationLeft = EUISelectableNavigationMode::Auto;
-				Selectable->NavigationUp = EUISelectableNavigationMode::Auto;
-				Selectable->NavigationPrev = EUISelectableNavigationMode::Auto;
+				Selectable->NavigationLeft = ELexUISelectableNavigationMode::Auto;
+				Selectable->NavigationUp = ELexUISelectableNavigationMode::Auto;
+				Selectable->NavigationPrev = ELexUISelectableNavigationMode::Auto;
 
 				auto PrevSelectable = Selectable->FindSelectableOnPrev();
 
@@ -805,11 +718,11 @@ UUISelectableComponent* UUISelectableComponent::FindDefaultSelectable(UObject* W
 }
 UUISelectableComponent* UUISelectableComponent::FindSelectableOnLeft()
 {
-	if (NavigationLeft == EUISelectableNavigationMode::Explicit)
+	if (NavigationLeft == ELexUISelectableNavigationMode::Explicit)
 	{
 		return NavigationLeftSpecific.GetComponent<UUISelectableComponent>();
 	}
-	if (NavigationLeft == EUISelectableNavigationMode::Auto)
+	if (NavigationLeft == ELexUISelectableNavigationMode::Auto)
 	{
 		return FindSelectable(-GetRootSceneComponent()->GetRightVector());
 	}
@@ -817,11 +730,11 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnLeft()
 }
 UUISelectableComponent* UUISelectableComponent::FindSelectableOnRight()
 {
-	if (NavigationRight == EUISelectableNavigationMode::Explicit)
+	if (NavigationRight == ELexUISelectableNavigationMode::Explicit)
 	{
 		return NavigationRightSpecific.GetComponent<UUISelectableComponent>();
 	}
-	if (NavigationRight == EUISelectableNavigationMode::Auto)
+	if (NavigationRight == ELexUISelectableNavigationMode::Auto)
 	{
 		return FindSelectable(GetRootSceneComponent()->GetRightVector());
 	}
@@ -829,11 +742,11 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnRight()
 }
 UUISelectableComponent* UUISelectableComponent::FindSelectableOnUp()
 {
-	if (NavigationUp == EUISelectableNavigationMode::Explicit)
+	if (NavigationUp == ELexUISelectableNavigationMode::Explicit)
 	{
 		return NavigationUpSpecific.GetComponent<UUISelectableComponent>();
 	}
-	if (NavigationUp == EUISelectableNavigationMode::Auto)
+	if (NavigationUp == ELexUISelectableNavigationMode::Auto)
 	{
 		return FindSelectable(GetRootSceneComponent()->GetUpVector());
 	}
@@ -841,11 +754,11 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnUp()
 }
 UUISelectableComponent* UUISelectableComponent::FindSelectableOnDown()
 {
-	if (NavigationDown == EUISelectableNavigationMode::Explicit)
+	if (NavigationDown == ELexUISelectableNavigationMode::Explicit)
 	{
 		return NavigationDownSpecific.GetComponent<UUISelectableComponent>();
 	}
-	if (NavigationDown == EUISelectableNavigationMode::Auto)
+	if (NavigationDown == ELexUISelectableNavigationMode::Auto)
 	{
 		return FindSelectable(-GetRootSceneComponent()->GetUpVector());
 	}
@@ -853,11 +766,11 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnDown()
 }
 UUISelectableComponent* UUISelectableComponent::FindSelectableOnNext()
 {
-	if (NavigationNext == EUISelectableNavigationMode::Explicit && NavigationNextSpecific.IsValidComponentReference())
+	if (NavigationNext == ELexUISelectableNavigationMode::Explicit && NavigationNextSpecific.IsValidComponentReference())
 	{
 		return NavigationNextSpecific.GetComponent<UUISelectableComponent>();
 	}
-	if (NavigationNext == EUISelectableNavigationMode::Auto)
+	if (NavigationNext == ELexUISelectableNavigationMode::Auto)
 	{
 		auto rightComp = FindSelectableOnRight();
 		if (rightComp != this)
@@ -870,11 +783,11 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnNext()
 }
 UUISelectableComponent* UUISelectableComponent::FindSelectableOnPrev()
 {
-	if (NavigationPrev == EUISelectableNavigationMode::Explicit)
+	if (NavigationPrev == ELexUISelectableNavigationMode::Explicit)
 	{
 		return NavigationPrevSpecific.GetComponent<UUISelectableComponent>();
 	}
-	if (NavigationPrev == EUISelectableNavigationMode::Auto)
+	if (NavigationPrev == ELexUISelectableNavigationMode::Auto)
 	{
 		auto leftComp = FindSelectableOnLeft();
 		if (leftComp != this)
@@ -890,27 +803,27 @@ void UUISelectableComponent::SetCanNavigateHere(bool value)
 {
 	bCanNavigateHere = value;
 }
-void UUISelectableComponent::SetNavigationLeft(EUISelectableNavigationMode value)
+void UUISelectableComponent::SetNavigationLeft(ELexUISelectableNavigationMode value)
 {
 	NavigationLeft = value;
 }
-void UUISelectableComponent::SetNavigationRight(EUISelectableNavigationMode value)
+void UUISelectableComponent::SetNavigationRight(ELexUISelectableNavigationMode value)
 {
 	NavigationRight = value;
 }
-void UUISelectableComponent::SetNavigationUp(EUISelectableNavigationMode value)
+void UUISelectableComponent::SetNavigationUp(ELexUISelectableNavigationMode value)
 {
 	NavigationUp = value;
 }
-void UUISelectableComponent::SetNavigationDown(EUISelectableNavigationMode value)
+void UUISelectableComponent::SetNavigationDown(ELexUISelectableNavigationMode value)
 {
 	NavigationDown = value;
 }
-void UUISelectableComponent::SetNavigationPrev(EUISelectableNavigationMode value)
+void UUISelectableComponent::SetNavigationPrev(ELexUISelectableNavigationMode value)
 {
 	NavigationPrev = value;
 }
-void UUISelectableComponent::SetNavigationNext(EUISelectableNavigationMode value)
+void UUISelectableComponent::SetNavigationNext(ELexUISelectableNavigationMode value)
 {
 	NavigationNext = value;
 }

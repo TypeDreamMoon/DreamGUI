@@ -1,6 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Interaction/UIDropdownComponent.h"
+
+#include "LGUI.h"
 #include "Event/LGUIEventSystem.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexCanvas.h"
@@ -30,7 +32,7 @@ void UUIDropdownComponent::Awake()
 	Super::Awake();
 	if (ListRoot.IsValid())
 	{
-		ListRoot->GetLexWidget()->SetWidgetVisibility(ESlateVisibility::Collapsed);
+		ListRoot->GetLexWidget()->SetWidgetVisibility(ELexWidgetVisibility::Collapsed);
 		ListRoot->GetLexWidget()->SetRenderOpacity(0);
 		MaxHeight = ListRoot->GetLexWidget()->GetRenderHeight();
 	}
@@ -91,7 +93,7 @@ void UUIDropdownComponent::Show()
 		CreateBlocker();
 	}
 	//show list
-	ListRoot->GetLexWidget()->SetWidgetVisibility(ESlateVisibility::Visible);
+	ListRoot->GetLexWidget()->SetWidgetVisibility(ELexWidgetVisibility::Visible);
 	ShowOrHideTweener = ListRoot->GetLexWidget()->RenderOpacityTo(1, 0.3f, 0, ELTweenEase::OutCubic);
 	auto canvasOnListRoot = ListRoot->FindComponentByClass<ULexCanvas>();
 	if (!IsValid(canvasOnListRoot))
@@ -281,7 +283,7 @@ void UUIDropdownComponent::Hide()
 
 	auto ListRootUIItem = ListRoot->GetLexWidget();
 	ShowOrHideTweener = ListRootUIItem->RenderOpacityTo(0, 0.3f, 0, ELTweenEase::InCubic)->OnComplete(FSimpleDelegate::CreateWeakLambda(ListRootUIItem, [ListRootUIItem] {
-		ListRootUIItem->SetWidgetVisibility(ESlateVisibility::Collapsed);
+		ListRootUIItem->SetWidgetVisibility(ELexWidgetVisibility::Collapsed);
 		}));
 
 	if (BlockerActor.IsValid())
@@ -324,7 +326,7 @@ void UUIDropdownComponent::CreateListItems()
 		UE_LOG(LGUI, Error, TEXT("[%s]ItemTemplate must be a UIItem!"), ANSI_TO_TCHAR(__FUNCTION__));
 		return;
 	}
-	templateUIItem->SetWidgetVisibility(ESlateVisibility::Visible);
+	templateUIItem->SetWidgetVisibility(ELexWidgetVisibility::Visible);
 	auto contentUIItem = templateUIItem->GetUIParent();
 	for (int i = 0, count = Options.Num(); i < count; i++)
 	{
@@ -341,7 +343,7 @@ void UUIDropdownComponent::CreateListItems()
 		OnSetItemCustomDataFunction.ExecuteIfBound(i, script, copiedItemActor);
 		CreatedItemArray.Add(script);
 	}
-	templateUIItem->SetWidgetVisibility(ESlateVisibility::Collapsed);
+	templateUIItem->SetWidgetVisibility(ELexWidgetVisibility::Collapsed);
 	// if (auto contentLayout = contentUIItem->GetOwner()->FindComponentByClass<UUILayoutBase>())
 	// {
 	// 	contentLayout->OnRebuildLayout();
@@ -583,7 +585,7 @@ void UUIDropdownItemComponent::SetSelectionState(const bool& InSelect)
 {
 	if (Toggle.IsValidComponentReference())
 	{
-		Toggle.GetComponent<UUIToggleComponent>()->SetValue(InSelect, false);
+		Toggle.GetComponent<UUIToggleComponent>()->SetValueWithoutNotify(InSelect);
 	}
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
 	{

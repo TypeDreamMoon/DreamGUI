@@ -6,29 +6,31 @@
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexVisual.h"
 #include "Core/LGUISettings.h"
+#include "Core/Components/LexImage.h"
 
 
+UUIToggleComponent::UUIToggleComponent()
+{
+	OnColor = FColor(255, 255, 255, 255);
+	OffColor = FColor(255, 255, 255, 0);
+}
 void UUIToggleComponent::Awake()
 {
 	Super::Awake();
 	CheckTarget();
 	//check toggle group
-	if (UIToggleGroupActor.IsValid())
+	if (ToggleGroup.IsValid())
 	{
-		GroupComp = UIToggleGroupActor->FindComponentByClass<UUIToggleGroupComponent>();
-	}
-	if (GroupComp.IsValid())
-	{
-		GroupComp->AddToggleComponent(this);
+		ToggleGroup->AddToggleComponent(this);
 	}
 }
 
 void UUIToggleComponent::Start()
 {
 	Super::Start();
-	if (GroupComp.IsValid() && IsOn)
+	if (ToggleGroup.IsValid() && bIsOn)
 	{
-		GroupComp->SetSelection(this);//if default is selected, set to group
+		ToggleGroup->SetSelection(this);//if default is selected, set to group
 	}
 	ApplyValueToUI(true);
 }
@@ -36,9 +38,9 @@ void UUIToggleComponent::Start()
 void UUIToggleComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
-	if (GroupComp.IsValid())
+	if (ToggleGroup.IsValid())
 	{
-		GroupComp->RemoveToggleComponent(this);
+		ToggleGroup->RemoveToggleComponent(this);
 	}
 }
 
@@ -49,7 +51,7 @@ void UUIToggleComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 	if (auto Property = PropertyChangedEvent.MemberProperty)
 	{
 		auto PropertyName = Property->GetFName();
-		if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIToggleComponent, IsOn))
+		if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIToggleComponent, bIsOn))
 		{
 			ApplyValueToUI(true);
 		}
@@ -59,41 +61,42 @@ void UUIToggleComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 
 bool UUIToggleComponent::CheckTarget()
 {
-	if (ToggleTarget.IsValid())return true;
+	if (ToggleTransitionTarget.IsValid())return true;
 	return false;
 }
 
-void UUIToggleComponent::SetValue(bool newValue, bool fireEvent)
+void UUIToggleComponent::SetValue(bool Value, bool SendCallback)
 {
-	if (IsOn != newValue)
+	if (bIsOn != Value)
 	{
-		if (GroupComp.IsValid())
+		if (ToggleGroup.IsValid())
 		{
-			if (GroupComp->GetAllowNoneSelected() == false && GroupComp->GetSelectedItem() == this && newValue == false)//not allow none select
+			if (ToggleGroup->GetAllowNoneSelected() == false && ToggleGroup->GetSelectedItem() == this && Value == false)//not allow none select
 			{
 				return;
 			}
 		}
 
-		IsOn = newValue;
-		if (GroupComp.IsValid())
+		bIsOn = Value;
+		if (ToggleGroup.IsValid())
 		{
-			if (IsOn)
+			if (bIsOn)
 			{
-				GroupComp->SetSelection(this);
+				ToggleGroup->SetSelection(this);
 			}
 			else
 			{
-				if (GroupComp->GetSelectedItem() == this)
+				if (ToggleGroup->GetSelectedItem() == this)
 				{
-					GroupComp->ClearSelection();
+					ToggleGroup->ClearSelection();
 				}
 			}
 		}
-		if (fireEvent)
+		if (SendCallback)
 		{
-			OnToggleCPP.Broadcast(IsOn);
-			OnToggle.FireEvent(IsOn);
+			OnValueChangedCPP.Broadcast(bIsOn);
+			OnValueChangedBP.Broadcast(bIsOn);
+			OnValueChanged.FireEvent(bIsOn);
 		}
 
 		ApplyValueToUI(false);
@@ -102,24 +105,92 @@ void UUIToggleComponent::SetValue(bool newValue, bool fireEvent)
 void UUIToggleComponent::ApplyValueToUI(bool immediateSet)
 {
 	if (!CheckTarget())return;
-	if (ToggleTransition == UIToggleTransitionType::Fade)
+	if (ToggleTransition != ELexUISelectableTransitionType::Custom)
 	{
-		if (auto Visual = ToggleTarget->GetVisual())
+		if (!ToggleTransitionTarget.IsValid())return;
+	}
+
+	TOptional<FColor> Color;
+	TOptional<FLexUIImageBrush> Brush;
+	if (ToggleTransition == ELexUISelectableTransitionType::Color)
+	{
+		Color = bIsOn ? OnColor : OffColor;
+	}
+	else if (ToggleTransition == ELexUISelectableTransitionType::ImageBrush)
+	{
+		Brush = bIsOn ? OnImageBrush : OffImageBrush;
+	}
+	else if (ToggleTransition == ELexUISelectableTransitionType::Custom)
+	{
+#if WITH_EDITOR
+		if (this->GetWorld() && this->GetWorld()->IsGameWorld())
+#endif
 		{
-			if (ULTweenManager::IsTweening(this, ToggleTransitionTweener))ToggleTransitionTweener->Kill();
-			if (ToggleDuration <= 0.0f || immediateSet)
+			if (IsValid(CustomToggleTransition))
 			{
-				Visual->SetAlpha(IsOn ? OnAlpha : OffAlpha);
+				CustomToggleTransition->OnStartCustomTransition(bIsOn ? OnTransitionName : OffTransitionName, immediateSet);
+			}
+		}
+	}
+
+	if (Color.IsSet())
+	{
+		if (ToggleDuration <= 0.0f || immediateSet)
+		{
+			ToggleTransitionTarget->SetColor(Color.GetValue());
+		}
+		else
+		{
+			if (ULTweenManager::IsTweening(this, TransitionTweener))TransitionTweener->Kill();
+			TransitionTweener = ULTweenManager::To(ToggleTransitionTarget.Get()
+				, FLTweenColorGetterFunction::CreateWeakLambda(ToggleTransitionTarget.Get(), [=, this]()
+			{
+				return ToggleTransitionTarget->GetColor();
+			}), FLTweenColorSetterFunction::CreateUObject(ToggleTransitionTarget.Get(), &ULexVisual::SetColor), Color.GetValue(), ToggleDuration);
+			if (TransitionTweener)
+			{
+				bool bAffectByGamePause = false;
+				bool bAffectByTimeDilation = false;
+				if (this->GetRootUIComponent()->IsScreenSpaceOverlayUI())
+				{
+					bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
+					bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
+				}
+				else
+				{
+					bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
+					bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
+				}
+				TransitionTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
+			}
+		}
+	}
+	if (Brush.IsSet())
+	{
+		if (auto ToggleTransitionTargetAsLexImage = Cast<ULexImage>(ToggleTransitionTarget.Get()))
+		{
+			if (IsValid(Brush.GetValue().GetResourceObject()))
+			{
+				ToggleTransitionTargetAsLexImage->SetBrush(Brush.GetValue());
 			}
 			else
 			{
-				ToggleTransitionTweener = ULTweenManager::To(Visual, FLTweenFloatGetterFunction::CreateUObject(Visual, &ULexVisual::GetAlpha), FLTweenFloatSetterFunction::CreateUObject(Visual, &ULexVisual::SetAlpha), IsOn ? OnAlpha : OffAlpha, ToggleDuration);
-				if (ToggleTransitionTweener)
+				if (ToggleDuration <= 0.0f || immediateSet)
 				{
-					bool bAffectByGamePause = false;
-					bool bAffectByTimeDilation = false;
-					if (this->GetRootUIComponent())
+					ToggleTransitionTargetAsLexImage->SetBrushTintColor(Brush.GetValue().TintColor);
+				}
+				else
+				{
+					if (ULTweenManager::IsTweening(this, TransitionTweener))TransitionTweener->Kill();
+					TransitionTweener = ULTweenManager::To(ToggleTransitionTargetAsLexImage
+						, FLTweenColorGetterFunction::CreateWeakLambda(ToggleTransitionTargetAsLexImage, [=, this]()
 					{
+						return ToggleTransitionTargetAsLexImage->GetBrush().TintColor;
+					}), FLTweenColorSetterFunction::CreateUObject(ToggleTransitionTargetAsLexImage, &ULexImage::SetBrushTintColor), Brush.GetValue().TintColor, ToggleDuration);
+					if (TransitionTweener)
+					{
+						bool bAffectByGamePause = false;
+						bool bAffectByTimeDilation = false;
 						if (this->GetRootUIComponent()->IsScreenSpaceOverlayUI())
 						{
 							bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
@@ -130,108 +201,76 @@ void UUIToggleComponent::ApplyValueToUI(bool immediateSet)
 							bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
 							bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
 						}
+						TransitionTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
 					}
-					ToggleTransitionTweener->SetEase(ELTweenEase::InOutSine)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
 				}
 			}
-		}
-	}
-	else if (ToggleTransition == UIToggleTransitionType::ColorTint)
-	{
-		if (auto Visual = ToggleTarget->GetVisual())
-		{
-			if (ULTweenManager::IsTweening(this, ToggleTransitionTweener))ToggleTransitionTweener->Kill();
-			if (ToggleDuration <= 0.0f || immediateSet)
-			{
-				Visual->SetColor(IsOn ? OnColor : OffColor);
-			}
-			else
-			{
-				ToggleTransitionTweener = ULTweenManager::To(Visual, FLTweenColorGetterFunction::CreateUObject(Visual, &ULexVisual::GetColor), FLTweenColorSetterFunction::CreateUObject(Visual, &ULexVisual::SetColor), IsOn ? OnColor : OffColor, ToggleDuration);
-				if (ToggleTransitionTweener)
-				{
-					bool bAffectByGamePause = false;
-					bool bAffectByTimeDilation = false;
-					if (this->GetRootUIComponent())
-					{
-						if (this->GetRootUIComponent()->IsScreenSpaceOverlayUI())
-						{
-							bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
-							bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-						}
-						else
-						{
-							bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
-							bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-						}
-					}
-					ToggleTransitionTweener->SetEase(ELTweenEase::InOutSine)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
-				}
-			}
-		}
-	}
-	else if (ToggleTransition == UIToggleTransitionType::TransitionComponent)
-	{
-		if (ToggleTransitionComp)
-		{
-			ToggleTransitionComp->OnStartCustomTransition(IsOn ? OnTransitionName : OffTransitionName, immediateSet);
 		}
 	}
 }
 
 void UUIToggleComponent::SetToggleGroup(UUIToggleGroupComponent* InGroupComp)
 {
-	if (GroupComp != InGroupComp)
+	if (ToggleGroup != InGroupComp)
 	{
-		if (GroupComp.IsValid())
+		if (ToggleGroup.IsValid())
 		{
-			GroupComp->RemoveToggleComponent(this);
+			ToggleGroup->RemoveToggleComponent(this);
 		}
 		if (IsValid(InGroupComp))
 		{
 			InGroupComp->AddToggleComponent(this);
 		}
-		GroupComp = InGroupComp;
-		UIToggleGroupActor = GroupComp->GetOwner();
+		ToggleGroup = InGroupComp;
 	}
+}
+
+void UUIToggleComponent::SetValue(bool Value)
+{
+	SetValue(Value, true);
+}
+
+void UUIToggleComponent::SetValueWithoutNotify(bool Value)
+{
+	SetValue(Value, false);
 }
 
 bool UUIToggleComponent::OnPointerClick_Implementation(ULGUIPointerEventData* eventData)
 {
-	SetValue(!IsOn);
+	SetValue(!bIsOn);
 	return AllowEventBubbleUp;
 }
 
 FDelegateHandle UUIToggleComponent::RegisterToggleEvent(const FLGUIBoolDelegate& InDelegate)
 {
-	return OnToggleCPP.Add(InDelegate);
+	return OnValueChangedCPP.Add(InDelegate);
 }
 FDelegateHandle UUIToggleComponent::RegisterToggleEvent(const TFunction<void(bool)>& InFunction)
 {
-	return OnToggleCPP.AddLambda(InFunction);
+	return OnValueChangedCPP.AddLambda(InFunction);
 }
 void UUIToggleComponent::UnregisterToggleEvent(const FDelegateHandle& InHandle)
 {
-	OnToggleCPP.Remove(InHandle);
+	OnValueChangedCPP.Remove(InHandle);
 }
 
-FLGUIDelegateHandleWrapper UUIToggleComponent::RegisterToggleEvent(const FLGUIToggleDynamicDelegate& InDelegate)
+FLGUIDelegateHandleWrapper UUIToggleComponent::RegisterToggleEvent(const FUIToggleValueChangedDelegate& InDelegate)
 {
-	auto delegateHandle = OnToggleCPP.AddLambda([InDelegate](bool InIsOn) {
+	auto delegateHandle = OnValueChangedCPP.AddLambda([InDelegate](bool InIsOn) {
 		InDelegate.ExecuteIfBound(InIsOn);
 	});
 	return FLGUIDelegateHandleWrapper(delegateHandle);
 }
 void UUIToggleComponent::UnregisterToggleEvent(const FLGUIDelegateHandleWrapper& InDelegateHandle)
 {
-	OnToggleCPP.Remove(InDelegateHandle.DelegateHandle);
+	OnValueChangedCPP.Remove(InDelegateHandle.DelegateHandle);
 }
 
 int32 UUIToggleComponent::GetIndexInGroup()const
 {
-	if (GroupComp.IsValid())
+	if (ToggleGroup.IsValid())
 	{
-		return GroupComp->GetToggleIndex(this);
+		return ToggleGroup->GetToggleIndex(this);
 	}
 	return -1;
 }

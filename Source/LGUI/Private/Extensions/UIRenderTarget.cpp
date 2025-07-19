@@ -73,7 +73,7 @@ void UUIRenderTarget::BeginPlay()
 	if (auto Canvas = GetCanvas())
 	{
 		Canvas->OnRenderTargetCreatedOrChanged.AddWeakLambda(this, [this](UTextureRenderTarget2D* RenderTarget, bool CreatedOrChanged) {
-			GetWidget()->SetWidgetVisibility(ESlateVisibility::Visible);
+			GetWidget()->SetWidgetVisibility(ELexWidgetVisibility::Visible);
 			this->MarkTextureDirty();
 			});
 	}

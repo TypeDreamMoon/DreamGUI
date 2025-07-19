@@ -11,6 +11,7 @@
 #include "Misc/NotifyHook.h"
 #include "LGUIPrefabEditor.h"
 #include "DetailLayoutBuilder.h"
+#include "DetailsViewObjectFilter.h"
 #include "LGUIPrefabOverrideDataViewer.h"
 #include "PrefabSystem/LGUIPrefab.h"
 #include "LGUIEditorTools.h"

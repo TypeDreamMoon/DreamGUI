@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "LexUIMeshModifierBase.h"
+#include "LexVisualBatchMeshModifierBase.h"
 #include "LTweener.h"
 #include "UIEffectTextAnimation.generated.h"
 
@@ -56,7 +56,7 @@ public:
 
 //per character animation control for UIText
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIEffectTextAnimation : public ULexUIMeshModifierBase
+class LGUI_API UUIEffectTextAnimation : public ULexVisualBatchMeshModifierBase
 {
 	GENERATED_BODY()
 

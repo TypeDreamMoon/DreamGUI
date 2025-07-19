@@ -95,7 +95,7 @@ class LGUI_API ULexVisual : public ULexWidgetSubObjectBehaviour
 
 public:	
 	ULexVisual(const FObjectInitializer& ObjectInitializer);
-	void BeginPlay();
+	virtual void BeginPlay()override;
 protected:
 	friend class FLexVisualCustomization;
 	friend class ULexWidget;
@@ -107,14 +107,12 @@ protected:
 
 	/**
 	 * Render color of UI element.
-	 * Color may be override by UISelectable(UIButton, UIToggle, UISlider ...), if UISelectable's transition set to "Color Tint".
 	 */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		FColor Color = FColor::White;
-	/** Only valid if RaycastTarget is true. */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Raycast")
 		ELexVisualHitTestType RaycastType = ELexVisualHitTestType::Rect;
-	/** Custom raycast object to handle raycast behaviour when LGUI do raycast hit test. Only valid if RaycastTarget is true and RaycastType is Custom. */
+	/** Custom raycast object to handle raycast behaviour when LGUI do raycast hit test. Only valid if RaycastType is Custom. */
 	UPROPERTY(EditAnywhere, Instanced, Category = "LGUI-Raycast")
 		TObjectPtr<ULexVisualCustomRaycast> CustomRaycastObject;
 	/** Pixel's alpha value threshold, if hit a pixel which alpha value is less than this value, then hit test return false. */

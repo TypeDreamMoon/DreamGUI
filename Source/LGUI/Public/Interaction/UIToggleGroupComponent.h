@@ -8,9 +8,9 @@
 #include "UIToggleGroupComponent.generated.h"
 
 class UUIToggleComponent;
-DECLARE_DELEGATE_OneParam(FLGUIToggleGroupDelegate, int32);
-DECLARE_MULTICAST_DELEGATE_OneParam(FLGUIToggleGroupMulticastDelegate, int32);
-DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUIToggleGroupDynamicDelegate, int32, Index);
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FUIToggleGroupValueChangedDelegate, int32, Index);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIToggleGroupValueChangedEvent, int32, Index);
 
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class LGUI_API UUIToggleGroupComponent : public ULGUILifeCycleUIBehaviour
@@ -25,13 +25,16 @@ protected:
 	void SortToggleCollection();
 	UPROPERTY(EditAnywhere, Category = "LGUI-ToggleGroup")
 		bool bAllowNoneSelected = true;
-	FLGUIToggleGroupMulticastDelegate OnToggleCPP;
+	FLGUIMulticastInt32Delegate OnToggleCPP;
 	/* Called when selection change of this toggle group. Parameter is selected toggle item's actor, or null if none selected. */
 	UPROPERTY(EditAnywhere, Category = "LGUI-ToggleGroup")
 		FLGUIEventDelegate OnToggle;
 public:
 	void AddToggleComponent(UUIToggleComponent* InComp);
 	void RemoveToggleComponent(UUIToggleComponent* InComp);
+
+	UPROPERTY(BlueprintAssignable, Category = "LGUI-Toggle")
+	FUIToggleGroupValueChangedEvent OnToggleValueChanged;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ToggleGroup")
 		void SetSelection(UUIToggleComponent* Target);
@@ -56,7 +59,7 @@ public:
 	 * Event will be called when selection change of this toggle group.
 	 * Parameter of the event is selected toggle component's index in group, or -1 if none selected.
 	 */
-	FDelegateHandle RegisterToggleEvent(const FLGUIToggleGroupDelegate& InDelegate);
+	FDelegateHandle RegisterToggleEvent(const FLGUIInt32Delegate& InDelegate);
 	/**
 	 * Register toggle change event.
 	 * Event will be called when selection change of this toggle group.
@@ -74,7 +77,7 @@ public:
 	 * Parameter of the event is selected toggle component's index in group, or -1 if none selected.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ToggleGroup")
-		FLGUIDelegateHandleWrapper RegisterToggleEvent(const FLGUIToggleGroupDynamicDelegate& InDelegate);
+		FLGUIDelegateHandleWrapper RegisterToggleEvent(const FUIToggleGroupValueChangedDelegate& InDelegate);
 	/**
 	 * Unregister toggle change event.
 	 */

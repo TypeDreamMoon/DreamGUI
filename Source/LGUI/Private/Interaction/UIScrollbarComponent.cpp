@@ -71,11 +71,23 @@ void UUIScrollbarComponent::SetValue(float InValue, bool FireEvent)
         ApplyValueToUI();
         if (FireEvent)
         {
-            OnValueChangeCPP.Broadcast(Value);
-            OnValueChange.FireEvent((double)Value);
+            OnValueChangedCPP.Broadcast(Value);
+            OnValueChangedBP.Broadcast(Value);
+            OnValueChanged.FireEvent((double)Value);
         }
     }
 }
+
+void UUIScrollbarComponent::SetValue(float InValue)
+{
+    SetValue(InValue, true);
+}
+
+void UUIScrollbarComponent::SetValueWithoutNotify(float InValue)
+{
+    SetValue(InValue, false);
+}
+
 void UUIScrollbarComponent::SetSize(float InSize)
 {
     if (Size != InSize)
@@ -105,8 +117,8 @@ void UUIScrollbarComponent::SetValueAndSize(float InValue, float InSize, bool Fi
         ApplyValueToUI();
         if (FireEvent)
         {
-            OnValueChangeCPP.Broadcast(Value);
-            OnValueChange.FireEvent((double)Value);
+            OnValueChangedCPP.Broadcast(Value);
+            OnValueChanged.FireEvent((double)Value);
         }
     }
 }
@@ -117,27 +129,27 @@ void UUIScrollbarComponent::SetNavigationChangeInterval(float InValue)
 
 FDelegateHandle UUIScrollbarComponent::RegisterSlideEvent(const FLGUIFloatDelegate &InDelegate)
 {
-    return OnValueChangeCPP.Add(InDelegate);
+    return OnValueChangedCPP.Add(InDelegate);
 }
 FDelegateHandle UUIScrollbarComponent::RegisterSlideEvent(const TFunction<void(float)> &InFunction)
 {
-    return OnValueChangeCPP.AddLambda(InFunction);
+    return OnValueChangedCPP.AddLambda(InFunction);
 }
 void UUIScrollbarComponent::UnregisterSlideEvent(const FDelegateHandle &InHandle)
 {
-    OnValueChangeCPP.Remove(InHandle);
+    OnValueChangedCPP.Remove(InHandle);
 }
 
-FLGUIDelegateHandleWrapper UUIScrollbarComponent::RegisterSlideEvent(const FLGUIScrollbarDynamicDelegate &InDelegate)
+FLGUIDelegateHandleWrapper UUIScrollbarComponent::RegisterSlideEvent(const FUIScrollbarValueChangedDelegate &InDelegate)
 {
-    auto delegateHandle = OnValueChangeCPP.AddLambda([InDelegate](float InValue) {
+    auto delegateHandle = OnValueChangedCPP.AddLambda([InDelegate](float InValue) {
         InDelegate.ExecuteIfBound(InValue);
     });
     return FLGUIDelegateHandleWrapper(delegateHandle);
 }
 void UUIScrollbarComponent::UnregisterSlideEvent(const FLGUIDelegateHandleWrapper &InDelegateHandle)
 {
-    OnValueChangeCPP.Remove(InDelegateHandle.DelegateHandle);
+    OnValueChangedCPP.Remove(InDelegateHandle.DelegateHandle);
 }
 
 bool UUIScrollbarComponent::OnPointerDown_Implementation(ULGUIPointerEventData* eventData)

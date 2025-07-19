@@ -149,7 +149,7 @@ void UUIWidget::OnWidgetVisibilityChanged(ESlateVisibility InVisibility)
 	ensure(UmgWidget);
 	ensure(bOnWidgetVisibilityChangedRegistered);
 
-	if (InVisibility != ESlateVisibility::Collapsed && InVisibility != ESlateVisibility::Hidden)
+	if (InVisibility != ELexWidgetVisibility::Collapsed && InVisibility != ELexWidgetVisibility::Hidden)
 	{
 		if (ShouldReenableComponentTickWhenWidgetBecomesVisible())
 		{

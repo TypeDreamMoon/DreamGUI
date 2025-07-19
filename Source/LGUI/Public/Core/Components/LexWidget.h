@@ -2,12 +2,9 @@
 
 #pragma once
 
-#include "LGUI.h"
-#include "Core/LexLayoutAnchorData.h"
 #include "Components/SceneComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "LTweener.h"
-#include "Components/SlateWrapperTypes.h"
 #include "Core/LexWidgetTypes.h"
 #include "PrefabSystem/ILGUIPrefabInterface.h"
 #include "LexWidget.generated.h"
@@ -40,6 +37,25 @@ enum class ELexWidgetClipping : uint8
 	 * This widget does not clip.
 	 */
 	Disabled UMETA(DisplayName = "No Clip"),
+};
+
+UENUM(BlueprintType)
+enum class ELexWidgetVisibility : uint8
+{
+	/** Visible and hit-testable (can interact with cursor). Default value. */
+	Visible,
+	/** Not visible and takes up no space in the layout (obviously not hit-testable). */
+	Collapsed,
+	/** Not visible but occupies layout space (obviously not hit-testable). */
+	Hidden,
+};
+
+UENUM(BlueprintType)
+enum class ELexWidgetHitTestType : uint8
+{
+	Inherit,
+	HitTestable,
+	NotHitTestable,
 };
 
 /**
@@ -310,7 +326,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
 	ELexWidgetClipping Clipping = ELexWidgetClipping::Inherit;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
-	ESlateVisibility WidgetVisibility = ESlateVisibility::Visible;
+	ELexWidgetVisibility WidgetVisibility = ELexWidgetVisibility::Visible;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
+	ELexWidgetHitTestType HitTestType = ELexWidgetHitTestType::Inherit;
 	/** If the widget will draw snapped to the nearest pixel.  Improves clarity but might cause visible stepping in animation. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
 	EWidgetPixelSnapping PixelSnapping = EWidgetPixelSnapping::Inherit;
@@ -363,7 +381,9 @@ public:
 	void SetPixelSnapping(EWidgetPixelSnapping Value);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	ESlateVisibility GetWidgetVisibility()const { return WidgetVisibility; }
+	ELexWidgetVisibility GetWidgetVisibility()const { return WidgetVisibility; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	ELexWidgetHitTestType GetHitTestType()const { return HitTestType; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	bool IsVisibleForRender()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
@@ -371,7 +391,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	bool IsVisibleForLayout()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	void SetWidgetVisibility(ESlateVisibility Value);
+	void SetWidgetVisibility(ELexWidgetVisibility Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetHitTestType(ELexWidgetHitTestType Value);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	bool GetIsEnabled()const { return bIsEnabled; }
@@ -536,6 +558,7 @@ protected:
 	void CheckRootWidget(ULexWidget* RootWidgetInParent = nullptr);
 
 	void CalculateVisibility_Recursive();
+	void CalculateHitTest_Recursive();
 public:
 #pragma region TweenAnimation
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")

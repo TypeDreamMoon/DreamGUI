@@ -9,6 +9,7 @@
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
+#include "Core/Components/LexImage.h"
 
 #define LOCTEXT_NAMESPACE "UIToggleCustomization"
 
@@ -31,127 +32,108 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 	}
 
 	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("LGUI-Toggle");
-	auto transitionHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleTransition));
-	transitionHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIToggleCustomization::ForceRefresh, &DetailBuilder));
+	auto ToggleTransition_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleTransition));
+	ToggleTransition_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIToggleCustomization::ForceRefresh, &DetailBuilder));
 
-	auto toggleActorHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleTarget));
-	toggleActorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIToggleCustomization::ForceRefresh, &DetailBuilder));
+	auto ToggleTransitionTarget_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleTransitionTarget));
+	ToggleTransitionTarget_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIToggleCustomization::ForceRefresh, &DetailBuilder));
+	ULexVisual* ToggleTransitionTarget_Visual = nullptr;
+	ToggleTransitionTarget_PH->GetValue(*(UObject**)&ToggleTransitionTarget_Visual);
+	auto ToggleTransitionTarget_Image = Cast<ULexImage>(ToggleTransitionTarget_Visual);
 
-	ULexWidget* targetUIItem = nullptr;
-	UUISelectableTransitionComponent* ToggleTransitionComp = nullptr;
-	auto CustomTransition_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleTransitionComp));
-	CustomTransition_PH->GetValue(*(UObject**)&ToggleTransitionComp);
+	UUISelectableTransitionComponent* CustomTransition = nullptr;
+	auto CustomTransition_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, CustomToggleTransition));
+	CustomTransition_PH->GetValue(*(UObject**)&CustomTransition);
 
-	uint8 transitionType;
-	transitionHandle->GetValue(transitionType);
-	TArray<FName> needToHidePropertyNameForTransition;
-	IDetailGroup& transitionGroup = category.AddGroup(FName("Transition"), LOCTEXT("Transition", "Transition"));
-	transitionGroup.HeaderProperty(transitionHandle);
-	if (transitionType == (uint8)(UIToggleTransitionType::None))
+	uint8 TransitionType;
+	ToggleTransition_PH->GetValue(TransitionType);
+	TArray<FName> NeedToHidePropertyNamesForTransition;
+	IDetailGroup& TransitionGroup = category.AddGroup(FName("Transition"), LOCTEXT("Transition", "Transition"));
+	TransitionGroup.HeaderProperty(ToggleTransition_PH);
+	if (TransitionType == (uint8)(ELexUISelectableTransitionType::None))
 	{
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleTarget));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffAlpha));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnAlpha));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffColor));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnColor));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnTransitionName));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffTransitionName));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleDuration));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleTransitionTarget));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffImageBrush));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnImageBrush));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffColor));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnColor));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnTransitionName));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffTransitionName));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleDuration));
 	}
-	else if (transitionType == (uint8)(UIToggleTransitionType::Fade))
+	else if (TransitionType == (uint8)(ELexUISelectableTransitionType::ImageBrush))
 	{
-		transitionGroup.AddPropertyRow(toggleActorHandle);
-		if (!targetUIItem)
+		TransitionGroup.AddPropertyRow(ToggleTransitionTarget_PH);
+		if (!ToggleTransitionTarget_Image)
 		{
-			transitionGroup.AddWidgetRow()
+			TransitionGroup.AddWidgetRow()
 				.ValueContent()
 				.MinDesiredWidth(500)
 				[
 					SNew(STextBlock)
 					.AutoWrapText(true)
-					.Text(LOCTEXT("TransitionActor_Fade_Tip", "If use Fade, Target must have UIItem component"))
+					.Text(LOCTEXT("TransitionTarget_ImageBrush_Tip", "If use ImageBrush, Target must be LexImage"))
 					.Font(IDetailLayoutBuilder::GetDetailFont())
 				];
 		}
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffColor));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnColor));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnTransitionName));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffTransitionName));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffColor));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnColor));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnTransitionName));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffTransitionName));
 
-		transitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffAlpha)));
-		transitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnAlpha)));
-		transitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleDuration)));
+		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffImageBrush)));
+		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnImageBrush)));
+		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleDuration)));
 	}
-	else if (transitionType == (uint8)(UIToggleTransitionType::ColorTint))
+	else if (TransitionType == (uint8)(ELexUISelectableTransitionType::Color))
 	{
-		transitionGroup.AddPropertyRow(toggleActorHandle);
-		if (!targetUIItem)
+		TransitionGroup.AddPropertyRow(ToggleTransitionTarget_PH);
+		if (!ToggleTransitionTarget_Visual)
 		{
-			transitionGroup.AddWidgetRow()
+			TransitionGroup.AddWidgetRow()
 				.ValueContent()
 				.MinDesiredWidth(500)
 				[
 					SNew(STextBlock)
 					.AutoWrapText(true)
-					.Text(LOCTEXT("TransitionActor_ColorTint_Tip", "If use ColorTint, Target must have UIItem component"))
+					.Text(LOCTEXT("TransitionTarget_Color_Tip", "If use Color transition, Target must be LexVisual"))
 					.ColorAndOpacity(FLinearColor(FColor::Red))
 					.Font(IDetailLayoutBuilder::GetDetailFont())
 				];
 		}
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffAlpha));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnAlpha));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnTransitionName));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffTransitionName));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffImageBrush));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnImageBrush));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnTransitionName));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffTransitionName));
 
-		transitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffColor)));
-		transitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnColor)));
-		transitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleDuration)));
+		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffColor)));
+		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnColor)));
+		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleDuration)));
 	}
-	else if (transitionType == (uint8)(UIToggleTransitionType::TransitionComponent))
+	else if (TransitionType == (uint8)(ELexUISelectableTransitionType::Custom))
 	{
-		transitionGroup.AddPropertyRow(toggleActorHandle);
-		if (!ToggleTransitionComp)
+		TransitionGroup.AddPropertyRow(ToggleTransitionTarget_PH);
+		if (!CustomTransition)
 		{
-			transitionGroup.AddWidgetRow()
+			TransitionGroup.AddWidgetRow()
 				.ValueContent()
 				.MinDesiredWidth(500)
 				[
 					SNew(STextBlock)
 					.AutoWrapText(true)
-					.Text(LOCTEXT("TransitionActor_TransitionComponent_Tip", "If use TransitionComponent, Target must have UUISelectableTransitionComponent component"))
+					.Text(LOCTEXT("TransitionTarget_Custom_Tip", "If use TransitionComponent, Target must have UUISelectableTransitionComponent component"))
 					.ColorAndOpacity(FLinearColor(FColor::Red))
 					.Font(IDetailLayoutBuilder::GetDetailFont())
 				];
 		}
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffAlpha));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnAlpha));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffColor));
-		needToHidePropertyNameForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnColor));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffImageBrush));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnImageBrush));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffColor));
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnColor));
 	}
-	for (auto item : needToHidePropertyNameForTransition)
+	for (auto item : NeedToHidePropertyNamesForTransition)
 	{
 		DetailBuilder.HideProperty(item);
-	}
-
-	auto groupActorHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, UIToggleGroupActor));
-	groupActorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIToggleCustomization::ForceRefresh, &DetailBuilder));
-	if (TargetScriptPtr->UIToggleGroupActor.Get())
-	{
-		auto toggleGroupComp = TargetScriptPtr->UIToggleGroupActor->FindComponentByClass<UUIToggleGroupComponent>();
-		if (!toggleGroupComp)
-		{
-			category.AddProperty(groupActorHandle);
-			category.AddCustomRow(LOCTEXT("Group", "Group"))
-				.ValueContent()
-				.MinDesiredWidth(500)
-				[
-					SNew(STextBlock)
-					.AutoWrapText(true)
-					.Text(LOCTEXT("GroupActorTip", "If use Group, Target must have UUIToggleGroupComponent"))
-					.ColorAndOpacity(FLinearColor(FColor::Red))
-					.Font(IDetailLayoutBuilder::GetDetailFont())
-				];
-		}
 	}
 }
 void FUIToggleCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)

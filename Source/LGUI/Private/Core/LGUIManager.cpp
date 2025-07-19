@@ -875,8 +875,8 @@ bool ULGUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULex
 					auto OriginRaycastType = Visual->GetRaycastType();
 					auto OriginVisibility = Widget->GetWidgetVisibility();
 					Visual->SetRaycastType(ELexVisualHitTestType::Mesh);//in editor selection, make the ray hit actural triangle
-					Widget->SetWidgetVisibility(ESlateVisibility::Visible);
-					Widget->SetWidgetVisibility(ESlateVisibility::Visible);
+					Widget->SetWidgetVisibility(ELexWidgetVisibility::Visible);
+					Widget->SetWidgetVisibility(ELexWidgetVisibility::Visible);
 					if (Visual->LineTraceUI(hitInfo, LineStart, LineEnd))
 					{
 						if (Widget->IsPointVisibleOnClip(hitInfo.Location))

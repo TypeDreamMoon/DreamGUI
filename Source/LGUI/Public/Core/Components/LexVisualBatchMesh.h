@@ -5,7 +5,7 @@
 #include "LexVisual.h"
 #include "LexVisualBatchMesh.generated.h"
 
-class ULexUIMeshModifierBase;
+class ULexVisualBatchMeshModifierBase;
 class FLexUIGeometry;
 class UMaterialInterface;
 
@@ -136,7 +136,7 @@ protected:
 	friend class FLexVisualBatchMeshCustomization;
 
 	UPROPERTY(EditAnywhere, Instanced, Category = "LGUI")
-	TArray<TObjectPtr<ULexUIMeshModifierBase>> MeshModifierArray;
+	TArray<TObjectPtr<ULexVisualBatchMeshModifierBase>> MeshModifierArray;
 
 	/** texture for render this UI element */
 	virtual UTexture* GetTextureToCreateGeometry();

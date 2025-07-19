@@ -11,7 +11,8 @@
 
 
 class ULexLayoutAnchorSlot;
-DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUIScrollbarDynamicDelegate, float, InFloat);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FUIScrollbarValueChangedDelegate, float, Value);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIScrollbarValueChangedEvent, float, Value);
 
 class ALexWidgetActor;
 class ULexWidget;
@@ -60,12 +61,15 @@ protected:
 	UPROPERTY(Transient)TWeakObjectPtr<ULexLayoutAnchorSlot> HandleLayout;
 	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> HandleArea;
 
-	FLGUIMulticastFloatDelegate OnValueChangeCPP;
+	FLGUIMulticastFloatDelegate OnValueChangedCPP;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Scrollbar")
-		FLGUIEventDelegate OnValueChange = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Double);
+		FLGUIEventDelegate OnValueChanged = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Double);
 
 	float PressValue = 0;
 public:
+	UPROPERTY(BlueprintAssignable, Category = "LGUI-Toggle", DisplayName="OnValueChanged")
+	FUIScrollbarValueChangedEvent OnValueChangedBP;
+	
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Scrollbar")
 		float GetValue()const { return Value; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Scrollbar")
@@ -74,7 +78,9 @@ public:
 		float GetNavigationChangeInterval()const { return NavigationChangeInterval; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Scrollbar")
-		void SetValue(float InValue, bool FireEvent = true);
+	void SetValue(float InValue);
+	UFUNCTION(BlueprintCallable, Category = "LGUI-Scrollbar")
+	void SetValueWithoutNotify(float InValue);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Scrollbar")
 		void SetSize(float InSize);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Scrollbar")
@@ -92,7 +98,7 @@ public:
 	void UnregisterSlideEvent(const FDelegateHandle& InHandle);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Scrollbar")
-		FLGUIDelegateHandleWrapper RegisterSlideEvent(const FLGUIScrollbarDynamicDelegate& InDelegate);
+		FLGUIDelegateHandleWrapper RegisterSlideEvent(const FUIScrollbarValueChangedDelegate& InDelegate);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Scrollbar")
 		void UnregisterSlideEvent(const FLGUIDelegateHandleWrapper& InDelegateHandle);
 public:
@@ -106,6 +112,7 @@ private:
 	bool CheckHandle();
 	void CalculateInputValue(ULGUIPointerEventData* eventData);
 	void ApplyValueToUI();
+	void SetValue(float InValue, bool FireEvent);
 
 #if WITH_EDITOR
 public:

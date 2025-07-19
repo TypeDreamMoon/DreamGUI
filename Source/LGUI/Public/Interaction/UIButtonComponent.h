@@ -9,7 +9,8 @@
 #include "LGUIDelegateHandleWrapper.h"
 #include "UIButtonComponent.generated.h"
 
-DECLARE_DYNAMIC_DELEGATE(FLGUIButtonDynamicDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUIButtonClickedEvent);
+DECLARE_DYNAMIC_DELEGATE(FUIButtonClickedDelegate);
 
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class LGUI_API UUIButtonComponent : public UUISelectableComponent, public ILGUIPointerClickInterface
@@ -18,10 +19,13 @@ class LGUI_API UUIButtonComponent : public UUISelectableComponent, public ILGUIP
 protected:
 
 	UPROPERTY(EditAnywhere, Category = "LGUI-Button")
-		FLGUIEventDelegate OnClick = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Empty);
+	FLGUIEventDelegate OnClick = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Empty);
 	FSimpleMulticastDelegate OnClickCPP;
 	virtual bool OnPointerClick_Implementation(ULGUIPointerEventData* eventData)override;
 public:
+	UPROPERTY(BlueprintAssignable, Category = "LGUI-Toggle", DisplayName="OnClick")
+	FUIButtonClickedEvent OnClickBP;
+	
 	/** Register click event */
 	FDelegateHandle RegisterClickEvent(const FSimpleDelegate& InDelegate);
 	/** Register click event */
@@ -30,7 +34,7 @@ public:
 	void UnregisterClickEvent(const FDelegateHandle& InHandle);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Button")
-		FLGUIDelegateHandleWrapper RegisterClickEvent(const FLGUIButtonDynamicDelegate& InDelegate);
+		FLGUIDelegateHandleWrapper RegisterClickEvent(const FUIButtonClickedDelegate& InDelegate);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Button")
 		void UnregisterClickEvent(const FLGUIDelegateHandleWrapper& InDelegateHandle);
 };

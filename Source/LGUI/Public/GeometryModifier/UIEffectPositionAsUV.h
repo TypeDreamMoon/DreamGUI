@@ -2,12 +2,12 @@
 
 #pragma once
 
-#include "LexUIMeshModifierBase.h"
+#include "LexVisualBatchMeshModifierBase.h"
 #include "UIEffectPositionAsUV.generated.h"
 
 
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIEffectPositionAsUV : public ULexUIMeshModifierBase
+class LGUI_API UUIEffectPositionAsUV : public ULexVisualBatchMeshModifierBase
 {
 	GENERATED_BODY()
 
