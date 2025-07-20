@@ -14,7 +14,7 @@
 #include "Core/Components/LexVisual.h"
 #include "Engine/Engine.h"
 #include "Core/LexUIRender/LexUIRenderer.h"
-#include "Core/ILGUICultureChangedInterface.h"
+#include "Core/ILexUICultureChangedInterface.h"
 #include "Core/LGUILifeCycleBehaviour.h"
 #include "Core/Components/LexLayoutAnchor.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
@@ -1063,7 +1063,7 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 			bShouldUpdateOnCultureChanged = false;
 			for (auto& Culture : AllCultureChangedArray)
 			{
-				ILGUICultureChangedInterface::Execute_OnCultureChanged(Culture.Get());
+				ILexUICultureChangedInterface::Execute_OnCultureChanged(Culture.Get());
 			}
 		}
 	}
@@ -1290,14 +1290,14 @@ void ULGUIManagerWorldSubsystem::RemoveLGUILifeCycleBehavioursFromUpdate(ULGUILi
 	}
 }
 
-void ULGUIManagerWorldSubsystem::RegisterLGUICultureChangedEvent(TScriptInterface<ILGUICultureChangedInterface> InItem)
+void ULGUIManagerWorldSubsystem::RegisterLGUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem)
 {
 	if (auto Instance = GetInstance(InItem.GetObject()->GetWorld()))
 	{
 		Instance->AllCultureChangedArray.AddUnique(InItem.GetObject());
 	}
 }
-void ULGUIManagerWorldSubsystem::UnregisterLGUICultureChangedEvent(TScriptInterface<ILGUICultureChangedInterface> InItem)
+void ULGUIManagerWorldSubsystem::UnregisterLGUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem)
 {
 	if (auto Instance = GetInstance(InItem.GetObject()->GetWorld()))
 	{

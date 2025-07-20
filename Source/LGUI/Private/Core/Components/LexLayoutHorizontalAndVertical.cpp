@@ -11,8 +11,8 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 	if (!Widget)return;
 	auto& Children = Widget->GetUIChildren();
 	auto ThisSize = Widget->GetRenderSize();
-	ThisSize.X -= Widget->GetPadding().Left + Widget->GetPadding().Right;
-	ThisSize.Y -= Widget->GetPadding().Bottom + Widget->GetPadding().Top;
+	ThisSize.X -= Widget->GetRenderPadding().Left + Widget->GetRenderPadding().Right;
+	ThisSize.Y -= Widget->GetRenderPadding().Bottom + Widget->GetRenderPadding().Top;
 	float TotalChildrenSize = 0;
 	int NumLayoutChildren = 0;
 	bool ShouldSortChildren = false;
@@ -69,11 +69,11 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 		{
 		case ELexLayoutDirection::Horizontal:
 		case ELexLayoutDirection::HorizontalReverse:
-			TotalChildrenSize += ChildSize.X + Child->GetMargin().Left + Child->GetMargin().Right;
+			TotalChildrenSize += ChildSize.X + Child->GetRenderMargin().Left + Child->GetRenderMargin().Right;
 			break;
 		case ELexLayoutDirection::Vertical:
 		case ELexLayoutDirection::VerticalReverse:
-			TotalChildrenSize += ChildSize.Y + Child->GetMargin().Top + Child->GetMargin().Bottom;
+			TotalChildrenSize += ChildSize.Y + Child->GetRenderMargin().Top + Child->GetRenderMargin().Bottom;
 			break;
 		}
 	}
@@ -200,7 +200,7 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 	case ELexLayoutDirection::HorizontalReverse:
 		{
 			ChildPosition.Y -= TotalChildrenSize * 0.5;
-			ChildPosition.Y += (Widget->GetPadding().Left - Widget->GetPadding().Right) * 0.5f;
+			ChildPosition.Y += (Widget->GetRenderPadding().Left - Widget->GetRenderPadding().Right) * 0.5f;
 			ChildPosition.Y += Spacing.Type == ELexLayoutSpacingType::Around ? SpaceValue * 0.5f : 0;
 			double SizeOffset = (ThisSize.X - TotalChildrenSize) * 0.5;
 			switch (HorizontalAlignment)
@@ -220,7 +220,7 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 	case ELexLayoutDirection::VerticalReverse:
 		{
 			ChildPosition.Z += TotalChildrenSize * 0.5;
-			ChildPosition.Z += (Widget->GetPadding().Bottom - Widget->GetPadding().Top) * 0.5f;
+			ChildPosition.Z += (Widget->GetRenderPadding().Bottom - Widget->GetRenderPadding().Top) * 0.5f;
 			ChildPosition.Z -= Spacing.Type == ELexLayoutSpacingType::Around ? SpaceValue * 0.5f : 0;
 			double SizeOffset = (ThisSize.Y - TotalChildrenSize) * 0.5;
 			switch (VerticalAlignment)
@@ -277,20 +277,20 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 					ChildVOffset += -(ThisSize.Y - ChildSize.Y) * 0.5f;
 					break;
 				}
-				float OffsetByMargin = Child->GetMargin().Left;
+				float OffsetByMargin = Child->GetRenderMargin().Left;
 				auto Pos = Child->GetRelativeLocation();
 				auto PivotOffsetX =
 					Child->GetRenderSize().X * (Child->GetPivot().X - 0.5f)//this pivot
 				+ Widget->GetRenderSize().X * (0.5f - Widget->GetPivot().X);//parent pivot
 				Pos.Y = ChildPosition.Y + HalfChildWidth + OffsetByMargin + PivotOffsetX;
-				float OffsetV = Widget->GetPadding().Bottom - Widget->GetPadding().Top + (Child->GetMargin().Bottom - Child->GetMargin().Top);
+				float OffsetV = Widget->GetRenderPadding().Bottom - Widget->GetRenderPadding().Top + (Child->GetRenderMargin().Bottom - Child->GetRenderMargin().Top);
 				OffsetV *= 0.5f;
 				auto PivotOffsetY =
 					Child->GetRenderSize().Y * (Child->GetPivot().Y - 0.5f)//this pivot
 				+ Widget->GetRenderSize().Y * (0.5f - Widget->GetPivot().Y);//parent pivot
 				Pos.Z = ChildVOffset + OffsetV + PivotOffsetY;
 				Child->SetRelativeLocation(Pos);
-				ChildPosition.Y += ChildSize.X + (Child->GetMargin().Left + Child->GetMargin().Right) + SpaceValue;
+				ChildPosition.Y += ChildSize.X + (Child->GetRenderMargin().Left + Child->GetRenderMargin().Right) + SpaceValue;
 			}
 			break;
 		case ELexLayoutDirection::Vertical:
@@ -309,20 +309,20 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 					ChildHOffset += (ThisSize.X - ChildSize.X) * 0.5f;
 					break;
 				}
-				float OffsetByMargin = Child->GetMargin().Bottom;
+				float OffsetByMargin = Child->GetRenderMargin().Bottom;
 				auto Pos = Child->GetRelativeLocation();
 				auto PivotOffsetY =
 					Child->GetRenderSize().Y * (Child->GetPivot().Y - 0.5f)//this pivot
 				+ Widget->GetRenderSize().Y * (0.5f - Widget->GetPivot().Y);//parent pivot
 				Pos.Z = ChildPosition.Z - HalfChildHeight + OffsetByMargin + PivotOffsetY;
-				float OffsetH = Widget->GetPadding().Left - Widget->GetPadding().Right + (Child->GetMargin().Left - Child->GetMargin().Right);
+				float OffsetH = Widget->GetRenderPadding().Left - Widget->GetRenderPadding().Right + (Child->GetRenderMargin().Left - Child->GetRenderMargin().Right);
 				OffsetH *= 0.5f;
 				auto PivotOffsetX =
 					Child->GetRenderSize().X * (Child->GetPivot().X - 0.5f)//this pivot
 				+ Widget->GetRenderSize().X * (0.5f - Widget->GetPivot().X);//parent pivot
 				Pos.Y = ChildHOffset + OffsetH + PivotOffsetX;
 				Child->SetRelativeLocation(Pos);
-				ChildPosition.Z -= ChildSize.Y + (Child->GetMargin().Top + Child->GetMargin().Bottom) + SpaceValue;
+				ChildPosition.Z -= ChildSize.Y + (Child->GetRenderMargin().Top + Child->GetRenderMargin().Bottom) + SpaceValue;
 			}
 			break;
 		}
@@ -358,11 +358,11 @@ float ULexLayoutHorizontalAndVertical::GetShrinkToChildrenWidth()
 		{
 		case ELexLayoutDirection::Horizontal:
 		case ELexLayoutDirection::HorizontalReverse:
-			ResultSize += ChildSize.X + Child->GetMargin().Left + Child->GetMargin().Right;
+			ResultSize += ChildSize.X + Child->GetRenderMargin().Left + Child->GetRenderMargin().Right;
 			break;
 		case ELexLayoutDirection::Vertical:
 		case ELexLayoutDirection::VerticalReverse:
-			ChildSize.Y += Child->GetMargin().Top + Child->GetMargin().Bottom;
+			ChildSize.Y += Child->GetRenderMargin().Top + Child->GetRenderMargin().Bottom;
 			if (ResultSize < ChildSize.X)
 			{
 				ResultSize = ChildSize.X;
@@ -370,7 +370,7 @@ float ULexLayoutHorizontalAndVertical::GetShrinkToChildrenWidth()
 			break;
 		}
 	}
-	ResultSize += Widget->GetPadding().Left + Widget->GetPadding().Right;
+	ResultSize += Widget->GetRenderPadding().Left + Widget->GetRenderPadding().Right;
 	if (Spacing.Type == ELexLayoutSpacingType::Fixed)
 	{
 		switch (Direction)
@@ -402,8 +402,8 @@ float ULexLayoutHorizontalAndVertical::GetShrinkToChildrenHeight()
 		if (!Child->IsVisibleForLayout())continue;
 		NumLayoutChildren++;
 		auto ChildSize = Child->GetPreferredSize();
-		ChildSize.X += Child->GetMargin().Left + Child->GetMargin().Right;
-		ChildSize.Y += Child->GetMargin().Top + Child->GetMargin().Bottom;
+		ChildSize.X += Child->GetRenderMargin().Left + Child->GetRenderMargin().Right;
+		ChildSize.Y += Child->GetRenderMargin().Top + Child->GetRenderMargin().Bottom;
 		switch (Direction)
 		{
 		case ELexLayoutDirection::Horizontal:
@@ -419,7 +419,7 @@ float ULexLayoutHorizontalAndVertical::GetShrinkToChildrenHeight()
 			break;
 		}
 	}
-	ResultSize += Widget->GetPadding().Top + Widget->GetPadding().Bottom;
+	ResultSize += Widget->GetRenderPadding().Top + Widget->GetRenderPadding().Bottom;
 	if (Spacing.Type == ELexLayoutSpacingType::Fixed)
 	{
 		switch (Direction)

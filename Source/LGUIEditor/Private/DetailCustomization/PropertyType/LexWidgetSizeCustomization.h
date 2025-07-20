@@ -40,7 +40,7 @@ public:
 		{
 			if (!PropertyHandle->IsEditable())return false;
 			if (!AspectRatioType_PH.IsValid())return false;
-			ELexWidgetAspectRatioType AspectRatioFitType = ELexWidgetAspectRatioType::None;
+			auto AspectRatioFitType = ELexWidgetAspectRatioType::None;
 			if (AspectRatioType_PH.Pin()->GetValue(*(uint8*)&AspectRatioFitType) == FPropertyAccess::Success)
 			{
 				if (AspectRatioFitType == ELexWidgetAspectRatioType::HeightControlWidth)
@@ -151,7 +151,7 @@ public:
 						SNew(SBox)
 						.Visibility_Lambda([=]
 						{
-							ELexWidgetSizeType SizeType = ELexWidgetSizeType::Fixed;
+							auto SizeType = ELexWidgetSizeType::Fixed;
 							if (Type_PH->GetValue(*(uint8*)(&SizeType)) == FPropertyAccess::Success)
 							{
 								if (SizeType == ELexWidgetSizeType::Fixed || SizeType == ELexWidgetSizeType::ShrinkToChildren)
@@ -163,7 +163,7 @@ public:
 						})
 						.IsEnabled_Lambda([=]
 						{
-							ELexWidgetSizeType SizeType = ELexWidgetSizeType::Fixed;
+							auto SizeType = ELexWidgetSizeType::Fixed;
 							if (Type_PH->GetValue(*(uint8*)(&SizeType)) == FPropertyAccess::Success)
 							{
 								if (SizeType == ELexWidgetSizeType::Fixed)
@@ -184,7 +184,7 @@ public:
 						SNew(SBox)
 						.Visibility_Lambda([=]
 						{
-							ELexWidgetSizeType SizeType = ELexWidgetSizeType::Fixed;
+							auto SizeType = ELexWidgetSizeType::Fixed;
 							if (Type_PH->GetValue(*(uint8*)(&SizeType)) == FPropertyAccess::Success)
 							{
 								if (SizeType == ELexWidgetSizeType::ExpandToParent)

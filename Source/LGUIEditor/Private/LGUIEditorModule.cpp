@@ -997,6 +997,16 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(bool InitialSetup, bo
 
 	MenuBuilder.BeginSection("CopyReference", LOCTEXT("CopyReference", "Copy Reference"));
 	{
+		MenuBuilder.AddMenuEntry(
+			LOCTEXT("CopyActorReference", "Copy Actor as Reference"),
+			LOCTEXT("CopyActorReference_Tooltip", "Copy Actor as Reference"),
+			FSlateIcon(),
+			FUIAction(FExecuteAction::CreateStatic(&LGUIEditorTools::CopyReference_Actor)
+				, FCanExecuteAction::CreateStatic(&LGUIEditorTools::CanCopyActorReference)
+				, FGetActionCheckState()
+				, FIsActionButtonVisible::CreateStatic(&LGUIEditorTools::CanCopyActorReference)
+				),
+				NAME_None, EUserInterfaceActionType::Button);
 		MenuBuilder.AddSubMenu(LOCTEXT("CopyWidgetReference", "Copy LexWidget as Reference"),
 			LOCTEXT("CopyWidgetReference_Tooltip", "Copy LexWidget as Reference, then we can paste to widget reference property."),
 			FNewMenuDelegate::CreateRaw(this, &FLGUIEditorModule::CopyWidgetReferenceSubMenu),

@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
-#include "ILGUICultureChangedInterface.generated.h"
+#include "ILexUICultureChangedInterface.generated.h"
 
 
 /**
@@ -12,7 +12,7 @@
  * Need to register UObject with RegisterLGUICultureChangedEvent, check UIText for reference
  */
 UINTERFACE(Blueprintable, MinimalAPI)
-class ULGUICultureChangedInterface : public UInterface
+class ULexUICultureChangedInterface : public UInterface
 {
 	GENERATED_BODY()
 };
@@ -20,7 +20,7 @@ class ULGUICultureChangedInterface : public UInterface
  * Interface for LGUI Widget to handle culture change event.
  * Need to register UObject with RegisterLGUICultureChangedEvent, check UIText for reference
  */
-class LGUI_API ILGUICultureChangedInterface
+class LGUI_API ILexUICultureChangedInterface
 {
 	GENERATED_BODY()
 public:

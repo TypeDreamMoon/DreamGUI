@@ -228,14 +228,18 @@ protected:
 	FLexWidgetSize Height;
 	// Expand inward
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Size", Getter, Setter, meta = (AllowPrivateAccess = true))
-	FMargin Padding;
+	FLexWidgetMargin Padding;
 	// Expand outward
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Size", Getter, Setter, meta = (AllowPrivateAccess = true))
-	FMargin Margin;
+	FLexWidgetMargin Margin;
 	UPROPERTY(EditAnywhere, Getter, Setter, Category = "LGUI")
 	FVector2D Pivot = FVector2D(0.5f, 0.5f);
-	UPROPERTY(VisibleAnywhere, Getter, Category = "LGUI", AdvancedDisplay)
+	UPROPERTY(VisibleAnywhere, Transient, Getter, Category = "LGUI", AdvancedDisplay)
 	FVector2D RenderSize = FVector2D(100, 100);
+	UPROPERTY(VisibleAnywhere, Transient, Getter, Category = "LGUI", AdvancedDisplay)
+	FMargin RenderMargin;
+	UPROPERTY(VisibleAnywhere, Transient, Getter, Category = "LGUI", AdvancedDisplay)
+	FMargin RenderPadding;
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
 	FVector2D GetPivot()const {return Pivot;}
@@ -261,9 +265,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Layout")
 	FLexWidgetSize GetHeight()const { return Height; }
 	UFUNCTION(BlueprintCallable, Category = "Size")
-	const FMargin& GetPadding()const{return Padding;}
+	const FLexWidgetMargin& GetPadding()const{return Padding;}
 	UFUNCTION(BlueprintCallable, Category = "Size")
-	const FMargin& GetMargin()const{return Margin;}
+	const FMargin& GetRenderPadding()const;
+	UFUNCTION(BlueprintCallable, Category = "Size")
+	const FLexWidgetMargin& GetMargin()const{return Margin;}
+	const FMargin& GetRenderMargin()const;
 
 	UFUNCTION(BlueprintCallable, Category = "Layout")
 	void SetAspectRatio(const FLexWidgetAspectRatio& Value);
@@ -274,9 +281,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Size")
 	void SetSize(const FLexWidgetSize2& InValue);
 	UFUNCTION(BlueprintCallable, Category = "Size")
-	void SetPadding(const FMargin& Value);
+	void SetPadding(const FLexWidgetMargin& Value);
 	UFUNCTION(BlueprintCallable, Category = "Size")
-	void SetMargin(const FMargin& Value);
+	void SetMargin(const FLexWidgetMargin& Value);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
 	FVector2D GetLocalSpaceLeftBottomPoint()const;
@@ -540,6 +547,8 @@ protected:
 
 	mutable uint32 bLayoutDirty : 1 = true;
 	mutable uint32 bRenderSizeDirty : 1 = true;
+	mutable uint32 bRenderMarginDirty : 1 = true;
+	mutable uint32 bRenderPaddingDirty : 1 = true;
 	mutable uint32 bClipDirty : 1 = true;
 	mutable uint32 bNeedRecreateClip : 1 = true;
 	uint32 bClipDataChanged : 1 = true;
@@ -552,6 +561,9 @@ protected:
 	mutable uint32 bFlattenHierarchyIndexDirty : 1;
 
 	void CalculateRenderSize();
+	void CalculateRenderMargin();
+	void CalculateRenderPadding();
+	float GetMarginPixelValue(const FLexWidgetMarginSize& MarginSize);
 	void MarkClipDirty(bool InClipTypeChanged)const;
 	
 	/** find root UIItem of hierarchy */

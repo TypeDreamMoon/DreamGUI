@@ -3,7 +3,7 @@
 #pragma once
 
 #include "LexVisualBatchMesh.h"
-#include "Core/ILGUICultureChangedInterface.h"
+#include "Core/ILexUICultureChangedInterface.h"
 #include "Core/LexUITextData.h"
 #include "LexText.generated.h"
 
@@ -13,7 +13,7 @@ class ULexUIRichTextImageData_BaseObject;
 class ULexUIRichTextCustomStyleData;
 
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API ULexText : public ULexVisualBatchMesh, public ILGUICultureChangedInterface
+class LGUI_API ULexText : public ULexVisualBatchMesh, public ILexUICultureChangedInterface
 {
 	GENERATED_BODY()
 

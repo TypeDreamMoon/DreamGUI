@@ -19,6 +19,7 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "PropertyType/LexWidgetAspectRatioCustomization.h"
+#include "PropertyType/LexWidgetMarginSizeCustomization.h"
 #include "PropertyType/LexWidgetSizeCustomization.h"
 
 #include "Widgets/Input/SNumericEntryBox.h"
@@ -85,9 +86,10 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	
 	IDetailCategoryBuilder& LGUICategory = DetailBuilder.EditCategory("LGUI");
 
-	DetailBuilder.GetDetailsView()->RegisterInstancedCustomPropertyTypeLayout(TEXT("LexWidgetAspectRatio"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexWidgetAspectRatioCustomization::MakeInstance));
+	DetailBuilder.GetDetailsView()->RegisterInstancedCustomPropertyTypeLayout(FLexWidgetAspectRatio::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexWidgetAspectRatioCustomization::MakeInstance));
 	auto AspectRatio_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AspectRatio));
-	DetailBuilder.GetDetailsView()->RegisterInstancedCustomPropertyTypeLayout(TEXT("LexWidgetSize"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexWidgetSizeCustomization::MakeInstance, AspectRatio_PH.ToSharedPtr()));
+	DetailBuilder.GetDetailsView()->RegisterInstancedCustomPropertyTypeLayout(FLexWidgetSize::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexWidgetSizeCustomization::MakeInstance, AspectRatio_PH.ToSharedPtr()));
+	DetailBuilder.GetDetailsView()->RegisterInstancedCustomPropertyTypeLayout(FLexWidgetMarginSize::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexWidgetMarginSizeCustomization::MakeInstance));
 	
 	//pivot
 	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, Pivot));

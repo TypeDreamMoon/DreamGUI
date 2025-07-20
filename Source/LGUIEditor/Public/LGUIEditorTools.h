@@ -52,6 +52,8 @@ public:
 	static void CopyReference_Layout();
 	static bool CanCopyComponentReference();
 	static void CopyReference_Component(UActorComponent* Comp);
+	static bool CanCopyActorReference();
+	static void CopyReference_Actor();
 	static void CreateScreenSpaceUI_BasicSetup();
 	static void CreateWorldSpaceUIUERenderer_BasicSetup();
 	static void CreateWorldSpaceUILGUIRenderer_BasicSetup();

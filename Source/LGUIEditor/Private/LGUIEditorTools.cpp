@@ -1477,6 +1477,19 @@ void LGUIEditorTools::CopyReference_Component(UActorComponent* Comp)
 	FPlatformApplicationMisc::ClipboardCopy(*ValueAsPathString);
 }
 
+bool LGUIEditorTools::CanCopyActorReference()
+{
+	auto SelectedActors = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
+	return SelectedActors.Num() == 1;
+}
+void LGUIEditorTools::CopyReference_Actor()
+{
+	auto SelectedActors = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
+	auto Actor = SelectedActors[0];
+	auto ValueAsPathString = FString::Printf(TEXT("%s'%s'"), *Actor->GetClass()->GetPathName(), *Actor->GetPathName());
+	FPlatformApplicationMisc::ClipboardCopy(*ValueAsPathString);
+}
+
 void LGUIEditorTools::CreateScreenSpaceUI_BasicSetup()
 {
 	FString prefabPath(TEXT("/LGUI/Prefabs/ScreenSpaceUI"));

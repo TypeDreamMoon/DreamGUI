@@ -82,7 +82,7 @@ struct FLGUILifeCycleBehaviourArrayContainer
 	TArray<TFunction<void()>> Functions;
 };
 
-class ILGUICultureChangedInterface;
+class ILexUICultureChangedInterface;
 enum class ELexRenderMode : uint8;
 
 UCLASS(NotBlueprintable, NotBlueprintType, Transient, NotPlaceable)
@@ -159,9 +159,9 @@ public:
 #endif
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	static void RegisterLGUICultureChangedEvent(TScriptInterface<ILGUICultureChangedInterface> InItem);
+	static void RegisterLGUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	static void UnregisterLGUICultureChangedEvent(TScriptInterface<ILGUICultureChangedInterface> InItem);
+	static void UnregisterLGUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem);
 
 	static void AddCanvas(ULexCanvas* InCanvas, ELexRenderMode InCurrentRenderMode);
 	static void RemoveCanvas(ULexCanvas* InCanvas, ELexRenderMode InCurrentRenderMode);

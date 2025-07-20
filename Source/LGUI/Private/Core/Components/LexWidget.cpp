@@ -64,9 +64,14 @@ void ULexWidget::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void ULexWidget::Awake_Implementation()
 {
+	bRenderSizeDirty = true;
+	bRenderMarginDirty = true;
+	bRenderPaddingDirty = true;
+	
 	CalculateVisibility_Recursive();
 	CalculateHitTest_Recursive();
 	CalculateIsEnabled_Recursive();
+	
 	if (IsValid(Layout))
 	{
 		Layout->BeginPlay();
@@ -79,7 +84,13 @@ void ULexWidget::Awake_Implementation()
 
 void ULexWidget::EditorAwake_Implementation()
 {
+	bRenderSizeDirty = true;
+	bRenderMarginDirty = true;
+	bRenderPaddingDirty = true;
 	
+	CalculateVisibility_Recursive();
+	CalculateHitTest_Recursive();
+	CalculateIsEnabled_Recursive();
 }
 
 #pragma region CallbackEvents
@@ -462,6 +473,8 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		{
 			this->MarkRenderSizeChanged();
 			this->MarkClipDirty(false);
+			this->bRenderMarginDirty = true;
+			this->bRenderPaddingDirty = true;
 			ULGUIPrefabManagerObject::AddOneShotTickFunction([this]()
 			{
 				this->MarkRenderSizeChanged();
@@ -469,20 +482,21 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 				EditorForceUpdate();
 			}, 1);
 		}
-		else if (PropertyName == ClippingName)
+		else if (MemberName == ClippingName)
 		{
 			MarkClipDirty(true);
 		}
-		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexWidget, SiblingIndex))
+		else if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, SiblingIndex))
 		{
 			this->Call_SiblingIndexChanged();
 			ApplySiblingIndex();
 		}
-		else if (PropertyName == FName(TEXT("RelativeLocation")))
+		else if (MemberName == FName(TEXT("RelativeLocation")))
 		{
 			UpdateComponentToWorld();
+			MarkLayoutDirty();
 		}
-		else if (PropertyName == VisualName)
+		else if (MemberName == VisualName)
 		{
 			if (RenderCanvas.IsValid() && IsValid(Visual))
 			{
@@ -497,7 +511,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 				Visual->OnRegister();
 			}
 		}
-		else if (PropertyName == LayoutName)
+		else if (MemberName == LayoutName)
 		{
 			if (!IsValid(Layout))
 			{
@@ -516,15 +530,15 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 			}
 			MarkRenderSizeChanged();
 		}
-		if (PropertyName == VisibilityName)
+		if (MemberName == VisibilityName)
 		{
 			CalculateVisibility_Recursive();
 		}
-		if (PropertyName == HitTestTypeName)
+		if (MemberName == HitTestTypeName)
 		{
 			CalculateHitTest_Recursive();
 		}
-		if (PropertyName == IsEnabledName)
+		if (MemberName == IsEnabledName)
 		{
 			CalculateIsEnabled_Recursive();
 		}
@@ -727,6 +741,7 @@ void ULexWidget::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, E
 		//For the condition LGUI_Tutorials/Tutorials/UIRenderTarget, when move LGUIRenderTarget1 at runtime, the LGUICanvas's RenderTarget's matrix not update, result in wrong interaction.
 		this->RenderCanvas->MarkSizeChanged();
 	}
+	MarkLayoutDirty();
 	MarkTransformChanged(true, true);
 	if (IsValid(Layout))
 	{
@@ -1096,7 +1111,7 @@ void ULexWidget::UpdateLayout()
 		{
 			auto Position = this->GetRelativeLocation();
 			{
-				float PaddingAndMarginOffset = UIParent->GetPadding().Left - UIParent->GetPadding().Right + (this->GetMargin().Left - this->GetMargin().Right);
+				float PaddingAndMarginOffset = UIParent->GetRenderPadding().Left - UIParent->GetRenderPadding().Right + (this->GetRenderMargin().Left - this->GetRenderMargin().Right);
 				PaddingAndMarginOffset *= 0.5f;
 				auto PivotOffset =
 					this->GetRenderSize().X * (this->GetPivot().X - 0.5f)//this pivot
@@ -1104,7 +1119,7 @@ void ULexWidget::UpdateLayout()
 				Position.Y = PaddingAndMarginOffset + PivotOffset;
 			}
 			{
-				float PaddingAndMarginOffset = UIParent->GetPadding().Bottom - UIParent->GetPadding().Top + (this->GetMargin().Bottom - this->GetMargin().Top);
+				float PaddingAndMarginOffset = UIParent->GetRenderPadding().Bottom - UIParent->GetRenderPadding().Top + (this->GetRenderMargin().Bottom - this->GetRenderMargin().Top);
 				PaddingAndMarginOffset *= 0.5f;
 				auto PivotOffset =
 					this->GetRenderSize().Y * (this->GetPivot().Y - 0.5f)//this pivot
@@ -1268,7 +1283,29 @@ void ULexWidget::CalculateRenderSize()
 	{
 		RenderSize.Y = GetPreferredHeight();
 	}
-} 
+}
+void ULexWidget::CalculateRenderMargin()
+{
+	RenderMargin.Left = GetMarginPixelValue(Margin.Left);
+	RenderMargin.Top = GetMarginPixelValue(Margin.Top);
+	RenderMargin.Right = GetMarginPixelValue(Margin.Right);
+	RenderMargin.Bottom = GetMarginPixelValue(Margin.Bottom);
+}
+
+void ULexWidget::CalculateRenderPadding()
+{
+	RenderPadding.Left = GetMarginPixelValue(Padding.Left);
+	RenderPadding.Top = GetMarginPixelValue(Padding.Top);
+	RenderPadding.Right = GetMarginPixelValue(Padding.Right);
+	RenderPadding.Bottom = GetMarginPixelValue(Padding.Bottom);
+}
+
+float ULexWidget::GetMarginPixelValue(const FLexWidgetMarginSize& MarginSize)
+{
+	if (MarginSize.Type == ELexWidgetMarginSizeType::Fixed || !UIParent.IsValid())
+		return MarginSize.Value;
+	return MarginSize.Percent * UIParent->GetRenderWidth() * 0.01f;
+}
 
 void ULexWidget::CheckRootWidget(ULexWidget* RootWidgetInParent)
 {
@@ -1421,8 +1458,8 @@ float ULexWidget::GetPreferredWidth() const
 				else
 				{
 					PreferredWidth = UIParent->GetRenderSize().X
-					- (UIParent->GetPadding().Left + UIParent->GetPadding().Right)
-					- (this->GetMargin().Left + this->GetMargin().Right)
+					- (UIParent->GetRenderPadding().Left + UIParent->GetRenderPadding().Right)
+					- (this->GetRenderMargin().Left + this->GetRenderMargin().Right)
 					;
 					PreferredWidth *= Width.Percent * 0.01f;
 				}
@@ -1442,13 +1479,13 @@ float ULexWidget::GetPreferredWidth() const
 				float MaxSize = 0;
 				for (auto& Child : UIChildren)
 				{
-					auto ChildSize = Child->GetRenderSize().X + (Child->GetMargin().Left + Child->GetMargin().Right);
+					auto ChildSize = Child->GetRenderSize().X + (Child->GetRenderMargin().Left + Child->GetRenderMargin().Right);
 					if (MaxSize < ChildSize)
 					{
 						MaxSize = ChildSize;
 					}
 				}
-				PreferredWidth = MaxSize + (this->GetPadding().Left + this->GetPadding().Right);
+				PreferredWidth = MaxSize + (this->GetRenderPadding().Left + this->GetRenderPadding().Right);
 			}
 			else if (IsValid(Visual))
 			{
@@ -1488,8 +1525,8 @@ float ULexWidget::GetPreferredHeight() const
 				else
 				{
 					PreferredHeight = UIParent->GetRenderSize().Y
-					- (UIParent->GetPadding().Bottom + UIParent->GetPadding().Top)
-					- (this->GetMargin().Bottom + this->GetMargin().Top)
+					- (UIParent->GetRenderPadding().Bottom + UIParent->GetRenderPadding().Top)
+					- (this->GetRenderMargin().Bottom + this->GetRenderMargin().Top)
 					;
 					PreferredHeight *= Height.Percent * 0.01f;
 				}
@@ -1509,13 +1546,13 @@ float ULexWidget::GetPreferredHeight() const
 				float MaxSize = 0;
 				for (auto& Child : UIChildren)
 				{
-					auto ChildSize = Child->GetRenderSize().Y + (Child->GetMargin().Bottom + Child->GetMargin().Top);
+					auto ChildSize = Child->GetRenderSize().Y + (Child->GetRenderMargin().Bottom + Child->GetRenderMargin().Top);
 					if (MaxSize < ChildSize)
 					{
 						MaxSize = ChildSize;
 					}
 				}
-				PreferredHeight = MaxSize + (this->GetPadding().Bottom + this->GetPadding().Top);
+				PreferredHeight = MaxSize + (this->GetRenderPadding().Bottom + this->GetRenderPadding().Top);
 			}
 			else if (IsValid(Visual))
 			{
@@ -1544,6 +1581,26 @@ void ULexWidget::SetRenderSizeByLayout(FVector2D Value)
 		bRenderSizeDirty = false;
 		MarkDimensionChanged(false, true, true);
 	}
+}
+
+const FMargin& ULexWidget::GetRenderPadding() const
+{
+	if (bRenderPaddingDirty)
+	{
+		bRenderPaddingDirty = false;
+		const_cast<ULexWidget*>(this)->CalculateRenderPadding();
+	}
+	return RenderPadding;
+}
+
+const FMargin& ULexWidget::GetRenderMargin() const
+{
+	if (bRenderMarginDirty)
+	{
+		bRenderMarginDirty = false;
+		const_cast<ULexWidget*>(this)->CalculateRenderMargin();
+	}
+	return RenderMargin;
 }
 
 void ULexWidget::SetAspectRatio(const FLexWidgetAspectRatio& Value)
@@ -1583,20 +1640,22 @@ void ULexWidget::SetSize(const FLexWidgetSize2& Value)
 	}
 }
 
-void ULexWidget::SetPadding(const FMargin& Value)
+void ULexWidget::SetPadding(const FLexWidgetMargin& Value)
 {
 	if (Padding != Value)
 	{
 		Padding = Value;
+		bRenderPaddingDirty = true;
 		MarkRenderSizeChanged();
 	}
 }
 
-void ULexWidget::SetMargin(const FMargin& Value)
+void ULexWidget::SetMargin(const FLexWidgetMargin& Value)
 {
 	if (Margin != Value)
 	{
 		Margin = Value;
+		bRenderMarginDirty = true;
 		MarkRenderSizeChanged();
 	}
 }
@@ -1727,9 +1786,17 @@ void ULexWidget::MarkRenderSizeChanged()
 		{
 			Target->bRenderSizeDirty = true;
 			Target->MarkDimensionChanged(false, true, true);
+			if (Target->Padding.AffectByParent())
+			{
+				Target->bRenderPaddingDirty = true;
+			}
+			if (Target->Margin.AffectByParent())
+			{
+				Target->bRenderMarginDirty = true;
+			}
+			Target->MarkLayoutDirty();
 			if (IsValid(Target->Layout))
 			{
-				Target->MarkLayoutDirty();
 				for (auto& Child : Target->GetUIChildren())
 				{
 					MarkDirty(Child);
@@ -1748,7 +1815,7 @@ void ULexWidget::MarkRenderSizeChanged()
 			}
 		}
 	};
-	//search up in hierarchy to find the first widget which is affected by the size change
+	//search up in hierarchy to find the first widget which is affected by the child size
 	auto ParentWillBeAffected = this;
 	while (ParentWillBeAffected != nullptr)
 	{
