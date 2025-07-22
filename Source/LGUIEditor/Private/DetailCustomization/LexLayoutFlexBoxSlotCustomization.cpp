@@ -1,44 +1,44 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LexLayoutHorizontalAndVerticalSlotCustomization.h"
+#include "LexLayoutFlexBoxSlotCustomization.h"
 #include "HAL/PlatformApplicationMisc.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailWidgetRow.h"
-#include "Core/Components/LexLayoutHorizontalAndVertical.h"
+#include "Core/Components/LexLayoutFlexBox.h"
 #include "Core/Components/LexWidget.h"
 #include "Widgets/Input/SSegmentedControl.h"
 
 #define LOCTEXT_NAMESPACE "LexLayoutSlotHorizontalAndVertical"
-FLexLayoutHorizontalAndVerticalSlotCustomization::FLexLayoutHorizontalAndVerticalSlotCustomization()
+FLexLayoutFlexBoxSlotCustomization::FLexLayoutFlexBoxSlotCustomization()
 {
 }
 
-FLexLayoutHorizontalAndVerticalSlotCustomization::~FLexLayoutHorizontalAndVerticalSlotCustomization()
+FLexLayoutFlexBoxSlotCustomization::~FLexLayoutFlexBoxSlotCustomization()
 {
 }
 
-TSharedRef<IDetailCustomization> FLexLayoutHorizontalAndVerticalSlotCustomization::MakeInstance()
+TSharedRef<IDetailCustomization> FLexLayoutFlexBoxSlotCustomization::MakeInstance()
 {
-	return MakeShareable(new FLexLayoutHorizontalAndVerticalSlotCustomization);
+	return MakeShareable(new FLexLayoutFlexBoxSlotCustomization);
 }
-void FLexLayoutHorizontalAndVerticalSlotCustomization::CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& DetailBuilder)
+void FLexLayoutFlexBoxSlotCustomization::CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& DetailBuilder)
 {
 	TArray<TWeakObjectPtr<UObject>> TargetObjects;
 	DetailBuilder->GetObjectsBeingCustomized(TargetObjects);
-	TargetScript = Cast<ULexLayoutHorizontalAndVerticalSlot>(TargetObjects[0].Get());
+	TargetScript = Cast<ULexLayoutFlexBoxSlot>(TargetObjects[0].Get());
 	if (TargetScript == nullptr)
 	{
-		UE_LOG(LGUIEditor, Log, TEXT("[FLexLayoutSlotHorizontalAndVerticalCustomization]Get TargetScript is null"));
+		UE_LOG(LGUIEditor, Log, TEXT("[%s]Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__	));
 		return;
 	}
 	
 	auto& Category = DetailBuilder->EditCategory("LayoutSlot");
 	{
 		auto BeginClipboardLexWidget_Prefix = TEXT("Begin LexUI PositionAlignment");
-		auto HorizontalAlignment_PH = DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutHorizontalAndVerticalSlot, HorizontalAlignment));
-		auto VerticalAlignment_PH = DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutHorizontalAndVerticalSlot, VerticalAlignment));
+		auto HorizontalAlignment_PH = DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutFlexBoxSlot, HorizontalAlignment));
+		auto VerticalAlignment_PH = DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutFlexBoxSlot, VerticalAlignment));
 		Category.AddCustomRow(LOCTEXT("PositionAlignment_Row", "PositionAlignment"))
 		.NameContent()
 		[
@@ -73,7 +73,7 @@ void FLexLayoutHorizontalAndVerticalSlotCustomization::CustomizeDetails(const TS
 					.FillWidth(1.0f)
 					[
 						SNew(SBox)
-						.IsEnabled(this, &FLexLayoutHorizontalAndVerticalSlotCustomization::GetAlignmentEnabled, true, TargetObjects)
+						.IsEnabled(this, &FLexLayoutFlexBoxSlotCustomization::GetAlignmentEnabled, true, TargetObjects)
 						[
 							SNew(SSegmentedControl<ELexLayoutHorizontalAlignment>)
 							.Value_Lambda([=]
@@ -131,7 +131,7 @@ void FLexLayoutHorizontalAndVerticalSlotCustomization::CustomizeDetails(const TS
 					.FillWidth(1.0f)
 					[
 						SNew(SBox)
-						.IsEnabled(this, &FLexLayoutHorizontalAndVerticalSlotCustomization::GetAlignmentEnabled, false, TargetObjects)
+						.IsEnabled(this, &FLexLayoutFlexBoxSlotCustomization::GetAlignmentEnabled, false, TargetObjects)
 						[
 							SNew(SSegmentedControl<ELexLayoutVerticalAlignment>)
 							.Value_Lambda([=]
@@ -219,9 +219,9 @@ void FLexLayoutHorizontalAndVerticalSlotCustomization::CustomizeDetails(const TS
 		DetailBuilder->HideProperty(HorizontalAlignment_PH);
 		DetailBuilder->HideProperty(VerticalAlignment_PH);
 
-		auto PositionOffset_PH = DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutHorizontalAndVerticalSlot, PositionOffset));
-		auto PositionOffsetX_PH = DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutHorizontalAndVerticalSlot, PositionOffset.X));
-		auto PositionOffsetY_PH = DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutHorizontalAndVerticalSlot, PositionOffset.Y));
+		auto PositionOffset_PH = DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutFlexBoxSlot, PositionOffset));
+		auto PositionOffsetX_PH = DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutFlexBoxSlot, PositionOffset.X));
+		auto PositionOffsetY_PH = DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutFlexBoxSlot, PositionOffset.Y));
 		FUIAction PositionOffsetPropertyCopyAction;
 		FUIAction PositionOffsetPropertyPasteAction;
 		PositionOffset_PH->CreateDefaultPropertyCopyPasteActions(PositionOffsetPropertyCopyAction, PositionOffsetPropertyPasteAction);
@@ -272,7 +272,7 @@ void FLexLayoutHorizontalAndVerticalSlotCustomization::CustomizeDetails(const TS
 								{
 									if (auto Parent = Widget->GetUIParent())
 									{
-										if (auto ParentLayout = Cast<ULexLayoutHorizontalAndVertical>(Parent->GetLayout()))
+										if (auto ParentLayout = Cast<ULexLayoutFlexBox>(Parent->GetLayout()))
 										{
 											auto Direction = ParentLayout->GetDirection();
 											if (Direction == ELexLayoutDirection::Horizontal || Direction == ELexLayoutDirection::HorizontalReverse)
@@ -329,7 +329,7 @@ void FLexLayoutHorizontalAndVerticalSlotCustomization::CustomizeDetails(const TS
 								{
 									if (auto Parent = Widget->GetUIParent())
 									{
-										if (auto ParentLayout = Cast<ULexLayoutHorizontalAndVertical>(Parent->GetLayout()))
+										if (auto ParentLayout = Cast<ULexLayoutFlexBox>(Parent->GetLayout()))
 										{
 											auto Direction = ParentLayout->GetDirection();
 											if (Direction == ELexLayoutDirection::Vertical || Direction == ELexLayoutDirection::VerticalReverse)
@@ -358,7 +358,7 @@ void FLexLayoutHorizontalAndVerticalSlotCustomization::CustomizeDetails(const TS
 		DetailBuilder->HideProperty(PositionOffset_PH);
 	}
 }
-bool FLexLayoutHorizontalAndVerticalSlotCustomization::GetAlignmentEnabled(bool HorizontalOrVertical, TArray<TWeakObjectPtr<UObject>> TargetObjects) const
+bool FLexLayoutFlexBoxSlotCustomization::GetAlignmentEnabled(bool HorizontalOrVertical, TArray<TWeakObjectPtr<UObject>> TargetObjects) const
 {
 	if (TargetObjects.Num() == 1 && TargetScript.IsValid())
 	{
@@ -366,7 +366,7 @@ bool FLexLayoutHorizontalAndVerticalSlotCustomization::GetAlignmentEnabled(bool 
 		{
 			if (auto Parent = Widget->GetUIParent())
 			{
-				if (auto ParentLayout = Cast<ULexLayoutHorizontalAndVertical>(Parent->GetLayout()))
+				if (auto ParentLayout = Cast<ULexLayoutFlexBox>(Parent->GetLayout()))
 				{
 					auto Direction = ParentLayout->GetDirection();
 					if ((HorizontalOrVertical && (Direction == ELexLayoutDirection::Horizontal || Direction == ELexLayoutDirection::HorizontalReverse))

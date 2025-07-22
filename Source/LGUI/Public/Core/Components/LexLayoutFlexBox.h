@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "LexLayout.h"
-#include "LexLayoutHorizontalAndVertical.generated.h"
+#include "LexLayoutFlexBox.generated.h"
 
 class ULexWidget;
 
@@ -58,12 +58,12 @@ enum class ELexLayoutVerticalAlignment : uint8
 	Bottom,
 };
 
-UCLASS(BlueprintType, DisplayName="Horizontal & Vertical")
-class LGUI_API ULexLayoutHorizontalAndVertical : public ULexLayout
+UCLASS(BlueprintType, DisplayName="FlexBox")
+class LGUI_API ULexLayoutFlexBox : public ULexLayout
 {
 	GENERATED_BODY()
 private:
-	friend class FLexLayoutHorizontalAndVerticalCustomization;
+	friend class FLexLayoutFlexBoxCustomization;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", Getter, Setter, meta = (AllowPrivateAccess = true))
 	ELexLayoutDirection Direction = ELexLayoutDirection::Horizontal;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", Getter, Setter, meta = (AllowPrivateAccess = true))
@@ -104,12 +104,12 @@ public:
 	void SetSpacing(const FLexLayoutSpacing& Value);
 };
 
-UCLASS(BlueprintType, DisplayName="Vertical & Horizontal Slot")
-class LGUI_API ULexLayoutHorizontalAndVerticalSlot : public ULexLayoutSlot
+UCLASS(BlueprintType, DisplayName="FlexBox Slot")
+class LGUI_API ULexLayoutFlexBoxSlot : public ULexLayoutSlot
 {
 	GENERATED_BODY()
 private:
-	friend class FLexLayoutHorizontalAndVerticalSlotCustomization;
+	friend class FLexLayoutFlexBoxSlotCustomization;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LayoutSlot", Getter, Setter, meta = (AllowPrivateAccess = true))
 	ELexLayoutHorizontalAlignment HorizontalAlignment = ELexLayoutHorizontalAlignment::Center;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LayoutSlot", Getter, Setter, meta = (AllowPrivateAccess = true))
@@ -129,7 +129,7 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LayoutSlot", Getter, Setter, meta = (AllowPrivateAccess = true, UIMin=0))
 	float Shrink = 0;
 	
-	TWeakObjectPtr<ULexLayoutHorizontalAndVertical> CacheLayout;
+	TWeakObjectPtr<ULexLayoutFlexBox> CacheLayout;
 public:
 	virtual bool GetLayoutControlWidth() const override;
 	virtual bool GetLayoutControlHeight() const override;
@@ -137,7 +137,7 @@ public:
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	ULexLayoutHorizontalAndVertical* GetLayout();
+	ULexLayoutFlexBox* GetLayout();
 	
 	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
 	ELexLayoutHorizontalAlignment GetHorizontalAlignment()const { return HorizontalAlignment; }

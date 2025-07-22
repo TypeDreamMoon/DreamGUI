@@ -1,6 +1,6 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LexLayoutHorizontalAndVerticalCustomization.h"
+#include "LexLayoutFlexBoxCustomization.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailWidgetRow.h"
@@ -13,36 +13,36 @@
 #define LOCTEXT_NAMESPACE "LexLayoutHorizontalAndVertical"
 UE_DISABLE_OPTIMIZATION
 
-FLexLayoutHorizontalAndVerticalCustomization::FLexLayoutHorizontalAndVerticalCustomization()
+FLexLayoutFlexBoxCustomization::FLexLayoutFlexBoxCustomization()
 {
 }
 
-FLexLayoutHorizontalAndVerticalCustomization::~FLexLayoutHorizontalAndVerticalCustomization()
+FLexLayoutFlexBoxCustomization::~FLexLayoutFlexBoxCustomization()
 {
 }
 
-TSharedRef<IDetailCustomization> FLexLayoutHorizontalAndVerticalCustomization::MakeInstance()
+TSharedRef<IDetailCustomization> FLexLayoutFlexBoxCustomization::MakeInstance()
 {
-	return MakeShareable(new FLexLayoutHorizontalAndVerticalCustomization);
+	return MakeShareable(new FLexLayoutFlexBoxCustomization);
 }
-void FLexLayoutHorizontalAndVerticalCustomization::CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& DetailBuilder)
+void FLexLayoutFlexBoxCustomization::CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& DetailBuilder)
 {
 	TArray<TWeakObjectPtr<UObject>> TargetObjects;
 	DetailBuilder->GetObjectsBeingCustomized(TargetObjects);
-	TargetScriptPtr = Cast<ULexLayoutHorizontalAndVertical>(TargetObjects[0].Get());
+	TargetScriptPtr = Cast<ULexLayoutFlexBox>(TargetObjects[0].Get());
 	if (TargetScriptPtr == nullptr)
 	{
-		UE_LOG(LGUIEditor, Log, TEXT("[FLexLayoutHorizontalAndVerticalCustomization]Get TargetScript is null"));
+		UE_LOG(LGUIEditor, Log, TEXT("[%s]Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__	));
 		return;
 	}
 	
 	IDetailCategoryBuilder& Category = DetailBuilder->EditCategory("Layout");
-	auto Direction_PH = DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutHorizontalAndVertical, Direction));
+	auto Direction_PH = DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutFlexBox, Direction));
 	Category.AddProperty(Direction_PH);
 	DetailBuilder->GetDetailsView()->RegisterInstancedCustomPropertyTypeLayout(TEXT("ELexLayoutDirection"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexLayoutDirectionCustomization::MakeInstance));
 	auto BeginClipboard_LexLayoutHorizontalAndVertical_Prefix = TEXT("Begin LexUI LexLayoutHorizontalAndVertical");
-	auto HorizontalAlignment_PH = DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutHorizontalAndVertical, HorizontalAlignment));
-	auto VerticalAlignment_PH = DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutHorizontalAndVertical, VerticalAlignment));
+	auto HorizontalAlignment_PH = DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutFlexBox, HorizontalAlignment));
+	auto VerticalAlignment_PH = DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutFlexBox, VerticalAlignment));
 	Category.AddCustomRow(LOCTEXT("PositionAlignment_Row", "PositionAlignment"))
 	.NameContent()
 	[
@@ -237,7 +237,7 @@ void FLexLayoutHorizontalAndVerticalCustomization::CustomizeDetails(const TShare
 	DetailBuilder->HideProperty(VerticalAlignment_PH);
 
 	DetailBuilder->RegisterInstancedCustomPropertyTypeLayout(FLexLayoutSpacing::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexLayoutSpacingCustomization::MakeInstance));
-	auto Spacing_PH = DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutHorizontalAndVertical, Spacing));
+	auto Spacing_PH = DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutFlexBox, Spacing));
 	Category.AddProperty(Spacing_PH);
 }
 

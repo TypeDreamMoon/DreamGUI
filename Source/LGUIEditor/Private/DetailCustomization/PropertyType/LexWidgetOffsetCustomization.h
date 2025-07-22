@@ -1,7 +1,7 @@
 #pragma once
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
-#include "LexUIEditorStyle.h"
+#include "LGUIEditorStyle.h"
 #include "Core/LexWidgetTypes.h"
 #include "Widgets/Input/SSegmentedControl.h"
 
@@ -63,10 +63,10 @@ public:
 						.Text(LOCTEXT("LexWidgetLength_Fixed", "*"))
 						.ToolTip(TypeEnumProperty->GetEnum()->GetToolTipTextByIndex((int)ELexWidgetOffsetType::Fixed))
 						+ SSegmentedControl<ELexWidgetOffsetType>::Slot(ELexWidgetOffsetType::RelativeToParentSize)
-						.Icon(FLexUIEditorStyle::Get().GetBrush(HorizontalOrVertical ? "WidgetSize_ExpandToParent" : "WidgetSize_ExpandToParent_V"))
+						.Icon(FLGUIEditorStyle::Get().GetBrush(HorizontalOrVertical ? "WidgetSize_ExpandToParent" : "WidgetSize_ExpandToParent_V"))
 						.ToolTip(TypeEnumProperty->GetEnum()->GetToolTipTextByIndex((int)ELexWidgetOffsetType::RelativeToParentSize))
 						+ SSegmentedControl<ELexWidgetOffsetType>::Slot(ELexWidgetOffsetType::RelativeToSelfSize)
-						.Icon(FLexUIEditorStyle::Get().GetBrush(HorizontalOrVertical ? "WidgetSize_ShrinkToChildren" : "WidgetSize_ShrinkToChildren_V"))
+						.Icon(FLGUIEditorStyle::Get().GetBrush(HorizontalOrVertical ? "WidgetSize_ShrinkToChildren" : "WidgetSize_ShrinkToChildren_V"))
 						.ToolTip(TypeEnumProperty->GetEnum()->GetToolTipTextByIndex((int)ELexWidgetOffsetType::RelativeToSelfSize))
 					]
 				]

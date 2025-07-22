@@ -7,7 +7,8 @@
 #include "LexLayoutAnchor.generated.h"
 
 class ULexLayoutSlot;
-UCLASS(BlueprintType)
+
+UCLASS(BlueprintType, DisplayName="Anchor")
 class LGUI_API ULexLayoutAnchor : public ULexLayout
 {
 	GENERATED_BODY()
@@ -32,7 +33,7 @@ private:
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
 };
 
-UCLASS(BlueprintType)
+UCLASS(BlueprintType, DisplayName="Anchor Slot")
 class LGUI_API ULexLayoutAnchorSlot : public ULexLayoutSlot
 {
 	GENERATED_BODY()

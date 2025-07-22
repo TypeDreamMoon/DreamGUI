@@ -1,6 +1,6 @@
 #pragma once
 #include "DetailWidgetRow.h"
-#include "Core/Components/LexLayoutHorizontalAndVertical.h"
+#include "Core/Components/LexLayoutFlexBox.h"
 
 #define LOCTEXT_NAMESPACE "LexLayoutSpacingCustomization"
 

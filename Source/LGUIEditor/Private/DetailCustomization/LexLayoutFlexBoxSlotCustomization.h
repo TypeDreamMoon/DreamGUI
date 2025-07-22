@@ -4,15 +4,15 @@
 #include "IDetailCustomization.h"
 #pragma once
 
-class ULexLayoutHorizontalAndVerticalSlot;
+class ULexLayoutFlexBoxSlot;
 /**
  * 
  */
-class FLexLayoutHorizontalAndVerticalSlotCustomization : public IDetailCustomization
+class FLexLayoutFlexBoxSlotCustomization : public IDetailCustomization
 {
 public:
-	FLexLayoutHorizontalAndVerticalSlotCustomization();
-	~FLexLayoutHorizontalAndVerticalSlotCustomization();
+	FLexLayoutFlexBoxSlotCustomization();
+	~FLexLayoutFlexBoxSlotCustomization();
 
 	static TSharedRef<IDetailCustomization> MakeInstance();
 	/** IDetailCustomization interface */
@@ -20,5 +20,5 @@ public:
 	virtual void CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& DetailBuilder) override;
 private:
 	bool GetAlignmentEnabled(bool HorizontalOrVertical, TArray<TWeakObjectPtr<UObject>> TargetObjects) const;
-	TWeakObjectPtr<ULexLayoutHorizontalAndVerticalSlot> TargetScript;
+	TWeakObjectPtr<ULexLayoutFlexBoxSlot> TargetScript;
 };

@@ -1,11 +1,11 @@
 // Copyright 2025-Present LexLiu. All Rights Reserved.
 
-#include "Core/Components/LexLayoutHorizontalAndVertical.h"
+#include "Core/Components/LexLayoutFlexBox.h"
 
 #include "Core/Components/LexVisual.h"
 #include "Core/Components/LexWidget.h"
 
-void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
+void ULexLayoutFlexBox::OnUpdateLayout()
 {
 	auto Widget = GetWidget();
 	if (!Widget)return;
@@ -37,7 +37,7 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 	for (int i = 0; i < Children.Num(); i++)
 	{
 		auto Child = Children[i];
-		auto LayoutSlot = (ULexLayoutHorizontalAndVerticalSlot*)Child->GetLayoutSlot();//make sure layout slot is created
+		auto LayoutSlot = (ULexLayoutFlexBoxSlot*)Child->GetLayoutSlot();//make sure layout slot is created
 		if (!Child->IsVisibleForLayout())continue;
 		if (LayoutSlot->GetOrder() != 0)
 		{
@@ -123,7 +123,7 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 				auto AverageExtraSize = ExtraSize / AccumulatedGrowValue;
 				for (auto Child : WidgetsWithGrow)
 				{
-					auto LayoutSlot = (ULexLayoutHorizontalAndVerticalSlot*)(Child->GetLayoutSlot());
+					auto LayoutSlot = (ULexLayoutFlexBoxSlot*)(Child->GetLayoutSlot());
 					auto GrowSize = LayoutSlot->GetGrow() * AverageExtraSize;
 					auto RenderSize = Child->GetPreferredSize();
 					RenderSize.X += GrowSize;
@@ -140,7 +140,7 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 				auto AverageExtraSize = ExtraSize / AccumulatedShrinkValue;
 				for (auto Child : WidgetsWithShrink)
 				{
-					auto LayoutSlot = (ULexLayoutHorizontalAndVerticalSlot*)(Child->GetLayoutSlot());
+					auto LayoutSlot = (ULexLayoutFlexBoxSlot*)(Child->GetLayoutSlot());
 					auto ShrinkSize = LayoutSlot->GetShrink() * AverageExtraSize;
 					auto RenderSize = Child->GetPreferredSize();
 					RenderSize.X -= ShrinkSize;
@@ -160,7 +160,7 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 				auto AverageExtraSize = ExtraSize / AccumulatedGrowValue;
 				for (auto Child : WidgetsWithGrow)
 				{
-					auto LayoutSlot = (ULexLayoutHorizontalAndVerticalSlot*)(Child->GetLayoutSlot());
+					auto LayoutSlot = (ULexLayoutFlexBoxSlot*)(Child->GetLayoutSlot());
 					auto GrowSize = LayoutSlot->GetGrow() * AverageExtraSize;
 					auto RenderSize = Child->GetPreferredSize();
 					RenderSize.Y += GrowSize;
@@ -177,7 +177,7 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 				auto AverageExtraSize = ExtraSize / AccumulatedShrinkValue;
 				for (auto Child : WidgetsWithShrink)
 				{
-					auto LayoutSlot = (ULexLayoutHorizontalAndVerticalSlot*)(Child->GetLayoutSlot());
+					auto LayoutSlot = (ULexLayoutFlexBoxSlot*)(Child->GetLayoutSlot());
 					auto ShrinkSize = LayoutSlot->GetShrink() * AverageExtraSize;
 					auto RenderSize = Child->GetPreferredSize();
 					RenderSize.Y -= ShrinkSize;
@@ -243,8 +243,8 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 	{
 		ReorderedChildren.Sort([this](const ULexWidget& A, const ULexWidget& B)
 		{
-			auto LayoutSlotA = (ULexLayoutHorizontalAndVerticalSlot*)A.GetLayoutSlot();
-			auto LayoutSlotB = (ULexLayoutHorizontalAndVerticalSlot*)B.GetLayoutSlot();
+			auto LayoutSlotA = (ULexLayoutFlexBoxSlot*)A.GetLayoutSlot();
+			auto LayoutSlotB = (ULexLayoutFlexBoxSlot*)B.GetLayoutSlot();
 			if (LayoutSlotA->GetOrder() == LayoutSlotB->GetOrder())
 				return A.GetSiblingIndex() < B.GetSiblingIndex();
 			return LayoutSlotA->GetOrder() < LayoutSlotB->GetOrder();
@@ -255,7 +255,7 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 	{
 		auto Child = ReorderedChildren[ReverseDirection ? ReorderedChildren.Num() - i - 1 : i];
 		if (!Child->IsVisibleForLayout())continue;
-		auto ChildLayoutSlot = (ULexLayoutHorizontalAndVerticalSlot*)Child->GetLayoutSlot();
+		auto ChildLayoutSlot = (ULexLayoutFlexBoxSlot*)Child->GetLayoutSlot();
 		auto ChildSize = Child->GetRenderSize();
 		// ChildSize.X += Child->GetMargin().Left + Child->GetMargin().Right;
 		// ChildSize.Y += Child->GetMargin().Top + Child->GetMargin().Bottom;
@@ -330,18 +330,18 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 }
 
 #if WITH_EDITOR
-void ULexLayoutHorizontalAndVertical::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
+void ULexLayoutFlexBox::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 
 #endif
 
-TSubclassOf<ULexLayoutSlot> ULexLayoutHorizontalAndVertical::GetSlotClass() const
+TSubclassOf<ULexLayoutSlot> ULexLayoutFlexBox::GetSlotClass() const
 {
-	return ULexLayoutHorizontalAndVerticalSlot::StaticClass();
+	return ULexLayoutFlexBoxSlot::StaticClass();
 }
-float ULexLayoutHorizontalAndVertical::GetShrinkToChildrenWidth()
+float ULexLayoutFlexBox::GetShrinkToChildrenWidth()
 {
 	auto Widget = GetWidget();
 	if (!Widget)return 0;
@@ -389,7 +389,7 @@ float ULexLayoutHorizontalAndVertical::GetShrinkToChildrenWidth()
 	}
 	return ResultSize;
 }
-float ULexLayoutHorizontalAndVertical::GetShrinkToChildrenHeight()
+float ULexLayoutFlexBox::GetShrinkToChildrenHeight()
 {
 	auto Widget = GetWidget();
 	if (!Widget)return 0;
@@ -439,7 +439,7 @@ float ULexLayoutHorizontalAndVertical::GetShrinkToChildrenHeight()
 	return ResultSize;
 }
 
-void ULexLayoutHorizontalAndVertical::SetDirection(ELexLayoutDirection Value)
+void ULexLayoutFlexBox::SetDirection(ELexLayoutDirection Value)
 {
 	if (Direction != Value)
 	{
@@ -448,7 +448,7 @@ void ULexLayoutHorizontalAndVertical::SetDirection(ELexLayoutDirection Value)
 	}
 }
 
-void ULexLayoutHorizontalAndVertical::SetHorizontalAlignment(ELexLayoutHorizontalAlignment Value)
+void ULexLayoutFlexBox::SetHorizontalAlignment(ELexLayoutHorizontalAlignment Value)
 {
 	if (HorizontalAlignment != Value)
 	{
@@ -456,7 +456,7 @@ void ULexLayoutHorizontalAndVertical::SetHorizontalAlignment(ELexLayoutHorizonta
 		GetWidget()->MarkRenderSizeChanged();
 	}
 }
-void ULexLayoutHorizontalAndVertical::SetVerticalAlignment(ELexLayoutVerticalAlignment Value)
+void ULexLayoutFlexBox::SetVerticalAlignment(ELexLayoutVerticalAlignment Value)
 {
 	if (VerticalAlignment != Value)
 	{
@@ -464,7 +464,7 @@ void ULexLayoutHorizontalAndVertical::SetVerticalAlignment(ELexLayoutVerticalAli
 		GetWidget()->MarkRenderSizeChanged();
 	}
 }
-void ULexLayoutHorizontalAndVertical::SetSpacing(const FLexLayoutSpacing& Value)
+void ULexLayoutFlexBox::SetSpacing(const FLexLayoutSpacing& Value)
 {
 	if (Spacing != Value)
 	{
@@ -475,25 +475,25 @@ void ULexLayoutHorizontalAndVertical::SetSpacing(const FLexLayoutSpacing& Value)
 
 
 #if WITH_EDITOR
-void ULexLayoutHorizontalAndVerticalSlot::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
+void ULexLayoutFlexBoxSlot::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 #endif
 
-ULexLayoutHorizontalAndVertical* ULexLayoutHorizontalAndVerticalSlot::GetLayout()
+ULexLayoutFlexBox* ULexLayoutFlexBoxSlot::GetLayout()
 {
 	if (!CacheLayout.IsValid())
 	{
 		if (auto Parent = GetWidget()->GetUIParent())
 		{
-			CacheLayout = Cast<ULexLayoutHorizontalAndVertical>(Parent->GetLayout());
+			CacheLayout = Cast<ULexLayoutFlexBox>(Parent->GetLayout());
 		}
 	}
 	return CacheLayout.Get();
 }
 
-void ULexLayoutHorizontalAndVerticalSlot::SetHorizontalAlignment(ELexLayoutHorizontalAlignment Value)
+void ULexLayoutFlexBoxSlot::SetHorizontalAlignment(ELexLayoutHorizontalAlignment Value)
 {
 	if (HorizontalAlignment != Value)
 	{
@@ -501,7 +501,7 @@ void ULexLayoutHorizontalAndVerticalSlot::SetHorizontalAlignment(ELexLayoutHoriz
 		GetWidget()->MarkRenderSizeChanged();
 	}
 }
-void ULexLayoutHorizontalAndVerticalSlot::SetVerticalAlignment(ELexLayoutVerticalAlignment Value)
+void ULexLayoutFlexBoxSlot::SetVerticalAlignment(ELexLayoutVerticalAlignment Value)
 {
 	if (VerticalAlignment != Value)
 	{
@@ -509,7 +509,7 @@ void ULexLayoutHorizontalAndVerticalSlot::SetVerticalAlignment(ELexLayoutVertica
 		GetWidget()->MarkRenderSizeChanged();
 	}
 }
-void ULexLayoutHorizontalAndVerticalSlot::SetPositionOffset(const FVector2D& Value)
+void ULexLayoutFlexBoxSlot::SetPositionOffset(const FVector2D& Value)
 {
 	if (PositionOffset != Value)
 	{
@@ -518,7 +518,7 @@ void ULexLayoutHorizontalAndVerticalSlot::SetPositionOffset(const FVector2D& Val
 	}
 }
 
-void ULexLayoutHorizontalAndVerticalSlot::SetOrder(int32 Value)
+void ULexLayoutFlexBoxSlot::SetOrder(int32 Value)
 {
 	if (Order != Value)
 	{
@@ -527,7 +527,7 @@ void ULexLayoutHorizontalAndVerticalSlot::SetOrder(int32 Value)
 	}
 }
 
-void ULexLayoutHorizontalAndVerticalSlot::SetGrow(float Value)
+void ULexLayoutFlexBoxSlot::SetGrow(float Value)
 {
 	if (Grow != Value)
 	{
@@ -536,7 +536,7 @@ void ULexLayoutHorizontalAndVerticalSlot::SetGrow(float Value)
 	}
 }
 
-void ULexLayoutHorizontalAndVerticalSlot::SetShrink(float Value)
+void ULexLayoutFlexBoxSlot::SetShrink(float Value)
 {
 	if (Shrink != Value)
 	{
@@ -545,12 +545,12 @@ void ULexLayoutHorizontalAndVerticalSlot::SetShrink(float Value)
 	}
 }
 
-bool ULexLayoutHorizontalAndVerticalSlot::GetLayoutControlWidth() const
+bool ULexLayoutFlexBoxSlot::GetLayoutControlWidth() const
 {
 	return Grow != 0 || Shrink != 0;
 }
 
-bool ULexLayoutHorizontalAndVerticalSlot::GetLayoutControlHeight() const
+bool ULexLayoutFlexBoxSlot::GetLayoutControlHeight() const
 {
 	return Grow != 0 || Shrink != 0;
 }

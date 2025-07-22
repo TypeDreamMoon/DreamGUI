@@ -4,20 +4,20 @@
 #include "IDetailCustomization.h"
 #pragma once
 
-class ULexLayoutHorizontalAndVertical;
+class ULexLayoutFlexBox;
 /**
  * 
  */
-class FLexLayoutHorizontalAndVerticalCustomization : public IDetailCustomization
+class FLexLayoutFlexBoxCustomization : public IDetailCustomization
 {
 public:
-	FLexLayoutHorizontalAndVerticalCustomization();
-	~FLexLayoutHorizontalAndVerticalCustomization();
+	FLexLayoutFlexBoxCustomization();
+	~FLexLayoutFlexBoxCustomization();
 
 	static TSharedRef<IDetailCustomization> MakeInstance();
 	/** IDetailCustomization interface */
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override {};
 	virtual void CustomizeDetails(const TSharedPtr<IDetailLayoutBuilder>& DetailBuilder) override;
 private:
-	TWeakObjectPtr<ULexLayoutHorizontalAndVertical> TargetScriptPtr;
+	TWeakObjectPtr<ULexLayoutFlexBox> TargetScriptPtr;
 };
