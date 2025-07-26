@@ -18,6 +18,17 @@ enum class ELexLayoutDirection : uint8
 };
 
 UENUM(BlueprintType)
+enum class ELexLayoutFlexBoxJustifyContentType: uint8
+{
+	Start,
+	Center,
+	End,
+	SpaceBetween,
+	SpaceAround,
+	SpaceEvenly,
+};
+
+UENUM(BlueprintType)
 enum class ELexLayoutSpacingType : uint8
 {
 	/** Set space with fixed value */
@@ -26,6 +37,7 @@ enum class ELexLayoutSpacingType : uint8
 	Between,
 	/** Auto set space between children, also set spacing on start & end child's edge */
 	Around,
+	Evently,
 };
 USTRUCT(BlueprintType)
 struct FLexLayoutSpacing
@@ -73,6 +85,8 @@ private:
 	/** Control the spacing between child elements */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", Getter, Setter, meta = (AllowPrivateAccess = true))
 	FLexLayoutSpacing Spacing;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", Getter, Setter, meta = (AllowPrivateAccess = true))
+	ELexLayoutFlexBoxJustifyContentType JustifyContent = ELexLayoutFlexBoxJustifyContentType::Start;
 protected:
 	virtual void OnUpdateLayout() override;
 public:
@@ -93,6 +107,8 @@ public:
 	ELexLayoutVerticalAlignment GetVerticalAlignment()const { return VerticalAlignment; }
 	UFUNCTION(BlueprintCallable, Category = "Layout")
 	FLexLayoutSpacing GetSpacing()const { return Spacing; }
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	ELexLayoutFlexBoxJustifyContentType GetJustifyContent()const{return JustifyContent;}
 
 	UFUNCTION(BlueprintCallable, Category = "Layout")
 	void SetDirection(ELexLayoutDirection Value);
@@ -102,6 +118,8 @@ public:
 	void SetVerticalAlignment(ELexLayoutVerticalAlignment Value);
 	UFUNCTION(BlueprintCallable, Category = "Layout")
 	void SetSpacing(const FLexLayoutSpacing& Value);
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	void SetJustifyContent(ELexLayoutFlexBoxJustifyContentType Value);
 };
 
 UCLASS(BlueprintType, DisplayName="FlexBox Slot")

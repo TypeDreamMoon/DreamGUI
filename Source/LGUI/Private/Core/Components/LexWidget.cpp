@@ -738,14 +738,20 @@ void ULexWidget::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, E
 	if (this->IsCanvasWidget() && this->RenderCanvas.IsValid())
 	{
 		//This is mainly to mark LGUICanvas's bIsViewProjectionMatrixDirty to true.
-		//For the condition LGUI_Tutorials/Tutorials/UIRenderTarget, when move LGUIRenderTarget1 at runtime, the LGUICanvas's RenderTarget's matrix not update, result in wrong interaction.
+		//For the condition LGUI_Tutorials/Tutorials/UIRenderTarget, when move LGUIRenderTarget at runtime, the LGUICanvas's RenderTarget's matrix not update, result in wrong interaction.
 		this->RenderCanvas->MarkSizeChanged();
 	}
 	MarkLayoutDirty();
 	MarkTransformChanged(true, true);
 	if (IsValid(Layout))
 	{
+		MarkLayoutDirty();
 		Layout->OnTransformChanged();
+	}
+	if (GetLayoutSlot())
+	{
+		UIParent->MarkLayoutDirty();
+		UIParent->Layout->OnTransformChanged();
 	}
 	if (IsValid(Visual))
 	{
@@ -2171,6 +2177,11 @@ ULexLayoutSlot* ULexWidget::GetLayoutSlot() const
 			LayoutSlot = nullptr;
 		}
 	};
+	if (!IsVisibleForLayout())
+	{
+		ClearLayoutSlot();
+		return nullptr;
+	}
 	if (!UIParent.IsValid())
 	{
 		ClearLayoutSlot();
@@ -2188,7 +2199,7 @@ ULexLayoutSlot* ULexWidget::GetLayoutSlot() const
 	{
 		LayoutSlot = ParentLayout->GetOrCreateSlot(this, ParentLayout->GetSlotClass());
 	}
-	return LayoutSlot.Get();
+	return LayoutSlot;
 }
 
 #if WITH_EDITOR

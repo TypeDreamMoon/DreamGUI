@@ -37,7 +37,7 @@ void ULexLayoutFlexBox::OnUpdateLayout()
 	for (int i = 0; i < Children.Num(); i++)
 	{
 		auto Child = Children[i];
-		auto LayoutSlot = (ULexLayoutFlexBoxSlot*)Child->GetLayoutSlot();//make sure layout slot is created
+		auto LayoutSlot = reinterpret_cast<ULexLayoutFlexBoxSlot*>(Child->GetLayoutSlot());//make sure layout slot is created
 		if (!Child->IsVisibleForLayout())continue;
 		if (LayoutSlot->GetOrder() != 0)
 		{
@@ -78,39 +78,51 @@ void ULexLayoutFlexBox::OnUpdateLayout()
 		}
 	}
 	auto SpaceValue = 0;
-	if (Spacing.Type == ELexLayoutSpacingType::Between || Spacing.Type == ELexLayoutSpacingType::Around)
+	int SpaceCount;
+	switch (Spacing.Type)
 	{
-		switch (Direction)
+	case ELexLayoutSpacingType::Between:
+		SpaceCount = NumLayoutChildren - 1;
+		break;
+	case ELexLayoutSpacingType::Around:
+		SpaceCount = NumLayoutChildren;
+		break;
+	case ELexLayoutSpacingType::Evently:
+		SpaceCount = NumLayoutChildren + 1;
+		break;
+	}
+	if (Spacing.Type == ELexLayoutSpacingType::Between || Spacing.Type == ELexLayoutSpacingType::Around || Spacing.Type == ELexLayoutSpacingType::Evently)
+	{
+		if (WidgetsWithGrow.Num() <= 0)//if child can grow then space will be 0 
 		{
-		case ELexLayoutDirection::Horizontal:
-		case ELexLayoutDirection::HorizontalReverse:
-			if (ThisSize.X > TotalChildrenSize)
+			switch (Direction)
 			{
-				if (WidgetsWithGrow.Num() <= 0)//if child can grow then space will be 0 
+			case ELexLayoutDirection::Horizontal:
+			case ELexLayoutDirection::HorizontalReverse:
+				if (ThisSize.X > TotalChildrenSize)
 				{
-					SpaceValue = (ThisSize.X - TotalChildrenSize) / (Spacing.Type == ELexLayoutSpacingType::Around ? NumLayoutChildren : (NumLayoutChildren - 1));
+				
+					SpaceValue = (ThisSize.X - TotalChildrenSize) / SpaceCount;
 				}
-			}
-			break;
-		case ELexLayoutDirection::Vertical:
-		case ELexLayoutDirection::VerticalReverse:
-			if (ThisSize.Y > TotalChildrenSize)
-			{
-				if (WidgetsWithGrow.Num() <= 0)//if child can grow then space will be 0 
+				break;
+			case ELexLayoutDirection::Vertical:
+			case ELexLayoutDirection::VerticalReverse:
+				if (ThisSize.Y > TotalChildrenSize)
 				{
-					SpaceValue = (ThisSize.Y - TotalChildrenSize) / (Spacing.Type == ELexLayoutSpacingType::Around ? NumLayoutChildren : (NumLayoutChildren - 1));
+					SpaceValue = (ThisSize.Y - TotalChildrenSize) / SpaceCount;
 				}
+				break;
 			}
-			break;
 		}
 	}
 	else
 	{
+		SpaceCount = NumLayoutChildren - 1;
 		SpaceValue = Spacing.Value;
 	}
 	if (SpaceValue > 0)
 	{
-		TotalChildrenSize += SpaceValue * (Spacing.Type == ELexLayoutSpacingType::Around ? NumLayoutChildren : (NumLayoutChildren - 1));
+		TotalChildrenSize += SpaceValue * SpaceCount;
 	}
 	
 	if (Direction == ELexLayoutDirection::Horizontal || Direction == ELexLayoutDirection::HorizontalReverse)
@@ -123,7 +135,7 @@ void ULexLayoutFlexBox::OnUpdateLayout()
 				auto AverageExtraSize = ExtraSize / AccumulatedGrowValue;
 				for (auto Child : WidgetsWithGrow)
 				{
-					auto LayoutSlot = (ULexLayoutFlexBoxSlot*)(Child->GetLayoutSlot());
+					auto LayoutSlot = reinterpret_cast<ULexLayoutFlexBoxSlot*>(Child->GetLayoutSlot());
 					auto GrowSize = LayoutSlot->GetGrow() * AverageExtraSize;
 					auto RenderSize = Child->GetPreferredSize();
 					RenderSize.X += GrowSize;
@@ -140,7 +152,7 @@ void ULexLayoutFlexBox::OnUpdateLayout()
 				auto AverageExtraSize = ExtraSize / AccumulatedShrinkValue;
 				for (auto Child : WidgetsWithShrink)
 				{
-					auto LayoutSlot = (ULexLayoutFlexBoxSlot*)(Child->GetLayoutSlot());
+					auto LayoutSlot = reinterpret_cast<ULexLayoutFlexBoxSlot*>(Child->GetLayoutSlot());
 					auto ShrinkSize = LayoutSlot->GetShrink() * AverageExtraSize;
 					auto RenderSize = Child->GetPreferredSize();
 					RenderSize.X -= ShrinkSize;
@@ -160,7 +172,7 @@ void ULexLayoutFlexBox::OnUpdateLayout()
 				auto AverageExtraSize = ExtraSize / AccumulatedGrowValue;
 				for (auto Child : WidgetsWithGrow)
 				{
-					auto LayoutSlot = (ULexLayoutFlexBoxSlot*)(Child->GetLayoutSlot());
+					auto LayoutSlot = reinterpret_cast<ULexLayoutFlexBoxSlot*>(Child->GetLayoutSlot());
 					auto GrowSize = LayoutSlot->GetGrow() * AverageExtraSize;
 					auto RenderSize = Child->GetPreferredSize();
 					RenderSize.Y += GrowSize;
@@ -177,7 +189,7 @@ void ULexLayoutFlexBox::OnUpdateLayout()
 				auto AverageExtraSize = ExtraSize / AccumulatedShrinkValue;
 				for (auto Child : WidgetsWithShrink)
 				{
-					auto LayoutSlot = (ULexLayoutFlexBoxSlot*)(Child->GetLayoutSlot());
+					auto LayoutSlot = reinterpret_cast<ULexLayoutFlexBoxSlot*>(Child->GetLayoutSlot());
 					auto ShrinkSize = LayoutSlot->GetShrink() * AverageExtraSize;
 					auto RenderSize = Child->GetPreferredSize();
 					RenderSize.Y -= ShrinkSize;
@@ -201,7 +213,15 @@ void ULexLayoutFlexBox::OnUpdateLayout()
 		{
 			ChildPosition.Y -= TotalChildrenSize * 0.5;
 			ChildPosition.Y += (Widget->GetRenderPadding().Left - Widget->GetRenderPadding().Right) * 0.5f;
-			ChildPosition.Y += Spacing.Type == ELexLayoutSpacingType::Around ? SpaceValue * 0.5f : 0;
+			switch (Spacing.Type)
+			{
+				case ELexLayoutSpacingType::Around:
+					ChildPosition.Y += SpaceValue * 0.5f;
+				break;
+			case ELexLayoutSpacingType::Evently:
+					ChildPosition.Y += SpaceValue;
+				break;
+			}
 			double SizeOffset = (ThisSize.X - TotalChildrenSize) * 0.5;
 			switch (HorizontalAlignment)
 			{
@@ -221,7 +241,15 @@ void ULexLayoutFlexBox::OnUpdateLayout()
 		{
 			ChildPosition.Z += TotalChildrenSize * 0.5;
 			ChildPosition.Z += (Widget->GetRenderPadding().Bottom - Widget->GetRenderPadding().Top) * 0.5f;
-			ChildPosition.Z -= Spacing.Type == ELexLayoutSpacingType::Around ? SpaceValue * 0.5f : 0;
+			switch (Spacing.Type)
+			{
+			case ELexLayoutSpacingType::Around:
+				ChildPosition.Z += SpaceValue * 0.5f;
+				break;
+			case ELexLayoutSpacingType::Evently:
+				ChildPosition.Z += SpaceValue;
+				break;
+			}
 			double SizeOffset = (ThisSize.Y - TotalChildrenSize) * 0.5;
 			switch (VerticalAlignment)
 			{
@@ -243,8 +271,8 @@ void ULexLayoutFlexBox::OnUpdateLayout()
 	{
 		ReorderedChildren.Sort([this](const ULexWidget& A, const ULexWidget& B)
 		{
-			auto LayoutSlotA = (ULexLayoutFlexBoxSlot*)A.GetLayoutSlot();
-			auto LayoutSlotB = (ULexLayoutFlexBoxSlot*)B.GetLayoutSlot();
+			auto LayoutSlotA = reinterpret_cast<ULexLayoutFlexBoxSlot*>(A.GetLayoutSlot());
+			auto LayoutSlotB = reinterpret_cast<ULexLayoutFlexBoxSlot*>(B.GetLayoutSlot());
 			if (LayoutSlotA->GetOrder() == LayoutSlotB->GetOrder())
 				return A.GetSiblingIndex() < B.GetSiblingIndex();
 			return LayoutSlotA->GetOrder() < LayoutSlotB->GetOrder();
@@ -255,7 +283,7 @@ void ULexLayoutFlexBox::OnUpdateLayout()
 	{
 		auto Child = ReorderedChildren[ReverseDirection ? ReorderedChildren.Num() - i - 1 : i];
 		if (!Child->IsVisibleForLayout())continue;
-		auto ChildLayoutSlot = (ULexLayoutFlexBoxSlot*)Child->GetLayoutSlot();
+		auto ChildLayoutSlot = reinterpret_cast<ULexLayoutFlexBoxSlot*>(Child->GetLayoutSlot());
 		auto ChildSize = Child->GetRenderSize();
 		// ChildSize.X += Child->GetMargin().Left + Child->GetMargin().Right;
 		// ChildSize.Y += Child->GetMargin().Top + Child->GetMargin().Bottom;
@@ -309,7 +337,7 @@ void ULexLayoutFlexBox::OnUpdateLayout()
 					ChildHOffset += (ThisSize.X - ChildSize.X) * 0.5f;
 					break;
 				}
-				float OffsetByMargin = Child->GetRenderMargin().Bottom;
+				float OffsetByMargin = -Child->GetRenderMargin().Top;
 				auto Pos = Child->GetRelativeLocation();
 				auto PivotOffsetY =
 					Child->GetRenderSize().Y * (Child->GetPivot().Y - 0.5f)//this pivot
@@ -378,7 +406,20 @@ float ULexLayoutFlexBox::GetShrinkToChildrenWidth()
 		case ELexLayoutDirection::Horizontal:
 		case ELexLayoutDirection::HorizontalReverse:
 			{
-				auto AllSpaceValue = Spacing.Value * (Spacing.Type == ELexLayoutSpacingType::Around ? NumLayoutChildren : (NumLayoutChildren - 1));
+				int SpaceCount = NumLayoutChildren;
+				switch (Spacing.Type)
+				{
+				case ELexLayoutSpacingType::Between:
+					SpaceCount = NumLayoutChildren - 1;
+					break;
+				case ELexLayoutSpacingType::Around:
+					SpaceCount = NumLayoutChildren;
+					break;
+				case ELexLayoutSpacingType::Evently:
+					SpaceCount = NumLayoutChildren + 1;
+					break;
+				}
+				auto AllSpaceValue = Spacing.Value * SpaceCount;
 				ResultSize += AllSpaceValue;
 			}
 			break;
@@ -430,7 +471,20 @@ float ULexLayoutFlexBox::GetShrinkToChildrenHeight()
 		case ELexLayoutDirection::Vertical:
 		case ELexLayoutDirection::VerticalReverse:
 			{
-				auto AllSpaceValue = Spacing.Value * (Spacing.Type == ELexLayoutSpacingType::Around ? NumLayoutChildren : (NumLayoutChildren - 1));
+				int SpaceCount = NumLayoutChildren;
+				switch (Spacing.Type)
+				{
+				case ELexLayoutSpacingType::Between:
+					SpaceCount = NumLayoutChildren - 1;
+					break;
+				case ELexLayoutSpacingType::Around:
+					SpaceCount = NumLayoutChildren;
+					break;
+				case ELexLayoutSpacingType::Evently:
+					SpaceCount = NumLayoutChildren + 1;
+					break;
+				}
+				auto AllSpaceValue = Spacing.Value * SpaceCount;
 				ResultSize += AllSpaceValue;
 			}
 			break;
@@ -469,6 +523,15 @@ void ULexLayoutFlexBox::SetSpacing(const FLexLayoutSpacing& Value)
 	if (Spacing != Value)
 	{
 		Spacing = Value;
+		GetWidget()->MarkRenderSizeChanged();
+	}
+}
+
+void ULexLayoutFlexBox::SetJustifyContent(ELexLayoutFlexBoxJustifyContentType Value)
+{
+	if (JustifyContent != Value)
+	{
+		JustifyContent = Value;
 		GetWidget()->MarkRenderSizeChanged();
 	}
 }

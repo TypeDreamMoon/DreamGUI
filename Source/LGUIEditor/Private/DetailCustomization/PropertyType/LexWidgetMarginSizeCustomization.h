@@ -64,9 +64,9 @@ public:
 					// .Icon(FLexUIEditorStyle::Get().GetBrush("WidgetSize_Off"))
 					.Text(LOCTEXT("LexWidgetSize_Fixed", "*"))
 					.ToolTip(TypeEnumProperty->GetEnum()->GetToolTipTextByIndex((int)ELexWidgetMarginSizeType::Fixed))
-					+ SSegmentedControl<ELexWidgetMarginSizeType>::Slot(ELexWidgetMarginSizeType::ExpandToParent)
+					+ SSegmentedControl<ELexWidgetMarginSizeType>::Slot(ELexWidgetMarginSizeType::PercentOfParent)
 					.Icon(FLGUIEditorStyle::Get().GetBrush("WidgetSize_ExpandToParent"))
-					.ToolTip(TypeEnumProperty->GetEnum()->GetToolTipTextByIndex((int)ELexWidgetMarginSizeType::ExpandToParent))
+					.ToolTip(TypeEnumProperty->GetEnum()->GetToolTipTextByIndex((int)ELexWidgetMarginSizeType::PercentOfParent))
 				]
 				+SHorizontalBox::Slot()
 				.FillWidth(0.5f)
@@ -115,7 +115,7 @@ public:
 							auto SizeType = ELexWidgetMarginSizeType::Fixed;
 							if (Type_PH->GetValue(*(uint8*)(&SizeType)) == FPropertyAccess::Success)
 							{
-								if (SizeType == ELexWidgetMarginSizeType::ExpandToParent)
+								if (SizeType == ELexWidgetMarginSizeType::PercentOfParent)
 								{
 									return EVisibility::Visible;
 								}

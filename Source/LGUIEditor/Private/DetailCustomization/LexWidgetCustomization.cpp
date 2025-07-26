@@ -236,7 +236,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		]
 		.ValueContent()
 		[
-			LayoutProperty->CreatePropertyValueWidget()
+			LayoutPropertyValueWidget
 		];
 	LayoutCategory.AddExternalObjects({ Layout }, EPropertyLocation::Default
 		, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));

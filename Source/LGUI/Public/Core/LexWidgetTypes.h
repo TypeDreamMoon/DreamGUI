@@ -91,11 +91,11 @@ struct FLexWidgetAspectRatio
 UENUM(BlueprintType)
 enum class ELexWidgetSizeType : uint8
 {
-	//Size is set by fixed pixel value
+	//Size is set by fixed pixel value. Margin will only affect position.
 	Fixed,
-	//Size expand to it's parent, and use Percent to control it, if no parent then fallback to Fixed
+	//Size expand to it's parent. Margin will affect position and size.
 	ExpandToParent,
-	//Size shrink to it's children, if no children then shrink to visual, if not visual then fallback to Fixed
+	//Size shrink to it's children, if no children then shrink to visual, if not visual then fallback to Fixed. Margin will only affect position.
 	ShrinkToChildren,
 };
 
@@ -174,8 +174,8 @@ enum class ELexWidgetMarginSizeType : uint8
 {
 	//Size is set by fixed pixel value
 	Fixed,
-	//Size expand to it's parent, and use Percent to control it, if no parent then fallback to Fixed
-	ExpandToParent,
+	//Size is percentage of it's parent size, if no parent then fallback to Fixed
+	PercentOfParent,
 };
 
 USTRUCT(BlueprintType)
@@ -206,7 +206,7 @@ struct FLexWidgetMarginSize
 	static FLexWidgetMarginSize MakePercent(float Percent)
 	{
 		FLexWidgetMarginSize Result;
-		Result.Type = ELexWidgetMarginSizeType::ExpandToParent;
+		Result.Type = ELexWidgetMarginSizeType::PercentOfParent;
 		Result.Percent = Percent;
 		return Result;
 	}
@@ -250,13 +250,13 @@ public:
 
 	bool AffectByParent()const
 	{
-		if (Left.Type == ELexWidgetMarginSizeType::ExpandToParent && Left.Percent != 0.0f)
+		if (Left.Type == ELexWidgetMarginSizeType::PercentOfParent && Left.Percent != 0.0f)
 			return true;
-		if (Top.Type == ELexWidgetMarginSizeType::ExpandToParent && Top.Percent != 0.0f)
+		if (Top.Type == ELexWidgetMarginSizeType::PercentOfParent && Top.Percent != 0.0f)
 			return true;
-		if (Right.Type == ELexWidgetMarginSizeType::ExpandToParent && Right.Percent != 0.0f)
+		if (Right.Type == ELexWidgetMarginSizeType::PercentOfParent && Right.Percent != 0.0f)
 			return true;
-		if (Bottom.Type == ELexWidgetMarginSizeType::ExpandToParent && Bottom.Percent != 0.0f)
+		if (Bottom.Type == ELexWidgetMarginSizeType::PercentOfParent && Bottom.Percent != 0.0f)
 			return true;
 		return false;
 	}
