@@ -3,7 +3,6 @@
 #include "Interaction/UIScrollbarComponent.h"
 #include "LGUI.h"
 #include "Core/Actor/LexWidgetActor.h"
-#include "Core/Components/LexLayoutAnchor.h"
 #include "Core/Components/LexWidget.h"
 
 UUIScrollbarComponent::UUIScrollbarComponent()
@@ -167,7 +166,7 @@ bool UUIScrollbarComponent::OnPointerDown_Implementation(ULGUIPointerEventData* 
                 {
                 case UIScrollbarDirectionType::LeftToRight:
                 {
-                    float validSpace = HandleArea->GetRenderWidth() * (1.0f - Size);
+                    float validSpace = HandleArea->GetWidth() * (1.0f - Size);
                     float valueDiff01;
                     if (pointerInHandleAreaSpace.Y > Handle->GetRelativeLocation().Y)
                     {
@@ -182,7 +181,7 @@ bool UUIScrollbarComponent::OnPointerDown_Implementation(ULGUIPointerEventData* 
                 break;
                 case UIScrollbarDirectionType::RightToLeft:
                 {
-                    float validSpace = HandleArea->GetRenderWidth() * (1.0f - Size);
+                    float validSpace = HandleArea->GetWidth() * (1.0f - Size);
                     float valueDiff01;
                     if (pointerInHandleAreaSpace.Y > Handle->GetRelativeLocation().Y)
                     {
@@ -197,7 +196,7 @@ bool UUIScrollbarComponent::OnPointerDown_Implementation(ULGUIPointerEventData* 
                 break;
                 case UIScrollbarDirectionType::BottomToTop:
                 {
-                    float validSpace = HandleArea->GetRenderHeight() * (1.0f - Size);
+                    float validSpace = HandleArea->GetHeight() * (1.0f - Size);
                     float valueDiff01;
                     if (pointerInHandleAreaSpace.Z > Handle->GetRelativeLocation().Z)
                     {
@@ -212,7 +211,7 @@ bool UUIScrollbarComponent::OnPointerDown_Implementation(ULGUIPointerEventData* 
                 break;
                 case UIScrollbarDirectionType::TopToBottom:
                 {
-                    float validSpace = HandleArea->GetRenderHeight() * (1.0f - Size);
+                    float validSpace = HandleArea->GetHeight() * (1.0f - Size);
                     float valueDiff01;
                     if (pointerInHandleAreaSpace.Z > Handle->GetRelativeLocation().Z)
                     {
@@ -294,29 +293,29 @@ void UUIScrollbarComponent::CalculateInputValue(ULGUIPointerEventData *eventData
         {
         case UIScrollbarDirectionType::LeftToRight:
         {
-            handleSize = HandleArea->GetRenderWidth() * Size;
-            slideAreaSize = HandleArea->GetRenderWidth() - handleSize;
+            handleSize = HandleArea->GetWidth() * Size;
+            slideAreaSize = HandleArea->GetWidth() - handleSize;
             value01 = PressValue + localCumulativeMoveDelta.Y / slideAreaSize;
         }
         break;
         case UIScrollbarDirectionType::RightToLeft:
         {
-            handleSize = HandleArea->GetRenderWidth() * Size;
-            slideAreaSize = HandleArea->GetRenderWidth() - handleSize;
+            handleSize = HandleArea->GetWidth() * Size;
+            slideAreaSize = HandleArea->GetWidth() - handleSize;
             value01 = PressValue - localCumulativeMoveDelta.Y / slideAreaSize;
         }
         break;
         case UIScrollbarDirectionType::BottomToTop:
         {
-            handleSize = HandleArea->GetRenderHeight() * Size;
-            slideAreaSize = HandleArea->GetRenderHeight() - handleSize;
+            handleSize = HandleArea->GetHeight() * Size;
+            slideAreaSize = HandleArea->GetHeight() - handleSize;
             value01 = PressValue + localCumulativeMoveDelta.Z / slideAreaSize;
         }
         break;
         case UIScrollbarDirectionType::TopToBottom:
         {
-            handleSize = HandleArea->GetRenderHeight() * Size;
-            slideAreaSize = HandleArea->GetRenderHeight() - handleSize;
+            handleSize = HandleArea->GetHeight() * Size;
+            slideAreaSize = HandleArea->GetHeight() - handleSize;
             value01 = PressValue - localCumulativeMoveDelta.Z / slideAreaSize;
         }
         break;
@@ -335,25 +334,25 @@ void UUIScrollbarComponent::ApplyValueToUI()
         case UIScrollbarDirectionType::LeftToRight:
         {
             auto HorizontalMinMax = FVector2D((1.0f - Size) * value01, FMath::Lerp(Size, 1.0f, value01));
-            HandleLayout->SetHorizontalAnchorMinMax(HorizontalMinMax);
+            Handle->SetHorizontalAnchorMinMax(HorizontalMinMax);
         }
         break;
         case UIScrollbarDirectionType::RightToLeft:
         {
             auto HorizontalMinMax = FVector2D((1.0f - Size) * (1.0f - value01), FMath::Lerp(1.0f, Size, value01));
-            HandleLayout->SetHorizontalAnchorMinMax(HorizontalMinMax);
+            Handle->SetHorizontalAnchorMinMax(HorizontalMinMax);
         }
         break;
         case UIScrollbarDirectionType::BottomToTop:
         {
             auto VerticalMinMax = FVector2D((1.0f - Size) * value01, FMath::Lerp(Size, 1.0f, value01));
-            HandleLayout->SetVerticalAnchorMinMax(VerticalMinMax);
+            Handle->SetVerticalAnchorMinMax(VerticalMinMax);
         }
         break;
         case UIScrollbarDirectionType::TopToBottom:
         {
             auto VerticalMinMax = FVector2D((1.0f - Size) * (1.0f - value01), FMath::Lerp(1.0f, Size, value01));
-            HandleLayout->SetVerticalAnchorMinMax(VerticalMinMax);
+            Handle->SetVerticalAnchorMinMax(VerticalMinMax);
         }
         break;
         }

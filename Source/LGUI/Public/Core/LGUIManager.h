@@ -127,10 +127,6 @@ private:
 		TWeakObjectPtr<ULGUIBaseInputModule> CurrentInputModule = nullptr;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<UUISelectableComponent>> AllSelectableArray;
-	//ILGUILayoutInterface
-	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<UObject>> AllLayoutArray;
-	//ILGUICultureChangedInterface
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<UObject>> AllCultureChangedArray;
 
@@ -167,8 +163,6 @@ public:
 	static void RemoveCanvas(ULexCanvas* InCanvas, ELexRenderMode InCurrentRenderMode);
 	static void CanvasRenderModeChange(ULexCanvas* InCanvas, ELexRenderMode InOldRenderMode, ELexRenderMode InNewRenderMode);
 	const TArray<TWeakObjectPtr<ULexCanvas>>& GetCanvasArray(ELexRenderMode RenderMode);
-
-	const TArray<TWeakObjectPtr<UObject>>& GetAllLayoutArray()const { return AllLayoutArray; }
 
 	static TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> GetViewExtension(UWorld* InWorld, bool InCreateIfNotExist);
 

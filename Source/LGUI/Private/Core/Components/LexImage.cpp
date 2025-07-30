@@ -128,7 +128,7 @@ UMaterialInterface* ULexImage::GetMaterialToCreateGeometry()
 void ULexImage::OnUpdateGeometry(FLexUIGeometry& InMesh, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
 	auto Widget = this->GetWidget();
-	auto RenderSize = Widget->GetRenderSize();
+	auto RenderSize = Widget->GetSize();
 	auto RenderCanvas = Widget->GetRenderCanvas();
 	auto FinalColor = FLexUIUtils::MultiplyColor(Brush.TintColor, this->GetFinalColor());
 

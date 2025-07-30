@@ -68,7 +68,8 @@ void FLGUIPrefabThumbnailScene::SpawnPreviewActor()
 
 				if (PrefabRootUIItem)
 				{
-					AgentRootActor->GetLexWidget()->SetSize(FLexWidgetSize2::MakeFixed(CanvasSize));
+					AgentRootActor->GetLexWidget()->SetWidth(CanvasSize.X);
+					AgentRootActor->GetLexWidget()->SetHeight(CanvasSize.Y);
 				}
 
 				bIsUI = true;

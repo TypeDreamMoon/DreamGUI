@@ -679,8 +679,8 @@ bool ULexText::UpdateCacheTextGeometry()const
 	CacheTextGeometryData.SetInputParameters(
 		this->Text.ToString()
 		, this->VisibleCharCount
-		, Widget->GetRenderWidth()
-		, Widget->GetRenderHeight()
+		, Widget->GetWidth()
+		, Widget->GetHeight()
 		, FVector2f(Widget->GetPivot())
 		, this->GetFinalColor()
 		, RenderOpacityForRichText
@@ -960,13 +960,13 @@ void ULexText::FindCaretByIndex(int32& inOutCaretPositionIndex, FVector2f& outCa
 	outVisibleCaretStartIndex = 0;
 	if (cacheLinePropertyArray.Num() == 0)
 	{
-		float pivotOffsetX = Widget->GetRenderWidth() * (0.5f - Widget->GetPivot().X);
-		float pivotOffsetY = Widget->GetRenderHeight() * (0.5f - Widget->GetPivot().Y);
+		float pivotOffsetX = Widget->GetWidth() * (0.5f - Widget->GetPivot().X);
+		float pivotOffsetY = Widget->GetHeight() * (0.5f - Widget->GetPivot().Y);
 		switch (HAlign)
 		{
 		case ELexUITextParagraphHorizontalAlign::Left:
 		{
-			outCaretPosition.X = pivotOffsetX - Widget->GetRenderWidth() * 0.5f;
+			outCaretPosition.X = pivotOffsetX - Widget->GetWidth() * 0.5f;
 		}
 			break;
 		case ELexUITextParagraphHorizontalAlign::Center:
@@ -976,7 +976,7 @@ void ULexText::FindCaretByIndex(int32& inOutCaretPositionIndex, FVector2f& outCa
 			break;
 		case ELexUITextParagraphHorizontalAlign::Right:
 		{
-			outCaretPosition.X = pivotOffsetX + Widget->GetRenderWidth() * 0.5f;
+			outCaretPosition.X = pivotOffsetX + Widget->GetWidth() * 0.5f;
 		}
 			break;
 		}
@@ -984,7 +984,7 @@ void ULexText::FindCaretByIndex(int32& inOutCaretPositionIndex, FVector2f& outCa
 		{
 		case ELexUITextParagraphVerticalAlign::Top:
 		{
-			outCaretPosition.Y = pivotOffsetY + Widget->GetRenderHeight() * 0.5f - FontSize * 0.5f;//fixed offset
+			outCaretPosition.Y = pivotOffsetY + Widget->GetHeight() * 0.5f - FontSize * 0.5f;//fixed offset
 		}
 			break;
 		case ELexUITextParagraphVerticalAlign::Middle:
@@ -994,7 +994,7 @@ void ULexText::FindCaretByIndex(int32& inOutCaretPositionIndex, FVector2f& outCa
 			break;
 		case ELexUITextParagraphVerticalAlign::Bottom:
 		{
-			outCaretPosition.Y = pivotOffsetY - Widget->GetRenderHeight() * 0.5f + FontSize * 0.5f;//fixed offset
+			outCaretPosition.Y = pivotOffsetY - Widget->GetHeight() * 0.5f + FontSize * 0.5f;//fixed offset
 		}
 			break;
 		}

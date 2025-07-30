@@ -7,6 +7,41 @@
 #include "PrefabSystem/ILGUIPrefabInterface.h"
 #include "LexLayout.generated.h"
 
+
+struct FLGUICanLayoutControlAnchor
+{
+	bool bCanControlHorizontalAnchoredPosition = false;
+	bool bCanControlVerticalAnchoredPosition = false;
+	bool bCanControlHorizontalSizeDelta = false;
+	bool bCanControlVerticalSizeDelta = false;
+
+	bool HaveRepeatedControl(const FLGUICanLayoutControlAnchor& Other)const
+	{
+		if (
+			(bCanControlHorizontalAnchoredPosition && Other.bCanControlHorizontalAnchoredPosition)
+			|| (bCanControlVerticalAnchoredPosition && Other.bCanControlVerticalAnchoredPosition)
+			|| (bCanControlHorizontalSizeDelta && Other.bCanControlHorizontalSizeDelta)
+			|| (bCanControlVerticalSizeDelta && Other.bCanControlVerticalSizeDelta)
+			)
+		{
+			return true;
+		}
+		return false;
+	}
+	void Or(const FLGUICanLayoutControlAnchor& Other)
+	{
+		bCanControlHorizontalAnchoredPosition |= Other.bCanControlHorizontalAnchoredPosition;
+		bCanControlVerticalAnchoredPosition |= Other.bCanControlVerticalAnchoredPosition;
+		bCanControlHorizontalSizeDelta |= Other.bCanControlHorizontalSizeDelta;
+		bCanControlVerticalSizeDelta |= Other.bCanControlVerticalSizeDelta;
+	}
+	bool AnyControl()const
+	{
+		return bCanControlHorizontalAnchoredPosition || bCanControlVerticalAnchoredPosition
+		|| bCanControlHorizontalSizeDelta || bCanControlVerticalSizeDelta;
+	}
+};
+
 class ULexLayoutSlot;
 /** Base class of UI element that can be renderred by LGUICanvas */
 UCLASS(Blueprintable, BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)
@@ -43,6 +78,8 @@ public:
 	virtual float GetShrinkToChildrenHeight(){return 0;}
 	
 	virtual void OnChildDetached(const ULexWidget* Child);
+
+	virtual void GetLayoutControlAnchor(ULexWidget* Widget, FLGUICanLayoutControlAnchor& Result){}
 };
 
 UCLASS(Blueprintable, BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)

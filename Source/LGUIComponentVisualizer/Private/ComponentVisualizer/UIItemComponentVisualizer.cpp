@@ -43,7 +43,7 @@ void FUIItemComponentVisualizer::DrawVisualization(const UActorComponent* Compon
 	auto RightBottomPoint = TargetComp->GetComponentTransform().TransformPosition(FVector(0, Right, Bottom));
 	auto RightTopPoint = TargetComp->GetComponentTransform().TransformPosition(FVector(0, Right, Top));
 
-	auto Area = TargetComp->GetRenderWidth() * TargetComp->GetRenderHeight();
+	auto Area = TargetComp->GetWidth() * TargetComp->GetHeight();
 	Area = FMath::Sqrt(Area);
 	auto DrawHitProxy = [=, this](FVector Position, EUIItemVisualizerSelectorType Type, UTexture2D* IconTexture, float AreaMultiply = 1.0f) {
 		float DistScale = View->WorldToScreen(Position).W * (4.0f / View->UnscaledViewRect.Width() / View->ViewMatrices.GetProjectionMatrix().M[0][0]);
@@ -171,13 +171,13 @@ bool FUIItemComponentVisualizer::HandleInputDelta(FEditorViewportClient* Viewpor
 	{
 		if (LocalSpaceDeltaTranslate.Y != 0 || LocalSpaceDeltaTranslate.Z != 0)
 		{
-			auto DeltaTranslatePivot = FVector2D(LocalSpaceDeltaTranslate.Y / TargetComp->GetRenderWidth(), LocalSpaceDeltaTranslate.Z / TargetComp->GetRenderHeight());
-			// FMargin PrevAnchorAsMargin(TargetComp->GetAnchorLeft(), TargetComp->GetAnchorTop(), TargetComp->GetAnchorRight(), TargetComp->GetAnchorBottom());
-			// TargetComp->SetPivot(TargetComp->GetPivot() + DeltaTranslatePivot);
-			// TargetComp->SetAnchorLeft(PrevAnchorAsMargin.Left);
-			// TargetComp->SetAnchorRight(PrevAnchorAsMargin.Right);
-			// TargetComp->SetAnchorBottom(PrevAnchorAsMargin.Bottom);
-			// TargetComp->SetAnchorTop(PrevAnchorAsMargin.Top);
+			auto DeltaTranslatePivot = FVector2D(LocalSpaceDeltaTranslate.Y / TargetComp->GetWidth(), LocalSpaceDeltaTranslate.Z / TargetComp->GetHeight());
+			FMargin PrevAnchorAsMargin(TargetComp->GetAnchorLeft(), TargetComp->GetAnchorTop(), TargetComp->GetAnchorRight(), TargetComp->GetAnchorBottom());
+			TargetComp->SetPivot(TargetComp->GetPivot() + DeltaTranslatePivot);
+			TargetComp->SetAnchorLeft(PrevAnchorAsMargin.Left);
+			TargetComp->SetAnchorRight(PrevAnchorAsMargin.Right);
+			TargetComp->SetAnchorBottom(PrevAnchorAsMargin.Bottom);
+			TargetComp->SetAnchorTop(PrevAnchorAsMargin.Top);
 			bAnchorChanged = true;
 		}
 	}
@@ -187,11 +187,11 @@ bool FUIItemComponentVisualizer::HandleInputDelta(FEditorViewportClient* Viewpor
 	{
 		if (LocalSpaceDeltaTranslate.Y != 0)
 		{
-			// TargetComp->SetAnchorLeft(TargetComp->GetAnchorLeft() + LocalSpaceDeltaTranslate.Y);
-			// if (IsAltDown(Viewport))
-			// {
-			// 	TargetComp->SetAnchorRight(TargetComp->GetAnchorRight() + LocalSpaceDeltaTranslate.Y);
-			// }
+			TargetComp->SetAnchorLeft(TargetComp->GetAnchorLeft() + LocalSpaceDeltaTranslate.Y);
+			if (IsAltDown(Viewport))
+			{
+				TargetComp->SetAnchorRight(TargetComp->GetAnchorRight() + LocalSpaceDeltaTranslate.Y);
+			}
 			bAnchorChanged = true;
 		}
 	}
@@ -199,11 +199,11 @@ bool FUIItemComponentVisualizer::HandleInputDelta(FEditorViewportClient* Viewpor
 	{
 		if (LocalSpaceDeltaTranslate.Y != 0)
 		{
-			// TargetComp->SetAnchorRight(TargetComp->GetAnchorRight() - LocalSpaceDeltaTranslate.Y);
-			// if (IsAltDown(Viewport))
-			// {
-			// 	TargetComp->SetAnchorLeft(TargetComp->GetAnchorLeft() - LocalSpaceDeltaTranslate.Y);
-			// }
+			TargetComp->SetAnchorRight(TargetComp->GetAnchorRight() - LocalSpaceDeltaTranslate.Y);
+			if (IsAltDown(Viewport))
+			{
+				TargetComp->SetAnchorLeft(TargetComp->GetAnchorLeft() - LocalSpaceDeltaTranslate.Y);
+			}
 			bAnchorChanged = true;
 		}
 	}
@@ -211,11 +211,11 @@ bool FUIItemComponentVisualizer::HandleInputDelta(FEditorViewportClient* Viewpor
 	{
 		if (LocalSpaceDeltaTranslate.Z != 0)
 		{
-			// TargetComp->SetAnchorBottom(TargetComp->GetAnchorBottom() + LocalSpaceDeltaTranslate.Z);
-			// if (IsAltDown(Viewport))
-			// {
-			// 	TargetComp->SetAnchorTop(TargetComp->GetAnchorTop() + LocalSpaceDeltaTranslate.Z);
-			// }
+			TargetComp->SetAnchorBottom(TargetComp->GetAnchorBottom() + LocalSpaceDeltaTranslate.Z);
+			if (IsAltDown(Viewport))
+			{
+				TargetComp->SetAnchorTop(TargetComp->GetAnchorTop() + LocalSpaceDeltaTranslate.Z);
+			}
 			bAnchorChanged = true;
 		}
 	}
@@ -223,17 +223,17 @@ bool FUIItemComponentVisualizer::HandleInputDelta(FEditorViewportClient* Viewpor
 	{
 		if (LocalSpaceDeltaTranslate.Z != 0)
 		{
-			// TargetComp->SetAnchorTop(TargetComp->GetAnchorTop() - LocalSpaceDeltaTranslate.Z);
-			// if (IsAltDown(Viewport))
-			// {
-			// 	TargetComp->SetAnchorBottom(TargetComp->GetAnchorBottom() - LocalSpaceDeltaTranslate.Z);
-			// }
+			TargetComp->SetAnchorTop(TargetComp->GetAnchorTop() - LocalSpaceDeltaTranslate.Z);
+			if (IsAltDown(Viewport))
+			{
+				TargetComp->SetAnchorBottom(TargetComp->GetAnchorBottom() - LocalSpaceDeltaTranslate.Z);
+			}
 			bAnchorChanged = true;
 		}
 	}
 	if (bAnchorChanged)
 	{
-		//FLexUIUtils::NotifyPropertyChanged(TargetComp.Get(), ULexWidget::GetAnchorDataPropertyName());
+		FLexUIUtils::NotifyPropertyChanged(TargetComp.Get(), ULexWidget::GetPropertyName_AnchorData());
 	}
 	return true;
 }

@@ -63,11 +63,9 @@ protected:
 		float NavigationChangeInterval = 0.1f;
 
 	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> Fill;
-	UPROPERTY(Transient)TWeakObjectPtr<ULexLayoutAnchorSlot> FillLayoutAnchor;
 	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> FillArea;
 	
 	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> Handle;
-	UPROPERTY(Transient)TWeakObjectPtr<ULexLayoutAnchorSlot> HandleLayoutAnchor;
 	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> HandleArea;
 
 	FLGUIMulticastFloatDelegate OnValueChangedCPP;

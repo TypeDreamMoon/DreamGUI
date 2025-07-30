@@ -220,7 +220,7 @@ void ULexCanvas::UpdateRootCanvas()
 
 void ULexCanvas::UpdateRenderTarget(bool CallEvent)
 {
-	FIntPoint DesiredRenderTargetSize(LexWidget->GetRenderWidth() * RenderTargetResolutionScale, LexWidget->GetRenderHeight() * RenderTargetResolutionScale);
+	FIntPoint DesiredRenderTargetSize(LexWidget->GetWidth() * RenderTargetResolutionScale, LexWidget->GetHeight() * RenderTargetResolutionScale);
 	static const int32 MaxAllowedDrawSize = GetMax2DTextureDimension();
 	if (DesiredRenderTargetSize.X <= 0 || DesiredRenderTargetSize.Y <= 0)
 	{
@@ -1417,8 +1417,8 @@ bool ULexCanvas::UpdateCanvasDrawCallRecursive()
 
 			//rect size minimal at 100, so UIQuadTree can work properly (prevent too small rect)
 			//@todo: use a better size, maybe screen size (only for screen space UI)
-			const auto Width = FMath::Max(LexWidget->GetRenderWidth(), 100.0f);
-			const auto Height = FMath::Max(LexWidget->GetRenderHeight(), 100.0f);
+			const auto Width = FMath::Max(LexWidget->GetWidth(), 100.0f);
+			const auto Height = FMath::Max(LexWidget->GetHeight(), 100.0f);
 			FVector2D LeftBottomPoint;
 			LeftBottomPoint.X = Width * -LexWidget->GetPivot().X;
 			LeftBottomPoint.Y = Height * -LexWidget->GetPivot().Y;
@@ -2417,7 +2417,7 @@ float ULexCanvas::CalculateDistanceToCamera()const
 	}
 	else
 	{
-		return LexWidget->GetRenderWidth() * 0.5f / FMath::Tan(FMath::DegreesToRadians(FOVAngle * 0.5f)) * LexWidget->GetComponentScale().X;
+		return LexWidget->GetWidth() * 0.5f / FMath::Tan(FMath::DegreesToRadians(FOVAngle * 0.5f)) * LexWidget->GetComponentScale().X;
 	}
 }
 FMatrix ULexCanvas::GetViewProjectionMatrix()const
@@ -2451,7 +2451,7 @@ FMatrix ULexCanvas::GetProjectionMatrix()const
 
 	FMatrix ProjectionMatrix = FMatrix::Identity;
 	const float FOV = (bOverrideFovAngle ? OverrideFovAngle : FOVAngle) * (float)PI / 360.0f;
-	BuildProjectionMatrix(FIntPoint(LexWidget->GetRenderWidth(), LexWidget->GetRenderHeight()), ProjectionType, FOV, FarClipPlane, NearClipPlane, ProjectionMatrix);
+	BuildProjectionMatrix(FIntPoint(LexWidget->GetWidth(), LexWidget->GetHeight()), ProjectionType, FOV, FarClipPlane, NearClipPlane, ProjectionMatrix);
 	return ProjectionMatrix;
 }
 FVector ULexCanvas::GetViewLocation()const
@@ -2478,8 +2478,8 @@ FIntPoint ULexCanvas::GetViewportSize()const
 		{
 			if (CheckLexWidget())
 			{
-				ViewportSize.X = LexWidget->GetRenderWidth();
-				ViewportSize.Y = LexWidget->GetRenderHeight();
+				ViewportSize.X = LexWidget->GetWidth();
+				ViewportSize.Y = LexWidget->GetHeight();
 			}
 		}
 		else

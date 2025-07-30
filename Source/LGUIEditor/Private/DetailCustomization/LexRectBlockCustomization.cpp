@@ -431,8 +431,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 						{
 							item->Modify();
 							item->SetSizeFromBodyTexture();
-							FLexUIUtils::NotifyPropertyChanged(item.Get(), ULexWidget::GetPropertyName_Width());
-							FLexUIUtils::NotifyPropertyChanged(item.Get(), ULexWidget::GetPropertyName_Height());
+							FLexUIUtils::NotifyPropertyChanged(item.Get(), ULexWidget::GetPropertyName_AnchorData());
 							item->GetWidget()->EditorForceUpdate();
 						}
 					}

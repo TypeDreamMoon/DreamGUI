@@ -1016,7 +1016,7 @@ void UUITextInputComponent::UpdateUITextComponent()
 			if (OverflowType == ELGUITextInputOverflowType::ClampContent)
 			{
 				auto SingleLineHeight = TextWidget->GetFont()->GetLineHeight(TextWidget->GetFontSize());
-				MaxLineCount = (int)(Widget->GetRenderHeight()
+				MaxLineCount = (int)(Widget->GetHeight()
 					/ (SingleLineHeight + TextWidget->GetFontSpace().Y));
 			}
 
@@ -1030,7 +1030,7 @@ void UUITextInputComponent::UpdateUITextComponent()
 		else//single line, handle out of range chars
 		{
 			float maxWidth = OverflowType == ELGUITextInputOverflowType::ClampContent
-				? Widget->GetRenderWidth()
+				? Widget->GetWidth()
 				: MaxLineWidth
 				;
 
@@ -1105,7 +1105,8 @@ void UUITextInputComponent::UpdateCaretPosition(FVector2f InCaretPosition, bool 
 #endif
 		CaretWidget = CaretActor->GetLexWidget();
 		auto uiText = TextWidget;
-		CaretWidget->SetSize(FLexWidgetSize2::MakeFixed(FVector2f(CaretWidth, uiText->GetFontSize())));
+		CaretWidget->SetWidth(CaretWidth);
+		CaretWidget->SetHeight(uiText->GetFontSize());
 		auto CaretVisual = NewObject<UUISprite>(CaretWidget.Get());
 		CaretVisual->SetColor(CaretColor);
 		CaretVisual->SetSprite(ULexUISpriteData::GetDefaultWhiteSolid(), false);
@@ -1135,7 +1136,7 @@ void UUITextInputComponent::UpdateSelection()
 			SpriteActor->SetActorLabel(FString::Printf(TEXT("Selection%d"), i + createdSelectionMaskCount));
 #endif
 			auto SpriteWidget = SpriteActor->GetLexWidget();
-			SpriteWidget->SetHeight(FLexWidgetSize::MakeFixed(TextWidget->GetFontSize()));
+			SpriteWidget->SetHeight(TextWidget->GetFontSize());
 			SpriteWidget->SetPivot(FVector2D(0, 0.5f));
 			auto SpriteVisual = NewObject<UUISprite>(SpriteWidget);
 			SpriteVisual->SetColor(SelectionColor);
@@ -1164,7 +1165,7 @@ void UUITextInputComponent::UpdateSelection()
 			uiSprite->GetWidget()->SetWidgetVisibility(ELexWidgetVisibility::Visible);
 			auto& selectionProperty = SelectionPropertyArray[i];
 			uiSprite->GetWidget()->SetRelativeLocation(FVector(0, selectionProperty.Pos.X, selectionProperty.Pos.Y));
-			uiSprite->GetWidget()->SetWidth(FLexWidgetSize::MakeFixed(selectionProperty.Size));
+			uiSprite->GetWidget()->SetWidth(selectionProperty.Size);
 		}
 	}
 }
@@ -1710,7 +1711,7 @@ void UUITextInputComponent::SetCaretWidth(float value)
 		CaretWidth = value;
 		if (CaretWidget.IsValid())
 		{
-			CaretWidget->SetWidth(FLexWidgetSize::MakeFixed(CaretWidth));
+			CaretWidget->SetWidth(CaretWidth);
 		}
 	}
 }

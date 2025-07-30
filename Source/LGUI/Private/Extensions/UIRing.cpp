@@ -25,8 +25,8 @@ void UUIRing::CalculatePoints()
 	auto Widget = GetWidget();
 	float angle = FMath::DegreesToRadians(StartAngle);
 	float angleInterval = FMath::DegreesToRadians((EndAngle - StartAngle) / (Segment + 1));
-	float halfWidth = Widget->GetRenderWidth() * 0.5f;
-	float halfHeight = Widget->GetRenderHeight() * 0.5f;
+	float halfWidth = Widget->GetWidth() * 0.5f;
+	float halfHeight = Widget->GetHeight() * 0.5f;
 	//points
 	for (int i = 0; i < pointCount; i++)
 	{
@@ -42,7 +42,7 @@ FVector2D UUIRing::GetStartPointTangentDirection()
 	auto Widget = GetWidget();
 	float angle = FMath::DegreesToRadians(StartAngle);
 	auto dir = FVector2D(FMath::Cos(angle), FMath::Sin(angle));
-	auto tanDir = FVector2D(-Widget->GetRenderWidth() * dir.Y, Widget->GetRenderHeight() * dir.X);
+	auto tanDir = FVector2D(-Widget->GetWidth() * dir.Y, Widget->GetHeight() * dir.X);
 	tanDir.Normalize();
 	return tanDir;
 }
@@ -51,7 +51,7 @@ FVector2D UUIRing::GetEndPointTangentDirection()
 	auto Widget = GetWidget();
 	float angle = FMath::DegreesToRadians(EndAngle);
 	auto dir = FVector2D(FMath::Cos(angle), FMath::Sin(angle));
-	auto tanDir = FVector2D(-Widget->GetRenderWidth() * dir.Y, Widget->GetRenderHeight() * dir.X);
+	auto tanDir = FVector2D(-Widget->GetWidth() * dir.Y, Widget->GetHeight() * dir.X);
 	tanDir.Normalize();
 	return tanDir;
 }

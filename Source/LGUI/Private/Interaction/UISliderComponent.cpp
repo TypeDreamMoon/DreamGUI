@@ -3,7 +3,6 @@
 #include "Interaction/UISliderComponent.h"
 #include "LGUI.h"
 #include "Core/Actor/LexWidgetActor.h"
-#include "Core/Components/LexLayoutAnchor.h"
 #include "Core/Components/LexWidget.h"
 
 void UUISliderComponent::Awake()
@@ -264,26 +263,26 @@ void UUISliderComponent::CalculateInputValue(ULGUIPointerEventData *eventData)
         {
         case UISliderDirectionType::LeftToRight:
         {
-            MinPosition = -areaUIItem->GetPivot().X * areaUIItem->GetRenderWidth();
-            value01 = (localPointerPosition.Y - MinPosition) / areaUIItem->GetRenderWidth();
+            MinPosition = -areaUIItem->GetPivot().X * areaUIItem->GetWidth();
+            value01 = (localPointerPosition.Y - MinPosition) / areaUIItem->GetWidth();
         }
         break;
         case UISliderDirectionType::RightToLeft:
         {
-            MinPosition = -areaUIItem->GetPivot().X * areaUIItem->GetRenderWidth();
-            value01 = 1.0f - (localPointerPosition.Y - MinPosition) / areaUIItem->GetRenderWidth();
+            MinPosition = -areaUIItem->GetPivot().X * areaUIItem->GetWidth();
+            value01 = 1.0f - (localPointerPosition.Y - MinPosition) / areaUIItem->GetWidth();
         }
         break;
         case UISliderDirectionType::BottomToTop:
         {
-            MinPosition = -areaUIItem->GetPivot().Y * areaUIItem->GetRenderHeight();
-            value01 = (localPointerPosition.Z - MinPosition) / areaUIItem->GetRenderHeight();
+            MinPosition = -areaUIItem->GetPivot().Y * areaUIItem->GetHeight();
+            value01 = (localPointerPosition.Z - MinPosition) / areaUIItem->GetHeight();
         }
         break;
         case UISliderDirectionType::TopToBottom:
         {
-            MinPosition = -areaUIItem->GetPivot().Y * areaUIItem->GetRenderHeight();
-            value01 = 1.0f - (localPointerPosition.Z - MinPosition) / areaUIItem->GetRenderHeight();
+            MinPosition = -areaUIItem->GetPivot().Y * areaUIItem->GetHeight();
+            value01 = 1.0f - (localPointerPosition.Z - MinPosition) / areaUIItem->GetHeight();
         }
         break;
         }
@@ -309,11 +308,11 @@ void UUISliderComponent::ApplyValueToUI()
         {
             if (CheckHandle())
             {
-                HandleLayoutAnchor->SetHorizontalAnchorMinMax(FVector2D(value01, value01));
+                Handle->SetHorizontalAnchorMinMax(FVector2D(value01, value01));
             }
             if (CheckFill())
             {
-                FillLayoutAnchor->SetHorizontalAnchorMinMax(FVector2D(0, value01));
+                Fill->SetHorizontalAnchorMinMax(FVector2D(0, value01));
             }
         }
         break;
@@ -322,11 +321,11 @@ void UUISliderComponent::ApplyValueToUI()
             if (CheckHandle())
             {
                 float invValue01 = 1.0f - value01;
-                HandleLayoutAnchor->SetHorizontalAnchorMinMax(FVector2D(invValue01, invValue01));
+                Handle->SetHorizontalAnchorMinMax(FVector2D(invValue01, invValue01));
             }
             if (CheckFill())
             {
-                FillLayoutAnchor->SetHorizontalAnchorMinMax(FVector2D(1.0f - value01, 1));
+                Fill->SetHorizontalAnchorMinMax(FVector2D(1.0f - value01, 1));
             }
         }
         break;
@@ -334,11 +333,11 @@ void UUISliderComponent::ApplyValueToUI()
         {
             if (CheckHandle())
             {
-                HandleLayoutAnchor->SetVerticalAnchorMinMax(FVector2D(value01, value01));
+                Handle->SetVerticalAnchorMinMax(FVector2D(value01, value01));
             }
             if (CheckFill())
             {
-                FillLayoutAnchor->SetVerticalAnchorMinMax(FVector2D(0, value01));
+                Fill->SetVerticalAnchorMinMax(FVector2D(0, value01));
             }
         }
         break;
@@ -347,11 +346,11 @@ void UUISliderComponent::ApplyValueToUI()
             if (CheckHandle())
             {
                 float invValue01 = 1.0f - value01;
-                HandleLayoutAnchor->SetVerticalAnchorMinMax(FVector2D(invValue01, invValue01));
+                Handle->SetVerticalAnchorMinMax(FVector2D(invValue01, invValue01));
             }
             if (CheckFill())
             {
-                FillLayoutAnchor->SetVerticalAnchorMinMax(FVector2D(1.0f - value01, 1));
+                Fill->SetVerticalAnchorMinMax(FVector2D(1.0f - value01, 1));
             }
         }
         break;

@@ -7,7 +7,6 @@
 #include "LGUIHeaders.h"
 
 #include "ISettingsModule.h"
-#include "ISettingsSection.h"
 
 #include "SceneOutliner/LGUISceneOutlinerInfoColumn.h"
 #include "SceneOutlinerModule.h"
@@ -71,10 +70,6 @@
 
 #include "PrefabAnimation/LGUIPrefabSequenceComponentCustomization.h"
 #include "PrefabAnimation/MovieSceneSequenceEditor_LGUIPrefabSequence.h"
-#include "BlueprintEditorModule.h"
-#include "BlueprintEditorTabs.h"
-#include "Framework/Docking/LayoutExtender.h"
-#include "WorkflowOrientedApp/WorkflowTabManager.h"
 #include "SequencerSettings.h"
 #include "ISequencerModule.h"
 #include "PrefabAnimation/LGUIPrefabSequenceEditor.h"
@@ -82,17 +77,10 @@
 #include "PrefabAnimation/LGUIMaterialTrackEditor.h"
 #include "PrefabAnimation/LGUIPrefabSequencerSettings.h"
 
-#include "UnrealEdGlobals.h"
-#include "Editor/UnrealEdEngine.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Core/LexUIImageBrush.h"
 #include "Core/Components/LexImage.h"
-#include "Core/Components/LexLayoutFlexBox.h"
-#include "Core/Components/LexLayoutSimpleAnchor.h"
 #include "DetailCustomization/LexImageBrushStructCustomization.h"
-#include "DetailCustomization/LexLayoutFlexBoxCustomization.h"
-#include "DetailCustomization/LexLayoutFlexBoxSlotCustomization.h"
-#include "DetailCustomization/LexLayoutSimpleAnchorSlotCustomization.h"
 
 const FName FLGUIEditorModule::LGUIDynamicSpriteAtlasViewerName(TEXT("LGUIDynamicSpriteAtlasViewerName"));
 const FName FLGUIEditorModule::LGUIPrefabSequenceTabName(TEXT("LGUIPrefabSequenceTabName"));
@@ -307,10 +295,6 @@ void FLGUIEditorModule::StartupModule()
 
 		PropertyModule.RegisterCustomClassLayout(ULGUIPrefabSequenceComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLGUIPrefabSequenceComponentCustomization::MakeInstance));
 		
-		PropertyModule.RegisterCustomClassLayout(ULexLayoutFlexBoxSlot::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutFlexBoxSlotCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(ULexLayoutFlexBox::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutFlexBoxCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(ULexLayoutSimpleAnchorSlot::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutSimpleAnchorSlotCustomization::MakeInstance));
-
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIImageBrush::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexImageBrushStructCustomization::MakeInstance));
 	}
 	//register asset
@@ -521,10 +505,6 @@ void FLGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIComponentReference::StaticStruct()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(ULGUIPrefabSequenceComponent::StaticClass()->GetFName());
-
-		PropertyModule.UnregisterCustomClassLayout(ULexLayoutFlexBoxSlot::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(ULexLayoutFlexBox::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(ULexLayoutSimpleAnchorSlot::StaticClass()->GetFName());
 
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIImageBrush::StaticStruct()->GetFName());
 	}

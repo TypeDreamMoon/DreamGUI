@@ -720,14 +720,14 @@ void UUIScrollViewComponent::UpdateProgress(bool InFireEvent)
 
 void UUIScrollViewComponent::CalculateHorizontalRange()
 {
-    if (ContentParentUIItem->GetRenderWidth() > ContentUIItem->GetRenderWidth())//content size smaller than parent
+    if (ContentParentUIItem->GetWidth() > ContentUIItem->GetWidth())//content size smaller than parent
     {
         //parent
-        HorizontalRange.X = -ContentParentUIItem->GetPivot().X * ContentParentUIItem->GetRenderWidth();
-        HorizontalRange.Y = (1.0f - ContentParentUIItem->GetPivot().X) * ContentParentUIItem->GetRenderWidth();
+        HorizontalRange.X = -ContentParentUIItem->GetPivot().X * ContentParentUIItem->GetWidth();
+        HorizontalRange.Y = (1.0f - ContentParentUIItem->GetPivot().X) * ContentParentUIItem->GetWidth();
         //self
-        HorizontalRange.X += ContentUIItem->GetPivot().X * ContentUIItem->GetRenderWidth();
-        HorizontalRange.Y += (ContentUIItem->GetPivot().X - 1.0f) * ContentUIItem->GetRenderWidth();
+        HorizontalRange.X += ContentUIItem->GetPivot().X * ContentUIItem->GetWidth();
+        HorizontalRange.Y += (ContentUIItem->GetPivot().X - 1.0f) * ContentUIItem->GetWidth();
 
         if (KeepProgress)
         {
@@ -741,29 +741,29 @@ void UUIScrollViewComponent::CalculateHorizontalRange()
         }
         else
         {
-            HorizontalRange.Y -= ContentParentUIItem->GetRenderWidth() - ContentUIItem->GetRenderWidth();
+            HorizontalRange.Y -= ContentParentUIItem->GetWidth() - ContentUIItem->GetWidth();
         }
     }
     else//content size bigger than parent
     {
         //self
-        HorizontalRange.X = (ContentUIItem->GetPivot().X - 1.0f) * ContentUIItem->GetRenderWidth();
-        HorizontalRange.Y = ContentUIItem->GetPivot().X * ContentUIItem->GetRenderWidth();
+        HorizontalRange.X = (ContentUIItem->GetPivot().X - 1.0f) * ContentUIItem->GetWidth();
+        HorizontalRange.Y = ContentUIItem->GetPivot().X * ContentUIItem->GetWidth();
         //parent
-        HorizontalRange.X += (1.0f - ContentParentUIItem->GetPivot().X) * ContentParentUIItem->GetRenderWidth();
-        HorizontalRange.Y += -ContentParentUIItem->GetPivot().X * ContentParentUIItem->GetRenderWidth();
+        HorizontalRange.X += (1.0f - ContentParentUIItem->GetPivot().X) * ContentParentUIItem->GetWidth();
+        HorizontalRange.Y += -ContentParentUIItem->GetPivot().X * ContentParentUIItem->GetWidth();
     }
 }
 void UUIScrollViewComponent::CalculateVerticalRange()
 {
-    if (ContentParentUIItem->GetRenderHeight() > ContentUIItem->GetRenderHeight())//content size smaller than parent
+    if (ContentParentUIItem->GetHeight() > ContentUIItem->GetHeight())//content size smaller than parent
     {
         //parent
-        VerticalRange.X = -ContentParentUIItem->GetPivot().Y * ContentParentUIItem->GetRenderHeight();
-        VerticalRange.Y = (1.0f - ContentParentUIItem->GetPivot().Y) * ContentParentUIItem->GetRenderHeight();
+        VerticalRange.X = -ContentParentUIItem->GetPivot().Y * ContentParentUIItem->GetHeight();
+        VerticalRange.Y = (1.0f - ContentParentUIItem->GetPivot().Y) * ContentParentUIItem->GetHeight();
         //self
-        VerticalRange.X += ContentUIItem->GetPivot().Y * ContentUIItem->GetRenderHeight();
-        VerticalRange.Y += (ContentUIItem->GetPivot().Y - 1.0f) * ContentUIItem->GetRenderHeight();
+        VerticalRange.X += ContentUIItem->GetPivot().Y * ContentUIItem->GetHeight();
+        VerticalRange.Y += (ContentUIItem->GetPivot().Y - 1.0f) * ContentUIItem->GetHeight();
 
         if (KeepProgress)
         {
@@ -777,17 +777,17 @@ void UUIScrollViewComponent::CalculateVerticalRange()
         }
         else
         {
-            VerticalRange.X += ContentParentUIItem->GetRenderHeight() - ContentUIItem->GetRenderHeight();
+            VerticalRange.X += ContentParentUIItem->GetHeight() - ContentUIItem->GetHeight();
         }
     }
     else//content size bigger than parent
     {
         //self
-        VerticalRange.X = (ContentUIItem->GetPivot().Y - 1.0f) * ContentUIItem->GetRenderHeight();
-        VerticalRange.Y = ContentUIItem->GetPivot().Y * ContentUIItem->GetRenderHeight();
+        VerticalRange.X = (ContentUIItem->GetPivot().Y - 1.0f) * ContentUIItem->GetHeight();
+        VerticalRange.Y = ContentUIItem->GetPivot().Y * ContentUIItem->GetHeight();
         //parent
-        VerticalRange.X += (1.0f - ContentParentUIItem->GetPivot().Y) * ContentParentUIItem->GetRenderHeight();
-        VerticalRange.Y += -ContentParentUIItem->GetPivot().Y * ContentParentUIItem->GetRenderHeight();
+        VerticalRange.X += (1.0f - ContentParentUIItem->GetPivot().Y) * ContentParentUIItem->GetHeight();
+        VerticalRange.Y += -ContentParentUIItem->GetPivot().Y * ContentParentUIItem->GetHeight();
     }
 }
 void UUIScrollViewComponent::RectRangeChanged()

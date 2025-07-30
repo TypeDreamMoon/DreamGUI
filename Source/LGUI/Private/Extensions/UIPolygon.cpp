@@ -77,8 +77,8 @@ void UUIPolygon::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged,
 		float calcStartAngle = StartAngle, calcEndAngle = EndAngle;
 		if (InVertexPositionChanged)
 		{
-			auto width = Widget->GetRenderWidth();
-			auto height = Widget->GetRenderHeight();
+			auto width = Widget->GetWidth();
+			auto height = Widget->GetHeight();
 			auto pivot = FVector2f(Widget->GetPivot());
 			//pivot offset
 			float pivotOffsetX = 0, pivotOffsetY = 0;

@@ -93,7 +93,8 @@ void UUITextureBase::SetSizeFromTexture()
 	if (IsValid(Texture))
 	{
 		auto Widget = GetWidget();
-		Widget->SetSize(FLexWidgetSize2::MakeFixed(FVector2f(Texture->GetSurfaceWidth(), Texture->GetSurfaceHeight())));
+		Widget->SetWidth(Texture->GetSurfaceWidth());
+		Widget->SetHeight(Texture->GetSurfaceHeight());
 	}
 	else
 	{

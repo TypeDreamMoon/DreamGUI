@@ -12,7 +12,7 @@ UE_DISABLE_OPTIMIZATION
 void ULexLayout::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	UObject::PostEditChangeProperty(PropertyChangedEvent);
-	GetWidget()->MarkRenderSizeChanged();
+	GetWidget()->MarkAnchorDataChanged(false, true, true);
 }
 bool ULexLayout::CanEditChange(const FProperty* InProperty) const
 {
@@ -99,7 +99,7 @@ void ULexLayout::OnChildDetached(const ULexWidget* Child)
 void ULexLayoutSlot::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
 {
 	UObject::PostEditChangeProperty(PropertyChangedEvent);
-	GetWidget()->MarkRenderSizeChanged();
+	GetWidget()->MarkAnchorDataChanged(false, true, true);
 }
 #endif
 

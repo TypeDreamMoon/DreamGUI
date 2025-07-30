@@ -5,7 +5,7 @@
 #include "Components/SceneComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "LTweener.h"
-#include "Core/LexWidgetTypes.h"
+#include "Core/LexUIAnchorData.h"
 #include "PrefabSystem/ILGUIPrefabInterface.h"
 #include "LexWidget.generated.h"
 
@@ -102,13 +102,9 @@ public:
 	virtual void EditorForceUpdate();//@todo: remove this
 	void EnsureDataForRebuild();
 #endif
-	static FName GetPropertyName_Width()
+	static FName GetPropertyName_AnchorData()
 	{
-		return GET_MEMBER_NAME_CHECKED(ULexWidget, Width);
-	}
-	static FName GetPropertyName_Height()
-	{
-		return GET_MEMBER_NAME_CHECKED(ULexWidget, Height);
+		return GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData);
 	}
 	static FName GetPropertyName_SiblingIndex()
 	{
@@ -216,90 +212,127 @@ protected:
 	mutable TWeakObjectPtr<ULexWidget> RootWidget = nullptr;//don't mark this Transactional, because undo or redo will call register/unregister, which will trigger check RootUIItem
 	/** UI children array, sorted by hierarchy index */
 	UPROPERTY(Transient) mutable TArray<TObjectPtr<ULexWidget>> UIChildren;
-	/** check valid, incase unnormally deleting actor, like undo */
+	/** check valid, incase un-normally deleting actor, like undo */
 	void EnsureUIChildrenValid();
 	void EnsureUIChildrenSorted()const;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Size", Getter, Setter, meta = (AllowPrivateAccess = true))
-	FLexWidgetAspectRatio AspectRatio;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Size", Getter, Setter, meta = (AllowPrivateAccess = true))
-	FLexWidgetSize Width;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Size", Getter, Setter, meta = (AllowPrivateAccess = true))
-	FLexWidgetSize Height;
-	// Expand inward
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Size", Getter, Setter, meta = (AllowPrivateAccess = true))
-	FLexWidgetMargin Padding;
-	// Expand outward
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Size", Getter, Setter, meta = (AllowPrivateAccess = true))
-	FLexWidgetMargin Margin;
-	UPROPERTY(EditAnywhere, Getter, Setter, Category = "LGUI")
-	FVector2D Pivot = FVector2D(0.5f, 0.5f);
-	UPROPERTY(VisibleAnywhere, Transient, Getter, Category = "LGUI", AdvancedDisplay)
-	FVector2D RenderSize = FVector2D(100, 100);
-	UPROPERTY(VisibleAnywhere, Transient, Getter, Category = "LGUI", AdvancedDisplay)
-	FMargin RenderMargin;
-	UPROPERTY(VisibleAnywhere, Transient, Getter, Category = "LGUI", AdvancedDisplay)
-	FMargin RenderPadding;
+	/** AnchorData contains rect transform and color */
+	UPROPERTY(EditAnywhere, Getter, Setter, Category = "LGUI-AnchorData")
+	FLexUIAnchorData AnchorData;
+
+	//UPROPERTY(EditAnywhere, Transient, Getter="GetWidth", Setter="SetWidth", Category = "LGUI-AnchorData", DisplayName="Width")
+	mutable float CacheWidth = 0;
+	//UPROPERTY(EditAnywhere, Transient, Getter="GetHeight", Setter="SetHeight", Category = "LGUI-AnchorData", DisplayName="Height")
+	mutable float CacheHeight = 0;
+	//UPROPERTY(EditAnywhere, Transient, Getter="GetAnchorLeft", Setter="SetAnchorLeft", Category = "LGUI-AnchorData", DisplayName="AnchorLeft")
+	mutable float CacheAnchorLeft = 0;
+	//UPROPERTY(EditAnywhere, Transient, Getter="GetAnchorRight", Setter="SetAnchorRight", Category = "LGUI-AnchorData", DisplayName="AnchorRight")
+	mutable float CacheAnchorRight = 0;
+	//UPROPERTY(EditAnywhere, Transient, Getter="GetAnchorTop", Setter="SetAnchorTop", Category = "LGUI-AnchorData", DisplayName="AnchorTop")
+	mutable float CacheAnchorTop = 0;
+	//UPROPERTY(EditAnywhere, Transient, Getter="GetAnchorBottom", Setter="SetAnchorBottom", Category = "LGUI-AnchorData", DisplayName="AnchorBottom")
+	mutable float CacheAnchorBottom = 0;
+	
+	mutable uint8 bCacheWidthDirty : 1 = true, bCacheHeightDirty : 1 = true, bCacheAnchorLeftDirty : 1 = true, bCacheAnchorRightDirty : 1 = true, bCacheAnchorTopDirty : 1 = true, bCacheAnchorBottomDirty : 1 = true;
+	uint8 bCanSetAnchorFromTransform : 1 = false;
+	
+#pragma region AnchorData
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-	FVector2D GetPivot()const {return Pivot;}
+	const FLexUIAnchorData& GetAnchorData()const { return AnchorData; }
+
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-	void SetPivot(FVector2D Value);
+	FVector2D GetPivot() const { return AnchorData.Pivot; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+	FVector2D GetAnchorMin() const { return AnchorData.AnchorMin; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+	FVector2D GetAnchorMax() const { return AnchorData.AnchorMax; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+	FVector2D GetAnchoredPosition() const { return AnchorData.AnchoredPosition; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+	FVector2D GetSizeDelta() const { return AnchorData.SizeDelta; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+	float GetHorizontalAnchoredPosition() const { return AnchorData.AnchoredPosition.X; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+	float GetVerticalAnchoredPosition() const { return AnchorData.AnchoredPosition.Y; }
+
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		float GetWidth() const;
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		float GetHeight() const;
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+	FVector2D GetSize() const{return FVector2D(GetWidth(), GetHeight());}
+
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		float GetAnchorLeft()const;
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		float GetAnchorTop()const;
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		float GetAnchorRight()const;
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		float GetAnchorBottom()const;
+
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		void SetAnchorData(const FLexUIAnchorData& Value);
+
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		void SetPivot(FVector2D Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		void SetAnchorMin(FVector2D Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		void SetAnchorMax(FVector2D Value);
+
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		void SetHorizontalAndVerticalAnchorMinMax(FVector2D MinValue, FVector2D MaxValue, bool bKeepSize, bool bKeepRelativeLocation);
+
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		void SetHorizontalAnchorMinMax(FVector2D Value, bool bKeepSize = false, bool bKeepRelativeLocation = false);
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		void SetVerticalAnchorMinMax(FVector2D Value, bool bKeepSize = false, bool bKeepRelativeLocation = false);
+
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		void SetAnchoredPosition(FVector2D Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		void SetHorizontalAnchoredPosition(float Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		void SetVerticalAnchoredPosition(float Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		void SetSizeDelta(FVector2D Value);
+
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		void SetWidth(float Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		void SetHeight(float Value);
+
+	/** This function only valid if UIItem have parent */
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		void SetAnchorLeft(float Value);
+	/** This function only valid if UIItem have parent */
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		void SetAnchorTop(float Value);
+	/** This function only valid if UIItem have parent */
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		void SetAnchorRight(float Value);
+	/** This function only valid if UIItem have parent */
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		void SetAnchorBottom(float Value);
+
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		FVector2D GetLocalSpaceLeftBottomPoint()const;
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		FVector2D GetLocalSpaceRightTopPoint()const;
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		FVector2D GetLocalSpaceCenter()const;
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		float GetLocalSpaceLeft()const;
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		float GetLocalSpaceRight()const;
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		float GetLocalSpaceBottom()const;
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+		float GetLocalSpaceTop()const;
+#pragma endregion
 	
-	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-	float GetRenderWidth() const{return GetRenderSize().X;}
-	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-	float GetRenderHeight() const{return GetRenderSize().Y;}
-	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-	FVector2D GetRenderSize() const;
-	float GetPreferredWidth() const;
-	float GetPreferredHeight() const;
-	FVector2D GetPreferredSize() const;
-
-	void SetRenderSizeByLayout(FVector2D Value);
-
-	UFUNCTION(BlueprintCallable, Category = "Layout")
-	FLexWidgetAspectRatio GetAspectRatio()const{return AspectRatio;}
-	UFUNCTION(BlueprintCallable, Category = "Layout")
-	FLexWidgetSize GetWidth()const { return Width; }
-	UFUNCTION(BlueprintCallable, Category = "Layout")
-	FLexWidgetSize GetHeight()const { return Height; }
-	UFUNCTION(BlueprintCallable, Category = "Size")
-	const FLexWidgetMargin& GetPadding()const{return Padding;}
-	UFUNCTION(BlueprintCallable, Category = "Size")
-	const FMargin& GetRenderPadding()const;
-	UFUNCTION(BlueprintCallable, Category = "Size")
-	const FLexWidgetMargin& GetMargin()const{return Margin;}
-	const FMargin& GetRenderMargin()const;
-
-	UFUNCTION(BlueprintCallable, Category = "Layout")
-	void SetAspectRatio(const FLexWidgetAspectRatio& Value);
-	UFUNCTION(BlueprintCallable, Category = "Size")
-	void SetWidth(const FLexWidgetSize& Value);
-	UFUNCTION(BlueprintCallable, Category = "Size")
-	void SetHeight(const FLexWidgetSize& Value);
-	UFUNCTION(BlueprintCallable, Category = "Size")
-	void SetSize(const FLexWidgetSize2& InValue);
-	UFUNCTION(BlueprintCallable, Category = "Size")
-	void SetPadding(const FLexWidgetMargin& Value);
-	UFUNCTION(BlueprintCallable, Category = "Size")
-	void SetMargin(const FLexWidgetMargin& Value);
-
-	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-	FVector2D GetLocalSpaceLeftBottomPoint()const;
-	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-	FVector2D GetLocalSpaceRightTopPoint()const;
-	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-	FVector2D GetLocalSpaceCenter()const;
-	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-	float GetLocalSpaceLeft()const;
-	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-	float GetLocalSpaceRight()const;
-	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-	float GetLocalSpaceBottom()const;
-	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-	float GetLocalSpaceTop()const;
-
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		ULexWidget* GetUIParent()const{ return UIParent.Get(); }
 	/** get UI children array, sorted by hierarchy index */
@@ -318,12 +351,17 @@ public:
 	void MarkAllDirtyRecursive();
 	virtual void MarkAllDirty();
 	virtual void MarkRenderModeChangeRecursive(ULexCanvas* Canvas, ELexRenderMode OldRenderMode, ELexRenderMode NewRenderMode);
+
+	void CalculateAnchorFromTransform();
+	void CalculateTransformFromAnchor();
+	void CalculateTransformFromAnchor(bool& OutHorizontalPositionChanged, bool& OutVerticalPositionChanged);
 	
 	void MarkTransformChanged(bool InPositionChanged, bool InScaleChanged);
 	void MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged);
-	void MarkRenderSizeChanged();
+	void MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged);
 	virtual void MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawcall = false);
 private:
+	FVector2f PrevScale2D = FVector2f::One();
 	mutable uint8 bNeedSortUIChildren : 1;
 	uint8 bIsDetaching : 1;
 
@@ -546,9 +584,6 @@ protected:
 	UPROPERTY(Transient) mutable uint32 bIsCanvasWidget:1;
 
 	mutable uint32 bLayoutDirty : 1 = true;
-	mutable uint32 bRenderSizeDirty : 1 = true;
-	mutable uint32 bRenderMarginDirty : 1 = true;
-	mutable uint32 bRenderPaddingDirty : 1 = true;
 	mutable uint32 bClipDirty : 1 = true;
 	mutable uint32 bNeedRecreateClip : 1 = true;
 	uint32 bClipDataChanged : 1 = true;
@@ -559,11 +594,7 @@ protected:
 
 	/** Only for root widget, if dirty then we need to recalculate flatten hierarchy index */
 	mutable uint32 bFlattenHierarchyIndexDirty : 1;
-
-	void CalculateRenderSize();
-	void CalculateRenderMargin();
-	void CalculateRenderPadding();
-	float GetMarginPixelValue(const FLexWidgetMarginSize& MarginSize);
+	
 	void MarkClipDirty(bool InClipTypeChanged)const;
 	
 	/** find root UIItem of hierarchy */

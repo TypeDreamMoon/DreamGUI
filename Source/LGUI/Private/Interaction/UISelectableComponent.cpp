@@ -586,7 +586,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 		if (dir != FVector2D::ZeroVector)
 			dir /= FMath::Max(FMath::Abs(dir.X), FMath::Abs(dir.Y));
 		auto center = rect->GetLocalSpaceCenter();
-		dir = center + FVector2D(rect->GetRenderWidth() * dir.X * 0.5f, rect->GetRenderHeight() * dir.Y * 0.5f);
+		dir = center + FVector2D(rect->GetWidth() * dir.X * 0.5f, rect->GetHeight() * dir.Y * 0.5f);
 		return FVector(0, dir.X, dir.Y);
 	};
 

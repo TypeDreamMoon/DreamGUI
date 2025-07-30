@@ -315,7 +315,7 @@ void ULexRectBlock::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 #define SetUnitChange(Property)\
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property##UnitMode))\
 	{\
-		this->On##Property##UnitModeChanged(GetWidget()->GetRenderWidth(), GetWidget()->GetRenderHeight());\
+		this->On##Property##UnitModeChanged(GetWidget()->GetWidth(), GetWidget()->GetHeight());\
 	}
 
 
@@ -453,9 +453,9 @@ void ULexRectBlock::MarkAllDirty()
 bool ULexRectBlock::LineTraceUI_CheckCornerRadius(const FVector2D& InLocalHitPoint)const
 {
 	auto Widget = GetWidget();
-	auto TempCornerRadius = GetValueWithUnitMode(CornerRadius, CornerRadiusUnitMode, Widget->GetRenderWidth(), Widget->GetRenderHeight(), 0.5f);
-	auto HalfWidth = Widget->GetRenderWidth() * 0.5f;
-	auto HalfHeight = Widget->GetRenderHeight() * 0.5f;
+	auto TempCornerRadius = GetValueWithUnitMode(CornerRadius, CornerRadiusUnitMode, Widget->GetWidth(), Widget->GetHeight(), 0.5f);
+	auto HalfWidth = Widget->GetWidth() * 0.5f;
+	auto HalfHeight = Widget->GetHeight() * 0.5f;
 	auto MinSize = FMath::Min(HalfWidth, HalfHeight);
 	TempCornerRadius.X = FMath::Min(TempCornerRadius.X, MinSize);
 	TempCornerRadius.Y = FMath::Min(TempCornerRadius.Y, MinSize);
@@ -572,11 +572,11 @@ void ULexRectBlock::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChang
 	FLexUIGeometry::UpdateUIProceduralRectSimpleVertex(&InGeo
 		, this->bEnableBody || this->bEnableBorder || this->bEnableInnerShadow
 		, this->bEnableOuterShadow
-		, this->GetOuterShadowOffset(Widget->GetRenderWidth(), Widget->GetRenderHeight())
-		, this->GetValueWithUnitMode(OuterShadowSize, OuterShadowSizeUnitMode, Widget->GetRenderWidth(), Widget->GetRenderHeight(), 0.5f)
-		, this->GetValueWithUnitMode(OuterShadowBlur, OuterShadowBlurUnitMode, Widget->GetRenderWidth(), Widget->GetRenderHeight(), 1)
+		, this->GetOuterShadowOffset(Widget->GetWidth(), Widget->GetHeight())
+		, this->GetValueWithUnitMode(OuterShadowSize, OuterShadowSizeUnitMode, Widget->GetWidth(), Widget->GetHeight(), 0.5f)
+		, this->GetValueWithUnitMode(OuterShadowBlur, OuterShadowBlurUnitMode, Widget->GetWidth(), Widget->GetHeight(), 1)
 		, this->bSoftEdge,
-		Widget->GetRenderWidth(), Widget->GetRenderHeight(), FVector2f(Widget->GetPivot())
+		Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot())
 		, SimpleRectSpriteData, IsValid(BodySpriteTexture) ? BodySpriteTexture->GetSpriteInfo() : SimpleRectSpriteData
 		, Widget->GetRenderCanvas(), this, GetFinalColor(),
 		InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
@@ -614,7 +614,7 @@ void ULexRectBlock::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChang
 		auto BlockSize = ProceduralRectData->GetBlockSizeInByte();
 		uint8* BlockBuffer = new uint8[BlockSize];
 		FMemory::Memzero(BlockBuffer, BlockSize);
-		FillData(BlockBuffer, Widget->GetRenderWidth(), Widget->GetRenderHeight());
+		FillData(BlockBuffer, Widget->GetWidth(), Widget->GetHeight());
 		ProceduralRectData->UpdateBlock(DataStartPosition, BlockBuffer);
 	}
 }
@@ -721,7 +721,8 @@ void ULexRectBlock::SetSizeFromBodyTexture()
 	{
 		if (IsValid(this->BodySpriteTexture))
 		{
-			GetWidget()->SetSize(FLexWidgetSize2::MakeFixed(FVector2f(this->BodySpriteTexture->GetSpriteInfo().GetSourceWidth(), this->BodySpriteTexture->GetSpriteInfo().GetSourceHeight())));
+			GetWidget()->SetWidth(this->BodySpriteTexture->GetSpriteInfo().GetSourceWidth());
+			GetWidget()->SetHeight(this->BodySpriteTexture->GetSpriteInfo().GetSourceHeight());
 		}
 		else
 		{
@@ -732,7 +733,8 @@ void ULexRectBlock::SetSizeFromBodyTexture()
 	{
 		if (IsValid(this->BodyTexture))
 		{
-			GetWidget()->SetSize(FLexWidgetSize2::MakeFixed(FVector2f(this->BodyTexture->GetSurfaceWidth(), this->BodyTexture->GetSurfaceHeight())));
+			GetWidget()->SetWidth(this->BodyTexture->GetSurfaceWidth());
+			GetWidget()->SetHeight(this->BodyTexture->GetSurfaceHeight());
 		}
 		else
 		{

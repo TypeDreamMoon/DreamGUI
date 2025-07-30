@@ -86,23 +86,23 @@ public:
 							{
 								if (Type == ELexWidgetSizeType::ExpandToParent)
 								{
-									if (auto Parent = Widget->GetUIParent())
-									{
-										if (HorizontalOrVertical)
-										{
-											if (Parent->GetWidth().Type == ELexWidgetSizeType::ShrinkToChildren)
-											{
-												return EVisibility::Visible;
-											}
-										}
-										else
-										{
-											if (Parent->GetHeight().Type == ELexWidgetSizeType::ShrinkToChildren)
-											{
-												return EVisibility::Visible;
-											}
-										}
-									}
+									// if (auto Parent = Widget->GetUIParent())
+									// {
+									// 	if (HorizontalOrVertical)
+									// 	{
+									// 		if (Parent->GetWidth().Type == ELexWidgetSizeType::ShrinkToChildren)
+									// 		{
+									// 			return EVisibility::Visible;
+									// 		}
+									// 	}
+									// 	else
+									// 	{
+									// 		if (Parent->GetHeight().Type == ELexWidgetSizeType::ShrinkToChildren)
+									// 		{
+									// 			return EVisibility::Visible;
+									// 		}
+									// 	}
+									// }
 								}
 							}
 							return EVisibility::Collapsed;

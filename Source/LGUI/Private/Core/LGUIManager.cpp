@@ -16,7 +16,6 @@
 #include "Core/LexUIRender/LexUIRenderer.h"
 #include "Core/ILexUICultureChangedInterface.h"
 #include "Core/LGUILifeCycleBehaviour.h"
-#include "Core/Components/LexLayoutAnchor.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #if WITH_EDITOR
@@ -70,10 +69,7 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 			{
 				if (auto Widget = Cast<ULexWidget>(Comp))
 				{
-					if (auto LayoutSlot = Widget->GetLayoutSlot())
-					{
-						LayoutSlot->CalculateTransformFromLayout();
-					}
+					Widget->CalculateTransformFromAnchor();
 				}
 			}
 			});
@@ -134,7 +130,8 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 						CanvasComp->SetRenderMode(RenderMode);
 					}
 
-					RootUICanvasActor->GetLexWidget()->SetSize(FLexWidgetSize2::MakeFixed(CanvasSize));
+					RootUICanvasActor->GetLexWidget()->SetWidth(CanvasSize.X);
+					RootUICanvasActor->GetLexWidget()->SetHeight(CanvasSize.Y);
 					RootUICanvasActor->GetLexWidget()->SetSiblingIndex(0);
 
 					OutCreatedRootAgentActor = RootUICanvasActor;
@@ -175,7 +172,7 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 			{
 				if (auto Widget = Cast<ULexWidget>(RootAgentActor->GetRootComponent()))
 				{
-					Prefab->PrefabDataForPrefabEditor.CanvasSize = FIntPoint(Widget->GetRenderWidth(), Widget->GetRenderHeight());
+					Prefab->PrefabDataForPrefabEditor.CanvasSize = FIntPoint(Widget->GetWidth(), Widget->GetHeight());
 				}
 				if (auto Canvas = RootAgentActor->FindComponentByClass<ULexCanvas>())
 				{
@@ -193,20 +190,20 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 		ULGUIPrefabManagerObject::OnPrefabEditor_ReplaceObjectPropertyForApplyOrRevert.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, FName& InPropertyName) {
 			if (auto Widget = Cast<ULexWidget>(InObject))
 			{
-				// if (InPropertyName == USceneComponent::GetRelativeLocationPropertyName())
-				// {
-				// 	InPropertyName = ULexWidget::GetAnchorDataPropertyName();
-				// }
+				if (InPropertyName == USceneComponent::GetRelativeLocationPropertyName())
+				{
+					InPropertyName = ULexWidget::GetPropertyName_AnchorData();
+				}
 			}
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_AfterObjectPropertyApplyOrRevert.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, FName InPropertyName) {
 			if (auto Widget = Cast<ULexWidget>(InObject))
 			{
-				// if (InPropertyName == ULexWidget::GetAnchorDataPropertyName())
-				// {
-				// 	Widget->CalculateTransformFromAnchor();//calculate transform here, because when NotifyPropertyChanged the PostActorConstruction->MoveComponent will call then anchor will calculate from transform value which is wrong
-				// 	PrefabHelper->RemoveMemberPropertyFromSubPrefab(Widget->GetOwner(), InObject, USceneComponent::GetRelativeLocationPropertyName());//remove RelativeLocation override because Widget use AnchorData to calculate RelativeLocation
-				// }
+				if (InPropertyName == ULexWidget::GetPropertyName_AnchorData())
+				{
+					Widget->CalculateTransformFromAnchor();//calculate transform here, because when NotifyPropertyChanged the PostActorConstruction->MoveComponent will call then anchor will calculate from transform value which is wrong
+					PrefabHelper->RemoveMemberPropertyFromSubPrefab(Widget->GetOwner(), InObject, USceneComponent::GetRelativeLocationPropertyName());//remove RelativeLocation override because Widget use AnchorData to calculate RelativeLocation
+				}
 			}
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_AfterMakePrefabAsSubPrefab.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, AActor* InRootActor) {
@@ -220,14 +217,14 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 		ULGUIPrefabManagerObject::OnPrefabEditor_AfterCollectPropertyToOverride.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, FName InPropertyName) {
 			if (auto Widget = Cast<ULexWidget>(InObject))
 			{
-				// if (InPropertyName == USceneComponent::GetRelativeLocationPropertyName())//if UI's relative location change, then record anchor data too
-				// {
-				// 	PrefabHelper->AddMemberPropertyToSubPrefab(Widget->GetOwner(), InObject, ULexWidget::GetAnchorDataPropertyName());
-				// }
-				// else if (InPropertyName == ULexWidget::GetAnchorDataPropertyName())//if UI's anchor data change, then record relative location too
-				// {
-				// 	PrefabHelper->AddMemberPropertyToSubPrefab(Widget->GetOwner(), InObject, USceneComponent::GetRelativeLocationPropertyName());
-				// }
+				if (InPropertyName == USceneComponent::GetRelativeLocationPropertyName())//if UI's relative location change, then record anchor data too
+				{
+					PrefabHelper->AddMemberPropertyToSubPrefab(Widget->GetOwner(), InObject, ULexWidget::GetPropertyName_AnchorData());
+				}
+				else if (InPropertyName == ULexWidget::GetPropertyName_AnchorData())//if UI's anchor data change, then record relative location too
+				{
+					PrefabHelper->AddMemberPropertyToSubPrefab(Widget->GetOwner(), InObject, USceneComponent::GetRelativeLocationPropertyName());
+				}
 			}
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_CopyRootObjectParentAnchorData.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, UObject* OriginObject) {
@@ -244,9 +241,9 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 					RelativeLocationProperty->CopyCompleteValue_InContainer(OriginObjectParent, InObjectParent);
 					FLexUIUtils::NotifyPropertyChanged(OriginObjectParent, RelativeLocationProperty);
 					//copy anchor data
-					// auto AnchorDataProperty = FindFProperty<FProperty>(InObjectParent->GetClass(), ULexWidget::GetAnchorDataPropertyName());
-					// AnchorDataProperty->CopyCompleteValue_InContainer(OriginObjectParent, InObjectParent);
-					// FLexUIUtils::NotifyPropertyChanged(OriginObjectParent, AnchorDataProperty);
+					auto AnchorDataProperty = FindFProperty<FProperty>(InObjectParent->GetClass(), ULexWidget::GetPropertyName_AnchorData());
+					AnchorDataProperty->CopyCompleteValue_InContainer(OriginObjectParent, InObjectParent);
+					FLexUIUtils::NotifyPropertyChanged(OriginObjectParent, AnchorDataProperty);
 				}
 			}
 			});
@@ -482,7 +479,7 @@ uint32 ULGUIEditorManagerObject::GetViewportKeyFromIndex(int32 InViewportIndex)
 #if WITH_EDITOR
 void ULGUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool IsScreenSpace)
 {
-	auto RectExtends = FVector(0.1f, Widget->GetRenderWidth(), Widget->GetRenderHeight()) * 0.5f;
+	auto RectExtends = FVector(0.1f, Widget->GetWidth(), Widget->GetHeight()) * 0.5f;
 	bool bCanDrawRect = false;
 	auto RectDrawColor = FColor(128, 128, 128, 128);//gray means normal object
 	if (ULGUIPrefabManagerObject::IsSelected(Widget->GetOwner()))//select self
@@ -565,8 +562,8 @@ void ULGUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool IsSc
 	{
 		auto WorldTransform = Widget->GetComponentTransform();
 		FVector RelativeOffset(0, 0, 0);
-		RelativeOffset.Y = (0.5f - Widget->GetPivot().X) * Widget->GetRenderWidth();
-		RelativeOffset.Z = (0.5f - Widget->GetPivot().Y) * Widget->GetRenderHeight();
+		RelativeOffset.Y = (0.5f - Widget->GetPivot().X) * Widget->GetWidth();
+		RelativeOffset.Z = (0.5f - Widget->GetPivot().Y) * Widget->GetHeight();
 		auto WorldLocation = WorldTransform.TransformPosition(RelativeOffset);
 
 		if (IsScreenSpace)

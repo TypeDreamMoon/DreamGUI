@@ -97,8 +97,8 @@ void ULexCanvasScaler::OnViewportParameterChanged()
 				{
 					if (auto canvasUIItem = Canvas->GetLexWidget())
 					{
-						canvasUIItem->SetWidth(FLexWidgetSize::MakeFixed(SizeInEditMode.X));
-						canvasUIItem->SetHeight(FLexWidgetSize::MakeFixed(SizeInEditMode.Y));
+						canvasUIItem->SetWidth(SizeInEditMode.X);
+						canvasUIItem->SetHeight(SizeInEditMode.Y);
 						ViewportSize.X = SizeInEditMode.X;
 						ViewportSize.Y = SizeInEditMode.Y;
 					}
@@ -118,8 +118,8 @@ void ULexCanvasScaler::OnViewportParameterChanged()
 					{
 					case ELGUICanvasScaleMode::ConstantPixelSize:
 					{
-						canvasUIItem->SetWidth(FLexWidgetSize::MakeFixed(ViewportSize.X));
-						canvasUIItem->SetHeight(FLexWidgetSize::MakeFixed(ViewportSize.Y));
+						canvasUIItem->SetWidth(ViewportSize.X);
+						canvasUIItem->SetHeight(ViewportSize.Y);
 						canvasScale = 1.0f;
 					}
 					break;
@@ -137,8 +137,8 @@ void ULexCanvasScaler::OnViewportParameterChanged()
 							float matchHeight_PreferredWidth = ReferenceResolution.Y * ViewportSize.X / ViewportSize.Y;
 							float matchHeight_ScaleRatio = ViewportSize.Y / ReferenceResolution.Y;
 
-							canvasUIItem->SetWidth(FLexWidgetSize::MakeFixed(FMath::Lerp(matchWidth_PreferredWidth, matchHeight_PreferredWidth, MatchFromWidthToHeight)));
-							canvasUIItem->SetHeight(FLexWidgetSize::MakeFixed(FMath::Lerp(matchWidth_PreferredHeight, matchHeight_PreferredHeight, MatchFromWidthToHeight)));
+							canvasUIItem->SetWidth(FMath::Lerp(matchWidth_PreferredWidth, matchHeight_PreferredWidth, MatchFromWidthToHeight));
+							canvasUIItem->SetHeight(FMath::Lerp(matchWidth_PreferredHeight, matchHeight_PreferredHeight, MatchFromWidthToHeight));
 
 							canvasScale = FMath::Lerp(matchWidth_ScaleRatio, matchHeight_ScaleRatio, MatchFromWidthToHeight);
 						}
@@ -180,8 +180,8 @@ void ULexCanvasScaler::OnViewportParameterChanged()
 									canvasScale = (float)ViewportSize.Y / resultHeight;
 								}
 							}
-							canvasUIItem->SetWidth(FLexWidgetSize::MakeFixed(resultWidth));
-							canvasUIItem->SetHeight(FLexWidgetSize::MakeFixed(resultHeight));
+							canvasUIItem->SetWidth(resultWidth);
+							canvasUIItem->SetHeight(resultHeight);
 						}
 						break;
 						}
@@ -194,14 +194,14 @@ void ULexCanvasScaler::OnViewportParameterChanged()
 							canvasScale = 1.0f;
 							auto ScaledViewportSize = ViewportSize;
 							CustomScale->CalculateSizeAndScale(this, ViewportSize, ScaledViewportSize, canvasScale);
-							canvasUIItem->SetWidth(FLexWidgetSize::MakeFixed(ScaledViewportSize.X));
-							canvasUIItem->SetHeight(FLexWidgetSize::MakeFixed(ScaledViewportSize.Y));
+							canvasUIItem->SetWidth(ScaledViewportSize.X);
+							canvasUIItem->SetHeight(ScaledViewportSize.Y);
 						}
 						else
 						{
 							//default is constant pixel
-							canvasUIItem->SetWidth(FLexWidgetSize::MakeFixed(ViewportSize.X));
-							canvasUIItem->SetHeight(FLexWidgetSize::MakeFixed(ViewportSize.Y));
+							canvasUIItem->SetWidth(ViewportSize.X);
+							canvasUIItem->SetHeight(ViewportSize.Y);
 							canvasScale = 1.0f;
 						}
 					}
@@ -428,15 +428,15 @@ void ULexCanvasScaler::DrawViewportArea()
 {
 	if (CheckCanvas())
 	{
-		auto RectExtends = FVector(0.1f, Canvas->GetLexWidget()->GetRenderWidth(), Canvas->GetLexWidget()->GetRenderHeight()) * 0.5f;
+		auto RectExtends = FVector(0.1f, Canvas->GetLexWidget()->GetWidth(), Canvas->GetLexWidget()->GetHeight()) * 0.5f;
 		auto GeometryBoundsExtends = FVector(0, 0, 0);
 		bool bCanDrawRect = false;
 		auto RectDrawColor = FColor(128, 128, 128, 128);//gray means normal object
 
 		auto WorldTransform = Canvas->GetLexWidget()->GetComponentTransform();
 		FVector RelativeOffset(0, 0, 0);
-		RelativeOffset.Y = (0.5f - Canvas->GetLexWidget()->GetPivot().X) * Canvas->GetLexWidget()->GetRenderWidth();
-		RelativeOffset.Z = (0.5f - Canvas->GetLexWidget()->GetPivot().Y) * Canvas->GetLexWidget()->GetRenderHeight();
+		RelativeOffset.Y = (0.5f - Canvas->GetLexWidget()->GetPivot().X) * Canvas->GetLexWidget()->GetWidth();
+		RelativeOffset.Z = (0.5f - Canvas->GetLexWidget()->GetPivot().Y) * Canvas->GetLexWidget()->GetHeight();
 		auto WorldLocation = WorldTransform.TransformPosition(RelativeOffset);
 
 		DrawDebugBox(Canvas->GetLexWidget()->GetWorld(), WorldLocation, RectExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), RectDrawColor);

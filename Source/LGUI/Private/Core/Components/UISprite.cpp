@@ -70,7 +70,7 @@ void UUISprite::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, 
 	{
 	case EUISpriteType::Normal:
 		FLexUIGeometry::UpdateUIRectSimpleVertex(&InGeo, 
-			Widget->GetRenderWidth(), Widget->GetRenderHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), RenderCanvas, this, GetFinalColor(), 
+			Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), RenderCanvas, this, GetFinalColor(), 
 			InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 		);
 		break;
@@ -78,14 +78,14 @@ void UUISprite::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, 
 	case EUISpriteType::SlicedFrame:
 		if (Sprite->GetSpriteInfo().HasBorder())
 		{
-			FLexUIGeometry::UpdateUIRectBorderVertex(&InGeo, type == EUISpriteType::Sliced, Widget->GetRenderWidth(), Widget->GetRenderHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), RenderCanvas, this, GetFinalColor(),
+			FLexUIGeometry::UpdateUIRectBorderVertex(&InGeo, type == EUISpriteType::Sliced, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 		}
 		else
 		{
 			FLexUIGeometry::UpdateUIRectSimpleVertex(&InGeo,
-				Widget->GetRenderWidth(), Widget->GetRenderHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), RenderCanvas, this, GetFinalColor(),
+				Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 		}
@@ -93,16 +93,16 @@ void UUISprite::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, 
 	case EUISpriteType::Tiled:
 		if (!Sprite->IsIndividual())
 		{
-			FLexUIGeometry::UpdateUIRectTiledVertex(&InGeo, Sprite->GetSpriteInfo(), RenderCanvas, this, Widget->GetRenderWidth(), Widget->GetRenderHeight(), FVector2f(Widget->GetPivot()), Tiled_WidthRectCount, Tiled_HeightRectCount, Tiled_WidthRemainedRectSize, Tiled_HeightRemainedRectSize, GetFinalColor(), 
+			FLexUIGeometry::UpdateUIRectTiledVertex(&InGeo, Sprite->GetSpriteInfo(), RenderCanvas, this, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Tiled_WidthRectCount, Tiled_HeightRectCount, Tiled_WidthRemainedRectSize, Tiled_HeightRemainedRectSize, GetFinalColor(), 
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 		}
 		else
 		{
 			FLexUISpriteInfo tempSpriteInfo;
-			tempSpriteInfo.ApplyUV(0, 0, Widget->GetRenderWidth(), Widget->GetRenderHeight(), 1.0f / Sprite->GetSpriteInfo().width, 1.0f / Sprite->GetSpriteInfo().height);
+			tempSpriteInfo.ApplyUV(0, 0, Widget->GetWidth(), Widget->GetHeight(), 1.0f / Sprite->GetSpriteInfo().width, 1.0f / Sprite->GetSpriteInfo().height);
 			FLexUIGeometry::UpdateUIRectSimpleVertex(&InGeo,
-				Widget->GetRenderWidth(), Widget->GetRenderHeight(), FVector2f(Widget->GetPivot()), tempSpriteInfo, RenderCanvas, this, GetFinalColor(),
+				Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), tempSpriteInfo, RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 		}
@@ -113,22 +113,22 @@ void UUISprite::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, 
 		{
 		case EUISpriteFillMethod::Horizontal:
 		case EUISpriteFillMethod::Vertical:
-			FLexUIGeometry::UpdateUIRectFillHorizontalVerticalVertex(&InGeo, Widget->GetRenderWidth(), Widget->GetRenderHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), fillDirectionFlip, fillAmount, fillMethod == EUISpriteFillMethod::Horizontal, RenderCanvas, this, GetFinalColor(),
+			FLexUIGeometry::UpdateUIRectFillHorizontalVerticalVertex(&InGeo, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), fillDirectionFlip, fillAmount, fillMethod == EUISpriteFillMethod::Horizontal, RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 			break;
 		case EUISpriteFillMethod::Radial90:
-			FLexUIGeometry::UpdateUIRectFillRadial90Vertex(&InGeo, Widget->GetRenderWidth(), Widget->GetRenderHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), fillDirectionFlip, fillAmount, (EUISpriteFillOriginType_Radial90)fillOrigin, RenderCanvas, this, GetFinalColor(),
+			FLexUIGeometry::UpdateUIRectFillRadial90Vertex(&InGeo, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), fillDirectionFlip, fillAmount, (EUISpriteFillOriginType_Radial90)fillOrigin, RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 			break;
 		case EUISpriteFillMethod::Radial180:
-			FLexUIGeometry::UpdateUIRectFillRadial180Vertex(&InGeo, Widget->GetRenderWidth(), Widget->GetRenderHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), fillDirectionFlip, fillAmount, (EUISpriteFillOriginType_Radial180)fillOrigin, RenderCanvas, this, GetFinalColor(),
+			FLexUIGeometry::UpdateUIRectFillRadial180Vertex(&InGeo, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), fillDirectionFlip, fillAmount, (EUISpriteFillOriginType_Radial180)fillOrigin, RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 			break;
 		case EUISpriteFillMethod::Radial360:
-			FLexUIGeometry::UpdateUIRectFillRadial360Vertex(&InGeo, Widget->GetRenderWidth(), Widget->GetRenderHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), fillDirectionFlip, fillAmount, (EUISpriteFillOriginType_Radial360)fillOrigin, RenderCanvas, this, GetFinalColor(),
+			FLexUIGeometry::UpdateUIRectFillRadial360Vertex(&InGeo, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), fillDirectionFlip, fillAmount, (EUISpriteFillOriginType_Radial360)fillOrigin, RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 			break;
@@ -167,7 +167,7 @@ void UUISprite::CalculateTiledWidth()
 	if (!Sprite->IsIndividual())
 	{
 		auto Widget = GetWidget();
-		if (Widget->GetRenderWidth() <= 0)
+		if (Widget->GetWidth() <= 0)
 		{
 			if (Tiled_WidthRectCount != 0)
 			{
@@ -177,7 +177,7 @@ void UUISprite::CalculateTiledWidth()
 			}
 			return;
 		}
-		float widthCountFloat = Widget->GetRenderWidth() / Sprite->GetSpriteInfo().width;
+		float widthCountFloat = Widget->GetWidth() / Sprite->GetSpriteInfo().width;
 		int widthCount = (int)widthCountFloat + 1;//rect count of width-direction, +1 means not-full-size rect
 		if (widthCount != Tiled_WidthRectCount)
 		{
@@ -201,7 +201,7 @@ void UUISprite::CalculateTiledHeight()
 	if (!Sprite->IsIndividual())
 	{
 		auto Widget = GetWidget();
-		if (Widget->GetRenderHeight() <= 0)
+		if (Widget->GetHeight() <= 0)
 		{
 			if (Tiled_HeightRectCount != 0)
 			{
@@ -211,7 +211,7 @@ void UUISprite::CalculateTiledHeight()
 			}
 			return;
 		}
-		float heightCountFloat = Widget->GetRenderHeight() / Sprite->GetSpriteInfo().height;
+		float heightCountFloat = Widget->GetHeight() / Sprite->GetSpriteInfo().height;
 		int heightCount = (int)heightCountFloat + 1;//rect count of height-direction, +1 means not-full-size rect
 		if (heightCount != Tiled_HeightRectCount)
 		{

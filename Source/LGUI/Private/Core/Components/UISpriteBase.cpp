@@ -106,7 +106,8 @@ void UUISpriteBase::SetSizeFromSpriteData()
 	if (IsValid(Sprite))
 	{
 		auto Widget = GetWidget();
-		Widget->SetSize(FLexWidgetSize2::MakeFixed(FVector2f(Sprite->GetSpriteInfo().GetSourceWidth(), Sprite->GetSpriteInfo().GetSourceHeight())));
+		Widget->SetWidth(Sprite->GetSpriteInfo().GetSourceWidth());
+		Widget->SetHeight(Sprite->GetSpriteInfo().GetSourceHeight());
 	}
 	else
 	{
