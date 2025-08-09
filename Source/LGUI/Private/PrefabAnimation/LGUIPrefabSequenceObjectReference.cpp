@@ -96,46 +96,23 @@ bool FLGUIPrefabSequenceObjectReference::FixObjectReferenceFromEditorHelpers(AAc
 	{
 		HelperActor = FoundHelperActor;
 		HelperActorLabel = HelperActor->GetActorLabel();
-		if (HelperClass == AActor::StaticClass())
+		if (ObjectPathRelativeToActor.IsEmpty())
 		{
 			Object = HelperActor;
 			return true;
 		}
-		else if (HelperClass->IsChildOf(UActorComponent::StaticClass()))
+		else 
 		{
-			TArray<UActorComponent*> Components;
-			HelperActor->GetComponents(HelperClass, Components);
-			if (Components.Num() == 1)
-			{
-				Object = Components[0];
-				return true;
-			}
-			else if (Components.Num() > 1)
-			{
-				for (auto& CompItem : Components)
-				{
-					if (CompItem->GetFName() == HelperComponentName)
-					{
-						Object = CompItem;
-						break;
-					}
-				}
-				if (Object == nullptr)
-				{
-					Object = Components[0];
-				}
-				return true;
-			}
+			FSoftObjectPath ObjectPath(FString::Printf(TEXT("%s.%s"), *HelperActor->GetPathName(), *this->ObjectPathRelativeToActor));
+			Object = ObjectPath.ResolveObject();
+			return IsValid(Object);
 		}
 	}
 	return false;
 }
 bool FLGUIPrefabSequenceObjectReference::CanFixObjectReferenceFromEditorHelpers()const
 {
-	return IsValid(HelperClass)
-		&& !HelperComponentName.IsNone()
-		&& !HelperActorPath.IsEmpty()
-		;
+	return !HelperActorPath.IsEmpty();
 }
 bool FLGUIPrefabSequenceObjectReference::IsObjectReferenceGood(AActor* InContextActor)const
 {
@@ -143,10 +120,7 @@ bool FLGUIPrefabSequenceObjectReference::IsObjectReferenceGood(AActor* InContext
 	AActor* Actor = Cast<AActor>(Object);
 	if (Actor == nullptr)
 	{
-		if (auto Component = Cast<UActorComponent>(Object))
-		{
-			Actor = Component->GetOwner();
-		}
+		Actor = Object->GetTypedOuter<AActor>();
 	}
 
 	if (Actor != nullptr)
@@ -160,8 +134,6 @@ bool FLGUIPrefabSequenceObjectReference::IsObjectReferenceGood(AActor* InContext
 bool FLGUIPrefabSequenceObjectReference::IsEditorHelpersGood(AActor* InContextActor)const
 {
 	return IsValid(HelperActor)
-		&& IsValid(HelperClass)
-		&& !HelperComponentName.IsNone()
 		&& HelperActorPath == GetActorPathRelativeToContextActor(InContextActor, HelperActor)
 		;
 }
@@ -172,8 +144,7 @@ bool FLGUIPrefabSequenceObjectReference::InitHelpers(AActor* InContextActor)
 	if (auto Actor = Cast<AActor>(Object))
 	{
 		this->HelperActor = Actor;
-		this->HelperClass = AActor::StaticClass();
-		this->HelperComponentName = TEXT("Actor");
+		this->ObjectPathRelativeToActor = "";
 #if WITH_EDITOR
 		this->HelperActorLabel = Actor->GetActorLabel();
 		this->HelperActorPath = GetActorPathRelativeToContextActor(InContextActor, Actor);
@@ -182,18 +153,14 @@ bool FLGUIPrefabSequenceObjectReference::InitHelpers(AActor* InContextActor)
 	}
 	else
 	{
-		if (auto Component = Cast<UActorComponent>(Object))
-		{
-			Actor = Component->GetOwner();
-			this->HelperActor = Actor;
-			this->HelperClass = Component->GetClass();
-			this->HelperComponentName = Component->GetFName();
+		Actor = Object->GetTypedOuter<AActor>();
+		this->HelperActor = Actor;
+		this->ObjectPathRelativeToActor = Object->GetPathName(Actor);
 #if WITH_EDITOR
-			this->HelperActorLabel = Actor->GetActorLabel();
-			this->HelperActorPath = GetActorPathRelativeToContextActor(InContextActor, Actor);
+		this->HelperActorLabel = Actor->GetActorLabel();
+		this->HelperActorPath = GetActorPathRelativeToContextActor(InContextActor, Actor);
 #endif
-			return true;
-		}
+		return true;
 	}
 	return false;
 }
@@ -211,33 +178,18 @@ bool FLGUIPrefabSequenceObjectReference::CheckTargetObject()const
 	}
 	else
 	{
-		if (IsValid(HelperActor) && IsValid(HelperClass))
+		if (IsValid(HelperActor))
 		{
-			if (HelperClass == AActor::StaticClass())
+			if (this->ObjectPathRelativeToActor.IsEmpty())
 			{
 				Object = HelperActor;
 				return true;
 			}
 			else
 			{
-				TArray<UActorComponent*> Components;
-				HelperActor->GetComponents(HelperClass, Components);
-				if (Components.Num() == 1)
-				{
-					Object = Components[0];
-					return true;
-				}
-				else if (Components.Num() > 1)
-				{
-					for (auto Comp : Components)
-					{
-						if (Comp->GetFName() == HelperComponentName)
-						{
-							Object = Comp;
-							return true;
-						}
-					}
-				}
+				FSoftObjectPath ObjectPath(FString::Printf(TEXT("%s.%s"), *HelperActor->GetPathName(), *this->ObjectPathRelativeToActor));
+				Object = ObjectPath.ResolveObject();
+				return IsValid(Object);
 			}
 		}
 	}

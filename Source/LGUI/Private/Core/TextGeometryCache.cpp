@@ -170,6 +170,7 @@ void FLexUITextGeometryCache::ConditionalCalculateGeometry()
 			, this->useKerning
 			, this->fontStyle
 			, this->textRealSize
+			, this->textPreferredSize
 			, RenderCanvas
 			, this->UIText.Get()
 			, this->cacheLinePropertyArray

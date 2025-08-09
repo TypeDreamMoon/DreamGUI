@@ -84,7 +84,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	}
 	if (TargetScriptArray.Num() == 0)
 	{
-		UE_LOG(LGUIEditor, Log, TEXT("[UIItemCustomization]Get TargetScript is null"));
+		UE_LOG(LGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
 
@@ -809,6 +809,85 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	// LayoutSlotCategory.AddExternalObjects({ LayoutSlot }, EPropertyLocation::Default
 	// 	, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
 	DetailBuilder.HideProperty(LayoutSlotProperty);
+
+	auto& LayoutPropertyCategory = DetailBuilder.EditCategory("LayoutProperties");
+	auto LayoutProperty_None = LOCTEXT("LayoutProperty_None", "None");
+	auto LayoutProperty_MultiValue = LOCTEXT("LayoutProperty_MultiValue", "Multiple Values");
+	auto LayoutProperty_Disabled = LOCTEXT("LayoutProperty_Disabled", "Disabled");
+	auto LayoutPropertySource_None = LOCTEXT("LayoutPropertySource_None", "None");
+	auto CreateLayoutPropertyRow = [&](const FText& Label, const TFunction<float(ULexWidget*)>& GetWidgetLayoutPropertyFunction, const TFunction<UObject*(ULexWidget*)>& GetWidgetLayoutSourceFunction)
+	{
+		auto ValueWidget = SNew(STextBlock).Font(IDetailLayoutBuilder::GetDetailFont())
+			.Text(TAttribute<FText>::CreateLambda([=, this]()
+		{
+			if (TargetScriptArray.Num() <= 0)
+			{
+				return LayoutProperty_None;
+			}
+			if (TargetScriptArray.Num() > 1)
+			{
+				return LayoutProperty_MultiValue;
+			}
+			auto Value = GetWidgetLayoutPropertyFunction(TargetScriptArray[0].Get());
+			if (Value < 0)
+				return LayoutProperty_Disabled;
+			return FText::FromString(FString::SanitizeFloat(Value));
+		}));
+		auto SourceWidget = SNew(STextBlock).Font(IDetailLayoutBuilder::GetDetailFont())
+			.Text(TAttribute<FText>::CreateLambda([=, this]()
+			{
+				if (TargetScriptArray.Num() <= 0)
+				{
+					return LayoutProperty_None;
+				}
+				if (TargetScriptArray.Num() > 1)
+				{
+					return LayoutProperty_MultiValue;
+				}
+				auto Value = GetWidgetLayoutSourceFunction(TargetScriptArray[0].Get());
+				if (Value)
+					return Value->GetClass()->GetDisplayNameText();
+				return LayoutPropertySource_None;
+			}));
+		
+		LayoutPropertyCategory.AddCustomRow(FText::Format(LOCTEXT("LayoutPropertyRowFormat", "LayoutProperty_{0}"), Label))
+		.IsEnabled(false)
+		.NameContent()
+		[
+			SNew(SBox)
+			[
+				SNew(STextBlock)
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+				.Text(Label)
+			]
+		]
+		.ValueContent()
+		[
+			SNew(SBox)
+			.WidthOverride(500)
+			[
+				SNew(SHorizontalBox)
+				+SHorizontalBox::Slot()
+				.FillWidth(1.0f)
+				[
+					ValueWidget
+				]
+				+SHorizontalBox::Slot()
+				.AutoWidth()
+				.HAlign(HAlign_Right)
+				[
+					SourceWidget
+				]
+			]
+		]
+		;
+	};
+	CreateLayoutPropertyRow(LOCTEXT("MinWidth", "Min Width"), &ULexWidget::GetMinWidth, &ULexWidget::GetMinWidthSource);
+	CreateLayoutPropertyRow(LOCTEXT("MinHeight", "Min Height"), &ULexWidget::GetMinHeight, &ULexWidget::GetMinHeightSource);
+	CreateLayoutPropertyRow(LOCTEXT("PreferredWidth", "Preferred Width"), &ULexWidget::GetPreferredWidth, &ULexWidget::GetPreferredWidthSource);
+	CreateLayoutPropertyRow(LOCTEXT("PreferredHeight", "Preferred Height"), &ULexWidget::GetPreferredHeight, &ULexWidget::GetPreferredHeightSource);
+	CreateLayoutPropertyRow(LOCTEXT("GetFlexibleWidth", "Flexible Width"), &ULexWidget::GetFlexibleWidth, &ULexWidget::GetFlexibleWidthSource);
+	CreateLayoutPropertyRow(LOCTEXT("GetFlexibleHeight", "Flexible Height"), &ULexWidget::GetFlexibleHeight, &ULexWidget::GetFlexibleHeightSource);
 
 	auto VisualProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, Visual));
 	UObject* Visual = nullptr;

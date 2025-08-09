@@ -8,6 +8,24 @@
 UE_DISABLE_OPTIMIZATION
 #endif
 
+void ULexWidgetSubObjectBehaviour::Call_OnRegister()
+{
+	if (!bIsRegistered)
+	{
+		bIsRegistered = true;
+		OnRegister();
+	}
+}
+
+void ULexWidgetSubObjectBehaviour::Call_OnUnregister()
+{
+	if (bIsRegistered)
+	{
+		bIsRegistered = false;
+		OnUnregister();
+	}
+}
+
 ULexWidget* ULexWidgetSubObjectBehaviour::GetWidget() const
 {
 	if (!CacheWidget.IsValid())

@@ -179,6 +179,7 @@ private:
 public:
 #pragma region OutputResults
 	FVector2f textRealSize = FVector2f::ZeroVector;
+	FVector2f textPreferredSize = FVector2f::ZeroVector;
 	/** line properties, from first line to last one in array */
 	TArray<FLexUITextLineProperty> cacheLinePropertyArray;
 	/** char properties, from first char to last one in array */

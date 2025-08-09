@@ -12,12 +12,16 @@ class LGUI_API ULexWidgetSubObjectBehaviour : public UObject
 	GENERATED_BODY()
 
 public:
+	void Call_OnRegister();
+	void Call_OnUnregister();
 	virtual void BeginPlay(){};
 	virtual void EndPlay(){};
-	virtual void OnRegister(){};
-	virtual void OnUnregister(){};
 	
 	virtual ULexWidget* GetWidget()const;
+protected:
+	virtual void OnRegister(){};
+	virtual void OnUnregister(){};
 private:
+	bool bIsRegistered = false;
 	mutable TWeakObjectPtr<ULexWidget> CacheWidget;
 };

@@ -2314,7 +2314,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
                                   , const FColor& color, uint8 renderOpacity, const FVector2f& fontSpace, FLexUIGeometry* uiGeo, float fontSize
                                   , ELexUITextParagraphHorizontalAlign paragraphHAlign, ELexUITextParagraphVerticalAlign paragraphVAlign, ELexUITextOverflowType overflowType
                                   , ETextWrappingPolicy wrappingPolicy, float maxHorizontalWidth, bool kerning
-                                  , ELexUITextFontStyle fontStyle, FVector2f& textRealSize
+                                  , ELexUITextFontStyle fontStyle, FVector2f& textRealSize, FVector2f& textPreferredSize
                                   , ULexCanvas* renderCanvas, ULexText* uiComp
                                   , TArray<FLexUITextLineProperty>& cacheLinePropertyArray, TArray<FLexUITextCharProperty>& cacheCharPropertyArray, TArray<FLexUIText_RichTextCustomTag>& cacheRichTextCustomTagArray
                                   , TArray<FLexUIText_RichTextImageTag>& cacheRichTextImageTagArray
@@ -2403,6 +2403,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 	float currentLineWidth = 0, currentLineHeight = originLineHeight, paragraphHeight = 0;//single line width, height, all line height
 	float firstLineHeight = currentLineHeight;//first line height
 	float maxLineWidth = 0;//if have multiple line
+	float preferredWidth = 0;//preferredWidth is the width that not wrapped width
 	int lineUIGeoVertStart = 0;//vertex index in originVertices of current line
 	int currentVisibleCharCount = 0;//visible char count, skip invisible char(\r,\n,\t)
 	int imageStartIndexInCurrentLine = 0;//
@@ -2426,11 +2427,15 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 	};
 	NewLineMode newLineMode = NewLineMode::None;
 
-	auto NewLine = [&](int32 charIndex, bool withCaret)
+	auto NewLine = [&](int32 charIndex, bool withCaret, NewLineMode inNewLineMode)
 	{
 		//add end caret position
 		currentLineWidth -= fontSpace.X;//last char of a line don't need space
 		maxLineWidth = FMath::Max(maxLineWidth, currentLineWidth);
+		if (inNewLineMode != NewLineMode::None && inNewLineMode != NewLineMode::LineBreak)
+		{
+			preferredWidth += currentLineWidth;
+		}
 
 		FLexUITextCaretProperty caretProperty;
 		caretProperty.CaretPosition = caretPosition;
@@ -2465,6 +2470,8 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 		}
 		//set line height to origin
 		currentLineHeight = originLineHeight;
+
+		newLineMode = inNewLineMode;
 	};
 
 	auto IsRichTextImageSpace = [&](TCHAR charCode, const FRichTextParseResult& richTextResult)
@@ -2687,7 +2694,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 
 		if (charCode == '\n' || charCode == '\r')//10 -- \n, 13 -- \r
 		{
-			NewLine(richText ? richTextParseResult.CharIndex : charIndex, true);
+			NewLine(richText ? richTextParseResult.CharIndex : charIndex, true, NewLineMode::LineBreak);
 			if (charIndex + 1 < contentLength)
 			{
 				auto nextCharCode = content[charIndex + 1];
@@ -2696,7 +2703,6 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 					charIndex++;//\n\r or \r\n
 				}
 			}
-			newLineMode = NewLineMode::LineBreak;
 			continue;
 		}
 
@@ -2756,8 +2762,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 				float maxWidthToCompare = overflowType == ELexUITextOverflowType::HorizontalAndVerticalOverflow ? maxHorizontalWidth : width;
 				if (currentLineOffset.X + spaceNeeded > maxWidthToCompare)
 				{
-					NewLine(caretCharIndex, false);
-					newLineMode = NewLineMode::Space;
+					NewLine(caretCharIndex, false, NewLineMode::Space);
 					continue;
 				}
 			}
@@ -2871,8 +2876,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 						}
 						else
 						{
-							NewLine(caretCharIndex + 2, false);
-							newLineMode = NewLineMode::Overflow;
+							NewLine(caretCharIndex + 2, false, NewLineMode::Overflow);
 							continue;
 						}
 					}
@@ -2888,8 +2892,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 						}
 						else
 						{
-							NewLine(caretCharIndex + 1, false);
-							newLineMode = NewLineMode::Overflow;
+							NewLine(caretCharIndex + 1, false, NewLineMode::Overflow);
 							continue;
 						}
 					}
@@ -2916,8 +2919,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 						}
 						else
 						{
-							NewLine(caretCharIndex + 2, false);
-							newLineMode = NewLineMode::Overflow;
+							NewLine(caretCharIndex + 2, false, NewLineMode::Overflow);
 							continue;
 						}
 					}
@@ -2933,8 +2935,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 						}
 						else
 						{
-							NewLine(caretCharIndex + 1, false);
-							newLineMode = NewLineMode::Overflow;
+							NewLine(caretCharIndex + 1, false, NewLineMode::Overflow);
 							continue;
 						}
 					}
@@ -3001,12 +3002,14 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 	}
 
 	//last line
-	NewLine(richText ? text.Len() : contentLength, true); 
+	NewLine(richText ? text.Len() : contentLength, true, NewLineMode::Overflow); 
 	//remove last line's space Y
 	paragraphHeight -= fontSpace.Y;
 
 	textRealSize.X = maxLineWidth;
 	textRealSize.Y = paragraphHeight;
+	textPreferredSize.X = preferredWidth;
+	textPreferredSize.Y = paragraphHeight;
 
 	float pivotOffsetX = width * (0.5f - pivot.X);
 	float pivotOffsetY = height * (0.5f - pivot.Y);

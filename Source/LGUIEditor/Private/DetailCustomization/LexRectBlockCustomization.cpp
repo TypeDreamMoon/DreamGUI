@@ -41,7 +41,7 @@ void FLexRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 	}
 	if (TargetScriptArray.Num() == 0)
 	{
-		UE_LOG(LGUIEditor, Log, TEXT("[UIProceduralRectCustomization]Get TargetScript is null"));
+		UE_LOG(LGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
 

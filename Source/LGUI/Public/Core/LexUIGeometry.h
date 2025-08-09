@@ -200,7 +200,7 @@ public:
 		, const FColor& color, uint8 renderOpacity, const FVector2f& fontSpace, FLexUIGeometry* uiGeo, float fontSize
 		, ELexUITextParagraphHorizontalAlign paragraphHAlign, ELexUITextParagraphVerticalAlign paragraphVAlign, ELexUITextOverflowType overflowType
 		, ETextWrappingPolicy wrappingPolicy, float maxHorizontalWidth, bool kerning
-		, ELexUITextFontStyle fontStyle, FVector2f& textRealSize
+		, ELexUITextFontStyle fontStyle, FVector2f& textRealSize, FVector2f& textPreferredSize
 		, ULexCanvas* renderCanvas, class ULexText* uiComp
 		, TArray<FLexUITextLineProperty>& cacheLinePropertyArray, TArray<FLexUITextCharProperty>& cacheCharPropertyArray, TArray<FLexUIText_RichTextCustomTag>& cacheRichTextCustomTagArray
 		, TArray<FLexUIText_RichTextImageTag>& cacheRichTextImageTagArray

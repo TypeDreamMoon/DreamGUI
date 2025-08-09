@@ -54,4 +54,7 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Image")
 	void SetBrushTintColor(FColor Value);
+
+	virtual float GetPreferredWidth() const override;
+	virtual float GetPreferredHeight() const override;
 };

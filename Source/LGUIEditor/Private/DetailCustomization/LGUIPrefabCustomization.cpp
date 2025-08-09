@@ -24,7 +24,7 @@ void FLGUIPrefabCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 	TargetScriptPtr = Cast<ULGUIPrefab>(targetObjects[0].Get());
 	if (TargetScriptPtr == nullptr)
 	{
-		UE_LOG(LGUIEditor, Log, TEXT("Get TargetScript is null"));
+		UE_LOG(LGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
 

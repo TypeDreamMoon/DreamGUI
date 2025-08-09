@@ -188,6 +188,31 @@ public:
 	/** editor only, return 3d bounds in self local space */
 	virtual void GetGeometryBounds3DInLocalSpace(FVector& OutMinPoint, FVector& OutMaxPoint)const;
 
+	/** The minimum width this layout element may be allocated. */
+	virtual float GetMinWidth()const{return 0;}
+	/**
+	 * The preferred width this layout element should be allocated if there is sufficient space.
+	 * Can be -1 to ignore it.
+	 */
+	virtual float GetPreferredWidth()const{return -1;}
+	/**
+	 * The extra relative width this layout element should be allocated if there is additional available space.
+	 * Can be -1 to ignore it.
+	 */
+	virtual float GetFlexibleWidth()const{return -1;}
+	/** The minimum height this layout element may be allocated. */
+	virtual float GetMinHeight()const{return 0;}
+	/**
+	 * The preferred height this layout element should be allocated if there is sufficient space.
+	 * Can be -1 to ignore it.
+	 */
+	virtual float GetPreferredHeight()const{return -1;}
+	/**
+	 * The extra relative height this layout element should be allocated if there is additional available space.
+	 * Can be -1 to ignore it.
+	 */
+	virtual float GetFlexibleHeight()const{return -1;}
+	
 	virtual float GetShrinkToContentWidth()const{return 0;}
 	virtual float GetShrinkToContentHeight()const{return 0;}
 protected:

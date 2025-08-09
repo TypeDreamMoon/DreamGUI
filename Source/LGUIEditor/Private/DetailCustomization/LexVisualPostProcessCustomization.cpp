@@ -36,7 +36,7 @@ void FLexVisualPostProcessCustomization::CustomizeDetails(IDetailLayoutBuilder& 
 	}
 	if (TargetScriptArray.Num() == 0)
 	{
-		UE_LOG(LGUIEditor, Log, TEXT("[UITextureCustomization]Get TargetScript is null"));
+		UE_LOG(LGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
 

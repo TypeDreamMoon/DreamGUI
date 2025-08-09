@@ -100,10 +100,7 @@ void ULGUIPrefabSequence::BindPossessableObject(const FGuid& ObjectId, UObject& 
 	AActor* Actor = Cast<AActor>(&PossessedObject);
 	if (Actor == nullptr)
 	{
-		if (auto Component = Cast<UActorComponent>(&PossessedObject))
-		{
-			Actor = Component->GetOwner();
-		}
+		Actor = PossessedObject.GetTypedOuter<AActor>();
 	}
 	check(Actor != nullptr);
 	if (FLGUIPrefabSequenceObjectReference::CreateForObject(Actor, &PossessedObject, ObjectRef))

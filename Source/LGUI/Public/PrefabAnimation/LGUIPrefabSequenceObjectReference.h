@@ -60,12 +60,11 @@ private:
 	/** for direct reference actor. */
 	UPROPERTY()
 		TObjectPtr<AActor> HelperActor = nullptr;
-	/** target object class. If class is actor then Object is HelperActor, if class is ActorComponent then Object is the component. */
+	/** object path relative to owner actor
+	 * if path is empty then means actor self
+	 */
 	UPROPERTY()
-		TObjectPtr<UClass> HelperClass = nullptr;
-	/** if Object is actor component and HelperActor have multiple components, then select by component name. */
-	UPROPERTY()
-		FName HelperComponentName;
+	FString ObjectPathRelativeToActor;
 
 #if WITH_EDITORONLY_DATA
 	/** HelperActor's actor label/ */

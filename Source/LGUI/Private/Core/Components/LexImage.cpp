@@ -129,6 +129,7 @@ void ULexImage::OnUpdateGeometry(FLexUIGeometry& InMesh, bool InTriangleChanged,
 {
 	auto Widget = this->GetWidget();
 	auto RenderSize = Widget->GetSize();
+	auto Pivot = Widget->GetPivot();
 	auto RenderCanvas = Widget->GetRenderCanvas();
 	auto FinalColor = FLexUIUtils::MultiplyColor(Brush.TintColor, this->GetFinalColor());
 
@@ -162,11 +163,13 @@ void ULexImage::OnUpdateGeometry(FLexUIGeometry& InMesh, bool InTriangleChanged,
 			{
 				//offset and size
 				float halfW = RenderSize.X * 0.5f, halfH = RenderSize.Y * 0.5f;
+				float pivotOffsetX = RenderSize.X * (0.5f - Pivot.X);//width * 0.5f *(1 - pivot.X * 2)
+				float pivotOffsetY = RenderSize.Y * (0.5f - Pivot.Y);//height * 0.5f *(1 - pivot.Y * 2)
 				//positions
-				float minX = -halfW;
-				float minY = -halfH;
-				float maxX = halfW;
-				float maxY = halfH;
+				float minX = -halfW + pivotOffsetX;
+				float minY = -halfH + pivotOffsetY;
+				float maxX = halfW + pivotOffsetX;
+				float maxY = halfH + pivotOffsetY;
 				originVertices[0].Position = FVector3f(0, minX, minY);
 				originVertices[1].Position = FVector3f(0, maxX, minY);
 				originVertices[2].Position = FVector3f(0, minX, maxY);
@@ -276,6 +279,8 @@ void ULexImage::OnUpdateGeometry(FLexUIGeometry& InMesh, bool InTriangleChanged,
 			if (InVertexPositionChanged)
 			{
 				//pivot offset
+				float pivotOffsetX = RenderSize.X * (0.5f - Pivot.X);//width * 0.5f *(1 - pivot.X * 2)
+				float pivotOffsetY = RenderSize.Y * (0.5f - Pivot.Y);//height * 0.5f *(1 - pivot.Y * 2)
 				float halfW = RenderSize.X * 0.5f, halfH = RenderSize.Y * 0.5f;
 				float geoWidth, geoHeight;
 				float borderLeft, borderTop, borderRight, borderBottom;
@@ -283,13 +288,23 @@ void ULexImage::OnUpdateGeometry(FLexUIGeometry& InMesh, bool InTriangleChanged,
 				{
 					auto LexSprite = (ULexUISpriteData_BaseObject*)Brush.GetResourceObject();
 					auto& SpriteInfo = LexSprite->GetSpriteInfo();
-					geoWidth = halfW * 2;
-					geoHeight = halfH * 2;
+					geoWidth = RenderSize.X;
+					geoHeight = RenderSize.Y;
 
 					borderLeft = SpriteInfo.borderLeft;
 					borderRight = SpriteInfo.borderRight;
 					borderTop = SpriteInfo.borderTop;
 					borderBottom = SpriteInfo.borderBottom;
+
+					if (SpriteInfo.HasBorder())
+					{
+						float widthScale = RenderSize.X / SpriteInfo.GetSourceWidth();
+						float heightScale = RenderSize.Y / SpriteInfo.GetSourceHeight();
+						geoWidth = SpriteInfo.width * widthScale;
+						geoHeight = SpriteInfo.height * heightScale;
+						pivotOffsetX += (-RenderSize.X + geoWidth) * 0.5f + SpriteInfo.paddingLeft * widthScale;
+						pivotOffsetY += (-RenderSize.Y + geoHeight) * 0.5f + SpriteInfo.paddingBottom * heightScale;
+					}
 				}
 				else
 				{
@@ -307,13 +322,13 @@ void ULexImage::OnUpdateGeometry(FLexUIGeometry& InMesh, bool InTriangleChanged,
 				float heightBorder = borderTop + borderBottom;
 				float widthScale = geoWidth < widthBorder ? geoWidth / widthBorder : 1.0f;
 				float heightScale = geoHeight < heightBorder ? geoHeight / heightBorder : 1.0f;
-				float x0 = -halfW;
+				float x0 = -halfW + pivotOffsetX;
 				float x1 = (x0 + borderLeft * widthScale);
-				float x3 = halfW;
+				float x3 = halfW + pivotOffsetX;
 				float x2 = (x3 - borderRight * widthScale);
-				float y0 = -halfH;
+				float y0 = -halfH + pivotOffsetY;
 				float y1 = (y0 + borderBottom * heightScale);
-				float y3 = halfH;
+				float y3 = halfH + pivotOffsetY;
 				float y2 = (y3 - borderTop * heightScale);
 
 				originVertices[0].Position = FVector3f(0, x0, y0);
@@ -536,4 +551,14 @@ void ULexImage::SetBrushTintColor(FColor Value)
 		Brush.TintColor = Value;
 		MarkColorDirty();
 	}
+}
+
+float ULexImage::GetPreferredWidth() const
+{
+	return Brush.ImageSize.X;
+}
+
+float ULexImage::GetPreferredHeight() const
+{
+	return Brush.ImageSize.Y;
 }

@@ -80,7 +80,10 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Core/LexUIImageBrush.h"
 #include "Core/Components/LexImage.h"
+#include "Core/Components/LexLayoutHorizontalAndVertical.h"
 #include "DetailCustomization/LexImageBrushStructCustomization.h"
+#include "DetailCustomization/LexLayoutHorizontalAndVerticalCustomization.h"
+#include "DetailCustomization/LexLayoutHorizontalAndVerticalSlotCustomization.h"
 
 const FName FLGUIEditorModule::LGUIDynamicSpriteAtlasViewerName(TEXT("LGUIDynamicSpriteAtlasViewerName"));
 const FName FLGUIEditorModule::LGUIPrefabSequenceTabName(TEXT("LGUIPrefabSequenceTabName"));
@@ -296,6 +299,9 @@ void FLGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomClassLayout(ULGUIPrefabSequenceComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLGUIPrefabSequenceComponentCustomization::MakeInstance));
 		
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIImageBrush::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexImageBrushStructCustomization::MakeInstance));
+		
+		PropertyModule.RegisterCustomClassLayout(ULexLayoutHorizontalAndVertical::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutHorizontalAndVerticalCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexLayoutHorizontalAndVerticalSlot::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutHorizontalAndVerticalSlotCustomization::MakeInstance));
 	}
 	//register asset
 	{
@@ -507,6 +513,9 @@ void FLGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(ULGUIPrefabSequenceComponent::StaticClass()->GetFName());
 
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIImageBrush::StaticStruct()->GetFName());
+		
+		PropertyModule.UnregisterCustomClassLayout(ULexLayoutHorizontalAndVertical::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexLayoutHorizontalAndVerticalSlot::StaticClass()->GetFName());
 	}
 	//unregister asset
 	{

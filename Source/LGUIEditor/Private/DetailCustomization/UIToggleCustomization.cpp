@@ -28,7 +28,7 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 	}
 	else
 	{
-		UE_LOG(LGUIEditor, Log, TEXT("Get TargetScript is null"));
+		UE_LOG(LGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	}
 
 	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("LGUI-Toggle");

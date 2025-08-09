@@ -12,7 +12,7 @@ UE_DISABLE_OPTIMIZATION
 void ULexLayout::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	UObject::PostEditChangeProperty(PropertyChangedEvent);
-	GetWidget()->MarkAnchorDataChanged(false, true, true);
+	MarkLayoutDirty();
 }
 bool ULexLayout::CanEditChange(const FProperty* InProperty) const
 {
@@ -41,6 +41,11 @@ void ULexLayout::CleanupSlots()
 	{
 		Slots.Remove(Widget);
 	}
+}
+
+void ULexLayout::MarkLayoutDirty()
+{
+	GetWidget()->MarkAnchorDataChanged(false, true, true);
 }
 
 void ULexLayout::OnPreSavePrefab_Implementation()
@@ -99,10 +104,16 @@ void ULexLayout::OnChildDetached(const ULexWidget* Child)
 void ULexLayoutSlot::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
 {
 	UObject::PostEditChangeProperty(PropertyChangedEvent);
+	MarkLayoutDirty();
 	GetWidget()->MarkAnchorDataChanged(false, true, true);
 }
 #endif
 
+void ULexLayoutSlot::MarkLayoutDirty()
+{
+	auto Layout = Cast<ULexLayout>(this->GetOuter());
+	Layout->MarkLayoutDirty();
+}
 ULexWidget* ULexLayoutSlot::GetWidget() const
 {
 	if (!CacheWidget.IsValid())

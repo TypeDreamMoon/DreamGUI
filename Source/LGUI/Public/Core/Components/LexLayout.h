@@ -46,7 +46,7 @@ class ULexLayoutSlot;
 /** Base class of UI element that can be renderred by LGUICanvas */
 UCLASS(Blueprintable, BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)
 class LGUI_API ULexLayout : public ULexWidgetSubObjectBehaviour
-	, public  ILGUIPrefabInterface
+	, public ILGUIPrefabInterface
 {
 	GENERATED_BODY()
 protected:
@@ -61,6 +61,7 @@ protected:
 	void CleanupSlots();
 	virtual void OnPreSavePrefab_Implementation() override;
 public:
+	void MarkLayoutDirty();
 	const ULexWidget* GetWidgetBySlot(const ULexLayoutSlot* Slot);
 	
 	virtual void OnTransformChanged(){}
@@ -72,14 +73,16 @@ public:
 	virtual ULexLayoutSlot* GetSlot(const ULexWidget* Child)const;
 	virtual ULexLayoutSlot* GetOrCreateSlot(const ULexWidget* Child, TSubclassOf<ULexLayoutSlot> SlotClass);
 
-	virtual bool SupportShrinkToChildrenWidth(){return false;}
-	virtual bool SupportShrinkToChildrenHeight(){return false;}
-	virtual float GetShrinkToChildrenWidth(){return 0;}
-	virtual float GetShrinkToChildrenHeight(){return 0;}
-	
 	virtual void OnChildDetached(const ULexWidget* Child);
 
 	virtual void GetLayoutControlAnchor(ULexWidget* Widget, FLGUICanLayoutControlAnchor& Result){}
+	
+	virtual float GetMinWidth()const{return 0;}
+	virtual float GetPreferredWidth()const{return 0;}
+	virtual float GetFlexibleWidth()const{return -1;}
+	virtual float GetMinHeight()const{return 0;}
+	virtual float GetPreferredHeight()const{return 0;}
+	virtual float GetFlexibleHeight()const{return -1;}
 };
 
 UCLASS(Blueprintable, BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)
@@ -91,13 +94,21 @@ public:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
+	void MarkLayoutDirty();
 	ULexWidget* GetWidget() const;
 	virtual bool GetLayoutControlWidth()const { return false; }
 	virtual bool GetLayoutControlHeight()const { return false; }
 	virtual bool GetLayoutControlHorizontalPosition()const { return false; }
 	virtual bool GetLayoutControlVerticalPosition()const { return false; }
-	
-	virtual void CalculateTransformFromLayout(){};
+	virtual void OnTransformChanged(){}
+	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange){};
+
+	virtual float GetMinWidth()const{return 0;}
+	virtual float GetPreferredWidth()const{return 0;}
+	virtual float GetFlexibleWidth()const{return -1;}
+	virtual float GetMinHeight()const{return -1;}
+	virtual float GetPreferredHeight()const{return -1;}
+	virtual float GetFlexibleHeight()const{return -1;}
 private:
 	mutable TWeakObjectPtr<ULexWidget> CacheWidget;
 };

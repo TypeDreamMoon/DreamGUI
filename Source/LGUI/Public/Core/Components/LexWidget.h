@@ -360,7 +360,48 @@ public:
 	void MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged);
 	void MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged);
 	virtual void MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawcall = false);
+
+	/** The minimum width this layout element may be allocated. */
+	float GetMinWidth()const;
+	/**
+	 * The preferred width this layout element should be allocated if there is sufficient space.
+	 * Can be -1 to ignore it.
+	 */
+	float GetPreferredWidth()const;
+	/**
+	 * The extra relative width this layout element should be allocated if there is additional available space.
+	 * Can be -1 to ignore it.
+	 */
+	float GetFlexibleWidth()const;
+	/** The minimum height this layout element may be allocated. */
+	float GetMinHeight()const;
+	/**
+	 * The preferred height this layout element should be allocated if there is sufficient space.
+	 * Can be -1 to ignore it.
+	 */
+	float GetPreferredHeight()const;
+	/**
+	 * The extra relative height this layout element should be allocated if there is additional available space.
+	 * Can be -1 to ignore it.
+	 */
+	float GetFlexibleHeight()const;
+
+	UObject* GetMinWidthSource()const;
+	UObject* GetPreferredWidthSource()const;
+	UObject* GetFlexibleWidthSource()const;
+	UObject* GetMinHeightSource()const;
+	UObject* GetPreferredHeightSource()const;
+	UObject* GetFlexibleHeightSource()const;
 private:
+	float GetLayoutProperty(const TFunction<float(ULexLayoutSlot*)>& GetLayoutSlotProperty
+		, const TFunction<float(ULexLayout*)>& GetLayoutProperty
+		, const TFunction<float(ULexVisual*)>& GetVisualProperty
+		, float DefaultValue)const;
+	UObject* GetLayoutSource(const TFunction<float(ULexLayoutSlot*)>& GetLayoutSlotProperty
+		, const TFunction<float(ULexLayout*)>& GetLayoutProperty
+		, const TFunction<float(ULexVisual*)>& GetVisualProperty
+		)const;
+	
 	FVector2f PrevScale2D = FVector2f::One();
 	mutable uint8 bNeedSortUIChildren : 1;
 	uint8 bIsDetaching : 1;
@@ -390,7 +431,7 @@ protected:
 	TObjectPtr<ULexVisual> Visual = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Instanced, Category = "Layout", Getter, meta = (AllowPrivateAccess = true))
 	TObjectPtr<ULexLayout> Layout = nullptr;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Transient, Instanced, Category = "LayoutSlot", Getter, meta = (AllowPrivateAccess = true))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Instanced, Category = "LayoutSlot", Getter, meta = (AllowPrivateAccess = true))
 	mutable TObjectPtr<ULexLayoutSlot> LayoutSlot = nullptr;
 	
 	TWeakPtr<FLexUIClipData> ClipData;

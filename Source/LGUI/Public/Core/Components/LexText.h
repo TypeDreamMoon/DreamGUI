@@ -170,6 +170,8 @@ public:
 
 	virtual float GetShrinkToContentWidth()const override;
 	virtual float GetShrinkToContentHeight()const override;
+	virtual float GetPreferredWidth() const override;
+	virtual float GetPreferredHeight() const override;
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI") ULexUIFontData_BaseObject* GetFont()const { return Font; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")	const FText& GetText()const { return Text; }

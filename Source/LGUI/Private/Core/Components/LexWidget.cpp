@@ -489,7 +489,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 				{
 					Visual->BeginPlay();
 				}
-				Visual->OnRegister();
+				Visual->Call_OnRegister();
 			}
 		}
 		else if (MemberName == LayoutName)
@@ -507,7 +507,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 				{
 					Layout->BeginPlay();
 				}
-				Layout->OnRegister();
+				Layout->Call_OnRegister();
 			}
 			MarkAnchorDataChanged(true, true, true);
 		}
@@ -554,7 +554,7 @@ void ULexWidget::PreEditChange(FProperty* PropertyAboutToChange)
 			{
 				Visual->EndPlay();
 			}
-			Visual->OnUnregister();
+			Visual->Call_OnUnregister();
 		}
 	}
 	else if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, Layout))
@@ -565,7 +565,7 @@ void ULexWidget::PreEditChange(FProperty* PropertyAboutToChange)
 			{
 				Layout->EndPlay();
 			}
-			Layout->OnUnregister();
+			Layout->Call_OnUnregister();
 		}
 	}
 }
@@ -710,8 +710,7 @@ void ULexWidget::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, E
 	}
 	if (GetLayoutSlot())
 	{
-		UIParent->MarkLayoutDirty();
-		UIParent->Layout->OnTransformChanged();
+		LayoutSlot->OnTransformChanged();
 	}
 	if (IsValid(Visual))
 	{
@@ -916,11 +915,11 @@ void ULexWidget::OnRegister()
 
 	if (IsValid(Layout))
 	{
-		Layout->OnRegister();
+		Layout->Call_OnRegister();
 	}
 	if (IsValid(Visual))
 	{
-		Visual->OnRegister();
+		Visual->Call_OnRegister();
 	}
 }
 void ULexWidget::OnUnregister()
@@ -951,11 +950,11 @@ void ULexWidget::OnUnregister()
 
 	if (IsValid(Layout))
 	{
-		Layout->OnUnregister();
+		Layout->Call_OnUnregister();
 	}
 	if (IsValid(Visual))
 	{
-		Visual->OnUnregister();
+		Visual->Call_OnUnregister();
 	}
 }
 
@@ -2107,7 +2106,13 @@ void ULexWidget::MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged, 
 	OnDimensionChangedEvent.Broadcast(InPivotChanged, InWidthChanged, InHeightChanged);
 	if (IsValid(Layout))
 	{
+		MarkLayoutDirty();
 		Layout->OnDimensionChanged(InPivotChanged, InWidthChanged, InHeightChanged);
+	}
+	if (GetLayoutSlot())
+	{
+		MarkLayoutDirty();
+		LayoutSlot->OnDimensionChanged(InPivotChanged, InWidthChanged, InHeightChanged);
 	}
 	if (IsValid(Visual))
 	{
@@ -2199,6 +2204,128 @@ void ULexWidget::MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransfor
 	{
 		RenderCanvas->MarkCanvasUpdate(bMaterialOrTextureChanged, bTransformOrVertexPositionChanged, bHierarchyOrderChanged, bForceRebuildDrawcall);
 	}
+}
+
+float ULexWidget::GetMinWidth() const
+{
+	return GetLayoutProperty(&ULexLayoutSlot::GetMinWidth, &ULexLayout::GetMinWidth, &ULexVisual::GetMinWidth, 0);
+}
+
+float ULexWidget::GetPreferredWidth() const
+{
+	return GetLayoutProperty(&ULexLayoutSlot::GetPreferredWidth, &ULexLayout::GetPreferredWidth, &ULexVisual::GetPreferredWidth, 0);
+}
+
+float ULexWidget::GetFlexibleWidth() const
+{
+	return GetLayoutProperty(&ULexLayoutSlot::GetFlexibleWidth, &ULexLayout::GetFlexibleWidth, &ULexVisual::GetFlexibleWidth, -1);
+}
+
+float ULexWidget::GetMinHeight() const
+{
+	return GetLayoutProperty(&ULexLayoutSlot::GetMinHeight, &ULexLayout::GetMinHeight, &ULexVisual::GetMinHeight, 0);
+}
+
+float ULexWidget::GetPreferredHeight() const
+{
+	return GetLayoutProperty(&ULexLayoutSlot::GetPreferredHeight, &ULexLayout::GetPreferredHeight, &ULexVisual::GetPreferredHeight, 0);
+}
+
+float ULexWidget::GetFlexibleHeight() const
+{
+	return GetLayoutProperty(&ULexLayoutSlot::GetFlexibleHeight, &ULexLayout::GetFlexibleHeight, &ULexVisual::GetFlexibleHeight, -1);
+}
+
+UObject* ULexWidget::GetMinWidthSource() const
+{
+	return GetLayoutSource(&ULexLayoutSlot::GetMinWidth, &ULexLayout::GetMinWidth, &ULexVisual::GetMinWidth);
+}
+
+UObject* ULexWidget::GetPreferredWidthSource() const
+{
+	return GetLayoutSource(&ULexLayoutSlot::GetPreferredWidth, &ULexLayout::GetPreferredWidth, &ULexVisual::GetPreferredWidth);
+}
+
+UObject* ULexWidget::GetFlexibleWidthSource() const
+{
+	return GetLayoutSource(&ULexLayoutSlot::GetFlexibleWidth, &ULexLayout::GetFlexibleWidth, &ULexVisual::GetFlexibleWidth);
+}
+
+UObject* ULexWidget::GetMinHeightSource() const
+{
+	return GetLayoutSource(&ULexLayoutSlot::GetMinHeight, &ULexLayout::GetMinHeight, &ULexVisual::GetMinHeight);
+}
+
+UObject* ULexWidget::GetPreferredHeightSource() const
+{
+	return GetLayoutSource(&ULexLayoutSlot::GetPreferredHeight, &ULexLayout::GetPreferredHeight, &ULexVisual::GetPreferredHeight);
+}
+
+UObject* ULexWidget::GetFlexibleHeightSource() const
+{
+	return GetLayoutSource(&ULexLayoutSlot::GetFlexibleHeight, &ULexLayout::GetFlexibleHeight, &ULexVisual::GetFlexibleHeight);
+}
+
+float ULexWidget::GetLayoutProperty(const TFunction<float(ULexLayoutSlot*)>& GetLayoutSlotProperty,
+                                    const TFunction<float(ULexLayout*)>& GetLayoutProperty,
+                                    const TFunction<float(ULexVisual*)>& GetVisualProperty,
+                                    float DefaultValue)const
+{
+	if (IsValid(LayoutSlot))
+	{
+		auto Value = GetLayoutSlotProperty(LayoutSlot);
+		if (Value >= 0)//enable override
+		{
+			return Value;
+		}
+	}
+	if (IsValid(Layout))
+	{
+		auto Value = GetLayoutProperty(Layout);
+		if (Value >= 0)//enable override
+		{
+			return Value;
+		}
+	}
+	if (IsValid(Visual))
+	{
+		auto Value = GetVisualProperty(Visual);
+		if (Value >= 0)
+		{
+			return Value;
+		}
+	}
+	return DefaultValue;
+}
+UObject* ULexWidget::GetLayoutSource(const TFunction<float(ULexLayoutSlot*)>& GetLayoutSlotProperty,
+	const TFunction<float(ULexLayout*)>& GetLayoutProperty,
+	const TFunction<float(ULexVisual*)>& GetVisualProperty) const
+{
+	if (IsValid(LayoutSlot))
+	{
+		auto Value = GetLayoutSlotProperty(LayoutSlot);
+		if (Value >= 0)//enable override
+		{
+			return LayoutSlot;
+		}
+	}
+	if (IsValid(Layout))
+	{
+		auto Value = GetLayoutProperty(Layout);
+		if (Value >= 0)//enable override
+		{
+			return Layout;
+		}
+	}
+	if (IsValid(Visual))
+	{
+		auto Value = GetVisualProperty(Visual);
+		if (Value >= 0)
+		{
+			return Visual;
+		}
+	}
+	return nullptr;
 }
 
 ULexCanvas* ULexWidget::GetRenderCanvas()const
@@ -2470,7 +2597,7 @@ ULexVisual* ULexWidget::CreateNewVisual(TSubclassOf<ULexVisual> VisualClass)
 		OldVisual->OnUnregister();
 	}
 	
-	NewVisual->OnRegister();
+	NewVisual->Call_OnRegister();
 	if (GetWorld()->IsGameWorld())
 	{
 		if (this->HasBegunPlay())
@@ -2495,10 +2622,10 @@ ULexLayout* ULexWidget::CreateNewLayout(TSubclassOf<ULexLayout> LayoutClass)
 				OldLayout->EndPlay();
 			}
 		}
-		OldLayout->OnUnregister();
+		OldLayout->Call_OnUnregister();
 	}
 	
-	NewLayout->OnRegister();
+	NewLayout->Call_OnRegister();
 	if (GetWorld()->IsGameWorld())
 	{
 		if (this->HasBegunPlay())

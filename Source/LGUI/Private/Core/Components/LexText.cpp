@@ -783,8 +783,17 @@ float ULexText::GetShrinkToContentHeight()const
 	return CacheTextGeometryData.textRealSize.Y;
 }
 
+float ULexText::GetPreferredWidth() const
+{
+	UpdateCacheTextGeometry();
+	return CacheTextGeometryData.textPreferredSize.X;
+}
 
-
+float ULexText::GetPreferredHeight() const
+{
+	UpdateCacheTextGeometry();
+	return CacheTextGeometryData.textPreferredSize.Y;
+}
 
 
 bool ULexText::MoveCaret(int32 moveType, int32& inOutCaretPositionIndex, int32& inOutCaretPositionLineIndex, FVector2f& inOutCaretPosition)
