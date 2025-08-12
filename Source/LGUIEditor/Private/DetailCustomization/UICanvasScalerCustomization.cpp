@@ -48,6 +48,8 @@ void FUICanvasScalerCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, ScreenMatchMode));
 	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, MatchFromWidthToHeight));
 	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, CustomScale));
+	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, bFixedSizeInEditMode));
+	needToHidePropertyNameArray.Add(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, SizeInEditMode));
 
 	auto CreateSlider = [this, &lguiCategory](const FText& FilterString, TSharedPtr<IPropertyHandle> Property) {
 		lguiCategory.AddCustomRow(FilterString)
@@ -197,6 +199,12 @@ void FUICanvasScalerCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 				lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, FOVAngle));
 				lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, NearClipPlane));
 				lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvasScaler, FarClipPlane));
+
+				if (canvas->GetRenderMode() == ELGUIRenderMode::ScreenSpaceOverlay)
+				{
+					lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, bFixedSizeInEditMode));
+					lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULGUICanvasScaler, SizeInEditMode));
+				}
 			}
 		}
 	}
