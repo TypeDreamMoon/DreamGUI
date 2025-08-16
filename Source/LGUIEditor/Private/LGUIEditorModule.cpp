@@ -82,6 +82,7 @@
 #include "Core/Components/LexImage.h"
 #include "Core/Components/LexLayoutHorizontalAndVertical.h"
 #include "DetailCustomization/LexImageBrushStructCustomization.h"
+#include "DetailCustomization/LexLayoutCustomization.h"
 #include "DetailCustomization/LexLayoutHorizontalAndVerticalCustomization.h"
 #include "DetailCustomization/LexLayoutHorizontalAndVerticalSlotCustomization.h"
 
@@ -300,6 +301,7 @@ void FLGUIEditorModule::StartupModule()
 		
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIImageBrush::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexImageBrushStructCustomization::MakeInstance));
 		
+		PropertyModule.RegisterCustomClassLayout(ULexLayout::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULexLayoutHorizontalAndVertical::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutHorizontalAndVerticalCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULexLayoutHorizontalAndVerticalSlot::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutHorizontalAndVerticalSlotCustomization::MakeInstance));
 	}
@@ -514,6 +516,7 @@ void FLGUIEditorModule::ShutdownModule()
 
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIImageBrush::StaticStruct()->GetFName());
 		
+		PropertyModule.UnregisterCustomClassLayout(ULexLayout::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(ULexLayoutHorizontalAndVertical::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(ULexLayoutHorizontalAndVerticalSlot::StaticClass()->GetFName());
 	}

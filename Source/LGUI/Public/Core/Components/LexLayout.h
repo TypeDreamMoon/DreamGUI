@@ -8,14 +8,14 @@
 #include "LexLayout.generated.h"
 
 
-struct FLGUICanLayoutControlAnchor
+struct FLexLayoutControlAnchorData
 {
 	bool bCanControlHorizontalAnchoredPosition = false;
 	bool bCanControlVerticalAnchoredPosition = false;
 	bool bCanControlHorizontalSizeDelta = false;
 	bool bCanControlVerticalSizeDelta = false;
 
-	bool HaveRepeatedControl(const FLGUICanLayoutControlAnchor& Other)const
+	bool HaveRepeatedControl(const FLexLayoutControlAnchorData& Other)const
 	{
 		if (
 			(bCanControlHorizontalAnchoredPosition && Other.bCanControlHorizontalAnchoredPosition)
@@ -28,7 +28,7 @@ struct FLGUICanLayoutControlAnchor
 		}
 		return false;
 	}
-	void Or(const FLGUICanLayoutControlAnchor& Other)
+	void Or(const FLexLayoutControlAnchorData& Other)
 	{
 		bCanControlHorizontalAnchoredPosition |= Other.bCanControlHorizontalAnchoredPosition;
 		bCanControlVerticalAnchoredPosition |= Other.bCanControlVerticalAnchoredPosition;
@@ -40,10 +40,22 @@ struct FLGUICanLayoutControlAnchor
 		return bCanControlHorizontalAnchoredPosition || bCanControlVerticalAnchoredPosition
 		|| bCanControlHorizontalSizeDelta || bCanControlVerticalSizeDelta;
 	}
+	bool Conflict(const FLexLayoutControlAnchorData& Other)const
+	{
+		if (bCanControlHorizontalAnchoredPosition && bCanControlHorizontalAnchoredPosition == Other.bCanControlHorizontalAnchoredPosition)
+			return true;
+		if (bCanControlVerticalAnchoredPosition && bCanControlVerticalAnchoredPosition == Other.bCanControlVerticalAnchoredPosition)
+			return true;
+		if (bCanControlHorizontalSizeDelta && bCanControlHorizontalSizeDelta == Other.bCanControlHorizontalSizeDelta)
+			return true;
+		if (bCanControlVerticalSizeDelta && bCanControlVerticalSizeDelta == Other.bCanControlVerticalSizeDelta)
+			return true;
+		return false;
+	}
 };
 
 class ULexLayoutSlot;
-/** Base class of UI element that can be renderred by LGUICanvas */
+
 UCLASS(Blueprintable, BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)
 class LGUI_API ULexLayout : public ULexWidgetSubObjectBehaviour
 	, public ILGUIPrefabInterface
@@ -66,16 +78,17 @@ public:
 	
 	virtual void OnTransformChanged(){}
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange){};
-	
+
+	//called by LexWidget during layout processing
 	void UpdateLayout();
 	
-	virtual TSubclassOf<ULexLayoutSlot> GetSlotClass()const PURE_VIRTUAL(ULexLayout::GetSlotClass, return nullptr;)
+	virtual TSubclassOf<ULexLayoutSlot> GetSlotClass()const{ return nullptr;}
 	virtual ULexLayoutSlot* GetSlot(const ULexWidget* Child)const;
 	virtual ULexLayoutSlot* GetOrCreateSlot(const ULexWidget* Child, TSubclassOf<ULexLayoutSlot> SlotClass);
 
 	virtual void OnChildDetached(const ULexWidget* Child);
 
-	virtual void GetLayoutControlAnchor(ULexWidget* Widget, FLGUICanLayoutControlAnchor& Result){}
+	virtual void GetLayoutControlAnchor(ULexWidget* Widget, FLexLayoutControlAnchorData& Result){}
 	
 	virtual float GetMinWidth()const{return 0;}
 	virtual float GetPreferredWidth()const{return 0;}
@@ -94,8 +107,8 @@ public:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
-	void MarkLayoutDirty();
 	ULexWidget* GetWidget() const;
+	ULexLayout* GetLayout() const;
 	virtual bool GetLayoutControlWidth()const { return false; }
 	virtual bool GetLayoutControlHeight()const { return false; }
 	virtual bool GetLayoutControlHorizontalPosition()const { return false; }

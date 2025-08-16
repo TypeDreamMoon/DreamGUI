@@ -75,6 +75,8 @@ private:
 	FLexLayoutHorizontalAndVerticalSizeControl UseChildScale;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", Getter, Setter, meta = (AllowPrivateAccess = true))
 	FLexLayoutHorizontalAndVerticalSizeControl ChildForceExpand;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", Getter, Setter, meta = (AllowPrivateAccess = true))
+	FLexLayoutHorizontalAndVerticalSizeControl SizeFitToChildren;
 	
 	virtual void OnUpdateLayout() override;
 
@@ -83,6 +85,7 @@ private:
 	float GetAlignmentOnAxis(int Axis);
 	void SetLayoutInputForAxis(float TotalMin, float TotalPreferred, float TotalFlexible, int Axis);
 	void SetChildrenAlongAxis(int Axis, bool isVertical);
+	void SetSelfAlongAxis(int Axis);
 	void GetChildSizes(ULexWidget* ChildWidget, int Axis, bool bControlSize, bool bChildForceExpand,
 			float& OutMin, float& OutPreferred, float& OutFlexible);
 	void SetChildAlongAxisWithScale(ULexWidget* ChildWidget, int Axis, float Pos, float Size, float ScaleFactor);
@@ -105,7 +108,7 @@ private:
 		return TotalFlexibleSize[axis];
 	}
 
-	virtual void GetLayoutControlAnchor(ULexWidget* TargetWidget, FLGUICanLayoutControlAnchor& Result) override;
+	virtual void GetLayoutControlAnchor(ULexWidget* TargetWidget, FLexLayoutControlAnchorData& Result) override;
 public:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -135,6 +138,8 @@ public:
 	FLexLayoutHorizontalAndVerticalSizeControl GetUseChildScale()const{return UseChildScale;}
 	UFUNCTION(BlueprintCallable, Category = "Layout")
 	FLexLayoutHorizontalAndVerticalSizeControl GetChildForceExpand()const{return ChildForceExpand;}
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	FLexLayoutHorizontalAndVerticalSizeControl GetSizeFitToChildren()const{return SizeFitToChildren;}
 
 	UFUNCTION(BlueprintCallable, Category = "Layout")
 	void SetDirection(ELexLayoutDirection Value);
@@ -152,6 +157,8 @@ public:
 	void SetUseChildScale(FLexLayoutHorizontalAndVerticalSizeControl Value);
 	UFUNCTION(BlueprintCallable, Category = "Layout")
 	void SetChildForceExpand(FLexLayoutHorizontalAndVerticalSizeControl Value);
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	void SetSizeFitToChildren(FLexLayoutHorizontalAndVerticalSizeControl Value);
 };
 
 UCLASS(BlueprintType, DisplayName="Horizontal & Vertical Slot")

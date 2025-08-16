@@ -2175,7 +2175,6 @@ void ULexWidget::MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged,
 	bCacheAnchorTopDirty = true;
 			
 	MarkDimensionChanged(InPivotChanged, InWidthChanged, InHeightChanged);
-	MarkLayoutDirty();
 	if (IsValid(Layout))
 	{
 		for (auto& Child : GetUIChildren())
@@ -2198,11 +2197,11 @@ void ULexWidget::MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged,
 	}
 }
 
-void ULexWidget::MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawcall)
+void ULexWidget::MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawCall)const
 {
 	if (RenderCanvas.IsValid())
 	{
-		RenderCanvas->MarkCanvasUpdate(bMaterialOrTextureChanged, bTransformOrVertexPositionChanged, bHierarchyOrderChanged, bForceRebuildDrawcall);
+		RenderCanvas->MarkCanvasUpdate(bMaterialOrTextureChanged, bTransformOrVertexPositionChanged, bHierarchyOrderChanged, bForceRebuildDrawCall);
 	}
 }
 
@@ -2218,7 +2217,7 @@ float ULexWidget::GetPreferredWidth() const
 
 float ULexWidget::GetFlexibleWidth() const
 {
-	return GetLayoutProperty(&ULexLayoutSlot::GetFlexibleWidth, &ULexLayout::GetFlexibleWidth, &ULexVisual::GetFlexibleWidth, -1);
+	return GetLayoutProperty(&ULexLayoutSlot::GetFlexibleWidth, &ULexLayout::GetFlexibleWidth, &ULexVisual::GetFlexibleWidth, 0);
 }
 
 float ULexWidget::GetMinHeight() const
@@ -2233,7 +2232,7 @@ float ULexWidget::GetPreferredHeight() const
 
 float ULexWidget::GetFlexibleHeight() const
 {
-	return GetLayoutProperty(&ULexLayoutSlot::GetFlexibleHeight, &ULexLayout::GetFlexibleHeight, &ULexVisual::GetFlexibleHeight, -1);
+	return GetLayoutProperty(&ULexLayoutSlot::GetFlexibleHeight, &ULexLayout::GetFlexibleHeight, &ULexVisual::GetFlexibleHeight, 0);
 }
 
 UObject* ULexWidget::GetMinWidthSource() const
@@ -2349,7 +2348,43 @@ bool ULexWidget::IsWorldSpaceUI()const
 	return RenderCanvas->IsRenderToWorldSpace();
 }
 
-void ULexWidget::MarkLayoutDirty()
+void ULexWidget::MarkLayoutForRebuild(ULexWidget* InWidget)
+{
+	auto TargetWidget = InWidget;
+	//move up, find if parent widget affect by layout then mark dirty
+	while (TargetWidget)
+	{
+		TargetWidget->MarkLayoutDirty();
+		if (auto ParentWidget = TargetWidget->GetUIParent())
+		{
+			if (auto ParentLayout = ParentWidget->GetLayout())
+			{
+				FLexLayoutControlAnchorData ControlChildAnchor;
+				ParentLayout->GetLayoutControlAnchor(TargetWidget, ControlChildAnchor);
+				FLexLayoutControlAnchorData ControlSelfAnchor;
+				ParentLayout->GetLayoutControlAnchor(ParentWidget, ControlSelfAnchor);
+				// if (ControlSelfAnchor.AnyControl() && !ControlChildAnchor.AnyControl())//if can only control self anchor then no need to move up 
+				// {
+				// 	break;
+				// }
+				if (ControlSelfAnchor.AnyControl() && ControlChildAnchor.AnyControl())//parent layout can control itself and children, then move up 
+				{
+					TargetWidget = ParentWidget;
+					continue;
+				}
+				if (ControlChildAnchor.AnyControl())//parent layout only control children, then stop here
+				{
+					ParentWidget->MarkLayoutDirty();
+					break;
+				}
+			}
+		}
+		break;
+	}
+	//
+}
+
+void ULexWidget::MarkLayoutDirty()const
 {
 	bLayoutDirty = true;
 	MarkCanvasUpdate(false, true, false);

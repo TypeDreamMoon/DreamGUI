@@ -359,7 +359,7 @@ public:
 	void MarkTransformChanged(bool InPositionChanged, bool InScaleChanged);
 	void MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged);
 	void MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged);
-	virtual void MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawcall = false);
+	virtual void MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawCall = false)const;
 
 	/** The minimum width this layout element may be allocated. */
 	float GetMinWidth()const;
@@ -615,7 +615,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		ULexWidget* GetRootWidgetInHierarchy()const { return RootWidget.Get(); }
 
-	void MarkLayoutDirty();
+	static void MarkLayoutForRebuild(ULexWidget* InWidget);
+
 protected:
 	friend class FLexWidgetCustomization;
 	friend class ULexCanvas;
@@ -637,6 +638,7 @@ protected:
 	mutable uint32 bFlattenHierarchyIndexDirty : 1;
 	
 	void MarkClipDirty(bool InClipTypeChanged)const;
+	void MarkLayoutDirty()const;
 	
 	/** find root UIItem of hierarchy */
 	void CheckRootWidget(ULexWidget* RootWidgetInParent = nullptr);

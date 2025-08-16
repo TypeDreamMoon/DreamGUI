@@ -1663,9 +1663,9 @@ void FLexWidgetCustomization::OnSelectAnchor(LGUIAnchorPreviewWidget::UIAnchorHo
 	GEditor->EndTransaction();
 }
 
-FLGUICanLayoutControlAnchor FLexWidgetCustomization::GetLayoutControlAnchorValue()const
+FLexLayoutControlAnchorData FLexWidgetCustomization::GetLayoutControlAnchorValue()const
 {
-	FLGUICanLayoutControlAnchor Result;
+	FLexLayoutControlAnchorData Result;
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return Result;
 
 	auto Widget = TargetScriptArray[0];
@@ -1679,7 +1679,7 @@ FLGUICanLayoutControlAnchor FLexWidgetCustomization::GetLayoutControlAnchorValue
 		{
 			if (auto ParentLayout = Parent->GetLayout())
 			{
-				FLGUICanLayoutControlAnchor ParentResult;
+				FLexLayoutControlAnchorData ParentResult;
 				ParentLayout->GetLayoutControlAnchor(Widget.Get(), ParentResult);
 				Result.Or(ParentResult);
 			}

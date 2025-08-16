@@ -403,6 +403,7 @@ void ULexText::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEven
 				ClearCreatedRichTextImageObject();
 			}
 		}
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
@@ -518,6 +519,7 @@ void ULexText::SetText(const FText& Value) {
 		{
 			MarkVerticesDirty(false, true, true, false);
 		}
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 
@@ -527,6 +529,7 @@ void ULexText::SetFontSize(float Value) {
 	{
 		MarkVertexPositionDirty();
 		FontSize = Value;
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetUseKerning(bool Value)
@@ -535,6 +538,7 @@ void ULexText::SetUseKerning(bool Value)
 	{
 		bUseKerning = Value;
 		MarkVertexPositionDirty();
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetFontSpace(FVector2D Value) {
@@ -542,6 +546,7 @@ void ULexText::SetFontSpace(FVector2D Value) {
 	{
 		MarkVertexPositionDirty();
 		FontSpace = Value;
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetParagraphHorizontalAlignment(ELexUITextParagraphHorizontalAlign Value) {
@@ -549,6 +554,7 @@ void ULexText::SetParagraphHorizontalAlignment(ELexUITextParagraphHorizontalAlig
 	{
 		MarkVertexPositionDirty();
 		HAlign = Value;
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetParagraphVerticalAlignment(ELexUITextParagraphVerticalAlign Value) {
@@ -556,6 +562,7 @@ void ULexText::SetParagraphVerticalAlignment(ELexUITextParagraphVerticalAlign Va
 	{
 		MarkVertexPositionDirty();
 		VAlign = Value;
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetOverflowType(ELexUITextOverflowType Value) {
@@ -568,6 +575,7 @@ void ULexText::SetOverflowType(ELexUITextOverflowType Value) {
 		else
 			MarkVertexPositionDirty();
 		OverflowType = Value;
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 
@@ -577,6 +585,7 @@ void ULexText::SetWrappingPolicy(ETextWrappingPolicy Value)
 	{
 		WrappingPolicy = Value;
 		MarkVertexPositionDirty();
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 
@@ -586,6 +595,7 @@ void ULexText::SetMaxHorizontalWidth(float Value)
 	{
 		MaxHorizontalWidth = Value;
 		MarkVertexPositionDirty();
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetFontStyle(ELexUITextFontStyle Value) {
@@ -601,6 +611,7 @@ void ULexText::SetFontStyle(ELexUITextFontStyle Value) {
 			MarkVerticesDirty(true, true, true, true);
 		}
 		FontStyle = Value;
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetRichText(bool Value)
@@ -613,6 +624,7 @@ void ULexText::SetRichText(bool Value)
 		{
 			ClearCreatedRichTextImageObject();
 		}
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetRichTextTagFilterFlags(int32 Value)
@@ -625,6 +637,7 @@ void ULexText::SetRichTextTagFilterFlags(int32 Value)
 		{
 			ClearCreatedRichTextImageObject();
 		}
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetRichTextImageData(ULexUIRichTextImageData_BaseObject* Value)
@@ -637,6 +650,7 @@ void ULexText::SetRichTextImageData(ULexUIRichTextImageData_BaseObject* Value)
 		{
 			ClearCreatedRichTextImageObject();
 		}
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 void ULexText::SetRichTextCustomStyleData(ULexUIRichTextCustomStyleData* Value)
@@ -645,6 +659,7 @@ void ULexText::SetRichTextCustomStyleData(ULexUIRichTextCustomStyleData* Value)
 	{
 		MarkVerticesDirty(true, true, true, true);
 		RichTextCustomStyleData = Value;
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
 

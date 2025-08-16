@@ -2403,7 +2403,8 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 	float currentLineWidth = 0, currentLineHeight = originLineHeight, paragraphHeight = 0;//single line width, height, all line height
 	float firstLineHeight = currentLineHeight;//first line height
 	float maxLineWidth = 0;//if have multiple line
-	float preferredWidth = 0;//preferredWidth is the width that not wrapped width
+	float currentPreferredWidth = 0;//preferredWidth is the width that not wrapped width
+	float maxPreferredWidth = 0;//preferredWidth of all (line-break) lines
 	int lineUIGeoVertStart = 0;//vertex index in originVertices of current line
 	int currentVisibleCharCount = 0;//visible char count, skip invisible char(\r,\n,\t)
 	int imageStartIndexInCurrentLine = 0;//
@@ -2427,14 +2428,23 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 	};
 	NewLineMode newLineMode = NewLineMode::None;
 
-	auto NewLine = [&](int32 charIndex, bool withCaret, NewLineMode inNewLineMode)
+	auto NewLine = [&](int32 charIndex, bool withCaret, NewLineMode inNewLineMode, float extraSizeForPreferredWidth)
 	{
 		//add end caret position
 		currentLineWidth -= fontSpace.X;//last char of a line don't need space
 		maxLineWidth = FMath::Max(maxLineWidth, currentLineWidth);
-		if (inNewLineMode != NewLineMode::None && inNewLineMode != NewLineMode::LineBreak)
+		if (inNewLineMode != NewLineMode::None)
 		{
-			preferredWidth += currentLineWidth;
+			if (inNewLineMode == NewLineMode::LineBreak)//if lineBreak then we should start a new preferredWidth
+			{
+				currentPreferredWidth += currentLineWidth;
+				maxPreferredWidth = FMath::Max(maxPreferredWidth, currentPreferredWidth);
+				currentPreferredWidth = 0;//lineBreak cause a newline and recalculation of preferredWidth
+			}
+			else
+			{
+				currentPreferredWidth += currentLineWidth + extraSizeForPreferredWidth;
+			}
 		}
 
 		FLexUITextCaretProperty caretProperty;
@@ -2694,7 +2704,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 
 		if (charCode == '\n' || charCode == '\r')//10 -- \n, 13 -- \r
 		{
-			NewLine(richText ? richTextParseResult.CharIndex : charIndex, true, NewLineMode::LineBreak);
+			NewLine(richText ? richTextParseResult.CharIndex : charIndex, true, NewLineMode::LineBreak, 0);
 			if (charIndex + 1 < contentLength)
 			{
 				auto nextCharCode = content[charIndex + 1];
@@ -2708,10 +2718,12 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 
 		if (newLineMode == NewLineMode::Space || newLineMode == NewLineMode::Overflow)
 		{
-			if (IsSpace(charCode, richTextParseResult))
+			if (IsSpace(charCode, richTextParseResult))//skip empty space at start of newline
 			{
 				if (newLineMode == NewLineMode::Overflow)
 				{
+					auto TempCharGeo = GetCharGeo(charIndex == 0 ? charCode : prevCharCode, charCode, richText ? richTextParseResult.Size : fontSize);
+					currentPreferredWidth += TempCharGeo.xadvance;//newline is caused by space, so the space size should add to preferredWidth, because preferredWidth should ignore auto wrapping
 					newLineMode = NewLineMode::None;
 				}
 				continue;
@@ -2762,7 +2774,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 				float maxWidthToCompare = overflowType == ELexUITextOverflowType::HorizontalAndVerticalOverflow ? maxHorizontalWidth : width;
 				if (currentLineOffset.X + spaceNeeded > maxWidthToCompare)
 				{
-					NewLine(caretCharIndex, false, NewLineMode::Space);
+					NewLine(caretCharIndex, false, NewLineMode::Space, charGeo.xadvance);
 					continue;
 				}
 			}
@@ -2876,7 +2888,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 						}
 						else
 						{
-							NewLine(caretCharIndex + 2, false, NewLineMode::Overflow);
+							NewLine(caretCharIndex + 2, false, NewLineMode::Overflow, 0);
 							continue;
 						}
 					}
@@ -2892,7 +2904,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 						}
 						else
 						{
-							NewLine(caretCharIndex + 1, false, NewLineMode::Overflow);
+							NewLine(caretCharIndex + 1, false, NewLineMode::Overflow, 0);
 							continue;
 						}
 					}
@@ -2919,7 +2931,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 						}
 						else
 						{
-							NewLine(caretCharIndex + 2, false, NewLineMode::Overflow);
+							NewLine(caretCharIndex + 2, false, NewLineMode::Overflow, 0);
 							continue;
 						}
 					}
@@ -2935,7 +2947,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 						}
 						else
 						{
-							NewLine(caretCharIndex + 1, false, NewLineMode::Overflow);
+							NewLine(caretCharIndex + 1, false, NewLineMode::Overflow, 0);
 							continue;
 						}
 					}
@@ -3002,13 +3014,13 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 	}
 
 	//last line
-	NewLine(richText ? text.Len() : contentLength, true, NewLineMode::Overflow); 
+	NewLine(richText ? text.Len() : contentLength, true, NewLineMode::Overflow, 0); 
 	//remove last line's space Y
 	paragraphHeight -= fontSpace.Y;
 
 	textRealSize.X = maxLineWidth;
 	textRealSize.Y = paragraphHeight;
-	textPreferredSize.X = preferredWidth;
+	textPreferredSize.X = FMath::Max(currentPreferredWidth, maxPreferredWidth);
 	textPreferredSize.Y = paragraphHeight;
 
 	float pivotOffsetX = width * (0.5f - pivot.X);

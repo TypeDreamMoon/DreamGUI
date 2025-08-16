@@ -45,7 +45,7 @@ void ULexLayout::CleanupSlots()
 
 void ULexLayout::MarkLayoutDirty()
 {
-	GetWidget()->MarkAnchorDataChanged(false, true, true);
+	ULexWidget::MarkLayoutForRebuild(GetWidget());
 }
 
 void ULexLayout::OnPreSavePrefab_Implementation()
@@ -104,24 +104,23 @@ void ULexLayout::OnChildDetached(const ULexWidget* Child)
 void ULexLayoutSlot::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
 {
 	UObject::PostEditChangeProperty(PropertyChangedEvent);
-	MarkLayoutDirty();
-	GetWidget()->MarkAnchorDataChanged(false, true, true);
+	ULexWidget::MarkLayoutForRebuild(GetWidget());
 }
 #endif
 
-void ULexLayoutSlot::MarkLayoutDirty()
-{
-	auto Layout = Cast<ULexLayout>(this->GetOuter());
-	Layout->MarkLayoutDirty();
-}
 ULexWidget* ULexLayoutSlot::GetWidget() const
 {
 	if (!CacheWidget.IsValid())
 	{
-		auto Layout = Cast<ULexLayout>(this->GetOuter());
+		auto Layout = GetLayout();
 		CacheWidget = const_cast<ULexWidget*>(Layout->GetWidgetBySlot(this));
 	}
 	return CacheWidget.Get();
+}
+
+ULexLayout* ULexLayoutSlot::GetLayout() const
+{
+	return Cast<ULexLayout>(GetOuter());
 }
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION

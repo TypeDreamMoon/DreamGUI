@@ -60,7 +60,7 @@ private:
 	FText GetHAlignText(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle)const;
 	FText GetVAlignText(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle)const;
 
-	FLGUICanLayoutControlAnchor GetLayoutControlAnchorValue()const;
+	FLexLayoutControlAnchorData GetLayoutControlAnchorValue()const;
 	enum class EAnchorControlledByLayoutType
 	{
 		HorizontalAnchor,
