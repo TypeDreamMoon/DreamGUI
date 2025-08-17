@@ -119,8 +119,8 @@ float sdRoundRectOuterShadow(float2 p, float2 b, float4 r, float shadowSize)
     float2 q = abs(p) - b + r.x;
     float d = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
 
-    d = saturate((0.0 - d) / shadowSize);
-    // d = 1 - d;
+    d /= shadowSize;
+    d = saturate(1.0 - d);
     d = smoothstep(0, 1, d);
     return d;
 }
@@ -151,12 +151,11 @@ half4 BlendPremul(half4 bottom, half4 top)
     return half4(outColor, outA);
 }
 
-float LexUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, float2 UV0, float2 UV1, float2 UV2, float2 UV3, Texture2D DataTex, inout float3 Color, inout float Alpha)
+float LexUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, float2 UV0, float2 UV1, float2 UV2, Texture2D DataTex, inout float3 Color, inout float Alpha)
 {
     half _TextureScaleMode;
     float4 _CornerRadius;
     float2 _QuadSize;
-    half _SoftEdge;
     
     half _EnableBody;
     half4 _BodyColor;
@@ -182,7 +181,7 @@ float LexUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, floa
     float _InnerShadowBlur;
     float2 _InnerShadowOffset;
 
-    half _OuterShadow;
+    half _EnableOuterShadow;
     half4 _OuterShadowColor;
     float _OuterShadowSize;
     float _OuterShadowBlur;
@@ -195,7 +194,6 @@ float LexUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, floa
     
     //read data from texture
     {
-        _OuterShadow = UV2.x;
         int Coordinate = round(UV1.y);
         int3 Position = int3(0, Coordinate, 0);
         
@@ -205,7 +203,7 @@ float LexUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, floa
         _TextureScaleMode = (ByteUint >> 16) & 0x000000ff;
         
         _EnableBody = (BoolValues >> 7) & 1;
-        _SoftEdge = (BoolValues >> 6) & 1;
+        _EnableOuterShadow = (BoolValues >> 6) & 1;
         _EnableGradient = (BoolValues >> 5) & 1;
         _EnableBorder = (BoolValues >> 4) & 1;
         _EnableBorderGradient = (BoolValues >> 3) & 1;
@@ -252,93 +250,80 @@ float LexUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, floa
     _InnerShadowOffset.y = -_InnerShadowOffset.y;
     _OuterShadowOffset.y = -_OuterShadowOffset.y;
     _RadialFillCenter.y = _QuadSize.y - _RadialFillCenter.y;
+
+    half4 color = half4(0,0,0,0);
+
+    float2 sdQuadSize = _QuadSize * 0.5f;
+    float2 sdFragCoord = (UV0 * 2.0f - float2(1.0f, 1.0f)) * sdQuadSize;
+    float dOuter = sdRoundRect(sdFragCoord, sdQuadSize, _CornerRadius);
     
-    half4 outerShadowColor;
     //outer shadow
+    if (_EnableOuterShadow)
     {
-        float2 sdQuadSize = _QuadSize * 0.5f;
-        float2 quadSize = sdQuadSize + _OuterShadowSize + _OuterShadowBlur * 0.5f;
-        float2 sdFragCoord = (UV0 * 2.0f - float2(1.0f, 1.0f)) * (quadSize);
-        outerShadowColor = _OuterShadowColor;
-        float4 cornerRadius = _CornerRadius + _OuterShadowSize + _OuterShadowBlur;
-        float outerShadow = sdRoundRectOuterShadow(sdFragCoord, quadSize, cornerRadius, _OuterShadowBlur);
+        half4 outerShadowColor = _OuterShadowColor;
+        float4 cornerRadius = _CornerRadius + _OuterShadowSize;
+        float outerShadow = sdRoundRectOuterShadow(sdFragCoord - _OuterShadowOffset, sdQuadSize + _OuterShadowSize, cornerRadius, _OuterShadowBlur * 0.5f);
         outerShadowColor.a *= outerShadow;
-        float dOuter = sdRoundRect(sdFragCoord + _OuterShadowOffset, sdQuadSize, _CornerRadius);
-        dOuter = 1.0f - dOuter;
+        float outerMask = 1.0f - dOuter;
         half bodyVisible = sign(_EnableBody + _EnableBorder + _EnableInnerShadow); //is body visible?
         outerShadowColor.a *= lerp(
-        dOuter // if body not visible, make it smooth
-        , sign(dOuter) //if body is visible, make it no smooth, because smooth can show a thin transparent line between body and outshadow
+        outerMask // if body not visible, make it smooth
+        , sign(outerMask) //if body is visible, make it no smooth, because smooth can show a thin transparent line between body and outshadow
         , bodyVisible);
-        
-        UV0 = lerp(
-        UV0
-        , UV3 //use UV3 for RadialFill calculation
-        + _OuterShadowOffset / _QuadSize //offset uv for RadialFill
-        , _OuterShadow);
+        color = outerShadowColor;
     }
     
-    half4 color;
     //inner body
+    if (_EnableBody)
     {
-        float2 sdQuadSize = _QuadSize * 0.5f;
-        float2 sdFragCoord = (UV0 * 2.0f - float2(1.0f, 1.0f)) * sdQuadSize;
-        
-        float2 stretchUV = UV3;
-        float2 fitUV = UV3;
-        float2 envelopUV = UV3;
+        float2 stretchUV = UV2;
+        float2 fitUV = UV2;
+        float2 envelopUV = UV2;
         {
-            float fitUVX = (UV3.x - _TextureUVCenter.x) * _QuadSize.x / _QuadSize.y + _TextureUVCenter.x;
-            float fitUVY = (UV3.y - _TextureUVCenter.y) * _QuadSize.y / _QuadSize.x + _TextureUVCenter.y;
+            float fitUVX = (UV2.x - _TextureUVCenter.x) * _QuadSize.x / _QuadSize.y + _TextureUVCenter.x;
+            float fitUVY = (UV2.y - _TextureUVCenter.y) * _QuadSize.y / _QuadSize.x + _TextureUVCenter.y;
             half lerpAlpha = saturate(sign(_QuadSize.x - _QuadSize.y));
-            fitUV = lerp(float2(UV3.x, fitUVY), float2(fitUVX, UV3.y), lerpAlpha);
-            envelopUV = lerp(float2(fitUVX, UV3.y), float2(UV3.x, fitUVY), lerpAlpha);
+            fitUV = lerp(float2(UV2.x, fitUVY), float2(fitUVX, UV2.y), lerpAlpha);
+            envelopUV = lerp(float2(fitUVX, UV2.y), float2(UV2.x, fitUVY), lerpAlpha);
         }
         
         float2 texUV = lerp(lerp(stretchUV, fitUV, _TextureScaleMode), envelopUV, max(0, _TextureScaleMode - 1));
         float4 MainTexColor = Texture2DSample(MainTex, MainTexSampler, texUV);
-        color = MainTexColor * _BodyColor;
+        float4 bodyColor = MainTexColor * _BodyColor;
 
-        half4 gradientColor;
+        if (_EnableGradient)
         {
             float gradientLerpAlpha = RadialGradient(UV0, _QuadSize, _GradientCenter.xy, _GradientRadius.xy, _GradientRotation);
-            gradientColor = lerp(_GradientColor * MainTexColor, color, gradientLerpAlpha);
-            color = lerp(color, gradientColor, _EnableGradient);
+            bodyColor = lerp(_GradientColor * MainTexColor, bodyColor, gradientLerpAlpha);
         }
         
-        color.a *= _EnableBody;
-
-        float dOuter = sdRoundRect(sdFragCoord, sdQuadSize, _CornerRadius);
-        float dInner = sdRoundRect(sdFragCoord, sdQuadSize - _BorderWidth, _CornerRadius - _BorderWidth);
-        half4 innerShadowColor;
+        if (_EnableInnerShadow)
         {
             float2 quadSize = sdQuadSize - _InnerShadowSize + _InnerShadowBlur * 0.5f;
             float4 cornerRadius = _CornerRadius + _InnerShadowBlur * 0.5f - _InnerShadowSize;
             cornerRadius = max(cornerRadius, _InnerShadowBlur);
             float innerShadow = sdRoundRectInnerShadow(sdFragCoord - _InnerShadowOffset.xy, quadSize, cornerRadius, _InnerShadowBlur);
             _InnerShadowColor.a *= innerShadow;
-            innerShadowColor = BlendPremul(color, _InnerShadowColor);
-            color = lerp(color, innerShadowColor, _EnableInnerShadow);
+            bodyColor = BlendPremul(bodyColor, _InnerShadowColor);
         }
 
-        half4 borderColor;
+        if (_EnableBorder * sign(abs(_BorderWidth)))
         {
-            borderColor = _BorderColor;
-            half4 borderGradientColor;
+            half4 borderColor = _BorderColor;
+            if (_EnableBorderGradient)
             {
                 float borderGradientLerpAlpha = RadialGradient(UV0, _QuadSize, _BorderGradientCenter.xy, _BorderGradientRadius.xy, _BorderGradientRotation);
-                borderGradientColor = lerp(_BorderGradientColor, borderColor, borderGradientLerpAlpha);
-                borderColor = lerp(borderColor, borderGradientColor, _EnableBorderGradient);
+                borderColor = lerp(_BorderGradientColor, borderColor, borderGradientLerpAlpha);
             }
+            float dInner = sdRoundRect(sdFragCoord, sdQuadSize - _BorderWidth, _CornerRadius - _BorderWidth);
             borderColor.a *= (1.0f - dInner);
-            borderColor = BlendPremul(color, borderColor);
-            color = lerp(color, borderColor, _EnableBorder * sign(abs(_BorderWidth)));
+            bodyColor = BlendPremul(bodyColor, borderColor);
         }
-        color.a *= dOuter;
+        bodyColor.a *= dOuter;
+        color = lerp(color, bodyColor, bodyColor.a);
     }
-    color = lerp(color, outerShadowColor, 1.0f * _OuterShadow);
 
-    float radialFillAlpha;
+    if (_EnableRadialFill * sign(max(0, 360.0f - _RadialFillAngle)))
     {
         float2 fragCoord = UV0 * _QuadSize;
         float2 centerToPixelDiff = fragCoord - _RadialFillCenter;
@@ -355,8 +340,7 @@ float LexUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, floa
                     
         d /= fwidth(d);
         d = saturate(d);
-        radialFillAlpha = color.a * d;
-        color.a = lerp(color.a, radialFillAlpha, _EnableRadialFill * sign(max(0, 360.0f - _RadialFillAngle)));
+        color.a *= d;
     }
     color.a *= sign(abs(_QuadSize.x)) * sign(abs(_QuadSize.y));//if size is 0
 

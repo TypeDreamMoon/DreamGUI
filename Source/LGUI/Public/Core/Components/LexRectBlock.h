@@ -163,7 +163,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
 		bool bEnableOuterShadow = false;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
-		FColor OuterShadowColor = FColor::Black;
+		FColor OuterShadowColor = FColor(0, 0, 0, 128);
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
 		float OuterShadowSize = 0;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")

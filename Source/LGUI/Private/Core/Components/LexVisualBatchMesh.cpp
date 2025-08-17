@@ -176,7 +176,7 @@ void ULexVisualBatchMesh::ApplyGeometryModifier(bool triangleChanged, bool uvCha
 	}
 }
 
-DECLARE_CYCLE_STAT(TEXT("UIBatchMeshRenderable UpdateGeometry"), STAT_UpdateGeometry, STATGROUP_LGUI);
+DECLARE_CYCLE_STAT(TEXT("LexVisualBatchMesh UpdateGeometry"), STAT_UpdateGeometry, STATGROUP_LGUI);
 void ULexVisualBatchMesh::UpdateGeometry()
 {
 	SCOPE_CYCLE_COUNTER(STAT_UpdateGeometry);

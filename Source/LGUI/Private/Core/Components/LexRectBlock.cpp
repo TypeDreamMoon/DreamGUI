@@ -38,7 +38,7 @@ void ULexRectBlock::FillData(uint8* Data, float width, float height)
 {
 	int DataOffset = 0;
 
-	uint8 BoolAsByte = PackBoolToByte(bEnableBody, bSoftEdge, bEnableBodyGradient, bEnableBorder, bEnableBorderGradient, bEnableInnerShadow, bEnableRadialFill, false);
+	uint8 BoolAsByte = PackBoolToByte(bEnableBody, bEnableOuterShadow, bEnableBodyGradient, bEnableBorder, bEnableBorderGradient, bEnableInnerShadow, bEnableRadialFill, false);
 	Fill4BytesToData(Data
 		, BoolAsByte
 		, (uint8)BodyTextureScaleMode
@@ -569,8 +569,7 @@ void ULexRectBlock::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChang
 {
 	auto Widget = GetWidget();
 	static FLexUISpriteInfo SimpleRectSpriteData;
-	FLexUIGeometry::UpdateUIProceduralRectSimpleVertex(&InGeo
-		, this->bEnableBody || this->bEnableBorder || this->bEnableInnerShadow
+	FLexUIGeometry::UpdateRectBlockVertex(&InGeo
 		, this->bEnableOuterShadow
 		, this->GetOuterShadowOffset(Widget->GetWidth(), Widget->GetHeight())
 		, this->GetValueWithUnitMode(OuterShadowSize, OuterShadowSizeUnitMode, Widget->GetWidth(), Widget->GetHeight(), 0.5f)
@@ -585,24 +584,9 @@ void ULexRectBlock::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChang
 	if (InTriangleChanged || InVertexPositionChanged || InVertexUVChanged || InVertexColorChanged)
 	{
 		auto& vertices = InGeo.Vertices;
-		if (this->bEnableOuterShadow)
+		for (int i = 0; i < 4; i++)
 		{
-			for (int i = 0; i < 8; i++)
-			{
-				vertices[i].TextureCoordinate[1].Y = DataStartPosition;
-			}
-			for (int i = 0; i < 4; i++)
-			{
-				vertices[i].TextureCoordinate[2] = FVector2f(1, 0);
-			}
-		}
-		else
-		{
-			for (int i = 0; i < 4; i++)
-			{
-				vertices[i].TextureCoordinate[1].Y = DataStartPosition;
-				vertices[i].TextureCoordinate[2] = FVector2f(0, 0);
-			}
+			vertices[i].TextureCoordinate[1].Y = DataStartPosition;
 		}
 		bNeedUpdateBlockData = true;
 	}
@@ -640,9 +624,9 @@ void ULexRectBlock::ApplyAtlasTextureScaleUp_Implementation()
 	{
 		for (int i = 0; i < vertices.Num(); i++)
 		{
-			auto& uv = vertices[i];
-			uv.TextureCoordinate[0].X *= 0.5f;
-			uv.TextureCoordinate[0].Y *= 0.5f;
+			auto& uv = vertices[i].TextureCoordinate[2];//sprite uv is at channel 2
+			uv.X *= 0.5f;
+			uv.Y *= 0.5f;
 		}
 	}
 	UIGeometry->Texture = BodySpriteTexture->GetAtlasTexture();

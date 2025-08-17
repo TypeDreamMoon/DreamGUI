@@ -139,9 +139,8 @@ public:
 		const float& width, const float& height, const FVector2f& pivot, const FLexUISpriteInfo& spriteInfo, ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
 		bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 	);
-	static void UpdateUIProceduralRectSimpleVertex(FLexUIGeometry* uiGeo,
-		bool bEnableBody,
-		bool bOuterShadow, const FVector2f& outerShadowOffset, const float& outerShadowSize, const float& outerShadowBlur, bool bSoftEdge,
+	static void UpdateRectBlockVertex(FLexUIGeometry* uiGeo,
+		bool bEnableOuterShadow, const FVector2f& outerShadowOffset, const float& outerShadowSize, const float& outerShadowBlur, bool bSoftEdge,
 		const float& width, const float& height, const FVector2f& pivot, 
 		const FLexUISpriteInfo& uniformSpriteInfo, const FLexUISpriteInfo& spriteInfo,
 		ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,

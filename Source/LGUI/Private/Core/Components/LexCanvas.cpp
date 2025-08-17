@@ -1906,7 +1906,7 @@ void ULexCanvas::UpdateDrawCallMaterial_Implement()
 						this->AddUIMaterialToPool((UMaterialInstanceDynamic*)RenderMat.Get());
 					}
 					auto SrcMaterial = DrawCallItem->Material.Get();
-					auto bContainsLGUIParam = IsMaterialContainsLexUIParameter(SrcMaterial);
+					auto bContainsLexUIParam = IsMaterialContainsLexUIParameter(SrcMaterial);
 					if (SrcMaterial->IsA(UMaterialInstanceDynamic::StaticClass()))//if custom material is UMaterialInstanceDynamic then use it directly
 					{
 						RenderMat = SrcMaterial;
@@ -1914,7 +1914,7 @@ void ULexCanvas::UpdateDrawCallMaterial_Implement()
 					}
 					else//if custom material is not UMaterialInstanceDynamic
 					{
-						if (bContainsLGUIParam)//if custom material contains LGUI parameters, then LGUI should control these parameters, then we need to create UMaterialInstanceDynamic with the custom material
+						if (bContainsLexUIParam)//if custom material contains LGUI parameters, then LGUI should control these parameters, then we need to create UMaterialInstanceDynamic with the custom material
 						{
 							RenderMat = UMaterialInstanceDynamic::Create(SrcMaterial, this);
 							RenderMat->SetFlags(RF_Transient);
@@ -1934,7 +1934,7 @@ void ULexCanvas::UpdateDrawCallMaterial_Implement()
 							UIMesh->SetMeshSectionMaterial(DrawCallItem->DrawCallRenderSection.Pin(), SrcMaterial);
 						}
 					}
-					DrawCallItem->bMaterialContainsLexUIParameter = bContainsLGUIParam;
+					DrawCallItem->bMaterialContainsLexUIParameter = bContainsLexUIParam;
 				}
 				else
 				{
