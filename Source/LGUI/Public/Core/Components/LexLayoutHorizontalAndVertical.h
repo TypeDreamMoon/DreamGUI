@@ -183,8 +183,6 @@ private:
 	float FlexibleHeight = -1;
 
 public:
-	virtual bool GetLayoutControlWidth() const override;
-	virtual bool GetLayoutControlHeight() const override;
 	virtual void OnTransformChanged() override;
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
 #if WITH_EDITOR

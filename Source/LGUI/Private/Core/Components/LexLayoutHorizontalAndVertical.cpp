@@ -394,22 +394,6 @@ void ULexLayoutHorizontalAndVertical::SetSizeFitToChildren(FLexLayoutHorizontalA
     }
 }
 
-bool ULexLayoutHorizontalAndVerticalSlot::GetLayoutControlWidth() const
-{
-    if (bIgnoreLayout)
-        return false;
-    auto Layout = Cast<ULexLayoutHorizontalAndVertical>(GetOuter());
-    return Layout->GetControlChildSize().bWidth;
-}
-
-bool ULexLayoutHorizontalAndVerticalSlot::GetLayoutControlHeight() const
-{
-    if (bIgnoreLayout)
-        return false;
-    auto Layout = Cast<ULexLayoutHorizontalAndVertical>(GetOuter());
-    return Layout->GetControlChildSize().bHeight;
-}
-
 void ULexLayoutHorizontalAndVerticalSlot::OnTransformChanged()
 {
 }

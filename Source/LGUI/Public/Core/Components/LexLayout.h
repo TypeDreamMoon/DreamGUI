@@ -109,8 +109,6 @@ public:
 #endif
 	ULexWidget* GetWidget() const;
 	ULexLayout* GetLayout() const;
-	virtual bool GetLayoutControlWidth()const { return false; }
-	virtual bool GetLayoutControlHeight()const { return false; }
 	virtual bool GetLayoutControlHorizontalPosition()const { return false; }
 	virtual bool GetLayoutControlVerticalPosition()const { return false; }
 	virtual void OnTransformChanged(){}

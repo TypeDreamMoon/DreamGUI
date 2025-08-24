@@ -209,6 +209,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 					.AllowSpin(true)
 					.MinSliderValue(this, &FLexWidgetCustomization::GetMinMaxSliderValue, AnchorHandle, AnchorValueIndex, true)
 					.MaxSliderValue(this, &FLexWidgetCustomization::GetMinMaxSliderValue, AnchorHandle, AnchorValueIndex, false)
+					.Delta(this, &FLexWidgetCustomization::GetSliderDeltaValue, AnchorHandle, AnchorValueIndex)
 					.Font(IDetailLayoutBuilder::GetDetailFont())
 					.UndeterminedString( NSLOCTEXT( "PropertyEditor", "MultipleValues", "Multiple Values") )
 					.Value(this, &FLexWidgetCustomization::GetAnchorValue, AnchorHandle, AnchorValueIndex)
@@ -828,6 +829,10 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			{
 				return LayoutProperty_MultiValue;
 			}
+			if (!TargetScriptArray[0].IsValid())
+			{
+				return LayoutProperty_None;
+			}
 			auto Value = GetWidgetLayoutPropertyFunction(TargetScriptArray[0].Get());
 			if (Value < 0)
 				return LayoutProperty_Disabled;
@@ -843,6 +848,10 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 				if (TargetScriptArray.Num() > 1)
 				{
 					return LayoutProperty_MultiValue;
+				}
+				if (!TargetScriptArray[0].IsValid())
+				{
+					return LayoutProperty_None;
 				}
 				auto Value = GetWidgetLayoutSourceFunction(TargetScriptArray[0].Get());
 				if (Value)
@@ -1774,6 +1783,28 @@ TOptional<float> FLexWidgetCustomization::GetMinMaxSliderValue(TSharedRef<IPrope
 	return RangeValue * 
 		(RangeValue >= MaxRangeValue ? 1.0f : (FMath::Abs(Value - RangeValue) < KINDA_SMALL_NUMBER ? 2.0f : 1.0f))
 		* (MinOrMax ? -1.0f : 1.0f);
+}
+
+float FLexWidgetCustomization::GetSliderDeltaValue(TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex) const
+{
+	auto Value = GetAnchorValue(AnchorHandle, AnchorValueIndex).Get(0.0f);
+	Value = FMath::Abs(Value);
+	float MaxRangeValue = ValueRangeArray[ValueRangeArray.Num() - 1];
+	float RangeValue = MaxRangeValue;
+	for (int i = ValueRangeArray.Num() - 1; i >= 0; i--)
+	{
+		auto RangeValueItem = ValueRangeArray[i];
+		if (Value > RangeValueItem)
+		{
+			break;
+		}
+		else
+		{
+			RangeValue = RangeValueItem;
+		}
+	}
+	RangeValue = FMath::Max(1.0f, RangeValue);
+	return RangeValue * 0.001f;
 }
 
 TOptional<float> FLexWidgetCustomization::GetAnchorValue(TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)const
