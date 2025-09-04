@@ -22,8 +22,7 @@ void ULGUILifeCycleUIBehaviour::OnRegister()
 		RootUIComp->GetDimensionChangedEvent().AddUObject(this, &ULGUILifeCycleUIBehaviour::Call_OnDimensionsChanged);
 		RootUIComp->GetAttachmentChangedEvent().AddUObject(this, &ULGUILifeCycleUIBehaviour::Call_OnAttachmentChanged);
 		RootUIComp->GetSiblingIndexChangedEvent().AddUObject(this, &ULGUILifeCycleUIBehaviour::Call_OnSiblingIndexChanged);
-		RootUIComp->GetRenderVisibilityChangedEvent().AddUObject(this, &ULGUILifeCycleUIBehaviour::Call_OnRenderVisibilityChanged);
-		RootUIComp->GetLayoutVisibilityChangedEvent().AddUObject(this, &ULGUILifeCycleUIBehaviour::Call_OnLayoutVisibilityChanged);
+		RootUIComp->GetWidgetActiveChangedEvent().AddUObject(this, &ULGUILifeCycleUIBehaviour::Call_OnWidgetActiveChanged);
 		RootUIComp->GetHitTestVisibilityChangedEvent().AddUObject(this, &ULGUILifeCycleUIBehaviour::Call_OnHitTestVisibilityChanged);
 	}
 }
@@ -37,8 +36,7 @@ void ULGUILifeCycleUIBehaviour::OnUnregister()
 		RootUIComp->GetDimensionChangedEvent().RemoveAll(this);
 		RootUIComp->GetAttachmentChangedEvent().RemoveAll(this);
 		RootUIComp->GetSiblingIndexChangedEvent().RemoveAll(this);
-		RootUIComp->GetRenderVisibilityChangedEvent().RemoveAll(this);
-		RootUIComp->GetLayoutVisibilityChangedEvent().RemoveAll(this);
+		RootUIComp->GetWidgetActiveChangedEvent().RemoveAll(this);
 		RootUIComp->GetHitTestVisibilityChangedEvent().RemoveAll(this);
 	}
 }
@@ -316,7 +314,7 @@ void ULGUILifeCycleUIBehaviour::Call_OnSiblingIndexChanged()
 	}
 }
 
-void ULGUILifeCycleUIBehaviour::Call_OnRenderVisibilityChanged()
+void ULGUILifeCycleUIBehaviour::Call_OnWidgetActiveChanged()
 {
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())//edit mode
@@ -337,32 +335,6 @@ void ULGUILifeCycleUIBehaviour::Call_OnRenderVisibilityChanged()
 				if (ThisPtr.IsValid())
 				{
 					ThisPtr->OnRenderVisibilityChanged();
-				}};
-		}
-	}
-}
-
-void ULGUILifeCycleUIBehaviour::Call_OnLayoutVisibilityChanged()
-{
-#if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())//edit mode
-	{
-		OnLayoutVisibilityChanged();
-	}
-	else
-#endif
-	{
-		if (bIsAwakeCalled)
-		{
-			OnLayoutVisibilityChanged();
-		}
-		else
-		{
-			auto ThisPtr = MakeWeakObjectPtr(this);
-			CallbacksBeforeAwake[(int)ECallbackFunctionType::OnLayoutVisibilityChanged] = [=]() {
-				if (ThisPtr.IsValid())
-				{
-					ThisPtr->OnLayoutVisibilityChanged();
 				}};
 		}
 	}

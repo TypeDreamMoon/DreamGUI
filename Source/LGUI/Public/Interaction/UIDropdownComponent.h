@@ -10,6 +10,7 @@
 #include "Event/LGUIDelegateDeclaration.h"
 #include "UIDropdownComponent.generated.h"
 
+class ALexWidgetActor;
 class UUISprite;
 class ULexText;
 class ULexUISpriteData_BaseObject;

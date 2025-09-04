@@ -156,7 +156,7 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 			{
 				if (auto Widget = Cast<ULexWidget>(SceneComp))
 				{
-					if (Widget->IsVisibleForRender())
+					if (Widget->GetWidgetActiveInHierarchy())
 					{
 						OutBounds = Widget->Bounds.GetBox();
 						OutValidBounds = true;
@@ -866,14 +866,13 @@ bool ULGUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULex
 		{
 			if (auto Visual = Widget->GetVisual())
 			{
-				if (Widget->IsVisibleForRender() && Widget->GetRenderCanvas() != nullptr)
+				if (Widget->GetWidgetActiveInHierarchy() && Widget->GetRenderCanvas() != nullptr)
 				{
 					FHitResult hitInfo;
 					auto OriginRaycastType = Visual->GetRaycastType();
-					auto OriginVisibility = Widget->GetWidgetVisibility();
+					auto OriginVisibility = Widget->GetHitTestType();
 					Visual->SetRaycastType(ELexVisualHitTestType::Mesh);//in editor selection, make the ray hit actural triangle
-					Widget->SetWidgetVisibility(ELexWidgetVisibility::Visible);
-					Widget->SetWidgetVisibility(ELexWidgetVisibility::Visible);
+					Widget->SetHitTestType(ELexWidgetHitTestType::HitTestable);
 					if (Visual->LineTraceUI(hitInfo, LineStart, LineEnd))
 					{
 						if (Widget->IsPointVisibleOnClip(hitInfo.Location))
@@ -882,7 +881,7 @@ bool ULGUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULex
 						}
 					}
 					Visual->SetRaycastType(OriginRaycastType);
-					Widget->SetWidgetVisibility(OriginVisibility);
+					Widget->SetHitTestType(OriginVisibility);
 				}
 			}
 		}

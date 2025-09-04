@@ -136,20 +136,12 @@ void ULexWidget::Call_SiblingIndexChanged()
 	if (this->GetWorld() == nullptr)return;
 	OnSiblingIndexChangedEvent.Broadcast();
 }
-void ULexWidget::Call_RenderVisibilityChanged()
+void ULexWidget::Call_WidgetActiveChanged()
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
-	OnRenderVisibilityChangedEvent.Broadcast();
+	OnWidgetActiveChangedEvent.Broadcast();
 }
-
-void ULexWidget::Call_LayoutVisibilityChanged()
-{
-	if (this->GetOwner() == nullptr)return;
-	if (this->GetWorld() == nullptr)return;
-	OnLayoutVisibilityChangedEvent.Broadcast();
-}
-
 void ULexWidget::Call_HitTestVisibilityChanged()
 {
 	if (this->GetOwner() == nullptr)return;
@@ -448,7 +440,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		auto PropertyName = PropertyChangedEvent.GetPropertyName();
 
 		static const FName AnchorDataName = GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData);
-		static const FName VisibilityName = GET_MEMBER_NAME_CHECKED(ULexWidget, WidgetVisibility);
+		static const FName VisibilityName = GET_MEMBER_NAME_CHECKED(ULexWidget, bWidgetActive);
 		static const FName HitTestTypeName = GET_MEMBER_NAME_CHECKED(ULexWidget, HitTestType);
 		static const FName ClippingName = GET_MEMBER_NAME_CHECKED(ULexWidget, Clipping);
 		static const FName VisualName = GET_MEMBER_NAME_CHECKED(ULexWidget, Visual);
@@ -901,7 +893,7 @@ void ULexWidget::OnRegister()
 	//apply inactive actor's visibility state in editor scene outliner
 	if (auto OwnerActor = GetOwner())
 	{
-		if (!IsVisibleForRender())
+		if (!GetWidgetActiveInHierarchy())
 		{
 			OwnerActor->SetIsTemporarilyHiddenInEditor(true);
 		}
@@ -1965,54 +1957,29 @@ void ULexWidget::CalculateVisibility_Recursive()
 {
 	struct LOCAL
 	{
-		static void CalculateRenderVisibility(ULexWidget* Widget)
+		static void CalculateWidgetActive(ULexWidget* Widget)
 		{
-			auto WidgetVisibility = Widget->WidgetVisibility;
-			bool bResultVisibility = true;
-			bool bSelfVisibleForRender = WidgetVisibility == ELexWidgetVisibility::Visible;
-			if (!bSelfVisibleForRender)
-				bResultVisibility = false;
+			bool bResultActive = true;
+			bool bSelfActiveForRender = Widget->bWidgetActive;
+			if (!bSelfActiveForRender)
+				bResultActive = false;
 			else if (Widget->UIParent.IsValid())
-				bResultVisibility = Widget->UIParent->IsVisibleForRender();
+				bResultActive = Widget->UIParent->GetWidgetActiveInHierarchy();
 			else
-				bResultVisibility = true;
+				bResultActive = true;
 
-			if (Widget->bCacheIsVisibleForRender != bResultVisibility)
+			if (Widget->bCacheWidgetActiveInHierarchy != bResultActive)
 			{
-				Widget->bCacheIsVisibleForRender = bResultVisibility;
-				Widget->Call_RenderVisibilityChanged();
+				Widget->bCacheWidgetActiveInHierarchy = bResultActive;
+				Widget->Call_WidgetActiveChanged();
 				for (auto& Child : Widget->GetUIChildren())
 				{
-					CalculateRenderVisibility(Child);
-				}
-			}
-		}
-		static void CalculateLayoutVisibility(ULexWidget* Widget)
-		{
-			auto WidgetVisibility = Widget->WidgetVisibility;
-			bool bResultVisibility = true;
-			bool bSelfVisibleForLayout = WidgetVisibility == ELexWidgetVisibility::Visible
-			|| WidgetVisibility == ELexWidgetVisibility::Hidden;
-			if (bSelfVisibleForLayout == false)
-				bResultVisibility = false;
-			else if (Widget->UIParent.IsValid())
-				bResultVisibility = Widget->UIParent->IsVisibleForLayout();
-			else
-				bResultVisibility = true;
-
-			if (Widget->bCacheIsVisibleForLayout != bResultVisibility)
-			{
-				Widget->bCacheIsVisibleForLayout = bResultVisibility;
-				Widget->Call_LayoutVisibilityChanged();
-				for (auto& Child : Widget->GetUIChildren())
-				{
-					CalculateLayoutVisibility(Child);
+					CalculateWidgetActive(Child);
 				}
 			}
 		}
 	};
-	LOCAL::CalculateRenderVisibility(this);
-	LOCAL::CalculateLayoutVisibility(this);
+	LOCAL::CalculateWidgetActive(this);
 }
 
 void ULexWidget::CalculateHitTest_Recursive()
@@ -2556,26 +2523,16 @@ void ULexWidget::SetPixelSnapping(EWidgetPixelSnapping Value)
 	}
 }
 
-bool ULexWidget::IsVisibleForRender() const
+bool ULexWidget::GetWidgetActiveInHierarchy() const
 {
-	return bCacheIsVisibleForRender;
+	return bCacheWidgetActiveInHierarchy;
 }
 
-bool ULexWidget::IsVisibleForHitTest() const
+void ULexWidget::SetWidgetActive(bool Value)
 {
-	return bCacheIsVisibleForHitTest;
-}
-
-bool ULexWidget::IsVisibleForLayout() const
-{
-	return bCacheIsVisibleForLayout;
-}
-
-void ULexWidget::SetWidgetVisibility(ELexWidgetVisibility Value)
-{
-	if (WidgetVisibility != Value)
+	if (bWidgetActive != Value)
 	{
-		WidgetVisibility = Value;
+		bWidgetActive = Value;
 		CalculateVisibility_Recursive();
 	}
 }
@@ -2693,13 +2650,12 @@ void ULexWidget::SetIsTemporarilyHiddenInEditor_Recursive_By_RenderVisibility()
 	if (Actor != nullptr && this == Actor->GetRootComponent())
 	{
 		auto bHiddenEdTemporary_Property = FindFProperty<FBoolProperty>(AActor::StaticClass(), TEXT("bHiddenEdTemporary"));
-		bHiddenEdTemporary_Property->SetPropertyValue_InContainer(Actor, !IsVisibleForRender());
+		bHiddenEdTemporary_Property->SetPropertyValue_InContainer(Actor, !GetWidgetActiveInHierarchy());
 		//Actor->SetIsTemporarilyHiddenInEditor(!IsVisibleForRender());
 	}
 #endif
 	//callback
-	Call_RenderVisibilityChanged();
-	Call_LayoutVisibilityChanged();
+	Call_WidgetActiveChanged();
 	Call_HitTestVisibilityChanged();
 	//canvas update
 	MarkCanvasUpdate(false, false, false, true);

@@ -68,7 +68,7 @@ void ULexCanvas::BeginPlay()
 	CurrentRenderMode = this->GetActualRenderMode();
 	if (CheckLexWidget())
 	{
-		bPrevIsVisible = LexWidget->IsVisibleForRender();
+		bPrevIsVisible = LexWidget->GetWidgetActiveInHierarchy();
 	}
 	else
 	{
@@ -303,7 +303,7 @@ void ULexCanvas::OnRegister()
 		//tell UIItem
 		LexWidget->RegisterRenderCanvas(this);
 		LexWidget->GetAttachmentChangedEvent().AddUObject(this, &ULexCanvas::OnUIHierarchyChanged);
-		LexWidget->GetRenderVisibilityChangedEvent().AddUObject(this, &ULexCanvas::OnRenderVisibilityChanged);
+		LexWidget->GetWidgetActiveChangedEvent().AddUObject(this, &ULexCanvas::OnWidgetActiveChanged);
 
 		OnUIHierarchyChanged();
 	}
@@ -335,7 +335,7 @@ void ULexCanvas::OnUnregister()
 	{
 		LexWidget->UnregisterRenderCanvas();
 		LexWidget->GetAttachmentChangedEvent().RemoveAll(this);
-		LexWidget->GetRenderVisibilityChangedEvent().RemoveAll(this);
+		LexWidget->GetWidgetActiveChangedEvent().RemoveAll(this);
 	}
 }
 void ULexCanvas::OnComponentDestroyed(bool bDestroyingHierarchy)
@@ -541,9 +541,9 @@ void ULexCanvas::OnUIHierarchyChanged()
 	SetParentCanvas(NewParentCanvas);
 }
 
-void ULexCanvas::OnRenderVisibilityChanged()
+void ULexCanvas::OnWidgetActiveChanged()
 {
-	if (LexWidget->IsVisibleForRender())
+	if (LexWidget->GetWidgetActiveInHierarchy())
 	{
 		if (ParentCanvas.IsValid())
 		{
@@ -1128,7 +1128,7 @@ void ULexCanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, co
 		{
 			auto Visual = Item->GetVisual();
 			if (!Visual)continue;
-			if (!Item->IsVisibleForRender())//if not visible, need to remove the draw-call from draw-call list
+			if (!Item->GetWidgetActiveInHierarchy())//if not visible, need to remove the draw-call from draw-call list
 			{
 				if (Visual->DrawCall.IsValid())//maybe exist in other draw-call, should remove from that draw-call
 				{
@@ -1317,7 +1317,7 @@ bool ULexCanvas::UpdateCanvasDrawCallRecursive()
 	 * so we check bPrevIsVisible, then we can still do draw-call calculation at this frame, and the prev existing draw-call will be removed.
 	 */
 	bool bResult = false;
-	const bool bNowIsVisible = LexWidget->IsVisibleForRender();
+	const bool bNowIsVisible = LexWidget->GetWidgetActiveInHierarchy();
 	if (bNowIsVisible || bPrevIsVisible)
 	{
 		bResult = true;

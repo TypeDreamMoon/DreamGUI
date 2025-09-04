@@ -1060,14 +1060,14 @@ void UUITextInputComponent::UpdatePlaceHolderComponent()
 	{
 		if (PlaceHolder.IsValid())
 		{
-			PlaceHolder->SetWidgetVisibility(ELexWidgetVisibility::Collapsed);
+			PlaceHolder->SetWidgetActive(false);
 		}
 	}
 	else
 	{
 		if (PlaceHolder.IsValid())
 		{
-			PlaceHolder->SetWidgetVisibility(ELexWidgetVisibility::Visible);
+			PlaceHolder->SetWidgetActive(true);
 		}
 	}
 }
@@ -1078,7 +1078,7 @@ void UUITextInputComponent::UpdateCaretPosition(bool InHideSelection)
 	{
 		if (CaretWidget.IsValid())
 		{
-			CaretWidget->SetWidgetVisibility(ELexWidgetVisibility::Collapsed);
+			CaretWidget->SetWidgetActive(false);
 		}
 	}
 	else
@@ -1112,7 +1112,7 @@ void UUITextInputComponent::UpdateCaretPosition(FVector2f InCaretPosition, bool 
 		CaretVisual->SetSprite(ULexUISpriteData::GetDefaultWhiteSolid(), false);
 	}
 	CaretWidget->SetRelativeLocation(FVector(0, InCaretPosition.X, InCaretPosition.Y));
-	CaretWidget->SetWidgetVisibility(ELexWidgetVisibility::Visible);
+	CaretWidget->SetWidgetActive(true);
 	
 	//force display caret
 	NextCaretBlinkTime = 0.8f;
@@ -1152,7 +1152,7 @@ void UUITextInputComponent::UpdateSelection()
 			auto uiSprite = SelectionMaskObjectArray[i + SelectionPropertyArray.Num()];
 			if (uiSprite.IsValid())
 			{
-				uiSprite->GetWidget()->SetWidgetVisibility(ELexWidgetVisibility::Collapsed);
+				uiSprite->GetWidget()->SetWidgetActive(false);
 			}
 		}
 	}
@@ -1162,7 +1162,7 @@ void UUITextInputComponent::UpdateSelection()
 		auto uiSprite = SelectionMaskObjectArray[i];
 		if (uiSprite.IsValid())
 		{
-			uiSprite->GetWidget()->SetWidgetVisibility(ELexWidgetVisibility::Visible);
+			uiSprite->GetWidget()->SetWidgetActive(true);
 			auto& selectionProperty = SelectionPropertyArray[i];
 			uiSprite->GetWidget()->SetRelativeLocation(FVector(0, selectionProperty.Pos.X, selectionProperty.Pos.Y));
 			uiSprite->GetWidget()->SetWidth(selectionProperty.Size);
@@ -1176,7 +1176,7 @@ void UUITextInputComponent::HideSelectionMask()
 		auto uiSprite = SelectionMaskObjectArray[i];
 		if (uiSprite.IsValid())
 		{
-			SelectionMaskObjectArray[i]->GetWidget()->SetWidgetVisibility(ELexWidgetVisibility::Collapsed);
+			SelectionMaskObjectArray[i]->GetWidget()->SetWidgetActive(false);
 		}
 	}
 	SelectionPropertyArray.Reset();//clear selection mask
@@ -1587,7 +1587,7 @@ void UUITextInputComponent::DeactivateInput(bool InFireEvent)
 	//hide caret
 	if (CaretWidget.IsValid())
 	{
-		CaretWidget->SetWidgetVisibility(ELexWidgetVisibility::Collapsed);
+		CaretWidget->SetWidgetActive(false);
 	}
 	//hide selection
 	HideSelectionMask();

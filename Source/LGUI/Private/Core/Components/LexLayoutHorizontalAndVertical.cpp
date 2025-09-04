@@ -11,7 +11,7 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
     Children.Empty();
     for (auto& ChildWidget : Widget->GetUIChildren())
     {
-        if (!ChildWidget->IsVisibleForLayout())continue;
+        if (!ChildWidget->GetWidgetActiveInHierarchy())continue;
         if (auto ChildLayoutSlot = ChildWidget->GetLayoutSlot())
         {
             if (ChildLayoutSlot->GetIgnoreLayout())continue;

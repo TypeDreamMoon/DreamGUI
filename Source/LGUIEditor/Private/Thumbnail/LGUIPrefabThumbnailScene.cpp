@@ -104,7 +104,7 @@ void FLGUIPrefabThumbnailScene::GetBoundsRecursive(USceneComponent* RootComp, FB
 		auto UIItem = Cast<ULexWidget>(RootComp);
 		if (UIItem != nullptr)
 		{
-			if (UIItem->IsVisibleForRender())
+			if (UIItem->GetWidgetActiveInHierarchy())
 			{
 				Bounds = UIItem->Bounds;
 				bIsValidBounds = true;

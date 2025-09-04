@@ -199,7 +199,7 @@ UUIStaticMesh::UUIStaticMesh(const FObjectInitializer& ObjectInitializer) :Super
 
 void UUIStaticMesh::UpdateGeometry()
 {
-	if (GetWidget()->IsVisibleForRender() == false)return;
+	if (GetWidget()->GetWidgetActiveInHierarchy() == false)return;
 	auto RenderCanvas = GetWidget()->GetRenderCanvas();
 	if (!RenderCanvas)return;
 	if (!IsValid(meshCache))return;

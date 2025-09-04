@@ -75,8 +75,7 @@ protected:
 	void Call_OnChildDimensionsChanged(ULexWidget* Child, bool PivotChanged, bool WidthChanged, bool HeightChanged);
 	void Call_OnAttachmentChanged();
 	void Call_OnSiblingIndexChanged();
-	void Call_OnRenderVisibilityChanged();
-	void Call_OnLayoutVisibilityChanged();
+	void Call_OnWidgetActiveChanged();
 	void Call_OnHitTestVisibilityChanged();
 
 	/** Called when RootUIComp IsActiveInHierarchy state is changed */

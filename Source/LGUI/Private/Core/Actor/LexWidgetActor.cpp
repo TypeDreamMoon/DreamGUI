@@ -1,10 +1,7 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/Actor/LexWidgetActor.h"
-#include "LGUI.h"
 #include "Core/Components/LexWidget.h"
-#include "Core/Components/LexVisual.h"
-#include "Core/Components/LexVisualPostProcess.h"
 #if WITH_EDITOR
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "Utils/LexUIUtils.h"
@@ -41,23 +38,23 @@ void ALexWidgetActor::SetIsTemporarilyHiddenInEditor(bool bIsHidden)
 				bool bShouldNotify = false;
 				if (bIsHidden)
 				{
-					if (GetLexWidget()->IsVisibleForRender())
+					if (GetLexWidget()->GetWidgetActiveInHierarchy())
 					{
 						bShouldNotify = true;
 					}
-					GetLexWidget()->SetWidgetVisibility(ELexWidgetVisibility::Collapsed);
+					GetLexWidget()->SetWidgetActive(false);
 				}
 				else
 				{
-					if (!GetLexWidget()->IsVisibleForRender())
+					if (!GetLexWidget()->GetWidgetActiveInHierarchy())
 					{
 						bShouldNotify = true;
 					}
-					GetLexWidget()->SetWidgetVisibility(ELexWidgetVisibility::Visible);
+					GetLexWidget()->SetWidgetActive(true);
 				}
 				if (bShouldNotify)
 				{
-					FLexUIUtils::NotifyPropertyChanged(GetLexWidget(), ULexWidget::GetPropertyName_WidgetVisibility());
+					FLexUIUtils::NotifyPropertyChanged(GetLexWidget(), ULexWidget::GetPropertyName_WidgetActive());
 				}
 			}
 			ULGUIPrefabManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)] {

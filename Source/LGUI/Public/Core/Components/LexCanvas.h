@@ -148,7 +148,7 @@ private:
 
 	/** hierarchy changed */
 	void OnUIHierarchyChanged();
-	void OnRenderVisibilityChanged();
+	void OnWidgetActiveChanged();
 public:
 	/** get root LGUICanvas on hierarchy */
 	UFUNCTION(BlueprintCallable, Category = LGUI)

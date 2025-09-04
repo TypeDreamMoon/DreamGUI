@@ -31,7 +31,7 @@ void UUIDropdownComponent::Awake()
 	Super::Awake();
 	if (ListRoot.IsValid())
 	{
-		ListRoot->GetLexWidget()->SetWidgetVisibility(ELexWidgetVisibility::Collapsed);
+		ListRoot->GetLexWidget()->SetWidgetActive(false);
 		ListRoot->GetLexWidget()->SetRenderOpacity(0);
 		MaxHeight = ListRoot->GetLexWidget()->GetHeight();
 	}
@@ -92,7 +92,7 @@ void UUIDropdownComponent::Show()
 		CreateBlocker();
 	}
 	//show list
-	ListRoot->GetLexWidget()->SetWidgetVisibility(ELexWidgetVisibility::Visible);
+	ListRoot->GetLexWidget()->SetWidgetActive(true);
 	ShowOrHideTweener = ListRoot->GetLexWidget()->RenderOpacityTo(1, 0.3f, 0, ELTweenEase::OutCubic);
 	auto canvasOnListRoot = ListRoot->FindComponentByClass<ULexCanvas>();
 	if (!IsValid(canvasOnListRoot))
@@ -281,7 +281,7 @@ void UUIDropdownComponent::Hide()
 
 	auto ListRootUIItem = ListRoot->GetLexWidget();
 	ShowOrHideTweener = ListRootUIItem->RenderOpacityTo(0, 0.3f, 0, ELTweenEase::InCubic)->OnComplete(FSimpleDelegate::CreateWeakLambda(ListRootUIItem, [ListRootUIItem] {
-		ListRootUIItem->SetWidgetVisibility(ELexWidgetVisibility::Collapsed);
+		ListRootUIItem->SetWidgetActive(false);
 		}));
 
 	if (BlockerActor.IsValid())
@@ -323,7 +323,7 @@ void UUIDropdownComponent::CreateListItems()
 		UE_LOG(LGUI, Error, TEXT("[%s]ItemTemplate must be a UIItem!"), ANSI_TO_TCHAR(__FUNCTION__));
 		return;
 	}
-	templateUIItem->SetWidgetVisibility(ELexWidgetVisibility::Visible);
+	templateUIItem->SetWidgetActive(true);
 	auto contentUIItem = templateUIItem->GetUIParent();
 	for (int i = 0, count = Options.Num(); i < count; i++)
 	{
@@ -340,7 +340,7 @@ void UUIDropdownComponent::CreateListItems()
 		OnSetItemCustomDataFunction.ExecuteIfBound(i, script, copiedItemActor);
 		CreatedItemArray.Add(script);
 	}
-	templateUIItem->SetWidgetVisibility(ELexWidgetVisibility::Collapsed);
+	templateUIItem->SetWidgetActive(false);
 	// if (auto contentLayout = contentUIItem->GetOwner()->FindComponentByClass<UUILayoutBase>())
 	// {
 	// 	contentLayout->OnRebuildLayout();

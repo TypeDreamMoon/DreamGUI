@@ -32,7 +32,7 @@ void UUIScrollViewWithScrollbarComponent::UpdateProgress(bool InFireEvent)
 	Super::UpdateProgress(InFireEvent);
 	if (CheckScrollbarParameter())
 	{
-		if (bAllowHorizontalScroll && HorizontalScrollbar->GetLexWidget()->IsVisibleForLayout())
+		if (bAllowHorizontalScroll && HorizontalScrollbar->GetLexWidget()->GetWidgetActiveInHierarchy())
 		{
 			if (Progress.X > 1.0f)
 			{
@@ -47,7 +47,7 @@ void UUIScrollViewWithScrollbarComponent::UpdateProgress(bool InFireEvent)
 				HorizontalScrollbarComp->SetValueWithoutNotify(Progress.X);
 			}
 		}
-		if (bAllowVerticalScroll && VerticalScrollbar->GetLexWidget()->IsVisibleForLayout())
+		if (bAllowVerticalScroll && VerticalScrollbar->GetLexWidget()->GetWidgetActiveInHierarchy())
 		{
 			if (Progress.Y > 1.0f)
 			{

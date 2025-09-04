@@ -40,17 +40,6 @@ enum class ELexWidgetClipping : uint8
 };
 
 UENUM(BlueprintType)
-enum class ELexWidgetVisibility : uint8
-{
-	/** Visible and hit-testable (can interact with cursor). Default value. */
-	Visible,
-	/** Not visible and takes up no space in the layout (obviously not hit-testable). */
-	Collapsed,
-	/** Not visible but occupies layout space (obviously not hit-testable). */
-	Hidden,
-};
-
-UENUM(BlueprintType)
 enum class ELexWidgetHitTestType : uint8
 {
 	Inherit,
@@ -73,8 +62,7 @@ public:
 	DECLARE_EVENT(ULexWidget, FAttachmentChangedEvent);
 	DECLARE_EVENT(ULexWidget, FTransformChangedEvent);
 	DECLARE_EVENT(ULexWidget, FSiblingIndexChangedEvent);
-	DECLARE_EVENT(ULexWidget, FRenderVisibilityChangedEvent)
-	DECLARE_EVENT(ULexWidget, FLayoutVisibilityChangedEvent)
+	DECLARE_EVENT(ULexWidget, FWidgetActiveChangedEvent);
 	DECLARE_EVENT(ULexWidget, FHitTestVisibilityChangedEvent)
 	
 	ULexWidget(const FObjectInitializer& ObjectInitializer);
@@ -110,9 +98,9 @@ public:
 	{
 		return GET_MEMBER_NAME_CHECKED(ULexWidget, SiblingIndex);
 	}
-	static FName GetPropertyName_WidgetVisibility()
+	static FName GetPropertyName_WidgetActive()
 	{
-		return GET_MEMBER_NAME_CHECKED(ULexWidget, WidgetVisibility);
+		return GET_MEMBER_NAME_CHECKED(ULexWidget, bWidgetActive);
 	}
 	template<class T>
 	static T* GetComponentInParentUI(AActor* InActor, bool IncludeUnregisteredComponent = true)
@@ -152,8 +140,7 @@ private:
 	void Call_ChildDimensionsChanged(ULexWidget* Child, bool InPivotChanged, bool InWidthChanged, bool InHeightChanged);
 	void Call_AttachmentChanged();
 	void Call_SiblingIndexChanged();
-	void Call_RenderVisibilityChanged();
-	void Call_LayoutVisibilityChanged();
+	void Call_WidgetActiveChanged();
 	void Call_HitTestVisibilityChanged();
 #pragma endregion
 protected:
@@ -192,9 +179,8 @@ private:
 	FChildDimensionChangedEvent OnChildDimensionChangedEvent;
 	FAttachmentChangedEvent OnAttachmentChangedEvent;
 	FSiblingIndexChangedEvent OnSiblingIndexChangedEvent;
-	FRenderVisibilityChangedEvent OnRenderVisibilityChangedEvent;
-	FRenderVisibilityChangedEvent OnLayoutVisibilityChangedEvent;
-	FRenderVisibilityChangedEvent OnHitTestVisibilityChangedEvent;
+	FWidgetActiveChangedEvent OnWidgetActiveChangedEvent;
+	FHitTestVisibilityChangedEvent OnHitTestVisibilityChangedEvent;
 public:
 	FIsEnabledChangedEvent& GetIsEnabledChangedEvent(){return OnIsEnabledChangedEvent;}
 	FTransformChangedEvent& GetTransformChangedEvent(){return OnTransformChangedEvent;}
@@ -202,9 +188,8 @@ public:
 	FChildDimensionChangedEvent& GetChildDimensionChangedEvent(){return OnChildDimensionChangedEvent;}
 	FAttachmentChangedEvent& GetAttachmentChangedEvent(){return OnAttachmentChangedEvent;}
 	FSiblingIndexChangedEvent& GetSiblingIndexChangedEvent(){return OnSiblingIndexChangedEvent;}
-	FRenderVisibilityChangedEvent& GetRenderVisibilityChangedEvent(){return OnRenderVisibilityChangedEvent;}
-	FRenderVisibilityChangedEvent& GetLayoutVisibilityChangedEvent(){return OnLayoutVisibilityChangedEvent;}
-	FRenderVisibilityChangedEvent& GetHitTestVisibilityChangedEvent(){return OnHitTestVisibilityChangedEvent;}
+	FWidgetActiveChangedEvent& GetWidgetActiveChangedEvent(){return OnWidgetActiveChangedEvent;}
+	FHitTestVisibilityChangedEvent& GetHitTestVisibilityChangedEvent(){return OnHitTestVisibilityChangedEvent;}
 protected:
 	/** parent in hierarchy */
 	UPROPERTY(Transient) mutable TWeakObjectPtr<ULexWidget> UIParent = nullptr;
@@ -411,8 +396,11 @@ protected:
 	float RenderOpacity = 1.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
 	ELexWidgetClipping Clipping = ELexWidgetClipping::Inherit;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
-	ELexWidgetVisibility WidgetVisibility = ELexWidgetVisibility::Visible;
+	/**
+	 * If not WidgetActive, then not visible, not take layout space, not interactable, not hit-testable
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter = "GetWidgetActive", Setter="SetWidgetActive", meta = (AllowPrivateAccess = true))
+	bool bWidgetActive = true;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
 	ELexWidgetHitTestType HitTestType = ELexWidgetHitTestType::Inherit;
 	/** If the widget will draw snapped to the nearest pixel.  Improves clarity but might cause visible stepping in animation. */
@@ -466,20 +454,31 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetPixelSnapping(EWidgetPixelSnapping Value);
 
+	/**
+	 * Get WidgetActive property value
+	 * @return WidgetActive self property
+	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	ELexWidgetVisibility GetWidgetVisibility()const { return WidgetVisibility; }
+	bool GetWidgetActive()const { return bWidgetActive; }
+	/**
+	 * Get widget active in hierarchy
+	 * @return Is widget active in hierarchy
+	 */
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	bool GetWidgetActiveInHierarchy()const;
+	/**
+	 * Set WidgetActive self property
+	 * @param Value 
+	 */
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetWidgetActive(bool Value);
+	
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	ELexWidgetHitTestType GetHitTestType()const { return HitTestType; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	bool IsVisibleForRender()const;
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	bool IsVisibleForHitTest()const;
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	bool IsVisibleForLayout()const;
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	void SetWidgetVisibility(ELexWidgetVisibility Value);
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetHitTestType(ELexWidgetHitTestType Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	bool IsVisibleForHitTest()const{return bCacheIsVisibleForHitTest;}
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	bool GetIsEnabled()const { return bIsEnabled; }
@@ -630,9 +629,8 @@ protected:
 	mutable uint32 bNeedRecreateClip : 1 = true;
 	uint32 bClipDataChanged : 1 = true;
 	
-	uint32 bCacheIsVisibleForRender : 1 = true;
-	uint32 bCacheIsVisibleForLayout : 1 = true;
 	uint32 bCacheIsVisibleForHitTest : 1 = true;
+	uint32 bCacheWidgetActiveInHierarchy : 1 = true;
 
 	/** Only for root widget, if dirty then we need to recalculate flatten hierarchy index */
 	mutable uint32 bFlattenHierarchyIndexDirty : 1;
