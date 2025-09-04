@@ -431,8 +431,8 @@ protected:
 	TObjectPtr<ULexVisual> Visual = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Instanced, Category = "Layout", Getter, meta = (AllowPrivateAccess = true))
 	TObjectPtr<ULexLayout> Layout = nullptr;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Instanced, Category = "LayoutSlot", Getter, meta = (AllowPrivateAccess = true))
-	mutable TObjectPtr<ULexLayoutSlot> LayoutSlot = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Instanced, Category = "LayoutSlot", Getter, meta = (AllowPrivateAccess = true))
+	TObjectPtr<ULexLayoutSlot> LayoutSlot = nullptr;
 	
 	TWeakPtr<FLexUIClipData> ClipData;
 	
@@ -525,7 +525,7 @@ public:
 	}
 	
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	ULexLayoutSlot* GetLayoutSlot()const;
+	ULexLayoutSlot* GetLayoutSlot()const{return LayoutSlot;}
 
 	const TWeakPtr<FLexUIClipData>& GetClipData()const{return ClipData;}
 
@@ -615,7 +615,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		ULexWidget* GetRootWidgetInHierarchy()const { return RootWidget.Get(); }
 
-	static void MarkLayoutForRebuild(ULexWidget* InWidget);
+	static void MarkLayoutForRebuild(const ULexWidget* InWidget);
 
 protected:
 	friend class FLexWidgetCustomization;

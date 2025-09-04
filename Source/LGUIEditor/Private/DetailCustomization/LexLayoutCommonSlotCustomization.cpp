@@ -1,33 +1,34 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "DetailCustomization/LexLayoutHorizontalAndVerticalSlotCustomization.h"
+#include "DetailCustomization/LexLayoutCommonSlotCustomization.h"
 #include "LGUIEditorUtils.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
+#include "Core/Components/LexLayoutCommonSlot.h"
 #include "Core/Components/LexLayoutHorizontalAndVertical.h"
 
 #define LOCTEXT_NAMESPACE "LexLayoutHorizontalAndVerticalSlotCustomization"
-FLexLayoutHorizontalAndVerticalSlotCustomization::FLexLayoutHorizontalAndVerticalSlotCustomization()
+FLexLayoutCommonSlotCustomization::FLexLayoutCommonSlotCustomization()
 {
 }
 
-FLexLayoutHorizontalAndVerticalSlotCustomization::~FLexLayoutHorizontalAndVerticalSlotCustomization()
+FLexLayoutCommonSlotCustomization::~FLexLayoutCommonSlotCustomization()
 {
 	
 }
 
-TSharedRef<IDetailCustomization> FLexLayoutHorizontalAndVerticalSlotCustomization::MakeInstance()
+TSharedRef<IDetailCustomization> FLexLayoutCommonSlotCustomization::MakeInstance()
 {
-	return MakeShareable(new FLexLayoutHorizontalAndVerticalSlotCustomization);
+	return MakeShareable(new FLexLayoutCommonSlotCustomization);
 }
-void FLexLayoutHorizontalAndVerticalSlotCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
+void FLexLayoutCommonSlotCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
 	TArray<TWeakObjectPtr<UObject>> targetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(targetObjects);
 	TargetScriptArray.Empty();
 	for (auto item : targetObjects)
 	{
-		if (auto validItem = Cast<ULexLayoutHorizontalAndVerticalSlot>(item.Get()))
+		if (auto validItem = Cast<ULexLayoutCommonSlot>(item.Get()))
 		{
 			TargetScriptArray.Add(validItem);
 		}
@@ -92,13 +93,13 @@ void FLexLayoutHorizontalAndVerticalSlotCustomization::CustomizeDetails(IDetailL
 		.PropertyHandleList({PropertyHandle})
 		;
 	};
-	auto MinWidth_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutHorizontalAndVerticalSlot, MinWidth));
-	auto MinHeight_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutHorizontalAndVerticalSlot, MinHeight));
-	auto PreferredWidth_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutHorizontalAndVerticalSlot, PreferredWidth));
-	auto PreferredHeight_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutHorizontalAndVerticalSlot, PreferredHeight));
-	auto FlexibleWidth_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutHorizontalAndVerticalSlot, FlexibleWidth));
-	auto FlexibleHeight_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutHorizontalAndVerticalSlot, FlexibleHeight));
-	Category.AddProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutHorizontalAndVerticalSlot, bIgnoreLayout));
+	auto MinWidth_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutCommonSlot, MinWidth));
+	auto MinHeight_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutCommonSlot, MinHeight));
+	auto PreferredWidth_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutCommonSlot, PreferredWidth));
+	auto PreferredHeight_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutCommonSlot, PreferredHeight));
+	auto FlexibleWidth_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutCommonSlot, FlexibleWidth));
+	auto FlexibleHeight_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutCommonSlot, FlexibleHeight));
+	Category.AddProperty(GET_MEMBER_NAME_CHECKED(ULexLayoutCommonSlot, bIgnoreLayout));
 	CreateOverridePropertyWidget(MinWidth_PH, 0);
 	CreateOverridePropertyWidget(MinHeight_PH, 0);
 	CreateOverridePropertyWidget(PreferredWidth_PH, TAttribute<float>::CreateLambda([&]()

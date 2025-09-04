@@ -12,8 +12,10 @@ void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
     for (auto& ChildWidget : Widget->GetUIChildren())
     {
         if (!ChildWidget->IsVisibleForLayout())continue;
-        auto ChildLayoutSlot = (ULexLayoutHorizontalAndVerticalSlot*)ChildWidget->GetLayoutSlot();
-        if (ChildLayoutSlot->GetIgnoreLayout())continue;
+        if (auto ChildLayoutSlot = ChildWidget->GetLayoutSlot())
+        {
+            if (ChildLayoutSlot->GetIgnoreLayout())continue;
+        }
         Children.Add(ChildWidget);
     }
     bool bIsVertical = Direction == ELexLayoutDirection::Vertical;
@@ -271,8 +273,9 @@ void ULexLayoutHorizontalAndVertical::SetChildAlongAxisWithScale(ULexWidget* Chi
     ChildWidget->SetAnchoredPosition(AnchoredPosition);
 }
 
-void ULexLayoutHorizontalAndVertical::GetLayoutControlAnchor(ULexWidget* TargetWidget, FLexLayoutControlAnchorData& Result)
+FLexLayoutControlAnchorData ULexLayoutHorizontalAndVertical::GetLayoutControlAnchor(const ULexWidget* TargetWidget)
 {
+    FLexLayoutControlAnchorData Result;
     auto ThisWidget = GetWidget();
     if (ThisWidget == TargetWidget)//self
     {
@@ -281,23 +284,26 @@ void ULexLayoutHorizontalAndVertical::GetLayoutControlAnchor(ULexWidget* TargetW
     }
     else if (ThisWidget->GetUIChildren().Contains(TargetWidget))//child
     {
-        if (auto LayoutSlot = Cast<ULexLayoutHorizontalAndVerticalSlot>(TargetWidget->GetLayoutSlot()))
+        bool bIgnoreLayout = false;
+        if (auto LayoutSlot = TargetWidget->GetLayoutSlot())
         {
-            if (!LayoutSlot->GetIgnoreLayout())
+            bIgnoreLayout = LayoutSlot->GetIgnoreLayout();
+        }
+        if (!bIgnoreLayout)
+        {
+            Result.bCanControlHorizontalAnchoredPosition = true;
+            Result.bCanControlVerticalAnchoredPosition = true;
+            if (this->ControlChildSize.bWidth)
             {
-                Result.bCanControlHorizontalAnchoredPosition = true;
-                Result.bCanControlVerticalAnchoredPosition = true;
-                if (this->ControlChildSize.bWidth)
-                {
-                    Result.bCanControlHorizontalSizeDelta = true;
-                }
-                if (this->ControlChildSize.bHeight)
-                {
-                    Result.bCanControlVerticalSizeDelta = true;
-                }
+                Result.bCanControlHorizontalSizeDelta = true;
+            }
+            if (this->ControlChildSize.bHeight)
+            {
+                Result.bCanControlVerticalSizeDelta = true;
             }
         }
     }
+    return Result;
 }
 
 #if WITH_EDITOR
@@ -307,11 +313,6 @@ void ULexLayoutHorizontalAndVertical::PostEditChangeProperty(struct FPropertyCha
 }
 
 #endif
-
-TSubclassOf<ULexLayoutSlot> ULexLayoutHorizontalAndVertical::GetSlotClass() const
-{
-	return ULexLayoutHorizontalAndVerticalSlot::StaticClass();
-}
 
 void ULexLayoutHorizontalAndVertical::SetDirection(ELexLayoutDirection Value)
 {
@@ -391,85 +392,5 @@ void ULexLayoutHorizontalAndVertical::SetSizeFitToChildren(FLexLayoutHorizontalA
     {
         SizeFitToChildren = Value;
         MarkLayoutDirty();
-    }
-}
-
-void ULexLayoutHorizontalAndVerticalSlot::OnTransformChanged()
-{
-}
-
-void ULexLayoutHorizontalAndVerticalSlot::OnDimensionChanged(bool InPivotChange, bool InWidthChange,
-    bool InHeightChange)
-{
-}
-
-#if WITH_EDITOR
-void ULexLayoutHorizontalAndVerticalSlot::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
-{
-	Super::PostEditChangeProperty(PropertyChangedEvent);
-    GetLayout()->MarkLayoutDirty();
-}
-#endif
-
-void ULexLayoutHorizontalAndVerticalSlot::SetIgnoreLayout(bool Value)
-{
-    if (bIgnoreLayout != Value)
-    {
-        bIgnoreLayout = Value;
-        GetLayout()->MarkLayoutDirty();
-    }
-}
-
-void ULexLayoutHorizontalAndVerticalSlot::SetMinWidth(float Value)
-{
-    if (MinWidth != Value)
-    {
-        MinWidth = Value;
-        GetLayout()->MarkLayoutDirty();
-    }
-}
-
-void ULexLayoutHorizontalAndVerticalSlot::SetMinHeight(float Value)
-{
-    if (MinHeight != Value)
-    {
-        MinHeight = Value;
-        GetLayout()->MarkLayoutDirty();
-    }
-}
-
-void ULexLayoutHorizontalAndVerticalSlot::SetPreferredWidth(float Value)
-{
-    if (PreferredWidth != Value)
-    {
-        PreferredWidth = Value;
-        GetLayout()->MarkLayoutDirty();
-    }
-}
-
-void ULexLayoutHorizontalAndVerticalSlot::SetPreferredHeight(float Value)
-{
-    if (PreferredHeight != Value)
-    {
-        PreferredHeight = Value;
-        GetLayout()->MarkLayoutDirty();
-    }
-}
-
-void ULexLayoutHorizontalAndVerticalSlot::SetFlexibleWidth(float Value)
-{
-    if (FlexibleWidth != Value)
-    {
-        FlexibleWidth = Value;
-        GetLayout()->MarkLayoutDirty();
-    }
-}
-
-void ULexLayoutHorizontalAndVerticalSlot::SetFlexibleHeight(float Value)
-{
-    if (FlexibleHeight != Value)
-    {
-        FlexibleHeight = Value;
-        GetLayout()->MarkLayoutDirty();
     }
 }

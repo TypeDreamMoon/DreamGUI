@@ -108,12 +108,11 @@ private:
 		return TotalFlexibleSize[axis];
 	}
 
-	virtual void GetLayoutControlAnchor(ULexWidget* TargetWidget, FLexLayoutControlAnchorData& Result) override;
+	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* TargetWidget) override;
 public:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
-	virtual TSubclassOf<ULexLayoutSlot> GetSlotClass()const override;
 
 	virtual float GetMinWidth()const override{return GetTotalMinSize(0);}
 	virtual float GetPreferredWidth()const override{return GetTotalPreferredSize(0);}
@@ -161,62 +160,22 @@ public:
 	void SetSizeFitToChildren(FLexLayoutHorizontalAndVerticalSizeControl Value);
 };
 
-UCLASS(BlueprintType, DisplayName="Horizontal & Vertical Slot")
-class LGUI_API ULexLayoutHorizontalAndVerticalSlot : public ULexLayoutSlot
+UINTERFACE(Blueprintable, MinimalAPI)
+class ULexLayoutHorizontalAndVerticalSlotInterface : public UInterface
 {
 	GENERATED_BODY()
-private:
-	friend class FLexLayoutHorizontalAndVerticalSlotCustomization;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSlot", Getter="GetIgnoreLayout", Setter="SetIgnoreLayout", meta = (AllowPrivateAccess = true))
-	bool bIgnoreLayout = false;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSlot", Getter, Setter, meta = (AllowPrivateAccess = true))
-	float MinWidth = -1;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSlot", Getter, Setter, meta = (AllowPrivateAccess = true))
-	float MinHeight = -1;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSlot", Getter, Setter, meta = (AllowPrivateAccess = true))
-	float PreferredWidth = -1;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSlot", Getter, Setter, meta = (AllowPrivateAccess = true))
-	float PreferredHeight = -1;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSlot", Getter, Setter, meta = (AllowPrivateAccess = true))
-	float FlexibleWidth = -1;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSlot", Getter, Setter, meta = (AllowPrivateAccess = true))
-	float FlexibleHeight = -1;
+};
 
+class ILexLayoutHorizontalAndVerticalSlotInterface
+{
+	GENERATED_BODY()
 public:
-	virtual void OnTransformChanged() override;
-	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
-#if WITH_EDITOR
-	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
-#endif
+	virtual bool GetIgnoreLayout()const = 0;
 	
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	bool GetIgnoreLayout()const{return bIgnoreLayout;}
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	void SetIgnoreLayout(bool Value);
-	
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	virtual float GetMinWidth()const override{return MinWidth;}
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	virtual float GetMinHeight()const override{return MinHeight;}
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	virtual float GetPreferredWidth()const override{return PreferredWidth;}
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	virtual float GetPreferredHeight()const override{return PreferredHeight;}
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	virtual float GetFlexibleWidth()const override{return FlexibleWidth;}
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	virtual float GetFlexibleHeight()const override{return FlexibleHeight;}
-
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	void SetMinWidth(float Value);
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	void SetMinHeight(float Value);
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	void SetPreferredWidth(float Value);
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	void SetPreferredHeight(float Value);
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	void SetFlexibleWidth(float Value);
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	void SetFlexibleHeight(float Value);
+	virtual float GetMinWidth()const = 0;
+	virtual float GetMinHeight()const = 0;
+	virtual float GetPreferredWidth()const = 0;
+	virtual float GetPreferredHeight()const = 0;
+	virtual float GetFlexibleWidth()const = 0;
+	virtual float GetFlexibleHeight()const = 0;
 };

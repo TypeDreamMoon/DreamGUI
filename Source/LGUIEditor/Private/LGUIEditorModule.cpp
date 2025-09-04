@@ -80,11 +80,14 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Core/LexUIImageBrush.h"
 #include "Core/Components/LexImage.h"
+#include "Core/Components/LexLayoutCommonSlot.h"
+#include "Core/Components/LexLayoutFlexBox.h"
 #include "Core/Components/LexLayoutHorizontalAndVertical.h"
 #include "DetailCustomization/LexImageBrushStructCustomization.h"
 #include "DetailCustomization/LexLayoutCustomization.h"
 #include "DetailCustomization/LexLayoutHorizontalAndVerticalCustomization.h"
-#include "DetailCustomization/LexLayoutHorizontalAndVerticalSlotCustomization.h"
+#include "DetailCustomization/LexLayoutCommonSlotCustomization.h"
+#include "DetailCustomization/LexLayoutFlexBoxCustomization.h"
 
 const FName FLGUIEditorModule::LGUIDynamicSpriteAtlasViewerName(TEXT("LGUIDynamicSpriteAtlasViewerName"));
 const FName FLGUIEditorModule::LGUIPrefabSequenceTabName(TEXT("LGUIPrefabSequenceTabName"));
@@ -303,7 +306,8 @@ void FLGUIEditorModule::StartupModule()
 		
 		PropertyModule.RegisterCustomClassLayout(ULexLayout::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULexLayoutHorizontalAndVertical::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutHorizontalAndVerticalCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(ULexLayoutHorizontalAndVerticalSlot::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutHorizontalAndVerticalSlotCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexLayoutFlexBox::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutFlexBoxCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexLayoutCommonSlot::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutCommonSlotCustomization::MakeInstance));
 	}
 	//register asset
 	{
@@ -518,7 +522,8 @@ void FLGUIEditorModule::ShutdownModule()
 		
 		PropertyModule.UnregisterCustomClassLayout(ULexLayout::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(ULexLayoutHorizontalAndVertical::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(ULexLayoutHorizontalAndVerticalSlot::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexLayoutFlexBox::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexLayoutCommonSlot::StaticClass()->GetFName());
 	}
 	//unregister asset
 	{

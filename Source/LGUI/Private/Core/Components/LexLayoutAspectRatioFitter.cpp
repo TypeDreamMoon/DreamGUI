@@ -53,7 +53,7 @@ void ULexLayoutAspectRatioFitter::UpdateSize()
 
 void ULexLayoutAspectRatioFitter::OnUpdateLayout()
 {
-    
+    UpdateSize();
 }
 
 void ULexLayoutAspectRatioFitter::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
@@ -61,15 +61,16 @@ void ULexLayoutAspectRatioFitter::OnDimensionChanged(bool InPivotChange, bool In
     UpdateSize();
 }
 
-void ULexLayoutAspectRatioFitter::GetLayoutControlAnchor(ULexWidget* TargetWidget, FLexLayoutControlAnchorData& Result)
+FLexLayoutControlAnchorData ULexLayoutAspectRatioFitter::GetLayoutControlAnchor(const ULexWidget* TargetWidget)
 {
+    FLexLayoutControlAnchorData Result;
     auto ThisWidget = GetWidget();
     if (ThisWidget == TargetWidget)
     {
         switch (AspectMode)
         {
         case ELexLayoutAspectRatioFitterMode::None:
-            return;
+            break;
         case ELexLayoutAspectRatioFitterMode::HeightControlsWidth:
             Result.bCanControlHorizontalSizeDelta = true;
             break;
@@ -85,6 +86,7 @@ void ULexLayoutAspectRatioFitter::GetLayoutControlAnchor(ULexWidget* TargetWidge
             break;
         }
     }
+    return Result;
 }
 
 #if WITH_EDITOR

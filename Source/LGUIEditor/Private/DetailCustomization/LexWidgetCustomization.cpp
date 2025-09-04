@@ -778,38 +778,61 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		]
 		;
 
-	auto LayoutProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, Layout));
-	UObject* Layout = nullptr;
-	LayoutProperty->GetValue(Layout);
-	IDetailCategoryBuilder& LayoutCategory = DetailBuilder.EditCategory("Layout");
-	auto LayoutPropertyValueWidget = LayoutProperty->CreatePropertyValueWidget();
-	if (bIsSubPrefab)
+	//Layout
 	{
-		LayoutPropertyValueWidget->SetEnabled(false);
+		auto LayoutProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, Layout));
+		UObject* Layout = nullptr;
+		LayoutProperty->GetValue(Layout);
+		auto& LayoutCategory = DetailBuilder.EditCategory("Layout");
+		auto LayoutPropertyValueWidget = LayoutProperty->CreatePropertyValueWidget();
+		if (bIsSubPrefab)
+		{
+			LayoutPropertyValueWidget->SetEnabled(false);
+		}
+		LayoutCategory.HeaderContent(LayoutPropertyValueWidget);
+		LayoutCategory.SetIsEmpty(!IsValid(Layout));
+		LayoutCategory.AddCustomRow(LOCTEXT("LayoutPlaceholder", "Placeholder"))
+			.Visibility(IsValid(Layout) ? EVisibility::Hidden : EVisibility::Visible)
+			.NameContent()
+			[
+				LayoutProperty->CreatePropertyNameWidget()
+			]
+			.ValueContent()
+			[
+				LayoutPropertyValueWidget
+			];
+		LayoutCategory.AddExternalObjects({ Layout }, EPropertyLocation::Default
+			, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
+		DetailBuilder.HideProperty(LayoutProperty);
 	}
-	LayoutCategory.HeaderContent(LayoutPropertyValueWidget);
-	LayoutCategory.SetIsEmpty(!IsValid(Layout));
-	LayoutCategory.AddCustomRow(LOCTEXT("LayoutPlaceholder", "Placeholder"))
-		.Visibility(IsValid(Layout) ? EVisibility::Hidden : EVisibility::Visible)
-		.NameContent()
-		[
-			LayoutProperty->CreatePropertyNameWidget()
-		]
-		.ValueContent()
-		[
-			LayoutPropertyValueWidget
-		];
-	LayoutCategory.AddExternalObjects({ Layout }, EPropertyLocation::Default
-		, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
-	DetailBuilder.HideProperty(LayoutProperty);
 
-	auto LayoutSlotProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutSlot));
-	UObject* LayoutSlot = nullptr;
-	LayoutSlotProperty->GetValue(LayoutSlot);
-	auto& LayoutSlotCategory = DetailBuilder.EditCategory("LayoutSlot");
-	// LayoutSlotCategory.AddExternalObjects({ LayoutSlot }, EPropertyLocation::Default
-	// 	, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
-	DetailBuilder.HideProperty(LayoutSlotProperty);
+	//LayoutSlot
+	{
+		auto LayoutSlotProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutSlot));
+		UObject* LayoutSlot = nullptr;
+		LayoutSlotProperty->GetValue(LayoutSlot);
+		auto& LayoutSlotCategory = DetailBuilder.EditCategory("LayoutSlot");
+		auto LayoutSlotPropertyValueWidget = LayoutSlotProperty->CreatePropertyValueWidget();
+		if (bIsSubPrefab)
+		{
+			LayoutSlotPropertyValueWidget->SetEnabled(false);
+		}
+		LayoutSlotCategory.HeaderContent(LayoutSlotPropertyValueWidget);
+		LayoutSlotCategory.SetIsEmpty(!IsValid(LayoutSlot));
+		LayoutSlotCategory.AddCustomRow(LOCTEXT("LayoutPlaceholder", "Placeholder"))
+			.Visibility(IsValid(LayoutSlot) ? EVisibility::Hidden : EVisibility::Visible)
+			.NameContent()
+			[
+				LayoutSlotProperty->CreatePropertyNameWidget()
+			]
+			.ValueContent()
+			[
+				LayoutSlotPropertyValueWidget
+			];
+		LayoutSlotCategory.AddExternalObjects({ LayoutSlot }, EPropertyLocation::Default
+			, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
+		DetailBuilder.HideProperty(LayoutSlotProperty);
+	}
 
 	auto& LayoutPropertyCategory = DetailBuilder.EditCategory("LayoutProperties");
 	auto LayoutProperty_None = LOCTEXT("LayoutProperty_None", "None");
@@ -992,7 +1015,7 @@ FReply FLexWidgetCustomization::OnClickIncreaseOrDecreaseHierarchyIndex(bool Inc
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return FReply::Handled();
 
 	//hierarchy index could affect other items
-	GEditor->BeginTransaction(LOCTEXT("ChangeHierarchyIndex_Transaction", "Change LGUI Hierarchy Index"));
+	GEditor->BeginTransaction(LOCTEXT("ChangeHierarchyIndex_Transaction", "Change LexUI Hierarchy Index"));
 	for (auto& Item : TargetScriptArray)
 	{
 		Item->Modify();
@@ -1682,14 +1705,13 @@ FLexLayoutControlAnchorData FLexWidgetCustomization::GetLayoutControlAnchorValue
 	{
 		if (Widget->Layout)
 		{
-			Widget->Layout->GetLayoutControlAnchor(Widget.Get(), Result);
+			Result = Widget->Layout->GetLayoutControlAnchor(Widget.Get());
 		}
 		if (auto Parent = Widget->GetUIParent())
 		{
 			if (auto ParentLayout = Parent->GetLayout())
 			{
-				FLexLayoutControlAnchorData ParentResult;
-				ParentLayout->GetLayoutControlAnchor(Widget.Get(), ParentResult);
+				auto ParentResult = ParentLayout->GetLayoutControlAnchor(Widget.Get());
 				Result.Or(ParentResult);
 			}
 		}

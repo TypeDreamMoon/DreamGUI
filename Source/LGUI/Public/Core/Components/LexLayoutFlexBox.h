@@ -27,7 +27,7 @@ enum class ELexLayoutFlexBoxWrapType :uint8
 };
 
 UENUM(BlueprintType, Category = LGUI)
-enum class ELexLayoutFlexBoxAlignment :uint8
+enum class ELexLayoutFlexBoxPrimaryAxisAlignment :uint8
 {
 	Start,
 	Center,
@@ -37,20 +37,69 @@ enum class ELexLayoutFlexBoxAlignment :uint8
 	SpaceEvenly,
 };
 
+UENUM(BlueprintType, Category = LGUI)
+enum class ELexLayoutFlexBoxSecondaryAxisAlignment :uint8
+{
+	Start,
+	Center,
+	End,
+	SpaceBetween,
+	SpaceAround,
+	SpaceEvenly,
+	/**
+	* Aligns a container's lines within the container when there is extra space in the secondary-axis, similar to how 'PrimaryAlignment' aligns individual items within the primary-axis.
+	*/
+	Stretch,
+};
+
+UENUM(BlueprintType, Category = LGUI)
+enum class ELexLayoutFlexBoxSecondaryAxisLineAlignment :uint8
+{
+	Start,
+	Center,
+	End,
+	/**
+	 * Expand size to fill all area.
+	 * Stretch only works when ControlChildSize is checked.
+	 */
+	Stretch,
+};
+
+/**
+ * This layout act like html/css3-flex layout
+ */
 UCLASS(BlueprintType, DisplayName="FlexBox")
 class LGUI_API ULexLayoutFlexBox : public ULexLayout
 {
 	GENERATED_BODY()
 private:
 	friend class FLexLayoutHorizontalAndVerticalCustomization;
+	/**
+	 * Specifies how items are placed in the container, by setting the direction of the container's primary axis.
+	 * Direction defines the primary axis, if Direction is Horizontal or HorizontalReversed then secondary axis would be vertical.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", meta = (AllowPrivateAccess = true))
 	ELexLayoutFlexBoxDirection Direction = ELexLayoutFlexBoxDirection::Horizontal;
+	/**
+	 * Controls whether the container is single-line or multi-line, and the direction of the secondary-axis, which determines the direction new lines are stacked in.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", meta = (AllowPrivateAccess = true))
 	ELexLayoutFlexBoxWrapType Warp = ELexLayoutFlexBoxWrapType::NoWrap;
+	/**
+	 * Know as justify-content. Aligns items along the primary axis of the current line of the container.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", meta = (AllowPrivateAccess = true))
-	ELexLayoutFlexBoxAlignment PrimaryAlignment = ELexLayoutFlexBoxAlignment::Start;
+	ELexLayoutFlexBoxPrimaryAxisAlignment PrimaryAlignment = ELexLayoutFlexBoxPrimaryAxisAlignment::Start;
+	/**
+	 * Know as align-content. Aligns a container's lines within the container when there is extra space in the secondary-axis, similar to how 'PrimaryAlignment' aligns individual items within the primary-axis.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", meta = (AllowPrivateAccess = true))
-	ELexLayoutFlexBoxAlignment SecondaryAlignment = ELexLayoutFlexBoxAlignment::Start;
+	ELexLayoutFlexBoxSecondaryAxisAlignment SecondaryAlignment = ELexLayoutFlexBoxSecondaryAxisAlignment::Start;
+	/**
+	 * Know as align-items. Aligns items along the secondary-axis of the current line of the container.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", meta = (AllowPrivateAccess = true))
+	ELexLayoutFlexBoxSecondaryAxisLineAlignment SecondaryLineAlignment = ELexLayoutFlexBoxSecondaryAxisLineAlignment::Start;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", meta = (AllowPrivateAccess = true))
 	FLexLayoutHorizontalAndVerticalSizeControl ControlChildSize;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", meta = (AllowPrivateAccess = true))
@@ -78,31 +127,20 @@ private:
 		FVector2f TotalFlexible;
 	};
 	TArray<FLineData> LineDataArray;
-	
+	UPROPERTY(Transient)TArray<ULexWidget*> Children;
 	FVector2f TotalMinSize;
 	FVector2f TotalPreferredSize;
 	FVector2f TotalFlexibleSize;
-	UPROPERTY(Transient)TArray<ULexWidget*> Children;
-	float GetTotalMinSize(int axis)const
-	{
-		return TotalMinSize[axis];
-	}
-	float GetTotalPreferredSize(int axis)const
-	{
-		return TotalPreferredSize[axis];
-	}
-	float GetTotalFlexibleSize(int axis)const
-	{
-		return TotalFlexibleSize[axis];
-	}
-	void SetChildPositionAndSize(ULexWidget* Child, FVector2f Pos, FVector2f Size, bool ReverseX, bool ReverseY);
+	float GetTotalMinSize(int Axis)const;
+	float GetTotalPreferredSize(int Axis)const;
+	float GetTotalFlexibleSize(int Axis)const;
+	void SetChildPositionAndSize(ULexWidget* Child, FVector2f Pos, FVector2f Size, int SecondaryAxis, float SecondaryPreferred, bool ReverseX, bool ReverseY);
 
-	virtual void GetLayoutControlAnchor(ULexWidget* TargetWidget, FLexLayoutControlAnchorData& Result) override;
+	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* TargetWidget) override;
 public:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
-	virtual TSubclassOf<ULexLayoutSlot> GetSlotClass()const override;
 
 	virtual float GetMinWidth()const override{return GetTotalMinSize(0);}
 	virtual float GetPreferredWidth()const override{return GetTotalPreferredSize(0);}
@@ -116,64 +154,4 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Layout")
 	void SetDirection(ELexLayoutFlexBoxDirection Value);
-};
-
-UCLASS(BlueprintType, DisplayName="FlexBox Slot")
-class LGUI_API ULexLayoutFlexBoxSlot : public ULexLayoutSlot
-{
-	GENERATED_BODY()
-private:
-	friend class FLexLayoutHorizontalAndVerticalSlotCustomization;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSlot", Getter="GetIgnoreLayout", Setter="SetIgnoreLayout", meta = (AllowPrivateAccess = true))
-	bool bIgnoreLayout = false;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSlot", Getter, Setter, meta = (AllowPrivateAccess = true))
-	float MinWidth = -1;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSlot", Getter, Setter, meta = (AllowPrivateAccess = true))
-	float MinHeight = -1;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSlot", Getter, Setter, meta = (AllowPrivateAccess = true))
-	float PreferredWidth = -1;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSlot", Getter, Setter, meta = (AllowPrivateAccess = true))
-	float PreferredHeight = -1;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSlot", Getter, Setter, meta = (AllowPrivateAccess = true))
-	float FlexibleWidth = -1;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSlot", Getter, Setter, meta = (AllowPrivateAccess = true))
-	float FlexibleHeight = -1;
-
-public:
-	virtual void OnTransformChanged() override;
-	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
-#if WITH_EDITOR
-	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
-#endif
-	
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	bool GetIgnoreLayout()const{return bIgnoreLayout;}
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	void SetIgnoreLayout(bool Value);
-	
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	virtual float GetMinWidth()const override{return MinWidth;}
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	virtual float GetMinHeight()const override{return MinHeight;}
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	virtual float GetPreferredWidth()const override{return PreferredWidth;}
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	virtual float GetPreferredHeight()const override{return PreferredHeight;}
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	virtual float GetFlexibleWidth()const override{return FlexibleWidth;}
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	virtual float GetFlexibleHeight()const override{return FlexibleHeight;}
-
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	void SetMinWidth(float Value);
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	void SetMinHeight(float Value);
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	void SetPreferredWidth(float Value);
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	void SetPreferredHeight(float Value);
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	void SetFlexibleWidth(float Value);
-	UFUNCTION(BlueprintCallable, Category = "LayoutSlot")
-	void SetFlexibleHeight(float Value);
 };

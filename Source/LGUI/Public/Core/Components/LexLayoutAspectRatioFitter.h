@@ -38,7 +38,7 @@ private:
 	virtual void OnUpdateLayout() override;
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
 	
-	virtual void GetLayoutControlAnchor(ULexWidget* TargetWidget, FLexLayoutControlAnchorData& Result) override;
+	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* TargetWidget) override;
 public:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;

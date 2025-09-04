@@ -68,13 +68,9 @@ protected:
 	virtual void PreSave(FObjectPreSaveContext ObjectSaveContext) override;
 #endif
 	virtual void OnUpdateLayout() {};
-	UPROPERTY(VisibleAnywhere, Category = "Layout")
-	TMap<TObjectPtr<const ULexWidget>, TObjectPtr<ULexLayoutSlot>> Slots;
-	void CleanupSlots();
 	virtual void OnPreSavePrefab_Implementation() override;
 public:
 	void MarkLayoutDirty();
-	const ULexWidget* GetWidgetBySlot(const ULexLayoutSlot* Slot);
 	
 	virtual void OnTransformChanged(){}
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange){};
@@ -82,13 +78,7 @@ public:
 	//called by LexWidget during layout processing
 	void UpdateLayout();
 	
-	virtual TSubclassOf<ULexLayoutSlot> GetSlotClass()const{ return nullptr;}
-	virtual ULexLayoutSlot* GetSlot(const ULexWidget* Child)const;
-	virtual ULexLayoutSlot* GetOrCreateSlot(const ULexWidget* Child, TSubclassOf<ULexLayoutSlot> SlotClass);
-
-	virtual void OnChildDetached(const ULexWidget* Child);
-
-	virtual void GetLayoutControlAnchor(ULexWidget* Widget, FLexLayoutControlAnchorData& Result){}
+	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* Widget)PURE_VIRTUAL(ULexLayout::GetLayoutControlAnchor, return FLexLayoutControlAnchorData(););
 	
 	virtual float GetMinWidth()const{return 0;}
 	virtual float GetPreferredWidth()const{return 0;}
@@ -108,12 +98,12 @@ public:
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 	ULexWidget* GetWidget() const;
-	ULexLayout* GetLayout() const;
 	virtual bool GetLayoutControlHorizontalPosition()const { return false; }
 	virtual bool GetLayoutControlVerticalPosition()const { return false; }
 	virtual void OnTransformChanged(){}
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange){};
 
+	virtual bool GetIgnoreLayout()const{return false;}
 	virtual float GetMinWidth()const{return 0;}
 	virtual float GetPreferredWidth()const{return 0;}
 	virtual float GetFlexibleWidth()const{return -1;}

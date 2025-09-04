@@ -45,10 +45,8 @@ void FLexLayoutCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		{
 			if (auto ParentLayout = ParentWidget->GetLayout())
 			{
-				FLexLayoutControlAnchorData ParentControl;
-				ParentLayout->GetLayoutControlAnchor(Widget, ParentControl);
-				FLexLayoutControlAnchorData ThisControl;
-				Target->GetLayoutControlAnchor(Widget, ThisControl);
+				auto ParentControl = ParentLayout->GetLayoutControlAnchor(Widget);
+				auto ThisControl = Target->GetLayoutControlAnchor(Widget);
 				if (ParentControl.Conflict(ThisControl))
 				{
 					return true;
