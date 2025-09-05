@@ -23,7 +23,6 @@
 #include "DrawDebugHelpers.h"
 #include "EditorViewportClient.h"
 #include "PrefabSystem/LGUIPrefab.h"
-#include "Core/Components/LexCanvasScaler.h"
 #include "Core/LexUISpriteData.h"
 #endif
 
@@ -547,12 +546,15 @@ void ULGUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool IsSc
 	{
 		if (Widget->IsCanvasWidget())
 		{
-			if (auto canvasScaler = Widget->GetOwner()->FindComponentByClass<ULexCanvasScaler>())
+			if (auto Canvas = Widget->GetRenderCanvas())
 			{
-				if (ULGUIPrefabManagerObject::AnySelectedIsChildOf(Widget->GetOwner()))
+				if (Canvas->IsRootCanvas())
 				{
-					bCanDrawRect = true;
-					RectDrawColor = FColor(255, 227, 124);
+					if (ULGUIPrefabManagerObject::AnySelectedIsChildOf(Widget->GetOwner()))
+					{
+						bCanDrawRect = true;
+						RectDrawColor = FColor(255, 227, 124);
+					}
 				}
 			}
 		}

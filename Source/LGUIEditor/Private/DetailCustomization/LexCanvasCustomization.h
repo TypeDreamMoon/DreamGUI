@@ -27,4 +27,7 @@ private:
 	bool IsFixClipTextureEnabled(TSharedRef<IPropertyHandle> ClipTextureHandle)const;
 
 	TSharedPtr<class IDetailsView> PropertyView;
+
+	TSharedPtr<SHorizontalBox> ValueBox;
+	FOptionalSize GetValueWidth()const;
 };

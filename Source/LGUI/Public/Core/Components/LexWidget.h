@@ -328,9 +328,6 @@ public:
 	/** Get root canvas of hierarchy */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		ULexCanvas* GetRootCanvas()const;
-	/** Get LexCanvasScaler from root canvas, return null if not have one */
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		class ULexCanvasScaler* GetCanvasScaler()const;
 
 	/** mark all dirty for UI element to update, include all children */
 	void MarkAllDirtyRecursive();

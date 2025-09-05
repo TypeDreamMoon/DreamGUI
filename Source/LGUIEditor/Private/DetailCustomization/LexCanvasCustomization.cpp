@@ -11,6 +11,7 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "IDetailGroup.h"
+#include "Widgets/Input/SSlider.h"
 
 #define LOCTEXT_NAMESPACE "LGUICanvasCustomization"
 FLexCanvasCustomization::FLexCanvasCustomization()
@@ -45,16 +46,16 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 
 	LGUIEditorUtils::ShowError_MultiComponentNotAllowed(&DetailBuilder, TargetScriptArray[0].Get());
 
-	auto renderModeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderMode));
-	renderModeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexCanvasCustomization::ForceRefresh, &DetailBuilder));
-
+	auto RenderModeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderMode));
+	RenderModeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexCanvasCustomization::ForceRefresh, &DetailBuilder));
+	
 	if (TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
 	{
-		if (auto world = TargetScriptArray[0]->GetWorld())
+		if (auto World = TargetScriptArray[0]->GetWorld())
 		{
-			if (auto LGUIManager = ULGUIManagerWorldSubsystem::GetInstance(world))
+			if (auto LexUIManager = ULGUIManagerWorldSubsystem::GetInstance(World))
 			{
-				auto& CanvasArray = LGUIManager->GetCanvasArray(ELexRenderMode::ScreenSpaceOverlay);
+				auto& CanvasArray = LexUIManager->GetCanvasArray(ELexRenderMode::ScreenSpaceOverlay);
 				int ScreenSpaceRootCanvasCount = 0;
 				for (auto item : CanvasArray)
 				{
@@ -68,28 +69,20 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 				}
 				if (ScreenSpaceRootCanvasCount > 1)
 				{
-					auto errMsg = FText::Format(LOCTEXT("MultipleScreenSpaceLGUICanvasError", "[{0}].{1} Detect multiple LGUICanvas renderred with ScreenSpaceOverlay mode, this is not allowed! There should be only one ScreenSpace UI in a world!")
+					auto errMsg = FText::Format(LOCTEXT("MultipleScreenSpaceLexCanvasError", "[{0}].{1} Detect multiple LexCanvas rendered with ScreenSpaceOverlay mode, this is not allowed! There should be only one ScreenSpace UI in a world!")
 					, FText::FromString(ANSI_TO_TCHAR(__FUNCTION__)), __LINE__);
 					LGUIEditorUtils::ShowError(&DetailBuilder, errMsg);
 				}
 			}
 		}
 	}
-
-	//if (TargetScriptArray[0]->GetWorld())
-	//{
-	//	if (!TargetScriptArray[0]->GetWorld()->IsGameWorld())
-	//	{
-	//		TargetScriptArray[0]->MarkCanvasUpdate();
-	//	}
-	//}
 	
-	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("LGUI");
+	IDetailCategoryBuilder& Category = DetailBuilder.EditCategory("LGUI");
 	TArray<FName> needToHidePropertyNames;
 
 	if (TargetScriptArray[0]->GetWorld() != nullptr)
 	{
-		category.AddCustomRow(LOCTEXT("DrawcallInfo", "DrawcallInfo"))
+		Category.AddCustomRow(LOCTEXT("DrawcallInfo", "DrawcallInfo"))
 		.NameContent()
 		[
 			SNew(STextBlock)
@@ -111,15 +104,15 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	auto OverrideSortingHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, bOverrideSorting));
 	bool bOverrideSorting;
 	OverrideSortingHandle->GetValue(bOverrideSorting);
-	category.AddProperty(OverrideSortingHandle);
+	Category.AddProperty(OverrideSortingHandle);
 	OverrideSortingHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexCanvasCustomization::ForceRefresh, &DetailBuilder));
 
 	if (bOverrideSorting)
 	{
-		category.AddProperty(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, SortOrder)));
+		Category.AddProperty(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, SortOrder)));
 		//sortOrder info
 		{
-			category.AddCustomRow(LOCTEXT("SortOrderInfo", "SortOrderInfo"))
+			Category.AddCustomRow(LOCTEXT("SortOrderInfo", "SortOrderInfo"))
 			.WholeRowContent()
 			.MinDesiredWidth(500)
 			[
@@ -214,15 +207,176 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 
 	if (!needToHidePropertyNames.Contains(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderMode)))
 	{
-		category.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderMode));
+		Category.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderMode));
 	}
 	if (!needToHidePropertyNames.Contains(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTarget)))
 	{
-		IDetailGroup& RenderTargetGroup = category.AddGroup(FName(TEXT("RenderTarget")), LOCTEXT("RenderTarget", "RenderTarget"));
+		IDetailGroup& RenderTargetGroup = Category.AddGroup(FName(TEXT("RenderTarget")), LOCTEXT("RenderTarget", "RenderTarget"));
 		RenderTargetGroup.HeaderProperty(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTarget)));
 		RenderTargetGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTargetUpdateMode)));
 		RenderTargetGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTargetSizeMode)));
 		RenderTargetGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTargetResolutionScale)));
+	}
+
+	auto& CanvasScalerCategory = DetailBuilder.EditCategory("LGUI-CanvasScaler");
+	//add all property
+	needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, ProjectionType));
+	needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, FieldOfView));
+	needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, NearClipPlane));
+	needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, FarClipPlane));
+
+	needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, ScaleMode));
+	needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, ReferenceResolution));
+	needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, ScreenMatchMode));
+	needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, MatchFromWidthToHeight));
+	needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, CustomScale));
+	needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, bFixedSizeInEditMode));
+	needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, SizeInEditMode));
+
+	auto CreateSlider = [this, &CanvasScalerCategory](const FText& FilterString, TSharedPtr<IPropertyHandle> Property) {
+	CanvasScalerCategory.AddCustomRow(FilterString)
+	.PropertyHandleList({ Property })
+	.NameContent()
+	[
+		SNew(SBox)
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("Match", "Match"))
+			.Font(IDetailLayoutBuilder::GetDetailFont())
+		]
+	]
+	.ValueContent()
+	.MinDesiredWidth(500)
+	[
+		SAssignNew(ValueBox, SHorizontalBox)
+		+SHorizontalBox::Slot()
+		.AutoWidth()
+		[
+			SNew(SBox)
+			.WidthOverride(this, &FLexCanvasCustomization::GetValueWidth)
+			[
+				SNew(SVerticalBox)
+				+SVerticalBox::Slot()
+				[
+					SNew(SSlider)
+					.Value_Lambda([=]{
+						float value = 0.0;
+						Property->GetValue(value);
+						return value;
+						})
+					.OnValueChanged_Lambda([=](float value){
+						Property->SetValue(value);
+						})
+				]
+				+SVerticalBox::Slot()
+				[
+					SNew(SHorizontalBox)
+					+SHorizontalBox::Slot()
+					[
+						SNew(STextBlock)
+						.Text(LOCTEXT("Width", "Width"))
+						.Font(IDetailLayoutBuilder::GetDetailFont())
+					]
+					+ SHorizontalBox::Slot()
+					.HAlign(EHorizontalAlignment::HAlign_Right)
+					[
+						SNew(STextBlock)
+						.Text(LOCTEXT("Height", "Height"))
+						.Font(IDetailLayoutBuilder::GetDetailFont())
+					]
+				]
+			]
+		]
+		+SHorizontalBox::Slot()
+		.HAlign(EHorizontalAlignment::HAlign_Right)
+		[
+			SNew(SBox)
+			.MinDesiredWidth(50)
+			[
+				Property->CreatePropertyValueWidget()
+			]
+		]
+	]
+	;
+	};
+	
+	if (TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::WorldSpace || TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::WorldSpace_LGUI)
+	{
+		CanvasScalerCategory.AddCustomRow(LOCTEXT("WorldSpaceUIInfo", "WorldSpaceUIInfo"))
+			.WholeRowContent()
+			.MinDesiredWidth(500)
+			.VAlign(VAlign_Center)
+			[
+				SNew(STextBlock)
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+				.Text(LOCTEXT("NothingHereForWorldSpaceUI", "Nothing here for WorldSpaceUI"))
+				.AutoWrapText(true)
+			];
+	}
+	else if (
+		TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::ScreenSpaceOverlay
+		|| TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::RenderTarget
+		)
+	{
+		CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, ScaleMode));
+
+		DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, ScaleMode))
+			->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&] { DetailBuilder.ForceRefreshDetails(); }));
+		if (TargetScriptArray[0]->ScaleMode == ELexCanvasScaleMode::ScaleWithScreenSize)
+		{
+			CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, ReferenceResolution));
+			CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, ScreenMatchMode));
+			DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, ScreenMatchMode))
+				->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&] { DetailBuilder.ForceRefreshDetails(); }));
+			switch (TargetScriptArray[0]->ScreenMatchMode)
+			{
+			case ELexCanvasScreenMatchMode::Expand:
+			case ELexCanvasScreenMatchMode::Shrink:
+			{
+				
+			}
+			break;
+			case ELexCanvasScreenMatchMode::MatchWidthOrHeight:
+			{
+				auto matchProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, MatchFromWidthToHeight));
+				CreateSlider(LOCTEXT("MatchSlider", "MatchSlider"), matchProperty);
+			}
+			break;
+			}
+			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, CustomScale));
+		}
+		else if (TargetScriptArray[0]->ScaleMode == ELexCanvasScaleMode::ConstantPixelSize)
+		{
+			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, ReferenceResolution));
+			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, ScreenMatchMode));
+			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, MatchFromWidthToHeight));
+			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, CustomScale));
+		}
+		else
+		{
+			CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, CustomScale));
+			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, ReferenceResolution));
+			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, ScreenMatchMode));
+			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, MatchFromWidthToHeight));
+		}
+
+		auto projectionTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, ProjectionType));
+		projectionTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&] { DetailBuilder.ForceRefreshDetails(); }));
+		if (TargetScriptArray[0]->ProjectionType == ECameraProjectionMode::Orthographic)
+		{
+			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, FieldOfView));
+		}
+
+		CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, ProjectionType));
+		CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, FieldOfView));
+		CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, NearClipPlane));
+		CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, FarClipPlane));
+
+		if (TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
+		{
+			CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, bFixedSizeInEditMode));
+			CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, SizeInEditMode));
+		}
 	}
 
 	for (auto item : needToHidePropertyNames)
@@ -424,5 +578,9 @@ void FLexCanvasCustomization::OnPasteSortOrder(TSharedRef<IPropertyHandle> Prope
 		int value = FCString::Atoi(*PastedText);
 		PropertyHandle->SetValue(value);
 	}
+}
+FOptionalSize FLexCanvasCustomization::GetValueWidth()const
+{
+	return ValueBox->GetCachedGeometry().GetLocalSize().X - 60;
 }
 #undef LOCTEXT_NAMESPACE

@@ -6,6 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "Camera/CameraTypes.h"
 #include "Math/TransformCalculus2D.h"
+#include "PrefabSystem/ILGUIPrefabInterface.h"
 #include "LexCanvas.generated.h"
 
 class FLexUIClipData;
@@ -17,7 +18,7 @@ enum class ELexRenderMode :uint8
 	/**
 	 * Render in screen space. If there are multiple screen-space-ui-root in world, they will be sort by SortOrder property.
 	 * This mode use LGUI's custom render pipeline.
-	 * This mode need a LGUICanvasScaler to control the size and scale.
+	 * This mode need a LexCanvasScaler to control the size and scale.
 	 */
 	ScreenSpaceOverlay = 0,
 	/**
@@ -42,16 +43,16 @@ UENUM(BlueprintType, Category = LGUI)
 enum class ELexCanvasRenderTargetSizeMode : uint8
 {
 	None,
-	/** Change LGUICanvas's size to fit RenderTarget. */
+	/** Change LexCanvas's size to fit RenderTarget. */
 	CanvasFitToRenderTarget,
-	/** Change RenderTarget's size to fit LGUICanvas. */
+	/** Change RenderTarget's size to fit LexCanvas. */
 	RenderTargetFitToCanvas,
 };
 
 UENUM(BlueprintType, Category = LGUI)
 enum class ELexCanvasRenderTargetUpdateMode : uint8
 {
-	/** LGUI will automatic manage update, only draw to RenderTarget when it detect something change. */
+	/** LGUI will automatically manage update, only draw to RenderTarget when it detect something change. */
 	Automatic,
 	/** Alway draw to RenderTarget every frame. */
 	Always,
@@ -70,6 +71,80 @@ enum class ELexCanvasOverrideParameters :uint8
 };
 ENUM_CLASS_FLAGS(ELexCanvasOverrideParameters);
 
+UENUM(BlueprintType, Category = LGUI)
+enum class ELexCanvasScaleMode:uint8
+{
+	/** 1 unit is 1 pixel render in screen*/
+	ConstantPixelSize,
+	/** scale UI with reference resolution and screen resolution*/
+	ScaleWithScreenSize,
+	/**
+	 * Assign CustomScale parameter to use a custom class calculate resolution and scale.
+	 */
+	Custom,
+};
+
+UENUM(BlueprintType, Category = LGUI)
+enum class ELexCanvasScreenMatchMode :uint8
+{
+	/** Use "MatchFromWidthToHeight" and "ReferenceResolution" properties to control size and scale UI*/
+	MatchWidthOrHeight,
+	/** If viewport's aspect ratio not match "ReferenceResolution"'s aspect ratio, then expand size and scale UI*/
+	Expand,
+	/** if viewport's aspect ratio not match "ReferenceResolution"'s aspect ratio, then shrink size and scale UI*/
+	Shrink,
+};
+
+class ULexCanvas;
+
+UCLASS(BlueprintType, Blueprintable, Abstract, DefaultToInstanced, EditInlineNew)
+class LGUI_API ULexCanvasCustomScale: public UObject
+{
+	GENERATED_BODY()
+public:
+	/** Initialize, called when LexCanvas Awake. */
+	virtual void Init(ULexCanvas* InCanvas);
+	/** Called when LexCanvas calculate viewport size and scale. */
+	virtual void CalculateSizeAndScale(ULexCanvas* InCanvas, const FIntPoint& InViewportSize, FIntPoint& OutLexCanvasSize, float& OutScale);
+	/**
+	 * Convert position from viewport to LexCanvas space.
+	 * @param InPosition The point's pixel position on viewport.
+	 * @param Result LexCanvas space position, left bottom is zero point.
+	 * @return convert will fail if this LexCanvas is not root canvas
+	 */
+	virtual bool ConvertPositionFromViewportToCanvas(const FVector2D& InPosition, FVector2D& Result)const;
+	/**
+	 * Convert position from LexCanvas space to viewport.
+	 * @param InPosition The point's position in LexCanvas space.
+	 * @param Result in viewport, pixel unit, left top is zero point.
+	 * @return convert will fail if this LexCanvas is not root canvas
+	 */
+	virtual bool ConvertPositionFromCanvasToViewport(const FVector2D& InPosition, FVector2D& Result)const;
+protected:
+	/** Initialize, called when LexCanvas Awake. */
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Init"), Category = "LGUI")
+	void ReceiveInit(ULexCanvas* InCanvas);
+	/** Called when LexCanvas calculate viewport size and scale. */
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "CalculateSizeAndScale"), Category = "LGUI")
+	void ReceiveCalculateSizeAndScale(ULexCanvas* InCanvas, const FIntPoint& InViewportSize, FIntPoint& OutLexCanvasSize, float& OutScale);
+	/**
+	 * Convert position from viewport to LexCanvas space.
+	 * @param InPosition The point's pixel position on viewport.
+	 * @param Result LexCanvas space position, left bottom is zero point.
+	 * @return convert will fail if this LexCanvas is not root canvas
+	 */
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "ConvertPositionFromViewportToCanvas"), Category = "LGUI")
+	bool ReceiveConvertPositionFromViewportToCanvas(const FVector2D& InPosition, FVector2D& Result)const;
+	/**
+	 * Convert position from LexCanvas space to viewport.
+	 * @param InPosition The point's position in LexCanvas space.
+	 * @param Result in viewport, pixel unit, left top is zero point.
+	 * @return convert will fail if this LexCanvas is not root canvas
+	 */
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "ConvertPositionFromCanvasToViewport"), Category = "LGUI")
+	bool ReceiveConvertPositionFromCanvasToViewport(const FVector2D& InPosition, FVector2D& Result)const;
+};
+
 class ULexWidget;
 class ULexVisual;
 class ULexVisualBatchMesh;
@@ -78,13 +153,12 @@ class ULexUIMeshComponent;
 class FLexUIDrawCall;
 class FLexVisualPostProcessRenderProxy;
 class UTextureRenderTarget2D;
-class ULGUICanvasCustomClip;
 
 /**
  * Canvas is for render and update all UI elements.
  */
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API ULexCanvas : public UActorComponent
+class LGUI_API ULexCanvas : public UActorComponent, public ILGUIPrefabInterface
 {
 	GENERATED_BODY()
 
@@ -94,6 +168,10 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction ) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason)override;
+	//begin LGUIPrefabInterface
+	virtual void Awake_Implementation() override;
+	virtual void EditorAwake_Implementation() override;
+	//end LGUIPrefabInterface
 #if WITH_EDITOR
 public:
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
@@ -113,7 +191,7 @@ public:
 private:
 	/** clear draw-calls */
 	void ClearDrawCall();
-	void RemoveFromViewExtension(bool PropogateToChildrenCanvas);
+	void RemoveFromViewExtension(bool PropagateToChildrenCanvas);
 	TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> RenderTargetViewExtension = nullptr;
 	TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> GetRenderTargetViewExtension();
 public:
@@ -141,18 +219,20 @@ public:
 	FRotator GetViewRotator()const;
 	FIntPoint GetViewportSize()const;
 	/** get scale value of canvas. only valid for root canvas. */
-	FORCEINLINE float GetCanvasScale()const { return canvasScale; }
+	FORCEINLINE float GetCanvasScale()const { return CanvasScale; }
 private:
 	friend class ULexCanvasScaler;
-	float canvasScale = 1.0f;//for screen space UI, screen size / root canvas size
+	float CanvasScale = 1.0f;//for screen space UI, screen size / root canvas size
 
 	/** hierarchy changed */
 	void OnUIHierarchyChanged();
 	void OnWidgetActiveChanged();
 public:
-	/** get root LGUICanvas on hierarchy */
+	/** get root canvas on hierarchy */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	ULexCanvas* GetRootCanvas()const;
+	/** is this the root canvas in hierarchy */
+	UFUNCTION(BlueprintCallable, Category = LGUI)
 	bool IsRootCanvas()const;
 
 	bool IsRenderToScreenSpace()const;
@@ -170,10 +250,10 @@ public:
 	DECLARE_EVENT_ThreeParams(ULexCanvas, FLGUICanvasRenderModeChangeEvent, ULexCanvas*, ELexRenderMode, ELexRenderMode);
 	FLGUICanvasRenderModeChangeEvent OnRenderModeChanged;
 protected:
-	/** Root LGUICanvas on hierarchy. LGUI's update start from the RootCanvas, and goes all down to every UI elements under it */
+	/** Root LexCanvas on hierarchy. LGUI's update start from the RootCanvas, and goes all down to every UI elements under it */
 	UPROPERTY(Transient) mutable TWeakObjectPtr<ULexCanvas> RootCanvas = nullptr;
-	void CheckRenderMode(bool PropogateToChildrenCanvas);
-	/** chekc RootCanvas. search for it if not valid */
+	void CheckRenderMode(bool PropagateToChildrenCanvas);
+	/** check RootCanvas. search for it if not valid */
 	bool CheckRootCanvas(bool forceRecheck = false)const;
 	/** nearest up parent Canvas */
 	UPROPERTY(Transient) TWeakObjectPtr<ULexCanvas> ParentCanvas = nullptr;
@@ -183,11 +263,6 @@ protected:
 protected:
 	friend class FLexCanvasCustomization;
 	friend class FLexWidgetCustomization;
-
-	ECameraProjectionMode::Type ProjectionType = ECameraProjectionMode::Perspective;
-	float FOVAngle = 90;
-	float NearClipPlane = GNearClippingPlane;
-	float FarClipPlane = GNearClippingPlane;
 
 	float CalculateDistanceToCamera()const;
 
@@ -241,7 +316,7 @@ protected:
 		float DynamicPixelsPerUnit = 1.0f;
 
 	/** Enable/disable normal and tangent in vertex data. */
-	UPROPERTY(EditAnywhere, Category = "LexUI")
+	UPROPERTY(EditAnywhere, Category = "LGUI")
 	bool bRequireNormalAndTangent = false;
 
 	/** Default materials, for render default UI elements. */
@@ -276,6 +351,43 @@ protected:
 	UPROPERTY(EditAnywhere, Category = LGUI, AdvancedDisplay, meta = (AllowAbstract = "true"))
 		TSubclassOf<ULexUIMeshComponent> DefaultMeshType;
 
+#pragma region CanvasScaler
+	/** Virtual Camera Projection Type.*/
+	UPROPERTY(EditAnywhere, Category = "LGUI-CanvasScaler", AdvancedDisplay, meta = (DisplayName = "Projection Type"))
+	TEnumAsByte<ECameraProjectionMode::Type> ProjectionType = ECameraProjectionMode::Perspective;
+	/** Virtual Camera field of view (in degrees). */
+	UPROPERTY(EditAnywhere, Category = "LGUI-CanvasScaler", AdvancedDisplay, meta = (UIMin = "5.0", UIMax = "170", ClampMin = "0.001", ClampMax = "360.0"))
+	float FieldOfView = 60;
+	UPROPERTY(EditAnywhere, Category = "LGUI-CanvasScaler", AdvancedDisplay)
+	float NearClipPlane = 1;
+	UPROPERTY(EditAnywhere, Category = "LGUI-CanvasScaler", AdvancedDisplay)
+	float FarClipPlane = 10000;
+	
+	UPROPERTY(EditAnywhere, Category = "LGUI-CanvasScaler")
+	ELexCanvasScaleMode ScaleMode = ELexCanvasScaleMode::ConstantPixelSize;
+	UPROPERTY(EditAnywhere, Category = "LGUI-CanvasScaler")
+	FVector2D ReferenceResolution = FVector2D(1280, 720);
+	UPROPERTY(EditAnywhere, Category = "LGUI-CanvasScaler", meta = (ClampMin = "0.0", ClampMax = "1.0", DisplayName = "Match"))
+	float MatchFromWidthToHeight = 1;
+	UPROPERTY(EditAnywhere, Category = "LGUI-CanvasScaler")
+	ELexCanvasScreenMatchMode ScreenMatchMode = ELexCanvasScreenMatchMode::MatchWidthOrHeight;
+#if WITH_EDITORONLY_DATA
+	/** When Canvas use ScreenSpaceOverlay, in edit mode it will try to match editor viewport's size. So make this true to use a fixed size. */
+	UPROPERTY(EditAnywhere, Category = "LGUI-CanvasScaler")
+	bool bFixedSizeInEditMode = false;
+	UPROPERTY(EditAnywhere, Category = "LGUI-CanvasScaler", meta = (EditCondition = "bFixedSizeInEditMode"))
+	FIntPoint SizeInEditMode = FIntPoint(1920, 1080);
+#endif
+	/**
+	 * Use this to do custom scale. Only valid if ScaleMode = Custom.
+	 * Will fallback to "ConstantPixelSize" if not assign this value.
+	 */
+	UPROPERTY(EditAnywhere, Instanced, Category = "LGUI-CanvasScaler")
+	TObjectPtr<ULexCanvasCustomScale> CustomScale;
+	/** Current viewport size*/
+	FIntPoint ViewportSize = FIntPoint(2, 2);
+#pragma endregion
+
 	FORCEINLINE bool GetOverrideDefaultMaterial()const				{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::DefaultMaterial); }
 	FORCEINLINE bool GetOverrideDynamicPixelsPerUnit()const			{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::DynamicPixelsPerUnit); }
 	FORCEINLINE bool GetOverrideRequireNormalAndTangent()const		{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::RequireNormalAndTangent); }
@@ -295,38 +407,38 @@ public:
 
 	/** Set render mode of this canvas. This may not take effect if the canvas is not a root cnavas. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetRenderMode(ELexRenderMode value);
+		void SetRenderMode(ELexRenderMode Value);
 	/** Set parameters for calculating projection matrix. Only valid for ScreenSpace/RenderTarget mode. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetProjectionParameters(TEnumAsByte<ECameraProjectionMode::Type> InProjectionType, float InFovAngle, float InNearClipPlane, float InFarClipPlane);
 	/** if renderMode is RenderTarget, then this will change the renderTarget */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetRenderTarget(UTextureRenderTarget2D* value);
+		void SetRenderTarget(UTextureRenderTarget2D* Value);
 	DECLARE_EVENT_TwoParams(ULexCanvas, FOnRenderTargetCreatedOrChangedEvent, UTextureRenderTarget2D*, bool);
 	FOnRenderTargetCreatedOrChangedEvent OnRenderTargetCreatedOrChanged;
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetRenderTargetResolutionScale(float value);
+		void SetRenderTargetResolutionScale(float Value);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetRenderTargetSizeMode(ELexCanvasRenderTargetSizeMode value);
+		void SetRenderTargetSizeMode(ELexCanvasRenderTargetSizeMode Value);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetRenderTargetUpdateMode(ELexCanvasRenderTargetUpdateMode value);
+		void SetRenderTargetUpdateMode(ELexCanvasRenderTargetUpdateMode Value);
 	/** Only valid when call this on root canvas. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void RequestUpdateForRenderTarget();
 	
 	/** 
-	 * Set LGUICanvas SortOrder
-	 * @param	propagateToChildrenCanvas	if true, set this Canvas's SortOrder and all children Canvas, not just set absolute value, but keep child Canvas's relative order to this one
+	 * Set LexCanvas SortOrder
+	 * @param	PropagateToChildrenCanvas	if true, set this Canvas's SortOrder and all children Canvas, not just set absolute value, but keep child Canvas's relative order to this one
 	 */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetSortOrder(int32 newValue, bool propagateToChildrenCanvas = true);
+		void SetSortOrder(int32 Value, bool PropagateToChildrenCanvas = true);
 	/** Set SortOrder to highest, so this canvas will render on top of all canvas that belong to same hierarchy. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetSortOrderToHighestOfHierarchy(bool propagateToChildrenCanvas = true);
-	/** Set SortOrder to lowest, so this canvas will render behide all canvas that belong to same hierarchy. */
+		void SetSortOrderToHighestOfHierarchy(bool PropagateToChildrenCanvas = true);
+	/** Set SortOrder to lowest, so this canvas will render behind all canvas that belong to same hierarchy. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetSortOrderToLowestOfHierarchy(bool propagateToChildrenCanvas = true);
+		void SetSortOrderToLowestOfHierarchy(bool PropagateToChildrenCanvas = true);
 	void GetMinMaxSortOrderOfHierarchy(int32& OutMin, int32& OutMax);
 
 	/** Get actually render mode of canvas. Canvas's render-mode is inherited from parent canvas. */
@@ -361,7 +473,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		float GetBlendDepth()const { return BlendDepth; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetBlendDepth(float value);
+		void SetBlendDepth(float Value);
 
 	/** Get actual depthFade value of canvas. Canvas's DepthFade is inherited from parent canvas. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
@@ -370,17 +482,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		int GetDepthFade()const { return DepthFade; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetDepthFade(int value);
+		void SetDepthFade(int Value);
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		bool GetEnableDepthTest()const { return bEnableDepthTest; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetEnableDepthTest(bool value);
+		void SetEnableDepthTest(bool Value);
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		bool GetOverrideSorting()const { return bOverrideSorting; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetOverrideSorting(bool value);
+		void SetOverrideSorting(bool Value);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		int32 GetSortOrder()const { return SortOrder; }
 	/** Get actual SortOrder of this canvas. Canvas's SortOrder property may inherit from parent canvas depend on OverrideSorting property. */
@@ -397,34 +509,126 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		float GetDynamicPixelsPerUnit()const { return DynamicPixelsPerUnit; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetDynamicPixelsPerUnit(float newValue);
+		void SetDynamicPixelsPerUnit(float Value);
 
 	int GetDrawCallCount()const;
 
 	/** Override LGUI's screen space UI render's camera location. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetOverrideViewLocation(bool InOverride, FVector InValue);
+		void SetOverrideViewLocation(bool Override, FVector Value);
 	/** Override LGUI's screen space UI render's camera rotation. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetOverrideViewRotation(bool InOverride, FRotator InValue);
+		void SetOverrideViewRotation(bool Override, FRotator Value);
 	/**
 	 * Override LGUI's screen space UI render's camera's fov in degree, will affect projection matrix.
 	 * If SetOverrideProjectionMatrix is true, then this will not take effect.
 	 */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetOverrideFovAngle(bool InOverride, float InValue);
+		void SetOverrideFovAngle(bool Override, float Value);
 	/**
 	 * Override LGUI's screen space UI render's camera's projection matrix.
 	 * If this is set to true, then SetOverrideFovAngle will not take effect.
 	 */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetOverrideProjectionMatrix(bool InOverride, FMatrix InValue);
+		void SetOverrideProjectionMatrix(bool Override, FMatrix Value);
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		TSubclassOf<ULexUIMeshComponent> GetDefaultMeshType()const { return DefaultMeshType; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetDefaultMeshType(TSubclassOf<ULexUIMeshComponent> InValue);
 
+#pragma region CanvasScaler
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	TEnumAsByte<ECameraProjectionMode::Type> GetProjectionType()const { return ProjectionType; }
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	float GetFieldOfView()const { return FieldOfView; }
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	float GetNearClipPlane()const { return NearClipPlane; }
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	float GetFarClipPlane()const { return FarClipPlane; }
+
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetProjectionType(TEnumAsByte<ECameraProjectionMode::Type> Value);
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetFieldOfView(float Value);
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetNearClipPlane(float Value);
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetFarClipPlane(float Value);
+
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	ELexCanvasScaleMode GetScaleMode() { return ScaleMode; }
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	FVector2D GetReferenceResolution() { return ReferenceResolution; }
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	float GetMatchFromWidthToHeight() { return MatchFromWidthToHeight; }
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	ELexCanvasScreenMatchMode GetScreenMatchMode() { return ScreenMatchMode; }
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	ULexCanvasCustomScale* GetCustomScale()const { return CustomScale; }
+
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetScaleMode(ELexCanvasScaleMode Value);
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetReferenceResolution(FVector2D Value);
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetMatchFromWidthToHeight(float Value);
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetScreenMatchMode(ELexCanvasScreenMatchMode Value);
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetCustomScale(ULexCanvasCustomScale* Value);
+
+	/**
+	 * Convert position from viewport to LexCanvas space.
+	 * @param InPosition The point's pixel position on viewport.
+	 * @param Result LexCanvas space position, left bottom is zero point.
+	 * @return convert will fail if this LexCanvas is not root canvas
+	 */
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	bool ConvertPositionFromViewportToCanvas(const FVector2D& InPosition, FVector2D& Result)const;
+	/**
+	 * Convert position from LexCanvas space to viewport.
+	 * @param InPosition The point's position in LexCanvas space.
+	 * @param Result in viewport, pixel unit, left top is zero point.
+	 * @return convert will fail if this LexCanvas is not root canvas
+	 */
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	bool ConvertPositionFromCanvasToViewport(const FVector2D& InPosition, FVector2D& Result)const;
+	/**
+	 * NOTE!!! This is only for screen-space-UI, don't use this for convert world space position!!!
+	 * Project 3D screen-space-UI element's position to 2D screen-space-UI.
+	 * @param	Position3D	GetWorldLocation from the UI element (world location).
+	 * @param	OutPosition2D	2D Position in screen-space, left bottom is zero point.
+	 * @return 	convert will fail if this LexCanvas is not root canvas.
+	 */
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	bool Project3DToScreen(const FVector& Position3D, FVector2D& OutPosition2D)const;
+
+	/**
+	 * CAUTION!!! This is just a test or reference function.
+	 * Compare to built-in GameplayStatics::ProjectWorldToScreen, this function has no latency, however GameplayStatics::ProjectWorldToScreen use last frame's camera location & rotation
+	 */
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	bool ProjectWorldToScreen(class APlayerController* Player, const FVector& Position3D, FVector2D& OutPosition2D)const;
+
+private:
+#if WITH_EDITOR
+	FDelegateHandle EditorTickDelegateHandle;
+	FDelegateHandle LGUIPreview_ViewportIndexChangeDelegateHandle;
+	void DrawVirtualCamera();
+	void DrawViewportArea();
+	void OnEditorTick(float DeltaTime);
+	void OnPreviewSetting_EditorPreviewViewportIndexChange();
+	void RegisterCanvasScaler();
+	void UnregisterCanvasScaler();
+#endif
+	void OnViewportParameterChanged();
+	void CheckAndApplyViewportParameter();
+	void OnViewportResized(FViewport*, uint32);
+	FDelegateHandle _ViewportResizeDelegateHandle;
+#pragma endregion
+
+public:
 	void MarkVisualWillChange(ULexVisual* InOldVisual);
 	void RegisterVisual(ULexWidget* InWidget);
 	void UnregisterVisual(ULexWidget* InVisual);

@@ -7,7 +7,6 @@
 #include "Core/LGUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "PhysicsEngine/BodySetup.h"
-#include "Core/Components/LexCanvasScaler.h"
 #include "LTweenManager.h"
 #include "Core/LexUIClipData.h"
 #include "Core/Components/LexLayout.h"
@@ -2033,14 +2032,6 @@ ULexCanvas* ULexWidget::GetRootCanvas()const
 	if (RenderCanvas.IsValid())
 	{
 		return RenderCanvas->GetRootCanvas();
-	}
-	return nullptr;
-}
-ULexCanvasScaler* ULexWidget::GetCanvasScaler()const
-{
-	if (auto canvas = GetRootCanvas())
-	{
-		return canvas->GetOwner()->FindComponentByClass<ULexCanvasScaler>();
 	}
 	return nullptr;
 }

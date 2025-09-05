@@ -10,7 +10,6 @@
 #include "Engine/EngineTypes.h"
 #include "Kismet2/ComponentEditorUtils.h"
 #include "Widgets/SViewport.h"
-#include "Core/Components/LexCanvasScaler.h"
 #include "EditorViewportClient.h"
 #include "Engine/Selection.h"
 #include "EngineUtils.h"
@@ -2234,11 +2233,10 @@ void LGUIEditorTools::FocusToScreenSpaceUI()
 			for (TActorIterator<ALexWidgetActor> ActorItr(GWorld); ActorItr; ++ActorItr)
 			{
 				auto canvas = ActorItr->FindComponentByClass<ULexCanvas>();
-				auto canvasScaler = ActorItr->FindComponentByClass<ULexCanvasScaler>();
 				if (canvas != nullptr && canvas->IsRootCanvas() && canvas->IsRenderToScreenSpace())//make sure is screen space UI root
 				{
 					auto viewDistance = FVector::Distance(canvas->GetViewLocation(), canvas->GetLexWidget()->GetComponentLocation());
-					auto halfViewWidth = viewDistance * FMath::Tan(FMath::DegreesToRadians(canvasScaler->GetFovAngle() * 0.5f));
+					auto halfViewWidth = viewDistance * FMath::Tan(FMath::DegreesToRadians(canvas->GetFieldOfView() * 0.5f));
 					auto editorViewDistance = halfViewWidth / FMath::Tan(FMath::DegreesToRadians(editorViewportClient->FOVAngle * 0.5f));
 					auto viewRotation = canvas->GetViewRotator().Quaternion();
 					editorViewportClient->SetViewLocation(canvas->GetLexWidget()->GetComponentLocation() - viewRotation.GetForwardVector() * editorViewDistance);
