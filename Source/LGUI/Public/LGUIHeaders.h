@@ -16,8 +16,8 @@
 #include "Core/Components/LexText.h"
 #include "Core/Components/LexBackgroundBlur.h"
 #include "Core/Components/LexBackgroundPixelate.h"
-#include "Core/LGUILifeCycleBehaviour.h"
-#include "Core/LGUILifeCycleUIBehaviour.h"
+#include "Core/LexUIBehaviour.h"
+#include "Core/LexUIBehaviour.h"
 #include "Core/ILexUICultureChangedInterface.h"
 
 #include "Core/LexUIFontData_Bitmap.h"

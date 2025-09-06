@@ -141,7 +141,7 @@ void ULexVisualPostProcess::OnUpdateGeometry(bool InTriangleChanged, bool InVert
 				originVertices[2].Position = FVector3f(0, minX, maxY);
 				originVertices[3].Position = FVector3f(0, maxX, maxY);
 				//snap pixel
-				if (Widget->GetFinalPixelSnapping())
+				if (Widget->GetPixelSnappingInHierarchy())
 				{
 					FLexUIGeometry::AdjustPixelPerfectPos(originVertices, 0, 4, Widget->GetRenderCanvas(), this);
 				}
@@ -306,11 +306,11 @@ bool ULexVisualPostProcess::HaveValidData()const
 
 bool ULexVisualPostProcess::LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
-	if (RaycastType == ELexVisualHitTestType::Rect)
+	if (RaycastType == ELexVisualRaycastType::Rect)
 	{
 		return Super::LineTraceUI(OutHit, Start, End);
 	}
-	else if (RaycastType == ELexVisualHitTestType::Mesh)
+	else if (RaycastType == ELexVisualRaycastType::Mesh)
 	{
 		return LineTraceUIGeometry(geometry.Get(), OutHit, Start, End);
 	}

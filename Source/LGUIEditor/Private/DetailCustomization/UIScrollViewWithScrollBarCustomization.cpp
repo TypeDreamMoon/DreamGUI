@@ -84,7 +84,7 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 		bool showWarning = false;
 		if (IsValid(Viewport))
 		{
-			if (Viewport->GetLexWidget()->GetAttachParent() != TargetScriptPtr->GetRootUIComponent())
+			if (Viewport->GetLexWidget()->GetAttachParent() != TargetScriptPtr->GetLexWidget())
 			{
 				showWarning = true;
 			}
@@ -95,7 +95,7 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 		}
 		if (IsValid(HorizontalScrollbar))
 		{
-			if (HorizontalScrollbar->GetLexWidget()->GetAttachParent() != TargetScriptPtr->GetRootUIComponent())
+			if (HorizontalScrollbar->GetLexWidget()->GetAttachParent() != TargetScriptPtr->GetLexWidget())
 			{
 				showWarning = true;
 			}
@@ -118,7 +118,7 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 		bool showWarning = false;
 		if (IsValid(Viewport))
 		{
-			if (Viewport->GetLexWidget()->GetAttachParent() != TargetScriptPtr->GetRootUIComponent())
+			if (Viewport->GetLexWidget()->GetAttachParent() != TargetScriptPtr->GetLexWidget())
 			{
 				showWarning = true;
 			}
@@ -129,7 +129,7 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 		}
 		if (IsValid(VerticalScrollbar))
 		{
-			if (VerticalScrollbar->GetLexWidget()->GetAttachParent() != TargetScriptPtr->GetRootUIComponent())
+			if (VerticalScrollbar->GetLexWidget()->GetAttachParent() != TargetScriptPtr->GetLexWidget())
 			{
 				showWarning = true;
 			}

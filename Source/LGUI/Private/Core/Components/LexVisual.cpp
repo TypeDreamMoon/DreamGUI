@@ -103,21 +103,21 @@ bool ULexVisual::CanEditChange(const FProperty* InProperty) const
 	static auto VisiblePixelThreshold_Name = GET_MEMBER_NAME_CHECKED(ULexVisual, VisiblePixelThreshold);
 	if (PropertyName == RayCastType_Name)
 	{
-		if (!GetWidget()->IsVisibleForHitTest())
+		if (!GetWidget()->GetRaycastableInHierarchy())
 		{
 			return false;
 		}
 	}
 	else if (PropertyName == CustomRaycastObject_Name)
 	{
-		if (!GetWidget()->IsVisibleForHitTest() || RaycastType!=ELexVisualHitTestType::Custom)
+		if (!GetWidget()->GetRaycastableInHierarchy() || RaycastType!=ELexVisualRaycastType::Custom)
 		{
 			return false;
 		}
 	}
 	else if (PropertyName == VisiblePixelThreshold_Name)
 	{
-		if (!GetWidget()->IsVisibleForHitTest() || RaycastType!=ELexVisualHitTestType::VisiblePixel)
+		if (!GetWidget()->GetRaycastableInHierarchy() || RaycastType!=ELexVisualRaycastType::VisiblePixel)
 		{
 			return false;
 		}
@@ -282,23 +282,28 @@ bool ULexVisual::LineTraceUICustom(FHitResult& OutHit, const FVector& Start, con
 	return false;
 }
 
-void ULexVisual::SetColor(FColor value)
+void ULexVisual::SetColor(FColor Value)
 {
-	if (Color != value)
+	if (Color != Value)
 	{
-		Color = value;
+		Color = Value;
 		MarkColorDirty();
 	}
 }
-void ULexVisual::SetAlpha(float value)
+void ULexVisual::SetAlpha(float Value)
 {
-	value = FMath::Clamp(value, 0.0f, 1.0f);
-	auto uintAlpha = (uint8)(value * 255);
+	Value = FMath::Clamp(Value, 0.0f, 1.0f);
+	auto uintAlpha = (uint8)(Value * 255);
 	if (Color.A != uintAlpha)
 	{
 		MarkColorDirty();
 		Color.A = uintAlpha;
 	}
+}
+
+void ULexVisual::SetRaycastTarget(bool Value)
+{
+	bRaycastTarget = Value;
 }
 
 void ULexVisual::SetCustomRaycastObject(ULexVisualCustomRaycast* Value)

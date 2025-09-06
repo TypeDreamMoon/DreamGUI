@@ -6,10 +6,12 @@
 #include "Event/Interface/LGUIPointerDownUpInterface.h"
 #include "Event/Interface/LGUIPointerSelectDeselectInterface.h"
 #include "Event/Interface/LGUINavigationInterface.h"
-#include "Core/LGUILifeCycleUIBehaviour.h"
+#include "Core/LexUIBehaviour.h"
 #include "LGUIComponentReference.h"
 #include "Core/LexUIImageBrush.h"
 #include "UISelectableComponent.generated.h"
+
+class ULTweener;
 
 UENUM(BlueprintType, Category = LGUI)
 enum class ELexUISelectableTransitionType:uint8
@@ -142,7 +144,7 @@ public:
 class ULexUISpriteData_BaseObject;
 
 UCLASS(HideCategories = (Collision, LOD, Physics, Cooking, Rendering, Activation, Actor, Input, Lighting, Mobile), ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUISelectableComponent : public ULGUILifeCycleUIBehaviour
+class LGUI_API UUISelectableComponent : public ULexUIBehaviour
 	, public ILGUIPointerEnterExitInterface
 	, public ILGUIPointerDownUpInterface
 	, public ILGUIPointerSelectDeselectInterface
@@ -172,7 +174,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable")
 		bool bInteractable = true;
 
-	virtual void OnIsEnabledChanged(bool IsEnabled) override;
+	virtual void OnInteractableChanged(bool IsEnabled) override;
 
 #pragma region Transition
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable")

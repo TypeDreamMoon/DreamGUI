@@ -15,7 +15,7 @@
 #include "Engine/Engine.h"
 #include "Core/LexUIRender/LexUIRenderer.h"
 #include "Core/ILexUICultureChangedInterface.h"
-#include "Core/LGUILifeCycleBehaviour.h"
+#include "Core/LexUIBehaviour.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #if WITH_EDITOR
@@ -96,7 +96,7 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 					{
 						AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
 					}
-					for (auto& CanvasItem : LGUIManager->GetCanvasArray(ELexRenderMode::WorldSpace_LGUI))
+					for (auto& CanvasItem : LGUIManager->GetCanvasArray(ELexRenderMode::WorldSpace_LexUI))
 					{
 						AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
 					}
@@ -480,7 +480,7 @@ void ULGUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool IsSc
 {
 	auto RectExtends = FVector(0.1f, Widget->GetWidth(), Widget->GetHeight()) * 0.5f;
 	bool bCanDrawRect = false;
-	auto RectDrawColor = FColor(128, 128, 128, 128);//gray means normal object
+	auto RectDrawColor = FColor(160, 160, 160, 255);//gray means normal object
 	if (ULGUIPrefabManagerObject::IsSelected(Widget->GetOwner()))//select self
 	{
 		RectDrawColor = FColor(0, 255, 0, 255);//green means selected object
@@ -537,24 +537,6 @@ void ULGUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool IsSc
 				{
 					bCanDrawRect = true;
 					break;
-				}
-			}
-		}
-	}
-	//canvas scaler
-	if (!bCanDrawRect)
-	{
-		if (Widget->IsCanvasWidget())
-		{
-			if (auto Canvas = Widget->GetRenderCanvas())
-			{
-				if (Canvas->IsRootCanvas())
-				{
-					if (ULGUIPrefabManagerObject::AnySelectedIsChildOf(Widget->GetOwner()))
-					{
-						bCanDrawRect = true;
-						RectDrawColor = FColor(255, 227, 124);
-					}
 				}
 			}
 		}
@@ -649,7 +631,7 @@ void ULGUIManagerWorldSubsystem::DrawNavigationArrow(UWorld* InWorld, const TArr
 
 void ULGUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld* InWorld, UUISelectableComponent* InSelectable, bool IsScreenSpace)
 {
-	auto SourceWidget = InSelectable->GetRootUIComponent();
+	auto SourceWidget = InSelectable->GetLexWidget();
 	if (!IsValid(SourceWidget))return;
 	const FColor Color = ULGUIPrefabManagerObject::IsSelected(SourceWidget->GetOwner()) ? FColor(255, 255, 0, 255) : FColor(140, 140, 0, 255);
 	constexpr float Offset = 2;
@@ -661,7 +643,7 @@ void ULGUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld* 
 		{
 			auto SourceLeftPoint = FVector(0, SourceWidget->GetLocalSpaceLeft(), 0.5f * (SourceWidget->GetLocalSpaceTop() + SourceWidget->GetLocalSpaceBottom()) + Offset);
 			SourceLeftPoint = SourceWidget->GetComponentTransform().TransformPosition(SourceLeftPoint);
-			auto DestWidget = ToLeftComp->GetRootUIComponent();
+			auto DestWidget = ToLeftComp->GetLexWidget();
 			auto LocalDestRightPoint = FVector(0, DestWidget->GetLocalSpaceRight(), 0.5f * (DestWidget->GetLocalSpaceTop() + DestWidget->GetLocalSpaceBottom()) + Offset);
 			auto DestRightPoint = DestWidget->GetComponentTransform().TransformPosition(LocalDestRightPoint);
 			float Distance = FVector::Distance(SourceLeftPoint, DestRightPoint);
@@ -685,7 +667,7 @@ void ULGUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld* 
 		{
 			auto SourceRightPoint = FVector(0, SourceWidget->GetLocalSpaceRight(), 0.5f * (SourceWidget->GetLocalSpaceTop() + SourceWidget->GetLocalSpaceBottom()) - Offset);
 			SourceRightPoint = SourceWidget->GetComponentTransform().TransformPosition(SourceRightPoint);
-			auto DestWidget = ToRightComp->GetRootUIComponent();
+			auto DestWidget = ToRightComp->GetLexWidget();
 			auto LocalDestLeftPoint = FVector(0, DestWidget->GetLocalSpaceLeft(), 0.5f * (DestWidget->GetLocalSpaceTop() + DestWidget->GetLocalSpaceBottom()) - Offset);
 			auto DestLeftPoint = DestWidget->GetComponentTransform().TransformPosition(LocalDestLeftPoint);
 			float Distance = FVector::Distance(SourceRightPoint, DestLeftPoint);
@@ -709,7 +691,7 @@ void ULGUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld* 
 		{
 			auto SourceDownPoint = FVector(0, 0.5f * (SourceWidget->GetLocalSpaceLeft() + SourceWidget->GetLocalSpaceRight()) - Offset, SourceWidget->GetLocalSpaceBottom());
 			SourceDownPoint = SourceWidget->GetComponentTransform().TransformPosition(SourceDownPoint);
-			auto DestWidget = ToDownComp->GetRootUIComponent();
+			auto DestWidget = ToDownComp->GetLexWidget();
 			auto LocalDestUpPoint = FVector(0, 0.5f * (DestWidget->GetLocalSpaceLeft() + DestWidget->GetLocalSpaceRight()) - Offset, DestWidget->GetLocalSpaceTop());
 			auto DestUpPoint = DestWidget->GetComponentTransform().TransformPosition(LocalDestUpPoint);
 			float Distance = FVector::Distance(SourceDownPoint, DestUpPoint);
@@ -733,7 +715,7 @@ void ULGUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld* 
 		{
 			auto SourceUpPoint = FVector(0, 0.5f * (SourceWidget->GetLocalSpaceLeft() + SourceWidget->GetLocalSpaceRight()) + Offset, SourceWidget->GetLocalSpaceTop());
 			SourceUpPoint = SourceWidget->GetComponentTransform().TransformPosition(SourceUpPoint);
-			auto DestWidget = ToUpComp->GetRootUIComponent();
+			auto DestWidget = ToUpComp->GetLexWidget();
 			auto LocalDestDownPoint = FVector(0, 0.5f * (DestWidget->GetLocalSpaceLeft() + DestWidget->GetLocalSpaceRight()) + Offset, DestWidget->GetLocalSpaceBottom());
 			auto DestDownPoint = DestWidget->GetComponentTransform().TransformPosition(LocalDestDownPoint);
 			float Distance = FVector::Distance(SourceUpPoint, DestDownPoint);
@@ -872,9 +854,9 @@ bool ULGUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULex
 				{
 					FHitResult hitInfo;
 					auto OriginRaycastType = Visual->GetRaycastType();
-					auto OriginVisibility = Widget->GetHitTestType();
-					Visual->SetRaycastType(ELexVisualHitTestType::Mesh);//in editor selection, make the ray hit actural triangle
-					Widget->SetHitTestType(ELexWidgetHitTestType::HitTestable);
+					auto OriginVisibility = Widget->GetRaycastable();
+					Visual->SetRaycastType(ELexVisualRaycastType::Mesh);//in editor selection, make the ray hit actural triangle
+					Widget->SetRaycastable(ELexWidgetRaycastableType::Enabled);
 					if (Visual->LineTraceUI(hitInfo, LineStart, LineEnd))
 					{
 						if (Widget->IsPointVisibleOnClip(hitInfo.Location))
@@ -883,7 +865,7 @@ bool ULGUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULex
 						}
 					}
 					Visual->SetRaycastType(OriginRaycastType);
-					Widget->SetHitTestType(OriginVisibility);
+					Widget->SetRaycastable(OriginVisibility);
 				}
 			}
 		}
@@ -1034,7 +1016,7 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 					};
 				DrawFrame(ScreenSpaceCanvasArray);
 				DrawFrame(WorldSpaceUECanvasArray);
-				DrawFrame(WorldSpaceLGUICanvasArray);
+				DrawFrame(WorldSpaceLexCanvasArray);
 				DrawFrame(RenderTargetSpaceLGUICanvasArray);
 			}
 		}
@@ -1045,10 +1027,10 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 			{
 				if (!Selectable.IsValid())continue;
 				if (!IsValid(Selectable->GetWorld()))continue;
-				if (!IsValid(Selectable->GetRootUIComponent()))continue;
-				if (!Selectable->GetRootUIComponent()->IsVisibleForHitTest())continue;
+				if (!IsValid(Selectable->GetLexWidget()))continue;
+				if (!Selectable->GetLexWidget()->GetRaycastableInHierarchy())continue;
 
-				ULGUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(Selectable->GetWorld(), Selectable.Get(), this->GetWorld()->IsGameWorld() ? Selectable->GetRootUIComponent()->IsScreenSpaceOverlayUI() : false);
+				ULGUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(Selectable->GetWorld(), Selectable.Get(), this->GetWorld()->IsGameWorld() ? Selectable->GetLexWidget()->IsScreenSpaceOverlayUI() : false);
 			}
 		}
 	}
@@ -1148,7 +1130,7 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 		{
 			if (Canvas->IsRootCanvas())
 			{
-				if (Canvas->GetActualRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
+				if (Canvas->GetRootRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
 				{
 					ScreenSpaceOverlayCanvasCount++;
 				}
@@ -1160,7 +1142,7 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 		if (PrevScreenSpaceOverlayCanvasCount != ScreenSpaceOverlayCanvasCount)//only show message when change
 		{
 			PrevScreenSpaceOverlayCanvasCount = ScreenSpaceOverlayCanvasCount;
-			auto errMsg = FText::Format(LOCTEXT("MultipleLGUICanvasRenderScreenSpaceOverlay", "[{0}].{1} Detect multiple LGUICanvas renderred with ScreenSpaceOverlay mode, this is not allowed! There should be only one ScreenSpace UI in a world!\
+			auto errMsg = FText::Format(LOCTEXT("MultipleLexUICanvasRenderScreenSpaceOverlay", "[{0}].{1} Detect multiple LexCanvas rendered with ScreenSpaceOverlay mode, this is not allowed! There should be only one ScreenSpace UI in a world!\
 \n	World: {2}, type: {3}")
 			, FText::FromString(ANSI_TO_TCHAR(__FUNCTION__)), __LINE__, FText::FromString(this->GetWorld()->GetPathName()), (int)(this->GetWorld()->WorldType));
 			UE_LOG(LGUI, Error, TEXT("%s"), *errMsg.ToString());
@@ -1173,7 +1155,7 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 	}
 #endif
 
-	//update drawcall
+	//update draw-call
 	{
 		SCOPE_CYCLE_COUNTER(STAT_UpdateCanvas);
 		auto UpdateCanvas = [](TArray<TWeakObjectPtr<ULexCanvas>>& InCanvasArray) {
@@ -1187,12 +1169,12 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 		};
 		UpdateCanvas(ScreenSpaceCanvasArray);
 		UpdateCanvas(WorldSpaceUECanvasArray);
-		UpdateCanvas(WorldSpaceLGUICanvasArray);
+		UpdateCanvas(WorldSpaceLexCanvasArray);
 		UpdateCanvas(RenderTargetSpaceLGUICanvasArray);
 	}
 }
 
-void ULGUIManagerWorldSubsystem::AddLGUILifeCycleBehaviourForLifecycleEvent(ULGUILifeCycleBehaviour* InComp)
+void ULGUIManagerWorldSubsystem::AddLGUILifeCycleBehaviourForLifecycleEvent(ULexUIBehaviour* InComp)
 {
 	if (IsValid(InComp))
 	{
@@ -1223,7 +1205,7 @@ void ULGUIManagerWorldSubsystem::AddLGUILifeCycleBehaviourForLifecycleEvent(ULGU
 	}
 }
 
-void ULGUIManagerWorldSubsystem::AddLGUILifeCycleBehavioursForUpdate(ULGUILifeCycleBehaviour* InComp)
+void ULGUIManagerWorldSubsystem::AddLGUILifeCycleBehavioursForUpdate(ULexUIBehaviour* InComp)
 {
 	if (IsValid(InComp))
 	{
@@ -1235,11 +1217,11 @@ void ULGUIManagerWorldSubsystem::AddLGUILifeCycleBehavioursForUpdate(ULGUILifeCy
 				Instance->LGUILifeCycleBehavioursForUpdate.Add(InComp);
 				return;
 			}
-			UE_LOG(LGUI, Warning, TEXT("[ULGUIManagerWorldSubsystem::AddLGUILifeCycleBehavioursForUpdate]Already exist, comp:%s"), *(InComp->GetPathName()));
+			UE_LOG(LGUI, Warning, TEXT("[%s].%d Already exist, comp:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(InComp->GetPathName()));
 		}
 	}
 }
-void ULGUIManagerWorldSubsystem::RemoveLGUILifeCycleBehavioursFromUpdate(ULGUILifeCycleBehaviour* InComp)
+void ULGUIManagerWorldSubsystem::RemoveLGUILifeCycleBehavioursFromUpdate(ULexUIBehaviour* InComp)
 {
 	if (IsValid(InComp))
 	{
@@ -1288,14 +1270,14 @@ void ULGUIManagerWorldSubsystem::RemoveLGUILifeCycleBehavioursFromUpdate(ULGUILi
 	}
 }
 
-void ULGUIManagerWorldSubsystem::RegisterLGUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem)
+void ULGUIManagerWorldSubsystem::RegisterLexUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem)
 {
 	if (auto Instance = GetInstance(InItem.GetObject()->GetWorld()))
 	{
 		Instance->AllCultureChangedArray.AddUnique(InItem.GetObject());
 	}
 }
-void ULGUIManagerWorldSubsystem::UnregisterLGUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem)
+void ULGUIManagerWorldSubsystem::UnregisterLexUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem)
 {
 	if (auto Instance = GetInstance(InItem.GetObject()->GetWorld()))
 	{
@@ -1371,8 +1353,8 @@ void ULGUIManagerWorldSubsystem::AddCanvas(ULexCanvas* InCanvas, ELexRenderMode 
 			case ELexRenderMode::WorldSpace:
 				Instance->WorldSpaceUECanvasArray.Add(InCanvas);
 				break;
-			case ELexRenderMode::WorldSpace_LGUI:
-				Instance->WorldSpaceLGUICanvasArray.Add(InCanvas);
+			case ELexRenderMode::WorldSpace_LexUI:
+				Instance->WorldSpaceLexCanvasArray.Add(InCanvas);
 				break;
 			case ELexRenderMode::RenderTarget:
 				Instance->RenderTargetSpaceLGUICanvasArray.Add(InCanvas);
@@ -1393,8 +1375,8 @@ void ULGUIManagerWorldSubsystem::RemoveCanvas(ULexCanvas* InCanvas, ELexRenderMo
 		case ELexRenderMode::WorldSpace:
 			Instance->WorldSpaceUECanvasArray.Remove(InCanvas);
 			break;
-		case ELexRenderMode::WorldSpace_LGUI:
-			Instance->WorldSpaceLGUICanvasArray.Remove(InCanvas);
+		case ELexRenderMode::WorldSpace_LexUI:
+			Instance->WorldSpaceLexCanvasArray.Remove(InCanvas);
 			break;
 		case ELexRenderMode::RenderTarget:
 			Instance->RenderTargetSpaceLGUICanvasArray.Remove(InCanvas);
@@ -1415,8 +1397,8 @@ void ULGUIManagerWorldSubsystem::CanvasRenderModeChange(ULexCanvas* InCanvas, EL
 		case ELexRenderMode::WorldSpace:
 			Instance->WorldSpaceUECanvasArray.Remove(InCanvas);
 			break;
-		case ELexRenderMode::WorldSpace_LGUI:
-			Instance->WorldSpaceLGUICanvasArray.Remove(InCanvas);
+		case ELexRenderMode::WorldSpace_LexUI:
+			Instance->WorldSpaceLexCanvasArray.Remove(InCanvas);
 			break;
 		case ELexRenderMode::RenderTarget:
 			Instance->RenderTargetSpaceLGUICanvasArray.Remove(InCanvas);
@@ -1431,8 +1413,8 @@ void ULGUIManagerWorldSubsystem::CanvasRenderModeChange(ULexCanvas* InCanvas, EL
 		case ELexRenderMode::WorldSpace:
 			Instance->WorldSpaceUECanvasArray.Add(InCanvas);
 			break;
-		case ELexRenderMode::WorldSpace_LGUI:
-			Instance->WorldSpaceLGUICanvasArray.Add(InCanvas);
+		case ELexRenderMode::WorldSpace_LexUI:
+			Instance->WorldSpaceLexCanvasArray.Add(InCanvas);
 			break;
 		case ELexRenderMode::RenderTarget:
 			Instance->RenderTargetSpaceLGUICanvasArray.Add(InCanvas);
@@ -1454,8 +1436,8 @@ const TArray<TWeakObjectPtr<ULexCanvas>>& ULGUIManagerWorldSubsystem::GetCanvasA
 		return ScreenSpaceCanvasArray;
 	case ELexRenderMode::WorldSpace:
 		return WorldSpaceUECanvasArray;
-	case ELexRenderMode::WorldSpace_LGUI:
-		return WorldSpaceLGUICanvasArray;
+	case ELexRenderMode::WorldSpace_LexUI:
+		return WorldSpaceLexCanvasArray;
 	case ELexRenderMode::RenderTarget:
 		return RenderTargetSpaceLGUICanvasArray;
 	}
@@ -1568,17 +1550,20 @@ void ULGUIManagerWorldSubsystem::RemoveSelectable(UUISelectableComponent* InSele
 	}
 }
 
-void ULGUIManagerWorldSubsystem::ProcessLGUILifecycleEvent(ULGUILifeCycleBehaviour* InComp)
+void ULGUIManagerWorldSubsystem::ProcessLGUILifecycleEvent(ULexUIBehaviour* InComp)
 {
 	if (InComp)
 	{
-		if (!InComp->bIsAwakeCalled)
+		if (InComp->IsAllowToCallAwake())
 		{
-			InComp->Call_Awake();
+			if (!InComp->bIsAwakeCalled)
+			{
+				InComp->Call_Awake();
 #if !UE_BUILD_SHIPPING
-			check(!LGUILifeCycleBehavioursForStart.Contains(InComp));
+				check(!LGUILifeCycleBehavioursForStart.Contains(InComp));
 #endif
-			LGUILifeCycleBehavioursForStart.Add(InComp);
+				LGUILifeCycleBehavioursForStart.Add(InComp);
+			}
 		}
 	}
 }

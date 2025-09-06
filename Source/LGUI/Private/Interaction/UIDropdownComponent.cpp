@@ -77,8 +77,8 @@ void UUIDropdownComponent::Show()
 		UE_LOG(LGUI, Error, TEXT("[UUIDropdownComponent::Show]ListRoot is not valid!"));
 		return;
 	}
-	if (!IsValid(this->GetRootUIComponent()))return;
-	if (!IsValid(this->GetRootUIComponent()->GetRootCanvas()))return;
+	if (!IsValid(this->GetLexWidget()))return;
+	if (!IsValid(this->GetLexWidget()->GetRootCanvas()))return;
 	if (bIsShow)return;
 	bIsShow = true;
 	if (ShowOrHideTweener.IsValid())
@@ -144,7 +144,7 @@ void UUIDropdownComponent::Show()
 		)
 	{
 		//search up til find clipped canvas, or root canvas
-		auto clipUIItem = GetRootUIComponent();
+		auto clipUIItem = GetLexWidget();
 		while (true)
 		{
 			if (clipUIItem->GetClipping() != ELexWidgetClipping::Disabled)
@@ -167,20 +167,20 @@ void UUIDropdownComponent::Show()
 
 		FTransform selfToClipSpaceTf;
 		auto inverseClipSpaceTf = clipUIItem->GetComponentTransform().Inverse();
-		FTransform::Multiply(&selfToClipSpaceTf, &GetRootUIComponent()->GetComponentTransform(), &inverseClipSpaceTf);
+		FTransform::Multiply(&selfToClipSpaceTf, &GetLexWidget()->GetComponentTransform(), &inverseClipSpaceTf);
 		if (tempVerticalPosition == EUIDropdownVerticalPosition::Automatic)
 		{
 			//convert top point position from dropdown's self to root ui space, and tell if it is inside root rect
 			FVector listBottomInClipSpace;
 			if (VerticalOverlap)
 			{
-				auto selfTop = GetRootUIComponent()->GetLocalSpaceTop();
+				auto selfTop = GetLexWidget()->GetLocalSpaceTop();
 				auto listBottomInSelfSpace = selfTop - ListRootUIItem->GetHeight();
 				listBottomInClipSpace = selfToClipSpaceTf.TransformPosition(FVector(0, 0, listBottomInSelfSpace));
 			}
 			else
 			{
-				auto selfBottom = GetRootUIComponent()->GetLocalSpaceBottom();
+				auto selfBottom = GetLexWidget()->GetLocalSpaceBottom();
 				auto listBottomInSelfSpace = selfBottom - ListRootUIItem->GetHeight();
 				listBottomInClipSpace = selfToClipSpaceTf.TransformPosition(FVector(0, 0, listBottomInSelfSpace));
 			}
@@ -195,7 +195,7 @@ void UUIDropdownComponent::Show()
 		}
 		if (tempHorizontalPosition == EUIDropdownHorizontalPosition::Automatic)
 		{
-			auto selfRight = GetRootUIComponent()->GetLocalSpaceRight();
+			auto selfRight = GetLexWidget()->GetLocalSpaceRight();
 			auto listRightInCanvasSpace = selfToClipSpaceTf.TransformPosition(FVector(0, selfRight + ListRootUIItem->GetWidth(), 0));
 			if (listRightInCanvasSpace.Y > clipUIItem->GetLocalSpaceRight())
 			{
@@ -297,7 +297,7 @@ void UUIDropdownComponent::CreateBlocker()
 	blocker->SetActorLabel(TEXT("UIDropdown_Blocker"));
 #endif
 	auto blockerUIItem = blocker->GetLexWidget();
-	blockerUIItem->AttachToComponent(this->GetRootUIComponent()->GetRootCanvas()->GetLexWidget(), FAttachmentTransformRules::KeepRelativeTransform);
+	blockerUIItem->AttachToComponent(this->GetLexWidget()->GetRootCanvas()->GetLexWidget(), FAttachmentTransformRules::KeepRelativeTransform);
 	blockerUIItem->SetSizeDelta(FVector2D::ZeroVector);
 	blockerUIItem->SetAnchorMin(FVector2D(0.0f, 0.0f));
 	blockerUIItem->SetAnchorMax(FVector2D(1.0f, 1.0f));
@@ -306,7 +306,7 @@ void UUIDropdownComponent::CreateBlocker()
 	blocker->AddInstanceComponent(blockerCanvas);
 	blockerCanvas->SetOverrideSorting(true);
 	blockerCanvas->SetSortOrderToHighestOfHierarchy();
-	blockerCanvas->SetTraceChannel(this->GetRootUIComponent()->GetRootCanvas()->GetTraceChannel());
+	blockerCanvas->SetTraceChannel(this->GetLexWidget()->GetRootCanvas()->GetTraceChannel());
 	auto blockerButton = NewObject<UUIButtonComponent>(blocker);
 	blockerButton->RegisterComponent();
 	blocker->AddInstanceComponent(blockerButton);
@@ -482,7 +482,7 @@ bool UUIDropdownComponent::OnPointerDeselect_Implementation(ULGUIBaseEventData* 
 {
 	if (IsValid(eventData->selectedComponent))
 	{
-		if (!eventData->selectedComponent->IsAttachedTo(this->GetRootUIComponent()))
+		if (!eventData->selectedComponent->IsAttachedTo(this->GetLexWidget()))
 		{
 			Hide();
 		}

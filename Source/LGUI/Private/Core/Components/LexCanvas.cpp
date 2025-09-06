@@ -39,8 +39,8 @@ ULexCanvas::ULexCanvas()
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 
-	bHasAddToLGUIScreenSpaceRenderer = false;
-	bHasSetIntialStateforLGUIWorldSpaceRenderer = false;
+	bHasAddToLexScreenSpaceRenderer = false;
+	bHasSetInitialStateForLexWorldSpaceRenderer = false;
 	bOverrideViewLocation = false;
 	bOverrideViewRotation = false;
 	bOverrideProjectionMatrix = false;
@@ -52,7 +52,7 @@ ULexCanvas::ULexCanvas()
 
 	bCanTickUpdate = true;
 	bShouldRebuildDrawCall = true;
-	bShouldSortRenderableOrder = true;
+	bShouldSortVisualOrder = true;
 	bAnythingChangedForRenderTarget = true;
 	bPrevAnythingChangedForRenderTarget = true;
 
@@ -66,7 +66,7 @@ void ULexCanvas::BeginPlay()
 {
 	Super::BeginPlay();
 	CheckRootCanvas();
-	CurrentRenderMode = this->GetActualRenderMode();
+	CurrentRenderMode = this->GetRootRenderMode();
 	if (CheckLexWidget())
 	{
 		bPrevIsVisible = LexWidget->GetWidgetActiveInHierarchy();
@@ -117,16 +117,16 @@ void ULexCanvas::UpdateRootCanvas()
 	if (this == RootCanvas)
 	{
 		bool bIsRenderTargetRenderer = false;
-		if (RenderModeIsLGUIRendererOrUERenderer(CurrentRenderMode))
+		if (RenderModeIsLexRendererOrUERenderer(CurrentRenderMode))
 		{
-			auto ActualRenderMode = GetActualRenderMode();
+			auto ActualRenderMode = GetRootRenderMode();
 #if WITH_EDITOR
-			if (bPreviewWithLGUIRenderer)
+			if (bPreviewWithLexUIRenderer)
 			{
 				if (!GetWorld()->IsGameWorld())//edit mode
 				{
 					if (ActualRenderMode == ELexRenderMode::ScreenSpaceOverlay)
-						ActualRenderMode = ELexRenderMode::WorldSpace_LGUI;
+						ActualRenderMode = ELexRenderMode::WorldSpace_LexUI;
 				}
 			}
 #endif
@@ -134,38 +134,38 @@ void ULexCanvas::UpdateRootCanvas()
 			{
 			case ELexRenderMode::ScreenSpaceOverlay:
 			{
-				if (!bHasAddToLGUIScreenSpaceRenderer)
+				if (!bHasAddToLexScreenSpaceRenderer)
 				{
 					auto ViewExtension = ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true);
 
 					if (ViewExtension.IsValid())//only root canvas can add screen space UI to LGUIRenderer
 					{
 						ViewExtension->SetScreenSpaceRootCanvas(this);
-						bHasAddToLGUIScreenSpaceRenderer = true;
+						bHasAddToLexScreenSpaceRenderer = true;
 					}
 				}
 			}
 			break;
 			case ELexRenderMode::RenderTarget:
 			{
-				if (!bHasAddToLGUIScreenSpaceRenderer)
+				if (!bHasAddToLexScreenSpaceRenderer)
 				{
 					GetRenderTargetViewExtension()->SetScreenSpaceRootCanvas(this);
-					bHasAddToLGUIScreenSpaceRenderer = true;
+					bHasAddToLexScreenSpaceRenderer = true;
 				}
 				bIsRenderTargetRenderer = true;
 			}
 			break;
-			case ELexRenderMode::WorldSpace_LGUI:
+			case ELexRenderMode::WorldSpace_LexUI:
 			{
-				if (!bHasSetIntialStateforLGUIWorldSpaceRenderer)
+				if (!bHasSetInitialStateForLexWorldSpaceRenderer)
 				{
 					auto ViewExtension = ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true);
 
 					if (ViewExtension.IsValid())//only root canvas can add screen space UI to LGUIRenderer
 					{
 						//put initial code here
-						bHasSetIntialStateforLGUIWorldSpaceRenderer = true;
+						bHasSetInitialStateForLexWorldSpaceRenderer = true;
 					}
 				}
 			}
@@ -316,10 +316,10 @@ void ULexCanvas::OnRegister()
 		ULGUIManagerWorldSubsystem::AddCanvas(this, CurrentRenderMode);
 		//tell UIItem
 		LexWidget->RegisterRenderCanvas(this);
-		LexWidget->GetAttachmentChangedEvent().AddUObject(this, &ULexCanvas::OnUIHierarchyChanged);
+		LexWidget->GetAttachmentChangedEvent().AddUObject(this, &ULexCanvas::OnUIHierarchyAttachmentChanged);
 		LexWidget->GetWidgetActiveChangedEvent().AddUObject(this, &ULexCanvas::OnWidgetActiveChanged);
 
-		OnUIHierarchyChanged();
+		OnUIHierarchyAttachmentChanged();
 	}
 
 	if (!IsValid(ClipDataAsTexture))
@@ -381,9 +381,9 @@ void ULexCanvas::ClearDrawCall()
 
 void ULexCanvas::RemoveFromViewExtension(bool PropogateToChildrenCanvas)
 {
-	if (bHasAddToLGUIScreenSpaceRenderer)
+	if (bHasAddToLexScreenSpaceRenderer)
 	{
-		bHasAddToLGUIScreenSpaceRenderer = false;
+		bHasAddToLexScreenSpaceRenderer = false;
 		if (RenderTargetViewExtension.IsValid())//could be RenderTarget mode
 		{
 			RenderTargetViewExtension->ClearScreenSpaceRootCanvas();
@@ -397,9 +397,9 @@ void ULexCanvas::RemoveFromViewExtension(bool PropogateToChildrenCanvas)
 			}
 		}
 	}
-	if (bHasSetIntialStateforLGUIWorldSpaceRenderer)
+	if (bHasSetInitialStateForLexWorldSpaceRenderer)
 	{
-		bHasSetIntialStateforLGUIWorldSpaceRenderer = false;
+		bHasSetInitialStateForLexWorldSpaceRenderer = false;
 	}
 
 	if (PropogateToChildrenCanvas)
@@ -544,7 +544,7 @@ void ULexCanvas::CheckRenderMode(bool PropogateToChildrenCanvas)
 		}
 	}
 }
-void ULexCanvas::OnUIHierarchyChanged()
+void ULexCanvas::OnUIHierarchyAttachmentChanged()
 {
 	this->bCanTickUpdate = true;
 	RemoveFromViewExtension(true);
@@ -559,7 +559,7 @@ void ULexCanvas::OnUIHierarchyChanged()
 	SetParentCanvas(NewParentCanvas);
 }
 
-void ULexCanvas::OnWidgetActiveChanged()
+void ULexCanvas::OnWidgetActiveChanged(bool WidgetActive)
 {
 	if (LexWidget->GetWidgetActiveInHierarchy())
 	{
@@ -602,7 +602,7 @@ bool ULexCanvas::IsRenderToWorldSpace()const
 	if (CheckRootCanvas())
 	{
 		return RootCanvas->RenderMode == ELexRenderMode::WorldSpace
-			|| RootCanvas->RenderMode == ELexRenderMode::WorldSpace_LGUI
+			|| RootCanvas->RenderMode == ELexRenderMode::WorldSpace_LexUI
 			;
 	}
 	return false;
@@ -614,7 +614,7 @@ bool ULexCanvas::IsRenderByLGUIRendererOrUERenderer()const
 	{
 		return RootCanvas->RenderMode == ELexRenderMode::ScreenSpaceOverlay
 			|| RootCanvas->RenderMode == ELexRenderMode::RenderTarget
-			|| RootCanvas->RenderMode == ELexRenderMode::WorldSpace_LGUI
+			|| RootCanvas->RenderMode == ELexRenderMode::WorldSpace_LexUI
 			;
 	}
 	return false;
@@ -629,7 +629,7 @@ void ULexCanvas::MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransfor
 	}
 	if (bHierarchyOrderChanged)
 	{
-		this->bShouldSortRenderableOrder = true;
+		this->bShouldSortVisualOrder = true;
 	}
 }
 void ULexCanvas::MarkCanvasUpdateRecursive(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawCall)
@@ -1620,7 +1620,7 @@ void ULexCanvas::UpdateDrawCallMesh_Implement()
 		case ELexUIDrawCallType::PostProcess:
 		{
 			//only LGUI renderer can render post process
-			if (this->GetActualRenderMode() == ELexRenderMode::WorldSpace)
+			if (this->GetRootRenderMode() == ELexRenderMode::WorldSpace)
 			{
 				return;
 			}
@@ -1776,14 +1776,14 @@ void ULexCanvas::UpdateDrawCallMesh_Implement()
 
 float ULexCanvas::GetLastRenderTime()const
 {
-	auto TempRenderMode = GetActualRenderMode();
+	auto TempRenderMode = GetRootRenderMode();
 #if WITH_EDITOR
 	if (!GetWorld()->IsGameWorld())//edit mode
 	{
-		if (bPreviewWithLGUIRenderer)
+		if (bPreviewWithLexUIRenderer)
 		{
 			if (TempRenderMode == ELexRenderMode::ScreenSpaceOverlay)
-				TempRenderMode = ELexRenderMode::WorldSpace_LGUI;
+				TempRenderMode = ELexRenderMode::WorldSpace_LexUI;
 		}
 		else
 		{
@@ -1792,7 +1792,7 @@ float ULexCanvas::GetLastRenderTime()const
 		}
 	}
 #endif
-	if (RenderModeIsLGUIRendererOrUERenderer(TempRenderMode))
+	if (RenderModeIsLexRendererOrUERenderer(TempRenderMode))
 	{
 		return LastRenderTime;
 	}
@@ -1820,16 +1820,16 @@ void ULexCanvas::CheckUIMesh()const
 	if (bUIMeshNeedToSetInitialParameters)
 	{
 		bUIMeshNeedToSetInitialParameters = false;
-		if (RenderModeIsLGUIRendererOrUERenderer(CurrentRenderMode))
+		if (RenderModeIsLexRendererOrUERenderer(CurrentRenderMode))
 		{
-			auto ActualRenderMode = GetActualRenderMode();
+			auto ActualRenderMode = GetRootRenderMode();
 #if WITH_EDITOR
-			if (bPreviewWithLGUIRenderer)
+			if (bPreviewWithLexUIRenderer)
 			{
 				if (!GetWorld()->IsGameWorld())//edit mode
 				{
 					if (ActualRenderMode == ELexRenderMode::ScreenSpaceOverlay)
-						ActualRenderMode = ELexRenderMode::WorldSpace_LGUI;
+						ActualRenderMode = ELexRenderMode::WorldSpace_LexUI;
 				}
 			}
 #endif
@@ -1866,7 +1866,7 @@ void ULexCanvas::CheckUIMesh()const
 				}
 			}
 			break;
-			case ELexRenderMode::WorldSpace_LGUI:
+			case ELexRenderMode::WorldSpace_LexUI:
 			{
 				UIMesh->SetSupportLexUIRenderer(true, ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true), true);
 				UIMesh->SetSupportUERenderer(false);
@@ -1909,7 +1909,7 @@ void ULexCanvas::SortDrawCall()
 
 	if (this->IsRootCanvas())
 	{
-		switch (this->GetActualRenderMode())
+		switch (this->GetRootRenderMode())
 		{
 		case ELexRenderMode::ScreenSpaceOverlay:
 			ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true)->MarkNeedToSortScreenSpacePrimitiveRenderPriority();
@@ -1917,7 +1917,7 @@ void ULexCanvas::SortDrawCall()
 		case ELexRenderMode::RenderTarget:
 			GetRenderTargetViewExtension()->MarkNeedToSortScreenSpacePrimitiveRenderPriority();
 			break;
-		case ELexRenderMode::WorldSpace_LGUI:
+		case ELexRenderMode::WorldSpace_LexUI:
 			ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true)->MarkNeedToSortWorldSpacePrimitiveRenderPriority();
 			break;
 		}
@@ -2593,7 +2593,7 @@ void ULexCanvas::SetRenderTarget(UTextureRenderTarget2D* Value)
 	}
 }
 
-ELexRenderMode ULexCanvas::GetActualRenderMode()const
+ELexRenderMode ULexCanvas::GetRootRenderMode()const
 {
 	if (IsRootCanvas())
 	{
@@ -2617,7 +2617,7 @@ void ULexCanvas::SetBlendDepth(float Value)
 
 		if (CheckRootCanvas())
 		{
-			if (RootCanvas->RenderModeIsLGUIRendererOrUERenderer(CurrentRenderMode))
+			if (RootCanvas->RenderModeIsLexRendererOrUERenderer(CurrentRenderMode))
 			{
 				if (RootCanvas->IsRenderToWorldSpace())
 				{
@@ -2640,7 +2640,7 @@ void ULexCanvas::SetDepthFade(int Value)
 
 		if (CheckRootCanvas())
 		{
-			if (RootCanvas->RenderModeIsLGUIRendererOrUERenderer(CurrentRenderMode))
+			if (RootCanvas->RenderModeIsLexRendererOrUERenderer(CurrentRenderMode))
 			{
 				if (RootCanvas->IsRenderToWorldSpace())
 				{
@@ -2663,7 +2663,7 @@ void ULexCanvas::SetEnableDepthTest(bool Value)
 	}
 }
 
-UTextureRenderTarget2D* ULexCanvas::GetActualRenderTarget()const
+UTextureRenderTarget2D* ULexCanvas::GetRootRenderTarget()const
 {
 	if (IsRootCanvas())
 	{
@@ -2679,7 +2679,7 @@ UTextureRenderTarget2D* ULexCanvas::GetActualRenderTarget()const
 	return nullptr;
 }
 
-float ULexCanvas::GetActualRenderTargetResolutionScale()const
+float ULexCanvas::GetRootRenderTargetResolutionScale()const
 {
 	if (IsRootCanvas())
 	{
@@ -2695,7 +2695,7 @@ float ULexCanvas::GetActualRenderTargetResolutionScale()const
 	return RenderTargetResolutionScale;
 }
 
-ELexCanvasRenderTargetSizeMode ULexCanvas::GetActualRenderTargetSizeMode()const
+ELexCanvasRenderTargetSizeMode ULexCanvas::GetRootRenderTargetSizeMode()const
 {
 	if (IsRootCanvas())
 	{
@@ -2711,7 +2711,7 @@ ELexCanvasRenderTargetSizeMode ULexCanvas::GetActualRenderTargetSizeMode()const
 	return RenderTargetSizeMode;
 }
 
-ELexCanvasRenderTargetUpdateMode ULexCanvas::GetActualRenderTargetUpdateMode()const
+ELexCanvasRenderTargetUpdateMode ULexCanvas::GetRootRenderTargetUpdateMode()const
 {
 	if (IsRootCanvas())
 	{
@@ -2876,7 +2876,7 @@ void ULexCanvas::RegisterCanvasScaler()
 		EditorTickDelegateHandle = ULGUIPrefabManagerObject::RegisterEditorTickFunction([this](float deltaTime) {
 			this->OnEditorTick(deltaTime);
 			});
-		LGUIPreview_ViewportIndexChangeDelegateHandle = ULGUIEditorSettings::LGUIPreviewSetting_EditorPreviewViewportIndexChange.AddUObject(this, &ULexCanvas::OnPreviewSetting_EditorPreviewViewportIndexChange);
+		LexUIPreview_ViewportIndexChangeDelegateHandle = ULGUIEditorSettings::LGUIPreviewSetting_EditorPreviewViewportIndexChange.AddUObject(this, &ULexCanvas::OnPreviewSetting_EditorPreviewViewportIndexChange);
 	}
 #endif
 
@@ -2898,7 +2898,7 @@ void ULexCanvas::RegisterCanvasScaler()
 					{
 						if (auto viewport = gameViewport->Viewport)
 						{
-							_ViewportResizeDelegateHandle = viewport->ViewportResizedEvent.AddUObject(this, &ULexCanvas::OnViewportResized);
+							ViewportResizeDelegateHandle = viewport->ViewportResizedEvent.AddUObject(this, &ULexCanvas::OnViewportResized);
 						}
 					}
 				}
@@ -2914,15 +2914,15 @@ void ULexCanvas::UnregisterCanvasScaler()
 	{
 		ULGUIPrefabManagerObject::UnregisterEditorTickFunction(EditorTickDelegateHandle);
 	}
-	if (LGUIPreview_ViewportIndexChangeDelegateHandle.IsValid())
+	if (LexUIPreview_ViewportIndexChangeDelegateHandle.IsValid())
 	{
-		ULGUIEditorSettings::LGUIPreviewSetting_EditorPreviewViewportIndexChange.Remove(LGUIPreview_ViewportIndexChangeDelegateHandle);
+		ULGUIEditorSettings::LGUIPreviewSetting_EditorPreviewViewportIndexChange.Remove(LexUIPreview_ViewportIndexChangeDelegateHandle);
 	}
 #endif
 	//reset the canvasScale to default
 	CanvasScale = 1.0f;
 
-	if (_ViewportResizeDelegateHandle.IsValid())
+	if (ViewportResizeDelegateHandle.IsValid())
 	{
 		if (auto world = GetWorld())
 		{
@@ -2930,7 +2930,7 @@ void ULexCanvas::UnregisterCanvasScaler()
 			{
 				if (auto viewport = gameViewport->Viewport)
 				{
-					viewport->ViewportResizedEvent.Remove(_ViewportResizeDelegateHandle);
+					viewport->ViewportResizedEvent.Remove(ViewportResizeDelegateHandle);
 				}
 			}
 		}
@@ -2940,90 +2940,90 @@ void ULexCanvas::UnregisterCanvasScaler()
 void ULexCanvas::OnViewportParameterChanged()
 {
 	if (ViewportSize.X <= 0 || ViewportSize.Y <= 0)return;
-		if (this->IsRootCanvas())
+	if (this->IsRootCanvas())
+	{
+		if (this->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay
+			|| this->GetRenderMode() == ELexRenderMode::RenderTarget
+			)
 		{
-			if (this->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay
-				|| this->GetRenderMode() == ELexRenderMode::RenderTarget
-				)
+			if (LexWidget.IsValid())
 			{
-				if (LexWidget.IsValid())
+				float TempCanvasScale = 1.0f;
+				//adjust size
+				switch (ScaleMode)
 				{
-					float TempCanvasScale = 1.0f;
-					//adjust size
-					switch (ScaleMode)
-					{
-					case ELexCanvasScaleMode::ConstantPixelSize:
+				case ELexCanvasScaleMode::ConstantPixelSize:
 					{
 						LexWidget->SetWidth(ViewportSize.X);
 						LexWidget->SetHeight(ViewportSize.Y);
 						TempCanvasScale = 1.0f;
 					}
 					break;
-					case ELexCanvasScaleMode::ScaleWithScreenSize:
+				case ELexCanvasScaleMode::ScaleWithScreenSize:
 					{
 						switch (ScreenMatchMode)
 						{
 						case ELexCanvasScreenMatchMode::MatchWidthOrHeight:
-						{
-							float matchWidth_PreferredWidth = ReferenceResolution.X;
-							float matchWidth_PreferredHeight = ReferenceResolution.X * ViewportSize.Y / ViewportSize.X;
-							float matchWidth_ScaleRatio = ViewportSize.X / ReferenceResolution.X;
+							{
+								float matchWidth_PreferredWidth = ReferenceResolution.X;
+								float matchWidth_PreferredHeight = ReferenceResolution.X * ViewportSize.Y / ViewportSize.X;
+								float matchWidth_ScaleRatio = ViewportSize.X / ReferenceResolution.X;
 
-							float matchHeight_PreferredHeight = ReferenceResolution.Y;
-							float matchHeight_PreferredWidth = ReferenceResolution.Y * ViewportSize.X / ViewportSize.Y;
-							float matchHeight_ScaleRatio = ViewportSize.Y / ReferenceResolution.Y;
+								float matchHeight_PreferredHeight = ReferenceResolution.Y;
+								float matchHeight_PreferredWidth = ReferenceResolution.Y * ViewportSize.X / ViewportSize.Y;
+								float matchHeight_ScaleRatio = ViewportSize.Y / ReferenceResolution.Y;
 
-							LexWidget->SetWidth(FMath::Lerp(matchWidth_PreferredWidth, matchHeight_PreferredWidth, MatchFromWidthToHeight));
-							LexWidget->SetHeight(FMath::Lerp(matchWidth_PreferredHeight, matchHeight_PreferredHeight, MatchFromWidthToHeight));
+								LexWidget->SetWidth(FMath::Lerp(matchWidth_PreferredWidth, matchHeight_PreferredWidth, MatchFromWidthToHeight));
+								LexWidget->SetHeight(FMath::Lerp(matchWidth_PreferredHeight, matchHeight_PreferredHeight, MatchFromWidthToHeight));
 
-							TempCanvasScale = FMath::Lerp(matchWidth_ScaleRatio, matchHeight_ScaleRatio, MatchFromWidthToHeight);
-						}
-						break;
+								TempCanvasScale = FMath::Lerp(matchWidth_ScaleRatio, matchHeight_ScaleRatio, MatchFromWidthToHeight);
+							}
+							break;
 						case ELexCanvasScreenMatchMode::Expand:
 						case ELexCanvasScreenMatchMode::Shrink:
-						{
-							float resultWidth = ViewportSize.X, resultHeight = ViewportSize.Y;
+							{
+								float resultWidth = ViewportSize.X, resultHeight = ViewportSize.Y;
 
-							float screenAspect = (float)ViewportSize.X / ViewportSize.Y;
-							float referenceAspect = ReferenceResolution.X / ReferenceResolution.Y;
-							if (screenAspect > referenceAspect)//screen width > reference width
-							{
-								if (ScreenMatchMode == ELexCanvasScreenMatchMode::Shrink)
+								float screenAspect = (float)ViewportSize.X / ViewportSize.Y;
+								float referenceAspect = ReferenceResolution.X / ReferenceResolution.Y;
+								if (screenAspect > referenceAspect)//screen width > reference width
 								{
-									resultHeight = ReferenceResolution.Y;
-									resultWidth = resultHeight * screenAspect;
-									TempCanvasScale = (float)ViewportSize.Y / resultHeight;
+									if (ScreenMatchMode == ELexCanvasScreenMatchMode::Shrink)
+									{
+										resultHeight = ReferenceResolution.Y;
+										resultWidth = resultHeight * screenAspect;
+										TempCanvasScale = (float)ViewportSize.Y / resultHeight;
+									}
+									else if (ScreenMatchMode == ELexCanvasScreenMatchMode::Expand)
+									{
+										resultWidth = ReferenceResolution.X;
+										resultHeight = resultWidth / screenAspect;
+										TempCanvasScale = (float)ViewportSize.X / resultWidth;
+									}
 								}
-								else if (ScreenMatchMode == ELexCanvasScreenMatchMode::Expand)
+								else//screen height > reference height
 								{
-									resultWidth = ReferenceResolution.X;
-									resultHeight = resultWidth / screenAspect;
-									TempCanvasScale = (float)ViewportSize.X / resultWidth;
+									if (ScreenMatchMode == ELexCanvasScreenMatchMode::Shrink)
+									{
+										resultWidth = ReferenceResolution.X;
+										resultHeight = resultWidth / screenAspect;
+										TempCanvasScale = (float)ViewportSize.X / resultWidth;
+									}
+									else if (ScreenMatchMode == ELexCanvasScreenMatchMode::Expand)
+									{
+										resultHeight = ReferenceResolution.Y;
+										resultWidth = resultHeight * screenAspect;
+										TempCanvasScale = (float)ViewportSize.Y / resultHeight;
+									}
 								}
+								LexWidget->SetWidth(resultWidth);
+								LexWidget->SetHeight(resultHeight);
 							}
-							else//screen height > reference height
-							{
-								if (ScreenMatchMode == ELexCanvasScreenMatchMode::Shrink)
-								{
-									resultWidth = ReferenceResolution.X;
-									resultHeight = resultWidth / screenAspect;
-									TempCanvasScale = (float)ViewportSize.X / resultWidth;
-								}
-								else if (ScreenMatchMode == ELexCanvasScreenMatchMode::Expand)
-								{
-									resultHeight = ReferenceResolution.Y;
-									resultWidth = resultHeight * screenAspect;
-									TempCanvasScale = (float)ViewportSize.Y / resultHeight;
-								}
-							}
-							LexWidget->SetWidth(resultWidth);
-							LexWidget->SetHeight(resultHeight);
-						}
-						break;
+							break;
 						}
 					}
 					break;
-					case ELexCanvasScaleMode::Custom:
+				case ELexCanvasScaleMode::Custom:
 					{
 						if (IsValid(CustomScale))
 						{
@@ -3042,98 +3042,98 @@ void ULexCanvas::OnViewportParameterChanged()
 						}
 					}
 					break;
-					}
-					this->CanvasScale = TempCanvasScale;
-
-					LexWidget->MarkAllDirtyRecursive();
-					this->MarkCanvasUpdate(false, true, false, true);
 				}
+				this->CanvasScale = TempCanvasScale;
+
+				LexWidget->MarkAllDirtyRecursive();
+				this->MarkCanvasUpdate(false, true, false, true);
 			}
 		}
+	}
 }
 #if WITH_EDITOR
 void ULexCanvas::OnEditorTick(float DeltaTime)
 {
 	if (ULGUIManagerWorldSubsystem::GetIsPlaying())//When hit play there is still a editor world and DrawViewportArea is called, which could cause frame dropdown, so skip it when playing
 		return;
-		if (this->IsRootCanvas())
+	if (this->IsRootCanvas())
+	{
+		if (this->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay
+			|| this->GetRenderMode() == ELexRenderMode::RenderTarget
+			)
 		{
-			if (this->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay
-				|| this->GetRenderMode() == ELexRenderMode::RenderTarget
-				)
+			DrawViewportArea();
+			if (ULGUIPrefabManagerObject::IsSelected(this->GetOwner()))
 			{
-				DrawViewportArea();
-				if (ULGUIPrefabManagerObject::IsSelected(this->GetOwner()))
-				{
-					DrawVirtualCamera();
-				}
+				DrawVirtualCamera();
+			}
 				
-				if (!GetWorld()->IsGameWorld())
+			if (!GetWorld()->IsGameWorld())
+			{
+				if (this->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
 				{
-					if (this->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
-					{
-						TOptional<FIntPoint> NewViewportSize;
+					TOptional<FIntPoint> NewViewportSize;
 #if WITH_EDITOR
-						if (bFixedSizeInEditMode)//Edit mode
-						{
-							NewViewportSize = SizeInEditMode;
-						}
-						else
+					if (bFixedSizeInEditMode)//Edit mode
+					{
+						NewViewportSize = SizeInEditMode;
+					}
+					else
 #endif
-						{
-							FViewport* viewport = nullptr;
+					{
+						FViewport* viewport = nullptr;
 
-							int32 editorViewIndex = ULGUIEditorSettings::GetLGUIPreview_EditorViewIndex();
-							auto& LevelViewportClients = GEditor->GetLevelViewportClients();
-							for (auto& ViewportClient : LevelViewportClients)
+						int32 editorViewIndex = ULGUIEditorSettings::GetLGUIPreview_EditorViewIndex();
+						auto& LevelViewportClients = GEditor->GetLevelViewportClients();
+						for (auto& ViewportClient : LevelViewportClients)
+						{
+							if (ViewportClient->ViewIndex == editorViewIndex)
 							{
-								if (ViewportClient->ViewIndex == editorViewIndex)
-								{
-									viewport = ViewportClient->Viewport;
-									break;
-								}
-							}
-							if (viewport == nullptr)
-							{
-								viewport = GEditor->GetActiveViewport();
-							}
-							if (viewport != nullptr)
-							{
-								NewViewportSize = viewport->GetSizeXY();
+								viewport = ViewportClient->Viewport;
+								break;
 							}
 						}
-
-						if (NewViewportSize.IsSet())
+						if (viewport == nullptr)
 						{
-							if (NewViewportSize.GetValue() != ViewportSize)
-							{
-								ViewportSize = NewViewportSize.GetValue();
-								OnViewportParameterChanged();
-							}
+							viewport = GEditor->GetActiveViewport();
+						}
+						if (viewport != nullptr)
+						{
+							NewViewportSize = viewport->GetSizeXY();
 						}
 					}
-					if (this->GetRenderMode() == ELexRenderMode::RenderTarget && IsValid(this->RenderTarget))
+
+					if (NewViewportSize.IsSet())
 					{
-						auto prevSize = ViewportSize;
-						ViewportSize.X = this->RenderTarget->SizeX;
-						ViewportSize.Y = this->RenderTarget->SizeY;
-						if (prevSize != ViewportSize)
+						if (NewViewportSize.GetValue() != ViewportSize)
 						{
+							ViewportSize = NewViewportSize.GetValue();
 							OnViewportParameterChanged();
 						}
 					}
 				}
-				else
+				if (this->GetRenderMode() == ELexRenderMode::RenderTarget && IsValid(this->RenderTarget))
 				{
-					auto newViewportSize = this->GetViewportSize();
-					if (newViewportSize != ViewportSize)
+					auto prevSize = ViewportSize;
+					ViewportSize.X = this->RenderTarget->SizeX;
+					ViewportSize.Y = this->RenderTarget->SizeY;
+					if (prevSize != ViewportSize)
 					{
-						ViewportSize = newViewportSize;
 						OnViewportParameterChanged();
 					}
 				}
 			}
+			else
+			{
+				auto newViewportSize = this->GetViewportSize();
+				if (newViewportSize != ViewportSize)
+				{
+					ViewportSize = newViewportSize;
+					OnViewportParameterChanged();
+				}
+			}
 		}
+	}
 }
 void ULexCanvas::OnPreviewSetting_EditorPreviewViewportIndexChange()
 {
@@ -3174,58 +3174,58 @@ void DeprojectViewPointToWorld(const FMatrix& InViewProjectionMatrix, const FVec
 
 void ULexCanvas::DrawViewportArea()
 {
-		auto RectExtends = FVector(0.1f, LexWidget->GetWidth(), LexWidget->GetHeight()) * 0.5f;
-		auto GeometryBoundsExtends = FVector(0, 0, 0);
-		bool bCanDrawRect = false;
-		auto RectDrawColor = FColor(128, 128, 128, 128);//gray means normal object
+	auto RectExtends = FVector(0.1f, LexWidget->GetWidth(), LexWidget->GetHeight()) * 0.5f;
+	auto GeometryBoundsExtends = FVector(0, 0, 0);
+	bool bCanDrawRect = false;
+	auto RectDrawColor = FColor(128, 128, 128, 128);//gray means normal object
 
-		auto WorldTransform = LexWidget->GetComponentTransform();
-		FVector RelativeOffset(0, 0, 0);
-		RelativeOffset.Y = (0.5f - LexWidget->GetPivot().X) * LexWidget->GetWidth();
-		RelativeOffset.Z = (0.5f - LexWidget->GetPivot().Y) * LexWidget->GetHeight();
-		auto WorldLocation = WorldTransform.TransformPosition(RelativeOffset);
+	auto WorldTransform = LexWidget->GetComponentTransform();
+	FVector RelativeOffset(0, 0, 0);
+	RelativeOffset.Y = (0.5f - LexWidget->GetPivot().X) * LexWidget->GetWidth();
+	RelativeOffset.Z = (0.5f - LexWidget->GetPivot().Y) * LexWidget->GetHeight();
+	auto WorldLocation = WorldTransform.TransformPosition(RelativeOffset);
 
-		DrawDebugBox(GetWorld(), WorldLocation, RectExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), RectDrawColor);
+	DrawDebugBox(GetWorld(), WorldLocation, RectExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), RectDrawColor);
 }
 
 void ULexCanvas::DrawVirtualCamera()
 {
-		auto ViewLocation = this->GetViewLocation();
-		auto ViewRotationMatrix = FInverseRotationMatrix(this->GetViewRotator()) * FMatrix(
-			FPlane(0, 0, 1, 0),
-			FPlane(1, 0, 0, 0),
-			FPlane(0, 1, 0, 0),
-			FPlane(0, 0, 0, 1));
-		auto ProjectionMatrix = this->GetProjectionMatrix();
-		auto ViewProjectionMatrix = FTranslationMatrix(-ViewLocation) * ViewRotationMatrix * ProjectionMatrix;
+	auto ViewLocation = this->GetViewLocation();
+	auto ViewRotationMatrix = FInverseRotationMatrix(this->GetViewRotator()) * FMatrix(
+		FPlane(0, 0, 1, 0),
+		FPlane(1, 0, 0, 0),
+		FPlane(0, 1, 0, 0),
+		FPlane(0, 0, 0, 1));
+	auto ProjectionMatrix = this->GetProjectionMatrix();
+	auto ViewProjectionMatrix = FTranslationMatrix(-ViewLocation) * ViewRotationMatrix * ProjectionMatrix;
 
-		FVector leftBottom, rightBottom, leftTop, rightTop;
-		FVector leftBottomEnd, rightBottomEnd, leftTopEnd, rightTopEnd;
-		auto lineColor = FColor::Green;
-		//draw view frustum
-		DeprojectViewPointToWorld(ViewProjectionMatrix, FVector2D(0, 0), leftBottom, leftBottomEnd);
-		DrawDebugLine(this->GetWorld(), leftBottom, leftBottomEnd, lineColor);
-		DeprojectViewPointToWorld(ViewProjectionMatrix, FVector2D(1, 0), rightBottom, rightBottomEnd);
-		DrawDebugLine(this->GetWorld(), rightBottom, rightBottomEnd, lineColor);
-		DeprojectViewPointToWorld(ViewProjectionMatrix, FVector2D(0, 1), leftTop, leftTopEnd);
-		DrawDebugLine(this->GetWorld(), leftTop, leftTopEnd, lineColor);
-		DeprojectViewPointToWorld(ViewProjectionMatrix, FVector2D(1, 1), rightTop, rightTopEnd);
-		DrawDebugLine(this->GetWorld(), rightTop, rightTopEnd, lineColor);
-		//draw near clip plane
-		DrawDebugLine(this->GetWorld(), leftBottom, rightBottom, lineColor);
-		DrawDebugLine(this->GetWorld(), leftBottom, leftTop, lineColor);
-		DrawDebugLine(this->GetWorld(), rightTop, rightBottom, lineColor);
-		DrawDebugLine(this->GetWorld(), rightTop, leftTop, lineColor);
-		//draw far clip plane
-		DrawDebugLine(this->GetWorld(), leftBottomEnd, rightBottomEnd, lineColor);
-		DrawDebugLine(this->GetWorld(), leftBottomEnd, leftTopEnd, lineColor);
-		DrawDebugLine(this->GetWorld(), rightTopEnd, rightBottomEnd, lineColor);
-		DrawDebugLine(this->GetWorld(), rightTopEnd, leftTopEnd, lineColor);
+	FVector leftBottom, rightBottom, leftTop, rightTop;
+	FVector leftBottomEnd, rightBottomEnd, leftTopEnd, rightTopEnd;
+	auto lineColor = FColor::Green;
+	//draw view frustum
+	DeprojectViewPointToWorld(ViewProjectionMatrix, FVector2D(0, 0), leftBottom, leftBottomEnd);
+	DrawDebugLine(this->GetWorld(), leftBottom, leftBottomEnd, lineColor);
+	DeprojectViewPointToWorld(ViewProjectionMatrix, FVector2D(1, 0), rightBottom, rightBottomEnd);
+	DrawDebugLine(this->GetWorld(), rightBottom, rightBottomEnd, lineColor);
+	DeprojectViewPointToWorld(ViewProjectionMatrix, FVector2D(0, 1), leftTop, leftTopEnd);
+	DrawDebugLine(this->GetWorld(), leftTop, leftTopEnd, lineColor);
+	DeprojectViewPointToWorld(ViewProjectionMatrix, FVector2D(1, 1), rightTop, rightTopEnd);
+	DrawDebugLine(this->GetWorld(), rightTop, rightTopEnd, lineColor);
+	//draw near clip plane
+	DrawDebugLine(this->GetWorld(), leftBottom, rightBottom, lineColor);
+	DrawDebugLine(this->GetWorld(), leftBottom, leftTop, lineColor);
+	DrawDebugLine(this->GetWorld(), rightTop, rightBottom, lineColor);
+	DrawDebugLine(this->GetWorld(), rightTop, leftTop, lineColor);
+	//draw far clip plane
+	DrawDebugLine(this->GetWorld(), leftBottomEnd, rightBottomEnd, lineColor);
+	DrawDebugLine(this->GetWorld(), leftBottomEnd, leftTopEnd, lineColor);
+	DrawDebugLine(this->GetWorld(), rightTopEnd, rightBottomEnd, lineColor);
+	DrawDebugLine(this->GetWorld(), rightTopEnd, leftTopEnd, lineColor);
 
-		if (LexWidget.IsValid())
-		{
-			DrawDebugCamera(this->GetWorld(), this->GetViewLocation(), this->GetViewRotator(), FieldOfView, this->GetLexWidget()->GetComponentScale().X * 3.0f, FColor::Green);
-		}
+	if (LexWidget.IsValid())
+	{
+		DrawDebugCamera(this->GetWorld(), this->GetViewLocation(), this->GetViewRotator(), FieldOfView, this->GetLexWidget()->GetComponentScale().X * 3.0f, FColor::Green);
+	}
 }
 #endif
 

@@ -119,11 +119,14 @@ void UUIScrollViewComponent::RecalculateRange()
     }
 }
 
-void UUIScrollViewComponent::OnLayoutVisibilityChanged()
+void UUIScrollViewComponent::OnWidgetActiveChanged(bool WidgetActive)
 {
-    Super::OnLayoutVisibilityChanged();
-    bRangeCalculated = false;
-    RecalculateRange();
+    Super::OnWidgetActiveChanged(WidgetActive);
+    if (WidgetActive)
+    {
+        bRangeCalculated = false;
+        RecalculateRange();
+    }
 }
 
 void UUIScrollViewComponent::OnTransformChanged()
@@ -142,7 +145,8 @@ void UUIScrollViewComponent::OnDimensionsChanged(bool PivotChanged, bool WidthCh
 
 bool UUIScrollViewComponent::CheckParameters()
 {
-    if (ContentUIItem.IsValid() && ContentParentUIItem.IsValid() && RootUIComp.IsValid())
+    auto Widget = GetLexWidget();
+    if (ContentUIItem.IsValid() && ContentParentUIItem.IsValid() && Widget)
         return true;
     if (!Content.IsValid())
         return false;
@@ -159,15 +163,15 @@ bool UUIScrollViewComponent::CheckParameters()
         ContentParentHelperComp->TargetComp = this;
         ContentParentHelperComp->RegisterComponent();
     }
-    CheckRootUIComponent();
-    if (ContentUIItem.IsValid() && ContentParentUIItem.IsValid() && RootUIComp.IsValid())
+    if (ContentUIItem.IsValid() && ContentParentUIItem.IsValid() && Widget)
         return true;
     return false;
 }
 
 bool UUIScrollViewComponent::CheckValidHit(USceneComponent *InHitComp)
 {
-    return (InHitComp->IsAttachedTo(RootUIComp.Get()) || InHitComp == RootUIComp); //make sure hit component is child of this or is this
+    auto Widget = GetLexWidget();
+    return (InHitComp->IsAttachedTo(Widget) || InHitComp == Widget); //make sure hit component is child of this or is this
 }
 
 bool UUIScrollViewComponent::OnPointerBeginDrag_Implementation(ULGUIPointerEventData *eventData)
@@ -497,9 +501,9 @@ void UUIScrollViewComponent::ScrollTo(ULexWidget* InChild, bool InEaseAnimation,
         {
             bool bAffectByGamePause = false;
             bool bAffectByTimeDilation = false;
-            if (this->GetRootUIComponent())
+            if (this->GetLexWidget())
             {
-                if (this->GetRootUIComponent()->IsScreenSpaceOverlayUI())
+                if (this->GetLexWidget()->IsScreenSpaceOverlayUI())
                 {
                     bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
                     bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;

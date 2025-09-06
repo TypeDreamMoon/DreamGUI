@@ -55,7 +55,7 @@ void ULGUIWorldSpaceRaycaster::OnRegister()
 		RaycasterSourceObject = NewObject<ULGUIWorldSpaceRaycasterSource_Mouse>(this);
 	}
 	RaycasterSourceObject->Init(this);
-	RenderModeArray = { ELexRenderMode::WorldSpace, ELexRenderMode::WorldSpace_LGUI };
+	RenderModeArray = { ELexRenderMode::WorldSpace, ELexRenderMode::WorldSpace_LexUI };
 }
 
 bool ULGUIWorldSpaceRaycaster::ShouldSkipCanvas(class ULexCanvas* UICanvas)

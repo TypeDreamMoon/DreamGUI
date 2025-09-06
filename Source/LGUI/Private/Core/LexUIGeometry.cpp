@@ -155,7 +155,7 @@ void FLexUIGeometry::UpdateUIRectSimpleVertex(FLexUIGeometry* uiGeo,
 		triangles[5] = 3;
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetFinalPixelSnapping();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetPixelSnappingInHierarchy();
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	LexUIGeometrySetArrayNum(vertices, 4);
@@ -231,7 +231,7 @@ void FLexUIGeometry::UpdateRectBlockVertex(FLexUIGeometry* uiGeo,
 		triangles[5] = 3;
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetFinalPixelSnapping();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetPixelSnappingInHierarchy();
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	LexUIGeometrySetArrayNum(vertices, 4);
@@ -376,7 +376,7 @@ void FLexUIGeometry::UpdateUIRectBorderVertex(FLexUIGeometry* uiGeo, bool fillCe
 		}
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetFinalPixelSnapping();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetPixelSnappingInHierarchy();
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	auto verticesCount = 16;
@@ -500,7 +500,7 @@ void FLexUIGeometry::UpdateUIRectTiledVertex(FLexUIGeometry* uiGeo,
 		}
 	}
 	
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetFinalPixelSnapping();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetPixelSnappingInHierarchy();
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	auto verticesCount = 4 * rectangleCount;
@@ -601,7 +601,7 @@ void FLexUIGeometry::UpdateUIRectFillHorizontalVerticalVertex(FLexUIGeometry* ui
 		triangles[5] = 3;
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetFinalPixelSnapping();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetPixelSnappingInHierarchy();
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	auto verticesCount = 4;
@@ -755,7 +755,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial90Vertex(FLexUIGeometry* uiGeo, const
 		triangles[5] = 3;
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetFinalPixelSnapping();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetPixelSnappingInHierarchy();
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	auto verticesCount = 4;
@@ -1167,7 +1167,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial180Vertex(FLexUIGeometry* uiGeo, cons
 		}
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetFinalPixelSnapping();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetPixelSnappingInHierarchy();
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	auto verticesCount = 5;
@@ -1716,7 +1716,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial360Vertex(FLexUIGeometry* uiGeo, cons
 		}
 	}
 
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetFinalPixelSnapping();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetPixelSnappingInHierarchy();
 	auto& vertices = uiGeo->Vertices;
 	auto& originVertices = uiGeo->OriginVertices;
 	auto verticesCount = 10;
@@ -2267,7 +2267,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 
 	float maxFontSize = font->GetFontSizeLimit();
 	fontSize = FMath::Clamp(fontSize, 0.0f, maxFontSize);
-	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetFinalPixelSnapping();
+	bool pixelPerfect = uiComp->GetShouldAffectByPixelSnapping() && uiComp->GetWidget()->GetPixelSnappingInHierarchy();
 	float rootCanvasScale = renderCanvas->GetRootCanvas()->GetCanvasScale();
 	float dynamicPixelsPerUnit = renderCanvas->GetActualDynamicPixelsPerUnit() * rootCanvasScale;
 	float oneDivideRootCanvasScale = 1.0f / rootCanvasScale;

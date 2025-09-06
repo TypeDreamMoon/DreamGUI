@@ -67,8 +67,9 @@ enum class ELexVisualType :uint8
 	DirectMesh,
 };
 
+// Defines how mouse or ray hit on LexVisual
 UENUM(BlueprintType, Category = LGUI)
-enum class ELexVisualHitTestType :uint8
+enum class ELexVisualRaycastType :uint8
 {
 	/** Hit on rect range */
 	Rect = 0,
@@ -77,13 +78,13 @@ enum class ELexVisualHitTestType :uint8
 	/**
 	 * Hit on main texture's pixel, if the pixel is not transparent then hit test success.
 	 * Only support UI element type which can read pixel value from texture:
-	 *		1. UISprite which use LGUIStaticSpriteAtlasData can work perfectly.
+	 *		1. UISprite which use LexUIStaticSpriteAtlasData can work perfectly.
 	 *		2. UITexture can work with some specific setting.
-	 *		3. UIText which use dynamic font can not work. (Currently all LGUI's built-in font is dynamic)
+	 *		3. UIText which use dynamic font can NOT work. (Currently all LGUI's built-in font is dynamic)
 	 * Will fallback to Mesh if ui element not support this raycast type.
 	 */
 	VisiblePixel = 3,
-	/** Use a user defined UIRenderableCustomRaycast to process the raycast hit. */
+	/** Use a user defined ULexVisualCustomRaycast to process the raycast hit. */
 	Custom = 2,
 };
 
@@ -109,15 +110,17 @@ protected:
 	 * Render color of UI element.
 	 */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		FColor Color = FColor::White;
+	FColor Color = FColor::White;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Raycast")
-		ELexVisualHitTestType RaycastType = ELexVisualHitTestType::Rect;
+	bool bRaycastTarget = true;
+	UPROPERTY(EditAnywhere, Category = "LGUI-Raycast")
+	ELexVisualRaycastType RaycastType = ELexVisualRaycastType::Rect;
 	/** Custom raycast object to handle raycast behaviour when LGUI do raycast hit test. Only valid if RaycastType is Custom. */
 	UPROPERTY(EditAnywhere, Instanced, Category = "LGUI-Raycast")
-		TObjectPtr<ULexVisualCustomRaycast> CustomRaycastObject;
+	TObjectPtr<ULexVisualCustomRaycast> CustomRaycastObject;
 	/** Pixel's alpha value threshold, if hit a pixel which alpha value is less than this value, then hit test return false. */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Raycast")
-		float VisiblePixelThreshold = 0.1f;
+	float VisiblePixelThreshold = 0.1f;
 
 	virtual bool LineTraceUIRect(FHitResult& OutHit, const FVector& Start, const FVector& End)const;
 	virtual bool LineTraceUIGeometry(FLexUIGeometry* InGeo, FHitResult& OutHit, const FVector& Start, const FVector& End)const;
@@ -128,28 +131,32 @@ public:
 		return GET_MEMBER_NAME_CHECKED(ULexVisual, Color);
 	}
 	
-	/** get UI renderable type */
+	/** get visual type */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		ELexVisualType GetVisualType()const { return VisualType; }
+	ELexVisualType GetVisualType()const { return VisualType; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		FColor GetColor() const { return Color; }
+	FColor GetColor() const { return Color; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		float GetAlpha() const { return FLexUIUtils::Color255To1_Table[Color.A]; }
+	float GetAlpha() const { return FLexUIUtils::Color255To1_Table[Color.A]; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		ELexVisualHitTestType GetRaycastType()const { return RaycastType; }
+	bool GetRaycastTarget()const{return bRaycastTarget;}
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	ELexVisualRaycastType GetRaycastType()const { return RaycastType; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		ULexVisualCustomRaycast* GetCustomRaycastObject()const { return CustomRaycastObject; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetColor(FColor value);
+	void SetColor(FColor Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetAlpha(float value);
+	void SetAlpha(float Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetRaycastType(ELexVisualHitTestType Value) { RaycastType = Value; }
+	void SetRaycastTarget(bool Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetRaycastType(ELexVisualRaycastType Value) { RaycastType = Value; }
 	/** Set custom raycast object to handle raycast behaviour, only valid if RaycastType is Custom */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetCustomRaycastObject(ULexVisualCustomRaycast* Value);
+	void SetCustomRaycastObject(ULexVisualCustomRaycast* Value);
 
 	uint8 GetFinalAlpha()const;
 	/** get final alpha, calculated with CanvasGroup's alpha */

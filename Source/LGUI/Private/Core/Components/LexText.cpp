@@ -184,7 +184,7 @@ void ULexText::OnRegister()
 		else
 #endif
 		{
-			ULGUIManagerWorldSubsystem::RegisterLGUICultureChangedEvent(this);
+			ULGUIManagerWorldSubsystem::RegisterLexUICultureChangedEvent(this);
 		}
 	}
 }
@@ -219,7 +219,7 @@ void ULexText::OnUnregister()
 		else
 #endif
 		{
-			ULGUIManagerWorldSubsystem::UnregisterLGUICultureChangedEvent(this);
+			ULGUIManagerWorldSubsystem::UnregisterLexUICultureChangedEvent(this);
 		}
 	}
 }

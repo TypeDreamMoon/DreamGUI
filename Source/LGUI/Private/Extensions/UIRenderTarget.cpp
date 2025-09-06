@@ -135,7 +135,7 @@ void UUIRenderTarget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChan
 		{
 			if (IsValid(CustomMesh))//custom mesh use geometry raycast to get precise uv
 			{
-				this->SetRaycastType(ELexVisualHitTestType::Mesh);
+				this->SetRaycastType(ELexVisualRaycastType::Mesh);
 			}
 		}
 	}

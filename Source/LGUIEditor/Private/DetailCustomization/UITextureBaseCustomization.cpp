@@ -53,7 +53,7 @@ void FUITextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
 	textureHandle->GetValue((*(UObject**)&texture));
 	if(IsValid(texture))
 	{
-		ELexVisualHitTestType raycastType = ELexVisualHitTestType::Rect;
+		ELexVisualRaycastType raycastType = ELexVisualRaycastType::Rect;
 		bool bGetRaycastTypeValue = true;
 		for (int i = 0; i < TargetScriptArray.Num(); i++)
 		{
@@ -72,7 +72,7 @@ void FUITextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
 		}
 		if (bGetRaycastTypeValue)
 		{
-			if (raycastType == ELexVisualHitTestType::VisiblePixel)
+			if (raycastType == ELexVisualRaycastType::VisiblePixel)
 			{
 				if (texture->CompressionSettings != TextureCompressionSettings::TC_EditorIcon)
 				{

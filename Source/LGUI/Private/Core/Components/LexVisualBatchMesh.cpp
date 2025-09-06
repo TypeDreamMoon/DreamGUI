@@ -211,7 +211,7 @@ void ULexVisualBatchMesh::UpdateGeometry()
 	else//if geometry is created, update data
 	{
 		//when use pixel-perfect, the pixel-perfect calculation will take consider transform matrix, so we need to recalculate geometry if pixel-perfect & bTransformChanged
-		bool pixelPerfect = this->GetShouldAffectByPixelSnapping() && Widget->GetFinalPixelSnapping();
+		bool pixelPerfect = this->GetShouldAffectByPixelSnapping() && Widget->GetPixelSnappingInHierarchy();
 		bool pixelPerfectAffectTransform = pixelPerfect && bTransformChanged;
 		if (bTriangleChanged || bLocalVertexPositionChanged || pixelPerfectAffectTransform || bColorChanged || bUVChanged)
 		{
@@ -280,16 +280,16 @@ bool ULexVisualBatchMesh::LineTraceUI(FHitResult& OutHit, const FVector& Start, 
 	switch (RaycastType)
 	{
 	default:
-	case ELexVisualHitTestType::Rect:
+	case ELexVisualRaycastType::Rect:
 		return LineTraceUIRect(OutHit, Start, End);
 		break;
-	case ELexVisualHitTestType::Mesh:
+	case ELexVisualRaycastType::Mesh:
 		return LineTraceUIGeometry(UIGeometry.Get(), OutHit, Start, End);
 		break;
-	case ELexVisualHitTestType::VisiblePixel:
+	case ELexVisualRaycastType::VisiblePixel:
 		return LineTraceVisiblePixel(VisiblePixelThreshold, OutHit, Start, End);
 		break;
-	case ELexVisualHitTestType::Custom:
+	case ELexVisualRaycastType::Custom:
 		return LineTraceUICustom(OutHit, Start, End);
 		break;
 	}

@@ -51,7 +51,7 @@ bool ULGUIScreenSpaceRaycaster::GenerateRay(ULGUIPointerEventData* InPointerEven
 			RootCanvas = Canvas;
 		}
 	}
-	if (RootCanvas->GetActualRenderMode() != ELexRenderMode::ScreenSpaceOverlay)
+	if (RootCanvas->GetRootRenderMode() != ELexRenderMode::ScreenSpaceOverlay)
 		return false;
 
 	auto ViewProjectionMatrix = RootCanvas->GetViewProjectionMatrix();

@@ -1,0 +1,130 @@
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+
+#pragma once
+
+#include "Components/ActorComponent.h"
+#include "LexUIBehaviour.generated.h"
+
+class USceneComponent;
+
+/**
+ * Base class for LexUI's life cycle behaviour related component.
+ * You should use Awake/Start instead of BeginPlay, Update instead of Tick.
+ * Awake execute order in prefab: higher in hierarchy will execute earlier, so scripts on root actor will execute the first.
+ */
+UCLASS(ClassGroup = (LGUI), Abstract, Blueprintable, HideCategories = (Activation), DisplayName = "Lex UI Behaviour")
+class LGUI_API ULexUIBehaviour : public UActorComponent
+{
+	GENERATED_BODY()
+public:
+	ULexUIBehaviour();
+protected:
+	virtual void BeginPlay() override;
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason)override;
+
+	virtual void OnRegister()override;
+	virtual void OnUnregister()override;
+#if WITH_EDITOR
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
+#endif
+
+	enum class ECallbackFunctionType :int32
+	{
+		OnWidgetActiveChanged,
+		OnTransformChanged,
+		OnDimensionsChanged,
+		OnChildDimensionsChanged,
+		OnAttachmentChanged,
+		OnSiblingIndexChanged,
+		OnInteractableChanged,
+		OnRaycastableChanged,
+		COUNT,
+	};
+	/** Some UI callback functions want to execute before Awake, but most behaviours should executed inside or after Awake. So use this array to cache these callbacks and execute when Awake called. */
+	TArray<TFunction<void()>> CallbacksBeforeAwake;
+
+	uint8 bIsAwakeCalled : 1 = false;
+	uint8 bIsStartCalled : 1 = false;
+	uint8 bCanExecuteUpdate : 1 = true;
+	/** use this to tell if the class is compiled from blueprint, only blueprint can execute ReceiveXXX. */
+	uint8 bCanExecuteBlueprintEvent : 1;
+private:
+	friend class ULGUIManagerWorldSubsystem;
+	void Call_Awake();
+	void Call_Start();
+	UPROPERTY(Transient) mutable TWeakObjectPtr<ULexWidget> CacheWidget = nullptr;
+	UPROPERTY(Transient) mutable TWeakObjectPtr<USceneComponent> CacheSceneComp = nullptr;
+protected:
+
+	bool IsAllowToCallAwake()const;
+	/**
+	 * This function is always called before any Start functions and also after a prefab is loaded.
+	 * This is a good replacement for BeginPlay in LGUI's Prefab workflow. Because Awake will execute after all prefab serialization and object reference is done.
+	 * NOTE!!! If RootComponent is UIItem: if UIItem is not "ActiveInHierarchy" during start up, then Awake is not called until "ActiveInHierarchy" becomes true.
+	 * Awake execute order in prefab: higher in hierarchy will execute earlier, so scripts on root actor will execute the first.
+	 */
+	virtual void Awake();
+	/** Start is called before the first frame update. */
+	virtual void Start();
+	/** Update is called once per frame. */
+	virtual void Update(float DeltaTime);
+
+	virtual void OnWidgetActiveChanged(bool WidgetActive);
+	virtual void OnTransformChanged();
+	/** Called when RootUIComp->AnchorData is changed or scale is changed. */
+	virtual void OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged);
+	virtual void OnChildDimensionsChanged(ULexWidget* Child, bool PivotChanged, bool WidthChanged, bool HeightChanged);
+	/** Called when RootUIComp attach to a new parent */
+	virtual void OnAttachmentChanged();
+	virtual void OnSiblingIndexChanged();
+	/** Called when RootUIComp Interactable state is changed */
+	virtual void OnInteractableChanged(bool Interactable);
+	virtual void OnRaycastableChanged(bool Raycastable);
+
+	void Call_OnWidgetActiveChanged(bool WidgetActive);
+	void Call_OnTransformChanged();
+	void Call_OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged);
+	void Call_OnChildDimensionsChanged(ULexWidget* Child, bool PivotChanged, bool WidthChanged, bool HeightChanged);
+	void Call_OnAttachmentChanged();
+	void Call_OnSiblingIndexChanged();
+	void Call_OnInteractableChanged(bool Interactable);
+	void Call_OnRaycastableChanged(bool Raycastable);
+
+	/**
+	 * This function is always called before any Start functions and also after a prefab is loaded.
+	 * This is a good replacement for BeginPlay in LGUI's Prefab workflow. Because Awake will execute after all prefab serialization and object reference is done.
+	 * NOTE!!! If RootComponent is UIItem: if UIItem is inactive during start up, then Awake is not called until it is made active.
+	 * Awake execute order in prefab: higher in hierarchy will execute earlier, so scripts on root actor will execute the first.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Awake"), Category = "LexUIBehaviour")void ReceiveAwake();
+	/** Start is called before the first frame update. */
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Start"), Category = "LexUIBehaviour")void ReceiveStart();
+	/** Update is called once per frame. */
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Update"), Category = "LexUIBehaviour")void ReceiveUpdate(float DeltaTime);
+
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnWidgetActiveChanged"), Category = "LexUIBehaviour") void ReceiveOnWidgetActiveChanged(bool WidgetActive);
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnTransformChanged"), Category = "LexUIBehaviour") void ReceiveOnTransformChanged();
+	/** Called when RootUIComp->AnchorData is changed  or scale is changed. */
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnDimensionsChanged"), Category = "LexUIBehaviour") void ReceiveOnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged);
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnChildDimensionsChanged"), Category = "LexUIBehaviour") void ReceiveOnChildDimensionsChanged(ULexWidget* Child, bool PivotChanged, bool WidthChanged, bool HeightChanged);
+	/** Called when RootUIComp attach to a new parent */
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnAttachmentChanged"), Category = "LexUIBehaviour") void ReceiveOnAttachmentChanged();
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnSiblingIndexChanged"), Category = "LexUIBehaviour") void ReceiveOnSiblingIndexChanged();
+	/** Called when RootUIComp IsActiveInHierarchy state is changed */
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnInteractableChanged"), Category = "LexUIBehaviour") void ReceiveOnInteractableChanged(bool Interactable);
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnRaycastableChanged"), Category = "LexUIBehaviour") void ReceiveOnRaycastableChanged(bool Raycastable);
+public:
+	/**
+	 * Set if this component can execute "Update" event or not. "CanExecuteUpdate" is true by default.
+	 * NOTE!!! This will not immediately affect "Update" event, "Update" event's state will only change after "Awake" "Start" "OnEnable" "OnDisable".
+	 */
+	UFUNCTION(BlueprintCallable, Category = "LexUIBehaviour")
+		void SetCanExecuteUpdate(bool Value);
+	
+	UFUNCTION(BlueprintCallable, Category = "LexUIBehaviour")
+	USceneComponent* GetRootSceneComponent();
+	
+	UFUNCTION(BlueprintCallable, Category = "LexUIBehaviour")
+	ULexWidget* GetLexWidget() const;
+};

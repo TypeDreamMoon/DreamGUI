@@ -49,7 +49,7 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	auto RenderModeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderMode));
 	RenderModeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexCanvasCustomization::ForceRefresh, &DetailBuilder));
 	
-	if (TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
+	if (TargetScriptArray[0]->GetRootRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
 	{
 		if (auto World = TargetScriptArray[0]->GetWorld())
 		{
@@ -153,20 +153,20 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, BlendDepth));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, DepthFade));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, bEnableDepthTest));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, bPreviewWithLGUIRenderer));
+			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, bPreviewWithLexUIRenderer));
 			break;
-		case ELexRenderMode::WorldSpace_LGUI:
+		case ELexRenderMode::WorldSpace_LexUI:
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTarget));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTargetUpdateMode));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTargetSizeMode));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTargetResolutionScale));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, bEnableDepthTest));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, bPreviewWithLGUIRenderer));
+			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, bPreviewWithLexUIRenderer));
 			break;
 		case ELexRenderMode::RenderTarget:
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, BlendDepth));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, DepthFade));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, bPreviewWithLGUIRenderer));
+			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, bPreviewWithLexUIRenderer));
 			break;
 		}
 	}
@@ -178,7 +178,7 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTargetSizeMode));
 		needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTargetResolutionScale));
 		needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, bEnableDepthTest));
-		needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, bPreviewWithLGUIRenderer));
+		needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, bPreviewWithLexUIRenderer));
 
 		auto overrideParametersHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, OverrideParameters));
 		overrideParametersHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexCanvasCustomization::ForceRefresh, &DetailBuilder));
@@ -300,7 +300,7 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	;
 	};
 	
-	if (TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::WorldSpace || TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::WorldSpace_LGUI)
+	if (TargetScriptArray[0]->GetRootRenderMode() == ELexRenderMode::WorldSpace || TargetScriptArray[0]->GetRootRenderMode() == ELexRenderMode::WorldSpace_LexUI)
 	{
 		CanvasScalerCategory.AddCustomRow(LOCTEXT("WorldSpaceUIInfo", "WorldSpaceUIInfo"))
 			.WholeRowContent()
@@ -314,8 +314,8 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			];
 	}
 	else if (
-		TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::ScreenSpaceOverlay
-		|| TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::RenderTarget
+		TargetScriptArray[0]->GetRootRenderMode() == ELexRenderMode::ScreenSpaceOverlay
+		|| TargetScriptArray[0]->GetRootRenderMode() == ELexRenderMode::RenderTarget
 		)
 	{
 		CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, ScaleMode));
@@ -372,7 +372,7 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, NearClipPlane));
 		CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, FarClipPlane));
 
-		if (TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
+		if (TargetScriptArray[0]->GetRootRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
 		{
 			CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, bFixedSizeInEditMode));
 			CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, SizeInEditMode));
@@ -465,7 +465,7 @@ FText FLexCanvasCustomization::GetSortOrderInfo(TWeakObjectPtr<ULexCanvas> Targe
 					}
 				}
 
-				auto renderMode = TargetScript->GetActualRenderMode();
+				auto renderMode = TargetScript->GetRootRenderMode();
 				auto& itemList = LGUIManager->GetCanvasArray(renderMode);
 				int sortOrderCount = 0;
 				for (auto item : itemList)
@@ -493,7 +493,7 @@ FText FLexCanvasCustomization::GetDrawcallInfo()const
 		int allDrawcallCount = 0;
 		for (auto& canvasItem : allCanvas)
 		{
-			if (TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::RenderTarget)
+			if (TargetScriptArray[0]->GetRootRenderMode() == ELexRenderMode::RenderTarget)
 			{
 				if (TargetScriptArray[0]->RenderTarget == canvasItem->RenderTarget && IsValid(canvasItem->RenderTarget))
 				{
@@ -512,7 +512,7 @@ FText FLexCanvasCustomization::GetDrawcallInfo()const
 FText FLexCanvasCustomization::GetDrawcallInfoTooltip()const
 {
 	FString spaceText;
-	switch (TargetScriptArray[0]->GetActualRenderMode())
+	switch (TargetScriptArray[0]->GetRootRenderMode())
 	{
 	case ELexRenderMode::ScreenSpaceOverlay:
 		spaceText = TEXT("ScreenSpaceOverlay");
@@ -520,7 +520,7 @@ FText FLexCanvasCustomization::GetDrawcallInfoTooltip()const
 	case ELexRenderMode::WorldSpace:
 		spaceText = TEXT("WorldSpace UE Renderer");
 		break;
-	case ELexRenderMode::WorldSpace_LGUI:
+	case ELexRenderMode::WorldSpace_LexUI:
 		spaceText = TEXT("WorldSpace LGUI Renderer");
 		break;
 	case ELexRenderMode::RenderTarget:
@@ -537,11 +537,11 @@ FText FLexCanvasCustomization::GetDrawcallInfoTooltip()const
 
 	if (auto LGUIManager = ULGUIManagerWorldSubsystem::GetInstance(TargetScriptArray[0]->GetWorld()))
 	{
-		auto& allCanvas = LGUIManager->GetCanvasArray(TargetScriptArray[0]->GetActualRenderMode());
+		auto& allCanvas = LGUIManager->GetCanvasArray(TargetScriptArray[0]->GetRootRenderMode());
 		int allDrawcallCount = 0;
 		for (auto& canvasItem : allCanvas)
 		{
-			if (TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::RenderTarget)
+			if (TargetScriptArray[0]->GetRootRenderMode() == ELexRenderMode::RenderTarget)
 			{
 				if (TargetScriptArray[0]->RenderTarget == canvasItem->RenderTarget && IsValid(canvasItem->RenderTarget))
 				{

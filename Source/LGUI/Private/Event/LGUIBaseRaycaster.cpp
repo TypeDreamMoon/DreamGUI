@@ -90,9 +90,10 @@ bool ULGUIBaseRaycaster::RaycastUI(ULGUIPointerEventData* InPointerEventData, co
 						FHitResult thisHit;
 						thisHit.FaceIndex = INDEX_NONE;
 						if (
-							uiItem->IsVisibleForHitTest()
-							&& uiItem->GetIsEnabled()
+							uiItem->GetRaycastableInHierarchy()
+							&& uiItem->GetWidgetActiveInHierarchy()
 							&& uiItem->GetVisual()
+							&& uiItem->GetVisual()->GetRaycastTarget()
 							&& uiItem->GetVisual()->LineTraceUI(thisHit, OutRayOrigin, OutRayEnd)
 							)
 						{
@@ -121,9 +122,10 @@ bool ULGUIBaseRaycaster::RaycastUI(ULGUIPointerEventData* InPointerEventData, co
 							FHitResult thisHit;
 							thisHit.FaceIndex = INDEX_NONE;
 							if (
-								uiItem->IsVisibleForHitTest()
-								&& uiItem->GetIsEnabled()
+								uiItem->GetRaycastableInHierarchy()
+								&& uiItem->GetWidgetActiveInHierarchy()
 								&& uiItem->GetVisual()
+								&& uiItem->GetVisual()->GetRaycastTarget()
 								&& uiItem->GetVisual()->LineTraceUI(thisHit, OutRayOrigin, OutRayEnd)
 								)
 							{
@@ -153,10 +155,11 @@ bool ULGUIBaseRaycaster::RaycastUI(ULGUIPointerEventData* InPointerEventData, co
 						FHitResult thisHit;
 						thisHit.FaceIndex = INDEX_NONE;
 						if (
-							uiItem->IsRaycastTarget()
-							&& uiItem->IsGroupAllowInteraction()
-							&& uiItem->GetTraceChannel() == traceChannel
-							&& uiItem->LineTraceUI(thisHit, OutRayOrigin, OutRayEnd)
+							uiItem->IsVisibleForHitTest()
+							&& uiItem->GetWidgetActiveInHierarchy()
+							&& uiItem->GetVisual()
+							&& uiItem->GetVisual()->GetRaycastTarget()
+							&& uiItem->GetVisual()->LineTraceUI(thisHit, OutRayOrigin, OutRayEnd)
 							)
 						{
 							if (uiItem->IsPointVisibleOnClip(thisHit.Location))

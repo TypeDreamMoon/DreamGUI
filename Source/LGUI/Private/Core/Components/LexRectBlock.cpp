@@ -363,7 +363,7 @@ bool ULexRectBlock::CanEditChange(const FProperty* InProperty) const
 	static auto RaycastSupportCornerRadius_Name = GET_MEMBER_NAME_CHECKED(ULexRectBlock, bRaycastSupportCornerRadius);
 	if (PropertyName == RaycastSupportCornerRadius_Name)
 	{
-		if (!GetWidget()->IsVisibleForHitTest() || RaycastType != ELexVisualHitTestType::Rect)
+		if (!GetWidget()->GetRaycastableInHierarchy() || RaycastType != ELexVisualRaycastType::Rect)
 		{
 			return false;
 		}

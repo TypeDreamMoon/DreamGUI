@@ -134,7 +134,7 @@ void ULexImage::OnUpdateGeometry(FLexUIGeometry& InMesh, bool InTriangleChanged,
 	auto FinalColor = FLexUIUtils::MultiplyColor(Brush.TintColor, this->GetFinalColor());
 
 	auto& triangles = InMesh.Triangles;
-	bool pixelSnapping = this->GetShouldAffectByPixelSnapping() && Widget->GetFinalPixelSnapping();
+	bool pixelSnapping = this->GetShouldAffectByPixelSnapping() && Widget->GetPixelSnappingInHierarchy();
 	auto& vertices = InMesh.Vertices;
 	auto& originVertices = InMesh.OriginVertices;
 	

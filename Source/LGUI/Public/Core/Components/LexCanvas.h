@@ -16,21 +16,21 @@ UENUM(BlueprintType, Category = LGUI)
 enum class ELexRenderMode :uint8
 {
 	/**
-	 * Render in screen space. If there are multiple screen-space-ui-root in world, they will be sort by SortOrder property.
-	 * This mode use LGUI's custom render pipeline.
+	 * Render in screen space. If there are multiple screen-space-ui-root in world, they will be sorted by SortOrder property.
+	 * This mode use LexUI's custom render pipeline.
 	 * This mode need a LexCanvasScaler to control the size and scale.
 	 */
 	ScreenSpaceOverlay = 0,
 	/**
 	 * Render in world space by UE default render pipeline.
-	 * This mode use engine's default render pieple, so post process will affect ui.
+	 * This mode use engine's default render pipeline, so post process will affect ui.
 	 */
 	WorldSpace=1			UMETA(DisplayName = "World Space - UE Renderer"),
 	/**
-	 * Render in world space by LGUI's custom render pipeline, 
-	 * This mode use LGUI's custom render pipeline, will not be affected by post process.
+	 * Render in world space by LexUI's custom render pipeline, 
+	 * This mode use LexUI's custom render pipeline, will not be affected by post process.
 	 */
-	WorldSpace_LGUI = 3		UMETA(DisplayName = "World Space - LGUI Renderer"),
+	WorldSpace_LexUI = 3		UMETA(DisplayName = "World Space - LexUI Renderer"),
 	/**
 	 * Render to a custom render target.
 	 */
@@ -52,9 +52,9 @@ enum class ELexCanvasRenderTargetSizeMode : uint8
 UENUM(BlueprintType, Category = LGUI)
 enum class ELexCanvasRenderTargetUpdateMode : uint8
 {
-	/** LGUI will automatically manage update, only draw to RenderTarget when it detect something change. */
+	/** LexUI will automatically manage update, only draw to RenderTarget when it detect something change. */
 	Automatic,
-	/** Alway draw to RenderTarget every frame. */
+	/** Always draw to RenderTarget every frame. */
 	Always,
 	/** Only draw to RenderTarget when call RequestUpdateForRenderTarget. */
 	WhenRequest,
@@ -198,12 +198,12 @@ public:
 	/** mark canvas layout dirty */
 	void MarkSizeChanged();
 	/**
-	 * Mark update this Canvas. Canvas dont need to update every frame, only update when need to.
-	 * Some rules if update could trigger drawcall's rebuild:
+	 * Mark update this Canvas. Canvas don't need to update every frame, only update when need to.
+	 * Some rules if update could trigger draw-call's rebuild:
 	 *		1. Commonly material & texture change and UI item's active state change
-	 *		2. Transform & vertex position change, drawcall could overlap with eachother
+	 *		2. Transform & vertex position change, draw-call could overlap with each other
 	 *		3. Hierarchy order change, this is directly related to render order
-	 * And about drawcall's rebuild, it's not actually force rebuild, it will check and reuse prev drawcall if possible.
+	 * And about draw-call's rebuild, it's not actually force rebuild, it will check and reuse prev draw-call if possible.
 	 * @param	bMaterialOrTextureChanged	Material or texture change
 	 * @param	bTransformOrVertexPositionChanged	UI element's transform change, or vertex position change
 	 * @param	bHierarchyOrderChanged	UI element's hierarchy order change
@@ -225,8 +225,8 @@ private:
 	float CanvasScale = 1.0f;//for screen space UI, screen size / root canvas size
 
 	/** hierarchy changed */
-	void OnUIHierarchyChanged();
-	void OnWidgetActiveChanged();
+	void OnUIHierarchyAttachmentChanged();
+	void OnWidgetActiveChanged(bool WidgetActive);
 public:
 	/** get root canvas on hierarchy */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
@@ -240,7 +240,7 @@ public:
 	bool IsRenderToWorldSpace()const;
 	bool IsRenderByLGUIRendererOrUERenderer()const;
 
-	/** Return UIItem component which this LGUICanvas attach to. */
+	/** Return UIItem component which this LexCanvas attach to. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	ULexWidget* GetLexWidget()const { return LexWidget.Get(); }
 	TWeakObjectPtr<ULexCanvas> GetParentCanvas()const { return ParentCanvas; }
@@ -273,11 +273,11 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		TObjectPtr<UTextureRenderTarget2D> RenderTarget;
-	/** Controls how LGUICanvas render to RenderTarget. */
+	/** Controls how LexCanvas render to RenderTarget. */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		ELexCanvasRenderTargetUpdateMode RenderTargetUpdateMode = ELexCanvasRenderTargetUpdateMode::Automatic;
 	/**
-	 * How RenderTarget and LGUICanvas's size change depend on the other.
+	 * How RenderTarget and LexCanvas's size change depend on the other.
 	 */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		ELexCanvasRenderTargetSizeMode RenderTargetSizeMode = ELexCanvasRenderTargetSizeMode::RenderTargetFitToCanvas;
@@ -289,11 +289,11 @@ protected:
 		float RenderTargetResolutionScale = 1.0f;
 #if WITH_EDITORONLY_DATA
 	/**
-	 * When in eidt mode, show the Screen-Space-Overlay UI with LGUIRenderer.
-	 * LGUIRenderer can show the color and texture at final result, not affect by post process.
+	 * When in edit mode, show the Screen-Space-Overlay UI with LexUIRenderer.
+	 * LexUIRenderer can show the color and texture at final result, not affect by post process.
 	 */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		bool bPreviewWithLGUIRenderer = false;
+		bool bPreviewWithLexUIRenderer = false;
 #endif
 	/**
 	 * true- Use custom sort order.
@@ -336,19 +336,19 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		bool bEnableDepthTest = false;
 	/** For not root canvas, inherit or override parent canvas parameters. */
-	UPROPERTY(EditAnywhere, Category = LGUI, meta = (Bitmask, BitmaskEnum = "/Script/LGUI.ELGUICanvasOverrideParameters"))
+	UPROPERTY(EditAnywhere, Category = LGUI, meta = (Bitmask, BitmaskEnum = "/Script/LGUI.ELexCanvasOverrideParameters"))
 		int8 OverrideParameters;
 
 	/** traceChannel for line trace of EventSystem interaction */
-	UPROPERTY(EditAnywhere, Category = "LGUI-Raycast")
+	UPROPERTY(EditAnywhere, Category = "LGUI")
 	TEnumAsByte<ETraceTypeQuery> TraceChannel = TraceTypeQuery3;
 
 	/**
-	 * LGUICanvas create mesh for render UI elements, this property can give us opportunity to use custom type of mesh for render.
+	 * LexCanvas create mesh for render UI elements, this property can give us opportunity to use custom type of mesh for render.
 	 * You can set "OwnerNoSee" "CastShadow" properties for your mesh.
 	 * @todo: override this property from parent canvas?
 	 */
-	UPROPERTY(EditAnywhere, Category = LGUI, AdvancedDisplay, meta = (AllowAbstract = "true"))
+	UPROPERTY(EditAnywhere, Category = "LGUI", AdvancedDisplay, meta = (AllowAbstract = "true"))
 		TSubclassOf<ULexUIMeshComponent> DefaultMeshType;
 
 #pragma region CanvasScaler
@@ -405,7 +405,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	TEnumAsByte<ETraceTypeQuery> GetTraceChannel()const { return TraceChannel; }
 
-	/** Set render mode of this canvas. This may not take effect if the canvas is not a root cnavas. */
+	/** Set render mode of this canvas. This may not take effect if the canvas is not a root canvas. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetRenderMode(ELexRenderMode Value);
 	/** Set parameters for calculating projection matrix. Only valid for ScreenSpace/RenderTarget mode. */
@@ -441,32 +441,32 @@ public:
 		void SetSortOrderToLowestOfHierarchy(bool PropagateToChildrenCanvas = true);
 	void GetMinMaxSortOrderOfHierarchy(int32& OutMin, int32& OutMax);
 
-	/** Get actually render mode of canvas. Canvas's render-mode is inherited from parent canvas. */
+	/** Get render mode of root canvas. Canvas's render-mode is inherited from parent canvas. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		ELexRenderMode GetActualRenderMode()const;
+		ELexRenderMode GetRootRenderMode()const;
 	/** Get render mode of this canvas. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		ELexRenderMode GetRenderMode()const { return RenderMode; }
-	/** Get render target of canvas if render mode is RenderTarget. Canvas's render-target is inherited from root canvas. */
+	/** Get render target of root canvas if render mode is RenderTarget. Canvas's render-target is inherited from root canvas. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		UTextureRenderTarget2D* GetActualRenderTarget()const;
+		UTextureRenderTarget2D* GetRootRenderTarget()const;
 	/** Get render target of this canvas. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		UTextureRenderTarget2D* GetRenderTarget()const { return RenderTarget; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		float GetActualRenderTargetResolutionScale()const;
+		float GetRootRenderTargetResolutionScale()const;
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		float GetRenderTargetResolutionScale()const { return RenderTargetResolutionScale; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		ELexCanvasRenderTargetSizeMode GetActualRenderTargetSizeMode()const;
+		ELexCanvasRenderTargetSizeMode GetRootRenderTargetSizeMode()const;
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		ELexCanvasRenderTargetSizeMode GetRenderTargetSizeMode()const { return RenderTargetSizeMode; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		ELexCanvasRenderTargetUpdateMode GetActualRenderTargetUpdateMode()const;
+		ELexCanvasRenderTargetUpdateMode GetRootRenderTargetUpdateMode()const;
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		ELexCanvasRenderTargetUpdateMode GetRenderTargetUpdateMode()const { return RenderTargetUpdateMode; }
 
-	/** Get actual blendDepth value of canvas. Canvas's BlendDepth is inherited from parent canvas. */
+	/** Get actual BlendDepth value of canvas. This property may inherit from parent canvas depend on OverrideParameters property. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		float GetActualBlendDepth()const;
 	/** Get blendDepth value of this canvas. */
@@ -475,7 +475,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetBlendDepth(float Value);
 
-	/** Get actual depthFade value of canvas. Canvas's DepthFade is inherited from parent canvas. */
+	/** Get actual DepthFade value of canvas. This property may inherit from parent canvas depend on OverrideParameters property. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		int GetActualDepthFade()const;
 	/** Get blendDepth value of this canvas. */
@@ -495,7 +495,7 @@ public:
 		void SetOverrideSorting(bool Value);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		int32 GetSortOrder()const { return SortOrder; }
-	/** Get actual SortOrder of this canvas. Canvas's SortOrder property may inherit from parent canvas depend on OverrideSorting property. */
+	/** Get actual SortOrder of canvas. This property may inherit from parent canvas depend on OverrideSorting property. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		int32 GetActualSortOrder()const;
 
@@ -504,6 +504,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	bool GetRequireNormalAndTangent()const { return bRequireNormalAndTangent; }
 
+	/** Get actual DynamicPixelsPerUnit of canvas. This property may inherit from parent canvas depend on OverrideParameters property. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		float GetActualDynamicPixelsPerUnit()const;
 	UFUNCTION(BlueprintCallable, Category = LGUI)
@@ -513,20 +514,20 @@ public:
 
 	int GetDrawCallCount()const;
 
-	/** Override LGUI's screen space UI render's camera location. */
+	/** Override LexUI's screen space UI render's camera location. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetOverrideViewLocation(bool Override, FVector Value);
-	/** Override LGUI's screen space UI render's camera rotation. */
+	/** Override LexUI's screen space UI render's camera rotation. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetOverrideViewRotation(bool Override, FRotator Value);
 	/**
-	 * Override LGUI's screen space UI render's camera's fov in degree, will affect projection matrix.
+	 * Override LexUI's screen space UI render's camera's fov in degree, will affect projection matrix.
 	 * If SetOverrideProjectionMatrix is true, then this will not take effect.
 	 */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetOverrideFovAngle(bool Override, float Value);
 	/**
-	 * Override LGUI's screen space UI render's camera's projection matrix.
+	 * Override LexUI's screen space UI render's camera's projection matrix.
 	 * If this is set to true, then SetOverrideFovAngle will not take effect.
 	 */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
@@ -614,7 +615,7 @@ public:
 private:
 #if WITH_EDITOR
 	FDelegateHandle EditorTickDelegateHandle;
-	FDelegateHandle LGUIPreview_ViewportIndexChangeDelegateHandle;
+	FDelegateHandle LexUIPreview_ViewportIndexChangeDelegateHandle;
 	void DrawVirtualCamera();
 	void DrawViewportArea();
 	void OnEditorTick(float DeltaTime);
@@ -625,7 +626,7 @@ private:
 	void OnViewportParameterChanged();
 	void CheckAndApplyViewportParameter();
 	void OnViewportResized(FViewport*, uint32);
-	FDelegateHandle _ViewportResizeDelegateHandle;
+	FDelegateHandle ViewportResizeDelegateHandle;
 #pragma endregion
 
 public:
@@ -661,14 +662,14 @@ public:
 private:
 	uint32 bCanTickUpdate:1;//if Canvas can update from tick
 	uint32 bShouldRebuildDrawCall : 1;
-	uint32 bShouldClearCachedDrawCall : 1;//mark this to true will delete all cached drawcall and rebuild all drawcall
-	uint32 bShouldSortRenderableOrder : 1;//if any renderable UIItem's hierarchy change, then we need to sort renderable list
+	uint32 bShouldClearCachedDrawCall : 1;//mark this to true will delete all cached draw-call and rebuild all draw-call
+	uint32 bShouldSortVisualOrder : 1;//if any visual UIItem's hierarchy change, then we need to sort visual list
 	uint32 bNeedToSortRenderPriority : 1;
-	uint32 bHasAddToLGUIScreenSpaceRenderer : 1;//is this canvas added to LGUI screen space renderer
+	uint32 bHasAddToLexScreenSpaceRenderer : 1;//is this canvas added to LGUI screen space renderer
 	uint32 bRequestUpdateForRenderTarget : 1;//request update when RenderTargetUpdateMode is WhenRequest
 	uint32 bAnythingChangedForRenderTarget : 1;//if children canvas anything changed, then mark this property for root canvas, good for RenderTarget mode to update
 	uint32 bPrevAnythingChangedForRenderTarget : 1;//same as upper one, but the prev frame
-	uint32 bHasSetIntialStateforLGUIWorldSpaceRenderer : 1;//is LGUI world space renderer's initial state set
+	uint32 bHasSetInitialStateForLexWorldSpaceRenderer : 1;//is LGUI world space renderer's initial state set
 	uint32 bNeedToVerifyMaterials : 1;
 	uint32 bRootCanvasNeedToUpdateChildrenCanvasBounds : 1;//if child canvas's UIMesh's bounds change, then need to notify root canvas to update it's UIMesh's bounds
 
@@ -682,11 +683,11 @@ private:
 	mutable float LastRenderTime = 0;
 	friend class FLexUIRenderSceneProxy;
 	/**
-	 * RenderMode can affect UI's renderer, basically WorldSpace use UE's buildin renderer, others use LGUI's renderer. Different renderers cannot share same render data.
+	 * RenderMode can affect UI's renderer, basically WorldSpace use UE's built-in renderer, others use LGUI's renderer. Different renderers cannot share same render data.
 	 * eg: when attach to other canvas, this will tell which render mode in old canvas, and if not compatible then recreate render data.
 	 */
 	ELexRenderMode CurrentRenderMode = ELexRenderMode::None;
-	bool RenderModeIsLGUIRendererOrUERenderer(ELexRenderMode InRenderMode)const
+	bool RenderModeIsLexRendererOrUERenderer(ELexRenderMode InRenderMode)const
 	{
 		return 
 			InRenderMode != ELexRenderMode::WorldSpace

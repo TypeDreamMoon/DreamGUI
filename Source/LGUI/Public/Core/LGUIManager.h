@@ -13,7 +13,7 @@ class ULexVisual;
 class ULexCanvas;
 class ULGUIBaseRaycaster;
 class UUISelectableComponent;
-class ULGUILifeCycleBehaviour;
+class ULexUIBehaviour;
 class ULGUIBaseInputModule;
 class ILGUILayoutInterface;
 class ULGUIPrefab;
@@ -77,7 +77,7 @@ private:
 
 struct FLGUILifeCycleBehaviourArrayContainer
 {
-	TArray<TWeakObjectPtr<ULGUILifeCycleBehaviour>> LGUILifeCycleBehaviourArray;
+	TArray<TWeakObjectPtr<ULexUIBehaviour>> LGUILifeCycleBehaviourArray;
 	/** Functions that wait for prefab serialization complete then execute */
 	TArray<TFunction<void()>> Functions;
 };
@@ -117,7 +117,7 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<ULexCanvas>> WorldSpaceUECanvasArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<ULexCanvas>> WorldSpaceLGUICanvasArray;
+		TArray<TWeakObjectPtr<ULexCanvas>> WorldSpaceLexCanvasArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<ULexCanvas>> RenderTargetSpaceLGUICanvasArray;
 
@@ -131,13 +131,13 @@ private:
 		TArray<TWeakObjectPtr<UObject>> AllCultureChangedArray;
 
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<ULGUILifeCycleBehaviour>> LGUILifeCycleBehavioursForUpdate;
+		TArray<TWeakObjectPtr<ULexUIBehaviour>> LGUILifeCycleBehavioursForUpdate;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<ULGUILifeCycleBehaviour>> LGUILifeCycleBehavioursForStart;
+		TArray<TWeakObjectPtr<ULexUIBehaviour>> LGUILifeCycleBehavioursForStart;
 	bool bIsExecutingStart = false;
 	bool bIsExecutingUpdate = false;
 	int32 CurrentExecutingUpdateIndex = -1;
-	TArray<ULGUILifeCycleBehaviour*> LGUILifeCycleBehavioursNeedToRemoveFromUpdate;
+	TArray<ULexUIBehaviour*> LGUILifeCycleBehavioursNeedToRemoveFromUpdate;
 #if WITH_EDITORONLY_DATA
 	int32 PrevScreenSpaceOverlayCanvasCount = 1;
 #endif
@@ -155,9 +155,9 @@ public:
 #endif
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	static void RegisterLGUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem);
+	static void RegisterLexUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	static void UnregisterLGUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem);
+	static void UnregisterLexUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem);
 
 	static void AddCanvas(ULexCanvas* InCanvas, ELexRenderMode InCurrentRenderMode);
 	static void RemoveCanvas(ULexCanvas* InCanvas, ELexRenderMode InCurrentRenderMode);
@@ -202,7 +202,7 @@ private:
 private:
 	/** Map prefab-deserialize-settion-id to LGUILifeCycleBehaviour array */
 	TMap<FGuid, FLGUILifeCycleBehaviourArrayContainer> LGUILifeCycleBehaviours_PrefabSystemProcessing;
-	void ProcessLGUILifecycleEvent(ULGUILifeCycleBehaviour* InComp);
+	void ProcessLGUILifecycleEvent(ULexUIBehaviour* InComp);
 public:
 	void BeginPrefabSystemProcessingActor(const FGuid& InSessionId);
 	void EndPrefabSystemProcessingActor(const FGuid& InSessionId);
@@ -213,7 +213,7 @@ public:
 	 */
 	void AddFunctionForPrefabSystemExecutionBeforeAwake(AActor* InPrefabActor, const TFunction<void()>& InFunction);
 
-	static void AddLGUILifeCycleBehaviourForLifecycleEvent(ULGUILifeCycleBehaviour* InComp);
-	static void AddLGUILifeCycleBehavioursForUpdate(ULGUILifeCycleBehaviour* InComp);
-	static void RemoveLGUILifeCycleBehavioursFromUpdate(ULGUILifeCycleBehaviour* InComp);
+	static void AddLGUILifeCycleBehaviourForLifecycleEvent(ULexUIBehaviour* InComp);
+	static void AddLGUILifeCycleBehavioursForUpdate(ULexUIBehaviour* InComp);
+	static void RemoveLGUILifeCycleBehavioursFromUpdate(ULexUIBehaviour* InComp);
 };

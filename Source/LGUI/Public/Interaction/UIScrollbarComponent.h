@@ -41,7 +41,7 @@ public:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 protected:
-	virtual void OnRenderVisibilityChanged()override;
+	virtual void OnWidgetActiveChanged(bool WidgetActive)override;
 	virtual void OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
 
 	UPROPERTY(EditAnywhere, Category = "LGUI-Scrollbar", meta = (ClampMin = "0.0", ClampMax = "1.0"))

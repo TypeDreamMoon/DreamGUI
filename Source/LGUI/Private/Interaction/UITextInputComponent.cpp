@@ -1183,15 +1183,18 @@ void UUITextInputComponent::HideSelectionMask()
 	//TextInputMethodContext->SetSelectionRange(0, 0, ITextInputMethodContext::ECaretPosition::Beginning);
 }
 
-void UUITextInputComponent::OnRenderVisibilityChanged()
+void UUITextInputComponent::OnWidgetActiveChanged(bool WidgetActive)
 {
-	Super::OnRenderVisibilityChanged();
-	DeactivateInput();
+	Super::OnWidgetActiveChanged(WidgetActive);
+	if (WidgetActive)
+	{
+		DeactivateInput();
+	}
 }
 
-void UUITextInputComponent::OnIsEnabledChanged(bool IsEnabled)
+void UUITextInputComponent::OnInteractableChanged(bool Interactable)
 {
-	Super::OnIsEnabledChanged(IsEnabled);
+	Super::OnInteractableChanged(Interactable);
 	DeactivateInput();
 }
 
@@ -1409,15 +1412,15 @@ void UUITextInputComponent::ActivateInput(ULGUIPointerEventData* eventData)
 	//set is selected
 	if (auto eventSystem = ULGUIEventSystem::GetLGUIEventSystemInstance(this))
 	{
-		if (CheckRootUIComponent())
+		if (auto Widget = GetLexWidget())
 		{
 			if (IsValid(eventData))
 			{
-				eventSystem->SetSelectComponent(RootUIComp.Get(), eventData, eventData->pressComponentEventFireType);
+				eventSystem->SetSelectComponent(Widget, eventData, eventData->pressComponentEventFireType);
 			}
 			else
 			{
-				eventSystem->SetSelectComponentWithDefault(RootUIComp.Get());
+				eventSystem->SetSelectComponentWithDefault(Widget);
 			}
 		}
 	}

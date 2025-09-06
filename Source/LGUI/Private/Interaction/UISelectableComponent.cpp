@@ -145,22 +145,19 @@ void UUISelectableComponent::PostEditChangeProperty(FPropertyChangedEvent& Prope
 }
 #endif
 
-void UUISelectableComponent::OnIsEnabledChanged(bool IsEnabled)
+void UUISelectableComponent::OnInteractableChanged(bool IsEnabled)
 {
-	Super::OnIsEnabledChanged(IsEnabled);
-	if (CheckRootUIComponent())
-	{
-		CurrentSelectionState = GetSelectionState();
+	Super::OnInteractableChanged(IsEnabled);
+	CurrentSelectionState = GetSelectionState();
 #if WITH_EDITOR
-		if (!this->GetWorld()->IsGameWorld())//is editor, just set properties immediately
-		{
-			ApplySelectionState(true);
-		}
-		else
+	if (!this->GetWorld()->IsGameWorld())//is editor, just set properties immediately
+	{
+		ApplySelectionState(true);
+	}
+	else
 #endif
-		{
-			ApplySelectionState(false);
-		}
+	{
+		ApplySelectionState(false);
 	}
 }
 
@@ -319,7 +316,7 @@ void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 			{
 				bool bAffectByGamePause = false;
 				bool bAffectByTimeDilation = false;
-				if (this->GetRootUIComponent()->IsScreenSpaceOverlayUI())
+				if (this->GetLexWidget()->IsScreenSpaceOverlayUI())
 				{
 					bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
 					bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
@@ -359,7 +356,7 @@ void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 					{
 						bool bAffectByGamePause = false;
 						bool bAffectByTimeDilation = false;
-						if (this->GetRootUIComponent()->IsScreenSpaceOverlayUI())
+						if (this->GetLexWidget()->IsScreenSpaceOverlayUI())
 						{
 							bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
 							bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
@@ -398,7 +395,7 @@ bool UUISelectableComponent::OnPointerDown_Implementation(ULGUIPointerEventData*
 	ApplySelectionState(false);
 	if (auto eventSystemInstance = ULGUIEventSystem::GetLGUIEventSystemInstance(this))
 	{
-		eventSystemInstance->SetSelectComponent(GetRootSceneComponent(), eventData, eventData->enterComponentEventFireType);
+		eventSystemInstance->SetSelectComponent(GetLexWidget(), eventData, eventData->enterComponentEventFireType);
 	}
 	return AllowEventBubbleUp;
 }
@@ -511,9 +508,9 @@ void UUISelectableComponent::SetSelectionState(ELexUISelectableSelectionState Ne
 }
 bool UUISelectableComponent::IsInteractable()const
 {
-	if (CheckRootUIComponent())
+	if (auto Widget = GetLexWidget())
 	{
-		return RootUIComp->GetFinalIsEnabled() && bInteractable;
+		return Widget->GetInteractableInHierarchy() && bInteractable;
 	}
 	return bInteractable;
 }
@@ -553,15 +550,15 @@ bool UUISelectableComponent::OnNavigate_Implementation(ELGUINavigationDirection 
 UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirection)
 {
 	InDirection.Normalize();
-	if (CheckRootUIComponent())
+	if (auto Widget = GetLexWidget())
 	{
-		if (RootUIComp->GetRenderCanvas() == nullptr || RootUIComp->GetRenderCanvas()->GetRootCanvas() == nullptr)
+		if (Widget->GetRenderCanvas() == nullptr || Widget->GetRenderCanvas()->GetRootCanvas() == nullptr)
 		{
 			return nullptr;//not active render
 		}
-		if (RootUIComp->IsScreenSpaceOverlayUI() || RootUIComp->IsRenderTargetUI())
+		if (Widget->IsScreenSpaceOverlayUI() || Widget->IsRenderTargetUI())
 		{
-			auto rootCanvasUIItem = RootUIComp->GetRootCanvas()->GetLexWidget();
+			auto rootCanvasUIItem = Widget->GetRootCanvas()->GetLexWidget();
 			return FindSelectable(InDirection, rootCanvasUIItem);
 		}
 		else
@@ -592,11 +589,11 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 
 	auto LocalPos = FVector::ZeroVector;
 	const USceneComponent* RestrictNavNode = nullptr;
-	if (CheckRootUIComponent())
+	if (auto Widget = GetLexWidget())
 	{
-		auto localDir = RootUIComp->GetComponentTransform().InverseTransformVectorNoScale(InDirection);
-		LocalPos = GetPointOnRectEdge(RootUIComp.Get(), FVector2D(localDir.Y, localDir.Z));
-		if (auto RestrictNavWidget = RootUIComp->GetRestrictNavigationAreaWidget())
+		auto localDir = Widget->GetComponentTransform().InverseTransformVectorNoScale(InDirection);
+		LocalPos = GetPointOnRectEdge(Widget, FVector2D(localDir.Y, localDir.Z));
+		if (auto RestrictNavWidget = Widget->GetRestrictNavigationAreaWidget())
 		{
 			RestrictNavNode = RestrictNavWidget;
 		}
@@ -621,8 +618,8 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 			continue;
 
 		//if is UI node, not allow inactive one
-		auto selRootUIComp = sel->GetRootUIComponent();
-		if (selRootUIComp && !sel->GetRootUIComponent()->IsVisibleForHitTest())
+		auto selRootUIComp = sel->GetLexWidget();
+		if (selRootUIComp && !sel->GetLexWidget()->GetRaycastableInHierarchy())
 		{
 			continue;
 		}

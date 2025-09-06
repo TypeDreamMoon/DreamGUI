@@ -76,11 +76,11 @@ void ULexVisualDirectMesh::OnMeshDataReady()
 
 bool ULexVisualDirectMesh::LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
-	if (RaycastType == ELexVisualHitTestType::Rect)
+	if (RaycastType == ELexVisualRaycastType::Rect)
 	{
 		return Super::LineTraceUI(OutHit, Start, End);
 	}
-	else if (RaycastType == ELexVisualHitTestType::Mesh)
+	else if (RaycastType == ELexVisualRaycastType::Mesh)
 	{
 		if (!DrawCall.IsValid())return false;
 		if (!DrawCall->DrawCallRenderSection.IsValid())return false;

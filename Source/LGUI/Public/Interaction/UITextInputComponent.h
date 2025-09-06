@@ -400,8 +400,8 @@ private:
 
 	int PressCaretPositionIndex = 0, PressCaretPositionLineIndex = 0;
 protected:
-	virtual void OnRenderVisibilityChanged() override;
-	virtual void OnIsEnabledChanged(bool IsEnabled) override;
+	virtual void OnWidgetActiveChanged(bool WidgetActive) override;
+	virtual void OnInteractableChanged(bool Interactable) override;
 	virtual void OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
 
 	virtual bool OnPointerEnter_Implementation(ULGUIPointerEventData* eventData)override;

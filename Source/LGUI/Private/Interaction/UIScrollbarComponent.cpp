@@ -50,10 +50,13 @@ void UUIScrollbarComponent::PostEditChangeProperty(FPropertyChangedEvent &Proper
 }
 #endif
 
-void UUIScrollbarComponent::OnRenderVisibilityChanged()
+void UUIScrollbarComponent::OnWidgetActiveChanged(bool WidgetActive)
 {
-    Super::OnRenderVisibilityChanged();
-    ApplyValueToUI();
+    Super::OnWidgetActiveChanged(WidgetActive);
+    if (WidgetActive)
+    {
+        ApplyValueToUI();
+    }
 }
 void UUIScrollbarComponent::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {

@@ -68,9 +68,9 @@ void ULexWidget::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void ULexWidget::Awake_Implementation()
 {
-	CalculateVisibility_Recursive();
-	CalculateHitTest_Recursive();
-	CalculateIsEnabled_Recursive();
+	CalculateWidgetActive_Recursive();
+	CalculateRaycastable_Recursive();
+	CalculateInteractable_Recursive();
 	
 	if (IsValid(Layout))
 	{
@@ -84,17 +84,17 @@ void ULexWidget::Awake_Implementation()
 
 void ULexWidget::EditorAwake_Implementation()
 {
-	CalculateVisibility_Recursive();
-	CalculateHitTest_Recursive();
-	CalculateIsEnabled_Recursive();
+	CalculateWidgetActive_Recursive();
+	CalculateRaycastable_Recursive();
+	CalculateInteractable_Recursive();
 }
 
 #pragma region CallbackEvents
-void ULexWidget::Call_IsEnabledChanged()
+void ULexWidget::Call_InteractableChanged()
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
-	OnIsEnabledChangedEvent.Broadcast(this->GetFinalIsEnabled());
+	OnInteractableChangedEvent.Broadcast(this->GetInteractableInHierarchy());
 }
 void ULexWidget::Call_TransformChanged()
 {
@@ -139,13 +139,13 @@ void ULexWidget::Call_WidgetActiveChanged()
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
-	OnWidgetActiveChangedEvent.Broadcast();
+	OnWidgetActiveChangedEvent.Broadcast(this->GetWidgetActiveInHierarchy());
 }
-void ULexWidget::Call_HitTestVisibilityChanged()
+void ULexWidget::Call_RaycastableChanged()
 {
 	if (this->GetOwner() == nullptr)return;
 	if (this->GetWorld() == nullptr)return;
-	OnHitTestVisibilityChangedEvent.Broadcast();
+	OnRaycastableChangedEvent.Broadcast(this->GetRaycastableInHierarchy());
 }
 #pragma endregion
 
@@ -440,11 +440,11 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 
 		static const FName AnchorDataName = GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData);
 		static const FName VisibilityName = GET_MEMBER_NAME_CHECKED(ULexWidget, bWidgetActive);
-		static const FName HitTestTypeName = GET_MEMBER_NAME_CHECKED(ULexWidget, HitTestType);
+		static const FName RaycastableName = GET_MEMBER_NAME_CHECKED(ULexWidget, Raycastable);
 		static const FName ClippingName = GET_MEMBER_NAME_CHECKED(ULexWidget, Clipping);
 		static const FName VisualName = GET_MEMBER_NAME_CHECKED(ULexWidget, Visual);
 		static const FName LayoutName = GET_MEMBER_NAME_CHECKED(ULexWidget, Layout);
-		static const FName IsEnabledName = GET_MEMBER_NAME_CHECKED(ULexWidget, bIsEnabled);
+		static const FName InteractableName = GET_MEMBER_NAME_CHECKED(ULexWidget, Interactable);
 
 		if (MemberName == AnchorDataName
 		|| MemberName == VisibilityName
@@ -511,15 +511,15 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		}
 		if (MemberName == VisibilityName)
 		{
-			CalculateVisibility_Recursive();
+			CalculateWidgetActive_Recursive();
 		}
-		if (MemberName == HitTestTypeName)
+		if (MemberName == RaycastableName)
 		{
-			CalculateHitTest_Recursive();
+			CalculateRaycastable_Recursive();
 		}
-		if (MemberName == IsEnabledName)
+		if (MemberName == InteractableName)
 		{
-			CalculateIsEnabled_Recursive();
+			CalculateInteractable_Recursive();
 		}
 		ULGUIPrefabManagerObject::AddOneShotTickFunction([this]()
 		{
@@ -659,8 +659,8 @@ void ULexWidget::EnsureDataForRebuild()
 	LOCAL::RenewRenderCanvas(this);
 	LOCAL::EnsureDataForRebuildRecursive(this);
 	LOCAL::ForceRefreshRenderCanvasRecursive(this);
-	CalculateVisibility_Recursive();
-	CalculateHitTest_Recursive();
+	CalculateWidgetActive_Recursive();
+	CalculateRaycastable_Recursive();
 	LOCAL::UpdateComponentToWorldRecursive(this);
 }
 
@@ -1901,8 +1901,8 @@ void ULexWidget::UIHierarchyAttachmentChanged(ULexCanvas* ParentRenderCanvas, UL
 	//flatten hierarchy index
 	MarkFlattenHierarchyIndexDirty();
 
-	CalculateVisibility_Recursive();
-	CalculateHitTest_Recursive();
+	CalculateWidgetActive_Recursive();
+	CalculateRaycastable_Recursive();
 
 	//if (this->IsRegistered())//not register means could be load from level
 	{
@@ -1952,7 +1952,7 @@ void ULexWidget::CheckRootWidget(ULexWidget* RootWidgetInParent)
 	}
 }
 
-void ULexWidget::CalculateVisibility_Recursive()
+void ULexWidget::CalculateWidgetActive_Recursive()
 {
 	struct LOCAL
 	{
@@ -1980,41 +1980,77 @@ void ULexWidget::CalculateVisibility_Recursive()
 	};
 	LOCAL::CalculateWidgetActive(this);
 }
-
-void ULexWidget::CalculateHitTest_Recursive()
+void ULexWidget::CalculateInteractable_Recursive()
 {
 	struct LOCAL
 	{
-		static void CalculateHitTestVisibility(ULexWidget* Widget)
+		static void CalculateInteractable(ULexWidget* Widget)
 		{
-			auto HitTestType = Widget->HitTestType;
-			bool bResult = true;
-			if (HitTestType == ELexWidgetHitTestType::NotHitTestable)
-				bResult = false;
-			else if (HitTestType == ELexWidgetHitTestType::HitTestable)
-				bResult = true;
-			else if (HitTestType == ELexWidgetHitTestType::Inherit)
+			bool bResultInteractable = true;
+			switch (Widget->Interactable)
 			{
+			case ELexWidgetInteractableType::Enabled:
+				bResultInteractable = true;
+				break;
+			case ELexWidgetInteractableType::Disabled:
+				bResultInteractable = false;
+				break;
+			case ELexWidgetInteractableType::Inherit:
 				if (Widget->UIParent.IsValid())
-					bResult = Widget->UIParent->IsVisibleForHitTest();
+					bResultInteractable = Widget->UIParent->GetInteractableInHierarchy();
 				else
-					bResult = true;
+					bResultInteractable = true;
+				break;
 			}
-			else
-				bResult = true;
 
-			if (Widget->bCacheIsVisibleForHitTest != bResult)
+			if (Widget->bCacheInteractableInHierarchy != bResultInteractable)
 			{
-				Widget->bCacheIsVisibleForHitTest = bResult;
-				Widget->Call_HitTestVisibilityChanged();
+				Widget->bCacheInteractableInHierarchy = bResultInteractable;
+				Widget->Call_InteractableChanged();
 				for (auto& Child : Widget->GetUIChildren())
 				{
-					CalculateHitTestVisibility(Child);
+					CalculateInteractable(Child);
 				}
 			}
 		}
 	};
-	LOCAL::CalculateHitTestVisibility(this);
+	LOCAL::CalculateInteractable(this);
+}
+void ULexWidget::CalculateRaycastable_Recursive()
+{
+	struct LOCAL
+	{
+		static void CalculateRaycastable(ULexWidget* Widget)
+		{
+			bool bResult = true;
+			switch (Widget->Raycastable)
+			{
+			case ELexWidgetRaycastableType::Disabled:
+				bResult = false;
+				break;
+			case ELexWidgetRaycastableType::Enabled:
+				bResult = true;
+				break;
+			case ELexWidgetRaycastableType::Inherit:
+				if (Widget->UIParent.IsValid())
+					bResult = Widget->UIParent->GetRaycastableInHierarchy();
+				else
+					bResult = true;
+				break;
+			}
+
+			if (Widget->bCacheRaycastableInHierarchy != bResult)
+			{
+				Widget->bCacheRaycastableInHierarchy = bResult;
+				Widget->Call_RaycastableChanged();
+				for (auto& Child : Widget->GetUIChildren())
+				{
+					CalculateRaycastable(Child);
+				}
+			}
+		}
+	};
+	LOCAL::CalculateRaycastable(this);
 }
 
 ULexWidget* ULexWidget::GetUIChild(int index)const
@@ -2407,40 +2443,6 @@ void ULexWidget::SetClipping(ELexWidgetClipping Value)
 	}
 }
 
-void ULexWidget::CalculateIsEnabled_Recursive()
-{
-	struct LOCAL
-	{
-		static void CalculateIsEnabled(ULexWidget* Widget)
-		{
-			bool bResult = true;
-			if (!Widget->bIsEnabled)
-			{
-				bResult = false;
-			}
-			else if (Widget->UIParent.IsValid())
-			{
-				bResult = Widget->UIParent->GetFinalIsEnabled();
-			}
-			else
-			{
-				bResult = true;
-			}
-
-			if (Widget->bCacheFinalIsEnabled != bResult)
-			{
-				Widget->bCacheFinalIsEnabled = bResult;
-				Widget->Call_IsEnabledChanged();
-				for (auto& Child : Widget->GetUIChildren())
-				{
-					CalculateIsEnabled(Child);
-				}
-			}
-		}
-	};
-	LOCAL::CalculateIsEnabled(this);
-}
-
 float ULexWidget::GetFinalRenderOpacity()const
 {
 	if (UIParent.IsValid())
@@ -2473,7 +2475,7 @@ void ULexWidget::SetRenderOpacity(float Value)
 	}
 }
 
-bool ULexWidget::GetFinalPixelSnapping() const
+bool ULexWidget::GetPixelSnappingInHierarchy() const
 {
 	switch (this->PixelSnapping)
 	{
@@ -2484,7 +2486,7 @@ bool ULexWidget::GetFinalPixelSnapping() const
 	case EWidgetPixelSnapping::Inherit:
 		if (UIParent.IsValid())
 		{
-			return UIParent->GetFinalPixelSnapping();
+			return UIParent->GetPixelSnappingInHierarchy();
 		}
 		return false;
 	}
@@ -2524,25 +2526,25 @@ void ULexWidget::SetWidgetActive(bool Value)
 	if (bWidgetActive != Value)
 	{
 		bWidgetActive = Value;
-		CalculateVisibility_Recursive();
+		CalculateWidgetActive_Recursive();
 	}
 }
 
-void ULexWidget::SetHitTestType(ELexWidgetHitTestType Value)
+void ULexWidget::SetRaycastable(ELexWidgetRaycastableType Value)
 {
-	if (HitTestType != Value)
+	if (Raycastable != Value)
 	{
-		HitTestType = Value;
-		CalculateHitTest_Recursive();
+		Raycastable = Value;
+		CalculateRaycastable_Recursive();
 	}
 }
 
-void ULexWidget::SetIsEnabled(bool Value)
+void ULexWidget::SetInteractable(ELexWidgetInteractableType Value)
 {
-	if (bIsEnabled != Value)
+	if (Interactable != Value)
 	{
-		bIsEnabled = Value;
-		CalculateIsEnabled_Recursive();
+		Interactable = Value;
+		CalculateInteractable_Recursive();
 	}
 }
 
@@ -2647,7 +2649,7 @@ void ULexWidget::SetIsTemporarilyHiddenInEditor_Recursive_By_RenderVisibility()
 #endif
 	//callback
 	Call_WidgetActiveChanged();
-	Call_HitTestVisibilityChanged();
+	Call_RaycastableChanged();
 	//canvas update
 	MarkCanvasUpdate(false, false, false, true);
 

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "Core/LGUILifeCycleUIBehaviour.h"
+#include "Core/LexUIBehaviour.h"
 #include "LGUIDelegateHandleWrapper.h"
 #include "Event/LGUIEventDelegate.h"
 #include "UIToggleGroupComponent.generated.h"
@@ -13,7 +13,7 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FUIToggleGroupValueChangedDelegate, int32, Ind
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIToggleGroupValueChangedEvent, int32, Index);
 
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIToggleGroupComponent : public ULGUILifeCycleUIBehaviour
+class LGUI_API UUIToggleGroupComponent : public ULexUIBehaviour
 {
 	GENERATED_BODY()
 public:

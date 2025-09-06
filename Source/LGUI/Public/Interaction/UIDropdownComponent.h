@@ -207,7 +207,7 @@ public:
 DECLARE_DYNAMIC_DELEGATE(FUIDropdownItem_OnSelect);
 
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIDropdownItemComponent : public ULGUILifeCycleBehaviour, public ILGUIPointerClickInterface
+class LGUI_API UUIDropdownItemComponent : public ULexUIBehaviour, public ILGUIPointerClickInterface
 {
 	GENERATED_BODY()
 

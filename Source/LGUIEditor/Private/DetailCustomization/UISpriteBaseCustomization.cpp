@@ -72,7 +72,7 @@ void FLexUISpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& Detai
 	spriteHandle->GetValue(*(UObject**)&spriteObject);
 	if (IsValid(spriteObject))
 	{
-		ELexVisualHitTestType raycastType = ELexVisualHitTestType::Rect;
+		ELexVisualRaycastType raycastType = ELexVisualRaycastType::Rect;
 		bool bGetRaycastTypeValue = true;
 		for (int i = 0; i < TargetScriptArray.Num(); i++)
 		{
@@ -91,7 +91,7 @@ void FLexUISpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& Detai
 		}
 		if (bGetRaycastTypeValue)
 		{
-			if (raycastType == ELexVisualHitTestType::VisiblePixel)
+			if (raycastType == ELexVisualRaycastType::VisiblePixel)
 			{
 				if (!spriteObject->SupportReadPixel())
 				{

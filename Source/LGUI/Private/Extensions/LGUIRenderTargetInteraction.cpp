@@ -118,7 +118,7 @@ bool ULGUIRenderTargetInteraction::ShouldSkipCanvas(class ULexCanvas* UICanvas)
 {
 	if (TargetCanvas.IsValid())
 	{
-		return TargetCanvas->GetRenderTarget() != UICanvas->GetActualRenderTarget();
+		return TargetCanvas->GetRenderTarget() != UICanvas->GetRootRenderTarget();
 	}
 	return true;
 }

@@ -9,14 +9,14 @@
 #include "LGUIDelegateHandleWrapper.h"
 #include "Event/Interface/LGUIPointerDragInterface.h"
 #include "Event/Interface/LGUIPointerScrollInterface.h"
-#include "Core/LGUILifeCycleUIBehaviour.h"
+#include "Core/LexUIBehaviour.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "UIScrollViewComponent.generated.h"
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUIScrollViewDynamicDelegate, FVector2D, InVector2);
 
 UCLASS(ClassGroup=(LGUI), Transient)
-class LGUI_API UUIScrollViewHelper :public ULGUILifeCycleUIBehaviour
+class LGUI_API UUIScrollViewHelper :public ULexUIBehaviour
 {
 	GENERATED_BODY()
 private:
@@ -29,7 +29,7 @@ private:
 };
 //ScrollView
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIScrollViewComponent : public ULGUILifeCycleUIBehaviour, public ILGUIPointerDragInterface, public ILGUIPointerScrollInterface
+class LGUI_API UUIScrollViewComponent : public ULexUIBehaviour, public ILGUIPointerDragInterface, public ILGUIPointerScrollInterface
 {
 	GENERATED_BODY()
 	
@@ -40,7 +40,7 @@ protected:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
-	virtual void OnLayoutVisibilityChanged() override;
+	virtual void OnWidgetActiveChanged(bool WidgetActive) override;
 	virtual void OnTransformChanged() override;
 	virtual void OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
 	virtual void RecalculateRange();

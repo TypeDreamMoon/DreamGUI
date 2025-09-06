@@ -40,11 +40,21 @@ enum class ELexWidgetClipping : uint8
 };
 
 UENUM(BlueprintType)
-enum class ELexWidgetHitTestType : uint8
+enum class ELexWidgetRaycastableType : uint8
 {
+	//If not parent then use Enable
 	Inherit,
-	HitTestable,
-	NotHitTestable,
+	Enabled,
+	Disabled,
+};
+
+UENUM(BlueprintType)
+enum class ELexWidgetInteractableType : uint8
+{
+	//If not parent then use Enable
+	Inherit,
+	Enabled,
+	Disabled,
 };
 
 /**
@@ -56,14 +66,14 @@ class LGUI_API ULexWidget : public USceneComponent, public ILGUIPrefabInterface
 	GENERATED_BODY()
 
 public:
+	DECLARE_EVENT_OneParam(ULexWidget, FWidgetActiveChangedEvent, bool/*WidgetActive*/);
 	DECLARE_EVENT_ThreeParams(ULexWidget, FDimensionChangedEvent, bool/*PivotChanged*/, bool/*WidthChanged*/, bool/*HeightChanged*/);
 	DECLARE_EVENT_FourParams(ULexWidget, FChildDimensionChangedEvent, ULexWidget*/*Child*/, bool/*PivotChanged*/, bool/*WidthChanged*/, bool/*HeightChanged*/);
-	DECLARE_EVENT_OneParam(ULexWidget, FIsEnabledChangedEvent, bool/*IsEnabled*/);
 	DECLARE_EVENT(ULexWidget, FAttachmentChangedEvent);
 	DECLARE_EVENT(ULexWidget, FTransformChangedEvent);
 	DECLARE_EVENT(ULexWidget, FSiblingIndexChangedEvent);
-	DECLARE_EVENT(ULexWidget, FWidgetActiveChangedEvent);
-	DECLARE_EVENT(ULexWidget, FHitTestVisibilityChangedEvent)
+	DECLARE_EVENT_OneParam(ULexWidget, FInteractableChangedEvent, bool/*Interactable*/);
+	DECLARE_EVENT_OneParam(ULexWidget, FRaycastableChangedEvent, bool/*Raycastable*/)
 	
 	ULexWidget(const FObjectInitializer& ObjectInitializer);
 
@@ -134,14 +144,14 @@ public:
 	
 #pragma region CallbackEvents
 private:
-	void Call_IsEnabledChanged();
+	void Call_WidgetActiveChanged();
 	void Call_TransformChanged();
 	void Call_DimensionsChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged);
 	void Call_ChildDimensionsChanged(ULexWidget* Child, bool InPivotChanged, bool InWidthChanged, bool InHeightChanged);
 	void Call_AttachmentChanged();
 	void Call_SiblingIndexChanged();
-	void Call_WidgetActiveChanged();
-	void Call_HitTestVisibilityChanged();
+	void Call_InteractableChanged();
+	void Call_RaycastableChanged();
 #pragma endregion
 protected:
 	virtual bool MoveComponentImpl(const FVector& Delta, const FQuat& NewRotation, bool bSweep, FHitResult* Hit /* = NULL */, EMoveComponentFlags MoveFlags /* = MOVECOMP_NoFlags */, ETeleportType Teleport /* = ETeleportType::None */)override;
@@ -173,23 +183,23 @@ protected:
 	void RenewRenderCanvasRecursive(ULexCanvas* InParentRenderCanvas);
 
 private:
-	FIsEnabledChangedEvent OnIsEnabledChangedEvent;
+	FWidgetActiveChangedEvent OnWidgetActiveChangedEvent;
 	FTransformChangedEvent OnTransformChangedEvent;
 	FDimensionChangedEvent OnDimensionChangedEvent;
 	FChildDimensionChangedEvent OnChildDimensionChangedEvent;
 	FAttachmentChangedEvent OnAttachmentChangedEvent;
 	FSiblingIndexChangedEvent OnSiblingIndexChangedEvent;
-	FWidgetActiveChangedEvent OnWidgetActiveChangedEvent;
-	FHitTestVisibilityChangedEvent OnHitTestVisibilityChangedEvent;
+	FInteractableChangedEvent OnInteractableChangedEvent;
+	FRaycastableChangedEvent OnRaycastableChangedEvent;
 public:
-	FIsEnabledChangedEvent& GetIsEnabledChangedEvent(){return OnIsEnabledChangedEvent;}
+	FWidgetActiveChangedEvent& GetWidgetActiveChangedEvent(){return OnWidgetActiveChangedEvent;}
 	FTransformChangedEvent& GetTransformChangedEvent(){return OnTransformChangedEvent;}
 	FDimensionChangedEvent& GetDimensionChangedEvent(){return OnDimensionChangedEvent;}
 	FChildDimensionChangedEvent& GetChildDimensionChangedEvent(){return OnChildDimensionChangedEvent;}
 	FAttachmentChangedEvent& GetAttachmentChangedEvent(){return OnAttachmentChangedEvent;}
 	FSiblingIndexChangedEvent& GetSiblingIndexChangedEvent(){return OnSiblingIndexChangedEvent;}
-	FWidgetActiveChangedEvent& GetWidgetActiveChangedEvent(){return OnWidgetActiveChangedEvent;}
-	FHitTestVisibilityChangedEvent& GetHitTestVisibilityChangedEvent(){return OnHitTestVisibilityChangedEvent;}
+	FInteractableChangedEvent& GetInteractableChangedEvent(){return OnInteractableChangedEvent;}
+	FRaycastableChangedEvent& GetRaycastableChangedEvent(){return OnRaycastableChangedEvent;}
 protected:
 	/** parent in hierarchy */
 	UPROPERTY(Transient) mutable TWeakObjectPtr<ULexWidget> UIParent = nullptr;
@@ -398,14 +408,14 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter = "GetWidgetActive", Setter="SetWidgetActive", meta = (AllowPrivateAccess = true))
 	bool bWidgetActive = true;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
-	ELexWidgetHitTestType HitTestType = ELexWidgetHitTestType::Inherit;
 	/** If the widget will draw snapped to the nearest pixel.  Improves clarity but might cause visible stepping in animation. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
 	EWidgetPixelSnapping PixelSnapping = EWidgetPixelSnapping::Inherit;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
+	ELexWidgetRaycastableType Raycastable = ELexWidgetRaycastableType::Inherit;
 	/** If the widget enable for interaction? */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter = "GetIsEnabled", Setter = "SetIsEnabled", meta = (AllowPrivateAccess = true))
-	uint8 bIsEnabled : 1 = true;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
+	ELexWidgetInteractableType Interactable = ELexWidgetInteractableType::Inherit;
 	/**
 	 * Restrict navigation area to only children of this UI node, to forbid it navigate out.
 	 */
@@ -421,8 +431,6 @@ protected:
 	
 	TWeakPtr<FLexUIClipData> ClipData;
 	
-	uint8 bCacheFinalIsEnabled : 1 = true;
-	void CalculateIsEnabled_Recursive();
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	ELexWidgetClipping GetClipping()const { return Clipping; }
@@ -447,7 +455,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	EWidgetPixelSnapping GetPixelSnapping()const { return PixelSnapping; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	bool GetFinalPixelSnapping()const;
+	bool GetPixelSnappingInHierarchy()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetPixelSnapping(EWidgetPixelSnapping Value);
 
@@ -471,22 +479,23 @@ public:
 	void SetWidgetActive(bool Value);
 	
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	ELexWidgetHitTestType GetHitTestType()const { return HitTestType; }
+	ELexWidgetRaycastableType GetRaycastable()const { return Raycastable; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	void SetHitTestType(ELexWidgetHitTestType Value);
+	void SetRaycastable(ELexWidgetRaycastableType Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	bool IsVisibleForHitTest()const{return bCacheIsVisibleForHitTest;}
+	bool GetRaycastableInHierarchy()const{return bCacheRaycastableInHierarchy;}
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	bool GetIsEnabled()const { return bIsEnabled; }
+	ELexWidgetInteractableType GetInteractable()const { return Interactable; }
 	/**
 	 * Get if this widget is interactable when use input interaction, considering all parent settings.
 	 * @return If this widget is interactable
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	bool GetFinalIsEnabled()const{return bCacheFinalIsEnabled;}
+	bool GetInteractableInHierarchy()const{return bCacheInteractableInHierarchy;}
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	void SetIsEnabled(bool Value);
+	void SetInteractable(ELexWidgetInteractableType Value);
+	
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	bool GetRestrictNavigationArea()const{return bRestrictNavigationArea;}
 
@@ -626,8 +635,9 @@ protected:
 	mutable uint32 bNeedRecreateClip : 1 = true;
 	uint32 bClipDataChanged : 1 = true;
 	
-	uint32 bCacheIsVisibleForHitTest : 1 = true;
 	uint32 bCacheWidgetActiveInHierarchy : 1 = true;
+	uint8 bCacheInteractableInHierarchy : 1 = true;
+	uint32 bCacheRaycastableInHierarchy : 1 = true;
 
 	/** Only for root widget, if dirty then we need to recalculate flatten hierarchy index */
 	mutable uint32 bFlattenHierarchyIndexDirty : 1;
@@ -638,8 +648,9 @@ protected:
 	/** find root UIItem of hierarchy */
 	void CheckRootWidget(ULexWidget* RootWidgetInParent = nullptr);
 
-	void CalculateVisibility_Recursive();
-	void CalculateHitTest_Recursive();
+	void CalculateWidgetActive_Recursive();
+	void CalculateInteractable_Recursive();
+	void CalculateRaycastable_Recursive();
 public:
 #pragma region TweenAnimation
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")
