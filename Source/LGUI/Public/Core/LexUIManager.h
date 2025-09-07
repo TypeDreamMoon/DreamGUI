@@ -4,7 +4,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "Tickable.h"
-#include "LGUIManager.generated.h"
+#include "LexUIManager.generated.h"
 
 class ULexWidget;
 class UUIText;
@@ -22,13 +22,13 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FLGUIEditorTickMulticastDelegate, float);
 DECLARE_MULTICAST_DELEGATE_ThreeParams(FLGUIEditorManagerOnComponentCreateDelete, bool, UActorComponent*, AActor*);
 
 UCLASS(NotBlueprintable, NotBlueprintType, Transient, NotPlaceable)
-class LGUI_API ULGUIEditorManagerObject :public UObject, public FTickableGameObject
+class LGUI_API ULexUIEditorManagerObject :public UObject, public FTickableGameObject
 {
 	GENERATED_BODY()
 
 public:
-	static ULGUIEditorManagerObject* Instance;
-	ULGUIEditorManagerObject();
+	static ULexUIEditorManagerObject* Instance;
+	ULexUIEditorManagerObject();
 	virtual void BeginDestroy()override;
 public:
 	//begin TickableEditorObject interface
@@ -55,7 +55,7 @@ public:
 private:
 	static bool InitCheck();
 public:
-	static ULGUIEditorManagerObject* GetInstance(bool CreateIfNotValid = false);
+	static ULexUIEditorManagerObject* GetInstance(bool CreateIfNotValid = false);
 	void CheckEditorViewportIndexAndKey();
 	uint32 GetViewportKeyFromIndex(int32 InViewportIndex);
 private:
@@ -86,7 +86,7 @@ class ILexUICultureChangedInterface;
 enum class ELexRenderMode : uint8;
 
 UCLASS(NotBlueprintable, NotBlueprintType, Transient, NotPlaceable)
-class LGUI_API ULGUIManagerWorldSubsystem : public UTickableWorldSubsystem
+class LGUI_API ULexUIManagerWorldSubsystem : public UTickableWorldSubsystem
 {
 	GENERATED_BODY()
 public:	
@@ -100,13 +100,13 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual bool IsTickableWhenPaused() const override;
 
-	static ULGUIManagerWorldSubsystem* GetInstance(UWorld* InWorld);
+	static ULexUIManagerWorldSubsystem* GetInstance(UWorld* InWorld);
 #if WITH_EDITOR
 	static bool GetIsPlaying() { return bIsPlaying; }
 #endif
 private:
 #if WITH_EDITOR
-	static TArray<ULGUIManagerWorldSubsystem*> InstanceArray;
+	static TArray<ULexUIManagerWorldSubsystem*> InstanceArray;
 	FTSTicker::FDelegateHandle EditorTickDelegateHandle;
 	static bool bIsPlaying;
 #endif
@@ -119,7 +119,7 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<ULexCanvas>> WorldSpaceLexCanvasArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<ULexCanvas>> RenderTargetSpaceLGUICanvasArray;
+		TArray<TWeakObjectPtr<ULexCanvas>> RenderTargetSpaceLexUICanvasArray;
 
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<ULGUIBaseRaycaster>> AllRaycasterArray;
@@ -131,13 +131,13 @@ private:
 		TArray<TWeakObjectPtr<UObject>> AllCultureChangedArray;
 
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<ULexUIBehaviour>> LGUILifeCycleBehavioursForUpdate;
+		TArray<TWeakObjectPtr<ULexUIBehaviour>> LexUIBehavioursForUpdate;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<ULexUIBehaviour>> LGUILifeCycleBehavioursForStart;
+		TArray<TWeakObjectPtr<ULexUIBehaviour>> LexUIBehavioursForStart;
 	bool bIsExecutingStart = false;
 	bool bIsExecutingUpdate = false;
 	int32 CurrentExecutingUpdateIndex = -1;
-	TArray<ULexUIBehaviour*> LGUILifeCycleBehavioursNeedToRemoveFromUpdate;
+	TArray<ULexUIBehaviour*> LexUIBehavioursNeedToRemoveFromUpdate;
 #if WITH_EDITORONLY_DATA
 	int32 PrevScreenSpaceOverlayCanvasCount = 1;
 #endif
@@ -200,9 +200,9 @@ private:
 	static void DrawDebugRectOnScreenSpace(UWorld* InWorld, FVector const& Center, FVector const& Box, const FQuat& Rotation, FColor const& Color);
 #endif
 private:
-	/** Map prefab-deserialize-settion-id to LGUILifeCycleBehaviour array */
-	TMap<FGuid, FLGUILifeCycleBehaviourArrayContainer> LGUILifeCycleBehaviours_PrefabSystemProcessing;
-	void ProcessLGUILifecycleEvent(ULexUIBehaviour* InComp);
+	/** Map prefab-deserialize-section-id to LexUIBehaviour array */
+	TMap<FGuid, FLGUILifeCycleBehaviourArrayContainer> LexUIBehaviours_PrefabSystemProcessing;
+	void ProcessLexUILifecycleEvent(ULexUIBehaviour* InComp);
 public:
 	void BeginPrefabSystemProcessingActor(const FGuid& InSessionId);
 	void EndPrefabSystemProcessingActor(const FGuid& InSessionId);
@@ -213,7 +213,7 @@ public:
 	 */
 	void AddFunctionForPrefabSystemExecutionBeforeAwake(AActor* InPrefabActor, const TFunction<void()>& InFunction);
 
-	static void AddLGUILifeCycleBehaviourForLifecycleEvent(ULexUIBehaviour* InComp);
-	static void AddLGUILifeCycleBehavioursForUpdate(ULexUIBehaviour* InComp);
-	static void RemoveLGUILifeCycleBehavioursFromUpdate(ULexUIBehaviour* InComp);
+	static void AddLexUIBehaviourForLifecycleEvent(ULexUIBehaviour* InComp);
+	static void AddLexUIBehavioursForUpdate(ULexUIBehaviour* InComp);
+	static void RemoveLexUIBehavioursFromUpdate(ULexUIBehaviour* InComp);
 };

@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Event/LGUIBaseRaycaster.h"
-#include "Core/LGUIManager.h"
+#include "Core/LexUIManager.h"
 #include "Core/Components/LexVisual.h"
 #include "Engine/SceneCapture2D.h"
 #include "Core/Components/LexWidget.h"
@@ -40,11 +40,11 @@ void ULGUIBaseRaycaster::Deactivate()
 }
 void ULGUIBaseRaycaster::ActivateRaycaster()
 {
-	ULGUIManagerWorldSubsystem::AddRaycaster(this);
+	ULexUIManagerWorldSubsystem::AddRaycaster(this);
 }
 void ULGUIBaseRaycaster::DeactivateRaycaster()
 {
-	ULGUIManagerWorldSubsystem::RemoveRaycaster(this);
+	ULexUIManagerWorldSubsystem::RemoveRaycaster(this);
 }
 void ULGUIBaseRaycaster::OnUnregister()
 {
@@ -72,7 +72,7 @@ bool ULGUIBaseRaycaster::RaycastUI(ULGUIPointerEventData* InPointerEventData, co
 		multiHitResult.Reset();
 		OutRayEnd = OutRayDirection * rayLength + OutRayOrigin;
 
-		if (auto LGUIManager = ULGUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
+		if (auto LGUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
 		{
 #if 1
 			// use ParallelFor to speed up the hit process. ParallelFor should be safe because it blocks current thread

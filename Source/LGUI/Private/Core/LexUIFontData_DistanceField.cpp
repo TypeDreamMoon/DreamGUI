@@ -2,7 +2,7 @@
 
 #include "Core/LexUIFontData_DistanceField.h"
 #include "Core/Components/LexText.h"
-#include "Core/LGUIManager.h"
+#include "Core/LexUIManager.h"
 #include "Utils/LexUIUtils.h"
 #include "Materials/MaterialInterface.h"
 #include "TextureResource.h"

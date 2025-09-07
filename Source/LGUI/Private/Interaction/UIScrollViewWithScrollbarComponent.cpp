@@ -5,7 +5,7 @@
 #include "Interaction/UIScrollbarComponent.h"
 #include "LTweenManager.h"
 #include "Core/Actor/LexWidgetActor.h"
-#include "Core/LGUIManager.h"
+#include "Core/LexUIManager.h"
 
 
 UUIScrollViewWithScrollbarComponent::UUIScrollViewWithScrollbarComponent()

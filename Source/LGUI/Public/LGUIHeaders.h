@@ -33,7 +33,7 @@
 #include "Core/LGUICustomMesh.h"
 
 #include "Core/Actor/LexWidgetActor.h"
-#include "Core/LGUIManager.h"
+#include "Core/LexUIManager.h"
 
 #include "Event/LGUIEventSystem.h"
 #include "Event/Interface/LGUIPointerClickInterface.h"

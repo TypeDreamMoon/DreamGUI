@@ -2,7 +2,7 @@
 
 #include "Event/InputModule/LGUIBaseInputModule.h"
 #include "LGUI.h"
-#include "Core/LGUIManager.h"
+#include "Core/LexUIManager.h"
 #include "Engine/World.h"
 
 ULGUIBaseInputModule::ULGUIBaseInputModule()
@@ -14,11 +14,11 @@ ULGUIBaseInputModule::ULGUIBaseInputModule()
 
 void ULGUIBaseInputModule::ActivateInputModule()
 {
-	ULGUIManagerWorldSubsystem::SetCurrentInputModule(this);
+	ULexUIManagerWorldSubsystem::SetCurrentInputModule(this);
 }
 void ULGUIBaseInputModule::DeactivateInputModule()
 {
-	ULGUIManagerWorldSubsystem::ClearCurrentInputModule(this);
+	ULexUIManagerWorldSubsystem::ClearCurrentInputModule(this);
 }
 void ULGUIBaseInputModule::Activate(bool bReset)
 {

@@ -4,7 +4,7 @@
 #include "LGUI.h"
 #include "LTweenBPLibrary.h"
 #include "Core/Components/LexVisual.h"
-#include "Core/LGUIManager.h"
+#include "Core/LexUIManager.h"
 #include "LTweenManager.h"
 #include "Core/Components/LexCanvas.h"
 #include "Event/LGUIEventSystem.h"
@@ -124,14 +124,14 @@ void UUISelectableComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void UUISelectableComponent::OnRegister()
 {
 	Super::OnRegister();
-	ULGUIManagerWorldSubsystem::AddSelectable(this);
+	ULexUIManagerWorldSubsystem::AddSelectable(this);
 	CurrentSelectionState = GetSelectionState();
 	ApplySelectionState(true);
 }
 void UUISelectableComponent::OnUnregister()
 {
 	Super::OnUnregister();
-	ULGUIManagerWorldSubsystem::RemoveSelectable(this);
+	ULexUIManagerWorldSubsystem::RemoveSelectable(this);
 }
 
 #if WITH_EDITOR
@@ -574,7 +574,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 
 UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirection, USceneComponent* InParent)
 {
-	auto LGUIManagerActor = ULGUIManagerWorldSubsystem::GetInstance(this->GetWorld());
+	auto LGUIManagerActor = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld());
 	if (LGUIManagerActor == nullptr)return nullptr;
 	const auto& SelectableArray = LGUIManagerActor->GetAllSelectableArray();
 
@@ -670,7 +670,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 }
 UUISelectableComponent* UUISelectableComponent::FindDefaultSelectable(UObject* WorldContextObject)
 {
-	if (auto LGUIManagerActor = ULGUIManagerWorldSubsystem::GetInstance(WorldContextObject->GetWorld()))
+	if (auto LGUIManagerActor = ULexUIManagerWorldSubsystem::GetInstance(WorldContextObject->GetWorld()))
 	{
 		const auto& SelectableArray = LGUIManagerActor->GetAllSelectableArray();
 		if (SelectableArray.Num() > 0)

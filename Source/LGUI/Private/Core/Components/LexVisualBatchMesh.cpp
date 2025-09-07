@@ -8,7 +8,7 @@
 #include "GeometryModifier/LexVisualBatchMeshModifierBase.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Core/LexUIDrawCall.h"
-#include "Core/LGUIManager.h"
+#include "Core/LexUIManager.h"
 
 DECLARE_CYCLE_STAT(TEXT("UIBatchMeshRenderable GeometryModifier"), STAT_ApplyModifier, STATGROUP_LGUI);
 

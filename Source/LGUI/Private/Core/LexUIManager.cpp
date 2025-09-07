@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/LGUIManager.h"
+#include "Core/LexUIManager.h"
 #include "LGUI.h"
 #include "Utils/LexUIUtils.h"
 #include "Core/Components/LexWidget.h"
@@ -32,13 +32,13 @@
 PRAGMA_DISABLE_OPTIMIZATION
 #endif
 
-ULGUIEditorManagerObject* ULGUIEditorManagerObject::Instance = nullptr;
+ULexUIEditorManagerObject* ULexUIEditorManagerObject::Instance = nullptr;
 #if WITH_EDITOR
-int ULGUIEditorManagerObject::IndexOfClickSelectUI = INDEX_NONE;
+int ULexUIEditorManagerObject::IndexOfClickSelectUI = INDEX_NONE;
 #endif
-ULGUIEditorManagerObject::ULGUIEditorManagerObject()
+ULexUIEditorManagerObject::ULexUIEditorManagerObject()
 {
-	if (this == GetDefault<ULGUIEditorManagerObject>())
+	if (this == GetDefault<ULexUIEditorManagerObject>())
 	{
 #if WITH_EDITOR
 		ULGUIPrefabManagerObject::OnSerialize_SortChildrenActors.BindStatic([](TArray<AActor*>& ChildrenActors) {
@@ -74,7 +74,7 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 			});
 
 		ULGUIPrefabManagerObject::OnPrefabEditorViewport_MouseClick.BindStatic([](UWorld* World, const FVector& RayOrigin, const FVector& RayDirection, AActor*& ClickHitActor) {
-			if (auto LGUIManager = ULGUIManagerWorldSubsystem::GetInstance(World))
+			if (auto LGUIManager = ULexUIManagerWorldSubsystem::GetInstance(World))
 			{
 				float LineTraceLength = 100000;
 				//find hit UIBatchMeshRenderable
@@ -101,14 +101,14 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 						AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
 					}
 				}
-				if (ULGUIManagerWorldSubsystem::RaycastHitUI(World, AllWidgetArray, LineStart, LineEnd, ClickHitUI, ULGUIEditorManagerObject::IndexOfClickSelectUI))
+				if (ULexUIManagerWorldSubsystem::RaycastHitUI(World, AllWidgetArray, LineStart, LineEnd, ClickHitUI, ULexUIEditorManagerObject::IndexOfClickSelectUI))
 				{
 					ClickHitActor = ClickHitUI->GetOwner();
 				}
 			}
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditorViewport_MouseMove.BindStatic([](UWorld* World) {
-			ULGUIEditorManagerObject::IndexOfClickSelectUI = INDEX_NONE;
+			ULexUIEditorManagerObject::IndexOfClickSelectUI = INDEX_NONE;
 			});
 
 		ULGUIPrefabManagerObject::OnPrefabEditor_CreateRootAgent.BindStatic([](UWorld* World, UClass* RootActorClass, ULGUIPrefab* Prefab, AActor*& OutCreatedRootAgentActor)
@@ -184,7 +184,7 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 				}
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_Refresh.BindStatic([]() {
-			ULGUIManagerWorldSubsystem::RefreshAllUI();
+			ULexUIManagerWorldSubsystem::RefreshAllUI();
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_ReplaceObjectPropertyForApplyOrRevert.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, FName& InPropertyName) {
 			if (auto Widget = Cast<ULexWidget>(InObject))
@@ -249,7 +249,7 @@ ULGUIEditorManagerObject::ULGUIEditorManagerObject()
 #endif
 	}
 }
-void ULGUIEditorManagerObject::BeginDestroy()
+void ULexUIEditorManagerObject::BeginDestroy()
 {
 #if WITH_EDITORONLY_DATA
 	if (OnAssetReimportDelegateHandle.IsValid())
@@ -293,24 +293,24 @@ void ULGUIEditorManagerObject::BeginDestroy()
 	Super::BeginDestroy();
 }
 
-void ULGUIEditorManagerObject::Tick(float DeltaTime)
+void ULexUIEditorManagerObject::Tick(float DeltaTime)
 {
 #if WITH_EDITOR
 	CheckEditorViewportIndexAndKey();
 #endif
 }
-TStatId ULGUIEditorManagerObject::GetStatId() const
+TStatId ULexUIEditorManagerObject::GetStatId() const
 {
 	RETURN_QUICK_DECLARE_CYCLE_STAT(ULGUIEditorManagerObject, STATGROUP_Tickables);
 }
 
 #if WITH_EDITOR
-FDelegateHandle ULGUIEditorManagerObject::RegisterEditorViewportIndexAndKeyChange(const TFunction<void()>& InFunction)
+FDelegateHandle ULexUIEditorManagerObject::RegisterEditorViewportIndexAndKeyChange(const TFunction<void()>& InFunction)
 {
 	InitCheck();
 	return Instance->EditorViewportIndexAndKeyChange.AddLambda(InFunction);
 }
-void ULGUIEditorManagerObject::UnregisterEditorViewportIndexAndKeyChange(const FDelegateHandle& InDelegateHandle)
+void ULexUIEditorManagerObject::UnregisterEditorViewportIndexAndKeyChange(const FDelegateHandle& InDelegateHandle)
 {
 	if (Instance != nullptr)
 	{
@@ -318,7 +318,7 @@ void ULGUIEditorManagerObject::UnregisterEditorViewportIndexAndKeyChange(const F
 	}
 }
 
-ULGUIEditorManagerObject* ULGUIEditorManagerObject::GetInstance(bool CreateIfNotValid)
+ULexUIEditorManagerObject* ULexUIEditorManagerObject::GetInstance(bool CreateIfNotValid)
 {
 	if (CreateIfNotValid)
 	{
@@ -326,41 +326,41 @@ ULGUIEditorManagerObject* ULGUIEditorManagerObject::GetInstance(bool CreateIfNot
 	}
 	return Instance;
 }
-bool ULGUIEditorManagerObject::InitCheck()
+bool ULexUIEditorManagerObject::InitCheck()
 {
 	if (Instance == nullptr)
 	{
-		Instance = NewObject<ULGUIEditorManagerObject>();
+		Instance = NewObject<ULexUIEditorManagerObject>();
 		Instance->AddToRoot();
 		UE_LOG(LGUI, Log, TEXT("[ULGUIManagerObject::InitCheck]No Instance for LGUIManagerObject, create!"));
-		Instance->OnActorLabelChangedDelegateHandle = FCoreDelegates::OnActorLabelChanged.AddUObject(Instance, &ULGUIEditorManagerObject::OnActorLabelChanged);
+		Instance->OnActorLabelChangedDelegateHandle = FCoreDelegates::OnActorLabelChanged.AddUObject(Instance, &ULexUIEditorManagerObject::OnActorLabelChanged);
 		//open map
-		Instance->OnMapOpenedDelegateHandle = FEditorDelegates::OnMapOpened.AddUObject(Instance, &ULGUIEditorManagerObject::OnMapOpened);
-		Instance->OnPackageReloadedDelegateHandle = FCoreUObjectDelegates::OnPackageReloaded.AddUObject(Instance, &ULGUIEditorManagerObject::OnPackageReloaded);
+		Instance->OnMapOpenedDelegateHandle = FEditorDelegates::OnMapOpened.AddUObject(Instance, &ULexUIEditorManagerObject::OnMapOpened);
+		Instance->OnPackageReloadedDelegateHandle = FCoreUObjectDelegates::OnPackageReloaded.AddUObject(Instance, &ULexUIEditorManagerObject::OnPackageReloaded);
 		if (GEditor)
 		{
 			//reimport asset
-			Instance->OnAssetReimportDelegateHandle = GEditor->GetEditorSubsystem<UImportSubsystem>()->OnAssetReimport.AddUObject(Instance, &ULGUIEditorManagerObject::OnAssetReimport);
+			Instance->OnAssetReimportDelegateHandle = GEditor->GetEditorSubsystem<UImportSubsystem>()->OnAssetReimport.AddUObject(Instance, &ULexUIEditorManagerObject::OnAssetReimport);
 			//blueprint recompile
-			Instance->OnBlueprintPreCompileDelegateHandle = GEditor->OnBlueprintPreCompile().AddUObject(Instance, &ULGUIEditorManagerObject::OnBlueprintPreCompile);
-			Instance->OnBlueprintCompiledDelegateHandle = GEditor->OnBlueprintCompiled().AddUObject(Instance, &ULGUIEditorManagerObject::OnBlueprintCompiled);
+			Instance->OnBlueprintPreCompileDelegateHandle = GEditor->OnBlueprintPreCompile().AddUObject(Instance, &ULexUIEditorManagerObject::OnBlueprintPreCompile);
+			Instance->OnBlueprintCompiledDelegateHandle = GEditor->OnBlueprintCompiled().AddUObject(Instance, &ULexUIEditorManagerObject::OnBlueprintCompiled);
 		}
 	}
 	return true;
 }
 
-void ULGUIEditorManagerObject::OnBlueprintPreCompile(UBlueprint* InBlueprint)
+void ULexUIEditorManagerObject::OnBlueprintPreCompile(UBlueprint* InBlueprint)
 {
 	
 }
-void ULGUIEditorManagerObject::OnBlueprintCompiled()
+void ULexUIEditorManagerObject::OnBlueprintCompiled()
 {
 	ULGUIPrefabManagerObject::AddOneShotTickFunction([] {
-		ULGUIManagerWorldSubsystem::RefreshAllUI();
+		ULexUIManagerWorldSubsystem::RefreshAllUI();
 		});
 }
 
-void ULGUIEditorManagerObject::OnAssetReimport(UObject* asset)
+void ULexUIEditorManagerObject::OnAssetReimport(UObject* asset)
 {
 	if (IsValid(asset))
 	{
@@ -385,18 +385,18 @@ void ULGUIEditorManagerObject::OnAssetReimport(UObject* asset)
 			//Refresh ui
 			if (needToRebuildUI)
 			{
-				ULGUIManagerWorldSubsystem::RefreshAllUI();
+				ULexUIManagerWorldSubsystem::RefreshAllUI();
 			}
 		}
 	}
 }
 
-void ULGUIEditorManagerObject::OnMapOpened(const FString& FileName, bool AsTemplate)
+void ULexUIEditorManagerObject::OnMapOpened(const FString& FileName, bool AsTemplate)
 {
 
 }
 
-void ULGUIEditorManagerObject::OnPackageReloaded(EPackageReloadPhase Phase, FPackageReloadedEvent* Event)
+void ULexUIEditorManagerObject::OnPackageReloaded(EPackageReloadPhase Phase, FPackageReloadedEvent* Event)
 {
 	if (Phase == EPackageReloadPhase::PostBatchPostGC && Event != nullptr && Event->GetNewPackage() != nullptr)
 	{
@@ -408,7 +408,7 @@ void ULGUIEditorManagerObject::OnPackageReloaded(EPackageReloadPhase Phase, FPac
 	}
 }
 
-void ULGUIEditorManagerObject::OnActorLabelChanged(AActor* actor)
+void ULexUIEditorManagerObject::OnActorLabelChanged(AActor* actor)
 {
 	if (!IsValid(actor))return;
 	auto World = actor->GetWorld();
@@ -430,7 +430,7 @@ void ULGUIEditorManagerObject::OnActorLabelChanged(AActor* actor)
 	}
 }
 
-void ULGUIEditorManagerObject::CheckEditorViewportIndexAndKey()
+void ULexUIEditorManagerObject::CheckEditorViewportIndexAndKey()
 {
 	if (!IsValid(GEditor))return;
 	auto& viewportClients = GEditor->GetAllViewportClients();
@@ -454,16 +454,16 @@ void ULGUIEditorManagerObject::CheckEditorViewportIndexAndKey()
 	{
 		if (auto viewportClient = viewport->GetClient())
 		{
-			if (ULGUIEditorManagerObject::Instance != nullptr)
+			if (ULexUIEditorManagerObject::Instance != nullptr)
 			{
 				auto editorViewportClient = (FEditorViewportClient*)viewportClient;
 				CurrentActiveViewportIndex = editorViewportClient->ViewIndex;
-				CurrentActiveViewportKey = ULGUIEditorManagerObject::Instance->GetViewportKeyFromIndex(editorViewportClient->ViewIndex);
+				CurrentActiveViewportKey = ULexUIEditorManagerObject::Instance->GetViewportKeyFromIndex(editorViewportClient->ViewIndex);
 			}
 		}
 	}
 }
-uint32 ULGUIEditorManagerObject::GetViewportKeyFromIndex(int32 InViewportIndex)
+uint32 ULexUIEditorManagerObject::GetViewportKeyFromIndex(int32 InViewportIndex)
 {
 	if (auto key = EditorViewportIndexToKeyMap.Find(InViewportIndex))
 	{
@@ -476,7 +476,7 @@ uint32 ULGUIEditorManagerObject::GetViewportKeyFromIndex(int32 InViewportIndex)
 
 
 #if WITH_EDITOR
-void ULGUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool IsScreenSpace)
+void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool IsScreenSpace)
 {
 	auto RectExtends = FVector(0.1f, Widget->GetWidth(), Widget->GetHeight()) * 0.5f;
 	bool bCanDrawRect = false;
@@ -499,7 +499,7 @@ void ULGUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool IsSc
 			auto GeometryBoundsExtends = (Max - Min) * 0.5f;
 			if (IsScreenSpace)
 			{
-				ULGUIManagerWorldSubsystem::DrawDebugRectOnScreenSpace(Widget->GetWorld(), WorldLocation, GeometryBoundsExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), GeometryBoundsDrawColor);
+				ULexUIManagerWorldSubsystem::DrawDebugRectOnScreenSpace(Widget->GetWorld(), WorldLocation, GeometryBoundsExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), GeometryBoundsDrawColor);
 			}
 			else
 			{
@@ -552,7 +552,7 @@ void ULGUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool IsSc
 
 		if (IsScreenSpace)
 		{
-			ULGUIManagerWorldSubsystem::DrawDebugRectOnScreenSpace(Widget->GetWorld(), WorldLocation, RectExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), RectDrawColor);
+			ULexUIManagerWorldSubsystem::DrawDebugRectOnScreenSpace(Widget->GetWorld(), WorldLocation, RectExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), RectDrawColor);
 		}
 		else
 		{
@@ -561,7 +561,7 @@ void ULGUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool IsSc
 	}
 }
 
-void ULGUIManagerWorldSubsystem::DrawNavigationArrow(UWorld* InWorld, const TArray<FVector>& InControlPoints, const FVector& InArrowPointA, const FVector& InArrowPointB, FColor const& InColor, bool IsScreenSpace)
+void ULexUIManagerWorldSubsystem::DrawNavigationArrow(UWorld* InWorld, const TArray<FVector>& InControlPoints, const FVector& InArrowPointA, const FVector& InArrowPointB, FColor const& InColor, bool IsScreenSpace)
 {
 	if (InControlPoints.Num() != 4)return;
 	TArray<FVector> ResultPoints;
@@ -593,7 +593,7 @@ void ULGUIManagerWorldSubsystem::DrawNavigationArrow(UWorld* InWorld, const TArr
 
 	if (IsScreenSpace)
 	{
-		auto ViewExtension = ULGUIManagerWorldSubsystem::GetViewExtension(InWorld, false);
+		auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, false);
 		if (ViewExtension.IsValid())
 		{
 			TArray<FLexUIHelperLineVertex> Lines;
@@ -629,7 +629,7 @@ void ULGUIManagerWorldSubsystem::DrawNavigationArrow(UWorld* InWorld, const TArr
 	}
 }
 
-void ULGUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld* InWorld, UUISelectableComponent* InSelectable, bool IsScreenSpace)
+void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld* InWorld, UUISelectableComponent* InSelectable, bool IsScreenSpace)
 {
 	auto SourceWidget = InSelectable->GetLexWidget();
 	if (!IsValid(SourceWidget))return;
@@ -735,9 +735,9 @@ void ULGUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld* 
 	}
 }
 
-void ULGUIManagerWorldSubsystem::DrawDebugBoxOnScreenSpace(UWorld* InWorld, FVector const& Center, FVector const& Box, const FQuat& Rotation, FColor const& Color)
+void ULexUIManagerWorldSubsystem::DrawDebugBoxOnScreenSpace(UWorld* InWorld, FVector const& Center, FVector const& Box, const FQuat& Rotation, FColor const& Color)
 {
-	auto ViewExtension = ULGUIManagerWorldSubsystem::GetViewExtension(InWorld, false);
+	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, false);
 	if (ViewExtension.IsValid())
 	{
 		TArray<FLexUIHelperLineVertex> Lines;
@@ -806,9 +806,9 @@ void ULGUIManagerWorldSubsystem::DrawDebugBoxOnScreenSpace(UWorld* InWorld, FVec
 		ViewExtension->AddLineRender(FLexUIHelperLineRenderParameter(Lines));
 	}
 }
-void ULGUIManagerWorldSubsystem::DrawDebugRectOnScreenSpace(UWorld* InWorld, FVector const& Center, FVector const& Box, const FQuat& Rotation, FColor const& Color)
+void ULexUIManagerWorldSubsystem::DrawDebugRectOnScreenSpace(UWorld* InWorld, FVector const& Center, FVector const& Box, const FQuat& Rotation, FColor const& Color)
 {
-	auto ViewExtension = ULGUIManagerWorldSubsystem::GetViewExtension(InWorld, false);
+	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, false);
 	if (ViewExtension.IsValid())
 	{
 		TArray<FLexUIHelperLineVertex> Lines;
@@ -838,7 +838,7 @@ void ULGUIManagerWorldSubsystem::DrawDebugRectOnScreenSpace(UWorld* InWorld, FVe
 	}
 }
 
-bool ULGUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULexWidget*>& InWidgets, const FVector& LineStart, const FVector& LineEnd
+bool ULexUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULexWidget*>& InWidgets, const FVector& LineStart, const FVector& LineEnd
 	, ULexWidget*& ResultSelectTarget, int& InOutTargetIndexInHitArray
 )
 {
@@ -898,7 +898,7 @@ bool ULGUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULex
 }
 #endif
 
-void ULGUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+void ULexUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 #if WITH_EDITOR
@@ -921,16 +921,16 @@ void ULGUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collection
 	}
 #endif
 	//localization
-	OnCultureChangedDelegateHandle = FInternationalization::Get().OnCultureChanged().AddUObject(this, &ULGUIManagerWorldSubsystem::OnCultureChanged);
+	OnCultureChangedDelegateHandle = FInternationalization::Get().OnCultureChanged().AddUObject(this, &ULexUIManagerWorldSubsystem::OnCultureChanged);
 }
-void ULGUIManagerWorldSubsystem::PostInitialize()
+void ULexUIManagerWorldSubsystem::PostInitialize()
 {
 	auto PrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(this->GetWorld());
 	check(PrefabManager);
-	PrefabManager->OnBeginDeserializeSession.AddUObject(this, &ULGUIManagerWorldSubsystem::BeginPrefabSystemProcessingActor);
-	PrefabManager->OnEndDeserializeSession.AddUObject(this, &ULGUIManagerWorldSubsystem::EndPrefabSystemProcessingActor);
+	PrefabManager->OnBeginDeserializeSession.AddUObject(this, &ULexUIManagerWorldSubsystem::BeginPrefabSystemProcessingActor);
+	PrefabManager->OnEndDeserializeSession.AddUObject(this, &ULexUIManagerWorldSubsystem::EndPrefabSystemProcessingActor);
 }
-void ULGUIManagerWorldSubsystem::Deinitialize()
+void ULexUIManagerWorldSubsystem::Deinitialize()
 {
 	Super::Deinitialize();
 #if WITH_EDITOR
@@ -954,39 +954,39 @@ void ULGUIManagerWorldSubsystem::Deinitialize()
 		FInternationalization::Get().OnCultureChanged().Remove(OnCultureChangedDelegateHandle);
 	}
 }
-TStatId ULGUIManagerWorldSubsystem::GetStatId() const
+TStatId ULexUIManagerWorldSubsystem::GetStatId() const
 {
 	//return GetStatID();
 	RETURN_QUICK_DECLARE_CYCLE_STAT(ULGUIManagerWorldSubsystem, STATGROUP_Tickables);
 }
-bool ULGUIManagerWorldSubsystem::IsTickableWhenPaused() const
+bool ULexUIManagerWorldSubsystem::IsTickableWhenPaused() const
 {
 	return true;
 }
 
-void ULGUIManagerWorldSubsystem::OnCultureChanged()
+void ULexUIManagerWorldSubsystem::OnCultureChanged()
 {
 	bShouldUpdateOnCultureChanged = true;
 }
 
-ULGUIManagerWorldSubsystem* ULGUIManagerWorldSubsystem::GetInstance(UWorld* InWorld)
+ULexUIManagerWorldSubsystem* ULexUIManagerWorldSubsystem::GetInstance(UWorld* InWorld)
 {
 	if (FWorldContext* WorldContext = GEngine->GetWorldContextFromWorld(InWorld))
 	{
-		return InWorld->GetSubsystem<ULGUIManagerWorldSubsystem>();
+		return InWorld->GetSubsystem<ULexUIManagerWorldSubsystem>();
 	}
 	return nullptr;
 }
 
 #if WITH_EDITOR
-TArray<ULGUIManagerWorldSubsystem*> ULGUIManagerWorldSubsystem::InstanceArray;
-bool ULGUIManagerWorldSubsystem::bIsPlaying = false;
+TArray<ULexUIManagerWorldSubsystem*> ULexUIManagerWorldSubsystem::InstanceArray;
+bool ULexUIManagerWorldSubsystem::bIsPlaying = false;
 #endif
 
 DECLARE_CYCLE_STAT(TEXT("LGUILifeCycleBehaviour Update"), STAT_LGUILifeCycleBehaviourUpdate, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("LGUILifeCycleBehaviour Start"), STAT_LGUILifeCycleBehaviourStart, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("Canvas Update"), STAT_UpdateCanvas, STATGROUP_LGUI);
-void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
+void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 {
 	//editor draw helper frame
 #if WITH_EDITOR
@@ -1010,14 +1010,14 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 						{
 							if (!IsValid(Widget))continue;
 
-							ULGUIManagerWorldSubsystem::DrawFrameOnWidget(Widget, bIsGameWorld ? Widget->IsScreenSpaceOverlayUI() : false);
+							ULexUIManagerWorldSubsystem::DrawFrameOnWidget(Widget, bIsGameWorld ? Widget->IsScreenSpaceOverlayUI() : false);
 						}
 					}
 					};
 				DrawFrame(ScreenSpaceCanvasArray);
 				DrawFrame(WorldSpaceUECanvasArray);
 				DrawFrame(WorldSpaceLexCanvasArray);
-				DrawFrame(RenderTargetSpaceLGUICanvasArray);
+				DrawFrame(RenderTargetSpaceLexUICanvasArray);
 			}
 		}
 
@@ -1030,7 +1030,7 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 				if (!IsValid(Selectable->GetLexWidget()))continue;
 				if (!Selectable->GetLexWidget()->GetRaycastableInHierarchy())continue;
 
-				ULGUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(Selectable->GetWorld(), Selectable.Get(), this->GetWorld()->IsGameWorld() ? Selectable->GetLexWidget()->IsScreenSpaceOverlayUI() : false);
+				ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(Selectable->GetWorld(), Selectable.Get(), this->GetWorld()->IsGameWorld() ? Selectable->GetLexWidget()->IsScreenSpaceOverlayUI() : false);
 			}
 		}
 	}
@@ -1050,23 +1050,23 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 
 	//LGUILifeCycleBehaviour start
 	{
-		if (LGUILifeCycleBehavioursForStart.Num() > 0)
+		if (LexUIBehavioursForStart.Num() > 0)
 		{
 			bIsExecutingStart = true;
 			SCOPE_CYCLE_COUNTER(STAT_LGUILifeCycleBehaviourStart);
-			for (int i = 0; i < LGUILifeCycleBehavioursForStart.Num(); i++)
+			for (int i = 0; i < LexUIBehavioursForStart.Num(); i++)
 			{
-				auto item = LGUILifeCycleBehavioursForStart[i];
+				auto item = LexUIBehavioursForStart[i];
 				if (item.IsValid())
 				{
 					item->Call_Start();
 					if (item->bCanExecuteUpdate)
 					{
-						LGUILifeCycleBehavioursForUpdate.AddUnique(item);
+						LexUIBehavioursForUpdate.AddUnique(item);
 					}
 				}
 			}
-			LGUILifeCycleBehavioursForStart.Reset();
+			LexUIBehavioursForStart.Reset();
 			bIsExecutingStart = false;
 		}
 	}
@@ -1077,10 +1077,10 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 		auto bIsGamePaused = GetWorld()->IsPaused();
 		auto Settings = GetDefault<ULGUISettings>();
 		SCOPE_CYCLE_COUNTER(STAT_LGUILifeCycleBehaviourUpdate);
-		for (int i = 0; i < LGUILifeCycleBehavioursForUpdate.Num(); i++)
+		for (int i = 0; i < LexUIBehavioursForUpdate.Num(); i++)
 		{
 			CurrentExecutingUpdateIndex = i;
-			auto item = LGUILifeCycleBehavioursForUpdate[i];
+			auto item = LexUIBehavioursForUpdate[i];
 			if (item.IsValid())
 			{
 				if (item->GetRootSceneComponent() && item->GetRootSceneComponent()->IsA(ULexWidget::StaticClass()))
@@ -1112,13 +1112,13 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 		bIsExecutingUpdate = false;
 		CurrentExecutingUpdateIndex = -1;
 		//remove these padding things
-		if (LGUILifeCycleBehavioursNeedToRemoveFromUpdate.Num() > 0)
+		if (LexUIBehavioursNeedToRemoveFromUpdate.Num() > 0)
 		{
-			for (auto& item : LGUILifeCycleBehavioursNeedToRemoveFromUpdate)
+			for (auto& item : LexUIBehavioursNeedToRemoveFromUpdate)
 			{
-				LGUILifeCycleBehavioursForUpdate.Remove(item);
+				LexUIBehavioursForUpdate.Remove(item);
 			}
-			LGUILifeCycleBehavioursNeedToRemoveFromUpdate.Reset();
+			LexUIBehavioursNeedToRemoveFromUpdate.Reset();
 		}
 	}
 
@@ -1170,11 +1170,11 @@ void ULGUIManagerWorldSubsystem::Tick(float DeltaTime)
 		UpdateCanvas(ScreenSpaceCanvasArray);
 		UpdateCanvas(WorldSpaceUECanvasArray);
 		UpdateCanvas(WorldSpaceLexCanvasArray);
-		UpdateCanvas(RenderTargetSpaceLGUICanvasArray);
+		UpdateCanvas(RenderTargetSpaceLexUICanvasArray);
 	}
 }
 
-void ULGUIManagerWorldSubsystem::AddLGUILifeCycleBehaviourForLifecycleEvent(ULexUIBehaviour* InComp)
+void ULexUIManagerWorldSubsystem::AddLexUIBehaviourForLifecycleEvent(ULexUIBehaviour* InComp)
 {
 	if (IsValid(InComp))
 	{
@@ -1183,7 +1183,7 @@ void ULGUIManagerWorldSubsystem::AddLGUILifeCycleBehaviourForLifecycleEvent(ULex
 			auto SessionId = ULGUIPrefabWorldSubsystem::GetInstance(InComp->GetWorld())->GetPrefabSystemSessionIdForActor(InComp->GetOwner());
 			if (SessionId.IsValid())//processing by prefab system, collect for further operation
 			{
-				if (auto ArrayPtr = Instance->LGUILifeCycleBehaviours_PrefabSystemProcessing.Find(SessionId))
+				if (auto ArrayPtr = Instance->LexUIBehaviours_PrefabSystemProcessing.Find(SessionId))
 				{
 					auto& CompArray = ArrayPtr->LGUILifeCycleBehaviourArray;
 #if !UE_BUILD_SHIPPING
@@ -1199,35 +1199,35 @@ void ULGUIManagerWorldSubsystem::AddLGUILifeCycleBehaviourForLifecycleEvent(ULex
 			}
 			else//not processed by prefab system, just do immediately
 			{
-				Instance->ProcessLGUILifecycleEvent(InComp);
+				Instance->ProcessLexUILifecycleEvent(InComp);
 			}
 		}
 	}
 }
 
-void ULGUIManagerWorldSubsystem::AddLGUILifeCycleBehavioursForUpdate(ULexUIBehaviour* InComp)
+void ULexUIManagerWorldSubsystem::AddLexUIBehavioursForUpdate(ULexUIBehaviour* InComp)
 {
 	if (IsValid(InComp))
 	{
 		if (auto Instance = GetInstance(InComp->GetWorld()))
 		{
 			int32 index = INDEX_NONE;
-			if (!Instance->LGUILifeCycleBehavioursForUpdate.Find(InComp, index))
+			if (!Instance->LexUIBehavioursForUpdate.Find(InComp, index))
 			{
-				Instance->LGUILifeCycleBehavioursForUpdate.Add(InComp);
+				Instance->LexUIBehavioursForUpdate.Add(InComp);
 				return;
 			}
 			UE_LOG(LGUI, Warning, TEXT("[%s].%d Already exist, comp:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(InComp->GetPathName()));
 		}
 	}
 }
-void ULGUIManagerWorldSubsystem::RemoveLGUILifeCycleBehavioursFromUpdate(ULexUIBehaviour* InComp)
+void ULexUIManagerWorldSubsystem::RemoveLexUIBehavioursFromUpdate(ULexUIBehaviour* InComp)
 {
 	if (IsValid(InComp))
 	{
 		if (auto Instance = GetInstance(InComp->GetWorld()))
 		{
-			auto& updateArray = Instance->LGUILifeCycleBehavioursForUpdate;
+			auto& updateArray = Instance->LexUIBehavioursForUpdate;
 			int32 index = INDEX_NONE;
 			if (updateArray.Find(InComp, index))
 			{
@@ -1239,7 +1239,7 @@ void ULGUIManagerWorldSubsystem::RemoveLGUILifeCycleBehavioursFromUpdate(ULexUIB
 					}
 					else//already execute or current execute it, not safe to remove. should remove it after execute process complete
 					{
-						Instance->LGUILifeCycleBehavioursNeedToRemoveFromUpdate.Add(InComp);
+						Instance->LexUIBehavioursNeedToRemoveFromUpdate.Add(InComp);
 					}
 				}
 				else//not executing update, safe to remove
@@ -1270,14 +1270,14 @@ void ULGUIManagerWorldSubsystem::RemoveLGUILifeCycleBehavioursFromUpdate(ULexUIB
 	}
 }
 
-void ULGUIManagerWorldSubsystem::RegisterLexUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem)
+void ULexUIManagerWorldSubsystem::RegisterLexUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem)
 {
 	if (auto Instance = GetInstance(InItem.GetObject()->GetWorld()))
 	{
 		Instance->AllCultureChangedArray.AddUnique(InItem.GetObject());
 	}
 }
-void ULGUIManagerWorldSubsystem::UnregisterLexUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem)
+void ULexUIManagerWorldSubsystem::UnregisterLexUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem)
 {
 	if (auto Instance = GetInstance(InItem.GetObject()->GetWorld()))
 	{
@@ -1286,7 +1286,7 @@ void ULGUIManagerWorldSubsystem::UnregisterLexUICultureChangedEvent(TScriptInter
 }
 
 #if WITH_EDITOR
-void ULGUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
+void ULexUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 {
 	for (auto InstanceItem : InstanceArray)
 	{
@@ -1309,7 +1309,7 @@ void ULGUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 	}
 }
 
-void ULGUIManagerWorldSubsystem::AddRootWidget(ULexWidget* InWidget)
+void ULexUIManagerWorldSubsystem::AddRootWidget(ULexWidget* InWidget)
 {
 	if (auto Instance = GetInstance(InWidget->GetWorld()))
 	{
@@ -1323,7 +1323,7 @@ void ULGUIManagerWorldSubsystem::AddRootWidget(ULexWidget* InWidget)
 		Instance->AllRootWidgetArray.AddUnique(InWidget);
 	}
 }
-void ULGUIManagerWorldSubsystem::RemoveRootWidget(ULexWidget* InWidget)
+void ULexUIManagerWorldSubsystem::RemoveRootWidget(ULexWidget* InWidget)
 {
 	if (auto Instance = GetInstance(InWidget->GetWorld()))
 	{
@@ -1339,7 +1339,7 @@ void ULGUIManagerWorldSubsystem::RemoveRootWidget(ULexWidget* InWidget)
 }
 #endif
 
-void ULGUIManagerWorldSubsystem::AddCanvas(ULexCanvas* InCanvas, ELexRenderMode InCurrentRenderMode)
+void ULexUIManagerWorldSubsystem::AddCanvas(ULexCanvas* InCanvas, ELexRenderMode InCurrentRenderMode)
 {
 	if (auto Instance = GetInstance(InCanvas->GetWorld()))
 	{
@@ -1357,13 +1357,13 @@ void ULGUIManagerWorldSubsystem::AddCanvas(ULexCanvas* InCanvas, ELexRenderMode 
 				Instance->WorldSpaceLexCanvasArray.Add(InCanvas);
 				break;
 			case ELexRenderMode::RenderTarget:
-				Instance->RenderTargetSpaceLGUICanvasArray.Add(InCanvas);
+				Instance->RenderTargetSpaceLexUICanvasArray.Add(InCanvas);
 				break;
 			}
 		}
 	}
 }
-void ULGUIManagerWorldSubsystem::RemoveCanvas(ULexCanvas* InCanvas, ELexRenderMode InCurrentRenderMode)
+void ULexUIManagerWorldSubsystem::RemoveCanvas(ULexCanvas* InCanvas, ELexRenderMode InCurrentRenderMode)
 {
 	if (auto Instance = GetInstance(InCanvas->GetWorld()))
 	{
@@ -1379,12 +1379,12 @@ void ULGUIManagerWorldSubsystem::RemoveCanvas(ULexCanvas* InCanvas, ELexRenderMo
 			Instance->WorldSpaceLexCanvasArray.Remove(InCanvas);
 			break;
 		case ELexRenderMode::RenderTarget:
-			Instance->RenderTargetSpaceLGUICanvasArray.Remove(InCanvas);
+			Instance->RenderTargetSpaceLexUICanvasArray.Remove(InCanvas);
 			break;
 		}
 	}
 }
-void ULGUIManagerWorldSubsystem::CanvasRenderModeChange(ULexCanvas* InCanvas, ELexRenderMode InOldRenderMode, ELexRenderMode InNewRenderMode)
+void ULexUIManagerWorldSubsystem::CanvasRenderModeChange(ULexCanvas* InCanvas, ELexRenderMode InOldRenderMode, ELexRenderMode InNewRenderMode)
 {
 	if (auto Instance = GetInstance(InCanvas->GetWorld()))
 	{
@@ -1401,7 +1401,7 @@ void ULGUIManagerWorldSubsystem::CanvasRenderModeChange(ULexCanvas* InCanvas, EL
 			Instance->WorldSpaceLexCanvasArray.Remove(InCanvas);
 			break;
 		case ELexRenderMode::RenderTarget:
-			Instance->RenderTargetSpaceLGUICanvasArray.Remove(InCanvas);
+			Instance->RenderTargetSpaceLexUICanvasArray.Remove(InCanvas);
 			break;
 		}
 		//add to new
@@ -1417,12 +1417,12 @@ void ULGUIManagerWorldSubsystem::CanvasRenderModeChange(ULexCanvas* InCanvas, EL
 			Instance->WorldSpaceLexCanvasArray.Add(InCanvas);
 			break;
 		case ELexRenderMode::RenderTarget:
-			Instance->RenderTargetSpaceLGUICanvasArray.Add(InCanvas);
+			Instance->RenderTargetSpaceLexUICanvasArray.Add(InCanvas);
 			break;
 		}
 	}
 }
-const TArray<TWeakObjectPtr<ULexCanvas>>& ULGUIManagerWorldSubsystem::GetCanvasArray(ELexRenderMode RenderMode)
+const TArray<TWeakObjectPtr<ULexCanvas>>& ULexUIManagerWorldSubsystem::GetCanvasArray(ELexRenderMode RenderMode)
 {
 	switch (RenderMode)
 	{
@@ -1439,11 +1439,11 @@ const TArray<TWeakObjectPtr<ULexCanvas>>& ULGUIManagerWorldSubsystem::GetCanvasA
 	case ELexRenderMode::WorldSpace_LexUI:
 		return WorldSpaceLexCanvasArray;
 	case ELexRenderMode::RenderTarget:
-		return RenderTargetSpaceLGUICanvasArray;
+		return RenderTargetSpaceLexUICanvasArray;
 	}
 }
 
-TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> ULGUIManagerWorldSubsystem::GetViewExtension(UWorld* InWorld, bool InCreateIfNotExist)
+TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> ULexUIManagerWorldSubsystem::GetViewExtension(UWorld* InWorld, bool InCreateIfNotExist)
 {
 	if (auto Instance = GetInstance(InWorld))
 	{
@@ -1459,7 +1459,7 @@ TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> ULGUIManagerWorldSubsystem
 	return nullptr;
 }
 
-void ULGUIManagerWorldSubsystem::AddRaycaster(ULGUIBaseRaycaster* InRaycaster)
+void ULexUIManagerWorldSubsystem::AddRaycaster(ULGUIBaseRaycaster* InRaycaster)
 {
 	if (auto Instance = GetInstance(InRaycaster->GetWorld()))
 	{
@@ -1496,7 +1496,7 @@ void ULGUIManagerWorldSubsystem::AddRaycaster(ULGUIBaseRaycaster* InRaycaster)
 		});
 	}
 }
-void ULGUIManagerWorldSubsystem::RemoveRaycaster(ULGUIBaseRaycaster* InRaycaster)
+void ULexUIManagerWorldSubsystem::RemoveRaycaster(ULGUIBaseRaycaster* InRaycaster)
 {
 	if (auto Instance = GetInstance(InRaycaster->GetWorld()))
 	{
@@ -1508,14 +1508,14 @@ void ULGUIManagerWorldSubsystem::RemoveRaycaster(ULGUIBaseRaycaster* InRaycaster
 	}
 }
 
-void ULGUIManagerWorldSubsystem::SetCurrentInputModule(ULGUIBaseInputModule* InInputModule)
+void ULexUIManagerWorldSubsystem::SetCurrentInputModule(ULGUIBaseInputModule* InInputModule)
 {
 	if (auto Instance = GetInstance(InInputModule->GetWorld()))
 	{
 		Instance->CurrentInputModule = InInputModule;
 	}
 }
-void ULGUIManagerWorldSubsystem::ClearCurrentInputModule(ULGUIBaseInputModule* InInputModule)
+void ULexUIManagerWorldSubsystem::ClearCurrentInputModule(ULGUIBaseInputModule* InInputModule)
 {
 	if (auto Instance = GetInstance(InInputModule->GetWorld()))
 	{
@@ -1523,7 +1523,7 @@ void ULGUIManagerWorldSubsystem::ClearCurrentInputModule(ULGUIBaseInputModule* I
 	}
 }
 
-void ULGUIManagerWorldSubsystem::AddSelectable(UUISelectableComponent* InSelectable)
+void ULexUIManagerWorldSubsystem::AddSelectable(UUISelectableComponent* InSelectable)
 {
 	if (auto Instance = GetInstance(InSelectable->GetWorld()))
 	{
@@ -1538,7 +1538,7 @@ void ULGUIManagerWorldSubsystem::AddSelectable(UUISelectableComponent* InSelecta
 		AllSelectableArray.AddUnique(InSelectable);
 	}
 }
-void ULGUIManagerWorldSubsystem::RemoveSelectable(UUISelectableComponent* InSelectable)
+void ULexUIManagerWorldSubsystem::RemoveSelectable(UUISelectableComponent* InSelectable)
 {
 	if (auto Instance = GetInstance(InSelectable->GetWorld()))
 	{
@@ -1550,7 +1550,7 @@ void ULGUIManagerWorldSubsystem::RemoveSelectable(UUISelectableComponent* InSele
 	}
 }
 
-void ULGUIManagerWorldSubsystem::ProcessLGUILifecycleEvent(ULexUIBehaviour* InComp)
+void ULexUIManagerWorldSubsystem::ProcessLexUILifecycleEvent(ULexUIBehaviour* InComp)
 {
 	if (InComp)
 	{
@@ -1560,21 +1560,21 @@ void ULGUIManagerWorldSubsystem::ProcessLGUILifecycleEvent(ULexUIBehaviour* InCo
 			{
 				InComp->Call_Awake();
 #if !UE_BUILD_SHIPPING
-				check(!LGUILifeCycleBehavioursForStart.Contains(InComp));
+				check(!LexUIBehavioursForStart.Contains(InComp));
 #endif
-				LGUILifeCycleBehavioursForStart.Add(InComp);
+				LexUIBehavioursForStart.Add(InComp);
 			}
 		}
 	}
 }
-void ULGUIManagerWorldSubsystem::BeginPrefabSystemProcessingActor(const FGuid& InSessionId)
+void ULexUIManagerWorldSubsystem::BeginPrefabSystemProcessingActor(const FGuid& InSessionId)
 {
 	FLGUILifeCycleBehaviourArrayContainer Container;
-	LGUILifeCycleBehaviours_PrefabSystemProcessing.Add(InSessionId, Container);
+	LexUIBehaviours_PrefabSystemProcessing.Add(InSessionId, Container);
 }
-void ULGUIManagerWorldSubsystem::EndPrefabSystemProcessingActor(const FGuid& InSessionId)
+void ULexUIManagerWorldSubsystem::EndPrefabSystemProcessingActor(const FGuid& InSessionId)
 {
-	if (auto ArrayPtr = LGUILifeCycleBehaviours_PrefabSystemProcessing.Find(InSessionId))
+	if (auto ArrayPtr = LexUIBehaviours_PrefabSystemProcessing.Find(InSessionId))
 	{
 		auto& LateFunctions = ArrayPtr->Functions;
 		for (auto& Function : LateFunctions)
@@ -1589,7 +1589,7 @@ void ULGUIManagerWorldSubsystem::EndPrefabSystemProcessingActor(const FGuid& InS
 			auto& Item = LGUILifeCycleBehaviourArray[i];
 			if (Item.IsValid())
 			{
-				ProcessLGUILifecycleEvent(Item.Get());
+				ProcessLexUILifecycleEvent(Item.Get());
 			}
 #if !UE_BUILD_SHIPPING
 			if (LGUILifeCycleBehaviourArray.Num() != Count)
@@ -1599,15 +1599,15 @@ void ULGUIManagerWorldSubsystem::EndPrefabSystemProcessingActor(const FGuid& InS
 #endif
 		}
 
-		LGUILifeCycleBehaviours_PrefabSystemProcessing.Remove(InSessionId);
+		LexUIBehaviours_PrefabSystemProcessing.Remove(InSessionId);
 	}
 }
-void ULGUIManagerWorldSubsystem::AddFunctionForPrefabSystemExecutionBeforeAwake(AActor* InPrefabActor, const TFunction<void()>& InFunction)
+void ULexUIManagerWorldSubsystem::AddFunctionForPrefabSystemExecutionBeforeAwake(AActor* InPrefabActor, const TFunction<void()>& InFunction)
 {
 	auto SessionId = ULGUIPrefabWorldSubsystem::GetInstance(InPrefabActor->GetWorld())->GetPrefabSystemSessionIdForActor(InPrefabActor);
 	if (SessionId.IsValid())
 	{
-		auto& Container = LGUILifeCycleBehaviours_PrefabSystemProcessing[SessionId];
+		auto& Container = LexUIBehaviours_PrefabSystemProcessing[SessionId];
 		Container.Functions.Add(InFunction);
 	}
 }

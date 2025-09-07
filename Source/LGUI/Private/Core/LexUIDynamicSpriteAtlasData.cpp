@@ -4,7 +4,7 @@
 #include "Core/LexUIStaticSpriteAtlasData.h"
 #include "LGUI.h"
 #include "Core/LGUISettings.h"
-#include "Core/LGUIManager.h"
+#include "Core/LexUIManager.h"
 #include "Core/Components/UISpriteBase.h"
 #include "Core/LexUISpriteData.h"
 #include "Utils/LexUIUtils.h"

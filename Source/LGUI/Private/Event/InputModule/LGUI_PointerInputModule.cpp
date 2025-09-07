@@ -3,7 +3,7 @@
 #include "Event/InputModule/LGUI_PointerInputModule.h"
 #include "LGUI.h"
 #include "Event/LGUIPointerEventData.h"
-#include "Core/LGUIManager.h"
+#include "Core/LexUIManager.h"
 #include "Event/LGUIEventSystem.h"
 #include "Event/LGUIBaseRaycaster.h"
 #include "Event/Interface/LGUINavigationInterface.h"
@@ -31,7 +31,7 @@ bool ULGUI_PointerInputModule::LineTrace(ULGUIPointerEventData* InPointerEventDa
 {
 	multiHitResult.Reset();
 	auto World = this->GetWorld();
-	if (auto LGUIManager = ULGUIManagerWorldSubsystem::GetInstance(World))
+	if (auto LGUIManager = ULexUIManagerWorldSubsystem::GetInstance(World))
 	{
 		auto bIsGamePaused = World->IsPaused();
 		auto& AllRaycasterArray = LGUIManager->GetAllRaycasterArray();

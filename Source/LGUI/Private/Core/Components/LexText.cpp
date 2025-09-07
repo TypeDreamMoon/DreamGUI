@@ -9,7 +9,7 @@
 #include "Core/LexUIRichTextImageData_BaseObject.h"
 #include "Core/LexUIRichTextCustomStyleData.h"
 #include "Core/LexUIDrawCall.h"
-#include "Core/LGUIManager.h"
+#include "Core/LexUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "Utils/LexUIUtils.h"
 #include "Engine/Texture2D.h"
@@ -184,7 +184,7 @@ void ULexText::OnRegister()
 		else
 #endif
 		{
-			ULGUIManagerWorldSubsystem::RegisterLexUICultureChangedEvent(this);
+			ULexUIManagerWorldSubsystem::RegisterLexUICultureChangedEvent(this);
 		}
 	}
 }
@@ -219,7 +219,7 @@ void ULexText::OnUnregister()
 		else
 #endif
 		{
-			ULGUIManagerWorldSubsystem::UnregisterLexUICultureChangedEvent(this);
+			ULexUIManagerWorldSubsystem::UnregisterLexUICultureChangedEvent(this);
 		}
 	}
 }

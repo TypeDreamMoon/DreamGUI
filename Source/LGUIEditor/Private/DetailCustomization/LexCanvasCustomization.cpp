@@ -3,7 +3,7 @@
 #include "DetailCustomization/LexCanvasCustomization.h"
 #include "LGUIEditorUtils.h"
 #include "Core/Components/LexCanvas.h"
-#include "Core/LGUIManager.h"
+#include "Core/LexUIManager.h"
 #include "HAL/PlatformApplicationMisc.h"
 #include "Engine/TextureRenderTarget2D.h"
 
@@ -53,7 +53,7 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	{
 		if (auto World = TargetScriptArray[0]->GetWorld())
 		{
-			if (auto LexUIManager = ULGUIManagerWorldSubsystem::GetInstance(World))
+			if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(World))
 			{
 				auto& CanvasArray = LexUIManager->GetCanvasArray(ELexRenderMode::ScreenSpaceOverlay);
 				int ScreenSpaceRootCanvasCount = 0;
@@ -435,7 +435,7 @@ FText FLexCanvasCustomization::GetSortOrderInfo(TWeakObjectPtr<ULexCanvas> Targe
 	{
 		if (auto world = TargetScript->GetWorld())
 		{
-			if (auto LGUIManager = ULGUIManagerWorldSubsystem::GetInstance(world))
+			if (auto LGUIManager = ULexUIManagerWorldSubsystem::GetInstance(world))
 			{
 				FText spaceText;
 				if (TargetScript->IsRenderToScreenSpace())
@@ -486,7 +486,7 @@ FText FLexCanvasCustomization::GetSortOrderInfo(TWeakObjectPtr<ULexCanvas> Targe
 
 FText FLexCanvasCustomization::GetDrawcallInfo()const
 {
-	auto LGUIManager = ULGUIManagerWorldSubsystem::GetInstance(TargetScriptArray[0]->GetWorld());
+	auto LGUIManager = ULexUIManagerWorldSubsystem::GetInstance(TargetScriptArray[0]->GetWorld());
 	if (TargetScriptArray.Num() > 0 && TargetScriptArray[0].IsValid() && LGUIManager)
 	{
 		auto& allCanvas = LGUIManager->GetCanvasArray(TargetScriptArray[0]->GetRenderMode());
@@ -535,7 +535,7 @@ FText FLexCanvasCustomization::GetDrawcallInfoTooltip()const
 		break;
 	}
 
-	if (auto LGUIManager = ULGUIManagerWorldSubsystem::GetInstance(TargetScriptArray[0]->GetWorld()))
+	if (auto LGUIManager = ULexUIManagerWorldSubsystem::GetInstance(TargetScriptArray[0]->GetWorld()))
 	{
 		auto& allCanvas = LGUIManager->GetCanvasArray(TargetScriptArray[0]->GetRootRenderMode());
 		int allDrawcallCount = 0;

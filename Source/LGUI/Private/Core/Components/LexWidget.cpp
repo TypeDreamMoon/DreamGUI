@@ -4,7 +4,7 @@
 #include "LGUI.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/LGUISettings.h"
-#include "Core/LGUIManager.h"
+#include "Core/LexUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "PhysicsEngine/BodySetup.h"
 #include "LTweenManager.h"
@@ -590,7 +590,7 @@ void ULexWidget::PostEditComponentMove(bool bFinished)
 void ULexWidget::PostEditUndo()
 {
 	Super::PostEditUndo();
-	ULGUIManagerWorldSubsystem::RefreshAllUI(this->GetWorld());
+	ULexUIManagerWorldSubsystem::RefreshAllUI(this->GetWorld());
 }
 
 void ULexWidget::PostTransacted(const FTransactionObjectEvent& TransactionEvent)
@@ -1944,7 +1944,7 @@ void ULexWidget::CheckRootWidget(ULexWidget* RootWidgetInParent)
 	auto OldRootWidget = RootWidget;
 	if (OldRootWidget == this && OldRootWidget != nullptr)
 	{
-		ULGUIManagerWorldSubsystem::RemoveRootWidget(this);
+		ULexUIManagerWorldSubsystem::RemoveRootWidget(this);
 	}
 
 	if (RootWidgetInParent == nullptr)
@@ -1962,7 +1962,7 @@ void ULexWidget::CheckRootWidget(ULexWidget* RootWidgetInParent)
 
 	if (RootWidget == this && RootWidget != nullptr)
 	{
-		ULGUIManagerWorldSubsystem::AddRootWidget(this);
+		ULexUIManagerWorldSubsystem::AddRootWidget(this);
 	}
 }
 

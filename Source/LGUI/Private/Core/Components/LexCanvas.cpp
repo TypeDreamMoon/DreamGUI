@@ -9,7 +9,7 @@
 #include "LevelEditorViewport.h"
 #endif
 #include "Core/LGUISettings.h"
-#include "Core/LGUIManager.h"
+#include "Core/LexUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "Core/LexUIRender/LexUIRenderer.h"
 #include "Core/LexUIMesh/LexUIMeshComponent.h"
@@ -136,7 +136,7 @@ void ULexCanvas::UpdateRootCanvas()
 			{
 				if (!bHasAddToLexScreenSpaceRenderer)
 				{
-					auto ViewExtension = ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true);
+					auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true);
 
 					if (ViewExtension.IsValid())//only root canvas can add screen space UI to LGUIRenderer
 					{
@@ -160,7 +160,7 @@ void ULexCanvas::UpdateRootCanvas()
 			{
 				if (!bHasSetInitialStateForLexWorldSpaceRenderer)
 				{
-					auto ViewExtension = ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true);
+					auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true);
 
 					if (ViewExtension.IsValid())//only root canvas can add screen space UI to LGUIRenderer
 					{
@@ -313,7 +313,7 @@ void ULexCanvas::OnRegister()
 	Super::OnRegister();
 	if (CheckLexWidget())
 	{
-		ULGUIManagerWorldSubsystem::AddCanvas(this, CurrentRenderMode);
+		ULexUIManagerWorldSubsystem::AddCanvas(this, CurrentRenderMode);
 		//tell UIItem
 		LexWidget->RegisterRenderCanvas(this);
 		LexWidget->GetAttachmentChangedEvent().AddUObject(this, &ULexCanvas::OnUIHierarchyAttachmentChanged);
@@ -335,7 +335,7 @@ void ULexCanvas::OnRegister()
 void ULexCanvas::OnUnregister()
 {
 	Super::OnUnregister();
-	ULGUIManagerWorldSubsystem::RemoveCanvas(this, CurrentRenderMode);
+	ULexUIManagerWorldSubsystem::RemoveCanvas(this, CurrentRenderMode);
 
 	ClipDataList.Empty();
 	
@@ -390,7 +390,7 @@ void ULexCanvas::RemoveFromViewExtension(bool PropogateToChildrenCanvas)
 		}
 		else//if not RenderTarget mode, then should be ScreenSpaceOverlay
 		{
-			auto ViewExtension = ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), false);
+			auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(GetWorld(), false);
 			if (ViewExtension.IsValid())
 			{
 				ViewExtension->ClearScreenSpaceRootCanvas();
@@ -529,7 +529,7 @@ void ULexCanvas::CheckRenderMode(bool PropogateToChildrenCanvas)
 		//clear drawcall, delete mesh, because UE/LGUI render's mesh data not compatible
 		this->ClearDrawCall();
 
-		ULGUIManagerWorldSubsystem::CanvasRenderModeChange(this, OldRenderMode, CurrentRenderMode);
+		ULexUIManagerWorldSubsystem::CanvasRenderModeChange(this, OldRenderMode, CurrentRenderMode);
 		OnRenderModeChanged.Broadcast(this, OldRenderMode, CurrentRenderMode);
 	}
 
@@ -715,7 +715,7 @@ void ULexCanvas::PostEditUndo()
 {
 	Super::PostEditUndo();
 
-	ULGUIManagerWorldSubsystem::RefreshAllUI(this->GetWorld());
+	ULexUIManagerWorldSubsystem::RefreshAllUI(this->GetWorld());
 }
 void ULexCanvas::EnsureDataForRebuild()
 {
@@ -1855,20 +1855,20 @@ void ULexCanvas::CheckUIMesh()const
 #if WITH_EDITOR
 				if (!GetWorld()->IsGameWorld())
 				{
-					UIMesh->SetSupportLexUIRenderer(true, ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true), false);
+					UIMesh->SetSupportLexUIRenderer(true, ULexUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true), false);
 					UIMesh->SetSupportUERenderer(true);
 				}
 				else
 #endif
 				{
-					UIMesh->SetSupportLexUIRenderer(true, ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true), false);
+					UIMesh->SetSupportLexUIRenderer(true, ULexUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true), false);
 					UIMesh->SetSupportUERenderer(false);
 				}
 			}
 			break;
 			case ELexRenderMode::WorldSpace_LexUI:
 			{
-				UIMesh->SetSupportLexUIRenderer(true, ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true), true);
+				UIMesh->SetSupportLexUIRenderer(true, ULexUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true), true);
 				UIMesh->SetSupportUERenderer(false);
 			}
 			break;
@@ -1912,13 +1912,13 @@ void ULexCanvas::SortDrawCall()
 		switch (this->GetRootRenderMode())
 		{
 		case ELexRenderMode::ScreenSpaceOverlay:
-			ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true)->MarkNeedToSortScreenSpacePrimitiveRenderPriority();
+			ULexUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true)->MarkNeedToSortScreenSpacePrimitiveRenderPriority();
 			break;
 		case ELexRenderMode::RenderTarget:
 			GetRenderTargetViewExtension()->MarkNeedToSortScreenSpacePrimitiveRenderPriority();
 			break;
 		case ELexRenderMode::WorldSpace_LexUI:
-			ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true)->MarkNeedToSortWorldSpacePrimitiveRenderPriority();
+			ULexUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true)->MarkNeedToSortWorldSpacePrimitiveRenderPriority();
 			break;
 		}
 	}
@@ -2621,7 +2621,7 @@ void ULexCanvas::SetBlendDepth(float Value)
 			{
 				if (RootCanvas->IsRenderToWorldSpace())
 				{
-					auto ViewExtension = ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), false);
+					auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(GetWorld(), false);
 					if (ViewExtension.IsValid())
 					{
 						ViewExtension->SetRenderCanvasDepthParameter(this, this->GetActualBlendDepth(), this->GetActualDepthFade());
@@ -2644,7 +2644,7 @@ void ULexCanvas::SetDepthFade(int Value)
 			{
 				if (RootCanvas->IsRenderToWorldSpace())
 				{
-					auto ViewExtension = ULGUIManagerWorldSubsystem::GetViewExtension(GetWorld(), false);
+					auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(GetWorld(), false);
 					if (ViewExtension.IsValid())
 					{
 						ViewExtension->SetRenderCanvasDepthParameter(this, this->GetActualBlendDepth(), this->GetActualDepthFade());
@@ -3054,7 +3054,7 @@ void ULexCanvas::OnViewportParameterChanged()
 #if WITH_EDITOR
 void ULexCanvas::OnEditorTick(float DeltaTime)
 {
-	if (ULGUIManagerWorldSubsystem::GetIsPlaying())//When hit play there is still a editor world and DrawViewportArea is called, which could cause frame dropdown, so skip it when playing
+	if (ULexUIManagerWorldSubsystem::GetIsPlaying())//When hit play there is still a editor world and DrawViewportArea is called, which could cause frame dropdown, so skip it when playing
 		return;
 	if (this->IsRootCanvas())
 	{
@@ -3138,7 +3138,7 @@ void ULexCanvas::OnEditorTick(float DeltaTime)
 void ULexCanvas::OnPreviewSetting_EditorPreviewViewportIndexChange()
 {
 	int32 editorViewIndex = ULGUIEditorSettings::GetLGUIPreview_EditorViewIndex();
-	FLexUIRenderer::EditorPreview_ViewKey = ULGUIEditorManagerObject::Instance->GetViewportKeyFromIndex(editorViewIndex);
+	FLexUIRenderer::EditorPreview_ViewKey = ULexUIEditorManagerObject::Instance->GetViewportKeyFromIndex(editorViewIndex);
 }
 void DeprojectViewPointToWorld(const FMatrix& InViewProjectionMatrix, const FVector2D& InViewPoint01, FVector& OutWorldStart, FVector& OutWorldEnd)
 {

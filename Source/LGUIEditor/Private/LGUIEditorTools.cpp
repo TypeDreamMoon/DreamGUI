@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "LGUIEditorTools.h"
-#include "Core/LGUIManager.h"
+#include "Core/LexUIManager.h"
 #include "Widgets/Docking/SDockTab.h"
 #include "Misc/FileHelper.h"
 #include "Misc/MessageDialog.h"
@@ -1007,7 +1007,7 @@ void LGUIEditorTools::DuplicateSelectedActors_Impl()//@todo: fix bug: duplicate 
 		GEditor->SelectActor(copiedActor, true, true);
 	}
 	GEditor->EndTransaction();
-	ULGUIManagerWorldSubsystem::RefreshAllUI();
+	ULexUIManagerWorldSubsystem::RefreshAllUI();
 }
 void LGUIEditorTools::CopySelectedActors_Impl()
 {
@@ -1173,7 +1173,7 @@ void LGUIEditorTools::PasteSelectedActors_Impl()
 	}
 	PrefabHelperObject->SetCanNotifyAttachment(true);
 	GEditor->EndTransaction();
-	ULGUIManagerWorldSubsystem::RefreshAllUI();
+	ULexUIManagerWorldSubsystem::RefreshAllUI();
 }
 void LGUIEditorTools::DeleteSelectedActors_Impl()
 {
@@ -1391,7 +1391,7 @@ void LGUIEditorTools::PasteComponentValues_Impl()
 			}
 		}
 		GEditor->EndTransaction();
-		ULGUIManagerWorldSubsystem::RefreshAllUI();
+		ULexUIManagerWorldSubsystem::RefreshAllUI();
 	}
 	else
 	{
@@ -1514,7 +1514,7 @@ void LGUIEditorTools::CreateScreenSpaceUI_BasicSetup()
 		GEditor->SelectActor(actor, true, true);
 		CreatePresetEventSystem_BasicSetup();
 		GEditor->EndTransaction();
-		ULGUIManagerWorldSubsystem::RefreshAllUI();
+		ULexUIManagerWorldSubsystem::RefreshAllUI();
 	}
 	else
 	{
@@ -1546,7 +1546,7 @@ void LGUIEditorTools::CreateWorldSpaceUIUERenderer_BasicSetup()
 		GEditor->SelectActor(actor, true, true);
 		CreatePresetEventSystem_BasicSetup();
 		GEditor->EndTransaction();
-		ULGUIManagerWorldSubsystem::RefreshAllUI();
+		ULexUIManagerWorldSubsystem::RefreshAllUI();
 	}
 	else
 	{
@@ -1578,7 +1578,7 @@ void LGUIEditorTools::CreateWorldSpaceUILGUIRenderer_BasicSetup()
 		GEditor->SelectActor(actor, true, true);
 		CreatePresetEventSystem_BasicSetup();
 		GEditor->EndTransaction();
-		ULGUIManagerWorldSubsystem::RefreshAllUI();
+		ULexUIManagerWorldSubsystem::RefreshAllUI();
 	}
 	else
 	{

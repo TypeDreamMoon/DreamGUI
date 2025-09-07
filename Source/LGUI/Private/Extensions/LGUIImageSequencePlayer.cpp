@@ -3,7 +3,7 @@
 #include "Extensions/LGUIImageSequencePlayer.h"
 #include "LTweenBPLibrary.h"
 #include "Core/Components/UITexture.h"
-#include "Core/LGUIManager.h"
+#include "Core/LexUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 
 ULGUIImageSequencePlayer::ULGUIImageSequencePlayer()

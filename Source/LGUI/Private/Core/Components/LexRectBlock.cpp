@@ -19,11 +19,11 @@ UE_DISABLE_OPTIMIZATION_SHIP
 #define LOCTEXT_NAMESPACE "UIProceduralRect"
 
 
-void ULGUIProceduralRectData::PostInitProperties()
+void ULexUIRectBlockData::PostInitProperties()
 {
 	Super::PostInitProperties();
 }
-UMaterialInterface* ULGUIProceduralRectData::GetMaterial()
+UMaterialInterface* ULexUIRectBlockData::GetMaterial()
 {
 	if (!DefaultMaterial)
 	{
@@ -49,7 +49,7 @@ void ULexRectBlock::FillData(uint8* Data, float width, float height)
 	FillVector4ToData(Data, GetValueWithUnitMode(CornerRadius, CornerRadiusUnitMode, width, height, 0.5f), DataOffset);
 	FillColorToData(Data, BodyColor, DataOffset);
 	FillVector2ToData(Data
-		, (BodyTextureMode == EUIProceduralBodyTextureMode::Sprite && IsValid(BodySpriteTexture)) ? FVector2f(BodySpriteTexture->GetSpriteInfo().GetUVCenter()) : FVector2f(0.5f, 0.5f)
+		, (BodyTextureMode == ELexUIRectBlockTextureMode::Sprite && IsValid(BodySpriteTexture)) ? FVector2f(BodySpriteTexture->GetSpriteInfo().GetUVCenter()) : FVector2f(0.5f, 0.5f)
 		, DataOffset);
 
 	FillColorToData(Data, BodyGradientColor, DataOffset);
@@ -79,17 +79,17 @@ void ULexRectBlock::FillData(uint8* Data, float width, float height)
 	FillVector2ToData(Data, GetOuterShadowOffset(width, height), DataOffset);
 }
 
-float ULexRectBlock::GetValueWithUnitMode(float SourceValue, EUIProceduralRectUnitMode UnitMode, float RectWidth, float RectHeight, float AdditionalScale)const
+float ULexRectBlock::GetValueWithUnitMode(float SourceValue, ELexUIRectBlockUnitMode UnitMode, float RectWidth, float RectHeight, float AdditionalScale)const
 {
-	return UnitMode == EUIProceduralRectUnitMode::Value ? SourceValue : (SourceValue * 0.01f * (RectWidth < RectHeight ? RectWidth : RectHeight) * AdditionalScale);
+	return UnitMode == ELexUIRectBlockUnitMode::Value ? SourceValue : (SourceValue * 0.01f * (RectWidth < RectHeight ? RectWidth : RectHeight) * AdditionalScale);
 }
-FVector4f ULexRectBlock::GetValueWithUnitMode(const FVector4f& SourceValue, EUIProceduralRectUnitMode UnitMode, float RectWidth, float RectHeight, float AdditionalScale)const
+FVector4f ULexRectBlock::GetValueWithUnitMode(const FVector4f& SourceValue, ELexUIRectBlockUnitMode UnitMode, float RectWidth, float RectHeight, float AdditionalScale)const
 {
-	return UnitMode == EUIProceduralRectUnitMode::Value ? SourceValue : (SourceValue * 0.01f * (RectWidth < RectHeight ? RectWidth : RectHeight) * AdditionalScale);
+	return UnitMode == ELexUIRectBlockUnitMode::Value ? SourceValue : (SourceValue * 0.01f * (RectWidth < RectHeight ? RectWidth : RectHeight) * AdditionalScale);
 }
-FVector2f ULexRectBlock::GetValueWithUnitMode(const FVector2f& SourceValue, EUIProceduralRectUnitMode UnitMode, float RectWidth, float RectHeight)const
+FVector2f ULexRectBlock::GetValueWithUnitMode(const FVector2f& SourceValue, ELexUIRectBlockUnitMode UnitMode, float RectWidth, float RectHeight)const
 {
-	return UnitMode == EUIProceduralRectUnitMode::Value ? SourceValue : (SourceValue * 0.01f * FVector2f(RectWidth, RectHeight));
+	return UnitMode == ELexUIRectBlockUnitMode::Value ? SourceValue : (SourceValue * 0.01f * FVector2f(RectWidth, RectHeight));
 }
 
 FVector2f ULexRectBlock::GetInnerShadowOffset(float RectWidth, float RectHeight)
@@ -217,7 +217,7 @@ void ULexRectBlock::FillVector4ToData(uint8* Data, const FVector4f& InValue, int
 }
 void ULexRectBlock::OnCornerRadiusUnitModeChanged(float width, float height)
 {
-	if (CornerRadiusUnitMode == EUIProceduralRectUnitMode::Value)//from percentage to value
+	if (CornerRadiusUnitMode == ELexUIRectBlockUnitMode::Value)//from percentage to value
 	{
 		CornerRadius = CornerRadius * 0.01f * (width < height ? width : height) * 0.5f;
 	}
@@ -261,14 +261,14 @@ void ULexRectBlock::EndPlay()
 void ULexRectBlock::OnRegister()
 {
 	Super::OnRegister();
-	if (ProceduralRectData == nullptr)
+	if (RectBlockData == nullptr)
 	{
-		ProceduralRectData = LoadObject<ULGUIProceduralRectData>(NULL, TEXT("/LGUI/DefaultProceduralRectData"));
-		check(ProceduralRectData != nullptr);
+		RectBlockData = LoadObject<ULexUIRectBlockData>(NULL, TEXT("/LGUI/DefaultRectBlockData"));
+		check(RectBlockData != nullptr);
 	}
-	ProceduralRectData->Init(DataCountInBytes());
-	DataStartPosition = ProceduralRectData->RegisterBuffer();
-	OnDataTextureChangedDelegateHandle = ProceduralRectData->OnDataTextureChange.AddUObject(this, &ULexRectBlock::OnDataTextureChanged);
+	RectBlockData->Init(DataCountInBytes());
+	DataStartPosition = RectBlockData->RegisterBuffer();
+	OnDataTextureChangedDelegateHandle = RectBlockData->OnDataTextureChange.AddUObject(this, &ULexRectBlock::OnDataTextureChanged);
 #if WITH_EDITOR
 	if (this->GetWorld() && this->GetWorld()->WorldType == EWorldType::Editor)
 	{
@@ -286,10 +286,10 @@ void ULexRectBlock::OnRegister()
 void ULexRectBlock::OnUnregister()
 {
 	Super::OnUnregister();
-	ProceduralRectData->UnregisterBuffer(DataStartPosition);
+	RectBlockData->UnregisterBuffer(DataStartPosition);
 	if (OnDataTextureChangedDelegateHandle.IsValid())
 	{
-		ProceduralRectData->OnDataTextureChange.Remove(OnDataTextureChangedDelegateHandle);
+		RectBlockData->OnDataTextureChange.Remove(OnDataTextureChangedDelegateHandle);
 		OnDataTextureChangedDelegateHandle.Reset();
 	}
 #if WITH_EDITOR
@@ -395,7 +395,7 @@ void ULexRectBlock::OnBeforeCreateOrUpdateGeometry()
 
 UTexture* ULexRectBlock::GetTextureToCreateGeometry()
 {
-	if (BodyTextureMode == EUIProceduralBodyTextureMode::Texture)
+	if (BodyTextureMode == ELexUIRectBlockTextureMode::Texture)
 	{
 		if (!IsValid(this->BodyTexture))
 		{
@@ -424,8 +424,8 @@ UMaterialInterface* ULexRectBlock::GetMaterialToCreateGeometry()
 	}
 	else
 	{
-		check(ProceduralRectData);
-		return ProceduralRectData->GetMaterial();
+		check(RectBlockData);
+		return RectBlockData->GetMaterial();
 	}
 }
 void ULexRectBlock::UpdateMaterialClipType()
@@ -440,7 +440,7 @@ void ULexRectBlock::UpdateMaterialClipType()
 }
 void ULexRectBlock::OnMaterialInstanceDynamicCreated(class UMaterialInstanceDynamic* mat) 
 {
-	mat->SetTextureParameterValue(DataTextureParameterName, ProceduralRectData->GetDataTexture());
+	mat->SetTextureParameterValue(DataTextureParameterName, RectBlockData->GetDataTexture());
 }
 
 void ULexRectBlock::MarkAllDirty()
@@ -594,17 +594,17 @@ void ULexRectBlock::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChang
 	{
 		bNeedUpdateBlockData = false;
 
-		auto BlockSize = ProceduralRectData->GetBlockSizeInByte();
+		auto BlockSize = RectBlockData->GetBlockSizeInByte();
 		uint8* BlockBuffer = new uint8[BlockSize];
 		FMemory::Memzero(BlockBuffer, BlockSize);
 		FillData(BlockBuffer, Widget->GetWidth(), Widget->GetHeight());
-		ProceduralRectData->UpdateBlock(DataStartPosition, BlockBuffer);
+		RectBlockData->UpdateBlock(DataStartPosition, BlockBuffer);
 	}
 }
 
 void ULexRectBlock::ApplyAtlasTextureChange_Implementation()
 {
-	if (BodyTextureMode != EUIProceduralBodyTextureMode::Sprite)return;
+	if (BodyTextureMode != ELexUIRectBlockTextureMode::Sprite)return;
 	check(BodySpriteTexture);
 	UIGeometry->Texture = BodySpriteTexture->GetAtlasTexture();
 	if (DrawCall.IsValid())
@@ -616,7 +616,7 @@ void ULexRectBlock::ApplyAtlasTextureChange_Implementation()
 }
 void ULexRectBlock::ApplyAtlasTextureScaleUp_Implementation()
 {
-	if (BodyTextureMode != EUIProceduralBodyTextureMode::Sprite)return;
+	if (BodyTextureMode != ELexUIRectBlockTextureMode::Sprite)return;
 	check(BodySpriteTexture);
 	auto& vertices = UIGeometry->Vertices;
 	if (vertices.Num() != 0)
@@ -692,7 +692,7 @@ void ULexRectBlock::SetBodySpriteTexture(ULexUISpriteData_BaseObject* value)
 		MarkUVDirty();
 	}
 }
-void ULexRectBlock::SetBodyTextureMode(EUIProceduralBodyTextureMode value)
+void ULexRectBlock::SetBodyTextureMode(ELexUIRectBlockTextureMode value)
 {
 	this->BodyTextureMode = value;
 	MarkTextureDirty();
@@ -700,7 +700,7 @@ void ULexRectBlock::SetBodyTextureMode(EUIProceduralBodyTextureMode value)
 }
 void ULexRectBlock::SetSizeFromBodyTexture()
 {
-	if (BodyTextureMode == EUIProceduralBodyTextureMode::Sprite)
+	if (BodyTextureMode == ELexUIRectBlockTextureMode::Sprite)
 	{
 		if (IsValid(this->BodySpriteTexture))
 		{
@@ -731,7 +731,7 @@ void ULexRectBlock::SetSoftEdge(bool value)
 	bNeedUpdateBlockData = true;
 	MarkVertexPositionDirty();
 }
-void ULexRectBlock::SetBodyTextureScaleMode(EUIProceduralRectTextureScaleMode value)
+void ULexRectBlock::SetBodyTextureScaleMode(ELexUIRectBlockTextureScaleMode value)
 {
 	this->BodyTextureScaleMode = value;
 	bNeedUpdateBlockData = true;
@@ -917,7 +917,7 @@ void ULexRectBlock::SetOuterShadowDistance(float value)
 }
 
 #define FunctionSetPropertyUnitMode(Property)\
-void ULexRectBlock::Set##Property##UnitMode(EUIProceduralRectUnitMode value)\
+void ULexRectBlock::Set##Property##UnitMode(ELexUIRectBlockUnitMode value)\
 {\
 	this->Property##UnitMode = value;\
 	bNeedUpdateBlockData = true;\

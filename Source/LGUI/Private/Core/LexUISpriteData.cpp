@@ -9,7 +9,7 @@
 #include "UObject/UObjectIterator.h"
 #include "Engine/Engine.h"
 #include "Utils/LexUIUtils.h"
-#include "Core/LGUIManager.h"
+#include "Core/LexUIManager.h"
 #include "RHI.h"
 #include "Rendering/Texture2DResource.h"
 #include "TextureCompiler.h"
@@ -347,7 +347,7 @@ void ULexUISpriteData::PostEditChangeProperty(struct FPropertyChangedEvent& Prop
 			this->ReloadTexture();
 		}
 
-		ULGUIManagerWorldSubsystem::RefreshAllUI();
+		ULexUIManagerWorldSubsystem::RefreshAllUI();
 	}
 }
 bool ULexUISpriteData::CanEditChange(const FProperty* InProperty) const

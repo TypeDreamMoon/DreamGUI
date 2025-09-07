@@ -2,7 +2,7 @@
 
 #include "Core/LexUIBehaviour.h"
 #include "LGUI.h"
-#include "Core/LGUIManager.h"
+#include "Core/LexUIManager.h"
 #include "Components/SceneComponent.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexWidget.h"
@@ -19,7 +19,7 @@ ULexUIBehaviour::ULexUIBehaviour()
 void ULexUIBehaviour::BeginPlay()
 {
 	Super::BeginPlay();
-	ULGUIManagerWorldSubsystem::AddLGUILifeCycleBehaviourForLifecycleEvent(this);
+	ULexUIManagerWorldSubsystem::AddLexUIBehaviourForLifecycleEvent(this);
 }
 void ULexUIBehaviour::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
@@ -78,11 +78,11 @@ void ULexUIBehaviour::SetCanExecuteUpdate(bool Value)
 		{
 			if (bCanExecuteUpdate)
 			{
-				ULGUIManagerWorldSubsystem::AddLGUILifeCycleBehavioursForUpdate(this);
+				ULexUIManagerWorldSubsystem::AddLexUIBehavioursForUpdate(this);
 			}
 			else
 			{
-				ULGUIManagerWorldSubsystem::RemoveLGUILifeCycleBehavioursFromUpdate(this);
+				ULexUIManagerWorldSubsystem::RemoveLexUIBehavioursFromUpdate(this);
 			}
 		}
 	}
