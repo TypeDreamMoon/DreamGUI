@@ -18,7 +18,7 @@
 
 ULexUIFontData_DistanceField::ULexUIFontData_DistanceField()
 {
-	initialSize = ELGUIAtlasTextureSizeType::SIZE_1024x1024;
+	initialSize = ELexUIAtlasTextureSizeType::SIZE_1024x1024;
 	rectPackCellSize = 1024;
 }
 

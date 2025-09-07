@@ -2,7 +2,7 @@
 
 #include "Core/LexUISpriteData.h"
 #include "LGUI.h"
-#include "Core/LGUISettings.h"
+#include "Core/LexUISettings.h"
 #include "Core/Components/UISpriteBase.h"
 #include "Core/LexUIDynamicSpriteAtlasData.h"
 #include "Core/LexUIStaticSpriteAtlasData.h"
@@ -57,7 +57,7 @@ void FLexUISpriteInfo::ApplyBorderUV(float texFullWidthReciprocal, float texFull
 bool ULexUISpriteData::InsertTexture(FLexUIDynamicSpriteAtlasData* InAtlasData)
 {
 #if WITH_EDITOR
-	int32 spaceBetweenSprites = ULGUISettings::GetAtlasTexturePadding(PackingTag);
+	int32 spaceBetweenSprites = ULexUISettings::GetAtlasTexturePadding(PackingTag);
 #else
 	static int32 spaceBetweenSprites = ULGUISettings::GetAtlasTexturePadding(PackingTag);
 #endif
@@ -507,7 +507,7 @@ ULexUISpriteData* ULexUISpriteData::CreateLexUISpriteData(UObject* Outer, UTextu
 	if (inSpriteTexture)
 	{
 		int32 atlasPadding = 0;
-		auto lguiSetting = GetDefault<ULGUISettings>()->defaultAtlasSetting.spaceBetweenSprites;
+		auto lguiSetting = GetDefault<ULexUISettings>()->DefaultAtlasSetting.SpaceBetweenSprites;
 		if (inSpriteTexture->GetSizeX() + atlasPadding * 2 > WARNING_ATLAS_SIZE || inSpriteTexture->GetSizeY() + atlasPadding * 2 > WARNING_ATLAS_SIZE)
 		{
 			auto warningMsg = FText::Format(LOCTEXT("CreateLGUISpriteData_Size_Warning", "{0} Target texture width or height is too large! Consider use UITexture to render this texture.")

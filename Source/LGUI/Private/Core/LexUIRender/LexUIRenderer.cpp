@@ -25,7 +25,7 @@
 #endif
 #include "Slate/SceneViewport.h"
 #include "Core/LexUIManager.h"
-#include "Core/LGUISettings.h"
+#include "Core/LexUISettings.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "ClearQuad.h"
 #if WITH_EDITOR
@@ -78,9 +78,9 @@ void FLexUIRenderer::SetupView(FSceneViewFamily& InViewFamily, FSceneView& InVie
 		ScreenSpaceRenderParameter.bEnableDepthTest = ScreenSpaceRenderParameter.RootCanvas->GetEnableDepthTest();
 	}
 
-	if (auto LGUISettings = GetDefault<ULGUISettings>())
+	if (auto LGUISettings = GetDefault<ULexUISettings>())
 	{
-		NumSamples_MSAA = LGUISettings->AntiAliasingMothod == ELGUIRendererAntiAliasingMethod::MSAA ? (uint8)LGUISettings->MSAASampleCount : 1;
+		NumSamples_MSAA = LGUISettings->AntiAliasingMethod == ELexUIRendererAntiAliasingMethod::MSAA ? (uint8)LGUISettings->MSAASampleCount : 1;
 		bFrustumCulling = LGUISettings->bFrustumCulling;
 	}
 	else
@@ -111,7 +111,7 @@ void FLexUIRenderer::PostRenderView_RenderThread(FRDGBuilder& GraphBuilder, FSce
 int32 FLexUIRenderer::GetPriority() const
 {
 #if WITH_EDITOR
-	auto Priority = ULGUISettings::GetPriorityInSceneViewExtension();
+	auto Priority = ULexUISettings::GetPriorityInSceneViewExtension();
 #else
 	static auto Priority = ULGUISettings::GetPriorityInSceneViewExtension();
 #endif

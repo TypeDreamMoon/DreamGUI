@@ -5,7 +5,7 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Core/Components/LexText.h"
-#include "Core/LGUISettings.h"
+#include "Core/LexUISettings.h"
 #include "Utils/LexUIUtils.h"
 #include "TextureResource.h"
 #include "Engine/Texture2D.h"
@@ -54,7 +54,7 @@ void ULexUIFontData_FreeTypeRender::UpdateFontOnCultureChanged()
 			powerValue--;
 		}
 		
-		rectPackCellSize = FMath::Clamp(rectPackCellSize, 64, ULGUISettings::ConvertAtlasTextureSizeTypeToSize(initialSize));
+		rectPackCellSize = FMath::Clamp(rectPackCellSize, 64, ULexUISettings::ConvertAtlasTextureSizeTypeToSize(initialSize));
 	}
 }
 
@@ -231,9 +231,9 @@ void ULexUIFontData_FreeTypeRender::InitFreeType()
 		hasKerning = FT_HAS_KERNING(face) != 0;
 
 		texture = nullptr;
-		textureSize = ULGUISettings::ConvertAtlasTextureSizeTypeToSize(initialSize);
+		textureSize = ULexUISettings::ConvertAtlasTextureSizeTypeToSize(initialSize);
 		binPack = rbp::MaxRectsBinPack(rectPackCellSize, rectPackCellSize);
-		if (initialSize != ELGUIAtlasTextureSizeType::SIZE_256x256)
+		if (initialSize != ELexUIAtlasTextureSizeType::SIZE_256x256)
 		{
 			binPack.PrepareExpendSizeForText(textureSize, textureSize, freeRects, rectPackCellSize, false);
 		}
@@ -676,7 +676,7 @@ void ULexUIFontData_FreeTypeRender::PostEditChangeProperty(FPropertyChangedEvent
 				powerValue--;
 			}
 			
-			rectPackCellSize = FMath::Clamp(rectPackCellSize, 64, ULGUISettings::ConvertAtlasTextureSizeTypeToSize(initialSize));
+			rectPackCellSize = FMath::Clamp(rectPackCellSize, 64, ULexUISettings::ConvertAtlasTextureSizeTypeToSize(initialSize));
 		}
 	}
 }

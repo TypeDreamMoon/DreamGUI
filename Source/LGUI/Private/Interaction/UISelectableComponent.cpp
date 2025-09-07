@@ -10,7 +10,7 @@
 #include "Event/LGUIEventSystem.h"
 #include "Core/Components/UISprite.h"
 #include "Core/LexUISpriteData_BaseObject.h"
-#include "Core/LGUISettings.h"
+#include "Core/LexUISettings.h"
 #include "Core/Components/LexImage.h"
 #if WITH_EDITOR
 #include "Utils/LexUIUtils.h"
@@ -318,13 +318,13 @@ void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 				bool bAffectByTimeDilation = false;
 				if (this->GetLexWidget()->IsScreenSpaceOverlayUI())
 				{
-					bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
-					bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
+					bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
+					bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;
 				}
 				else
 				{
-					bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
-					bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
+					bAffectByGamePause = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
+					bAffectByTimeDilation = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByTimeDilation;
 				}
 				TransitionTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
 			}
@@ -358,13 +358,13 @@ void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 						bool bAffectByTimeDilation = false;
 						if (this->GetLexWidget()->IsScreenSpaceOverlayUI())
 						{
-							bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
-							bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
+							bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
+							bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;
 						}
 						else
 						{
-							bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
-							bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
+							bAffectByGamePause = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
+							bAffectByTimeDilation = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByTimeDilation;
 						}
 						TransitionTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
 					}

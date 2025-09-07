@@ -6,11 +6,11 @@
 #include "Engine/DataAsset.h"
 #include "Engine/Texture.h"
 #include "SceneUtils.h"
-#include "LGUISettings.generated.h"
+#include "LexUISettings.generated.h"
 
 /** Atlas texture size must be power of 2 */
 UENUM(BlueprintType, Category = LGUI)
-enum class ELGUIAtlasTextureSizeType :uint8
+enum class ELexUIAtlasTextureSizeType :uint8
 {
 	SIZE_256x256 = 0		UMETA(DisplayName = "256x256"),
 	SIZE_512x512			UMETA(DisplayName = "512x512"),
@@ -21,17 +21,17 @@ enum class ELGUIAtlasTextureSizeType :uint8
 };
 
 UENUM(BlueprintType)
-enum class ELGUIRendererAntiAliasingMethod :uint8
+enum class ELexUIRendererAntiAliasingMethod :uint8
 {
 	None,
 	MSAA = AAM_MSAA UMETA(DisplayName = "Multisample Anti-Aliasing (MSAA)"),
 };
 
 /**
- * Aniti Aliasing(MSAA) for LGUI Renderer
+ * Anti Aliasing(MSAA) for LexUI Renderer
  */
 UENUM(BlueprintType)
-enum class ELGUIRendererMSAASampleCount :uint8
+enum class ELexUIRendererMSAASampleCount :uint8
 {
 	Hidden = 0		UMETA(Hidden),
 	One = 1			UMETA(DisplayName = "No MSAA"),
@@ -41,7 +41,7 @@ enum class ELGUIRendererMSAASampleCount :uint8
 };
 
 USTRUCT(BlueprintType)
-struct LGUI_API FLGUIAtlasSettings
+struct LGUI_API FLexUIAtlasSettings
 {
 	GENERATED_BODY()
 public:
@@ -51,38 +51,38 @@ public:
 	 * if initialSize is too large, it is not efficient to sample large texture on GPU.
 	*/
 	UPROPERTY(EditAnywhere, config, Category = Sprite)
-		ELGUIAtlasTextureSizeType atlasTextureInitialSize = ELGUIAtlasTextureSizeType::SIZE_1024x1024;
-	/** whether or not use srgb for generate atlas texture */
+		ELexUIAtlasTextureSizeType AtlasTextureInitialSize = ELexUIAtlasTextureSizeType::SIZE_1024x1024;
+	/** weather or not use srgb for generate atlas texture */
 	UPROPERTY(EditAnywhere, config, Category = Sprite)
-		bool atlasTextureUseSRGB = true;
+		bool AtlasTextureUseSRGB = true;
 	UPROPERTY(EditAnywhere, config, Category = Sprite)
-		TEnumAsByte<TextureFilter> atlasTextureFilter = TextureFilter::TF_Trilinear;
+		TEnumAsByte<TextureFilter> AtlasTextureFilter = TextureFilter::TF_Trilinear;
 	/** space between two sprites when package into atlas */
 	UPROPERTY(EditAnywhere, config, Category = Sprite)
-		int32 spaceBetweenSprites = 2;
+		int32 SpaceBetweenSprites = 2;
 };
 
-/** for LGUI config */
+/** for LexUI config */
 UCLASS(config=Engine, defaultconfig)
-class LGUI_API ULGUISettings :public UObject
+class LGUI_API ULexUISettings :public UObject
 {
 	GENERATED_BODY()
 public:
 	/** default atlas setting */
 	UPROPERTY(EditAnywhere, config, Category = Sprite)
-		FLGUIAtlasSettings defaultAtlasSetting;
+		FLexUIAtlasSettings DefaultAtlasSetting;
 	/** override atlasSettings for your PackingTag, otherwise use defaultAtlasSettings */
 	UPROPERTY(EditAnywhere, config, Category = Sprite)
-		TMap<FName, FLGUIAtlasSettings> atlasSettingForSpecificPackingTag;
+		TMap<FName, FLexUIAtlasSettings> AtlasSettingForSpecificPackingTag;
 
 	/**
-	 * LGUI renderer use ISceneViewExtension to render, so this value can sort with other view extensions, higher comes first.
+	 * LexUI Renderer use ISceneViewExtension to render, so this value can sort with other view extensions, higher comes first.
 	 */
 	UPROPERTY(EditAnywhere, config, Category = "Rendering")
 		int32 PriorityInSceneViewExtension = 0;
 
 	/** 
-	 * 3D UI elements is almost not possible to check overlap, so a 3D UI element only allowed to batch to last drawcall from drawcall list, as long as common check is passed (material/ texture).
+	 * 3D UI elements is almost not possible to check overlap, so a 3D UI element only allowed to batch to last draw-call from draw-call list, as long as common check is passed (material/ texture).
 	 * Only 2D elements are easier to check overlap and batch together.
 	 *		Rules for telling if a UI element is 2D (convert the UI element in Canvas's relative space):
 	 *			Relative location.Z less than threshold.
@@ -109,17 +109,17 @@ public:
 		bool bWorldSpaceUIAffectByTimeDilation = true;
 
 	/**
-	 * This will affect all LGUI-Renderer (ScreenSpaceOverlay, WorldSpace-LGUIRenderer, RenderTarget).
+	 * This will affect all LexUI-Renderer (ScreenSpaceOverlay, WorldSpace-LexUIRenderer, RenderTarget).
 	 * Tested on Windows DX11 & DX12, Mac (intel), Android (vulkan), not valid on Android (gles).
 	 */
 	UPROPERTY(EditAnywhere, config, Category = "Rendering", meta = (DisplayName="Anti-Aliasing Method"))
-		ELGUIRendererAntiAliasingMethod AntiAliasingMothod = ELGUIRendererAntiAliasingMethod::None;
+		ELexUIRendererAntiAliasingMethod AntiAliasingMethod = ELexUIRendererAntiAliasingMethod::None;
 	/**
-	 * This will affect all LGUI-Renderer (ScreenSpaceOverlay, WorldSpace-LGUIRenderer, RenderTarget).
+	 * This will affect all LexUI-Renderer (ScreenSpaceOverlay, WorldSpace-LexUIRenderer, RenderTarget).
 	 * Tested on Windows DX11 & DX12, Mac (intel), Android (vulkan), not valid on Android (gles).
 	 */
 	UPROPERTY(EditAnywhere, config, Category = "Rendering", meta = (DisplayName="MSAA Sample Count"))
-		ELGUIRendererMSAASampleCount MSAASampleCount = ELGUIRendererMSAASampleCount::Four;
+		ELexUIRendererMSAASampleCount MSAASampleCount = ELexUIRendererMSAASampleCount::Four;
 
 #if WITH_EDITORONLY_DATA
 	static float CacheAutoBatchThreshold;
@@ -132,41 +132,40 @@ public:
 	static bool GetAtlasTextureSRGB(const FName& InPackingTag);
 	static int32 GetAtlasTexturePadding(const FName& InPackingTag);
 	static TextureFilter GetAtlasTextureFilter(const FName& InPackingTag);
-	static const TMap<FName, FLGUIAtlasSettings>& GetAllAtlasSettings();
+	static const TMap<FName, FLexUIAtlasSettings>& GetAllAtlasSettings();
 	static float GetAutoBatchThreshold();
-	static int32 ConvertAtlasTextureSizeTypeToSize(const ELGUIAtlasTextureSizeType& InType);
+	static int32 ConvertAtlasTextureSizeTypeToSize(const ELexUIAtlasTextureSizeType& InType);
 	static int32 GetPriorityInSceneViewExtension();
 private:
-	static const FLGUIAtlasSettings& GetAtlasSettings(const FName& InPackingTag);
+	static const FLexUIAtlasSettings& GetAtlasSettings(const FName& InPackingTag);
 };
 
-//@todo:save config in editor
 UCLASS(config=Editor, defaultconfig)
-class LGUI_API ULGUIEditorSettings : public UObject
+class LGUI_API ULexUIEditorSettings : public UObject
 {
 	GENERATED_BODY()
 public:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)override;
 	virtual void PostEditChangeChainProperty(struct FPropertyChangedChainEvent& PropertyChangedEvent)override;
-	static int32 GetLGUIPreview_EditorViewIndex();
-	static void SetLGUIPreview_EditorViewIndex(int32 value);
+	static int32 GetLexUIPreview_EditorViewIndex();
+	static void SetLexUIPreview_EditorViewIndex(int32 value);
 	static bool GetPreserveHierarchyState();
 	static float GetDelayRestoreHierarchyTime();
 #endif
 	virtual bool IsEditorOnly()const override { return true; }
 #if WITH_EDITORONLY_DATA
-	//show screen space LGUI on target editor view. 
+	//show screen space UI on target editor view. 
 	UPROPERTY(config)
-		int32 LGUIPreview_EditorViewIndex = 6;
-	static FSimpleMulticastDelegate LGUIPreviewSetting_EditorPreviewViewportIndexChange;
+		int32 LexUIPreview_EditorViewIndex = 6;
+	static FSimpleMulticastDelegate LexUIPreviewSetting_EditorPreviewViewportIndexChange;
 	/**
 	 * Keep World Outliner's actor state: expand and temporarily-hidden. When reload a level or play & endplay, all actors will expand and temporarily-hidden actors become visible, so we can check this on to keep these actor and folder's state.
 	 * Note: If actors in folder and the folder is not expanded, then these actors's state will not affected, because I can't get these tree items.
 	 */
 	UPROPERTY(EditAnywhere, config, Category = "LGUI Editor")
 		bool bPreserveHierarchyState = true;
-	static FSimpleMulticastDelegate LGUIEditorSetting_PreserveHierarchyStateChange;
+	static FSimpleMulticastDelegate LexUIEditorSetting_PreserveHierarchyStateChange;
 	/**
 	 * Sometimes when there are too many actors in level, restore hierarchy will not work. Then increase this value may solve the issue.
 	 */
@@ -186,12 +185,12 @@ public:
 	UPROPERTY(config)
 		bool bShowAnchorTool = true;
 	/**
-	 * Draw navigation visulaizer
+	 * Draw navigation visualizer
 	 */
 	UPROPERTY(Transient)
 		bool bDrawSelectableNavigationVisualizer = false;
 
 	UPROPERTY(config)
-		bool ShowLGUIColumnInSceneOutliner = true;
+		bool ShowLexUIColumnInSceneOutliner = true;
 #endif
 };

@@ -9,7 +9,7 @@
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
-#include "Core/LGUISettings.h"
+#include "Core/LexUISettings.h"
 #include "Core/Components/LexImage.h"
 
 #define LOCTEXT_NAMESPACE "UISelectableCustomization"
@@ -223,12 +223,12 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		[
 			SNew(SCheckBox)
 			.IsChecked_Lambda([]() {
-				return GetDefault<ULGUIEditorSettings>()->bDrawSelectableNavigationVisualizer ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+				return GetDefault<ULexUIEditorSettings>()->bDrawSelectableNavigationVisualizer ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
 				})
 			.OnCheckStateChanged_Lambda([=](ECheckBoxState State)
 			{
 				GEditor->BeginTransaction(LOCTEXT("ToggleNavigationVisualizer_Transaction", "Toggle Navigation Visualizer"));
-				auto LGUIEditorSetting = GetMutableDefault<ULGUIEditorSettings>();
+				auto LGUIEditorSetting = GetMutableDefault<ULexUIEditorSettings>();
 				LGUIEditorSetting->Modify();
 				LGUIEditorSetting->bDrawSelectableNavigationVisualizer = State == ECheckBoxState::Checked;
 				GEditor->EndTransaction();

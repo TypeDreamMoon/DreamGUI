@@ -368,11 +368,11 @@ void FLGUIEditorModule::StartupModule()
 			SettingsModule->RegisterSettings("Project", "Plugins", "LGUI",
 				LOCTEXT("LGUISettingsName", "LGUI"),
 				LOCTEXT("LGUISettingsDescription", "LGUI Settings"),
-				GetMutableDefault<ULGUISettings>());
+				GetMutableDefault<ULexUISettings>());
 			SettingsModule->RegisterSettings("Project", "Plugins", "LGUI Editor",
 				LOCTEXT("LGUIEditorSettingsName", "LGUI Editor"),
 				LOCTEXT("LGUIEditorSettingsDescription", "LGUI Editor Settings"),
-				GetMutableDefault<ULGUIEditorSettings>());
+				GetMutableDefault<ULexUIEditorSettings>());
 			SettingsModule->RegisterSettings("Project", "Plugins", "LGUIPrefab",
 				LOCTEXT("LGUIPrefabSettingsName", "LGUIPrefab"),
 				LOCTEXT("LGUIPrefabSettingsDescription", "LGUIPrefab Settings"),
@@ -1294,7 +1294,7 @@ void FLGUIEditorModule::CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder)
 		}
 	};
 
-	auto PrefabFolders = GetDefault<ULGUIEditorSettings>()->ExtraPrefabFolders;
+	auto PrefabFolders = GetDefault<ULexUIEditorSettings>()->ExtraPrefabFolders;
 	for (auto PrefabFolder : PrefabFolders)
 	{
 		FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(FName("AssetRegistry"));
@@ -1344,14 +1344,14 @@ void FLGUIEditorModule::UseActiveViewportAsPreview()
 		{
 			if (auto editorViewportClient = (FEditorViewportClient*)(viewportClient))
 			{
-				ULGUIEditorSettings::SetLGUIPreview_EditorViewIndex(editorViewportClient->ViewIndex);
+				ULexUIEditorSettings::SetLexUIPreview_EditorViewIndex(editorViewportClient->ViewIndex);
 			}
 		}
 	}
 }
 void FLGUIEditorModule::ClearViewportPreview()
 {
-	ULGUIEditorSettings::SetLGUIPreview_EditorViewIndex(-1);
+	ULexUIEditorSettings::SetLexUIPreview_EditorViewIndex(-1);
 }
 void FLGUIEditorModule::ToggleActiveViewportAsPreview()
 {
@@ -1368,37 +1368,37 @@ void FLGUIEditorModule::ToggleActiveViewportAsPreview()
 
 void FLGUIEditorModule::ToggleLGUIColumnInfo()
 {
-	auto LGUIEditorSettings = GetMutableDefault<ULGUIEditorSettings>();
-	LGUIEditorSettings->ShowLGUIColumnInSceneOutliner = !LGUIEditorSettings->ShowLGUIColumnInSceneOutliner;
+	auto LGUIEditorSettings = GetMutableDefault<ULexUIEditorSettings>();
+	LGUIEditorSettings->ShowLexUIColumnInSceneOutliner = !LGUIEditorSettings->ShowLexUIColumnInSceneOutliner;
 	LGUIEditorSettings->SaveConfig();
 
-	ApplyLGUIColumnInfo(LGUIEditorSettings->ShowLGUIColumnInSceneOutliner, true);
+	ApplyLGUIColumnInfo(LGUIEditorSettings->ShowLexUIColumnInSceneOutliner, true);
 }
 bool FLGUIEditorModule::IsLGUIColumnInfoChecked()
 {
-	return GetDefault<ULGUIEditorSettings>()->ShowLGUIColumnInSceneOutliner;
+	return GetDefault<ULexUIEditorSettings>()->ShowLexUIColumnInSceneOutliner;
 }
 
 void FLGUIEditorModule::ToggleAnchorTool()
 {
-	auto LGUIEditorSettings = GetMutableDefault<ULGUIEditorSettings>();
+	auto LGUIEditorSettings = GetMutableDefault<ULexUIEditorSettings>();
 	LGUIEditorSettings->bShowAnchorTool = !LGUIEditorSettings->bShowAnchorTool;
 	LGUIEditorSettings->SaveConfig();
 }
 bool FLGUIEditorModule::IsAnchorToolChecked()
 {
-	return GetDefault<ULGUIEditorSettings>()->bShowAnchorTool;
+	return GetDefault<ULexUIEditorSettings>()->bShowAnchorTool;
 }
 
 void FLGUIEditorModule::ToggleDrawHelperFrame()
 {
-	auto LGUIEditorSettings = GetMutableDefault<ULGUIEditorSettings>();
+	auto LGUIEditorSettings = GetMutableDefault<ULexUIEditorSettings>();
 	LGUIEditorSettings->bDrawHelperFrame = !LGUIEditorSettings->bDrawHelperFrame;
 	LGUIEditorSettings->SaveConfig();
 }
 bool FLGUIEditorModule::IsDrawHelperFrameChecked()
 {
-	return GetDefault<ULGUIEditorSettings>()->bDrawHelperFrame;
+	return GetDefault<ULexUIEditorSettings>()->bDrawHelperFrame;
 }
 
 void FLGUIEditorModule::ApplyLGUIColumnInfo(bool value, bool refreshSceneOutliner)

@@ -3,7 +3,7 @@
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "LGUI.h"
 #include "Engine/World.h"
-#include "Core/LGUISettings.h"
+#include "Core/LexUISettings.h"
 #include "Engine/Engine.h"
 #if WITH_EDITOR
 #include "Editor.h"

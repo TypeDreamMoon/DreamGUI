@@ -6,7 +6,7 @@
 #include "Core/Components/LexCanvas.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "LTweenManager.h"
-#include "Core/LGUISettings.h"
+#include "Core/LexUISettings.h"
 
 DECLARE_CYCLE_STAT(TEXT("UI2DLine Update"), STAT_2DLineUpdate, STATGROUP_LGUI);
 
@@ -422,13 +422,13 @@ ULTweener* UUI2DLineRendererBase::LineWidthTo(float endValue, float duration, fl
 		bool bAffectByTimeDilation;
 		if (GetWidget()->IsScreenSpaceOverlayUI())
 		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
+			bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
+			bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;
 		}
 		else
 		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
+			bAffectByGamePause = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
+			bAffectByTimeDilation = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByTimeDilation;
 		}
 		Tweener->SetEase(easeType)->SetDelay(delay)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
 	}

@@ -3,7 +3,7 @@
 #include "Core/LexUIDynamicSpriteAtlasData.h"
 #include "Core/LexUIStaticSpriteAtlasData.h"
 #include "LGUI.h"
-#include "Core/LGUISettings.h"
+#include "Core/LexUISettings.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/UISpriteBase.h"
 #include "Core/LexUISpriteData.h"
@@ -18,7 +18,7 @@ void FLexUIDynamicSpriteAtlasData::EnsureAtlasTexture(const FName& packingTag)
 	if (!IsValid(AtlasTexture))
 	{
 #if WITH_EDITOR
-		int32 defaultAtlasTextureSize = ULGUISettings::GetAtlasTextureInitialSize(packingTag);
+		int32 defaultAtlasTextureSize = ULexUISettings::GetAtlasTextureInitialSize(packingTag);
 #else
 		static int32 defaultAtlasTextureSize = ULGUISettings::GetAtlasTextureInitialSize(PackingTag);
 #endif
@@ -29,8 +29,8 @@ void FLexUIDynamicSpriteAtlasData::EnsureAtlasTexture(const FName& packingTag)
 void FLexUIDynamicSpriteAtlasData::CreateAtlasTexture(const FName& packingTag, int oldTextureSize, int newTextureSize)
 {
 #if WITH_EDITOR
-	bool atlasSRGB = ULGUISettings::GetAtlasTextureSRGB(packingTag);
-	auto filter = ULGUISettings::GetAtlasTextureFilter(packingTag);
+	bool atlasSRGB = ULexUISettings::GetAtlasTextureSRGB(packingTag);
+	auto filter = ULexUISettings::GetAtlasTextureFilter(packingTag);
 #else
 	static bool atlasSRGB = ULGUISettings::GetAtlasTextureSRGB(PackingTag);
 	static auto filter = ULGUISettings::GetAtlasTextureFilter(PackingTag);

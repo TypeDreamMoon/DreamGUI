@@ -3,7 +3,7 @@
 #include "Core/Components/LexWidget.h"
 #include "LGUI.h"
 #include "Core/Components/LexCanvas.h"
-#include "Core/LGUISettings.h"
+#include "Core/LexUISettings.h"
 #include "Core/LexUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "PhysicsEngine/BodySetup.h"
@@ -2691,13 +2691,13 @@ ULTweener* ULexWidget::RenderOpacityTo(float endValue, float duration, float del
 		bool bAffectByTimeDilation;
 		if (this->IsScreenSpaceOverlayUI())
 		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
+			bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
+			bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;
 		}
 		else
 		{
-			bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
+			bAffectByGamePause = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
+			bAffectByTimeDilation = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByTimeDilation;
 		}
 		Tweener->SetEase(ease)->SetDelay(delay)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
 	}

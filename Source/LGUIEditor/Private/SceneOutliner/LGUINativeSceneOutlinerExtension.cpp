@@ -12,7 +12,7 @@
 #include "WorldTreeItem.h"
 #include "SceneOutlinerStandaloneTypes.h"
 #include "EditorActorFolders.h"
-#include "Core/LGUISettings.h"
+#include "Core/LexUISettings.h"
 #include "GameFramework/Actor.h"
 #include "EngineUtils.h"
 #include "Utils/LexUIUtils.h"
@@ -29,7 +29,7 @@ FLGUINativeSceneOutlinerExtension::FLGUINativeSceneOutlinerExtension()
 	OnPreBeginPIEDelegateHandle = FEditorDelegates::PreBeginPIE.AddRaw(this, &FLGUINativeSceneOutlinerExtension::OnPreBeginPIE);
 	OnBeginPIEDelegateHandle = FEditorDelegates::BeginPIE.AddRaw(this, &FLGUINativeSceneOutlinerExtension::OnBeginPIE);
 	OnEndPIEDelegateHandle = FEditorDelegates::EndPIE.AddRaw(this, &FLGUINativeSceneOutlinerExtension::OnEndPIE);
-	OnLGUIEditorPreserveHierarchyStateChangeDelegateHandle = ULGUIEditorSettings::LGUIEditorSetting_PreserveHierarchyStateChange.AddRaw(this, &FLGUINativeSceneOutlinerExtension::PreserveHierarchyStateChange);
+	OnLGUIEditorPreserveHierarchyStateChangeDelegateHandle = ULexUIEditorSettings::LexUIEditorSetting_PreserveHierarchyStateChange.AddRaw(this, &FLGUINativeSceneOutlinerExtension::PreserveHierarchyStateChange);
 }
 FLGUINativeSceneOutlinerExtension::~FLGUINativeSceneOutlinerExtension()
 {
@@ -44,7 +44,7 @@ void FLGUINativeSceneOutlinerExtension::Tick(float DeltaTime)
 	if (needToRestore)
 	{
 		delayRestoreTime += DeltaTime;
-		if (delayRestoreTime > ULGUIEditorSettings::GetDelayRestoreHierarchyTime())
+		if (delayRestoreTime > ULexUIEditorSettings::GetDelayRestoreHierarchyTime())
 		{
 			RestoreSceneOutlinerState();
 			delayRestoreTime = 0;
@@ -91,7 +91,7 @@ void FLGUINativeSceneOutlinerExtension::SetDelayRestore(bool RestoreTemporarilyH
 }
 void FLGUINativeSceneOutlinerExtension::PreserveHierarchyStateChange()
 {
-	if (!ULGUIEditorSettings::GetPreserveHierarchyState())//no need to preseve it, just delete the actor
+	if (!ULexUIEditorSettings::GetPreserveHierarchyState())//no need to preseve it, just delete the actor
 	{
 		auto storageActor = FindDataStorageActor(false);
 		FLexUIUtils::DestroyActorWithHierarchy(storageActor);
@@ -120,7 +120,7 @@ void FLGUINativeSceneOutlinerExtension::OnIterateTreeItem(const TFunction<void(S
 
 void FLGUINativeSceneOutlinerExtension::SaveSceneOutlinerState()
 {
-	if (!ULGUIEditorSettings::GetPreserveHierarchyState())return;
+	if (!ULexUIEditorSettings::GetPreserveHierarchyState())return;
 	auto storageActor = FindDataStorageActor();
 	if (!storageActor)return;
 	storageActor->ExpandedFolderArray.Reset();
@@ -179,7 +179,7 @@ void FLGUINativeSceneOutlinerExtension::SaveSceneOutlinerState()
 }
 void FLGUINativeSceneOutlinerExtension::SaveSceneOutlinerStateForPIE()
 {
-	if (!ULGUIEditorSettings::GetPreserveHierarchyState())return;
+	if (!ULexUIEditorSettings::GetPreserveHierarchyState())return;
 	ExpandedActorArray.Reset();
 	ExpandedFolderArray.Reset();
 	OnIterateTreeItem([&](STreeView<FSceneOutlinerTreeItemPtr>& TreeView, FSceneOutlinerTreeItemPtr& Item) {
@@ -247,7 +247,7 @@ ALGUIEditorLevelDataStorageActor* FLGUINativeSceneOutlinerExtension::FindDataSto
 
 void FLGUINativeSceneOutlinerExtension::RestoreSceneOutlinerState()
 {
-	if (!ULGUIEditorSettings::GetPreserveHierarchyState())return;
+	if (!ULexUIEditorSettings::GetPreserveHierarchyState())return;
 	auto storageActor = FindDataStorageActor();
 	if (!storageActor)return;
 	OnIterateTreeItem([&](STreeView<FSceneOutlinerTreeItemPtr>& TreeView, FSceneOutlinerTreeItemPtr& Item) {

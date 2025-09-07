@@ -10,7 +10,7 @@
 #include "PipelineStateCache.h"
 #include "Core/LexUIRender/LexUIRenderer.h"
 #include "Core/Components/LexCanvas.h"
-#include "Core/LGUISettings.h"
+#include "Core/LexUISettings.h"
 #include "RenderTargetPool.h"
 #include "Core/LexVisualPostProcessRenderProxy.h"
 #include "RHIStaticStates.h"

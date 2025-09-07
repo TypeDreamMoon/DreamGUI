@@ -5,7 +5,7 @@
 #include "LTweenManager.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "Utils/LexUIUtils.h"
-#include "Core/LGUISettings.h"
+#include "Core/LexUISettings.h"
 
 void UUIScrollViewHelper::Awake()
 {
@@ -505,13 +505,13 @@ void UUIScrollViewComponent::ScrollTo(ULexWidget* InChild, bool InEaseAnimation,
             {
                 if (this->GetLexWidget()->IsScreenSpaceOverlayUI())
                 {
-                    bAffectByGamePause = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
-                    bAffectByTimeDilation = GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByTimeDilation;
+                    bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
+                    bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;
                 }
                 else
                 {
-                    bAffectByGamePause = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByGamePause;
-                    bAffectByTimeDilation = GetDefault<ULGUISettings>()->bWorldSpaceUIAffectByTimeDilation;
+                    bAffectByGamePause = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
+                    bAffectByTimeDilation = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByTimeDilation;
                 }
             }
             tweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);

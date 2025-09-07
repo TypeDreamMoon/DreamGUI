@@ -2,7 +2,7 @@
 
 #include "DetailCustomization/LexUISpriteDataCustomization.h"
 #include "DesktopPlatformModule.h"
-#include "Core/LGUISettings.h"
+#include "Core/LexUISettings.h"
 #include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
 #include "Core/LexUIDynamicSpriteAtlasData.h"
@@ -166,7 +166,7 @@ this can reduce the package size, because AtlasPacking already pack this SpriteT
 	spriteTextureHandle->GetValue(spriteTextureObject);
 	if (auto spriteTexture = Cast<UTexture2D>(spriteTextureObject))
 	{
-		int32 atlasPadding = ULGUISettings::GetAtlasTexturePadding(TargetScriptPtr->PackingTag);
+		int32 atlasPadding = ULexUISettings::GetAtlasTexturePadding(TargetScriptPtr->PackingTag);
 		if (TargetScriptPtr->SpriteTexture->GetSurfaceWidth() + atlasPadding * 2 > WARNING_ATLAS_SIZE || TargetScriptPtr->SpriteTexture->GetSurfaceHeight() + atlasPadding * 2 > WARNING_ATLAS_SIZE)
 		{
 			UE_LOG(LGUIEditor, Error, TEXT("Target texture width or height is too large! Consider use UITexture to render this texture."));

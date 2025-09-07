@@ -4,7 +4,7 @@
 #include "Core/Components/LexCanvas.h"
 #include "LGUI.h"
 #include "Utils/LexUIUtils.h"
-#include "Core/LGUISettings.h"
+#include "Core/LexUISettings.h"
 
 #define LOCTEXT_NAMESPACE "LGUIScreenSpaceRaycaster"
 
@@ -26,7 +26,7 @@ bool ULGUIScreenSpaceRaycaster::ShouldSkipCanvas(class ULexCanvas* UICanvas)
 
 bool ULGUIScreenSpaceRaycaster::GetAffectByGamePause()const
 {
-	return GetDefault<ULGUISettings>()->bScreenSpaceUIAffectByGamePause;
+	return GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
 }
 bool ULGUIScreenSpaceRaycaster::ShouldStartDrag(ULGUIPointerEventData* InPointerEventData)
 {

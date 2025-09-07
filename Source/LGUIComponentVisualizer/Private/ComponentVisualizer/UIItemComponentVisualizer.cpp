@@ -7,7 +7,7 @@
 #include "LGUIEditorUtils.h"
 #include "Utils/LexUIUtils.h"
 #include "Interfaces/IPluginManager.h"
-#include "Core/LGUISettings.h"
+#include "Core/LexUISettings.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
@@ -69,7 +69,7 @@ void FUIItemComponentVisualizer::DrawVisualization(const UActorComponent* Compon
 	}
 
 	//draw anchor tool
-	if (GetDefault<ULGUIEditorSettings>()->bShowAnchorTool)
+	if (GetDefault<ULexUIEditorSettings>()->bShowAnchorTool)
 	{
 		if (!bHaveDrawPanelLayout)//anchor is controlled by panel layout, so no need to draw it
 		{
@@ -133,7 +133,7 @@ bool FUIItemComponentVisualizer::HandleInputKey(FEditorViewportClient* ViewportC
 }
 bool FUIItemComponentVisualizer::HandleInputDelta(FEditorViewportClient* ViewportClient, FViewport* Viewport, FVector& DeltaTranslate, FRotator& DeltalRotate, FVector& DeltaScale)
 {
-	if (!GetDefault<ULGUIEditorSettings>()->bShowAnchorTool)return false;
+	if (!GetDefault<ULexUIEditorSettings>()->bShowAnchorTool)return false;
 	if (!TargetComp.IsValid())return false;
 	if (DeltaTranslate.IsZero())return false;
 

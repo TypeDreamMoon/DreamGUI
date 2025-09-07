@@ -7,7 +7,7 @@
 #include "RHI.h"
 #include "Utils/MaxRectsBinPack/MaxRectsBinPack.h"
 #include "Core/LexUIFontData_BaseObject.h"
-#include "LGUISettings.h"
+#include "LexUISettings.h"
 #include "LexUIFontData_FreeTypeRender.generated.h"
 
 
@@ -88,7 +88,7 @@ protected:
 	 * if initialSize is too big, it is not much efficient to sample very big texture on GPU.
 	*/
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		ELGUIAtlasTextureSizeType initialSize = ELGUIAtlasTextureSizeType::SIZE_1024x1024;
+		ELexUIAtlasTextureSizeType initialSize = ELexUIAtlasTextureSizeType::SIZE_1024x1024;
 	/**
 	 * rect pack use small cells to pack glyph in, and move to next cell if current cell is full. smaller value get better performance, but leave more garbage area.
 	 * this value defines the cell size. must not larger then InitialSize and only allow pow of 2.

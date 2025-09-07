@@ -8,7 +8,7 @@
 #include "Event/LGUIBaseRaycaster.h"
 #include "Engine/World.h"
 #include "Interaction/UISelectableComponent.h"
-#include "Core/LGUISettings.h"
+#include "Core/LexUISettings.h"
 #include "Event/InputModule/LGUIBaseInputModule.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexVisual.h"
@@ -992,7 +992,7 @@ void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 #if WITH_EDITOR
 	if (IsValid(GEditor))
 	{
-		auto Settings = GetDefault<ULGUIEditorSettings>();
+		auto Settings = GetDefault<ULexUIEditorSettings>();
 		if (Settings->bDrawHelperFrame && GEditor->GetSelectedActorCount() > 0)
 		{
 			if (this->GetWorld()->WorldType == EWorldType::Game
@@ -1075,7 +1075,7 @@ void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 	{
 		bIsExecutingUpdate = true;
 		auto bIsGamePaused = GetWorld()->IsPaused();
-		auto Settings = GetDefault<ULGUISettings>();
+		auto Settings = GetDefault<ULexUISettings>();
 		SCOPE_CYCLE_COUNTER(STAT_LGUILifeCycleBehaviourUpdate);
 		for (int i = 0; i < LexUIBehavioursForUpdate.Num(); i++)
 		{

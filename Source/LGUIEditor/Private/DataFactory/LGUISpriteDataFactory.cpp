@@ -2,7 +2,7 @@
 
 #include "DataFactory/LGUISpriteDataFactory.h"
 #include "LGUIEditorModule.h"
-#include "Core/LGUISettings.h"
+#include "Core/LexUISettings.h"
 #include "Core/LexUISpriteData.h"
 #include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
@@ -29,7 +29,7 @@ UObject* ULexUISpriteDataFactory::FactoryCreateNew(UClass* Class, UObject* InPar
 	if (SpriteTexture && !isDefaltTexture)
 	{
 		int32 atlasPadding = 0;
-		auto lguiSetting = GetDefault<ULGUISettings>()->defaultAtlasSetting.spaceBetweenSprites;
+		auto lguiSetting = GetDefault<ULexUISettings>()->DefaultAtlasSetting.SpaceBetweenSprites;
 		if (SpriteTexture->GetSurfaceWidth() + atlasPadding * 2 > WARNING_ATLAS_SIZE || SpriteTexture->GetSurfaceHeight() + atlasPadding * 2 > WARNING_ATLAS_SIZE)
 		{
 			auto LogMsg = LOCTEXT("TextureSizeError", "Target texture width or height is too large! Consider use UITexture to render this texture.");

@@ -8,7 +8,7 @@
 #include "DrawDebugHelpers.h"
 #include "LevelEditorViewport.h"
 #endif
-#include "Core/LGUISettings.h"
+#include "Core/LexUISettings.h"
 #include "Core/LexUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "Core/LexUIRender/LexUIRenderer.h"
@@ -828,7 +828,7 @@ void ULexCanvas::SetRequireNormalAndTangent(bool Value)
 bool ULexCanvas::Is2DUITransform(const FTransform& Transform)
 {
 #if WITH_EDITOR
-	float threshold = ULGUISettings::GetAutoBatchThreshold();
+	float threshold = ULexUISettings::GetAutoBatchThreshold();
 #else
 	static float threshold = ULGUISettings::GetAutoBatchThreshold();
 #endif
@@ -2876,7 +2876,7 @@ void ULexCanvas::RegisterCanvasScaler()
 		EditorTickDelegateHandle = ULGUIPrefabManagerObject::RegisterEditorTickFunction([this](float deltaTime) {
 			this->OnEditorTick(deltaTime);
 			});
-		LexUIPreview_ViewportIndexChangeDelegateHandle = ULGUIEditorSettings::LGUIPreviewSetting_EditorPreviewViewportIndexChange.AddUObject(this, &ULexCanvas::OnPreviewSetting_EditorPreviewViewportIndexChange);
+		LexUIPreview_ViewportIndexChangeDelegateHandle = ULexUIEditorSettings::LexUIPreviewSetting_EditorPreviewViewportIndexChange.AddUObject(this, &ULexCanvas::OnPreviewSetting_EditorPreviewViewportIndexChange);
 	}
 #endif
 
@@ -2916,7 +2916,7 @@ void ULexCanvas::UnregisterCanvasScaler()
 	}
 	if (LexUIPreview_ViewportIndexChangeDelegateHandle.IsValid())
 	{
-		ULGUIEditorSettings::LGUIPreviewSetting_EditorPreviewViewportIndexChange.Remove(LexUIPreview_ViewportIndexChangeDelegateHandle);
+		ULexUIEditorSettings::LexUIPreviewSetting_EditorPreviewViewportIndexChange.Remove(LexUIPreview_ViewportIndexChangeDelegateHandle);
 	}
 #endif
 	//reset the canvasScale to default
@@ -3083,7 +3083,7 @@ void ULexCanvas::OnEditorTick(float DeltaTime)
 					{
 						FViewport* viewport = nullptr;
 
-						int32 editorViewIndex = ULGUIEditorSettings::GetLGUIPreview_EditorViewIndex();
+						int32 editorViewIndex = ULexUIEditorSettings::GetLexUIPreview_EditorViewIndex();
 						auto& LevelViewportClients = GEditor->GetLevelViewportClients();
 						for (auto& ViewportClient : LevelViewportClients)
 						{
@@ -3137,7 +3137,7 @@ void ULexCanvas::OnEditorTick(float DeltaTime)
 }
 void ULexCanvas::OnPreviewSetting_EditorPreviewViewportIndexChange()
 {
-	int32 editorViewIndex = ULGUIEditorSettings::GetLGUIPreview_EditorViewIndex();
+	int32 editorViewIndex = ULexUIEditorSettings::GetLexUIPreview_EditorViewIndex();
 	FLexUIRenderer::EditorPreview_ViewKey = ULexUIEditorManagerObject::Instance->GetViewportKeyFromIndex(editorViewIndex);
 }
 void DeprojectViewPointToWorld(const FMatrix& InViewProjectionMatrix, const FVector2D& InViewPoint01, FVector& OutWorldStart, FVector& OutWorldEnd)
