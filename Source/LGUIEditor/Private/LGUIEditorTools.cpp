@@ -2006,7 +2006,7 @@ void LGUIEditorTools::RefreshOnSubPrefabChange(ULGUIPrefab* InSubPrefab)
 
 TArray<ULGUIPrefab*> LGUIEditorTools::GetAllPrefabArray()
 {
-#if 0//Why comment this? Because we don't need to refresh not-loaded prefab, because prefab will reload all sub prefab when load
+#if 0//Why disable? Because we don't need to refresh not-loaded prefab, because prefab will reload all sub prefab when load
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(FName("AssetRegistry"));
 	IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
 

@@ -95,15 +95,15 @@ void ULexVisualPostProcess::UpdateGeometry()
 			geometry->Clear();
 			OnUpdateGeometry(false, bLocalVertexPositionChanged, bUVChanged, bColorChanged);
 		}
-		if (bClipDataChanged)
+		if (bClipDataPositionChanged)
 		{
-			OnUpdateGeometryClipData(*geometry.Get(), bClipDataChanged);
+			UpdateGeometryClipData(*geometry.Get(), ClipDataStartPosition);
 		}
 		if (bLocalVertexPositionChanged || bTransformChanged)
 		{
 			FLexUIGeometry::TransformVertices(RenderCanvas, this, geometry.Get());
 		}
-		if (bLocalVertexPositionChanged || bUVChanged || bColorChanged || bTransformChanged || bClipDataChanged)
+		if (bLocalVertexPositionChanged || bUVChanged || bColorChanged || bTransformChanged || bClipDataPositionChanged)
 		{
 			UpdateRegionVertex();
 		}
@@ -159,20 +159,6 @@ void ULexVisualPostProcess::OnUpdateGeometry(bool InTriangleChanged, bool InVert
 			{
 				FLexUIGeometry::UpdateUIColor(geometry.Get(), GetFinalColor());
 			}
-		}
-	}
-}
-
-void ULexVisualPostProcess::OnUpdateGeometryClipData(FLexUIGeometry& InMesh, bool InClipDataStartPositionChanged)
-{
-	//clip data
-	if (InClipDataStartPositionChanged)
-	{
-		auto& vertices = InMesh.Vertices;
-		auto clipDataStartPos = GetClipDataStartPosition();
-		for (int i = 0; i < vertices.Num(); i++)
-		{
-			vertices[i].TextureCoordinate[1].X = clipDataStartPos;
 		}
 	}
 }

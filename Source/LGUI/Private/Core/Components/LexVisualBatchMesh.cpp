@@ -196,7 +196,7 @@ void ULexVisualBatchMesh::UpdateGeometry()
 		UIGeometry->Texture = GetTextureToCreateGeometry();
 		UIGeometry->Material = GetMaterialToCreateGeometry();
 		OnUpdateGeometry(*(UIGeometry.Get()), true, true, true, true);
-		OnUpdateGeometryClipData(*(UIGeometry.Get()), true);
+		UpdateGeometryClipData(*UIGeometry.Get(), ClipDataStartPosition);
 		ApplyGeometryModifier(true, true, true, true);
 		CalculateLocalBounds();//CalculateLocalBounds must stay before TransformVertices, because TransformVertices will also cache bounds for Canvas to check 2d overlap.
 
@@ -233,9 +233,9 @@ void ULexVisualBatchMesh::UpdateGeometry()
 				CalculateLocalBounds();//CalculateLocalBounds must stay before TransformVertices, because TransformVertices will also cache bounds for Canvas to check 2d overlap.
 			}
 		}
-		if (bClipDataChanged)
+		if (bClipDataPositionChanged)
 		{
-			OnUpdateGeometryClipData(*(UIGeometry.Get()), true);
+			UpdateGeometryClipData(*UIGeometry.Get(), ClipDataStartPosition);
 			DrawCall->bNeedToUpdateVertex = true;
 		}
 		if (bLocalVertexPositionChanged || bTransformChanged)
@@ -272,7 +272,7 @@ void ULexVisualBatchMesh::UpdateGeometry()
 	bUVChanged = false;
 	bColorChanged = false;
 	bTransformChanged = false;
-	bClipDataChanged = false;
+	bClipDataPositionChanged = false;
 }
 
 bool ULexVisualBatchMesh::LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const
@@ -462,21 +462,6 @@ void ULexVisualBatchMesh::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangl
 		ReceiveOnUpdateGeometry(GeometryHelper, InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged);
 	}
 }
-
-void ULexVisualBatchMesh::OnUpdateGeometryClipData(FLexUIGeometry& InMesh, bool InClipDataStartPositionChanged)
-{
-	//clip data
-	if (InClipDataStartPositionChanged)
-	{
-		auto& vertices = InMesh.Vertices;
-		auto clipDataStartPos = GetClipDataStartPosition();
-		for (int i = 0; i < vertices.Num(); i++)
-		{
-			vertices[i].TextureCoordinate[1].X = clipDataStartPos;
-		}
-	}
-}
-
 
 
 void ULexUIGeometryHelper::AddVertexSimple(FVector position, FColor color, FVector2D uv0)

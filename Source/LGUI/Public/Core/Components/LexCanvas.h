@@ -238,9 +238,9 @@ public:
 	bool IsRenderToScreenSpace()const;
 	bool IsRenderToRenderTarget()const;
 	bool IsRenderToWorldSpace()const;
-	bool IsRenderByLGUIRendererOrUERenderer()const;
+	bool IsRenderByLexUIRendererOrUERenderer()const;
 
-	/** Return UIItem component which this LexCanvas attach to. */
+	/** Return LexWidget component which this LexCanvas attach to. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	ULexWidget* GetLexWidget()const { return LexWidget.Get(); }
 	TWeakObjectPtr<ULexCanvas> GetParentCanvas()const { return ParentCanvas; }
@@ -634,9 +634,9 @@ public:
 	void RegisterVisual(ULexWidget* InWidget);
 	void UnregisterVisual(ULexWidget* InVisual);
 
-	void AddLexWidget(ULexWidget* InUIItem);
-	void RemoveLexWidget(ULexWidget* InUIItem);
-	/** return all UIItem that belongs to this canvas. */
+	void AddLexWidget(ULexWidget* InWidget);
+	void RemoveLexWidget(ULexWidget* InWidget);
+	/** return all LexWidget that belongs to this canvas. */
 	const TArray<ULexWidget*>& GetVisualWidgetArray()const { return VisualWidgetList; }
 	const TArray<ULexWidget*>& GetWidgetArray()const { return WidgetList; }
 
@@ -663,7 +663,7 @@ private:
 	uint32 bCanTickUpdate:1;//if Canvas can update from tick
 	uint32 bShouldRebuildDrawCall : 1;
 	uint32 bShouldClearCachedDrawCall : 1;//mark this to true will delete all cached draw-call and rebuild all draw-call
-	uint32 bShouldSortVisualOrder : 1;//if any visual UIItem's hierarchy change, then we need to sort visual list
+	uint32 bShouldSortVisualOrder : 1;//if any visual LexWidget's hierarchy change, then we need to sort visual list
 	uint32 bNeedToSortRenderPriority : 1;
 	uint32 bHasAddToLexScreenSpaceRenderer : 1;//is this canvas added to LGUI screen space renderer
 	uint32 bRequestUpdateForRenderTarget : 1;//request update when RenderTargetUpdateMode is WhenRequest
@@ -673,7 +673,7 @@ private:
 	uint32 bNeedToVerifyMaterials : 1;
 	uint32 bRootCanvasNeedToUpdateChildrenCanvasBounds : 1;//if child canvas's UIMesh's bounds change, then need to notify root canvas to update it's UIMesh's bounds
 
-	uint32 bPrevIsVisible : 1;//is UIItem active in prev frame?
+	uint32 bPrevIsVisible : 1;//is LexWidget active in prev frame?
 
 	uint32 bOverrideViewLocation:1, bOverrideViewRotation:1, bOverrideProjectionMatrix:1, bOverrideFovAngle :1;
 
@@ -706,10 +706,10 @@ private:
 	TArray<TSharedPtr<FLexUIDrawCall>> UIDrawCallList;//DrawCall collection of this Canvas.
 	TArray<TSharedPtr<FLexUIDrawCall>> CacheUIDrawCallList;//Cached DrawCall collection.
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
-	TArray<TObjectPtr<ULexWidget>> VisualWidgetList;//Use UIItem instead of UIBaseRenderable, because we need UIItem to get sub-canvas.
+	TArray<TObjectPtr<ULexWidget>> VisualWidgetList;//Use LexWidget instead of LexVisual, because we need LexWidget to get sub-canvas.
 	bool bNeedToGenerateWidgetList = true;
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
-	TArray<TObjectPtr<ULexWidget>> WidgetList;//All UIItem that belongs to this canvas
+	TArray<TObjectPtr<ULexWidget>> WidgetList;//All LexWidget that belongs to this canvas
 	TSharedPtr<FLexUIDrawCall> DrawCallAsChildCanvas = nullptr;//DrawCall that represent this canvas when the canvas is render as child.
 	TAtomic<int> ThreadProcessingGeometryCount;
 
@@ -720,14 +720,14 @@ private:
 public:
 	void IncreaseThreadProcessingGeometry(){ThreadProcessingGeometryCount.IncrementExchange();}
 	void DecreaseThreadProcessingGeometry(){ThreadProcessingGeometryCount.DecrementExchange();}
-	/** Called by UIItem to delete clip data */
+	/** Called by LexWidget to delete clip data */
 	void RemoveClipData(const TSharedPtr<FLexUIClipData>& InClipData);
 	UTexture* GetClipDataTexture()const;
 public:
 	const TArray<TSharedPtr<FLexUIDrawCall>>& GetUIDrawCallList()const { return UIDrawCallList; }
 	
 	static FTransform2D ConvertTo2DTransform(const FTransform& Transform);
-	static void CalculateUIItem2DBounds(ULexVisual* item, const FTransform2D& transform, FVector2D& min, FVector2D& max);
+	static void CalculateVisual2DBounds(ULexVisual* item, const FTransform2D& transform, FVector2D& min, FVector2D& max);
 private:
 
 	/** canvas array belong to this canvas in hierarchy. */

@@ -3,7 +3,6 @@
 #include "Core/Components/LexRectBlock.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
-#include "Core/Components/LexCanvas.h"
 #include "Core/LexUISpriteInfo.h"
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"

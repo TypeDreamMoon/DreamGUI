@@ -633,7 +633,6 @@ protected:
 	mutable uint32 bLayoutDirty : 1 = true;
 	mutable uint32 bClipDirty : 1 = true;
 	mutable uint32 bNeedRecreateClip : 1 = true;
-	uint32 bClipDataChanged : 1 = true;
 	
 	uint32 bCacheWidgetActiveInHierarchy : 1 = true;
 	uint8 bCacheInteractableInHierarchy : 1 = true;

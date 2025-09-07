@@ -444,7 +444,7 @@ FText FLexCanvasCustomization::GetSortOrderInfo(TWeakObjectPtr<ULexCanvas> Targe
 				}
 				else if (TargetScript->IsRenderToWorldSpace())
 				{
-					if (TargetScript->IsRenderByLGUIRendererOrUERenderer())
+					if (TargetScript->IsRenderByLexUIRendererOrUERenderer())
 					{
 						spaceText = LOCTEXT("World Space - LGUI Renderer", "World Space - LGUI Renderer");
 					}

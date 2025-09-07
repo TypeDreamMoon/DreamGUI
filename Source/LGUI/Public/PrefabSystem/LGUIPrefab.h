@@ -143,7 +143,7 @@ public:
 	UPROPERTY()
 		TEnumAsByte<EViewModeIndex> ViewMode = EViewModeIndex::VMI_Lit;//editor viewport's viewmode
 	UPROPERTY()
-		TSet<FGuid> UnexpendActorSet;
+		TSet<FGuid> UnexpandActorSet;
 };
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUIPrefab_LoadPrefabCallback, AActor*, LoadedRootActor);

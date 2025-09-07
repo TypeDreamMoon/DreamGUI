@@ -156,10 +156,30 @@ void ULexVisual::MarkColorDirty()
 	GetWidget()->MarkCanvasUpdate(false, false, false);
 }
 
+void ULexVisual::CheckClipDataStartPosition()
+{
+	auto NowClipDataStartPosition = GetClipDataStartPosition();
+	if (ClipDataStartPosition != NowClipDataStartPosition)
+	{
+		ClipDataStartPosition = NowClipDataStartPosition;
+		bClipDataPositionChanged = true;
+	}
+}
+
+void ULexVisual::UpdateGeometryClipData(FLexUIGeometry& InMesh, int InClipDataStartPosition)
+{
+	auto& vertices = InMesh.Vertices;
+	for (int i = 0; i < vertices.Num(); i++)
+	{
+		vertices[i].TextureCoordinate[1].X = InClipDataStartPosition;
+	}
+}
+
 void ULexVisual::MarkAllDirty()
 {
 	bColorChanged = true;
 	bTransformChanged = true;
+	bClipDataPositionChanged = true;
 	GetWidget()->MarkCanvasUpdate(false, true, false);
 }
 

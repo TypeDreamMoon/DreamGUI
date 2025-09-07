@@ -348,7 +348,7 @@ void FLGUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const TS
 
 	PrefabRawDataViewer = SNew(SLGUIPrefabRawDataViewer, PrefabEditorPtr, PrefabBeingEdited);
 
-	auto UnexpendActorGuidSet = PrefabBeingEdited->PrefabDataForPrefabEditor.UnexpendActorSet;
+	auto UnexpendActorGuidSet = PrefabBeingEdited->PrefabDataForPrefabEditor.UnexpandActorSet;
 	TSet<AActor*> UnexpendActorSet;
 	for (auto& ItemActorGuid : UnexpendActorGuidSet)
 	{
@@ -509,18 +509,18 @@ void FLGUIPrefabEditor::OnApply()
 			}
 		}
 		PrefabBeingEdited->PrefabDataForPrefabEditor.ViewMode = ViewportPtr->GetViewportClient()->GetViewMode();
-		TSet<FGuid> UnexpendActorGuidArray;
-		TArray<AActor*> UnexpendActorArray;
-		FLexUIUtils::CollectChildrenActors(PrefabHelperObject->LoadedRootActor, UnexpendActorArray, true);
-		OutlinerPtr->GetUnexpendActor(UnexpendActorArray);
+		TSet<FGuid> UnexpandActorGuidArray;
+		TArray<AActor*> UnexpandActorArray;
+		FLexUIUtils::CollectChildrenActors(PrefabHelperObject->LoadedRootActor, UnexpandActorArray, true);
+		OutlinerPtr->GetUnfoldActor(UnexpandActorArray);
 		for (auto& KeyValue : PrefabHelperObject->MapGuidToObject)
 		{
-			if (UnexpendActorArray.Contains(KeyValue.Value))
+			if (UnexpandActorArray.Contains(KeyValue.Value))
 			{
-				UnexpendActorGuidArray.Add(KeyValue.Key);
+				UnexpandActorGuidArray.Add(KeyValue.Key);
 			}
 		}
-		PrefabBeingEdited->PrefabDataForPrefabEditor.UnexpendActorSet = UnexpendActorGuidArray;
+		PrefabBeingEdited->PrefabDataForPrefabEditor.UnexpandActorSet = UnexpandActorGuidArray;
 
 		//refresh parameter, remove invalid
 		for (auto& KeyValue : PrefabHelperObject->SubPrefabMap)

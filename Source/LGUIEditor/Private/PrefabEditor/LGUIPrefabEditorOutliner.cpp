@@ -231,7 +231,7 @@ void FLGUIPrefabEditorOutliner::ClearSelectedActor()
 	SelectedActor = nullptr;
 }
 
-void FLGUIPrefabEditorOutliner::GetUnexpendActor(TArray<AActor*>& InOutAllActors)const
+void FLGUIPrefabEditorOutliner::GetUnfoldActor(TArray<AActor*>& InOutAllActors)const
 {
 	auto& TreeView = SceneOutlinerPtr->GetTree();
 	TSet<FSceneOutlinerTreeItemPtr> VisitingItems;

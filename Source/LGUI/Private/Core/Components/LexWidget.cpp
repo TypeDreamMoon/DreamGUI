@@ -42,6 +42,10 @@ ULexWidget::ULexWidget(const FObjectInitializer& ObjectInitializer) :Super(Objec
 	bCacheAnchorTopDirty = true;
 	bCacheAnchorLeftDirty = true;
 	bCacheAnchorRightDirty = true;
+
+	bLayoutDirty = true;
+	bClipDirty = true;
+	bNeedRecreateClip = true;
 }
 
 void ULexWidget::BeginPlay()
@@ -400,6 +404,8 @@ void ULexWidget::MarkAllDirtyRecursive()
 void ULexWidget::MarkAllDirty()
 {
 	bFlattenHierarchyIndexDirty = true;
+	bLayoutDirty = true;
+	bClipDirty = true;
 	if (IsValid(Visual))
 	{
 		Visual->MarkAllDirty();
@@ -434,7 +440,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 
 	if (PropertyChangedEvent.Property != nullptr)
 	{
-		MarkAllDirtyRecursive();
+		//MarkAllDirtyRecursive();
 		auto MemberName = PropertyChangedEvent.GetMemberPropertyName();
 		auto PropertyName = PropertyChangedEvent.GetPropertyName();
 
@@ -1835,7 +1841,14 @@ void ULexWidget::UpdateClip(ULexUIDataAsTexture* ClipDataTexture, TArray<TShared
 		this->ClipData = nullptr;
 		break;
 	}
-	this->bClipDataChanged = true;
+	if (ClipData.IsValid() && ClipData.Pin()->GetWidget() == this)
+	{
+		ClipData.Pin()->MarkNeedUpdateData();
+	}
+	if (Visual)
+	{
+		Visual->CheckClipDataStartPosition();
+	}
 }
 
 void ULexWidget::UpdateVisual() const
@@ -1869,6 +1882,7 @@ void ULexWidget::SetRenderCanvas(ULexCanvas* InNewCanvas)
 	if (RenderCanvas.IsValid())
 	{
 		RenderCanvas->AddLexWidget(this);
+		bClipDirty = true;//mark it dirty so it will be added to new canvas
 		if (IsValid(Visual))
 		{
 			RenderCanvas->RegisterVisual(this);
@@ -2402,13 +2416,14 @@ void ULexWidget::MarkClipDirty(bool InClipTypeChanged) const
 	if (InClipTypeChanged)bNeedRecreateClip = true;
 	struct LOCAL
 	{
-		static void MarkDirty(const ULexWidget* Widget)
+		static void MarkDirty(const ULexWidget* Widget, bool InClipTypeChanged)
 		{
 			switch (Widget->Clipping)
 			{
 			case ELexWidgetClipping::Inherit:
 			case ELexWidgetClipping::ClipToBounds:
 				Widget->bClipDirty = true;
+				if (InClipTypeChanged)Widget->bNeedRecreateClip = true;
 				break;
 			case ELexWidgetClipping::ClipToBoundsWithoutIntersecting:
 			case ELexWidgetClipping::Disabled:
@@ -2417,13 +2432,13 @@ void ULexWidget::MarkClipDirty(bool InClipTypeChanged) const
 
 			for (auto& Child : Widget->GetUIChildren())
 			{
-				MarkDirty(Child);
+				MarkDirty(Child, InClipTypeChanged);
 			}
 		}
 	};
 	for (auto& Child : this->GetUIChildren())
 	{
-		LOCAL::MarkDirty(Child);
+		LOCAL::MarkDirty(Child, InClipTypeChanged);
 	}
 }
 bool ULexWidget::IsPointVisibleOnClip(const FVector& Value) const

@@ -608,7 +608,7 @@ bool ULexCanvas::IsRenderToWorldSpace()const
 	return false;
 }
 
-bool ULexCanvas::IsRenderByLGUIRendererOrUERenderer()const
+bool ULexCanvas::IsRenderByLexUIRendererOrUERenderer()const
 {
 	if (CheckRootCanvas())
 	{
@@ -805,12 +805,12 @@ void ULexCanvas::UnregisterVisual(ULexWidget* InWidget)
 	VisualWidgetList.Remove(InWidget);
 }
 
-void ULexCanvas::AddLexWidget(ULexWidget* InUIItem)
+void ULexCanvas::AddLexWidget(ULexWidget* InWidget)
 {
 	bNeedToGenerateWidgetList = true;
 	MarkCanvasUpdate(false, false, false);
 }
-void ULexCanvas::RemoveLexWidget(ULexWidget* InUIItem)
+void ULexCanvas::RemoveLexWidget(ULexWidget* InWidget)
 {
 	bNeedToGenerateWidgetList = true;
 	MarkCanvasUpdate(false, false, false);
@@ -2790,7 +2790,7 @@ FORCEINLINE void GetMinMax(T a, T b, T c, T d, T& min, T& max)
 	min = FMath::Min(abMin, cdMin);
 	max = FMath::Max(abMax, cdMax);
 }
-void ULexCanvas::CalculateUIItem2DBounds(ULexVisual* item, const FTransform2D& transform, FVector2D& min, FVector2D& max)
+void ULexCanvas::CalculateVisual2DBounds(ULexVisual* item, const FTransform2D& transform, FVector2D& min, FVector2D& max)
 {
 	FVector2D LocalPoint1, LocalPoint2;
 	item->GetGeometryBoundsInLocalSpace(LocalPoint1, LocalPoint2);

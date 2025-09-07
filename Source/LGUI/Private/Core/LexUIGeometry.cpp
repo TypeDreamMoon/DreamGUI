@@ -3099,7 +3099,7 @@ void FLexUIGeometry::TransformVertices(ULexCanvas* canvas, ULexVisual* item, FLe
 	uiGeo->TransformRelativeToCanvas = itemToCanvasTf;
 	auto itemToCanvasTf2D = ULexCanvas::ConvertTo2DTransform(itemToCanvasTf);
 	FVector2D itemMin, itemMax;
-	ULexCanvas::CalculateUIItem2DBounds(item, itemToCanvasTf2D, itemMin, itemMax);
+	ULexCanvas::CalculateVisual2DBounds(item, itemToCanvasTf2D, itemMin, itemMax);
 	uiGeo->BoundsMin2DInCanvasSpace = itemMin;
 	uiGeo->BoundsMax2DInCanvasSpace = itemMax;
 

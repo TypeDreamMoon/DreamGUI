@@ -125,6 +125,8 @@ protected:
 	virtual bool LineTraceUIRect(FHitResult& OutHit, const FVector& Start, const FVector& End)const;
 	virtual bool LineTraceUIGeometry(FLexUIGeometry* InGeo, FHitResult& OutHit, const FVector& Start, const FVector& End)const;
 	virtual bool LineTraceUICustom(FHitResult& OutHit, const FVector& Start, const FVector& End)const;
+
+	void UpdateGeometryClipData(FLexUIGeometry& InMesh, int InClipDataStartPosition);
 public:
 	static const FName GetColorPropertyName()
 	{
@@ -179,6 +181,7 @@ public:
 	virtual void OnTransformChanged();
 	
 	void MarkColorDirty();
+	void CheckClipDataStartPosition();
 	virtual void MarkAllDirty();
 	
 	/** Called by LGUICanvas when begin to collect geometry for render */
@@ -225,7 +228,8 @@ public:
 protected:
 	uint8 bColorChanged : 1;
 	uint8 bTransformChanged : 1;
-	uint8 bClipDataChanged : 1;
+	uint8 bClipDataPositionChanged : 1;
+	int ClipDataStartPosition = 0;
 public:
 #pragma region TweenAnimation
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")

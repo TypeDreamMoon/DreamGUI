@@ -75,7 +75,6 @@ protected:
 	TSharedPtr<FLexVisualPostProcessRenderProxy> RenderProxy = nullptr;
 	/** update ui geometry */
 	virtual void OnUpdateGeometry(bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged);
-	virtual void OnUpdateGeometryClipData(FLexUIGeometry& InGeo, bool InClipDataStartPositionChanged);
 	/** update region vertex data */
 	virtual void UpdateRegionVertex();
 	TArray<FLexUIPostProcessCopyMeshRegionVertex> RenderScreenToMeshRegionVertexArray;
