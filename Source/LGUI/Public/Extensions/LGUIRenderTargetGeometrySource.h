@@ -11,7 +11,7 @@
 #include "LGUIRenderTargetGeometrySource.generated.h"
 
 class ULexCanvas;
-class ULGUIWorldSpaceRaycasterSource;
+class ULexUIWorldSpaceRaycasterSource;
 
 UENUM(BlueprintType, Category = LGUI)
 enum class ELGUIRenderTargetGeometryMode : uint8

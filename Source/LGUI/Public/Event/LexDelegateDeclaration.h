@@ -1,0 +1,26 @@
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+
+#pragma once
+
+#include "Engine/Engine.h"
+#include "CoreMinimal.h"
+#include "Event/LexPointerEventData.h"
+
+DECLARE_DELEGATE_OneParam(FLGUIBoolDelegate, bool);
+DECLARE_DELEGATE_OneParam(FLGUIFloatDelegate, float);
+DECLARE_DELEGATE_OneParam(FLGUIVector2Delegate, FVector2D);
+DECLARE_DELEGATE_OneParam(FLGUIStringDelegate, const FString&);
+DECLARE_DELEGATE_OneParam(FLGUIInt32Delegate, int32);
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FLGUIMulticastBoolDelegate, bool);
+DECLARE_MULTICAST_DELEGATE_OneParam(FLGUIMulticastFloatDelegate, float);
+DECLARE_MULTICAST_DELEGATE_OneParam(FLGUIMulticastVector2Delegate, FVector2D);
+DECLARE_MULTICAST_DELEGATE_OneParam(FLGUIMulticastStringDelegate, const FString&);
+DECLARE_MULTICAST_DELEGATE_OneParam(FLGUIMulticastInt32Delegate, int32);
+
+DECLARE_DELEGATE_ThreeParams(FLGUIHitDelegate, bool, const FHitResult&, USceneComponent*);
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FLGUIMulticastHitDelegate, bool, const FHitResult&, USceneComponent*);
+DECLARE_DELEGATE_OneParam(FLGUIPointerEventDelegate, ULexPointerEventData*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FLGUIMulticastPointerEventDelegate, ULexPointerEventData*);
+DECLARE_DELEGATE_OneParam(FLGUIBaseEventDelegate, ULexBaseEventData*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FLGUIMulticastBaseEventDelegate, ULexBaseEventData*);

@@ -2,9 +2,9 @@
 
 #pragma once
 
-#include "LGUIPointerEventData.h"
+#include "LexPointerEventData.h"
 #include "LGUIDelegateHandleWrapper.h"
-#include "LGUIDelegateDeclaration.h"
+#include "LexDelegateDeclaration.h"
 #include "LGUIEventDelegate.generated.h"
 
 
@@ -193,7 +193,7 @@ public:
 	void FireEvent(const FString& InParam)const;
 	void FireEvent(UObject* InParam)const;
 	void FireEvent(AActor* InParam)const;
-	void FireEvent(ULGUIPointerEventData* InParam)const;
+	void FireEvent(ULexPointerEventData* InParam)const;
 	void FireEvent(UClass* InParam)const;
 	void FireEvent(FRotator InParam)const;
 	void FireEvent(const FName& InParam)const;

@@ -235,7 +235,7 @@ void UUIToggleComponent::SetValueWithoutNotify(bool Value)
 	SetValue(Value, false);
 }
 
-bool UUIToggleComponent::OnPointerClick_Implementation(ULGUIPointerEventData* eventData)
+bool UUIToggleComponent::OnPointerClick_Implementation(ULexPointerEventData* eventData)
 {
 	SetValue(!bIsOn);
 	return AllowEventBubbleUp;

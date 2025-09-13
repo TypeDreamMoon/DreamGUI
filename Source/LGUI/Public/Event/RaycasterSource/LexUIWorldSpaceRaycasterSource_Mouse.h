@@ -1,0 +1,26 @@
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Event/LexWorldSpaceRaycaster.h"
+#include "LexUIWorldSpaceRaycasterSource_Mouse.generated.h"
+
+#define BUILD_VP_MATRIX_FROM_CAMERA_MANAGER 0
+
+/**
+ * This is for standalone mouse input, it will emit a ray from main viewport mouse position
+ */
+UCLASS(ClassGroup = LGUI, Blueprintable, meta = (DisplayName = "Mouse"))
+class LGUI_API ULexUIWorldSpaceRaycasterSource_Mouse : public ULexUIWorldSpaceRaycasterSource
+{
+	GENERATED_BODY()
+public:
+	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection)override;
+	virtual bool ShouldStartDrag(ULexPointerEventData* InPointerEventData)override;
+#if BUILD_VP_MATRIX_FROM_CAMERA_MANAGER
+private:
+	FMatrix ComputeViewProjectionMatrix(APlayerCameraManager* CameraManager, const FIntPoint& ScreenSize);
+	void DeprojectViewPointToWorldForMainViewport(const FMatrix& InViewProjectionMatrix, const FVector2D& InViewPoint01, FVector& OutWorldLocation, FVector& OutWorldDirection);
+#endif
+};

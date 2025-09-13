@@ -174,7 +174,7 @@ bool UUIScrollViewComponent::CheckValidHit(USceneComponent *InHitComp)
     return (InHitComp->IsAttachedTo(Widget) || InHitComp == Widget); //make sure hit component is child of this or is this
 }
 
-bool UUIScrollViewComponent::OnPointerBeginDrag_Implementation(ULGUIPointerEventData *eventData)
+bool UUIScrollViewComponent::OnPointerBeginDrag_Implementation(ULexPointerEventData *eventData)
 {
     if (CheckParameters() && CheckValidHit(eventData->dragComponent))
     {
@@ -216,7 +216,7 @@ bool UUIScrollViewComponent::OnPointerBeginDrag_Implementation(ULGUIPointerEvent
     return AllowEventBubbleUp;
 }
 
-bool UUIScrollViewComponent::OnPointerDrag_Implementation(ULGUIPointerEventData *eventData)
+bool UUIScrollViewComponent::OnPointerDrag_Implementation(ULexPointerEventData *eventData)
 {
     if (!ContentUIItem.IsValid())
         return AllowEventBubbleUp;
@@ -257,7 +257,7 @@ bool UUIScrollViewComponent::OnPointerDrag_Implementation(ULGUIPointerEventData 
     return AllowEventBubbleUp;
 }
 
-bool UUIScrollViewComponent::OnPointerEndDrag_Implementation(ULGUIPointerEventData *eventData)
+bool UUIScrollViewComponent::OnPointerEndDrag_Implementation(ULexPointerEventData *eventData)
 {
     auto Position = ContentUIItem->GetRelativeLocation();
     auto CurrentPointerPosition = eventData->GetWorldPointInPlane();
@@ -274,7 +274,7 @@ bool UUIScrollViewComponent::OnPointerEndDrag_Implementation(ULGUIPointerEventDa
     }
     return AllowEventBubbleUp;
 }
-bool UUIScrollViewComponent::OnPointerScroll_Implementation(ULGUIPointerEventData *eventData)
+bool UUIScrollViewComponent::OnPointerScroll_Implementation(ULexPointerEventData *eventData)
 {
     if (CheckParameters() && CheckValidHit(eventData->enterComponent))
     {

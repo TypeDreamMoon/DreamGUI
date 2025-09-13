@@ -2,10 +2,10 @@
 
 #pragma once
 
-#include "Event/Interface/LGUIPointerDragInterface.h"
+#include "Event/Interface/LexPointerDragInterface.h"
 #include "UISelectableComponent.h"
 #include "Event/LGUIEventDelegate.h"
-#include "Event/LGUIDelegateDeclaration.h"
+#include "Event/LexDelegateDeclaration.h"
 #include "LGUIDelegateHandleWrapper.h"
 #include "UIScrollbarComponent.generated.h"
 
@@ -27,7 +27,7 @@ enum class UIScrollbarDirectionType:uint8
 };
 
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIScrollbarComponent : public UUISelectableComponent, public ILGUIPointerDragInterface
+class LGUI_API UUIScrollbarComponent : public UUISelectableComponent, public ILexPointerDragInterface
 {
 	GENERATED_BODY()
 	
@@ -101,15 +101,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Scrollbar")
 		void UnregisterSlideEvent(const FLGUIDelegateHandleWrapper& InDelegateHandle);
 public:
-	virtual bool OnPointerDown_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerUp_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerBeginDrag_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerDrag_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerEndDrag_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnNavigate_Implementation(ELGUINavigationDirection direction, TScriptInterface<ILGUINavigationInterface>& result)override;
+	virtual bool OnPointerDown_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerUp_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerBeginDrag_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerDrag_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerEndDrag_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnNavigate_Implementation(ELexUINavigationDirection direction, TScriptInterface<ILexNavigationInterface>& result)override;
 private:
 	bool CheckHandle();
-	void CalculateInputValue(ULGUIPointerEventData* eventData);
+	void CalculateInputValue(ULexPointerEventData* eventData);
 	void ApplyValueToUI();
 	void SetValue(float InValue, bool FireEvent);
 

@@ -146,7 +146,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)static void LGUIEventDelegateExecuteObject(const FLGUIEventDelegate& InEvent, UObject* InParameter) { InEvent.FireEvent(InParameter); }
 	UFUNCTION(BlueprintCallable, Category = LGUI)static void LGUIEventDelegateExecuteActor(const FLGUIEventDelegate& InEvent, AActor* InParameter) { InEvent.FireEvent(InParameter); }
 	UFUNCTION(BlueprintCallable, Category = LGUI)static void LGUIEventDelegateExecuteClass(const FLGUIEventDelegate& InEvent, UClass* InParameter) { InEvent.FireEvent(InParameter); }
-	UFUNCTION(BlueprintCallable, Category = LGUI)static void LGUIEventDelegateExecutePointerEvent(const FLGUIEventDelegate& InEvent, ULGUIPointerEventData* InParameter) { InEvent.FireEvent(InParameter); }
+	UFUNCTION(BlueprintCallable, Category = LGUI)static void LGUIEventDelegateExecutePointerEvent(const FLGUIEventDelegate& InEvent, ULexPointerEventData* InParameter) { InEvent.FireEvent(InParameter); }
 	UFUNCTION(BlueprintCallable, Category = LGUI)static void LGUIEventDelegateExecuteRotator(const FLGUIEventDelegate& InEvent, const FRotator& InParameter) { InEvent.FireEvent(InParameter); }
 	UFUNCTION(BlueprintCallable, Category = LGUI)static void LGUIEventDelegateExecuteText(const FLGUIEventDelegate& InEvent, const FText& InParameter) { InEvent.FireEvent(InParameter); }
 	UFUNCTION(BlueprintCallable, Category = LGUI)static void LGUIEventDelegateExecuteName(const FLGUIEventDelegate& InEvent, const FName& InParameter) { InEvent.FireEvent(InParameter); }
@@ -300,7 +300,7 @@ public:
 		static void LGUIEventDelegate_Actor_Unregister(const FLGUIEventDelegate_Actor& InEvent, const FLGUIDelegateHandleWrapper& InDelegateHandle);
 
 	UFUNCTION(BlueprintCallable, Category = LGUI, meta = (DisplayName = "Execute"))
-		static void LGUIEventDelegate_PointerEvent_Execute(const FLGUIEventDelegate_PointerEvent& InEvent, ULGUIPointerEventData* InParameter) { InEvent(InParameter); }
+		static void LGUIEventDelegate_PointerEvent_Execute(const FLGUIEventDelegate_PointerEvent& InEvent, ULexPointerEventData* InParameter) { InEvent(InParameter); }
 	UFUNCTION(BlueprintCallable, Category = LGUI, meta = (DisplayName = "Register"))
 		static FLGUIDelegateHandleWrapper LGUIEventDelegate_PointerEvent_Register(const FLGUIEventDelegate_PointerEvent& InEvent, FLGUIEventDelegate_PointerEvent_DynamicDelegate InDelegate);
 	UFUNCTION(BlueprintCallable, Category = LGUI, meta = (DisplayName = "Unregister"))

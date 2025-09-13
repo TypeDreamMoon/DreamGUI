@@ -5,9 +5,9 @@
 #include "Interaction/UISelectableComponent.h"
 #include "Components/InputComponent.h"
 #include "Event/LGUIEventDelegate.h"
-#include "Event/LGUIDelegateDeclaration.h"
-#include "Event/Interface/LGUIPointerClickInterface.h"
-#include "Event/Interface/LGUIPointerDragInterface.h"
+#include "Event/LexDelegateDeclaration.h"
+#include "Event/Interface/LexPointerClickInterface.h"
+#include "Event/Interface/LexPointerDragInterface.h"
 #include "Widgets/Input/IVirtualKeyboardEntry.h"
 #include "GenericPlatform/ITextInputMethodSystem.h"
 #include "LGUIDelegateHandleWrapper.h"
@@ -36,11 +36,11 @@ DECLARE_DELEGATE_RetVal_TwoParams(bool, FLGUITextInputCustomInputTypeDelegate, c
 DECLARE_DYNAMIC_DELEGATE_RetVal_TwoParams(bool, FLGUITextInputCustomInputTypeDynamicDelegate, const FString&, InString, int, InStartIndex);
 
 UCLASS(BlueprintType, Blueprintable, Abstract, DefaultToInstanced, EditInlineNew)
-class UUITextInputCustomValidation : public UObject
+class ULexTextInputCustomValidation : public UObject
 {
 	GENERATED_BODY()
 public:
-	UUITextInputCustomValidation();
+	ULexTextInputCustomValidation();
 	/**
 	 * Verify input string, return true if the input string is good to use, false otherwise.
 	 * @param InTextInput	The UITextInputComponent object reference which call this function.
@@ -64,7 +64,7 @@ protected:
 };
 
 UENUM(BlueprintType, Category = LGUI)
-enum class ELGUITextInputType:uint8
+enum class ELexUITextInputType:uint8
 {
 	/** No validation. Any input is valid. */
 	Standard = 0,
@@ -102,14 +102,14 @@ enum class ELGUITextInputType:uint8
 	Custom = 7,
 };
 UENUM(BlueprintType, Category = LGUI)
-enum class ELGUITextInputDisplayType :uint8
+enum class ELexUITextInputDisplayType :uint8
 {
 	Standard,
 	/** Display as password. */
 	Password,
 };
 UENUM(BlueprintType, Category = LGUI)
-enum class ELGUITextInputOverflowType :uint8
+enum class ELexUITextInputOverflowType :uint8
 {
 	ClampContent,
 	/**
@@ -119,7 +119,7 @@ enum class ELGUITextInputOverflowType :uint8
 	OverflowToMax,
 };
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUITextInputComponent : public UUISelectableComponent, public ILGUIPointerClickInterface, public ILGUIPointerDragInterface
+class LGUI_API UUITextInputComponent : public UUISelectableComponent, public ILexPointerClickInterface, public ILexPointerDragInterface
 {
 	GENERATED_BODY()
 	
@@ -138,24 +138,24 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
 		FString Text;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
-		ELGUITextInputType InputType;
+		ELexUITextInputType InputType;
 	/** Use this to do custom validation. Only valid when InputType = Custom */
-	UPROPERTY(EditAnywhere, Instanced, Category = "LGUI-Input", meta = (EditCondition = "InputType==ELGUITextInputType::Custom"))
-		TObjectPtr<UUITextInputCustomValidation> CustomValidation = nullptr;
+	UPROPERTY(EditAnywhere, Instanced, Category = "LGUI-Input", meta = (EditCondition = "InputType==ELexUITextInputType::Custom"))
+		TObjectPtr<ULexTextInputCustomValidation> CustomValidation = nullptr;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
-		ELGUITextInputDisplayType DisplayType = ELGUITextInputDisplayType::Standard;
+		ELexUITextInputDisplayType DisplayType = ELexUITextInputDisplayType::Standard;
 	//password display character
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
 		FString PasswordChar = TEXT("*");
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
 		bool bAllowMultiLine = false;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
-		ELGUITextInputOverflowType OverflowType = ELGUITextInputOverflowType::ClampContent;
+		ELexUITextInputOverflowType OverflowType = ELexUITextInputOverflowType::ClampContent;
 	//when use multiline mode and OverflowType is OverflowToMax, this is the max line count that can expend the input area
-	UPROPERTY(EditAnywhere, Category = "LGUI-Input", meta=(EditCondition="OverflowType==ELGUITextInputOverflowType::OverflowToMax"))
+	UPROPERTY(EditAnywhere, Category = "LGUI-Input", meta=(EditCondition="OverflowType==ELexUITextInputOverflowType::OverflowToMax"))
 		int MaxLineCount = 5;
 	//when use SingleLine mode and OverflowType is OverflowToMax, this is the max width that can expend the input area
-	UPROPERTY(EditAnywhere, Category = "LGUI-Input", meta=(EditCondition="OverflowType==ELGUITextInputOverflowType::OverflowToMax"))
+	UPROPERTY(EditAnywhere, Category = "LGUI-Input", meta=(EditCondition="OverflowType==ELexUITextInputOverflowType::OverflowToMax"))
 		float MaxLineWidth = 100;
 	/**
 	 * This will be used in multiline mode, when hit enter, if one of these keys is also pressing then the input will submit, otherwise a new line will be added.
@@ -176,7 +176,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
 		FColor SelectionColor = FColor(168, 206, 255, 128);
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
-		FVirtualKeyboardOptions VirtualKeyboradOptions;
+		FVirtualKeyboardOptions VirtualKeyboardOptions;
 	//Ignore these keys input. eg, if use tab and arrow keys for navigation then you should put tab and arrow keys in this array
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
 		TArray<FKey> IgnoreKeys;
@@ -208,11 +208,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		const FString& GetText()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		ELGUITextInputType GetInputType()const { return InputType; }
+		ELexUITextInputType GetInputType()const { return InputType; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		UUITextInputCustomValidation* GetCustomValidation()const { return CustomValidation; }
+		ULexTextInputCustomValidation* GetCustomValidation()const { return CustomValidation; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		ELGUITextInputDisplayType GetDisplayType()const { return DisplayType; }
+		ELexUITextInputDisplayType GetDisplayType()const { return DisplayType; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		const FString& GetPasswordChar()const { return PasswordChar; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
@@ -230,7 +230,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		FColor GetSelectionColor()const { return SelectionColor; }
 	UFUNCTION()
-		FVirtualKeyboardOptions GetVirtualKeyboradOptions()const { return VirtualKeyboradOptions; }
+		FVirtualKeyboardOptions GetVirtualKeyboardOptions()const { return VirtualKeyboardOptions; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		const TArray<FKey>& GetIgnoreKeys()const { return IgnoreKeys; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
@@ -245,39 +245,39 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		bool SetText(const FString& InText, bool InFireEvent = false);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void SetInputType(ELGUITextInputType newValue);
+		void SetInputType(ELexUITextInputType Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void SetCustomValidation(UUITextInputCustomValidation* value);
+		void SetCustomValidation(ULexTextInputCustomValidation* Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void SetDisplayType(ELGUITextInputDisplayType newValue);
+		void SetDisplayType(ELexUITextInputDisplayType Value);
 	/** Set password display char. Only allow one char in the value string */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void SetPasswordChar(const FString& value);
+		void SetPasswordChar(const FString& Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void SetAllowMultiLine(bool value);
+		void SetAllowMultiLine(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void SetMultiLineSubmitFunctionKeys(const TArray<FKey>& value);
+		void SetMultiLineSubmitFunctionKeys(const TArray<FKey>& Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void SetPlaceHolder(ULexWidget* value);
+		void SetPlaceHolder(ULexWidget* Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void SetCaretBlinkRate(float value);
+		void SetCaretBlinkRate(float Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void SetCaretWidth(float value);
+		void SetCaretWidth(float Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void SetCaretColor(FColor value);
+		void SetCaretColor(FColor Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void SetSelectionColor(FColor value);
+		void SetSelectionColor(FColor Value);
 	UFUNCTION()
-		void SetVirtualKeyboradOptions(FVirtualKeyboardOptions value);
+		void SetVirtualKeyboradOptions(FVirtualKeyboardOptions Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void SetIgnoreKeys(const TArray<FKey>& value);
+		void SetIgnoreKeys(const TArray<FKey>& Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void SetAutoActivateInputWhenNavigateIn(bool value);
+		void SetAutoActivateInputWhenNavigateIn(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void SetReadOnly(bool value);
+		void SetReadOnly(bool Value);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-	void ActivateInput(ULGUIPointerEventData* eventData = nullptr);
+	void ActivateInput(ULexPointerEventData* eventData = nullptr);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 	void DeactivateInput(bool InFireEvent = true);
 
@@ -329,17 +329,17 @@ public:
 		void ClearCustomInputTypeFunction();
 	/**
 	 * Verify input string value and insert the string value to text value at current caret position.
-	 * @param value string value to check and insert.
+	 * @param Value string value to check and insert.
 	 * @return true- if any char added.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		bool VerifyAndInsertStringAtCaretPosition(const FString& value);
+		bool VerifyAndInsertStringAtCaretPosition(const FString& Value);
 	/**
 	 * Verify input char value and insert the char value to text value at current caret position.
-	 * @param value char value to check and insert.
+	 * @param Value char value to check and insert.
 	 * @return true- if verify success and added.
 	 */
-	bool VerifyAndInsertCharAtCaretPosition(TCHAR value);
+	bool VerifyAndInsertCharAtCaretPosition(TCHAR Value);
 private:
 	void BindKeys();
 	void UnbindKeys();
@@ -404,16 +404,16 @@ protected:
 	virtual void OnInteractableChanged(bool Interactable) override;
 	virtual void OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
 
-	virtual bool OnPointerEnter_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerExit_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerSelect_Implementation(ULGUIBaseEventData* eventData) override;
-	virtual bool OnPointerDeselect_Implementation(ULGUIBaseEventData* eventData) override;
-	virtual bool OnPointerClick_Implementation(ULGUIPointerEventData* eventData) override;
-	virtual bool OnPointerBeginDrag_Implementation(ULGUIPointerEventData* eventData) override;
-	virtual bool OnPointerDrag_Implementation(ULGUIPointerEventData* eventData) override;
-	virtual bool OnPointerEndDrag_Implementation(ULGUIPointerEventData* eventData) override;
-	virtual bool OnPointerDown_Implementation(ULGUIPointerEventData* eventData) override;
-	virtual bool OnPointerUp_Implementation(ULGUIPointerEventData* eventData) override;
+	virtual bool OnPointerEnter_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerExit_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerSelect_Implementation(ULexBaseEventData* eventData) override;
+	virtual bool OnPointerDeselect_Implementation(ULexBaseEventData* eventData) override;
+	virtual bool OnPointerClick_Implementation(ULexPointerEventData* eventData) override;
+	virtual bool OnPointerBeginDrag_Implementation(ULexPointerEventData* eventData) override;
+	virtual bool OnPointerDrag_Implementation(ULexPointerEventData* eventData) override;
+	virtual bool OnPointerEndDrag_Implementation(ULexPointerEventData* eventData) override;
+	virtual bool OnPointerDown_Implementation(ULexPointerEventData* eventData) override;
+	virtual bool OnPointerUp_Implementation(ULexPointerEventData* eventData) override;
 
 private:
 	friend class FVirtualKeyboardEntry;

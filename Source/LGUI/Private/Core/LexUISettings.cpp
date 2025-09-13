@@ -29,14 +29,14 @@ void ULexUISettings::PostEditChangeProperty(struct FPropertyChangedEvent& Proper
 #endif
 const FLexUIAtlasSettings& ULexUISettings::GetAtlasSettings(const FName& InPackingTag)
 {
-	auto lguiSettings = GetDefault<ULexUISettings>();
-	if (auto atlasSettings = lguiSettings->AtlasSettingForSpecificPackingTag.Find(InPackingTag))
+	auto Settings = GetDefault<ULexUISettings>();
+	if (auto AtlasSettings = Settings->AtlasSettingForSpecificPackingTag.Find(InPackingTag))
 	{
-		return *atlasSettings;
+		return *AtlasSettings;
 	}
 	else
 	{
-		return lguiSettings->DefaultAtlasSetting;
+		return Settings->DefaultAtlasSetting;
 	}
 }
 int32 ULexUISettings::GetAtlasTextureInitialSize(const FName& InPackingTag)

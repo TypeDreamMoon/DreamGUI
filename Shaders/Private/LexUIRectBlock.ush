@@ -143,7 +143,7 @@ float RadialGradient(float2 uv, float2 quadSize, float2 center, float2 radius, f
 
 float4 BlendPremul(float4 bottom, float4 top)
 {
-#if 1
+#if 0
     half3 outColor;
     half outA = top.a + bottom.a * (1.0f - top.a);
     outColor = (top.rgb * top.a + bottom.rgb * bottom.a * (1.0f - top.a)) / outA;
@@ -151,6 +151,7 @@ float4 BlendPremul(float4 bottom, float4 top)
         outColor.rgb = 0;
     return half4(outColor, outA);
 #else
+    bottom.rgb *= bottom.a;
     return top * (1.0 - bottom.a) + bottom;
 #endif
 }

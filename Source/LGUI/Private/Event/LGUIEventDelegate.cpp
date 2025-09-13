@@ -163,7 +163,7 @@ bool ULGUIEventDelegateParameterHelper::IsPropertyCompatible(const FProperty* In
 			{
 				OutParameterType = ELGUIEventDelegateParameterType::Actor;
 			}
-			else if (objectProperty->PropertyClass->IsChildOf(ULGUIPointerEventData::StaticClass()))
+			else if (objectProperty->PropertyClass->IsChildOf(ULexPointerEventData::StaticClass()))
 			{
 				OutParameterType = ELGUIEventDelegateParameterType::PointerEvent;
 			}
@@ -879,7 +879,7 @@ void FLGUIEventDelegate::FireEvent(AActor* InParam)const
 	}
 	else LogParameterError(ELGUIEventDelegateParameterType::Actor);
 }
-void FLGUIEventDelegate::FireEvent(ULGUIPointerEventData* InParam)const
+void FLGUIEventDelegate::FireEvent(ULexPointerEventData* InParam)const
 {
 	if (eventList.Num() == 0)return;
 	if (supportParameterType == ELGUIEventDelegateParameterType::PointerEvent)

@@ -1498,7 +1498,7 @@ void LGUIEditorTools::CreateScreenSpaceUI_BasicSetup()
 		ETraceTypeQuery LGUITraceTypeQuery;
 		auto bIsTraceTypeQueryValid = CreateTraceChannel_BasicSetup(LGUITraceTypeQuery);
 
-		GEditor->BeginTransaction(FText::FromString(TEXT("LGUI Create Screen Space UI")));
+		GEditor->BeginTransaction(FText::FromString(TEXT("LexUI Create Screen Space UI")));
 		auto actor = prefab->LoadPrefabInEditor(GetWorldFromSelection(), nullptr, true);
 		actor->GetRootComponent()->SetRelativeScale3D(FVector::OneVector);
 		actor->GetRootComponent()->SetRelativeLocation(FVector(0, 0, 250));
@@ -1512,26 +1512,28 @@ void LGUIEditorTools::CreateScreenSpaceUI_BasicSetup()
 			GEditor->SelectActor(selectedActor, false, true);
 		}
 		GEditor->SelectActor(actor, true, true);
-		CreatePresetEventSystem_BasicSetup();
+		CreatePresetEventSystem_BasicSetup(false);
 		GEditor->EndTransaction();
 		ULexUIManagerWorldSubsystem::RefreshAllUI();
 	}
 	else
 	{
-		UE_LOG(LGUIEditor, Error, TEXT("[LGUIEditorToolsAgentObject::CreateScreenSpaceUI_BasicSetup]Load control prefab error! Path:%s. Missing some content of LGUI plugin, reinstall this plugin may fix the issue."), *prefabPath);
+		UE_LOG(LGUIEditor, Error, TEXT("[%s].%d Load control prefab error! Path:%s. Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), 
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *prefabPath);
 	}
 }
-void LGUIEditorTools::CreateWorldSpaceUIUERenderer_BasicSetup()
+void LGUIEditorTools::CreateWorldSpaceUIBuiltinRenderer_BasicSetup()
 {
-	FString prefabPath(TEXT("/LGUI/Prefabs/WorldSpaceUI_UERenderer"));
+	FString prefabPath(TEXT("/LGUI/Prefabs/WorldSpaceUI"));
 	auto prefab = LoadObject<ULGUIPrefab>(NULL, *prefabPath);
 	if (prefab)
 	{
 		ETraceTypeQuery LGUITraceTypeQuery;
 		auto bIsTraceTypeQueryValid = CreateTraceChannel_BasicSetup(LGUITraceTypeQuery);
 
-		GEditor->BeginTransaction(FText::FromString(TEXT("LGUI Create World Space UI - UE Renderer")));
+		GEditor->BeginTransaction(FText::FromString(TEXT("LexUI Create World Space UI - UE Renderer")));
 		auto actor = prefab->LoadPrefabInEditor(GetWorldFromSelection(), nullptr, true);
+		actor->SetActorLabel(TEXT("WorldSpaceUI-UERenderer"));
 		actor->GetRootComponent()->SetRelativeLocation(FVector(0, 0, 250));
 		actor->GetRootComponent()->SetWorldScale3D(FVector::OneVector);
 		if (bIsTraceTypeQueryValid)
@@ -1544,31 +1546,34 @@ void LGUIEditorTools::CreateWorldSpaceUIUERenderer_BasicSetup()
 			GEditor->SelectActor(selectedActor, false, true);
 		}
 		GEditor->SelectActor(actor, true, true);
-		CreatePresetEventSystem_BasicSetup();
+		CreatePresetEventSystem_BasicSetup(true);
 		GEditor->EndTransaction();
 		ULexUIManagerWorldSubsystem::RefreshAllUI();
 	}
 	else
 	{
-		UE_LOG(LGUIEditor, Error, TEXT("[LGUIEditorToolsAgentObject::CreateWorldSpaceUIUERenderer_BasicSetup]Load control prefab error! Path:%s. Missing some content of LGUI plugin, reinstall this plugin may fix the issue."), *prefabPath);
+		UE_LOG(LGUIEditor, Error, TEXT("[%s].%d Load control prefab error! Path:%s. Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), 
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *prefabPath);
 	}
 }
-void LGUIEditorTools::CreateWorldSpaceUILGUIRenderer_BasicSetup()
+void LGUIEditorTools::CreateWorldSpaceUILexUIRenderer_BasicSetup()
 {
-	FString prefabPath(TEXT("/LGUI/Prefabs/WorldSpaceUI_LGUIRenderer"));
+	FString prefabPath(TEXT("/LGUI/Prefabs/WorldSpaceUI"));
 	auto prefab = LoadObject<ULGUIPrefab>(NULL, *prefabPath);
 	if (prefab)
 	{
 		ETraceTypeQuery LGUITraceTypeQuery;
 		auto bIsTraceTypeQueryValid = CreateTraceChannel_BasicSetup(LGUITraceTypeQuery);
 
-		GEditor->BeginTransaction(FText::FromString(TEXT("LGUI Create World Space UI - LGUI Renderer")));
+		GEditor->BeginTransaction(FText::FromString(TEXT("LexUI Create World Space UI - LexUI Renderer")));
 		auto actor = prefab->LoadPrefabInEditor(GetWorldFromSelection(), nullptr, true);
+		actor->SetActorLabel(TEXT("WorldSpaceUI-LexUIRenderer"));
 		actor->GetRootComponent()->SetRelativeLocation(FVector(0, 0, 250));
 		actor->GetRootComponent()->SetWorldScale3D(FVector::OneVector);
+		auto Canvas = actor->FindComponentByClass<ULexCanvas>();
+		Canvas->SetRenderMode(ELexRenderMode::WorldSpace_LexUI);
 		if (bIsTraceTypeQueryValid)
 		{
-			auto Canvas = actor->FindComponentByClass<ULexCanvas>();
 			Canvas->SetTraceChannel(LGUITraceTypeQuery);
 		}
 		if (auto selectedActor = GetFirstSelectedActor())
@@ -1576,33 +1581,53 @@ void LGUIEditorTools::CreateWorldSpaceUILGUIRenderer_BasicSetup()
 			GEditor->SelectActor(selectedActor, false, true);
 		}
 		GEditor->SelectActor(actor, true, true);
-		CreatePresetEventSystem_BasicSetup();
+		CreatePresetEventSystem_BasicSetup(true);
 		GEditor->EndTransaction();
 		ULexUIManagerWorldSubsystem::RefreshAllUI();
 	}
 	else
 	{
-		UE_LOG(LGUIEditor, Error, TEXT("[LGUIEditorToolsAgentObject::CreateWorldSpaceUILGUIRenderer_BasicSetup]Load control prefab error! Path:%s. Missing some content of LGUI plugin, reinstall this plugin may fix the issue."), *prefabPath);
+		UE_LOG(LGUIEditor, Error, TEXT("[%s].%d Load control prefab error! Path:%s. Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), 
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *prefabPath);
 	}
 }
-void LGUIEditorTools::CreatePresetEventSystem_BasicSetup()
+void LGUIEditorTools::CreatePresetEventSystem_BasicSetup(bool WorldSpace)
 {
-	bool haveEventSystem = false;
-	for (TActorIterator<ALGUIEventSystemActor> eventSysActorItr(GetWorldFromSelection()); eventSysActorItr; ++eventSysActorItr)
+	bool bEventSystemExit = false;
+	bool bWorldSpaceExit = false;
+	for (TActorIterator<AActor> ActorItr(GetWorldFromSelection()); ActorItr; ++ActorItr)
 	{
-		haveEventSystem = true;
+		auto Actor = *ActorItr;
+		if (Actor->FindComponentByClass<ULexEventSystem>())
+		{
+			bEventSystemExit = true;
+		}
+		if (Actor->FindComponentByClass<ULexWorldSpaceRaycaster>())
+		{
+			bWorldSpaceExit = true;
+		}
 		break;
 	}
-	if (!haveEventSystem)
+	auto CreateActor = [](const TCHAR* ClassName)
 	{
-		if (auto presetEventSystemActorClass = LoadObject<UClass>(NULL, TEXT("/LGUI/Blueprints/PresetEventSystemActor.PresetEventSystemActor_C")))
+		if (auto PresetEventSystemActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
 		{
-			GetWorldFromSelection()->SpawnActor<AActor>(presetEventSystemActorClass);
+			auto Actor = GetWorldFromSelection()->SpawnActor<AActor>(PresetEventSystemActorClass);
+			Actor->SetActorLabel(ClassName);
 		}
 		else
 		{
-			UE_LOG(LGUIEditor, Error, TEXT("[ULGUIEditorToolsAgentObject::CreateWorldSpaceUILGUIRenderer_BasicSetup]Load PresetEventSystemActor error! Missing some content of LGUI plugin, reinstall this plugin may fix the issue."));
+			UE_LOG(LGUIEditor, Error, TEXT("[%s].%d Load %s error! Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), 
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ClassName);
 		}
+	};
+	if (!bEventSystemExit)
+	{
+		CreateActor(TEXT("PresetEventSystemActor"));
+	}
+	if (WorldSpace && !bWorldSpaceExit)
+	{
+		CreateActor(TEXT("WorldSpaceRaycasterActor"));
 	}
 }
 
@@ -1782,7 +1807,7 @@ bool LGUIEditorTools::HaveValidCopiedComponent()
 	return CopiedComponent.IsValid();
 }
 
-FString LGUIEditorTools::PrevSavePrafabFolder = TEXT("");
+FString LGUIEditorTools::PrevSavePrefabFolder = TEXT("");
 void LGUIEditorTools::CreatePrefabAsset()//@todo: make some referenced parameter as override parameter(eg: Actor parameter reference other actor that is not belongs to prefab hierarchy)
 {
 	auto selectedActor = GetFirstSelectedActor();
@@ -1810,7 +1835,7 @@ void LGUIEditorTools::CreatePrefabAsset()//@todo: make some referenced parameter
 		DesktopPlatform->SaveFileDialog(
 			FSlateApplication::Get().FindBestParentWindowHandleForDialogs(FSlateApplication::Get().GetGameViewport()),
 			TEXT("Choose a path to save prefab asset, must inside Content folder"),
-			PrevSavePrafabFolder.IsEmpty() ? FPaths::ProjectContentDir() : PrevSavePrafabFolder,
+			PrevSavePrefabFolder.IsEmpty() ? FPaths::ProjectContentDir() : PrevSavePrefabFolder,
 			selectedActor->GetActorLabel() + TEXT("_Prefab"),
 			TEXT("*.*"),
 			EFileDialogFlags::None,
@@ -1819,9 +1844,9 @@ void LGUIEditorTools::CreatePrefabAsset()//@todo: make some referenced parameter
 		if (OutFileNames.Num() > 0)
 		{
 			FString selectedFilePath = OutFileNames[0];
-			if (selectedFilePath.StartsWith(FPaths::ProjectContentDir()))
+			if (selectedFilePath.StartsWith(FPaths::ProjectDir()))
 			{
-				PrevSavePrafabFolder = FPaths::GetPath(selectedFilePath);
+				PrevSavePrefabFolder = FPaths::GetPath(selectedFilePath);
 				if (FPaths::FileExists(selectedFilePath + TEXT(".uasset")))
 				{
 					auto returnValue = FMessageDialog::Open(EAppMsgType::YesNo

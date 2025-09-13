@@ -4,7 +4,7 @@
 #include "LGUI.h"
 #include "Core/Components/LexText.h"
 #include "InputCoreTypes.h"
-#include "Event/LGUIEventSystem.h"
+#include "Event/LexEventSystem.h"
 #include "HAL/PlatformApplicationMisc.h"
 #include "GameFramework/PlayerInput.h"
 #include "GameFramework/PlayerController.h"
@@ -19,11 +19,11 @@
 UE_DISABLE_OPTIMIZATION
 #endif
 
-UUITextInputCustomValidation::UUITextInputCustomValidation()
+ULexTextInputCustomValidation::ULexTextInputCustomValidation()
 {
 	bCanExecuteBlueprintEvent = GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native);
 }
-bool UUITextInputCustomValidation::OnValidateInput(UUITextInputComponent* InTextInput, const FString& InString, int InIndexOfInsertedChar)
+bool ULexTextInputCustomValidation::OnValidateInput(UUITextInputComponent* InTextInput, const FString& InString, int InIndexOfInsertedChar)
 {
 	if (bCanExecuteBlueprintEvent)
 	{
@@ -79,8 +79,8 @@ bool UUITextInputComponent::CanEditChange(const FProperty* InProperty)const
 {
 	if (InProperty->GetFName() == GET_MEMBER_NAME_CHECKED(UUITextInputComponent, PasswordChar))
 	{
-		if (InputType != ELGUITextInputType::Password
-			&& DisplayType != ELGUITextInputDisplayType::Password)
+		if (InputType != ELexUITextInputType::Password
+			&& DisplayType != ELexUITextInputDisplayType::Password)
 		{
 			return false;
 		}
@@ -563,10 +563,10 @@ bool UUITextInputComponent::IsValidChar(TCHAR c)
 	//input type
 	switch (InputType)
 	{
-	case ELGUITextInputType::Standard:
+	case ELexUITextInputType::Standard:
 		return true;
 		break;
-	case ELGUITextInputType::IntegerNumber:
+	case ELexUITextInputType::IntegerNumber:
 	{
 		if (c >= '0' && c <= '9')
 		{
@@ -589,7 +589,7 @@ bool UUITextInputComponent::IsValidChar(TCHAR c)
 		return false;
 	}
 		break;
-	case ELGUITextInputType::DecimalNumber:
+	case ELexUITextInputType::DecimalNumber:
 	{
 		if (c >= '0' && c <= '9')
 		{
@@ -634,7 +634,7 @@ bool UUITextInputComponent::IsValidChar(TCHAR c)
 		return false;
 	}
 		break;
-	case ELGUITextInputType::Alphanumeric:
+	case ELexUITextInputType::Alphanumeric:
 	{
 		if (c >= 'A' && c <= 'Z') return true;
 		if (c >= 'a' && c <= 'z') return true;
@@ -642,7 +642,7 @@ bool UUITextInputComponent::IsValidChar(TCHAR c)
 		return false;
 	}
 	break;
-	case ELGUITextInputType::EmailAddress:
+	case ELexUITextInputType::EmailAddress:
 	{
 		if (c >= 'A' && c <= 'Z') return true;
 		if (c >= 'a' && c <= 'z') return true;
@@ -668,11 +668,11 @@ bool UUITextInputComponent::IsValidChar(TCHAR c)
 		return false;
 	}
 	break;
-	case ELGUITextInputType::Password:
+	case ELexUITextInputType::Password:
 		//handled when UpdateUITextComponent
 		return true;
 		break;
-	case ELGUITextInputType::CustomFunction:
+	case ELexUITextInputType::CustomFunction:
 	{
 		if (CustomInputTypeFunction.IsBound())
 		{
@@ -695,7 +695,7 @@ bool UUITextInputComponent::IsValidChar(TCHAR c)
 		}
 	}
 		break;
-	case ELGUITextInputType::Custom:
+	case ELexUITextInputType::Custom:
 	{
 		if (IsValid(CustomValidation))
 		{
@@ -826,8 +826,8 @@ void UUITextInputComponent::ForwardSpace()
 }
 void UUITextInputComponent::Copy()
 {
-	if (InputType == ELGUITextInputType::Password
-		|| DisplayType == ELGUITextInputDisplayType::Password
+	if (InputType == ELexUITextInputType::Password
+		|| DisplayType == ELexUITextInputDisplayType::Password
 		)return;//not allow copy password
 	if (SelectionPropertyArray.Num() != 0)//have selection
 	{
@@ -881,8 +881,8 @@ void UUITextInputComponent::Paste()
 void UUITextInputComponent::Cut()
 {
 	if (bReadOnly)return;
-	if (InputType == ELGUITextInputType::Password
-		|| DisplayType == ELGUITextInputDisplayType::Password
+	if (InputType == ELexUITextInputType::Password
+		|| DisplayType == ELexUITextInputDisplayType::Password
 		)return;//not allow copy password
 	if (SelectionPropertyArray.Num() != 0)//have selection
 	{
@@ -900,13 +900,13 @@ void UUITextInputComponent::SelectAll()
 	UpdateSelection();
 }
 
-bool UUITextInputComponent::VerifyAndInsertStringAtCaretPosition(const FString& value)
+bool UUITextInputComponent::VerifyAndInsertStringAtCaretPosition(const FString& Value)
 {
 	if (bReadOnly)return false;
 	FString verifiedString;
-	for (int i = 0; i < value.Len(); i++)
+	for (int i = 0; i < Value.Len(); i++)
 	{
-		TCHAR c = value[i];
+		TCHAR c = Value[i];
 		if (IsValidChar(c))
 		{
 			verifiedString.AppendChar(c);
@@ -920,12 +920,12 @@ bool UUITextInputComponent::VerifyAndInsertStringAtCaretPosition(const FString& 
 	}
 	return false;
 }
-bool UUITextInputComponent::VerifyAndInsertCharAtCaretPosition(TCHAR value)
+bool UUITextInputComponent::VerifyAndInsertCharAtCaretPosition(TCHAR Value)
 {
 	if (bReadOnly)return false;
-	if (IsValidChar(value))
+	if (IsValidChar(Value))
 	{
-		InsertCharAtCaretPosition(value);
+		InsertCharAtCaretPosition(Value);
 		UpdateAfterTextChange(true);
 		return true;
 	}
@@ -946,8 +946,8 @@ void UUITextInputComponent::UpdateAfterTextChange(bool InFireEvent)
 FString UUITextInputComponent::GetReplaceText()const
 {
 	FString replaceText;
-	if (InputType == ELGUITextInputType::Password
-		|| DisplayType == ELGUITextInputDisplayType::Password)
+	if (InputType == ELexUITextInputType::Password
+		|| DisplayType == ELexUITextInputDisplayType::Password)
 	{
 		int len = Text.Len();
 		replaceText.Reset(len);
@@ -1013,7 +1013,7 @@ void UUITextInputComponent::UpdateUITextComponent()
 		if (bAllowMultiLine)//multi line, handle out of range chars
 		{
 			//recalculate MaxVisibleLineCount
-			if (OverflowType == ELGUITextInputOverflowType::ClampContent)
+			if (OverflowType == ELexUITextInputOverflowType::ClampContent)
 			{
 				auto SingleLineHeight = TextWidget->GetFont()->GetLineHeight(TextWidget->GetFontSize());
 				MaxLineCount = (int)(Widget->GetHeight()
@@ -1029,7 +1029,7 @@ void UUITextInputComponent::UpdateUITextComponent()
 		}
 		else//single line, handle out of range chars
 		{
-			float maxWidth = OverflowType == ELGUITextInputOverflowType::ClampContent
+			float maxWidth = OverflowType == ELexUITextInputOverflowType::ClampContent
 				? Widget->GetWidth()
 				: MaxLineWidth
 				;
@@ -1204,12 +1204,12 @@ void UUITextInputComponent::OnDimensionsChanged(bool PivotChanged, bool WidthCha
 	this->UpdateAfterTextChange(false);//if size change, need to recalculate text input area
 }
 
-bool UUITextInputComponent::OnPointerEnter_Implementation(ULGUIPointerEventData* eventData)
+bool UUITextInputComponent::OnPointerEnter_Implementation(ULexPointerEventData* eventData)
 {
 	Super::OnPointerEnter_Implementation(eventData);
 	if (bAutoActivateInputWhenNavigateIn)
 	{
-		if (eventData->inputType == ELGUIPointerInputType::Navigation)
+		if (eventData->inputType == ELexUIPointerInputType::Navigation)
 		{
 			ActivateInput(eventData);
 		}
@@ -1220,7 +1220,7 @@ bool UUITextInputComponent::OnPointerEnter_Implementation(ULGUIPointerEventData*
 	}
 	return AllowEventBubbleUp;
 }
-bool UUITextInputComponent::OnPointerExit_Implementation(ULGUIPointerEventData* eventData)
+bool UUITextInputComponent::OnPointerExit_Implementation(ULexPointerEventData* eventData)
 {
 	Super::OnPointerExit_Implementation(eventData);
 	if (APlayerController* pc = this->GetWorld()->GetFirstPlayerController())
@@ -1229,19 +1229,19 @@ bool UUITextInputComponent::OnPointerExit_Implementation(ULGUIPointerEventData* 
 	}
 	return AllowEventBubbleUp;
 }
-bool UUITextInputComponent::OnPointerSelect_Implementation(ULGUIBaseEventData* eventData)
+bool UUITextInputComponent::OnPointerSelect_Implementation(ULexBaseEventData* eventData)
 {
 	Super::OnPointerSelect_Implementation(eventData);
 	//ActivateInput();//handled at PointerClick
 	return AllowEventBubbleUp;
 }
-bool UUITextInputComponent::OnPointerDeselect_Implementation(ULGUIBaseEventData* eventData)
+bool UUITextInputComponent::OnPointerDeselect_Implementation(ULexBaseEventData* eventData)
 {
 	Super::OnPointerDeselect_Implementation(eventData);
 	DeactivateInput();
 	return AllowEventBubbleUp;
 }
-bool UUITextInputComponent::OnPointerClick_Implementation(ULGUIPointerEventData* eventData)
+bool UUITextInputComponent::OnPointerClick_Implementation(ULexPointerEventData* eventData)
 {
 	if (!bInputActive)//need active input
 	{
@@ -1249,7 +1249,7 @@ bool UUITextInputComponent::OnPointerClick_Implementation(ULGUIPointerEventData*
 	}
 	return AllowEventBubbleUp;
 }
-bool UUITextInputComponent::OnPointerBeginDrag_Implementation(ULGUIPointerEventData* eventData)
+bool UUITextInputComponent::OnPointerBeginDrag_Implementation(ULexPointerEventData* eventData)
 {
 	if (bInputActive)
 	{
@@ -1260,7 +1260,7 @@ bool UUITextInputComponent::OnPointerBeginDrag_Implementation(ULGUIPointerEventD
 		return true;
 	}
 }
-bool UUITextInputComponent::OnPointerDrag_Implementation(ULGUIPointerEventData* eventData)
+bool UUITextInputComponent::OnPointerDrag_Implementation(ULexPointerEventData* eventData)
 {
 	if (bInputActive)
 	{
@@ -1311,7 +1311,7 @@ bool UUITextInputComponent::OnPointerDrag_Implementation(ULGUIPointerEventData* 
 		return true;
 	}
 }
-bool UUITextInputComponent::OnPointerEndDrag_Implementation(ULGUIPointerEventData* eventData)
+bool UUITextInputComponent::OnPointerEndDrag_Implementation(ULexPointerEventData* eventData)
 {
 	if (bInputActive)
 	{
@@ -1322,7 +1322,7 @@ bool UUITextInputComponent::OnPointerEndDrag_Implementation(ULGUIPointerEventDat
 		return true;
 	}
 }
-bool UUITextInputComponent::OnPointerDown_Implementation(ULGUIPointerEventData* eventData)
+bool UUITextInputComponent::OnPointerDown_Implementation(ULexPointerEventData* eventData)
 {
 	Super::OnPointerDown_Implementation(eventData);
 	if (bInputActive)//if already active, then put caret position at mouse position
@@ -1343,12 +1343,12 @@ bool UUITextInputComponent::OnPointerDown_Implementation(ULGUIPointerEventData* 
 
 	return AllowEventBubbleUp;
 }
-bool UUITextInputComponent::OnPointerUp_Implementation(ULGUIPointerEventData* eventData)
+bool UUITextInputComponent::OnPointerUp_Implementation(ULexPointerEventData* eventData)
 {
 	Super::OnPointerUp_Implementation(eventData);
 	return AllowEventBubbleUp;
 }
-void UUITextInputComponent::ActivateInput(ULGUIPointerEventData* eventData)
+void UUITextInputComponent::ActivateInput(ULexPointerEventData* eventData)
 {
 	if (TextWidget == nullptr)
 	{
@@ -1410,7 +1410,7 @@ void UUITextInputComponent::ActivateInput(ULGUIPointerEventData* eventData)
 	BindKeys();
 	UpdatePlaceHolderComponent();
 	//set is selected
-	if (auto eventSystem = ULGUIEventSystem::GetLGUIEventSystemInstance(this))
+	if (auto eventSystem = ULexEventSystem::GetLexEventSystemInstance(this))
 	{
 		if (auto Widget = GetLexWidget())
 		{
@@ -1643,97 +1643,97 @@ bool UUITextInputComponent::SetText(const FString& InText, bool InFireEvent)
 	}
 	return true;
 }
-void UUITextInputComponent::SetInputType(ELGUITextInputType newValue)
+void UUITextInputComponent::SetInputType(ELexUITextInputType Value)
 {
-	if (InputType != newValue)
+	if (InputType != Value)
 	{
-		InputType = newValue;
+		InputType = Value;
 		CaretPositionIndex = 0;
 		UpdateUITextComponent();
 	}
 }
-void UUITextInputComponent::SetCustomValidation(UUITextInputCustomValidation* value)
+void UUITextInputComponent::SetCustomValidation(ULexTextInputCustomValidation* Value)
 {
-	if (CustomValidation != value)
+	if (CustomValidation != Value)
 	{
-		CustomValidation = value;
-		if (InputType == ELGUITextInputType::Custom)
+		CustomValidation = Value;
+		if (InputType == ELexUITextInputType::Custom)
 		{
 			CaretPositionIndex = 0;
 			UpdateUITextComponent();
 		}
 	}
 }
-void UUITextInputComponent::SetDisplayType(ELGUITextInputDisplayType newValue)
+void UUITextInputComponent::SetDisplayType(ELexUITextInputDisplayType Value)
 {
-	if (DisplayType != newValue)
+	if (DisplayType != Value)
 	{
-		DisplayType = newValue;
+		DisplayType = Value;
 		CaretPositionIndex = 0;
 		UpdateUITextComponent();
 	}
 }
-void UUITextInputComponent::SetPasswordChar(const FString& value)
+void UUITextInputComponent::SetPasswordChar(const FString& Value)
 {
-	if (PasswordChar != value)
+	if (PasswordChar != Value)
 	{
-		if (value.Len() != 1)
+		if (Value.Len() != 1)
 		{
 			return;
 		}
-		PasswordChar = value;
-		if (InputType == ELGUITextInputType::Password || DisplayType == ELGUITextInputDisplayType::Password)
+		PasswordChar = Value;
+		if (InputType == ELexUITextInputType::Password || DisplayType == ELexUITextInputDisplayType::Password)
 		{
 			UpdateUITextComponent();
 		}
 	}
 }
-void UUITextInputComponent::SetAllowMultiLine(bool value)
+void UUITextInputComponent::SetAllowMultiLine(bool Value)
 {
-	if (bAllowMultiLine != value)
+	if (bAllowMultiLine != Value)
 	{
-		bAllowMultiLine = value;
+		bAllowMultiLine = Value;
 	}
 }
-void UUITextInputComponent::SetMultiLineSubmitFunctionKeys(const TArray<FKey>& value)
+void UUITextInputComponent::SetMultiLineSubmitFunctionKeys(const TArray<FKey>& Value)
 {
-	MultiLineSubmitFunctionKeys = value;
+	MultiLineSubmitFunctionKeys = Value;
 }
-void UUITextInputComponent::SetPlaceHolder(ULexWidget* value)
+void UUITextInputComponent::SetPlaceHolder(ULexWidget* Value)
 {
-	PlaceHolder = value;
+	PlaceHolder = Value;
 }
-void UUITextInputComponent::SetCaretBlinkRate(float value)
+void UUITextInputComponent::SetCaretBlinkRate(float Value)
 {
-	CaretBlinkRate = value;
+	CaretBlinkRate = Value;
 }
-void UUITextInputComponent::SetCaretWidth(float value)
+void UUITextInputComponent::SetCaretWidth(float Value)
 {
-	if (CaretWidth != value)
+	if (CaretWidth != Value)
 	{
-		CaretWidth = value;
+		CaretWidth = Value;
 		if (CaretWidget.IsValid())
 		{
 			CaretWidget->SetWidth(CaretWidth);
 		}
 	}
 }
-void UUITextInputComponent::SetCaretColor(FColor value)
+void UUITextInputComponent::SetCaretColor(FColor Value)
 {
-	if (CaretColor != value)
+	if (CaretColor != Value)
 	{
-		CaretColor = value;
+		CaretColor = Value;
 		if (CaretWidget.IsValid())
 		{
 			CaretWidget->GetVisual()->SetColor(CaretColor);
 		}
 	}
 }
-void UUITextInputComponent::SetSelectionColor(FColor value)
+void UUITextInputComponent::SetSelectionColor(FColor Value)
 {
-	if (SelectionColor != value)
+	if (SelectionColor != Value)
 	{
-		SelectionColor = value;
+		SelectionColor = Value;
 		if (SelectionMaskObjectArray.Num() > 0)
 		{
 			for (auto& Item : SelectionMaskObjectArray)
@@ -1746,21 +1746,21 @@ void UUITextInputComponent::SetSelectionColor(FColor value)
 		}
 	}
 }
-void UUITextInputComponent::SetVirtualKeyboradOptions(FVirtualKeyboardOptions value)
+void UUITextInputComponent::SetVirtualKeyboradOptions(FVirtualKeyboardOptions Value)
 {
-	VirtualKeyboradOptions = value;
+	VirtualKeyboardOptions = Value;
 }
-void UUITextInputComponent::SetIgnoreKeys(const TArray<FKey>& value)
+void UUITextInputComponent::SetIgnoreKeys(const TArray<FKey>& Value)
 {
-	IgnoreKeys = value;
+	IgnoreKeys = Value;
 }
-void UUITextInputComponent::SetAutoActivateInputWhenNavigateIn(bool value)
+void UUITextInputComponent::SetAutoActivateInputWhenNavigateIn(bool Value)
 {
-	bAutoActivateInputWhenNavigateIn = value;
+	bAutoActivateInputWhenNavigateIn = Value;
 }
-void UUITextInputComponent::SetReadOnly(bool value)
+void UUITextInputComponent::SetReadOnly(bool Value)
 {
-	bReadOnly = value;
+	bReadOnly = Value;
 }
 
 FDelegateHandle UUITextInputComponent::RegisterValueChangeEvent(const FLGUIStringDelegate& InDelegate)
@@ -1909,27 +1909,27 @@ FText UUITextInputComponent::FVirtualKeyboardEntry::GetHintText() const
 }
 EKeyboardType UUITextInputComponent::FVirtualKeyboardEntry::GetVirtualKeyboardType() const
 {
-	if (InputComp->DisplayType == ELGUITextInputDisplayType::Password)
+	if (InputComp->DisplayType == ELexUITextInputDisplayType::Password)
 	{
 		return EKeyboardType::Keyboard_Password;
 	}
 	switch (InputComp->InputType)
 	{
 	default:
-	case ELGUITextInputType::Standard:
+	case ELexUITextInputType::Standard:
 		return EKeyboardType::Keyboard_Default;
 		break;
-	case ELGUITextInputType::Password:
+	case ELexUITextInputType::Password:
 		return EKeyboardType::Keyboard_Password;
 		break;
-	case ELGUITextInputType::DecimalNumber:
+	case ELexUITextInputType::DecimalNumber:
 		return EKeyboardType::Keyboard_Number;
 		break;
 	}
 }
 FVirtualKeyboardOptions UUITextInputComponent::FVirtualKeyboardEntry::GetVirtualKeyboardOptions() const
 {
-	return InputComp->VirtualKeyboradOptions;
+	return InputComp->VirtualKeyboardOptions;
 }
 bool UUITextInputComponent::FVirtualKeyboardEntry::IsMultilineEntry() const
 {

@@ -4,11 +4,11 @@
 
 #include "Components/ActorComponent.h"
 #include "Core/Components/UISprite.h"
-#include "Event/LGUIDelegateDeclaration.h"
+#include "Event/LexDelegateDeclaration.h"
 #include "Event/LGUIEventDelegate.h"
 #include "LGUIDelegateHandleWrapper.h"
-#include "Event/Interface/LGUIPointerDragInterface.h"
-#include "Event/Interface/LGUIPointerScrollInterface.h"
+#include "Event/Interface/LexPointerDragInterface.h"
+#include "Event/Interface/LexPointerScrollInterface.h"
 #include "Core/LexUIBehaviour.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "UIScrollViewComponent.generated.h"
@@ -29,7 +29,7 @@ private:
 };
 //ScrollView
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIScrollViewComponent : public ULexUIBehaviour, public ILGUIPointerDragInterface, public ILGUIPointerScrollInterface
+class LGUI_API UUIScrollViewComponent : public ULexUIBehaviour, public ILexPointerDragInterface, public ILexPointerScrollInterface
 {
 	GENERATED_BODY()
 	
@@ -127,11 +127,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
 		void UnregisterScrollEvent(const FLGUIDelegateHandleWrapper& InDelegateHandle);
 
-	virtual bool OnPointerBeginDrag_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerDrag_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerEndDrag_Implementation(ULGUIPointerEventData* eventData)override;
+	virtual bool OnPointerBeginDrag_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerDrag_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerEndDrag_Implementation(ULexPointerEventData* eventData)override;
 
-	virtual bool OnPointerScroll_Implementation(ULGUIPointerEventData* eventData)override;
+	virtual bool OnPointerScroll_Implementation(ULexPointerEventData* eventData)override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
 		ALexWidgetActor* GetContent()const { return Content.Get(); }

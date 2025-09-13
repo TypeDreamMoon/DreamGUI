@@ -19,11 +19,11 @@ void UUIScrollViewWithScrollbarComponent::OnDimensionsChanged(bool PivotChanged,
 	CheckScrollbarParameter();//Check and register scrollbar event
 }
 
-bool UUIScrollViewWithScrollbarComponent::OnPointerDrag_Implementation(ULGUIPointerEventData* eventData)
+bool UUIScrollViewWithScrollbarComponent::OnPointerDrag_Implementation(ULexPointerEventData* eventData)
 {
 	return Super::OnPointerDrag_Implementation(eventData);
 }
-bool UUIScrollViewWithScrollbarComponent::OnPointerScroll_Implementation(ULGUIPointerEventData* eventData)
+bool UUIScrollViewWithScrollbarComponent::OnPointerScroll_Implementation(ULexPointerEventData* eventData)
 {
 	return Super::OnPointerScroll_Implementation(eventData);
 }

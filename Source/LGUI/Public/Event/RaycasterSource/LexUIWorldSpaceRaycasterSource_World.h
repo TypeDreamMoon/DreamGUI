@@ -1,0 +1,44 @@
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Event/LexWorldSpaceRaycaster.h"
+#include "LexUIWorldSpaceRaycasterSource_World.generated.h"
+
+
+
+UENUM(BlueprintType, Category = LGUI)
+enum class ELexUISceneComponentDirection :uint8
+{
+	PositiveX		UMETA(DisplayName = "X+"),
+	NagtiveX		UMETA(DisplayName = "X-"),
+	PositiveY		UMETA(DisplayName = "Y+"),
+	NagtiveY		UMETA(DisplayName = "Y-"),
+	PositiveZ		UMETA(DisplayName = "Z+"),
+	NagtiveZ		UMETA(DisplayName = "Z-"),
+};
+
+/**
+ * If VR mode, you can use this component to emit ray from hand controller
+ */
+UCLASS(ClassGroup = LGUI, Blueprintable, meta=(DisplayName="World"))
+class LGUI_API ULexUIWorldSpaceRaycasterSource_World : public ULexUIWorldSpaceRaycasterSource
+{
+	GENERATED_BODY()
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = LGUI)
+		ELexUISceneComponentDirection RayDirectionType = ELexUISceneComponentDirection::PositiveX;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = LGUI)
+	USceneComponent* TargetSceneComp = nullptr;
+	/** click/drag threshold relate to line trace distance? If true then use ray distance as drag threshold */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = LGUI)
+		bool ClickThresholdRelateToRayDistance = true;
+	/** if clickThresholdRelateToRayDistance is true, then multiply the ray distance with this value and use the result as drag threshold */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = LGUI)
+		float RayDistanceMultiply = 0.003f;
+
+public:
+	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection)override;
+	virtual bool ShouldStartDrag(ULexPointerEventData* InPointerEventData)override;
+};

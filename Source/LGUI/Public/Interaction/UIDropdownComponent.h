@@ -4,10 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Interaction/UISelectableComponent.h"
-#include "Event/Interface/LGUIPointerClickInterface.h"
+#include "Event/Interface/LexPointerClickInterface.h"
 #include "LGUIComponentReference.h"
 #include "Event/LGUIEventDelegate.h"
-#include "Event/LGUIDelegateDeclaration.h"
+#include "Event/LexDelegateDeclaration.h"
 #include "UIDropdownComponent.generated.h"
 
 class ALexWidgetActor;
@@ -67,7 +67,7 @@ public:
 };
 
 UCLASS( ClassGroup=(LGUI), Blueprintable, meta=(BlueprintSpawnableComponent) )
-class LGUI_API UUIDropdownComponent : public UUISelectableComponent, public ILGUIPointerClickInterface
+class LGUI_API UUIDropdownComponent : public UUISelectableComponent, public ILexPointerClickInterface
 {
 	GENERATED_BODY()
 
@@ -114,8 +114,8 @@ protected:
 	TWeakObjectPtr<ULTweener> ShowOrHideTweener;
 	TWeakObjectPtr<ALexWidgetActor> BlockerActor;
 	UPROPERTY(Transient) TArray<TWeakObjectPtr<class UUIDropdownItemComponent>> CreatedItemArray;
-	virtual bool OnPointerClick_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerDeselect_Implementation(ULGUIBaseEventData* eventData)override;
+	virtual bool OnPointerClick_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerDeselect_Implementation(ULexBaseEventData* eventData)override;
 	void OnSelectItem(int index);
 	void ApplyValueToUI();
 	virtual void CreateBlocker();
@@ -207,7 +207,7 @@ public:
 DECLARE_DYNAMIC_DELEGATE(FUIDropdownItem_OnSelect);
 
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIDropdownItemComponent : public ULexUIBehaviour, public ILGUIPointerClickInterface
+class LGUI_API UUIDropdownItemComponent : public ULexUIBehaviour, public ILexPointerClickInterface
 {
 	GENERATED_BODY()
 
@@ -252,7 +252,7 @@ public:
 	 * When select other item, then need to de-select this one.
 	 */
 	virtual void SetSelectionState(const bool& InSelect);
-	virtual bool OnPointerClick_Implementation(ULGUIPointerEventData* eventData)override;
+	virtual bool OnPointerClick_Implementation(ULexPointerEventData* eventData)override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Dropdown")
 	ULexText* GetTextActor()const { return Text.Get(); }

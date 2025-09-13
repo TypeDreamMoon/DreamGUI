@@ -77,7 +77,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		ELexUITextOverflowType OverflowType = ELexUITextOverflowType::VerticalOverflow;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-	ETextWrappingPolicy WrappingPolicy = ETextWrappingPolicy::AllowPerCharacterWrapping;
+	ETextWrappingPolicy WrappingPolicy = ETextWrappingPolicy::DefaultWrapping;
 	/** Use a custom material to render this text */
     UPROPERTY(EditAnywhere, Category = "LexUI")
     UMaterialInterface* OverrideMaterial = nullptr;

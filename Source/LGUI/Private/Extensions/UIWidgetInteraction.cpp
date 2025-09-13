@@ -3,10 +3,10 @@
 #include "Extensions/UIWidgetInteraction.h"
 #include "LGUI.h"
 #include "Extensions/UIWidget.h"
-#include "Event/LGUIEventSystem.h"
+#include "Event/LexEventSystem.h"
 #include "Framework/Application/SlateUser.h"
 #include "Framework/Application/SlateApplication.h"
-#include "Event/LGUIBaseRaycaster.h"
+#include "Event/LexBaseRaycaster.h"
 
 #define LOCTEXT_NAMESPACE "UIWidgetInteraction"
 

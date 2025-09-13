@@ -3,7 +3,7 @@
 #include "Interaction/UIDropdownComponent.h"
 
 #include "LGUI.h"
-#include "Event/LGUIEventSystem.h"
+#include "Event/LexEventSystem.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexCanvas.h"
 #include "LGUIBPLibrary.h"
@@ -473,16 +473,16 @@ void UUIDropdownComponent::ApplyValueToUI()
 		}
 	}
 }
-bool UUIDropdownComponent::OnPointerClick_Implementation(ULGUIPointerEventData* eventData)
+bool UUIDropdownComponent::OnPointerClick_Implementation(ULexPointerEventData* eventData)
 {
 	Show();
 	return AllowEventBubbleUp;
 }
-bool UUIDropdownComponent::OnPointerDeselect_Implementation(ULGUIBaseEventData* eventData)
+bool UUIDropdownComponent::OnPointerDeselect_Implementation(ULexBaseEventData* eventData)
 {
-	if (IsValid(eventData->selectedComponent))
+	if (IsValid(eventData->SelectedComponent))
 	{
-		if (!eventData->selectedComponent->IsAttachedTo(this->GetLexWidget()))
+		if (!eventData->SelectedComponent->IsAttachedTo(this->GetLexWidget()))
 		{
 			Hide();
 		}
@@ -589,7 +589,7 @@ void UUIDropdownItemComponent::SetSelectionState(const bool& InSelect)
 		ReceiveSetSelectionState(InSelect);
 	}
 }
-bool UUIDropdownItemComponent::OnPointerClick_Implementation(ULGUIPointerEventData* eventData)
+bool UUIDropdownItemComponent::OnPointerClick_Implementation(ULexPointerEventData* eventData)
 {
 	return false;
 }

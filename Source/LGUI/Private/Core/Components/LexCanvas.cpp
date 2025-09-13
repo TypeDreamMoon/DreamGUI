@@ -78,6 +78,16 @@ void ULexCanvas::BeginPlay()
 	MarkCanvasUpdate(true, true, true, true);
 
 	bNeedToSortRenderPriority = true;
+
+	if (this->IsRootCanvas())
+	{
+		if (this->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay
+				|| this->GetRenderMode() == ELexRenderMode::RenderTarget
+				)
+		{
+			OnViewportResized(nullptr, 0);
+		}
+	}
 }
 void ULexCanvas::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {

@@ -4,12 +4,12 @@
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexCanvas.h"
 #include "LGUI.h"
-#include "Event/LGUIWorldSpaceRaycaster.h"
+#include "Event/LexWorldSpaceRaycaster.h"
 #include "Extensions/LGUIRenderTargetGeometrySource.h"
-#include "Event/LGUIScreenSpaceRaycaster.h"
+#include "Event/LexScreenSpaceRaycaster.h"
 #include "Engine/World.h"
-#include "Event/LGUIEventSystem.h"
-#include "Event/InputModule/LGUI_PointerInputModule.h"
+#include "Event/LexEventSystem.h"
+#include "Event/InputModule/LexPointerInputModule.h"
 
 #define LOCTEXT_NAMESPACE "LGUIRenderTargetInteraction"
 
@@ -22,7 +22,7 @@ ULGUIRenderTargetInteraction::ULGUIRenderTargetInteraction()
 void ULGUIRenderTargetInteraction::BeginPlay()
 {
 	Super::BeginPlay();
-	PointerEventData = NewObject<ULGUIPointerEventData>(this);
+	PointerEventData = NewObject<ULexPointerEventData>(this);
 	PointerEventData->pointerID = -1;//make it -1, different from LGUIEventSystem created
 	RenderModeArray = { ELexRenderMode::RenderTarget };
 }
@@ -59,11 +59,11 @@ void ULGUIRenderTargetInteraction::TickComponent(float DeltaTime, ELevelTick Tic
 	if (!InputPointerEventData.IsValid())
 		return;
 
-	FLGUIHitResult hitResultContainer;
+	FLexUIHitResult hitResultContainer;
 	bool lineTraceHitSomething = LineTrace(hitResultContainer);
 	bool resultHitSomething = false;
 	FHitResult hitResult;
-	ULGUI_PointerInputModule::ProcessPointerEvent(nullptr, PointerEventData, lineTraceHitSomething, hitResultContainer, resultHitSomething, hitResult);
+	ULexPointerInputModule::ProcessPointerEvent(nullptr, PointerEventData, lineTraceHitSomething, hitResultContainer, resultHitSomething, hitResult);
 }
 
 void ULGUIRenderTargetInteraction::ActivateRaycaster()
@@ -75,13 +75,13 @@ void ULGUIRenderTargetInteraction::DeactivateRaycaster()
 	
 }
 
-bool ULGUIRenderTargetInteraction::LineTrace(FLGUIHitResult& hitResult)
+bool ULGUIRenderTargetInteraction::LineTrace(FLexUIHitResult& hitResult)
 {
 	if (InputPointerEventData->raycaster == nullptr)return false;
 	auto RayOrigin = InputPointerEventData->raycaster->GetRayOrigin();
 	auto RayDirection = InputPointerEventData->raycaster->GetRayDirection();
 
-	auto RayEnd = RayOrigin + RayDirection * rayLength;
+	auto RayEnd = RayOrigin + RayDirection * RayLength;
 
 	FVector2D HitUV;
 	if (ILGUIRenderTargetInteractionSourceInterface::Execute_PerformLineTrace(LineTraceSource, InputPointerEventData->faceIndex, InputPointerEventData->worldPoint, RayOrigin, RayEnd, HitUV))
@@ -91,13 +91,13 @@ bool ULGUIRenderTargetInteraction::LineTrace(FLGUIHitResult& hitResult)
 		PointerEventData->pointerPosition = FVector(mousePos01 * TargetCanvas->GetViewportSize(), 0);
 
 		FVector OutRayOrigin, OutRayDirection;
-		ULGUIScreenSpaceRaycaster::DeprojectViewPointToWorld(ViewProjectionMatrix, mousePos01, OutRayOrigin, OutRayDirection);
+		ULexScreenSpaceRaycaster::DeprojectViewPointToWorld(ViewProjectionMatrix, mousePos01, OutRayOrigin, OutRayDirection);
 
 		FHitResult hitResultItem;
 		TArray<USceneComponent*> hoverArray;//temp array for store hover components
 		if (this->Raycast(PointerEventData, OutRayOrigin, OutRayDirection, RayEnd, hitResultItem, hoverArray))
 		{
-			FLGUIHitResult LGUIHitResult;
+			FLexUIHitResult LGUIHitResult;
 			LGUIHitResult.hitResult = hitResultItem;
 			LGUIHitResult.eventFireType = this->GetEventFireType();
 			LGUIHitResult.raycaster = this;
@@ -122,29 +122,29 @@ bool ULGUIRenderTargetInteraction::ShouldSkipCanvas(class ULexCanvas* UICanvas)
 	}
 	return true;
 }
-bool ULGUIRenderTargetInteraction::ShouldStartDrag(ULGUIPointerEventData* InPointerEventData)
+bool ULGUIRenderTargetInteraction::ShouldStartDrag(ULexPointerEventData* InPointerEventData)
 {
 	if (ShouldStartDrag_HoldToDrag(InPointerEventData))return true;
 	FVector2D mousePos = FVector2D(InPointerEventData->pointerPosition);
 	FVector2D pressMousePos = FVector2D(InPointerEventData->pressPointerPosition);
-	return FVector2D::DistSquared(pressMousePos, mousePos) > clickThresholdSquare;
+	return FVector2D::DistSquared(pressMousePos, mousePos) > ClickThresholdSquare;
 }
-bool ULGUIRenderTargetInteraction::Raycast(ULGUIPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, FHitResult& OutHitResult, TArray<USceneComponent*>& OutHoverArray)
+bool ULGUIRenderTargetInteraction::Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, FHitResult& OutHitResult, TArray<USceneComponent*>& OutHoverArray)
 {
 	return Super::RaycastUI(InPointerEventData, RenderModeArray, OutRayOrigin, OutRayDirection, OutRayEnd, OutHitResult, OutHoverArray);
 }
 
 
-bool ULGUIRenderTargetInteraction::OnPointerEnter_Implementation(ULGUIPointerEventData* eventData)
+bool ULGUIRenderTargetInteraction::OnPointerEnter_Implementation(ULexPointerEventData* eventData)
 {
 	InputPointerEventData = eventData;
 	return bAllowEventBubbleUp;
 }
-bool ULGUIRenderTargetInteraction::OnPointerExit_Implementation(ULGUIPointerEventData* eventData)
+bool ULGUIRenderTargetInteraction::OnPointerExit_Implementation(ULexPointerEventData* eventData)
 {
 	return bAllowEventBubbleUp;
 }
-bool ULGUIRenderTargetInteraction::OnPointerDown_Implementation(ULGUIPointerEventData* eventData)
+bool ULGUIRenderTargetInteraction::OnPointerDown_Implementation(ULexPointerEventData* eventData)
 {
 	PointerEventData->pressPointerPosition = PointerEventData->pointerPosition;
 	PointerEventData->pressTime = GetWorld()->TimeSeconds;
@@ -152,13 +152,13 @@ bool ULGUIRenderTargetInteraction::OnPointerDown_Implementation(ULGUIPointerEven
 	PointerEventData->mouseButtonType = eventData->mouseButtonType;
 	return bAllowEventBubbleUp;
 }
-bool ULGUIRenderTargetInteraction::OnPointerUp_Implementation(ULGUIPointerEventData* eventData)
+bool ULGUIRenderTargetInteraction::OnPointerUp_Implementation(ULexPointerEventData* eventData)
 {
 	PointerEventData->releaseTime = GetWorld()->TimeSeconds;
 	PointerEventData->nowIsTriggerPressed = false;
 	return bAllowEventBubbleUp;
 }
-bool ULGUIRenderTargetInteraction::OnPointerScroll_Implementation(ULGUIPointerEventData* eventData)
+bool ULGUIRenderTargetInteraction::OnPointerScroll_Implementation(ULexPointerEventData* eventData)
 {
 	auto inAxisValue = eventData->scrollAxisValue;
 	if (IsValid(PointerEventData->enterComponent))
@@ -166,7 +166,7 @@ bool ULGUIRenderTargetInteraction::OnPointerScroll_Implementation(ULGUIPointerEv
 		if (inAxisValue != FVector2D::ZeroVector || PointerEventData->scrollAxisValue != inAxisValue)
 		{
 			PointerEventData->scrollAxisValue = inAxisValue;
-			ULGUIEventSystem::ExecuteEvent_OnPointerScroll(PointerEventData->enterComponent, PointerEventData, PointerEventData->enterComponentEventFireType, true);
+			ULexEventSystem::ExecuteEvent_OnPointerScroll(PointerEventData->enterComponent, PointerEventData, PointerEventData->enterComponentEventFireType, true);
 		}
 	}
 	return bAllowEventBubbleUp;

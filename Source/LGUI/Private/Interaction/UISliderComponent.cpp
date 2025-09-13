@@ -180,45 +180,45 @@ void UUISliderComponent::UnregisterSlideEvent(const FLGUIDelegateHandleWrapper &
     OnValueChangedCPP.Remove(InDelegateHandle.DelegateHandle);
 }
 
-bool UUISliderComponent::OnPointerDown_Implementation(ULGUIPointerEventData *eventData)
+bool UUISliderComponent::OnPointerDown_Implementation(ULexPointerEventData *eventData)
 {
     Super::OnPointerDown_Implementation(eventData);
-    if (eventData->inputType == ELGUIPointerInputType::Pointer)
+    if (eventData->inputType == ELexUIPointerInputType::Pointer)
     {
         CalculateInputValue(eventData);
     }
     return AllowEventBubbleUp;
 }
-bool UUISliderComponent::OnPointerUp_Implementation(ULGUIPointerEventData *eventData)
+bool UUISliderComponent::OnPointerUp_Implementation(ULexPointerEventData *eventData)
 {
     Super::OnPointerUp_Implementation(eventData);
     return AllowEventBubbleUp;
 }
-bool UUISliderComponent::OnPointerBeginDrag_Implementation(ULGUIPointerEventData *eventData)
+bool UUISliderComponent::OnPointerBeginDrag_Implementation(ULexPointerEventData *eventData)
 {
     CalculateInputValue(eventData);
     return AllowEventBubbleUp;
 }
-bool UUISliderComponent::OnPointerDrag_Implementation(ULGUIPointerEventData *eventData)
+bool UUISliderComponent::OnPointerDrag_Implementation(ULexPointerEventData *eventData)
 {
     CalculateInputValue(eventData);
     return AllowEventBubbleUp;
 }
-bool UUISliderComponent::OnPointerEndDrag_Implementation(ULGUIPointerEventData *eventData)
+bool UUISliderComponent::OnPointerEndDrag_Implementation(ULexPointerEventData *eventData)
 {
     CalculateInputValue(eventData);
     return AllowEventBubbleUp;
 }
-bool UUISliderComponent::OnNavigate_Implementation(ELGUINavigationDirection direction, TScriptInterface<ILGUINavigationInterface>& result)
+bool UUISliderComponent::OnNavigate_Implementation(ELexUINavigationDirection direction, TScriptInterface<ILexNavigationInterface>& result)
 {
     float valueIntervalMultiply = 0.0f;
     if (
-        (DirectionType == UISliderDirectionType::LeftToRight && direction == ELGUINavigationDirection::Left) || (DirectionType == UISliderDirectionType::RightToLeft && direction == ELGUINavigationDirection::Right) || (DirectionType == UISliderDirectionType::BottomToTop && direction == ELGUINavigationDirection::Down) || (DirectionType == UISliderDirectionType::TopToBottom && direction == ELGUINavigationDirection::Up))
+        (DirectionType == UISliderDirectionType::LeftToRight && direction == ELexUINavigationDirection::Left) || (DirectionType == UISliderDirectionType::RightToLeft && direction == ELexUINavigationDirection::Right) || (DirectionType == UISliderDirectionType::BottomToTop && direction == ELexUINavigationDirection::Down) || (DirectionType == UISliderDirectionType::TopToBottom && direction == ELexUINavigationDirection::Up))
     {
         valueIntervalMultiply = -NavigationChangeInterval;
     }
     else if (
-        (DirectionType == UISliderDirectionType::LeftToRight && direction == ELGUINavigationDirection::Right) || (DirectionType == UISliderDirectionType::RightToLeft && direction == ELGUINavigationDirection::Left) || (DirectionType == UISliderDirectionType::BottomToTop && direction == ELGUINavigationDirection::Up) || (DirectionType == UISliderDirectionType::TopToBottom && direction == ELGUINavigationDirection::Down))
+        (DirectionType == UISliderDirectionType::LeftToRight && direction == ELexUINavigationDirection::Right) || (DirectionType == UISliderDirectionType::RightToLeft && direction == ELexUINavigationDirection::Left) || (DirectionType == UISliderDirectionType::BottomToTop && direction == ELexUINavigationDirection::Up) || (DirectionType == UISliderDirectionType::TopToBottom && direction == ELexUINavigationDirection::Down))
     {
         valueIntervalMultiply = NavigationChangeInterval;
     }
@@ -236,7 +236,7 @@ bool UUISliderComponent::OnNavigate_Implementation(ELGUINavigationDirection dire
     }
 }
 
-void UUISliderComponent::CalculateInputValue(ULGUIPointerEventData *eventData)
+void UUISliderComponent::CalculateInputValue(ULexPointerEventData *eventData)
 {
     ULexWidget *mainUIItem = nullptr;
     ULexWidget *areaUIItem = nullptr;

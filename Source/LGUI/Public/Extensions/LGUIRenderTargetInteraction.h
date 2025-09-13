@@ -4,14 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
-#include "Event/LGUIBaseRaycaster.h"
-#include "Event/Interface/LGUIPointerEnterExitInterface.h"
-#include "Event/Interface/LGUIPointerDownUpInterface.h"
-#include "Event/Interface/LGUIPointerScrollInterface.h"
+#include "Event/LexBaseRaycaster.h"
+#include "Event/Interface/LexPointerEnterExitInterface.h"
+#include "Event/Interface/LexPointerDownUpInterface.h"
+#include "Event/Interface/LexPointerScrollInterface.h"
 #include "LGUIRenderTargetInteraction.generated.h"
 
 class ULexCanvas;
-class ULGUIEventSystem;
+class ULexEventSystem;
 enum class ELexRenderMode :uint8;
 
 /**
@@ -40,10 +40,10 @@ public:
  * This component should be placed on a actor which have a ILGUIRenderTargetInteractionSourceInterface component.
  */
 UCLASS(ClassGroup = LGUI, meta = (BlueprintSpawnableComponent), Blueprintable)
-class LGUI_API ULGUIRenderTargetInteraction : public ULGUIBaseRaycaster
-	, public ILGUIPointerEnterExitInterface
-	, public ILGUIPointerDownUpInterface
-	, public ILGUIPointerScrollInterface
+class LGUI_API ULGUIRenderTargetInteraction : public ULexBaseRaycaster
+	, public ILexPointerEnterExitInterface
+	, public ILexPointerDownUpInterface
+	, public ILexPointerScrollInterface
 {
 	GENERATED_BODY()
 	
@@ -62,20 +62,20 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Transient, Category = LGUI, AdvancedDisplay) TWeakObjectPtr<ULexCanvas> TargetCanvas = nullptr;
 	UPROPERTY(VisibleAnywhere, Transient, Category = LGUI, AdvancedDisplay) TObjectPtr<UActorComponent> LineTraceSource = nullptr;
-	UPROPERTY(VisibleAnywhere, Transient, Category = LGUI, AdvancedDisplay) TObjectPtr<ULGUIPointerEventData> PointerEventData = nullptr;
-	TWeakObjectPtr<ULGUIPointerEventData> InputPointerEventData = nullptr;
+	UPROPERTY(VisibleAnywhere, Transient, Category = LGUI, AdvancedDisplay) TObjectPtr<ULexPointerEventData> PointerEventData = nullptr;
+	TWeakObjectPtr<ULexPointerEventData> InputPointerEventData = nullptr;
 
 	TArray<ELexRenderMode> RenderModeArray;
 	virtual bool ShouldSkipCanvas(class ULexCanvas* UICanvas)override;
-	virtual bool GenerateRay(ULGUIPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection)override { return true; }
-	virtual bool ShouldStartDrag(ULGUIPointerEventData* InPointerEventData)override;
-	virtual bool Raycast(ULGUIPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, FHitResult& OutHitResult, TArray<USceneComponent*>& OutHoverArray)override;
+	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection)override { return true; }
+	virtual bool ShouldStartDrag(ULexPointerEventData* InPointerEventData)override;
+	virtual bool Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, FHitResult& OutHitResult, TArray<USceneComponent*>& OutHoverArray)override;
 
-	virtual bool OnPointerEnter_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerExit_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerDown_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerUp_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerScroll_Implementation(ULGUIPointerEventData* eventData)override;
+	virtual bool OnPointerEnter_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerExit_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerDown_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerUp_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerScroll_Implementation(ULexPointerEventData* eventData)override;
 
-	bool LineTrace(FLGUIHitResult& hitResult);
+	bool LineTrace(FLexUIHitResult& hitResult);
 };

@@ -2,10 +2,10 @@
 
 #pragma once
 
-#include "Event/Interface/LGUIPointerEnterExitInterface.h"
-#include "Event/Interface/LGUIPointerDownUpInterface.h"
-#include "Event/Interface/LGUIPointerSelectDeselectInterface.h"
-#include "Event/Interface/LGUINavigationInterface.h"
+#include "Event/Interface/LexPointerEnterExitInterface.h"
+#include "Event/Interface/LexPointerDownUpInterface.h"
+#include "Event/Interface/LexPointerSelectDeselectInterface.h"
+#include "Event/Interface/LexNavigationInterface.h"
 #include "Core/LexUIBehaviour.h"
 #include "LGUIComponentReference.h"
 #include "Core/LexUIImageBrush.h"
@@ -145,10 +145,10 @@ class ULexUISpriteData_BaseObject;
 
 UCLASS(HideCategories = (Collision, LOD, Physics, Cooking, Rendering, Activation, Actor, Input, Lighting, Mobile), ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class LGUI_API UUISelectableComponent : public ULexUIBehaviour
-	, public ILGUIPointerEnterExitInterface
-	, public ILGUIPointerDownUpInterface
-	, public ILGUIPointerSelectDeselectInterface
-	, public ILGUINavigationInterface
+	, public ILexPointerEnterExitInterface
+	, public ILexPointerDownUpInterface
+	, public ILexPointerSelectDeselectInterface
+	, public ILexNavigationInterface
 {
 	GENERATED_BODY()
 public:
@@ -371,11 +371,11 @@ public:
 	virtual UUISelectableComponent* FindSelectableOnPrev();
 #pragma endregion
 protected:
-	virtual bool OnPointerEnter_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerExit_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerDown_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerUp_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerSelect_Implementation(ULGUIBaseEventData* eventData)override;
-	virtual bool OnPointerDeselect_Implementation(ULGUIBaseEventData* eventData)override;
-	virtual bool OnNavigate_Implementation(ELGUINavigationDirection direction, TScriptInterface<ILGUINavigationInterface>& result)override;
+	virtual bool OnPointerEnter_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerExit_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerDown_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerUp_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerSelect_Implementation(ULexBaseEventData* eventData)override;
+	virtual bool OnPointerDeselect_Implementation(ULexBaseEventData* eventData)override;
+	virtual bool OnNavigate_Implementation(ELexUINavigationDirection direction, TScriptInterface<ILexNavigationInterface>& result)override;
 };

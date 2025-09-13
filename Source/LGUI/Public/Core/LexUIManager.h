@@ -11,10 +11,10 @@ class UUIText;
 class ULexVisualBatchMesh;
 class ULexVisual;
 class ULexCanvas;
-class ULGUIBaseRaycaster;
+class ULexBaseRaycaster;
 class UUISelectableComponent;
 class ULexUIBehaviour;
-class ULGUIBaseInputModule;
+class ULexBaseInputModule;
 class ILGUILayoutInterface;
 class ULGUIPrefab;
 
@@ -122,9 +122,9 @@ private:
 		TArray<TWeakObjectPtr<ULexCanvas>> RenderTargetSpaceLexUICanvasArray;
 
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<ULGUIBaseRaycaster>> AllRaycasterArray;
+		TArray<TWeakObjectPtr<ULexBaseRaycaster>> AllRaycasterArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TWeakObjectPtr<ULGUIBaseInputModule> CurrentInputModule = nullptr;
+		TWeakObjectPtr<ULexBaseInputModule> CurrentInputModule = nullptr;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<UUISelectableComponent>> AllSelectableArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
@@ -166,13 +166,13 @@ public:
 
 	static TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> GetViewExtension(UWorld* InWorld, bool InCreateIfNotExist);
 
-	const TArray<TWeakObjectPtr<ULGUIBaseRaycaster>>& GetAllRaycasterArray(){ return AllRaycasterArray; }
-	static void AddRaycaster(ULGUIBaseRaycaster* InRaycaster);
-	static void RemoveRaycaster(ULGUIBaseRaycaster* InRaycaster);
+	const TArray<TWeakObjectPtr<ULexBaseRaycaster>>& GetAllRaycasterArray(){ return AllRaycasterArray; }
+	static void AddRaycaster(ULexBaseRaycaster* InRaycaster);
+	static void RemoveRaycaster(ULexBaseRaycaster* InRaycaster);
 
-	TWeakObjectPtr<ULGUIBaseInputModule> GetCurrentInputModule() { return CurrentInputModule; }
-	static void SetCurrentInputModule(ULGUIBaseInputModule* InInputModule);
-	static void ClearCurrentInputModule(ULGUIBaseInputModule* InInputModule);
+	TWeakObjectPtr<ULexBaseInputModule> GetCurrentInputModule() { return CurrentInputModule; }
+	static void SetCurrentInputModule(ULexBaseInputModule* InInputModule);
+	static void ClearCurrentInputModule(ULexBaseInputModule* InInputModule);
 
 	const TArray<TWeakObjectPtr<UUISelectableComponent>>& GetAllSelectableArray() { return AllSelectableArray; }
 	static void AddSelectable(UUISelectableComponent* InSelectable);

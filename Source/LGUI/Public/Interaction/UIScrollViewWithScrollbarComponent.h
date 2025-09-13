@@ -48,8 +48,8 @@ protected:
 	virtual void CalculateVerticalRange()override;
 	virtual bool CheckValidHit(USceneComponent* InHitComp)override;
 	virtual void UpdateProgress(bool InFireEvent = true)override;
-	virtual bool OnPointerDrag_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerScroll_Implementation(ULGUIPointerEventData* eventData)override;
+	virtual bool OnPointerDrag_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerScroll_Implementation(ULexPointerEventData* eventData)override;
 	UPROPERTY(Transient)TWeakObjectPtr<class UUIScrollbarComponent> HorizontalScrollbarComp = nullptr;
 	UPROPERTY(Transient)TWeakObjectPtr<class UUIScrollbarComponent> VerticalScrollbarComp = nullptr;
 	bool CheckScrollbarParameter();

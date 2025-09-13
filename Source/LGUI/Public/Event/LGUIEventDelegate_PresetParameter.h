@@ -248,13 +248,13 @@ struct LGUI_API FLGUIEventDelegate_Actor : public FLGUIEventDelegate
 		MAKE_EVENTDELEGATE_PRESETPARAM(Actor, AActor*);
 };
 
-MAKE_EVENTDELEGATE_PRESETPARAM_DELEGATE(PointerEvent, ULGUIPointerEventData*);
-DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUIEventDelegate_PointerEvent_DynamicDelegate, ULGUIPointerEventData*, value);
+MAKE_EVENTDELEGATE_PRESETPARAM_DELEGATE(PointerEvent, ULexPointerEventData*);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUIEventDelegate_PointerEvent_DynamicDelegate, ULexPointerEventData*, value);
 USTRUCT(BlueprintType)
 struct LGUI_API FLGUIEventDelegate_PointerEvent : public FLGUIEventDelegate
 {
 	GENERATED_BODY()
-		MAKE_EVENTDELEGATE_PRESETPARAM(PointerEvent, ULGUIPointerEventData*);
+		MAKE_EVENTDELEGATE_PRESETPARAM(PointerEvent, ULexPointerEventData*);
 };
 
 MAKE_EVENTDELEGATE_PRESETPARAM_DELEGATE(Class, UClass*);

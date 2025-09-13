@@ -7,7 +7,7 @@
 #include "Core/LexUIManager.h"
 #include "LTweenManager.h"
 #include "Core/Components/LexCanvas.h"
-#include "Event/LGUIEventSystem.h"
+#include "Event/LexEventSystem.h"
 #include "Core/Components/UISprite.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/LexUISettings.h"
@@ -374,43 +374,43 @@ void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 	}
 }
 
-bool UUISelectableComponent::OnPointerEnter_Implementation(ULGUIPointerEventData* eventData)
+bool UUISelectableComponent::OnPointerEnter_Implementation(ULexPointerEventData* eventData)
 {
 	IsPointerInsideThis = true;
 	CurrentSelectionState = GetSelectionState();
 	ApplySelectionState(false);
 	return AllowEventBubbleUp;
 }
-bool UUISelectableComponent::OnPointerExit_Implementation(ULGUIPointerEventData* eventData)
+bool UUISelectableComponent::OnPointerExit_Implementation(ULexPointerEventData* eventData)
 {
 	IsPointerInsideThis = false;
 	CurrentSelectionState = GetSelectionState();
 	ApplySelectionState(false);
 	return AllowEventBubbleUp;
 }
-bool UUISelectableComponent::OnPointerDown_Implementation(ULGUIPointerEventData* eventData)
+bool UUISelectableComponent::OnPointerDown_Implementation(ULexPointerEventData* eventData)
 {
 	IsPointerDown = true;
 	CurrentSelectionState = GetSelectionState();
 	ApplySelectionState(false);
-	if (auto eventSystemInstance = ULGUIEventSystem::GetLGUIEventSystemInstance(this))
+	if (auto eventSystemInstance = ULexEventSystem::GetLexEventSystemInstance(this))
 	{
 		eventSystemInstance->SetSelectComponent(GetLexWidget(), eventData, eventData->enterComponentEventFireType);
 	}
 	return AllowEventBubbleUp;
 }
-bool UUISelectableComponent::OnPointerUp_Implementation(ULGUIPointerEventData* eventData)
+bool UUISelectableComponent::OnPointerUp_Implementation(ULexPointerEventData* eventData)
 {
 	IsPointerDown = false;
 	CurrentSelectionState = GetSelectionState();
 	ApplySelectionState(false);
 	return AllowEventBubbleUp;
 }
-bool UUISelectableComponent::OnPointerSelect_Implementation(ULGUIBaseEventData* eventData)
+bool UUISelectableComponent::OnPointerSelect_Implementation(ULexBaseEventData* eventData)
 {
 	return AllowEventBubbleUp;
 }
-bool UUISelectableComponent::OnPointerDeselect_Implementation(ULGUIBaseEventData* eventData)
+bool UUISelectableComponent::OnPointerDeselect_Implementation(ULexBaseEventData* eventData)
 {
 	return AllowEventBubbleUp;
 }
@@ -516,31 +516,31 @@ bool UUISelectableComponent::IsInteractable()const
 }
 
 #pragma region Navigation
-bool UUISelectableComponent::OnNavigate_Implementation(ELGUINavigationDirection direction, TScriptInterface<ILGUINavigationInterface>& result)
+bool UUISelectableComponent::OnNavigate_Implementation(ELexUINavigationDirection direction, TScriptInterface<ILexNavigationInterface>& result)
 {
 	UUISelectableComponent* Selectable = nullptr;
 	switch (direction)
 	{
 	default:
-	case ELGUINavigationDirection::None:
+	case ELexUINavigationDirection::None:
 		return false;
 		break;
-	case ELGUINavigationDirection::Left:
+	case ELexUINavigationDirection::Left:
 		Selectable = FindSelectableOnLeft();
 		break;
-	case ELGUINavigationDirection::Right:
+	case ELexUINavigationDirection::Right:
 		Selectable = FindSelectableOnRight();
 		break;
-	case ELGUINavigationDirection::Up:
+	case ELexUINavigationDirection::Up:
 		Selectable = FindSelectableOnUp();
 		break;
-	case ELGUINavigationDirection::Down:
+	case ELexUINavigationDirection::Down:
 		Selectable = FindSelectableOnDown();
 		break;
-	case ELGUINavigationDirection::Prev:
+	case ELexUINavigationDirection::Prev:
 		Selectable = FindSelectableOnPrev();
 		break;
-	case ELGUINavigationDirection::Next:
+	case ELexUINavigationDirection::Next:
 		Selectable = FindSelectableOnNext();
 		break;
 	}

@@ -5,11 +5,11 @@
 #include "Utils/LexUIUtils.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexCanvas.h"
-#include "Event/LGUIBaseRaycaster.h"
+#include "Event/LexBaseRaycaster.h"
 #include "Engine/World.h"
 #include "Interaction/UISelectableComponent.h"
 #include "Core/LexUISettings.h"
-#include "Event/InputModule/LGUIBaseInputModule.h"
+#include "Event/InputModule/LexBaseInputModule.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexVisual.h"
 #include "Engine/Engine.h"
@@ -1459,7 +1459,7 @@ TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> ULexUIManagerWorldSubsyste
 	return nullptr;
 }
 
-void ULexUIManagerWorldSubsystem::AddRaycaster(ULGUIBaseRaycaster* InRaycaster)
+void ULexUIManagerWorldSubsystem::AddRaycaster(ULexBaseRaycaster* InRaycaster)
 {
 	if (auto Instance = GetInstance(InRaycaster->GetWorld()))
 	{
@@ -1490,13 +1490,13 @@ void ULexUIManagerWorldSubsystem::AddRaycaster(ULGUIBaseRaycaster* InRaycaster)
 
 		AllRaycasterArray.Add(InRaycaster);
 		//sort depth
-		AllRaycasterArray.Sort([](const TWeakObjectPtr<ULGUIBaseRaycaster>& A, const TWeakObjectPtr<ULGUIBaseRaycaster>& B)
+		AllRaycasterArray.Sort([](const TWeakObjectPtr<ULexBaseRaycaster>& A, const TWeakObjectPtr<ULexBaseRaycaster>& B)
 		{
 			return A->GetDepth() > B->GetDepth();
 		});
 	}
 }
-void ULexUIManagerWorldSubsystem::RemoveRaycaster(ULGUIBaseRaycaster* InRaycaster)
+void ULexUIManagerWorldSubsystem::RemoveRaycaster(ULexBaseRaycaster* InRaycaster)
 {
 	if (auto Instance = GetInstance(InRaycaster->GetWorld()))
 	{
@@ -1508,14 +1508,14 @@ void ULexUIManagerWorldSubsystem::RemoveRaycaster(ULGUIBaseRaycaster* InRaycaste
 	}
 }
 
-void ULexUIManagerWorldSubsystem::SetCurrentInputModule(ULGUIBaseInputModule* InInputModule)
+void ULexUIManagerWorldSubsystem::SetCurrentInputModule(ULexBaseInputModule* InInputModule)
 {
 	if (auto Instance = GetInstance(InInputModule->GetWorld()))
 	{
 		Instance->CurrentInputModule = InInputModule;
 	}
 }
-void ULexUIManagerWorldSubsystem::ClearCurrentInputModule(ULGUIBaseInputModule* InInputModule)
+void ULexUIManagerWorldSubsystem::ClearCurrentInputModule(ULexBaseInputModule* InInputModule)
 {
 	if (auto Instance = GetInstance(InInputModule->GetWorld()))
 	{

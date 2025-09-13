@@ -88,6 +88,9 @@ void ULexWidget::Awake_Implementation()
 
 void ULexWidget::EditorAwake_Implementation()
 {
+	//force size recalculate. solve condition: LexUITools->BasicSetup->CreateWorldSpaceUI, but size is 100x100
+	this->MarkAnchorDataChanged(true, true, true);
+	
 	CalculateWidgetActive_Recursive();
 	CalculateRaycastable_Recursive();
 	CalculateInteractable_Recursive();

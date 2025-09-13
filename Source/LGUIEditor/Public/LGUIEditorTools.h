@@ -15,7 +15,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FBeforeApplyPrefabDelegate, ULGUIPrefabHelpe
 class LGUIEDITOR_API LGUIEditorTools
 {
 private:
-	static FString PrevSavePrafabFolder;
+	static FString PrevSavePrefabFolder;
 public:
 	static FString LGUIPresetPrefabPath;
 	static FEditingPrefabChangedDelegate OnEditingPrefabChanged;
@@ -55,9 +55,9 @@ public:
 	static bool CanCopyActorReference();
 	static void CopyReference_Actor();
 	static void CreateScreenSpaceUI_BasicSetup();
-	static void CreateWorldSpaceUIUERenderer_BasicSetup();
-	static void CreateWorldSpaceUILGUIRenderer_BasicSetup();
-	static void CreatePresetEventSystem_BasicSetup();
+	static void CreateWorldSpaceUIBuiltinRenderer_BasicSetup();
+	static void CreateWorldSpaceUILexUIRenderer_BasicSetup();
+	static void CreatePresetEventSystem_BasicSetup(bool WorldSpace);
 	static bool CreateTraceChannel_BasicSetup(ETraceTypeQuery& OutTraceTypeQuery);
 	static void AttachComponentToSelectedActor(TSubclassOf<UActorComponent> InComponentClass);
 	static UWorld* GetWorldFromSelection();

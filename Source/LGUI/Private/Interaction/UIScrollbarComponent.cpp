@@ -154,10 +154,10 @@ void UUIScrollbarComponent::UnregisterSlideEvent(const FLGUIDelegateHandleWrappe
     OnValueChangedCPP.Remove(InDelegateHandle.DelegateHandle);
 }
 
-bool UUIScrollbarComponent::OnPointerDown_Implementation(ULGUIPointerEventData* eventData)
+bool UUIScrollbarComponent::OnPointerDown_Implementation(ULexPointerEventData* eventData)
 {
     Super::OnPointerDown_Implementation(eventData);
-    if (eventData->inputType == ELGUIPointerInputType::Pointer)
+    if (eventData->inputType == ELexUIPointerInputType::Pointer)
     {
         if (CheckHandle())
         {
@@ -235,37 +235,37 @@ bool UUIScrollbarComponent::OnPointerDown_Implementation(ULGUIPointerEventData* 
     }
     return AllowEventBubbleUp;
 }
-bool UUIScrollbarComponent::OnPointerUp_Implementation(ULGUIPointerEventData *eventData)
+bool UUIScrollbarComponent::OnPointerUp_Implementation(ULexPointerEventData *eventData)
 {
     Super::OnPointerUp_Implementation(eventData);
     return AllowEventBubbleUp;
 }
-bool UUIScrollbarComponent::OnPointerBeginDrag_Implementation(ULGUIPointerEventData *eventData)
+bool UUIScrollbarComponent::OnPointerBeginDrag_Implementation(ULexPointerEventData *eventData)
 {
     PressValue = Value;
     CalculateInputValue(eventData);
     return AllowEventBubbleUp;
 }
-bool UUIScrollbarComponent::OnPointerDrag_Implementation(ULGUIPointerEventData *eventData)
+bool UUIScrollbarComponent::OnPointerDrag_Implementation(ULexPointerEventData *eventData)
 {
     CalculateInputValue(eventData);
     return AllowEventBubbleUp;
 }
-bool UUIScrollbarComponent::OnPointerEndDrag_Implementation(ULGUIPointerEventData *eventData)
+bool UUIScrollbarComponent::OnPointerEndDrag_Implementation(ULexPointerEventData *eventData)
 {
     CalculateInputValue(eventData);
     return AllowEventBubbleUp;
 }
-bool UUIScrollbarComponent::OnNavigate_Implementation(ELGUINavigationDirection direction, TScriptInterface<ILGUINavigationInterface>& result)
+bool UUIScrollbarComponent::OnNavigate_Implementation(ELexUINavigationDirection direction, TScriptInterface<ILexNavigationInterface>& result)
 {
     float valueIntervalMultiply = 0.0f;
     if (
-        (DirectionType == UIScrollbarDirectionType::LeftToRight && direction == ELGUINavigationDirection::Left) || (DirectionType == UIScrollbarDirectionType::RightToLeft && direction == ELGUINavigationDirection::Right) || (DirectionType == UIScrollbarDirectionType::BottomToTop && direction == ELGUINavigationDirection::Down) || (DirectionType == UIScrollbarDirectionType::TopToBottom && direction == ELGUINavigationDirection::Up))
+        (DirectionType == UIScrollbarDirectionType::LeftToRight && direction == ELexUINavigationDirection::Left) || (DirectionType == UIScrollbarDirectionType::RightToLeft && direction == ELexUINavigationDirection::Right) || (DirectionType == UIScrollbarDirectionType::BottomToTop && direction == ELexUINavigationDirection::Down) || (DirectionType == UIScrollbarDirectionType::TopToBottom && direction == ELexUINavigationDirection::Up))
     {
         valueIntervalMultiply = -NavigationChangeInterval;
     }
     else if (
-        (DirectionType == UIScrollbarDirectionType::LeftToRight && direction == ELGUINavigationDirection::Right) || (DirectionType == UIScrollbarDirectionType::RightToLeft && direction == ELGUINavigationDirection::Left) || (DirectionType == UIScrollbarDirectionType::BottomToTop && direction == ELGUINavigationDirection::Up) || (DirectionType == UIScrollbarDirectionType::TopToBottom && direction == ELGUINavigationDirection::Down))
+        (DirectionType == UIScrollbarDirectionType::LeftToRight && direction == ELexUINavigationDirection::Right) || (DirectionType == UIScrollbarDirectionType::RightToLeft && direction == ELexUINavigationDirection::Left) || (DirectionType == UIScrollbarDirectionType::BottomToTop && direction == ELexUINavigationDirection::Up) || (DirectionType == UIScrollbarDirectionType::TopToBottom && direction == ELexUINavigationDirection::Down))
     {
         valueIntervalMultiply = NavigationChangeInterval;
     }
@@ -283,7 +283,7 @@ bool UUIScrollbarComponent::OnNavigate_Implementation(ELGUINavigationDirection d
     }
 }
 
-void UUIScrollbarComponent::CalculateInputValue(ULGUIPointerEventData *eventData)
+void UUIScrollbarComponent::CalculateInputValue(ULexPointerEventData *eventData)
 {
     if (CheckHandle())
     {

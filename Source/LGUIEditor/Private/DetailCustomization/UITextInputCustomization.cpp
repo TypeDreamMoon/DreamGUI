@@ -35,28 +35,28 @@ void FUITextInputCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 
 	auto InputTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUITextInputComponent, InputType));
 	InputTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {DetailBuilder.ForceRefreshDetails(); }));
-	ELGUITextInputType InputType;
+	ELexUITextInputType InputType;
 	InputTypeHandle->GetValue(*(uint8*)&InputType);
-	if (InputType != ELGUITextInputType::Custom)
+	if (InputType != ELexUITextInputType::Custom)
 	{
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UUITextInputComponent, CustomValidation));
 	}
 	auto DisplayTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUITextInputComponent, DisplayType));
 	DisplayTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {DetailBuilder.ForceRefreshDetails(); }));
-	ELGUITextInputDisplayType DisplayType;
+	ELexUITextInputDisplayType DisplayType;
 	DisplayTypeHandle->GetValue(*(uint8*)&DisplayType);
 	switch (DisplayType)
 	{
-	case ELGUITextInputDisplayType::Standard:
+	case ELexUITextInputDisplayType::Standard:
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UUITextInputComponent, PasswordChar));
 		break;
-	case ELGUITextInputDisplayType::Password:
+	case ELexUITextInputDisplayType::Password:
 		break;
 	}
 
 	auto OverflowTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUITextInputComponent, OverflowType));
 	OverflowTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {DetailBuilder.ForceRefreshDetails(); }));
-	ELGUITextInputOverflowType OverflowType;
+	ELexUITextInputOverflowType OverflowType;
 	OverflowTypeHandle->GetValue(*(uint8*)&OverflowType);
 	auto AllowMultilineHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUITextInputComponent, bAllowMultiLine));
 	AllowMultilineHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {DetailBuilder.ForceRefreshDetails(); }));
@@ -64,11 +64,11 @@ void FUITextInputCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	AllowMultilineHandle->GetValue(bAllowMultiLine);
 	switch (OverflowType)
 	{
-	case ELGUITextInputOverflowType::ClampContent:
+	case ELexUITextInputOverflowType::ClampContent:
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UUITextInputComponent, MaxLineCount));
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UUITextInputComponent, MaxLineWidth));
 		break;
-	case ELGUITextInputOverflowType::OverflowToMax:
+	case ELexUITextInputOverflowType::OverflowToMax:
 		if (bAllowMultiLine)
 		{
 			DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UUITextInputComponent, MaxLineWidth));

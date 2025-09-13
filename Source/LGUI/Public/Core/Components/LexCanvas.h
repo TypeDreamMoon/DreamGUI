@@ -539,44 +539,44 @@ public:
 		void SetDefaultMeshType(TSubclassOf<ULexUIMeshComponent> InValue);
 
 #pragma region CanvasScaler
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	TEnumAsByte<ECameraProjectionMode::Type> GetProjectionType()const { return ProjectionType; }
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	float GetFieldOfView()const { return FieldOfView; }
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	float GetNearClipPlane()const { return NearClipPlane; }
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	float GetFarClipPlane()const { return FarClipPlane; }
 
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	void SetProjectionType(TEnumAsByte<ECameraProjectionMode::Type> Value);
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	void SetFieldOfView(float Value);
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	void SetNearClipPlane(float Value);
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	void SetFarClipPlane(float Value);
 
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	ELexCanvasScaleMode GetScaleMode() { return ScaleMode; }
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	FVector2D GetReferenceResolution() { return ReferenceResolution; }
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	float GetMatchFromWidthToHeight() { return MatchFromWidthToHeight; }
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	ELexCanvasScreenMatchMode GetScreenMatchMode() { return ScreenMatchMode; }
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	ULexCanvasCustomScale* GetCustomScale()const { return CustomScale; }
 
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	void SetScaleMode(ELexCanvasScaleMode Value);
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	void SetReferenceResolution(FVector2D Value);
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	void SetMatchFromWidthToHeight(float Value);
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	void SetScreenMatchMode(ELexCanvasScreenMatchMode Value);
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	void SetCustomScale(ULexCanvasCustomScale* Value);
 
 	/**
@@ -585,7 +585,7 @@ public:
 	 * @param Result LexCanvas space position, left bottom is zero point.
 	 * @return convert will fail if this LexCanvas is not root canvas
 	 */
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	bool ConvertPositionFromViewportToCanvas(const FVector2D& InPosition, FVector2D& Result)const;
 	/**
 	 * Convert position from LexCanvas space to viewport.
@@ -593,7 +593,7 @@ public:
 	 * @param Result in viewport, pixel unit, left top is zero point.
 	 * @return convert will fail if this LexCanvas is not root canvas
 	 */
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	bool ConvertPositionFromCanvasToViewport(const FVector2D& InPosition, FVector2D& Result)const;
 	/**
 	 * NOTE!!! This is only for screen-space-UI, don't use this for convert world space position!!!
@@ -602,14 +602,14 @@ public:
 	 * @param	OutPosition2D	2D Position in screen-space, left bottom is zero point.
 	 * @return 	convert will fail if this LexCanvas is not root canvas.
 	 */
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	bool Project3DToScreen(const FVector& Position3D, FVector2D& OutPosition2D)const;
 
 	/**
 	 * CAUTION!!! This is just a test or reference function.
 	 * Compare to built-in GameplayStatics::ProjectWorldToScreen, this function has no latency, however GameplayStatics::ProjectWorldToScreen use last frame's camera location & rotation
 	 */
-	UFUNCTION(BlueprintCallable, Category = LGUI)
+	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
 	bool ProjectWorldToScreen(class APlayerController* Player, const FVector& Position3D, FVector2D& OutPosition2D)const;
 
 private:
@@ -655,7 +655,7 @@ private:
 	/** Check if any invalid in list. Currently use in editor after undo check or rebuild. */
 	void EnsureDrawCallObjectReference();
 public:
-	/** Called from LGUIManagerActor. Update this canvas if it is a RootCanvas */
+	/** Called from LexUIManagerActor. Update this canvas if it is a RootCanvas */
 	void UpdateRootCanvas();
 	/**  */
 	void MarkNeedVerifyMaterials();

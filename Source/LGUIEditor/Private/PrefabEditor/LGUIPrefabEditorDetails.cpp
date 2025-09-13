@@ -12,6 +12,7 @@
 #include "LGUIPrefabEditor.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailsViewObjectFilter.h"
+#include "FLexWidgetDetailPropertyExtensionHandler.h"
 #include "LGUIPrefabOverrideDataViewer.h"
 #include "PrefabSystem/LGUIPrefab.h"
 #include "LGUIEditorTools.h"
@@ -47,6 +48,9 @@ void SLGUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLGU
 
     DetailsView = PropPlugin.CreateDetailView(DetailsViewArgs);
     DetailsView->SetIsPropertyReadOnlyDelegate(FIsPropertyReadOnly::CreateSP(this, &SLGUIPrefabEditorDetails::IsPropertyReadOnly));
+
+	TSharedRef<FLexWidgetDetailPropertyExtensionHandler> BindingHandler = MakeShareable(new FLexWidgetDetailPropertyExtensionHandler(PrefabEditorPtr));
+	DetailsView->SetExtensionHandler(BindingHandler);
 
 	FModuleManager::LoadModuleChecked<FSubobjectEditorModule>("SubobjectEditor");
 	SubobjectEditor = SNew(SSubobjectInstanceEditor)

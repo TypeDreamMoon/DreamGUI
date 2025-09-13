@@ -2,10 +2,10 @@
 
 #pragma once
 
-#include "Event/Interface/LGUIPointerClickInterface.h"
+#include "Event/Interface/LexPointerClickInterface.h"
 #include "UISelectableComponent.h"
 #include "Event/LGUIEventDelegate.h"
-#include "Event/LGUIDelegateDeclaration.h"
+#include "Event/LexDelegateDeclaration.h"
 #include "LGUIDelegateHandleWrapper.h"
 #include "UIToggleComponent.generated.h"
 
@@ -14,7 +14,7 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FUIToggleValueChangedDelegate, bool, Value);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIToggleValueChangedEvent, bool, Value);
 
 UCLASS(ClassGroup = LGUI, Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIToggleComponent : public UUISelectableComponent, public ILGUIPointerClickInterface
+class LGUI_API UUIToggleComponent : public UUISelectableComponent, public ILexPointerClickInterface
 {
 	GENERATED_BODY()
 
@@ -71,7 +71,7 @@ protected:
 
 	void SetValue(bool Value, bool SendCallback);
 	void ApplyValueToUI(bool ImmediateSet);
-	virtual bool OnPointerClick_Implementation(ULGUIPointerEventData* eventData)override;
+	virtual bool OnPointerClick_Implementation(ULexPointerEventData* eventData)override;
 public:
 	UPROPERTY(BlueprintAssignable, Category = "LGUI-Toggle", DisplayName="OnValueChanged")
 	FUIToggleValueChangedEvent OnValueChangedBP;
