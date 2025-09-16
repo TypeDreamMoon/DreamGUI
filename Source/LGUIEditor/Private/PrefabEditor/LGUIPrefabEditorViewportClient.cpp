@@ -48,6 +48,7 @@
 #include "HModel.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "LGUIPrefabViewportClickHandlers.h"
+#include "Core/Components/LexWidget.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditorViewportClient"
 
@@ -352,6 +353,10 @@ void FLGUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy* 
 	if (ClickHitActor != nullptr)
 	{
 		LGUIPrefabViewportClickHandlers::ClickActor(this, ClickHitActor, Click, true);
+		if (auto LexWidget = Cast<ULexWidget>(ClickHitActor->GetRootComponent()))
+		{
+			PrefabEditorPtr.Pin()->SelectWidgets({LexWidget}, Click.IsControlDown());
+		}
 		return;
 	}
 

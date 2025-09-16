@@ -11,6 +11,7 @@
 #include "Core/Components/UISprite.h"
 #include "Core/Components/UITextureBase.h"
 #include "Core/Components/UITexture.h"
+#include "Core/Components/LexImage.h"
 #include "Core/Components/LexRectBlock.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexText.h"

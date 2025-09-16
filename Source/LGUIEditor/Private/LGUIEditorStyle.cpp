@@ -48,8 +48,7 @@ TSharedRef< FSlateStyleSet > FLGUIEditorStyle::Create()
 
 	Style->Set("ClassIcon.LexWidgetActor", new IMAGE_BRUSH(TEXT("LexWidget_16x"), Icon16x16));
 
-	Style->Set("ClassThumbnail.LGUICanvas", new IMAGE_BRUSH(TEXT("LGUICanvas_40x"), Icon40x40));
-	Style->Set("ClassThumbnail.LGUICanvasScaler", new IMAGE_BRUSH(TEXT("CanvasScaler_40x"), Icon40x40));
+	Style->Set("ClassThumbnail.LexCanvas", new IMAGE_BRUSH(TEXT("LexCanvas_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.UISpriteBase", new IMAGE_BRUSH(TEXT("UISprite_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.LexText", new IMAGE_BRUSH(TEXT("LexText_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.UITexture", new IMAGE_BRUSH(TEXT("UITexture_40x"), Icon40x40));
@@ -61,17 +60,16 @@ TSharedRef< FSlateStyleSet > FLGUIEditorStyle::Create()
 	Style->Set("ClassThumbnail.UI2DLineChildrenAsPoints", new IMAGE_BRUSH(TEXT("UILineChildrenAsPoints_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.UIRing", new IMAGE_BRUSH(TEXT("UIRing_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.UITextureBase", new IMAGE_BRUSH(TEXT("UITexture_40x"), Icon40x40));
-	Style->Set("ClassThumbnail.UIPostProcessRenderable", new IMAGE_BRUSH(TEXT("UIPostProcess_40x"), Icon40x40));
-	Style->Set("ClassThumbnail.LGUILifeCycleUIBehaviour", new IMAGE_BRUSH(TEXT("LGUILifeCycleBehaviour_40x"), Icon40x40));
-	Style->Set("ClassThumbnail.LGUILifeCycleBehaviour", new IMAGE_BRUSH(TEXT("LGUILifeCycleBehaviour_40x"), Icon40x40));
+	Style->Set("ClassThumbnail.LexVisualPostProcess", new IMAGE_BRUSH(TEXT("UIPostProcess_40x"), Icon40x40));
+	Style->Set("ClassThumbnail.LexUIBehaviour", new IMAGE_BRUSH(TEXT("LexUIBehaviour_40x"), Icon40x40));
+	Style->Set("ClassThumbnail.LexUIBehaviour", new IMAGE_BRUSH(TEXT("LexUIBehaviour_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.LexRectBlock", new IMAGE_BRUSH(TEXT("LexRectBlock_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.UIWidget", new IMAGE_BRUSH(TEXT("UIWidget_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.UIRenderTarget", new IMAGE_BRUSH(TEXT("UIRenderTarget_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.UICustomMesh", new IMAGE_BRUSH(TEXT("UICustomMesh_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.LGUICustomMesh", new IMAGE_BRUSH(TEXT("UICustomMesh_40x"), Icon40x40));
 
-	Style->Set("ClassIcon.LGUICanvas", new IMAGE_BRUSH(TEXT("LGUICanvas_16x"), Icon16x16));
-	Style->Set("ClassIcon.LGUICanvasScaler", new IMAGE_BRUSH(TEXT("CanvasScaler_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexCanvas", new IMAGE_BRUSH(TEXT("LexCanvas_16x"), Icon16x16));
 	Style->Set("ClassIcon.UISpriteBase", new IMAGE_BRUSH(TEXT("UISprite_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexText", new IMAGE_BRUSH(TEXT("LexText_16x"), Icon16x16));
 	Style->Set("ClassIcon.UITexture", new IMAGE_BRUSH(TEXT("UITexture_16x"), Icon16x16));
@@ -83,19 +81,19 @@ TSharedRef< FSlateStyleSet > FLGUIEditorStyle::Create()
 	Style->Set("ClassIcon.UI2DLineChildrenAsPoints", new IMAGE_BRUSH(TEXT("UILineChildrenAsPoints_16x"), Icon16x16));
 	Style->Set("ClassIcon.UIRing", new IMAGE_BRUSH(TEXT("UIRing_16x"), Icon16x16));
 	Style->Set("ClassIcon.UITextureBase", new IMAGE_BRUSH(TEXT("UITexture_16x"), Icon16x16));
-	Style->Set("ClassIcon.UIPostProcessRenderable", new IMAGE_BRUSH(TEXT("UIPostProcess_16x"), Icon16x16));
-	Style->Set("ClassIcon.LGUILifeCycleUIBehaviour", new IMAGE_BRUSH(TEXT("LGUILifeCycleBehaviour_16x"), Icon16x16));
-	Style->Set("ClassIcon.LGUILifeCycleBehaviour", new IMAGE_BRUSH(TEXT("LGUILifeCycleBehaviour_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexVisualPostProcess", new IMAGE_BRUSH(TEXT("UIPostProcess_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexUIBehaviour", new IMAGE_BRUSH(TEXT("LexUIBehaviour_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexUIBehaviour", new IMAGE_BRUSH(TEXT("LexUIBehaviour_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexRectBlock", new IMAGE_BRUSH(TEXT("LexRectBlock_16x"), Icon16x16));
 	Style->Set("ClassIcon.UIWidget", new IMAGE_BRUSH(TEXT("UIWidget_16x"), Icon16x16));
 	Style->Set("ClassIcon.UIRenderTarget", new IMAGE_BRUSH(TEXT("UIRenderTarget_16x"), Icon16x16));
 	Style->Set("ClassIcon.UICustomMesh", new IMAGE_BRUSH(TEXT("UICustomMesh_16x"), Icon16x16));
 	Style->Set("ClassIcon.LGUICustomMesh", new IMAGE_BRUSH(TEXT("UICustomMesh_16x"), Icon16x16));
 
-	Style->Set("ClassThumbnail.LGUIEventSystemActor", new IMAGE_BRUSH(TEXT("EventSystem_40x"), Icon40x40));
-	Style->Set("ClassThumbnail.LGUIEventSystem", new IMAGE_BRUSH(TEXT("EventSystem_40x"), Icon40x40));
-	Style->Set("ClassIcon.LGUIEventSystemActor", new IMAGE_BRUSH(TEXT("EventSystem_16x"), Icon16x16));
-	Style->Set("ClassIcon.LGUIEventSystem", new IMAGE_BRUSH(TEXT("EventSystem_16x"), Icon16x16));
+	Style->Set("ClassThumbnail.LexUIEventSystemActor", new IMAGE_BRUSH(TEXT("EventSystem_40x"), Icon40x40));
+	Style->Set("ClassThumbnail.LexUIEventSystem", new IMAGE_BRUSH(TEXT("EventSystem_40x"), Icon40x40));
+	Style->Set("ClassIcon.LexUIEventSystemActor", new IMAGE_BRUSH(TEXT("EventSystem_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexUIEventSystem", new IMAGE_BRUSH(TEXT("EventSystem_16x"), Icon16x16));
 
 	Style->Set("ClassThumbnail.LGUIPrefab", new IMAGE_BRUSH(TEXT("Prefab_40x"), Icon40x40));
 	Style->Set("ClassIcon.LGUIPrefab", new IMAGE_BRUSH(TEXT("Prefab_16x"), Icon16x16));

@@ -586,10 +586,10 @@ void FLGUIEditorModule::CheckPrefabOverrideDataViewerEntry()
 	PrefabOverrideDataViewer = 
 	SNew(SLGUIPrefabOverrideDataViewer, nullptr)
 	.AfterRevertPrefab_Lambda([=, this](ULGUIPrefab* PrefabAsset) {
-		OnOutlinerSelectionChange();//force refresh
+		MarkOutlinerSelectionChange();//force refresh
 		})
 	.AfterApplyPrefab_Lambda([=, this](ULGUIPrefab* PrefabAsset) {
-		OnOutlinerSelectionChange();//force refresh
+		MarkOutlinerSelectionChange();//force refresh
 		LGUIEditorTools::RefreshLevelLoadedPrefab(PrefabAsset);
 		LGUIEditorTools::RefreshOnSubPrefabChange(PrefabAsset);
 		LGUIEditorTools::RefreshOpenedPrefabEditor(PrefabAsset);
@@ -760,7 +760,7 @@ FLGUINativeSceneOutlinerExtension* FLGUIEditorModule::GetNativeSceneOutlinerExte
 {
 	return NativeSceneOutlinerExtension;
 }
-void FLGUIEditorModule::OnOutlinerSelectionChange()
+void FLGUIEditorModule::MarkOutlinerSelectionChange()
 {
 	auto SelectedActor = LGUIEditorTools::GetFirstSelectedActor();
 	if (SelectedActor == nullptr)return;

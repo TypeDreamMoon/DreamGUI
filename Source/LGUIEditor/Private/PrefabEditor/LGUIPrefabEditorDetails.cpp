@@ -12,12 +12,13 @@
 #include "LGUIPrefabEditor.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailsViewObjectFilter.h"
-#include "FLexWidgetDetailPropertyExtensionHandler.h"
+#include "LexWidgetDetailPropertyExtensionHandler.h"
 #include "LGUIPrefabOverrideDataViewer.h"
 #include "PrefabSystem/LGUIPrefab.h"
 #include "LGUIEditorTools.h"
 #include "SSubobjectEditorModule.h"
 #include "SSubobjectInstanceEditor.h"
+#include "Core/Components/LexWidget.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditorDetailTab"
 
@@ -30,7 +31,7 @@ void SLGUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLGU
 {
 	PrefabEditorPtr = InPrefabEditor;
 
-	USelection::SelectionChangedEvent.AddRaw(this, &SLGUIPrefabEditorDetails::OnEditorSelectionChanged);
+	InPrefabEditor->OnSelectedWidgetsChanged.AddRaw(this, &SLGUIPrefabEditorDetails::OnEditorSelectionChanged);
 
     FPropertyEditorModule& PropPlugin = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
     FDetailsViewArgs DetailsViewArgs;
@@ -201,7 +202,6 @@ void SLGUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLGU
 
 SLGUIPrefabEditorDetails::~SLGUIPrefabEditorDetails()
 {
-	USelection::SelectionChangedEvent.RemoveAll(this);
 }
 
 bool SLGUIPrefabEditorDetails::IsPrefabButtonEnable()const
@@ -243,13 +243,12 @@ AActor* SLGUIPrefabEditorDetails::GetActorContext() const
 	return CachedActor.Get();
 }
 
-void SLGUIPrefabEditorDetails::OnEditorSelectionChanged(UObject* Object)
+void SLGUIPrefabEditorDetails::OnEditorSelectionChanged()
 {
-	// Make sure the selection set that changed is relevant to us
-	USelection* Selection = Cast<USelection>(Object);
-	if (Selection)
+	auto SelectedWidgets = PrefabEditorPtr.Pin()->GetSelectedWidgets();
+	if (SelectedWidgets.Num() > 0)
 	{
-		if (AActor* Actor = Selection->GetTop<AActor>())
+		if (AActor* Actor = SelectedWidgets[0]->GetOwner())
 		{
 			if (Actor->GetWorld() != PrefabEditorPtr.Pin()->GetWorld())
 			{
@@ -265,26 +264,26 @@ void SLGUIPrefabEditorDetails::OnEditorSelectionChanged(UObject* Object)
 			}
 		}
 
-		TArray<UObject*> SeletedObjectList;
-		for (int32 i = 0; i < Selection->Num(); i++)
+		TArray<UObject*> SelectedObjectList;
+		for (int32 i = 0; i < SelectedWidgets.Num(); i++)
 		{
-			UObject* SeletedObject = Selection->GetSelectedObject(i);
-			if (SeletedObject)
+			auto SelectedObject = SelectedWidgets[i];
+			if (SelectedObject.IsValid())
 			{
-				if (SeletedObject->GetWorld() != PrefabEditorPtr.Pin()->GetWorld())
+				if (SelectedObject->GetWorld() != PrefabEditorPtr.Pin()->GetWorld())
 				{
 					continue;
 				}
 
-				SeletedObjectList.Add(SeletedObject);
+				SelectedObjectList.Add(SelectedObject.Get());
 			}
 		}
 
-		if (SeletedObjectList.Num() > 0)
+		if (SelectedObjectList.Num() > 0)
 		{
 			if (DetailsView)
 			{
-				DetailsView->SetObjects(SeletedObjectList);
+				DetailsView->SetObjects(SelectedObjectList);
 			}
 		}
 	}

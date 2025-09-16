@@ -15,4 +15,5 @@ public:
 	virtual void ExtendWidgetRow(FDetailWidgetRow& InWidgetRow, const IDetailLayoutBuilder& InDetailBuilder, const UClass* InObjectClass, TSharedPtr<IPropertyHandle> PropertyHandle) override;
 private:
 	TWeakPtr<FLGUIPrefabEditor> PrefabEditorPtr;
+	TSharedPtr<SComboButton> PickerButton;
 };

@@ -29,7 +29,7 @@ public:
 private:
 	AActor* GetActorContext() const;
 	UObject* GetActorContextAsObject() const { return GetActorContext(); }
-	void OnEditorSelectionChanged(UObject* Object);
+	void OnEditorSelectionChanged();
 	void OnEditorTreeViewSelectionChanged(const TArray<FSubobjectEditorTreeNodePtrType>& SelectedNodes);
 	void OnEditorTreeViewItemDoubleClicked(const FSubobjectEditorTreeNodePtrType ClickedNode);
 

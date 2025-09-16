@@ -31,7 +31,7 @@ public:
 	TSharedRef<SWidget> MakeEditorToolsMenu(bool InitialSetup, bool ComponentAction, bool OpenWindow, bool PreviewInViewport, bool EditorCameraControl, bool Others);
 	TSharedPtr<class FUICommandList> PluginCommands;
 	TArray<TSharedPtr<class FAssetTypeActions_Base>> AssetTypeActionsArray;
-	void OnOutlinerSelectionChange();
+	void MarkOutlinerSelectionChange();
 	FLGUINativeSceneOutlinerExtension* GetNativeSceneOutlinerExtension()const;
 private:
 

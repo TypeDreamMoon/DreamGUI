@@ -2070,7 +2070,7 @@ void ULexWidget::CalculateRaycastable_Recursive()
 	LOCAL::CalculateRaycastable(this);
 }
 
-ULexWidget* ULexWidget::GetUIChild(int index)const
+ULexWidget* ULexWidget::GetUIChildByIndex(int index)const
 {
 	if (index < 0 || index >= UIChildren.Num())
 	{
@@ -2080,6 +2080,13 @@ ULexWidget* ULexWidget::GetUIChild(int index)const
 	EnsureUIChildrenSorted();
 	return UIChildren[index];
 }
+
+int ULexWidget::GetIndexOfUIChild(ULexWidget* Child) const
+{
+	EnsureUIChildrenSorted();
+	return UIChildren.IndexOfByKey(Child);
+}
+
 ULexCanvas* ULexWidget::GetRootCanvas()const
 {
 	if (RenderCanvas.IsValid())

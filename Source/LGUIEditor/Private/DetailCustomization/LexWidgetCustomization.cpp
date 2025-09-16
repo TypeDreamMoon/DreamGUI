@@ -635,11 +635,15 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		AnchorRawDataGroup.AddWidgetRow()
 		.WholeRowContent()
 		[
-			SNew(STextBlock)
-			.Text(LOCTEXT("AnchorRawDataWarning", "Normally do not edit these!"))
-			.ColorAndOpacity(FLinearColor(FColor::Yellow))
-			.AutoWrapText(true)
-			.Font(IDetailLayoutBuilder::GetDetailFont())
+			SNew(SBox)
+			.VAlign(VAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text(LOCTEXT("AnchorRawDataWarning", "Normally do not edit these!"))
+				.ColorAndOpacity(FLinearColor(FColor::Yellow))
+				.AutoWrapText(true)
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
 		]
 		;
 		auto& AnchoredPositionProperty = AnchorRawDataGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData.AnchoredPosition)));
@@ -669,20 +673,20 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	TSharedRef<FComponentTransformDetails> transformDetails = MakeShareable(new FComponentTransformDetails(TargetScriptArray, selectedActorInfo, DetailBuilder));
 	TransformCategory.AddCustomBuilder(transformDetails);
 	
-	//HierarchyIndex
+	//SiblingIndex
 	{
-		auto HierarchyIndexHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, SiblingIndex));
-		DetailBuilder.HideProperty(HierarchyIndexHandle);
-		HierarchyIndexHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
+		auto SiblingIndexHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, SiblingIndex));
+		DetailBuilder.HideProperty(SiblingIndexHandle);
+		SiblingIndexHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
 			ForceUpdateUI();
 			ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();
 			}));
-		auto hierarchyIndexWidget =
+		auto SiblingIndexWidget =
 			SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot()
 			.Padding(2, 0)
 			[
-				HierarchyIndexHandle->CreatePropertyValueWidget()
+				SiblingIndexHandle->CreatePropertyValueWidget()
 			]
 			+ SHorizontalBox::Slot()
 			.Padding(2, 0)
@@ -692,8 +696,8 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 				.ToolTipText(LOCTEXT("IncreaseHierarchyOrder_Tooltip", "Move order up"))
 				.HAlign(EHorizontalAlignment::HAlign_Center)
 				.VAlign(EVerticalAlignment::VAlign_Center)
-				.IsEnabled_Static(LGUIEditorUtils::IsEnabledOnProperty, HierarchyIndexHandle)
-				.OnClicked(this, &FLexWidgetCustomization::OnClickIncreaseOrDecreaseHierarchyIndex, true, HierarchyIndexHandle)
+				.IsEnabled_Static(LGUIEditorUtils::IsEnabledOnProperty, SiblingIndexHandle)
+				.OnClicked(this, &FLexWidgetCustomization::OnClickIncreaseOrDecreaseSiblingIndex, true, SiblingIndexHandle)
 				[
 					SNew(STextBlock)
 					.Text(LOCTEXT("IncreaseHierarchyOrder", "+"))
@@ -708,8 +712,8 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 				.ToolTipText(LOCTEXT("DecreaseHierarchyOrder_Tooltip", "Move order down"))
 				.HAlign(EHorizontalAlignment::HAlign_Center)
 				.VAlign(EVerticalAlignment::VAlign_Center)
-				.IsEnabled_Static(LGUIEditorUtils::IsEnabledOnProperty, HierarchyIndexHandle)
-				.OnClicked(this, &FLexWidgetCustomization::OnClickIncreaseOrDecreaseHierarchyIndex, false, HierarchyIndexHandle)
+				.IsEnabled_Static(LGUIEditorUtils::IsEnabledOnProperty, SiblingIndexHandle)
+				.OnClicked(this, &FLexWidgetCustomization::OnClickIncreaseOrDecreaseSiblingIndex, false, SiblingIndexHandle)
 				[
 					SNew(STextBlock)
 					.Text(LOCTEXT("DecreaseHierarchyOrder", "-"))
@@ -717,23 +721,41 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 				]
 			];
 
-		LGUICategory.AddCustomRow(LOCTEXT("HierarchyIndexManager", "HierarchyIndexManager"))
-		.CopyAction(FUIAction(
-			FExecuteAction::CreateSP(this, &FLexWidgetCustomization::OnCopyHierarchyIndex)
-		))
-		.PasteAction(FUIAction(
-			FExecuteAction::CreateSP(this, &FLexWidgetCustomization::OnPasteHierarchyIndex, HierarchyIndexHandle)
-		))
-		.NameContent()
-		[
-			HierarchyIndexHandle->CreatePropertyNameWidget()
-		]
-		.ValueContent()
-		[
-			hierarchyIndexWidget
-		]
-		.PropertyHandleList({ HierarchyIndexHandle })
-		;
+		bool bIsInsidePrefabEditor = false;
+		if (TargetScriptArray.Num() > 0 && TargetScriptArray[0].IsValid())
+		{
+			if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(TargetScriptArray[0]->GetOwner()))
+			{
+				if (PrefabHelperObject->IsInsidePrefabEditor())
+				{
+					bIsInsidePrefabEditor = true;
+				}
+			}
+		}
+		if (bIsInsidePrefabEditor)
+		{
+			LGUICategory.AddProperty(SiblingIndexHandle, EPropertyLocation::Advanced).IsEnabled(false);//not editable inside PrefabEditor, because we can drag-drop inside it
+		}
+		else
+		{
+			LGUICategory.AddCustomRow(LOCTEXT("SiblingIndexManager", "SiblingIndexManager"), true)
+			.CopyAction(FUIAction(
+				FExecuteAction::CreateSP(this, &FLexWidgetCustomization::OnCopyHierarchyIndex)
+			))
+			.PasteAction(FUIAction(
+				FExecuteAction::CreateSP(this, &FLexWidgetCustomization::OnPasteHierarchyIndex, SiblingIndexHandle)
+			))
+			.NameContent()
+			[
+				SiblingIndexHandle->CreatePropertyNameWidget()
+			]
+			.ValueContent()
+			[
+				SiblingIndexWidget
+			]
+			.PropertyHandleList({ SiblingIndexHandle })
+			;
+		}
 
 		LGUICategory.AddProperty(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, FlattenHierarchyIndex)), EPropertyLocation::Advanced);
 	}
@@ -1010,7 +1032,7 @@ EVisibility FLexWidgetCustomization::GetDisplayNameWarningVisibility()const
 	}
 }
 
-FReply FLexWidgetCustomization::OnClickIncreaseOrDecreaseHierarchyIndex(bool IncreaseOrDecrease, TSharedRef<IPropertyHandle> HierarchyIndexHandle)
+FReply FLexWidgetCustomization::OnClickIncreaseOrDecreaseSiblingIndex(bool IncreaseOrDecrease, TSharedRef<IPropertyHandle> HierarchyIndexHandle)
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return FReply::Handled();
 

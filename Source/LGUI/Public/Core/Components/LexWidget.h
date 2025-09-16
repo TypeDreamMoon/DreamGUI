@@ -334,7 +334,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		const TArray<ULexWidget*>& GetUIChildren()const { EnsureUIChildrenSorted(); return UIChildren; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		ULexWidget* GetUIChild(int index)const;
+		ULexWidget* GetUIChildByIndex(int index)const;
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	int GetIndexOfUIChild(ULexWidget* Child)const;
 	/** Get root canvas of hierarchy */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		ULexCanvas* GetRootCanvas()const;
@@ -515,7 +517,7 @@ public:
 	T* CreateNewVisual()
 	{
 		static_assert(TPointerIsConvertibleFromTo<T, const ULexVisual>::Value, "'T' template parameter to CreateNewVisual must be derived from ULexVisual");
-		return (T*)CreateNewVisual(T::GetClass());
+		return (T*)CreateNewVisual(T::StaticClass());
 	}
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
@@ -526,7 +528,7 @@ public:
 	T* CreateNewLayout()
 	{
 		static_assert(TPointerIsConvertibleFromTo<T, const ULexLayout>::Value, "'T' template parameter to CreateNewLayout must be derived from ULexLayout");
-		return (T*)CreateNewLayout(T::GetClass());
+		return (T*)CreateNewLayout(T::StaticClass());
 	}
 	
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
@@ -541,7 +543,7 @@ public:
 #pragma region SiblingIndex
 protected:
 	/** hierarchy index, hierarchy order, render order */
-	UPROPERTY(EditAnywhere, Category = LGUI)
+	UPROPERTY(EditAnywhere, Category = LGUI, AdvancedDisplay)
 		int32 SiblingIndex = INDEX_NONE;
 	UPROPERTY(Transient, VisibleAnywhere, Category = LGUI, AdvancedDisplay)
 	mutable int32 FlattenHierarchyIndex = 0;
@@ -660,6 +662,8 @@ public:
 #if WITH_EDITORONLY_DATA
 	/** This is a helper component for calculate bounds, so we can double-click to focus on this UIItem */
 	UPROPERTY(Transient, NonTransactional)TObjectPtr<class ULexWidgetEditorHelperComp> HelperComp = nullptr;//@todo: better way to replace this?
+	/** Expand children in editor */
+	UPROPERTY()bool bIsExpanded = true;
 #endif
 };
 

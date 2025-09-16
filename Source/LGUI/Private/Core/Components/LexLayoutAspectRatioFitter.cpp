@@ -96,6 +96,62 @@ void ULexLayoutAspectRatioFitter::PostEditChangeProperty(struct FPropertyChanged
 }
 #endif
 
+float ULexLayoutAspectRatioFitter::GetPreferredWidth() const
+{
+    auto Widget = GetWidget();
+    if (!Widget)return -1;
+    switch (AspectMode)
+    {
+    case ELexLayoutAspectRatioFitterMode::None:
+    case ELexLayoutAspectRatioFitterMode::WidthControlsHeight:
+        return -1;
+    case ELexLayoutAspectRatioFitterMode::HeightControlsWidth:
+        return Widget->GetHeight() * AspectRatio;
+    case ELexLayoutAspectRatioFitterMode::FitInParent:
+    case ELexLayoutAspectRatioFitterMode::EnvelopeParent:
+        auto UIParent = Widget->GetUIParent();
+        if (!UIParent)return -1;
+        auto ParentSize = UIParent->GetSize();
+        if ((ParentSize.Y * AspectRatio < ParentSize.X) ^ (AspectMode == ELexLayoutAspectRatioFitterMode::FitInParent))
+        {
+            return -1;
+        }
+        else
+        {
+            return (UIParent->GetHeight() * AspectRatio) - (UIParent->GetWidth() * (Widget->GetAnchorMax().X - Widget->GetAnchorMin().X));
+        }
+    }
+    return -1;
+}
+
+float ULexLayoutAspectRatioFitter::GetPreferredHeight() const
+{
+    auto Widget = GetWidget();
+    if (!Widget)return -1;
+    switch (AspectMode)
+    {
+    case ELexLayoutAspectRatioFitterMode::None:
+    case ELexLayoutAspectRatioFitterMode::WidthControlsHeight:
+        return -1;
+    case ELexLayoutAspectRatioFitterMode::HeightControlsWidth:
+        return Widget->GetHeight() * AspectRatio;
+    case ELexLayoutAspectRatioFitterMode::FitInParent:
+    case ELexLayoutAspectRatioFitterMode::EnvelopeParent:
+        auto UIParent = Widget->GetUIParent();
+        if (!UIParent)return -1;
+        auto ParentSize = UIParent->GetSize();
+        if ((ParentSize.Y * AspectRatio < ParentSize.X) ^ (AspectMode == ELexLayoutAspectRatioFitterMode::FitInParent))
+        {
+            return (UIParent->GetWidth() / AspectRatio) - (UIParent->GetHeight() * (Widget->GetAnchorMax().Y - Widget->GetAnchorMin().Y));
+        }
+        else
+        {
+            return -1;
+        }
+    }
+    return -1;
+}
+
 void ULexLayoutAspectRatioFitter::SetAspectMode(ELexLayoutAspectRatioFitterMode Value)
 {
     if (AspectMode != Value)

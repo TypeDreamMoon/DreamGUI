@@ -43,6 +43,8 @@ public:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
+	virtual float GetPreferredWidth()const override;
+	virtual float GetPreferredHeight()const override;
 
 	UFUNCTION(BlueprintCallable, Category = "Layout")
 	ELexLayoutAspectRatioFitterMode GetAspectMode()const{return AspectMode;}

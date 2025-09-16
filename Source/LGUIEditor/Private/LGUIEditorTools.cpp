@@ -561,7 +561,7 @@ TWeakObjectPtr<class UActorComponent> LGUIEditorTools::CopiedComponent;
 
 FString LGUIEditorTools::LGUIPresetPrefabPath = TEXT("/LGUI/Prefabs/");
 
-FString LGUIEditorTools::GetUniqueNumetricName(const FString& InPrefix, const TArray<FString>& InExistNames)
+FString LGUIEditorTools::GetUniqueNumericName(const FString& InPrefix, const TArray<FString>& InExistNames)
 {
 	auto ExtractNumetric = [](const FString& InString, int32& Num) {
 		int NumetricStringIndex = -1;
@@ -611,6 +611,63 @@ FString LGUIEditorTools::GetUniqueNumetricName(const FString& InPrefix, const TA
 		}
 	}
 	return FString::Printf(TEXT("%s_%d"), *InPrefix, MaxNumSuffix + 1);
+}
+
+FString LGUIEditorTools::GetNameForNewWidget(ULexWidget* InParentWidget, const FString& InBaseName)
+{
+	auto SiblingWidgetList = InParentWidget->GetUIChildren();
+
+	FString MaxNumericSuffixStr = TEXT("");//numeric suffix
+	auto OriginName = GetNamePrefixForCopy(InBaseName, MaxNumericSuffixStr);
+	int MaxNumericSuffixStrLength = MaxNumericSuffixStr.Len();
+	int SameNameActorCount = 0;//if actor name is same with source name, then collect it
+	for (int i = 0; i < SiblingWidgetList.Num(); i ++)//search from same level actors, and get the right suffix
+	{
+		auto WidgetItem = SiblingWidgetList[i];
+		auto WidgetItemName = WidgetItem->GetDisplayName();
+		if (WidgetItemName == OriginName)SameNameActorCount++;
+		if (OriginName.Len() == 0 || WidgetItemName.StartsWith(OriginName))
+		{
+			auto itemRightStr = WidgetItemName.Right(WidgetItemName.Len() - OriginName.Len());
+			if (!itemRightStr.IsNumeric())//if rest is not numeric
+			{
+				continue;
+			}
+			FString ItemNumericSuffixStr = itemRightStr;
+			int ItemNumeric = FCString::Atoi(*ItemNumericSuffixStr);
+			int MaxNumericSuffix = FCString::Atoi(*MaxNumericSuffixStr);
+			if (ItemNumeric > MaxNumericSuffix)
+			{
+				MaxNumericSuffix = ItemNumeric;
+				MaxNumericSuffixStr = FString::Printf(TEXT("%d"), MaxNumericSuffix);
+			}
+		}
+	}
+	FString CopiedName = OriginName;
+	if (!MaxNumericSuffixStr.IsEmpty() || SameNameActorCount > 0)
+	{
+		int MaxNumericSuffix = FCString::Atoi(*MaxNumericSuffixStr);
+		MaxNumericSuffix++;
+		FString NumericSuffixStr = FString::Printf(TEXT("%d"), MaxNumericSuffix);
+		while (NumericSuffixStr.Len() < MaxNumericSuffixStrLength)
+		{
+			NumericSuffixStr = TEXT("0") + NumericSuffixStr;
+		}
+		CopiedName += NumericSuffixStr;
+	}
+	return CopiedName;
+}
+
+FString LGUIEditorTools::GetNamePrefixForCopy(const FString& InSrcName, FString& OutNumericSuffix)
+{
+	int RightCount = 1;
+	while (RightCount <= InSrcName.Len() && InSrcName.Right(RightCount).IsNumeric())
+	{
+		RightCount++;
+	}
+	RightCount--;
+	OutNumericSuffix = InSrcName.Right(RightCount);
+	return InSrcName.Left(InSrcName.Len() - RightCount);
 }
 
 TArray<AActor*> LGUIEditorTools::GetRootActorListFromSelection(const TArray<AActor*>& selectedActors)

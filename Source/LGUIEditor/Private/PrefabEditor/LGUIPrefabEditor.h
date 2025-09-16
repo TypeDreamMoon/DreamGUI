@@ -7,6 +7,8 @@
 #include "LGUIPrefabEditorScene.h"
 #pragma once
 
+class SLexWidgetEditorHierarchyView;
+class ULexWidget;
 class ULGUIPrefab;
 class SLGUIPrefabEditorViewport;
 class SLGUIPrefabEditorDetails;
@@ -27,6 +29,9 @@ class FLGUIPrefabEditor : public FAssetEditorToolkit
 	, public FGCObject
 {
 public:
+	DECLARE_MULTICAST_DELEGATE(FOnSelectedWidgetsChanged)
+	DECLARE_MULTICAST_DELEGATE(FOnWidgetPreviewUpdated)
+	
 	FLGUIPrefabEditor();
 	~FLGUIPrefabEditor();
 
@@ -54,6 +59,10 @@ public:
 	/** FGCObject interface */
 	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
 	virtual FString GetReferencerName()const { return TEXT("LGUIPrefabEditor"); }
+
+	void SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bAppendOrToggle);
+	const TArray<TWeakObjectPtr<AActor>>& GetSelectedActors(){return SelectedActors;}
+	TArray<TWeakObjectPtr<ULexWidget>> GetSelectedWidgets();
 
 	bool CheckBeforeSaveAsset();
 
@@ -89,9 +98,14 @@ public:
 	void CloseWithoutCheckDataDirty();
 
 	ULGUIPrefabHelperObject* GetPrefabManagerObject()const { return PrefabHelperObject; }
+	AActor* GetRootAgentActor();
+	AActor* GetLoadedRootActor();
 	void ApplyPrefab();
 
-	TSharedPtr<FUICommandList> EditorCommandList;
+	/** Fires whenever the selected set of widgets changing */
+	FOnSelectedWidgetsChanged OnSelectedWidgetsChanging;
+	/** Fires whenever the selected set of widgets changes */
+	FOnSelectedWidgetsChanged OnSelectedWidgetsChanged;
 private:
 	TObjectPtr<ULGUIPrefab> PrefabBeingEdited = nullptr;
 	TObjectPtr<ULGUIPrefabHelperObject> PrefabHelperObject = nullptr;
@@ -99,9 +113,10 @@ private:
 
 	TSharedPtr<SLGUIPrefabEditorViewport> ViewportPtr;
 	TSharedPtr<SLGUIPrefabEditorDetails> DetailsPtr;
-	TSharedPtr<FLGUIPrefabEditorOutliner> OutlinerPtr;
+	TSharedPtr<SLexWidgetEditorHierarchyView> OutlinerPtr;
 	TSharedPtr<SLGUIPrefabRawDataViewer> PrefabRawDataViewer;
 
+	TArray<TWeakObjectPtr<AActor>> SelectedActors;
 	TWeakObjectPtr<AActor> CurrentSelectedActor;
 
 	FLGUIPrefabEditorScene PreviewScene;
@@ -110,6 +125,12 @@ private:
 	void BindCommands();
 	//void ExtendMenu();
 	void ExtendToolbar();
+
+	void OnCopy();
+	void OnPaste();
+	void OnCut();
+	void OnDuplicate();
+	void OnDelete();
 
 	FText GetApplyButtonStatusTooltip()const;
 	FSlateIcon GetApplyButtonStatusImage()const;

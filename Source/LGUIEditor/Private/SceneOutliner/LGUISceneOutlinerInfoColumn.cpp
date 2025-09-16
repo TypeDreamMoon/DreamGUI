@@ -77,7 +77,7 @@ namespace LGUISceneOutliner
 			.ContentPadding(FMargin(0))
 			.HasDownArrow(false)
 			.OnComboBoxOpened(FOnComboBoxOpened::CreateLambda([=]() {//@todo: make it a callback
-				FLGUIEditorModule::Get().OnOutlinerSelectionChange();
+				FLGUIEditorModule::Get().MarkOutlinerSelectionChange();
 				}))
 			.Visibility(bIsRootAgentActor ? EVisibility::HitTestInvisible : EVisibility::Visible)
 			.ButtonContent()

@@ -1,0 +1,478 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+#include "SLexWidgetEditorHierarchyView.h"
+#include "LGUIEditorModule.h"
+#include "LGUIPrefabEditor.h"
+#include "SLexWidgetEditorHierarchyViewItem.h"
+#include "SLexWidgetHierarchyPickerViewItem.h"
+#include "Widgets/Layout/SScrollBorder.h"
+#include "Widgets/Input/SSearchBox.h"
+#include "Core/Components/LexRectBlock.h"
+#include "Framework/Commands/GenericCommands.h"
+
+#define LOCTEXT_NAMESPACE "LexWidgetEditorHierarchyView"
+
+void SLexWidgetEditorHierarchyView::Construct(const FArguments& InArgs, TSharedPtr<FLGUIPrefabEditor> InManager)
+{
+	Manager = InManager;
+	bRebuildTreeRequested = false;
+	bIsUpdatingSelection = false;
+
+	// register for any objects replaced
+	FCoreUObjectDelegates::OnObjectsReplaced.AddRaw(this, &SLexWidgetEditorHierarchyView::OnObjectsReplaced);
+	
+	SearchBoxWidgetFilter = MakeShareable(new WidgetTextFilter(WidgetTextFilter::FItemToStringArray::CreateSP(this, &SLexWidgetEditorHierarchyView::GetWidgetFilterStrings)));
+
+	FilterHandler = MakeShareable(new TreeFilterHandler<TWeakObjectPtr<ULexWidget>>());
+	FilterHandler->SetFilter(SearchBoxWidgetFilter.Get());
+	FilterHandler->SetRootItems(&RootWidgets, &TreeRootWidgets);
+	FilterHandler->SetGetChildrenDelegate(TreeFilterHandler< TWeakObjectPtr<ULexWidget> >::FOnGetChildren::CreateRaw(this, &SLexWidgetEditorHierarchyView::OnGetChildren));
+
+	CommandList = MakeShareable(new FUICommandList);
+	CommandList->MapAction(
+		FGenericCommands::Get().Rename,
+		FExecuteAction::CreateSP(this, &SLexWidgetEditorHierarchyView::BeginRename),
+		FCanExecuteAction::CreateSP(this, &SLexWidgetEditorHierarchyView::CanRename)
+	);
+
+	ChildSlot
+	[
+		SNew(SVerticalBox)
+
+		+ SVerticalBox::Slot()
+		.Padding(4)
+		.AutoHeight()
+		[
+			SAssignNew(SearchBoxPtr, SSearchBox)
+			.HintText(LOCTEXT("SearchWidgets", "Search Widgets"))
+			.OnTextChanged(this, &SLexWidgetEditorHierarchyView::OnSearchChanged)
+		]
+
+		+ SVerticalBox::Slot()
+		.FillHeight(1.0f)
+		[
+			SAssignNew(TreeViewArea, SBorder)
+			.Padding(0)
+			.BorderImage( FAppStyle::GetBrush( "NoBrush" ) )
+		]
+	];
+
+	RebuildTreeView();
+
+	bRefreshRequested = true;
+	
+	InManager->OnSelectedWidgetsChanged.AddRaw(this, &SLexWidgetEditorHierarchyView::OnEditorSelectionChanged);
+}
+SLexWidgetEditorHierarchyView::~SLexWidgetEditorHierarchyView()
+{
+	if (Manager.IsValid())
+	{
+		Manager.Pin()->OnSelectedWidgetsChanged.RemoveAll(this);
+	}
+
+	FCoreUObjectDelegates::OnObjectsReplaced.RemoveAll(this);
+}
+void SLexWidgetEditorHierarchyView::Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime)
+{
+	if (bRebuildTreeRequested || bRefreshRequested)
+	{
+		if (bRebuildTreeRequested)
+		{
+			RebuildTreeView();
+		}
+
+		RefreshTree();
+
+		UpdateItemsExpansionFromModel();
+
+		OnEditorSelectionChanged();
+
+		bRefreshRequested = false;
+		bRebuildTreeRequested = false;
+	}
+}
+void SLexWidgetEditorHierarchyView::OnMouseEnter(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+
+}
+void SLexWidgetEditorHierarchyView::OnMouseLeave(const FPointerEvent& MouseEvent)
+{
+
+}
+FReply SLexWidgetEditorHierarchyView::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent)
+{
+	if (Manager.IsValid() && Manager.Pin()->GetToolkitCommands()->ProcessCommandBindings(InKeyEvent))
+	{
+		return FReply::Handled();
+	}
+	if (CommandList->ProcessCommandBindings(InKeyEvent))
+	{
+		return FReply::Handled();
+	}
+	return FReply::Unhandled();
+}
+bool SLexWidgetEditorHierarchyView::CanRename() const
+{
+	auto SelectedItems = WidgetTreeView->GetSelectedItems();
+	if (SelectedItems.Num() == 1)
+	{
+		auto ItemWidget = StaticCastSharedPtr<SLexWidgetEditorHierarchyViewItem>(WidgetTreeView->WidgetFromItem(SelectedItems[0]));
+		return ItemWidget->CanRename();
+	}
+	return false;
+}
+void SLexWidgetEditorHierarchyView::BeginRename()
+{
+	auto SelectedItems = WidgetTreeView->GetSelectedItems();
+	if (SelectedItems.Num() == 1)
+	{
+		auto ItemWidget = StaticCastSharedPtr<SLexWidgetEditorHierarchyViewItem>(WidgetTreeView->WidgetFromItem(SelectedItems[0]));
+		ItemWidget->RequestEditName();
+	}
+}
+TWeakObjectPtr<ULexWidget> SLexWidgetEditorHierarchyView::SetSelectionByNodeObject(ULexWidget* Element)
+{
+	WidgetTreeView->ClearSelection();
+	if (!Element)return nullptr;
+	struct LOCAL
+	{
+		static ULexWidget* RecursiveSearch(ULexWidget* Element, ULexWidget* Root)
+		{
+			auto& Children = Root->GetUIChildren();
+			for (auto& Item: Children)
+			{
+				if (Item == Element)
+				{
+					return Item;
+				}
+				if (auto Result = RecursiveSearch(Element, Item))
+				{
+					return Result;
+				}
+			}
+			return nullptr;
+		}
+	};
+	
+	if (auto FoundItem = LOCAL::RecursiveSearch(Element, RootWidgets[0].Get()))
+	{
+		WidgetTreeView->SetSelection(FoundItem);
+		return FoundItem;
+	}
+	return nullptr;
+}
+
+void SLexWidgetEditorHierarchyView::SetSelectionsByNodeObjects(const TArray<TWeakObjectPtr<ULexWidget>>& ElementArray)
+{
+	WidgetTreeView->ClearSelection();
+	WidgetTreeView->SetItemSelection(ElementArray, true);
+}
+
+void SLexWidgetEditorHierarchyView::ClearSelection()
+{
+	WidgetTreeView->ClearSelection();
+	RequestRefresh();
+}
+
+void SLexWidgetEditorHierarchyView::RequestRefresh()
+{
+	bRefreshRequested = true;
+}
+void SLexWidgetEditorHierarchyView::RefreshImmediately()
+{
+	RebuildTreeView();
+	RefreshTree();
+	UpdateItemsExpansionFromModel();
+}
+void SLexWidgetEditorHierarchyView::RefreshTree()
+{
+	RootWidgets.Empty();
+	if (auto RootItem = Cast<ULexWidget>(Manager.Pin()->GetLoadedRootActor()->GetRootComponent()))
+	{
+		RootWidgets.Add(RootItem);
+	}
+
+	FilterHandler->RefreshAndFilterTree();
+}
+void SLexWidgetEditorHierarchyView::RebuildTreeView()
+{
+	float OldScrollOffset = 0;
+	if (WidgetTreeView.IsValid())
+	{
+		OldScrollOffset = WidgetTreeView->GetScrollOffset();
+	}
+
+	SAssignNew(WidgetTreeView, STreeView<TWeakObjectPtr<ULexWidget>>)
+		.SelectionMode(ESelectionMode::Multi)
+		.OnGetChildren(FilterHandler.ToSharedRef(), &TreeFilterHandler< TWeakObjectPtr<ULexWidget>>::OnGetFilteredChildren)
+		.OnGenerateRow(this, &SLexWidgetEditorHierarchyView::OnGenerateRow)
+		.OnSelectionChanged(this, &SLexWidgetEditorHierarchyView::OnSelectionChanged)
+		.OnExpansionChanged(this, &SLexWidgetEditorHierarchyView::OnExpansionChanged)
+		.OnContextMenuOpening(this, &SLexWidgetEditorHierarchyView::OnContextMenuOpening)
+		.OnSetExpansionRecursive(this, &SLexWidgetEditorHierarchyView::SetItemExpansionRecursive)
+		.TreeItemsSource(&TreeRootWidgets)
+		//.OnMouseButtonClick(this, &SLexWidgetHierarchyView::WidgetHierarchy_OnMouseClick)
+		;
+
+	FilterHandler->SetTreeView(WidgetTreeView.Get());
+
+	TreeViewArea->SetContent(
+		SNew(SScrollBorder, WidgetTreeView.ToSharedRef())
+		[
+			WidgetTreeView.ToSharedRef()
+		]
+	);
+
+	// Restore the previous scroll offset
+	WidgetTreeView->SetScrollOffset(OldScrollOffset);
+}
+
+void SLexWidgetEditorHierarchyView::OnEditorSelectionChanged()
+{
+	if (!bIsUpdatingSelection)
+	{
+		WidgetTreeView->ClearSelection();
+		// if ( RootWidgets.Num() > 0 )
+		// {
+		// 	RootWidgets[0]->RefreshSelection();
+		// }
+		RestoreSelectedItems();
+
+		auto SelectedWidgets = Manager.Pin()->GetSelectedWidgets();
+		if (SelectedWidgets.Num() == 0)
+		{
+			ClearSelection();
+		}
+		else
+		{
+			TArray<TWeakObjectPtr<ULexWidget>> SelectedItems;
+			for (auto& Item: SelectedWidgets)
+			{
+				SelectedItems.Add(Item.Get());
+			}
+			SetSelectionsByNodeObjects(SelectedItems);
+		}
+	}
+}
+
+void SLexWidgetEditorHierarchyView::OnWidgetHierarchyChanged()
+{
+	bRefreshRequested = true;
+}
+
+void SLexWidgetEditorHierarchyView::OnObjectsReplaced(const TMap<UObject*, UObject*>& ReplacementMap)
+{
+	if ( !bRebuildTreeRequested )
+	{
+		bRefreshRequested = true;
+		bRebuildTreeRequested = true;
+	}
+}
+
+TSharedRef< ITableRow > SLexWidgetEditorHierarchyView::OnGenerateRow(TWeakObjectPtr<ULexWidget> InItem, const TSharedRef<STableViewBase>& OwnerTable)
+{
+	return SNew(SLexWidgetEditorHierarchyViewItem, OwnerTable, InItem, SharedThis(this), Manager.Pin())
+	.MouseEnter_Lambda([=, this] {
+	// Manager.Pin()->HoverHierarchyNode(InItem);
+		})
+	.MouseExit_Lambda([=, this] {
+	// Manager.Pin()->HoverHierarchyNode(nullptr);
+		})
+	;
+}
+void SLexWidgetEditorHierarchyView::OnSelectionChanged(TWeakObjectPtr<ULexWidget> SelectedItem, ESelectInfo::Type SelectInfo)
+{
+	if (SelectInfo != ESelectInfo::Direct)
+	{
+		bIsUpdatingSelection = true;
+
+		auto SelectedItems = WidgetTreeView->GetSelectedItems();
+
+		TSet<ULexWidget*> NewSelectedItems;
+		for (auto& Item : SelectedItems)
+		{
+			NewSelectedItems.Add(Item.Get());
+		}
+		Manager.Pin()->SelectWidgets(NewSelectedItems, false);
+
+		//TSet<FLexWidgetReference> Clear;
+		//Manager.Pin()->SelectWidgets(Clear, false);
+
+		//for (TWeakObjectPtr<ULexWidget>& Item : SelectedItems)
+		//{
+		//	Item->OnSelection();
+		//}
+
+		//if (RootWidgets.Num() > 0)
+		//{
+		//	RootWidgets[0]->RefreshSelection();
+		//}
+
+		//BlueprintEditor.Pin()->PasteDropLocation = FVector2D(0, 0);
+
+		bIsUpdatingSelection = false;
+	}
+}
+void SLexWidgetEditorHierarchyView::OnGetChildren(TWeakObjectPtr<ULexWidget> InParent, TArray< TWeakObjectPtr<ULexWidget> >& OutChildren)
+{
+	auto& Children = InParent->GetUIChildren();
+#if 1
+	OutChildren.Append(Children);
+#else
+	auto RootOwner = InParent->GetRootWidget()->GetOwner();
+	for (auto Child: Children)
+	{
+		if (Child->GetOwner() == RootOwner)
+		{
+			OutChildren.Add(Child);
+		}
+		else
+		{
+			if (Child->GetOwner()->GetWidget() == Child)
+			{
+				OutChildren.Add(Child);
+			}
+		}
+	}
+#endif
+}
+void SLexWidgetEditorHierarchyView::GetWidgetFilterStrings(TWeakObjectPtr<ULexWidget> Item, TArray<FString>& OutStrings)
+{
+	OutStrings.Add(Item->GetDisplayName());
+}
+void SLexWidgetEditorHierarchyView::OnSearchChanged(const FText& InFilterText)
+{
+	bRefreshRequested = true;
+	const bool bFilteringEnabled = !InFilterText.IsEmpty();
+	if (bFilteringEnabled != FilterHandler->GetIsEnabled())
+	{
+		FilterHandler->SetIsEnabled(bFilteringEnabled);
+		if (bFilteringEnabled)
+		{
+			SaveItemsExpansion();
+		}
+		else
+		{
+			RestoreItemsExpansion();
+		}
+	}
+	SearchBoxWidgetFilter->SetRawFilterText(InFilterText);
+	SearchBoxPtr->SetError(SearchBoxWidgetFilter->GetFilterErrorText());
+}
+
+void SLexWidgetEditorHierarchyView::OnExpansionChanged(TWeakObjectPtr<ULexWidget> Item, bool bExpanded)
+{
+	Item->bIsExpanded = bExpanded;
+}
+TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
+{
+	FLGUIEditorModule::Get().MarkOutlinerSelectionChange();
+	return FLGUIEditorModule::Get().MakeEditorToolsMenu(false, false, true, false, false, false);
+}
+
+void SLexWidgetEditorHierarchyView::GetExpandWidgets(TArray<ULexWidget*>& OutExpandActors)
+{
+	TSet< TWeakObjectPtr<ULexWidget> > ExpandedItems;
+	WidgetTreeView->GetExpandedItems(ExpandedItems);
+	for (auto Item : ExpandedItems)
+	{
+		OutExpandActors.Add(Item.Get());
+	}
+}
+
+void SLexWidgetEditorHierarchyView::UpdateItemsExpansionFromModel()
+{
+	for (auto Widget: RootWidgets)
+	{
+		RecursiveExpand(Widget.Get(), EExpandBehavior::FromModel);
+	}
+}
+
+void SLexWidgetEditorHierarchyView::RestoreItemsExpansion()
+{
+	for (auto Widget : RootWidgets)
+	{
+		RecursiveExpand(Widget.Get(), EExpandBehavior::RestoreFromPrevious);
+	}
+}
+
+void SLexWidgetEditorHierarchyView::SaveItemsExpansion()
+{
+	ExpandedItemNames.Empty();
+
+	if (WidgetTreeView.IsValid())
+	{
+		TSet< TWeakObjectPtr<ULexWidget> > ExpandedItems;
+		WidgetTreeView->GetExpandedItems(ExpandedItems);
+
+		for (TWeakObjectPtr<ULexWidget> Item : ExpandedItems)
+		{
+			if (Item.IsValid())
+			{
+				ExpandedItemNames.Add(Item->GetName());
+			}
+		}
+	}
+}
+void SLexWidgetEditorHierarchyView::RecursiveExpand(ULexWidget* Widget, EExpandBehavior ExpandBehavior)
+{
+	bool bShouldExpandItem = true;
+
+	switch (ExpandBehavior)
+	{
+	case EExpandBehavior::NeverExpand:
+	{
+		bShouldExpandItem = false;
+	}
+	break;
+
+	case EExpandBehavior::RestoreFromPrevious:
+	{
+		bShouldExpandItem = ExpandedItemNames.Contains(Widget->GetName());
+	}
+	break;
+
+	case EExpandBehavior::AlwaysExpand:
+	{
+		bShouldExpandItem = true;
+	}
+	break;
+
+	case EExpandBehavior::FromModel:
+	default:
+	{
+		bShouldExpandItem = Widget->bIsExpanded;
+	}
+	break;
+	}
+
+	WidgetTreeView->SetItemExpansion(Widget, bShouldExpandItem);
+
+	auto& Children = Widget->GetUIChildren();
+	for (auto Child: Children)
+	{
+		RecursiveExpand(Child, ExpandBehavior);
+	}
+}
+
+void SLexWidgetEditorHierarchyView::RestoreSelectedItems()
+{
+	WidgetTreeView->SetSelectionMode(ESelectionMode::Single);
+
+	// for ( TSharedPtr<FHierarchyModel>& Model : RootWidgets )
+	// {
+	// 	RecursiveSelection(Model);
+	// }
+
+	WidgetTreeView->SetSelectionMode(ESelectionMode::Multi);
+}
+
+void SLexWidgetEditorHierarchyView::SetItemExpansionRecursive(TWeakObjectPtr<ULexWidget> Model, bool bInExpansionState)
+{
+	if (Model.IsValid())
+	{
+		RecursiveExpand(Model.Get(), bInExpansionState ? EExpandBehavior::AlwaysExpand : EExpandBehavior::NeverExpand);
+	}
+}
+
+#undef LOCTEXT_NAMESPACE

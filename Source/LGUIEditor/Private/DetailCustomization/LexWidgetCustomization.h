@@ -32,7 +32,7 @@ private:
 	void OnPasteAnchor(IDetailLayoutBuilder* DetailBuilder);
 	void OnCopyHierarchyIndex();
 	void OnPasteHierarchyIndex(TSharedRef<IPropertyHandle> PropertyHandle);
-	FReply OnClickIncreaseOrDecreaseHierarchyIndex(bool IncreaseOrDecrease, TSharedRef<IPropertyHandle> HierarchyIndexHandle);
+	FReply OnClickIncreaseOrDecreaseSiblingIndex(bool IncreaseOrDecrease, TSharedRef<IPropertyHandle> HierarchyIndexHandle);
 	EVisibility GetAnchorPresetButtonVisibility()const;
 
 	EVisibility GetDisplayNameWarningVisibility()const;

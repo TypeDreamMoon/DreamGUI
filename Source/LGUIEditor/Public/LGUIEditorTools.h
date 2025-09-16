@@ -6,6 +6,7 @@
 #include "Engine/EngineTypes.h"
 
 #pragma once
+class ULexWidget;
 class ULGUIPrefabHelperObject;
 class ULGUIPrefab;
 
@@ -22,7 +23,9 @@ public:
 	static FBeforeApplyPrefabDelegate OnBeforeApplyPrefab;
 	static AActor* GetFirstSelectedActor();
 	static TArray<AActor*> GetSelectedActors();
-	static FString GetUniqueNumetricName(const FString& InPrefix, const TArray<FString>& InExistNames);
+	static FString GetUniqueNumericName(const FString& InPrefix, const TArray<FString>& InExistNames);
+	static FString GetNameForNewWidget(ULexWidget* InParentWidget, const FString& InBaseName);
+	static FString GetNamePrefixForCopy(const FString& InSrcName, FString& OutNumericSuffix);
 	static TArray<AActor*> GetRootActorListFromSelection(const TArray<AActor*>& selectedActors);
 	static void CreateActorByClass(UClass* ActorClass, TFunction<void(AActor*)> Callback);
 	static void CreateLexWidget(FString Name, UClass* VisualClass, TFunction<void(class ULexWidget*)> Callback);
