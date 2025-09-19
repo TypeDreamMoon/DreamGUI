@@ -967,11 +967,11 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(bool InitialSetup, bo
 	}
 	MenuBuilder.EndSection();
 
-	MenuBuilder.BeginSection("CommonActor", LOCTEXT("CommonActor", "Create Common Actors"));
-	{
-		this->CreateCommonActorSubMenu(MenuBuilder);
-	}
-	MenuBuilder.EndSection();
+	// MenuBuilder.BeginSection("CommonActor", LOCTEXT("CommonActor", "Create Common Actors"));
+	// {
+	// 	this->CreateCommonActorSubMenu(MenuBuilder);
+	// }
+	// MenuBuilder.EndSection();
 
 	MenuBuilder.BeginSection("ActorAction", LOCTEXT("ActorAction", "Edit Actor With Hierarchy"));
 	{
@@ -1445,24 +1445,23 @@ void FLGUIEditorModule::CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder)
 {
 	struct FunctionContainer
 	{
-		static void CreateUIBaseElementMenuEntry(FMenuBuilder& InBuilder, UClass* InClass)
+		static void CreateWidgetVisualElementMenuEntry(FMenuBuilder& InBuilder, FString Name, UClass* InVisualClass, TFunction<void(ULexWidget*)> Callback)
 		{
-			TFunction<void(AActor*)> EmptyCallback = nullptr;
+			UClass* NameClass = InVisualClass ? InVisualClass : ULexWidget::StaticClass();
 			InBuilder.AddMenuEntry(
-				InClass->GetDisplayNameText(),
-				InClass->GetToolTipText(),
+				FText::FromString(NameClass->GetName()),
+				NameClass->GetToolTipText(),
 				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&LGUIEditorTools::CreateActorByClass, InClass, EmptyCallback))
+				FUIAction(FExecuteAction::CreateStatic(&LGUIEditorTools::CreateLexWidget, Name, InVisualClass, Callback))
 			);
 		}
 	};
 
-	MenuBuilder.BeginSection("UIPostProcessRenderable");
+	MenuBuilder.BeginSection("UIPostProcess");
 	{
 		for (TObjectIterator<UClass> ClassItr; ClassItr; ++ClassItr)
 		{
-#if 0
-			if (ClassItr->IsChildOf(AUIBasePostProcessActor::StaticClass()))
+			if (ClassItr->IsChildOf(ULexVisualPostProcess::StaticClass()))
 			{
 				if (
 					   !(ClassItr->HasAnyClassFlags(CLASS_Transient))
@@ -1479,10 +1478,9 @@ void FLGUIEditorModule::CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder)
 							continue;
 						}
 					}
-					FunctionContainer::CreateUIBaseElementMenuEntry(MenuBuilder, *ClassItr);
+					FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, ClassItr->GetName(), *ClassItr, nullptr);
 				}
 			}
-#endif
 		}
 	}
 	MenuBuilder.EndSection();
@@ -1492,13 +1490,14 @@ void FLGUIEditorModule::CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder)
 {
 	struct FunctionContainer
 	{
-		static void CreateMenuEntryByClass(FMenuBuilder& InBuilder, UClass* InClass, TFunction<void(AActor*)> EmptyCallback = nullptr)
+		static void CreateWidgetVisualElementMenuEntry(FMenuBuilder& InBuilder, UClass* InVisualClass, TFunction<void(ULexWidget*)> Callback)
 		{
+			UClass* NameClass = InVisualClass ? InVisualClass : ULexWidget::StaticClass();
 			InBuilder.AddMenuEntry(
-				InClass->GetDisplayNameText(),
-				InClass->GetToolTipText(),
+				FText::FromString(NameClass->GetName()),
+				NameClass->GetToolTipText(),
 				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&LGUIEditorTools::CreateActorByClass, InClass, EmptyCallback))
+				FUIAction(FExecuteAction::CreateStatic(&LGUIEditorTools::CreateLexWidget, InVisualClass->GetName(), InVisualClass, Callback))
 			);
 		}
 		static void CreateMenuEntryByPrefab(FMenuBuilder& InBuilder, const FString& InControlName, const FText& InLabel, const FText& InTooltip = FText::GetEmpty())
@@ -1514,16 +1513,14 @@ void FLGUIEditorModule::CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder)
 
 	MenuBuilder.BeginSection("UIExtension");
 	{
-#if 0
-		FunctionContainer::CreateMenuEntryByClass(MenuBuilder, AUIPolygonActor::StaticClass());
-		FunctionContainer::CreateMenuEntryByClass(MenuBuilder, AUIPolygonLineActor::StaticClass());
-		FunctionContainer::CreateMenuEntryByClass(MenuBuilder, AUIRingActor::StaticClass());
-		FunctionContainer::CreateMenuEntryByClass(MenuBuilder, AUIStaticMeshActor::StaticClass());
-		FunctionContainer::CreateMenuEntryByClass(MenuBuilder, AUI2DLineActor::StaticClass());
-		FunctionContainer::CreateMenuEntryByClass(MenuBuilder, AUI2DLineChildrenAsPointsActor::StaticClass());
-		FunctionContainer::CreateMenuEntryByPrefab(MenuBuilder, TEXT("UIWidget"), LOCTEXT("UIWidget", "UI Widget"), AUIWidgetActor::StaticClass()->GetToolTipText());
-		FunctionContainer::CreateMenuEntryByPrefab(MenuBuilder, TEXT("UIRenderTarget"), LOCTEXT("UIRenderTarget", "UI Render Target"), AUIRenderTargetActor::StaticClass()->GetToolTipText());
-#endif
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, UUIPolygon::StaticClass(), nullptr);
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, UUIPolygonLine::StaticClass(), nullptr);
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, UUIRing::StaticClass(), nullptr);
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, UUIStaticMesh::StaticClass(), nullptr);
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, UUI2DLineRaw::StaticClass(), nullptr);
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, UUI2DLineChildrenAsPoints::StaticClass(), nullptr);
+		//FunctionContainer::CreateMenuEntryByPrefab(MenuBuilder, TEXT("UIWidget"), LOCTEXT("UIWidget", "UI Widget"), AUIWidgetActor::StaticClass()->GetToolTipText());
+		//FunctionContainer::CreateMenuEntryByPrefab(MenuBuilder, TEXT("UIRenderTarget"), LOCTEXT("UIRenderTarget", "UI Render Target"), AUIRenderTargetActor::StaticClass()->GetToolTipText());
 	}
 	MenuBuilder.EndSection();
 }

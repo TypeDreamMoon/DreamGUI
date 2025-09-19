@@ -33,6 +33,8 @@ public:
 	TArray<TSharedPtr<class FAssetTypeActions_Base>> AssetTypeActionsArray;
 	void MarkOutlinerSelectionChange();
 	FLGUINativeSceneOutlinerExtension* GetNativeSceneOutlinerExtension()const;
+	DECLARE_EVENT(FLGUIEditorModule, FOnHierarchyChanged);
+	FOnHierarchyChanged OnHierarchyChanged;
 private:
 
 	bool IsValidClassName(const FString& InName);

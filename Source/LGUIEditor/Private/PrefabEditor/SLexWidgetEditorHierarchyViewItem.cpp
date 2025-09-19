@@ -1,6 +1,8 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "SLexWidgetEditorHierarchyViewItem.h"
+
+#include "ClassIconFinder.h"
 #include "SLexWidgetEditorHierarchyView.h"
 #include "Widgets/Text/SInlineEditableTextBlock.h"
 #include "DragAndDrop/DecoratedDragDropOp.h"
@@ -11,16 +13,18 @@
 #include "EditorFontGlyphs.h"
 #include "Editor.h"
 #include "LGUIEditorModule.h"
+#include "LGUIEditorStyle.h"
+#include "LGUIEditorTools.h"
 #include "DragAndDrop/AssetDragDropOp.h"
 
 #define LOCTEXT_NAMESPACE "LexWidgetEditorHierarchyViewItem"
 
-class FHierarchyLexWidgetBlueprintDragDropOp : public FDecoratedDragDropOp
+class FHierarchyLexWidgetDragDropOp : public FDecoratedDragDropOp
 {
 public:
 	DRAG_DROP_OPERATOR_TYPE(FHierarchyLexWidgetDragDropOp, FDecoratedDragDropOp)
 
-		virtual ~FHierarchyLexWidgetBlueprintDragDropOp();
+		virtual ~FHierarchyLexWidgetDragDropOp();
 
 	virtual void OnDrop(bool bDropWasHandled, const FPointerEvent& MouseEvent) override;
 
@@ -51,14 +55,14 @@ public:
 	FScopedTransaction* Transaction;
 
 	/** Constructs a new drag/drop operation */
-	static TSharedRef<FHierarchyLexWidgetBlueprintDragDropOp> New(TSharedPtr<FLGUIPrefabEditor> Blueprint, const TArray<ULexWidget*>& InWidgets);
+	static TSharedRef<FHierarchyLexWidgetDragDropOp> New(TSharedPtr<FLGUIPrefabEditor> Blueprint, const TArray<ULexWidget*>& InWidgets);
 };
 
-TSharedRef<FHierarchyLexWidgetBlueprintDragDropOp> FHierarchyLexWidgetBlueprintDragDropOp::New(TSharedPtr<FLGUIPrefabEditor> Blueprint, const TArray<ULexWidget*>& InWidgets)
+TSharedRef<FHierarchyLexWidgetDragDropOp> FHierarchyLexWidgetDragDropOp::New(TSharedPtr<FLGUIPrefabEditor> Blueprint, const TArray<ULexWidget*>& InWidgets)
 {
 	check(InWidgets.Num() > 0);
 
-	TSharedRef<FHierarchyLexWidgetBlueprintDragDropOp> Operation = MakeShareable(new FHierarchyLexWidgetBlueprintDragDropOp());
+	TSharedRef<FHierarchyLexWidgetDragDropOp> Operation = MakeShareable(new FHierarchyLexWidgetDragDropOp());
 
 	// Set the display text and the transaction name based on whether we're dragging a single or multiple widgets
 	if (InWidgets.Num() == 1)
@@ -95,12 +99,12 @@ TSharedRef<FHierarchyLexWidgetBlueprintDragDropOp> FHierarchyLexWidgetBlueprintD
 	return Operation;
 }
 
-FHierarchyLexWidgetBlueprintDragDropOp::~FHierarchyLexWidgetBlueprintDragDropOp()
+FHierarchyLexWidgetDragDropOp::~FHierarchyLexWidgetDragDropOp()
 {
 	delete Transaction;
 }
 
-void FHierarchyLexWidgetBlueprintDragDropOp::OnDrop(bool bDropWasHandled, const FPointerEvent& MouseEvent)
+void FHierarchyLexWidgetDragDropOp::OnDrop(bool bDropWasHandled, const FPointerEvent& MouseEvent)
 {
 	if (!bDropWasHandled)
 	{
@@ -154,19 +158,19 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 
 	//drag/drop from content to create new widget
 	TSharedPtr<FDragDropOperation> DragDropOp = DragDropEvent.GetOperation();
-	if (DragDropOp.IsValid() && !DragDropOp->IsOfType<FHierarchyLexWidgetBlueprintDragDropOp>())
+	if (DragDropOp.IsValid() && !DragDropOp->IsOfType<FHierarchyLexWidgetDragDropOp>())
 	{
 		if (bIsDrop)
 		{
 			if (DragDropOp->IsOfType<FAssetDragDropOp>())
 			{
-				Manager->TryHandleAssetDragDropOperation(DragDropEvent);
+				Manager->TryHandleAssetDragDropOperation(DragDropEvent, TargetItem);
 			}
 		}
 		return EItemDropZone::OntoItem;
 	}
 
-	TSharedPtr<FHierarchyLexWidgetBlueprintDragDropOp> HierarchyDragDropOp = DragDropEvent.GetOperationAs<FHierarchyLexWidgetBlueprintDragDropOp>();
+	TSharedPtr<FHierarchyLexWidgetDragDropOp> HierarchyDragDropOp = DragDropEvent.GetOperationAs<FHierarchyLexWidgetDragDropOp>();
 	if (HierarchyDragDropOp.IsValid())
 	{
 		HierarchyDragDropOp->ResetToDefaultToolTip();
@@ -175,11 +179,11 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 		// the null case and we should be adding it as the root widget.
 		if (TargetItem)
 		{
-			const bool bIsDraggedObject = HierarchyDragDropOp->DraggedWidgets.ContainsByPredicate([TargetItem](const FHierarchyLexWidgetBlueprintDragDropOp::FItem& DraggedItem)
+			const bool bIsDraggedObject = HierarchyDragDropOp->DraggedWidgets.ContainsByPredicate([TargetItem](const FHierarchyLexWidgetDragDropOp::FItem& DraggedItem)
 				{
 					return DraggedItem.Widget == TargetItem;
 				});
-			const bool bIsChildOfDraggedObject = HierarchyDragDropOp->DraggedWidgets.ContainsByPredicate([TargetItem](const FHierarchyLexWidgetBlueprintDragDropOp::FItem& DraggedItem)
+			const bool bIsChildOfDraggedObject = HierarchyDragDropOp->DraggedWidgets.ContainsByPredicate([TargetItem](const FHierarchyLexWidgetDragDropOp::FItem& DraggedItem)
 				{
 					return TargetItem->IsAttachedTo(DraggedItem.Widget);
 				});
@@ -263,86 +267,291 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 		.OnDragDetected(this, &SLexWidgetEditorHierarchyViewItem::HandleDragDetected)
 		.OnDragEnter(this, &SLexWidgetEditorHierarchyViewItem::HandleDragEnter)
 		.OnDragLeave(this, &SLexWidgetEditorHierarchyViewItem::HandleDragLeave)
-		.Padding(0.0f)
+		.Padding(FMargin(0, 2))
 		.Content()
 		[
 			SNew(SHorizontalBox)
 
-				// Widget icon
-				//+ SHorizontalBox::Slot()
-				//.AutoWidth()
-				//.VAlign(VAlign_Center)
-				//[
-				//	SNew(SImage)
-				//	.ColorAndOpacity(FSlateColor::UseForeground())
-				//	.Image(Model->GetImage())
-				//	.ToolTipText(Model->GetImageToolTipText())
-				//]
+			// Widget icon
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(2, 0)
+			[
+				SNew(SImage)
+				.ColorAndOpacity(FSlateColor::UseForeground())
+				.Image_Lambda([=, this]()
+				{
+					FString BrushName;
+					if (Widget.IsValid())
+					{
+						if (Widget->GetVisual())
+						{
+							BrushName = FString::Printf(TEXT("ClassIcon.%s"), *Widget->GetVisual()->GetClass()->GetName());
+						}
+						else
+						{
+							BrushName = FString::Printf(TEXT("ClassIcon.%s"), *Widget->GetClass()->GetName());
+						}
+					}
+					return FLGUIEditorStyle::Get().GetBrush(*BrushName);
+				})
+			]
 
-				// Name of the widget
-				+SHorizontalBox::Slot()
-				.FillWidth(1.0f)
-				.Padding(2, 0, 0, 0)
-				.VAlign(VAlign_Center)
+			// Canvas
+			+SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(2, 0)
+			[
+				SNew(SBox)
+				.Visibility_Lambda([=, this]()
+				{
+					if (Widget.IsValid() && Widget->IsCanvasWidget())
+					{
+						return EVisibility::Visible;
+					}
+					return EVisibility::Collapsed;
+				})
 				[
-					SAssignNew(EditBox, SInlineEditableTextBlock)
-						//.Font(this, &SHierarchyViewItem::GetItemFont)
-						.Text(this, &SLexWidgetEditorHierarchyViewItem::GetItemText)
-						.ToolTipText(this, &SLexWidgetEditorHierarchyViewItem::GetItemTooltipText)
-						.ColorAndOpacity(this, &SLexWidgetEditorHierarchyViewItem::GetItemColorAndOpacity)
-						.IsReadOnly(this, &SLexWidgetEditorHierarchyViewItem::IsReadOnly)
-						.OnEnterEditingMode(this, &SLexWidgetEditorHierarchyViewItem::OnBeginNameTextEdit)
-						.OnExitEditingMode(this, &SLexWidgetEditorHierarchyViewItem::OnEndNameTextEdit)
-						.OnVerifyTextChanged(this, &SLexWidgetEditorHierarchyViewItem::OnVerifyNameTextChanged)
-						.OnTextCommitted(this, &SLexWidgetEditorHierarchyViewItem::OnNameTextCommited)
-						.IsSelected(this, &SLexWidgetEditorHierarchyViewItem::IsSelectedExclusively)
-				]
-
-				// Locked Icon
-				//+ SHorizontalBox::Slot()
-				//.AutoWidth()
-				//.VAlign(VAlign_Center)
-				//[
-				//	SNew(SButton)
-				//	.ContentPadding(FMargin(3, 1))
-				//	.ButtonStyle(FAppStyle::Get(), "HoverHintOnly")
-				//	.ForegroundColor(FCoreStyle::Get().GetSlateColor("Foreground"))
-				//	.OnClicked(this, &SHierarchyViewItem::OnToggleLockedInDesigner)
-				//	.Visibility(Model->CanControlLockedInDesigner() ? EVisibility::Visible : EVisibility::Hidden)
-				//	.ToolTipText(LOCTEXT("WidgetLockedButtonToolTip", "Locks or Unlocks this widget and all children.  Locking a widget prevents it from being selected in the designer view by clicking on them.\n\nHolding [Shift] will only affect this widget and no children."))
-				//	.HAlign(HAlign_Center)
-				//	.VAlign(VAlign_Center)
-				//	[
-				//		SNew(SBox)
-				//		.MinDesiredWidth(12.0f)
-				//		.HAlign(HAlign_Left)
-				//		[
-				//			SNew(STextBlock)
-				//			.Font(FAppStyle::Get().GetFontStyle("FontAwesome.10"))
-				//			.Text(this, &SHierarchyViewItem::GetLockBrushForWidget)
-				//		]
-				//	]
-				//]
-
-				// Visibility icon
-				+SHorizontalBox::Slot()
-				.AutoWidth()
-				.VAlign(VAlign_Center)
-				[
-					SNew(SButton)
-						.ContentPadding(FMargin(3, 1))
-						.ButtonStyle(FAppStyle::Get(), "HoverHintOnly")
-						.ForegroundColor(FCoreStyle::Get().GetSlateColor("Foreground"))
-						.OnClicked(this, &SLexWidgetEditorHierarchyViewItem::OnToggleVisibility)
-						.ToolTipText(LOCTEXT("WidgetVisibilityButtonToolTip", "Toggle Widget's Editor Visibility"))
-						.HAlign(HAlign_Center)
-						.VAlign(VAlign_Center)
+					SNew(SOverlay)
+					+SOverlay::Slot()//canvas icon
+					[
+						SNew(SBox)
+						.WidthOverride(16)
+						.HeightOverride(16)
+						.Padding(FMargin(0))
+						.HAlign(EHorizontalAlignment::HAlign_Center)
+						.VAlign(EVerticalAlignment::VAlign_Center)
+						[
+							SNew(SImage)
+							.Image(FLGUIEditorStyle::Get().GetBrush("CanvasMark"))
+							.Visibility_Lambda([=, this]()
+							{
+								if (Widget->IsCanvasWidget())
+								{
+									return EVisibility::Visible;
+								}
+								return EVisibility::Hidden;
+							})
+							.ColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 0.4f))
+							.ToolTipText(LOCTEXT("CanvasMarkTip", "This is canvas widget. The number is the draw-call count of this canvas."))
+						]
+					]
+					+SOverlay::Slot()//draw-call count
+					[
+						SNew(SBox)
+						.WidthOverride(16)
+						.HeightOverride(16)
+						.Padding(FMargin(0))
+						.HAlign(EHorizontalAlignment::HAlign_Left)
+						.VAlign(EVerticalAlignment::VAlign_Center)
 						[
 							SNew(STextBlock)
-								.Font(FAppStyle::Get().GetFontStyle("FontAwesome.10"))
-								.Text(this, &SLexWidgetEditorHierarchyViewItem::GetVisibilityBrushForWidget)
+							.ShadowColorAndOpacity(FLinearColor::Black)
+							.ShadowOffset(FVector2D(1, 1))
+							.Text_Lambda([=, this]()
+							{
+								int DrawCallCount = 0;
+								if (Widget.IsValid() && Widget->IsCanvasWidget() && Widget->GetRenderCanvas())
+								{
+									 DrawCallCount = Widget->GetRenderCanvas()->GetDrawCallCount();
+								}
+								return FText::FromString(FString::Printf(TEXT("%d"), DrawCallCount));
+							})
+							.ColorAndOpacity(FSlateColor(FLinearColor(FColor::Green)))
+							.Visibility_Lambda([=, this]()
+							{
+								if (Widget.IsValid() && Widget->IsCanvasWidget())
+								{
+									return EVisibility::Visible;
+								}
+								return EVisibility::Hidden;
+							})
+							.ToolTipText(LOCTEXT("DrawCallCountTip", "The number is the draw-call count generated by this LexCanvas."))
+							.Font(IDetailLayoutBuilder::GetDetailFont())
 						]
+					]
 				]
+			]			
+
+			// Name of the widget
+			+SHorizontalBox::Slot()
+			.FillWidth(1.0f)
+			.Padding(2, 0, 0, 0)
+			.VAlign(VAlign_Center)
+			[
+				SAssignNew(EditBox, SInlineEditableTextBlock)
+				//.Font(this, &SHierarchyViewItem::GetItemFont)
+				.Text(this, &SLexWidgetEditorHierarchyViewItem::GetItemText)
+				.ToolTipText(this, &SLexWidgetEditorHierarchyViewItem::GetItemTooltipText)
+				.ColorAndOpacity(this, &SLexWidgetEditorHierarchyViewItem::GetItemColorAndOpacity)
+				.IsReadOnly(this, &SLexWidgetEditorHierarchyViewItem::IsReadOnly)
+				.OnEnterEditingMode(this, &SLexWidgetEditorHierarchyViewItem::OnBeginNameTextEdit)
+				.OnExitEditingMode(this, &SLexWidgetEditorHierarchyViewItem::OnEndNameTextEdit)
+				.OnVerifyTextChanged(this, &SLexWidgetEditorHierarchyViewItem::OnVerifyNameTextChanged)
+				.OnTextCommitted(this, &SLexWidgetEditorHierarchyViewItem::OnNameTextCommited)
+				.IsSelected(this, &SLexWidgetEditorHierarchyViewItem::IsSelectedExclusively)
+			]
+
+			// SubPrefab
+			+SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			[
+				SNew(SOverlay)
+				+SOverlay::Slot()
+				[
+					SNew(SImage)
+					.Image_Lambda([=, this]()
+					{
+						if (Manager.IsValid() && Widget.IsValid())
+						{
+							if (auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject())
+							{
+								if (!PrefabHelperObject->IsActorBelongsToSubPrefab(Widget->GetOwner()))//is sub prefab
+								{
+									if (PrefabHelperObject->IsActorBelongsToMissingSubPrefab(Widget->GetOwner()))
+									{
+										return FLGUIEditorStyle::Get().GetBrush("PrefabMarkBroken");
+									}
+								}
+								else
+								{
+									if (PrefabHelperObject->GetSubPrefabAsset(Widget->GetOwner())->GetIsPrefabVariant())
+									{
+										return FLGUIEditorStyle::Get().GetBrush("PrefabVariantMarkWhite");
+									}
+								}
+							}
+						}
+						return FLGUIEditorStyle::Get().GetBrush("PrefabMarkWhite");
+					})
+					.ColorAndOpacity_Lambda([=, this]()
+					{
+						if (Manager.IsValid() && Widget.IsValid())
+						{
+							if (auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject())
+							{
+								if (PrefabHelperObject->IsActorBelongsToSubPrefab(Widget->GetOwner()))//is sub prefab
+								{
+									return FSlateColor(PrefabHelperObject->GetSubPrefabData(Widget->GetOwner()).EditorIdentifyColor);
+								}
+								else
+								{
+									if (PrefabHelperObject->IsActorBelongsToMissingSubPrefab(Widget->GetOwner()))
+									{
+										return FSlateColor(FColor::White);
+									}
+								}
+							}
+						}
+						return FSlateColor(FColor::Green);
+					})
+					.Visibility_Lambda([=, this]()
+					{
+						if (Manager.IsValid() && Widget.IsValid())
+						{
+							if (auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject())
+							{
+								if (PrefabHelperObject->IsActorBelongsToSubPrefab(Widget->GetOwner()))//is sub prefab
+								{
+									return EVisibility::Visible;
+								}
+								else
+								{
+									if (PrefabHelperObject->IsActorBelongsToMissingSubPrefab(Widget->GetOwner()))
+									{
+										return EVisibility::Visible;
+									}
+									else
+									{
+										return EVisibility::Hidden;
+									}
+								}
+							}
+						}
+						return EVisibility::Hidden;
+					})
+					.ToolTipText_Lambda([=, this]()
+					{
+						if (Manager.IsValid() && Widget.IsValid())
+						{
+							if (auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject())
+							{
+								if (!PrefabHelperObject->IsActorBelongsToSubPrefab(Widget->GetOwner()))//is sub prefab
+								{
+									if (PrefabHelperObject->IsActorBelongsToMissingSubPrefab(Widget->GetOwner()))
+									{
+										return LOCTEXT("PrefabMarkBrokenTip", "This actor was part of another prefab, but the prefab asset is missing!");
+									}
+								}
+							}
+						}
+						return LOCTEXT("PrefabMarkWhiteTip", "This widget belongs to another prefab.");
+					})
+				]
+				// +SOverlay::Slot()//prefab+
+				// [
+				// 	SNew(SBox)
+				// 	.WidthOverride(16)
+				// 	.HeightOverride(16)
+				// 	.Padding(FMargin(0))
+				// 	.HAlign(EHorizontalAlignment::HAlign_Center)
+				// 	.VAlign(EVerticalAlignment::VAlign_Center)
+				// 	[
+				// 		SNew(SImage)
+				// 		.Image(FLGUIEditorStyle::Get().GetBrush("PrefabPlusMarkWhite"))
+				// 		.Visibility_Lambda([=, this]()
+				// 		{
+				// 			if (auto ParentActor = Widget->GetOwner()->GetAttachParentActor())
+				// 			{
+				// 				auto PrefabHelperObjectForParent = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(ParentActor);
+				// 				auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(Widget->GetOwner());
+				// 				if (PrefabHelperObject != nullptr && PrefabHelperObjectForParent != nullptr)
+				// 				{
+				// 					if (!PrefabHelperObject->IsActorBelongsToSubPrefab(Widget->GetOwner()) && PrefabHelperObjectForParent->IsActorBelongsToSubPrefab(ParentActor))
+				// 					{
+				// 						return EVisibility::Visible;
+				// 					}
+				// 				}
+				// 			}
+				// 			return EVisibility::Hidden;
+				// 		})
+				// 	]
+				// ]
+			]
+
+			// Visibility
+			+SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			[
+				SNew(SButton)
+				.ContentPadding(FMargin(3, 1))
+				.ButtonStyle(FAppStyle::Get(), "HoverHintOnly")
+				.ForegroundColor(FCoreStyle::Get().GetSlateColor("Foreground"))
+				.OnClicked(this, &SLexWidgetEditorHierarchyViewItem::OnToggleVisibility)
+				.ToolTipText(LOCTEXT("WidgetVisibilityButtonToolTip", "Toggle Widget's Editor Visibility"))
+				.HAlign(HAlign_Center)
+				.VAlign(VAlign_Center)
+				.Visibility_Lambda([=, this]()
+				{
+					if (Manager.IsValid() && Widget.IsValid())
+					{
+						if (Widget->GetOwner() == Manager.Pin()->GetRootAgentActor())
+						{
+							return EVisibility::Hidden;
+						}
+					}
+					return EVisibility::Visible;
+				})
+				[
+					SNew(STextBlock)
+						.Font(FAppStyle::Get().GetFontStyle("FontAwesome.10"))
+						.Text(this, &SLexWidgetEditorHierarchyViewItem::GetVisibilityBrushForWidget)
+				]
+			]
 		],
 		InOwnerTableView);
 }
@@ -366,7 +575,7 @@ bool SLexWidgetEditorHierarchyViewItem::CanRename()
 	return true;
 }
 
-struct LOCAL_SLexWidgetDesignerHierarchyViewViewItem
+struct LOCAL_SLexWidgetHierarchyViewViewItem
 {
 	static FString PrintZone(TOptional<EItemDropZone> Zone)
 	{
@@ -392,7 +601,7 @@ struct LOCAL_SLexWidgetDesignerHierarchyViewViewItem
 TOptional<EItemDropZone> SLexWidgetEditorHierarchyViewItem::HandleCanAcceptDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone, TWeakObjectPtr<ULexWidget> TargetItem)
 {
 	TSharedPtr<FDragDropOperation> DragDropOp = DragDropEvent.GetOperation();
-	if (DragDropOp.IsValid() && !DragDropOp->IsOfType<FHierarchyLexWidgetBlueprintDragDropOp>())
+	if (DragDropOp.IsValid() && !DragDropOp->IsOfType<FHierarchyLexWidgetDragDropOp>())
 	{
 		if (DragDropOp->IsOfType<FAssetDragDropOp>())
 		{
@@ -472,7 +681,21 @@ FReply SLexWidgetEditorHierarchyViewItem::HandleDragDetected(const FGeometry& My
 
 	if (DraggedItems.Num() > 0)
 	{
-		return FReply::Handled().BeginDragDrop(FHierarchyLexWidgetBlueprintDragDropOp::New(Manager.Pin(), DraggedItems));
+		bool bAllCanDrag = true;
+		auto PrefabHelper = Manager.Pin()->GetPrefabHelperObject();
+		for (auto Item : DraggedItems)
+		{
+			auto Actor = Item->GetOwner();
+			if (PrefabHelper->IsActorBelongsToSubPrefab(Actor) && !PrefabHelper->IsSubPrefabRootActor(Actor))
+			{
+				bAllCanDrag = false;
+				break;;
+			}
+		}
+		if (bAllCanDrag)
+		{
+			return FReply::Handled().BeginDragDrop(FHierarchyLexWidgetDragDropOp::New(Manager.Pin(), DraggedItems));
+		}
 	}
 
 	return FReply::Handled();
@@ -498,7 +721,7 @@ FText SLexWidgetEditorHierarchyViewItem::GetItemTooltipText() const
 
 FSlateColor SLexWidgetEditorHierarchyViewItem::GetItemColorAndOpacity() const
 {
-	if (auto PrefabHelperObject = Manager.Pin()->GetPrefabManagerObject())
+	if (auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject())
 	{
 		if (PrefabHelperObject->IsActorBelongsToSubPrefab(Widget->GetOwner()))//is sub prefab
 		{

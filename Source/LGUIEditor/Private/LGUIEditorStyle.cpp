@@ -73,6 +73,7 @@ TSharedRef< FSlateStyleSet > FLGUIEditorStyle::Create()
 	Style->Set("ClassIcon.UISpriteBase", new IMAGE_BRUSH(TEXT("UISprite_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexText", new IMAGE_BRUSH(TEXT("LexText_16x"), Icon16x16));
 	Style->Set("ClassIcon.UITexture", new IMAGE_BRUSH(TEXT("UITexture_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexImage", new IMAGE_BRUSH(TEXT("Image_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexWidget", new IMAGE_BRUSH(TEXT("LexWidget_16x"), Icon16x16));
 	Style->Set("ClassIcon.UIPolygon", new IMAGE_BRUSH(TEXT("UIPolygon_16x"), Icon16x16));
 	Style->Set("ClassIcon.UIPolygonLine", new IMAGE_BRUSH(TEXT("UIPolygonLine_16x"), Icon16x16));

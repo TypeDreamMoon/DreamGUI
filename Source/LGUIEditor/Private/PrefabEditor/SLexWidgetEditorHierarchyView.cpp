@@ -187,7 +187,7 @@ void SLexWidgetEditorHierarchyView::RefreshImmediately()
 void SLexWidgetEditorHierarchyView::RefreshTree()
 {
 	RootWidgets.Empty();
-	if (auto RootItem = Cast<ULexWidget>(Manager.Pin()->GetLoadedRootActor()->GetRootComponent()))
+	if (auto RootItem = Cast<ULexWidget>(Manager.Pin()->GetRootAgentActor()->GetRootComponent()))
 	{
 		RootWidgets.Add(RootItem);
 	}
@@ -278,6 +278,9 @@ TSharedRef< ITableRow > SLexWidgetEditorHierarchyView::OnGenerateRow(TWeakObject
 	.MouseExit_Lambda([=, this] {
 	// Manager.Pin()->HoverHierarchyNode(nullptr);
 		})
+		// .IsEnabled_Lambda([=, this](){
+		// 	return InItem->GetOwner() != Manager.Pin()->GetRootAgentActor();
+		// })
 	;
 }
 void SLexWidgetEditorHierarchyView::OnSelectionChanged(TWeakObjectPtr<ULexWidget> SelectedItem, ESelectInfo::Type SelectInfo)

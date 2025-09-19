@@ -62,7 +62,7 @@ public:
 	 * Only call this function after IsActorBelongsToSubPrefab.
 	 */
 	bool IsActorBelongsToMissingSubPrefab(const AActor* InActor);
-	bool ActorIsSubPrefabRootActor(const AActor* InActor);
+	bool IsSubPrefabRootActor(const AActor* InActor);
 	bool IsActorBelongsToThis(const AActor* InActor);
 	void ClearInvalidObjectAndGuid();
 	void AddMemberPropertyToSubPrefab(AActor* InSubPrefabActor, UObject* InObject, FName InPropertyName);

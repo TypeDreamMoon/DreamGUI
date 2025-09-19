@@ -131,7 +131,7 @@ bool ULGUIPrefabHelperObject::IsActorBelongsToMissingSubPrefab(const AActor* InA
 	return false;
 }
 
-bool ULGUIPrefabHelperObject::ActorIsSubPrefabRootActor(const AActor* InActor)
+bool ULGUIPrefabHelperObject::IsSubPrefabRootActor(const AActor* InActor)
 {
 	CleanupInvalidSubPrefab();
 	if (!IsValid(InActor))return false;
@@ -277,7 +277,8 @@ FLGUISubPrefabData ULGUIPrefabHelperObject::GetSubPrefabData(AActor* InSubPrefab
 	check(IsValid(InSubPrefabActor));
 	for (auto& SubPrefabKeyValue : SubPrefabMap)
 	{
-		for (auto& KeyValue : SubPrefabKeyValue.Value.MapGuidToObject)
+		auto& SubMapGuidToObject = SubPrefabKeyValue.Value.MapGuidToObject;
+		for (auto& KeyValue : SubMapGuidToObject)
 		{
 			if (InSubPrefabActor == KeyValue.Value)
 			{

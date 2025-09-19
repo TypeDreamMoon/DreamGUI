@@ -766,6 +766,7 @@ void LGUIEditorTools::CreateLexWidget(FString Name, UClass* VisualClass, TFuncti
 			Callback(NewActor->GetLexWidget());
 		}
 		GEditor->SelectActor(NewActor, true, true);
+		FLGUIEditorModule::Get().OnHierarchyChanged.Broadcast();
 	}
 	GEditor->EndTransaction();
 }
@@ -1381,7 +1382,7 @@ bool LGUIEditorTools::CanDeleteActor()
 	{
 		if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(Actor))
 		{
-			if (!PrefabHelperObject->ActorIsSubPrefabRootActor(Actor)//allowed to delete sub prefab's root actor
+			if (!PrefabHelperObject->IsSubPrefabRootActor(Actor)//allowed to delete sub prefab's root actor
 				&& PrefabHelperObject->IsActorBelongsToSubPrefab(Actor))//not allowed to delete sub prefab's actor
 			{
 				return false;

@@ -26,7 +26,7 @@ struct FLGUISubPrefabData;
  * 
  */
 class FLGUIPrefabEditor : public FAssetEditorToolkit
-	, public FGCObject
+	, public FGCObject, public FEditorUndoClient
 {
 public:
 	DECLARE_MULTICAST_DELEGATE(FOnSelectedWidgetsChanged)
@@ -39,6 +39,11 @@ public:
 	virtual void RegisterTabSpawners(const TSharedRef<class FTabManager>& TabManager) override;
 	virtual void UnregisterTabSpawners(const TSharedRef<class FTabManager>& TabManager) override;
 	// End of IToolkit interface
+
+	//Begin EditorUndo
+	virtual void PostUndo(bool bSuccess)override;
+	virtual void PostRedo(bool bSuccess)override;
+	//End EditorUndo
 
 	// FAssetEditorToolkit
 public:
@@ -60,7 +65,7 @@ public:
 	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
 	virtual FString GetReferencerName()const { return TEXT("LGUIPrefabEditor"); }
 
-	void SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bAppendOrToggle);
+	void SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bAppendOrToggle, bool bNotifyGEditor = true);
 	const TArray<TWeakObjectPtr<AActor>>& GetSelectedActors(){return SelectedActors;}
 	TArray<TWeakObjectPtr<ULexWidget>> GetSelectedWidgets();
 
@@ -70,7 +75,7 @@ public:
 	TArray<AActor*> GetAllActors();
 
 	/** Try to handle a drag-drop operation */
-	FReply TryHandleAssetDragDropOperation(const FDragDropEvent& DragDropEvent);
+	FReply TryHandleAssetDragDropOperation(const FDragDropEvent& DragDropEvent, ULexWidget* InParentWidget = nullptr);
 
 	FLGUIPrefabEditorScene& GetPreviewScene();
 	UWorld* GetWorld();
@@ -97,7 +102,7 @@ public:
 	bool GetAnythingDirty()const;
 	void CloseWithoutCheckDataDirty();
 
-	ULGUIPrefabHelperObject* GetPrefabManagerObject()const { return PrefabHelperObject; }
+	ULGUIPrefabHelperObject* GetPrefabHelperObject()const { return PrefabHelperObject; }
 	AActor* GetRootAgentActor();
 	AActor* GetLoadedRootActor();
 	void ApplyPrefab();
@@ -117,7 +122,6 @@ private:
 	TSharedPtr<SLGUIPrefabRawDataViewer> PrefabRawDataViewer;
 
 	TArray<TWeakObjectPtr<AActor>> SelectedActors;
-	TWeakObjectPtr<AActor> CurrentSelectedActor;
 
 	FLGUIPrefabEditorScene PreviewScene;
 private:
@@ -145,6 +149,5 @@ private:
 	TSharedRef<SDockTab> SpawnTab_PrefabRawDataViewer(const FSpawnTabArgs& Args);
 
 	bool IsFilteredActor(const AActor* Actor);
-	void OnOutlinerPickedChanged(AActor* Actor);
 	void OnOutlinerActorDoubleClick(AActor* Actor);
 };

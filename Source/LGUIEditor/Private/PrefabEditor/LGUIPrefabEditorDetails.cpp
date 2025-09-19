@@ -19,12 +19,52 @@
 #include "SSubobjectEditorModule.h"
 #include "SSubobjectInstanceEditor.h"
 #include "Core/Components/LexWidget.h"
+#include "PrefabSystem/LGUIPrefabHelperObject.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditorDetailTab"
 
 class LGUISCSEditorUICustomization : public ISCSEditorUICustomization
 {
-	virtual bool HideBlueprintButtons() const override { return true; }
+	TWeakPtr<FLGUIPrefabEditor> PrefabEditor;
+public:
+	LGUISCSEditorUICustomization(TSharedPtr<FLGUIPrefabEditor> InPrefabEditor)
+	{
+		PrefabEditor = InPrefabEditor;
+	}
+	virtual bool HideAddComponentButton(TArrayView<UObject*> Context) const override
+	{
+		if (Context.Num() == 1)
+		{
+			if (auto Actor = Cast<AActor>(Context[0]))
+			{
+				if (auto HelperObj = PrefabEditor.Pin()->GetPrefabHelperObject())
+				{
+					if (HelperObj->IsActorBelongsToSubPrefab(Actor))
+					{
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+	virtual bool HideBlueprintButtons(TArrayView<UObject*> Context) const override
+	{
+		if (Context.Num() == 1)
+		{
+			if (auto Actor = Cast<AActor>(Context[0]))
+			{
+				if (auto HelperObj = PrefabEditor.Pin()->GetPrefabHelperObject())
+				{
+					if (HelperObj->IsActorBelongsToSubPrefab(Actor))
+					{
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
 };
 
 void SLGUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLGUIPrefabEditor> InPrefabEditor)
@@ -61,7 +101,7 @@ void SLGUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLGU
 		.OnItemDoubleClicked(this, &SLGUIPrefabEditorDetails::OnEditorTreeViewItemDoubleClicked);
 
 	
-	TSharedPtr<ISCSEditorUICustomization> Customization = MakeShared<LGUISCSEditorUICustomization>();
+	TSharedPtr<ISCSEditorUICustomization> Customization = MakeShared<LGUISCSEditorUICustomization>(InPrefabEditor);
 	SubobjectEditor->SetUICustomization(Customization);
 	auto ButtonBox = SubobjectEditor->GetToolButtonsBox().ToSharedRef();
 	DetailsView->SetNameAreaCustomContent(ButtonBox);
@@ -168,7 +208,7 @@ void SLGUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLGU
 										+SHorizontalBox::Slot()
 										.AutoWidth()
 										[
-											SAssignNew(OverrideParameterEditor, SLGUIPrefabOverrideDataViewer, PrefabEditorPtr.Pin()->GetPrefabManagerObject())
+											SAssignNew(OverrideParameterEditor, SLGUIPrefabOverrideDataViewer, PrefabEditorPtr.Pin()->GetPrefabHelperObject())
 											.AfterRevertPrefab_Lambda([=, this](ULGUIPrefab* PrefabAsset) {
 												RefreshOverrideParameter();
 												})
@@ -245,6 +285,7 @@ AActor* SLGUIPrefabEditorDetails::GetActorContext() const
 
 void SLGUIPrefabEditorDetails::OnEditorSelectionChanged()
 {
+	bIsSelectFromLGUIEditor = true;
 	auto SelectedWidgets = PrefabEditorPtr.Pin()->GetSelectedWidgets();
 	if (SelectedWidgets.Num() > 0)
 	{
@@ -256,7 +297,10 @@ void SLGUIPrefabEditorDetails::OnEditorSelectionChanged()
 			}
 
 			CachedActor = Actor;
-			RefreshOverrideParameter();
+			if (Actor != PrefabEditorPtr.Pin()->GetRootAgentActor())
+			{
+				RefreshOverrideParameter();
+			}
 			if (SubobjectEditor)
 			{
 				SubobjectEditor->ClearSelection();
@@ -287,6 +331,7 @@ void SLGUIPrefabEditorDetails::OnEditorSelectionChanged()
 			}
 		}
 	}
+	bIsSelectFromLGUIEditor = false;
 }
 
 void SLGUIPrefabEditorDetails::OnEditorTreeViewSelectionChanged(const TArray<FSubobjectEditorTreeNodePtrType>& SelectedNodes)
@@ -315,17 +360,20 @@ void SLGUIPrefabEditorDetails::OnEditorTreeViewSelectionChanged(const TArray<FSu
 		{
 			DetailsView->SetObjects(SelectedObjects);
 		}
-		if (SelectedComponents.Num() > 0)
+		if (!bIsSelectFromLGUIEditor)
 		{
-			GEditor->SelectNone(true, true);
-			for (auto Comp : SelectedComponents)
+			if (SelectedComponents.Num() > 0)
 			{
-				GEditor->SelectComponent(Comp, true, true);
+				GEditor->SelectNone(true, true);
+				for (auto Comp : SelectedComponents)
+				{
+					GEditor->SelectComponent(Comp, true, true);
+				}
 			}
-		}
-		else
-		{
-			GEditor->SelectNone(true, true);
+			else
+			{
+				GEditor->SelectNone(true, true);
+			}
 		}
 	}
 }

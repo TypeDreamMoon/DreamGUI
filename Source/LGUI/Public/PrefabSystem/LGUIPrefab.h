@@ -128,21 +128,21 @@ struct FLGUIPrefabDataForPrefabEditor
 {
 	GENERATED_BODY()
 public:
-	UPROPERTY()
+	UPROPERTY(EditAnywhere)
 		FVector ViewLocation = FVector::ZeroVector;
-	UPROPERTY()
+	UPROPERTY(EditAnywhere)
 		FRotator ViewRotation = FRotator::ZeroRotator;
-	UPROPERTY()
+	UPROPERTY(EditAnywhere)
 		FVector ViewOrbitLocation = FVector::ZeroVector;
-	UPROPERTY()
+	UPROPERTY(EditAnywhere)
 		FIntPoint CanvasSize = FIntPoint(1920, 1080);
-	UPROPERTY()
+	UPROPERTY(EditAnywhere)
 		bool bNeedCanvas = true;//do we need LGUICanvas component? default is true
-	UPROPERTY()
+	UPROPERTY(EditAnywhere)
 		uint8 CanvasRenderMode = 0;//default LGUICanvas's render mode is ELGUIRenderMode::ScreenSpaceOverlay
-	UPROPERTY()
+	UPROPERTY(EditAnywhere)
 		TEnumAsByte<EViewModeIndex> ViewMode = EViewModeIndex::VMI_Lit;//editor viewport's viewmode
-	UPROPERTY()
+	UPROPERTY(EditAnywhere)
 		TSet<FGuid> UnexpandActorSet;
 };
 

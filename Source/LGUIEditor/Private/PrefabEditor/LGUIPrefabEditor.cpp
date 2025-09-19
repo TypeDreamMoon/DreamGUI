@@ -25,6 +25,8 @@
 #include "Editor.h"
 #include "EditorStyleSet.h"
 #include "SLexWidgetEditorHierarchyView.h"
+#include "Core/LexUIManager.h"
+#include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexWidget.h"
 #include "Framework/Commands/GenericCommands.h"
 #include "Framework/Notifications/NotificationManager.h"
@@ -79,6 +81,8 @@ FLGUIPrefabEditor::~FLGUIPrefabEditor()
 
 	ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();
 	FLGUIEditorModule::Get().GetNativeSceneOutlinerExtension()->Restore();
+	FLGUIEditorModule::Get().OnHierarchyChanged.RemoveAll(this);
+	USelection::SelectionChangedEvent.RemoveAll(this);
 }
 
 FLGUIPrefabEditor* FLGUIPrefabEditor::GetEditorForPrefabIfValid(ULGUIPrefab* InPrefab)
@@ -252,7 +256,7 @@ bool FLGUIPrefabEditor::OnRequestClose()
 {
 	if (GetAnythingDirty())
 	{
-		auto WarningMsg = LOCTEXT("LoseDataOnCloseEditor", "Are you sure you want to close prefab editor window? Property will lose if not hit Apply!");
+		auto WarningMsg = LOCTEXT("OnCloseEditor_DataMissingWarning", "Are you sure you want to close prefab editor window? Property will lose if not hit Apply!");
 		auto Result = FMessageDialog::Open(EAppMsgType::YesNo, WarningMsg);
 		if (Result == EAppReturnType::Yes)
 		{
@@ -303,6 +307,21 @@ void FLGUIPrefabEditor::UnregisterTabSpawners(const TSharedRef<FTabManager>& InT
 	InTabManager->UnregisterTabSpawner(FLGUIPrefabEditorTabs::PrefabRawDataViewerID);
 }
 
+void FLGUIPrefabEditor::PostUndo(bool bSuccess)
+{
+	ULGUIPrefabManagerObject::AddOneShotTickFunction([=, this] {
+		ULexUIManagerWorldSubsystem::RefreshAllUI();
+		}, 1);
+	OutlinerPtr->RequestRefresh();
+}
+void FLGUIPrefabEditor::PostRedo(bool bSuccess)
+{
+	ULGUIPrefabManagerObject::AddOneShotTickFunction([=, this] {
+		ULexUIManagerWorldSubsystem::RefreshAllUI();
+		}, 1);
+	OutlinerPtr->RequestRefresh();
+}
+
 void FLGUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const TSharedPtr<IToolkitHost >& InitToolkitHost, ULGUIPrefab* InPrefab)
 {
 	PrefabBeingEdited = InPrefab;
@@ -336,6 +355,27 @@ void FLGUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const TS
 	DetailsPtr = SNew(SLGUIPrefabEditorDetails, PrefabEditorPtr);
 
 	PrefabRawDataViewer = SNew(SLGUIPrefabRawDataViewer, PrefabEditorPtr, PrefabBeingEdited);
+
+	FLGUIEditorModule::Get().OnHierarchyChanged.AddSPLambda(this, [=, this]()
+	{
+		OutlinerPtr->RequestRefresh();
+	});
+	USelection::SelectionChangedEvent.AddSPLambda(this, [=, this](UObject*)
+	{
+		TSet<ULexWidget*> SelectedItems;
+		auto SelectedActors = LGUIEditorTools::GetSelectedActors();
+		for (auto Actor : SelectedActors)
+		{
+			if (Actor->GetWorld() == this->GetWorld())
+			{
+				if (auto WidgetActor = Cast<ALexWidgetActor>(Actor))
+				{
+					SelectedItems.Add(WidgetActor->GetLexWidget());
+				}
+			}
+		}
+		this->SelectWidgets(SelectedItems, false, false);
+	});
 
 	auto UnexpendActorGuidSet = PrefabBeingEdited->PrefabDataForPrefabEditor.UnexpandActorSet;
 	TSet<AActor*> UnexpendActorSet;
@@ -545,7 +585,7 @@ void FLGUIPrefabEditor::AddReferencedObjects(FReferenceCollector& Collector)
 	Collector.AddReferencedObject(PrefabHelperObject);
 }
 
-void FLGUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bAppendOrToggle)
+void FLGUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bAppendOrToggle, bool bNotifyGEditor)
 {
 	TSet<ULexWidget*> TempSelection;
 	for (auto& Widget : Widgets)
@@ -561,7 +601,10 @@ void FLGUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bAp
 	if (!bAppendOrToggle)
 	{
 		SelectedActors.Empty();
-		GEditor->SelectNone(true, true);
+		if (bNotifyGEditor)
+		{
+			GEditor->SelectNone(true, true);
+		}
 	}
 
 	for ( const auto& Widget : TempSelection )
@@ -574,7 +617,10 @@ void FLGUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bAp
 		{
 			SelectedActors.Add(Widget->GetOwner());
 		}
-		GEditor->SelectActor(Widget->GetOwner(), true, true);
+		if (bNotifyGEditor)
+		{
+			GEditor->SelectActor(Widget->GetOwner(), true, true);
+		}
 	}
 	
 	OnSelectedWidgetsChanged.Broadcast();
@@ -801,11 +847,6 @@ bool FLGUIPrefabEditor::IsFilteredActor(const AActor* Actor)
 	return true;
 }
 
-void FLGUIPrefabEditor::OnOutlinerPickedChanged(AActor* Actor)
-{
-	CurrentSelectedActor = Actor;
-}
-
 void FLGUIPrefabEditor::OnOutlinerActorDoubleClick(AActor* Actor)
 {
 	// Create a bounding volume of all of the selected actors.
@@ -888,7 +929,7 @@ void FLGUIPrefabEditor::OnToolkitHostingFinished(const TSharedRef<IToolkit>& Too
 
 }
 
-FReply FLGUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent& DragDropEvent)
+FReply FLGUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent& DragDropEvent, ULexWidget* InParentWidget)
 {
 	TSharedPtr<FDragDropOperation> Operation = DragDropEvent.GetOperation();
 	if (Operation.IsValid() && Operation->IsOfType<FAssetDragDropOp>())
@@ -968,6 +1009,8 @@ FReply FLGUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent& 
 				}
 			}
 
+			auto CurrentSelectedActor = InParentWidget != nullptr ? InParentWidget->GetOwner() :
+			(SelectedActors.Num() > 0 ? SelectedActors[0] : nullptr);
 			if (PrefabsToLoad.Num() > 0 || PotentialActorClassesToLoad.Num() > 0 || PotentialStaticMeshesToLoad.Num() > 0)
 			{
 				if (CurrentSelectedActor == nullptr)

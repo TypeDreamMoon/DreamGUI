@@ -223,7 +223,7 @@ void ULexVisualPostProcess::SendRegionVertexDataToRenderProxy()
 		auto ClipDataTex = this->GetClipDataTexture();
 		if (IsValid(ClipDataTex) && ClipDataTex->GetResource() != nullptr)
 		{
-			updateData->ClipDataTexture = (FTexture2DDynamicResource*)this->GetClipDataTexture()->GetResource();
+			updateData->ClipDataTexture = (FTexture2DDynamicResource*)ClipDataTex->GetResource();
 		}
 		ENQUEUE_RENDER_COMMAND(FUIPostProcess_UpdateData)
 			([TempRenderProxy, updateData](FRHICommandListImmediate& RHICmdList)
