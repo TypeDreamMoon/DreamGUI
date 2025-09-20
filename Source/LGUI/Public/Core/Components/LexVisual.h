@@ -222,9 +222,6 @@ public:
 	 * Can be -1 to ignore it.
 	 */
 	virtual float GetFlexibleHeight()const{return -1;}
-	
-	virtual float GetShrinkToContentWidth()const{return 0;}
-	virtual float GetShrinkToContentHeight()const{return 0;}
 protected:
 	uint8 bColorChanged : 1;
 	uint8 bTransformChanged : 1;

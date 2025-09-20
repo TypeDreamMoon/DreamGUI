@@ -53,17 +53,6 @@ void FLexTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder
 	auto OverflowTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, OverflowType));
 	OverflowTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexTextCustomization::ForceRefresh, &DetailBuilder));
 	LGUICategory.AddProperty(OverflowTypeHandle);
-	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexText, MaxHorizontalWidth))
-	.Visibility(TAttribute<EVisibility>::CreateSPLambda(this, [=]()
-	{
-		ELexUITextOverflowType OverflowType;
-		OverflowTypeHandle->GetValue(*(uint8*)&OverflowType);
-		if (OverflowType == ELexUITextOverflowType::HorizontalAndVerticalOverflow)
-		{
-			return EVisibility::Visible;
-		}
-		return EVisibility::Collapsed;
-	}));
 	
 	TArray<FName> needToHidePropertyName;
 	auto RichTextHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, bRichText));

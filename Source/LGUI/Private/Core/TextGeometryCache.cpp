@@ -24,7 +24,6 @@ bool FLexUITextGeometryCache::SetInputParameters(
 	ELexUITextParagraphVerticalAlign InParagraphVAlign,
 	ELexUITextOverflowType InOverflowType,
 	ETextWrappingPolicy InWrappingPolicy,
-	float InMaxHorizontalWidth,
 	bool InUseKerning,
 	ELexUITextFontStyle InFontStyle,
 	bool InRichText,
@@ -110,11 +109,6 @@ bool FLexUITextGeometryCache::SetInputParameters(
 		this->WrappingPolicy = InWrappingPolicy;
 		bIsDirty = true;
 	}
-	if (this->maxHorizontalWidth != InMaxHorizontalWidth)
-	{
-		this->maxHorizontalWidth = InMaxHorizontalWidth;
-		bIsDirty = true;
-	}
 	if (this->useKerning != InUseKerning)
 	{
 		this->useKerning = InUseKerning;
@@ -166,11 +160,10 @@ void FLexUITextGeometryCache::ConditionalCalculateGeometry()
 			, this->paragraphVAlign
 			, this->overflowType
 			, this->WrappingPolicy
-			, this->maxHorizontalWidth
 			, this->useKerning
 			, this->fontStyle
-			, this->textRealSize
 			, this->textPreferredSize
+			, this->textTruncated
 			, RenderCanvas
 			, this->UIText.Get()
 			, this->cacheLinePropertyArray

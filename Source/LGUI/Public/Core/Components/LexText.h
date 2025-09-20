@@ -81,9 +81,6 @@ protected:
 	/** Use a custom material to render this text */
     UPROPERTY(EditAnywhere, Category = "LexUI")
     UMaterialInterface* OverrideMaterial = nullptr;
-	/** if overflowType is HorizontalAndVerticalOverflow, this parameter will limit width for horizontal overflow */
-	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (EditCondition = "OverflowType==ELexUITextOverflowType::HorizontalAndVerticalOverflow"))
-		float MaxHorizontalWidth = 100;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		ELexUITextFontStyle FontStyle = ELexUITextFontStyle::None;
 	/**
@@ -105,7 +102,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		bool bRichText = false;
 	/** Flags to enable/disable rich text tag. */
-	UPROPERTY(EditAnywhere, Category = LGUI, meta = (Bitmask, BitmaskEnum = "/Script/LGUI.EUIText_RichTextTagFilterFlags", EditCondition = "bRichText"))
+	UPROPERTY(EditAnywhere, Category = LGUI, meta = (Bitmask, BitmaskEnum = "/Script/LGUI.ELexUIText_RichTextTagFilterFlags", EditCondition = "bRichText"))
 		int32 RichTextTagFilterFlags = 0xffffffff;
 	/** rich text custom style data for custom tag and rendering custom style */
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (EditCondition = "bRichText"))
@@ -168,8 +165,6 @@ public:
 
 	void GenerateRichTextImageObject();
 
-	virtual float GetShrinkToContentWidth()const override;
-	virtual float GetShrinkToContentHeight()const override;
 	virtual float GetPreferredWidth() const override;
 	virtual float GetPreferredHeight() const override;
 public:
@@ -180,7 +175,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI") FVector2D GetFontSpace()const { return FontSpace; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") ELexUITextOverflowType GetOverflowType()const { return OverflowType; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") ETextWrappingPolicy GetWrappingPolicy()const{return WrappingPolicy;}
-	UFUNCTION(BlueprintCallable, Category = "LGUI") float GetMaxHorizontalWidth()const { return MaxHorizontalWidth; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") ELexUITextFontStyle GetFontStyle()const { return FontStyle; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") bool GetRichText()const { return bRichText; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") int32 GetRichTextTagFilterFlags()const { return RichTextTagFilterFlags; }
@@ -190,7 +184,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI") ELexUITextParagraphVerticalAlign GetParagraphVerticalAlignment()const { return VAlign; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") UMaterialInterface* GetOverrideMaterial()const{return OverrideMaterial;}
 
-	UFUNCTION(BlueprintCallable, Category = "LGUI") FVector2D GetTextRealSize()const;
+	/** indicating whether the text is Truncated or using Ellipsis */
+	UFUNCTION(BlueprintCallable, Category = "LGUI") bool IsTextTruncated()const;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetFont(ULexUIFontData_BaseObject* Value);
@@ -210,8 +205,6 @@ public:
 		void SetOverflowType(ELexUITextOverflowType Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetWrappingPolicy(ETextWrappingPolicy Value);
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetMaxHorizontalWidth(float Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetFontStyle(ELexUITextFontStyle Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")

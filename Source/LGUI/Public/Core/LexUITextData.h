@@ -44,10 +44,10 @@ enum class ELexUITextOverflowType :uint8
 	HorizontalOverflow = 0,
 	/** chars will go out of rect range vertically */
 	VerticalOverflow = 1,
-	/** if with less than maxHorizontalWidth then use HorizontalOverlow, if grater than maxHorizontalWidth then use VerticalOverflow */
-	HorizontalAndVerticalOverflow = 3,
 	/** remove chars on right if out of range */
-	ClampContent = 2,
+	Truncate = 2,
+	/** replace chars with ... if out of range */
+	Ellipsis = 3,
 };
 
 /** single char property */
@@ -142,7 +142,6 @@ public:
 		ELexUITextParagraphVerticalAlign InParagraphVAlign,
 		ELexUITextOverflowType InOverflowType,
 		ETextWrappingPolicy InWrappingPolicy,
-		float InMaxHorizontalWidth,
 		bool InUseKerning,
 		ELexUITextFontStyle InFontStyle,
 		bool InRichText,
@@ -164,7 +163,6 @@ private:
 	ELexUITextParagraphVerticalAlign paragraphVAlign = ELexUITextParagraphVerticalAlign::Bottom;
 	ELexUITextOverflowType overflowType = ELexUITextOverflowType::HorizontalOverflow;
 	ETextWrappingPolicy WrappingPolicy = ETextWrappingPolicy::AllowPerCharacterWrapping;
-	float maxHorizontalWidth = 100;
 	bool useKerning = false;
 	ELexUITextFontStyle fontStyle = ELexUITextFontStyle::None;
 	bool richText = false;
@@ -178,7 +176,8 @@ private:
 
 public:
 #pragma region OutputResults
-	FVector2f textRealSize = FVector2f::ZeroVector;
+	/** indicating whether the text is Truncated or using Ellipsis */
+	bool textTruncated = false;
 	FVector2f textPreferredSize = FVector2f::ZeroVector;
 	/** line properties, from first line to last one in array */
 	TArray<FLexUITextLineProperty> cacheLinePropertyArray;

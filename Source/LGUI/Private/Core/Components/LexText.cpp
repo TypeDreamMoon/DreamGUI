@@ -476,10 +476,10 @@ void ULexText::UnregisterOnRichTextCustomStyleDataChange()
 	onRichTextCustomStyleDataChangedDelegateHandle.Reset();
 }
 
-FVector2D ULexText::GetTextRealSize()const
+bool ULexText::IsTextTruncated()const
 {
 	UpdateCacheTextGeometry();
-	return FVector2D(CacheTextGeometryData.textRealSize);
+	return CacheTextGeometryData.textTruncated;
 }
 
 
@@ -568,8 +568,8 @@ void ULexText::SetParagraphVerticalAlignment(ELexUITextParagraphVerticalAlign Va
 void ULexText::SetOverflowType(ELexUITextOverflowType Value) {
 	if (OverflowType != Value)
 	{
-		if (OverflowType == ELexUITextOverflowType::ClampContent
-			|| Value == ELexUITextOverflowType::ClampContent
+		if (OverflowType == ELexUITextOverflowType::Truncate
+			|| Value == ELexUITextOverflowType::Truncate
 			)
 			MarkVerticesDirty(true, true, true, true);
 		else
@@ -589,15 +589,6 @@ void ULexText::SetWrappingPolicy(ETextWrappingPolicy Value)
 	}
 }
 
-void ULexText::SetMaxHorizontalWidth(float Value)
-{
-	if (MaxHorizontalWidth != Value)
-	{
-		MaxHorizontalWidth = Value;
-		MarkVertexPositionDirty();
-		ULexWidget::MarkLayoutForRebuild(GetWidget());
-	}
-}
 void ULexText::SetFontStyle(ELexUITextFontStyle Value) {
 	if (FontStyle != Value)
 	{
@@ -705,7 +696,6 @@ bool ULexText::UpdateCacheTextGeometry()const
 		, this->GetParagraphVerticalAlignment()
 		, this->GetOverflowType()
 		, this->GetWrappingPolicy()
-		, this->GetMaxHorizontalWidth()
 		, this->GetUseKerning()
 		, this->GetFontStyle()
 		, this->GetRichText()
@@ -784,18 +774,6 @@ void ULexText::GenerateRichTextImageObject()
 		false
 #endif
 	);
-}
-
-float ULexText::GetShrinkToContentWidth()const
-{
-	UpdateCacheTextGeometry();
-	return CacheTextGeometryData.textRealSize.X;
-}
-
-float ULexText::GetShrinkToContentHeight()const
-{
-	UpdateCacheTextGeometry();
-	return CacheTextGeometryData.textRealSize.Y;
 }
 
 float ULexText::GetPreferredWidth() const

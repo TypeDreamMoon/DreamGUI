@@ -198,9 +198,9 @@ public:
 	static void UpdateUIText(const FString& text, int32 visibleCharCount, float width, float height, const FVector2f& pivot
 		, const FColor& color, uint8 renderOpacity, const FVector2f& fontSpace, FLexUIGeometry* uiGeo, float fontSize
 		, ELexUITextParagraphHorizontalAlign paragraphHAlign, ELexUITextParagraphVerticalAlign paragraphVAlign, ELexUITextOverflowType overflowType
-		, ETextWrappingPolicy wrappingPolicy, float maxHorizontalWidth, bool kerning
-		, ELexUITextFontStyle fontStyle, FVector2f& textRealSize, FVector2f& textPreferredSize
-		, ULexCanvas* renderCanvas, class ULexText* uiComp
+		, ETextWrappingPolicy wrappingPolicy, bool kerning
+		, ELexUITextFontStyle fontStyle, FVector2f& textPreferredSize, bool& outTruncated
+		, ULexCanvas* renderCanvas, class ULexText* lexText
 		, TArray<FLexUITextLineProperty>& cacheLinePropertyArray, TArray<FLexUITextCharProperty>& cacheCharPropertyArray, TArray<FLexUIText_RichTextCustomTag>& cacheRichTextCustomTagArray
 		, TArray<FLexUIText_RichTextImageTag>& cacheRichTextImageTagArray
 		, ULexUIFontData_BaseObject* font, bool richText, int32 richTextFilterFlags);
