@@ -33,7 +33,6 @@
 #include "AssetTypeActions/AssetTypeActions_LGUIStaticSpriteAtlasData.h"
 #include "AssetTypeActions/AssetTypeActions_LGUIFontData.h"
 #include "AssetTypeActions/AssetTypeActions_LGUIPrefab.h"
-#include "AssetTypeActions/AssetTypeActions_LGUIPrefabForUI.h"
 #include "AssetTypeActions/AssetTypeActions_LGUIStaticMeshCache.h"
 #include "AssetTypeActions/AssetTypeActions_LGUIRichTextCustomStyleData.h"
 #include "AssetTypeActions/AssetTypeActions_LGUIRichTextImageData.h"
@@ -322,8 +321,7 @@ void FLGUIEditorModule::StartupModule()
 		TSharedPtr<FAssetTypeActions_Base> SpriteDataAction = MakeShareable(new FAssetTypeActions_LGUISpriteData(LGUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> StaticSpriteAtlasDataAction = MakeShareable(new FAssetTypeActions_LGUIStaticSpriteAtlasData(LGUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> FontDataAction = MakeShareable(new FAssetTypeActions_LGUIFontData(LGUIAssetCategoryBit));
-		TSharedPtr<FAssetTypeActions_Base> PrefabDataAction = MakeShareable(new FAssetTypeActions_LGUIPrefab(EAssetTypeCategories::Basic));
-		TSharedPtr<FAssetTypeActions_Base> PrefabDataForUIAction = MakeShareable(new FAssetTypeActions_LGUIPrefabForUI(LGUIAssetCategoryBit));
+		TSharedPtr<FAssetTypeActions_Base> PrefabDataAction = MakeShareable(new FAssetTypeActions_LGUIPrefab(LGUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> UIStaticMeshCacheDataAction = MakeShareable(new FAssetTypeActions_LGUIStaticMeshCache(LGUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> RichTextCustomStyleDataAction = MakeShareable(new FAssetTypeActions_LGUIRichTextCustomStyleData(LGUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> RichTextImageDataAction = MakeShareable(new FAssetTypeActions_LGUIRichTextImageData(LGUIAssetCategoryBit));
@@ -332,7 +330,6 @@ void FLGUIEditorModule::StartupModule()
 		AssetTools.RegisterAssetTypeActions(StaticSpriteAtlasDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(FontDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(PrefabDataAction.ToSharedRef());
-		AssetTools.RegisterAssetTypeActions(PrefabDataForUIAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(UIStaticMeshCacheDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(RichTextCustomStyleDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(RichTextImageDataAction.ToSharedRef());
@@ -341,7 +338,6 @@ void FLGUIEditorModule::StartupModule()
 		AssetTypeActionsArray.Add(StaticSpriteAtlasDataAction);
 		AssetTypeActionsArray.Add(FontDataAction);
 		AssetTypeActionsArray.Add(PrefabDataAction);
-		AssetTypeActionsArray.Add(PrefabDataForUIAction);
 		AssetTypeActionsArray.Add(UIStaticMeshCacheDataAction);
 		AssetTypeActionsArray.Add(RichTextCustomStyleDataAction);
 		AssetTypeActionsArray.Add(RichTextImageDataAction);
