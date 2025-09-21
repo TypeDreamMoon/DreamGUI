@@ -8,7 +8,8 @@
 
 int FLexUIClipData::InheritClipDepth = 16;
 int FLexUIClipData::SingleBlockSizeInBytes =
-	sizeof(FMatrix44f)//canvas to clip object's space, last column of matrix: (half-width, half-height, isValid, 1)
+	sizeof(FMatrix44f)//canvas to clip object's space, last column of matrix: (half-width, half-height, isValid, softness)
+	+ sizeof(FVector4f)//CornerRadius
 	;
 int FLexUIClipData::BlockSizeInBytes = SingleBlockSizeInBytes * FLexUIClipData::InheritClipDepth;
 
@@ -39,12 +40,12 @@ void FLexUIClipData::UpdateData()
 	{
 		auto WorldToWidgetMatrix = TargetClip->Widget->GetComponentTransform().ToInverseMatrixWithScale();
 		auto CanvasToWidgetMatrix = FMatrix44f(CanvasToWorldMatrix * WorldToWidgetMatrix);
-		auto Column3 = CanvasToWidgetMatrix.GetColumn(3);
+		auto& M = CanvasToWidgetMatrix.M;
 		auto RenderSize = FVector2f(TargetClip->Widget->GetWidth(), TargetClip->Widget->GetHeight());
-		Column3.X = RenderSize.X * 0.5f;
-		Column3.Y = RenderSize.Y * 0.5f;
-		Column3.Z = 1;
-		CanvasToWidgetMatrix.SetColumn(3, Column3);
+		M[0][3] = RenderSize.X * 0.5f;//half width
+		M[1][3] = RenderSize.Y * 0.5f;//half height
+		M[2][3] = 1;//isValid
+		M[3][3] = 1;//softness
 		CanvasToWidgetMatrix = CanvasToWidgetMatrix.GetTransposed();//matrix in memory is aligned as row-primary, so transpose it then in hlsl we can read as column-primary
 		FMemory::Memcpy(BlockBuffer + BlockDataOffset, &CanvasToWidgetMatrix, SingleBlockSizeInBytes);
 		BlockDataOffset += SingleBlockSizeInBytes;

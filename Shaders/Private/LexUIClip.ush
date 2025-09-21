@@ -1,31 +1,32 @@
 
-float4 LexUI_ReadFloat4_ClipData(Texture2D DataTex, inout int3 Position)
+void LexUI_ReadClipData(Texture2D DataTex, inout int3 Position, out float4x4 CanvasToClipMatrix, out float HalfWidth, out float HalfHeight, out float IsValid, out float Softness)
 {
-	float4 Result;
-	Result.x = DataTex.Load(Position).r;
-	Position.x += 1;
-	Result.y = DataTex.Load(Position).r;
-	Position.x += 1;
-	Result.z = DataTex.Load(Position).r;
-	Position.x += 1;
-	Result.w = DataTex.Load(Position).r;
-	Position.x += 1;
-	return Result;
-}
-void LexUI_ReadClipData(Texture2D DataTex, inout int3 Position, out float4x4 CanvasToClipMatrix, out float HalfWidth, out float HalfHeight, out float IsValid)
-{
-	float4 Column0 = LexUI_ReadFloat4_ClipData(DataTex, Position);
-	float4 Column1 = LexUI_ReadFloat4_ClipData(DataTex, Position);
-	float4 Column2 = LexUI_ReadFloat4_ClipData(DataTex, Position);
-	float4 Column3 = LexUI_ReadFloat4_ClipData(DataTex, Position);
+	float4 Column0 = DataTex.Load(Position);Position.x += 1;
+	float4 Column1 = DataTex.Load(Position);Position.x += 1;
+	float4 Column2 = DataTex.Load(Position);Position.x += 1;
+	float4 Column3 = DataTex.Load(Position);Position.x += 1;
 	HalfWidth = Column3.x;
 	HalfHeight = Column3.y;
 	IsValid = Column3.z;
+	Softness = Column3.w;
 	Column3 = float4(0, 0, 0, 1);
 	CanvasToClipMatrix[0] = Column0;
 	CanvasToClipMatrix[1] = Column1;
 	CanvasToClipMatrix[2] = Column2;
 	CanvasToClipMatrix[3] = Column3;
+}
+// reference from https://www.shadertoy.com/view/4tGGRm
+float LexUIClip_sdRoundRect(float2 p, float2 b, float4 r)
+{
+	r.xyzw = min(r.xyzw, min(b.x, b.y));
+	r.xy = (p.x > 0.0) ? r.xy : r.wz;
+	r.x = (p.y > 0.0) ? r.x : r.y;
+	float2 q = abs(p) - b + r.x;
+	float d = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
+	// modified by me
+	d = d / fwidth(d);
+	d = saturate(0 - d);
+	return d;
 }
 #define LexUI_Clip_Depth 16
 float LexUI_CalculateClipData(Texture2D DataTex, SamplerState DataTexSampler, float CoordinateInDataTex, float3 PixelLocalPosition)
@@ -39,8 +40,11 @@ float LexUI_CalculateClipData(Texture2D DataTex, SamplerState DataTexSampler, fl
 		float4x4 CanvasToClipMatrix;
 		float HalfWidth, HalfHeight;
 		float IsValid = 1;
-		LexUI_ReadClipData(DataTex, Position, CanvasToClipMatrix, HalfWidth, HalfHeight, IsValid);
+		float Softness = 0;
+		LexUI_ReadClipData(DataTex, Position, CanvasToClipMatrix, HalfWidth, HalfHeight, IsValid, Softness);
 		if (!IsValid)break;
+		float4 CornerRadius = DataTex.Load(Position);Position.x += 1;
+		
 		float3 PixelPosition = mul(CanvasToClipMatrix, float4(PixelLocalPosition.xyz, 1.0)).xyz;
 		float2 alpha2 = abs(PixelPosition.yz) - float2(HalfWidth, HalfHeight);
 		alpha2 = saturate(alpha2);

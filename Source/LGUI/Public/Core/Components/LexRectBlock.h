@@ -198,7 +198,7 @@ protected:
 		, bool v6
 		, bool v7
 	);
-	void Fill4BytesToData(uint8* Data, uint8 InValue0, uint8 InValue1, uint8 InValue2, uint8 InValue3, int& InOutDataOffset);
+	void Fill8BytesToData(uint8* Data, uint8 InValue0, uint8 InValue1, uint8 InValue2, uint8 InValue3, int& InOutDataOffset);
 	void FillFloatToData(uint8* Data, const float& InValue, int& InOutDataOffset);
 	void FillVector2ToData(uint8* Data, const FVector2f& InValue, int& InOutDataOffset);
 	void FillVector4ToData(uint8* Data, const FVector4f& InValue, int& InOutDataOffset);

@@ -2880,50 +2880,59 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 						//move back and replace chars by ...
 						TCHAR charCodeOfDots = 0x2026;//'…'
 						auto charGeoOfDots = GetCharGeo(charCodeOfDots, charCodeOfDots, fontSize);
-						auto lineOffsetPointToStripOff = currentLineOffset.X - charGeoOfDots.xadvance - halfFontSpaceX;
-						//remove char geometry on tail of data, if the char's vertex position greater than dots
-						for (int charPropertyIndex = cacheCharPropertyArray.Num() - 1; charPropertyIndex >= 0; charPropertyIndex--)
+						if (currentLineOffset.X < charGeoOfDots.xadvance)//remove all if it can't fit the char-of-dots
 						{
-							bool bShouldStripOffThisChar = false;
-							auto& charProperty = cacheCharPropertyArray[charPropertyIndex];
-							for (int i = 0; i < charProperty.VertCount; i++)
+							originVertices.Reset();
+							vertices.Reset();
+							triangles.Reset();
+						}
+						else
+						{
+							auto lineOffsetPointToStripOff = currentLineOffset.X - charGeoOfDots.xadvance - halfFontSpaceX;
+							//remove char geometry on tail of data, if the char's vertex position greater than dots
+							for (int charPropertyIndex = cacheCharPropertyArray.Num() - 1; charPropertyIndex >= 0; charPropertyIndex--)
 							{
-								auto vertIndex = charProperty.StartVertIndex + i;
-								auto& vert = originVertices[vertIndex];
-								if (vert.Position.Y > lineOffsetPointToStripOff)
+								bool bShouldStripOffThisChar = false;
+								auto& charProperty = cacheCharPropertyArray[charPropertyIndex];
+								for (int i = 0; i < charProperty.VertCount; i++)
 								{
-									bShouldStripOffThisChar = true;
+									auto vertIndex = charProperty.StartVertIndex + i;
+									auto& vert = originVertices[vertIndex];
+									if (vert.Position.Y > lineOffsetPointToStripOff)
+									{
+										bShouldStripOffThisChar = true;
+										break;
+									}
+								}
+								if (bShouldStripOffThisChar)
+								{
+									for (int i = 0; i < charProperty.VertCount; i++)
+									{
+										originVertices.Pop();
+										vertices.Pop();
+									}
+									for (int i = 0; i < charProperty.IndicesCount; i++)
+									{
+										triangles.Pop();
+									}
+								}
+								else
+								{
 									break;
 								}
 							}
-							if (bShouldStripOffThisChar)
-							{
-								for (int i = 0; i < charProperty.VertCount; i++)
-								{
-									originVertices.Pop();
-									vertices.Pop();
-								}
-								for (int i = 0; i < charProperty.IndicesCount; i++)
-								{
-									triangles.Pop();
-								}
-							}
-							else
-							{
-								break;
-							}
-						}
 
-						currentLineOffset.X = lineOffsetPointToStripOff;
-						//push dots geometry to tail
-						int additionalVerticesCount, additionalIndicesCount;
-						font->PushCharData(
-						charCodeOfDots, currentLineOffset, fontSpace, charGeoOfDots,
-						richTextParseResult,
-						originVertices.Num(), triangles.Num(),
-						additionalVerticesCount, additionalIndicesCount,
-						originVertices, vertices, triangles
-						);
+							currentLineOffset.X = lineOffsetPointToStripOff;
+							//push dots geometry to tail
+							int additionalVerticesCount, additionalIndicesCount;
+							font->PushCharData(
+							charCodeOfDots, currentLineOffset, fontSpace, charGeoOfDots,
+							richTextParseResult,
+							originVertices.Num(), triangles.Num(),
+							additionalVerticesCount, additionalIndicesCount,
+							originVertices, vertices, triangles
+							);
+						}
 					}
 				}
 			}

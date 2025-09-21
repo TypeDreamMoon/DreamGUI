@@ -38,7 +38,7 @@ void ULexRectBlock::FillData(uint8* Data, float width, float height)
 	int DataOffset = 0;
 
 	uint8 BoolAsByte = PackBoolToByte(bEnableBody, bEnableOuterShadow, bEnableBodyGradient, bEnableBorder, bEnableBorderGradient, bEnableInnerShadow, bEnableRadialFill, false);
-	Fill4BytesToData(Data
+	Fill8BytesToData(Data
 		, BoolAsByte
 		, (uint8)BodyTextureScaleMode
 		, 0, 0
@@ -113,6 +113,7 @@ constexpr int ULexRectBlock::DataCountInBytes()
 {
 	const int result =
 		4//bool and enum
+		+ 4//for extra bool and enum
 
 		+ 8//quad size
 		+ 16//corner radius
@@ -185,9 +186,9 @@ uint8 ULexRectBlock::PackBoolToByte(
 		;
 	return Result;
 }
-void ULexRectBlock::Fill4BytesToData(uint8* Data, uint8 InValue0, uint8 InValue1, uint8 InValue2, uint8 InValue3, int& InOutDataOffset)
+void ULexRectBlock::Fill8BytesToData(uint8* Data, uint8 InValue0, uint8 InValue1, uint8 InValue2, uint8 InValue3, int& InOutDataOffset)
 {
-	int ByteCount = 4;
+	int ByteCount = 8;//actually data only cover 4 bytes, but we need extra 4 bytes to make decode easier (because data texture is 16bytes per pixel)
 	uint32 DataAsUint =
 		(InValue0 << 24)
 		| (InValue1 << 16)

@@ -32,22 +32,22 @@ void ULexUIDataAsTexture::CreateTexture()
 		this,
 		FName(*FString::Printf(TEXT("LexUIDataAsTexture_%d"), TextureNameSuffix++))
 	);
-	TextureDynamic->CompressionSettings = TC_SingleFloat;
+	TextureDynamic->CompressionSettings = TC_HDR_F32;
 	TextureDynamic->LODGroup = TEXTUREGROUP_UI;
-	TextureDynamic->Init(TextureWidth, TextureHeight, EPixelFormat::PF_R32_FLOAT, false);
+	TextureDynamic->Init(TextureWidth, TextureHeight, EPixelFormat::PF_A32B32G32R32F, false);
 	if (TextureDynamic->GetResource())
 	{
 		auto TextureRes = (FTexture2DDynamicResource*)TextureDynamic->GetResource();
 		ENQUEUE_RENDER_COMMAND(FLWidgetDataAsTexture_ZeroMemory)(
 			[TextureRes, Width = TextureWidth, Height = TextureHeight](FRHICommandListImmediate& RHICmdList)
 			{
-				uint8* Data = new uint8[Width * Height * 4];
-				FMemory::Memzero(Data, Width * Height * 4);
+				uint8* Data = new uint8[Width * Height * 16];
+				FMemory::Memzero(Data, Width * Height * 16);
 				RHICmdList.UpdateTexture2D(
 					TextureRes->GetTexture2DRHI(),
 					0,
 					FUpdateTextureRegion2D(0, 0, 0, 0, Width, Height),
-					4 * Width,
+					16 * Width,
 					Data
 				);
 				delete Data;
@@ -110,7 +110,7 @@ void ULexUIDataAsTexture::Init(int InBlockSizeInByte, int InInitialTextureSize)
 	}
 	bIsInitialized = true;
 	BlockSizeInByte = InBlockSizeInByte;
-	BlockPixelCount = BlockSizeInByte / 4 + ((BlockSizeInByte % 4) > 0 ? 1 : 0);
+	BlockPixelCount = BlockSizeInByte / 16 + ((BlockSizeInByte % 16) > 0 ? 1 : 0);
 	TextureWidth = InInitialTextureSize;
 	while (BlockPixelCount > TextureWidth)
 	{

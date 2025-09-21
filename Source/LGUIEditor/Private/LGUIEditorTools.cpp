@@ -2276,7 +2276,7 @@ int LGUIEditorTools::GetDrawcallCount(AActor* InActor)
 	{
 		if (auto rootUIItem = Cast<ULexWidget>(rootComp))
 		{
-			if (auto canvas = InActor->FindComponentByClass<ULexCanvas>())
+			if (auto canvas = rootUIItem->GetRenderCanvas())
 			{
 				return canvas->GetDrawCallCount();
 			}

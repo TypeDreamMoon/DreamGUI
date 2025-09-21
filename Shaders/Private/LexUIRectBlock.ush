@@ -29,64 +29,16 @@ half4 LexUI_UnpackUintColor(uint colorUint)
     ResultColor.a = ((colorUint >> 0) & 0x000000ff) * INV_255;
     return ResultColor;
 }
-half4 LexUI_UnpackBytes(uint value)
+half4 LexUI_ReadColor(float Data)
 {
-    half4 Result;
-    Result.x = (value >> 24) & 0x000000ff;
-    Result.y = (value >> 16) & 0x000000ff;
-    Result.z = (value >> 8) & 0x000000ff;
-    Result.w = (value >> 0) & 0x000000ff;
-    return Result;
-}
-
-int2 LexUI_UnpackCoordinate(float value)
-{
-    uint PackedCoordinate = asuint(value);
-    int2 Coordinate;
-    Coordinate.x = (PackedCoordinate >> 16) & 0x0000ffff;
-    Coordinate.y = (PackedCoordinate >> 0) & 0x0000ffff;
-    return Coordinate;
-}
-float LexUI_ReadFloat(Texture2D DataTex, inout int3 Position)
-{
-    float Result;
-    Result = DataTex.Load(Position).r;
-    Position.x += 1;
-    return Result;
-}
-float2 LexUI_ReadFloat2(Texture2D DataTex, inout int3 Position)
-{
-    float2 Result;
-    Result.x = DataTex.Load(Position).r;
-    Position.x += 1;
-    Result.y = DataTex.Load(Position).r;
-    Position.x += 1;
-    return Result;
-}
-float4 LexUI_ReadFloat4(Texture2D DataTex, inout int3 Position)
-{
-    float4 Result;
-    Result.x = DataTex.Load(Position).r;
-    Position.x += 1;
-    Result.y = DataTex.Load(Position).r;
-    Position.x += 1;
-    Result.z = DataTex.Load(Position).r;
-    Position.x += 1;
-    Result.w = DataTex.Load(Position).r;
-    Position.x += 1;
-    return Result;
-}
-half4 LexUI_ReadColor(Texture2D DataTex, inout int3 Position)
-{
-    uint ColorUint = asuint(DataTex.Load(Position).r);
-    Position.x += 1;
+    uint ColorUint = asuint(Data);
     half4 Color = LexUI_UnpackUintColor(ColorUint);
     Color.rgb = sRGBToLinear(Color.rgb);
     return Color;
 }
 
 // reference from https://www.shadertoy.com/view/4tGGRm
-float sdRoundRect(float2 p, float2 b, float4 r)
+float LexUI_sdRoundRect(float2 p, float2 b, float4 r)
 {
     r.xyzw = min(r.xyzw, min(b.x, b.y));
     r.xy = (p.x > 0.0) ? r.xy : r.wz;
@@ -98,7 +50,7 @@ float sdRoundRect(float2 p, float2 b, float4 r)
     d = saturate(0.5 - d);
     return d;
 }
-float sdRoundRectInnerShadow(float2 p, float2 b, float4 r, float shadowSize)
+float LexUI_sdRoundRectInnerShadow(float2 p, float2 b, float4 r, float shadowSize)
 {
     r.xyzw = min(r.xyzw, min(b.x, b.y));
     r.xy = (p.x > 0.0) ? r.xy : r.wz;
@@ -111,7 +63,7 @@ float sdRoundRectInnerShadow(float2 p, float2 b, float4 r, float shadowSize)
     d = smoothstep(0, 1, d);
     return d;
 }
-float sdRoundRectOuterShadow(float2 p, float2 b, float4 r, float shadowSize)
+float LexUI_sdRoundRectOuterShadow(float2 p, float2 b, float4 r, float shadowSize)
 {
     r.xyzw = min(r.xyzw, min(b.x, b.y));
     r.xy = (p.x > 0.0) ? r.xy : r.wz;
@@ -125,7 +77,7 @@ float sdRoundRectOuterShadow(float2 p, float2 b, float4 r, float shadowSize)
     return d;
 }
 
-float RadialGradient(float2 uv, float2 quadSize, float2 center, float2 radius, float rotation)
+float LexUI_RadialGradient(float2 uv, float2 quadSize, float2 center, float2 radius, float rotation)
 {
     float2 fragCoord = uv * quadSize;
     rotation = radians(rotation);
@@ -141,7 +93,7 @@ float RadialGradient(float2 uv, float2 quadSize, float2 center, float2 radius, f
     return distToCenter;
 }
 
-float4 BlendPremul(float4 bottom, float4 top)
+float4 LexUI_BlendPremul(float4 bottom, float4 top)
 {
 #if 0
     half3 outColor;
@@ -201,9 +153,9 @@ float LexUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, floa
     {
         int Coordinate = round(UV1.y);
         int3 Position = int3(0, Coordinate, 0);
-        
-        uint ByteUint = asuint(DataTex.Load(Position).r);
-        Position.x += 1;
+
+        float4 PixelData = DataTex.Load(Position);Position.x += 1;
+        uint ByteUint = asuint(PixelData.r);
         uint BoolValues = (ByteUint >> 24) & 0x000000ff;
         _TextureScaleMode = (ByteUint >> 16) & 0x000000ff;
         
@@ -215,37 +167,46 @@ float LexUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, floa
         _EnableInnerShadow = (BoolValues >> 2) & 1;
         _EnableRadialFill = (BoolValues >> 1) & 1;
         
-        _QuadSize = LexUI_ReadFloat2(DataTex, Position);
-        
-        _CornerRadius = LexUI_ReadFloat4(DataTex, Position);
-        _BodyColor = LexUI_ReadColor(DataTex, Position);
-        _TextureUVCenter = LexUI_ReadFloat2(DataTex, Position);
-        
-        _GradientColor = LexUI_ReadColor(DataTex, Position);
-        _GradientCenter = LexUI_ReadFloat2(DataTex, Position);
-        _GradientRadius = LexUI_ReadFloat2(DataTex, Position);
-        _GradientRotation = LexUI_ReadFloat(DataTex, Position);
+        _QuadSize = PixelData.ba;
 
-        _BorderWidth = LexUI_ReadFloat(DataTex, Position);
-        _BorderColor = LexUI_ReadColor(DataTex, Position);
-        _BorderGradientColor = LexUI_ReadColor(DataTex, Position);
-        _BorderGradientCenter = LexUI_ReadFloat2(DataTex, Position);
-        _BorderGradientRadius = LexUI_ReadFloat2(DataTex, Position);
-        _BorderGradientRotation = LexUI_ReadFloat(DataTex, Position);
+        PixelData = DataTex.Load(Position);Position.x += 1;
+        _CornerRadius = PixelData;
+        PixelData = DataTex.Load(Position);Position.x += 1;
+        _BodyColor = LexUI_ReadColor(PixelData.r);
+        _TextureUVCenter = PixelData.gb;
         
-        _InnerShadowColor = LexUI_ReadColor(DataTex, Position);
-        _InnerShadowSize = LexUI_ReadFloat(DataTex, Position);
-        _InnerShadowBlur = LexUI_ReadFloat(DataTex, Position);
-        _InnerShadowOffset = LexUI_ReadFloat2(DataTex, Position);
+        _GradientColor = LexUI_ReadColor(PixelData.a);
+        PixelData = DataTex.Load(Position);Position.x += 1;
+        _GradientCenter = PixelData.xy;
+        _GradientRadius = PixelData.zw;
+        PixelData = DataTex.Load(Position);Position.x += 1;
+        _GradientRotation = PixelData.x;
+
+        _BorderWidth = PixelData.y;
+        _BorderColor = LexUI_ReadColor(PixelData.z);
+        _BorderGradientColor = LexUI_ReadColor(PixelData.w);
+        PixelData = DataTex.Load(Position);Position.x += 1;
+        _BorderGradientCenter = PixelData.xy;
+        _BorderGradientRadius = PixelData.zw;
+        PixelData = DataTex.Load(Position);Position.x += 1;
+        _BorderGradientRotation = PixelData.x;
         
-        _RadialFillCenter = LexUI_ReadFloat2(DataTex, Position);
-        _RadialFillRotation = LexUI_ReadFloat(DataTex, Position);
-        _RadialFillAngle = LexUI_ReadFloat(DataTex, Position);
+        _InnerShadowColor = LexUI_ReadColor(PixelData.y);
+        _InnerShadowSize = PixelData.z;
+        _InnerShadowBlur = PixelData.w;
+        PixelData = DataTex.Load(Position);Position.x += 1;
+        _InnerShadowOffset = PixelData.xy;
         
-        _OuterShadowColor = LexUI_ReadColor(DataTex, Position);
-        _OuterShadowSize = LexUI_ReadFloat(DataTex, Position);
-        _OuterShadowBlur = LexUI_ReadFloat(DataTex, Position);
-        _OuterShadowOffset = LexUI_ReadFloat2(DataTex, Position);
+        _RadialFillCenter = PixelData.zw;
+        PixelData = DataTex.Load(Position);Position.x += 1;
+        _RadialFillRotation = PixelData.x;
+        _RadialFillAngle = PixelData.y;
+        
+        _OuterShadowColor = LexUI_ReadColor(PixelData.z);
+        _OuterShadowSize = PixelData.w;
+        PixelData = DataTex.Load(Position);Position.x += 1;
+        _OuterShadowBlur = PixelData.x;
+        _OuterShadowOffset = PixelData.yz;
 
     }
     
@@ -260,14 +221,14 @@ float LexUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, floa
 
     float2 sdQuadSize = _QuadSize * 0.5f;
     float2 sdFragCoord = (UV0 * 2.0f - float2(1.0f, 1.0f)) * sdQuadSize;
-    float dOuter = sdRoundRect(sdFragCoord, sdQuadSize, _CornerRadius);
+    float dOuter = LexUI_sdRoundRect(sdFragCoord, sdQuadSize, _CornerRadius);
     
     //outer shadow
     if (_EnableOuterShadow)
     {
         half4 outerShadowColor = _OuterShadowColor;
         float4 cornerRadius = _CornerRadius + _OuterShadowSize;
-        float outerShadow = sdRoundRectOuterShadow(sdFragCoord - _OuterShadowOffset, sdQuadSize + _OuterShadowSize, cornerRadius, _OuterShadowBlur * 0.5f);
+        float outerShadow = LexUI_sdRoundRectOuterShadow(sdFragCoord - _OuterShadowOffset, sdQuadSize + _OuterShadowSize, cornerRadius, _OuterShadowBlur * 0.5f);
         outerShadowColor.a *= outerShadow;
         float outerMask = 1.0f - dOuter;
         half bodyVisible = sign(_EnableBody + _EnableBorder + _EnableInnerShadow); //is body visible?
@@ -275,7 +236,7 @@ float LexUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, floa
         outerMask // if body not visible, make it smooth
         , sign(outerMask) //if body is visible, make it no smooth, because smooth can show a thin transparent line between body and outshadow
         , bodyVisible);
-        color = BlendPremul(color, outerShadowColor);
+        color = LexUI_BlendPremul(color, outerShadowColor);
         //outerShadowColor.rgb *= outerShadowColor.a;
         //color = color * (1.0 - outerShadowColor.a) + outerShadowColor;
     }
@@ -300,12 +261,12 @@ float LexUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, floa
 
         if (_EnableGradient)
         {
-            float gradientLerpAlpha = RadialGradient(UV0, _QuadSize, _GradientCenter.xy, _GradientRadius.xy, _GradientRotation);
+            float gradientLerpAlpha = LexUI_RadialGradient(UV0, _QuadSize, _GradientCenter.xy, _GradientRadius.xy, _GradientRotation);
             bodyColor = lerp(_GradientColor * MainTexColor, bodyColor, gradientLerpAlpha);
         }
         
         bodyColor.a *= dOuter;
-        color = BlendPremul(color, bodyColor);
+        color = LexUI_BlendPremul(color, bodyColor);
     }
     
     if (_EnableInnerShadow)
@@ -313,11 +274,11 @@ float LexUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, floa
         float2 quadSize = sdQuadSize - _InnerShadowSize + _InnerShadowBlur * 0.5f;
         float4 cornerRadius = _CornerRadius + _InnerShadowBlur * 0.5f - _InnerShadowSize;
         cornerRadius = max(cornerRadius, _InnerShadowBlur);
-        float innerShadow = sdRoundRectInnerShadow(sdFragCoord - _InnerShadowOffset.xy, quadSize, cornerRadius, _InnerShadowBlur);
+        float innerShadow = LexUI_sdRoundRectInnerShadow(sdFragCoord - _InnerShadowOffset.xy, quadSize, cornerRadius, _InnerShadowBlur);
         half4 innerShadowColor = _InnerShadowColor;
         innerShadowColor.a *= innerShadow;
         innerShadowColor.a *= dOuter;
-        color = BlendPremul(color, innerShadowColor);
+        color = LexUI_BlendPremul(color, innerShadowColor);
     }
 
     if (_EnableBorder * sign(abs(_BorderWidth)))
@@ -325,14 +286,14 @@ float LexUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, floa
         half4 borderColor = _BorderColor;
         if (_EnableBorderGradient)
         {
-            float borderGradientLerpAlpha = RadialGradient(UV0, _QuadSize, _BorderGradientCenter.xy, _BorderGradientRadius.xy, _BorderGradientRotation);
+            float borderGradientLerpAlpha = LexUI_RadialGradient(UV0, _QuadSize, _BorderGradientCenter.xy, _BorderGradientRadius.xy, _BorderGradientRotation);
             borderColor = lerp(_BorderGradientColor, borderColor, borderGradientLerpAlpha);
         }
-        float dInner = sdRoundRect(sdFragCoord, sdQuadSize - _BorderWidth, _CornerRadius - _BorderWidth);
+        float dInner = LexUI_sdRoundRect(sdFragCoord, sdQuadSize - _BorderWidth, _CornerRadius - _BorderWidth);
         borderColor.a *= (1.0f - dInner);
         borderColor.a *= dOuter;
         borderColor.a = saturate(borderColor.a);
-        color = BlendPremul(color, borderColor);
+        color = LexUI_BlendPremul(color, borderColor);
     }
 
     if (_EnableRadialFill * sign(max(0, 360.0f - _RadialFillAngle)))
