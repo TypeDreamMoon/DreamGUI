@@ -21,6 +21,7 @@ public:
 	void MarkNeedUpdateData(){bNeedUpdateData = true;}
 	bool IsPointVisible(const FVector& Point)const;
 private:
+	bool IsPointVisible_CheckCornerRadius(const FVector2D& InLocalHitPoint, ULexWidget* InWidget)const;
 	bool bNeedUpdateData = true;
 	int BufferStartPos;
 	TWeakObjectPtr<ULexWidget> Widget;

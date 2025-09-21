@@ -18,9 +18,6 @@
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
-#include "PropertyType/LexWidgetAspectRatioCustomization.h"
-#include "PropertyType/LexWidgetMarginSizeCustomization.h"
-#include "PropertyType/LexWidgetSizeCustomization.h"
 
 #include "Widgets/Input/SNumericEntryBox.h"
 
@@ -104,7 +101,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 
 	DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData));
 
-	// LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, bIsUIActive));
+	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, bWidgetActive));
 
 	//anchor, width, height
 	{

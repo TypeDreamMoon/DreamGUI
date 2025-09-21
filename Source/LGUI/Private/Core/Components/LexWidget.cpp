@@ -451,12 +451,14 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		static const FName VisibilityName = GET_MEMBER_NAME_CHECKED(ULexWidget, bWidgetActive);
 		static const FName RaycastableName = GET_MEMBER_NAME_CHECKED(ULexWidget, Raycastable);
 		static const FName ClippingName = GET_MEMBER_NAME_CHECKED(ULexWidget, Clipping);
+		static const FName ClippingCornerRadiusName = GET_MEMBER_NAME_CHECKED(ULexWidget, ClippingCornerRadius);
 		static const FName VisualName = GET_MEMBER_NAME_CHECKED(ULexWidget, Visual);
 		static const FName LayoutName = GET_MEMBER_NAME_CHECKED(ULexWidget, Layout);
 		static const FName InteractableName = GET_MEMBER_NAME_CHECKED(ULexWidget, Interactable);
 
 		if (MemberName == AnchorDataName
 		|| MemberName == VisibilityName
+		|| MemberName == ClippingCornerRadiusName
 		)
 		{
 			this->MarkAnchorDataChanged(true, true, true);
@@ -2467,7 +2469,14 @@ void ULexWidget::SetClipping(ELexWidgetClipping Value)
 		MarkClipDirty(true);
 	}
 }
-
+void ULexWidget::SetClippingCornerRadius(FVector4f Value)
+{
+	if (ClippingCornerRadius != Value)
+	{
+		ClippingCornerRadius = Value;
+		MarkClipDirty(false);
+	}
+}
 float ULexWidget::GetFinalRenderOpacity()const
 {
 	if (UIParent.IsValid())

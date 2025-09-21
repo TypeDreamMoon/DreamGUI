@@ -32,7 +32,7 @@ enum class ELexWidgetClipping : uint8
 	 * This widget clips to its bounds.  It does NOT intersect with any existing clipping UIGeometry, it pushes a new clipping 
 	 * state.  Effectively allowing it to render outside the bounds of hierarchy that does clip.
 	 */
-	ClipToBoundsWithoutIntersecting UMETA(DisplayName = "Clip To Bounds - Without Intersecting (Advanced)"),
+	ClipToBoundsWithoutIntersecting UMETA(DisplayName = "Clip To Bounds - Without Intersecting"),
 	/**
 	 * This widget does not clip.
 	 */
@@ -406,6 +406,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
 	ELexWidgetClipping Clipping = ELexWidgetClipping::Inherit;
 	/**
+	 * X- RightBottom, Y- RightTop, Z- LeftTop, W- LeftBottom
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition="Clipping!=ELexWidgetClipping::Disabled&&Clipping!=ELexWidgetClipping::Inherit"))
+	FVector4f ClippingCornerRadius = FVector4f::Zero();
+	/**
 	 * If not WidgetActive, then not visible, not take layout space, not interactable, not hit-testable
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter = "GetWidgetActive", Setter="SetWidgetActive", meta = (AllowPrivateAccess = true))
@@ -440,6 +445,10 @@ public:
 	bool IsPointVisibleOnClip(const FVector& Value)const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetClipping(ELexWidgetClipping Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	FVector4f GetClippingCornerRadius()const { return ClippingCornerRadius; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetClippingCornerRadius(FVector4f Value);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	float GetRenderOpacity()const { return RenderOpacity; }
