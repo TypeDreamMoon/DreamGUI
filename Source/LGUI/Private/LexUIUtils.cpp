@@ -1,18 +1,12 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Utils/LexUIUtils.h"
-#include "../Public/Core/Components/LexWidget.h"
-#include "../Public/Core/Components/LexCanvas.h"
-#include "Core/LexUIDrawCall.h"
 #include "Sound/SoundBase.h"
-#include "../Public/Core/Components/LexVisual.h"
-#include "../Public/Core/Components/LexVisualPostProcess.h"
-#include "../Public/Core/Components/LexVisualBatchMesh.h"
 #include "TextureResource.h"
 #include "Engine/Texture2D.h"
+#include "LGUI.h"
 #if WITH_EDITOR
 #include "Editor.h"
-#include "EditorStyleSet.h"
 #include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
 #endif
@@ -27,7 +21,7 @@ void FLexUIUtils::DestroyActorWithHierarchy(AActor* Target, bool WithHierarchy)
 {
 	if (!Target->IsValidLowLevelFast())
 	{
-		UE_LOG(LGUI, Error, TEXT("[%s].%d Try to delete not valid actor"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Try to delete invalid actor"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
 	if (WithHierarchy)

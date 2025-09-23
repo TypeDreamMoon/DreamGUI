@@ -2,6 +2,7 @@
 
 #include "Interaction/UIToggleGroupComponent.h"
 #include "LGUI.h"
+#include "Core/Components/LexWidget.h"
 #include "Interaction/UIToggleComponent.h"
 
 

@@ -46,5 +46,6 @@ private:
 	TSharedPtr<class SBox> ComponentsBox;
 	TSharedPtr<class SSubobjectEditor> SubobjectEditor;
 	TWeakObjectPtr<AActor> CachedActor;
-	bool bIsSelectFromLGUIEditor = false;;
+	bool bIsSelectFromLGUIEditor = false;
+	bool bIsSelectFromDetails = false;
 };

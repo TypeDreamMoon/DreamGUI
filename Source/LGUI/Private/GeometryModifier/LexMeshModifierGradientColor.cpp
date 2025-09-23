@@ -1,14 +1,14 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "GeometryModifier/UIEffectGradientColor.h"
+#include "GeometryModifier/LexMeshModifierGradientColor.h"
 #include "LGUI.h"
 #include "Utils/LexUIUtils.h"
 #include "Core/Components/LexText.h"
 
-UUIEffectGradientColor::UUIEffectGradientColor()
+ULexMeshModifierGradientColor::ULexMeshModifierGradientColor()
 {
 }
-void UUIEffectGradientColor::ApplyColorAndAlpha(FColor& InOutColor, FColor InTintColor)
+void ULexMeshModifierGradientColor::ApplyColorAndAlpha(FColor& InOutColor, FColor InTintColor)
 {
 	if (multiplySourceAlpha)
 	{
@@ -22,7 +22,7 @@ void UUIEffectGradientColor::ApplyColorAndAlpha(FColor& InOutColor, FColor InTin
 		InOutColor = InTintColor;
 	}
 }
-void UUIEffectGradientColor::ModifyUIGeometry(
+void ULexMeshModifierGradientColor::ModifyUIGeometry(
 	FLexUIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 )
 {
@@ -35,7 +35,7 @@ void UUIEffectGradientColor::ModifyUIGeometry(
 
 	switch (directionType)
 	{
-	case EUIEffectGradientColorDirection::BottomToTop:
+	case ELexMeshModifierGradientColorDirection::BottomToTop:
 	{
 		for (int i = 0; i < vertexCount;)
 		{
@@ -46,7 +46,7 @@ void UUIEffectGradientColor::ModifyUIGeometry(
 		}
 	}
 	break;
-	case EUIEffectGradientColorDirection::TopToBottom:
+	case ELexMeshModifierGradientColorDirection::TopToBottom:
 	{
 		for (int i = 0; i < vertexCount;)
 		{
@@ -57,7 +57,7 @@ void UUIEffectGradientColor::ModifyUIGeometry(
 		}
 	}
 	break;
-	case EUIEffectGradientColorDirection::LeftToRight:
+	case ELexMeshModifierGradientColorDirection::LeftToRight:
 	{
 		for (int i = 0; i < vertexCount;)
 		{
@@ -68,7 +68,7 @@ void UUIEffectGradientColor::ModifyUIGeometry(
 		}
 	}
 	break;
-	case EUIEffectGradientColorDirection::RightToLeft:
+	case ELexMeshModifierGradientColorDirection::RightToLeft:
 	{
 		for (int i = 0; i < vertexCount;)
 		{
@@ -79,7 +79,7 @@ void UUIEffectGradientColor::ModifyUIGeometry(
 		}
 	}
 	break;
-	case EUIEffectGradientColorDirection::FourCornor:
+	case ELexMeshModifierGradientColorDirection::FourCornor:
 	{
 		for (int i = 0; i < vertexCount;)
 		{

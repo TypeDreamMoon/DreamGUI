@@ -1,6 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Extensions/UISpriteSequencePlayer.h"
+
+#include "LGUI.h"
 #include "LTweenBPLibrary.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/Components/UISprite.h"

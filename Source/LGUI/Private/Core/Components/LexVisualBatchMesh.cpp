@@ -144,15 +144,17 @@ void ULexVisualBatchMesh::GeometryModifierWillChangeVertexData(bool& OutTriangle
 	{
 		for (int i = 0; i < count; i++)
 		{
-			auto modifierComp = MeshModifierArray[i];
-			if (modifierComp->GetEnable())
+			if (auto modifierComp = MeshModifierArray[i])
 			{
-				bool TempTriangleIndices = false, TempVertexPosition = false, TempUV = false, TempColor = false;
-				modifierComp->ModifierWillChangeVertexData(TempTriangleIndices, TempVertexPosition, TempUV, TempColor);
-				if (TempTriangleIndices)OutTriangleIndices = true;
-				if (TempVertexPosition)OutVertexPosition = true;
-				if (TempUV)OutUV = true;
-				if (TempColor)OutColor = true;
+				if (modifierComp->GetEnable())
+				{
+					bool TempTriangleIndices = false, TempVertexPosition = false, TempUV = false, TempColor = false;
+					modifierComp->ModifierWillChangeVertexData(TempTriangleIndices, TempVertexPosition, TempUV, TempColor);
+					if (TempTriangleIndices)OutTriangleIndices = true;
+					if (TempVertexPosition)OutVertexPosition = true;
+					if (TempUV)OutUV = true;
+					if (TempColor)OutColor = true;
+				}
 			}
 		}
 	}
@@ -167,10 +169,12 @@ void ULexVisualBatchMesh::ApplyGeometryModifier(bool triangleChanged, bool uvCha
 	{
 		for (int i = 0; i < count; i++)
 		{
-			auto modifierComp = MeshModifierArray[i];
-			if (modifierComp->GetEnable())
+			if (auto modifierComp = MeshModifierArray[i])
 			{
-				modifierComp->ModifyUIGeometry(*(UIGeometry.Get()), triangleChanged, uvChanged, colorChanged, vertexPositionChanged);
+				if (modifierComp->GetEnable())
+				{
+					modifierComp->ModifyUIGeometry(*(UIGeometry.Get()), triangleChanged, uvChanged, colorChanged, vertexPositionChanged);
+				}
 			}
 		}
 	}

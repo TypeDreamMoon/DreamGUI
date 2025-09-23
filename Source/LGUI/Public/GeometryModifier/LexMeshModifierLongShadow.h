@@ -2,17 +2,17 @@
 
 #pragma once
 
-#include "LexVisualBatchMeshModifierBase.h"
-#include "UIEffectLongShadow.generated.h"
+#include "LexMeshModifierBase.h"
+#include "LexMeshModifierLongShadow.generated.h"
 
 
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIEffectLongShadow : public ULexVisualBatchMeshModifierBase
+class LGUI_API ULexMeshModifierLongShadow : public ULexMeshModifierBase
 {
 	GENERATED_BODY()
 
 public:	
-	UUIEffectLongShadow();
+	ULexMeshModifierLongShadow();
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")

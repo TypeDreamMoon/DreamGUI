@@ -12,8 +12,8 @@ struct FLexUIPostProcessVertex;
 
 
 /** 
- * UI element that can do post processing effect on screen space.
- * Only valid on LGUIRenderer (ScreenSpaceUI or WorldSpace-LGUIRenderer).
+ * UI element that can do post-processing effect on screen space.
+ * Only valid on LexUIRenderer (ScreenSpaceUI or WorldSpace-LexUIRenderer).
  */
 UCLASS(Abstract, NotBlueprintable)
 class LGUI_API ULexVisualPostProcess : public ULexVisual
@@ -29,7 +29,7 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
 #endif
-	TSharedPtr<FLexUIGeometry> geometry = nullptr;
+	TSharedPtr<FLexUIGeometry> Geometry = nullptr;
 	virtual void UpdateGeometry()override final;
 
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
@@ -46,7 +46,7 @@ protected:
 		FVector4 MaskTextureUVRect = FVector4(0, 0, 1, 1);
 	void SendMaskTextureToRenderProxy();
 public:
-	FLexUIGeometry* GetGeometry()const { return geometry.Get(); }
+	FLexUIGeometry* GetGeometry()const { return Geometry.Get(); }
 	
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		UTexture2D* GetMaskTexture()const { return MaskTexture; }
@@ -54,9 +54,9 @@ public:
 		const FVector4& GetMaskTextureUVRect()const { return MaskTextureUVRect; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetMaskTexture(UTexture2D* newValue);
+		void SetMaskTexture(UTexture2D* Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetMaskTextureUVRect(const FVector4& value);
+		void SetMaskTextureUVRect(const FVector4& Value);
 public:
 	void MarkVertexPositionDirty();
 	void MarkUVDirty();

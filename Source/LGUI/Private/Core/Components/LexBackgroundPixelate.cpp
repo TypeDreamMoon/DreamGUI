@@ -45,21 +45,21 @@ void ULexBackgroundPixelate::MarkAllDirty()
 
 
 
-void ULexBackgroundPixelate::SetPixelateStrength(float newValue)
+void ULexBackgroundPixelate::SetPixelateStrength(float Value)
 {
-	if (pixelateStrength != newValue)
+	if (PixelateStrength != Value)
 	{
-		pixelateStrength = newValue;
+		PixelateStrength = Value;
 		GetWidget()->MarkCanvasUpdate(false, false, false, false);
 		SendOthersDataToRenderProxy();
 	}
 }
 
-void ULexBackgroundPixelate::SetApplyAlphaToStrength(bool newValue)
+void ULexBackgroundPixelate::SetApplyAlphaToStrength(bool Value)
 {
-	if (applyAlphaToStrength != newValue)
+	if (ApplyAlphaToStrength != Value)
 	{
-		applyAlphaToStrength = newValue;
+		ApplyAlphaToStrength = Value;
 		GetWidget()->MarkCanvasUpdate(false, false, false, false);
 		SendOthersDataToRenderProxy();
 	}
@@ -67,11 +67,11 @@ void ULexBackgroundPixelate::SetApplyAlphaToStrength(bool newValue)
 
 float ULexBackgroundPixelate::GetStrengthInternal()
 {
-	if (applyAlphaToStrength)
+	if (ApplyAlphaToStrength)
 	{
-		return GetFinalAlpha01() * pixelateStrength;
+		return GetFinalAlpha01() * PixelateStrength;
 	}
-	return pixelateStrength;
+	return PixelateStrength;
 }
 
 

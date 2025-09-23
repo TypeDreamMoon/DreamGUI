@@ -3,24 +3,32 @@
 #pragma once
 
 #include "LexVisualPostProcess.h"
-#include "LGUIDelegateHandleWrapper.h"
-#include "UIFrameCapture.generated.h"
+#include "LexFrameCapture.generated.h"
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(FUIFrameCapture_OnFrameReady_DynamicDelegate, UTextureRenderTarget2D*, CapturedFrame);
-DECLARE_DELEGATE_OneParam(FUIFrameCapture_OnFrameReady_Delegate, UTextureRenderTarget2D*);
+UENUM(BlueprintType)
+enum class ELexFrameCaptureMode : uint8
+{
+	/** Capture one frame every time we call DoCapture, and return new RenderTarget. */
+	OneShot,
+	/** Continuous capture frame after we call DoCapture until we call StopCapture. */
+	Continuous,
+};
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FLexFrameCapture_OnFrameReady_DynamicDelegate, UTextureRenderTarget2D*, CapturedFrame);
+DECLARE_DELEGATE_OneParam(FLexFrameCapture_OnFrameReady_Delegate, UTextureRenderTarget2D*);
 
 /**
  * UI element that can capture screen as texture for further use.
- * Use it in ScreenSpace or WorldSpace-LGUIRenderer.
+ * Use it in ScreenSpace or WorldSpace-LexUIRenderer.
  * If android OpenGL ES3.1, need to enable "ProjectSettings/Platforms/Android/Build/Support Backbuffer Sampling on OpenGL".
  */
 UCLASS(ClassGroup = (LGUI), NotBlueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIFrameCapture : public ULexVisualPostProcess
+class LGUI_API ULexFrameCapture : public ULexVisualPostProcess
 {
 	GENERATED_BODY()
 
 public:	
-	UUIFrameCapture(const FObjectInitializer& ObjectInitializer);
+	ULexFrameCapture(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	virtual void BeginPlay() override;
@@ -36,10 +44,15 @@ protected:
 	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI")
 	TObjectPtr<UTextureRenderTarget2D> CapturedFrame;
 
-	DECLARE_MULTICAST_DELEGATE_OneParam(FUIFrameCapture_OnFrameReady_MulticastDelegate, UTextureRenderTarget2D*);
-	FUIFrameCapture_OnFrameReady_MulticastDelegate OnFrameReady;
+	DECLARE_MULTICAST_DELEGATE_OneParam(FLexFrameCapture_OnFrameReady_MulticastDelegate, UTextureRenderTarget2D*);
+	FLexFrameCapture_OnFrameReady_MulticastDelegate OnFrameReady;
 	bool bIsFrameReady = false;
-	bool bPendingCapture = false;
+	friend class FUIFrameCaptureRenderProxy;
+	enum class ECaptureMode : uint8
+	{
+		None, OneShot, Continuous,
+	};
+	ECaptureMode CaptureMode = ECaptureMode::None;
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	UTextureRenderTarget2D* GetCapturedFrame()const { return CapturedFrame; }
@@ -48,15 +61,20 @@ public:
 	 * @param InDelegate Called when capture finish.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void DoCapture(const FUIFrameCapture_OnFrameReady_DynamicDelegate& InDelegate);
-	void DoCapture(const FUIFrameCapture_OnFrameReady_Delegate& InDelegate);
-	void DoCapture(const TFunction<void(UTextureRenderTarget2D*)>& InFunction);
+	void DoOneFrameCapture(const FLexFrameCapture_OnFrameReady_DynamicDelegate& InDelegate);
+	void DoOneFrameCapture(const FLexFrameCapture_OnFrameReady_Delegate& InDelegate);
+	void DoOneFrameCapture(const TFunction<void(UTextureRenderTarget2D*)>& InFunction);
+
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void StartContinuousCapture();
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void StopContinuousCapture();
 
 	virtual TSharedPtr<FLexVisualPostProcessRenderProxy> GetRenderProxy()override;
 	virtual void MarkAllDirty()override;
 protected:
 	void MarkOneFrameCapture();
 	virtual void SendRegionVertexDataToRenderProxy()override;
-	void SendOthersDataToRenderProxy();
+	void SendCaptureDataToRenderProxy();
 	void UpdateRenderTarget();
 };

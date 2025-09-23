@@ -5,13 +5,13 @@
 #include "Core/LexUIGeometry.h"
 #include "Core/Components/LexVisualBatchMesh.h"
 #include "Components/ActorComponent.h"
-#include "LexVisualBatchMeshModifierBase.generated.h"
+#include "LexMeshModifierBase.generated.h"
 
 class ULexVisualBatchMesh;
 class ULexText;
 
 UENUM(BlueprintType)
-enum class ELexUIMeshModifierHelper_UITextModifyPositionType:uint8
+enum class ELexUIMeshModifierHelper_TextPositionType:uint8
 {
 	//Relative to character's origin position
 	Relative,
@@ -33,7 +33,7 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void UITextHelperFunction_ModifyCharGeometry_Transform(ULexText* InUIText, int InCharIndex
-			, ELexUIMeshModifierHelper_UITextModifyPositionType InPositionType
+			, ELexUIMeshModifierHelper_TextPositionType InPositionType
 			, const FVector& InPosition
 			, const FRotator& InRotator = FRotator::ZeroRotator
 			, const FVector& InScale = FVector(1,1,1)
@@ -49,7 +49,7 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void UITextHelperFunction_ModifyCharGeometry_Position(ULexText* InUIText, int InCharIndex
-			, const FVector& InPosition, ELexUIMeshModifierHelper_UITextModifyPositionType InPositionType
+			, const FVector& InPosition, ELexUIMeshModifierHelper_TextPositionType InPositionType
 		);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void UITextHelperFunction_ModifyCharGeometry_Rotate(ULexText* InUIText, int InCharIndex, const FRotator& InRotator = FRotator::ZeroRotator);
@@ -62,16 +62,15 @@ public:
 };
 
 /** 
- * For modify ui geometry, act like a filter.
- * Need UIBatchMeshRenderable component.
+ * For modify ui mesh, like a filter.
  */
 UCLASS(Abstract, BlueprintType, DefaultToInstanced, EditInlineNew)
-class LGUI_API ULexVisualBatchMeshModifierBase : public UObject
+class LGUI_API ULexMeshModifierBase : public UObject
 {
 	GENERATED_BODY()
 
 public:	
-	ULexVisualBatchMeshModifierBase();
+	ULexMeshModifierBase();
 
 protected:
 	friend class ULexVisualBatchMesh;
@@ -81,7 +80,7 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 
-	/** Enable this geometry modifier */
+	/** Enable this mesh modifier */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		bool bEnable = true;
 
@@ -94,9 +93,9 @@ public:
 		bool GetEnable()const { return bEnable; }
 	
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetEnable(bool value);
+		void SetEnable(bool Value);
 	/**
-	 * Modify UI geometry's vertex and triangle.
+	 * Modify UI mesh's vertex and triangle.
 	 * @param	InTriangleChanged		triangle changed
 	 * @param	InUVChanged			vertex uv changed
 	 * @param	InColorChanged			vertex color changed

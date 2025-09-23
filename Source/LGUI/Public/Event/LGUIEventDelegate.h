@@ -46,9 +46,6 @@ enum class ELGUIEventDelegateParameterType :uint8
 	Name,
 	Text,
 };
-#ifndef LGUIEventDelegateParameterType
-#define LGUIEventDelegateParameterType UE_DEPRECATED_MACRO(5.0, "LGUIEventDelegateParameterType has been renamed to ELGUIEventDelegateParameterType") ELGUIEventDelegateParameterType
-#endif
 /** helper class for finding function */
 class LGUI_API ULGUIEventDelegateParameterHelper
 {

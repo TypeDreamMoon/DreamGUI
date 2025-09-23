@@ -5,7 +5,7 @@
 #include "LexVisual.h"
 #include "LexVisualBatchMesh.generated.h"
 
-class ULexVisualBatchMeshModifierBase;
+class ULexMeshModifierBase;
 class FLexUIGeometry;
 class UMaterialInterface;
 
@@ -101,7 +101,7 @@ protected:
 
 public:
 	/** 
-	 * Return a created MaterialInstanceDynamic that renderring this UI item, may shared by other UI item. if this UI item is not renderred yet, then return nullptr.
+	 * Return a created MaterialInstanceDynamic that rendering this UI item, may shared by other UI item. if this UI item is not renderred yet, then return nullptr.
 	 * LGUI only create MaterialInstanceDynamic when specified material have one of these LGUI material parameter: [LexUI_MainTexture, LexUI_FontTexture, LexUI_ClipDataTexture].
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
@@ -127,7 +127,7 @@ public:
 	FLexUIGeometry* GetGeometry()const { return UIGeometry.Get(); }
 
 	virtual bool LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const override;
-	/** is this UI element type support drawcall batching? */
+	/** is this UI element type support draw-call batching? */
 	virtual bool SupportDrawCallBatching()const { return true; }
 protected:
 	virtual bool LineTraceVisiblePixel(float InAlphaThreshold, FHitResult& OutHit, const FVector& Start, const FVector& End)const;
@@ -136,14 +136,14 @@ protected:
 	friend class FLexVisualBatchMeshCustomization;
 
 	UPROPERTY(EditAnywhere, Instanced, Category = "LGUI")
-	TArray<TObjectPtr<ULexVisualBatchMeshModifierBase>> MeshModifierArray;
+	TArray<TObjectPtr<ULexMeshModifierBase>> MeshModifierArray;
 
 	/** texture for render this UI element */
 	virtual UTexture* GetTextureToCreateGeometry();
 	/** material to render this UI element. if CustomUIMaterial is not valid, then use this material. */
 	virtual UMaterialInterface* GetMaterialToCreateGeometry();
 
-	/** do anything before acturally create or update geometry */
+	/** do anything before actually create or update geometry */
 	virtual void OnBeforeCreateOrUpdateGeometry();
 	/** fill and update ui geometry */
 	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged);
@@ -158,7 +158,7 @@ protected:
 	/** material to render this UI element. if CustomUIMaterial is not valid, then use this material. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI", meta = (DisplayName = "GetMaterialToCreateGeometry"))
 		UMaterialInterface* ReceiveGetMaterialToCreateGeometry();
-	/** do anything before acturally create or update geometry */
+	/** do anything before actually create or update geometry */
 	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI", meta = (DisplayName = "OnBeforeCreateOrUpdateGeometry"))
 		void ReceiveOnBeforeCreateOrUpdateGeometry();
 	/** fill and update ui geometry */

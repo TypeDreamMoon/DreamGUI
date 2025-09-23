@@ -1,15 +1,15 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "GeometryModifier/UIEffectLongShadow.h"
+#include "GeometryModifier/LexMeshModifierLongShadow.h"
 #include "LGUI.h"
 #include "Utils/LexUIUtils.h"
 
 
-UUIEffectLongShadow::UUIEffectLongShadow()
+ULexMeshModifierLongShadow::ULexMeshModifierLongShadow()
 {
 }
 
-void UUIEffectLongShadow::ApplyColorAndAlpha(FColor& InOutColor, FColor InTintColor, uint8 InOriginAlpha)
+void ULexMeshModifierLongShadow::ApplyColorAndAlpha(FColor& InOutColor, FColor InTintColor, uint8 InOriginAlpha)
 {
 	if (multiplySourceAlpha)
 	{
@@ -23,7 +23,7 @@ void UUIEffectLongShadow::ApplyColorAndAlpha(FColor& InOutColor, FColor InTintCo
 		InOutColor = InTintColor;
 	}
 }
-void UUIEffectLongShadow::ModifyUIGeometry(
+void ULexMeshModifierLongShadow::ModifyUIGeometry(
 	FLexUIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 )
 {
@@ -110,7 +110,7 @@ void UUIEffectLongShadow::ModifyUIGeometry(
 	}
 }
 
-void UUIEffectLongShadow::SetShadowColor(FColor newColor)
+void ULexMeshModifierLongShadow::SetShadowColor(FColor newColor)
 {
 	if (shadowColor != newColor)
 	{
@@ -118,7 +118,7 @@ void UUIEffectLongShadow::SetShadowColor(FColor newColor)
 		if (GetLexVisual())GetLexVisual()->MarkColorDirty();
 	}
 }
-void UUIEffectLongShadow::SetShadowSize(FVector newSize)
+void ULexMeshModifierLongShadow::SetShadowSize(FVector newSize)
 {
 	if (shadowSize != newSize)
 	{
@@ -126,7 +126,7 @@ void UUIEffectLongShadow::SetShadowSize(FVector newSize)
 		if (GetLexVisual())GetLexVisual()->MarkVertexPositionDirty();
 	}
 }
-void UUIEffectLongShadow::SetShadowSegment(uint8 newSegment)
+void ULexMeshModifierLongShadow::SetShadowSegment(uint8 newSegment)
 {
 	if (shadowSegment != newSegment)
 	{
@@ -134,7 +134,7 @@ void UUIEffectLongShadow::SetShadowSegment(uint8 newSegment)
 		if (GetLexVisual())GetLexVisual()->MarkVerticesDirty(true, true, true, true);
 	}
 }
-void UUIEffectLongShadow::SetUseGradientColor(bool newBool)
+void ULexMeshModifierLongShadow::SetUseGradientColor(bool newBool)
 {
 	if (useGradientColor != newBool)
 	{
@@ -142,7 +142,7 @@ void UUIEffectLongShadow::SetUseGradientColor(bool newBool)
 		if (GetLexVisual())GetLexVisual()->MarkColorDirty();
 	}
 }
-void UUIEffectLongShadow::SetGradientColor(FColor newColor)
+void ULexMeshModifierLongShadow::SetGradientColor(FColor newColor)
 {
 	if (shadowColor != newColor)
 	{

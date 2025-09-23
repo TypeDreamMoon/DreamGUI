@@ -9,7 +9,7 @@
 ULexVisualPostProcess::ULexVisualPostProcess(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
 	VisualType = ELexVisualType::PostProcess;
-	geometry = TSharedPtr<FLexUIGeometry>(new FLexUIGeometry);
+	Geometry = TSharedPtr<FLexUIGeometry>(new FLexUIGeometry);
 
 	bLocalVertexPositionChanged = true;
 	bUVChanged = true;
@@ -82,9 +82,9 @@ void ULexVisualPostProcess::UpdateGeometry()
 	if (!DrawCall.IsValid()//not add to render yet
 		)
 	{
-		geometry->Clear();
+		Geometry->Clear();
 		OnUpdateGeometry(true, true, true, true);
-		FLexUIGeometry::TransformVertices(RenderCanvas, this, geometry.Get());
+		FLexUIGeometry::TransformVertices(RenderCanvas, this, Geometry.Get());
 
 		UpdateRegionVertex();
 	}
@@ -92,16 +92,16 @@ void ULexVisualPostProcess::UpdateGeometry()
 	{
 		if (bLocalVertexPositionChanged || bUVChanged || bColorChanged)
 		{
-			geometry->Clear();
+			Geometry->Clear();
 			OnUpdateGeometry(false, bLocalVertexPositionChanged, bUVChanged, bColorChanged);
 		}
 		if (bClipDataPositionChanged)
 		{
-			UpdateGeometryClipData(*geometry.Get(), ClipDataStartPosition);
+			UpdateGeometryClipData(*Geometry.Get(), ClipDataStartPosition);
 		}
 		if (bLocalVertexPositionChanged || bTransformChanged)
 		{
-			FLexUIGeometry::TransformVertices(RenderCanvas, this, geometry.Get());
+			FLexUIGeometry::TransformVertices(RenderCanvas, this, Geometry.Get());
 		}
 		if (bLocalVertexPositionChanged || bUVChanged || bColorChanged || bTransformChanged || bClipDataPositionChanged)
 		{
@@ -118,8 +118,8 @@ void ULexVisualPostProcess::OnUpdateGeometry(bool InTriangleChanged, bool InVert
 {
 	//simple rect geometry for render from screen image to mesh region and inverse
 	{
-		auto& vertices = geometry->Vertices;
-		auto& originVertices = geometry->OriginVertices;
+		auto& vertices = Geometry->Vertices;
+		auto& originVertices = Geometry->OriginVertices;
 		FLexUIGeometry::LexUIGeometrySetArrayNum(vertices, 4);
 		FLexUIGeometry::LexUIGeometrySetArrayNum(originVertices, 4);
 		if (InVertexUVChanged || InVertexPositionChanged || InVertexColorChanged)
@@ -157,7 +157,7 @@ void ULexVisualPostProcess::OnUpdateGeometry(bool InTriangleChanged, bool InVert
 
 			if (InVertexColorChanged)
 			{
-				FLexUIGeometry::UpdateUIColor(geometry.Get(), GetFinalColor());
+				FLexUIGeometry::UpdateUIColor(Geometry.Get(), GetFinalColor());
 			}
 		}
 	}
@@ -177,7 +177,7 @@ void ULexVisualPostProcess::UpdateRegionVertex()
 		};
 	}
 
-	auto& Vertices = geometry->Vertices;
+	auto& Vertices = Geometry->Vertices;
 	for (int i = 0; i < 4; i++)
 	{
 		auto& copyVert = RenderScreenToMeshRegionVertexArray[i];
@@ -238,11 +238,11 @@ void ULexVisualPostProcess::SendRegionVertexDataToRenderProxy()
 	}
 }
 
-void ULexVisualPostProcess::SetMaskTexture(UTexture2D* newValue)
+void ULexVisualPostProcess::SetMaskTexture(UTexture2D* Value)
 {
-	if (MaskTexture != newValue)
+	if (MaskTexture != Value)
 	{
-		MaskTexture = newValue;
+		MaskTexture = Value;
 		SendMaskTextureToRenderProxy();
 
 		bLocalVertexPositionChanged = true;
@@ -251,11 +251,11 @@ void ULexVisualPostProcess::SetMaskTexture(UTexture2D* newValue)
 		GetWidget()->MarkCanvasUpdate(false, true, false);
 	}
 }
-void ULexVisualPostProcess::SetMaskTextureUVRect(const FVector4& value)
+void ULexVisualPostProcess::SetMaskTextureUVRect(const FVector4& Value)
 {
-	if (MaskTextureUVRect != value)
+	if (MaskTextureUVRect != Value)
 	{
-		MaskTextureUVRect = value;
+		MaskTextureUVRect = Value;
 
 		bUVChanged = true;
 		GetWidget()->MarkCanvasUpdate(false, false, false);
@@ -287,7 +287,7 @@ bool ULexVisualPostProcess::IsRenderProxyValid()const
 
 bool ULexVisualPostProcess::HaveValidData()const
 {
-	return geometry->Vertices.Num() > 0;
+	return Geometry->Vertices.Num() > 0;
 }
 
 bool ULexVisualPostProcess::LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const
@@ -298,7 +298,7 @@ bool ULexVisualPostProcess::LineTraceUI(FHitResult& OutHit, const FVector& Start
 	}
 	else if (RaycastType == ELexVisualRaycastType::Mesh)
 	{
-		return LineTraceUIGeometry(geometry.Get(), OutHit, Start, End);
+		return LineTraceUIGeometry(Geometry.Get(), OutHit, Start, End);
 	}
 	else
 	{

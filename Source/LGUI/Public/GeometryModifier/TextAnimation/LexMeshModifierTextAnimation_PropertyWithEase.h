@@ -2,23 +2,23 @@
 
 #pragma once
 
-#include "../UIEffectTextAnimation.h"
+#include "../LexMeshModifierTextAnimation.h"
 #include "LTweener.h"
-#include "UIEffectTextAnimation_PropertyWithEase.generated.h"
+#include "LexMeshModifierTextAnimation_PropertyWithEase.generated.h"
 
 UCLASS(ClassGroup = (LGUI), Abstract, BlueprintType)
-class LGUI_API UUIEffectTextAnimation_PropertyWithEase : public UUIEffectTextAnimation_Property
+class LGUI_API ULexMeshModifierTextAnimation_PropertyWithEase : public ULexMeshModifierTextAnimation_Property
 {
 	GENERATED_BODY()
 private:
 	friend class FUIEffectTextAnimationPropertyCustomization;
 	/** Animation type, same as LTween ease */
 	UPROPERTY(EditAnywhere, Category = "Property")
-		ELTweenEase easeType = ELTweenEase::InOutSine;
+		ELTweenEase EaseType = ELTweenEase::InOutSine;
 	/** Only valid if easeType = CurveFloat. Use CurveFloat to control the animation. */
 	UPROPERTY(EditAnywhere, Category = "Property", meta = (EditCondition = "easeType == ELTweenEase::CurveFloat"))
-		TObjectPtr<UCurveFloat> easeCurve;
-	FLTweenFunction easeFunc;
+		TObjectPtr<UCurveFloat> EaseCurve;
+	FLTweenFunction EaseFunc;
 	float EaseCurveFunction(float c, float b, float t, float d);
 protected:
 	const FLTweenFunction& GetEaseFunction();
@@ -27,74 +27,74 @@ protected:
 #endif
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		ELTweenEase GetEaseType()const { return easeType; }
+		ELTweenEase GetEaseType()const { return EaseType; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		UCurveFloat* GetCurveFloat()const { return easeCurve; }
+		UCurveFloat* GetCurveFloat()const { return EaseCurve; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetEaseType(ELTweenEase value);
+		void SetEaseType(ELTweenEase Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetEaseCurve(UCurveFloat* value);
+		void SetEaseCurve(UCurveFloat* Value);
 };
 
 UCLASS(ClassGroup = (LGUI), BlueprintType, meta = (DisplayName = "Position Property (UI Effect TextAnimation)"))
-class LGUI_API UUIEffectTextAnimation_PositionProperty : public UUIEffectTextAnimation_PropertyWithEase
+class LGUI_API ULexMeshModifierTextAnimation_PositionProperty : public ULexMeshModifierTextAnimation_PropertyWithEase
 {
 	GENERATED_BODY()
 private:
 	UPROPERTY(EditAnywhere, Category = "Property")
-		FVector position;
+		FVector Position;
 public:
-	virtual void ApplyProperty(class ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) override;
+	virtual void ApplyProperty(class ULexText* InUIText, const FLexMeshModifierTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		FVector GetPosition()const { return position; }
+		FVector GetPosition()const { return Position; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetPosition(FVector value);
+		void SetPosition(FVector Value);
 };
 
 UCLASS(ClassGroup = (LGUI), BlueprintType, meta = (DisplayName = "PositionRandom Property (UI Effect TextAnimation)"))
-class LGUI_API UUIEffectTextAnimation_PositionRandomProperty : public UUIEffectTextAnimation_PropertyWithEase
+class LGUI_API ULexMeshModifierTextAnimation_PositionRandomProperty : public ULexMeshModifierTextAnimation_PropertyWithEase
 {
 	GENERATED_BODY()
 private:
 	//random seed
 	UPROPERTY(EditAnywhere, Category = "Property")
-		int seed = 0;
+		int Seed = 0;
 	//random min
 	UPROPERTY(EditAnywhere, Category = "Property")
-		FVector min = FVector(0, 0, 0);
+		FVector Min = FVector(0, 0, 0);
 	//random max
 	UPROPERTY(EditAnywhere, Category = "Property")
-		FVector max = FVector(0, 10, 0);
+		FVector Max = FVector(0, 10, 0);
 public:
-	virtual void ApplyProperty(class ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) override;
+	virtual void ApplyProperty(class ULexText* InUIText, const FLexMeshModifierTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		int GetSeed()const { return seed; }
+		int GetSeed()const { return Seed; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		FVector GetMin()const { return min; }
+		FVector GetMin()const { return Min; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		FVector GetMax()const { return max; }
+		FVector GetMax()const { return Max; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetSeed(int value);
+		void SetSeed(int Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetMin(FVector value);
+		void SetMin(FVector Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetMax(FVector value);
+		void SetMax(FVector Value);
 };
 
 UCLASS(ClassGroup = (LGUI), BlueprintType, meta = (DisplayName = "Rotation Property (UI Effect TextAnimation)"))
-class LGUI_API UUIEffectTextAnimation_RotationProperty : public UUIEffectTextAnimation_PropertyWithEase
+class LGUI_API ULexMeshModifierTextAnimation_RotationProperty : public ULexMeshModifierTextAnimation_PropertyWithEase
 {
 	GENERATED_BODY()
 private:
 	UPROPERTY(EditAnywhere, Category = "Property")
 		FRotator rotator;
 public:
-	virtual void ApplyProperty(class ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) override;
+	virtual void ApplyProperty(class ULexText* InUIText, const FLexMeshModifierTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		FRotator GetRotator()const { return rotator; }
@@ -104,163 +104,163 @@ public:
 };
 
 UCLASS(ClassGroup = (LGUI), BlueprintType, meta = (DisplayName = "RotationRandom Property (UI Effect TextAnimation)"))
-class LGUI_API UUIEffectTextAnimation_RotationRandomProperty : public UUIEffectTextAnimation_PropertyWithEase
+class LGUI_API ULexMeshModifierTextAnimation_RotationRandomProperty : public ULexMeshModifierTextAnimation_PropertyWithEase
 {
 	GENERATED_BODY()
 private:
 	//random seed
 	UPROPERTY(EditAnywhere, Category = "Property")
-		int seed = 0;
+		int Seed = 0;
 	//random min
 	UPROPERTY(EditAnywhere, Category = "Property")
-		FRotator min = FRotator(0, 0, 0);
+		FRotator Min = FRotator(0, 0, 0);
 	//random max
 	UPROPERTY(EditAnywhere, Category = "Property")
-		FRotator max = FRotator(0, 90, 0);
+		FRotator Max = FRotator(0, 90, 0);
 public:
-	virtual void ApplyProperty(class ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) override;
+	virtual void ApplyProperty(class ULexText* InUIText, const FLexMeshModifierTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		int GetSeed()const { return seed; }
+		int GetSeed()const { return Seed; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		FRotator GetMin()const { return min; }
+		FRotator GetMin()const { return Min; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		FRotator GetMax()const { return max; }
+		FRotator GetMax()const { return Max; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetSeed(int value);
+		void SetSeed(int Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetMin(FRotator value);
+		void SetMin(FRotator Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetMax(FRotator value);
+		void SetMax(FRotator Value);
 };
 
 UCLASS(ClassGroup = (LGUI), BlueprintType, meta = (DisplayName = "Scale Property (UI Effect TextAnimation)"))
-class LGUI_API UUIEffectTextAnimation_ScaleProperty : public UUIEffectTextAnimation_PropertyWithEase
+class LGUI_API ULexMeshModifierTextAnimation_ScaleProperty : public ULexMeshModifierTextAnimation_PropertyWithEase
 {
 	GENERATED_BODY()
 private:
 	UPROPERTY(EditAnywhere, Category = "Property")
-		FVector scale = FVector::OneVector;
+		FVector Scale = FVector::OneVector;
 public:
-	virtual void ApplyProperty(class ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) override;
+	virtual void ApplyProperty(class ULexText* InUIText, const FLexMeshModifierTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		FVector GetScale()const { return scale; }
+		FVector GetScale()const { return Scale; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetScale(FVector value);
+		void SetScale(FVector Value);
 };
 
 UCLASS(ClassGroup = (LGUI), BlueprintType, meta = (DisplayName = "ScaleRandom Property (UI Effect TextAnimation)"))
-class LGUI_API UUIEffectTextAnimation_ScaleRandomProperty : public UUIEffectTextAnimation_PropertyWithEase
+class LGUI_API ULexMeshModifierTextAnimation_ScaleRandomProperty : public ULexMeshModifierTextAnimation_PropertyWithEase
 {
 	GENERATED_BODY()
 private:
 	//random seed
 	UPROPERTY(EditAnywhere, Category = "Property")
-		int seed = 0;
+		int Seed = 0;
 	//random min
 	UPROPERTY(EditAnywhere, Category = "Property")
-		FVector min = FVector(1, 1, 1);
+		FVector Min = FVector(1, 1, 1);
 	//random max
 	UPROPERTY(EditAnywhere, Category = "Property")
-		FVector max = FVector(2, 2, 2);
+		FVector Max = FVector(2, 2, 2);
 public:
-	virtual void ApplyProperty(class ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) override;
+	virtual void ApplyProperty(class ULexText* InUIText, const FLexMeshModifierTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		int GetSeed()const { return seed; }
+		int GetSeed()const { return Seed; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		FVector GetMin()const { return min; }
+		FVector GetMin()const { return Min; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		FVector GetMax()const { return max; }
+		FVector GetMax()const { return Max; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetSeed(int value);
+		void SetSeed(int Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetMin(FVector value);
+		void SetMin(FVector Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetMax(FVector value);
+		void SetMax(FVector Value);
 };
 
 UCLASS(ClassGroup = (LGUI), BlueprintType, meta = (DisplayName = "Alpha Property (UI Effect TextAnimation)"))
-class LGUI_API UUIEffectTextAnimation_AlphaProperty : public UUIEffectTextAnimation_PropertyWithEase
+class LGUI_API ULexMeshModifierTextAnimation_AlphaProperty : public ULexMeshModifierTextAnimation_PropertyWithEase
 {
 	GENERATED_BODY()
 private:
 	/** Target alpha value, 0-1 range. */
 	UPROPERTY(EditAnywhere, Category = "Property", meta = (ClampMin = "0.0", ClampMax = "1.0"))
-		float alpha;
+		float Alpha;
 public:
-	virtual void ApplyProperty(class ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) override;
+	virtual void ApplyProperty(class ULexText* InUIText, const FLexMeshModifierTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		float GetAlpha()const { return alpha; }
+		float GetAlpha()const { return Alpha; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetAlpha(float value);
+		void SetAlpha(float Value);
 };
 
 UCLASS(ClassGroup = (LGUI), BlueprintType, meta = (DisplayName = "Color Property (UI Effect TextAnimation)"))
-class LGUI_API UUIEffectTextAnimation_ColorProperty : public UUIEffectTextAnimation_PropertyWithEase
+class LGUI_API ULexMeshModifierTextAnimation_ColorProperty : public ULexMeshModifierTextAnimation_PropertyWithEase
 {
 	GENERATED_BODY()
 private:
 	UPROPERTY(EditAnywhere, Category = "Property")
-		FColor color = FColor::Green;
-	/** Conver color to HSV(Hue, Saturate, Value) and interpolate, then convert the result back. Interpolate two colors in HSV may look better. */
+		FColor Color = FColor::Green;
+	/** Convert color to HSV(Hue, Saturate, Value) and interpolate, then convert the result back. Interpolate two colors in HSV may look better. */
 	UPROPERTY(EditAnywhere, Category = "Property")
-		bool useHSV = true;
+		bool bUseHSV = true;
 public:
-	virtual void ApplyProperty(class ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) override;
+	virtual void ApplyProperty(class ULexText* InUIText, const FLexMeshModifierTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		FColor GetColor()const { return color; }
+		FColor GetColor()const { return Color; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		bool GetUseHSV()const { return useHSV; }
+		bool GetUseHSV()const { return bUseHSV; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetColor(FColor value);
+		void SetColor(FColor Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetUseHSV(bool value);
+		void SetUseHSV(bool Value);
 };
 
 UCLASS(ClassGroup = (LGUI), BlueprintType, meta = (DisplayName = "ColorRandom Property (UI Effect TextAnimation)"))
-class LGUI_API UUIEffectTextAnimation_ColorRandomProperty : public UUIEffectTextAnimation_PropertyWithEase
+class LGUI_API ULexMeshModifierTextAnimation_ColorRandomProperty : public ULexMeshModifierTextAnimation_PropertyWithEase
 {
 	GENERATED_BODY()
 private:
 	/** Random seed. */
 	UPROPERTY(EditAnywhere, Category = "Property")
-		int seed = 0;
+		int Seed = 0;
 	/** Random min. */
 	UPROPERTY(EditAnywhere, Category = "Property")
-		FColor min = FColor::Green;
+		FColor Min = FColor::Green;
 	/** Random max. */
 	UPROPERTY(EditAnywhere, Category = "Property")
-		FColor max = FColor::Red;
-	/** convert color to linear hsv, interlpate, and convert back to color */
+		FColor Max = FColor::Red;
+	/** convert color to linear hsv, interpolate, and convert back to color */
 	UPROPERTY(EditAnywhere, Category = "Property")
-		bool useHSV = true;
+		bool bUseHSV = true;
 public:
-	virtual void ApplyProperty(class ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) override;
+	virtual void ApplyProperty(class ULexText* InUIText, const FLexMeshModifierTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry) override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		int GetSeed()const { return seed; }
+		int GetSeed()const { return Seed; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		FColor GetMin()const { return min; }
+		FColor GetMin()const { return Min; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		FColor GetMax()const { return max; }
+		FColor GetMax()const { return Max; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		bool GetUseHSV()const { return useHSV; }
+		bool GetUseHSV()const { return bUseHSV; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetSeed(int value);
+		void SetSeed(int Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetMin(FColor value);
+		void SetMin(FColor Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetMax(FColor value);
+		void SetMax(FColor Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetUseHSV(bool value);
+		void SetUseHSV(bool Value);
 };

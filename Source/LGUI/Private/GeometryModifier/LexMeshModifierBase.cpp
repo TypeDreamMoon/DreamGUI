@@ -1,15 +1,15 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "GeometryModifier/LexVisualBatchMeshModifierBase.h"
+#include "GeometryModifier/LexMeshModifierBase.h"
 #include "LGUI.h"
 #include "Core/Components/LexVisualBatchMesh.h"
 
-ULexVisualBatchMeshModifierBase::ULexVisualBatchMeshModifierBase()
+ULexMeshModifierBase::ULexMeshModifierBase()
 {
 	
 }
 
-ULexVisualBatchMesh* ULexVisualBatchMeshModifierBase::GetLexVisual()const
+ULexVisualBatchMesh* ULexMeshModifierBase::GetLexVisual()const
 {
 	if(!CacheLexVisual.IsValid())
 	{
@@ -18,7 +18,7 @@ ULexVisualBatchMesh* ULexVisualBatchMeshModifierBase::GetLexVisual()const
 	return CacheLexVisual.Get();
 }
 #if WITH_EDITOR
-void ULexVisualBatchMeshModifierBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void ULexMeshModifierBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (GetLexVisual())
@@ -28,11 +28,11 @@ void ULexVisualBatchMeshModifierBase::PostEditChangeProperty(FPropertyChangedEve
 }
 #endif
 
-void ULexVisualBatchMeshModifierBase::SetEnable(bool value)
+void ULexMeshModifierBase::SetEnable(bool Value)
 { 
-	if (bEnable != value)
+	if (bEnable != Value)
 	{
-		bEnable = value;
+		bEnable = Value;
 		if (GetLexVisual() != nullptr)
 		{
 			CacheLexVisual->MarkVerticesDirty(true, true, true, true);
@@ -41,7 +41,7 @@ void ULexVisualBatchMeshModifierBase::SetEnable(bool value)
 }
 
 DECLARE_CYCLE_STAT(TEXT("UIGeometryModifierBase_Blueprint.ModifyUIGeometry"), STAT_UIGeometryModifierBase_ModifyUIGeometry, STATGROUP_LGUI);
-void ULexVisualBatchMeshModifierBase::ModifyUIGeometry(
+void ULexMeshModifierBase::ModifyUIGeometry(
 	FLexUIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 )
 {
@@ -120,7 +120,7 @@ void ULexVisualBatchMeshModifierHelper::UITextHelperFunction_GetCharGeometry_Abs
 }
 
 void ULexVisualBatchMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_Transform(ULexText* InUIText, int InCharIndex
-	, ELexUIMeshModifierHelper_UITextModifyPositionType InPositionType
+	, ELexUIMeshModifierHelper_TextPositionType InPositionType
 	, const FVector& InPosition
 	, const FRotator& InRotator
 	, const FVector& InScale
@@ -154,7 +154,7 @@ void ULexVisualBatchMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_
 	switch (InPositionType)
 	{
 	default:
-	case ELexUIMeshModifierHelper_UITextModifyPositionType::Relative:
+	case ELexUIMeshModifierHelper_TextPositionType::Relative:
 	{
 		for (int vertIndex = startVertIndex; vertIndex < endVertIndex; vertIndex++)
 		{
@@ -163,7 +163,7 @@ void ULexVisualBatchMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_
 		}
 	}
 	break;
-	case ELexUIMeshModifierHelper_UITextModifyPositionType::Absolute:
+	case ELexUIMeshModifierHelper_TextPositionType::Absolute:
 	{
 		auto charPivotOffset = charPivotPos - (FVector3f)InPosition;
 		for (int vertIndex = startVertIndex; vertIndex < endVertIndex; vertIndex++)
@@ -196,7 +196,7 @@ void ULexVisualBatchMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_
 		}
 	}
 }
-void ULexVisualBatchMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_Position(ULexText* InUIText, int InCharIndex, const FVector& InPosition, ELexUIMeshModifierHelper_UITextModifyPositionType InPositionType)
+void ULexVisualBatchMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_Position(ULexText* InUIText, int InCharIndex, const FVector& InPosition, ELexUIMeshModifierHelper_TextPositionType InPositionType)
 {
 	if (InUIText == nullptr)
 	{
@@ -219,7 +219,7 @@ void ULexVisualBatchMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_
 	switch (InPositionType)
 	{
 	default:
-	case ELexUIMeshModifierHelper_UITextModifyPositionType::Relative:
+	case ELexUIMeshModifierHelper_TextPositionType::Relative:
 	{
 		for (int vertIndex = startVertIndex; vertIndex < endVertIndex; vertIndex++)
 		{
@@ -228,7 +228,7 @@ void ULexVisualBatchMeshModifierHelper::UITextHelperFunction_ModifyCharGeometry_
 		}
 	}
 	break;
-	case ELexUIMeshModifierHelper_UITextModifyPositionType::Absolute:
+	case ELexUIMeshModifierHelper_TextPositionType::Absolute:
 	{
 		auto charCenterPos = FVector3f::ZeroVector;
 		for (int vertIndex = startVertIndex; vertIndex < endVertIndex; vertIndex++)

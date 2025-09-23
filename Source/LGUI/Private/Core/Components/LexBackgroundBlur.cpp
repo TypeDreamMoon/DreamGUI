@@ -365,42 +365,42 @@ void ULexBackgroundBlur::SendStrengthTextureToRenderProxy()
 	}
 }
 
-void ULexBackgroundBlur::SetBlurStrength(float newValue)
+void ULexBackgroundBlur::SetBlurStrength(float Value)
 {
-	if (BlurStrength != newValue)
+	if (BlurStrength != Value)
 	{
-		BlurStrength = newValue;
+		BlurStrength = Value;
 		GetWidget()->MarkCanvasUpdate(false, false, false, false);
 		SendOthersDataToRenderProxy();
 	}
 }
 
-void ULexBackgroundBlur::SetApplyAlphaToBlur(bool newValue)
+void ULexBackgroundBlur::SetApplyAlphaToBlur(bool Value)
 {
-	if (ApplyAlphaToBlur != newValue)
+	if (ApplyAlphaToBlur != Value)
 	{
-		ApplyAlphaToBlur = newValue;
+		ApplyAlphaToBlur = Value;
 		GetWidget()->MarkCanvasUpdate(false, false, false, false);
 		SendOthersDataToRenderProxy();
 	}
 }
 
-void ULexBackgroundBlur::SetMaxDownSampleLevel(int newValue)
+void ULexBackgroundBlur::SetMaxDownSampleLevel(int Value)
 {
-	if (MaxDownSampleLevel != newValue)
+	if (MaxDownSampleLevel != Value)
 	{
-		MaxDownSampleLevel = newValue;
+		MaxDownSampleLevel = Value;
 		Inv_SampleLevelInterval = 1.0f / MAX_BlurStrength * MaxDownSampleLevel;
 		GetWidget()->MarkCanvasUpdate(false, false, false, false);
 		SendOthersDataToRenderProxy();
 	}
 }
 
-void ULexBackgroundBlur::SetStrengthTexture(UTexture2D* newValue)
+void ULexBackgroundBlur::SetStrengthTexture(UTexture2D* Value)
 {
-	if (StrengthTexture != newValue)
+	if (StrengthTexture != Value)
 	{
-		StrengthTexture = newValue;
+		StrengthTexture = Value;
 		GetWidget()->MarkCanvasUpdate(false, false, false, false);
 		SendStrengthTextureToRenderProxy();
 	}

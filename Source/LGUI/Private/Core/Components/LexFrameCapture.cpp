@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/Components/UIFrameCapture.h"
+#include "Core/Components/LexFrameCapture.h"
 #include "LGUI.h"
 #include "LTweenBPLibrary.h"
 #include "Engine/TextureRenderTarget2D.h"
@@ -10,39 +10,47 @@
 #include "RenderTargetPool.h"
 #include "TextureResource.h"
 
-UUIFrameCapture::UUIFrameCapture(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
+ULexFrameCapture::ULexFrameCapture(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
 	
 }
 
-void UUIFrameCapture::BeginPlay()
+void ULexFrameCapture::BeginPlay()
 {
 	Super::BeginPlay();
-	ULTweenBPLibrary::UpdateCall(this, FLTweenUpdateDelegate::CreateUObject(this, &UUIFrameCapture::OnUpdate));
+	ULTweenBPLibrary::UpdateCall(this, FLTweenUpdateDelegate::CreateUObject(this, &ULexFrameCapture::OnUpdate));
 }
 
-void UUIFrameCapture::EndPlay()
+void ULexFrameCapture::EndPlay()
 {
 	Super::EndPlay();
 	ULTweenBPLibrary::KillAllTweensOnTarget(this, this);
 }
 
-void UUIFrameCapture::OnUpdate(float DeltaTime)
+void ULexFrameCapture::OnUpdate(float DeltaTime)
 {
-	if (bIsFrameReady)
+	if (CaptureMode == ECaptureMode::Continuous)
 	{
-		bIsFrameReady = false;
-		OnFrameReady.Broadcast(CapturedFrame);
-		OnFrameReady.Clear();
-		CapturedFrame = nullptr;
-		UpdateRenderTarget();
-		SendOthersDataToRenderProxy();
+		if (bIsFrameReady)
+		{
+			OnFrameReady.Broadcast(CapturedFrame);
+		}
+	}
+	else if (CaptureMode == ECaptureMode::OneShot)
+	{
+		if (bIsFrameReady)
+		{
+			OnFrameReady.Broadcast(CapturedFrame);
+			bIsFrameReady = false;
+			OnFrameReady.Clear();
+			CapturedFrame = nullptr;
+		}
 	}
 }
 
 
 #if WITH_EDITOR
-void UUIFrameCapture::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void ULexFrameCapture::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (auto Property = PropertyChangedEvent.Property)
@@ -50,13 +58,13 @@ void UUIFrameCapture::PostEditChangeProperty(FPropertyChangedEvent& PropertyChan
 		
 	}
 }
-bool UUIFrameCapture::CanEditChange(const FProperty* InProperty) const
+bool ULexFrameCapture::CanEditChange(const FProperty* InProperty) const
 {
 	if (InProperty)
 	{
 		FString PropertyName = InProperty->GetName();
 
-		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(UUIFrameCapture, MaskTexture))
+		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(ULexFrameCapture, MaskTexture))
 		{
 			return false;//mask texture not needed here
 		}
@@ -64,20 +72,20 @@ bool UUIFrameCapture::CanEditChange(const FProperty* InProperty) const
 	return Super::CanEditChange(InProperty);
 }
 #endif
-void UUIFrameCapture::MarkAllDirty()
+void ULexFrameCapture::MarkAllDirty()
 {
 	Super::MarkAllDirty();
 }
 
-DECLARE_CYCLE_STAT(TEXT("PostProcess_UIFrameCapture"), STAT_FrameGrabber, STATGROUP_LGUI);
+DECLARE_CYCLE_STAT(TEXT("PostProcess_FrameCapture"), STAT_FrameGrabber, STATGROUP_LGUI);
 class FUIFrameCaptureRenderProxy :public FLexVisualPostProcessRenderProxy
 {
 public:
 	bool bCaptureFullScreen = true;
 	FTextureRenderTargetResource* CapturedFrameResource = nullptr;
-	bool bDoCapture = false;
+	ULexFrameCapture::ECaptureMode CaptureMode = ULexFrameCapture::ECaptureMode::None;
 	/**
-	 * This is a pointer to UIFrameCapture's IsFrameReady.
+	 * This is a pointer to LexFrameCapture's IsFrameReady.
 	 * Why it is safe to use? Check PrimitiveSceneInfo.h OwnerLastRenderTime
 	 */
 	bool* OwnerIsFrameReady = nullptr;
@@ -89,7 +97,7 @@ public:
 	}
 	virtual bool CanRender()const override
 	{
-		return bDoCapture;
+		return CaptureMode != ULexFrameCapture::ECaptureMode::None;
 	}
 	virtual void OnRenderPostProcess_RenderThread(
 		FRDGBuilder& GraphBuilder,
@@ -107,8 +115,7 @@ public:
 	)override
 	{
 		if (CapturedFrameResource == nullptr || CapturedFrameResource->GetRenderTargetTexture() == nullptr)return;
-		if (!bDoCapture)return;
-		bDoCapture = false;
+		if (CaptureMode == ULexFrameCapture::ECaptureMode::None)return;
 		SCOPE_CYCLE_COUNTER(STAT_FrameGrabber);
 		auto& RHICmdList = GraphBuilder.RHICmdList;
 
@@ -154,10 +161,12 @@ public:
 		{
 			ScreenResolvedTexture.SafeRelease();
 		}
+		if (CaptureMode == ULexFrameCapture::ECaptureMode::OneShot)
+			CaptureMode = ULexFrameCapture::ECaptureMode::None;
 	}
 };
 
-TSharedPtr<FLexVisualPostProcessRenderProxy> UUIFrameCapture::GetRenderProxy()
+TSharedPtr<FLexVisualPostProcessRenderProxy> ULexFrameCapture::GetRenderProxy()
 {
 	if (!RenderProxy.IsValid())
 	{
@@ -169,29 +178,26 @@ TSharedPtr<FLexVisualPostProcessRenderProxy> UUIFrameCapture::GetRenderProxy()
 	return RenderProxy;
 }
 
-void UUIFrameCapture::SendRegionVertexDataToRenderProxy()
+void ULexFrameCapture::SendRegionVertexDataToRenderProxy()
 {
 	Super::SendRegionVertexDataToRenderProxy();
-	UpdateRenderTarget();
-	SendOthersDataToRenderProxy();
 }
 
-void UUIFrameCapture::SendOthersDataToRenderProxy()
+void ULexFrameCapture::SendCaptureDataToRenderProxy()
 {
 	if (RenderProxy.IsValid())
 	{
 		auto TempRenderProxy = (FUIFrameCaptureRenderProxy*)(RenderProxy.Get());
 		ENQUEUE_RENDER_COMMAND(FUIBackgroundPixelate_UpdateData)
-			([TempRenderProxy, bCaptureFullScreen = this->bCaptureFullScreen, RenderTargetResource = CapturedFrame->GameThread_GetRenderTargetResource(), bPendingCapture = bPendingCapture](FRHICommandListImmediate& RHICmdList)
+			([TempRenderProxy, bCaptureFullScreen = this->bCaptureFullScreen, RenderTargetResource = CapturedFrame->GameThread_GetRenderTargetResource(), CaptureMode = CaptureMode](FRHICommandListImmediate& RHICmdList)
 				{
 					TempRenderProxy->bCaptureFullScreen = bCaptureFullScreen;
 					TempRenderProxy->CapturedFrameResource = RenderTargetResource;
-					TempRenderProxy->bDoCapture = bPendingCapture;
+					TempRenderProxy->CaptureMode = CaptureMode;
 				});
-		bPendingCapture = false;
 	}
 }
-void UUIFrameCapture::UpdateRenderTarget()
+void ULexFrameCapture::UpdateRenderTarget()
 {
 	auto Widget = GetWidget();
 	FIntPoint DesiredRenderTargetSize(Widget->GetWidth(), Widget->GetHeight());
@@ -232,26 +238,62 @@ void UUIFrameCapture::UpdateRenderTarget()
 	}
 }
 
-void UUIFrameCapture::DoCapture(const FUIFrameCapture_OnFrameReady_DynamicDelegate& InDelegate)
+void ULexFrameCapture::DoOneFrameCapture(const FLexFrameCapture_OnFrameReady_DynamicDelegate& InDelegate)
 {
+	if (CaptureMode == ECaptureMode::Continuous)
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Already in continuous capture process, can't start one frame capture!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return;
+	}
+	CaptureMode = ECaptureMode::OneShot;
 	MarkOneFrameCapture();
 	OnFrameReady.AddLambda([InDelegate](UTextureRenderTarget2D* InCapturedFrame) {
 		InDelegate.ExecuteIfBound(InCapturedFrame);
 		});
 }
-void UUIFrameCapture::DoCapture(const FUIFrameCapture_OnFrameReady_Delegate& InDelegate)
+void ULexFrameCapture::DoOneFrameCapture(const FLexFrameCapture_OnFrameReady_Delegate& InDelegate)
 {
+	if (CaptureMode == ECaptureMode::Continuous)
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Already in continuous capture process, can't start one frame capture!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return;
+	}
+	CaptureMode = ECaptureMode::OneShot;
 	MarkOneFrameCapture();
 	OnFrameReady.Add(InDelegate);
 }
-void UUIFrameCapture::DoCapture(const TFunction<void(UTextureRenderTarget2D*)>& InFunction)
+void ULexFrameCapture::DoOneFrameCapture(const TFunction<void(UTextureRenderTarget2D*)>& InFunction)
 {
+	if (CaptureMode == ECaptureMode::Continuous)
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Already in continuous capture process, can't start one frame capture!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return;
+	}
+	CaptureMode = ECaptureMode::OneShot;
 	MarkOneFrameCapture();
 	OnFrameReady.AddLambda(InFunction);
 }
 
-void UUIFrameCapture::MarkOneFrameCapture()
+void ULexFrameCapture::StartContinuousCapture()
 {
-	bPendingCapture = true;
-	SendOthersDataToRenderProxy();
+	if (CaptureMode == ECaptureMode::OneShot)
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Already in one frame capture process, can't start continuous capture!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return;
+	}
+	CaptureMode = ECaptureMode::Continuous;
+	UpdateRenderTarget();
+	SendCaptureDataToRenderProxy();
+}
+void ULexFrameCapture::StopContinuousCapture()
+{
+	CaptureMode = ECaptureMode::None;
+	SendCaptureDataToRenderProxy();
+}
+
+void ULexFrameCapture::MarkOneFrameCapture()
+{
+	CaptureMode = ECaptureMode::OneShot;
+	UpdateRenderTarget();
+	SendCaptureDataToRenderProxy();
 }

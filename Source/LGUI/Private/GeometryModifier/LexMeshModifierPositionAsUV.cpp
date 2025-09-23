@@ -1,15 +1,15 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "GeometryModifier/UIEffectPositionAsUV.h"
+#include "GeometryModifier/LexMeshModifierPositionAsUV.h"
 #include "Core/Components/LexCanvas.h"
 #include "LGUI.h"
 
 
-UUIEffectPositionAsUV::UUIEffectPositionAsUV()
+ULexMeshModifierPositionAsUV::ULexMeshModifierPositionAsUV()
 {
 }
 
-void UUIEffectPositionAsUV::ModifyUIGeometry(
+void ULexMeshModifierPositionAsUV::ModifyUIGeometry(
 	FLexUIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 )
 {

@@ -1,112 +1,112 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "GeometryModifier/TextAnimation/UIEffectTextAnimation_PropertyWithEase.h"
+#include "GeometryModifier/TextAnimation/LexMeshModifierTextAnimation_PropertyWithEase.h"
 #include "LGUI.h"
 #include "Core/Components/LexText.h"
 #include "Curves/CurveFloat.h"
 #include "Utils/LexUIUtils.h"
 
-const FLTweenFunction& UUIEffectTextAnimation_PropertyWithEase::GetEaseFunction()
+const FLTweenFunction& ULexMeshModifierTextAnimation_PropertyWithEase::GetEaseFunction()
 {
-	if (easeFunc.IsBound())return easeFunc;
-	switch (easeType)
+	if (EaseFunc.IsBound())return EaseFunc;
+	switch (EaseType)
 	{
 	case ELTweenEase::Linear:
-		easeFunc.BindStatic(&ULTweener::Linear);
+		EaseFunc.BindStatic(&ULTweener::Linear);
 		break;
 	case ELTweenEase::InQuad:
-		easeFunc.BindStatic(&ULTweener::InQuad);
+		EaseFunc.BindStatic(&ULTweener::InQuad);
 		break;
 	case ELTweenEase::OutQuad:
-		easeFunc.BindStatic(&ULTweener::OutQuad);
+		EaseFunc.BindStatic(&ULTweener::OutQuad);
 		break;
 	case ELTweenEase::InOutQuad:
-		easeFunc.BindStatic(&ULTweener::InOutQuad);
+		EaseFunc.BindStatic(&ULTweener::InOutQuad);
 		break;
 	case ELTweenEase::InCubic:
-		easeFunc.BindStatic(&ULTweener::InCubic);
+		EaseFunc.BindStatic(&ULTweener::InCubic);
 		break;
 	case ELTweenEase::OutCubic:
-		easeFunc.BindStatic(&ULTweener::OutCubic);
+		EaseFunc.BindStatic(&ULTweener::OutCubic);
 		break;
 	case ELTweenEase::InOutCubic:
-		easeFunc.BindStatic(&ULTweener::InOutCubic);
+		EaseFunc.BindStatic(&ULTweener::InOutCubic);
 		break;
 	case ELTweenEase::InQuart:
-		easeFunc.BindStatic(&ULTweener::InQuart);
+		EaseFunc.BindStatic(&ULTweener::InQuart);
 		break;
 	case ELTweenEase::OutQuart:
-		easeFunc.BindStatic(&ULTweener::OutQuart);
+		EaseFunc.BindStatic(&ULTweener::OutQuart);
 		break;
 	case ELTweenEase::InOutQuart:
-		easeFunc.BindStatic(&ULTweener::InOutQuart);
+		EaseFunc.BindStatic(&ULTweener::InOutQuart);
 		break;
 	case ELTweenEase::InSine:
-		easeFunc.BindStatic(&ULTweener::InSine);
+		EaseFunc.BindStatic(&ULTweener::InSine);
 		break;
 	case ELTweenEase::OutSine:
-		easeFunc.BindStatic(&ULTweener::OutSine);
+		EaseFunc.BindStatic(&ULTweener::OutSine);
 		break;
 	default:
 	case ELTweenEase::InOutSine:
-		easeFunc.BindStatic(&ULTweener::InOutSine);
+		EaseFunc.BindStatic(&ULTweener::InOutSine);
 		break;
 	case ELTweenEase::InExpo:
-		easeFunc.BindStatic(&ULTweener::InExpo);
+		EaseFunc.BindStatic(&ULTweener::InExpo);
 		break;
 	case ELTweenEase::OutExpo:
-		easeFunc.BindStatic(&ULTweener::OutExpo);
+		EaseFunc.BindStatic(&ULTweener::OutExpo);
 		break;
 	case ELTweenEase::InOutExpo:
-		easeFunc.BindStatic(&ULTweener::InOutExpo);
+		EaseFunc.BindStatic(&ULTweener::InOutExpo);
 		break;
 	case ELTweenEase::InCirc:
-		easeFunc.BindStatic(&ULTweener::InCirc);
+		EaseFunc.BindStatic(&ULTweener::InCirc);
 		break;
 	case ELTweenEase::OutCirc:
-		easeFunc.BindStatic(&ULTweener::OutCirc);
+		EaseFunc.BindStatic(&ULTweener::OutCirc);
 		break;
 	case ELTweenEase::InOutCirc:
-		easeFunc.BindStatic(&ULTweener::InOutCirc);
+		EaseFunc.BindStatic(&ULTweener::InOutCirc);
 		break;
 	case ELTweenEase::InElastic:
-		easeFunc.BindStatic(&ULTweener::InElastic);
+		EaseFunc.BindStatic(&ULTweener::InElastic);
 		break;
 	case ELTweenEase::OutElastic:
-		easeFunc.BindStatic(&ULTweener::OutElastic);
+		EaseFunc.BindStatic(&ULTweener::OutElastic);
 		break;
 	case ELTweenEase::InOutElastic:
-		easeFunc.BindStatic(&ULTweener::InOutElastic);
+		EaseFunc.BindStatic(&ULTweener::InOutElastic);
 		break;
 	case ELTweenEase::InBack:
-		easeFunc.BindStatic(&ULTweener::InBack);
+		EaseFunc.BindStatic(&ULTweener::InBack);
 		break;
 	case ELTweenEase::OutBack:
-		easeFunc.BindStatic(&ULTweener::OutBack);
+		EaseFunc.BindStatic(&ULTweener::OutBack);
 		break;
 	case ELTweenEase::InOutBack:
-		easeFunc.BindStatic(&ULTweener::InOutBack);
+		EaseFunc.BindStatic(&ULTweener::InOutBack);
 		break;
 	case ELTweenEase::InBounce:
-		easeFunc.BindStatic(&ULTweener::InBounce);
+		EaseFunc.BindStatic(&ULTweener::InBounce);
 		break;
 	case ELTweenEase::OutBounce:
-		easeFunc.BindStatic(&ULTweener::OutBounce);
+		EaseFunc.BindStatic(&ULTweener::OutBounce);
 		break;
 	case ELTweenEase::InOutBounce:
-		easeFunc.BindStatic(&ULTweener::InOutBounce);
+		EaseFunc.BindStatic(&ULTweener::InOutBounce);
 		break;
 	case ELTweenEase::CurveFloat:
-		easeFunc.BindUObject(this, &UUIEffectTextAnimation_PropertyWithEase::EaseCurveFunction);
+		EaseFunc.BindUObject(this, &ULexMeshModifierTextAnimation_PropertyWithEase::EaseCurveFunction);
 		break;
 	}
-	return easeFunc;
+	return EaseFunc;
 }
-float UUIEffectTextAnimation_PropertyWithEase::EaseCurveFunction(float c, float b, float t, float d)
+float ULexMeshModifierTextAnimation_PropertyWithEase::EaseCurveFunction(float c, float b, float t, float d)
 {
-	if (easeCurve != nullptr)
+	if (EaseCurve != nullptr)
 	{
-		return easeCurve->GetFloatValue(t / d) * c + b;
+		return EaseCurve->GetFloatValue(t / d) * c + b;
 	}
 	else
 	{
@@ -114,38 +114,38 @@ float UUIEffectTextAnimation_PropertyWithEase::EaseCurveFunction(float c, float 
 	}
 }
 #if WITH_EDITOR
-void UUIEffectTextAnimation_PropertyWithEase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void ULexMeshModifierTextAnimation_PropertyWithEase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (auto Property = PropertyChangedEvent.Property)
 	{
 		auto propertyName = Property->GetFName();
-		if (propertyName == GET_MEMBER_NAME_CHECKED(UUIEffectTextAnimation_PropertyWithEase, easeType))
+		if (propertyName == GET_MEMBER_NAME_CHECKED(ULexMeshModifierTextAnimation_PropertyWithEase, EaseType))
 		{
-			easeFunc.Unbind();
+			EaseFunc.Unbind();
 		}
 	}
 }
 #endif
 
-void UUIEffectTextAnimation_PropertyWithEase::SetEaseType(ELTweenEase value)
+void ULexMeshModifierTextAnimation_PropertyWithEase::SetEaseType(ELTweenEase Value)
 {
-	if (easeType != value)
+	if (EaseType != Value)
 	{
-		easeType = value;
-		easeFunc.Unbind();
+		EaseType = Value;
+		EaseFunc.Unbind();
 		if (auto uiText = GetUIText())
 		{
 			uiText->MarkVertexPositionDirty();
 		}
 	}
 }
-void UUIEffectTextAnimation_PropertyWithEase::SetEaseCurve(UCurveFloat* value)
+void ULexMeshModifierTextAnimation_PropertyWithEase::SetEaseCurve(UCurveFloat* Value)
 {
-	if (easeCurve != value)
+	if (EaseCurve != Value)
 	{
-		easeCurve = value;
-		if (easeType == ELTweenEase::CurveFloat)
+		EaseCurve = Value;
+		if (EaseType == ELTweenEase::CurveFloat)
 		{
 			if (auto uiText = GetUIText())
 			{
@@ -155,40 +155,40 @@ void UUIEffectTextAnimation_PropertyWithEase::SetEaseCurve(UCurveFloat* value)
 	}
 }
 
-void UUIEffectTextAnimation_PositionProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void ULexMeshModifierTextAnimation_PositionProperty::ApplyProperty(ULexText* InUIText, const FLexMeshModifierTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	auto easeFunction = GetEaseFunction();
 	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
-	for (int charIndex = InSelection.startCharIndex; charIndex < InSelection.endCharCount; charIndex++)
+	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
 		int startVertIndex = charPropertyItem.StartVertIndex;
 		int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
-		float lerpValue = FMath::Clamp(InSelection.lerpValueArray[charIndex - InSelection.startCharIndex], 0.0f, 1.0f);
+		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
 		lerpValue = easeFunction.Execute(1.0f, 0.0f, lerpValue, 1.0f);
 		for (int vertIndex = startVertIndex; vertIndex < endVertIndex; vertIndex++)
 		{
 			auto& pos = originVertices[vertIndex].Position;
-			pos = FMath::Lerp(pos, pos + (FVector3f)position, lerpValue);
+			pos = FMath::Lerp(pos, pos + (FVector3f)Position, lerpValue);
 		}
 	}
 }
 
-void UUIEffectTextAnimation_PositionRandomProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void ULexMeshModifierTextAnimation_PositionRandomProperty::ApplyProperty(ULexText* InUIText, const FLexMeshModifierTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
-	FMath::RandInit(seed);
+	FMath::RandInit(Seed);
 	auto easeFunction = GetEaseFunction();
 	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
-	for (int charIndex = InSelection.startCharIndex; charIndex < InSelection.endCharCount; charIndex++)
+	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
 		int startVertIndex = charPropertyItem.StartVertIndex;
 		int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
-		float lerpValue = FMath::Clamp(InSelection.lerpValueArray[charIndex - InSelection.startCharIndex], 0.0f, 1.0f);
+		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
 		lerpValue = easeFunction.Execute(1.0f, 0.0f, lerpValue, 1.0f);
-		auto position = FVector3f(FMath::FRandRange(min.X, max.X), FMath::FRandRange(min.Y, max.Y), FMath::FRandRange(min.Z, max.Z));
+		auto position = FVector3f(FMath::FRandRange(Min.X, Max.X), FMath::FRandRange(Min.Y, Max.Y), FMath::FRandRange(Min.Z, Max.Z));
 		for (int vertIndex = startVertIndex; vertIndex < endVertIndex; vertIndex++)
 		{
 			auto& pos = originVertices[vertIndex].Position;
@@ -197,12 +197,12 @@ void UUIEffectTextAnimation_PositionRandomProperty::ApplyProperty(ULexText* InUI
 	}
 }
 
-void UUIEffectTextAnimation_RotationProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void ULexMeshModifierTextAnimation_RotationProperty::ApplyProperty(ULexText* InUIText, const FLexMeshModifierTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	auto easeFunction = GetEaseFunction();
 	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
-	for (int charIndex = InSelection.startCharIndex; charIndex < InSelection.endCharCount; charIndex++)
+	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
 		int startVertIndex = charPropertyItem.StartVertIndex;
@@ -213,7 +213,7 @@ void UUIEffectTextAnimation_RotationProperty::ApplyProperty(ULexText* InUIText, 
 			charCenterPos += originVertices[vertIndex].Position;
 		}
 		charCenterPos /= charPropertyItem.VertCount;
-		float lerpValue = FMath::Clamp(InSelection.lerpValueArray[charIndex - InSelection.startCharIndex], 0.0f, 1.0f);
+		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
 		lerpValue = easeFunction.Execute(1.0f, 0.0f, lerpValue, 1.0f);
 		auto calcRotationMatrix = FRotationMatrix44f(((FRotator3f)rotator) * lerpValue);
 		for (int vertIndex = startVertIndex; vertIndex < endVertIndex; vertIndex++)
@@ -225,13 +225,13 @@ void UUIEffectTextAnimation_RotationProperty::ApplyProperty(ULexText* InUIText, 
 	}
 }
 
-void UUIEffectTextAnimation_RotationRandomProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void ULexMeshModifierTextAnimation_RotationRandomProperty::ApplyProperty(ULexText* InUIText, const FLexMeshModifierTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
-	FMath::RandInit(seed);
+	FMath::RandInit(Seed);
 	auto easeFunction = GetEaseFunction();
 	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
-	for (int charIndex = InSelection.startCharIndex; charIndex < InSelection.endCharCount; charIndex++)
+	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
 		int startVertIndex = charPropertyItem.StartVertIndex;
@@ -242,9 +242,9 @@ void UUIEffectTextAnimation_RotationRandomProperty::ApplyProperty(ULexText* InUI
 			charCenterPos += originVertices[vertIndex].Position;
 		}
 		charCenterPos /= charPropertyItem.VertCount;
-		float lerpValue = FMath::Clamp(InSelection.lerpValueArray[charIndex - InSelection.startCharIndex], 0.0f, 1.0f);
+		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
 		lerpValue = easeFunction.Execute(1.0f, 0.0f, lerpValue, 1.0f);
-		auto rotator = FRotator3f(FMath::FRandRange(min.Pitch, max.Pitch), FMath::FRandRange(min.Yaw, max.Yaw), FMath::FRandRange(min.Roll, max.Roll));
+		auto rotator = FRotator3f(FMath::FRandRange(Min.Pitch, Max.Pitch), FMath::FRandRange(Min.Yaw, Max.Yaw), FMath::FRandRange(Min.Roll, Max.Roll));
 		auto calcRotationMatrix = FRotationMatrix44f(rotator * lerpValue);
 		for (int vertIndex = startVertIndex; vertIndex < endVertIndex; vertIndex++)
 		{
@@ -255,12 +255,12 @@ void UUIEffectTextAnimation_RotationRandomProperty::ApplyProperty(ULexText* InUI
 	}
 }
 
-void UUIEffectTextAnimation_ScaleProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void ULexMeshModifierTextAnimation_ScaleProperty::ApplyProperty(ULexText* InUIText, const FLexMeshModifierTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	auto easeFunction = GetEaseFunction();
 	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
-	for (int charIndex = InSelection.startCharIndex; charIndex < InSelection.endCharCount; charIndex++)
+	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
 		int startVertIndex = charPropertyItem.StartVertIndex;
@@ -271,9 +271,9 @@ void UUIEffectTextAnimation_ScaleProperty::ApplyProperty(ULexText* InUIText, con
 			charCenterPos += originVertices[vertIndex].Position;
 		}
 		charCenterPos /= charPropertyItem.VertCount;
-		float lerpValue = FMath::Clamp(InSelection.lerpValueArray[charIndex - InSelection.startCharIndex], 0.0f, 1.0f);
+		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
 		lerpValue = easeFunction.Execute(1.0f, 0.0f, lerpValue, 1.0f);
-		auto calcScale = FMath::Lerp(FVector3f::OneVector, (FVector3f)scale, lerpValue);
+		auto calcScale = FMath::Lerp(FVector3f::OneVector, (FVector3f)Scale, lerpValue);
 		for (int vertIndex = startVertIndex; vertIndex < endVertIndex; vertIndex++)
 		{
 			auto& pos = originVertices[vertIndex].Position;
@@ -283,13 +283,13 @@ void UUIEffectTextAnimation_ScaleProperty::ApplyProperty(ULexText* InUIText, con
 	}
 }
 
-void UUIEffectTextAnimation_ScaleRandomProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void ULexMeshModifierTextAnimation_ScaleRandomProperty::ApplyProperty(ULexText* InUIText, const FLexMeshModifierTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
-	FMath::RandInit(seed);
+	FMath::RandInit(Seed);
 	auto easeFunction = GetEaseFunction();
 	auto& originVertices = InGeometry->OriginVertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
-	for (int charIndex = InSelection.startCharIndex; charIndex < InSelection.endCharCount; charIndex++)
+	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
 		int startVertIndex = charPropertyItem.StartVertIndex;
@@ -300,9 +300,9 @@ void UUIEffectTextAnimation_ScaleRandomProperty::ApplyProperty(ULexText* InUITex
 			charCenterPos += originVertices[vertIndex].Position;
 		}
 		charCenterPos /= charPropertyItem.VertCount;
-		float lerpValue = FMath::Clamp(InSelection.lerpValueArray[charIndex - InSelection.startCharIndex], 0.0f, 1.0f);
+		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
 		lerpValue = easeFunction.Execute(1.0f, 0.0f, lerpValue, 1.0f);
-		auto scale = FVector3f(FMath::FRandRange(min.X, max.X), FMath::FRandRange(min.Y, max.Y), FMath::FRandRange(min.Z, max.Z));
+		auto scale = FVector3f(FMath::FRandRange(Min.X, Max.X), FMath::FRandRange(Min.Y, Max.Y), FMath::FRandRange(Min.Z, Max.Z));
 		auto calcScale = FMath::Lerp(FVector3f::OneVector, scale, lerpValue);
 		for (int vertIndex = startVertIndex; vertIndex < endVertIndex; vertIndex++)
 		{
@@ -313,47 +313,47 @@ void UUIEffectTextAnimation_ScaleRandomProperty::ApplyProperty(ULexText* InUITex
 	}
 }
 
-void UUIEffectTextAnimation_AlphaProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void ULexMeshModifierTextAnimation_AlphaProperty::ApplyProperty(ULexText* InUIText, const FLexMeshModifierTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	auto easeFunction = GetEaseFunction();
 	auto& vertices = InGeometry->Vertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
-	for (int charIndex = InSelection.startCharIndex; charIndex < InSelection.endCharCount; charIndex++)
+	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
 		int startVertIndex = charPropertyItem.StartVertIndex;
 		int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
-		float lerpValue = FMath::Clamp(InSelection.lerpValueArray[charIndex - InSelection.startCharIndex], 0.0f, 1.0f);
+		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
 		lerpValue = easeFunction.Execute(1.0f, 0.0f, lerpValue, 1.0f);
 		for (int vertIndex = startVertIndex; vertIndex < endVertIndex; vertIndex++)
 		{
 			auto& vert = vertices[vertIndex];
-			vert.Color.A = FMath::Lerp(vert.Color.A, (uint8)(vert.Color.A * alpha), lerpValue);
+			vert.Color.A = FMath::Lerp(vert.Color.A, (uint8)(vert.Color.A * Alpha), lerpValue);
 		}
 	}
 }
 
-void UUIEffectTextAnimation_ColorProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void ULexMeshModifierTextAnimation_ColorProperty::ApplyProperty(ULexText* InUIText, const FLexMeshModifierTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
 	auto easeFunction = GetEaseFunction();
 	auto& vertices = InGeometry->Vertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
 	FVector colorHsv;
-	if (useHSV)
+	if (bUseHSV)
 	{
-		colorHsv = FLexUIUtils::ColorRGBToColorHSVData(color);
+		colorHsv = FLexUIUtils::ColorRGBToColorHSVData(Color);
 	}
-	for (int charIndex = InSelection.startCharIndex; charIndex < InSelection.endCharCount; charIndex++)
+	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
 		int startVertIndex = charPropertyItem.StartVertIndex;
 		int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
-		float lerpValue = FMath::Clamp(InSelection.lerpValueArray[charIndex - InSelection.startCharIndex], 0.0f, 1.0f);
+		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
 		lerpValue = easeFunction.Execute(1.0f, 0.0f, lerpValue, 1.0f);
 		for (int vertIndex = startVertIndex; vertIndex < endVertIndex; vertIndex++)
 		{
 			auto& vert = vertices[vertIndex];
-			if (useHSV)
+			if (bUseHSV)
 			{
 				auto vertColorHsv = FLexUIUtils::ColorRGBToColorHSVData(vert.Color);
 				vertColorHsv = FMath::Lerp(vertColorHsv, colorHsv, lerpValue);
@@ -364,19 +364,19 @@ void UUIEffectTextAnimation_ColorProperty::ApplyProperty(ULexText* InUIText, con
 			}
 			else
 			{
-				vert.Color.R = FMath::Lerp(vert.Color.R, color.R, lerpValue);
-				vert.Color.G = FMath::Lerp(vert.Color.G, color.G, lerpValue);
-				vert.Color.B = FMath::Lerp(vert.Color.B, color.B, lerpValue);
+				vert.Color.R = FMath::Lerp(vert.Color.R, Color.R, lerpValue);
+				vert.Color.G = FMath::Lerp(vert.Color.G, Color.G, lerpValue);
+				vert.Color.B = FMath::Lerp(vert.Color.B, Color.B, lerpValue);
 			}
-			vert.Color.A = FMath::Lerp(vert.Color.A, color.A, lerpValue);
+			vert.Color.A = FMath::Lerp(vert.Color.A, Color.A, lerpValue);
 		}
 	}
 }
-void UUIEffectTextAnimation_ColorProperty::SetUseHSV(bool value)
+void ULexMeshModifierTextAnimation_ColorProperty::SetUseHSV(bool Value)
 {
-	if (useHSV != value)
+	if (bUseHSV != Value)
 	{
-		useHSV = value;
+		bUseHSV = Value;
 		if (auto uiText = GetUIText())
 		{
 			uiText->MarkColorDirty();
@@ -384,29 +384,29 @@ void UUIEffectTextAnimation_ColorProperty::SetUseHSV(bool value)
 	}
 }
 
-void UUIEffectTextAnimation_ColorRandomProperty::ApplyProperty(ULexText* InUIText, const FUIEffectTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
+void ULexMeshModifierTextAnimation_ColorRandomProperty::ApplyProperty(ULexText* InUIText, const FLexMeshModifierTextAnimation_SelectResult& InSelection, FLexUIGeometry* InGeometry)
 {
-	FMath::RandInit(seed);
+	FMath::RandInit(Seed);
 	auto easeFunction = GetEaseFunction();
 	auto& vertices = InGeometry->Vertices;
 	auto& charProperties = InUIText->GetCharPropertyArray();
-	for (int charIndex = InSelection.startCharIndex; charIndex < InSelection.endCharCount; charIndex++)
+	for (int charIndex = InSelection.StartCharIndex; charIndex < InSelection.EndCharCount; charIndex++)
 	{
 		auto charPropertyItem = charProperties[charIndex];
 		int startVertIndex = charPropertyItem.StartVertIndex;
 		int endVertIndex = charPropertyItem.StartVertIndex + charPropertyItem.VertCount;
-		auto color = FColor((uint8)FMath::RandRange(min.R, max.R), (uint8)FMath::RandRange(min.G, max.G), (uint8)FMath::RandRange(min.B, max.B), (uint8)FMath::RandRange(min.A, max.A));
-		float lerpValue = FMath::Clamp(InSelection.lerpValueArray[charIndex - InSelection.startCharIndex], 0.0f, 1.0f);
+		auto color = FColor((uint8)FMath::RandRange(Min.R, Max.R), (uint8)FMath::RandRange(Min.G, Max.G), (uint8)FMath::RandRange(Min.B, Max.B), (uint8)FMath::RandRange(Min.A, Max.A));
+		float lerpValue = FMath::Clamp(InSelection.LerpValueArray[charIndex - InSelection.StartCharIndex], 0.0f, 1.0f);
 		lerpValue = easeFunction.Execute(1.0f, 0.0f, lerpValue, 1.0f);
 		FVector colorHsv;
-		if (useHSV)
+		if (bUseHSV)
 		{
 			colorHsv = FLexUIUtils::ColorRGBToColorHSVData(color);
 		}
 		for (int vertIndex = startVertIndex; vertIndex < endVertIndex; vertIndex++)
 		{
 			auto& vert = vertices[vertIndex];
-			if (useHSV)
+			if (bUseHSV)
 			{
 				auto vertColorHsv = FLexUIUtils::ColorRGBToColorHSVData(vert.Color);
 				vertColorHsv = FMath::Lerp(vertColorHsv, colorHsv, lerpValue);
@@ -425,11 +425,11 @@ void UUIEffectTextAnimation_ColorRandomProperty::ApplyProperty(ULexText* InUITex
 		}
 	}
 }
-void UUIEffectTextAnimation_ColorRandomProperty::SetUseHSV(bool value)
+void ULexMeshModifierTextAnimation_ColorRandomProperty::SetUseHSV(bool Value)
 {
-	if (useHSV != value)
+	if (bUseHSV != Value)
 	{
-		useHSV = value;
+		bUseHSV = Value;
 		if (auto uiText = GetUIText())
 		{
 			uiText->MarkColorDirty();
@@ -437,39 +437,39 @@ void UUIEffectTextAnimation_ColorRandomProperty::SetUseHSV(bool value)
 	}
 }
 
-void UUIEffectTextAnimation_PositionProperty::SetPosition(FVector value)
+void ULexMeshModifierTextAnimation_PositionProperty::SetPosition(FVector Value)
 {
-	if (position != value)
+	if (Position != Value)
 	{
-		position = value;
+		Position = Value;
 		MarkUITextPositionDirty();
 	}
 }
-void UUIEffectTextAnimation_PositionRandomProperty::SetSeed(int value)
+void ULexMeshModifierTextAnimation_PositionRandomProperty::SetSeed(int Value)
 {
-	if (seed != value)
+	if (Seed != Value)
 	{
-		seed = value;
+		Seed = Value;
 		MarkUITextPositionDirty();
 	}
 }
-void UUIEffectTextAnimation_PositionRandomProperty::SetMin(FVector value)
+void ULexMeshModifierTextAnimation_PositionRandomProperty::SetMin(FVector Value)
 {
-	if (min != value)
+	if (Min != Value)
 	{
-		min = value;
+		Min = Value;
 		MarkUITextPositionDirty();
 	}
 }
-void UUIEffectTextAnimation_PositionRandomProperty::SetMax(FVector value)
+void ULexMeshModifierTextAnimation_PositionRandomProperty::SetMax(FVector Value)
 {
-	if (max != value)
+	if (Max != Value)
 	{
-		max = value;
+		Max = Value;
 		MarkUITextPositionDirty();
 	}
 }
-void UUIEffectTextAnimation_RotationProperty::SetRotator(FRotator value)
+void ULexMeshModifierTextAnimation_RotationProperty::SetRotator(FRotator value)
 {
 	if (rotator != value)
 	{
@@ -477,99 +477,99 @@ void UUIEffectTextAnimation_RotationProperty::SetRotator(FRotator value)
 		MarkUITextPositionDirty();
 	}
 }
-void UUIEffectTextAnimation_RotationRandomProperty::SetSeed(int value)
+void ULexMeshModifierTextAnimation_RotationRandomProperty::SetSeed(int Value)
 {
-	if (seed != value)
+	if (Seed != Value)
 	{
-		seed = value;
+		Seed = Value;
 		MarkUITextPositionDirty();
 	}
 }
-void UUIEffectTextAnimation_RotationRandomProperty::SetMin(FRotator value)
+void ULexMeshModifierTextAnimation_RotationRandomProperty::SetMin(FRotator Value)
 {
-	if (min != value)
+	if (Min != Value)
 	{
-		min = value;
+		Min = Value;
 		MarkUITextPositionDirty();
 	}
 }
-void UUIEffectTextAnimation_RotationRandomProperty::SetMax(FRotator value)
+void ULexMeshModifierTextAnimation_RotationRandomProperty::SetMax(FRotator Value)
 {
-	if (max != value)
+	if (Max != Value)
 	{
-		max = value;
+		Max = Value;
 		MarkUITextPositionDirty();
 	}
 }
-void UUIEffectTextAnimation_ScaleProperty::SetScale(FVector value)
+void ULexMeshModifierTextAnimation_ScaleProperty::SetScale(FVector Value)
 {
-	if (scale != value)
+	if (Scale != Value)
 	{
-		scale = value;
+		Scale = Value;
 		MarkUITextPositionDirty();
 	}
 }
-void UUIEffectTextAnimation_ScaleRandomProperty::SetSeed(int value)
+void ULexMeshModifierTextAnimation_ScaleRandomProperty::SetSeed(int Value)
 {
-	if (seed != value)
+	if (Seed != Value)
 	{
-		seed = value;
+		Seed = Value;
 		MarkUITextPositionDirty();
 	}
 }
-void UUIEffectTextAnimation_ScaleRandomProperty::SetMin(FVector value)
+void ULexMeshModifierTextAnimation_ScaleRandomProperty::SetMin(FVector Value)
 {
-	if (min != value)
+	if (Min != Value)
 	{
-		min = value;
+		Min = Value;
 		MarkUITextPositionDirty();
 	}
 }
-void UUIEffectTextAnimation_ScaleRandomProperty::SetMax(FVector value)
+void ULexMeshModifierTextAnimation_ScaleRandomProperty::SetMax(FVector Value)
 {
-	if (max != value)
+	if (Max != Value)
 	{
-		max = value;
+		Max = Value;
 		MarkUITextPositionDirty();
 	}
 }
-void UUIEffectTextAnimation_AlphaProperty::SetAlpha(float value)
+void ULexMeshModifierTextAnimation_AlphaProperty::SetAlpha(float Value)
 {
-	if (alpha != value)
+	if (Alpha != Value)
 	{
-		alpha = value;
+		Alpha = Value;
 		MarkUITextPositionDirty();
 	}
 }
-void UUIEffectTextAnimation_ColorProperty::SetColor(FColor value)
+void ULexMeshModifierTextAnimation_ColorProperty::SetColor(FColor value)
 {
-	if (color != value)
+	if (Color != value)
 	{
-		color = value;
+		Color = value;
 		MarkUITextPositionDirty();
 	}
 }
-void UUIEffectTextAnimation_ColorRandomProperty::SetSeed(int value)
+void ULexMeshModifierTextAnimation_ColorRandomProperty::SetSeed(int Value)
 {
-	if (seed != value)
+	if (Seed != Value)
 	{
-		seed = value;
+		Seed = Value;
 		MarkUITextPositionDirty();
 	}
 }
-void UUIEffectTextAnimation_ColorRandomProperty::SetMin(FColor value)
+void ULexMeshModifierTextAnimation_ColorRandomProperty::SetMin(FColor Value)
 {
-	if (min != value)
+	if (Min != Value)
 	{
-		min = value;
+		Min = Value;
 		MarkUITextPositionDirty();
 	}
 }
-void UUIEffectTextAnimation_ColorRandomProperty::SetMax(FColor value)
+void ULexMeshModifierTextAnimation_ColorRandomProperty::SetMax(FColor Value)
 {
-	if (max != value)
+	if (Max != Value)
 	{
-		max = value;
+		Max = Value;
 		MarkUITextPositionDirty();
 	}
 }

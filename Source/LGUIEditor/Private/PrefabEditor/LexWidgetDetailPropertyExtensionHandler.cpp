@@ -3,6 +3,7 @@
 #include "LexWidgetDetailPropertyExtensionHandler.h"
 
 #include "DetailLayoutBuilder.h"
+#include "IPropertyUtilities.h"
 #include "LGUIPrefabEditor.h"
 #include "PropertyCustomizationHelpers.h"
 #include "SLexWidgetHierarchyPickerView.h"
@@ -106,10 +107,11 @@ void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow&
 						.Padding(4, 4)
 						[
 							SNew(SLexWidgetHierarchyPickerView, PrefabEditorPtr.Pin(), ObjectClass)
-							.OnSelectItem_Lambda([=, this](UObject* InItem)
+							.OnSelectItem_Lambda([=, &InDetailBuilder, this](UObject* InItem)
 							{
 								InPropertyHandle->SetValue(InItem);
 								PickerButton->SetIsOpen(false);
+								InDetailBuilder.GetPropertyUtilities()->RequestForceRefresh();
 							})
 						]
 					]

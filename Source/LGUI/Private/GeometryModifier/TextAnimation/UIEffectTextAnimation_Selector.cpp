@@ -1,72 +1,72 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "GeometryModifier/TextAnimation/UIEffectTextAnimation_Selector.h"
+#include "GeometryModifier/TextAnimation/LexVisualEffectTextAnimation_Selector.h"
 #include "LGUI.h"
 #include "Core/Components/LexText.h"
 
-bool UUIEffectTextAnimation_RangeSelector::Select(ULexText* InUIText, FUIEffectTextAnimation_SelectResult& OutSelection)
+bool ULexMeshModifierTextAnimation_RangeSelector::Select(ULexText* InUIText, FLexMeshModifierTextAnimation_SelectResult& OutSelection)
 {
-	if (FMath::Abs(range) < KINDA_SMALL_NUMBER)return false;
-	if (end <= start)return false;
+	if (FMath::Abs(Range) < KINDA_SMALL_NUMBER)return false;
+	if (End <= Start)return false;
 	auto& charProperties = InUIText->GetCharPropertyArray();
-	float interval = 1.0f / (charProperties.Num() * (end - start));
-	float calculatedOffset = offset * (1.0f + range) - range;
+	float interval = 1.0f / (charProperties.Num() * (End - Start));
+	float calculatedOffset = Offset * (1.0f + Range) - Range;
 	float value = -calculatedOffset;
-	OutSelection.startCharIndex = charProperties.Num() * start;
-	OutSelection.endCharCount = charProperties.Num() * end;
-	int count = OutSelection.endCharCount - OutSelection.startCharIndex;
-	auto& lerpValueArray = OutSelection.lerpValueArray;
+	OutSelection.StartCharIndex = charProperties.Num() * Start;
+	OutSelection.EndCharCount = charProperties.Num() * End;
+	int count = OutSelection.EndCharCount - OutSelection.StartCharIndex;
+	auto& lerpValueArray = OutSelection.LerpValueArray;
 	lerpValueArray.Reset(count);
 	lerpValueArray.AddDefaulted(count);
-	float rangeInv = 1.0f / range;
-	for (int startIndex = OutSelection.startCharIndex, endIndex = OutSelection.endCharCount; startIndex < endIndex; startIndex++)
+	float rangeInv = 1.0f / Range;
+	for (int startIndex = OutSelection.StartCharIndex, endIndex = OutSelection.EndCharCount; startIndex < endIndex; startIndex++)
 	{
 		float lerpValue = value * rangeInv;
 		//lerpValue = FMath::Clamp(value, 0.0f, 1.0f);
-		int lerpValueIndex = startIndex - OutSelection.startCharIndex;
-		lerpValueArray[flipDirection ? endIndex - startIndex - 1 : lerpValueIndex] = 1.0f - lerpValue;
+		int lerpValueIndex = startIndex - OutSelection.StartCharIndex;
+		lerpValueArray[bFlipDirection ? endIndex - startIndex - 1 : lerpValueIndex] = 1.0f - lerpValue;
 		value += interval;
 	}
 	return true;
 }
-void UUIEffectTextAnimation_RangeSelector::SetRange(float value)
+void ULexMeshModifierTextAnimation_RangeSelector::SetRange(float Value)
 {
-	if (range != value)
+	if (Range != Value)
 	{
-		range = value;
+		Range = Value;
 		if (auto uiText = GetUIText())
 		{
 			uiText->MarkVertexPositionDirty();
 		}
 	}
 }
-void UUIEffectTextAnimation_RangeSelector::SetFlipDirection(bool value)
+void ULexMeshModifierTextAnimation_RangeSelector::SetFlipDirection(bool Value)
 {
-	if (flipDirection != value)
+	if (bFlipDirection != Value)
 	{
-		flipDirection = value;
+		bFlipDirection = Value;
 		if (auto uiText = GetUIText())
 		{
 			uiText->MarkVertexPositionDirty();
 		}
 	}
 }
-void UUIEffectTextAnimation_RangeSelector::SetStart(float value)
+void ULexMeshModifierTextAnimation_RangeSelector::SetStart(float Value)
 {
-	if (start != value)
+	if (Start != Value)
 	{
-		start = value;
+		Start = Value;
 		if (auto uiText = GetUIText())
 		{
 			uiText->MarkVertexPositionDirty();
 		}
 	}
 }
-void UUIEffectTextAnimation_RangeSelector::SetEnd(float value)
+void ULexMeshModifierTextAnimation_RangeSelector::SetEnd(float Value)
 {
-	if (end != value)
+	if (End != Value)
 	{
-		end = value;
+		End = Value;
 		if (auto uiText = GetUIText())
 		{
 			uiText->MarkVertexPositionDirty();
@@ -74,54 +74,54 @@ void UUIEffectTextAnimation_RangeSelector::SetEnd(float value)
 	}
 }
 
-bool UUIEffectTextAnimation_RandomSelector::Select(ULexText* InUIText, FUIEffectTextAnimation_SelectResult& OutSelection)
+bool ULexMeshModifierTextAnimation_RandomSelector::Select(ULexText* InUIText, FLexMeshModifierTextAnimation_SelectResult& OutSelection)
 {
-	if (end <= start)return false;
-	FMath::RandInit(seed);
+	if (End <= Start)return false;
+	FMath::RandInit(Seed);
 	auto& charProperties = InUIText->GetCharPropertyArray();
-	float calculatedOffset = offset * 2.0f - 1.0f;
-	OutSelection.startCharIndex = charProperties.Num() * start;
-	OutSelection.endCharCount = charProperties.Num() * end;
-	int count = OutSelection.endCharCount - OutSelection.startCharIndex;
-	auto& lerpValueArray = OutSelection.lerpValueArray;
+	float calculatedOffset = Offset * 2.0f - 1.0f;
+	OutSelection.StartCharIndex = charProperties.Num() * Start;
+	OutSelection.EndCharCount = charProperties.Num() * End;
+	int count = OutSelection.EndCharCount - OutSelection.StartCharIndex;
+	auto& lerpValueArray = OutSelection.LerpValueArray;
 	lerpValueArray.Reset(count);
 	lerpValueArray.AddDefaulted(count);
-	for (int startIndex = OutSelection.startCharIndex, endIndex = OutSelection.endCharCount; startIndex < endIndex; startIndex++)
+	for (int startIndex = OutSelection.StartCharIndex, endIndex = OutSelection.EndCharCount; startIndex < endIndex; startIndex++)
 	{
 		float lerpValue = FMath::FRand() + calculatedOffset;
 		//lerpValue = FMath::Clamp(lerpValue, 0.0f, 1.0f);
-		int lerpValueIndex = startIndex - OutSelection.startCharIndex;
+		int lerpValueIndex = startIndex - OutSelection.StartCharIndex;
 		lerpValueArray[lerpValueIndex] = lerpValue;
 	}
 	return true;
 }
-void UUIEffectTextAnimation_RandomSelector::SetSeed(int value)
+void ULexMeshModifierTextAnimation_RandomSelector::SetSeed(int Value)
 {
-	if (seed != value)
+	if (Seed != Value)
 	{
-		seed = value;
+		Seed = Value;
 		if (auto uiText = GetUIText())
 		{
 			uiText->MarkVertexPositionDirty();
 		}
 	}
 }
-void UUIEffectTextAnimation_RandomSelector::SetStart(float value)
+void ULexMeshModifierTextAnimation_RandomSelector::SetStart(float Value)
 {
-	if (start != value)
+	if (Start != Value)
 	{
-		start = value;
+		Start = Value;
 		if (auto uiText = GetUIText())
 		{
 			uiText->MarkVertexPositionDirty();
 		}
 	}
 }
-void UUIEffectTextAnimation_RandomSelector::SetEnd(float value)
+void ULexMeshModifierTextAnimation_RandomSelector::SetEnd(float Value)
 {
-	if (end != value)
+	if (End != Value)
 	{
-		end = value;
+		End = Value;
 		if (auto uiText = GetUIText())
 		{
 			uiText->MarkVertexPositionDirty();
@@ -129,64 +129,64 @@ void UUIEffectTextAnimation_RandomSelector::SetEnd(float value)
 	}
 }
 
-bool UUIEffectTextAnimation_RichTextTagSelector::Select(class ULexText* InUIText, FUIEffectTextAnimation_SelectResult& OutSelection)
+bool ULexMeshModifierTextAnimation_RichTextTagSelector::Select(class ULexText* InUIText, FLexMeshModifierTextAnimation_SelectResult& OutSelection)
 {
-	if (FMath::Abs(range) < KINDA_SMALL_NUMBER)return false;
+	if (FMath::Abs(Range) < KINDA_SMALL_NUMBER)return false;
 	auto& charProperties = InUIText->GetCharPropertyArray();
 	auto& richTextCustomTagArray = InUIText->GetRichTextCustomTagArray();
 	int foundIndex = richTextCustomTagArray.IndexOfByPredicate([this](const FLexUIText_RichTextCustomTag& A) {
-		return A.TagName == tagName;
+		return A.TagName == TagName;
 		});
 	if (foundIndex == -1)return false;
 	auto customTag = richTextCustomTagArray[foundIndex];
 
-	float calculatedOffset = offset * (1.0f + range) - range;
+	float calculatedOffset = Offset * (1.0f + Range) - Range;
 	float value = -calculatedOffset;
-	OutSelection.startCharIndex = customTag.CharIndexStart;
-	OutSelection.endCharCount = customTag.CharIndexEnd + 1;
-	int count = OutSelection.endCharCount - OutSelection.startCharIndex;
-	auto& lerpValueArray = OutSelection.lerpValueArray;
+	OutSelection.StartCharIndex = customTag.CharIndexStart;
+	OutSelection.EndCharCount = customTag.CharIndexEnd + 1;
+	int count = OutSelection.EndCharCount - OutSelection.StartCharIndex;
+	auto& lerpValueArray = OutSelection.LerpValueArray;
 	lerpValueArray.Reset(count);
 	lerpValueArray.AddDefaulted(count);
 	float interval = 1.0f / (count - 1);
-	float rangeInv = 1.0f / range;
-	for (int startIndex = OutSelection.startCharIndex, endIndex = OutSelection.endCharCount; startIndex < endIndex; startIndex++)
+	float rangeInv = 1.0f / Range;
+	for (int startIndex = OutSelection.StartCharIndex, endIndex = OutSelection.EndCharCount; startIndex < endIndex; startIndex++)
 	{
 		float lerpValue = value * rangeInv;
 		//lerpValue = FMath::Clamp(lerpValue, 0.0f, 1.0f);
-		int lerpValueIndex = startIndex - OutSelection.startCharIndex;
-		lerpValueArray[flipDirection ? endIndex - startIndex - 1 : lerpValueIndex] = 1.0f - lerpValue;
+		int lerpValueIndex = startIndex - OutSelection.StartCharIndex;
+		lerpValueArray[bFlipDirection ? endIndex - startIndex - 1 : lerpValueIndex] = 1.0f - lerpValue;
 		value += interval;
 	}
 	return true;
 }
-void UUIEffectTextAnimation_RichTextTagSelector::SetTagName(const FName& value)
+void ULexMeshModifierTextAnimation_RichTextTagSelector::SetTagName(const FName& Value)
 {
-	if (tagName != value)
+	if (TagName != Value)
 	{
-		tagName = value;
+		TagName = Value;
 		if (auto uiText = GetUIText())
 		{
 			uiText->MarkVertexPositionDirty();
 		}
 	}
 }
-void UUIEffectTextAnimation_RichTextTagSelector::SetRange(float value)
+void ULexMeshModifierTextAnimation_RichTextTagSelector::SetRange(float Value)
 {
-	if (range != value)
+	if (Range != Value)
 	{
-		range = value;
+		Range = Value;
 		if (auto uiText = GetUIText())
 		{
 			uiText->MarkVertexPositionDirty();
 		}
 	}
 }
-void UUIEffectTextAnimation_RichTextTagSelector::SetFlipDirection(bool value)
+void ULexMeshModifierTextAnimation_RichTextTagSelector::SetFlipDirection(bool Value)
 {
-	if (flipDirection != value)
+	if (bFlipDirection != Value)
 	{
-		flipDirection = value;
+		bFlipDirection = Value;
 		if (auto uiText = GetUIText())
 		{
 			uiText->MarkVertexPositionDirty();

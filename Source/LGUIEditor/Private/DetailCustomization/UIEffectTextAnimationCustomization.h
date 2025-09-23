@@ -14,5 +14,5 @@ public:
 	/** IDetailCustomization interface */
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
 private:
-	TWeakObjectPtr<class UUIEffectTextAnimation> TargetScriptPtr;
+	TWeakObjectPtr<class ULexMeshModifierTextAnimation> TargetScriptPtr;
 };

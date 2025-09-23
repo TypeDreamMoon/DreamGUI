@@ -162,7 +162,6 @@ bool FLGUIPrefabSequenceObjectReference::InitHelpers(AActor* InContextActor)
 #endif
 		return true;
 	}
-	return false;
 }
 bool FLGUIPrefabSequenceObjectReference::CreateForObject(AActor* InContextActor, UObject* InObject, FLGUIPrefabSequenceObjectReference& OutResult)
 {

@@ -1,15 +1,15 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "GeometryModifier/UIEffectOutline.h"
+#include "GeometryModifier/LexMeshModifierOutline.h"
 #include "LGUI.h"
 #include "Utils/LexUIUtils.h"
 
 
-UUIEffectOutline::UUIEffectOutline()
+ULexMeshModifierOutline::ULexMeshModifierOutline()
 {
 }
 
-void UUIEffectOutline::ApplyColorAndAlpha(FColor& InOutColor, uint8 InSourceAlpha)
+void ULexMeshModifierOutline::ApplyColorAndAlpha(FColor& InOutColor, uint8 InSourceAlpha)
 {
 	if (multiplySourceAlpha)
 	{
@@ -23,7 +23,7 @@ void UUIEffectOutline::ApplyColorAndAlpha(FColor& InOutColor, uint8 InSourceAlph
 		InOutColor = outlineColor;
 	}
 }
-void UUIEffectOutline::ModifyUIGeometry(
+void ULexMeshModifierOutline::ModifyUIGeometry(
 	FLexUIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 )
 {
@@ -179,7 +179,7 @@ void UUIEffectOutline::ModifyUIGeometry(
 	}
 }
 
-void UUIEffectOutline::SetOutlineColor(FColor newColor)
+void ULexMeshModifierOutline::SetOutlineColor(FColor newColor)
 {
 	if (outlineColor != newColor)
 	{
@@ -187,7 +187,7 @@ void UUIEffectOutline::SetOutlineColor(FColor newColor)
 		if (GetLexVisual())GetLexVisual()->MarkColorDirty();
 	}
 }
-void UUIEffectOutline::SetOutlineSize(FVector2D newSize)
+void ULexMeshModifierOutline::SetOutlineSize(FVector2D newSize)
 {
 	if (outlineSize != newSize)
 	{
@@ -195,7 +195,7 @@ void UUIEffectOutline::SetOutlineSize(FVector2D newSize)
 		if (GetLexVisual())GetLexVisual()->MarkVertexPositionDirty();
 	}
 }
-void UUIEffectOutline::SetUse8Direction(bool newValue)
+void ULexMeshModifierOutline::SetUse8Direction(bool newValue)
 {
 	if (use8Direction != newValue)
 	{

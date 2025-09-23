@@ -2,17 +2,17 @@
 
 #pragma once
 
-#include "LexVisualBatchMeshModifierBase.h"
-#include "UIEffectShadow.generated.h"
+#include "LexMeshModifierBase.h"
+#include "LexMeshModifierShadow.generated.h"
 
 
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIEffectShadow : public ULexVisualBatchMeshModifierBase
+class LGUI_API ULexMeshModifierShadow : public ULexMeshModifierBase
 {
 	GENERATED_BODY()
 
 public:	
-	UUIEffectShadow();
+	ULexMeshModifierShadow();
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")

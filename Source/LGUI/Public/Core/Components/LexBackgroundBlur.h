@@ -7,7 +7,7 @@
 
 /** 
  * UI element that can add blur effect on background image, just like UMG's BackgroundBlur.
- * Use it in ScreenSpace or WorldSpace-LGUIRenderer.
+ * Use it in ScreenSpace or WorldSpace-LexUIRenderer.
  * If android OpenGL ES3.1, need to enable "ProjectSettings/Platforms/Android/Build/Support Backbuffer Sampling on OpenGL".
  */
 UCLASS(ClassGroup = (LGUI), NotBlueprintable, meta = (BlueprintSpawnableComponent))
@@ -44,13 +44,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		UTexture2D* GetStrengthTexture()const { return StrengthTexture; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetBlurStrength(float newValue);
+		void SetBlurStrength(float Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetMaxDownSampleLevel(int newValue);
+		void SetMaxDownSampleLevel(int Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetApplyAlphaToBlur(bool newValue);
+		void SetApplyAlphaToBlur(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetStrengthTexture(UTexture2D* newValue);
+		void SetStrengthTexture(UTexture2D* Value);
 
 	virtual TSharedPtr<FLexVisualPostProcessRenderProxy> GetRenderProxy()override;
 	virtual void MarkAllDirty()override;

@@ -1,8 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/Components/LexWidgetSubObjectBehaviour.h"
-
 #include "Core/Components/LexWidget.h"
+#include "LGUI.h"
 
 #if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION

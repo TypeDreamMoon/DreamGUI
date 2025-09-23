@@ -285,6 +285,7 @@ AActor* SLGUIPrefabEditorDetails::GetActorContext() const
 
 void SLGUIPrefabEditorDetails::OnEditorSelectionChanged()
 {
+	if (bIsSelectFromDetails)return;
 	bIsSelectFromLGUIEditor = true;
 	auto SelectedWidgets = PrefabEditorPtr.Pin()->GetSelectedWidgets();
 	if (SelectedWidgets.Num() > 0)
@@ -336,6 +337,7 @@ void SLGUIPrefabEditorDetails::OnEditorSelectionChanged()
 
 void SLGUIPrefabEditorDetails::OnEditorTreeViewSelectionChanged(const TArray<FSubobjectEditorTreeNodePtrType>& SelectedNodes)
 {
+	bIsSelectFromDetails = true;
 	if (SelectedNodes.Num() > 0)
 	{
 		TArray<UObject*> SelectedObjects;
@@ -376,6 +378,7 @@ void SLGUIPrefabEditorDetails::OnEditorTreeViewSelectionChanged(const TArray<FSu
 			}
 		}
 	}
+	bIsSelectFromDetails = false;
 }
 
 void SLGUIPrefabEditorDetails::OnEditorTreeViewItemDoubleClicked(const FSubobjectEditorTreeNodePtrType ClickedNode)

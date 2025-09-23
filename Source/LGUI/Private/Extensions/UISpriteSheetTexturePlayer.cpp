@@ -1,6 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Extensions/UISpriteSheetTexturePlayer.h"
+
+#include "LGUI.h"
 #include "LTweenBPLibrary.h"
 #include "Core/Components/UITexture.h"
 

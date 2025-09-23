@@ -1,14 +1,14 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "GeometryModifier/UIEffectShadow.h"
+#include "GeometryModifier/LexMeshModifierShadow.h"
 #include "LGUI.h"
 #include "Utils/LexUIUtils.h"
 
 
-UUIEffectShadow::UUIEffectShadow()
+ULexMeshModifierShadow::ULexMeshModifierShadow()
 {
 }
-void UUIEffectShadow::ModifyUIGeometry(
+void ULexMeshModifierShadow::ModifyUIGeometry(
 	FLexUIGeometry& InGeometry, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 )
 {
@@ -63,7 +63,7 @@ void UUIEffectShadow::ModifyUIGeometry(
 	}
 }
 
-void UUIEffectShadow::SetShadowColor(FColor newColor)
+void ULexMeshModifierShadow::SetShadowColor(FColor newColor)
 {
 	if (shadowColor != newColor)
 	{
@@ -71,7 +71,7 @@ void UUIEffectShadow::SetShadowColor(FColor newColor)
 		if (GetLexVisual())GetLexVisual()->MarkColorDirty();
 	}
 }
-void UUIEffectShadow::SetShadowOffset(FVector2D newOffset)
+void ULexMeshModifierShadow::SetShadowOffset(FVector2D newOffset)
 {
 	if (shadowOffset != newOffset)
 	{

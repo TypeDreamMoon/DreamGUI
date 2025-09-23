@@ -1,7 +1,7 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/UIEffectTextAnimationCustomization.h"
-#include "GeometryModifier/UIEffectTextAnimation.h"
+#include "GeometryModifier/LexMeshModifierTextAnimation.h"
 #include "LGUIEditorUtils.h"
 
 #include "LGUIEditorModule.h"
@@ -18,7 +18,7 @@ void FUIEffectTextAnimationCustomization::CustomizeDetails(IDetailLayoutBuilder&
 {
 	TArray<TWeakObjectPtr<UObject>> targetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(targetObjects);
-	TargetScriptPtr = Cast<UUIEffectTextAnimation>(targetObjects[0].Get());
+	TargetScriptPtr = Cast<ULexMeshModifierTextAnimation>(targetObjects[0].Get());
 	if (TargetScriptPtr == nullptr)
 	{
 		UE_LOG(LGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
