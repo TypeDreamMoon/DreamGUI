@@ -2,15 +2,13 @@
 
 #include "Core/Components/LexVisualBatchMesh.h"
 #include "LGUI.h"
-#include "Core/LexUIClipData.h"
 #include "Core/Components/LexCanvas.h"
 #include "Utils/LexUIUtils.h"
-#include "GeometryModifier/LexVisualBatchMeshModifierBase.h"
+#include "GeometryModifier/LexMeshModifierBase.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Core/LexUIDrawCall.h"
-#include "Core/LexUIManager.h"
 
-DECLARE_CYCLE_STAT(TEXT("UIBatchMeshRenderable GeometryModifier"), STAT_ApplyModifier, STATGROUP_LGUI);
+DECLARE_CYCLE_STAT(TEXT("LexVisualBatchMesh GeometryModifier"), STAT_ApplyModifier, STATGROUP_LGUI);
 
 ULexVisualBatchMesh::ULexVisualBatchMesh(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {

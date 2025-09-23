@@ -1,0 +1,71 @@
+// Copyright 2019-Present LexLiu. All Rights Reserved.
+
+#include "DataFactory/LexUIPrefabFactory.h"
+#include "LGUIEditorModule.h"
+#include "PrefabSystem/LGUIPrefab.h"
+#include "PrefabSystem/LGUIPrefabHelperObject.h"
+#include "PrefabSystem/LGUIPrefabManager.h"
+#include "Core/Actor/LexWidgetActor.h"
+
+#define LOCTEXT_NAMESPACE "LexUIPrefabFactory"
+
+
+ULexUIPrefabFactory::ULexUIPrefabFactory()
+{
+	SupportedClass = ULGUIPrefab::StaticClass();
+	bCreateNew = true;
+	bEditAfterNew = true;
+}
+
+UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent, FName Name, EObjectFlags Flags, UObject* Context, FFeedbackContext* Warn)
+{
+	if (SourcePrefab != nullptr)//prefab variant
+	{
+		ULGUIPrefab* NewAsset = NewObject<ULGUIPrefab>(InParent, Class, Name, Flags | RF_Transactional);
+		NewAsset->bIsPrefabVariant = true;
+		ULGUIPrefabHelperObject* HelperObject = NewObject<ULGUIPrefabHelperObject>(GetTransientPackage());
+		HelperObject->PrefabAsset = NewAsset;
+		TMap<FGuid, TObjectPtr<UObject>> MapGuidToObject;
+		TMap<TObjectPtr<AActor>, FLGUISubPrefabData> SubPrefabMap;
+		HelperObject->LoadedRootActor = SourcePrefab->LoadPrefabWithExistingObjects(ULGUIPrefabManagerObject::GetPreviewWorldForPrefabPackage(), nullptr, MapGuidToObject, SubPrefabMap);
+		FLGUISubPrefabData SubPrefabData;
+		SubPrefabData.PrefabAsset = SourcePrefab;
+		SubPrefabData.MapGuidToObject = MapGuidToObject;
+		for (auto& KeyValue : MapGuidToObject)
+		{
+			auto GuidInParent = FGuid::NewGuid();
+			SubPrefabData.MapObjectGuidFromParentPrefabToSubPrefab.Add(GuidInParent, KeyValue.Key);
+			HelperObject->MapGuidToObject.Add(GuidInParent, KeyValue.Value);
+		}
+		HelperObject->SubPrefabMap.Add(HelperObject->LoadedRootActor, SubPrefabData);
+		HelperObject->SavePrefab();
+		HelperObject->LoadedRootActor->Destroy();
+		HelperObject->ConditionalBeginDestroy();
+		return NewAsset;
+	}
+	else
+	{
+		ULGUIPrefab* NewAsset = NewObject<ULGUIPrefab>(InParent, Class, Name, Flags | RF_Transactional);
+		NewAsset->bIsPrefabVariant = false;
+		ULGUIPrefabHelperObject* HelperObject = NewObject<ULGUIPrefabHelperObject>(GetTransientPackage());
+		HelperObject->PrefabAsset = NewAsset;
+		HelperObject->LoadedRootActor = ULGUIPrefabManagerObject::GetPreviewWorldForPrefabPackage()->SpawnActor<ALexWidgetActor>();
+		HelperObject->LoadedRootActor->SetActorLabel(TEXT("RootActor"));
+		if (!HelperObject->LoadedRootActor->GetRootComponent())
+		{
+			USceneComponent* RootComponent = NewObject<USceneComponent>(HelperObject->LoadedRootActor, USceneComponent::GetDefaultSceneRootVariableName(), RF_Transactional);
+			RootComponent->Mobility = EComponentMobility::Movable;
+			RootComponent->bVisualizeComponent = false;
+
+			HelperObject->LoadedRootActor->SetRootComponent(RootComponent);
+			RootComponent->RegisterComponent();
+			HelperObject->LoadedRootActor->AddInstanceComponent(RootComponent);
+		}
+		HelperObject->SavePrefab();
+		HelperObject->LoadedRootActor->Destroy();
+		HelperObject->ConditionalBeginDestroy();
+		return NewAsset;
+	}
+}
+
+#undef LOCTEXT_NAMESPACE

@@ -1,0 +1,570 @@
+﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
+
+#include "Extensions/LexStaticMesh.h"
+#include "Core/LexUIGeometry.h"
+#include "Core/Components/LexCanvas.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/Engine.h"
+#include "StaticMeshResources.h"
+#include "Rendering/ColorVertexBuffer.h"
+#include "LGUI.h"
+#include "Core/LexUIMesh/LexUIMeshComponent.h"
+#include "Core/LexUIDrawCall.h"
+#include "Materials/MaterialInterface.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Utils/LexUIUtils.h"
+
+#define LOCTEXT_NAMESPACE "UIStaticMesh"
+
+static void StaticMeshToLGUIMeshRenderData(const UStaticMesh* DataSource, TArray<FLexUIStaticMeshVertex>& OutVerts, TArray<uint32>& OutIndexes)
+{
+	const FStaticMeshLODResources& LOD = DataSource->GetRenderData()->LODResources[0];
+	const int32 NumSections = LOD.Sections.Num();
+	if (NumSections > 1)
+	{
+		auto WarningText = FText::Format(LOCTEXT("StaticMeshHasMultipleSections", "StaticMesh {0} has {1} sections. UIStaticMesh expects a static mesh with 1 section."), FText::FromString(DataSource->GetName()), NumSections);
+#if WITH_EDITOR
+		FLexUIUtils::EditorNotification(WarningText, 10);
+#endif
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *WarningText.ToString());
+		//@todo: support multiple sections
+	}
+
+	// Populate Vertex Data
+	{
+		const uint32 NumVerts = LOD.VertexBuffers.PositionVertexBuffer.GetNumVertices();
+		OutVerts.Empty();
+		OutVerts.Reserve(NumVerts);
+
+		static const int32 MAX_SUPPORTED_UV_SETS = 4;
+		const int32 TexCoordsPerVertex = LOD.GetNumTexCoords();
+		if (TexCoordsPerVertex > MAX_SUPPORTED_UV_SETS)
+		{
+			auto WarningText = FText::Format(LOCTEXT("StaticMeshHasTooManyUVSets", "StaticMesh {0} has {1} UV sets; LGUI vertex data supports at most {2}."), FText::FromString(DataSource->GetName()), TexCoordsPerVertex, MAX_SUPPORTED_UV_SETS);
+#if WITH_EDITOR
+			FLexUIUtils::EditorNotification(WarningText, 10);
+#endif
+			UE_LOG(LGUI, Warning, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *WarningText.ToString());
+		}
+
+		for (uint32 i = 0; i < NumVerts; ++i)
+		{
+			// Copy Position
+			const FVector3f& Position = LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(i);
+
+			// Copy Color
+			FColor Color = (LOD.VertexBuffers.ColorVertexBuffer.GetNumVertices() > 0) ? LOD.VertexBuffers.ColorVertexBuffer.VertexColor(i) : FColor::White;
+
+			// Copy all the UVs that we have, and as many as we can fit.
+			const FVector2f& UV0 = (TexCoordsPerVertex > 0) ? LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(i, 0) : FVector2f(1, 1);
+
+			const FVector2f& UV1 = (TexCoordsPerVertex > 1) ? LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(i, 1) : FVector2f(1, 1);
+
+			const FVector2f& UV2 = (TexCoordsPerVertex > 2) ? LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(i, 2) : FVector2f(1, 1);
+
+			const FVector2f& UV3 = (TexCoordsPerVertex > 3) ? LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(i, 3) : FVector2f(1, 1);
+
+			const FVector3f TangentX = FVector3f(LOD.VertexBuffers.StaticMeshVertexBuffer.VertexTangentX(i));
+			const FVector3f TangentZ = FVector3f(LOD.VertexBuffers.StaticMeshVertexBuffer.VertexTangentZ(i));
+
+			OutVerts.Add(FLexUIStaticMeshVertex(
+				FVector(Position),
+				FVector(TangentX),
+				FVector(TangentZ),
+				Color,
+				FVector2D(UV0),
+				FVector2D(UV1),
+				FVector2D(UV2),
+				FVector2D(UV3)
+			));
+		}
+	}
+
+	// Populate Index data
+	{
+		FIndexArrayView SourceIndexes = LOD.IndexBuffer.GetArrayView();
+		const int32 NumIndexes = SourceIndexes.Num();
+		OutIndexes.Empty();
+		OutIndexes.Reserve(NumIndexes);
+		for (int32 i = 0; i < NumIndexes; ++i)
+		{
+			OutIndexes.Add(SourceIndexes[i]);
+		}
+
+
+		// Sort the index buffer such that verts are drawn in Z-order.
+		// Assume that all triangles are coplanar with Z == SomeValue.
+		ensure(NumIndexes % 3 == 0);
+		for (int32 a = 0; a < NumIndexes; a += 3)
+		{
+			for (int32 b = 0; b < NumIndexes; b += 3)
+			{
+				const float VertADepth = LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(OutIndexes[a]).Z;
+				const float VertBDepth = LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(OutIndexes[b]).Z;
+				if (VertADepth < VertBDepth)
+				{
+					// Swap the order in which triangles will be drawn
+					Swap(OutIndexes[a + 0], OutIndexes[b + 0]);
+					Swap(OutIndexes[a + 1], OutIndexes[b + 1]);
+					Swap(OutIndexes[a + 2], OutIndexes[b + 2]);
+				}
+			}
+		}
+	}
+}
+
+
+
+const TArray<FLexUIStaticMeshVertex>& ULexUIStaticMeshCacheData::GetVertexData() const
+{
+	return VertexData;
+}
+
+const TArray<uint32>& ULexUIStaticMeshCacheData::GetIndexData() const
+{
+	return IndexData;
+}
+
+UMaterialInterface* ULexUIStaticMeshCacheData::GetMaterial() const
+{
+	return Material;
+}
+
+void ULexUIStaticMeshCacheData::EnsureValidData()
+{
+#if WITH_EDITORONLY_DATA
+	if (IsValid(MeshAsset))
+	{
+		InitFromStaticMesh(MeshAsset);
+	}
+#endif
+}
+
+#include "UObject/ObjectSaveContext.h"
+void ULexUIStaticMeshCacheData::PreSave(FObjectPreSaveContext SaveContext)
+{
+	Super::PreSave(SaveContext);
+}
+#if WITH_EDITOR
+void ULexUIStaticMeshCacheData::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+	if (auto Property = PropertyChangedEvent.Property)
+	{
+		auto PropName = Property->GetFName();
+		if (
+			PropName == GET_MEMBER_NAME_CHECKED(ULexUIStaticMeshCacheData, MeshAsset)
+			)
+		{
+			if (IsValid(MeshAsset))
+			{
+				EnsureValidData();
+			}
+			else
+			{
+				ClearMeshData();
+			}
+		}
+	}
+}
+
+void ULexUIStaticMeshCacheData::InitFromStaticMesh(const UStaticMesh* InSourceMesh)
+{
+	if (SourceMaterial != InSourceMesh->GetMaterial(0))
+	{
+		SourceMaterial = InSourceMesh->GetMaterial(0);
+		Material = SourceMaterial;
+	}
+
+	ensureMsgf(Material != nullptr, TEXT("[%s].%d Expected %s to have a material assigned."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InSourceMesh->GetFullName());
+
+	StaticMeshToLGUIMeshRenderData(InSourceMesh, VertexData, IndexData);
+	OnMeshDataChange.Broadcast();
+}
+void ULexUIStaticMeshCacheData::ClearMeshData()
+{
+	VertexData.Empty();
+	IndexData.Empty();
+}
+#endif
+
+
+
+
+ULexStaticMesh::ULexStaticMesh(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
+{
+}
+
+#define ONE_DIVIDE_255 0.0039215686274509803921568627451f
+
+void ULexStaticMesh::UpdateGeometry()
+{
+	if (GetWidget()->GetWidgetActiveInHierarchy() == false)return;
+	auto RenderCanvas = GetWidget()->GetRenderCanvas();
+	if (!RenderCanvas)return;
+	if (!IsValid(meshCache))return;
+
+	Super::UpdateGeometry();
+
+#if WITH_EDITOR
+	if (!OnMeshDataChangeDelegateHandle.IsValid())
+	{
+		OnMeshDataChangeDelegateHandle = meshCache->OnMeshDataChange.AddUObject(this, &ULexStaticMesh::OnStaticMeshDataChange);
+	}
+#endif
+	if (GetUIMesh() != nullptr && GetMeshSection() != nullptr)
+	{
+		if (bColorChanged)
+		{
+			UpdateMeshColor(false);
+		}
+		if (bLocalVertexPositionChanged || bTransformChanged)
+		{
+			UpdateMeshTransform(false);
+		}
+		if (bColorChanged || bLocalVertexPositionChanged || bTransformChanged)
+		{
+			DrawCall->DrawCallMesh->UpdateMeshSectionRenderData(DrawCall->DrawCallRenderSection.Pin(), bLocalVertexPositionChanged || bTransformChanged, RenderCanvas->GetActualRequireNormalAndTangent());
+			bColorChanged = false;
+			bLocalVertexPositionChanged = false;
+			bTransformChanged = false;
+		}
+	}
+}
+
+void ULexStaticMesh::UpdateMeshColor(bool updateToDrawcallMesh)
+{
+	if (vertexColorType == ELexStaticMeshVertexColorType::NotAffectByUIColor)return;
+	const auto& sourceVertexData = meshCache->GetVertexData();
+	const auto& sourceIndexData = meshCache->GetIndexData();
+	auto numVertices = sourceVertexData.Num();
+	auto numIndices = sourceIndexData.Num();
+	if (numVertices > 0 && numIndices > 0)
+	{
+		auto MeshSection = (FLexUIMeshSection*)DrawCall->DrawCallRenderSection.Pin().Get();
+		auto& VertexData = MeshSection->vertices;
+
+		VertexData.SetNumUninitialized(numVertices);
+		auto tempVertexColorType = vertexColorType;
+
+		for (int i = 0; i < numVertices; i++)
+		{
+			auto& sourceVert = sourceVertexData[i];
+			auto& vert = VertexData[i];
+			vert.Position = FVector3f(sourceVert.Position);
+			switch (tempVertexColorType)
+			{
+			case ELexStaticMeshVertexColorType::MultiplyWithUIColor:
+			{
+				vert.Color = sourceVert.Color;
+				auto uiFinalColor = GetFinalColor();
+				vert.Color.R = (uint8)((float)vert.Color.R * uiFinalColor.R * ONE_DIVIDE_255);
+				vert.Color.G = (uint8)((float)vert.Color.G * uiFinalColor.G * ONE_DIVIDE_255);
+				vert.Color.B = (uint8)((float)vert.Color.B * uiFinalColor.B * ONE_DIVIDE_255);
+				vert.Color.A = (uint8)((float)vert.Color.A * uiFinalColor.A * ONE_DIVIDE_255);
+			}
+			break;
+			case ELexStaticMeshVertexColorType::NotAffectByUIColor:
+			{
+				vert.Color = sourceVert.Color;
+			}
+			break;
+			case ELexStaticMeshVertexColorType::ReplaceByUIColor:
+			{
+				vert.Color = GetFinalColor();
+			}
+			break;
+			}
+		}
+	}
+
+	if (updateToDrawcallMesh)
+	{
+		DrawCall->DrawCallMesh->UpdateMeshSectionRenderData(DrawCall->DrawCallRenderSection.Pin(), false, GetWidget()->GetRenderCanvas()->GetActualRequireNormalAndTangent());
+	}
+}
+void ULexStaticMesh::CreateGeometry()
+{
+	const auto& sourceVertexData = meshCache->GetVertexData();
+	const auto& sourceIndexData = meshCache->GetIndexData();
+	auto numVertices = sourceVertexData.Num();
+	auto numIndices = sourceIndexData.Num();
+	if (numVertices > 0 && numIndices > 0)
+	{
+		auto MeshSection = (FLexUIMeshSection*)DrawCall->DrawCallRenderSection.Pin().Get();
+		auto& VertexData = MeshSection->vertices;
+
+		VertexData.SetNumUninitialized(numVertices);
+		bool RequireNormalAndTangent = GetWidget()->GetRenderCanvas()->GetActualRequireNormalAndTangent();
+		auto tempVertexColorType = vertexColorType;
+
+		for (int i = 0; i < numVertices; i++)
+		{
+			auto& sourceVert = sourceVertexData[i];
+			auto& vert = VertexData[i];
+			vert.Position = FVector3f(sourceVert.Position);
+			switch (tempVertexColorType)
+			{
+			case ELexStaticMeshVertexColorType::MultiplyWithUIColor:
+			{
+				vert.Color = sourceVert.Color;
+			auto uiFinalColor = GetFinalColor();
+			vert.Color.R = (uint8)((float)vert.Color.R * uiFinalColor.R * ONE_DIVIDE_255);
+			vert.Color.G = (uint8)((float)vert.Color.G * uiFinalColor.G * ONE_DIVIDE_255);
+			vert.Color.B = (uint8)((float)vert.Color.B * uiFinalColor.B * ONE_DIVIDE_255);
+			vert.Color.A = (uint8)((float)vert.Color.A * uiFinalColor.A * ONE_DIVIDE_255);
+			}
+			break;
+			case ELexStaticMeshVertexColorType::NotAffectByUIColor:
+			{
+				vert.Color = sourceVert.Color;
+			}
+			break;
+			case ELexStaticMeshVertexColorType::ReplaceByUIColor:
+			{
+				vert.Color = GetFinalColor();
+			}
+			break;
+			}
+
+			vert.TextureCoordinate[0] = FVector2f(sourceVert.UV0);
+			vert.TextureCoordinate[1] = FVector2f(sourceVert.UV1);
+			vert.TextureCoordinate[2] = FVector2f(sourceVert.UV2);
+			vert.TextureCoordinate[3] = FVector2f(sourceVert.UV3);
+
+			if (RequireNormalAndTangent)
+			{
+				vert.TangentZ = sourceVert.TangentZ;
+				vert.TangentZ = sourceVert.TangentX;
+			}
+		}
+
+		auto& IndexData = MeshSection->triangles;
+		IndexData.SetNumUninitialized(numIndices);
+		for (int i = 0; i < numIndices; i++)
+		{
+			IndexData[i] = sourceIndexData[i];
+		}
+	}
+	DrawCall->DrawCallMesh->CreateRenderSectionRenderData(DrawCall->DrawCallRenderSection.Pin());
+	DrawCall->bMaterialNeedToReassign = true;
+	DrawCall->bMaterialChanged = true;
+
+	UpdateMeshTransform(true);
+
+	GetWidget()->MarkCanvasUpdate(true, false, false);
+}
+
+void ULexStaticMesh::UpdateMeshTransform(bool updateToDrawcallMesh)
+{
+	auto Widget = GetWidget();
+	auto RenderCanvas = Widget->GetRenderCanvas();
+	FTransform itemToCanvasTf;
+	auto canvasUIItem = RenderCanvas->GetLexWidget();
+	auto inverseCanvasTf = canvasUIItem->GetComponentTransform().Inverse();
+	const auto& itemTf = Widget->GetComponentTransform();
+	FTransform::Multiply(&itemToCanvasTf, &itemTf, &inverseCanvasTf);
+
+	auto MeshSection = (FLexUIMeshSection*)DrawCall->DrawCallRenderSection.Pin().Get();
+
+	const auto& sourceVertexData = meshCache->GetVertexData();
+	auto numVertices = sourceVertexData.Num();
+	{
+		auto& VertexData = MeshSection->vertices;
+		VertexData.SetNumUninitialized(numVertices);
+		bool RequireNormalAndTangent = RenderCanvas->GetActualRequireNormalAndTangent();
+		for (int i = 0; i < numVertices; i++)
+		{
+			auto& vert = VertexData[i];
+			vert.Position = FVector3f(sourceVertexData[i].Position);
+			if (RequireNormalAndTangent)
+			{
+				vert.TangentZ = sourceVertexData[i].TangentZ;
+				vert.TangentX = sourceVertexData[i].TangentX;
+			}
+		}
+	}
+
+	auto& vertices = MeshSection->vertices;
+	auto vertexCount = vertices.Num();
+	for (int i = 0; i < vertexCount; i++)
+	{
+		vertices[i].Position = FVector3f(itemToCanvasTf.TransformPosition(FVector(vertices[i].Position)));
+	}
+	if (RenderCanvas->GetActualRequireNormalAndTangent())
+	{
+		for (int i = 0; i < vertexCount; i++)
+		{
+			vertices[i].TangentZ = itemToCanvasTf.TransformVector(vertices[i].TangentZ.ToFVector());
+			vertices[i].TangentZ.Vector.W = -127;
+			vertices[i].TangentX = itemToCanvasTf.TransformVector(vertices[i].TangentX.ToFVector());
+		}
+	}
+
+	if (updateToDrawcallMesh)
+	{
+		DrawCall->DrawCallMesh->UpdateMeshSectionRenderData(DrawCall->DrawCallRenderSection.Pin(), true, RenderCanvas->GetActualRequireNormalAndTangent());
+	}
+}
+
+#if WITH_EDITOR
+void ULexStaticMesh::PreEditChange(FProperty* PropertyAboutToChange)
+{
+	Super::PreEditChange(PropertyAboutToChange);
+	auto PropName = PropertyAboutToChange->GetFName();
+	if (PropName == GET_MEMBER_NAME_CHECKED(ULexStaticMesh, meshCache))
+	{
+		if (IsValid(meshCache) && OnMeshDataChangeDelegateHandle.IsValid())
+		{
+			meshCache->OnMeshDataChange.Remove(OnMeshDataChangeDelegateHandle);
+			OnMeshDataChangeDelegateHandle.Reset();
+		}
+	}
+}
+void ULexStaticMesh::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+	if (auto Property = PropertyChangedEvent.Property)
+	{
+		auto PropName = Property->GetFName();
+		if (
+			PropName == GET_MEMBER_NAME_CHECKED(ULexStaticMesh, meshCache)
+			|| PropName == GET_MEMBER_NAME_CHECKED(ULexStaticMesh, vertexColorType)
+			)
+		{
+			if (IsValid(meshCache))
+			{
+				OnMeshDataChangeDelegateHandle = meshCache->OnMeshDataChange.AddUObject(this, &ULexStaticMesh::OnStaticMeshDataChange);
+				if (DrawCall.IsValid() && DrawCall->DrawCallRenderSection.IsValid())
+				{
+					if (HaveValidData())
+					{
+						CreateGeometry();
+					}
+				}
+			}
+			else
+			{
+				ClearMeshData();
+			}
+		}
+		else if (PropName == GET_MEMBER_NAME_CHECKED(ULexStaticMesh, ReplaceMaterial))
+		{
+			if (DrawCall.IsValid() && DrawCall->DrawCallRenderSection.IsValid())
+			{
+				if (HaveValidData())
+				{
+					CreateGeometry();
+				}
+			}
+		}
+	}
+}
+void ULexStaticMesh::OnStaticMeshDataChange()
+{
+	if (IsValid(meshCache))
+	{
+		if (DrawCall.IsValid() && DrawCall->DrawCallRenderSection.IsValid())
+		{
+			if (HaveValidData())
+			{
+				CreateGeometry();
+			}
+		}
+	}
+}
+#endif
+
+void ULexStaticMesh::OnMeshDataReady()
+{
+	Super::OnMeshDataReady();
+	if (DrawCall.IsValid() && DrawCall->DrawCallRenderSection.IsValid())
+	{
+		if (HaveValidData())
+		{
+			CreateGeometry();
+		}
+	}
+}
+
+bool ULexStaticMesh::HaveValidData()const
+{
+	if (IsValid(meshCache))
+	{
+		return meshCache->GetVertexData().Num() > 0 && meshCache->GetIndexData().Num() > 0;
+	}
+	return false;
+}
+
+UMaterialInterface* ULexStaticMesh::GetMaterial()const
+{
+	if (IsValid(ReplaceMaterial))
+	{
+		return ReplaceMaterial;
+	}
+	else
+	{
+		return meshCache->GetMaterial();
+	}
+}
+
+UMaterialInstanceDynamic* ULexStaticMesh::GetOrCreateDynamicMaterialInstance()
+{
+	UMaterialInterface* MaterialInstance = GetMaterial();
+	UMaterialInstanceDynamic* MID = Cast<UMaterialInstanceDynamic>(MaterialInstance);
+
+	if (MaterialInstance && !MID)
+	{
+		// Create and set the dynamic material instance.
+		MID = UMaterialInstanceDynamic::Create(MaterialInstance, this);
+		SetReplaceMaterial(MID);
+	}
+	else if (!MaterialInstance)
+	{
+		UE_LOG(LGUI, Warning, TEXT("[UUIStaticMesh::GetOrCreateDynamicMaterialInstance]Material is invalid on %s."), *GetPathName());
+	}
+
+	return MID;
+}
+
+void ULexStaticMesh::SetMesh(ULexUIStaticMeshCacheData* value)
+{
+	if (meshCache != value)
+	{
+		meshCache = value;
+		if (IsValid(meshCache))
+		{
+			if (DrawCall.IsValid() && DrawCall->DrawCallRenderSection.IsValid())
+			{
+				if (HaveValidData())
+				{
+					CreateGeometry();
+				}
+			}
+		}
+	}
+}
+
+void ULexStaticMesh::SetReplaceMaterial(UMaterialInterface* value)
+{
+	if (ReplaceMaterial != value)
+	{
+		ReplaceMaterial = value;
+		if (DrawCall.IsValid())
+		{
+			DrawCall->bMaterialChanged = true;
+		}
+		GetWidget()->MarkCanvasUpdate(true, false, false);
+	}
+}
+
+void ULexStaticMesh::SetVertexColorType(ELexStaticMeshVertexColorType value)
+{
+	if (vertexColorType != value)
+	{
+		vertexColorType = value;
+		MarkColorDirty();
+	}
+}
+
+#undef LOCTEXT_NAMESPACE

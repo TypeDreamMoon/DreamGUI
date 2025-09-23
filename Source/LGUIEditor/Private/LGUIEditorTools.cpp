@@ -13,7 +13,7 @@
 #include "EditorViewportClient.h"
 #include "Engine/Selection.h"
 #include "EngineUtils.h"
-#include "DataFactory/LGUIPrefabActorFactory.h"
+#include "DataFactory/LexUIPrefabActorFactory.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "LGUIEditorModule.h"

@@ -32,7 +32,7 @@ bool UUIRenderableCustomRaycast_Circle::Raycast(UUIBaseRenderable* InUIRenderabl
 }
 #endif
 
-bool UUIRenderableCustomRaycast_VisiblePixel::Raycast(const ULexVisual* InVisual, const FVector& InLocalSpaceRayStart, const FVector& InLocalSpaceRayEnd, FVector& OutHitPoint, FVector& OutHitNormal)const
+bool ULexVisualCustomRaycast_VisiblePixel::Raycast(const ULexVisual* InVisual, const FVector& InLocalSpaceRayStart, const FVector& InLocalSpaceRayEnd, FVector& OutHitPoint, FVector& OutHitNormal)const
 {
 	if (auto BatchGeometry = Cast<ULexVisualBatchMesh>(InVisual))
 	{
@@ -57,11 +57,11 @@ bool UUIRenderableCustomRaycast_VisiblePixel::Raycast(const ULexVisual* InVisual
 	return false;
 }
 
-void UUIRenderableCustomRaycast_VisiblePixel::SetVisibilityThreshold(float value)
+void ULexVisualCustomRaycast_VisiblePixel::SetVisibilityThreshold(float value)
 {
 	VisibilityThreshold = value;
 }
-void UUIRenderableCustomRaycast_VisiblePixel::SetPixelChannel(uint8 value)
+void ULexVisualCustomRaycast_VisiblePixel::SetPixelChannel(uint8 value)
 {
 	PixelChannel = value;
 }

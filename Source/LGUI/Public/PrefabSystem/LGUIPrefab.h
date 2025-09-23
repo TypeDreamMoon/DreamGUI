@@ -160,7 +160,7 @@ class LGUI_API ULGUIPrefab : public UObject
 public:
 	ULGUIPrefab();
 	friend class FLGUIPrefabCustomization;
-	friend class ULGUIPrefabFactory;
+	friend class ULexUIPrefabFactory;
 
 #if WITH_EDITORONLY_DATA
 private:

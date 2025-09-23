@@ -16,7 +16,7 @@ class ULexVisualCustomRaycast;
 class ULexVisual;
 
 /**
- * This component is only used when UIBaseRenderable's RaycastType = Custom
+ * This component is only used when LexVisual's RaycastType = Custom
  */
 UCLASS(BlueprintType, Blueprintable, Abstract, DefaultToInstanced, EditInlineNew)
 class LGUI_API ULexVisualCustomRaycast :public UObject
@@ -25,8 +25,8 @@ class LGUI_API ULexVisualCustomRaycast :public UObject
 
 protected:
 	/**
-	 * Called by UIBaseRenderable when do raycast hit test.
-	 * @param	InVisual			The UIBaseRenderable object which call this Raycast function
+	 * Called by LexVisual when do raycast hit test.
+	 * @param	InVisual			The LexVisual object which call this Raycast function
 	 * @param	InLocalSpaceRayStart	Ray start point in this UI's local space
 	 * @param	InLocalSpaceRayEnd		Ray end point in this UI's local space
 	 * @param	OutHitPoint				Hit point position in this UI's local space
@@ -47,8 +47,8 @@ protected:
 		static bool GetRaycastPixelFromUIBatchMeshVisual(const class ULexVisualBatchMesh* InVisual, const FVector& InLocalSpaceRayStart, const FVector& InLocalSpaceRayEnd, FVector2D& OutUV, FColor& OutPixel, FVector& OutHitPoint, FVector& OutHitNormal);
 public:
 	/**
-	 * Called by UIBaseRenderable when do raycast hit test.
-	 * @param	InVisual			The UIBaseRenderable object which call this Raycast function
+	 * Called by LexVisual when do raycast hit test.
+	 * @param	InVisual			The LexVisual object which call this Raycast function
 	 * @param	InLocalSpaceRayStart	Ray start point in this UI's local space
 	 * @param	InLocalSpaceRayEnd		Ray end point in this UI's local space
 	 * @param	OutHitPoint				Hit point position in this UI's local space

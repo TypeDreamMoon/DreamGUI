@@ -5,19 +5,19 @@
 #include "CoreMinimal.h"
 #include "LGUIComponentReference.h"
 #include "PrefabSystem/ILGUIPrefabInterface.h"
-#include "Core/Components/UICustomMesh.h"
+#include "Core/Components/LexCustomMesh.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "LGUIRenderTargetInteraction.h"
 #include "UIRenderTarget.generated.h"
 
 class ULexCanvas;
-class ULGUICustomMesh;
+class ULexCustomMeshSource;
 
 /**
  * LGUI Render Target provide a solution to display a LGUICanvas with RenderMode of RenderTarget, just like "Retainer Box", and interact it with UIRenderTargetInteraction component.
  */
 UCLASS(ClassGroup = LGUI, Blueprintable, meta = (BlueprintSpawnableComponent), hidecategories = (Object, Activation, "Components|Activation"))
-class LGUI_API UUIRenderTarget : public UUICustomMesh, public ILGUIRenderTargetInteractionSourceInterface
+class LGUI_API UUIRenderTarget : public ULexCustomMesh, public ILGUIRenderTargetInteractionSourceInterface
 {
 	GENERATED_BODY()
 	

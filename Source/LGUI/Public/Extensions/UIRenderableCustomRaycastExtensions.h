@@ -29,7 +29,7 @@ public:
 	 *			3. UIText which use dynamic font can not work.
  */
 UCLASS(ClassGroup = (LGUI), BlueprintType)
-class LGUI_API UUIRenderableCustomRaycast_VisiblePixel : public ULexVisualCustomRaycast
+class LGUI_API ULexVisualCustomRaycast_VisiblePixel : public ULexVisualCustomRaycast
 {
 	GENERATED_BODY()
 protected:

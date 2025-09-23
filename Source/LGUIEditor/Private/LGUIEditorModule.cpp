@@ -25,18 +25,18 @@
 #include "Thumbnail/LGUIPrefabThumbnailRenderer.h"
 #include "Thumbnail/LGUISpriteThumbnailRenderer.h"
 #include "Thumbnail/LGUISpriteDataBaseObjectThumbnailRenderer.h"
-#include "ContentBrowserExtensions/LGUIContentBrowserExtensions.h"
+#include "ContentBrowserExtensions/LexUIContentBrowserExtensions.h"
 #include "LevelEditorMenuExtensions/LGUILevelEditorExtensions.h"
 #include "Window/LGUIDynamicSpriteAtlasViewer.h"
 
-#include "AssetTypeActions/AssetTypeActions_LGUISpriteData.h"
-#include "AssetTypeActions/AssetTypeActions_LGUIStaticSpriteAtlasData.h"
-#include "AssetTypeActions/AssetTypeActions_LGUIFontData.h"
-#include "AssetTypeActions/AssetTypeActions_LGUIPrefab.h"
-#include "AssetTypeActions/AssetTypeActions_LGUIStaticMeshCache.h"
-#include "AssetTypeActions/AssetTypeActions_LGUIRichTextCustomStyleData.h"
-#include "AssetTypeActions/AssetTypeActions_LGUIRichTextImageData.h"
-#include "AssetTypeActions/AssetTypeActions_LGUISDFFontData.h"
+#include "AssetTypeActions/AssetTypeActions_LexUISpriteData.h"
+#include "AssetTypeActions/AssetTypeActions_LexUIStaticSpriteAtlasData.h"
+#include "AssetTypeActions/AssetTypeActions_LexUIFontData.h"
+#include "AssetTypeActions/AssetTypeActions_LexUIPrefab.h"
+#include "AssetTypeActions/AssetTypeActions_LexUIStaticMeshCache.h"
+#include "AssetTypeActions/AssetTypeActions_LexUIRichTextCustomStyleData.h"
+#include "AssetTypeActions/AssetTypeActions_LexUIRichTextImageData.h"
+#include "AssetTypeActions/AssetTypeActions_LexUIFontData_DistanceField.h"
 
 #include "DetailCustomization/LexWidgetCustomization.h"
 #include "DetailCustomization/UIBaseRenderableCustomization.h"
@@ -115,46 +115,46 @@ void FLGUIEditorModule::StartupModule()
 
 	//Editor tools
 	{
-		auto editorCommand = FLGUIEditorCommands::Get();
+		auto EditorCommands = FLGUIEditorCommands::Get();
 
 		//actor action
 		PluginCommands->MapAction(
-			editorCommand.CopyActor,
+			EditorCommands.CopyActor,
 			FExecuteAction::CreateStatic(&LGUIEditorTools::CopySelectedActors_Impl),
 			FCanExecuteAction::CreateStatic(&LGUIEditorTools::CanCopyActor),
 			FGetActionCheckState(),
 			FIsActionButtonVisible::CreateStatic(&LGUIEditorTools::CanCopyActor)
 		);
 		PluginCommands->MapAction(
-			editorCommand.CutActor,
+			EditorCommands.CutActor,
 			FExecuteAction::CreateStatic(&LGUIEditorTools::CutSelectedActors_Impl),
 			FCanExecuteAction::CreateStatic(&LGUIEditorTools::CanCutActor),
 			FGetActionCheckState(),
 			FIsActionButtonVisible::CreateStatic(&LGUIEditorTools::CanCutActor)
 		);
 		PluginCommands->MapAction(
-			editorCommand.PasteActor,
+			EditorCommands.PasteActor,
 			FExecuteAction::CreateStatic(&LGUIEditorTools::PasteSelectedActors_Impl),
 			FCanExecuteAction::CreateStatic(&LGUIEditorTools::CanPasteActor),
 			FGetActionCheckState(),
 			FIsActionButtonVisible::CreateStatic(&LGUIEditorTools::CanPasteActor)
 		);
 		PluginCommands->MapAction(
-			editorCommand.DuplicateActor,
+			EditorCommands.DuplicateActor,
 			FExecuteAction::CreateStatic(&LGUIEditorTools::DuplicateSelectedActors_Impl),
 			FCanExecuteAction::CreateStatic(&LGUIEditorTools::CanDuplicateActor),
 			FGetActionCheckState(),
 			FIsActionButtonVisible::CreateStatic(&LGUIEditorTools::CanDuplicateActor)
 		);
 		PluginCommands->MapAction(
-			editorCommand.DestroyActor,
+			EditorCommands.DestroyActor,
 			FExecuteAction::CreateStatic(&LGUIEditorTools::DeleteSelectedActors_Impl),
 			FCanExecuteAction::CreateStatic(&LGUIEditorTools::CanDeleteActor),
 			FGetActionCheckState(),
 			FIsActionButtonVisible::CreateStatic(&LGUIEditorTools::CanDeleteActor)
 		);
 		PluginCommands->MapAction(
-			editorCommand.ToggleSpatiallyLoaded,
+			EditorCommands.ToggleSpatiallyLoaded,
 			FExecuteAction::CreateStatic(&LGUIEditorTools::ToggleSelectedActorsSpatiallyLoaded_Impl),
 			FCanExecuteAction::CreateStatic(&LGUIEditorTools::CanToggleActorSpatiallyLoaded),
 			FGetActionCheckState::CreateStatic(&LGUIEditorTools::GetActorSpatiallyLoadedProperty),
@@ -163,14 +163,14 @@ void FLGUIEditorModule::StartupModule()
 
 		//component action
 		PluginCommands->MapAction(
-			editorCommand.CopyComponentValues,
+			EditorCommands.CopyComponentValues,
 			FExecuteAction::CreateStatic(&LGUIEditorTools::CopyComponentValues_Impl),
 			FCanExecuteAction::CreateLambda([] {return GEditor->GetSelectedComponentCount() > 0; }),
 			FGetActionCheckState(),
 			FIsActionButtonVisible::CreateLambda([] {return GEditor->GetSelectedComponentCount() > 0; })
 		);
 		PluginCommands->MapAction(
-			editorCommand.PasteComponentValues,
+			EditorCommands.PasteComponentValues,
 			FExecuteAction::CreateStatic(&LGUIEditorTools::PasteComponentValues_Impl),
 			FCanExecuteAction::CreateLambda([] {return LGUIEditorTools::HaveValidCopiedComponent(); }),
 			FGetActionCheckState(),
@@ -178,41 +178,41 @@ void FLGUIEditorModule::StartupModule()
 		);
 		//view
 		PluginCommands->MapAction(
-			editorCommand.FocusToScreenSpaceUI,
+			EditorCommands.FocusToScreenSpaceUI,
 			FExecuteAction::CreateStatic(&LGUIEditorTools::FocusToScreenSpaceUI)
 		);
 		PluginCommands->MapAction(
-			editorCommand.FocusToSelectedUI,
+			EditorCommands.FocusToSelectedUI,
 			FExecuteAction::CreateStatic(&LGUIEditorTools::FocusToSelectedUI)
 		);
 		PluginCommands->MapAction(
-			editorCommand.ActiveViewportAsLGUIPreview,
+			EditorCommands.ActiveViewportAsLGUIPreview,
 			FExecuteAction::CreateRaw(this, &FLGUIEditorModule::ToggleActiveViewportAsPreview),
 			FCanExecuteAction(),
 			FIsActionChecked::CreateLambda([this] {return this->bActiveViewportAsPreview; })
 		);
 		//settings
 		PluginCommands->MapAction(
-			editorCommand.ToggleLGUIInfoColume,
+			EditorCommands.ToggleLGUIInfoColume,
 			FExecuteAction::CreateRaw(this, &FLGUIEditorModule::ToggleLGUIColumnInfo),
 			FCanExecuteAction(),
 			FIsActionChecked::CreateRaw(this, &FLGUIEditorModule::IsLGUIColumnInfoChecked)
 		);
 		PluginCommands->MapAction(
-			editorCommand.ToggleDrawHelperFrame,
+			EditorCommands.ToggleDrawHelperFrame,
 			FExecuteAction::CreateRaw(this, &FLGUIEditorModule::ToggleDrawHelperFrame),
 			FCanExecuteAction(),
 			FIsActionChecked::CreateRaw(this, &FLGUIEditorModule::IsDrawHelperFrameChecked)
 		);
 		PluginCommands->MapAction(
-			editorCommand.ToggleAnchorTool,
+			EditorCommands.ToggleAnchorTool,
 			FExecuteAction::CreateRaw(this, &FLGUIEditorModule::ToggleAnchorTool),
 			FCanExecuteAction(),
 			FIsActionChecked::CreateRaw(this, &FLGUIEditorModule::IsAnchorToolChecked)
 		);
 		//gc
 		PluginCommands->MapAction(
-			editorCommand.ForceGC,
+			EditorCommands.ForceGC,
 			FExecuteAction::CreateStatic(&LGUIEditorTools::ForceGC)
 		);
 
@@ -231,10 +231,10 @@ void FLGUIEditorModule::StartupModule()
 	{
 		//atlas texture viewer
 		FGlobalTabmanager::Get()->RegisterNomadTabSpawner(LGUIDynamicSpriteAtlasViewerName, FOnSpawnTab::CreateRaw(this, &FLGUIEditorModule::HandleSpawnDynamicSpriteAtlasViewerTab))
-			.SetDisplayName(LOCTEXT("LGUISpriteAtlasTextureViewerName", "LGUI Sprite Atlas Texture Viewer"))
+			.SetDisplayName(LOCTEXT("LexUIDynamicSpriteAtlasTextureViewerName", "LexUI Dynamic-Sprite-Atlas Texture Viewer"))
 			.SetMenuType(ETabSpawnerMenuType::Hidden);
 		FGlobalTabmanager::Get()->RegisterNomadTabSpawner(LGUIPrefabSequenceTabName, FOnSpawnTab::CreateRaw(this, &FLGUIEditorModule::HandleSpawnLGUIPrefabSequenceTab))
-			.SetDisplayName(LOCTEXT("LGUIPrefabSequenceTabName", "LGUI Prefab Sequence"))
+			.SetDisplayName(LOCTEXT("LexUIPrefabSequenceTabName", "LGUI Prefab Sequence"))
 			.SetMenuType(ETabSpawnerMenuType::Hidden);
 	}
 	//register custom editor
@@ -312,20 +312,20 @@ void FLGUIEditorModule::StartupModule()
 	{
 		IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
 		//register AssetCategory
-		EAssetTypeCategories::Type LGUIAssetCategoryBit = AssetTools.FindAdvancedAssetCategory(FName(TEXT("LGUI")));
-		if (LGUIAssetCategoryBit == EAssetTypeCategories::Misc)
+		EAssetTypeCategories::Type LexUIAssetCategoryBit = AssetTools.FindAdvancedAssetCategory(FName(TEXT("LexUI")));
+		if (LexUIAssetCategoryBit == EAssetTypeCategories::Misc)
 		{
-			LGUIAssetCategoryBit = AssetTools.RegisterAdvancedAssetCategory(FName(TEXT("LGUI")), LOCTEXT("LGUIAssetCategory", "LGUI"));
+			LexUIAssetCategoryBit = AssetTools.RegisterAdvancedAssetCategory(FName(TEXT("LexUI")), LOCTEXT("LexUIAssetCategory", "LexUI"));
 		}
 
-		TSharedPtr<FAssetTypeActions_Base> SpriteDataAction = MakeShareable(new FAssetTypeActions_LGUISpriteData(LGUIAssetCategoryBit));
-		TSharedPtr<FAssetTypeActions_Base> StaticSpriteAtlasDataAction = MakeShareable(new FAssetTypeActions_LGUIStaticSpriteAtlasData(LGUIAssetCategoryBit));
-		TSharedPtr<FAssetTypeActions_Base> FontDataAction = MakeShareable(new FAssetTypeActions_LGUIFontData(LGUIAssetCategoryBit));
-		TSharedPtr<FAssetTypeActions_Base> PrefabDataAction = MakeShareable(new FAssetTypeActions_LGUIPrefab(LGUIAssetCategoryBit));
-		TSharedPtr<FAssetTypeActions_Base> UIStaticMeshCacheDataAction = MakeShareable(new FAssetTypeActions_LGUIStaticMeshCache(LGUIAssetCategoryBit));
-		TSharedPtr<FAssetTypeActions_Base> RichTextCustomStyleDataAction = MakeShareable(new FAssetTypeActions_LGUIRichTextCustomStyleData(LGUIAssetCategoryBit));
-		TSharedPtr<FAssetTypeActions_Base> RichTextImageDataAction = MakeShareable(new FAssetTypeActions_LGUIRichTextImageData(LGUIAssetCategoryBit));
-		TSharedPtr<FAssetTypeActions_Base> SDFFontDataTypeAction = MakeShareable(new FAssetTypeActions_LGUISDFFontData(LGUIAssetCategoryBit));
+		TSharedPtr<FAssetTypeActions_Base> SpriteDataAction = MakeShareable(new FAssetTypeActions_LexUISpriteData(LexUIAssetCategoryBit));
+		TSharedPtr<FAssetTypeActions_Base> StaticSpriteAtlasDataAction = MakeShareable(new FAssetTypeActions_LexUIStaticSpriteAtlasData(LexUIAssetCategoryBit));
+		TSharedPtr<FAssetTypeActions_Base> FontDataAction = MakeShareable(new FAssetTypeActions_LexUIFontData(LexUIAssetCategoryBit));
+		TSharedPtr<FAssetTypeActions_Base> PrefabDataAction = MakeShareable(new FAssetTypeActions_LexUIPrefab(LexUIAssetCategoryBit));
+		TSharedPtr<FAssetTypeActions_Base> UIStaticMeshCacheDataAction = MakeShareable(new FAssetTypeActions_LexUIStaticMeshCache(LexUIAssetCategoryBit));
+		TSharedPtr<FAssetTypeActions_Base> RichTextCustomStyleDataAction = MakeShareable(new FAssetTypeActions_LexUIRichTextCustomStyleData(LexUIAssetCategoryBit));
+		TSharedPtr<FAssetTypeActions_Base> RichTextImageDataAction = MakeShareable(new FAssetTypeActions_LexUIRichTextImageData(LexUIAssetCategoryBit));
+		TSharedPtr<FAssetTypeActions_Base> SDFFontDataTypeAction = MakeShareable(new FAssetTypeActions_LexUIFontData_DistanceField(LexUIAssetCategoryBit));
 		AssetTools.RegisterAssetTypeActions(SpriteDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(StaticSpriteAtlasDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(FontDataAction.ToSharedRef());
@@ -353,7 +353,7 @@ void FLGUIEditorModule::StartupModule()
 	{
 		if (!IsRunningCommandlet())
 		{
-			FLGUIContentBrowserExtensions::InstallHooks();
+			FLexUIContentBrowserExtensions::InstallHooks();
 			FLGUILevelEditorExtensions::InstallHooks();
 		}
 	}
@@ -542,7 +542,7 @@ void FLGUIEditorModule::ShutdownModule()
 	}
 	//unregister right mouse button in content browser
 	{
-		FLGUIContentBrowserExtensions::RemoveHooks();
+		FLexUIContentBrowserExtensions::RemoveHooks();
 		FLGUILevelEditorExtensions::RemoveHooks();
 	}
 
@@ -1512,7 +1512,7 @@ void FLGUIEditorModule::CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder)
 		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, UUIPolygon::StaticClass(), nullptr);
 		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, UUIPolygonLine::StaticClass(), nullptr);
 		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, UUIRing::StaticClass(), nullptr);
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, UUIStaticMesh::StaticClass(), nullptr);
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, ULexStaticMesh::StaticClass(), nullptr);
 		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, UUI2DLineRaw::StaticClass(), nullptr);
 		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, UUI2DLineChildrenAsPoints::StaticClass(), nullptr);
 		//FunctionContainer::CreateMenuEntryByPrefab(MenuBuilder, TEXT("UIWidget"), LOCTEXT("UIWidget", "UI Widget"), AUIWidgetActor::StaticClass()->GetToolTipText());

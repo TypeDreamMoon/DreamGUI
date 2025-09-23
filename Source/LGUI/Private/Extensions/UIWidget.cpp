@@ -11,7 +11,7 @@
 #include "Framework/Application/SlateApplication.h"
 #include "Engine/GameInstance.h"
 #include "Engine/GameViewportClient.h"
-#include "Core/LGUICustomMesh.h"
+#include "Core/LexCustomMeshSource.h"
 #include "Core/Components/LexCanvas.h"
 
 #define LOCTEXT_NAMESPACE "UIWidget"

@@ -79,7 +79,7 @@ void ULexMeshModifierGradientColor::ModifyUIGeometry(
 		}
 	}
 	break;
-	case ELexMeshModifierGradientColorDirection::FourCornor:
+	case ELexMeshModifierGradientColorDirection::FourCorner:
 	{
 		for (int i = 0; i < vertexCount;)
 		{
