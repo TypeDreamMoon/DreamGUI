@@ -1236,8 +1236,8 @@ void LGUIEditorTools::PasteSelectedActors_Impl()
 void LGUIEditorTools::DeleteSelectedActors_Impl()
 {
 	auto selectedActors = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
-	GEditor->SelectNone(true, true);
 	DeleteActors_Impl(selectedActors);
+	GEditor->SelectNone(true, true);
 }
 void LGUIEditorTools::CutSelectedActors_Impl()
 {

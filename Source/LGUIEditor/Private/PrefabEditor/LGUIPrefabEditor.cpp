@@ -753,13 +753,13 @@ void FLGUIPrefabEditor::OnCopy()
 
 void FLGUIPrefabEditor::OnPaste()
 {
-	LGUIEditorTools::CutSelectedActors_Impl();
+	LGUIEditorTools::PasteSelectedActors_Impl();
 	OutlinerPtr->RequestRefresh();
 }
 
 void FLGUIPrefabEditor::OnCut()
 {
-	LGUIEditorTools::PasteSelectedActors_Impl();
+	LGUIEditorTools::CutSelectedActors_Impl();
 	OutlinerPtr->RequestRefresh();
 }
 

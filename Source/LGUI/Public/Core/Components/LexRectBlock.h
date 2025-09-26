@@ -46,7 +46,7 @@ enum class ELexUIRectBlockTextureMode : uint8
 
 class ULexUISpriteData_BaseObject;
 
-UCLASS(ClassGroup = (LGUI), NotBlueprintable, meta = (BlueprintSpawnableComponent))
+UCLASS(ClassGroup = (LGUI), NotBlueprintable)
 class LGUI_API ULexRectBlock : public ULexVisualBatchMesh
 	, public ILexUISpriteRenderInterface
 {

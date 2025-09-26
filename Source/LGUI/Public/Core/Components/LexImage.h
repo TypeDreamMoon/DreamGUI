@@ -9,6 +9,9 @@
 #include "Slate/SlateTextureAtlasInterface.h"
 #include "LexImage.generated.h"
 
+/**
+ * LexImage is render entry for SpriteAtlas & Texture & Material
+ */
 UCLASS(BlueprintType)
 class LGUI_API ULexImage : public ULexVisualBatchMesh, public ILexUISpriteRenderInterface
 {

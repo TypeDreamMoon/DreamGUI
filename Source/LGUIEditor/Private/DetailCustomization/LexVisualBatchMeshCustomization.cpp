@@ -7,7 +7,7 @@
 #include "DetailCategoryBuilder.h"
 #include "MaterialDomain.h"
 
-#define LOCTEXT_NAMESPACE "UIBatchMeshRenderableCustomization"
+#define LOCTEXT_NAMESPACE "LexVisualBatchMeshCustomization"
 FLexVisualBatchMeshCustomization::FLexVisualBatchMeshCustomization()
 {
 }

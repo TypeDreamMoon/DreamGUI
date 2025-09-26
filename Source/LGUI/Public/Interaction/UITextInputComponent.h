@@ -16,7 +16,7 @@
 #include "UITextInputComponent.generated.h"
 
 
-class UUISprite;
+class ULexSprite;
 DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUITextInputDynamicDelegate, FString, InString);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUIInputActivateDynamicDelegate, bool, InActivate);
 
@@ -384,7 +384,7 @@ private:
 	//a Sprite for caret, can blink, can represent current caret location
 	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> CaretWidget;
 	//selection mask
-	UPROPERTY(Transient)TArray<TWeakObjectPtr<UUISprite>> SelectionMaskObjectArray;
+	UPROPERTY(Transient)TArray<TWeakObjectPtr<ULexSprite>> SelectionMaskObjectArray;
 	//range selection
 	TArray<FLexUITextSelectionProperty> SelectionPropertyArray;
 	//Caret position of full text. caret is on left side of char

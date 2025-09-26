@@ -5,7 +5,7 @@
 #include "Utils/LexUIUtils.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/LexCustomMeshSource.h"
-#include "Core/Components/UITextureBase.h"
+#include "Core/Components/LexTextureBase.h"
 
 #define LOCTEXT_NAMESPACE "UICustomMesh"
 

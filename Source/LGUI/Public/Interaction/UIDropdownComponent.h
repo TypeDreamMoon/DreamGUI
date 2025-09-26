@@ -11,7 +11,7 @@
 #include "UIDropdownComponent.generated.h"
 
 class ALexWidgetActor;
-class UUISprite;
+class ULexSprite;
 class ULexText;
 class ULexUISpriteData_BaseObject;
 
@@ -85,7 +85,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Dropdown")
 		TWeakObjectPtr<ULexText> CaptionText;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Dropdown")
-		TWeakObjectPtr<UUISprite> CaptionSprite;
+		TWeakObjectPtr<ULexSprite> CaptionSprite;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Dropdown")
 		FLGUIComponentReference ItemTemplate;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Dropdown")
@@ -218,7 +218,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Dropdown")
 		TWeakObjectPtr<ULexText> Text;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Dropdown")
-		TWeakObjectPtr<UUISprite> Sprite;
+		TWeakObjectPtr<ULexSprite> Sprite;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Dropdown")
 		FLGUIComponentReference Toggle;
 
@@ -257,7 +257,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Dropdown")
 	ULexText* GetTextActor()const { return Text.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Dropdown")
-	UUISprite* GetSpriteActor()const { return Sprite.Get(); }
+	ULexSprite* GetSpriteActor()const { return Sprite.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Dropdown")
 	UUIToggleComponent* GetToggle()const;
 };

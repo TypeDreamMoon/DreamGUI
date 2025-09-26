@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "DetailCustomization/UISpriteBaseCustomization.h"
+#include "DetailCustomization/LexSpriteBaseCustomization.h"
 #include "LGUIEditorUtils.h"
 #include "LGUIHeaders.h"
 
@@ -8,30 +8,30 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 
-#define LOCTEXT_NAMESPACE "UISpriteBaseCustomization"
-FLexUISpriteBaseCustomization::FLexUISpriteBaseCustomization()
+#define LOCTEXT_NAMESPACE "LexUISpriteBaseCustomization"
+FLexSpriteBaseCustomization::FLexSpriteBaseCustomization()
 {
 }
 
-FLexUISpriteBaseCustomization::~FLexUISpriteBaseCustomization()
+FLexSpriteBaseCustomization::~FLexSpriteBaseCustomization()
 {
 	
 }
 
-TSharedRef<IDetailCustomization> FLexUISpriteBaseCustomization::MakeInstance()
+TSharedRef<IDetailCustomization> FLexSpriteBaseCustomization::MakeInstance()
 {
-	return MakeShareable(new FLexUISpriteBaseCustomization);
+	return MakeShareable(new FLexSpriteBaseCustomization);
 }
-void FLexUISpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
+void FLexSpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
 	TArray<TWeakObjectPtr<UObject>> targetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(targetObjects);
 	TargetScriptArray.Empty();
 	for (auto item : targetObjects)
 	{
-		if (auto validItem = Cast<UUISpriteBase>(item.Get()))
+		if (auto validItem = Cast<ULexSpriteBase>(item.Get()))
 		{
-			TargetScriptArray.Add(TWeakObjectPtr<UUISpriteBase>(validItem));
+			TargetScriptArray.Add(TWeakObjectPtr<ULexSpriteBase>(validItem));
 			if (validItem->GetWorld() && validItem->GetWorld()->WorldType == EWorldType::Editor)
 			{
 				validItem->CheckSpriteData();
@@ -47,8 +47,8 @@ void FLexUISpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& Detai
 
 	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("LGUI");
 
-	category.AddProperty(GET_MEMBER_NAME_CHECKED(UUISpriteBase, Sprite));
-	auto spriteHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISpriteBase, Sprite));
+	category.AddProperty(GET_MEMBER_NAME_CHECKED(ULexSpriteBase, Sprite));
+	auto spriteHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexSpriteBase, Sprite));
 	spriteHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this, &DetailBuilder] {
 		for (auto item : TargetScriptArray)
 		{
@@ -139,7 +139,7 @@ void FLexUISpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& Detai
 		];
 	}
 }
-void FLexUISpriteBaseCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
+void FLexSpriteBaseCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
 {
 	if (DetailBuilder)
 	{

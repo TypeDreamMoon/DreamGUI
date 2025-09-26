@@ -254,7 +254,7 @@ void ULexVisualBatchMesh::UpdateGeometry()
 	}
 	if (UIGeometry->OriginVertices.Num() >= LEXUI_MAX_VERTEX_COUNT)
 	{
-		auto errorMsg = FText::Format(NSLOCTEXT("UIBatchMeshRenderable", "TooManyTrianglesInSingleUIElement", "{0} Too many vertex ({1}) in single UI element: {2}")
+		auto errorMsg = FText::Format(NSLOCTEXT("LexVisualBatchMesh", "TooManyTrianglesInSingleUIElement", "{0} Too many vertex ({1}) in single UI element: {2}")
 			, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__))
 			, UIGeometry->OriginVertices.Num()
 #if WITH_EDITOR
@@ -450,7 +450,7 @@ void ULexVisualBatchMesh::OnBeforeCreateOrUpdateGeometry()
 	}
 }
 
-DECLARE_CYCLE_STAT(TEXT("UIBatchMeshRenderable Blueprint.OnFillMesh"), STAT_BatchGeometryRenderable_OnFillMesh, STATGROUP_LGUI);
+DECLARE_CYCLE_STAT(TEXT("LexVisualBatchMesh Blueprint.OnFillMesh"), STAT_BatchGeometryRenderable_OnFillMesh, STATGROUP_LGUI);
 void ULexVisualBatchMesh::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))

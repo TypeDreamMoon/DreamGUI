@@ -251,7 +251,22 @@ bool ULexBaseRaycaster::RaycastWorld(bool InRequireFaceIndex, ULexPointerEventDa
 	return false;
 }
 
-
+void ULexBaseRaycaster::SetPointerID(int32 value)
+{
+	PointerID = value;
+}
+void ULexBaseRaycaster::SetDepth(int32 value)
+{
+	Depth = value;
+}
+void ULexBaseRaycaster::SetRayLength(float value)
+{
+	RayLength = value;
+}
+void ULexBaseRaycaster::SetTraceChannel(TEnumAsByte<ETraceTypeQuery> value)
+{
+	TraceChannel = value;
+}
 void ULexBaseRaycaster::SetClickThreshold(float Value)
 {
 	ClickThreshold = Value;

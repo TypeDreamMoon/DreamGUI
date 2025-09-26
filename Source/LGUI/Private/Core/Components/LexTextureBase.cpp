@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/Components/UITextureBase.h"
+#include "Core/Components/LexTextureBase.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/Components/LexCanvas.h"
@@ -11,27 +11,27 @@
 
 #define LOCTEXT_NAMESPACE "UITextureBase"
 
-UUITextureBase::UUITextureBase(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
+ULexTextureBase::ULexTextureBase(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
 }
 
-void UUITextureBase::BeginPlay()
+void ULexTextureBase::BeginPlay()
 {
 	Super::BeginPlay();
 }
 #if WITH_EDITOR
-void UUITextureBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void ULexTextureBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (auto Property = PropertyChangedEvent.Property)
 	{
-		if (Property->GetFName() == GET_MEMBER_NAME_CHECKED(UUITextureBase, Texture))
+		if (Property->GetFName() == GET_MEMBER_NAME_CHECKED(ULexTextureBase, Texture))
 		{
 			MarkTextureDirty();
 		}
 	}
 }
-void UUITextureBase::CheckTexture()
+void ULexTextureBase::CheckTexture()
 {
 	if (!IsValid(Texture))
 	{
@@ -44,7 +44,7 @@ void UUITextureBase::CheckTexture()
 }
 #endif
 
-UTexture* UUITextureBase::GetTextureToCreateGeometry()
+UTexture* ULexTextureBase::GetTextureToCreateGeometry()
 {
 	if (!IsValid(Texture))
 	{
@@ -53,7 +53,7 @@ UTexture* UUITextureBase::GetTextureToCreateGeometry()
 	return Texture;
 }
 
-bool UUITextureBase::ReadPixelFromMainTexture(const FVector2D& InUV, FColor& OutPixel)const
+bool ULexTextureBase::ReadPixelFromMainTexture(const FVector2D& InUV, FColor& OutPixel)const
 {
 	if (IsValid(Texture))
 	{
@@ -76,11 +76,11 @@ bool UUITextureBase::ReadPixelFromMainTexture(const FVector2D& InUV, FColor& Out
 	return false;
 }
 
-void UUITextureBase::SetTexture(UTexture* newTexture)
+void ULexTextureBase::SetTexture(UTexture* Value)
 {
-	if (Texture != newTexture)
+	if (Texture != Value)
 	{
-		Texture = newTexture;
+		Texture = Value;
 		if (Texture == nullptr)
 		{
 			Texture = FLexUIUtils::GetDefaultWhiteTexture();
@@ -88,7 +88,7 @@ void UUITextureBase::SetTexture(UTexture* newTexture)
 		MarkTextureDirty();
 	}
 }
-void UUITextureBase::SetSizeFromTexture()
+void ULexTextureBase::SetSizeFromTexture()
 {
 	if (IsValid(Texture))
 	{

@@ -3,6 +3,8 @@
 #include "Core/Components/LexLayoutFlexBox.h"
 #include "Core/Components/LexWidget.h"
 
+UE_DISABLE_OPTIMIZATION
+
 void ULexLayoutFlexBox::OnUpdateLayout()
 {
     auto Widget = GetWidget();
@@ -43,12 +45,14 @@ void ULexLayoutFlexBox::OnUpdateLayout()
             {
                 OutMin = ChildWidget->GetMinWidth();
                 OutPreferred = ChildWidget->GetPreferredWidth();
+                OutPreferred = FMath::Max(OutMin, OutPreferred);
                 OutFlexible = ChildWidget->GetFlexibleWidth();
             }
             else
             {
                 OutMin = ChildWidget->GetMinHeight();
                 OutPreferred = ChildWidget->GetPreferredHeight();
+                OutPreferred = FMath::Max(OutMin, OutPreferred);
                 OutFlexible = ChildWidget->GetFlexibleHeight();
             }
         }
@@ -417,3 +421,5 @@ void ULexLayoutFlexBox::SetDirection(ELexLayoutFlexBoxDirection Value)
         MarkLayoutDirty();
     }
 }
+
+UE_ENABLE_OPTIMIZATION

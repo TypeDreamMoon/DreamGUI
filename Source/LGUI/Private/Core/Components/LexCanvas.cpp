@@ -1215,15 +1215,15 @@ void ULexCanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, co
 			default:
 			case ELexVisualType::BatchMesh:
 			{
-				auto UIBatchMeshRenderableItem = (ULexVisualBatchMesh*)Visual;
-				auto ItemGeo = UIBatchMeshRenderableItem->GetGeometry();
+				auto LexVisualBatchMeshItem = (ULexVisualBatchMesh*)Visual;
+				auto ItemGeo = LexVisualBatchMeshItem->GetGeometry();
 				if (ItemGeo == nullptr)continue;
 				if (ItemGeo->Vertices.Num() == 0)continue;
 				if (ItemGeo->Vertices.Num() > LEXUI_MAX_VERTEX_COUNT)continue;
 
 				bool is2DUIItem = Is2DUITransform(ItemGeo->TransformRelativeToCanvas);
 				int DrawCallIndexToFitin;
-				if (UIBatchMeshRenderableItem->SupportDrawCallBatching() && CanFitInDrawCall(UIBatchMeshRenderableItem, is2DUIItem, ItemGeo->Vertices.Num(), DrawCallIndexToFitin))
+				if (LexVisualBatchMeshItem->SupportDrawCallBatching() && CanFitInDrawCall(LexVisualBatchMeshItem, is2DUIItem, ItemGeo->Vertices.Num(), DrawCallIndexToFitin))
 				{
 					auto DrawCallItem = InUIDrawCallList[DrawCallIndexToFitin];
 					DrawCallItem->bIs2DSpace = DrawCallItem->bIs2DSpace && is2DUIItem;
@@ -1235,9 +1235,9 @@ void ULexCanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, co
 					{
 						DrawCallItem->Texture = ItemGeo->Texture;
 					}
-					if (UIBatchMeshRenderableItem->DrawCall == DrawCallItem)//already exist in this draw-call (added previously)
+					if (LexVisualBatchMeshItem->DrawCall == DrawCallItem)//already exist in this draw-call (added previously)
 					{
-						DrawCallItem->BatchMeshVisualObjectList.Add(UIBatchMeshRenderableItem);
+						DrawCallItem->BatchMeshVisualObjectList.Add(LexVisualBatchMeshItem);
 						//mark sort list
 						DrawCallItem->bNeedToSortBatchMeshVisualObjectList = true;
 						//update tree
@@ -1247,18 +1247,18 @@ void ULexCanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, co
 					}
 					else//not exist in this draw-call
 					{
-						auto OldDrawCall = UIBatchMeshRenderableItem->DrawCall;
+						auto OldDrawCall = LexVisualBatchMeshItem->DrawCall;
 						if (OldDrawCall.IsValid())//maybe exist in other draw-call, should remove from that draw-call
 						{
-							ClearObjectFromDrawCall(OldDrawCall, UIBatchMeshRenderableItem);
+							ClearObjectFromDrawCall(OldDrawCall, LexVisualBatchMeshItem);
 						}
 						//add to this draw-call
-						DrawCallItem->BatchMeshVisualObjectList.Add(UIBatchMeshRenderableItem);
+						DrawCallItem->BatchMeshVisualObjectList.Add(LexVisualBatchMeshItem);
 						DrawCallItem->BatchMeshTreeNode->Insert(LexUIQuadTree::Rectangle(ItemGeo->BoundsMin2DInCanvasSpace, ItemGeo->BoundsMax2DInCanvasSpace));
 						DrawCallItem->VerticesCount += ItemGeo->Vertices.Num();
 						DrawCallItem->IndicesCount += ItemGeo->Triangles.Num();
 						DrawCallItem->bNeedToUpdateVertex = true;
-						UIBatchMeshRenderableItem->DrawCall = DrawCallItem;
+						LexVisualBatchMeshItem->DrawCall = DrawCallItem;
 						//copy update state from old to new
 						if (OldDrawCall.IsValid())
 						{
@@ -1269,17 +1269,17 @@ void ULexCanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, co
 				}
 				else//cannot fit in any other draw-call
 				{
-					auto OldDrawCall = UIBatchMeshRenderableItem->DrawCall;
+					auto OldDrawCall = LexVisualBatchMeshItem->DrawCall;
 					if (OldDrawCall.IsValid())//maybe exist in other draw-call, should remove from that draw-call
 					{
 						if (InUIDrawCallList.Contains(OldDrawCall))//if this draw-call already exist (added previously), then remove the object from the draw-call.
 						{
-							ClearObjectFromDrawCall(OldDrawCall, UIBatchMeshRenderableItem);
+							ClearObjectFromDrawCall(OldDrawCall, LexVisualBatchMeshItem);
 						}
 					}
 					//make a new draw-call
-					PushSingleDrawCall(UIBatchMeshRenderableItem, true, ItemGeo, ELexUIDrawCallType::BatchMesh, is2DUIItem);
-					check(UIBatchMeshRenderableItem->DrawCall->VerticesCount < LEXUI_MAX_VERTEX_COUNT);
+					PushSingleDrawCall(LexVisualBatchMeshItem, true, ItemGeo, ELexUIDrawCallType::BatchMesh, is2DUIItem);
+					check(LexVisualBatchMeshItem->DrawCall->VerticesCount < LEXUI_MAX_VERTEX_COUNT);
 				}
 			}
 			break;

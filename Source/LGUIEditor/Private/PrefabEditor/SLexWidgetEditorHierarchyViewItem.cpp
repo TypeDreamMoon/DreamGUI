@@ -711,27 +711,31 @@ void SLexWidgetEditorHierarchyViewItem::HandleDragLeave(const FDragDropEvent& Dr
 
 FText SLexWidgetEditorHierarchyViewItem::GetItemText() const
 {
-	return FText::FromString(Widget->GetOwner()->GetActorLabel());
+	return Widget.IsValid() ? FText::FromString(Widget->GetOwner()->GetActorLabel()) : FText::GetEmpty();
 }
 
 FText SLexWidgetEditorHierarchyViewItem::GetItemTooltipText() const
 {
-	return FText::Format(LOCTEXT("ItemTooltipFormat", "ID name: {0}\nPath name: {1}"), FText::FromName(Widget->GetFName()), FText::FromString(Widget->GetPathName()));
+	return Widget.IsValid() ? FText::Format(LOCTEXT("ItemTooltipFormat", "ID name: {0}\nPath name: {1}"), FText::FromName(Widget->GetFName()), FText::FromString(Widget->GetPathName()))
+		: FText::GetEmpty();
 }
 
 FSlateColor SLexWidgetEditorHierarchyViewItem::GetItemColorAndOpacity() const
 {
-	if (auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject())
+	if (Widget.IsValid())
 	{
-		if (PrefabHelperObject->IsActorBelongsToSubPrefab(Widget->GetOwner()))//is sub prefab
+		if (auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject())
 		{
-			return FLinearColor(FColor(124,171,240, 255));
-		}
-		else
-		{
-			if (PrefabHelperObject->IsActorBelongsToMissingSubPrefab(Widget->GetOwner()))
+			if (PrefabHelperObject->IsActorBelongsToSubPrefab(Widget->GetOwner()))//is sub prefab
 			{
-				return FSlateColor(FColor::Red);
+				return FLinearColor(FColor(124,171,240, 255));
+			}
+			else
+			{
+				if (PrefabHelperObject->IsActorBelongsToMissingSubPrefab(Widget->GetOwner()))
+				{
+					return FSlateColor(FColor::Red);
+				}
 			}
 		}
 	}
@@ -784,7 +788,7 @@ FReply SLexWidgetEditorHierarchyViewItem::OnToggleVisibility()
 }
 FText SLexWidgetEditorHierarchyViewItem::GetVisibilityBrushForWidget() const
 {
-	return Widget->GetWidgetActiveInHierarchy() ? FEditorFontGlyphs::Eye : FEditorFontGlyphs::Eye_Slash;
+	return Widget.IsValid() && Widget->GetWidgetActiveInHierarchy() ? FEditorFontGlyphs::Eye : FEditorFontGlyphs::Eye_Slash;
 }
 
 bool SLexWidgetEditorHierarchyViewItem::SupportDrop(ULexWidget* Dragging, ULexWidget* Current, EItemDropZone DropZone)

@@ -12,7 +12,7 @@ class ULexUIFontData_BaseObject;
 class ULexUIRichTextImageData_BaseObject;
 class ULexUIRichTextCustomStyleData;
 
-UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
+UCLASS(ClassGroup = (LGUI), Blueprintable)
 class LGUI_API ULexText : public ULexVisualBatchMesh, public ILexUICultureChangedInterface
 {
 	GENERATED_BODY()

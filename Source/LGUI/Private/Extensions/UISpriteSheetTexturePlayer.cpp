@@ -4,7 +4,7 @@
 
 #include "LGUI.h"
 #include "LTweenBPLibrary.h"
-#include "Core/Components/UITexture.h"
+#include "Core/Components/LexTexture.h"
 
 #if WITH_EDITOR
 void UUISpriteSheetTexturePlayer::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
@@ -16,7 +16,7 @@ void UUISpriteSheetTexturePlayer::PostEditChangeProperty(FPropertyChangedEvent& 
 		{
 			if (auto Widget = GetOwner()->FindComponentByClass<ULexWidget>())
 			{
-				texture = Cast<UUITexture>(Widget->GetVisual());
+				texture = Cast<ULexTexture>(Widget->GetVisual());
 			}
 		}
 		if (texture.IsValid())
@@ -35,7 +35,7 @@ bool UUISpriteSheetTexturePlayer::CanPlay()
 	{
 		if (auto Widget = GetOwner()->FindComponentByClass<ULexWidget>())
 		{
-			texture = Cast<UUITexture>(Widget->GetVisual());
+			texture = Cast<ULexTexture>(Widget->GetVisual());
 		}
 	}
 	if (!texture.IsValid())

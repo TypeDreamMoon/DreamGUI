@@ -9,7 +9,7 @@
 #include "LexUIStaticSpriteAtlasData.generated.h"
 
 class ULexUISpriteData;
-class UUISpriteBase;
+class ULexSpriteBase;
 class ILexUISpriteRenderInterface;
 
 //Static packing Sprite into atlas

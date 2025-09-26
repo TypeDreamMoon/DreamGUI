@@ -1107,7 +1107,7 @@ void UUITextInputComponent::UpdateCaretPosition(FVector2f InCaretPosition, bool 
 		auto uiText = TextWidget;
 		CaretWidget->SetWidth(CaretWidth);
 		CaretWidget->SetHeight(uiText->GetFontSize());
-		auto CaretVisual = NewObject<UUISprite>(CaretWidget.Get());
+		auto CaretVisual = NewObject<ULexSprite>(CaretWidget.Get());
 		CaretVisual->SetColor(CaretColor);
 		CaretVisual->SetSprite(ULexUISpriteData::GetDefaultWhiteSolid(), false);
 	}
@@ -1138,7 +1138,7 @@ void UUITextInputComponent::UpdateSelection()
 			auto SpriteWidget = SpriteActor->GetLexWidget();
 			SpriteWidget->SetHeight(TextWidget->GetFontSize());
 			SpriteWidget->SetPivot(FVector2D(0, 0.5f));
-			auto SpriteVisual = NewObject<UUISprite>(SpriteWidget);
+			auto SpriteVisual = NewObject<ULexSprite>(SpriteWidget);
 			SpriteVisual->SetColor(SelectionColor);
 			SpriteVisual->SetSprite(ULexUISpriteData::GetDefaultWhiteSolid(), false);
 			SelectionMaskObjectArray.Add(SpriteVisual);

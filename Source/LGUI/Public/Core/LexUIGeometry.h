@@ -3,7 +3,7 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "Components/LexText.h"
-#include "Components/UISprite.h"
+#include "Components/LexSprite.h"
 #include "Core/LexUIMeshIndex.h"
 #include "Core/LexUIMeshVertex.h"
 
@@ -172,7 +172,7 @@ public:
 #pragma region UISprite_Fill_Radial90
 public:
 	static void UpdateUIRectFillRadial90Vertex(FLexUIGeometry* uiGeo, const float& width, const float& height, const FVector2f& pivot
-		, const FLexUISpriteInfo& spriteInfo, bool flipDirection, float fillAmount, EUISpriteFillOriginType_Radial90 originType
+		, const FLexUISpriteInfo& spriteInfo, bool flipDirection, float fillAmount, ELexUISpriteFillOriginType_Radial90 originType
 		, ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
 		bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 	);
@@ -180,7 +180,7 @@ public:
 #pragma region UISprite_Fill_Radial180
 public:
 	static void UpdateUIRectFillRadial180Vertex(FLexUIGeometry* uiGeo, const float& width, const float& height, const FVector2f& pivot
-		, const FLexUISpriteInfo& spriteInfo, bool flipDirection, float fillAmount, EUISpriteFillOriginType_Radial180 originType
+		, const FLexUISpriteInfo& spriteInfo, bool flipDirection, float fillAmount, ELexUISpriteFillOriginType_Radial180 originType
 		, ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
 		bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 	);
@@ -188,7 +188,7 @@ public:
 #pragma region UISprite_Fill_Radial360
 public:
 	static void UpdateUIRectFillRadial360Vertex(FLexUIGeometry* uiGeo, const float& width, const float& height, const FVector2f& pivot
-		, const FLexUISpriteInfo& spriteInfo, bool flipDirection, float fillAmount, EUISpriteFillOriginType_Radial360 originType
+		, const FLexUISpriteInfo& spriteInfo, bool flipDirection, float fillAmount, ELexUISpriteFillOriginType_Radial360 originType
 		, ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
 		bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 	);

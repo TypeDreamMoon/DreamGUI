@@ -5,7 +5,7 @@
 #include "LGUI.h"
 #include "Core/LexUISettings.h"
 #include "Core/LexUIManager.h"
-#include "Core/Components/UISpriteBase.h"
+#include "Core/Components/LexSpriteBase.h"
 #include "Core/LexUISpriteData.h"
 #include "Utils/LexUIUtils.h"
 #include "Rendering/Texture2DResource.h"

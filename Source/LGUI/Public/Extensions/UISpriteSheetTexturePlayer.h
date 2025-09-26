@@ -16,7 +16,7 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
 #endif
 	UPROPERTY(Transient)
-		TWeakObjectPtr<class UUITexture> texture;
+		TWeakObjectPtr<class ULexTexture> texture;
 	/** Sprite element count of horizontal direction in texture. */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		int widthCount = 8;

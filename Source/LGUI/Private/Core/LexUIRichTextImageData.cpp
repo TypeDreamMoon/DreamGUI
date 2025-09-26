@@ -7,7 +7,7 @@
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexWidget.h"
-#include "Core/Components/UISprite.h"
+#include "Core/Components/LexSprite.h"
 #include "Engine/World.h"
 
 #if WITH_EDITOR
@@ -55,7 +55,7 @@ void ULexUIRichTextImageData::CreateOrUpdateObject(ULexWidget* parent, const TAr
 	for (int i = 0; i < imageTagData.Num(); i++)
 	{
 		auto ImageWidget = createdImageObjectArray[i];
-		auto ImageVisual = (UUISprite*)ImageWidget->GetVisual();
+		auto ImageVisual = (ULexSprite*)ImageWidget->GetVisual();
 #if WITH_EDITOR
 		ImageWidget->GetOwner()->SetActorLabel(FString::Printf(TEXT("[%s]"), *imageTagData[i].TagName.ToString()));
 		if (!parent->GetWorld()->IsGameWorld())//set it only in edit mode

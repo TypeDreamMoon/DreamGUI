@@ -16,7 +16,7 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
 #endif
 	UPROPERTY(Transient)
-		TWeakObjectPtr<class UUISpriteBase> sprite;
+		TWeakObjectPtr<class ULexSpriteBase> sprite;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		TArray<TObjectPtr<ULexUISpriteData_BaseObject>> spriteSequence;
 	/** should also set size to Sprite-data? */

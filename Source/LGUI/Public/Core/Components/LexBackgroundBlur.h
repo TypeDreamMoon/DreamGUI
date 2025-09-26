@@ -10,7 +10,7 @@
  * Use it in ScreenSpace or WorldSpace-LexUIRenderer.
  * If android OpenGL ES3.1, need to enable "ProjectSettings/Platforms/Android/Build/Support Backbuffer Sampling on OpenGL".
  */
-UCLASS(ClassGroup = (LGUI), NotBlueprintable, meta = (BlueprintSpawnableComponent))
+UCLASS(ClassGroup = (LGUI), NotBlueprintable)
 class LGUI_API ULexBackgroundBlur : public ULexVisualPostProcess
 {
 	GENERATED_BODY()

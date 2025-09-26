@@ -5,8 +5,8 @@
 #include "LGUI.h"
 #include "LTweenBPLibrary.h"
 #include "Core/LexUISpriteData_BaseObject.h"
-#include "Core/Components/UISprite.h"
-#include "Core/Components/UISpriteBase.h"
+#include "Core/Components/LexSprite.h"
+#include "Core/Components/LexSpriteBase.h"
 
 #if WITH_EDITOR
 void UUISpriteSequencePlayer::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
@@ -24,7 +24,7 @@ bool UUISpriteSequencePlayer::CanPlay()
 	{
 		if (auto Widget = GetOwner()->FindComponentByClass<ULexWidget>())
 		{
-			sprite = Cast<UUISprite>(Widget->GetVisual());
+			sprite = Cast<ULexSprite>(Widget->GetVisual());
 		}
 	}
 	if (!sprite.IsValid())

@@ -1,37 +1,37 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "DetailCustomization/UITextureBaseCustomization.h"
+#include "DetailCustomization/LexTextureBaseCustomization.h"
 #include "LGUIEditorUtils.h"
-#include "Core/Components/UITextureBase.h"
+#include "Core/Components/LexTextureBase.h"
 #include "Utils/LexUIUtils.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 
 #define LOCTEXT_NAMESPACE "UITextureBaseCustomization"
-FUITextureBaseCustomization::FUITextureBaseCustomization()
+FLexTextureBaseCustomization::FLexTextureBaseCustomization()
 {
 }
 
-FUITextureBaseCustomization::~FUITextureBaseCustomization()
+FLexTextureBaseCustomization::~FLexTextureBaseCustomization()
 {
 	
 }
 
-TSharedRef<IDetailCustomization> FUITextureBaseCustomization::MakeInstance()
+TSharedRef<IDetailCustomization> FLexTextureBaseCustomization::MakeInstance()
 {
-	return MakeShareable(new FUITextureBaseCustomization);
+	return MakeShareable(new FLexTextureBaseCustomization);
 }
-void FUITextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
+void FLexTextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
 	TArray<TWeakObjectPtr<UObject>> targetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(targetObjects);
 	TargetScriptArray.Empty();
 	for (auto item : targetObjects)
 	{
-		if (auto validItem = Cast<UUITextureBase>(item.Get()))
+		if (auto validItem = Cast<ULexTextureBase>(item.Get()))
 		{
-			TargetScriptArray.Add(TWeakObjectPtr<UUITextureBase>(validItem));
+			TargetScriptArray.Add(TWeakObjectPtr<ULexTextureBase>(validItem));
 			if (validItem->GetWorld() && validItem->GetWorld()->WorldType == EWorldType::Editor)
 			{
 				validItem->CheckTexture();
@@ -46,9 +46,9 @@ void FUITextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
 	}
 
 	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("LGUI");
-	auto textureHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUITextureBase, Texture));
-	textureHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUITextureBaseCustomization::ForceRefresh, &DetailBuilder));
-	category.AddProperty(GET_MEMBER_NAME_CHECKED(UUITextureBase, Texture));
+	auto textureHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexTextureBase, Texture));
+	textureHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexTextureBaseCustomization::ForceRefresh, &DetailBuilder));
+	category.AddProperty(GET_MEMBER_NAME_CHECKED(ULexTextureBase, Texture));
 	UTexture* texture = nullptr;
 	textureHandle->GetValue((*(UObject**)&texture));
 	if(IsValid(texture))
@@ -135,7 +135,7 @@ void FUITextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
 		];
 	}
 }
-void FUITextureBaseCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
+void FLexTextureBaseCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
 {
 	if (DetailBuilder)
 	{

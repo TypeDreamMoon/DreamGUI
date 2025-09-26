@@ -4,18 +4,18 @@
 
 #include "LexVisualBatchMesh.h"
 #include "Engine/Texture.h"
-#include "UITextureBase.generated.h"
+#include "LexTextureBase.generated.h"
 
 /** 
  * This is base class for create custom mesh based on UITexture. Just override OnCreateGeometry() and OnUpdateGeometry(...) to create or update your own geometry
  */
 UCLASS(ClassGroup = (LGUI), Abstract, Blueprintable)
-class LGUI_API UUITextureBase : public ULexVisualBatchMesh
+class LGUI_API ULexTextureBase : public ULexVisualBatchMesh
 {
 	GENERATED_BODY()
 
 public:	
-	UUITextureBase(const FObjectInitializer& ObjectInitializer);
+	ULexTextureBase(const FObjectInitializer& ObjectInitializer);
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -23,7 +23,7 @@ public:
 #endif
 protected:
 	virtual void BeginPlay()override;
-	friend class FUITextureBaseCustomization;
+	friend class FLexTextureBaseCustomization;
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (DisplayThumbnail = "false"))
 		TObjectPtr<UTexture> Texture = nullptr;
 
@@ -34,7 +34,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI") UTexture* GetTexture()const { return Texture; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		virtual void SetTexture(UTexture* newTexture);
+		virtual void SetTexture(UTexture* Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetSizeFromTexture();
 };

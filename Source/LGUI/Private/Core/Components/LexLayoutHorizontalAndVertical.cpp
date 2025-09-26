@@ -212,12 +212,14 @@ void ULexLayoutHorizontalAndVertical::GetChildSizes(ULexWidget* ChildWidget, int
         {
             OutMin = ChildWidget->GetMinWidth();
             OutPreferred = ChildWidget->GetPreferredWidth();
+            OutPreferred = FMath::Max(OutMin, OutPreferred);
             OutFlexible = ChildWidget->GetFlexibleWidth();
         }
         else
         {
             OutMin = ChildWidget->GetMinHeight();
             OutPreferred = ChildWidget->GetPreferredHeight();
+            OutPreferred = FMath::Max(OutMin, OutPreferred);
             OutFlexible = ChildWidget->GetFlexibleHeight();
         }
     }

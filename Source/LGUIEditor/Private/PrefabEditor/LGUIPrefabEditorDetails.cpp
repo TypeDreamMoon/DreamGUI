@@ -324,13 +324,25 @@ void SLGUIPrefabEditorDetails::OnEditorSelectionChanged()
 			}
 		}
 
-		if (SelectedObjectList.Num() > 0)
+		if (DetailsView)
 		{
-			if (DetailsView)
-			{
-				DetailsView->SetObjects(SelectedObjectList);
-			}
+			DetailsView->SetObjects(SelectedObjectList, true);
 		}
+		if (SelectedObjectList.Num() == 0)
+		{
+			SubobjectEditor->ClearSelection();
+			SubobjectEditor->UpdateTree();
+		}
+	}
+	else
+	{
+		TArray<UObject*> SelectedObjectList;
+		if (DetailsView)
+		{
+			DetailsView->SetObjects(SelectedObjectList, true);
+		}
+		SubobjectEditor->ClearSelection();
+		SubobjectEditor->UpdateTree();
 	}
 	bIsSelectFromLGUIEditor = false;
 }

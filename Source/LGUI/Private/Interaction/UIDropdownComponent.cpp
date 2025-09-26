@@ -10,7 +10,7 @@
 #include "Core/LexUISpriteData.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexText.h"
-#include "Core/Components/UISprite.h"
+#include "Core/Components/LexSprite.h"
 #include "Interaction/UIButtonComponent.h"
 #if WITH_EDITOR
 #include "Utils/LexUIUtils.h"
@@ -64,7 +64,7 @@ void UUIDropdownComponent::PostEditChangeProperty(FPropertyChangedEvent& Propert
 		if (CaptionSprite.IsValid() && IsValid(Options[tempValue].Sprite))
 		{
 			CaptionSprite->SetSprite(Options[tempValue].Sprite);
-			FLexUIUtils::NotifyPropertyChanged(CaptionText.Get(), UUISpriteBase::GetSpritePropertyName());
+			FLexUIUtils::NotifyPropertyChanged(CaptionText.Get(), ULexSpriteBase::GetSpritePropertyName());
 		}
 	}
 }

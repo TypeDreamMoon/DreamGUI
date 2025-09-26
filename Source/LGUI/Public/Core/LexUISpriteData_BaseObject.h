@@ -8,7 +8,7 @@
 #include "LexUISpriteInfo.h"
 #include "LexUISpriteData_BaseObject.generated.h"
 
-class UUISpriteBase;
+class ULexSpriteBase;
 class ILexUISpriteRenderInterface;
 
 /**

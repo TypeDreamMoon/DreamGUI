@@ -98,6 +98,14 @@ public:
 		FVector GetRayDirection()const { return CurrentRayDirection; }
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetPointerID(int32 value);
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetDepth(int32 value);
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetRayLength(float value);
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetTraceChannel(TEnumAsByte<ETraceTypeQuery> value);
+	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetClickThreshold(float Value);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetHoldToDrag(bool Value);

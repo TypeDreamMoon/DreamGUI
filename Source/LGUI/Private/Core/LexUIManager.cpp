@@ -77,7 +77,7 @@ ULexUIEditorManagerObject::ULexUIEditorManagerObject()
 			if (auto LGUIManager = ULexUIManagerWorldSubsystem::GetInstance(World))
 			{
 				float LineTraceLength = 100000;
-				//find hit UIBatchMeshRenderable
+				//find hit LexVisualBatchMesh
 				auto LineStart = RayOrigin;
 				auto LineEnd = RayOrigin + RayDirection * LineTraceLength;
 				ULexWidget* ClickHitUI = nullptr;

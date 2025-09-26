@@ -5,7 +5,6 @@
 #include "LexWidgetSubObjectBehaviour.generated.h"
 
 class ULexWidget;
-/** Base class of UI element that can be renderred by LGUICanvas */
 UCLASS(Blueprintable, BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)
 class LGUI_API ULexWidgetSubObjectBehaviour : public UObject
 {

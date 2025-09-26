@@ -8,7 +8,7 @@
 #include "LTweenManager.h"
 #include "Core/Components/LexCanvas.h"
 #include "Event/LexEventSystem.h"
-#include "Core/Components/UISprite.h"
+#include "Core/Components/LexSprite.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/LexUISettings.h"
 #include "Core/Components/LexImage.h"

@@ -6,7 +6,7 @@
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
-#include "Core/Components/UISpriteBase.h"
+#include "Core/Components/LexSpriteBase.h"
 
 #define LOCTEXT_NAMESPACE "UISpriteSequencePlayerCustomization"
 
@@ -24,6 +24,6 @@ void FUISpriteSequencePlayerCustomization::CustomizeDetails(IDetailLayoutBuilder
 		UE_LOG(LGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
-	LGUIEditorUtils::ShowError_RequireComponent(&DetailBuilder, TargetScriptPtr.Get(), UUISpriteBase::StaticClass());
+	LGUIEditorUtils::ShowError_RequireComponent(&DetailBuilder, TargetScriptPtr.Get(), ULexSpriteBase::StaticClass());
 }
 #undef LOCTEXT_NAMESPACE

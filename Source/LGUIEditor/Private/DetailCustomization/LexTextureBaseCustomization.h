@@ -6,17 +6,16 @@
 /**
  * 
  */
-class FUITextureCustomization : public IDetailCustomization
+class FLexTextureBaseCustomization : public IDetailCustomization
 {
 public:
-	FUITextureCustomization();
-	~FUITextureCustomization();
+	FLexTextureBaseCustomization();
+	~FLexTextureBaseCustomization();
 
 	static TSharedRef<IDetailCustomization> MakeInstance();
 	/** IDetailCustomization interface */
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
 private:
-	TWeakObjectPtr<class UUITexture> TargetScriptPtr;
+	TArray<TWeakObjectPtr<class ULexTextureBase>> TargetScriptArray;
 	void ForceRefresh(IDetailLayoutBuilder* DetailBuilder);
-
 };

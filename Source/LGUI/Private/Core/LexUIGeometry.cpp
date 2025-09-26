@@ -2,7 +2,7 @@
 
 #include "Core/LexUIGeometry.h"
 #include "LGUI.h"
-#include "Core/Components/UISprite.h"
+#include "Core/Components/LexSprite.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexVisual.h"
 #include "Core/LexUISpriteData.h"
@@ -737,7 +737,7 @@ void FLexUIGeometry::UpdateUIRectFillHorizontalVerticalVertex(FLexUIGeometry* ui
 #pragma endregion
 #pragma region UISprite_Fill_Radial90
 void FLexUIGeometry::UpdateUIRectFillRadial90Vertex(FLexUIGeometry* uiGeo, const float& width, const float& height, const FVector2f& pivot
-	, const FLexUISpriteInfo& spriteInfo, bool flipDirection, float fillAmount, EUISpriteFillOriginType_Radial90 originType
+	, const FLexUISpriteInfo& spriteInfo, bool flipDirection, float fillAmount, ELexUISpriteFillOriginType_Radial90 originType
 	, ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
 	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 )
@@ -796,7 +796,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial90Vertex(FLexUIGeometry* uiGeo, const
 		}
 		switch (originType)
 		{
-		case EUISpriteFillOriginType_Radial90::BottomLeft:
+		case ELexUISpriteFillOriginType_Radial90::BottomLeft:
 		{
 			if (flipDirection)
 			{
@@ -864,7 +864,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial90Vertex(FLexUIGeometry* uiGeo, const
 			}
 		}
 		break;
-		case EUISpriteFillOriginType_Radial90::TopLeft:
+		case ELexUISpriteFillOriginType_Radial90::TopLeft:
 		{
 			if (flipDirection)
 			{
@@ -932,7 +932,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial90Vertex(FLexUIGeometry* uiGeo, const
 			}
 		}
 		break;
-		case EUISpriteFillOriginType_Radial90::TopRight:
+		case ELexUISpriteFillOriginType_Radial90::TopRight:
 		{
 			if (flipDirection)
 			{
@@ -1000,7 +1000,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial90Vertex(FLexUIGeometry* uiGeo, const
 			}
 		}
 		break;
-		case EUISpriteFillOriginType_Radial90::BottomRight:
+		case ELexUISpriteFillOriginType_Radial90::BottomRight:
 		{
 			if (flipDirection)
 			{
@@ -1092,7 +1092,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial90Vertex(FLexUIGeometry* uiGeo, const
 #pragma endregion
 #pragma region UISprite_Fill_Radial180
 void FLexUIGeometry::UpdateUIRectFillRadial180Vertex(FLexUIGeometry* uiGeo, const float& width, const float& height, const FVector2f& pivot
-	, const FLexUISpriteInfo& spriteInfo, bool flipDirection, float fillAmount, EUISpriteFillOriginType_Radial180 originType
+	, const FLexUISpriteInfo& spriteInfo, bool flipDirection, float fillAmount, ELexUISpriteFillOriginType_Radial180 originType
 	, ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
 	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 )
@@ -1104,7 +1104,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial180Vertex(FLexUIGeometry* uiGeo, cons
 	{
 		switch (originType)
 		{
-		case EUISpriteFillOriginType_Radial180::Bottom:
+		case ELexUISpriteFillOriginType_Radial180::Bottom:
 		{
 			triangles[0] = 4;
 			triangles[1] = 2;
@@ -1119,7 +1119,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial180Vertex(FLexUIGeometry* uiGeo, cons
 			triangles[8] = 3;
 		}
 		break;
-		case EUISpriteFillOriginType_Radial180::Left:
+		case ELexUISpriteFillOriginType_Radial180::Left:
 		{
 			triangles[0] = 4;
 			triangles[1] = 3;
@@ -1134,7 +1134,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial180Vertex(FLexUIGeometry* uiGeo, cons
 			triangles[8] = 1;
 		}
 		break;
-		case EUISpriteFillOriginType_Radial180::Top:
+		case ELexUISpriteFillOriginType_Radial180::Top:
 		{
 			triangles[0] = 4;
 			triangles[1] = 1;
@@ -1149,7 +1149,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial180Vertex(FLexUIGeometry* uiGeo, cons
 			triangles[8] = 0;
 		}
 		break;
-		case EUISpriteFillOriginType_Radial180::Right:
+		case ELexUISpriteFillOriginType_Radial180::Right:
 		{
 			triangles[0] = 4;
 			triangles[1] = 0;
@@ -1208,7 +1208,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial180Vertex(FLexUIGeometry* uiGeo, cons
 		}
 		switch (originType)
 		{
-		case EUISpriteFillOriginType_Radial180::Bottom:
+		case ELexUISpriteFillOriginType_Radial180::Bottom:
 		{
 			if (flipDirection)
 			{
@@ -1314,7 +1314,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial180Vertex(FLexUIGeometry* uiGeo, cons
 			}
 		}
 		break;
-		case EUISpriteFillOriginType_Radial180::Left:
+		case ELexUISpriteFillOriginType_Radial180::Left:
 		{
 			if (flipDirection)
 			{
@@ -1420,7 +1420,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial180Vertex(FLexUIGeometry* uiGeo, cons
 			}
 		}
 		break;
-		case EUISpriteFillOriginType_Radial180::Top:
+		case ELexUISpriteFillOriginType_Radial180::Top:
 		{
 			if (flipDirection)
 			{
@@ -1527,7 +1527,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial180Vertex(FLexUIGeometry* uiGeo, cons
 			}
 		}
 		break;
-		case EUISpriteFillOriginType_Radial180::Right:
+		case ELexUISpriteFillOriginType_Radial180::Right:
 		{
 			if (flipDirection)
 			{
@@ -1657,7 +1657,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial180Vertex(FLexUIGeometry* uiGeo, cons
 #pragma endregion
 #pragma region UISprite_Fill_Radial360
 void FLexUIGeometry::UpdateUIRectFillRadial360Vertex(FLexUIGeometry* uiGeo, const float& width, const float& height, const FVector2f& pivot
-	, const FLexUISpriteInfo& spriteInfo, bool flipDirection, float fillAmount, EUISpriteFillOriginType_Radial360 originType
+	, const FLexUISpriteInfo& spriteInfo, bool flipDirection, float fillAmount, ELexUISpriteFillOriginType_Radial360 originType
 	, ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
 	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 )
@@ -1701,16 +1701,16 @@ void FLexUIGeometry::UpdateUIRectFillRadial360Vertex(FLexUIGeometry* uiGeo, cons
 
 		switch (originType)
 		{
-		case EUISpriteFillOriginType_Radial360::Bottom:
+		case ELexUISpriteFillOriginType_Radial360::Bottom:
 			triangles[1] = 9;
 			break;
-		case EUISpriteFillOriginType_Radial360::Right:
+		case ELexUISpriteFillOriginType_Radial360::Right:
 			triangles[19] = 9;
 			break;
-		case EUISpriteFillOriginType_Radial360::Top:
+		case ELexUISpriteFillOriginType_Radial360::Top:
 			triangles[13] = 9;
 			break;
-		case EUISpriteFillOriginType_Radial360::Left:
+		case ELexUISpriteFillOriginType_Radial360::Left:
 			triangles[7] = 9;
 			break;
 		}
@@ -1801,7 +1801,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial360Vertex(FLexUIGeometry* uiGeo, cons
 		};
 		switch (originType)
 		{
-		case EUISpriteFillOriginType_Radial360::Bottom:
+		case ELexUISpriteFillOriginType_Radial360::Bottom:
 		{
 			originVertices[9].Position = originVertices[1].Position;
 			vertices[9].TextureCoordinate[0] = vertices[1].TextureCoordinate[0];
@@ -1893,7 +1893,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial360Vertex(FLexUIGeometry* uiGeo, cons
 			}
 		}
 		break;
-		case EUISpriteFillOriginType_Radial360::Right:
+		case ELexUISpriteFillOriginType_Radial360::Right:
 		{
 			originVertices[9].Position = originVertices[5].Position;
 			vertices[9].TextureCoordinate[0] = vertices[5].TextureCoordinate[0];
@@ -1985,7 +1985,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial360Vertex(FLexUIGeometry* uiGeo, cons
 			}
 		}
 		break;
-		case EUISpriteFillOriginType_Radial360::Top:
+		case ELexUISpriteFillOriginType_Radial360::Top:
 		{
 			originVertices[9].Position = originVertices[7].Position;
 			vertices[9].TextureCoordinate[0] = vertices[7].TextureCoordinate[0];
@@ -2077,7 +2077,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial360Vertex(FLexUIGeometry* uiGeo, cons
 			}
 		}
 		break;
-		case EUISpriteFillOriginType_Radial360::Left:
+		case ELexUISpriteFillOriginType_Radial360::Left:
 		{
 			originVertices[9].Position = originVertices[3].Position;
 			vertices[9].TextureCoordinate[0] = vertices[3].TextureCoordinate[0];

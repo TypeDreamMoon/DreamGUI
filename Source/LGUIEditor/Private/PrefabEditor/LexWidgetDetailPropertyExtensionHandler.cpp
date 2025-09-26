@@ -41,6 +41,8 @@ void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow&
 		&& !ObjectClass->IsChildOf(AActor::StaticClass())
 		&& !ObjectClass->IsChildOf(UActorComponent::StaticClass())
 		)return;
+	if (ObjectProperty->HasAnyPropertyFlags(CPF_InstancedReference))
+		return;
 	UObject* Object = nullptr;
 	if (InPropertyHandle->GetValue(Object) != FPropertyAccess::Success)return;
 

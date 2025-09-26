@@ -4,7 +4,7 @@
 
 #include "LexVisualBatchMesh.h"
 #include "Core/ILexUISpriteRenderInterface.h"
-#include "UISpriteBase.generated.h"
+#include "LexSpriteBase.generated.h"
 
 class ULexUISpriteData_BaseObject;
 
@@ -12,13 +12,13 @@ class ULexUISpriteData_BaseObject;
  * This is base class for create custom mesh based on UISprite.
  */
 UCLASS(ClassGroup = (LGUI), Abstract, NotBlueprintable)
-class LGUI_API UUISpriteBase : public ULexVisualBatchMesh
+class LGUI_API ULexSpriteBase : public ULexVisualBatchMesh
 	, public ILexUISpriteRenderInterface
 {
 	GENERATED_BODY()
 
 public:	
-	UUISpriteBase(const FObjectInitializer& ObjectInitializer);
+	ULexSpriteBase(const FObjectInitializer& ObjectInitializer);
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -30,7 +30,7 @@ public:
 	void CheckSpriteData();
 	static const FName GetSpritePropertyName()
 	{
-		return GET_MEMBER_NAME_CHECKED(UUISpriteBase, Sprite);
+		return GET_MEMBER_NAME_CHECKED(ULexSpriteBase, Sprite);
 	}
 protected:
 	virtual void BeginPlay() override;
@@ -39,7 +39,7 @@ protected:
 	virtual void OnUnregister()override;
 protected:
 	friend class SLexUISpriteBorderEditor;
-	friend class FLexUISpriteBaseCustomization;
+	friend class FLexSpriteBaseCustomization;
 
 	/** Sprite may override by UISelectable(UIButton, UIToggle, UISlider ...) */
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (DisplayThumbnail = "false"))
@@ -62,7 +62,7 @@ public:
 #pragma endregion
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetSprite(ULexUISpriteData_BaseObject* newSprite, bool setSize = true);
+		void SetSprite(ULexUISpriteData_BaseObject* Value, bool bSetSize = true);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetSizeFromSpriteData();
 };

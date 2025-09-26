@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "Core/Components/UISpriteBase.h"
+#include "Core/Components/LexSpriteBase.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "LTweener.h"
 #include "UIPolygon.generated.h"
@@ -22,7 +22,7 @@ enum class UIPolygonUVType :uint8
  * render a solid polygon shape
  */
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIPolygon : public UUISpriteBase
+class LGUI_API UUIPolygon : public ULexSpriteBase
 {
 	GENERATED_BODY()
 

@@ -11,7 +11,7 @@ class ULexCustomMeshSource;
 /**
  * Render UI element with LGUICustomMesh.
  */
-UCLASS(ClassGroup = LGUI, NotBlueprintable, meta = (BlueprintSpawnableComponent))
+UCLASS(ClassGroup = LGUI, NotBlueprintable)
 class LGUI_API ULexCustomMesh : public ULexVisualBatchMesh
 {
 	GENERATED_BODY()

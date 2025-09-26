@@ -7,7 +7,7 @@
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Core/LexUIDrawCall.h"
-#include "Core/Components/UITextureBase.h"
+#include "Core/Components/LexTextureBase.h"
 #include "Utils/LexUIUtils.h"
 #include "Core/LexUISpriteData.h"
 #include "Core/LexUISpriteData_BaseObject.h"

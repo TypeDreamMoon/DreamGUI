@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/Components/UISpriteBase.h"
+#include "Core/Components/LexSpriteBase.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/Components/LexCanvas.h"
@@ -8,11 +8,11 @@
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/LexUIDrawCall.h"
 
-UUISpriteBase::UUISpriteBase(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
+ULexSpriteBase::ULexSpriteBase(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
 }
 
-void UUISpriteBase::BeginPlay()
+void ULexSpriteBase::BeginPlay()
 {
 	Super::BeginPlay();
 	if (!bHasAddToSprite)
@@ -25,7 +25,7 @@ void UUISpriteBase::BeginPlay()
 	}
 }
 
-void UUISpriteBase::EndPlay()
+void ULexSpriteBase::EndPlay()
 {
 	Super::EndPlay();
 	if (bHasAddToSprite)
@@ -38,7 +38,7 @@ void UUISpriteBase::EndPlay()
 	}
 }
 
-void UUISpriteBase::ApplyAtlasTextureChange_Implementation()
+void ULexSpriteBase::ApplyAtlasTextureChange_Implementation()
 {
 	UIGeometry->Texture = Sprite->GetAtlasTexture();
 	if (DrawCall.IsValid())
@@ -48,7 +48,7 @@ void UUISpriteBase::ApplyAtlasTextureChange_Implementation()
 	}
 	GetWidget()->MarkCanvasUpdate(true, true, false);
 }
-void UUISpriteBase::ApplyAtlasTextureScaleUp_Implementation()
+void ULexSpriteBase::ApplyAtlasTextureScaleUp_Implementation()
 {
 	auto& vertices = UIGeometry->Vertices;
 	if (vertices.Num() != 0)
@@ -71,16 +71,16 @@ void UUISpriteBase::ApplyAtlasTextureScaleUp_Implementation()
 	GetWidget()->MarkCanvasUpdate(true, true, false);
 }
 
-void UUISpriteBase::SetSprite(ULexUISpriteData_BaseObject* newSprite, bool setSize)
+void ULexSpriteBase::SetSprite(ULexUISpriteData_BaseObject* Value, bool bSetSize)
 {
-	if (!IsValid(newSprite))
+	if (!IsValid(Value))
 	{
-		newSprite = ULexUISpriteData::GetDefaultWhiteSolid();
+		Value = ULexUISpriteData::GetDefaultWhiteSolid();
 	}
-	if (Sprite != newSprite)
+	if (Sprite != Value)
 	{
-		if((!IsValid(Sprite) || !IsValid(newSprite))
-			|| (Sprite->GetAtlasTexture() != newSprite->GetAtlasTexture()))
+		if((!IsValid(Sprite) || !IsValid(Value))
+			|| (Sprite->GetAtlasTexture() != Value->GetAtlasTexture()))
 		{
 			//remove from old
 			if (IsValid(Sprite))
@@ -89,19 +89,19 @@ void UUISpriteBase::SetSprite(ULexUISpriteData_BaseObject* newSprite, bool setSi
 				bHasAddToSprite = false;
 			}
 			//add to new
-			if (IsValid(newSprite))
+			if (IsValid(Value))
 			{
-				newSprite->AddUISprite(this);
+				Value->AddUISprite(this);
 				bHasAddToSprite = true;
 			}
 			MarkTextureDirty();
 		}
-		Sprite = newSprite;
+		Sprite = Value;
 		MarkUVDirty();
-		if (setSize) SetSizeFromSpriteData();
+		if (bSetSize) SetSizeFromSpriteData();
 	}
 }
-void UUISpriteBase::SetSizeFromSpriteData()
+void ULexSpriteBase::SetSizeFromSpriteData()
 {
 	if (IsValid(Sprite))
 	{
@@ -115,7 +115,7 @@ void UUISpriteBase::SetSizeFromSpriteData()
 	}
 }
 
-void UUISpriteBase::OnRegister()
+void ULexSpriteBase::OnRegister()
 {
 	Super::OnRegister();
 #if WITH_EDITOR
@@ -132,7 +132,7 @@ void UUISpriteBase::OnRegister()
 	}
 #endif
 }
-void UUISpriteBase::OnUnregister()
+void ULexSpriteBase::OnUnregister()
 {
 	Super::OnUnregister();
 #if WITH_EDITOR
@@ -150,11 +150,11 @@ void UUISpriteBase::OnUnregister()
 #endif
 }
 #if WITH_EDITOR
-void UUISpriteBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void ULexSpriteBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
-void UUISpriteBase::OnPreChangeSpriteProperty()
+void ULexSpriteBase::OnPreChangeSpriteProperty()
 {
 	if (IsValid(Sprite))
 	{
@@ -162,7 +162,7 @@ void UUISpriteBase::OnPreChangeSpriteProperty()
 		bHasAddToSprite = false;
 	}
 }
-void UUISpriteBase::OnPostChangeSpriteProperty()
+void ULexSpriteBase::OnPostChangeSpriteProperty()
 {
 	if (IsValid(Sprite))
 	{
@@ -172,7 +172,7 @@ void UUISpriteBase::OnPostChangeSpriteProperty()
 }
 #endif
 
-void UUISpriteBase::CheckSpriteData()
+void ULexSpriteBase::CheckSpriteData()
 {
 	if (!IsValid(Sprite))
 	{
@@ -180,7 +180,7 @@ void UUISpriteBase::CheckSpriteData()
 		Sprite->AddUISprite(this);
 	}
 }
-void UUISpriteBase::OnBeforeCreateOrUpdateGeometry()
+void ULexSpriteBase::OnBeforeCreateOrUpdateGeometry()
 {
 	if (!bHasAddToSprite)
 	{
@@ -193,7 +193,7 @@ void UUISpriteBase::OnBeforeCreateOrUpdateGeometry()
 	}
 }
 
-UTexture* UUISpriteBase::GetTextureToCreateGeometry()
+UTexture* ULexSpriteBase::GetTextureToCreateGeometry()
 {
 	if (!IsValid(Sprite))
 	{
@@ -206,7 +206,7 @@ UTexture* UUISpriteBase::GetTextureToCreateGeometry()
 	return nullptr;
 }
 
-bool UUISpriteBase::ReadPixelFromMainTexture(const FVector2D& InUV, FColor& OutPixel)const
+bool ULexSpriteBase::ReadPixelFromMainTexture(const FVector2D& InUV, FColor& OutPixel)const
 {
 	if (IsValid(Sprite))
 	{

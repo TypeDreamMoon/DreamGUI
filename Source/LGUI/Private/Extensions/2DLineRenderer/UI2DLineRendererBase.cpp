@@ -25,37 +25,52 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseUV(FLexUIGeometry& InGeo, co
 	auto& vertices = InGeo.Vertices;
 	int pointCount = InPointArray.Num();
 
-	const auto& spriteInfo = Sprite->GetSpriteInfo();
-	float uvY = (spriteInfo.uv0Y + spriteInfo.uv3Y) * 0.5f;
-	int i = 0; 
+	FVector2f MinUV;
+	FVector2f MaxUV;
+	if (bHasAddToSprite)
+	{
+		auto LexSprite = (ULexUISpriteData_BaseObject*)Brush.GetResourceObject();
+		auto& SpriteInfo = LexSprite->GetSpriteInfo();
+		MinUV = FVector2f(SpriteInfo.uv0X, SpriteInfo.uv0Y);
+		MaxUV = FVector2f(SpriteInfo.uv3X, SpriteInfo.uv3Y);
+	}
+	else
+	{
+		MinUV = FVector2f(Brush.UVRegion.X, Brush.UVRegion.Y);
+		MaxUV = FVector2f(Brush.UVRegion.Z, Brush.UVRegion.W);
+	}
+	
+	float uvY = (MinUV.Y + MaxUV.Y) * 0.5f;
+	int i = 0;
 	for (; i < pointCount; i++)
 	{
 		auto& uvi0 = vertices[i + i].TextureCoordinate[0];
 		auto& uvi1 = vertices[i + i + 1].TextureCoordinate[0];
-		uvi0.X = spriteInfo.uv0X;
-		uvi1.X = spriteInfo.uv3X;
+		uvi0.X = MinUV.X;
+		uvi1.X = MaxUV.X;
 		uvi0.Y = uvY;
 		uvi1.Y = uvY;
 	}
+	
 	if (EndType == EUI2DLineRenderer_EndType::Cap)
 	{
 		//start point cap
 		{
 			auto& uvi0 = vertices[i + i + 2].TextureCoordinate[0];
 			auto& uvi1 = vertices[i + i + 3].TextureCoordinate[0];
-			uvi0.X = spriteInfo.uv0X;
-			uvi1.X = spriteInfo.uv3X;
-			uvi0.Y = spriteInfo.uv0Y;
-			uvi1.Y = spriteInfo.uv0Y;
+			uvi0.X = MinUV.X;
+			uvi1.X = MaxUV.X;
+			uvi0.Y = MinUV.Y;
+			uvi1.Y = MaxUV.Y;
 		}
 		//end point cap
 		{
 			auto& uvi0 = vertices[i + i].TextureCoordinate[0];
 			auto& uvi1 = vertices[i + i + 1].TextureCoordinate[0];
-			uvi0.X = spriteInfo.uv0X;
-			uvi1.X = spriteInfo.uv3X;
-			uvi0.Y = spriteInfo.uv3Y;
-			uvi1.Y = spriteInfo.uv3Y;
+			uvi0.X = MinUV.X;
+			uvi1.X = MaxUV.X;
+			uvi0.Y = MinUV.Y;
+			uvi1.Y = MaxUV.Y;
 		}
 	}
 }
@@ -173,11 +188,23 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseVertex(FLexUIGeometry& InGeo
 		if (EndType == EUI2DLineRenderer_EndType::Cap)
 		{	
 			//start point cap
-			auto spriteInfo = Sprite->GetSpriteInfo();
-			auto capSize = spriteInfo.HasBorder() ? spriteInfo.borderBottom : spriteInfo.height * 0.5f;
+			float capSize = 0, spriteWidth = 0;
+			if (bHasAddToSprite)
+			{
+				auto LexSprite = (ULexUISpriteData_BaseObject*)Brush.GetResourceObject();
+				auto& SpriteInfo = LexSprite->GetSpriteInfo();
+				capSize = SpriteInfo.HasBorder() ? SpriteInfo.borderBottom : SpriteInfo.height * 0.5f;
+				spriteWidth = SpriteInfo.width;
+			}
+			else
+			{
+				capSize = Brush.ImageSize.Y * 0.5f;
+				spriteWidth = Brush.ImageSize.X * 0.5f;
+			}
+			
 			if (bEndCapSizeAffectByLineWidth)
 			{
-				capSize *= LineWidth / spriteInfo.width;
+				capSize *= LineWidth / spriteWidth;
 			}
 			auto capPoint = v0 - dir * capSize;
 
@@ -250,11 +277,22 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseVertex(FLexUIGeometry& InGeo
 			if (EndType == EUI2DLineRenderer_EndType::Cap)
 			{
 				//end point cap
-				auto spriteInfo = Sprite->GetSpriteInfo();
-				auto capSize = spriteInfo.HasBorder() ? spriteInfo.borderTop : spriteInfo.height * 0.5f;
+				float capSize = 0, spriteWidth = 0;
+				if (bHasAddToSprite)
+				{
+					auto LexSprite = (ULexUISpriteData_BaseObject*)Brush.GetResourceObject();
+					auto& SpriteInfo = LexSprite->GetSpriteInfo();
+					capSize = SpriteInfo.HasBorder() ? SpriteInfo.borderBottom : SpriteInfo.height * 0.5f;
+					spriteWidth = SpriteInfo.width;
+				}
+				else
+				{
+					capSize = Brush.ImageSize.Y * 0.5f;
+					spriteWidth = Brush.ImageSize.X * 0.5f;
+				}
 				if (bEndCapSizeAffectByLineWidth)
 				{
-					capSize *= LineWidth / spriteInfo.width;
+					capSize *= LineWidth / spriteWidth;
 				}
 				auto capPoint = vEnd1 + dir * capSize;
 
@@ -379,12 +417,12 @@ void UUI2DLineRendererBase::OnBeforeCreateOrUpdateGeometry()
 
 FVector2D UUI2DLineRendererBase::GetStartPointTangentDirection()
 {
-	UE_LOG(LGUI, Error, TEXT("This function (UUI2DLineRendererBase::GetStartPointTangentDirection) must be implemented if (UUI2DLineRendererBase::OverrideStartPointTangentDirection) return true!"));
+	UE_LOG(LGUI, Error, TEXT("This function [%s] must be implemented if [OverrideStartPointTangentDirection] return true!"), ANSI_TO_TCHAR(__FUNCTION__));
 	return FVector2D::ZeroVector;
 }
 FVector2D UUI2DLineRendererBase::GetEndPointTangentDirection()
 {
-	UE_LOG(LGUI, Error, TEXT("This function (UUI2DLineRendererBase::GetEndPointTangentDirection) must be implemented if (UUI2DLineRendererBase::OverrideEndPointTangentDirection) return true"));
+	UE_LOG(LGUI, Error, TEXT("This function [%s] must be implemented if [OverrideEndPointTangentDirection] return true!"), ANSI_TO_TCHAR(__FUNCTION__));
 	return FVector2D::ZeroVector;
 }
 

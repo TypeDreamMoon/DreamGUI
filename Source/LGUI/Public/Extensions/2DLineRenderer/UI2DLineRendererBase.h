@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "Core/Components/UISpriteBase.h"
 #include "LTweener.h"
+#include "Core/Components/LexImage.h"
 #include "UI2DLineRendererBase.generated.h"
 
 
@@ -20,7 +20,7 @@ enum class EUI2DLineRenderer_EndType :uint8
  * Render line use given points.
  */
 UCLASS(ClassGroup = (LGUI), Abstract, NotBlueprintable)
-class LGUI_API UUI2DLineRendererBase : public UUISpriteBase
+class LGUI_API UUI2DLineRendererBase : public ULexImage
 {
 	GENERATED_BODY()
 
@@ -54,10 +54,10 @@ protected:
 	//if OverrideEndPointTangentDirection return true, then this function must be implemented
 	virtual FVector2D GetEndPointTangentDirection();
 
-	//Begin UIBatchMeshRenderable interface
+	//Begin LexVisualBatchMesh interface
 	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 	virtual void OnBeforeCreateOrUpdateGeometry()override;
-	//End UIBatchMeshRenderable interface
+	//End LexVisualBatchMesh interface
 
 	FORCEINLINE bool AngleLargerThanPi(const FVector2D& A, const FVector2D& B)
 	{
@@ -88,5 +88,5 @@ public:
 		void SetLineWidthOffset(float newValue);
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		class ULTweener* LineWidthTo(float endValue, float duration, float delay = 0.0f, ELTweenEase easeType = ELTweenEase::OutCubic);
+		ULTweener* LineWidthTo(float endValue, float duration, float delay = 0.0f, ELTweenEase easeType = ELTweenEase::OutCubic);
 };

@@ -11,7 +11,7 @@
 
 
 class ULexUISpriteData;
-class UUISpriteBase;
+class ULexSpriteBase;
 
 #define WARNING_ATLAS_SIZE 4096
 

@@ -6,17 +6,16 @@
 /**
  * 
  */
-class FUISpriteCustomization : public IDetailCustomization
+class FLexSpriteBaseCustomization : public IDetailCustomization
 {
 public:
-	FUISpriteCustomization();
-	~FUISpriteCustomization();
+	FLexSpriteBaseCustomization();
+	~FLexSpriteBaseCustomization();
 
 	static TSharedRef<IDetailCustomization> MakeInstance();
 	/** IDetailCustomization interface */
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
 private:
-	TWeakObjectPtr<class UUISprite> TargetScriptPtr;
+	TArray<TWeakObjectPtr<class ULexSpriteBase>> TargetScriptArray;
 	void ForceRefresh(IDetailLayoutBuilder* DetailBuilder);
-
 };

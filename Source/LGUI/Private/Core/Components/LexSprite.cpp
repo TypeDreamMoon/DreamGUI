@@ -1,59 +1,59 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/Components/UISprite.h"
+#include "Core/Components/LexSprite.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 
 
-UUISprite::UUISprite(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
+ULexSprite::ULexSprite(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
 }
 
-void UUISprite::BeginPlay()
+void ULexSprite::BeginPlay()
 {
 	Super::BeginPlay();
 }
 #if WITH_EDITOR
-void UUISprite::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void ULexSprite::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (auto Property = PropertyChangedEvent.Property)
 	{
 		auto propName = Property->GetFName();
-		if (propName == GET_MEMBER_NAME_CHECKED(UUISprite, fillOriginType_Radial90))
+		if (propName == GET_MEMBER_NAME_CHECKED(ULexSprite, FillOriginType_Radial90))
 		{
-			fillOrigin = (uint8)fillOriginType_Radial90;
-			fillOriginType_Radial180 = (EUISpriteFillOriginType_Radial180)fillOrigin;
-			fillOriginType_Radial360 = (EUISpriteFillOriginType_Radial360)fillOrigin;
+			FillOrigin = (uint8)FillOriginType_Radial90;
+			FillOriginType_Radial180 = (ELexUISpriteFillOriginType_Radial180)FillOrigin;
+			FillOriginType_Radial360 = (ELexUISpriteFillOriginType_Radial360)FillOrigin;
 		}
-		else if (propName == GET_MEMBER_NAME_CHECKED(UUISprite, fillOriginType_Radial180))
+		else if (propName == GET_MEMBER_NAME_CHECKED(ULexSprite, FillOriginType_Radial180))
 		{
-			fillOrigin = (uint8)fillOriginType_Radial180;
-			fillOriginType_Radial90 = (EUISpriteFillOriginType_Radial90)fillOrigin;
-			fillOriginType_Radial360 = (EUISpriteFillOriginType_Radial360)fillOrigin;
+			FillOrigin = (uint8)FillOriginType_Radial180;
+			FillOriginType_Radial90 = (ELexUISpriteFillOriginType_Radial90)FillOrigin;
+			FillOriginType_Radial360 = (ELexUISpriteFillOriginType_Radial360)FillOrigin;
 		}
-		else if (propName == GET_MEMBER_NAME_CHECKED(UUISprite, fillOriginType_Radial360))
+		else if (propName == GET_MEMBER_NAME_CHECKED(ULexSprite, FillOriginType_Radial360))
 		{
-			fillOrigin = (uint8)fillOriginType_Radial360;
-			fillOriginType_Radial180 = (EUISpriteFillOriginType_Radial180)fillOrigin;
-			fillOriginType_Radial90 = (EUISpriteFillOriginType_Radial90)fillOrigin;
+			FillOrigin = (uint8)FillOriginType_Radial360;
+			FillOriginType_Radial180 = (ELexUISpriteFillOriginType_Radial180)FillOrigin;
+			FillOriginType_Radial90 = (ELexUISpriteFillOriginType_Radial90)FillOrigin;
 		}
-		else if (propName == GET_MEMBER_NAME_CHECKED(UUISprite, Sprite))
+		else if (propName == GET_MEMBER_NAME_CHECKED(ULexSprite, Sprite))
 		{
 			if (IsValid(Sprite))
 			{
 				if (Sprite->GetSpriteInfo().HasBorder())
 				{
-					if (this->type == EUISpriteType::Normal)
+					if (this->DrawType == ELexUISpriteDrawType::Normal)
 					{
-						this->SetSpriteType(EUISpriteType::Sliced);
+						this->SetDrawType(ELexUISpriteDrawType::Sliced);
 					}
 				}
 			}
 		}
-		if (IsValid(Sprite) && type == EUISpriteType::Tiled)
+		if (IsValid(Sprite) && DrawType == ELexUISpriteDrawType::Tiled)
 		{
 			CalculateTiledWidth();
 			CalculateTiledHeight();
@@ -62,23 +62,23 @@ void UUISprite::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 }
 #endif
 
-void UUISprite::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
+void ULexSprite::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
 	auto Widget = GetWidget();
 	auto RenderCanvas = Widget->GetRenderCanvas();
-	switch (type)
+	switch (DrawType)
 	{
-	case EUISpriteType::Normal:
+	case ELexUISpriteDrawType::Normal:
 		FLexUIGeometry::UpdateUIRectSimpleVertex(&InGeo, 
 			Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), RenderCanvas, this, GetFinalColor(), 
 			InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 		);
 		break;
-	case EUISpriteType::Sliced:
-	case EUISpriteType::SlicedFrame:
+	case ELexUISpriteDrawType::Sliced:
+	case ELexUISpriteDrawType::SlicedFrame:
 		if (Sprite->GetSpriteInfo().HasBorder())
 		{
-			FLexUIGeometry::UpdateUIRectBorderVertex(&InGeo, type == EUISpriteType::Sliced, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), RenderCanvas, this, GetFinalColor(),
+			FLexUIGeometry::UpdateUIRectBorderVertex(&InGeo, DrawType == ELexUISpriteDrawType::Sliced, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 		}
@@ -90,7 +90,7 @@ void UUISprite::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, 
 			);
 		}
 	break;
-	case EUISpriteType::Tiled:
+	case ELexUISpriteDrawType::Tiled:
 		if (!Sprite->IsIndividual())
 		{
 			FLexUIGeometry::UpdateUIRectTiledVertex(&InGeo, Sprite->GetSpriteInfo(), RenderCanvas, this, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Tiled_WidthRectCount, Tiled_HeightRectCount, Tiled_WidthRemainedRectSize, Tiled_HeightRemainedRectSize, GetFinalColor(), 
@@ -107,28 +107,28 @@ void UUISprite::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, 
 			);
 		}
 		break;
-	case EUISpriteType::Filled:
+	case ELexUISpriteDrawType::Filled:
 	{
-		switch (fillMethod)
+		switch (FillMethod)
 		{
-		case EUISpriteFillMethod::Horizontal:
-		case EUISpriteFillMethod::Vertical:
-			FLexUIGeometry::UpdateUIRectFillHorizontalVerticalVertex(&InGeo, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), fillDirectionFlip, fillAmount, fillMethod == EUISpriteFillMethod::Horizontal, RenderCanvas, this, GetFinalColor(),
+		case ELexUISpriteFillMethod::Horizontal:
+		case ELexUISpriteFillMethod::Vertical:
+			FLexUIGeometry::UpdateUIRectFillHorizontalVerticalVertex(&InGeo, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), FillDirectionFlip, FillAmount, FillMethod == ELexUISpriteFillMethod::Horizontal, RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 			break;
-		case EUISpriteFillMethod::Radial90:
-			FLexUIGeometry::UpdateUIRectFillRadial90Vertex(&InGeo, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), fillDirectionFlip, fillAmount, (EUISpriteFillOriginType_Radial90)fillOrigin, RenderCanvas, this, GetFinalColor(),
+		case ELexUISpriteFillMethod::Radial90:
+			FLexUIGeometry::UpdateUIRectFillRadial90Vertex(&InGeo, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), FillDirectionFlip, FillAmount, (ELexUISpriteFillOriginType_Radial90)FillOrigin, RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 			break;
-		case EUISpriteFillMethod::Radial180:
-			FLexUIGeometry::UpdateUIRectFillRadial180Vertex(&InGeo, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), fillDirectionFlip, fillAmount, (EUISpriteFillOriginType_Radial180)fillOrigin, RenderCanvas, this, GetFinalColor(),
+		case ELexUISpriteFillMethod::Radial180:
+			FLexUIGeometry::UpdateUIRectFillRadial180Vertex(&InGeo, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), FillDirectionFlip, FillAmount, (ELexUISpriteFillOriginType_Radial180)FillOrigin, RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 			break;
-		case EUISpriteFillMethod::Radial360:
-			FLexUIGeometry::UpdateUIRectFillRadial360Vertex(&InGeo, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), fillDirectionFlip, fillAmount, (EUISpriteFillOriginType_Radial360)fillOrigin, RenderCanvas, this, GetFinalColor(),
+		case ELexUISpriteFillMethod::Radial360:
+			FLexUIGeometry::UpdateUIRectFillRadial360Vertex(&InGeo, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), FillDirectionFlip, FillAmount, (ELexUISpriteFillOriginType_Radial360)FillOrigin, RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 			break;
@@ -138,11 +138,11 @@ void UUISprite::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, 
 	}
 }
 
-void UUISprite::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
+void ULexSprite::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
 {
     Super::OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
 	if (!IsValid(Sprite))return;
-	if (type == EUISpriteType::Tiled)
+	if (DrawType == ELexUISpriteDrawType::Tiled)
 	{
         if (InWidthChange)
         {
@@ -162,7 +162,7 @@ void UUISprite::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool 
     }
 }
 
-void UUISprite::CalculateTiledWidth()
+void ULexSprite::CalculateTiledWidth()
 {
 	if (!Sprite->IsIndividual())
 	{
@@ -196,7 +196,7 @@ void UUISprite::CalculateTiledWidth()
 		MarkVerticesDirty(false, true, true, false);
 	}
 }
-void UUISprite::CalculateTiledHeight()
+void ULexSprite::CalculateTiledHeight()
 {
 	if (!Sprite->IsIndividual())
 	{
@@ -231,64 +231,64 @@ void UUISprite::CalculateTiledHeight()
 	}
 }
 
-void UUISprite::SetSpriteType(EUISpriteType newType) {
-	if (type != newType)
+void ULexSprite::SetDrawType(ELexUISpriteDrawType Value) {
+	if (DrawType != Value)
 	{
-		type = newType;
+		DrawType = Value;
 		MarkVerticesDirty(true, true, true, true);
-		if (type == EUISpriteType::Tiled)
+		if (DrawType == ELexUISpriteDrawType::Tiled)
 		{
 			CalculateTiledWidth();
 			CalculateTiledHeight();
 		}
 	}
 }
-void UUISprite::SetFillMethod(EUISpriteFillMethod newValue)
+void ULexSprite::SetFillMethod(ELexUISpriteFillMethod Value)
 {
-	if (fillMethod != newValue)
+	if (FillMethod != Value)
 	{
-		fillMethod = newValue;
-		if (type == EUISpriteType::Filled)
+		FillMethod = Value;
+		if (DrawType == ELexUISpriteDrawType::Filled)
 		{
 			MarkVerticesDirty(true, true, true, true);
 		}
 	}
 }
-void UUISprite::SetFillOrigin(uint8 newValue)
+void ULexSprite::SetFillOrigin(uint8 Value)
 {
-	if (fillOrigin != newValue)
+	if (FillOrigin != Value)
 	{
-		fillOrigin = newValue;
-		if (type == EUISpriteType::Filled)
+		FillOrigin = Value;
+		if (DrawType == ELexUISpriteDrawType::Filled)
 		{
-			if (fillMethod == EUISpriteFillMethod::Radial90)
+			if (FillMethod == ELexUISpriteFillMethod::Radial90)
 			{
 				MarkVerticesDirty(false, true, true, false);
 			}
-			else if (fillMethod == EUISpriteFillMethod::Radial180 || fillMethod == EUISpriteFillMethod::Radial360)
+			else if (FillMethod == ELexUISpriteFillMethod::Radial180 || FillMethod == ELexUISpriteFillMethod::Radial360)
 			{
 				MarkVerticesDirty(true, true, true, true);
 			}
 		}
 	}
 }
-void UUISprite::SetFillDirectionFlip(bool newValue)
+void ULexSprite::SetFillDirectionFlip(bool Value)
 {
-	if (fillDirectionFlip != newValue)
+	if (FillDirectionFlip != Value)
 	{
-		fillDirectionFlip = newValue;
-		if (type == EUISpriteType::Filled)
+		FillDirectionFlip = Value;
+		if (DrawType == ELexUISpriteDrawType::Filled)
 		{
 			MarkVerticesDirty(false, true, true, false);
 		}
 	}
 }
-void UUISprite::SetFillAmount(float newValue)
+void ULexSprite::SetFillAmount(float Value)
 {
-	if (fillAmount != newValue)
+	if (FillAmount != Value)
 	{
-		fillAmount = newValue;
-		if (type == EUISpriteType::Filled)
+		FillAmount = Value;
+		if (DrawType == ELexUISpriteDrawType::Filled)
 		{
 			MarkVerticesDirty(false, true, true, false);
 		}
