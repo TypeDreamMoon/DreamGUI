@@ -334,22 +334,22 @@ void ULGUIBPLibrary::GetSpriteSize(const FLexUISpriteInfo& SpriteInfo, int32& wi
 }
 void ULGUIBPLibrary::GetSpriteBorderSize(const FLexUISpriteInfo& SpriteInfo, int32& borderLeft, int32& borderRight, int32& borderTop, int32& borderBottom)
 {
-	borderLeft = SpriteInfo.borderLeft;
-	borderRight = SpriteInfo.borderRight;
-	borderTop = SpriteInfo.borderTop;
-	borderBottom = SpriteInfo.borderBottom;
+	borderLeft = SpriteInfo.Border.Left;
+	borderRight = SpriteInfo.Border.Right;
+	borderTop = SpriteInfo.Border.Top;
+	borderBottom = SpriteInfo.Border.Bottom;
 }
 void ULGUIBPLibrary::GetSpriteUV(const FLexUISpriteInfo& SpriteInfo, float& UV0X, float& UV0Y, float& UV3X, float& UV3Y)
 {
-	UV0X = SpriteInfo.uvMinX;
-	UV0Y = SpriteInfo.uvMinY;
-	UV3X = SpriteInfo.uvMaxX;
-	UV3Y = SpriteInfo.uvMaxY;
+	UV0X = SpriteInfo.MinUV.X;
+	UV0Y = SpriteInfo.MaxUV.Y;
+	UV3X = SpriteInfo.MaxUV.X;
+	UV3Y = SpriteInfo.MinUV.Y;
 }
 void ULGUIBPLibrary::GetSpriteBorderUV(const FLexUISpriteInfo& SpriteInfo, float& borderUV0X, float& borderUV0Y, float& borderUV3X, float& borderUV3Y)
 {
-	borderUV0X = SpriteInfo.uvMinX;
-	borderUV0Y = SpriteInfo.uvMinY;
-	borderUV3X = SpriteInfo.uvMaxX;
-	borderUV3Y = SpriteInfo.uvMaxY;
+	borderUV0X = SpriteInfo.MinUV.X;
+	borderUV0Y = SpriteInfo.MaxUV.Y;
+	borderUV3X = SpriteInfo.MaxUV.X;
+	borderUV3Y = SpriteInfo.MinUV.Y;
 }

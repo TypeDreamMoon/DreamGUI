@@ -66,6 +66,10 @@ this can reduce the package size, because AtlasPacking already pack this SpriteT
 		];
 	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Width));
 	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Height));
+	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.MinUV));
+	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.MaxUV));
+	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.BorderMinUV));
+	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.BorderMaxUV));
 	IDetailCategoryBuilder& atlasPackingCategory = DetailBuilder.EditCategory("AtlasPacking");
 	auto PackingAtlasProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, packingAtlas));
 	atlasPackingCategory.AddProperty(PackingAtlasProperty);
@@ -162,9 +166,9 @@ this can reduce the package size, because AtlasPacking already pack this SpriteT
 	//if change SpriteTexture, clear all sprites and repack
 	auto spriteTextureHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteTexture));
 	spriteTextureHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {ULexUISpriteData::MarkAllSpritesNeedToReinitialize(); DetailBuilder.ForceRefreshDetails(); }));
-	UObject* spriteTextureObject;
+	UObject* spriteTextureObject = nullptr;
 	spriteTextureHandle->GetValue(spriteTextureObject);
-	if (auto spriteTexture = Cast<UTexture2D>(spriteTextureObject))
+	if (spriteTextureObject)
 	{
 		int32 atlasPadding = ULexUISettings::GetAtlasTexturePadding(TargetScriptPtr->PackingTag);
 		if (TargetScriptPtr->SpriteTexture->GetSurfaceWidth() + atlasPadding * 2 > WARNING_ATLAS_SIZE || TargetScriptPtr->SpriteTexture->GetSurfaceHeight() + atlasPadding * 2 > WARNING_ATLAS_SIZE)
@@ -192,21 +196,21 @@ this can reduce the package size, because AtlasPacking already pack this SpriteT
 		}
 	}
 
-	if(TargetScriptPtr->SpriteTexture != nullptr)
+	if (spriteTextureObject)
 	{
 		IDetailCategoryBuilder& paddingCategory = DetailBuilder.EditCategory("Padding");
-		paddingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.paddingLeft));
-		paddingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.paddingRight));
-		paddingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.paddingTop));
-		paddingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.paddingBottom));
+		paddingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Padding.Left));
+		paddingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Padding.Right));
+		paddingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Padding.Top));
+		paddingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Padding.Bottom));
 
 		IDetailCategoryBuilder& borderEditorCategory = DetailBuilder.EditCategory("BorderEditor");
 		spriteSlateBrush = TSharedPtr<FSlateBrush>(new FSlateBrush);
 		spriteSlateBrush->SetResourceObject(TargetScriptPtr->SpriteTexture);
-		borderEditorCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.borderLeft));
-		borderEditorCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.borderRight));
-		borderEditorCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.borderTop));
-		borderEditorCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.borderBottom));
+		borderEditorCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Border.Left));
+		borderEditorCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Border.Right));
+		borderEditorCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Border.Top));
+		borderEditorCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Border.Bottom));
 		borderEditorCategory.AddCustomRow(LOCTEXT("BorderEditor", "BorderEditor"))
 		.WholeRowContent()
 		[
@@ -444,11 +448,11 @@ FOptionalSize FLexUISpriteDataCustomization::GetBorderLeftSize()const
 	float imageBoxAspect = (float)(imageBoxSize.X / imageBoxSize.Y);
 	if (imageAspect > imageBoxAspect)
 	{
-		return TargetScriptPtr->SpriteInfo.borderLeft * imageBoxSize.X / TargetScriptPtr->SpriteTexture->GetSurfaceWidth();
+		return TargetScriptPtr->SpriteInfo.Border.Left * imageBoxSize.X / TargetScriptPtr->SpriteTexture->GetSurfaceWidth();
 	}
 	else
 	{
-		return TargetScriptPtr->SpriteInfo.borderLeft * imageBoxSize.Y / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
+		return TargetScriptPtr->SpriteInfo.Border.Left * imageBoxSize.Y / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	}
 }
 FOptionalSize FLexUISpriteDataCustomization::GetBorderRightSize()const
@@ -459,11 +463,11 @@ FOptionalSize FLexUISpriteDataCustomization::GetBorderRightSize()const
 	float imageBoxAspect = (float)(imageBoxSize.X / imageBoxSize.Y);
 	if (imageAspect > imageBoxAspect)
 	{
-		return TargetScriptPtr->SpriteInfo.borderRight * imageBoxSize.X / TargetScriptPtr->SpriteTexture->GetSurfaceWidth();
+		return TargetScriptPtr->SpriteInfo.Border.Right * imageBoxSize.X / TargetScriptPtr->SpriteTexture->GetSurfaceWidth();
 	}
 	else
 	{
-		return TargetScriptPtr->SpriteInfo.borderRight * imageBoxSize.Y / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
+		return TargetScriptPtr->SpriteInfo.Border.Right * imageBoxSize.Y / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	}
 }
 FOptionalSize FLexUISpriteDataCustomization::GetBorderTopSize()const
@@ -474,11 +478,11 @@ FOptionalSize FLexUISpriteDataCustomization::GetBorderTopSize()const
 	float imageBoxAspect = (float)(imageBoxSize.X / imageBoxSize.Y);
 	if (imageAspect > imageBoxAspect)
 	{
-		return TargetScriptPtr->SpriteInfo.borderTop * imageBoxSize.X / TargetScriptPtr->SpriteTexture->GetSurfaceWidth();
+		return TargetScriptPtr->SpriteInfo.Border.Top * imageBoxSize.X / TargetScriptPtr->SpriteTexture->GetSurfaceWidth();
 	}
 	else
 	{
-		return TargetScriptPtr->SpriteInfo.borderTop * imageBoxSize.Y / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
+		return TargetScriptPtr->SpriteInfo.Border.Top * imageBoxSize.Y / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	}
 }
 FOptionalSize FLexUISpriteDataCustomization::GetBorderBottomSize()const
@@ -489,11 +493,11 @@ FOptionalSize FLexUISpriteDataCustomization::GetBorderBottomSize()const
 	float imageBoxAspect = (float)(imageBoxSize.X / imageBoxSize.Y);
 	if (imageAspect > imageBoxAspect)
 	{
-		return TargetScriptPtr->SpriteInfo.borderBottom * imageBoxSize.X / TargetScriptPtr->SpriteTexture->GetSurfaceWidth();
+		return TargetScriptPtr->SpriteInfo.Border.Bottom * imageBoxSize.X / TargetScriptPtr->SpriteTexture->GetSurfaceWidth();
 	}
 	else
 	{
-		return TargetScriptPtr->SpriteInfo.borderBottom * imageBoxSize.Y / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
+		return TargetScriptPtr->SpriteInfo.Border.Bottom * imageBoxSize.Y / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	}
 }
 

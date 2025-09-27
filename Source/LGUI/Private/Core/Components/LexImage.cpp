@@ -150,10 +150,10 @@ void ULexImage::OnUpdateGeometry(FLexUIGeometry& InMesh, bool InTriangleChanged,
 			{
 				SpriteInfo.Width = Brush.ImageSize.X;
 				SpriteInfo.Height = Brush.ImageSize.Y;
-				SpriteInfo.uvMinX = Brush.UVRegion.X;
-				SpriteInfo.uvMinY = Brush.UVRegion.Y;
-				SpriteInfo.uvMaxX = Brush.UVRegion.Z;
-				SpriteInfo.uvMaxY = Brush.UVRegion.W;
+				SpriteInfo.MinUV.X = Brush.UVRegion.X;
+				SpriteInfo.MaxUV.Y = Brush.UVRegion.Y;
+				SpriteInfo.MaxUV.X = Brush.UVRegion.Z;
+				SpriteInfo.MinUV.Y = Brush.UVRegion.W;
 			}
 			FLexUIGeometry::UpdateUIRectSimpleVertex(&InMesh, RenderSize.X, RenderSize.Y, FVector2f(Pivot)
 			, SpriteInfo, RenderCanvas, this, FinalColor
@@ -185,19 +185,19 @@ void ULexImage::OnUpdateGeometry(FLexUIGeometry& InMesh, bool InTriangleChanged,
 			{
 				SpriteInfo.Width = Brush.ImageSize.X;
 				SpriteInfo.Height = Brush.ImageSize.Y;
-				SpriteInfo.uvMinX = Brush.UVRegion.X;
-				SpriteInfo.uvMinY = Brush.UVRegion.Y;
-				SpriteInfo.uvMaxX = Brush.UVRegion.Z;
-				SpriteInfo.uvMaxY = Brush.UVRegion.W;
-				SpriteInfo.borderLeft = Brush.Margin.Left * Brush.ImageSize.X;
-				SpriteInfo.borderRight = Brush.Margin.Right * Brush.ImageSize.X;
-				SpriteInfo.borderTop = Brush.Margin.Top * Brush.ImageSize.Y;
-				SpriteInfo.borderBottom = Brush.Margin.Bottom * Brush.ImageSize.Y;
-				float uvWidth = SpriteInfo.uvMaxX - SpriteInfo.uvMinX, uvHeight = SpriteInfo.uvMinY - SpriteInfo.uvMaxY;
-				SpriteInfo.buvMinX = SpriteInfo.uvMinX + Brush.Margin.Left * uvWidth;
-				SpriteInfo.buvMinY = SpriteInfo.uvMinY - Brush.Margin.Bottom * uvHeight;
-				SpriteInfo.buvMaxX = SpriteInfo.uvMaxX - Brush.Margin.Right * uvWidth;
-				SpriteInfo.buvMaxY = SpriteInfo.uvMaxY + Brush.Margin.Top * uvHeight;
+				SpriteInfo.MinUV.X = Brush.UVRegion.X;
+				SpriteInfo.MaxUV.Y = Brush.UVRegion.Y;
+				SpriteInfo.MaxUV.X = Brush.UVRegion.Z;
+				SpriteInfo.MinUV.Y = Brush.UVRegion.W;
+				SpriteInfo.Border.Left = Brush.Margin.Left * Brush.ImageSize.X;
+				SpriteInfo.Border.Right = Brush.Margin.Right * Brush.ImageSize.X;
+				SpriteInfo.Border.Top = Brush.Margin.Top * Brush.ImageSize.Y;
+				SpriteInfo.Border.Bottom = Brush.Margin.Bottom * Brush.ImageSize.Y;
+				float uvWidth = SpriteInfo.MaxUV.X - SpriteInfo.MinUV.X, uvHeight = SpriteInfo.MaxUV.Y - SpriteInfo.MinUV.Y;
+				SpriteInfo.BorderMinUV.X = SpriteInfo.MinUV.X + Brush.Margin.Left * uvWidth;
+				SpriteInfo.BorderMinUV.Y = SpriteInfo.MaxUV.Y - Brush.Margin.Bottom * uvHeight;
+				SpriteInfo.BorderMaxUV.X = SpriteInfo.MaxUV.X - Brush.Margin.Right * uvWidth;
+				SpriteInfo.BorderMinUV.X = SpriteInfo.MinUV.Y + Brush.Margin.Top * uvHeight;
 			}
 			FLexUIGeometry::UpdateUIRectBorderVertex(&InMesh, bFillCenter, RenderSize.X, RenderSize.Y, FVector2f(Pivot)
 				, SpriteInfo, RenderCanvas, this, FinalColor

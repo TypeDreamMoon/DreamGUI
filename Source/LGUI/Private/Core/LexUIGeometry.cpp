@@ -393,18 +393,18 @@ void FLexUIGeometry::UpdateUIRectBorderVertex(FLexUIGeometry* uiGeo, bool fillCe
 			float geoHeight = halfH * 2;
 			//vertices
 			float x0, x1, x2, x3, y0, y1, y2, y3;
-			int widthBorder = spriteInfo.borderLeft + spriteInfo.borderRight;
-			int heightBorder = spriteInfo.borderTop + spriteInfo.borderBottom;
+			int widthBorder = spriteInfo.Border.Left + spriteInfo.Border.Right;
+			int heightBorder = spriteInfo.Border.Top + spriteInfo.Border.Bottom;
 			float widthScale = geoWidth < widthBorder ? geoWidth / widthBorder : 1.0f;
 			float heightScale = geoHeight < heightBorder ? geoHeight / heightBorder : 1.0f;
 			x0 = (-halfW + pivotOffsetX);
-			x1 = (x0 + spriteInfo.borderLeft * widthScale);
+			x1 = (x0 + spriteInfo.Border.Left * widthScale);
 			x3 = (halfW + pivotOffsetX);
-			x2 = (x3 - spriteInfo.borderRight * widthScale);
+			x2 = (x3 - spriteInfo.Border.Right * widthScale);
 			y0 = (-halfH + pivotOffsetY);
-			y1 = (y0 + spriteInfo.borderBottom * heightScale);
+			y1 = (y0 + spriteInfo.Border.Bottom * heightScale);
 			y3 = (halfH + pivotOffsetY);
-			y2 = (y3 - spriteInfo.borderTop * heightScale);
+			y2 = (y3 - spriteInfo.Border.Top * heightScale);
 
 			originVertices[0].Position = FVector3f(0, x0, y0);
 			originVertices[1].Position = FVector3f(0, x1, y0);
@@ -435,25 +435,25 @@ void FLexUIGeometry::UpdateUIRectBorderVertex(FLexUIGeometry* uiGeo, bool fillCe
 
 		if (InVertexUVChanged)
 		{
-			vertices[0].TextureCoordinate[0] = FVector2f(spriteInfo.uvMinX, spriteInfo.uvMinY);
-			vertices[1].TextureCoordinate[0] = FVector2f(spriteInfo.buvMinX, spriteInfo.uvMinY);
-			vertices[2].TextureCoordinate[0] = FVector2f(spriteInfo.buvMaxX, spriteInfo.uvMinY);
-			vertices[3].TextureCoordinate[0] = FVector2f(spriteInfo.uvMaxX, spriteInfo.uvMinY);
+			vertices[0].TextureCoordinate[0] = FVector2f(spriteInfo.MinUV.X, spriteInfo.MaxUV.Y);
+			vertices[1].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMinUV.X, spriteInfo.MaxUV.Y);
+			vertices[2].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMaxUV.X, spriteInfo.MaxUV.Y);
+			vertices[3].TextureCoordinate[0] = FVector2f(spriteInfo.MaxUV.X, spriteInfo.MaxUV.Y);
 
-			vertices[4].TextureCoordinate[0] = FVector2f(spriteInfo.uvMinX, spriteInfo.buvMinY);
-			vertices[5].TextureCoordinate[0] = FVector2f(spriteInfo.buvMinX, spriteInfo.buvMinY);
-			vertices[6].TextureCoordinate[0] = FVector2f(spriteInfo.buvMaxX, spriteInfo.buvMinY);
-			vertices[7].TextureCoordinate[0] = FVector2f(spriteInfo.uvMaxX, spriteInfo.buvMinY);
+			vertices[4].TextureCoordinate[0] = FVector2f(spriteInfo.MinUV.X, spriteInfo.BorderMinUV.Y);
+			vertices[5].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMinUV.X, spriteInfo.BorderMinUV.Y);
+			vertices[6].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMaxUV.X, spriteInfo.BorderMinUV.Y);
+			vertices[7].TextureCoordinate[0] = FVector2f(spriteInfo.MaxUV.X, spriteInfo.BorderMinUV.Y);
 
-			vertices[8].TextureCoordinate[0] = FVector2f(spriteInfo.uvMinX, spriteInfo.buvMaxY);
-			vertices[9].TextureCoordinate[0] = FVector2f(spriteInfo.buvMinX, spriteInfo.buvMaxY);
-			vertices[10].TextureCoordinate[0] = FVector2f(spriteInfo.buvMaxX, spriteInfo.buvMaxY);
-			vertices[11].TextureCoordinate[0] = FVector2f(spriteInfo.uvMaxX, spriteInfo.buvMaxY);
+			vertices[8].TextureCoordinate[0] = FVector2f(spriteInfo.MinUV.X, spriteInfo.BorderMinUV.X);
+			vertices[9].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMinUV.X, spriteInfo.BorderMinUV.X);
+			vertices[10].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMaxUV.X, spriteInfo.BorderMinUV.X);
+			vertices[11].TextureCoordinate[0] = FVector2f(spriteInfo.MaxUV.X, spriteInfo.BorderMinUV.X);
 
-			vertices[12].TextureCoordinate[0] = FVector2f(spriteInfo.uvMinX, spriteInfo.uvMaxY);
-			vertices[13].TextureCoordinate[0] = FVector2f(spriteInfo.buvMinX, spriteInfo.uvMaxY);
-			vertices[14].TextureCoordinate[0] = FVector2f(spriteInfo.buvMaxX, spriteInfo.uvMaxY);
-			vertices[15].TextureCoordinate[0] = FVector2f(spriteInfo.uvMaxX, spriteInfo.uvMaxY);
+			vertices[12].TextureCoordinate[0] = FVector2f(spriteInfo.MinUV.X, spriteInfo.MinUV.Y);
+			vertices[13].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMinUV.X, spriteInfo.MinUV.Y);
+			vertices[14].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMaxUV.X, spriteInfo.MinUV.Y);
+			vertices[15].TextureCoordinate[0] = FVector2f(spriteInfo.MaxUV.X, spriteInfo.MinUV.Y);
 		}
 
 		if (InVertexColorChanged)
@@ -544,17 +544,17 @@ void FLexUIGeometry::UpdateUIRectTiledVertex(FLexUIGeometry* uiGeo,
 		if (InVertexUVChanged)
 		{
 			int vertIndex = 0;
-			float remainedUV3X = spriteInfo.buvMinX + (spriteInfo.buvMaxX - spriteInfo.buvMinX) * widthRemainedRectSize / spriteInfo.Width;
-			float remainedUV3Y = spriteInfo.buvMinY + (spriteInfo.buvMaxY - spriteInfo.buvMinY) * heightRemainedRectSize / spriteInfo.Height;
+			float remainedUV3X = spriteInfo.BorderMinUV.X + (spriteInfo.BorderMaxUV.X - spriteInfo.BorderMinUV.X) * widthRemainedRectSize / spriteInfo.Width;
+			float remainedUV3Y = spriteInfo.BorderMinUV.Y + (spriteInfo.BorderMinUV.X - spriteInfo.BorderMinUV.Y) * heightRemainedRectSize / spriteInfo.Height;
 			for (int heightRectIndex = 1; heightRectIndex <= heightRectCount; heightRectIndex++)
 			{
-				float realUV3Y = heightRectIndex == heightRectCount ? remainedUV3Y : spriteInfo.buvMaxY;
+				float realUV3Y = heightRectIndex == heightRectCount ? remainedUV3Y : spriteInfo.BorderMinUV.X;
 				for (int widthRectIndex = 1; widthRectIndex <= widthRectCount; widthRectIndex++)
 				{
-					float realUV3X = widthRectIndex == widthRectCount ? remainedUV3X : spriteInfo.buvMaxX;
-					vertices[vertIndex++].TextureCoordinate[0] = FVector2f(spriteInfo.buvMinX, spriteInfo.buvMinY);
-					vertices[vertIndex++].TextureCoordinate[0] = FVector2f(realUV3X, spriteInfo.buvMinY);
-					vertices[vertIndex++].TextureCoordinate[0] = FVector2f(spriteInfo.buvMinX, realUV3Y);
+					float realUV3X = widthRectIndex == widthRectCount ? remainedUV3X : spriteInfo.BorderMaxUV.X;
+					vertices[vertIndex++].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMinUV.X, spriteInfo.BorderMinUV.Y);
+					vertices[vertIndex++].TextureCoordinate[0] = FVector2f(realUV3X, spriteInfo.BorderMinUV.Y);
+					vertices[vertIndex++].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMinUV.X, realUV3Y);
 					vertices[vertIndex++].TextureCoordinate[0] = FVector2f(realUV3X, realUV3Y);
 				}
 			}
@@ -620,10 +620,10 @@ void FLexUIGeometry::UpdateUIRectFillHorizontalVerticalVertex(FLexUIGeometry* ui
 			float posMaxX = halfW + pivotOffsetX;
 			float posMaxY = halfH + pivotOffsetY;
 			//uvs
-			float uvMinX = spriteInfo.uvMinX;
-			float uvMinY = spriteInfo.uvMinY;
-			float uvMaxX = spriteInfo.uvMaxX;
-			float uvMaxY = spriteInfo.uvMaxY;
+			float uvMinX = spriteInfo.MinUV.X;
+			float uvMinY = spriteInfo.MaxUV.Y;
+			float uvMaxX = spriteInfo.MaxUV.X;
+			float uvMaxY = spriteInfo.MinUV.Y;
 
 			if (InVertexPositionChanged)
 			{
@@ -772,10 +772,10 @@ void FLexUIGeometry::UpdateUIRectFillRadial90Vertex(FLexUIGeometry* uiGeo, const
 		float posMaxX = halfW + pivotOffsetX;
 		float posMaxY = halfH + pivotOffsetY;
 		//uvs
-		float uvMinX = spriteInfo.uvMinX;
-		float uvMinY = spriteInfo.uvMinY;
-		float uvMaxX = spriteInfo.uvMaxX;
-		float uvMaxY = spriteInfo.uvMaxY;
+		float uvMinX = spriteInfo.MinUV.X;
+		float uvMinY = spriteInfo.MaxUV.Y;
+		float uvMaxX = spriteInfo.MaxUV.X;
+		float uvMaxY = spriteInfo.MinUV.Y;
 
 		if (InVertexPositionChanged)
 		{
@@ -1184,10 +1184,10 @@ void FLexUIGeometry::UpdateUIRectFillRadial180Vertex(FLexUIGeometry* uiGeo, cons
 		float posMaxX = halfW + pivotOffsetX;
 		float posMaxY = halfH + pivotOffsetY;
 		//uvs
-		float uvMinX = spriteInfo.uvMinX;
-		float uvMinY = spriteInfo.uvMinY;
-		float uvMaxX = spriteInfo.uvMaxX;
-		float uvMaxY = spriteInfo.uvMaxY;
+		float uvMinX = spriteInfo.MinUV.X;
+		float uvMinY = spriteInfo.MaxUV.Y;
+		float uvMaxX = spriteInfo.MaxUV.X;
+		float uvMaxY = spriteInfo.MinUV.Y;
 
 		if (InVertexPositionChanged)
 		{
@@ -1735,10 +1735,10 @@ void FLexUIGeometry::UpdateUIRectFillRadial360Vertex(FLexUIGeometry* uiGeo, cons
 		float posHalfX = (posMinX + posMaxX) * 0.5f;
 		float posHalfY = (posMinY + posMaxY) * 0.5f;
 		//uvs
-		float uvMinX = spriteInfo.uvMinX;
-		float uvMinY = spriteInfo.uvMinY;
-		float uvMaxX = spriteInfo.uvMaxX;
-		float uvMaxY = spriteInfo.uvMaxY;
+		float uvMinX = spriteInfo.MinUV.X;
+		float uvMinY = spriteInfo.MaxUV.Y;
+		float uvMaxX = spriteInfo.MaxUV.X;
+		float uvMaxY = spriteInfo.MinUV.Y;
 		float uvHalfX = (uvMinX + uvMaxX) * 0.5f;
 		float uvHalfY = (uvMinY + uvMaxY) * 0.5f;
 
@@ -3075,8 +3075,8 @@ void FLexUIGeometry::CalculateOffsetAndSize(
 		float heightScale = height / spriteInfo.GetSourceHeight();
 		float geoWidth = spriteInfo.Width * widthScale;
 		float geoHeight = spriteInfo.Height * heightScale;
-		pivotOffsetX += (-width + geoWidth) * 0.5f + spriteInfo.paddingLeft * widthScale;
-		pivotOffsetY += (-height + geoHeight) * 0.5f + spriteInfo.paddingBottom * heightScale;
+		pivotOffsetX += (-width + geoWidth) * 0.5f + spriteInfo.Padding.Left * widthScale;
+		pivotOffsetY += (-height + geoHeight) * 0.5f + spriteInfo.Padding.Bottom * heightScale;
 		halfWidth = geoWidth * 0.5f;
 		halfHeight = geoHeight * 0.5f;
 	}

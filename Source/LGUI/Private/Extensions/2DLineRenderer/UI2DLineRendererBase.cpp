@@ -31,8 +31,8 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseUV(FLexUIGeometry& InGeo, co
 	{
 		auto LexSprite = (ULexUISpriteData_BaseObject*)Brush.GetResourceObject();
 		auto& SpriteInfo = LexSprite->GetSpriteInfo();
-		MinUV = FVector2f(SpriteInfo.uvMinX, SpriteInfo.uvMinY);
-		MaxUV = FVector2f(SpriteInfo.uvMaxX, SpriteInfo.uvMaxY);
+		MinUV = FVector2f(SpriteInfo.MinUV.X, SpriteInfo.MaxUV.Y);
+		MaxUV = FVector2f(SpriteInfo.MaxUV.X, SpriteInfo.MinUV.Y);
 	}
 	else
 	{
@@ -40,7 +40,7 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseUV(FLexUIGeometry& InGeo, co
 		MaxUV = FVector2f(Brush.UVRegion.Z, Brush.UVRegion.W);
 	}
 	
-	float uvY = (MinUV.Y + MaxUV.Y) * 0.5f;
+	float uvY = (MaxUV.Y + MinUV.Y) * 0.5f;
 	int i = 0;
 	for (; i < pointCount; i++)
 	{
@@ -60,8 +60,8 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseUV(FLexUIGeometry& InGeo, co
 			auto& uvi1 = vertices[i + i + 3].TextureCoordinate[0];
 			uvi0.X = MinUV.X;
 			uvi1.X = MaxUV.X;
-			uvi0.Y = MinUV.Y;
-			uvi1.Y = MaxUV.Y;
+			uvi0.Y = MaxUV.Y;
+			uvi1.Y = MinUV.Y;
 		}
 		//end point cap
 		{
@@ -69,8 +69,8 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseUV(FLexUIGeometry& InGeo, co
 			auto& uvi1 = vertices[i + i + 1].TextureCoordinate[0];
 			uvi0.X = MinUV.X;
 			uvi1.X = MaxUV.X;
-			uvi0.Y = MinUV.Y;
-			uvi1.Y = MaxUV.Y;
+			uvi0.Y = MaxUV.Y;
+			uvi1.Y = MinUV.Y;
 		}
 	}
 }
@@ -193,7 +193,7 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseVertex(FLexUIGeometry& InGeo
 			{
 				auto LexSprite = (ULexUISpriteData_BaseObject*)Brush.GetResourceObject();
 				auto& SpriteInfo = LexSprite->GetSpriteInfo();
-				capSize = SpriteInfo.HasBorder() ? SpriteInfo.borderBottom : SpriteInfo.Height * 0.5f;
+				capSize = SpriteInfo.HasBorder() ? SpriteInfo.Border.Bottom : SpriteInfo.Height * 0.5f;
 				spriteWidth = SpriteInfo.Width;
 			}
 			else
@@ -282,7 +282,7 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseVertex(FLexUIGeometry& InGeo
 				{
 					auto LexSprite = (ULexUISpriteData_BaseObject*)Brush.GetResourceObject();
 					auto& SpriteInfo = LexSprite->GetSpriteInfo();
-					capSize = SpriteInfo.HasBorder() ? SpriteInfo.borderBottom : SpriteInfo.Height * 0.5f;
+					capSize = SpriteInfo.HasBorder() ? SpriteInfo.Border.Bottom : SpriteInfo.Height * 0.5f;
 					spriteWidth = SpriteInfo.Width;
 				}
 				else
