@@ -61,8 +61,8 @@ UObject* ULexUISpriteDataFactory::FactoryCreateNew(UClass* Class, UObject* InPar
 	if (SpriteTexture)
 	{
 		NewAsset->SpriteTexture = SpriteTexture;
-		NewAsset->SpriteInfo.width = SpriteTexture->GetSurfaceWidth();
-		NewAsset->SpriteInfo.height = SpriteTexture->GetSurfaceHeight();
+		NewAsset->SpriteInfo.Width = SpriteTexture->GetSurfaceWidth();
+		NewAsset->SpriteInfo.Height = SpriteTexture->GetSurfaceHeight();
 	}
 	return NewAsset;
 }

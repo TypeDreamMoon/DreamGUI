@@ -64,8 +64,8 @@ this can reduce the package size, because AtlasPacking already pack this SpriteT
 				return FReply::Handled();
 			})
 		];
-	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.width));
-	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.height));
+	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Width));
+	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Height));
 	IDetailCategoryBuilder& atlasPackingCategory = DetailBuilder.EditCategory("AtlasPacking");
 	auto PackingAtlasProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, packingAtlas));
 	atlasPackingCategory.AddProperty(PackingAtlasProperty);

@@ -13,7 +13,9 @@ public:
 	ULexUIPrefabFactory();
 
 	class ULGUIPrefab* SourcePrefab = nullptr;
+	UClass* RootActorClass = nullptr;
 	// UFactory interface
+	virtual bool ConfigureProperties() override;
 	virtual UObject* FactoryCreateNew(UClass* Class, UObject* InParent, FName Name, EObjectFlags Flags, UObject* Context, FFeedbackContext* Warn) override;
 	// End of UFactory interface
 };

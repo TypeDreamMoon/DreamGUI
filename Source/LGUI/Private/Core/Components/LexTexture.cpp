@@ -50,13 +50,13 @@ void ULexTexture::CheckSpriteData()
 {
 	if (IsValid(Texture))
 	{
-		SpriteData.width = Texture->GetSurfaceWidth();
-		SpriteData.height = Texture->GetSurfaceHeight();
+		SpriteData.Width = Texture->GetSurfaceWidth();
+		SpriteData.Height = Texture->GetSurfaceHeight();
 		if (DrawType != ELexUISpriteDrawType::Tiled)
 		{
 			ApplyUVRect();
-			SpriteData.ApplyUV(0, 0, SpriteData.width, SpriteData.height, 1.0f / SpriteData.width, 1.0f / SpriteData.height, UVRect);
-			SpriteData.ApplyBorderUV(1.0f / SpriteData.width, 1.0f / SpriteData.height);
+			SpriteData.ApplyUV(0, 0, SpriteData.Width, SpriteData.Height, 1.0f / SpriteData.Width, 1.0f / SpriteData.Height, UVRect);
+			SpriteData.ApplyBorderUV(1.0f / SpriteData.Width, 1.0f / SpriteData.Height);
 		}
 	}
 }
@@ -191,7 +191,7 @@ void ULexTexture::OnDimensionChanged(bool InPivotChange, bool InWidthChange, boo
         if (InWidthChange || InHeightChange)
         {
         	auto Widget = GetWidget();
-            SpriteData.ApplyUV(0, 0, Widget->GetWidth(), Widget->GetHeight(), 1.0f / SpriteData.width, 1.0f / SpriteData.height);
+            SpriteData.ApplyUV(0, 0, Widget->GetWidth(), Widget->GetHeight(), 1.0f / SpriteData.Width, 1.0f / SpriteData.Height);
             MarkUVDirty();
         }
 	}

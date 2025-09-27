@@ -683,18 +683,17 @@ bool ULexWidget::MoveComponentImpl(const FVector& Delta, const FQuat& NewRotatio
 	if (this->IsRegistered()//check if registerred, because it may called from reconstruction.
 		)
 	{
-		
+		if (bCanSetAnchorFromTransform)
+		{
+			CalculateAnchorFromTransform();
+		}
 	}
 	return result;
 }
 void ULexWidget::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
 {
 	Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
-
-	if (bCanSetAnchorFromTransform)
-	{
-		CalculateAnchorFromTransform();
-	}
+	
 	if (this->IsCanvasWidget() && this->RenderCanvas.IsValid())
 	{
 		//This is mainly to mark LGUICanvas's bIsViewProjectionMatrixDirty to true.
@@ -1021,7 +1020,8 @@ void ULexWidget::CalculateAnchorFromTransform()
 		AnchorData.AnchoredPosition = CalculatedAnchoredPosition;
 	}
 }
-void ULexWidget::CalculateTransformFromAnchor()
+void ULexWidget::
+CalculateTransformFromAnchor()
 {
 	bool HorizontalPositionChanged = false, VerticalPositionChanged = false;
 	CalculateTransformFromAnchor(HorizontalPositionChanged, VerticalPositionChanged);

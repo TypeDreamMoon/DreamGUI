@@ -38,8 +38,8 @@ void ULGUISpriteDataBaseObjectThumbnailRenderer::DrawFrame(class ULexUISpriteDat
 		if (SourceTexture->GetResource() != nullptr)
 		{
 			float triangleWidth = Width, triangleHeight = Height;
-			float spriteWidth = SpriteInfo.width;
-			float spriteHeight = SpriteInfo.height;
+			float spriteWidth = SpriteInfo.Width;
+			float spriteHeight = SpriteInfo.Height;
 			float xOffset = 0, yOffset = 0;
 			if (spriteWidth > spriteHeight)
 			{

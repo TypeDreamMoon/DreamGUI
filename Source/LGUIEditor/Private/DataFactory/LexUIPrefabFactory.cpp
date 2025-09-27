@@ -1,11 +1,16 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DataFactory/LexUIPrefabFactory.h"
+
+#include "ClassViewerFilter.h"
+#include "ClassViewerModule.h"
 #include "LGUIEditorModule.h"
 #include "PrefabSystem/LGUIPrefab.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "Core/Actor/LexWidgetActor.h"
+#include "Kismet2/KismetEditorUtilities.h"
+#include "Kismet2/SClassPickerDialog.h"
 
 #define LOCTEXT_NAMESPACE "LexUIPrefabFactory"
 
@@ -17,6 +22,79 @@ ULexUIPrefabFactory::ULexUIPrefabFactory()
 	bEditAfterNew = true;
 }
 
+class FAssetClassParentFilter : public IClassViewerFilter
+{
+public:
+	FAssetClassParentFilter()
+		: DisallowedClassFlags(CLASS_None), bDisallowBlueprintBase(false)
+	{}
+
+	/** All children of these classes will be included unless filtered out by another setting. */
+	TSet< const UClass* > AllowedChildrenOfClasses;
+
+	/** Disallowed class flags. */
+	EClassFlags DisallowedClassFlags;
+
+	/** Disallow blueprint base classes. */
+	bool bDisallowBlueprintBase;
+
+	virtual bool IsClassAllowed(const FClassViewerInitializationOptions& InInitOptions, const UClass* InClass, TSharedRef< FClassViewerFilterFuncs > InFilterFuncs) override
+	{
+		bool bAllowed = !InClass->HasAnyClassFlags(DisallowedClassFlags)
+			&& InClass->CanCreateAssetOfClass()
+			&& InFilterFuncs->IfInChildOfClassesSet(AllowedChildrenOfClasses, InClass) != EFilterReturn::Failed;
+
+		if (bAllowed && bDisallowBlueprintBase)
+		{
+			if (FKismetEditorUtilities::CanCreateBlueprintOfClass(InClass))
+			{
+				return false;
+			}
+		}
+
+		return bAllowed;
+	}
+
+	virtual bool IsUnloadedClassAllowed(const FClassViewerInitializationOptions& InInitOptions, const TSharedRef< const IUnloadedBlueprintData > InUnloadedClassData, TSharedRef< FClassViewerFilterFuncs > InFilterFuncs) override
+	{
+		if (bDisallowBlueprintBase)
+		{
+			return false;
+		}
+
+		return !InUnloadedClassData->HasAnyClassFlags(DisallowedClassFlags)
+			&& InFilterFuncs->IfInChildOfClassesSet(AllowedChildrenOfClasses, InUnloadedClassData) != EFilterReturn::Failed;
+	}
+};
+bool ULexUIPrefabFactory::ConfigureProperties()
+{
+	// Null the CurveClass so we can get a clean class
+	RootActorClass = nullptr;
+
+	// Load the classviewer module to display a class picker
+	FClassViewerModule& ClassViewerModule = FModuleManager::LoadModuleChecked<FClassViewerModule>("ClassViewer");
+
+	// Fill in options
+	FClassViewerInitializationOptions Options;
+	Options.Mode = EClassViewerMode::ClassPicker;
+
+	TSharedPtr<FAssetClassParentFilter> Filter = MakeShareable(new FAssetClassParentFilter);
+	Options.ClassFilters.Add(Filter.ToSharedRef());
+
+	Filter->DisallowedClassFlags = CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists;
+	Filter->AllowedChildrenOfClasses.Add(ALexWidgetActor::StaticClass());
+
+	const FText TitleText = LOCTEXT("CreatePrefabOptions", "Pick Class as Root-Actor");
+	UClass* ChosenClass = nullptr;
+	const bool bPressedOk = SClassPickerDialog::PickClass(TitleText, Options, ChosenClass, AActor::StaticClass());
+
+	if (bPressedOk)
+	{
+		RootActorClass = ChosenClass;
+	}
+
+	return bPressedOk;
+}
 UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent, FName Name, EObjectFlags Flags, UObject* Context, FFeedbackContext* Warn)
 {
 	if (SourcePrefab != nullptr)//prefab variant

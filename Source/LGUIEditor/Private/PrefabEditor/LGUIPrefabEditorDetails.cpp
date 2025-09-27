@@ -97,8 +97,8 @@ void SLGUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLGU
 	SubobjectEditor = SNew(SSubobjectInstanceEditor)
 		.AllowEditing(this, &SLGUIPrefabEditorDetails::IsEditorAllowEditing)
 		.ObjectContext(this, &SLGUIPrefabEditorDetails::GetActorContextAsObject)
-		.OnSelectionUpdated(this, &SLGUIPrefabEditorDetails::OnEditorTreeViewSelectionChanged)
-		.OnItemDoubleClicked(this, &SLGUIPrefabEditorDetails::OnEditorTreeViewItemDoubleClicked);
+		.OnSelectionUpdated(this, &SLGUIPrefabEditorDetails::OnSubObjectSelectionChanged)
+		.OnItemDoubleClicked(this, &SLGUIPrefabEditorDetails::OnSubObjectItemDoubleClicked);
 
 	
 	TSharedPtr<ISCSEditorUICustomization> Customization = MakeShared<LGUISCSEditorUICustomization>(InPrefabEditor);
@@ -227,15 +227,30 @@ void SLGUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLGU
 				]
 			]
 			+ SVerticalBox::Slot()
-			.Padding(FMargin(0, 2))
-			.AutoHeight()
 			[
-				SubobjectEditor.ToSharedRef()
-			]
-			+ SVerticalBox::Slot()
-			.Padding(FMargin(0, 2))
-			[
-				DetailsView.ToSharedRef()
+				SNew(SSplitter)
+				.Orientation(EOrientation::Orient_Vertical)
+				+ SSplitter::Slot()
+				.Resizable(true)
+				.SizeRule(SSplitter::ESizeRule::FractionOfParent)
+				.Value(0.2f)
+				[
+					SNew(SBox)
+					.MinDesiredHeight(200)
+					.Padding(FMargin(0, 2))
+					[
+						SubobjectEditor.ToSharedRef()
+					]
+				]
+				+ SSplitter::Slot()
+				[
+					SNew(SVerticalBox)
+					+SVerticalBox::Slot()
+					.Padding(FMargin(0, 2))
+					[
+						DetailsView.ToSharedRef()
+					]
+				]
 			]
 		];
 }
@@ -330,6 +345,7 @@ void SLGUIPrefabEditorDetails::OnEditorSelectionChanged()
 		}
 		if (SelectedObjectList.Num() == 0)
 		{
+			CachedActor = nullptr;
 			SubobjectEditor->ClearSelection();
 			SubobjectEditor->UpdateTree();
 		}
@@ -341,13 +357,14 @@ void SLGUIPrefabEditorDetails::OnEditorSelectionChanged()
 		{
 			DetailsView->SetObjects(SelectedObjectList, true);
 		}
+		CachedActor = nullptr;
 		SubobjectEditor->ClearSelection();
 		SubobjectEditor->UpdateTree();
 	}
 	bIsSelectFromLGUIEditor = false;
 }
 
-void SLGUIPrefabEditorDetails::OnEditorTreeViewSelectionChanged(const TArray<FSubobjectEditorTreeNodePtrType>& SelectedNodes)
+void SLGUIPrefabEditorDetails::OnSubObjectSelectionChanged(const TArray<FSubobjectEditorTreeNodePtrType>& SelectedNodes)
 {
 	bIsSelectFromDetails = true;
 	if (SelectedNodes.Num() > 0)
@@ -393,7 +410,7 @@ void SLGUIPrefabEditorDetails::OnEditorTreeViewSelectionChanged(const TArray<FSu
 	bIsSelectFromDetails = false;
 }
 
-void SLGUIPrefabEditorDetails::OnEditorTreeViewItemDoubleClicked(const FSubobjectEditorTreeNodePtrType ClickedNode)
+void SLGUIPrefabEditorDetails::OnSubObjectItemDoubleClicked(const FSubobjectEditorTreeNodePtrType ClickedNode)
 {
 
 }

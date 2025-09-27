@@ -16,9 +16,9 @@ struct LGUI_API FLexUISpriteInfo
 
 public:
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		uint16 width = 0;
+		uint16 Width = 0;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		uint16 height = 0;
+		uint16 Height = 0;
 
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		float borderLeft = 0;
@@ -40,40 +40,40 @@ public:
 
 	/** left point uv */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
-		float uv0X = 0;
+		float uvMinX = 0;
 	/** bottom point uv */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
-		float uv0Y = 1;
+		float uvMinY = 1;
 	/** right point uv */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
-		float uv3X = 1;
+		float uvMaxX = 1;
 	/** top point uv */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
-		float uv3Y = 0;
+		float uvMaxY = 0;
 
 	/** border left point uv */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
-		float buv0X = 0;
+		float buvMinX = 0;
 	/** border bottom point uv */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
-		float buv0Y = 1;
+		float buvMinY = 1;
 	/** border right point uv */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
-		float buv3X = 1;
+		float buvMaxX = 1;
 	/** border top point uv */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
-		float buv3Y = 0;
+		float buvMaxY = 0;
 
 public:
-	auto GetUV0()const { return FVector2f(uv0X, uv0Y); }
-	auto GetUV1()const { return FVector2f(uv3X, uv0Y); }
-	auto GetUV2()const { return FVector2f(uv0X, uv3Y); }
-	auto GetUV3()const { return FVector2f(uv3X, uv3Y); }
+	auto GetUV0()const { return FVector2f(uvMinX, uvMinY); }
+	auto GetUV1()const { return FVector2f(uvMaxX, uvMinY); }
+	auto GetUV2()const { return FVector2f(uvMinX, uvMaxY); }
+	auto GetUV3()const { return FVector2f(uvMaxX, uvMaxY); }
 
-	auto GetUVCenter()const { return FVector2f((uv3X - uv0X) * 0.5f + uv0X, (uv0Y - uv3Y) * 0.5f + uv3Y); }
+	auto GetUVCenter()const { return FVector2f((uvMaxX - uvMinX) * 0.5f + uvMinX, (uvMinY - uvMaxY) * 0.5f + uvMaxY); }
 
-	uint16 GetSourceWidth()const { return width + paddingLeft + paddingRight; }
-	uint16 GetSourceHeight()const { return height + paddingTop + paddingBottom; }
+	uint16 GetSourceWidth()const { return Width + paddingLeft + paddingRight; }
+	uint16 GetSourceHeight()const { return Height + paddingTop + paddingBottom; }
 	
 	bool HasBorder()const;
 	bool HasPadding()const;
@@ -82,21 +82,21 @@ public:
 	void ApplyBorderUV(float texFullWidthReciprocal, float texFullHeightReciprocal);
 	void ScaleUV(float InMultiply)
 	{
-		uv0X *= InMultiply;
-		uv0Y *= InMultiply;
-		uv3X *= InMultiply;
-		uv3Y *= InMultiply;
+		uvMinX *= InMultiply;
+		uvMinY *= InMultiply;
+		uvMaxX *= InMultiply;
+		uvMaxY *= InMultiply;
 
-		buv0X *= InMultiply;
-		buv3X *= InMultiply;
-		buv0Y *= InMultiply;
-		buv3Y *= InMultiply;
+		buvMinX *= InMultiply;
+		buvMaxX *= InMultiply;
+		buvMinY *= InMultiply;
+		buvMaxY *= InMultiply;
 	}
 
 	bool operator == (const FLexUISpriteInfo& Other)const
 	{
-		return width == Other.width
-			&& height == Other.height
+		return Width == Other.Width
+			&& Height == Other.Height
 			&& borderLeft == Other.borderLeft
 			&& borderRight == Other.borderRight
 			&& borderTop == Other.borderTop
@@ -109,8 +109,8 @@ public:
 	}
 	bool operator != (const FLexUISpriteInfo& Other)const
 	{
-		return width != Other.width
-			|| height != Other.height
+		return Width != Other.Width
+			|| Height != Other.Height
 			|| borderLeft != Other.borderLeft
 			|| borderRight != Other.borderRight
 			|| borderTop != Other.borderTop

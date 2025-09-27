@@ -31,8 +31,8 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseUV(FLexUIGeometry& InGeo, co
 	{
 		auto LexSprite = (ULexUISpriteData_BaseObject*)Brush.GetResourceObject();
 		auto& SpriteInfo = LexSprite->GetSpriteInfo();
-		MinUV = FVector2f(SpriteInfo.uv0X, SpriteInfo.uv0Y);
-		MaxUV = FVector2f(SpriteInfo.uv3X, SpriteInfo.uv3Y);
+		MinUV = FVector2f(SpriteInfo.uvMinX, SpriteInfo.uvMinY);
+		MaxUV = FVector2f(SpriteInfo.uvMaxX, SpriteInfo.uvMaxY);
 	}
 	else
 	{
@@ -193,8 +193,8 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseVertex(FLexUIGeometry& InGeo
 			{
 				auto LexSprite = (ULexUISpriteData_BaseObject*)Brush.GetResourceObject();
 				auto& SpriteInfo = LexSprite->GetSpriteInfo();
-				capSize = SpriteInfo.HasBorder() ? SpriteInfo.borderBottom : SpriteInfo.height * 0.5f;
-				spriteWidth = SpriteInfo.width;
+				capSize = SpriteInfo.HasBorder() ? SpriteInfo.borderBottom : SpriteInfo.Height * 0.5f;
+				spriteWidth = SpriteInfo.Width;
 			}
 			else
 			{
@@ -282,8 +282,8 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseVertex(FLexUIGeometry& InGeo
 				{
 					auto LexSprite = (ULexUISpriteData_BaseObject*)Brush.GetResourceObject();
 					auto& SpriteInfo = LexSprite->GetSpriteInfo();
-					capSize = SpriteInfo.HasBorder() ? SpriteInfo.borderBottom : SpriteInfo.height * 0.5f;
-					spriteWidth = SpriteInfo.width;
+					capSize = SpriteInfo.HasBorder() ? SpriteInfo.borderBottom : SpriteInfo.Height * 0.5f;
+					spriteWidth = SpriteInfo.Width;
 				}
 				else
 				{

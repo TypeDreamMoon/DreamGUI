@@ -20,23 +20,23 @@
 
 void FLexUISpriteInfo::ApplyUV(int32 InX, int32 InY, int32 InWidth, int32 InHeight, float texFullWidthReciprocal, float texFullHeightReciprocal)
 {
-	width = InWidth;
-	height = InHeight;
+	Width = InWidth;
+	Height = InHeight;
 
-	uv0X = InX * texFullWidthReciprocal;
-	uv0Y = (InY + InHeight) * texFullHeightReciprocal;
-	uv3X = (InX + InWidth) * texFullWidthReciprocal;
-	uv3Y = InY * texFullHeightReciprocal;
+	uvMinX = InX * texFullWidthReciprocal;
+	uvMinY = (InY + InHeight) * texFullHeightReciprocal;
+	uvMaxX = (InX + InWidth) * texFullWidthReciprocal;
+	uvMaxY = InY * texFullHeightReciprocal;
 }
 void FLexUISpriteInfo::ApplyUV(int32 InX, int32 InY, int32 InWidth, int32 InHeight, float texFullWidthReciprocal, float texFullHeightReciprocal, const FVector4& uvRect)
 {
-	width = InWidth;
-	height = InHeight;
+	Width = InWidth;
+	Height = InHeight;
 
-	uv0X = InX * texFullWidthReciprocal + uvRect.X;
-	uv0Y = (InY + InHeight) * texFullHeightReciprocal * uvRect.W + uvRect.Y;
-	uv3X = (InX + InWidth) * texFullWidthReciprocal * uvRect.Z + uvRect.X;
-	uv3Y = InY * texFullHeightReciprocal + uvRect.Y;
+	uvMinX = InX * texFullWidthReciprocal + uvRect.X;
+	uvMinY = (InY + InHeight) * texFullHeightReciprocal * uvRect.W + uvRect.Y;
+	uvMaxX = (InX + InWidth) * texFullWidthReciprocal * uvRect.Z + uvRect.X;
+	uvMaxY = InY * texFullHeightReciprocal + uvRect.Y;
 }
 bool FLexUISpriteInfo::HasBorder()const
 {
@@ -48,10 +48,10 @@ bool FLexUISpriteInfo::HasPadding()const
 }
 void FLexUISpriteInfo::ApplyBorderUV(float texFullWidthReciprocal, float texFullHeightReciprocal)
 {
-	buv0X = uv0X + borderLeft * texFullWidthReciprocal;
-	buv3X = uv3X - borderRight * texFullWidthReciprocal;
-	buv0Y = uv0Y - borderBottom * texFullHeightReciprocal;
-	buv3Y = uv3Y + borderTop * texFullHeightReciprocal;
+	buvMinX = uvMinX + borderLeft * texFullWidthReciprocal;
+	buvMaxX = uvMaxX - borderRight * texFullWidthReciprocal;
+	buvMinY = uvMinY - borderBottom * texFullHeightReciprocal;
+	buvMaxY = uvMaxY + borderTop * texFullHeightReciprocal;
 }
 
 bool ULexUISpriteData::InsertTexture(FLexUIDynamicSpriteAtlasData* InAtlasData)
@@ -304,8 +304,8 @@ void ULexUISpriteData::PostEditChangeProperty(struct FPropertyChangedEvent& Prop
 #if WITH_EDITOR
 				FTextureCompilingManager::Get().FinishCompilation({ SpriteTexture });
 #endif
-				SpriteInfo.width = SpriteTexture->GetSizeX();
-				SpriteInfo.height = SpriteTexture->GetSizeY();
+				SpriteInfo.Width = SpriteTexture->GetSizeX();
+				SpriteInfo.Height = SpriteTexture->GetSizeY();
 			}
 		}
 		else if (
@@ -321,8 +321,8 @@ void ULexUISpriteData::PostEditChangeProperty(struct FPropertyChangedEvent& Prop
 #if WITH_EDITOR
 				FTextureCompilingManager::Get().FinishCompilation({ SpriteTexture });
 #endif
-				SpriteInfo.width = SpriteTexture->GetSizeX();
-				SpriteInfo.height = SpriteTexture->GetSizeY();
+				SpriteInfo.Width = SpriteTexture->GetSizeX();
+				SpriteInfo.Height = SpriteTexture->GetSizeY();
 				if (bIsInitialized)
 				{
 					float atlasTextureSizeInv = 1.0f / GetAtlasTexture()->GetSizeX();
@@ -527,8 +527,8 @@ ULexUISpriteData* ULexUISpriteData::CreateLexUISpriteData(UObject* Outer, UTextu
 	{
 		result->SpriteTexture = inSpriteTexture;
 		auto& spriteInfo = result->SpriteInfo;
-		spriteInfo.width = inSpriteTexture->GetSizeX();
-		spriteInfo.height = inSpriteTexture->GetSizeY();
+		spriteInfo.Width = inSpriteTexture->GetSizeX();
+		spriteInfo.Height = inSpriteTexture->GetSizeY();
 		spriteInfo.borderLeft = (uint16)inHorizontalBorder.X;
 		spriteInfo.borderRight = (uint16)inHorizontalBorder.Y;
 		spriteInfo.borderTop = (uint16)inVerticalBorder.X;

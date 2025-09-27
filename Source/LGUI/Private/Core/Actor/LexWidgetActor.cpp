@@ -7,7 +7,6 @@
 #include "Utils/LexUIUtils.h"
 #endif
 
-
 ALexWidgetActor::ALexWidgetActor()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -17,6 +16,15 @@ ALexWidgetActor::ALexWidgetActor()
 
 	LexWidget = CreateDefaultSubobject<ULexWidget>(TEXT("LexWidget"));
 	RootComponent = LexWidget;
+}
+
+void ALexWidgetActor::BeginPlay()
+{
+	Super::BeginPlay();
+	if (!ULGUIPrefabWorldSubsystem::IsLGUIPrefabSystemProcessingActor(this))
+	{
+		WidgetConstruct();
+	}
 }
 
 #if WITH_EDITOR
@@ -70,4 +78,17 @@ void ALexWidgetActor::SetIsTemporarilyHiddenInEditor(bool bIsHidden)
 	Super::SetIsTemporarilyHiddenInEditor(bIsHidden);
 }
 #endif
+
+void ALexWidgetActor::Awake_Implementation()
+{
+	WidgetConstruct();
+}
+
+void ALexWidgetActor::WidgetConstruct()
+{
+	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
+	{
+		ReceiveWidgetConstruct();
+	}
+}
 

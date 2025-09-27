@@ -133,11 +133,6 @@ void ULexImage::OnUpdateGeometry(FLexUIGeometry& InMesh, bool InTriangleChanged,
 	auto RenderCanvas = Widget->GetRenderCanvas();
 	auto FinalColor = FLexUIUtils::MultiplyColor(Brush.TintColor, this->GetFinalColor());
 
-	auto& triangles = InMesh.Triangles;
-	bool pixelSnapping = this->GetShouldAffectByPixelSnapping() && Widget->GetPixelSnappingInHierarchy();
-	auto& vertices = InMesh.Vertices;
-	auto& originVertices = InMesh.OriginVertices;
-	
 	switch (Brush.DrawAs)
 	{
 	case ELexUIImageBrushDrawType::None:
@@ -145,82 +140,24 @@ void ULexImage::OnUpdateGeometry(FLexUIGeometry& InMesh, bool InTriangleChanged,
 	case ELexUIImageBrushDrawType::Image:
 		{
 			DRAW_AS_IMAGE:
-			FLexUIGeometry::LexUIGeometrySetArrayNum(triangles, 6);
-			if (InTriangleChanged)
+			FLexUISpriteInfo SpriteInfo;
+			if (bHasAddToSprite)
 			{
-				triangles[0] = 0;
-				triangles[1] = 3;
-				triangles[2] = 2;
-				triangles[3] = 0;
-				triangles[4] = 1;
-				triangles[5] = 3;
+				auto LexSprite = (ULexUISpriteData_BaseObject*)Brush.GetResourceObject();
+				SpriteInfo = LexSprite->GetSpriteInfo();
 			}
-	
-			FLexUIGeometry::LexUIGeometrySetArrayNum(vertices, 4);
-			FLexUIGeometry::LexUIGeometrySetArrayNum(originVertices, 4);
-			
-			if (InVertexPositionChanged)
+			else
 			{
-				//offset and size
-				float halfW = RenderSize.X * 0.5f, halfH = RenderSize.Y * 0.5f;
-				float pivotOffsetX = RenderSize.X * (0.5f - Pivot.X);//width * 0.5f *(1 - pivot.X * 2)
-				float pivotOffsetY = RenderSize.Y * (0.5f - Pivot.Y);//height * 0.5f *(1 - pivot.Y * 2)
-				//positions
-				float minX = -halfW + pivotOffsetX;
-				float minY = -halfH + pivotOffsetY;
-				float maxX = halfW + pivotOffsetX;
-				float maxY = halfH + pivotOffsetY;
-				originVertices[0].Position = FVector3f(0, minX, minY);
-				originVertices[1].Position = FVector3f(0, maxX, minY);
-				originVertices[2].Position = FVector3f(0, minX, maxY);
-				originVertices[3].Position = FVector3f(0, maxX, maxY);
-				//snap pixel
-				if (pixelSnapping)
-				{
-					FLexUIGeometry::AdjustPixelPerfectPos(originVertices, 0, 4, RenderCanvas, this);
-				}
+				SpriteInfo.Width = Brush.ImageSize.X;
+				SpriteInfo.Height = Brush.ImageSize.Y;
+				SpriteInfo.uvMinX = Brush.UVRegion.X;
+				SpriteInfo.uvMinY = Brush.UVRegion.Y;
+				SpriteInfo.uvMaxX = Brush.UVRegion.Z;
+				SpriteInfo.uvMaxY = Brush.UVRegion.W;
 			}
-
-			if (InVertexUVChanged)
-			{
-				if (bHasAddToSprite)
-				{
-					auto LexSprite = (ULexUISpriteData_BaseObject*)Brush.GetResourceObject();
-					auto& SpriteInfo = LexSprite->GetSpriteInfo();
-					vertices[0].TextureCoordinate[0] = SpriteInfo.GetUV0();
-					vertices[1].TextureCoordinate[0] = SpriteInfo.GetUV1();
-					vertices[2].TextureCoordinate[0] = SpriteInfo.GetUV2();
-					vertices[3].TextureCoordinate[0] = SpriteInfo.GetUV3();
-				}
-				else
-				{
-					vertices[0].TextureCoordinate[0] = FVector2f(Brush.UVRegion.X, Brush.UVRegion.W);
-					vertices[1].TextureCoordinate[0] = FVector2f(Brush.UVRegion.Z, Brush.UVRegion.W);
-					vertices[2].TextureCoordinate[0] = FVector2f(Brush.UVRegion.X, Brush.UVRegion.Y);
-					vertices[3].TextureCoordinate[0] = FVector2f(Brush.UVRegion.Z, Brush.UVRegion.Y);
-				}
-			}
-
-			if (InVertexColorChanged)
-			{
-				FLexUIGeometry::UpdateUIColor(&InMesh, FinalColor);
-			}
-
-			if (InVertexUVChanged || InVertexPositionChanged || InVertexColorChanged)
-			{
-				//additional data
-				{
-					//normal & tangent
-					if (RenderCanvas->GetRequireNormalAndTangent())
-					{
-						for(int i = 0; i < originVertices.Num(); i++)
-						{
-							originVertices[i].Normal = FVector3f(-1, 0, 0);
-							originVertices[i].Tangent = FVector3f(0, 1, 0);
-						}
-					}
-				}
-			}
+			FLexUIGeometry::UpdateUIRectSimpleVertex(&InMesh, RenderSize.X, RenderSize.Y, FVector2f(Pivot)
+			, SpriteInfo, RenderCanvas, this, FinalColor
+			, InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged);
 		}
 		break;
 	case ELexUIImageBrushDrawType::Border:
@@ -237,197 +174,34 @@ void ULexImage::OnUpdateGeometry(FLexUIGeometry& InMesh, bool InTriangleChanged,
 				if (Brush.Margin.Left == 0 && Brush.Margin.Right == 0 && Brush.Margin.Top == 0 && Brush.Margin.Bottom == 0)
 					goto DRAW_AS_IMAGE;
 			}
-			bool fillCenter = Brush.DrawAs == ELexUIImageBrushDrawType::Box;
-			int triangleCount;
-			if (fillCenter)
+			bool bFillCenter = Brush.DrawAs == ELexUIImageBrushDrawType::Box;
+			FLexUISpriteInfo SpriteInfo;
+			if (bHasAddToSprite)
 			{
-				triangleCount = 54;
+				auto LexSprite = (ULexUISpriteData_BaseObject*)Brush.GetResourceObject();
+				SpriteInfo = LexSprite->GetSpriteInfo();
 			}
 			else
 			{
-				triangleCount = 48;
+				SpriteInfo.Width = Brush.ImageSize.X;
+				SpriteInfo.Height = Brush.ImageSize.Y;
+				SpriteInfo.uvMinX = Brush.UVRegion.X;
+				SpriteInfo.uvMinY = Brush.UVRegion.Y;
+				SpriteInfo.uvMaxX = Brush.UVRegion.Z;
+				SpriteInfo.uvMaxY = Brush.UVRegion.W;
+				SpriteInfo.borderLeft = Brush.Margin.Left * Brush.ImageSize.X;
+				SpriteInfo.borderRight = Brush.Margin.Right * Brush.ImageSize.X;
+				SpriteInfo.borderTop = Brush.Margin.Top * Brush.ImageSize.Y;
+				SpriteInfo.borderBottom = Brush.Margin.Bottom * Brush.ImageSize.Y;
+				float uvWidth = SpriteInfo.uvMaxX - SpriteInfo.uvMinX, uvHeight = SpriteInfo.uvMinY - SpriteInfo.uvMaxY;
+				SpriteInfo.buvMinX = SpriteInfo.uvMinX + Brush.Margin.Left * uvWidth;
+				SpriteInfo.buvMinY = SpriteInfo.uvMinY - Brush.Margin.Bottom * uvHeight;
+				SpriteInfo.buvMaxX = SpriteInfo.uvMaxX - Brush.Margin.Right * uvWidth;
+				SpriteInfo.buvMaxY = SpriteInfo.uvMaxY + Brush.Margin.Top * uvHeight;
 			}
-			FLexUIGeometry::LexUIGeometrySetArrayNum(triangles, triangleCount);
-			if (InTriangleChanged)
-			{
-				int wSeg = 3, hSeg = 3;
-				int vStartIndex = 0;
-				int triangleArrayIndex = 0;
-				for (int h = 0; h < hSeg; h++)
-				{
-					for (int w = 0; w < wSeg; w++)
-					{
-						if (!fillCenter)
-							if (h == 1 && w == 1)continue;
-						int vIndex = vStartIndex + w;
-						triangles[triangleArrayIndex++] = vIndex;
-						triangles[triangleArrayIndex++] = vIndex + wSeg + 2;
-						triangles[triangleArrayIndex++] = vIndex + wSeg + 1;
-
-						triangles[triangleArrayIndex++] = vIndex;
-						triangles[triangleArrayIndex++] = vIndex + 1;
-						triangles[triangleArrayIndex++] = vIndex + wSeg + 2;
-					}
-					vStartIndex += wSeg + 1;
-				}
-			}
-
-			auto verticesCount = 16;
-			FLexUIGeometry::LexUIGeometrySetArrayNum(vertices, verticesCount);
-			FLexUIGeometry::LexUIGeometrySetArrayNum(originVertices, verticesCount);
-			
-			if (InVertexPositionChanged)
-			{
-				//pivot offset
-				float pivotOffsetX = RenderSize.X * (0.5f - Pivot.X);//width * 0.5f *(1 - pivot.X * 2)
-				float pivotOffsetY = RenderSize.Y * (0.5f - Pivot.Y);//height * 0.5f *(1 - pivot.Y * 2)
-				float halfW = RenderSize.X * 0.5f, halfH = RenderSize.Y * 0.5f;
-				float geoWidth, geoHeight;
-				float borderLeft, borderTop, borderRight, borderBottom;
-				if (bHasAddToSprite)
-				{
-					auto LexSprite = (ULexUISpriteData_BaseObject*)Brush.GetResourceObject();
-					auto& SpriteInfo = LexSprite->GetSpriteInfo();
-					geoWidth = RenderSize.X;
-					geoHeight = RenderSize.Y;
-
-					borderLeft = SpriteInfo.borderLeft;
-					borderRight = SpriteInfo.borderRight;
-					borderTop = SpriteInfo.borderTop;
-					borderBottom = SpriteInfo.borderBottom;
-
-					if (SpriteInfo.HasBorder())
-					{
-						float widthScale = RenderSize.X / SpriteInfo.GetSourceWidth();
-						float heightScale = RenderSize.Y / SpriteInfo.GetSourceHeight();
-						geoWidth = SpriteInfo.width * widthScale;
-						geoHeight = SpriteInfo.height * heightScale;
-						pivotOffsetX += (-RenderSize.X + geoWidth) * 0.5f + SpriteInfo.paddingLeft * widthScale;
-						pivotOffsetY += (-RenderSize.Y + geoHeight) * 0.5f + SpriteInfo.paddingBottom * heightScale;
-					}
-				}
-				else
-				{
-					geoWidth = RenderSize.X;
-					geoHeight = RenderSize.Y;
-					
-					borderLeft = Brush.Margin.Left * Brush.ImageSize.X;
-					borderRight = Brush.Margin.Right * Brush.ImageSize.X;
-					borderTop = Brush.Margin.Top * Brush.ImageSize.Y;
-					borderBottom = Brush.Margin.Bottom * Brush.ImageSize.Y;
-				}
-				//vertices
-				
-				float widthBorder = borderLeft + borderRight;
-				float heightBorder = borderTop + borderBottom;
-				float widthScale = geoWidth < widthBorder ? geoWidth / widthBorder : 1.0f;
-				float heightScale = geoHeight < heightBorder ? geoHeight / heightBorder : 1.0f;
-				float x0 = -halfW + pivotOffsetX;
-				float x1 = (x0 + borderLeft * widthScale);
-				float x3 = halfW + pivotOffsetX;
-				float x2 = (x3 - borderRight * widthScale);
-				float y0 = -halfH + pivotOffsetY;
-				float y1 = (y0 + borderBottom * heightScale);
-				float y3 = halfH + pivotOffsetY;
-				float y2 = (y3 - borderTop * heightScale);
-
-				originVertices[0].Position = FVector3f(0, x0, y0);
-				originVertices[1].Position = FVector3f(0, x1, y0);
-				originVertices[2].Position = FVector3f(0, x2, y0);
-				originVertices[3].Position = FVector3f(0, x3, y0);
-
-				originVertices[4].Position = FVector3f(0, x0, y1);
-				originVertices[5].Position = FVector3f(0, x1, y1);
-				originVertices[6].Position = FVector3f(0, x2, y1);
-				originVertices[7].Position = FVector3f(0, x3, y1);
-
-				originVertices[8].Position = FVector3f(0, x0, y2);
-				originVertices[9].Position = FVector3f(0, x1, y2);
-				originVertices[10].Position = FVector3f(0, x2, y2);
-				originVertices[11].Position = FVector3f(0, x3, y2);
-
-				originVertices[12].Position = FVector3f(0, x0, y3);
-				originVertices[13].Position = FVector3f(0, x1, y3);
-				originVertices[14].Position = FVector3f(0, x2, y3);
-				originVertices[15].Position = FVector3f(0, x3, y3);
-
-				//snap pixel
-				if (pixelSnapping)
-				{
-					FLexUIGeometry::AdjustPixelPerfectPos(originVertices, 0, verticesCount, RenderCanvas, this);
-				}
-			}
-
-			if (InVertexUVChanged)
-			{
-				float uv0X, uv0Y, uv3X, uv3Y;
-				float buv0X, buv0Y, buv3X, buv3Y;
-				if (bHasAddToSprite)
-				{
-					auto LexSprite = (ULexUISpriteData_BaseObject*)Brush.GetResourceObject();
-					auto& SpriteInfo = LexSprite->GetSpriteInfo();
-					uv0X = SpriteInfo.uv0X;
-					uv0Y = SpriteInfo.uv0Y;
-					uv3X = SpriteInfo.uv3X;
-					uv3Y = SpriteInfo.uv3Y;
-					buv0X = SpriteInfo.buv0X;
-					buv0Y = SpriteInfo.buv0Y;
-					buv3X = SpriteInfo.buv3X;
-					buv3Y = SpriteInfo.buv3Y;
-				}
-				else
-				{
-					uv0X = Brush.UVRegion.X;
-					uv0Y = Brush.UVRegion.W;
-					uv3X = Brush.UVRegion.Z;
-					uv3Y = Brush.UVRegion.Y;
-					float uvWidth = uv3X - uv0X, uvHeight = uv0Y - uv3Y;
-					buv0X = uv0X + Brush.Margin.Left * uvWidth;
-					buv0Y = uv0Y - Brush.Margin.Bottom * uvHeight;
-					buv3X = uv3X - Brush.Margin.Right * uvWidth;
-					buv3Y = uv3Y + Brush.Margin.Top * uvHeight;
-				}
-				vertices[0].TextureCoordinate[0] = FVector2f(uv0X, uv0Y);
-				vertices[1].TextureCoordinate[0] = FVector2f(buv0X, uv0Y);
-				vertices[2].TextureCoordinate[0] = FVector2f(buv3X, uv0Y);
-				vertices[3].TextureCoordinate[0] = FVector2f(uv3X, uv0Y);
-
-				vertices[4].TextureCoordinate[0] = FVector2f(uv0X, buv0Y);
-				vertices[5].TextureCoordinate[0] = FVector2f(buv0X, buv0Y);
-				vertices[6].TextureCoordinate[0] = FVector2f(buv3X, buv0Y);
-				vertices[7].TextureCoordinate[0] = FVector2f(uv3X, buv0Y);
-
-				vertices[8].TextureCoordinate[0] = FVector2f(uv0X, buv3Y);
-				vertices[9].TextureCoordinate[0] = FVector2f(buv0X, buv3Y);
-				vertices[10].TextureCoordinate[0] = FVector2f(buv3X, buv3Y);
-				vertices[11].TextureCoordinate[0] = FVector2f(uv3X, buv3Y);
-
-				vertices[12].TextureCoordinate[0] = FVector2f(uv0X, uv3Y);
-				vertices[13].TextureCoordinate[0] = FVector2f(buv0X, uv3Y);
-				vertices[14].TextureCoordinate[0] = FVector2f(buv3X, uv3Y);
-				vertices[15].TextureCoordinate[0] = FVector2f(uv3X, uv3Y);
-			}
-
-			if (InVertexColorChanged)
-			{
-				FLexUIGeometry::UpdateUIColor(&InMesh, FinalColor);
-			}
-
-			if (InVertexUVChanged || InVertexPositionChanged || InVertexColorChanged)
-			{
-				//additional data
-				{
-					//normal & tangent
-					if (RenderCanvas->GetRequireNormalAndTangent())
-					{
-						for (int i = 0; i < originVertices.Num(); i++)
-						{
-							originVertices[i].Normal = FVector3f(-1, 0, 0);
-							originVertices[i].Tangent = FVector3f(0, 1, 0);
-						}
-					}
-				}
-			}
+			FLexUIGeometry::UpdateUIRectBorderVertex(&InMesh, bFillCenter, RenderSize.X, RenderSize.Y, FVector2f(Pivot)
+				, SpriteInfo, RenderCanvas, this, FinalColor
+				, InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged);
 		}
 		break;
 	}

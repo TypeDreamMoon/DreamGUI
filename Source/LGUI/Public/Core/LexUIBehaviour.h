@@ -60,7 +60,7 @@ protected:
 	bool IsAllowToCallAwake()const;
 	/**
 	 * This function is always called before any Start functions and also after a prefab is loaded.
-	 * This is a good replacement for BeginPlay in LGUI's Prefab workflow. Because Awake will execute after all prefab serialization and object reference is done.
+	 * This is a good replacement for BeginPlay in LexUI's Prefab workflow. Because Awake will execute after all prefab serialization and object reference is done.
 	 * NOTE!!! If RootComponent is UIItem: if UIItem is not "ActiveInHierarchy" during start up, then Awake is not called until "ActiveInHierarchy" becomes true.
 	 * Awake execute order in prefab: higher in hierarchy will execute earlier, so scripts on root actor will execute the first.
 	 */

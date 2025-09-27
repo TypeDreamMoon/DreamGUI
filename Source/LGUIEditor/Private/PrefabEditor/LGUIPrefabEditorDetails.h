@@ -30,8 +30,8 @@ private:
 	AActor* GetActorContext() const;
 	UObject* GetActorContextAsObject() const { return GetActorContext(); }
 	void OnEditorSelectionChanged();
-	void OnEditorTreeViewSelectionChanged(const TArray<FSubobjectEditorTreeNodePtrType>& SelectedNodes);
-	void OnEditorTreeViewItemDoubleClicked(const FSubobjectEditorTreeNodePtrType ClickedNode);
+	void OnSubObjectSelectionChanged(const TArray<FSubobjectEditorTreeNodePtrType>& SelectedNodes);
+	void OnSubObjectItemDoubleClicked(const FSubobjectEditorTreeNodePtrType ClickedNode);
 
 	TWeakPtr<FLGUIPrefabEditor> PrefabEditorPtr;
 

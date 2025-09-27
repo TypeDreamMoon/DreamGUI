@@ -130,10 +130,10 @@ void UUIPolygon::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged,
 				float sin = FMath::Sin(angle);
 				float cos = FMath::Cos(angle);
 
-				float halfUVWidth = (spriteInfo.uv3X - spriteInfo.uv0X) * 0.5f;
-				float halfUVHeight = (spriteInfo.uv3Y - spriteInfo.uv0Y) * 0.5f;
-				float centerUVX = (spriteInfo.uv0X + spriteInfo.uv3X) * 0.5f;
-				float centerUVY = (spriteInfo.uv0Y + spriteInfo.uv3Y) * 0.5f;
+				float halfUVWidth = (spriteInfo.uvMaxX - spriteInfo.uvMinX) * 0.5f;
+				float halfUVHeight = (spriteInfo.uvMaxY - spriteInfo.uvMinY) * 0.5f;
+				float centerUVX = (spriteInfo.uvMinX + spriteInfo.uvMaxX) * 0.5f;
+				float centerUVY = (spriteInfo.uvMinY + spriteInfo.uvMaxY) * 0.5f;
 
 				float x = centerUVX;
 				float y = centerUVY;
@@ -153,8 +153,8 @@ void UUIPolygon::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged,
 			break;
 			case UIPolygonUVType::HeightCenter:
 			{
-				vertices[0].TextureCoordinate[0] = FVector2f(spriteInfo.uv0X, (spriteInfo.uv0Y + spriteInfo.uv3Y) * 0.5f);
-				FVector2f otherUV(spriteInfo.uv3X, (spriteInfo.uv0Y + spriteInfo.uv3Y) * 0.5f);
+				vertices[0].TextureCoordinate[0] = FVector2f(spriteInfo.uvMinX, (spriteInfo.uvMinY + spriteInfo.uvMaxY) * 0.5f);
+				FVector2f otherUV(spriteInfo.uvMaxX, (spriteInfo.uvMinY + spriteInfo.uvMaxY) * 0.5f);
 				for (int i = 1; i < vertexCount; i++)
 				{
 					vertices[i].TextureCoordinate[0] = otherUV;
@@ -163,10 +163,10 @@ void UUIPolygon::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged,
 			break;
 			case UIPolygonUVType::StretchSpriteHeight:
 			{
-				vertices[0].TextureCoordinate[0] = FVector2f(spriteInfo.uv0X, (spriteInfo.uv0Y + spriteInfo.uv3Y) * 0.5f);
-				float uvX = spriteInfo.uv3X;
-				float uvY = spriteInfo.uv0Y;
-				float uvYInterval = (spriteInfo.uv3Y - spriteInfo.uv0Y) / (vertexCount - 2);
+				vertices[0].TextureCoordinate[0] = FVector2f(spriteInfo.uvMinX, (spriteInfo.uvMinY + spriteInfo.uvMaxY) * 0.5f);
+				float uvX = spriteInfo.uvMaxX;
+				float uvY = spriteInfo.uvMinY;
+				float uvYInterval = (spriteInfo.uvMaxY - spriteInfo.uvMinY) / (vertexCount - 2);
 				for (int i = 1; i < vertexCount; i++)
 				{
 					auto& uv = vertices[i].TextureCoordinate[0];

@@ -260,8 +260,8 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 	HierarchyView = InHierarchyView;
 	Manager = InManager;
 
-	STableRow<TWeakObjectPtr<ULexWidget>>::Construct(
-		STableRow<TWeakObjectPtr<ULexWidget>>::FArguments()
+	STableRow::Construct(
+		STableRow::FArguments()
 		.OnCanAcceptDrop(this, &SLexWidgetEditorHierarchyViewItem::HandleCanAcceptDrop)
 		.OnAcceptDrop(this, &SLexWidgetEditorHierarchyViewItem::HandleAcceptDrop)
 		.OnDragDetected(this, &SLexWidgetEditorHierarchyViewItem::HandleDragDetected)

@@ -130,8 +130,8 @@ bool ULexUIRichTextImageData::GetImageSize(const FName& imageTag, FIntVector2& o
 	if (!IsValid(sprite))
 		return false;
 
-	auto spriteWidth = sprite->GetSpriteInfo().width;
-	auto spriteHeight = sprite->GetSpriteInfo().height;
+	auto spriteWidth = sprite->GetSpriteInfo().Width;
+	auto spriteHeight = sprite->GetSpriteInfo().Height;
 	outSize = FIntVector2(spriteWidth, spriteHeight);
 	return true;
 }

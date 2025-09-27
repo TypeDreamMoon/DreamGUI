@@ -100,7 +100,7 @@ void ULexSprite::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged,
 		else
 		{
 			FLexUISpriteInfo tempSpriteInfo;
-			tempSpriteInfo.ApplyUV(0, 0, Widget->GetWidth(), Widget->GetHeight(), 1.0f / Sprite->GetSpriteInfo().width, 1.0f / Sprite->GetSpriteInfo().height);
+			tempSpriteInfo.ApplyUV(0, 0, Widget->GetWidth(), Widget->GetHeight(), 1.0f / Sprite->GetSpriteInfo().Width, 1.0f / Sprite->GetSpriteInfo().Height);
 			FLexUIGeometry::UpdateUIRectSimpleVertex(&InGeo,
 				Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), tempSpriteInfo, RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
@@ -177,14 +177,14 @@ void ULexSprite::CalculateTiledWidth()
 			}
 			return;
 		}
-		float widthCountFloat = Widget->GetWidth() / Sprite->GetSpriteInfo().width;
+		float widthCountFloat = Widget->GetWidth() / Sprite->GetSpriteInfo().Width;
 		int widthCount = (int)widthCountFloat + 1;//rect count of width-direction, +1 means not-full-size rect
 		if (widthCount != Tiled_WidthRectCount)
 		{
 			Tiled_WidthRectCount = widthCount;
 			MarkVerticesDirty(true, true, true, false);
 		}
-		float remainedWidth = (widthCountFloat - (widthCount - 1)) * Sprite->GetSpriteInfo().width;//not-full-size rect's width
+		float remainedWidth = (widthCountFloat - (widthCount - 1)) * Sprite->GetSpriteInfo().Width;//not-full-size rect's width
 		if (remainedWidth != Tiled_WidthRemainedRectSize)
 		{
 			Tiled_WidthRemainedRectSize = remainedWidth;
@@ -211,14 +211,14 @@ void ULexSprite::CalculateTiledHeight()
 			}
 			return;
 		}
-		float heightCountFloat = Widget->GetHeight() / Sprite->GetSpriteInfo().height;
+		float heightCountFloat = Widget->GetHeight() / Sprite->GetSpriteInfo().Height;
 		int heightCount = (int)heightCountFloat + 1;//rect count of height-direction, +1 means not-full-size rect
 		if (heightCount != Tiled_HeightRectCount)
 		{
 			Tiled_HeightRectCount = heightCount;
 			MarkVerticesDirty(true, true, true, false);
 		}
-		float remainedHeight = (heightCountFloat - (heightCount - 1)) * Sprite->GetSpriteInfo().height;//not-full-size rect's height
+		float remainedHeight = (heightCountFloat - (heightCount - 1)) * Sprite->GetSpriteInfo().Height;//not-full-size rect's height
 		if (remainedHeight != Tiled_HeightRemainedRectSize)
 		{
 			Tiled_HeightRemainedRectSize = remainedHeight;
