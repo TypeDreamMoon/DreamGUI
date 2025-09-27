@@ -11,7 +11,7 @@
 #include "UIRenderTarget.generated.h"
 
 class ULexCanvas;
-class ULexCustomMeshSource;
+class ULexUICustomMeshSource;
 
 /**
  * LGUI Render Target provide a solution to display a LGUICanvas with RenderMode of RenderTarget, just like "Retainer Box", and interact it with UIRenderTargetInteraction component.

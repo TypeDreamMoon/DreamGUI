@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/LexCustomMeshSource.h"
+#include "Core/LexUICustomMeshSource.h"
 #include "Core/Components/LexVisualBatchMesh.h"
 #include "LGUI.h"
 #include "Core/Components/LexCanvas.h"
@@ -8,7 +8,7 @@
 
 DECLARE_CYCLE_STAT(TEXT("LGUICustomMesh Blueprint.OnFillMesh"), STAT_LGUICustomMesh_OnFillMesh, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("LGUICustomMesh Blueprint.GetHitUV"), STAT_LGUICustomMesh_GetHitUV, STATGROUP_LGUI);
-void ULexCustomMeshSource::OnFillMesh(ULexVisualBatchMesh* InLexMesh, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
+void ULexUICustomMeshSource::OnFillMesh(ULexVisualBatchMesh* InLexMesh, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
 	{
@@ -16,7 +16,7 @@ void ULexCustomMeshSource::OnFillMesh(ULexVisualBatchMesh* InLexMesh, bool InTri
 		ReceiveOnFillMesh(InLexMesh, InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged);
 	}
 }
-bool ULexCustomMeshSource::GetHitUV(const ULexVisualBatchMesh* InLexMesh, const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV)const
+bool ULexUICustomMeshSource::GetHitUV(const ULexVisualBatchMesh* InLexMesh, const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV)const
 {
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
 	{
@@ -25,7 +25,7 @@ bool ULexCustomMeshSource::GetHitUV(const ULexVisualBatchMesh* InLexMesh, const 
 	}
 	return false;
 }
-bool ULexCustomMeshSource::SupportDrawcallBatching()const
+bool ULexUICustomMeshSource::SupportDrawcallBatching()const
 {
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
 	{
@@ -33,7 +33,7 @@ bool ULexCustomMeshSource::SupportDrawcallBatching()const
 	}
 	return false;
 }
-bool ULexCustomMeshSource::GetHitUVbyFaceIndex(const ULexVisualBatchMesh* InLexMesh, const int32& InHitFaceIndex, const FVector& InHitPoint, FVector2D& OutHitUV)const
+bool ULexUICustomMeshSource::GetHitUVbyFaceIndex(const ULexVisualBatchMesh* InLexMesh, const int32& InHitFaceIndex, const FVector& InHitPoint, FVector2D& OutHitUV)const
 {
 	auto& Vertices = UIGeo->Vertices;
 	auto& OriginVertices = UIGeo->OriginVertices;

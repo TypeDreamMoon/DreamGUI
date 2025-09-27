@@ -46,7 +46,7 @@ protected:
 		int32 Depth = 0;
 	/** line trace ray emit length */
 	UPROPERTY(EditAnywhere, Category = LGUI)
-		float RayLength = 10000;
+		float RayLength = 100000;
 	UPROPERTY(EditAnywhere, Category = LGUI)
 		TEnumAsByte<ETraceTypeQuery> TraceChannel;
 	UPROPERTY(EditAnywhere, Category = LGUI)

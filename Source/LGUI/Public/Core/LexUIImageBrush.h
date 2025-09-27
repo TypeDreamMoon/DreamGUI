@@ -16,8 +16,13 @@ enum class ELexUIImageBrushDrawType:uint8
 	Border,
 	/** Draw an image; margin is ignored */
 	Image,
-	/** Draw a solid rectangle with an outline and corner radius */
-	//RoundedBox
+	/** Draw a sliced image with its resizable sections tiled instead of stretched */
+	//Tiled,
+	/**
+	 * A Filled Image will display a section of the image, with the rest of transparent.
+	 * The FillAmount determines how much of the Image to show, and FillMethod controls the shape in which the Image will be cut.
+	 */
+	//Filled,
 };
 
 

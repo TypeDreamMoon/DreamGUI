@@ -8,7 +8,7 @@
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/LexUISpriteInfo.h"
-#include "Core/LexCustomMeshSource.h"
+#include "Core/LexUICustomMeshSource.h"
 
 #define LOCTEXT_NAMESPACE "UIRenderTarget"
 

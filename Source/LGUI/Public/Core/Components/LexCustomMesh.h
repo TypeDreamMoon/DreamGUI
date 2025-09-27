@@ -6,7 +6,7 @@
 #include "Core/Components/LexVisualBatchMesh.h"
 #include "LexCustomMesh.generated.h"
 
-class ULexCustomMeshSource;
+class ULexUICustomMeshSource;
 
 /**
  * Render UI element with LGUICustomMesh.
@@ -26,7 +26,7 @@ protected:
 
 	/** Use a mesh generator to create your own mesh instead of a simple rect */
 	UPROPERTY(EditAnywhere, Instanced, Category = LGUI)
-		TObjectPtr<ULexCustomMeshSource> CustomMesh = nullptr;
+		TObjectPtr<ULexUICustomMeshSource> CustomMesh = nullptr;
 
 public:
 
@@ -35,8 +35,8 @@ public:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-	ULexCustomMeshSource* GetCustomMesh()const { return CustomMesh; }
+	ULexUICustomMeshSource* GetCustomMesh()const { return CustomMesh; }
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-	void SetCustomMesh(ULexCustomMeshSource* Value);
+	void SetCustomMesh(ULexUICustomMeshSource* Value);
 };

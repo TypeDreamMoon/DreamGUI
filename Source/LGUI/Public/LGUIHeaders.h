@@ -31,7 +31,7 @@
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/LexUIRichTextImageData.h"
 #include "Core/LexUIRichTextImageData_BaseObject.h"
-#include "Core/LexCustomMeshSource.h"
+#include "Core/LexUICustomMeshSource.h"
 
 #include "Core/Actor/LexWidgetActor.h"
 #include "Core/LexUIManager.h"

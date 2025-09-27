@@ -1651,20 +1651,19 @@ void LGUIEditorTools::CreateWorldSpaceUILexUIRenderer_BasicSetup()
 }
 void LGUIEditorTools::CreatePresetEventSystem_BasicSetup(bool WorldSpace)
 {
-	bool bEventSystemExit = false;
-	bool bWorldSpaceExit = false;
+	bool bEventSystemExits = false;
+	bool bWorldSpaceRaycasterExists = false;
 	for (TActorIterator<AActor> ActorItr(GetWorldFromSelection()); ActorItr; ++ActorItr)
 	{
 		auto Actor = *ActorItr;
 		if (Actor->FindComponentByClass<ULexEventSystem>())
 		{
-			bEventSystemExit = true;
+			bEventSystemExits = true;
 		}
 		if (Actor->FindComponentByClass<ULexWorldSpaceRaycaster>())
 		{
-			bWorldSpaceExit = true;
+			bWorldSpaceRaycasterExists = true;
 		}
-		break;
 	}
 	auto CreateActor = [](const TCHAR* ClassName)
 	{
@@ -1679,11 +1678,11 @@ void LGUIEditorTools::CreatePresetEventSystem_BasicSetup(bool WorldSpace)
 			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ClassName);
 		}
 	};
-	if (!bEventSystemExit)
+	if (!bEventSystemExits)
 	{
 		CreateActor(TEXT("PresetEventSystemActor"));
 	}
-	if (WorldSpace && !bWorldSpaceExit)
+	if (WorldSpace && !bWorldSpaceRaycasterExists)
 	{
 		CreateActor(TEXT("WorldSpaceRaycasterActor"));
 	}

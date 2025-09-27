@@ -341,7 +341,7 @@ protected:
 
 	/** traceChannel for line trace of EventSystem interaction */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-	TEnumAsByte<ETraceTypeQuery> TraceChannel = TraceTypeQuery3;
+	TEnumAsByte<ETraceTypeQuery> TraceChannel = TraceTypeQuery2;
 
 	/**
 	 * LexCanvas create mesh for render UI elements, this property can give us opportunity to use custom type of mesh for render.

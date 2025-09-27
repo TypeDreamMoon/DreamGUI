@@ -13,7 +13,7 @@ ULexBaseRaycaster::ULexBaseRaycaster()
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 	bAutoActivate = true;
-	TraceChannel = ETraceTypeQuery::TraceTypeQuery3;
+	TraceChannel = ETraceTypeQuery::TraceTypeQuery2;
 }
 
 void ULexBaseRaycaster::BeginPlay()

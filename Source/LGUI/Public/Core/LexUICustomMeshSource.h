@@ -4,7 +4,7 @@
 
 #include "Components/LexVisualBatchMesh.h"
 #include "Curves/CurveFloat.h"
-#include "LexCustomMeshSource.generated.h"
+#include "LexUICustomMeshSource.generated.h"
 
 class FLexUIGeometry;
 class ULexCanvas;
@@ -15,7 +15,7 @@ class ULexVisualBatchMesh;
  * This class only hold the method of generating mesh, the actual mesh data is stored inside outer class (LexBatchMesh) which hold this instance.
  */
 UCLASS(BlueprintType, Blueprintable, Abstract, DefaultToInstanced, EditInlineNew)
-class LGUI_API ULexCustomMeshSource : public ULexUIGeometryHelper
+class LGUI_API ULexUICustomMeshSource : public ULexUIGeometryHelper
 {
 	GENERATED_BODY()
 public:
@@ -77,7 +77,7 @@ protected:
 };
 
 UCLASS(ClassGroup = LGUI, DisplayName="LexCustomMeshSource Cylinder")
-class LGUI_API ULexCustomMeshSource_Cylinder : public ULexCustomMeshSource
+class LGUI_API ULexCustomMeshSource_Cylinder : public ULexUICustomMeshSource
 {
 	GENERATED_BODY()
 public:
@@ -89,7 +89,7 @@ protected:
 };
 
 UCLASS(ClassGroup = LGUI, DisplayName = "LexCustomMeshSource CurvyPlane")
-class LGUI_API ULexCustomMeshSource_CurvyPlane : public ULexCustomMeshSource
+class LGUI_API ULexCustomMeshSource_CurvyPlane : public ULexUICustomMeshSource
 {
 	GENERATED_BODY()
 public:

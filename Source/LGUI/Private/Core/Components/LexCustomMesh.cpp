@@ -4,7 +4,7 @@
 #include "LGUI.h"
 #include "Utils/LexUIUtils.h"
 #include "Core/LexUIGeometry.h"
-#include "Core/LexCustomMeshSource.h"
+#include "Core/LexUICustomMeshSource.h"
 #include "Core/Components/LexTextureBase.h"
 
 #define LOCTEXT_NAMESPACE "UICustomMesh"
@@ -60,7 +60,7 @@ void ULexCustomMesh::PostEditChangeProperty(FPropertyChangedEvent& PropertyChang
 }
 #endif
 
-void ULexCustomMesh::SetCustomMesh(ULexCustomMeshSource* Value)
+void ULexCustomMesh::SetCustomMesh(ULexUICustomMeshSource* Value)
 {
 	if (CustomMesh != Value)
 	{
