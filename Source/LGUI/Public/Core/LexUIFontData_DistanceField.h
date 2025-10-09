@@ -37,8 +37,8 @@ public:
 private:
 	/** Font size when render glyph. */
 	UPROPERTY(EditAnywhere, Category = "LGUI SDF Font", meta = (UIMin = "16", UIMax = "100"))
-		int FontSize = 64;
-	/** The radius of the distance field in pixels. Will automatically set to a quarter of FontSize since LGUI 3.4.11. */
+		int SampleFontSize = 64;
+	/** The radius of the distance field in pixels. Will automatically set to a quarter of FontSize */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI SDF Font")
 		int SDFRadius = 16;
 	/** Angle of italic style in degree */
@@ -58,7 +58,7 @@ private:
 		int VerticalOffset = -1;
 
 public:
-	//Begin ULGUIFontDataBaseObject interface
+	//Begin ULexUIFontData_BaseObject interface
 	virtual UMaterialInterface* GetFontMaterial()override;
 	virtual void PushCharData(
 		TCHAR charCode, const FVector2f& lineOffset, const FVector2f& fontSpace, const FLexUICharData_HighPrecision& charData,
@@ -75,10 +75,10 @@ public:
 	virtual bool GetShouldAffectByPixelPerfect() override{ return false; }
 	virtual bool GetNeedObjectScale() override{ return true; }//sdf font need scale value in material
 	virtual float GetFontTextureMark() override{ return 1; }
-	//End ULGUIFontDataBaseObject interface
+	//End ULexUIFontData_BaseObject interface
 protected:
-	float italicSlop = 0.0f; float oneDivideFontSize = 1.0f; float objectScale = 1.0f;
-	TMap<TCHAR, FLexUICharData> charDataMap;
+	float ItalicSlop = 0.0f; float OneDivideFontSize = 1.0f; float ObjectScale = 1.0f;
+	TMap<TCHAR, FLexUICharData> CharDataMap;
 	TMap<FLexUIDistanceFieldFontKerningPair, int16> KerningPairsMap;
 	virtual UTexture2D* CreateFontTexture(int InTextureSize)override;
 	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize)override;
@@ -93,7 +93,7 @@ protected:
 	virtual int32 Get_SPACE_NEED_EXPEND()const override { return 0; };
 	virtual int32 Get_SPACE_BETWEEN_GLYPH()const override { return 0; };
 #if WITH_EDITOR
-	void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent);
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
 #endif
 	virtual void PostInitProperties()override;
 };

@@ -17,9 +17,7 @@
 #include "UObject/UnrealType.h"
 #endif
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
-#endif
 
 ULexWidget::ULexWidget(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
@@ -448,16 +446,17 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		auto PropertyName = PropertyChangedEvent.GetPropertyName();
 
 		static const FName AnchorDataName = GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData);
-		static const FName VisibilityName = GET_MEMBER_NAME_CHECKED(ULexWidget, bWidgetActive);
+		static const FName WidgetActiveName = GET_MEMBER_NAME_CHECKED(ULexWidget, bWidgetActive);
 		static const FName RaycastableName = GET_MEMBER_NAME_CHECKED(ULexWidget, Raycastable);
 		static const FName ClippingName = GET_MEMBER_NAME_CHECKED(ULexWidget, Clipping);
 		static const FName ClippingCornerRadiusName = GET_MEMBER_NAME_CHECKED(ULexWidget, ClippingCornerRadius);
 		static const FName VisualName = GET_MEMBER_NAME_CHECKED(ULexWidget, Visual);
 		static const FName LayoutName = GET_MEMBER_NAME_CHECKED(ULexWidget, Layout);
 		static const FName InteractableName = GET_MEMBER_NAME_CHECKED(ULexWidget, Interactable);
+		static const FName RenderOpacityName = GET_MEMBER_NAME_CHECKED(ULexWidget, RenderOpacity);
 
 		if (MemberName == AnchorDataName
-		|| MemberName == VisibilityName
+		|| MemberName == WidgetActiveName
 		|| MemberName == ClippingCornerRadiusName
 		)
 		{
@@ -520,7 +519,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 			CalculateTransformFromAnchor();
 			UpdateComponentToWorld();
 		}
-		if (MemberName == VisibilityName)
+		if (MemberName == WidgetActiveName)
 		{
 			CalculateWidgetActive_Recursive();
 		}
@@ -531,6 +530,24 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		if (MemberName == InteractableName)
 		{
 			CalculateInteractable_Recursive();
+		}
+		if (MemberName == RenderOpacityName)
+		{
+			struct LOCAL
+			{
+				static void MarkDirty(const ULexWidget* Widget)
+				{
+					if (Widget->Visual)
+					{
+						Widget->Visual->MarkColorDirty();
+					}
+					for (auto& Child : Widget->UIChildren)
+					{
+						MarkDirty(Child);
+					}
+				}
+			};
+			LOCAL::MarkDirty(this);
 		}
 		ULGUIPrefabManagerObject::AddOneShotTickFunction([this]()
 		{
@@ -1784,7 +1801,7 @@ void ULexWidget::UnregisterRenderCanvas()
 	}
 }
 
-void ULexWidget::UpdateLayout()
+void ULexWidget::UpdateLayout()const
 {
 	if (!bLayoutDirty)return;
 	bLayoutDirty = false;
@@ -1989,7 +2006,27 @@ void ULexWidget::CalculateWidgetActive_Recursive()
 			if (Widget->bCacheWidgetActiveInHierarchy != bResultActive)
 			{
 				Widget->bCacheWidgetActiveInHierarchy = bResultActive;
+#if WITH_EDITOR
+				//modify inactive actor's name
+				if (auto Actor = Widget->GetOwner())
+				{
+					auto bHiddenEdTemporary_Property = FindFProperty<FBoolProperty>(AActor::StaticClass(), TEXT("bHiddenEdTemporary"));
+					bHiddenEdTemporary_Property->SetPropertyValue_InContainer(Actor, !Widget->GetWidgetActiveInHierarchy());
+				}
+#endif
+				//callback
 				Widget->Call_WidgetActiveChanged();
+				//canvas update
+				Widget->MarkCanvasUpdate(false, false, false, true);
+				//tell parent layout
+				if (auto Parent = Widget->GetUIParent())
+				{
+					if (Parent->GetLayout())
+					{
+						Parent->bLayoutDirty = true;
+					}
+				}
+			
 				for (auto& Child : Widget->GetUIChildren())
 				{
 					CalculateWidgetActive(Child);
@@ -2224,10 +2261,16 @@ void ULexWidget::MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged,
 		{
 			for (auto& Child : GetUIChildren())
 			{
-				if (Child->AnchorData.IsHorizontalStretched() || Child->AnchorData.IsVerticalStretched())
+				bool ChildWidthChange = false, ChildHeightChange = false;
+				if (InWidthChanged && Child->AnchorData.IsHorizontalStretched())
 				{
-					Child->MarkAnchorDataChanged(false, true, true);
+					ChildWidthChange = true;
 				}
+				if (InHeightChanged && Child->AnchorData.IsVerticalStretched())
+				{
+					ChildHeightChange = true;
+				}
+				Child->MarkAnchorDataChanged(false, ChildWidthChange, ChildHeightChange);
 			}
 		}
 	}
@@ -2413,7 +2456,23 @@ void ULexWidget::MarkLayoutForRebuild(const ULexWidget* InWidget)
 		}
 		break;
 	}
-	//
+}
+
+void ULexWidget::ForceRebuildLayoutImmediately(const ULexWidget* InWidget)
+{
+	struct LOCAL
+	{
+		static void RebuildLayout(const ULexWidget* InWidget)
+		{
+			InWidget->bLayoutDirty = true;
+			InWidget->UpdateLayout();
+			for (auto Child : InWidget->GetUIChildren())
+			{
+				RebuildLayout(Child);
+			}
+		}
+	};
+	LOCAL::RebuildLayout(InWidget);
 }
 
 void ULexWidget::MarkLayoutDirty()const
@@ -2683,7 +2742,6 @@ void ULexWidget::SetIsTemporarilyHiddenInEditor_Recursive_By_RenderVisibility()
 #endif
 	//callback
 	Call_WidgetActiveChanged();
-	Call_RaycastableChanged();
 	//canvas update
 	MarkCanvasUpdate(false, false, false, true);
 
@@ -2812,6 +2870,4 @@ FBoxSphereBounds ULexWidgetEditorHelperComp::CalcBounds(const FTransform& LocalT
 	return FBoxSphereBounds(Origin, FVector(1, Parent->GetWidth() * 0.5f, Parent->GetHeight() * 0.5f), (Parent->GetWidth() > Parent->GetHeight() ? Parent->GetWidth() : Parent->GetHeight()) * 0.5f).TransformBy(LocalToWorld);
 }
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_ENABLE_OPTIMIZATION
-#endif

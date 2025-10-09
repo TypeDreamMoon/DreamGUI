@@ -91,33 +91,33 @@ void ULexUIFontData_Bitmap::PushCharData(
 			auto vert3 = FVector3f(0, x, y);
 			if (richTextProperty.Italic)
 			{
-				auto vert01ItalicOffset = (charData.height - charData.yoffset) * italicSlop;
+				auto vert01ItalicOffset = (charData.height - charData.yoffset) * ItalicSlop;
 				vert0.Y -= vert01ItalicOffset;
 				vert1.Y -= vert01ItalicOffset;
-				auto vert23ItalicOffset = charData.yoffset * italicSlop;
+				auto vert23ItalicOffset = charData.yoffset * ItalicSlop;
 				vert2.Y += vert23ItalicOffset;
 				vert3.Y += vert23ItalicOffset;
 			}
 			//bold left
-			originVertices[verticesStartIndex].Position = vert0 + FVector3f(0, -boldSize, 0);
-			originVertices[verticesStartIndex + 1].Position = vert1 + FVector3f(0, -boldSize, 0);
-			originVertices[verticesStartIndex + 2].Position = vert2 + FVector3f(0, -boldSize, 0);
-			originVertices[verticesStartIndex + 3].Position = vert3 + FVector3f(0, -boldSize, 0);
+			originVertices[verticesStartIndex].Position = vert0 + FVector3f(0, -BoldSize, 0);
+			originVertices[verticesStartIndex + 1].Position = vert1 + FVector3f(0, -BoldSize, 0);
+			originVertices[verticesStartIndex + 2].Position = vert2 + FVector3f(0, -BoldSize, 0);
+			originVertices[verticesStartIndex + 3].Position = vert3 + FVector3f(0, -BoldSize, 0);
 			//bold right
-			originVertices[verticesStartIndex + 4].Position = vert0 + FVector3f(0, boldSize, 0);
-			originVertices[verticesStartIndex + 5].Position = vert1 + FVector3f(0, boldSize, 0);
-			originVertices[verticesStartIndex + 6].Position = vert2 + FVector3f(0, boldSize, 0);
-			originVertices[verticesStartIndex + 7].Position = vert3 + FVector3f(0, boldSize, 0);
+			originVertices[verticesStartIndex + 4].Position = vert0 + FVector3f(0, BoldSize, 0);
+			originVertices[verticesStartIndex + 5].Position = vert1 + FVector3f(0, BoldSize, 0);
+			originVertices[verticesStartIndex + 6].Position = vert2 + FVector3f(0, BoldSize, 0);
+			originVertices[verticesStartIndex + 7].Position = vert3 + FVector3f(0, BoldSize, 0);
 			//bold top
-			originVertices[verticesStartIndex + 8].Position = vert0 + FVector3f(0, 0, boldSize);
-			originVertices[verticesStartIndex + 9].Position = vert1 + FVector3f(0, 0, boldSize);
-			originVertices[verticesStartIndex + 10].Position = vert2 + FVector3f(0, 0, boldSize);
-			originVertices[verticesStartIndex + 11].Position = vert3 + FVector3f(0, 0, boldSize);
+			originVertices[verticesStartIndex + 8].Position = vert0 + FVector3f(0, 0, BoldSize);
+			originVertices[verticesStartIndex + 9].Position = vert1 + FVector3f(0, 0, BoldSize);
+			originVertices[verticesStartIndex + 10].Position = vert2 + FVector3f(0, 0, BoldSize);
+			originVertices[verticesStartIndex + 11].Position = vert3 + FVector3f(0, 0, BoldSize);
 			//bold bottom
-			originVertices[verticesStartIndex + 12].Position = vert0 + FVector3f(0, 0, -boldSize);
-			originVertices[verticesStartIndex + 13].Position = vert1 + FVector3f(0, 0, -boldSize);
-			originVertices[verticesStartIndex + 14].Position = vert2 + FVector3f(0, 0, -boldSize);
-			originVertices[verticesStartIndex + 15].Position = vert3 + FVector3f(0, 0, -boldSize);
+			originVertices[verticesStartIndex + 12].Position = vert0 + FVector3f(0, 0, -BoldSize);
+			originVertices[verticesStartIndex + 13].Position = vert1 + FVector3f(0, 0, -BoldSize);
+			originVertices[verticesStartIndex + 14].Position = vert2 + FVector3f(0, 0, -BoldSize);
+			originVertices[verticesStartIndex + 15].Position = vert3 + FVector3f(0, 0, -BoldSize);
 
 			addVertCount = 16;
 		}
@@ -139,10 +139,10 @@ void ULexUIFontData_Bitmap::PushCharData(
 			vert3 = FVector3f(0, x, y);
 			if (richTextProperty.Italic)
 			{
-				auto vert01ItalicOffset = (charData.height - charData.yoffset) * italicSlop;
+				auto vert01ItalicOffset = (charData.height - charData.yoffset) * ItalicSlop;
 				vert0.Y -= vert01ItalicOffset;
 				vert1.Y -= vert01ItalicOffset;
-				auto vert23ItalicOffset = charData.yoffset * italicSlop;
+				auto vert23ItalicOffset = charData.yoffset * ItalicSlop;
 				vert2.Y += vert23ItalicOffset;
 				vert3.Y += vert23ItalicOffset;
 			}
@@ -378,7 +378,7 @@ void ULexUIFontData_Bitmap::PushCharData(
 bool ULexUIFontData_Bitmap::GetCharDataFromCache(const TCHAR& charCode, const float& charSize, FLexUICharData_HighPrecision& OutResult)
 {
 	auto fontKey = FLexUIFontKeyData(charCode, charSize);
-	if (auto charData = charDataMap.Find(fontKey))
+	if (auto charData = CharDataMap.Find(fontKey))
 	{
 		OutResult = FLexUICharData_HighPrecision(*charData);
 		return true;
@@ -387,11 +387,11 @@ bool ULexUIFontData_Bitmap::GetCharDataFromCache(const TCHAR& charCode, const fl
 }
 void ULexUIFontData_Bitmap::AddCharDataToCache(const TCHAR& charCode, const float& charSize, const FLexUICharData& charData)
 {
-	charDataMap.Add(FLexUIFontKeyData(charCode, charSize), charData);
+	CharDataMap.Add(FLexUIFontKeyData(charCode, charSize), charData);
 }
 void ULexUIFontData_Bitmap::ScaleDownUVofCachedChars()
 {
-	for (auto& charDataItem : charDataMap)
+	for (auto& charDataItem : CharDataMap)
 	{
 		auto& mapValue = charDataItem.Value;
 		mapValue.uv0X *= 0.5f;
@@ -433,7 +433,7 @@ bool ULexUIFontData_Bitmap::RenderGlyph(const TCHAR& charCode, const float& char
 }
 void ULexUIFontData_Bitmap::ClearCharDataCache()
 {
-	charDataMap.Empty();
+	CharDataMap.Empty();
 }
 
 UTexture2D* ULexUIFontData_Bitmap::CreateFontTexture(int InTextureSize)
@@ -479,7 +479,7 @@ void ULexUIFontData_Bitmap::ApplyPackingAtlasTextureExpand(UTexture2D* newTextur
 {
 	Super::ApplyPackingAtlasTextureExpand(newTexture, newTextureSize);
 	//scale down uv of prev chars
-	for (auto& charDataItem : charDataMap)
+	for (auto& charDataItem : CharDataMap)
 	{
 		auto& mapValue = charDataItem.Value;
 		mapValue.uv0X *= 0.5f;
@@ -491,8 +491,8 @@ void ULexUIFontData_Bitmap::ApplyPackingAtlasTextureExpand(UTexture2D* newTextur
 
 void ULexUIFontData_Bitmap::PrepareForPushCharData(ULexText* InText)
 {
-	boldSize = InText->GetFontSize() * boldRatio;
-	italicSlop = FMath::Tan(FMath::DegreesToRadians(italicAngle));
+	BoldSize = InText->GetFontSize() * BoldRatio;
+	ItalicSlop = FMath::Tan(FMath::DegreesToRadians(ItalicAngle));
 }
 
 #if WITH_EDITOR
@@ -502,11 +502,11 @@ void ULexUIFontData_Bitmap::PostEditChangeProperty(FPropertyChangedEvent& Proper
 	if (auto Property = PropertyChangedEvent.Property)
 	{
 		auto PropertyName = Property->GetFName();
-		if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_Bitmap, italicAngle)
-			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_Bitmap, boldRatio)
+		if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_Bitmap, ItalicAngle)
+			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_Bitmap, BoldRatio)
 			)
 		{
-			for (auto& textItem : renderTextArray)
+			for (auto& textItem : RenderTextArray)
 			{
 				if (textItem.IsValid())
 				{

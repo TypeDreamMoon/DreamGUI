@@ -203,9 +203,10 @@ void ULexVisualPostProcess::UpdateRegionVertex()
 
 void ULexVisualPostProcess::SendRegionVertexDataToRenderProxy()
 {
-	if (RenderProxy.IsValid())
+	auto Widget = GetWidget();
+	auto RenderCanvas = Widget->GetRenderCanvas();
+	if (RenderProxy.IsValid() && RenderCanvas)
 	{
-		auto Widget = GetWidget();
 		auto TempRenderProxy = RenderProxy.Get();
 		struct FUIPostProcess_SendRegionVertexDataToRenderProxy
 		{
@@ -219,13 +220,13 @@ void ULexVisualPostProcess::SendRegionVertexDataToRenderProxy()
 		updateData->renderMeshRegionToScreenVertexArray = this->RenderMeshRegionToScreenVertexArray;
 		updateData->renderScreenToMeshRegionVertexArray = this->RenderScreenToMeshRegionVertexArray;
 		updateData->RectSize = FVector2f(Widget->GetWidth(), Widget->GetHeight());
-		updateData->objectToWorldMatrix = FMatrix44f(Widget->GetRenderCanvas()->GetLexWidget()->GetComponentTransform().ToMatrixWithScale());
+		updateData->objectToWorldMatrix = FMatrix44f(RenderCanvas->GetLexWidget()->GetComponentTransform().ToMatrixWithScale());
 		auto ClipDataTex = this->GetClipDataTexture();
 		if (IsValid(ClipDataTex) && ClipDataTex->GetResource() != nullptr)
 		{
 			updateData->ClipDataTexture = (FTexture2DDynamicResource*)ClipDataTex->GetResource();
 		}
-		ENQUEUE_RENDER_COMMAND(FUIPostProcess_UpdateData)
+		ENQUEUE_RENDER_COMMAND(FLexPostProcess_UpdateData)
 			([TempRenderProxy, updateData](FRHICommandListImmediate& RHICmdList)
 				{
 					TempRenderProxy->RenderScreenToMeshRegionVertexArray = updateData->renderScreenToMeshRegionVertexArray;
@@ -272,7 +273,7 @@ void ULexVisualPostProcess::SendMaskTextureToRenderProxy()
 		{
 			MaskTextureResource = (FTexture2DResource*)this->MaskTexture->GetResource();
 		}
-		ENQUEUE_RENDER_COMMAND(FUIPostProcess_UpdateMaskTexture)
+		ENQUEUE_RENDER_COMMAND(FLexPostProcess_UpdateMaskTexture)
 			([TempRenderProxy, MaskTextureResource](FRHICommandListImmediate& RHICmdList)
 				{
 					TempRenderProxy->MaskTexture = MaskTextureResource;

@@ -93,6 +93,10 @@ float LexUI_RadialGradient(float2 uv, float2 quadSize, float2 center, float2 rad
     return distToCenter;
 }
 
+float4 LexUI_BlendAlpha(float4 bottom, float4 top)
+{
+    return lerp(bottom, top, top.a);
+}
 float4 LexUI_BlendPremul(float4 bottom, float4 top)
 {
 #if 0
@@ -293,7 +297,7 @@ float LexUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, floa
         borderColor.a *= (1.0f - dInner);
         borderColor.a *= dOuter;
         borderColor.a = saturate(borderColor.a);
-        color = LexUI_BlendPremul(color, borderColor);
+        color = LexUI_BlendAlpha(color, borderColor);
     }
 
     if (_EnableRadialFill * sign(max(0, 360.0f - _RadialFillAngle)))

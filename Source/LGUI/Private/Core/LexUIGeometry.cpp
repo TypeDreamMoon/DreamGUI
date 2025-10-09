@@ -10,9 +10,7 @@
 #include "Core/LexUIRichTextImageData_BaseObject.h"
 #include "Core/FRichTextParser.h"
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
-#endif
 
 FORCEINLINE float RoundToFloat(float value)
 {
@@ -440,15 +438,15 @@ void FLexUIGeometry::UpdateUIRectBorderVertex(FLexUIGeometry* uiGeo, bool fillCe
 			vertices[2].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMaxUV.X, spriteInfo.MaxUV.Y);
 			vertices[3].TextureCoordinate[0] = FVector2f(spriteInfo.MaxUV.X, spriteInfo.MaxUV.Y);
 
-			vertices[4].TextureCoordinate[0] = FVector2f(spriteInfo.MinUV.X, spriteInfo.BorderMinUV.Y);
-			vertices[5].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMinUV.X, spriteInfo.BorderMinUV.Y);
-			vertices[6].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMaxUV.X, spriteInfo.BorderMinUV.Y);
-			vertices[7].TextureCoordinate[0] = FVector2f(spriteInfo.MaxUV.X, spriteInfo.BorderMinUV.Y);
+			vertices[4].TextureCoordinate[0] = FVector2f(spriteInfo.MinUV.X, spriteInfo.BorderMaxUV.Y);
+			vertices[5].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMinUV.X, spriteInfo.BorderMaxUV.Y);
+			vertices[6].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMaxUV.X, spriteInfo.BorderMaxUV.Y);
+			vertices[7].TextureCoordinate[0] = FVector2f(spriteInfo.MaxUV.X, spriteInfo.BorderMaxUV.Y);
 
-			vertices[8].TextureCoordinate[0] = FVector2f(spriteInfo.MinUV.X, spriteInfo.BorderMinUV.X);
-			vertices[9].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMinUV.X, spriteInfo.BorderMinUV.X);
-			vertices[10].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMaxUV.X, spriteInfo.BorderMinUV.X);
-			vertices[11].TextureCoordinate[0] = FVector2f(spriteInfo.MaxUV.X, spriteInfo.BorderMinUV.X);
+			vertices[8].TextureCoordinate[0] = FVector2f(spriteInfo.MinUV.X, spriteInfo.BorderMinUV.Y);
+			vertices[9].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMinUV.X, spriteInfo.BorderMinUV.Y);
+			vertices[10].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMaxUV.X, spriteInfo.BorderMinUV.Y);
+			vertices[11].TextureCoordinate[0] = FVector2f(spriteInfo.MaxUV.X, spriteInfo.BorderMinUV.Y);
 
 			vertices[12].TextureCoordinate[0] = FVector2f(spriteInfo.MinUV.X, spriteInfo.MinUV.Y);
 			vertices[13].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMinUV.X, spriteInfo.MinUV.Y);
@@ -545,15 +543,15 @@ void FLexUIGeometry::UpdateUIRectTiledVertex(FLexUIGeometry* uiGeo,
 		{
 			int vertIndex = 0;
 			float remainedUV3X = spriteInfo.BorderMinUV.X + (spriteInfo.BorderMaxUV.X - spriteInfo.BorderMinUV.X) * widthRemainedRectSize / spriteInfo.Width;
-			float remainedUV3Y = spriteInfo.BorderMinUV.Y + (spriteInfo.BorderMinUV.X - spriteInfo.BorderMinUV.Y) * heightRemainedRectSize / spriteInfo.Height;
+			float remainedUV3Y = spriteInfo.BorderMaxUV.Y + (spriteInfo.BorderMinUV.Y - spriteInfo.BorderMaxUV.Y) * heightRemainedRectSize / spriteInfo.Height;
 			for (int heightRectIndex = 1; heightRectIndex <= heightRectCount; heightRectIndex++)
 			{
-				float realUV3Y = heightRectIndex == heightRectCount ? remainedUV3Y : spriteInfo.BorderMinUV.X;
+				float realUV3Y = heightRectIndex == heightRectCount ? remainedUV3Y : spriteInfo.BorderMaxUV.Y;
 				for (int widthRectIndex = 1; widthRectIndex <= widthRectCount; widthRectIndex++)
 				{
 					float realUV3X = widthRectIndex == widthRectCount ? remainedUV3X : spriteInfo.BorderMaxUV.X;
-					vertices[vertIndex++].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMinUV.X, spriteInfo.BorderMinUV.Y);
-					vertices[vertIndex++].TextureCoordinate[0] = FVector2f(realUV3X, spriteInfo.BorderMinUV.Y);
+					vertices[vertIndex++].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMinUV.X, spriteInfo.BorderMaxUV.Y);
+					vertices[vertIndex++].TextureCoordinate[0] = FVector2f(realUV3X, spriteInfo.BorderMaxUV.Y);
 					vertices[vertIndex++].TextureCoordinate[0] = FVector2f(spriteInfo.BorderMinUV.X, realUV3Y);
 					vertices[vertIndex++].TextureCoordinate[0] = FVector2f(realUV3X, realUV3Y);
 				}
@@ -3131,6 +3129,4 @@ void FLexUIGeometry::TransformVertices(ULexCanvas* canvas, ULexVisual* item, FLe
 	}
 }
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_ENABLE_OPTIMIZATION
-#endif

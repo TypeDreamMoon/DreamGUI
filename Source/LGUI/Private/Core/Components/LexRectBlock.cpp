@@ -12,9 +12,7 @@
 #include "Core/LexUISpriteData.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION_SHIP
-#endif
 
 #define LOCTEXT_NAMESPACE "UIProceduralRect"
 
@@ -1095,6 +1093,4 @@ FunctionPropertyAnimation(OuterShadowDistance, float, Float);
 
 #undef LOCTEXT_NAMESPACE
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_ENABLE_OPTIMIZATION
-#endif

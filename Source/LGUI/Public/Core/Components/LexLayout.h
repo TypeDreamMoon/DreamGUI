@@ -69,8 +69,8 @@ protected:
 #endif
 	virtual void OnUpdateLayout() {};
 	virtual void OnPreSavePrefab_Implementation() override;
-public:
 	void MarkLayoutDirty();
+public:
 	
 	virtual void OnTransformChanged(){}
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange){};

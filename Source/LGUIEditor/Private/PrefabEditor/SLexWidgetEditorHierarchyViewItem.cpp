@@ -282,19 +282,13 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 				.ColorAndOpacity(FSlateColor::UseForeground())
 				.Image_Lambda([=, this]()
 				{
-					FString BrushName;
 					if (Widget.IsValid())
 					{
 						if (Widget->GetVisual())
-						{
-							BrushName = FString::Printf(TEXT("ClassIcon.%s"), *Widget->GetVisual()->GetClass()->GetName());
-						}
-						else
-						{
-							BrushName = FString::Printf(TEXT("ClassIcon.%s"), *Widget->GetClass()->GetName());
-						}
+							return FSlateIconFinder::FindIconBrushForClass(Widget->GetVisual()->GetClass());
+						return FSlateIconFinder::FindIconBrushForClass(ULexWidget::StaticClass());
 					}
-					return FLGUIEditorStyle::Get().GetBrush(*BrushName);
+					return (const FSlateBrush*)nullptr;
 				})
 			]
 

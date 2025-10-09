@@ -26,6 +26,7 @@ float LexUIClip_sdRoundRect(float2 p, float2 b, float4 r)
 	return d;
 }
 #define LexUI_Clip_Depth 16
+#define LexUI_Clip_Enable_Rounded 1
 float LexUI_CalculateClipData(Texture2D DataTex, SamplerState DataTexSampler, float CoordinateInDataTex, float3 PixelLocalPosition)
 {
 	int Coordinate = round(CoordinateInDataTex);
@@ -40,13 +41,20 @@ float LexUI_CalculateClipData(Texture2D DataTex, SamplerState DataTexSampler, fl
 		float IsValid = 1;
 		LexUI_ReadClipData(DataTex, Position, CanvasToClipMatrix, HalfWidth, HalfHeight, Softness, IsValid);
 		if (!IsValid)break;
-		float4 CornerRadius = DataTex.Load(Position);Position.x += 1;
-		
+
 		float3 PixelPosition = mul(CanvasToClipMatrix, float4(PixelLocalPosition.xyz, 1.0)).xyz;
+#if LexUI_Clip_Enable_Rounded
+		float4 CornerRadius = DataTex.Load(Position);Position.x += 1;
 		float Alpha = LexUIClip_sdRoundRect(PixelPosition.yz, float2(HalfWidth, HalfHeight), CornerRadius);
 		Alpha = Alpha / fwidth(Alpha);
 		Alpha = saturate(0 - Alpha);
 		finalAlpha *= Alpha;
+#else
+		float2 Alpha2 = abs(PixelPosition.yz) - float2(HalfWidth, HalfHeight);
+		Alpha2 = saturate(Alpha2);
+		float Alpha = 1.0 - saturate(Alpha2.x + Alpha2.y);
+		finalAlpha *= Alpha;
+#endif
 	}
 	return finalAlpha;
 }

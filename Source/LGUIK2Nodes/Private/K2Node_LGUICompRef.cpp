@@ -165,7 +165,7 @@ void UK2Node_LGUICompRef_GetComponent::ExpandNode(FKismetCompilerContext& Compil
 {
 	Super::ExpandNode(CompilerContext, SourceGraph);
 
-	UFunction* BlueprintFunction = ULGUIBPLibrary::StaticClass()->FindFunctionByName("K2_LGUICompRef_GetComponent");
+	UFunction* BlueprintFunction = ULexUIBPLibrary::StaticClass()->FindFunctionByName("K2_LGUICompRef_GetComponent");
 	if (!BlueprintFunction)
 	{
 		CompilerContext.MessageLog.Error(*LOCTEXT("InvalidFunctionName", "The function has not been found.").ToString(), this);

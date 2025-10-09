@@ -38,7 +38,7 @@ void ULexUIDataAsTexture::CreateTexture()
 	if (TextureDynamic->GetResource())
 	{
 		auto TextureRes = (FTexture2DDynamicResource*)TextureDynamic->GetResource();
-		ENQUEUE_RENDER_COMMAND(FLWidgetDataAsTexture_ZeroMemory)(
+		ENQUEUE_RENDER_COMMAND(FLexUIDataAsTexture_ZeroMemory)(
 			[TextureRes, Width = TextureWidth, Height = TextureHeight](FRHICommandListImmediate& RHICmdList)
 			{
 				uint8* Data = new uint8[Width * Height * 16];
@@ -79,7 +79,7 @@ bool ULexUIDataAsTexture::ExpandTexture()
 	auto NewTexture = Texture;
 	if (OldTexture->GetResource() != nullptr && NewTexture->GetResource() != nullptr)
 	{
-		ENQUEUE_RENDER_COMMAND(FLGUIProceduralRectUpdateAndCopyDataTexture)(
+		ENQUEUE_RENDER_COMMAND(FLFLexUIDataAsTexture_UpdateAndCopyDataTexture)(
 			[OldTexture, NewTexture, Width = TextureWidth, OldTextureHeight](FRHICommandListImmediate& RHICmdList)
 			{
 				FRHICopyTextureInfo CopyInfo;
@@ -148,7 +148,7 @@ void ULexUIDataAsTexture::UpdateBlock(int InPosition, uint8* InData)
 	if (Texture->GetResource())
 	{
 		auto TextureRes = (FTexture2DDynamicResource*)Texture->GetResource();
-		ENQUEUE_RENDER_COMMAND(FLWidgetDataAsTexture_UpdateBlock)(
+		ENQUEUE_RENDER_COMMAND(FLexUIDataAsTexture_UpdateBlock)(
 			[TextureRes, InPosition, InData, BlockSizeInByte = this->BlockSizeInByte, BlockPixelCount = this->BlockPixelCount](FRHICommandListImmediate& RHICmdList)
 			{
 				RHICmdList.UpdateTexture2D(

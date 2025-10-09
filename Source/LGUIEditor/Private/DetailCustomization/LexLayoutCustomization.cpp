@@ -6,6 +6,7 @@
 #include "DetailLayoutBuilder.h"
 #include "Core/Components/LexLayout.h"
 
+UE_DISABLE_OPTIMIZATION
 #define LOCTEXT_NAMESPACE "LexLayoutCustomization"
 FLexLayoutCustomization::FLexLayoutCustomization()
 {
@@ -40,16 +41,18 @@ void FLexLayoutCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 
 	auto Conflict = [](ULexLayout* Target)
 	{
-		auto Widget = Target->GetWidget();
-		if (auto ParentWidget = Widget->GetUIParent())
+		if (auto Widget = Target->GetWidget())
 		{
-			if (auto ParentLayout = ParentWidget->GetLayout())
+			if (auto ParentWidget = Widget->GetUIParent())
 			{
-				auto ParentControl = ParentLayout->GetLayoutControlAnchor(Widget);
-				auto ThisControl = Target->GetLayoutControlAnchor(Widget);
-				if (ParentControl.Conflict(ThisControl))
+				if (auto ParentLayout = ParentWidget->GetLayout())
 				{
-					return true;
+					auto ParentControl = ParentLayout->GetLayoutControlAnchor(Widget);
+					auto ThisControl = Target->GetLayoutControlAnchor(Widget);
+					if (ParentControl.Conflict(ThisControl))
+					{
+						return true;
+					}
 				}
 			}
 		}
@@ -96,3 +99,4 @@ void FLexLayoutCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 }
 
 #undef LOCTEXT_NAMESPACE
+UE_ENABLE_OPTIMIZATION

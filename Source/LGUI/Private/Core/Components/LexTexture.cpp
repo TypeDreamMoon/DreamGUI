@@ -5,9 +5,8 @@
 #include "Core/LexUIGeometry.h"
 #include "Core/Components/LexCanvas.h"
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
-#endif
+
 ULexTexture::ULexTexture(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
 }
@@ -313,6 +312,5 @@ void ULexTexture::SetUVRectControlMode(ELexUITextureUVRectControlMode Value)
 		CheckSpriteData();
 	}
 }
-#if LGUI_CAN_DISABLE_OPTIMIZATION
+
 UE_ENABLE_OPTIMIZATION
-#endif

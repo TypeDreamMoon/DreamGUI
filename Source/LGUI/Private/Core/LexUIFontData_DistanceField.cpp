@@ -18,13 +18,13 @@
 
 ULexUIFontData_DistanceField::ULexUIFontData_DistanceField()
 {
-	initialSize = ELexUIAtlasTextureSizeType::SIZE_1024x1024;
-	rectPackCellSize = 1024;
+	InitialSize = ELexUIAtlasTextureSizeType::SIZE_1024x1024;
+	RectPackCellSize = 1024;
 }
 
 bool ULexUIFontData_DistanceField::GetCharDataFromCache(const TCHAR& charCode, const float& charSize, FLexUICharData_HighPrecision& OutResult)
 {
-	if (auto charData = charDataMap.Find(charCode))
+	if (auto charData = CharDataMap.Find(charCode))
 	{
 		OutResult = FLexUICharData_HighPrecision(*charData);
 		float vertexOffset = SDFRadius - SDFRadius * BoldRatio;
@@ -32,12 +32,12 @@ bool ULexUIFontData_DistanceField::GetCharDataFromCache(const TCHAR& charCode, c
 		OutResult.height -= vertexOffset + vertexOffset;
 		OutResult.xoffset += vertexOffset;
 		OutResult.yoffset -= vertexOffset;
-		float uvOffset = vertexOffset * oneDivideTextureSize;
+		float uvOffset = vertexOffset * OneDivideTextureSize;
 		OutResult.uv0X += uvOffset;
 		OutResult.uv0Y -= uvOffset;
 		OutResult.uv3X -= uvOffset;
 		OutResult.uv3Y += uvOffset;
-		float scale = charSize * oneDivideFontSize;
+		float scale = charSize * OneDivideFontSize;
 		OutResult.width *= scale;
 		OutResult.height *= scale;
 		OutResult.xoffset *= scale;
@@ -49,11 +49,11 @@ bool ULexUIFontData_DistanceField::GetCharDataFromCache(const TCHAR& charCode, c
 }
 void ULexUIFontData_DistanceField::AddCharDataToCache(const TCHAR& charCode, const float& charSize, const FLexUICharData& charData)
 {
-	charDataMap.Add(charCode, charData);
+	CharDataMap.Add(charCode, charData);
 }
 void ULexUIFontData_DistanceField::ScaleDownUVofCachedChars()
 {
-	for (auto& charDataItem : charDataMap)
+	for (auto& charDataItem : CharDataMap)
 	{
 		auto& mapValue = charDataItem.Value;
 		mapValue.uv0X *= 0.5f;
@@ -65,7 +65,7 @@ void ULexUIFontData_DistanceField::ScaleDownUVofCachedChars()
 bool ULexUIFontData_DistanceField::RenderGlyph(const TCHAR& charCode, const float& charSize, FGlyphBitmap& OutResult)
 {
 #if WITH_FREETYPE
-	auto slot = RenderGlyphOnFreeType(charCode, FontSize);
+	auto slot = RenderGlyphOnFreeType(charCode, SampleFontSize);
 	if (slot == nullptr)
 	{
 		return false;
@@ -104,7 +104,7 @@ bool ULexUIFontData_DistanceField::RenderGlyph(const TCHAR& charCode, const floa
 }
 void ULexUIFontData_DistanceField::ClearCharDataCache()
 {
-	charDataMap.Empty();
+	CharDataMap.Empty();
 	LineHeight = VerticalOffset = -1;
 }
 
@@ -147,7 +147,7 @@ void ULexUIFontData_DistanceField::ApplyPackingAtlasTextureExpand(UTexture2D* ne
 {
 	Super::ApplyPackingAtlasTextureExpand(newTexture, newTextureSize);
 	//scale down uv of prev chars
-	for (auto& charDataItem : charDataMap)
+	for (auto& charDataItem : CharDataMap)
 	{
 		auto& mapValue = charDataItem.Value;
 		mapValue.uv0X *= 0.5f;
@@ -159,11 +159,11 @@ void ULexUIFontData_DistanceField::ApplyPackingAtlasTextureExpand(UTexture2D* ne
 
 void ULexUIFontData_DistanceField::PrepareForPushCharData(ULexText* InText)
 {
-	italicSlop = FMath::Tan(FMath::DegreesToRadians(ItalicAngle));
-	oneDivideFontSize = 1.0f / FontSize;
+	ItalicSlop = FMath::Tan(FMath::DegreesToRadians(ItalicAngle));
+	OneDivideFontSize = 1.0f / SampleFontSize;
 	auto CompScale = InText->GetWidget()->GetComponentScale();
-	objectScale = FMath::Max(CompScale.X, CompScale.Y);
-	SDFRadius = FontSize * 0.25f;//use 1/4 of FontSize can get good result
+	ObjectScale = FMath::Max(CompScale.X, CompScale.Y);
+	SDFRadius = SampleFontSize * 0.25f;//use 1/4 of FontSize can get good result
 }
 
 bool ULexUIFontData_DistanceField::GetRequireNormalAndTangent()
@@ -176,30 +176,30 @@ float ULexUIFontData_DistanceField::GetKerning(const TCHAR& leftCharIndex, const
 	auto KerningPair = FLexUIDistanceFieldFontKerningPair(leftCharIndex, rightCharIndex);
 	if (auto KerningValuePtr = KerningPairsMap.Find(KerningPair))
 	{
-		return (*KerningValuePtr) * charSize * oneDivideFontSize;
+		return (*KerningValuePtr) * charSize * OneDivideFontSize;
 	}
 	else
 	{
-		auto KerningValue = Super::GetKerning(leftCharIndex, rightCharIndex, FontSize);
+		auto KerningValue = Super::GetKerning(leftCharIndex, rightCharIndex, SampleFontSize);
 		KerningPairsMap.Add(KerningPair, KerningValue);
-		return KerningValue * charSize * oneDivideFontSize;
+		return KerningValue * charSize * OneDivideFontSize;
 	}
 }
 float ULexUIFontData_DistanceField::GetLineHeight(const float& fontSize)
 {
 	if (LineHeight == -1)
 	{
-		LineHeight = Super::GetLineHeight(FontSize);
+		LineHeight = Super::GetLineHeight(SampleFontSize);
 	}
-	return LineHeight * fontSize * oneDivideFontSize;
+	return LineHeight * fontSize * OneDivideFontSize;
 }
 float ULexUIFontData_DistanceField::GetVerticalOffset(const float& fontSize)
 {
 	if (VerticalOffset == -1)
 	{
-		VerticalOffset = Super::GetVerticalOffset(FontSize);
+		VerticalOffset = Super::GetVerticalOffset(SampleFontSize);
 	}
-	return VerticalOffset * fontSize * oneDivideFontSize;
+	return VerticalOffset * fontSize * OneDivideFontSize;
 }
 UMaterialInterface* ULexUIFontData_DistanceField::GetFontMaterial()
 {
@@ -284,10 +284,10 @@ void ULexUIFontData_DistanceField::PushCharData(
 			vert3 = FVector3f(0, x, y);
 			if (richTextProperty.Italic)
 			{
-				auto vert01ItalicOffset = (charData.height - charData.yoffset) * italicSlop;
+				auto vert01ItalicOffset = (charData.height - charData.yoffset) * ItalicSlop;
 				vert0.Y -= vert01ItalicOffset;
 				vert1.Y -= vert01ItalicOffset;
-				auto vert23ItalicOffset = charData.yoffset * italicSlop;
+				auto vert23ItalicOffset = charData.yoffset * ItalicSlop;
 				vert2.Y += vert23ItalicOffset;
 				vert3.Y += vert23ItalicOffset;
 			}
@@ -332,7 +332,7 @@ void ULexUIFontData_DistanceField::PushCharData(
 	//uv
 	{
 		int addVertCount = 0;
-		auto tempFontScale = richTextProperty.Size * objectScale;
+		auto tempFontScale = richTextProperty.Size * ObjectScale;
 		{
 			vertices[verticesStartIndex].TextureCoordinate[0] = charData.GetUV0();
 			vertices[verticesStartIndex + 1].TextureCoordinate[0] = charData.GetUV1();
@@ -467,7 +467,7 @@ void ULexUIFontData_DistanceField::PostEditChangeProperty(FPropertyChangedEvent&
 	{
 		auto PropertyName = Property->GetFName();
 		if (
-			PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_DistanceField, FontSize)
+			PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_DistanceField, SampleFontSize)
 			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_DistanceField, SDFRadius)
 			)
 		{
@@ -478,7 +478,7 @@ void ULexUIFontData_DistanceField::PostEditChangeProperty(FPropertyChangedEvent&
 			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_DistanceField, BoldRatio)
 			)
 		{
-			for (auto& textItem : renderTextArray)
+			for (auto& textItem : RenderTextArray)
 			{
 				if (textItem.IsValid())
 				{

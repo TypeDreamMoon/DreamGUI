@@ -105,7 +105,7 @@
 
 #include "Utils/LexUIUtils.h"
 
-#include "LGUIBPLibrary.h"
+#include "LexUIBPLibrary.h"
 #include "LGUIComponentReference.h"
 
 #include "PrefabAnimation/LGUIPrefabSequence.h"

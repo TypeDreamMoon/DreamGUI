@@ -73,12 +73,12 @@ protected:
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		int fontFace = 0;
+		int FontFace = 0;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		ELexUIDynamicFontLineHeightType lineHeightType = ELexUIDynamicFontLineHeightType::FontSizeAsLineHeight;
+		ELexUIDynamicFontLineHeightType LineHeightType = ELexUIDynamicFontLineHeightType::FromFontFace;
 	/** Current using font face has kerning? */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI", Transient, AdvancedDisplay)
-		bool hasKerning = false;
+		bool bHasKerning = false;
 	//UPROPERTY(EditAnywhere, Category = "LGUI")
 	//	TScriptInterface<class UFontFaceInterface> test;
 	
@@ -88,21 +88,21 @@ protected:
 	 * if initialSize is too big, it is not much efficient to sample very big texture on GPU.
 	*/
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		ELexUIAtlasTextureSizeType initialSize = ELexUIAtlasTextureSizeType::SIZE_1024x1024;
+		ELexUIAtlasTextureSizeType InitialSize = ELexUIAtlasTextureSizeType::SIZE_1024x1024;
 	/**
 	 * rect pack use small cells to pack glyph in, and move to next cell if current cell is full. smaller value get better performance, but leave more garbage area.
 	 * this value defines the cell size. must not larger then InitialSize and only allow pow of 2.
 	 */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		int32 rectPackCellSize = 256;
+		int32 RectPackCellSize = 256;
 
 	/** Texture of this font */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI")
-		TObjectPtr<UTexture2D> texture;
+		TObjectPtr<UTexture2D> Texture;
 
 	/** if not find char in current font, LGUI will search the char in this font array until find it. */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		TArray<TObjectPtr<ULexUIFontData_FreeTypeRender>> fallbackFontArray;
+		TArray<TObjectPtr<ULexUIFontData_FreeTypeRender>> FallbackFontArray;
 
 	virtual void FinishDestroy()override;
 
@@ -116,44 +116,44 @@ public:
 	virtual void BeginDestroy()override;
 	//End UObject
 
-	//Begin ULGUIFontData_BaseObject interface
+	//Begin ULexUIFontData_BaseObject interface
 	virtual void InitFont()override;
 	virtual UMaterialInterface* GetFontMaterial()override { return nullptr; }
 	virtual UTexture2D* GetFontTexture()override;
 	virtual FLexUICharData_HighPrecision GetCharData(const TCHAR& charCode, const float& charSize)override;
-	virtual bool HasKerning()override { return hasKerning; }
+	virtual bool HasKerning()override { return bHasKerning; }
 	virtual float GetKerning(const TCHAR& leftCharIndex, const TCHAR& rightCharIndex, const float& charSize)override;
 	virtual float GetLineHeight(const float& fontSize)override;
 	virtual float GetVerticalOffset(const float& fontSize)override;
-	virtual float GetFontSizeLimit() { return 200.0f; }//limit font size to 200. too large font size will result in extream large texture
+	virtual float GetFontSizeLimit()override { return 200.0f; }//limit font size to 200. too large font size will result in extreme large texture
 
 	virtual void AddUIText(ULexText* InText)override;
 	virtual void RemoveUIText(ULexText* InText)override;
-	//End ULGUIFontData_BaseObject interface
+	//End ULexUIFontData_BaseObject interface
 protected:
 	/** Collection of UIText which use this font to render. */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI")
-		TArray<TWeakObjectPtr<ULexText>> renderTextArray;
+		TArray<TWeakObjectPtr<ULexText>> RenderTextArray;
 
 	friend class FLexUIFontData_FreeTypeRenderCustomization;
 	/** save data when useExternalFileOrEmbedInToUAsset=false */
 	UPROPERTY()
-		TArray<uint8> fontBinaryArray;
+		TArray<uint8> FontBinaryArray;
 	/** temp array for storing font binary data, because freetype need to load font from it so we need keep it alive */
-	TArray<uint8> tempFontBinaryArray;
-	FDelegateHandle packingAtlasTextureExpandDelegateHandle;
+	TArray<uint8> TempFontBinaryArray;
+	FDelegateHandle PackingAtlasTextureExpandDelegateHandle;
 
 	/** for rect packing */
-	rbp::MaxRectsBinPack binPack;
-	TArray<rbp::Rect> freeRects;
+	rbp::MaxRectsBinPack BinPack;
+	TArray<rbp::Rect> FreeRects;
 	/** current texture size */
-	int32 textureSize;
+	int32 TextureSize;
 	/** 1.0 / textureSize */
-	float oneDivideTextureSize;
+	float OneDivideTextureSize;
 
 #if WITH_FREETYPE
-	FT_LibraryRec_* library = nullptr;
-	FT_FaceRec_* face = nullptr;
+	FT_LibraryRec_* Library = nullptr;
+	FT_FaceRec_* Face = nullptr;
 	void InitFreeType();
 	void DeinitFreeType();
 	FT_GlyphSlotRec_* RenderGlyphOnFreeType(const TCHAR& charCode, const float& charSize);
@@ -164,24 +164,24 @@ protected:
 #endif
 #if WITH_EDITORONLY_DATA
 	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI", AdvancedDisplay)
-		TArray<FString> subFaces;
+		TArray<FString> SubFaces;
 #endif
-	bool alreadyInitialized = false;
+	bool bAlreadyInitialized = false;
 
 	struct FGlyphBitmap
 	{
 		int width, height, hOffset, vOffset, hAdvance;
-		/** memory will passed to render thread and delete there too */
+		/** memory will be passed to render thread and delete there too */
 		unsigned char* buffer;
-		/** single pixel data size in byte, eg RGBA8-4 A8-1 */
+		/** single pixel data size in byte, eg: RGBA8-4 A8-1 */
 		int pixelSize;
 	};
 	/**
 	 * Insert rect into area, assign pixel if succeed
-	 * return: if can fit in rect area return true, else false
+	 * return: if glyph can fit in rect area return true, else false
 	 */
 	bool PackRectAndInsertChar(const FGlyphBitmap& InGlyphBitmap, rbp::MaxRectsBinPack& InOutBinpack, UTexture2D* InTexture, FLexUICharData& OutResult);
-	void UpdateFontTextureRegion(UTexture2D* Texture, FUpdateTextureRegion2D* Region, uint32 SrcPitch, uint32 SrcBpp, uint8* SrcData);
+	void UpdateFontTextureRegion(UTexture2D* InTexture, FUpdateTextureRegion2D* Region, uint32 SrcPitch, uint32 SrcBpp, uint8* SrcData);
 	void RenewFontTexture(int oldTextureSize, int newTextureSize);
 
 	virtual UTexture2D* CreateFontTexture(int InTextureSize)PURE_VIRTUAL(ULGUIFreeTypeRenderFontData::CreateFontTexture, return nullptr;);

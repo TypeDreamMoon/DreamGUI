@@ -20,13 +20,9 @@ bool UUISliderComponent::CheckFill()
 {
     if (Fill.IsValid() && FillArea.IsValid())
         return true;
-    if (!FillActor.IsValid())
+    if (!Fill.IsValid())
         return false;
-    Fill = FillActor->GetLexWidget();
-    if (IsValid(FillActor->GetAttachParentActor()))
-    {
-        FillArea = FillActor->GetAttachParentActor()->FindComponentByClass<ULexWidget>();
-    }
+    FillArea = Fill->GetUIParent();
     if (Fill.IsValid() && FillArea.IsValid())
         return true;
     return false;
@@ -35,14 +31,10 @@ bool UUISliderComponent::CheckHandle()
 {
     if (Handle.IsValid() && HandleArea.IsValid())
         return true;
-    if (!HandleActor.IsValid())
+    if (!Handle.IsValid())
         return false;
-    Handle = HandleActor->GetLexWidget();
-    if (IsValid(HandleActor->GetAttachParentActor()))
-    {
-        HandleArea = HandleActor->GetAttachParentActor()->FindComponentByClass<ULexWidget>();
-    }
-    if (Handle.IsValid() && HandleArea.IsValid())
+    HandleArea = Handle->GetUIParent();
+    if (HandleArea.IsValid())
         return true;
     return false;
 }
@@ -55,21 +47,10 @@ void UUISliderComponent::PostEditChangeProperty(FPropertyChangedEvent &PropertyC
     {
         Value = FMath::FloorToFloat(Value);
     }
-    ApplyValueToUI();
-
-    Handle = nullptr; //force refind
-    HandleArea = nullptr;
-    if (CheckHandle())
-    {
-        HandleArea->EditorForceUpdate();
-    }
-    Fill = nullptr;
-    FillArea = nullptr;
-    if (CheckFill())
-    {
-        FillArea->EditorForceUpdate();
-    }
     Value = FMath::Clamp(Value, MinValue, MaxValue);
+    HandleArea = nullptr;//force re-check
+    FillArea = nullptr;//force re-check
+    ApplyValueToUI();
 }
 #endif
 

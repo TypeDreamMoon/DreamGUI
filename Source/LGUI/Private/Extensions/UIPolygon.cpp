@@ -7,9 +7,7 @@
 #include "LTweenManager.h"
 #include "Core/Components/LexCanvas.h"
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
-#endif
 
 UUIPolygon::UUIPolygon(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
@@ -292,6 +290,4 @@ ULTweener* UUIPolygon::EndAngleTo(float endValue, float duration /* = 0.5f */, f
 	return Tweener;
 }
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_ENABLE_OPTIMIZATION
-#endif

@@ -58,7 +58,7 @@ void FLexUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayoutB
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, fontFilePath));
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, useRelativeFilePath));
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, useExternalFileOrEmbedInToUAsset));
-		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, fontFace));
+		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, FontFace));
 
 		lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, unrealFont));
 	}
@@ -68,7 +68,7 @@ void FLexUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayoutB
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, useRelativeFilePath));
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, useExternalFileOrEmbedInToUAsset));
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, unrealFont));
-		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, fontFace));
+		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, FontFace));
 
 		auto fontFilePathHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, fontFilePath));
 		lguiCategory.AddCustomRow(LOCTEXT("FontSourceFileCategory","FontSourceFile"))
@@ -115,7 +115,7 @@ void FLexUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayoutB
 		]
 		;
 		TargetScriptPtr->InitFreeType();
-		if (TargetScriptPtr->alreadyInitialized == false)
+		if (TargetScriptPtr->bAlreadyInitialized == false)
 		{
 			lguiCategory.AddCustomRow(LOCTEXT("ErrorTip", "ErrorTip"))
 			.WholeRowContent()
@@ -132,11 +132,11 @@ void FLexUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayoutB
 
 	//faces
 	FontFaceOptions.Empty();
-	for (auto Face : TargetScriptPtr->subFaces)
+	for (auto Face : TargetScriptPtr->SubFaces)
 	{
 		FontFaceOptions.Add(MakeShareable(new FString(Face)));
 	}
-	auto fontFaceHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, fontFace));
+	auto fontFaceHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, FontFace));
 	lguiCategory.AddCustomRow(LOCTEXT("FontFace", "FontFace"))
 		.NameContent()
 		[
@@ -179,11 +179,11 @@ void FLexUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayoutB
 
 FText FLexUIFontData_FreeTypeRenderCustomization::FontFaceOptions_GetCurrentFace()const
 {
-	if (TargetScriptPtr->subFaces.Num() == 0 || TargetScriptPtr->fontFace >= TargetScriptPtr->subFaces.Num())
+	if (TargetScriptPtr->SubFaces.Num() == 0 || TargetScriptPtr->FontFace >= TargetScriptPtr->SubFaces.Num())
 	{
 		return LOCTEXT("NoFontFace", "(No Valid Face)");
 	}
-	return FText::FromString(TargetScriptPtr->subFaces[TargetScriptPtr->fontFace]);
+	return FText::FromString(TargetScriptPtr->SubFaces[TargetScriptPtr->FontFace]);
 }
 
 TSharedRef<ITableRow> FLexUIFontData_FreeTypeRenderCustomization::FontFaceOptions_GenerateComboItem(TSharedPtr<FString> InItem, const TSharedRef<STableViewBase>& OwnerTable, IDetailLayoutBuilder* DetailBuilder)
@@ -218,15 +218,15 @@ FText FLexUIFontData_FreeTypeRenderCustomization::OnGetFontFilePath()const
 
 FText FLexUIFontData_FreeTypeRenderCustomization::GetCurrentValue() const
 {
-	auto faceName = TargetScriptPtr->subFaces[TargetScriptPtr->fontFace];
+	auto faceName = TargetScriptPtr->SubFaces[TargetScriptPtr->FontFace];
 	return FText::FromString(faceName);
 }
 void FLexUIFontData_FreeTypeRenderCustomization::OnFontFaceComboSelectionChanged(TSharedPtr<FString> InSelectedItem, ESelectInfo::Type SelectInfo, TSharedRef<IPropertyHandle> fontFaceHandle)
 {
 	int selectedIndex = 0;
-	for (int i = 0; i < TargetScriptPtr->subFaces.Num(); i++)
+	for (int i = 0; i < TargetScriptPtr->SubFaces.Num(); i++)
 	{
-		if (TargetScriptPtr->subFaces[i] == *InSelectedItem)
+		if (TargetScriptPtr->SubFaces[i] == *InSelectedItem)
 		{
 			selectedIndex = i;
 		}

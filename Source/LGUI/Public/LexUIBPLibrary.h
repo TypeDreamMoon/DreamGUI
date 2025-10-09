@@ -11,8 +11,10 @@
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "PrefabSystem/LGUIPrefab.h"
 #include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
-#include "LGUIBPLibrary.generated.h"
+#include "LexUIBPLibrary.generated.h"
 
+class ULexCanvas;
+class ALexWidgetActor;
 class ULexWidget;
 class ULexVisual;
 class UUISector;
@@ -33,7 +35,7 @@ public:
 };
 
 UCLASS()
-class LGUI_API ULGUIBPLibrary : public UBlueprintFunctionLibrary
+class LGUI_API ULexUIBPLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 
@@ -94,7 +96,7 @@ public:
 	static T* DuplicateActorT(T* Target, USceneComponent* Parent)
 	{
 		static_assert(TPointerIsConvertibleFromTo<T, const AActor>::Value, "'T' template parameter to DuplicateActor must be derived from AActor");
-		return (T*)ULGUIBPLibrary::DuplicateActor(Target, Parent);
+		return (T*)ULexUIBPLibrary::DuplicateActor(Target, Parent);
 	}
 
 	/**
@@ -122,6 +124,10 @@ public:
 	 */
 	UFUNCTION(BlueprintPure, Category = LGUI, meta = (ComponentClass = "ActorComponent", DeterminesOutputType = "ComponentClass", AutoCreateRefTerm = "InExcludeNode"))
 		static UActorComponent* GetComponentInChildren(AActor* InActor, TSubclassOf<UActorComponent> ComponentClass, bool IncludeSelf, const TSet<AActor*>& InExcludeNode);
+
+	UFUNCTION(BlueprintCallable, Category=LexUI, meta=(WorldContext = "WorldContextObject"))
+	static void CreateScreenSpaceUIRoot(UObject* WorldContextObject, bool bCreateDefaultEventSystem
+		, ALexWidgetActor*& OutRootWidgetActor, ULexCanvas*& OutCanvas);
 public:
 #pragma region EventDelegate
 	UFUNCTION(BlueprintCallable, Category = LGUI)static void LGUIEventDelegateExecuteEmpty(const FLGUIEventDelegate& InEvent) { InEvent.FireEvent(); }

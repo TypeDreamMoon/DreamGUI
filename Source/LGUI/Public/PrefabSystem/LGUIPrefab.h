@@ -137,11 +137,11 @@ public:
 	UPROPERTY(EditAnywhere)
 		FIntPoint CanvasSize = FIntPoint(1920, 1080);
 	UPROPERTY(EditAnywhere)
-		bool bNeedCanvas = true;//do we need LGUICanvas component? default is true
+		bool bNeedCanvas = true;//do we need LexCanvas component? default is true
 	UPROPERTY(EditAnywhere)
-		uint8 CanvasRenderMode = 0;//default LGUICanvas's render mode is ELGUIRenderMode::ScreenSpaceOverlay
+		uint8 CanvasRenderMode = 0;//default LexCanvas's render mode is ELexUIRenderMode::ScreenSpaceOverlay
 	UPROPERTY(EditAnywhere)
-		TEnumAsByte<EViewModeIndex> ViewMode = EViewModeIndex::VMI_Lit;//editor viewport's viewmode
+		TEnumAsByte<EViewModeIndex> ViewMode = EViewModeIndex::VMI_Lit;//editor viewport's view-mode
 	UPROPERTY(EditAnywhere)
 		TSet<FGuid> UnexpandActorSet;
 };

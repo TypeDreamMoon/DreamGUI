@@ -32,9 +32,7 @@
 #include "Core/LexUIRender/LexUIHelperLineShaders.h"
 #endif
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
-#endif
 
 #if WITH_EDITORONLY_DATA
 uint32 FLexUIRenderer::EditorPreview_ViewKey = 0;
@@ -1362,6 +1360,4 @@ void FLexUIFullScreenSlicedQuadIndexBuffer::InitRHI(FRHICommandListBase& RHICmdL
 	IndexBufferRHI = RHICmdList.CreateIndexBuffer(sizeof(uint16), IndexBuffer.GetResourceDataSize(), BUF_Static, CreateInfo);
 }
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_ENABLE_OPTIMIZATION
-#endif

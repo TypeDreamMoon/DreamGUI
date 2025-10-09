@@ -52,20 +52,17 @@ protected:
 		bool WholeNumbers = false;
 	/** "Fill" can fill inside it's parent */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Slider")
-		TWeakObjectPtr<ALexWidgetActor> FillActor;
+		TWeakObjectPtr<ULexWidget> Fill;
 	/** Handle can move inside it's parent */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Slider")
-		TWeakObjectPtr<ALexWidgetActor> HandleActor;
+		TWeakObjectPtr<ULexWidget> Handle;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Slider")
 		UISliderDirectionType DirectionType;
 	/** When use navigation input to change the slider value, each press will change value as (MaxValue - MinValue) * NavigationChangeInterval. */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Slider", meta=(ClampMin = "0.0", ClampMax = "1.0"))
 		float NavigationChangeInterval = 0.1f;
 
-	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> Fill;
 	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> FillArea;
-	
-	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> Handle;
 	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> HandleArea;
 
 	FLGUIMulticastFloatDelegate OnValueChangedCPP;
@@ -86,9 +83,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
 		bool GetWholeNumber()const { return WholeNumbers; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
-		ALexWidgetActor* GetFillActor()const { return FillActor.Get(); }
+		ULexWidget* GetFill()const { return Fill.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
-		ALexWidgetActor* GetHandleActor()const { return HandleActor.Get(); }
+		ULexWidget* GetHandle()const { return Handle.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
 		UISliderDirectionType GetDirectionType()const { return DirectionType; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")

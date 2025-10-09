@@ -20,8 +20,10 @@ ULexUIPrefabFactory::ULexUIPrefabFactory()
 	SupportedClass = ULGUIPrefab::StaticClass();
 	bCreateNew = true;
 	bEditAfterNew = true;
+	RootActorClass = ALexWidgetActor::StaticClass();
 }
 
+#if USE_CLASS_PICKER
 class FAssetClassParentFilter : public IClassViewerFilter
 {
 public:
@@ -95,6 +97,8 @@ bool ULexUIPrefabFactory::ConfigureProperties()
 
 	return bPressedOk;
 }
+#endif
+
 UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent, FName Name, EObjectFlags Flags, UObject* Context, FFeedbackContext* Warn)
 {
 	if (SourcePrefab != nullptr)//prefab variant
@@ -127,8 +131,9 @@ UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent,
 		NewAsset->bIsPrefabVariant = false;
 		ULGUIPrefabHelperObject* HelperObject = NewObject<ULGUIPrefabHelperObject>(GetTransientPackage());
 		HelperObject->PrefabAsset = NewAsset;
-		HelperObject->LoadedRootActor = ULGUIPrefabManagerObject::GetPreviewWorldForPrefabPackage()->SpawnActor<ALexWidgetActor>();
-		HelperObject->LoadedRootActor->SetActorLabel(TEXT("RootActor"));
+		HelperObject->LoadedRootActor = ULGUIPrefabManagerObject::GetPreviewWorldForPrefabPackage()->SpawnActor<ALexWidgetActor>(RootActorClass);
+
+		HelperObject->LoadedRootActor->SetActorLabel(NewAsset->GetName());
 		if (!HelperObject->LoadedRootActor->GetRootComponent())
 		{
 			USceneComponent* RootComponent = NewObject<USceneComponent>(HelperObject->LoadedRootActor, USceneComponent::GetDefaultSceneRootVariableName(), RF_Transactional);

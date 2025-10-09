@@ -6,7 +6,7 @@
 #include "Event/LexEventSystem.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexCanvas.h"
-#include "LGUIBPLibrary.h"
+#include "LexUIBPLibrary.h"
 #include "Core/LexUISpriteData.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexText.h"
@@ -16,9 +16,7 @@
 #include "Utils/LexUIUtils.h"
 #endif
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
-#endif
 
 UUIDropdownComponent::UUIDropdownComponent()
 {
@@ -128,7 +126,7 @@ void UUIDropdownComponent::Show()
 		for (auto item : CreatedItemArray)
 		{
 			auto itemActor = item->GetOwner();
-			ULGUIBPLibrary::DestroyActorWithHierarchy(itemActor, true);
+			ULexUIBPLibrary::DestroyActorWithHierarchy(itemActor, true);
 		}
 		CreatedItemArray.Reset();
 		//create items
@@ -327,7 +325,7 @@ void UUIDropdownComponent::CreateListItems()
 	auto contentUIItem = templateUIItem->GetUIParent();
 	for (int i = 0, count = Options.Num(); i < count; i++)
 	{
-		auto copiedItemActor = ULGUIBPLibrary::DuplicateActor(ItemTemplate.GetActor(), contentUIItem);
+		auto copiedItemActor = ULexUIBPLibrary::DuplicateActor(ItemTemplate.GetActor(), contentUIItem);
 #if WITH_EDITOR
 		copiedItemActor->SetActorLabel(FString::Printf(TEXT("Item_%d"), i));
 #endif
@@ -602,6 +600,4 @@ UUIToggleComponent* UUIDropdownItemComponent::GetToggle()const
 	return nullptr;
 }
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_ENABLE_OPTIMIZATION
-#endif

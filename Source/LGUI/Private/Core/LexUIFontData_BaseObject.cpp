@@ -8,10 +8,10 @@
 
 ULexUIFontData_BaseObject* ULexUIFontData_BaseObject::GetDefaultFont()
 {
-	static auto defaultFont = LoadObject<ULexUIFontData_BaseObject>(NULL, TEXT("/LGUI/DefaultSDFFont"));
+	static auto defaultFont = LoadObject<ULexUIFontData_BaseObject>(NULL, TEXT("/LGUI/DefaultFont_DistanceField"));
 	if (defaultFont == nullptr)
 	{
-		auto errMsg = FText::Format(LOCTEXT("MissingDefaultContent", "{0} Load default font error! Missing some content of LGUI plugin, reinstall this plugin may fix the issue.")
+		auto errMsg = FText::Format(LOCTEXT("MissingDefaultContent", "{0} Load default font error! Missing some content of LexUI plugin, reinstall this plugin may fix the issue.")
 			, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)));
 		UE_LOG(LGUI, Error, TEXT("%s"), *errMsg.ToString());
 #if WITH_EDITOR

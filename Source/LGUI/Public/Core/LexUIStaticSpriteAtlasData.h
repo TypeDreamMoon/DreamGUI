@@ -13,7 +13,7 @@ class ULexSpriteBase;
 class ILexUISpriteRenderInterface;
 
 //Static packing Sprite into atlas
-UCLASS(NotBlueprintable, NotBlueprintType, Experimental)
+UCLASS(NotBlueprintable, NotBlueprintType)
 class LGUI_API ULexUIStaticSpriteAtlasData :public UObject
 {
 	GENERATED_BODY()
@@ -39,19 +39,19 @@ private:
 	/** Generated atlas texture. */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI")
 		TObjectPtr<UTexture2D> AtlasTexture = nullptr;
+#if WITH_EDITORONLY_DATA
 	/** Collected Sprite array to pack. */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		TArray<TObjectPtr<ULexUISpriteData>> SpriteArray;
-#if WITH_EDITORONLY_DATA
+		TArray<TObjectPtr<ULexUISpriteData>> SpriteDataArray;
 	UPROPERTY(Transient)
-	TArray<TObjectPtr<ULexUISpriteData>> PrevSpriteArray;
+	TArray<TObjectPtr<ULexUISpriteData>> PrevSpriteDataArray;
 	/** collection of all objects that use this atlas to render. Object must implement IUISpriteRenderableInterface. */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI", AdvancedDisplay)
 		TArray<TWeakObjectPtr<UObject>> RenderSpriteArray;
 #endif
 	/**
 	 * Store texture mip data, so we can recreate atlas texture with this data.
-	 * @todo: Actually I want to save this only in cook time (reduce editor asset size), but I can't get texutre's pixel data in cook time.
+	 * @todo: Actually I want to save this only in cook time (reduce editor asset size), but I can't get texture's pixel data in cook time.
 	 */
 	UPROPERTY()
 		TArray<uint8> TextureMipData;
@@ -85,7 +85,7 @@ private:
 #endif
 private:
 	bool bIsInitialized = false;
-	virtual void BeginDestroy();
+	virtual void BeginDestroy()override;
 public:
 	bool InitCheck();
 	UFUNCTION(BlueprintCallable, Category = LGUI)

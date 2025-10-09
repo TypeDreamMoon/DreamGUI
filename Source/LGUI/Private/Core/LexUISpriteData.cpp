@@ -50,8 +50,8 @@ void FLexUISpriteInfo::ApplyBorderUV(float texFullWidthReciprocal, float texFull
 {
 	BorderMinUV.X = MinUV.X + Border.Left * texFullWidthReciprocal;
 	BorderMaxUV.X = MaxUV.X - Border.Right * texFullWidthReciprocal;
-	BorderMinUV.Y = MaxUV.Y - Border.Bottom * texFullHeightReciprocal;
-	BorderMinUV.X = MinUV.Y + Border.Top * texFullHeightReciprocal;
+	BorderMaxUV.Y = MaxUV.Y - Border.Bottom * texFullHeightReciprocal;
+	BorderMinUV.Y = MinUV.Y + Border.Top * texFullHeightReciprocal;
 }
 
 bool ULexUISpriteData::InsertTexture(FLexUIDynamicSpriteAtlasData* InAtlasData)
@@ -118,7 +118,7 @@ void ULexUISpriteData::CopySpriteTextureToAtlas(rbp::Rect InPackedRect, int32 In
 		RegionData->SpaceBetweenSprites = bUseEdgePixelPadding ? InAtlasTexturePadding : 0;
 		RegionData->PackedRect = InPackedRect;
 
-		ENQUEUE_RENDER_COMMAND(FLGUISpriteCopyTextureData)(
+		ENQUEUE_RENDER_COMMAND(FLexUISpriteData_CopyTextureData)(
 			[RegionData](FRHICommandListImmediate& RHICmdList)
 		{
 			auto spriteTextureRHIRef = RegionData->SpriteTextureResource->GetTexture2DRHI();

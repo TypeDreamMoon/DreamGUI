@@ -195,9 +195,9 @@ void ULexImage::OnUpdateGeometry(FLexUIGeometry& InMesh, bool InTriangleChanged,
 				SpriteInfo.Border.Bottom = Brush.Margin.Bottom * Brush.ImageSize.Y;
 				float uvWidth = SpriteInfo.MaxUV.X - SpriteInfo.MinUV.X, uvHeight = SpriteInfo.MaxUV.Y - SpriteInfo.MinUV.Y;
 				SpriteInfo.BorderMinUV.X = SpriteInfo.MinUV.X + Brush.Margin.Left * uvWidth;
-				SpriteInfo.BorderMinUV.Y = SpriteInfo.MaxUV.Y - Brush.Margin.Bottom * uvHeight;
 				SpriteInfo.BorderMaxUV.X = SpriteInfo.MaxUV.X - Brush.Margin.Right * uvWidth;
-				SpriteInfo.BorderMinUV.X = SpriteInfo.MinUV.Y + Brush.Margin.Top * uvHeight;
+				SpriteInfo.BorderMaxUV.Y = SpriteInfo.MaxUV.Y - Brush.Margin.Bottom * uvHeight;
+				SpriteInfo.BorderMinUV.Y = SpriteInfo.MinUV.Y + Brush.Margin.Top * uvHeight;
 			}
 			FLexUIGeometry::UpdateUIRectBorderVertex(&InMesh, bFillCenter, RenderSize.X, RenderSize.Y, FVector2f(Pivot)
 				, SpriteInfo, RenderCanvas, this, FinalColor

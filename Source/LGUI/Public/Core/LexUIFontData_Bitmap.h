@@ -38,12 +38,12 @@ class LGUI_API ULexUIFontData_Bitmap : public ULexUIFontData_FreeTypeRender
 protected:
 	/** angle of italic style in degree */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		float italicAngle = 15.0f;
+		float ItalicAngle = 15.0f;
 	/** bold size radio for bold style, large number create more bold effect */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		float boldRatio = 0.015f;
+		float BoldRatio = 0.015f;
 public:
-	//Begin ULGUIFreeTypeRenderFontData interface
+	//Begin ULexUIFontData_FreeTypeRender interface
 	virtual void PushCharData(
 		TCHAR charCode, const FVector2f& lineOffset, const FVector2f& fontSpace, const FLexUICharData_HighPrecision& charData,
 		const LexUIRichTextParser::FRichTextParseResult& richTextProperty,
@@ -52,10 +52,10 @@ public:
 		TArray<FLexUIOriginVertexData>& originVertices, TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndexBufferType>& triangleIndices
 	)override;
 	virtual void PrepareForPushCharData(ULexText* InText)override;
-	//End ULGUIFreeTypeRenderFontData interface
+	//End ULexUIFontData_FreeTypeRender interface
 protected:
-	float boldSize; float italicSlop;
-	TMap<FLexUIFontKeyData, FLexUICharData> charDataMap;
+	float BoldSize; float ItalicSlop;
+	TMap<FLexUIFontKeyData, FLexUICharData> CharDataMap;
 	virtual UTexture2D* CreateFontTexture(int InTextureSize)override;
 	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize)override;
 

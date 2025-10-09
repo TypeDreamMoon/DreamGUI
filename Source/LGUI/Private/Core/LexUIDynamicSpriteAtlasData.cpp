@@ -2,10 +2,7 @@
 
 #include "Core/LexUIDynamicSpriteAtlasData.h"
 #include "Core/LexUIStaticSpriteAtlasData.h"
-#include "LGUI.h"
 #include "Core/LexUISettings.h"
-#include "Core/LexUIManager.h"
-#include "Core/Components/LexSpriteBase.h"
 #include "Core/LexUISpriteData.h"
 #include "Utils/LexUIUtils.h"
 #include "Rendering/Texture2DResource.h"
@@ -56,7 +53,7 @@ void FLexUIDynamicSpriteAtlasData::CreateAtlasTexture(const FName& packingTag, i
 		auto NewTexture = texture;
 		if (OldTexture->GetResource() != nullptr && NewTexture->GetResource() != nullptr)
 		{
-			ENQUEUE_RENDER_COMMAND(FLGUIDynamicSpriteAtlas_CopyAtlasTexture)(
+			ENQUEUE_RENDER_COMMAND(FLexUIDynamicSpriteAtlas_CopyAtlasTexture)(
 				[OldTexture, NewTexture, oldTextureSize](FRHICommandListImmediate& RHICmdList)
 			{
 				FRHICopyTextureInfo CopyInfo;

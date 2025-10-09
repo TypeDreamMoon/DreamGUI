@@ -188,7 +188,7 @@ void ULexFrameCapture::SendCaptureDataToRenderProxy()
 	if (RenderProxy.IsValid())
 	{
 		auto TempRenderProxy = (FUIFrameCaptureRenderProxy*)(RenderProxy.Get());
-		ENQUEUE_RENDER_COMMAND(FUIBackgroundPixelate_UpdateData)
+		ENQUEUE_RENDER_COMMAND(FLexBackgroundPixelate_UpdateData)
 			([TempRenderProxy, bCaptureFullScreen = this->bCaptureFullScreen, RenderTargetResource = CapturedFrame->GameThread_GetRenderTargetResource(), CaptureMode = CaptureMode](FRHICommandListImmediate& RHICmdList)
 				{
 					TempRenderProxy->bCaptureFullScreen = bCaptureFullScreen;

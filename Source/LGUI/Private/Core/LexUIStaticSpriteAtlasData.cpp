@@ -3,23 +3,22 @@
 #include "Core/LexUIStaticSpriteAtlasData.h"
 #include "LGUI.h"
 #include "Core/LexUISpriteData.h"
-#include "Core/Components/LexSpriteBase.h"
 #include "TextureCompiler.h"
 #include "Utils/LexUIUtils.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "Core/ILexUISpriteRenderInterface.h"
 #include "TextureResource.h"
 
-#define LOCTEXT_NAMESPACE "LGUIStaticSpriteAtlasData"
+#define LOCTEXT_NAMESPACE "LexUIStaticSpriteAtlasData"
 
 #if WITH_EDITOR
 void ULexUIStaticSpriteAtlasData::PreEditChange(FProperty* PropertyAboutToChange)
 {
 	Super::PreEditChange(PropertyAboutToChange);
 	auto PropertyName = PropertyAboutToChange->GetFName();
-	if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIStaticSpriteAtlasData, SpriteArray))
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIStaticSpriteAtlasData, SpriteDataArray))
 	{
-		PrevSpriteArray = SpriteArray;
+		PrevSpriteDataArray = SpriteDataArray;
 	}
 }
 void ULexUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
@@ -29,19 +28,19 @@ void ULexUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChanged
 	{
 		MarkNotInitialized();
 		auto PropertyName = Property->GetFName();
-		if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIStaticSpriteAtlasData, SpriteArray))
+		if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIStaticSpriteAtlasData, SpriteDataArray))
 		{
 			//not allow empty
-			PrevSpriteArray.Remove(nullptr);
-			SpriteArray.Remove(nullptr);
+			PrevSpriteDataArray.Remove(nullptr);
+			SpriteDataArray.Remove(nullptr);
 			//not allow repeated
 			TSet<ULexUISpriteData*> tempSet;
-			for (int i = 0; i < PrevSpriteArray.Num(); i++)
+			for (int i = 0; i < PrevSpriteDataArray.Num(); i++)
 			{
-				auto spriteItem = PrevSpriteArray[i];
+				auto spriteItem = PrevSpriteDataArray[i];
 				if (tempSet.Contains(spriteItem))
 				{
-					PrevSpriteArray.RemoveAt(i);
+					PrevSpriteDataArray.RemoveAt(i);
 					i--;
 				}
 				else
@@ -50,12 +49,12 @@ void ULexUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChanged
 				}
 			}
 			tempSet.Empty();
-			for (int i = 0; i < SpriteArray.Num(); i++)
+			for (int i = 0; i < SpriteDataArray.Num(); i++)
 			{
-				auto spriteItem = SpriteArray[i];
+				auto spriteItem = SpriteDataArray[i];
 				if (tempSet.Contains(spriteItem))
 				{
-					SpriteArray.RemoveAt(i);
+					SpriteDataArray.RemoveAt(i);
 					i--;
 				}
 				else
@@ -66,16 +65,16 @@ void ULexUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChanged
 
 			TArray<ULexUISpriteData*> AddedArray;
 			TArray<ULexUISpriteData*> RemovedArray;
-			for (auto Item : SpriteArray)
+			for (auto Item : SpriteDataArray)
 			{
-				if (!PrevSpriteArray.Contains(Item))
+				if (!PrevSpriteDataArray.Contains(Item))
 				{
 					AddedArray.Add(Item);
 				}
 			}
-			for (auto Item : PrevSpriteArray)
+			for (auto Item : PrevSpriteDataArray)
 			{
-				if (!SpriteArray.Contains(Item))
+				if (!SpriteDataArray.Contains(Item))
 				{
 					RemovedArray.Add(Item);
 				}
@@ -92,7 +91,7 @@ void ULexUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChanged
 				spriteData->MarkPackageDirty();
 			};
 			auto KeepOldSprite = [this](ULexUISpriteData* spriteData) {
-				SpriteArray.Remove(spriteData);
+				SpriteDataArray.Remove(spriteData);
 			};
 			for (auto Item : AddedArray)
 			{
@@ -180,18 +179,18 @@ void ULexUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChanged
 }
 void ULexUIStaticSpriteAtlasData::AddSpriteData(ULexUISpriteData* InSpriteData)
 {
-	if (!SpriteArray.Contains(InSpriteData))
+	if (!SpriteDataArray.Contains(InSpriteData))
 	{
-		SpriteArray.Add(InSpriteData);
+		SpriteDataArray.Add(InSpriteData);
 		MarkPackageDirty();
 		MarkNotInitialized();
 	}
 }
 void ULexUIStaticSpriteAtlasData::RemoveSpriteData(ULexUISpriteData* InSpriteData)
 {
-	if (SpriteArray.Contains(InSpriteData))
+	if (SpriteDataArray.Contains(InSpriteData))
 	{
-		SpriteArray.Remove(InSpriteData);
+		SpriteDataArray.Remove(InSpriteData);
 		MarkPackageDirty();
 		MarkNotInitialized();
 	}
@@ -206,19 +205,19 @@ void ULexUIStaticSpriteAtlasData::RemoveRenderSprite(TScriptInterface<ILexUISpri
 }
 void ULexUIStaticSpriteAtlasData::CheckSprite()
 {
-	for (int i = this->SpriteArray.Num() - 1; i >= 0; i--)
+	for (int i = this->SpriteDataArray.Num() - 1; i >= 0; i--)
 	{
-		auto itemSprite = this->SpriteArray[i];
+		auto itemSprite = this->SpriteDataArray[i];
 		if (IsValid(itemSprite))
 		{
 			if (itemSprite->GetPackingAtlas() != this)
 			{
-				this->SpriteArray.RemoveAt(i);
+				this->SpriteDataArray.RemoveAt(i);
 			}
 		}
 		else
 		{
-			this->SpriteArray.RemoveAt(i);
+			this->SpriteDataArray.RemoveAt(i);
 		}
 	}
 	for (int i = this->RenderSpriteArray.Num() - 1; i >= 0; i--)
@@ -255,10 +254,10 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 {
 	AtlasTexture = nullptr;
 
-	if (SpriteArray.Num() <= 0)return false;
-	for (int i = 0; i < SpriteArray.Num(); i++)
+	if (SpriteDataArray.Num() <= 0)return false;
+	for (int i = 0; i < SpriteDataArray.Num(); i++)
 	{
-		ULexUISpriteData* spriteDataItem = SpriteArray[i];
+		ULexUISpriteData* spriteDataItem = SpriteDataArray[i];
 		if (!IsValid(spriteDataItem))
 		{
 			if (!bWarningIsAlreadyAppearedAtCurrentPackingSession)
@@ -290,7 +289,7 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 			if (!bWarningIsAlreadyAppearedAtCurrentPackingSession)
 			{
 				bWarningIsAlreadyAppearedAtCurrentPackingSession = true;
-				auto ErrMsg = FText::Format(LOCTEXT("SpritePackingAtlasError", "{0} Packing atlas for LGUIStaticSpriteAtlasData: '{1}', but SpriteData's packingAtlas is not this one, spriteData '{2}', at index: {3}")
+				auto ErrMsg = FText::Format(LOCTEXT("SpritePackingAtlasError", "{0} Packing atlas for LexUIStaticSpriteAtlasData: '{1}', but SpriteData's packingAtlas is not this one, spriteData '{2}', at index: {3}")
 					, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__))
 					, FText::FromString(this->GetPathName()), FText::FromString(spriteDataItem->GetPathName()), i);
 				UE_LOG(LGUI, Error, TEXT("%s"), *ErrMsg.ToString());
@@ -303,7 +302,7 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 	//pack
 	uint32 packSize = 16;//start from minimal size 16
 	TArray<rbp::Rect> packResult;
-	packResult.SetNumUninitialized(SpriteArray.Num());
+	packResult.SetNumUninitialized(SpriteDataArray.Num());
 	while (!PackAtlasTest(packSize, packResult))
 	{
 		packSize *= 2;
@@ -337,9 +336,9 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 	//copy pixels
 	FColor* atlasColorBuffer = static_cast<FColor*>((void*)pixelData);
 	float atlasTextureSizeInv = 1.0f / atlasSize;
-	for (int spriteIndex = 0; spriteIndex < SpriteArray.Num(); spriteIndex++)
+	for (int spriteIndex = 0; spriteIndex < SpriteDataArray.Num(); spriteIndex++)
 	{
-		auto spriteDataItem = SpriteArray[spriteIndex];
+		auto spriteDataItem = SpriteDataArray[spriteIndex];
 		if (IsValid(spriteDataItem) && IsValid(spriteDataItem->GetSpriteTexture()))
 		{
 			auto spriteTexture = spriteDataItem->GetSpriteTexture();
@@ -349,7 +348,7 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 #endif
 			int32 spriteWidth = spriteTexture->GetSizeX();
 			int32 spriteHeight = spriteTexture->GetSizeY();
-			const FColor* spriteColorBuffer = reinterpret_cast<const FColor*>(spriteTexture->GetPlatformData()->Mips[0].BulkData.LockReadOnly());
+			const FColor* spriteColorBuffer = static_cast<const FColor*>(spriteTexture->GetPlatformData()->Mips[0].BulkData.LockReadOnly());
 			rbp::Rect rect = packResult[spriteIndex];
 
 			int destY = rect.y * atlasSize;
@@ -517,9 +516,9 @@ bool ULexUIStaticSpriteAtlasData::PackAtlasTest(uint32 size, TArray<rbp::Rect>& 
 	rbp::MaxRectsBinPack atlasBinPack;
 	atlasBinPack.Init(size, size, false);
 	auto methold = rbp::MaxRectsBinPack::FreeRectChoiceHeuristic::RectBestAreaFit;
-	for (int i = 0; i < SpriteArray.Num(); i++)
+	for (int i = 0; i < SpriteDataArray.Num(); i++)
 	{
-		auto spriteDataItem = SpriteArray[i];
+		auto spriteDataItem = SpriteDataArray[i];
 		auto calculatedEdgePixelPadding = spriteDataItem->GetUseEdgePixelPadding() ? EdgePixelPadding : 0;
 		auto spriteTexture = spriteDataItem->GetSpriteTexture();
 		auto space = SpaceBetweenSprites + calculatedEdgePixelPadding + calculatedEdgePixelPadding;
@@ -563,9 +562,9 @@ void ULexUIStaticSpriteAtlasData::MarkNotInitialized()
 }
 bool ULexUIStaticSpriteAtlasData::CheckInvalidSpriteData()const
 {
-	for (int i = 0; i < SpriteArray.Num(); i++)
+	for (int i = 0; i < SpriteDataArray.Num(); i++)
 	{
-		ULexUISpriteData* spriteDataItem = SpriteArray[i];
+		ULexUISpriteData* spriteDataItem = SpriteDataArray[i];
 		if (!IsValid(spriteDataItem))
 		{
 			return true;
@@ -583,27 +582,27 @@ bool ULexUIStaticSpriteAtlasData::CheckInvalidSpriteData()const
 }
 void ULexUIStaticSpriteAtlasData::CleanupInvalidSpriteData()
 {
-	auto PrevCount = SpriteArray.Num();
-	for (int i = 0; i < SpriteArray.Num(); i++)
+	auto PrevCount = SpriteDataArray.Num();
+	for (int i = 0; i < SpriteDataArray.Num(); i++)
 	{
-		ULexUISpriteData* spriteDataItem = SpriteArray[i];
+		ULexUISpriteData* spriteDataItem = SpriteDataArray[i];
 		if (!IsValid(spriteDataItem))
 		{
-			SpriteArray.RemoveAt(i);
+			SpriteDataArray.RemoveAt(i);
 			i--;
 		}
 		else if (!IsValid(spriteDataItem->GetSpriteTexture()))
 		{
-			SpriteArray.RemoveAt(i);
+			SpriteDataArray.RemoveAt(i);
 			i--;
 		}
 		else if (spriteDataItem->packingAtlas != this)
 		{
-			SpriteArray.RemoveAt(i);
+			SpriteDataArray.RemoveAt(i);
 			i--;
 		}
 	}
-	if (PrevCount != SpriteArray.Num())
+	if (PrevCount != SpriteDataArray.Num())
 	{
 		this->MarkNotInitialized();
 		this->InitCheck();
@@ -614,10 +613,12 @@ void ULexUIStaticSpriteAtlasData::CleanupInvalidSpriteData()
 
 void ULexUIStaticSpriteAtlasData::BeginDestroy()
 {
-	for (auto& item : SpriteArray)
+#if WITH_EDITOR
+	for (auto& item : SpriteDataArray)
 	{
 		item->bIsInitialized = false;
 	}
+#endif
 	Super::BeginDestroy();
 }
 
@@ -708,12 +709,10 @@ bool ULexUIStaticSpriteAtlasData::ReadPixel(const FVector2D& InUV, FColor& OutPi
 	auto PlatformData = AtlasTexture->GetPlatformData();
 	if (PlatformData && PlatformData->Mips.Num() > 0)
 	{
-		auto Pixels = (FColor*)(PlatformData->Mips[0].BulkData.Lock(LOCK_READ_ONLY));
-		{
-			auto uvInFullSize = FIntPoint(InUV.X * TextureSize, InUV.Y * TextureSize);
-			auto PixelIndex = uvInFullSize.Y * TextureSize + uvInFullSize.X;
-			OutPixel = Pixels[PixelIndex];
-		}
+		auto Pixels = static_cast<FColor*>(PlatformData->Mips[0].BulkData.Lock(LOCK_READ_ONLY));
+		auto uvInFullSize = FIntPoint(InUV.X * TextureSize, InUV.Y * TextureSize);
+		auto PixelIndex = uvInFullSize.Y * TextureSize + uvInFullSize.X;
+		OutPixel = Pixels[PixelIndex];
 		PlatformData->Mips[0].BulkData.Unlock();
 		return true;
 	}

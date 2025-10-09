@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUIBPLibrary.h"
+#include "LexUIBPLibrary.h"
 #include "Utils/LexUIUtils.h"
 #include "LTweenManager.h"
 #include "LTweenBPLibrary.h"
@@ -8,14 +8,17 @@
 #include "../Public/Core/Components/LexVisual.h"
 #include "Framework/Application/SlateApplication.h"
 #include "LGUI.h"
+#include "Core/Actor/LexWidgetActor.h"
+#include "Core/Components/LexCanvas.h"
+#include "Event/LexScreenSpaceRaycaster.h"
 #include "PrefabSystem/LGUIPrefab.h"
 #include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 
-void ULGUIBPLibrary::DestroyActorWithHierarchy(AActor* Target, bool WithHierarchy)
+void ULexUIBPLibrary::DestroyActorWithHierarchy(AActor* Target, bool WithHierarchy)
 {
 	FLexUIUtils::DestroyActorWithHierarchy(Target, WithHierarchy);
 }
-AActor* ULGUIBPLibrary::LoadPrefab(UObject* WorldContextObject, ULGUIPrefab* InPrefab, USceneComponent* InParent, const FLGUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake, bool SetRelativeTransformToIdentity)
+AActor* ULexUIBPLibrary::LoadPrefab(UObject* WorldContextObject, ULGUIPrefab* InPrefab, USceneComponent* InParent, const FLGUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake, bool SetRelativeTransformToIdentity)
 {
 	if (!IsValid(InPrefab))
 	{
@@ -24,7 +27,7 @@ AActor* ULGUIBPLibrary::LoadPrefab(UObject* WorldContextObject, ULGUIPrefab* InP
 	}
 	return InPrefab->LoadPrefab(WorldContextObject, InParent, InCallbackBeforeAwake, SetRelativeTransformToIdentity);
 }
-AActor* ULGUIBPLibrary::LoadPrefabWithTransform(UObject* WorldContextObject, ULGUIPrefab* InPrefab, USceneComponent* InParent, FVector Location, FRotator Rotation, FVector Scale, const FLGUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake)
+AActor* ULexUIBPLibrary::LoadPrefabWithTransform(UObject* WorldContextObject, ULGUIPrefab* InPrefab, USceneComponent* InParent, FVector Location, FRotator Rotation, FVector Scale, const FLGUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake)
 {
 	if (!IsValid(InPrefab))
 	{
@@ -33,7 +36,7 @@ AActor* ULGUIBPLibrary::LoadPrefabWithTransform(UObject* WorldContextObject, ULG
 	}
 	return InPrefab->LoadPrefabWithTransform(WorldContextObject, InParent, Location, Rotation, Scale, InCallbackBeforeAwake);
 }
-AActor* ULGUIBPLibrary::LoadPrefabWithTransform(UObject* WorldContextObject, ULGUIPrefab* InPrefab, USceneComponent* InParent, FVector Location, FQuat Rotation, FVector Scale, const TFunction<void(AActor*)>& InCallbackBeforeAwake)
+AActor* ULexUIBPLibrary::LoadPrefabWithTransform(UObject* WorldContextObject, ULGUIPrefab* InPrefab, USceneComponent* InParent, FVector Location, FQuat Rotation, FVector Scale, const TFunction<void(AActor*)>& InCallbackBeforeAwake)
 {
 	if (!IsValid(InPrefab))
 	{
@@ -42,7 +45,7 @@ AActor* ULGUIBPLibrary::LoadPrefabWithTransform(UObject* WorldContextObject, ULG
 	}
 	return InPrefab->LoadPrefabWithTransform(WorldContextObject, InParent, Location, Rotation, Scale, InCallbackBeforeAwake);
 }
-AActor* ULGUIBPLibrary::LoadPrefabWithReplacement(UObject* WorldContextObject, ULGUIPrefab* InPrefab, USceneComponent* InParent, const TMap<UObject*, UObject*>& InReplaceAssetMap, const TMap<UClass*, UClass*>& InReplaceClassMap, const FLGUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake)
+AActor* ULexUIBPLibrary::LoadPrefabWithReplacement(UObject* WorldContextObject, ULGUIPrefab* InPrefab, USceneComponent* InParent, const TMap<UObject*, UObject*>& InReplaceAssetMap, const TMap<UClass*, UClass*>& InReplaceClassMap, const FLGUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake)
 {
 	if (!IsValid(InPrefab))
 	{
@@ -52,15 +55,15 @@ AActor* ULGUIBPLibrary::LoadPrefabWithReplacement(UObject* WorldContextObject, U
 	return InPrefab->LoadPrefabWithReplacement(WorldContextObject, InParent, InReplaceAssetMap, InReplaceClassMap, InCallbackBeforeAwake);
 }
 
-AActor* ULGUIBPLibrary::DuplicateActor(AActor* Target, USceneComponent* Parent)
+AActor* ULexUIBPLibrary::DuplicateActor(AActor* Target, USceneComponent* Parent)
 {
 	return LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::DuplicateActor(Target, Parent);
 }
-void ULGUIBPLibrary::PrepareDuplicateData(AActor* Target, FLGUIDuplicateDataContainer& DataContainer)
+void ULexUIBPLibrary::PrepareDuplicateData(AActor* Target, FLGUIDuplicateDataContainer& DataContainer)
 {
 	DataContainer.bIsValid = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::PrepareDataForDuplicate(Target, DataContainer.DuplicateData);
 }
-AActor* ULGUIBPLibrary::DuplicateActorWithPreparedData(FLGUIDuplicateDataContainer& Data, USceneComponent* Parent)
+AActor* ULexUIBPLibrary::DuplicateActorWithPreparedData(FLGUIDuplicateDataContainer& Data, USceneComponent* Parent)
 {
 	if (Data.bIsValid)
 	{
@@ -72,7 +75,7 @@ AActor* ULGUIBPLibrary::DuplicateActorWithPreparedData(FLGUIDuplicateDataContain
 	}
 }
 
-UActorComponent* ULGUIBPLibrary::GetComponentInParent(AActor* InActor, TSubclassOf<UActorComponent> ComponentClass, bool IncludeSelf, AActor* InStopNode)
+UActorComponent* ULexUIBPLibrary::GetComponentInParent(AActor* InActor, TSubclassOf<UActorComponent> ComponentClass, bool IncludeSelf, AActor* InStopNode)
 {
 	if (!IsValid(InActor))
 	{
@@ -98,7 +101,7 @@ UActorComponent* ULGUIBPLibrary::GetComponentInParent(AActor* InActor, TSubclass
 	}
 	return nullptr;
 }
-TArray<UActorComponent*> ULGUIBPLibrary::GetComponentsInChildren(AActor* InActor, TSubclassOf<UActorComponent> ComponentClass, bool IncludeSelf, const TSet<AActor*>& InExcludeNode)
+TArray<UActorComponent*> ULexUIBPLibrary::GetComponentsInChildren(AActor* InActor, TSubclassOf<UActorComponent> ComponentClass, bool IncludeSelf, const TSet<AActor*>& InExcludeNode)
 {
 	TArray<UActorComponent*> result;
 	if (!IsValid(InActor))
@@ -151,7 +154,7 @@ TArray<UActorComponent*> ULGUIBPLibrary::GetComponentsInChildren(AActor* InActor
 	return result;
 }
 
-UActorComponent* ULGUIBPLibrary::GetComponentInChildren(AActor* InActor, TSubclassOf<UActorComponent> ComponentClass, bool IncludeSelf, const TSet<AActor*>& InExcludeNode)
+UActorComponent* ULexUIBPLibrary::GetComponentInChildren(AActor* InActor, TSubclassOf<UActorComponent> ComponentClass, bool IncludeSelf, const TSet<AActor*>& InExcludeNode)
 {
 	if (!IsValid(InActor))
 	{
@@ -209,7 +212,46 @@ UActorComponent* ULGUIBPLibrary::GetComponentInChildren(AActor* InActor, TSubcla
 	return result;
 }
 
-UActorComponent* ULGUIBPLibrary::LGUICompRef_GetComponent(const FLGUIComponentReference& InLGUIComponentReference, TSubclassOf<UActorComponent> InComponentType)
+void ULexUIBPLibrary::CreateScreenSpaceUIRoot(UObject* WorldContextObject, bool bCreateDefaultEventSystem
+	, ALexWidgetActor*& OutRootWidgetActor, ULexCanvas*& OutCanvas)
+{
+	if (auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull))
+	{
+		auto RootWidgetActor = World->SpawnActor<ALexWidgetActor>(FActorSpawnParameters());
+#if WITH_EDITOR
+		RootWidgetActor->SetActorLabel(TEXT("ScreenSpaceUIRoot"));
+#else
+		RootWidgetActor->GetLexWidget()->SetDisplayName(TEXT("ScreenSpaceUIRoot"));
+#endif
+		auto Canvas = NewObject<ULexCanvas>(RootWidgetActor);
+		Canvas->RegisterComponent();
+		RootWidgetActor->AddInstanceComponent(Canvas);
+		Canvas->SetRenderMode(ELexRenderMode::ScreenSpaceOverlay);
+		auto Raycaster = NewObject<ULexScreenSpaceRaycaster>(RootWidgetActor);
+		Raycaster->RegisterComponent();
+		RootWidgetActor->AddInstanceComponent(Raycaster);
+
+		if (bCreateDefaultEventSystem)
+		{
+			auto ClassName = TEXT("PresetEventSystemActor");
+			if (auto PresetEventSystemActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
+			{
+				auto Actor = World->SpawnActor<AActor>(PresetEventSystemActorClass);
+				Actor->SetActorLabel(ClassName);
+			}
+			else
+			{
+				UE_LOG(LGUI, Error, TEXT("[%s].%d Load %s error! Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), 
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ClassName);
+			}
+		}
+
+		OutRootWidgetActor = RootWidgetActor;
+		OutCanvas = Canvas;
+	}
+}
+
+UActorComponent* ULexUIBPLibrary::LGUICompRef_GetComponent(const FLGUIComponentReference& InLGUIComponentReference, TSubclassOf<UActorComponent> InComponentType)
 {
 	auto comp = InLGUIComponentReference.GetComponent();
 	if (comp == nullptr)
@@ -225,12 +267,12 @@ UActorComponent* ULGUIBPLibrary::LGUICompRef_GetComponent(const FLGUIComponentRe
 	return comp;
 }
 
-AActor* ULGUIBPLibrary::LGUICompRef_GetActor(const FLGUIComponentReference& InLGUIComponentReference)
+AActor* ULexUIBPLibrary::LGUICompRef_GetActor(const FLGUIComponentReference& InLGUIComponentReference)
 {
 	return InLGUIComponentReference.GetActor();
 }
 
-void ULGUIBPLibrary::K2_LGUICompRef_GetComponent(const FLGUIComponentReference& InLGUICompRef, UActorComponent*& OutResult)
+void ULexUIBPLibrary::K2_LGUICompRef_GetComponent(const FLGUIComponentReference& InLGUICompRef, UActorComponent*& OutResult)
 {
 	OutResult = InLGUICompRef.GetComponent();
 }
@@ -238,7 +280,7 @@ void ULGUIBPLibrary::K2_LGUICompRef_GetComponent(const FLGUIComponentReference& 
 
 #pragma region LTween
 
-void ULGUIBPLibrary::LGUIExecuteControllerInputAxis(FKey inputKey, float value)
+void ULexUIBPLibrary::LGUIExecuteControllerInputAxis(FKey inputKey, float value)
 {
 	if (inputKey.IsValid())
 	{
@@ -248,7 +290,7 @@ void ULGUIBPLibrary::LGUIExecuteControllerInputAxis(FKey inputKey, float value)
 		FSlateApplication::Get().OnControllerAnalog(keyName, UserId, DeviceId, value);
 	}
 }
-void ULGUIBPLibrary::LGUIExecuteControllerInputAction(FKey inputKey, bool pressOrRelease)
+void ULexUIBPLibrary::LGUIExecuteControllerInputAction(FKey inputKey, bool pressOrRelease)
 {
 	if (inputKey.IsValid())
 	{
@@ -269,7 +311,7 @@ void ULGUIBPLibrary::LGUIExecuteControllerInputAction(FKey inputKey, bool pressO
 
 #pragma region EventDelegate
 #define IMPLEMENT_EVENTDELEGATE_BP(EventDelegateParamType, ParamType)\
-FLGUIDelegateHandleWrapper ULGUIBPLibrary::LGUIEventDelegate_##EventDelegateParamType##_Register(const FLGUIEventDelegate_##EventDelegateParamType& InEvent, FLGUIEventDelegate_##EventDelegateParamType##_DynamicDelegate InDelegate)\
+FLGUIDelegateHandleWrapper ULexUIBPLibrary::LGUIEventDelegate_##EventDelegateParamType##_Register(const FLGUIEventDelegate_##EventDelegateParamType& InEvent, FLGUIEventDelegate_##EventDelegateParamType##_DynamicDelegate InDelegate)\
 {\
 	auto delegateHandle = InEvent.Register([InDelegate](ParamType value) {\
 		if (InDelegate.IsBound())\
@@ -279,12 +321,12 @@ FLGUIDelegateHandleWrapper ULGUIBPLibrary::LGUIEventDelegate_##EventDelegatePara
 		});\
 	return FLGUIDelegateHandleWrapper(delegateHandle);\
 }\
-void ULGUIBPLibrary::LGUIEventDelegate_##EventDelegateParamType##_Unregister(const FLGUIEventDelegate_##EventDelegateParamType& InEvent, const FLGUIDelegateHandleWrapper& InDelegateHandle)\
+void ULexUIBPLibrary::LGUIEventDelegate_##EventDelegateParamType##_Unregister(const FLGUIEventDelegate_##EventDelegateParamType& InEvent, const FLGUIDelegateHandleWrapper& InDelegateHandle)\
 {\
 	InEvent.Unregister(InDelegateHandle.DelegateHandle);\
 }
 
-FLGUIDelegateHandleWrapper ULGUIBPLibrary::LGUIEventDelegate_Empty_Register(const FLGUIEventDelegate_Empty& InEvent, FLGUIEventDelegate_Empty_DynamicDelegate InDelegate)
+FLGUIDelegateHandleWrapper ULexUIBPLibrary::LGUIEventDelegate_Empty_Register(const FLGUIEventDelegate_Empty& InEvent, FLGUIEventDelegate_Empty_DynamicDelegate InDelegate)
 {
 	auto delegateHandle = InEvent.Register([InDelegate]() {
 		if (InDelegate.IsBound())
@@ -294,7 +336,7 @@ FLGUIDelegateHandleWrapper ULGUIBPLibrary::LGUIEventDelegate_Empty_Register(cons
 		});
 	return FLGUIDelegateHandleWrapper(delegateHandle);
 }
-void ULGUIBPLibrary::LGUIEventDelegate_Empty_Unregister(const FLGUIEventDelegate_Empty& InEvent, const FLGUIDelegateHandleWrapper& InDelegateHandle)
+void ULexUIBPLibrary::LGUIEventDelegate_Empty_Unregister(const FLGUIEventDelegate_Empty& InEvent, const FLGUIDelegateHandleWrapper& InDelegateHandle)
 {
 	InEvent.Unregister(InDelegateHandle.DelegateHandle);
 }
@@ -327,26 +369,26 @@ IMPLEMENT_EVENTDELEGATE_BP(Name, FName);
 
 #pragma endregion
 
-void ULGUIBPLibrary::GetSpriteSize(const FLexUISpriteInfo& SpriteInfo, int32& width, int32& height)
+void ULexUIBPLibrary::GetSpriteSize(const FLexUISpriteInfo& SpriteInfo, int32& width, int32& height)
 {
 	width = SpriteInfo.Width;
 	height = SpriteInfo.Height;
 }
-void ULGUIBPLibrary::GetSpriteBorderSize(const FLexUISpriteInfo& SpriteInfo, int32& borderLeft, int32& borderRight, int32& borderTop, int32& borderBottom)
+void ULexUIBPLibrary::GetSpriteBorderSize(const FLexUISpriteInfo& SpriteInfo, int32& borderLeft, int32& borderRight, int32& borderTop, int32& borderBottom)
 {
 	borderLeft = SpriteInfo.Border.Left;
 	borderRight = SpriteInfo.Border.Right;
 	borderTop = SpriteInfo.Border.Top;
 	borderBottom = SpriteInfo.Border.Bottom;
 }
-void ULGUIBPLibrary::GetSpriteUV(const FLexUISpriteInfo& SpriteInfo, float& UV0X, float& UV0Y, float& UV3X, float& UV3Y)
+void ULexUIBPLibrary::GetSpriteUV(const FLexUISpriteInfo& SpriteInfo, float& UV0X, float& UV0Y, float& UV3X, float& UV3Y)
 {
 	UV0X = SpriteInfo.MinUV.X;
 	UV0Y = SpriteInfo.MaxUV.Y;
 	UV3X = SpriteInfo.MaxUV.X;
 	UV3Y = SpriteInfo.MinUV.Y;
 }
-void ULGUIBPLibrary::GetSpriteBorderUV(const FLexUISpriteInfo& SpriteInfo, float& borderUV0X, float& borderUV0Y, float& borderUV3X, float& borderUV3Y)
+void ULexUIBPLibrary::GetSpriteBorderUV(const FLexUISpriteInfo& SpriteInfo, float& borderUV0X, float& borderUV0Y, float& borderUV3X, float& borderUV3Y)
 {
 	borderUV0X = SpriteInfo.MinUV.X;
 	borderUV0Y = SpriteInfo.MaxUV.Y;

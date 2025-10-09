@@ -7,9 +7,7 @@
 #include "UObject/Package.h"
 #include "LGUI.h"
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
-#endif
 
 #if WITH_EDITOR
 FString FLGUIPrefabSequenceObjectReference::GetActorPathRelativeToContextActor(AActor* InContextActor, AActor* InActor)
@@ -314,6 +312,4 @@ bool FLGUIPrefabSequenceObjectReferenceMap::FixEditorHelpers(AActor* InContextAc
 }
 #endif
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_ENABLE_OPTIMIZATION
-#endif

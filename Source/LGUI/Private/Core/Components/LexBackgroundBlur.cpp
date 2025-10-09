@@ -337,7 +337,7 @@ void ULexBackgroundBlur::SendOthersDataToRenderProxy()
 		updateData->blurStrengthWithAlpha = this->GetBlurStrengthInternal();
 		updateData->inv_SampleLevelInterval = this->Inv_SampleLevelInterval;
 		updateData->maxDownSampleLevel = this->MaxDownSampleLevel;
-		ENQUEUE_RENDER_COMMAND(FUIBackgroundBlur_UpdateData)
+		ENQUEUE_RENDER_COMMAND(FLexBackgroundBlur_UpdateData)
 			([BackgroundBlurRenderProxy, updateData](FRHICommandListImmediate& RHICmdList)
 				{
 					BackgroundBlurRenderProxy->inv_SampleLevelInterval = updateData->inv_SampleLevelInterval;
@@ -357,7 +357,7 @@ void ULexBackgroundBlur::SendStrengthTextureToRenderProxy()
 		{
 			strengthTextureResource = (FTexture2DResource*)this->StrengthTexture->GetResource();
 		}
-		ENQUEUE_RENDER_COMMAND(FUIBackgroundBlur_UpdateData)
+		ENQUEUE_RENDER_COMMAND(FLexBackgroundBlur_UpdateData)
 			([BackgroundBlurRenderProxy, strengthTextureResource](FRHICommandListImmediate& RHICmdList)
 				{
 					BackgroundBlurRenderProxy->strengthTexture = strengthTextureResource;
@@ -436,7 +436,7 @@ void ULexBackgroundBlur::SendRegionVertexDataToRenderProxy()
 	{
 		auto BackgroundBlurRenderProxy = (FUIBackgroundBlurRenderProxy*)(RenderProxy.Get());
 		auto blurStrengthWithAlpha = this->GetBlurStrengthInternal();
-		ENQUEUE_RENDER_COMMAND(FUIBackgroundBlur_UpdateData)
+		ENQUEUE_RENDER_COMMAND(FLexBackgroundBlur_UpdateData)
 			([BackgroundBlurRenderProxy, blurStrengthWithAlpha](FRHICommandListImmediate& RHICmdList)
 				{
 					BackgroundBlurRenderProxy->blurStrength = blurStrengthWithAlpha;

@@ -88,7 +88,7 @@ enum class ELexVisualRaycastType :uint8
 	Custom = 2,
 };
 
-/** Base class of UI element that can be renderred by LGUICanvas */
+/** Base class of UI element that can be rendered by LexCanvas */
 UCLASS(Blueprintable, BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)
 class LGUI_API ULexVisual : public ULexWidgetSubObjectBehaviour
 {

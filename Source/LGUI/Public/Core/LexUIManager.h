@@ -7,7 +7,6 @@
 #include "LexUIManager.generated.h"
 
 class ULexWidget;
-class UUIText;
 class ULexVisualBatchMesh;
 class ULexVisual;
 class ULexCanvas;
@@ -15,8 +14,6 @@ class ULexBaseRaycaster;
 class UUISelectableComponent;
 class ULexUIBehaviour;
 class ULexBaseInputModule;
-class ILGUILayoutInterface;
-class ULGUIPrefab;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FLGUIEditorTickMulticastDelegate, float);
 DECLARE_MULTICAST_DELEGATE_ThreeParams(FLGUIEditorManagerOnComponentCreateDelete, bool, UActorComponent*, AActor*);
@@ -137,7 +134,7 @@ private:
 	bool bIsExecutingStart = false;
 	bool bIsExecutingUpdate = false;
 	int32 CurrentExecutingUpdateIndex = -1;
-	TArray<ULexUIBehaviour*> LexUIBehavioursNeedToRemoveFromUpdate;
+	UPROPERTY(Transient) TArray<ULexUIBehaviour*> LexUIBehavioursNeedToRemoveFromUpdate;
 #if WITH_EDITORONLY_DATA
 	int32 PrevScreenSpaceOverlayCanvasCount = 1;
 #endif

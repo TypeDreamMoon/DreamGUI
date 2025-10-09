@@ -28,9 +28,7 @@
 
 #define LOCTEXT_NAMESPACE "LGUIManagerObject"
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 PRAGMA_DISABLE_OPTIMIZATION
-#endif
 
 ULexUIEditorManagerObject* ULexUIEditorManagerObject::Instance = nullptr;
 #if WITH_EDITOR
@@ -127,6 +125,7 @@ ULexUIEditorManagerObject::ULexUIEditorManagerObject()
 						CanvasComp->RegisterComponent();
 						RootUICanvasActor->AddInstanceComponent(CanvasComp);
 						CanvasComp->SetRenderMode(RenderMode);
+						CanvasComp->bFixedSizeInEditMode = true;
 					}
 
 					RootUICanvasActor->GetLexWidget()->SetWidth(CanvasSize.X);
@@ -1611,7 +1610,5 @@ void ULexUIManagerWorldSubsystem::AddFunctionForPrefabSystemExecutionBeforeAwake
 		Container.Functions.Add(InFunction);
 	}
 }
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_ENABLE_OPTIMIZATION
-#endif
 #undef LOCTEXT_NAMESPACE

@@ -19,9 +19,7 @@
 #include "Utils/LexUIUtils.h"
 #endif
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
-#endif
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabSystem8_Deserialize"
 
@@ -832,6 +830,4 @@ namespace LGUIPrefabSystem8
 
 #undef LOCTEXT_NAMESPACE
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_ENABLE_OPTIMIZATION
-#endif

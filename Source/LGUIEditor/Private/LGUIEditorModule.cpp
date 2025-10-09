@@ -39,7 +39,7 @@
 #include "AssetTypeActions/AssetTypeActions_LexUIFontData_DistanceField.h"
 
 #include "DetailCustomization/LexWidgetCustomization.h"
-#include "DetailCustomization/UIBaseRenderableCustomization.h"
+#include "DetailCustomization/LexVisualCustomization.h"
 #include "DetailCustomization/LexVisualBatchMeshCustomization.h"
 #include "DetailCustomization/LexSpriteBaseCustomization.h"
 #include "DetailCustomization/LexSpriteCustomization.h"
@@ -58,7 +58,6 @@
 #include "DetailCustomization/LGUIEventDelegateCustomization.h"
 #include "DetailCustomization/LGUIEventDelegatePresetParamCustomization.h"
 #include "DetailCustomization/LGUIComponentReferenceCustomization.h"
-#include "DetailCustomization/UIEffectTextAnimationCustomization.h"
 #include "DetailCustomization/UIScrollViewWithScrollBarCustomization.h"
 #include "DetailCustomization/UISpriteSequencePlayerCustomization.h"
 #include "DetailCustomization/UISpriteSheetTexturePlayerCustomization.h"
@@ -262,8 +261,6 @@ void FLGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomClassLayout(UUIScrollViewWithScrollbarComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIScrollViewWithScrollBarCustomization::MakeInstance));
 		
 		PropertyModule.RegisterCustomClassLayout(ULGUIPrefab::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLGUIPrefabCustomization::MakeInstance));
-
-		PropertyModule.RegisterCustomClassLayout(ULexMeshModifierTextAnimation::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIEffectTextAnimationCustomization::MakeInstance));
 
 		PropertyModule.RegisterCustomClassLayout(UUISpriteSequencePlayer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteSequencePlayerCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUISpriteSheetTexturePlayer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteSheetTexturePlayerCustomization::MakeInstance));
@@ -478,7 +475,6 @@ void FLGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(ULGUIPrefab::StaticClass()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(ULexMeshModifierTextAnimation_Property::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(ULexMeshModifierTextAnimation::StaticClass()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(UUISpriteSequencePlayer::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUISpriteSheetTexturePlayer::StaticClass()->GetFName());

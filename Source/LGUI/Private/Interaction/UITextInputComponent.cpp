@@ -13,11 +13,10 @@
 #include "Core/LexUIFontData_Bitmap.h"
 #include "Core/LexUISpriteData.h"
 #include "Core/Actor/LexWidgetActor.h"
+#include "Core/Components/LexImage.h"
 #include "Engine/GameViewportClient.h"
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
-#endif
 
 ULexTextInputCustomValidation::ULexTextInputCustomValidation()
 {
@@ -129,7 +128,7 @@ void UUITextInputComponent::PostEditChangeProperty(FPropertyChangedEvent& Proper
 		if (!TextWidget->GetText().IsCultureInvariant())
 		{
 			TextWidget->SetText(FText::AsCultureInvariant(Text));
-			UE_LOG(LGUI, Error, TEXT("[UUITextInputComponent::PostEditChangeProperty]Input text should not change by culture, set it to not localizable."));
+			UE_LOG(LGUI, Error, TEXT("[%s].%d Input text should not change by culture, set it to not localizable."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		}
 	}
 	UpdateUITextComponent();
@@ -1107,9 +1106,9 @@ void UUITextInputComponent::UpdateCaretPosition(FVector2f InCaretPosition, bool 
 		auto uiText = TextWidget;
 		CaretWidget->SetWidth(CaretWidth);
 		CaretWidget->SetHeight(uiText->GetFontSize());
-		auto CaretVisual = NewObject<ULexSprite>(CaretWidget.Get());
+		auto CaretVisual = CaretWidget->CreateNewVisual<ULexImage>();
 		CaretVisual->SetColor(CaretColor);
-		CaretVisual->SetSprite(ULexUISpriteData::GetDefaultWhiteSolid(), false);
+		CaretVisual->SetBrush_LexUISprite(ULexUISpriteData::GetDefaultWhiteSolid());
 	}
 	CaretWidget->SetRelativeLocation(FVector(0, InCaretPosition.X, InCaretPosition.Y));
 	CaretWidget->SetWidgetActive(true);
@@ -1138,10 +1137,10 @@ void UUITextInputComponent::UpdateSelection()
 			auto SpriteWidget = SpriteActor->GetLexWidget();
 			SpriteWidget->SetHeight(TextWidget->GetFontSize());
 			SpriteWidget->SetPivot(FVector2D(0, 0.5f));
-			auto SpriteVisual = NewObject<ULexSprite>(SpriteWidget);
-			SpriteVisual->SetColor(SelectionColor);
-			SpriteVisual->SetSprite(ULexUISpriteData::GetDefaultWhiteSolid(), false);
-			SelectionMaskObjectArray.Add(SpriteVisual);
+			auto SelectionVisual = SpriteWidget->CreateNewVisual<ULexImage>();
+			SelectionVisual->SetColor(SelectionColor);
+			SelectionVisual->SetBrush_LexUISprite(ULexUISpriteData::GetDefaultWhiteSolid());
+			SelectionMaskObjectArray.Add(SelectionVisual);
 		}
 	}
 	else if (SelectionPropertyArray.Num() < createdSelectionMaskCount)//hide extra selection mask object
@@ -1149,23 +1148,23 @@ void UUITextInputComponent::UpdateSelection()
 		int32 needToHideTextureCount = createdSelectionMaskCount - SelectionPropertyArray.Num();
 		for (int32 i = 0; i < needToHideTextureCount; i++)
 		{
-			auto uiSprite = SelectionMaskObjectArray[i + SelectionPropertyArray.Num()];
-			if (uiSprite.IsValid())
+			auto SelectionVisual = SelectionMaskObjectArray[i + SelectionPropertyArray.Num()];
+			if (SelectionVisual.IsValid())
 			{
-				uiSprite->GetWidget()->SetWidgetActive(false);
+				SelectionVisual->GetWidget()->SetWidgetActive(false);
 			}
 		}
 	}
 
 	for (int32 i = 0; i < SelectionPropertyArray.Num(); i++)
 	{
-		auto uiSprite = SelectionMaskObjectArray[i];
-		if (uiSprite.IsValid())
+		auto SelectionVisual = SelectionMaskObjectArray[i];
+		if (SelectionVisual.IsValid())
 		{
-			uiSprite->GetWidget()->SetWidgetActive(true);
+			SelectionVisual->GetWidget()->SetWidgetActive(true);
 			auto& selectionProperty = SelectionPropertyArray[i];
-			uiSprite->GetWidget()->SetRelativeLocation(FVector(0, selectionProperty.Pos.X, selectionProperty.Pos.Y));
-			uiSprite->GetWidget()->SetWidth(selectionProperty.Size);
+			SelectionVisual->GetWidget()->SetRelativeLocation(FVector(0, selectionProperty.Pos.X, selectionProperty.Pos.Y));
+			SelectionVisual->GetWidget()->SetWidth(selectionProperty.Size);
 		}
 	}
 }
@@ -1173,8 +1172,8 @@ void UUITextInputComponent::HideSelectionMask()
 {
 	for (int i = 0; i < SelectionMaskObjectArray.Num(); i++)
 	{
-		auto uiSprite = SelectionMaskObjectArray[i];
-		if (uiSprite.IsValid())
+		auto SelectionVisual = SelectionMaskObjectArray[i];
+		if (SelectionVisual.IsValid())
 		{
 			SelectionMaskObjectArray[i]->GetWidget()->SetWidgetActive(false);
 		}
@@ -1352,7 +1351,7 @@ void UUITextInputComponent::ActivateInput(ULexPointerEventData* eventData)
 {
 	if (TextWidget == nullptr)
 	{
-		UE_LOG(LGUI, Error, TEXT("[UUITextInputComponent::ActivateInput]TextActor is null!"));
+		UE_LOG(LGUI, Error, TEXT("[%s].%d TextActor is null!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
 	else
@@ -1736,11 +1735,11 @@ void UUITextInputComponent::SetSelectionColor(FColor Value)
 		SelectionColor = Value;
 		if (SelectionMaskObjectArray.Num() > 0)
 		{
-			for (auto& Item : SelectionMaskObjectArray)
+			for (auto& SelectionVisual : SelectionMaskObjectArray)
 			{
-				if (Item.IsValid())
+				if (SelectionVisual.IsValid())
 				{
-					Item->SetColor(SelectionColor);
+					SelectionVisual->SetColor(SelectionColor);
 				}
 			}
 		}
@@ -2109,7 +2108,5 @@ void UUITextInputComponent::FTextInputMethodContext::EndComposition()
 #endif
 }
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_ENABLE_OPTIMIZATION
-#endif
 

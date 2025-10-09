@@ -44,7 +44,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush")
 	ELexUIImageBrushDrawType DrawAs = ELexUIImageBrushDrawType::None;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush")
-	FVector2f ImageSize = FVector2f(100, 100);
+	FVector2f ImageSize = FVector2f(32, 32);
 	/** Margin size from 0 to 1. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush", meta = (UVSpace="true"))
 	FMargin Margin;

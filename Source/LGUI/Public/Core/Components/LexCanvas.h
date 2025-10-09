@@ -372,12 +372,14 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-CanvasScaler")
 	ELexCanvasScreenMatchMode ScreenMatchMode = ELexCanvasScreenMatchMode::MatchWidthOrHeight;
 #if WITH_EDITORONLY_DATA
+public:
 	/** When Canvas use ScreenSpaceOverlay, in edit mode it will try to match editor viewport's size. So make this true to use a fixed size. */
 	UPROPERTY(EditAnywhere, Category = "LGUI-CanvasScaler")
 	bool bFixedSizeInEditMode = false;
 	UPROPERTY(EditAnywhere, Category = "LGUI-CanvasScaler", meta = (EditCondition = "bFixedSizeInEditMode"))
 	FIntPoint SizeInEditMode = FIntPoint(1920, 1080);
 #endif
+private:
 	/**
 	 * Use this to do custom scale. Only valid if ScaleMode = Custom.
 	 * Will fallback to "ConstantPixelSize" if not assign this value.
@@ -388,13 +390,13 @@ protected:
 	FIntPoint ViewportSize = FIntPoint(2, 2);
 #pragma endregion
 
+public:
 	FORCEINLINE bool GetOverrideDefaultMaterial()const				{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::DefaultMaterial); }
 	FORCEINLINE bool GetOverrideDynamicPixelsPerUnit()const			{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::DynamicPixelsPerUnit); }
 	FORCEINLINE bool GetOverrideRequireNormalAndTangent()const		{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::RequireNormalAndTangent); }
 	FORCEINLINE bool GetOverrideBlendDepth()const					{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::BlendDepth); }
 	FORCEINLINE bool GetOverrideDepthFade()const					{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::DepthFade); }
 
-public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		UMaterialInterface* GetDefaultMaterial()const;
 	UFUNCTION(BlueprintCallable, Category = LGUI)
@@ -625,7 +627,6 @@ private:
 #endif
 	void OnViewportParameterChanged();
 	void CheckAndApplyViewportParameter();
-	void OnViewportResized(FViewport*, uint32);
 	FDelegateHandle ViewportResizeDelegateHandle;
 #pragma endregion
 

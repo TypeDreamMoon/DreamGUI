@@ -20,9 +20,7 @@
 
 
 #define LOCTEXT_NAMESPACE "LexUIMeshComponent"
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
-#endif
 class FLexUIMeshVertexResourceArray : public FResourceArrayInterface
 {
 public:
@@ -147,7 +145,7 @@ struct FLexUIMeshSectionProxy : public FLexUIRenderSectionProxy
 
 		FStaticMeshVertexBuffers* Self = &VertexBuffers;
 		FLocalVertexFactory* VertexFactoryPtr = &VertexFactory;
-		ENQUEUE_RENDER_COMMAND(StaticMeshVertexBuffersLegacyInit)(
+		ENQUEUE_RENDER_COMMAND(FLexUIRenderSceneProxy_InitFromLexUIVertexData)(
 			[VertexFactoryPtr, Self, LightMapIndex](FRHICommandListImmediate& RHICmdList)
 			{
 				InitOrUpdateResource(RHICmdList, &Self->PositionVertexBuffer);
@@ -1317,6 +1315,4 @@ FBoxSphereBounds ULexUIMeshComponent::CalcBounds(const FTransform& LocalToWorld)
 	return FBoxSphereBounds(ResultBox);
 }
 #undef LOCTEXT_NAMESPACE
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_ENABLE_OPTIMIZATION
-#endif

@@ -185,7 +185,7 @@ void ULexBackgroundPixelate::SendOthersDataToRenderProxy()
 	{
 		auto TempRenderProxy = (FUIBackgroundPixelateRenderProxy*)(RenderProxy.Get());
 		float pixelateStrengthWidthAlpha = this->GetStrengthInternal();
-		ENQUEUE_RENDER_COMMAND(FUIBackgroundPixelate_UpdateData)
+		ENQUEUE_RENDER_COMMAND(FLexBackgroundPixelate_UpdateData)
 			([TempRenderProxy, pixelateStrengthWidthAlpha](FRHICommandListImmediate& RHICmdList)
 				{
 					TempRenderProxy->pixelateStrength = pixelateStrengthWidthAlpha;

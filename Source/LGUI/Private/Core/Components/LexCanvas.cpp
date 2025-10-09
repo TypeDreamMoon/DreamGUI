@@ -28,9 +28,7 @@
 #include "Core/LexUIClipData.h"
 #include "Core/LexUIDataAsTexture.h"
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
-#endif
 
 #define LOCTEXT_NAMESPACE "LGUICanvas"
 
@@ -85,7 +83,7 @@ void ULexCanvas::BeginPlay()
 				|| this->GetRenderMode() == ELexRenderMode::RenderTarget
 				)
 		{
-			OnViewportResized(nullptr, 0);
+			CheckAndApplyViewportParameter();
 		}
 	}
 }
@@ -1203,10 +1201,7 @@ void ULexCanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, co
 			{
 				if (Visual->DrawCall.IsValid())//maybe exist in other draw-call, should remove from that draw-call
 				{
-					if (InUIDrawCallList.Contains(Visual->DrawCall))//if this draw-call already exist (added previously), then remove the object from the draw-call.
-					{
-						ClearObjectFromDrawCall(Visual->DrawCall, Visual);
-					}
+					ClearObjectFromDrawCall(Visual->DrawCall, Visual);
 				}
 				continue;
 			}
@@ -1229,11 +1224,19 @@ void ULexCanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, co
 					DrawCallItem->bIs2DSpace = DrawCallItem->bIs2DSpace && is2DUIItem;
 					if (ItemGeo->bIsFont)
 					{
-						DrawCallItem->FontTexture = ItemGeo->Texture;
+						if (DrawCallItem->FontTexture != ItemGeo->Texture)
+						{
+							DrawCallItem->FontTexture = ItemGeo->Texture;
+							DrawCallItem->bTextureChanged = true;
+						}
 					}
 					else
 					{
-						DrawCallItem->Texture = ItemGeo->Texture;
+						if (DrawCallItem->Texture != ItemGeo->Texture)
+						{
+							DrawCallItem->Texture = ItemGeo->Texture;
+							DrawCallItem->bTextureChanged = true;
+						}
 					}
 					if (LexVisualBatchMeshItem->DrawCall == DrawCallItem)//already exist in this draw-call (added previously)
 					{
@@ -2036,7 +2039,7 @@ void ULexCanvas::UpdateDrawCallMaterial_Implement()
 				if (RenderMat.IsValid() && DrawCallItem->bMaterialContainsLexUIParameter)
 				{
 					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_MainTextureMaterialParameterName, DrawCallItem->Texture.Get());
-					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_FontTextureMaterialParameterName, DrawCallItem->Texture.Get());
+					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_FontTextureMaterialParameterName, DrawCallItem->FontTexture.Get());
 				}
 			}
 			if (DrawCallItem->bMaterialNeedToReassign)
@@ -2580,6 +2583,9 @@ void ULexCanvas::SetRenderMode(ELexRenderMode Value)
 		RenderMode = Value;
 		MarkCanvasUpdate(false, false, false, true);
 		CheckRenderMode(true);
+
+		UnregisterCanvasScaler();
+		RegisterCanvasScaler();
 	}
 }
 
@@ -2862,20 +2868,15 @@ void ULexCanvas::CheckAndApplyViewportParameter()
 	break;
 	case ELexRenderMode::RenderTarget:
 	{
-		if (auto renderTarget = this->GetRenderTarget())
+		if (IsValid(RenderTarget))
 		{
-			ViewportSize.X = renderTarget->SizeX;
-			ViewportSize.Y = renderTarget->SizeY;
+			ViewportSize.X = RenderTarget->SizeX;
+			ViewportSize.Y = RenderTarget->SizeY;
 			OnViewportParameterChanged();
 		}
 	}
 	break;
 	}
-}
-void ULexCanvas::OnViewportResized(FViewport* viewport, uint32)
-{
-	ViewportSize = this->GetViewportSize();//why not just get the viewport size from "viewport" parameter? because assets editor's viewport(ie. material, texture editor viewport) can fire the same event, and size is assets editor's viewport size
-	OnViewportParameterChanged();
 }
 
 void ULexCanvas::RegisterCanvasScaler()
@@ -2908,7 +2909,10 @@ void ULexCanvas::RegisterCanvasScaler()
 					{
 						if (auto viewport = gameViewport->Viewport)
 						{
-							ViewportResizeDelegateHandle = viewport->ViewportResizedEvent.AddUObject(this, &ULexCanvas::OnViewportResized);
+							ViewportResizeDelegateHandle = viewport->ViewportResizedEvent.AddWeakLambda(this, [this](FViewport*, uint32)
+							{
+								CheckAndApplyViewportParameter();
+							});
 						}
 					}
 				}
@@ -3423,7 +3427,4 @@ bool ULexCanvas::ProjectWorldToScreen(APlayerController* Player, const FVector& 
 
 #pragma endregion
 
-
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_ENABLE_OPTIMIZATION
-#endif

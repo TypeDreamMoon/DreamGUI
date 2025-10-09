@@ -10,9 +10,7 @@
 #include "Core/LexUIClipData.h"
 #include "Engine/Texture2D.h"
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
-#endif
 
 bool ULexVisualCustomRaycast::Raycast(const ULexVisual* InVisual, const FVector& InLocalSpaceRayStart, const FVector& InLocalSpaceRayEnd, FVector& OutHitPoint, FVector& OutHitNormal)const
 {
@@ -447,6 +445,4 @@ ULTweener* ULexVisual::AlphaFrom(float startValue, float duration, float delay, 
 }
 #pragma endregion
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_ENABLE_OPTIMIZATION
-#endif

@@ -41,25 +41,45 @@ void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow&
 		&& !ObjectClass->IsChildOf(AActor::StaticClass())
 		&& !ObjectClass->IsChildOf(UActorComponent::StaticClass())
 		)return;
-	if (ObjectProperty->HasAnyPropertyFlags(CPF_InstancedReference))
+	if (ObjectProperty->HasAnyPropertyFlags(CPF_PersistentInstance))
 		return;
 	UObject* Object = nullptr;
 	if (InPropertyHandle->GetValue(Object) != FPropertyAccess::Success)return;
+	InPropertyHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&InDetailBuilder]()
+	{
+		InDetailBuilder.GetPropertyUtilities()->RequestForceRefresh();
+	}));
 
 	auto NoneObjectText = LOCTEXT("None", "None");
 	auto GetText = [=, this]()
 	{
 		if (Object == nullptr)return NoneObjectText;
 		if (!PrefabEditorPtr.IsValid())return NoneObjectText;
-		auto Actor = Object->GetTypedOuter<AActor>();
-		return FText::FromString(Object->GetPathName(Actor));
+		if (auto Actor = Cast<AActor>(Object))
+		{
+			return FText::FromString(Actor->GetActorLabel());
+		}
+		else
+		{
+			auto OuterActor = Object->GetTypedOuter<AActor>();
+			return FText::FromString(Object->GetPathName(OuterActor));
+		}
 	};
 	auto GetTooltipText = [=, this]()
 	{
 		if (Object == nullptr)return NoneObjectText;
 		if (!PrefabEditorPtr.IsValid())return NoneObjectText;
-		auto Actor = Object->GetTypedOuter<AActor>();
-		FString PathStr = "." + Object->GetPathName(Actor);
+		AActor* Actor = nullptr;
+		FString PathStr;
+		if (auto CastActor = Cast<AActor>(Object))
+		{
+			Actor = CastActor;
+		}
+		else
+		{
+			Actor = Object->GetTypedOuter<AActor>();
+			PathStr = "." + Object->GetPathName(Actor);
+		}
 		auto RootAgentActor = PrefabEditorPtr.Pin()->GetRootAgentActor();
 		while (Actor && Actor != RootAgentActor)
 		{
@@ -71,6 +91,10 @@ void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow&
 	InWidgetRow.ValueContent()
 	[
 		SNew(SBox)
+		.IsEnabled_Lambda([=]()
+		{
+			return InPropertyHandle->IsEditable();
+		})
 		.WidthOverride(5000)
 		[
 			SNew(SVerticalBox)
@@ -109,11 +133,10 @@ void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow&
 						.Padding(4, 4)
 						[
 							SNew(SLexWidgetHierarchyPickerView, PrefabEditorPtr.Pin(), ObjectClass)
-							.OnSelectItem_Lambda([=, &InDetailBuilder, this](UObject* InItem)
+							.OnSelectItem_Lambda([=, this](UObject* InItem)
 							{
 								InPropertyHandle->SetValue(InItem);
 								PickerButton->SetIsOpen(false);
-								InDetailBuilder.GetPropertyUtilities()->RequestForceRefresh();
 							})
 						]
 					]

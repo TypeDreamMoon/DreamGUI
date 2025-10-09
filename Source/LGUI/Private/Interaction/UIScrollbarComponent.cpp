@@ -25,13 +25,10 @@ bool UUIScrollbarComponent::CheckHandle()
 {
     if (Handle.IsValid() && HandleArea.IsValid())
         return true;
-    if (!HandleActor.IsValid())
+    if (!Handle.IsValid())
         return false;
-    if (!HandleActor->GetAttachParentActor())
-        return false;
-    Handle = HandleActor->FindComponentByClass<ULexWidget>();
-    HandleArea = HandleActor->GetAttachParentActor()->FindComponentByClass<ULexWidget>();
-    if (Handle.IsValid() && HandleArea.IsValid())
+    HandleArea = Handle->GetUIParent();
+    if (HandleArea.IsValid())
         return true;
     return false;
 }
@@ -40,13 +37,8 @@ bool UUIScrollbarComponent::CheckHandle()
 void UUIScrollbarComponent::PostEditChangeProperty(FPropertyChangedEvent &PropertyChangedEvent)
 {
     Super::PostEditChangeProperty(PropertyChangedEvent);
+    HandleArea = nullptr;//force re-check
     ApplyValueToUI();
-    Handle = nullptr;
-    HandleArea = nullptr;
-    if (CheckHandle())
-    {
-        Handle->EditorForceUpdate();
-    }
 }
 #endif
 

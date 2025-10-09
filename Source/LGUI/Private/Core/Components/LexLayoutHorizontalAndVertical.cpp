@@ -4,6 +4,8 @@
 #include "Core/Components/LexVisual.h"
 #include "Core/Components/LexWidget.h"
 
+UE_DISABLE_OPTIMIZATION
+
 void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 {
     auto Widget = GetWidget();
@@ -396,3 +398,5 @@ void ULexLayoutHorizontalAndVertical::SetSizeFitToChildren(FLexLayoutHorizontalA
         MarkLayoutDirty();
     }
 }
+
+UE_ENABLE_OPTIMIZATION

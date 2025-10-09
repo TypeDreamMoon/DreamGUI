@@ -10,9 +10,7 @@
 #include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabManager"
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
-#endif
 
 ULGUIPrefabHelperObject::ULGUIPrefabHelperObject()
 {
@@ -2130,8 +2128,6 @@ void ULGUIPrefabHelperObject::OnNewVersionDismissAllClicked()
 }
 
 #endif
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_ENABLE_OPTIMIZATION
-#endif
 
 #undef LOCTEXT_NAMESPACE

@@ -19,6 +19,7 @@
 #include "Components/ShapeComponent.h"
 #include "Components/DrawFrustumComponent.h"
 #include "AssetEditorModeManager.h"
+#include "CanvasTypes.h"
 #include "EngineUtils.h"
 #include "EdMode.h"
 #include "Engine/Selection.h"
@@ -76,13 +77,13 @@ FLGUIPrefabEditorViewportClient::FLGUIPrefabEditorViewportClient(FLGUIPrefabEdit
 	// DrawHelper set up
 
 	DrawHelper.PerspectiveGridSize = HALF_WORLD_MAX1;
-	DrawHelper.AxesLineThickness = 0.0f;
-	DrawHelper.bDrawGrid = false;
+	DrawHelper.AxesLineThickness = 1.0f;
+	DrawHelper.bDrawGrid = true;
 
 	EngineShowFlags.Game = 0;
 	EngineShowFlags.ScreenSpaceReflections = 1;
 	EngineShowFlags.AmbientOcclusion = 1;
-	EngineShowFlags.SetSnap(0);
+	EngineShowFlags.SetSnap(false);
 
 	SetRealtime(true);
 
@@ -103,8 +104,8 @@ FLGUIPrefabEditorViewportClient::FLGUIPrefabEditorViewportClient(FLGUIPrefabEdit
 	FVector InitialViewOrbitLocation;
 	InPrefabEditorPtr.Pin()->GetInitialViewLocationAndRotation(InitialViewLocation, InitialViewRotation, InitialViewOrbitLocation);
 	SetViewLocation(InitialViewLocation);
-	SetViewRotation(InitialViewRotation);
-	SetLookAtLocation(InitialViewOrbitLocation);
+	//SetViewRotation(InitialViewRotation);
+	//SetLookAtLocation(InitialViewOrbitLocation);
 }
 
 FLGUIPrefabEditorViewportClient::~FLGUIPrefabEditorViewportClient()
@@ -187,6 +188,34 @@ static FMatrix GPerspViewMatrix;
 void FLGUIPrefabEditorViewportClient::Draw(const FSceneView* View, FPrimitiveDrawInterface* PDI)
 {
 	FMemMark Mark(FMemStack::Get());
+
+	//Draw grid
+	{
+#if 0
+		auto ScreenColorRenderTargetTexture = View->Family->RenderTarget->GetRenderTargetTexture();
+		if (ScreenColorRenderTargetTexture != nullptr)
+		{
+			static UTexture2D* GridTexture = Cast<UTexture2D>(FAppStyle::GetBrush("Checkerboard")->GetResourceObject());
+			if (GridTexture == nullptr)
+			{
+				GridTexture = LoadObject<UTexture2D>(nullptr, TEXT("/Engine/EngineMaterials/DefaultWhiteGrid.DefaultWhiteGrid"), nullptr, LOAD_None, nullptr);
+			}
+			const bool bAlphaBlend = false;
+			Canvas.DrawTile(
+				0,
+				0,
+				InViewport.GetSizeXY().X,
+				InViewport.GetSizeXY().Y,
+				0.0f,
+				0.0f,
+				4.0f,
+				4.0f,
+				FLinearColor(0.15f, 0.15f, 0.15f),
+				GridTexture->GetResource(),
+				bAlphaBlend);
+		}
+#endif
+	}
 
 	FEditorViewportClient::Draw(View, PDI);
 
@@ -277,7 +306,7 @@ void FLGUIPrefabEditorViewportClient::Draw(const FSceneView* View, FPrimitiveDra
 	Mark.Pop();
 }
 void FLGUIPrefabEditorViewportClient::DrawCanvas(FViewport& InViewport, FSceneView& View, FCanvas& Canvas)
-{
+{	
 	if (GUnrealEd != nullptr && !IsInGameView())
 	{
 		GUnrealEd->DrawComponentVisualizersHUD(&InViewport, &View, &Canvas);

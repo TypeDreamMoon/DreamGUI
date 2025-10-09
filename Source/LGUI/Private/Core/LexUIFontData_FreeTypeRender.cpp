@@ -25,14 +25,14 @@ void ULexUIFontData_FreeTypeRender::UpdateFontOnCultureChanged()
 
 	if (fontType == ELexUIDynamicFontDataType::UnrealFont)
 	{
-		fontBinaryArray.Empty();//clear cache font data when swich to UnrealFont
+		FontBinaryArray.Empty();//clear cache font data when swich to UnrealFont
 	}
 
 #if WITH_FREETYPE
 	DeinitFreeType();
 	InitFreeType();
 #endif
-	for (auto textItem : renderTextArray)
+	for (auto textItem : RenderTextArray)
 	{
 		if (textItem.IsValid())
 		{
@@ -42,19 +42,19 @@ void ULexUIFontData_FreeTypeRender::UpdateFontOnCultureChanged()
 
 	{
 		int powerValue = 0;
-		while (rectPackCellSize > 0)
+		while (RectPackCellSize > 0)
 		{
-			rectPackCellSize = rectPackCellSize >> 1;
+			RectPackCellSize = RectPackCellSize >> 1;
 			powerValue++;
 		}
-		rectPackCellSize = 1;
+		RectPackCellSize = 1;
 		while (powerValue > 0)
 		{
-			rectPackCellSize = rectPackCellSize << 1;
+			RectPackCellSize = RectPackCellSize << 1;
 			powerValue--;
 		}
 		
-		rectPackCellSize = FMath::Clamp(rectPackCellSize, 64, ULexUISettings::ConvertAtlasTextureSizeTypeToSize(initialSize));
+		RectPackCellSize = FMath::Clamp(RectPackCellSize, 64, ULexUISettings::ConvertAtlasTextureSizeTypeToSize(InitialSize));
 	}
 }
 
@@ -107,9 +107,9 @@ TArray<FString> ULexUIFontData_FreeTypeRender::CacheSubFaces(FT_LibraryRec_* InF
 
 void ULexUIFontData_FreeTypeRender::InitFreeType()
 {
-	if (alreadyInitialized)return;
+	if (bAlreadyInitialized)return;
 	FT_Error error = 0;
-	error = FT_Init_FreeType(&library);
+	error = FT_Init_FreeType(&Library);
 	if (error)
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d Font:%s, error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetName()), ANSI_TO_TCHAR(GetErrorMessage(error)));
@@ -118,12 +118,12 @@ void ULexUIFontData_FreeTypeRender::InitFreeType()
 
 	auto NewFontFace = [&error, this](const TArray<uint8>& InFontBinary) {
 #if WITH_EDITOR
-		subFaces = CacheSubFaces(library, InFontBinary);
-		if (subFaces.Num() > 0)
+		SubFaces = CacheSubFaces(Library, InFontBinary);
+		if (SubFaces.Num() > 0)
 		{
-			fontFace = FMath::Clamp(fontFace, 0, subFaces.Num());
+			FontFace = FMath::Clamp(FontFace, 0, SubFaces.Num());
 #endif
-			error = FT_New_Memory_Face(library, InFontBinary.GetData(), InFontBinary.Num(), fontFace, &face);
+			error = FT_New_Memory_Face(Library, InFontBinary.GetData(), InFontBinary.Num(), FontFace, &Face);
 #if WITH_EDITOR
 		}
 		else
@@ -143,14 +143,14 @@ void ULexUIFontData_FreeTypeRender::InitFreeType()
 			}
 			else
 			{
-				if (!FFileHelper::LoadFileToArray(tempFontBinaryArray, *unrealFont->GetFontFilename()))
+				if (!FFileHelper::LoadFileToArray(TempFontBinaryArray, *unrealFont->GetFontFilename()))
 				{
 					UE_LOG(LGUI, Warning, TEXT("[%s].%d Failed to load or process '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *unrealFont->GetFontFilename());
 					return;
 				}
 				else
 				{
-					NewFontFace(tempFontBinaryArray);
+					NewFontFace(TempFontBinaryArray);
 				}
 			}
 		}
@@ -169,7 +169,7 @@ void ULexUIFontData_FreeTypeRender::InitFreeType()
 			FontFilePathStr = useRelativeFilePath ? FPaths::ProjectDir() + fontFilePath : fontFilePath;
 			if (!FPaths::FileExists(*FontFilePathStr))
 			{
-				if (fontBinaryArray.Num() > 0 && !useExternalFileOrEmbedInToUAsset)
+				if (FontBinaryArray.Num() > 0 && !useExternalFileOrEmbedInToUAsset)
 				{
 					UE_LOG(LGUI, Warning, TEXT("[%s].%d Font:%s, file: \"%s\" not exist! Will use cache data"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetName()), *FontFilePathStr);
 				}
@@ -182,17 +182,17 @@ void ULexUIFontData_FreeTypeRender::InitFreeType()
 
 			if (useExternalFileOrEmbedInToUAsset)
 			{
-				FFileHelper::LoadFileToArray(tempFontBinaryArray, *FontFilePathStr);
-				NewFontFace(tempFontBinaryArray);
+				FFileHelper::LoadFileToArray(TempFontBinaryArray, *FontFilePathStr);
+				NewFontFace(TempFontBinaryArray);
 				if (error == 0)
 				{
-					fontBinaryArray.Empty();
+					FontBinaryArray.Empty();
 				}
 			}
 			else
 			{
-				FFileHelper::LoadFileToArray(fontBinaryArray, *FontFilePathStr);
-				NewFontFace(fontBinaryArray);
+				FFileHelper::LoadFileToArray(FontBinaryArray, *FontFilePathStr);
+				NewFontFace(FontBinaryArray);
 			}
 		}
 		else
@@ -207,13 +207,13 @@ void ULexUIFontData_FreeTypeRender::InitFreeType()
 					return;
 				}
 
-				fontBinaryArray.Empty();
-				FFileHelper::LoadFileToArray(tempFontBinaryArray, *FontFilePathStr);
-				NewFontFace(tempFontBinaryArray);
+				FontBinaryArray.Empty();
+				FFileHelper::LoadFileToArray(TempFontBinaryArray, *FontFilePathStr);
+				NewFontFace(TempFontBinaryArray);
 			}
 			else
 			{
-				NewFontFace(fontBinaryArray);
+				NewFontFace(FontBinaryArray);
 			}
 		}
 	}
@@ -221,24 +221,24 @@ void ULexUIFontData_FreeTypeRender::InitFreeType()
 	if (error)
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d Font:%s, error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetName()), ANSI_TO_TCHAR(GetErrorMessage(error)));
-		face = nullptr;
+		Face = nullptr;
 		return;
 	}
 	else
 	{
 		UE_LOG(LGUI, Log, TEXT("[%s].%d Success, font:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetName()));
-		alreadyInitialized = true;
-		hasKerning = FT_HAS_KERNING(face) != 0;
+		bAlreadyInitialized = true;
+		bHasKerning = FT_HAS_KERNING(Face) != 0;
 
-		texture = nullptr;
-		textureSize = ULexUISettings::ConvertAtlasTextureSizeTypeToSize(initialSize);
-		binPack = rbp::MaxRectsBinPack(rectPackCellSize, rectPackCellSize);
-		if (initialSize != ELexUIAtlasTextureSizeType::SIZE_256x256)
+		Texture = nullptr;
+		TextureSize = ULexUISettings::ConvertAtlasTextureSizeTypeToSize(InitialSize);
+		BinPack = rbp::MaxRectsBinPack(RectPackCellSize, RectPackCellSize);
+		if (InitialSize != ELexUIAtlasTextureSizeType::SIZE_256x256)
 		{
-			binPack.PrepareExpendSizeForText(textureSize, textureSize, freeRects, rectPackCellSize, false);
+			BinPack.PrepareExpendSizeForText(TextureSize, TextureSize, FreeRects, RectPackCellSize, false);
 		}
-		RenewFontTexture(0, textureSize);
-		oneDivideTextureSize = 1.0f / textureSize;
+		RenewFontTexture(0, TextureSize);
+		OneDivideTextureSize = 1.0f / TextureSize;
 
 		ClearCharDataCache();
 	}
@@ -246,10 +246,10 @@ void ULexUIFontData_FreeTypeRender::InitFreeType()
 
 void ULexUIFontData_FreeTypeRender::DeinitFreeType()
 {
-	alreadyInitialized = false;
-	if (library != nullptr)
+	bAlreadyInitialized = false;
+	if (Library != nullptr)
 	{
-		auto error = FT_Done_FreeType(library);
+		auto error = FT_Done_FreeType(Library);
 		if (error)
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d Font:%s, error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetName()), ANSI_TO_TCHAR(GetErrorMessage(error)));
@@ -259,15 +259,15 @@ void ULexUIFontData_FreeTypeRender::DeinitFreeType()
 			UE_LOG(LGUI, Log, TEXT("[%s].%d Success, font:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetName()));
 		}
 	}
-	face = nullptr;
-	library = nullptr;
-	freeRects.Empty();
-	binPack = rbp::MaxRectsBinPack(256, 256);
+	Face = nullptr;
+	Library = nullptr;
+	FreeRects.Empty();
+	BinPack = rbp::MaxRectsBinPack(256, 256);
 #if WITH_EDITORONLY_DATA
-	subFaces.Reset();
+	SubFaces.Reset();
 #endif
-	fontFace = 0;
-	hasKerning = false;
+	FontFace = 0;
+	bHasKerning = false;
 	ClearCharDataCache();
 }
 #endif
@@ -276,31 +276,31 @@ void ULexUIFontData_FreeTypeRender::DeinitFreeType()
 FT_GlyphSlot ULexUIFontData_FreeTypeRender::RenderGlyphOnFreeType(const TCHAR& charCode, const float& charSize)
 {
 	InitFreeType();
-	if (alreadyInitialized == false)
+	if (bAlreadyInitialized == false)
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d Font '%s' is not initialized"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
 		return nullptr;
 	}
 
-	auto error = FT_Set_Pixel_Sizes(face, 0, charSize);
+	auto error = FT_Set_Pixel_Sizes(Face, 0, charSize);
 	if (error)
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d Font '%s' FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), ANSI_TO_TCHAR(GetErrorMessage(error)));
 		return nullptr;
 	}
-	FT_GlyphSlot slot = face->glyph;
-	error = FT_Load_Glyph(face, FT_Get_Char_Index(face, charCode), FT_LOAD_DEFAULT);
+	FT_GlyphSlot slot = Face->glyph;
+	error = FT_Load_Glyph(Face, FT_Get_Char_Index(Face, charCode), FT_LOAD_DEFAULT);
 	if (slot->glyph_index == 0//missing char in this font
 		&& slot->metrics.width == 0 && slot->metrics.height == 0//some chars (/r, /n, space) only have width and height, no pixels
 		)
 	{
-		if (fallbackFontArray.Num() > 0)
+		if (FallbackFontArray.Num() > 0)
 		{
 			UE_LOG(LGUI, Log, TEXT("[%s].%d Font '%s' Can't find glyph (char:%s, code:%d), will search in fallbacks"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), *FString(1, &charCode), (int)charCode);
-			for (int i = 0; i < fallbackFontArray.Num(); i++)
+			for (int i = 0; i < FallbackFontArray.Num(); i++)
 			{
-				if (fallbackFontArray[i] == nullptr)continue;
-				if (auto fallbackSlot = fallbackFontArray[i]->RenderGlyphOnFreeType(charCode, charSize))
+				if (FallbackFontArray[i] == nullptr)continue;
+				if (auto fallbackSlot = FallbackFontArray[i]->RenderGlyphOnFreeType(charCode, charSize))
 				{
 					return fallbackSlot;
 				}
@@ -314,7 +314,7 @@ FT_GlyphSlot ULexUIFontData_FreeTypeRender::RenderGlyphOnFreeType(const TCHAR& c
 		UE_LOG(LGUI, Error, TEXT("[%s].%d Font '%s' FT_Load_Glyph error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), ANSI_TO_TCHAR(GetErrorMessage(error)));
 		return nullptr;
 	}
-	error = FT_Render_Glyph(face->glyph, FT_Render_Mode::FT_RENDER_MODE_NORMAL);
+	error = FT_Render_Glyph(Face->glyph, FT_Render_Mode::FT_RENDER_MODE_NORMAL);
 	if (error)
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d Font '%s' FT_Render_Glyph error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), ANSI_TO_TCHAR(GetErrorMessage(error)));
@@ -326,7 +326,7 @@ FT_GlyphSlot ULexUIFontData_FreeTypeRender::RenderGlyphOnFreeType(const TCHAR& c
 
 UTexture2D* ULexUIFontData_FreeTypeRender::GetFontTexture()
 {
-	return texture;
+	return Texture;
 }
 
 void ULexUIFontData_FreeTypeRender::PostLoad()
@@ -365,16 +365,16 @@ void ULexUIFontData_FreeTypeRender::InitFont()
 float ULexUIFontData_FreeTypeRender::GetKerning(const TCHAR& leftCharIndex, const TCHAR& rightCharIndex, const float& charSize)
 {
 #if WITH_FREETYPE
-	if (face == nullptr)return 0;
-	if (!hasKerning)return 0;
-	auto error = FT_Set_Pixel_Sizes(face, 0, charSize);
+	if (Face == nullptr)return 0;
+	if (!bHasKerning)return 0;
+	auto error = FT_Set_Pixel_Sizes(Face, 0, charSize);
 	if (error)
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
 		return 0;
 	}
 	FT_Vector kerning;
-	error = FT_Get_Kerning(face, FT_Get_Char_Index(face, leftCharIndex), FT_Get_Char_Index(face, rightCharIndex), FT_KERNING_DEFAULT, &kerning);
+	error = FT_Get_Kerning(Face, FT_Get_Char_Index(Face, leftCharIndex), FT_Get_Char_Index(Face, rightCharIndex), FT_KERNING_DEFAULT, &kerning);
 	if (error)
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d FT_Get_Kerning error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
@@ -388,14 +388,14 @@ float ULexUIFontData_FreeTypeRender::GetKerning(const TCHAR& leftCharIndex, cons
 float ULexUIFontData_FreeTypeRender::GetLineHeight(const float& fontSize)
 {
 #if WITH_FREETYPE
-	if (face == nullptr)return fontSize;
-	auto error = FT_Set_Pixel_Sizes(face, 0, fontSize);
+	if (Face == nullptr)return fontSize;
+	auto error = FT_Set_Pixel_Sizes(Face, 0, fontSize);
 	if (error)
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
 		return fontSize;
 	}
-	return lineHeightType == ELexUIDynamicFontLineHeightType::FromFontFace ? (face->size->metrics.height >> 6) : fontSize;
+	return LineHeightType == ELexUIDynamicFontLineHeightType::FromFontFace ? (Face->size->metrics.height >> 6) : fontSize;
 #else
 	return fontSize;
 #endif
@@ -403,14 +403,14 @@ float ULexUIFontData_FreeTypeRender::GetLineHeight(const float& fontSize)
 float ULexUIFontData_FreeTypeRender::GetVerticalOffset(const float& fontSize)
 {
 #if WITH_FREETYPE
-	if (face == nullptr)return fontSize;
-	auto error = FT_Set_Pixel_Sizes(face, 0, fontSize);
+	if (Face == nullptr)return fontSize;
+	auto error = FT_Set_Pixel_Sizes(Face, 0, fontSize);
 	if (error)
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
 		return 0;
 	}
-	return -((face->size->metrics.ascender + face->size->metrics.descender) >> 6) * 0.5f;
+	return -((Face->size->metrics.ascender + Face->size->metrics.descender) >> 6) * 0.5f;
 #else
 	return fontSize;
 #endif
@@ -418,11 +418,11 @@ float ULexUIFontData_FreeTypeRender::GetVerticalOffset(const float& fontSize)
 
 void ULexUIFontData_FreeTypeRender::AddUIText(ULexText* InText)
 {
-	renderTextArray.AddUnique(InText);
+	RenderTextArray.AddUnique(InText);
 }
 void ULexUIFontData_FreeTypeRender::RemoveUIText(ULexText* InText)
 {
-	renderTextArray.Remove(InText);
+	RenderTextArray.Remove(InText);
 }
 
 FLexUICharData_HighPrecision ULexUIFontData_FreeTypeRender::GetCharData(const TCHAR& charCode, const float& charSize)
@@ -437,8 +437,8 @@ FLexUICharData_HighPrecision ULexUIFontData_FreeTypeRender::GetCharData(const TC
 			return Result;
 		}
 
-		auto& calcBinpack = this->binPack;
-		auto& calcTexture = this->texture;
+		auto& calcBinpack = this->BinPack;
+		auto& calcTexture = this->Texture;
 		FLexUICharData uiCharData;
 	PACK_AND_INSERT:
 		if (PackRectAndInsertChar(glyphBitmap, calcBinpack, calcTexture, uiCharData))
@@ -448,28 +448,28 @@ FLexUICharData_HighPrecision ULexUIFontData_FreeTypeRender::GetCharData(const TC
 		else
 		{
 			int32 newTextureSize = 0;
-			if (freeRects.Num() > 0)
+			if (FreeRects.Num() > 0)
 			{
-				calcBinpack.DoExpendSizeForText(freeRects[freeRects.Num() - 1]);
-				freeRects.RemoveAt(freeRects.Num() - 1, 1, EAllowShrinking::No);
+				calcBinpack.DoExpendSizeForText(FreeRects[FreeRects.Num() - 1]);
+				FreeRects.RemoveAt(FreeRects.Num() - 1, 1, EAllowShrinking::No);
 			}
 			else
 			{
-				newTextureSize = textureSize + textureSize;
+				newTextureSize = TextureSize + TextureSize;
 				UE_LOG(LGUI, Log, TEXT("[%s].%d Expend font texture size to:%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, newTextureSize);
 				//expend by multiply 2
-				calcBinpack.PrepareExpendSizeForText(newTextureSize, newTextureSize, freeRects, rectPackCellSize);
-				calcBinpack.DoExpendSizeForText(freeRects[freeRects.Num() - 1]);
-				freeRects.RemoveAt(freeRects.Num() - 1, 1, EAllowShrinking::No);
+				calcBinpack.PrepareExpendSizeForText(newTextureSize, newTextureSize, FreeRects, RectPackCellSize);
+				calcBinpack.DoExpendSizeForText(FreeRects[FreeRects.Num() - 1]);
+				FreeRects.RemoveAt(FreeRects.Num() - 1, 1, EAllowShrinking::No);
 
-				RenewFontTexture(textureSize, newTextureSize);
-				textureSize = newTextureSize;
-				oneDivideTextureSize = 1.0f / textureSize;
+				RenewFontTexture(TextureSize, newTextureSize);
+				TextureSize = newTextureSize;
+				OneDivideTextureSize = 1.0f / TextureSize;
 
 				//scale down uv of prev chars
 				ScaleDownUVofCachedChars();
 				//tell UIText to scale down uv
-				for (auto textItem : renderTextArray)
+				for (auto textItem : RenderTextArray)
 				{
 					if (textItem.IsValid())
 					{
@@ -529,20 +529,20 @@ bool ULexUIFontData_FreeTypeRender::PackRectAndInsertChar(const FGlyphBitmap& In
 		OutResult.xoffset = InGlyphBitmap.hOffset - SPACE_NEED_EXPEND;
 		OutResult.yoffset = InGlyphBitmap.vOffset + SPACE_NEED_EXPEND;
 		OutResult.xadvance = InGlyphBitmap.hAdvance;
-		OutResult.uv0X = oneDivideTextureSize * (packedRect.x - SPACE_NEED_EXPEND);
-		OutResult.uv0Y = oneDivideTextureSize * (packedRect.y - SPACE_NEED_EXPEND + OutResult.height);
-		OutResult.uv3X = oneDivideTextureSize * (packedRect.x - SPACE_NEED_EXPEND + OutResult.width);
-		OutResult.uv3Y = oneDivideTextureSize * (packedRect.y - SPACE_NEED_EXPEND);
+		OutResult.uv0X = OneDivideTextureSize * (packedRect.x - SPACE_NEED_EXPEND);
+		OutResult.uv0Y = OneDivideTextureSize * (packedRect.y - SPACE_NEED_EXPEND + OutResult.height);
+		OutResult.uv3X = OneDivideTextureSize * (packedRect.x - SPACE_NEED_EXPEND + OutResult.width);
+		OutResult.uv3Y = OneDivideTextureSize * (packedRect.y - SPACE_NEED_EXPEND);
 		return true;
 	}
 }
 void ULexUIFontData_FreeTypeRender::ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize)
 {
-	this->texture = newTexture;
-	textureSize = newTextureSize;
-	oneDivideTextureSize = 1.0f / textureSize;
+	this->Texture = newTexture;
+	TextureSize = newTextureSize;
+	OneDivideTextureSize = 1.0f / TextureSize;
 	//tell UIText to scale down uv
-	for (auto textItem : renderTextArray)
+	for (auto textItem : RenderTextArray)
 	{
 		if (textItem.IsValid())
 		{
@@ -551,9 +551,9 @@ void ULexUIFontData_FreeTypeRender::ApplyPackingAtlasTextureExpand(UTexture2D* n
 	}
 }
 
-void ULexUIFontData_FreeTypeRender::UpdateFontTextureRegion(UTexture2D* Texture, FUpdateTextureRegion2D* Region, uint32 SrcPitch, uint32 SrcBpp, uint8* SrcData)
+void ULexUIFontData_FreeTypeRender::UpdateFontTextureRegion(UTexture2D* InTexture, FUpdateTextureRegion2D* Region, uint32 SrcPitch, uint32 SrcBpp, uint8* SrcData)
 {
-	if (Texture->GetResource())
+	if (InTexture->GetResource())
 	{
 		struct FUpdateTextureRegionsData
 		{
@@ -565,12 +565,12 @@ void ULexUIFontData_FreeTypeRender::UpdateFontTextureRegion(UTexture2D* Texture,
 		};
 		FUpdateTextureRegionsData* RegionData = new FUpdateTextureRegionsData;
 
-		auto Texture2DRes = (FTexture2DResource*)Texture->GetResource();
+		auto Texture2DRes = (FTexture2DResource*)InTexture->GetResource();
 		RegionData->Region = Region;
 		RegionData->SrcPitch = SrcPitch;
 		RegionData->SrcBpp = SrcBpp;
 		RegionData->SrcData = SrcData;
-		ENQUEUE_RENDER_COMMAND(FLGUIFontUpdateFontTextureRegionData)(
+		ENQUEUE_RENDER_COMMAND(FLexUIFontData_UpdateFontTextureRegionData)(
 			[RegionData, Texture2DRes](FRHICommandListImmediate& RHICmdList)
 			{
 				RHICmdList.UpdateTexture2D(
@@ -591,18 +591,18 @@ void ULexUIFontData_FreeTypeRender::UpdateFontTextureRegion(UTexture2D* Texture,
 void ULexUIFontData_FreeTypeRender::RenewFontTexture(int oldTextureSize, int newTextureSize)
 {
 	//store old texutre pointer
-	auto OldTexture = texture;
+	auto OldTexture = Texture;
 	//create new texture
-	texture = CreateFontTexture(newTextureSize);
-	texture->AddToRoot();//@todo: is this really need to AddToRoot?
+	Texture = CreateFontTexture(newTextureSize);
+	Texture->AddToRoot();//@todo: is this really need to AddToRoot?
 
 	//copy old texture to new one
 	if (IsValid(OldTexture) && oldTextureSize > 0)
 	{
-		auto NewTexture = texture;
+		auto NewTexture = Texture;
 		if (OldTexture->GetResource() != nullptr && NewTexture->GetResource() != nullptr)
 		{
-			ENQUEUE_RENDER_COMMAND(FLGUIFontUpdateAndCopyFontTexture)(
+			ENQUEUE_RENDER_COMMAND(FLexUIFontData_UpdateAndCopyFontTexture)(
 				[OldTexture, NewTexture, oldTextureSize](FRHICommandListImmediate& RHICmdList)
 			{
 				FRHICopyTextureInfo CopyInfo;
@@ -631,7 +631,7 @@ void ULexUIFontData_FreeTypeRender::ReloadFont()
 	DeinitFreeType();
 	InitFreeType();
 #endif
-	for (auto textItem : renderTextArray)
+	for (auto textItem : RenderTextArray)
 	{
 		if (textItem.IsValid())
 		{
@@ -646,9 +646,9 @@ void ULexUIFontData_FreeTypeRender::PostEditChangeProperty(FPropertyChangedEvent
 	{
 		auto PropertyName = Property->GetFName();
 		if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, useExternalFileOrEmbedInToUAsset)
-			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, fontFace)
+			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, FontFace)
 			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, fontType)
-			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, lineHeightType)
+			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, LineHeightType)
 			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, unrealFont)
 			)
 		{
@@ -656,7 +656,7 @@ void ULexUIFontData_FreeTypeRender::PostEditChangeProperty(FPropertyChangedEvent
 			{
 				if (fontType == ELexUIDynamicFontDataType::UnrealFont)
 				{
-					fontBinaryArray.Empty();//clear cache font data when swich to UnrealFont
+					FontBinaryArray.Empty();//clear cache font data when swich to UnrealFont
 				}
 			}
 			ReloadFont();
@@ -664,19 +664,19 @@ void ULexUIFontData_FreeTypeRender::PostEditChangeProperty(FPropertyChangedEvent
 
 		{
 			int powerValue = 0;
-			while (rectPackCellSize > 0)
+			while (RectPackCellSize > 0)
 			{
-				rectPackCellSize = rectPackCellSize >> 1;
+				RectPackCellSize = RectPackCellSize >> 1;
 				powerValue++;
 			}
-			rectPackCellSize = 1;
+			RectPackCellSize = 1;
 			while (powerValue > 0)
 			{
-				rectPackCellSize = rectPackCellSize << 1;
+				RectPackCellSize = RectPackCellSize << 1;
 				powerValue--;
 			}
 			
-			rectPackCellSize = FMath::Clamp(rectPackCellSize, 64, ULexUISettings::ConvertAtlasTextureSizeTypeToSize(initialSize));
+			RectPackCellSize = FMath::Clamp(RectPackCellSize, 64, ULexUISettings::ConvertAtlasTextureSizeTypeToSize(InitialSize));
 		}
 	}
 }

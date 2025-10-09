@@ -51,12 +51,12 @@ bool FLexUIDrawCall::CanConsumeUIGeometryForBatchMesh(FLexUIGeometry* geo, int32
 	if (this->Material != geo->Material)return false;
 	if (geo->bIsFont)
 	{
-		if (this->FontTexture != nullptr && this->FontTexture != geo->Texture)
+		if (this->FontTexture != nullptr && this->FontTexture != geo->Texture)//draw-call also contains font but different of geo's
 			return false;
 	}
 	else
 	{
-		if (this->Texture != geo->Texture)
+		if (this->Texture != nullptr && this->Texture != geo->Texture)//draw-call also contains non-font but difference of geo's
 			return false;
 	}
 	if (this->VerticesCount + itemVertCount >= LEXUI_MAX_VERTEX_COUNT)return false;

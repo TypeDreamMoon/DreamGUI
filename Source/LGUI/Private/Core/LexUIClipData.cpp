@@ -26,6 +26,12 @@ FLexUIClipData::~FLexUIClipData()
 	this->DataTexture->UnregisterBuffer(this->BufferStartPos);
 }
 
+void FLexUIClipData::Add2DTranslationToMatrix(FMatrix44d& Matrix, const FVector2d& Translation)
+{
+	auto M = &Matrix.M[0][0];
+	M[13] += Translation.X;
+	M[14] += Translation.Y;
+}
 void FLexUIClipData::UpdateData()
 {
 	if (!bNeedUpdateData)return;
@@ -34,11 +40,17 @@ void FLexUIClipData::UpdateData()
 	uint8* BlockBuffer = new uint8[BlockSizeInBytes];
 	FMemory::Memzero(BlockBuffer, BlockSizeInBytes);
 	int BlockDataOffset = 0;
-	auto CanvasToWorldMatrix = this->GetWidget()->GetRenderCanvas()->GetLexWidget()->GetComponentTransform().ToMatrixWithScale();
+	auto RenderCanvasWidget = this->GetWidget()->GetRenderCanvas()->GetLexWidget();
+	auto CanvasToWorldMatrix = RenderCanvasWidget->GetComponentTransform().ToMatrixWithScale();
+	//auto CanvasLocalSpaceCenter = RenderCanvasWidget->GetLocalSpaceCenter();
+	//Add2DTranslationToMatrix(CanvasToWorldMatrix, CanvasLocalSpaceCenter);
 	FLexUIClipData* TargetClip = this;
 	for (int i = 0; i < InheritClipDepth; i++)
 	{
-		auto WorldToWidgetMatrix = TargetClip->Widget->GetComponentTransform().ToInverseMatrixWithScale();
+		auto WidgetToWorldMatrix = TargetClip->Widget->GetComponentTransform().ToMatrixWithScale();
+		auto WidgetLocalSpaceCenter = TargetClip->Widget->GetLocalSpaceCenter();
+		Add2DTranslationToMatrix(WidgetToWorldMatrix, WidgetLocalSpaceCenter);
+		auto WorldToWidgetMatrix = WidgetToWorldMatrix.Inverse();
 		auto CanvasToWidgetMatrix = FMatrix44f(CanvasToWorldMatrix * WorldToWidgetMatrix);
 		auto& M = CanvasToWidgetMatrix.M;
 		auto RenderSize = FVector2f(TargetClip->Widget->GetWidth(), TargetClip->Widget->GetHeight());

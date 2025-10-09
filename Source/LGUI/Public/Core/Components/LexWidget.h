@@ -42,7 +42,7 @@ enum class ELexWidgetClipping : uint8
 UENUM(BlueprintType)
 enum class ELexWidgetRaycastableType : uint8
 {
-	//If not parent then use Enable
+	//If no parent then use Enabled
 	Inherit,
 	Enabled,
 	Disabled,
@@ -51,7 +51,7 @@ enum class ELexWidgetRaycastableType : uint8
 UENUM(BlueprintType)
 enum class ELexWidgetInteractableType : uint8
 {
-	//If not parent then use Enable
+	//If no parent then use Enabled
 	Inherit,
 	Enabled,
 	Disabled,
@@ -176,7 +176,7 @@ public:
 	/** Called by LexCanvas, when LexCanvas is unregistered on self actor */
 	void UnregisterRenderCanvas();
 
-	void UpdateLayout();
+	void UpdateLayout()const;
 	void UpdateClip(ULexUIDataAsTexture* ClipDataTexture, TArray<TSharedPtr<FLexUIClipData>>& ClipDataList);
 	void UpdateVisual()const;
 protected:
@@ -631,7 +631,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		ULexWidget* GetRootWidgetInHierarchy()const { return RootWidget.Get(); }
 
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	static void MarkLayoutForRebuild(const ULexWidget* InWidget);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	static void ForceRebuildLayoutImmediately(const ULexWidget* InWidget);
 
 protected:
 	friend class FLexWidgetCustomization;

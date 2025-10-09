@@ -10,9 +10,7 @@
 #include "Core/LexUISettings.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_DISABLE_OPTIMIZATION
-#endif
 
 #define LOCTEXT_NAMESPACE "UIItemComponentVisualizer"
 
@@ -315,6 +313,4 @@ HUIItemAnchorVisProxy::HUIItemAnchorVisProxy(const ULexWidget* InComponent, EUII
 
 #undef LOCTEXT_NAMESPACE
 
-#if LGUI_CAN_DISABLE_OPTIMIZATION
 UE_ENABLE_OPTIMIZATION
-#endif

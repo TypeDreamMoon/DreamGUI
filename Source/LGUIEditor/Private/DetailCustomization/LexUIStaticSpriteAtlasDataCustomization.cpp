@@ -26,7 +26,7 @@ void FLexUIStaticSpriteAtlasDataCustomization::CustomizeDetails(IDetailLayoutBui
 		return;
 	}
 	IDetailCategoryBuilder& LguiCategory = DetailBuilder.EditCategory("LGUI");
-	auto spriteArrayHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUIStaticSpriteAtlasData, SpriteArray));
+	auto spriteArrayHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUIStaticSpriteAtlasData, SpriteDataArray));
 	spriteArrayHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {
 		DetailBuilder.ForceRefreshDetails();
 		}));

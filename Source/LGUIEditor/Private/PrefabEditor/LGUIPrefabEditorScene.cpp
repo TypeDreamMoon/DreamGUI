@@ -7,7 +7,9 @@
 #include "Components/DirectionalLightComponent.h"
 #include "Components/SphereReflectionCaptureComponent.h"
 #include "EngineUtils.h"
+#include "Engine/TextureCube.h"
 #include "GameFramework/Actor.h"
+#include "Materials/MaterialInstanceConstant.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditorScene"
@@ -34,20 +36,34 @@ FLGUIPrefabEditorScene::FLGUIPrefabEditorScene(ConstructionValues CVS) :FPrefabS
 	DirectionalLight->RecreateRenderState_Concurrent();
 
 	// A background sky sphere
-	//m_EditorSkyComp = NewObject<UStaticMeshComponent>();
-	//UStaticMesh* StaticMesh = LoadObject<UStaticMesh>(NULL, TEXT("/Engine/MapTemplates/Sky/SM_SkySphere.SM_SkySphere"), NULL, LOAD_None, NULL);
- //   if (StaticMesh)
- //       m_EditorSkyComp->SetStaticMesh(StaticMesh);
+	{
+		// Large scale to prevent sphere from clipping
+		const FTransform SphereTransform(FRotator(0, 0, 0), FVector(0, 0, 0), FVector(2000));
+		auto SkyComponent = NewObject<UStaticMeshComponent>(GetTransientPackage());
 
-	//// TODO: Clone this material in case it is ever removed?
-	//UMaterial* SkyMaterial = LoadObject<UMaterial>(NULL, TEXT("/Engine/EditorMaterials/PersonaSky.PersonaSky"), NULL, LOAD_None, NULL);
- //   if(SkyMaterial)
-	//    m_EditorSkyComp->SetMaterial(0, SkyMaterial);
+		// Set up sky sphere showing the same cube map as used by the sky light
+		UStaticMesh* SkySphere = LoadObject<UStaticMesh>(NULL, TEXT("/Engine/EditorMeshes/AssetViewer/Sphere_inversenormals.Sphere_inversenormals"), NULL, LOAD_None, NULL);
+		check(SkySphere);
+		SkyComponent->SetStaticMesh(SkySphere);
+		SkyComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		SkyComponent->CastShadow = false;
+		SkyComponent->bCastDynamicShadow = false;
 
-	//const float SkySphereScale = 1000.f;
-	//const FTransform SkyTransform(FRotator(0, 0, 0), FVector(0, 0, 0), FVector(SkySphereScale));
+		UMaterial* SkyMaterial = LoadObject<UMaterial>(NULL, TEXT("/Engine/EditorMaterials/AssetViewer/M_SkyBox.M_SkyBox"), NULL, LOAD_None, NULL);
+		check(SkyMaterial);
 
-	//AddComponent(m_EditorSkyComp, SkyTransform);
+		auto InstancedSkyMaterial = NewObject<UMaterialInstanceConstant>(GetTransientPackage());
+		InstancedSkyMaterial->Parent = SkyMaterial;		
+
+		UTextureCube* DefaultTexture = LoadObject<UTextureCube>(NULL, TEXT("/Engine/EditorMaterials/AssetViewer/EpicQuadPanorama_CC+EV1.EpicQuadPanorama_CC+EV1"));
+    
+		InstancedSkyMaterial->SetTextureParameterValueEditorOnly(FName("SkyBox"), DefaultTexture );
+		InstancedSkyMaterial->SetScalarParameterValueEditorOnly(FName("CubemapRotation"), 0);
+		InstancedSkyMaterial->SetScalarParameterValueEditorOnly(FName("Intensity"), 1);
+		InstancedSkyMaterial->PostLoad();
+		SkyComponent->SetMaterial(0, InstancedSkyMaterial);
+		AddComponent(SkyComponent, SphereTransform);
+	}
 
 	// now add height fog component
 

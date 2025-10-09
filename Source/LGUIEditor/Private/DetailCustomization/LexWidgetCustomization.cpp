@@ -243,6 +243,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			FExecuteAction::CreateSP(this, &FLexWidgetCustomization::OnPasteAnchor, DetailBuilderPtr),
 			FCanExecuteAction::CreateSP(this, &FLexWidgetCustomization::OnCanPasteAnchor)
 		))
+		.PropertyHandleList({AnchorHandle})
 		.ValueContent()
 		.MinDesiredWidth(500)
 		[
@@ -522,7 +523,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 											MakeAnchorPreviewWidget(LGUIAnchorPreviewWidget::UIAnchorHorizontalAlign::Stretch, LGUIAnchorPreviewWidget::UIAnchorVerticalAlign::Stretch)
 										]
 									]
-									//splite line
+									//split line
 									+ SOverlay::Slot()
 									[
 										SNew(SHorizontalBox)

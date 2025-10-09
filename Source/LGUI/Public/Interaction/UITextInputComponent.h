@@ -384,7 +384,7 @@ private:
 	//a Sprite for caret, can blink, can represent current caret location
 	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> CaretWidget;
 	//selection mask
-	UPROPERTY(Transient)TArray<TWeakObjectPtr<ULexSprite>> SelectionMaskObjectArray;
+	UPROPERTY(Transient)TArray<TWeakObjectPtr<ULexVisual>> SelectionMaskObjectArray;
 	//range selection
 	TArray<FLexUITextSelectionProperty> SelectionPropertyArray;
 	//Caret position of full text. caret is on left side of char

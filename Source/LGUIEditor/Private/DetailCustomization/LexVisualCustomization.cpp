@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "DetailCustomization/UIBaseRenderableCustomization.h"
+#include "DetailCustomization/LexVisualCustomization.h"
 #include "Core/Components/LexVisual.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"

@@ -1782,7 +1782,7 @@ bool LGUIEditorTools::CreateTraceChannel_BasicSetup(ETraceTypeQuery& OutTraceTyp
 	{
 		if (Response != ECollisionResponse::ECR_Ignore)
 		{
-			auto Message = LOCTEXT("RecommandLGUITraceChannelSettings", "It is recommanded to set \"Default Response\" of LGUI trace channel to \"Ignore\".");
+			auto Message = LOCTEXT("RecommendLexUITraceChannelSettings", "It is recommended to set \"Default Response\" of LexUI trace channel to \"Ignore\".");
 			FMessageDialog::Open(EAppMsgType::Ok, Message);
 			auto CollisionProfile = UCollisionProfile::Get();
 			OutTraceTypeQuery = CollisionProfile->ConvertToTraceType(TraceChannel);
@@ -1798,15 +1798,15 @@ bool LGUIEditorTools::CreateTraceChannel_BasicSetup(ETraceTypeQuery& OutTraceTyp
 	break;
 	case ELGUIChannelErrorType::NoLGUIChannel:
 	{
-		auto Message = LOCTEXT("RecommandCreateLGUITraceChannel", "It is recommanded to create a specific trace channel for LGUI, with name \"LGUI\", and default response \"Ignore\".");
+		auto Message = LOCTEXT("RecommendCreateLexUITraceChannel", "It is recommended to create a specific trace channel for LexUI, with name \"LexUI\", and default response \"Ignore\".");
 		FMessageDialog::Open(EAppMsgType::Ok, Message);
 	}
 	break;
 	case ELGUIChannelErrorType::ChannelIsNotTrace:
 	{
-		auto Message = LOCTEXT("LGUIChannelIsNotTraceType", "\
-Trying to use \"LGUI\" as trace channel, but detect a collision channel with name \"LGUI\"!\n\
-It is recommanded to create a specific trace channel for LGUI, with name \"LGUI\", and default response \"Ignore\".\
+		auto Message = LOCTEXT("LexUIChannelIsNotTraceType", "\
+Trying to use \"LexUI\" as trace channel, but detect a collision channel with name \"LexUI\"!\n\
+It is recommended to create a specific trace channel for LexUI, with name \"LexUI\", and default response \"Ignore\".\
 ");
 		FMessageDialog::Open(EAppMsgType::Ok, Message);
 	}
