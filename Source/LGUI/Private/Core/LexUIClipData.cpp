@@ -6,6 +6,8 @@
 #include "Core/LexUIDataAsTexture.h"
 #include "Core/Components/LexCanvas.h"
 
+UE_DISABLE_OPTIMIZATION
+
 int FLexUIClipData::InheritClipDepth = 16;
 int FLexUIClipData::SingleBlockSizeInBytes =
 	sizeof(FMatrix44f)//canvas to clip object's space, last column of matrix: (half-width, half-height, isValid, softness)
@@ -81,18 +83,10 @@ bool FLexUIClipData::IsPointVisible(const FVector& Point) const
 	{
 		auto TargetWidget = TargetClip->Widget;
 		auto LocalPoint = TargetWidget->GetComponentTransform().InverseTransformPosition(Point);
-		auto LocalSize = FVector2f(TargetWidget->GetWidth(), TargetWidget->GetHeight());
-		auto HalfLocalSize = LocalSize * 0.5f;
-		FVector2D clipRectMin, clipRectMax;
-		clipRectMin.X = -HalfLocalSize.X;
-		clipRectMin.Y = -HalfLocalSize.Y;
-		clipRectMax.X = HalfLocalSize.X;
-		clipRectMax.Y = HalfLocalSize.Y;
-		//out of range
-		if (LocalPoint.Y < clipRectMin.X) return false;
-		if (LocalPoint.Z < clipRectMin.Y) return false;
-		if (LocalPoint.Y > clipRectMax.X) return false;
-		if (LocalPoint.Z > clipRectMax.Y) return false;
+		if (LocalPoint.Y < Widget->GetLocalSpaceLeft())return false;
+		if (LocalPoint.Y > Widget->GetLocalSpaceRight())return false;
+		if (LocalPoint.Z < Widget->GetLocalSpaceBottom())return false;
+		if (LocalPoint.Z > Widget->GetLocalSpaceTop())return false;
 		if (!IsPointVisible_CheckCornerRadius(FVector2D(LocalPoint.Y, LocalPoint.Z), TargetWidget.Get()))
 			return false;
 		if (!TargetClip->Parent.IsValid())
@@ -117,57 +111,47 @@ bool FLexUIClipData::IsPointVisible_CheckCornerRadius(const FVector2D& InLocalHi
 	CornerRadius.Y = FMath::Min(CornerRadius.Y, MinSize);
 	CornerRadius.Z = FMath::Min(CornerRadius.Z, MinSize);
 	CornerRadius.W = FMath::Min(CornerRadius.W, MinSize);
-	if (InLocalHitPoint.X > 0 && InLocalHitPoint.Y < 0)//right bottom area of rect
+	auto Radius = CornerRadius.X;
+	auto CenterPos = FVector2D(InWidget->GetLocalSpaceRight() - Radius, InWidget->GetLocalSpaceBottom() + Radius);
+	if (InLocalHitPoint.X > CenterPos.X && InLocalHitPoint.Y < CenterPos.Y)//right bottom area of rect
 	{
-		auto Radius = CornerRadius.X;
-		auto CenterPos = FVector2D(InWidget->GetLocalSpaceRight() - Radius, InWidget->GetLocalSpaceBottom() + Radius);
-		if (InLocalHitPoint.X > CenterPos.X && InLocalHitPoint.Y < CenterPos.Y)
+		if (FVector2D::DistSquared(InLocalHitPoint, CenterPos) > Radius * Radius)
 		{
-			if (FVector2D::DistSquared(InLocalHitPoint, CenterPos) > Radius * Radius)
-			{
-				return false;
-			}
+			return false;
 		}
 		return true;
 	}
-	else if (InLocalHitPoint.X > 0 && InLocalHitPoint.Y > 0)//right top area of rect
+	Radius = CornerRadius.Y;
+	CenterPos = FVector2D(InWidget->GetLocalSpaceRight() - Radius, InWidget->GetLocalSpaceTop() - Radius);
+	if (InLocalHitPoint.X > CenterPos.X && InLocalHitPoint.Y > CenterPos.Y)//right top area of rect
 	{
-		auto Radius = CornerRadius.Y;
-		auto CenterPos = FVector2D(InWidget->GetLocalSpaceRight() - Radius, InWidget->GetLocalSpaceTop() - Radius);
-		if (InLocalHitPoint.X > CenterPos.X && InLocalHitPoint.Y > CenterPos.Y)
+		if (FVector2D::DistSquared(InLocalHitPoint, CenterPos) > Radius * Radius)
 		{
-			if (FVector2D::DistSquared(InLocalHitPoint, CenterPos) > Radius * Radius)
-			{
-				return false;
-			}
+			return false;
 		}
 		return true;
 	}
-	else if (InLocalHitPoint.X < 0 && InLocalHitPoint.Y > 0)//left top area of rect
+	Radius = CornerRadius.Z;
+	CenterPos = FVector2D(InWidget->GetLocalSpaceLeft() + Radius, InWidget->GetLocalSpaceTop() - Radius);
+	if (InLocalHitPoint.X < CenterPos.X && InLocalHitPoint.Y > CenterPos.Y)//left top area of rect
 	{
-		auto Radius = CornerRadius.Z;
-		auto CenterPos = FVector2D(InWidget->GetLocalSpaceLeft() + Radius, InWidget->GetLocalSpaceTop() - Radius);
-		if (InLocalHitPoint.X < CenterPos.X && InLocalHitPoint.Y > CenterPos.Y)
+		if (FVector2D::DistSquared(InLocalHitPoint, CenterPos) > Radius * Radius)
 		{
-			if (FVector2D::DistSquared(InLocalHitPoint, CenterPos) > Radius * Radius)
-			{
-				return false;
-			}
+			return false;
 		}
 		return true;
 	}
-	else if (InLocalHitPoint.X < 0 && InLocalHitPoint.Y < 0)//left bottom area of rect
+	Radius = CornerRadius.W;
+	CenterPos = FVector2D(InWidget->GetLocalSpaceLeft() + Radius, InWidget->GetLocalSpaceBottom() + Radius);
+	if (InLocalHitPoint.X < CenterPos.X && InLocalHitPoint.Y < CenterPos.Y)//left bottom area of rect
 	{
-		auto Radius = CornerRadius.W;
-		auto CenterPos = FVector2D(InWidget->GetLocalSpaceLeft() + Radius, InWidget->GetLocalSpaceBottom() + Radius);
-		if (InLocalHitPoint.X < CenterPos.X && InLocalHitPoint.Y < CenterPos.Y)
+		if (FVector2D::DistSquared(InLocalHitPoint, CenterPos) > Radius * Radius)
 		{
-			if (FVector2D::DistSquared(InLocalHitPoint, CenterPos) > Radius * Radius)
-			{
-				return false;
-			}
+			return false;
 		}
 		return true;
 	}
 	return true;
 }
+
+UE_ENABLE_OPTIMIZATION

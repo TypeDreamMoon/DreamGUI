@@ -197,9 +197,6 @@ public:
 	/** Recreate cell list. */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-RecyclableScrollView")
 		void RecreateList() { InitializeOnDataSource(); }
-	UE_DEPRECATED(4.26, "Use RecreateList instead.")
-	UFUNCTION(BlueprintCallable, Category = "LGUI-RecyclableScrollView", meta = (DeprecatedFunction, DeprecationMessage = "Use RecreateList instead."))
-		void UpdateWithDataSource() { RecreateList(); }
 	/** Update list cell's data, this will not change current layout, only set data. */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-RecyclableScrollView")
 		void UpdateCellData();

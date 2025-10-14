@@ -3,13 +3,13 @@
 #pragma once
 
 #include "Components/ActorComponent.h"
-#include "Core/Components/LexSprite.h"
-#include "Event/LGUIEventDelegate.h"
 #include "UIScrollViewComponent.h"
 #include "UIScrollViewWithScrollbarComponent.generated.h"
 
+class UUIScrollbarComponent;
+
 UENUM(BlueprintType, Category = LGUI)
-enum class EScrollViewScrollbarVisibility :uint8
+enum class ELexUIScrollViewScrollbarVisibility :uint8
 {
 	//Always visible.
 	Permanent,
@@ -34,15 +34,15 @@ protected:
 	friend class FUIScrollViewWithScrollBarCustomization;
 	//For scrollbars to expand or shrink viewport
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollViewWithScrollbar")
-		TWeakObjectPtr<ALexWidgetActor> Viewport;
+		TWeakObjectPtr<ULexWidget> Viewport;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollViewWithScrollbar")
-		TWeakObjectPtr<ALexWidgetActor> HorizontalScrollbar;
+		TWeakObjectPtr<UUIScrollbarComponent> HorizontalScrollbar;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollViewWithScrollbar")
-		EScrollViewScrollbarVisibility HorizontalScrollbarVisibility = EScrollViewScrollbarVisibility::AutoHideAndExpandViewport;
+		ELexUIScrollViewScrollbarVisibility HorizontalScrollbarVisibility = ELexUIScrollViewScrollbarVisibility::AutoHideAndExpandViewport;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollViewWithScrollbar")
-		TWeakObjectPtr<ALexWidgetActor> VerticalScrollbar;
+		TWeakObjectPtr<UUIScrollbarComponent> VerticalScrollbar;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollViewWithScrollbar")
-		EScrollViewScrollbarVisibility VerticalScrollbarVisibility = EScrollViewScrollbarVisibility::AutoHideAndExpandViewport;
+		ELexUIScrollViewScrollbarVisibility VerticalScrollbarVisibility = ELexUIScrollViewScrollbarVisibility::AutoHideAndExpandViewport;
 
 	virtual void CalculateHorizontalRange()override;
 	virtual void CalculateVerticalRange()override;
@@ -50,12 +50,11 @@ protected:
 	virtual void UpdateProgress(bool InFireEvent = true)override;
 	virtual bool OnPointerDrag_Implementation(ULexPointerEventData* eventData)override;
 	virtual bool OnPointerScroll_Implementation(ULexPointerEventData* eventData)override;
-	UPROPERTY(Transient)TWeakObjectPtr<class UUIScrollbarComponent> HorizontalScrollbarComp = nullptr;
-	UPROPERTY(Transient)TWeakObjectPtr<class UUIScrollbarComponent> VerticalScrollbarComp = nullptr;
+	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> HorizontalScrollbarWidget;
+	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> VerticalScrollbarWidget;
 	bool CheckScrollbarParameter();
 	void OnHorizontalScrollbar(float InScrollValue);
 	void OnVerticalScrollbar(float InScrollValue);
-	uint8 bLayoutDirty : 1;
 	enum class EScrollbarLayoutAction :uint8
 	{
 		None,
@@ -65,26 +64,26 @@ protected:
 	EScrollbarLayoutAction HorizontalScrollbarLayoutActionType = EScrollbarLayoutAction::None;
 	EScrollbarLayoutAction VerticalScrollbarLayoutActionType = EScrollbarLayoutAction::None;
 
-	void OnChildSiblingIndexChanged();
-	void OnChildAttachmentChanged();
+	void OnScrollbarSiblingIndexChanged();
+	void OnScrollbarAttachmentChanged();
+	void LateUpdateScrollbarLayout();
 	
-	void OnUpdateLayout_Implementation();
-	void MarkLayoutDirty(){bLayoutDirty = true;}
+	void UpdateScrollbarLayout();
 public:
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")
-		ALexWidgetActor* GetViewport()const { return Viewport.Get(); }
+		ULexWidget* GetViewport()const { return Viewport.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")
-		ALexWidgetActor* GetHorizontalScrollbar()const { return HorizontalScrollbar.Get(); }
+		ULexWidget* GetHorizontalScrollbar()const { return HorizontalScrollbarWidget.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")
-		EScrollViewScrollbarVisibility GetHorizontalScrollbarVisibility()const { return HorizontalScrollbarVisibility; }
+		ELexUIScrollViewScrollbarVisibility GetHorizontalScrollbarVisibility()const { return HorizontalScrollbarVisibility; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")
-		ALexWidgetActor* GetVerticalScrollbar()const { return VerticalScrollbar.Get(); }
+		ULexWidget* GetVerticalScrollbar()const { return VerticalScrollbarWidget.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")
-		EScrollViewScrollbarVisibility GetVerticalScrollbarVisibility()const { return VerticalScrollbarVisibility; }
+		ELexUIScrollViewScrollbarVisibility GetVerticalScrollbarVisibility()const { return VerticalScrollbarVisibility; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")
-		void SetHorizontalScrollbarVisibility(EScrollViewScrollbarVisibility value);
+		void SetHorizontalScrollbarVisibility(ELexUIScrollViewScrollbarVisibility value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")
-		void SetVerticalScrollbarVisibility(EScrollViewScrollbarVisibility value);
+		void SetVerticalScrollbarVisibility(ELexUIScrollViewScrollbarVisibility value);
 };

@@ -6,21 +6,11 @@
 #include "CoreMinimal.h"
 #include "Event/LexPointerEventData.h"
 
-DECLARE_DELEGATE_OneParam(FLGUIBoolDelegate, bool);
-DECLARE_DELEGATE_OneParam(FLGUIFloatDelegate, float);
-DECLARE_DELEGATE_OneParam(FLGUIVector2Delegate, FVector2D);
-DECLARE_DELEGATE_OneParam(FLGUIStringDelegate, const FString&);
-DECLARE_DELEGATE_OneParam(FLGUIInt32Delegate, int32);
+DECLARE_MULTICAST_DELEGATE_OneParam(FLexUIMulticastDelegateBool, bool);
+DECLARE_MULTICAST_DELEGATE_OneParam(FLexUIMulticastDelegateFloat, float);
+DECLARE_MULTICAST_DELEGATE_OneParam(FLexUIMulticastDelegateVector2, FVector2D);
+DECLARE_MULTICAST_DELEGATE_OneParam(FLexUIMulticastDelegateString, const FString&);
+DECLARE_MULTICAST_DELEGATE_OneParam(FLexUIMulticastDelegateInt32, int32);
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FLGUIMulticastBoolDelegate, bool);
-DECLARE_MULTICAST_DELEGATE_OneParam(FLGUIMulticastFloatDelegate, float);
-DECLARE_MULTICAST_DELEGATE_OneParam(FLGUIMulticastVector2Delegate, FVector2D);
-DECLARE_MULTICAST_DELEGATE_OneParam(FLGUIMulticastStringDelegate, const FString&);
-DECLARE_MULTICAST_DELEGATE_OneParam(FLGUIMulticastInt32Delegate, int32);
-
-DECLARE_DELEGATE_ThreeParams(FLGUIHitDelegate, bool, const FHitResult&, USceneComponent*);
-DECLARE_MULTICAST_DELEGATE_ThreeParams(FLGUIMulticastHitDelegate, bool, const FHitResult&, USceneComponent*);
-DECLARE_DELEGATE_OneParam(FLGUIPointerEventDelegate, ULexPointerEventData*);
-DECLARE_MULTICAST_DELEGATE_OneParam(FLGUIMulticastPointerEventDelegate, ULexPointerEventData*);
-DECLARE_DELEGATE_OneParam(FLGUIBaseEventDelegate, ULexBaseEventData*);
-DECLARE_MULTICAST_DELEGATE_OneParam(FLGUIMulticastBaseEventDelegate, ULexBaseEventData*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FLexUIMulticastDelegatePointerEventData, ULexPointerEventData*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FLexUIMulticastDelegateBaseEventData, ULexBaseEventData*);

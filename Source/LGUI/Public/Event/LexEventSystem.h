@@ -12,13 +12,11 @@
 class ULexPointerEventData;
 class ULexBaseInputModule;
 
-DECLARE_DYNAMIC_DELEGATE_ThreeParams(FLGUIHitDynamicDelegate, bool, isHit, const FHitResult&, hitResult, USceneComponent*, hitComponent);
-DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUIPointerEventDynamicDelegate, ULexPointerEventData*, pointerEventData);
-DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUIBaseEventDynamicDelegate, ULexBaseEventData*, eventData);
-
-DECLARE_MULTICAST_DELEGATE_TwoParams(FLGUIPointerInputChange_MulticastDelegate, int, ELexUIPointerInputType);
-DECLARE_DELEGATE_TwoParams(FLGUIPointerInputChange_Delegate, int, ELexUIPointerInputType);
-DECLARE_DYNAMIC_DELEGATE_TwoParams(FLGUIPointerInputChange_DynamicDelegate, int, pointerID, ELexUIPointerInputType, type);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FLexUIPointerInputTypeChangedDelegate, int, ELexUIPointerInputType);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FLexUIPointerInputChangedDynamicDelegate, int, PointID, ELexUIPointerInputType, InputType);
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FLexUIRaycastHitDelegate, bool, const FHitResult&, USceneComponent*);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FLexUIRaycastHitDynamicDelegate, bool, IsHit, const FHitResult&, HitResult, USceneComponent*, HitObject);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FLexUIBaseEventDataDynamicDelegate, ULexBaseEventData*, Data);
 
 /**
  * This is the place for manage LexUI's input/raycast/event.
@@ -38,7 +36,7 @@ public:
 protected:
 	/** a world should only have one LexUIEventSystem */
 	static TMap<UWorld*, ULexEventSystem*> WorldToInstanceMap;
-	bool existInInstanceMap = false;
+	bool bExistInInstanceMap = false;
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -60,10 +58,10 @@ public:
 		void ClearEvent();
 	/** 
 	 * SetRaycast enable or disable
-	 * @param	clearEvent		call ClearEvent after disable Raycast
+	 * @param	bClearEvent		call ClearEvent after disable Raycast
 	 */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetRaycastEnable(bool enable, bool clearEvent = false);
+		void SetRaycastEnable(bool bEnable, bool bClearEvent = false);
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetSelectComponent(USceneComponent* InSelectComp, ULexBaseEventData* eventData, ELexUIEventFireType eventFireType);
@@ -79,62 +77,47 @@ public:
 		mutable TMap<int, TObjectPtr<ULexPointerEventData>> PointerEventDataMap;
 	/**
 	 * Get PointerEventData by given pointerID.
-	 * @param	pointerID	0 for mouse input, touch-id for touch input, or other customized value
+	 * @param	PointerID	0 for mouse input, touch-id for touch input, or other customized value
 	 */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		ULexPointerEventData* GetPointerEventData(int pointerID = 0, bool createIfNotExist = false)const;
+		ULexPointerEventData* GetPointerEventData(int PointerID = 0, bool bCreateIfNotExist = false)const;
 	/**
 	 * Remove a PointerEventData. If you ensure that you will not use it anymore, then you can remove it.
-	 * @param	pointerID	0 for mouse input, touch-id for touch input, or other customized value
+	 * @param	PointerID	0 for mouse input, touch-id for touch input, or other customized value
 	 */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void RemovePointerEventData(int pointerID);
+		void RemovePointerEventData(int PointerID);
 protected:
 	/** called for pointer hit anything */
-	FLGUIMulticastHitDelegate hitEvent;
-	/** called for all pointer event */
-	FLGUIMulticastBaseEventDelegate globalListenerPointerEvent;
+	FLexUIRaycastHitDelegate RaycastHitEvent;
+	UPROPERTY(BlueprintAssignable, Category = LGUI, DisplayName="RaycastHitEvent")
+	FLexUIRaycastHitDynamicDelegate RaycastHitEventBP;
+	
+	/** called for all pointer && navigation event */
+	FLexUIMulticastDelegateBaseEventData InputEvent;
+	UPROPERTY(BlueprintAssignable, Category = LGUI, DisplayName="InputEvent")
+	FLexUIBaseEventDataDynamicDelegate InputEventBP;
+	
 	/** called when any pointerEventData's input type is changed */
-	FLGUIPointerInputChange_MulticastDelegate inputChangeDelegate;
+	FLexUIPointerInputTypeChangedDelegate PointerInputTypedChangedEvent;
 public:
-	void RegisterHitEvent(const FLGUIHitDelegate& InEvent);
-	void UnregisterHitEvent(const FLGUIHitDelegate& InEvent);
-	/**
-	 * Register a global event listener, that listener will called when any LGUIEventSystem's event is executed.
-	 * @param InEvent Callback delegate, you can cast LGUIBaseEventData to LGUIPointerEventData if you need.
-	 */
-	void RegisterGlobalListener(const FLGUIBaseEventDelegate& InEvent);
-	void UnregisterGlobalListener(const FLGUIBaseEventDelegate& InEvent);
-
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		FLGUIDelegateHandleWrapper RegisterHitEvent(const FLGUIHitDynamicDelegate& InDelegate);
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void UnregisterHitEvent(const FLGUIDelegateHandleWrapper& InHandle);
-	/**
-	 * Register a global event listener, that listener will called when any LGUIEventSystem's event is executed.
-	 * @param InDelegate Callback delegate, you can cast LGUIBaseEventData to LGUIPointerEventData if you need.
-	 */
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		FLGUIDelegateHandleWrapper RegisterGlobalListener(const FLGUIBaseEventDynamicDelegate& InDelegate);
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void UnregisterGlobalListener(const FLGUIDelegateHandleWrapper& InHandle);
-	void RaiseHitEvent(bool hitOrNot, const FHitResult& hitResult, USceneComponent* hitComponent);
-
-	UE_DEPRECATED(5.0, "Use IsPointerOverUIByPointerID instead.")
-		bool IsPointerOverUI(int pointerID = 0) { return IsPointerOverUIByPointerID(pointerID); }
+	FLexUIRaycastHitDelegate& GetRaycastHitEvent(){return RaycastHitEvent;}
+	FLexUIMulticastDelegateBaseEventData& GetInputEvent(){return InputEvent;}
+	FLexUIPointerInputTypeChangedDelegate& GetInputChangedEvent(){return PointerInputTypedChangedEvent;}
+	
+	void RaiseHitEvent(bool bHitOrNot, const FHitResult& HitResult, USceneComponent* HitComponent);
+	
 	/**
 	 * Tell if the pointer hovering on any UI object.
 	 */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		bool IsPointerOverUIByPointerID(int pointerID = 0);
+		bool IsPointerOverUIByPointerID(int PointerID = 0);
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetHighlightedComponentForNavigation(USceneComponent* InComp, int InPointerID);	
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		USceneComponent* GetHighlightedComponentForNavigation(int InPointerID)const;
-
-	UE_DEPRECATED(5.0, "Use SetPointerInputTypeByPointerID instead.")
-		bool SetPointerInputType(int InPointerID, ELexUIPointerInputType InInputType) { return SetPointerInputTypeByPointerID(InPointerID, InInputType); }
+	
 	/**
 	 * Set input type of the pointer, can be pointer or navigation.
 	 * @return true- input type changed, false- otherwise.
@@ -154,29 +137,22 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void ActivateNavigationInput(int InPointerID, USceneComponent* InDefaultHighlightedComponent = nullptr);
 
-	void RegisterInputChangeEvent(const FLGUIPointerInputChange_Delegate& pointerInputChange);
-	void UnregisterInputChangeEvent(const FDelegateHandle& delegateHandle);
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		FLGUIDelegateHandleWrapper RegisterInputChangeEvent(const FLGUIPointerInputChange_DynamicDelegate& pointerInputChange);
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void UnregisterInputChangeEvent(FLGUIDelegateHandleWrapper delegateHandle);
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = LGUI)
-		ELexUIPointerInputType defaultInputType = ELexUIPointerInputType::Pointer;
+		ELexUIPointerInputType DefaultInputType = ELexUIPointerInputType::Pointer;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = LGUI)
-		ELexUIEventFireType eventFireTypeForNavigation = ELexUIEventFireType::TargetActorAndAllItsComponents;
+		ELexUIEventFireType EventFireTypeForNavigation = ELexUIEventFireType::TargetActorAndAllItsComponents;
 	/**
 	 * If keep pressing the navigate button for a while, then will trigger the process of continuous navigation.
 	 * This is the interval trigger time of continuous navigation
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = LGUI)
-		float navigateInputInterval = 0.2f;
+		float NavigateInputInterval = 0.2f;
 	/**
 	 * If keep pressing the navigate button for a while, then will trigger the process of continuous navigation.
 	 * This is the time to trigger the process.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = LGUI)
-		float navigateInputIntervalForFirstTime = 0.5f;
+		float NavigateInputIntervalForFirstTime = 0.5f;
 public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		static void ExecuteEvent_OnPointerEnter(USceneComponent* TargetRootComponent, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp = false);

@@ -19,7 +19,7 @@
 UE_DISABLE_OPTIMIZATION
 
 
-void UUISelectableTransitionComponent::StopTransition() 
+void UUISelectableTransition::StopTransition() 
 { 
 	for (auto tweener : TweenerCollection)
 	{
@@ -27,11 +27,11 @@ void UUISelectableTransitionComponent::StopTransition()
 	}
 	TweenerCollection.Reset();
 }
-void UUISelectableTransitionComponent::CollectTweener(ULTweener* InItem)
+void UUISelectableTransition::CollectTweener(ULTweener* InItem)
 {
 	TweenerCollection.Add(InItem);
 }
-void UUISelectableTransitionComponent::CollectTweeners(const TSet<ULTweener*>& InItems)
+void UUISelectableTransition::CollectTweeners(const TSet<ULTweener*>& InItems)
 {
 	TweenerCollection.Reserve(TweenerCollection.Num() + InItems.Num());
 	for (auto item : InItems)
@@ -40,7 +40,7 @@ void UUISelectableTransitionComponent::CollectTweeners(const TSet<ULTweener*>& I
 	}
 }
 
-void UUISelectableTransitionComponent::BeginPlay()
+void UUISelectableTransition::BeginPlay()
 {
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
 	{
@@ -48,7 +48,7 @@ void UUISelectableTransitionComponent::BeginPlay()
 	}
 }
 
-void UUISelectableTransitionComponent::EndPlay()
+void UUISelectableTransition::EndPlay()
 {
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
 	{
@@ -56,35 +56,35 @@ void UUISelectableTransitionComponent::EndPlay()
 	}
 }
 
-void UUISelectableTransitionComponent::OnNormal(bool InImmediateSet)
+void UUISelectableTransition::OnNormal(bool InImmediateSet)
 { 
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
 	{
 		ReceiveOnNormal(InImmediateSet);
 	}
 }
-void UUISelectableTransitionComponent::OnHovered(bool InImmediateSet)
+void UUISelectableTransition::OnHovered(bool InImmediateSet)
 {
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
 	{
 		ReceiveOnHovered(InImmediateSet);
 	}
 }
-void UUISelectableTransitionComponent::OnPressed(bool InImmediateSet)
+void UUISelectableTransition::OnPressed(bool InImmediateSet)
 {
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
 	{
 		ReceiveOnPressed(InImmediateSet);
 	}
 }
-void UUISelectableTransitionComponent::OnDisabled(bool InImmediateSet)
+void UUISelectableTransition::OnDisabled(bool InImmediateSet)
 {
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
 	{
 		ReceiveOnDisabled(InImmediateSet);
 	}
 }
-void UUISelectableTransitionComponent::OnStartCustomTransition(FName InTransitionName, bool InImmediateSet)
+void UUISelectableTransition::OnStartCustomTransition(FName InTransitionName, bool InImmediateSet)
 {
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
 	{
@@ -161,7 +161,7 @@ void UUISelectableComponent::OnInteractableChanged(bool IsEnabled)
 
 void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 {
-	if (Transition != ELexUISelectableTransitionType::Custom)
+	if (Transition != EUISelectableTransitionType::Custom)
 	{
 		if (!TransitionTarget.IsValid())return;
 	}
@@ -170,22 +170,22 @@ void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 	TOptional<FLexUIImageBrush> Brush;
 	switch (CurrentSelectionState)
 	{
-	case ELexUISelectableSelectionState::Normal:
+	case EUISelectableSelectionState::Normal:
 		{
 			switch (Transition)
 			{
-			case ELexUISelectableTransitionType::None:break;
-			case ELexUISelectableTransitionType::Color:
+			case EUISelectableTransitionType::None:break;
+			case EUISelectableTransitionType::Color:
 				{
 					Color = NormalColor;
 				}
 				break;
-			case ELexUISelectableTransitionType::ImageBrush:
+			case EUISelectableTransitionType::ImageBrush:
 				{
 					Brush = NormalImageBrush;
 				}
 				break;
-			case ELexUISelectableTransitionType::Custom:
+			case EUISelectableTransitionType::Custom:
 				{
 #if WITH_EDITOR
 					if (this->GetWorld() && this->GetWorld()->IsGameWorld())
@@ -201,22 +201,22 @@ void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 			}
 		}
 		break;
-	case ELexUISelectableSelectionState::Hovered:
+	case EUISelectableSelectionState::Hovered:
 		{
 			switch (Transition)
 			{
-			case ELexUISelectableTransitionType::None:break;
-			case ELexUISelectableTransitionType::Color:
+			case EUISelectableTransitionType::None:break;
+			case EUISelectableTransitionType::Color:
 				{
 					Color = HoveredColor;
 				}
 				break;
-			case ELexUISelectableTransitionType::ImageBrush:
+			case EUISelectableTransitionType::ImageBrush:
 				{
 					Brush = HoveredImageBrush;
 				}
 				break;
-			case ELexUISelectableTransitionType::Custom:
+			case EUISelectableTransitionType::Custom:
 				{
 #if WITH_EDITOR
 					if (this->GetWorld() && this->GetWorld()->IsGameWorld())
@@ -232,22 +232,22 @@ void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 			}
 		}
 		break;
-	case ELexUISelectableSelectionState::Pressed:
+	case EUISelectableSelectionState::Pressed:
 		{
 			switch (Transition)
 			{
-			case ELexUISelectableTransitionType::None:break;
-			case ELexUISelectableTransitionType::Color:
+			case EUISelectableTransitionType::None:break;
+			case EUISelectableTransitionType::Color:
 				{
 					Color = PressedColor;
 				}
 				break;
-			case ELexUISelectableTransitionType::ImageBrush:
+			case EUISelectableTransitionType::ImageBrush:
 				{
 					Brush = PressedImageBrush;
 				}
 				break;
-			case ELexUISelectableTransitionType::Custom:
+			case EUISelectableTransitionType::Custom:
 				{
 #if WITH_EDITOR
 					if (this->GetWorld() && this->GetWorld()->IsGameWorld())
@@ -263,22 +263,22 @@ void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 			}
 		}
 		break;
-	case ELexUISelectableSelectionState::Disabled:
+	case EUISelectableSelectionState::Disabled:
 		{
 			switch (Transition)
 			{
-			case ELexUISelectableTransitionType::None:break;
-			case ELexUISelectableTransitionType::Color:
+			case EUISelectableTransitionType::None:break;
+			case EUISelectableTransitionType::Color:
 				{
 					Color = DisabledColor;
 				}
 				break;
-			case ELexUISelectableTransitionType::ImageBrush:
+			case EUISelectableTransitionType::ImageBrush:
 				{
 					Brush =  DisabledImageBrush;
 				}
 				break;
-			case ELexUISelectableTransitionType::Custom:
+			case EUISelectableTransitionType::Custom:
 				{
 #if WITH_EDITOR
 					if (this->GetWorld() && this->GetWorld()->IsGameWorld())
@@ -413,29 +413,29 @@ bool UUISelectableComponent::OnPointerDeselect_Implementation(ULexBaseEventData*
 	return AllowEventBubbleUp;
 }
 
-ELexUISelectableSelectionState UUISelectableComponent::GetSelectionState()const
+EUISelectableSelectionState UUISelectableComponent::GetSelectionState()const
 {
 	if (!IsInteractable())
-		return ELexUISelectableSelectionState::Disabled;
+		return EUISelectableSelectionState::Disabled;
 	if (IsPointerDown)
-		return ELexUISelectableSelectionState::Pressed;
+		return EUISelectableSelectionState::Pressed;
 	if (IsPointerInsideThis)
-		return ELexUISelectableSelectionState::Hovered;
-	return ELexUISelectableSelectionState::Normal;
+		return EUISelectableSelectionState::Hovered;
+	return EUISelectableSelectionState::Normal;
 }
 
-void UUISelectableComponent::SetTransitionTarget(ULexVisual* value)
+void UUISelectableComponent::SetTransitionTarget(ULexVisual* Value)
 {
-	if (TransitionTarget != value)
+	if (TransitionTarget != Value)
 	{
-		TransitionTarget = value;
+		TransitionTarget = Value;
 		ApplySelectionState(false);
 	}
 }
 void UUISelectableComponent::SetNormalColor(FColor Value)
 {
 	NormalColor = Value;
-	if (CurrentSelectionState == ELexUISelectableSelectionState::Normal)
+	if (CurrentSelectionState == EUISelectableSelectionState::Normal)
 	{
 		ApplySelectionState(false);
 	}
@@ -443,7 +443,7 @@ void UUISelectableComponent::SetNormalColor(FColor Value)
 void UUISelectableComponent::SetHoveredColor(FColor Value)
 {
 	HoveredColor = Value;
-	if (CurrentSelectionState == ELexUISelectableSelectionState::Hovered)
+	if (CurrentSelectionState == EUISelectableSelectionState::Hovered)
 	{
 		ApplySelectionState(false);
 	}
@@ -451,7 +451,7 @@ void UUISelectableComponent::SetHoveredColor(FColor Value)
 void UUISelectableComponent::SetPressedColor(FColor Value)
 {
 	PressedColor = Value;
-	if (CurrentSelectionState == ELexUISelectableSelectionState::Pressed)
+	if (CurrentSelectionState == EUISelectableSelectionState::Pressed)
 	{
 		ApplySelectionState(false);
 	}
@@ -459,7 +459,7 @@ void UUISelectableComponent::SetPressedColor(FColor Value)
 void UUISelectableComponent::SetDisabledColor(FColor Value)
 {
 	DisabledColor = Value;
-	if (CurrentSelectionState == ELexUISelectableSelectionState::Disabled)
+	if (CurrentSelectionState == EUISelectableSelectionState::Disabled)
 	{
 		ApplySelectionState(false);
 	}
@@ -467,7 +467,7 @@ void UUISelectableComponent::SetDisabledColor(FColor Value)
 void UUISelectableComponent::SetNormalImageBrush(const FLexUIImageBrush& Value)
 {
 	NormalImageBrush = Value;
-	if (CurrentSelectionState == ELexUISelectableSelectionState::Normal)
+	if (CurrentSelectionState == EUISelectableSelectionState::Normal)
 	{
 		ApplySelectionState(false);
 	}
@@ -475,7 +475,7 @@ void UUISelectableComponent::SetNormalImageBrush(const FLexUIImageBrush& Value)
 void UUISelectableComponent::SetHoveredImageBrush(const FLexUIImageBrush& Value)
 {
 	HoveredImageBrush = Value;
-	if (CurrentSelectionState == ELexUISelectableSelectionState::Hovered)
+	if (CurrentSelectionState == EUISelectableSelectionState::Hovered)
 	{
 		ApplySelectionState(false);
 	}
@@ -483,7 +483,7 @@ void UUISelectableComponent::SetHoveredImageBrush(const FLexUIImageBrush& Value)
 void UUISelectableComponent::SetPressedImageBrush(const FLexUIImageBrush& Value)
 {
 	PressedImageBrush = Value;
-	if (CurrentSelectionState == ELexUISelectableSelectionState::Pressed)
+	if (CurrentSelectionState == EUISelectableSelectionState::Pressed)
 	{
 		ApplySelectionState(false);
 	}
@@ -491,12 +491,12 @@ void UUISelectableComponent::SetPressedImageBrush(const FLexUIImageBrush& Value)
 void UUISelectableComponent::SetDisabledImageBrush(const FLexUIImageBrush& Value)
 {
 	DisabledImageBrush = Value;
-	if (CurrentSelectionState == ELexUISelectableSelectionState::Disabled)
+	if (CurrentSelectionState == EUISelectableSelectionState::Disabled)
 	{
 		ApplySelectionState(false);
 	}
 }
-void UUISelectableComponent::SetSelectionState(ELexUISelectableSelectionState NewState)
+void UUISelectableComponent::SetSelectionState(EUISelectableSelectionState NewState)
 {
 	if (CurrentSelectionState != NewState)
 	{
@@ -596,7 +596,8 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 			RestrictNavNode = RestrictNavWidget;
 		}
 	}
-	auto pos = GetRootSceneComponent()->GetComponentTransform().TransformPosition(LocalPos);
+	auto pos = this->GetRootSceneComponent()->GetComponentTransform().TransformPosition(LocalPos);
+	auto thisWidget = this->GetLexWidget();
 	float maxScore = -MAX_flt;
 	UUISelectableComponent* bestPick = this;
 	for (int i = 0; i < SelectableArray.Num(); ++i)
@@ -616,13 +617,21 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 			continue;
 
 		//if is UI node, not allow inactive one
-		auto selRootUIComp = sel->GetLexWidget();
-		if (selRootUIComp && !sel->GetLexWidget()->GetRaycastableInHierarchy())
+		auto selWidget = sel->GetLexWidget();
+		if (selWidget && !sel->GetLexWidget()->GetRaycastableInHierarchy())
 		{
 			continue;
 		}
 
-		//if navigation is restricted, only allow child of restric node
+		if (selWidget && thisWidget)
+		{
+			if (selWidget->IsWorldSpaceUI() != thisWidget->IsWorldSpaceUI())
+			{
+				continue;
+			}
+		}
+
+		//if navigation is restricted, only allow child of restrict node
 		if (RestrictNavNode && !sel->GetRootSceneComponent()->IsAttachedTo(RestrictNavNode))
 		{
 			continue;
@@ -634,9 +643,9 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 #endif
 
 		FVector selCenter;
-		if (selRootUIComp)
+		if (selWidget)
 		{
-			auto LocalCenter2D = selRootUIComp->GetLocalSpaceCenter();
+			auto LocalCenter2D = selWidget->GetLocalSpaceCenter();
 			selCenter = FVector(0, LocalCenter2D.X, LocalCenter2D.Y);
 		}
 		else
@@ -644,9 +653,9 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 			selCenter = sel->GetRootSceneComponent()->GetRelativeLocation();
 		}
 		auto selCenterInWorld = sel->GetRootSceneComponent()->GetComponentTransform().TransformPosition(selCenter);
-		if (selRootUIComp)
+		if (selWidget)
 		{
-			if (selRootUIComp->IsPointVisibleOnClip(selCenterInWorld))
+			if (!selWidget->IsPointVisibleOnClip(selCenterInWorld))
 			{
 				continue;//if not visible then skip it
 			}
@@ -683,9 +692,9 @@ UUISelectableComponent* UUISelectableComponent::FindDefaultSelectable(UObject* W
 				auto OriginNavigationLeftMode = Selectable->NavigationLeft;
 				auto OriginNavigationUpMode = Selectable->NavigationUp;
 				auto OriginNavigationPrevMode = Selectable->NavigationPrev;
-				Selectable->NavigationLeft = ELexUISelectableNavigationMode::Auto;
-				Selectable->NavigationUp = ELexUISelectableNavigationMode::Auto;
-				Selectable->NavigationPrev = ELexUISelectableNavigationMode::Auto;
+				Selectable->NavigationLeft = EUISelectableNavigationMode::Auto;
+				Selectable->NavigationUp = EUISelectableNavigationMode::Auto;
+				Selectable->NavigationPrev = EUISelectableNavigationMode::Auto;
 
 				auto PrevSelectable = Selectable->FindSelectableOnPrev();
 
@@ -713,11 +722,11 @@ UUISelectableComponent* UUISelectableComponent::FindDefaultSelectable(UObject* W
 }
 UUISelectableComponent* UUISelectableComponent::FindSelectableOnLeft()
 {
-	if (NavigationLeft == ELexUISelectableNavigationMode::Explicit)
+	if (NavigationLeft == EUISelectableNavigationMode::Explicit)
 	{
-		return NavigationLeftSpecific.GetComponent<UUISelectableComponent>();
+		return NavigationLeftSpecific.Get();
 	}
-	if (NavigationLeft == ELexUISelectableNavigationMode::Auto)
+	if (NavigationLeft == EUISelectableNavigationMode::Auto)
 	{
 		return FindSelectable(-GetRootSceneComponent()->GetRightVector());
 	}
@@ -725,11 +734,11 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnLeft()
 }
 UUISelectableComponent* UUISelectableComponent::FindSelectableOnRight()
 {
-	if (NavigationRight == ELexUISelectableNavigationMode::Explicit)
+	if (NavigationRight == EUISelectableNavigationMode::Explicit)
 	{
-		return NavigationRightSpecific.GetComponent<UUISelectableComponent>();
+		return NavigationRightSpecific.Get();
 	}
-	if (NavigationRight == ELexUISelectableNavigationMode::Auto)
+	if (NavigationRight == EUISelectableNavigationMode::Auto)
 	{
 		return FindSelectable(GetRootSceneComponent()->GetRightVector());
 	}
@@ -737,11 +746,11 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnRight()
 }
 UUISelectableComponent* UUISelectableComponent::FindSelectableOnUp()
 {
-	if (NavigationUp == ELexUISelectableNavigationMode::Explicit)
+	if (NavigationUp == EUISelectableNavigationMode::Explicit)
 	{
-		return NavigationUpSpecific.GetComponent<UUISelectableComponent>();
+		return NavigationUpSpecific.Get();
 	}
-	if (NavigationUp == ELexUISelectableNavigationMode::Auto)
+	if (NavigationUp == EUISelectableNavigationMode::Auto)
 	{
 		return FindSelectable(GetRootSceneComponent()->GetUpVector());
 	}
@@ -749,11 +758,11 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnUp()
 }
 UUISelectableComponent* UUISelectableComponent::FindSelectableOnDown()
 {
-	if (NavigationDown == ELexUISelectableNavigationMode::Explicit)
+	if (NavigationDown == EUISelectableNavigationMode::Explicit)
 	{
-		return NavigationDownSpecific.GetComponent<UUISelectableComponent>();
+		return NavigationDownSpecific.Get();
 	}
-	if (NavigationDown == ELexUISelectableNavigationMode::Auto)
+	if (NavigationDown == EUISelectableNavigationMode::Auto)
 	{
 		return FindSelectable(-GetRootSceneComponent()->GetUpVector());
 	}
@@ -761,11 +770,11 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnDown()
 }
 UUISelectableComponent* UUISelectableComponent::FindSelectableOnNext()
 {
-	if (NavigationNext == ELexUISelectableNavigationMode::Explicit && NavigationNextSpecific.IsValidComponentReference())
+	if (NavigationNext == EUISelectableNavigationMode::Explicit)
 	{
-		return NavigationNextSpecific.GetComponent<UUISelectableComponent>();
+		return NavigationNextSpecific.Get();
 	}
-	if (NavigationNext == ELexUISelectableNavigationMode::Auto)
+	if (NavigationNext == EUISelectableNavigationMode::Auto)
 	{
 		auto rightComp = FindSelectableOnRight();
 		if (rightComp != this)
@@ -778,11 +787,11 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnNext()
 }
 UUISelectableComponent* UUISelectableComponent::FindSelectableOnPrev()
 {
-	if (NavigationPrev == ELexUISelectableNavigationMode::Explicit)
+	if (NavigationPrev == EUISelectableNavigationMode::Explicit)
 	{
-		return NavigationPrevSpecific.GetComponent<UUISelectableComponent>();
+		return NavigationPrevSpecific.Get();
 	}
-	if (NavigationPrev == ELexUISelectableNavigationMode::Auto)
+	if (NavigationPrev == EUISelectableNavigationMode::Auto)
 	{
 		auto leftComp = FindSelectableOnLeft();
 		if (leftComp != this)
@@ -794,99 +803,99 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnPrev()
 	return nullptr;
 }
 
-void UUISelectableComponent::SetCanNavigateHere(bool value)
+void UUISelectableComponent::SetCanNavigateHere(bool Value)
 {
-	bCanNavigateHere = value;
+	bCanNavigateHere = Value;
 }
-void UUISelectableComponent::SetNavigationLeft(ELexUISelectableNavigationMode value)
+void UUISelectableComponent::SetNavigationLeft(EUISelectableNavigationMode Value)
 {
-	NavigationLeft = value;
+	NavigationLeft = Value;
 }
-void UUISelectableComponent::SetNavigationRight(ELexUISelectableNavigationMode value)
+void UUISelectableComponent::SetNavigationRight(EUISelectableNavigationMode Value)
 {
-	NavigationRight = value;
+	NavigationRight = Value;
 }
-void UUISelectableComponent::SetNavigationUp(ELexUISelectableNavigationMode value)
+void UUISelectableComponent::SetNavigationUp(EUISelectableNavigationMode Value)
 {
-	NavigationUp = value;
+	NavigationUp = Value;
 }
-void UUISelectableComponent::SetNavigationDown(ELexUISelectableNavigationMode value)
+void UUISelectableComponent::SetNavigationDown(EUISelectableNavigationMode Value)
 {
-	NavigationDown = value;
+	NavigationDown = Value;
 }
-void UUISelectableComponent::SetNavigationPrev(ELexUISelectableNavigationMode value)
+void UUISelectableComponent::SetNavigationPrev(EUISelectableNavigationMode Value)
 {
-	NavigationPrev = value;
+	NavigationPrev = Value;
 }
-void UUISelectableComponent::SetNavigationNext(ELexUISelectableNavigationMode value)
+void UUISelectableComponent::SetNavigationNext(EUISelectableNavigationMode Value)
 {
-	NavigationNext = value;
+	NavigationNext = Value;
 }
 
-void UUISelectableComponent::SetNavigationLeftExplicit(UUISelectableComponent* value)
+void UUISelectableComponent::SetNavigationLeftExplicit(UUISelectableComponent* Value)
 {
-	if (IsValid(value))
+	if (IsValid(Value))
 	{
-		NavigationLeftSpecific = FLGUIComponentReference(value);
+		NavigationLeftSpecific = Value;
 	}
 	else
 	{
-		UE_LOG(LGUI, Error, TEXT("[UUISelectableComponent::SetNavigationLeftExplicit] value is not valid!"));
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Value is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	}
 }
-void UUISelectableComponent::SetNavigationRightExplicit(UUISelectableComponent* value)
+void UUISelectableComponent::SetNavigationRightExplicit(UUISelectableComponent* Value)
 {
-	if (IsValid(value))
+	if (IsValid(Value))
 	{
-		NavigationRightSpecific = FLGUIComponentReference(value);
+		NavigationRightSpecific = Value;
 	}
 	else
 	{
-		UE_LOG(LGUI, Error, TEXT("[UUISelectableComponent::SetNavigationRightExplicit] value is not valid!"));
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Value is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	}
 }
-void UUISelectableComponent::SetNavigationUpExplicit(UUISelectableComponent* value)
+void UUISelectableComponent::SetNavigationUpExplicit(UUISelectableComponent* Value)
 {
-	if (IsValid(value))
+	if (IsValid(Value))
 	{
-		NavigationUpSpecific = FLGUIComponentReference(value);
+		NavigationUpSpecific = Value;
 	}
 	else
 	{
-		UE_LOG(LGUI, Error, TEXT("[UUISelectableComponent::SetNavigationUpExplicit] value is not valid!"));
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Value is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	}
 }
-void UUISelectableComponent::SetNavigationDownExplicit(UUISelectableComponent* value)
+void UUISelectableComponent::SetNavigationDownExplicit(UUISelectableComponent* Value)
 {
-	if (IsValid(value))
+	if (IsValid(Value))
 	{
-		NavigationDownSpecific = FLGUIComponentReference(value);
+		NavigationDownSpecific = Value;
 	}
 	else
 	{
-		UE_LOG(LGUI, Error, TEXT("[UUISelectableComponent::SetNavigationDownExplicit] value is not valid!"));
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Value is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	}
 }
-void UUISelectableComponent::SetNavigationPrevExplicit(UUISelectableComponent* value)
+void UUISelectableComponent::SetNavigationPrevExplicit(UUISelectableComponent* Value)
 {
-	if (IsValid(value))
+	if (IsValid(Value))
 	{
-		NavigationPrevSpecific = FLGUIComponentReference(value);
+		NavigationPrevSpecific = Value;
 	}
 	else
 	{
-		UE_LOG(LGUI, Error, TEXT("[UUISelectableComponent::SetNavigationPrevExplicit] value is not valid!"));
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Value is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	}
 }
-void UUISelectableComponent::SetNavigationNextExplicit(UUISelectableComponent* value)
+void UUISelectableComponent::SetNavigationNextExplicit(UUISelectableComponent* Value)
 {
-	if (IsValid(value))
+	if (IsValid(Value))
 	{
-		NavigationNextSpecific = FLGUIComponentReference(value);
+		NavigationNextSpecific = Value;
 	}
 	else
 	{
-		UE_LOG(LGUI, Error, TEXT("[UUISelectableComponent::SetNavigationNextExplicit] value is not valid!"));
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Value is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	}
 }
 #pragma endregion

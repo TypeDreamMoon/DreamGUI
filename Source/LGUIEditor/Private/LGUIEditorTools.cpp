@@ -1316,7 +1316,7 @@ void LGUIEditorTools::DeleteActors_Impl(const TArray<AActor*>& InActors)
 	}
 	auto confirmMsg = FString::Printf(TEXT("Destroy selected actors? This will also destroy the children attached to selected actors."));
 	auto confirmResult = FMessageDialog::Open(EAppMsgType::YesNo, FText::FromString(confirmMsg));
-	if (confirmResult == EAppReturnType::No)return;
+	if (confirmResult != EAppReturnType::Yes)return;
 
 	ULGUIPrefabManagerObject::GetInstance(true)->bIsProcessingDelete = true;
 	auto RootActorList = LGUIEditorTools::GetRootActorListFromSelection(InActors);
@@ -1908,7 +1908,7 @@ void LGUIEditorTools::CreatePrefabAsset()//@todo: make some referenced parameter
 				{
 					auto returnValue = FMessageDialog::Open(EAppMsgType::YesNo
 						, FText::Format(LOCTEXT("Error_AssetAlreadyExist", "Asset already exist at path: \"{0}\" !\nReplace it?"), FText::FromString(selectedFilePath)));
-					if (returnValue == EAppReturnType::No)
+					if (returnValue != EAppReturnType::Yes)
 					{
 						return;
 					}

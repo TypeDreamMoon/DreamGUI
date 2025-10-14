@@ -54,6 +54,7 @@ public:
 	TArray<FLexUIPostProcessVertex> RenderMeshRegionToScreenVertexArray;
 	FVector2f RectSize;
 	FTexture2DResource* MaskTexture = nullptr;
+	bool bFullScreen = false;
 
 	/**
 	 * Use a mesh to render the MeshRegionTexture to ScreenTargetTexture

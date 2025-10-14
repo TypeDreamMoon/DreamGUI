@@ -10,7 +10,7 @@
 #include "LexImage.generated.h"
 
 /**
- * LexImage is render entry for SpriteAtlas & Texture & Material
+ * LexImage is render entry for Sprite & Texture & Material
  */
 UCLASS(BlueprintType)
 class LGUI_API ULexImage : public ULexVisualBatchMesh, public ILexUISpriteRenderInterface
@@ -54,6 +54,10 @@ public:
 	//If you keep using SlateTextureAtlas brush in this LexImage, then this function is better performance than SetBrush
 	UFUNCTION(BlueprintCallable, Category = "Image")
 	void SetBrush_SlateSprite(TScriptInterface<ISlateTextureAtlasInterface> Value);
+	UFUNCTION(BlueprintCallable, Category = "Image")
+	void SetBrush_Texture(UTexture* Value);
+	UFUNCTION(BlueprintCallable, Category = "Image")
+	void SetBrush_Material(UTexture* Value);
 	
 	UFUNCTION(BlueprintCallable, Category = "Image")
 	void SetBrushTintColor(FColor Value);

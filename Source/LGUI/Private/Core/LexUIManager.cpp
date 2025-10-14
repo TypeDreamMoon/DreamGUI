@@ -20,15 +20,16 @@
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #if WITH_EDITOR
 #include "Editor.h"
-#include "DrawDebugHelpers.h"
+#include "LevelEditor.h"
+#include "SLevelViewport.h"
 #include "EditorViewportClient.h"
 #include "PrefabSystem/LGUIPrefab.h"
 #include "Core/LexUISpriteData.h"
 #endif
 
-#define LOCTEXT_NAMESPACE "LGUIManagerObject"
+#define LOCTEXT_NAMESPACE "LexUIManager"
 
-PRAGMA_DISABLE_OPTIMIZATION
+UE_DISABLE_OPTIMIZATION
 
 ULexUIEditorManagerObject* ULexUIEditorManagerObject::Instance = nullptr;
 #if WITH_EDITOR
@@ -475,7 +476,7 @@ uint32 ULexUIEditorManagerObject::GetViewportKeyFromIndex(int32 InViewportIndex)
 
 
 #if WITH_EDITOR
-void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool IsScreenSpace)
+void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool ScreenOrWorld)
 {
 	auto RectExtends = FVector(0.1f, Widget->GetWidth(), Widget->GetHeight()) * 0.5f;
 	bool bCanDrawRect = false;
@@ -491,19 +492,13 @@ void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool IsS
 			FVector Min, Max;
 			Visual->GetGeometryBounds3DInLocalSpace(Min, Max);
 			auto WorldTransform = Widget->GetComponentTransform();
-			FVector Center = (Max + Min) * 0.5f;
-			auto WorldLocation = WorldTransform.TransformPosition(Center);
 
 			auto GeometryBoundsDrawColor = FColor(255, 255, 0, 255);//yellow for geometry bounds
 			auto GeometryBoundsExtends = (Max - Min) * 0.5f;
-			if (IsScreenSpace)
-			{
-				ULexUIManagerWorldSubsystem::DrawDebugRectOnScreenSpace(Widget->GetWorld(), WorldLocation, GeometryBoundsExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), GeometryBoundsDrawColor);
-			}
-			else
-			{
-				DrawDebugBox(Widget->GetWorld(), WorldLocation, GeometryBoundsExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), GeometryBoundsDrawColor);
-			}
+			auto RelativeOffset = (Min + Max) * 0.5f;
+
+			ULexUIManagerWorldSubsystem::DrawDebugRect(Widget->GetWorld(), RelativeOffset, FMatrix44f(WorldTransform.ToMatrixWithScale()), GeometryBoundsExtends, GeometryBoundsDrawColor
+				, Widget->GetVisual() , FString::Printf(TEXT("%s.Visual"), *Widget->GetDisplayName()), ScreenOrWorld);
 		}
 	}
 	else
@@ -547,20 +542,13 @@ void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool IsS
 		FVector RelativeOffset(0, 0, 0);
 		RelativeOffset.Y = (0.5f - Widget->GetPivot().X) * Widget->GetWidth();
 		RelativeOffset.Z = (0.5f - Widget->GetPivot().Y) * Widget->GetHeight();
-		auto WorldLocation = WorldTransform.TransformPosition(RelativeOffset);
 
-		if (IsScreenSpace)
-		{
-			ULexUIManagerWorldSubsystem::DrawDebugRectOnScreenSpace(Widget->GetWorld(), WorldLocation, RectExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), RectDrawColor);
-		}
-		else
-		{
-			DrawDebugBox(Widget->GetWorld(), WorldLocation, RectExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), RectDrawColor);
-		}
+		ULexUIManagerWorldSubsystem::DrawDebugRect(Widget->GetWorld(), RelativeOffset, FMatrix44f(WorldTransform.ToMatrixWithScale()), RectExtends * WorldTransform.GetScale3D(), RectDrawColor
+			, Widget, Widget->GetDisplayName(), ScreenOrWorld);
 	}
 }
 
-void ULexUIManagerWorldSubsystem::DrawNavigationArrow(UWorld* InWorld, const TArray<FVector>& InControlPoints, const FVector& InArrowPointA, const FVector& InArrowPointB, FColor const& InColor, bool IsScreenSpace)
+void ULexUIManagerWorldSubsystem::DrawNavigationArrow(UWorld* InWorld, const TArray<FVector>& InControlPoints, const FVector& InArrowPointA, const FVector& InArrowPointB, FColor const& InColor, void* Object, const FString& DebugName, bool ScreenOrWorld)
 {
 	if (InControlPoints.Num() != 4)return;
 	TArray<FVector> ResultPoints;
@@ -589,42 +577,33 @@ void ULexUIManagerWorldSubsystem::DrawNavigationArrow(UWorld* InWorld, const TAr
 		auto pixel = CalculateCubicBezierPoint(t, InControlPoints[0], InControlPoints[1], InControlPoints[2], InControlPoints[3]);
 		ResultPoints.Add(pixel);
 	}
-
-	if (IsScreenSpace)
+	
+	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, false);
+	if (ViewExtension.IsValid())
 	{
-		auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, false);
-		if (ViewExtension.IsValid())
-		{
-			TArray<FLexUIHelperLineVertex> Lines;
-			//lines
-			FVector prevPoint = ResultPoints[0];
-			for (int i = 1; i < ResultPoints.Num(); i++)
-			{
-				new(Lines) FLexUIHelperLineVertex((FVector3f)prevPoint, InColor);
-				new(Lines) FLexUIHelperLineVertex((FVector3f)ResultPoints[i], InColor);
-				prevPoint = ResultPoints[i];
-			}
-			//arrow
-			new(Lines) FLexUIHelperLineVertex((FVector3f)InControlPoints[3], InColor);
-			new(Lines) FLexUIHelperLineVertex((FVector3f)InArrowPointA, InColor);
-			new(Lines) FLexUIHelperLineVertex((FVector3f)InControlPoints[3], InColor);
-			new(Lines) FLexUIHelperLineVertex((FVector3f)InArrowPointB, InColor);
-
-			ViewExtension->AddLineRender(FLexUIHelperLineRenderParameter(Lines));
-		}
-	}
-	else
-	{
+		TArray<FLexUIHelperLineVertex> Lines;
 		//lines
 		FVector prevPoint = ResultPoints[0];
 		for (int i = 1; i < ResultPoints.Num(); i++)
 		{
-			DrawDebugLine(InWorld, prevPoint, ResultPoints[i], InColor);
+			new(Lines) FLexUIHelperLineVertex((FVector3f)prevPoint, InColor);
+			new(Lines) FLexUIHelperLineVertex((FVector3f)ResultPoints[i], InColor);
 			prevPoint = ResultPoints[i];
 		}
 		//arrow
-		DrawDebugLine(InWorld, InControlPoints[3], InArrowPointA, InColor);
-		DrawDebugLine(InWorld, InControlPoints[3], InArrowPointB, InColor);
+		new(Lines) FLexUIHelperLineVertex((FVector3f)InControlPoints[3], InColor);
+		new(Lines) FLexUIHelperLineVertex((FVector3f)InArrowPointA, InColor);
+		new(Lines) FLexUIHelperLineVertex((FVector3f)InControlPoints[3], InColor);
+		new(Lines) FLexUIHelperLineVertex((FVector3f)InArrowPointB, InColor);
+
+		if (ScreenOrWorld)
+		{
+			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperLineKey(Object, DebugName), FLexUIHelperLineRenderParameter(Lines, FMatrix44f::Identity));
+		}
+		else
+		{
+			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperLineKey(Object, DebugName), FLexUIHelperLineRenderParameter(Lines, FMatrix44f::Identity));
+		}
 	}
 }
 
@@ -634,7 +613,33 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 	if (!IsValid(SourceWidget))return;
 	const FColor Color = ULGUIPrefabManagerObject::IsSelected(SourceWidget->GetOwner()) ? FColor(255, 255, 0, 255) : FColor(140, 140, 0, 255);
 	constexpr float Offset = 2;
-	constexpr float ArrowSize = 2;
+	constexpr float ArrowSize = 5;
+	
+	auto GetArrowSizeScaledByDistanceToCamera = [=, this](FVector WorldPoint)
+	{
+		if (this->GetWorld()->IsGameWorld())
+		{
+			if (auto PC = this->GetWorld()->GetFirstPlayerController())
+			{
+				if (auto CameraManager = PC->PlayerCameraManager)
+				{
+					auto ViewLocation = CameraManager->GetCameraLocation();
+					float Distance = FVector::Distance(WorldPoint, ViewLocation);
+					return Distance * 0.01f;
+				}
+			}
+		}
+		else
+		{
+			if (auto ViewportClient = GetEditorViewportClient())
+			{
+				auto ViewLocation = ViewportClient->GetViewLocation();
+				float Distance = FVector::Distance(WorldPoint, ViewLocation);
+				return Distance * 0.01f;
+			}
+		}
+		return ArrowSize;
+	};
 
 	if (auto ToLeftComp = InSelectable->FindSelectableOnLeft())
 	{
@@ -647,8 +652,13 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 			auto DestRightPoint = DestWidget->GetComponentTransform().TransformPosition(LocalDestRightPoint);
 			float Distance = FVector::Distance(SourceLeftPoint, DestRightPoint);
 			Distance *= 0.2f;
-			auto ArrowPointA = DestWidget->GetComponentTransform().TransformPosition(LocalDestRightPoint + FVector(0, ArrowSize, ArrowSize));
-			auto ArrowPointB = DestWidget->GetComponentTransform().TransformPosition(LocalDestRightPoint + FVector(0, ArrowSize, -ArrowSize));
+			auto ScaledArrowSize = ArrowSize;
+			if (!IsScreenSpace)
+			{
+				ScaledArrowSize = GetArrowSizeScaledByDistanceToCamera(DestRightPoint);
+			}
+			auto ArrowPointA = DestWidget->GetComponentTransform().TransformPosition(LocalDestRightPoint + FVector(0, ScaledArrowSize, ScaledArrowSize));
+			auto ArrowPointB = DestWidget->GetComponentTransform().TransformPosition(LocalDestRightPoint + FVector(0, ScaledArrowSize, -ScaledArrowSize));
 			DrawNavigationArrow(InWorld
 				, {
 					SourceLeftPoint,
@@ -657,7 +667,7 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 					DestRightPoint,
 				}
 				, ArrowPointA, ArrowPointB
-				, Color, IsScreenSpace);
+				, Color, InSelectable, FString::Printf(TEXT("%s.NavigationLeft"), *InSelectable->GetLexWidget()->GetDisplayName()), IsScreenSpace);
 		}
 	}
 	if (auto ToRightComp = InSelectable->FindSelectableOnRight())
@@ -671,8 +681,13 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 			auto DestLeftPoint = DestWidget->GetComponentTransform().TransformPosition(LocalDestLeftPoint);
 			float Distance = FVector::Distance(SourceRightPoint, DestLeftPoint);
 			Distance *= 0.2f;
-			auto ArrowPointA = DestWidget->GetComponentTransform().TransformPosition(LocalDestLeftPoint + FVector(0, -ArrowSize, ArrowSize));
-			auto ArrowPointB = DestWidget->GetComponentTransform().TransformPosition(LocalDestLeftPoint + FVector(0, -ArrowSize, -ArrowSize));
+			auto ScaledArrowSize = ArrowSize;
+			if (!IsScreenSpace)
+			{
+				ScaledArrowSize = GetArrowSizeScaledByDistanceToCamera(DestLeftPoint);
+			}
+			auto ArrowPointA = DestWidget->GetComponentTransform().TransformPosition(LocalDestLeftPoint + FVector(0, -ScaledArrowSize, ScaledArrowSize));
+			auto ArrowPointB = DestWidget->GetComponentTransform().TransformPosition(LocalDestLeftPoint + FVector(0, -ScaledArrowSize, -ScaledArrowSize));
 			DrawNavigationArrow(InWorld
 				, {
 					SourceRightPoint,
@@ -681,7 +696,7 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 					DestLeftPoint,
 				}
 				, ArrowPointA, ArrowPointB
-				, Color, IsScreenSpace);
+				, Color, InSelectable, FString::Printf(TEXT("%s.NavigationRight"), *InSelectable->GetLexWidget()->GetDisplayName()), IsScreenSpace);
 		}
 	}
 	if (auto ToDownComp = InSelectable->FindSelectableOnDown())
@@ -695,8 +710,13 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 			auto DestUpPoint = DestWidget->GetComponentTransform().TransformPosition(LocalDestUpPoint);
 			float Distance = FVector::Distance(SourceDownPoint, DestUpPoint);
 			Distance *= 0.2f;
-			auto ArrowPointA = DestWidget->GetComponentTransform().TransformPosition(LocalDestUpPoint + FVector(0, ArrowSize, ArrowSize));
-			auto ArrowPointB = DestWidget->GetComponentTransform().TransformPosition(LocalDestUpPoint + FVector(0, -ArrowSize, ArrowSize));
+			auto ScaledArrowSize = ArrowSize;
+			if (!IsScreenSpace)
+			{
+				ScaledArrowSize = GetArrowSizeScaledByDistanceToCamera(DestUpPoint);
+			}
+			auto ArrowPointA = DestWidget->GetComponentTransform().TransformPosition(LocalDestUpPoint + FVector(0, ScaledArrowSize, ScaledArrowSize));
+			auto ArrowPointB = DestWidget->GetComponentTransform().TransformPosition(LocalDestUpPoint + FVector(0, -ScaledArrowSize, ScaledArrowSize));
 			DrawNavigationArrow(InWorld
 				, {
 					SourceDownPoint,
@@ -705,7 +725,7 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 					DestUpPoint,
 				}
 				, ArrowPointA, ArrowPointB
-				, Color, IsScreenSpace);
+				, Color, InSelectable, FString::Printf(TEXT("%s.NavigationDown"), *InSelectable->GetLexWidget()->GetDisplayName()), IsScreenSpace);
 		}
 	}
 	if (auto ToUpComp = InSelectable->FindSelectableOnUp())
@@ -719,8 +739,13 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 			auto DestDownPoint = DestWidget->GetComponentTransform().TransformPosition(LocalDestDownPoint);
 			float Distance = FVector::Distance(SourceUpPoint, DestDownPoint);
 			Distance *= 0.2f;
-			auto ArrowPointA = DestWidget->GetComponentTransform().TransformPosition(LocalDestDownPoint + FVector(0, ArrowSize, -ArrowSize));
-			auto ArrowPointB = DestWidget->GetComponentTransform().TransformPosition(LocalDestDownPoint + FVector(0, -ArrowSize, -ArrowSize));
+			auto ScaledArrowSize = ArrowSize;
+			if (!IsScreenSpace)
+			{
+				ScaledArrowSize = GetArrowSizeScaledByDistanceToCamera(DestDownPoint);
+			}
+			auto ArrowPointA = DestWidget->GetComponentTransform().TransformPosition(LocalDestDownPoint + FVector(0, ScaledArrowSize, -ScaledArrowSize));
+			auto ArrowPointB = DestWidget->GetComponentTransform().TransformPosition(LocalDestDownPoint + FVector(0, -ScaledArrowSize, -ScaledArrowSize));
 			DrawNavigationArrow(InWorld
 				, {
 					SourceUpPoint,
@@ -729,111 +754,69 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 					DestDownPoint,
 				}
 				, ArrowPointA, ArrowPointB
-				, Color, IsScreenSpace);
+				, Color, InSelectable, FString::Printf(TEXT("%s.NavigationUp"), *InSelectable->GetLexWidget()->GetDisplayName()), IsScreenSpace);
 		}
 	}
 }
 
-void ULexUIManagerWorldSubsystem::DrawDebugBoxOnScreenSpace(UWorld* InWorld, FVector const& Center, FVector const& Box, const FQuat& Rotation, FColor const& Color)
+FEditorViewportClient* ULexUIManagerWorldSubsystem::GetEditorViewportClient()
 {
-	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, false);
-	if (ViewExtension.IsValid())
+	if (CacheViewportClient == nullptr)
 	{
-		TArray<FLexUIHelperLineVertex> Lines;
-
-		FTransform const Transform(Rotation);
-		FVector Start = Transform.TransformPosition(FVector(Box.X, Box.Y, Box.Z));
-		FVector End = Transform.TransformPosition(FVector(Box.X, -Box.Y, Box.Z));
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
-
-		Start = Transform.TransformPosition(FVector(Box.X, -Box.Y, Box.Z));
-		End = Transform.TransformPosition(FVector(-Box.X, -Box.Y, Box.Z));
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
-
-		Start = Transform.TransformPosition(FVector(-Box.X, -Box.Y, Box.Z));
-		End = Transform.TransformPosition(FVector(-Box.X, Box.Y, Box.Z));
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
-
-		Start = Transform.TransformPosition(FVector(-Box.X, Box.Y, Box.Z));
-		End = Transform.TransformPosition(FVector(Box.X, Box.Y, Box.Z));
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
-
-		Start = Transform.TransformPosition(FVector(Box.X, Box.Y, -Box.Z));
-		End = Transform.TransformPosition(FVector(Box.X, -Box.Y, -Box.Z));
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
-
-		Start = Transform.TransformPosition(FVector(Box.X, -Box.Y, -Box.Z));
-		End = Transform.TransformPosition(FVector(-Box.X, -Box.Y, -Box.Z));
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
-
-		Start = Transform.TransformPosition(FVector(-Box.X, -Box.Y, -Box.Z));
-		End = Transform.TransformPosition(FVector(-Box.X, Box.Y, -Box.Z));
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
-
-		Start = Transform.TransformPosition(FVector(-Box.X, Box.Y, -Box.Z));
-		End = Transform.TransformPosition(FVector(Box.X, Box.Y, -Box.Z));
-		new(Lines)FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines)FLexUIHelperLineVertex(FVector3f(Center + End), Color);
-
-		Start = Transform.TransformPosition(FVector(Box.X, Box.Y, Box.Z));
-		End = Transform.TransformPosition(FVector(Box.X, Box.Y, -Box.Z));
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
-
-		Start = Transform.TransformPosition(FVector(Box.X, -Box.Y, Box.Z));
-		End = Transform.TransformPosition(FVector(Box.X, -Box.Y, -Box.Z));
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
-
-		Start = Transform.TransformPosition(FVector(-Box.X, -Box.Y, Box.Z));
-		End = Transform.TransformPosition(FVector(-Box.X, -Box.Y, -Box.Z));
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
-
-		Start = Transform.TransformPosition(FVector(-Box.X, Box.Y, Box.Z));
-		End = Transform.TransformPosition(FVector(-Box.X, Box.Y, -Box.Z));
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
-		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
-
-		ViewExtension->AddLineRender(FLexUIHelperLineRenderParameter(Lines));
+		for (auto& ViewportClient : GEditor->GetAllViewportClients())
+		{
+			if (ViewportClient->GetWorld() == this->GetWorld())
+			{
+				if (ViewportClient->IsVisible())
+				{
+					CacheViewportClient = ViewportClient;
+				}
+			}
+		}
 	}
+	return CacheViewportClient;
 }
-void ULexUIManagerWorldSubsystem::DrawDebugRectOnScreenSpace(UWorld* InWorld, FVector const& Center, FVector const& Box, const FQuat& Rotation, FColor const& Color)
+
+void ULexUIManagerWorldSubsystem::OnEndOfFrame()
+{
+	CacheViewportClient = nullptr;
+}
+
+void ULexUIManagerWorldSubsystem::DrawDebugRect(UWorld* InWorld, const FVector& Center, const FMatrix44f& LocalToWorld, FVector const& Box, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld)
 {
 	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, false);
 	if (ViewExtension.IsValid())
 	{
 		TArray<FLexUIHelperLineVertex> Lines;
 
-		FTransform const Transform(Rotation);
-		FVector Start = Transform.TransformPosition(FVector(Box.X, Box.Y, Box.Z));
-		FVector End = Transform.TransformPosition(FVector(Box.X, -Box.Y, Box.Z));
+		FVector Start = FVector(Box.X, Box.Y, Box.Z);
+		FVector End = FVector(Box.X, -Box.Y, Box.Z);
 		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
 		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
 
-		Start = Transform.TransformPosition(FVector(Box.X, Box.Y, -Box.Z));
-		End = Transform.TransformPosition(FVector(Box.X, -Box.Y, -Box.Z));
+		Start = FVector(Box.X, Box.Y, -Box.Z);
+		End = FVector(Box.X, -Box.Y, -Box.Z);
 		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
 		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
 
-		Start = Transform.TransformPosition(FVector(Box.X, Box.Y, Box.Z));
-		End = Transform.TransformPosition(FVector(Box.X, Box.Y, -Box.Z));
+		Start = FVector(Box.X, Box.Y, Box.Z);
+		End = FVector(Box.X, Box.Y, -Box.Z);
 		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
 		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
 
-		Start = Transform.TransformPosition(FVector(Box.X, -Box.Y, Box.Z));
-		End = Transform.TransformPosition(FVector(Box.X, -Box.Y, -Box.Z));
+		Start = FVector(Box.X, -Box.Y, Box.Z);
+		End = FVector(Box.X, -Box.Y, -Box.Z);
 		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
 		new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
 
-		ViewExtension->AddLineRender(FLexUIHelperLineRenderParameter(Lines));
+		if (ScreenOrWorld)
+		{
+			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperLineKey(Object, DebugName), FLexUIHelperLineRenderParameter(Lines, LocalToWorld));
+		}
+		else
+		{
+			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperLineKey(Object, DebugName), FLexUIHelperLineRenderParameter(Lines, LocalToWorld));
+		}
 	}
 }
 
@@ -918,6 +901,7 @@ void ULexUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 	{
 		bIsPlaying = true;
 	}
+	FCoreDelegates::OnEndFrame.AddUObject(this, &ULexUIManagerWorldSubsystem::OnEndOfFrame);
 #endif
 	//localization
 	OnCultureChangedDelegateHandle = FInternationalization::Get().OnCultureChanged().AddUObject(this, &ULexUIManagerWorldSubsystem::OnCultureChanged);
@@ -1000,8 +984,7 @@ void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 				|| this->GetWorld()->WorldType == EWorldType::EditorPreview
 				)
 			{
-				auto bIsGameWorld = this->GetWorld()->IsGameWorld();
-				auto DrawFrame = [bIsGameWorld](const TArray<TWeakObjectPtr<ULexCanvas>>& CanvasArray) {
+				auto DrawFrame = [this](const TArray<TWeakObjectPtr<ULexCanvas>>& CanvasArray) {
 					for (auto& Canvas : CanvasArray)
 					{
 						auto& WidgetArray = Canvas->GetWidgetArray();
@@ -1009,7 +992,13 @@ void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 						{
 							if (!IsValid(Widget))continue;
 
-							ULexUIManagerWorldSubsystem::DrawFrameOnWidget(Widget, bIsGameWorld ? Widget->IsScreenSpaceOverlayUI() : false);
+							bool bIsScreenSpace = false;
+							if (Widget->GetWorld()->IsGameWorld())
+							{
+								auto RenderCanvas = Widget->GetRenderCanvas();
+								bIsScreenSpace = RenderCanvas->IsRenderToScreenSpace() || RenderCanvas->IsRenderToRenderTarget();
+							}
+							DrawFrameOnWidget(Widget, bIsScreenSpace);
 						}
 					}
 					};
@@ -1027,9 +1016,17 @@ void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 				if (!Selectable.IsValid())continue;
 				if (!IsValid(Selectable->GetWorld()))continue;
 				if (!IsValid(Selectable->GetLexWidget()))continue;
+				if (!IsValid(Selectable->GetLexWidget()->GetRenderCanvas()))continue;
 				if (!Selectable->GetLexWidget()->GetRaycastableInHierarchy())continue;
 
-				ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(Selectable->GetWorld(), Selectable.Get(), this->GetWorld()->IsGameWorld() ? Selectable->GetLexWidget()->IsScreenSpaceOverlayUI() : false);
+				bool bIsScreenSpace = false;
+				if (Selectable->GetWorld()->IsGameWorld())
+				{
+					auto RenderCanvas = Selectable->GetLexWidget()->GetRenderCanvas();
+					bIsScreenSpace = RenderCanvas->IsRenderToScreenSpace() || RenderCanvas->IsRenderToRenderTarget();
+				}
+				DrawNavigationVisualizerOnUISelectable(Selectable->GetWorld(), Selectable.Get()
+					, bIsScreenSpace);
 			}
 		}
 	}

@@ -121,31 +121,6 @@ void UUIScrollbarComponent::SetNavigationChangeInterval(float InValue)
     NavigationChangeInterval = InValue;
 }
 
-FDelegateHandle UUIScrollbarComponent::RegisterSlideEvent(const FLGUIFloatDelegate &InDelegate)
-{
-    return OnValueChangedCPP.Add(InDelegate);
-}
-FDelegateHandle UUIScrollbarComponent::RegisterSlideEvent(const TFunction<void(float)> &InFunction)
-{
-    return OnValueChangedCPP.AddLambda(InFunction);
-}
-void UUIScrollbarComponent::UnregisterSlideEvent(const FDelegateHandle &InHandle)
-{
-    OnValueChangedCPP.Remove(InHandle);
-}
-
-FLGUIDelegateHandleWrapper UUIScrollbarComponent::RegisterSlideEvent(const FUIScrollbarValueChangedDelegate &InDelegate)
-{
-    auto delegateHandle = OnValueChangedCPP.AddLambda([InDelegate](float InValue) {
-        InDelegate.ExecuteIfBound(InValue);
-    });
-    return FLGUIDelegateHandleWrapper(delegateHandle);
-}
-void UUIScrollbarComponent::UnregisterSlideEvent(const FLGUIDelegateHandleWrapper &InDelegateHandle)
-{
-    OnValueChangedCPP.Remove(InDelegateHandle.DelegateHandle);
-}
-
 bool UUIScrollbarComponent::OnPointerDown_Implementation(ULexPointerEventData* eventData)
 {
     Super::OnPointerDown_Implementation(eventData);
@@ -159,7 +134,7 @@ bool UUIScrollbarComponent::OnPointerDown_Implementation(ULexPointerEventData* e
                 float value01 = Value;
                 switch (DirectionType)
                 {
-                case UIScrollbarDirectionType::LeftToRight:
+                case EUIScrollbarDirectionType::LeftToRight:
                 {
                     float validSpace = HandleArea->GetWidth() * (1.0f - Size);
                     float valueDiff01;
@@ -174,7 +149,7 @@ bool UUIScrollbarComponent::OnPointerDown_Implementation(ULexPointerEventData* e
                     value01 += valueDiff01;
                 }
                 break;
-                case UIScrollbarDirectionType::RightToLeft:
+                case EUIScrollbarDirectionType::RightToLeft:
                 {
                     float validSpace = HandleArea->GetWidth() * (1.0f - Size);
                     float valueDiff01;
@@ -189,7 +164,7 @@ bool UUIScrollbarComponent::OnPointerDown_Implementation(ULexPointerEventData* e
                     value01 -= valueDiff01;
                 }
                 break;
-                case UIScrollbarDirectionType::BottomToTop:
+                case EUIScrollbarDirectionType::BottomToTop:
                 {
                     float validSpace = HandleArea->GetHeight() * (1.0f - Size);
                     float valueDiff01;
@@ -204,7 +179,7 @@ bool UUIScrollbarComponent::OnPointerDown_Implementation(ULexPointerEventData* e
                     value01 += valueDiff01;
                 }
                 break;
-                case UIScrollbarDirectionType::TopToBottom:
+                case EUIScrollbarDirectionType::TopToBottom:
                 {
                     float validSpace = HandleArea->GetHeight() * (1.0f - Size);
                     float valueDiff01;
@@ -252,12 +227,12 @@ bool UUIScrollbarComponent::OnNavigate_Implementation(ELexUINavigationDirection 
 {
     float valueIntervalMultiply = 0.0f;
     if (
-        (DirectionType == UIScrollbarDirectionType::LeftToRight && direction == ELexUINavigationDirection::Left) || (DirectionType == UIScrollbarDirectionType::RightToLeft && direction == ELexUINavigationDirection::Right) || (DirectionType == UIScrollbarDirectionType::BottomToTop && direction == ELexUINavigationDirection::Down) || (DirectionType == UIScrollbarDirectionType::TopToBottom && direction == ELexUINavigationDirection::Up))
+        (DirectionType == EUIScrollbarDirectionType::LeftToRight && direction == ELexUINavigationDirection::Left) || (DirectionType == EUIScrollbarDirectionType::RightToLeft && direction == ELexUINavigationDirection::Right) || (DirectionType == EUIScrollbarDirectionType::BottomToTop && direction == ELexUINavigationDirection::Down) || (DirectionType == EUIScrollbarDirectionType::TopToBottom && direction == ELexUINavigationDirection::Up))
     {
         valueIntervalMultiply = -NavigationChangeInterval;
     }
     else if (
-        (DirectionType == UIScrollbarDirectionType::LeftToRight && direction == ELexUINavigationDirection::Right) || (DirectionType == UIScrollbarDirectionType::RightToLeft && direction == ELexUINavigationDirection::Left) || (DirectionType == UIScrollbarDirectionType::BottomToTop && direction == ELexUINavigationDirection::Up) || (DirectionType == UIScrollbarDirectionType::TopToBottom && direction == ELexUINavigationDirection::Down))
+        (DirectionType == EUIScrollbarDirectionType::LeftToRight && direction == ELexUINavigationDirection::Right) || (DirectionType == EUIScrollbarDirectionType::RightToLeft && direction == ELexUINavigationDirection::Left) || (DirectionType == EUIScrollbarDirectionType::BottomToTop && direction == ELexUINavigationDirection::Up) || (DirectionType == EUIScrollbarDirectionType::TopToBottom && direction == ELexUINavigationDirection::Down))
     {
         valueIntervalMultiply = NavigationChangeInterval;
     }
@@ -286,28 +261,28 @@ void UUIScrollbarComponent::CalculateInputValue(ULexPointerEventData *eventData)
         float value01 = Value;
         switch (DirectionType)
         {
-        case UIScrollbarDirectionType::LeftToRight:
+        case EUIScrollbarDirectionType::LeftToRight:
         {
             handleSize = HandleArea->GetWidth() * Size;
             slideAreaSize = HandleArea->GetWidth() - handleSize;
             value01 = PressValue + localCumulativeMoveDelta.Y / slideAreaSize;
         }
         break;
-        case UIScrollbarDirectionType::RightToLeft:
+        case EUIScrollbarDirectionType::RightToLeft:
         {
             handleSize = HandleArea->GetWidth() * Size;
             slideAreaSize = HandleArea->GetWidth() - handleSize;
             value01 = PressValue - localCumulativeMoveDelta.Y / slideAreaSize;
         }
         break;
-        case UIScrollbarDirectionType::BottomToTop:
+        case EUIScrollbarDirectionType::BottomToTop:
         {
             handleSize = HandleArea->GetHeight() * Size;
             slideAreaSize = HandleArea->GetHeight() - handleSize;
             value01 = PressValue + localCumulativeMoveDelta.Z / slideAreaSize;
         }
         break;
-        case UIScrollbarDirectionType::TopToBottom:
+        case EUIScrollbarDirectionType::TopToBottom:
         {
             handleSize = HandleArea->GetHeight() * Size;
             slideAreaSize = HandleArea->GetHeight() - handleSize;
@@ -326,25 +301,25 @@ void UUIScrollbarComponent::ApplyValueToUI()
         float value01 = Value;
         switch (DirectionType)
         {
-        case UIScrollbarDirectionType::LeftToRight:
+        case EUIScrollbarDirectionType::LeftToRight:
         {
             auto HorizontalMinMax = FVector2D((1.0f - Size) * value01, FMath::Lerp(Size, 1.0f, value01));
             Handle->SetHorizontalAnchorMinMax(HorizontalMinMax);
         }
         break;
-        case UIScrollbarDirectionType::RightToLeft:
+        case EUIScrollbarDirectionType::RightToLeft:
         {
             auto HorizontalMinMax = FVector2D((1.0f - Size) * (1.0f - value01), FMath::Lerp(1.0f, Size, value01));
             Handle->SetHorizontalAnchorMinMax(HorizontalMinMax);
         }
         break;
-        case UIScrollbarDirectionType::BottomToTop:
+        case EUIScrollbarDirectionType::BottomToTop:
         {
             auto VerticalMinMax = FVector2D((1.0f - Size) * value01, FMath::Lerp(Size, 1.0f, value01));
             Handle->SetVerticalAnchorMinMax(VerticalMinMax);
         }
         break;
-        case UIScrollbarDirectionType::TopToBottom:
+        case EUIScrollbarDirectionType::TopToBottom:
         {
             auto VerticalMinMax = FVector2D((1.0f - Size) * (1.0f - value01), FMath::Lerp(1.0f, Size, value01));
             Handle->SetVerticalAnchorMinMax(VerticalMinMax);

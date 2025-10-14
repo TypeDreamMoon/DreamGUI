@@ -6,19 +6,14 @@
 #include "UISelectableComponent.h"
 #include "Event/LGUIEventDelegate.h"
 #include "Event/LexDelegateDeclaration.h"
-#include "LGUIDelegateHandleWrapper.h"
 #include "UISliderComponent.generated.h"
 
-
-class ULexLayoutAnchorSlot;
-DECLARE_DYNAMIC_DELEGATE_OneParam(FUISliderValueChangedDelegate, float, Value);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUISliderValueChangedEvent, float, Value);
 
-class ALexWidgetActor;
 class ULexWidget;
 
 UENUM(BlueprintType, Category = LGUI)
-enum class UISliderDirectionType:uint8
+enum class EUISliderDirectionType:uint8
 {
 	LeftToRight,
 	RightToLeft,
@@ -57,7 +52,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Slider")
 		TWeakObjectPtr<ULexWidget> Handle;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Slider")
-		UISliderDirectionType DirectionType;
+		EUISliderDirectionType DirectionType;
 	/** When use navigation input to change the slider value, each press will change value as (MaxValue - MinValue) * NavigationChangeInterval. */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Slider", meta=(ClampMin = "0.0", ClampMax = "1.0"))
 		float NavigationChangeInterval = 0.1f;
@@ -65,13 +60,14 @@ protected:
 	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> FillArea;
 	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> HandleArea;
 
-	FLGUIMulticastFloatDelegate OnValueChangedCPP;
+	FLexUIMulticastDelegateFloat OnValueChangedCPP;
+	UPROPERTY(BlueprintAssignable, Category = "LGUI-Slider", DisplayName="OnValueChanged")
+	FUISliderValueChangedEvent OnValueChangedBP;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Slider")
-		FLGUIEventDelegate OnValueChanged = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Double);
+	FLGUIEventDelegate OnValueChanged = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Double);
 	
 public:
-	UPROPERTY(BlueprintAssignable, Category = "LGUI-Toggle", DisplayName="OnValueChanged")
-	FUISliderValueChangedEvent OnValueChangedBP;
+	FLexUIMulticastDelegateFloat& GetOnValueChangedEvent(){return OnValueChangedCPP;}
 	
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
 		float GetValue()const { return Value; }
@@ -87,7 +83,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
 		ULexWidget* GetHandle()const { return Handle.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
-		UISliderDirectionType GetDirectionType()const { return DirectionType; }
+		EUISliderDirectionType GetDirectionType()const { return DirectionType; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
 		float GetNavigationChangeInterval()const { return NavigationChangeInterval; }
 
@@ -114,16 +110,7 @@ public:
 	void SetMaxValue(float InMaxValue, bool KeepRelativeValue, bool FireEvent = true);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
 	void SetNavigationChangeInterval(float InValue);
-
-	FDelegateHandle RegisterSlideEvent(const FLGUIFloatDelegate& InDelegate);
-	FDelegateHandle RegisterSlideEvent(const TFunction<void(float)>& InFunction);
-	void UnregisterSlideEvent(const FDelegateHandle& InHandle);
-
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
-		FLGUIDelegateHandleWrapper RegisterSlideEvent(const FUISliderValueChangedDelegate& InDelegate);
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
-		void UnregisterSlideEvent(const FLGUIDelegateHandleWrapper& InDelegateHandle);
-public:
+	
 	virtual bool OnPointerDown_Implementation(ULexPointerEventData* eventData)override;
 	virtual bool OnPointerUp_Implementation(ULexPointerEventData* eventData)override;
 	virtual bool OnPointerBeginDrag_Implementation(ULexPointerEventData* eventData)override;

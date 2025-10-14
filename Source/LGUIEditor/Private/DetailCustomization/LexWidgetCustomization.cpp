@@ -772,8 +772,13 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot()
 			.AutoWidth()
+			.VAlign(VAlign_Center)
 			[
-				displayNamePropertyHandle->CreatePropertyValueWidget(true)
+				SNew(SBox)
+				.VAlign(VAlign_Center)
+				[
+					displayNamePropertyHandle->CreatePropertyValueWidget(true)
+				]
 			]
 			+SHorizontalBox::Slot()
 			.AutoWidth()

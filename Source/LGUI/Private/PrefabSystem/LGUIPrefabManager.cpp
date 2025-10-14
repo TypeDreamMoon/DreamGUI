@@ -16,7 +16,7 @@
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabManagerObject"
 
-PRAGMA_DISABLE_OPTIMIZATION
+UE_DISABLE_OPTIMIZATION
 
 #if WITH_EDITOR
 class FLGUIObjectCreateDeleteListener : public FUObjectArray::FUObjectCreateListener, public FUObjectArray::FUObjectDeleteListener
@@ -384,6 +384,6 @@ bool ULGUIPrefabWorldSubsystem::IsPrefabSystemProcessingActor(AActor* InActor)
 {
 	return AllActors_PrefabSystemProcessing.Contains(InActor);
 }
-PRAGMA_ENABLE_OPTIMIZATION
+UE_ENABLE_OPTIMIZATION
 
 #undef LOCTEXT_NAMESPACE

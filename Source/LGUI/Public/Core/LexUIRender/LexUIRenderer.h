@@ -26,14 +26,29 @@ public:
 };
 
 #if WITH_EDITOR
+struct FLexUIHelperLineKey
+{
+	void* ObjectPtr = nullptr;
+	FString Tag;
+	bool operator==(const FLexUIHelperLineKey& other)const
+	{
+		return this->ObjectPtr == other.ObjectPtr && this->Tag == other.Tag;
+	}
+	friend FORCEINLINE uint32 GetTypeHash(const FLexUIHelperLineKey& other)
+	{
+		return HashCombine(GetTypeHash(other.ObjectPtr), GetTypeHash(other.Tag));
+	}
+};
 /** Parameters for render editor helper line */
 struct FLexUIHelperLineRenderParameter
 {
 public:
-	FLexUIHelperLineRenderParameter(const TArray<FLexUIHelperLineVertex>& InLinePoints)
+	FLexUIHelperLineRenderParameter(const TArray<FLexUIHelperLineVertex>& InLinePoints, const FMatrix44f& InLocalToWorld)
 	{
 		LinePoints = InLinePoints;
+		LocalToWorld = InLocalToWorld;
 	}
+	FMatrix44f LocalToWorld;
 	TArray<FLexUIHelperLineVertex> LinePoints;
 };
 #endif
@@ -175,9 +190,19 @@ private:
 #endif
 #if WITH_EDITOR
 private:
-	TArray<FLexUIHelperLineRenderParameter> HelperLineRenderParameterArray;
+	TMap<FLexUIHelperLineKey, FLexUIHelperLineRenderParameter> ScreenSpaceHelperLineMap;
+	TMap<FLexUIHelperLineKey, FLexUIHelperLineRenderParameter> WorldSpaceHelperLineMap;
+	void RenderHelperLineArray_RenderThread(TMap<FLexUIHelperLineKey, FLexUIHelperLineRenderParameter>& LineMap
+	, FRDGBuilder& GraphBuilder
+	, FSceneView* RenderView
+	, const FMatrix44f& ViewProjectionMatrix
+	, const FIntRect& ViewRect
+	, uint8 NumSamples
+	, FRDGTextureRef RenderTargetTexture
+	, FGlobalShaderMap* GlobalShaderMap);
 public:
-	void AddLineRender(const FLexUIHelperLineRenderParameter& InLineParameter);
+	void AddScreenSpaceLineRender(const FLexUIHelperLineKey& InKey, const FLexUIHelperLineRenderParameter& InLineParameter);
+	void AddWorldSpaceLineRender(const FLexUIHelperLineKey& InKey, const FLexUIHelperLineRenderParameter& InLineParameter);
 #endif
 };
 

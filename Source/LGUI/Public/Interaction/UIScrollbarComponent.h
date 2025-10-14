@@ -6,19 +6,14 @@
 #include "UISelectableComponent.h"
 #include "Event/LGUIEventDelegate.h"
 #include "Event/LexDelegateDeclaration.h"
-#include "LGUIDelegateHandleWrapper.h"
 #include "UIScrollbarComponent.generated.h"
 
-
-class ULexLayoutAnchorSlot;
-DECLARE_DYNAMIC_DELEGATE_OneParam(FUIScrollbarValueChangedDelegate, float, Value);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIScrollbarValueChangedEvent, float, Value);
 
-class ALexWidgetActor;
 class ULexWidget;
 
 UENUM(BlueprintType, Category = LGUI)
-enum class UIScrollbarDirectionType:uint8
+enum class EUIScrollbarDirectionType:uint8
 {
 	LeftToRight,
 	RightToLeft,
@@ -52,21 +47,22 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Scrollbar")
 		TWeakObjectPtr<ULexWidget> Handle;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Scrollbar")
-		UIScrollbarDirectionType DirectionType;
+		EUIScrollbarDirectionType DirectionType;
 	/** When use navigation input to change the scroll value, each press will change value as NavigationChangeInterval. */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Scrollbar", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 		float NavigationChangeInterval = 0.1f;
 
 	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> HandleArea;
 
-	FLGUIMulticastFloatDelegate OnValueChangedCPP;
+	FLexUIMulticastDelegateFloat OnValueChangedCPP;
+	UPROPERTY(BlueprintAssignable, Category = "LGUI-Scrollbar", DisplayName="OnValueChanged")
+	FUIScrollbarValueChangedEvent OnValueChangedBP;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Scrollbar")
-		FLGUIEventDelegate OnValueChanged = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Double);
+	FLGUIEventDelegate OnValueChanged = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Double);
 
 	float PressValue = 0;
 public:
-	UPROPERTY(BlueprintAssignable, Category = "LGUI-Toggle", DisplayName="OnValueChanged")
-	FUIScrollbarValueChangedEvent OnValueChangedBP;
+	FLexUIMulticastDelegateFloat& GetOnValueChangedEvent(){return OnValueChangedCPP;}
 	
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Scrollbar")
 		float GetValue()const { return Value; }
@@ -89,17 +85,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Scrollbar")
 		ULexWidget* GetHandle()const { return Handle.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Scrollbar")
-		UIScrollbarDirectionType GetDirectionType()const { return DirectionType; }
-
-	FDelegateHandle RegisterSlideEvent(const FLGUIFloatDelegate& InDelegate);
-	FDelegateHandle RegisterSlideEvent(const TFunction<void(float)>& InFunction);
-	void UnregisterSlideEvent(const FDelegateHandle& InHandle);
-
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Scrollbar")
-		FLGUIDelegateHandleWrapper RegisterSlideEvent(const FUIScrollbarValueChangedDelegate& InDelegate);
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Scrollbar")
-		void UnregisterSlideEvent(const FLGUIDelegateHandleWrapper& InDelegateHandle);
-public:
+		EUIScrollbarDirectionType GetDirectionType()const { return DirectionType; }
+	
 	virtual bool OnPointerDown_Implementation(ULexPointerEventData* eventData)override;
 	virtual bool OnPointerUp_Implementation(ULexPointerEventData* eventData)override;
 	virtual bool OnPointerBeginDrag_Implementation(ULexPointerEventData* eventData)override;

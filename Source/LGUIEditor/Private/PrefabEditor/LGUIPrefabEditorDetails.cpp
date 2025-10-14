@@ -85,6 +85,7 @@ void SLGUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLGU
     DetailsViewArgs.NameAreaSettings = FDetailsViewArgs::ComponentsAndActorsUseNameArea;
     DetailsViewArgs.bShowOptions = true;
 	DetailsViewArgs.bAllowSearch = true;
+	DetailsViewArgs.bShowObjectLabel = true;
     //DetailsViewArgs.HostCommandList = InCommandList;
 
     DetailsView = PropPlugin.CreateDetailView(DetailsViewArgs);

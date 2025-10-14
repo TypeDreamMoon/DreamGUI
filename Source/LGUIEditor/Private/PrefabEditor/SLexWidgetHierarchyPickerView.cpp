@@ -168,7 +168,14 @@ TSharedRef< ITableRow > SLexWidgetHierarchyPickerView::OnGenerateRow(DataType In
 }
 void SLexWidgetHierarchyPickerView::OnSelectionChanged(DataType SelectedItem, ESelectInfo::Type SelectInfo)
 {
-	OnSelectItem.ExecuteIfBound(SelectedItem->Object.Get());
+	if (SelectedItem == nullptr)
+	{
+		OnSelectItem.ExecuteIfBound(nullptr);
+	}
+	else
+	{
+		OnSelectItem.ExecuteIfBound(SelectedItem->Object.Get());
+	}
 }
 void SLexWidgetHierarchyPickerView::OnGetChildren(DataType InParent, TArray< DataType >& OutChildren)
 {

@@ -542,7 +542,7 @@ bool ULexPointerInputModule::Navigate(ELexUINavigationDirection direction, ULexP
 		LGUIHitResult.hitResult.Location = LGUIHitResult.hitResult.Component->GetComponentLocation();
 		LGUIHitResult.hitResult.Normal = LGUIHitResult.hitResult.Component->GetComponentTransform().TransformVector(FVector(0, 0, 1));
 		LGUIHitResult.hitResult.Normal.Normalize();
-		LGUIHitResult.eventFireType = EventSystem->eventFireTypeForNavigation;
+		LGUIHitResult.eventFireType = EventSystem->EventFireTypeForNavigation;
 		LGUIHitResult.raycaster = nullptr;
 		LGUIHitResult.hoverArray.Reset();
 
@@ -565,7 +565,7 @@ void ULexPointerInputModule::ProcessInputForNavigation(ULexPointerEventData* eve
 	while (timeSeconds > eventData->navigateTickTime)
 	{
 		bool isFirstPressInSequence = eventData->navigateTickTime == 0.0f;
-		auto timeInterval = isFirstPressInSequence ? EventSystem->navigateInputIntervalForFirstTime : EventSystem->navigateInputInterval;
+		auto timeInterval = isFirstPressInSequence ? EventSystem->NavigateInputIntervalForFirstTime : EventSystem->NavigateInputInterval;
 		if (isFirstPressInSequence)
 		{
 			eventData->navigateTickTime = timeSeconds + timeInterval;
@@ -581,7 +581,7 @@ void ULexPointerInputModule::ProcessInputForNavigation(ULexPointerEventData* eve
 		ProcessPointerEvent(EventSystem, eventData, selectValid, LGUIHitResult, resultHitSomething, hitResult);
 		if (resultHitSomething)
 		{
-			EventSystem->SetSelectComponent((USceneComponent*)hitResult.Component.Get(), eventData, EventSystem->eventFireTypeForNavigation);
+			EventSystem->SetSelectComponent((USceneComponent*)hitResult.Component.Get(), eventData, EventSystem->EventFireTypeForNavigation);
 		}
 
 		auto tempHitComp = (USceneComponent*)hitResult.Component.Get();

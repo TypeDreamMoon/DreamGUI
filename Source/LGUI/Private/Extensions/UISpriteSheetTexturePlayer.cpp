@@ -12,18 +12,18 @@ void UUISpriteSheetTexturePlayer::PostEditChangeProperty(FPropertyChangedEvent& 
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (auto Property = PropertyChangedEvent.Property)
 	{
-		if (!texture.IsValid())
+		if (!Texture.IsValid())
 		{
 			if (auto Widget = GetOwner()->FindComponentByClass<ULexWidget>())
 			{
-				texture = Cast<ULexTexture>(Widget->GetVisual());
+				Texture = Cast<ULexTexture>(Widget->GetVisual());
 			}
 		}
-		if (texture.IsValid())
+		if (Texture.IsValid())
 		{
-			if (!previewInEditor)
+			if (!bPreviewInEditor)
 			{
-				texture->SetUVRect(FVector4(0, 0, 1, 1));
+				Texture->SetUVRect(FVector4(0, 0, 1, 1));
 			}
 		}
 	}
@@ -31,24 +31,24 @@ void UUISpriteSheetTexturePlayer::PostEditChangeProperty(FPropertyChangedEvent& 
 #endif
 bool UUISpriteSheetTexturePlayer::CanPlay()
 {
-	if (!texture.IsValid())
+	if (!Texture.IsValid())
 	{
 		if (auto Widget = GetOwner()->FindComponentByClass<ULexWidget>())
 		{
-			texture = Cast<ULexTexture>(Widget->GetVisual());
+			Texture = Cast<ULexTexture>(Widget->GetVisual());
 		}
 	}
-	if (!texture.IsValid())
+	if (!Texture.IsValid())
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s]Need UITexture component!"), ANSI_TO_TCHAR(__FUNCTION__));
 		return false;
 	}
-	if (!IsValid(texture->GetTexture()))
+	if (!IsValid(Texture->GetTexture()))
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s]UITexture component must have valid texture!"), ANSI_TO_TCHAR(__FUNCTION__));
 		return false;
 	}
-	if (widthCount <= 0 || heightCount <= 0)
+	if (WidthCount <= 0 || HeightCount <= 0)
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s]WidthCount & HeightCount must greater then 0!"), ANSI_TO_TCHAR(__FUNCTION__));
 		return false;
@@ -57,28 +57,28 @@ bool UUISpriteSheetTexturePlayer::CanPlay()
 }
 float UUISpriteSheetTexturePlayer::GetDuration()const
 {
-	return (float)(widthCount * heightCount) / fps;
+	return (float)(WidthCount * HeightCount) / Fps;
 }
 void UUISpriteSheetTexturePlayer::PrepareForPlay()
 {
-	widthUVInterval = 1.0f / widthCount;
-	heightUVInterval = 1.0f / heightCount;
+	WidthUVInterval = 1.0f / WidthCount;
+	HeightUVInterval = 1.0f / HeightCount;
 }
 
-void UUISpriteSheetTexturePlayer::OnUpdateAnimation(int frameNumber)
+void UUISpriteSheetTexturePlayer::OnUpdateAnimation(int FrameNumber)
 {
-	int verticalFrame = (int)(frameNumber / widthCount);
-	int horizontalFrame = (int)(frameNumber % widthCount);
-	verticalFrame = FMath::Clamp(verticalFrame, 0, heightCount);
-	horizontalFrame = FMath::Clamp(horizontalFrame, 0, widthCount);
-	texture->SetUVRect(FVector4(widthUVInterval * horizontalFrame, heightUVInterval * verticalFrame, widthUVInterval, heightUVInterval));
+	int verticalFrame = (int)(FrameNumber / WidthCount);
+	int horizontalFrame = (int)(FrameNumber % WidthCount);
+	verticalFrame = FMath::Clamp(verticalFrame, 0, HeightCount);
+	horizontalFrame = FMath::Clamp(horizontalFrame, 0, WidthCount);
+	Texture->SetUVRect(FVector4(WidthUVInterval * horizontalFrame, HeightUVInterval * verticalFrame, WidthUVInterval, HeightUVInterval));
 }
 
 void UUISpriteSheetTexturePlayer::SetWidthCount(int value)
 {
-	widthCount = value;
+	WidthCount = value;
 }
 void UUISpriteSheetTexturePlayer::SetHeightCount(int value)
 {
-	heightCount = value;
+	HeightCount = value;
 }

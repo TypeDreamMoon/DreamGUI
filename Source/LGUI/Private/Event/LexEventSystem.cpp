@@ -9,8 +9,6 @@
 #include "Event/Interface/LexPointerDragDropInterface.h"
 #include "Event/Interface/LexPointerSelectDeselectInterface.h"
 #include "Core/LexUIManager.h"
-#include "Core/Components/LexWidget.h"
-#include "Event/LexBaseRaycaster.h"
 #include "Event/LexPointerEventData.h"
 #include "Event/InputModule/LexBaseInputModule.h"
 #include "Utils/LexUIUtils.h"
@@ -70,7 +68,7 @@ void ULexEventSystem::BeginPlay()
 		else
 		{
 			WorldToInstanceMap.Add(world, this);
-			existInInstanceMap = true;
+			bExistInInstanceMap = true;
 		}
 	}
 }
@@ -98,10 +96,10 @@ void ULexEventSystem::ProcessInputEvent()
 	}
 }
 
-void ULexEventSystem::SetRaycastEnable(bool enable, bool clearEvent)
+void ULexEventSystem::SetRaycastEnable(bool bEnable, bool bClearEvent)
 {
-	bRayEventEnable = enable;
-	if (bRayEventEnable == false && clearEvent)
+	bRayEventEnable = bEnable;
+	if (bRayEventEnable == false && bClearEvent)
 	{
 		ClearEvent();
 	}
@@ -114,7 +112,7 @@ void ULexEventSystem::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void ULexEventSystem::BeginDestroy()
 {
 	Super::BeginDestroy();
-	if (WorldToInstanceMap.Num() > 0 && existInInstanceMap)
+	if (WorldToInstanceMap.Num() > 0 && bExistInInstanceMap)
 	{
 		bool removed = false;
 		if (auto world = this->GetWorld())
@@ -142,7 +140,7 @@ void ULexEventSystem::BeginDestroy()
 		}
 		if (removed)
 		{
-			existInInstanceMap = false;
+			bExistInInstanceMap = false;
 		}
 		else
 		{
@@ -167,74 +165,34 @@ void ULexEventSystem::ClearEvent()
 	}
 }
 
-ULexPointerEventData* ULexEventSystem::GetPointerEventData(int pointerID, bool createIfNotExist)const
+ULexPointerEventData* ULexEventSystem::GetPointerEventData(int PointerID, bool bCreateIfNotExist)const
 {
-	if (auto foundPtr = PointerEventDataMap.Find(pointerID))
+	if (auto foundPtr = PointerEventDataMap.Find(PointerID))
 	{
 		return *foundPtr;
 	}
 	auto newEventData = NewObject<ULexPointerEventData>(const_cast<ULexEventSystem*>(this));
-	newEventData->pointerID = pointerID;
-	newEventData->inputType = defaultInputType;
-	PointerEventDataMap.Add(pointerID, newEventData);
+	newEventData->pointerID = PointerID;
+	newEventData->inputType = DefaultInputType;
+	PointerEventDataMap.Add(PointerID, newEventData);
 	return newEventData;
 }
-void ULexEventSystem::RemovePointerEventData(int pointerID)
+void ULexEventSystem::RemovePointerEventData(int PointerID)
 {
-	PointerEventDataMap.Remove(pointerID);
+	PointerEventDataMap.Remove(PointerID);
 }
 
-
-void ULexEventSystem::RegisterHitEvent(const FLGUIHitDelegate& InEvent)
+void ULexEventSystem::RaiseHitEvent(bool bHitOrNot, const FHitResult& HitResult, USceneComponent* HitComponent)
 {
-	hitEvent.Add(InEvent);
-}
-void ULexEventSystem::UnregisterHitEvent(const FLGUIHitDelegate& InEvent)
-{
-	hitEvent.Remove(InEvent.GetHandle());
-}
-void ULexEventSystem::RegisterGlobalListener(const FLGUIBaseEventDelegate& InEvent)
-{
-	globalListenerPointerEvent.Add(InEvent);
-}
-void ULexEventSystem::UnregisterGlobalListener(const FLGUIBaseEventDelegate& InEvent)
-{
-	globalListenerPointerEvent.Remove(InEvent.GetHandle());
-}
-
-
-FLGUIDelegateHandleWrapper ULexEventSystem::RegisterHitEvent(const FLGUIHitDynamicDelegate& InDelegate)
-{
-	auto delegateHandle = hitEvent.AddLambda([InDelegate](bool isHit, const FHitResult& hitResult, USceneComponent* hitComp) {
-		InDelegate.ExecuteIfBound(isHit, hitResult, hitComp);
-	});
-	return FLGUIDelegateHandleWrapper(delegateHandle);
-}
-void ULexEventSystem::UnregisterHitEvent(const FLGUIDelegateHandleWrapper& InHandle)
-{
-	hitEvent.Remove(InHandle.DelegateHandle);
-}
-FLGUIDelegateHandleWrapper ULexEventSystem::RegisterGlobalListener(const FLGUIBaseEventDynamicDelegate& InDelegate)
-{
-	auto delegateHandle = globalListenerPointerEvent.AddLambda([InDelegate](ULexBaseEventData* eventData) {
-		InDelegate.ExecuteIfBound(eventData);
-	});
-	return FLGUIDelegateHandleWrapper(delegateHandle);
-}
-void ULexEventSystem::UnregisterGlobalListener(const FLGUIDelegateHandleWrapper& InHandle)
-{
-	globalListenerPointerEvent.Remove(InHandle.DelegateHandle);
-}
-void ULexEventSystem::RaiseHitEvent(bool hitOrNot, const FHitResult& hitResult, USceneComponent* hitComponent)
-{
-	if (hitEvent.IsBound() && bRayEventEnable)
+	if (bRayEventEnable)
 	{
-		hitEvent.Broadcast(hitOrNot, hitResult, hitComponent);
+		RaycastHitEvent.Broadcast(bHitOrNot, HitResult, HitComponent);
+		RaycastHitEventBP.Broadcast(bHitOrNot, HitResult, HitComponent);
 	}
 }
-bool ULexEventSystem::IsPointerOverUIByPointerID(int pointerID)
+bool ULexEventSystem::IsPointerOverUIByPointerID(int PointerID)
 {
-	if (auto foundPtr = PointerEventDataMap.Find(pointerID))
+	if (auto foundPtr = PointerEventDataMap.Find(PointerID))
 	{
 		return (*foundPtr)->IsPointerOverUI();
 	}
@@ -270,7 +228,7 @@ bool ULexEventSystem::SetPointerInputType(class ULexPointerEventData* InPointerE
 	if (InPointerEventData->inputType != InInputType)
 	{
 		InPointerEventData->inputType = InInputType;
-		inputChangeDelegate.Broadcast(InPointerEventData->pointerID, InPointerEventData->inputType);
+		PointerInputTypedChangedEvent.Broadcast(InPointerEventData->pointerID, InPointerEventData->inputType);
 		return true;
 	}
 	return false;
@@ -283,26 +241,6 @@ void ULexEventSystem::ActivateNavigationInput(int InPointerID, USceneComponent* 
 		eventData->SetHighlightedComponentForNavigation(InDefaultHighlightedComponent);
 	}
 }
-void ULexEventSystem::RegisterInputChangeEvent(const FLGUIPointerInputChange_Delegate& pointerInputChange)
-{
-	inputChangeDelegate.Add(pointerInputChange);
-}
-void ULexEventSystem::UnregisterInputChangeEvent(const FDelegateHandle& delegateHandle)
-{
-	inputChangeDelegate.Remove(delegateHandle);
-}
-FLGUIDelegateHandleWrapper ULexEventSystem::RegisterInputChangeEvent(const FLGUIPointerInputChange_DynamicDelegate& pointerInputChange)
-{
-	auto delegateHandle = inputChangeDelegate.AddLambda([pointerInputChange](int pointerID, ELexUIPointerInputType pointerInputType) {
-		if (pointerInputChange.IsBound())pointerInputChange.Execute(pointerID, pointerInputType);
-		});
-	return FLGUIDelegateHandleWrapper(delegateHandle);
-}
-void ULexEventSystem::UnregisterInputChangeEvent(FLGUIDelegateHandleWrapper delegateHandle)
-{
-	inputChangeDelegate.Remove(delegateHandle.DelegateHandle);
-}
-
 
 void ULexEventSystem::SetSelectComponent(USceneComponent* InSelectComp, ULexBaseEventData* eventData, ELexUIEventFireType eventFireType)
 {
@@ -582,112 +520,87 @@ void ULexEventSystem::CallOnPointerEnter(USceneComponent* component, ULexPointer
 {
 	LogEventData(inEventData);
 	ExecuteEvent_OnPointerEnter(component, inEventData, eventFireType, false);
-	if (globalListenerPointerEvent.IsBound())
-	{
-		globalListenerPointerEvent.Broadcast(inEventData);
-	}
+	InputEvent.Broadcast(inEventData);
+	InputEventBP.Broadcast(inEventData);
 }
 void ULexEventSystem::CallOnPointerExit(USceneComponent* component, ULexPointerEventData* inEventData, ELexUIEventFireType eventFireType)
 {
 	LogEventData(inEventData);
 	ExecuteEvent_OnPointerExit(component, inEventData, eventFireType, false);
-	if (globalListenerPointerEvent.IsBound())
-	{
-		globalListenerPointerEvent.Broadcast(inEventData);
-	}
+	InputEvent.Broadcast(inEventData);
+	InputEventBP.Broadcast(inEventData);
 }
 void ULexEventSystem::CallOnPointerDown(USceneComponent* component, ULexPointerEventData* inEventData, ELexUIEventFireType eventFireType)
 {
 	LogEventData(inEventData);
 	ExecuteEvent_OnPointerDown(component, inEventData, eventFireType, true);
-	if (globalListenerPointerEvent.IsBound())
-	{
-		globalListenerPointerEvent.Broadcast(inEventData);
-	}
+	InputEvent.Broadcast(inEventData);
+	InputEventBP.Broadcast(inEventData);
 }
 void ULexEventSystem::CallOnPointerUp(USceneComponent* component, ULexPointerEventData* inEventData, ELexUIEventFireType eventFireType)
 {
 	LogEventData(inEventData);
 	ExecuteEvent_OnPointerUp(component, inEventData, eventFireType, true);
-	if (globalListenerPointerEvent.IsBound())
-	{
-		globalListenerPointerEvent.Broadcast(inEventData);
-	}
+	InputEvent.Broadcast(inEventData);
+	InputEventBP.Broadcast(inEventData);
 }
 void ULexEventSystem::CallOnPointerClick(USceneComponent* component, ULexPointerEventData* inEventData, ELexUIEventFireType eventFireType)
 {
 	LogEventData(inEventData);
 	ExecuteEvent_OnPointerClick(component, inEventData, eventFireType, true);
-	if (globalListenerPointerEvent.IsBound())
-	{
-		globalListenerPointerEvent.Broadcast(inEventData);
-	}
+	InputEvent.Broadcast(inEventData);
+	InputEventBP.Broadcast(inEventData);
 }
 void ULexEventSystem::CallOnPointerBeginDrag(USceneComponent* component, ULexPointerEventData* inEventData, ELexUIEventFireType eventFireType)
 {
 	LogEventData(inEventData);
 	ExecuteEvent_OnPointerBeginDrag(component, inEventData, eventFireType, true);
-	if (globalListenerPointerEvent.IsBound())
-	{
-		globalListenerPointerEvent.Broadcast(inEventData);
-	}
+	InputEvent.Broadcast(inEventData);
+	InputEventBP.Broadcast(inEventData);
 }
 void ULexEventSystem::CallOnPointerDrag(USceneComponent* component, ULexPointerEventData* inEventData, ELexUIEventFireType eventFireType)
 {
 	LogEventData(inEventData);
 	ExecuteEvent_OnPointerDrag(component, inEventData, eventFireType, true);
-	if (globalListenerPointerEvent.IsBound())
-	{
-		globalListenerPointerEvent.Broadcast(inEventData);
-	}
+	InputEventBP.Broadcast(inEventData);
 }
 void ULexEventSystem::CallOnPointerEndDrag(USceneComponent* component, ULexPointerEventData* inEventData, ELexUIEventFireType eventFireType)
 {
 	LogEventData(inEventData);
 	ExecuteEvent_OnPointerEndDrag(component, inEventData, eventFireType, true);
-	if (globalListenerPointerEvent.IsBound())
-	{
-		globalListenerPointerEvent.Broadcast(inEventData);
-	}
+	InputEvent.Broadcast(inEventData);
+	InputEventBP.Broadcast(inEventData);
 }
 
 void ULexEventSystem::CallOnPointerScroll(USceneComponent* component, ULexPointerEventData* inEventData, ELexUIEventFireType eventFireType)
 {
 	LogEventData(inEventData);
 	ExecuteEvent_OnPointerScroll(component, inEventData, eventFireType, true);
-	if (globalListenerPointerEvent.IsBound())
-	{
-		globalListenerPointerEvent.Broadcast(inEventData);
-	}
+	InputEvent.Broadcast(inEventData);
+	InputEventBP.Broadcast(inEventData);
 }
 
 void ULexEventSystem::CallOnPointerDragDrop(USceneComponent* component, ULexPointerEventData* inEventData, ELexUIEventFireType eventFireType)
 {
 	LogEventData(inEventData);
 	ExecuteEvent_OnPointerDragDrop(component, inEventData, eventFireType, true);
-	if (globalListenerPointerEvent.IsBound())
-	{
-		globalListenerPointerEvent.Broadcast(inEventData);
-	}
+	InputEvent.Broadcast(inEventData);
+	InputEventBP.Broadcast(inEventData);
 }
 
 void ULexEventSystem::CallOnPointerSelect(USceneComponent* component, ULexBaseEventData* inEventData, ELexUIEventFireType eventFireType)
 {
 	LogEventData(inEventData);
 	ExecuteEvent_OnPointerSelect(component, inEventData, eventFireType, false);
-	if (globalListenerPointerEvent.IsBound())
-	{
-		globalListenerPointerEvent.Broadcast(inEventData);
-	}
+	InputEvent.Broadcast(inEventData);
+	InputEventBP.Broadcast(inEventData);
 }
 void ULexEventSystem::CallOnPointerDeselect(USceneComponent* component, ULexBaseEventData* inEventData, ELexUIEventFireType eventFireType)
 {
 	LogEventData(inEventData);
 	ExecuteEvent_OnPointerDeselect(component, inEventData, eventFireType, false);
-	if (globalListenerPointerEvent.IsBound())
-	{
-		globalListenerPointerEvent.Broadcast(inEventData);
-	}
+	InputEvent.Broadcast(inEventData);
+	InputEventBP.Broadcast(inEventData);
 }
 #pragma endregion
 

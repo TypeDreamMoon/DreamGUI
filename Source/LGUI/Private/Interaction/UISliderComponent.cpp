@@ -136,31 +136,6 @@ void UUISliderComponent::SetNavigationChangeInterval(float InValue)
     NavigationChangeInterval = InValue;
 }
 
-FDelegateHandle UUISliderComponent::RegisterSlideEvent(const FLGUIFloatDelegate &InDelegate)
-{
-    return OnValueChangedCPP.Add(InDelegate);
-}
-FDelegateHandle UUISliderComponent::RegisterSlideEvent(const TFunction<void(float)> &InFunction)
-{
-    return OnValueChangedCPP.AddLambda(InFunction);
-}
-void UUISliderComponent::UnregisterSlideEvent(const FDelegateHandle &InHandle)
-{
-    OnValueChangedCPP.Remove(InHandle);
-}
-
-FLGUIDelegateHandleWrapper UUISliderComponent::RegisterSlideEvent(const FUISliderValueChangedDelegate &InDelegate)
-{
-    auto delegateHandle = OnValueChangedCPP.AddLambda([InDelegate](float InValue) {
-        InDelegate.ExecuteIfBound(InValue);
-    });
-    return FLGUIDelegateHandleWrapper(delegateHandle);
-}
-void UUISliderComponent::UnregisterSlideEvent(const FLGUIDelegateHandleWrapper &InDelegateHandle)
-{
-    OnValueChangedCPP.Remove(InDelegateHandle.DelegateHandle);
-}
-
 bool UUISliderComponent::OnPointerDown_Implementation(ULexPointerEventData *eventData)
 {
     Super::OnPointerDown_Implementation(eventData);
@@ -194,12 +169,18 @@ bool UUISliderComponent::OnNavigate_Implementation(ELexUINavigationDirection dir
 {
     float valueIntervalMultiply = 0.0f;
     if (
-        (DirectionType == UISliderDirectionType::LeftToRight && direction == ELexUINavigationDirection::Left) || (DirectionType == UISliderDirectionType::RightToLeft && direction == ELexUINavigationDirection::Right) || (DirectionType == UISliderDirectionType::BottomToTop && direction == ELexUINavigationDirection::Down) || (DirectionType == UISliderDirectionType::TopToBottom && direction == ELexUINavigationDirection::Up))
+        (DirectionType == EUISliderDirectionType::LeftToRight && direction == ELexUINavigationDirection::Left)
+        || (DirectionType == EUISliderDirectionType::RightToLeft && direction == ELexUINavigationDirection::Right)
+        || (DirectionType == EUISliderDirectionType::BottomToTop && direction == ELexUINavigationDirection::Down)
+        || (DirectionType == EUISliderDirectionType::TopToBottom && direction == ELexUINavigationDirection::Up))
     {
         valueIntervalMultiply = -NavigationChangeInterval;
     }
     else if (
-        (DirectionType == UISliderDirectionType::LeftToRight && direction == ELexUINavigationDirection::Right) || (DirectionType == UISliderDirectionType::RightToLeft && direction == ELexUINavigationDirection::Left) || (DirectionType == UISliderDirectionType::BottomToTop && direction == ELexUINavigationDirection::Up) || (DirectionType == UISliderDirectionType::TopToBottom && direction == ELexUINavigationDirection::Down))
+        (DirectionType == EUISliderDirectionType::LeftToRight && direction == ELexUINavigationDirection::Right)
+        || (DirectionType == EUISliderDirectionType::RightToLeft && direction == ELexUINavigationDirection::Left)
+        || (DirectionType == EUISliderDirectionType::BottomToTop && direction == ELexUINavigationDirection::Up)
+        || (DirectionType == EUISliderDirectionType::TopToBottom && direction == ELexUINavigationDirection::Down))
     {
         valueIntervalMultiply = NavigationChangeInterval;
     }
@@ -242,25 +223,25 @@ void UUISliderComponent::CalculateInputValue(ULexPointerEventData *eventData)
         float value01 = 0;
         switch (DirectionType)
         {
-        case UISliderDirectionType::LeftToRight:
+        case EUISliderDirectionType::LeftToRight:
         {
             MinPosition = -areaUIItem->GetPivot().X * areaUIItem->GetWidth();
             value01 = (localPointerPosition.Y - MinPosition) / areaUIItem->GetWidth();
         }
         break;
-        case UISliderDirectionType::RightToLeft:
+        case EUISliderDirectionType::RightToLeft:
         {
             MinPosition = -areaUIItem->GetPivot().X * areaUIItem->GetWidth();
             value01 = 1.0f - (localPointerPosition.Y - MinPosition) / areaUIItem->GetWidth();
         }
         break;
-        case UISliderDirectionType::BottomToTop:
+        case EUISliderDirectionType::BottomToTop:
         {
             MinPosition = -areaUIItem->GetPivot().Y * areaUIItem->GetHeight();
             value01 = (localPointerPosition.Z - MinPosition) / areaUIItem->GetHeight();
         }
         break;
-        case UISliderDirectionType::TopToBottom:
+        case EUISliderDirectionType::TopToBottom:
         {
             MinPosition = -areaUIItem->GetPivot().Y * areaUIItem->GetHeight();
             value01 = 1.0f - (localPointerPosition.Z - MinPosition) / areaUIItem->GetHeight();
@@ -285,7 +266,7 @@ void UUISliderComponent::ApplyValueToUI()
     {
         switch (DirectionType)
         {
-        case UISliderDirectionType::LeftToRight:
+        case EUISliderDirectionType::LeftToRight:
         {
             if (CheckHandle())
             {
@@ -297,7 +278,7 @@ void UUISliderComponent::ApplyValueToUI()
             }
         }
         break;
-        case UISliderDirectionType::RightToLeft:
+        case EUISliderDirectionType::RightToLeft:
         {
             if (CheckHandle())
             {
@@ -310,7 +291,7 @@ void UUISliderComponent::ApplyValueToUI()
             }
         }
         break;
-        case UISliderDirectionType::BottomToTop:
+        case EUISliderDirectionType::BottomToTop:
         {
             if (CheckHandle())
             {
@@ -322,7 +303,7 @@ void UUISliderComponent::ApplyValueToUI()
             }
         }
         break;
-        case UISliderDirectionType::TopToBottom:
+        case EUISliderDirectionType::TopToBottom:
         {
             if (CheckHandle())
             {

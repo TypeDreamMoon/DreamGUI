@@ -189,12 +189,15 @@ public:
 	static bool RaycastHitUI(UWorld* InWorld, const TArray<ULexWidget*>& InWidgets, const FVector& LineStart, const FVector& LineEnd
 		, ULexWidget*& ResultSelectTarget, int& InOutTargetIndexInHitArray
 	);
-	static void DrawFrameOnWidget(ULexWidget* InItem, bool IsScreenSpace = false);
-	static void DrawNavigationArrow(UWorld* InWorld, const TArray<FVector>& InControlPoints, const FVector& InArrowPointA, const FVector& InArrowPointB, FColor const& InColor, bool IsScreenSpace = false);
-	static void DrawNavigationVisualizerOnUISelectable(UWorld* InWorld, UUISelectableComponent* InSelectable, bool IsScreenSpace = false);
+	void DrawFrameOnWidget(ULexWidget* InItem, bool ScreenOrWorld = false);
+	void DrawNavigationArrow(UWorld* InWorld, const TArray<FVector>& InControlPoints, const FVector& InArrowPointA, const FVector& InArrowPointB, FColor const& InColor, void* Object, const FString& DebugName, bool ScreenOrWorld = false);
+	void DrawNavigationVisualizerOnUISelectable(UWorld* InWorld, UUISelectableComponent* InSelectable, bool IsScreenSpace = false);
+	FEditorViewportClient* GetEditorViewportClient();
 private:
-	static void DrawDebugBoxOnScreenSpace(UWorld* InWorld, FVector const& Center, FVector const& Box, const FQuat& Rotation, FColor const& Color);
-	static void DrawDebugRectOnScreenSpace(UWorld* InWorld, FVector const& Center, FVector const& Box, const FQuat& Rotation, FColor const& Color);
+	//this is cached when call GetEditorViewportClient
+	FEditorViewportClient* CacheViewportClient = nullptr;
+	void OnEndOfFrame();
+	static void DrawDebugRect(UWorld* InWorld, const FVector& Center, const FMatrix44f& LocalToWorld, FVector const& Box, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
 #endif
 private:
 	/** Map prefab-deserialize-section-id to LexUIBehaviour array */

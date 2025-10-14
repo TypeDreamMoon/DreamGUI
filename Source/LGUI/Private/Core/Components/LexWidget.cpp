@@ -496,20 +496,16 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		}
 		else if (MemberName == LayoutName)
 		{
-			if (!IsValid(Layout))
+			if (IsValid(Layout))
 			{
-				for (auto Child : GetUIChildren())
+				if (GetWorld()->IsGameWorld())
 				{
-					Child->GetLayoutSlot();//use this to refresh layout-slot
+					if (this->HasBegunPlay())
+					{
+						Layout->BeginPlay();
+					}
+					Layout->Call_OnRegister();
 				}
-			}
-			if (GetWorld()->IsGameWorld())
-			{
-				if (this->HasBegunPlay())
-				{
-					Layout->BeginPlay();
-				}
-				Layout->Call_OnRegister();
 			}
 			MarkAnchorDataChanged(true, true, true);
 			MarkLayoutDirty();
@@ -1151,7 +1147,7 @@ void ULexWidget::SetAnchorData(const FLexUIAnchorData& Value)
 	AnchorData.AnchoredPosition = Value.AnchoredPosition;
 	AnchorData.SizeDelta = Value.SizeDelta;
 
-	MarkAnchorDataChanged(true, true, true);
+	MarkAnchorDataChanged(true, true, true, false);
 	MarkLayoutDirty();
 }
 
@@ -1160,7 +1156,7 @@ void ULexWidget::SetPivot(FVector2D Value)
 	if (!AnchorData.Pivot.Equals(Value, 0.0f))
 	{
 		AnchorData.Pivot = Value;
-		MarkAnchorDataChanged(true, false, false);
+		MarkAnchorDataChanged(true, false, false, false);
 		MarkLayoutDirty();
 	}
 }
@@ -1200,7 +1196,7 @@ void ULexWidget::SetAnchorMin(FVector2D Value)
 				this->AnchorData.AnchoredPosition.Y = FMath::Lerp(CurrentBottom, -CurrentTop, this->AnchorData.Pivot.Y);
 			}
 
-			MarkAnchorDataChanged(false, true, true);
+			MarkAnchorDataChanged(false, true, true, false);
 			MarkLayoutDirty();
 		}
 	}
@@ -1246,7 +1242,7 @@ void ULexWidget::SetAnchorMax(FVector2D Value)
 				this->AnchorData.AnchoredPosition.Y = FMath::Lerp(CurrentBottom, -CurrentTop, this->AnchorData.Pivot.Y);
 			}
 
-			MarkAnchorDataChanged(false, true, true);
+			MarkAnchorDataChanged(false, true, true, false);
 			MarkLayoutDirty();
 		}
 	}
@@ -1326,7 +1322,7 @@ void ULexWidget::SetHorizontalAnchorMinMax(FVector2D Value, bool bKeepSize, bool
 				this->SetRelativeLocation(PrevRelativeLocation);
 			}
 
-			MarkAnchorDataChanged(false, !bKeepSize, !bKeepSize);
+			MarkAnchorDataChanged(false, !bKeepSize, !bKeepSize, false);
 			MarkLayoutDirty();
 		}
 	}
@@ -1374,7 +1370,7 @@ void ULexWidget::SetVerticalAnchorMinMax(FVector2D Value, bool bKeepSize, bool b
 				this->SetRelativeLocation(PrevRelativeLocation);
 			}
 
-			MarkAnchorDataChanged(false, !bKeepSize, !bKeepSize);
+			MarkAnchorDataChanged(false, !bKeepSize, !bKeepSize, false);
 			MarkLayoutDirty();
 		}
 	}
@@ -1392,7 +1388,7 @@ void ULexWidget::SetAnchoredPosition(FVector2D Value)
 	if (!AnchorData.AnchoredPosition.Equals(Value, 0.0f))
 	{
 		AnchorData.AnchoredPosition = Value;
-		MarkAnchorDataChanged(false, false, false);
+		MarkAnchorDataChanged(false, false, false, false);
 		MarkLayoutDirty();
 	}
 }
@@ -1402,7 +1398,7 @@ void ULexWidget::SetHorizontalAnchoredPosition(float Value)
 	if (AnchorData.AnchoredPosition.X != Value)
 	{
 		AnchorData.AnchoredPosition.X = Value;
-		MarkAnchorDataChanged(false, false, false);
+		MarkAnchorDataChanged(false, false, false, false);
 		MarkLayoutDirty();
 	}
 }
@@ -1411,7 +1407,7 @@ void ULexWidget::SetVerticalAnchoredPosition(float Value)
 	if (AnchorData.AnchoredPosition.Y != Value)
 	{
 		AnchorData.AnchoredPosition.Y = Value;
-		MarkAnchorDataChanged(false, false, false);
+		MarkAnchorDataChanged(false, false, false, false);
 		MarkLayoutDirty();
 	}
 }
@@ -1423,7 +1419,7 @@ void ULexWidget::SetSizeDelta(FVector2D Value)
 		AnchorData.SizeDelta = Value;
 		bCacheWidthDirty = true;
 		bCacheHeightDirty = true;
-		MarkAnchorDataChanged(false, true, true);
+		MarkAnchorDataChanged(false, true, true, false);
 		MarkLayoutDirty();
 	}
 }
@@ -1544,7 +1540,7 @@ void ULexWidget::SetAnchorLeft(float Value)
 				}
 			}
 			this->AnchorData.AnchoredPosition.X = FMath::Lerp(Value, -CurrentRight, this->AnchorData.Pivot.X);
-			MarkAnchorDataChanged(false, true, false);
+			MarkAnchorDataChanged(false, true, false, false);
 			MarkLayoutDirty();
 		}
 	}
@@ -1576,7 +1572,7 @@ void ULexWidget::SetAnchorTop(float Value)
 				}
 			}
 			this->AnchorData.AnchoredPosition.Y = FMath::Lerp(CurrentBottom, -Value, this->AnchorData.Pivot.Y);
-			MarkAnchorDataChanged(false, false, true);
+			MarkAnchorDataChanged(false, false, true, false);
 			MarkLayoutDirty();
 		}
 	}
@@ -1608,7 +1604,7 @@ void ULexWidget::SetAnchorRight(float Value)
 				}
 			}
 			this->AnchorData.AnchoredPosition.X = FMath::Lerp(CurrentLeft, -Value, this->AnchorData.Pivot.X);
-			MarkAnchorDataChanged(false, true, false);
+			MarkAnchorDataChanged(false, true, false, false);
 			MarkLayoutDirty();
 		}
 	}
@@ -1640,7 +1636,7 @@ void ULexWidget::SetAnchorBottom(float Value)
 				}
 			}
 			this->AnchorData.AnchoredPosition.Y = FMath::Lerp(Value, -CurrentTop, this->AnchorData.Pivot.Y);
-			MarkAnchorDataChanged(false, false, true);
+			MarkAnchorDataChanged(false, false, true, false);
 			MarkLayoutDirty();
 		}
 	}
@@ -1664,7 +1660,7 @@ void ULexWidget::SetWidth(float Value)
 				if (AnchorData.SizeDelta.X != CalculatedSizeDeltaX)
 				{
 					AnchorData.SizeDelta.X = CalculatedSizeDeltaX;
-					MarkAnchorDataChanged(false, true, false);
+					MarkAnchorDataChanged(false, true, false, false);
 					MarkLayoutDirty();
 				}
 			}
@@ -1673,7 +1669,7 @@ void ULexWidget::SetWidth(float Value)
 				if (AnchorData.SizeDelta.X != Value)
 				{
 					AnchorData.SizeDelta.X = Value;
-					MarkAnchorDataChanged(false, true, false);
+					MarkAnchorDataChanged(false, true, false, false);
 					MarkLayoutDirty();
 				}
 			}
@@ -1683,7 +1679,7 @@ void ULexWidget::SetWidth(float Value)
 			if (AnchorData.SizeDelta.X != Value)
 			{
 				AnchorData.SizeDelta.X = Value;
-				MarkAnchorDataChanged(false, true, false);
+				MarkAnchorDataChanged(false, true, false, false);
 				MarkLayoutDirty();
 			}
 		}
@@ -1704,7 +1700,7 @@ void ULexWidget::SetHeight(float Value)
 				if (AnchorData.SizeDelta.Y != CalculatedSizeDeltaY)
 				{
 					AnchorData.SizeDelta.Y = CalculatedSizeDeltaY;
-					MarkAnchorDataChanged(false, false, true);
+					MarkAnchorDataChanged(false, false, true, false);
 					MarkLayoutDirty();
 				}
 			}
@@ -1713,7 +1709,7 @@ void ULexWidget::SetHeight(float Value)
 				if (AnchorData.SizeDelta.Y != Value)
 				{
 					AnchorData.SizeDelta.Y = Value;
-					MarkAnchorDataChanged(false, false, true);
+					MarkAnchorDataChanged(false, false, true, false);
 					MarkLayoutDirty();
 				}
 			}
@@ -1723,7 +1719,7 @@ void ULexWidget::SetHeight(float Value)
 			if (AnchorData.SizeDelta.Y != Value)
 			{
 				AnchorData.SizeDelta.Y = Value;
-				MarkAnchorDataChanged(false, false, true);
+				MarkAnchorDataChanged(false, false, true, false);
 				MarkLayoutDirty();
 			}
 		}
@@ -1942,6 +1938,13 @@ void ULexWidget::UIHierarchyAttachmentChanged(ULexCanvas* ParentRenderCanvas, UL
 
 	//if (this->IsRegistered())//not register means could be load from level
 	{
+		bCacheWidthDirty = true;
+		bCacheHeightDirty = true;
+		bCacheAnchorLeftDirty = true;
+		bCacheAnchorRightDirty = true;
+		bCacheAnchorBottomDirty = true;
+		bCacheAnchorTopDirty = true;
+		
 		MarkAnchorDataChanged(false, true, true);
 		MarkLayoutDirty();
 	}
@@ -2230,23 +2233,25 @@ void ULexWidget::MarkTransformChanged(bool InPositionChanged, bool InScaleChange
 	}
 }
 
-void ULexWidget::MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged)
+void ULexWidget::MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged, bool InDiscardCache)
 {
 	CalculateTransformFromAnchor();
-	
-	if (InWidthChanged)
+
+	if (InDiscardCache)
 	{
-		bCacheWidthDirty = true;
+		if (InWidthChanged)
+		{
+			bCacheWidthDirty = true;
+		}
+		if (InHeightChanged)
+		{
+			bCacheHeightDirty = true;
+		}
+		bCacheAnchorLeftDirty = true;
+		bCacheAnchorRightDirty = true;
+		bCacheAnchorBottomDirty = true;
+		bCacheAnchorTopDirty = true;
 	}
-	if (InHeightChanged)
-	{
-		bCacheHeightDirty = true;
-	}
-	bCacheAnchorLeftDirty = true;
-	bCacheAnchorRightDirty = true;
-	bCacheAnchorBottomDirty = true;
-	bCacheAnchorTopDirty = true;
-			
 	MarkDimensionChanged(InPivotChanged, InWidthChanged, InHeightChanged);
 	if (IsValid(Layout))
 	{

@@ -47,6 +47,7 @@ public class LGUIEditor : ModuleRules
                 "Kismet",
                 "ToolMenus",//PrefabEditor
                 "SubobjectEditor",//PrefabEditor, Actor component panel
+                "UMG",//UMGStyle
                 "Sequencer",
 				"MovieScene",
 				"MovieSceneTracks",

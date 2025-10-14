@@ -7,6 +7,7 @@
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
+#include "Interaction/UIScrollbarComponent.h"
 
 #define LOCTEXT_NAMESPACE "UIScrollViewWithScrollBarComponentDetails"
 FUIScrollViewWithScrollBarCustomization::FUIScrollViewWithScrollBarCustomization()
@@ -37,13 +38,8 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 	TArray<FName> needToHidePropertyName;
 	auto ViewportHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, Viewport));
 	ViewportHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
-	UObject* ViewportObject = nullptr;
-	ViewportHandle->GetValue(ViewportObject);
-	ALexWidgetActor* Viewport = nullptr;
-	if (IsValid(ViewportObject))
-	{
-		Viewport = Cast<ALexWidgetActor>(ViewportObject);
-	}
+	ULexWidget* Viewport = nullptr;
+	ViewportHandle->GetValue(*(UObject**)&Viewport);
 
 	auto HorizontalScrollbarVisibilityHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, HorizontalScrollbarVisibility));
 	auto VerticalScrollbarVisibilityHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, VerticalScrollbarVisibility));
@@ -53,38 +49,28 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 	uint8 VerticalScrollbarVisibilityByte;
 	HorizontalScrollbarVisibilityHandle->GetValue(HorizontalScrollbarVisibilityByte);
 	VerticalScrollbarVisibilityHandle->GetValue(VerticalScrollbarVisibilityByte);
-	EScrollViewScrollbarVisibility HorizontalScrollbarVisibility = (EScrollViewScrollbarVisibility)HorizontalScrollbarVisibilityByte;
-	EScrollViewScrollbarVisibility VerticalScrollbarVisibility = (EScrollViewScrollbarVisibility)VerticalScrollbarVisibilityByte;
+	ELexUIScrollViewScrollbarVisibility HorizontalScrollbarVisibility = (ELexUIScrollViewScrollbarVisibility)HorizontalScrollbarVisibilityByte;
+	ELexUIScrollViewScrollbarVisibility VerticalScrollbarVisibility = (ELexUIScrollViewScrollbarVisibility)VerticalScrollbarVisibilityByte;
 
 	auto HorizontalScrollbarHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, HorizontalScrollbar));
 	HorizontalScrollbarHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
-	UObject* HorizontalScrollbarObject = nullptr;
-	HorizontalScrollbarHandle->GetValue(HorizontalScrollbarObject);
-	ALexWidgetActor* HorizontalScrollbar = nullptr;
-	if (IsValid(HorizontalScrollbarObject))
-	{
-		HorizontalScrollbar = Cast<ALexWidgetActor>(HorizontalScrollbarObject);
-	}
+	UUIScrollbarComponent* HorizontalScrollbar = nullptr;
+	HorizontalScrollbarHandle->GetValue(*(UObject**)&HorizontalScrollbar);
 
 	auto VerticalScrollbarHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, VerticalScrollbar));
 	VerticalScrollbarHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
-	UObject* VerticalScrollbarObject = nullptr;
-	VerticalScrollbarHandle->GetValue(VerticalScrollbarObject);
-	ALexWidgetActor* VerticalScrollbar = nullptr;
-	if (IsValid(VerticalScrollbarObject))
-	{
-		VerticalScrollbar = Cast<ALexWidgetActor>(VerticalScrollbarObject);
-	}
+	UUIScrollbarComponent* VerticalScrollbar = nullptr;
+	VerticalScrollbarHandle->GetValue(*(UObject**)&VerticalScrollbar);
 
-	category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, HorizontalScrollbar));
+	category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, HorizontalScrollbarWidget));
 	IDetailPropertyRow& HorizontalScrollbarVisibilityProperty = category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, HorizontalScrollbarVisibility));
 	HorizontalScrollbarVisibilityProperty.IsEnabled(IsValid(HorizontalScrollbar));
-	if (HorizontalScrollbarVisibility == EScrollViewScrollbarVisibility::AutoHideAndExpandViewport)
+	if (HorizontalScrollbarVisibility == ELexUIScrollViewScrollbarVisibility::AutoHideAndExpandViewport)
 	{
 		bool showWarning = false;
 		if (IsValid(Viewport))
 		{
-			if (Viewport->GetLexWidget()->GetAttachParent() != TargetScriptPtr->GetLexWidget())
+			if (Viewport->GetAttachParent() != TargetScriptPtr->GetLexWidget())
 			{
 				showWarning = true;
 			}
@@ -110,15 +96,15 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 		}
 	}
 
-	category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, VerticalScrollbar));
+	category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, VerticalScrollbarWidget));
 	IDetailPropertyRow& VerticalScrollbarVisibilityProperty = category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, VerticalScrollbarVisibility));
 	VerticalScrollbarVisibilityProperty.IsEnabled(IsValid(VerticalScrollbar));
-	if (VerticalScrollbarVisibility == EScrollViewScrollbarVisibility::AutoHideAndExpandViewport)
+	if (VerticalScrollbarVisibility == ELexUIScrollViewScrollbarVisibility::AutoHideAndExpandViewport)
 	{
 		bool showWarning = false;
 		if (IsValid(Viewport))
 		{
-			if (Viewport->GetLexWidget()->GetAttachParent() != TargetScriptPtr->GetLexWidget())
+			if (Viewport->GetAttachParent() != TargetScriptPtr->GetLexWidget())
 			{
 				showWarning = true;
 			}

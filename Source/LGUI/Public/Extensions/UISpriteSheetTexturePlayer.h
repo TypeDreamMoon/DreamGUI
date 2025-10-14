@@ -1,14 +1,14 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #pragma once
-#include "LGUIImageSequencePlayer.h"
+#include "LexImageSequencePlayer.h"
 #include "UISpriteSheetTexturePlayer.generated.h"
 
 class ULexUISpriteData;
 
 /** Play spritesheet texture, need UITexture component. */
 UCLASS(ClassGroup = (LGUI), meta = (BlueprintSpawnableComponent))
-class LGUI_API UUISpriteSheetTexturePlayer : public ULGUIImageSequencePlayer
+class LGUI_API UUISpriteSheetTexturePlayer : public ULexImageSequencePlayer
 {
 	GENERATED_BODY()
 protected:
@@ -16,24 +16,24 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
 #endif
 	UPROPERTY(Transient)
-		TWeakObjectPtr<class ULexTexture> texture;
+		TWeakObjectPtr<class ULexTexture> Texture;
 	/** Sprite element count of horizontal direction in texture. */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		int widthCount = 8;
+		int WidthCount = 8;
 	/** Sprite element count of vertical direction in texture. */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		int heightCount = 8;
+		int HeightCount = 8;
 
-	float widthUVInterval, heightUVInterval;
+	float WidthUVInterval, HeightUVInterval;
 	virtual bool CanPlay()override;
 	virtual float GetDuration()const override;
 	virtual void PrepareForPlay()override;
-	virtual void OnUpdateAnimation(int frameNumber)override;
+	virtual void OnUpdateAnimation(int FrameNumber)override;
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		int GetWidthCount()const { return widthCount; }
+		int GetWidthCount()const { return WidthCount; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		int GetHeightCount()const { return heightCount; }
+		int GetHeightCount()const { return HeightCount; }
 	/** Will take effect on next cycle. */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetWidthCount(int value);

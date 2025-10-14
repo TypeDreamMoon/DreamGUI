@@ -263,6 +263,14 @@ void ULexVisualPostProcess::SetMaskTextureUVRect(const FVector4& Value)
 	}
 }
 
+void ULexVisualPostProcess::SetFullScreen(bool Value)
+{
+	if (bFullScreen != Value)
+	{
+		bFullScreen = Value;
+	}
+}
+
 void ULexVisualPostProcess::SendMaskTextureToRenderProxy()
 {
 	if (RenderProxy.IsValid())
@@ -277,6 +285,19 @@ void ULexVisualPostProcess::SendMaskTextureToRenderProxy()
 			([TempRenderProxy, MaskTextureResource](FRHICommandListImmediate& RHICmdList)
 				{
 					TempRenderProxy->MaskTexture = MaskTextureResource;
+				});
+	}
+}
+
+void ULexVisualPostProcess::SendFullScreenToRenderProxy()
+{
+	if (RenderProxy.IsValid())
+	{
+		auto TempRenderProxy = RenderProxy.Get();
+		ENQUEUE_RENDER_COMMAND(FLexPostProcess_UpdateMaskTexture)
+			([TempRenderProxy, bFullScreen = bFullScreen](FRHICommandListImmediate& RHICmdList)
+				{
+					TempRenderProxy->bFullScreen = bFullScreen;
 				});
 	}
 }

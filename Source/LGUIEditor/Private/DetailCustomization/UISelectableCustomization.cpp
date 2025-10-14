@@ -49,7 +49,7 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 	TransitionTarget_PH->GetValue(*(UObject**)&TransitionTarget_Visual);
 	auto TransitionTarget_Image = Cast<ULexImage>(TransitionTarget_Visual);
 
-	UUISelectableTransitionComponent* TargetTweenComp = nullptr;
+	UUISelectableTransition* TargetTweenComp = nullptr;
 	auto CustomTransition_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, CustomTransition));
 	CustomTransition_PH->GetValue(*(UObject**)&TargetTweenComp);
 
@@ -58,7 +58,7 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 	TArray<FName> NeedToHidePropertyNamesForTransition;
 	IDetailGroup& TransitionGroup = category.AddGroup(FName("Transition"), Transition_PH->GetPropertyDisplayName());
 	TransitionGroup.HeaderProperty(Transition_PH);
-	if (TransitionType == (uint8)(ELexUISelectableTransitionType::None))
+	if (TransitionType == (uint8)(EUISelectableTransitionType::None))
 	{
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, TransitionTarget));
 
@@ -75,7 +75,7 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, CustomTransition));
 	}
-	else if (TransitionType == (uint8)(ELexUISelectableTransitionType::Color))
+	else if (TransitionType == (uint8)(EUISelectableTransitionType::Color))
 	{
 		TransitionGroup.AddPropertyRow(TransitionTarget_PH);
 		if (!TransitionTarget_Visual)
@@ -104,7 +104,7 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledColor)));
 		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, AnimDuration)));
 	}
-	else if (TransitionType == (uint8)(ELexUISelectableTransitionType::ImageBrush))
+	else if (TransitionType == (uint8)(EUISelectableTransitionType::ImageBrush))
 	{
 		TransitionGroup.AddPropertyRow(TransitionTarget_PH);
 		if (!TransitionTarget_Image)
@@ -133,7 +133,7 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, PressedImageBrush)));
 		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, DisabledImageBrush)));
 	}
-	else if (TransitionType == (uint8)(ELexUISelectableTransitionType::Custom))
+	else if (TransitionType == (uint8)(EUISelectableTransitionType::Custom))
 	{
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, TransitionTarget));
 
@@ -161,7 +161,7 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 	auto navigationPrevHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationPrev));
 	auto navigationNextHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationNext));
 	
-	ELexUISelectableNavigationMode tempEnumValue;
+	EUISelectableNavigationMode tempEnumValue;
 	navigationLeftHandle->GetValue(*(uint8*)&tempEnumValue);
 	navigationLeftHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
 	auto navigationLeftValue = tempEnumValue;
@@ -176,39 +176,39 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 	auto navigationDownValue = tempEnumValue;
 
 	NavigationCategory.AddProperty(navigationLeftHandle);
-	if (navigationLeftValue == ELexUISelectableNavigationMode::Explicit)
+	if (navigationLeftValue == EUISelectableNavigationMode::Explicit)
 	{
 		LGUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationLeftSpecific)));
 	}
 	NavigationCategory.AddProperty(navigationRightHandle);
-	if (navigationRightValue == ELexUISelectableNavigationMode::Explicit)
+	if (navigationRightValue == EUISelectableNavigationMode::Explicit)
 	{
 		LGUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationRightSpecific)));
 	}
 	NavigationCategory.AddProperty(navigationUpHandle);
-	if (navigationUpValue == ELexUISelectableNavigationMode::Explicit)
+	if (navigationUpValue == EUISelectableNavigationMode::Explicit)
 	{
 		LGUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationUpSpecific)));
 	}
 	NavigationCategory.AddProperty(navigationDownHandle);
-	if (navigationDownValue == ELexUISelectableNavigationMode::Explicit)
+	if (navigationDownValue == EUISelectableNavigationMode::Explicit)
 	{
 		LGUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationDownSpecific)));
 	}
 
 	navigationNextHandle->GetValue(*(uint8*)&tempEnumValue);
 	navigationNextHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
-	auto navigationNextValue = (ELexUISelectableNavigationMode)tempEnumValue;
+	auto navigationNextValue = (EUISelectableNavigationMode)tempEnumValue;
 	navigationPrevHandle->GetValue(*(uint8*)&tempEnumValue);
 	navigationPrevHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUISelectableCustomization::ForceRefresh, &DetailBuilder));
-	auto navigationPrevValue = (ELexUISelectableNavigationMode)tempEnumValue;
+	auto navigationPrevValue = (EUISelectableNavigationMode)tempEnumValue;
 	NavigationCategory.AddProperty(navigationPrevHandle);
-	if (navigationPrevValue == ELexUISelectableNavigationMode::Explicit)
+	if (navigationPrevValue == EUISelectableNavigationMode::Explicit)
 	{
 		LGUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationPrevSpecific)));
 	}
 	NavigationCategory.AddProperty(navigationNextHandle);
-	if (navigationNextValue == ELexUISelectableNavigationMode::Explicit)
+	if (navigationNextValue == EUISelectableNavigationMode::Explicit)
 	{
 		LGUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationNextSpecific)));
 	}
@@ -236,27 +236,27 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		]
 	;
 	
-	if (navigationLeftValue != ELexUISelectableNavigationMode::Explicit)
+	if (navigationLeftValue != EUISelectableNavigationMode::Explicit)
 	{
 		NeedToHidePropertyNamesForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationLeftSpecific)));
 	}
-	if (navigationRightValue != ELexUISelectableNavigationMode::Explicit)
+	if (navigationRightValue != EUISelectableNavigationMode::Explicit)
 	{
 		NeedToHidePropertyNamesForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationRightSpecific)));
 	}
-	if (navigationUpValue != ELexUISelectableNavigationMode::Explicit)
+	if (navigationUpValue != EUISelectableNavigationMode::Explicit)
 	{
 		NeedToHidePropertyNamesForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationUpSpecific)));
 	}
-	if (navigationDownValue != ELexUISelectableNavigationMode::Explicit)
+	if (navigationDownValue != EUISelectableNavigationMode::Explicit)
 	{
 		NeedToHidePropertyNamesForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationDownSpecific)));
 	}
-	if (navigationNextValue != ELexUISelectableNavigationMode::Explicit)
+	if (navigationNextValue != EUISelectableNavigationMode::Explicit)
 	{
 		NeedToHidePropertyNamesForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationNextSpecific)));
 	}
-	if (navigationPrevValue != ELexUISelectableNavigationMode::Explicit)
+	if (navigationPrevValue != EUISelectableNavigationMode::Explicit)
 	{
 		NeedToHidePropertyNamesForTransition.Add((GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationPrevSpecific)));
 	}

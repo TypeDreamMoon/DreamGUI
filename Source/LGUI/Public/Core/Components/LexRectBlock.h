@@ -34,7 +34,7 @@ enum class ELexUIRectBlockUnitMode : uint8
 {
 	/** Direct value */
 	Value			UMETA(DisplayName="V"),
-	/** Percent with rect's size from 0 to 100 */
+	/** Percent with rect size from 0 to 100 */
 	Percentage		UMETA(DisplayName="%"),
 };
 UENUM(BlueprintType)
@@ -413,7 +413,7 @@ public:
 		void SetBodySpriteTexture(ULexUISpriteData_BaseObject* value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetBodyTextureMode(ELexUIRectBlockTextureMode value);
-	/** Set size from current body texutre or Sprite */
+	/** Set size from current body texture or Sprite */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetSizeFromBodyTexture();
 	UFUNCTION(BlueprintCallable, Category = "LGUI")

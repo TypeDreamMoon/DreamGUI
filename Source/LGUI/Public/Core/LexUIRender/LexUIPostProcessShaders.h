@@ -113,31 +113,6 @@ private:
 	LAYOUT_FIELD(FShaderResourceParameter, MainTextureSamplerParameter);
 	LAYOUT_FIELD(FShaderParameter, BlurStrengthParameter);
 };
-class FLexUIPostProcessGaussianBlurWithStrengthTexturePS :public FLexUIPostProcessGaussianBlurPS
-{
-	DECLARE_SHADER_TYPE(FLexUIPostProcessGaussianBlurWithStrengthTexturePS, Global);
-public:
-	FLexUIPostProcessGaussianBlurWithStrengthTexturePS() {}
-	FLexUIPostProcessGaussianBlurWithStrengthTexturePS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLexUIPostProcessGaussianBlurPS(Initializer)
-	{
-		StrengthTextureParameter.Bind(Initializer.ParameterMap, TEXT("_StrengthTex"));
-		StrengthTextureSamplerParameter.Bind(Initializer.ParameterMap, TEXT("_StrengthTexSampler"));
-	}
-	void SetStrengthTexture(FRHICommandListImmediate& RHICmdList, FTextureRHIRef StrengthTexture, FRHISamplerState* StrengthTextureSampler)
-	{
-		SetTextureParameter(RHICmdList, RHICmdList.GetBoundPixelShader(), StrengthTextureParameter, StrengthTextureSamplerParameter, StrengthTextureSampler, StrengthTexture);
-	}
-	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
-	{
-		OutEnvironment.SetDefine(TEXT("USE_STRENGTH_TEXTURE"), 1);
-		FLexUIPostProcessGaussianBlurPS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
-	}
-private:
-	LAYOUT_FIELD(FShaderResourceParameter, StrengthTextureParameter);
-	LAYOUT_FIELD(FShaderResourceParameter, StrengthTextureSamplerParameter);
-};
-
 
 
 

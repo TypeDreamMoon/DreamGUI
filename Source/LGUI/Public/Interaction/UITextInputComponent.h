@@ -10,30 +10,14 @@
 #include "Event/Interface/LexPointerDragInterface.h"
 #include "Widgets/Input/IVirtualKeyboardEntry.h"
 #include "GenericPlatform/ITextInputMethodSystem.h"
-#include "LGUIDelegateHandleWrapper.h"
 #include "Core/Components/LexText.h"
 #include "Widgets/Layout/SBox.h"
 #include "UITextInputComponent.generated.h"
 
 
 class ULexSprite;
-DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUITextInputDynamicDelegate, FString, InString);
-DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUIInputActivateDynamicDelegate, bool, InActivate);
-
-/**
- * Custom function to verify input string, return true if the input string is good to use, false otherwise.
- * @param	InString	The will display string value, for check if it is valid. If not, then display origin string value.
- * @param	InStartIndex	New insert char index in InString.
- * @return	Is "InString" valid?
- */
-DECLARE_DELEGATE_RetVal_TwoParams(bool, FLGUITextInputCustomInputTypeDelegate, const FString&, int)
-/**
- * Custom function to verify input string, return true if the input string is good to use, false otherwise.
- * @param	InString	The will display string value, for check if it is valid. If not, then display origin string value.
- * @param	InStartIndex	New insert char index in InString.
- * @return	Is "InString" valid?
- */
-DECLARE_DYNAMIC_DELEGATE_RetVal_TwoParams(bool, FLGUITextInputCustomInputTypeDynamicDelegate, const FString&, InString, int, InStartIndex);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUITextInputValueChangedEvent, FString, Value);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUITextInputActivateEvent, bool, Value);
 
 UCLASS(BlueprintType, Blueprintable, Abstract, DefaultToInstanced, EditInlineNew)
 class ULexTextInputCustomValidation : public UObject
@@ -64,7 +48,7 @@ protected:
 };
 
 UENUM(BlueprintType, Category = LGUI)
-enum class ELexUITextInputType:uint8
+enum class EUITextInputType:uint8
 {
 	/** No validation. Any input is valid. */
 	Standard = 0,
@@ -93,23 +77,18 @@ enum class ELexUITextInputType:uint8
 	 * NOTE!!! This type will be deprecate, use DisplayType.Password instead.
 	 */
 	Password = 3,
-	/**
-	 * Use *SetCustomInputTypeFunction* to check if input is valid.
-	 * NOTE!!! This type will be deprecate, use Custom instead.
-	 */
-	CustomFunction = 4,
 	/** Use a user implemented *CustomValidation* to do custom input check. */
 	Custom = 7,
 };
 UENUM(BlueprintType, Category = LGUI)
-enum class ELexUITextInputDisplayType :uint8
+enum class EUITextInputDisplayType :uint8
 {
 	Standard,
 	/** Display as password. */
 	Password,
 };
 UENUM(BlueprintType, Category = LGUI)
-enum class ELexUITextInputOverflowType :uint8
+enum class EUITextInputOverflowType :uint8
 {
 	ClampContent,
 	/**
@@ -138,19 +117,19 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
 		FString Text;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
-		ELexUITextInputType InputType;
+		EUITextInputType InputType;
 	/** Use this to do custom validation. Only valid when InputType = Custom */
-	UPROPERTY(EditAnywhere, Instanced, Category = "LGUI-Input", meta = (EditCondition = "InputType==ELexUITextInputType::Custom"))
+	UPROPERTY(EditAnywhere, Instanced, Category = "LGUI-Input", meta = (EditCondition = "InputType==EUITextInputType::Custom"))
 		TObjectPtr<ULexTextInputCustomValidation> CustomValidation = nullptr;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
-		ELexUITextInputDisplayType DisplayType = ELexUITextInputDisplayType::Standard;
+		EUITextInputDisplayType DisplayType = EUITextInputDisplayType::Standard;
 	//password display character
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
 		FString PasswordChar = TEXT("*");
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
 		bool bAllowMultiLine = false;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
-		ELexUITextInputOverflowType OverflowType = ELexUITextInputOverflowType::ClampContent;
+		EUITextInputOverflowType OverflowType = EUITextInputOverflowType::ClampContent;
 	//when use multiline mode and OverflowType is OverflowToMax, this is the max line count that can expend the input area
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input", meta=(EditCondition="OverflowType==ELexUITextInputOverflowType::OverflowToMax"))
 		int MaxLineCount = 5;
@@ -190,29 +169,36 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
 		bool bReadOnly = false;
 
-	FLGUIMulticastStringDelegate OnValueChangeCPP;
+	FLexUIMulticastDelegateString OnValueChangedCPP;
+	UPROPERTY(BlueprintAssignable, Category = "LGUI-Input", DisplayName="OnValueChanged")
+	FUITextInputValueChangedEvent OnValueChangedBP;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
-		FLGUIEventDelegate OnValueChange = FLGUIEventDelegate(ELGUIEventDelegateParameterType::String);
-	FLGUIMulticastStringDelegate OnSubmitCPP;
+	FLGUIEventDelegate OnValueChange = FLGUIEventDelegate(ELGUIEventDelegateParameterType::String);
+	
+	FLexUIMulticastDelegateString OnSubmitCPP;
+	UPROPERTY(BlueprintAssignable, Category = "LGUI-Input", DisplayName="OnSubmit")
+	FUITextInputValueChangedEvent OnSubmitBP;
 	/** Input submit by "Enter" key. */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
-		FLGUIEventDelegate OnSubmit = FLGUIEventDelegate(ELGUIEventDelegateParameterType::String);
-	FLGUIMulticastBoolDelegate OnInputActivateCPP;
+	FLGUIEventDelegate OnSubmit = FLGUIEventDelegate(ELGUIEventDelegateParameterType::String);
+	
+	FLexUIMulticastDelegateBool OnInputActivateCPP;
+	UPROPERTY(BlueprintAssignable, Category = "LGUI-Input", DisplayName="OnSubmit")
+	FUITextInputActivateEvent OnInputActivateBP;
 	/** Input activate or deactivate, means begin input or end input. */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
-		FLGUIEventDelegate OnInputActivate = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Bool);
-	FLGUITextInputCustomInputTypeDelegate CustomInputTypeFunction;
+	FLGUIEventDelegate OnInputActivate = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Bool);
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		class ULexText* GetTextComponent()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		const FString& GetText()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		ELexUITextInputType GetInputType()const { return InputType; }
+		EUITextInputType GetInputType()const { return InputType; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		ULexTextInputCustomValidation* GetCustomValidation()const { return CustomValidation; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		ELexUITextInputDisplayType GetDisplayType()const { return DisplayType; }
+		EUITextInputDisplayType GetDisplayType()const { return DisplayType; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		const FString& GetPasswordChar()const { return PasswordChar; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
@@ -245,11 +231,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		bool SetText(const FString& InText, bool InFireEvent = false);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void SetInputType(ELexUITextInputType Value);
+		void SetInputType(EUITextInputType Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		void SetCustomValidation(ULexTextInputCustomValidation* Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void SetDisplayType(ELexUITextInputDisplayType Value);
+		void SetDisplayType(EUITextInputDisplayType Value);
 	/** Set password display char. Only allow one char in the value string */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		void SetPasswordChar(const FString& Value);
@@ -280,53 +266,7 @@ public:
 	void ActivateInput(ULexPointerEventData* eventData = nullptr);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 	void DeactivateInput(bool InFireEvent = true);
-
-	FDelegateHandle RegisterValueChangeEvent(const FLGUIStringDelegate& InDelegate);
-	FDelegateHandle RegisterValueChangeEvent(const TFunction<void(const FString&)>& InFunction);
-	void UnregisterValueChangeEvent(const FDelegateHandle& InHandle);
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		FLGUIDelegateHandleWrapper RegisterValueChangeEvent(const FLGUITextInputDynamicDelegate& InDelegate);
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void UnregisterValueChangeEvent(const FLGUIDelegateHandleWrapper& InDelegateHandle);
-
-	/** Input submit by "Enter" key. */
-	FDelegateHandle RegisterSubmitEvent(const FLGUIStringDelegate& InDelegate);
-	/** Input submit by "Enter" key. */
-	FDelegateHandle RegisterSubmitEvent(const TFunction<void(const FString&)>& InFunction);
-	void UnregisterSubmitEvent(const FDelegateHandle& InHandle);
-	/** Input submit by "Enter" key. */
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		FLGUIDelegateHandleWrapper RegisterSubmitEvent(const FLGUITextInputDynamicDelegate& InDelegate);
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void UnregisterSubmitEvent(const FLGUIDelegateHandleWrapper& InDelegateHandle);
-
-	/** Input activate or deactivate, means begin input or end input. */
-	FDelegateHandle RegisterInputActivateEvent(const FLGUIBoolDelegate& InDelegate);
-	/** Input activate or deactivate, means begin input or end input. */
-	FDelegateHandle RegisterInputActivateEvent(const TFunction<void(bool)>& InDelegate);
-	void UnregisterInputActivateEvent(const FDelegateHandle& InHandle);
-	/** Input activate or deactivate, means begin input or end input. */
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		FLGUIDelegateHandleWrapper RegisterInputActivateEvent(const FLGUIInputActivateDynamicDelegate& InDelegate);
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void UnregisterInputActivateEvent(const FLGUIDelegateHandleWrapper& InDelegateHandle);
-
-	/**
-	 * Set custom function to verify input string, return true if the input string is good to use, false otherwise.
-	 */
-	void SetCustomInputTypeFunction(const FLGUITextInputCustomInputTypeDelegate& InFunction);
-	/**
-	 * Set custom function to verify input string, return true if the input string is good to use, false otherwise.
-	 */
-	void SetCustomInputTypeFunction(const TFunction<bool(const FString&, int)>& InFunction);
-	/**
-	 * Set custom function to verify input string, return true if the input string is good to use, false otherwise.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void SetCustomInputTypeFunction(const FLGUITextInputCustomInputTypeDynamicDelegate& InFunction);
-	/** Remove the function set by "SetCustomInputTypeFunction" */
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		void ClearCustomInputTypeFunction();
+	
 	/**
 	 * Verify input string value and insert the string value to text value at current caret position.
 	 * @param Value string value to check and insert.

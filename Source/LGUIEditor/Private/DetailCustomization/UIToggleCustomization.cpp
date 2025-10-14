@@ -41,7 +41,7 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 	ToggleTransitionTarget_PH->GetValue(*(UObject**)&ToggleTransitionTarget_Visual);
 	auto ToggleTransitionTarget_Image = Cast<ULexImage>(ToggleTransitionTarget_Visual);
 
-	UUISelectableTransitionComponent* CustomTransition = nullptr;
+	UUISelectableTransition* CustomTransition = nullptr;
 	auto CustomTransition_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, CustomToggleTransition));
 	CustomTransition_PH->GetValue(*(UObject**)&CustomTransition);
 
@@ -50,7 +50,7 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 	TArray<FName> NeedToHidePropertyNamesForTransition;
 	IDetailGroup& TransitionGroup = category.AddGroup(FName("Transition"), LOCTEXT("Transition", "Transition"));
 	TransitionGroup.HeaderProperty(ToggleTransition_PH);
-	if (TransitionType == (uint8)(ELexUISelectableTransitionType::None))
+	if (TransitionType == (uint8)(EUISelectableTransitionType::None))
 	{
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleTransitionTarget));
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffImageBrush));
@@ -61,7 +61,7 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffTransitionName));
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleDuration));
 	}
-	else if (TransitionType == (uint8)(ELexUISelectableTransitionType::ImageBrush))
+	else if (TransitionType == (uint8)(EUISelectableTransitionType::ImageBrush))
 	{
 		TransitionGroup.AddPropertyRow(ToggleTransitionTarget_PH);
 		if (!ToggleTransitionTarget_Image)
@@ -85,7 +85,7 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnImageBrush)));
 		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleDuration)));
 	}
-	else if (TransitionType == (uint8)(ELexUISelectableTransitionType::Color))
+	else if (TransitionType == (uint8)(EUISelectableTransitionType::Color))
 	{
 		TransitionGroup.AddPropertyRow(ToggleTransitionTarget_PH);
 		if (!ToggleTransitionTarget_Visual)
@@ -110,7 +110,7 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnColor)));
 		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleDuration)));
 	}
-	else if (TransitionType == (uint8)(ELexUISelectableTransitionType::Custom))
+	else if (TransitionType == (uint8)(EUISelectableTransitionType::Custom))
 	{
 		TransitionGroup.AddPropertyRow(ToggleTransitionTarget_PH);
 		if (!CustomTransition)

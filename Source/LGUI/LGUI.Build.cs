@@ -74,6 +74,7 @@ public class LGUI : ModuleRules
                 "UnrealEd",
                 "EditorStyle",
                 "TargetPlatform",
+                "LevelEditor",
             }
             );
         }

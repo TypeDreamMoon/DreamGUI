@@ -20,19 +20,19 @@ void UUISpriteSequencePlayer::PostEditChangeProperty(FPropertyChangedEvent& Prop
 #endif
 bool UUISpriteSequencePlayer::CanPlay()
 {
-	if (!sprite.IsValid())
+	if (!Sprite.IsValid())
 	{
 		if (auto Widget = GetOwner()->FindComponentByClass<ULexWidget>())
 		{
-			sprite = Cast<ULexSprite>(Widget->GetVisual());
+			Sprite = Cast<ULexSprite>(Widget->GetVisual());
 		}
 	}
-	if (!sprite.IsValid())
+	if (!Sprite.IsValid())
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s]Need UISprite component!"), ANSI_TO_TCHAR(__FUNCTION__));
 		return false;
 	}
-	if (spriteSequence.Num() <= 0)
+	if (SpriteSequence.Num() <= 0)
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s]SpriteSequence array is empty!"), ANSI_TO_TCHAR(__FUNCTION__));
 		return false;
@@ -41,25 +41,25 @@ bool UUISpriteSequencePlayer::CanPlay()
 }
 float UUISpriteSequencePlayer::GetDuration()const
 {
-	return (float)(spriteSequence.Num()) / fps;
+	return (float)(SpriteSequence.Num()) / Fps;
 }
 void UUISpriteSequencePlayer::PrepareForPlay()
 {
 
 }
 
-void UUISpriteSequencePlayer::OnUpdateAnimation(int frameNumber)
+void UUISpriteSequencePlayer::OnUpdateAnimation(int FrameNumber)
 {
-	frameNumber = FMath::Clamp(frameNumber, 0, spriteSequence.Num() - 1);
-	sprite->SetSprite(spriteSequence[frameNumber], snapSpriteSize);
+	FrameNumber = FMath::Clamp(FrameNumber, 0, SpriteSequence.Num() - 1);
+	Sprite->SetSprite(SpriteSequence[FrameNumber], bSnapSpriteSize);
 }
 
 void UUISpriteSequencePlayer::SetSpriteSequence(TArray<ULexUISpriteData_BaseObject*> value)
 {
-	spriteSequence = value;
+	SpriteSequence = value;
 }
 
 void UUISpriteSequencePlayer::SetSnapSpriteSize(bool value)
 {
-	snapSpriteSize = value;
+	bSnapSpriteSize = value;
 }

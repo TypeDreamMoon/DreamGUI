@@ -15,6 +15,8 @@
 #include "LGUIEditorModule.h"
 #include "LGUIEditorStyle.h"
 #include "LGUIEditorTools.h"
+#include "UMGStyle.h"
+#include "Components/EditableTextBox.h"
 #include "DragAndDrop/AssetDragDropOp.h"
 
 #define LOCTEXT_NAMESPACE "LexWidgetEditorHierarchyViewItem"
@@ -251,7 +253,6 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 }
 
 
-
 void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& InOwnerTableView, TWeakObjectPtr<ULexWidget> InModel, TSharedPtr<SLexWidgetEditorHierarchyView> InHierarchyView, TSharedPtr<FLGUIPrefabEditor> InManager)
 {
 	Widget = InModel;
@@ -288,6 +289,33 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 							return FSlateIconFinder::FindIconBrushForClass(Widget->GetVisual()->GetClass());
 						return FSlateIconFinder::FindIconBrushForClass(ULexWidget::StaticClass());
 					}
+					return (const FSlateBrush*)nullptr;
+				})
+			]
+			// Interaction icon
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(2, 0)
+			[
+				SNew(SImage)
+				.ColorAndOpacity(FSlateColor::UseForeground())
+				.Image_Lambda([=, this]()
+				{
+					if (!Widget.IsValid())return (const FSlateBrush*)nullptr;
+					
+#define RETURN_BRUSH(Class)\
+if (Widget->GetOwner()->FindComponentByClass<Class>())\
+{\
+	return *FLGUIEditorModule::Get().InteractableClassIconMap.Find(Class::StaticClass());\
+}
+					RETURN_BRUSH(UUITextInputComponent);
+					RETURN_BRUSH(UUIButtonComponent);
+					RETURN_BRUSH(UUIToggleComponent);
+					RETURN_BRUSH(UUISliderComponent);
+					RETURN_BRUSH(UUIScrollbarComponent);
+					RETURN_BRUSH(UUIDropdownComponent);
+					RETURN_BRUSH(UUIScrollViewComponent);
 					return (const FSlateBrush*)nullptr;
 				})
 			]
@@ -710,7 +738,7 @@ FText SLexWidgetEditorHierarchyViewItem::GetItemText() const
 
 FText SLexWidgetEditorHierarchyViewItem::GetItemTooltipText() const
 {
-	return Widget.IsValid() ? FText::Format(LOCTEXT("ItemTooltipFormat", "ID name: {0}\nPath name: {1}"), FText::FromName(Widget->GetFName()), FText::FromString(Widget->GetPathName()))
+	return Widget.IsValid() ? FText::Format(LOCTEXT("ItemTooltipFormat", "Path name: {0}"), FText::FromString(Widget->GetPathName()))
 		: FText::GetEmpty();
 }
 

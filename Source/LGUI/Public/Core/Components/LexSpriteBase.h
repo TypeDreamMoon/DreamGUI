@@ -28,7 +28,7 @@ protected:
 #endif
 public:
 	void CheckSpriteData();
-	static const FName GetSpritePropertyName()
+	static FName GetPropertyName_Sprite()
 	{
 		return GET_MEMBER_NAME_CHECKED(ULexSpriteBase, Sprite);
 	}

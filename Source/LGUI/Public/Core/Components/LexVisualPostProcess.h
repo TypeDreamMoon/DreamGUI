@@ -4,7 +4,6 @@
 
 #include "LexVisual.h"
 #include "Core/LexUIRender/LexUIVertex.h"
-#include "Core/LexUISpriteInfo.h"
 #include "LexVisualPostProcess.generated.h"
 
 class FLexVisualPostProcessRenderProxy;
@@ -40,11 +39,13 @@ protected:
 	friend class FLexVisualPostProcessCustomization;
 	/** Use maskTexture's red channel to mask out effect result. */
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (DisplayThumbnail = "false"))
-		TObjectPtr<UTexture2D> MaskTexture;
+	TObjectPtr<UTexture2D> MaskTexture;
 	/** MaskTexture UV offset and scale info. Only get good result when MaskTextureType is Simple */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		FVector4 MaskTextureUVRect = FVector4(0, 0, 1, 1);
-	void SendMaskTextureToRenderProxy();
+	FVector4 MaskTextureUVRect = FVector4(0, 0, 1, 1);
+	/** Do full screen effect instead of just rect area */
+	UPROPERTY(EditAnywhere, Category = "LGUI")
+	bool bFullScreen = false;
 public:
 	FLexUIGeometry* GetGeometry()const { return Geometry.Get(); }
 	
@@ -52,11 +53,15 @@ public:
 		UTexture2D* GetMaskTexture()const { return MaskTexture; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		const FVector4& GetMaskTextureUVRect()const { return MaskTextureUVRect; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	bool GetFullScreen()const{return bFullScreen;}
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetMaskTexture(UTexture2D* Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetMaskTextureUVRect(const FVector4& Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetFullScreen(bool Value);
 public:
 	void MarkVertexPositionDirty();
 	void MarkUVDirty();
@@ -81,4 +86,6 @@ protected:
 	TArray<FLexUIPostProcessVertex> RenderMeshRegionToScreenVertexArray;
 
 	virtual void SendRegionVertexDataToRenderProxy();
+	void SendMaskTextureToRenderProxy();
+	void SendFullScreenToRenderProxy();
 };

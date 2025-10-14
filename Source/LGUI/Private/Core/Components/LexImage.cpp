@@ -296,6 +296,17 @@ void ULexImage::SetBrush_LexUISprite(ULexUISpriteData_BaseObject* Value)
 
 void ULexImage::SetBrush_SlateSprite(TScriptInterface<ISlateTextureAtlasInterface> Value)
 {
+	//remove from old sprite
+	if (bHasAddToSprite)
+	{
+		auto OldLexSprite = Cast<ULexUISpriteData_BaseObject>(Brush.GetResourceObject());
+		if (OldLexSprite != nullptr)
+		{
+			OldLexSprite->RemoveUISprite(this);
+			bHasAddToSprite = false;
+		}
+	}
+	
 	auto OldSlateSprite = Cast<ISlateTextureAtlasInterface>(Brush.GetResourceObject());
 	auto NewSlateSprite = Value;
 	if (OldSlateSprite != nullptr && NewSlateSprite != nullptr)
@@ -316,6 +327,44 @@ void ULexImage::SetBrush_SlateSprite(TScriptInterface<ISlateTextureAtlasInterfac
 		MarkMaterialDirty();
 	}
 	Brush.SetResourceObject(Value.GetObject());
+}
+
+void ULexImage::SetBrush_Texture(UTexture* Value)
+{
+	//remove from old sprite
+	if (bHasAddToSprite)
+	{
+		auto OldLexSprite = Cast<ULexUISpriteData_BaseObject>(Brush.GetResourceObject());
+		if (OldLexSprite != nullptr)
+		{
+			OldLexSprite->RemoveUISprite(this);
+			bHasAddToSprite = false;
+		}
+	}
+	MarkVerticesDirty(true, true, true, false);
+	MarkTextureDirty();
+	if (Cast<UMaterialInterface>(Brush.GetResourceObject()) != nullptr)//if old brush is material then mark material dirty
+	{
+		MarkMaterialDirty();
+	}
+	Brush.SetResourceObject(Value);
+}
+void ULexImage::SetBrush_Material(UTexture* Value)
+{
+	//remove from old sprite
+	if (bHasAddToSprite)
+	{
+		auto OldLexSprite = Cast<ULexUISpriteData_BaseObject>(Brush.GetResourceObject());
+		if (OldLexSprite != nullptr)
+		{
+			OldLexSprite->RemoveUISprite(this);
+			bHasAddToSprite = false;
+		}
+	}
+	MarkVerticesDirty(true, true, true, false);
+	MarkTextureDirty();
+	MarkMaterialDirty();
+	Brush.SetResourceObject(Value);
 }
 
 void ULexImage::SetBrushTintColor(FColor Value)

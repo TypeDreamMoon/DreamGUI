@@ -13,7 +13,7 @@ ULexBaseRaycaster::ULexBaseRaycaster()
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 	bAutoActivate = true;
-	TraceChannel = ETraceTypeQuery::TraceTypeQuery2;
+	TraceChannel = ETraceTypeQuery::TraceTypeQuery3;
 }
 
 void ULexBaseRaycaster::BeginPlay()
@@ -74,7 +74,7 @@ bool ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, cons
 
 		if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
 		{
-#if 1
+#if 0
 			// use ParallelFor to speed up the hit process. ParallelFor should be safe because it blocks current thread
 			FCriticalSection Mutex;
 			if (InRenderModeArray.Num() == 1)//most case
@@ -84,23 +84,23 @@ bool ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, cons
 					auto& CanvasItem = AllCanvasArray[CanvasIndex];
 					if (ShouldSkipCanvas(CanvasItem.Get()))return;
 					if (CanvasItem->GetTraceChannel() != TraceChannel)return;
-					auto& AllUIItemArray = CanvasItem->GetVisualWidgetArray();
-					ParallelFor(AllUIItemArray.Num(), [&AllUIItemArray, &Mutex, &OutRayOrigin, &OutRayEnd, CanvasItem, this](int32 index) {
-						auto uiItem = AllUIItemArray[index];
-						FHitResult thisHit;
-						thisHit.FaceIndex = INDEX_NONE;
+					auto& VisualWidgetArray = CanvasItem->GetVisualWidgetArray();
+					ParallelFor(VisualWidgetArray.Num(), [&VisualWidgetArray, &Mutex, &OutRayOrigin, &OutRayEnd, CanvasItem, this](int32 index) {
+						auto VisualWidget = VisualWidgetArray[index];
+						FHitResult ThisHit;
+						ThisHit.FaceIndex = INDEX_NONE;
 						if (
-							uiItem->GetRaycastableInHierarchy()
-							&& uiItem->GetWidgetActiveInHierarchy()
-							&& uiItem->GetVisual()
-							&& uiItem->GetVisual()->GetRaycastTarget()
-							&& uiItem->GetVisual()->LineTraceUI(thisHit, OutRayOrigin, OutRayEnd)
+							VisualWidget->GetRaycastableInHierarchy()
+							&& VisualWidget->GetWidgetActiveInHierarchy()
+							&& VisualWidget->GetVisual()
+							&& VisualWidget->GetVisual()->GetRaycastTarget()
+							&& VisualWidget->GetVisual()->LineTraceUI(ThisHit, OutRayOrigin, OutRayEnd)
 							)
 						{
-							if (uiItem->IsPointVisibleOnClip(thisHit.Location))
+							if (VisualWidget->IsPointVisibleOnClip(ThisHit.Location))
 							{
 								Mutex.Lock();
-								MultiHitResult.Add(thisHit);
+								MultiHitResult.Add(ThisHit);
 								Mutex.Unlock();
 							}
 						}
@@ -143,28 +143,28 @@ bool ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, cons
 #else
 			for (auto& InRenderMode : InRenderModeArray)
 			{
-				auto& AllCanvasArray = LGUIManager->GetCanvasArray(InRenderMode);
+				auto& AllCanvasArray = LexUIManager->GetCanvasArray(InRenderMode);
 				for (auto& CanvasItem : AllCanvasArray)
 				{
 					if (ShouldSkipCanvas(CanvasItem.Get()))continue;
-					auto& AllUIItemArray = CanvasItem->GetUIItemArray();
-					for (auto& uiItem : AllUIItemArray)
+					auto& VisualWidgetArray = CanvasItem->GetVisualWidgetArray();
+					for (auto& VisualWidget : VisualWidgetArray)
 					{
-						if (!IsValid(uiItem))continue;
+						if (!IsValid(VisualWidget))continue;
 
-						FHitResult thisHit;
-						thisHit.FaceIndex = INDEX_NONE;
+						FHitResult ThisHit;
+						ThisHit.FaceIndex = INDEX_NONE;
 						if (
-							uiItem->IsVisibleForHitTest()
-							&& uiItem->GetWidgetActiveInHierarchy()
-							&& uiItem->GetVisual()
-							&& uiItem->GetVisual()->GetRaycastTarget()
-							&& uiItem->GetVisual()->LineTraceUI(thisHit, OutRayOrigin, OutRayEnd)
+							VisualWidget->GetRaycastableInHierarchy()
+							&& VisualWidget->GetWidgetActiveInHierarchy()
+							&& VisualWidget->GetVisual()
+							&& VisualWidget->GetVisual()->GetRaycastTarget()
+							&& VisualWidget->GetVisual()->LineTraceUI(ThisHit, OutRayOrigin, OutRayEnd)
 							)
 						{
-							if (uiItem->IsPointVisibleOnClip(thisHit.Location))
+							if (VisualWidget->IsPointVisibleOnClip(ThisHit.Location))
 							{
-								multiHitResult.Add(thisHit);
+								MultiHitResult.Add(ThisHit);
 							}
 						}
 					}
@@ -177,8 +177,8 @@ bool ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, cons
 			return false;
 		}
 		
-		int hitCount = MultiHitResult.Num();
-		if (hitCount > 0)
+		int HitCount = MultiHitResult.Num();
+		if (HitCount > 0)
 		{
 			MultiHitResult.Sort([](const FHitResult& A, const FHitResult& B)
 				{
@@ -200,20 +200,19 @@ bool ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, cons
 					return true;
 				});
 
-			//consider UI may not visible or CanvasGroup not allow interaction, so we cannot take first one as result, we need to check from start
-			bool haveValidHitResult = false;
-			for (int i = 0; i < hitCount; i++)
+			//consider UI may not visible or not allow interaction, so we cannot take first one as result, we need to check from start
+			bool bHaveValidHitResult = false;
+			for (int i = 0; i < HitCount; i++)
 			{
-				auto hit = MultiHitResult[i];
-				auto hitUIItem = (ULexWidget*)(hit.Component.Get());
-				if (!haveValidHitResult)
+				auto HitResult = MultiHitResult[i];
+				if (!bHaveValidHitResult)
 				{
-					OutHitResult = hit;
-					haveValidHitResult = true;
+					OutHitResult = HitResult;
+					bHaveValidHitResult = true;
 				}
-				OutHoverArray.Add(hit.Component.Get());
+				OutHoverArray.Add(HitResult.Component.Get());
 			}
-			if (haveValidHitResult)
+			if (bHaveValidHitResult)
 				return true;
 		}
 	}

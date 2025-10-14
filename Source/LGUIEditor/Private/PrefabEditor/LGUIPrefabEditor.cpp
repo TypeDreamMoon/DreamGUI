@@ -458,41 +458,6 @@ void FLGUIPrefabEditor::GetInitialViewLocationAndRotation(FVector& OutLocation, 
 	}
 }
 
-void FLGUIPrefabEditor::DeleteActors(const TArray<TWeakObjectPtr<AActor>>& InSelectedActorArray)
-{
-	for (auto Item : InSelectedActorArray)
-	{
-		if (Item == PrefabHelperObject->LoadedRootActor)
-		{
-			auto WarningMsg = FString::Printf(TEXT("Cannot destroy root actor!"));
-			FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(WarningMsg));
-			return;
-		}
-		if (Item == GetPreviewScene().GetRootAgentActor())
-		{
-			auto WarningMsg = FString::Printf(TEXT("Cannot destroy root agent actor!"));
-			FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(WarningMsg));
-			return;
-		}
-		if (PrefabHelperObject->IsActorBelongsToSubPrefab(Item.Get()) && !PrefabHelperObject->SubPrefabMap.Contains(Item.Get()))
-		{
-			auto WarningMsg = FString::Printf(TEXT("Cannot destroy sub prefab's actor!"));
-			FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(WarningMsg));
-			return;
-		}
-	}
-
-	TArray<AActor*> SelectedActorArray;
-	for (auto Item : InSelectedActorArray)
-	{
-		if (Item.IsValid())
-		{
-			SelectedActorArray.Add(Item.Get());
-		}
-	}
-	LGUIEditorTools::DeleteActors_Impl(SelectedActorArray);
-}
-
 AActor* FLGUIPrefabEditor::GetRootAgentActor()
 {
 	return GetPreviewScene().GetRootAgentActor();

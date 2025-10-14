@@ -3,7 +3,7 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "Core/Components/LexVisual.h"
-#include "UIRenderableCustomRaycastExtensions.generated.h"
+#include "LexVisualCustomRaycastExtensions.generated.h"
 
 #if 0
 /**

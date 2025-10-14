@@ -6,14 +6,12 @@
 #include "Core/Components/LexSprite.h"
 #include "Event/LexDelegateDeclaration.h"
 #include "Event/LGUIEventDelegate.h"
-#include "LGUIDelegateHandleWrapper.h"
 #include "Event/Interface/LexPointerDragInterface.h"
 #include "Event/Interface/LexPointerScrollInterface.h"
 #include "Core/LexUIBehaviour.h"
-#include "Core/Actor/LexWidgetActor.h"
 #include "UIScrollViewComponent.generated.h"
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUIScrollViewDynamicDelegate, FVector2D, InVector2);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIScrollViewValueChangedEvent, FVector2D, InVector2);
 
 UCLASS(ClassGroup=(LGUI), Transient)
 class LGUI_API UUIScrollViewHelper :public ULexUIBehaviour
@@ -48,7 +46,7 @@ protected:
 	friend class UUIScrollViewHelper;
 	/** Content can move inside it's parent area. */ 
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollView")
-		TWeakObjectPtr<ALexWidgetActor> Content;
+		TWeakObjectPtr<ULexWidget> Content;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollView")
 		bool Horizontal = true;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollView")
@@ -98,8 +96,7 @@ protected:
 	virtual void CalculateVerticalRange();
 	bool CheckParameters();
 	virtual bool CheckValidHit(USceneComponent* InHitComp);
-	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> ContentUIItem = nullptr;//drag or scroll Content
-	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> ContentParentUIItem = nullptr;//Content's parent
+	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> ContentParent = nullptr;//Content's parent
 	virtual void UpdateProgress(bool InFireEvent = true);
 	FVector2D Velocity = FVector2D(0, 0);//drag speed
 	FVector2D HorizontalRange;//horizontal scroll range, x--min, y--max
@@ -109,24 +106,18 @@ protected:
 	void UpdateAfterDrag(float deltaTime);
 	virtual void ApplyContentPositionWithProgress();
 
-	FLGUIMulticastVector2Delegate OnScrollCPP;
+	FLexUIMulticastDelegateVector2 OnValueChangedCPP;
+	UPROPERTY(BlueprintAssignable, Category = "LGUI-ScrollView", DisplayName="OnValueChanged")
+	FUIScrollViewValueChangedEvent OnValueChangedBP;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollView")
-		FLGUIEventDelegate OnScroll = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Vector2);
-
+	FLGUIEventDelegate OnValueChanged = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Vector2);
 public:
+	FLexUIMulticastDelegateVector2& GetOnValueChangedEvent(){return OnValueChangedCPP;}
+	
 	//scroll range change(eg content or content's parent size change), use this to recalculate range
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
 		void RectRangeChanged();
-
-	FDelegateHandle RegisterScrollEvent(const FLGUIVector2Delegate& InDelegate);
-	FDelegateHandle RegisterScrollEvent(const TFunction<void(FVector2D)>& InFunction);
-	void UnregisterScrollEvent(const FDelegateHandle& InHandle);
-
-	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
-		FLGUIDelegateHandleWrapper RegisterScrollEvent(const FLGUIScrollViewDynamicDelegate& InDelegate);
-	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
-		void UnregisterScrollEvent(const FLGUIDelegateHandleWrapper& InDelegateHandle);
-
+	
 	virtual bool OnPointerBeginDrag_Implementation(ULexPointerEventData* eventData)override;
 	virtual bool OnPointerDrag_Implementation(ULexPointerEventData* eventData)override;
 	virtual bool OnPointerEndDrag_Implementation(ULexPointerEventData* eventData)override;
@@ -134,7 +125,7 @@ public:
 	virtual bool OnPointerScroll_Implementation(ULexPointerEventData* eventData)override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
-		ALexWidgetActor* GetContent()const { return Content.Get(); }
+		ULexWidget* GetContent()const { return Content.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
 		bool GetHorizontal()const { return Horizontal; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
@@ -181,13 +172,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
 		void SetOutOfRangeDamper(float value);
 
-	/** Mannually scroll it with delta value. */
+	/** Manually scroll it with delta value. */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
 		void SetScrollDelta(FVector2D value);
-	/** Mannually scroll it with absolute value. The value will be applyed to Content's relative location. */
+	/** Manually scroll it with absolute value. The value will be applyed to Content's relative location. */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
 		void SetScrollValue(FVector2D value);
-	/** Mannually scroll it with progress value (from 0 to 1). */
+	/** Manually scroll it with progress value (from 0 to 1). */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
 		void SetScrollProgress(FVector2D value);
 

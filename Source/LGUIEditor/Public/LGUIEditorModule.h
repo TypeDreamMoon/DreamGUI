@@ -28,6 +28,7 @@ public:
 
 	static FLGUIEditorModule& Get();
 
+	TMap<UClass*, const FSlateBrush*> InteractableClassIconMap;
 	TSharedRef<SWidget> MakeEditorToolsMenu(bool InitialSetup, bool ComponentAction, bool OpenWindow, bool PreviewInViewport, bool EditorCameraControl, bool Others);
 	TSharedPtr<class FUICommandList> PluginCommands;
 	TArray<TSharedPtr<class FAssetTypeActions_Base>> AssetTypeActionsArray;
@@ -48,7 +49,6 @@ private:
 	void ReplaceActorSubMenu(FMenuBuilder& MenuBuilder);
 	void CopyWidgetReferenceSubMenu(FMenuBuilder& MenuBuilder);
 	void CopyComponentReferenceSubMenu(FMenuBuilder& MenuBuilder);
-	void ChangeTraceChannelSubMenu(FMenuBuilder& MenuBuilder);
 	void UseActiveViewportAsPreview();
 	void ClearViewportPreview();
 	void ToggleActiveViewportAsPreview();

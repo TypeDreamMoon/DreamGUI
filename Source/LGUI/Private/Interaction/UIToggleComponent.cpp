@@ -105,22 +105,22 @@ void UUIToggleComponent::SetValue(bool Value, bool SendCallback)
 void UUIToggleComponent::ApplyValueToUI(bool immediateSet)
 {
 	if (!CheckTarget())return;
-	if (ToggleTransition != ELexUISelectableTransitionType::Custom)
+	if (ToggleTransition != EUISelectableTransitionType::Custom)
 	{
 		if (!ToggleTransitionTarget.IsValid())return;
 	}
 
 	TOptional<FColor> Color;
 	TOptional<FLexUIImageBrush> Brush;
-	if (ToggleTransition == ELexUISelectableTransitionType::Color)
+	if (ToggleTransition == EUISelectableTransitionType::Color)
 	{
 		Color = bIsOn ? OnColor : OffColor;
 	}
-	else if (ToggleTransition == ELexUISelectableTransitionType::ImageBrush)
+	else if (ToggleTransition == EUISelectableTransitionType::ImageBrush)
 	{
 		Brush = bIsOn ? OnImageBrush : OffImageBrush;
 	}
-	else if (ToggleTransition == ELexUISelectableTransitionType::Custom)
+	else if (ToggleTransition == EUISelectableTransitionType::Custom)
 	{
 #if WITH_EDITOR
 		if (this->GetWorld() && this->GetWorld()->IsGameWorld())
@@ -141,13 +141,13 @@ void UUIToggleComponent::ApplyValueToUI(bool immediateSet)
 		}
 		else
 		{
-			if (ULTweenManager::IsTweening(this, TransitionTweener))TransitionTweener->Kill();
-			TransitionTweener = ULTweenManager::To(ToggleTransitionTarget.Get()
+			if (ULTweenManager::IsTweening(this, ToggleTransitionTweener))ToggleTransitionTweener->Kill();
+			ToggleTransitionTweener = ULTweenManager::To(ToggleTransitionTarget.Get()
 				, FLTweenColorGetterFunction::CreateWeakLambda(ToggleTransitionTarget.Get(), [=, this]()
 			{
 				return ToggleTransitionTarget->GetColor();
 			}), FLTweenColorSetterFunction::CreateUObject(ToggleTransitionTarget.Get(), &ULexVisual::SetColor), Color.GetValue(), ToggleDuration);
-			if (TransitionTweener)
+			if (ToggleTransitionTweener)
 			{
 				bool bAffectByGamePause = false;
 				bool bAffectByTimeDilation = false;
@@ -161,7 +161,7 @@ void UUIToggleComponent::ApplyValueToUI(bool immediateSet)
 					bAffectByGamePause = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
 					bAffectByTimeDilation = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByTimeDilation;
 				}
-				TransitionTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
+				ToggleTransitionTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
 			}
 		}
 	}
@@ -181,13 +181,13 @@ void UUIToggleComponent::ApplyValueToUI(bool immediateSet)
 				}
 				else
 				{
-					if (ULTweenManager::IsTweening(this, TransitionTweener))TransitionTweener->Kill();
-					TransitionTweener = ULTweenManager::To(ToggleTransitionTargetAsLexImage
+					if (ULTweenManager::IsTweening(this, ToggleTransitionTweener))ToggleTransitionTweener->Kill();
+					ToggleTransitionTweener = ULTweenManager::To(ToggleTransitionTargetAsLexImage
 						, FLTweenColorGetterFunction::CreateWeakLambda(ToggleTransitionTargetAsLexImage, [=, this]()
 					{
 						return ToggleTransitionTargetAsLexImage->GetBrush().TintColor;
 					}), FLTweenColorSetterFunction::CreateUObject(ToggleTransitionTargetAsLexImage, &ULexImage::SetBrushTintColor), Brush.GetValue().TintColor, ToggleDuration);
-					if (TransitionTweener)
+					if (ToggleTransitionTweener)
 					{
 						bool bAffectByGamePause = false;
 						bool bAffectByTimeDilation = false;
@@ -201,7 +201,7 @@ void UUIToggleComponent::ApplyValueToUI(bool immediateSet)
 							bAffectByGamePause = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
 							bAffectByTimeDilation = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByTimeDilation;
 						}
-						TransitionTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
+						ToggleTransitionTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
 					}
 				}
 			}
@@ -239,31 +239,6 @@ bool UUIToggleComponent::OnPointerClick_Implementation(ULexPointerEventData* eve
 {
 	SetValue(!bIsOn);
 	return AllowEventBubbleUp;
-}
-
-FDelegateHandle UUIToggleComponent::RegisterToggleEvent(const FLGUIBoolDelegate& InDelegate)
-{
-	return OnValueChangedCPP.Add(InDelegate);
-}
-FDelegateHandle UUIToggleComponent::RegisterToggleEvent(const TFunction<void(bool)>& InFunction)
-{
-	return OnValueChangedCPP.AddLambda(InFunction);
-}
-void UUIToggleComponent::UnregisterToggleEvent(const FDelegateHandle& InHandle)
-{
-	OnValueChangedCPP.Remove(InHandle);
-}
-
-FLGUIDelegateHandleWrapper UUIToggleComponent::RegisterToggleEvent(const FUIToggleValueChangedDelegate& InDelegate)
-{
-	auto delegateHandle = OnValueChangedCPP.AddLambda([InDelegate](bool InIsOn) {
-		InDelegate.ExecuteIfBound(InIsOn);
-	});
-	return FLGUIDelegateHandleWrapper(delegateHandle);
-}
-void UUIToggleComponent::UnregisterToggleEvent(const FLGUIDelegateHandleWrapper& InDelegateHandle)
-{
-	OnValueChangedCPP.Remove(InDelegateHandle.DelegateHandle);
 }
 
 int32 UUIToggleComponent::GetIndexInGroup()const

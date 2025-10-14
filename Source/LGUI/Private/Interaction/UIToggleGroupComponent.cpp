@@ -8,7 +8,7 @@
 
 UUIToggleGroupComponent::UUIToggleGroupComponent()
 {
-	OnToggle = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Int32);
+	OnValueChanged = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Int32);
 }
 void UUIToggleGroupComponent::AddToggleComponent(UUIToggleComponent* InComp)
 {
@@ -62,9 +62,9 @@ void UUIToggleGroupComponent::SetSelection(UUIToggleComponent* Target)
 			TempSelected->SetValue(false);
 		}
 		int index = GetToggleIndex(Target);
-		OnToggleCPP.Broadcast(index);
-		OnToggleValueChanged.Broadcast(index);
-		OnToggle.FireEvent(index);
+		OnValueChangedCPP.Broadcast(index);
+		OnValueChangedBP.Broadcast(index);
+		OnValueChanged.FireEvent(index);
 	}
 }
 void UUIToggleGroupComponent::ClearSelection()
@@ -74,38 +74,13 @@ void UUIToggleGroupComponent::ClearSelection()
 		LastSelect->SetValue(false);
 		LastSelect.Reset();
 
-		OnToggleCPP.Broadcast(-1);
-		OnToggle.FireEvent(-1);
+		OnValueChangedCPP.Broadcast(-1);
+		OnValueChanged.FireEvent(-1);
 	}
 }
 UUIToggleComponent* UUIToggleGroupComponent::GetSelectedItem()const
 {
 	return LastSelect.Get();
-}
-
-FDelegateHandle UUIToggleGroupComponent::RegisterToggleEvent(const FLGUIInt32Delegate& InDelegate)
-{
-	return OnToggleCPP.Add(InDelegate);
-}
-FDelegateHandle UUIToggleGroupComponent::RegisterToggleEvent(const TFunction<void(int32)>& InFunction)
-{
-	return OnToggleCPP.AddLambda(InFunction);
-}
-void UUIToggleGroupComponent::UnregisterToggleEvent(const FDelegateHandle& InHandle)
-{
-	OnToggleCPP.Remove(InHandle);
-}
-
-FLGUIDelegateHandleWrapper UUIToggleGroupComponent::RegisterToggleEvent(const FUIToggleGroupValueChangedDelegate& InDelegate)
-{
-	auto delegateHandle = OnToggleCPP.AddLambda([InDelegate, this](int32 Value) {
-		InDelegate.ExecuteIfBound(Value);
-		});
-	return FLGUIDelegateHandleWrapper(delegateHandle);
-}
-void UUIToggleGroupComponent::UnregisterToggleEvent(const FLGUIDelegateHandleWrapper& InDelegateHandle)
-{
-	OnToggleCPP.Remove(InDelegateHandle.DelegateHandle);
 }
 
 int32 UUIToggleGroupComponent::GetToggleIndex(const UUIToggleComponent* InComp)const

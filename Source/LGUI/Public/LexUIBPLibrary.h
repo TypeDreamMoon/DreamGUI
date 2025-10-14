@@ -7,7 +7,6 @@
 #include "LGUIComponentReference.h"
 #include "Event/LGUIEventDelegate.h"
 #include "Event/LGUIEventDelegate_PresetParameter.h"
-#include "LTweener.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "PrefabSystem/LGUIPrefab.h"
 #include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE

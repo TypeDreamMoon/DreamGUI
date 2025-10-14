@@ -352,7 +352,7 @@ public:
 	
 	void MarkTransformChanged(bool InPositionChanged, bool InScaleChanged);
 	void MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged);
-	void MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged);
+	void MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged, bool InDiscardCache = true);
 	virtual void MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawCall = false)const;
 
 	/** The minimum width this layout element may be allocated. */

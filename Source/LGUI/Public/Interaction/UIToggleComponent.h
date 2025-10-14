@@ -6,11 +6,8 @@
 #include "UISelectableComponent.h"
 #include "Event/LGUIEventDelegate.h"
 #include "Event/LexDelegateDeclaration.h"
-#include "LGUIDelegateHandleWrapper.h"
 #include "UIToggleComponent.generated.h"
 
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(FUIToggleValueChangedDelegate, bool, Value);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIToggleValueChangedEvent, bool, Value);
 
 UCLASS(ClassGroup = LGUI, Blueprintable, meta = (BlueprintSpawnableComponent))
@@ -31,9 +28,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Toggle")
 	TWeakObjectPtr<ULexVisual> ToggleTransitionTarget;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI-Toggle")
-	ELexUISelectableTransitionType ToggleTransition = ELexUISelectableTransitionType::Color;
+	EUISelectableTransitionType ToggleTransition = EUISelectableTransitionType::Color;
 	UPROPERTY(EditAnywhere, Category="LGUI-Toggle", Instanced, meta = (EditCondition = "Transition==ELexUISelectableSelectionState::Custom"))
-	TObjectPtr<class UUISelectableTransitionComponent> CustomToggleTransition = nullptr;
+	TObjectPtr<class UUISelectableTransition> CustomToggleTransition = nullptr;
 	bool CheckTarget();
 #pragma region Transition
 	UPROPERTY(Transient) TObjectPtr<class ULTweener> ToggleTransitionTweener = nullptr;
@@ -65,7 +62,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Toggle")
 	TWeakObjectPtr<class UUIToggleGroupComponent> ToggleGroup = nullptr;
 
-	FLGUIMulticastBoolDelegate OnValueChangedCPP;
+	FLexUIMulticastDelegateBool OnValueChangedCPP;
+	UPROPERTY(BlueprintAssignable, Category = "LGUI-Toggle", DisplayName="OnValueChanged")
+	FUIToggleValueChangedEvent OnValueChangedBP;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Toggle")
 	FLGUIEventDelegate OnValueChanged = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Bool);
 
@@ -73,8 +72,7 @@ protected:
 	void ApplyValueToUI(bool ImmediateSet);
 	virtual bool OnPointerClick_Implementation(ULexPointerEventData* eventData)override;
 public:
-	UPROPERTY(BlueprintAssignable, Category = "LGUI-Toggle", DisplayName="OnValueChanged")
-	FUIToggleValueChangedEvent OnValueChangedBP;
+	FLexUIMulticastDelegateBool& GetOnValueChangedEvent(){ return OnValueChangedCPP;}
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Toggle")
 	UUIToggleGroupComponent* GetToggleGroup()const { return ToggleGroup.Get(); }
@@ -94,13 +92,4 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Toggle")
 		virtual int32 GetIndexInGroup()const;
-
-	FDelegateHandle RegisterToggleEvent(const FLGUIBoolDelegate& InDelegate);
-	FDelegateHandle RegisterToggleEvent(const TFunction<void(bool)>& InFunction);
-	void UnregisterToggleEvent(const FDelegateHandle& InHandle);
-
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Toggle")
-		FLGUIDelegateHandleWrapper RegisterToggleEvent(const FUIToggleValueChangedDelegate& InDelegate);
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Toggle")
-		void UnregisterToggleEvent(const FLGUIDelegateHandleWrapper& InDelegateHandle);
 };

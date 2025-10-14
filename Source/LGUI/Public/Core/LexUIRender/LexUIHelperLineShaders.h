@@ -40,16 +40,16 @@ public:
 	FLexUIHelperLineShaderVS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
 		: FLexUIHelperLineShader(Initializer)
 	{
-		VPParameter.Bind(Initializer.ParameterMap, TEXT("_VP"));
+		MVPParameter.Bind(Initializer.ParameterMap, TEXT("_MVP"));
 	}
-	void SetParameters(FRHICommandListImmediate& RHICmdList, const FMatrix44f& VP)
+	void SetParameters(FRHICommandListImmediate& RHICmdList, const FMatrix44f& MVP)
 	{
 		FRHIBatchedShaderParameters& BatchedParameters = RHICmdList.GetScratchShaderParameters();
-		SetShaderValue(BatchedParameters, VPParameter, VP);
+		SetShaderValue(BatchedParameters, MVPParameter, MVP);
 		RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundVertexShader(), BatchedParameters);
 	}
 private:
-	LAYOUT_FIELD(FShaderParameter, VPParameter);
+	LAYOUT_FIELD(FShaderParameter, MVPParameter);
 };
 class FLexUIHelperLineShaderPS :public FLexUIHelperLineShader
 {
