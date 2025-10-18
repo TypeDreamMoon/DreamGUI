@@ -5,15 +5,6 @@
 #include "LexVisualPostProcess.h"
 #include "LexBackgroundBlur.generated.h"
 
-UENUM(BlueprintType)
-enum class ELexBackgroundBlurRenderType:uint8
-{
-	/** Render direct to screen */
-	Screen,
-	/** Output to a RenderTarget */
-	RenderTarget,
-};
-
 /** 
  * UI element that can add blur effect on background image, just like UMG's BackgroundBlur.
  * Use it in ScreenSpace or WorldSpace-LexUIRenderer.
@@ -37,14 +28,6 @@ private:
 	/** Will alpha affect blur strength? If true, then 0 alpha means 0 blur strength, and 1 alpha means full blur strength. */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		bool ApplyAlphaToBlur = true;
-	UPROPERTY(EditAnywhere, Category = "LGUI")
-		ELexBackgroundBlurRenderType RenderType = ELexBackgroundBlurRenderType::Screen;
-	/**
-	 * Blur result will output to this RenderTarget.
-	 * Will create one if not specified.
-	 */
-	UPROPERTY(EditAnywhere, Category = "LGUI", meta=(EditCondition="RenderType==ELexBackgroundBlurRenderType::RenderTarget"))
-	UTextureRenderTarget2D* OutputRenderTarget = nullptr;
 	
 	/** No need to change this because default value can give you good result. */
 	UPROPERTY(EditAnywhere, Category = "LGUI", AdvancedDisplay)
@@ -57,19 +40,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	bool GetApplyAlphaToBlur()const { return ApplyAlphaToBlur; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	ELexBackgroundBlurRenderType GetRenderType()const { return RenderType; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	UTextureRenderTarget2D* GetOutputRenderTarget()const { return OutputRenderTarget; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetBlurStrength(float Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetMaxDownSampleLevel(int Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetApplyAlphaToBlur(bool Value);
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	void SetRenderType(ELexBackgroundBlurRenderType Value);
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	void SetOutputRenderTarget(UTextureRenderTarget2D* Value);
 
 	virtual TSharedPtr<FLexVisualPostProcessRenderProxy> GetRenderProxy()override;
 	virtual void MarkAllDirty()override;
@@ -78,7 +53,4 @@ private:
 	FORCEINLINE float GetBlurStrengthInternal();
 	virtual void SendRegionVertexDataToRenderProxy()override;
 	void SendOthersDataToRenderProxy();
-	void UpdateRenderTarget();
-	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
-	virtual void OnTransformChanged() override;
 };

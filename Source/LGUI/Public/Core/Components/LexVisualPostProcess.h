@@ -9,6 +9,14 @@
 class FLexVisualPostProcessRenderProxy;
 struct FLexUIPostProcessVertex;
 
+UENUM(BlueprintType)
+enum class ELexBackgroundBlurRenderType:uint8
+{
+	/** Render direct to screen */
+	Screen,
+	/** Output to a RenderTarget */
+	RenderTarget,
+};
 
 /** 
  * UI element that can do post-processing effect on screen space.
@@ -19,7 +27,8 @@ class LGUI_API ULexVisualPostProcess : public ULexVisual
 {
 	GENERATED_BODY()
 
-public:	
+public:
+	DECLARE_EVENT_OneParam(ULexVisualPostProcess, FRenderTargetChangedEvent, UTextureRenderTarget2D*);
 	ULexVisualPostProcess(const FObjectInitializer& ObjectInitializer);
 
 protected:
@@ -32,7 +41,7 @@ protected:
 	virtual void UpdateGeometry()override final;
 
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
-
+	virtual void OnTransformChanged() override;
 	virtual void MarkAllDirty()override;
 
 protected:
@@ -46,20 +55,39 @@ protected:
 	/** Do full screen effect instead of just rect area */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 	bool bFullScreen = false;
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (EditCondition = "!bFullScreen"))
+	ELexBackgroundBlurRenderType RenderType = ELexBackgroundBlurRenderType::Screen;
+	/**
+	 * Blur result will output to this RenderTarget.
+	 * Will create one if not specified.
+	 */
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta=(EditCondition="RenderType==ELexBackgroundBlurRenderType::RenderTarget&&!bFullScreen"))
+	TObjectPtr<UTextureRenderTarget2D> OutputRenderTarget = nullptr;
+	FRenderTargetChangedEvent OnRenderTargetChanged;
 public:
+	FRenderTargetChangedEvent& GetRenderTargetChangedEvent(){return OnRenderTargetChanged;}
+	
 	FLexUIGeometry* GetGeometry()const { return Geometry.Get(); }
 	
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		UTexture2D* GetMaskTexture()const { return MaskTexture; }
+	UTexture2D* GetMaskTexture()const { return MaskTexture; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		const FVector4& GetMaskTextureUVRect()const { return MaskTextureUVRect; }
+	const FVector4& GetMaskTextureUVRect()const { return MaskTextureUVRect; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	ELexBackgroundBlurRenderType GetRenderType()const { return RenderType; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	UTextureRenderTarget2D* GetOutputRenderTarget()const { return OutputRenderTarget; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	bool GetFullScreen()const{return bFullScreen;}
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetMaskTexture(UTexture2D* Value);
+	void SetMaskTexture(UTexture2D* Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetMaskTextureUVRect(const FVector4& Value);
+	void SetMaskTextureUVRect(const FVector4& Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetRenderType(ELexBackgroundBlurRenderType Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetOutputRenderTarget(UTextureRenderTarget2D* Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetFullScreen(bool Value);
 public:
@@ -87,5 +115,8 @@ protected:
 
 	virtual void SendRegionVertexDataToRenderProxy();
 	void SendMaskTextureToRenderProxy();
+	void SendRenderTargetToRenderProxy();
 	void SendFullScreenToRenderProxy();
+
+	void UpdateRenderTarget();
 };

@@ -2,13 +2,12 @@
 
 #pragma once
 
-#include "Core/Actor/LexWidgetActor.h"
 #include "Extensions/2DLineRenderer/UI2DLineRendererBase.h"
 #include "LTweener.h"
 #include "UIRing.generated.h"
 
 
-UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
+UCLASS(ClassGroup = (LGUI), Blueprintable)
 class LGUI_API UUIRing : public UUI2DLineRendererBase
 {
 	GENERATED_BODY()

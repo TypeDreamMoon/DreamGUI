@@ -144,7 +144,7 @@ void FLexUIRenderer::PostRenderBasePass_RenderThread(FRHICommandListImmediate& R
 }
 
 void FLexUIRenderer::CopyRenderTarget(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap, FTextureRHIRef Src, FTextureRHIRef Dst
-	, bool ColorCorrect
+	, bool ColorCorrect, FRHISamplerState* SrcTextureSamplerState
 )
 {
 	auto* PassParameters = GraphBuilder.AllocParameters<FRenderTargetParameters>();
@@ -153,7 +153,7 @@ void FLexUIRenderer::CopyRenderTarget(FRDGBuilder& GraphBuilder, FGlobalShaderMa
 		RDG_EVENT_NAME("LexUICopyRenderTarget"),
 		PassParameters,
 		ERDGPassFlags::Raster,
-		[this, GlobalShaderMap, Src, Dst, ColorCorrect](FRHICommandListImmediate& RHICmdList)
+		[this, GlobalShaderMap, Src, Dst, ColorCorrect, SrcTextureSamplerState](FRHICommandListImmediate& RHICmdList)
 		{
 			RHICmdList.SetViewport(0, 0, 0, Dst->GetSizeXYZ().X, Dst->GetSizeXYZ().Y, 1.0f);
 
@@ -172,14 +172,14 @@ void FLexUIRenderer::CopyRenderTarget(FRDGBuilder& GraphBuilder, FGlobalShaderMa
 				TShaderMapRef<FLexUISimpleCopyTargetPS_ColorCorrect> PixelShader(GlobalShaderMap);
 				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
 				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
-				PixelShader->SetParameters(RHICmdList, Src);
+				PixelShader->SetParameters(RHICmdList, Src, SrcTextureSamplerState);
 			}
 			else
 			{
 				TShaderMapRef<FLexUISimpleCopyTargetPS> PixelShader(GlobalShaderMap);
 				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
 				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
-				PixelShader->SetParameters(RHICmdList, Src);
+				PixelShader->SetParameters(RHICmdList, Src, SrcTextureSamplerState);
 			}
 			VertexShader->SetParameters(RHICmdList);
 

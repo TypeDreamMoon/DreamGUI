@@ -82,7 +82,7 @@ DECLARE_CYCLE_STAT(TEXT("PostProcess_BackgroundPixelate"), STAT_BackgroundPixela
 class FUIBackgroundPixelateRenderProxy :public FLexVisualPostProcessRenderProxy
 {
 public:
-	float pixelateStrength = 0.0f;
+	float PixelateStrength = 0.0f;
 public:
 	FUIBackgroundPixelateRenderProxy()
 		:FLexVisualPostProcessRenderProxy()
@@ -91,7 +91,7 @@ public:
 	}
 	virtual bool CanRender()const override
 	{
-		return pixelateStrength > 0.0f;
+		return PixelateStrength > 0.0f;
 	}
 	virtual void OnRenderPostProcess_RenderThread(
 		FRDGBuilder& GraphBuilder,
@@ -109,7 +109,7 @@ public:
 	)override
 	{
 		SCOPE_CYCLE_COUNTER(STAT_BackgroundPixelate);
-		if (pixelateStrength <= 0.0f)return;
+		if (PixelateStrength <= 0.0f)return;
 
 		auto& RHICmdList = GraphBuilder.RHICmdList;
 
@@ -127,31 +127,31 @@ public:
 		};
 
 		uint8 NumSamples = ScreenTargetTexture->GetNumSamples();
+		auto ScreenSize = ScreenTargetTexture->GetSizeXY();
 		if (NumSamples > 1)
 		{
-			auto Size = ScreenTargetTexture->GetSizeXY();
-			FPooledRenderTargetDesc desc(FPooledRenderTargetDesc::Create2DDesc(Size, ScreenTargetTexture->GetFormat(), FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable, false));
+			FPooledRenderTargetDesc desc(FPooledRenderTargetDesc::Create2DDesc(ScreenSize, ScreenTargetTexture->GetFormat(), FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable, false));
 			GRenderTargetPool.FindFreeElement(RHICmdList, desc, ScreenResolvedTexture, TEXT("LGUIBlurEffectResolveTarget"));
 			if (!ScreenResolvedTexture.IsValid())
 				return;
 			auto ResolveSrc = RegisterExternalTexture(GraphBuilder, ScreenTargetTexture, TEXT("LGUIBlurEffectResolveSource"));
 			auto ResolveDst = RegisterExternalTexture(GraphBuilder, ScreenResolvedTexture->GetRHI(), TEXT("LGUIBlurEffectResolveTarget"));
-			Renderer->AddResolvePass(GraphBuilder, FRDGTextureMSAA(ResolveSrc, ResolveDst), FIntRect(0, 0, Size.X, Size.Y), NumSamples, GlobalShaderMap);
+			Renderer->AddResolvePass(GraphBuilder, FRDGTextureMSAA(ResolveSrc, ResolveDst), FIntRect(0, 0, ScreenSize.X, ScreenSize.Y), NumSamples, GlobalShaderMap);
 		}
 
-		float calculatedStrength = FMath::Pow(pixelateStrength * INV_MAX_PixelateStrength, 2) * MAX_PixelateStrength;//this can make the pixelate effect transition feel more linear
+		float calculatedStrength = FMath::Pow(PixelateStrength * INV_MAX_PixelateStrength, 2) * MAX_PixelateStrength;//this can make the pixelate effect transition feel more linear
 		calculatedStrength = FMath::Clamp(calculatedStrength, 0.0f, 100.0f);
 		calculatedStrength += 1;
 
-		auto width = (int)(RectSize.X / calculatedStrength);
-		auto height = (int)(RectSize.Y / calculatedStrength);
-		width = FMath::Clamp(width, 1, (int)RectSize.X);
-		height = FMath::Clamp(height, 1, (int)RectSize.Y);
+		auto width = (int)((bFullScreen ? ScreenSize.X : RectSize.X) / calculatedStrength);
+		auto height = (int)((bFullScreen ? ScreenSize.Y : RectSize.Y) / calculatedStrength);
+		width = FMath::Clamp(width, 1, (int)(bFullScreen ? ScreenSize.X : RectSize.X));
+		height = FMath::Clamp(height, 1, (int)(bFullScreen ? ScreenSize.Y : RectSize.Y));
 
 		//get render target
 		{
 			FPooledRenderTargetDesc desc(FPooledRenderTargetDesc::Create2DDesc(FIntPoint(width, height), ScreenTargetTexture->GetFormat(), FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable, false));
-			GRenderTargetPool.FindFreeElement(RHICmdList, desc, PixelateEffectRenderTarget, TEXT("LGUIPixelateEffectRenderTarget"));
+			GRenderTargetPool.FindFreeElement(RHICmdList, desc, PixelateEffectRenderTarget, TEXT("LexUIPixelateEffectRenderTarget"));
 			if (!PixelateEffectRenderTarget.IsValid())
 			{
 				ReleaseRenderTarget();
@@ -161,18 +161,44 @@ public:
 		auto PixelateEffectRenderTargetTexture = PixelateEffectRenderTarget->GetRHI();
 
 		//copy rect area from screen image to a render target, so we can just process this area
-		auto modelViewProjectionMatrix = ObjectToWorldMatrix * ViewProjectionMatrix;
-		Renderer->CopyRenderTargetOnMeshRegion(GraphBuilder
-			, RegisterExternalTexture(GraphBuilder, PixelateEffectRenderTargetTexture, TEXT("LGUI_PixelateEffectRenderTargetTexture"))
-			, NumSamples > 1 ? ScreenResolvedTexture->GetRHI() : ScreenTargetTexture.GetReference()
-			, GlobalShaderMap
-			, RenderScreenToMeshRegionVertexArray
-			, modelViewProjectionMatrix
-			, FIntRect(0, 0, PixelateEffectRenderTargetTexture->GetSizeXYZ().X, PixelateEffectRenderTargetTexture->GetSizeXYZ().Y)
-			, ViewTextureScaleOffset
-		);
-		//after pixelate process, copy the area back to screen image
-		RenderMeshOnScreen_RenderThread(GraphBuilder, SceneTextures, ScreenTargetTexture, GlobalShaderMap, PixelateEffectRenderTargetTexture, modelViewProjectionMatrix, ObjectToWorldMatrix, IsWorldSpace, BlendDepthForWorld, BlendDepthForWorld, DepthTextureScaleOffset, ViewRect, TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
+		auto ModelViewProjectionMatrix = ObjectToWorldMatrix * ViewProjectionMatrix;
+		if (!bFullScreen)
+		{
+			Renderer->CopyRenderTargetOnMeshRegion(GraphBuilder
+				, RegisterExternalTexture(GraphBuilder, PixelateEffectRenderTargetTexture, TEXT("LexUI_PixelateEffectRenderTargetTexture"))
+				, NumSamples > 1 ? ScreenResolvedTexture->GetRHI() : ScreenTargetTexture.GetReference()
+				, GlobalShaderMap
+				, RenderScreenToMeshRegionVertexArray
+				, ModelViewProjectionMatrix
+				, FIntRect(0, 0, PixelateEffectRenderTargetTexture->GetSizeXYZ().X, PixelateEffectRenderTargetTexture->GetSizeXYZ().Y)
+				, ViewTextureScaleOffset
+			);
+		}
+		else
+		{
+			Renderer->CopyRenderTarget(GraphBuilder, GlobalShaderMap, NumSamples > 1 ? ScreenResolvedTexture->GetRHI() : ScreenTargetTexture.GetReference()
+				, PixelateEffectRenderTargetTexture);
+		}
+
+		if (RenderTargetResource == nullptr)
+		{
+			//after pixelate process, copy the area back to screen image
+			if (!bFullScreen)
+			{
+				RenderMeshOnScreen_RenderThread(GraphBuilder, SceneTextures, ScreenTargetTexture, GlobalShaderMap, PixelateEffectRenderTargetTexture, ModelViewProjectionMatrix, ObjectToWorldMatrix, IsWorldSpace, BlendDepthForWorld, BlendDepthForWorld, DepthTextureScaleOffset, ViewRect
+					, TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
+			}
+			else
+			{
+				Renderer->CopyRenderTarget(GraphBuilder, GlobalShaderMap, PixelateEffectRenderTargetTexture, ScreenTargetTexture, false
+					, TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
+			}
+		}
+		else
+		{
+			Renderer->CopyRenderTarget(GraphBuilder, GlobalShaderMap, PixelateEffectRenderTargetTexture, RenderTargetResource->GetRenderTargetTexture(), true
+					, TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
+		}
 
 		//release render target
 		ReleaseRenderTarget();
@@ -188,7 +214,7 @@ void ULexBackgroundPixelate::SendOthersDataToRenderProxy()
 		ENQUEUE_RENDER_COMMAND(FLexBackgroundPixelate_UpdateData)
 			([TempRenderProxy, pixelateStrengthWidthAlpha](FRHICommandListImmediate& RHICmdList)
 				{
-					TempRenderProxy->pixelateStrength = pixelateStrengthWidthAlpha;
+					TempRenderProxy->PixelateStrength = pixelateStrengthWidthAlpha;
 				});
 	}
 }

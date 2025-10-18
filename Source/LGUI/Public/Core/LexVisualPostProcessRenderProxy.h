@@ -55,6 +55,8 @@ public:
 	FVector2f RectSize;
 	FTexture2DResource* MaskTexture = nullptr;
 	bool bFullScreen = false;
+	//output target
+	FTextureRenderTargetResource* RenderTargetResource = nullptr;
 
 	/**
 	 * Use a mesh to render the MeshRegionTexture to ScreenTargetTexture

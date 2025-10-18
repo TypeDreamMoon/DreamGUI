@@ -47,6 +47,7 @@ void CopyMeshRegionPS(
     uv.xy = uv.xy * _MainTextureScaleOffset.xy + _MainTextureScaleOffset.zw;
     uv.y = 1.0f - uv.y;
     OutColor = _MainTex.Sample(_MainTexSampler, uv);
+    OutColor.a = 1;
 #if LEXUI_COLORCORRECT
     OutColor.rgb = LinearizeColor(OutColor.rgb);
 #endif

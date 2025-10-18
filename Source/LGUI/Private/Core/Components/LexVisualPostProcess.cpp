@@ -5,6 +5,7 @@
 #include "Core/Components/LexCanvas.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/LexVisualPostProcessRenderProxy.h"
+#include "Engine/TextureRenderTarget2D.h"
 
 ULexVisualPostProcess::ULexVisualPostProcess(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
@@ -29,8 +30,14 @@ void ULexVisualPostProcess::PostEditChangeProperty(FPropertyChangedEvent& Proper
 	bUVChanged = true;
 	bLocalVertexPositionChanged = true;
 	Super::PostEditChangeProperty(PropertyChangedEvent);
+	if (RenderType == ELexBackgroundBlurRenderType::RenderTarget)
+	{
+		UpdateRenderTarget();
+	}
 	
 	SendMaskTextureToRenderProxy();
+	SendRenderTargetToRenderProxy();
+	SendFullScreenToRenderProxy();
 }
 bool ULexVisualPostProcess::CanEditChange(const FProperty* InProperty) const
 {
@@ -50,6 +57,15 @@ void ULexVisualPostProcess::OnDimensionChanged(bool InPivotChange, bool InWidthC
     {
 	    MarkVertexPositionDirty();
     }
+	if (InWidthChange || InHeightChange)
+	{
+		UpdateRenderTarget();
+	}
+}
+void ULexVisualPostProcess::OnTransformChanged()
+{
+	Super::OnTransformChanged();
+	UpdateRenderTarget();
 }
 
 void ULexVisualPostProcess::MarkVertexPositionDirty()
@@ -68,6 +84,7 @@ void ULexVisualPostProcess::MarkAllDirty()
 	bLocalVertexPositionChanged = true;
 	bUVChanged = true;
 	Super::MarkAllDirty();
+	SendRenderTargetToRenderProxy();
 }
 
 DECLARE_CYCLE_STAT(TEXT("UIPostProcessRenderable UpdateGeometry"), STAT_UIPostProcessRenderableUpdate, STATGROUP_LGUI);
@@ -263,11 +280,33 @@ void ULexVisualPostProcess::SetMaskTextureUVRect(const FVector4& Value)
 	}
 }
 
+void ULexVisualPostProcess::SetRenderType(ELexBackgroundBlurRenderType Value)
+{
+	if (RenderType != Value)
+	{
+		RenderType = Value;
+		GetWidget()->MarkCanvasUpdate(false, false, false, false);
+		SendRenderTargetToRenderProxy();
+	}
+}
+
+void ULexVisualPostProcess::SetOutputRenderTarget(UTextureRenderTarget2D* Value)
+{
+	if (OutputRenderTarget != Value)
+	{
+		OutputRenderTarget = Value;
+		GetWidget()->MarkCanvasUpdate(false, false, false, false);
+		SendRenderTargetToRenderProxy();
+	}
+}
+
 void ULexVisualPostProcess::SetFullScreen(bool Value)
 {
 	if (bFullScreen != Value)
 	{
 		bFullScreen = Value;
+		SendRenderTargetToRenderProxy();
+		SendFullScreenToRenderProxy();
 	}
 }
 
@@ -285,6 +324,28 @@ void ULexVisualPostProcess::SendMaskTextureToRenderProxy()
 			([TempRenderProxy, MaskTextureResource](FRHICommandListImmediate& RHICmdList)
 				{
 					TempRenderProxy->MaskTexture = MaskTextureResource;
+				});
+	}
+}
+
+void ULexVisualPostProcess::SendRenderTargetToRenderProxy()
+{
+	if (RenderProxy.IsValid())
+	{
+		auto TempRenderProxy = RenderProxy.Get();
+		FTextureRenderTargetResource* RenderTargetResource = nullptr;
+		if (!bFullScreen && RenderType == ELexBackgroundBlurRenderType::RenderTarget && IsValid(OutputRenderTarget))
+		{
+			RenderTargetResource = OutputRenderTarget->GameThread_GetRenderTargetResource();
+		}
+		else
+		{
+			RenderTargetResource = nullptr;
+		}
+		ENQUEUE_RENDER_COMMAND(FLexPostProcess_UpdateMaskTexture)
+			([TempRenderProxy, RenderTargetResource](FRHICommandListImmediate& RHICmdList)
+				{
+					TempRenderProxy->RenderTargetResource = RenderTargetResource;
 				});
 	}
 }
@@ -326,4 +387,53 @@ bool ULexVisualPostProcess::LineTraceUI(FHitResult& OutHit, const FVector& Start
 	{
 		return LineTraceUICustom(OutHit, Start, End);
 	}
+}
+
+void ULexVisualPostProcess::UpdateRenderTarget()
+{
+	if (bFullScreen || RenderType != ELexBackgroundBlurRenderType::RenderTarget)return;
+	auto Widget = GetWidget();
+	FIntPoint DesiredRenderTargetSize(Widget->GetWidth(), Widget->GetHeight());
+	static const int32 MaxAllowedDrawSize = GetMax2DTextureDimension();
+	if (DesiredRenderTargetSize.X <= 0 || DesiredRenderTargetSize.Y <= 0)
+	{
+		return;
+	}
+	DesiredRenderTargetSize.X = FMath::Min(DesiredRenderTargetSize.X, MaxAllowedDrawSize);
+	DesiredRenderTargetSize.Y = FMath::Min(DesiredRenderTargetSize.Y, MaxAllowedDrawSize);
+
+	if (OutputRenderTarget == nullptr)
+	{
+		OutputRenderTarget = NewObject<UTextureRenderTarget2D>(this, NAME_None, EObjectFlags::RF_Transient);
+		OutputRenderTarget->AddressX = TextureAddress::TA_Clamp;
+		OutputRenderTarget->AddressY = TextureAddress::TA_Clamp;
+		OutputRenderTarget->ClearColor = FLinearColor::Transparent;
+		OutputRenderTarget->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
+		SendRenderTargetToRenderProxy();
+		OnRenderTargetChanged.Broadcast(OutputRenderTarget);
+	}
+	else
+	{
+		if (OutputRenderTarget->SizeX != DesiredRenderTargetSize.X || OutputRenderTarget->SizeY != DesiredRenderTargetSize.Y)
+		{
+			OutputRenderTarget->ClearColor = FLinearColor::Transparent;
+			OutputRenderTarget->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
+			OutputRenderTarget->UpdateResourceImmediate();
+#if WITH_EDITOR
+			OutputRenderTarget->Modify();
+#endif
+			SendRenderTargetToRenderProxy();
+		}
+	}
+
+#if WITH_EDITOR
+	if (!this->GetWorld()->IsGameWorld())
+	{
+		if (!OutputRenderTarget->GameThread_GetRenderTargetResource())
+		{
+			OutputRenderTarget->InitCustomFormat(OutputRenderTarget->SizeX, OutputRenderTarget->SizeY, EPixelFormat::PF_B8G8R8A8, false);
+			SendRenderTargetToRenderProxy();
+		}
+	}
+#endif
 }

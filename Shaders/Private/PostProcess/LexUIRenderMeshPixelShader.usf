@@ -33,7 +33,6 @@ void RenderMeshPS(
 )
 {
     OutColor = _MainTex.Sample(_MainTexSampler, input.uv);
-    OutColor.a = 1.0;
 #if LEXUI_MASK
     OutColor.a *= _MaskTex.Sample(_MaskTexSampler, input.uv).r;
 #endif

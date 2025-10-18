@@ -28,10 +28,6 @@ void ULexBackgroundBlur::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 			MaxDownSampleLevel += 1;//just make it work
 			SetMaxDownSampleLevel(MaxDownSampleLevel - 1);
 		}
-		if (RenderType == ELexBackgroundBlurRenderType::RenderTarget)
-		{
-			UpdateRenderTarget();
-		}
 	}
 }
 #endif
@@ -55,8 +51,6 @@ class FUIBackgroundBlurRenderProxy : public FLexVisualPostProcessRenderProxy
 public:
 	float Inv_SampleLevelInterval = 0.0f;
 	float BlurStrength = 0.0f;
-	//output target
-	FTextureRenderTargetResource* RenderTargetResource = nullptr;
 public:
 	FUIBackgroundBlurRenderProxy()
 		:FLexVisualPostProcessRenderProxy()
@@ -106,20 +100,20 @@ public:
 		};
 
 		uint8 NumSamples = ScreenTargetTexture->GetNumSamples();
-		auto Size = ScreenTargetTexture->GetSizeXY();
+		auto ScreenSize = ScreenTargetTexture->GetSizeXY();
 		if (NumSamples > 1)
 		{
-			FPooledRenderTargetDesc desc(FPooledRenderTargetDesc::Create2DDesc(Size, ScreenTargetTexture->GetFormat(), FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable, false));
+			FPooledRenderTargetDesc desc(FPooledRenderTargetDesc::Create2DDesc(ScreenSize, ScreenTargetTexture->GetFormat(), FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable, false));
 			GRenderTargetPool.FindFreeElement(RHICmdList, desc, ScreenResolvedTexture, TEXT("LexUIBlurEffectResolveTarget"));
 			if (!ScreenResolvedTexture.IsValid())
 				return;
 			auto ResolveSrc = RegisterExternalTexture(GraphBuilder, ScreenTargetTexture, TEXT("LexUIBlurEffectResolveSource"));
 			auto ResolveDst = RegisterExternalTexture(GraphBuilder, ScreenResolvedTexture->GetRHI(), TEXT("LexUIBlurEffectResolveTarget"));
-			Renderer->AddResolvePass(GraphBuilder, FRDGTextureMSAA(ResolveSrc, ResolveDst), FIntRect(0, 0, Size.X, Size.Y), NumSamples, GlobalShaderMap);
+			Renderer->AddResolvePass(GraphBuilder, FRDGTextureMSAA(ResolveSrc, ResolveDst), FIntRect(0, 0, ScreenSize.X, ScreenSize.Y), NumSamples, GlobalShaderMap);
 		}
 
-		float width = bFullScreen ? Size.X : RectSize.X;
-		float height = bFullScreen ? Size.Y : RectSize.Y;
+		float width = bFullScreen ? ScreenSize.X : RectSize.X;
+		float height = bFullScreen ? ScreenSize.Y : RectSize.Y;
 		width = FMath::Max(width, 1.0f);
 		height = FMath::Max(height, 1.0f);
 		FVector2f inv_TextureSize(1.0f / width, 1.0f / height);
@@ -129,20 +123,43 @@ public:
 			FPooledRenderTargetDesc desc(FPooledRenderTargetDesc::Create2DDesc(TextureSize, ScreenTargetTexture->GetFormat(), FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable, false));
 			if (RenderTargetResource == nullptr)
 			{
+				if (!bFullScreen)
+				{
+					GRenderTargetPool.FindFreeElement(RHICmdList, desc, BlurEffectRenderTarget1, TEXT("LexUIBlurEffectRenderTarget1"));
+					if (!BlurEffectRenderTarget1.IsValid())
+					{
+						ReleaseRenderTarget();
+						return;
+					}
+				}//full screen don't need it
+			}
+			else
+			{
 				GRenderTargetPool.FindFreeElement(RHICmdList, desc, BlurEffectRenderTarget1, TEXT("LexUIBlurEffectRenderTarget1"));
+				if (!BlurEffectRenderTarget1.IsValid())
+				{
+					ReleaseRenderTarget();
+					return;
+				}
 			}
 			GRenderTargetPool.FindFreeElement(RHICmdList, desc, BlurEffectRenderTarget2, TEXT("LexUIBlurEffectRenderTarget2"));
-			if ((RenderTargetResource == nullptr && !BlurEffectRenderTarget1.IsValid())
-				|| !BlurEffectRenderTarget2.IsValid())
+			if (!BlurEffectRenderTarget2.IsValid())
 			{
 				ReleaseRenderTarget();
 				return;
 			}
 		}
 		FRHITexture* BlurEffectRenderTexture1 = nullptr;
-		if (RenderTargetResource != nullptr)//if output to specific RenderTarget, then use it directly
+		if (RenderTargetResource == nullptr)
 		{
-			BlurEffectRenderTexture1 = RenderTargetResource->GetRenderTargetTexture();
+			if (bFullScreen)//full screen just use it directly
+			{
+				BlurEffectRenderTexture1 = NumSamples > 1 ? ScreenResolvedTexture->GetRHI() : ScreenTargetTexture.GetReference();
+			}
+			else
+			{
+				BlurEffectRenderTexture1 = BlurEffectRenderTarget1->GetRHI();
+			}
 		}
 		else
 		{
@@ -150,16 +167,19 @@ public:
 		}
 		auto BlurEffectRenderTexture2 = BlurEffectRenderTarget2->GetRHI();
 
-		auto modelViewProjectionMatrix = ObjectToWorldMatrix * ViewProjectionMatrix;
-		Renderer->CopyRenderTargetOnMeshRegion(GraphBuilder
-			, RegisterExternalTexture(GraphBuilder, BlurEffectRenderTexture1, TEXT("LexUIBlurEffectRenderTexture1_ExternalTexture"))
-			, NumSamples > 1 ? ScreenResolvedTexture->GetRHI() : ScreenTargetTexture.GetReference()
-			, GlobalShaderMap
-			, RenderScreenToMeshRegionVertexArray
-			, modelViewProjectionMatrix
-			, FIntRect(0, 0, BlurEffectRenderTexture1->GetSizeXYZ().X, BlurEffectRenderTexture1->GetSizeXYZ().Y)
-			, ViewTextureScaleOffset
-		);
+		auto ModelViewProjectionMatrix = ObjectToWorldMatrix * ViewProjectionMatrix;
+		if (!bFullScreen)
+		{
+			Renderer->CopyRenderTargetOnMeshRegion(GraphBuilder
+				, RegisterExternalTexture(GraphBuilder, BlurEffectRenderTexture1, TEXT("LexUIBlurEffectRenderTexture1_ExternalTexture"))
+				, NumSamples > 1 ? ScreenResolvedTexture->GetRHI() : ScreenTargetTexture.GetReference()
+				, GlobalShaderMap
+				, RenderScreenToMeshRegionVertexArray
+				, ModelViewProjectionMatrix
+				, FIntRect(0, 0, BlurEffectRenderTexture1->GetSizeXYZ().X, BlurEffectRenderTexture1->GetSizeXYZ().Y)
+				, ViewTextureScaleOffset
+			);
+		}
 		//do the blur process on the area
 		{
 			TShaderMapRef<FLexUISimplePostProcessVS> VertexShader(GlobalShaderMap);
@@ -243,14 +263,14 @@ public:
 		if (RenderTargetResource == nullptr)
 		{
 			//after blur process, copy the blur result image back to screen image of the area
-			if (bFullScreen)
+			if (!bFullScreen)
 			{
-				Renderer->CopyRenderTarget(GraphBuilder, GlobalShaderMap, BlurEffectRenderTexture1, ScreenTargetTexture);
-			}
-			else
-			{
-				RenderMeshOnScreen_RenderThread(GraphBuilder, SceneTextures, ScreenTargetTexture, GlobalShaderMap, BlurEffectRenderTexture1, modelViewProjectionMatrix, ObjectToWorldMatrix, IsWorldSpace, BlendDepthForWorld, DepthFadeForWorld, DepthTextureScaleOffset, ViewRect);
-			}
+				RenderMeshOnScreen_RenderThread(GraphBuilder, SceneTextures, ScreenTargetTexture, GlobalShaderMap, BlurEffectRenderTexture1, ModelViewProjectionMatrix, ObjectToWorldMatrix, IsWorldSpace, BlendDepthForWorld, DepthFadeForWorld, DepthTextureScaleOffset, ViewRect);
+			}//full screen don't need it
+		}
+		else
+		{
+			Renderer->CopyRenderTarget(GraphBuilder, GlobalShaderMap, BlurEffectRenderTexture1, RenderTargetResource->GetRenderTargetTexture(), true);
 		}
 
 		//release render target
@@ -268,88 +288,18 @@ void ULexBackgroundBlur::SendOthersDataToRenderProxy()
 		{
 			float BlurStrengthWithAlpha;
 			float Inv_SampleLevelInterval;
-			FTextureRenderTargetResource* RenderTargetResource;
 		};
 		auto updateData = new FUIBackgroundBlurUpdateOthersData();
 		updateData->BlurStrengthWithAlpha = this->GetBlurStrengthInternal();
 		updateData->Inv_SampleLevelInterval = this->Inv_SampleLevelInterval;
-		if (RenderType == ELexBackgroundBlurRenderType::RenderTarget && IsValid(OutputRenderTarget))
-		{
-			updateData->RenderTargetResource = OutputRenderTarget->GameThread_GetRenderTargetResource();
-		}
-		else
-		{
-			updateData->RenderTargetResource = nullptr;
-		}
 		ENQUEUE_RENDER_COMMAND(FLexBackgroundBlur_UpdateData)
 			([BackgroundBlurRenderProxy, updateData](FRHICommandListImmediate& RHICmdList)
 			{
 				BackgroundBlurRenderProxy->Inv_SampleLevelInterval = updateData->Inv_SampleLevelInterval;
 				BackgroundBlurRenderProxy->BlurStrength = updateData->BlurStrengthWithAlpha;
-				BackgroundBlurRenderProxy->RenderTargetResource = updateData->RenderTargetResource;
 				delete updateData;
 			});
 	}
-}
-
-void ULexBackgroundBlur::UpdateRenderTarget()
-{
-	if (RenderType != ELexBackgroundBlurRenderType::RenderTarget)return;
-	auto Widget = GetWidget();
-	FIntPoint DesiredRenderTargetSize(Widget->GetWidth(), Widget->GetHeight());
-	static const int32 MaxAllowedDrawSize = GetMax2DTextureDimension();
-	if (DesiredRenderTargetSize.X <= 0 || DesiredRenderTargetSize.Y <= 0)
-	{
-		return;
-	}
-	DesiredRenderTargetSize.X = FMath::Min(DesiredRenderTargetSize.X, MaxAllowedDrawSize);
-	DesiredRenderTargetSize.Y = FMath::Min(DesiredRenderTargetSize.Y, MaxAllowedDrawSize);
-
-	if (OutputRenderTarget == nullptr)
-	{
-		OutputRenderTarget = NewObject<UTextureRenderTarget2D>(this, NAME_None, EObjectFlags::RF_Transient);
-		OutputRenderTarget->AddressX = TextureAddress::TA_Clamp;
-		OutputRenderTarget->AddressY = TextureAddress::TA_Clamp;
-		OutputRenderTarget->ClearColor = FLinearColor::Transparent;
-		OutputRenderTarget->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
-	}
-	else
-	{
-		if (OutputRenderTarget->SizeX != DesiredRenderTargetSize.X || OutputRenderTarget->SizeY != DesiredRenderTargetSize.Y)
-		{
-			OutputRenderTarget->ClearColor = FLinearColor::Transparent;
-			OutputRenderTarget->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
-			OutputRenderTarget->UpdateResourceImmediate();
-#if WITH_EDITOR
-			OutputRenderTarget->Modify();
-#endif
-		}
-	}
-
-#if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())
-	{
-		if (!OutputRenderTarget->GameThread_GetRenderTargetResource())
-		{
-			OutputRenderTarget->InitCustomFormat(OutputRenderTarget->SizeX, OutputRenderTarget->SizeY, EPixelFormat::PF_B8G8R8A8, false);
-		}
-	}
-#endif
-}
-
-void ULexBackgroundBlur::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
-{
-	Super::OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
-	if (InWidthChange || InHeightChange)
-	{
-		UpdateRenderTarget();
-	}
-}
-
-void ULexBackgroundBlur::OnTransformChanged()
-{
-	Super::OnTransformChanged();
-	UpdateRenderTarget();
 }
 
 void ULexBackgroundBlur::SetBlurStrength(float Value)
@@ -367,26 +317,6 @@ void ULexBackgroundBlur::SetApplyAlphaToBlur(bool Value)
 	if (ApplyAlphaToBlur != Value)
 	{
 		ApplyAlphaToBlur = Value;
-		GetWidget()->MarkCanvasUpdate(false, false, false, false);
-		SendOthersDataToRenderProxy();
-	}
-}
-
-void ULexBackgroundBlur::SetRenderType(ELexBackgroundBlurRenderType Value)
-{
-	if (RenderType != Value)
-	{
-		RenderType = Value;
-		GetWidget()->MarkCanvasUpdate(false, false, false, false);
-		SendOthersDataToRenderProxy();
-	}
-}
-
-void ULexBackgroundBlur::SetOutputRenderTarget(UTextureRenderTarget2D* Value)
-{
-	if (OutputRenderTarget != Value)
-	{
-		OutputRenderTarget = Value;
 		GetWidget()->MarkCanvasUpdate(false, false, false, false);
 		SendOthersDataToRenderProxy();
 	}
@@ -420,6 +350,7 @@ TSharedPtr<FLexVisualPostProcessRenderProxy> ULexBackgroundBlur::GetRenderProxy(
 		Inv_SampleLevelInterval = 1.0f / MAX_BlurStrength * MaxDownSampleLevel;
 		SendRegionVertexDataToRenderProxy();
 		SendMaskTextureToRenderProxy();
+		SendRenderTargetToRenderProxy();
 		SendOthersDataToRenderProxy();
 	}
 	return RenderProxy;

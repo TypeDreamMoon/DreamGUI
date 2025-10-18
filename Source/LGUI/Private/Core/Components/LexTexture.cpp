@@ -22,20 +22,20 @@ void ULexTexture::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedE
 	CheckSpriteData();
 	if (auto Property = PropertyChangedEvent.Property)
 	{
-		auto propName = Property->GetFName();
-		if (propName == GET_MEMBER_NAME_CHECKED(ULexTexture, fillOriginType_Radial90))
+		auto PropName = Property->GetFName();
+		if (PropName == GET_MEMBER_NAME_CHECKED(ULexTexture, fillOriginType_Radial90))
 		{
 			FillOrigin = (uint8)fillOriginType_Radial90;
 			fillOriginType_Radial180 = (ELexUISpriteFillOriginType_Radial180)FillOrigin;
 			fillOriginType_Radial360 = (ELexUISpriteFillOriginType_Radial360)FillOrigin;
 		}
-		else if (propName == GET_MEMBER_NAME_CHECKED(ULexTexture, fillOriginType_Radial180))
+		else if (PropName == GET_MEMBER_NAME_CHECKED(ULexTexture, fillOriginType_Radial180))
 		{
 			FillOrigin = (uint8)fillOriginType_Radial180;
 			fillOriginType_Radial90 = (ELexUISpriteFillOriginType_Radial90)FillOrigin;
 			fillOriginType_Radial360 = (ELexUISpriteFillOriginType_Radial360)FillOrigin;
 		}
-		else if (propName == GET_MEMBER_NAME_CHECKED(ULexTexture, fillOriginType_Radial360))
+		else if (PropName == GET_MEMBER_NAME_CHECKED(ULexTexture, fillOriginType_Radial360))
 		{
 			FillOrigin = (uint8)fillOriginType_Radial360;
 			fillOriginType_Radial180 = (ELexUISpriteFillOriginType_Radial180)FillOrigin;

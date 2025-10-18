@@ -40,8 +40,7 @@ protected:
 protected:
 	friend class SLexUISpriteBorderEditor;
 	friend class FLexSpriteBaseCustomization;
-
-	/** Sprite may override by UISelectable(UIButton, UIToggle, UISlider ...) */
+	
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (DisplayThumbnail = "false"))
 		TObjectPtr<ULexUISpriteData_BaseObject> Sprite = nullptr;
 
