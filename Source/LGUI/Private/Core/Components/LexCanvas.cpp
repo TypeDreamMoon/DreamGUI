@@ -6,7 +6,6 @@
 #include "Utils/LexUIUtils.h"
 #if WITH_EDITOR
 #include "DrawDebugHelpers.h"
-#include "LevelEditorViewport.h"
 #endif
 #include "Core/LexUISettings.h"
 #include "Core/LexUIManager.h"

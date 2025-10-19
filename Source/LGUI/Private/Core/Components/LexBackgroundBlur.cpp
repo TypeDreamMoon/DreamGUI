@@ -77,7 +77,7 @@ public:
 	) override
 	{
 		SCOPE_CYCLE_COUNTER(STAT_BackgroundBlur);
-		if (BlurStrength <= 0.0f)return;
+		if (BlurStrength <= 0.0f && RenderTargetResource == nullptr)return;
 
 		auto& RHICmdList = GraphBuilder.RHICmdList;
 
@@ -181,6 +181,7 @@ public:
 			);
 		}
 		//do the blur process on the area
+		if (BlurStrength > 0.0f)
 		{
 			TShaderMapRef<FLexUISimplePostProcessVS> VertexShader(GlobalShaderMap);
 			TShaderMapRef<FLexUIPostProcessGaussianBlurPS> PixelShader(GlobalShaderMap);

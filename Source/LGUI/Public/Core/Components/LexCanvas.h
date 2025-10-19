@@ -184,7 +184,7 @@ public:
 	virtual void OnUnregister()override;
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy)override;
 
-	static const FName GetPropertyName_TraceChannel()
+	static FName GetPropertyName_TraceChannel()
 	{
 		return GET_MEMBER_NAME_CHECKED(ULexCanvas, TraceChannel);
 	}

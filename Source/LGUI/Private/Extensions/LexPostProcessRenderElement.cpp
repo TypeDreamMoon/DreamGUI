@@ -128,6 +128,11 @@ UTexture* ULexPostProcessRenderElement::GetTextureToCreateGeometry()
 	return nullptr;
 }
 
+UMaterialInterface* ULexPostProcessRenderElement::GetMaterialToCreateGeometry()
+{
+	return Material;
+}
+
 void ULexPostProcessRenderElement::OnBeforeCreateOrUpdateGeometry()
 {
 	if (!bHasRegisterPostProcessUpdateEvent)

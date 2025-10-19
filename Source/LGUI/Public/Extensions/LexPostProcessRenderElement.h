@@ -26,6 +26,8 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 	TWeakObjectPtr<ULexVisualPostProcess> PostProcess;
+	UPROPERTY(EditAnywhere, Category = "LGUI")
+	TObjectPtr<UMaterialInterface> Material;
 	FLexUISpriteInfo SpriteInfo;
 
 	bool bHasRegisterPostProcessUpdateEvent = false;
@@ -37,6 +39,7 @@ protected:
 	virtual void OnTransformChanged() override;
 	
 	virtual UTexture* GetTextureToCreateGeometry()override;
+	virtual UMaterialInterface* GetMaterialToCreateGeometry() override;
 	virtual void OnBeforeCreateOrUpdateGeometry() override;
 	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged) override;
 };
