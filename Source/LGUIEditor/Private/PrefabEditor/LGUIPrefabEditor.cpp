@@ -27,7 +27,6 @@
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "Utils/LexUIUtils.h"
-#include "SceneOutliner/LGUINativeSceneOutlinerExtension.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditor"
 
@@ -72,8 +71,7 @@ FLGUIPrefabEditor::~FLGUIPrefabEditor()
 	GEditor->SelectNone(true, true);
 
 	ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();
-	FLGUIEditorModule::Get().GetNativeSceneOutlinerExtension()->Restore();
-	FLGUIEditorModule::Get().OnHierarchyChanged.RemoveAll(this);
+ 	FLGUIEditorModule::Get().OnHierarchyChanged.RemoveAll(this);
 	USelection::SelectionChangedEvent.RemoveAll(this);
 }
 

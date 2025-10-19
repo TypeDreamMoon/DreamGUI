@@ -23,10 +23,7 @@
 #include "Engine/Engine.h"
 #include "Editor/EditorEngine.h"
 #endif
-#include "Slate/SceneViewport.h"
-#include "Core/LexUIManager.h"
 #include "Core/LexUISettings.h"
-#include "Engine/TextureRenderTarget2D.h"
 #include "ClearQuad.h"
 #if WITH_EDITOR
 #include "Core/LexUIRender/LexUIHelperLineShaders.h"
@@ -35,7 +32,6 @@
 UE_DISABLE_OPTIMIZATION
 
 #if WITH_EDITORONLY_DATA
-uint32 FLexUIRenderer::EditorPreview_ViewKey = 0;
 #endif
 FLexUIRenderer::FLexUIRenderer(const FAutoRegister& AutoRegister, UWorld* InWorld, ELexUIRendererType InRendererType)
 	:FSceneViewExtensionBase(AutoRegister)
@@ -794,9 +790,9 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 			{
 				if (!InView.bIsGameView)goto END_LEXUI_RENDER;
 			}
-			else//editor viewport preview
+			else
 			{
-				if (InView.GetViewKey() != EditorPreview_ViewKey)goto END_LEXUI_RENDER;//only preview in specific viewport in editor
+				goto END_LEXUI_RENDER;
 			}
 		}
 #endif

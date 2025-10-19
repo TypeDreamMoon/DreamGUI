@@ -82,8 +82,6 @@ int32 ULexUISettings::GetPriorityInSceneViewExtension()
 
 
 #if WITH_EDITOR
-FSimpleMulticastDelegate ULexUIEditorSettings::LexUIPreviewSetting_EditorPreviewViewportIndexChange;
-FSimpleMulticastDelegate ULexUIEditorSettings::LexUIEditorSetting_PreserveHierarchyStateChange;
 void ULexUIEditorSettings::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
@@ -91,14 +89,7 @@ void ULexUIEditorSettings::PostEditChangeProperty(struct FPropertyChangedEvent& 
 	auto Property = PropertyChangedEvent.Property;
 	if (MemberProperty && Property)
 	{
-		if (MemberProperty->GetFName() == GET_MEMBER_NAME_CHECKED(ULexUIEditorSettings, LexUIPreview_EditorViewIndex))
-		{
-			if (LexUIPreviewSetting_EditorPreviewViewportIndexChange.IsBound())
-			{
-				LexUIPreviewSetting_EditorPreviewViewportIndexChange.Broadcast();
-			}
-		}
-		else if (MemberProperty->GetFName() == GET_MEMBER_NAME_CHECKED(ULexUIEditorSettings, ExtraPrefabFolders)
+		if (MemberProperty->GetFName() == GET_MEMBER_NAME_CHECKED(ULexUIEditorSettings, ExtraPrefabFolders)
 			|| (
 				Property->GetFName() == GET_MEMBER_NAME_CHECKED(FDirectoryPath, Path)
 				&& MemberProperty->GetFName() == GET_MEMBER_NAME_CHECKED(ULexUIEditorSettings, ExtraPrefabFolders)
@@ -117,34 +108,10 @@ void ULexUIEditorSettings::PostEditChangeProperty(struct FPropertyChangedEvent& 
 				GEditor->BroadcastLevelActorListChanged();//refresh Outliner menu
 			}
 		}
-		else if (MemberProperty->GetFName() == GET_MEMBER_NAME_CHECKED(ULexUIEditorSettings, bPreserveHierarchyState))
-		{
-			LexUIEditorSetting_PreserveHierarchyStateChange.Broadcast();
-		}
 	}
 }
 void ULexUIEditorSettings::PostEditChangeChainProperty(struct FPropertyChangedChainEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeChainProperty(PropertyChangedEvent);
-}
-int32 ULexUIEditorSettings::GetLexUIPreview_EditorViewIndex()
-{
-	return GetDefault<ULexUIEditorSettings>()->LexUIPreview_EditorViewIndex;
-}
-void ULexUIEditorSettings::SetLexUIPreview_EditorViewIndex(int32 value)
-{
-	GetMutableDefault<ULexUIEditorSettings>()->LexUIPreview_EditorViewIndex = value;
-	if (LexUIPreviewSetting_EditorPreviewViewportIndexChange.IsBound())
-	{
-		LexUIPreviewSetting_EditorPreviewViewportIndexChange.Broadcast();
-	}
-}
-bool ULexUIEditorSettings::GetPreserveHierarchyState()
-{
-	return GetDefault<ULexUIEditorSettings>()->bPreserveHierarchyState;
-}
-float ULexUIEditorSettings::GetDelayRestoreHierarchyTime()
-{
-	return GetDefault<ULexUIEditorSettings>()->DelayRestoreHierarchyTime;
 }
 #endif

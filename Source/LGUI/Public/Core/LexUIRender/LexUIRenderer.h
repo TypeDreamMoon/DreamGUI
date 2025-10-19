@@ -182,8 +182,6 @@ private:
 		FRDGBuilder& GraphBuilder
 		, FSceneView& InView);
 #if WITH_EDITORONLY_DATA
-public:
-	static uint32 EditorPreview_ViewKey;
 private:
 	bool bIsEditorPreview = false;
 	mutable bool bCanRenderScreenSpace = true;

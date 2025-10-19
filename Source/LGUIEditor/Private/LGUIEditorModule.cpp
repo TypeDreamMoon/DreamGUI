@@ -11,7 +11,6 @@
 #include "SceneOutliner/LGUISceneOutlinerInfoColumn.h"
 #include "SceneOutlinerModule.h"
 #include "SceneOutlinerPublicTypes.h"
-#include "SceneOutliner/LGUINativeSceneOutlinerExtension.h"
 #include "AssetToolsModule.h"
 #include "SceneView.h"
 #include "Kismet2/KismetEditorUtilities.h"
@@ -185,12 +184,6 @@ void FLGUIEditorModule::StartupModule()
 			EditorCommands.FocusToSelectedUI,
 			FExecuteAction::CreateStatic(&LGUIEditorTools::FocusToSelectedUI)
 		);
-		PluginCommands->MapAction(
-			EditorCommands.ActiveViewportAsLGUIPreview,
-			FExecuteAction::CreateRaw(this, &FLGUIEditorModule::ToggleActiveViewportAsPreview),
-			FCanExecuteAction(),
-			FIsActionChecked::CreateLambda([this] {return this->bActiveViewportAsPreview; })
-		);
 		//settings
 		PluginCommands->MapAction(
 			EditorCommands.ToggleLGUIInfoColume,
@@ -224,8 +217,6 @@ void FLGUIEditorModule::StartupModule()
 	//register SceneOutliner ColumnInfo
 	{
 		ApplyLGUIColumnInfo(IsLGUIColumnInfoChecked(), false);
-		//SceneOutliner extension
-		NativeSceneOutlinerExtension = new FLGUINativeSceneOutlinerExtension();
 	}
 	//register window
 	{
@@ -453,8 +444,6 @@ void FLGUIEditorModule::ShutdownModule()
 	{
 		FSceneOutlinerModule& SceneOutlinerModule = FModuleManager::LoadModuleChecked< FSceneOutlinerModule >("SceneOutliner");
 		SceneOutlinerModule.UnRegisterColumnType<LGUISceneOutliner::FLGUISceneOutlinerInfoColumn>();
-		delete NativeSceneOutlinerExtension;
-		NativeSceneOutlinerExtension = nullptr;
 	}
 	//unregister window
 	{
@@ -760,10 +749,6 @@ bool FLGUIEditorModule::CanCreatePrefab()
 	return true;
 }
 
-FLGUINativeSceneOutlinerExtension* FLGUIEditorModule::GetNativeSceneOutlinerExtension()const
-{
-	return NativeSceneOutlinerExtension;
-}
 void FLGUIEditorModule::MarkOutlinerSelectionChange()
 {
 	auto SelectedActor = LGUIEditorTools::GetFirstSelectedActor();
@@ -1050,7 +1035,6 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(bool InitialSetup, bo
 	{
 		MenuBuilder.BeginSection("Others", LOCTEXT("Others", "Others"));
 		{
-			MenuBuilder.AddMenuEntry(commandList.ActiveViewportAsLGUIPreview);
 			MenuBuilder.AddMenuEntry(commandList.ToggleLGUIInfoColume);
 			MenuBuilder.AddMenuEntry(commandList.ToggleDrawHelperFrame);
 			MenuBuilder.AddMenuEntry(commandList.ToggleAnchorTool);
@@ -1197,7 +1181,6 @@ void FLGUIEditorModule::CreateCommonActorSubMenu(FMenuBuilder& MenuBuilder)
 		//reference from SPlacementAssetMenuEntry::OnMouseButtonUp
 		static void CreateActor(TSharedPtr<FPlaceableItem> Item)
 		{
-			AActor* NewActor = nullptr;
 			UActorFactory* Factory = Item->Factory;
 			if (!Item->Factory)
 			{
@@ -1210,7 +1193,7 @@ void FLGUIEditorModule::CreateCommonActorSubMenu(FMenuBuilder& MenuBuilder)
 				}
 			}
 			//reference from FLevelEditorActionCallbacks::AddActor
-			NewActor = UseActorFactory(Factory, Item->AssetData);
+			auto NewActor = UseActorFactory(Factory, Item->AssetData);
 			if (NewActor != NULL && IPlacementModeModule::IsAvailable())
 			{
 				IPlacementModeModule::Get().AddToRecentlyPlaced(Item->AssetData.GetAsset(), Factory);
@@ -1325,36 +1308,6 @@ void FLGUIEditorModule::CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder)
 				NAME_None, EUserInterfaceActionType::None
 			);
 		}
-	}
-}
-
-void FLGUIEditorModule::UseActiveViewportAsPreview()
-{
-	if (auto viewport = GEditor->GetActiveViewport())
-	{
-		if (auto viewportClient = viewport->GetClient())
-		{
-			if (auto editorViewportClient = (FEditorViewportClient*)(viewportClient))
-			{
-				ULexUIEditorSettings::SetLexUIPreview_EditorViewIndex(editorViewportClient->ViewIndex);
-			}
-		}
-	}
-}
-void FLGUIEditorModule::ClearViewportPreview()
-{
-	ULexUIEditorSettings::SetLexUIPreview_EditorViewIndex(-1);
-}
-void FLGUIEditorModule::ToggleActiveViewportAsPreview()
-{
-	bActiveViewportAsPreview = !bActiveViewportAsPreview;
-	if (bActiveViewportAsPreview)
-	{
-		UseActiveViewportAsPreview();
-	}
-	else
-	{
-		ClearViewportPreview();
 	}
 }
 
@@ -1693,16 +1646,16 @@ void FLGUIEditorModule::ReplaceActorSubMenu(FMenuBuilder& MenuBuilder)
 		MenuBuilder.AddSubMenu(
 			FText::FromString(AllActorGroupName),
 			FText(),
-			FNewMenuDelegate::CreateLambda([=](FMenuBuilder& MenuBuilder) {
-				MenuBuilder.BeginSection(FName(*AllActorGroupName));
+			FNewMenuDelegate::CreateLambda([=](FMenuBuilder& ItemMenuBuilder) {
+				ItemMenuBuilder.BeginSection(FName(*AllActorGroupName));
 				{
-					MenuBuilder.AddSearchWidget();
+					ItemMenuBuilder.AddSearchWidget();
 					for (auto& PlaceableItem : AllValidActorArray)
 					{
-						FunctionContainer::CreateCommonActorMenuEntry(MenuBuilder, PlaceableItem);
+						FunctionContainer::CreateCommonActorMenuEntry(ItemMenuBuilder, PlaceableItem);
 					}
 				}
-				MenuBuilder.EndSection();
+				ItemMenuBuilder.EndSection();
 				}),
 			FUIAction(),
 					NAME_None, EUserInterfaceActionType::None

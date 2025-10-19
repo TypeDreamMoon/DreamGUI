@@ -617,11 +617,9 @@ public:
 private:
 #if WITH_EDITOR
 	FDelegateHandle EditorTickDelegateHandle;
-	FDelegateHandle LexUIPreview_ViewportIndexChangeDelegateHandle;
 	void DrawVirtualCamera();
 	void DrawViewportArea();
 	void OnEditorTick(float DeltaTime);
-	void OnPreviewSetting_EditorPreviewViewportIndexChange();
 	void RegisterCanvasScaler();
 	void UnregisterCanvasScaler();
 #endif

@@ -2887,7 +2887,6 @@ void ULexCanvas::RegisterCanvasScaler()
 		EditorTickDelegateHandle = ULGUIPrefabManagerObject::RegisterEditorTickFunction([this](float deltaTime) {
 			this->OnEditorTick(deltaTime);
 			});
-		LexUIPreview_ViewportIndexChangeDelegateHandle = ULexUIEditorSettings::LexUIPreviewSetting_EditorPreviewViewportIndexChange.AddUObject(this, &ULexCanvas::OnPreviewSetting_EditorPreviewViewportIndexChange);
 	}
 #endif
 
@@ -2927,10 +2926,6 @@ void ULexCanvas::UnregisterCanvasScaler()
 	if (EditorTickDelegateHandle.IsValid())
 	{
 		ULGUIPrefabManagerObject::UnregisterEditorTickFunction(EditorTickDelegateHandle);
-	}
-	if (LexUIPreview_ViewportIndexChangeDelegateHandle.IsValid())
-	{
-		ULexUIEditorSettings::LexUIPreviewSetting_EditorPreviewViewportIndexChange.Remove(LexUIPreview_ViewportIndexChangeDelegateHandle);
 	}
 #endif
 	//reset the canvasScale to default
@@ -3095,25 +3090,15 @@ void ULexCanvas::OnEditorTick(float DeltaTime)
 					else
 #endif
 					{
-						FViewport* viewport = nullptr;
-
-						int32 editorViewIndex = ULexUIEditorSettings::GetLexUIPreview_EditorViewIndex();
-						auto& LevelViewportClients = GEditor->GetLevelViewportClients();
-						for (auto& ViewportClient : LevelViewportClients)
+						auto ViewportClient = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld())->GetEditorViewportClient();
+						auto Viewport = ViewportClient->Viewport;
+						if (Viewport == nullptr)
 						{
-							if (ViewportClient->ViewIndex == editorViewIndex)
-							{
-								viewport = ViewportClient->Viewport;
-								break;
-							}
+							Viewport = GEditor->GetActiveViewport();
 						}
-						if (viewport == nullptr)
+						if (Viewport != nullptr)
 						{
-							viewport = GEditor->GetActiveViewport();
-						}
-						if (viewport != nullptr)
-						{
-							NewViewportSize = viewport->GetSizeXY();
+							NewViewportSize = Viewport->GetSizeXY();
 						}
 					}
 
@@ -3148,11 +3133,6 @@ void ULexCanvas::OnEditorTick(float DeltaTime)
 			}
 		}
 	}
-}
-void ULexCanvas::OnPreviewSetting_EditorPreviewViewportIndexChange()
-{
-	int32 editorViewIndex = ULexUIEditorSettings::GetLexUIPreview_EditorViewIndex();
-	FLexUIRenderer::EditorPreview_ViewKey = ULexUIEditorManagerObject::Instance->GetViewportKeyFromIndex(editorViewIndex);
 }
 void DeprojectViewPointToWorld(const FMatrix& InViewProjectionMatrix, const FVector2D& InViewPoint01, FVector& OutWorldStart, FVector& OutWorldEnd)
 {

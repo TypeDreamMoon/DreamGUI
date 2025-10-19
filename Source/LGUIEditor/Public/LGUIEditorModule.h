@@ -12,7 +12,6 @@
 
 class FToolBarBuilder;
 class FMenuBuilder;
-class FLGUINativeSceneOutlinerExtension;
 DECLARE_LOG_CATEGORY_EXTERN(LGUIEditor, Log, All);
 
 class FLGUIEditorModule : public IModuleInterface, public FGCObject
@@ -33,7 +32,6 @@ public:
 	TSharedPtr<class FUICommandList> PluginCommands;
 	TArray<TSharedPtr<class FAssetTypeActions_Base>> AssetTypeActionsArray;
 	void MarkOutlinerSelectionChange();
-	FLGUINativeSceneOutlinerExtension* GetNativeSceneOutlinerExtension()const;
 	DECLARE_EVENT(FLGUIEditorModule, FOnHierarchyChanged);
 	FOnHierarchyChanged OnHierarchyChanged;
 private:
@@ -49,9 +47,6 @@ private:
 	void ReplaceActorSubMenu(FMenuBuilder& MenuBuilder);
 	void CopyWidgetReferenceSubMenu(FMenuBuilder& MenuBuilder);
 	void CopyComponentReferenceSubMenu(FMenuBuilder& MenuBuilder);
-	void UseActiveViewportAsPreview();
-	void ClearViewportPreview();
-	void ToggleActiveViewportAsPreview();
 	bool CanUnpackActorForPrefab();
 	bool CanBrowsePrefab();
 	bool CanUpdateLevelPrefab();
@@ -77,8 +72,6 @@ private:
 private:
 	TSharedRef<SDockTab> HandleSpawnDynamicSpriteAtlasViewerTab(const FSpawnTabArgs& SpawnTabArgs);
 	TSharedRef<SDockTab> HandleSpawnLGUIPrefabSequenceTab(const FSpawnTabArgs& SpawnTabArgs);
-	bool bActiveViewportAsPreview = false;
-	FLGUINativeSceneOutlinerExtension* NativeSceneOutlinerExtension = nullptr;
 	TSharedPtr<class SLGUIPrefabOverrideDataViewer> PrefabOverrideDataViewer = nullptr;
 	void CheckPrefabOverrideDataViewerEntry();
 
