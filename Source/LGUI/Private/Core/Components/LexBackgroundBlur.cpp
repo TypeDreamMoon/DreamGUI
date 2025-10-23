@@ -1,6 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/Components/LexBackgroundBlur.h"
+
+#include "ClearQuad.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/LexUIRender/LexUIPostProcessShaders.h"
@@ -68,7 +70,8 @@ public:
 		FTextureRHIRef ScreenTargetTexture,
 		FGlobalShaderMap* GlobalShaderMap,
 		const FMatrix44f& ViewProjectionMatrix,
-		bool IsWorldSpace,
+		bool bIsWorldSpace,
+		bool bIsRenderTarget,
 		float BlendDepthForWorld,
 		int DepthFadeForWorld,
 		const FIntRect& ViewRect,
@@ -176,6 +179,7 @@ public:
 				, GlobalShaderMap
 				, RenderScreenToMeshRegionVertexArray
 				, ModelViewProjectionMatrix
+				, bIsRenderTarget
 				, FIntRect(0, 0, BlurEffectRenderTexture1->GetSizeXYZ().X, BlurEffectRenderTexture1->GetSizeXYZ().Y)
 				, ViewTextureScaleOffset
 			);
@@ -266,7 +270,8 @@ public:
 			//after blur process, copy the blur result image back to screen image of the area
 			if (!bFullScreen)
 			{
-				RenderMeshOnScreen_RenderThread(GraphBuilder, SceneTextures, ScreenTargetTexture, GlobalShaderMap, BlurEffectRenderTexture1, ModelViewProjectionMatrix, ObjectToWorldMatrix, IsWorldSpace, BlendDepthForWorld, DepthFadeForWorld, DepthTextureScaleOffset, ViewRect);
+				//copy on mesh region
+				RenderMeshOnScreen_RenderThread(GraphBuilder, SceneTextures, ScreenTargetTexture, GlobalShaderMap, BlurEffectRenderTexture1, ModelViewProjectionMatrix, ObjectToWorldMatrix, bIsWorldSpace, BlendDepthForWorld, DepthFadeForWorld, DepthTextureScaleOffset, ViewRect);
 			}//full screen don't need it
 		}
 		else

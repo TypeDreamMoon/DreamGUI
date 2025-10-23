@@ -119,6 +119,7 @@ public:
 		FGlobalShaderMap* GlobalShaderMap,
 		const TArray<FLexUIPostProcessCopyMeshRegionVertex>& RegionVertexData,
 		const FMatrix44f& MVP,
+		bool bIsRenderTarget,
 		const FIntRect& ViewRect,
 		const FVector4f& SrcTextureScaleOffset,
 		bool ColorCorrect = false

@@ -34,6 +34,10 @@ void ULexVisualPostProcess::PostEditChangeProperty(FPropertyChangedEvent& Proper
 	{
 		UpdateRenderTarget();
 	}
+	else
+	{
+		OnRenderTargetChanged.Broadcast(nullptr);
+	}
 	
 	SendMaskTextureToRenderProxy();
 	SendRenderTargetToRenderProxy();
@@ -285,16 +289,6 @@ void ULexVisualPostProcess::SetRenderType(ELexBackgroundBlurRenderType Value)
 	if (RenderType != Value)
 	{
 		RenderType = Value;
-		GetWidget()->MarkCanvasUpdate(false, false, false, false);
-		SendRenderTargetToRenderProxy();
-	}
-}
-
-void ULexVisualPostProcess::SetOutputRenderTarget(UTextureRenderTarget2D* Value)
-{
-	if (OutputRenderTarget != Value)
-	{
-		OutputRenderTarget = Value;
 		GetWidget()->MarkCanvasUpdate(false, false, false, false);
 		SendRenderTargetToRenderProxy();
 	}

@@ -100,7 +100,8 @@ public:
 		FTextureRHIRef ScreenTargetTexture,
 		FGlobalShaderMap* GlobalShaderMap,
 		const FMatrix44f& ViewProjectionMatrix,
-		bool IsWorldSpace,
+		bool bIsWorldSpace,
+		bool bIsRenderTarget,
 		float BlendDepthForWorld,
 		int DepthFadeForWorld,
 		const FIntRect& ViewRect,
@@ -170,6 +171,7 @@ public:
 				, GlobalShaderMap
 				, RenderScreenToMeshRegionVertexArray
 				, ModelViewProjectionMatrix
+				, bIsRenderTarget
 				, FIntRect(0, 0, PixelateEffectRenderTargetTexture->GetSizeXYZ().X, PixelateEffectRenderTargetTexture->GetSizeXYZ().Y)
 				, ViewTextureScaleOffset
 			);
@@ -185,7 +187,7 @@ public:
 			//after pixelate process, copy the area back to screen image
 			if (!bFullScreen)
 			{
-				RenderMeshOnScreen_RenderThread(GraphBuilder, SceneTextures, ScreenTargetTexture, GlobalShaderMap, PixelateEffectRenderTargetTexture, ModelViewProjectionMatrix, ObjectToWorldMatrix, IsWorldSpace, BlendDepthForWorld, BlendDepthForWorld, DepthTextureScaleOffset, ViewRect
+				RenderMeshOnScreen_RenderThread(GraphBuilder, SceneTextures, ScreenTargetTexture, GlobalShaderMap, PixelateEffectRenderTargetTexture, ModelViewProjectionMatrix, ObjectToWorldMatrix, bIsWorldSpace, BlendDepthForWorld, BlendDepthForWorld, DepthTextureScaleOffset, ViewRect
 					, TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
 			}
 			else

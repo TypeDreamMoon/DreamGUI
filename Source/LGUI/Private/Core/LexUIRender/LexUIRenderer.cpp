@@ -190,6 +190,7 @@ void FLexUIRenderer::CopyRenderTargetOnMeshRegion(
 	, FGlobalShaderMap* GlobalShaderMap
 	, const TArray<FLexUIPostProcessCopyMeshRegionVertex>& RegionVertexData
 	, const FMatrix44f& MVP
+	, bool bIsRenderTarget
 	, const FIntRect& ViewRect
 	, const FVector4f& SrcTextureScaleOffset
 	, bool ColorCorrect
@@ -203,7 +204,7 @@ void FLexUIRenderer::CopyRenderTargetOnMeshRegion(
 		RDG_EVENT_NAME("LexUICopyRenderTargetOnMeshRegion"),
 		PassParameters,
 		ERDGPassFlags::Raster,
-		[Src, GlobalShaderMap, RegionVertexData, MVP, ViewRect, SrcTextureScaleOffset, NumSamples, ColorCorrect](FRHICommandListImmediate& RHICmdList)
+		[Src, GlobalShaderMap, RegionVertexData, MVP, bIsRenderTarget, ViewRect, SrcTextureScaleOffset, NumSamples, ColorCorrect](FRHICommandListImmediate& RHICmdList)
 		{
 			RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
 
@@ -223,7 +224,7 @@ void FLexUIRenderer::CopyRenderTargetOnMeshRegion(
 				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
 				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 
-				PixelShader->SetParameters(RHICmdList, MVP, SrcTextureScaleOffset, Src);
+				PixelShader->SetParameters(RHICmdList, MVP, bIsRenderTarget, Src, SrcTextureScaleOffset);
 			}
 			else
 			{
@@ -231,7 +232,7 @@ void FLexUIRenderer::CopyRenderTargetOnMeshRegion(
 				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
 				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 
-				PixelShader->SetParameters(RHICmdList, MVP, SrcTextureScaleOffset, Src);
+				PixelShader->SetParameters(RHICmdList, MVP, bIsRenderTarget, Src, SrcTextureScaleOffset);
 			}
 
 			uint32 VertexBufferSize = 4 * sizeof(FLexUIPostProcessCopyMeshRegionVertex);
@@ -384,7 +385,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 	FRHICommandListImmediate& RHICmdList = GraphBuilder.RHICmdList;
 	FVector4f DepthTextureScaleOffset;
 	FVector4f ColorTextureScaleOffset;
-	if (RendererType == ELexUIRendererType::RenderTarget)//rendertarget mode
+	if (RendererType == ELexUIRendererType::RenderTarget)//render-target mode
 	{
 		if (!bIsMainViewport)//render to scene capture (or other capture)
 		{
@@ -527,7 +528,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 
 			//for sort translucent
 			FVector3f WorldPosition;
-			//distance to camera (sqare)
+			//distance to camera (square)
 			float DistToCamera = 0;
 			int RenderPriority = 0;
 		};
@@ -637,6 +638,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 										GlobalShaderMap,
 										ViewProjectionMatrix,
 										true,
+										false,
 										RenderSequenceItem.BlendDepth,
 										RenderSequenceItem.DepthFade,
 										ViewRect,
@@ -865,6 +867,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 
 		const FMinimalSceneTextures& SceneTextures = ((FViewFamilyInfo*)InView.Family)->GetSceneTextures();
 		bool bIsDepthStencilCleared = false;
+		bool bIsRenderTarget = RendererType == ELexUIRendererType::RenderTarget;
 		for (auto& RenderSequenceItem : RenderSequenceArray)
 		{
 			switch (RenderSequenceItem.Type)
@@ -883,6 +886,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 							GlobalShaderMap,
 							ScreenSpaceRenderParameter.ViewProjectionMatrix,
 							/*IsWorldSpace*/false,
+							/*IsRenderToRenderTarget*/bIsRenderTarget,
 							/*BlendDepthForWorld*/0.0f,//actually this value will no work because 'IsWorldSpace' is false
 							/*BlendDepthForWorld*/0.0f,//actually this value will no work because 'IsWorldSpace' is false
 							ViewRect,

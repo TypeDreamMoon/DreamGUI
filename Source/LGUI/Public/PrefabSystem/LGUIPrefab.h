@@ -139,7 +139,7 @@ public:
 	UPROPERTY(EditAnywhere)
 		bool bNeedCanvas = true;//do we need LexCanvas component? default is true
 	UPROPERTY(EditAnywhere)
-		uint8 CanvasRenderMode = 0;//default LexCanvas's render mode is ELexUIRenderMode::ScreenSpaceOverlay
+		uint8 CanvasRenderMode = 3;//default LexCanvas's render mode is ELexUIRenderMode::WorldSpace_LexUI
 	UPROPERTY(EditAnywhere)
 		TEnumAsByte<EViewModeIndex> ViewMode = EViewModeIndex::VMI_Lit;//editor viewport's view-mode
 	UPROPERTY(EditAnywhere)

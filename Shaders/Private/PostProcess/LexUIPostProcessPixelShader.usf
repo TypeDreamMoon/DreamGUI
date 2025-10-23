@@ -35,6 +35,7 @@ void SimpleCopyTargetPS(
 
 float4 _MainTextureScaleOffset;
 float4x4 _MVP;
+half _IsRenderTarget;//if this is render to TextureTarget or to Screen
 
 void CopyMeshRegionPS(
     CopyMeshRegionVSToPS input,
@@ -47,7 +48,8 @@ void CopyMeshRegionPS(
     uv.xy = uv.xy * _MainTextureScaleOffset.xy + _MainTextureScaleOffset.zw;
     uv.y = 1.0f - uv.y;
     OutColor = _MainTex.Sample(_MainTexSampler, uv);
-    OutColor.a = 1;
+    //if render to screen then we need set alpha to 1, because default is 0 
+    OutColor.a = _IsRenderTarget ? OutColor.a : 1;
 #if LEXUI_COLORCORRECT
     OutColor.rgb = LinearizeColor(OutColor.rgb);
 #endif

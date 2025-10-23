@@ -247,8 +247,8 @@ public:
 
 	void SetParentCanvas(ULexCanvas* InParentCanvas);
 
-	DECLARE_EVENT_ThreeParams(ULexCanvas, FLGUICanvasRenderModeChangeEvent, ULexCanvas*, ELexRenderMode, ELexRenderMode);
-	FLGUICanvasRenderModeChangeEvent OnRenderModeChanged;
+	DECLARE_EVENT_ThreeParams(ULexCanvas, FRenderModeChangedEvent, ULexCanvas*, ELexRenderMode/*Old*/, ELexRenderMode/*New*/);
+	DECLARE_EVENT_OneParam(ULexCanvas, FRenderTargetChangedEvent, UTextureRenderTarget2D*);
 protected:
 	/** Root LexCanvas on hierarchy. LGUI's update start from the RootCanvas, and goes all down to every UI elements under it */
 	UPROPERTY(Transient) mutable TWeakObjectPtr<ULexCanvas> RootCanvas = nullptr;
@@ -268,6 +268,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		ELexRenderMode RenderMode = ELexRenderMode::WorldSpace;
+	/**
+	 * Force this canvas render to a TextureRenderTarget, no matter what render mode of the root canvas is.
+	 * This will break canvas link and make this canvas as root canvas.
+	 */
+	UPROPERTY(EditAnywhere, Category = "LGUI")
+	bool bForceRenderToTarget = false;
 	/**
 	 * Render to RenderTarget, if not specified then LGUI will create a new one.
 	 */
@@ -389,6 +395,8 @@ private:
 	/** Current viewport size*/
 	FIntPoint ViewportSize = FIntPoint(2, 2);
 #pragma endregion
+	FRenderModeChangedEvent OnRenderModeChanged;
+	FRenderTargetChangedEvent OnRenderTargetChanged;
 
 public:
 	FORCEINLINE bool GetOverrideDefaultMaterial()const				{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::DefaultMaterial); }
@@ -410,15 +418,17 @@ public:
 	/** Set render mode of this canvas. This may not take effect if the canvas is not a root canvas. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetRenderMode(ELexRenderMode Value);
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetForceRenderToTarget(bool Value);
 	/** Set parameters for calculating projection matrix. Only valid for ScreenSpace/RenderTarget mode. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetProjectionParameters(TEnumAsByte<ECameraProjectionMode::Type> InProjectionType, float InFovAngle, float InNearClipPlane, float InFarClipPlane);
 	/** if renderMode is RenderTarget, then this will change the renderTarget */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetRenderTarget(UTextureRenderTarget2D* Value);
-	DECLARE_EVENT_TwoParams(ULexCanvas, FOnRenderTargetCreatedOrChangedEvent, UTextureRenderTarget2D*, bool);
-	FOnRenderTargetCreatedOrChangedEvent OnRenderTargetCreatedOrChanged;
-
+	FRenderModeChangedEvent& GetRenderModeChangedEvent(){return OnRenderModeChanged;}
+	FRenderTargetChangedEvent& GetRenderTargetChangedEvent(){return OnRenderTargetChanged;}
+	
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetRenderTargetResolutionScale(float Value);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
@@ -443,28 +453,27 @@ public:
 		void SetSortOrderToLowestOfHierarchy(bool PropagateToChildrenCanvas = true);
 	void GetMinMaxSortOrderOfHierarchy(int32& OutMin, int32& OutMax);
 
-	/** Get render mode of root canvas. Canvas's render-mode is inherited from parent canvas. */
+	/**
+	 * Get actual render mode of this canvas.
+	 * Normally canvas's render-mode is inherited from parent canvas.
+	 * */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		ELexRenderMode GetRootRenderMode()const;
+		ELexRenderMode GetActualRenderMode()const;
 	/** Get render mode of this canvas. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		ELexRenderMode GetRenderMode()const { return RenderMode; }
-	/** Get render target of root canvas if render mode is RenderTarget. Canvas's render-target is inherited from root canvas. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		UTextureRenderTarget2D* GetRootRenderTarget()const;
+	bool GetForceRenderToTarget()const{return bForceRenderToTarget;}
+	/** Get actual render target of this canvas if actual render mode is RenderTarget. Canvas's render-target is inherited from root canvas. */
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+		UTextureRenderTarget2D* GetActualRenderTarget()const;
 	/** Get render target of this canvas. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		UTextureRenderTarget2D* GetRenderTarget()const { return RenderTarget; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		float GetRootRenderTargetResolutionScale()const;
-	UFUNCTION(BlueprintCallable, Category = LGUI)
 		float GetRenderTargetResolutionScale()const { return RenderTargetResolutionScale; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		ELexCanvasRenderTargetSizeMode GetRootRenderTargetSizeMode()const;
-	UFUNCTION(BlueprintCallable, Category = LGUI)
 		ELexCanvasRenderTargetSizeMode GetRenderTargetSizeMode()const { return RenderTargetSizeMode; }
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		ELexCanvasRenderTargetUpdateMode GetRootRenderTargetUpdateMode()const;
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		ELexCanvasRenderTargetUpdateMode GetRenderTargetUpdateMode()const { return RenderTargetUpdateMode; }
 
@@ -686,8 +695,9 @@ private:
 	 * eg: when attach to other canvas, this will tell which render mode in old canvas, and if not compatible then recreate render data.
 	 */
 	ELexRenderMode CurrentRenderMode = ELexRenderMode::None;
-	bool RenderModeIsLexRendererOrUERenderer(ELexRenderMode InRenderMode)const
+	FORCEINLINE bool RenderModeIsLexRendererOrUERenderer(ELexRenderMode InRenderMode)const
 	{
+		if (bForceRenderToTarget)return true;
 		return 
 			InRenderMode != ELexRenderMode::WorldSpace
 			;

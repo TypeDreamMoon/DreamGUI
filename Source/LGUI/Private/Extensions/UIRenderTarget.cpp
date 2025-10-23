@@ -72,7 +72,7 @@ void UUIRenderTarget::BeginPlay()
 	Super::BeginPlay();
 	if (auto Canvas = GetCanvas())
 	{
-		Canvas->OnRenderTargetCreatedOrChanged.AddWeakLambda(this, [this](UTextureRenderTarget2D* RenderTarget, bool CreatedOrChanged) {
+		Canvas->GetRenderTargetChangedEvent().AddWeakLambda(this, [this](UTextureRenderTarget2D* RenderTarget) {
 			GetWidget()->SetWidgetActive(true);
 			this->MarkTextureDirty();
 			});

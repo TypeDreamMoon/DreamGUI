@@ -87,8 +87,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetRenderType(ELexBackgroundBlurRenderType Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	void SetOutputRenderTarget(UTextureRenderTarget2D* Value);
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetFullScreen(bool Value);
 public:
 	void MarkVertexPositionDirty();

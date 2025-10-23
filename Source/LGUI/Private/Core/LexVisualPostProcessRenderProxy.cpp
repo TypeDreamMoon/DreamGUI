@@ -43,10 +43,9 @@ void FLexVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 )
 {
 	uint8 NumSamples = ScreenTargetTexture->GetNumSamples();
-	FRHICommandListImmediate& RHICmdList = GraphBuilder.RHICmdList;
-	FLexUIWorldRenderPSParameter* PSShaderParameters = GraphBuilder.AllocParameters<FLexUIWorldRenderPSParameter>();
+	auto PSShaderParameters = GraphBuilder.AllocParameters<FLexUIWorldRenderPSParameter>();
 	PSShaderParameters->SceneDepthTex = SceneTextures.Depth.Resolve;
-	PSShaderParameters->RenderTargets[0] = FRenderTargetBinding(RegisterExternalTexture(GraphBuilder, ScreenTargetTexture, TEXT("LGUIRendererTargetTexture")), ERenderTargetLoadAction::ELoad);
+	PSShaderParameters->RenderTargets[0] = FRenderTargetBinding(RegisterExternalTexture(GraphBuilder, ScreenTargetTexture, TEXT("LexUIRendererTargetTexture")), ERenderTargetLoadAction::ELoad);
 
 	GraphBuilder.AddPass(
 		RDG_EVENT_NAME("UIPostProcess_RenderMeshToScreen"),

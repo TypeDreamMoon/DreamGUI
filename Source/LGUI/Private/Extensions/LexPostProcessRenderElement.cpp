@@ -10,18 +10,18 @@
 void ULexPostProcessRenderElement::BeginPlay()
 {
 	Super::BeginPlay();
-	if (!bHasRegisterPostProcessUpdateEvent)
+	if (!bHasRegisterPostProcessChangedEvent)
 	{
-		RegisterPostProcessUpdateEvent();
+		RegisterPostProcessChangedEvent();
 	}
 }
 
 void ULexPostProcessRenderElement::EndPlay()
 {
 	Super::EndPlay();
-	if (bHasRegisterPostProcessUpdateEvent)
+	if (bHasRegisterPostProcessChangedEvent)
 	{
-		UnregisterPostProcessUpdateEvent();
+		UnregisterPostProcessChangedEvent();
 	}
 }
 
@@ -32,7 +32,7 @@ void ULexPostProcessRenderElement::PreEditChange(FProperty* PropertyAboutToChang
 	auto PropName = PropertyAboutToChange->GetFName();
 	if (PropName == GET_MEMBER_NAME_CHECKED(ULexPostProcessRenderElement, PostProcess))
 	{
-		UnregisterPostProcessUpdateEvent();
+		UnregisterPostProcessChangedEvent();
 	}
 }
 void ULexPostProcessRenderElement::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
@@ -43,17 +43,20 @@ void ULexPostProcessRenderElement::PostEditChangeProperty(struct FPropertyChange
 		auto PropName = Property->GetFName();
 		if (PropName == GET_MEMBER_NAME_CHECKED(ULexPostProcessRenderElement, PostProcess))
 		{
-			RegisterPostProcessUpdateEvent();
+			RegisterPostProcessChangedEvent();
+			MarkTextureDirty();
+			UpdateSpriteData();
 		}
 	}
 }
 #endif
 
-void ULexPostProcessRenderElement::RegisterPostProcessUpdateEvent()
+void ULexPostProcessRenderElement::RegisterPostProcessChangedEvent()
 {
+	if (bHasRegisterPostProcessChangedEvent)return;
 	if (PostProcess.IsValid())
 	{
-		bHasRegisterPostProcessUpdateEvent = true;
+		bHasRegisterPostProcessChangedEvent = true;
 		PostProcess->GetWidget()->GetDimensionChangedEvent().AddWeakLambda(this, [=, this](bool, bool, bool)
 		{
 			UpdateSpriteData();
@@ -70,9 +73,10 @@ void ULexPostProcessRenderElement::RegisterPostProcessUpdateEvent()
 	}
 }
 
-void ULexPostProcessRenderElement::UnregisterPostProcessUpdateEvent()
+void ULexPostProcessRenderElement::UnregisterPostProcessChangedEvent()
 {
-	bHasRegisterPostProcessUpdateEvent = false;
+	if (!bHasRegisterPostProcessChangedEvent)return;
+	bHasRegisterPostProcessChangedEvent = false;
 	if (PostProcess.IsValid() && PostProcess->GetWidget())
 	{
 		PostProcess->GetWidget()->GetDimensionChangedEvent().RemoveAll(this);
@@ -123,7 +127,10 @@ UTexture* ULexPostProcessRenderElement::GetTextureToCreateGeometry()
 {
 	if (PostProcess.IsValid())
 	{
-		return PostProcess->GetOutputRenderTarget();
+		if (PostProcess->GetRenderType() == ELexBackgroundBlurRenderType::RenderTarget)
+		{
+			return PostProcess->GetOutputRenderTarget();
+		}
 	}
 	return nullptr;
 }
@@ -135,19 +142,26 @@ UMaterialInterface* ULexPostProcessRenderElement::GetMaterialToCreateGeometry()
 
 void ULexPostProcessRenderElement::OnBeforeCreateOrUpdateGeometry()
 {
-	if (!bHasRegisterPostProcessUpdateEvent)
+	if (!bHasRegisterPostProcessChangedEvent)
 	{
-		RegisterPostProcessUpdateEvent();
+		RegisterPostProcessChangedEvent();
 	}
 }
 
 void ULexPostProcessRenderElement::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged,
                                                     bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
-	auto Widget = GetWidget();
-	auto RenderCanvas = Widget->GetRenderCanvas();
-	FLexUIGeometry::UpdateUIRectSimpleVertex(&InGeo,
-			Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), SpriteInfo, RenderCanvas, this, GetFinalColor(),
-			InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
-		);
+	if (InGeo.Texture != nullptr)
+	{
+		auto Widget = GetWidget();
+		auto RenderCanvas = Widget->GetRenderCanvas();
+		FLexUIGeometry::UpdateUIRectSimpleVertex(&InGeo,
+				Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), SpriteInfo, RenderCanvas, this, GetFinalColor(),
+				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
+			);
+	}
+	else
+	{
+		InGeo.Clear();
+	}
 }

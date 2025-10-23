@@ -29,7 +29,7 @@
 
 UE_DISABLE_OPTIMIZATION
 
-#define LOCTEXT_NAMESPACE "LGUICanvas"
+#define LOCTEXT_NAMESPACE "LexCanvas"
 
 ULexCanvas::ULexCanvas()
 {
@@ -63,7 +63,7 @@ void ULexCanvas::BeginPlay()
 {
 	Super::BeginPlay();
 	CheckRootCanvas();
-	CurrentRenderMode = this->GetRootRenderMode();
+	CurrentRenderMode = this->GetActualRenderMode();
 	if (CheckLexWidget())
 	{
 		bPrevIsVisible = LexWidget->GetWidgetActiveInHierarchy();
@@ -126,7 +126,7 @@ void ULexCanvas::UpdateRootCanvas()
 		bool bIsRenderTargetRenderer = false;
 		if (RenderModeIsLexRendererOrUERenderer(CurrentRenderMode))
 		{
-			auto ActualRenderMode = GetRootRenderMode();
+			auto ActualRenderMode = GetActualRenderMode();
 #if WITH_EDITOR
 			if (bPreviewWithLexUIRenderer)
 			{
@@ -221,18 +221,21 @@ void ULexCanvas::UpdateRootCanvas()
 			if (bCanUpdateRenderTarget)
 			{
 				UpdateRenderTarget(true);
+				if (IsValid(RenderTarget))
+				{
 #if WITH_EDITOR
-				if (!this->GetWorld()->IsGameWorld())
-				{
-					if (!RenderTarget->GameThread_GetRenderTargetResource())
+					if (!this->GetWorld()->IsGameWorld())
 					{
-						RenderTarget->InitCustomFormat(RenderTarget->SizeX, RenderTarget->SizeY, EPixelFormat::PF_B8G8R8A8, false);
+						if (!RenderTarget->GameThread_GetRenderTargetResource())
+						{
+							RenderTarget->InitCustomFormat(RenderTarget->SizeX, RenderTarget->SizeY, EPixelFormat::PF_B8G8R8A8, false);
+						}
 					}
-				}
 #endif
-				if (RenderTargetViewExtension.IsValid())
-				{
-					RenderTargetViewExtension->UpdateRenderTargetRenderer(RenderTarget);
+					if (RenderTargetViewExtension.IsValid())
+					{
+						RenderTargetViewExtension->UpdateRenderTargetRenderer(RenderTarget);
+					}
 				}
 			}
 		}
@@ -259,7 +262,7 @@ void ULexCanvas::UpdateRenderTarget(bool CallEvent)
 		RenderTarget->InitCustomFormat(DesiredRenderTargetSize.X, DesiredRenderTargetSize.Y, EPixelFormat::PF_B8G8R8A8, false);
 		if (CallEvent)
 		{
-			OnRenderTargetCreatedOrChanged.Broadcast(RenderTarget, true);
+			OnRenderTargetChanged.Broadcast(RenderTarget);
 		}
 	}
 	else
@@ -287,7 +290,7 @@ void ULexCanvas::UpdateRenderTarget(bool CallEvent)
 #endif
 			if (CallEvent)
 			{
-				OnRenderTargetCreatedOrChanged.Broadcast(RenderTarget, false);
+				OnRenderTargetChanged.Broadcast(RenderTarget);
 			}
 		}
 	}
@@ -413,10 +416,9 @@ void ULexCanvas::RemoveFromViewExtension(bool PropogateToChildrenCanvas)
 	{
 		for (const auto& ChildCanvas : ChildrenCanvasArray)
 		{
-			if (ChildCanvas.IsValid())
-			{
-				ChildCanvas->RemoveFromViewExtension(PropogateToChildrenCanvas);
-			}
+			if (!ChildCanvas.IsValid())continue;
+			if (ChildCanvas->bForceRenderToTarget)continue;
+			ChildCanvas->RemoveFromViewExtension(PropogateToChildrenCanvas);
 		}
 	}
 }
@@ -444,6 +446,10 @@ bool ULexCanvas::CheckRootCanvas(bool forceRecheck)const
 			if (FoundCanvas)
 			{
 				ResultCanvas = FoundCanvas;
+				if (FoundCanvas->bForceRenderToTarget)
+				{
+					return ResultCanvas;
+				}
 			}
 			ParentActor = ParentActor->GetAttachParentActor();
 		}
@@ -496,7 +502,7 @@ bool ULexCanvas::CheckLexWidget()const
 	{
 		if (this->IsRegistered())
 		{
-			UE_LOG(LGUI, Warning, TEXT("LGUICanvas component should only attach to a actor which have UIItem as RootComponent! %s"), *this->GetPathName());
+			UE_LOG(LGUI, Warning, TEXT("LexCanvas component should only attach to a actor which have UIItem as RootComponent! %s"), *this->GetPathName());
 #if !UE_BUILD_SHIPPING
 			FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
 #endif
@@ -544,10 +550,9 @@ void ULexCanvas::CheckRenderMode(bool PropogateToChildrenCanvas)
 	{
 		for (const auto& ChildCanvas : ChildrenCanvasArray)
 		{
-			if (ChildCanvas.IsValid())
-			{
-				ChildCanvas->CheckRenderMode(PropogateToChildrenCanvas);
-			}
+			if (!ChildCanvas.IsValid())continue;
+			if (ChildCanvas->bForceRenderToTarget)continue;
+			ChildCanvas->CheckRenderMode(PropogateToChildrenCanvas);
 		}
 	}
 }
@@ -644,6 +649,8 @@ void ULexCanvas::MarkCanvasUpdateRecursive(bool bMaterialOrTextureChanged, bool 
 	this->MarkCanvasUpdate(bMaterialOrTextureChanged, bTransformOrVertexPositionChanged, bHierarchyOrderChanged, bForceRebuildDrawCall);
 	for (auto& ChildCanvas : this->ChildrenCanvasArray)
 	{
+		if (!ChildCanvas.IsValid())continue;
+		if (ChildCanvas->bForceRenderToTarget)continue;
 		ChildCanvas->MarkCanvasUpdateRecursive(bMaterialOrTextureChanged, bTransformOrVertexPositionChanged, bHierarchyOrderChanged, bForceRebuildDrawCall);
 	}
 }
@@ -695,6 +702,17 @@ bool ULexCanvas::CanEditChange(const FProperty* InProperty) const
 		{
 			return bIsRootCanvas;
 		}
+		if (MemberName == GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderMode))
+		{
+			if (bIsRootCanvas)
+			{
+				if (bForceRenderToTarget)
+				{
+					return false;
+				}
+				return true;
+			}
+		}
 	}
 
 	return Super::CanEditChange(InProperty);
@@ -710,6 +728,20 @@ void ULexCanvas::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 	if (CheckRootCanvas())
 	{
 		RootCanvas->MarkCanvasUpdate(true, true, true);
+	}
+
+	auto PropertyName = PropertyChangedEvent.GetMemberPropertyName();
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexCanvas, bForceRenderToTarget))
+	{
+		if (bForceRenderToTarget)
+		{
+			RenderMode = ELexRenderMode::RenderTarget;
+			OnRenderTargetChanged.Broadcast(RenderTarget);
+		}
+		else
+		{
+			OnRenderTargetChanged.Broadcast(nullptr);
+		}
 	}
 
 	OnViewportParameterChanged();
@@ -1144,6 +1176,7 @@ void ULexCanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, co
 		{
 			auto ChildCanvas = Item->GetRenderCanvas();
 			if (ChildCanvas == nullptr)continue;//normally this won't be nullptr, but when redo in editor this breaks
+			if (ChildCanvas->bForceRenderToTarget)continue;//skip this type
 			if (!ChildCanvas->GetOverrideSorting())
 			{
 				if (InCacheUIDrawCallList.Num() > 0)
@@ -1373,10 +1406,9 @@ void ULexCanvas::MarkFinishRenderFrameRecursive()
 	//mark children canvas
 	for (const auto& ChildCanvas : ChildrenCanvasArray)
 	{
-		if (ChildCanvas.IsValid())
-		{
-			ChildCanvas->MarkFinishRenderFrameRecursive();
-		}
+		if (!ChildCanvas.IsValid())continue;
+		if (ChildCanvas->bForceRenderToTarget)continue;
+		ChildCanvas->MarkFinishRenderFrameRecursive();
 	}
 
 	bShouldRebuildDrawCall = false;
@@ -1398,10 +1430,9 @@ bool ULexCanvas::UpdateCanvasDrawCallRecursive()
 		//update children canvas
 		for (auto& item : ChildrenCanvasArray)
 		{
-			if (item.IsValid())
-			{
-				item->UpdateCanvasDrawCallRecursive();
-			}
+			if (!item.IsValid())continue;
+			if (item->bForceRenderToTarget)continue;
+			item->UpdateCanvasDrawCallRecursive();
 		}
 	}
 
@@ -1417,9 +1448,9 @@ bool ULexCanvas::UpdateCanvasDrawCallRecursive()
 				, ULexCanvas* ThisCanvas
 				, TArray<TObjectPtr<ULexWidget>>& WidgetCollection)
 			{
-				WidgetCollection.Add(Widget);
 				if (Widget->GetRenderCanvas() == ThisCanvas)
 				{
+					WidgetCollection.Add(Widget);
 					for (auto Child : Widget->GetUIChildren())
 					{
 						CollectRenderWidget(Child, ThisCanvas, WidgetCollection);
@@ -1632,7 +1663,7 @@ void ULexCanvas::UpdateDrawCallMesh_Implement()
 		case ELexUIDrawCallType::PostProcess:
 		{
 			//only LGUI renderer can render post process
-			if (this->GetRootRenderMode() == ELexRenderMode::WorldSpace)
+			if (this->GetActualRenderMode() == ELexRenderMode::WorldSpace)
 			{
 				return;
 			}
@@ -1788,7 +1819,7 @@ void ULexCanvas::UpdateDrawCallMesh_Implement()
 
 float ULexCanvas::GetLastRenderTime()const
 {
-	auto TempRenderMode = GetRootRenderMode();
+	auto TempRenderMode = GetActualRenderMode();
 #if WITH_EDITOR
 	if (!GetWorld()->IsGameWorld())//edit mode
 	{
@@ -1834,7 +1865,7 @@ void ULexCanvas::CheckUIMesh()const
 		bUIMeshNeedToSetInitialParameters = false;
 		if (RenderModeIsLexRendererOrUERenderer(CurrentRenderMode))
 		{
-			auto ActualRenderMode = GetRootRenderMode();
+			auto ActualRenderMode = GetActualRenderMode();
 #if WITH_EDITOR
 			if (bPreviewWithLexUIRenderer)
 			{
@@ -1850,16 +1881,7 @@ void ULexCanvas::CheckUIMesh()const
 			case ELexRenderMode::RenderTarget:
 			{
 				UIMesh->SetSupportLexUIRenderer(true, this->GetRootCanvas()->GetRenderTargetViewExtension(), false);
-#if WITH_EDITOR
-				if (!GetWorld()->IsGameWorld())
-				{
-					UIMesh->SetSupportUERenderer(true);
-				}
-				else
-#endif
-				{
-					UIMesh->SetSupportUERenderer(false);
-				}
+				UIMesh->SetSupportUERenderer(false);
 			}
 			break;
 			case ELexRenderMode::ScreenSpaceOverlay:
@@ -1921,7 +1943,7 @@ void ULexCanvas::SortDrawCall()
 
 	if (this->IsRootCanvas())
 	{
-		switch (this->GetRootRenderMode())
+		switch (this->GetActualRenderMode())
 		{
 		case ELexRenderMode::ScreenSpaceOverlay:
 			ULexUIManagerWorldSubsystem::GetViewExtension(GetWorld(), true)->MarkNeedToSortScreenSpacePrimitiveRenderPriority();
@@ -2163,6 +2185,8 @@ void ULexCanvas::SetSortOrderAdditionalValueRecursive(int32 InAdditionalValue)
 	this->SortOrder += InAdditionalValue;
 	for (auto ChildCanvas : ChildrenCanvasArray)
 	{
+		if (!ChildCanvas.IsValid())continue;
+		if (ChildCanvas->bForceRenderToTarget)continue;
 		ChildCanvas->SetSortOrderAdditionalValueRecursive(InAdditionalValue);
 	}
 }
@@ -2225,6 +2249,8 @@ void ULexCanvas::GetMinMaxSortOrderOfHierarchy(int32& OutMin, int32& OutMax)
 	}
 	for (auto ChildCanvas : ChildrenCanvasArray)
 	{
+		if (!ChildCanvas.IsValid())continue;
+		if (ChildCanvas->bForceRenderToTarget)continue;
 		ChildCanvas->GetMinMaxSortOrderOfHierarchy(OutMin, OutMax);
 	}
 }
@@ -2588,6 +2614,19 @@ void ULexCanvas::SetRenderMode(ELexRenderMode Value)
 	}
 }
 
+void ULexCanvas::SetForceRenderToTarget(bool Value)
+{
+	if (bForceRenderToTarget != Value)
+	{
+		bForceRenderToTarget = Value;
+		if (bForceRenderToTarget)
+		{
+			MarkCanvasUpdate(false, false, false, true);
+			LexWidget->MarkAllDirtyRecursive();
+		}
+	}
+}
+
 void ULexCanvas::SetProjectionParameters(TEnumAsByte<ECameraProjectionMode::Type> InProjectionType, float InFovAngle, float InNearClipPlane, float InFarClipPlane)
 {
 	ProjectionType = InProjectionType;
@@ -2604,11 +2643,11 @@ void ULexCanvas::SetRenderTarget(UTextureRenderTarget2D* Value)
 	{
 		RenderTarget = Value;
 		UpdateRenderTarget(false);
-		OnRenderTargetCreatedOrChanged.Broadcast(RenderTarget, false);
+		OnRenderTargetChanged.Broadcast(RenderTarget);
 	}
 }
 
-ELexRenderMode ULexCanvas::GetRootRenderMode()const
+ELexRenderMode ULexCanvas::GetActualRenderMode()const
 {
 	if (IsRootCanvas())
 	{
@@ -2616,6 +2655,11 @@ ELexRenderMode ULexCanvas::GetRootRenderMode()const
 	}
 	else
 	{
+		if (bForceRenderToTarget)
+		{
+			checkf(this->RenderMode == ELexRenderMode::RenderTarget, TEXT("[%s].%d This error should not happen!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+			return this->RenderMode;
+		}
 		if (CheckRootCanvas())
 		{
 			return RootCanvas->RenderMode;
@@ -2678,7 +2722,7 @@ void ULexCanvas::SetEnableDepthTest(bool Value)
 	}
 }
 
-UTextureRenderTarget2D* ULexCanvas::GetRootRenderTarget()const
+UTextureRenderTarget2D* ULexCanvas::GetActualRenderTarget()const
 {
 	if (IsRootCanvas())
 	{
@@ -2692,54 +2736,6 @@ UTextureRenderTarget2D* ULexCanvas::GetRootRenderTarget()const
 		}
 	}
 	return nullptr;
-}
-
-float ULexCanvas::GetRootRenderTargetResolutionScale()const
-{
-	if (IsRootCanvas())
-	{
-		return this->RenderTargetResolutionScale;
-	}
-	else
-	{
-		if (CheckRootCanvas())
-		{
-			return RootCanvas->RenderTargetResolutionScale;
-		}
-	}
-	return RenderTargetResolutionScale;
-}
-
-ELexCanvasRenderTargetSizeMode ULexCanvas::GetRootRenderTargetSizeMode()const
-{
-	if (IsRootCanvas())
-	{
-		return this->RenderTargetSizeMode;
-	}
-	else
-	{
-		if (CheckRootCanvas())
-		{
-			return RootCanvas->RenderTargetSizeMode;
-		}
-	}
-	return RenderTargetSizeMode;
-}
-
-ELexCanvasRenderTargetUpdateMode ULexCanvas::GetRootRenderTargetUpdateMode()const
-{
-	if (IsRootCanvas())
-	{
-		return this->RenderTargetUpdateMode;
-	}
-	else
-	{
-		if (CheckRootCanvas())
-		{
-			return RootCanvas->RenderTargetUpdateMode;
-		}
-	}
-	return RenderTargetUpdateMode;
 }
 
 int32 ULexCanvas::GetDrawCallCount()const
@@ -2784,7 +2780,7 @@ void ULexCanvas::RemoveClipData(const TSharedPtr<FLexUIClipData>& InClipData)
 }
 UTexture* ULexCanvas::GetClipDataTexture()const
 {
-	return ClipDataAsTexture->GetDataTexture();
+	return IsValid(ClipDataAsTexture) ? ClipDataAsTexture->GetDataTexture() : nullptr;
 }
 
 FTransform2D ULexCanvas::ConvertTo2DTransform(const FTransform& Transform)
@@ -3064,7 +3060,7 @@ void ULexCanvas::OnEditorTick(float DeltaTime)
 {
 	if (ULexUIManagerWorldSubsystem::GetIsPlaying())//When hit play there is still a editor world and DrawViewportArea is called, which could cause frame dropdown, so skip it when playing
 		return;
-	if (this->IsRootCanvas())
+	if (this->IsRootCanvas() && !this->bForceRenderToTarget)
 	{
 		if (this->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay
 			|| this->GetRenderMode() == ELexRenderMode::RenderTarget

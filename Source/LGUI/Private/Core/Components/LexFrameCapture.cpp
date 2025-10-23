@@ -106,7 +106,8 @@ public:
 		FTextureRHIRef ScreenTargetTexture,
 		FGlobalShaderMap* GlobalShaderMap,
 		const FMatrix44f& ViewProjectionMatrix,
-		bool IsWorldSpace,
+		bool bIsWorldSpace,
+		bool bIsRenderTarget,
 		float BlendDepthForWorld,
 		int DepthFadeForWorld,
 		const FIntRect& ViewRect,
@@ -150,6 +151,7 @@ public:
 				, GlobalShaderMap
 				, RenderScreenToMeshRegionVertexArray
 				, modelViewProjectionMatrix
+				, bIsRenderTarget
 				, FIntRect(0, 0, CapturedFrameTexture->GetSizeXYZ().X, CapturedFrameTexture->GetSizeXYZ().Y)
 				, ViewTextureScaleOffset
 				, true

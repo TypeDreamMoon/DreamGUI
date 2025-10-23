@@ -5,34 +5,37 @@
 #include "CoreMinimal.h"
 #include "Core/LexUISpriteInfo.h"
 #include "Core/Components/LexVisualBatchMesh.h"
-#include "LexPostProcessRenderElement.generated.h"
+#include "LexCanvasRenderTargetPreviewer.generated.h"
 
-class ULexVisualPostProcess;
+class ULexCanvas;
 /**
- * This component will grab post-process result image and display here. Not support rotate.
- * NOTE!!! This only valid when target PostProcess RenderType is set to RenderTarget and FullScreen is set to false.
+ * This component will grab canvas RenderTarget and display here.
+ * NOTE!!! This only valid when target Canvas RenderMode is set to RenderTarget.
  */
 UCLASS(ClassGroup = (LGUI), Blueprintable)
-class LGUI_API ULexPostProcessRenderElement : public ULexVisualBatchMesh
+class LGUI_API ULexCanvasRenderTargetPreviewer : public ULexVisualBatchMesh
 {
 	GENERATED_BODY()
 protected:
 	virtual void BeginPlay()override;
 	virtual void EndPlay() override;
+	virtual void OnRegister() override;
+	virtual void OnUnregister() override;
+	
 #if WITH_EDITOR
 	virtual void PreEditChange(FProperty* PropertyAboutToChange) override;
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-	TWeakObjectPtr<ULexVisualPostProcess> PostProcess;
+	TWeakObjectPtr<ULexCanvas> Canvas;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 	TObjectPtr<UMaterialInterface> Material;
 	FLexUISpriteInfo SpriteInfo;
 
-	bool bHasRegisterPostProcessChangedEvent = false;
-	void RegisterPostProcessChangedEvent();
-	void UnregisterPostProcessChangedEvent();
+	bool bHasRegisterRenderTargetChangedEvent = false;
+	void RegisterRenderTargetChangedEvent();
+	void UnregisterRenderTargetChangedEvent();
 	void UpdateSpriteData();
 
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;

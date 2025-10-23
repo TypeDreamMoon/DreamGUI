@@ -49,7 +49,7 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	auto RenderModeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderMode));
 	RenderModeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexCanvasCustomization::ForceRefresh, &DetailBuilder));
 	
-	if (TargetScriptArray[0]->GetRootRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
+	if (TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
 	{
 		if (auto World = TargetScriptArray[0]->GetWorld())
 		{
@@ -82,11 +82,11 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 
 	if (TargetScriptArray[0]->GetWorld() != nullptr)
 	{
-		Category.AddCustomRow(LOCTEXT("DrawcallInfo", "DrawcallInfo"))
+		Category.AddCustomRow(LOCTEXT("DrawCallInfo", "DrawCallInfo"))
 		.NameContent()
 		[
 			SNew(STextBlock)
-			.Text(LOCTEXT("DrawcallCountLabel", "DrawcallCount"))
+			.Text(LOCTEXT("DrawCallCountLabel", "DrawCallCount"))
 			.Font(IDetailLayoutBuilder::GetDetailFont())
 			.ColorAndOpacity(FLinearColor(FColor::Green))
 		]
@@ -300,7 +300,7 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	;
 	};
 	
-	if (TargetScriptArray[0]->GetRootRenderMode() == ELexRenderMode::WorldSpace || TargetScriptArray[0]->GetRootRenderMode() == ELexRenderMode::WorldSpace_LexUI)
+	if (TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::WorldSpace || TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::WorldSpace_LexUI)
 	{
 		CanvasScalerCategory.AddCustomRow(LOCTEXT("WorldSpaceUIInfo", "WorldSpaceUIInfo"))
 			.WholeRowContent()
@@ -314,8 +314,8 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			];
 	}
 	else if (
-		TargetScriptArray[0]->GetRootRenderMode() == ELexRenderMode::ScreenSpaceOverlay
-		|| TargetScriptArray[0]->GetRootRenderMode() == ELexRenderMode::RenderTarget
+		TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::ScreenSpaceOverlay
+		|| TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::RenderTarget && !TargetScriptArray[0]->bForceRenderToTarget
 		)
 	{
 		CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, ScaleMode));
@@ -372,7 +372,7 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, NearClipPlane));
 		CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, FarClipPlane));
 
-		if (TargetScriptArray[0]->GetRootRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
+		if (TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
 		{
 			CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, bFixedSizeInEditMode));
 			CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, SizeInEditMode));
@@ -465,7 +465,7 @@ FText FLexCanvasCustomization::GetSortOrderInfo(TWeakObjectPtr<ULexCanvas> Targe
 					}
 				}
 
-				auto renderMode = TargetScript->GetRootRenderMode();
+				auto renderMode = TargetScript->GetActualRenderMode();
 				auto& itemList = LGUIManager->GetCanvasArray(renderMode);
 				int sortOrderCount = 0;
 				for (auto item : itemList)
@@ -493,7 +493,7 @@ FText FLexCanvasCustomization::GetDrawcallInfo()const
 		int allDrawcallCount = 0;
 		for (auto& canvasItem : allCanvas)
 		{
-			if (TargetScriptArray[0]->GetRootRenderMode() == ELexRenderMode::RenderTarget)
+			if (TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::RenderTarget)
 			{
 				if (TargetScriptArray[0]->RenderTarget == canvasItem->RenderTarget && IsValid(canvasItem->RenderTarget))
 				{
@@ -512,7 +512,7 @@ FText FLexCanvasCustomization::GetDrawcallInfo()const
 FText FLexCanvasCustomization::GetDrawcallInfoTooltip()const
 {
 	FString spaceText;
-	switch (TargetScriptArray[0]->GetRootRenderMode())
+	switch (TargetScriptArray[0]->GetActualRenderMode())
 	{
 	case ELexRenderMode::ScreenSpaceOverlay:
 		spaceText = TEXT("ScreenSpaceOverlay");
@@ -537,11 +537,11 @@ FText FLexCanvasCustomization::GetDrawcallInfoTooltip()const
 
 	if (auto LGUIManager = ULexUIManagerWorldSubsystem::GetInstance(TargetScriptArray[0]->GetWorld()))
 	{
-		auto& allCanvas = LGUIManager->GetCanvasArray(TargetScriptArray[0]->GetRootRenderMode());
+		auto& allCanvas = LGUIManager->GetCanvasArray(TargetScriptArray[0]->GetActualRenderMode());
 		int allDrawcallCount = 0;
 		for (auto& canvasItem : allCanvas)
 		{
-			if (TargetScriptArray[0]->GetRootRenderMode() == ELexRenderMode::RenderTarget)
+			if (TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::RenderTarget)
 			{
 				if (TargetScriptArray[0]->RenderTarget == canvasItem->RenderTarget && IsValid(canvasItem->RenderTarget))
 				{

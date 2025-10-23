@@ -262,7 +262,6 @@ UWorld* ULGUIPrefabManagerObject::GetPreviewWorldForPrefabPackage()
 	{
 		FName UniqueWorldName = MakeUniqueObjectName(Instance, UWorld::StaticClass(), FName("LGUI_PreviewWorldForPrefabPackage"));
 		PreviewWorldForPrefabPackage = NewObject<UWorld>(Instance, UniqueWorldName);
-		PreviewWorldForPrefabPackage->AddToRoot();
 		PreviewWorldForPrefabPackage->WorldType = EWorldType::EditorPreview;
 
 		FWorldContext& WorldContext = GEngine->CreateNewWorldContext(PreviewWorldForPrefabPackage->WorldType);

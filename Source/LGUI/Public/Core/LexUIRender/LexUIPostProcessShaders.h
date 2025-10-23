@@ -143,13 +143,19 @@ public:
 		MainTextureSamplerParameter.Bind(Initializer.ParameterMap, TEXT("_MainTexSampler"));
 		MainTextureScaleOffsetParameter.Bind(Initializer.ParameterMap, TEXT("_MainTextureScaleOffset"));
 		MVPParameter.Bind(Initializer.ParameterMap, TEXT("_MVP"));
+		IsRenderTargetParameter.Bind(Initializer.ParameterMap, TEXT("_IsRenderTarget"));
 	}
-	void SetParameters(FRHICommandListImmediate& RHICmdList, const FMatrix44f& MVP, const FVector4f& MainTextureScaleOffset, FTextureRHIRef MainTexture, FRHISamplerState* MainTextureSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI())
+	void SetParameters(FRHICommandListImmediate& RHICmdList, const FMatrix44f& MVP
+		, bool bIsRenderTarget
+		, FTextureRHIRef MainTexture, const FVector4f& MainTextureScaleOffset
+		, FRHISamplerState* MainTextureSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI()
+		)
 	{
 		FRHIBatchedShaderParameters& BatchedParameters = RHICmdList.GetScratchShaderParameters();
 		SetTextureParameter(BatchedParameters, MainTextureParameter, MainTextureSamplerParameter, MainTextureSampler, MainTexture);
 		SetShaderValue(BatchedParameters, MVPParameter, MVP);
 		SetShaderValue(BatchedParameters, MainTextureScaleOffsetParameter, MainTextureScaleOffset);
+		SetShaderValue(BatchedParameters, IsRenderTargetParameter, bIsRenderTarget ? 1.0f : 0.0f);
 		RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
 	}
 private:
@@ -157,6 +163,7 @@ private:
 	LAYOUT_FIELD(FShaderResourceParameter, MainTextureSamplerParameter);
 	LAYOUT_FIELD(FShaderParameter, MainTextureScaleOffsetParameter);
 	LAYOUT_FIELD(FShaderParameter, MVPParameter);
+	LAYOUT_FIELD(FShaderParameter, IsRenderTargetParameter);
 };
 class FLexUICopyMeshRegionPS_ColorCorrect : public FLexUICopyMeshRegionPS
 {

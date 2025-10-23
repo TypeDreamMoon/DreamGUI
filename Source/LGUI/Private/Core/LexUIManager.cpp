@@ -1,6 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/LexUIManager.h"
+
+#include "Constraint.h"
 #include "LGUI.h"
 #include "Utils/LexUIUtils.h"
 #include "Core/Components/LexWidget.h"
@@ -478,73 +480,75 @@ uint32 ULexUIEditorManagerObject::GetViewportKeyFromIndex(int32 InViewportIndex)
 #if WITH_EDITOR
 void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool ScreenOrWorld)
 {
-	auto RectExtends = FVector(0.1f, Widget->GetWidth(), Widget->GetHeight()) * 0.5f;
-	bool bCanDrawRect = false;
-	auto RectDrawColor = FColor(160, 160, 160, 255);//gray means normal object
 	if (ULGUIPrefabManagerObject::IsSelected(Widget->GetOwner()))//select self
 	{
-		RectDrawColor = FColor(0, 255, 0, 255);//green means selected object
-		RectExtends.X = 1;
-		bCanDrawRect = true;
-
-		if (auto Visual = Cast<ULexVisual>(Widget->GetVisual()))
+		auto RectDrawColor = FColor(160, 160, 160, 255);//gray means normal object
+		auto DrawWidget = [=](ULexWidget* InWidget, const FColor& Color)
 		{
-			FVector Min, Max;
-			Visual->GetGeometryBounds3DInLocalSpace(Min, Max);
-			auto WorldTransform = Widget->GetComponentTransform();
-
-			auto GeometryBoundsDrawColor = FColor(255, 255, 0, 255);//yellow for geometry bounds
-			auto GeometryBoundsExtends = (Max - Min) * 0.5f;
-			auto RelativeOffset = (Min + Max) * 0.5f;
-
-			ULexUIManagerWorldSubsystem::DrawDebugRect(Widget->GetWorld(), RelativeOffset, FMatrix44f(WorldTransform.ToMatrixWithScale()), GeometryBoundsExtends, GeometryBoundsDrawColor
-				, Widget->GetVisual() , FString::Printf(TEXT("%s.Visual"), *Widget->GetDisplayName()), ScreenOrWorld);
+			auto WorldTransform = InWidget->GetComponentTransform();
+			FVector RelativeOffset(0, 0, 0);
+			RelativeOffset.Y = (0.5f - InWidget->GetPivot().X) * InWidget->GetWidth();
+			RelativeOffset.Z = (0.5f - InWidget->GetPivot().Y) * InWidget->GetHeight();
+			auto Extends = FVector(1, InWidget->GetWidth(), InWidget->GetHeight()) * 0.5f;
+			ULexUIManagerWorldSubsystem::DrawDebugRect(InWidget->GetWorld()
+				, RelativeOffset, FMatrix44f(WorldTransform.ToMatrixWithScale())
+				, Extends * WorldTransform.GetScale3D(), Color
+				, InWidget, InWidget->GetDisplayName(), ScreenOrWorld);
+		};
+		//parent
+		if (auto Parent = Widget->GetUIParent())
+		{
+			DrawWidget(Parent, RectDrawColor);
 		}
-	}
-	else
-	{
-		//parent selected
-		if (IsValid(Widget->GetUIParent()))
+		//child
+		for (auto& Child : Widget->GetUIChildren())
 		{
-			if (ULGUIPrefabManagerObject::IsSelected(Widget->GetUIParent()->GetOwner()))
+			if (IsValid(Child) && IsValid(Child->GetOwner()))
 			{
-				bCanDrawRect = true;
-			}
-		}
-		//child selected
-		auto& childrenCompArray = Widget->GetUIChildren();
-		for (auto& uiComp : childrenCompArray)
-		{
-			if (IsValid(uiComp) && IsValid(uiComp->GetOwner()) && ULGUIPrefabManagerObject::IsSelected(uiComp->GetOwner()))
-			{
-				bCanDrawRect = true;
-				break;
+				DrawWidget(Child, RectDrawColor);
 			}
 		}
 		//other object of same hierarchy is selected
-		if (IsValid(Widget->GetUIParent()))
+		if (auto Parent = Widget->GetUIParent())
 		{
-			const auto& sameLevelCompArray = Widget->GetUIParent()->GetUIChildren();
-			for (auto& uiComp : sameLevelCompArray)
+			for (auto& SiblingWidget : Parent->GetUIChildren())
 			{
-				if (IsValid(uiComp) && IsValid(uiComp->GetOwner()) && ULGUIPrefabManagerObject::IsSelected(uiComp->GetOwner()))
+				if (IsValid(SiblingWidget) && SiblingWidget != Widget)
 				{
-					bCanDrawRect = true;
-					break;
+					DrawWidget(SiblingWidget, RectDrawColor);
 				}
 			}
 		}
-	}
 
-	if (bCanDrawRect)
-	{
-		auto WorldTransform = Widget->GetComponentTransform();
-		FVector RelativeOffset(0, 0, 0);
-		RelativeOffset.Y = (0.5f - Widget->GetPivot().X) * Widget->GetWidth();
-		RelativeOffset.Z = (0.5f - Widget->GetPivot().Y) * Widget->GetHeight();
+		//self
+		{
+			RectDrawColor = FColor(0, 255, 0, 255);//green means selected object
+			auto WorldTransform = Widget->GetComponentTransform();
+			FVector RelativeOffset(0, 0, 0);
+			RelativeOffset.Y = (0.5f - Widget->GetPivot().X) * Widget->GetWidth();
+			RelativeOffset.Z = (0.5f - Widget->GetPivot().Y) * Widget->GetHeight();
+			auto Extends = FVector(1, Widget->GetWidth(), Widget->GetHeight()) * 0.5f;
+			ULexUIManagerWorldSubsystem::DrawDebugRect(Widget->GetWorld()
+				, RelativeOffset, FMatrix44f(WorldTransform.ToMatrixWithScale())
+				, Extends * WorldTransform.GetScale3D(), RectDrawColor
+				, Widget, Widget->GetDisplayName(), ScreenOrWorld);
 
-		ULexUIManagerWorldSubsystem::DrawDebugRect(Widget->GetWorld(), RelativeOffset, FMatrix44f(WorldTransform.ToMatrixWithScale()), RectExtends * WorldTransform.GetScale3D(), RectDrawColor
-			, Widget, Widget->GetDisplayName(), ScreenOrWorld);
+			if (auto Visual = Cast<ULexVisual>(Widget->GetVisual()))
+			{
+				FVector Min, Max;
+				Visual->GetGeometryBounds3DInLocalSpace(Min, Max);
+				auto GeometryBoundsDrawColor = FColor(255, 255, 0, 255);//yellow for geometry bounds
+				auto GeometryBoundsExtends = (Max - Min) * 0.5f;
+				auto GeometryRelativeOffset = (Min + Max) * 0.5f;
+				if (Extends != GeometryBoundsExtends || RelativeOffset != GeometryRelativeOffset)
+				{
+					ULexUIManagerWorldSubsystem::DrawDebugRect(Widget->GetWorld()
+						, GeometryRelativeOffset, FMatrix44f(WorldTransform.ToMatrixWithScale())
+						, GeometryBoundsExtends, GeometryBoundsDrawColor
+						, Widget->GetVisual() , FString::Printf(TEXT("%s.Visual"), *Widget->GetDisplayName()), ScreenOrWorld);
+				}
+			}
+		}
 	}
 }
 
@@ -1126,7 +1130,7 @@ void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 		{
 			if (Canvas->IsRootCanvas())
 			{
-				if (Canvas->GetRootRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
+				if (Canvas->GetActualRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
 				{
 					ScreenSpaceOverlayCanvasCount++;
 				}
