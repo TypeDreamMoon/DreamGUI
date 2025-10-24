@@ -139,7 +139,7 @@ void UUISliderComponent::SetNavigationChangeInterval(float InValue)
 bool UUISliderComponent::OnPointerDown_Implementation(ULexPointerEventData *eventData)
 {
     Super::OnPointerDown_Implementation(eventData);
-    if (eventData->inputType == ELexUIPointerInputType::Pointer)
+    if (eventData->InputType == ELexUIPointerInputType::Pointer)
     {
         CalculateInputValue(eventData);
     }

@@ -10,18 +10,21 @@
 
 ULexScreenSpaceRaycaster::ULexScreenSpaceRaycaster()
 {
-	Depth = 1000;//normally ScreenSpaceRaycaster is on top of WorldSpaceRaycaster, so make it higher
 }
 
 void ULexScreenSpaceRaycaster::BeginPlay()
 {
 	Super::BeginPlay();
-	RenderModeArray = { ELexRenderMode::ScreenSpaceOverlay };
-}
-
-bool ULexScreenSpaceRaycaster::ShouldSkipCanvas(class ULexCanvas* UICanvas)
-{
-	return false;
+	if (!RootCanvas.IsValid())
+	{
+		auto Canvas = GetOwner()->FindComponentByClass<ULexCanvas>();
+		if (!IsValid(Canvas) || !Canvas->IsRootCanvas() || Canvas->GetActualRenderMode() != ELexRenderMode::ScreenSpaceOverlay)
+		{
+			UE_LOG(LGUI, Error, TEXT("[%s].%d Canvas is not valid! LexUIScreenSpaceRaycaster can only attach to ScreenSpaceUI!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+			return;
+		}
+		RootCanvas = Canvas;
+	}
 }
 
 bool ULexScreenSpaceRaycaster::GetAffectByGamePause()const
@@ -40,43 +43,38 @@ bool ULexScreenSpaceRaycaster::GetAffectByGamePause()const
 }
 bool ULexScreenSpaceRaycaster::ShouldStartDrag(ULexPointerEventData* InPointerEventData)
 {
-	if (ShouldStartDrag_HoldToDrag(InPointerEventData))return true;
-	FVector2D mousePos = FVector2D(InPointerEventData->pointerPosition);
-	FVector2D pressMousePos = FVector2D(InPointerEventData->pressPointerPosition);
-	return FVector2D::DistSquared(pressMousePos, mousePos) > ClickThresholdSquare;
-}
-bool ULexScreenSpaceRaycaster::GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection)
-{
-	if (!RootCanvas.IsValid())
+	if (bHoldToDrag)
 	{
-		auto Canvas = GetOwner()->FindComponentByClass<ULexCanvas>();
-		if (!IsValid(Canvas) || !Canvas->IsRootCanvas())
+		if (GetWorld()->TimeSeconds - InPointerEventData->PressTime > HoldToDragTime)
 		{
-			UE_LOG(LGUI, Error, TEXT("[%s].%d Canvas is not valid! LexUIScreenSpaceRaycaster can only attach to ScreenSpaceUIRoot!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			return false;
-		}
-		else
-		{
-			RootCanvas = Canvas;
+			return true;
 		}
 	}
-	if (RootCanvas->GetActualRenderMode() != ELexRenderMode::ScreenSpaceOverlay)
+	FVector2D mousePos = FVector2D(InPointerEventData->PointerPosition);
+	FVector2D pressMousePos = FVector2D(InPointerEventData->PressPointerPosition);
+	return FVector2D::DistSquared(pressMousePos, mousePos) > DragThresholdSquare;
+}
+bool ULexScreenSpaceRaycaster::GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd)
+{
+	if (!RootCanvas.IsValid())
 		return false;
 
 	auto ViewProjectionMatrix = RootCanvas->GetViewProjectionMatrix();
 	//Get mouse position, convert to range 0-1
-	FVector2D mousePos = FVector2D(InPointerEventData->pointerPosition);
+	FVector2D mousePos = FVector2D(InPointerEventData->PointerPosition);
 	FVector2D viewportSize = RootCanvas->GetViewportSize();
 	FVector2D mousePos01 = mousePos / viewportSize;
 	mousePos01.Y = 1.0f - mousePos01.Y;
 
 	DeprojectViewPointToWorld(ViewProjectionMatrix, mousePos01, OutRayOrigin, OutRayDirection);
+	OutRayEnd = OutRayOrigin + OutRayDirection * RayLength;
 	return true;
 }
 
-bool ULexScreenSpaceRaycaster::Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, FHitResult& OutHitResult, TArray<USceneComponent*>& OutHoverArray)
+void ULexScreenSpaceRaycaster::Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResult)
 {
-	return Super::RaycastUI(InPointerEventData, RenderModeArray, OutRayOrigin, OutRayDirection, OutRayEnd, OutHitResult, OutHoverArray);
+	if (!RootCanvas.IsValid())return;
+	Super::RaycastUI(InPointerEventData, RootCanvas.Get(), TOptional<ETraceTypeQuery>(), OutRayOrigin, OutRayDirection, OutRayEnd, OutHitResult);
 }
 
 void ULexScreenSpaceRaycaster::DeprojectViewPointToWorld(const FMatrix& InViewProjectionMatrix, const FVector2D& InViewPoint01, FVector& OutWorldLocation, FVector& OutWorldDirection)
@@ -111,6 +109,24 @@ void ULexScreenSpaceRaycaster::DeprojectViewPointToWorld(const FMatrix& InViewPr
 	// Finally, store the results in the outputs
 	OutWorldLocation = RayStartWorldSpace;
 	OutWorldDirection = RayDirWorldSpace;
+}
+
+void ULexScreenSpaceRaycaster::SetRayLength(float Value)
+{
+	RayLength = Value;
+}
+void ULexScreenSpaceRaycaster::SetDragThreshold(float Value)
+{
+	DragThreshold = Value;
+	DragThresholdSquare = DragThreshold * DragThreshold;
+}
+void ULexScreenSpaceRaycaster::SetHoldToDrag(bool Value)
+{
+	bHoldToDrag = Value;
+}
+void ULexScreenSpaceRaycaster::SetHoldToDragTime(float Value)
+{
+	HoldToDragTime = Value;
 }
 
 #undef LOCTEXT_NAMESPACE

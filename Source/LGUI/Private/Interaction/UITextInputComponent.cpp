@@ -1181,7 +1181,7 @@ bool UUITextInputComponent::OnPointerEnter_Implementation(ULexPointerEventData* 
 	Super::OnPointerEnter_Implementation(eventData);
 	if (bAutoActivateInputWhenNavigateIn)
 	{
-		if (eventData->inputType == ELexUIPointerInputType::Navigation)
+		if (eventData->InputType == ELexUIPointerInputType::Navigation)
 		{
 			ActivateInput(eventData);
 		}
@@ -1388,7 +1388,7 @@ void UUITextInputComponent::ActivateInput(ULexPointerEventData* eventData)
 		{
 			if (IsValid(eventData))
 			{
-				eventSystem->SetSelectComponent(Widget, eventData, eventData->pressComponentEventFireType);
+				eventSystem->SetSelectComponent(Widget, eventData, eventData->PressComponentEventFireType);
 			}
 			else
 			{

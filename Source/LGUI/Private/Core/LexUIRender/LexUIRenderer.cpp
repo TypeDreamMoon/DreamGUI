@@ -417,9 +417,9 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 					RDG_EVENT_NAME("LexUIRender_ClearRenderTarget"),
 					Parameters,
 					ERDGPassFlags::Raster,
-					[](FRHICommandListImmediate& RHICmdList)
+					[ClearColor = RenderTargetClearColor](FRHICommandListImmediate& RHICmdList)
 					{
-						DrawClearQuad(RHICmdList, FLinearColor(0, 0, 0, 0));
+						DrawClearQuad(RHICmdList, FLinearColor(ClearColor));
 					}
 				);
 			}
@@ -1234,16 +1234,17 @@ void FLexUIRenderer::ClearScreenSpaceRootCanvas()
 	ScreenSpaceRenderParameter.RootCanvas = nullptr;
 }
 
-void FLexUIRenderer::UpdateRenderTargetRenderer(UTextureRenderTarget2D* InRenderTarget)
+void FLexUIRenderer::UpdateRenderTargetRenderer(UTextureRenderTarget2D* InRenderTarget, FColor InClearColor)
 {
 	auto Resource = InRenderTarget->GameThread_GetRenderTargetResource();
 	if (Resource)
 	{
 		auto ViewExtension = this;
 		ENQUEUE_RENDER_COMMAND(FLexUIRender_UpdateRenderTargetRenderer)(
-			[ViewExtension, Resource](FRHICommandListImmediate& RHICmdList)
+			[ViewExtension, Resource, InClearColor](FRHICommandListImmediate& RHICmdList)
 			{
 				ViewExtension->RenderTargetResource = Resource;
+				ViewExtension->RenderTargetClearColor = InClearColor;
 			}
 		);
 	}

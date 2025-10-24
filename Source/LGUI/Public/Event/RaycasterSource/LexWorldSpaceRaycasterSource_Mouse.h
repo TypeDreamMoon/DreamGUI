@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Event/LexWorldSpaceRaycaster.h"
-#include "LexUIWorldSpaceRaycasterSource_Mouse.generated.h"
+#include "Event/LexWorldSpaceRaycasterBase.h"
+#include "LexWorldSpaceRaycasterSource_Mouse.generated.h"
 
 #define BUILD_VP_MATRIX_FROM_CAMERA_MANAGER 0
 
@@ -12,11 +12,11 @@
  * This is for standalone mouse input, it will emit a ray from main viewport mouse position
  */
 UCLASS(ClassGroup = LGUI, Blueprintable, meta = (DisplayName = "Mouse"))
-class LGUI_API ULexUIWorldSpaceRaycasterSource_Mouse : public ULexUIWorldSpaceRaycasterSource
+class LGUI_API ULexWorldSpaceRaycasterSource_Mouse : public ULexWorldSpaceRaycasterSource
 {
 	GENERATED_BODY()
 public:
-	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection)override;
+	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd)override;
 	virtual bool ShouldStartDrag(ULexPointerEventData* InPointerEventData)override;
 #if BUILD_VP_MATRIX_FROM_CAMERA_MANAGER
 private:

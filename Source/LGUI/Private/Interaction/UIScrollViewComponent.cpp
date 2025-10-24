@@ -170,11 +170,11 @@ bool UUIScrollViewComponent::CheckValidHit(USceneComponent *InHitComp)
 
 bool UUIScrollViewComponent::OnPointerBeginDrag_Implementation(ULexPointerEventData *eventData)
 {
-    if (CheckParameters() && CheckValidHit(eventData->dragComponent))
+    if (CheckParameters() && CheckValidHit(eventData->DragComponent))
     {
-        PrevPointerPosition = eventData->pressWorldPoint;
+        PrevPointerPosition = eventData->PressWorldPoint;
         auto CurrentPointerPosition = eventData->GetWorldPointInPlane();
-        const auto localMoveDelta = eventData->pressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
+        const auto localMoveDelta = eventData->PressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
         PrevPointerPosition = CurrentPointerPosition;
         bAllowHorizontalScroll = false;
         bAllowVerticalScroll = false;
@@ -216,7 +216,7 @@ bool UUIScrollViewComponent::OnPointerDrag_Implementation(ULexPointerEventData *
         return AllowEventBubbleUp;
     auto Position = Content->GetRelativeLocation();
     auto CurrentPointerPosition = eventData->GetWorldPointInPlane();
-    auto localMoveDelta = eventData->pressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
+    auto localMoveDelta = eventData->PressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
     PrevPointerPosition = CurrentPointerPosition;
     if (bAllowHorizontalScroll)
     {
@@ -255,7 +255,7 @@ bool UUIScrollViewComponent::OnPointerEndDrag_Implementation(ULexPointerEventDat
 {
     auto Position = Content->GetRelativeLocation();
     auto CurrentPointerPosition = eventData->GetWorldPointInPlane();
-    const auto localMoveDelta = eventData->pressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
+    const auto localMoveDelta = eventData->PressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
     if (bAllowHorizontalScroll)
     {
         bCanUpdateAfterDrag = true;
@@ -270,15 +270,15 @@ bool UUIScrollViewComponent::OnPointerEndDrag_Implementation(ULexPointerEventDat
 }
 bool UUIScrollViewComponent::OnPointerScroll_Implementation(ULexPointerEventData *eventData)
 {
-    if (CheckParameters() && CheckValidHit(eventData->enterComponent))
+    if (CheckParameters() && CheckValidHit(eventData->EnterComponent))
     {
-        if (eventData->scrollAxisValue != FVector2D::ZeroVector)
+        if (eventData->ScrollAxisValue != FVector2D::ZeroVector)
         {
             bAllowHorizontalScroll = false;
             bAllowVerticalScroll = false;
             if (OnlyOneDirection && Horizontal && Vertical)
             {
-                if (FMath::Abs(eventData->scrollAxisValue.X) > FMath::Abs(eventData->scrollAxisValue.Y))
+                if (FMath::Abs(eventData->ScrollAxisValue.X) > FMath::Abs(eventData->ScrollAxisValue.Y))
                 {
                     bAllowHorizontalScroll = true;
                 }
@@ -302,7 +302,7 @@ bool UUIScrollViewComponent::OnPointerScroll_Implementation(ULexPointerEventData
             auto Position = Content->GetRelativeLocation();
             if (bAllowHorizontalScroll)
             {
-                auto delta = eventData->scrollAxisValue.X * ScrollSensitivity;
+                auto delta = eventData->ScrollAxisValue.X * ScrollSensitivity;
                 bCanUpdateAfterDrag = true;
                 if ((Position.Y < HorizontalRange.X || Position.Y > HorizontalRange.Y) && RestrictRectArea)
                 {
@@ -318,7 +318,7 @@ bool UUIScrollViewComponent::OnPointerScroll_Implementation(ULexPointerEventData
             }
             if (bAllowVerticalScroll)
             {
-                auto delta = eventData->scrollAxisValue.Y * -ScrollSensitivity;
+                auto delta = eventData->ScrollAxisValue.Y * -ScrollSensitivity;
                 bCanUpdateAfterDrag = true;
                 if ((Position.Z < VerticalRange.X || Position.Z > VerticalRange.Y) && RestrictRectArea)
                 {

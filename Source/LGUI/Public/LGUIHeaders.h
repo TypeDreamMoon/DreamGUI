@@ -50,7 +50,7 @@
 #include "Event/LGUIEventDelegate_PresetParameter.h"
 #include "Event/LexBaseRaycaster.h"
 #include "Event/LexScreenSpaceRaycaster.h"
-#include "Event/LexWorldSpaceRaycaster.h"
+#include "Event/LexWorldSpaceRaycasterBase.h"
 #include "Event/InputModule/LexBaseInputModule.h"
 #include "Event/InputModule/LexPointerInputModule.h"
 #include "Event/InputModule/LexStandaloneInputModule.h"

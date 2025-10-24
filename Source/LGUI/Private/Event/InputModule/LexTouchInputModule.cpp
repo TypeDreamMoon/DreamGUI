@@ -12,14 +12,14 @@ void ULexTouchInputModule::ProcessInput()
 	for (auto& keyValue : EventSystem->PointerEventDataMap)
 	{
 		auto& eventData = keyValue.Value;
-		switch (eventData->inputType)
+		switch (eventData->InputType)
 		{
 		default:
 		case ELexUIPointerInputType::Pointer:
 		{
 			if (IsValid(eventData))
 			{
-				if (eventData->nowIsTriggerPressed || eventData->prevIsTriggerPressed)
+				if (eventData->bNowIsTriggerPressed || eventData->bPrevIsTriggerPressed)
 				{
 					FLexUIHitResult LGUIHitResult;
 					bool lineTraceHitSomething = LineTrace(eventData, LGUIHitResult);
@@ -46,12 +46,12 @@ void ULexTouchInputModule::InputScroll(const FVector2D& inAxisValue)
 	if (!CheckEventSystem())return;
 
 	auto eventData = EventSystem->GetPointerEventData(0, true);
-	if (IsValid(eventData->enterComponent))
+	if (IsValid(eventData->EnterComponent))
 	{
-		if (inAxisValue != FVector2D::ZeroVector || eventData->scrollAxisValue != inAxisValue)
+		if (inAxisValue != FVector2D::ZeroVector || eventData->ScrollAxisValue != inAxisValue)
 		{
-			eventData->scrollAxisValue = inAxisValue;
-			EventSystem->CallOnPointerScroll(eventData->enterComponent, eventData, eventData->enterComponentEventFireType);
+			eventData->ScrollAxisValue = inAxisValue;
+			EventSystem->CallOnPointerScroll(eventData->EnterComponent, eventData, eventData->EnterComponentEventFireType);
 		}
 	}
 }
@@ -62,11 +62,11 @@ void ULexTouchInputModule::InputTouchTrigger(bool inTouchPress, int inTouchID, c
 
 	auto eventData = EventSystem->GetPointerEventData(inTouchID, true);
 	EventSystem->SetPointerInputType(eventData, ELexUIPointerInputType::Pointer);
-	eventData->nowIsTriggerPressed = inTouchPress;
-	eventData->pointerPosition = inTouchPointPosition;
+	eventData->bNowIsTriggerPressed = inTouchPress;
+	eventData->PointerPosition = inTouchPointPosition;
 	if (inTouchPress)
 	{
-		eventData->pressPointerPosition = eventData->pointerPosition;
+		eventData->PressPointerPosition = eventData->PointerPosition;
 	}
 }
 
@@ -76,5 +76,5 @@ void ULexTouchInputModule::InputTouchMoved(int inTouchID, const FVector& inTouch
 
 	auto eventData = EventSystem->GetPointerEventData(inTouchID, true);
 	EventSystem->SetPointerInputType(eventData, ELexUIPointerInputType::Pointer);
-	eventData->pointerPosition = inTouchPointPosition;
+	eventData->PointerPosition = inTouchPointPosition;
 }

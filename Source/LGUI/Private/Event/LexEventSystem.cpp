@@ -172,8 +172,8 @@ ULexPointerEventData* ULexEventSystem::GetPointerEventData(int PointerID, bool b
 		return *foundPtr;
 	}
 	auto newEventData = NewObject<ULexPointerEventData>(const_cast<ULexEventSystem*>(this));
-	newEventData->pointerID = PointerID;
-	newEventData->inputType = DefaultInputType;
+	newEventData->PointerID = PointerID;
+	newEventData->InputType = DefaultInputType;
 	PointerEventDataMap.Add(PointerID, newEventData);
 	return newEventData;
 }
@@ -225,10 +225,10 @@ bool ULexEventSystem::SetPointerInputTypeByPointerID(int InPointerID, ELexUIPoin
 }
 bool ULexEventSystem::SetPointerInputType(class ULexPointerEventData* InPointerEventData, ELexUIPointerInputType InInputType)
 {
-	if (InPointerEventData->inputType != InInputType)
+	if (InPointerEventData->InputType != InInputType)
 	{
-		InPointerEventData->inputType = InInputType;
-		PointerInputTypedChangedEvent.Broadcast(InPointerEventData->pointerID, InPointerEventData->inputType);
+		InPointerEventData->InputType = InInputType;
+		PointerInputTypedChangedEvent.Broadcast(InPointerEventData->PointerID, InPointerEventData->InputType);
 		return true;
 	}
 	return false;
@@ -297,7 +297,7 @@ USceneComponent* ULexEventSystem::GetCurrentSelectedComponent(int InPointerID)co
 void ULexEventSystem::SetSelectComponentWithDefault(USceneComponent* InSelectComp)
 {
 	auto eventData = GetPointerEventData(0, true);
-	SetSelectComponent(InSelectComp, eventData, eventData->pressComponentEventFireType);
+	SetSelectComponent(InSelectComp, eventData, eventData->PressComponentEventFireType);
 }
 ULexBaseInputModule* ULexEventSystem::GetCurrentInputModule()
 {

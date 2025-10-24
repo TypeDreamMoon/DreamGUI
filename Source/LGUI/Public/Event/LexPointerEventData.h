@@ -36,110 +36,110 @@ public:
 	 * note some data is not valid when in navigation input.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		ELexUIPointerInputType inputType;
+		ELexUIPointerInputType InputType;
 
 	/** id of the pointer (touch id) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		int pointerID = 0;
+		int PointerID = 0;
 	/** current pointer position (mouse position or touch point position in screen space. X&Y for mouse position) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		FVector pointerPosition = FVector::ZeroVector;
+		FVector PointerPosition = FVector::ZeroVector;
 	/** pointer position when press (mouse position or touch point position in screen space. X&Y for mouse position) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		FVector pressPointerPosition = FVector::ZeroVector;
+		FVector PressPointerPosition = FVector::ZeroVector;
 
-	/** enterred component */
+	/** entered component */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		TObjectPtr<USceneComponent> enterComponent = nullptr;
-	/** a stack list for store enterred component. the latest enter one stay at num-1, first stay at 0. */
+		TObjectPtr<USceneComponent> EnterComponent = nullptr;
+	/** a stack list for store entered component. the latest enter one stay at num-1, first stay at 0. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		TArray<TObjectPtr<USceneComponent>> enterComponentStack;
-	/** a collection that current pointer hoverring objects. the top most one stay at index 0 in array. */
+		TArray<TObjectPtr<USceneComponent>> EnterComponentStack;
+	/** a collection that current pointer hovering objects. the top most one stay at index 0 in array. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		TArray<TObjectPtr<USceneComponent>> hoverComponentArray;
+		TArray<TObjectPtr<USceneComponent>> HoverComponentArray;
 	/** current world space hit point */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		FVector worldPoint = FVector(0, 0, 0);
+		FVector WorldPoint = FVector(0, 0, 0);
 	/** current world space hit normal */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		FVector worldNormal = FVector(0, 0, 1);
+		FVector WorldNormal = FVector(0, 0, 1);
 	/**
 	 * current hit object's triangle face index.
 	 * For UI element, only valid when target's RaycastType is Geometry.
-	 * For world space static mesh, only valid when LGUIWorldSpaceRaycaster->bRequireFaceIndex is true.
+	 * For world space static mesh, only valid when LexWorldSpaceRaycaster->bRequireFaceIndex is true.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		int32 faceIndex = -1;
+		int32 FaceIndex = -1;
 
-	/** pointer scroll event. X for horizontal, Y for vertical */
+	/** scroll event. X for horizontal, Y for vertical. if use mouse input, X equals Y */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		FVector2D scrollAxisValue = FVector2D::ZeroVector;
+		FVector2D ScrollAxisValue = FVector2D::ZeroVector;
 	/** current raycaster */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		TObjectPtr<ULexBaseRaycaster> raycaster;
+		TObjectPtr<ULexBaseRaycaster> Raycaster;
 	/** mouse input type */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		ELexUIMouseButtonType mouseButtonType = ELexUIMouseButtonType::Left;
+		ELexUIMouseButtonType MouseButtonType = ELexUIMouseButtonType::Left;
 
 	/** hit component when press */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		TObjectPtr<USceneComponent> pressComponent = nullptr;
+		TObjectPtr<USceneComponent> PressComponent = nullptr;
 	/** world space hit point when press and hit something */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		FVector pressWorldPoint = FVector(0, 0, 0);
+		FVector PressWorldPoint = FVector(0, 0, 0);
 	/** world space normal direction when press and hit something */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		FVector pressWorldNormal = FVector(0, 0, 1);
+		FVector PressWorldNormal = FVector(0, 0, 1);
 	/** ray distance when press and hit something */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		float pressDistance = 0;
+		float PressDistance = 0;
 	/** ray origin when press and hit something */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		FVector pressRayOrigin;
+		FVector PressRayOrigin;
 	/** ray direction when press and hit something */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		FVector pressRayDirection;
-	/** world to press component's local transform when trigger press, usefull to calculate local space point/normal/delta */
+		FVector PressRayDirection;
+	/** world to press component's local transform when trigger press, useful to calculate local space point/normal/delta */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		FTransform pressWorldToLocalTransform;
+		FTransform PressWorldToLocalTransform;
 	/** raycaster when press */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		TObjectPtr<ULexBaseRaycaster> pressRaycaster;
-	/** the last time when trigger click(get time from GetWorld()->TimeSeconds), can be used to tell double click */
+		TObjectPtr<ULexBaseRaycaster> PressRaycaster;
+	/** the last time when trigger click(time is get from GetWorld()->TimeSeconds), can be used to tell double click */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		double clickTime;
-	/** the last time when trigger release(get time from GetWorld()->TimeSeconds). */
+		double ClickTime;
+	/** the last time when trigger release(time is get from GetWorld()->TimeSeconds). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		double releaseTime;
-	/** the last time when trigger press(get time from GetWorld()->TimeSeconds). */
+		double ReleaseTime;
+	/** the last time when trigger press(time is tell from GetWorld()->TimeSeconds). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		double pressTime;
+		double PressTime;
 
 	/** is dragging? */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		bool isDragging = false;
+		bool bIsDragging = false;
 	/** current dragging component */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		TObjectPtr<USceneComponent> dragComponent = nullptr;
+		TObjectPtr<USceneComponent> DragComponent = nullptr;
 
-	ELexUIEventFireType enterComponentEventFireType = ELexUIEventFireType::TargetActorAndAllItsComponents;
-	ELexUIEventFireType pressComponentEventFireType = ELexUIEventFireType::TargetActorAndAllItsComponents;
-	ELexUIEventFireType dragComponentEventFireType = ELexUIEventFireType::TargetActorAndAllItsComponents;
+	ELexUIEventFireType EnterComponentEventFireType = ELexUIEventFireType::TargetActorAndAllItsComponents;
+	ELexUIEventFireType PressComponentEventFireType = ELexUIEventFireType::TargetActorAndAllItsComponents;
+	ELexUIEventFireType DragComponentEventFireType = ELexUIEventFireType::TargetActorAndAllItsComponents;
 
-	bool isUpFiredAtCurrentFrame = false;//PointerUp event is called at current frame?
-	bool isExitFiredAtCurrentFrame = false;//PointerExit event is called at current frame?
-	bool isEndDragFiredAtCurrentFrame = false;//EndDrag event is called at current frame?
+	bool bIsUpFiredAtCurrentFrame = false;//PointerUp event is called at current frame?
+	bool bIsExitFiredAtCurrentFrame = false;//PointerExit event is called at current frame?
+	bool bIsEndDragFiredAtCurrentFrame = false;//EndDrag event is called at current frame?
 
-	bool nowIsTriggerPressed = false;
-	bool prevIsTriggerPressed = false;
+	bool bNowIsTriggerPressed = false;
+	bool bPrevIsTriggerPressed = false;
 
-	TWeakObjectPtr<USceneComponent> highlightComponentForNavigation = nullptr;
-	float navigateTickTime = 0;
-	ELexUINavigationDirection navigateDirection = ELexUINavigationDirection::None;
+	TWeakObjectPtr<USceneComponent> HighlightComponentForNavigation = nullptr;
+	float NavigateTickTime = 0;
+	ELexUINavigationDirection NavigateDirection = ELexUINavigationDirection::None;
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetHighlightedComponentForNavigation(USceneComponent* InComp);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		USceneComponent* GetHighlightedComponentForNavigation()const { return highlightComponentForNavigation.Get(); }
+		USceneComponent* GetHighlightedComponentForNavigation()const { return HighlightComponentForNavigation.Get(); }
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		bool IsPointerOverUI();
@@ -166,12 +166,12 @@ public:
 
 struct FLexUIHitResult
 {
-	FHitResult hitResult;
-	ELexUIEventFireType eventFireType = ELexUIEventFireType::TargetActorAndAllItsComponents;
+	FHitResult HitResult;
+	ELexUIEventFireType EventFireType = ELexUIEventFireType::TargetActorAndAllItsComponents;
 
-	FVector rayOrigin = FVector(0, 0, 0), rayDirection = FVector(1, 0, 0), rayEnd = FVector(1, 0, 0);
+	FVector RayOrigin = FVector(0, 0, 0), RayDirection = FVector(1, 0, 0), RayEnd = FVector(1, 0, 0);
 
-	ULexBaseRaycaster* raycaster = nullptr;
+	ULexBaseRaycaster* Raycaster = nullptr;
 
-	TArray<USceneComponent*> hoverArray;
+	TArray<USceneComponent*> HoverArray;
 };

@@ -8,15 +8,15 @@
 
 void ULexPointerEventData::SetHighlightedComponentForNavigation(USceneComponent* InComp)
 {
-	this->highlightComponentForNavigation = InComp;
-	this->navigateTickTime = 0;//trigger on next navigation process
+	this->HighlightComponentForNavigation = InComp;
+	this->NavigateTickTime = 0;//trigger on next navigation process
 }
 
 bool ULexPointerEventData::IsPointerOverUI()
 {
-	if (this->enterComponentStack.Num() > 0)
+	if (this->EnterComponentStack.Num() > 0)
 	{
-		auto firstEnterComp = this->enterComponentStack[0];
+		auto firstEnterComp = this->EnterComponentStack[0];
 		if (auto UIItem = Cast<ULexWidget>(firstEnterComp))
 		{
 			return true;
@@ -27,35 +27,35 @@ bool ULexPointerEventData::IsPointerOverUI()
 
 FVector ULexPointerEventData::GetWorldPointInPlane()const
 {
-	if (IsValid(pressRaycaster))
+	if (IsValid(PressRaycaster))
 	{
-		return FMath::LinePlaneIntersection(pressRaycaster->GetRayOrigin(), pressRaycaster->GetRayOrigin() + pressRaycaster->GetRayDirection() * pressRaycaster->GetRayLength(), pressWorldPoint, pressWorldNormal);
+		return FMath::RayPlaneIntersection(PressRaycaster->GetRayOrigin(), PressRaycaster->GetRayDirection(), FPlane(PressWorldPoint, PressWorldNormal));
 	}
 	else
 	{
-		return worldPoint;
+		return WorldPoint;
 	}
 }
 FVector ULexPointerEventData::GetLocalPointInPlane()const
 {
-	return pressWorldToLocalTransform.TransformPosition(GetWorldPointInPlane());
+	return PressWorldToLocalTransform.TransformPosition(GetWorldPointInPlane());
 }
 FVector ULexPointerEventData::GetWorldPointSpherical()const
 {
-	if (IsValid(pressRaycaster))
+	if (IsValid(PressRaycaster))
 	{
-		return pressRaycaster->GetRayOrigin() + pressRaycaster->GetRayDirection() * pressDistance;
+		return PressRaycaster->GetRayOrigin() + PressRaycaster->GetRayDirection() * PressDistance;
 	}
 	else
 	{
-		return worldPoint;
+		return WorldPoint;
 	}
 }
 FVector ULexPointerEventData::GetDragRayOrigin()const
 {
-	if (IsValid(pressRaycaster))
+	if (IsValid(PressRaycaster))
 	{
-		return pressRaycaster->GetRayOrigin();
+		return PressRaycaster->GetRayOrigin();
 	}
 	else
 	{
@@ -64,9 +64,9 @@ FVector ULexPointerEventData::GetDragRayOrigin()const
 }
 FVector ULexPointerEventData::GetDragRayDirection()const
 {
-	if (IsValid(pressRaycaster))
+	if (IsValid(PressRaycaster))
 	{
-		return pressRaycaster->GetRayDirection();
+		return PressRaycaster->GetRayDirection();
 	}
 	else
 	{
@@ -75,55 +75,55 @@ FVector ULexPointerEventData::GetDragRayDirection()const
 }
 FVector ULexPointerEventData::GetCumulativeMoveDelta()const
 {
-	return GetWorldPointSpherical() - pressWorldPoint;
+	return GetWorldPointSpherical() - PressWorldPoint;
 }
 
 FString ULexPointerEventData::ToString()const
 {
 	FString result;
-	if (IsValid(enterComponent))
+	if (IsValid(EnterComponent))
 	{
 		result += FString::Printf(TEXT("\n		enterComponent actor:%s, comp:%s"),
 #if WITH_EDITOR
-			* (enterComponent->GetOwner()->GetActorLabel()),
+			* (EnterComponent->GetOwner()->GetActorLabel()),
 #else
 			* (enterComponent->GetOwner()->GetName()),
 #endif
-			* (enterComponent->GetPathName()));
+			* (EnterComponent->GetPathName()));
 	}
 	else
 	{
 		result += TEXT("\n		enterComponent is null");
 	}
-	if (enterComponentStack.Num() > 0)
+	if (EnterComponentStack.Num() > 0)
 	{
-		result += FString::Printf(TEXT("\n		enterActorStack count:%d"), enterComponentStack.Num());
+		result += FString::Printf(TEXT("\n		enterActorStack count:%d"), EnterComponentStack.Num());
 	}
 	else
 	{
 		result += TEXT("\n		enterActorStack empty");
 	}
-	if (IsValid(dragComponent))
+	if (IsValid(DragComponent))
 	{
 		result += FString::Printf(TEXT("\n		dragComponent actor:%s, comp:%s"),
 #if WITH_EDITOR
-			* (dragComponent->GetOwner()->GetActorLabel()),
+			* (DragComponent->GetOwner()->GetActorLabel()),
 #else
 			* (dragComponent->GetOwner()->GetName()),
 #endif
-			* (dragComponent->GetPathName()));
+			* (DragComponent->GetPathName()));
 	}
 	else
 	{
 		result += TEXT("\n		dragComponent is null");
 	}
-	result += FString::Printf(TEXT("\n		worldPoint:%s"), *(worldPoint.ToString()));
-	result += FString::Printf(TEXT("\n		moveDelta:%s"), *(worldNormal.ToString()));
+	result += FString::Printf(TEXT("\n		worldPoint:%s"), *(WorldPoint.ToString()));
+	result += FString::Printf(TEXT("\n		moveDelta:%s"), *(WorldNormal.ToString()));
 
-	result += FString::Printf(TEXT("\n		scrollAxisValue:%s"), *scrollAxisValue.ToString());
+	result += FString::Printf(TEXT("\n		scrollAxisValue:%s"), *ScrollAxisValue.ToString());
 
-	result += FString::Printf(TEXT("\n		raycaster:%s"), *(IsValid(raycaster) ? raycaster->GetName() : TEXT("null")));
-	switch (mouseButtonType)
+	result += FString::Printf(TEXT("\n		raycaster:%s"), *(IsValid(Raycaster) ? Raycaster->GetName() : TEXT("null")));
+	switch (MouseButtonType)
 	{
 	case ELexUIMouseButtonType::Left:
 		result += TEXT("\n		mouseButtonType:Left");
@@ -136,18 +136,18 @@ FString ULexPointerEventData::ToString()const
 		break;
 	}
 
-	result += FString::Printf(TEXT("\n		pressComponent:%s"), *(IsValid(pressComponent) ? pressComponent->GetName() : TEXT("null")));
-	result += FString::Printf(TEXT("\n		pressWorldPoint:%s"), *(pressWorldPoint.ToString()));
-	result += FString::Printf(TEXT("\n		pressWorldNormal:%s"), *(pressWorldNormal.ToString()));
-	result += FString::Printf(TEXT("\n		pressDistance:%f"), pressDistance);
-	result += FString::Printf(TEXT("\n		pressRayOrigin:%s"), *(pressRayOrigin.ToString()));
-	result += FString::Printf(TEXT("\n		pressRayDirection:%s"), *(pressRayDirection.ToString()));
-	result += FString::Printf(TEXT("\n		pressRaycaster:%s"), *(IsValid(pressRaycaster) ? pressRaycaster->GetName() : TEXT("null")));
-	result += FString::Printf(TEXT("\n		clickTime:%f"), clickTime);
-	result += FString::Printf(TEXT("\n		pressTime:%f"), pressTime);
+	result += FString::Printf(TEXT("\n		pressComponent:%s"), *(IsValid(PressComponent) ? PressComponent->GetName() : TEXT("null")));
+	result += FString::Printf(TEXT("\n		pressWorldPoint:%s"), *(PressWorldPoint.ToString()));
+	result += FString::Printf(TEXT("\n		pressWorldNormal:%s"), *(PressWorldNormal.ToString()));
+	result += FString::Printf(TEXT("\n		pressDistance:%f"), PressDistance);
+	result += FString::Printf(TEXT("\n		pressRayOrigin:%s"), *(PressRayOrigin.ToString()));
+	result += FString::Printf(TEXT("\n		pressRayDirection:%s"), *(PressRayDirection.ToString()));
+	result += FString::Printf(TEXT("\n		pressRaycaster:%s"), *(IsValid(PressRaycaster) ? PressRaycaster->GetName() : TEXT("null")));
+	result += FString::Printf(TEXT("\n		clickTime:%f"), ClickTime);
+	result += FString::Printf(TEXT("\n		pressTime:%f"), PressTime);
 
-	result += FString::Printf(TEXT("\n		isDragging:%s"), isDragging ? TEXT("true") : TEXT("false"));
-	result += FString::Printf(TEXT("\n		dragComponent:%s"), *(IsValid(dragComponent) ? dragComponent->GetName() : TEXT("null")));
+	result += FString::Printf(TEXT("\n		isDragging:%s"), bIsDragging ? TEXT("true") : TEXT("false"));
+	result += FString::Printf(TEXT("\n		dragComponent:%s"), *(IsValid(DragComponent) ? DragComponent->GetName() : TEXT("null")));
 
 	switch (EventType)
 	{
@@ -191,27 +191,27 @@ FString ULexPointerEventData::ToString()const
 
 
 
-	if (IsValid(pressComponent))
+	if (IsValid(PressComponent))
 	{
 		result += FString::Printf(TEXT("\n		pressHitComponent actor:%s, comp:%s"),
 #if WITH_EDITOR
-			* (pressComponent->GetOwner()->GetActorLabel()),
+			* (PressComponent->GetOwner()->GetActorLabel()),
 #else
 			* (pressComponent->GetOwner()->GetName()),
 #endif
-			* (pressComponent->GetPathName()));
+			* (PressComponent->GetPathName()));
 	}
 	else
 	{
 		result += TEXT("\n		pressHitComponent is null");
 	}
-	result += FString::Printf(TEXT("\n		pressWorldPoint:%s"), *(pressWorldPoint.ToString()));
-	result += FString::Printf(TEXT("\n		pressWorldNormal:%s"), *(pressWorldNormal.ToString()));
-	result += FString::Printf(TEXT("\n		pressDistance:%f"), pressDistance);
-	result += FString::Printf(TEXT("\n		pressRayOrigin:%s"), *(pressRayOrigin.ToString()));
-	result += FString::Printf(TEXT("\n		pressRayDirection:%s"), *(pressRayDirection.ToString()));
-	result += FString::Printf(TEXT("\n		pressRaycaster:%s"), *(IsValid(pressRaycaster) ? pressRaycaster->GetName() : TEXT("null")));
-	result += FString::Printf(TEXT("\n		pressTime:%f"), clickTime);
+	result += FString::Printf(TEXT("\n		pressWorldPoint:%s"), *(PressWorldPoint.ToString()));
+	result += FString::Printf(TEXT("\n		pressWorldNormal:%s"), *(PressWorldNormal.ToString()));
+	result += FString::Printf(TEXT("\n		pressDistance:%f"), PressDistance);
+	result += FString::Printf(TEXT("\n		pressRayOrigin:%s"), *(PressRayOrigin.ToString()));
+	result += FString::Printf(TEXT("\n		pressRayDirection:%s"), *(PressRayDirection.ToString()));
+	result += FString::Printf(TEXT("\n		pressRaycaster:%s"), *(IsValid(PressRaycaster) ? PressRaycaster->GetName() : TEXT("null")));
+	result += FString::Printf(TEXT("\n		pressTime:%f"), ClickTime);
 
 	return result;
 }

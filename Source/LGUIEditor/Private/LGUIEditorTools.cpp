@@ -1660,7 +1660,7 @@ void LGUIEditorTools::CreatePresetEventSystem_BasicSetup(bool WorldSpace)
 		{
 			bEventSystemExits = true;
 		}
-		if (Actor->FindComponentByClass<ULexWorldSpaceRaycaster>())
+		if (Actor->FindComponentByClass<ULexWorldSpaceRaycasterBase>())
 		{
 			bWorldSpaceRaycasterExists = true;
 		}

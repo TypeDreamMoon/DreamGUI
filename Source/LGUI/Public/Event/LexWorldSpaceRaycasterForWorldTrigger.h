@@ -4,21 +4,23 @@
 
 #include "CoreMinimal.h"
 #include "LexWorldSpaceRaycasterBase.h"
-#include "LexWorldSpaceRaycaster.generated.h"
+#include "LexWorldSpaceRaycasterForWorldTrigger.generated.h"
 
 /**
- * Raycast on world space UI, need LexCanvas component on same actor
+ * Raycast on common world space objects like StaticMesh and Trigger
  */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
-class LGUI_API ULexWorldSpaceRaycaster : public ULexWorldSpaceRaycasterBase
+class LGUI_API ULexWorldSpaceRaycasterForWorldTrigger : public ULexWorldSpaceRaycasterBase
 {
 	GENERATED_BODY()
 
 public:
-	ULexWorldSpaceRaycaster();
+	ULexWorldSpaceRaycasterForWorldTrigger();
 
 protected:
-	TWeakObjectPtr<ULexCanvas> RootCanvas;
+	/** Will get FaceIndex when line trace world object's mesh. */
+	UPROPERTY(EditAnywhere, Category = "LGUI")
+	bool bRequireFaceIndex = false;
 	
 	virtual void BeginPlay() override;
 	virtual void Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResultArray)override;

@@ -3,18 +3,18 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Event/LexWorldSpaceRaycaster.h"
-#include "LexUIWorldSpaceRaycasterSource_CenterScreen.generated.h"
+#include "Event/LexWorldSpaceRaycasterBase.h"
+#include "LexWorldSpaceRaycasterSource_CenterScreen.generated.h"
 
 /** 
  * Sends trace from the center of the first local player's screen
  */
 UCLASS(ClassGroup = LGUI, Blueprintable, meta = (DisplayName = "Center Screen"))
-class LGUI_API ULexUIWorldSpaceRaycasterSource_CenterScreen : public ULexUIWorldSpaceRaycasterSource
+class LGUI_API ULexWorldSpaceRaycasterSource_CenterScreen : public ULexWorldSpaceRaycasterSource
 {
 	GENERATED_BODY()
 
 public:
-	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection)override;
+	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd)override;
 	virtual bool ShouldStartDrag(ULexPointerEventData* InPointerEventData)override;
 };

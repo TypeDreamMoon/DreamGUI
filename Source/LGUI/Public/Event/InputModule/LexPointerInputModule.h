@@ -23,7 +23,7 @@ protected:
 	UPROPERTY(Transient)TObjectPtr<ULexEventSystem> EventSystem = nullptr;
 	bool CheckEventSystem();
 
-	bool LineTrace(ULexPointerEventData* InPointerEventData, FLexUIHitResult& hitResult);
+	bool LineTrace(ULexPointerEventData* InPointerEventData, FLexUIHitResult& OutLexHitResult);
 	TArray<FLexUIHitResult> MultiHitResult;//temp array for hit result
 	static void ProcessPointerEnterExit(ULexEventSystem* eventSystem, ULexPointerEventData* pointerEventData, USceneComponent* oldObj, USceneComponent* newObj, ELexUIEventFireType enterFireType);
 	/** find a common root actor of two actors. return nullptr if no common root */

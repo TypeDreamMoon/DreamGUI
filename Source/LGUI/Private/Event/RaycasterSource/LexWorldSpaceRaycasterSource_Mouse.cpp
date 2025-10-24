@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Event/RaycasterSource/LexUIWorldSpaceRaycasterSource_Mouse.h"
+#include "Event/RaycasterSource/LexWorldSpaceRaycasterSource_Mouse.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
 #include "SceneView.h"
@@ -137,7 +137,7 @@ void ULGUIWorldSpaceRaycasterSource_Mouse::DeprojectViewPointToWorldForMainViewp
 #endif
 
 
-bool ULexUIWorldSpaceRaycasterSource_Mouse::GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection)
+bool ULexWorldSpaceRaycasterSource_Mouse::GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd)
 {
 #if BUILD_VP_MATRIX_FROM_CAMERA_MANAGER
 	if (auto pc = GetWorld()->GetFirstPlayerController())
@@ -151,6 +151,7 @@ bool ULexUIWorldSpaceRaycasterSource_Mouse::GenerateRay(ULexPointerEventData* In
 		MousePosition.Y = 1.0f - MousePosition.Y;
 		DeprojectViewPointToWorldForMainViewport(viewProjectionMatrix, MousePosition, OutRayOrigin, OutRayDirection);
 		OutRayOrigin += pc->PlayerCameraManager->GetRootComponent()->GetComponentLocation();//take position out from ViewProjectionMatrix, after deproject calculation, add position to result, this can avoid float precition issue. otherwise result ray will have some obvious bias
+		OutRayEnd = OutRayOrigin + OutRayDirection * RayLength; 
 		return true;
 	}
 #else
@@ -159,7 +160,7 @@ bool ULexUIWorldSpaceRaycasterSource_Mouse::GenerateRay(ULexPointerEventData* In
 		ULocalPlayer* const LocalPlayer = playerController->GetLocalPlayer();
 		if (LocalPlayer && LocalPlayer->ViewportClient)
 		{
-			FVector2D ScreenPosition = FVector2D(InPointerEventData->pointerPosition);
+			FVector2D ScreenPosition = FVector2D(InPointerEventData->PointerPosition);
 			// get the projection data
 			FSceneViewProjectionData ProjectionData;
 			if (LocalPlayer->GetProjectionData(LocalPlayer->ViewportClient->Viewport, ProjectionData))
@@ -168,6 +169,7 @@ bool ULexUIWorldSpaceRaycasterSource_Mouse::GenerateRay(ULexPointerEventData* In
 				FMatrix const InvViewProjMatrix = ViewProMatrix.InverseFast();
 				FSceneView::DeprojectScreenToWorld(ScreenPosition, ProjectionData.GetConstrainedViewRect(), InvViewProjMatrix, /*out*/ OutRayOrigin, /*out*/ OutRayDirection);
 				OutRayOrigin += ProjectionData.ViewOrigin;//take position out from ViewProjectionMatrix, after de-project calculation, add position to result, this can avoid float precition issue. otherwise result ray will have some obvious bias
+				OutRayEnd = OutRayOrigin + OutRayDirection * RayLength;
 				return true;
 			}
 		}
@@ -175,13 +177,16 @@ bool ULexUIWorldSpaceRaycasterSource_Mouse::GenerateRay(ULexPointerEventData* In
 #endif
 	return false;
 }
-bool ULexUIWorldSpaceRaycasterSource_Mouse::ShouldStartDrag(ULexPointerEventData* InPointerEventData)
+bool ULexWorldSpaceRaycasterSource_Mouse::ShouldStartDrag(ULexPointerEventData* InPointerEventData)
 {
-	if (auto IterObj = GetRaycasterObject())
+	if (bHoldToDrag)
 	{
-		FVector2D mousePos = FVector2D(InPointerEventData->pointerPosition);
-		FVector2D pressMousePos = FVector2D(InPointerEventData->pressPointerPosition);
-		return FVector2D::DistSquared(pressMousePos, mousePos) > IterObj->GetClickThresholdSquare();
+		if (GetWorld()->TimeSeconds - InPointerEventData->PressTime > HoldToDragTime)
+		{
+			return true;
+		}
 	}
-	return false;
+	FVector2D mousePos = FVector2D(InPointerEventData->PointerPosition);
+	FVector2D pressMousePos = FVector2D(InPointerEventData->PressPointerPosition);
+	return FVector2D::DistSquared(pressMousePos, mousePos) > this->GetDragThresholdSquare();
 }

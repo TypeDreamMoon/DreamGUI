@@ -13,7 +13,7 @@ void ULexStandaloneInputModule::ProcessInput()
 	for (auto& keyValue : EventSystem->PointerEventDataMap)
 	{
 		auto& eventData = keyValue.Value;
-		switch (eventData->inputType)
+		switch (eventData->InputType)
 		{
 		default:
 		case ELexUIPointerInputType::Pointer:
@@ -22,22 +22,22 @@ void ULexStandaloneInputModule::ProcessInput()
 			{
 				if (bOverrideMousePosition)
 				{
-					eventData->pointerPosition = FVector(overrideMousePosition, 0);
+					eventData->PointerPosition = FVector(overrideMousePosition, 0);
 				}
 				else
 				{
 					FVector2D mousePos;
 					if (GetMousePosition(mousePos))
 					{
-						eventData->pointerPosition = FVector(mousePos, 0);
+						eventData->PointerPosition = FVector(mousePos, 0);
 					}
 				}
 
-				FLexUIHitResult LGUIHitResult;
-				bool lineTraceHitSomething = LineTrace(eventData, LGUIHitResult);
+				FLexUIHitResult LexHitResult;
+				bool lineTraceHitSomething = LineTrace(eventData, LexHitResult);
 				bool resultHitSomething = false;
 				FHitResult hitResult;
-				ProcessPointerEvent(EventSystem, eventData, lineTraceHitSomething, LGUIHitResult, resultHitSomething, hitResult);
+				ProcessPointerEvent(EventSystem, eventData, lineTraceHitSomething, LexHitResult, resultHitSomething, hitResult);
 
 				auto tempHitComp = (USceneComponent*)hitResult.Component.Get();
 				EventSystem->RaiseHitEvent(resultHitSomething, hitResult, tempHitComp);
@@ -46,17 +46,17 @@ void ULexStandaloneInputModule::ProcessInput()
 			{
 				for (auto& inputData : standaloneInputDataArray)//handle multiple click in one frame
 				{
-					eventData->pointerPosition = FVector(inputData.mousePosition, 0);
-					eventData->nowIsTriggerPressed = inputData.triggerPress;
+					eventData->PointerPosition = FVector(inputData.mousePosition, 0);
+					eventData->bNowIsTriggerPressed = inputData.triggerPress;
 					if (inputData.triggerPress)
 					{
-						eventData->pressTime = inputData.pressTime;
+						eventData->PressTime = inputData.pressTime;
 					}
 					else
 					{
-						eventData->releaseTime = inputData.releaseTime;
+						eventData->ReleaseTime = inputData.releaseTime;
 					}
-					eventData->mouseButtonType = inputData.mouseButtonType;
+					eventData->MouseButtonType = inputData.mouseButtonType;
 
 					FLexUIHitResult LGUIHitResult;
 					bool lineTraceHitSomething = LineTrace(eventData, LGUIHitResult);
@@ -84,14 +84,14 @@ void ULexStandaloneInputModule::InputScroll(const FVector2D& inAxisValue)
 	if (!CheckEventSystem())return;
 
 	auto eventData = EventSystem->GetPointerEventData(0, true);
-	if (IsValid(eventData->enterComponent))
+	if (IsValid(eventData->EnterComponent))
 	{
-		if (inAxisValue != FVector2D::ZeroVector || eventData->scrollAxisValue != inAxisValue)
+		if (inAxisValue != FVector2D::ZeroVector || eventData->ScrollAxisValue != inAxisValue)
 		{
-			eventData->scrollAxisValue = inAxisValue;
+			eventData->ScrollAxisValue = inAxisValue;
 			if (CheckEventSystem())
 			{
-				EventSystem->CallOnPointerScroll(eventData->enterComponent, eventData, eventData->enterComponentEventFireType);
+				EventSystem->CallOnPointerScroll(eventData->EnterComponent, eventData, eventData->EnterComponentEventFireType);
 			}
 		}
 	}
@@ -117,7 +117,7 @@ void ULexStandaloneInputModule::InputTrigger(bool inTriggerPress, ELexUIMouseBut
 	}
 	else
 	{
-		FVector2D mousePos = FVector2D(eventData->pointerPosition);
+		FVector2D mousePos = FVector2D(eventData->PointerPosition);
 		GetMousePosition(mousePos);
 		inputData.mousePosition = mousePos;
 	}
@@ -125,7 +125,7 @@ void ULexStandaloneInputModule::InputTrigger(bool inTriggerPress, ELexUIMouseBut
 	if (inTriggerPress)
 	{
 		inputData.pressTime = GetWorld()->TimeSeconds;
-		eventData->pressPointerPosition = eventData->pointerPosition;
+		eventData->PressPointerPosition = eventData->PointerPosition;
 	}
 	else
 	{

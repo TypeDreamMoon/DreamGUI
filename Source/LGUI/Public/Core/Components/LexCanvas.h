@@ -266,19 +266,22 @@ protected:
 
 	float CalculateDistanceToCamera()const;
 
-	UPROPERTY(EditAnywhere, Category = "LGUI")
-		ELexRenderMode RenderMode = ELexRenderMode::WorldSpace;
 	/**
 	 * Force this canvas render to a TextureRenderTarget, no matter what render mode of the root canvas is.
 	 * This will break canvas link and make this canvas as root canvas.
 	 */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 	bool bForceRenderToTarget = false;
+	UPROPERTY(EditAnywhere, Category = "LGUI")
+		ELexRenderMode RenderMode = ELexRenderMode::WorldSpace;
 	/**
 	 * Render to RenderTarget, if not specified then LGUI will create a new one.
 	 */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		TObjectPtr<UTextureRenderTarget2D> RenderTarget;
+	/** Clear color for TextureRenderTarget */
+	UPROPERTY(EditAnywhere, Category = "LGUI")
+	FColor RenderTargetClearColor = FColor::Transparent;
 	/** Controls how LexCanvas render to RenderTarget. */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		ELexCanvasRenderTargetUpdateMode RenderTargetUpdateMode = ELexCanvasRenderTargetUpdateMode::Automatic;
@@ -345,9 +348,12 @@ protected:
 	UPROPERTY(EditAnywhere, Category = LGUI, meta = (Bitmask, BitmaskEnum = "/Script/LGUI.ELexCanvasOverrideParameters"))
 		int8 OverrideParameters;
 
-	/** traceChannel for line trace of EventSystem interaction */
+	/**
+	 * TraceChannel for line trace of EventSystem interaction.
+	 * Only world space UI need this property.
+	 */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-	TEnumAsByte<ETraceTypeQuery> TraceChannel = TraceTypeQuery3;
+	TEnumAsByte<ETraceTypeQuery> TraceChannel = TraceTypeQuery1;
 
 	/**
 	 * LexCanvas create mesh for render UI elements, this property can give us opportunity to use custom type of mesh for render.
@@ -426,6 +432,8 @@ public:
 	/** if renderMode is RenderTarget, then this will change the renderTarget */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetRenderTarget(UTextureRenderTarget2D* Value);
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetRenderTargetClearColor(FColor Value);
 	FRenderModeChangedEvent& GetRenderModeChangedEvent(){return OnRenderModeChanged;}
 	FRenderTargetChangedEvent& GetRenderTargetChangedEvent(){return OnRenderTargetChanged;}
 	
@@ -470,6 +478,8 @@ public:
 	/** Get render target of this canvas. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		UTextureRenderTarget2D* GetRenderTarget()const { return RenderTarget; }
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	FColor GetRenderTargetClearColor()const{return RenderTargetClearColor;}
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		float GetRenderTargetResolutionScale()const { return RenderTargetResolutionScale; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
@@ -732,8 +742,9 @@ public:
 	/** Called by LexWidget to delete clip data */
 	void RemoveClipData(const TSharedPtr<FLexUIClipData>& InClipData);
 	UTexture* GetClipDataTexture()const;
-public:
+
 	const TArray<TSharedPtr<FLexUIDrawCall>>& GetUIDrawCallList()const { return UIDrawCallList; }
+	const TArray<TWeakObjectPtr<ULexCanvas>>& GetChildrenCanvasArray()const{return ChildrenCanvasArray;}
 	
 	static FTransform2D ConvertTo2DTransform(const FTransform& Transform);
 	static void CalculateVisual2DBounds(ULexVisual* item, const FTransform2D& transform, FVector2D& min, FVector2D& max);

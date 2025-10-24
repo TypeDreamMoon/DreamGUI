@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Event/LexWorldSpaceRaycaster.h"
-#include "LexUIWorldSpaceRaycasterSource_World.generated.h"
+#include "Event/LexWorldSpaceRaycasterBase.h"
+#include "LexWorldSpaceRaycasterSource_World.generated.h"
 
 
 
@@ -12,18 +12,18 @@ UENUM(BlueprintType, Category = LGUI)
 enum class ELexUISceneComponentDirection :uint8
 {
 	PositiveX		UMETA(DisplayName = "X+"),
-	NagtiveX		UMETA(DisplayName = "X-"),
+	NegativeX		UMETA(DisplayName = "X-"),
 	PositiveY		UMETA(DisplayName = "Y+"),
-	NagtiveY		UMETA(DisplayName = "Y-"),
+	NegativeY		UMETA(DisplayName = "Y-"),
 	PositiveZ		UMETA(DisplayName = "Z+"),
-	NagtiveZ		UMETA(DisplayName = "Z-"),
+	NegativeZ		UMETA(DisplayName = "Z-"),
 };
 
 /**
  * If VR mode, you can use this component to emit ray from hand controller
  */
 UCLASS(ClassGroup = LGUI, Blueprintable, meta=(DisplayName="World"))
-class LGUI_API ULexUIWorldSpaceRaycasterSource_World : public ULexUIWorldSpaceRaycasterSource
+class LGUI_API ULexWorldSpaceRaycasterSource_World : public ULexWorldSpaceRaycasterSource
 {
 	GENERATED_BODY()
 protected:
@@ -39,6 +39,6 @@ protected:
 		float RayDistanceMultiply = 0.003f;
 
 public:
-	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection)override;
+	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd)override;
 	virtual bool ShouldStartDrag(ULexPointerEventData* InPointerEventData)override;
 };

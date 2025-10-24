@@ -124,13 +124,13 @@ void UUIScrollbarComponent::SetNavigationChangeInterval(float InValue)
 bool UUIScrollbarComponent::OnPointerDown_Implementation(ULexPointerEventData* eventData)
 {
     Super::OnPointerDown_Implementation(eventData);
-    if (eventData->inputType == ELexUIPointerInputType::Pointer)
+    if (eventData->InputType == ELexUIPointerInputType::Pointer)
     {
         if (CheckHandle())
         {
-            if (eventData->enterComponent != Handle)
+            if (eventData->EnterComponent != Handle)
             {
-                const auto& pointerInHandleAreaSpace = HandleArea->GetComponentTransform().InverseTransformPosition(eventData->worldPoint);
+                const auto& pointerInHandleAreaSpace = HandleArea->GetComponentTransform().InverseTransformPosition(eventData->WorldPoint);
                 float value01 = Value;
                 switch (DirectionType)
                 {
@@ -254,7 +254,7 @@ void UUIScrollbarComponent::CalculateInputValue(ULexPointerEventData *eventData)
 {
     if (CheckHandle())
     {
-        auto localCumulativeMoveDelta = eventData->pressWorldToLocalTransform.TransformVector(eventData->GetWorldPointInPlane() - eventData->pressWorldPoint);
+        auto localCumulativeMoveDelta = eventData->PressWorldToLocalTransform.TransformVector(eventData->GetWorldPointInPlane() - eventData->PressWorldPoint);
         localCumulativeMoveDelta.X = 0;
         float slideAreaSize = 0;
         float handleSize = 0;

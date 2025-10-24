@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
 #include "Event/LexBaseRaycaster.h"
+#include "Event/LexScreenSpaceRaycaster.h"
 #include "Event/Interface/LexPointerEnterExitInterface.h"
 #include "Event/Interface/LexPointerDownUpInterface.h"
 #include "Event/Interface/LexPointerScrollInterface.h"
@@ -12,7 +13,6 @@
 
 class ULexCanvas;
 class ULexEventSystem;
-enum class ELexRenderMode :uint8;
 
 /**
  * Interface for LGUIRenderTargetInteraction to provide raycast info.
@@ -40,7 +40,7 @@ public:
  * This component should be placed on a actor which have a ILGUIRenderTargetInteractionSourceInterface component.
  */
 UCLASS(ClassGroup = LGUI, meta = (BlueprintSpawnableComponent), Blueprintable)
-class LGUI_API ULGUIRenderTargetInteraction : public ULexBaseRaycaster
+class LGUI_API ULGUIRenderTargetInteraction : public ULexScreenSpaceRaycaster
 	, public ILexPointerEnterExitInterface
 	, public ILexPointerDownUpInterface
 	, public ILexPointerScrollInterface
@@ -65,11 +65,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, Transient, Category = LGUI, AdvancedDisplay) TObjectPtr<ULexPointerEventData> PointerEventData = nullptr;
 	TWeakObjectPtr<ULexPointerEventData> InputPointerEventData = nullptr;
 
-	TArray<ELexRenderMode> RenderModeArray;
-	virtual bool ShouldSkipCanvas(class ULexCanvas* UICanvas)override;
-	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection)override { return true; }
+	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd)override { return true; }
 	virtual bool ShouldStartDrag(ULexPointerEventData* InPointerEventData)override;
-	virtual bool Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, FHitResult& OutHitResult, TArray<USceneComponent*>& OutHoverArray)override;
+	virtual void Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResultArray)override;
 
 	virtual bool OnPointerEnter_Implementation(ULexPointerEventData* eventData)override;
 	virtual bool OnPointerExit_Implementation(ULexPointerEventData* eventData)override;
@@ -77,5 +75,5 @@ protected:
 	virtual bool OnPointerUp_Implementation(ULexPointerEventData* eventData)override;
 	virtual bool OnPointerScroll_Implementation(ULexPointerEventData* eventData)override;
 
-	bool LineTrace(FLexUIHitResult& hitResult);
+	bool LineTrace(FLexUIHitResult& OutHitResult);
 };

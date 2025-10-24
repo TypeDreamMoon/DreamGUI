@@ -393,7 +393,7 @@ bool UUISelectableComponent::OnPointerDown_Implementation(ULexPointerEventData* 
 	ApplySelectionState(false);
 	if (auto eventSystemInstance = ULexEventSystem::GetLexEventSystemInstance(this))
 	{
-		eventSystemInstance->SetSelectComponent(GetLexWidget(), eventData, eventData->enterComponentEventFireType);
+		eventSystemInstance->SetSelectComponent(GetLexWidget(), eventData, eventData->EnterComponentEventFireType);
 	}
 	return AllowEventBubbleUp;
 }

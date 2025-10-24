@@ -234,7 +234,7 @@ void ULexCanvas::UpdateRootCanvas()
 #endif
 					if (RenderTargetViewExtension.IsValid())
 					{
-						RenderTargetViewExtension->UpdateRenderTargetRenderer(RenderTarget);
+						RenderTargetViewExtension->UpdateRenderTargetRenderer(RenderTarget, RenderTargetClearColor);
 					}
 				}
 			}
@@ -728,6 +728,7 @@ void ULexCanvas::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 	if (CheckRootCanvas())
 	{
 		RootCanvas->MarkCanvasUpdate(true, true, true);
+		RootCanvas->bRequestUpdateForRenderTarget = true;
 	}
 
 	auto PropertyName = PropertyChangedEvent.GetMemberPropertyName();
@@ -2642,8 +2643,24 @@ void ULexCanvas::SetRenderTarget(UTextureRenderTarget2D* Value)
 	if (RenderTarget != Value)
 	{
 		RenderTarget = Value;
-		UpdateRenderTarget(false);
+		if (CheckRootCanvas() && RootCanvas == this)
+		{
+			UpdateRenderTarget(false);
+		}
 		OnRenderTargetChanged.Broadcast(RenderTarget);
+	}
+}
+
+void ULexCanvas::SetRenderTargetClearColor(FColor Value)
+{
+	if (RenderTargetClearColor != Value)
+	{
+		RenderTargetClearColor = Value;
+		if (CheckRootCanvas() && RootCanvas == this)
+		{
+			this->bRequestUpdateForRenderTarget = true;
+			this->MarkCanvasUpdate(false, false, false, false);
+		}
 	}
 }
 

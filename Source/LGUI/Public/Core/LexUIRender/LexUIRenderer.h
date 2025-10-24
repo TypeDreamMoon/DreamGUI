@@ -101,7 +101,7 @@ public:
 	void SetScreenSpaceRootCanvas(ULexCanvas* InCanvas);
 	void ClearScreenSpaceRootCanvas();
 
-	void UpdateRenderTargetRenderer(class UTextureRenderTarget2D* InRenderTarget);
+	void UpdateRenderTargetRenderer(class UTextureRenderTarget2D* InRenderTarget, FColor InClearColor);
 
 	TWeakObjectPtr<UWorld> GetWorld() { return World; }
 
@@ -173,6 +173,7 @@ private:
 	TArray<FLexUIMeshBatchContainer> MeshBatchArray;
 	//if 'bIsRenderToRenderTarget' is true then we need a render target
 	class FTextureRenderTargetResource* RenderTargetResource = nullptr;
+	FColor RenderTargetClearColor = FColor::Transparent;
 	void SortScreenSpacePrimitiveRenderPriority_RenderThread();
 	void SetRenderCanvasDepthFade_RenderThread(ULexCanvas* InRenderCanvas, float InBlendDepth, int InDepthFade);
 	//render thread sample count for MSAA

@@ -1465,35 +1465,7 @@ void ULexUIManagerWorldSubsystem::AddRaycaster(ULexBaseRaycaster* InRaycaster)
 	{
 		auto& AllRaycasterArray = Instance->AllRaycasterArray;
 		if (AllRaycasterArray.Contains(InRaycaster))return;
-		//check multiple racaster
-		for (auto& item : AllRaycasterArray)
-		{
-			if (InRaycaster->GetDepth() == item->GetDepth() && InRaycaster->GetTraceChannel() == item->GetTraceChannel())
-			{
-#if WITH_EDITOR
-				auto ErrorNotifyMsg = LOCTEXT("MultipleLGUIBaseRaycasterWithSameDepthAndTraceChannel"
-					, "Detect multiple LGUIBaseRaycaster components with same depth and traceChannel, this may cause wrong interaction results! See output log for details.");
-				FLexUIUtils::EditorNotification(ErrorNotifyMsg, 10);
-#endif
-				UE_LOG(LGUI, Warning, TEXT("[%s].%d \
-\nDetect multiple LGUIBaseRaycaster components with same depth and traceChannel, this may cause wrong interaction results!\
-\neg: Want use mouse to click object A but get object B.\
-\nPlease note : \
-\n	For LGUIBaseRaycasters with same depth, LGUI will line trace them all and sort result on hit distance.\
-\n	For LGUIBaseRaycasters with different depth, LGUI will sort raycasters on depth, and line trace from highest depth to lowest, if hit anything then stop line trace.\
-\n	LGUIWorldSpaceInteraction is for all WorldSpaceUI in current level.\
-"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-
-				break;
-			}
-		}
-
 		AllRaycasterArray.Add(InRaycaster);
-		//sort depth
-		AllRaycasterArray.Sort([](const TWeakObjectPtr<ULexBaseRaycaster>& A, const TWeakObjectPtr<ULexBaseRaycaster>& B)
-		{
-			return A->GetDepth() > B->GetDepth();
-		});
 	}
 }
 void ULexUIManagerWorldSubsystem::RemoveRaycaster(ULexBaseRaycaster* InRaycaster)

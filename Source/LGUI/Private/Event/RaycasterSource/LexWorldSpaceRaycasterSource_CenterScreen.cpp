@@ -1,13 +1,13 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Event/RaycasterSource/LexUIWorldSpaceRaycasterSource_CenterScreen.h"
+#include "Event/RaycasterSource/LexWorldSpaceRaycasterSource_CenterScreen.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
 #include "SceneView.h"
 #include "Engine/World.h"
 #include "Engine/GameViewportClient.h"
 
-bool ULexUIWorldSpaceRaycasterSource_CenterScreen::GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection)
+bool ULexWorldSpaceRaycasterSource_CenterScreen::GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd)
 {
 	if (auto playerController = this->GetWorld()->GetFirstPlayerController())
 	{
@@ -24,19 +24,23 @@ bool ULexUIWorldSpaceRaycasterSource_CenterScreen::GenerateRay(ULexPointerEventD
 				FMatrix const InvViewProjMatrix = ViewProMatrix.InverseFast();
 				FSceneView::DeprojectScreenToWorld(ViewportSize * 0.5f, ProjectionData.GetConstrainedViewRect(), InvViewProjMatrix, /*out*/ OutRayOrigin, /*out*/ OutRayDirection);
 				OutRayOrigin += ProjectionData.ViewOrigin;//take position out from ViewProjectionMatrix, after deproject calculation, add position to result, this can avoid float precition issue. otherwise result ray will have some obvious bias
+				OutRayEnd = OutRayOrigin + OutRayDirection * RayLength;
 				return true;
 			}
 		}
 	}
 	return false;
 }
-bool ULexUIWorldSpaceRaycasterSource_CenterScreen::ShouldStartDrag(ULexPointerEventData* InPointerEventData)
+bool ULexWorldSpaceRaycasterSource_CenterScreen::ShouldStartDrag(ULexPointerEventData* InPointerEventData)
 {
-	if (auto IterObj = GetRaycasterObject())
+	if (bHoldToDrag)
 	{
-		FVector2D mousePos = FVector2D(InPointerEventData->pointerPosition);
-		FVector2D pressMousePos = FVector2D(InPointerEventData->pressPointerPosition);
-		return FVector2D::DistSquared(pressMousePos, mousePos) > IterObj->GetClickThresholdSquare();
+		if (GetWorld()->TimeSeconds - InPointerEventData->PressTime > HoldToDragTime)
+		{
+			return true;
+		}
 	}
-	return false;
+	FVector2D mousePos = FVector2D(InPointerEventData->PointerPosition);
+	FVector2D pressMousePos = FVector2D(InPointerEventData->PressPointerPosition);
+	return FVector2D::DistSquared(pressMousePos, mousePos) > this->GetDragThresholdSquare();
 }

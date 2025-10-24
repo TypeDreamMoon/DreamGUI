@@ -22,16 +22,45 @@ public:
 	ULexScreenSpaceRaycaster();
 	virtual void BeginPlay()override;
 protected:
+	/** line trace ray emit length */
+	UPROPERTY(EditAnywhere, Category = LGUI)
+	float RayLength = 100000;
+	/** drag threshold, calculated in target's local space */
+	UPROPERTY(EditAnywhere, Category = LGUI)
+	float DragThreshold = 5;
+	/** hold press for a little while to entering drag mode */
+	UPROPERTY(EditAnywhere, Category = LGUI)
+	bool bHoldToDrag = false;
+	/** hold press for "holdToDragTime" to entering drag mode */
+	UPROPERTY(EditAnywhere, Category = LGUI, meta = (EditCondition = "bHoldToDrag"))
+	float HoldToDragTime = 0.5f;
+	float DragThresholdSquare = 0;
 	
 	TWeakObjectPtr<ULexCanvas> RootCanvas = nullptr;
-
-	virtual bool ShouldSkipCanvas(class ULexCanvas* UICanvas)override;
-	TArray<ELexRenderMode> RenderModeArray;
 public:
 	virtual bool GetAffectByGamePause()const override;
 	virtual bool ShouldStartDrag(ULexPointerEventData* InPointerEventData)override;
-	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection)override;
-	virtual bool Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, FHitResult& OutHitResult, TArray<USceneComponent*>& OutHoverArray)override;
+	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd)override;
+	virtual void Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResult)override;
 
 	static void DeprojectViewPointToWorld(const FMatrix& InViewProjectionMatrix, const FVector2D& InViewPoint01, FVector& OutWorldLocation, FVector& OutWorldDirection);
+
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	float GetRayLength()const { return RayLength; }
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	float GetDragThreshold()const { return DragThreshold; }
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	bool GetHoldToDrag()const { return bHoldToDrag; }
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	float GetHoldToDragTime()const { return HoldToDragTime; }
+	float GetDragThresholdSquare()const { return DragThresholdSquare; }
+
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetRayLength(float Value);
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetDragThreshold(float Value);
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetHoldToDrag(bool Value);
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetHoldToDragTime(float Value);
 };
