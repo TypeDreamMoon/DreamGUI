@@ -2190,7 +2190,7 @@ void FLexUIGeometry::UpdateUIRectFillRadial360Vertex(FLexUIGeometry* uiGeo, cons
 }
 #pragma endregion
 
-#pragma region UIText
+#pragma region LexText
 #include "Core/Components/LexText.h"
 void UIGeometry_AlignUITextLineVertex(ELexUITextParagraphHorizontalAlign pivotHAlign, float lineWidth, int lineUIGeoVertStart
                                       , TArray<FLexUIOriginVertexData>& vertices, FLexUITextLineProperty& lineProperty
@@ -2695,15 +2695,17 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 
 		if (IsSpace(charCode, richTextParseResult))//char is space
 		{
-			if (overflowType == ELexUITextOverflowType::VerticalOverflow//char is space and UIText can have multi line, then we need to calculate if the following words can fit the rest space, if not means new line
+			if (overflowType == ELexUITextOverflowType::VerticalOverflow//char is space and LexText can have overflow line, then we need to calculate if the following words can fit the rest space, if not means new line
 				)
 			{
 				auto prevCharCodeOfForwardChar = prevCharCode;
 				float spaceNeeded = GetCharGeoXAdv(prevCharCodeOfForwardChar, charCode, richTextParseResult);
 				prevCharCodeOfForwardChar = charCode;
 				spaceNeeded += fontSpace.X;
+				bool needToRemoveLastFontSpace = false;
 				for (int forwardCharIndex = charIndex + 1, forwardVisibleCharIndex = currentVisibleCharCount; forwardCharIndex < contentLength && forwardVisibleCharIndex < visibleCharCount; forwardCharIndex++)
 				{
+					needToRemoveLastFontSpace = false;
 					auto charCodeOfForwardChar = content[forwardCharIndex];
 					if (IsSpace(charCodeOfForwardChar, richTextParseResult))//space
 					{
@@ -2715,12 +2717,21 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 					}
 					spaceNeeded += GetCharGeoXAdv(prevCharCodeOfForwardChar, charCodeOfForwardChar, richTextParseResult);
 					spaceNeeded += fontSpace.X;
+					needToRemoveLastFontSpace = true;
 					forwardVisibleCharIndex++;
 					prevCharCodeOfForwardChar = charCodeOfForwardChar;
 				}
-				if (currentLineOffset.X + spaceNeeded > width)
+				if (needToRemoveLastFontSpace)
 				{
-					NewLine(caretCharIndex, false, NewLineMode::Space, charGeo.xadvance);
+					spaceNeeded -= fontSpace.X;
+				}
+				if (currentLineOffset.X + spaceNeeded > width + UE_KINDA_SMALL_NUMBER)
+				{
+					NewLine(caretCharIndex, false, NewLineMode::Space,
+						charGeo.xadvance
+						+ fontSpace.X//this font-space is related to char
+						+ fontSpace.X//because NewLine function remove font-space (currentLineWidth -= fontSpace.X to remove font-space), so we need add it back 
+						);
 					continue;
 				}
 			}
@@ -2829,7 +2840,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 					)
 				{
 					nextCharXAdv += GetCharGeoXAdv(content[charIndex+1], content[charIndex+2], richText ? richTextPropertyArray[charIndex+2] : richTextParseResult);
-					if (currentLineOffset.X + nextCharXAdv > width)//if next char cannot fit this line, then add new line
+					if (currentLineOffset.X + nextCharXAdv > width + UE_KINDA_SMALL_NUMBER)//if next char cannot fit this line, then add new line
 					{
 						auto nextChar = content[charIndex + 1];
 						if (nextChar == '\r' || nextChar == '\n')
@@ -2845,7 +2856,7 @@ void FLexUIGeometry::UpdateUIText(const FString& text, int32 visibleCharCount, f
 				}
 				else
 				{
-					if (currentLineOffset.X + nextCharXAdv > width && wrappingPolicy == ETextWrappingPolicy::AllowPerCharacterWrapping)//if next char cannot fit this line, then add new line
+					if (currentLineOffset.X + nextCharXAdv > width + UE_KINDA_SMALL_NUMBER && wrappingPolicy == ETextWrappingPolicy::AllowPerCharacterWrapping)//if next char cannot fit this line, then add new line
 					{
 						auto nextChar = content[charIndex + 1];
 						if (nextChar == '\r' || nextChar == '\n')

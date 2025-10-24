@@ -182,10 +182,8 @@ void ULexCanvas::UpdateRootCanvas()
 		
 		if (CheckLexWidget())
 		{
-			if (UpdateCanvasDrawCallRecursive())
-			{
-				MarkFinishRenderFrameRecursive();
-			}
+			UpdateRootCanvasDrawCall();
+			MarkFinishUpdateRootCanvasDrawCall();
 		}
 
 		if (bIsRenderTargetRenderer)
@@ -1178,35 +1176,17 @@ void ULexCanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, co
 			auto ChildCanvas = Item->GetRenderCanvas();
 			if (ChildCanvas == nullptr)continue;//normally this won't be nullptr, but when redo in editor this breaks
 			if (ChildCanvas->bForceRenderToTarget)continue;//skip this type
-			if (!ChildCanvas->GetOverrideSorting())
+			if (ChildCanvas->GetOverrideSorting())continue;//override sorting means render by itself, then no need to use it as child-canvas
+
+			if (InCacheUIDrawCallList.Num() > 0)
 			{
-				if (InCacheUIDrawCallList.Num() > 0)
+				int FoundIndex = InCacheUIDrawCallList.IndexOfByPredicate([ChildCanvas](const TSharedPtr<FLexUIDrawCall>& CacheDrawCallItem) {
+					return CacheDrawCallItem->Type == ELexUIDrawCallType::ChildCanvas && CacheDrawCallItem->ChildCanvas == ChildCanvas;
+					});
+				if (FoundIndex != INDEX_NONE)
 				{
-					int FoundIndex = InCacheUIDrawCallList.IndexOfByPredicate([ChildCanvas](const TSharedPtr<FLexUIDrawCall>& CacheDrawCallItem) {
-						return CacheDrawCallItem->Type == ELexUIDrawCallType::ChildCanvas && CacheDrawCallItem->ChildCanvas == ChildCanvas;
-						});
-					if (FoundIndex != INDEX_NONE)
-					{
-						InUIDrawCallList.Add(InCacheUIDrawCallList[FoundIndex]);
-						InCacheUIDrawCallList.RemoveAt(FoundIndex);
-					}
-					else
-					{
-						auto OldDrawCall = ChildCanvas->DrawCallAsChildCanvas;
-						if (OldDrawCall.IsValid())//maybe exist in other draw-call, should remove from that draw-call
-						{
-							ClearChildCanvasFromDrawCall(OldDrawCall, ChildCanvas);
-						}
-						auto ChildCanvasDrawCall = MakeShared<FLexUIDrawCall>(ELexUIDrawCallType::ChildCanvas);
-						ChildCanvasDrawCall->ChildCanvas = ChildCanvas;
-						ChildCanvasDrawCall->DrawCallMesh = UIMesh;
-						ChildCanvas->DrawCallAsChildCanvas = ChildCanvasDrawCall;
-						InUIDrawCallList.Add(ChildCanvasDrawCall);
-					}
-					if (FoundIndex != 0)//if not find draw-call or found draw-call not at head of array, means draw-call list's order is changed compare to cache list, then we need to sort render order
-					{
-						OutNeedToSortRenderPriority = true;
-					}
+					InUIDrawCallList.Add(InCacheUIDrawCallList[FoundIndex]);
+					InCacheUIDrawCallList.RemoveAt(FoundIndex);
 				}
 				else
 				{
@@ -1220,11 +1200,28 @@ void ULexCanvas::BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, co
 					ChildCanvasDrawCall->DrawCallMesh = UIMesh;
 					ChildCanvas->DrawCallAsChildCanvas = ChildCanvasDrawCall;
 					InUIDrawCallList.Add(ChildCanvasDrawCall);
+				}
+				if (FoundIndex != 0)//if not find draw-call or found draw-call not at head of array, means draw-call list's order is changed compare to cache list, then we need to sort render order
+				{
 					OutNeedToSortRenderPriority = true;
 				}
-
-				FitInDrawCallMinIndex = InUIDrawCallList.Num();
 			}
+			else
+			{
+				auto OldDrawCall = ChildCanvas->DrawCallAsChildCanvas;
+				if (OldDrawCall.IsValid())//maybe exist in other draw-call, should remove from that draw-call
+				{
+					ClearChildCanvasFromDrawCall(OldDrawCall, ChildCanvas);
+				}
+				auto ChildCanvasDrawCall = MakeShared<FLexUIDrawCall>(ELexUIDrawCallType::ChildCanvas);
+				ChildCanvasDrawCall->ChildCanvas = ChildCanvas;
+				ChildCanvasDrawCall->DrawCallMesh = UIMesh;
+				ChildCanvas->DrawCallAsChildCanvas = ChildCanvasDrawCall;
+				InUIDrawCallList.Add(ChildCanvasDrawCall);
+				OutNeedToSortRenderPriority = true;
+			}
+
+			FitInDrawCallMinIndex = InUIDrawCallList.Num();
 		}
 		else
 		{
@@ -1402,39 +1399,50 @@ void ULexCanvas::SetDefaultMeshType(TSubclassOf<ULexUIMeshComponent> InValue)
 	}
 }
 
-void ULexCanvas::MarkFinishRenderFrameRecursive()
+void ULexCanvas::MarkFinishUpdateRootCanvasDrawCall()
 {
-	//mark children canvas
-	for (const auto& ChildCanvas : ChildrenCanvasArray)
+	//All children canvas clip data is stored in root canvas, so update from root canvas
+	if (this == RootCanvas)
 	{
-		if (!ChildCanvas.IsValid())continue;
-		if (ChildCanvas->bForceRenderToTarget)continue;
-		ChildCanvas->MarkFinishRenderFrameRecursive();
+		for (const auto& ClipData : ClipDataList)
+		{
+			ClipData->UpdateData();
+		}
+	}
+	//sort render priority
+	if (bNeedToSortRenderPriority)
+	{
+		bNeedToSortRenderPriority = false;
+		if (this->IsRootCanvas() || this->GetOverrideSorting())
+		{
+			this->SortDrawCall();
+		}
 	}
 
-	bShouldRebuildDrawCall = false;
+	//update children canvas
+	for (auto& item : ChildrenCanvasArray)
+	{
+		if (!item.IsValid())continue;
+		if (item->bForceRenderToTarget)continue;
+		item->MarkFinishUpdateRootCanvasDrawCall();
+	}
 }
 
-bool ULexCanvas::UpdateCanvasDrawCallRecursive()
-{
+void ULexCanvas::UpdateRootCanvasDrawCall()
+{		
 	/**
 	 * Why use bPrevIsVisible?:
-	 * If Canvas is rendering in frame 1, but when in frame 2 the Canvas is disabled(by disable UIItem), then the Canvas will not do draw-call calculation, and the prev existing draw-call mesh is still there and render,
+	 * If Canvas is rendering in frame 1, but when in frame 2 the Canvas is disabled(set WidgetActive to false), then the Canvas will not do draw-call calculation, and the prev existing draw-call mesh is still there and render,
 	 * so we check bPrevIsVisible, then we can still do draw-call calculation at this frame, and the prev existing draw-call will be removed.
 	 */
-	bool bResult = false;
 	const bool bNowIsVisible = LexWidget->GetWidgetActiveInHierarchy();
 	if (bNowIsVisible || bPrevIsVisible)
 	{
-		bResult = true;
-		bPrevIsVisible = bNowIsVisible;
-		//update children canvas
-		for (auto& item : ChildrenCanvasArray)
+		if (bNowIsVisible != bPrevIsVisible)
 		{
-			if (!item.IsValid())continue;
-			if (item->bForceRenderToTarget)continue;
-			item->UpdateCanvasDrawCallRecursive();
+			bCanTickUpdate = true;
 		}
+		bPrevIsVisible = bNowIsVisible;
 	}
 
 	//update draw-call
@@ -1449,9 +1457,9 @@ bool ULexCanvas::UpdateCanvasDrawCallRecursive()
 				, ULexCanvas* ThisCanvas
 				, TArray<TObjectPtr<ULexWidget>>& WidgetCollection)
 			{
+				WidgetCollection.Add(Widget);//maybe sub-canvas, so collect it before tell canvas
 				if (Widget->GetRenderCanvas() == ThisCanvas)
 				{
-					WidgetCollection.Add(Widget);
 					for (auto Child : Widget->GetUIChildren())
 					{
 						CollectRenderWidget(Child, ThisCanvas, WidgetCollection);
@@ -1461,28 +1469,25 @@ bool ULexCanvas::UpdateCanvasDrawCallRecursive()
 		};
 		if (bNeedToGenerateWidgetList)
 		{
+			bNeedToGenerateWidgetList = false;
 			WidgetList.Reset();
 			LOCAL::CollectRenderWidget(this->LexWidget.Get(), this, WidgetList);
 		}
 		for (const auto& Widget : WidgetList)
 		{
 			Widget->UpdateLayout();
-			Widget->UpdateClip(ClipDataAsTexture, ClipDataList);
+			Widget->UpdateClip(RootCanvas->ClipDataAsTexture, RootCanvas->ClipDataList);
 			Widget->UpdateVisual();
 		}
-		for (const auto& ClipData : ClipDataList)
-		{
-			ClipData->UpdateData();
-		}
-
+		
 		if (bShouldRebuildDrawCall)
 		{
+			bShouldRebuildDrawCall = false;
 			CheckUIMesh();
 			auto ClearDrawCallData = [this](TArray<TSharedPtr<FLexUIDrawCall>>& DrawCallArray) {
 				for (int i = 0; i < DrawCallArray.Num(); i++)
 				{
 					auto DrawCallInCache = DrawCallArray[i];
-					//check(DrawCallInCache->RenderObjectList.Num() == 0);//why comment this?: need to wait until UUIBaseRenderable::OnRenderCanvasChanged.todo finish
 					if (DrawCallInCache->DrawCallRenderSection.IsValid())
 					{
 						DrawCallInCache->DrawCallMesh->DeleteRenderSection(DrawCallInCache->DrawCallRenderSection.Pin());
@@ -1549,20 +1554,13 @@ bool ULexCanvas::UpdateCanvasDrawCallRecursive()
 		//update draw-call material
 		UpdateDrawCallMaterial_Implement();
 	}
-
-	//sort render priority
+	//update children canvas
+	for (auto& item : ChildrenCanvasArray)
 	{
-		if (bNeedToSortRenderPriority)
-		{
-			bNeedToSortRenderPriority = false;
-			if (this->IsRootCanvas() || this->GetOverrideSorting())
-			{
-				this->SortDrawCall();
-			}
-		}
+		if (!item.IsValid())continue;
+		if (item->bForceRenderToTarget)continue;
+		item->UpdateRootCanvasDrawCall();
 	}
-
-	return bResult;
 }
 
 DECLARE_CYCLE_STAT(TEXT("Canvas UpdateDrawCallMesh"), STAT_UpdateDrawCallMesh, STATGROUP_LGUI);
@@ -2044,7 +2042,7 @@ void ULexCanvas::UpdateDrawCallMaterial_Implement()
 				{
 					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_MainTextureMaterialParameterName, DrawCallItem->Texture.Get());
 					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_FontTextureMaterialParameterName, DrawCallItem->FontTexture.Get());
-					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_ClipDataTexture_MaterialParameterName, ClipDataAsTexture->GetDataTexture());
+					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_ClipDataTexture_MaterialParameterName, RootCanvas->ClipDataAsTexture->GetDataTexture());
 				}
 				DrawCallItem->bTextureChanged = false;
 				DrawCallItem->bMaterialNeedToReassign = false;
@@ -2793,11 +2791,11 @@ void ULexCanvas::OnClipDataTextureChanged(UTexture* NewTexture)
 
 void ULexCanvas::RemoveClipData(const TSharedPtr<FLexUIClipData>& InClipData)
 {
-	ClipDataList.Remove(InClipData);
+	RootCanvas->ClipDataList.Remove(InClipData);
 }
 UTexture* ULexCanvas::GetClipDataTexture()const
 {
-	return IsValid(ClipDataAsTexture) ? ClipDataAsTexture->GetDataTexture() : nullptr;
+	return IsValid(RootCanvas->ClipDataAsTexture) ? RootCanvas->ClipDataAsTexture->GetDataTexture() : nullptr;
 }
 
 FTransform2D ULexCanvas::ConvertTo2DTransform(const FTransform& Transform)

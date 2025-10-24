@@ -405,6 +405,7 @@ protected:
 	float RenderOpacity = 1.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
 	ELexWidgetClipping Clipping = ELexWidgetClipping::Inherit;
+	TWeakPtr<FLexUIClipData> ClipData = nullptr;
 	/**
 	 * X- RightBottom, Y- RightTop, Z- LeftTop, W- LeftBottom
 	 */
@@ -435,8 +436,6 @@ protected:
 	TObjectPtr<ULexLayout> Layout = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Instanced, Category = "LayoutSlot", Getter, meta = (AllowPrivateAccess = true))
 	TObjectPtr<ULexLayoutSlot> LayoutSlot = nullptr;
-	
-	TWeakPtr<FLexUIClipData> ClipData;
 	
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")

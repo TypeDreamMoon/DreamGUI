@@ -753,9 +753,9 @@ private:
 	/** canvas array belong to this canvas in hierarchy. */
 	UPROPERTY(Transient) TArray<TWeakObjectPtr<ULexCanvas>> ChildrenCanvasArray;
 	/** update Canvas's draw-call */
-	bool UpdateCanvasDrawCallRecursive();
+	void UpdateRootCanvasDrawCall();
 	/** mark render finish */
-	void MarkFinishRenderFrameRecursive();
+	void MarkFinishUpdateRootCanvasDrawCall();
 
 	void BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, TArray<TSharedPtr<FLexUIDrawCall>>& InUIDrawCallList, TArray<TSharedPtr<FLexUIDrawCall>>& InCacheUIDrawCallList, bool& OutNeedToSortRenderPriority);
 	void UpdateDrawCallMesh_Implement();

@@ -57,9 +57,17 @@ void ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, ULex
 	{
 		CurrentRayOrigin = OutRayOrigin;
 		CurrentRayDirection = OutRayDirection;
-
+		
 		struct LOCAL
 		{
+			static void CollectCanvas(ULexCanvas* InCanvas, TArray<ULexCanvas*>& OutCanvasArray)
+			{
+				OutCanvasArray.Add(InCanvas);
+				for (auto& Child : InCanvas->GetChildrenCanvasArray())
+				{
+					CollectCanvas(Child.Get(), OutCanvasArray);
+				}
+			}
 			static void ForeachCanvas(ULexCanvas* InCanvas, TFunctionRef<void(ULexCanvas*)> InFunction)
 			{
 				InFunction(InCanvas);
@@ -80,6 +88,37 @@ void ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, ULex
 				}
 			}
 		};
+#if 1// use ParallelFor to speed up the hit process, should be ok because it blocks game thread and we use thread lock
+		TArray<ULexCanvas*> CanvasArray;
+		LOCAL::CollectCanvas(InRootCanvas, CanvasArray);
+		FCriticalSection Mutex;
+		ParallelFor(CanvasArray.Num(), [&CanvasArray, &Mutex, &OutHitResultArray, OutRayOrigin, OutRayEnd](int32 Index)
+		{
+			auto& VisualWidgetArray = CanvasArray[Index]->GetVisualWidgetArray();
+			for (auto& VisualWidget : VisualWidgetArray)
+			{
+				if (!IsValid(VisualWidget))continue;
+
+				FHitResult ThisHit;
+				ThisHit.FaceIndex = INDEX_NONE;
+				if (
+					VisualWidget->GetRaycastableInHierarchy()
+					&& VisualWidget->GetWidgetActiveInHierarchy()
+					&& VisualWidget->GetVisual()
+					&& VisualWidget->GetVisual()->GetRaycastTarget()
+					&& VisualWidget->GetVisual()->LineTraceUI(ThisHit, OutRayOrigin, OutRayEnd)
+					)
+				{
+					if (VisualWidget->IsPointVisibleOnClip(ThisHit.Location))
+					{
+						Mutex.Lock();
+						OutHitResultArray.Add(ThisHit);
+						Mutex.Unlock();
+					}
+				}
+			}
+		});
+#elif
 		auto TraceFunction = [&](ULexCanvas* InCanvas)
 		{
 			auto& VisualWidgetArray = InCanvas->GetVisualWidgetArray();
@@ -112,6 +151,7 @@ void ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, ULex
 		{
 			LOCAL::ForeachCanvas(InRootCanvas, TraceFunction);
 		}
+#endif
 		
 		if (OutHitResultArray.Num() > 0)
 		{
