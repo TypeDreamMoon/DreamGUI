@@ -7,6 +7,8 @@
 #include "Core/LexVisualPostProcessRenderProxy.h"
 #include "Engine/TextureRenderTarget2D.h"
 
+
+
 ULexVisualPostProcess::ULexVisualPostProcess(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
 	VisualType = ELexVisualType::PostProcess;
@@ -22,6 +24,12 @@ void ULexVisualPostProcess::BeginPlay()
 
 	bLocalVertexPositionChanged = true;
 	bUVChanged = true;
+}
+
+void ULexVisualPostProcess::OnUnregister()
+{
+	Super::OnUnregister();
+	OnRenderTargetChanged.Broadcast(nullptr);
 }
 
 #if WITH_EDITOR
@@ -41,7 +49,6 @@ void ULexVisualPostProcess::PostEditChangeProperty(FPropertyChangedEvent& Proper
 	
 	SendMaskTextureToRenderProxy();
 	SendRenderTargetToRenderProxy();
-	SendFullScreenToRenderProxy();
 }
 bool ULexVisualPostProcess::CanEditChange(const FProperty* InProperty) const
 {
@@ -139,15 +146,15 @@ void ULexVisualPostProcess::OnUpdateGeometry(bool InTriangleChanged, bool InVert
 {
 	//simple rect geometry for render from screen image to mesh region and inverse
 	{
-		auto& vertices = Geometry->Vertices;
-		auto& originVertices = Geometry->OriginVertices;
-		FLexUIGeometry::LexUIGeometrySetArrayNum(vertices, 4);
-		FLexUIGeometry::LexUIGeometrySetArrayNum(originVertices, 4);
+		auto& Vertices = Geometry->Vertices;
+		auto& OriginVertices = Geometry->OriginVertices;
+		FLexUIGeometry::LexUIGeometrySetArrayNum(Vertices, 4);
+		FLexUIGeometry::LexUIGeometrySetArrayNum(OriginVertices, 4);
 		if (InVertexUVChanged || InVertexPositionChanged || InVertexColorChanged)
 		{
 			if (InVertexPositionChanged)
 			{
-				auto Widget = GetWidget();
+				auto Widget = bUseFullSize ? GetWidget()->GetRenderCanvas()->GetRootCanvas()->GetLexWidget() : this->GetWidget();
 				//offset and size
 				float pivotOffsetX = 0, pivotOffsetY = 0;
 				FLexUIGeometry::CalculatePivotOffset(Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), pivotOffsetX, pivotOffsetY);
@@ -157,23 +164,23 @@ void ULexVisualPostProcess::OnUpdateGeometry(bool InTriangleChanged, bool InVert
 				float minY = -halfH + pivotOffsetY;
 				float maxX = halfW + pivotOffsetX;
 				float maxY = halfH + pivotOffsetY;
-				originVertices[0].Position = FVector3f(0, minX, minY);
-				originVertices[1].Position = FVector3f(0, maxX, minY);
-				originVertices[2].Position = FVector3f(0, minX, maxY);
-				originVertices[3].Position = FVector3f(0, maxX, maxY);
+				OriginVertices[0].Position = FVector3f(0, minX, minY);
+				OriginVertices[1].Position = FVector3f(0, maxX, minY);
+				OriginVertices[2].Position = FVector3f(0, minX, maxY);
+				OriginVertices[3].Position = FVector3f(0, maxX, maxY);
 				//snap pixel
 				if (Widget->GetPixelSnappingInHierarchy())
 				{
-					FLexUIGeometry::AdjustPixelPerfectPos(originVertices, 0, 4, Widget->GetRenderCanvas(), this);
+					FLexUIGeometry::AdjustPixelPerfectPos(OriginVertices, 0, 4, Widget->GetRenderCanvas(), this);
 				}
 			}
 
 			if (InVertexUVChanged)
 			{
-				vertices[0].TextureCoordinate[0] = FVector2f(0, 1);
-				vertices[1].TextureCoordinate[0] = FVector2f(1, 1);
-				vertices[2].TextureCoordinate[0] = FVector2f(0, 0);
-				vertices[3].TextureCoordinate[0] = FVector2f(1, 0);
+				Vertices[0].TextureCoordinate[0] = FVector2f(0, 1);
+				Vertices[1].TextureCoordinate[0] = FVector2f(1, 1);
+				Vertices[2].TextureCoordinate[0] = FVector2f(0, 0);
+				Vertices[3].TextureCoordinate[0] = FVector2f(1, 0);
 			}
 
 			if (InVertexColorChanged)
@@ -224,7 +231,7 @@ void ULexVisualPostProcess::UpdateRegionVertex()
 
 void ULexVisualPostProcess::SendRegionVertexDataToRenderProxy()
 {
-	auto Widget = GetWidget();
+	auto Widget = bUseFullSize ? GetWidget()->GetRenderCanvas()->GetRootCanvas()->GetLexWidget() : this->GetWidget();
 	auto RenderCanvas = Widget->GetRenderCanvas();
 	if (RenderProxy.IsValid() && RenderCanvas)
 	{
@@ -294,13 +301,12 @@ void ULexVisualPostProcess::SetRenderType(ELexBackgroundBlurRenderType Value)
 	}
 }
 
-void ULexVisualPostProcess::SetFullScreen(bool Value)
+void ULexVisualPostProcess::SetUseFullSize(bool Value)
 {
-	if (bFullScreen != Value)
+	if (bUseFullSize != Value)
 	{
-		bFullScreen = Value;
-		SendRenderTargetToRenderProxy();
-		SendFullScreenToRenderProxy();
+		bUseFullSize = Value;
+		MarkVertexPositionDirty();
 	}
 }
 
@@ -328,7 +334,7 @@ void ULexVisualPostProcess::SendRenderTargetToRenderProxy()
 	{
 		auto TempRenderProxy = RenderProxy.Get();
 		FTextureRenderTargetResource* RenderTargetResource = nullptr;
-		if (!bFullScreen && RenderType == ELexBackgroundBlurRenderType::RenderTarget && IsValid(OutputRenderTarget))
+		if (!bUseFullSize && RenderType == ELexBackgroundBlurRenderType::RenderTarget && IsValid(OutputRenderTarget))
 		{
 			RenderTargetResource = OutputRenderTarget->GameThread_GetRenderTargetResource();
 		}
@@ -340,19 +346,6 @@ void ULexVisualPostProcess::SendRenderTargetToRenderProxy()
 			([TempRenderProxy, RenderTargetResource](FRHICommandListImmediate& RHICmdList)
 				{
 					TempRenderProxy->RenderTargetResource = RenderTargetResource;
-				});
-	}
-}
-
-void ULexVisualPostProcess::SendFullScreenToRenderProxy()
-{
-	if (RenderProxy.IsValid())
-	{
-		auto TempRenderProxy = RenderProxy.Get();
-		ENQUEUE_RENDER_COMMAND(FLexPostProcess_UpdateMaskTexture)
-			([TempRenderProxy, bFullScreen = bFullScreen](FRHICommandListImmediate& RHICmdList)
-				{
-					TempRenderProxy->bFullScreen = bFullScreen;
 				});
 	}
 }
@@ -385,7 +378,7 @@ bool ULexVisualPostProcess::LineTraceUI(FHitResult& OutHit, const FVector& Start
 
 void ULexVisualPostProcess::UpdateRenderTarget()
 {
-	if (bFullScreen || RenderType != ELexBackgroundBlurRenderType::RenderTarget)return;
+	if (RenderType != ELexBackgroundBlurRenderType::RenderTarget)return;
 	auto Widget = GetWidget();
 	FIntPoint DesiredRenderTargetSize(Widget->GetWidth(), Widget->GetHeight());
 	static const int32 MaxAllowedDrawSize = GetMax2DTextureDimension();
@@ -431,3 +424,5 @@ void ULexVisualPostProcess::UpdateRenderTarget()
 	}
 #endif
 }
+
+

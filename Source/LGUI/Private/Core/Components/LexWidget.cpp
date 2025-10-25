@@ -17,7 +17,7 @@
 #include "UObject/UnrealType.h"
 #endif
 
-UE_DISABLE_OPTIMIZATION
+
 
 ULexWidget::ULexWidget(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
@@ -481,17 +481,24 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		}
 		else if (MemberName == VisualName)
 		{
-			if (RenderCanvas.IsValid() && IsValid(Visual))
+			if (IsValid(Visual))
 			{
-				RenderCanvas->RegisterVisual(this);
-			}
-			if (GetWorld()->IsGameWorld())
-			{
-				if (this->HasBegunPlay())
+				if (RenderCanvas.IsValid())
 				{
-					Visual->BeginPlay();
+					RenderCanvas->RegisterVisual(this);
 				}
-				Visual->Call_OnRegister();
+				if (GetWorld()->IsGameWorld())
+				{
+					if (this->HasBegunPlay())
+					{
+						Visual->BeginPlay();
+					}
+					Visual->Call_OnRegister();
+				}
+				else
+				{
+					Visual->Call_OnRegister();
+				}
 			}
 		}
 		else if (MemberName == LayoutName)
@@ -560,29 +567,43 @@ void ULexWidget::PreEditChange(FProperty* PropertyAboutToChange)
 	const FName MemberName = PropertyAboutToChange->GetFName();
 	if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, Visual))
 	{
-		if (RenderCanvas.IsValid() && IsValid(Visual))
+		if (IsValid(Visual))
 		{
-			RenderCanvas->MarkVisualWillChange(Visual);
-			RenderCanvas->UnregisterVisual(this);
-		}
-		if (GetWorld()->IsGameWorld())
-		{
-			if (this->HasBegunPlay())
+			if (RenderCanvas.IsValid())
 			{
-				Visual->EndPlay();
+				RenderCanvas->MarkVisualWillChange(Visual);
+				RenderCanvas->UnregisterVisual(this);
 			}
-			Visual->Call_OnUnregister();
+			if (GetWorld()->IsGameWorld())
+			{
+				if (this->HasBegunPlay())
+				{
+					Visual->EndPlay();
+				}
+				Visual->Call_OnUnregister();
+			}
+			else
+			{
+				Visual->Call_OnUnregister();
+			}
 		}
 	}
 	else if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, Layout))
 	{
-		if (GetWorld()->IsGameWorld())
+		if (IsValid(Layout))
 		{
-			if (this->HasBegunPlay())
+			if (GetWorld()->IsGameWorld())
 			{
-				Layout->EndPlay();
+				if (this->HasBegunPlay())
+				{
+					Layout->EndPlay();
+				}
+				Layout->Call_OnUnregister();
 			}
-			Layout->Call_OnUnregister();
+			else
+			{
+				Layout->Call_OnUnregister();
+			}
 		}
 	}
 }
@@ -2875,4 +2896,4 @@ FBoxSphereBounds ULexWidgetEditorHelperComp::CalcBounds(const FTransform& LocalT
 	return FBoxSphereBounds(Origin, FVector(1, Parent->GetWidth() * 0.5f, Parent->GetHeight() * 0.5f), (Parent->GetWidth() > Parent->GetHeight() ? Parent->GetWidth() : Parent->GetHeight()) * 0.5f).TransformBy(LocalToWorld);
 }
 
-UE_ENABLE_OPTIMIZATION
+

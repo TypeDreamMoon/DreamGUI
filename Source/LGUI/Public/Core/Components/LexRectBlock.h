@@ -46,6 +46,12 @@ enum class ELexUIRectBlockTextureMode : uint8
 
 class ULexUISpriteData_BaseObject;
 
+/**
+ * UV channel-
+ *		UV0: Texture coordinate
+ *		UV1: X for clip data coordinate, Y for RectBlock data coordinate
+ *		UV2: Body texture's coordinate
+ */
 UCLASS(ClassGroup = (LGUI), NotBlueprintable)
 class LGUI_API ULexRectBlock : public ULexVisualBatchMesh
 	, public ILexUISpriteRenderInterface

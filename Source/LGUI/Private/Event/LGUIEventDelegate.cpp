@@ -7,7 +7,7 @@
 #include "Utils/LexUIUtils.h"
 #endif
 
-UE_DISABLE_OPTIMIZATION
+
 
 #define LOCTEXT_NAMESPACE "LGUIEventDelegate"
 
@@ -939,4 +939,4 @@ bool FLGUIEventDelegate::CheckFunctionParameter()const
 
 #undef LOCTEXT_NAMESPACE
 
-UE_ENABLE_OPTIMIZATION
+

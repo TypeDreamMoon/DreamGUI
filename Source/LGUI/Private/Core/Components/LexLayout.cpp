@@ -5,7 +5,7 @@
 #include "UObject/ObjectSaveContext.h"
 #include "LGUI.h"
 
-UE_DISABLE_OPTIMIZATION
+
 
 #if WITH_EDITOR
 void ULexLayout::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
@@ -56,4 +56,4 @@ ULexWidget* ULexLayoutSlot::GetWidget() const
 	return CacheWidget.Get();
 }
 
-UE_ENABLE_OPTIMIZATION
+

@@ -4,7 +4,7 @@
 #include "Core/Components/LexWidget.h"
 #include "LGUI.h"
 
-UE_DISABLE_OPTIMIZATION
+
 
 void ULexWidgetSubObjectBehaviour::Call_OnRegister()
 {
@@ -33,4 +33,3 @@ ULexWidget* ULexWidgetSubObjectBehaviour::GetWidget() const
 	return CacheWidget.Get();
 }
 
-UE_ENABLE_OPTIMIZATION

@@ -10,7 +10,7 @@
 #include "Core/LexUIRichTextImageData_BaseObject.h"
 #include "Core/FRichTextParser.h"
 
-UE_DISABLE_OPTIMIZATION
+
 
 FORCEINLINE float RoundToFloat(float value)
 {
@@ -3140,4 +3140,4 @@ void FLexUIGeometry::TransformVertices(ULexCanvas* canvas, ULexVisual* item, FLe
 	}
 }
 
-UE_ENABLE_OPTIMIZATION
+

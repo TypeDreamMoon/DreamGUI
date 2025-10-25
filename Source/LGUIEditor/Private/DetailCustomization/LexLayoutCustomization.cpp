@@ -6,7 +6,7 @@
 #include "DetailLayoutBuilder.h"
 #include "Core/Components/LexLayout.h"
 
-UE_DISABLE_OPTIMIZATION
+
 #define LOCTEXT_NAMESPACE "LexLayoutCustomization"
 FLexLayoutCustomization::FLexLayoutCustomization()
 {
@@ -99,4 +99,4 @@ void FLexLayoutCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 }
 
 #undef LOCTEXT_NAMESPACE
-UE_ENABLE_OPTIMIZATION
+

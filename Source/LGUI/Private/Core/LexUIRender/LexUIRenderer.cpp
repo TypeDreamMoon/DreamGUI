@@ -29,7 +29,7 @@
 #include "Core/LexUIRender/LexUIHelperLineShaders.h"
 #endif
 
-UE_DISABLE_OPTIMIZATION
+
 
 #if WITH_EDITORONLY_DATA
 #endif
@@ -1418,4 +1418,4 @@ void FLexUIFullScreenSlicedQuadIndexBuffer::InitRHI(FRHICommandListBase& RHICmdL
 	IndexBufferRHI = RHICmdList.CreateIndexBuffer(sizeof(uint16), IndexBuffer.GetResourceDataSize(), BUF_Static, CreateInfo);
 }
 
-UE_ENABLE_OPTIMIZATION
+

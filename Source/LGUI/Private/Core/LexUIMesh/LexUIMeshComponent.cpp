@@ -20,7 +20,7 @@
 
 
 #define LOCTEXT_NAMESPACE "LexUIMeshComponent"
-UE_DISABLE_OPTIMIZATION
+
 class FLexUIMeshVertexResourceArray : public FResourceArrayInterface
 {
 public:
@@ -1315,4 +1315,3 @@ FBoxSphereBounds ULexUIMeshComponent::CalcBounds(const FTransform& LocalToWorld)
 	return FBoxSphereBounds(ResultBox);
 }
 #undef LOCTEXT_NAMESPACE
-UE_ENABLE_OPTIMIZATION

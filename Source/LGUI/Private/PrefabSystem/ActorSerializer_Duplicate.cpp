@@ -16,7 +16,7 @@
 #include "Utils/LexUIUtils.h"
 #endif
 
-UE_DISABLE_OPTIMIZATION
+
 namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 {
 	AActor* ActorSerializer::DuplicateActor(AActor* OriginRootActor, USceneComponent* Parent)
@@ -228,4 +228,4 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 		return CreatedRootActor;
 	}
 }
-UE_ENABLE_OPTIMIZATION
+

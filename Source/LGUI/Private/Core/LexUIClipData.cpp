@@ -6,7 +6,7 @@
 #include "Core/LexUIDataAsTexture.h"
 #include "Core/Components/LexCanvas.h"
 
-UE_DISABLE_OPTIMIZATION
+
 
 int FLexUIClipData::InheritClipDepth = 16;
 int FLexUIClipData::SingleBlockSizeInBytes =
@@ -154,4 +154,4 @@ bool FLexUIClipData::IsPointVisible_CheckCornerRadius(const FVector2D& InLocalHi
 	return true;
 }
 
-UE_ENABLE_OPTIMIZATION
+

@@ -115,12 +115,13 @@ public:
 			Renderer->AddResolvePass(GraphBuilder, FRDGTextureMSAA(ResolveSrc, ResolveDst), FIntRect(0, 0, ScreenSize.X, ScreenSize.Y), NumSamples, GlobalShaderMap);
 		}
 
-		float width = bFullScreen ? ScreenSize.X : RectSize.X;
-		float height = bFullScreen ? ScreenSize.Y : RectSize.Y;
+		float width = RectSize.X;
+		float height = RectSize.Y;
 		width = FMath::Max(width, 1.0f);
 		height = FMath::Max(height, 1.0f);
 		FVector2f inv_TextureSize(1.0f / width, 1.0f / height);
 		FIntPoint TextureSize(width, height);
+		bool bFullScreen = TextureSize == ScreenSize;
 		//get render target
 		{
 			FPooledRenderTargetDesc desc(FPooledRenderTargetDesc::Create2DDesc(TextureSize, ScreenTargetTexture->GetFormat(), FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable, false));

@@ -156,6 +156,9 @@ class UTextureRenderTarget2D;
 
 /**
  * Canvas is for render and update all UI elements.
+ * UV channels-
+ *		UV0: Texture coordinate
+ *		UV1: X for clip data coordinate
  */
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class LGUI_API ULexCanvas : public UActorComponent, public ILGUIPrefabInterface

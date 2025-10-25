@@ -16,7 +16,7 @@
 #include "Core/Components/LexImage.h"
 #include "Engine/GameViewportClient.h"
 
-UE_DISABLE_OPTIMIZATION
+
 
 ULexTextInputCustomValidation::ULexTextInputCustomValidation()
 {
@@ -1982,5 +1982,5 @@ void UUITextInputComponent::FTextInputMethodContext::EndComposition()
 #endif
 }
 
-UE_ENABLE_OPTIMIZATION
+
 

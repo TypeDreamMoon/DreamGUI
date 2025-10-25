@@ -13,7 +13,7 @@
 #include "Utils/LexUIUtils.h"
 #endif
 
-UE_DISABLE_OPTIMIZATION
+
 
 UUIDropdownComponent::UUIDropdownComponent()
 {
@@ -573,4 +573,4 @@ UUIToggleComponent* UUIDropdownItemComponent::GetToggle()const
 	return Toggle.Get();
 }
 
-UE_ENABLE_OPTIMIZATION
+

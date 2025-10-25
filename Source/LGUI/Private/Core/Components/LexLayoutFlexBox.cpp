@@ -3,7 +3,7 @@
 #include "Core/Components/LexLayoutFlexBox.h"
 #include "Core/Components/LexWidget.h"
 
-UE_DISABLE_OPTIMIZATION
+
 
 void ULexLayoutFlexBox::OnUpdateLayout()
 {
@@ -422,4 +422,4 @@ void ULexLayoutFlexBox::SetDirection(ELexLayoutFlexBoxDirection Value)
     }
 }
 
-UE_ENABLE_OPTIMIZATION
+

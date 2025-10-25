@@ -31,7 +31,7 @@
 
 #define LOCTEXT_NAMESPACE "LexUIManager"
 
-UE_DISABLE_OPTIMIZATION
+
 
 ULexUIEditorManagerObject* ULexUIEditorManagerObject::Instance = nullptr;
 #if WITH_EDITOR
@@ -1583,5 +1583,5 @@ void ULexUIManagerWorldSubsystem::AddFunctionForPrefabSystemExecutionBeforeAwake
 		Container.Functions.Add(InFunction);
 	}
 }
-UE_ENABLE_OPTIMIZATION
+
 #undef LOCTEXT_NAMESPACE

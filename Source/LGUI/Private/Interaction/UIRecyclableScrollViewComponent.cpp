@@ -7,7 +7,7 @@
 #include "LTweenManager.h"
 #include "Core/LexUISettings.h"
 
-UE_DISABLE_OPTIMIZATION
+
 
 void UUIRecyclableScrollViewComponent::Awake()
 {
@@ -898,4 +898,4 @@ void UUIRecyclableScrollViewComponent::DecreaseMinMaxCellIndexInCacheCellList(in
     }
 }
 
-UE_ENABLE_OPTIMIZATION
+

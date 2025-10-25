@@ -15,7 +15,7 @@
 #include "Utils/LexUIUtils.h"
 #endif
 
-UE_DISABLE_OPTIMIZATION
+
 namespace LGUIPrefabSystem8
 {
 	void ActorSerializer::SavePrefab(AActor* OriginRootActor, ULGUIPrefab* InPrefab
@@ -329,4 +329,4 @@ namespace LGUIPrefabSystem8
 		}
 	}
 }
-UE_ENABLE_OPTIMIZATION
+

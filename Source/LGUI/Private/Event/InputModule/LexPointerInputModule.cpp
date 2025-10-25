@@ -11,7 +11,7 @@
 #include "Interaction/UISelectableComponent.h"
 #include "Utils/LexUIUtils.h"
 
-UE_DISABLE_OPTIMIZATION
+
 
 bool ULexPointerInputModule::CheckEventSystem()
 {
@@ -746,4 +746,4 @@ void ULexPointerInputModule::ClearEvent()
 	}
 }
 
-UE_ENABLE_OPTIMIZATION
+

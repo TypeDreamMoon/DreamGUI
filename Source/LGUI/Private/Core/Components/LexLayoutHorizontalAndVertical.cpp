@@ -4,7 +4,7 @@
 #include "Core/Components/LexVisual.h"
 #include "Core/Components/LexWidget.h"
 
-UE_DISABLE_OPTIMIZATION
+
 
 void ULexLayoutHorizontalAndVertical::OnUpdateLayout()
 {
@@ -399,4 +399,4 @@ void ULexLayoutHorizontalAndVertical::SetSizeFitToChildren(FLexLayoutHorizontalA
     }
 }
 
-UE_ENABLE_OPTIMIZATION
+

@@ -14,7 +14,7 @@
 #include "Utils/LexUIUtils.h"
 #include "Engine/Texture2D.h"
 
-UE_DISABLE_OPTIMIZATION
+
 
 #define LOCTEXT_NAMESPACE "UIText"
 
@@ -1394,4 +1394,4 @@ void ULexText::GetSelectionProperty(int32 InSelectionStartCaretIndex, int32 InSe
 
 #undef LOCTEXT_NAMESPACE
 
-UE_ENABLE_OPTIMIZATION
+

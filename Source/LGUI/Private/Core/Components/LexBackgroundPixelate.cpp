@@ -144,10 +144,12 @@ public:
 		calculatedStrength = FMath::Clamp(calculatedStrength, 0.0f, 100.0f);
 		calculatedStrength += 1;
 
-		auto width = (int)((bFullScreen ? ScreenSize.X : RectSize.X) / calculatedStrength);
-		auto height = (int)((bFullScreen ? ScreenSize.Y : RectSize.Y) / calculatedStrength);
-		width = FMath::Clamp(width, 1, (int)(bFullScreen ? ScreenSize.X : RectSize.X));
-		height = FMath::Clamp(height, 1, (int)(bFullScreen ? ScreenSize.Y : RectSize.Y));
+		auto width = (int)(RectSize.X / calculatedStrength);
+		auto height = (int)(RectSize.Y / calculatedStrength);
+		width = FMath::Clamp(width, 1, (int)RectSize.X);
+		height = FMath::Clamp(height, 1, (int)RectSize.Y);
+		auto TextureSize = FIntPoint(width, height);
+		bool bFullScreen = TextureSize == ScreenSize;
 
 		//get render target
 		{

@@ -27,7 +27,7 @@
 #include "Core/LexUIClipData.h"
 #include "Core/LexUIDataAsTexture.h"
 
-UE_DISABLE_OPTIMIZATION
+
 
 #define LOCTEXT_NAMESPACE "LexCanvas"
 
@@ -3417,4 +3417,4 @@ bool ULexCanvas::ProjectWorldToScreen(APlayerController* Player, const FVector& 
 
 #pragma endregion
 
-UE_ENABLE_OPTIMIZATION
+

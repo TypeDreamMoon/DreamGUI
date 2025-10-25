@@ -7,7 +7,7 @@
 #include "LTweenManager.h"
 #include "Core/Components/LexCanvas.h"
 
-UE_DISABLE_OPTIMIZATION
+
 
 UUIPolygon::UUIPolygon(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
@@ -290,4 +290,3 @@ ULTweener* UUIPolygon::EndAngleTo(float endValue, float duration /* = 0.5f */, f
 	return Tweener;
 }
 
-UE_ENABLE_OPTIMIZATION

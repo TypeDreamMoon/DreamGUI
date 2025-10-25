@@ -5,7 +5,7 @@
 #include "Core/LexUIGeometry.h"
 #include "Core/Components/LexCanvas.h"
 
-UE_DISABLE_OPTIMIZATION
+
 
 ULexTexture::ULexTexture(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
@@ -313,4 +313,4 @@ void ULexTexture::SetUVRectControlMode(ELexUITextureUVRectControlMode Value)
 	}
 }
 
-UE_ENABLE_OPTIMIZATION
+

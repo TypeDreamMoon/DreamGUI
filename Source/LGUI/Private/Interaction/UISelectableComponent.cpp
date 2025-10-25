@@ -16,7 +16,7 @@
 #include "Utils/LexUIUtils.h"
 #endif
 
-UE_DISABLE_OPTIMIZATION
+
 
 
 void UUISelectableTransition::StopTransition() 
@@ -900,4 +900,4 @@ void UUISelectableComponent::SetNavigationNextExplicit(UUISelectableComponent* V
 }
 #pragma endregion
 
-UE_ENABLE_OPTIMIZATION
+

@@ -23,7 +23,7 @@
 
 #define LOCTEXT_NAMESPACE "UIItemComponentDetails"
 
-UE_DISABLE_OPTIMIZATION
+
 
 FLexWidgetCustomization::FLexWidgetCustomization()
 {
@@ -2311,5 +2311,5 @@ bool FLexWidgetCustomization::IsAnchorValueEnable(TSharedRef<IPropertyHandle> An
 	}
 }
 
-UE_ENABLE_OPTIMIZATION
+
 #undef LOCTEXT_NAMESPACE

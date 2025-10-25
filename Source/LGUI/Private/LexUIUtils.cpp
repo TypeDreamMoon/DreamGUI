@@ -11,7 +11,7 @@
 #include "Widgets/Notifications/SNotificationList.h"
 #endif
 
-UE_DISABLE_OPTIMIZATION
+
 
 #define LOCTEXT_NAMESPACE "LexUIUtils"
 
@@ -395,4 +395,3 @@ float FLexUIUtils::Color255To1_Table[256] =
 
 #undef LOCTEXT_NAMESPACE
 
-UE_ENABLE_OPTIMIZATION
