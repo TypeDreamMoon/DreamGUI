@@ -127,6 +127,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category=LexUI, meta=(WorldContext = "WorldContextObject"))
 	static void CreateScreenSpaceUIRoot(UObject* WorldContextObject, bool bCreateDefaultEventSystem
 		, ALexWidgetActor*& OutRootWidgetActor, ULexCanvas*& OutCanvas);
+	UFUNCTION(BlueprintCallable, Category=LexUI, meta=(WorldContext = "WorldContextObject"))
+	static void CreateWorldSpaceUI(UObject* WorldContextObject, bool bCreateDefaultEventSystem
+		, bool bUseLexUIRenderer, ALexWidgetActor*& OutRootWidgetActor, ULexCanvas*& OutCanvas);
 public:
 #pragma region EventDelegate
 	UFUNCTION(BlueprintCallable, Category = LGUI)static void LGUIEventDelegateExecuteEmpty(const FLGUIEventDelegate& InEvent) { InEvent.FireEvent(); }

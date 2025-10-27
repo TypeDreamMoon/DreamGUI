@@ -174,13 +174,6 @@ void FLexUITextGeometryCache::ConditionalCalculateGeometry()
 			, this->richText
 			, this->richTextFilterFlags
 			);
-
-		auto& vertices = this->UIText->GetGeometry()->Vertices;
-		auto FontTextureMark = this->font->GetFontTextureMark();
-		for (int i = 0; i < vertices.Num(); i++)
-		{
-			vertices[i].TextureCoordinate[1].Y = FontTextureMark;//Mark UV1.Y so material will know it should use FontTexture 
-		}
 		
 		this->UIText->GenerateRichTextImageObject();
 	}

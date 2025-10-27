@@ -324,7 +324,7 @@ void ULexEventSystem::LogEventData(ULexBaseEventData* inEventData)
 	bool eventAllowBubble = allowBubble;\
 	switch(eventFireType)\
 	{\
-		case ELexUIEventFireType::OnlyTargetActor:\
+		case ELexUIEventFireType::TargetActor:\
 		{\
 			auto ownerActor = component->GetOwner(); \
 			if (ownerActor->GetClass()->ImplementsInterface(ULexPointer##interface##Interface::StaticClass()))\
@@ -336,7 +336,7 @@ void ULexEventSystem::LogEventData(ULexBaseEventData* inEventData)
 			}\
 		}\
 		break;\
-		case ELexUIEventFireType::OnlyTargetComponent:\
+		case ELexUIEventFireType::TargetComponents:\
 		{\
 			if (component->GetClass()->ImplementsInterface(ULexPointer##interface##Interface::StaticClass()))\
 			{\

@@ -48,9 +48,10 @@ class ULexUISpriteData_BaseObject;
 
 /**
  * UV channel-
- *		UV0: Texture coordinate
- *		UV1: X for clip data coordinate, Y for RectBlock data coordinate
+ *		UV0: full 0~1 UV coordinate for calculate sdf
+ *		UV1: Widget property data coordinate, include clipData coordinate in data texture
  *		UV2: Body texture's coordinate
+ *		UV3: X for RectBlock data coordinate
  */
 UCLASS(ClassGroup = (LGUI), NotBlueprintable)
 class LGUI_API ULexRectBlock : public ULexVisualBatchMesh
@@ -275,7 +276,6 @@ protected:
 	virtual void OnBeforeCreateOrUpdateGeometry()override;
 	virtual UTexture* GetTextureToCreateGeometry()override;
 	virtual UMaterialInterface* GetMaterialToCreateGeometry()override;
-	virtual void UpdateMaterialClipType()override;
 	virtual void OnMaterialInstanceDynamicCreated(class UMaterialInstanceDynamic* mat) override;
 
 	//virtual void OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange, bool InDiscardCache = true)override;

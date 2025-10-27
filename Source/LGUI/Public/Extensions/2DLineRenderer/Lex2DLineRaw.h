@@ -2,18 +2,17 @@
 
 #pragma once
 
-#include "Core/Actor/LexWidgetActor.h"
-#include "UI2DLineRendererBase.h"
-#include "UI2DLineRaw.generated.h"
+#include "Lex2DLineRendererBase.h"
+#include "Lex2DLineRaw.generated.h"
 
 
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUI2DLineRaw : public UUI2DLineRendererBase
+class LGUI_API ULex2DLineRaw : public ULex2DLineRendererBase
 {
 	GENERATED_BODY()
 
 public:	
-	UUI2DLineRaw(const FObjectInitializer& ObjectInitializer);
+	ULex2DLineRaw(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	virtual void BeginPlay()override;

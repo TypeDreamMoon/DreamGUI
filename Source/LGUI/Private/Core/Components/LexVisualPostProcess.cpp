@@ -112,6 +112,7 @@ void ULexVisualPostProcess::UpdateGeometry()
 	{
 		Geometry->Clear();
 		OnUpdateGeometry(true, true, true, true);
+		UpdateGeometryClipData(*Geometry.Get(), ClipDataStartPosition);
 		FLexUIGeometry::TransformVertices(RenderCanvas, this, Geometry.Get());
 
 		UpdateRegionVertex();
@@ -227,6 +228,15 @@ void ULexVisualPostProcess::UpdateRegionVertex()
 	}
 
 	SendRegionVertexDataToRenderProxy();
+}
+
+void ULexVisualPostProcess::UpdateGeometryClipData(FLexUIGeometry& InMesh, int InDataStartPosition)
+{
+	auto& vertices = InMesh.Vertices;
+	for (int i = 0; i < vertices.Num(); i++)
+	{
+		vertices[i].TextureCoordinate[1].X = InDataStartPosition;
+	}
 }
 
 void ULexVisualPostProcess::SendRegionVertexDataToRenderProxy()

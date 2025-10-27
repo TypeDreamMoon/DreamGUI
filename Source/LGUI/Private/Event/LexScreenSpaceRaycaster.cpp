@@ -10,6 +10,7 @@
 
 ULexScreenSpaceRaycaster::ULexScreenSpaceRaycaster()
 {
+	EventFireType = ELexUIEventFireType::TargetComponents;
 }
 
 void ULexScreenSpaceRaycaster::BeginPlay()

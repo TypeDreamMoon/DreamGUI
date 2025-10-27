@@ -2,32 +2,21 @@
 
 #pragma once
 
-#include "Core/Components/LexSpriteBase.h"
-#include "Core/Actor/LexWidgetActor.h"
+#include "Extensions/2DLineRenderer/Lex2DLineRendererBase.h"
 #include "LTweener.h"
-#include "UIPolygon.generated.h"
+#include "LexPolygonLine.generated.h"
 
 
-UENUM(BlueprintType, Category = LGUI)
-enum class UIPolygonUVType :uint8
-{
-	//Use full rect uv
-	SpriteRect,
-	//Use left center as polygon's center, and right center as polygon's ring uv
-	HeightCenter,
-	//Use left center as polygon's center, right bottom as polygon ring's start, and right top as polygon ring's end
-	StretchSpriteHeight,
-};
 /**
- * render a solid polygon shape
+ * render a polygon line shape
  */
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIPolygon : public ULexSpriteBase
+class LGUI_API ULexPolygonLine : public ULex2DLineRendererBase
 {
 	GENERATED_BODY()
 
-public:	
-	UUIPolygon(const FObjectInitializer& ObjectInitializer);
+public:
+	ULexPolygonLine(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
@@ -39,18 +28,27 @@ protected:
 	//Sides of polygon
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		int Sides = 3;
-	UPROPERTY(EditAnywhere, Category = "LGUI")
-		UIPolygonUVType UVType = UIPolygonUVType::SpriteRect;
-	UPROPERTY(EditAnywhere, Category = "LGUI", meta=(UIMin="0.0", UIMax="1.0"))
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (UIMin = "0.0", UIMax = "1.0"))
 		TArray<float> VertexOffsetArray;
-	
-	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
+
+	UPROPERTY(VisibleAnywhere, Transient, Category = LGUI)TArray<FVector2D> CurrentPointArray;
+
+	//Begin UI2DLineRendererBase interface
+	virtual const TArray<FVector2D>& GetCalcaultedPointArray()override
+	{
+		return CurrentPointArray;
+	}
+	virtual void CalculatePoints()override;
+	virtual bool OverrideStartPointTangentDirection()override { return true; }
+	virtual bool OverrideEndPointTangentDirection()override { return true; }
+	virtual FVector2D GetStartPointTangentDirection()override;
+	virtual FVector2D GetEndPointTangentDirection()override;
+	//End UI2DLineRendererBase interface
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI") bool GetFullCycle()const { return FullCycle; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") float GetStartAngle()const { return StartAngle; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") float GetEndAngle()const { return EndAngle; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") int GetSides()const { return Sides; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI") UIPolygonUVType GetUVType()const { return UVType; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") const TArray<float>& GetVertexOffsetArray()const { return VertexOffsetArray; }
 	//Return direct mutable array for edit and change. Call MarkVertexPositionDirty() function after change.
 	TArray<float>& GetVertexOffsetArray_Direct() { return VertexOffsetArray; }
@@ -63,8 +61,6 @@ public:
 		void SetEndAngle(float value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetSides(int value);
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetUVType(UIPolygonUVType value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetVertexOffsetArray(const TArray<float>& value);
 

@@ -1,25 +1,25 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Extensions/2DLineRenderer/UI2DLineChildrenAsPoints.h"
+#include "Extensions/2DLineRenderer/Lex2DLineChildrenAsPoints.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/Components/LexCanvas.h"
 
-UUI2DLineChildrenAsPoints::UUI2DLineChildrenAsPoints(const FObjectInitializer &ObjectInitializer) : Super(ObjectInitializer)
+ULex2DLineChildrenAsPoints::ULex2DLineChildrenAsPoints(const FObjectInitializer &ObjectInitializer) : Super(ObjectInitializer)
 {
 }
 
-void UUI2DLineChildrenAsPoints::BeginPlay()
+void ULex2DLineChildrenAsPoints::BeginPlay()
 {
     Super::BeginPlay();
 }
 
-void UUI2DLineChildrenAsPoints::OnRegister()
+void ULex2DLineChildrenAsPoints::OnRegister()
 {
     Super::OnRegister();
 }
 
-void UUI2DLineChildrenAsPoints::CalculatePoints()
+void ULex2DLineChildrenAsPoints::CalculatePoints()
 {
     auto& SortedItemArray = GetWidget()->GetUIChildren();
     int pointCount = SortedItemArray.Num();
@@ -31,7 +31,7 @@ void UUI2DLineChildrenAsPoints::CalculatePoints()
     }
 }
 
-void UUI2DLineChildrenAsPoints::OnChildPositionChanged()
+void ULex2DLineChildrenAsPoints::OnChildPositionChanged()
 {
     MarkVertexPositionDirty();
 }

@@ -4,11 +4,11 @@
 
 #include "LTweener.h"
 #include "Core/Components/LexImage.h"
-#include "UI2DLineRendererBase.generated.h"
+#include "Lex2DLineRendererBase.generated.h"
 
 
 UENUM(BlueprintType, Category = LGUI)
-enum class EUI2DLineRenderer_EndType :uint8
+enum class ELex2DLineRenderer_EndType :uint8
 {
 	None,
 	//Draw a cap at start and end.
@@ -20,12 +20,12 @@ enum class EUI2DLineRenderer_EndType :uint8
  * Render line use given points.
  */
 UCLASS(ClassGroup = (LGUI), Abstract, NotBlueprintable)
-class LGUI_API UUI2DLineRendererBase : public ULexImage
+class LGUI_API ULex2DLineRendererBase : public ULexImage
 {
 	GENERATED_BODY()
 
 public:	
-	UUI2DLineRendererBase(const FObjectInitializer& ObjectInitializer);
+	ULex2DLineRendererBase(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	virtual void BeginPlay()override;
@@ -34,9 +34,9 @@ protected:
 		float LineWidth = 10.0f;
 	//Draw extra quad at start and end.
 	UPROPERTY(EditAnywhere, Category = LGUI)
-		EUI2DLineRenderer_EndType EndType = EUI2DLineRenderer_EndType::Cap;
+		ELex2DLineRenderer_EndType EndType = ELex2DLineRenderer_EndType::Cap;
 	/** When EndType is Cap, if LineWidth bigger or smaller than Sprite's width, then cap size will scale with it. */
-	UPROPERTY(EditAnywhere, Category = LGUI, meta = (EditCondition="EndType==EUI2DLineRenderer_EndType::Cap"))
+	UPROPERTY(EditAnywhere, Category = LGUI, meta = (EditCondition="EndType==ELex2DLineRenderer_EndType::Cap"))
 		bool bEndCapSizeAffectByLineWidth = false;
 	//This will slide line's width from left to right.
 	UPROPERTY(EditAnywhere, Category = LGUI, meta = (ClampMin = "0", ClampMax = "1"))
@@ -68,7 +68,7 @@ protected:
 		, float InLineLeftWidth, float InLineRightWidth
 		, FVector2D& OutPosA, FVector2D& OutPosB
 		, FVector2D& InOutPrevLineDir);
-	FORCEINLINE bool CanConnectStartEndPoint(int InPointCount) { return EndType == EUI2DLineRenderer_EndType::ConnectStartAndEnd && InPointCount >= 3; }
+	FORCEINLINE bool CanConnectStartEndPoint(int InPointCount) { return EndType == ELex2DLineRenderer_EndType::ConnectStartAndEnd && InPointCount >= 3; }
 	void Update2DLineRendererBaseTriangle(FLexUIGeometry& InGeo, const TArray<FVector2D>& InPointArray);
 	void Update2DLineRendererBaseUV(FLexUIGeometry& InGeo, const TArray<FVector2D>& InPointArray);
 	void Update2DLineRendererBaseVertex(FLexUIGeometry& InGeo, const TArray<FVector2D>& InPointArray);
@@ -76,12 +76,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		float GetLineWidth()const { return LineWidth; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		EUI2DLineRenderer_EndType GetEndType()const { return EndType; }
+		ELex2DLineRenderer_EndType GetEndType()const { return EndType; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		float GetLineWidthOffset()const { return LineWidthOffset; }
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetEndType(EUI2DLineRenderer_EndType newValue);
+		void SetEndType(ELex2DLineRenderer_EndType newValue);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetLineWidth(float newValue);
 	UFUNCTION(BlueprintCallable, Category = LGUI)

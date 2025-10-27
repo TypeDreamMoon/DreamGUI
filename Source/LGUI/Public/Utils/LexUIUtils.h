@@ -147,6 +147,19 @@ public:
 	static float Color255To1_Table[256];
 
 	static UTexture* GetDefaultWhiteTexture();
+	static int CeilPowerOfTwo(int v)
+	{
+		if (v <= 1)
+			return 1;
+		v--;
+		v |= v >> 1;
+		v |= v >> 2;
+		v |= v >> 4;
+		v |= v >> 8;
+		v |= v >> 16;
+		v++;
+		return v;
+	}
 private:
 	template<class T>
 	static void CollectComponentsInChildrenRecursive(AActor* InActor, TArray<T*>& InOutArray)

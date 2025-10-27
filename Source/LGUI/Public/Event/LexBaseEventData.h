@@ -10,12 +10,12 @@
 UENUM(BlueprintType, Category = LGUI)
 enum class ELexUIEventFireType :uint8
 {
-	/** event will call on trace target actor and all component of the actor */
+	/** event will call on target actor and all components of the actor */
 	TargetActorAndAllItsComponents,
-	/** event will call only on trace target */
-	OnlyTargetComponent,
-	/** event will call only on trace target actor */
-	OnlyTargetActor,
+	/** event will call on all components of target actor */
+	TargetComponents,
+	/** event will call only on target actor */
+	TargetActor,
 };
 
 UENUM(BlueprintType, Category = LGUI)

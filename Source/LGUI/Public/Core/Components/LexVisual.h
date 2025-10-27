@@ -125,8 +125,8 @@ protected:
 	virtual bool LineTraceUIRect(FHitResult& OutHit, const FVector& Start, const FVector& End)const;
 	virtual bool LineTraceUIGeometry(FLexUIGeometry* InGeo, FHitResult& OutHit, const FVector& Start, const FVector& End)const;
 	virtual bool LineTraceUICustom(FHitResult& OutHit, const FVector& Start, const FVector& End)const;
-
-	void UpdateGeometryClipData(FLexUIGeometry& InMesh, int InClipDataStartPosition);
+	
+	void UpdateGeometryWidgetPropertyData(FLexUIGeometry& InMesh, int InDataStartPosition);
 public:
 	static const FName GetColorPropertyName()
 	{
@@ -184,16 +184,14 @@ public:
 	void CheckClipDataStartPosition();
 	virtual void MarkAllDirty();
 	
-	/** Called by LGUICanvas when begin to collect geometry for render */
+	/** Called by LexCanvas when begin to collect geometry for render */
 	virtual void UpdateGeometry() {};
-	/** Called by LGUICanvas when clip type changed */
-	virtual void UpdateMaterialClipType() {};
-	/** Called by LGUICanvas after create MaterialInstanceDynamic for this object or it's drawcall */
+	/** Called by LexCanvas after create MaterialInstanceDynamic for this object or it's drawcall */
 	virtual void OnMaterialInstanceDynamicCreated(class UMaterialInstanceDynamic* mat) {};
 
-	/** will this UI element affect by canvas's pixel perfect property? */
+	/** will this UI element affected by canvas's pixel perfect property? */
 	virtual bool GetShouldAffectByPixelSnapping()const { return true; };
-	/** return bounds min max point in self local space, for LGUICanvas to tell if geometry overlap with each other. */
+	/** return bounds min max point in self local space, for LexCanvas to tell if geometry overlap with each other. */
 	virtual void GetGeometryBoundsInLocalSpace(FVector2D& OutMinPoint, FVector2D& OutMaxPoint)const;
 	/** editor only, return 3d bounds in self local space */
 	virtual void GetGeometryBounds3DInLocalSpace(FVector& OutMinPoint, FVector& OutMaxPoint)const;
@@ -222,11 +220,18 @@ public:
 	 * Can be -1 to ignore it.
 	 */
 	virtual float GetFlexibleHeight()const{return -1;}
+
+	static int WidgetPropertyDataLength;
 protected:
 	uint8 bColorChanged : 1;
 	uint8 bTransformChanged : 1;
 	uint8 bClipDataPositionChanged : 1;
 	int ClipDataStartPosition = 0;
+	int WidgetPropertyDataStartPosition = INDEX_NONE;
+
+	static void FillWidgetPropertyDataForMaterial_SimpleRect(ULexVisual* Visual, uint8 FontMark);
+	static void FillWidgetPropertyDataForMaterial_FirstPixel(ULexVisual* Visual, uint8 FontMark);
+	static void FillWidgetPropertyDataForMaterial_FontChar(ULexUIDataAsTexture* DataTexture, int CharIndex, int DataOffset, int StartPosition);
 public:
 #pragma region TweenAnimation
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")

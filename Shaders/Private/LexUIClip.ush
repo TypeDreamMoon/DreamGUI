@@ -27,7 +27,7 @@ float LexUIClip_sdRoundRect(float2 p, float2 b, float4 r)
 }
 #define LexUI_Clip_Depth 16
 #define LexUI_Clip_Enable_Rounded 1
-float LexUI_CalculateClipData(Texture2D DataTex, SamplerState DataTexSampler, float CoordinateInDataTex, float3 PixelLocalPosition)
+float LexUI_CalculateClipData(Texture2D DataTex, float CoordinateInDataTex, float3 PixelLocalPosition)
 {
 	int Coordinate = round(CoordinateInDataTex);
 	if (Coordinate == 0) return 1.0f;//0 position means no clip

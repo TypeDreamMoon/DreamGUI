@@ -156,9 +156,10 @@ class UTextureRenderTarget2D;
 
 /**
  * Canvas is for render and update all UI elements.
- * UV channels-
+ * Default UV channels-
  *		UV0: Texture coordinate
- *		UV1: X for clip data coordinate
+ *		UV1: X- Widget property data primary coordinate, include clipData coordinate in data texture; Y- secondary coordinate for text char data
+ * Other UV channels usage, check LexText and LexRectBlock.
  */
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class LGUI_API ULexCanvas : public UActorComponent, public ILGUIPrefabInterface
@@ -408,11 +409,11 @@ private:
 	FRenderTargetChangedEvent OnRenderTargetChanged;
 
 public:
-	FORCEINLINE bool GetOverrideDefaultMaterial()const				{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::DefaultMaterial); }
-	FORCEINLINE bool GetOverrideDynamicPixelsPerUnit()const			{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::DynamicPixelsPerUnit); }
-	FORCEINLINE bool GetOverrideRequireNormalAndTangent()const		{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::RequireNormalAndTangent); }
-	FORCEINLINE bool GetOverrideBlendDepth()const					{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::BlendDepth); }
-	FORCEINLINE bool GetOverrideDepthFade()const					{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::DepthFade); }
+	FORCEINLINE bool GetOverrideDefaultMaterial()const						{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::DefaultMaterial); }
+	FORCEINLINE bool GetOverrideDynamicPixelsPerUnit()const					{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::DynamicPixelsPerUnit); }
+	FORCEINLINE bool GetOverrideRequireNormalAndTangent()const				{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::RequireNormalAndTangent); }
+	FORCEINLINE bool GetOverrideBlendDepth()const							{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::BlendDepth); }
+	FORCEINLINE bool GetOverrideDepthFade()const							{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::DepthFade); }
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		UMaterialInterface* GetDefaultMaterial()const;
@@ -527,7 +528,9 @@ public:
 	bool GetActualRequireNormalAndTangent()const;
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	bool GetRequireNormalAndTangent()const { return bRequireNormalAndTangent; }
-
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetRequireNormalAndTangent(bool Value);
+	
 	/** Get actual DynamicPixelsPerUnit of canvas. This property may inherit from parent canvas depend on OverrideParameters property. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		float GetActualDynamicPixelsPerUnit()const;
@@ -642,9 +645,9 @@ private:
 	void DrawVirtualCamera();
 	void DrawViewportArea();
 	void OnEditorTick(float DeltaTime);
+#endif
 	void RegisterCanvasScaler();
 	void UnregisterCanvasScaler();
-#endif
 	void OnViewportParameterChanged();
 	void CheckAndApplyViewportParameter();
 	FDelegateHandle ViewportResizeDelegateHandle;
@@ -652,8 +655,8 @@ private:
 
 public:
 	void MarkVisualWillChange(ULexVisual* InOldVisual);
-	void RegisterVisual(ULexWidget* InWidget);
-	void UnregisterVisual(ULexWidget* InVisual);
+	void RegisterVisual(ULexWidget* InWidget, int& OutWidgetPropertyDataStartPosition);
+	void UnregisterVisual(ULexWidget* InVisual, int& InOutWidgetPropertyDataStartPosition);
 
 	void AddLexWidget(ULexWidget* InWidget);
 	void RemoveLexWidget(ULexWidget* InWidget);
@@ -661,14 +664,13 @@ public:
 	const TArray<ULexWidget*>& GetVisualWidgetArray()const { return VisualWidgetList; }
 	const TArray<ULexWidget*>& GetWidgetArray()const { return WidgetList; }
 
-	void SetRequireNormalAndTangent(bool Value);
-
 	float GetLastRenderTime()const;
 	ULexUIMeshComponent* GetUIMesh()const { CheckUIMesh(); return UIMesh.Get(); }
 public:
 	static FName LexUI_MainTextureMaterialParameterName;
 	static FName LexUI_FontTextureMaterialParameterName;
 	static FName LexUI_ClipDataTexture_MaterialParameterName;
+	static FName LexUI_WidgetPropertyDataTexture_MaterialParameterName;
 	bool IsMaterialContainsLexUIParameter(UMaterialInterface* InMaterial);
 private:
 	void SetSortOrderAdditionalValueRecursive(int32 InAdditionalValue);
@@ -735,16 +737,22 @@ private:
 	TSharedPtr<FLexUIDrawCall> DrawCallAsChildCanvas = nullptr;//DrawCall that represent this canvas when the canvas is render as child.
 	TAtomic<int> ThreadProcessingGeometryCount;
 
+	//clip data is stored in root canvas
 	TArray<TSharedPtr<FLexUIClipData>> ClipDataList;
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	TObjectPtr<ULexUIDataAsTexture> ClipDataAsTexture;//clip coordinate stored in UV1.x
 	void OnClipDataTextureChanged(UTexture* NewTexture);
+	//widget property data is stored in each canvas (not only root canvas)
+	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
+	TObjectPtr<ULexUIDataAsTexture> WidgetPropertyDataAsTexture;//widget properties coordinate stored in UV1.y
+	void OnWidgetPropertyDataTextureChanged(UTexture* NewTexture);
 public:
 	void IncreaseThreadProcessingGeometry(){ThreadProcessingGeometryCount.IncrementExchange();}
 	void DecreaseThreadProcessingGeometry(){ThreadProcessingGeometryCount.DecrementExchange();}
 	/** Called by LexWidget to delete clip data */
 	void RemoveClipData(const TSharedPtr<FLexUIClipData>& InClipData);
 	UTexture* GetClipDataTexture()const;
+	ULexUIDataAsTexture* GetWidgetPropertyDataAsTexture()const{return WidgetPropertyDataAsTexture;}
 
 	const TArray<TSharedPtr<FLexUIDrawCall>>& GetUIDrawCallList()const { return UIDrawCallList; }
 	const TArray<TWeakObjectPtr<ULexCanvas>>& GetChildrenCanvasArray()const{return ChildrenCanvasArray;}

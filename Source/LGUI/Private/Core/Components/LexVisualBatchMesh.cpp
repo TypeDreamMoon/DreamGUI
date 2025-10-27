@@ -198,14 +198,15 @@ void ULexVisualBatchMesh::UpdateGeometry()
 		UIGeometry->Texture = GetTextureToCreateGeometry();
 		UIGeometry->Material = GetMaterialToCreateGeometry();
 		OnUpdateGeometry(*(UIGeometry.Get()), true, true, true, true);
-		UpdateGeometryClipData(*UIGeometry.Get(), ClipDataStartPosition);
+		UpdateGeometryWidgetPropertyData(*(UIGeometry.Get()), this->WidgetPropertyDataStartPosition);
+		OnFillWidgetPropertyDataForMaterial();
 		ApplyGeometryModifier(true, true, true, true);
-		CalculateLocalBounds();//CalculateLocalBounds must stay before TransformVertices, because TransformVertices will also cache bounds for Canvas to check 2d overlap.
 
 		//it is ok to use AsyncTask here, because we can make sure it completes in current frame
 		Canvas->IncreaseThreadProcessingGeometry();
 		AsyncTask(ENamedThreads::Type::AnyBackgroundHiPriTask, [this, Canvas]()
 		{
+			CalculateLocalBounds();//CalculateLocalBounds must stay before TransformVertices, because TransformVertices will also cache bounds for Canvas to check 2d overlap.
 			FLexUIGeometry::TransformVertices(Canvas, this, this->UIGeometry.Get());
 			Canvas->DecreaseThreadProcessingGeometry();
 		});
@@ -228,29 +229,31 @@ void ULexVisualBatchMesh::UpdateGeometry()
 				if (TempColor)bColorChanged = true;
 			}
 			OnUpdateGeometry(*(UIGeometry.Get()), bTriangleChanged, bLocalVertexPositionChanged || pixelPerfectAffectTransform, bUVChanged, bColorChanged);
+			UpdateGeometryWidgetPropertyData(*(UIGeometry.Get()), this->WidgetPropertyDataStartPosition);
 			ApplyGeometryModifier(bTriangleChanged, bUVChanged, bColorChanged, bLocalVertexPositionChanged);
-			DrawCall->bNeedToUpdateVertex = true;
-			if (bLocalVertexPositionChanged || pixelPerfectAffectTransform)//pixelPerfect is affected by transform, and can affect localVertex calculation
-			{
-				CalculateLocalBounds();//CalculateLocalBounds must stay before TransformVertices, because TransformVertices will also cache bounds for Canvas to check 2d overlap.
-			}
 		}
-		if (bClipDataPositionChanged)
-		{
-			UpdateGeometryClipData(*UIGeometry.Get(), ClipDataStartPosition);
-			DrawCall->bNeedToUpdateVertex = true;
-		}
-		if (bLocalVertexPositionChanged || bTransformChanged)
+		if (bLocalVertexPositionChanged || bTransformChanged || pixelPerfectAffectTransform)
 		{
 			//it is ok to use AsyncTask here, because we can make sure it completes in current frame
 			Canvas->IncreaseThreadProcessingGeometry();
 			AsyncTask(ENamedThreads::Type::AnyBackgroundHiPriTask, [this, Canvas]()
 			{
+				CalculateLocalBounds();//CalculateLocalBounds must stay before TransformVertices, because TransformVertices will also cache bounds for Canvas to check 2d overlap.
 				FLexUIGeometry::TransformVertices(Canvas, this, this->UIGeometry.Get());
 				Canvas->DecreaseThreadProcessingGeometry();
 			});
 			DrawCall->bNeedToUpdateVertex = true;
+
+			OnFillWidgetPropertyDataForMaterial();
 		}
+		else
+		{
+			if (bClipDataPositionChanged)
+			{
+				OnFillWidgetPropertyDataForMaterial_FirstPixel();
+				DrawCall->bNeedToUpdateVertex = true;
+			}
+        }
 	}
 	if (UIGeometry->OriginVertices.Num() >= LEXUI_MAX_VERTEX_COUNT)
 	{
@@ -463,6 +466,16 @@ void ULexVisualBatchMesh::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangl
 		SCOPE_CYCLE_COUNTER(STAT_BatchGeometryRenderable_OnFillMesh);
 		ReceiveOnUpdateGeometry(GeometryHelper, InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged);
 	}
+}
+
+void ULexVisualBatchMesh::OnFillWidgetPropertyDataForMaterial()
+{
+	FillWidgetPropertyDataForMaterial_SimpleRect(this, 0);
+}
+
+void ULexVisualBatchMesh::OnFillWidgetPropertyDataForMaterial_FirstPixel()
+{
+	FillWidgetPropertyDataForMaterial_FirstPixel(this, 0);
 }
 
 

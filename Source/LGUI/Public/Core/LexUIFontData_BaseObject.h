@@ -74,6 +74,10 @@ struct FLexUICharData_HighPrecision
 	{
 		return FVector2f(uv3X, uv0Y);
 	}
+	FVector2f GetUVRange()const
+	{
+		return FVector2f(uv3X - uv0X, uv3Y - uv0Y);
+	}
 };
 
 class UTexture2D;

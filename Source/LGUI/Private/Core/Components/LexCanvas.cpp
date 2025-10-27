@@ -62,6 +62,18 @@ ULexCanvas::ULexCanvas()
 void ULexCanvas::BeginPlay()
 {
 	Super::BeginPlay();
+	if (!ULGUIPrefabWorldSubsystem::GetInstance(this->GetWorld())->IsPrefabSystemProcessingActor(this->GetOwner()))
+	{
+		Awake_Implementation();
+	}
+}
+void ULexCanvas::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+}
+
+void ULexCanvas::Awake_Implementation()
+{
 	CheckRootCanvas();
 	CurrentRenderMode = this->GetActualRenderMode();
 	if (CheckLexWidget())
@@ -85,14 +97,7 @@ void ULexCanvas::BeginPlay()
 			CheckAndApplyViewportParameter();
 		}
 	}
-}
-void ULexCanvas::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	Super::EndPlay(EndPlayReason);
-}
-
-void ULexCanvas::Awake_Implementation()
-{
+	
 	if (IsValid(CustomScale))
 	{
 		CustomScale->Init(this);
@@ -333,7 +338,7 @@ void ULexCanvas::OnRegister()
 	if (!IsValid(ClipDataAsTexture))
 	{
 		ClipDataAsTexture = NewObject<ULexUIDataAsTexture>(this, ULexUIDataAsTexture::StaticClass(), NAME_None, RF_Transient);
-		ClipDataAsTexture->Init(FLexUIClipData::BlockSizeInBytes, 512);
+		ClipDataAsTexture->Init(FLexUIClipData::BlockSizeInBytes, ELexUIDataAsTexturePixelFormat::R32G32B32A32, 512);
 		ClipDataAsTexture->OnDataTextureChange.AddUObject(this, &ULexCanvas::OnClipDataTextureChanged);
 		ClipDataAsTexture->RegisterBuffer();//register a zero position as a placeholder for not clipping type.
 	}
@@ -833,14 +838,30 @@ void ULexCanvas::MarkVisualWillChange(ULexVisual* InOldVisual)
 	MarkCanvasUpdate(false, false, false);
 }
 
-void ULexCanvas::RegisterVisual(ULexWidget* InWidget)
+void ULexCanvas::RegisterVisual(ULexWidget* InWidget, int& OutWidgetPropertyDataStartPosition)
 {
 	VisualWidgetList.AddUnique(InWidget);
+	
+	if (!IsValid(WidgetPropertyDataAsTexture))
+	{
+		WidgetPropertyDataAsTexture = NewObject<ULexUIDataAsTexture>(this, ULexUIDataAsTexture::StaticClass(), NAME_None, RF_Transient);
+		WidgetPropertyDataAsTexture->Init(ULexVisual::WidgetPropertyDataLength, ELexUIDataAsTexturePixelFormat::R32G32B32A32, 4);
+		WidgetPropertyDataAsTexture->OnDataTextureChange.AddUObject(this, &ULexCanvas::OnWidgetPropertyDataTextureChanged);
+	}
+	OutWidgetPropertyDataStartPosition = WidgetPropertyDataAsTexture->RegisterBuffer();
 }
 
-void ULexCanvas::UnregisterVisual(ULexWidget* InWidget)
+void ULexCanvas::UnregisterVisual(ULexWidget* InWidget, int& InOutWidgetPropertyDataStartPosition)
 {
 	VisualWidgetList.Remove(InWidget);
+	if (InOutWidgetPropertyDataStartPosition > INDEX_NONE)
+	{
+		if (IsValid(WidgetPropertyDataAsTexture))
+		{
+			WidgetPropertyDataAsTexture->UnregisterBuffer(InOutWidgetPropertyDataStartPosition);
+		}
+		InOutWidgetPropertyDataStartPosition = INDEX_NONE;
+	}
 }
 
 void ULexCanvas::AddLexWidget(ULexWidget* InWidget)
@@ -852,15 +873,6 @@ void ULexCanvas::RemoveLexWidget(ULexWidget* InWidget)
 {
 	bNeedToGenerateWidgetList = true;
 	MarkCanvasUpdate(false, false, false);
-}
-
-void ULexCanvas::SetRequireNormalAndTangent(bool Value)
-{
-	if (bRequireNormalAndTangent != Value)
-	{
-		bRequireNormalAndTangent = Value;
-		MarkCanvasUpdate(false, false, false);
-	}
 }
 
 bool ULexCanvas::Is2DUITransform(const FTransform& Transform)
@@ -1960,6 +1972,7 @@ void ULexCanvas::SortDrawCall()
 FName ULexCanvas::LexUI_MainTextureMaterialParameterName = FName(TEXT("LexUI_MainTexture"));
 FName ULexCanvas::LexUI_FontTextureMaterialParameterName = FName(TEXT("LexUI_FontTexture"));
 FName ULexCanvas::LexUI_ClipDataTexture_MaterialParameterName = FName(TEXT("LexUI_ClipDataTexture"));
+FName ULexCanvas::LexUI_WidgetPropertyDataTexture_MaterialParameterName = FName(TEXT("LexUI_WidgetPropertyDataTexture"));
 
 bool ULexCanvas::IsMaterialContainsLexUIParameter(UMaterialInterface* InMaterial)
 {
@@ -1972,6 +1985,7 @@ bool ULexCanvas::IsMaterialContainsLexUIParameter(UMaterialInterface* InMaterial
 				Item.Name == LexUI_MainTextureMaterialParameterName
 				|| Item.Name == LexUI_FontTextureMaterialParameterName
 				|| Item.Name == LexUI_ClipDataTexture_MaterialParameterName
+				|| Item.Name == LexUI_WidgetPropertyDataTexture_MaterialParameterName
 				;
 		});
 	return FoundIndex != INDEX_NONE;
@@ -2043,6 +2057,7 @@ void ULexCanvas::UpdateDrawCallMaterial_Implement()
 					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_MainTextureMaterialParameterName, DrawCallItem->Texture.Get());
 					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_FontTextureMaterialParameterName, DrawCallItem->FontTexture.Get());
 					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_ClipDataTexture_MaterialParameterName, RootCanvas->ClipDataAsTexture->GetDataTexture());
+					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_WidgetPropertyDataTexture_MaterialParameterName, WidgetPropertyDataAsTexture->GetDataTexture());
 				}
 				DrawCallItem->bTextureChanged = false;
 				DrawCallItem->bMaterialNeedToReassign = false;
@@ -2305,6 +2320,7 @@ void ULexCanvas::SetDynamicPixelsPerUnit(float Value)
 		MarkCanvasUpdate(false, true, false);
 	}
 }
+
 float ULexCanvas::GetActualDynamicPixelsPerUnit()const
 {
 	if (IsRootCanvas())
@@ -2439,7 +2455,18 @@ bool ULexCanvas::GetActualRequireNormalAndTangent()const
 	}
 	return bRequireNormalAndTangent;
 }
-
+void ULexCanvas::SetRequireNormalAndTangent(bool Value)
+{
+	if (bRequireNormalAndTangent != Value)
+	{
+		bRequireNormalAndTangent = Value;
+		MarkCanvasUpdate(false, false, false);
+		if (CheckLexWidget())
+		{
+			LexWidget->MarkAllDirtyRecursive();
+		}
+	}
+}
 
 void ULexCanvas::BuildProjectionMatrix(FIntPoint InViewportSize, ECameraProjectionMode::Type InProjectionType, float InFOV, float FarClipPlane, float NearClipPlane, FMatrix& OutProjectionMatrix)
 {
@@ -2789,6 +2816,29 @@ void ULexCanvas::OnClipDataTextureChanged(UTexture* NewTexture)
 	}
 }
 
+void ULexCanvas::OnWidgetPropertyDataTextureChanged(UTexture* NewTexture)
+{
+	for (const auto& DrawCallItem : UIDrawCallList)
+	{
+		switch (DrawCallItem->Type)
+		{
+		case ELexUIDrawCallType::BatchMesh:
+			{
+				auto RenderMat = DrawCallItem->RenderMaterial;
+				if (RenderMat.IsValid() && DrawCallItem->bMaterialContainsLexUIParameter)
+				{
+					((UMaterialInstanceDynamic*)RenderMat.Get())->SetTextureParameterValue(LexUI_WidgetPropertyDataTexture_MaterialParameterName, NewTexture);
+				}
+			}
+			break;
+		case ELexUIDrawCallType::PostProcess:
+			break;
+		case ELexUIDrawCallType::DirectMesh:
+			break;
+		}
+	}
+}
+
 void ULexCanvas::RemoveClipData(const TSharedPtr<FLexUIClipData>& InClipData)
 {
 	RootCanvas->ClipDataList.Remove(InClipData);
@@ -2880,8 +2930,8 @@ void ULexCanvas::CheckAndApplyViewportParameter()
 	{
 		if (IsValid(RenderTarget))
 		{
-			ViewportSize.X = RenderTarget->SizeX;
-			ViewportSize.Y = RenderTarget->SizeY;
+			ViewportSize.X = RenderTarget->SizeX / RenderTargetResolutionScale;
+			ViewportSize.Y = RenderTarget->SizeY / RenderTargetResolutionScale;
 			OnViewportParameterChanged();
 		}
 	}

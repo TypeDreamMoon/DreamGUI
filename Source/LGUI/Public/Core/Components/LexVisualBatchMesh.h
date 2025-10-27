@@ -135,7 +135,7 @@ protected:
 protected:
 	friend class FLexVisualBatchMeshCustomization;
 
-	UPROPERTY(EditAnywhere, Instanced, Category = "LGUI")
+	UPROPERTY(EditAnywhere, Instanced, Category = "LGUI", AdvancedDisplay)
 	TArray<TObjectPtr<ULexMeshModifierBase>> MeshModifierArray;
 
 	/** texture for render this UI element */
@@ -147,6 +147,10 @@ protected:
 	virtual void OnBeforeCreateOrUpdateGeometry();
 	/** fill and update ui geometry */
 	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged);
+	/** fill widget property data for access in material */
+	virtual void OnFillWidgetPropertyDataForMaterial();
+	/** Same as OnFillWidgetPropertyDataForMaterial but only update 1st pixel (16bytes data), when only the clip data position changed. */
+	virtual void OnFillWidgetPropertyDataForMaterial_FirstPixel();
 
 	virtual void UpdateGeometry()override final;
 	virtual void GetGeometryBoundsInLocalSpace(FVector2D& OutMinPoint, FVector2D& OutMaxPoint)const override;

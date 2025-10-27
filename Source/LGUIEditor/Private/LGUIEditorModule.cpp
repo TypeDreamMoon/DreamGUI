@@ -30,7 +30,7 @@
 
 #include "AssetTypeActions/AssetTypeActions_LexUISpriteData.h"
 #include "AssetTypeActions/AssetTypeActions_LexUIStaticSpriteAtlasData.h"
-#include "AssetTypeActions/AssetTypeActions_LexUIFontData.h"
+#include "AssetTypeActions/AssetTypeActions_LexUIFontData_Bitmap.h"
 #include "AssetTypeActions/AssetTypeActions_LexUIPrefab.h"
 #include "AssetTypeActions/AssetTypeActions_LexUIStaticMeshCache.h"
 #include "AssetTypeActions/AssetTypeActions_LexUIRichTextCustomStyleData.h"
@@ -309,7 +309,7 @@ void FLGUIEditorModule::StartupModule()
 
 		TSharedPtr<FAssetTypeActions_Base> SpriteDataAction = MakeShareable(new FAssetTypeActions_LexUISpriteData(LexUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> StaticSpriteAtlasDataAction = MakeShareable(new FAssetTypeActions_LexUIStaticSpriteAtlasData(LexUIAssetCategoryBit));
-		TSharedPtr<FAssetTypeActions_Base> FontDataAction = MakeShareable(new FAssetTypeActions_LexUIFontData(LexUIAssetCategoryBit));
+		TSharedPtr<FAssetTypeActions_Base> FontDataAction = MakeShareable(new FAssetTypeActions_LexUIFontData_Bitmap(LexUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> PrefabDataAction = MakeShareable(new FAssetTypeActions_LexUIPrefab(LexUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> UIStaticMeshCacheDataAction = MakeShareable(new FAssetTypeActions_LexUIStaticMeshCache(LexUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> RichTextCustomStyleDataAction = MakeShareable(new FAssetTypeActions_LexUIRichTextCustomStyleData(LexUIAssetCategoryBit));
@@ -1458,12 +1458,12 @@ void FLGUIEditorModule::CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder)
 
 	MenuBuilder.BeginSection("UIExtension");
 	{
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, UUIPolygon::StaticClass(), nullptr);
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, UUIPolygonLine::StaticClass(), nullptr);
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, UUIRing::StaticClass(), nullptr);
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, ULexPolygon::StaticClass(), nullptr);
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, ULexPolygonLine::StaticClass(), nullptr);
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, ULexRing::StaticClass(), nullptr);
 		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, ULexStaticMesh::StaticClass(), nullptr);
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, UUI2DLineRaw::StaticClass(), nullptr);
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, UUI2DLineChildrenAsPoints::StaticClass(), nullptr);
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, ULex2DLineRaw::StaticClass(), nullptr);
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, ULex2DLineChildrenAsPoints::StaticClass(), nullptr);
 		//FunctionContainer::CreateMenuEntryByPrefab(MenuBuilder, TEXT("UIWidget"), LOCTEXT("UIWidget", "UI Widget"), AUIWidgetActor::StaticClass()->GetToolTipText());
 		//FunctionContainer::CreateMenuEntryByPrefab(MenuBuilder, TEXT("UIRenderTarget"), LOCTEXT("UIRenderTarget", "UI Render Target"), AUIRenderTargetActor::StaticClass()->GetToolTipText());
 	}

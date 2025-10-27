@@ -193,7 +193,7 @@ void ULexRectBlock::Fill8BytesToData(uint8* Data, uint8 InValue0, uint8 InValue1
 		| (InValue2 << 8)
 		| (InValue3 << 0)
 		;
-	FMemory::Memcpy(Data + InOutDataOffset, &DataAsUint, ByteCount);
+	FMemory::Memcpy(Data + InOutDataOffset, &DataAsUint, 4);
 	InOutDataOffset += ByteCount;
 }
 void ULexRectBlock::FillFloatToData(uint8* Data, const float& InValue, int& InOutDataOffset)
@@ -265,7 +265,7 @@ void ULexRectBlock::OnRegister()
 		RectBlockData = LoadObject<ULexUIRectBlockData>(NULL, TEXT("/LGUI/DefaultRectBlockData"));
 		check(RectBlockData != nullptr);
 	}
-	RectBlockData->Init(DataCountInBytes());
+	RectBlockData->Init(DataCountInBytes(), ELexUIDataAsTexturePixelFormat::R32G32B32A32, 32);
 	DataStartPosition = RectBlockData->RegisterBuffer();
 	OnDataTextureChangedDelegateHandle = RectBlockData->OnDataTextureChange.AddUObject(this, &ULexRectBlock::OnDataTextureChanged);
 #if WITH_EDITOR
@@ -427,16 +427,6 @@ UMaterialInterface* ULexRectBlock::GetMaterialToCreateGeometry()
 		return RectBlockData->GetMaterial();
 	}
 }
-void ULexRectBlock::UpdateMaterialClipType()
-{
-	UIGeometry->Material = GetMaterialToCreateGeometry();
-	if (DrawCall.IsValid())
-	{
-		DrawCall->bMaterialChanged = true;
-		DrawCall->bMaterialNeedToReassign = true;
-		DrawCall->bNeedToUpdateVertex = true;
-	}
-}
 void ULexRectBlock::OnMaterialInstanceDynamicCreated(class UMaterialInstanceDynamic* mat) 
 {
 	mat->SetTextureParameterValue(DataTextureParameterName, RectBlockData->GetDataTexture());
@@ -584,7 +574,7 @@ void ULexRectBlock::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChang
 		auto& vertices = InGeo.Vertices;
 		for (int i = 0; i < 4; i++)
 		{
-			vertices[i].TextureCoordinate[1].Y = DataStartPosition;
+			vertices[i].TextureCoordinate[3].X = DataStartPosition;
 		}
 		bNeedUpdateBlockData = true;
 	}

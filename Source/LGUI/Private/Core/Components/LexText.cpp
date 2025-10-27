@@ -1,7 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/Components/LexText.h"
-#include "LGUI.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/Components/LexCanvas.h"
 #include "Materials/MaterialInterface.h"
@@ -325,15 +324,14 @@ void ULexText::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, b
 	}
 }
 
-void ULexText::UpdateMaterialClipType()
+void ULexText::OnFillWidgetPropertyDataForMaterial()
 {
-	UIGeometry->Material = GetMaterialToCreateGeometry();
-	if (DrawCall.IsValid())
-	{
-		DrawCall->bMaterialChanged = true;
-		DrawCall->bMaterialNeedToReassign = true;
-		DrawCall->bNeedToUpdateVertex = true;
-	}
+	FillWidgetPropertyDataForMaterial_SimpleRect(this, this->Font->GetFontTextureMark());
+}
+
+void ULexText::OnFillWidgetPropertyDataForMaterial_FirstPixel()
+{
+	FillWidgetPropertyDataForMaterial_FirstPixel(this, this->Font->GetFontTextureMark());
 }
 
 void ULexText::OnCultureChanged_Implementation()

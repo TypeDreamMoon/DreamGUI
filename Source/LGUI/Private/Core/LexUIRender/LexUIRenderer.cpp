@@ -254,7 +254,7 @@ void FLexUIRenderer::DrawFullScreenQuad(FRHICommandListImmediate& RHICmdList)
 	RHICmdList.SetStreamSource(0, GLexUIFullScreenQuadVertexBuffer.VertexBufferRHI, 0);
 	RHICmdList.DrawIndexedPrimitive(GLexUIFullScreenQuadIndexBuffer.IndexBufferRHI, 0, 0, 4, 0, 2, 1);
 }
-void FLexUIRenderer::SetGraphicPipelineState(ERHIFeatureLevel::Type FeatureLevel, FGraphicsPipelineStateInitializer& GraphicsPSOInit, EBlendMode BlendMode
+void FLexUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(ERHIFeatureLevel::Type FeatureLevel, FGraphicsPipelineStateInitializer& GraphicsPSOInit, EBlendMode BlendMode
 	, bool bIsWireFrame, bool bIsTwoSided, bool bDisableDepthTestForTransparent, bool bIsDepthValid, bool bReverseCulling
 ) 
 {
@@ -374,6 +374,14 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 #endif
 		)return;//nothing to render
 	bool bIsMainViewport = !(InView.bIsSceneCapture || InView.bIsReflectionCapture || InView.bIsPlanarReflection || InView.bIsVirtualTexture);
+	
+	bool bRenderWireframe = InView.Family->ViewMode == VMI_Wireframe || InView.Family->ViewMode == VMI_Lit_Wireframe;
+	bool bRenderLit = InView.Family->ViewMode != VMI_Wireframe;
+	FMaterialRenderProxy* WireframeMaterialInstance = NULL;
+	if (bRenderWireframe)
+	{
+		WireframeMaterialInstance = GEngine->WireframeMaterial->GetRenderProxy();
+	}
 
 	FTextureRHIRef OrignScreenColorRenderTargetTexture = nullptr;
 	FTextureRHIRef ScreenColorRenderTargetTexture = nullptr;
@@ -659,7 +667,10 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 								RDG_EVENT_NAME("LexUIRender_WorldSpace"),
 								PassParameters,
 								ERDGPassFlags::Raster,
-								[this, DepthFade = RenderSequenceItem.DepthFade, BlendDepth = RenderSequenceItem.BlendDepth, RenderPrimitiveItem, RenderView, ViewRect, PassParameters, SceneDepthTexST = DepthTextureScaleOffset, NumSamples, GammaValue](FRHICommandListImmediate& RHICmdList)
+								[this, DepthFade = RenderSequenceItem.DepthFade, BlendDepth = RenderSequenceItem.BlendDepth
+									, RenderPrimitiveItem, RenderView, ViewRect, PassParameters
+									, SceneDepthTexST = DepthTextureScaleOffset, NumSamples, GammaValue
+									, bRenderWireframe, bRenderLit, WireframeMaterialInstance](FRHICommandListImmediate& RHICmdList)
 								{
 									FGraphicsPipelineStateInitializer GraphicsPSOInit;
 									RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
@@ -673,8 +684,6 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 									{
 										auto& MeshBatchContainer = MeshBatchArray[MeshIndex];
 										const FMeshBatch& Mesh = MeshBatchContainer.Mesh;
-										auto Material = Mesh.MaterialRenderProxy->GetMaterialNoFallback(RenderView->GetFeatureLevel());//why not use "GetIncompleteMaterialWithFallback" here? because fallback material cann't render with LexUIRenderer
-										if (!Material)return;
 		#if LGUI_ENABLE_SCENETEXTURES
 										FRHIUniformBuffer* SceneTextureUniformBuffer = GetSceneTextureExtracts().GetUniformBuffer();
 										if (!SceneTextureUniformBuffer)return;
@@ -682,68 +691,91 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 										SCOPED_UNIFORM_BUFFER_STATIC_BINDINGS(RHICmdList, StaticUniformBuffers);
 		#endif
 
-										FLexUIRenderer::SetGraphicPipelineState(RenderView->GetFeatureLevel(), GraphicsPSOInit, Material->GetBlendMode()
-											, Material->IsWireframe(), Material->IsTwoSided(), Material->ShouldDisableDepthTest(), false, Mesh.ReverseCulling
-										);
-
-										if (DepthFade <= 0)
+										auto DoRender = [&](bool bWireframe)
 										{
-											TShaderRef<FLexUIScreenRenderVS> VertexShader;
-											TShaderRef<FLexUIWorldRenderPS> PixelShader;
-											FMaterialShaderTypes ShaderTypes;
-											ShaderTypes.AddShaderType<FLexUIScreenRenderVS>();
-											ShaderTypes.AddShaderType<FLexUIWorldRenderPS>();
-											FMaterialShaders Shaders;
-											if (Material->TryGetShaders(ShaderTypes, nullptr, Shaders))
+											auto Material = (bWireframe ? WireframeMaterialInstance : Mesh.MaterialRenderProxy)
+											->GetMaterialNoFallback(RenderView->GetFeatureLevel());//why not use "GetIncompleteMaterialWithFallback" here? because fallback material can't render with LexUIRenderer
+											if (!Material)return;
+											
+											if (DepthFade <= 0)
 											{
-												Shaders.TryGetVertexShader(VertexShader);
-												Shaders.TryGetPixelShader(PixelShader);
+												TShaderRef<FLexUIScreenRenderVS> VertexShader;
+												TShaderRef<FLexUIWorldRenderPS> PixelShader;
+												FMaterialShaderTypes ShaderTypes;
+												ShaderTypes.AddShaderType<FLexUIScreenRenderVS>();
+												ShaderTypes.AddShaderType<FLexUIWorldRenderPS>();
+												FMaterialShaders Shaders;
+												if (Material->TryGetShaders(ShaderTypes, nullptr, Shaders))
+												{
+													Shaders.TryGetVertexShader(VertexShader);
+													Shaders.TryGetPixelShader(PixelShader);
 
-												GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIMeshVertexDeclaration();
-												GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-												GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-												GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
-												GraphicsPSOInit.NumSamples = NumSamples;
-												SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+													FLexUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, Material->GetBlendMode()
+													, Material->IsWireframe() || bWireframe, Material->IsTwoSided(), Material->ShouldDisableDepthTest(), false, Mesh.ReverseCulling
+													);
+													GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIMeshVertexDeclaration();
+													GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+													GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+													GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+													GraphicsPSOInit.NumSamples = NumSamples;
+													SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 
-												VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh);
-												PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh);
-												PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepth, SceneDepthTexST, PassParameters->SceneDepthTex->GetRHI());
-												PixelShader->SetGammaValue(RHICmdList, GammaValue);
+													if (!bWireframe)
+													{
+														VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh);
+														PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh);
+														PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepth, SceneDepthTexST, PassParameters->SceneDepthTex->GetRHI());
+														PixelShader->SetGammaValue(RHICmdList, GammaValue);
+													}
 
-												RHICmdList.SetStreamSource(0, MeshBatchContainer.VertexBufferRHI, 0);
-												RHICmdList.DrawIndexedPrimitive(Mesh.Elements[0].IndexBuffer->IndexBufferRHI, 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.GetNumPrimitives(), 1);
+													RHICmdList.SetStreamSource(0, MeshBatchContainer.VertexBufferRHI, 0);
+													RHICmdList.DrawIndexedPrimitive(Mesh.Elements[0].IndexBuffer->IndexBufferRHI, 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.GetNumPrimitives(), 1);
+												}
 											}
+											else
+											{
+												TShaderRef<FLexUIScreenRenderVS> VertexShader;
+												TShaderRef<FLexUIWorldRenderDepthFadePS> PixelShader;
+												FMaterialShaderTypes ShaderTypes;
+												ShaderTypes.AddShaderType<FLexUIScreenRenderVS>();
+												ShaderTypes.AddShaderType<FLexUIWorldRenderDepthFadePS>();
+												FMaterialShaders Shaders;
+												if (Material->TryGetShaders(ShaderTypes, nullptr, Shaders))
+												{
+													Shaders.TryGetVertexShader(VertexShader);
+													Shaders.TryGetPixelShader(PixelShader);
+
+													FLexUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, Material->GetBlendMode()
+													, Material->IsWireframe() || bWireframe, Material->IsTwoSided(), Material->ShouldDisableDepthTest(), false, Mesh.ReverseCulling
+													);
+													GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIMeshVertexDeclaration();
+													GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+													GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+													GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+													GraphicsPSOInit.NumSamples = NumSamples;
+													SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+
+													if (!bWireframe)
+													{
+														VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh);
+														PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh);
+														PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepth, SceneDepthTexST, PassParameters->SceneDepthTex->GetRHI());
+														PixelShader->SetDepthFadeParameter(RHICmdList, DepthFade);
+														PixelShader->SetGammaValue(RHICmdList, GammaValue);
+													}
+
+													RHICmdList.SetStreamSource(0, MeshBatchContainer.VertexBufferRHI, 0);
+													RHICmdList.DrawIndexedPrimitive(Mesh.Elements[0].IndexBuffer->IndexBufferRHI, 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.GetNumPrimitives(), 1);
+												}
+											}
+										};
+										if (bRenderLit)
+										{
+											DoRender(false);
 										}
-										else
+										if (bRenderWireframe)
 										{
-											TShaderRef<FLexUIScreenRenderVS> VertexShader;
-											TShaderRef<FLexUIWorldRenderDepthFadePS> PixelShader;
-											FMaterialShaderTypes ShaderTypes;
-											ShaderTypes.AddShaderType<FLexUIScreenRenderVS>();
-											ShaderTypes.AddShaderType<FLexUIWorldRenderDepthFadePS>();
-											FMaterialShaders Shaders;
-											if (Material->TryGetShaders(ShaderTypes, nullptr, Shaders))
-											{
-												Shaders.TryGetVertexShader(VertexShader);
-												Shaders.TryGetPixelShader(PixelShader);
-
-												GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIMeshVertexDeclaration();
-												GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-												GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-												GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
-												GraphicsPSOInit.NumSamples = NumSamples;
-												SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
-
-												VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh);
-												PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh);
-												PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepth, SceneDepthTexST, PassParameters->SceneDepthTex->GetRHI());
-												PixelShader->SetDepthFadeParameter(RHICmdList, DepthFade);
-												PixelShader->SetGammaValue(RHICmdList, GammaValue);
-
-												RHICmdList.SetStreamSource(0, MeshBatchContainer.VertexBufferRHI, 0);
-												RHICmdList.DrawIndexedPrimitive(Mesh.Elements[0].IndexBuffer->IndexBufferRHI, 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.GetNumPrimitives(), 1);
-											}
+											DoRender(true);
 										}
 									}
 								});
@@ -917,19 +949,25 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 					RDG_EVENT_NAME("LexUIRender_ScreenSpace"),
 					PassParameters,
 					ERDGPassFlags::Raster,
-					[this, RenderSequenceItem, RenderView, ViewRect, SceneDepthTexST = DepthTextureScaleOffset, NumSamples, ValidDepth = LexUIScreenSpaceDepthRDGTexture != nullptr, GammaValue](FRHICommandListImmediate& RHICmdList)
+					[this, RenderSequenceItem, RenderView, ViewRect, SceneDepthTexST = DepthTextureScaleOffset
+						, NumSamples, ValidDepth = LexUIScreenSpaceDepthRDGTexture != nullptr, GammaValue
+						, bRenderLit, bRenderWireframe, WireframeMaterialInstance](FRHICommandListImmediate& RHICmdList)
 					{
+						FGraphicsPipelineStateInitializer GraphicsPSOInit;
+						RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+						RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
+						
 						MeshBatchArray.Reset();
 						FSceneRenderingBulkObjectAllocator Allocator;
 						FLexUIMeshElementCollector meshCollector(RenderView->GetFeatureLevel(), Allocator, RHICmdList);
-						RenderSequenceItem.Primitive->GetMeshElements(*RenderView->Family, (FMeshElementCollector*)&meshCollector, RenderSequenceItem, MeshBatchArray);
+						RenderSequenceItem.Primitive->GetMeshElements(*RenderView->Family, (FMeshElementCollector*)&meshCollector,
+						RenderSequenceItem, MeshBatchArray);
 
 						for (int MeshIndex = 0; MeshIndex < MeshBatchArray.Num(); MeshIndex++)
 						{
 							auto& MeshBatchContainer = MeshBatchArray[MeshIndex];
 							const FMeshBatch& Mesh = MeshBatchContainer.Mesh;
-							auto Material = Mesh.MaterialRenderProxy->GetMaterialNoFallback(RenderView->GetFeatureLevel());//why not use "GetIncompleteMaterialWithFallback" here? because fallback material cann't render with LexUIRenderer
-							if (!Material)return;
+							
 #if LGUI_ENABLE_SCENETEXTURES
 							FRHIUniformBuffer* SceneTextureUniformBuffer = GetSceneTextureExtracts().GetUniformBuffer();
 							if (!SceneTextureUniformBuffer)return;
@@ -937,39 +975,52 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 							SCOPED_UNIFORM_BUFFER_STATIC_BINDINGS(RHICmdList, StaticUniformBuffers);
 #endif
 
-							TShaderRef<FLexUIScreenRenderVS> VertexShader;
-							TShaderRef<FLexUIScreenRenderPS> PixelShader;
-							FMaterialShaderTypes ShaderTypes;
-							ShaderTypes.AddShaderType<FLexUIScreenRenderVS>();
-							ShaderTypes.AddShaderType<FLexUIScreenRenderPS>();
-							FMaterialShaders Shaders;
-							if (Material->TryGetShaders(ShaderTypes, nullptr, Shaders))
+							auto DoRender = [&](bool bWireframe)
 							{
-								Shaders.TryGetVertexShader(VertexShader);
-								Shaders.TryGetPixelShader(PixelShader);
+								auto Material = (bWireframe ? WireframeMaterialInstance : Mesh.MaterialRenderProxy)
+								->GetMaterialNoFallback(RenderView->GetFeatureLevel());//why not use "GetIncompleteMaterialWithFallback" here? because fallback material cann't render with LexUIRenderer
+								if (!Material)return;
+							
+								TShaderRef<FLexUIScreenRenderVS> VertexShader;
+								TShaderRef<FLexUIScreenRenderPS> PixelShader;
+								FMaterialShaderTypes ShaderTypes;
+								ShaderTypes.AddShaderType<FLexUIScreenRenderVS>();
+								ShaderTypes.AddShaderType<FLexUIScreenRenderPS>();
+								FMaterialShaders Shaders;
+								if (Material->TryGetShaders(ShaderTypes, nullptr, Shaders))
+								{
+									Shaders.TryGetVertexShader(VertexShader);
+									Shaders.TryGetPixelShader(PixelShader);
 
-								RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
+									FLexUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, Material->GetBlendMode()
+										, Material->IsWireframe() || bWireframe, Material->IsTwoSided(), Material->ShouldDisableDepthTest(), ValidDepth, Mesh.ReverseCulling
+									);
 
-								FGraphicsPipelineStateInitializer GraphicsPSOInit;
-								RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+									GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIMeshVertexDeclaration();
+									GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+									GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+									GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+									GraphicsPSOInit.NumSamples = NumSamples;
+									SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 
-								FLexUIRenderer::SetGraphicPipelineState(RenderView->GetFeatureLevel(), GraphicsPSOInit, Material->GetBlendMode()
-									, Material->IsWireframe(), Material->IsTwoSided(), Material->ShouldDisableDepthTest(), ValidDepth, Mesh.ReverseCulling
-								);
+									if (!bWireframe)
+									{
+										VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh);
+										PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh);
+										PixelShader->SetGammaValue(RHICmdList, GammaValue);
+									}
 
-								GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIMeshVertexDeclaration();
-								GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-								GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-								GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
-								GraphicsPSOInit.NumSamples = NumSamples;
-								SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
-
-								VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh);
-								PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh);
-								PixelShader->SetGammaValue(RHICmdList, GammaValue);
-
-								RHICmdList.SetStreamSource(0, MeshBatchContainer.VertexBufferRHI, 0);
-								RHICmdList.DrawIndexedPrimitive(Mesh.Elements[0].IndexBuffer->IndexBufferRHI, 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.Elements[0].NumPrimitives, Mesh.Elements[0].NumInstances);
+									RHICmdList.SetStreamSource(0, MeshBatchContainer.VertexBufferRHI, 0);
+									RHICmdList.DrawIndexedPrimitive(Mesh.Elements[0].IndexBuffer->IndexBufferRHI, 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.Elements[0].NumPrimitives, Mesh.Elements[0].NumInstances);
+								}
+							};
+							if (bRenderLit)
+							{
+								DoRender(false);
+							}
+							if (bRenderWireframe)
+							{
+								DoRender(true);
 							}
 						}
 					});
@@ -1277,7 +1328,7 @@ void FLexUIRenderer::RenderHelperLineArray_RenderThread(TMap<FLexUIHelperLineKey
 
 			FGraphicsPipelineStateInitializer GraphicsPSOInit;
 			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-			FLexUIRenderer::SetGraphicPipelineState(RenderView->GetFeatureLevel(), GraphicsPSOInit, EBlendMode::BLEND_Opaque, false, true, true, false, false);
+			FLexUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, EBlendMode::BLEND_Opaque, false, true, true, false, false);
 
 			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIHelperLineVertexDeclaration();
 			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();

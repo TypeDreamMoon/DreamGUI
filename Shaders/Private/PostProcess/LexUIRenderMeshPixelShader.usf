@@ -38,7 +38,7 @@ void RenderMeshPS(
 #endif
 #if LEXUI_CLIP
 	float3 localPosition = mul(float4(input.worldPosition, 1.0), _Inv_M).xyz;
-	OutColor.a *= LexUI_CalculateClipData(_ClipDataTex, _ClipDataTexSampler, input.uv1.x, input.localPosition);
+	OutColor.a *= LexUI_CalculateClipData(_ClipDataTex, input.uv1.x, input.localPosition);
 #endif
 #if LEXUI_BLEND_DEPTH
     float PixelDepth = input.screenPosition.z / input.screenPosition.w;

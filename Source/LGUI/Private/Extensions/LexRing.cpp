@@ -1,22 +1,22 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Extensions/UIRing.h"
+#include "Extensions/LexRing.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/Components/LexCanvas.h"
 #include "LTweenManager.h"
 
-UUIRing::UUIRing(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
+ULexRing::ULexRing(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
 }
 
-void UUIRing::BeginPlay()
+void ULexRing::BeginPlay()
 {
 	Super::BeginPlay();
 }
 
 
-void UUIRing::CalculatePoints()
+void ULexRing::CalculatePoints()
 {
 	Segment = FMath::Max(0, Segment);
 	int pointCount = Segment + 2;
@@ -37,7 +37,7 @@ void UUIRing::CalculatePoints()
 	}
 }
 
-FVector2D UUIRing::GetStartPointTangentDirection()
+FVector2D ULexRing::GetStartPointTangentDirection()
 {
 	auto Widget = GetWidget();
 	float angle = FMath::DegreesToRadians(StartAngle);
@@ -46,7 +46,7 @@ FVector2D UUIRing::GetStartPointTangentDirection()
 	tanDir.Normalize();
 	return tanDir;
 }
-FVector2D UUIRing::GetEndPointTangentDirection()
+FVector2D ULexRing::GetEndPointTangentDirection()
 {
 	auto Widget = GetWidget();
 	float angle = FMath::DegreesToRadians(EndAngle);
@@ -56,7 +56,7 @@ FVector2D UUIRing::GetEndPointTangentDirection()
 	return tanDir;
 }
 
-void UUIRing::SetStartAngle(float newValue)
+void ULexRing::SetStartAngle(float newValue)
 {
 	if (StartAngle != newValue)
 	{
@@ -64,7 +64,7 @@ void UUIRing::SetStartAngle(float newValue)
 		MarkVertexPositionDirty();
 	}
 }
-void UUIRing::SetEndAngle(float newValue)
+void ULexRing::SetEndAngle(float newValue)
 {
 	if (EndAngle != newValue)
 	{
@@ -72,7 +72,7 @@ void UUIRing::SetEndAngle(float newValue)
 		MarkVertexPositionDirty();
 	}
 }
-void UUIRing::SetSegment(int newValue)
+void ULexRing::SetSegment(int newValue)
 {
 	newValue = FMath::Max(0, newValue);
 	if (Segment != newValue)
@@ -84,9 +84,9 @@ void UUIRing::SetSegment(int newValue)
 
 
 #include "Core/LexUISettings.h"
-ULTweener* UUIRing::StartAngleTo(float endValue, float duration, float delay, ELTweenEase easeType)
+ULTweener* ULexRing::StartAngleTo(float endValue, float duration, float delay, ELTweenEase easeType)
 {
-	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &UUIRing::GetStartAngle), FLTweenFloatSetterFunction::CreateUObject(this, &UUIRing::SetStartAngle), endValue, duration);
+	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexRing::GetStartAngle), FLTweenFloatSetterFunction::CreateUObject(this, &ULexRing::SetStartAngle), endValue, duration);
 	if (Tweener)
 	{
 		bool bAffectByGamePause;
@@ -105,9 +105,9 @@ ULTweener* UUIRing::StartAngleTo(float endValue, float duration, float delay, EL
 	}
 	return Tweener;
 }
-ULTweener* UUIRing::EndAngleTo(float endValue, float duration, float delay, ELTweenEase easeType)
+ULTweener* ULexRing::EndAngleTo(float endValue, float duration, float delay, ELTweenEase easeType)
 {
-	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &UUIRing::GetEndAngle), FLTweenFloatSetterFunction::CreateUObject(this, &UUIRing::SetEndAngle), endValue, duration);
+	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexRing::GetEndAngle), FLTweenFloatSetterFunction::CreateUObject(this, &ULexRing::SetEndAngle), endValue, duration);
 	if (Tweener)
 	{
 		bool bAffectByGamePause;

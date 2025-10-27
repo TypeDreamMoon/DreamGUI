@@ -27,7 +27,7 @@ public:
 	}
 };
 
-/** SDF(Signed Distance Field) Font asset for UIText to render smooth scaled sdf font. */
+/** SDF(Signed Distance Field) Font asset for render smooth scaled sdf text. */
 UCLASS(BlueprintType)
 class LGUI_API ULexUIFontData_DistanceField : public ULexUIFontData_FreeTypeRender
 {
@@ -49,7 +49,7 @@ private:
 	 * this parameter is related with SDFRadius & FontSize, smaller SDFRadius & FontSize will need larger BoldRatio to render.
 	 */
 	UPROPERTY(EditAnywhere, Category = "LGUI SDF Font", meta = (UIMin = "0.0", UIMax = "1.0"))
-		float BoldRatio = 0.1f;
+		float BoldRatio = 0.03f;
 	/** -1 means not set yet. */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI SDF Font", Transient)
 		int LineHeight = -1;
@@ -74,10 +74,10 @@ public:
 	virtual float GetVerticalOffset(const float& fontSize) override;
 	virtual bool GetShouldAffectByPixelPerfect() override{ return false; }
 	virtual bool GetNeedObjectScale() override{ return true; }//sdf font need scale value in material
-	virtual float GetFontTextureMark() override{ return 1; }
+	virtual float GetFontTextureMark() override{ return 2; }
 	//End ULexUIFontData_BaseObject interface
 protected:
-	float ItalicSlop = 0.0f; float OneDivideFontSize = 1.0f; float ObjectScale = 1.0f;
+	float ItalicSlop = 0.0f; float OneDivideFontSize = 1.0f;
 	TMap<TCHAR, FLexUICharData> CharDataMap;
 	TMap<FLexUIDistanceFieldFontKerningPair, int16> KerningPairsMap;
 	virtual UTexture2D* CreateFontTexture(int InTextureSize)override;

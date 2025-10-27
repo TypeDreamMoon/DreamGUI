@@ -1,17 +1,17 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Extensions/UIPolygonLine.h"
+#include "Extensions/LexPolygonLine.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/Components/LexCanvas.h"
 #include "LTweenManager.h"
 
-UUIPolygonLine::UUIPolygonLine(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
+ULexPolygonLine::ULexPolygonLine(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
-	EndType = EUI2DLineRenderer_EndType::ConnectStartAndEnd;
+	EndType = ELex2DLineRenderer_EndType::ConnectStartAndEnd;
 }
 
-void UUIPolygonLine::CalculatePoints()
+void ULexPolygonLine::CalculatePoints()
 {
 	Sides = FMath::Max(Sides, FullCycle ? 3 : 1);
 	int pointCount = FullCycle ? Sides : (Sides + 1);//ring's point count, not include center point
@@ -54,7 +54,7 @@ void UUIPolygonLine::CalculatePoints()
 	}
 }
 
-FVector2D UUIPolygonLine::GetStartPointTangentDirection()
+FVector2D ULexPolygonLine::GetStartPointTangentDirection()
 {
 	auto Widget = GetWidget();
 	float angle = FMath::DegreesToRadians(StartAngle);
@@ -63,7 +63,7 @@ FVector2D UUIPolygonLine::GetStartPointTangentDirection()
 	tanDir.Normalize();
 	return tanDir;
 }
-FVector2D UUIPolygonLine::GetEndPointTangentDirection()
+FVector2D ULexPolygonLine::GetEndPointTangentDirection()
 {
 	if (FullCycle)
 	{
@@ -80,28 +80,28 @@ FVector2D UUIPolygonLine::GetEndPointTangentDirection()
 	}
 }
 
-void UUIPolygonLine::SetFullCycle(bool value) {
+void ULexPolygonLine::SetFullCycle(bool value) {
 	if (FullCycle != value)
 	{
 		FullCycle = value;
 		MarkVerticesDirty(true, true, true, false);
 	}
 }
-void UUIPolygonLine::SetStartAngle(float value) {
+void ULexPolygonLine::SetStartAngle(float value) {
 	if (StartAngle != value)
 	{
 		StartAngle = value;
 		MarkVerticesDirty(false, true, true, false);
 	}
 }
-void UUIPolygonLine::SetEndAngle(float value) {
+void ULexPolygonLine::SetEndAngle(float value) {
 	if (EndAngle != value)
 	{
 		EndAngle = value;
 		MarkVerticesDirty(false, true, true, false);
 	}
 }
-void UUIPolygonLine::SetSides(int value) {
+void ULexPolygonLine::SetSides(int value) {
 	if (Sides != value)
 	{
 		Sides = value;
@@ -109,7 +109,7 @@ void UUIPolygonLine::SetSides(int value) {
 		MarkVerticesDirty(true, true, true, true);
 	}
 }
-void UUIPolygonLine::SetVertexOffsetArray(const TArray<float>& value)
+void ULexPolygonLine::SetVertexOffsetArray(const TArray<float>& value)
 {
 	if (VertexOffsetArray.Num() == value.Num())
 	{
@@ -122,9 +122,9 @@ void UUIPolygonLine::SetVertexOffsetArray(const TArray<float>& value)
 	}
 }
 #include "Core/LexUISettings.h"
-ULTweener* UUIPolygonLine::StartAngleTo(float endValue, float duration /* = 0.5f */, float delay /* = 0.0f */, ELTweenEase easeType /* = ELTweenEase::OutCubic */)
+ULTweener* ULexPolygonLine::StartAngleTo(float endValue, float duration /* = 0.5f */, float delay /* = 0.0f */, ELTweenEase easeType /* = ELTweenEase::OutCubic */)
 {
-	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &UUIPolygonLine::GetStartAngle), FLTweenFloatSetterFunction::CreateUObject(this, &UUIPolygonLine::SetStartAngle), endValue, duration);
+	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexPolygonLine::GetStartAngle), FLTweenFloatSetterFunction::CreateUObject(this, &ULexPolygonLine::SetStartAngle), endValue, duration);
 	if (Tweener)
 	{
 		bool bAffectByGamePause;
@@ -143,9 +143,9 @@ ULTweener* UUIPolygonLine::StartAngleTo(float endValue, float duration /* = 0.5f
 	}
 	return Tweener;
 }
-ULTweener* UUIPolygonLine::EndAngleTo(float endValue, float duration /* = 0.5f */, float delay /* = 0.0f */, ELTweenEase easeType /* = ELTweenEase::OutCubic */)
+ULTweener* ULexPolygonLine::EndAngleTo(float endValue, float duration /* = 0.5f */, float delay /* = 0.0f */, ELTweenEase easeType /* = ELTweenEase::OutCubic */)
 {
-	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &UUIPolygonLine::GetEndAngle), FLTweenFloatSetterFunction::CreateUObject(this, &UUIPolygonLine::SetEndAngle), endValue, duration);
+	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexPolygonLine::GetEndAngle), FLTweenFloatSetterFunction::CreateUObject(this, &ULexPolygonLine::SetEndAngle), endValue, duration);
 	if (Tweener)
 	{
 		bool bAffectByGamePause;

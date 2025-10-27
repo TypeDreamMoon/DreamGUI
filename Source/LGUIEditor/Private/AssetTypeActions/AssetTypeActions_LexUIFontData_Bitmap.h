@@ -4,10 +4,10 @@
 
 #include "AssetTypeActions_Base.h"
 
-class FAssetTypeActions_LexUIFontData : public FAssetTypeActions_Base
+class FAssetTypeActions_LexUIFontData_Bitmap : public FAssetTypeActions_Base
 {
 public:
-	FAssetTypeActions_LexUIFontData(EAssetTypeCategories::Type InAssetType);
+	FAssetTypeActions_LexUIFontData_Bitmap(EAssetTypeCategories::Type InAssetType);
 
 	// FAssetTypeActions_Base overrides
 	virtual bool CanFilter() override;

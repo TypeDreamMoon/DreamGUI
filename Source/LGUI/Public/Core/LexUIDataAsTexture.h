@@ -6,6 +6,16 @@
 #include "Engine/DataAsset.h"
 #include "LexUIDataAsTexture.generated.h"
 
+UENUM(BlueprintType)
+enum class ELexUIDataAsTexturePixelFormat:uint8
+{
+	R8,
+	R16,
+	R32,
+	R8G8B8A8,
+	R16G16B16A16,
+	R32G32B32A32,
+};
 UCLASS(ClassGroup = (LexUI), BlueprintType)
 class LGUI_API ULexUIDataAsTexture :public UDataAsset
 {
@@ -21,6 +31,8 @@ private:
 	UPROPERTY(VisibleAnywhere, Transient, Category = "LexUI")
 	TObjectPtr<UTexture> Texture = nullptr;
 
+	ELexUIDataAsTexturePixelFormat PixelFormat = ELexUIDataAsTexturePixelFormat::R8;
+	int BytesPerPixel = 4;
 	//how many bytes in single block
 	int BlockSizeInByte = 4;
 	//how many pixels in single block
@@ -41,9 +53,9 @@ public:
 	/**
 	 * Initialize this buffer.
 	 * @param InBlockSizeInByte byte count
-	 * @param InInitialTextureSize texture size when first create it
+	 * @param InInitialTextureHeight texture size when first create it
 	 */
-	void Init(int InBlockSizeInByte, int InInitialTextureSize = 32);
+	void Init(int InBlockSizeInByte, ELexUIDataAsTexturePixelFormat InPixelFormat, int InInitialTextureHeight = 32);
 	int GetBlockSizeInByte()const { return BlockSizeInByte; }
 	/**
 	 * Request a new block area with initialize block size.
@@ -51,7 +63,8 @@ public:
 	 */
 	int RegisterBuffer();
 	void UnregisterBuffer(int InPosition);
-	void UpdateBlock(int InPosition, uint8* InData);
+	void UpdateBlock(int InPositionY, uint8* InData);
+	void UpdateBlock(int InPositionX, int InPositionY, uint8* InData, int InDataPixelCount);
 
 	UTexture* GetDataTexture()const { return Texture; }
 

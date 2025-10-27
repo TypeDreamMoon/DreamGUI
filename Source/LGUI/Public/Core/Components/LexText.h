@@ -12,6 +12,11 @@ class ULexUIFontData_BaseObject;
 class ULexUIRichTextImageData_BaseObject;
 class ULexUIRichTextCustomStyleData;
 
+/**
+ * UV channels-
+ *		UV2: XY- bold and scale of DistanceField font
+ *		UV3: X- tell if this draw-call need font texture (UV3.x > 0.5) or not (UV3.x < 0.5) and what type of font it is (Sdf(>1.0) or bitmap(>1.5))
+ */
 UCLASS(ClassGroup = (LGUI), Blueprintable)
 class LGUI_API ULexText : public ULexVisualBatchMesh, public ILexUICultureChangedInterface
 {
@@ -63,7 +68,7 @@ protected:
 		TObjectPtr<ULexUIFontData_BaseObject> Font;
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (MultiLine="true"))
 		FText Text = FText::FromString(TEXT("New Text"));
-	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (ClampMin = "2", ClampMax = "200"))
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (ClampMin = "2", ClampMax = "500"))
 		float FontSize = 16;
 	/** use font kerning for better text layout. */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
@@ -143,7 +148,8 @@ public:
 	virtual void OnBeforeCreateOrUpdateGeometry()override;
 	virtual bool GetShouldAffectByPixelSnapping()const override;
 	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
-	virtual void UpdateMaterialClipType()override;
+	virtual void OnFillWidgetPropertyDataForMaterial() override;
+	virtual void OnFillWidgetPropertyDataForMaterial_FirstPixel() override;
 	virtual void OnCultureChanged_Implementation()override;
 
 	void CheckRequireNormalAndTangent();

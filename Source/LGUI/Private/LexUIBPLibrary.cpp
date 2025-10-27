@@ -215,40 +215,78 @@ UActorComponent* ULexUIBPLibrary::GetComponentInChildren(AActor* InActor, TSubcl
 void ULexUIBPLibrary::CreateScreenSpaceUIRoot(UObject* WorldContextObject, bool bCreateDefaultEventSystem
 	, ALexWidgetActor*& OutRootWidgetActor, ULexCanvas*& OutCanvas)
 {
-	if (auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull))
-	{
-		auto RootWidgetActor = World->SpawnActor<ALexWidgetActor>(FActorSpawnParameters());
+	auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
+	if (!World)return;
+	auto RootWidgetActor = World->SpawnActor<ALexWidgetActor>(FActorSpawnParameters());
 #if WITH_EDITOR
-		RootWidgetActor->SetActorLabel(TEXT("ScreenSpaceUIRoot"));
+	RootWidgetActor->SetActorLabel(TEXT("ScreenSpaceUIRoot"));
 #else
-		RootWidgetActor->GetLexWidget()->SetDisplayName(TEXT("ScreenSpaceUIRoot"));
+	RootWidgetActor->GetLexWidget()->SetDisplayName(TEXT("ScreenSpaceUIRoot"));
 #endif
-		auto Canvas = NewObject<ULexCanvas>(RootWidgetActor);
-		Canvas->RegisterComponent();
-		RootWidgetActor->AddInstanceComponent(Canvas);
-		Canvas->SetRenderMode(ELexRenderMode::ScreenSpaceOverlay);
-		auto Raycaster = NewObject<ULexScreenSpaceRaycaster>(RootWidgetActor);
-		Raycaster->RegisterComponent();
-		RootWidgetActor->AddInstanceComponent(Raycaster);
+	auto Canvas = NewObject<ULexCanvas>(RootWidgetActor);
+	Canvas->RegisterComponent();
+	RootWidgetActor->AddInstanceComponent(Canvas);
+	Canvas->SetRenderMode(ELexRenderMode::ScreenSpaceOverlay);
+	auto Raycaster = NewObject<ULexScreenSpaceRaycaster>(RootWidgetActor);
+	Raycaster->RegisterComponent();
+	RootWidgetActor->AddInstanceComponent(Raycaster);
 
-		if (bCreateDefaultEventSystem)
+	if (bCreateDefaultEventSystem)
+	{
+		auto ClassName = TEXT("PresetEventSystemActor");
+		if (auto PresetEventSystemActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
 		{
-			auto ClassName = TEXT("PresetEventSystemActor");
-			if (auto PresetEventSystemActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
-			{
-				auto Actor = World->SpawnActor<AActor>(PresetEventSystemActorClass);
-				Actor->SetActorLabel(ClassName);
-			}
-			else
-			{
-				UE_LOG(LGUI, Error, TEXT("[%s].%d Load %s error! Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), 
-				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ClassName);
-			}
+			auto Actor = World->SpawnActor<AActor>(PresetEventSystemActorClass);
+			Actor->SetActorLabel(ClassName);
 		}
-
-		OutRootWidgetActor = RootWidgetActor;
-		OutCanvas = Canvas;
+		else
+		{
+			UE_LOG(LGUI, Error, TEXT("[%s].%d Load %s error! Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), 
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ClassName);
+		}
 	}
+
+	OutRootWidgetActor = RootWidgetActor;
+	OutCanvas = Canvas;
+}
+
+void ULexUIBPLibrary::CreateWorldSpaceUI(UObject* WorldContextObject, bool bCreateDefaultEventSystem,
+	bool bUseLexUIRenderer,
+	ALexWidgetActor*& OutRootWidgetActor, ULexCanvas*& OutCanvas)
+{
+	auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
+	if (!World)return;
+	auto RootWidgetActor = World->SpawnActor<ALexWidgetActor>(FActorSpawnParameters());
+#if WITH_EDITOR
+	RootWidgetActor->SetActorLabel(TEXT("WorldSpaceUI"));
+#else
+	RootWidgetActor->GetLexWidget()->SetDisplayName(TEXT("ScreenSpaceUIRoot"));
+#endif
+	auto Canvas = NewObject<ULexCanvas>(RootWidgetActor);
+	Canvas->RegisterComponent();
+	RootWidgetActor->AddInstanceComponent(Canvas);
+	Canvas->SetRenderMode(bUseLexUIRenderer ? ELexRenderMode::WorldSpace_LexUI : ELexRenderMode::WorldSpace);
+	auto Raycaster = NewObject<ULexScreenSpaceRaycaster>(RootWidgetActor);
+	Raycaster->RegisterComponent();
+	RootWidgetActor->AddInstanceComponent(Raycaster);
+
+	if (bCreateDefaultEventSystem)
+	{
+		auto ClassName = TEXT("PresetEventSystemActor");
+		if (auto PresetEventSystemActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
+		{
+			auto Actor = World->SpawnActor<AActor>(PresetEventSystemActorClass);
+			Actor->SetActorLabel(ClassName);
+		}
+		else
+		{
+			UE_LOG(LGUI, Error, TEXT("[%s].%d Load %s error! Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), 
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ClassName);
+		}
+	}
+
+	OutRootWidgetActor = RootWidgetActor;
+	OutCanvas = Canvas;
 }
 
 UActorComponent* ULexUIBPLibrary::LGUICompRef_GetComponent(const FLGUIComponentReference& InLGUIComponentReference, TSubclassOf<UActorComponent> InComponentType)

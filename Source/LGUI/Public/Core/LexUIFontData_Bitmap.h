@@ -29,7 +29,8 @@ public:
 };
 
 /**
- * Font asset for UIText to render
+ * Bitmap font asset for render text.
+ * NOTE!!! This type is not maintained anymore, new features will not implement, use DistanceField font instead.
  */
 UCLASS(BlueprintType)
 class LGUI_API ULexUIFontData_Bitmap : public ULexUIFontData_FreeTypeRender
@@ -66,7 +67,7 @@ protected:
 	virtual void ClearCharDataCache()override;
 
 	virtual bool GetSupportDynamicPixelsPerUnit()override { return true; }
-	virtual float GetFontTextureMark() override{ return 2; }
+	virtual float GetFontTextureMark() override{ return 1; }
 public:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;

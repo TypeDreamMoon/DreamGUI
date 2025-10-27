@@ -220,7 +220,7 @@ UTexture* FLexUIUtils::GetDefaultWhiteTexture()
 }
 
 #if WITH_EDITOR
-//nodify some informations in editor
+//notify some information in editor
 void FLexUIUtils::EditorNotification(FText NofityText, float ExpireDuration)
 {
 	if (!IsValid(GEditor))return;

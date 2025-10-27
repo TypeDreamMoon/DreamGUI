@@ -671,7 +671,7 @@ bool ULexPointerInputModule::CanHandleInterface(USceneComponent* targetComp, UCl
 	bool canSelectPressedComponent = false;
 	switch (eventFireType)
 	{
-	case ELexUIEventFireType::OnlyTargetActor:
+	case ELexUIEventFireType::TargetActor:
 	{
 		if (targetComp->GetOwner()->GetClass()->ImplementsInterface(targetInterfaceClass))
 		{
@@ -679,7 +679,7 @@ bool ULexPointerInputModule::CanHandleInterface(USceneComponent* targetComp, UCl
 		}
 	}
 	break;
-	case ELexUIEventFireType::OnlyTargetComponent:
+	case ELexUIEventFireType::TargetComponents:
 	{
 		if (targetComp->GetClass()->ImplementsInterface(targetInterfaceClass))
 		{

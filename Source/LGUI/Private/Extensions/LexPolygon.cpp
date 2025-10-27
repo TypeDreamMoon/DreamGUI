@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Extensions/UIPolygon.h"
+#include "Extensions/LexPolygon.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/LexUISpriteData_BaseObject.h"
@@ -9,12 +9,12 @@
 
 
 
-UUIPolygon::UUIPolygon(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
+ULexPolygon::ULexPolygon(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
 	
 }
 
-void UUIPolygon::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
+void ULexPolygon::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
 	Sides = FMath::Max(Sides, FullCycle ? 3 : 1);
 
@@ -116,10 +116,24 @@ void UUIPolygon::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged,
 
 		if (InVertexUVChanged)
 		{
-			auto spriteInfo = this->GetSprite()->GetSpriteInfo();
+			FVector2f MinUV;
+			FVector2f MaxUV;
+			if (bHasAddToSprite)
+			{
+				auto LexSprite = (ULexUISpriteData_BaseObject*)Brush.GetResourceObject();
+				auto& SpriteInfo = LexSprite->GetSpriteInfo();
+				MinUV = FVector2f(SpriteInfo.MinUV.X, SpriteInfo.MaxUV.Y);
+				MaxUV = FVector2f(SpriteInfo.MaxUV.X, SpriteInfo.MinUV.Y);
+			}
+			else
+			{
+				MinUV = FVector2f(Brush.UVRegion.X, Brush.UVRegion.Y);
+				MaxUV = FVector2f(Brush.UVRegion.Z, Brush.UVRegion.W);
+			}
+			// auto spriteInfo = this->GetSprite()->GetSpriteInfo();
 			switch (UVType)
 			{
-			case UIPolygonUVType::SpriteRect:
+			case ELexPolygonUVType::SpriteRect:
 			{
 				if (FullCycle)calcEndAngle = calcStartAngle + 360.0f;
 				float singleAngle = FMath::DegreesToRadians((calcEndAngle - calcStartAngle) / Sides);
@@ -128,10 +142,10 @@ void UUIPolygon::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged,
 				float sin = FMath::Sin(angle);
 				float cos = FMath::Cos(angle);
 
-				float halfUVWidth = (spriteInfo.MaxUV.X - spriteInfo.MinUV.X) * 0.5f;
-				float halfUVHeight = (spriteInfo.MinUV.Y - spriteInfo.MaxUV.Y) * 0.5f;
-				float centerUVX = (spriteInfo.MinUV.X + spriteInfo.MaxUV.X) * 0.5f;
-				float centerUVY = (spriteInfo.MaxUV.Y + spriteInfo.MinUV.Y) * 0.5f;
+				float halfUVWidth = (MaxUV.X - MinUV.X) * 0.5f;
+				float halfUVHeight = (MinUV.Y - MaxUV.Y) * 0.5f;
+				float centerUVX = (MinUV.X + MaxUV.X) * 0.5f;
+				float centerUVY = (MaxUV.Y + MinUV.Y) * 0.5f;
 
 				float x = centerUVX;
 				float y = centerUVY;
@@ -149,22 +163,22 @@ void UUIPolygon::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged,
 				}
 			}
 			break;
-			case UIPolygonUVType::HeightCenter:
+			case ELexPolygonUVType::HeightCenter:
 			{
-				vertices[0].TextureCoordinate[0] = FVector2f(spriteInfo.MinUV.X, (spriteInfo.MaxUV.Y + spriteInfo.MinUV.Y) * 0.5f);
-				FVector2f otherUV(spriteInfo.MaxUV.X, (spriteInfo.MaxUV.Y + spriteInfo.MinUV.Y) * 0.5f);
+				vertices[0].TextureCoordinate[0] = FVector2f(MinUV.X, (MaxUV.Y + MinUV.Y) * 0.5f);
+				FVector2f otherUV(MaxUV.X, (MaxUV.Y + MinUV.Y) * 0.5f);
 				for (int i = 1; i < vertexCount; i++)
 				{
 					vertices[i].TextureCoordinate[0] = otherUV;
 				}
 			}
 			break;
-			case UIPolygonUVType::StretchSpriteHeight:
+			case ELexPolygonUVType::StretchSpriteHeight:
 			{
-				vertices[0].TextureCoordinate[0] = FVector2f(spriteInfo.MinUV.X, (spriteInfo.MaxUV.Y + spriteInfo.MinUV.Y) * 0.5f);
-				float uvX = spriteInfo.MaxUV.X;
-				float uvY = spriteInfo.MaxUV.Y;
-				float uvYInterval = (spriteInfo.MinUV.Y - spriteInfo.MaxUV.Y) / (vertexCount - 2);
+				vertices[0].TextureCoordinate[0] = FVector2f(MinUV.X, (MaxUV.Y + MinUV.Y) * 0.5f);
+				float uvX = MaxUV.X;
+				float uvY = MaxUV.Y;
+				float uvYInterval = (MinUV.Y - MaxUV.Y) / (vertexCount - 2);
 				for (int i = 1; i < vertexCount; i++)
 				{
 					auto& uv = vertices[i].TextureCoordinate[0];
@@ -197,28 +211,28 @@ void UUIPolygon::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged,
 	}
 }
 
-void UUIPolygon::SetFullCycle(bool value) {
+void ULexPolygon::SetFullCycle(bool value) {
 	if (FullCycle != value)
 	{
 		FullCycle = value;
 		MarkVerticesDirty(true, true, true, false);
 	}
 }
-void UUIPolygon::SetStartAngle(float value) {
+void ULexPolygon::SetStartAngle(float value) {
 	if (StartAngle != value)
 	{
 		StartAngle = value;
 		MarkVerticesDirty(false, true, true, false);
 	}
 }
-void UUIPolygon::SetEndAngle(float value) {
+void ULexPolygon::SetEndAngle(float value) {
 	if (EndAngle != value)
 	{
 		EndAngle = value;
 		MarkVerticesDirty(false, true, true, false);
 	}
 }
-void UUIPolygon::SetSides(int value) {
+void ULexPolygon::SetSides(int value) {
 	if (Sides != value)
 	{
 		Sides = value;
@@ -226,7 +240,7 @@ void UUIPolygon::SetSides(int value) {
 		MarkVerticesDirty(true, true, true, true);
 	}
 }
-void UUIPolygon::SetUVType(UIPolygonUVType value)
+void ULexPolygon::SetUVType(ELexPolygonUVType value)
 {
 	if (UVType != value)
 	{
@@ -234,7 +248,7 @@ void UUIPolygon::SetUVType(UIPolygonUVType value)
 		MarkUVDirty();
 	}
 }
-void UUIPolygon::SetVertexOffsetArray(const TArray<float>& value)
+void ULexPolygon::SetVertexOffsetArray(const TArray<float>& value)
 {
 	if (VertexOffsetArray.Num() == value.Num())
 	{
@@ -247,9 +261,9 @@ void UUIPolygon::SetVertexOffsetArray(const TArray<float>& value)
 	}
 }
 #include "Core/LexUISettings.h"
-ULTweener* UUIPolygon::StartAngleTo(float endValue, float duration /* = 0.5f */, float delay /* = 0.0f */, ELTweenEase easeType /* = ELTweenEase::OutCubic */)
+ULTweener* ULexPolygon::StartAngleTo(float endValue, float duration /* = 0.5f */, float delay /* = 0.0f */, ELTweenEase easeType /* = ELTweenEase::OutCubic */)
 {
-	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &UUIPolygon::GetStartAngle), FLTweenFloatSetterFunction::CreateUObject(this, &UUIPolygon::SetStartAngle), endValue, duration);
+	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexPolygon::GetStartAngle), FLTweenFloatSetterFunction::CreateUObject(this, &ULexPolygon::SetStartAngle), endValue, duration);
 	if (Tweener)
 	{
 		bool bAffectByGamePause;
@@ -268,9 +282,9 @@ ULTweener* UUIPolygon::StartAngleTo(float endValue, float duration /* = 0.5f */,
 	}
 	return Tweener;
 }
-ULTweener* UUIPolygon::EndAngleTo(float endValue, float duration /* = 0.5f */, float delay /* = 0.0f */, ELTweenEase easeType /* = ELTweenEase::OutCubic */)
+ULTweener* ULexPolygon::EndAngleTo(float endValue, float duration /* = 0.5f */, float delay /* = 0.0f */, ELTweenEase easeType /* = ELTweenEase::OutCubic */)
 {
-	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &UUIPolygon::GetEndAngle), FLTweenFloatSetterFunction::CreateUObject(this, &UUIPolygon::SetEndAngle), endValue, duration);
+	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexPolygon::GetEndAngle), FLTweenFloatSetterFunction::CreateUObject(this, &ULexPolygon::SetEndAngle), endValue, duration);
 	if (Tweener)
 	{
 		bool bAffectByGamePause;

@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Extensions/2DLineRenderer/UI2DLineRendererBase.h"
+#include "Extensions/2DLineRenderer/Lex2DLineRendererBase.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/Components/LexCanvas.h"
@@ -10,17 +10,17 @@
 
 DECLARE_CYCLE_STAT(TEXT("UI2DLine Update"), STAT_2DLineUpdate, STATGROUP_LGUI);
 
-TArray<FVector2D> UUI2DLineRendererBase::EmptyArray;
-UUI2DLineRendererBase::UUI2DLineRendererBase(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
+TArray<FVector2D> ULex2DLineRendererBase::EmptyArray;
+ULex2DLineRendererBase::ULex2DLineRendererBase(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
 }
 
-void UUI2DLineRendererBase::BeginPlay()
+void ULex2DLineRendererBase::BeginPlay()
 {
 	Super::BeginPlay();
 }
 
-void UUI2DLineRendererBase::Update2DLineRendererBaseUV(FLexUIGeometry& InGeo, const TArray<FVector2D>& InPointArray)
+void ULex2DLineRendererBase::Update2DLineRendererBaseUV(FLexUIGeometry& InGeo, const TArray<FVector2D>& InPointArray)
 {
 	auto& vertices = InGeo.Vertices;
 	int pointCount = InPointArray.Num();
@@ -52,7 +52,7 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseUV(FLexUIGeometry& InGeo, co
 		uvi1.Y = uvY;
 	}
 	
-	if (EndType == EUI2DLineRenderer_EndType::Cap)
+	if (EndType == ELex2DLineRenderer_EndType::Cap)
 	{
 		//start point cap
 		{
@@ -75,7 +75,7 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseUV(FLexUIGeometry& InGeo, co
 	}
 }
 
-void UUI2DLineRendererBase::Update2DLineRendererBaseTriangle(FLexUIGeometry& InGeo, const TArray<FVector2D>& InPointArray)
+void ULex2DLineRendererBase::Update2DLineRendererBaseTriangle(FLexUIGeometry& InGeo, const TArray<FVector2D>& InPointArray)
 {
 	int pointCount = InPointArray.Num();
 	auto& triangles = InGeo.Triangles;
@@ -106,7 +106,7 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseTriangle(FLexUIGeometry& InG
 		triangles[k + 4] = 1;
 		triangles[k + 5] = j + 1;
 	}
-	else if (EndType == EUI2DLineRenderer_EndType::Cap)
+	else if (EndType == ELex2DLineRenderer_EndType::Cap)
 	{
 		vertIndex = pointIndex * 2;
 		triangleIndex = pointIndex * 6;
@@ -133,7 +133,7 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseTriangle(FLexUIGeometry& InG
 	}
 }
 
-void UUI2DLineRendererBase::Update2DLineRendererBaseVertex(FLexUIGeometry& InGeo, const TArray<FVector2D>& InPointArray)
+void ULex2DLineRendererBase::Update2DLineRendererBaseVertex(FLexUIGeometry& InGeo, const TArray<FVector2D>& InPointArray)
 {
 	auto Widget = GetWidget();
 	int pointCount = InPointArray.Num();
@@ -185,7 +185,7 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseVertex(FLexUIGeometry& InGeo
 		originVertices[0].Position = FVector3f(0, pos0.X + pivotOffsetX, pos0.Y + pivotOffsetY);
 		originVertices[1].Position = FVector3f(0, pos1.X + pivotOffsetX, pos1.Y + pivotOffsetY);
 
-		if (EndType == EUI2DLineRenderer_EndType::Cap)
+		if (EndType == ELex2DLineRenderer_EndType::Cap)
 		{	
 			//start point cap
 			float capSize = 0, spriteWidth = 0;
@@ -274,7 +274,7 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseVertex(FLexUIGeometry& InGeo
 			originVertices[i2].Position = FVector3f(0, pos0.X + pivotOffsetX, pos0.Y + pivotOffsetY);
 			originVertices[i2 + 1].Position = FVector3f(0, pos1.X + pivotOffsetX, pos1.Y + pivotOffsetY);
 
-			if (EndType == EUI2DLineRenderer_EndType::Cap)
+			if (EndType == ELex2DLineRenderer_EndType::Cap)
 			{
 				//end point cap
 				float capSize = 0, spriteWidth = 0;
@@ -307,7 +307,7 @@ void UUI2DLineRendererBase::Update2DLineRendererBaseVertex(FLexUIGeometry& InGeo
 	}
 }
 
-void UUI2DLineRendererBase::GenerateLinePoint(const FVector2D& InCurrentPoint, const FVector2D& InPrevPoint, const FVector2D& InNextPoint
+void ULex2DLineRendererBase::GenerateLinePoint(const FVector2D& InCurrentPoint, const FVector2D& InPrevPoint, const FVector2D& InNextPoint
 	, float InLineLeftWidth, float InLineRightWidth
 	, FVector2D& OutPosA, FVector2D& OutPosB
 	, FVector2D& InOutPrevLineDir)
@@ -347,7 +347,7 @@ void UUI2DLineRendererBase::GenerateLinePoint(const FVector2D& InCurrentPoint, c
 }
 
 
-void UUI2DLineRendererBase::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
+void ULex2DLineRendererBase::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
 	SCOPE_CYCLE_COUNTER(STAT_2DLineUpdate);
 	auto& CurrentPointArray = GetCalcaultedPointArray();
@@ -364,7 +364,7 @@ void UUI2DLineRendererBase::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTrian
 	{
 		triangleIndicesCount += 6;
 	}
-	else if (EndType == EUI2DLineRenderer_EndType::Cap)
+	else if (EndType == ELex2DLineRenderer_EndType::Cap)
 	{
 		triangleIndicesCount += 12;
 	}
@@ -377,7 +377,7 @@ void UUI2DLineRendererBase::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTrian
 	auto& vertices = InGeo.Vertices;
 	auto& originVertices = InGeo.OriginVertices;
 	int vertexCount = pointCount * 2;
-	if (EndType == EUI2DLineRenderer_EndType::Cap)
+	if (EndType == ELex2DLineRenderer_EndType::Cap)
 	{
 		vertexCount += 4;
 	}
@@ -410,23 +410,23 @@ void UUI2DLineRendererBase::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTrian
 	}
 }
 
-void UUI2DLineRendererBase::OnBeforeCreateOrUpdateGeometry()
+void ULex2DLineRendererBase::OnBeforeCreateOrUpdateGeometry()
 {
 	CalculatePoints();
 }
 
-FVector2D UUI2DLineRendererBase::GetStartPointTangentDirection()
+FVector2D ULex2DLineRendererBase::GetStartPointTangentDirection()
 {
 	UE_LOG(LGUI, Error, TEXT("This function [%s] must be implemented if [OverrideStartPointTangentDirection] return true!"), ANSI_TO_TCHAR(__FUNCTION__));
 	return FVector2D::ZeroVector;
 }
-FVector2D UUI2DLineRendererBase::GetEndPointTangentDirection()
+FVector2D ULex2DLineRendererBase::GetEndPointTangentDirection()
 {
 	UE_LOG(LGUI, Error, TEXT("This function [%s] must be implemented if [OverrideEndPointTangentDirection] return true!"), ANSI_TO_TCHAR(__FUNCTION__));
 	return FVector2D::ZeroVector;
 }
 
-void UUI2DLineRendererBase::SetEndType(EUI2DLineRenderer_EndType newValue)
+void ULex2DLineRendererBase::SetEndType(ELex2DLineRenderer_EndType newValue)
 {
 	if (EndType != newValue)
 	{
@@ -434,7 +434,7 @@ void UUI2DLineRendererBase::SetEndType(EUI2DLineRenderer_EndType newValue)
 		MarkVerticesDirty(true, true, true, true);
 	}
 }
-void UUI2DLineRendererBase::SetLineWidth(float newValue)
+void ULex2DLineRendererBase::SetLineWidth(float newValue)
 {
 	if (LineWidth != newValue)
 	{
@@ -442,7 +442,7 @@ void UUI2DLineRendererBase::SetLineWidth(float newValue)
 		MarkVertexPositionDirty();
 	}
 }
-void UUI2DLineRendererBase::SetLineWidthOffset(float newValue)
+void ULex2DLineRendererBase::SetLineWidthOffset(float newValue)
 {
 	if (LineWidthOffset != newValue)
 	{
@@ -451,9 +451,9 @@ void UUI2DLineRendererBase::SetLineWidthOffset(float newValue)
 	}
 }
 
-ULTweener* UUI2DLineRendererBase::LineWidthTo(float endValue, float duration, float delay, ELTweenEase easeType)
+ULTweener* ULex2DLineRendererBase::LineWidthTo(float endValue, float duration, float delay, ELTweenEase easeType)
 {
-	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &UUI2DLineRendererBase::GetLineWidth), FLTweenFloatSetterFunction::CreateUObject(this, &UUI2DLineRendererBase::SetLineWidth), endValue, duration);
+	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULex2DLineRendererBase::GetLineWidth), FLTweenFloatSetterFunction::CreateUObject(this, &ULex2DLineRendererBase::SetLineWidth), endValue, duration);
 	if (Tweener)
 	{
 		bool bAffectByGamePause;

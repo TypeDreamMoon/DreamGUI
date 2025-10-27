@@ -132,6 +132,9 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	{
 		needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, SortOrder));
 	}
+	
+	auto ForceRenderToTargetHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, bForceRenderToTarget));
+	ForceRenderToTargetHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexCanvasCustomization::ForceRefresh, &DetailBuilder));
 
 	if (TargetScriptArray[0]->IsRootCanvas())
 	{
@@ -143,6 +146,7 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		{
 		case ELexRenderMode::ScreenSpaceOverlay:
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTarget));
+			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTargetClearColor));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTargetUpdateMode));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTargetSizeMode));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTargetResolutionScale));

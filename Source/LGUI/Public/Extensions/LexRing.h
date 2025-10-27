@@ -2,18 +2,18 @@
 
 #pragma once
 
-#include "Extensions/2DLineRenderer/UI2DLineRendererBase.h"
+#include "Extensions/2DLineRenderer/Lex2DLineRendererBase.h"
 #include "LTweener.h"
-#include "UIRing.generated.h"
+#include "LexRing.generated.h"
 
 
 UCLASS(ClassGroup = (LGUI), Blueprintable)
-class LGUI_API UUIRing : public UUI2DLineRendererBase
+class LGUI_API ULexRing : public ULex2DLineRendererBase
 {
 	GENERATED_BODY()
 
 public:	
-	UUIRing(const FObjectInitializer& ObjectInitializer);
+	ULexRing(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	virtual void BeginPlay()override;

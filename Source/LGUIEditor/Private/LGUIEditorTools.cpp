@@ -1318,7 +1318,7 @@ void LGUIEditorTools::DeleteActors_Impl(const TArray<AActor*>& InActors)
 	auto confirmResult = FMessageDialog::Open(EAppMsgType::YesNo, FText::FromString(confirmMsg));
 	if (confirmResult != EAppReturnType::Yes)return;
 
-	ULGUIPrefabManagerObject::GetInstance(true)->bIsProcessingDelete = true;
+	ULGUIPrefabManagerObject::Instance->bIsProcessingDelete = true;
 	auto RootActorList = LGUIEditorTools::GetRootActorListFromSelection(InActors);
 	GEditor->BeginTransaction(LOCTEXT("DestroyActor_Transaction", "LGUI Destroy Actor"));
 	GEditor->GetSelectedActors()->DeselectAll();
@@ -1346,7 +1346,7 @@ void LGUIEditorTools::DeleteActors_Impl(const TArray<AActor*>& InActors)
 	}
 	GEditor->EndTransaction();
 	CleanupPrefabsInWorld(RootActorList[0]->GetWorld());
-	ULGUIPrefabManagerObject::GetInstance(true)->bIsProcessingDelete = false;
+	ULGUIPrefabManagerObject::Instance->bIsProcessingDelete = false;
 }
 
 bool LGUIEditorTools::CanDuplicateActor()

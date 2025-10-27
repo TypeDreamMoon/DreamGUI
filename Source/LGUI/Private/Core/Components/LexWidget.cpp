@@ -485,7 +485,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 			{
 				if (RenderCanvas.IsValid())
 				{
-					RenderCanvas->RegisterVisual(this);
+					RenderCanvas->RegisterVisual(this, Visual->WidgetPropertyDataStartPosition);
 				}
 				if (GetWorld()->IsGameWorld())
 				{
@@ -572,7 +572,7 @@ void ULexWidget::PreEditChange(FProperty* PropertyAboutToChange)
 			if (RenderCanvas.IsValid())
 			{
 				RenderCanvas->MarkVisualWillChange(Visual);
-				RenderCanvas->UnregisterVisual(this);
+				RenderCanvas->UnregisterVisual(this, Visual->WidgetPropertyDataStartPosition);
 			}
 			if (GetWorld()->IsGameWorld())
 			{
@@ -1168,7 +1168,7 @@ void ULexWidget::SetAnchorData(const FLexUIAnchorData& Value)
 	AnchorData.AnchoredPosition = Value.AnchoredPosition;
 	AnchorData.SizeDelta = Value.SizeDelta;
 
-	MarkAnchorDataChanged(true, true, true, false);
+	MarkAnchorDataChanged(true, true, true, true);
 	MarkLayoutDirty();
 }
 
@@ -1217,7 +1217,7 @@ void ULexWidget::SetAnchorMin(FVector2D Value)
 				this->AnchorData.AnchoredPosition.Y = FMath::Lerp(CurrentBottom, -CurrentTop, this->AnchorData.Pivot.Y);
 			}
 
-			MarkAnchorDataChanged(false, true, true, false);
+			MarkAnchorDataChanged(false, true, true, true);
 			MarkLayoutDirty();
 		}
 	}
@@ -1263,7 +1263,7 @@ void ULexWidget::SetAnchorMax(FVector2D Value)
 				this->AnchorData.AnchoredPosition.Y = FMath::Lerp(CurrentBottom, -CurrentTop, this->AnchorData.Pivot.Y);
 			}
 
-			MarkAnchorDataChanged(false, true, true, false);
+			MarkAnchorDataChanged(false, true, true, true);
 			MarkLayoutDirty();
 		}
 	}
@@ -1343,7 +1343,7 @@ void ULexWidget::SetHorizontalAnchorMinMax(FVector2D Value, bool bKeepSize, bool
 				this->SetRelativeLocation(PrevRelativeLocation);
 			}
 
-			MarkAnchorDataChanged(false, !bKeepSize, !bKeepSize, false);
+			MarkAnchorDataChanged(false, !bKeepSize, !bKeepSize, true);
 			MarkLayoutDirty();
 		}
 	}
@@ -1391,7 +1391,7 @@ void ULexWidget::SetVerticalAnchorMinMax(FVector2D Value, bool bKeepSize, bool b
 				this->SetRelativeLocation(PrevRelativeLocation);
 			}
 
-			MarkAnchorDataChanged(false, !bKeepSize, !bKeepSize, false);
+			MarkAnchorDataChanged(false, !bKeepSize, !bKeepSize, true);
 			MarkLayoutDirty();
 		}
 	}
@@ -1409,7 +1409,7 @@ void ULexWidget::SetAnchoredPosition(FVector2D Value)
 	if (!AnchorData.AnchoredPosition.Equals(Value, 0.0f))
 	{
 		AnchorData.AnchoredPosition = Value;
-		MarkAnchorDataChanged(false, false, false, false);
+		MarkAnchorDataChanged(false, false, false, true);
 		MarkLayoutDirty();
 	}
 }
@@ -1419,7 +1419,7 @@ void ULexWidget::SetHorizontalAnchoredPosition(float Value)
 	if (AnchorData.AnchoredPosition.X != Value)
 	{
 		AnchorData.AnchoredPosition.X = Value;
-		MarkAnchorDataChanged(false, false, false, false);
+		MarkAnchorDataChanged(false, false, false, true);
 		MarkLayoutDirty();
 	}
 }
@@ -1428,7 +1428,7 @@ void ULexWidget::SetVerticalAnchoredPosition(float Value)
 	if (AnchorData.AnchoredPosition.Y != Value)
 	{
 		AnchorData.AnchoredPosition.Y = Value;
-		MarkAnchorDataChanged(false, false, false, false);
+		MarkAnchorDataChanged(false, false, false, true);
 		MarkLayoutDirty();
 	}
 }
@@ -1440,7 +1440,7 @@ void ULexWidget::SetSizeDelta(FVector2D Value)
 		AnchorData.SizeDelta = Value;
 		bCacheWidthDirty = true;
 		bCacheHeightDirty = true;
-		MarkAnchorDataChanged(false, true, true, false);
+		MarkAnchorDataChanged(false, true, true, true);
 		MarkLayoutDirty();
 	}
 }
@@ -1548,7 +1548,7 @@ void ULexWidget::SetAnchorLeft(float Value)
 			CacheAnchorLeft = Value;
 			auto CurrentRight = this->GetAnchorRight();
 			CacheWidth = this->UIParent->GetWidth() * (this->AnchorData.AnchorMax.X - this->AnchorData.AnchorMin.X) - CurrentRight - Value;
-			//SetWdith
+			//SetWidth
 			{
 				if (AnchorData.IsHorizontalStretched())
 				{
@@ -1561,9 +1561,10 @@ void ULexWidget::SetAnchorLeft(float Value)
 				}
 			}
 			this->AnchorData.AnchoredPosition.X = FMath::Lerp(Value, -CurrentRight, this->AnchorData.Pivot.X);
-			MarkAnchorDataChanged(false, true, false, false);
+			MarkAnchorDataChanged(false, true, false, true);
 			MarkLayoutDirty();
 		}
+		bCacheAnchorLeftDirty = false;
 	}
 	else
 	{
@@ -1593,9 +1594,10 @@ void ULexWidget::SetAnchorTop(float Value)
 				}
 			}
 			this->AnchorData.AnchoredPosition.Y = FMath::Lerp(CurrentBottom, -Value, this->AnchorData.Pivot.Y);
-			MarkAnchorDataChanged(false, false, true, false);
+			MarkAnchorDataChanged(false, false, true, true);
 			MarkLayoutDirty();
 		}
+		bCacheAnchorTopDirty = false;
 	}
 	else
 	{
@@ -1625,9 +1627,10 @@ void ULexWidget::SetAnchorRight(float Value)
 				}
 			}
 			this->AnchorData.AnchoredPosition.X = FMath::Lerp(CurrentLeft, -Value, this->AnchorData.Pivot.X);
-			MarkAnchorDataChanged(false, true, false, false);
+			MarkAnchorDataChanged(false, true, false, true);
 			MarkLayoutDirty();
 		}
+		bCacheAnchorRightDirty = false;
 	}
 	else
 	{
@@ -1657,9 +1660,10 @@ void ULexWidget::SetAnchorBottom(float Value)
 				}
 			}
 			this->AnchorData.AnchoredPosition.Y = FMath::Lerp(Value, -CurrentTop, this->AnchorData.Pivot.Y);
-			MarkAnchorDataChanged(false, false, true, false);
+			MarkAnchorDataChanged(false, false, true, true);
 			MarkLayoutDirty();
 		}
+		bCacheAnchorBottomDirty = false;
 	}
 	else
 	{
@@ -1681,7 +1685,7 @@ void ULexWidget::SetWidth(float Value)
 				if (AnchorData.SizeDelta.X != CalculatedSizeDeltaX)
 				{
 					AnchorData.SizeDelta.X = CalculatedSizeDeltaX;
-					MarkAnchorDataChanged(false, true, false, false);
+					MarkAnchorDataChanged(false, true, false, true);
 					MarkLayoutDirty();
 				}
 			}
@@ -1690,7 +1694,7 @@ void ULexWidget::SetWidth(float Value)
 				if (AnchorData.SizeDelta.X != Value)
 				{
 					AnchorData.SizeDelta.X = Value;
-					MarkAnchorDataChanged(false, true, false, false);
+					MarkAnchorDataChanged(false, true, false, true);
 					MarkLayoutDirty();
 				}
 			}
@@ -1700,7 +1704,7 @@ void ULexWidget::SetWidth(float Value)
 			if (AnchorData.SizeDelta.X != Value)
 			{
 				AnchorData.SizeDelta.X = Value;
-				MarkAnchorDataChanged(false, true, false, false);
+				MarkAnchorDataChanged(false, true, false, true);
 				MarkLayoutDirty();
 			}
 		}
@@ -1721,7 +1725,7 @@ void ULexWidget::SetHeight(float Value)
 				if (AnchorData.SizeDelta.Y != CalculatedSizeDeltaY)
 				{
 					AnchorData.SizeDelta.Y = CalculatedSizeDeltaY;
-					MarkAnchorDataChanged(false, false, true, false);
+					MarkAnchorDataChanged(false, false, true, true);
 					MarkLayoutDirty();
 				}
 			}
@@ -1730,7 +1734,7 @@ void ULexWidget::SetHeight(float Value)
 				if (AnchorData.SizeDelta.Y != Value)
 				{
 					AnchorData.SizeDelta.Y = Value;
-					MarkAnchorDataChanged(false, false, true, false);
+					MarkAnchorDataChanged(false, false, true, true);
 					MarkLayoutDirty();
 				}
 			}
@@ -1740,7 +1744,7 @@ void ULexWidget::SetHeight(float Value)
 			if (AnchorData.SizeDelta.Y != Value)
 			{
 				AnchorData.SizeDelta.Y = Value;
-				MarkAnchorDataChanged(false, false, true, false);
+				MarkAnchorDataChanged(false, false, true, true);
 				MarkLayoutDirty();
 			}
 		}
@@ -1915,7 +1919,7 @@ void ULexWidget::SetRenderCanvas(ULexCanvas* InNewCanvas)
 		if (IsValid(Visual))
 		{
 			OldRenderCanvas->MarkVisualWillChange(Visual);
-			OldRenderCanvas->UnregisterVisual(this);
+			OldRenderCanvas->UnregisterVisual(this, Visual->WidgetPropertyDataStartPosition);
 		}
 	}
 	if (RenderCanvas.IsValid())
@@ -1924,7 +1928,7 @@ void ULexWidget::SetRenderCanvas(ULexCanvas* InNewCanvas)
 		bClipDirty = true;//mark it dirty so it will be added to new canvas
 		if (IsValid(Visual))
 		{
-			RenderCanvas->RegisterVisual(this);
+			RenderCanvas->RegisterVisual(this, Visual->WidgetPropertyDataStartPosition);
 		}
 	}
 }
@@ -2694,11 +2698,11 @@ ULexVisual* ULexWidget::CreateNewVisual(TSubclassOf<ULexVisual> VisualClass)
 		if (IsValid(OldVisual))
 		{
 			RenderCanvas->MarkVisualWillChange(OldVisual);
-			RenderCanvas->UnregisterVisual(this);
+			RenderCanvas->UnregisterVisual(this, OldVisual->WidgetPropertyDataStartPosition);
 		}
 		if (NewVisual)
 		{
-			RenderCanvas->RegisterVisual(this);
+			RenderCanvas->RegisterVisual(this, NewVisual->WidgetPropertyDataStartPosition);
 		}
 	}
 	if (IsValid(OldVisual))

@@ -68,12 +68,12 @@ void ULexUIFontData_Bitmap::PushCharData(
 	{
 		lineOffset.Y -= richTextProperty.Size * 0.5f;
 	}
-	float offsetX = lineOffset.X + charData.xoffset;
-	float offsetY = lineOffset.Y + charData.yoffset;
-
-	float charWidth = charData.xadvance + fontSpace.X;
+	
 	//position
 	{
+		float offsetX = lineOffset.X + charData.xoffset;
+		float offsetY = lineOffset.Y + charData.yoffset;
+		float charWidth = charData.xadvance + fontSpace.X;
 		float x, y;
 
 		int addVertCount = 0;

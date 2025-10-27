@@ -60,13 +60,13 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 	bool bUseFullSize = false;
-	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (EditCondition = "!bFullScreen"))
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (EditCondition = "!bUseFullSize"))
 	ELexBackgroundBlurRenderType RenderType = ELexBackgroundBlurRenderType::Screen;
 	/**
 	 * Blur result will output to this RenderTarget.
 	 * Will create one if not specified.
 	 */
-	UPROPERTY(EditAnywhere, Category = "LGUI", meta=(EditCondition="RenderType==ELexBackgroundBlurRenderType::RenderTarget&&!bFullScreen"))
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta=(EditCondition="RenderType==ELexBackgroundBlurRenderType::RenderTarget&&!bUseFullSize"))
 	TObjectPtr<UTextureRenderTarget2D> OutputRenderTarget = nullptr;
 	FRenderTargetChangedEvent OnRenderTargetChanged;
 public:
@@ -113,6 +113,7 @@ protected:
 	virtual void OnUpdateGeometry(bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged);
 	/** update region vertex data */
 	virtual void UpdateRegionVertex();
+	void UpdateGeometryClipData(FLexUIGeometry& InMesh, int InDataStartPosition);
 	TArray<FLexUIPostProcessCopyMeshRegionVertex> RenderScreenToMeshRegionVertexArray;
 	TArray<FLexUIPostProcessVertex> RenderMeshRegionToScreenVertexArray;
 

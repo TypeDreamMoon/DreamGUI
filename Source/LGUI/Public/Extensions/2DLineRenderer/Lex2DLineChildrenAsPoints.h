@@ -2,18 +2,17 @@
 
 #pragma once
 
-#include "Core/Actor/LexWidgetActor.h"
-#include "UI2DLineRendererBase.h"
-#include "UI2DLineChildrenAsPoints.generated.h"
+#include "Lex2DLineRendererBase.h"
+#include "Lex2DLineChildrenAsPoints.generated.h"
 
 //Collect U2DLineChildrenAsPointsChild, and use child's relative location as points to draw line
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUI2DLineChildrenAsPoints : public UUI2DLineRendererBase
+class LGUI_API ULex2DLineChildrenAsPoints : public ULex2DLineRendererBase
 {
 	GENERATED_BODY()
 
 public:	
-	UUI2DLineChildrenAsPoints(const FObjectInitializer& ObjectInitializer);
+	ULex2DLineChildrenAsPoints(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	virtual void BeginPlay()override;

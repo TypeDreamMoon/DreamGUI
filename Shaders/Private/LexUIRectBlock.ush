@@ -112,7 +112,7 @@ float4 LexUI_BlendPremul(float4 bottom, float4 top)
 #endif
 }
 
-float LexUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, float2 UV0, float2 UV1, float2 UV2, Texture2D DataTex, inout float3 Color, inout float Alpha)
+float LexUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler, float2 UV0, float2 UV1, float2 UV2, float2 UV3, Texture2D DataTex, inout float3 Color, inout float Alpha)
 {
     half _TextureScaleMode;
     float4 _CornerRadius;
@@ -155,7 +155,7 @@ float LexUI_CalculateBuffer(Texture2D MainTex, SamplerState MainTexSampler, floa
     
     //read data from texture
     {
-        int Coordinate = round(UV1.y);
+        int Coordinate = round(UV3.x);
         int3 Position = int3(0, Coordinate, 0);
 
         float4 PixelData = DataTex.Load(Position);Position.x += 1;

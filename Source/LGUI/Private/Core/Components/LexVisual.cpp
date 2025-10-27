@@ -8,6 +8,7 @@
 #include "Core/Components/LexVisualBatchMesh.h"
 #include "TextureResource.h"
 #include "Core/LexUIClipData.h"
+#include "Core/LexUIDataAsTexture.h"
 #include "Engine/Texture2D.h"
 
 
@@ -164,12 +165,12 @@ void ULexVisual::CheckClipDataStartPosition()
 	}
 }
 
-void ULexVisual::UpdateGeometryClipData(FLexUIGeometry& InMesh, int InClipDataStartPosition)
+void ULexVisual::UpdateGeometryWidgetPropertyData(FLexUIGeometry& InMesh, int InDataStartPosition)
 {
 	auto& vertices = InMesh.Vertices;
 	for (int i = 0; i < vertices.Num(); i++)
 	{
-		vertices[i].TextureCoordinate[1].X = InClipDataStartPosition;
+		vertices[i].TextureCoordinate[1].X = InDataStartPosition;
 	}
 }
 
@@ -349,6 +350,88 @@ float ULexVisual::GetFinalAlpha01()const
 bool ULexVisual::LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
 	return LineTraceUIRect(OutHit, Start, End);
+}
+
+int ULexVisual::WidgetPropertyDataLength =
+	sizeof(FVector2f)//1st pixel's xy channel: x.byte1- font mark, y- clip data coordinate
+	+ sizeof(FVector2f)//1st pixel's zw channel: width & height
+	+ sizeof(FVector2f)//2nd pixels' xy channel: widget rect center position
+;
+void ULexVisual::FillWidgetPropertyDataForMaterial_SimpleRect(ULexVisual* Visual, uint8 FontMark)
+{
+	auto StartPosition = Visual->WidgetPropertyDataStartPosition;
+	if (StartPosition <= INDEX_NONE)return;
+	auto Widget = Visual->GetWidget();
+	if (!Widget)return;
+	auto Canvas = Widget->GetRenderCanvas();
+	if (!Canvas)return;
+	auto Data = Canvas->GetWidgetPropertyDataAsTexture();
+	if (!Data)return;
+	uint8* BlockBuffer = new uint8[WidgetPropertyDataLength];
+	FMemory::Memzero(BlockBuffer, WidgetPropertyDataLength);
+	int BlockBufferOffset = 0;
+	
+	{
+		uint32 FontMark32 = FontMark << 24;
+		FMemory::Memcpy(BlockBuffer + BlockBufferOffset, &FontMark32, 4);
+		BlockBufferOffset += 4;
+		uint32 ClipDataStartPosition = Visual->ClipDataStartPosition;
+		FMemory::Memcpy(BlockBuffer + BlockBufferOffset, &ClipDataStartPosition, 4);
+		BlockBufferOffset += 4;
+	}
+	
+	//width & height
+	auto Size = FVector2f(Widget->GetWidth(), Widget->GetHeight());
+	FMemory::Memcpy(BlockBuffer + BlockBufferOffset, &Size, sizeof(FVector2f));
+	BlockBufferOffset += sizeof(FVector2f);
+	
+	//widget rect center position in canvas space
+	auto WidgetToWorldMatrix = Widget->GetComponentTransform().ToMatrixWithScale();
+	auto WidgetLocalSpaceCenter = Widget->GetLocalSpaceCenter();
+	auto CenterPositionInWorldSpace = WidgetToWorldMatrix.TransformPosition(FVector(0, WidgetLocalSpaceCenter.X, WidgetLocalSpaceCenter.Y));
+	auto CenterPositionInCanvasSpace = Canvas->GetLexWidget()->GetComponentTransform().InverseTransformPosition(CenterPositionInWorldSpace);
+	FMemory::Memcpy(BlockBuffer + BlockBufferOffset, &CenterPositionInCanvasSpace, sizeof(FVector2f));
+	BlockBufferOffset += sizeof(FVector2f);
+	
+	Data->UpdateBlock(StartPosition, BlockBuffer);
+}
+
+void ULexVisual::FillWidgetPropertyDataForMaterial_FirstPixel(ULexVisual* Visual, uint8 FontMark)
+{
+	auto StartPosition = Visual->WidgetPropertyDataStartPosition;
+	if (StartPosition <= INDEX_NONE)return;
+	auto Widget = Visual->GetWidget();
+	if (!Widget)return;
+	auto Canvas = Widget->GetRenderCanvas();
+	if (!Canvas)return;
+	auto Data = Canvas->GetWidgetPropertyDataAsTexture();
+	if (!Data)return;
+	uint8* BlockBuffer = new uint8[WidgetPropertyDataLength];
+	FMemory::Memzero(BlockBuffer, WidgetPropertyDataLength);
+	int BlockBufferValidCount = 0;
+	
+	{
+		uint32 FontMark32 = FontMark << 24;
+		FMemory::Memcpy(BlockBuffer + BlockBufferValidCount, &FontMark32, 4);
+		BlockBufferValidCount += 4;
+		uint32 ClipDataStartPosition = Visual->ClipDataStartPosition;
+		FMemory::Memcpy(BlockBuffer + BlockBufferValidCount, &ClipDataStartPosition, 4);
+		BlockBufferValidCount += 4;
+	}
+	
+	//width & height
+	auto Size = FVector2f(Widget->GetWidth(), Widget->GetHeight());
+	FMemory::Memcpy(BlockBuffer + BlockBufferValidCount, &Size, sizeof(FVector2f));
+	BlockBufferValidCount += sizeof(FVector2f);
+	Data->UpdateBlock(0, StartPosition, BlockBuffer, 1);
+}
+
+void ULexVisual::FillWidgetPropertyDataForMaterial_FontChar(ULexUIDataAsTexture* DataTexture, int CharIndex,
+                                                            int DataOffset, int StartPosition)
+{
+	uint8* BlockBuffer = new uint8[WidgetPropertyDataLength];
+	FMemory::Memzero(BlockBuffer, WidgetPropertyDataLength);
+	int BlockBufferOffset = DataOffset;
 }
 
 #pragma region TweenAnimation
