@@ -14,69 +14,60 @@ struct FLexUICharData
 	GENERATED_BODY()
 public:
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	uint16 width = 0;
+	uint16 Width = 0;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	uint16 height = 0;
+	uint16 Height = 0;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	int16 xoffset = 0;
+	int16 XOffset = 0;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	int16 yoffset = 0;
+	int16 YOffset = 0;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	int16 xadvance = 0;
+	int16 XAdvance = 0;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	float uv0X = 0;
+	FVector2f MinUV;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	float uv0Y = 0;
-	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	float uv3X = 0;
-	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	float uv3Y = 0;
+	FVector2f MaxUV;
 };
 struct FLexUICharData_HighPrecision
 {
 	FLexUICharData_HighPrecision() {}
 	FLexUICharData_HighPrecision(const FLexUICharData& charData)
 	{
-		width = charData.width;
-		height = charData.height;
-		xoffset = charData.xoffset;
-		yoffset = charData.yoffset;
-		xadvance = charData.xadvance;
-		uv0X = charData.uv0X;
-		uv0Y = charData.uv0Y;
-		uv3X = charData.uv3X;
-		uv3Y = charData.uv3Y;
+		Width = charData.Width;
+		Height = charData.Height;
+		XOffset = charData.XOffset;
+		YOffset = charData.YOffset;
+		XAdvance = charData.XAdvance;
+		MinUV = charData.MinUV;
+		MaxUV = charData.MaxUV;
 	}
-	float width = 0;
-	float height = 0;
-	float xoffset = 0;
-	float yoffset = 0;
-	float xadvance = 0;
-
-	float uv0X = 0;
-	float uv0Y = 0;
-	float uv3X = 0;
-	float uv3Y = 0;
+	float Width = 0;
+	float Height = 0;
+	float XOffset = 0;
+	float YOffset = 0;
+	float XAdvance = 0;
+	FVector2f MinUV;
+	FVector2f MaxUV;
 
 	FVector2f GetUV0()const
 	{
-		return FVector2f(uv0X, uv0Y);
+		return FVector2f(MinUV.X, MaxUV.Y);
 	}
 	FVector2f GetUV3()const
 	{
-		return FVector2f(uv3X, uv3Y);
+		return FVector2f(MaxUV.X, MinUV.Y);
 	}
 	FVector2f GetUV2()const
 	{
-		return FVector2f(uv0X, uv3Y);
+		return FVector2f(MinUV.X, MinUV.Y);
 	}
 	FVector2f GetUV1()const
 	{
-		return FVector2f(uv3X, uv0Y);
+		return FVector2f(MaxUV.X, MaxUV.Y);
 	}
 	FVector2f GetUVRange()const
 	{
-		return FVector2f(uv3X - uv0X, uv3Y - uv0Y);
+		return FVector2f(MaxUV.X - MinUV.X, MinUV.Y - MaxUV.Y);
 	}
 };
 

@@ -1,7 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/LexUIFontData_Bitmap.h"
-#include "LGUI.h"
 #include "Core/Components/LexText.h"
 #include "TextureResource.h"
 #include "Engine/Texture2D.h"
@@ -22,10 +21,10 @@ void ULexUIFontData_Bitmap::PushCharData(
 	auto GetUnderlineOrStrikethroughCharGeo = [&](TCHAR charCode, float overrideFontSize)
 	{
 		auto charData = this->GetCharData(charCode, overrideFontSize);
-		charData.yoffset += this->GetVerticalOffset(overrideFontSize);
+		charData.YOffset += this->GetVerticalOffset(overrideFontSize);
 
-		float uvX = (charData.uv3X - charData.uv0X) * 0.5f + charData.uv0X;
-		charData.uv0X = charData.uv3X = uvX;
+		float uvX = (charData.MaxUV.X - charData.MinUV.X) * 0.5f + charData.MinUV.X;
+		charData.MinUV.X = charData.MaxUV.X = uvX;
 		return charData;
 	};
 
@@ -71,30 +70,30 @@ void ULexUIFontData_Bitmap::PushCharData(
 	
 	//position
 	{
-		float offsetX = lineOffset.X + charData.xoffset;
-		float offsetY = lineOffset.Y + charData.yoffset;
-		float charWidth = charData.xadvance + fontSpace.X;
+		float offsetX = lineOffset.X + charData.XOffset;
+		float offsetY = lineOffset.Y + charData.YOffset;
+		float charWidth = charData.XAdvance + fontSpace.X;
 		float x, y;
 
 		int addVertCount = 0;
 		if (richTextProperty.Bold)
 		{
 			x = offsetX;
-			y = offsetY - charData.height;
+			y = offsetY - charData.Height;
 			auto vert0 = FVector3f(0, x, y);
-			x = charData.width + offsetX;
+			x = charData.Width + offsetX;
 			auto vert1 = FVector3f(0, x, y);
 			x = offsetX;
 			y = offsetY;
 			auto vert2 = FVector3f(0, x, y);
-			x = charData.width + offsetX;
+			x = charData.Width + offsetX;
 			auto vert3 = FVector3f(0, x, y);
 			if (richTextProperty.Italic)
 			{
-				auto vert01ItalicOffset = (charData.height - charData.yoffset) * ItalicSlop;
+				auto vert01ItalicOffset = (charData.Height - charData.YOffset) * ItalicSlop;
 				vert0.Y -= vert01ItalicOffset;
 				vert1.Y -= vert01ItalicOffset;
-				auto vert23ItalicOffset = charData.yoffset * ItalicSlop;
+				auto vert23ItalicOffset = charData.YOffset * ItalicSlop;
 				vert2.Y += vert23ItalicOffset;
 				vert3.Y += vert23ItalicOffset;
 			}
@@ -124,25 +123,25 @@ void ULexUIFontData_Bitmap::PushCharData(
 		else
 		{
 			x = offsetX;
-			y = offsetY - charData.height;
+			y = offsetY - charData.Height;
 			auto& vert0 = originVertices[verticesStartIndex].Position;
 			vert0 = FVector3f(0, x, y);
-			x = charData.width + offsetX;
+			x = charData.Width + offsetX;
 			auto& vert1 = originVertices[verticesStartIndex + 1].Position;
 			vert1 = FVector3f(0, x, y);
 			x = offsetX;
 			y = offsetY;
 			auto& vert2 = originVertices[verticesStartIndex + 2].Position;
 			vert2 = FVector3f(0, x, y);
-			x = charData.width + offsetX;
+			x = charData.Width + offsetX;
 			auto& vert3 = originVertices[verticesStartIndex + 3].Position;
 			vert3 = FVector3f(0, x, y);
 			if (richTextProperty.Italic)
 			{
-				auto vert01ItalicOffset = (charData.height - charData.yoffset) * ItalicSlop;
+				auto vert01ItalicOffset = (charData.Height - charData.YOffset) * ItalicSlop;
 				vert0.Y -= vert01ItalicOffset;
 				vert1.Y -= vert01ItalicOffset;
-				auto vert23ItalicOffset = charData.yoffset * ItalicSlop;
+				auto vert23ItalicOffset = charData.YOffset * ItalicSlop;
 				vert2.Y += vert23ItalicOffset;
 				vert3.Y += vert23ItalicOffset;
 			}
@@ -153,9 +152,9 @@ void ULexUIFontData_Bitmap::PushCharData(
 		if (richTextProperty.Underline)
 		{
 			offsetX = lineOffset.X;
-			offsetY = lineOffset.Y + underlineCharGeo.yoffset;
+			offsetY = lineOffset.Y + underlineCharGeo.YOffset;
 			x = offsetX;
-			y = offsetY - underlineCharGeo.height;
+			y = offsetY - underlineCharGeo.Height;
 			originVertices[verticesStartIndex + addVertCount].Position = FVector3f(0, x, y);
 			x = charWidth + offsetX;
 			originVertices[verticesStartIndex + addVertCount + 1].Position = FVector3f(0, x, y);
@@ -170,9 +169,9 @@ void ULexUIFontData_Bitmap::PushCharData(
 		if (richTextProperty.Strikethrough)
 		{
 			offsetX = lineOffset.X;
-			offsetY = lineOffset.Y + strikethroughCharGeo.yoffset;
+			offsetY = lineOffset.Y + strikethroughCharGeo.YOffset;
 			x = offsetX;
-			y = offsetY - strikethroughCharGeo.height;
+			y = offsetY - strikethroughCharGeo.Height;
 			originVertices[verticesStartIndex + addVertCount].Position = FVector3f(0, x, y);
 			x = charWidth + offsetX;
 			originVertices[verticesStartIndex + addVertCount + 1].Position = FVector3f(0, x, y);
@@ -394,10 +393,10 @@ void ULexUIFontData_Bitmap::ScaleDownUVofCachedChars()
 	for (auto& charDataItem : CharDataMap)
 	{
 		auto& mapValue = charDataItem.Value;
-		mapValue.uv0X *= 0.5f;
-		mapValue.uv0Y *= 0.5f;
-		mapValue.uv3X *= 0.5f;
-		mapValue.uv3Y *= 0.5f;
+		mapValue.MinUV.X *= 0.5f;
+		mapValue.MaxUV.Y *= 0.5f;
+		mapValue.MaxUV.X *= 0.5f;
+		mapValue.MinUV.Y *= 0.5f;
 	}
 }
 bool ULexUIFontData_Bitmap::RenderGlyph(const TCHAR& charCode, const float& charSize, FGlyphBitmap& OutResult)
@@ -482,10 +481,10 @@ void ULexUIFontData_Bitmap::ApplyPackingAtlasTextureExpand(UTexture2D* newTextur
 	for (auto& charDataItem : CharDataMap)
 	{
 		auto& mapValue = charDataItem.Value;
-		mapValue.uv0X *= 0.5f;
-		mapValue.uv0Y *= 0.5f;
-		mapValue.uv3X *= 0.5f;
-		mapValue.uv3Y *= 0.5f;
+		mapValue.MinUV.X *= 0.5f;
+		mapValue.MaxUV.Y *= 0.5f;
+		mapValue.MaxUV.X *= 0.5f;
+		mapValue.MinUV.Y *= 0.5f;
 	}
 }
 

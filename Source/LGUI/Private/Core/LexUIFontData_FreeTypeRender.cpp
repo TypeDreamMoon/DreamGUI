@@ -491,12 +491,12 @@ bool ULexUIFontData_FreeTypeRender::PackRectAndInsertChar(const FGlyphBitmap& In
 {
 	if (InGlyphBitmap.width <= 0 || InGlyphBitmap.height <= 0)//glyph no need to display, could be space
 	{
-		OutResult.width = InGlyphBitmap.width;
-		OutResult.height = InGlyphBitmap.height;
-		OutResult.xoffset = InGlyphBitmap.hOffset;
-		OutResult.yoffset = InGlyphBitmap.vOffset;
-		OutResult.xadvance = InGlyphBitmap.hAdvance;
-		OutResult.uv0X = OutResult.uv0Y = OutResult.uv3X = OutResult.uv3Y = 0.0f;//(0,0) point is transparent
+		OutResult.Width = InGlyphBitmap.width;
+		OutResult.Height = InGlyphBitmap.height;
+		OutResult.XOffset = InGlyphBitmap.hOffset;
+		OutResult.YOffset = InGlyphBitmap.vOffset;
+		OutResult.XAdvance = InGlyphBitmap.hAdvance;
+		OutResult.MinUV.X = OutResult.MaxUV.Y = OutResult.MaxUV.X = OutResult.MinUV.Y = 0.0f;//(0,0) point is transparent
 		return true;
 	}
 	const auto SPACE_NEED_EXPEND = this->Get_SPACE_NEED_EXPEND();
@@ -524,15 +524,15 @@ bool ULexUIFontData_FreeTypeRender::PackRectAndInsertChar(const FGlyphBitmap& In
 		auto region = new FUpdateTextureRegion2D(packedRect.x, packedRect.y, 0, 0, InGlyphBitmap.width, InGlyphBitmap.height);
 		UpdateFontTextureRegion(InTexture, region, packedRect.width * InGlyphBitmap.pixelSize, InGlyphBitmap.pixelSize, (uint8*)InGlyphBitmap.buffer);
 
-		OutResult.width = InGlyphBitmap.width + SPACE_NEED_EXPENDx2;
-		OutResult.height = InGlyphBitmap.height + SPACE_NEED_EXPENDx2;
-		OutResult.xoffset = InGlyphBitmap.hOffset - SPACE_NEED_EXPEND;
-		OutResult.yoffset = InGlyphBitmap.vOffset + SPACE_NEED_EXPEND;
-		OutResult.xadvance = InGlyphBitmap.hAdvance;
-		OutResult.uv0X = OneDivideTextureSize * (packedRect.x - SPACE_NEED_EXPEND);
-		OutResult.uv0Y = OneDivideTextureSize * (packedRect.y - SPACE_NEED_EXPEND + OutResult.height);
-		OutResult.uv3X = OneDivideTextureSize * (packedRect.x - SPACE_NEED_EXPEND + OutResult.width);
-		OutResult.uv3Y = OneDivideTextureSize * (packedRect.y - SPACE_NEED_EXPEND);
+		OutResult.Width = InGlyphBitmap.width + SPACE_NEED_EXPENDx2;
+		OutResult.Height = InGlyphBitmap.height + SPACE_NEED_EXPENDx2;
+		OutResult.XOffset = InGlyphBitmap.hOffset - SPACE_NEED_EXPEND;
+		OutResult.YOffset = InGlyphBitmap.vOffset + SPACE_NEED_EXPEND;
+		OutResult.XAdvance = InGlyphBitmap.hAdvance;
+		OutResult.MinUV.X = OneDivideTextureSize * (packedRect.x - SPACE_NEED_EXPEND);
+		OutResult.MaxUV.Y = OneDivideTextureSize * (packedRect.y - SPACE_NEED_EXPEND + OutResult.Height);
+		OutResult.MaxUV.X = OneDivideTextureSize * (packedRect.x - SPACE_NEED_EXPEND + OutResult.Width);
+		OutResult.MinUV.Y = OneDivideTextureSize * (packedRect.y - SPACE_NEED_EXPEND);
 		return true;
 	}
 }

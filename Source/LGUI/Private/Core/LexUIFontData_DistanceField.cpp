@@ -28,21 +28,21 @@ bool ULexUIFontData_DistanceField::GetCharDataFromCache(const TCHAR& charCode, c
 	{
 		OutResult = FLexUICharData_HighPrecision(*charData);
 		float vertexOffset = SDFRadius - SDFRadius * BoldRatio;
-		OutResult.width -= vertexOffset + vertexOffset;
-		OutResult.height -= vertexOffset + vertexOffset;
-		OutResult.xoffset += vertexOffset;
-		OutResult.yoffset -= vertexOffset;
+		OutResult.Width -= vertexOffset + vertexOffset;
+		OutResult.Height -= vertexOffset + vertexOffset;
+		OutResult.XOffset += vertexOffset;
+		OutResult.YOffset -= vertexOffset;
 		float uvOffset = vertexOffset * OneDivideTextureSize;
-		OutResult.uv0X += uvOffset;
-		OutResult.uv0Y -= uvOffset;
-		OutResult.uv3X -= uvOffset;
-		OutResult.uv3Y += uvOffset;
+		OutResult.MinUV.X += uvOffset;
+		OutResult.MaxUV.Y -= uvOffset;
+		OutResult.MaxUV.X -= uvOffset;
+		OutResult.MinUV.Y += uvOffset;
 		float scale = charSize * OneDivideFontSize;
-		OutResult.width *= scale;
-		OutResult.height *= scale;
-		OutResult.xoffset *= scale;
-		OutResult.yoffset *= scale;
-		OutResult.xadvance *= scale;
+		OutResult.Width *= scale;
+		OutResult.Height *= scale;
+		OutResult.XOffset *= scale;
+		OutResult.YOffset *= scale;
+		OutResult.XAdvance *= scale;
 		return true;
 	}
 	return false;
@@ -56,10 +56,10 @@ void ULexUIFontData_DistanceField::ScaleDownUVofCachedChars()
 	for (auto& charDataItem : CharDataMap)
 	{
 		auto& mapValue = charDataItem.Value;
-		mapValue.uv0X *= 0.5f;
-		mapValue.uv0Y *= 0.5f;
-		mapValue.uv3X *= 0.5f;
-		mapValue.uv3Y *= 0.5f;
+		mapValue.MinUV.X *= 0.5f;
+		mapValue.MaxUV.Y *= 0.5f;
+		mapValue.MaxUV.X *= 0.5f;
+		mapValue.MinUV.Y *= 0.5f;
 	}
 }
 bool ULexUIFontData_DistanceField::RenderGlyph(const TCHAR& charCode, const float& charSize, FGlyphBitmap& OutResult)
@@ -150,10 +150,10 @@ void ULexUIFontData_DistanceField::ApplyPackingAtlasTextureExpand(UTexture2D* ne
 	for (auto& charDataItem : CharDataMap)
 	{
 		auto& mapValue = charDataItem.Value;
-		mapValue.uv0X *= 0.5f;
-		mapValue.uv0Y *= 0.5f;
-		mapValue.uv3X *= 0.5f;
-		mapValue.uv3Y *= 0.5f;
+		mapValue.MinUV.X *= 0.5f;
+		mapValue.MaxUV.Y *= 0.5f;
+		mapValue.MaxUV.X *= 0.5f;
+		mapValue.MinUV.Y *= 0.5f;
 	}
 }
 
@@ -215,10 +215,10 @@ void ULexUIFontData_DistanceField::PushCharData(
 	auto GetUnderlineOrStrikethroughCharGeo = [&](TCHAR charCode, float overrideFontSize)
 	{
 		auto charData = this->GetCharData(charCode, overrideFontSize);
-		charData.yoffset += this->GetVerticalOffset(overrideFontSize);
+		charData.YOffset += this->GetVerticalOffset(overrideFontSize);
 
-		float uvX = (charData.uv3X - charData.uv0X) * 0.5f + charData.uv0X;
-		charData.uv0X = charData.uv3X = uvX;
+		float uvX = (charData.MaxUV.X - charData.MinUV.X) * 0.5f + charData.MinUV.X;
+		charData.MinUV.X = charData.MaxUV.X = uvX;
 		return charData;
 	};
 
@@ -261,9 +261,9 @@ void ULexUIFontData_DistanceField::PushCharData(
 	float boldUVExtendHeight = 0;
 	//position
 	{
-		float offsetX = lineOffset.X + charData.xoffset;
-		float offsetY = lineOffset.Y + charData.yoffset;
-		float charAdvanceWidth = charData.xadvance + fontSpace.X;
+		float offsetX = lineOffset.X + charData.XOffset;
+		float offsetY = lineOffset.Y + charData.YOffset;
+		float charAdvanceWidth = charData.XAdvance + fontSpace.X;
 		if (richTextProperty.Bold)
 		{
 			charAdvanceWidth += charAdvanceWidth * BoldRatio;
@@ -272,8 +272,8 @@ void ULexUIFontData_DistanceField::PushCharData(
 
 		int addVertCount = 0;
 		{
-			float charWidth = charData.width;
-			float charHeight = charData.height;
+			float charWidth = charData.Width;
+			float charHeight = charData.Height;
 			if (richTextProperty.Bold)
 			{
 				float boldExtendWidth = charWidth * BoldRatio * 0.5f;
@@ -284,8 +284,8 @@ void ULexUIFontData_DistanceField::PushCharData(
 				offsetY += boldExtendHeight;
 
 				auto uvRange = charData.GetUVRange();
-				boldUVExtendWidth = boldExtendWidth / charData.width * uvRange.X;
-				boldUVExtendHeight = boldExtendHeight / charData.height * uvRange.Y;
+				boldUVExtendWidth = boldExtendWidth / charData.Width * uvRange.X;
+				boldUVExtendHeight = boldExtendHeight / charData.Height * uvRange.Y;
 			}
 			x = offsetX;
 			y = offsetY - charHeight;
@@ -303,10 +303,10 @@ void ULexUIFontData_DistanceField::PushCharData(
 			vert3 = FVector3f(0, x, y);
 			if (richTextProperty.Italic)
 			{
-				auto vert01ItalicOffset = (charHeight - charData.yoffset) * ItalicSlop;
+				auto vert01ItalicOffset = (charHeight - charData.YOffset) * ItalicSlop;
 				vert0.Y -= vert01ItalicOffset;
 				vert1.Y -= vert01ItalicOffset;
-				auto vert23ItalicOffset = charData.yoffset * ItalicSlop;
+				auto vert23ItalicOffset = charData.YOffset * ItalicSlop;
 				vert2.Y += vert23ItalicOffset;
 				vert3.Y += vert23ItalicOffset;
 			}
@@ -316,9 +316,9 @@ void ULexUIFontData_DistanceField::PushCharData(
 		if (richTextProperty.Underline)
 		{
 			offsetX = lineOffset.X;
-			offsetY = lineOffset.Y + underlineCharGeo.yoffset;
+			offsetY = lineOffset.Y + underlineCharGeo.YOffset;
 			x = offsetX;
-			y = offsetY - underlineCharGeo.height;
+			y = offsetY - underlineCharGeo.Height;
 			originVertices[verticesStartIndex + addVertCount].Position = FVector3f(0, x, y);
 			x = charAdvanceWidth + offsetX;
 			originVertices[verticesStartIndex + addVertCount + 1].Position = FVector3f(0, x, y);
@@ -333,9 +333,9 @@ void ULexUIFontData_DistanceField::PushCharData(
 		if (richTextProperty.Strikethrough)
 		{
 			offsetX = lineOffset.X;
-			offsetY = lineOffset.Y + strikethroughCharGeo.yoffset;
+			offsetY = lineOffset.Y + strikethroughCharGeo.YOffset;
 			x = offsetX;
-			y = offsetY - strikethroughCharGeo.height;
+			y = offsetY - strikethroughCharGeo.Height;
 			originVertices[verticesStartIndex + addVertCount].Position = FVector3f(0, x, y);
 			x = charAdvanceWidth + offsetX;
 			originVertices[verticesStartIndex + addVertCount + 1].Position = FVector3f(0, x, y);
