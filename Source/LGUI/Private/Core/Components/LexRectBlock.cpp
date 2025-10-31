@@ -17,11 +17,11 @@
 #define LOCTEXT_NAMESPACE "UIProceduralRect"
 
 
-void ULexUIRectBlockData::PostInitProperties()
+void ULexRectBlockData::PostInitProperties()
 {
 	Super::PostInitProperties();
 }
-UMaterialInterface* ULexUIRectBlockData::GetMaterial()
+UMaterialInterface* ULexRectBlockData::GetMaterial()
 {
 	if (!DefaultMaterial)
 	{
@@ -47,7 +47,7 @@ void ULexRectBlock::FillData(uint8* Data, float width, float height)
 	FillVector4ToData(Data, GetValueWithUnitMode(CornerRadius, CornerRadiusUnitMode, width, height, 0.5f), DataOffset);
 	FillColorToData(Data, BodyColor, DataOffset);
 	FillVector2ToData(Data
-		, (BodyTextureMode == ELexUIRectBlockTextureMode::Sprite && IsValid(BodySpriteTexture)) ? FVector2f(BodySpriteTexture->GetSpriteInfo().GetUVCenter()) : FVector2f(0.5f, 0.5f)
+		, (BodyTextureMode == ELexRectBlockTextureMode::Sprite && IsValid(BodySpriteTexture)) ? FVector2f(BodySpriteTexture->GetSpriteInfo().GetUVCenter()) : FVector2f(0.5f, 0.5f)
 		, DataOffset);
 
 	FillColorToData(Data, BodyGradientColor, DataOffset);
@@ -77,17 +77,17 @@ void ULexRectBlock::FillData(uint8* Data, float width, float height)
 	FillVector2ToData(Data, GetOuterShadowOffset(width, height), DataOffset);
 }
 
-float ULexRectBlock::GetValueWithUnitMode(float SourceValue, ELexUIRectBlockUnitMode UnitMode, float RectWidth, float RectHeight, float AdditionalScale)const
+float ULexRectBlock::GetValueWithUnitMode(float SourceValue, ELexRectBlockUnitMode UnitMode, float RectWidth, float RectHeight, float AdditionalScale)const
 {
-	return UnitMode == ELexUIRectBlockUnitMode::Value ? SourceValue : (SourceValue * 0.01f * (RectWidth < RectHeight ? RectWidth : RectHeight) * AdditionalScale);
+	return UnitMode == ELexRectBlockUnitMode::Value ? SourceValue : (SourceValue * 0.01f * (RectWidth < RectHeight ? RectWidth : RectHeight) * AdditionalScale);
 }
-FVector4f ULexRectBlock::GetValueWithUnitMode(const FVector4f& SourceValue, ELexUIRectBlockUnitMode UnitMode, float RectWidth, float RectHeight, float AdditionalScale)const
+FVector4f ULexRectBlock::GetValueWithUnitMode(const FVector4f& SourceValue, ELexRectBlockUnitMode UnitMode, float RectWidth, float RectHeight, float AdditionalScale)const
 {
-	return UnitMode == ELexUIRectBlockUnitMode::Value ? SourceValue : (SourceValue * 0.01f * (RectWidth < RectHeight ? RectWidth : RectHeight) * AdditionalScale);
+	return UnitMode == ELexRectBlockUnitMode::Value ? SourceValue : (SourceValue * 0.01f * (RectWidth < RectHeight ? RectWidth : RectHeight) * AdditionalScale);
 }
-FVector2f ULexRectBlock::GetValueWithUnitMode(const FVector2f& SourceValue, ELexUIRectBlockUnitMode UnitMode, float RectWidth, float RectHeight)const
+FVector2f ULexRectBlock::GetValueWithUnitMode(const FVector2f& SourceValue, ELexRectBlockUnitMode UnitMode, float RectWidth, float RectHeight)const
 {
-	return UnitMode == ELexUIRectBlockUnitMode::Value ? SourceValue : (SourceValue * 0.01f * FVector2f(RectWidth, RectHeight));
+	return UnitMode == ELexRectBlockUnitMode::Value ? SourceValue : (SourceValue * 0.01f * FVector2f(RectWidth, RectHeight));
 }
 
 FVector2f ULexRectBlock::GetInnerShadowOffset(float RectWidth, float RectHeight)
@@ -216,7 +216,7 @@ void ULexRectBlock::FillVector4ToData(uint8* Data, const FVector4f& InValue, int
 }
 void ULexRectBlock::OnCornerRadiusUnitModeChanged(float width, float height)
 {
-	if (CornerRadiusUnitMode == ELexUIRectBlockUnitMode::Value)//from percentage to value
+	if (CornerRadiusUnitMode == ELexRectBlockUnitMode::Value)//from percentage to value
 	{
 		CornerRadius = CornerRadius * 0.01f * (width < height ? width : height) * 0.5f;
 	}
@@ -262,7 +262,7 @@ void ULexRectBlock::OnRegister()
 	Super::OnRegister();
 	if (RectBlockData == nullptr)
 	{
-		RectBlockData = LoadObject<ULexUIRectBlockData>(NULL, TEXT("/LGUI/DefaultRectBlockData"));
+		RectBlockData = LoadObject<ULexRectBlockData>(NULL, TEXT("/LGUI/DefaultRectBlockData"));
 		check(RectBlockData != nullptr);
 	}
 	RectBlockData->Init(DataCountInBytes(), ELexUIDataAsTexturePixelFormat::R32G32B32A32, 32);
@@ -394,7 +394,7 @@ void ULexRectBlock::OnBeforeCreateOrUpdateGeometry()
 
 UTexture* ULexRectBlock::GetTextureToCreateGeometry()
 {
-	if (BodyTextureMode == ELexUIRectBlockTextureMode::Texture)
+	if (BodyTextureMode == ELexRectBlockTextureMode::Texture)
 	{
 		if (!IsValid(this->BodyTexture))
 		{
@@ -593,7 +593,7 @@ void ULexRectBlock::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChang
 
 void ULexRectBlock::ApplyAtlasTextureChange_Implementation()
 {
-	if (BodyTextureMode != ELexUIRectBlockTextureMode::Sprite)return;
+	if (BodyTextureMode != ELexRectBlockTextureMode::Sprite)return;
 	check(BodySpriteTexture);
 	UIGeometry->Texture = BodySpriteTexture->GetAtlasTexture();
 	if (DrawCall.IsValid())
@@ -605,7 +605,7 @@ void ULexRectBlock::ApplyAtlasTextureChange_Implementation()
 }
 void ULexRectBlock::ApplyAtlasTextureScaleUp_Implementation()
 {
-	if (BodyTextureMode != ELexUIRectBlockTextureMode::Sprite)return;
+	if (BodyTextureMode != ELexRectBlockTextureMode::Sprite)return;
 	check(BodySpriteTexture);
 	auto& vertices = UIGeometry->Vertices;
 	if (vertices.Num() != 0)
@@ -681,7 +681,7 @@ void ULexRectBlock::SetBodySpriteTexture(ULexUISpriteData_BaseObject* value)
 		MarkUVDirty();
 	}
 }
-void ULexRectBlock::SetBodyTextureMode(ELexUIRectBlockTextureMode value)
+void ULexRectBlock::SetBodyTextureMode(ELexRectBlockTextureMode value)
 {
 	this->BodyTextureMode = value;
 	MarkTextureDirty();
@@ -689,7 +689,7 @@ void ULexRectBlock::SetBodyTextureMode(ELexUIRectBlockTextureMode value)
 }
 void ULexRectBlock::SetSizeFromBodyTexture()
 {
-	if (BodyTextureMode == ELexUIRectBlockTextureMode::Sprite)
+	if (BodyTextureMode == ELexRectBlockTextureMode::Sprite)
 	{
 		if (IsValid(this->BodySpriteTexture))
 		{
@@ -720,7 +720,7 @@ void ULexRectBlock::SetSoftEdge(bool value)
 	bNeedUpdateBlockData = true;
 	MarkVertexPositionDirty();
 }
-void ULexRectBlock::SetBodyTextureScaleMode(ELexUIRectBlockTextureScaleMode value)
+void ULexRectBlock::SetBodyTextureScaleMode(ELexRectBlockTextureScaleMode value)
 {
 	this->BodyTextureScaleMode = value;
 	bNeedUpdateBlockData = true;
@@ -906,7 +906,7 @@ void ULexRectBlock::SetOuterShadowDistance(float value)
 }
 
 #define FunctionSetPropertyUnitMode(Property)\
-void ULexRectBlock::Set##Property##UnitMode(ELexUIRectBlockUnitMode value)\
+void ULexRectBlock::Set##Property##UnitMode(ELexRectBlockUnitMode value)\
 {\
 	this->Property##UnitMode = value;\
 	bNeedUpdateBlockData = true;\

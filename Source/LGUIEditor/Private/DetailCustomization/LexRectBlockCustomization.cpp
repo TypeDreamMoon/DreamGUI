@@ -60,12 +60,12 @@ void FLexRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 			.ToolTipText(LOCTEXT("Value_Tooltip", "Use direct value"))
 			.Padding(ContentPadding)
 			.OnCheckStateChanged_Lambda([=](ECheckBoxState InCheckboxState){
-				PropertyHandle->SetValue((uint8)ELexUIRectBlockUnitMode::Value);
+				PropertyHandle->SetValue((uint8)ELexRectBlockUnitMode::Value);
 				})
 			.IsChecked_Lambda([=] {
 				uint8 Value;
 				PropertyHandle->GetValue(Value);
-				return Value == (uint8)ELexUIRectBlockUnitMode::Value ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+				return Value == (uint8)ELexRectBlockUnitMode::Value ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
 				})
 			[
 				SNew(STextBlock)
@@ -84,12 +84,12 @@ void FLexRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 			.ToolTipText(LOCTEXT("Percentage_Tooltip", "Use percentage of rect width and height"))
 			.Padding(ContentPadding)
 			.OnCheckStateChanged_Lambda([=](ECheckBoxState InCheckboxState) {
-			PropertyHandle->SetValue((uint8)ELexUIRectBlockUnitMode::Percentage);
+			PropertyHandle->SetValue((uint8)ELexRectBlockUnitMode::Percentage);
 				})
 			.IsChecked_Lambda([=] {
 				uint8 Value;
 				PropertyHandle->GetValue(Value);
-				return Value == (uint8)ELexUIRectBlockUnitMode::Percentage ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+				return Value == (uint8)ELexRectBlockUnitMode::Percentage ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
 				})
 			[
 				SNew(STextBlock)
@@ -307,7 +307,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 	{
 		AddPropertyRowToGroup(BodyColor, Color, BodyGroup, bEnableBody);
 
-		ELexUIRectBlockTextureMode BodyTextureMode;
+		ELexRectBlockTextureMode BodyTextureMode;
 		auto BodyTextureModeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexRectBlock, BodyTextureMode));
 		BodyTextureModeHandle->GetValue(*(uint8*)&BodyTextureMode);
 		BodyTextureModeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {
@@ -335,11 +335,11 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 			}
 			}));
 		BodySpriteTextureHandle->SetPropertyDisplayName(LOCTEXT("BodySpriteTexture_DisplayName", "Sprite"));
-		auto& TextureGroup = BodyTextureMode == ELexUIRectBlockTextureMode::Texture
+		auto& TextureGroup = BodyTextureMode == ELexRectBlockTextureMode::Texture
 			? BodyGroup.AddGroup(GET_MEMBER_NAME_CHECKED(ULexRectBlock, BodyTexture), BodyTextureHandle->GetPropertyDisplayName(), true)
 			: BodyGroup.AddGroup(GET_MEMBER_NAME_CHECKED(ULexRectBlock, BodySpriteTexture), BodySpriteTextureHandle->GetPropertyDisplayName(), true)
 			;
-		auto TempBodyTextureHandle = BodyTextureMode == ELexUIRectBlockTextureMode::Texture ? BodyTextureHandle : BodySpriteTextureHandle;
+		auto TempBodyTextureHandle = BodyTextureMode == ELexRectBlockTextureMode::Texture ? BodyTextureHandle : BodySpriteTextureHandle;
 		TextureGroup.HeaderRow()
 			.PropertyHandleList({ TempBodyTextureHandle })
 			.NameContent()
@@ -366,12 +366,12 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 							.ToolTipText(LOCTEXT("Texture_Tooltip", "Use texture"))
 							.Padding(ContentPadding)
 							.OnCheckStateChanged_Lambda([=](ECheckBoxState InCheckboxState){
-								BodyTextureModeHandle->SetValue((uint8)ELexUIRectBlockTextureMode::Texture);
+								BodyTextureModeHandle->SetValue((uint8)ELexRectBlockTextureMode::Texture);
 								})
 							.IsChecked_Lambda([=] {
 								uint8 Value;
 								BodyTextureModeHandle->GetValue(Value);
-								return Value == (uint8)ELexUIRectBlockTextureMode::Texture ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+								return Value == (uint8)ELexRectBlockTextureMode::Texture ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
 								})
 							[
 								SNew(STextBlock)
@@ -390,12 +390,12 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 							.ToolTipText(LOCTEXT("Sprite_Tooltip", "Use sprite"))
 							.Padding(ContentPadding)
 							.OnCheckStateChanged_Lambda([=](ECheckBoxState InCheckboxState) {
-								BodyTextureModeHandle->SetValue((uint8)ELexUIRectBlockTextureMode::Sprite);
+								BodyTextureModeHandle->SetValue((uint8)ELexRectBlockTextureMode::Sprite);
 								})
 							.IsChecked_Lambda([=] {
 								uint8 Value;
 								BodyTextureModeHandle->GetValue(Value);
-								return Value == (uint8)ELexUIRectBlockTextureMode::Sprite ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+								return Value == (uint8)ELexRectBlockTextureMode::Sprite ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
 								})
 							[
 								SNew(STextBlock)
