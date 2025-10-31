@@ -417,12 +417,12 @@ void ULex2DLineRendererBase::OnBeforeCreateOrUpdateGeometry()
 
 FVector2D ULex2DLineRendererBase::GetStartPointTangentDirection()
 {
-	UE_LOG(LGUI, Error, TEXT("This function [%s] must be implemented if [OverrideStartPointTangentDirection] return true!"), ANSI_TO_TCHAR(__FUNCTION__));
+	UE_LOG(LGUI, Error, TEXT("This function [%s].%d must be implemented if [OverrideStartPointTangentDirection] return true!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	return FVector2D::ZeroVector;
 }
 FVector2D ULex2DLineRendererBase::GetEndPointTangentDirection()
 {
-	UE_LOG(LGUI, Error, TEXT("This function [%s] must be implemented if [OverrideEndPointTangentDirection] return true!"), ANSI_TO_TCHAR(__FUNCTION__));
+	UE_LOG(LGUI, Error, TEXT("This function [%s].%d must be implemented if [OverrideEndPointTangentDirection] return true!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	return FVector2D::ZeroVector;
 }
 

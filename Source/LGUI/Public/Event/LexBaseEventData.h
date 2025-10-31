@@ -13,9 +13,9 @@ enum class ELexUIEventFireType :uint8
 	/** event will call on target actor and all components of the actor */
 	TargetActorAndAllItsComponents,
 	/** event will call on all components of target actor */
-	TargetComponents,
+	OnlyTargetComponent,
 	/** event will call only on target actor */
-	TargetActor,
+	OnlyTargetActor,
 };
 
 UENUM(BlueprintType, Category = LGUI)

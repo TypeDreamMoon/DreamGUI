@@ -1204,7 +1204,7 @@ bool UUITextInputComponent::OnPointerExit_Implementation(ULexPointerEventData* e
 bool UUITextInputComponent::OnPointerSelect_Implementation(ULexBaseEventData* eventData)
 {
 	Super::OnPointerSelect_Implementation(eventData);
-	//ActivateInput();//handled at PointerClick
+	//ActivateInput(eventData);//handled at PointerClick
 	return AllowEventBubbleUp;
 }
 bool UUITextInputComponent::OnPointerDeselect_Implementation(ULexBaseEventData* eventData)
@@ -1217,7 +1217,7 @@ bool UUITextInputComponent::OnPointerClick_Implementation(ULexPointerEventData* 
 {
 	if (!bInputActive)//need active input
 	{
-		ActivateInput();
+		ActivateInput(eventData);
 	}
 	return AllowEventBubbleUp;
 }
@@ -1382,7 +1382,7 @@ void UUITextInputComponent::ActivateInput(ULexPointerEventData* eventData)
 	BindKeys();
 	UpdatePlaceHolderComponent();
 	//set is selected
-	if (auto eventSystem = ULexEventSystem::GetLexEventSystemInstance(this))
+	if (auto eventSystem = ULexEventSystem::GetLexEventSystemInstance(this, IsValid(eventData) ? eventData->UserIndex : 0))
 	{
 		if (auto Widget = GetLexWidget())
 		{

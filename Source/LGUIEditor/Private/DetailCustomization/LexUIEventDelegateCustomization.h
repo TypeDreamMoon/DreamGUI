@@ -1,14 +1,14 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 #include "CoreMinimal.h"
 #include "IPropertyTypeCustomization.h"
-#include "Event/LGUIEventDelegate.h"
+#include "Event/LexUIEventDelegate.h"
 #pragma once
 
 
 /**
  * 
  */
-class FLGUIEventDelegateCustomization : public IPropertyTypeCustomization
+class FLexUIEventDelegateCustomization : public IPropertyTypeCustomization
 {
 protected:
 	TSharedPtr<IPropertyHandle> PropertyHandle;
@@ -17,12 +17,12 @@ protected:
 	TSharedPtr<SWidget> ColorPickerParentWidget;
 	TArray<TSharedRef<SWidget>> EventParameterWidgetArray;
 	TSharedPtr<SBox> EventsWidget;
-	TArray<FLGUIEventDelegate*> EventDelegateInstances;
+	TArray<FLexUIEventDelegate*> EventDelegateInstances;
 private:
 	bool CanChangeParameterType = true;
-	bool IsParameterTypeValid(ELGUIEventDelegateParameterType InParamType)
+	bool IsParameterTypeValid(ELexUIEventDelegateParameterType InParamType)
 	{
-		return InParamType != ELGUIEventDelegateParameterType::None;
+		return InParamType != ELexUIEventDelegateParameterType::None;
 	}
 	FText GetEventTitleName()const;
 	FText GetEventItemFunctionName(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const;
@@ -33,28 +33,28 @@ private:
 	EVisibility GetDrawFunctionParameterWidgetVisibility(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const;
 	EVisibility GetNotValidParameterWidgetVisibility(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const;
 public:
-	FLGUIEventDelegateCustomization(bool InCanChangeParameterType)
+	FLexUIEventDelegateCustomization(bool InCanChangeParameterType)
 	{
 		CanChangeParameterType = InCanChangeParameterType;
 	}
-	~FLGUIEventDelegateCustomization()
+	~FLexUIEventDelegateCustomization()
 	{
 		
 	}
 	static TSharedRef<IPropertyTypeCustomization> MakeInstance()
 	{
-		return MakeShareable(new FLGUIEventDelegateCustomization(true));
+		return MakeShareable(new FLexUIEventDelegateCustomization(true));
 	}
 	/** IDetailCustomization interface */
 	virtual void CustomizeHeader(TSharedRef<IPropertyHandle> InPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& CustomizationUtils) override {};
 
-	ELGUIEventDelegateParameterType GetNativeParameterType()const;
+	ELexUIEventDelegateParameterType GetNativeParameterType()const;
 	void AddNativeParameterTypeProperty(IDetailChildrenBuilder& ChildBuilder);
-	ELGUIEventDelegateParameterType GetEventDataParameterType(TSharedRef<IPropertyHandle> EventDataItemHandle)const;
+	ELexUIEventDelegateParameterType GetEventDataParameterType(TSharedRef<IPropertyHandle> EventDataItemHandle)const;
 
 	virtual void CustomizeChildren(TSharedRef<IPropertyHandle> InPropertyHandle, IDetailChildrenBuilder& ChildBuilder, IPropertyTypeCustomizationUtils& CustomizationUtils)override;
 
-	void SetEventDataParameterType(TSharedRef<IPropertyHandle> EventDataItemHandle, ELGUIEventDelegateParameterType ParameterType);
+	void SetEventDataParameterType(TSharedRef<IPropertyHandle> EventDataItemHandle, ELexUIEventDelegateParameterType ParameterType);
 private:
 
 	void UpdateEventsLayout();
@@ -78,7 +78,7 @@ private:
 	void OnActorParameterChange(TSharedRef<IPropertyHandle> ItemPropertyHandle);
 	void OnSelectComponent(UActorComponent* Comp, TSharedRef<IPropertyHandle> ItemPropertyHandle);
 	void OnSelectActorSelf(TSharedRef<IPropertyHandle> ItemPropertyHandle);
-	void OnSelectFunction(FName FuncName, ELGUIEventDelegateParameterType ParamType, bool UseNativeParameter, TSharedRef<IPropertyHandle> ItemPropertyHandle);
+	void OnSelectFunction(FName FuncName, ELexUIEventDelegateParameterType ParamType, bool UseNativeParameter, TSharedRef<IPropertyHandle> ItemPropertyHandle);
 	bool IsComponentSelectorMenuEnabled(TSharedRef<IPropertyHandle> ItemPropertyHandle)const;
 	bool IsFunctionSelectorMenuEnabled(TSharedRef<IPropertyHandle> ItemPropertyHandle)const;
 	void OnClickListAdd();
@@ -88,9 +88,9 @@ private:
 	FReply OnClickDuplicate(int32 Index);
 	FReply OnClickMoveUpDown(bool UpOrDown, int32 Index);
 
-	TSharedRef<SWidget> DrawFunctionParameter(TSharedRef<IPropertyHandle> InDataContainerHandle, ELGUIEventDelegateParameterType InFunctionParameterType, UFunction* InFunction);
+	TSharedRef<SWidget> DrawFunctionParameter(TSharedRef<IPropertyHandle> InDataContainerHandle, ELexUIEventDelegateParameterType InFunctionParameterType, UFunction* InFunction);
 	//function's parameter editor
-	TSharedRef<SWidget> DrawFunctionReferenceParameter(TSharedRef<IPropertyHandle> InDataContainerHandle, ELGUIEventDelegateParameterType FunctionParameterType, UFunction* InFunction);
+	TSharedRef<SWidget> DrawFunctionReferenceParameter(TSharedRef<IPropertyHandle> InDataContainerHandle, ELexUIEventDelegateParameterType FunctionParameterType, UFunction* InFunction);
 
 	void ObjectValueChange(const FAssetData& InObj, TSharedPtr<IPropertyHandle> BufferHandle, TSharedPtr<IPropertyHandle> ObjectReferenceHandle, bool ObjectOrActor);
 	const UClass* GetClassValue(TSharedPtr<IPropertyHandle> ClassReferenceHandle)const;

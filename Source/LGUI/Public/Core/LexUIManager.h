@@ -6,6 +6,7 @@
 #include "Tickable.h"
 #include "LexUIManager.generated.h"
 
+class ULexEventSystem;
 class ULexWidget;
 class ULexVisualBatchMesh;
 class ULexVisual;
@@ -121,11 +122,12 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<ULexBaseRaycaster>> AllRaycasterArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TWeakObjectPtr<ULexBaseInputModule> CurrentInputModule = nullptr;
-	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<UUISelectableComponent>> AllSelectableArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<UObject>> AllCultureChangedArray;
+
+	UPROPERTY(VisibleAnywhere, Category = "LGUI")
+	TMap<int, TWeakObjectPtr<ULexEventSystem>> MapUserIndexToEventSystem;
 
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<ULexUIBehaviour>> LexUIBehavioursForUpdate;
@@ -167,13 +169,14 @@ public:
 	static void AddRaycaster(ULexBaseRaycaster* InRaycaster);
 	static void RemoveRaycaster(ULexBaseRaycaster* InRaycaster);
 
-	TWeakObjectPtr<ULexBaseInputModule> GetCurrentInputModule() { return CurrentInputModule; }
-	static void SetCurrentInputModule(ULexBaseInputModule* InInputModule);
-	static void ClearCurrentInputModule(ULexBaseInputModule* InInputModule);
-
 	const TArray<TWeakObjectPtr<UUISelectableComponent>>& GetAllSelectableArray() { return AllSelectableArray; }
 	static void AddSelectable(UUISelectableComponent* InSelectable);
 	static void RemoveSelectable(UUISelectableComponent* InSelectable);
+
+	const TMap<int, TWeakObjectPtr<ULexEventSystem>>& GetMapUserIndexToEventSystem() { return MapUserIndexToEventSystem; }
+	ULexEventSystem* GetEventSystemByUserIndex(int UserIndex = 0);
+	void AddEventSystem(ULexEventSystem* InEventSystem);
+	void RemoveEventSystem(ULexEventSystem* InEventSystem);
 	
 #if WITH_EDITOR
 	/**

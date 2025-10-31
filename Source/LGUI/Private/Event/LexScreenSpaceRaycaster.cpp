@@ -3,14 +3,12 @@
 #include "Event/LexScreenSpaceRaycaster.h"
 #include "Core/Components/LexCanvas.h"
 #include "LGUI.h"
-#include "Utils/LexUIUtils.h"
 #include "Core/LexUISettings.h"
 
 #define LOCTEXT_NAMESPACE "LGUIScreenSpaceRaycaster"
 
 ULexScreenSpaceRaycaster::ULexScreenSpaceRaycaster()
 {
-	EventFireType = ELexUIEventFireType::TargetComponents;
 }
 
 void ULexScreenSpaceRaycaster::BeginPlay()

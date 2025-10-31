@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "GeometryModifier/LexMeshModifierGradientColor.h"
+#include "LGUI/Public/MeshModifier/LexMeshModifierGradientColor.h"
 #include "LGUI.h"
 #include "Utils/LexUIUtils.h"
 #include "Core/Components/LexText.h"

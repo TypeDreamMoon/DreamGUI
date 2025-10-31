@@ -257,7 +257,7 @@ void ULexPolygon::SetVertexOffsetArray(const TArray<float>& value)
 	}
 	else
 	{
-		UE_LOG(LGUI, Error, TEXT("[UUIPolygon::SetVertexOffsetArray]Array count not equal! VertexOffsetArray:%d, value:%d"), VertexOffsetArray.Num(), value.Num());
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Array count not equal! VertexOffsetArray:%d, value:%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, VertexOffsetArray.Num(), value.Num());
 	}
 }
 #include "Core/LexUISettings.h"

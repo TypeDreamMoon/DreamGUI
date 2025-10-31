@@ -1,15 +1,14 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Event/InputModule/LexTouchInputModule.h"
-#include "LGUI.h"
 #include "Event/LexEventSystem.h"
 #include "Event/LexPointerEventData.h"
 
 void ULexTouchInputModule::ProcessInput()
 {
-	if (!CheckEventSystem())return;
+	if (!EventSystem.IsValid())return;
 
-	for (auto& keyValue : EventSystem->PointerEventDataMap)
+	for (auto& keyValue : EventSystem->GetPointerEventDataMap())
 	{
 		auto& eventData = keyValue.Value;
 		switch (eventData->InputType)
@@ -25,7 +24,7 @@ void ULexTouchInputModule::ProcessInput()
 					bool lineTraceHitSomething = LineTrace(eventData, LGUIHitResult);
 					bool resultHitSomething = false;
 					FHitResult hitResult;
-					ProcessPointerEvent(EventSystem, eventData, lineTraceHitSomething, LGUIHitResult, resultHitSomething, hitResult);
+					ProcessPointerEvent(EventSystem.Get(), eventData, lineTraceHitSomething, LGUIHitResult, resultHitSomething, hitResult);
 
 					auto tempHitComp = (USceneComponent*)hitResult.Component.Get();
 					EventSystem->RaiseHitEvent(resultHitSomething, hitResult, tempHitComp);
@@ -43,7 +42,7 @@ void ULexTouchInputModule::ProcessInput()
 }
 void ULexTouchInputModule::InputScroll(const FVector2D& inAxisValue)
 {
-	if (!CheckEventSystem())return;
+	if (!EventSystem.IsValid())return;
 
 	auto eventData = EventSystem->GetPointerEventData(0, true);
 	if (IsValid(eventData->EnterComponent))
@@ -58,7 +57,7 @@ void ULexTouchInputModule::InputScroll(const FVector2D& inAxisValue)
 
 void ULexTouchInputModule::InputTouchTrigger(bool inTouchPress, int inTouchID, const FVector& inTouchPointPosition)
 {
-	if (!CheckEventSystem())return;
+	if (!EventSystem.IsValid())return;
 
 	auto eventData = EventSystem->GetPointerEventData(inTouchID, true);
 	EventSystem->SetPointerInputType(eventData, ELexUIPointerInputType::Pointer);
@@ -72,7 +71,7 @@ void ULexTouchInputModule::InputTouchTrigger(bool inTouchPress, int inTouchID, c
 
 void ULexTouchInputModule::InputTouchMoved(int inTouchID, const FVector& inTouchPointPosition)
 {
-	if (!CheckEventSystem())return;
+	if (!EventSystem.IsValid())return;
 
 	auto eventData = EventSystem->GetPointerEventData(inTouchID, true);
 	EventSystem->SetPointerInputType(eventData, ELexUIPointerInputType::Pointer);

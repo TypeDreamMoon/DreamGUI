@@ -10,7 +10,7 @@
 #include "Event/Interface/LexPointerScrollInterface.h"
 #include "Event/Interface/LexPointerSelectDeselectInterface.h"
 
-#include "Event/LGUIEventDelegate.h"
+#include "Event/LexUIEventDelegate.h"
 #include "Event/LexDelegateDeclaration.h"
 #include "Components/ActorComponent.h"
 #include "UIEventTriggerComponent.generated.h"
@@ -35,29 +35,29 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "UIEventTrigger") 
 		bool AllowEventBubbleUp = false;
 	UPROPERTY(EditAnywhere, Category = "UIEventTrigger") 
-		FLGUIEventDelegate OnPointerEnter = FLGUIEventDelegate(ELGUIEventDelegateParameterType::PointerEvent);
+		FLexUIEventDelegate OnPointerEnter = FLexUIEventDelegate(ELexUIEventDelegateParameterType::PointerEvent);
 	UPROPERTY(EditAnywhere, Category = "UIEventTrigger") 
-		FLGUIEventDelegate OnPointerExit = FLGUIEventDelegate(ELGUIEventDelegateParameterType::PointerEvent);
+		FLexUIEventDelegate OnPointerExit = FLexUIEventDelegate(ELexUIEventDelegateParameterType::PointerEvent);
 	UPROPERTY(EditAnywhere, Category = "UIEventTrigger") 
-		FLGUIEventDelegate OnPointerDown = FLGUIEventDelegate(ELGUIEventDelegateParameterType::PointerEvent);
+		FLexUIEventDelegate OnPointerDown = FLexUIEventDelegate(ELexUIEventDelegateParameterType::PointerEvent);
 	UPROPERTY(EditAnywhere, Category = "UIEventTrigger") 
-		FLGUIEventDelegate OnPointerUp = FLGUIEventDelegate(ELGUIEventDelegateParameterType::PointerEvent);
+		FLexUIEventDelegate OnPointerUp = FLexUIEventDelegate(ELexUIEventDelegateParameterType::PointerEvent);
 	UPROPERTY(EditAnywhere, Category = "UIEventTrigger") 
-		FLGUIEventDelegate OnPointerClick = FLGUIEventDelegate(ELGUIEventDelegateParameterType::PointerEvent);
+		FLexUIEventDelegate OnPointerClick = FLexUIEventDelegate(ELexUIEventDelegateParameterType::PointerEvent);
 	UPROPERTY(EditAnywhere, Category = "UIEventTrigger") 
-		FLGUIEventDelegate OnPointerBeginDrag = FLGUIEventDelegate(ELGUIEventDelegateParameterType::PointerEvent);
+		FLexUIEventDelegate OnPointerBeginDrag = FLexUIEventDelegate(ELexUIEventDelegateParameterType::PointerEvent);
 	UPROPERTY(EditAnywhere, Category = "UIEventTrigger") 
-		FLGUIEventDelegate OnPointerDrag = FLGUIEventDelegate(ELGUIEventDelegateParameterType::PointerEvent);
+		FLexUIEventDelegate OnPointerDrag = FLexUIEventDelegate(ELexUIEventDelegateParameterType::PointerEvent);
 	UPROPERTY(EditAnywhere, Category = "UIEventTrigger") 
-		FLGUIEventDelegate OnPointerEndDrag = FLGUIEventDelegate(ELGUIEventDelegateParameterType::PointerEvent);
+		FLexUIEventDelegate OnPointerEndDrag = FLexUIEventDelegate(ELexUIEventDelegateParameterType::PointerEvent);
 	UPROPERTY(EditAnywhere, Category = "UIEventTrigger") 
-		FLGUIEventDelegate OnPointerDragDrop = FLGUIEventDelegate(ELGUIEventDelegateParameterType::PointerEvent);
+		FLexUIEventDelegate OnPointerDragDrop = FLexUIEventDelegate(ELexUIEventDelegateParameterType::PointerEvent);
 	UPROPERTY(EditAnywhere, Category = "UIEventTrigger") 
-		FLGUIEventDelegate OnPointerScroll = FLGUIEventDelegate(ELGUIEventDelegateParameterType::PointerEvent);
+		FLexUIEventDelegate OnPointerScroll = FLexUIEventDelegate(ELexUIEventDelegateParameterType::PointerEvent);
 	UPROPERTY(EditAnywhere, Category = "UIEventTrigger") 
-		FLGUIEventDelegate OnPointerSelect = FLGUIEventDelegate(ELGUIEventDelegateParameterType::PointerEvent);
+		FLexUIEventDelegate OnPointerSelect = FLexUIEventDelegate(ELexUIEventDelegateParameterType::PointerEvent);
 	UPROPERTY(EditAnywhere, Category = "UIEventTrigger") 
-		FLGUIEventDelegate OnPointerDeselect = FLGUIEventDelegate(ELGUIEventDelegateParameterType::PointerEvent);
+		FLexUIEventDelegate OnPointerDeselect = FLexUIEventDelegate(ELexUIEventDelegateParameterType::PointerEvent);
 
 	FLexUIMulticastDelegatePointerEventData OnPointerEnterCPP;
 	FLexUIMulticastDelegatePointerEventData OnPointerExitCPP;

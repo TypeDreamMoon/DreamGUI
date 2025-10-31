@@ -2,18 +2,18 @@
 
 #pragma once
 #include "CoreMinimal.h"
-#include "LGUIDelegateHandleWrapper.generated.h"
+#include "LexUIDelegateHandleWrapper.generated.h"
 
 /**
  *Just a wrapper for blueprint to store a delegate handle
  */
 USTRUCT(BlueprintType)
-struct LGUI_API FLGUIDelegateHandleWrapper
+struct LGUI_API FLexUIDelegateHandleWrapper
 {
 	GENERATED_BODY()
 public:
-	FLGUIDelegateHandleWrapper() {}
-	FLGUIDelegateHandleWrapper(FDelegateHandle InDelegateHandle)
+	FLexUIDelegateHandleWrapper() {}
+	FLexUIDelegateHandleWrapper(FDelegateHandle InDelegateHandle)
 	{
 		DelegateHandle = InDelegateHandle;
 	}

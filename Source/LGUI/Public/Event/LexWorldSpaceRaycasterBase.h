@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "LexBaseRaycaster.h"
-#include "LGUIComponentReference.h"
+#include "LexUIComponentReference.h"
 #include "LexWorldSpaceRaycasterBase.generated.h"
 
 class ULexWorldSpaceRaycasterBase;
@@ -80,7 +80,7 @@ public:
 protected:
 	
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-	FLGUIComponentReference RaycasterSource;
+	FLexUIComponentReference RaycasterSource;
 	mutable TWeakObjectPtr<ULexWorldSpaceRaycasterSource> RaycasterSourceObject = nullptr;
 	UPROPERTY(EditAnywhere, Category = LGUI)
 	TEnumAsByte<ETraceTypeQuery> TraceChannel;

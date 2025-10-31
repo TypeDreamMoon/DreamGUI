@@ -49,7 +49,7 @@ bool ULexWorldSpaceRaycasterSource::ShouldStartDrag(ULexPointerEventData* InPoin
 
 ULexWorldSpaceRaycasterBase::ULexWorldSpaceRaycasterBase()
 {
-	RaycasterSource = FLGUIComponentReference(ULexWorldSpaceRaycasterSource::StaticClass());
+	RaycasterSource = FLexUIComponentReference(ULexWorldSpaceRaycasterSource::StaticClass());
 	TraceChannel = TraceTypeQuery1;
 }
 

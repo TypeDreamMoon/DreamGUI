@@ -4,7 +4,7 @@
 
 #include "Event/Interface/LexPointerDragInterface.h"
 #include "UISelectableComponent.h"
-#include "Event/LGUIEventDelegate.h"
+#include "Event/LexUIEventDelegate.h"
 #include "Event/LexDelegateDeclaration.h"
 #include "UISliderComponent.generated.h"
 
@@ -64,7 +64,7 @@ protected:
 	UPROPERTY(BlueprintAssignable, Category = "LGUI-Slider", DisplayName="OnValueChanged")
 	FUISliderValueChangedEvent OnValueChangedBP;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Slider")
-	FLGUIEventDelegate OnValueChanged = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Double);
+	FLexUIEventDelegate OnValueChanged = FLexUIEventDelegate(ELexUIEventDelegateParameterType::Double);
 	
 public:
 	FLexUIMulticastDelegateFloat& GetOnValueChangedEvent(){return OnValueChangedCPP;}

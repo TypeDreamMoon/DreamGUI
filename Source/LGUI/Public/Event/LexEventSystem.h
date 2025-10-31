@@ -6,7 +6,6 @@
 #include "GameFramework/Actor.h"
 #include "Components/ActorComponent.h"
 #include "LexDelegateDeclaration.h"
-#include "LGUIDelegateHandleWrapper.h"
 #include "LexEventSystem.generated.h"
 
 class ULexPointerEventData;
@@ -23,7 +22,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FLexUIBaseEventDataDynamicDelegate, 
  * InputTrigger and InputScroll need manually setup in InputModule.
  * About event bubble: if all interface of target component and actor return true, then event will bubble up. if no interface found on target, then event will bubble up
  */
-UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
+UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent), HideCategories = (Sockets, Physics, Collision, Activation, Cooking, Rendering, Actor, Input, Lighting, Mobile, Navigation))
 class LGUI_API ULexEventSystem : public UActorComponent
 {
 	GENERATED_BODY()
@@ -32,11 +31,8 @@ public:
 	ULexEventSystem();
 
 	UFUNCTION(BlueprintPure, Category = LGUI, meta = (WorldContext = "WorldContextObject", DisplayName = "Get Lex Event System Instance"))
-		static ULexEventSystem* GetLexEventSystemInstance(UObject* WorldContextObject);
+		static ULexEventSystem* GetLexEventSystemInstance(UObject* WorldContextObject, int UserIndex);
 protected:
-	/** a world should only have one LexUIEventSystem */
-	static TMap<UWorld*, ULexEventSystem*> WorldToInstanceMap;
-	bool bExistInInstanceMap = false;
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -44,6 +40,9 @@ protected:
 
 protected:
 
+	UPROPERTY(EditAnywhere, Category = LGUI, Getter)
+	int UserIndex = 0;
+	
 #if WITH_EDITORONLY_DATA
 	UPROPERTY(EditAnywhere, Category = LGUI)
 		bool bOutputLog = false;
@@ -52,7 +51,18 @@ protected:
 		bool bRayEventEnable = true;
 
 	void ProcessInputEvent();
+
+	UPROPERTY(VisibleAnywhere, Category = LGUI, AdvancedDisplay)
+	TWeakObjectPtr<ULexBaseInputModule> CurrentInputModule = nullptr;
 public:
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	int GetUserIndex()const{return UserIndex;}
+
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	ULexBaseInputModule* GetCurrentInputModule()const{return CurrentInputModule.Get();}
+	void SetInputModule(ULexBaseInputModule* InputModule);
+	void ClearInputModule();
+	
 	/** clear event. eg when mouse is hovering a UI and highlight, and then event is disabled, we can use this to clear the hover event */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void ClearEvent();
@@ -70,11 +80,7 @@ public:
 		void SetSelectComponentWithDefault(USceneComponent* InSelectComp);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		USceneComponent* GetCurrentSelectedComponent(int InPointerID)const;
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		ULexBaseInputModule* GetCurrentInputModule();
-
-	UPROPERTY(VisibleAnywhere, Category = LGUI)
-		mutable TMap<int, TObjectPtr<ULexPointerEventData>> PointerEventDataMap;
+	
 	/**
 	 * Get PointerEventData by given pointerID.
 	 * @param	PointerID	0 for mouse input, touch-id for touch input, or other customized value
@@ -88,6 +94,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void RemovePointerEventData(int PointerID);
 protected:
+	UPROPERTY(VisibleAnywhere, Category = LGUI)
+	mutable TMap<int, TObjectPtr<ULexPointerEventData>> PointerEventDataMap;
+	
 	/** called for pointer hit anything */
 	FLexUIRaycastHitDelegate RaycastHitEvent;
 	UPROPERTY(BlueprintAssignable, Category = LGUI, DisplayName="RaycastHitEvent")
@@ -101,6 +110,8 @@ protected:
 	/** called when any pointerEventData's input type is changed */
 	FLexUIPointerInputTypeChangedDelegate PointerInputTypedChangedEvent;
 public:
+	const TMap<int, TObjectPtr<ULexPointerEventData>>& GetPointerEventDataMap()const{return PointerEventDataMap;}
+	
 	FLexUIRaycastHitDelegate& GetRaycastHitEvent(){return RaycastHitEvent;}
 	FLexUIMulticastDelegateBaseEventData& GetInputEvent(){return InputEvent;}
 	FLexUIPointerInputTypeChangedDelegate& GetInputChangedEvent(){return PointerInputTypedChangedEvent;}
@@ -136,24 +147,173 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void ActivateNavigationInput(int InPointerID, USceneComponent* InDefaultHighlightedComponent = nullptr);
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = LGUI)
-		ELexUIPointerInputType DefaultInputType = ELexUIPointerInputType::Pointer;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = LGUI)
-		ELexUIEventFireType EventFireTypeForNavigation = ELexUIEventFireType::TargetActorAndAllItsComponents;
-	/**
-	 * If keep pressing the navigate button for a while, then will trigger the process of continuous navigation.
-	 * This is the interval trigger time of continuous navigation
-	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = LGUI)
-		float NavigateInputInterval = 0.2f;
+private:
+	UPROPERTY(EditAnywhere, Getter, Setter, Category = LGUI)
+	ELexUIPointerInputType DefaultInputType = ELexUIPointerInputType::Pointer;
+	UPROPERTY(EditAnywhere, Getter, Setter, Category = LGUI)
+	ELexUIEventFireType EventFireTypeForNavigation = ELexUIEventFireType::TargetActorAndAllItsComponents;
 	/**
 	 * If keep pressing the navigate button for a while, then will trigger the process of continuous navigation.
 	 * This is the time to trigger the process.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = LGUI)
-		float NavigateInputIntervalForFirstTime = 0.5f;
+	UPROPERTY(EditAnywhere, Getter, Setter, Category = LGUI)
+	float NavigateInputIntervalForFirstTime = 0.5f;
+	/**
+	 * If keep pressing the navigate button for a while, then will trigger the process of continuous navigation.
+	 * This is the interval trigger time of continuous navigation
+	 */
+	UPROPERTY(EditAnywhere, Getter, Setter, Category = LGUI)
+	float NavigateInputInterval = 0.2f;
+	
 public:
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	ELexUIPointerInputType GetDefaultInputType()const{return DefaultInputType;}
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	ELexUIEventFireType GetEventFireTypeForNavigation()const{return EventFireTypeForNavigation;}
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	float GetNavigateInputIntervalForFirstTime()const{return NavigateInputIntervalForFirstTime;}
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	float GetNavigateInputInterval()const{return NavigateInputInterval;}
+
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetDefaultInputType(ELexUIPointerInputType Value){ DefaultInputType = Value;}
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetEventFireTypeForNavigation(ELexUIEventFireType Value){ EventFireTypeForNavigation = Value;}
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetNavigateInputIntervalForFirstTime(float Value){ NavigateInputIntervalForFirstTime = Value;}
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetNavigateInputInterval(float Value){ NavigateInputInterval = Value;}
+public:
+	template<class UEventData, class UInterfaceFunction>
+	static void ExecuteLexUIInterface(USceneComponent* RootComponent,
+		UEventData* EventData, ELexUIEventFireType EventFireType,
+		UClass* InterfaceClass, UInterfaceFunction InterfaceFunction,
+		bool AllowEventBubbleUp)
+	{
+		bool TempAllowEventBubbleUp = AllowEventBubbleUp;
+		switch(EventFireType)
+		{
+			case ELexUIEventFireType::OnlyTargetActor:
+			{
+				auto OwnerActor = RootComponent->GetOwner(); 
+				if (OwnerActor->GetClass()->ImplementsInterface(InterfaceClass))
+				{
+					if (InterfaceFunction(OwnerActor, EventData) == false)
+					{
+						TempAllowEventBubbleUp = false;
+					}
+				}
+			}
+			break;
+			case ELexUIEventFireType::OnlyTargetComponent:
+			{
+				if (RootComponent->GetClass()->ImplementsInterface(InterfaceClass))
+				{
+					if (InterfaceFunction(RootComponent, EventData) == false)
+					{
+						TempAllowEventBubbleUp = false;
+					}
+				}
+			}
+			break;
+			case ELexUIEventFireType::TargetActorAndAllItsComponents:
+			{
+				auto OwnerActor = RootComponent->GetOwner(); 
+				if (OwnerActor->GetClass()->ImplementsInterface(InterfaceClass))
+				{
+					if (InterfaceFunction(OwnerActor, EventData) == false)
+					{
+						TempAllowEventBubbleUp = false;
+					}
+				}
+				auto Components = OwnerActor->GetComponents();
+				for (auto Comp : Components)
+				{
+					if (Comp->GetClass()->ImplementsInterface(InterfaceClass))
+					{
+						if (InterfaceFunction(Comp, EventData) == false)
+						{
+							TempAllowEventBubbleUp = false;
+						}
+					}
+				}
+			}
+			break;
+		}
+		if (TempAllowEventBubbleUp)
+		{
+			if (auto ParentActor = RootComponent->GetOwner()->GetAttachParentActor())
+			{
+				ExecuteLexUIInterface(ParentActor->GetRootComponent(),
+					EventData, EventFireType,
+					InterfaceClass, InterfaceFunction, true);
+			}
+		}
+	}
+	template<class UEventData, class UInterfaceFunction, class UBubbleUpFunction>
+	static void BubbleLexUIInterface(USceneComponent* RootComponent,
+		UEventData* EventData, UClass* InterfaceClass, ELexUIEventFireType EventFireType,
+		UInterfaceFunction InterfaceFunction, UBubbleUpFunction BubbleUpFunction)
+	{
+		bool TempAllowEventBubbleUp = true;
+		switch(EventFireType)
+		{
+		case ELexUIEventFireType::OnlyTargetActor:
+			{
+				auto OwnerActor = RootComponent->GetOwner(); 
+				if (OwnerActor->GetClass()->ImplementsInterface(InterfaceClass))
+				{
+					if (InterfaceFunction(OwnerActor, EventData) == false)
+					{
+						TempAllowEventBubbleUp = false;
+					}
+				}
+			}
+			break;
+		case ELexUIEventFireType::OnlyTargetComponent:
+			{
+				if (RootComponent->GetClass()->ImplementsInterface(InterfaceClass))
+				{
+					if (InterfaceFunction(RootComponent, EventData) == false)
+					{
+						TempAllowEventBubbleUp = false;
+					}
+				}
+			}
+			break;
+		case ELexUIEventFireType::TargetActorAndAllItsComponents:
+			{
+				auto OwnerActor = RootComponent->GetOwner(); 
+				if (OwnerActor->GetClass()->ImplementsInterface(InterfaceClass))
+				{
+					if (InterfaceFunction(OwnerActor, EventData) == false)
+					{
+						TempAllowEventBubbleUp = false;
+					}
+				}
+				auto Components = OwnerActor->GetComponents();
+				for (auto Comp : Components)
+				{
+					if (Comp->GetClass()->ImplementsInterface(InterfaceClass))
+					{
+						if (InterfaceFunction(Comp, EventData) == false)
+						{
+							TempAllowEventBubbleUp = false;
+						}
+					}
+				}
+			}
+			break;
+		}
+		if (TempAllowEventBubbleUp)
+		{
+			if (auto ParentActor = RootComponent->GetOwner()->GetAttachParentActor())
+			{
+				BubbleUpFunction(ParentActor, EventData);
+			}
+		}
+	}
+	
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		static void ExecuteEvent_OnPointerEnter(USceneComponent* TargetRootComponent, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp = false);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
@@ -179,32 +339,19 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		static void ExecuteEvent_OnPointerDeselect(USceneComponent* TargetRootComponent, ULexBaseEventData* EventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp = false);
 
-	void CallOnPointerEnter(USceneComponent* component, ULexPointerEventData* eventData, ELexUIEventFireType eventFireType);
-	void CallOnPointerExit(USceneComponent* component, ULexPointerEventData* eventData, ELexUIEventFireType eventFireType);
-	void CallOnPointerDown(USceneComponent* component, ULexPointerEventData* eventData, ELexUIEventFireType eventFireType);
-	void CallOnPointerUp(USceneComponent* component, ULexPointerEventData* eventData, ELexUIEventFireType eventFireType);
-	void CallOnPointerClick(USceneComponent* component, ULexPointerEventData* eventData, ELexUIEventFireType eventFireType);
-	void CallOnPointerBeginDrag(USceneComponent* component, ULexPointerEventData* eventData, ELexUIEventFireType eventFireType);
-	void CallOnPointerDrag(USceneComponent* component, ULexPointerEventData* eventData, ELexUIEventFireType eventFireType);
-	void CallOnPointerEndDrag(USceneComponent* component, ULexPointerEventData* eventData, ELexUIEventFireType eventFireType);
-	void CallOnPointerScroll(USceneComponent* component, ULexPointerEventData* eventData, ELexUIEventFireType eventFireType);
-	void CallOnPointerDragDrop(USceneComponent* component, ULexPointerEventData* eventData, ELexUIEventFireType eventFireType);
-	void CallOnPointerSelect(USceneComponent* component, ULexBaseEventData* eventData, ELexUIEventFireType eventFireType);
-	void CallOnPointerDeselect(USceneComponent* component, ULexBaseEventData* eventData, ELexUIEventFireType eventFireType);
-
-	static void BubbleOnPointerEnter(AActor* actor, ULexPointerEventData* eventData);
-	static void BubbleOnPointerExit(AActor* actor, ULexPointerEventData* eventData);
-	static void BubbleOnPointerDown(AActor* actor, ULexPointerEventData* eventData);
-	static void BubbleOnPointerUp(AActor* actor, ULexPointerEventData* eventData);
-	static void BubbleOnPointerClick(AActor* actor, ULexPointerEventData* eventData);
-	static void BubbleOnPointerBeginDrag(AActor* actor, ULexPointerEventData* eventData);
-	static void BubbleOnPointerDrag(AActor* actor, ULexPointerEventData* eventData);
-	static void BubbleOnPointerEndDrag(AActor* actor, ULexPointerEventData* eventData);
-	static void BubbleOnPointerScroll(AActor* actor, ULexPointerEventData* eventData);
-	static void BubbleOnPointerDragDrop(AActor* actor, ULexPointerEventData* eventData);
-	static void BubbleOnPointerSelect(AActor* actor, ULexBaseEventData* eventData);
-	static void BubbleOnPointerDeselect(AActor* actor, ULexBaseEventData* eventData);
-
+	void CallOnPointerEnter(USceneComponent* RootComponent, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType);
+	void CallOnPointerExit(USceneComponent* RootComponent, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType);
+	void CallOnPointerDown(USceneComponent* RootComponent, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType);
+	void CallOnPointerUp(USceneComponent* RootComponent, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType);
+	void CallOnPointerClick(USceneComponent* RootComponent, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType);
+	void CallOnPointerBeginDrag(USceneComponent* RootComponent, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType);
+	void CallOnPointerDrag(USceneComponent* RootComponent, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType);
+	void CallOnPointerEndDrag(USceneComponent* RootComponent, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType);
+	void CallOnPointerScroll(USceneComponent* RootComponent, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType);
+	void CallOnPointerDragDrop(USceneComponent* RootComponent, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType);
+	void CallOnPointerSelect(USceneComponent* RootComponent, ULexBaseEventData* EventData, ELexUIEventFireType EventFireType);
+	void CallOnPointerDeselect(USceneComponent* RootComponent, ULexBaseEventData* EventData, ELexUIEventFireType EventFireType);
+	
 	void LogEventData(ULexBaseEventData* eventData);
 };
 
@@ -212,13 +359,13 @@ public:
  * This is a preset actor that contains a LexEventSystem component
  */
 UCLASS(ClassGroup = LGUI)
-class LGUI_API ALGUIEventSystemActor : public AActor
+class LGUI_API ALexEventSystemActor : public AActor
 {
 	GENERATED_BODY()
 
 public:
-	ALGUIEventSystemActor();
-protected:
-	UPROPERTY(Category = "LGUI", VisibleAnywhere, BlueprintReadOnly, Transient, meta = (AllowPrivateAccess = "true"))
-		TObjectPtr<class ULexEventSystem> EventSystem;
+	ALexEventSystemActor();
+private:
+	UPROPERTY(Category = "LGUI", VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class ULexEventSystem> EventSystem;
 };

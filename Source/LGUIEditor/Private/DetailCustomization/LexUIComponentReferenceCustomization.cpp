@@ -1,27 +1,27 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "DetailCustomization/LGUIComponentReferenceCustomization.h"
+#include "DetailCustomization/LexUIComponentReferenceCustomization.h"
 #include "EdGraphNode_Comment.h"
 #include "GameFramework/Actor.h"
 #include "Components/ActorComponent.h"
-#include "LGUIComponentReference.h"
+#include "LexUIComponentReference.h"
 #include "DetailLayoutBuilder.h"
-#include "IDetailChildrenBuilder.h"
+#include "DetailWidgetRow.h"
 
 #define LOCTEXT_NAMESPACE "LGUIComponentRefereceHelperCustomization"
 
-TWeakObjectPtr<AActor> FLGUIComponentReferenceCustomization::CopiedHelperActor;
-TWeakObjectPtr<UActorComponent> FLGUIComponentReferenceCustomization::CopiedTargetComp;
-UClass* FLGUIComponentReferenceCustomization::CopiedHelperClass;
+TWeakObjectPtr<AActor> FLexUIComponentReferenceCustomization::CopiedHelperActor;
+TWeakObjectPtr<UActorComponent> FLexUIComponentReferenceCustomization::CopiedTargetComp;
+UClass* FLexUIComponentReferenceCustomization::CopiedHelperClass;
 
 static const FName NAME_AllowedClasses = "AllowedClasses";
 static const FName NAME_DisallowedClasses = "DisallowedClasses";
 
-TSharedRef<IPropertyTypeCustomization> FLGUIComponentReferenceCustomization::MakeInstance()
+TSharedRef<IPropertyTypeCustomization> FLexUIComponentReferenceCustomization::MakeInstance()
 {
-	return MakeShareable(new FLGUIComponentReferenceCustomization);
+	return MakeShareable(new FLexUIComponentReferenceCustomization);
 }
-void FLGUIComponentReferenceCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> InPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& CustomizationUtils)
+void FLexUIComponentReferenceCustomization::CustomizeHeader(TSharedRef<IPropertyHandle> InPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& CustomizationUtils)
 {
 	PropertyHandle = InPropertyHandle;
 	PropertyUtilites = CustomizationUtils.GetPropertyUtilities();
@@ -42,13 +42,13 @@ void FLGUIComponentReferenceCustomization::CustomizeHeader(TSharedRef<IPropertyH
 	for (auto Iter = StructPtrs.CreateIterator(); Iter; ++Iter)
 	{
 		check(*Iter);
-		auto Item = (FLGUIComponentReference*)(*Iter);
+		auto Item = (FLexUIComponentReference*)(*Iter);
 		ComponentReferenceInstances[Iter.GetIndex()] = Item;
 		Item->CheckTargetObject();
 	}
 
-	auto HelperActorHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIComponentReference, HelperActor));
-	HelperActorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUIComponentReferenceCustomization::OnHelperActorValueChange));
+	auto HelperActorHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIComponentReference, HelperActor));
+	HelperActorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexUIComponentReferenceCustomization::OnHelperActorValueChange));
 
 	//ChildBuilder.AddProperty(TargetCompHandle.ToSharedRef());
 	//ChildBuilder.AddProperty(HelperActorHandle.ToSharedRef());
@@ -65,35 +65,35 @@ void FLGUIComponentReferenceCustomization::CustomizeHeader(TSharedRef<IPropertyH
 	]
 	.CopyAction(FUIAction
 	(
-		FExecuteAction::CreateSP(this, &FLGUIComponentReferenceCustomization::OnCopy),
+		FExecuteAction::CreateSP(this, &FLexUIComponentReferenceCustomization::OnCopy),
 		FCanExecuteAction::CreateLambda([this] {return bIsInWorld; })
 	))
 	.PasteAction(FUIAction
 	(
-		FExecuteAction::CreateSP(this, &FLGUIComponentReferenceCustomization::OnPaste),
+		FExecuteAction::CreateSP(this, &FLexUIComponentReferenceCustomization::OnPaste),
 		FCanExecuteAction::CreateLambda([this] {return bIsInWorld; })
 	))
 	.PropertyHandleList({ PropertyHandle })
 	.OverrideResetToDefault(FResetToDefaultOverride::Create(
-		FSimpleDelegate::CreateSP(this, &FLGUIComponentReferenceCustomization::OnResetToDefaultClicked)
+		FSimpleDelegate::CreateSP(this, &FLexUIComponentReferenceCustomization::OnResetToDefaultClicked)
 	))
 	;
 	BuildClassFilters();
 	RegenerateContentWidget();
 }
-void FLGUIComponentReferenceCustomization::CustomizeChildren(TSharedRef<IPropertyHandle> InPropertyHandle, IDetailChildrenBuilder& ChildBuilder, IPropertyTypeCustomizationUtils& CustomizationUtils)
+void FLexUIComponentReferenceCustomization::CustomizeChildren(TSharedRef<IPropertyHandle> InPropertyHandle, IDetailChildrenBuilder& ChildBuilder, IPropertyTypeCustomizationUtils& CustomizationUtils)
 {
 	
 }
-void FLGUIComponentReferenceCustomization::OnResetToDefaultClicked()
+void FLexUIComponentReferenceCustomization::OnResetToDefaultClicked()
 {
 	PropertyHandle->ResetToDefault();
 	RegenerateContentWidget();
 }
-void FLGUIComponentReferenceCustomization::RegenerateContentWidget()
+void FLexUIComponentReferenceCustomization::RegenerateContentWidget()
 {
 	if (!PropertyHandle.IsValid())return;
-	auto HelperClassHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIComponentReference, HelperClass));
+	auto HelperClassHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIComponentReference, HelperClass));
 	UClass* HelperClass = nullptr;
 	HelperClassHandle->GetValue(*(UObject**)&HelperClass);
 	if (!IsValid(HelperClass))
@@ -106,12 +106,12 @@ void FLGUIComponentReferenceCustomization::RegenerateContentWidget()
 	}
 
 	UActorComponent* TargetComp = nullptr;
-	auto TargetCompHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIComponentReference, TargetComp));
+	auto TargetCompHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIComponentReference, TargetComp));
 	TargetCompHandle->GetValue(*(UObject**)&TargetComp);
 
-	auto HelperComponentNameHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIComponentReference, HelperComponentName));
+	auto HelperComponentNameHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIComponentReference, HelperComponentName));
 
-	auto HelperActorHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIComponentReference, HelperActor));
+	auto HelperActorHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIComponentReference, HelperActor));
 	AActor* HelperActor = nullptr;
 	HelperActorHandle->GetValue(*(UObject**)&HelperActor);
 
@@ -205,12 +205,12 @@ void FLGUIComponentReferenceCustomization::RegenerateContentWidget()
 						[
 							SNew(SComboButton)
 							.ToolTipText(LOCTEXT("TargetActorHaveMultipleComponent_YouMustSelectOne", "Target actor have multiple valid components, you need to select one of them"))
-							.OnGetMenuContent(this, &FLGUIComponentReferenceCustomization::OnGetMenu, TargetCompHandle, HelperComponentNameHandle, Components)
+							.OnGetMenuContent(this, &FLexUIComponentReferenceCustomization::OnGetMenu, TargetCompHandle, HelperComponentNameHandle, Components)
 							.ContentPadding(FMargin(0))
 							.ButtonContent()
 							[
 								SNew(STextBlock)
-								.Text(this, &FLGUIComponentReferenceCustomization::GetButtonText, TargetCompHandle, Components)
+								.Text(this, &FLexUIComponentReferenceCustomization::GetButtonText, TargetCompHandle, Components)
 								.Font(IDetailLayoutBuilder::GetDetailFont())
 							]
 						]
@@ -227,7 +227,7 @@ void FLGUIComponentReferenceCustomization::RegenerateContentWidget()
 
 	ContentWidgetBox->SetContent(ContentWidget.ToSharedRef());
 }
-bool FLGUIComponentReferenceCustomization::IsAllowedComponentClass(UActorComponent* InComp)
+bool FLexUIComponentReferenceCustomization::IsAllowedComponentClass(UActorComponent* InComp)
 {
 	auto Class = InComp->GetClass();
 	bool bResult = false;
@@ -261,7 +261,7 @@ bool FLGUIComponentReferenceCustomization::IsAllowedComponentClass(UActorCompone
 	}
 	return bResult;
 }
-void FLGUIComponentReferenceCustomization::BuildClassFilters()
+void FLexUIComponentReferenceCustomization::BuildClassFilters()
 {
 	auto AddToClassFilters = [this](const UClass* Class, TArray<const UClass*>& ComponentList)
 	{
@@ -316,17 +316,17 @@ void FLGUIComponentReferenceCustomization::BuildClassFilters()
 	const FString& DisallowedClassesFilterString = PropertyHandle->GetMetaData(NAME_DisallowedClasses);
 	ParseClassFilters(DisallowedClassesFilterString, DisallowedComponentClassFilters);
 }
-void FLGUIComponentReferenceCustomization::OnCopy()
+void FLexUIComponentReferenceCustomization::OnCopy()
 {
-	auto HelperActorHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIComponentReference, HelperActor));
+	auto HelperActorHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIComponentReference, HelperActor));
 	AActor* HelperActor = nullptr;
 	HelperActorHandle->GetValue(*(UObject**)&HelperActor);
 
-	auto TargetCompHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIComponentReference, TargetComp));
+	auto TargetCompHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIComponentReference, TargetComp));
 	UActorComponent* TargetComp = nullptr;
 	TargetCompHandle->GetValue(*(UObject**)&TargetComp);
 
-	auto HelperClassHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIComponentReference, HelperClass));
+	auto HelperClassHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIComponentReference, HelperClass));
 	UClass* HelperClass = nullptr;
 	HelperClassHandle->GetValue(*(UObject**)&HelperClass);
 
@@ -334,16 +334,16 @@ void FLGUIComponentReferenceCustomization::OnCopy()
 	CopiedTargetComp = TargetComp;
 	CopiedHelperClass = HelperClass;
 }
-void FLGUIComponentReferenceCustomization::OnPaste()
+void FLexUIComponentReferenceCustomization::OnPaste()
 {
-	auto HelperActorHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIComponentReference, HelperActor));
-	auto TargetCompHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIComponentReference, TargetComp));
-	auto HelperClassHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIComponentReference, HelperClass));
+	auto HelperActorHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIComponentReference, HelperActor));
+	auto TargetCompHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIComponentReference, TargetComp));
+	auto HelperClassHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIComponentReference, HelperClass));
 	HelperActorHandle->SetValue((UObject*)CopiedHelperActor.Get());
 	TargetCompHandle->SetValue((UObject*)CopiedTargetComp.Get());
 	HelperClassHandle->SetValue((UObject*)CopiedHelperClass);
 }
-TSharedRef<SWidget> FLGUIComponentReferenceCustomization::OnGetMenu(TSharedPtr<IPropertyHandle> TargetCompHandle, TSharedPtr<IPropertyHandle> CompNameProperty, TArray<UActorComponent*> Components)
+TSharedRef<SWidget> FLexUIComponentReferenceCustomization::OnGetMenu(TSharedPtr<IPropertyHandle> TargetCompHandle, TSharedPtr<IPropertyHandle> CompNameProperty, TArray<UActorComponent*> Components)
 {
 	FMenuBuilder MenuBuilder(true, nullptr);
 	//MenuBuilder.BeginSection(FName(), LOCTEXT("Components", "Components"));
@@ -352,7 +352,7 @@ TSharedRef<SWidget> FLGUIComponentReferenceCustomization::OnGetMenu(TSharedPtr<I
 			FText::FromName(FName(NAME_None)),
 			FText(LOCTEXT("Tip", "Clear component selection, will use first one.")),
 			FSlateIcon(),
-			FUIAction(FExecuteAction::CreateRaw(this, &FLGUIComponentReferenceCustomization::OnSelectComponent, TargetCompHandle, CompNameProperty, (UActorComponent*)nullptr))
+			FUIAction(FExecuteAction::CreateRaw(this, &FLexUIComponentReferenceCustomization::OnSelectComponent, TargetCompHandle, CompNameProperty, (UActorComponent*)nullptr))
 		);
 		for (auto Comp : Components)
 		{
@@ -361,14 +361,14 @@ TSharedRef<SWidget> FLGUIComponentReferenceCustomization::OnGetMenu(TSharedPtr<I
 				FText::FromString(Comp->GetName()),
 				FText(),
 				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateRaw(this, &FLGUIComponentReferenceCustomization::OnSelectComponent, TargetCompHandle, CompNameProperty, Comp))
+				FUIAction(FExecuteAction::CreateRaw(this, &FLexUIComponentReferenceCustomization::OnSelectComponent, TargetCompHandle, CompNameProperty, Comp))
 			);
 		}
 	}
 	//MenuBuilder.EndSection();
 	return MenuBuilder.MakeWidget();
 }
-void FLGUIComponentReferenceCustomization::OnSelectComponent(TSharedPtr<IPropertyHandle> TargetCompHandle, TSharedPtr<IPropertyHandle> CompNameProperty, UActorComponent* Comp)
+void FLexUIComponentReferenceCustomization::OnSelectComponent(TSharedPtr<IPropertyHandle> TargetCompHandle, TSharedPtr<IPropertyHandle> CompNameProperty, UActorComponent* Comp)
 {
 	for (auto& Item : ComponentReferenceInstances)
 	{
@@ -377,7 +377,7 @@ void FLGUIComponentReferenceCustomization::OnSelectComponent(TSharedPtr<IPropert
 	}
 }
 
-FText FLGUIComponentReferenceCustomization::GetButtonText(TSharedPtr<IPropertyHandle> TargetCompHandle, TArray<UActorComponent*> Components)const
+FText FLexUIComponentReferenceCustomization::GetButtonText(TSharedPtr<IPropertyHandle> TargetCompHandle, TArray<UActorComponent*> Components)const
 {
 	UActorComponent* TargetComp = nullptr;
 	TargetCompHandle->GetValue(*(UObject**)&TargetComp);
@@ -391,21 +391,21 @@ FText FLGUIComponentReferenceCustomization::GetButtonText(TSharedPtr<IPropertyHa
 		return LOCTEXT("ComponentButtonNone", "None");
 	}
 }
-void FLGUIComponentReferenceCustomization::OnHelperActorValueChange()
+void FLexUIComponentReferenceCustomization::OnHelperActorValueChange()
 {
-	auto HelperActorHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIComponentReference, HelperActor));
+	auto HelperActorHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIComponentReference, HelperActor));
 	AActor* HelperActor = nullptr;
 	HelperActorHandle->GetValue(*(UObject**)&HelperActor);
 
-	auto TargetCompHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIComponentReference, TargetComp));
+	auto TargetCompHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIComponentReference, TargetComp));
 	UActorComponent* TargetComp = nullptr;
 	TargetCompHandle->GetValue(*(UObject**)&TargetComp);
 
-	auto HelperClassHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIComponentReference, HelperClass));
+	auto HelperClassHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIComponentReference, HelperClass));
 	UClass* HelperClass = nullptr;
 	HelperClassHandle->GetValue(*(UObject**)&HelperClass);
 
-	auto HelperComponentNameHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIComponentReference, HelperClass));
+	auto HelperComponentNameHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIComponentReference, HelperClass));
 	
 	if (HelperActor)
 	{

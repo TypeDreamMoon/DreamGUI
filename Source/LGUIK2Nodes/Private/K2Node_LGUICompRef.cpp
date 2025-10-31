@@ -20,7 +20,7 @@
 void UK2Node_LGUICompRef_GetComponent::AllocateDefaultPins()
 {
 	//input pin
-	UScriptStruct* compRefScriptStruct = FLGUIComponentReference::StaticStruct();
+	UScriptStruct* compRefScriptStruct = FLexUIComponentReference::StaticStruct();
 	CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Struct, compRefScriptStruct, TEXT("LGUI Component Reference"));
 	//output pin
 	CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Wildcard, TEXT("Output"));
@@ -106,11 +106,11 @@ void UK2Node_LGUICompRef_GetComponent::SetOutputPinType()
 								{
 									if (auto structProperty = CastField<FStructProperty>(propertyItem))
 									{
-										if (structProperty->Struct == FLGUIComponentReference::StaticStruct())
+										if (structProperty->Struct == FLexUIComponentReference::StaticStruct())
 										{
 											if (structProperty->GetFName() == propertyName)
 											{
-												FLGUIComponentReference* structPtr = structProperty->ContainerPtrToValuePtr<FLGUIComponentReference>(objectInstance);
+												FLexUIComponentReference* structPtr = structProperty->ContainerPtrToValuePtr<FLexUIComponentReference>(objectInstance);
 												if (structPtr->GetComponentClass() != nullptr)
 												{
 													UEdGraphPin* outputPin = Pins[1];

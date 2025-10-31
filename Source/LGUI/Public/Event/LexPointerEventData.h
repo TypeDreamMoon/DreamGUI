@@ -38,6 +38,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
 		ELexUIPointerInputType InputType;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
+		int UserIndex = 0;
 	/** id of the pointer (touch id) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
 		int PointerID = 0;

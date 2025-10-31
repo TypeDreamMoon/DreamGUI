@@ -1,19 +1,18 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 #include "CoreMinimal.h"
 #include "IPropertyTypeCustomization.h"
-#include "PropertyCustomizationHelpers.h"
 #include "IPropertyUtilities.h"
 #include "Widgets/SWidget.h"
 #pragma once
 
 class UActorComponent;
 class AActor;
-struct FLGUIComponentReference;
+struct FLexUIComponentReference;
 
 /**
  * 
  */
-class FLGUIComponentReferenceCustomization : public IPropertyTypeCustomization
+class FLexUIComponentReferenceCustomization : public IPropertyTypeCustomization
 {
 public:
 
@@ -44,7 +43,7 @@ private:
 	TArray<const UClass*> DisallowedComponentClassFilters;
 	TSharedPtr<SBox> ContentWidgetBox;
 	bool bIsInWorld = false;
-	TArray<FLGUIComponentReference*> ComponentReferenceInstances;
+	TArray<FLexUIComponentReference*> ComponentReferenceInstances;
 	static TWeakObjectPtr<AActor> CopiedHelperActor;
 	static TWeakObjectPtr<UActorComponent> CopiedTargetComp;
 	static UClass* CopiedHelperClass;

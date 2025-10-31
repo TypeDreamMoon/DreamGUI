@@ -68,7 +68,7 @@ void UUIDropdownComponent::Show()
 {
 	if (!ListRoot.IsValid())
 	{
-		UE_LOG(LGUI, Error, TEXT("[UUIDropdownComponent::Show]ListRoot is not valid!"));
+		UE_LOG(LGUI, Error, TEXT("[%s].%d ListRoot is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
 	if (!IsValid(this->GetLexWidget()))return;

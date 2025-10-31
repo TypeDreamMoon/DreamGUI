@@ -5,7 +5,7 @@
 #include "Components/ActorComponent.h"
 #include "Core/Components/LexSprite.h"
 #include "Event/LexDelegateDeclaration.h"
-#include "Event/LGUIEventDelegate.h"
+#include "Event/LexUIEventDelegate.h"
 #include "Event/Interface/LexPointerDragInterface.h"
 #include "Event/Interface/LexPointerScrollInterface.h"
 #include "Core/LexUIBehaviour.h"
@@ -110,7 +110,7 @@ protected:
 	UPROPERTY(BlueprintAssignable, Category = "LGUI-ScrollView", DisplayName="OnValueChanged")
 	FUIScrollViewValueChangedEvent OnValueChangedBP;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollView")
-	FLGUIEventDelegate OnValueChanged = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Vector2);
+	FLexUIEventDelegate OnValueChanged = FLexUIEventDelegate(ELexUIEventDelegateParameterType::Vector2);
 public:
 	FLexUIMulticastDelegateVector2& GetOnValueChangedEvent(){return OnValueChangedCPP;}
 	

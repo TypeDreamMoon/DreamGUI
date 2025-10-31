@@ -6,9 +6,11 @@
 #include "Components/ActorComponent.h"
 #include "LexBaseInputModule.generated.h"
 
+class ULexEventSystem;
+
 /**
  * This is the place for handling inputs.
- * Only one InputModule is valid in the same time. so if multiple InputModule is activate, then the last one will be deactivate.
+ * Call RegisterInputModuleToEventSystem to make this work. Only one InputModule is valid in the same time.
  */
 UCLASS(Abstract)
 class LGUI_API ULexBaseInputModule : public UActorComponent
@@ -19,12 +21,15 @@ public:
 	ULexBaseInputModule();
 
 	virtual void ProcessInput() PURE_VIRTUAL(, );
-
-	virtual void Activate(bool bReset = false)override;
-	virtual void Deactivate()override;
-	UFUNCTION(BlueprintCallable, Category = LGUI)
 	virtual void ClearEvent() PURE_VIRTUAL(, );
+
+	/**
+	 * Register this InputModule to a EventSystem. Only one InputModule is valid in the same time.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void RegisterInputModuleToEventSystem(ULexEventSystem* TargetEventSystem);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void UnregisterInputModuleFromEventSystem();
 protected:
-	void ActivateInputModule();
-	void DeactivateInputModule();
+	UPROPERTY(Transient)TWeakObjectPtr<ULexEventSystem> EventSystem = nullptr;
 };

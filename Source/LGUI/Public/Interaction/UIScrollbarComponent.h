@@ -4,7 +4,7 @@
 
 #include "Event/Interface/LexPointerDragInterface.h"
 #include "UISelectableComponent.h"
-#include "Event/LGUIEventDelegate.h"
+#include "Event/LexUIEventDelegate.h"
 #include "Event/LexDelegateDeclaration.h"
 #include "UIScrollbarComponent.generated.h"
 
@@ -58,7 +58,7 @@ protected:
 	UPROPERTY(BlueprintAssignable, Category = "LGUI-Scrollbar", DisplayName="OnValueChanged")
 	FUIScrollbarValueChangedEvent OnValueChangedBP;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Scrollbar")
-	FLGUIEventDelegate OnValueChanged = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Double);
+	FLexUIEventDelegate OnValueChanged = FLexUIEventDelegate(ELexUIEventDelegateParameterType::Double);
 
 	float PressValue = 0;
 public:

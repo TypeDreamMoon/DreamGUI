@@ -1,11 +1,9 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "LexUIBPLibrary.h"
+
+#include "LexUIDelegateHandleWrapper.h"
 #include "Utils/LexUIUtils.h"
-#include "LTweenManager.h"
-#include "LTweenBPLibrary.h"
-#include "../Public/Core/Components/LexWidget.h"
-#include "../Public/Core/Components/LexVisual.h"
 #include "Framework/Application/SlateApplication.h"
 #include "LGUI.h"
 #include "Core/Actor/LexWidgetActor.h"
@@ -250,9 +248,39 @@ void ULexUIBPLibrary::CreateScreenSpaceUIRoot(UObject* WorldContextObject, bool 
 	OutCanvas = Canvas;
 }
 
+void ULexUIBPLibrary::LoadScreenSpaceUIPrefab(UObject* WorldContextObject, ULGUIPrefab* ScreenSpaceUIPrefab,
+	bool bCreateDefaultEventSystem, ALexWidgetActor*& OutRootWidgetActor, ULexCanvas*& OutCanvas)
+{	
+	auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
+	if (!World)return;
+
+	if (!IsValid(ScreenSpaceUIPrefab))
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d InPrefab not valid"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return;
+	}
+	OutRootWidgetActor = Cast<ALexWidgetActor>(ScreenSpaceUIPrefab->LoadPrefab(World, nullptr));
+	OutCanvas = OutRootWidgetActor->FindComponentByClass<ULexCanvas>();
+
+	if (bCreateDefaultEventSystem)
+	{
+		auto ClassName = TEXT("PresetEventSystemActor");
+		if (auto PresetEventSystemActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
+		{
+			auto Actor = World->SpawnActor<AActor>(PresetEventSystemActorClass);
+			Actor->SetActorLabel(ClassName);
+		}
+		else
+		{
+			UE_LOG(LGUI, Error, TEXT("[%s].%d Load %s error! Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), 
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ClassName);
+		}
+	}
+}
+
 void ULexUIBPLibrary::CreateWorldSpaceUI(UObject* WorldContextObject, bool bCreateDefaultEventSystem,
-	bool bUseLexUIRenderer,
-	ALexWidgetActor*& OutRootWidgetActor, ULexCanvas*& OutCanvas)
+                                         bool bUseLexUIRenderer,
+                                         ALexWidgetActor*& OutRootWidgetActor, ULexCanvas*& OutCanvas)
 {
 	auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
 	if (!World)return;
@@ -289,7 +317,7 @@ void ULexUIBPLibrary::CreateWorldSpaceUI(UObject* WorldContextObject, bool bCrea
 	OutCanvas = Canvas;
 }
 
-UActorComponent* ULexUIBPLibrary::LGUICompRef_GetComponent(const FLGUIComponentReference& InLGUIComponentReference, TSubclassOf<UActorComponent> InComponentType)
+UActorComponent* ULexUIBPLibrary::LGUICompRef_GetComponent(const FLexUIComponentReference& InLGUIComponentReference, TSubclassOf<UActorComponent> InComponentType)
 {
 	auto comp = InLGUIComponentReference.GetComponent();
 	if (comp == nullptr)
@@ -305,12 +333,12 @@ UActorComponent* ULexUIBPLibrary::LGUICompRef_GetComponent(const FLGUIComponentR
 	return comp;
 }
 
-AActor* ULexUIBPLibrary::LGUICompRef_GetActor(const FLGUIComponentReference& InLGUIComponentReference)
+AActor* ULexUIBPLibrary::LGUICompRef_GetActor(const FLexUIComponentReference& InLGUIComponentReference)
 {
 	return InLGUIComponentReference.GetActor();
 }
 
-void ULexUIBPLibrary::K2_LGUICompRef_GetComponent(const FLGUIComponentReference& InLGUICompRef, UActorComponent*& OutResult)
+void ULexUIBPLibrary::K2_LGUICompRef_GetComponent(const FLexUIComponentReference& InLGUICompRef, UActorComponent*& OutResult)
 {
 	OutResult = InLGUICompRef.GetComponent();
 }
@@ -349,7 +377,7 @@ void ULexUIBPLibrary::LGUIExecuteControllerInputAction(FKey inputKey, bool press
 
 #pragma region EventDelegate
 #define IMPLEMENT_EVENTDELEGATE_BP(EventDelegateParamType, ParamType)\
-FLGUIDelegateHandleWrapper ULexUIBPLibrary::LGUIEventDelegate_##EventDelegateParamType##_Register(const FLGUIEventDelegate_##EventDelegateParamType& InEvent, FLGUIEventDelegate_##EventDelegateParamType##_DynamicDelegate InDelegate)\
+FLexUIDelegateHandleWrapper ULexUIBPLibrary::LexUIEventDelegate_##EventDelegateParamType##_Register(const FLexUIEventDelegate_##EventDelegateParamType& InEvent, FLexUIEventDelegate_##EventDelegateParamType##_DynamicDelegate InDelegate)\
 {\
 	auto delegateHandle = InEvent.Register([InDelegate](ParamType value) {\
 		if (InDelegate.IsBound())\
@@ -357,14 +385,14 @@ FLGUIDelegateHandleWrapper ULexUIBPLibrary::LGUIEventDelegate_##EventDelegatePar
 			InDelegate.Execute(value);\
 		}\
 		});\
-	return FLGUIDelegateHandleWrapper(delegateHandle);\
+	return FLexUIDelegateHandleWrapper(delegateHandle);\
 }\
-void ULexUIBPLibrary::LGUIEventDelegate_##EventDelegateParamType##_Unregister(const FLGUIEventDelegate_##EventDelegateParamType& InEvent, const FLGUIDelegateHandleWrapper& InDelegateHandle)\
+void ULexUIBPLibrary::LexUIEventDelegate_##EventDelegateParamType##_Unregister(const FLexUIEventDelegate_##EventDelegateParamType& InEvent, const FLexUIDelegateHandleWrapper& InDelegateHandle)\
 {\
 	InEvent.Unregister(InDelegateHandle.DelegateHandle);\
 }
 
-FLGUIDelegateHandleWrapper ULexUIBPLibrary::LGUIEventDelegate_Empty_Register(const FLGUIEventDelegate_Empty& InEvent, FLGUIEventDelegate_Empty_DynamicDelegate InDelegate)
+FLexUIDelegateHandleWrapper ULexUIBPLibrary::LexUIEventDelegate_Empty_Register(const FLexUIEventDelegate_Empty& InEvent, FLexUIEventDelegate_Empty_DynamicDelegate InDelegate)
 {
 	auto delegateHandle = InEvent.Register([InDelegate]() {
 		if (InDelegate.IsBound())
@@ -372,9 +400,9 @@ FLGUIDelegateHandleWrapper ULexUIBPLibrary::LGUIEventDelegate_Empty_Register(con
 			InDelegate.Execute();
 		}
 		});
-	return FLGUIDelegateHandleWrapper(delegateHandle);
+	return FLexUIDelegateHandleWrapper(delegateHandle);
 }
-void ULexUIBPLibrary::LGUIEventDelegate_Empty_Unregister(const FLGUIEventDelegate_Empty& InEvent, const FLGUIDelegateHandleWrapper& InDelegateHandle)
+void ULexUIBPLibrary::LexUIEventDelegate_Empty_Unregister(const FLexUIEventDelegate_Empty& InEvent, const FLexUIDelegateHandleWrapper& InDelegateHandle)
 {
 	InEvent.Unregister(InDelegateHandle.DelegateHandle);
 }

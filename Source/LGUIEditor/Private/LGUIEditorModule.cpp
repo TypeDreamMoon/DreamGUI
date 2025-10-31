@@ -54,9 +54,8 @@
 #include "DetailCustomization/UIToggleCustomization.h"
 #include "DetailCustomization/UITextInputCustomization.h"
 #include "DetailCustomization/LGUIPrefabCustomization.h"
-#include "DetailCustomization/LGUIEventDelegateCustomization.h"
-#include "DetailCustomization/LGUIEventDelegatePresetParamCustomization.h"
-#include "DetailCustomization/LGUIComponentReferenceCustomization.h"
+#include "DetailCustomization/LexUIEventDelegateCustomization.h"
+#include "DetailCustomization/LexUIComponentReferenceCustomization.h"
 #include "DetailCustomization/UIScrollViewWithScrollBarCustomization.h"
 #include "DetailCustomization/UISpriteSequencePlayerCustomization.h"
 #include "DetailCustomization/UISpriteSheetTexturePlayerCustomization.h"
@@ -86,6 +85,7 @@
 #include "DetailCustomization/LexLayoutHorizontalAndVerticalCustomization.h"
 #include "DetailCustomization/LexLayoutCommonSlotCustomization.h"
 #include "DetailCustomization/LexLayoutFlexBoxCustomization.h"
+#include "DetailCustomization/LexUIEventDelegatePresetParamCustomization.h"
 
 const FName FLGUIEditorModule::LGUIDynamicSpriteAtlasViewerName(TEXT("LGUIDynamicSpriteAtlasViewerName"));
 const FName FLGUIEditorModule::LGUIPrefabSequenceTabName(TEXT("LGUIPrefabSequenceTabName"));
@@ -257,36 +257,36 @@ void FLGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomClassLayout(UUISpriteSequencePlayer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteSequencePlayerCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUISpriteSheetTexturePlayer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteSheetTexturePlayerCustomization::MakeInstance));
 
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLGUIEventDelegateCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexUIEventDelegateCustomization::MakeInstance));
 		//PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegateTwoParam::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLGUIEventDelegateTwoParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_Empty::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_Bool::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_Float::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_Double::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_Int8::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_UInt8::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_Int16::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_UInt16::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_Int32::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_UInt32::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_Int64::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_UInt64::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_Vector2::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_Vector3::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_Vector4::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_Color::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_LinearColor::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_Quaternion::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_String::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_Object::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_Actor::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_PointerEvent::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_Class::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_Rotator::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_Text::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegate_Name::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LGUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Empty::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Bool::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Float::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Double::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Int8::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_UInt8::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Int16::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_UInt16::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Int32::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_UInt32::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Int64::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_UInt64::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Vector2::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Vector3::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Vector4::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Color::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_LinearColor::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Quaternion::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_String::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Object::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Actor::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_PointerEvent::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Class::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Rotator::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Text::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Name::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
 
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIComponentReference::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLGUIComponentReferenceCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIComponentReference::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexUIComponentReferenceCustomization::MakeInstance));
 
 		PropertyModule.RegisterCustomClassLayout(ULGUIPrefabSequenceComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLGUIPrefabSequenceComponentCustomization::MakeInstance));
 		
@@ -480,34 +480,34 @@ void FLGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(UUISpriteSequencePlayer::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUISpriteSheetTexturePlayer::StaticClass()->GetFName());
 
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate::StaticStruct()->GetFName());
 		//PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegateTwoParam::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_Empty::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_Bool::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_Float::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_Double::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_Int8::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_UInt8::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_Int16::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_UInt16::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_Int32::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_UInt32::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_Int64::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_UInt64::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_Vector2::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_Vector3::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_Vector4::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_Color::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_LinearColor::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_Quaternion::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_String::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_Object::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_Actor::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_PointerEvent::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_Class::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegate_Rotator::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Empty::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Bool::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Float::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Double::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Int8::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_UInt8::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Int16::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_UInt16::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Int32::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_UInt32::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Int64::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_UInt64::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Vector2::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Vector3::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Vector4::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Color::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_LinearColor::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Quaternion::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_String::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Object::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Actor::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_PointerEvent::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Class::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Rotator::StaticStruct()->GetFName());
 
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIComponentReference::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIComponentReference::StaticStruct()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(ULGUIPrefabSequenceComponent::StaticClass()->GetFName());
 

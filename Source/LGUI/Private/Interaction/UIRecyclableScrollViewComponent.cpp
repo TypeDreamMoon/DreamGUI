@@ -181,7 +181,7 @@ void UUIRecyclableScrollViewComponent::SetInfiniteLoop(bool value)
 {
     if ((Horizontal && Rows != 1) || (Vertical && Columns != 1))
     {
-        UE_LOG(LGUI, Error, TEXT("[%s] InfiniteLoop only work when Rows and Columns equals 1"), ANSI_TO_TCHAR(__FUNCTION__));
+        UE_LOG(LGUI, Error, TEXT("[%s].%d InfiniteLoop only work when Rows and Columns equals 1"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
         return;
     }
     if (value != bInfiniteLoop)

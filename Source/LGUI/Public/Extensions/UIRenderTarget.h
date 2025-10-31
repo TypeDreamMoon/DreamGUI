@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "LGUIComponentReference.h"
+#include "LexUIComponentReference.h"
 #include "PrefabSystem/ILGUIPrefabInterface.h"
 #include "Core/Components/LexCustomMesh.h"
 #include "Core/Actor/LexWidgetActor.h"
@@ -32,7 +32,7 @@ protected:
 	virtual void BeginPlay()override;
 
 	UPROPERTY(EditAnywhere, Category = LGUI)
-		FLGUIComponentReference TargetCanvas;
+		FLexUIComponentReference TargetCanvas;
 
 	mutable TWeakObjectPtr<class ULexCanvas> TargetCanvasObject = nullptr;
 public:

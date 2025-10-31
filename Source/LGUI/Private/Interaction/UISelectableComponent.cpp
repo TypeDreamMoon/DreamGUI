@@ -8,15 +8,8 @@
 #include "LTweenManager.h"
 #include "Core/Components/LexCanvas.h"
 #include "Event/LexEventSystem.h"
-#include "Core/Components/LexSprite.h"
-#include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/LexUISettings.h"
 #include "Core/Components/LexImage.h"
-#if WITH_EDITOR
-#include "Utils/LexUIUtils.h"
-#endif
-
-
 
 
 void UUISelectableTransition::StopTransition() 
@@ -391,7 +384,7 @@ bool UUISelectableComponent::OnPointerDown_Implementation(ULexPointerEventData* 
 	IsPointerDown = true;
 	CurrentSelectionState = GetSelectionState();
 	ApplySelectionState(false);
-	if (auto eventSystemInstance = ULexEventSystem::GetLexEventSystemInstance(this))
+	if (auto eventSystemInstance = ULexEventSystem::GetLexEventSystemInstance(this, IsValid(eventData) ? eventData->UserIndex : 0))
 	{
 		eventSystemInstance->SetSelectComponent(GetLexWidget(), eventData, eventData->EnterComponentEventFireType);
 	}

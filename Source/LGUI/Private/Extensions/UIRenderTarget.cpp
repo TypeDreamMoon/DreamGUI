@@ -14,7 +14,7 @@
 
 UUIRenderTarget::UUIRenderTarget(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
-	TargetCanvas = FLGUIComponentReference(ULexCanvas::StaticClass());
+	TargetCanvas = FLexUIComponentReference(ULexCanvas::StaticClass());
 }
 
 bool UUIRenderTarget::SupportDrawCallBatching()const
@@ -150,23 +150,23 @@ ULexCanvas* UUIRenderTarget::GetCanvas()const
 	}
 	if (!TargetCanvas.IsValidComponentReference())
 	{
-		UE_LOG(LGUI, Warning, TEXT("[UUIRenderTarget::GetCanvas]TargetCanvas not valid!"));
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d TargetCanvas not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return nullptr;
 	}
 	auto Canvas = TargetCanvas.GetComponent<ULexCanvas>();
 	if (Canvas == nullptr)
 	{
-		UE_LOG(LGUI, Warning, TEXT("[UUIRenderTarget::GetCanvas]TargetCanvas not valid!"));
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d TargetCanvas not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return nullptr;
 	}
 	if (!Canvas->IsRootCanvas())
 	{
-		UE_LOG(LGUI, Warning, TEXT("[UUIRenderTarget::GetCanvas]TargetCanvas must be a root canvas!"));
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d TargetCanvas must be a root canvas!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return nullptr;
 	}
 	if (Canvas->GetRenderMode() != ELexRenderMode::RenderTarget)
 	{
-		UE_LOG(LGUI, Warning, TEXT("[UUIRenderTarget::GetCanvas]TargetCanvas's render mode must be RenderTarget!"));
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d TargetCanvas's render mode must be RenderTarget!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return nullptr;
 	}
 	TargetCanvasObject = Canvas;

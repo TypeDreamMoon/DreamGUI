@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/MeshComponent.h"
-#include "LGUIComponentReference.h"
+#include "LexUIComponentReference.h"
 #include "Interfaces/Interface_CollisionDataProvider.h"
 #include "DynamicMeshBuilder.h"
 #include "LGUIRenderTargetInteraction.h"
@@ -41,7 +41,7 @@ public:
 
 private:
 	UPROPERTY(EditAnywhere, Category = LGUI)
-		FLGUIComponentReference TargetCanvas;
+		FLexUIComponentReference TargetCanvas;
 	UPROPERTY(EditAnywhere, Category = LGUI)
 		ELGUIRenderTargetGeometryMode GeometryMode = ELGUIRenderTargetGeometryMode::Plane;
 	UPROPERTY(EditAnywhere, Category = LGUI)

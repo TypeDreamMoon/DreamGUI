@@ -18,6 +18,7 @@
 #include "Core/LexUIRender/LexUIRenderer.h"
 #include "Core/ILexUICultureChangedInterface.h"
 #include "Core/LexUIBehaviour.h"
+#include "Event/LexEventSystem.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #if WITH_EDITOR
@@ -334,7 +335,7 @@ bool ULexUIEditorManagerObject::InitCheck()
 	{
 		Instance = NewObject<ULexUIEditorManagerObject>();
 		Instance->AddToRoot();
-		UE_LOG(LGUI, Log, TEXT("[ULGUIManagerObject::InitCheck]No Instance for LGUIManagerObject, create!"));
+		UE_LOG(LGUI, Log, TEXT("[%s].%d No Instance for LGUIManagerObject, create!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		Instance->OnActorLabelChangedDelegateHandle = FCoreDelegates::OnActorLabelChanged.AddUObject(Instance, &ULexUIEditorManagerObject::OnActorLabelChanged);
 		//open map
 		Instance->OnMapOpenedDelegateHandle = FEditorDelegates::OnMapOpened.AddUObject(Instance, &ULexUIEditorManagerObject::OnMapOpened);
@@ -1480,21 +1481,6 @@ void ULexUIManagerWorldSubsystem::RemoveRaycaster(ULexBaseRaycaster* InRaycaster
 	}
 }
 
-void ULexUIManagerWorldSubsystem::SetCurrentInputModule(ULexBaseInputModule* InInputModule)
-{
-	if (auto Instance = GetInstance(InInputModule->GetWorld()))
-	{
-		Instance->CurrentInputModule = InInputModule;
-	}
-}
-void ULexUIManagerWorldSubsystem::ClearCurrentInputModule(ULexBaseInputModule* InInputModule)
-{
-	if (auto Instance = GetInstance(InInputModule->GetWorld()))
-	{
-		Instance->CurrentInputModule = nullptr;
-	}
-}
-
 void ULexUIManagerWorldSubsystem::AddSelectable(UUISelectableComponent* InSelectable)
 {
 	if (auto Instance = GetInstance(InSelectable->GetWorld()))
@@ -1520,6 +1506,45 @@ void ULexUIManagerWorldSubsystem::RemoveSelectable(UUISelectableComponent* InSel
 			Instance->AllSelectableArray.RemoveAt(index);
 		}
 	}
+}
+
+ULexEventSystem* ULexUIManagerWorldSubsystem::GetEventSystemByUserIndex(int UserIndex)
+{
+	if (auto ResultPtr = MapUserIndexToEventSystem.Find(UserIndex))
+	{
+		return ResultPtr->Get();
+	}
+	return nullptr;
+}
+
+void ULexUIManagerWorldSubsystem::AddEventSystem(ULexEventSystem* InEventSystem)
+{
+	if (auto InstancePtr = MapUserIndexToEventSystem.Find(InEventSystem->GetUserIndex()))
+	{
+		auto Instance = *InstancePtr;
+		FString ActorName =
+#if WITH_EDITOR
+			Instance->GetOwner()->GetActorLabel();
+#else
+			instance->GetOwner()->GetName();
+#endif
+		FString ErrorMsg = FString::Printf(TEXT("[%s].%d LexEventSystem component is already exist in actor:%s, pathName:%s, world:%s, multiple LexEventSystem with same UserIndex in same world is not allowed!")
+			, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *ActorName, *Instance->GetPathName(), *GetWorld()->GetPathName());
+		UE_LOG(LGUI, Error, TEXT("%s"), *ErrorMsg);
+		GEngine->AddOnScreenDebugMessage(-1, -1, FColor::Red, ErrorMsg);
+#if WITH_EDITOR
+		FLexUIUtils::EditorNotification(FText::FromString(ErrorMsg), 10);
+#endif
+	}
+	else
+	{
+		MapUserIndexToEventSystem.Add(InEventSystem->GetUserIndex(), InEventSystem);
+	}
+}
+
+void ULexUIManagerWorldSubsystem::RemoveEventSystem(ULexEventSystem* InEventSystem)
+{
+	MapUserIndexToEventSystem.Remove(InEventSystem->GetUserIndex());
 }
 
 void ULexUIManagerWorldSubsystem::ProcessLexUILifecycleEvent(ULexUIBehaviour* InComp)

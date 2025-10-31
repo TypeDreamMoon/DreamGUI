@@ -17,57 +17,33 @@
 #define LOCTEXT_NAMESPACE "LGUIPrefabManagerObject"
 
 
-
-#if WITH_EDITOR
-class FLGUIObjectCreateDeleteListener : public FUObjectArray::FUObjectCreateListener, public FUObjectArray::FUObjectDeleteListener
-{
-public:
-	ULGUIPrefabManagerObject* Manager = nullptr;
-	FLGUIObjectCreateDeleteListener(ULGUIPrefabManagerObject* InManager)
-	{
-		Manager = InManager;
-		GUObjectArray.AddUObjectCreateListener(this);
-		GUObjectArray.AddUObjectDeleteListener(this);
-	}
-	~FLGUIObjectCreateDeleteListener()
-	{
-		GUObjectArray.RemoveUObjectCreateListener(this);
-		GUObjectArray.RemoveUObjectDeleteListener(this);
-	}
-
-	virtual void NotifyUObjectCreated(const class UObjectBase* Object, int32 Index)override
-	{
-		if (auto Comp = Cast<UActorComponent>((UObject*)Object))
-		{
-			if (Comp->IsVisualizationComponent())return;
-			if (auto Actor = Comp->GetOwner())
-			{
-				Manager->OnComponentCreateDelete().Broadcast(true, Comp, Actor);
-			}
-		}
-	}
-	virtual void NotifyUObjectDeleted(const class UObjectBase* Object, int32 Index)override
-	{
-		if (auto Comp = Cast<UActorComponent>((UObject*)Object))
-		{
-			if (Comp->IsVisualizationComponent())return;
-			if (auto Actor = Comp->GetOwner())
-			{
-				Manager->OnComponentCreateDelete().Broadcast(false, Comp, Actor);
-			}
-		}
-	}
-	virtual void OnUObjectArrayShutdown()override {};
-};
-#endif
-
 ULGUIPrefabManagerObject* ULGUIPrefabManagerObject::Instance = nullptr;
 ULGUIPrefabManagerObject::ULGUIPrefabManagerObject()
 {
 
 }
-void ULGUIPrefabManagerObject::BeginDestroy()
+
+void ULGUIPrefabManagerObject::Initialize(FSubsystemCollectionBase& Collection)
 {
+	Super::Initialize(Collection);
+	Instance = this;
+
+	//open map
+	OnMapOpenedDelegateHandle = FEditorDelegates::OnMapOpened.AddUObject(Instance, &ULGUIPrefabManagerObject::OnMapOpened);
+	OnPackageReloadedDelegateHandle = FCoreUObjectDelegates::OnPackageReloaded.AddUObject(Instance, &ULGUIPrefabManagerObject::OnPackageReloaded);
+	if (GEditor)
+	{
+		//reimport asset
+		OnAssetReimportDelegateHandle = GEditor->GetEditorSubsystem<UImportSubsystem>()->OnAssetReimport.AddUObject(Instance, &ULGUIPrefabManagerObject::OnAssetReimport);
+		//blueprint recompile
+		OnBlueprintPreCompileDelegateHandle = GEditor->OnBlueprintPreCompile().AddUObject(Instance, &ULGUIPrefabManagerObject::OnBlueprintPreCompile);
+		OnBlueprintCompiledDelegateHandle = GEditor->OnBlueprintCompiled().AddUObject(Instance, &ULGUIPrefabManagerObject::OnBlueprintCompiled);
+	}
+}
+
+void ULGUIPrefabManagerObject::Deinitialize()
+{
+	Super::Deinitialize();
 #if WITH_EDITORONLY_DATA
 	if (OnAssetReimportDelegateHandle.IsValid())
 	{
@@ -110,11 +86,8 @@ void ULGUIPrefabManagerObject::BeginDestroy()
 		PreviewWorldForPrefabPackage->ReleasePhysicsScene();
 	}
 
-	delete ObjectCreateDeleteListener;
-	ObjectCreateDeleteListener = nullptr;
 #endif
 	Instance = nullptr;
-	Super::BeginDestroy();
 }
 
 void ULGUIPrefabManagerObject::Tick(float DeltaTime)
@@ -162,7 +135,6 @@ TStatId ULGUIPrefabManagerObject::GetStatId() const
 
 void ULGUIPrefabManagerObject::AddOneShotTickFunction(const TFunction<void()>& InFunction, int InDelayFrameCount)
 {
-	InitCheck();
 	InDelayFrameCount = FMath::Max(0, InDelayFrameCount);
 	TTuple<int, TFunction<void()>> Item;
 	Item.Key = InDelayFrameCount;
@@ -171,7 +143,6 @@ void ULGUIPrefabManagerObject::AddOneShotTickFunction(const TFunction<void()>& I
 }
 FDelegateHandle ULGUIPrefabManagerObject::RegisterEditorTickFunction(const TFunction<void(float)>& InFunction)
 {
-	InitCheck();
 	return Instance->EditorTick.AddLambda(InFunction);
 }
 void ULGUIPrefabManagerObject::UnregisterEditorTickFunction(const FDelegateHandle& InDelegateHandle)
@@ -180,37 +151,6 @@ void ULGUIPrefabManagerObject::UnregisterEditorTickFunction(const FDelegateHandl
 	{
 		Instance->EditorTick.Remove(InDelegateHandle);
 	}
-}
-
-ULGUIPrefabManagerObject* ULGUIPrefabManagerObject::GetInstance(bool CreateIfNotValid)
-{
-	if (CreateIfNotValid)
-	{
-		InitCheck();
-	}
-	return Instance;
-}
-bool ULGUIPrefabManagerObject::InitCheck()
-{
-	if (Instance == nullptr)
-	{
-		Instance = NewObject<ULGUIPrefabManagerObject>();
-		Instance->AddToRoot();
-		UE_LOG(LGUI, Log, TEXT("[ULGUIManagerObject::InitCheck]No Instance for LGUIManagerObject, create!"));
-		//open map
-		Instance->OnMapOpenedDelegateHandle = FEditorDelegates::OnMapOpened.AddUObject(Instance, &ULGUIPrefabManagerObject::OnMapOpened);
-		Instance->OnPackageReloadedDelegateHandle = FCoreUObjectDelegates::OnPackageReloaded.AddUObject(Instance, &ULGUIPrefabManagerObject::OnPackageReloaded);
-		if (GEditor)
-		{
-			//reimport asset
-			Instance->OnAssetReimportDelegateHandle = GEditor->GetEditorSubsystem<UImportSubsystem>()->OnAssetReimport.AddUObject(Instance, &ULGUIPrefabManagerObject::OnAssetReimport);
-			//blueprint recompile
-			Instance->OnBlueprintPreCompileDelegateHandle = GEditor->OnBlueprintPreCompile().AddUObject(Instance, &ULGUIPrefabManagerObject::OnBlueprintPreCompile);
-			Instance->OnBlueprintCompiledDelegateHandle = GEditor->OnBlueprintCompiled().AddUObject(Instance, &ULGUIPrefabManagerObject::OnBlueprintCompiled);
-		}
-		Instance->ObjectCreateDeleteListener = new FLGUIObjectCreateDeleteListener(Instance);
-	}
-	return true;
 }
 
 void ULGUIPrefabManagerObject::OnBlueprintPreCompile(UBlueprint* InBlueprint)
@@ -256,11 +196,10 @@ void ULGUIPrefabManagerObject::OnPackageReloaded(EPackageReloadPhase Phase, FPac
 
 UWorld* ULGUIPrefabManagerObject::GetPreviewWorldForPrefabPackage()
 {
-	InitCheck();
 	auto& PreviewWorldForPrefabPackage = Instance->PreviewWorldForPrefabPackage;
 	if (PreviewWorldForPrefabPackage == nullptr)
 	{
-		FName UniqueWorldName = MakeUniqueObjectName(Instance, UWorld::StaticClass(), FName("LGUI_PreviewWorldForPrefabPackage"));
+		FName UniqueWorldName = MakeUniqueObjectName(Instance, UWorld::StaticClass(), FName("LexUI_PreviewWorldForPrefabPackage"));
 		PreviewWorldForPrefabPackage = NewObject<UWorld>(Instance, UniqueWorldName);
 		PreviewWorldForPrefabPackage->WorldType = EWorldType::EditorPreview;
 
@@ -280,19 +219,11 @@ UWorld* ULGUIPrefabManagerObject::GetPreviewWorldForPrefabPackage()
 }
 bool ULGUIPrefabManagerObject::GetIsBlueprintCompiling()
 {
-	if (InitCheck())
-	{
-		return Instance->bIsBlueprintCompiling;
-	}
-	return false;
+	return Instance->bIsBlueprintCompiling;
 }
 bool ULGUIPrefabManagerObject::GetIsProcessingDelete()
 {
-	if (InitCheck())
-	{
-		return Instance->bIsProcessingDelete;
-	}
-	return false;
+	return Instance->bIsProcessingDelete;
 }
 
 void ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged()

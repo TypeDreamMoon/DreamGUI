@@ -3,7 +3,7 @@
 #pragma once
 
 #include "../LexMeshModifierTextAnimation.h"
-#include "LexVisualEffectTextAnimation_Selector.generated.h"
+#include "LexMeshModifierTextAnimation_Selector.generated.h"
 
 class UCurveFloat;
 

@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "GeometryModifier/TextAnimation/LexMeshModifierTextAnimation_PropertyWithWave.h"
+#include "LGUI/Public/MeshModifier/TextAnimation/LexMeshModifierTextAnimation_PropertyWithWave.h"
 #include "LGUI.h"
 #include "Core/Components/LexText.h"
 #include "LTweenBPLibrary.h"

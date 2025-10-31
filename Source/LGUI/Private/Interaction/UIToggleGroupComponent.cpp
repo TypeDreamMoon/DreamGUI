@@ -8,7 +8,7 @@
 
 UUIToggleGroupComponent::UUIToggleGroupComponent()
 {
-	OnValueChanged = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Int32);
+	OnValueChanged = FLexUIEventDelegate(ELexUIEventDelegateParameterType::Int32);
 }
 void UUIToggleGroupComponent::AddToggleComponent(UUIToggleComponent* InComp)
 {

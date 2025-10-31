@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Event/LGUIEventDelegate.h"
+#include "Event/LexUIEventDelegate.h"
 #include "LGUI.h"
 #include "Serialization/MemoryReader.h"
 #if WITH_EDITOR
@@ -11,15 +11,15 @@
 
 #define LOCTEXT_NAMESPACE "LGUIEventDelegate"
 
-bool ULGUIEventDelegateParameterHelper::IsFunctionCompatible(const UFunction* InFunction, ELGUIEventDelegateParameterType& OutParameterType)
+bool ULexUIEventDelegateParameterHelper::IsFunctionCompatible(const UFunction* InFunction, ELexUIEventDelegateParameterType& OutParameterType)
 {
 	if (InFunction->GetReturnProperty() != nullptr)return false;//not support return value for ProcessEvent
 	TFieldIterator<FProperty> IteratorA(InFunction);
-	TArray<ELGUIEventDelegateParameterType> ParameterTypeArray;
+	TArray<ELexUIEventDelegateParameterType> ParameterTypeArray;
 	while (IteratorA && (IteratorA->PropertyFlags & CPF_Parm))
 	{
 		FProperty* PropA = *IteratorA;
-		ELGUIEventDelegateParameterType ParamType;
+		ELexUIEventDelegateParameterType ParamType;
 		if (IsPropertyCompatible(PropA, ParamType))
 		{
 			ParameterTypeArray.Add(ParamType);
@@ -38,12 +38,12 @@ bool ULGUIEventDelegateParameterHelper::IsFunctionCompatible(const UFunction* In
 	}
 	if (ParameterTypeArray.Num() == 0)
 	{
-		OutParameterType = ELGUIEventDelegateParameterType::Empty;
+		OutParameterType = ELexUIEventDelegateParameterType::Empty;
 		return true;
 	}
 	return false;
 }
-bool ULGUIEventDelegateParameterHelper::IsPropertyCompatible(const FProperty* InFunctionProperty, ELGUIEventDelegateParameterType& OutParameterType)
+bool ULexUIEventDelegateParameterHelper::IsPropertyCompatible(const FProperty* InFunctionProperty, ELexUIEventDelegateParameterType& OutParameterType)
 {
 	if (!InFunctionProperty)
 	{
@@ -55,62 +55,62 @@ bool ULGUIEventDelegateParameterHelper::IsPropertyCompatible(const FProperty* In
 	{
 	case NAME_BoolProperty:
 	{
-		OutParameterType = ELGUIEventDelegateParameterType::Bool;
+		OutParameterType = ELexUIEventDelegateParameterType::Bool;
 		return true;
 	}
 	case NAME_FloatProperty:
 	{
-		OutParameterType = ELGUIEventDelegateParameterType::Float;
+		OutParameterType = ELexUIEventDelegateParameterType::Float;
 		return true;
 	}
 	case NAME_DoubleProperty:
 	{
-		OutParameterType = ELGUIEventDelegateParameterType::Double;
+		OutParameterType = ELexUIEventDelegateParameterType::Double;
 		return true;
 	}
 	case NAME_Int8Property:
 	{
-		OutParameterType = ELGUIEventDelegateParameterType::Int8;
+		OutParameterType = ELexUIEventDelegateParameterType::Int8;
 		return true;
 	}
 	case NAME_ByteProperty:
 	{
-		OutParameterType = ELGUIEventDelegateParameterType::UInt8;
+		OutParameterType = ELexUIEventDelegateParameterType::UInt8;
 		return true;
 	}
 	case NAME_Int16Property:
 	{
-		OutParameterType = ELGUIEventDelegateParameterType::Int16;
+		OutParameterType = ELexUIEventDelegateParameterType::Int16;
 		return true;
 	}
 	case NAME_UInt16Property:
 	{
-		OutParameterType = ELGUIEventDelegateParameterType::UInt16;
+		OutParameterType = ELexUIEventDelegateParameterType::UInt16;
 		return true;
 	}
 	case NAME_IntProperty:
 	{
-		OutParameterType = ELGUIEventDelegateParameterType::Int32;
+		OutParameterType = ELexUIEventDelegateParameterType::Int32;
 		return true;
 	}
 	case NAME_UInt32Property:
 	{
-		OutParameterType = ELGUIEventDelegateParameterType::UInt32;
+		OutParameterType = ELexUIEventDelegateParameterType::UInt32;
 		return true;
 	}
 	case NAME_Int64Property:
 	{
-		OutParameterType = ELGUIEventDelegateParameterType::Int64;
+		OutParameterType = ELexUIEventDelegateParameterType::Int64;
 		return true;
 	}
 	case NAME_UInt64Property:
 	{
-		OutParameterType = ELGUIEventDelegateParameterType::UInt64;
+		OutParameterType = ELexUIEventDelegateParameterType::UInt64;
 		return true;
 	}
 	case NAME_EnumProperty:
 	{
-		OutParameterType = ELGUIEventDelegateParameterType::UInt8;
+		OutParameterType = ELexUIEventDelegateParameterType::UInt8;
 		return true;
 	}
 	case NAME_StructProperty:
@@ -119,31 +119,31 @@ bool ULGUIEventDelegateParameterHelper::IsPropertyCompatible(const FProperty* In
 		auto structName = structProperty->Struct->GetFName();
 		if (structName == NAME_Vector2D)
 		{
-			OutParameterType = ELGUIEventDelegateParameterType::Vector2; return true;
+			OutParameterType = ELexUIEventDelegateParameterType::Vector2; return true;
 		}
 		else if (structName == NAME_Vector)
 		{
-			OutParameterType = ELGUIEventDelegateParameterType::Vector3; return true;
+			OutParameterType = ELexUIEventDelegateParameterType::Vector3; return true;
 		}
 		else if (structName == NAME_Vector4)
 		{
-			OutParameterType = ELGUIEventDelegateParameterType::Vector4; return true;
+			OutParameterType = ELexUIEventDelegateParameterType::Vector4; return true;
 		}
 		else if (structName == NAME_Color)
 		{
-			OutParameterType = ELGUIEventDelegateParameterType::Color; return true;
+			OutParameterType = ELexUIEventDelegateParameterType::Color; return true;
 		}
 		else if (structName == NAME_LinearColor)
 		{
-			OutParameterType = ELGUIEventDelegateParameterType::LinearColor; return true;
+			OutParameterType = ELexUIEventDelegateParameterType::LinearColor; return true;
 		}
 		else if (structName == NAME_Quat)
 		{
-			OutParameterType = ELGUIEventDelegateParameterType::Quaternion; return true;
+			OutParameterType = ELexUIEventDelegateParameterType::Quaternion; return true;
 		}
 		else if (structName == NAME_Rotator)
 		{
-			OutParameterType = ELGUIEventDelegateParameterType::Rotator; return true;
+			OutParameterType = ELexUIEventDelegateParameterType::Rotator; return true;
 		}
 		return false;
 	}
@@ -152,18 +152,18 @@ bool ULGUIEventDelegateParameterHelper::IsPropertyCompatible(const FProperty* In
 	{
 		if (auto classProperty = CastField<FClassProperty>(InFunctionProperty))
 		{
-			OutParameterType = ELGUIEventDelegateParameterType::Class;
+			OutParameterType = ELexUIEventDelegateParameterType::Class;
 			return true;
 		}
 		else if (auto objectProperty = CastField<FObjectProperty>(InFunctionProperty))//if object property
 		{
 			if (objectProperty->PropertyClass->IsChildOf(AActor::StaticClass()))//if is Actor
 			{
-				OutParameterType = ELGUIEventDelegateParameterType::Actor;
+				OutParameterType = ELexUIEventDelegateParameterType::Actor;
 			}
 			else if (objectProperty->PropertyClass->IsChildOf(ULexPointerEventData::StaticClass()))
 			{
-				OutParameterType = ELGUIEventDelegateParameterType::PointerEvent;
+				OutParameterType = ELexUIEventDelegateParameterType::PointerEvent;
 			}
 			else if (objectProperty->PropertyClass->IsChildOf(UActorComponent::StaticClass()))
 			{
@@ -171,7 +171,7 @@ bool ULGUIEventDelegateParameterHelper::IsPropertyCompatible(const FProperty* In
 			}
 			else
 			{
-				OutParameterType = ELGUIEventDelegateParameterType::Object;
+				OutParameterType = ELexUIEventDelegateParameterType::Object;
 			}
 			return true;
 		}
@@ -179,17 +179,17 @@ bool ULGUIEventDelegateParameterHelper::IsPropertyCompatible(const FProperty* In
 
 	case NAME_StrProperty:
 	{
-		OutParameterType = ELGUIEventDelegateParameterType::String;
+		OutParameterType = ELexUIEventDelegateParameterType::String;
 		return true;
 	}
 	case NAME_NameProperty:
 	{
-		OutParameterType = ELGUIEventDelegateParameterType::Name;
+		OutParameterType = ELexUIEventDelegateParameterType::Name;
 		return true;
 	}
 	case NAME_TextProperty:
 	{
-		OutParameterType = ELGUIEventDelegateParameterType::Text;
+		OutParameterType = ELexUIEventDelegateParameterType::Text;
 		return true;
 	}
 	}
@@ -197,7 +197,7 @@ bool ULGUIEventDelegateParameterHelper::IsPropertyCompatible(const FProperty* In
 	return false;
 }
 
-UClass* ULGUIEventDelegateParameterHelper::GetObjectParameterClass(const UFunction* InFunction)
+UClass* ULexUIEventDelegateParameterHelper::GetObjectParameterClass(const UFunction* InFunction)
 {
 	TFieldIterator<FProperty> paramsIterator(InFunction);
 	FProperty* firstProperty = *paramsIterator;
@@ -208,7 +208,7 @@ UClass* ULGUIEventDelegateParameterHelper::GetObjectParameterClass(const UFuncti
 	return nullptr;
 }
 
-UEnum* ULGUIEventDelegateParameterHelper::GetEnumParameter(const UFunction* InFunction)
+UEnum* ULexUIEventDelegateParameterHelper::GetEnumParameter(const UFunction* InFunction)
 {
 	TFieldIterator<FProperty> paramsIterator(InFunction);
 	FProperty* firstProperty = *paramsIterator;
@@ -225,7 +225,7 @@ UEnum* ULGUIEventDelegateParameterHelper::GetEnumParameter(const UFunction* InFu
 	}
 	return nullptr;
 }
-UClass* ULGUIEventDelegateParameterHelper::GetClassParameterClass(const UFunction* InFunction)
+UClass* ULexUIEventDelegateParameterHelper::GetClassParameterClass(const UFunction* InFunction)
 {
 	TFieldIterator<FProperty> paramsIterator(InFunction);
 	FProperty* firstProperty = *paramsIterator;
@@ -236,14 +236,14 @@ UClass* ULGUIEventDelegateParameterHelper::GetClassParameterClass(const UFunctio
 	return nullptr;
 }
 
-bool ULGUIEventDelegateParameterHelper::IsSupportedFunction(UFunction* Target, ELGUIEventDelegateParameterType& OutParamType)
+bool ULexUIEventDelegateParameterHelper::IsSupportedFunction(UFunction* Target, ELexUIEventDelegateParameterType& OutParamType)
 {
 	return IsFunctionCompatible(Target, OutParamType);
 }
 
-bool ULGUIEventDelegateParameterHelper::IsStillSupported(UFunction* Target, ELGUIEventDelegateParameterType InParamType)
+bool ULexUIEventDelegateParameterHelper::IsStillSupported(UFunction* Target, ELexUIEventDelegateParameterType InParamType)
 {
-	ELGUIEventDelegateParameterType ParamType;
+	ELexUIEventDelegateParameterType ParamType;
 	if (IsSupportedFunction(Target, ParamType))
 	{
 		if (ParamType == InParamType)
@@ -254,26 +254,26 @@ bool ULGUIEventDelegateParameterHelper::IsStillSupported(UFunction* Target, ELGU
 	return false;
 }
 
-FString ULGUIEventDelegateParameterHelper::ParameterTypeToName(ELGUIEventDelegateParameterType paramType, const UFunction* InFunction)
+FString ULexUIEventDelegateParameterHelper::ParameterTypeToName(ELexUIEventDelegateParameterType paramType, const UFunction* InFunction)
 {
 	FString ParamTypeString = "";
 	switch (paramType)
 	{
-	case ELGUIEventDelegateParameterType::Empty:
+	case ELexUIEventDelegateParameterType::Empty:
 		break;
-	case ELGUIEventDelegateParameterType::Bool:
+	case ELexUIEventDelegateParameterType::Bool:
 		ParamTypeString = "Bool";
 		break;
-	case ELGUIEventDelegateParameterType::Float:
+	case ELexUIEventDelegateParameterType::Float:
 		ParamTypeString = "Float";
 		break;
-	case ELGUIEventDelegateParameterType::Double:
+	case ELexUIEventDelegateParameterType::Double:
 		ParamTypeString = "Double";
 		break;
-	case ELGUIEventDelegateParameterType::Int8:
+	case ELexUIEventDelegateParameterType::Int8:
 		ParamTypeString = "Int8";
 		break;
-	case ELGUIEventDelegateParameterType::UInt8:
+	case ELexUIEventDelegateParameterType::UInt8:
 	{
 		if (auto enumValue = GetEnumParameter(InFunction))
 		{
@@ -285,47 +285,47 @@ FString ULGUIEventDelegateParameterHelper::ParameterTypeToName(ELGUIEventDelegat
 		}
 	}
 		break;
-	case ELGUIEventDelegateParameterType::Int16:
+	case ELexUIEventDelegateParameterType::Int16:
 		ParamTypeString = "Int16";
 		break;
-	case ELGUIEventDelegateParameterType::UInt16:
+	case ELexUIEventDelegateParameterType::UInt16:
 		ParamTypeString = "UInt16";
 		break;
-	case ELGUIEventDelegateParameterType::Int32:
+	case ELexUIEventDelegateParameterType::Int32:
 		ParamTypeString = "Int32";
 		break;
-	case ELGUIEventDelegateParameterType::UInt32:
+	case ELexUIEventDelegateParameterType::UInt32:
 		ParamTypeString = "UInt32";
 		break;
-	case ELGUIEventDelegateParameterType::Int64:
+	case ELexUIEventDelegateParameterType::Int64:
 		ParamTypeString = "Int64";
 		break;
-	case ELGUIEventDelegateParameterType::UInt64:
+	case ELexUIEventDelegateParameterType::UInt64:
 		ParamTypeString = "UInt64";
 		break;
-	case ELGUIEventDelegateParameterType::Vector2:
+	case ELexUIEventDelegateParameterType::Vector2:
 		ParamTypeString = "Vector2";
 		break;
-	case ELGUIEventDelegateParameterType::Vector3:
+	case ELexUIEventDelegateParameterType::Vector3:
 		ParamTypeString = "Vector3";
 		break;
-	case ELGUIEventDelegateParameterType::Vector4:
+	case ELexUIEventDelegateParameterType::Vector4:
 		ParamTypeString = "Vector4";
 		break;
-	case ELGUIEventDelegateParameterType::Quaternion:
+	case ELexUIEventDelegateParameterType::Quaternion:
 		ParamTypeString = "Quaternion";
 		break;
-	case ELGUIEventDelegateParameterType::Color:
+	case ELexUIEventDelegateParameterType::Color:
 		ParamTypeString = "Color";
 		break;
-	case ELGUIEventDelegateParameterType::LinearColor:
+	case ELexUIEventDelegateParameterType::LinearColor:
 		ParamTypeString = "LinearColor";
 		break;
-	case ELGUIEventDelegateParameterType::String:
+	case ELexUIEventDelegateParameterType::String:
 		ParamTypeString = "String";
 		break;
 
-	case ELGUIEventDelegateParameterType::Object:
+	case ELexUIEventDelegateParameterType::Object:
 	{
 		TFieldIterator<FProperty> ParamIterator(InFunction);
 		if (auto firstProperty = CastField<FObjectProperty>(*ParamIterator))
@@ -345,7 +345,7 @@ FString ULGUIEventDelegateParameterHelper::ParameterTypeToName(ELGUIEventDelegat
 		}
 	}
 		break;
-	case ELGUIEventDelegateParameterType::Actor:
+	case ELexUIEventDelegateParameterType::Actor:
 	{
 		TFieldIterator<FProperty> ParamIterator(InFunction);
 		if (auto firstProperty = CastField<FObjectProperty>(*ParamIterator))
@@ -365,19 +365,19 @@ FString ULGUIEventDelegateParameterHelper::ParameterTypeToName(ELGUIEventDelegat
 		}
 	}
 		break;
-	case ELGUIEventDelegateParameterType::PointerEvent:
+	case ELexUIEventDelegateParameterType::PointerEvent:
 		ParamTypeString = "PointerEvent";
 		break;
-	case ELGUIEventDelegateParameterType::Class:
+	case ELexUIEventDelegateParameterType::Class:
 		ParamTypeString = "Class";
 		break;
-	case ELGUIEventDelegateParameterType::Rotator:
+	case ELexUIEventDelegateParameterType::Rotator:
 		ParamTypeString = "Rotator";
 		break;
-	case ELGUIEventDelegateParameterType::Name:
+	case ELexUIEventDelegateParameterType::Name:
 		ParamTypeString = "Name";
 		break;
-	case ELGUIEventDelegateParameterType::Text:
+	case ELexUIEventDelegateParameterType::Text:
 		ParamTypeString = "Text";
 		break;
 	default:
@@ -388,7 +388,7 @@ FString ULGUIEventDelegateParameterHelper::ParameterTypeToName(ELGUIEventDelegat
 
 
 
-void FLGUIEventDelegateData::Execute()
+void FLexUIEventDelegateData::Execute()
 {
 	if (UseNativeParameter)
 	{
@@ -399,7 +399,7 @@ void FLGUIEventDelegateData::Execute()
 		UE_LOG(LGUI, Error, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *errMsg.ToString());
 		return;
 	}
-	if (ParamType == ELGUIEventDelegateParameterType::None)
+	if (ParamType == ELexUIEventDelegateParameterType::None)
 	{
 		auto errMsg = LOCTEXT("NotValid", "LGUIEventDelegateData.Execute, Not valid LGUIEventDelegate.");
 #if WITH_EDITOR
@@ -420,9 +420,9 @@ void FLGUIEventDelegateData::Execute()
 		}
 	}
 }
-void FLGUIEventDelegateData::Execute(void* InParam, ELGUIEventDelegateParameterType InParameterType)
+void FLexUIEventDelegateData::Execute(void* InParam, ELexUIEventDelegateParameterType InParameterType)
 {
-	if (ParamType == ELGUIEventDelegateParameterType::None)
+	if (ParamType == ELexUIEventDelegateParameterType::None)
 	{
 		auto errMsg = LOCTEXT("NotValid", "LGUIEventDelegateData.Execute, Not valid LGUIEventDelegate.");
 #if WITH_EDITOR
@@ -436,7 +436,7 @@ void FLGUIEventDelegateData::Execute(void* InParam, ELGUIEventDelegateParameterT
 	{
 		if (ParamType != InParameterType)//function's supported parameter is equal to event's parameter
 		{
-			if (InParameterType == ELGUIEventDelegateParameterType::Double && ParamType == ELGUIEventDelegateParameterType::Float)
+			if (InParameterType == ELexUIEventDelegateParameterType::Double && ParamType == ELexUIEventDelegateParameterType::Float)
 			{
 				auto InValue = *((double*)InParam);
 				auto ConvertValue = (float)InValue;
@@ -447,7 +447,7 @@ void FLGUIEventDelegateData::Execute(void* InParam, ELGUIEventDelegateParameterT
 #endif
 				UE_LOG(LGUI, Error, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *errMsg.ToString());
 			}
-			else if (InParameterType == ELGUIEventDelegateParameterType::Float && ParamType == ELGUIEventDelegateParameterType::Double)
+			else if (InParameterType == ELexUIEventDelegateParameterType::Float && ParamType == ELexUIEventDelegateParameterType::Double)
 			{
 				auto InValue = *((float*)InParam);
 				auto ConvertValue = (double)InValue;
@@ -497,9 +497,9 @@ void FLGUIEventDelegateData::Execute(void* InParam, ELGUIEventDelegateParameterT
 }
 
 #if WITH_EDITOR
-bool FLGUIEventDelegateData::CheckFunctionParameter()const
+bool FLexUIEventDelegateData::CheckFunctionParameter()const
 {
-	if (ParamType == ELGUIEventDelegateParameterType::None)
+	if (ParamType == ELexUIEventDelegateParameterType::None)
 	{
 		return false;
 	}
@@ -509,7 +509,7 @@ bool FLGUIEventDelegateData::CheckFunctionParameter()const
 	{
 		return false;
 	}
-	if (!ULGUIEventDelegateParameterHelper::IsStillSupported(TargetFunction, ParamType))
+	if (!ULexUIEventDelegateParameterHelper::IsStillSupported(TargetFunction, ParamType))
 	{
 		return false;
 	}
@@ -518,7 +518,7 @@ bool FLGUIEventDelegateData::CheckFunctionParameter()const
 }
 #endif
 
-bool FLGUIEventDelegateData::CheckTargetObject()
+bool FLexUIEventDelegateData::CheckTargetObject()
 {
 	if (IsValid(TargetObject))
 	{
@@ -570,12 +570,12 @@ bool FLGUIEventDelegateData::CheckTargetObject()
 		return IsValid(TargetObject);
 	}
 }
-void FLGUIEventDelegateData::FindAndExecute(UObject* Target, void* ParamData)
+void FLexUIEventDelegateData::FindAndExecute(UObject* Target, void* ParamData)
 {
 	CacheFunction = Target->FindFunction(functionName);
 	if (CacheFunction)
 	{
-		if (!ULGUIEventDelegateParameterHelper::IsStillSupported(CacheFunction, ParamType))
+		if (!ULexUIEventDelegateParameterHelper::IsStillSupported(CacheFunction, ParamType))
 		{
 			auto errMsg = FText::Format(LOCTEXT("FunctionNotSupport", "LGUIEventDelegateData.FindAndExecute, Target function: {0} not supported!"), FText::FromName(functionName));
 #if WITH_EDITOR
@@ -605,11 +605,11 @@ void FLGUIEventDelegateData::FindAndExecute(UObject* Target, void* ParamData)
 		UE_LOG(LGUI, Error, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *errMsg.ToString());
 	}
 }
-void FLGUIEventDelegateData::ExecuteTargetFunction(UObject* Target, UFunction* Func)
+void FLexUIEventDelegateData::ExecuteTargetFunction(UObject* Target, UFunction* Func)
 {
 	switch (ParamType)
 	{
-	case ELGUIEventDelegateParameterType::String:
+	case ELexUIEventDelegateParameterType::String:
 	{
 		FString TempString;
 		auto FromBinary = FMemoryReader(ParamBuffer, false);
@@ -617,7 +617,7 @@ void FLGUIEventDelegateData::ExecuteTargetFunction(UObject* Target, UFunction* F
 		Target->ProcessEvent(Func, &TempString);
 	}
 	break;
-	case ELGUIEventDelegateParameterType::Name:
+	case ELexUIEventDelegateParameterType::Name:
 	{
 		FName TempName;
 		auto FromBinary = FMemoryReader(ParamBuffer, false);
@@ -625,7 +625,7 @@ void FLGUIEventDelegateData::ExecuteTargetFunction(UObject* Target, UFunction* F
 		Target->ProcessEvent(Func, &TempName);
 	}
 	break;
-	case ELGUIEventDelegateParameterType::Text:
+	case ELexUIEventDelegateParameterType::Text:
 	{
 		FText TempText;
 		auto FromBinary = FMemoryReader(ParamBuffer, false);
@@ -633,9 +633,9 @@ void FLGUIEventDelegateData::ExecuteTargetFunction(UObject* Target, UFunction* F
 		Target->ProcessEvent(Func, &TempText);
 	}
 	break;
-	case ELGUIEventDelegateParameterType::Object:
-	case ELGUIEventDelegateParameterType::Actor:
-	case ELGUIEventDelegateParameterType::Class:
+	case ELexUIEventDelegateParameterType::Object:
+	case ELexUIEventDelegateParameterType::Actor:
+	case ELexUIEventDelegateParameterType::Class:
 	{
 		Target->ProcessEvent(Func, &ReferenceObject);
 	}
@@ -647,27 +647,27 @@ void FLGUIEventDelegateData::ExecuteTargetFunction(UObject* Target, UFunction* F
 	break;
 	}
 }
-void FLGUIEventDelegateData::ExecuteTargetFunction(UObject* Target, UFunction* Func, void* ParamData)
+void FLexUIEventDelegateData::ExecuteTargetFunction(UObject* Target, UFunction* Func, void* ParamData)
 {
 	Target->ProcessEvent(Func, ParamData);
 }
 
-FLGUIEventDelegate::FLGUIEventDelegate()
+FLexUIEventDelegate::FLexUIEventDelegate()
 {
 }
-FLGUIEventDelegate::FLGUIEventDelegate(ELGUIEventDelegateParameterType InParameterType)
+FLexUIEventDelegate::FLexUIEventDelegate(ELexUIEventDelegateParameterType InParameterType)
 {
 	supportParameterType = InParameterType;
 }
 
-bool FLGUIEventDelegate::IsBound()const
+bool FLexUIEventDelegate::IsBound()const
 {
 	return eventList.Num() != 0;
 }
-void FLGUIEventDelegate::FireEvent()const
+void FLexUIEventDelegate::FireEvent()const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::Empty)
+	if (supportParameterType == ELexUIEventDelegateParameterType::Empty)
 	{
 		for (auto& item : eventList)
 		{
@@ -675,9 +675,9 @@ void FLGUIEventDelegate::FireEvent()const
 		}
 	}
 	else
-		LogParameterError(ELGUIEventDelegateParameterType::Empty);
+		LogParameterError(ELexUIEventDelegateParameterType::Empty);
 }
-void FLGUIEventDelegate::LogParameterError(ELGUIEventDelegateParameterType WrongParamType)const
+void FLexUIEventDelegate::LogParameterError(ELexUIEventDelegateParameterType WrongParamType)const
 {
 	auto enumObject = FindObject<UEnum>(nullptr, TEXT("/Script/LGUI.ELGUIEventDelegateParameterType"), true);
 	auto errMsg = FText::Format(LOCTEXT("ParameterTypeMismatch", "LGUIEventDelegate parameter type must be the same as your declaration. support parameter type: {0}, execute parameter type: {1}")
@@ -689,7 +689,7 @@ void FLGUIEventDelegate::LogParameterError(ELGUIEventDelegateParameterType Wrong
 #endif
 	UE_LOG(LGUI, Error, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *errMsg.ToString());
 }
-void FLGUIEventDelegate::FireEvent(void* InParam)const
+void FLexUIEventDelegate::FireEvent(void* InParam)const
 {
 	for (auto& item : eventList)
 	{
@@ -697,234 +697,234 @@ void FLGUIEventDelegate::FireEvent(void* InParam)const
 	}
 }
 
-void FLGUIEventDelegate::FireEvent(bool InParam)const
+void FLexUIEventDelegate::FireEvent(bool InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::Bool)
+	if (supportParameterType == ELexUIEventDelegateParameterType::Bool)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::Bool);
+	else LogParameterError(ELexUIEventDelegateParameterType::Bool);
 }
-void FLGUIEventDelegate::FireEvent(float InParam)const
+void FLexUIEventDelegate::FireEvent(float InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::Float)
+	if (supportParameterType == ELexUIEventDelegateParameterType::Float)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::Float);
+	else LogParameterError(ELexUIEventDelegateParameterType::Float);
 }
-void FLGUIEventDelegate::FireEvent(double InParam)const
+void FLexUIEventDelegate::FireEvent(double InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::Double)
+	if (supportParameterType == ELexUIEventDelegateParameterType::Double)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::Double);
+	else LogParameterError(ELexUIEventDelegateParameterType::Double);
 }
-void FLGUIEventDelegate::FireEvent(int8 InParam)const
+void FLexUIEventDelegate::FireEvent(int8 InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::Int8)
+	if (supportParameterType == ELexUIEventDelegateParameterType::Int8)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::Int8);
+	else LogParameterError(ELexUIEventDelegateParameterType::Int8);
 }
-void FLGUIEventDelegate::FireEvent(uint8 InParam)const
+void FLexUIEventDelegate::FireEvent(uint8 InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::UInt8)
+	if (supportParameterType == ELexUIEventDelegateParameterType::UInt8)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::UInt8);
+	else LogParameterError(ELexUIEventDelegateParameterType::UInt8);
 }
-void FLGUIEventDelegate::FireEvent(int16 InParam)const
+void FLexUIEventDelegate::FireEvent(int16 InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::Int16)
+	if (supportParameterType == ELexUIEventDelegateParameterType::Int16)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::Int16);
+	else LogParameterError(ELexUIEventDelegateParameterType::Int16);
 }
-void FLGUIEventDelegate::FireEvent(uint16 InParam)const
+void FLexUIEventDelegate::FireEvent(uint16 InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::UInt16)
+	if (supportParameterType == ELexUIEventDelegateParameterType::UInt16)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::UInt16);
+	else LogParameterError(ELexUIEventDelegateParameterType::UInt16);
 }
-void FLGUIEventDelegate::FireEvent(int32 InParam)const
+void FLexUIEventDelegate::FireEvent(int32 InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::Int32)
+	if (supportParameterType == ELexUIEventDelegateParameterType::Int32)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::Int32);
+	else LogParameterError(ELexUIEventDelegateParameterType::Int32);
 }
-void FLGUIEventDelegate::FireEvent(uint32 InParam)const
+void FLexUIEventDelegate::FireEvent(uint32 InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::UInt32)
+	if (supportParameterType == ELexUIEventDelegateParameterType::UInt32)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::UInt32);
+	else LogParameterError(ELexUIEventDelegateParameterType::UInt32);
 }
-void FLGUIEventDelegate::FireEvent(int64 InParam)const
+void FLexUIEventDelegate::FireEvent(int64 InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::Int64)
+	if (supportParameterType == ELexUIEventDelegateParameterType::Int64)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::Int64);
+	else LogParameterError(ELexUIEventDelegateParameterType::Int64);
 }
-void FLGUIEventDelegate::FireEvent(uint64 InParam)const
+void FLexUIEventDelegate::FireEvent(uint64 InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::UInt64)
+	if (supportParameterType == ELexUIEventDelegateParameterType::UInt64)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::UInt64);
+	else LogParameterError(ELexUIEventDelegateParameterType::UInt64);
 }
-void FLGUIEventDelegate::FireEvent(FVector2D InParam)const
+void FLexUIEventDelegate::FireEvent(FVector2D InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::Vector2)
+	if (supportParameterType == ELexUIEventDelegateParameterType::Vector2)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::Vector2);
+	else LogParameterError(ELexUIEventDelegateParameterType::Vector2);
 }
-void FLGUIEventDelegate::FireEvent(FVector InParam)const
+void FLexUIEventDelegate::FireEvent(FVector InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::Vector3)
+	if (supportParameterType == ELexUIEventDelegateParameterType::Vector3)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::Vector3);
+	else LogParameterError(ELexUIEventDelegateParameterType::Vector3);
 }
-void FLGUIEventDelegate::FireEvent(FVector4 InParam)const
+void FLexUIEventDelegate::FireEvent(FVector4 InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::Vector4)
+	if (supportParameterType == ELexUIEventDelegateParameterType::Vector4)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::Vector4);
+	else LogParameterError(ELexUIEventDelegateParameterType::Vector4);
 }
-void FLGUIEventDelegate::FireEvent(FColor InParam)const
+void FLexUIEventDelegate::FireEvent(FColor InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::Color)
+	if (supportParameterType == ELexUIEventDelegateParameterType::Color)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::Color);
+	else LogParameterError(ELexUIEventDelegateParameterType::Color);
 }
-void FLGUIEventDelegate::FireEvent(FLinearColor InParam)const
+void FLexUIEventDelegate::FireEvent(FLinearColor InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::LinearColor)
+	if (supportParameterType == ELexUIEventDelegateParameterType::LinearColor)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::LinearColor);
+	else LogParameterError(ELexUIEventDelegateParameterType::LinearColor);
 }
-void FLGUIEventDelegate::FireEvent(FQuat InParam)const
+void FLexUIEventDelegate::FireEvent(FQuat InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::Quaternion)
+	if (supportParameterType == ELexUIEventDelegateParameterType::Quaternion)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::Quaternion);
+	else LogParameterError(ELexUIEventDelegateParameterType::Quaternion);
 }
-void FLGUIEventDelegate::FireEvent(const FString& InParam)const
+void FLexUIEventDelegate::FireEvent(const FString& InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::String)
+	if (supportParameterType == ELexUIEventDelegateParameterType::String)
 	{
 		FireEvent((void*)&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::String);
+	else LogParameterError(ELexUIEventDelegateParameterType::String);
 }
-void FLGUIEventDelegate::FireEvent(UObject* InParam)const
+void FLexUIEventDelegate::FireEvent(UObject* InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::Object)
+	if (supportParameterType == ELexUIEventDelegateParameterType::Object)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::Object);
+	else LogParameterError(ELexUIEventDelegateParameterType::Object);
 }
-void FLGUIEventDelegate::FireEvent(AActor* InParam)const
+void FLexUIEventDelegate::FireEvent(AActor* InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::Actor)
+	if (supportParameterType == ELexUIEventDelegateParameterType::Actor)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::Actor);
+	else LogParameterError(ELexUIEventDelegateParameterType::Actor);
 }
-void FLGUIEventDelegate::FireEvent(ULexPointerEventData* InParam)const
+void FLexUIEventDelegate::FireEvent(ULexPointerEventData* InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::PointerEvent)
+	if (supportParameterType == ELexUIEventDelegateParameterType::PointerEvent)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::PointerEvent);
+	else LogParameterError(ELexUIEventDelegateParameterType::PointerEvent);
 }
-void FLGUIEventDelegate::FireEvent(UClass* InParam)const
+void FLexUIEventDelegate::FireEvent(UClass* InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::Class)
+	if (supportParameterType == ELexUIEventDelegateParameterType::Class)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::Class);
+	else LogParameterError(ELexUIEventDelegateParameterType::Class);
 }
-void FLGUIEventDelegate::FireEvent(FRotator InParam)const
+void FLexUIEventDelegate::FireEvent(FRotator InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::Rotator)
+	if (supportParameterType == ELexUIEventDelegateParameterType::Rotator)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::Rotator);
+	else LogParameterError(ELexUIEventDelegateParameterType::Rotator);
 }
-void FLGUIEventDelegate::FireEvent(const FName& InParam)const
+void FLexUIEventDelegate::FireEvent(const FName& InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::Name)
+	if (supportParameterType == ELexUIEventDelegateParameterType::Name)
 	{
 		FireEvent((void*)&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::Name);
+	else LogParameterError(ELexUIEventDelegateParameterType::Name);
 }
-void FLGUIEventDelegate::FireEvent(const FText& InParam)const
+void FLexUIEventDelegate::FireEvent(const FText& InParam)const
 {
 	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELGUIEventDelegateParameterType::Text)
+	if (supportParameterType == ELexUIEventDelegateParameterType::Text)
 	{
 		FireEvent((void*)&InParam);
 	}
-	else LogParameterError(ELGUIEventDelegateParameterType::Text);
+	else LogParameterError(ELexUIEventDelegateParameterType::Text);
 }
 
 #if WITH_EDITOR
-bool FLGUIEventDelegate::CheckFunctionParameter()const
+bool FLexUIEventDelegate::CheckFunctionParameter()const
 {
 	for (auto& item : eventList)
 	{

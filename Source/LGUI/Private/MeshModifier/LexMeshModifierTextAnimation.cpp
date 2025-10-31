@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "GeometryModifier/LexMeshModifierTextAnimation.h"
+#include "LGUI/Public/MeshModifier/LexMeshModifierTextAnimation.h"
 #include "LGUI.h"
 #include "Core/Components/LexText.h"
 

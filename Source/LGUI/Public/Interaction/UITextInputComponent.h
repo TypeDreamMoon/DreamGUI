@@ -4,7 +4,7 @@
 
 #include "Interaction/UISelectableComponent.h"
 #include "Components/InputComponent.h"
-#include "Event/LGUIEventDelegate.h"
+#include "Event/LexUIEventDelegate.h"
 #include "Event/LexDelegateDeclaration.h"
 #include "Event/Interface/LexPointerClickInterface.h"
 #include "Event/Interface/LexPointerDragInterface.h"
@@ -173,21 +173,21 @@ protected:
 	UPROPERTY(BlueprintAssignable, Category = "LGUI-Input", DisplayName="OnValueChanged")
 	FUITextInputValueChangedEvent OnValueChangedBP;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
-	FLGUIEventDelegate OnValueChange = FLGUIEventDelegate(ELGUIEventDelegateParameterType::String);
+	FLexUIEventDelegate OnValueChange = FLexUIEventDelegate(ELexUIEventDelegateParameterType::String);
 	
 	FLexUIMulticastDelegateString OnSubmitCPP;
 	UPROPERTY(BlueprintAssignable, Category = "LGUI-Input", DisplayName="OnSubmit")
 	FUITextInputValueChangedEvent OnSubmitBP;
 	/** Input submit by "Enter" key. */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
-	FLGUIEventDelegate OnSubmit = FLGUIEventDelegate(ELGUIEventDelegateParameterType::String);
+	FLexUIEventDelegate OnSubmit = FLexUIEventDelegate(ELexUIEventDelegateParameterType::String);
 	
 	FLexUIMulticastDelegateBool OnInputActivateCPP;
 	UPROPERTY(BlueprintAssignable, Category = "LGUI-Input", DisplayName="OnSubmit")
 	FUITextInputActivateEvent OnInputActivateBP;
 	/** Input activate or deactivate, means begin input or end input. */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
-	FLGUIEventDelegate OnInputActivate = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Bool);
+	FLexUIEventDelegate OnInputActivate = FLexUIEventDelegate(ELexUIEventDelegateParameterType::Bool);
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		class ULexText* GetTextComponent()const;

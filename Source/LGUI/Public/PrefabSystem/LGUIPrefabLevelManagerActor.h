@@ -9,7 +9,7 @@
 class ULGUIPrefabHelperObject;
 
 /**
- * Wraper or container for ULGUIPrefabHelperObject. One level should only have one LGUIPrefabLevelManagerActor.
+ * Wrapper or container for ULGUIPrefabHelperObject. One level should only have one LGUIPrefabLevelManagerActor.
  */
 UCLASS(ClassGroup = (LGUI), NotBlueprintable, NotPlaceable, NotBlueprintType, HideCategories = (Rendering, Actor, Input))
 class LGUI_API ALGUIPrefabLevelManagerActor : public AActor

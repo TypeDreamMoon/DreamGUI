@@ -4,7 +4,7 @@
 
 #include "Event/Interface/LexPointerClickInterface.h"
 #include "UISelectableComponent.h"
-#include "Event/LGUIEventDelegate.h"
+#include "Event/LexUIEventDelegate.h"
 #include "UIButtonComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUIButtonClickedEvent);
@@ -16,7 +16,7 @@ class LGUI_API UUIButtonComponent : public UUISelectableComponent, public ILexPo
 protected:
 
 	UPROPERTY(EditAnywhere, Category = "LGUI-Button")
-	FLGUIEventDelegate OnClick = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Empty);
+	FLexUIEventDelegate OnClick = FLexUIEventDelegate(ELexUIEventDelegateParameterType::Empty);
 	FSimpleMulticastDelegate OnClickCPP;
 	UPROPERTY(BlueprintAssignable, Category = "LGUI-Toggle", DisplayName="OnClick")
 	FUIButtonClickedEvent OnClickBP;

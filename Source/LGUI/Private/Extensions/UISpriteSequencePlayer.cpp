@@ -29,12 +29,12 @@ bool UUISpriteSequencePlayer::CanPlay()
 	}
 	if (!Sprite.IsValid())
 	{
-		UE_LOG(LGUI, Error, TEXT("[%s]Need UISprite component!"), ANSI_TO_TCHAR(__FUNCTION__));
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Need UISprite component!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return false;
 	}
 	if (SpriteSequence.Num() <= 0)
 	{
-		UE_LOG(LGUI, Error, TEXT("[%s]SpriteSequence array is empty!"), ANSI_TO_TCHAR(__FUNCTION__));
+		UE_LOG(LGUI, Error, TEXT("[%s].%d SpriteSequence array is empty!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return false;
 	}
 	return true;

@@ -29,6 +29,8 @@ protected:
 	friend class FUIBaseRaycasterCustomization;
 
 protected:
+	UPROPERTY(EditAnywhere, Category = LGUI)
+	int UserIndex = 0;
 	/**
 	 * Link PointerID, limit this raycaster to work on specific pointer. This is useful when multiple pointer interact in same level.
 	 * Default is -1, means this raycaster will work on all pointers.
@@ -49,6 +51,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)virtual void ActivateRaycaster();
 	UFUNCTION(BlueprintCallable, Category = LGUI)virtual void DeactivateRaycaster();
+
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	int GetUserIndex()const{return UserIndex;}
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	int32 GetPointerID()const { return PointerID; }

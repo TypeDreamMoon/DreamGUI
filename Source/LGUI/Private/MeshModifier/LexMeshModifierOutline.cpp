@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "GeometryModifier/LexMeshModifierOutline.h"
+#include "LGUI/Public/MeshModifier/LexMeshModifierOutline.h"
 #include "LGUI.h"
 #include "Utils/LexUIUtils.h"
 

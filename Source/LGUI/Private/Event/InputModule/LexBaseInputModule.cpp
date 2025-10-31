@@ -1,38 +1,30 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Event/InputModule/LexBaseInputModule.h"
-#include "LGUI.h"
-#include "Core/LexUIManager.h"
 #include "Engine/World.h"
+#include "Event/LexEventSystem.h"
 
 ULexBaseInputModule::ULexBaseInputModule()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
-	bAutoActivate = true;
 }
 
-void ULexBaseInputModule::ActivateInputModule()
+void ULexBaseInputModule::RegisterInputModuleToEventSystem(ULexEventSystem* TargetEventSystem)
 {
-	ULexUIManagerWorldSubsystem::SetCurrentInputModule(this);
+	EventSystem = TargetEventSystem;
+	EventSystem->SetInputModule(this);
 }
-void ULexBaseInputModule::DeactivateInputModule()
+
+void ULexBaseInputModule::UnregisterInputModuleFromEventSystem()
 {
-	ULexUIManagerWorldSubsystem::ClearCurrentInputModule(this);
-}
-void ULexBaseInputModule::Activate(bool bReset)
-{
-	Super::Activate(bReset);
-	if (this->GetWorld() == nullptr)return;
-#if WITH_EDITOR
-	if (this->GetWorld()->IsGameWorld())
-#endif
+	if (EventSystem.IsValid())
 	{
-		ActivateInputModule();
+		if (EventSystem->GetCurrentInputModule() == this)
+		{
+			EventSystem->ClearInputModule();
+			EventSystem = nullptr;
+		}
 	}
 }
-void ULexBaseInputModule::Deactivate()
-{
-	Super::Deactivate();
-	DeactivateInputModule();
-}
+

@@ -505,7 +505,8 @@ bool ULexCanvas::CheckLexWidget()const
 	{
 		if (this->IsRegistered())
 		{
-			UE_LOG(LGUI, Warning, TEXT("LexCanvas component should only attach to a actor which have UIItem as RootComponent! %s"), *this->GetPathName());
+			UE_LOG(LGUI, Warning, TEXT("[%s].%d LexCanvas component should only attach to a actor which have UIItem as RootComponent! %s")
+				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
 #if !UE_BUILD_SHIPPING
 			FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
 #endif

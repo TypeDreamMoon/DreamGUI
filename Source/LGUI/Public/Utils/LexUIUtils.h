@@ -66,7 +66,7 @@ public:
 		TArray<T*> result;
 		if (!IsValid(InActor))
 		{
-			UE_LOG(LogTemp, Error, TEXT("[LGUIUtils::GetComponentsInChildren]InActor is not valid!"));
+			UE_LOG(LogTemp, Error, TEXT("[%s].%d InActor is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			return result;
 		}
 		if (IncludeSelf)
@@ -93,7 +93,7 @@ public:
 		static_assert(TPointerIsConvertibleFromTo<T, const UActorComponent>::Value, "'T' template parameter to GetComponentsInChildren must be derived from UActorComponent");
 		if (!IsValid(InActor))
 		{
-			UE_LOG(LogTemp, Error, TEXT("[LGUIUtils::GetComponentsInChildren]InActor is not valid!"));
+			UE_LOG(LogTemp, Error, TEXT("[%s].%d InActor is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			return nullptr;
 		}
 		if (IncludeSelf)

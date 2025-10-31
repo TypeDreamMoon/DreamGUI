@@ -3,7 +3,8 @@
 #pragma once
 
 #include "Core/LexUIBehaviour.h"
-#include "Event/LGUIEventDelegate.h"
+#include "Event/LexDelegateDeclaration.h"
+#include "Event/LexUIEventDelegate.h"
 #include "UIToggleGroupComponent.generated.h"
 
 class UUIToggleComponent;
@@ -29,7 +30,7 @@ protected:
 	UPROPERTY(BlueprintAssignable, Category = "LGUI-Toggle", DisplayName="OnValueChanged")
 	FUIToggleGroupValueChangedEvent OnValueChangedBP;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ToggleGroup")
-		FLGUIEventDelegate OnValueChanged;
+		FLexUIEventDelegate OnValueChanged;
 public:
 	FLexUIMulticastDelegateInt32& GetOnValueChangedEvent(){return OnValueChangedCPP;}
 	

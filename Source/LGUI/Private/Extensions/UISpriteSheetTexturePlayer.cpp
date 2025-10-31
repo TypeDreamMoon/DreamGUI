@@ -40,17 +40,17 @@ bool UUISpriteSheetTexturePlayer::CanPlay()
 	}
 	if (!Texture.IsValid())
 	{
-		UE_LOG(LGUI, Error, TEXT("[%s]Need UITexture component!"), ANSI_TO_TCHAR(__FUNCTION__));
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Need LexTexture!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return false;
 	}
 	if (!IsValid(Texture->GetTexture()))
 	{
-		UE_LOG(LGUI, Error, TEXT("[%s]UITexture component must have valid texture!"), ANSI_TO_TCHAR(__FUNCTION__));
+		UE_LOG(LGUI, Error, TEXT("[%s].%d LexTexture must have valid texture!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return false;
 	}
 	if (WidthCount <= 0 || HeightCount <= 0)
 	{
-		UE_LOG(LGUI, Error, TEXT("[%s]WidthCount & HeightCount must greater then 0!"), ANSI_TO_TCHAR(__FUNCTION__));
+		UE_LOG(LGUI, Error, TEXT("[%s].%d WidthCount & HeightCount must greater then 0!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return false;
 	}
 	return true;

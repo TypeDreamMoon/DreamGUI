@@ -4,7 +4,7 @@
 
 #include "Event/Interface/LexPointerClickInterface.h"
 #include "UISelectableComponent.h"
-#include "Event/LGUIEventDelegate.h"
+#include "Event/LexUIEventDelegate.h"
 #include "Event/LexDelegateDeclaration.h"
 #include "UIToggleComponent.generated.h"
 
@@ -66,7 +66,7 @@ protected:
 	UPROPERTY(BlueprintAssignable, Category = "LGUI-Toggle", DisplayName="OnValueChanged")
 	FUIToggleValueChangedEvent OnValueChangedBP;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Toggle")
-	FLGUIEventDelegate OnValueChanged = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Bool);
+	FLexUIEventDelegate OnValueChanged = FLexUIEventDelegate(ELexUIEventDelegateParameterType::Bool);
 
 	void SetValue(bool Value, bool SendCallback);
 	void ApplyValueToUI(bool ImmediateSet);

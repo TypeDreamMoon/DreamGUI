@@ -5,8 +5,8 @@
 #include "CoreMinimal.h"
 #include "Interaction/UISelectableComponent.h"
 #include "Event/Interface/LexPointerClickInterface.h"
-#include "LGUIComponentReference.h"
-#include "Event/LGUIEventDelegate.h"
+#include "LexUIComponentReference.h"
+#include "Event/LexUIEventDelegate.h"
 #include "Event/LexDelegateDeclaration.h"
 #include "UIDropdownComponent.generated.h"
 
@@ -128,7 +128,7 @@ protected:
 	UPROPERTY(BlueprintAssignable, Category = "LGUI-Dropdown", DisplayName="OnValueChanged")
 	FUIDropdownValueChangedEvent OnValueChangedBP;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Dropdown")
-	FLGUIEventDelegate OnValueChanged = FLGUIEventDelegate(ELGUIEventDelegateParameterType::Int32);
+	FLexUIEventDelegate OnValueChanged = FLexUIEventDelegate(ELexUIEventDelegateParameterType::Int32);
 
 	/** Bind this delegate and set custom data for option list item. */
 	FUIDropdownComponentDelegate_SetItemCustomData OnSetItemCustomDataFunction;

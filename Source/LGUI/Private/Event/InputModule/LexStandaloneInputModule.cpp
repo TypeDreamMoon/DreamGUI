@@ -8,9 +8,9 @@
 
 void ULexStandaloneInputModule::ProcessInput()
 {
-	if (!CheckEventSystem())return;
+	if (!EventSystem.IsValid())return;
 
-	for (auto& keyValue : EventSystem->PointerEventDataMap)
+	for (auto& keyValue : EventSystem->GetPointerEventDataMap())
 	{
 		auto& eventData = keyValue.Value;
 		switch (eventData->InputType)
@@ -37,7 +37,7 @@ void ULexStandaloneInputModule::ProcessInput()
 				bool lineTraceHitSomething = LineTrace(eventData, LexHitResult);
 				bool resultHitSomething = false;
 				FHitResult hitResult;
-				ProcessPointerEvent(EventSystem, eventData, lineTraceHitSomething, LexHitResult, resultHitSomething, hitResult);
+				ProcessPointerEvent(EventSystem.Get(), eventData, lineTraceHitSomething, LexHitResult, resultHitSomething, hitResult);
 
 				auto tempHitComp = (USceneComponent*)hitResult.Component.Get();
 				EventSystem->RaiseHitEvent(resultHitSomething, hitResult, tempHitComp);
@@ -62,7 +62,7 @@ void ULexStandaloneInputModule::ProcessInput()
 					bool lineTraceHitSomething = LineTrace(eventData, LGUIHitResult);
 					bool resultHitSomething = false;
 					FHitResult hitResult;
-					ProcessPointerEvent(EventSystem, eventData, lineTraceHitSomething, LGUIHitResult, resultHitSomething, hitResult);
+					ProcessPointerEvent(EventSystem.Get(), eventData, lineTraceHitSomething, LGUIHitResult, resultHitSomething, hitResult);
 
 					auto tempHitComp = (USceneComponent*)hitResult.Component.Get();
 					EventSystem->RaiseHitEvent(resultHitSomething, hitResult, tempHitComp);
@@ -81,7 +81,7 @@ void ULexStandaloneInputModule::ProcessInput()
 }
 void ULexStandaloneInputModule::InputScroll(const FVector2D& inAxisValue)
 {
-	if (!CheckEventSystem())return;
+	if (!EventSystem.IsValid())return;
 
 	auto eventData = EventSystem->GetPointerEventData(0, true);
 	if (IsValid(eventData->EnterComponent))
@@ -89,17 +89,14 @@ void ULexStandaloneInputModule::InputScroll(const FVector2D& inAxisValue)
 		if (inAxisValue != FVector2D::ZeroVector || eventData->ScrollAxisValue != inAxisValue)
 		{
 			eventData->ScrollAxisValue = inAxisValue;
-			if (CheckEventSystem())
-			{
-				EventSystem->CallOnPointerScroll(eventData->EnterComponent, eventData, eventData->EnterComponentEventFireType);
-			}
+			EventSystem->CallOnPointerScroll(eventData->EnterComponent, eventData, eventData->EnterComponentEventFireType);
 		}
 	}
 }
 
 void ULexStandaloneInputModule::InputTrigger(bool inTriggerPress, ELexUIMouseButtonType inMouseButtonType)
 {
-	if (!CheckEventSystem())return;
+	if (!EventSystem.IsValid())return;
 
 	auto eventData = EventSystem->GetPointerEventData(0, true);
 	if (EventSystem->SetPointerInputType(eventData, ELexUIPointerInputType::Pointer))

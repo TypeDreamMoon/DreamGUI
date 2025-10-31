@@ -8,10 +8,10 @@
 #pragma once
 
 /** Allows STextPropertyEditableTextBox to edit a property handle */
-class FLGUIEditableTextPropertyHandle : public IEditableTextProperty
+class FLexUIEditableTextPropertyHandle : public IEditableTextProperty
 {
 public:
-	FLGUIEditableTextPropertyHandle(const TSharedRef<IPropertyHandle>& InPropertyHandle, const TSharedPtr<IPropertyUtilities>& InPropertyUtilities)
+	FLexUIEditableTextPropertyHandle(const TSharedRef<IPropertyHandle>& InPropertyHandle, const TSharedPtr<IPropertyUtilities>& InPropertyUtilities)
 		: PropertyHandle(InPropertyHandle)
 		, PropertyUtilities(InPropertyUtilities)
 	{

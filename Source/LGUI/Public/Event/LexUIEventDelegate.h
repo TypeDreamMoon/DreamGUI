@@ -3,13 +3,11 @@
 #pragma once
 
 #include "LexPointerEventData.h"
-#include "LGUIDelegateHandleWrapper.h"
-#include "LexDelegateDeclaration.h"
-#include "LGUIEventDelegate.generated.h"
+#include "LexUIEventDelegate.generated.h"
 
 
 UENUM()
-enum class ELGUIEventDelegateParameterType :uint8
+enum class ELexUIEventDelegateParameterType :uint8
 {
 	/** not initialized */
 	None		UMETA(Hidden),
@@ -37,7 +35,7 @@ enum class ELGUIEventDelegateParameterType :uint8
 	/** for actor reference in level */
 	Actor,
 	/** for LGUIPointerEventData */
-	PointerEvent	UMETA(DisplayName = "LGUIPointerEventData"),
+	PointerEvent	UMETA(DisplayName = "LexPointerEventData"),
 	/** Class for UClass reference */
 	Class,
 	
@@ -47,31 +45,31 @@ enum class ELGUIEventDelegateParameterType :uint8
 	Text,
 };
 /** helper class for finding function */
-class LGUI_API ULGUIEventDelegateParameterHelper
+class LGUI_API ULexUIEventDelegateParameterHelper
 {
 public:
-	static bool IsSupportedFunction(UFunction* Target, ELGUIEventDelegateParameterType& OutParamType);
-	static bool IsStillSupported(UFunction* Target, ELGUIEventDelegateParameterType InParamType);
-	static FString ParameterTypeToName(ELGUIEventDelegateParameterType paramType, const UFunction* InFunction = nullptr);
+	static bool IsSupportedFunction(UFunction* Target, ELexUIEventDelegateParameterType& OutParamType);
+	static bool IsStillSupported(UFunction* Target, ELexUIEventDelegateParameterType InParamType);
+	static FString ParameterTypeToName(ELexUIEventDelegateParameterType paramType, const UFunction* InFunction = nullptr);
 	/** if first parameter is an object type, then return it's objectclass */
 	static UClass* GetObjectParameterClass(const UFunction* InFunction);
 	static UEnum* GetEnumParameter(const UFunction* InFunction);
 	static UClass* GetClassParameterClass(const UFunction* InFunction);
 private:
-	static bool IsFunctionCompatible(const UFunction* InFunction, ELGUIEventDelegateParameterType& OutParameterType);
-	static bool IsPropertyCompatible(const FProperty* InFunctionProperty, ELGUIEventDelegateParameterType& OutParameterType);
+	static bool IsFunctionCompatible(const UFunction* InFunction, ELexUIEventDelegateParameterType& OutParameterType);
+	static bool IsPropertyCompatible(const FProperty* InFunctionProperty, ELexUIEventDelegateParameterType& OutParameterType);
 };
 
 /**
  * Editable event type in editor
  */
 USTRUCT()
-struct LGUI_API FLGUIEventDelegateData
+struct LGUI_API FLexUIEventDelegateData
 {
 	GENERATED_BODY()
 private:
-	friend struct FLGUIEventDelegate;
-	friend class FLGUIEventDelegateCustomization;
+	friend struct FLexUIEventDelegate;
+	friend class FLexUIEventDelegateCustomization;
 #if WITH_EDITORONLY_DATA
 	UPROPERTY(EditAnywhere, Transient, Category = "LGUI")bool BoolValue = false;
 	UPROPERTY(EditAnywhere, Transient, Category = "LGUI")float FloatValue = 0;
@@ -113,7 +111,7 @@ private:
 		FName functionName;
 	/** target function supported parameter type */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		ELGUIEventDelegateParameterType ParamType = ELGUIEventDelegateParameterType::None;
+		ELexUIEventDelegateParameterType ParamType = ELexUIEventDelegateParameterType::None;
 
 	/** data buffer stores function's parameter */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
@@ -129,7 +127,7 @@ private:
 	UPROPERTY(Transient) TObjectPtr<UFunction> CacheFunction = nullptr;
 public:
 	void Execute();
-	void Execute(void* InParam, ELGUIEventDelegateParameterType InParameterType);
+	void Execute(void* InParam, ELexUIEventDelegateParameterType InParameterType);
 #if WITH_EDITOR
 	/**
 	 * Check if function parameter compatible with target function
@@ -148,24 +146,24 @@ private:
  * event or callback that can edit inside ue4 editor
  */
 USTRUCT(BlueprintType)
-struct LGUI_API FLGUIEventDelegate
+struct LGUI_API FLexUIEventDelegate
 {
 	GENERATED_BODY()
 
 public:
-	FLGUIEventDelegate();
-	FLGUIEventDelegate(ELGUIEventDelegateParameterType InParameterType);
+	FLexUIEventDelegate();
+	FLexUIEventDelegate(ELexUIEventDelegateParameterType InParameterType);
 private:
-	friend class FLGUIEventDelegateCustomization;
+	friend class FLexUIEventDelegateCustomization;
 	/** event list */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		mutable TArray<FLGUIEventDelegateData> eventList;
+		mutable TArray<FLexUIEventDelegateData> eventList;
 	/** supported parameter type of this event */
 	UPROPERTY(EditAnywhere, Transient, Category = "LGUI", meta = (DisplayName = "NativeParameterType"))
-		ELGUIEventDelegateParameterType supportParameterType = ELGUIEventDelegateParameterType::Empty;
-	/** Parameter type must be the same as your declaration of FLGUIEventDelegate(LGUIEventDelegateParameterType InParameterType) */
+		ELexUIEventDelegateParameterType supportParameterType = ELexUIEventDelegateParameterType::Empty;
+	/** Parameter type must be the same as your declaration of FLexUIEventDelegate(LexUIEventDelegateParameterType InParameterType) */
 	void FireEvent(void* InParam)const;
-	void LogParameterError(ELGUIEventDelegateParameterType WrongParamType)const;
+	void LogParameterError(ELexUIEventDelegateParameterType WrongParamType)const;
 public:
 	bool IsBound()const;
 public:

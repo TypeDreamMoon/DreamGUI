@@ -4,7 +4,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "GameFramework/Actor.h"
-#include "LGUIComponentReference.generated.h"
+#include "LexUIComponentReference.generated.h"
 
 /**
  * For direct reference a ActorComponent
@@ -12,14 +12,14 @@
  *					But this result in an issue: BlueprintCreatedComponents will not be saved, so only use this for InstancedComponents.
  */ 
 USTRUCT(BlueprintType)
-struct LGUI_API FLGUIComponentReference
+struct LGUI_API FLexUIComponentReference
 {
 	GENERATED_BODY()
-	FLGUIComponentReference(TSubclassOf<UActorComponent> InCompClass);
-	FLGUIComponentReference(UActorComponent* InComp);
-	FLGUIComponentReference();
+	FLexUIComponentReference(TSubclassOf<UActorComponent> InCompClass);
+	FLexUIComponentReference(UActorComponent* InComp);
+	FLexUIComponentReference();
 protected:
-	friend class FLGUIComponentReferenceCustomization;
+	friend class FLexUIComponentReferenceCustomization;
 	/** Editor helper actor */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		TObjectPtr<AActor> HelperActor = nullptr;
@@ -51,12 +51,12 @@ public:
 			static_assert(TPointerIsConvertibleFromTo<T, const UActorComponent>::Value, "'T' template parameter to GetComponent must be derived from UActorComponent");
 			if (!TargetComp)
 			{
-				UE_LOG(LogTemp, Error, TEXT("[FLGUIComponentReference::GetComponent<T>] TargetComp is null!"));
+				UE_LOG(LogTemp, Error, TEXT("[%s].%d TargetComp is null!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 				return nullptr;
 			}
 			if (!TargetComp->IsA(T::StaticClass()))
 			{
-				UE_LOG(LogTemp, Error, TEXT("[FLGUIComponentReference::GetComponent<T>] Provided parameter T: '%s' must be parent of or equal to HelperClass: '%s'!"), *(T::StaticClass()->GetName()), *(HelperClass->GetName()));
+				UE_LOG(LogTemp, Error, TEXT("[%s].%d Provided parameter T: '%s' must be parent of or equal to HelperClass: '%s'!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(T::StaticClass()->GetName()), *(HelperClass->GetName()));
 				return nullptr;
 			}
 #endif
@@ -72,17 +72,4 @@ public:
 		return HelperClass;
 	}
 	bool IsValidComponentReference()const;
-
-#if WITH_EDITORONLY_DATA
-	//can't delete those old data, or new data will missing and K2Node will compile fail.
-	/** old data */
-	UPROPERTY(VisibleAnywhere, Category = "LGUI-old")
-		TWeakObjectPtr<AActor> targetActor;
-	/** old data */
-	UPROPERTY(VisibleAnywhere, Category = "LGUI-old")
-		FName targetComonentName;
-	/** old data */
-	UPROPERTY(EditAnywhere, Category = "LGUI-old", meta = (AllowAbstract = "true"))
-		TSubclassOf<UActorComponent> targetComponentClass;
-#endif
 };

@@ -10,7 +10,7 @@ ULGUIPrefabSequenceComponent::ULGUIPrefabSequenceComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
-	SequenceEventHandler = FLGUIComponentReference(UActorComponent::StaticClass());
+	SequenceEventHandler = FLexUIComponentReference(UActorComponent::StaticClass());
 }
 
 void ULGUIPrefabSequenceComponent::BeginPlay()

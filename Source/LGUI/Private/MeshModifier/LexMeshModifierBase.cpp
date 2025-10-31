@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "GeometryModifier/LexMeshModifierBase.h"
+#include "LGUI/Public/MeshModifier/LexMeshModifierBase.h"
 #include "LGUI.h"
 #include "Core/Components/LexVisualBatchMesh.h"
 

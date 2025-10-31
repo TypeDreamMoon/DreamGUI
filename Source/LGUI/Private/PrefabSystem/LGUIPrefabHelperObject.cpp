@@ -54,7 +54,7 @@ void ULGUIPrefabHelperObject::LoadPrefab(UWorld* InWorld, USceneComponent* InPar
 {
 	if (!IsValid(PrefabAsset))
 	{
-		UE_LOG(LGUI, Error, TEXT("LoadPrefab failed! PrefabAsset=%s, InParentComp=%s"), *GetNameSafe(PrefabAsset), *GetNameSafe(InParent));
+		UE_LOG(LGUI, Error, TEXT("[%s].%d LoadPrefab failed! PrefabAsset=%s, InParentComp=%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetNameSafe(PrefabAsset), *GetNameSafe(InParent));
 		return;
 	}
 	if (!IsValid(LoadedRootActor))

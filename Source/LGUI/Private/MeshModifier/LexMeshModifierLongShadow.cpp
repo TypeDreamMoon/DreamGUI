@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "GeometryModifier/LexMeshModifierLongShadow.h"
+#include "LGUI/Public/MeshModifier/LexMeshModifierLongShadow.h"
 #include "LGUI.h"
 #include "Utils/LexUIUtils.h"
 

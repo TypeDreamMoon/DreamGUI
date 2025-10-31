@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "Event/InputModule/LexBaseInputModule.h"
 #include "Event/LexPointerEventData.h"
-#include "LGUIDelegateHandleWrapper.h"
 #include "Engine/HitResult.h"
 #include "LexPointerInputModule.generated.h"
 
@@ -18,11 +17,9 @@ class LGUI_API ULexPointerInputModule : public ULexBaseInputModule
 	GENERATED_BODY()
 
 public:
-	static void ProcessPointerEvent(ULexEventSystem* eventSystem, ULexPointerEventData* pointerEventData, bool pointerHitAnything, const FLexUIHitResult& hitResult, bool& outIsHitSomething, FHitResult& outHitResult);
+	static void ProcessPointerEvent(ULexEventSystem* eventSystem, ULexPointerEventData* pointerEventData, bool pointerHitAnything, const FLexUIHitResult& hitResult, bool& OutIsHitSomething, FHitResult& OutHitResult);
 protected:
-	UPROPERTY(Transient)TObjectPtr<ULexEventSystem> EventSystem = nullptr;
-	bool CheckEventSystem();
-
+	
 	bool LineTrace(ULexPointerEventData* InPointerEventData, FLexUIHitResult& OutLexHitResult);
 	TArray<FLexUIHitResult> MultiHitResult;//temp array for hit result
 	static void ProcessPointerEnterExit(ULexEventSystem* eventSystem, ULexPointerEventData* pointerEventData, USceneComponent* oldObj, USceneComponent* newObj, ELexUIEventFireType enterFireType);

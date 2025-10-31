@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "GeometryModifier/LexMeshModifierPositionAsUV.h"
+#include "LGUI/Public/MeshModifier/LexMeshModifierPositionAsUV.h"
 #include "Core/Components/LexCanvas.h"
 #include "LGUI.h"
 

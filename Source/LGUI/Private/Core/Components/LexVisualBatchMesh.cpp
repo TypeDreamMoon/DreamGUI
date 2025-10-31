@@ -4,7 +4,7 @@
 #include "LGUI.h"
 #include "Core/Components/LexCanvas.h"
 #include "Utils/LexUIUtils.h"
-#include "GeometryModifier/LexMeshModifierBase.h"
+#include "LGUI/Public/MeshModifier/LexMeshModifierBase.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Core/LexUIDrawCall.h"
 
@@ -231,6 +231,7 @@ void ULexVisualBatchMesh::UpdateGeometry()
 			OnUpdateGeometry(*(UIGeometry.Get()), bTriangleChanged, bLocalVertexPositionChanged || pixelPerfectAffectTransform, bUVChanged, bColorChanged);
 			UpdateGeometryWidgetPropertyData(*(UIGeometry.Get()), this->WidgetPropertyDataStartPosition);
 			ApplyGeometryModifier(bTriangleChanged, bUVChanged, bColorChanged, bLocalVertexPositionChanged);
+			DrawCall->bNeedToUpdateVertex = true;
 		}
 		if (bLocalVertexPositionChanged || bTransformChanged || pixelPerfectAffectTransform)
 		{

@@ -1,25 +1,25 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUIComponentReference.h"
+#include "LexUIComponentReference.h"
 #include "LGUI.h"
 
-FLGUIComponentReference::FLGUIComponentReference(TSubclassOf<UActorComponent> InCompClass)
+FLexUIComponentReference::FLexUIComponentReference(TSubclassOf<UActorComponent> InCompClass)
 {
 	HelperClass = InCompClass;
 }
-FLGUIComponentReference::FLGUIComponentReference(UActorComponent* InComp)
+FLexUIComponentReference::FLexUIComponentReference(UActorComponent* InComp)
 {
 	TargetComp = InComp;
 	HelperClass = InComp->GetClass();
 	HelperActor = TargetComp->GetOwner();
 	HelperComponentName = TargetComp->GetFName();
 }
-FLGUIComponentReference::FLGUIComponentReference()
+FLexUIComponentReference::FLexUIComponentReference()
 {
 	
 }
 
-bool FLGUIComponentReference::CheckTargetObject()const
+bool FLexUIComponentReference::CheckTargetObject()const
 {
 	if (IsValid(TargetComp))
 	{
@@ -64,12 +64,12 @@ bool FLGUIComponentReference::CheckTargetObject()const
 		return IsValid(TargetComp);
 	}
 }
-AActor* FLGUIComponentReference::GetActor()const
+AActor* FLexUIComponentReference::GetActor()const
 {
 	return HelperActor;
 }
 
-bool FLGUIComponentReference::IsValidComponentReference()const
+bool FLexUIComponentReference::IsValidComponentReference()const
 {
 	return CheckTargetObject();
 }

@@ -13,15 +13,16 @@ DECLARE_MULTICAST_DELEGATE_ThreeParams(FLGUIEditorManagerOnComponentCreateDelete
 class ULGUIPrefab;
 class ULGUIPrefabHelperObject;
 
-UCLASS(NotBlueprintable, NotBlueprintType, Transient, NotPlaceable)
-class LGUI_API ULGUIPrefabManagerObject :public UObject, public FTickableGameObject
+UCLASS(NotBlueprintable, NotBlueprintType)
+class LGUI_API ULGUIPrefabManagerObject :public UEditorSubsystem, public FTickableGameObject
 {
 	GENERATED_BODY()
 
 public:
 	static ULGUIPrefabManagerObject* Instance;
 	ULGUIPrefabManagerObject();
-	virtual void BeginDestroy()override;
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void Deinitialize() override;
 public:
 	//begin TickableEditorObject interface
 	virtual void Tick(float DeltaTime)override;
@@ -36,7 +37,6 @@ private:
 	FLGUIEditorTickMulticastDelegate EditorTick;
 	UPROPERTY()UWorld* PreviewWorldForPrefabPackage = nullptr;
 	bool bIsBlueprintCompiling = false;
-	class FLGUIObjectCreateDeleteListener* ObjectCreateDeleteListener = nullptr;
 private:
 	friend class LGUIEditorTools;
 	bool bShouldBroadcastLevelActorListChanged = false;
@@ -50,11 +50,8 @@ public:
 	static void AddOneShotTickFunction(const TFunction<void()>& InFunction, int InDelayFrameCount = 0);
 	static FDelegateHandle RegisterEditorTickFunction(const TFunction<void(float)>& InFunction);
 	static void UnregisterEditorTickFunction(const FDelegateHandle& InDelegateHandle);
-	static FLGUIEditorManagerOnComponentCreateDelete& OnComponentCreateDelete() { InitCheck(); return Instance->OnComponentCreateDeleteEvent; }
-private:
-	static bool InitCheck();
+	static FLGUIEditorManagerOnComponentCreateDelete& OnComponentCreateDelete() { return Instance->OnComponentCreateDeleteEvent; }
 public:
-	static ULGUIPrefabManagerObject* GetInstance(bool CreateIfNotValid = false);
 	static bool IsSelected(AActor* InObject);
 	static bool AnySelectedIsChildOf(AActor* InObject);
 	static UWorld* GetPreviewWorldForPrefabPackage();

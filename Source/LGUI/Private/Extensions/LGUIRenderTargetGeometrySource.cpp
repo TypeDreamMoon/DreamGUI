@@ -417,7 +417,7 @@ ULGUIRenderTargetGeometrySource::ULGUIRenderTargetGeometrySource()
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 
-	TargetCanvas = FLGUIComponentReference(ULexCanvas::StaticClass());
+	TargetCanvas = FLexUIComponentReference(ULexCanvas::StaticClass());
 }
 
 void ULGUIRenderTargetGeometrySource::BeginPlay()
@@ -497,8 +497,8 @@ bool ULGUIRenderTargetGeometrySource::CheckStaticMesh()const
 			}
 			else
 			{
-				auto ErrorMsg = LOCTEXT("StaticMeshComponentNotValid", "[ULGUIRenderTargetGeometrySource::BeginPlay]StaticMesh component not valid!");
-				UE_LOG(LGUI, Error, TEXT("%s"), *ErrorMsg.ToString());
+				auto ErrorMsg = LOCTEXT("StaticMeshComponentNotValid", "StaticMesh component not valid!");
+				UE_LOG(LGUI, Error, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *ErrorMsg.ToString());
 #if WITH_EDITOR
 				FLexUIUtils::EditorNotification(ErrorMsg);
 #endif
@@ -999,23 +999,23 @@ ULexCanvas* ULGUIRenderTargetGeometrySource::GetCanvas()const
 	}
 	if (!TargetCanvas.IsValidComponentReference())
 	{
-		UE_LOG(LGUI, Warning, TEXT("[ULGUIRenderTargetGeometrySource::GetCanvas]TargetCanvas not valid!"));
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d TargetCanvas not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return nullptr;
 	}
 	auto Canvas = TargetCanvas.GetComponent<ULexCanvas>();
 	if (Canvas == nullptr)
 	{
-		UE_LOG(LGUI, Warning, TEXT("[ULGUIRenderTargetGeometrySource::GetCanvas]TargetCanvas not valid!"));
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d TargetCanvas not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return nullptr;
 	}
 	if (!Canvas->IsRootCanvas())
 	{
-		UE_LOG(LGUI, Warning, TEXT("[ULGUIRenderTargetGeometrySource::GetCanvas]TargetCanvas must be a root canvas!"));
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d TargetCanvas must be a root canvas!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return nullptr;
 	}
 	if (Canvas->GetRenderMode() != ELexRenderMode::RenderTarget || !IsValid(Canvas->GetRenderTarget()))
 	{
-		UE_LOG(LGUI, Warning, TEXT("[ULGUIRenderTargetGeometrySource::GetCanvas]TargetCanvas's render mode must be RenderTarget!"));
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d TargetCanvas's render mode must be RenderTarget!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return nullptr;
 	}
 	TargetCanvasObject = Canvas;

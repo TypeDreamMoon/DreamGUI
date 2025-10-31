@@ -5,7 +5,7 @@
 #include "Components/ActorComponent.h"
 #include "PrefabSystem/ILGUIPrefabInterface.h"
 #include "MovieSceneSequencePlayer.h"
-#include "LGUIComponentReference.h"
+#include "LexUIComponentReference.h"
 #include "LGUIPrefabSequenceComponent.generated.h"
 
 
@@ -88,7 +88,7 @@ protected:
 	 * Not working: Add event in prefab the event can work no problem, but if close editor and open again, the event not fire at all.
 	 */
 	UPROPERTY(/*EditAnywhere, Category = Playback*/)
-		FLGUIComponentReference SequenceEventHandler;
+		FLexUIComponentReference SequenceEventHandler;
 
 	UPROPERTY(transient)
 		TObjectPtr<ULGUIPrefabSequencePlayer> SequencePlayer;

@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "DetailCustomization/LGUIEventDelegateCustomization.h"
+#include "DetailCustomization/LexUIEventDelegateCustomization.h"
 #include "LGUIEditorStyle.h"
 #include "IDetailChildrenBuilder.h"
 #include "IDetailPropertyRow.h"
@@ -18,7 +18,7 @@
 #include "STextPropertyEditableTextBox.h"
 #include "SEnumCombo.h"
 #include "Serialization/BufferArchive.h"
-#include "LGUIEditableTextPropertyHandle.h"
+#include "LexUIEditableTextPropertyHandle.h"
 #include "Widgets/Input/NumericUnitTypeInterface.inl"
 
 #define LOCTEXT_NAMESPACE "LGUIEventDelegateCustomization"
@@ -27,14 +27,14 @@
 
 #define LGUIEventActorSelfName "(ActorSelf)"
 
-TArray<FString> FLGUIEventDelegateCustomization::CopySourceData;
+TArray<FString> FLexUIEventDelegateCustomization::CopySourceData;
 
-TSharedPtr<IPropertyHandleArray> FLGUIEventDelegateCustomization::GetEventListHandle()const
+TSharedPtr<IPropertyHandleArray> FLexUIEventDelegateCustomization::GetEventListHandle()const
 {
-	return PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegate, eventList))->AsArray();
+	return PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegate, eventList))->AsArray();
 }
 
-void FLGUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyHandle> InPropertyHandle, IDetailChildrenBuilder& ChildBuilder, IPropertyTypeCustomizationUtils& CustomizationUtils)
+void FLexUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyHandle> InPropertyHandle, IDetailChildrenBuilder& ChildBuilder, IPropertyTypeCustomizationUtils& CustomizationUtils)
 {
 	PropertyUtilites = CustomizationUtils.GetPropertyUtilities();
 	PropertyHandle = InPropertyHandle;
@@ -50,7 +50,7 @@ void FLGUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyHand
 		.NameContent()
 		[
 			SNew(STextBlock)
-			.Text(this, &FLGUIEventDelegateCustomization::GetEventTitleName)
+			.Text(this, &FLexUIEventDelegateCustomization::GetEventTitleName)
 			.ToolTipText(PropertyHandle->GetToolTipText())
 		]
 		.ValueContent()
@@ -84,7 +84,7 @@ void FLGUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyHand
 				.NameContent()
 				[
 					SNew(STextBlock)
-					.Text(this, &FLGUIEventDelegateCustomization::GetEventTitleName)
+					.Text(this, &FLexUIEventDelegateCustomization::GetEventTitleName)
 					.ToolTipText(PropertyHandle->GetToolTipText())
 				]
 				.ValueContent()
@@ -110,7 +110,7 @@ void FLGUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyHand
 	for (auto Iter = StructPtrs.CreateIterator(); Iter; ++Iter)
 	{
 		check(*Iter);
-		auto Item = (FLGUIEventDelegate*)(*Iter);
+		auto Item = (FLexUIEventDelegate*)(*Iter);
 		EventDelegateInstances[Iter.GetIndex()] = Item;
 		for (auto& listItem : Item->eventList)
 		{
@@ -119,9 +119,9 @@ void FLGUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyHand
 	}
 
 	auto EventListHandle = GetEventListHandle();
-	auto RefreshDelegate = FSimpleDelegate::CreateSP(this, &FLGUIEventDelegateCustomization::UpdateEventsLayout);
+	auto RefreshDelegate = FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::UpdateEventsLayout);
 	EventListHandle->SetOnNumElementsChanged(RefreshDelegate);
-	auto NativeParameterTypeHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegate, supportParameterType));
+	auto NativeParameterTypeHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegate, supportParameterType));
 	NativeParameterTypeHandle->SetOnPropertyValueChanged(RefreshDelegate);
 
 	auto EventParameterType = GetNativeParameterType();
@@ -141,7 +141,7 @@ void FLGUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyHand
 					[
 						SNew(SBox)
 						.WidthOverride(1000)
-						.HeightOverride(this, &FLGUIEventDelegateCustomization::GetEventTotalHeight)
+						.HeightOverride(this, &FLexUIEventDelegateCustomization::GetEventTotalHeight)
 						[
 							SNew(SImage)
 							.Image(FLGUIEditorStyle::Get().GetBrush("LGUIEditor.EventGroup"))
@@ -166,7 +166,7 @@ void FLGUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyHand
 							.AutoWidth()
 							[
 								SNew(STextBlock)
-								.Text(this, &FLGUIEventDelegateCustomization::GetEventTitleName)
+								.Text(this, &FLexUIEventDelegateCustomization::GetEventTitleName)
 								.ToolTipText(PropertyHandle->GetToolTipText())
 								//.Font(IDetailLayoutBuilder::GetDetailFont())
 							]
@@ -185,11 +185,11 @@ void FLGUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyHand
 										SNew(SHorizontalBox)
 										+ SHorizontalBox::Slot()
 										[
-											PropertyCustomizationHelpers::MakeAddButton(FSimpleDelegate::CreateSP(this, &FLGUIEventDelegateCustomization::OnClickListAdd))
+											PropertyCustomizationHelpers::MakeAddButton(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::OnClickListAdd))
 										]
 										+ SHorizontalBox::Slot()
 										[
-											PropertyCustomizationHelpers::MakeEmptyButton(FSimpleDelegate::CreateSP(this, &FLGUIEventDelegateCustomization::OnClickListEmpty))
+											PropertyCustomizationHelpers::MakeEmptyButton(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::OnClickListEmpty))
 										]
 									]
 								)
@@ -223,19 +223,19 @@ void FLGUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyHand
 	UpdateEventsLayout();
 }
 
-FText FLGUIEventDelegateCustomization::GetEventTitleName()const
+FText FLexUIEventDelegateCustomization::GetEventTitleName()const
 {
 	auto EventParameterType = GetNativeParameterType();
 	auto NameStr = PropertyHandle->GetPropertyDisplayName().ToString();
-	FString ParamTypeString = ULGUIEventDelegateParameterHelper::ParameterTypeToName(EventParameterType, nullptr);
+	FString ParamTypeString = ULexUIEventDelegateParameterHelper::ParameterTypeToName(EventParameterType, nullptr);
 	NameStr = NameStr + "(" + ParamTypeString + ")";
 	return FText::FromString(NameStr);
 }
 
-FText FLGUIEventDelegateCustomization::GetEventItemFunctionName(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const
+FText FLexUIEventDelegateCustomization::GetEventItemFunctionName(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const
 {
 	//function
-	auto FunctionNameHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, functionName));
+	auto FunctionNameHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, functionName));
 	FName FunctionFName;
 	FunctionNameHandle->GetValue(FunctionFName);
 	FString FunctionName = FunctionFName.ToString();
@@ -251,7 +251,7 @@ FText FLGUIEventDelegateCustomization::GetEventItemFunctionName(TSharedRef<IProp
 		EventFunction = TargetObject->FindFunction(FunctionFName);
 		if (EventFunction)
 		{
-			if (ULGUIEventDelegateParameterHelper::IsStillSupported(EventFunction, FunctionParameterType))
+			if (ULexUIEventDelegateParameterHelper::IsStillSupported(EventFunction, FunctionParameterType))
 			{
 				EventFunctionValid = true;
 			}
@@ -270,16 +270,16 @@ FText FLGUIEventDelegateCustomization::GetEventItemFunctionName(TSharedRef<IProp
 	return FText::FromString(FunctionName);
 }
 
-UObject* FLGUIEventDelegateCustomization::GetEventItemTargetObject(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const
+UObject* FLexUIEventDelegateCustomization::GetEventItemTargetObject(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const
 {
 	//TargetObject
-	auto TargetObjectHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, TargetObject));
+	auto TargetObjectHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, TargetObject));
 	UObject* TargetObject = nullptr;
 	TargetObjectHandle->GetValue(TargetObject);
 	return TargetObject;
 }
 
-FText FLGUIEventDelegateCustomization::GetComponentDisplayName(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const
+FText FLexUIEventDelegateCustomization::GetComponentDisplayName(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const
 {
 	FString ComponentDisplayName;
 	auto TargetObject = GetEventItemTargetObject(EventItemPropertyHandle);
@@ -309,11 +309,11 @@ FText FLGUIEventDelegateCustomization::GetComponentDisplayName(TSharedRef<IPrope
 	return FText::FromString(ComponentDisplayName);
 }
 
-EVisibility FLGUIEventDelegateCustomization::GetNativeParameterWidgetVisibility(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const
+EVisibility FLexUIEventDelegateCustomization::GetNativeParameterWidgetVisibility(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const
 {
 	auto TargetObject = GetEventItemTargetObject(EventItemPropertyHandle);
 	//function
-	auto FunctionNameHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, functionName));
+	auto FunctionNameHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, functionName));
 	FName FunctionFName;
 	FunctionNameHandle->GetValue(FunctionFName);
 	//parameterType
@@ -329,7 +329,7 @@ EVisibility FLGUIEventDelegateCustomization::GetNativeParameterWidgetVisibility(
 	if (IsValid(TargetObject) && IsValid(EventFunction))
 	{
 		bool bUseNativeParameter = false;
-		auto UseNativeParameterHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, UseNativeParameter));
+		auto UseNativeParameterHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, UseNativeParameter));
 		UseNativeParameterHandle->GetValue(bUseNativeParameter);
 
 		if ((EventParameterType == FunctionParameterType) && bUseNativeParameter)//support native parameter
@@ -340,11 +340,11 @@ EVisibility FLGUIEventDelegateCustomization::GetNativeParameterWidgetVisibility(
 	return EVisibility::Collapsed;
 }
 
-EVisibility FLGUIEventDelegateCustomization::GetDrawFunctionParameterWidgetVisibility(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const
+EVisibility FLexUIEventDelegateCustomization::GetDrawFunctionParameterWidgetVisibility(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const
 {
 	auto TargetObject = GetEventItemTargetObject(EventItemPropertyHandle);
 	//function
-	auto FunctionNameHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, functionName));
+	auto FunctionNameHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, functionName));
 	FName FunctionFName;
 	FunctionNameHandle->GetValue(FunctionFName);
 	//parameterType
@@ -360,7 +360,7 @@ EVisibility FLGUIEventDelegateCustomization::GetDrawFunctionParameterWidgetVisib
 	if (IsValid(TargetObject) && IsValid(EventFunction))
 	{
 		bool bUseNativeParameter = false;
-		auto UseNativeParameterHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, UseNativeParameter));
+		auto UseNativeParameterHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, UseNativeParameter));
 		UseNativeParameterHandle->GetValue(bUseNativeParameter);
 
 		if ((EventParameterType == FunctionParameterType) && bUseNativeParameter)//support native parameter
@@ -375,11 +375,11 @@ EVisibility FLGUIEventDelegateCustomization::GetDrawFunctionParameterWidgetVisib
 	return EVisibility::Collapsed;
 }
 
-EVisibility FLGUIEventDelegateCustomization::GetNotValidParameterWidgetVisibility(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const
+EVisibility FLexUIEventDelegateCustomization::GetNotValidParameterWidgetVisibility(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const
 {
 	auto TargetObject = GetEventItemTargetObject(EventItemPropertyHandle);
 	//function
-	auto FunctionNameHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, functionName));
+	auto FunctionNameHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, functionName));
 	FName FunctionFName;
 	FunctionNameHandle->GetValue(FunctionFName);
 	//parameterType
@@ -402,10 +402,10 @@ EVisibility FLGUIEventDelegateCustomization::GetNotValidParameterWidgetVisibilit
 	}
 }
 
-AActor* FLGUIEventDelegateCustomization::GetEventItemHelperActor(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const
+AActor* FLexUIEventDelegateCustomization::GetEventItemHelperActor(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const
 {
 	//HelperActor
-	auto HelperActorHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, HelperActor));
+	auto HelperActorHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperActor));
 	AActor* HelperActor = nullptr;
 	UObject* HelperActorObject = nullptr;
 	HelperActorHandle->GetValue(HelperActorObject);
@@ -416,7 +416,7 @@ AActor* FLGUIEventDelegateCustomization::GetEventItemHelperActor(TSharedRef<IPro
 	return HelperActor;
 }
 
-void FLGUIEventDelegateCustomization::UpdateEventsLayout()
+void FLexUIEventDelegateCustomization::UpdateEventsLayout()
 {
 	auto EventParameterType = GetNativeParameterType();
 	auto EventListHandle = GetEventListHandle();
@@ -429,18 +429,18 @@ void FLGUIEventDelegateCustomization::UpdateEventsLayout()
 	{
 		auto ItemPropertyHandle = EventListHandle->GetElement(EventItemIndex);
 		//HelperActor
-		auto HelperActorHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, HelperActor));
+		auto HelperActorHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperActor));
 		UObject* HelperActorObject = nullptr;
 		HelperActorHandle->GetValue(HelperActorObject);
 		AActor* HelperActor = Cast<AActor>(HelperActorObject);
 
 		//TargetObject
-		auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, TargetObject));
+		auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, TargetObject));
 		UObject* TargetObject = nullptr;
 		TargetObjectHandle->GetValue(TargetObject);
 
 		UObject* ClassObject = nullptr;
-		auto HelperClassHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, HelperClass));
+		auto HelperClassHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperClass));
 		HelperClassHandle->GetValue(ClassObject);
 		if (ClassObject != nullptr)
 		{
@@ -463,7 +463,7 @@ void FLGUIEventDelegateCustomization::UpdateEventsLayout()
 					else if (CompArray.Num() > 1)
 					{
 						FName HelperComponentName = NAME_None;
-						auto HelperComponentNameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, HelperComponentName));
+						auto HelperComponentNameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperComponentName));
 						HelperComponentNameHandle->GetValue(HelperComponentName);
 						if (!HelperComponentName.IsNone())
 						{
@@ -499,15 +499,15 @@ void FLGUIEventDelegateCustomization::UpdateEventsLayout()
 			}
 		}
 
-		HelperActorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUIEventDelegateCustomization::OnActorParameterChange, ItemPropertyHandle));
+		HelperActorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::OnActorParameterChange, ItemPropertyHandle));
 			
 		//function
-		auto FunctionNameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, functionName));
+		auto FunctionNameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, functionName));
 		FName FunctionFName;
 		FunctionNameHandle->GetValue(FunctionFName);
 		//parameterType
-		auto paramTypeHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, ParamType));
-		paramTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUIEventDelegateCustomization::OnParameterTypeChange, ItemPropertyHandle));
+		auto paramTypeHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, ParamType));
+		paramTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::OnParameterTypeChange, ItemPropertyHandle));
 		auto FunctionParameterType = GetEventDataParameterType(ItemPropertyHandle);
 
 		UFunction* EventFunction = nullptr;
@@ -520,7 +520,7 @@ void FLGUIEventDelegateCustomization::UpdateEventsLayout()
 		if (IsValid(TargetObject) && IsValid(EventFunction))
 		{
 			bool bUseNativeParameter = false;
-			auto UseNativeParameterHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, UseNativeParameter));
+			auto UseNativeParameterHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, UseNativeParameter));
 			UseNativeParameterHandle->GetValue(bUseNativeParameter);
 				
 			if (EventParameterType != FunctionParameterType)//check "bUseNativeParameter" parameter
@@ -592,7 +592,7 @@ void FLGUIEventDelegateCustomization::UpdateEventsLayout()
 							.HAlign(HAlign_Center)
 							.VAlign(VAlign_Center)
 							.Text(LOCTEXT("C", "C"))
-							.OnClicked(this, &FLGUIEventDelegateCustomization::OnClickCopyPaste, true, EventItemIndex)
+							.OnClicked(this, &FLexUIEventDelegateCustomization::OnClickCopyPaste, true, EventItemIndex)
 							.ToolTipText(LOCTEXT("Copy", "Copy this function"))
 						]
 					]
@@ -611,7 +611,7 @@ void FLGUIEventDelegateCustomization::UpdateEventsLayout()
 							.HAlign(HAlign_Center)
 							.VAlign(VAlign_Center)
 							.Text(LOCTEXT("P", "P"))
-							.OnClicked(this, &FLGUIEventDelegateCustomization::OnClickCopyPaste, false, EventItemIndex)
+							.OnClicked(this, &FLexUIEventDelegateCustomization::OnClickCopyPaste, false, EventItemIndex)
 							.ToolTipText(LOCTEXT("Paste", "Paste copied function to this function"))
 						]
 					]
@@ -630,7 +630,7 @@ void FLGUIEventDelegateCustomization::UpdateEventsLayout()
 							.HAlign(HAlign_Center)
 							.VAlign(VAlign_Center)
 							.Text(LOCTEXT("D", "D"))
-							.OnClicked(this, &FLGUIEventDelegateCustomization::OnClickDuplicate, EventItemIndex)
+							.OnClicked(this, &FLexUIEventDelegateCustomization::OnClickDuplicate, EventItemIndex)
 							.ToolTipText(LOCTEXT("Duplicate", "Duplicate this function"))
 						]
 					]
@@ -649,7 +649,7 @@ void FLGUIEventDelegateCustomization::UpdateEventsLayout()
 							.HAlign(HAlign_Center)
 							.VAlign(VAlign_Center)
 							.Text(LOCTEXT("+", "+"))
-							.OnClicked(this, &FLGUIEventDelegateCustomization::OnClickAddRemove, true, EventItemIndex, (int32)arrayCount)
+							.OnClicked(this, &FLexUIEventDelegateCustomization::OnClickAddRemove, true, EventItemIndex, (int32)arrayCount)
 							.ToolTipText(LOCTEXT("Add", "Add new one"))
 						]
 					]
@@ -668,7 +668,7 @@ void FLGUIEventDelegateCustomization::UpdateEventsLayout()
 							.HAlign(HAlign_Center)
 							.VAlign(VAlign_Center)
 							.Text(LOCTEXT("-", "-"))
-							.OnClicked(this, &FLGUIEventDelegateCustomization::OnClickAddRemove, false, EventItemIndex, (int32)arrayCount)
+							.OnClicked(this, &FLexUIEventDelegateCustomization::OnClickAddRemove, false, EventItemIndex, (int32)arrayCount)
 							.ToolTipText(LOCTEXT("Delete", "Delete this one"))
 						]
 					]
@@ -687,7 +687,7 @@ void FLGUIEventDelegateCustomization::UpdateEventsLayout()
 							.HAlign(HAlign_Center)
 							.VAlign(VAlign_Center)
 							.Text(LOCTEXT("▲", "▲"))
-							.OnClicked(this, &FLGUIEventDelegateCustomization::OnClickMoveUpDown, true, EventItemIndex)
+							.OnClicked(this, &FLexUIEventDelegateCustomization::OnClickMoveUpDown, true, EventItemIndex)
 							.ToolTipText(LOCTEXT("MoveUp", "Move up"))
 						]
 					]
@@ -706,7 +706,7 @@ void FLGUIEventDelegateCustomization::UpdateEventsLayout()
 							.HAlign(HAlign_Center)
 							.VAlign(VAlign_Center)
 							.Text(LOCTEXT("▼", "▼"))
-							.OnClicked(this, &FLGUIEventDelegateCustomization::OnClickMoveUpDown, false, EventItemIndex)
+							.OnClicked(this, &FLexUIEventDelegateCustomization::OnClickMoveUpDown, false, EventItemIndex)
 							.ToolTipText(LOCTEXT("MoveDown", "Move down"))
 						]
 					]
@@ -732,7 +732,7 @@ void FLGUIEventDelegateCustomization::UpdateEventsLayout()
 						[
 							SNew(SBox)
 							.WidthOverride(1000)
-							.HeightOverride(this, &FLGUIEventDelegateCustomization::GetEventItemHeight, EventItemIndex)
+							.HeightOverride(this, &FLexUIEventDelegateCustomization::GetEventItemHeight, EventItemIndex)
 							[
 								SNew(SImage)
 								.Image(FLGUIEditorStyle::Get().GetBrush("LGUIEditor.EventItem"))
@@ -770,12 +770,12 @@ void FLGUIEventDelegateCustomization::UpdateEventsLayout()
 											//Component
 											SNew(SComboButton)
 											.HasDownArrow(true)
-											.IsEnabled(this, &FLGUIEventDelegateCustomization::IsComponentSelectorMenuEnabled, ItemPropertyHandle)
+											.IsEnabled(this, &FLexUIEventDelegateCustomization::IsComponentSelectorMenuEnabled, ItemPropertyHandle)
 											.ToolTipText(LOCTEXT("Component", "Pick component for this event"))
 											.ButtonContent()
 											[
 												SNew(STextBlock)
-												.Text(this, &FLGUIEventDelegateCustomization::GetComponentDisplayName, ItemPropertyHandle)
+												.Text(this, &FLexUIEventDelegateCustomization::GetComponentDisplayName, ItemPropertyHandle)
 												.Font(IDetailLayoutBuilder::GetDetailFont())
 											]
 											.MenuContent()
@@ -804,12 +804,12 @@ void FLGUIEventDelegateCustomization::UpdateEventsLayout()
 												//function
 												SNew(SComboButton)
 												.HasDownArrow(true)
-												.IsEnabled(this, &FLGUIEventDelegateCustomization::IsFunctionSelectorMenuEnabled, ItemPropertyHandle)
+												.IsEnabled(this, &FLexUIEventDelegateCustomization::IsFunctionSelectorMenuEnabled, ItemPropertyHandle)
 												.ToolTipText(LOCTEXT("Function", "Pick a function to execute of this event"))
 												.ButtonContent()
 												[
 													SNew(STextBlock)
-													.Text(this, &FLGUIEventDelegateCustomization::GetEventItemFunctionName, ItemPropertyHandle)
+													.Text(this, &FLexUIEventDelegateCustomization::GetEventItemFunctionName, ItemPropertyHandle)
 													.Font(IDetailLayoutBuilder::GetDetailFont())
 												]
 												.MenuContent()
@@ -839,19 +839,19 @@ void FLGUIEventDelegateCustomization::UpdateEventsLayout()
 	EventsWidget->SetContent(EventsVerticalLayout);
 }
 
-void FLGUIEventDelegateCustomization::OnActorParameterChange(TSharedRef<IPropertyHandle> ItemPropertyHandle)
+void FLexUIEventDelegateCustomization::OnActorParameterChange(TSharedRef<IPropertyHandle> ItemPropertyHandle)
 {
 	UObject* HelperActorObject = nullptr;
-	auto HelperActorHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, HelperActor));
+	auto HelperActorHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperActor));
 	HelperActorHandle->GetValue(HelperActorObject);
 	AActor* HelperActor = Cast<AActor>(HelperActorObject);
 
-	auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, TargetObject));
+	auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, TargetObject));
 	UObject* TargetObject = nullptr;
 	TargetObjectHandle->GetValue(TargetObject);
 
 	UObject* ClassObject = nullptr;
-	auto HelperClassHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, HelperClass));
+	auto HelperClassHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperClass));
 	HelperClassHandle->GetValue(ClassObject);
 	if (ClassObject != nullptr)
 	{
@@ -874,7 +874,7 @@ void FLGUIEventDelegateCustomization::OnActorParameterChange(TSharedRef<IPropert
 				else if (CompArray.Num() > 1)
 				{
 					FName HelperComponentName = NAME_None;
-					auto HelperComponentNameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, HelperComponentName));
+					auto HelperComponentNameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperComponentName));
 					HelperComponentNameHandle->GetValue(HelperComponentName);
 					if (!HelperComponentName.IsNone())
 					{
@@ -913,79 +913,79 @@ void FLGUIEventDelegateCustomization::OnActorParameterChange(TSharedRef<IPropert
 	UpdateEventsLayout();
 }
 
-void FLGUIEventDelegateCustomization::OnSelectComponent(UActorComponent* Comp, TSharedRef<IPropertyHandle> ItemPropertyHandle)
+void FLexUIEventDelegateCustomization::OnSelectComponent(UActorComponent* Comp, TSharedRef<IPropertyHandle> ItemPropertyHandle)
 {
-	auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, TargetObject));
+	auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, TargetObject));
 	TargetObjectHandle->SetValue(Comp);
 
-	auto HelperClassHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, HelperClass));
+	auto HelperClassHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperClass));
 	HelperClassHandle->SetValue(Comp->GetClass());
 
-	auto HelperComponentNameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, HelperComponentName));
+	auto HelperComponentNameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperComponentName));
 	HelperComponentNameHandle->SetValue(Comp->GetFName());
 
 	UpdateEventsLayout();
 }
-void FLGUIEventDelegateCustomization::OnSelectActorSelf(TSharedRef<IPropertyHandle> ItemPropertyHandle)
+void FLexUIEventDelegateCustomization::OnSelectActorSelf(TSharedRef<IPropertyHandle> ItemPropertyHandle)
 {
-	auto HelperActorHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, HelperActor));
+	auto HelperActorHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperActor));
 	UObject* HelperActorObject = nullptr;
 	HelperActorHandle->GetValue(HelperActorObject);
 
-	auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, TargetObject));
+	auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, TargetObject));
 	TargetObjectHandle->SetValue(HelperActorObject);
 
-	auto HelperClassHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, HelperClass));
+	auto HelperClassHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperClass));
 	HelperClassHandle->SetValue(AActor::StaticClass());
 
-	auto HelperComponentNameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, HelperComponentName));
+	auto HelperComponentNameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperComponentName));
 	HelperComponentNameHandle->SetValue(NAME_None);
 
 	UpdateEventsLayout();
 }
-void FLGUIEventDelegateCustomization::OnSelectFunction(FName FuncName, ELGUIEventDelegateParameterType ParamType, bool UseNativeParameter, TSharedRef<IPropertyHandle> ItemPropertyHandle)
+void FLexUIEventDelegateCustomization::OnSelectFunction(FName FuncName, ELexUIEventDelegateParameterType ParamType, bool UseNativeParameter, TSharedRef<IPropertyHandle> ItemPropertyHandle)
 {
-	auto nameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, functionName));
+	auto nameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, functionName));
 	nameHandle->SetValue(FuncName);
 	SetEventDataParameterType(ItemPropertyHandle, ParamType);
-	auto UseNativeParameterHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, UseNativeParameter));
+	auto UseNativeParameterHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, UseNativeParameter));
 	UseNativeParameterHandle->SetValue(UseNativeParameter);
 
 	UpdateEventsLayout();
 }
 
-void FLGUIEventDelegateCustomization::SetEventDataParameterType(TSharedRef<IPropertyHandle> EventDataItemHandle, ELGUIEventDelegateParameterType ParameterType)
+void FLexUIEventDelegateCustomization::SetEventDataParameterType(TSharedRef<IPropertyHandle> EventDataItemHandle, ELexUIEventDelegateParameterType ParameterType)
 {
-	auto ParamTypeHandle = EventDataItemHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, ParamType));
+	auto ParamTypeHandle = EventDataItemHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, ParamType));
 	ParamTypeHandle->SetValue((uint8)ParameterType);
 }
-ELGUIEventDelegateParameterType FLGUIEventDelegateCustomization::GetNativeParameterType()const
+ELexUIEventDelegateParameterType FLexUIEventDelegateCustomization::GetNativeParameterType()const
 {
-	auto NativeParameterTypeHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegate, supportParameterType));
+	auto NativeParameterTypeHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegate, supportParameterType));
 	uint8 supportParameterTypeUint8;
 	NativeParameterTypeHandle->GetValue(supportParameterTypeUint8);
-	ELGUIEventDelegateParameterType eventParameterType = (ELGUIEventDelegateParameterType)supportParameterTypeUint8;
+	ELexUIEventDelegateParameterType eventParameterType = (ELexUIEventDelegateParameterType)supportParameterTypeUint8;
 	return eventParameterType;
 }
-void FLGUIEventDelegateCustomization::AddNativeParameterTypeProperty(IDetailChildrenBuilder& ChildBuilder)
+void FLexUIEventDelegateCustomization::AddNativeParameterTypeProperty(IDetailChildrenBuilder& ChildBuilder)
 {
-	auto NativeParameterTypeHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegate, supportParameterType));
+	auto NativeParameterTypeHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegate, supportParameterType));
 	ChildBuilder.AddProperty(NativeParameterTypeHandle.ToSharedRef());
 }
-ELGUIEventDelegateParameterType FLGUIEventDelegateCustomization::GetEventDataParameterType(TSharedRef<IPropertyHandle> EventDataItemHandle)const
+ELexUIEventDelegateParameterType FLexUIEventDelegateCustomization::GetEventDataParameterType(TSharedRef<IPropertyHandle> EventDataItemHandle)const
 {
-	auto paramTypeHandle = EventDataItemHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, ParamType));
+	auto paramTypeHandle = EventDataItemHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, ParamType));
 	uint8 functionParameterTypeUint8;
 	paramTypeHandle->GetValue(functionParameterTypeUint8);
-	ELGUIEventDelegateParameterType functionParameterType = (ELGUIEventDelegateParameterType)functionParameterTypeUint8;
+	ELexUIEventDelegateParameterType functionParameterType = (ELexUIEventDelegateParameterType)functionParameterTypeUint8;
 	return functionParameterType;
 }
 
-TSharedRef<SWidget> FLGUIEventDelegateCustomization::MakeComponentSelectorMenu(int32 itemIndex)
+TSharedRef<SWidget> FLexUIEventDelegateCustomization::MakeComponentSelectorMenu(int32 itemIndex)
 {
 	auto EventListHandle = GetEventListHandle();
 	auto ItemPropertyHandle = EventListHandle->GetElement(itemIndex);
-	auto HelperActorHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, HelperActor));
+	auto HelperActorHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperActor));
 	UObject* HelperActorObject = nullptr;
 	HelperActorHandle->GetValue(HelperActorObject);
 	if (HelperActorObject == nullptr)
@@ -997,7 +997,7 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::MakeComponentSelectorMenu(i
 
 	auto HelperActor = (AActor*)HelperActorObject;
 	MenuBuilder.AddMenuEntry(
-		FUIAction(FExecuteAction::CreateRaw(this, &FLGUIEventDelegateCustomization::OnSelectActorSelf, ItemPropertyHandle)),
+		FUIAction(FExecuteAction::CreateRaw(this, &FLexUIEventDelegateCustomization::OnSelectActorSelf, ItemPropertyHandle)),
 		SNew(SHorizontalBox)
 		+ SHorizontalBox::Slot()
 		[
@@ -1020,7 +1020,7 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::MakeComponentSelectorMenu(i
 		auto CompName = Comp->GetFName();
 		auto CompTypeName = Comp->GetClass()->GetName();
 		MenuBuilder.AddMenuEntry(
-			FUIAction(FExecuteAction::CreateRaw(this, &FLGUIEventDelegateCustomization::OnSelectComponent, Comp, ItemPropertyHandle)),
+			FUIAction(FExecuteAction::CreateRaw(this, &FLexUIEventDelegateCustomization::OnSelectComponent, Comp, ItemPropertyHandle)),
 			SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot()
 			.HAlign(EHorizontalAlignment::HAlign_Left)
@@ -1040,12 +1040,12 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::MakeComponentSelectorMenu(i
 	}
 	return MenuBuilder.MakeWidget();
 }
-TSharedRef<SWidget> FLGUIEventDelegateCustomization::MakeFunctionSelectorMenu(int32 itemIndex)
+TSharedRef<SWidget> FLexUIEventDelegateCustomization::MakeFunctionSelectorMenu(int32 itemIndex)
 {
 	auto EventListHandle = GetEventListHandle();
 	auto EventParameterType = GetNativeParameterType();
 	auto ItemPropertyHandle = EventListHandle->GetElement(itemIndex);
-	auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, TargetObject));
+	auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, TargetObject));
 	UObject* TargetObject = nullptr;
 	TargetObjectHandle->GetValue(TargetObject);
 	if (TargetObject == nullptr)
@@ -1058,13 +1058,13 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::MakeFunctionSelectorMenu(in
 	auto FunctionField = TFieldRange<UFunction>(TargetObject->GetClass());
 	for (auto Func : FunctionField)
 	{
-		ELGUIEventDelegateParameterType ParamType;
-		if (ULGUIEventDelegateParameterHelper::IsSupportedFunction(Func, ParamType))//show only supported type
+		ELexUIEventDelegateParameterType ParamType;
+		if (ULexUIEventDelegateParameterHelper::IsSupportedFunction(Func, ParamType))//show only supported type
 		{
-			FString ParamTypeString = ULGUIEventDelegateParameterHelper::ParameterTypeToName(ParamType, Func);
+			FString ParamTypeString = ULexUIEventDelegateParameterHelper::ParameterTypeToName(ParamType, Func);
 			auto FunctionSelectorName = FString::Printf(TEXT("%s(%s)"), *Func->GetName(), *ParamTypeString);
 			MenuBuilder.AddMenuEntry(
-				FUIAction(FExecuteAction::CreateRaw(this, &FLGUIEventDelegateCustomization::OnSelectFunction, Func->GetFName(), ParamType, false, ItemPropertyHandle)),
+				FUIAction(FExecuteAction::CreateRaw(this, &FLexUIEventDelegateCustomization::OnSelectFunction, Func->GetFName(), ParamType, false, ItemPropertyHandle)),
 				SNew(SHorizontalBox)
 				+ SHorizontalBox::Slot()
 				.HAlign(EHorizontalAlignment::HAlign_Left)
@@ -1074,11 +1074,11 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::MakeFunctionSelectorMenu(in
 					.Font(IDetailLayoutBuilder::GetDetailFont())
 				]
 			);
-			if (ParamType == EventParameterType && EventParameterType != ELGUIEventDelegateParameterType::Empty)//if function support native parameter, then draw another button, and show as native parameter
+			if (ParamType == EventParameterType && EventParameterType != ELexUIEventDelegateParameterType::Empty)//if function support native parameter, then draw another button, and show as native parameter
 			{
 				FunctionSelectorName = FString::Printf(TEXT("%s(NativeParameter)"), *Func->GetName());
 				MenuBuilder.AddMenuEntry(
-					FUIAction(FExecuteAction::CreateRaw(this, &FLGUIEventDelegateCustomization::OnSelectFunction, Func->GetFName(), ParamType, true, ItemPropertyHandle)),
+					FUIAction(FExecuteAction::CreateRaw(this, &FLexUIEventDelegateCustomization::OnSelectFunction, Func->GetFName(), ParamType, true, ItemPropertyHandle)),
 					SNew(SHorizontalBox)
 					+ SHorizontalBox::Slot()
 					.HAlign(EHorizontalAlignment::HAlign_Left)
@@ -1094,38 +1094,38 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::MakeFunctionSelectorMenu(in
 	return MenuBuilder.MakeWidget();
 }
 
-bool FLGUIEventDelegateCustomization::IsComponentSelectorMenuEnabled(TSharedRef<IPropertyHandle> ItemPropertyHandle)const
+bool FLexUIEventDelegateCustomization::IsComponentSelectorMenuEnabled(TSharedRef<IPropertyHandle> ItemPropertyHandle)const
 {
-	auto HelperActorHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, HelperActor));
+	auto HelperActorHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperActor));
 	UObject* HelperActorObject = nullptr;
 	HelperActorHandle->GetValue(HelperActorObject);
 	return IsValid(HelperActorObject);
 }
-bool FLGUIEventDelegateCustomization::IsFunctionSelectorMenuEnabled(TSharedRef<IPropertyHandle> ItemPropertyHandle)const
+bool FLexUIEventDelegateCustomization::IsFunctionSelectorMenuEnabled(TSharedRef<IPropertyHandle> ItemPropertyHandle)const
 {
-	auto HelperActorHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, HelperActor));
+	auto HelperActorHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperActor));
 	UObject* HelperActorObject = nullptr;
 	HelperActorHandle->GetValue(HelperActorObject);
 
-	auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, TargetObject));
+	auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, TargetObject));
 	UObject* TargetObject = nullptr;
 	TargetObjectHandle->GetValue(TargetObject);
 
 	return IsValid(HelperActorObject) && IsValid(TargetObject);
 }
-void FLGUIEventDelegateCustomization::OnClickListAdd()
+void FLexUIEventDelegateCustomization::OnClickListAdd()
 {
 	auto EventListHandle = GetEventListHandle();
 	EventListHandle->AddItem();
 	UpdateEventsLayout();
 }
-void FLGUIEventDelegateCustomization::OnClickListEmpty()
+void FLexUIEventDelegateCustomization::OnClickListEmpty()
 {
 	auto EventListHandle = GetEventListHandle();
 	EventListHandle->EmptyArray();
 	UpdateEventsLayout();
 }
-FReply FLGUIEventDelegateCustomization::OnClickAddRemove(bool AddOrRemove, int32 Index, int32 Count)
+FReply FLexUIEventDelegateCustomization::OnClickAddRemove(bool AddOrRemove, int32 Index, int32 Count)
 {
 	auto EventListHandle = GetEventListHandle();
 	if (AddOrRemove)
@@ -1150,7 +1150,7 @@ FReply FLGUIEventDelegateCustomization::OnClickAddRemove(bool AddOrRemove, int32
 	UpdateEventsLayout();
 	return FReply::Handled();
 }
-FReply FLGUIEventDelegateCustomization::OnClickCopyPaste(bool CopyOrPaste, int32 Index)
+FReply FLexUIEventDelegateCustomization::OnClickCopyPaste(bool CopyOrPaste, int32 Index)
 {
 	auto EventListHandle = GetEventListHandle();
 	auto EventDataHandle = EventListHandle->GetElement(Index);
@@ -1167,14 +1167,14 @@ FReply FLGUIEventDelegateCustomization::OnClickCopyPaste(bool CopyOrPaste, int32
 	return FReply::Handled();
 }
 
-FReply FLGUIEventDelegateCustomization::OnClickDuplicate(int32 Index)
+FReply FLexUIEventDelegateCustomization::OnClickDuplicate(int32 Index)
 {
 	auto EventListHandle = GetEventListHandle();
 	auto EventDataHandle = EventListHandle->GetElement(Index);
 	EventListHandle->DuplicateItem(Index);
 	return FReply::Handled();
 }
-FReply FLGUIEventDelegateCustomization::OnClickMoveUpDown(bool UpOrDown, int32 Index)
+FReply FLexUIEventDelegateCustomization::OnClickMoveUpDown(bool UpOrDown, int32 Index)
 {
 	auto EventListHandle = GetEventListHandle();
 	if (UpOrDown)
@@ -1204,15 +1204,15 @@ type Value;\
 Reader << Value;\
 ValueHandle->SetValue(Value);
 
-TSharedRef<SWidget> FLGUIEventDelegateCustomization::DrawFunctionParameter(TSharedRef<IPropertyHandle> InDataContainerHandle, ELGUIEventDelegateParameterType InFunctionParameterType, UFunction* InFunction)
+TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawFunctionParameter(TSharedRef<IPropertyHandle> InDataContainerHandle, ELexUIEventDelegateParameterType InFunctionParameterType, UFunction* InFunction)
 {
-	auto ParamBufferHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, ParamBuffer));
-	if (InFunctionParameterType != ELGUIEventDelegateParameterType::None)//None means not select function yet
+	auto ParamBufferHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, ParamBuffer));
+	if (InFunctionParameterType != ELexUIEventDelegateParameterType::None)//None means not select function yet
 	{
 		switch (InFunctionParameterType)
 		{
 		default:
-		case ELGUIEventDelegateParameterType::Empty:
+		case ELexUIEventDelegateParameterType::Empty:
 		{
 			ClearValueBuffer(InDataContainerHandle);
 			ClearReferenceValue(InDataContainerHandle);
@@ -1228,55 +1228,55 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::DrawFunctionParameter(TShar
 			;
 		}
 		break;
-		case ELGUIEventDelegateParameterType::Bool:
+		case ELexUIEventDelegateParameterType::Bool:
 		{
 			ClearReferenceValue(InDataContainerHandle);
 			SetBufferLength(ParamBufferHandle, 1);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, BoolValue));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, BoolValue));
 			auto ParamBuffer = GetBuffer(ParamBufferHandle);
 			bool Value = ParamBuffer[0] == 1;
 			ValueHandle->SetValue(Value);
-			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUIEventDelegateCustomization::BoolValueChange, ValueHandle, ParamBufferHandle));
+			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::BoolValueChange, ValueHandle, ParamBufferHandle));
 			return ValueHandle->CreatePropertyValueWidget();
 		}
 		break;
-		case ELGUIEventDelegateParameterType::Float:
+		case ELexUIEventDelegateParameterType::Float:
 		{
 			ClearReferenceValue(InDataContainerHandle);
 			SetBufferLength(ParamBufferHandle, 4);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, FloatValue));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, FloatValue));
 			SET_VALUE_ON_BUFFER(float);
-			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUIEventDelegateCustomization::FloatValueChange, ValueHandle, ParamBufferHandle));
+			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::FloatValueChange, ValueHandle, ParamBufferHandle));
 			return ValueHandle->CreatePropertyValueWidget();
 		}
 		break;
-		case ELGUIEventDelegateParameterType::Double:
+		case ELexUIEventDelegateParameterType::Double:
 		{
 			ClearReferenceValue(InDataContainerHandle);
 			SetBufferLength(ParamBufferHandle, 8);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, DoubleValue));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, DoubleValue));
 			SET_VALUE_ON_BUFFER(double);
-			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUIEventDelegateCustomization::DoubleValueChange, ValueHandle, ParamBufferHandle));
+			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::DoubleValueChange, ValueHandle, ParamBufferHandle));
 			return ValueHandle->CreatePropertyValueWidget();
 		}
 		break;
-		case ELGUIEventDelegateParameterType::Int8:
+		case ELexUIEventDelegateParameterType::Int8:
 		{
 			ClearReferenceValue(InDataContainerHandle);
 			SetBufferLength(ParamBufferHandle, 1);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, Int8Value));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, Int8Value));
 			SET_VALUE_ON_BUFFER(int8);
-			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUIEventDelegateCustomization::Int8ValueChange, ValueHandle, ParamBufferHandle));
+			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::Int8ValueChange, ValueHandle, ParamBufferHandle));
 			return ValueHandle->CreatePropertyValueWidget();
 		}
 		break;
-		case ELGUIEventDelegateParameterType::UInt8:
+		case ELexUIEventDelegateParameterType::UInt8:
 		{
 			ClearReferenceValue(InDataContainerHandle);
 			SetBufferLength(ParamBufferHandle, 1);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, UInt8Value));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, UInt8Value));
 			SET_VALUE_ON_BUFFER(uint8);
-			if (auto enumValue = ULGUIEventDelegateParameterHelper::GetEnumParameter(InFunction))
+			if (auto enumValue = ULexUIEventDelegateParameterHelper::GetEnumParameter(InFunction))
 			{
 				return
 					SNew(SHorizontalBox)
@@ -1289,84 +1289,84 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::DrawFunctionParameter(TShar
 						.MinDesiredWidth(500)
 						[
 							SNew(SEnumComboBox, enumValue)
-							.CurrentValue(this, &FLGUIEventDelegateCustomization::GetEnumValue, ValueHandle)
-							.OnEnumSelectionChanged(this, &FLGUIEventDelegateCustomization::EnumValueChange, ValueHandle, ParamBufferHandle)
+							.CurrentValue(this, &FLexUIEventDelegateCustomization::GetEnumValue, ValueHandle)
+							.OnEnumSelectionChanged(this, &FLexUIEventDelegateCustomization::EnumValueChange, ValueHandle, ParamBufferHandle)
 						]
 					]
 				;
 			}
 			else
 			{
-				ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUIEventDelegateCustomization::UInt8ValueChange, ValueHandle, ParamBufferHandle));
+				ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::UInt8ValueChange, ValueHandle, ParamBufferHandle));
 				return ValueHandle->CreatePropertyValueWidget();
 			}
 		}
 		break;
-		case ELGUIEventDelegateParameterType::Int16:
+		case ELexUIEventDelegateParameterType::Int16:
 		{
 			ClearReferenceValue(InDataContainerHandle);
 			SetBufferLength(ParamBufferHandle, 2);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, Int16Value));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, Int16Value));
 			SET_VALUE_ON_BUFFER(int16);
-			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUIEventDelegateCustomization::Int16ValueChange, ValueHandle, ParamBufferHandle));
+			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::Int16ValueChange, ValueHandle, ParamBufferHandle));
 			return ValueHandle->CreatePropertyValueWidget();
 		}
 		break;
-		case ELGUIEventDelegateParameterType::UInt16:
+		case ELexUIEventDelegateParameterType::UInt16:
 		{
 			ClearReferenceValue(InDataContainerHandle);
 			SetBufferLength(ParamBufferHandle, 2);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, UInt16Value));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, UInt16Value));
 			SET_VALUE_ON_BUFFER(uint16);
-			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUIEventDelegateCustomization::UInt16ValueChange, ValueHandle, ParamBufferHandle));
+			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::UInt16ValueChange, ValueHandle, ParamBufferHandle));
 			return ValueHandle->CreatePropertyValueWidget();
 		}
 		break;
-		case ELGUIEventDelegateParameterType::Int32:
+		case ELexUIEventDelegateParameterType::Int32:
 		{
 			ClearReferenceValue(InDataContainerHandle);
 			SetBufferLength(ParamBufferHandle, 4);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, Int32Value));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, Int32Value));
 			SET_VALUE_ON_BUFFER(int32);
-			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUIEventDelegateCustomization::Int32ValueChange, ValueHandle, ParamBufferHandle));
+			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::Int32ValueChange, ValueHandle, ParamBufferHandle));
 			return ValueHandle->CreatePropertyValueWidget();
 		}
 		break;
-		case ELGUIEventDelegateParameterType::UInt32:
+		case ELexUIEventDelegateParameterType::UInt32:
 		{
 			ClearReferenceValue(InDataContainerHandle);
 			SetBufferLength(ParamBufferHandle, 4);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, UInt32Value));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, UInt32Value));
 			SET_VALUE_ON_BUFFER(uint32);
-			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUIEventDelegateCustomization::UInt32ValueChange, ValueHandle, ParamBufferHandle));
+			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::UInt32ValueChange, ValueHandle, ParamBufferHandle));
 			return ValueHandle->CreatePropertyValueWidget();
 		}
 		break;
-		case ELGUIEventDelegateParameterType::Int64:
+		case ELexUIEventDelegateParameterType::Int64:
 		{
 			ClearReferenceValue(InDataContainerHandle);
 			SetBufferLength(ParamBufferHandle, 8);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, Int64Value));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, Int64Value));
 			SET_VALUE_ON_BUFFER(int64);
-			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUIEventDelegateCustomization::Int64ValueChange, ValueHandle, ParamBufferHandle));
+			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::Int64ValueChange, ValueHandle, ParamBufferHandle));
 			return ValueHandle->CreatePropertyValueWidget();
 		}
 		break;
-		case ELGUIEventDelegateParameterType::UInt64:
+		case ELexUIEventDelegateParameterType::UInt64:
 		{
 			ClearReferenceValue(InDataContainerHandle);
 			SetBufferLength(ParamBufferHandle, 8);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, UInt64Value));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, UInt64Value));
 			SET_VALUE_ON_BUFFER(uint64);
-			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUIEventDelegateCustomization::UInt64ValueChange, ValueHandle, ParamBufferHandle));
+			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::UInt64ValueChange, ValueHandle, ParamBufferHandle));
 			return ValueHandle->CreatePropertyValueWidget();
 		}
 		break;
-		case ELGUIEventDelegateParameterType::Vector2:
+		case ELexUIEventDelegateParameterType::Vector2:
 		{
 			ClearReferenceValue(InDataContainerHandle);
 			SetBufferLength(ParamBufferHandle, 8);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, Vector2Value));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, Vector2Value));
 			SET_VALUE_ON_BUFFER(FVector2D);
 			return SNew(SHorizontalBox)
 				+SHorizontalBox::Slot()
@@ -1381,19 +1381,19 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::DrawFunctionParameter(TShar
 					.EnableY(true)
 					.ShowX(true)
 					.ShowY(true)
-					.X(this, &FLGUIEventDelegateCustomization::Vector2GetItemValue, 0, ValueHandle, ParamBufferHandle)
-					.Y(this, &FLGUIEventDelegateCustomization::Vector2GetItemValue, 1, ValueHandle, ParamBufferHandle)
-					.OnXCommitted(this, &FLGUIEventDelegateCustomization::Vector2ItemValueChange, 0, ValueHandle, ParamBufferHandle)
-					.OnYCommitted(this, &FLGUIEventDelegateCustomization::Vector2ItemValueChange, 1, ValueHandle, ParamBufferHandle)
+					.X(this, &FLexUIEventDelegateCustomization::Vector2GetItemValue, 0, ValueHandle, ParamBufferHandle)
+					.Y(this, &FLexUIEventDelegateCustomization::Vector2GetItemValue, 1, ValueHandle, ParamBufferHandle)
+					.OnXCommitted(this, &FLexUIEventDelegateCustomization::Vector2ItemValueChange, 0, ValueHandle, ParamBufferHandle)
+					.OnYCommitted(this, &FLexUIEventDelegateCustomization::Vector2ItemValueChange, 1, ValueHandle, ParamBufferHandle)
 				]
 			;
 		}
 		break;
-		case ELGUIEventDelegateParameterType::Vector3:
+		case ELexUIEventDelegateParameterType::Vector3:
 		{
 			ClearReferenceValue(InDataContainerHandle);
 			SetBufferLength(ParamBufferHandle, 12);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, Vector3Value));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, Vector3Value));
 			SET_VALUE_ON_BUFFER(FVector);
 			return SNew(SHorizontalBox)
 				+SHorizontalBox::Slot()
@@ -1410,21 +1410,21 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::DrawFunctionParameter(TShar
 					.ShowX(true)
 					.ShowY(true)
 					.ShowZ(true)
-					.X(this, &FLGUIEventDelegateCustomization::Vector3GetItemValue, 0, ValueHandle, ParamBufferHandle)
-					.Y(this, &FLGUIEventDelegateCustomization::Vector3GetItemValue, 1, ValueHandle, ParamBufferHandle)
-					.Z(this, &FLGUIEventDelegateCustomization::Vector3GetItemValue, 2, ValueHandle, ParamBufferHandle)
-					.OnXCommitted(this, &FLGUIEventDelegateCustomization::Vector3ItemValueChange, 0, ValueHandle, ParamBufferHandle)
-					.OnYCommitted(this, &FLGUIEventDelegateCustomization::Vector3ItemValueChange, 1, ValueHandle, ParamBufferHandle)
-					.OnZCommitted(this, &FLGUIEventDelegateCustomization::Vector3ItemValueChange, 2, ValueHandle, ParamBufferHandle)
+					.X(this, &FLexUIEventDelegateCustomization::Vector3GetItemValue, 0, ValueHandle, ParamBufferHandle)
+					.Y(this, &FLexUIEventDelegateCustomization::Vector3GetItemValue, 1, ValueHandle, ParamBufferHandle)
+					.Z(this, &FLexUIEventDelegateCustomization::Vector3GetItemValue, 2, ValueHandle, ParamBufferHandle)
+					.OnXCommitted(this, &FLexUIEventDelegateCustomization::Vector3ItemValueChange, 0, ValueHandle, ParamBufferHandle)
+					.OnYCommitted(this, &FLexUIEventDelegateCustomization::Vector3ItemValueChange, 1, ValueHandle, ParamBufferHandle)
+					.OnZCommitted(this, &FLexUIEventDelegateCustomization::Vector3ItemValueChange, 2, ValueHandle, ParamBufferHandle)
 				]
 			;
 		}
 		break;
-		case ELGUIEventDelegateParameterType::Vector4:
+		case ELexUIEventDelegateParameterType::Vector4:
 		{
 			ClearReferenceValue(InDataContainerHandle);
 			SetBufferLength(ParamBufferHandle, 16);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, Vector4Value));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, Vector4Value));
 			SET_VALUE_ON_BUFFER(FVector4);
 			return SNew(SHorizontalBox)
 				+SHorizontalBox::Slot()
@@ -1443,23 +1443,23 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::DrawFunctionParameter(TShar
 					.ShowY(true)
 					.ShowZ(true)
 					.ShowW(true)
-					.X(this, &FLGUIEventDelegateCustomization::Vector4GetItemValue, 0, ValueHandle, ParamBufferHandle)
-					.Y(this, &FLGUIEventDelegateCustomization::Vector4GetItemValue, 1, ValueHandle, ParamBufferHandle)
-					.Z(this, &FLGUIEventDelegateCustomization::Vector4GetItemValue, 2, ValueHandle, ParamBufferHandle)
-					.W(this, &FLGUIEventDelegateCustomization::Vector4GetItemValue, 3, ValueHandle, ParamBufferHandle)
-					.OnXCommitted(this, &FLGUIEventDelegateCustomization::Vector4ItemValueChange, 0, ValueHandle, ParamBufferHandle)
-					.OnYCommitted(this, &FLGUIEventDelegateCustomization::Vector4ItemValueChange, 1, ValueHandle, ParamBufferHandle)
-					.OnZCommitted(this, &FLGUIEventDelegateCustomization::Vector4ItemValueChange, 2, ValueHandle, ParamBufferHandle)
-					.OnWCommitted(this, &FLGUIEventDelegateCustomization::Vector4ItemValueChange, 3, ValueHandle, ParamBufferHandle)
+					.X(this, &FLexUIEventDelegateCustomization::Vector4GetItemValue, 0, ValueHandle, ParamBufferHandle)
+					.Y(this, &FLexUIEventDelegateCustomization::Vector4GetItemValue, 1, ValueHandle, ParamBufferHandle)
+					.Z(this, &FLexUIEventDelegateCustomization::Vector4GetItemValue, 2, ValueHandle, ParamBufferHandle)
+					.W(this, &FLexUIEventDelegateCustomization::Vector4GetItemValue, 3, ValueHandle, ParamBufferHandle)
+					.OnXCommitted(this, &FLexUIEventDelegateCustomization::Vector4ItemValueChange, 0, ValueHandle, ParamBufferHandle)
+					.OnYCommitted(this, &FLexUIEventDelegateCustomization::Vector4ItemValueChange, 1, ValueHandle, ParamBufferHandle)
+					.OnZCommitted(this, &FLexUIEventDelegateCustomization::Vector4ItemValueChange, 2, ValueHandle, ParamBufferHandle)
+					.OnWCommitted(this, &FLexUIEventDelegateCustomization::Vector4ItemValueChange, 3, ValueHandle, ParamBufferHandle)
 				]
 			;
 		}
 		break;
-		case ELGUIEventDelegateParameterType::Color:
+		case ELexUIEventDelegateParameterType::Color:
 		{
 			ClearReferenceValue(InDataContainerHandle);
 			SetBufferLength(ParamBufferHandle, 4);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, ColorValue));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, ColorValue));
 			auto ParamBuffer = GetBuffer(ParamBufferHandle);
 			FMemoryReader Reader(ParamBuffer);
 			FColor Value;
@@ -1472,10 +1472,10 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::DrawFunctionParameter(TShar
 				[
 					// Displays the color with alpha unless it is ignored
 					SAssignNew(ColorPickerParentWidget, SColorBlock)
-					.Color(this, &FLGUIEventDelegateCustomization::LinearColorGetValue, false, ValueHandle, ParamBufferHandle)
+					.Color(this, &FLexUIEventDelegateCustomization::LinearColorGetValue, false, ValueHandle, ParamBufferHandle)
 					.ShowBackgroundForAlpha(true)
 					.AlphaDisplayMode(EColorBlockAlphaDisplayMode::Separate)
-					.OnMouseButtonDown(this, &FLGUIEventDelegateCustomization::OnMouseButtonDownColorBlock, false, ValueHandle, ParamBufferHandle)
+					.OnMouseButtonDown(this, &FLexUIEventDelegateCustomization::OnMouseButtonDownColorBlock, false, ValueHandle, ParamBufferHandle)
 					.Size(FVector2D(35.0f, 12.0f))
 				]
 				+ SHorizontalBox::Slot()
@@ -1484,20 +1484,20 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::DrawFunctionParameter(TShar
 				[
 					// Displays the color without alpha
 					SNew(SColorBlock)
-					.Color(this, &FLGUIEventDelegateCustomization::LinearColorGetValue, false, ValueHandle, ParamBufferHandle)
+					.Color(this, &FLexUIEventDelegateCustomization::LinearColorGetValue, false, ValueHandle, ParamBufferHandle)
 					.ShowBackgroundForAlpha(false)
 					.AlphaDisplayMode(EColorBlockAlphaDisplayMode::Ignore)
-					.OnMouseButtonDown(this, &FLGUIEventDelegateCustomization::OnMouseButtonDownColorBlock, false, ValueHandle, ParamBufferHandle)
+					.OnMouseButtonDown(this, &FLexUIEventDelegateCustomization::OnMouseButtonDownColorBlock, false, ValueHandle, ParamBufferHandle)
 					.Size(FVector2D(35.0f, 12.0f))
 				];
 			;
 		}
 		break;
-		case ELGUIEventDelegateParameterType::LinearColor:
+		case ELexUIEventDelegateParameterType::LinearColor:
 		{
 			ClearReferenceValue(InDataContainerHandle);
 			SetBufferLength(ParamBufferHandle, 16);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, LinearColorValue));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, LinearColorValue));
 			SET_VALUE_ON_BUFFER(FLinearColor);
 			return SNew(SHorizontalBox)
 				+ SHorizontalBox::Slot()
@@ -1506,10 +1506,10 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::DrawFunctionParameter(TShar
 				[
 					// Displays the color with alpha unless it is ignored
 					SAssignNew(ColorPickerParentWidget, SColorBlock)
-					.Color(this, &FLGUIEventDelegateCustomization::LinearColorGetValue, true, ValueHandle, ParamBufferHandle)
+					.Color(this, &FLexUIEventDelegateCustomization::LinearColorGetValue, true, ValueHandle, ParamBufferHandle)
 					.ShowBackgroundForAlpha(true)
 					.AlphaDisplayMode(EColorBlockAlphaDisplayMode::Separate)
-					.OnMouseButtonDown(this, &FLGUIEventDelegateCustomization::OnMouseButtonDownColorBlock, true, ValueHandle, ParamBufferHandle)
+					.OnMouseButtonDown(this, &FLexUIEventDelegateCustomization::OnMouseButtonDownColorBlock, true, ValueHandle, ParamBufferHandle)
 					.Size(FVector2D(35.0f, 12.0f))
 				]
 				+ SHorizontalBox::Slot()
@@ -1518,20 +1518,20 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::DrawFunctionParameter(TShar
 				[
 					// Displays the color without alpha
 					SNew(SColorBlock)
-					.Color(this, &FLGUIEventDelegateCustomization::LinearColorGetValue, true, ValueHandle, ParamBufferHandle)
+					.Color(this, &FLexUIEventDelegateCustomization::LinearColorGetValue, true, ValueHandle, ParamBufferHandle)
 					.ShowBackgroundForAlpha(false)
 					.AlphaDisplayMode(EColorBlockAlphaDisplayMode::Ignore)
-					.OnMouseButtonDown(this, &FLGUIEventDelegateCustomization::OnMouseButtonDownColorBlock, true, ValueHandle, ParamBufferHandle)
+					.OnMouseButtonDown(this, &FLexUIEventDelegateCustomization::OnMouseButtonDownColorBlock, true, ValueHandle, ParamBufferHandle)
 					.Size(FVector2D(35.0f, 12.0f))
 				];
 			;
 		}
 		break;
-		case ELGUIEventDelegateParameterType::Quaternion:
+		case ELexUIEventDelegateParameterType::Quaternion:
 		{
 			ClearReferenceValue(InDataContainerHandle);
 			SetBufferLength(ParamBufferHandle, 16);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, QuatValue));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, QuatValue));
 			SET_VALUE_ON_BUFFER(FQuat);
 			return SNew(SHorizontalBox)
 				+SHorizontalBox::Slot()
@@ -1550,42 +1550,42 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::DrawFunctionParameter(TShar
 					.ShowY(true)
 					.ShowZ(true)
 					.ShowW(true)
-					.X(this, &FLGUIEventDelegateCustomization::Vector4GetItemValue, 0, ValueHandle, ParamBufferHandle)
-					.Y(this, &FLGUIEventDelegateCustomization::Vector4GetItemValue, 1, ValueHandle, ParamBufferHandle)
-					.Z(this, &FLGUIEventDelegateCustomization::Vector4GetItemValue, 2, ValueHandle, ParamBufferHandle)
-					.W(this, &FLGUIEventDelegateCustomization::Vector4GetItemValue, 3, ValueHandle, ParamBufferHandle)
-					.OnXCommitted(this, &FLGUIEventDelegateCustomization::Vector4ItemValueChange, 0, ValueHandle, ParamBufferHandle)
-					.OnYCommitted(this, &FLGUIEventDelegateCustomization::Vector4ItemValueChange, 1, ValueHandle, ParamBufferHandle)
-					.OnZCommitted(this, &FLGUIEventDelegateCustomization::Vector4ItemValueChange, 2, ValueHandle, ParamBufferHandle)
-					.OnWCommitted(this, &FLGUIEventDelegateCustomization::Vector4ItemValueChange, 3, ValueHandle, ParamBufferHandle)
+					.X(this, &FLexUIEventDelegateCustomization::Vector4GetItemValue, 0, ValueHandle, ParamBufferHandle)
+					.Y(this, &FLexUIEventDelegateCustomization::Vector4GetItemValue, 1, ValueHandle, ParamBufferHandle)
+					.Z(this, &FLexUIEventDelegateCustomization::Vector4GetItemValue, 2, ValueHandle, ParamBufferHandle)
+					.W(this, &FLexUIEventDelegateCustomization::Vector4GetItemValue, 3, ValueHandle, ParamBufferHandle)
+					.OnXCommitted(this, &FLexUIEventDelegateCustomization::Vector4ItemValueChange, 0, ValueHandle, ParamBufferHandle)
+					.OnYCommitted(this, &FLexUIEventDelegateCustomization::Vector4ItemValueChange, 1, ValueHandle, ParamBufferHandle)
+					.OnZCommitted(this, &FLexUIEventDelegateCustomization::Vector4ItemValueChange, 2, ValueHandle, ParamBufferHandle)
+					.OnWCommitted(this, &FLexUIEventDelegateCustomization::Vector4ItemValueChange, 3, ValueHandle, ParamBufferHandle)
 				]
 			;
 		}
 		break;
-		case ELGUIEventDelegateParameterType::String:
+		case ELexUIEventDelegateParameterType::String:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, StringValue));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, StringValue));
 			SET_VALUE_ON_BUFFER(FString);
-			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUIEventDelegateCustomization::StringValueChange, ValueHandle, ParamBufferHandle));
+			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::StringValueChange, ValueHandle, ParamBufferHandle));
 			return ValueHandle->CreatePropertyValueWidget();
 		}
 		break;
-		case ELGUIEventDelegateParameterType::Name:
+		case ELexUIEventDelegateParameterType::Name:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, NameValue));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, NameValue));
 			SET_VALUE_ON_BUFFER(FName);
-			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUIEventDelegateCustomization::NameValueChange, ValueHandle, ParamBufferHandle));
+			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::NameValueChange, ValueHandle, ParamBufferHandle));
 			return ValueHandle->CreatePropertyValueWidget();
 		}
-		case ELGUIEventDelegateParameterType::Text:
+		case ELexUIEventDelegateParameterType::Text:
 		{
 			ClearReferenceValue(InDataContainerHandle);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, TextValue));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, TextValue));
 			SET_VALUE_ON_BUFFER(FText);
-			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLGUIEventDelegateCustomization::TextValueChange, ValueHandle, ParamBufferHandle));
-			TSharedRef<IEditableTextProperty> EditableTextProperty = MakeShareable(new FLGUIEditableTextPropertyHandle(ValueHandle.ToSharedRef(), PropertyUtilites));
+			ValueHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::TextValueChange, ValueHandle, ParamBufferHandle));
+			TSharedRef<IEditableTextProperty> EditableTextProperty = MakeShareable(new FLexUIEditableTextPropertyHandle(ValueHandle.ToSharedRef(), PropertyUtilites));
 			const bool bIsMultiLine = EditableTextProperty->IsMultiLineText();
 			return 
 				SNew(SHorizontalBox)
@@ -1605,7 +1605,7 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::DrawFunctionParameter(TShar
 				]
 				;
 		}
-		case ELGUIEventDelegateParameterType::PointerEvent:
+		case ELexUIEventDelegateParameterType::PointerEvent:
 		{
 			ClearValueBuffer(InDataContainerHandle);
 			ClearReferenceValue(InDataContainerHandle);
@@ -1622,9 +1622,9 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::DrawFunctionParameter(TShar
 				];
 		}
 		break;
-		case ELGUIEventDelegateParameterType::Object:
-		case ELGUIEventDelegateParameterType::Actor:
-		case ELGUIEventDelegateParameterType::Class:
+		case ELexUIEventDelegateParameterType::Object:
+		case ELexUIEventDelegateParameterType::Actor:
+		case ELexUIEventDelegateParameterType::Class:
 		{
 			return
 				SNew(SBox)
@@ -1634,11 +1634,11 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::DrawFunctionParameter(TShar
 				];
 		}
 		break;
-		case ELGUIEventDelegateParameterType::Rotator:
+		case ELexUIEventDelegateParameterType::Rotator:
 		{
 			ClearReferenceValue(InDataContainerHandle);
 			SetBufferLength(ParamBufferHandle, 12);
-			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, RotatorValue));
+			auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, RotatorValue));
 			SET_VALUE_ON_BUFFER(FRotator);
 			TSharedPtr<INumericTypeInterface<float>> TypeInterface;
 			if (FUnitConversion::Settings().ShouldDisplayUnits())
@@ -1654,12 +1654,12 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::DrawFunctionParameter(TShar
 					SNew(SRotatorInputBox)
 					.AllowSpin(false)
 					.bColorAxisLabels(true)
-					.Roll(this, &FLGUIEventDelegateCustomization::RotatorGetItemValue, 0, ValueHandle, ParamBufferHandle)
-					.Pitch(this, &FLGUIEventDelegateCustomization::RotatorGetItemValue, 1, ValueHandle, ParamBufferHandle)
-					.Yaw(this, &FLGUIEventDelegateCustomization::RotatorGetItemValue, 2, ValueHandle, ParamBufferHandle)
-					.OnRollCommitted(this, &FLGUIEventDelegateCustomization::RotatorValueChange, 0, ValueHandle, ParamBufferHandle)
-					.OnPitchCommitted(this, &FLGUIEventDelegateCustomization::RotatorValueChange, 1, ValueHandle, ParamBufferHandle)
-					.OnYawCommitted(this, &FLGUIEventDelegateCustomization::RotatorValueChange, 2, ValueHandle, ParamBufferHandle)
+					.Roll(this, &FLexUIEventDelegateCustomization::RotatorGetItemValue, 0, ValueHandle, ParamBufferHandle)
+					.Pitch(this, &FLexUIEventDelegateCustomization::RotatorGetItemValue, 1, ValueHandle, ParamBufferHandle)
+					.Yaw(this, &FLexUIEventDelegateCustomization::RotatorGetItemValue, 2, ValueHandle, ParamBufferHandle)
+					.OnRollCommitted(this, &FLexUIEventDelegateCustomization::RotatorValueChange, 0, ValueHandle, ParamBufferHandle)
+					.OnPitchCommitted(this, &FLexUIEventDelegateCustomization::RotatorValueChange, 1, ValueHandle, ParamBufferHandle)
+					.OnYawCommitted(this, &FLexUIEventDelegateCustomization::RotatorValueChange, 2, ValueHandle, ParamBufferHandle)
 					.TypeInterface(TypeInterface)
 				]
 			;
@@ -1678,48 +1678,48 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::DrawFunctionParameter(TShar
 	}
 }
 //function's parameter editor
-TSharedRef<SWidget> FLGUIEventDelegateCustomization::DrawFunctionReferenceParameter(TSharedRef<IPropertyHandle> InDataContainerHandle, ELGUIEventDelegateParameterType FunctionParameterType, UFunction* InFunction)
+TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawFunctionReferenceParameter(TSharedRef<IPropertyHandle> InDataContainerHandle, ELexUIEventDelegateParameterType FunctionParameterType, UFunction* InFunction)
 {
-	auto ParamBufferHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, ParamBuffer));
+	auto ParamBufferHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, ParamBuffer));
 
 	TSharedPtr<SWidget> ParameterContent;
 	switch (FunctionParameterType)
 	{
-	case ELGUIEventDelegateParameterType::Object:
+	case ELexUIEventDelegateParameterType::Object:
 	{
 		ClearValueBuffer(InDataContainerHandle);
 		return SNew(SObjectPropertyEntryBox)
 			.IsEnabled(true)
-			.AllowedClass(ULGUIEventDelegateParameterHelper::GetObjectParameterClass(InFunction))
-			.PropertyHandle(InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, ReferenceObject)))
+			.AllowedClass(ULexUIEventDelegateParameterHelper::GetObjectParameterClass(InFunction))
+			.PropertyHandle(InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, ReferenceObject)))
 			.AllowClear(true)
 			.ToolTipText(LOCTEXT("UObjectTips", "UObject only referece asset, dont use for HelperActor"))
-			.OnObjectChanged(this, &FLGUIEventDelegateCustomization::ObjectValueChange, ParamBufferHandle, InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, ReferenceObject)), true);
+			.OnObjectChanged(this, &FLexUIEventDelegateCustomization::ObjectValueChange, ParamBufferHandle, InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, ReferenceObject)), true);
 	}
 	break;
-	case ELGUIEventDelegateParameterType::Actor:
+	case ELexUIEventDelegateParameterType::Actor:
 	{
 		ClearValueBuffer(InDataContainerHandle);
 		return SNew(SObjectPropertyEntryBox)
 			.IsEnabled(true)
-			.AllowedClass(ULGUIEventDelegateParameterHelper::GetObjectParameterClass(InFunction))
-			.PropertyHandle(InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, ReferenceObject)))
+			.AllowedClass(ULexUIEventDelegateParameterHelper::GetObjectParameterClass(InFunction))
+			.PropertyHandle(InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, ReferenceObject)))
 			.AllowClear(true)
-			.OnObjectChanged(this, &FLGUIEventDelegateCustomization::ObjectValueChange, ParamBufferHandle, InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, ReferenceObject)), false);
+			.OnObjectChanged(this, &FLexUIEventDelegateCustomization::ObjectValueChange, ParamBufferHandle, InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, ReferenceObject)), false);
 	}
 	break;
-	case ELGUIEventDelegateParameterType::Class:
+	case ELexUIEventDelegateParameterType::Class:
 	{
-		auto MetaClass = ULGUIEventDelegateParameterHelper::GetClassParameterClass(InFunction);
-		auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, ReferenceObject));
+		auto MetaClass = ULexUIEventDelegateParameterHelper::GetClassParameterClass(InFunction);
+		auto ValueHandle = InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, ReferenceObject));
 		ClearValueBuffer(InDataContainerHandle);
 		return SNew(SClassPropertyEntryBox)
 			.IsEnabled(true)
 			.AllowAbstract(true)
 			.AllowNone(true)
 			.MetaClass(MetaClass)
-			.SelectedClass(this, &FLGUIEventDelegateCustomization::GetClassValue, ValueHandle)
-			.OnSetClass(this, &FLGUIEventDelegateCustomization::ClassValueChange, ValueHandle);
+			.SelectedClass(this, &FLexUIEventDelegateCustomization::GetClassValue, ValueHandle)
+			.OnSetClass(this, &FLexUIEventDelegateCustomization::ClassValueChange, ValueHandle);
 	}
 	break;
 	default:
@@ -1731,7 +1731,7 @@ TSharedRef<SWidget> FLGUIEventDelegateCustomization::DrawFunctionReferenceParame
 		.Text(LOCTEXT("(Not handled)", "(Not handled)"));
 }
 
-void FLGUIEventDelegateCustomization::ObjectValueChange(const FAssetData& InObj, TSharedPtr<IPropertyHandle> BufferHandle, TSharedPtr<IPropertyHandle> ObjectReferenceHandle, bool ObjectOrActor)
+void FLexUIEventDelegateCustomization::ObjectValueChange(const FAssetData& InObj, TSharedPtr<IPropertyHandle> BufferHandle, TSharedPtr<IPropertyHandle> ObjectReferenceHandle, bool ObjectOrActor)
 {
 	if (ObjectOrActor)
 	{
@@ -1752,17 +1752,17 @@ void FLGUIEventDelegateCustomization::ObjectValueChange(const FAssetData& InObj,
 		ObjectReferenceHandle->SetValue(InObj);
 	}
 }
-const UClass* FLGUIEventDelegateCustomization::GetClassValue(TSharedPtr<IPropertyHandle> ClassReferenceHandle)const
+const UClass* FLexUIEventDelegateCustomization::GetClassValue(TSharedPtr<IPropertyHandle> ClassReferenceHandle)const
 {
 	UObject* referenceClassObject = nullptr;
 	ClassReferenceHandle->GetValue(referenceClassObject);
 	return (UClass*)referenceClassObject;
 }
-void FLGUIEventDelegateCustomization::ClassValueChange(const UClass* InClass, TSharedPtr<IPropertyHandle> ClassReferenceHandle)
+void FLexUIEventDelegateCustomization::ClassValueChange(const UClass* InClass, TSharedPtr<IPropertyHandle> ClassReferenceHandle)
 {
 	ClassReferenceHandle->SetValue(InClass);
 }
-void FLGUIEventDelegateCustomization::EnumValueChange(int32 InValue, ESelectInfo::Type SelectionType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::EnumValueChange(int32 InValue, ESelectInfo::Type SelectionType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	uint8 Value = (uint8)InValue;
 	ValueHandle->SetValue(Value);
@@ -1776,7 +1776,7 @@ FBufferArchive ToBinary;\
 ToBinary << Value;\
 SetBufferValue(BufferHandle, ToBinary);
 
-void FLGUIEventDelegateCustomization::BoolValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::BoolValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	bool Value; 
 	ValueHandle->GetValue(Value); 
@@ -1784,59 +1784,59 @@ void FLGUIEventDelegateCustomization::BoolValueChange(TSharedPtr<IPropertyHandle
 	Buffer.Add(Value ? 1 : 0);
 	SetBufferValue(BufferHandle, Buffer);
 }
-void FLGUIEventDelegateCustomization::FloatValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::FloatValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	SET_BUFFER_ON_VALUE(float);
 }
-void FLGUIEventDelegateCustomization::DoubleValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::DoubleValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	SET_BUFFER_ON_VALUE(double);
 }
-void FLGUIEventDelegateCustomization::Int8ValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::Int8ValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	SET_BUFFER_ON_VALUE(int8);
 }
-void FLGUIEventDelegateCustomization::UInt8ValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::UInt8ValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	SET_BUFFER_ON_VALUE(uint8);
 }
-void FLGUIEventDelegateCustomization::Int16ValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::Int16ValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	SET_BUFFER_ON_VALUE(int16);
 }
-void FLGUIEventDelegateCustomization::UInt16ValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::UInt16ValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	SET_BUFFER_ON_VALUE(uint16);
 }
-void FLGUIEventDelegateCustomization::Int32ValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::Int32ValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	SET_BUFFER_ON_VALUE(int32);
 }
-void FLGUIEventDelegateCustomization::UInt32ValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::UInt32ValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	SET_BUFFER_ON_VALUE(uint32);
 }
-void FLGUIEventDelegateCustomization::Int64ValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::Int64ValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	SET_BUFFER_ON_VALUE(int64);
 }
-void FLGUIEventDelegateCustomization::UInt64ValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::UInt64ValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	SET_BUFFER_ON_VALUE(uint64);
 }
-void FLGUIEventDelegateCustomization::StringValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::StringValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	SET_BUFFER_ON_VALUE(FString);
 }
-void FLGUIEventDelegateCustomization::NameValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::NameValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	SET_BUFFER_ON_VALUE(FName);
 }
-void FLGUIEventDelegateCustomization::TextValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::TextValueChange(TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	SET_BUFFER_ON_VALUE(FText);
 }
-void FLGUIEventDelegateCustomization::Vector2ItemValueChange(float NewValue, ETextCommit::Type CommitInfo, int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::Vector2ItemValueChange(float NewValue, ETextCommit::Type CommitInfo, int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	FVector2D Value;
 	ValueHandle->GetValue(Value);
@@ -1850,7 +1850,7 @@ void FLGUIEventDelegateCustomization::Vector2ItemValueChange(float NewValue, ETe
 	ToBinary << Value;
 	SetBufferValue(BufferHandle, ToBinary);
 }
-TOptional<float> FLGUIEventDelegateCustomization::Vector2GetItemValue(int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)const
+TOptional<float> FLexUIEventDelegateCustomization::Vector2GetItemValue(int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)const
 {
 	FVector2D Value;
 	ValueHandle->GetValue(Value);
@@ -1861,7 +1861,7 @@ TOptional<float> FLGUIEventDelegateCustomization::Vector2GetItemValue(int AxisTy
 	case 1: return	Value.Y;
 	}
 }
-void FLGUIEventDelegateCustomization::Vector3ItemValueChange(float NewValue, ETextCommit::Type CommitInfo, int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::Vector3ItemValueChange(float NewValue, ETextCommit::Type CommitInfo, int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	FVector Value;
 	ValueHandle->GetValue(Value);
@@ -1876,7 +1876,7 @@ void FLGUIEventDelegateCustomization::Vector3ItemValueChange(float NewValue, ETe
 	ToBinary << Value;
 	SetBufferValue(BufferHandle, ToBinary);
 }
-TOptional<float> FLGUIEventDelegateCustomization::Vector3GetItemValue(int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)const
+TOptional<float> FLexUIEventDelegateCustomization::Vector3GetItemValue(int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)const
 {
 	FVector Value;
 	ValueHandle->GetValue(Value);
@@ -1888,7 +1888,7 @@ TOptional<float> FLGUIEventDelegateCustomization::Vector3GetItemValue(int AxisTy
 	case 2: return	Value.Z;
 	}
 }
-void FLGUIEventDelegateCustomization::Vector4ItemValueChange(float NewValue, ETextCommit::Type CommitInfo, int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::Vector4ItemValueChange(float NewValue, ETextCommit::Type CommitInfo, int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	FVector4 Value;
 	ValueHandle->GetValue(Value);
@@ -1904,7 +1904,7 @@ void FLGUIEventDelegateCustomization::Vector4ItemValueChange(float NewValue, ETe
 	ToBinary << Value;
 	SetBufferValue(BufferHandle, ToBinary);
 }
-TOptional<float> FLGUIEventDelegateCustomization::Vector4GetItemValue(int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)const
+TOptional<float> FLexUIEventDelegateCustomization::Vector4GetItemValue(int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)const
 {
 	FVector4 Value;
 	ValueHandle->GetValue(Value);
@@ -1917,7 +1917,7 @@ TOptional<float> FLGUIEventDelegateCustomization::Vector4GetItemValue(int AxisTy
 	case 3: return	Value.W;
 	}
 }
-FLinearColor FLGUIEventDelegateCustomization::LinearColorGetValue(bool bIsLinearColor, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)const
+FLinearColor FLexUIEventDelegateCustomization::LinearColorGetValue(bool bIsLinearColor, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)const
 {
 	if (bIsLinearColor)
 	{
@@ -1936,7 +1936,7 @@ FLinearColor FLGUIEventDelegateCustomization::LinearColorGetValue(bool bIsLinear
 		return FLinearColor(Value.R / 255.0f, Value.G / 255.0f, Value.B / 255.0f, Value.A / 255.0f);
 	}
 }
-void FLGUIEventDelegateCustomization::LinearColorValueChange(FLinearColor NewValue, bool bIsLinearColor, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::LinearColorValueChange(FLinearColor NewValue, bool bIsLinearColor, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	if (bIsLinearColor)
 	{
@@ -1956,7 +1956,7 @@ void FLGUIEventDelegateCustomization::LinearColorValueChange(FLinearColor NewVal
 		SetBufferValue(BufferHandle, ToBinary);
 	}
 }
-FReply FLGUIEventDelegateCustomization::OnMouseButtonDownColorBlock(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent, bool bIsLinearColor, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+FReply FLexUIEventDelegateCustomization::OnMouseButtonDownColorBlock(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent, bool bIsLinearColor, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	if (MouseEvent.GetEffectingButton() != EKeys::LeftMouseButton)
 	{
@@ -1967,7 +1967,7 @@ FReply FLGUIEventDelegateCustomization::OnMouseButtonDownColorBlock(const FGeome
 
 	return FReply::Handled();
 }
-TOptional<float> FLGUIEventDelegateCustomization::RotatorGetItemValue(int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)const
+TOptional<float> FLexUIEventDelegateCustomization::RotatorGetItemValue(int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)const
 {
 	FRotator Value;
 	ValueHandle->GetValue(Value);
@@ -1979,7 +1979,7 @@ TOptional<float> FLGUIEventDelegateCustomization::RotatorGetItemValue(int AxisTy
 	case 2: return	Value.Yaw;
 	}
 }
-void FLGUIEventDelegateCustomization::RotatorValueChange(float NewValue, ETextCommit::Type CommitInfo, int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::RotatorValueChange(float NewValue, ETextCommit::Type CommitInfo, int AxisType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	FRotator Value;
 	ValueHandle->GetValue(Value);
@@ -1994,7 +1994,7 @@ void FLGUIEventDelegateCustomization::RotatorValueChange(float NewValue, ETextCo
 	ToBinary << Value;
 	SetBufferValue(BufferHandle, ToBinary);
 }
-void FLGUIEventDelegateCustomization::SetBufferValue(TSharedPtr<IPropertyHandle> BufferHandle, const TArray<uint8>& BufferArray)
+void FLexUIEventDelegateCustomization::SetBufferValue(TSharedPtr<IPropertyHandle> BufferHandle, const TArray<uint8>& BufferArray)
 {
 	auto BufferArrayHandle = BufferHandle->AsArray();
 	auto bufferCount = BufferArray.Num();
@@ -2023,7 +2023,7 @@ void FLGUIEventDelegateCustomization::SetBufferValue(TSharedPtr<IPropertyHandle>
 	}
 }
 
-void FLGUIEventDelegateCustomization::SetBufferLength(TSharedPtr<IPropertyHandle> BufferHandle, int32 Count)
+void FLexUIEventDelegateCustomization::SetBufferLength(TSharedPtr<IPropertyHandle> BufferHandle, int32 Count)
 {
 	auto BufferArrayHandle = BufferHandle->AsArray();
 	uint32 bufferHandleCount;
@@ -2038,7 +2038,7 @@ void FLGUIEventDelegateCustomization::SetBufferLength(TSharedPtr<IPropertyHandle
 	}
 }
 
-TArray<uint8> FLGUIEventDelegateCustomization::GetBuffer(TSharedPtr<IPropertyHandle> BufferHandle)
+TArray<uint8> FLexUIEventDelegateCustomization::GetBuffer(TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	auto BufferArrayHandle = BufferHandle->AsArray();
 	uint32 bufferHandleCount;
@@ -2055,7 +2055,7 @@ TArray<uint8> FLGUIEventDelegateCustomization::GetBuffer(TSharedPtr<IPropertyHan
 	return resultBuffer;
 }
 
-TArray<uint8> FLGUIEventDelegateCustomization::GetPropertyBuffer(TSharedPtr<IPropertyHandle> BufferHandle) const
+TArray<uint8> FLexUIEventDelegateCustomization::GetPropertyBuffer(TSharedPtr<IPropertyHandle> BufferHandle) const
 {
 	auto paramBufferArrayHandle = BufferHandle->AsArray();
 	uint32 bufferCount;
@@ -2070,39 +2070,39 @@ TArray<uint8> FLGUIEventDelegateCustomization::GetPropertyBuffer(TSharedPtr<IPro
 	}
 	return paramBuffer;
 }
-int32 FLGUIEventDelegateCustomization::GetEnumValue(TSharedPtr<IPropertyHandle> ValueHandle)const
+int32 FLexUIEventDelegateCustomization::GetEnumValue(TSharedPtr<IPropertyHandle> ValueHandle)const
 {
 	uint8 Value = 0;
 	ValueHandle->GetValue(Value);
 	return Value;
 }
-FText FLGUIEventDelegateCustomization::GetTextValue(TSharedPtr<IPropertyHandle> ValueHandle)const
+FText FLexUIEventDelegateCustomization::GetTextValue(TSharedPtr<IPropertyHandle> ValueHandle)const
 {
 	FText Value;
 	ValueHandle->GetValue(Value);
 	return Value;
 }
-void FLGUIEventDelegateCustomization::SetTextValue(const FText& InText, ETextCommit::Type InCommitType, TSharedPtr<IPropertyHandle> ValueHandle)
+void FLexUIEventDelegateCustomization::SetTextValue(const FText& InText, ETextCommit::Type InCommitType, TSharedPtr<IPropertyHandle> ValueHandle)
 {
 	ValueHandle->SetValue(InText);
 }
 
-void FLGUIEventDelegateCustomization::ClearValueBuffer(TSharedPtr<IPropertyHandle> InItemPropertyHandle)
+void FLexUIEventDelegateCustomization::ClearValueBuffer(TSharedPtr<IPropertyHandle> InItemPropertyHandle)
 {
-	auto handle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, ParamBuffer))->AsArray();
+	auto handle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, ParamBuffer))->AsArray();
 	uint32 NumElements = 0;
 	if (handle->GetNumElements(NumElements) == FPropertyAccess::Result::Success && NumElements > 0)
 	{
 		handle->EmptyArray();
 	}
 }
-void FLGUIEventDelegateCustomization::ClearReferenceValue(TSharedPtr<IPropertyHandle> InItemPropertyHandle)
+void FLexUIEventDelegateCustomization::ClearReferenceValue(TSharedPtr<IPropertyHandle> InItemPropertyHandle)
 {
 	ClearObjectValue(InItemPropertyHandle);
 }
-void FLGUIEventDelegateCustomization::ClearObjectValue(TSharedPtr<IPropertyHandle> InItemPropertyHandle)
+void FLexUIEventDelegateCustomization::ClearObjectValue(TSharedPtr<IPropertyHandle> InItemPropertyHandle)
 {
-	auto handle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, ReferenceObject));
+	auto handle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, ReferenceObject));
 	UObject* Obj = nullptr;
 	if (handle->GetValue(Obj) == FPropertyAccess::Result::Success && Obj != nullptr)
 	{
@@ -2110,31 +2110,31 @@ void FLGUIEventDelegateCustomization::ClearObjectValue(TSharedPtr<IPropertyHandl
 	}
 }
 
-void FLGUIEventDelegateCustomization::OnParameterTypeChange(TSharedRef<IPropertyHandle> InItemPropertyHandle)
+void FLexUIEventDelegateCustomization::OnParameterTypeChange(TSharedRef<IPropertyHandle> InItemPropertyHandle)
 {
-	auto ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, BoolValue)); ValueHandle->ResetToDefault();
-	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, FloatValue)); ValueHandle->ResetToDefault();
-	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, DoubleValue)); ValueHandle->ResetToDefault();
-	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, Int8Value)); ValueHandle->ResetToDefault();
-	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, UInt8Value)); ValueHandle->ResetToDefault();
-	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, Int16Value)); ValueHandle->ResetToDefault();
-	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, UInt16Value)); ValueHandle->ResetToDefault();
-	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, Int32Value)); ValueHandle->ResetToDefault();
-	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, UInt32Value)); ValueHandle->ResetToDefault();
-	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, Int64Value)); ValueHandle->ResetToDefault();
-	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, UInt64Value)); ValueHandle->ResetToDefault();
-	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, Vector2Value)); ValueHandle->ResetToDefault();
-	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, Vector3Value)); ValueHandle->ResetToDefault();
-	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, Vector4Value)); ValueHandle->ResetToDefault();
-	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, QuatValue)); ValueHandle->ResetToDefault();
-	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, ColorValue)); ValueHandle->ResetToDefault();
-	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, LinearColorValue)); ValueHandle->ResetToDefault();
-	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLGUIEventDelegateData, RotatorValue)); ValueHandle->ResetToDefault();
+	auto ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, BoolValue)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, FloatValue)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, DoubleValue)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, Int8Value)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, UInt8Value)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, Int16Value)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, UInt16Value)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, Int32Value)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, UInt32Value)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, Int64Value)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, UInt64Value)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, Vector2Value)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, Vector3Value)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, Vector4Value)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, QuatValue)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, ColorValue)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, LinearColorValue)); ValueHandle->ResetToDefault();
+	ValueHandle = InItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, RotatorValue)); ValueHandle->ResetToDefault();
 }
 
 
 
-void FLGUIEventDelegateCustomization::CreateColorPicker(bool bIsLinearColor, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
+void FLexUIEventDelegateCustomization::CreateColorPicker(bool bIsLinearColor, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle)
 {
 	FLinearColor InitialColor = LinearColorGetValue(bIsLinearColor, ValueHandle, BufferHandle);
 
@@ -2145,7 +2145,7 @@ void FLGUIEventDelegateCustomization::CreateColorPicker(bool bIsLinearColor, TSh
 		PickerArgs.bOnlyRefreshOnOk = false;
 		PickerArgs.sRGBOverride = bIsLinearColor;
 		PickerArgs.DisplayGamma = TAttribute<float>::Create(TAttribute<float>::FGetter::CreateUObject(GEngine, &UEngine::GetDisplayGamma));
-		PickerArgs.OnColorCommitted = FOnLinearColorValueChanged::CreateSP(this, &FLGUIEventDelegateCustomization::LinearColorValueChange, bIsLinearColor, ValueHandle, BufferHandle);
+		PickerArgs.OnColorCommitted = FOnLinearColorValueChanged::CreateSP(this, &FLexUIEventDelegateCustomization::LinearColorValueChange, bIsLinearColor, ValueHandle, BufferHandle);
 		//PickerArgs.OnColorPickerCancelled = FOnColorPickerCancelled::CreateSP(this, &FColorStructCustomization::OnColorPickerCancelled);
 		//PickerArgs.OnInteractivePickBegin = FSimpleDelegate::CreateSP(this, &FColorStructCustomization::OnColorPickerInteractiveBegin);
 		//PickerArgs.OnInteractivePickEnd = FSimpleDelegate::CreateSP(this, &FColorStructCustomization::OnColorPickerInteractiveEnd);
