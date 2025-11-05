@@ -28,7 +28,7 @@ void FLexUISpriteInfo::ApplyUV(int32 InX, int32 InY, int32 InWidth, int32 InHeig
 	MaxUV.X = (InX + InWidth) * texFullWidthReciprocal;
 	MinUV.Y = InY * texFullHeightReciprocal;
 }
-void FLexUISpriteInfo::ApplyUV(int32 InX, int32 InY, int32 InWidth, int32 InHeight, float texFullWidthReciprocal, float texFullHeightReciprocal, const FVector4& uvRect)
+void FLexUISpriteInfo::ApplyUV(int32 InX, int32 InY, int32 InWidth, int32 InHeight, float texFullWidthReciprocal, float texFullHeightReciprocal, const FVector4f& uvRect)
 {
 	Width = InWidth;
 	Height = InHeight;
@@ -90,7 +90,7 @@ bool ULexUISpriteData::InsertTexture(FLexUIDynamicSpriteAtlasData* InAtlasData)
 		//add to Sprite
 		SpriteInfo.ApplyUV(packedRect.x, packedRect.y, packedRect.width, packedRect.height, atlasTextureSizeInv, atlasTextureSizeInv);
 		SpriteInfo.ApplyBorderUV(atlasTextureSizeInv, atlasTextureSizeInv);
-		InAtlasData->SpriteDataArray.Add(this);
+		InAtlasData->SpriteDataArray.AddUnique(this);
 		return true;
 	}
 }
@@ -289,14 +289,27 @@ void ULexUISpriteData::ApplySpriteInfoAfterStaticPack(const rbp::Rect& InPackedR
 	bIsInitialized = false;
 }
 #if WITH_EDITOR
+void ULexUISpriteData::PreEditChange(FProperty* PropertyAboutToChange)
+{
+	Super::PreEditChange(PropertyAboutToChange);
+	auto PropertyName = PropertyAboutToChange->GetFName();
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUISpriteData, PackingAtlas))
+	{
+		if (IsValid(PackingAtlas))
+		{
+			PackingAtlas->RemoveSpriteData(this);
+		}
+	}
+}
+
 void ULexUISpriteData::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	CheckSpriteTexture();
 	if (PropertyChangedEvent.Property != nullptr)
 	{
-		auto propertyName = PropertyChangedEvent.Property->GetFName();
-		if (propertyName == GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteTexture))
+		auto PropertyName = PropertyChangedEvent.Property->GetFName();
+		if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteTexture))
 		{
 			if (SpriteTexture != nullptr)
 			{
@@ -308,48 +321,70 @@ void ULexUISpriteData::PostEditChangeProperty(struct FPropertyChangedEvent& Prop
 				SpriteInfo.Height = SpriteTexture->GetSizeY();
 			}
 		}
-		else if (
-			propertyName == GET_MEMBER_NAME_CHECKED(FLexUISpriteInfo, Border.Left) ||
-			propertyName == GET_MEMBER_NAME_CHECKED(FLexUISpriteInfo, Border.Right) ||
-			propertyName == GET_MEMBER_NAME_CHECKED(FLexUISpriteInfo, Border.Top) ||
-			propertyName == GET_MEMBER_NAME_CHECKED(FLexUISpriteInfo, Border.Bottom)
-			)
+		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUISpriteData, PackingTag))
 		{
-			//Sprite data, apply border
-			if (SpriteTexture != nullptr)
+			this->ReloadTexture();
+		}
+		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteTexture))
+		{
+			this->ReloadTexture();
+		}
+		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUISpriteData, bUseEdgePixelPadding))
+		{
+			this->ReloadTexture();
+		}
+		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUISpriteData, PackingAtlas))
+		{
+			if (IsValid(PackingAtlas))
 			{
-#if WITH_EDITOR
-				FTextureCompilingManager::Get().FinishCompilation({ SpriteTexture });
-#endif
-				SpriteInfo.Width = SpriteTexture->GetSizeX();
-				SpriteInfo.Height = SpriteTexture->GetSizeY();
-				if (bIsInitialized)
-				{
-					float atlasTextureSizeInv = 1.0f / GetAtlasTexture()->GetSizeX();
-					SpriteInfo.ApplyBorderUV(atlasTextureSizeInv, atlasTextureSizeInv);
-				}
+				PackingAtlas->CheckSprite();
 			}
-		}
-		else if (propertyName == GET_MEMBER_NAME_CHECKED(ULexUISpriteData, PackingTag))
-		{
-			this->ReloadTexture();
-		}
-		else if (propertyName == GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteTexture))
-		{
-			this->ReloadTexture();
-		}
-		else if (propertyName == GET_MEMBER_NAME_CHECKED(ULexUISpriteData, bUseEdgePixelPadding))
-		{
-			this->ReloadTexture();
-		}
-		else if (propertyName == GET_MEMBER_NAME_CHECKED(ULexUISpriteData, packingAtlas))
-		{
+			if (auto DynamicSpriteAtlasData = ULexUIDynamicSpriteAtlasManager::Find(PackingTag))
+			{
+				DynamicSpriteAtlasData->CheckSprite(PackingTag);
+			}
 			this->ReloadTexture();
 		}
 
 		ULexUIManagerWorldSubsystem::RefreshAllUI();
 	}
 }
+
+void ULexUISpriteData::PostEditChangeChainProperty(struct FPropertyChangedChainEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeChainProperty(PropertyChangedEvent);
+
+	FString PropertyPath;
+	auto PropNode = PropertyChangedEvent.PropertyChain.GetHead();
+	while (PropNode != nullptr)
+	{
+		PropertyPath += PropNode->GetValue()->GetName();
+		PropNode = PropNode->GetNextNode();
+		if (PropNode)
+		{
+			PropertyPath += ".";
+		}
+	}
+	if (PropertyPath.StartsWith(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Border).ToString()))
+	{
+		SpriteInfo.bIsBorderDirty = true;
+		//Sprite data, apply border
+		if (SpriteTexture != nullptr)
+		{
+#if WITH_EDITOR
+			FTextureCompilingManager::Get().FinishCompilation({ SpriteTexture });
+#endif
+			SpriteInfo.Width = SpriteTexture->GetSizeX();
+			SpriteInfo.Height = SpriteTexture->GetSizeY();
+			if (bIsInitialized)
+			{
+				float atlasTextureSizeInv = 1.0f / GetAtlasTexture()->GetSizeX();
+				SpriteInfo.ApplyBorderUV(atlasTextureSizeInv, atlasTextureSizeInv);
+			}
+		}
+	}
+}
+
 bool ULexUISpriteData::CanEditChange(const FProperty* InProperty) const
 {
 	if (InProperty)
@@ -358,7 +393,7 @@ bool ULexUISpriteData::CanEditChange(const FProperty* InProperty) const
 
 		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(ULexUISpriteData, PackingTag))
 		{
-			return IsValid(packingAtlas);
+			return IsValid(PackingAtlas);
 		}
 	}
 	return Super::CanEditChange(InProperty);
@@ -394,9 +429,10 @@ void ULexUISpriteData::ReloadTexture()
 	bIsInitialized = false;
 
 #if WITH_EDITOR
-	if (IsValid(packingAtlas))
+	if (IsValid(PackingAtlas))
 	{
-		packingAtlas->MarkNotInitialized();
+		PackingAtlas->RemoveSpriteData(this);
+		PackingAtlas->MarkNotInitialized();
 	}
 #endif
 
@@ -417,21 +453,21 @@ void ULexUISpriteData::InitSpriteData()
 {
 	if (!bIsInitialized)
 	{
-		if (IsValid(packingAtlas))
+		if (IsValid(PackingAtlas))
 		{
 #if WITH_EDITOR
 			//add it again as check if it exist in packingAtlas
-			packingAtlas->AddSpriteData(this);
+			PackingAtlas->AddSpriteData(this);
 #endif
-			if (packingAtlas->InitCheck())
+			if (PackingAtlas->InitCheck())
 			{
-				AtlasTexture = packingAtlas->GetAtlasTexture();
+				AtlasTexture = PackingAtlas->GetAtlasTexture();
 				//no need to set spriteInfo because it is already set when do static pack
 				return;
 			}
 			else
 			{
-				UE_LOG(LGUI, Error, TEXT("[%s].%d PackingAtlas:%s pack error, will fallback to use PackingTag!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(packingAtlas->GetPathName()));
+				UE_LOG(LGUI, Error, TEXT("[%s].%d PackingAtlas:%s pack error, will fallback to use PackingTag!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(PackingAtlas->GetPathName()));
 			}
 		}
 		if (SpriteTexture == nullptr)
@@ -484,7 +520,7 @@ const FLexUISpriteInfo& ULexUISpriteData::GetSpriteInfo()
 
 bool ULexUISpriteData::IsIndividual()const
 {
-	return !IsValid(packingAtlas) && PackingTag.IsNone();
+	return !IsValid(PackingAtlas) && PackingTag.IsNone();
 }
 
 bool ULexUISpriteData::HavePackingTag()const
@@ -539,12 +575,12 @@ ULexUISpriteData* ULexUISpriteData::CreateLexUISpriteData(UObject* Outer, UTextu
 
 void ULexUISpriteData::AddUISprite(TScriptInterface<class ILexUISpriteRenderInterface> InUISprite)
 {
-	if (IsValid(packingAtlas))
+	if (IsValid(PackingAtlas))
 	{
 		InitSpriteData();
 #if WITH_EDITOR
 		//packingAtlas only need to collect Sprite in editor
-		packingAtlas->AddRenderSprite(InUISprite);
+		PackingAtlas->AddRenderSprite(InUISprite);
 #endif
 	}
 	else if (!PackingTag.IsNone())
@@ -556,11 +592,11 @@ void ULexUISpriteData::AddUISprite(TScriptInterface<class ILexUISpriteRenderInte
 }
 void ULexUISpriteData::RemoveUISprite(TScriptInterface<class ILexUISpriteRenderInterface> InUISprite)
 {
-	if (IsValid(packingAtlas))
+	if (IsValid(PackingAtlas))
 	{
 #if WITH_EDITOR
 		//packingAtlas only need to collect Sprite in editor
-		packingAtlas->RemoveRenderSprite(InUISprite);
+		PackingAtlas->RemoveRenderSprite(InUISprite);
 #endif
 	}
 	else if (!PackingTag.IsNone())
@@ -573,15 +609,15 @@ void ULexUISpriteData::RemoveUISprite(TScriptInterface<class ILexUISpriteRenderI
 }
 bool ULexUISpriteData::ReadPixel(const FVector2D& InUV, FColor& OutPixel)const
 {
-	if (packingAtlas != nullptr)
+	if (PackingAtlas != nullptr)
 	{
-		return packingAtlas->ReadPixel(InUV, OutPixel);
+		return PackingAtlas->ReadPixel(InUV, OutPixel);
 	}
 	return false;
 }
 bool ULexUISpriteData::SupportReadPixel()const
 {
-	return packingAtlas != nullptr;
+	return PackingAtlas != nullptr;
 }
 
 ULexUISpriteData* ULexUISpriteData::GetDefaultWhiteSolid()

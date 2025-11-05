@@ -6,7 +6,7 @@
 #include "LexMeshModifierShadow.generated.h"
 
 
-UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
+UCLASS(ClassGroup = (LGUI), Blueprintable, DisplayName="Shadow")
 class LGUI_API ULexMeshModifierShadow : public ULexMeshModifierBase
 {
 	GENERATED_BODY()
@@ -16,23 +16,23 @@ public:
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		FColor shadowColor = FColor::Black;
+		FColor ShadowColor = FColor::Black;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		bool multiplySourceAlpha = true;
+		bool bMultiplySourceAlpha = true;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		FVector2D shadowOffset = FVector2D(1, -1);
+		FVector3f ShadowOffset = FVector3f(0, 1, -1);
 public:
 	virtual void ModifyUIGeometry(FLexUIGeometry& InGeometry
 		, bool InTriangleChanged, bool InUVChanged, bool InColorChanged, bool InVertexPositionChanged
 	)override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		FColor GetShadowColor()const { return shadowColor; }
+		FColor GetShadowColor()const { return ShadowColor; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		FVector2D GetShadowOffset()const { return shadowOffset; }
+		FVector3f GetShadowOffset()const { return ShadowOffset; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetShadowColor(FColor newColor);
+		void SetShadowColor(FColor Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetShadowOffset(FVector2D newOffset);
+		void SetShadowOffset(FVector3f Value);
 };

@@ -145,7 +145,7 @@ void UUIScrollViewComponent::OnDimensionsChanged(bool PivotChanged, bool WidthCh
 
 bool UUIScrollViewComponent::CheckParameters()
 {
-    auto Widget = GetLexWidget();
+    auto Widget = GetWidget();
     if (Content.IsValid() && ContentParent.IsValid() && Widget)
         return true;
     if (!Content.IsValid())
@@ -164,7 +164,7 @@ bool UUIScrollViewComponent::CheckParameters()
 
 bool UUIScrollViewComponent::CheckValidHit(USceneComponent *InHitComp)
 {
-    auto Widget = GetLexWidget();
+    auto Widget = GetWidget();
     return (InHitComp->IsAttachedTo(Widget) || InHitComp == Widget); //make sure hit component is child of this or is this
 }
 
@@ -495,9 +495,9 @@ void UUIScrollViewComponent::ScrollTo(ULexWidget* InChild, bool InEaseAnimation,
         {
             bool bAffectByGamePause = false;
             bool bAffectByTimeDilation = false;
-            if (this->GetLexWidget())
+            if (this->GetWidget())
             {
-                if (this->GetLexWidget()->IsScreenSpaceOverlayUI())
+                if (this->GetWidget()->IsScreenSpaceOverlayUI())
                 {
                     bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
                     bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;

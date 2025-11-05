@@ -3,8 +3,6 @@
 #include "Core/Components/LexLayout.h"
 #include "Core/Components/LexWidget.h"
 #include "UObject/ObjectSaveContext.h"
-#include "LGUI.h"
-
 
 
 #if WITH_EDITOR

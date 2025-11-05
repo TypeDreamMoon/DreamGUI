@@ -1490,7 +1490,10 @@ void ULexCanvas::UpdateRootCanvasDrawCall()
 		{
 			Widget->UpdateLayout();
 			Widget->UpdateClip(RootCanvas->ClipDataAsTexture, RootCanvas->ClipDataList);
-			Widget->UpdateVisual();
+			if (Widget->GetWidgetActiveInHierarchy())
+			{
+				Widget->UpdateVisual();
+			}
 		}
 		
 		if (bShouldRebuildDrawCall)
@@ -1685,7 +1688,7 @@ void ULexCanvas::UpdateDrawCallMesh_Implement()
 				Mutex.Lock();
 				auto RenderSection = UIMesh->CreateRenderSection(ELexUIRenderSectionType::PostProcess);
 				auto ChildCanvasSection = (FLexUIPostProcessSection*)RenderSection.Get();
-				ChildCanvasSection->PostProcessRenderableObject = DrawCallItem->PostProcessVisualObject;
+				ChildCanvasSection->PostProcessVisualObject = DrawCallItem->PostProcessVisualObject;
 				UIMesh->CreateRenderSectionRenderData(RenderSection);
 				Mutex.Unlock();
 				DrawCallItem->DrawCallRenderSection = RenderSection;
@@ -1731,7 +1734,7 @@ void ULexCanvas::UpdateDrawCallMesh_Implement()
 				MeshSection = UIMesh->CreateRenderSection(ELexUIRenderSectionType::Mesh);
 
 				DrawCallItem->DrawCallRenderSection = MeshSection;
-				DrawCallItem->DirectMeshRenderableObject->OnMeshDataReady();
+				DrawCallItem->DirectMeshVisualObject->OnMeshDataReady();
 				UIMesh->CreateRenderSectionRenderData(MeshSection.Pin());
 				//create new mesh section, need to sort it
 				bNeedToSortRenderPriority = true;
@@ -1740,7 +1743,7 @@ void ULexCanvas::UpdateDrawCallMesh_Implement()
 			}
 		}
 		break;
-		case ELexUIDrawCallType::BatchGeometry:
+		case ELexUIDrawCallType::BatchMesh:
 		{
 			auto RenderSection = DrawCallItem->DrawCallRenderSection;
 			if (!RenderSection.IsValid())
@@ -1779,7 +1782,7 @@ void ULexCanvas::UpdateDrawCallMesh_Implement()
 		case ELexUIDrawCallType::PostProcess:
 		{
 			//only LGUI renderer can render post process
-			if (this->GetActualRenderMode() == ELGUIRenderMode::WorldSpace)
+			if (this->GetActualRenderMode() == ELexRenderMode::WorldSpace)
 			{
 				continue;
 			}
@@ -1788,7 +1791,7 @@ void ULexCanvas::UpdateDrawCallMesh_Implement()
 			{
 				auto RenderSection = UIMesh->CreateRenderSection(ELexUIRenderSectionType::PostProcess);
 				auto ChildCanvasSection = (FLexUIPostProcessSection*)RenderSection.Get();
-				ChildCanvasSection->PostProcessRenderableObject = DrawCallItem->PostProcessRenderableObject;
+				ChildCanvasSection->PostProcessVisualObject = DrawCallItem->PostProcessVisualObject;
 				UIMesh->CreateRenderSectionRenderData(RenderSection);
 				DrawCallItem->DrawCallRenderSection = RenderSection;
 				//create new section, need to sort it

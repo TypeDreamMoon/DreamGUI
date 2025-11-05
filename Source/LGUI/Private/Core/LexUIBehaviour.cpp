@@ -32,7 +32,7 @@ void ULexUIBehaviour::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void ULexUIBehaviour::OnRegister()
 {
 	Super::OnRegister();
-	if (auto Widget = GetLexWidget())
+	if (auto Widget = GetWidget())
 	{
 		Widget->GetWidgetActiveChangedEvent().AddUObject(this, &ULexUIBehaviour::Call_OnWidgetActiveChanged);
 		Widget->GetTransformChangedEvent().AddUObject(this, &ULexUIBehaviour::Call_OnTransformChanged);
@@ -46,7 +46,7 @@ void ULexUIBehaviour::OnRegister()
 void ULexUIBehaviour::OnUnregister()
 {
 	Super::OnUnregister();
-	if (CacheWidget.IsValid())
+	if (IsValid(CacheWidget))
 	{
 		CacheWidget->GetWidgetActiveChangedEvent().RemoveAll(this);
 		CacheWidget->GetTransformChangedEvent().RemoveAll(this);
@@ -90,7 +90,7 @@ void ULexUIBehaviour::SetCanExecuteUpdate(bool Value)
 
 bool ULexUIBehaviour::IsAllowToCallAwake() const
 {
-	if (auto Widget = GetLexWidget())
+	if (auto Widget = GetWidget())
 	{
 		return Widget->GetWidgetActiveInHierarchy();
 	}
@@ -171,9 +171,9 @@ void ULexUIBehaviour::Call_Start()
 	Start();
 }
 
-USceneComponent* ULexUIBehaviour::GetRootSceneComponent()
+USceneComponent* ULexUIBehaviour::GetSceneComponent()const
 {
-	if (!CacheSceneComp.IsValid())
+	if (!IsValid(CacheSceneComp))
 	{
 		if (this->GetWorld())
 		{
@@ -187,11 +187,11 @@ USceneComponent* ULexUIBehaviour::GetRootSceneComponent()
 			}
 		}
 	}
-	return CacheSceneComp.Get();
+	return CacheSceneComp;
 }
-ULexWidget* ULexUIBehaviour::GetLexWidget() const
+ULexWidget* ULexUIBehaviour::GetWidget() const
 {
-	if (!CacheWidget.IsValid())
+	if (!IsValid(CacheWidget))
 	{
 		if (this->GetWorld())
 		{

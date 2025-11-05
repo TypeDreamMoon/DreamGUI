@@ -71,8 +71,8 @@ void UUIDropdownComponent::Show()
 		UE_LOG(LGUI, Error, TEXT("[%s].%d ListRoot is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
-	if (!IsValid(this->GetLexWidget()))return;
-	if (!IsValid(this->GetLexWidget()->GetRootCanvas()))return;
+	if (!IsValid(this->GetWidget()))return;
+	if (!IsValid(this->GetWidget()->GetRootCanvas()))return;
 	if (bIsShow)return;
 	bIsShow = true;
 	if (ShowOrHideTweener.IsValid())
@@ -137,7 +137,7 @@ void UUIDropdownComponent::Show()
 		)
 	{
 		//search up til find clipped canvas, or root canvas
-		auto clipUIItem = GetLexWidget();
+		auto clipUIItem = GetWidget();
 		while (true)
 		{
 			if (clipUIItem->GetClipping() != ELexWidgetClipping::Disabled)
@@ -160,20 +160,20 @@ void UUIDropdownComponent::Show()
 
 		FTransform selfToClipSpaceTf;
 		auto inverseClipSpaceTf = clipUIItem->GetComponentTransform().Inverse();
-		FTransform::Multiply(&selfToClipSpaceTf, &GetLexWidget()->GetComponentTransform(), &inverseClipSpaceTf);
+		FTransform::Multiply(&selfToClipSpaceTf, &GetWidget()->GetComponentTransform(), &inverseClipSpaceTf);
 		if (tempVerticalPosition == EUIDropdownVerticalPosition::Automatic)
 		{
 			//convert top point position from drop-down's self to root ui space, and tell if it is inside root rect
 			FVector listBottomInClipSpace;
 			if (VerticalOverlap)
 			{
-				auto selfTop = GetLexWidget()->GetLocalSpaceTop();
+				auto selfTop = GetWidget()->GetLocalSpaceTop();
 				auto listBottomInSelfSpace = selfTop - ListRoot->GetHeight();
 				listBottomInClipSpace = selfToClipSpaceTf.TransformPosition(FVector(0, 0, listBottomInSelfSpace));
 			}
 			else
 			{
-				auto selfBottom = GetLexWidget()->GetLocalSpaceBottom();
+				auto selfBottom = GetWidget()->GetLocalSpaceBottom();
 				auto listBottomInSelfSpace = selfBottom - ListRoot->GetHeight();
 				listBottomInClipSpace = selfToClipSpaceTf.TransformPosition(FVector(0, 0, listBottomInSelfSpace));
 			}
@@ -188,7 +188,7 @@ void UUIDropdownComponent::Show()
 		}
 		if (tempHorizontalPosition == EUIDropdownHorizontalPosition::Automatic)
 		{
-			auto selfRight = GetLexWidget()->GetLocalSpaceRight();
+			auto selfRight = GetWidget()->GetLocalSpaceRight();
 			auto listRightInCanvasSpace = selfToClipSpaceTf.TransformPosition(FVector(0, selfRight + ListRoot->GetWidth(), 0));
 			if (listRightInCanvasSpace.Y > clipUIItem->GetLocalSpaceRight())
 			{
@@ -290,7 +290,7 @@ void UUIDropdownComponent::CreateBlocker()
 	blocker->SetActorLabel(TEXT("UIDropdown_Blocker"));
 #endif
 	auto blockerUIItem = blocker->GetLexWidget();
-	blockerUIItem->AttachToComponent(this->GetLexWidget()->GetRootCanvas()->GetLexWidget(), FAttachmentTransformRules::KeepRelativeTransform);
+	blockerUIItem->AttachToComponent(this->GetWidget()->GetRootCanvas()->GetLexWidget(), FAttachmentTransformRules::KeepRelativeTransform);
 	blockerUIItem->SetSizeDelta(FVector2D::ZeroVector);
 	blockerUIItem->SetAnchorMin(FVector2D(0.0f, 0.0f));
 	blockerUIItem->SetAnchorMax(FVector2D(1.0f, 1.0f));
@@ -299,7 +299,7 @@ void UUIDropdownComponent::CreateBlocker()
 	blocker->AddInstanceComponent(blockerCanvas);
 	blockerCanvas->SetOverrideSorting(true);
 	blockerCanvas->SetSortOrderToHighestOfHierarchy();
-	blockerCanvas->SetTraceChannel(this->GetLexWidget()->GetRootCanvas()->GetTraceChannel());
+	blockerCanvas->SetTraceChannel(this->GetWidget()->GetRootCanvas()->GetTraceChannel());
 	auto blockerButton = NewObject<UUIButtonComponent>(blocker);
 	blockerButton->RegisterComponent();
 	blocker->AddInstanceComponent(blockerButton);
@@ -310,7 +310,7 @@ void UUIDropdownComponent::CreateBlocker()
 }
 void UUIDropdownComponent::CreateListItems()
 {
-	auto ItemTemplateWidget = ItemTemplate->GetLexWidget();
+	auto ItemTemplateWidget = ItemTemplate->GetWidget();
 	if (!IsValid(ItemTemplateWidget))
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d ItemTemplate must be a UIItem!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
@@ -487,7 +487,7 @@ bool UUIDropdownComponent::OnPointerDeselect_Implementation(ULexBaseEventData* e
 {
 	if (IsValid(eventData->SelectedComponent))
 	{
-		if (!eventData->SelectedComponent->IsAttachedTo(this->GetLexWidget()))
+		if (!eventData->SelectedComponent->IsAttachedTo(this->GetWidget()))
 		{
 			Hide();
 		}

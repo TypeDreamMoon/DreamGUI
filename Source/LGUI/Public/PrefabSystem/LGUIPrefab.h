@@ -143,6 +143,8 @@ public:
 	UPROPERTY(EditAnywhere)
 		TEnumAsByte<EViewModeIndex> ViewMode = EViewModeIndex::VMI_Lit;//editor viewport's view-mode
 	UPROPERTY(EditAnywhere)
+		TEnumAsByte<ELevelViewportType> ViewportType = ELevelViewportType::LVT_OrthoYZ;
+	UPROPERTY(EditAnywhere)
 		TSet<FGuid> UnexpandActorSet;
 };
 

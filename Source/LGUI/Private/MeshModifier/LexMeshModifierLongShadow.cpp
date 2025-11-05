@@ -11,7 +11,7 @@ ULexMeshModifierLongShadow::ULexMeshModifierLongShadow()
 
 void ULexMeshModifierLongShadow::ApplyColorAndAlpha(FColor& InOutColor, FColor InTintColor, uint8 InOriginAlpha)
 {
-	if (multiplySourceAlpha)
+	if (bMultiplySourceAlpha)
 	{
 		InOutColor.A = (uint8)(FLexUIUtils::Color255To1_Table[InOriginAlpha] * InTintColor.A);
 		InOutColor.R = InTintColor.R;
@@ -37,7 +37,7 @@ void ULexMeshModifierLongShadow::ModifyUIGeometry(
 
 	const int32 singleChannelTriangleIndicesCount = triangleCount;
 	const int32 singleChannelVerticesCount = vertexCount;
-	int32 additionalTriangleIndicesCount = singleChannelTriangleIndicesCount * (shadowSegment + 1);
+	int32 additionalTriangleIndicesCount = singleChannelTriangleIndicesCount * (ShadowSegment + 1);
 
 	triangles.AddUninitialized(additionalTriangleIndicesCount);
 	//put orgin triangles on last pass, this will make the origin triangle render at top
@@ -48,7 +48,7 @@ void ULexMeshModifierLongShadow::ModifyUIGeometry(
 	}
 	//calculate other pass
 	int32 prevChannelVerticesCount = singleChannelVerticesCount;
-	int32 shadowChannelCount = shadowSegment + 1;
+	int32 shadowChannelCount = ShadowSegment + 1;
 	for (int channelIndex = 0, originTriangleIndex = 0, triangleIndex = 0; channelIndex < shadowChannelCount; triangleIndex++, originTriangleIndex++)
 	{
 		auto index = triangles[originTriangleIndex + additionalTriangleIndicesCount] + prevChannelVerticesCount;
@@ -61,14 +61,14 @@ void ULexMeshModifierLongShadow::ModifyUIGeometry(
 		}
 	}
 
-	int additionalVertCount = singleChannelVerticesCount * (shadowSegment + 1);
+	int additionalVertCount = singleChannelVerticesCount * (ShadowSegment + 1);
 	vertexCount = singleChannelVerticesCount + additionalVertCount;
 	originVertices.AddDefaulted(additionalVertCount);
 	vertices.AddDefaulted(additionalVertCount);
 
 	//verticies
 	{
-		FVector shadowSizeInterval = shadowSize / (shadowSegment + 1);
+		auto shadowSizeInterval = ShadowSize / (ShadowSegment + 1);
 		for (int channelOriginVertIndex = 0; channelOriginVertIndex < singleChannelVerticesCount; channelOriginVertIndex++)
 		{
 			auto originVert = originVertices[channelOriginVertIndex].Position;
@@ -90,63 +90,63 @@ void ULexMeshModifierLongShadow::ModifyUIGeometry(
 				vert.Y += shadowSizeInterval.Y * (shadowChannelCount - channelIndex);
 				vert.Z += shadowSizeInterval.Z * (shadowChannelCount - channelIndex);
 				
-				if (useGradientColor)
+				if (bUseGradientColor)
 				{
 					float colorRatio = ((float)(channelIndex) / (shadowChannelCount));
 					float colorRatio_INV = 1.0f - colorRatio;
 					FColor color;
-					color.R = shadowColor.R * colorRatio + gradientColor.R * colorRatio_INV;
-					color.G = shadowColor.G * colorRatio + gradientColor.G * colorRatio_INV;
-					color.B = shadowColor.B * colorRatio + gradientColor.B * colorRatio_INV;
-					color.A = shadowColor.A * colorRatio + gradientColor.A * colorRatio_INV;
+					color.R = ShadowColor.R * colorRatio + GradientColor.R * colorRatio_INV;
+					color.G = ShadowColor.G * colorRatio + GradientColor.G * colorRatio_INV;
+					color.B = ShadowColor.B * colorRatio + GradientColor.B * colorRatio_INV;
+					color.A = ShadowColor.A * colorRatio + GradientColor.A * colorRatio_INV;
 					ApplyColorAndAlpha(vertices[channelVertIndex].Color, color, originAlpha);
 				}
 				else
 				{
-					ApplyColorAndAlpha(vertices[channelVertIndex].Color, shadowColor, originAlpha);
+					ApplyColorAndAlpha(vertices[channelVertIndex].Color, ShadowColor, originAlpha);
 				}
 			}
 		}
 	}
 }
 
-void ULexMeshModifierLongShadow::SetShadowColor(FColor newColor)
+void ULexMeshModifierLongShadow::SetShadowColor(FColor Value)
 {
-	if (shadowColor != newColor)
+	if (ShadowColor != Value)
 	{
-		shadowColor = newColor;
+		ShadowColor = Value;
 		if (GetLexVisual())GetLexVisual()->MarkColorDirty();
 	}
 }
-void ULexMeshModifierLongShadow::SetShadowSize(FVector newSize)
+void ULexMeshModifierLongShadow::SetShadowSize(FVector3f Value)
 {
-	if (shadowSize != newSize)
+	if (ShadowSize != Value)
 	{
-		shadowSize = newSize;
+		ShadowSize = Value;
 		if (GetLexVisual())GetLexVisual()->MarkVertexPositionDirty();
 	}
 }
-void ULexMeshModifierLongShadow::SetShadowSegment(uint8 newSegment)
+void ULexMeshModifierLongShadow::SetShadowSegment(uint8 Value)
 {
-	if (shadowSegment != newSegment)
+	if (ShadowSegment != Value)
 	{
-		shadowSegment = newSegment;
+		ShadowSegment = Value;
 		if (GetLexVisual())GetLexVisual()->MarkVerticesDirty(true, true, true, true);
 	}
 }
-void ULexMeshModifierLongShadow::SetUseGradientColor(bool newBool)
+void ULexMeshModifierLongShadow::SetUseGradientColor(bool Value)
 {
-	if (useGradientColor != newBool)
+	if (bUseGradientColor != Value)
 	{
-		useGradientColor = newBool;
+		bUseGradientColor = Value;
 		if (GetLexVisual())GetLexVisual()->MarkColorDirty();
 	}
 }
-void ULexMeshModifierLongShadow::SetGradientColor(FColor newColor)
+void ULexMeshModifierLongShadow::SetGradientColor(FColor Value)
 {
-	if (shadowColor != newColor)
+	if (ShadowColor != Value)
 	{
-		shadowColor = newColor;
+		ShadowColor = Value;
 		if (GetLexVisual())GetLexVisual()->MarkColorDirty();
 	}
 }

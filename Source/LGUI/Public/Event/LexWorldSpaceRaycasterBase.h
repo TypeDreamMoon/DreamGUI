@@ -12,14 +12,14 @@ class ULexWorldSpaceRaycasterBase;
 /**
  * Perform a ray source for LexWorldSpaceRaycaster
  */
-UCLASS(BlueprintType, Blueprintable, Abstract)
+UCLASS(ClassGroup = (LGUI), Blueprintable, Abstract, HideCategories = (Sockets, Physics, Collision, Activation, Cooking, Rendering, Actor, Input, Lighting, Mobile, Navigation))
 class LGUI_API ULexWorldSpaceRaycasterSource : public USceneComponent
 {
 	GENERATED_BODY()
 protected:
 	virtual void BeginPlay() override;
 	
-	/** line trace ray emit length */
+	/** ray length for line trace hit */
 	UPROPERTY(EditAnywhere, Category = LGUI)
 	float RayLength = 100000;
 	/** drag threshold, calculated in target's local space */
@@ -97,5 +97,5 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	void SetTraceChannel(TEnumAsByte<ETraceTypeQuery> Value);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-	void SetRaycasterSourceObject(ULexWorldSpaceRaycasterSource* NewSource);
+	void SetRaycasterSourceObject(ULexWorldSpaceRaycasterSource* Value);
 };

@@ -7,6 +7,13 @@ FLexUIComponentReference::FLexUIComponentReference(TSubclassOf<UActorComponent> 
 {
 	HelperClass = InCompClass;
 }
+FLexUIComponentReference::FLexUIComponentReference(UActorComponent* InComp, TSubclassOf<UActorComponent> InCompClass)
+{
+	TargetComp = InComp;
+	HelperClass = InCompClass;
+	HelperActor = TargetComp->GetOwner();
+	HelperComponentName = TargetComp->GetFName();
+}
 FLexUIComponentReference::FLexUIComponentReference(UActorComponent* InComp)
 {
 	TargetComp = InComp;

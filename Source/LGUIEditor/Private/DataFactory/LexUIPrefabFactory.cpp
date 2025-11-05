@@ -2,15 +2,16 @@
 
 #include "DataFactory/LexUIPrefabFactory.h"
 
-#include "ClassViewerFilter.h"
-#include "ClassViewerModule.h"
-#include "LGUIEditorModule.h"
 #include "PrefabSystem/LGUIPrefab.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "Core/Actor/LexWidgetActor.h"
+#if USE_CLASS_PICKER
+#include "ClassViewerFilter.h"
+#include "ClassViewerModule.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Kismet2/SClassPickerDialog.h"
+#endif
 
 #define LOCTEXT_NAMESPACE "LexUIPrefabFactory"
 

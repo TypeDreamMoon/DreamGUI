@@ -80,13 +80,13 @@ void ULexTexture::ApplyUVRect()
 			{
 				auto VerticalScale = TextureAspect / ThisAspect;
 				auto VerticalOffset = (1.0f - VerticalScale) * 0.5f;
-				UVRect = FVector4(0, VerticalOffset, 1, VerticalScale);
+				UVRect = FVector4f(0, VerticalOffset, 1, VerticalScale);
 			}
 			else
 			{
 				auto HorizontalScale = ThisAspect / TextureAspect;
 				auto HorizontalOffset = (1.0f - HorizontalScale) * 0.5f;
-				UVRect = FVector4(HorizontalOffset, 0, HorizontalScale, 1);
+				UVRect = FVector4f(HorizontalOffset, 0, HorizontalScale, 1);
 			}
 		}
 		break;
@@ -103,13 +103,13 @@ void ULexTexture::ApplyUVRect()
 			{
 				auto HorizontalScale = ThisAspect / TextureAspect;
 				auto HorizontalOffset = (1.0f - HorizontalScale) * 0.5f;
-				UVRect = FVector4(HorizontalOffset, 0, HorizontalScale, 1);
+				UVRect = FVector4f(HorizontalOffset, 0, HorizontalScale, 1);
 			}
 			else
 			{
 				auto VerticalScale = TextureAspect / ThisAspect;
 				auto VerticalOffset = (1.0f - VerticalScale) * 0.5f;
-				UVRect = FVector4(0, VerticalOffset, 1, VerticalScale);
+				UVRect = FVector4f(0, VerticalOffset, 1, VerticalScale);
 			}
 		}
 		break;
@@ -227,7 +227,7 @@ void ULexTexture::SetSpriteInfo(FLexUISpriteInfo Value)
 	}
 }
 
-void ULexTexture::SetUVRect(FVector4 Value)
+void ULexTexture::SetUVRect(FVector4f Value)
 {
 	if (UVRect != Value)
 	{

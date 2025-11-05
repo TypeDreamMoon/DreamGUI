@@ -10,6 +10,7 @@
 #include "IDetailGroup.h"
 #include "MaterialDomain.h"
 #include "PropertyType/LexTextAlignmentCustomization.h"
+#include "PropertyType/LexTextFontStyleCustomization.h"
 
 #define LOCTEXT_NAMESPACE "UITextCustomization"
 FLexTextCustomization::FLexTextCustomization()
@@ -49,6 +50,8 @@ void FLexTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder
 		LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexText, HAlign));
 		LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexText, VAlign));
 	}
+	//font style
+	DetailBuilder.GetDetailsView()->RegisterInstancedCustomPropertyTypeLayout(TEXT("ELexUITextFontStyle"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexTextFontStyleCustomization::MakeInstance));
 
 	auto OverflowTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, OverflowType));
 	OverflowTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexTextCustomization::ForceRefresh, &DetailBuilder));

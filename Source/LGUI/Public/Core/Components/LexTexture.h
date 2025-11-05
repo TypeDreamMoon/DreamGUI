@@ -37,7 +37,7 @@ protected:
 		ELexUITextureUVRectControlMode UVRectControlMode = ELexUITextureUVRectControlMode::None;
 	/** Texture UV offset and scale info. Only get good result when DrawType is Normal */
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta=(EditCondition="UVRectControlMode==ELexUITextureUVRectControlMode::None"))
-		FVector4 UVRect = FVector4(0, 0, 1, 1);
+		FVector4f UVRect = FVector4f(0, 0, 1, 1);
 
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		ELexUISpriteFillMethod FillMethod = ELexUISpriteFillMethod::Horizontal;
@@ -62,7 +62,7 @@ protected:
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI") ELexUISpriteDrawType GetDrawType()const { return DrawType; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") FLexUISpriteInfo GetSpriteInfo()const { return SpriteInfo; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI") FVector4 GetUVRect()const { return UVRect; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") FVector4f GetUVRect()const { return UVRect; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")	ELexUISpriteFillMethod GetFillMethod()const { return FillMethod; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")	uint8 GetFillOrigin()const { return FillOrigin; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")	bool GetFillDirectionFlip()const { return FillDirectionFlip; }
@@ -71,7 +71,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI") void SetDrawType(ELexUISpriteDrawType Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI") void SetSpriteInfo(FLexUISpriteInfo Value);
-	UFUNCTION(BlueprintCallable, Category = "LGUI") void SetUVRect(FVector4 Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI") void SetUVRect(FVector4f Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI") void SetFillMethod(ELexUISpriteFillMethod Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI") void SetFillOrigin(uint8 Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI") void SetFillDirectionFlip(bool Value);

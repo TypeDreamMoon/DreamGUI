@@ -15,12 +15,16 @@ public:
 	void Call_OnUnregister();
 	virtual void BeginPlay(){};
 	virtual void EndPlay(){};
-	
-	virtual ULexWidget* GetWidget()const;
+
+	virtual void PostInitProperties() override;
+
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	ULexWidget* GetWidget()const;
 protected:
 	virtual void OnRegister(){};
 	virtual void OnUnregister(){};
 private:
 	bool bIsRegistered = false;
-	mutable TWeakObjectPtr<ULexWidget> CacheWidget;
+	UPROPERTY(Transient, BlueprintReadOnly, Category = LGUI, Getter=GetWidget, meta = (AllowPrivateAccess = true), DisplayName=Widget)
+	mutable TObjectPtr<ULexWidget> OwnerWidget = nullptr;
 };

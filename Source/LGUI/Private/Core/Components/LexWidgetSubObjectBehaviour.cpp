@@ -2,8 +2,6 @@
 
 #include "Core/Components/LexWidgetSubObjectBehaviour.h"
 #include "Core/Components/LexWidget.h"
-#include "LGUI.h"
-
 
 
 void ULexWidgetSubObjectBehaviour::Call_OnRegister()
@@ -24,12 +22,23 @@ void ULexWidgetSubObjectBehaviour::Call_OnUnregister()
 	}
 }
 
+void ULexWidgetSubObjectBehaviour::PostInitProperties()
+{
+	UObject::PostInitProperties();
+// #if WITH_EDITOR
+// 	if (!this->GetName().StartsWith(TEXT("Default__")))
+// 	{
+// 		check(GetWidget() != nullptr);
+// 	}
+// #endif
+}
+
 ULexWidget* ULexWidgetSubObjectBehaviour::GetWidget() const
 {
-	if (!CacheWidget.IsValid())
+	if (!IsValid(OwnerWidget))
 	{
-		CacheWidget = this->GetTypedOuter<ULexWidget>();
+		OwnerWidget = this->GetTypedOuter<ULexWidget>();
 	}
-	return CacheWidget.Get();
+	return OwnerWidget;
 }
 

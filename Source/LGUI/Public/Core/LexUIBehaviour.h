@@ -5,6 +5,7 @@
 #include "Components/ActorComponent.h"
 #include "LexUIBehaviour.generated.h"
 
+class ULexWidget;
 class USceneComponent;
 
 /**
@@ -53,8 +54,10 @@ private:
 	friend class ULexUIManagerWorldSubsystem;
 	void Call_Awake();
 	void Call_Start();
-	UPROPERTY(Transient) mutable TWeakObjectPtr<ULexWidget> CacheWidget = nullptr;
-	UPROPERTY(Transient) mutable TWeakObjectPtr<USceneComponent> CacheSceneComp = nullptr;
+	UPROPERTY(Transient, Getter=GetWidget, DisplayName=Widget, BlueprintReadOnly, Category=LexUIBehaviour, meta=(AllowPrivateAccess=true))
+	mutable TObjectPtr<ULexWidget> CacheWidget = nullptr;
+	UPROPERTY(Transient, Getter=GetSceneComponent, DisplayName=SceneComponent, BlueprintReadOnly, Category=LexUIBehaviour, meta=(AllowPrivateAccess=true))
+	mutable TObjectPtr<USceneComponent> CacheSceneComp = nullptr;
 protected:
 
 	bool IsAllowToCallAwake()const;
@@ -123,8 +126,8 @@ public:
 		void SetCanExecuteUpdate(bool Value);
 	
 	UFUNCTION(BlueprintCallable, Category = "LexUIBehaviour")
-	USceneComponent* GetRootSceneComponent();
+	USceneComponent* GetSceneComponent()const;
 	
 	UFUNCTION(BlueprintCallable, Category = "LexUIBehaviour")
-	ULexWidget* GetLexWidget() const;
+	ULexWidget* GetWidget() const;
 };

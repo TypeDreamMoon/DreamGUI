@@ -11,16 +11,16 @@ ULexMeshModifierOutline::ULexMeshModifierOutline()
 
 void ULexMeshModifierOutline::ApplyColorAndAlpha(FColor& InOutColor, uint8 InSourceAlpha)
 {
-	if (multiplySourceAlpha)
+	if (bMultiplySourceAlpha)
 	{
-		InOutColor.A = (uint8)(FLexUIUtils::Color255To1_Table[InSourceAlpha] * outlineColor.A);
-		InOutColor.R = outlineColor.R;
-		InOutColor.G = outlineColor.G;
-		InOutColor.B = outlineColor.B;
+		InOutColor.A = (uint8)(FLexUIUtils::Color255To1_Table[InSourceAlpha] * OutlineColor.A);
+		InOutColor.R = OutlineColor.R;
+		InOutColor.G = OutlineColor.G;
+		InOutColor.B = OutlineColor.B;
 	}
 	else
 	{
-		InOutColor = outlineColor;
+		InOutColor = OutlineColor;
 	}
 }
 void ULexMeshModifierOutline::ModifyUIGeometry(
@@ -37,7 +37,7 @@ void ULexMeshModifierOutline::ModifyUIGeometry(
 
 	const int32 singleChannelTriangleIndicesCount = triangleCount;
 	const int32 singleChannelVerticesCount = vertexCount;
-	const int32 additionalTriangleIndicesCount = singleChannelTriangleIndicesCount * (use8Direction ? 8 : 4);
+	const int32 additionalTriangleIndicesCount = singleChannelTriangleIndicesCount * (bUse8Direction ? 8 : 4);
 
 	triangles.AddUninitialized(additionalTriangleIndicesCount);
 	//put orgin triangles on last pass, this will make the origin triangle render at top
@@ -75,7 +75,7 @@ void ULexMeshModifierOutline::ModifyUIGeometry(
 			triangles[channelTriangleIndex2] = originTriangleIndex + channelIndicesOffset2;
 			triangles[channelTriangleIndex3] = originTriangleIndex + channelIndicesOffset3;
 			triangles[channelTriangleIndex4] = originTriangleIndex + channelIndicesOffset4;
-			if (use8Direction)
+			if (bUse8Direction)
 			{
 				triangles[channelTriangleIndex5] = originTriangleIndex + channelIndicesOffset5;
 				triangles[channelTriangleIndex6] = originTriangleIndex + channelIndicesOffset6;
@@ -88,7 +88,7 @@ void ULexMeshModifierOutline::ModifyUIGeometry(
 		}
 	}
 
-	int additionalVertCount = singleChannelVerticesCount * (use8Direction ? 8 : 4);
+	int additionalVertCount = singleChannelVerticesCount * (bUse8Direction ? 8 : 4);
 	vertexCount = singleChannelVerticesCount + additionalVertCount;
 	originVertices.AddDefaulted(additionalVertCount);
 	vertices.AddDefaulted(additionalVertCount);
@@ -114,7 +114,7 @@ void ULexMeshModifierOutline::ModifyUIGeometry(
 				vertices[channelVertIndex2].TextureCoordinate[i] = originUV;
 				vertices[channelVertIndex3].TextureCoordinate[i] = originUV;
 				vertices[channelVertIndex4].TextureCoordinate[i] = originUV;
-				if (use8Direction)
+				if (bUse8Direction)
 				{
 					vertices[channelVertIndex5].TextureCoordinate[i] = originUV;
 					vertices[channelVertIndex6].TextureCoordinate[i] = originUV;
@@ -128,7 +128,7 @@ void ULexMeshModifierOutline::ModifyUIGeometry(
 			ApplyColorAndAlpha(vertices[channelVertIndex2].Color, originAlpha);
 			ApplyColorAndAlpha(vertices[channelVertIndex3].Color, originAlpha);
 			ApplyColorAndAlpha(vertices[channelVertIndex4].Color, originAlpha);
-			if (use8Direction)
+			if (bUse8Direction)
 			{
 				ApplyColorAndAlpha(vertices[channelVertIndex5].Color, originAlpha);
 				ApplyColorAndAlpha(vertices[channelVertIndex6].Color, originAlpha);
@@ -139,38 +139,38 @@ void ULexMeshModifierOutline::ModifyUIGeometry(
 			auto originVert = originVertices[channelOriginVertIndex].Position;
 			auto& channel1Vert = originVertices[channelVertIndex1].Position;
 			channel1Vert = originVert;
-			channel1Vert.Y += outlineSize.X;
-			channel1Vert.Z += outlineSize.Y;
+			channel1Vert.Y += OutlineSize.X;
+			channel1Vert.Z += OutlineSize.Y;
 			auto& channel2Vert = originVertices[channelVertIndex2].Position;
 			channel2Vert = originVert;
-			channel2Vert.Y -= outlineSize.X;
-			channel2Vert.Z += outlineSize.Y;
+			channel2Vert.Y -= OutlineSize.X;
+			channel2Vert.Z += OutlineSize.Y;
 			auto& channel3Vert = originVertices[channelVertIndex3].Position;
 			channel3Vert = originVert;
-			channel3Vert.Y += outlineSize.X;
-			channel3Vert.Z -= outlineSize.Y;
+			channel3Vert.Y += OutlineSize.X;
+			channel3Vert.Z -= OutlineSize.Y;
 			auto& channel4Vert = originVertices[channelVertIndex4].Position;
 			channel4Vert = originVert;
-			channel4Vert.Y -= outlineSize.X;
-			channel4Vert.Z -= outlineSize.Y;
-			if (use8Direction)
+			channel4Vert.Y -= OutlineSize.X;
+			channel4Vert.Z -= OutlineSize.Y;
+			if (bUse8Direction)
 			{
 				auto& channel5Vert = originVertices[channelVertIndex5].Position;
 				channel5Vert = originVert;
-				channel5Vert.Y -= outlineSize.X;
+				channel5Vert.Y -= OutlineSize.X;
 				channel5Vert.Z += 0;
 				auto& channel6Vert = originVertices[channelVertIndex6].Position;
 				channel6Vert = originVert;
-				channel6Vert.Y += outlineSize.X;
+				channel6Vert.Y += OutlineSize.X;
 				channel6Vert.Z += 0;
 				auto& channel7Vert = originVertices[channelVertIndex7].Position;
 				channel7Vert = originVert;
 				channel7Vert.Y += 0;
-				channel7Vert.Z += outlineSize.Y;
+				channel7Vert.Z += OutlineSize.Y;
 				auto& channel8Vert = originVertices[channelVertIndex8].Position;
 				channel8Vert = originVert;
 				channel8Vert.Y += 0;
-				channel8Vert.Z -= outlineSize.Y;
+				channel8Vert.Z -= OutlineSize.Y;
 			}
 
 			channelVertIndex1++, channelVertIndex2++, channelVertIndex3++, channelVertIndex4++;
@@ -179,27 +179,27 @@ void ULexMeshModifierOutline::ModifyUIGeometry(
 	}
 }
 
-void ULexMeshModifierOutline::SetOutlineColor(FColor newColor)
+void ULexMeshModifierOutline::SetOutlineColor(FColor Value)
 {
-	if (outlineColor != newColor)
+	if (OutlineColor != Value)
 	{
-		outlineColor = newColor;
+		OutlineColor = Value;
 		if (GetLexVisual())GetLexVisual()->MarkColorDirty();
 	}
 }
-void ULexMeshModifierOutline::SetOutlineSize(FVector2D newSize)
+void ULexMeshModifierOutline::SetOutlineSize(FVector2f Value)
 {
-	if (outlineSize != newSize)
+	if (OutlineSize != Value)
 	{
-		outlineSize = newSize;
+		OutlineSize = Value;
 		if (GetLexVisual())GetLexVisual()->MarkVertexPositionDirty();
 	}
 }
-void ULexMeshModifierOutline::SetUse8Direction(bool newValue)
+void ULexMeshModifierOutline::SetUse8Direction(bool Value)
 {
-	if (use8Direction != newValue)
+	if (bUse8Direction != Value)
 	{
-		use8Direction = newValue;
+		bUse8Direction = Value;
 		if (GetLexVisual())GetLexVisual()->MarkVerticesDirty(true, true, true, true);
 	}
 }

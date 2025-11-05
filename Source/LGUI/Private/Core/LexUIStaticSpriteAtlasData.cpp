@@ -82,11 +82,11 @@ void ULexUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChanged
 
 			auto TransferSprite = [this](ULexUISpriteData* spriteData) {
 				spriteData->Modify();
-				if (IsValid(spriteData->packingAtlas))
+				if (IsValid(spriteData->PackingAtlas))
 				{
-					spriteData->packingAtlas->RemoveSpriteData(spriteData);
+					spriteData->PackingAtlas->RemoveSpriteData(spriteData);
 				}
-				spriteData->packingAtlas = this;
+				spriteData->PackingAtlas = this;
 				spriteData->bIsInitialized = false;
 				spriteData->MarkPackageDirty();
 			};
@@ -95,7 +95,7 @@ void ULexUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChanged
 			};
 			for (auto Item : AddedArray)
 			{
-				if (Item->packingAtlas == nullptr)
+				if (Item->PackingAtlas == nullptr)
 				{
 					TransferSprite(Item);
 				}
@@ -115,7 +115,7 @@ void ULexUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChanged
 					else
 					{
 						auto WarningMsg = FText::Format(LOCTEXT("TransferSpriteWarning", "Sprite: '{0}' was belongs to atlas: '{1}', do you want to transfer the Sprite to this atlas?")
-							, FText::FromString(Item->GetPathName()), FText::FromString(Item->packingAtlas->GetPathName()));
+							, FText::FromString(Item->GetPathName()), FText::FromString(Item->PackingAtlas->GetPathName()));
 						auto Result = FMessageDialog::Open(EAppMsgType::YesNoYesAllNoAll, WarningMsg);
 						switch (Result)
 						{
@@ -149,7 +149,7 @@ void ULexUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChanged
 			for (auto Item : RemovedArray)
 			{
 				Item->Modify();
-				Item->packingAtlas = nullptr;
+				Item->PackingAtlas = nullptr;
 				Item->bIsInitialized = false;
 				Item->MarkPackageDirty();
 			}
@@ -284,7 +284,7 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 			}
 			return false;
 		}
-		if (spriteDataItem->packingAtlas != this)
+		if (spriteDataItem->PackingAtlas != this)
 		{
 			if (!bWarningIsAlreadyAppearedAtCurrentPackingSession)
 			{
@@ -573,7 +573,7 @@ bool ULexUIStaticSpriteAtlasData::CheckInvalidSpriteData()const
 		{
 			return true;
 		}
-		else if (spriteDataItem->packingAtlas != this)
+		else if (spriteDataItem->PackingAtlas != this)
 		{
 			return true;
 		}
@@ -596,7 +596,7 @@ void ULexUIStaticSpriteAtlasData::CleanupInvalidSpriteData()
 			SpriteDataArray.RemoveAt(i);
 			i--;
 		}
-		else if (spriteDataItem->packingAtlas != this)
+		else if (spriteDataItem->PackingAtlas != this)
 		{
 			SpriteDataArray.RemoveAt(i);
 			i--;

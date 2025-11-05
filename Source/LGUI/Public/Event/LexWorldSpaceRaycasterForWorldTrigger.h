@@ -9,7 +9,7 @@
 /**
  * Raycast on common world space objects like StaticMesh and Trigger
  */
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(ClassGroup = LGUI, meta=(BlueprintSpawnableComponent))
 class LGUI_API ULexWorldSpaceRaycasterForWorldTrigger : public ULexWorldSpaceRaycasterBase
 {
 	GENERATED_BODY()

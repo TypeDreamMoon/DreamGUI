@@ -1384,7 +1384,7 @@ void UUITextInputComponent::ActivateInput(ULexPointerEventData* eventData)
 	//set is selected
 	if (auto eventSystem = ULexEventSystem::GetLexEventSystemInstance(this, IsValid(eventData) ? eventData->UserIndex : 0))
 	{
-		if (auto Widget = GetLexWidget())
+		if (auto Widget = GetWidget())
 		{
 			if (IsValid(eventData))
 			{

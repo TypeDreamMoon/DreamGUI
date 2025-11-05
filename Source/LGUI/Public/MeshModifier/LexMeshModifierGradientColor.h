@@ -15,7 +15,7 @@ enum class ELexMeshModifierGradientColorDirection :uint8
 	RightToLeft,
 	FourCorner,
 };
-UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
+UCLASS(ClassGroup = (LGUI), Blueprintable, DisplayName="GradientColor")
 class LGUI_API ULexMeshModifierGradientColor : public ULexMeshModifierBase
 {
 	GENERATED_BODY()
@@ -25,20 +25,20 @@ public:
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		ELexMeshModifierGradientColorDirection directionType = ELexMeshModifierGradientColorDirection::BottomToTop;
+		ELexMeshModifierGradientColorDirection DirectionType = ELexMeshModifierGradientColorDirection::BottomToTop;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		bool multiplySourceAlpha = true;
+		bool bMultiplySourceAlpha = true;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		FColor color1 = FColor::Black;
+		FColor Color1 = FColor::Black;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		FColor color2 = FColor::White;
+		FColor Color2 = FColor::White;
 
-	//only use for FourCornor
+	//only use for FourCorner
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		FColor color3 = FColor::Black;
-	//only use for FourCornor
+		FColor Color3 = FColor::Black;
+	//only use for FourCorner
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		FColor color4 = FColor::White;
+		FColor Color4 = FColor::White;
 	FORCEINLINE void ApplyColorAndAlpha(FColor& InOutColor, FColor InTintColor);
 public:
 	virtual void ModifyUIGeometry(FLexUIGeometry& InGeometry
@@ -51,4 +51,30 @@ public:
 		OutUV = false;
 		OutColor = true;
 	};
+
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	ELexMeshModifierGradientColorDirection GetDirectionType()const{return DirectionType;}
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	bool GetMultiplySourceAlpha()const{return bMultiplySourceAlpha;}
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	FColor GetColor1()const{return Color1;}
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	FColor GetColor2()const{return Color2;}
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	FColor GetColor3()const{return Color3;}
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	FColor GetColor4()const{return Color4;}
+	
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetDirectionType(ELexMeshModifierGradientColorDirection Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetMultiplySourceAlpha(bool Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetColor1(FColor Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetColor2(FColor Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetColor3(FColor Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetColor4(FColor Value);
 };

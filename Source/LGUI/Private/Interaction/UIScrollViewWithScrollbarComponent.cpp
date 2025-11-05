@@ -79,7 +79,7 @@ bool UUIScrollViewWithScrollbarComponent::CheckScrollbarParameter()
 			if (HorizontalScrollbar.IsValid())
 			{
 				HorizontalScrollbar->GetOnValueChangedEvent().AddUObject(this, &UUIScrollViewWithScrollbarComponent::OnHorizontalScrollbar);
-				HorizontalScrollbarWidget = HorizontalScrollbar->GetLexWidget();
+				HorizontalScrollbarWidget = HorizontalScrollbar->GetWidget();
 				HorizontalScrollbarWidget->GetSiblingIndexChangedEvent().AddUObject(this, &UUIScrollViewWithScrollbarComponent::OnScrollbarSiblingIndexChanged);
 				HorizontalScrollbarWidget->GetAttachmentChangedEvent().AddUObject(this, &UUIScrollViewWithScrollbarComponent::OnScrollbarAttachmentChanged);
 				bHorizontalValid = true;
@@ -96,7 +96,7 @@ bool UUIScrollViewWithScrollbarComponent::CheckScrollbarParameter()
 		else
 		{
 			VerticalScrollbar->GetOnValueChangedEvent().AddUObject(this, &UUIScrollViewWithScrollbarComponent::OnVerticalScrollbar);
-			VerticalScrollbarWidget = VerticalScrollbar->GetLexWidget();
+			VerticalScrollbarWidget = VerticalScrollbar->GetWidget();
 			VerticalScrollbarWidget->GetSiblingIndexChangedEvent().AddUObject(this, &UUIScrollViewWithScrollbarComponent::OnScrollbarSiblingIndexChanged);
 			VerticalScrollbarWidget->GetAttachmentChangedEvent().AddUObject(this, &UUIScrollViewWithScrollbarComponent::OnScrollbarAttachmentChanged);
 			bVerticalValid = true;
@@ -224,9 +224,9 @@ void UUIScrollViewWithScrollbarComponent::UpdateScrollbarLayout()
 
 	if (VerticalScrollbarWidget.IsValid())
 	{
-		if (VerticalScrollbarWidget->GetAttachParent() != this->GetLexWidget())
+		if (VerticalScrollbarWidget->GetAttachParent() != this->GetWidget())
 		{
-			VerticalScrollbarWidget->AttachToComponent(this->GetLexWidget(), FAttachmentTransformRules::KeepWorldTransform);
+			VerticalScrollbarWidget->AttachToComponent(this->GetWidget(), FAttachmentTransformRules::KeepWorldTransform);
 		}
 		auto ParentHeight = ContentParent->GetHeight();
 		auto ContentHeight = Content->GetHeight();
@@ -281,9 +281,9 @@ void UUIScrollViewWithScrollbarComponent::UpdateScrollbarLayout()
 
 	if (HorizontalScrollbarWidget.IsValid())
 	{
-		if (HorizontalScrollbarWidget->GetAttachParent() != this->GetLexWidget())
+		if (HorizontalScrollbarWidget->GetAttachParent() != this->GetWidget())
 		{
-			HorizontalScrollbarWidget->AttachToComponent(this->GetLexWidget(), FAttachmentTransformRules::KeepWorldTransform);
+			HorizontalScrollbarWidget->AttachToComponent(this->GetWidget(), FAttachmentTransformRules::KeepWorldTransform);
 		}
 		auto parentWidth = ContentParent->GetWidth();
 		auto contentWidth = Content->GetWidth();

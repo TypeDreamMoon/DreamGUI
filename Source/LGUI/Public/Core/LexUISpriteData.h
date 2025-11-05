@@ -42,9 +42,9 @@ private:
 	 * Support mipmaps.
 	 */
 	UPROPERTY(EditAnywhere, Category = "AtlasPacking")
-		TObjectPtr<ULexUIStaticSpriteAtlasData> packingAtlas = nullptr;
+		TObjectPtr<ULexUIStaticSpriteAtlasData> PackingAtlas = nullptr;
 	/**
-	 * Sprites that have same PackingTag will be packed into same atlas at runtime. If PackingTag is None, then the UISprite which render this LexUISpriteData will be treated as a UITexture.
+	 * Sprites that have same PackingTag will be packed into same atlas at runtime. If PackingTag is None, then the LexSprite which render this LexUISpriteData will be treated as a LexTexture.
 	 * Not support mipmaps.
 	 * Only valid if PackingAtlas is empty.
 	 */
@@ -62,7 +62,7 @@ private:
 	void CopySpriteTextureToAtlas(rbp::Rect InPackedRect, int32 InAtlasTexturePadding);
 public:
 	bool GetUseEdgePixelPadding()const { return bUseEdgePixelPadding; }
-	ULexUIStaticSpriteAtlasData* GetPackingAtlas()const { return packingAtlas; }
+	ULexUIStaticSpriteAtlasData* GetPackingAtlas()const { return PackingAtlas; }
 	void ApplySpriteInfoAfterStaticPack(const rbp::Rect& InPackedRect, float InAtlasTextureSizeInv);
 	//Begin ULexUISpriteData_BaseObject interface
 	virtual UTexture2D * GetAtlasTexture()override;
@@ -86,7 +86,7 @@ public:
 	 * @param inHorizontalBorder		Horizontal border value, x for left, y for right, will be convert to uint16</param>
 	 * @param inVerticalBorder			Vertical border value, x for top, y for bottom, will be convert to uint16</param>
 	 * @param inPackingTag				see "PackingTag" property
-	 * @return							Created LGUISpriteData, nullptr if something wrong.
+	 * @return							Created LexUISpriteData, nullptr if something wrong.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		static ULexUISpriteData* CreateLexUISpriteData(UObject* Outer, UTexture2D* inSpriteTexture, FVector2D inHorizontalBorder = FVector2D::ZeroVector, FVector2D inVerticalBorder = FVector2D::ZeroVector, FName inPackingTag = TEXT("Main"));
@@ -98,7 +98,9 @@ public:
 	void ReloadTexture();
 	UFUNCTION(BlueprintCallable, Category = "LGUI") UTexture2D* GetSpriteTexture()const { return SpriteTexture; }
 #if WITH_EDITOR
+	virtual void PreEditChange(FProperty* PropertyAboutToChange) override;
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)override;
+	virtual void PostEditChangeChainProperty(struct FPropertyChangedChainEvent& PropertyChangedEvent) override;
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
 	static void MarkAllSpritesNeedToReinitialize();
 #endif

@@ -150,10 +150,7 @@ void ULexImage::OnUpdateGeometry(FLexUIGeometry& InMesh, bool InTriangleChanged,
 			{
 				SpriteInfo.Width = Brush.ImageSize.X;
 				SpriteInfo.Height = Brush.ImageSize.Y;
-				SpriteInfo.MinUV.X = Brush.UVRegion.X;
-				SpriteInfo.MaxUV.Y = Brush.UVRegion.Y;
-				SpriteInfo.MaxUV.X = Brush.UVRegion.Z;
-				SpriteInfo.MinUV.Y = Brush.UVRegion.W;
+				SpriteInfo.ApplyUV(0, 0, SpriteInfo.Width, SpriteInfo.Height, 1.0f / SpriteInfo.Width, 1.0f / SpriteInfo.Height, Brush.UVRegion);
 			}
 			FLexUIGeometry::UpdateUIRectSimpleVertex(&InMesh, RenderSize.X, RenderSize.Y, FVector2f(Pivot)
 			, SpriteInfo, RenderCanvas, this, FinalColor
@@ -185,19 +182,12 @@ void ULexImage::OnUpdateGeometry(FLexUIGeometry& InMesh, bool InTriangleChanged,
 			{
 				SpriteInfo.Width = Brush.ImageSize.X;
 				SpriteInfo.Height = Brush.ImageSize.Y;
-				SpriteInfo.MinUV.X = Brush.UVRegion.X;
-				SpriteInfo.MaxUV.Y = Brush.UVRegion.Y;
-				SpriteInfo.MaxUV.X = Brush.UVRegion.Z;
-				SpriteInfo.MinUV.Y = Brush.UVRegion.W;
 				SpriteInfo.Border.Left = Brush.Margin.Left * Brush.ImageSize.X;
 				SpriteInfo.Border.Right = Brush.Margin.Right * Brush.ImageSize.X;
 				SpriteInfo.Border.Top = Brush.Margin.Top * Brush.ImageSize.Y;
 				SpriteInfo.Border.Bottom = Brush.Margin.Bottom * Brush.ImageSize.Y;
-				float uvWidth = SpriteInfo.MaxUV.X - SpriteInfo.MinUV.X, uvHeight = SpriteInfo.MaxUV.Y - SpriteInfo.MinUV.Y;
-				SpriteInfo.BorderMinUV.X = SpriteInfo.MinUV.X + Brush.Margin.Left * uvWidth;
-				SpriteInfo.BorderMaxUV.X = SpriteInfo.MaxUV.X - Brush.Margin.Right * uvWidth;
-				SpriteInfo.BorderMaxUV.Y = SpriteInfo.MaxUV.Y - Brush.Margin.Bottom * uvHeight;
-				SpriteInfo.BorderMinUV.Y = SpriteInfo.MinUV.Y + Brush.Margin.Top * uvHeight;
+				SpriteInfo.ApplyUV(0, 0, SpriteInfo.Width, SpriteInfo.Height, 1.0f / SpriteInfo.Width, 1.0f / SpriteInfo.Height, Brush.UVRegion);
+				SpriteInfo.ApplyBorderUV(1.0f / SpriteInfo.Width, 1.0f / SpriteInfo.Height);
 			}
 			FLexUIGeometry::UpdateUIRectBorderVertex(&InMesh, bFillCenter, RenderSize.X, RenderSize.Y, FVector2f(Pivot)
 				, SpriteInfo, RenderCanvas, this, FinalColor
@@ -216,6 +206,32 @@ void ULexImage::BeginDestroy()
 {
 	Super::BeginDestroy();
 	
+	if (bHasAddToSprite)
+	{
+		if (auto LexSprite = Cast<ULexUISpriteData_BaseObject>(Brush.GetResourceObject()))
+		{
+			LexSprite->RemoveUISprite(this);
+			bHasAddToSprite = false;
+		}
+	}
+}
+
+void ULexImage::OnRegister()
+{
+	Super::OnRegister();
+	if (auto LexSprite = Cast<ULexUISpriteData_BaseObject>(Brush.GetResourceObject()))
+	{
+		if (!bHasAddToSprite)
+		{
+			LexSprite->AddUISprite(this);
+			bHasAddToSprite = true;
+		}
+	}
+}
+
+void ULexImage::OnUnregister()
+{
+	Super::OnUnregister();
 	if (bHasAddToSprite)
 	{
 		if (auto LexSprite = Cast<ULexUISpriteData_BaseObject>(Brush.GetResourceObject()))

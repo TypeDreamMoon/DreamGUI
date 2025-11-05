@@ -96,7 +96,8 @@ void ULexWorldSpaceRaycasterBase::SetTraceChannel(TEnumAsByte<ETraceTypeQuery> V
 {
 	TraceChannel = Value;
 }
-void ULexWorldSpaceRaycasterBase::SetRaycasterSourceObject(ULexWorldSpaceRaycasterSource* NewSource)
+void ULexWorldSpaceRaycasterBase::SetRaycasterSourceObject(ULexWorldSpaceRaycasterSource* Value)
 {
-	RaycasterSource = NewSource;
+	RaycasterSourceObject = Value;
+	RaycasterSource = FLexUIComponentReference(Value, ULexWorldSpaceRaycasterSource::StaticClass());
 }

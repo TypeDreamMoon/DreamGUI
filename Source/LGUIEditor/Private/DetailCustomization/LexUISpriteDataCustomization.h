@@ -25,6 +25,7 @@ private:
 	FOptionalSize GetBorderRightSize()const;
 	FOptionalSize GetBorderTopSize()const;
 	FOptionalSize GetBorderBottomSize()const;
+	bool IsApplyButtonEnabled(TSharedPtr<IPropertyHandle> BorderDirtyPropertyHandle)const;
 
 	void OnPackingTagTextCommited(const FText& InText, ETextCommit::Type CommitType, TSharedRef<IPropertyHandle> InProperty, IDetailLayoutBuilder* DetailBuilder);
 	FText GetPackingTagText(TSharedRef<IPropertyHandle> InProperty)const;

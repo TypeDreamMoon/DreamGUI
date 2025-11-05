@@ -24,7 +24,7 @@ void ULexMeshModifierShadow::ModifyUIGeometry(
 	const int32 singleChannelVerticesCount = vertexCount;
 	//create additional triangle pass
 	triangles.AddUninitialized(singleChannelTriangleIndicesCount);
-	//put orgin triangles on last pass, this will make the origin triangle render at top
+	//put origin triangles on last pass, this will make the origin triangle render at top
 	for (int i = singleChannelTriangleIndicesCount, j = 0; j < singleChannelTriangleIndicesCount; i++, j++)
 	{
 		auto index = triangles[j];
@@ -39,21 +39,20 @@ void ULexMeshModifierShadow::ModifyUIGeometry(
 	for (int channelIndex1 = singleChannelVerticesCount, channelIndexOrigin = 0; channelIndex1 < vertexCount; channelIndex1++, channelIndexOrigin++)
 	{
 		auto originVertPos = originVertices[channelIndexOrigin].Position;
-		originVertPos.Y += shadowOffset.X;
-		originVertPos.Z += shadowOffset.Y;
+		originVertPos += ShadowOffset;
 		originVertices[channelIndex1].Position = originVertPos;
 
-		if (multiplySourceAlpha)
+		if (bMultiplySourceAlpha)
 		{
 			auto& vertColor = vertices[channelIndex1].Color;
-			vertColor.A = (uint8)(FLexUIUtils::Color255To1_Table[vertices[channelIndexOrigin].Color.A] * shadowColor.A);
-			vertColor.R = shadowColor.R;
-			vertColor.G = shadowColor.G;
-			vertColor.B = shadowColor.B;
+			vertColor.A = (uint8)(FLexUIUtils::Color255To1_Table[vertices[channelIndexOrigin].Color.A] * ShadowColor.A);
+			vertColor.R = ShadowColor.R;
+			vertColor.G = ShadowColor.G;
+			vertColor.B = ShadowColor.B;
 		}
 		else
 		{
-			vertices[channelIndex1].Color = shadowColor;
+			vertices[channelIndex1].Color = ShadowColor;
 		}
 
 		for (int i = 0; i < MAX_STATIC_TEXCOORDS; i++)
@@ -63,19 +62,19 @@ void ULexMeshModifierShadow::ModifyUIGeometry(
 	}
 }
 
-void ULexMeshModifierShadow::SetShadowColor(FColor newColor)
+void ULexMeshModifierShadow::SetShadowColor(FColor Value)
 {
-	if (shadowColor != newColor)
+	if (ShadowColor != Value)
 	{
-		shadowColor = newColor;
+		ShadowColor = Value;
 		if (GetLexVisual())GetLexVisual()->MarkColorDirty();
 	}
 }
-void ULexMeshModifierShadow::SetShadowOffset(FVector2D newOffset)
+void ULexMeshModifierShadow::SetShadowOffset(FVector3f Value)
 {
-	if (shadowOffset != newOffset)
+	if (ShadowOffset != Value)
 	{
-		shadowOffset = newOffset;
+		ShadowOffset = Value;
 		if (GetLexVisual())GetLexVisual()->MarkVertexPositionDirty();
 	}
 }

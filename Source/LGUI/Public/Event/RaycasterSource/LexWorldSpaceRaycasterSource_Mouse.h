@@ -11,7 +11,7 @@
 /**
  * This is for standalone mouse input, it will emit a ray from main viewport mouse position
  */
-UCLASS(ClassGroup = LGUI, Blueprintable, meta = (DisplayName = "Mouse"))
+UCLASS(ClassGroup = LGUI, meta=(BlueprintSpawnableComponent))
 class LGUI_API ULexWorldSpaceRaycasterSource_Mouse : public ULexWorldSpaceRaycasterSource
 {
 	GENERATED_BODY()

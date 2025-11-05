@@ -2,16 +2,9 @@
 
 #include "AssetTypeActions_LexUIPrefab.h"
 #include "Misc/PackageName.h"
-#include "EditorStyleSet.h"
-#include "EditorFramework/AssetImportData.h"
-#include "ThumbnailRendering/SceneThumbnailInfo.h"
-#include "AssetRegistry/AssetRegistryModule.h"
-#include "ContentBrowserModule.h"
-#include "AssetNotifications.h"
 #include "Algo/Transform.h"
 #include "PrefabSystem/LGUIPrefab.h"
 #include "PrefabEditor/LGUIPrefabEditor.h"
-#include "LGUIEditorModule.h"
 
 #define LOCTEXT_NAMESPACE "AssetTypeActions_LexUIPrefab"
 

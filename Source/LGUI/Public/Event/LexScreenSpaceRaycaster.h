@@ -22,7 +22,7 @@ public:
 	ULexScreenSpaceRaycaster();
 	virtual void BeginPlay()override;
 protected:
-	/** line trace ray emit length */
+	/** ray length for line trace hit */
 	UPROPERTY(EditAnywhere, Category = LGUI)
 	float RayLength = 100000;
 	/** drag threshold, calculated in target's local space */

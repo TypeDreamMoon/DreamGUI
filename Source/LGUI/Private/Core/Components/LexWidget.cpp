@@ -23,7 +23,7 @@ ULexWidget::ULexWidget(const FObjectInitializer& ObjectInitializer) :Super(Objec
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
-	SetMobility(EComponentMobility::Movable);
+	Mobility = EComponentMobility::Movable;
 	SetUsingAbsoluteLocation(false);
 	SetUsingAbsoluteRotation(false);
 	SetUsingAbsoluteScale(false);

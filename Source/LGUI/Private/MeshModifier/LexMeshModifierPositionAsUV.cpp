@@ -17,7 +17,7 @@ void ULexMeshModifierPositionAsUV::ModifyUIGeometry(
 	if (!LexVisual)return;
 	auto RenderCanvas = LexVisual->GetWidget()->GetRenderCanvas();
 	auto& originVertices = InGeometry.OriginVertices;
-	switch (uvChannel)
+	switch (UVChannel)
 	{
 	case 0:
 	{
@@ -26,7 +26,7 @@ void ULexMeshModifierPositionAsUV::ModifyUIGeometry(
 		for (int i = 0; i < vertexCount; i++)
 		{
 			auto& vert = originVertices[i].Position;
-			vertices[i].TextureCoordinate[0] = FVector2f(vert.Y, vert.Z);
+			vertices[i].TextureCoordinate[0] = FVector2f(vert.Y, vert.Z) * Scale;
 		}
 	}
 	break;
@@ -38,7 +38,7 @@ void ULexMeshModifierPositionAsUV::ModifyUIGeometry(
 		for (int i = 0; i < vertexCount; i++)
 		{
 			auto& vert = originVertices[i].Position;
-			vertices[i].TextureCoordinate[1] = FVector2f(vert.Y, vert.Z);
+			vertices[i].TextureCoordinate[1] = FVector2f(vert.Y, vert.Z) * Scale;
 		}
 	}
 	break;
@@ -50,7 +50,7 @@ void ULexMeshModifierPositionAsUV::ModifyUIGeometry(
 		for (int i = 0; i < vertexCount; i++)
 		{
 			auto& vert = originVertices[i].Position;
-			vertices[i].TextureCoordinate[2] = FVector2f(vert.Y, vert.Z);
+			vertices[i].TextureCoordinate[2] = FVector2f(vert.Y, vert.Z) * Scale;
 		}
 	}
 	break;
@@ -62,7 +62,7 @@ void ULexMeshModifierPositionAsUV::ModifyUIGeometry(
 		for (int i = 0; i < vertexCount; i++)
 		{
 			auto& vert = originVertices[i].Position;
-			vertices[i].TextureCoordinate[3] = FVector2f(vert.Y, vert.Z);
+			vertices[i].TextureCoordinate[3] = FVector2f(vert.Y, vert.Z) * Scale;
 		}
 	}
 	break;

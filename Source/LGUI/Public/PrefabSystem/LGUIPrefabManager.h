@@ -13,16 +13,15 @@ DECLARE_MULTICAST_DELEGATE_ThreeParams(FLGUIEditorManagerOnComponentCreateDelete
 class ULGUIPrefab;
 class ULGUIPrefabHelperObject;
 
-UCLASS(NotBlueprintable, NotBlueprintType)
-class LGUI_API ULGUIPrefabManagerObject :public UEditorSubsystem, public FTickableGameObject
+UCLASS(NotBlueprintable, NotBlueprintType, Transient, NotPlaceable)
+class LGUI_API ULGUIPrefabManagerObject :public UObject, public FTickableGameObject
 {
 	GENERATED_BODY()
 
 public:
 	static ULGUIPrefabManagerObject* Instance;
 	ULGUIPrefabManagerObject();
-	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
-	virtual void Deinitialize() override;
+	virtual void BeginDestroy()override;
 public:
 	//begin TickableEditorObject interface
 	virtual void Tick(float DeltaTime)override;
@@ -35,7 +34,7 @@ public:
 private:
 	int32 PrevEditorViewportCount = 0;
 	FLGUIEditorTickMulticastDelegate EditorTick;
-	UPROPERTY()UWorld* PreviewWorldForPrefabPackage = nullptr;
+	TUniquePtr<FPreviewScene> PreviewSceneForPrefabPackage;
 	bool bIsBlueprintCompiling = false;
 private:
 	friend class LGUIEditorTools;
@@ -50,8 +49,11 @@ public:
 	static void AddOneShotTickFunction(const TFunction<void()>& InFunction, int InDelayFrameCount = 0);
 	static FDelegateHandle RegisterEditorTickFunction(const TFunction<void(float)>& InFunction);
 	static void UnregisterEditorTickFunction(const FDelegateHandle& InDelegateHandle);
-	static FLGUIEditorManagerOnComponentCreateDelete& OnComponentCreateDelete() { return Instance->OnComponentCreateDeleteEvent; }
+	static FLGUIEditorManagerOnComponentCreateDelete& OnComponentCreateDelete() { InitCheck(); return Instance->OnComponentCreateDeleteEvent; }
+private:
+	static bool InitCheck();
 public:
+	static ULGUIPrefabManagerObject* GetInstance(bool CreateIfNotValid = false);
 	static bool IsSelected(AActor* InObject);
 	static bool AnySelectedIsChildOf(AActor* InObject);
 	static UWorld* GetPreviewWorldForPrefabPackage();
@@ -116,7 +118,7 @@ public:
 	FDeserializeSession OnBeginDeserializeSession;
 	FDeserializeSession OnEndDeserializeSession;
 private:
-	/** Map actor to prefab-deserialize-settion-id */
+	/** Map actor to prefab-deserialize-section-id */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 	TMap<AActor*, FGuid> AllActors_PrefabSystemProcessing;
 public:

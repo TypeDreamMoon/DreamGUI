@@ -9,7 +9,7 @@
 /** 
  * Sends trace from the center of the first local player's screen
  */
-UCLASS(ClassGroup = LGUI, Blueprintable, meta = (DisplayName = "Center Screen"))
+UCLASS(ClassGroup = LGUI, meta=(BlueprintSpawnableComponent))
 class LGUI_API ULexWorldSpaceRaycasterSource_CenterScreen : public ULexWorldSpaceRaycasterSource
 {
 	GENERATED_BODY()

@@ -304,9 +304,9 @@ void UUIRecyclableScrollViewComponent::ScrollToByDataIndex(int InDataIndex, bool
             {
                 bool bAffectByGamePause = false;
                 bool bAffectByTimeDilation = false;
-                if (this->GetLexWidget())
+                if (this->GetWidget())
                 {
-                    if (this->GetLexWidget()->IsScreenSpaceOverlayUI())
+                    if (this->GetWidget()->IsScreenSpaceOverlayUI())
                     {
                         bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
                         bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;
@@ -364,9 +364,9 @@ void UUIRecyclableScrollViewComponent::ScrollToByDataIndex(int InDataIndex, bool
             {
                 bool bAffectByGamePause = false;
                 bool bAffectByTimeDilation = false;
-                if (this->GetLexWidget())
+                if (this->GetWidget())
                 {
-                    if (this->GetLexWidget()->IsScreenSpaceOverlayUI())
+                    if (this->GetWidget()->IsScreenSpaceOverlayUI())
                     {
                         bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
                         bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;

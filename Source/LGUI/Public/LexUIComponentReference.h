@@ -16,6 +16,7 @@ struct LGUI_API FLexUIComponentReference
 {
 	GENERATED_BODY()
 	FLexUIComponentReference(TSubclassOf<UActorComponent> InCompClass);
+	FLexUIComponentReference(UActorComponent* InComp, TSubclassOf<UActorComponent> InCompClass);
 	FLexUIComponentReference(UActorComponent* InComp);
 	FLexUIComponentReference();
 protected:

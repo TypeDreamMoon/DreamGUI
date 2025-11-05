@@ -56,21 +56,9 @@ void FLexUISpriteDataCustomization::CustomizeDetails(IDetailLayoutBuilder& Detai
 	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.BorderMinUV));
 	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.BorderMaxUV));
 	IDetailCategoryBuilder& atlasPackingCategory = DetailBuilder.EditCategory("AtlasPacking");
-	auto PackingAtlasProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, packingAtlas));
+	auto PackingAtlasProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, PackingAtlas));
 	atlasPackingCategory.AddProperty(PackingAtlasProperty);
-	PackingAtlasProperty->SetOnPropertyValuePreChange(FSimpleDelegate::CreateLambda([this] {
-		if (IsValid(TargetScriptPtr->GetPackingAtlas()))
-		{
-			TargetScriptPtr->GetPackingAtlas()->RemoveSpriteData(TargetScriptPtr.Get());
-		}
-		}));
 	PackingAtlasProperty->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([this, &DetailBuilder] {
-		if (IsValid(TargetScriptPtr->GetPackingAtlas()))
-		{
-			TargetScriptPtr->GetPackingAtlas()->AddSpriteData(TargetScriptPtr.Get());
-		}
-		CheckSprite();
-		TargetScriptPtr->InitSpriteData();
 		DetailBuilder.ForceRefreshDetails();
 		}));
 	auto PackingTagProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, PackingTag));
@@ -134,7 +122,7 @@ void FLexUISpriteDataCustomization::CustomizeDetails(IDetailLayoutBuilder& Detai
 			[
 				SNew(SButton)
 				.VAlign(EVerticalAlignment::VAlign_Center)
-				.Text(LOCTEXT("OpenAtals", "Open Atals Viewer"))
+				.Text(LOCTEXT("OpenAtlas", "Open Atlas Viewer"))
 				.OnClicked_Lambda([]() {
 				LGUIEditorTools::OpenAtlasViewer_Impl();
 				return FReply::Handled();
@@ -189,13 +177,50 @@ void FLexUISpriteDataCustomization::CustomizeDetails(IDetailLayoutBuilder& Detai
 		paddingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Padding.Top));
 		paddingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Padding.Bottom));
 
-		IDetailCategoryBuilder& borderEditorCategory = DetailBuilder.EditCategory("BorderEditor");
+		IDetailCategoryBuilder& borderEditorCategory = DetailBuilder.EditCategory("Border");
 		spriteSlateBrush = TSharedPtr<FSlateBrush>(new FSlateBrush);
 		spriteSlateBrush->SetResourceObject(TargetScriptPtr->SpriteTexture);
-		borderEditorCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Border.Left));
-		borderEditorCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Border.Right));
-		borderEditorCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Border.Top));
-		borderEditorCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Border.Bottom));
+		auto BorderLeftPropertyHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Border.Left));
+		auto BorderRightPropertyHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Border.Right));
+		auto BorderTopPropertyHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Border.Top));
+		auto BorderBottomPropertyHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.Border.Bottom));
+		borderEditorCategory.AddProperty(BorderLeftPropertyHandle);
+		borderEditorCategory.AddProperty(BorderRightPropertyHandle);
+		borderEditorCategory.AddProperty(BorderTopPropertyHandle);
+		borderEditorCategory.AddProperty(BorderBottomPropertyHandle);
+		auto BorderDirtyPropertyHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.bIsBorderDirty));
+		borderEditorCategory.AddCustomRow(LOCTEXT("BorderEditorTitleRow", "BorderEditor"))
+		.NameContent()
+		[
+			SNew(SBox)
+			.VAlign(VAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text(LOCTEXT("BorderEditorTitle", "Border Editor"))
+			]
+		]
+		.ValueContent()
+		[
+			SNew(SBox)
+			.VAlign(VAlign_Center)
+			.ToolTipText(LOCTEXT("ApplyTooltip", "Click this button after change these values, or it will not take effect."))
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("Apply", "Apply"))
+				.IsEnabled(this, &FLexUISpriteDataCustomization::IsApplyButtonEnabled, BorderDirtyPropertyHandle.ToSharedPtr())
+				.OnClicked_Lambda([=, this]()
+				{
+					TargetScriptPtr->SpriteInfo.bIsBorderDirty = false;
+
+					TargetScriptPtr->ReloadTexture();
+					TargetScriptPtr->InitSpriteData();
+					TargetScriptPtr->MarkPackageDirty();
+					ULexUIManagerWorldSubsystem::RefreshAllUI();
+					return FReply::Handled();
+				})
+			]
+		]
+		;
 		borderEditorCategory.AddCustomRow(LOCTEXT("BorderEditor", "BorderEditor"))
 		.WholeRowContent()
 		[
@@ -329,13 +354,13 @@ void FLexUISpriteDataCustomization::CustomizeDetails(IDetailLayoutBuilder& Detai
 void FLexUISpriteDataCustomization::CheckSprite()
 {
 	//check invalid RenderSprite in atlas
-	if (IsValid(TargetScriptPtr->packingAtlas))
+	if (IsValid(TargetScriptPtr->PackingAtlas))
 	{
-		TargetScriptPtr->packingAtlas->CheckSprite();
+		TargetScriptPtr->PackingAtlas->CheckSprite();
 	}
-	if (auto spriteAtlasData = ULexUIDynamicSpriteAtlasManager::Find(TargetScriptPtr->PackingTag))
+	if (auto DynamicSpriteAtlasData = ULexUIDynamicSpriteAtlasManager::Find(TargetScriptPtr->PackingTag))
 	{
-		spriteAtlasData->CheckSprite(TargetScriptPtr->PackingTag);
+		DynamicSpriteAtlasData->CheckSprite(TargetScriptPtr->PackingTag);
 	}
 }
 
@@ -484,6 +509,15 @@ FOptionalSize FLexUISpriteDataCustomization::GetBorderBottomSize()const
 	{
 		return TargetScriptPtr->SpriteInfo.Border.Bottom * imageBoxSize.Y / TargetScriptPtr->SpriteTexture->GetSurfaceHeight();
 	}
+}
+
+bool FLexUISpriteDataCustomization::IsApplyButtonEnabled(TSharedPtr<IPropertyHandle> BorderDirtyPropertyHandle) const
+{
+	if (TargetScriptPtr.IsValid())
+	{
+		return TargetScriptPtr->SpriteInfo.bIsBorderDirty;
+	}
+	return false;
 }
 
 #undef LOCTEXT_NAMESPACE

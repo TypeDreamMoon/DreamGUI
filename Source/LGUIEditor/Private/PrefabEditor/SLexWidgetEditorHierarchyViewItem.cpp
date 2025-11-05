@@ -14,9 +14,6 @@
 #include "Editor.h"
 #include "LGUIEditorModule.h"
 #include "LGUIEditorStyle.h"
-#include "LGUIEditorTools.h"
-#include "UMGStyle.h"
-#include "Components/EditableTextBox.h"
 #include "DragAndDrop/AssetDragDropOp.h"
 
 #define LOCTEXT_NAMESPACE "LexWidgetEditorHierarchyViewItem"
@@ -57,10 +54,10 @@ public:
 	FScopedTransaction* Transaction;
 
 	/** Constructs a new drag/drop operation */
-	static TSharedRef<FHierarchyLexWidgetDragDropOp> New(TSharedPtr<FLGUIPrefabEditor> Blueprint, const TArray<ULexWidget*>& InWidgets);
+	static TSharedRef<FHierarchyLexWidgetDragDropOp> New(TSharedPtr<FLGUIPrefabEditor> Editor, const TArray<ULexWidget*>& InWidgets);
 };
 
-TSharedRef<FHierarchyLexWidgetDragDropOp> FHierarchyLexWidgetDragDropOp::New(TSharedPtr<FLGUIPrefabEditor> Blueprint, const TArray<ULexWidget*>& InWidgets)
+TSharedRef<FHierarchyLexWidgetDragDropOp> FHierarchyLexWidgetDragDropOp::New(TSharedPtr<FLGUIPrefabEditor> Editor, const TArray<ULexWidget*>& InWidgets)
 {
 	check(InWidgets.Num() > 0);
 

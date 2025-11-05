@@ -432,7 +432,7 @@ TArray<AActor*> FLGUIPrefabEditor::GetAllActors()
 	return AllActors;
 }
 
-void FLGUIPrefabEditor::GetInitialViewLocationAndRotation(FVector& OutLocation, FRotator& OutRotation, FVector& OutOrbitLocation)
+void FLGUIPrefabEditor::GetInitialViewSetting(FVector& OutLocation, FRotator& OutRotation, FVector& OutOrbitLocation, ELevelViewportType& OutViewType)
 {
 	auto& PrefabEditorData = PrefabBeingEdited->PrefabDataForPrefabEditor;
 	auto SceneBounds = this->GetAllObjectsBounds();
@@ -454,6 +454,7 @@ void FLGUIPrefabEditor::GetInitialViewLocationAndRotation(FVector& OutLocation, 
 	{
 		OutOrbitLocation = PrefabEditorData.ViewOrbitLocation;
 	}
+	OutViewType = PrefabEditorData.ViewportType;
 }
 
 AActor* FLGUIPrefabEditor::GetRootAgentActor()
@@ -479,6 +480,10 @@ void FLGUIPrefabEditor::SaveAsset_Execute()
 		{
 			OnApply();//apply change
 		}
+		else
+		{
+			SaveViewState();
+		}
 		FAssetEditorToolkit::SaveAsset_Execute();//save asset
 	}
 }
@@ -486,19 +491,7 @@ void FLGUIPrefabEditor::OnApply()
 {
 	if (CheckBeforeSaveAsset())
 	{
-		//save view location and rotation
-		auto ViewTransform = ViewportPtr->GetViewportClient()->GetViewTransform();
-		PrefabBeingEdited->PrefabDataForPrefabEditor.ViewLocation = ViewTransform.GetLocation();
-		PrefabBeingEdited->PrefabDataForPrefabEditor.ViewRotation = ViewTransform.GetRotation();
-		PrefabBeingEdited->PrefabDataForPrefabEditor.ViewOrbitLocation = ViewTransform.GetLookAt();
-		if (auto RootAgentActor = GetPreviewScene().GetRootAgentActor())
-		{
-			if (!ULGUIPrefabManagerObject::OnPrefabEditor_SavePrefab.ExecuteIfBound(RootAgentActor, PrefabBeingEdited))
-			{
-				PrefabBeingEdited->PrefabDataForPrefabEditor.bNeedCanvas = false;
-			}
-		}
-		PrefabBeingEdited->PrefabDataForPrefabEditor.ViewMode = ViewportPtr->GetViewportClient()->GetViewMode();
+		SaveViewState();
 		TArray<ULexWidget*> UnexpandActorArray;
 		TSet<FGuid> UnexpandActorGuidArray;
 		OutlinerPtr->GetExpandWidgets(UnexpandActorArray);
@@ -532,6 +525,24 @@ void FLGUIPrefabEditor::OnOpenPrefabHelperObjectDetailsPanel()
 {
 	UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
 	AssetEditorSubsystem->OpenEditorForAsset(PrefabHelperObject);
+}
+
+void FLGUIPrefabEditor::SaveViewState()
+{
+	//save view location and rotation
+	auto ViewTransform = ViewportPtr->GetViewportClient()->GetViewTransform();
+	PrefabBeingEdited->PrefabDataForPrefabEditor.ViewLocation = ViewTransform.GetLocation();
+	PrefabBeingEdited->PrefabDataForPrefabEditor.ViewRotation = ViewTransform.GetRotation();
+	PrefabBeingEdited->PrefabDataForPrefabEditor.ViewOrbitLocation = ViewTransform.GetLookAt();
+	PrefabBeingEdited->PrefabDataForPrefabEditor.ViewportType = ViewportPtr->GetViewportClient()->GetViewportType();
+	if (auto RootAgentActor = GetPreviewScene().GetRootAgentActor())
+	{
+		if (!ULGUIPrefabManagerObject::OnPrefabEditor_SavePrefab.ExecuteIfBound(RootAgentActor, PrefabBeingEdited))
+		{
+			PrefabBeingEdited->PrefabDataForPrefabEditor.bNeedCanvas = false;
+		}
+	}
+	PrefabBeingEdited->PrefabDataForPrefabEditor.ViewMode = ViewportPtr->GetViewportClient()->GetViewMode();
 }
 
 void FLGUIPrefabEditor::AddReferencedObjects(FReferenceCollector& Collector)

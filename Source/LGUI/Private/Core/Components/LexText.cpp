@@ -101,7 +101,6 @@ void ULexText::BeginPlay()
 	if (IsValid(Font))
 	{
 		Font->InitFont();
-		CheckRequireNormalAndTangent();//@todo: looks this line is not necessary
 		if (!bHasAddToFont)
 		{
 			Font->AddUIText(this);
@@ -250,7 +249,6 @@ UTexture* ULexText::GetTextureToCreateGeometry()
 		Font = ULexUIFontData_BaseObject::GetDefaultFont();
 	}
 	Font->InitFont();
-	CheckRequireNormalAndTangent();
 	return Font->GetFontTexture();
 }
 
@@ -265,19 +263,7 @@ UMaterialInterface* ULexText::GetMaterialToCreateGeometry()
 		Font = ULexUIFontData_BaseObject::GetDefaultFont();
 	}
 	Font->InitFont();
-	CheckRequireNormalAndTangent();
 	return Font->GetFontMaterial();
-}
-
-void ULexText::CheckRequireNormalAndTangent()
-{
-	if (auto RenderCanvas = GetWidget()->GetRenderCanvas())
-	{
-		if (Font->GetRequireNormalAndTangent())
-		{
-			RenderCanvas->GetRootCanvas()->SetRequireNormalAndTangent(true);
-		}
-	}
 }
 
 void ULexText::OnBeforeCreateOrUpdateGeometry()

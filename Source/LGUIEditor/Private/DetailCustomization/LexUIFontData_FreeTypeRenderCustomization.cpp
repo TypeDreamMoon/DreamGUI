@@ -30,7 +30,7 @@ void FLexUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayoutB
 		return;
 	}
 
-	auto fontTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, fontType));
+	auto fontTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, FontType));
 	fontTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateRaw(this, &FLexUIFontData_FreeTypeRenderCustomization::ForceRefresh, &DetailBuilder));
 	uint8 fontTypeUint8;
 	fontTypeHandle->GetValue(fontTypeUint8);
@@ -55,22 +55,22 @@ void FLexUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayoutB
 	TArray<FName> propertiesNeedToHide;
 	if (fontType == ELexUIDynamicFontDataType::UnrealFont)
 	{
-		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, fontFilePath));
-		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, useRelativeFilePath));
-		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, useExternalFileOrEmbedInToUAsset));
+		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, FontFilePath));
+		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, bUseRelativeFilePath));
+		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, bUseExternalFileOrEmbedInToUAsset));
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, FontFace));
 
-		lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, unrealFont));
+		lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, UnrealFont));
 	}
 	else
 	{
-		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, fontFilePath));
-		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, useRelativeFilePath));
-		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, useExternalFileOrEmbedInToUAsset));
-		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, unrealFont));
+		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, FontFilePath));
+		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, bUseRelativeFilePath));
+		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, bUseExternalFileOrEmbedInToUAsset));
+		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, UnrealFont));
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, FontFace));
 
-		auto fontFilePathHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, fontFilePath));
+		auto fontFilePathHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, FontFilePath));
 		lguiCategory.AddCustomRow(LOCTEXT("FontSourceFileCategory","FontSourceFile"))
 		.NameContent()
 		[
@@ -98,10 +98,10 @@ void FLexUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayoutB
 			.Padding(FMargin(5, 0, 0, 0))
 			[
 				SNew(SCheckBox)
-				.IsChecked_Lambda([&]() {return TargetScriptPtr->useRelativeFilePath ? ECheckBoxState::Checked : ECheckBoxState::Unchecked; })
+				.IsChecked_Lambda([&]() {return TargetScriptPtr->bUseRelativeFilePath ? ECheckBoxState::Checked : ECheckBoxState::Unchecked; })
 				.OnCheckStateChanged_Lambda([&](ECheckBoxState State) 
 					{
-						TargetScriptPtr->useRelativeFilePath = State == ECheckBoxState::Checked ? true : false; 
+						TargetScriptPtr->bUseRelativeFilePath = State == ECheckBoxState::Checked ? true : false; 
 						TargetScriptPtr->ReloadFont();
 						DetailBuilder.ForceRefreshDetails();
 					})
@@ -127,7 +127,7 @@ void FLexUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayoutB
 			]
 			;
 		}
-		lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, useExternalFileOrEmbedInToUAsset));
+		lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, bUseExternalFileOrEmbedInToUAsset));
 	}
 
 	//faces
@@ -213,7 +213,7 @@ void FLexUIFontData_FreeTypeRenderCustomization::FontFaceOptions_OnComboChanged(
 FText FLexUIFontData_FreeTypeRenderCustomization::OnGetFontFilePath()const
 {
 	auto& fileManager = IFileManager::Get();
-	return FText::FromString(TargetScriptPtr->fontFilePath.IsEmpty() ? fileManager.GetFilenameOnDisk(*FPaths::ProjectDir()) : TargetScriptPtr->fontFilePath);
+	return FText::FromString(TargetScriptPtr->FontFilePath.IsEmpty() ? fileManager.GetFilenameOnDisk(*FPaths::ProjectDir()) : TargetScriptPtr->FontFilePath);
 }
 
 FText FLexUIFontData_FreeTypeRenderCustomization::GetCurrentValue() const
@@ -241,7 +241,7 @@ void FLexUIFontData_FreeTypeRenderCustomization::OnPathTextChanged(const FString
 void FLexUIFontData_FreeTypeRenderCustomization::OnPathTextCommitted(const FString& InString, TSharedRef<IPropertyHandle> InPathProperty, IDetailLayoutBuilder* DetailBuilderPtr)
 {
 	FString pathString = InString;
-	if (TargetScriptPtr->useRelativeFilePath)
+	if (TargetScriptPtr->bUseRelativeFilePath)
 	{
 		if (pathString.StartsWith(FPaths::ProjectDir()))//is relative path
 		{

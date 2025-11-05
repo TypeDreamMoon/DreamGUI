@@ -34,6 +34,10 @@ public:
 	UPROPERTY(VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	FVector2f BorderMaxUV = FVector2f(1, 1);
 
+#if WITH_EDITORONLY_DATA
+	UPROPERTY()
+	bool bIsBorderDirty = false;
+#endif
 public:
 	auto GetUV0()const { return FVector2f(MinUV.X, MaxUV.Y); }
 	auto GetUV1()const { return FVector2f(MaxUV.X, MaxUV.Y); }
@@ -48,7 +52,7 @@ public:
 	bool HasBorder()const;
 	bool HasPadding()const;
 	void ApplyUV(int32 InX, int32 InY, int32 InWidth, int32 InHeight, float texFullWidthReciprocal, float texFullHeightReciprocal);
-	void ApplyUV(int32 InX, int32 InY, int32 InWidth, int32 InHeight, float texFullWidthReciprocal, float texFullHeightReciprocal, const FVector4& uvRect);
+	void ApplyUV(int32 InX, int32 InY, int32 InWidth, int32 InHeight, float texFullWidthReciprocal, float texFullHeightReciprocal, const FVector4f& uvRect);
 	void ApplyBorderUV(float texFullWidthReciprocal, float texFullHeightReciprocal);
 	void ScaleUV(float InMultiply)
 	{

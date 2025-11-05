@@ -51,18 +51,18 @@ protected:
 	friend class FLexUIFontDataCustomization;
 
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		ELexUIDynamicFontDataType fontType = ELexUIDynamicFontDataType::CustomFontFile;
+		ELexUIDynamicFontDataType FontType = ELexUIDynamicFontDataType::CustomFontFile;
 	/** Font file path, absolute path or relative to ProjectDir */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		FString fontFilePath;
+		FString FontFilePath;
 	/** Font file use relative path(relative to ProjectDir) or absolute path. After build your game, remember to copy your font file to target path, unless "useExternalFileOrEmbedInToUAsset" is false */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		bool useRelativeFilePath = true;
+		bool bUseRelativeFilePath = true;
 	/** When in build, use external file or embed into uasset. But in editor, will always load from fontFilePath. */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		bool useExternalFileOrEmbedInToUAsset = false;
+		bool bUseExternalFileOrEmbedInToUAsset = false;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		TObjectPtr<class UFontFace> unrealFont;
+		TObjectPtr<class UFontFace> UnrealFont;
 
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 	bool bCultureFont = false;
@@ -91,7 +91,7 @@ protected:
 		ELexUIAtlasTextureSizeType InitialSize = ELexUIAtlasTextureSizeType::SIZE_1024x1024;
 	/**
 	 * rect pack use small cells to pack glyph in, and move to next cell if current cell is full. smaller value get better performance, but leave more garbage area.
-	 * this value defines the cell size. must not larger then InitialSize and only allow pow of 2.
+	 * this value defines the cell size. must not larger than InitialSize and only allow pow of 2.
 	 */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		int32 RectPackCellSize = 256;

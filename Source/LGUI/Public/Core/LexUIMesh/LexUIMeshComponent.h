@@ -58,7 +58,7 @@ struct FLexUIPostProcessSection : public FLexUIRenderSection
 	}
 	virtual ~FLexUIPostProcessSection()override{}
 
-	TWeakObjectPtr<class ULexVisualPostProcess> PostProcessRenderableObject = nullptr;
+	TWeakObjectPtr<class ULexVisualPostProcess> PostProcessVisualObject = nullptr;
 
 	virtual void UpdateSectionBox(const FTransform& LocalToWorld) override;
 };

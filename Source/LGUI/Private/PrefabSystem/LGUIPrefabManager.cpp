@@ -20,30 +20,11 @@
 ULGUIPrefabManagerObject* ULGUIPrefabManagerObject::Instance = nullptr;
 ULGUIPrefabManagerObject::ULGUIPrefabManagerObject()
 {
-
+	
 }
-
-void ULGUIPrefabManagerObject::Initialize(FSubsystemCollectionBase& Collection)
+void ULGUIPrefabManagerObject::BeginDestroy()
 {
-	Super::Initialize(Collection);
-	Instance = this;
-
-	//open map
-	OnMapOpenedDelegateHandle = FEditorDelegates::OnMapOpened.AddUObject(Instance, &ULGUIPrefabManagerObject::OnMapOpened);
-	OnPackageReloadedDelegateHandle = FCoreUObjectDelegates::OnPackageReloaded.AddUObject(Instance, &ULGUIPrefabManagerObject::OnPackageReloaded);
-	if (GEditor)
-	{
-		//reimport asset
-		OnAssetReimportDelegateHandle = GEditor->GetEditorSubsystem<UImportSubsystem>()->OnAssetReimport.AddUObject(Instance, &ULGUIPrefabManagerObject::OnAssetReimport);
-		//blueprint recompile
-		OnBlueprintPreCompileDelegateHandle = GEditor->OnBlueprintPreCompile().AddUObject(Instance, &ULGUIPrefabManagerObject::OnBlueprintPreCompile);
-		OnBlueprintCompiledDelegateHandle = GEditor->OnBlueprintCompiled().AddUObject(Instance, &ULGUIPrefabManagerObject::OnBlueprintCompiled);
-	}
-}
-
-void ULGUIPrefabManagerObject::Deinitialize()
-{
-	Super::Deinitialize();
+	Super::BeginDestroy();
 #if WITH_EDITORONLY_DATA
 	if (OnAssetReimportDelegateHandle.IsValid())
 	{
@@ -77,22 +58,13 @@ void ULGUIPrefabManagerObject::Deinitialize()
 			GEditor->OnBlueprintCompiled().Remove(OnBlueprintCompiledDelegateHandle);
 		}
 	}
-
-	//cleanup preview world
-	if (PreviewWorldForPrefabPackage && GEngine)
-	{
-		PreviewWorldForPrefabPackage->CleanupWorld();
-		GEngine->DestroyWorldContext(PreviewWorldForPrefabPackage);
-		PreviewWorldForPrefabPackage->ReleasePhysicsScene();
-	}
-
 #endif
 	Instance = nullptr;
 }
 
 void ULGUIPrefabManagerObject::Tick(float DeltaTime)
 {
-#if WITH_EDITORONLY_DATA
+#if WITH_EDITOR
 	if (EditorTick.IsBound())
 	{
 		EditorTick.Broadcast(DeltaTime);
@@ -114,8 +86,6 @@ void ULGUIPrefabManagerObject::Tick(float DeltaTime)
 			}
 		}
 	}
-#endif
-#if WITH_EDITOR
 	if (bShouldBroadcastLevelActorListChanged)
 	{
 		bShouldBroadcastLevelActorListChanged = false;
@@ -135,6 +105,7 @@ TStatId ULGUIPrefabManagerObject::GetStatId() const
 
 void ULGUIPrefabManagerObject::AddOneShotTickFunction(const TFunction<void()>& InFunction, int InDelayFrameCount)
 {
+	InitCheck();
 	InDelayFrameCount = FMath::Max(0, InDelayFrameCount);
 	TTuple<int, TFunction<void()>> Item;
 	Item.Key = InDelayFrameCount;
@@ -143,6 +114,7 @@ void ULGUIPrefabManagerObject::AddOneShotTickFunction(const TFunction<void()>& I
 }
 FDelegateHandle ULGUIPrefabManagerObject::RegisterEditorTickFunction(const TFunction<void(float)>& InFunction)
 {
+	InitCheck();
 	return Instance->EditorTick.AddLambda(InFunction);
 }
 void ULGUIPrefabManagerObject::UnregisterEditorTickFunction(const FDelegateHandle& InDelegateHandle)
@@ -151,6 +123,36 @@ void ULGUIPrefabManagerObject::UnregisterEditorTickFunction(const FDelegateHandl
 	{
 		Instance->EditorTick.Remove(InDelegateHandle);
 	}
+}
+
+ULGUIPrefabManagerObject* ULGUIPrefabManagerObject::GetInstance(bool CreateIfNotValid)
+{
+	if (CreateIfNotValid)
+	{
+		InitCheck();
+	}
+	return Instance;
+}
+bool ULGUIPrefabManagerObject::InitCheck()
+{
+	if (Instance == nullptr)
+	{
+		Instance = NewObject<ULGUIPrefabManagerObject>();
+		Instance->AddToRoot();
+		UE_LOG(LGUI, Log, TEXT("[%s].%d No Instance for ULGUIPrefabManagerObject, create it!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		//open map
+		Instance->OnMapOpenedDelegateHandle = FEditorDelegates::OnMapOpened.AddUObject(Instance, &ULGUIPrefabManagerObject::OnMapOpened);
+		Instance->OnPackageReloadedDelegateHandle = FCoreUObjectDelegates::OnPackageReloaded.AddUObject(Instance, &ULGUIPrefabManagerObject::OnPackageReloaded);
+		if (GEditor)
+		{
+			//reimport asset
+			Instance->OnAssetReimportDelegateHandle = GEditor->GetEditorSubsystem<UImportSubsystem>()->OnAssetReimport.AddUObject(Instance, &ULGUIPrefabManagerObject::OnAssetReimport);
+			//blueprint recompile
+			Instance->OnBlueprintPreCompileDelegateHandle = GEditor->OnBlueprintPreCompile().AddUObject(Instance, &ULGUIPrefabManagerObject::OnBlueprintPreCompile);
+			Instance->OnBlueprintCompiledDelegateHandle = GEditor->OnBlueprintCompiled().AddUObject(Instance, &ULGUIPrefabManagerObject::OnBlueprintCompiled);
+		}
+	}
+	return true;
 }
 
 void ULGUIPrefabManagerObject::OnBlueprintPreCompile(UBlueprint* InBlueprint)
@@ -196,34 +198,29 @@ void ULGUIPrefabManagerObject::OnPackageReloaded(EPackageReloadPhase Phase, FPac
 
 UWorld* ULGUIPrefabManagerObject::GetPreviewWorldForPrefabPackage()
 {
-	auto& PreviewWorldForPrefabPackage = Instance->PreviewWorldForPrefabPackage;
-	if (PreviewWorldForPrefabPackage == nullptr)
+	InitCheck();
+	auto& PreviewScene = Instance->PreviewSceneForPrefabPackage;
+	if (!PreviewScene)
 	{
-		FName UniqueWorldName = MakeUniqueObjectName(Instance, UWorld::StaticClass(), FName("LexUI_PreviewWorldForPrefabPackage"));
-		PreviewWorldForPrefabPackage = NewObject<UWorld>(Instance, UniqueWorldName);
-		PreviewWorldForPrefabPackage->WorldType = EWorldType::EditorPreview;
-
-		FWorldContext& WorldContext = GEngine->CreateNewWorldContext(PreviewWorldForPrefabPackage->WorldType);
-		WorldContext.SetCurrentWorld(PreviewWorldForPrefabPackage);
-
-		PreviewWorldForPrefabPackage->InitializeNewWorld(UWorld::InitializationValues()
-			.AllowAudioPlayback(false)
-			.CreatePhysicsScene(false)
-			.RequiresHitProxies(false)
-			.CreateNavigation(false)
-			.CreateAISystem(false)
-			.ShouldSimulatePhysics(false)
-			.SetTransactional(false));
+		PreviewScene = MakeUnique<FPreviewScene>();
 	}
-	return PreviewWorldForPrefabPackage;
+	return PreviewScene->GetWorld();
 }
 bool ULGUIPrefabManagerObject::GetIsBlueprintCompiling()
 {
-	return Instance->bIsBlueprintCompiling;
+	if (InitCheck())
+	{
+		return Instance->bIsBlueprintCompiling;
+	}
+	return false;
 }
 bool ULGUIPrefabManagerObject::GetIsProcessingDelete()
 {
-	return Instance->bIsProcessingDelete;
+	if (InitCheck())
+	{
+		return Instance->bIsProcessingDelete;
+	}
+	return false;
 }
 
 void ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged()

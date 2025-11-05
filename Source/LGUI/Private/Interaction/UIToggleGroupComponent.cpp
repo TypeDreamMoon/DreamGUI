@@ -18,7 +18,7 @@ void UUIToggleGroupComponent::AddToggleComponent(UUIToggleComponent* InComp)
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d Already exist!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
-	if (!IsValid(InComp->GetLexWidget()))
+	if (!IsValid(InComp->GetWidget()))
 	{
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d InComp must have UIItem as root component!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
@@ -42,7 +42,7 @@ void UUIToggleGroupComponent::SortToggleCollection()
 	{
 		bNeedToSortToggleCollection = false;
 		ToggleCollection.Sort([](const TWeakObjectPtr<UUIToggleComponent>& A, const TWeakObjectPtr<UUIToggleComponent>& B) {
-			return A->GetLexWidget()->GetFlattenHierarchyIndex() < B->GetLexWidget()->GetFlattenHierarchyIndex();
+			return A->GetWidget()->GetFlattenHierarchyIndex() < B->GetWidget()->GetFlattenHierarchyIndex();
 			});
 	}
 }

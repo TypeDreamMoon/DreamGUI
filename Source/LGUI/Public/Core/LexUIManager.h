@@ -200,7 +200,8 @@ private:
 	//this is cached when call GetEditorViewportClient
 	FEditorViewportClient* CacheViewportClient = nullptr;
 	void OnEndOfFrame();
-	static void DrawDebugRect(UWorld* InWorld, const FVector& Center, const FMatrix44f& LocalToWorld, FVector const& Box, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
+	static void DrawDebugRect(UWorld* InWorld, const FVector& Center, const FMatrix44f& LocalToWorld, FVector2D const& Rect, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
+	static void DrawDebugBox(UWorld* InWorld, const FVector& Center, const FMatrix44f& LocalToWorld, FVector const& Box, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
 #endif
 private:
 	/** Map prefab-deserialize-section-id to LexUIBehaviour array */

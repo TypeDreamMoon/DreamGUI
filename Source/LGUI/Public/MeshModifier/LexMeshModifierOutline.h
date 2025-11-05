@@ -6,7 +6,7 @@
 #include "LexMeshModifierOutline.generated.h"
 
 
-UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
+UCLASS(ClassGroup = (LGUI), Blueprintable, DisplayName="Outline")
 class LGUI_API ULexMeshModifierOutline : public ULexMeshModifierBase
 {
 	GENERATED_BODY()
@@ -16,14 +16,14 @@ public:
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		FColor outlineColor = FColor::White;
+		FColor OutlineColor = FColor::White;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		FVector2D outlineSize = FVector2D(1, 1);
+		FVector2f OutlineSize = FVector2f(1, 1);
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		bool multiplySourceAlpha = true;
+		bool bMultiplySourceAlpha = true;
 	/** Default is 4 direction. 8 direction will get nicer look. */
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (DisplayName = "Use 8 Direction"))
-		bool use8Direction = false;
+		bool bUse8Direction = false;
 	FORCEINLINE void ApplyColorAndAlpha(FColor& InOutColor, uint8 InSourceAlpha);
 public:
 	virtual void ModifyUIGeometry(FLexUIGeometry& InGeometry
@@ -31,16 +31,16 @@ public:
 	)override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		FColor GetOutlineColor()const { return outlineColor; }
+		FColor GetOutlineColor()const { return OutlineColor; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		FVector2D GetOutlineSize()const { return outlineSize; }
+		FVector2f GetOutlineSize()const { return OutlineSize; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		bool GetUse8Direction()const { return use8Direction; }
+		bool GetUse8Direction()const { return bUse8Direction; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetOutlineColor(FColor newColor);
+		void SetOutlineColor(FColor Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetOutlineSize(FVector2D newSize);
+		void SetOutlineSize(FVector2f Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetUse8Direction(bool newValue);
+		void SetUse8Direction(bool Value);
 };

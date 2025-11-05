@@ -322,7 +322,7 @@ public:
 			auto SrcSection = (FLexUIPostProcessSection*)InSrcSection;
 			FLexUIPostProcessSectionProxy* NewSectionProxy = new FLexUIPostProcessSectionProxy();
 
-			NewSectionProxy->PostProcessRenderProxy = SrcSection->PostProcessRenderableObject->GetRenderProxy();
+			NewSectionProxy->PostProcessRenderProxy = SrcSection->PostProcessVisualObject->GetRenderProxy();
 
 			// Copy info
 			NewSectionProxy->SectionRenderPriority = SrcSection->RenderPriority;
@@ -904,9 +904,9 @@ void FLexUIPostProcessSection::UpdateSectionBox(const FTransform& LocalToWorld)
 	BoundingBox = FBox(EForceInit::ForceInit);
 
 	FVector2D Min, Max;
-	PostProcessRenderableObject->GetGeometryBoundsInLocalSpace(Min, Max);
-	auto WorldMin = PostProcessRenderableObject->GetWidget()->GetComponentToWorld().TransformPosition(FVector(0, Min.X, Min.Y));
-	auto WorldMax = PostProcessRenderableObject->GetWidget()->GetComponentToWorld().TransformPosition(FVector(0, Max.X, Max.Y));
+	PostProcessVisualObject->GetGeometryBoundsInLocalSpace(Min, Max);
+	auto WorldMin = PostProcessVisualObject->GetWidget()->GetComponentToWorld().TransformPosition(FVector(0, Min.X, Min.Y));
+	auto WorldMax = PostProcessVisualObject->GetWidget()->GetComponentToWorld().TransformPosition(FVector(0, Max.X, Max.Y));
 	BoundingBox += WorldMin;
 	BoundingBox += WorldMax;
 }

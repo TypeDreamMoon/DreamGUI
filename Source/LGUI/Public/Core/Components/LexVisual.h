@@ -89,7 +89,7 @@ enum class ELexVisualRaycastType :uint8
 };
 
 /** Base class of UI element that can be rendered by LexCanvas */
-UCLASS(Blueprintable, BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)
+UCLASS(Blueprintable, BlueprintType, Abstract, DefaultToInstanced)
 class LGUI_API ULexVisual : public ULexWidgetSubObjectBehaviour
 {
 	GENERATED_BODY()
@@ -109,7 +109,7 @@ protected:
 	/**
 	 * Render color of UI element.
 	 */
-	UPROPERTY(EditAnywhere, Category = "LGUI")
+	UPROPERTY(EditAnywhere, Category = "LGUI", Getter, Setter, BlueprintReadWrite)
 	FColor Color = FColor::White;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Raycast")
 	bool bRaycastTarget = true;
@@ -128,7 +128,7 @@ protected:
 	
 	void UpdateGeometryWidgetPropertyData(FLexUIGeometry& InMesh, int InDataStartPosition);
 public:
-	static const FName GetColorPropertyName()
+	static const FName GetPropertyName_Color()
 	{
 		return GET_MEMBER_NAME_CHECKED(ULexVisual, Color);
 	}

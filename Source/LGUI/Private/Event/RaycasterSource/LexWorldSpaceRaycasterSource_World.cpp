@@ -40,7 +40,7 @@ bool ULexWorldSpaceRaycasterSource_World::ShouldStartDrag(ULexPointerEventData* 
 		}
 	}
 	auto calculatedThreshold = this->GetDragThresholdSquare();
-	if (ClickThresholdRelateToRayDistance)
+	if (bDragThresholdRelateToRayDistance)
 	{
 		calculatedThreshold *= InPointerEventData->PressDistance * RayDistanceMultiply;
 	}

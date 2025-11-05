@@ -6,7 +6,7 @@
 #include "LexMeshModifierLongShadow.generated.h"
 
 
-UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
+UCLASS(ClassGroup = (LGUI), Blueprintable, DisplayName="LongShadow")
 class LGUI_API ULexMeshModifierLongShadow : public ULexMeshModifierBase
 {
 	GENERATED_BODY()
@@ -16,17 +16,17 @@ public:
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		FColor shadowColor = FColor::White;
+		FColor ShadowColor = FColor::White;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		FVector shadowSize = FVector(0, 1, -1);
+		FVector3f ShadowSize = FVector3f(0, 1, -1);
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		uint8 shadowSegment = 5;
+		uint8 ShadowSegment = 5;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		bool useGradientColor = true;
+		bool bUseGradientColor = true;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		FColor gradientColor = FColor::Black;
+		FColor GradientColor = FColor::Black;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		bool multiplySourceAlpha = true;
+		bool bMultiplySourceAlpha = true;
 	FORCEINLINE void ApplyColorAndAlpha(FColor& InOutColor, FColor InTintColor, uint8 InOriginAlpha);
 public:
 	virtual void ModifyUIGeometry(FLexUIGeometry& InGeometry
@@ -34,24 +34,24 @@ public:
 	)override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		FColor GetShadowColor()const { return shadowColor; }
+		FColor GetShadowColor()const { return ShadowColor; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		FVector GetShadowSize()const { return shadowSize; }
+		FVector3f GetShadowSize()const { return ShadowSize; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		uint8 GetShadowSegments()const { return shadowSegment; }
+		uint8 GetShadowSegments()const { return ShadowSegment; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		bool GetUseGradientColor()const { return useGradientColor; }
+		bool GetUseGradientColor()const { return bUseGradientColor; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		FColor GetGradientColor()const { return gradientColor; }
+		FColor GetGradientColor()const { return GradientColor; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetShadowColor(FColor newColor);
+		void SetShadowColor(FColor Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetShadowSize(FVector newSize);
+		void SetShadowSize(FVector3f Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetShadowSegment(uint8 newSegment);
+		void SetShadowSegment(uint8 Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetUseGradientColor(bool newBool);
+		void SetUseGradientColor(bool Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetGradientColor(FColor newColor);
+		void SetGradientColor(FColor Value);
 };

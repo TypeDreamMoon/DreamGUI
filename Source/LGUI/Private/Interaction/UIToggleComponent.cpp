@@ -151,7 +151,7 @@ void UUIToggleComponent::ApplyValueToUI(bool immediateSet)
 			{
 				bool bAffectByGamePause = false;
 				bool bAffectByTimeDilation = false;
-				if (this->GetLexWidget()->IsScreenSpaceOverlayUI())
+				if (this->GetWidget()->IsScreenSpaceOverlayUI())
 				{
 					bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
 					bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;
@@ -191,7 +191,7 @@ void UUIToggleComponent::ApplyValueToUI(bool immediateSet)
 					{
 						bool bAffectByGamePause = false;
 						bool bAffectByTimeDilation = false;
-						if (this->GetLexWidget()->IsScreenSpaceOverlayUI())
+						if (this->GetWidget()->IsScreenSpaceOverlayUI())
 						{
 							bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
 							bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;

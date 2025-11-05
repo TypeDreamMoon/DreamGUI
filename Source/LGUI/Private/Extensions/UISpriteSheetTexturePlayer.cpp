@@ -23,7 +23,7 @@ void UUISpriteSheetTexturePlayer::PostEditChangeProperty(FPropertyChangedEvent& 
 		{
 			if (!bPreviewInEditor)
 			{
-				Texture->SetUVRect(FVector4(0, 0, 1, 1));
+				Texture->SetUVRect(FVector4f(0, 0, 1, 1));
 			}
 		}
 	}
@@ -71,7 +71,7 @@ void UUISpriteSheetTexturePlayer::OnUpdateAnimation(int FrameNumber)
 	int horizontalFrame = (int)(FrameNumber % WidthCount);
 	verticalFrame = FMath::Clamp(verticalFrame, 0, HeightCount);
 	horizontalFrame = FMath::Clamp(horizontalFrame, 0, WidthCount);
-	Texture->SetUVRect(FVector4(WidthUVInterval * horizontalFrame, HeightUVInterval * verticalFrame, WidthUVInterval, HeightUVInterval));
+	Texture->SetUVRect(FVector4f(WidthUVInterval * horizontalFrame, HeightUVInterval * verticalFrame, WidthUVInterval, HeightUVInterval));
 }
 
 void UUISpriteSheetTexturePlayer::SetWidthCount(int value)

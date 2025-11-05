@@ -93,7 +93,7 @@ public:
 	bool ActorBelongsToSubPrefab(AActor* InSubPrefabActor);
 	bool ActorIsSubPrefabRoot(AActor* InSubPrefabRootActor);
 	FLGUISubPrefabData GetSubPrefabDataForActor(AActor* InSubPrefabActor);
-	void GetInitialViewLocationAndRotation(FVector& OutLocation, FRotator& OutRotation, FVector& OutOrbitLocation);
+	void GetInitialViewSetting(FVector& OutLocation, FRotator& OutRotation, FVector& OutOrbitLocation, ELevelViewportType& OutViewType);
 
 	void OpenSubPrefab(AActor* InSubPrefabActor);
 	void SelectSubPrefab(AActor* InSubPrefabActor);
@@ -140,6 +140,7 @@ private:
 	void OnApply();
 	void OnOpenRawDataViewerPanel();
 	void OnOpenPrefabHelperObjectDetailsPanel();
+	void SaveViewState();
 
 	TSharedRef<SDockTab> SpawnTab_Viewport(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_Details(const FSpawnTabArgs& Args);

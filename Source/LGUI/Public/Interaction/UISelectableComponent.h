@@ -10,6 +10,7 @@
 #include "Core/LexUIImageBrush.h"
 #include "UISelectableComponent.generated.h"
 
+class UUISelectableComponent;
 class ULexVisual;
 class ULTweener;
 
@@ -46,13 +47,16 @@ enum class EUISelectableNavigationMode:uint8
 	Explicit,
 };
 
-UCLASS(ClassGroup = (LexUI), Abstract, DefaultToInstanced, EditInlineNew)
+UCLASS(ClassGroup = (LexUI), Abstract, DefaultToInstanced, EditInlineNew, Blueprintable)
 class LGUI_API UUISelectableTransition :public UObject
 {
 	GENERATED_BODY()
 public:
 	virtual void BeginPlay();
 	virtual void EndPlay();
+
+	UFUNCTION()
+	UUISelectableComponent* GetSelectableComponent()const;
 protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI-Transition", meta = (DisplayName = "BeginPlay"))
 	void ReceiveBeginPlay();
@@ -61,6 +65,8 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "LGUI-Transition")
 		TArray<TObjectPtr<ULTweener>> TweenerCollection;
+	UPROPERTY(Transient, BlueprintReadOnly, Getter=GetSelectableComponent, Category = "LGUI-Transition", DisplayName=UISelectable)
+	mutable TObjectPtr<UUISelectableComponent> OwnerUISelectableComp;
 
 	/** 
 	 * Called when UISelectableComponent's transition state = normal.

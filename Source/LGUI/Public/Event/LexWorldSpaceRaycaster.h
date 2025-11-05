@@ -9,7 +9,7 @@
 /**
  * Raycast on world space UI, need LexCanvas component on same actor
  */
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(ClassGroup = LGUI, meta=(BlueprintSpawnableComponent))
 class LGUI_API ULexWorldSpaceRaycaster : public ULexWorldSpaceRaycasterBase
 {
 	GENERATED_BODY()

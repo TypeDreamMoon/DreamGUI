@@ -54,7 +54,7 @@ public:
 };
 
 //per character animation control for UIText
-UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
+UCLASS(ClassGroup = (LGUI), Blueprintable, DisplayName="TextAnimation")
 class LGUI_API ULexMeshModifierTextAnimation : public ULexMeshModifierBase
 {
 	GENERATED_BODY()

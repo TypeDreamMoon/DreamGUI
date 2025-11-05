@@ -583,7 +583,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 	AddPropertyRowToGroup(RadialFillRotation, Rotation, RadialFillGroup, bEnableRadialFill);
 	AddPropertyRowToGroup(RadialFillAngle, Angle, RadialFillGroup, bEnableRadialFill);
 
-	auto TintColorHandle = DetailBuilder.GetProperty(ULexRectBlock::GetColorPropertyName(), ULexVisual::StaticClass());
+	auto TintColorHandle = DetailBuilder.GetProperty(ULexRectBlock::GetPropertyName_Color(), ULexVisual::StaticClass());
 	TintColorHandle->SetPropertyDisplayName(LOCTEXT("TintColor", "Tint Color"));
 	TintColorHandle->SetToolTipText(LOCTEXT("TintColorTooltip", "Known as \"Color\" property in other UI elements. This can tint all color of this UI element. Usually only set alpha value."));
 	LGUICategory.AddProperty(TintColorHandle);

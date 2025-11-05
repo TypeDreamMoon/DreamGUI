@@ -1553,18 +1553,11 @@ void LGUIEditorTools::CreateScreenSpaceUI_BasicSetup()
 	auto prefab = LoadObject<ULGUIPrefab>(NULL, *prefabPath);
 	if (prefab)
 	{
-		ETraceTypeQuery LGUITraceTypeQuery;
-		auto bIsTraceTypeQueryValid = CreateTraceChannel_BasicSetup(LGUITraceTypeQuery);
-
 		GEditor->BeginTransaction(FText::FromString(TEXT("LexUI Create Screen Space UI")));
+		GetWorldFromSelection()->GetCurrentLevel()->MarkPackageDirty();
 		auto actor = prefab->LoadPrefabInEditor(GetWorldFromSelection(), nullptr, true);
 		actor->GetRootComponent()->SetRelativeScale3D(FVector::OneVector);
 		actor->GetRootComponent()->SetRelativeLocation(FVector(0, 0, 250));
-		if (bIsTraceTypeQueryValid)
-		{
-			auto Canvas = actor->FindComponentByClass<ULexCanvas>();
-			Canvas->SetTraceChannel(LGUITraceTypeQuery);
-		}
 		if (auto selectedActor = GetFirstSelectedActor())
 		{
 			GEditor->SelectActor(selectedActor, false, true);
@@ -1582,29 +1575,28 @@ void LGUIEditorTools::CreateScreenSpaceUI_BasicSetup()
 }
 void LGUIEditorTools::CreateWorldSpaceUIBuiltinRenderer_BasicSetup()
 {
-	FString prefabPath(TEXT("/LGUI/Prefabs/WorldSpaceUI"));
+	FString prefabPath(TEXT("/LGUI/Prefabs/WorldSpaceUI_UERenderer"));
 	auto prefab = LoadObject<ULGUIPrefab>(NULL, *prefabPath);
 	if (prefab)
 	{
-		ETraceTypeQuery LGUITraceTypeQuery;
-		auto bIsTraceTypeQueryValid = CreateTraceChannel_BasicSetup(LGUITraceTypeQuery);
-
 		GEditor->BeginTransaction(FText::FromString(TEXT("LexUI Create World Space UI - UE Renderer")));
+		GetWorldFromSelection()->GetCurrentLevel()->MarkPackageDirty();
 		auto actor = prefab->LoadPrefabInEditor(GetWorldFromSelection(), nullptr, true);
 		actor->SetActorLabel(TEXT("WorldSpaceUI-UERenderer"));
 		actor->GetRootComponent()->SetRelativeLocation(FVector(0, 0, 250));
 		actor->GetRootComponent()->SetWorldScale3D(FVector::OneVector);
-		if (bIsTraceTypeQueryValid)
-		{
-			auto Canvas = actor->FindComponentByClass<ULexCanvas>();
-			Canvas->SetTraceChannel(LGUITraceTypeQuery);
-		}
 		if (auto selectedActor = GetFirstSelectedActor())
 		{
 			GEditor->SelectActor(selectedActor, false, true);
 		}
 		GEditor->SelectActor(actor, true, true);
 		CreatePresetEventSystem_BasicSetup(true);
+		auto RaycasterSource = CreatePresetWorldSpaceRaycasterSource();
+		auto Raycaster = actor->GetComponentByClass<ULexWorldSpaceRaycasterBase>();
+		if (RaycasterSource && Raycaster)
+		{
+			Raycaster->SetRaycasterSourceObject(RaycasterSource);
+		}
 		GEditor->EndTransaction();
 		ULexUIManagerWorldSubsystem::RefreshAllUI();
 	}
@@ -1616,30 +1608,28 @@ void LGUIEditorTools::CreateWorldSpaceUIBuiltinRenderer_BasicSetup()
 }
 void LGUIEditorTools::CreateWorldSpaceUILexUIRenderer_BasicSetup()
 {
-	FString prefabPath(TEXT("/LGUI/Prefabs/WorldSpaceUI"));
+	FString prefabPath(TEXT("/LGUI/Prefabs/WorldSpaceUI_LexUIRenderer"));
 	auto prefab = LoadObject<ULGUIPrefab>(NULL, *prefabPath);
 	if (prefab)
 	{
-		ETraceTypeQuery LGUITraceTypeQuery;
-		auto bIsTraceTypeQueryValid = CreateTraceChannel_BasicSetup(LGUITraceTypeQuery);
-
 		GEditor->BeginTransaction(FText::FromString(TEXT("LexUI Create World Space UI - LexUI Renderer")));
+		GetWorldFromSelection()->GetCurrentLevel()->MarkPackageDirty();
 		auto actor = prefab->LoadPrefabInEditor(GetWorldFromSelection(), nullptr, true);
 		actor->SetActorLabel(TEXT("WorldSpaceUI-LexUIRenderer"));
 		actor->GetRootComponent()->SetRelativeLocation(FVector(0, 0, 250));
 		actor->GetRootComponent()->SetWorldScale3D(FVector::OneVector);
-		auto Canvas = actor->FindComponentByClass<ULexCanvas>();
-		Canvas->SetRenderMode(ELexRenderMode::WorldSpace_LexUI);
-		if (bIsTraceTypeQueryValid)
-		{
-			Canvas->SetTraceChannel(LGUITraceTypeQuery);
-		}
 		if (auto selectedActor = GetFirstSelectedActor())
 		{
 			GEditor->SelectActor(selectedActor, false, true);
 		}
 		GEditor->SelectActor(actor, true, true);
 		CreatePresetEventSystem_BasicSetup(true);
+		auto RaycasterSource = CreatePresetWorldSpaceRaycasterSource();
+		auto Raycaster = actor->GetComponentByClass<ULexWorldSpaceRaycasterBase>();
+		if (RaycasterSource && Raycaster)
+		{
+			Raycaster->SetRaycasterSourceObject(RaycasterSource);
+		}
 		GEditor->EndTransaction();
 		ULexUIManagerWorldSubsystem::RefreshAllUI();
 	}
@@ -1688,131 +1678,36 @@ void LGUIEditorTools::CreatePresetEventSystem_BasicSetup(bool WorldSpace)
 	}
 }
 
-bool LGUIEditorTools::CreateTraceChannel_BasicSetup(ETraceTypeQuery& OutTraceTypeQuery)
+ULexWorldSpaceRaycasterSource* LGUIEditorTools::CreatePresetWorldSpaceRaycasterSource()
 {
-	enum class ELGUIChannelErrorType
+	for (TActorIterator<AActor> ActorItr(GetWorldFromSelection()); ActorItr; ++ActorItr)
 	{
-		NoError,
-		NoLGUIChannel,
-		ChannelIsNotTrace,
-	};
-	const auto DefaultChannelResponsesName = FName(TEXT("DefaultChannelResponses"));
-	auto OnLGUIChannel = [=](const TFunction<void(FByteProperty*, void*)>& OnDefaultResponseProperty, ECollisionChannel& OutChannel) {
-		auto DefaultChannelResponses_Property = FindFProperty<FArrayProperty>(UCollisionProfile::StaticClass(), DefaultChannelResponsesName);
-		auto CollisionProfile = UCollisionProfile::Get();
-		FScriptArrayHelper ArrayHelper(DefaultChannelResponses_Property, DefaultChannelResponses_Property->ContainerPtrToValuePtr<void>(CollisionProfile));
-		for (int i = 0; i < ArrayHelper.Num(); i++)
+		auto Actor = *ActorItr;
+		if (auto RaycasterSource = Actor->FindComponentByClass<ULexWorldSpaceRaycasterSource>())
 		{
-			if (auto StructProperty = CastField<FStructProperty>(DefaultChannelResponses_Property->Inner))
-			{
-				auto StructPtr = StructProperty->ContainerPtrToValuePtr<uint8>(ArrayHelper.GetRawPtr(i));
-				FByteProperty* ChannelProperty = nullptr;
-				FNameProperty* DisplayNameProperty = nullptr;
-				FByteProperty* DefaultResponseProperty = nullptr;
-				FBoolProperty* TraceTypeProperty = nullptr;
-				for (TFieldIterator<FProperty> It(StructProperty->Struct); It; ++It)
-				{
-					if (It->GetFName() == TEXT("Name"))
-					{
-						if (auto NameProperty = CastField<FNameProperty>(*It))
-						{
-							DisplayNameProperty = NameProperty;
-						}
-					}
-					else if (It->GetFName() == TEXT("Channel"))
-					{
-						if (auto ByteProperty = CastField<FByteProperty>(*It))
-						{
-							ChannelProperty = ByteProperty;
-						}
-					}
-					else if (It->GetFName() == TEXT("DefaultResponse"))
-					{
-						if (auto ByteProperty = CastField<FByteProperty>(*It))
-						{
-							DefaultResponseProperty = ByteProperty;
-						}
-					}
-					else if (It->GetFName() == TEXT("bTraceType"))
-					{
-						if (auto BoolProperty = CastField<FBoolProperty>(*It))
-						{
-							TraceTypeProperty = BoolProperty;
-						}
-					}
-				}
-				if (DisplayNameProperty != nullptr && DefaultResponseProperty != nullptr && TraceTypeProperty != nullptr && ChannelProperty != nullptr)
-				{
-					if (DisplayNameProperty->GetPropertyValue_InContainer(StructPtr) == TEXT("LGUI"))
-					{
-						if (TraceTypeProperty->GetPropertyValue_InContainer(StructPtr) == true)
-						{
-							OnDefaultResponseProperty(DefaultResponseProperty, StructPtr);
-							OutChannel = (ECollisionChannel)ChannelProperty->GetPropertyValue_InContainer(StructPtr);
-							return ELGUIChannelErrorType::NoError;
-						}
-						else
-						{
-							return ELGUIChannelErrorType::ChannelIsNotTrace;
-						}
-					}
-				}
-			}
+			return RaycasterSource;
 		}
-		return ELGUIChannelErrorType::NoLGUIChannel;
-	};
-	auto GetLGUIChannelResponse = [=](ECollisionResponse& Response, ECollisionChannel& OutChannelIndex) {
-		return OnLGUIChannel([&](FByteProperty* DefaultResponseProperty, void* StructPtr) {
-			DefaultResponseProperty->GetValue_InContainer(StructPtr, (uint8*)&Response);
-			}, OutChannelIndex);
-	};
-	auto SetLGUIChannelResponse = [=](ECollisionChannel& OutChannelIndex) {
-		return OnLGUIChannel([](FByteProperty* DefaultResponseProperty, void* StructPtr) {
-			auto Response = ECollisionResponse::ECR_Ignore;
-			DefaultResponseProperty->SetValue_InContainer(StructPtr, (uint8)Response);
-			}, OutChannelIndex);
-	};
-
-	ECollisionResponse Response = ECollisionResponse::ECR_MAX;
-	ECollisionChannel TraceChannel = ECollisionChannel::ECC_MAX;
-	auto ChannelErrorType = GetLGUIChannelResponse(Response, TraceChannel);
-	switch (ChannelErrorType)
+	}
+	auto CreateActor = [](const TCHAR* ClassName)
 	{
-	case ELGUIChannelErrorType::NoError:
-	{
-		if (Response != ECollisionResponse::ECR_Ignore)
+		if (auto PresetEventSystemActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
 		{
-			auto Message = LOCTEXT("RecommendLexUITraceChannelSettings", "It is recommended to set \"Default Response\" of LexUI trace channel to \"Ignore\".");
-			FMessageDialog::Open(EAppMsgType::Ok, Message);
-			auto CollisionProfile = UCollisionProfile::Get();
-			OutTraceTypeQuery = CollisionProfile->ConvertToTraceType(TraceChannel);
-			return true;
+			auto Actor = GetWorldFromSelection()->SpawnActor<AActor>(PresetEventSystemActorClass);
+			Actor->SetActorLabel(ClassName);
+			return Actor;
 		}
 		else
 		{
-			auto CollisionProfile = UCollisionProfile::Get();
-			OutTraceTypeQuery = CollisionProfile->ConvertToTraceType(TraceChannel);
-			return true;
+			UE_LOG(LGUIEditor, Error, TEXT("[%s].%d Load %s error! Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), 
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ClassName);
 		}
-	}
-	break;
-	case ELGUIChannelErrorType::NoLGUIChannel:
+		return (AActor*)nullptr;
+	};
+	if (auto RaycasterSourceActor = CreateActor(TEXT("WorldSpaceRaycasterSourceActor")))
 	{
-		auto Message = LOCTEXT("RecommendCreateLexUITraceChannel", "It is recommended to create a specific trace channel for LexUI, with name \"LexUI\", and default response \"Ignore\".");
-		FMessageDialog::Open(EAppMsgType::Ok, Message);
+		return RaycasterSourceActor->FindComponentByClass<ULexWorldSpaceRaycasterSource>();
 	}
-	break;
-	case ELGUIChannelErrorType::ChannelIsNotTrace:
-	{
-		auto Message = LOCTEXT("LexUIChannelIsNotTraceType", "\
-Trying to use \"LexUI\" as trace channel, but detect a collision channel with name \"LexUI\"!\n\
-It is recommended to create a specific trace channel for LexUI, with name \"LexUI\", and default response \"Ignore\".\
-");
-		FMessageDialog::Open(EAppMsgType::Ok, Message);
-	}
-	break;
-	}
-	return false;
+	return nullptr;
 }
 
 void LGUIEditorTools::AttachComponentToSelectedActor(TSubclassOf<UActorComponent> InComponentClass)

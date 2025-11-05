@@ -61,7 +61,7 @@ public:
 	static void CreateWorldSpaceUIBuiltinRenderer_BasicSetup();
 	static void CreateWorldSpaceUILexUIRenderer_BasicSetup();
 	static void CreatePresetEventSystem_BasicSetup(bool WorldSpace);
-	static bool CreateTraceChannel_BasicSetup(ETraceTypeQuery& OutTraceTypeQuery);
+	static class ULexWorldSpaceRaycasterSource* CreatePresetWorldSpaceRaycasterSource();
 	static void AttachComponentToSelectedActor(TSubclassOf<UActorComponent> InComponentClass);
 	static UWorld* GetWorldFromSelection();
 	static void CreatePrefabAsset();

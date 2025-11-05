@@ -32,6 +32,8 @@ protected:
 	virtual void OnUpdateGeometry(FLexUIGeometry& InMesh, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 	virtual void PostInitProperties() override;
 	virtual void BeginDestroy() override;
+	virtual void OnRegister() override;
+	virtual void OnUnregister() override;
 #if WITH_EDITOR
 	virtual void PreEditChange(FProperty* PropertyAboutToChange) override;
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;

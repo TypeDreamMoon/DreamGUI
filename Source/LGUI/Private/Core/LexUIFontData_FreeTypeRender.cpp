@@ -21,11 +21,11 @@ void ULexUIFontData_FreeTypeRender::UpdateFontOnCultureChanged()
 {
 	FString CurrentCulture = FInternationalization::Get().GetCurrentCulture()->GetName();
 	if (CultureFontMap.Contains(CurrentCulture))
-		unrealFont = CultureFontMap[CurrentCulture].LoadSynchronous();
+		UnrealFont = CultureFontMap[CurrentCulture].LoadSynchronous();
 
-	if (fontType == ELexUIDynamicFontDataType::UnrealFont)
+	if (FontType == ELexUIDynamicFontDataType::UnrealFont)
 	{
-		FontBinaryArray.Empty();//clear cache font data when swich to UnrealFont
+		FontBinaryArray.Empty();//clear cache font data when switch to UnrealFont
 	}
 
 #if WITH_FREETYPE
@@ -133,19 +133,19 @@ void ULexUIFontData_FreeTypeRender::InitFreeType()
 #endif
 	};
 
-	if (fontType == ELexUIDynamicFontDataType::UnrealFont)
+	if (FontType == ELexUIDynamicFontDataType::UnrealFont)
 	{
-		if (IsValid(unrealFont))
+		if (IsValid(UnrealFont))
 		{
-			if (unrealFont->GetFontFaceData()->HasData())
+			if (UnrealFont->GetFontFaceData()->HasData())
 			{
-				NewFontFace(unrealFont->GetFontFaceData()->GetData());
+				NewFontFace(UnrealFont->GetFontFaceData()->GetData());
 			}
 			else
 			{
-				if (!FFileHelper::LoadFileToArray(TempFontBinaryArray, *unrealFont->GetFontFilename()))
+				if (!FFileHelper::LoadFileToArray(TempFontBinaryArray, *UnrealFont->GetFontFilename()))
 				{
-					UE_LOG(LGUI, Warning, TEXT("[%s].%d Failed to load or process '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *unrealFont->GetFontFilename());
+					UE_LOG(LGUI, Warning, TEXT("[%s].%d Failed to load or process '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *UnrealFont->GetFontFilename());
 					return;
 				}
 				else
@@ -165,11 +165,11 @@ void ULexUIFontData_FreeTypeRender::InitFreeType()
 #if WITH_EDITOR
 		if (true)
 		{
-			FString FontFilePathStr = fontFilePath;
-			FontFilePathStr = useRelativeFilePath ? FPaths::ProjectDir() + fontFilePath : fontFilePath;
+			FString FontFilePathStr = FontFilePath;
+			FontFilePathStr = bUseRelativeFilePath ? FPaths::ProjectDir() + FontFilePath : FontFilePath;
 			if (!FPaths::FileExists(*FontFilePathStr))
 			{
-				if (FontBinaryArray.Num() > 0 && !useExternalFileOrEmbedInToUAsset)
+				if (FontBinaryArray.Num() > 0 && !bUseExternalFileOrEmbedInToUAsset)
 				{
 					UE_LOG(LGUI, Warning, TEXT("[%s].%d Font:%s, file: \"%s\" not exist! Will use cache data"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetName()), *FontFilePathStr);
 				}
@@ -180,7 +180,7 @@ void ULexUIFontData_FreeTypeRender::InitFreeType()
 				}
 			}
 
-			if (useExternalFileOrEmbedInToUAsset)
+			if (bUseExternalFileOrEmbedInToUAsset)
 			{
 				FFileHelper::LoadFileToArray(TempFontBinaryArray, *FontFilePathStr);
 				NewFontFace(TempFontBinaryArray);
@@ -198,9 +198,9 @@ void ULexUIFontData_FreeTypeRender::InitFreeType()
 		else
 #endif	
 		{
-			if (useExternalFileOrEmbedInToUAsset)
+			if (bUseExternalFileOrEmbedInToUAsset)
 			{
-				auto FontFilePathStr = useRelativeFilePath ? FPaths::ProjectDir() + fontFilePath : fontFilePath;
+				auto FontFilePathStr = bUseRelativeFilePath ? FPaths::ProjectDir() + FontFilePath : FontFilePath;
 				if (!FPaths::FileExists(*FontFilePathStr))
 				{
 					UE_LOG(LGUI, Error, TEXT("[%s].%d Font:%s, file: \"%s\" not exist!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetName()), *FontFilePathStr);
@@ -340,7 +340,7 @@ void ULexUIFontData_FreeTypeRender::PostLoad()
 
 	FString CurrentCulture = FInternationalization::Get().GetCurrentCulture()->GetName();
 	if (CultureFontMap.Contains(CurrentCulture))
-		unrealFont = CultureFontMap[CurrentCulture].LoadSynchronous();
+		UnrealFont = CultureFontMap[CurrentCulture].LoadSynchronous();
 }
 
 void ULexUIFontData_FreeTypeRender::BeginDestroy()
@@ -573,6 +573,7 @@ void ULexUIFontData_FreeTypeRender::UpdateFontTextureRegion(UTexture2D* InTextur
 		ENQUEUE_RENDER_COMMAND(FLexUIFontData_UpdateFontTextureRegionData)(
 			[RegionData, Texture2DRes](FRHICommandListImmediate& RHICmdList)
 			{
+				
 				RHICmdList.UpdateTexture2D(
 					Texture2DRes->GetTexture2DRHI(),
 					0,
@@ -590,7 +591,7 @@ void ULexUIFontData_FreeTypeRender::UpdateFontTextureRegion(UTexture2D* InTextur
 }
 void ULexUIFontData_FreeTypeRender::RenewFontTexture(int oldTextureSize, int newTextureSize)
 {
-	//store old texutre pointer
+	//get old texture pointer
 	auto OldTexture = Texture;
 	//create new texture
 	Texture = CreateFontTexture(newTextureSize);
@@ -645,16 +646,16 @@ void ULexUIFontData_FreeTypeRender::PostEditChangeProperty(FPropertyChangedEvent
 	if (auto Property = PropertyChangedEvent.Property)
 	{
 		auto PropertyName = Property->GetFName();
-		if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, useExternalFileOrEmbedInToUAsset)
+		if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, bUseExternalFileOrEmbedInToUAsset)
 			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, FontFace)
-			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, fontType)
+			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, FontType)
 			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, LineHeightType)
-			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, unrealFont)
+			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, UnrealFont)
 			)
 		{
-			if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, fontType))
+			if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, FontType))
 			{
-				if (fontType == ELexUIDynamicFontDataType::UnrealFont)
+				if (FontType == ELexUIDynamicFontDataType::UnrealFont)
 				{
 					FontBinaryArray.Empty();//clear cache font data when swich to UnrealFont
 				}

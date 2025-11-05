@@ -88,7 +88,6 @@ public class LGUI : ModuleRules
                 "EditorStyle",
                 "TargetPlatform",
                 "LevelEditor",
-                "EditorSubsystem",
             }
             );
         }
