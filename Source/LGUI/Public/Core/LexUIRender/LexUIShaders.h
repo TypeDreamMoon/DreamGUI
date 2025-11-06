@@ -35,7 +35,7 @@ public:
 	void SetMaterialShaderParameters(FRHICommandList& RHICmdList, const FSceneView& View, const FMaterialRenderProxy* MaterialRenderProxy, const FMaterial* Material, const FMeshBatch& Mesh);
 	void SetGammaValue(FRHICommandList& RHICmdList, float value);
 private:
-	LAYOUT_FIELD(FShaderParameter, LGUIGammaValuesParameter);
+	LAYOUT_FIELD(FShaderParameter, LexUIGammaValuesParameter);
 };
 
 class FLexUIWorldRenderPS : public FLexUIScreenRenderPS

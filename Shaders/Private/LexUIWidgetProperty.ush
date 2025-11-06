@@ -1,7 +1,8 @@
 #include "/Engine/Private/GammaCorrectionCommon.ush"
 
 void LexUI_ReadWidgetProperty_Simple(float2 UV1, Texture2D DataTex
-    , inout float FontMark, inout float ClipDataCoordinate
+    , inout float FontMark, inout float IsRenderByLexUIRenderer
+    , inout float ClipDataCoordinate
     , inout float2 Size, inout float2 CenterPosition)
 {
     //read data from texture
@@ -9,8 +10,11 @@ void LexUI_ReadWidgetProperty_Simple(float2 UV1, Texture2D DataTex
     int3 Position = int3(0, Coordinate, 0);
 
     float4 PixelData = DataTex.Load(Position);Position.x += 1;
-    uint ByteUint = asuint(PixelData.x);
-    uint FontMarkUint = (ByteUint >> 24) & 0x000000ff;
+    uint MarksUint = asuint(PixelData.x);
+    uint FontMarkUint = (MarksUint >> 24) & 0x000000ff;
+    uint ExtraMarkUint = (MarksUint >> 16) & 0x000000ff;
+    
+    IsRenderByLexUIRenderer = (ExtraMarkUint >> 7) & 1;    
     FontMark = FontMarkUint;
     ClipDataCoordinate = asuint(PixelData.y);
     Size = PixelData.zw;

@@ -49,7 +49,7 @@ void FLexUIScreenRenderVS::SetMaterialShaderParameters(FRHICommandList& RHICmdLi
 FLexUIScreenRenderPS::FLexUIScreenRenderPS(const FMaterialShaderType::CompiledShaderInitializerType& Initializer)
 	:FMaterialShader(Initializer)
 {
-	LGUIGammaValuesParameter.Bind(Initializer.ParameterMap, TEXT("_LexUIGammaValues"));
+	LexUIGammaValuesParameter.Bind(Initializer.ParameterMap, TEXT("_LexUIGammaValues"));
 }
 bool FLexUIScreenRenderPS::ShouldCompilePermutation(const FMaterialShaderPermutationParameters& Parameters)
 {
@@ -78,7 +78,7 @@ void FLexUIScreenRenderPS::SetGammaValue(FRHICommandList& RHICmdList, float valu
 {
 	FRHIBatchedShaderParameters& BatchedParameters = RHICmdList.GetScratchShaderParameters();
 	FVector4f GammaValues(2.2f / value, 1.0f / value, 0.0f, 0.0f);
-	SetShaderValue(BatchedParameters, LGUIGammaValuesParameter, GammaValues);
+	SetShaderValue(BatchedParameters, LexUIGammaValuesParameter, GammaValues);
 	RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
 }
 

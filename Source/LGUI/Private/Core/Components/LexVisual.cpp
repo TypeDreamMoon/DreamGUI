@@ -353,7 +353,7 @@ bool ULexVisual::LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVe
 }
 
 int ULexVisual::WidgetPropertyDataLength =
-	sizeof(FVector2f)//1st pixel's xy channel: x.byte1- font mark, y- clip data coordinate
+	sizeof(FVector2f)//1st pixel's xy channel: x.byte1- font mark, byte2- extra marks, y- clip data coordinate
 	+ sizeof(FVector2f)//1st pixel's zw channel: width & height
 	+ sizeof(FVector2f)//2nd pixels' xy channel: widget rect center position
 ;
@@ -372,8 +372,14 @@ void ULexVisual::FillWidgetPropertyDataForMaterial_SimpleRect(ULexVisual* Visual
 	int BlockBufferOffset = 0;
 	
 	{
-		uint32 FontMark32 = FontMark << 24;
-		FMemory::Memcpy(BlockBuffer + BlockBufferOffset, &FontMark32, 4);
+		uint8 ExtraMark =
+			(Canvas->IsRenderByLexUIRendererOrUERenderer() ? 1 : 0) << 7
+		;
+		uint32 Marks =
+			FontMark << 24
+			| ExtraMark << 16
+		;
+		FMemory::Memcpy(BlockBuffer + BlockBufferOffset, &Marks, 4);
 		BlockBufferOffset += 4;
 		uint32 ClipDataStartPosition = Visual->ClipDataStartPosition;
 		FMemory::Memcpy(BlockBuffer + BlockBufferOffset, &ClipDataStartPosition, 4);
@@ -408,21 +414,27 @@ void ULexVisual::FillWidgetPropertyDataForMaterial_FirstPixel(ULexVisual* Visual
 	if (!Data)return;
 	uint8* BlockBuffer = new uint8[WidgetPropertyDataLength];
 	FMemory::Memzero(BlockBuffer, WidgetPropertyDataLength);
-	int BlockBufferValidCount = 0;
+	int BlockBufferOffset = 0;
 	
 	{
-		uint32 FontMark32 = FontMark << 24;
-		FMemory::Memcpy(BlockBuffer + BlockBufferValidCount, &FontMark32, 4);
-		BlockBufferValidCount += 4;
+		uint8 ExtraMark =
+			(Canvas->IsRenderByLexUIRendererOrUERenderer() ? 1 : 0) << 7
+		;
+		uint32 Marks =
+			FontMark << 24
+			| ExtraMark << 16
+		;
+		FMemory::Memcpy(BlockBuffer + BlockBufferOffset, &Marks, 4);
+		BlockBufferOffset += 4;
 		uint32 ClipDataStartPosition = Visual->ClipDataStartPosition;
-		FMemory::Memcpy(BlockBuffer + BlockBufferValidCount, &ClipDataStartPosition, 4);
-		BlockBufferValidCount += 4;
+		FMemory::Memcpy(BlockBuffer + BlockBufferOffset, &ClipDataStartPosition, 4);
+		BlockBufferOffset += 4;
 	}
 	
 	//width & height
 	auto Size = FVector2f(Widget->GetWidth(), Widget->GetHeight());
-	FMemory::Memcpy(BlockBuffer + BlockBufferValidCount, &Size, sizeof(FVector2f));
-	BlockBufferValidCount += sizeof(FVector2f);
+	FMemory::Memcpy(BlockBuffer + BlockBufferOffset, &Size, sizeof(FVector2f));
+	BlockBufferOffset += sizeof(FVector2f);
 	Data->UpdateBlock(0, StartPosition, BlockBuffer, 1);
 }
 

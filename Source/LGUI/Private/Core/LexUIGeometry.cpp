@@ -319,7 +319,7 @@ void FLexUIGeometry::UpdateRectBlockVertex(FLexUIGeometry* uiGeo,
 			Vert2.TextureCoordinate[0] = uniformSpriteInfo.GetUV2() + FVector2f((OriginVert2.Position.Y - minX) * oneDivideWidth, -(OriginVert2.Position.Z - maxY) * oneDivideHeight);
 			Vert3.TextureCoordinate[0] = uniformSpriteInfo.GetUV3() + FVector2f((OriginVert3.Position.Y - maxX) * oneDivideWidth, -(OriginVert3.Position.Z - maxY) * oneDivideHeight);
 			
-			//uv3 store the info for sampling texture and Sprite
+			//uv2 store the info for sampling texture and Sprite
 			Vert0.TextureCoordinate[2] = spriteInfo.GetUV0();
 			Vert1.TextureCoordinate[2] = spriteInfo.GetUV1();
 			Vert2.TextureCoordinate[2] = spriteInfo.GetUV2();
