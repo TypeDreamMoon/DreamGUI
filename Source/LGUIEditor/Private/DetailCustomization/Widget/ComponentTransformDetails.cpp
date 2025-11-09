@@ -814,7 +814,7 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 
 					if (NotifyHook)
 					{
-						//NotifyHook->NotifyPreChange(ValueProperty);
+						NotifyHook->NotifyPreChange(ValueProperty);
 					}
 
 					switch (TransformField)
@@ -830,7 +830,7 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 							SceneComponent->SetRelativeLocation(NewComponentValue);
 
 							// Also forcibly set it as the cache may have changed it slightly
-							SceneComponent->GetRelativeLocation_DirectMutable() = NewComponentValue;
+							SceneComponent->SetRelativeLocation_Direct(NewComponentValue);
 							CachedLocation.Set(NewComponentValue);
 
 							// If it's a template, propagate the change out to any current instances of the object
@@ -985,7 +985,7 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 
 		if (NotifyHook)
 		{
-			//NotifyHook->NotifyPostChange(PropertyChangedEvent, ValueProperty);
+			NotifyHook->NotifyPostChange(PropertyChangedEvent, ValueProperty);
 		}
 	}
 

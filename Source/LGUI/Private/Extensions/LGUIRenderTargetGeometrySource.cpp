@@ -500,7 +500,7 @@ bool ULGUIRenderTargetGeometrySource::CheckStaticMesh()const
 				auto ErrorMsg = LOCTEXT("StaticMeshComponentNotValid", "StaticMesh component not valid!");
 				UE_LOG(LGUI, Error, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *ErrorMsg.ToString());
 #if WITH_EDITOR
-				FLexUIUtils::EditorNotification(ErrorMsg);
+				FLexUIUtils::EditorNotification(ErrorMsg, false);
 #endif
 			}
 		}

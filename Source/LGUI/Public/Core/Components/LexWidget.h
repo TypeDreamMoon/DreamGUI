@@ -387,13 +387,13 @@ public:
 	UObject* GetPreferredHeightSource()const;
 	UObject* GetFlexibleHeightSource()const;
 private:
-	float GetLayoutProperty(const TFunction<float(ULexLayoutSlot*)>& GetLayoutSlotProperty
-		, const TFunction<float(ULexLayout*)>& GetLayoutProperty
-		, const TFunction<float(ULexVisual*)>& GetVisualProperty
+	float GetLayoutProperty(TFunctionRef<float(ULexLayoutSlot*)> GetLayoutSlotProperty
+		, TFunctionRef<float(ULexLayout*)> GetLayoutProperty
+		, TFunctionRef<float(ULexVisual*)> GetVisualProperty
 		, float DefaultValue)const;
-	UObject* GetLayoutSource(const TFunction<float(ULexLayoutSlot*)>& GetLayoutSlotProperty
-		, const TFunction<float(ULexLayout*)>& GetLayoutProperty
-		, const TFunction<float(ULexVisual*)>& GetVisualProperty
+	UObject* GetLayoutSource(TFunctionRef<float(ULexLayoutSlot*)> GetLayoutSlotProperty
+		, TFunctionRef<float(ULexLayout*)> GetLayoutProperty
+		, TFunctionRef<float(ULexVisual*)> GetVisualProperty
 		)const;
 	
 	FVector2f PrevScale2D = FVector2f::One();

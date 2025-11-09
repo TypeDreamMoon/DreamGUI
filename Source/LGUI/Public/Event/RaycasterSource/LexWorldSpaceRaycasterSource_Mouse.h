@@ -24,3 +24,16 @@ private:
 	void DeprojectViewPointToWorldForMainViewport(const FMatrix& InViewProjectionMatrix, const FVector2D& InViewPoint01, FVector& OutWorldLocation, FVector& OutWorldDirection);
 #endif
 };
+
+/*
+ * This is a preset actor that contains a LexWorldSpaceRaycasterSource_Mouse component
+ */
+UCLASS(ClassGroup = LGUI)
+class LGUI_API ALexWorldSpaceRaycasterSource_Mouse_Actor : public ALexWorldSpaceRaycasterSourceActor
+{
+	GENERATED_BODY()
+
+public:
+	ALexWorldSpaceRaycasterSource_Mouse_Actor();
+};
+

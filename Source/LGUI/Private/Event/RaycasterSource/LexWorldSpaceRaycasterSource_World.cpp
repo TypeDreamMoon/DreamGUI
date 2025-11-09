@@ -47,3 +47,9 @@ bool ULexWorldSpaceRaycasterSource_World::ShouldStartDrag(ULexPointerEventData* 
 	auto dragDistance = (InPointerEventData->GetWorldPointSpherical() - InPointerEventData->PressWorldPoint).Size();
 	return dragDistance > calculatedThreshold;
 }
+
+ALexWorldSpaceRaycasterSource_World_Actor::ALexWorldSpaceRaycasterSource_World_Actor()
+{
+	RaycasterSource = CreateDefaultSubobject<ULexWorldSpaceRaycasterSource_World>(TEXT("RaycasterSource"));
+	RootComponent = RaycasterSource;
+}

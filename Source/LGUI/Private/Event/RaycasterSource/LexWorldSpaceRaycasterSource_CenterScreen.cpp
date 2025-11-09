@@ -44,3 +44,9 @@ bool ULexWorldSpaceRaycasterSource_CenterScreen::ShouldStartDrag(ULexPointerEven
 	FVector2D pressMousePos = FVector2D(InPointerEventData->PressPointerPosition);
 	return FVector2D::DistSquared(pressMousePos, mousePos) > this->GetDragThresholdSquare();
 }
+
+ALexWorldSpaceRaycasterSource_CenterScreen_Actor::ALexWorldSpaceRaycasterSource_CenterScreen_Actor()
+{
+	RaycasterSource = CreateDefaultSubobject<ULexWorldSpaceRaycasterSource_CenterScreen>(TEXT("RaycasterSource"));
+	RootComponent = RaycasterSource;
+}

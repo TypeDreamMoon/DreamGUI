@@ -15,7 +15,7 @@ ULexUIFontData_BaseObject* ULexUIFontData_BaseObject::GetDefaultFont()
 			, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)));
 		UE_LOG(LGUI, Error, TEXT("%s"), *errMsg.ToString());
 #if WITH_EDITOR
-		FLexUIUtils::EditorNotification(errMsg, 10);
+		FLexUIUtils::EditorNotification(errMsg, false, 10);
 #endif
 		return nullptr;
 	}

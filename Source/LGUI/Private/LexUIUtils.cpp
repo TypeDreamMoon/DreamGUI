@@ -209,11 +209,11 @@ UTexture* FLexUIUtils::GetDefaultWhiteTexture()
 	auto defaultWhiteSolid = LoadObject<UTexture2D>(NULL, TEXT("/LGUI/Textures/LGUIPreset_WhiteSolid"));
 	if (!IsValid(defaultWhiteSolid))
 	{
-		auto errMsg = FText::Format(LOCTEXT("MissingDefaultContent", "{0} Load default texture error! Missing some content of LGUI plugin, reinstall this plugin may fix the issue.")
+		auto errMsg = FText::Format(LOCTEXT("MissingDefaultContent", "{0} Load default texture error! Missing some content of LexUI plugin, reinstall this plugin may fix the issue.")
 			, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)));
 		UE_LOG(LGUI, Error, TEXT("%s"), *errMsg.ToString());
 #if WITH_EDITOR
-		FLexUIUtils::EditorNotification(errMsg, 10);
+		FLexUIUtils::EditorNotification(errMsg, false, 10);
 #endif
 	}
 	return defaultWhiteSolid;
@@ -221,10 +221,10 @@ UTexture* FLexUIUtils::GetDefaultWhiteTexture()
 
 #if WITH_EDITOR
 //notify some information in editor
-void FLexUIUtils::EditorNotification(FText NofityText, float ExpireDuration)
+void FLexUIUtils::EditorNotification(const FText& NotifyText, bool bSuccessOrFailureSound, float ExpireDuration)
 {
 	if (!IsValid(GEditor))return;
-	FNotificationInfo Info(NofityText);
+	FNotificationInfo Info(NotifyText);
 	Info.FadeInDuration = 0.1f;
 	Info.FadeOutDuration = 0.5f;
 	Info.ExpireDuration = ExpireDuration;
@@ -235,7 +235,7 @@ void FLexUIUtils::EditorNotification(FText NofityText, float ExpireDuration)
 	NotificationItem->SetCompletionState(SNotificationItem::CS_Success);
 	NotificationItem->ExpireAndFadeout();
 
-	auto CompileFailSound = LoadObject<USoundBase>(NULL, TEXT("/Engine/EditorSounds/Notifications/CompileFailed_Cue.CompileFailed_Cue"));
+	auto CompileFailSound = LoadObject<USoundBase>(NULL, bSuccessOrFailureSound ? TEXT("/Engine/EditorSounds/Notifications/CompileFailed_Cue.CompileSuccess_Cue" : TEXT("/Engine/EditorSounds/Notifications/CompileFailed_Cue.CompileFailed_Cue")));
 	GEditor->PlayEditorSound(CompileFailSound);
 }
 #endif

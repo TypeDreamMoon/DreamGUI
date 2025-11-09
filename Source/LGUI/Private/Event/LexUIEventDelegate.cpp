@@ -394,7 +394,7 @@ void FLexUIEventDelegateData::Execute()
 	{
 		auto errMsg = LOCTEXT("NativeParameterError", "LGUIEventDelegateData.Execute, If use NativeParameter, you must FireEvent with your own parameter!");
 #if WITH_EDITOR
-		FLexUIUtils::EditorNotification(errMsg, 10);
+		FLexUIUtils::EditorNotification(errMsg, false, 10);
 #endif
 		UE_LOG(LGUI, Error, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *errMsg.ToString());
 		return;
@@ -403,7 +403,7 @@ void FLexUIEventDelegateData::Execute()
 	{
 		auto errMsg = LOCTEXT("NotValid", "LGUIEventDelegateData.Execute, Not valid LGUIEventDelegate.");
 #if WITH_EDITOR
-		FLexUIUtils::EditorNotification(errMsg, 10);
+		FLexUIUtils::EditorNotification(errMsg, false, 10);
 #endif
 		UE_LOG(LGUI, Error, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *errMsg.ToString());
 		return;
@@ -426,7 +426,7 @@ void FLexUIEventDelegateData::Execute(void* InParam, ELexUIEventDelegateParamete
 	{
 		auto errMsg = LOCTEXT("NotValid", "LGUIEventDelegateData.Execute, Not valid LGUIEventDelegate.");
 #if WITH_EDITOR
-		FLexUIUtils::EditorNotification(errMsg, 10);
+		FLexUIUtils::EditorNotification(errMsg, false, 10);
 #endif
 		UE_LOG(LGUI, Error, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *errMsg.ToString());
 		return;
@@ -443,7 +443,7 @@ void FLexUIEventDelegateData::Execute(void* InParam, ELexUIEventDelegateParamete
 				InParam = &ConvertValue;
 				auto errMsg = LOCTEXT("ParameterTypeNotEqual_DoubleToFloat", "LGUIEventDelegateData.Execute, Parameter type not equal, LGUI will automatic convert it from double to float.");
 #if WITH_EDITOR
-				FLexUIUtils::EditorNotification(errMsg, 10);
+				FLexUIUtils::EditorNotification(errMsg, false, 10);
 #endif
 				UE_LOG(LGUI, Error, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *errMsg.ToString());
 			}
@@ -454,7 +454,7 @@ void FLexUIEventDelegateData::Execute(void* InParam, ELexUIEventDelegateParamete
 				InParam = &ConvertValue;
 				auto errMsg = LOCTEXT("ParameterTypeNotEqual_FloatToDouble", "LGUIEventDelegateData.Execute, Parameter type not equal, LGUI will automatic convert it from float to double.");
 #if WITH_EDITOR
-				FLexUIUtils::EditorNotification(errMsg, 10);
+				FLexUIUtils::EditorNotification(errMsg, false, 10);
 #endif
 				UE_LOG(LGUI, Error, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *errMsg.ToString());
 			}
@@ -462,7 +462,7 @@ void FLexUIEventDelegateData::Execute(void* InParam, ELexUIEventDelegateParamete
 			{
 				auto errMsg = LOCTEXT("ParameterTypeNotEqual", "LGUIEventDelegateData.Execute, Parameter type not equal!");
 #if WITH_EDITOR
-				FLexUIUtils::EditorNotification(errMsg, 10);
+				FLexUIUtils::EditorNotification(errMsg, false, 10);
 #endif
 				UE_LOG(LGUI, Error, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *errMsg.ToString());
 				return;
@@ -579,7 +579,7 @@ void FLexUIEventDelegateData::FindAndExecute(UObject* Target, void* ParamData)
 		{
 			auto errMsg = FText::Format(LOCTEXT("FunctionNotSupport", "LGUIEventDelegateData.FindAndExecute, Target function: {0} not supported!"), FText::FromName(functionName));
 #if WITH_EDITOR
-			FLexUIUtils::EditorNotification(errMsg, 10);
+			FLexUIUtils::EditorNotification(errMsg, false, 10);
 #endif
 			UE_LOG(LGUI, Error, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *errMsg.ToString());
 			CacheFunction = nullptr;
@@ -600,7 +600,7 @@ void FLexUIEventDelegateData::FindAndExecute(UObject* Target, void* ParamData)
 	{
 		auto errMsg = FText::Format(LOCTEXT("FunctionNotExist", "LGUIEventDelegateData.FindAndExecute, Target function: {0} not exist!"), FText::FromName(functionName));
 #if WITH_EDITOR
-		FLexUIUtils::EditorNotification(errMsg, 10);
+		FLexUIUtils::EditorNotification(errMsg, false, 10);
 #endif
 		UE_LOG(LGUI, Error, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *errMsg.ToString());
 	}
@@ -685,7 +685,7 @@ void FLexUIEventDelegate::LogParameterError(ELexUIEventDelegateParameterType Wro
 		, enumObject->GetDisplayNameTextByValue((int64)WrongParamType)
 	);
 #if WITH_EDITOR
-	FLexUIUtils::EditorNotification(errMsg, 10);
+	FLexUIUtils::EditorNotification(errMsg, false, 10);
 #endif
 	UE_LOG(LGUI, Error, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *errMsg.ToString());
 }

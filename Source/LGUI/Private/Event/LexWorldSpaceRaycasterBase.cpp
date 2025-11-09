@@ -45,11 +45,13 @@ bool ULexWorldSpaceRaycasterSource::ShouldStartDrag(ULexPointerEventData* InPoin
 	return false;
 }
 
-
+ALexWorldSpaceRaycasterSourceActor::ALexWorldSpaceRaycasterSourceActor()
+{
+	PrimaryActorTick.bCanEverTick = false;
+}
 
 ULexWorldSpaceRaycasterBase::ULexWorldSpaceRaycasterBase()
 {
-	RaycasterSource = FLexUIComponentReference(ULexWorldSpaceRaycasterSource::StaticClass());
 	TraceChannel = TraceTypeQuery1;
 }
 
@@ -86,8 +88,10 @@ ULexWorldSpaceRaycasterSource* ULexWorldSpaceRaycasterBase::GetRaycasterSourceOb
 {
 	if (!RaycasterSourceObject.IsValid())
 	{
-		auto Object = RaycasterSource.GetComponent<ULexWorldSpaceRaycasterSource>();
-		RaycasterSourceObject = Object;
+		if (RaycasterSourceActor.IsValid())
+		{
+			RaycasterSourceObject = RaycasterSourceActor->GetRaycasterSource();
+		}
 	}
 	return RaycasterSourceObject.Get();
 }
@@ -99,5 +103,4 @@ void ULexWorldSpaceRaycasterBase::SetTraceChannel(TEnumAsByte<ETraceTypeQuery> V
 void ULexWorldSpaceRaycasterBase::SetRaycasterSourceObject(ULexWorldSpaceRaycasterSource* Value)
 {
 	RaycasterSourceObject = Value;
-	RaycasterSource = FLexUIComponentReference(Value, ULexWorldSpaceRaycasterSource::StaticClass());
 }

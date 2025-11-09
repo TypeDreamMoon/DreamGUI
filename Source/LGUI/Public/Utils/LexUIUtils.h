@@ -119,8 +119,8 @@ public:
 	}
 	static FColor MultiplyColor(FColor A, FColor B);
 #if WITH_EDITOR
-	//nodify some informations in editor
-	static void EditorNotification(FText NotifyText, float ExpireDuration = 5.0f);
+	//notify information text in editor with sound
+	static void EditorNotification(const FText& NotifyText, bool bSuccessOrFailureSound, float ExpireDuration = 5.0f);
 #endif
 	/**
 	 * Collect children actors reculsively.

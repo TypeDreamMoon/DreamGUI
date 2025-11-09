@@ -29,7 +29,7 @@ protected:
 	TWeakObjectPtr<ULexVisual> ToggleTransitionTarget;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI-Toggle")
 	EUISelectableTransitionType ToggleTransition = EUISelectableTransitionType::Color;
-	UPROPERTY(EditAnywhere, Category="LGUI-Toggle", Instanced, meta = (EditCondition = "Transition==ELexUISelectableSelectionState::Custom"))
+	UPROPERTY(EditAnywhere, Category="LGUI-Toggle", Instanced, meta = (EditCondition = "ToggleTransition==EUISelectableTransitionType::Custom"))
 	TObjectPtr<class UUISelectableTransition> CustomToggleTransition = nullptr;
 	bool CheckTarget();
 #pragma region Transition

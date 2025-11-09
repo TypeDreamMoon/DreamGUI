@@ -586,6 +586,7 @@ void ULexWidget::PreEditChange(FProperty* PropertyAboutToChange)
 			{
 				Visual->Call_OnUnregister();
 			}
+			Visual->ConditionalBeginDestroy();
 		}
 	}
 	else if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, Layout))
@@ -604,6 +605,14 @@ void ULexWidget::PreEditChange(FProperty* PropertyAboutToChange)
 			{
 				Layout->Call_OnUnregister();
 			}
+			Layout->ConditionalBeginDestroy();
+		}
+	}
+	else if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutSlot))
+	{
+		if (IsValid(LayoutSlot))
+		{
+			LayoutSlot->ConditionalBeginDestroy();
 		}
 	}
 }
@@ -2374,9 +2383,9 @@ UObject* ULexWidget::GetFlexibleHeightSource() const
 	return GetLayoutSource(&ULexLayoutSlot::GetFlexibleHeight, &ULexLayout::GetFlexibleHeight, &ULexVisual::GetFlexibleHeight);
 }
 
-float ULexWidget::GetLayoutProperty(const TFunction<float(ULexLayoutSlot*)>& GetLayoutSlotProperty,
-                                    const TFunction<float(ULexLayout*)>& GetLayoutProperty,
-                                    const TFunction<float(ULexVisual*)>& GetVisualProperty,
+float ULexWidget::GetLayoutProperty(TFunctionRef<float(ULexLayoutSlot*)> GetLayoutSlotProperty,
+                                    TFunctionRef<float(ULexLayout*)> GetLayoutProperty,
+                                    TFunctionRef<float(ULexVisual*)> GetVisualProperty,
                                     float DefaultValue)const
 {
 	if (IsValid(LayoutSlot))
@@ -2405,9 +2414,9 @@ float ULexWidget::GetLayoutProperty(const TFunction<float(ULexLayoutSlot*)>& Get
 	}
 	return DefaultValue;
 }
-UObject* ULexWidget::GetLayoutSource(const TFunction<float(ULexLayoutSlot*)>& GetLayoutSlotProperty,
-	const TFunction<float(ULexLayout*)>& GetLayoutProperty,
-	const TFunction<float(ULexVisual*)>& GetVisualProperty) const
+UObject* ULexWidget::GetLayoutSource(TFunctionRef<float(ULexLayoutSlot*)> GetLayoutSlotProperty,
+	TFunctionRef<float(ULexLayout*)> GetLayoutProperty,
+	TFunctionRef<float(ULexVisual*)> GetVisualProperty) const
 {
 	if (IsValid(LayoutSlot))
 	{

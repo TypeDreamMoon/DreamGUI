@@ -95,7 +95,7 @@ bool ULexUIDataAsTexture::ExpandTexture()
 			, GetMax2DTextureDimension());
 		UE_LOG(LGUI, Error, TEXT("%s"), *WarningMsg.ToString());
 #if WITH_EDITOR
-		FLexUIUtils::EditorNotification(WarningMsg);
+		FLexUIUtils::EditorNotification(WarningMsg, false);
 #endif
 		return false;
 	}

@@ -18,6 +18,8 @@
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
+#include "UnrealEdGlobals.h"
+#include "Editor/UnrealEdEngine.h"
 
 #include "Widgets/Input/SNumericEntryBox.h"
 
@@ -887,6 +889,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			return FText::FromString(FString::SanitizeFloat(Value));
 		}));
 		auto SourceWidget = SNew(STextBlock).Font(IDetailLayoutBuilder::GetDetailFont())
+			.ToolTipText(LOCTEXT("LayoutPropertySource_ToolTip", "Current source object which provide this layout value"))
 			.Text(TAttribute<FText>::CreateLambda([=, this]()
 			{
 				if (TargetScriptArray.Num() <= 0)
@@ -2069,7 +2072,7 @@ TOptional<float> FLexWidgetCustomization::GetAnchorValue(TSharedRef<IPropertyHan
 	break;
 	}
 }
-void FLexWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)
+void FLexWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex, bool Commited)
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return;
 
@@ -2083,6 +2086,18 @@ void FLexWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPropert
 	FVector2D AnchorMaxValue;
 	AnchorMaxHandle->GetValue(AnchorMaxValue);
 
+	for (auto& Item : TargetScriptArray)
+	{
+		auto SceneComponent = Item.Get();
+		AActor* EditedActor = SceneComponent->GetOwner();
+		// Broadcast the first time an actor is about to move
+		GEditor->BroadcastBeginObjectMovement(*SceneComponent);
+		if (EditedActor && EditedActor->GetRootComponent() == SceneComponent)
+		{
+			GEditor->BroadcastBeginObjectMovement(*EditedActor);
+		}
+	}
+	
 	switch (AnchorValueIndex)
 	{
 	case 0://anchored position x, stretch left
@@ -2158,6 +2173,23 @@ void FLexWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPropert
 	}
 	break;
 	}
+	
+	for (auto& Item : TargetScriptArray)
+	{
+		auto SceneComponent = Item.Get();
+		AActor* EditedActor = SceneComponent->GetOwner();
+		// Broadcast when the actor is done moving
+		GEditor->BroadcastEndObjectMovement(*SceneComponent);
+		if (EditedActor && EditedActor->GetRootComponent() == SceneComponent)
+		{
+			GEditor->BroadcastEndObjectMovement(*EditedActor);
+		}
+	}
+
+	GUnrealEd->UpdatePivotLocationForSelection();
+	GUnrealEd->SetPivotMovedIndependently(false);
+	// Redraw
+	GUnrealEd->RedrawLevelEditingViewports();
 
 	auto AnchorProperty = FindFProperty<FProperty>(ULexWidget::StaticClass(), ULexWidget::GetPropertyName_AnchorData());
 	auto RelativeLocationProperty = FindFProperty<FProperty>(USceneComponent::StaticClass(), FName(TEXT("RelativeLocation")));
@@ -2174,7 +2206,7 @@ void FLexWidgetCustomization::OnAnchorValueChanged(float Value, TSharedRef<IProp
 	{
 		Item->Modify();
 	}
-	ApplyValueChanged(Value, AnchorHandle, AnchorValueIndex);
+	ApplyValueChanged(Value, AnchorHandle, AnchorValueIndex, false);
 	GEditor->EndTransaction();
 }
 void FLexWidgetCustomization::OnAnchorValueCommitted(float Value, ETextCommit::Type commitType, TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)
@@ -2184,7 +2216,7 @@ void FLexWidgetCustomization::OnAnchorValueCommitted(float Value, ETextCommit::T
 	{
 		Item->Modify();
 	}
-	ApplyValueChanged(Value, AnchorHandle, AnchorValueIndex);
+	ApplyValueChanged(Value, AnchorHandle, AnchorValueIndex, true);
 	GEditor->EndTransaction();
 }
 
@@ -2199,7 +2231,7 @@ void FLexWidgetCustomization::OnAnchorValueSliderMovementBegin()
 
 void FLexWidgetCustomization::OnAnchorValueSliderMovementEnd(float Value, TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)
 {
-	ApplyValueChanged(Value, AnchorHandle, AnchorValueIndex);
+	//ApplyValueChanged(Value, AnchorHandle, AnchorValueIndex);
 	GEditor->EndTransaction();
 }
 

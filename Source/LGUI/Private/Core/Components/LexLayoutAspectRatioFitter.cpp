@@ -132,9 +132,9 @@ float ULexLayoutAspectRatioFitter::GetPreferredHeight() const
     {
     case ELexLayoutAspectRatioFitterMode::None:
     case ELexLayoutAspectRatioFitterMode::WidthControlsHeight:
-        return -1;
+        return Widget->GetWidth() / AspectRatio;
     case ELexLayoutAspectRatioFitterMode::HeightControlsWidth:
-        return Widget->GetHeight() * AspectRatio;
+        return -1;
     case ELexLayoutAspectRatioFitterMode::FitInParent:
     case ELexLayoutAspectRatioFitterMode::EnvelopeParent:
         auto UIParent = Widget->GetUIParent();

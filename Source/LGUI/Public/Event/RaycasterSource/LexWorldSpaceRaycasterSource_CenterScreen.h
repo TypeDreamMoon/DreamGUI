@@ -18,3 +18,15 @@ public:
 	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd)override;
 	virtual bool ShouldStartDrag(ULexPointerEventData* InPointerEventData)override;
 };
+
+/*
+ * This is a preset actor that contains a LexWorldSpaceRaycasterSource_CenterScreen component
+ */
+UCLASS(ClassGroup = LGUI)
+class LGUI_API ALexWorldSpaceRaycasterSource_CenterScreen_Actor : public ALexWorldSpaceRaycasterSourceActor
+{
+	GENERATED_BODY()
+
+public:
+	ALexWorldSpaceRaycasterSource_CenterScreen_Actor();
+};

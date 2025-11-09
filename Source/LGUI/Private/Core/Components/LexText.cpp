@@ -339,7 +339,7 @@ void ULexText::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEven
 		auto MemberPropertyName = MemberProperty->GetFName();
 		if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, Text))
 		{
-			
+			VisibleCharCount = -1;
 		}
 		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, Font))
 		{

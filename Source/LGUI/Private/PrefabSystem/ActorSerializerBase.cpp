@@ -58,11 +58,12 @@ namespace LGUIPrefabSystem
 		return false;
 	}
 
-	bool ActorSerializerBase::CollectObjectToSerailize(UObject* Object, FGuid& OutGuid)
+	bool ActorSerializerBase::CollectObjectToSerialize(UObject* Object, FGuid& OutGuid)
 	{
 		if (!IsValid(Object))return false;
 		if (!Object->IsValidLowLevel())return false;
 		if (Object->IsUnreachable())return false;
+		if (Object->GetFName() == NAME_None)return false;
 #if WITH_EDITOR
 		if (Object->GetClass()->IsChildOf(UEdMode::StaticClass()))return false;
 		if (ObjectIsTrash(Object))return false;

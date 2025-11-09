@@ -49,7 +49,7 @@ private:
 	 * this parameter is related with SDFRadius & FontSize, smaller SDFRadius & FontSize will need larger BoldRatio to render.
 	 */
 	UPROPERTY(EditAnywhere, Category = "LGUI SDF Font", meta = (UIMin = "0.0", UIMax = "1.0"))
-		float BoldRatio = 0.03f;
+		float BoldRatio = 0.06f;
 	/** -1 means not set yet. */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI SDF Font", Transient)
 		int LineHeight = -1;

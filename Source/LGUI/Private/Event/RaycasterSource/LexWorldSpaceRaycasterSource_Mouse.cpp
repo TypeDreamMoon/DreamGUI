@@ -190,3 +190,9 @@ bool ULexWorldSpaceRaycasterSource_Mouse::ShouldStartDrag(ULexPointerEventData* 
 	FVector2D pressMousePos = FVector2D(InPointerEventData->PressPointerPosition);
 	return FVector2D::DistSquared(pressMousePos, mousePos) > this->GetDragThresholdSquare();
 }
+
+ALexWorldSpaceRaycasterSource_Mouse_Actor::ALexWorldSpaceRaycasterSource_Mouse_Actor()
+{
+	RaycasterSource = CreateDefaultSubobject<ULexWorldSpaceRaycasterSource_Mouse>(TEXT("RaycasterSource"));
+	RootComponent = RaycasterSource;
+}

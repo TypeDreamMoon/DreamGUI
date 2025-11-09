@@ -11,6 +11,7 @@ class ULexWidget;
 UENUM(BlueprintType, Category = LGUI)
 enum class ELexLayoutDirection :uint8
 {
+	None,
 	Horizontal,
 	Vertical,
 };
@@ -60,7 +61,7 @@ class LGUI_API ULexLayoutHorizontalAndVertical : public ULexLayout
 private:
 	friend class FLexLayoutHorizontalAndVerticalCustomization;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", Getter, Setter, meta = (AllowPrivateAccess = true))
-	ELexLayoutDirection Direction = ELexLayoutDirection::Horizontal;
+	ELexLayoutDirection Direction = ELexLayoutDirection::None;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", Getter, Setter, meta = (AllowPrivateAccess = true))
 	FMargin Padding;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", Getter, Setter, meta = (AllowPrivateAccess = true))

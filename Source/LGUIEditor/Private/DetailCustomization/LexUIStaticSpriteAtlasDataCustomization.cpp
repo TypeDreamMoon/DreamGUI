@@ -37,7 +37,7 @@ void FLexUIStaticSpriteAtlasDataCustomization::CustomizeDetails(IDetailLayoutBui
 	{
 		auto ErrMsg = LOCTEXT("CheckSpriteDataError", "Some spriteData in spriteArray is not valid! Click \"Cleanup\" button to clear invalid spriteData.");
 		UE_LOG(LGUIEditor, Error, TEXT("%s"), *ErrMsg.ToString());
-		FLexUIUtils::EditorNotification(ErrMsg, 10.0f);
+		FLexUIUtils::EditorNotification(ErrMsg, false, 10.0f);
 		LguiCategory.AddCustomRow(LOCTEXT("Error_Row", "Error"))
 			.NameContent()
 			[

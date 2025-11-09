@@ -1670,11 +1670,11 @@ void LGUIEditorTools::CreatePresetEventSystem_BasicSetup(bool WorldSpace)
 	};
 	if (!bEventSystemExits)
 	{
-		CreateActor(TEXT("PresetEventSystemActor"));
+		CreateActor(TEXT("BP_PresetLexEventSystemActor"));
 	}
 	if (WorldSpace && !bWorldSpaceRaycasterExists)
 	{
-		CreateActor(TEXT("WorldSpaceRaycasterActor"));
+		CreateActor(TEXT("BP_PresetLexWorldSpaceRaycasterSource_Mouse_Actor"));
 	}
 }
 
@@ -2193,7 +2193,7 @@ void LGUIEditorTools::MakeCurrentLevel(AActor* InActor)
 			}
 			else
 			{
-				FLexUIUtils::EditorNotification(FText::FromString(FString::Printf(TEXT("The level of selected actor:%s is locked!"), *(InActor->GetActorLabel()))));
+				FLexUIUtils::EditorNotification(FText::FromString(FString::Printf(TEXT("The level of selected actor:%s is locked!"), *(InActor->GetActorLabel()))), false);
 			}
 		}
 	}

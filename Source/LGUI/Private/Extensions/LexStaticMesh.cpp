@@ -24,7 +24,7 @@ static void StaticMeshToLGUIMeshRenderData(const UStaticMesh* DataSource, TArray
 	{
 		auto WarningText = FText::Format(LOCTEXT("StaticMeshHasMultipleSections", "StaticMesh {0} has {1} sections. UIStaticMesh expects a static mesh with 1 section."), FText::FromString(DataSource->GetName()), NumSections);
 #if WITH_EDITOR
-		FLexUIUtils::EditorNotification(WarningText, 10);
+		FLexUIUtils::EditorNotification(WarningText, false, 10);
 #endif
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *WarningText.ToString());
 		//@todo: support multiple sections
@@ -42,7 +42,7 @@ static void StaticMeshToLGUIMeshRenderData(const UStaticMesh* DataSource, TArray
 		{
 			auto WarningText = FText::Format(LOCTEXT("StaticMeshHasTooManyUVSets", "StaticMesh {0} has {1} UV sets; LGUI vertex data supports at most {2}."), FText::FromString(DataSource->GetName()), TexCoordsPerVertex, MAX_SUPPORTED_UV_SETS);
 #if WITH_EDITOR
-			FLexUIUtils::EditorNotification(WarningText, 10);
+			FLexUIUtils::EditorNotification(WarningText, false, 10);
 #endif
 			UE_LOG(LGUI, Warning, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *WarningText.ToString());
 		}

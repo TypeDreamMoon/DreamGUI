@@ -5,6 +5,7 @@
 #include "Core/LexUIManager.h"
 #include "Event/LexEventSystem.h"
 #include "Event/LexBaseRaycaster.h"
+#include "Event/LexScreenSpaceRaycaster.h"
 #include "Event/Interface/LexNavigationInterface.h"
 #include "Interaction/UISelectableComponent.h"
 
@@ -53,9 +54,19 @@ bool ULexPointerInputModule::LineTrace(ULexPointerEventData* InPointerEventData,
 		{
 			//sort only on distance (not depth), because multiHitResult only store hit result of same depth
 			MultiHitResult.Sort([](const FLexUIHitResult& A, const FLexUIHitResult& B)
+			{
+				auto AIsScreenSpace = A.Raycaster->IsA(ULexScreenSpaceRaycaster::StaticClass());
+				auto BIsScreenSpace = B.Raycaster->IsA(ULexScreenSpaceRaycaster::StaticClass());
+				if (AIsScreenSpace && !BIsScreenSpace)
 				{
-					return A.HitResult.Distance < B.HitResult.Distance;
-				});
+					return true;
+				}
+				if (BIsScreenSpace && !AIsScreenSpace)
+				{
+					return false;
+				}
+				return A.HitResult.Distance < B.HitResult.Distance;
+			});
 			for (auto& hitResultItem : MultiHitResult)
 			{
 				for (auto& hoverItem : hitResultItem.HoverArray)

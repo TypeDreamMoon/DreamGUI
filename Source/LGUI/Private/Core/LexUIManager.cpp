@@ -1215,7 +1215,7 @@ void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 \n	World: {2}, type: {3}")
 			, FText::FromString(ANSI_TO_TCHAR(__FUNCTION__)), __LINE__, FText::FromString(this->GetWorld()->GetPathName()), (int)(this->GetWorld()->WorldType));
 			UE_LOG(LGUI, Error, TEXT("%s"), *errMsg.ToString());
-			FLexUIUtils::EditorNotification(errMsg, 10.0f);
+			FLexUIUtils::EditorNotification(errMsg, false, 10.0f);
 		}
 	}
 	else
@@ -1601,7 +1601,7 @@ void ULexUIManagerWorldSubsystem::AddEventSystem(ULexEventSystem* InEventSystem)
 		UE_LOG(LGUI, Error, TEXT("%s"), *ErrorMsg);
 		GEngine->AddOnScreenDebugMessage(-1, -1, FColor::Red, ErrorMsg);
 #if WITH_EDITOR
-		FLexUIUtils::EditorNotification(FText::FromString(ErrorMsg), 10);
+		FLexUIUtils::EditorNotification(FText::FromString(ErrorMsg), false, 10);
 #endif
 	}
 	else

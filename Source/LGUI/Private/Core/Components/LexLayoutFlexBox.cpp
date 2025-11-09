@@ -9,6 +9,7 @@ void ULexLayoutFlexBox::OnUpdateLayout()
 {
     auto Widget = GetWidget();
     if (!Widget)return;
+    if (Direction == ELexLayoutFlexBoxDirection::None)return;
     Children.Empty();
     for (auto& ChildWidget : Widget->GetUIChildren())
     {

@@ -145,7 +145,7 @@ namespace LGUIPrefabSystem8
 				for (auto DefaultSubObject : DefaultSubObjects)
 				{
 					FGuid DefaultSubObjectGuid;
-					if (!CollectObjectToSerailize(DefaultSubObject, DefaultSubObjectGuid))continue;
+					if (!CollectObjectToSerialize(DefaultSubObject, DefaultSubObjectGuid))continue;
 					ActorSaveData.DefaultSubObjectGuidArray.Add(MapObjectToGuid[DefaultSubObject]);
 					ActorSaveData.DefaultSubObjectNameArray.Add(DefaultSubObject->GetFName());
 				}
@@ -321,7 +321,7 @@ namespace LGUIPrefabSystem8
 			for (auto DefaultSubObject : DefaultSubObjects)
 			{
 				FGuid DefaultSubObjectGuid;
-				if (!CollectObjectToSerailize(DefaultSubObject, DefaultSubObjectGuid))continue;
+				if (!CollectObjectToSerialize(DefaultSubObject, DefaultSubObjectGuid))continue;
 				ObjectSaveDataItem.DefaultSubObjectGuidArray.Add(MapObjectToGuid[DefaultSubObject]);
 				ObjectSaveDataItem.DefaultSubObjectNameArray.Add(DefaultSubObject->GetFName());
 			}

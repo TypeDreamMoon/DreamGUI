@@ -270,7 +270,7 @@ namespace LGUIPrefabSystem8
 						{
 							auto MissingParentMsg = FText::Format(LOCTEXT("MissingParentMsg", "Prefab '{0}' fail to find parent for component '{1}.{2}', do you delete it? The component will attach to root")
 								, FText::FromString(PrefabAssetPath), FText::FromString(SceneComp->GetOwner()->GetActorLabel()), FText::FromString(SceneComp->GetName()));
-							FLexUIUtils::EditorNotification(MissingParentMsg, 10);
+							FLexUIUtils::EditorNotification(MissingParentMsg, false, 10);
 							UE_LOG(LGUI, Error, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *MissingParentMsg.ToString());
 						}
 #endif

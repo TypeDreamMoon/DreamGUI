@@ -267,7 +267,7 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 					, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__))
 					, FText::FromString(this->GetPathName()), i);
 				UE_LOG(LGUI, Error, TEXT("%s"), *ErrMsg.ToString());
-				FLexUIUtils::EditorNotification(ErrMsg, 10.0f);
+				FLexUIUtils::EditorNotification(ErrMsg, false, 10.0f);
 			}
 			return false;
 		}
@@ -280,7 +280,7 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 					, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__))
 					, FText::FromString(this->GetPathName()), FText::FromString(spriteDataItem->GetPathName()));
 				UE_LOG(LGUI, Error, TEXT("%s"), *ErrMsg.ToString());
-				FLexUIUtils::EditorNotification(ErrMsg, 10.0f);
+				FLexUIUtils::EditorNotification(ErrMsg, false, 10.0f);
 			}
 			return false;
 		}
@@ -293,7 +293,7 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 					, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__))
 					, FText::FromString(this->GetPathName()), FText::FromString(spriteDataItem->GetPathName()), i);
 				UE_LOG(LGUI, Error, TEXT("%s"), *ErrMsg.ToString());
-				FLexUIUtils::EditorNotification(ErrMsg, 10.0f);
+				FLexUIUtils::EditorNotification(ErrMsg, false, 10.0f);
 			}
 			return false;
 		}
@@ -318,7 +318,7 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 				, FText::FromName(GET_MEMBER_NAME_CHECKED(ULexUIStaticSpriteAtlasData, MaxAtlasTextureSize))
 				, MaxAtlasTextureSize);
 			UE_LOG(LGUI, Error, TEXT("%s"), *ErrMsg.ToString());
-			FLexUIUtils::EditorNotification(ErrMsg, 10.0f);
+			FLexUIUtils::EditorNotification(ErrMsg, false, 10.0f);
 		}
 		return false;
 	}

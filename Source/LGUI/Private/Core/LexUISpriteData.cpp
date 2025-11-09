@@ -255,7 +255,7 @@ PACK_AND_INSERT:
 				, newTextureSize, WARNING_ATLAS_SIZE);
 			UE_LOG(LGUI, Warning, TEXT("%s"), *warningMsg.ToString());
 #if WITH_EDITOR
-			FLexUIUtils::EditorNotification(warningMsg);
+			FLexUIUtils::EditorNotification(warningMsg, false);
 #endif
 		}
 		if ((uint32)newTextureSize > GetMax2DTextureDimension())
@@ -265,7 +265,7 @@ PACK_AND_INSERT:
 				, FText::FromString(SpriteTexture->GetPathName()), GetMax2DTextureDimension());
 			UE_LOG(LGUI, Error, TEXT("%s"), *warningMsg.ToString());
 #if WITH_EDITOR
-			FLexUIUtils::EditorNotification(warningMsg);
+			FLexUIUtils::EditorNotification(warningMsg, false, false);
 #endif
 			return false;
 		}
@@ -546,11 +546,11 @@ ULexUISpriteData* ULexUISpriteData::CreateLexUISpriteData(UObject* Outer, UTextu
 		auto lguiSetting = GetDefault<ULexUISettings>()->DefaultAtlasSetting.SpaceBetweenSprites;
 		if (inSpriteTexture->GetSizeX() + atlasPadding * 2 > WARNING_ATLAS_SIZE || inSpriteTexture->GetSizeY() + atlasPadding * 2 > WARNING_ATLAS_SIZE)
 		{
-			auto warningMsg = FText::Format(LOCTEXT("CreateLGUISpriteData_Size_Warning", "{0} Target texture width or height is too large! Consider use UITexture to render this texture.")
+			auto warningMsg = FText::Format(LOCTEXT("CreateLexUISpriteData_Size_Warning", "{0} Target texture width or height is too large! Consider use UITexture to render this texture.")
 				, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)));
 			UE_LOG(LGUI, Warning, TEXT("%s"), *warningMsg.ToString());
 #if WITH_EDITOR
-			FLexUIUtils::EditorNotification(warningMsg);
+			FLexUIUtils::EditorNotification(warningMsg, false);
 #endif
 		}
 		// Apply setting for Sprite creation
@@ -629,7 +629,7 @@ ULexUISpriteData* ULexUISpriteData::GetDefaultWhiteSolid()
 			, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)));
 		UE_LOG(LGUI, Error, TEXT("%s"), *errMsg.ToString());
 #if WITH_EDITOR
-		FLexUIUtils::EditorNotification(errMsg, 10);
+		FLexUIUtils::EditorNotification(errMsg, false, 10);
 #endif
 		return nullptr;
 	}
@@ -644,7 +644,7 @@ ULexUISpriteData* ULexUISpriteData::GetDefaultFrameRect()
 			, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)));
 		UE_LOG(LGUI, Error, TEXT("%s"), *errMsg.ToString());
 #if WITH_EDITOR
-		FLexUIUtils::EditorNotification(errMsg, 10);
+		FLexUIUtils::EditorNotification(errMsg, false, 10);
 #endif
 		return nullptr;
 	}

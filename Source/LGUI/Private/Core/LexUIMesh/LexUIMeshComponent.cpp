@@ -938,7 +938,7 @@ void ULexUIMeshComponent::CreateRenderSectionRenderData(TSharedPtr<FLexUIRenderS
 				auto errorMsg = FText::Format(LOCTEXT("TooManyVerticesInSingleDdrawcall", "{0} Too many vertices ({1}) in single drawcall! This will cause issue!")
 					, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__))
 					, MeshSection->vertices.Num());
-				FLexUIUtils::EditorNotification(errorMsg, 10);
+				FLexUIUtils::EditorNotification(errorMsg, false, 10);
 				UE_LOG(LGUI, Error, TEXT("%s"), *errorMsg.ToString());
 			}
 		}

@@ -2195,7 +2195,7 @@ void ULexCanvas::SetSortOrderAdditionalValueRecursive(int32 InAdditionalValue)
 			, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)));
 		UE_LOG(LGUI, Error, TEXT("%s"), *errorMsg.ToString());
 #if WITH_EDITOR
-		FLexUIUtils::EditorNotification(errorMsg);
+		FLexUIUtils::EditorNotification(errorMsg, false);
 #endif
 		return;
 	}
@@ -2231,7 +2231,7 @@ void ULexCanvas::SetSortOrder(int32 InSortOrder, bool InPropagateToChildrenCanva
 					, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)));
 				UE_LOG(LGUI, Error, TEXT("%s"), *errorMsg.ToString());
 #if WITH_EDITOR
-				FLexUIUtils::EditorNotification(errorMsg);
+				FLexUIUtils::EditorNotification(errorMsg, false);
 #endif
 				InSortOrder = FMath::Clamp(InSortOrder, (int32)MIN_int16, (int32)MAX_int16);
 			}

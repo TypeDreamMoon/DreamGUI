@@ -43,7 +43,7 @@ namespace LGUIPrefabSystem
 		bool ObjectBelongsToThisPrefab(UObject* InObject);
 
 		const TSet<FName>& GetSceneComponentExcludeProperties();
-		bool CollectObjectToSerailize(UObject* Object, FGuid& OutGuid);
+		bool CollectObjectToSerialize(UObject* Object, FGuid& OutGuid);
 		//Check object and it's up outer to tell if it is trash
 		bool ObjectIsTrash(UObject* InObject);
 		//find id from list, if not then create

@@ -86,12 +86,12 @@ namespace LGUIPrefabSystem
 				canSerializeObject = true;
 				//MapObjectToGuid could be passed-in, if that the CollectObjectToSerailize will not execute which will miss some objects. so we still need to collect objects to serialize
 				FGuid guid;
-				Serializer.CollectObjectToSerailize(Object, guid);
+				Serializer.CollectObjectToSerialize(Object, guid);
 			}
 			else
 			{
 				FGuid guid;
-				canSerializeObject = Serializer.CollectObjectToSerailize(Object, guid);
+				canSerializeObject = Serializer.CollectObjectToSerialize(Object, guid);
 				if (canSerializeObject)
 				{
 					guidPtr = &guid;

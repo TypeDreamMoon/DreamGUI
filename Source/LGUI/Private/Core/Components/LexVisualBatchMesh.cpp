@@ -268,7 +268,7 @@ void ULexVisualBatchMesh::UpdateGeometry()
 #endif
 		);
 #if WITH_EDITOR
-		FLexUIUtils::EditorNotification(errorMsg, 10);
+		FLexUIUtils::EditorNotification(errorMsg, false, 10);
 #endif
 		UE_LOG(LGUI, Error, TEXT("%s"), *errorMsg.ToString());
 	}

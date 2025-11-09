@@ -27,7 +27,7 @@ bool ULexUIFontData_DistanceField::GetCharDataFromCache(const TCHAR& charCode, c
 	if (auto charData = CharDataMap.Find(charCode))
 	{
 		OutResult = FLexUICharData_HighPrecision(*charData);
-		float vertexOffset = SDFRadius - SDFRadius * BoldRatio;
+		float vertexOffset = SDFRadius - SampleFontSize * 0.02f;//slightly expand it in-case too sharp edge
 		OutResult.Width -= vertexOffset + vertexOffset;
 		OutResult.Height -= vertexOffset + vertexOffset;
 		OutResult.XOffset += vertexOffset;
@@ -276,8 +276,8 @@ void ULexUIFontData_DistanceField::PushCharData(
 			float charHeight = charData.Height;
 			if (richTextProperty.Bold)
 			{
-				float boldExtendWidth = charWidth * BoldRatio * 0.5f;
-				float boldExtendHeight = charHeight * BoldRatio * 0.5f;
+				float boldExtendWidth = charWidth * BoldRatio;
+				float boldExtendHeight = charHeight * BoldRatio;
 				charWidth += boldExtendWidth * 2;
 				charHeight += boldExtendHeight * 2;
 				offsetX -= boldExtendWidth;

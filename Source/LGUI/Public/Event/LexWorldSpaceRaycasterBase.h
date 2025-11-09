@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "LexBaseRaycaster.h"
-#include "LexUIComponentReference.h"
 #include "LexWorldSpaceRaycasterBase.generated.h"
 
 class ULexWorldSpaceRaycasterBase;
@@ -65,6 +64,20 @@ protected:
 		bool ReceiveShouldStartDrag(ULexPointerEventData* InPointerEventData);
 };
 
+UCLASS(ClassGroup = LGUI, Abstract, HideCategories=(Rendering, Replication, Collision, HLOD, Physics, Networking, Input, Actor, Navigation, LevelInstance, Cooking))
+class LGUI_API ALexWorldSpaceRaycasterSourceActor : public AActor
+{
+	GENERATED_BODY()
+
+public:
+	ALexWorldSpaceRaycasterSourceActor();
+	UFUNCTION(BlueprintCallable, Category=LGUI)
+	ULexWorldSpaceRaycasterSource* GetRaycasterSource()const{return RaycasterSource;}
+protected:
+	UPROPERTY(Category = "LGUI", EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<ULexWorldSpaceRaycasterSource> RaycasterSource;
+};
+
 /**
  * Perform a raycaster interaction for WorldSpaceUI and common world space objects.
  */
@@ -80,7 +93,8 @@ public:
 protected:
 	
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-	FLexUIComponentReference RaycasterSource;
+	TWeakObjectPtr<ALexWorldSpaceRaycasterSourceActor> RaycasterSourceActor = nullptr;
+	UPROPERTY(VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	mutable TWeakObjectPtr<ULexWorldSpaceRaycasterSource> RaycasterSourceObject = nullptr;
 	UPROPERTY(EditAnywhere, Category = LGUI)
 	TEnumAsByte<ETraceTypeQuery> TraceChannel;

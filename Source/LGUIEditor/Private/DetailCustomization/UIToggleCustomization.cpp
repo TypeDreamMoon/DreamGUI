@@ -112,20 +112,9 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 	}
 	else if (TransitionType == (uint8)(EUISelectableTransitionType::Custom))
 	{
-		TransitionGroup.AddPropertyRow(ToggleTransitionTarget_PH);
-		if (!CustomTransition)
-		{
-			TransitionGroup.AddWidgetRow()
-				.ValueContent()
-				.MinDesiredWidth(500)
-				[
-					SNew(STextBlock)
-					.AutoWrapText(true)
-					.Text(LOCTEXT("TransitionTarget_Custom_Tip", "If use TransitionComponent, Target must have UUISelectableTransitionComponent component"))
-					.ColorAndOpacity(FLinearColor(FColor::Red))
-					.Font(IDetailLayoutBuilder::GetDetailFont())
-				];
-		}
+		TransitionGroup.AddPropertyRow(CustomTransition_PH);
+
+		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleTransitionTarget));
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffImageBrush));
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnImageBrush));
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffColor));

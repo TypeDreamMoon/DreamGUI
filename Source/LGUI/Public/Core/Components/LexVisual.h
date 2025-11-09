@@ -113,9 +113,9 @@ protected:
 	FColor Color = FColor::White;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Raycast")
 	bool bRaycastTarget = true;
-	UPROPERTY(EditAnywhere, Category = "LGUI-Raycast")
+	UPROPERTY(EditAnywhere, Category = "LGUI-Raycast", meta=(EditCondition=bRaycastTarget))
 	ELexVisualRaycastType RaycastType = ELexVisualRaycastType::Rect;
-	/** Custom raycast object to handle raycast behaviour when LGUI do raycast hit test. Only valid if RaycastType is Custom. */
+	/** Custom raycast object to handle raycast behaviour when LexUI do raycast hit test. Only valid if RaycastType is Custom. */
 	UPROPERTY(EditAnywhere, Instanced, Category = "LGUI-Raycast")
 	TObjectPtr<ULexVisualCustomRaycast> CustomRaycastObject;
 	/** Pixel's alpha value threshold, if hit a pixel which alpha value is less than this value, then hit test return false. */

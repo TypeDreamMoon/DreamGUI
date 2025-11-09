@@ -9,6 +9,25 @@
 
 class ULexWidget;
 
+// UENUM(BlueprintType)
+// enum class ELexLayoutSlotSizeType : uint8
+// {
+// 	/** Default value from widget's visual or layout */
+// 	Auto,
+// 	/** Fixed pixel value */
+// 	Fixed,
+// 	/** Percentage relative it's parent size */
+// 	Percent,
+// };
+//
+// UENUM(BlueprintType)
+// enum class ELexLayoutSlotAspectRatioType : uint8
+// {
+// 	None,
+// 	WidthControlHeight,
+// 	HeightControlWidth,
+// };
+
 UCLASS(BlueprintType, DisplayName="Common Slot")
 class LGUI_API ULexLayoutCommonSlot : public ULexLayoutSlot, public ILexLayoutHorizontalAndVerticalSlotInterface
 {

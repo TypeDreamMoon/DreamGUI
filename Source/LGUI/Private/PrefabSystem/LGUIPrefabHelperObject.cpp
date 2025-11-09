@@ -830,7 +830,7 @@ You should know that using actor-blueprint inside Prefab is not a good idea, so 
 			if (bFirstTimeShow_RestructActorBlueprint)
 			{
 				bFirstTimeShow_RestructActorBlueprint = false;
-				FLexUIUtils::EditorNotification(InfoText, 10);
+				FLexUIUtils::EditorNotification(InfoText, false, 10);
 			}
 			return false;
 		}
@@ -1073,10 +1073,10 @@ void ULGUIPrefabHelperObject::RevertPrefabPropertyValue(UObject* ContextObject, 
 						}
 						else
 						{
-							auto InfoText = FText::Format(LOCTEXT("RevertPrefabPropertyValue_MissingConditionWarning", "LGUI have not handle this condition:\nobject: '{0}'\nobjectClass: '{1}'")
+							auto InfoText = FText::Format(LOCTEXT("RevertPrefabPropertyValue_MissingConditionWarning", "LexUI have not handle this condition:\nobject: '{0}'\nobjectClass: '{1}'")
 								, FText::FromString(ObjectInPrefab->GetPathName()), FText::FromString(ObjectClass->GetPathName()));
 							UE_LOG(LGUI, Log, TEXT("%s"), *InfoText.ToString());
-							FLexUIUtils::EditorNotification(InfoText);
+							FLexUIUtils::EditorNotification(InfoText, false);
 						}
 					}
 				}
@@ -1426,10 +1426,10 @@ void ULGUIPrefabHelperObject::ApplyPrefabPropertyValue(UObject* ContextObject, F
 						}
 						else
 						{
-							auto InfoText = FText::Format(LOCTEXT("ApplyPrefabPropertyValue_MissingConditionWarning", "LGUI have not handle this condition:\nobject: '{0}'\nobjectClass: '{1}'")
+							auto InfoText = FText::Format(LOCTEXT("ApplyPrefabPropertyValue_MissingConditionWarning", "LexUI have not handle this condition:\nobject: '{0}'\nobjectClass: '{1}'")
 								, FText::FromString(ObjectInParent->GetPathName()), FText::FromString(ObjectClass->GetPathName()));
 							UE_LOG(LGUI, Warning, TEXT("%s"), *InfoText.ToString());
-							FLexUIUtils::EditorNotification(InfoText);
+							FLexUIUtils::EditorNotification(InfoText, false);
 						}
 					}
 				}
@@ -1438,7 +1438,7 @@ void ULGUIPrefabHelperObject::ApplyPrefabPropertyValue(UObject* ContextObject, F
 					auto InfoText = FText::Format(LOCTEXT("ApplyPrefabPropertyValue_ReferencingOuterObject", "This property '{0}' is referencing object which is not belongs to this prefab, will ignore it.")
 						, FText::FromString(ObjectProperty->GetPathName()));
 					UE_LOG(LGUI, Log, TEXT("%s"), *InfoText.ToString());
-					FLexUIUtils::EditorNotification(InfoText);
+					FLexUIUtils::EditorNotification(InfoText, false);
 				}
 			}
 		}
@@ -1977,7 +1977,7 @@ void ULGUIPrefabHelperObject::CheckPrefabVersion()
 				this->RefreshOnSubPrefabDirty(SubPrefabData.PrefabAsset, KeyValue.Key);
 				auto InfoText = FText::Format(LOCTEXT("AutoUpdatePrefabInfo", "Auto update old version prefab to latest version:\nActor:'{0}' Prefab:'{1}'."), FText::FromString(KeyValue.Key->GetActorLabel()), FText::FromString(SubPrefabData.PrefabAsset->GetName()));
 				UE_LOG(LGUI, Log, TEXT("%s"), *InfoText.ToString());
-				FLexUIUtils::EditorNotification(InfoText);
+				FLexUIUtils::EditorNotification(InfoText, true);
 			}
 			else
 			{
