@@ -12,7 +12,7 @@
 #include "Core/Components/LexImage.h"
 
 
-void UUISelectableTransition::StopTransition() 
+void UUITransitionComponent::StopTransition() 
 { 
 	for (auto tweener : TweenerCollection)
 	{
@@ -20,11 +20,11 @@ void UUISelectableTransition::StopTransition()
 	}
 	TweenerCollection.Reset();
 }
-void UUISelectableTransition::CollectTweener(ULTweener* InItem)
+void UUITransitionComponent::CollectTweener(ULTweener* InItem)
 {
 	TweenerCollection.Add(InItem);
 }
-void UUISelectableTransition::CollectTweeners(const TSet<ULTweener*>& InItems)
+void UUITransitionComponent::CollectTweeners(const TSet<ULTweener*>& InItems)
 {
 	TweenerCollection.Reserve(TweenerCollection.Num() + InItems.Num());
 	for (auto item : InItems)
@@ -33,29 +33,13 @@ void UUISelectableTransition::CollectTweeners(const TSet<ULTweener*>& InItems)
 	}
 }
 
-void UUISelectableTransition::BeginPlay()
-{
-	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
-	{
-		ReceiveBeginPlay();
-	}
-}
-
-void UUISelectableTransition::EndPlay()
-{
-	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
-	{
-		ReceiveEndPlay();
-	}
-}
-
 UUISelectableComponent* UUISelectableTransition::GetSelectableComponent() const
 {
-	if (!IsValid(OwnerUISelectableComp))
+	if (!IsValid(UISelectableComp))
 	{
-		OwnerUISelectableComp = GetTypedOuter<UUISelectableComponent>();
+		UISelectableComp = GetOwner()->FindComponentByClass<UUISelectableComponent>();
 	}
-	return OwnerUISelectableComp;
+	return UISelectableComp;
 }
 
 void UUISelectableTransition::OnNormal(bool InImmediateSet)
@@ -86,13 +70,6 @@ void UUISelectableTransition::OnDisabled(bool InImmediateSet)
 		ReceiveOnDisabled(InImmediateSet);
 	}
 }
-void UUISelectableTransition::OnStartCustomTransition(FName InTransitionName, bool InImmediateSet)
-{
-	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
-	{
-		ReceiveOnStartCustomTransition(InTransitionName, InImmediateSet);
-	}
-}
 
 UUISelectableComponent::UUISelectableComponent()
 {
@@ -106,19 +83,11 @@ void UUISelectableComponent::Awake()
 {
 	Super::Awake();
 	this->SetCanExecuteUpdate(false);
-	if (IsValid(CustomTransition))
-	{
-		CustomTransition->BeginPlay();
-	}
 }
 
 void UUISelectableComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
-	if (IsValid(CustomTransition))
-	{
-		CustomTransition->EndPlay();
-	}
 }
 
 void UUISelectableComponent::OnRegister()
@@ -163,7 +132,7 @@ void UUISelectableComponent::OnInteractableChanged(bool IsEnabled)
 
 void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 {
-	if (Transition != EUISelectableTransitionType::Custom)
+	if (TransitionType != EUISelectableTransitionType::Custom)
 	{
 		if (!TransitionTarget.IsValid())return;
 	}
@@ -174,7 +143,7 @@ void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 	{
 	case EUISelectableSelectionState::Normal:
 		{
-			switch (Transition)
+			switch (TransitionType)
 			{
 			case EUISelectableTransitionType::None:break;
 			case EUISelectableTransitionType::Color:
@@ -193,7 +162,7 @@ void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 					if (this->GetWorld() && this->GetWorld()->IsGameWorld())
 #endif
 					{
-						if (IsValid(CustomTransition))
+						if (CustomTransition.IsValid())
 						{
 							CustomTransition->OnNormal(ImmediateSet);
 						}
@@ -205,7 +174,7 @@ void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 		break;
 	case EUISelectableSelectionState::Hovered:
 		{
-			switch (Transition)
+			switch (TransitionType)
 			{
 			case EUISelectableTransitionType::None:break;
 			case EUISelectableTransitionType::Color:
@@ -224,7 +193,7 @@ void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 					if (this->GetWorld() && this->GetWorld()->IsGameWorld())
 #endif
 					{
-						if (IsValid(CustomTransition))
+						if (CustomTransition.IsValid())
 						{
 							CustomTransition->OnHovered(ImmediateSet);
 						}
@@ -236,7 +205,7 @@ void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 		break;
 	case EUISelectableSelectionState::Pressed:
 		{
-			switch (Transition)
+			switch (TransitionType)
 			{
 			case EUISelectableTransitionType::None:break;
 			case EUISelectableTransitionType::Color:
@@ -255,7 +224,7 @@ void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 					if (this->GetWorld() && this->GetWorld()->IsGameWorld())
 #endif
 					{
-						if (IsValid(CustomTransition))
+						if (CustomTransition.IsValid())
 						{
 							CustomTransition->OnPressed(ImmediateSet);
 						}
@@ -267,7 +236,7 @@ void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 		break;
 	case EUISelectableSelectionState::Disabled:
 		{
-			switch (Transition)
+			switch (TransitionType)
 			{
 			case EUISelectableTransitionType::None:break;
 			case EUISelectableTransitionType::Color:
@@ -286,7 +255,7 @@ void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 					if (this->GetWorld() && this->GetWorld()->IsGameWorld())
 #endif
 					{
-						if (IsValid(CustomTransition))
+						if (CustomTransition.IsValid())
 						{
 							CustomTransition->OnDisabled(ImmediateSet);
 						}

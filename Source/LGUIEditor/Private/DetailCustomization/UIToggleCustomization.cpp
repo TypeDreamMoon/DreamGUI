@@ -32,7 +32,7 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 	}
 
 	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("LGUI-Toggle");
-	auto ToggleTransition_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleTransition));
+	auto ToggleTransition_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleTransitionType));
 	ToggleTransition_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIToggleCustomization::ForceRefresh, &DetailBuilder));
 
 	auto ToggleTransitionTarget_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleTransitionTarget));
@@ -57,8 +57,6 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnImageBrush));
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffColor));
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnTransitionName));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffTransitionName));
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, ToggleDuration));
 	}
 	else if (TransitionType == (uint8)(EUISelectableTransitionType::ImageBrush))
@@ -78,8 +76,6 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 		}
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffColor));
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnColor));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnTransitionName));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffTransitionName));
 
 		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffImageBrush)));
 		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnImageBrush)));
@@ -103,8 +99,6 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 		}
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffImageBrush));
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnImageBrush));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnTransitionName));
-		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffTransitionName));
 
 		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OffColor)));
 		TransitionGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggleComponent, OnColor)));

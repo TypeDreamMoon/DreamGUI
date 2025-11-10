@@ -301,15 +301,15 @@ void FLGUIPrefabEditor::PostUndo(bool bSuccess)
 {
 	ULGUIPrefabManagerObject::AddOneShotTickFunction([=, this] {
 		ULexUIManagerWorldSubsystem::RefreshAllUI();
+		OutlinerPtr->RequestRefresh();
 		}, 1);
-	OutlinerPtr->RequestRefresh();
 }
 void FLGUIPrefabEditor::PostRedo(bool bSuccess)
 {
 	ULGUIPrefabManagerObject::AddOneShotTickFunction([=, this] {
 		ULexUIManagerWorldSubsystem::RefreshAllUI();
+		OutlinerPtr->RequestRefresh();
 		}, 1);
-	OutlinerPtr->RequestRefresh();
 }
 
 void FLGUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const TSharedPtr<IToolkitHost >& InitToolkitHost, ULGUIPrefab* InPrefab)

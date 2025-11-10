@@ -9,6 +9,23 @@
 #include "Core/Components/LexImage.h"
 
 
+UUIToggleComponent* UUIToggleTransition::GetToggleComponent() const
+{
+	if (!IsValid(UIToggleComp))
+	{
+		UIToggleComp = GetOwner()->FindComponentByClass<UUIToggleComponent>();
+	}
+	return UIToggleComp;
+}
+
+void UUIToggleTransition::ToggleOn(bool InImmediateSet)
+{
+}
+
+void UUIToggleTransition::ToggleOff(bool InImmediateSet)
+{
+}
+
 UUIToggleComponent::UUIToggleComponent()
 {
 	OnColor = FColor(255, 255, 255, 255);
@@ -105,30 +122,37 @@ void UUIToggleComponent::SetValue(bool Value, bool SendCallback)
 void UUIToggleComponent::ApplyValueToUI(bool immediateSet)
 {
 	if (!CheckTarget())return;
-	if (ToggleTransition != EUISelectableTransitionType::Custom)
+	if (ToggleTransitionType != EUISelectableTransitionType::Custom)
 	{
 		if (!ToggleTransitionTarget.IsValid())return;
 	}
 
 	TOptional<FColor> Color;
 	TOptional<FLexUIImageBrush> Brush;
-	if (ToggleTransition == EUISelectableTransitionType::Color)
+	if (ToggleTransitionType == EUISelectableTransitionType::Color)
 	{
 		Color = bIsOn ? OnColor : OffColor;
 	}
-	else if (ToggleTransition == EUISelectableTransitionType::ImageBrush)
+	else if (ToggleTransitionType == EUISelectableTransitionType::ImageBrush)
 	{
 		Brush = bIsOn ? OnImageBrush : OffImageBrush;
 	}
-	else if (ToggleTransition == EUISelectableTransitionType::Custom)
+	else if (ToggleTransitionType == EUISelectableTransitionType::Custom)
 	{
 #if WITH_EDITOR
 		if (this->GetWorld() && this->GetWorld()->IsGameWorld())
 #endif
 		{
-			if (IsValid(CustomToggleTransition))
+			if (CustomToggleTransition.IsValid())
 			{
-				CustomToggleTransition->OnStartCustomTransition(bIsOn ? OnTransitionName : OffTransitionName, immediateSet);
+				if (bIsOn)
+				{
+					CustomToggleTransition->ToggleOn(immediateSet);
+				}
+				else
+				{
+					CustomToggleTransition->ToggleOff(immediateSet);
+				}
 			}
 		}
 	}

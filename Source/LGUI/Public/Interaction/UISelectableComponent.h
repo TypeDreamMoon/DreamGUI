@@ -21,7 +21,7 @@ enum class EUISelectableTransitionType:uint8
 	Color,
 	/** This mode need a LexImage as TransitionTarget */
 	ImageBrush,
-	/** You can implement custom class to do the transition */
+	/** You can implement custom UISelectableTransition to do the transition */
 	Custom,
 };
 UENUM(BlueprintType, Category = LGUI)
@@ -47,26 +47,40 @@ enum class EUISelectableNavigationMode:uint8
 	Explicit,
 };
 
-UCLASS(ClassGroup = (LexUI), Abstract, DefaultToInstanced, EditInlineNew, Blueprintable)
-class LGUI_API UUISelectableTransition :public UObject
+
+UCLASS(ClassGroup = (LexUI), Abstract, Blueprintable)
+class LGUI_API UUITransitionComponent :public ULexUIBehaviour
+{
+	GENERATED_BODY()
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "LGUI-Transition")
+		TArray<TObjectPtr<ULTweener>> TweenerCollection;
+public:
+	/**
+	 * Stop any transition inside TweenerCollection if playing, so remember to collect your tweener object by calling function CollectTweener.
+	 * Call this before start any transition, in case of other transition is in progress.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "LGUI-Transition")
+	virtual void StopTransition();
+	/** Add tweener to TweenerCollection, so the function StopTransition will take effect. */
+	UFUNCTION(BlueprintCallable, Category = "LGUI-Transition")
+	virtual void CollectTweener(ULTweener* InItem);
+	/** Add tweener set to TweenerCollection, so the function StopTransition will take effect. */
+	UFUNCTION(BlueprintCallable, Category = "LGUI-Transition")
+	virtual void CollectTweeners(const TSet<ULTweener*>& InItems);
+};
+
+UCLASS(ClassGroup = (LexUI), Abstract, Blueprintable)
+class LGUI_API UUISelectableTransition :public UUITransitionComponent
 {
 	GENERATED_BODY()
 public:
-	virtual void BeginPlay();
-	virtual void EndPlay();
 
 	UFUNCTION()
 	UUISelectableComponent* GetSelectableComponent()const;
 protected:
-	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI-Transition", meta = (DisplayName = "BeginPlay"))
-	void ReceiveBeginPlay();
-	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI-Transition", meta = (DisplayName = "EndPlay"))
-	void ReceiveEndPlay();
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "LGUI-Transition")
-		TArray<TObjectPtr<ULTweener>> TweenerCollection;
 	UPROPERTY(Transient, BlueprintReadOnly, Getter=GetSelectableComponent, Category = "LGUI-Transition", DisplayName=UISelectable)
-	mutable TObjectPtr<UUISelectableComponent> OwnerUISelectableComp;
+	mutable TObjectPtr<UUISelectableComponent> UISelectableComp;
 
 	/** 
 	 * Called when UISelectableComponent's transition state = normal.
@@ -92,13 +106,6 @@ protected:
 	 */
 	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI-Transition", meta = (DisplayName = "OnDisabled"))
 		void ReceiveOnDisabled(bool InImmediateSet);
-	/**
-	 * This gives us an opportunity to do transition on more case than just provided above
-	 * @param InTransitionName	use this to tell different event type. eg.UIToggleComponent, "On"/"Off" for toggle on/off
-	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
-	 */
-	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI-Transition", meta = (DisplayName = "OnStartCustomTransition"))
-		void ReceiveOnStartCustomTransition(FName InTransitionName, bool InImmediateSet);
 public:
 	/**
 	 * Called when UISelectableComponent's transition state = normal.
@@ -124,30 +131,7 @@ public:
 	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
 	 */
 	virtual void OnDisabled(bool InImmediateSet);
-
-	/**
-	 * This gives us an opportunity to do transition on more case than just provided above.
-	 * Default will call blueprint implemented function. If you dont want that, just not use Super::OnStartCustomTransition();
-	 * @param InTransitionName: use this to tell different event type. eg.UIToggleComponent, "On"/"Off" for toggle on/off
-	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
-	 */
-	virtual void OnStartCustomTransition(FName InTransitionName, bool InImmediateSet);
-
-	/**
-	 * Stop any transition inside TweenerCollection if is playing, so remember to collect your tweener object by calling function CollectTweener.
-	 * Call this before start any transition, in case of other transition is in progress.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Transition")
-	virtual void StopTransition();
-	/** Add tweener to TweenerCollection, so the function StopTransition will take effect. */
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Transition")
-	virtual void CollectTweener(ULTweener* InItem);
-	/** Add tweener set to TweenerCollection, so the function StopTransition will take effect. */
-	UFUNCTION(BlueprintCallable, Category = "LGUI-Transition")
-	virtual void CollectTweeners(const TSet<ULTweener*>& InItems);
 };
-
-class ULexUISpriteData_BaseObject;
 
 UCLASS(HideCategories = (Collision, LOD, Physics, Cooking, Rendering, Activation, Actor, Input, Lighting, Mobile), ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class LGUI_API UUISelectableComponent : public ULexUIBehaviour
@@ -187,10 +171,10 @@ protected:
 	TWeakObjectPtr<ULexVisual> TransitionTarget;
 	
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable")
-	EUISelectableTransitionType Transition = EUISelectableTransitionType::Color;
+	EUISelectableTransitionType TransitionType = EUISelectableTransitionType::Color;
 
-	UPROPERTY(EditAnywhere, Instanced, Category="LGUI-Selectable")
-	TObjectPtr<UUISelectableTransition> CustomTransition = nullptr;
+	UPROPERTY(EditAnywhere, Category="LGUI-Selectable", meta=(EditCondition="TransitionType==EUISelectableTransitionType::Custom"))
+	TWeakObjectPtr<UUISelectableTransition> CustomTransition = nullptr;
 	UPROPERTY(Transient)TObjectPtr<class ULTweener> TransitionTweener = nullptr;
 	
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable")

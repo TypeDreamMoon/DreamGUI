@@ -8,6 +8,48 @@
 #include "Event/LexDelegateDeclaration.h"
 #include "UIToggleComponent.generated.h"
 
+
+class UUIToggleComponent;
+
+UCLASS(ClassGroup = (LexUI), Abstract, Blueprintable)
+class LGUI_API UUIToggleTransition :public UUITransitionComponent
+{
+	GENERATED_BODY()
+public:
+
+	UFUNCTION()
+	UUIToggleComponent* GetToggleComponent()const;
+protected:
+	UPROPERTY(Transient, BlueprintReadOnly, Getter=GetToggleComponent, Category = "LGUI-Transition", DisplayName=UIToggle)
+	mutable TObjectPtr<UUIToggleComponent> UIToggleComp;
+
+	/** 
+	 * Called when UISelectableComponent's transition state = normal.
+	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI-Transition", meta = (DisplayName = "ToggleOn"))
+		void ReceiveToggleOn(bool InImmediateSet);
+	/**
+	 * Called when UISelectableComponent's transition state = highlighted.
+	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category = "LGUI-Transition", meta = (DisplayName = "ToggleOff"))
+		void ReceiveToggleOff(bool InImmediateSet);
+public:
+	/**
+	 * Called when UISelectableComponent's transition state = normal.
+	 * Default will call blueprint implemented function. If you dont want that, just not use Super::OnNormal();
+	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
+	 */
+	virtual void ToggleOn(bool InImmediateSet);
+	/**
+	 * Called when UISelectableComponent's transition state = highlighted.
+	 * Default will call blueprint implemented function. If you dont want that, just not use Super::OnHighlighted();
+	 * @param InImmediateSet	set properties immediately or use tween animation. InImmediateSet is true when set initialize state.
+	 */
+	virtual void ToggleOff(bool InImmediateSet);
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIToggleValueChangedEvent, bool, Value);
 
 UCLASS(ClassGroup = LGUI, Blueprintable, meta = (BlueprintSpawnableComponent))
@@ -28,9 +70,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Toggle")
 	TWeakObjectPtr<ULexVisual> ToggleTransitionTarget;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI-Toggle")
-	EUISelectableTransitionType ToggleTransition = EUISelectableTransitionType::Color;
-	UPROPERTY(EditAnywhere, Category="LGUI-Toggle", Instanced, meta = (EditCondition = "ToggleTransition==EUISelectableTransitionType::Custom"))
-	TObjectPtr<class UUISelectableTransition> CustomToggleTransition = nullptr;
+	EUISelectableTransitionType ToggleTransitionType = EUISelectableTransitionType::Color;
+	UPROPERTY(EditAnywhere, Category="LGUI-Toggle", meta = (EditCondition = "ToggleTransitionType==EUISelectableTransitionType::Custom"))
+	TWeakObjectPtr<UUIToggleTransition> CustomToggleTransition = nullptr;
 	bool CheckTarget();
 #pragma region Transition
 	UPROPERTY(Transient) TObjectPtr<class ULTweener> ToggleTransitionTweener = nullptr;
@@ -52,10 +94,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI-Toggle")
 		float ToggleDuration = 0.2f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI-Toggle")
-		FName OnTransitionName = TEXT("On");
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI-Toggle")
-		FName OffTransitionName = TEXT("Off");
 #pragma endregion
 	UPROPERTY(EditAnywhere, Category = "LGUI-Toggle")
 		bool bIsOn = true;
