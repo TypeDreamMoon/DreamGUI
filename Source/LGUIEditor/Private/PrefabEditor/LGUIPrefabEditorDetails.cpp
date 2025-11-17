@@ -294,9 +294,17 @@ void SLGUIPrefabEditorDetails::RefreshOverrideParameter()
 	OverrideParameterEditor->RefreshDataContent(SubPrefabData.ObjectOverrideParameterArray, nullptr);
 }
 
-AActor* SLGUIPrefabEditorDetails::GetActorContext() const
+UObject* SLGUIPrefabEditorDetails::GetActorContextAsObject() const
 {
-	return CachedActor.Get();
+	auto& SelectedObjects = DetailsView->GetSelectedObjects();
+	if (SelectedObjects.Num() > 0)
+	{
+		if (auto Actor = SelectedObjects[0]->GetTypedOuter<AActor>())
+		{
+			return Actor;
+		}
+	}
+	return nullptr;
 }
 
 void SLGUIPrefabEditorDetails::OnEditorSelectionChanged()

@@ -77,14 +77,12 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Core/LexUIImageBrush.h"
 #include "Core/Components/LexImage.h"
-#include "Core/Components/LexLayoutCommonSlot.h"
-#include "Core/Components/LexLayoutFlexBox.h"
-#include "Core/Components/LexLayoutHorizontalAndVertical.h"
+#include "Core/Components/LexLayoutFlexBoxSelf.h"
+#include "Core/Components/LexLayoutFlexBoxContainer.h"
 #include "DetailCustomization/LexImageBrushStructCustomization.h"
-#include "DetailCustomization/LexLayoutCustomization.h"
-#include "DetailCustomization/LexLayoutHorizontalAndVerticalCustomization.h"
-#include "DetailCustomization/LexLayoutCommonSlotCustomization.h"
-#include "DetailCustomization/LexLayoutFlexBoxCustomization.h"
+#include "DetailCustomization/LexLayoutContainerCustomization.h"
+#include "DetailCustomization/LexLayoutFlexBoxSelfCustomization.h"
+#include "DetailCustomization/LexLayoutFlexBoxContainerCustomization.h"
 #include "DetailCustomization/LexUIEventDelegatePresetParamCustomization.h"
 
 const FName FLGUIEditorModule::LGUIDynamicSpriteAtlasViewerName(TEXT("LGUIDynamicSpriteAtlasViewerName"));
@@ -292,10 +290,9 @@ void FLGUIEditorModule::StartupModule()
 		
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIImageBrush::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexImageBrushStructCustomization::MakeInstance));
 		
-		PropertyModule.RegisterCustomClassLayout(ULexLayout::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(ULexLayoutHorizontalAndVertical::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutHorizontalAndVerticalCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(ULexLayoutFlexBox::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutFlexBoxCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(ULexLayoutCommonSlot::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutCommonSlotCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexLayoutContainer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutContainerCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexLayoutFlexBoxContainer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutFlexBoxContainerCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexLayoutFlexBoxSelf::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutFlexBoxSelfCustomization::MakeInstance));
 	}
 	//register asset
 	{
@@ -515,10 +512,9 @@ void FLGUIEditorModule::ShutdownModule()
 
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIImageBrush::StaticStruct()->GetFName());
 		
-		PropertyModule.UnregisterCustomClassLayout(ULexLayout::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(ULexLayoutHorizontalAndVertical::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(ULexLayoutFlexBox::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(ULexLayoutCommonSlot::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexLayoutContainer::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexLayoutFlexBoxContainer::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexLayoutFlexBoxSelf::StaticClass()->GetFName());
 	}
 	//unregister asset
 	{

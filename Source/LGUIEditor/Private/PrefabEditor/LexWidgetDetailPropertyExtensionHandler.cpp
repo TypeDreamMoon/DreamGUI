@@ -36,8 +36,8 @@ void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow&
 	auto ObjectClass = ObjectProperty->PropertyClass;
 	if (!ObjectClass->IsChildOf(ULexWidget::StaticClass())
 		&& !ObjectClass->IsChildOf(ULexVisual::StaticClass())
-		&& !ObjectClass->IsChildOf(ULexLayout::StaticClass())
-		&& !ObjectClass->IsChildOf(ULexLayoutSlot::StaticClass())
+		&& !ObjectClass->IsChildOf(ULexLayoutContainer::StaticClass())
+		&& !ObjectClass->IsChildOf(ULexLayoutSelf::StaticClass())
 		&& !ObjectClass->IsChildOf(AActor::StaticClass())
 		&& !ObjectClass->IsChildOf(UActorComponent::StaticClass())
 		)return;

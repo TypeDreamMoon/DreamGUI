@@ -1513,7 +1513,7 @@ void LGUIEditorTools::CopyReference_Layout()
 		if (auto WidgetActor = Cast<ALexWidgetActor>(SelectedActors[0]))
 		{
 			auto Widget = WidgetActor->GetLexWidget();
-			if (auto Layout = Widget->GetLayout())
+			if (auto Layout = Widget->GetLayoutContainer())
 			{
 				auto ValueAsPathString = FString::Printf(TEXT("%s'%s'"), *Layout->GetClass()->GetPathName(), *Layout->GetPathName());
 				FPlatformApplicationMisc::ClipboardCopy(*ValueAsPathString);
@@ -1530,7 +1530,7 @@ bool LGUIEditorTools::CanCopyComponentReference()
 
 void LGUIEditorTools::CopyReference_Component(UActorComponent* Comp)
 {
-	auto ValueAsPathString = FString::Printf(TEXT("%s'%s'"), *Comp->GetClass()->GetPathName(), *Comp->GetPathName());
+	auto ValueAsPathString = FString::Printf(TEXT("%s"), *Comp->GetPathName());
 	FPlatformApplicationMisc::ClipboardCopy(*ValueAsPathString);
 }
 

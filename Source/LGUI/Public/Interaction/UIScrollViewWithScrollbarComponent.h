@@ -30,7 +30,7 @@ public:
 	UUIScrollViewWithScrollbarComponent();
 protected:
 	virtual void OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
-protected:
+private:
 	friend class FUIScrollViewWithScrollBarCustomization;
 	//For scrollbars to expand or shrink viewport
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollViewWithScrollbar")
@@ -69,6 +69,7 @@ protected:
 	void LateUpdateScrollbarLayout();
 	
 	void UpdateScrollbarLayout();
+	bool bLayoutDirty = false;
 public:
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")

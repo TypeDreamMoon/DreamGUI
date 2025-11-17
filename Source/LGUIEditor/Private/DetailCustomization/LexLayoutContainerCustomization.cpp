@@ -1,34 +1,34 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "DetailCustomization/LexLayoutCustomization.h"
+#include "DetailCustomization/LexLayoutContainerCustomization.h"
 #include "LGUIEditorUtils.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "Core/Components/LexLayout.h"
 
 
-#define LOCTEXT_NAMESPACE "LexLayoutCustomization"
-FLexLayoutCustomization::FLexLayoutCustomization()
+#define LOCTEXT_NAMESPACE "LexLayoutContainerCustomization"
+FLexLayoutContainerCustomization::FLexLayoutContainerCustomization()
 {
 }
 
-FLexLayoutCustomization::~FLexLayoutCustomization()
+FLexLayoutContainerCustomization::~FLexLayoutContainerCustomization()
 {
 	
 }
 
-TSharedRef<IDetailCustomization> FLexLayoutCustomization::MakeInstance()
+TSharedRef<IDetailCustomization> FLexLayoutContainerCustomization::MakeInstance()
 {
-	return MakeShareable(new FLexLayoutCustomization);
+	return MakeShareable(new FLexLayoutContainerCustomization);
 }
-void FLexLayoutCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
+void FLexLayoutContainerCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
 	TArray<TWeakObjectPtr<UObject>> TargetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(TargetObjects);
 	TargetScriptArray.Empty();
 	for (auto item : TargetObjects)
 	{
-		if (auto validItem = Cast<ULexLayout>(item.Get()))
+		if (auto validItem = Cast<ULexLayoutContainer>(item.Get()))
 		{
 			TargetScriptArray.Add(validItem);
 		}
@@ -39,13 +39,13 @@ void FLexLayoutCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		return;
 	}
 
-	auto Conflict = [](ULexLayout* Target)
+	auto Conflict = [](ULexLayoutContainer* Target)
 	{
 		if (auto Widget = Target->GetWidget())
 		{
 			if (auto ParentWidget = Widget->GetUIParent())
 			{
-				if (auto ParentLayout = ParentWidget->GetLayout())
+				if (auto ParentLayout = ParentWidget->GetLayoutContainer())
 				{
 					auto ParentControl = ParentLayout->GetLayoutControlAnchor(Widget);
 					auto ThisControl = Target->GetLayoutControlAnchor(Widget);
@@ -58,7 +58,7 @@ void FLexLayoutCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		}
 		return false;
 	};
-	auto& LayoutCategory = DetailBuilder.EditCategory("Layout");
+	auto& LayoutCategory = DetailBuilder.EditCategory("LayoutContainer");
 	auto InfoText = LOCTEXT("LayoutGoodInfo", "No info");
 	auto ErrorInfoText = LOCTEXT("LayoutConflictInfo", "Parent Layout is controlling this widget, which is conflict with this layout!");
 	LayoutCategory.AddCustomRow(LOCTEXT("LayoutConflictRow", "LayoutConflict"))

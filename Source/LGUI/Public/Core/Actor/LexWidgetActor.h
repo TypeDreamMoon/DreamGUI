@@ -16,6 +16,7 @@ public:
 	ALexWidgetActor();
 
 	virtual void BeginPlay() override;
+	virtual void Destroyed() override;
 #if WITH_EDITOR
 	static AActor* FirstTemporarilyHiddenActor;
 	virtual void SetIsTemporarilyHiddenInEditor(bool bIsHidden) override;

@@ -27,8 +27,7 @@ public:
 public:
 	void RefreshOverrideParameter();
 private:
-	AActor* GetActorContext() const;
-	UObject* GetActorContextAsObject() const { return GetActorContext(); }
+	UObject* GetActorContextAsObject() const;
 	void OnEditorSelectionChanged();
 	void OnSubObjectSelectionChanged(const TArray<FSubobjectEditorTreeNodePtrType>& SelectedNodes);
 	void OnSubObjectItemDoubleClicked(const FSubobjectEditorTreeNodePtrType ClickedNode);

@@ -946,13 +946,13 @@ private:
 		auto Widget = TargetScriptArray[0];
 		if (Widget.IsValid())
 		{
-			if (Widget->GetLayout())
+			if (Widget->GetLayoutContainer())
 			{
-				Result = Widget->GetLayout()->GetLayoutControlAnchor(Widget.Get());
+				Result = Widget->GetLayoutContainer()->GetLayoutControlAnchor(Widget.Get());
 			}
 			if (auto Parent = Widget->GetUIParent())
 			{
-				if (auto ParentLayout = Parent->GetLayout())
+				if (auto ParentLayout = Parent->GetLayoutContainer())
 				{
 					auto ParentResult = ParentLayout->GetLayoutControlAnchor(Widget.Get());
 					Result.Or(ParentResult);
@@ -1009,19 +1009,19 @@ private:
 
 	bool GetLayoutControlHorizontalAnchoredPosition()const
 	{
-		return GetLayoutControlAnchorValue().bCanControlHorizontalAnchoredPosition;
+		return GetLayoutControlAnchorValue().bCanControlHorizontalPosition;
 	}
 	bool GetLayoutControlVerticalAnchoredPosition()const
 	{
-		return GetLayoutControlAnchorValue().bCanControlVerticalAnchoredPosition;
+		return GetLayoutControlAnchorValue().bCanControlVerticalPosition;
 	}
 	bool GetLayoutControlHorizontalSizeDelta()const
 	{
-		return GetLayoutControlAnchorValue().bCanControlHorizontalSizeDelta;
+		return GetLayoutControlAnchorValue().bCanControlHorizontalSize;
 	}
 	bool GetLayoutControlVerticalSizeDelta()const
 	{
-		return GetLayoutControlAnchorValue().bCanControlVerticalSizeDelta;
+		return GetLayoutControlAnchorValue().bCanControlVerticalSize;
 	}
 	
 	TOptional<float> GetMinMaxSliderValue(TSharedPtr<IPropertyHandle> AnchorHandle, int AnchorValueIndex, bool MinOrMax)const

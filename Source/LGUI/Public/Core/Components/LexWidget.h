@@ -10,8 +10,8 @@
 #include "LexWidget.generated.h"
 
 class ULexVisual;
-class ULexLayoutSlot;
-class ULexLayout;
+class ULexLayoutSelf;
+class ULexLayoutContainer;
 class FLexUIClipData;
 class ULexUIDataAsTexture;
 class ULexCanvas;
@@ -355,44 +355,13 @@ public:
 	void MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged, bool InDiscardCache = true);
 	virtual void MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawCall = false)const;
 
-	/** The minimum width this layout element may be allocated. */
-	float GetMinWidth()const;
-	/**
-	 * The preferred width this layout element should be allocated if there is sufficient space.
-	 * Can be -1 to ignore it.
-	 */
-	float GetPreferredWidth()const;
-	/**
-	 * The extra relative width this layout element should be allocated if there is additional available space.
-	 * Can be -1 to ignore it.
-	 */
-	float GetFlexibleWidth()const;
-	/** The minimum height this layout element may be allocated. */
-	float GetMinHeight()const;
-	/**
-	 * The preferred height this layout element should be allocated if there is sufficient space.
-	 * Can be -1 to ignore it.
-	 */
-	float GetPreferredHeight()const;
-	/**
-	 * The extra relative height this layout element should be allocated if there is additional available space.
-	 * Can be -1 to ignore it.
-	 */
-	float GetFlexibleHeight()const;
-
-	UObject* GetMinWidthSource()const;
-	UObject* GetPreferredWidthSource()const;
-	UObject* GetFlexibleWidthSource()const;
-	UObject* GetMinHeightSource()const;
-	UObject* GetPreferredHeightSource()const;
-	UObject* GetFlexibleHeightSource()const;
 private:
-	float GetLayoutProperty(TFunctionRef<float(ULexLayoutSlot*)> GetLayoutSlotProperty
-		, TFunctionRef<float(ULexLayout*)> GetLayoutProperty
+	float GetLayoutProperty(TFunctionRef<float(ULexLayoutSelf*)> GetLayoutSelfProperty
+		, TFunctionRef<float(ULexLayoutContainer*)> GetLayoutContainerProperty
 		, TFunctionRef<float(ULexVisual*)> GetVisualProperty
 		, float DefaultValue)const;
-	UObject* GetLayoutSource(TFunctionRef<float(ULexLayoutSlot*)> GetLayoutSlotProperty
-		, TFunctionRef<float(ULexLayout*)> GetLayoutProperty
+	UObject* GetLayoutSource(TFunctionRef<float(ULexLayoutSelf*)> GetLayoutSelfProperty
+		, TFunctionRef<float(ULexLayoutContainer*)> GetLayoutContainerProperty
 		, TFunctionRef<float(ULexVisual*)> GetVisualProperty
 		)const;
 	
@@ -432,10 +401,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Instanced, Category = "Visual", Getter, meta = (AllowPrivateAccess = true))
 	TObjectPtr<ULexVisual> Visual = nullptr;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Instanced, Category = "Layout", Getter, meta = (AllowPrivateAccess = true))
-	TObjectPtr<ULexLayout> Layout = nullptr;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Instanced, Category = "LayoutSlot", Getter, meta = (AllowPrivateAccess = true))
-	TObjectPtr<ULexLayoutSlot> LayoutSlot = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Instanced, Category = "LayoutContainer", Getter, meta = (AllowPrivateAccess = true))
+	TObjectPtr<ULexLayoutContainer> LayoutContainer = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Instanced, Category = "LayoutSelf", Getter, meta = (AllowPrivateAccess = true))
+	TObjectPtr<ULexLayoutSelf> LayoutSelf = nullptr;
 	
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
@@ -529,18 +498,26 @@ public:
 	}
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	ULexLayout* GetLayout()const { return Layout; }
+	ULexLayoutContainer* GetLayoutContainer()const { return LayoutContainer; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI", meta=(DeterminesOutputType="LayoutClass"))
-	ULexLayout* CreateNewLayout(TSubclassOf<ULexLayout> LayoutClass);
+	ULexLayoutContainer* CreateNewLayoutContainer(TSubclassOf<ULexLayoutContainer> Class);
 	template<class T>
-	T* CreateNewLayout()
+	T* CreateNewLayoutContainer()
 	{
-		static_assert(TPointerIsConvertibleFromTo<T, const ULexLayout>::Value, "'T' template parameter to CreateNewLayout must be derived from ULexLayout");
-		return (T*)CreateNewLayout(T::StaticClass());
+		static_assert(TPointerIsConvertibleFromTo<T, const ULexLayoutContainer>::Value, "'T' template parameter to CreateNewLayoutContainer must be derived from ULexLayout");
+		return (T*)CreateNewLayoutContainer(T::StaticClass());
 	}
 	
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	ULexLayoutSlot* GetLayoutSlot()const{return LayoutSlot;}
+	ULexLayoutSelf* GetLayoutSelf()const{return LayoutSelf;}
+	UFUNCTION(BlueprintCallable, Category = "LGUI", meta=(DeterminesOutputType="LayoutClass"))
+	ULexLayoutSelf* CreateNewLayoutSelf(TSubclassOf<ULexLayoutSelf> Class);
+	template<class T>
+	T* CreateNewLayoutSelf()
+	{
+		static_assert(TPointerIsConvertibleFromTo<T, const ULexLayoutSelf>::Value, "'T' template parameter to CreateNewLayoutSelf must be derived from ULexLayout");
+		return (T*)CreateNewLayoutSelf(T::StaticClass());
+	}
 
 	const TWeakPtr<FLexUIClipData>& GetClipData()const{return ClipData;}
 
@@ -574,6 +551,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetAsLastSibling();
 #pragma endregion SiblingIndex
+
+#if WITH_EDITORONLY_DATA
+private:
+	UPROPERTY(EditAnywhere, Category = LGUI)
+	bool bListChildrenInSceneOutliner = true;
+public:
+	void ApplyListChildrenInSceneOutliner();
+#endif
 
 #pragma region Name
 private:

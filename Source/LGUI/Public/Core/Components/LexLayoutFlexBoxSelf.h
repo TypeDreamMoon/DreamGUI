@@ -1,0 +1,293 @@
+// Copyright 2025-Present LexLiu. All Rights Reserved.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "LexLayout.h"
+#include "LexLayoutFlexBoxSelf.generated.h"
+
+class ULexWidget;
+
+UENUM(BlueprintType)
+enum class ELexLayoutSizeType : uint8
+{
+	/**
+	 * Auto get size value with these roles:
+	 * 1. If parent widget have FlexBoxLayoutContainer and self enable Grow or Shrink, then size may set by FlexBoxLayoutContainer.
+	 * 2. If not 1, then get value from this widget's LayoutContainer.
+	 * 3. If not 2, then get value from this widget's Visual.
+	 * 4. If not 3, then fallback to Fixed.
+	 */
+	Auto,
+	/** Fixed pixel value */
+	Fixed,
+	/**
+	 * Percentage relative it's parent size.
+	 * If no parent then fallback to Fixed.
+	 */
+	Percent,
+};
+
+USTRUCT(BlueprintType)
+struct FLexLayoutSize
+{
+	GENERATED_BODY()
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
+	bool bEnable = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
+	ELexLayoutSizeType Type = ELexLayoutSizeType::Auto;
+#if WITH_EDITORONLY_DATA
+	UPROPERTY(VisibleAnywhere, Category = "LGUI")
+	float AutoValue = 0;
+#endif
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI", meta = (EditCondition = "Type == ELexLayoutSizeType::Fixed", UIMin=0))
+	float FixedValue = 100;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI", meta = (EditCondition = "Type == ELexLayoutSizeType::Percent", UIMin=0, UIMax=100))
+	float PercentValue = 50;
+
+	FLexLayoutSize(){}
+	FLexLayoutSize(ELexLayoutSizeType Type, float Value)
+	{
+		this->bEnable = true;
+		this->Type = Type;
+		switch (Type)
+		{
+		default:
+		case ELexLayoutSizeType::Fixed:
+			this->FixedValue = Value;
+			break;
+		case ELexLayoutSizeType::Percent:
+			this->PercentValue = Value;
+			break;
+		}
+	}
+	FLexLayoutSize(float PixelValue)
+	{
+		this->bEnable = true;
+		this->Type = ELexLayoutSizeType::Fixed;
+		this->FixedValue = PixelValue;
+	}
+	bool operator==(const FLexLayoutSize& Other) const
+	{
+		return this->Type == Other.Type && this->FixedValue == Other.FixedValue && this->PercentValue == Other.PercentValue;
+	}
+	bool operator!=(const FLexLayoutSize& Other) const
+	{
+		return this->Type != Other.Type || this->FixedValue != Other.FixedValue || this->PercentValue != Other.PercentValue;
+	}
+
+	float CalculateSize(ULexWidget* Widget, bool IsVertical)const;
+};
+
+UENUM(BlueprintType)
+enum class ELexLayoutMinMaxSizeType : uint8
+{
+	/** Fixed pixel value */
+	Fixed,
+	/**
+	 * Percentage relative it's parent size.
+	 * If no parent then fallback to Fixed.
+	 */
+	Percent,
+};
+
+USTRUCT(BlueprintType)
+struct FLexLayoutMinMaxSize
+{
+	GENERATED_BODY()
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
+	bool bEnable = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
+	ELexLayoutMinMaxSizeType Type = ELexLayoutMinMaxSizeType::Fixed;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI", meta = (EditCondition = "Type == ELexLayoutMinMaxSizeType::Fixed", UIMin=0))
+	float FixedValue = 100;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI", meta = (EditCondition = "Type == ELexLayoutMinMaxSizeType::Percent", UIMin=0, UIMax=100))
+	float PercentValue = 50;
+
+	FLexLayoutMinMaxSize(){}
+	FLexLayoutMinMaxSize(ELexLayoutMinMaxSizeType Type, float Value)
+	{
+		this->bEnable = true;
+		this->Type = Type;
+		switch (Type)
+		{
+		default:
+		case ELexLayoutMinMaxSizeType::Fixed:
+			this->FixedValue = Value;
+			break;
+		case ELexLayoutMinMaxSizeType::Percent:
+			this->PercentValue = Value;
+			break;
+		}
+	}
+	FLexLayoutMinMaxSize(float Value)
+	{
+		this->bEnable = true;
+		this->Type = ELexLayoutMinMaxSizeType::Fixed;
+		this->FixedValue = Value;
+	}
+	bool operator==(const FLexLayoutMinMaxSize& Other) const
+	{
+		return this->Type == Other.Type && this->FixedValue == Other.FixedValue && this->PercentValue == Other.PercentValue;
+	}
+	bool operator!=(const FLexLayoutMinMaxSize& Other) const
+	{
+		return this->Type != Other.Type || this->FixedValue != Other.FixedValue || this->PercentValue != Other.PercentValue;
+	}
+
+	float CalculateSize(ULexWidget* Widget, bool IsVertical, bool IsMinOrMax)const;
+};
+
+UENUM(BlueprintType)
+enum class ELexLayoutAspectRatioType : uint8
+{
+	/**
+	 * Unlock aspect ratio
+	 */
+	None,
+	/**
+	 * Width control height
+	 */
+	WidthControlHeight,
+	/**
+	 * Height control width
+	 */
+	HeightControlWidth,
+};
+USTRUCT(BlueprintType)
+struct FLexLayoutAspectRatio
+{
+	GENERATED_BODY()
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
+	ELexLayoutAspectRatioType Type = ELexLayoutAspectRatioType::None;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
+	float Value = 1.0f;
+
+	bool operator==(const FLexLayoutAspectRatio& Other) const
+	{
+		return this->Type == Other.Type && this->Value == Other.Value;
+	}
+	bool operator!=(const FLexLayoutAspectRatio& Other) const
+	{
+		return this->Type != Other.Type || this->Value != Other.Value;
+	}
+};
+
+/**
+ * Provide item properties for FlexBoxContainer, and we can also use it independently to easily control self size.
+ */
+UCLASS(BlueprintType, DisplayName="FlexBox Self")
+class LGUI_API ULexLayoutFlexBoxSelf : public ULexLayoutSelf
+{
+	GENERATED_BODY()
+private:
+	friend class FLexLayoutFlexBoxSelfCustomization;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true))
+	FLexLayoutAspectRatio AspectRatio;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true))
+	FLexLayoutSize PreferredWidth;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true))
+	FLexLayoutSize PreferredHeight;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true))
+	FLexLayoutMinMaxSize MinWidth = FLexLayoutMinMaxSize(0);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true))
+	FLexLayoutMinMaxSize MinHeight = FLexLayoutMinMaxSize(0);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true))
+	FLexLayoutMinMaxSize MaxWidth;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true))
+	FLexLayoutMinMaxSize MaxHeight;
+
+	/**
+	 * Grow size when FlexBoxContainer's primary-axis can provide extra space, not working with secondary axis.
+	 * Only valid when PreferredWidth/Height is enabled.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true))
+	float Grow = 0;
+	/**
+	 * Shrink size when FlexBoxContainer's primary-axis can't provide enough space, not working with secondary axis.
+	 * Only valid when PreferredWidth/Height is enabled.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true))
+	float Shrink = 0;
+
+	bool bIsCalculatingSize = false;
+	float CalculatedWidth = 0.0f;
+	float CalculatedHeight = 0.0f;
+	float CalculatedMinWidth = 0.0f;
+	float CalculatedMinHeight = 0.0f;
+	float CalculatedMaxWidth = -1.0f;
+	float CalculatedMaxHeight = -1.0f;
+	void CalculateSize();
+public:
+	virtual void OnTransformChanged() override;
+	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
+	virtual void UpdateLayout() override{CalculateSize();}
+#if WITH_EDITOR
+	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
+	virtual void PostInitProperties() override;
+#endif
+	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* Widget)const override;
+
+	float GetMinWidthForLayoutContainer()const{return CalculatedMinWidth;}
+	float GetMaxWidthForLayoutContainer()const{return CalculatedMaxWidth;}
+	float GetPreferredWidthForLayoutContainer()const{return CalculatedWidth;}
+	float GetMinHeightForLayoutContainer()const{return CalculatedMinHeight;}
+	float GetMaxHeightForLayoutContainer()const{return CalculatedMaxHeight;}
+	float GetPreferredHeightForLayoutContainer()const{return CalculatedHeight;}
+	float GetGrowForLayoutContainer(int Axis, bool IsPrimary)const;
+	float GetShrinkForLayoutContainer(int Axis, bool IsPrimary)const;
+
+	bool SecondarySizeCanStretch(int SecondaryAxis)const;
+	void SetSizeByLayoutContainer(FVector2f Value, int PrimaryAxis); 
+
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	FLexLayoutAspectRatio GetAspectRatio()const{return AspectRatio;}
+	
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	virtual const FLexLayoutSize& GetPreferredWidth()const{return PreferredWidth;}
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	virtual const FLexLayoutSize& GetPreferredHeight()const{return PreferredHeight;}
+	
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	virtual const FLexLayoutMinMaxSize& GetMinWidth()const{return MinWidth;}
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	virtual const FLexLayoutMinMaxSize& GetMinHeight()const{return MinHeight;}
+
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	virtual const FLexLayoutMinMaxSize& GetMaxWidth()const{return MaxWidth;}
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	virtual const FLexLayoutMinMaxSize& GetMaxHeight()const{return MaxHeight;}
+	
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	virtual float GetGrow()const{return Grow;}
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	virtual float GetShrink()const{return Shrink;}
+
+	
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	void SetAspectRatio(const FLexLayoutAspectRatio& Value);
+	
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	void SetPreferredWidth(const FLexLayoutSize& Value);
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	void SetPreferredHeight(const FLexLayoutSize& Value);
+	
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	void SetMinWidth(const FLexLayoutMinMaxSize& Value);
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	void SetMinHeight(const FLexLayoutMinMaxSize& Value);
+
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	void SetMaxWidth(const FLexLayoutMinMaxSize& Value);
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	void SetMaxHeight(const FLexLayoutMinMaxSize& Value);
+
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	virtual void SetGrow(float Value);
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	virtual void SetShrink(float Value);
+};

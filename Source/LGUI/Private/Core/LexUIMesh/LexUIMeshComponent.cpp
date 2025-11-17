@@ -513,6 +513,7 @@ public:
 			}
 			if(bIsSupportUERenderer)
 			{
+#if 0//looks like these code is not necessary
 				for (int i = 0; i < NumVerts; i++)
 				{
 					auto& LexUIVert = MeshVertexData[i];
@@ -525,6 +526,7 @@ public:
 					Section->VertexBuffers.StaticMeshVertexBuffer.SetVertexUV(i, 2, LexUIVert.TextureCoordinate[2]);
 					Section->VertexBuffers.StaticMeshVertexBuffer.SetVertexUV(i, 3, LexUIVert.TextureCoordinate[3]);
 				}
+#endif
 
 				{
 					auto& VertexBuffer = Section->VertexBuffers.PositionVertexBuffer;
@@ -540,6 +542,7 @@ public:
 					RHICmdList.UnlockBuffer(VertexBuffer.VertexBufferRHI);
 				}
 
+				if (RequireNormalAndTangent)
 				{
 					auto& VertexBuffer = Section->VertexBuffers.StaticMeshVertexBuffer;
 					void* VertexBufferData = RHICmdList.LockBuffer(VertexBuffer.TangentsVertexBuffer.VertexBufferRHI, 0, VertexBuffer.GetTangentSize(), RLM_WriteOnly);

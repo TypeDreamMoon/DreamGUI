@@ -95,11 +95,14 @@ bool UUIScrollViewWithScrollbarComponent::CheckScrollbarParameter()
 		}
 		else
 		{
-			VerticalScrollbar->GetOnValueChangedEvent().AddUObject(this, &UUIScrollViewWithScrollbarComponent::OnVerticalScrollbar);
-			VerticalScrollbarWidget = VerticalScrollbar->GetWidget();
-			VerticalScrollbarWidget->GetSiblingIndexChangedEvent().AddUObject(this, &UUIScrollViewWithScrollbarComponent::OnScrollbarSiblingIndexChanged);
-			VerticalScrollbarWidget->GetAttachmentChangedEvent().AddUObject(this, &UUIScrollViewWithScrollbarComponent::OnScrollbarAttachmentChanged);
-			bVerticalValid = true;
+			if (VerticalScrollbar.IsValid())
+			{
+				VerticalScrollbar->GetOnValueChangedEvent().AddUObject(this, &UUIScrollViewWithScrollbarComponent::OnVerticalScrollbar);
+				VerticalScrollbarWidget = VerticalScrollbar->GetWidget();
+				VerticalScrollbarWidget->GetSiblingIndexChangedEvent().AddUObject(this, &UUIScrollViewWithScrollbarComponent::OnScrollbarSiblingIndexChanged);
+				VerticalScrollbarWidget->GetAttachmentChangedEvent().AddUObject(this, &UUIScrollViewWithScrollbarComponent::OnScrollbarAttachmentChanged);
+				bVerticalValid = true;
+			}
 		}
 	}
 
@@ -191,6 +194,8 @@ void UUIScrollViewWithScrollbarComponent::OnScrollbarAttachmentChanged()
 
 void UUIScrollViewWithScrollbarComponent::LateUpdateScrollbarLayout()
 {
+	if (bLayoutDirty)return;//already dirty
+	bLayoutDirty = true;
 	//can't update layout immediately because it will break the attachment process and cause crash, so we delay and update
 #if WITH_EDITOR
 	if (!GetWorld()->IsGameWorld())
@@ -218,6 +223,8 @@ void UUIScrollViewWithScrollbarComponent::LateUpdateScrollbarLayout()
 
 void UUIScrollViewWithScrollbarComponent::UpdateScrollbarLayout()
 {
+	if (!bLayoutDirty)return;
+	bLayoutDirty = false;
 	if (!Viewport.IsValid())return;
 	if (!CheckParameters())return;
 	if (!CheckScrollbarParameter())return;

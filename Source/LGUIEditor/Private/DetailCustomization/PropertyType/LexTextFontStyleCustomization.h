@@ -43,17 +43,37 @@ public:
 				PropertyHandle->SetValue((uint8)NewValue);
 			})
 			+ SSegmentedControl<ELexUITextFontStyle>::Slot(ELexUITextFontStyle::None)
-			.Text(LOCTEXT("None", "Off"))
 			.ToolTip(LOCTEXT("None_Tooltip", "No style"))
+			.VAlign(VAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text(LOCTEXT("None", "Off"))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
 			+ SSegmentedControl<ELexUITextFontStyle>::Slot(ELexUITextFontStyle::Bold)
-			.Text(LOCTEXT("Bold", "B"))
 			.ToolTip(LOCTEXT("Bold_Tooltip", "Bold"))
+			.VAlign(VAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text(LOCTEXT("Bold", "B"))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
 			+ SSegmentedControl<ELexUITextFontStyle>::Slot(ELexUITextFontStyle::Italic)
-			.Text(LOCTEXT("Italic", "I"))
 			.ToolTip(LOCTEXT("Italic_Tooltip", "Italic"))
+			.VAlign(VAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text(LOCTEXT("Italic", "I"))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
 			+ SSegmentedControl<ELexUITextFontStyle>::Slot(ELexUITextFontStyle::BoldAndItalic)
-			.Text(LOCTEXT("Bold&Italic", "B&I"))
 			.ToolTip(LOCTEXT("Bold&Italic_Tooltip", "Bold and Italic"))
+			.VAlign(VAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text(LOCTEXT("Bold&Italic", "B&I"))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
 		);
 	}
 	virtual void CustomizeChildren(TSharedRef<IPropertyHandle> PropertyHandle, IDetailChildrenBuilder& ChildBuilder, IPropertyTypeCustomizationUtils& CustomizationUtils) override{}

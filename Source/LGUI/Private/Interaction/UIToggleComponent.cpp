@@ -20,10 +20,18 @@ UUIToggleComponent* UUIToggleTransition::GetToggleComponent() const
 
 void UUIToggleTransition::ToggleOn(bool InImmediateSet)
 {
+	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
+	{
+		ReceiveToggleOn(InImmediateSet);
+	}
 }
 
 void UUIToggleTransition::ToggleOff(bool InImmediateSet)
 {
+	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
+	{
+		ReceiveToggleOff(InImmediateSet);
+	}
 }
 
 UUIToggleComponent::UUIToggleComponent()

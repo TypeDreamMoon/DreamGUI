@@ -580,7 +580,7 @@ void ULexUIManagerWorldSubsystem::DrawNavigationArrow(UWorld* InWorld, const TAr
 		ResultPoints.Add(pixel);
 	}
 	
-	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, false);
+	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, true);
 	if (ViewExtension.IsValid())
 	{
 		TArray<FLexUIHelperLineVertex> Lines;
@@ -786,7 +786,7 @@ void ULexUIManagerWorldSubsystem::OnEndOfFrame()
 
 void ULexUIManagerWorldSubsystem::DrawDebugRect(UWorld* InWorld, const FVector& Center, const FMatrix44f& LocalToWorld, FVector2D const& Rect, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld)
 {
-	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, false);
+	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, true);
 	if (ViewExtension.IsValid())
 	{
 		TArray<FLexUIHelperLineVertex> Lines;
@@ -826,7 +826,7 @@ void ULexUIManagerWorldSubsystem::DrawDebugRect(UWorld* InWorld, const FVector& 
 void ULexUIManagerWorldSubsystem::DrawDebugBox(UWorld* InWorld, const FVector& Center, const FMatrix44f& LocalToWorld,
 	FVector const& Box, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld)
 {
-	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, false);
+	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, true);
 	if (ViewExtension.IsValid())
 	{
 		TArray<FLexUIHelperLineVertex> Lines;
@@ -961,10 +961,10 @@ void ULexUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 	Super::Initialize(Collection);
 #if WITH_EDITOR
 	InstanceArray.Add(this);
-	if (this->GetWorld()->WorldType == EWorldType::EditorPreview//EditorPreview world don't tick, so mannually tick it
+	if (this->GetWorld()->WorldType == EWorldType::EditorPreview//EditorPreview world don't tick, so manually tick it
 		|| this->GetWorld()->WorldType == EWorldType::Editor)
 	{
-		EditorTickDelegateHandle = FTSTicker::GetCoreTicker().AddTicker(TEXT("LGUIManagerEditorTick"), 0, [WeakThis = MakeWeakObjectPtr(this)](float DeltaTime) {
+		EditorTickDelegateHandle = FTSTicker::GetCoreTicker().AddTicker(TEXT("LexUIManagerWorldSubsystemEditorTick"), 0, [WeakThis = MakeWeakObjectPtr(this)](float DeltaTime) {
 			if (WeakThis.IsValid())
 			{
 				WeakThis->Tick(DeltaTime);

@@ -807,7 +807,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 
 	//Layout
 	{
-		auto LayoutProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, Layout));
+		auto LayoutProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutContainer));
 		UObject* Layout = nullptr;
 		LayoutProperty->GetValue(Layout);
 		auto& LayoutCategory = DetailBuilder.EditCategory("Layout");
@@ -833,32 +833,32 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		DetailBuilder.HideProperty(LayoutProperty);
 	}
 
-	//LayoutSlot
+	//LayoutSelf
 	{
-		auto LayoutSlotProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutSlot));
-		UObject* LayoutSlot = nullptr;
-		LayoutSlotProperty->GetValue(LayoutSlot);
-		auto& LayoutSlotCategory = DetailBuilder.EditCategory("LayoutSlot");
-		auto LayoutSlotPropertyValueWidget = LayoutSlotProperty->CreatePropertyValueWidget();
+		auto LayoutSelf_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutSelf));
+		UObject* LayoutSelf = nullptr;
+		LayoutSelf_PH->GetValue(LayoutSelf);
+		auto& LayoutSelfCategory = DetailBuilder.EditCategory("LayoutSelf");
+		auto LayoutSelfPropertyValueWidget = LayoutSelf_PH->CreatePropertyValueWidget();
 		if (bIsSubPrefab)
 		{
-			LayoutSlotPropertyValueWidget->SetEnabled(false);
+			LayoutSelfPropertyValueWidget->SetEnabled(false);
 		}
-		LayoutSlotCategory.HeaderContent(LayoutSlotPropertyValueWidget);
-		LayoutSlotCategory.SetIsEmpty(!IsValid(LayoutSlot));
-		LayoutSlotCategory.AddCustomRow(LOCTEXT("LayoutPlaceholder", "Placeholder"))
-			.Visibility(IsValid(LayoutSlot) ? EVisibility::Hidden : EVisibility::Visible)
+		LayoutSelfCategory.HeaderContent(LayoutSelfPropertyValueWidget);
+		LayoutSelfCategory.SetIsEmpty(!IsValid(LayoutSelf));
+		LayoutSelfCategory.AddCustomRow(LOCTEXT("LayoutPlaceholder", "Placeholder"))
+			.Visibility(IsValid(LayoutSelf) ? EVisibility::Hidden : EVisibility::Visible)
 			.NameContent()
 			[
-				LayoutSlotProperty->CreatePropertyNameWidget()
+				LayoutSelf_PH->CreatePropertyNameWidget()
 			]
 			.ValueContent()
 			[
-				LayoutSlotPropertyValueWidget
+				LayoutSelfPropertyValueWidget
 			];
-		LayoutSlotCategory.AddExternalObjects({ LayoutSlot }, EPropertyLocation::Default
+		LayoutSelfCategory.AddExternalObjects({ LayoutSelf }, EPropertyLocation::Default
 			, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
-		DetailBuilder.HideProperty(LayoutSlotProperty);
+		DetailBuilder.HideProperty(LayoutSelf_PH);
 	}
 
 	auto& LayoutPropertyCategory = DetailBuilder.EditCategory("LayoutProperties");
@@ -942,12 +942,12 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		]
 		;
 	};
-	CreateLayoutPropertyRow(LOCTEXT("MinWidth", "Min Width"), &ULexWidget::GetMinWidth, &ULexWidget::GetMinWidthSource);
-	CreateLayoutPropertyRow(LOCTEXT("MinHeight", "Min Height"), &ULexWidget::GetMinHeight, &ULexWidget::GetMinHeightSource);
-	CreateLayoutPropertyRow(LOCTEXT("PreferredWidth", "Preferred Width"), &ULexWidget::GetPreferredWidth, &ULexWidget::GetPreferredWidthSource);
-	CreateLayoutPropertyRow(LOCTEXT("PreferredHeight", "Preferred Height"), &ULexWidget::GetPreferredHeight, &ULexWidget::GetPreferredHeightSource);
-	CreateLayoutPropertyRow(LOCTEXT("GetFlexibleWidth", "Flexible Width"), &ULexWidget::GetFlexibleWidth, &ULexWidget::GetFlexibleWidthSource);
-	CreateLayoutPropertyRow(LOCTEXT("GetFlexibleHeight", "Flexible Height"), &ULexWidget::GetFlexibleHeight, &ULexWidget::GetFlexibleHeightSource);
+	// CreateLayoutPropertyRow(LOCTEXT("MinWidth", "Min Width"), &ULexWidget::GetMinWidth, &ULexWidget::GetMinWidthSource);
+	// CreateLayoutPropertyRow(LOCTEXT("MinHeight", "Min Height"), &ULexWidget::GetMinHeight, &ULexWidget::GetMinHeightSource);
+	// CreateLayoutPropertyRow(LOCTEXT("PreferredWidth", "Preferred Width"), &ULexWidget::GetPreferredWidth, &ULexWidget::GetPreferredWidthSource);
+	// CreateLayoutPropertyRow(LOCTEXT("PreferredHeight", "Preferred Height"), &ULexWidget::GetPreferredHeight, &ULexWidget::GetPreferredHeightSource);
+	// CreateLayoutPropertyRow(LOCTEXT("GetFlexibleWidth", "Flexible Width"), &ULexWidget::GetFlexibleWidth, &ULexWidget::GetFlexibleWidthSource);
+	// CreateLayoutPropertyRow(LOCTEXT("GetFlexibleHeight", "Flexible Height"), &ULexWidget::GetFlexibleHeight, &ULexWidget::GetFlexibleHeightSource);
 
 	auto VisualProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, Visual));
 	UObject* Visual = nullptr;
@@ -1731,13 +1731,18 @@ FLexLayoutControlAnchorData FLexWidgetCustomization::GetLayoutControlAnchorValue
 	auto Widget = TargetScriptArray[0];
 	if (Widget.IsValid())
 	{
-		if (Widget->Layout)
+		if (Widget->LayoutContainer)
 		{
-			Result = Widget->Layout->GetLayoutControlAnchor(Widget.Get());
+			Result = Widget->LayoutContainer->GetLayoutControlAnchor(Widget.Get());
+		}
+		if (Widget->LayoutSelf)
+		{
+			auto LayoutSelfResult = Widget->LayoutSelf->GetLayoutControlAnchor(Widget.Get());
+			Result.Or(LayoutSelfResult);
 		}
 		if (auto Parent = Widget->GetUIParent())
 		{
-			if (auto ParentLayout = Parent->GetLayout())
+			if (auto ParentLayout = Parent->GetLayoutContainer())
 			{
 				auto ParentResult = ParentLayout->GetLayoutControlAnchor(Widget.Get());
 				Result.Or(ParentResult);
@@ -1794,19 +1799,19 @@ bool FLexWidgetCustomization::IsAnchorControlledByMultipleLayout(TMap<EAnchorCon
 
 bool FLexWidgetCustomization::GetLayoutControlHorizontalAnchoredPosition()const
 {
-	return GetLayoutControlAnchorValue().bCanControlHorizontalAnchoredPosition;
+	return GetLayoutControlAnchorValue().bCanControlHorizontalPosition;
 }
 bool FLexWidgetCustomization::GetLayoutControlVerticalAnchoredPosition()const
 {
-	return GetLayoutControlAnchorValue().bCanControlVerticalAnchoredPosition;
+	return GetLayoutControlAnchorValue().bCanControlVerticalPosition;
 }
 bool FLexWidgetCustomization::GetLayoutControlHorizontalSizeDelta()const
 {
-	return GetLayoutControlAnchorValue().bCanControlHorizontalSizeDelta;
+	return GetLayoutControlAnchorValue().bCanControlHorizontalSize;
 }
 bool FLexWidgetCustomization::GetLayoutControlVerticalSizeDelta()const
 {
-	return GetLayoutControlAnchorValue().bCanControlVerticalSizeDelta;
+	return GetLayoutControlAnchorValue().bCanControlVerticalSize;
 }
 
 TArray<float> FLexWidgetCustomization::ValueRangeArray = {

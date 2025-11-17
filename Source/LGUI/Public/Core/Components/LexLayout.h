@@ -4,24 +4,23 @@
 #include "CoreMinimal.h"
 #include "LexWidget.h"
 #include "LexWidgetSubObjectBehaviour.h"
-#include "PrefabSystem/ILGUIPrefabInterface.h"
 #include "LexLayout.generated.h"
 
 
 struct FLexLayoutControlAnchorData
 {
-	bool bCanControlHorizontalAnchoredPosition = false;
-	bool bCanControlVerticalAnchoredPosition = false;
-	bool bCanControlHorizontalSizeDelta = false;
-	bool bCanControlVerticalSizeDelta = false;
+	bool bCanControlHorizontalPosition = false;
+	bool bCanControlVerticalPosition = false;
+	bool bCanControlHorizontalSize = false;
+	bool bCanControlVerticalSize = false;
 
 	bool HaveRepeatedControl(const FLexLayoutControlAnchorData& Other)const
 	{
 		if (
-			(bCanControlHorizontalAnchoredPosition && Other.bCanControlHorizontalAnchoredPosition)
-			|| (bCanControlVerticalAnchoredPosition && Other.bCanControlVerticalAnchoredPosition)
-			|| (bCanControlHorizontalSizeDelta && Other.bCanControlHorizontalSizeDelta)
-			|| (bCanControlVerticalSizeDelta && Other.bCanControlVerticalSizeDelta)
+			(bCanControlHorizontalPosition && Other.bCanControlHorizontalPosition)
+			|| (bCanControlVerticalPosition && Other.bCanControlVerticalPosition)
+			|| (bCanControlHorizontalSize && Other.bCanControlHorizontalSize)
+			|| (bCanControlVerticalSize && Other.bCanControlVerticalSize)
 			)
 		{
 			return true;
@@ -30,86 +29,78 @@ struct FLexLayoutControlAnchorData
 	}
 	void Or(const FLexLayoutControlAnchorData& Other)
 	{
-		bCanControlHorizontalAnchoredPosition |= Other.bCanControlHorizontalAnchoredPosition;
-		bCanControlVerticalAnchoredPosition |= Other.bCanControlVerticalAnchoredPosition;
-		bCanControlHorizontalSizeDelta |= Other.bCanControlHorizontalSizeDelta;
-		bCanControlVerticalSizeDelta |= Other.bCanControlVerticalSizeDelta;
+		bCanControlHorizontalPosition |= Other.bCanControlHorizontalPosition;
+		bCanControlVerticalPosition |= Other.bCanControlVerticalPosition;
+		bCanControlHorizontalSize |= Other.bCanControlHorizontalSize;
+		bCanControlVerticalSize |= Other.bCanControlVerticalSize;
 	}
 	bool AnyControl()const
 	{
-		return bCanControlHorizontalAnchoredPosition || bCanControlVerticalAnchoredPosition
-		|| bCanControlHorizontalSizeDelta || bCanControlVerticalSizeDelta;
+		return bCanControlHorizontalPosition || bCanControlVerticalPosition
+		|| bCanControlHorizontalSize || bCanControlVerticalSize;
 	}
 	bool Conflict(const FLexLayoutControlAnchorData& Other)const
 	{
-		if (bCanControlHorizontalAnchoredPosition && bCanControlHorizontalAnchoredPosition == Other.bCanControlHorizontalAnchoredPosition)
+		if (bCanControlHorizontalPosition && bCanControlHorizontalPosition == Other.bCanControlHorizontalPosition)
 			return true;
-		if (bCanControlVerticalAnchoredPosition && bCanControlVerticalAnchoredPosition == Other.bCanControlVerticalAnchoredPosition)
+		if (bCanControlVerticalPosition && bCanControlVerticalPosition == Other.bCanControlVerticalPosition)
 			return true;
-		if (bCanControlHorizontalSizeDelta && bCanControlHorizontalSizeDelta == Other.bCanControlHorizontalSizeDelta)
+		if (bCanControlHorizontalSize && bCanControlHorizontalSize == Other.bCanControlHorizontalSize)
 			return true;
-		if (bCanControlVerticalSizeDelta && bCanControlVerticalSizeDelta == Other.bCanControlVerticalSizeDelta)
+		if (bCanControlVerticalSize && bCanControlVerticalSize == Other.bCanControlVerticalSize)
 			return true;
 		return false;
 	}
 };
 
-class ULexLayoutSlot;
-
+/**
+ * LayoutContainer can handle children position
+ */
 UCLASS(Blueprintable, BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)
-class LGUI_API ULexLayout : public ULexWidgetSubObjectBehaviour
-	, public ILGUIPrefabInterface
+class LGUI_API ULexLayoutContainer : public ULexWidgetSubObjectBehaviour
 {
 	GENERATED_BODY()
 protected:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
-	virtual void PreSave(FObjectPreSaveContext ObjectSaveContext) override;
 #endif
-	virtual void OnUpdateLayout() {};
-	virtual void OnPreSavePrefab_Implementation() override;
-	void MarkLayoutDirty();
 public:
 	
 	virtual void OnTransformChanged(){}
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange){};
 
 	//called by LexWidget during layout processing
-	void UpdateLayout();
+	virtual void UpdateLayout(){}
 	
-	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* Widget)PURE_VIRTUAL(ULexLayout::GetLayoutControlAnchor, return FLexLayoutControlAnchorData(););
-	
-	virtual float GetMinWidth()const{return 0;}
-	virtual float GetPreferredWidth()const{return 0;}
-	virtual float GetFlexibleWidth()const{return -1;}
-	virtual float GetMinHeight()const{return 0;}
-	virtual float GetPreferredHeight()const{return 0;}
-	virtual float GetFlexibleHeight()const{return -1;}
+	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* Widget)const PURE_VIRTUAL(ULexLayout::GetLayoutControlAnchor, return FLexLayoutControlAnchorData(););
 };
 
+/**
+ * LayoutSelf can handle self size
+ */
 UCLASS(Blueprintable, BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)
-class LGUI_API ULexLayoutSlot : public UObject
+class LGUI_API ULexLayoutSelf : public ULexWidgetSubObjectBehaviour
 {
 	GENERATED_BODY()
 
+private:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter="GetIgnoreLayoutContainer", Setter="SetIgnoreLayoutContainer", meta = (AllowPrivateAccess = true))
+	bool bIgnoreLayoutContainer = false;
 public:
+	static FName GetPropertyName_IgnoreLayout(){return GET_MEMBER_NAME_CHECKED(ULexLayoutSelf, bIgnoreLayoutContainer);}
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
-	ULexWidget* GetWidget() const;
-	virtual bool GetLayoutControlHorizontalPosition()const { return false; }
-	virtual bool GetLayoutControlVerticalPosition()const { return false; }
 	virtual void OnTransformChanged(){}
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange){};
+	/** Called by LexWidget to calculate size */
+	virtual void UpdateLayout(){}
 
-	virtual bool GetIgnoreLayout()const{return false;}
-	virtual float GetMinWidth()const{return 0;}
-	virtual float GetPreferredWidth()const{return 0;}
-	virtual float GetFlexibleWidth()const{return -1;}
-	virtual float GetMinHeight()const{return -1;}
-	virtual float GetPreferredHeight()const{return -1;}
-	virtual float GetFlexibleHeight()const{return -1;}
-private:
-	mutable TWeakObjectPtr<ULexWidget> CacheWidget;
+	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* Widget)const PURE_VIRTUAL(ULexLayoutSelf::GetLayoutControlAnchor, return FLexLayoutControlAnchorData(););
+
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	virtual bool GetIgnoreLayoutContainer()const{return bIgnoreLayoutContainer;}
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	virtual void SetIgnoreLayoutContainer(bool Value);
 };

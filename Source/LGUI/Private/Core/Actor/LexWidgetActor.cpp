@@ -27,6 +27,20 @@ void ALexWidgetActor::BeginPlay()
 	}
 }
 
+void ALexWidgetActor::Destroyed()
+{
+	Super::Destroyed();
+	TArray<AActor*> AttachedActors;
+	GetAttachedActors(AttachedActors);
+	for (auto Child : AttachedActors)
+	{
+		if (IsValid(Child))
+		{
+			Child->Destroy();
+		}
+	}
+}
+
 #if WITH_EDITOR
 AActor* ALexWidgetActor::FirstTemporarilyHiddenActor = nullptr;
 void ALexWidgetActor::SetIsTemporarilyHiddenInEditor(bool bIsHidden)

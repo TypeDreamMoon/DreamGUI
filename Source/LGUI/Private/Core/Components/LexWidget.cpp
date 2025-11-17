@@ -58,9 +58,9 @@ void ULexWidget::BeginPlay()
 void ULexWidget::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
-	if (IsValid(Layout))
+	if (IsValid(LayoutContainer))
 	{
-		Layout->EndPlay();
+		LayoutContainer->EndPlay();
 	}
 	if (IsValid(Visual))
 	{
@@ -74,9 +74,9 @@ void ULexWidget::Awake_Implementation()
 	CalculateRaycastable_Recursive();
 	CalculateInteractable_Recursive();
 	
-	if (IsValid(Layout))
+	if (IsValid(LayoutContainer))
 	{
-		Layout->BeginPlay();
+		LayoutContainer->BeginPlay();
 	}
 	if (IsValid(Visual))
 	{
@@ -87,7 +87,7 @@ void ULexWidget::Awake_Implementation()
 void ULexWidget::EditorAwake_Implementation()
 {
 	//force size recalculate. solve condition: LexUITools->BasicSetup->CreateWorldSpaceUI, but size is 100x100
-	this->MarkAnchorDataChanged(true, true, true);
+	this->MarkAnchorDataChanged(true, true, true, true);
 	
 	CalculateWidgetActive_Recursive();
 	CalculateRaycastable_Recursive();
@@ -286,6 +286,42 @@ void ULexWidget::SetAsLastSibling()
 	}
 }
 
+#if WITH_EDITOR
+void ULexWidget::ApplyListChildrenInSceneOutliner()
+{
+	struct LOCAL
+	{
+		static void ApplyListChildrenInSceneOutliner(ULexWidget* Widget, bool UpValue)
+		{
+			for (auto& Child : Widget->UIChildren)
+			{
+				bool bShouldListInSceneOutliner = false;
+				if (!UpValue)
+				{
+					bShouldListInSceneOutliner = false;
+				}
+				else
+				{
+					if (Child->bListChildrenInSceneOutliner)
+					{
+						bShouldListInSceneOutliner = true;
+					}
+					else
+					{
+						bShouldListInSceneOutliner = false;
+					}
+				}
+				auto bListedInSceneOutliner_Property = FindFProperty<FBoolProperty>(AActor::StaticClass(), TEXT("bListedInSceneOutliner"));
+				bListedInSceneOutliner_Property->SetPropertyValue_InContainer(Child->GetOwner(), bShouldListInSceneOutliner);
+				ApplyListChildrenInSceneOutliner(Child, UpValue);
+			}
+		}
+	};
+	LOCAL::ApplyListChildrenInSceneOutliner(this, bListChildrenInSceneOutliner);
+	ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();
+}
+#endif
+
 ULexWidget* ULexWidget::FindChildByDisplayName(const FString& InName, bool IncludeChildren)const
 {
 	int indexOfFirstSlash;
@@ -451,7 +487,8 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		static const FName ClippingName = GET_MEMBER_NAME_CHECKED(ULexWidget, Clipping);
 		static const FName ClippingCornerRadiusName = GET_MEMBER_NAME_CHECKED(ULexWidget, ClippingCornerRadius);
 		static const FName VisualName = GET_MEMBER_NAME_CHECKED(ULexWidget, Visual);
-		static const FName LayoutName = GET_MEMBER_NAME_CHECKED(ULexWidget, Layout);
+		static const FName LayoutContainerName = GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutContainer);
+		static const FName LayoutSelfName = GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutSelf);
 		static const FName InteractableName = GET_MEMBER_NAME_CHECKED(ULexWidget, Interactable);
 		static const FName RenderOpacityName = GET_MEMBER_NAME_CHECKED(ULexWidget, RenderOpacity);
 
@@ -500,22 +537,38 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 					Visual->Call_OnRegister();
 				}
 			}
+			MarkDimensionChanged(false, true, true);//change Visual could cause LayoutSelf size change
 		}
-		else if (MemberName == LayoutName)
+		else if (MemberName == LayoutContainerName)
 		{
-			if (IsValid(Layout))
+			if (IsValid(LayoutContainer))
 			{
 				if (GetWorld()->IsGameWorld())
 				{
 					if (this->HasBegunPlay())
 					{
-						Layout->BeginPlay();
+						LayoutContainer->BeginPlay();
 					}
-					Layout->Call_OnRegister();
+					LayoutContainer->Call_OnRegister();
 				}
+				LayoutContainer->UpdateLayout();
 			}
-			MarkAnchorDataChanged(true, true, true);
-			MarkLayoutDirty();
+			MarkDimensionChanged(false, true, true);//change LayoutContainer could cause LayoutSelf size change
+		}
+		else if (MemberName == LayoutSelfName)
+		{
+			if (IsValid(LayoutSelf))
+			{
+				if (GetWorld()->IsGameWorld())
+				{
+					if (this->HasBegunPlay())
+					{
+						LayoutSelf->BeginPlay();
+					}
+					LayoutSelf->Call_OnRegister();
+				}
+				LayoutSelf->UpdateLayout();
+			}
 		}
 		if (MemberName == AnchorDataName)
 		{
@@ -557,6 +610,11 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 			EditorForceUpdate();
 			UpdateBounds();
 		}, 1);
+
+		if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, bListChildrenInSceneOutliner))
+		{
+			ApplyListChildrenInSceneOutliner();
+		}
 	}
 }
 
@@ -589,30 +647,30 @@ void ULexWidget::PreEditChange(FProperty* PropertyAboutToChange)
 			Visual->ConditionalBeginDestroy();
 		}
 	}
-	else if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, Layout))
+	else if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutContainer))
 	{
-		if (IsValid(Layout))
+		if (IsValid(LayoutContainer))
 		{
 			if (GetWorld()->IsGameWorld())
 			{
 				if (this->HasBegunPlay())
 				{
-					Layout->EndPlay();
+					LayoutContainer->EndPlay();
 				}
-				Layout->Call_OnUnregister();
+				LayoutContainer->Call_OnUnregister();
 			}
 			else
 			{
-				Layout->Call_OnUnregister();
+				LayoutContainer->Call_OnUnregister();
 			}
-			Layout->ConditionalBeginDestroy();
+			LayoutContainer->ConditionalBeginDestroy();
 		}
 	}
-	else if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutSlot))
+	else if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutSelf))
 	{
-		if (IsValid(LayoutSlot))
+		if (IsValid(LayoutSelf))
 		{
-			LayoutSlot->ConditionalBeginDestroy();
+			LayoutSelf->ConditionalBeginDestroy();
 		}
 	}
 }
@@ -749,13 +807,13 @@ void ULexWidget::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, E
 	bool ScaleChanged = PrevScale2D != CompScale2D;
 	PrevScale2D = CompScale2D;
 	MarkTransformChanged(true, ScaleChanged);
-	if (IsValid(Layout))
+	if (IsValid(LayoutContainer))
 	{
-		Layout->OnTransformChanged();
+		LayoutContainer->OnTransformChanged();
 	}
-	if (GetLayoutSlot())
+	if (GetLayoutSelf())
 	{
-		LayoutSlot->OnTransformChanged();
+		LayoutSelf->OnTransformChanged();
 	}
 	if (IsValid(Visual))
 	{
@@ -954,9 +1012,9 @@ void ULexWidget::OnRegister()
 
 	CheckRootWidget();
 
-	if (IsValid(Layout))
+	if (IsValid(LayoutContainer))
 	{
-		Layout->Call_OnRegister();
+		LayoutContainer->Call_OnRegister();
 	}
 	if (IsValid(Visual))
 	{
@@ -989,9 +1047,9 @@ void ULexWidget::OnUnregister()
 #endif
 	CheckRootWidget();
 
-	if (IsValid(Layout))
+	if (IsValid(LayoutContainer))
 	{
-		Layout->Call_OnUnregister();
+		LayoutContainer->Call_OnUnregister();
 	}
 	if (IsValid(Visual))
 	{
@@ -1177,7 +1235,7 @@ void ULexWidget::SetAnchorData(const FLexUIAnchorData& Value)
 	AnchorData.AnchoredPosition = Value.AnchoredPosition;
 	AnchorData.SizeDelta = Value.SizeDelta;
 
-	MarkAnchorDataChanged(true, true, true, true);
+	MarkAnchorDataChanged(true, true, true, false);
 	MarkLayoutDirty();
 }
 
@@ -1226,7 +1284,7 @@ void ULexWidget::SetAnchorMin(FVector2D Value)
 				this->AnchorData.AnchoredPosition.Y = FMath::Lerp(CurrentBottom, -CurrentTop, this->AnchorData.Pivot.Y);
 			}
 
-			MarkAnchorDataChanged(false, true, true, true);
+			MarkAnchorDataChanged(false, true, true, false);
 			MarkLayoutDirty();
 		}
 	}
@@ -1272,7 +1330,7 @@ void ULexWidget::SetAnchorMax(FVector2D Value)
 				this->AnchorData.AnchoredPosition.Y = FMath::Lerp(CurrentBottom, -CurrentTop, this->AnchorData.Pivot.Y);
 			}
 
-			MarkAnchorDataChanged(false, true, true, true);
+			MarkAnchorDataChanged(false, true, true, false);
 			MarkLayoutDirty();
 		}
 	}
@@ -1352,7 +1410,7 @@ void ULexWidget::SetHorizontalAnchorMinMax(FVector2D Value, bool bKeepSize, bool
 				this->SetRelativeLocation(PrevRelativeLocation);
 			}
 
-			MarkAnchorDataChanged(false, !bKeepSize, !bKeepSize, true);
+			MarkAnchorDataChanged(false, !bKeepSize, !bKeepSize, false);
 			MarkLayoutDirty();
 		}
 	}
@@ -1400,7 +1458,7 @@ void ULexWidget::SetVerticalAnchorMinMax(FVector2D Value, bool bKeepSize, bool b
 				this->SetRelativeLocation(PrevRelativeLocation);
 			}
 
-			MarkAnchorDataChanged(false, !bKeepSize, !bKeepSize, true);
+			MarkAnchorDataChanged(false, !bKeepSize, !bKeepSize, false);
 			MarkLayoutDirty();
 		}
 	}
@@ -1418,7 +1476,7 @@ void ULexWidget::SetAnchoredPosition(FVector2D Value)
 	if (!AnchorData.AnchoredPosition.Equals(Value, 0.0f))
 	{
 		AnchorData.AnchoredPosition = Value;
-		MarkAnchorDataChanged(false, false, false, true);
+		MarkAnchorDataChanged(false, false, false, false);
 		MarkLayoutDirty();
 	}
 }
@@ -1428,7 +1486,7 @@ void ULexWidget::SetHorizontalAnchoredPosition(float Value)
 	if (AnchorData.AnchoredPosition.X != Value)
 	{
 		AnchorData.AnchoredPosition.X = Value;
-		MarkAnchorDataChanged(false, false, false, true);
+		MarkAnchorDataChanged(false, false, false, false);
 		MarkLayoutDirty();
 	}
 }
@@ -1437,7 +1495,7 @@ void ULexWidget::SetVerticalAnchoredPosition(float Value)
 	if (AnchorData.AnchoredPosition.Y != Value)
 	{
 		AnchorData.AnchoredPosition.Y = Value;
-		MarkAnchorDataChanged(false, false, false, true);
+		MarkAnchorDataChanged(false, false, false, false);
 		MarkLayoutDirty();
 	}
 }
@@ -1449,7 +1507,7 @@ void ULexWidget::SetSizeDelta(FVector2D Value)
 		AnchorData.SizeDelta = Value;
 		bCacheWidthDirty = true;
 		bCacheHeightDirty = true;
-		MarkAnchorDataChanged(false, true, true, true);
+		MarkAnchorDataChanged(false, true, true, false);
 		MarkLayoutDirty();
 	}
 }
@@ -1570,7 +1628,7 @@ void ULexWidget::SetAnchorLeft(float Value)
 				}
 			}
 			this->AnchorData.AnchoredPosition.X = FMath::Lerp(Value, -CurrentRight, this->AnchorData.Pivot.X);
-			MarkAnchorDataChanged(false, true, false, true);
+			MarkAnchorDataChanged(false, true, false, false);
 			MarkLayoutDirty();
 		}
 		bCacheAnchorLeftDirty = false;
@@ -1603,7 +1661,7 @@ void ULexWidget::SetAnchorTop(float Value)
 				}
 			}
 			this->AnchorData.AnchoredPosition.Y = FMath::Lerp(CurrentBottom, -Value, this->AnchorData.Pivot.Y);
-			MarkAnchorDataChanged(false, false, true, true);
+			MarkAnchorDataChanged(false, false, true, false);
 			MarkLayoutDirty();
 		}
 		bCacheAnchorTopDirty = false;
@@ -1636,7 +1694,7 @@ void ULexWidget::SetAnchorRight(float Value)
 				}
 			}
 			this->AnchorData.AnchoredPosition.X = FMath::Lerp(CurrentLeft, -Value, this->AnchorData.Pivot.X);
-			MarkAnchorDataChanged(false, true, false, true);
+			MarkAnchorDataChanged(false, true, false, false);
 			MarkLayoutDirty();
 		}
 		bCacheAnchorRightDirty = false;
@@ -1669,7 +1727,7 @@ void ULexWidget::SetAnchorBottom(float Value)
 				}
 			}
 			this->AnchorData.AnchoredPosition.Y = FMath::Lerp(Value, -CurrentTop, this->AnchorData.Pivot.Y);
-			MarkAnchorDataChanged(false, false, true, true);
+			MarkAnchorDataChanged(false, false, true, false);
 			MarkLayoutDirty();
 		}
 		bCacheAnchorBottomDirty = false;
@@ -1694,7 +1752,7 @@ void ULexWidget::SetWidth(float Value)
 				if (AnchorData.SizeDelta.X != CalculatedSizeDeltaX)
 				{
 					AnchorData.SizeDelta.X = CalculatedSizeDeltaX;
-					MarkAnchorDataChanged(false, true, false, true);
+					MarkAnchorDataChanged(false, true, false, false);
 					MarkLayoutDirty();
 				}
 			}
@@ -1703,7 +1761,7 @@ void ULexWidget::SetWidth(float Value)
 				if (AnchorData.SizeDelta.X != Value)
 				{
 					AnchorData.SizeDelta.X = Value;
-					MarkAnchorDataChanged(false, true, false, true);
+					MarkAnchorDataChanged(false, true, false, false);
 					MarkLayoutDirty();
 				}
 			}
@@ -1713,11 +1771,10 @@ void ULexWidget::SetWidth(float Value)
 			if (AnchorData.SizeDelta.X != Value)
 			{
 				AnchorData.SizeDelta.X = Value;
-				MarkAnchorDataChanged(false, true, false, true);
+				MarkAnchorDataChanged(false, true, false, false);
 				MarkLayoutDirty();
 			}
 		}
-		bCacheWidthDirty = false;//this maybe set dirty by MarkAnchorDataChanged, but it is already calculated, so make it not dirty again
 	}
 }
 void ULexWidget::SetHeight(float Value)
@@ -1734,7 +1791,7 @@ void ULexWidget::SetHeight(float Value)
 				if (AnchorData.SizeDelta.Y != CalculatedSizeDeltaY)
 				{
 					AnchorData.SizeDelta.Y = CalculatedSizeDeltaY;
-					MarkAnchorDataChanged(false, false, true, true);
+					MarkAnchorDataChanged(false, false, true, false);
 					MarkLayoutDirty();
 				}
 			}
@@ -1743,7 +1800,7 @@ void ULexWidget::SetHeight(float Value)
 				if (AnchorData.SizeDelta.Y != Value)
 				{
 					AnchorData.SizeDelta.Y = Value;
-					MarkAnchorDataChanged(false, false, true, true);
+					MarkAnchorDataChanged(false, false, true, false);
 					MarkLayoutDirty();
 				}
 			}
@@ -1753,11 +1810,10 @@ void ULexWidget::SetHeight(float Value)
 			if (AnchorData.SizeDelta.Y != Value)
 			{
 				AnchorData.SizeDelta.Y = Value;
-				MarkAnchorDataChanged(false, false, true, true);
+				MarkAnchorDataChanged(false, false, true, false);
 				MarkLayoutDirty();
 			}
 		}
-		bCacheHeightDirty = false;//this maybe set dirty by MarkAnchorDataChanged, but it is already calculated, so make it not dirty again
 	}
 }
 
@@ -1835,9 +1891,13 @@ void ULexWidget::UpdateLayout()const
 {
 	if (!bLayoutDirty)return;
 	bLayoutDirty = false;
-	if (IsValid(Layout))
+	if (IsValid(LayoutContainer))
 	{
-		Layout->UpdateLayout();
+		LayoutContainer->UpdateLayout();
+	}
+	if (IsValid(LayoutSelf))
+	{
+		LayoutSelf->UpdateLayout();
 	}
 }
 
@@ -1979,7 +2039,7 @@ void ULexWidget::UIHierarchyAttachmentChanged(ULexCanvas* ParentRenderCanvas, UL
 		bCacheAnchorBottomDirty = true;
 		bCacheAnchorTopDirty = true;
 		
-		MarkAnchorDataChanged(false, true, true);
+		MarkAnchorDataChanged(false, true, true, false);
 		MarkLayoutDirty();
 	}
 
@@ -2058,7 +2118,7 @@ void ULexWidget::CalculateWidgetActive_Recursive()
 				//tell parent layout
 				if (auto Parent = Widget->GetUIParent())
 				{
-					if (Parent->GetLayout())
+					if (Parent->GetLayoutContainer())
 					{
 						Parent->bLayoutDirty = true;
 					}
@@ -2216,13 +2276,13 @@ void ULexWidget::MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged, 
 	}
 
 	OnDimensionChangedEvent.Broadcast(InPivotChanged, InWidthChanged, InHeightChanged);
-	if (IsValid(Layout))
+	if (IsValid(LayoutContainer))
 	{
-		Layout->OnDimensionChanged(InPivotChanged, InWidthChanged, InHeightChanged);
+		LayoutContainer->OnDimensionChanged(InPivotChanged, InWidthChanged, InHeightChanged);
 	}
-	if (GetLayoutSlot())
+	if (GetLayoutSelf())
 	{
-		LayoutSlot->OnDimensionChanged(InPivotChanged, InWidthChanged, InHeightChanged);
+		LayoutSelf->OnDimensionChanged(InPivotChanged, InWidthChanged, InHeightChanged);
 	}
 	if (IsValid(Visual))
 	{
@@ -2287,7 +2347,7 @@ void ULexWidget::MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged,
 		bCacheAnchorTopDirty = true;
 	}
 	MarkDimensionChanged(InPivotChanged, InWidthChanged, InHeightChanged);
-	if (IsValid(Layout))
+	if (IsValid(LayoutContainer))
 	{
 		for (auto& Child : GetUIChildren())
 		{
@@ -2323,82 +2383,22 @@ void ULexWidget::MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransfor
 	}
 }
 
-float ULexWidget::GetMinWidth() const
-{
-	return GetLayoutProperty(&ULexLayoutSlot::GetMinWidth, &ULexLayout::GetMinWidth, &ULexVisual::GetMinWidth, 0);
-}
-
-float ULexWidget::GetPreferredWidth() const
-{
-	return GetLayoutProperty(&ULexLayoutSlot::GetPreferredWidth, &ULexLayout::GetPreferredWidth, &ULexVisual::GetPreferredWidth, 0);
-}
-
-float ULexWidget::GetFlexibleWidth() const
-{
-	return GetLayoutProperty(&ULexLayoutSlot::GetFlexibleWidth, &ULexLayout::GetFlexibleWidth, &ULexVisual::GetFlexibleWidth, 0);
-}
-
-float ULexWidget::GetMinHeight() const
-{
-	return GetLayoutProperty(&ULexLayoutSlot::GetMinHeight, &ULexLayout::GetMinHeight, &ULexVisual::GetMinHeight, 0);
-}
-
-float ULexWidget::GetPreferredHeight() const
-{
-	return GetLayoutProperty(&ULexLayoutSlot::GetPreferredHeight, &ULexLayout::GetPreferredHeight, &ULexVisual::GetPreferredHeight, 0);
-}
-
-float ULexWidget::GetFlexibleHeight() const
-{
-	return GetLayoutProperty(&ULexLayoutSlot::GetFlexibleHeight, &ULexLayout::GetFlexibleHeight, &ULexVisual::GetFlexibleHeight, 0);
-}
-
-UObject* ULexWidget::GetMinWidthSource() const
-{
-	return GetLayoutSource(&ULexLayoutSlot::GetMinWidth, &ULexLayout::GetMinWidth, &ULexVisual::GetMinWidth);
-}
-
-UObject* ULexWidget::GetPreferredWidthSource() const
-{
-	return GetLayoutSource(&ULexLayoutSlot::GetPreferredWidth, &ULexLayout::GetPreferredWidth, &ULexVisual::GetPreferredWidth);
-}
-
-UObject* ULexWidget::GetFlexibleWidthSource() const
-{
-	return GetLayoutSource(&ULexLayoutSlot::GetFlexibleWidth, &ULexLayout::GetFlexibleWidth, &ULexVisual::GetFlexibleWidth);
-}
-
-UObject* ULexWidget::GetMinHeightSource() const
-{
-	return GetLayoutSource(&ULexLayoutSlot::GetMinHeight, &ULexLayout::GetMinHeight, &ULexVisual::GetMinHeight);
-}
-
-UObject* ULexWidget::GetPreferredHeightSource() const
-{
-	return GetLayoutSource(&ULexLayoutSlot::GetPreferredHeight, &ULexLayout::GetPreferredHeight, &ULexVisual::GetPreferredHeight);
-}
-
-UObject* ULexWidget::GetFlexibleHeightSource() const
-{
-	return GetLayoutSource(&ULexLayoutSlot::GetFlexibleHeight, &ULexLayout::GetFlexibleHeight, &ULexVisual::GetFlexibleHeight);
-}
-
-float ULexWidget::GetLayoutProperty(TFunctionRef<float(ULexLayoutSlot*)> GetLayoutSlotProperty,
-                                    TFunctionRef<float(ULexLayout*)> GetLayoutProperty,
+float ULexWidget::GetLayoutProperty(TFunctionRef<float(ULexLayoutSelf*)> GetLayoutSelfProperty,
+                                    TFunctionRef<float(ULexLayoutContainer*)> GetLayoutContainerProperty,
                                     TFunctionRef<float(ULexVisual*)> GetVisualProperty,
                                     float DefaultValue)const
 {
-	if (IsValid(LayoutSlot))
+	if (IsValid(LayoutSelf))
 	{
-		auto Value = GetLayoutSlotProperty(LayoutSlot);
+		auto Value = GetLayoutSelfProperty(LayoutSelf);
 		if (Value >= 0)//enable override
 		{
 			return Value;
 		}
 	}
-	if (IsValid(Layout))
+	if (IsValid(LayoutContainer))
 	{
-		auto Value = GetLayoutProperty(Layout);
+		auto Value = GetLayoutContainerProperty(LayoutContainer);
 		if (Value >= 0)//enable override
 		{
 			return Value;
@@ -2414,24 +2414,24 @@ float ULexWidget::GetLayoutProperty(TFunctionRef<float(ULexLayoutSlot*)> GetLayo
 	}
 	return DefaultValue;
 }
-UObject* ULexWidget::GetLayoutSource(TFunctionRef<float(ULexLayoutSlot*)> GetLayoutSlotProperty,
-	TFunctionRef<float(ULexLayout*)> GetLayoutProperty,
+UObject* ULexWidget::GetLayoutSource(TFunctionRef<float(ULexLayoutSelf*)> GetLayoutSelfProperty,
+	TFunctionRef<float(ULexLayoutContainer*)> GetLayoutContainerProperty,
 	TFunctionRef<float(ULexVisual*)> GetVisualProperty) const
 {
-	if (IsValid(LayoutSlot))
+	if (IsValid(LayoutSelf))
 	{
-		auto Value = GetLayoutSlotProperty(LayoutSlot);
+		auto Value = GetLayoutSelfProperty(LayoutSelf);
 		if (Value >= 0)//enable override
 		{
-			return LayoutSlot;
+			return LayoutSelf;
 		}
 	}
-	if (IsValid(Layout))
+	if (IsValid(LayoutContainer))
 	{
-		auto Value = GetLayoutProperty(Layout);
+		auto Value = GetLayoutContainerProperty(LayoutContainer);
 		if (Value >= 0)//enable override
 		{
-			return Layout;
+			return LayoutContainer;
 		}
 	}
 	if (IsValid(Visual))
@@ -2476,7 +2476,7 @@ void ULexWidget::MarkLayoutForRebuild(const ULexWidget* InWidget)
 		TargetWidget->MarkCanvasUpdate(false, true, false);
 		if (auto ParentWidget = TargetWidget->GetUIParent())
 		{
-			if (auto ParentLayout = ParentWidget->GetLayout())
+			if (auto ParentLayout = ParentWidget->GetLayoutContainer())
 			{
 				auto ControlChildAnchor = ParentLayout->GetLayoutControlAnchor(TargetWidget);
 				//auto ControlSelfAnchor = ParentLayout->GetLayoutControlAnchor(ParentWidget);
@@ -2738,10 +2738,10 @@ ULexVisual* ULexWidget::CreateNewVisual(TSubclassOf<ULexVisual> VisualClass)
 	return NewVisual;
 }
 
-ULexLayout* ULexWidget::CreateNewLayout(TSubclassOf<ULexLayout> LayoutClass)
+ULexLayoutContainer* ULexWidget::CreateNewLayoutContainer(TSubclassOf<ULexLayoutContainer> LayoutClass)
 {
-	auto OldLayout = Layout;
-	auto NewLayout = NewObject<ULexLayout>(this, LayoutClass);
+	auto OldLayout = LayoutContainer;
+	auto NewLayout = NewObject<ULexLayoutContainer>(this, LayoutClass);
 	if (IsValid(OldLayout))
 	{
 		if (GetWorld()->IsGameWorld())
@@ -2762,7 +2762,38 @@ ULexLayout* ULexWidget::CreateNewLayout(TSubclassOf<ULexLayout> LayoutClass)
 			NewLayout->BeginPlay();
 		}
 	}
-	Layout = NewLayout;
+	LayoutContainer = NewLayout;
+	LayoutContainer->UpdateLayout();
+	MarkDimensionChanged(false, true, true);//change LayoutContainer could cause LayoutSelf size change
+	return NewLayout;
+}
+
+ULexLayoutSelf* ULexWidget::CreateNewLayoutSelf(TSubclassOf<ULexLayoutSelf> LayoutClass)
+{
+	auto OldLayout = LayoutSelf;
+	auto NewLayout = NewObject<ULexLayoutSelf>(this, LayoutClass);
+	if (IsValid(OldLayout))
+	{
+		if (GetWorld()->IsGameWorld())
+		{
+			if (this->HasBegunPlay())
+			{
+				OldLayout->EndPlay();
+			}
+		}
+		OldLayout->Call_OnUnregister();
+	}
+	
+	NewLayout->Call_OnRegister();
+	if (GetWorld()->IsGameWorld())
+	{
+		if (this->HasBegunPlay())
+		{
+			NewLayout->BeginPlay();
+		}
+	}
+	LayoutSelf = NewLayout;
+	LayoutSelf->UpdateLayout();
 	return NewLayout;
 }
 
