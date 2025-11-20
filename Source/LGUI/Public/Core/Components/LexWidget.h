@@ -522,7 +522,7 @@ public:
 	const TWeakPtr<FLexUIClipData>& GetClipData()const{return ClipData;}
 
 #if WITH_EDITOR
-	void SetIsTemporarilyHiddenInEditor_Recursive_By_RenderVisibility();
+	void SetIsTemporarilyHiddenInEditor_Recursive_By_WidgetActive();
 #endif
 
 #pragma region SiblingIndex

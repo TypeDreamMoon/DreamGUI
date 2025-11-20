@@ -5,20 +5,18 @@
 
 
 #if WITH_EDITOR
+void ULexLayout::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+}
+
 void ULexLayoutContainer::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	UObject::PostEditChangeProperty(PropertyChangedEvent);
 	ULexWidget::MarkLayoutForRebuild(GetWidget());
 }
-bool ULexLayoutContainer::CanEditChange(const FProperty* InProperty) const
-{
-	return UObject::CanEditChange(InProperty);
-}
-#endif
 
-#if WITH_EDITOR
-
-void ULexLayoutSelf::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
+void ULexLayoutSelf::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	UObject::PostEditChangeProperty(PropertyChangedEvent);
 	ULexWidget::MarkLayoutForRebuild(GetWidget()->GetUIParent());

@@ -2,6 +2,7 @@
 
 #include "Core/Components/LexLayoutFlexBoxSelf.h"
 
+#include "LGUI.h"
 #include "Core/Components/LexLayoutFlexBoxContainer.h"
 #include "Core/Components/LexVisual.h"
 
@@ -13,9 +14,11 @@ float FLexLayoutSize::CalculateSize(ULexWidget* Widget, bool IsVertical)const
         switch (Type)
         {
         case ELexLayoutSizeType::Auto:
-            if (auto Layout = Cast<ULexLayoutFlexBoxContainer>(Widget->GetLayoutContainer()))
+            if (auto Layout = Widget->GetLayoutContainer())
             {
-                CalculatedValue = IsVertical ? Layout->GetPreferredHeightPixelValue() : Layout->GetPreferredWidthPixelValue();
+                FVector2f Min, Max, Preferred;
+                Layout->GetLayoutProperties(Min, Max, Preferred);
+                CalculatedValue = IsVertical ? Preferred.Y : Preferred.X;
             }
             else if (auto Visual = Widget->GetVisual())
             {
@@ -51,6 +54,15 @@ float FLexLayoutMinMaxSize::CalculateSize(ULexWidget* Widget, bool IsVertical, b
     {
         switch (Type)
         {
+        case ELexLayoutMinMaxSizeType::Auto:
+            if (auto LayoutContainer = Widget->GetLayoutContainer())
+            {
+                int Axis = IsVertical ? 1 : 0;
+                FVector2f Min, Max, Preferred;
+                LayoutContainer->GetLayoutProperties(Min, Max, Preferred);
+                CalculatedValue = IsMinOrMax ? Min[Axis] : Max[Axis];
+            }
+            break;
         case ELexLayoutMinMaxSizeType::Fixed:
             CalculatedValue = FixedValue;
             break;
@@ -69,72 +81,74 @@ float FLexLayoutMinMaxSize::CalculateSize(ULexWidget* Widget, bool IsVertical, b
     return CalculatedValue;
 }
 
+DECLARE_CYCLE_STAT(TEXT("LexLayout FlexBoxSelf"), STAT_LexLayoutFlexBoxSelf, STATGROUP_LGUI);
 void ULexLayoutFlexBoxSelf::CalculateSize()
 {
+    SCOPE_CYCLE_COUNTER(STAT_LexLayoutFlexBoxSelf);
     auto Widget = GetWidget();
     if (!Widget)return;
     bIsCalculatingSize = true;
-    CalculatedWidth = PreferredWidth.CalculateSize(Widget, false);
+    CalculatedPreferred.X = PreferredWidth.CalculateSize(Widget, false);
     if (PreferredWidth.bEnable)
     {
-        CalculatedMinWidth = MinWidth.CalculateSize(Widget, false, true);
+        CalculatedMin.X = MinWidth.CalculateSize(Widget, false, true);
     }
     else//if not enable width control then we also don't use minWidth, because layoutContainer could use minWidth to calculate and set the wrong width
     {
-        CalculatedMinWidth = CalculatedWidth;
+        CalculatedMin.X = CalculatedPreferred.X;
     }
-    CalculatedHeight = PreferredHeight.CalculateSize(Widget, true);
+    CalculatedPreferred.Y = PreferredHeight.CalculateSize(Widget, true);
     if (PreferredHeight.bEnable)
     {
-        CalculatedMinHeight = MinHeight.CalculateSize(Widget, true, true);
+        CalculatedMin.Y = MinHeight.CalculateSize(Widget, true, true);
     }
     else//if not enable height control then we also don't use minHeight, because layoutContainer could use minHeight to calculate and set the wrong height
     {
-        CalculatedMinHeight = CalculatedHeight;
+        CalculatedMin.Y = CalculatedPreferred.Y;
     }
-    CalculatedMaxWidth = MaxWidth.CalculateSize(Widget, false, false);
-    if (CalculatedMaxWidth < CalculatedMinWidth)
+    CalculatedMax.X = MaxWidth.CalculateSize(Widget, false, false);
+    if (CalculatedMax.X < CalculatedMin.X)
     {
-        CalculatedMaxWidth = UE_MAX_FLT;
+        CalculatedMax.X = UE_MAX_FLT;
     }
-    CalculatedMaxHeight = MaxHeight.CalculateSize(Widget, true, false);
-    if (CalculatedMaxHeight < CalculatedMinHeight)
+    CalculatedMax.Y = MaxHeight.CalculateSize(Widget, true, false);
+    if (CalculatedMax.Y < CalculatedMin.Y)
     {
-        CalculatedMaxHeight = UE_MAX_FLT;
+        CalculatedMax.Y = UE_MAX_FLT;
     }
     //clamp value before AspectRatio calculation
-    CalculatedWidth = FMath::Clamp(CalculatedWidth, CalculatedMinWidth, CalculatedMaxWidth);
-    CalculatedHeight = FMath::Clamp(CalculatedHeight, CalculatedMinHeight, CalculatedMaxHeight);
+    CalculatedPreferred.X = FMath::Clamp(CalculatedPreferred.X, CalculatedMin.X, CalculatedMax.X);
+    CalculatedPreferred.Y = FMath::Clamp(CalculatedPreferred.Y, CalculatedMin.Y, CalculatedMax.Y);
     switch (AspectRatio.Type)
     {
     case ELexLayoutAspectRatioType::None:
         break;
     case ELexLayoutAspectRatioType::HeightControlWidth:
-        CalculatedWidth = CalculatedHeight * AspectRatio.Value;
+        CalculatedPreferred.X = CalculatedPreferred.Y * AspectRatio.Value;
         break;
     case ELexLayoutAspectRatioType::WidthControlHeight:
-        CalculatedHeight = CalculatedWidth / AspectRatio.Value;
+        CalculatedPreferred.Y = CalculatedPreferred.X / AspectRatio.Value;
         break;
     }
     //clamp again because AspectRatio calculation
-    CalculatedWidth = FMath::Clamp(CalculatedWidth, CalculatedMinWidth, CalculatedMaxWidth);
-    CalculatedHeight = FMath::Clamp(CalculatedHeight, CalculatedMinHeight, CalculatedMaxHeight);
+    CalculatedPreferred.X = FMath::Clamp(CalculatedPreferred.X, CalculatedMin.X, CalculatedMax.X);
+    CalculatedPreferred.Y = FMath::Clamp(CalculatedPreferred.Y, CalculatedMin.Y, CalculatedMax.Y);
 
 #if WITH_EDITOR
     if (PreferredWidth.Type == ELexLayoutSizeType::Auto)
     {
-        PreferredWidth.AutoValue = CalculatedWidth;
+        PreferredWidth.AutoValue = CalculatedPreferred.X;
     }
     if (PreferredHeight.Type == ELexLayoutSizeType::Auto)
     {
-        PreferredHeight.AutoValue = CalculatedHeight;
+        PreferredHeight.AutoValue = CalculatedPreferred.Y;
     }
 #endif
 
     bool bShouldSetWidgetSize = true;
     if (auto ParentWidget = Widget->GetUIParent())
     {
-        if (auto LayoutContainer = Cast<ULexLayoutFlexBoxContainer>(ParentWidget->GetLayoutContainer()))
+        if (Cast<ULexLayoutFlexBoxContainer>(ParentWidget->GetLayoutContainer()) != nullptr)//if parent widget have FlexBoxContainer, then it will set this widget size
         {
             bShouldSetWidgetSize = false;
         }
@@ -151,7 +165,7 @@ void ULexLayoutFlexBoxSelf::CalculateSize()
         {
             Widget->SetVerticalAnchorMinMax(FVector2D(1, 1), true, true);
         }
-        Widget->SetSizeDelta(FVector2D(CalculatedWidth, CalculatedHeight));
+        Widget->SetSizeDelta(FVector2D(CalculatedPreferred.X, CalculatedPreferred.Y));
     }
 
     bIsCalculatingSize = false;
@@ -189,17 +203,11 @@ FLexLayoutControlAnchorData ULexLayoutFlexBoxSelf::GetLayoutControlAnchor(const 
     {
         if (PreferredWidth.bEnable)
         {
-            if (ThisWidget->GetLayoutContainer() != nullptr || ThisWidget->GetVisual() != nullptr)
-            {
-                Result.bCanControlHorizontalSize = true;
-            }
+            Result.bCanControlHorizontalSize = true;
         }
         if (PreferredHeight.bEnable)
         {
-            if (ThisWidget->GetLayoutContainer() != nullptr || ThisWidget->GetVisual() != nullptr)
-            {
-                Result.bCanControlVerticalSize = true;
-            }
+            Result.bCanControlVerticalSize = true;
         }
         if (AspectRatio.Type == ELexLayoutAspectRatioType::HeightControlWidth)
         {
@@ -213,45 +221,49 @@ FLexLayoutControlAnchorData ULexLayoutFlexBoxSelf::GetLayoutControlAnchor(const 
     return Result;
 }
 
-float ULexLayoutFlexBoxSelf::GetGrowForLayoutContainer(int Axis, bool IsPrimary) const
+void ULexLayoutFlexBoxSelf::GetLayoutProperties(FVector2f& OutMin, FVector2f& OutMax, FVector2f& OutPreferred)
 {
-    if (IsPrimary)
+    OutMin.X = CalculatedMin.X;
+    OutMin.Y = CalculatedMin.Y;
+    OutMax.X = CalculatedMax.X;
+    OutMax.Y = CalculatedMax.Y;
+    OutPreferred.X = CalculatedPreferred.X;
+    OutPreferred.Y = CalculatedPreferred.Y;
+}
+
+float ULexLayoutFlexBoxSelf::GetGrowForLayoutContainer(int Axis) const
+{
+    //If width not enable then it is danger to use Grow.
+    //Because width is get from widget, after increase width by Grow the result will set to widget too, that will make width keep increasing.
+    //Same problem for height.
+    if (Axis == 0 && PreferredWidth.bEnable)
     {
-        //If width not enable then it is danger to use Grow.
-        //Because width is get from widget, after increase width by Grow the result will set to widget too, that will make width keep increasing.
-        //Same problem for height.
-        if (Axis == 0 && PreferredWidth.bEnable)
-        {
-            return Grow;
-        }
-        if (Axis == 1 && PreferredHeight.bEnable)
-        {
-            return Grow;
-        }
+        return Grow;
+    }
+    if (Axis == 1 && PreferredHeight.bEnable)
+    {
+        return Grow;
     }
     return 0;
 }
 
-float ULexLayoutFlexBoxSelf::GetShrinkForLayoutContainer(int Axis, bool IsPrimary) const
+float ULexLayoutFlexBoxSelf::GetShrinkForLayoutContainer(int Axis) const
 {
-    if (IsPrimary)
+    //If width not enable then it is danger to use shrink.
+    //Because width is get from widget, after decrease width by Shrink the result will set to widget too, that will make width keep decreasing.
+    //Same problem for height.
+    if (Axis == 0 && PreferredWidth.bEnable)
     {
-        //If width not enable then it is danger to use shrink.
-        //Because width is get from widget, after decrease width by Shrink the result will set to widget too, that will make width keep decreasing.
-        //Same problem for height.
-        if (Axis == 0 && PreferredWidth.bEnable)
-        {
-            return Shrink;
-        }
-        if (Axis == 1 && PreferredHeight.bEnable)
-        {
-            return Shrink;
-        }
+        return Shrink;
+    }
+    if (Axis == 1 && PreferredHeight.bEnable)
+    {
+        return Shrink;
     }
     return 0;
 }
 
-bool ULexLayoutFlexBoxSelf::SecondarySizeCanStretch(int SecondaryAxis) const
+bool ULexLayoutFlexBoxSelf::GetSecondaryAxisSizeCanStretchByLayoutContainer(int SecondaryAxis) const
 {
     if (SecondaryAxis == 0)
     {
@@ -280,24 +292,24 @@ void ULexLayoutFlexBoxSelf::SetSizeByLayoutContainer(FVector2f Value, int Primar
     {
         if (PreferredHeight.Type != ELexLayoutSizeType::Auto)
         {
-            Value.Y = CalculatedHeight;
+            Value.Y = CalculatedPreferred.Y;
         }
     }
     else
     {
         if (PreferredWidth.Type != ELexLayoutSizeType::Auto)
         {
-            Value.X = CalculatedWidth;
+            Value.X = CalculatedPreferred.X;
         }
     }
     //check Enable
     if (!PreferredWidth.bEnable)
     {
-        Value.X = CalculatedWidth;
+        Value.X = CalculatedPreferred.X;
     }
     if (!PreferredHeight.bEnable)
     {
-        Value.Y = CalculatedHeight;
+        Value.Y = CalculatedPreferred.Y;
     }
     
     auto AnchorMin = Widget->GetAnchorMin();

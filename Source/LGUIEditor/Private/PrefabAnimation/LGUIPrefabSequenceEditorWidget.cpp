@@ -21,6 +21,7 @@
 #include "Core/Actor/LexWidgetActor.h"
 #include "LevelEditor.h"
 #include "Core/Components/LexImage.h"
+#include "Core/Components/LexLayout.h"
 #include "Core/Components/LexText.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabSequenceEditorWidget"
@@ -421,6 +422,17 @@ public:
 				FSlateIcon()
 			);
 		}
+		//widget menu
+		if (auto Widget = GetSelectedWidget())
+		{
+			MenuBuilder.AddSubMenu(
+				LOCTEXT("AddWidget_Label", "LexWidget"),
+				LOCTEXT("AddWidget_ToolTip", "Add a binding to LexWidget and it's components and allow it to be animated by Sequencer"),
+				FNewMenuDelegate::CreateRaw(this, &SLGUIPrefabSequenceEditorWidgetImpl::AddPossessWidgetMenuExtensions, Widget),
+				false,
+				FSlateIcon()
+			);
+		}
 	}
 	void AddPossessActorMenuExtensions(FMenuBuilder& MenuBuilder, TArray<AActor*> InActorArray)
 	{
@@ -447,7 +459,7 @@ public:
 			{
 				MenuBuilder.AddMenuEntry(
 					FText::Format(LOCTEXT("ComponentLabelFormat", "{0} ({1})"), FText::FromString(Comp->GetName()), FText::FromString(Comp->GetClass()->GetName())),
-					FText::FromString(Comp->GetName()), FSlateIcon(),
+					FText::FromString(Comp->GetPathName()), FSlateIcon(),
 					FUIAction(FExecuteAction::CreateLambda([=, this]() {
 						const FScopedTransaction Transaction(LOCTEXT("AddComponentToSequencer", "Add component to Sequencer"));
 						Sequencer->GetHandleToObject(Comp, true);
@@ -456,10 +468,47 @@ public:
 			}
 		}
 	}
+	void AddPossessWidgetMenuExtensions(FMenuBuilder& MenuBuilder, ULexWidget* InWidget)
+	{
+		if (!IsValid(InWidget))return;
+		if (auto Visual = InWidget->GetVisual())
+		{
+			MenuBuilder.AddMenuEntry(
+				FText::Format(LOCTEXT("WidgetVisualLabelFormat", "{0} ({1})"), FText::FromString(Visual->GetName()), FText::FromString(Visual->GetClass()->GetName())),
+				FText::FromString(Visual->GetPathName()), FSlateIcon(),
+				FUIAction(FExecuteAction::CreateLambda([=, this]() {
+					const FScopedTransaction Transaction(LOCTEXT("AddVisualToSequencer", "Add visual to Sequencer"));
+					Sequencer->GetHandleToObject(Visual, true);
+					}))
+			);
+		}
+		if (auto LayoutContainer = InWidget->GetLayoutContainer())
+		{
+			MenuBuilder.AddMenuEntry(
+				FText::Format(LOCTEXT("WidgetLayoutContainerLabelFormat", "{0} ({1})"), FText::FromString(LayoutContainer->GetName()), FText::FromString(LayoutContainer->GetClass()->GetName())),
+				FText::FromString(LayoutContainer->GetPathName()), FSlateIcon(),
+				FUIAction(FExecuteAction::CreateLambda([=, this]() {
+					const FScopedTransaction Transaction(LOCTEXT("AddLayoutContainerToSequencer", "Add LayoutContainer to Sequencer"));
+					Sequencer->GetHandleToObject(LayoutContainer, true);
+					}))
+			);
+		}
+		if (auto LayoutSelf = InWidget->GetLayoutSelf())
+		{
+			MenuBuilder.AddMenuEntry(
+				FText::Format(LOCTEXT("WidgetLayoutSelfLabelFormat", "{0} ({1})"), FText::FromString(LayoutSelf->GetName()), FText::FromString(LayoutSelf->GetClass()->GetName())),
+				FText::FromString(LayoutSelf->GetPathName()), FSlateIcon(),
+				FUIAction(FExecuteAction::CreateLambda([=, this]() {
+					const FScopedTransaction Transaction(LOCTEXT("AddLayoutSelfToSequencer", "Add LayoutSelf to Sequencer"));
+					Sequencer->GetHandleToObject(LayoutSelf, true);
+					}))
+			);
+		}
+	}
 
 	AActor* GetSelectedActor()const
 	{
-		TArray<AActor*, TInlineAllocator<1>> SelectedActorArray;
+		TArray<AActor*> SelectedActorArray;
 		if (WeakSequence.IsValid())
 		{
 			TArray<FGuid> SelectedObjects;
@@ -478,6 +527,29 @@ public:
 			}
 		}
 		return SelectedActorArray.Num() == 1 ? SelectedActorArray[0] : nullptr;
+	}
+
+	ULexWidget* GetSelectedWidget()const
+	{
+		TArray<ULexWidget*> SelectedWidgetArray;
+		if (WeakSequence.IsValid())
+		{
+			TArray<FGuid> SelectedObjects;
+			Sequencer->GetSelectedObjects(SelectedObjects);
+			for (auto GuidItem : SelectedObjects)
+			{
+				TArray<UObject*, TInlineAllocator<1>> BoundObjects;
+				WeakSequence->LocateBoundObjects(GuidItem, nullptr, BoundObjects);
+				for (auto Obj : BoundObjects)
+				{
+					if (auto Widget = Cast<ULexWidget>(Obj))
+					{
+						SelectedWidgetArray.Add(Widget);
+					}
+				}
+			}
+		}
+		return SelectedWidgetArray.Num() == 1 ? SelectedWidgetArray[0] : nullptr;
 	}
 
 	void OnSequenceChanged()

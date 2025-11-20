@@ -83,7 +83,7 @@ void ALexWidgetActor::SetIsTemporarilyHiddenInEditor(bool bIsHidden)
 				FirstTemporarilyHiddenActor = nullptr;
 				if (WeakThis.IsValid())
 				{
-					WeakThis->GetLexWidget()->SetIsTemporarilyHiddenInEditor_Recursive_By_RenderVisibility();//restore Temporary hidden state by UI item's IsUIActive state.
+					WeakThis->GetLexWidget()->SetIsTemporarilyHiddenInEditor_Recursive_By_WidgetActive();//restore Temporary hidden state by LexWidget's WidgetActive state.
 				}
 				});
 		}

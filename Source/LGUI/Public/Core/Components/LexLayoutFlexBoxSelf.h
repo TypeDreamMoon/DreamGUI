@@ -82,11 +82,16 @@ struct FLexLayoutSize
 UENUM(BlueprintType)
 enum class ELexLayoutMinMaxSizeType : uint8
 {
+	/**
+	 * Will get value from LayoutContainer, if no LayoutContainer exits, then fallback to Not-Enabled.
+	 */
+	Auto,
+	
 	/** Fixed pixel value */
 	Fixed,
 	/**
 	 * Percentage relative it's parent size.
-	 * If no parent then fallback to Fixed.
+	 * If no parent then fallback to Not-Enabled.
 	 */
 	Percent,
 };
@@ -215,12 +220,9 @@ private:
 	float Shrink = 0;
 
 	bool bIsCalculatingSize = false;
-	float CalculatedWidth = 0.0f;
-	float CalculatedHeight = 0.0f;
-	float CalculatedMinWidth = 0.0f;
-	float CalculatedMinHeight = 0.0f;
-	float CalculatedMaxWidth = -1.0f;
-	float CalculatedMaxHeight = -1.0f;
+	FVector2f CalculatedPreferred;
+	FVector2f CalculatedMin;
+	FVector2f CalculatedMax;
 	void CalculateSize();
 public:
 	virtual void OnTransformChanged() override;
@@ -231,17 +233,12 @@ public:
 	virtual void PostInitProperties() override;
 #endif
 	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* Widget)const override;
+	virtual void GetLayoutProperties(FVector2f& OutMin, FVector2f& OutMax, FVector2f& OutPreferred) override;
+	
+	float GetGrowForLayoutContainer(int Axis)const;
+	float GetShrinkForLayoutContainer(int Axis)const;
 
-	float GetMinWidthForLayoutContainer()const{return CalculatedMinWidth;}
-	float GetMaxWidthForLayoutContainer()const{return CalculatedMaxWidth;}
-	float GetPreferredWidthForLayoutContainer()const{return CalculatedWidth;}
-	float GetMinHeightForLayoutContainer()const{return CalculatedMinHeight;}
-	float GetMaxHeightForLayoutContainer()const{return CalculatedMaxHeight;}
-	float GetPreferredHeightForLayoutContainer()const{return CalculatedHeight;}
-	float GetGrowForLayoutContainer(int Axis, bool IsPrimary)const;
-	float GetShrinkForLayoutContainer(int Axis, bool IsPrimary)const;
-
-	bool SecondarySizeCanStretch(int SecondaryAxis)const;
+	bool GetSecondaryAxisSizeCanStretchByLayoutContainer(int SecondaryAxis)const;
 	void SetSizeByLayoutContainer(FVector2f Value, int PrimaryAxis); 
 
 	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")

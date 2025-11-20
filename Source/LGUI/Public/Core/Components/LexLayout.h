@@ -53,34 +53,44 @@ struct FLexLayoutControlAnchorData
 	}
 };
 
-/**
- * LayoutContainer can handle children position
- */
-UCLASS(Blueprintable, BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)
-class LGUI_API ULexLayoutContainer : public ULexWidgetSubObjectBehaviour
+UCLASS(BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)
+class LGUI_API ULexLayout : public ULexWidgetSubObjectBehaviour
 {
 	GENERATED_BODY()
 protected:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-	virtual bool CanEditChange(const FProperty* InProperty) const override;
 #endif
 public:
-	
-	virtual void OnTransformChanged(){}
-	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange){};
-
+	virtual void OnTransformChanged() {}
+	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) {}
 	//called by LexWidget during layout processing
 	virtual void UpdateLayout(){}
 	
 	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* Widget)const PURE_VIRTUAL(ULexLayout::GetLayoutControlAnchor, return FLexLayoutControlAnchorData(););
+
+	virtual void GetLayoutProperties(FVector2f& OutMin, FVector2f& OutMax, FVector2f& OutPreferred)PURE_VIRTUAL(ULexLayout::GetLayoutProperties, );
+};
+
+/**
+ * LayoutContainer can handle children position
+ */
+UCLASS(BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)
+class LGUI_API ULexLayoutContainer : public ULexLayout
+{
+	GENERATED_BODY()
+protected:
+#if WITH_EDITOR
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
+	
 };
 
 /**
  * LayoutSelf can handle self size
  */
-UCLASS(Blueprintable, BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)
-class LGUI_API ULexLayoutSelf : public ULexWidgetSubObjectBehaviour
+UCLASS(BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)
+class LGUI_API ULexLayoutSelf : public ULexLayout
 {
 	GENERATED_BODY()
 
@@ -90,14 +100,8 @@ private:
 public:
 	static FName GetPropertyName_IgnoreLayout(){return GET_MEMBER_NAME_CHECKED(ULexLayoutSelf, bIgnoreLayoutContainer);}
 #if WITH_EDITOR
-	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
-	virtual void OnTransformChanged(){}
-	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange){};
-	/** Called by LexWidget to calculate size */
-	virtual void UpdateLayout(){}
-
-	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* Widget)const PURE_VIRTUAL(ULexLayoutSelf::GetLayoutControlAnchor, return FLexLayoutControlAnchorData(););
 
 	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
 	virtual bool GetIgnoreLayoutContainer()const{return bIgnoreLayoutContainer;}

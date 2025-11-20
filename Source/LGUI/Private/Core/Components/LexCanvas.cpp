@@ -3233,17 +3233,13 @@ void DeprojectViewPointToWorld(const FMatrix& InViewProjectionMatrix, const FVec
 void ULexCanvas::DrawViewportArea()
 {
 	auto RectExtends = FVector(0.1f, LexWidget->GetWidth(), LexWidget->GetHeight()) * 0.5f;
-	auto GeometryBoundsExtends = FVector(0, 0, 0);
-	bool bCanDrawRect = false;
 	auto RectDrawColor = FColor(128, 128, 128, 128);//gray means normal object
-
 	auto WorldTransform = LexWidget->GetComponentTransform();
-	FVector RelativeOffset(0, 0, 0);
-	RelativeOffset.Y = (0.5f - LexWidget->GetPivot().X) * LexWidget->GetWidth();
-	RelativeOffset.Z = (0.5f - LexWidget->GetPivot().Y) * LexWidget->GetHeight();
-	auto WorldLocation = WorldTransform.TransformPosition(RelativeOffset);
 
-	DrawDebugBox(GetWorld(), WorldLocation, RectExtends * WorldTransform.GetScale3D(), WorldTransform.GetRotation(), RectDrawColor);
+	ULexUIManagerWorldSubsystem::DrawDebugBox(GetWorld()
+		, FVector::Zero(), FMatrix44f(WorldTransform.ToMatrixWithScale())
+		, RectExtends, RectDrawColor, this, FString::Printf(TEXT("%s.LexCanvas.ViewportArea"), *this->GetOwner()->GetActorLabel())
+		, false);
 }
 
 void ULexCanvas::DrawVirtualCamera()
@@ -3260,30 +3256,53 @@ void ULexCanvas::DrawVirtualCamera()
 	FVector leftBottom, rightBottom, leftTop, rightTop;
 	FVector leftBottomEnd, rightBottomEnd, leftTopEnd, rightTopEnd;
 	auto lineColor = FColor::Green;
+	TArray<FVector3f> LinePoints;
 	//draw view frustum
 	DeprojectViewPointToWorld(ViewProjectionMatrix, FVector2D(0, 0), leftBottom, leftBottomEnd);
-	DrawDebugLine(this->GetWorld(), leftBottom, leftBottomEnd, lineColor);
+	new(LinePoints)FVector3f(leftBottom);
+	new(LinePoints)FVector3f(leftBottomEnd);
 	DeprojectViewPointToWorld(ViewProjectionMatrix, FVector2D(1, 0), rightBottom, rightBottomEnd);
-	DrawDebugLine(this->GetWorld(), rightBottom, rightBottomEnd, lineColor);
+	new(LinePoints)FVector3f(rightBottom);
+	new(LinePoints)FVector3f(rightBottomEnd);
 	DeprojectViewPointToWorld(ViewProjectionMatrix, FVector2D(0, 1), leftTop, leftTopEnd);
-	DrawDebugLine(this->GetWorld(), leftTop, leftTopEnd, lineColor);
+	new(LinePoints)FVector3f(leftTop);
+	new(LinePoints)FVector3f(leftTopEnd);
 	DeprojectViewPointToWorld(ViewProjectionMatrix, FVector2D(1, 1), rightTop, rightTopEnd);
-	DrawDebugLine(this->GetWorld(), rightTop, rightTopEnd, lineColor);
+	new(LinePoints)FVector3f(rightTop);
+	new(LinePoints)FVector3f(rightTopEnd);
 	//draw near clip plane
-	DrawDebugLine(this->GetWorld(), leftBottom, rightBottom, lineColor);
-	DrawDebugLine(this->GetWorld(), leftBottom, leftTop, lineColor);
-	DrawDebugLine(this->GetWorld(), rightTop, rightBottom, lineColor);
-	DrawDebugLine(this->GetWorld(), rightTop, leftTop, lineColor);
+	new(LinePoints)FVector3f(leftBottom);
+	new(LinePoints)FVector3f(rightBottom);
+	
+	new(LinePoints)FVector3f(leftBottom);
+	new(LinePoints)FVector3f(leftTop);
+	
+	new(LinePoints)FVector3f(rightTop);
+	new(LinePoints)FVector3f(rightBottom);
+	
+	new(LinePoints)FVector3f(rightTop);
+	new(LinePoints)FVector3f(leftTop);
 	//draw far clip plane
-	DrawDebugLine(this->GetWorld(), leftBottomEnd, rightBottomEnd, lineColor);
-	DrawDebugLine(this->GetWorld(), leftBottomEnd, leftTopEnd, lineColor);
-	DrawDebugLine(this->GetWorld(), rightTopEnd, rightBottomEnd, lineColor);
-	DrawDebugLine(this->GetWorld(), rightTopEnd, leftTopEnd, lineColor);
+	new(LinePoints)FVector3f(leftBottomEnd);
+	new(LinePoints)FVector3f(rightBottomEnd);
 
-	if (LexWidget.IsValid())
-	{
-		DrawDebugCamera(this->GetWorld(), this->GetViewLocation(), this->GetViewRotator(), FieldOfView, this->GetLexWidget()->GetComponentScale().X * 3.0f, FColor::Green);
-	}
+	new(LinePoints)FVector3f(leftBottomEnd);
+	new(LinePoints)FVector3f(leftTopEnd);
+
+	new(LinePoints)FVector3f(rightTopEnd);
+	new(LinePoints)FVector3f(rightBottomEnd);
+
+	new(LinePoints)FVector3f(rightTopEnd);
+	new(LinePoints)FVector3f(leftTopEnd);
+
+	ULexUIManagerWorldSubsystem::DrawDebugLine(GetWorld(), FMatrix44f::Identity
+		, LinePoints, lineColor, this, FString::Printf(TEXT("%s.LexCanvas.VirtualCamera"), *this->GetOwner()->GetActorLabel())
+		, false);
+
+	// if (LexWidget.IsValid())
+	// {
+	// 	DrawDebugCamera(this->GetWorld(), this->GetViewLocation(), this->GetViewRotator(), FieldOfView, this->GetLexWidget()->GetComponentScale().X * 3.0f, FColor::Green);
+	// }
 }
 #endif
 

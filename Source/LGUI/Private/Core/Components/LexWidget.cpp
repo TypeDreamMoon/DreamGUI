@@ -2798,7 +2798,7 @@ ULexLayoutSelf* ULexWidget::CreateNewLayoutSelf(TSubclassOf<ULexLayoutSelf> Layo
 }
 
 #if WITH_EDITOR
-void ULexWidget::SetIsTemporarilyHiddenInEditor_Recursive_By_RenderVisibility()
+void ULexWidget::SetIsTemporarilyHiddenInEditor_Recursive_By_WidgetActive()
 {
 #if WITH_EDITOR
 	//modify inactive actor's name
@@ -2820,7 +2820,7 @@ void ULexWidget::SetIsTemporarilyHiddenInEditor_Recursive_By_RenderVisibility()
 	{
 		if (IsValid(uiChild))
 		{
-			uiChild->SetIsTemporarilyHiddenInEditor_Recursive_By_RenderVisibility();
+			uiChild->SetIsTemporarilyHiddenInEditor_Recursive_By_WidgetActive();
 		}
 	}
 }

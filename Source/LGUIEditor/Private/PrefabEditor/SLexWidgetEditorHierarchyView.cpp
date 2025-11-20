@@ -4,7 +4,6 @@
 #include "LGUIEditorModule.h"
 #include "LGUIPrefabEditor.h"
 #include "SLexWidgetEditorHierarchyViewItem.h"
-#include "SLexWidgetHierarchyPickerViewItem.h"
 #include "Widgets/Layout/SScrollBorder.h"
 #include "Widgets/Input/SSearchBox.h"
 #include "Core/Components/LexRectBlock.h"

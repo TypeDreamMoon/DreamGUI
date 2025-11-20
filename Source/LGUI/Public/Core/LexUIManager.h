@@ -42,12 +42,14 @@ private:
 	int32 PrevEditorViewportCount = 0;
 	int32 PrevScreenSpaceOverlayCanvasCount = 1;
 	FSimpleMulticastDelegate EditorViewportIndexAndKeyChange;
+	static bool bIsBlueprintCompiling;
 public:
 	int32 CurrentActiveViewportIndex = 0;
 	uint32 CurrentActiveViewportKey = 0;
 	static int IndexOfClickSelectUI;
 #endif
 #if WITH_EDITOR
+	static bool GetIsBlueprintCompiling(){return bIsBlueprintCompiling;}
 	static FDelegateHandle RegisterEditorViewportIndexAndKeyChange(const TFunction<void()>& InFunction);
 	static void UnregisterEditorViewportIndexAndKeyChange(const FDelegateHandle& InDelegateHandle);
 private:
@@ -196,12 +198,15 @@ public:
 	void DrawNavigationArrow(UWorld* InWorld, const TArray<FVector>& InControlPoints, const FVector& InArrowPointA, const FVector& InArrowPointB, FColor const& InColor, void* Object, const FString& DebugName, bool ScreenOrWorld = false);
 	void DrawNavigationVisualizerOnUISelectable(UWorld* InWorld, UUISelectableComponent* InSelectable, bool IsScreenSpace = false);
 	FEditorViewportClient* GetEditorViewportClient();
+	
+	static void DrawDebugRect(UWorld* InWorld, const FVector& Center, const FMatrix44f& LocalToWorld, FVector2D const& Rect, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
+	static void DrawDebugBox(UWorld* InWorld, const FVector& Center, const FMatrix44f& LocalToWorld, FVector const& Box, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
+	static void DrawDebugLineStream(UWorld* InWorld, const FMatrix44f& LocalToWorld, const TArray<FVector3f>& LineStreamPoints, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
+	static void DrawDebugLine(UWorld* InWorld, const FMatrix44f& LocalToWorld, const TArray<FVector3f>& LinePoints, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
 private:
 	//this is cached when call GetEditorViewportClient
 	FEditorViewportClient* CacheViewportClient = nullptr;
 	void OnEndOfFrame();
-	static void DrawDebugRect(UWorld* InWorld, const FVector& Center, const FMatrix44f& LocalToWorld, FVector2D const& Rect, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
-	static void DrawDebugBox(UWorld* InWorld, const FVector& Center, const FMatrix44f& LocalToWorld, FVector const& Box, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
 #endif
 private:
 	/** Map prefab-deserialize-section-id to LexUIBehaviour array */

@@ -73,7 +73,6 @@ class LGUI_API ULexLayoutFlexBoxContainer : public ULexLayoutContainer
 {
 	GENERATED_BODY()
 private:
-	friend class FLexLayoutHorizontalAndVerticalCustomization;
 	/**
 	 * Specifies how items are placed in the container, by setting the direction of the container's primary axis.
 	 * Direction defines the primary axis, if Direction is Horizontal or HorizontalReversed then secondary axis would be vertical.
@@ -84,7 +83,7 @@ private:
 	 * Controls whether the container is single-line or multi-line, and the direction of the secondary-axis, which determines the direction new lines are stacked in.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", meta = (AllowPrivateAccess = true))
-	ELexLayoutFlexBoxWrapType Warp = ELexLayoutFlexBoxWrapType::NoWrap;
+	ELexLayoutFlexBoxWrapType Wrap = ELexLayoutFlexBoxWrapType::NoWrap;
 	/**
 	 * Know as justify-content. Aligns items along the primary axis of the current line of the container.
 	 */
@@ -132,9 +131,6 @@ private:
 	FVector2f TotalMinSize;
 	FVector2f TotalMaxSize;
 	FVector2f TotalPreferredSize;
-	float GetTotalMinSize(int Axis);
-	float GetTotalMaxSize(int Axis);
-	float GetTotalPreferredSize(int Axis);
 	void SetChildPositionAndSize(ULexWidget* Child, FVector2f Pos, FVector2f AreaSize, int PrimaryAxis, int SecondaryAxis, float SecondaryPreferred, bool ReverseX, bool ReverseY);
 
 	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* TargetWidget)const override;
@@ -142,18 +138,40 @@ public:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
-	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
 
-	float GetMinWidthPixelValue() {return GetTotalMinSize(0);}
-	float GetMaxWidthPixelValue() {return GetTotalMaxSize(0);}
-	float GetPreferredWidthPixelValue(){return GetTotalPreferredSize(0);}
-	float GetPreferredHeightPixelValue(){return GetTotalPreferredSize(1);}
-	float GetMinHeightPixelValue() {return GetTotalMinSize(1);}
-	float GetMaxHeightPixelValue(){return GetTotalMaxSize(1);}
+	virtual void GetLayoutProperties(FVector2f& OutMin, FVector2f& OutMax, FVector2f& OutPreferred) override;
 
 	UFUNCTION(BlueprintCallable, Category = "Layout")
 	ELexLayoutFlexBoxDirectionType GetDirection()const{return Direction;}
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	ELexLayoutFlexBoxWrapType GetWrap()const{return Wrap;}
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	ELexLayoutFlexBoxPrimaryAxisAlignment GetPrimaryAlignment()const{return PrimaryAlignment;}
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	ELexLayoutFlexBoxSecondaryAxisAlignment GetSecondaryAlignment()const{return SecondaryAlignment;}
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	ELexLayoutFlexBoxSecondaryAxisLineAlignment GetSecondaryLineAlignment()const{return SecondaryLineAlignment;}
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	float GetWidthGap()const{return WidthGap;}
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	float GetHeightGap()const{return HeightGap;}
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	FMargin GetPadding()const{return Padding;}
 	
 	UFUNCTION(BlueprintCallable, Category = "Layout")
 	void SetDirection(ELexLayoutFlexBoxDirectionType Value);
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	void SetWrap(ELexLayoutFlexBoxWrapType Value);
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	void SetPrimaryAlignment(ELexLayoutFlexBoxPrimaryAxisAlignment Value);
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	void SetSecondaryAlignment(ELexLayoutFlexBoxSecondaryAxisAlignment Value);
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	void SetSecondaryLineAlignment(ELexLayoutFlexBoxSecondaryAxisLineAlignment Value);
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	void SetWidthGap(float Value);
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	void SetHeightGap(float Value);
+	UFUNCTION(BlueprintCallable, Category = "Layout")
+	void SetPadding(FMargin Value);
 };
