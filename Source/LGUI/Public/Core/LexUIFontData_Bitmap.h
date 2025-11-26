@@ -11,12 +11,12 @@ struct FLexUIFontKeyData
 {
 public:
 	FLexUIFontKeyData() {}
-	FLexUIFontKeyData(const TCHAR& inCharCode, const uint16& inCharSize)
+	FLexUIFontKeyData(const uint32& inCharCode, const uint16& inCharSize)
 	{
 		this->charCode = inCharCode;
 		this->charSize = inCharSize;
 	}
-	TCHAR charCode = 0;
+	uint32 charCode = 0;
 	uint16 charSize = 0;
 	bool operator==(const FLexUIFontKeyData& other)const
 	{
@@ -46,7 +46,7 @@ protected:
 public:
 	//Begin ULexUIFontData_FreeTypeRender interface
 	virtual void PushCharData(
-		TCHAR charCode, const FVector2f& lineOffset, const FVector2f& fontSpace, const FLexUICharData_HighPrecision& charData,
+		uint32 charCode, const FVector2f& lineOffset, const FVector2f& fontSpace, const FLexUICharData& charData,
 		const LexUIRichTextParser::FRichTextParseResult& richTextProperty,
 		int verticesStartIndex, int indicesStartIndex,
 		int& outAdditionalVerticesCount, int& outAdditionalIndicesCount,
@@ -60,10 +60,10 @@ protected:
 	virtual UTexture2D* CreateFontTexture(int InTextureSize)override;
 	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize)override;
 
-	virtual bool GetCharDataFromCache(const TCHAR& charCode, const float& charSize, FLexUICharData_HighPrecision& OutResult)override;
-	virtual void AddCharDataToCache(const TCHAR& charCode, const float& charSize, const FLexUICharData& charData)override;
+	virtual bool GetCharDataFromCache(const uint32& charCode, const float& charSize, FLexUICharData& OutResult)override;
+	virtual void AddCharDataToCache(const uint32& charCode, const float& charSize, FLexUICharData& charData)override;
 	virtual void ScaleDownUVofCachedChars()override;
-	virtual bool RenderGlyph(const TCHAR& charCode, const float& charSize, FGlyphBitmap& OutResult)override;
+	virtual bool RenderGlyph(const uint32& charCode, const float& charSize, FGlyphBitmap& OutResult)override;
 	virtual void ClearCharDataCache()override;
 
 	virtual bool GetSupportDynamicPixelsPerUnit()override { return true; }

@@ -41,7 +41,7 @@ bool UUISpriteSequencePlayer::CanPlay()
 }
 float UUISpriteSequencePlayer::GetDuration()const
 {
-	return (float)(SpriteSequence.Num()) / Fps;
+	return SpriteSequence.Num() / Fps;
 }
 void UUISpriteSequencePlayer::PrepareForPlay()
 {

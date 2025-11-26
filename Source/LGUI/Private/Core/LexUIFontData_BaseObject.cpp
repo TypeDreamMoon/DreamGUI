@@ -2,6 +2,7 @@
 
 #include "Core/LexUIFontData_BaseObject.h"
 #include "LGUI.h"
+#include "Core/LexUIFontEmojiData.h"
 #include "Utils/LexUIUtils.h"
 
 #define LOCTEXT_NAMESPACE "LGUIFontData_BaseObject"
@@ -21,5 +22,57 @@ ULexUIFontData_BaseObject* ULexUIFontData_BaseObject::GetDefaultFont()
 	}
 	return defaultFont;
 }
+
+void ULexUIFontData_BaseObject::PostInitProperties()
+{
+	UObject::PostInitProperties();
+	if (IsValid(EmojiData))
+	{
+		EmojiData->OnDataChange.AddWeakLambda(this, [this]()
+		{
+			OnEmojiDataChanged.Broadcast();
+		});
+	}
+}
+
+void ULexUIFontData_BaseObject::BeginDestroy()
+{
+	UObject::BeginDestroy();
+	if (IsValid(EmojiData))
+	{
+		EmojiData->OnDataChange.RemoveAll(this);
+	}
+}
+
+#if WITH_EDITOR
+void ULexUIFontData_BaseObject::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	UObject::PostEditChangeProperty(PropertyChangedEvent);
+	auto PropertyName = PropertyChangedEvent.GetMemberPropertyName();
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_BaseObject, EmojiData))
+	{
+		if (IsValid(EmojiData))
+		{
+			EmojiData->OnDataChange.AddWeakLambda(this, [this]()
+			{
+				OnEmojiDataChanged.Broadcast();
+			});
+		}
+		OnEmojiDataChanged.Broadcast();
+	}
+}
+void ULexUIFontData_BaseObject::PreEditChange(FProperty* PropertyAboutToChange)
+{
+	UObject::PreEditChange(PropertyAboutToChange);
+	auto PropertyName = PropertyAboutToChange->GetFName();
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_BaseObject, EmojiData))
+	{
+		if (IsValid(EmojiData))
+		{
+			EmojiData->OnDataChange.RemoveAll(this);
+		}
+	}
+}
+#endif
 
 #undef LOCTEXT_NAMESPACE

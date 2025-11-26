@@ -25,7 +25,7 @@ UObject* ULexUISpriteDataFactory::FactoryCreateNew(UClass* Class, UObject* InPar
 		isDefaltTexture = true;
 	}
 	// check size
-	if (SpriteTexture && !isDefaltTexture)
+	if (SpriteTexture.IsValid() && !isDefaltTexture)
 	{
 		int32 atlasPadding = 0;
 		auto lguiSetting = GetDefault<ULexUISettings>()->DefaultAtlasSetting.SpaceBetweenSprites;
@@ -54,13 +54,13 @@ UObject* ULexUISpriteDataFactory::FactoryCreateNew(UClass* Class, UObject* InPar
 		}
 		// Apply setting for sprite creation
 		//SpriteTexture->MipGenSettings = TextureMipGenSettings::TMGS_NoMipmaps;
-		ULexUISpriteData::CheckAndApplySpriteTextureSetting(SpriteTexture);
+		ULexUISpriteData::CheckAndApplySpriteTextureSetting(SpriteTexture.Get());
 	}
 
 	ULexUISpriteData* NewAsset = NewObject<ULexUISpriteData>(InParent, Class, Name, Flags | RF_Transactional);
-	if (SpriteTexture)
+	if (SpriteTexture.IsValid())
 	{
-		NewAsset->SpriteTexture = SpriteTexture;
+		NewAsset->SpriteTexture = SpriteTexture.Get();
 		NewAsset->SpriteInfo.Width = SpriteTexture->GetSurfaceWidth();
 		NewAsset->SpriteInfo.Height = SpriteTexture->GetSurfaceHeight();
 	}

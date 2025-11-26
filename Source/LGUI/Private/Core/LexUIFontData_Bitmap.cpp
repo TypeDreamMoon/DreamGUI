@@ -11,14 +11,14 @@
 
 
 void ULexUIFontData_Bitmap::PushCharData(
-	TCHAR charCode, const FVector2f& inLineOffset, const FVector2f& fontSpace, const FLexUICharData_HighPrecision& charData,
+	uint32 charCode, const FVector2f& inLineOffset, const FVector2f& fontSpace, const FLexUICharData& charData,
 	const LexUIRichTextParser::FRichTextParseResult& richTextProperty,
 	int verticesStartIndex, int indicesStartIndex,
 	int& outAdditionalVerticesCount, int& outAdditionalIndicesCount,
 	TArray<FLexUIOriginVertexData>& originVertices, TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndexBufferType>& triangleIndices
 )
 {
-	auto GetUnderlineOrStrikethroughCharGeo = [&](TCHAR charCode, float overrideFontSize)
+	auto GetUnderlineOrStrikethroughCharGeo = [&](uint32 charCode, float overrideFontSize)
 	{
 		auto charData = this->GetCharData(charCode, overrideFontSize);
 		charData.YOffset += this->GetVerticalOffset(overrideFontSize);
@@ -31,8 +31,8 @@ void ULexUIFontData_Bitmap::PushCharData(
 	outAdditionalVerticesCount = 4;
 	outAdditionalIndicesCount = 6;
 
-	FLexUICharData_HighPrecision underlineCharGeo;
-	FLexUICharData_HighPrecision strikethroughCharGeo;
+	FLexUICharData underlineCharGeo;
+	FLexUICharData strikethroughCharGeo;
 	//underline and strikethrough should not exist at same char
 	if (richTextProperty.Underline)
 	{
@@ -374,17 +374,17 @@ void ULexUIFontData_Bitmap::PushCharData(
 }
 
 
-bool ULexUIFontData_Bitmap::GetCharDataFromCache(const TCHAR& charCode, const float& charSize, FLexUICharData_HighPrecision& OutResult)
+bool ULexUIFontData_Bitmap::GetCharDataFromCache(const uint32& charCode, const float& charSize, FLexUICharData& OutResult)
 {
 	auto fontKey = FLexUIFontKeyData(charCode, charSize);
 	if (auto charData = CharDataMap.Find(fontKey))
 	{
-		OutResult = FLexUICharData_HighPrecision(*charData);
+		OutResult = *charData;
 		return true;
 	}
 	return false;
 }
-void ULexUIFontData_Bitmap::AddCharDataToCache(const TCHAR& charCode, const float& charSize, const FLexUICharData& charData)
+void ULexUIFontData_Bitmap::AddCharDataToCache(const uint32& charCode, const float& charSize, FLexUICharData& charData)
 {
 	CharDataMap.Add(FLexUIFontKeyData(charCode, charSize), charData);
 }
@@ -399,7 +399,7 @@ void ULexUIFontData_Bitmap::ScaleDownUVofCachedChars()
 		mapValue.MinUV.Y *= 0.5f;
 	}
 }
-bool ULexUIFontData_Bitmap::RenderGlyph(const TCHAR& charCode, const float& charSize, FGlyphBitmap& OutResult)
+bool ULexUIFontData_Bitmap::RenderGlyph(const uint32& charCode, const float& charSize, FGlyphBitmap& OutResult)
 {
 #if WITH_FREETYPE
 	//InSlot->bitmap_left equals (InSlot->metrics.horiBearingX >> 6), InSlot->bitmap_top equals (InSlot->metrics.horiBearingY >> 6)

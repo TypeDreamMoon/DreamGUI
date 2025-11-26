@@ -8,6 +8,7 @@
 #include "Core/LexUIRichTextImageData_BaseObject.h"
 #include "Core/LexUIRichTextCustomStyleData.h"
 #include "Core/LexUIDrawCall.h"
+#include "Core/LexUIFontEmojiData.h"
 #include "Core/LexUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "Utils/LexUIUtils.h"
@@ -95,17 +96,18 @@ void ULexText::ApplyRecreateText()
 	}
 }
 
+void ULexText::ApplyFontEmojiChange()
+{
+	this->MarkVerticesDirty(false, true, true, false);
+}
+
 void ULexText::BeginPlay()
 {
 	Super::BeginPlay();
 	if (IsValid(Font))
 	{
 		Font->InitFont();
-		if (!bHasAddToFont)
-		{
-			Font->AddUIText(this);
-			bHasAddToFont = true;
-		}
+		RegisterFont();
 	}
 	if (IsValid(RichTextImageData))
 	{
@@ -115,7 +117,6 @@ void ULexText::BeginPlay()
 	{
 		this->RegisterOnRichTextCustomStyleDataChange();
 	}
-	VisibleCharCount = VisibleCharCountInString(Text.ToString());
 }
 
 void ULexText::EndPlay()
@@ -123,8 +124,7 @@ void ULexText::EndPlay()
 	Super::EndPlay();
 	if (IsValid(Font))
 	{
-		Font->RemoveUIText(this);
-		bHasAddToFont = false;
+		UnregisterFont();
 	}
 	if (IsValid(RichTextImageData))
 	{
@@ -154,22 +154,18 @@ void ULexText::OnRegister()
 #if WITH_EDITOR
 		if (!World->IsGameWorld())
 		{
-			if (!bHasAddToFont)
+			if (IsValid(Font))
 			{
-				if (IsValid(Font))
-				{
-					Font->AddUIText(this);
-					bHasAddToFont = true;
-				}
+				RegisterFont();
 			}
-			if (!onRichTextImageDataChangedDelegateHandle.IsValid())
+			if (!RichTextImageDataChangedDelegateHandle.IsValid())
 			{
 				if (IsValid(RichTextImageData))
 				{
 					this->RegisterOnRichTextImageDataChange();
 				}
 			}
-			if (!onRichTextCustomStyleDataChangedDelegateHandle.IsValid())
+			if (!RichTextCustomStyleDataChangedDelegateHandle.IsValid())
 			{
 				if (IsValid(RichTextCustomStyleData))
 				{
@@ -194,19 +190,18 @@ void ULexText::OnUnregister()
 		{
 			if (IsValid(Font))
 			{
-				Font->RemoveUIText(this);
-				bHasAddToFont = false;
+				UnregisterFont();
 			}
 			if (IsValid(RichTextImageData))
 			{
-				if (onRichTextImageDataChangedDelegateHandle.IsValid())
+				if (RichTextImageDataChangedDelegateHandle.IsValid())
 				{
 					this->UnregisterOnRichTextImageDataChange();
 				}
 			}
 			if (IsValid(RichTextCustomStyleData))
 			{
-				if (onRichTextCustomStyleDataChangedDelegateHandle.IsValid())
+				if (RichTextCustomStyleDataChangedDelegateHandle.IsValid())
 				{
 					this->UnregisterOnRichTextCustomStyleDataChange();
 				}
@@ -268,29 +263,24 @@ UMaterialInterface* ULexText::GetMaterialToCreateGeometry()
 
 void ULexText::OnBeforeCreateOrUpdateGeometry()
 {
-	if (!bHasAddToFont)
+	if (IsValid(Font))
 	{
-		if (IsValid(Font))
-		{
-			Font->AddUIText(this);
-			bHasAddToFont = true;
-		}
+		RegisterFont();
 	}
-	if (bRichText && !onRichTextImageDataChangedDelegateHandle.IsValid())
+	if (bRichText && !RichTextImageDataChangedDelegateHandle.IsValid())
 	{
 		if (IsValid(RichTextImageData))
 		{
 			this->RegisterOnRichTextImageDataChange();
 		}
 	}
-	if (bRichText && !onRichTextCustomStyleDataChangedDelegateHandle.IsValid())
+	if (bRichText && !RichTextCustomStyleDataChangedDelegateHandle.IsValid())
 	{
 		if (IsValid(RichTextCustomStyleData))
 		{
 			this->RegisterOnRichTextCustomStyleDataChange();
 		}
 	}
-	if (VisibleCharCount == -1)VisibleCharCount = VisibleCharCountInString(Text.ToString());
 }
 
 bool ULexText::GetShouldAffectByPixelSnapping()const
@@ -329,6 +319,32 @@ void ULexText::OnCultureChanged_Implementation()
 
 
 #if WITH_EDITOR
+void ULexText::PreEditChange(FProperty* PropertyAboutToChange)
+{
+	Super::PreEditChange(PropertyAboutToChange);
+	auto PropertyName = PropertyAboutToChange->GetFName();
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexText, Font))
+	{
+		if (IsValid(Font))
+		{
+			UnregisterFont();
+		}
+	}
+	else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexText, RichTextImageData))
+	{
+		if (IsValid(RichTextImageData))//unregister event from prev
+		{
+			UnregisterOnRichTextImageDataChange();
+		}
+	}
+	else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexText, RichTextCustomStyleData))
+	{
+		if (IsValid(RichTextCustomStyleData))
+		{
+			UnregisterOnRichTextCustomStyleDataChange();
+		}
+	}
+}
 void ULexText::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	auto MemberProperty = PropertyChangedEvent.MemberProperty;
@@ -339,11 +355,17 @@ void ULexText::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEven
 		auto MemberPropertyName = MemberProperty->GetFName();
 		if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, Text))
 		{
-			VisibleCharCount = -1;
+			if (IsValid(Font))
+			{
+				RegisterFont();
+			}
+			ConditionalUpdateCacheTextGeometry();
 		}
 		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, Font))
 		{
 			ULexText::CurrentUsingFontData = Font;
+			ClearEmojiObject();
+			ConditionalUpdateCacheTextGeometry();
 		}
 		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, bUseKerning))
 		{
@@ -366,16 +388,25 @@ void ULexText::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEven
 		}
 		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, bRichText))
 		{
-			if (!bRichText)
+			if (bRichText)
+			{
+				ConditionalUpdateCacheTextGeometry();
+			}
+			else
 			{
 				ClearCreatedRichTextImageObject();
 			}
 		}
 		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, RichTextImageData))
 		{
+			UnregisterOnRichTextImageDataChange();
 			if (!IsValid(RichTextImageData))//clear richTextImageData, then need to delete created object
 			{
 				ClearCreatedRichTextImageObject();
+			}
+			else
+			{
+				ConditionalUpdateCacheTextGeometry();
 			}
 		}
 		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, RichTextTagFilterFlags))
@@ -384,78 +415,46 @@ void ULexText::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEven
 			{
 				ClearCreatedRichTextImageObject();
 			}
+			else
+			{
+				ConditionalUpdateCacheTextGeometry();
+			}
+		}
+		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, RichTextCustomStyleData))
+		{
+			if (IsValid(RichTextCustomStyleData))
+			{
+				RegisterOnRichTextCustomStyleDataChange();
+			}
 		}
 		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
-void ULexText::OnPreChangeFontProperty()
-{
-	if (IsValid(Font))
-	{
-		Font->RemoveUIText(this);
-		bHasAddToFont = false;
-	}
-}
-void ULexText::OnPostChangeFontProperty()
-{
-	if (IsValid(Font))
-	{
-		Font->AddUIText(this);
-		bHasAddToFont = true;
-	}
-}
-void ULexText::OnPreChangeRichTextImageDataProperty()
-{
-	if (IsValid(RichTextImageData))//unregister event from prev
-	{
-		UnregisterOnRichTextImageDataChange();
-	}
-}
-void ULexText::OnPostChangeRichTextImageDataProperty()
-{
-	if (IsValid(RichTextImageData))
-	{
-		RegisterOnRichTextImageDataChange();
-	}
-}
-void ULexText::OnPreChangeRichTextCustomStyleDataProperty()
-{
-	if (IsValid(RichTextCustomStyleData))
-	{
-		UnregisterOnRichTextCustomStyleDataChange();
-	}
-}
-void ULexText::OnPostChangeRichTextCustomStyleDataProperty()
-{
-	if (IsValid(RichTextCustomStyleData))
-	{
-		RegisterOnRichTextCustomStyleDataChange();
-	}
-}
+
 #endif
 void ULexText::RegisterOnRichTextImageDataChange()
 {
-	onRichTextImageDataChangedDelegateHandle = RichTextImageData->OnDataChange.AddWeakLambda(this, [this] {
+	RichTextImageDataChangedDelegateHandle = RichTextImageData->OnDataChange.AddWeakLambda(this, [this] {
 		this->MarkVerticesDirty(false, true, true, false);
 		});
 }
 void ULexText::UnregisterOnRichTextImageDataChange()
 {
-	RichTextImageData->OnDataChange.Remove(onRichTextImageDataChangedDelegateHandle);
-	onRichTextImageDataChangedDelegateHandle.Reset();
+	RichTextImageData->OnDataChange.Remove(RichTextImageDataChangedDelegateHandle);
+	RichTextImageDataChangedDelegateHandle.Reset();
 }
 
 void ULexText::RegisterOnRichTextCustomStyleDataChange()
 {
-	onRichTextCustomStyleDataChangedDelegateHandle = RichTextCustomStyleData->OnDataChange.AddWeakLambda(this, [this] {
+	RichTextCustomStyleDataChangedDelegateHandle = RichTextCustomStyleData->OnDataChange.AddWeakLambda(this, [this] {
 		this->MarkVerticesDirty(false, true, true, false);
 		});
 }
 void ULexText::UnregisterOnRichTextCustomStyleDataChange()
 {
-	RichTextCustomStyleData->OnDataChange.Remove(onRichTextCustomStyleDataChangedDelegateHandle);
-	onRichTextCustomStyleDataChangedDelegateHandle.Reset();
+	RichTextCustomStyleData->OnDataChange.Remove(RichTextCustomStyleDataChangedDelegateHandle);
+	RichTextCustomStyleDataChangedDelegateHandle.Reset();
 }
 
 bool ULexText::IsTextTruncated()const
@@ -472,8 +471,7 @@ void ULexText::SetFont(ULexUIFontData_BaseObject* Value) {
 		//remove from old
 		if (IsValid(Font))
 		{
-			Font->RemoveUIText(this);
-			bHasAddToFont = false;
+			UnregisterFont();
 		}
 		Font = Value;
 
@@ -481,8 +479,7 @@ void ULexText::SetFont(ULexUIFontData_BaseObject* Value) {
 		//add to new
 		if (IsValid(Font))
 		{
-			Font->AddUIText(this);
-			bHasAddToFont = true;
+			RegisterFont();
 		}
 	}
 }
@@ -490,18 +487,9 @@ void ULexText::SetText(const FText& Value) {
 	if (!Text.EqualTo(Value))
 	{
 		Text = Value;
-
-		int newVisibleCharCount = VisibleCharCountInString(Text.ToString());
-		if (newVisibleCharCount != VisibleCharCount)//visible char count change
-		{
-			MarkVerticesDirty(true, true, true, true);
-			VisibleCharCount = newVisibleCharCount;
-		}
-		else//visible char count not change, just mark update vertex and uv
-		{
-			MarkVerticesDirty(false, true, true, false);
-		}
+		MarkVerticesDirty(false, true, true, false);
 		ULexWidget::MarkLayoutForRebuild(GetWidget());
+		ConditionalUpdateCacheTextGeometry();
 	}
 }
 
@@ -657,16 +645,51 @@ void ULexText::ClearCreatedRichTextImageObject()
 	CreatedRichTextImageObjectArray.Empty();
 }
 
-bool ULexText::UpdateCacheTextGeometry()const
+void ULexText::ClearEmojiObject()
 {
-	if (!IsValid(this->GetFont()))return false;
-	auto Widget = GetWidget();
+	for (auto& ItemObj : CreatedEmojiObjectArray)
+	{
+		if (IsValid(ItemObj))
+		{
+			FLexUIUtils::DestroyActorWithHierarchy(ItemObj->GetOwner());
+		}
+	}
+	CreatedEmojiObjectArray.Empty();
+}
 
-	if (VisibleCharCount == -1)VisibleCharCount = VisibleCharCountInString(Text.ToString());
+void ULexText::RegisterFont()
+{
+	if (!bHasAddToFont)
+	{
+		bHasAddToFont = true;
+		Font->AddUIText(this);
+		EmojiDataChangedDelegateHandle = Font->OnEmojiDataChanged.AddWeakLambda(this, [=, this]()
+		{
+			ClearEmojiObject();
+			MarkVerticesDirty(true, true, true, true);
+		});
+	}
+}
+
+void ULexText::UnregisterFont()
+{
+	if (bHasAddToFont)
+	{
+		bHasAddToFont = false;
+		Font->RemoveUIText(this);
+		Font->OnEmojiDataChanged.Remove(EmojiDataChangedDelegateHandle);
+		EmojiDataChangedDelegateHandle.Reset();
+	}
+}
+
+void ULexText::UpdateCacheTextGeometry()const
+{
+	if (!IsValid(this->GetFont()))return;
+	auto Widget = GetWidget();
+	
 	auto RenderOpacityForRichText = this->GetRichText() ? Widget->GetFinalRenderOpacity() : 1.0f;
 	CacheTextGeometryData.SetInputParameters(
 		this->Text.ToString()
-		, this->VisibleCharCount
 		, Widget->GetWidth()
 		, Widget->GetHeight()
 		, FVector2f(Widget->GetPivot())
@@ -689,7 +712,18 @@ bool ULexText::UpdateCacheTextGeometry()const
 		CacheTextGeometryData.MarkDirty();
 	}
 	CacheTextGeometryData.ConditionalCalculateGeometry();
-	return true;
+}
+
+void ULexText::ConditionalUpdateCacheTextGeometry() const
+{
+	/**
+	 * RichTextImageData and EmojiData could cause create or delete widget, so we should make it happen before Canvas-Update,
+	 * because unexpected thing will happed if we create or delete widget during Canvas-Update.
+	 */
+	if (IsValid(RichTextImageData) || (IsValid(Font) && IsValid(Font->GetEmojiData())))
+	{
+		UpdateCacheTextGeometry();
+	}
 }
 
 void ULexText::MarkVerticesDirty(bool InTriangleDirty, bool InVertexPositionDirty, bool InVertexUVDirty, bool InVertexColorDirty)
@@ -756,6 +790,20 @@ void ULexText::GenerateRichTextImageObject()
 		false
 #endif
 	);
+}
+
+void ULexText::GenerateEmojiObject()
+{
+	if (auto EmojiData = Font->GetEmojiData())
+	{
+		EmojiData->CreateOrUpdateObject(this->GetWidget(), CacheTextGeometryData.cacheEmojiArray, CreatedEmojiObjectArray, 
+	#if WITH_EDITOR
+		bListEmojiObjectInOutliner
+	#else
+			false
+	#endif
+		);
+	}
 }
 
 float ULexText::GetPreferredWidth() const

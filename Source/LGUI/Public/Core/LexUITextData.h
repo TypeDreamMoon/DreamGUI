@@ -113,12 +113,122 @@ struct FLexUIText_RichTextImageTag
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = LGUI) FColor TintColor = FColor::White;
 };
 
+USTRUCT(BlueprintType, Category = LGUI)
+struct FLexUIText_Emoji
+{
+	GENERATED_BODY()
+	/** Emoji char */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = LGUI) int32 EmojiCode;
+	/** image object position */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = LGUI) FVector2D Position = FVector2D::ZeroVector;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = LGUI) FVector2D Size = FVector2D::ZeroVector;
+};
+
 UENUM(BlueprintType, meta = (Bitflags), Category = LGUI)
 enum class ELexUIText_RichTextTagFilterFlags : uint8
 {
 	Bold, Italic, Underline, Strikethrough, Size, Color, Superscript, Subscript, CustomTag, Image
 };
 ENUM_CLASS_FLAGS(ELexUIText_RichTextTagFilterFlags);
+
+enum class ELexUIText_CodeType
+{
+	Text = 0,
+	Emoji = 1,
+};
+struct FLexUIText_TextProcessingElement
+{
+	uint32 Unicode;
+	int StringIndex;
+	int Length;
+	ELexUIText_CodeType Type;
+};
+
+/// <summary>
+/// Commonly referenced Unicode characters in the text generation process.
+/// </summary>
+namespace FLexUIText_CodePoint
+{
+	// constexpr uint32 SPACE = 0x20;
+	// constexpr uint32 DOUBLE_QUOTE = 0x22;
+	// constexpr uint32 NUMBER_SIGN = 0x23;
+	// constexpr uint32 PERCENTAGE = 0x25;
+	// constexpr uint32 PLUS = 0x2B;
+	// constexpr uint32 MINUS = 0x2D;
+	// constexpr uint32 PERIOD = 0x2E;
+	//
+	// constexpr uint32 HYPHEN_MINUS = 0x2D;
+	// constexpr uint32 SOFT_HYPHEN = 0xAD;
+	// constexpr uint32 HYPHEN = 0x2010;
+	// constexpr uint32 NON_BREAKING_HYPHEN = 0x2011;
+	// constexpr uint32 ZERO_WIDTH_SPACE = 0x200B;
+	// constexpr uint32 RIGHT_SINGLE_QUOTATION = 0x2019;
+	// constexpr uint32 APOSTROPHE = 0x27;
+	// constexpr uint32 WORD_JOINER = 0x2060;
+	constexpr uint32 HIGH_SURROGATE_START = 0xD800;
+	constexpr uint32 HIGH_SURROGATE_END = 0xDBFF;
+	constexpr uint32 LOW_SURROGATE_START = 0xDC00;
+	constexpr uint32 LOW_SURROGATE_END = 0xDFFF;
+	constexpr uint32 UNICODE_PLANE01_START = 0x10000;
+	constexpr uint32 UNICODE_VS_BLACK = 0xFE0E;
+	constexpr uint32 UNICODE_VS_COLOR = 0xFE0F;
+
+	inline uint32 ConvertToUTF32(uint32 highSurrogate, uint32 lowSurrogate)
+	{
+		return (((highSurrogate - FLexUIText_CodePoint::HIGH_SURROGATE_START) << 10) | (lowSurrogate - FLexUIText_CodePoint::LOW_SURROGATE_START)) + FLexUIText_CodePoint::UNICODE_PLANE01_START;
+	}
+	inline bool IsEmoji(uint32 Codepoint)
+	{
+		// Emoji Block 1
+		if (Codepoint >= 0x1F300 && Codepoint <= 0x1F5FF) return true;
+
+		// Emoticons
+		if (Codepoint >= 0x1F600 && Codepoint <= 0x1F64F) return true;
+
+		// Transport & Map Symbols
+		if (Codepoint >= 0x1F680 && Codepoint <= 0x1F6FF) return true;
+
+		// Supplemental Symbols and Pictographs
+		if (Codepoint >= 0x1F900 && Codepoint <= 0x1F9FF) return true;
+
+		// Symbols and Pictographs Extended-A
+		if (Codepoint >= 0x1FA70 && Codepoint <= 0x1FAFF) return true;
+
+		// Flags (Regional Indicator Symbols)
+		if (Codepoint >= 0x1F1E6 && Codepoint <= 0x1F1FF) return true;
+
+		return false;
+	}
+	inline FLexUIText_TextProcessingElement ReadCodePoint(const FString& InString, int InStringLen, int& InOutCharIndex)
+	{
+		auto charCode = InString[InOutCharIndex];
+		if (charCode >= FLexUIText_CodePoint::HIGH_SURROGATE_START && charCode <= FLexUIText_CodePoint::HIGH_SURROGATE_END
+				&& InOutCharIndex + 1 < InStringLen
+				&& InString[InOutCharIndex + 1] >= FLexUIText_CodePoint::LOW_SURROGATE_START && InString[InOutCharIndex + 1] <= FLexUIText_CodePoint::LOW_SURROGATE_END)
+		{
+			FLexUIText_TextProcessingElement Element;
+			Element.Unicode = FLexUIText_CodePoint::ConvertToUTF32(charCode, InString[InOutCharIndex + 1]);
+			Element.StringIndex = InOutCharIndex;
+			Element.Type = IsEmoji(Element.Unicode) ? ELexUIText_CodeType::Emoji : ELexUIText_CodeType::Text;
+			if (InOutCharIndex + 2 < InStringLen
+				&& (InString[InOutCharIndex + 2] == FLexUIText_CodePoint::UNICODE_VS_BLACK || InString[InOutCharIndex + 2] == FLexUIText_CodePoint::UNICODE_VS_COLOR))
+			{
+				Element.Length = 3;
+				InOutCharIndex+=2;
+			}
+			else
+			{
+				Element.Length = 2;
+				InOutCharIndex+=1;
+			}
+			return Element;
+		}
+		else
+		{
+			return FLexUIText_TextProcessingElement{charCode, InOutCharIndex, 1, ELexUIText_CodeType::Text};
+		}
+	}
+};
 
 struct LGUI_API FLexUITextGeometryCache
 {
@@ -130,12 +240,11 @@ public:
 	 */
 	bool SetInputParameters(
 		const FString& InContent,
-		int32 InVisibleCharCount,
 		float InWidth,
 		float InHeight,
 		FVector2f InPivot,
 		FColor InColor,
-		float InCanvasGroupAlpha,
+		float InRenderOpacityForRichText,
 		FVector2f InFontSpace,
 		float InFontSize,
 		ELexUITextParagraphHorizontalAlign InParagraphHAlign,
@@ -150,29 +259,29 @@ public:
 	);
 private:
 #pragma region InputParameters
-	FString content = TEXT("");
-	int32 visibleCharCount = -1;
-	float width = 0;
-	float height = 0;
-	FVector2f pivot = FVector2f::ZeroVector;
-	FColor color = FColor::White;
-	float canvasGroupAlpha = 1.0f;
-	FVector2f fontSpace = FVector2f::ZeroVector;
-	float fontSize = 0;
-	ELexUITextParagraphHorizontalAlign paragraphHAlign = ELexUITextParagraphHorizontalAlign::Left;
-	ELexUITextParagraphVerticalAlign paragraphVAlign = ELexUITextParagraphVerticalAlign::Bottom;
-	ELexUITextOverflowType overflowType = ELexUITextOverflowType::HorizontalOverflow;
+	TArray<FLexUIText_TextProcessingElement> TextProcessingArray;
+	FString Content = TEXT("");
+	float Width = 0;
+	float Height = 0;
+	FVector2f Pivot = FVector2f::ZeroVector;
+	FColor Color = FColor::White;
+	float RenderOpacityForRichText = 1.0f;
+	FVector2f FontSpace = FVector2f::ZeroVector;
+	float FontSize = 0;
+	ELexUITextParagraphHorizontalAlign ParagraphHAlign = ELexUITextParagraphHorizontalAlign::Left;
+	ELexUITextParagraphVerticalAlign ParagraphVAlign = ELexUITextParagraphVerticalAlign::Bottom;
+	ELexUITextOverflowType OverflowType = ELexUITextOverflowType::HorizontalOverflow;
 	ETextWrappingPolicy WrappingPolicy = ETextWrappingPolicy::AllowPerCharacterWrapping;
-	bool useKerning = false;
-	ELexUITextFontStyle fontStyle = ELexUITextFontStyle::None;
-	bool richText = false;
-	int32 richTextFilterFlags = 0xffffffff;
-	TWeakObjectPtr<ULexUIFontData_BaseObject> font = nullptr;
+	bool bUseKerning = false;
+	ELexUITextFontStyle FontStyle = ELexUITextFontStyle::None;
+	bool bRichText = false;
+	int32 RichTextFilterFlags = 0xffffffff;
+	TWeakObjectPtr<ULexUIFontData_BaseObject> Font = nullptr;
 #pragma endregion InputParameters
 
 	bool bIsDirty = true;//vertex or triangle data is dirty
 	bool bIsColorDirty = true;//only color data is dirty (no include rich text's color)
-	TWeakObjectPtr<ULexText> UIText = nullptr;
+	TWeakObjectPtr<ULexText> TextComp = nullptr;
 
 public:
 #pragma region OutputResults
@@ -185,8 +294,8 @@ public:
 	TArray<FLexUITextCharProperty> cacheCharPropertyArray;
 	TArray<FLexUIText_RichTextCustomTag> cacheRichTextCustomTagArray;
 	TArray<FLexUIText_RichTextImageTag> cacheRichTextImageTagArray;
+	TArray<FLexUIText_Emoji> cacheEmojiArray;
 #pragma endregion OutputResults
-public:
 	void MarkDirty();
 	/** check if dirty before calculate geometry */
 	void ConditionalCalculateGeometry();

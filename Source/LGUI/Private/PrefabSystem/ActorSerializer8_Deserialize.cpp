@@ -9,6 +9,7 @@
 #include "Runtime/Launch/Resources/Version.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "LGUI.h"
+#include "ObjectTools.h"
 #include "Misc/NetworkVersion.h"
 #include "UObject/UObjectThreadContext.h"
 #include "PrefabSystem/LGUIPrefabSettings.h"
@@ -542,6 +543,22 @@ namespace LGUIPrefabSystem8
 
 					if (auto OuterObjectPtr = MapGuidToObject.Find(ObjectData.OuterObjectGuid))
 					{
+#if WITH_EDITOR
+						if (auto ExitObject = FindObjectWithOuter(*OuterObjectPtr, nullptr, ObjectData.ObjectName))
+						{
+							if (auto Comp = Cast<UActorComponent>(ExitObject))
+							{
+								Comp->DestroyComponent();
+								Comp->Rename(nullptr);
+							}
+							else if (auto Obj = Cast<UObject>(ExitObject))
+							{
+								Obj->MarkAsGarbage();
+								Obj->Rename(nullptr);
+							}
+							UE_LOG(LGUI, Warning, TEXT("[%s].%d Object '%s' already exist on outer '%s', will destroy and rename exiting one. Prefab: '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(ObjectData.ObjectName.ToString()), *(OuterObjectPtr->GetPathName()), *PrefabAssetPath);
+						}
+#endif
 						CreatedNewObject = NewObject<UObject>(*OuterObjectPtr, ObjectClass, ObjectData.ObjectName, (EObjectFlags)ObjectData.ObjectFlags);
 						MapGuidToObject.Add(ObjectGuid, CreatedNewObject);
 						MapObjectToOriginGuid.Add(CreatedNewObject, ObjectGuid);

@@ -13,10 +13,10 @@ struct FLexUIRichTextImageItemData
 	GENERATED_BODY()
 public:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		TArray<TObjectPtr<class ULexUISpriteData_BaseObject>> frames;
+		TArray<TObjectPtr<class ULexUISpriteData_BaseObject>> Frames;
 	/** use this value as animation-fps, -1 means not override */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		float overrideAnimationFps = -1;
+		float OverrideAnimationFps = -1;
 };
 /** use Sprite to render image for UIText */
 UCLASS(NotBlueprintable, BlueprintType)
@@ -25,9 +25,9 @@ class LGUI_API ULexUIRichTextImageData :public ULexUIRichTextImageData_BaseObjec
 	GENERATED_BODY()
 private:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		TMap<FName, FLexUIRichTextImageItemData> imageMap;
+		TMap<FName, FLexUIRichTextImageItemData> ImageMap;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		float animationFps = 4;
+		float AnimationFps = 4;
 protected:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -39,15 +39,15 @@ public:
 		void SetAnimationFps(float value);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		const TMap<FName, FLexUIRichTextImageItemData>& GetImageMap()const { return imageMap; }
+		const TMap<FName, FLexUIRichTextImageItemData>& GetImageMap()const { return ImageMap; }
 	/** Get this to directly modify the data. After modify is done, call BroadcastOnDataChange function to notify. */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		TMap<FName, FLexUIRichTextImageItemData>& GetMutableImageMap() { return imageMap; }
+		TMap<FName, FLexUIRichTextImageItemData>& GetMutableImageMap() { return ImageMap; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void BroadcastOnDataChange();
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		float GetAnimationFps()const { return animationFps; }
+		float GetAnimationFps()const { return AnimationFps; }
 
 	virtual void CreateOrUpdateObject(class ULexWidget* parent, const TArray<FLexUIText_RichTextImageTag>& imageTagArray, TArray<TObjectPtr<class ULexWidget>>& inOutCreatedImageObjectArray, bool listImageObjectInEditorOutliner)override;
-	virtual bool GetImageSize(const FName& imageTag, FIntVector2& outSize);
+	virtual bool GetImageSize(const FName& imageTag, FIntVector2& outSize)override;
 };

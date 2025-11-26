@@ -1,7 +1,6 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "AssetTypeActions_LexUIRichTextImageData.h"
-#include "ContentBrowserModule.h"
 #include "Core/LexUIRichTextImageData.h"
 
 #define LOCTEXT_NAMESPACE "AssetTypeActions_LexUIRichTextImageData"

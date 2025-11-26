@@ -11,9 +11,10 @@ UENUM(BlueprintType)
 enum class ELexLayoutGridSizeType:uint8
 {
 	/**
-	 * Auto will use max size of cell content
+	 * Auto will use max preferred-size of cell content
 	 */
-	Auto,
+	//Auto,
+	
 	/**
 	 * Fixed pixel value
 	 */

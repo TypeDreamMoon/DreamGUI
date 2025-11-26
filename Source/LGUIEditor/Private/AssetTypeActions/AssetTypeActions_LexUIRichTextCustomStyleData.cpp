@@ -1,7 +1,6 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "AssetTypeActions_LexUIRichTextCustomStyleData.h"
-#include "ContentBrowserModule.h"
 #include "Core/LexUIRichTextCustomStyleData.h"
 
 #define LOCTEXT_NAMESPACE "AssetTypeActions_LexUIRichTextCustomStyleData"

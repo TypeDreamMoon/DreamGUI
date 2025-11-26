@@ -131,10 +131,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
 		EUITextInputOverflowType OverflowType = EUITextInputOverflowType::ClampContent;
 	//when use multiline mode and OverflowType is OverflowToMax, this is the max line count that can expend the input area
-	UPROPERTY(EditAnywhere, Category = "LGUI-Input", meta=(EditCondition="OverflowType==ELexUITextInputOverflowType::OverflowToMax"))
+	UPROPERTY(EditAnywhere, Category = "LGUI-Input", meta=(EditCondition="OverflowType==EUITextInputOverflowType::OverflowToMax"))
 		int MaxLineCount = 5;
 	//when use SingleLine mode and OverflowType is OverflowToMax, this is the max width that can expend the input area
-	UPROPERTY(EditAnywhere, Category = "LGUI-Input", meta=(EditCondition="OverflowType==ELexUITextInputOverflowType::OverflowToMax"))
+	UPROPERTY(EditAnywhere, Category = "LGUI-Input", meta=(EditCondition="OverflowType==EUITextInputOverflowType::OverflowToMax"))
 		float MaxLineWidth = 100;
 	/**
 	 * This will be used in multiline mode, when hit enter, if one of these keys is also pressing then the input will submit, otherwise a new line will be added.
@@ -188,6 +188,8 @@ protected:
 	/** Input activate or deactivate, means begin input or end input. */
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
 	FLexUIEventDelegate OnInputActivate = FLexUIEventDelegate(ELexUIEventDelegateParameterType::Bool);
+
+	void SetText(const FString& InText, bool InFireEvent);
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		class ULexText* GetTextComponent()const;
@@ -224,12 +226,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		bool GetReadOnly()const { return bReadOnly; }
 
-	/**
-	 * Set text value.
-	 * @return false if InText is wrong format.
-	 */
+	/** Set text value and send callback event */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-		bool SetText(const FString& InText, bool InFireEvent = false);
+	void SetText(const FString& InText);
+	/** Set text value and NOT send callback event */
+	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
+	void SetTextWithoutNotify(const FString& InText);
+	
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 		void SetInputType(EUITextInputType Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")

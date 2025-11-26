@@ -1,7 +1,6 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "AssetTypeActions/AssetTypeActions_LexUIStaticMeshCache.h"
-#include "ContentBrowserModule.h"
 #include "Extensions/LexStaticMesh.h"
 
 #define LOCTEXT_NAMESPACE "AssetTypeActions_LexUIStaticMeshCache"

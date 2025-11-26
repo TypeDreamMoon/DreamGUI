@@ -87,30 +87,6 @@ void FLexTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder
 		DetailBuilder.HideProperty(item);
 	}
 
-	auto fontHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, Font));
-	fontHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
-		TargetScriptPtr->OnPostChangeFontProperty();
-	}));
-	fontHandle->SetOnPropertyValuePreChange(FSimpleDelegate::CreateLambda([=, this]{
-		TargetScriptPtr->OnPreChangeFontProperty();
-	}));
-
-	auto richTextImageDataHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, RichTextImageData));
-	richTextImageDataHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
-		TargetScriptPtr->OnPostChangeRichTextImageDataProperty();
-		}));
-	richTextImageDataHandle->SetOnPropertyValuePreChange(FSimpleDelegate::CreateLambda([=, this] {
-		TargetScriptPtr->OnPreChangeRichTextImageDataProperty();
-		}));
-
-	auto richTextCustomStyleDataHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, RichTextCustomStyleData));
-	richTextCustomStyleDataHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
-		TargetScriptPtr->OnPostChangeRichTextCustomStyleDataProperty();
-		}));
-	richTextCustomStyleDataHandle->SetOnPropertyValuePreChange(FSimpleDelegate::CreateLambda([=, this] {
-		TargetScriptPtr->OnPreChangeRichTextCustomStyleDataProperty();
-		}));
-
 	auto OverrideMaterial_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, OverrideMaterial));
 	OverrideMaterial_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, &DetailBuilder] {
 		DetailBuilder.ForceRefreshDetails();

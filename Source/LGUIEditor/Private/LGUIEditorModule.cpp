@@ -75,6 +75,8 @@
 #include "PrefabAnimation/LGUIPrefabSequencerSettings.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "AssetTypeActions/AssetTypeActions_LexUIFontEmojiData.h"
+#include "Core/LexUIFontEmojiData.h"
 #include "Core/LexUIImageBrush.h"
 #include "Core/Components/LexImage.h"
 #include "Core/Components/LexLayoutFlexBoxSelf.h"
@@ -84,6 +86,7 @@
 #include "DetailCustomization/LexLayoutFlexBoxSelfCustomization.h"
 #include "DetailCustomization/LexLayoutFlexBoxContainerCustomization.h"
 #include "DetailCustomization/LexUIEventDelegatePresetParamCustomization.h"
+#include "DetailCustomization/LexUIFontEmojiDataCustomization.h"
 
 const FName FLGUIEditorModule::LGUIDynamicSpriteAtlasViewerName(TEXT("LGUIDynamicSpriteAtlasViewerName"));
 const FName FLGUIEditorModule::LGUIPrefabSequenceTabName(TEXT("LGUIPrefabSequenceTabName"));
@@ -255,6 +258,8 @@ void FLGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomClassLayout(UUISpriteSequencePlayer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteSequencePlayerCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUISpriteSheetTexturePlayer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteSheetTexturePlayerCustomization::MakeInstance));
 
+		PropertyModule.RegisterCustomClassLayout(ULexUIFontEmojiData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexUIFontEmojiDataCustomization::MakeInstance));
+
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexUIEventDelegateCustomization::MakeInstance));
 		//PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegateTwoParam::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLGUIEventDelegateTwoParamCustomization::MakeInstance));
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Empty::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
@@ -306,28 +311,31 @@ void FLGUIEditorModule::StartupModule()
 
 		TSharedPtr<FAssetTypeActions_Base> SpriteDataAction = MakeShareable(new FAssetTypeActions_LexUISpriteData(LexUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> StaticSpriteAtlasDataAction = MakeShareable(new FAssetTypeActions_LexUIStaticSpriteAtlasData(LexUIAssetCategoryBit));
-		TSharedPtr<FAssetTypeActions_Base> FontDataAction = MakeShareable(new FAssetTypeActions_LexUIFontData_Bitmap(LexUIAssetCategoryBit));
+		TSharedPtr<FAssetTypeActions_Base> BitmapFontDataAction = MakeShareable(new FAssetTypeActions_LexUIFontData_Bitmap(LexUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> PrefabDataAction = MakeShareable(new FAssetTypeActions_LexUIPrefab(LexUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> UIStaticMeshCacheDataAction = MakeShareable(new FAssetTypeActions_LexUIStaticMeshCache(LexUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> RichTextCustomStyleDataAction = MakeShareable(new FAssetTypeActions_LexUIRichTextCustomStyleData(LexUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> RichTextImageDataAction = MakeShareable(new FAssetTypeActions_LexUIRichTextImageData(LexUIAssetCategoryBit));
-		TSharedPtr<FAssetTypeActions_Base> SDFFontDataTypeAction = MakeShareable(new FAssetTypeActions_LexUIFontData_DistanceField(LexUIAssetCategoryBit));
+		TSharedPtr<FAssetTypeActions_Base> FontEmojiDataAction = MakeShareable(new FAssetTypeActions_LexUIFontEmojiData(LexUIAssetCategoryBit));
+		TSharedPtr<FAssetTypeActions_Base> DistanceFieldFontDataTypeAction = MakeShareable(new FAssetTypeActions_LexUIFontData_DistanceField(LexUIAssetCategoryBit));
 		AssetTools.RegisterAssetTypeActions(SpriteDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(StaticSpriteAtlasDataAction.ToSharedRef());
-		AssetTools.RegisterAssetTypeActions(FontDataAction.ToSharedRef());
+		AssetTools.RegisterAssetTypeActions(BitmapFontDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(PrefabDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(UIStaticMeshCacheDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(RichTextCustomStyleDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(RichTextImageDataAction.ToSharedRef());
-		AssetTools.RegisterAssetTypeActions(SDFFontDataTypeAction.ToSharedRef());
+		AssetTools.RegisterAssetTypeActions(FontEmojiDataAction.ToSharedRef());
+		AssetTools.RegisterAssetTypeActions(DistanceFieldFontDataTypeAction.ToSharedRef());
 		AssetTypeActionsArray.Add(SpriteDataAction);
 		AssetTypeActionsArray.Add(StaticSpriteAtlasDataAction);
-		AssetTypeActionsArray.Add(FontDataAction);
+		AssetTypeActionsArray.Add(BitmapFontDataAction);
 		AssetTypeActionsArray.Add(PrefabDataAction);
 		AssetTypeActionsArray.Add(UIStaticMeshCacheDataAction);
 		AssetTypeActionsArray.Add(RichTextCustomStyleDataAction);
 		AssetTypeActionsArray.Add(RichTextImageDataAction);
-		AssetTypeActionsArray.Add(SDFFontDataTypeAction);
+		AssetTypeActionsArray.Add(FontEmojiDataAction);
+		AssetTypeActionsArray.Add(DistanceFieldFontDataTypeAction);
 	}
 	//register Thumbnail
 	{
@@ -478,6 +486,8 @@ void FLGUIEditorModule::ShutdownModule()
 
 		PropertyModule.UnregisterCustomClassLayout(UUISpriteSequencePlayer::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUISpriteSheetTexturePlayer::StaticClass()->GetFName());
+		
+		PropertyModule.UnregisterCustomClassLayout(ULexUIFontEmojiData::StaticClass()->GetFName());
 
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate::StaticStruct()->GetFName());
 		//PropertyModule.UnregisterCustomPropertyTypeLayout(FLGUIEventDelegateTwoParam::StaticStruct()->GetFName());

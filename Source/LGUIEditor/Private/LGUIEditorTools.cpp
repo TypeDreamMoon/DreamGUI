@@ -1027,7 +1027,7 @@ void LGUIEditorTools::DuplicateSelectedActors_Impl()//@todo: fix bug: duplicate 
 								return KeyValue.Key;
 							}
 						}
-						UE_LOG(LGUIEditor, Error, TEXT("[LGUIEditorTools::DuplicateSelectedActors_Impl] Should never reach this point!"));
+						UE_LOG(LGUIEditor, Error, TEXT("[%s].%d Should never reach this point!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 						FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
 						return FGuid::NewGuid();
 					};
@@ -1132,7 +1132,7 @@ void LGUIEditorTools::CopySelectedActors_Impl()
 								return KeyValue.Key;
 							}
 						}
-						UE_LOG(LGUIEditor, Error, TEXT("[LGUIEditorTools::CopySelectedActors_Impl] Should never reach this point!"));
+						UE_LOG(LGUIEditor, Error, TEXT("[%s].%d Should never reach this point!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 						FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
 						return FGuid::NewGuid();
 					};

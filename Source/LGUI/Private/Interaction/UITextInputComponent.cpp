@@ -1590,7 +1590,7 @@ const FString& UUITextInputComponent::GetText()const
 {
 	return Text;
 }
-bool UUITextInputComponent::SetText(const FString& InText, bool InFireEvent)
+void UUITextInputComponent::SetText(const FString& InText, bool InFireEvent)
 {
 	if (Text != InText)
 	{
@@ -1615,8 +1615,18 @@ bool UUITextInputComponent::SetText(const FString& InText, bool InFireEvent)
 		CaretPositionIndex = 0;
 		UpdateAfterTextChange(InFireEvent);
 	}
-	return true;
 }
+
+void UUITextInputComponent::SetText(const FString& InText)
+{
+	SetText(InText, true);
+}
+
+void UUITextInputComponent::SetTextWithoutNotify(const FString& InText)
+{
+	SetText(InText, false);
+}
+
 void UUITextInputComponent::SetInputType(EUITextInputType Value)
 {
 	if (InputType != Value)

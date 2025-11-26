@@ -195,14 +195,17 @@ public:
 #pragma endregion
 #pragma region UIText
 public:
-	static void UpdateUIText(const FString& text, int32 visibleCharCount, float width, float height, const FVector2f& pivot
-		, const FColor& color, uint8 renderOpacity, const FVector2f& fontSpace, FLexUIGeometry* uiGeo, float fontSize
+	static void UpdateUIText(const FString& Content
+		, TArray<FLexUIText_TextProcessingElement>& TextProcessingArray
+		, float width, float height, const FVector2f& pivot
+		, const FColor& color, uint8 RenderOpacityForRichText, const FVector2f& fontSpace, FLexUIGeometry* uiGeo, float fontSize
 		, ELexUITextParagraphHorizontalAlign paragraphHAlign, ELexUITextParagraphVerticalAlign paragraphVAlign, ELexUITextOverflowType overflowType
-		, ETextWrappingPolicy wrappingPolicy, bool kerning
+		, ETextWrappingPolicy wrappingPolicy, bool bUseKerning
 		, ELexUITextFontStyle fontStyle, FVector2f& textPreferredSize, bool& outTruncated
 		, ULexCanvas* renderCanvas, class ULexText* lexText
 		, TArray<FLexUITextLineProperty>& cacheLinePropertyArray, TArray<FLexUITextCharProperty>& cacheCharPropertyArray, TArray<FLexUIText_RichTextCustomTag>& cacheRichTextCustomTagArray
 		, TArray<FLexUIText_RichTextImageTag>& cacheRichTextImageTagArray
+		, TArray<FLexUIText_Emoji>& cacheEmojiArray
 		, ULexUIFontData_BaseObject* font, bool richText, int32 richTextFilterFlags);
 #pragma endregion
 

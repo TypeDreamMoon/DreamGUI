@@ -71,7 +71,6 @@ protected:
 	void UpdateFontOnCultureChanged();
 	FDelegateHandle OnCultureChangedDelegateHandle;
 
-protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		int FontFace = 0;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
@@ -79,8 +78,6 @@ protected:
 	/** Current using font face has kerning? */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI", Transient, AdvancedDisplay)
 		bool bHasKerning = false;
-	//UPROPERTY(EditAnywhere, Category = "LGUI")
-	//	TScriptInterface<class UFontFaceInterface> test;
 	
 	/**
 	 * when packing char pixel into one single atlas texture, we will use this size to create a blank texture, then insert char pixel. if texture is full(cannot insert anymore), a new larger texture will be created.
@@ -120,9 +117,9 @@ public:
 	virtual void InitFont()override;
 	virtual UMaterialInterface* GetFontMaterial()override { return nullptr; }
 	virtual UTexture2D* GetFontTexture()override;
-	virtual FLexUICharData_HighPrecision GetCharData(const TCHAR& charCode, const float& charSize)override;
+	virtual FLexUICharData GetCharData(const uint32& charCode, const float& charSize)override;
 	virtual bool HasKerning()override { return bHasKerning; }
-	virtual float GetKerning(const TCHAR& leftCharIndex, const TCHAR& rightCharIndex, const float& charSize)override;
+	virtual float GetKerning(const uint32& leftCharIndex, const uint32& rightCharIndex, const float& charSize)override;
 	virtual float GetLineHeight(const float& fontSize)override;
 	virtual float GetVerticalOffset(const float& fontSize)override;
 	virtual float GetFontSizeLimit()override { return 200.0f; }//limit font size to 200. too large font size will result in extreme large texture
@@ -130,6 +127,9 @@ public:
 	virtual void AddUIText(ULexText* InText)override;
 	virtual void RemoveUIText(ULexText* InText)override;
 	//End ULexUIFontData_BaseObject interface
+
+	void SetFontType(ELexUIDynamicFontDataType Value);
+	void SetUnrealFont(UFontFace* Value);
 protected:
 	/** Collection of UIText which use this font to render. */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI")
@@ -156,7 +156,7 @@ protected:
 	FT_FaceRec_* Face = nullptr;
 	void InitFreeType();
 	void DeinitFreeType();
-	FT_GlyphSlotRec_* RenderGlyphOnFreeType(const TCHAR& charCode, const float& charSize);
+	FT_GlyphSlotRec_* RenderGlyphOnFreeType(const uint32& charCode, const float& charSize);
 
 #if WITH_EDITOR
 	TArray<FString> CacheSubFaces(FT_LibraryRec_* InFTLibrary, const TArray<uint8>& InMemory);
@@ -187,9 +187,9 @@ protected:
 	virtual UTexture2D* CreateFontTexture(int InTextureSize)PURE_VIRTUAL(ULGUIFreeTypeRenderFontData::CreateFontTexture, return nullptr;);
 	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize);
 
-	virtual bool GetCharDataFromCache(const TCHAR& charCode, const float& charSize, FLexUICharData_HighPrecision& OutResult) { return false; };
-	virtual void AddCharDataToCache(const TCHAR& charCode, const float& charSize, const FLexUICharData& charData) {};
-	virtual bool RenderGlyph(const TCHAR& charCode, const float& charSize, FGlyphBitmap& OutResult) { return false; };
+	virtual bool GetCharDataFromCache(const uint32& charCode, const float& charSize, FLexUICharData& OutResult) { return false; };
+	virtual void AddCharDataToCache(const uint32& charCode, const float& charSize, FLexUICharData& charData) {};
+	virtual bool RenderGlyph(const uint32& charCode, const float& charSize, FGlyphBitmap& OutResult) { return false; };
 	virtual void ScaleDownUVofCachedChars() {};
 	virtual void ClearCharDataCache() {};
 public:

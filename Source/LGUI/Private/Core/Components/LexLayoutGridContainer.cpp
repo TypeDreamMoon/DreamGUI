@@ -163,10 +163,12 @@ void ULexLayoutGridContainer::UpdateLayout()
 		else
 		{
 			NotLocatedWidgets.Add(Child);
+			continue;
 		}
 		float ColumnRatio = 0, ColumnConstant = 0;
 		for (int i = ColumnIndex, Count = FMath::Min(i + ColumnCount, Columns.Num()); i < Count; i++)
 		{
+			AlreadyFilledColumns.AddUnique(i);
 			auto& Column = Columns[i];
 			if (Column.Type == ELexLayoutGridSizeType::Ratio)
 			{
@@ -180,6 +182,7 @@ void ULexLayoutGridContainer::UpdateLayout()
 		float RowRatio = 0, RowConstant = 0;
 		for (int i = RowIndex, Count = FMath::Min(i + RowCount, Rows.Num()); i < Count; i++)
 		{
+			AlreadyFilledRows.AddUnique(i);
 			auto& Row = Rows[i];
 			if (Row.Type == ELexLayoutGridSizeType::Ratio)
 			{
@@ -203,6 +206,26 @@ void ULexLayoutGridContainer::UpdateLayout()
 		if (ChildLayoutSelf)
 		{
 			ChildLayoutSelf->SetSizeByLayoutContainer(FVector2f(ColumnSize, RowSize));
+		}
+	}
+	if (NotLocatedWidgets.Num() > 0)
+	{
+		for (int ColumnIndex = 0; ColumnIndex < Columns.Num(); ColumnIndex++)
+		{
+			for (int RowIndex = 0; RowIndex < Rows.Num(); RowIndex++)
+			{
+				if (!AlreadyFilledColumns.Contains(ColumnIndex) && !AlreadyFilledRows.Contains(RowIndex))
+				{
+					auto ChildWidget = NotLocatedWidgets[0];
+					
+					NotLocatedWidgets.RemoveAt(0);
+					if (NotLocatedWidgets.Num() <= 0)//break the loop if all widgets are located
+					{
+						ColumnIndex = Columns.Num();
+						RowIndex = Rows.Num();
+					}
+				}
+			}
 		}
 	}
 }

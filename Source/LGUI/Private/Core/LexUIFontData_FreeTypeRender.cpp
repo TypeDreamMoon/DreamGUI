@@ -273,7 +273,7 @@ void ULexUIFontData_FreeTypeRender::DeinitFreeType()
 #endif
 
 #if WITH_FREETYPE
-FT_GlyphSlot ULexUIFontData_FreeTypeRender::RenderGlyphOnFreeType(const TCHAR& charCode, const float& charSize)
+FT_GlyphSlot ULexUIFontData_FreeTypeRender::RenderGlyphOnFreeType(const uint32& charCode, const float& charSize)
 {
 	InitFreeType();
 	if (bAlreadyInitialized == false)
@@ -296,7 +296,7 @@ FT_GlyphSlot ULexUIFontData_FreeTypeRender::RenderGlyphOnFreeType(const TCHAR& c
 	{
 		if (FallbackFontArray.Num() > 0)
 		{
-			UE_LOG(LGUI, Log, TEXT("[%s].%d Font '%s' Can't find glyph (char:%s, code:%d), will search in fallbacks"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), *FString(1, &charCode), (int)charCode);
+			UE_LOG(LGUI, Log, TEXT("[%s].%d Font '%s' Can't find glyph (code:%d), will search in fallbacks"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), (int)charCode);
 			for (int i = 0; i < FallbackFontArray.Num(); i++)
 			{
 				if (FallbackFontArray[i] == nullptr)continue;
@@ -306,7 +306,7 @@ FT_GlyphSlot ULexUIFontData_FreeTypeRender::RenderGlyphOnFreeType(const TCHAR& c
 				}
 			}
 		}
-		UE_LOG(LGUI, Error, TEXT("[%s].%d Font '%s' Can't find glyph (char:%s, code:%d) in fallbacks too"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), *FString(1, &charCode), (int)charCode);
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Font '%s' Can't find glyph (code:%d) in fallbacks too"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), (int)charCode);
 		return nullptr;
 	}
 	if (error)
@@ -362,7 +362,7 @@ void ULexUIFontData_FreeTypeRender::InitFont()
 #endif
 }
 
-float ULexUIFontData_FreeTypeRender::GetKerning(const TCHAR& leftCharIndex, const TCHAR& rightCharIndex, const float& charSize)
+float ULexUIFontData_FreeTypeRender::GetKerning(const uint32& leftCharIndex, const uint32& rightCharIndex, const float& charSize)
 {
 #if WITH_FREETYPE
 	if (Face == nullptr)return 0;
@@ -425,14 +425,24 @@ void ULexUIFontData_FreeTypeRender::RemoveUIText(ULexText* InText)
 	RenderTextArray.Remove(InText);
 }
 
-FLexUICharData_HighPrecision ULexUIFontData_FreeTypeRender::GetCharData(const TCHAR& charCode, const float& charSize)
+void ULexUIFontData_FreeTypeRender::SetFontType(ELexUIDynamicFontDataType Value)
 {
-	auto Result = FLexUICharData_HighPrecision();
+	FontType = Value;
+}
+
+void ULexUIFontData_FreeTypeRender::SetUnrealFont(UFontFace* Value)
+{
+	UnrealFont = Value;
+}
+
+FLexUICharData ULexUIFontData_FreeTypeRender::GetCharData(const uint32& charCode, const float& charSize)
+{
+	auto Result = FLexUICharData();
 	if (charSize <= 0.0f)return Result;
 	if (!GetCharDataFromCache(charCode, charSize, Result))//if charData not cached, then create it and add to cache
 	{
 		FGlyphBitmap glyphBitmap;
-		if (!RenderGlyph(charCode, charSize, glyphBitmap))
+		if (!RenderGlyph(charCode, charSize, glyphBitmap))//no valid glyph
 		{
 			return Result;
 		}

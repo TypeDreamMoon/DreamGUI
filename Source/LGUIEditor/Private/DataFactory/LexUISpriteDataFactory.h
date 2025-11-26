@@ -12,7 +12,7 @@ class ULexUISpriteDataFactory : public UFactory
 public:
 	ULexUISpriteDataFactory();
 
-	class UTexture2D* SpriteTexture = nullptr;
+	TWeakObjectPtr<UTexture2D> SpriteTexture = nullptr;
 	// UFactory interface
 	virtual UObject* FactoryCreateNew(UClass* Class, UObject* InParent, FName Name, EObjectFlags Flags, UObject* Context, FFeedbackContext* Warn) override;
 	// End of UFactory interface

@@ -1,7 +1,6 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "AssetTypeActions_LexUISpriteData.h"
-#include "ContentBrowserModule.h"
 #include "Core/LexUISpriteData.h"
 
 #define LOCTEXT_NAMESPACE "AssetTypeActions_LexUISpriteData"

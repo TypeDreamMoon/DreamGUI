@@ -507,9 +507,6 @@ bool ULexCanvas::CheckLexWidget()const
 		{
 			UE_LOG(LGUI, Warning, TEXT("[%s].%d LexCanvas component should only attach to a actor which have UIItem as RootComponent! %s")
 				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
-#if !UE_BUILD_SHIPPING
-			FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
-#endif
 		}
 		return false;
 	}
@@ -868,12 +865,12 @@ void ULexCanvas::UnregisterVisual(ULexWidget* InWidget, int& InOutWidgetProperty
 void ULexCanvas::AddLexWidget(ULexWidget* InWidget)
 {
 	bNeedToGenerateWidgetList = true;
-	MarkCanvasUpdate(false, false, false);
+	MarkCanvasUpdate(false, false, true);
 }
 void ULexCanvas::RemoveLexWidget(ULexWidget* InWidget)
 {
 	bNeedToGenerateWidgetList = true;
-	MarkCanvasUpdate(false, false, false);
+	MarkCanvasUpdate(false, false, true);
 }
 
 bool ULexCanvas::Is2DUITransform(const FTransform& Transform)
@@ -1490,7 +1487,7 @@ void ULexCanvas::UpdateRootCanvasDrawCall()
 		{
 			Widget->UpdateLayout();
 			Widget->UpdateClip(RootCanvas->ClipDataAsTexture, RootCanvas->ClipDataList);
-			if (Widget->GetWidgetActiveInHierarchy())
+			if (Widget->GetWidgetActiveInHierarchy() && Widget->GetRenderCanvas() == this)
 			{
 				Widget->UpdateVisual();
 			}

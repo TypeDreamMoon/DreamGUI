@@ -10,13 +10,13 @@ struct FLexUIDistanceFieldFontKerningPair
 {
 public:
 	FLexUIDistanceFieldFontKerningPair() {}
-	FLexUIDistanceFieldFontKerningPair(const TCHAR& InLeftCharCode, const TCHAR& InRightCharCode)
+	FLexUIDistanceFieldFontKerningPair(const uint32& InLeftCharCode, const uint32& InRightCharCode)
 	{
 		this->LeftCharCode = InLeftCharCode;
 		this->RightCharCode = InRightCharCode;
 	}
-	TCHAR LeftCharCode = 0;
-	TCHAR RightCharCode = 0;
+	uint32 LeftCharCode = 0;
+	uint32 RightCharCode = 0;
 	bool operator==(const FLexUIDistanceFieldFontKerningPair& other)const
 	{
 		return this->LeftCharCode == other.LeftCharCode && this->RightCharCode == other.RightCharCode;
@@ -36,32 +36,34 @@ public:
 	ULexUIFontData_DistanceField();
 private:
 	/** Font size when render glyph. */
-	UPROPERTY(EditAnywhere, Category = "LGUI SDF Font", meta = (UIMin = "16", UIMax = "100"))
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (UIMin = "16", UIMax = "100"))
 		int SampleFontSize = 64;
 	/** The radius of the distance field in pixels. Will automatically set to a quarter of FontSize */
-	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI SDF Font")
+	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI")
 		int SDFRadius = 16;
 	/** Angle of italic style in degree */
-	UPROPERTY(EditAnywhere, Category = "LGUI SDF Font")
+	UPROPERTY(EditAnywhere, Category = "LGUI")
 		float ItalicAngle = 15.0f;
 	/**
 	 * bold size radio for bold style, large number create more bold effect.
 	 * this parameter is related with SDFRadius & FontSize, smaller SDFRadius & FontSize will need larger BoldRatio to render.
 	 */
-	UPROPERTY(EditAnywhere, Category = "LGUI SDF Font", meta = (UIMin = "0.0", UIMax = "1.0"))
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (UIMin = "0.0", UIMax = "1.0"))
 		float BoldRatio = 0.06f;
 	/** -1 means not set yet. */
-	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI SDF Font", Transient)
+	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI", Transient)
 		int LineHeight = -1;
 	/** -1 means not set yet. */
-	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI SDF Font", Transient)
+	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI", Transient)
 		int VerticalOffset = -1;
+	UPROPERTY(EditAnywhere, Transient, Category = "LGUI", Transient)
+	float AdditionalVerticalOffset = 0.0f;
 
 public:
 	//Begin ULexUIFontData_BaseObject interface
 	virtual UMaterialInterface* GetFontMaterial()override;
 	virtual void PushCharData(
-		TCHAR charCode, const FVector2f& lineOffset, const FVector2f& fontSpace, const FLexUICharData_HighPrecision& charData,
+		uint32 charCode, const FVector2f& lineOffset, const FVector2f& fontSpace, const FLexUICharData& charData,
 		const LexUIRichTextParser::FRichTextParseResult& richTextProperty,
 		int verticesStartIndex, int indicesStartIndex,
 		int& outAdditionalVerticesCount, int& outAdditionalIndicesCount,
@@ -69,7 +71,7 @@ public:
 	)override;
 	virtual void PrepareForPushCharData(ULexText* InText)override;
 	virtual bool GetRequireNormalAndTangent()override;
-	virtual float GetKerning(const TCHAR& leftCharIndex, const TCHAR& rightCharIndex, const float& charSize) override;
+	virtual float GetKerning(const uint32& leftCharIndex, const uint32& rightCharIndex, const float& charSize) override;
 	virtual float GetLineHeight(const float& fontSize) override;
 	virtual float GetVerticalOffset(const float& fontSize) override;
 	virtual bool GetShouldAffectByPixelPerfect() override{ return false; }
@@ -78,15 +80,15 @@ public:
 	//End ULexUIFontData_BaseObject interface
 protected:
 	float ItalicSlop = 0.0f; float OneDivideFontSize = 1.0f;
-	TMap<TCHAR, FLexUICharData> CharDataMap;
+	TMap<uint32, FLexUICharData> CharDataMap;
 	TMap<FLexUIDistanceFieldFontKerningPair, int16> KerningPairsMap;
 	virtual UTexture2D* CreateFontTexture(int InTextureSize)override;
 	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize)override;
 
-	virtual bool GetCharDataFromCache(const TCHAR& charCode, const float& charSize, FLexUICharData_HighPrecision& OutResult)override;
-	virtual void AddCharDataToCache(const TCHAR& charCode, const float& charSize, const FLexUICharData& charData)override;
+	virtual bool GetCharDataFromCache(const uint32& charCode, const float& charSize, FLexUICharData& OutResult)override;
+	virtual void AddCharDataToCache(const uint32& charCode, const float& charSize, FLexUICharData& charData)override;
 	virtual void ScaleDownUVofCachedChars()override;
-	virtual bool RenderGlyph(const TCHAR& charCode, const float& charSize, FGlyphBitmap& OutResult)override;
+	virtual bool RenderGlyph(const uint32& charCode, const float& charSize, FGlyphBitmap& OutResult)override;
 	virtual void ClearCharDataCache()override;
 
 	//SDF font already have space between glyphs

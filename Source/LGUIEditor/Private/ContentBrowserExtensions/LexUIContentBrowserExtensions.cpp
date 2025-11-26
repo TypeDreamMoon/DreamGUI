@@ -7,8 +7,11 @@
 #include "IContentBrowserSingleton.h"
 #include "ContentBrowserModule.h"
 #include "LGUIEditorStyle.h"
+#include "Core/LexUIFontData_DistanceField.h"
+#include "DataFactory/LexUIFontDataDistanceFieldFactory.h"
 #include "DataFactory/LexUISpriteDataFactory.h"
 #include "DataFactory/LexUIPrefabFactory.h"
+#include "Engine/FontFace.h"
 #include "PrefabSystem/LGUIPrefab.h"
 
 #define LOCTEXT_NAMESPACE "LexUIContentBrowserExtensions"
@@ -49,6 +52,16 @@ public:
 			FNewMenuDelegate::CreateStatic(&FLGUIContentBrowserExtensions_Impl::PopulatePrefabActionMenu, SelectedAssets),
 			false,
 			FSlateIcon(FLGUIEditorStyle::GetStyleSetName(), "LGUIEditor.PrefabDataAction")
+		);
+	}
+	static void CreateFontActionsSubMenu(FMenuBuilder& MenuBuilder, TArray<UFontFace*> SelectedAssets)
+	{
+		MenuBuilder.AddSubMenu(
+			LOCTEXT("FontActionsSubMenuLabel", "LexUIFont"),
+			LOCTEXT("FontActionsSubMenuToolTip", "LexUIFont-related actions for this prefab."),
+			FNewMenuDelegate::CreateStatic(&FLGUIContentBrowserExtensions_Impl::PopulateFontActionMenu, SelectedAssets),
+			false,
+			FSlateIcon()
 		);
 	}
 
@@ -166,6 +179,53 @@ public:
 			NAME_None,
 			EUserInterfaceActionType::Button);
 	}
+	static void PopulateFontActionMenu(FMenuBuilder& MenuBuilder, TArray<UFontFace*> SelectedAssets)
+	{
+		struct LOCAL
+		{
+			static void CreateLexUIFontFromUnrealFontAsset(TArray<UFontFace*> Fonts)
+			{
+				FAssetToolsModule& AssetToolsModule = FModuleManager::Get().LoadModuleChecked<FAssetToolsModule>("AssetTools");
+				FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+
+				TArray<UObject*> ObjectsToSync;
+
+				for (auto Font : Fonts)
+				{
+					// Create the factory used to generate LexUIFont
+					auto FontFactory = NewObject<ULexUIFontDataDistanceFieldFactory>();
+					FontFactory->SourceFont = Font;
+
+					// Create LexUIFont
+					FString Name;
+					FString PackageName;
+
+					// Get a unique name for LexUIFont
+					const FString DefaultSuffix = TEXT("_LexUIFont");
+					AssetToolsModule.Get().CreateUniqueAssetName(Font->GetOutermost()->GetName(), DefaultSuffix, /*out*/ PackageName, /*out*/ Name);
+					const FString PackagePath = FPackageName::GetLongPackagePath(PackageName);
+
+					if (UObject* NewAsset = AssetToolsModule.Get().CreateAsset(Name, PackagePath, ULexUIFontData_DistanceField::StaticClass(), FontFactory))
+					{
+						ObjectsToSync.Add(NewAsset);
+					}
+				}
+
+				if (ObjectsToSync.Num() > 0)
+				{
+					ContentBrowserModule.Get().SyncBrowserToAssets(ObjectsToSync);
+				}
+			}
+		};
+		
+		MenuBuilder.AddMenuEntry(
+			LOCTEXT("CreateLexUIFontDistanceField", "Create LexUIFont DistanceField"),
+			LOCTEXT("CreateLexUIFontDistanceField_Tooltip", "Create LexUIFont DistanceField using this font-face."),
+			FSlateIcon(),
+			FUIAction(FExecuteAction::CreateStatic(&LOCAL::CreateLexUIFontFromUnrealFontAsset, SelectedAssets)),
+			NAME_None,
+			EUserInterfaceActionType::Button);
+	}
 
 	static TSharedRef<FExtender> OnExtendContentBrowserAssetSelectionMenu(const TArray<FAssetData>& SelectedAssets)
 	{
@@ -174,6 +234,7 @@ public:
 		// Run thru the assets to determine if any meet our criteria
 		TArray<UTexture2D*> Textures;
 		TArray<ULGUIPrefab*> Prefabs;
+		TArray<UFontFace*> Fonts;
 		for (auto AssetIt = SelectedAssets.CreateConstIterator(); AssetIt; ++AssetIt)
 		{
 			const FAssetData& Asset = *AssetIt;
@@ -185,6 +246,10 @@ public:
 			else if (auto Prefab = Cast<ULGUIPrefab>(AssetObject))
 			{
 				Prefabs.Add(Prefab);
+			}
+			else if (auto Font = Cast<UFontFace>(AssetObject))
+			{
+				Fonts.Add(Font);
 			}
 		}
 
@@ -204,6 +269,14 @@ public:
 				EExtensionHook::After,
 				nullptr,
 				FMenuExtensionDelegate::CreateStatic(&FLGUIContentBrowserExtensions_Impl::CreatePrefabActionsSubMenu, Prefabs));
+		}
+		if (Fonts.Num() > 0)
+		{
+			Extender->AddMenuExtension(
+				"GetAssetActions",
+				EExtensionHook::After,
+				nullptr,
+				FMenuExtensionDelegate::CreateStatic(&FLGUIContentBrowserExtensions_Impl::CreateFontActionsSubMenu, Fonts));
 		}
 
 		return Extender;

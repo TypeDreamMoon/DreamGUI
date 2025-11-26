@@ -1,7 +1,6 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "AssetTypeActions_LexUIStaticSpriteAtlasData.h"
-#include "ContentBrowserModule.h"
 #include "Core/LexUIStaticSpriteAtlasData.h"
 
 #define LOCTEXT_NAMESPACE "AssetTypeActions_LexUIStaticSpriteAtlasData"

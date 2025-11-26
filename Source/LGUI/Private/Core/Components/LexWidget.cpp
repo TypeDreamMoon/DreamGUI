@@ -1291,9 +1291,6 @@ void ULexWidget::SetAnchorMin(FVector2D Value)
 	else
 	{
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
-#if !UE_BUILD_SHIPPING
-		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
-#endif
 	}
 }
 void ULexWidget::SetAnchorMax(FVector2D Value)
@@ -1337,9 +1334,6 @@ void ULexWidget::SetAnchorMax(FVector2D Value)
 	else
 	{
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
-#if !UE_BUILD_SHIPPING
-		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
-#endif
 	}
 }
 
@@ -1368,9 +1362,6 @@ void ULexWidget::SetHorizontalAndVerticalAnchorMinMax(FVector2D MinValue, FVecto
 	else
 	{
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
-#if !UE_BUILD_SHIPPING
-		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
-#endif
 	}
 }
 
@@ -1417,9 +1408,6 @@ void ULexWidget::SetHorizontalAnchorMinMax(FVector2D Value, bool bKeepSize, bool
 	else
 	{
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
-#if !UE_BUILD_SHIPPING
-		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
-#endif
 	}
 }
 void ULexWidget::SetVerticalAnchorMinMax(FVector2D Value, bool bKeepSize, bool bKeepRelativeLocation)
@@ -1465,9 +1453,6 @@ void ULexWidget::SetVerticalAnchorMinMax(FVector2D Value, bool bKeepSize, bool b
 	else
 	{
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
-#if !UE_BUILD_SHIPPING
-		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
-#endif
 	}
 }
 

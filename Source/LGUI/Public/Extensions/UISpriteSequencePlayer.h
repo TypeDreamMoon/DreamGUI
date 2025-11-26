@@ -29,7 +29,7 @@ protected:
 	virtual void OnUpdateAnimation(int FrameNumber)override;
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		const TArray<ULexUISpriteData_BaseObject*> GetSpriteSequence()const { return SpriteSequence; }
+		const TArray<ULexUISpriteData_BaseObject*>& GetSpriteSequence()const { return SpriteSequence; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		bool GetSnapSpriteSize()const { return bSnapSpriteSize; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")

@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/LexUIRichTextImageData.h"
+#include "Core/LexUIFontEmojiData.h"
 #include "Extensions/UISpriteSequencePlayer.h"
 #include "Utils/LexUIUtils.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
@@ -11,32 +11,68 @@
 #include "Engine/World.h"
 
 #if WITH_EDITOR
-void ULexUIRichTextImageData::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+
+UE_DISABLE_OPTIMIZATION
+void FLexUIFontEmojiKey::ApplyEmoji()
+{
+	int ValidLength = 0;
+	if (EmojiChar.Len() >= 2)
+	{
+		auto highSurrogate = EmojiChar[0];
+		auto lowSurrogate = EmojiChar[1];
+		if (highSurrogate >= FLexUIText_CodePoint::HIGH_SURROGATE_START && highSurrogate <= FLexUIText_CodePoint::HIGH_SURROGATE_END
+		&& lowSurrogate >= FLexUIText_CodePoint::LOW_SURROGATE_START && lowSurrogate <= FLexUIText_CodePoint::LOW_SURROGATE_END)
+		{
+			if (EmojiChar.Len() == 3
+				&& (EmojiChar[2] == FLexUIText_CodePoint::UNICODE_VS_BLACK || EmojiChar[2] == FLexUIText_CodePoint::UNICODE_VS_COLOR))
+			{
+				ValidLength = 3;
+				VariantSelector = EmojiChar[2];
+			}
+			else
+			{
+				ValidLength = 2;
+				VariantSelector = 0;
+			}
+		}
+		EmojiCode = FLexUIText_CodePoint::ConvertToUTF32(highSurrogate, lowSurrogate);
+		EmojiChar = EmojiChar.Left(ValidLength);
+	}
+	if (ValidLength == 0)
+	{
+		EmojiChar = "";
+		EmojiCode = 0;
+		VariantSelector = 0;
+	}
+}
+UE_ENABLE_OPTIMIZATION
+
+void ULexUIFontEmojiData::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	OnDataChange.Broadcast();
 }
 #endif
 
-void ULexUIRichTextImageData::SetImageMap(const TMap<FName, FLexUIRichTextImageItemData>& value)
+void ULexUIFontEmojiData::SetDataMap(const TMap<FLexUIFontEmojiKey, FLexUIFontEmojiDataItem>& Value)
 {
-	ImageMap = value;
+	DataMap = Value;
 	OnDataChange.Broadcast();
 }
-void ULexUIRichTextImageData::SetAnimationFps(float value)
+void ULexUIFontEmojiData::SetAnimationFps(float Value)
 {
-	AnimationFps = value;
+	AnimationFps = Value;
 	OnDataChange.Broadcast();
 }
-void ULexUIRichTextImageData::BroadcastOnDataChange()
+void ULexUIFontEmojiData::BroadcastOnDataChange()
 {
 	OnDataChange.Broadcast();
 }
 
-void ULexUIRichTextImageData::CreateOrUpdateObject(ULexWidget* parent, const TArray<FLexUIText_RichTextImageTag>& imageTagData, TArray<TObjectPtr<ULexWidget>>& createdImageObjectArray, bool listImageObjectInEditorOutliner)
+void ULexUIFontEmojiData::CreateOrUpdateObject(ULexWidget* parent, const TArray<FLexUIText_Emoji>& emojiData, TArray<TObjectPtr<ULexWidget>>& createdImageObjectArray, bool listImageObjectInEditorOutliner)
 {
 	//destroy extra
-	while (createdImageObjectArray.Num() > imageTagData.Num())
+	while (createdImageObjectArray.Num() > emojiData.Num())
 	{
 		auto lastIndex = createdImageObjectArray.Num() - 1;
 		auto imageObj = createdImageObjectArray[lastIndex];
@@ -44,7 +80,7 @@ void ULexUIRichTextImageData::CreateOrUpdateObject(ULexWidget* parent, const TAr
 		createdImageObjectArray.RemoveAt(lastIndex);
 	}
 	//create more
-	while (createdImageObjectArray.Num() < imageTagData.Num())
+	while (createdImageObjectArray.Num() < emojiData.Num())
 	{
 		auto spriteActor = parent->GetWorld()->SpawnActor<ALexWidgetActor>();
 		spriteActor->SetFlags(EObjectFlags::RF_Transient);
@@ -52,23 +88,26 @@ void ULexUIRichTextImageData::CreateOrUpdateObject(ULexWidget* parent, const TAr
 		createdImageObjectArray.Push(spriteActor->GetLexWidget());
 	}
 	//apply data
-	for (int i = 0; i < imageTagData.Num(); i++)
+	for (int i = 0; i < emojiData.Num(); i++)
 	{
 		auto ImageWidget = createdImageObjectArray[i];
-		auto ImageVisual = (ULexSprite*)ImageWidget->GetVisual();
+		auto ImageVisual = Cast<ULexSprite>(ImageWidget->GetVisual());
+		if (!ImageVisual)
+		{
+			ImageVisual = ImageWidget->CreateNewVisual<ULexSprite>();
+		}
 #if WITH_EDITOR
-		ImageWidget->GetOwner()->SetActorLabel(FString::Printf(TEXT("[%s]"), *imageTagData[i].TagName.ToString()));
+		ImageWidget->GetOwner()->SetActorLabel(FString::Printf(TEXT("[%d]"), emojiData[i].EmojiCode));
 		if (!parent->GetWorld()->IsGameWorld())//set it only in edit mode
 		{
 			auto bListedInSceneOutliner_Property = FindFProperty<FBoolProperty>(AActor::StaticClass(), TEXT("bListedInSceneOutliner"));
 			bListedInSceneOutliner_Property->SetPropertyValue_InContainer(ImageWidget->GetOwner(), listImageObjectInEditorOutliner);
 		}
 #endif
-		if (auto imageItemPtr = ImageMap.Find(imageTagData[i].TagName))
+		if (auto imageItemPtr = DataMap.Find(emojiData[i].EmojiCode))
 		{
 			auto& spriteFrames = imageItemPtr->Frames;
 			auto sequencePlayerComp = ImageWidget->GetOwner()->FindComponentByClass<UUISpriteSequencePlayer>();
-			ULexUISpriteData_BaseObject* sprite = nullptr;
 			if (spriteFrames.Num() == 0)
 			{
 				ImageVisual->SetSprite(nullptr, false);
@@ -79,7 +118,7 @@ void ULexUIRichTextImageData::CreateOrUpdateObject(ULexWidget* parent, const TAr
 			}
 			else if (spriteFrames.Num() == 1)
 			{
-				sprite = spriteFrames[0];
+				ImageVisual->SetSprite(spriteFrames[0], false);
 				if (IsValid(sequencePlayerComp))
 				{
 					sequencePlayerComp->DestroyComponent();
@@ -87,7 +126,6 @@ void ULexUIRichTextImageData::CreateOrUpdateObject(ULexWidget* parent, const TAr
 			}
 			else
 			{
-				sprite = spriteFrames[0];
 				if (!IsValid(sequencePlayerComp))
 				{
 					sequencePlayerComp = NewObject<UUISpriteSequencePlayer>(ImageWidget->GetOwner());
@@ -102,15 +140,13 @@ void ULexUIRichTextImageData::CreateOrUpdateObject(ULexWidget* parent, const TAr
 					sequencePlayerComp->Play();
 				}
 			}
-			ImageVisual->SetColor(imageTagData[i].TintColor);
-			ImageWidget->SetAnchoredPosition(imageTagData[i].Position);
-			ImageWidget->SetSizeDelta(imageTagData[i].Size);
+			ImageWidget->SetAnchoredPosition(emojiData[i].Position);
+			ImageWidget->SetSizeDelta(emojiData[i].Size);
 		}
 		else
 		{
-			ImageVisual->SetColor(imageTagData[i].TintColor);
-			ImageWidget->SetAnchoredPosition(imageTagData[i].Position);
-			ImageWidget->SetSizeDelta(FVector2D(imageTagData[i].Size));
+			ImageWidget->SetAnchoredPosition(emojiData[i].Position);
+			ImageWidget->SetSizeDelta(FVector2D(emojiData[i].Size));
 		}
 	}
 #if WITH_EDITOR
@@ -120,9 +156,9 @@ void ULexUIRichTextImageData::CreateOrUpdateObject(ULexWidget* parent, const TAr
 	}
 #endif
 }
-bool ULexUIRichTextImageData::GetImageSize(const FName& imageTag, FIntVector2& outSize)
+bool ULexUIFontEmojiData::GetImageSize(const uint32& emojiCode, FIntVector2& outSize)
 {
-	auto ImageItemData = ImageMap.Find(imageTag);
+	auto ImageItemData = DataMap.Find(emojiCode);
 	if (!ImageItemData)return false;
 	if (ImageItemData->Frames.Num() == 0)
 		return false;

@@ -2,7 +2,6 @@
 
 #include "AssetTypeActions_LexUIFontData_DistanceField.h"
 #include "Core/LexUIFontData_DistanceField.h"
-#include "ContentBrowserModule.h"
 
 #define LOCTEXT_NAMESPACE "AssetTypeActions_LexUIFontData_DistanceField"
 

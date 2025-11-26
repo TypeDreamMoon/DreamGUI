@@ -1,7 +1,6 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "AssetTypeActions_LexUIFontData_Bitmap.h"
-#include "ContentBrowserModule.h"
 #include "Core/LexUIFontData_Bitmap.h"
 
 #define LOCTEXT_NAMESPACE "AssetTypeActions_LexUIFontData"

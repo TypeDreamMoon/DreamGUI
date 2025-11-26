@@ -6,7 +6,7 @@
 #include "LexUITextData.h"
 #include "LexUIRichTextImageData_BaseObject.generated.h"
 
-/** base class for UIText image render */
+/** base class for LexText to render image inside text */
 UCLASS(Abstract, BlueprintType)
 class LGUI_API ULexUIRichTextImageData_BaseObject :public UObject
 {

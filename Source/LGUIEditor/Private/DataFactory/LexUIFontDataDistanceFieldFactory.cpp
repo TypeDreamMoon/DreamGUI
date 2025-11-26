@@ -13,7 +13,14 @@ ULexUIFontDataDistanceFieldFactory::ULexUIFontDataDistanceFieldFactory()
 }
 UObject* ULexUIFontDataDistanceFieldFactory::FactoryCreateNew(UClass* Class, UObject* InParent, FName Name, EObjectFlags Flags, UObject* Context, FFeedbackContext* Warn)
 {
-	return NewObject<ULexUIFontData_DistanceField>(InParent, Class, Name, Flags | RF_Transactional);
+	auto LexUIFont = NewObject<ULexUIFontData_DistanceField>(InParent, Class, Name, Flags | RF_Transactional);
+	if (SourceFont.IsValid())
+	{
+		LexUIFont->SetFontType(ELexUIDynamicFontDataType::UnrealFont);
+		LexUIFont->SetUnrealFont(SourceFont.Get());
+		LexUIFont->ReloadFont();
+	}
+	return LexUIFont;
 }
 
 #undef LOCTEXT_NAMESPACE

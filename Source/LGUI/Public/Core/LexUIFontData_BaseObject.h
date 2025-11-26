@@ -8,39 +8,8 @@
 #include "LexUIFontData_BaseObject.generated.h"
 
 
-USTRUCT(BlueprintType)
 struct FLexUICharData
 {
-	GENERATED_BODY()
-public:
-	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	uint16 Width = 0;
-	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	uint16 Height = 0;
-	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	int16 XOffset = 0;
-	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	int16 YOffset = 0;
-	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	int16 XAdvance = 0;
-	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	FVector2f MinUV;
-	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	FVector2f MaxUV;
-};
-struct FLexUICharData_HighPrecision
-{
-	FLexUICharData_HighPrecision() {}
-	FLexUICharData_HighPrecision(const FLexUICharData& charData)
-	{
-		Width = charData.Width;
-		Height = charData.Height;
-		XOffset = charData.XOffset;
-		YOffset = charData.YOffset;
-		XAdvance = charData.XAdvance;
-		MinUV = charData.MinUV;
-		MaxUV = charData.MaxUV;
-	}
 	float Width = 0;
 	float Height = 0;
 	float XOffset = 0;
@@ -48,6 +17,11 @@ struct FLexUICharData_HighPrecision
 	float XAdvance = 0;
 	FVector2f MinUV;
 	FVector2f MaxUV;
+
+	bool IsValid()const
+	{
+		return Width > 0 || Height > 0 || XAdvance > 0;
+	}
 
 	FVector2f GetUV0()const
 	{
@@ -73,6 +47,7 @@ struct FLexUICharData_HighPrecision
 
 class UTexture2D;
 class ULexText;
+class ULexUIFontEmojiData;
 
 /**
  * base font class, UIText can use a implemented asset object to render text
@@ -86,9 +61,9 @@ public:
 
 	virtual UMaterialInterface* GetFontMaterial()PURE_VIRTUAL(ULGUISpriteData_BaseObject::GetFontMaterial, return nullptr;);
 	virtual UTexture2D* GetFontTexture()PURE_VIRTUAL(ULGUISpriteData_BaseObject::GetFontTexture, return nullptr;);
-	virtual FLexUICharData_HighPrecision GetCharData(const TCHAR& charCode, const float& charSize) PURE_VIRTUAL(ULGUIFontData_BaseObject::GetCharData, return FLexUICharData_HighPrecision(););
+	virtual FLexUICharData GetCharData(const uint32& charCode, const float& charSize) PURE_VIRTUAL(ULGUIFontData_BaseObject::GetCharData, return FLexUICharData(););
 	virtual bool HasKerning() { return false; }
-	virtual float GetKerning(const TCHAR& leftCharIndex, const TCHAR& rightCharIndex, const float& charSize) { return 0; }
+	virtual float GetKerning(const uint32& leftCharIndex, const uint32& rightCharIndex, const float& charSize) { return 0; }
 	virtual float GetLineHeight(const float& fontSize) { return fontSize; }
 	virtual float GetVerticalOffset(const float& fontSize) { return 0; }
 	virtual float GetFontSizeLimit() { return MAX_FLT; }
@@ -102,7 +77,7 @@ public:
 	virtual void PrepareForPushCharData(ULexText* InText) {};
 	/** create char geometry and push to vertices & triangleIndices array */
 	virtual void PushCharData(
-		TCHAR charCode, const FVector2f& lineOffset, const FVector2f& fontSpace, const FLexUICharData_HighPrecision& charData,
+		uint32 charCode, const FVector2f& lineOffset, const FVector2f& fontSpace, const FLexUICharData& charData,
 		const LexUIRichTextParser::FRichTextParseResult& richTextProperty,
 		int verticesStartIndex, int indicesStartIndex,
 		int& outAdditionalVerticesCount, int& outAdditionalIndicesCount,
@@ -112,5 +87,21 @@ public:
 	virtual void AddUIText(ULexText* InText) {}
 	virtual void RemoveUIText(ULexText* InText) {}
 
+	ULexUIFontEmojiData* GetEmojiData()const{return EmojiData;}
+
 	static ULexUIFontData_BaseObject* GetDefaultFont();
+
+	virtual void PostInitProperties() override;
+	virtual void BeginDestroy() override;
+#if WITH_EDITOR
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+	virtual void PreEditChange(FProperty* PropertyAboutToChange) override;
+#endif
+
+	DECLARE_EVENT(ULexUIFontData_BaseObject, FLexUIFontEmojiDataRefreshEvent);
+	/** Called when emoji data changed, and need LexText to refresh. */
+	FLexUIFontEmojiDataRefreshEvent OnEmojiDataChanged;
+private:
+	UPROPERTY(EditAnywhere, Category = "LGUI")
+	TObjectPtr<ULexUIFontEmojiData> EmojiData;
 };

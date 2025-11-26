@@ -33,21 +33,16 @@ protected:
 	virtual void OnTransformChanged()override;
 public:
 #if WITH_EDITOR
+	virtual void PreEditChange(FProperty* PropertyAboutToChange) override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
 protected:
-	virtual void OnPreChangeFontProperty();
-	virtual void OnPostChangeFontProperty();
-	virtual void OnPreChangeRichTextImageDataProperty();
-	virtual void OnPostChangeRichTextImageDataProperty();
-	virtual void OnPreChangeRichTextCustomStyleDataProperty();
-	virtual void OnPostChangeRichTextCustomStyleDataProperty();
 #endif
 	void RegisterOnRichTextImageDataChange();
 	void UnregisterOnRichTextImageDataChange();
-	FDelegateHandle onRichTextImageDataChangedDelegateHandle;
+	FDelegateHandle RichTextImageDataChangedDelegateHandle;
 	void RegisterOnRichTextCustomStyleDataChange();
 	void UnregisterOnRichTextCustomStyleDataChange();
-	FDelegateHandle onRichTextCustomStyleDataChangedDelegateHandle;
+	FDelegateHandle RichTextCustomStyleDataChangedDelegateHandle;
 #if WITH_EDITORONLY_DATA
 	/** current using font. the default font when creating new UIText */
 	static TWeakObjectPtr<ULexUIFontData_BaseObject> CurrentUsingFontData;
@@ -117,19 +112,23 @@ protected:
 		TObjectPtr<ULexUIRichTextImageData_BaseObject> RichTextImageData = nullptr;
 	/** created object for rich text image */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI", Transient, AdvancedDisplay)
-		TArray<TObjectPtr<class ULexWidget>> CreatedRichTextImageObjectArray;
+	TArray<TObjectPtr<ULexWidget>> CreatedRichTextImageObjectArray;
+	/** created object for emoji */
+	UPROPERTY(VisibleAnywhere, Category = "LGUI", Transient, AdvancedDisplay)
+	TArray<TObjectPtr<ULexWidget>> CreatedEmojiObjectArray;
 #if WITH_EDITORONLY_DATA
 	UPROPERTY(EditAnywhere, Category = "LGUI", AdvancedDisplay)
-		bool bListRichTextImageObjectInOutliner = false;
+	bool bListRichTextImageObjectInOutliner = true;
+	UPROPERTY(EditAnywhere, Category = "LGUI", AdvancedDisplay)
+	bool bListEmojiObjectInOutliner = true;
 #endif
 private:
 	bool bHasAddToFont = false;
-	/** visible/readable char count of current text. -1 means not set yet */
-	mutable int VisibleCharCount = -1;
 	FVector2f PrevScale2DForUIText = FVector2f::One();
 
 	mutable FLexUITextGeometryCache CacheTextGeometryData;
-	bool UpdateCacheTextGeometry()const;
+	void UpdateCacheTextGeometry()const;
+	void ConditionalUpdateCacheTextGeometry()const;
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		const TArray<FLexUITextCharProperty>& GetCharPropertyArray()const;
@@ -157,18 +156,31 @@ public:
 	void ApplyFontTextureChange();
 	void ApplyFontMaterialChange();
 	void ApplyRecreateText();
+	void ApplyFontEmojiChange();
 
 	virtual void MarkVerticesDirty(bool InTriangleDirty, bool InVertexPositionDirty, bool InVertexUVDirty, bool InVertexColorDirty)override;
 	virtual void MarkTextureDirty()override;
 
-	FORCEINLINE static bool IsVisibleChar(TCHAR character)
+	FORCEINLINE static bool IsVisibleChar(uint32 Codepoint)
 	{
-		return (character != '\n' && character != '\r' && character != ' ' && character != '\t');
+		if (Codepoint < 0x20) return false;    // C0
+		if (Codepoint == 0x7F) return false;   // DEL
+
+		// zero width
+		if (Codepoint == 0x200B || Codepoint == 0x200C || Codepoint == 0x200D)
+			return false;
+
+		// 
+		if (Codepoint == '\n' || Codepoint == '\r' || Codepoint == '\t' || Codepoint == ' ')
+			return false;
+
+		return true;
 	}
 	/** count visible char count of the string */
 	static int VisibleCharCountInString(const FString& srcStr);
 
 	void GenerateRichTextImageObject();
+	void GenerateEmojiObject();
 
 	virtual float GetPreferredWidth() const override;
 	virtual float GetPreferredHeight() const override;
@@ -224,6 +236,10 @@ public:
     	void SetOverrideMaterial(UMaterialInterface* Value);
 private:
 	void ClearCreatedRichTextImageObject();
+	void ClearEmojiObject();
+	void RegisterFont();
+	void UnregisterFont();
+	FDelegateHandle EmojiDataChangedDelegateHandle;
 protected:
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
 public:

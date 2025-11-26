@@ -97,70 +97,32 @@ void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow&
 		})
 		.WidthOverride(5000)
 		[
-			SNew(SVerticalBox)
-			+SVerticalBox::Slot()
-			.HAlign(HAlign_Left)
-			.VAlign(VAlign_Center)
-			.FillHeight(1)
+			SNew(SBox)
+			.MinDesiredWidth(125)
+			.Padding(0, 4)
 			[
-				// SNew(SObjectPropertyEntryBox)
-				// .IsEnabled(true)
-				// .AllowedClass(ObjectProperty->PropertyClass)
-				// .PropertyHandle(InPropertyHandle)
-				// .AllowClear(true)
-				// .DisplayThumbnail(InPropertyHandle->HasMetaData("DisplayThumbnail") ? InPropertyHandle->GetBoolMetaData("DisplayThumbnail") : true)
-				// .ToolTipText(InPropertyHandle->GetToolTipText())
-				// .OnObjectChanged_Lambda([=](const FAssetData& InObj)
-				// {
-				// 	InPropertyHandle->SetValue(InObj);
-				// })
-				SNew(SBox)
-				.MinDesiredWidth(125)
-				.Padding(0, 4)
-				[
-					SAssignNew(PickerButton, SComboButton)
-					.HasDownArrow(true)
-					.ToolTipText_Lambda(GetTooltipText)
-					.ButtonContent()
-					[
-						SNew(STextBlock)
-						.Font(IDetailLayoutBuilder::GetDetailFont())
-						.Text_Lambda(GetText)
-					]
-					.MenuContent()
-					[
-						SNew(SBox)
-						.Padding(4, 4)
-						[
-							SNew(SLexWidgetHierarchyPickerView, PrefabEditorPtr.Pin(), ObjectClass)
-							.OnSelectItem_Lambda([=, this](UObject* InItem)
-							{
-								// InPropertyHandle->SetValue(InItem);
-								InPropertyHandle->SetValueFromFormattedString(InItem->GetPathName());
-								PickerButton->SetIsOpen(false);
-							})
-						]
-					]
-				]
-			]
-			+SVerticalBox::Slot()
-			.HAlign(HAlign_Left)
-			.VAlign(VAlign_Center)
-			.AutoHeight()
-			[
-				SNew(SBox)
-				.Padding(0, 4)
-				.Visibility_Lambda([=, this]()
-				{
-					if (Object != nullptr)return EVisibility::Visible;
-					if (PrefabEditorPtr.IsValid())return EVisibility::Visible;
-					return EVisibility::Collapsed;
-				})
+				SAssignNew(PickerButton, SComboButton)
+				.HasDownArrow(true)
+				.ToolTipText_Lambda(GetTooltipText)
+				.ButtonContent()
 				[
 					SNew(STextBlock)
-					.Text_Lambda(GetTooltipText)
-					.ToolTipText_Lambda(GetTooltipText)
-					.Font(InDetailBuilder.GetDetailFont())
+					.Font(IDetailLayoutBuilder::GetDetailFont())
+					.Text_Lambda(GetText)
+				]
+				.MenuContent()
+				[
+					SNew(SBox)
+					.Padding(4, 4)
+					[
+						SNew(SLexWidgetHierarchyPickerView, PrefabEditorPtr.Pin(), ObjectClass)
+						.OnSelectItem_Lambda([=, this](UObject* InItem)
+						{
+							// InPropertyHandle->SetValue(InItem);
+							InPropertyHandle->SetValueFromFormattedString(InItem->GetPathName());
+							PickerButton->SetIsOpen(false);
+						})
+					]
 				]
 			]
 		]
