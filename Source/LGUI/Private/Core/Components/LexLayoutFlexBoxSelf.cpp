@@ -125,9 +125,11 @@ void ULexLayoutFlexBoxSelf::CalculateSize()
         break;
     case ELexLayoutAspectRatioType::HeightControlWidth:
         CalculatedPreferred.X = CalculatedPreferred.Y * AspectRatio.Value;
+        CalculatedMin.X = CalculatedPreferred.X;
         break;
     case ELexLayoutAspectRatioType::WidthControlHeight:
         CalculatedPreferred.Y = CalculatedPreferred.X / AspectRatio.Value;
+        CalculatedMin.Y = CalculatedPreferred.Y;
         break;
     }
     //clamp again because AspectRatio calculation
@@ -159,11 +161,11 @@ void ULexLayoutFlexBoxSelf::CalculateSize()
         auto AnchorMax = Widget->GetAnchorMax();
         if (AnchorMin.X != AnchorMax.X)//custom anchor not support
         {
-            Widget->SetHorizontalAnchorMinMax(FVector2D(0, 0), true, true);
+            Widget->SetHorizontalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
         }
         if (AnchorMin.Y != AnchorMax.Y)
         {
-            Widget->SetVerticalAnchorMinMax(FVector2D(1, 1), true, true);
+            Widget->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
         }
         Widget->SetSizeDelta(FVector2D(CalculatedPreferred.X, CalculatedPreferred.Y));
     }
@@ -311,16 +313,39 @@ void ULexLayoutFlexBoxSelf::SetSizeByLayoutContainer(FVector2f Value, int Primar
     {
         Value.Y = CalculatedPreferred.Y;
     }
+
+    //re-check size because grow and shrink could change size
+    {
+        //clamp value before AspectRatio calculation
+        Value.X = FMath::Clamp(Value.X, CalculatedMin.X, CalculatedMax.X);
+        Value.Y = FMath::Clamp(Value.Y, CalculatedMin.Y, CalculatedMax.Y);
+        switch (AspectRatio.Type)
+        {
+        case ELexLayoutAspectRatioType::None:
+            break;
+        case ELexLayoutAspectRatioType::HeightControlWidth:
+            Value.X = Value.Y * AspectRatio.Value;
+            CalculatedMin.X = Value.X;
+            break;
+        case ELexLayoutAspectRatioType::WidthControlHeight:
+            Value.Y = Value.X / AspectRatio.Value;
+            CalculatedMin.Y = Value.Y;
+            break;
+        }
+        //clamp again because AspectRatio calculation
+        Value.X = FMath::Clamp(Value.X, CalculatedMin.X, CalculatedMax.X);
+        Value.Y = FMath::Clamp(Value.Y, CalculatedMin.Y, CalculatedMax.Y);
+    }
     
     auto AnchorMin = Widget->GetAnchorMin();
     auto AnchorMax = Widget->GetAnchorMax();
     if (AnchorMin.X != AnchorMax.X)//custom anchor not support
     {
-        Widget->SetHorizontalAnchorMinMax(FVector2D(0, 0), true, true);
+        Widget->SetHorizontalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
     }
     if (AnchorMin.Y != AnchorMax.Y)
     {
-        Widget->SetVerticalAnchorMinMax(FVector2D(1, 1), true, true);
+        Widget->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
     }
     Widget->SetSizeDelta(FVector2D(Value));
 

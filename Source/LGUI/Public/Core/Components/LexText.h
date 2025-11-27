@@ -77,7 +77,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		ELexUITextOverflowType OverflowType = ELexUITextOverflowType::VerticalOverflow;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-	ETextWrappingPolicy WrappingPolicy = ETextWrappingPolicy::DefaultWrapping;
+	ETextWrappingPolicy WrappingPolicy = ETextWrappingPolicy::AllowPerCharacterWrapping;
 	/** Use a custom material to render this text */
     UPROPERTY(EditAnywhere, Category = "LexUI")
     UMaterialInterface* OverrideMaterial = nullptr;
@@ -260,11 +260,6 @@ public:
 	void FindCaretByWorldPosition(FVector inWorldPosition, FVector2f& outCaretPosition, int32& outCaretPositionLineIndex, int32& outCaretPositionIndex);
 	int GetCaretIndexByCharIndex(int32 inCharIndex);
 	bool GetVisibleCharRangeForMultiLine(int32& inOutCaretPositionIndex, int32& inOutCaretPositionLineIndex, int32& inOutVisibleCaretStartLineIndex, int32& inOutVisibleCaretStartIndex, int inMaxLineCount, int32& outVisibleCharStartIndex, int32& outVisibleCharCount);
-	/**
-	 * .
-	 * @return true- value changed
-	 */
-	bool GetVisibleCharRangeForSingleLine(int32& inOutCaretPositionIndex, int32& inOutVisibleCaretStartIndex, float inMaxWidth, int32& outVisibleCharStartIndex, int32& outVisibleCharCount);
 
 	/** range selection */
 	void GetSelectionProperty(int32 InSelectionStartCaretIndex, int32 InSelectionEndCaretIndex, TArray<FLexUITextSelectionProperty>& OutSelectionProeprtyArray);

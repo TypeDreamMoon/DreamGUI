@@ -51,11 +51,14 @@ void FLexUIClipData::UpdateData()
 	{
 		auto WidgetToWorldMatrix = TargetClip->Widget->GetComponentTransform().ToMatrixWithScale();
 		auto WidgetLocalSpaceCenter = TargetClip->Widget->GetLocalSpaceCenter();
+		auto ClippingMargin = TargetClip->Widget->GetClippingMargin();
+		auto CenterOffsetByMargin = FVector2D(ClippingMargin.Right - ClippingMargin.Left, ClippingMargin.Top - ClippingMargin.Bottom) * 0.5f;
+		WidgetLocalSpaceCenter += CenterOffsetByMargin;
 		Add2DTranslationToMatrix(WidgetToWorldMatrix, WidgetLocalSpaceCenter);
 		auto WorldToWidgetMatrix = WidgetToWorldMatrix.Inverse();
 		auto CanvasToWidgetMatrix = FMatrix44f(CanvasToWorldMatrix * WorldToWidgetMatrix);
 		auto& M = CanvasToWidgetMatrix.M;
-		auto RenderSize = FVector2f(TargetClip->Widget->GetWidth(), TargetClip->Widget->GetHeight());
+		auto RenderSize = FVector2f(TargetClip->Widget->GetWidth(), TargetClip->Widget->GetHeight()) + ClippingMargin.GetDesiredSize2f();
 		M[0][3] = RenderSize.X * 0.5f;//half width
 		M[1][3] = RenderSize.Y * 0.5f;//half height
 		M[2][3] = 0;//softness
@@ -76,13 +79,13 @@ void FLexUIClipData::UpdateData()
 	DataTexture->UpdateBlock(BufferStartPos, BlockBuffer);
 }
 
-bool FLexUIClipData::IsPointVisible(const FVector& Point) const
+bool FLexUIClipData::IsPointVisible(const FVector& WorldPoint) const
 {
 	auto TargetClip = this;
 	for (int i = 0; i < InheritClipDepth; i++)
 	{
 		auto TargetWidget = TargetClip->Widget;
-		auto LocalPoint = TargetWidget->GetComponentTransform().InverseTransformPosition(Point);
+		auto LocalPoint = TargetWidget->GetComponentTransform().InverseTransformPosition(WorldPoint);
 		if (LocalPoint.Y < Widget->GetLocalSpaceLeft())return false;
 		if (LocalPoint.Y > Widget->GetLocalSpaceRight())return false;
 		if (LocalPoint.Z < Widget->GetLocalSpaceBottom())return false;

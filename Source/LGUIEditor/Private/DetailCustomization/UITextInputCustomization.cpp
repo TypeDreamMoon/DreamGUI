@@ -54,31 +54,10 @@ void FUITextInputCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		break;
 	}
 
-	auto OverflowTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUITextInputComponent, OverflowType));
-	OverflowTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {DetailBuilder.ForceRefreshDetails(); }));
-	EUITextInputOverflowType OverflowType;
-	OverflowTypeHandle->GetValue(*(uint8*)&OverflowType);
 	auto AllowMultilineHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUITextInputComponent, bAllowMultiLine));
 	AllowMultilineHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {DetailBuilder.ForceRefreshDetails(); }));
 	bool bAllowMultiLine;
 	AllowMultilineHandle->GetValue(bAllowMultiLine);
-	switch (OverflowType)
-	{
-	case EUITextInputOverflowType::ClampContent:
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UUITextInputComponent, MaxLineCount));
-		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UUITextInputComponent, MaxLineWidth));
-		break;
-	case EUITextInputOverflowType::OverflowToMax:
-		if (bAllowMultiLine)
-		{
-			DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UUITextInputComponent, MaxLineWidth));
-		}
-		else
-		{
-			DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UUITextInputComponent, MaxLineCount));
-		}
-		break;
-	}
 	if (!bAllowMultiLine)
 	{
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(UUITextInputComponent, MultiLineSubmitFunctionKeys));

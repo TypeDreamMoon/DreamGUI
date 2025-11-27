@@ -104,6 +104,14 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData));
 
 	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, bWidgetActive));
+	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, RenderOpacity));
+	auto Clipping_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, Clipping));
+	auto& ClippingGroup = LGUICategory.AddGroup(TEXT("ClippingGroup"), LOCTEXT("ClippingGroup", "Clipping"));
+	ClippingGroup.HeaderProperty(Clipping_PH);
+	auto ClippingCornerRadius_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, ClippingCornerRadius));
+	auto ClippingMargin_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, ClippingMargin));
+	ClippingGroup.AddPropertyRow(ClippingCornerRadius_PH);
+	ClippingGroup.AddPropertyRow(ClippingMargin_PH);
 
 	//anchor, width, height
 	{
@@ -982,7 +990,8 @@ void FLexWidgetCustomization::OnPrePivotChange()
 }
 void FLexWidgetCustomization::OnPivotChanged()
 {
-	
+	GUnrealEd->UpdatePivotLocationForSelection();
+	GUnrealEd->SetPivotMovedIndependently(false);
 }
 
 EVisibility FLexWidgetCustomization::GetDisplayNameWarningVisibility()const
@@ -1649,8 +1658,7 @@ void FLexWidgetCustomization::OnSelectAnchor(LGUIAnchorPreviewWidget::UIAnchorHo
 		auto PrevRelativeLocation = Widget->GetRelativeLocation();
 		auto PrevWidth = Widget->GetWidth();
 		auto PrevHeight = Widget->GetHeight();
-		Widget->SetAnchorMin(AnchorMin);
-		Widget->SetAnchorMax(AnchorMax);
+		Widget->SetAnchorData(FLexUIAnchorData{Widget->GetPivot(), AnchorMin, AnchorMax, Widget->GetAnchoredPosition(), Widget->GetSizeDelta()});
 		Widget->MarkAllDirtyRecursive();
 		Widget->SetWidth(PrevWidth);
 		Widget->SetHeight(PrevHeight);

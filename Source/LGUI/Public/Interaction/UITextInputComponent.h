@@ -87,16 +87,7 @@ enum class EUITextInputDisplayType :uint8
 	/** Display as password. */
 	Password,
 };
-UENUM(BlueprintType, Category = LGUI)
-enum class EUITextInputOverflowType :uint8
-{
-	ClampContent,
-	/**
-	 * Overflow to max limit then clamp content.
-	 * For multiline mode, the max limit is the MaxLineCount property.
-	 */
-	OverflowToMax,
-};
+
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class LGUI_API UUITextInputComponent : public UUISelectableComponent, public ILexPointerClickInterface, public ILexPointerDragInterface
 {
@@ -113,7 +104,7 @@ protected:
 protected:
 	friend class FUITextInputCustomization;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
-		TWeakObjectPtr<ULexText> TextWidget;
+		TWeakObjectPtr<ULexText> TextVisual;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
 		FString Text;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
@@ -128,14 +119,6 @@ protected:
 		FString PasswordChar = TEXT("*");
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
 		bool bAllowMultiLine = false;
-	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
-		EUITextInputOverflowType OverflowType = EUITextInputOverflowType::ClampContent;
-	//when use multiline mode and OverflowType is OverflowToMax, this is the max line count that can expend the input area
-	UPROPERTY(EditAnywhere, Category = "LGUI-Input", meta=(EditCondition="OverflowType==EUITextInputOverflowType::OverflowToMax"))
-		int MaxLineCount = 5;
-	//when use SingleLine mode and OverflowType is OverflowToMax, this is the max width that can expend the input area
-	UPROPERTY(EditAnywhere, Category = "LGUI-Input", meta=(EditCondition="OverflowType==EUITextInputOverflowType::OverflowToMax"))
-		float MaxLineWidth = 100;
 	/**
 	 * This will be used in multiline mode, when hit enter, if one of these keys is also pressing then the input will submit, otherwise a new line will be added.
 	 * Commonly only use control/shift/alt key.
@@ -173,7 +156,7 @@ protected:
 	UPROPERTY(BlueprintAssignable, Category = "LGUI-Input", DisplayName="OnValueChanged")
 	FUITextInputValueChangedEvent OnValueChangedBP;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Input")
-	FLexUIEventDelegate OnValueChange = FLexUIEventDelegate(ELexUIEventDelegateParameterType::String);
+	FLexUIEventDelegate OnValueChanged = FLexUIEventDelegate(ELexUIEventDelegateParameterType::String);
 	
 	FLexUIMulticastDelegateString OnSubmitCPP;
 	UPROPERTY(BlueprintAssignable, Category = "LGUI-Input", DisplayName="OnSubmit")
@@ -317,7 +300,7 @@ private:
 
 	void UpdateAfterTextChange(bool InFireEvent = true);
 
-	void FireOnValueChangeEvent();
+	void FireOnValueChangedEvent();
 	void UpdateUITextComponent();
 	void UpdatePlaceHolderComponent();
 	void UpdateCaretPosition(bool InHideSelection = true);

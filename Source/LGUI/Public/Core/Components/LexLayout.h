@@ -87,9 +87,10 @@ protected:
 };
 
 /**
- * LayoutSelf can handle self size
+ * LayoutSelf can handle self size.
+ * This base class just provide IgnoreLayout.
  */
-UCLASS(BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)
+UCLASS(BlueprintType, DefaultToInstanced, EditInlineNew)
 class LGUI_API ULexLayoutSelf : public ULexLayout
 {
 	GENERATED_BODY()
@@ -102,6 +103,7 @@ public:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
+	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* Widget) const override{return FLexLayoutControlAnchorData();}
 
 	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
 	virtual bool GetIgnoreLayoutContainer()const{return bIgnoreLayoutContainer;}

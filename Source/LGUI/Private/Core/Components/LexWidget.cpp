@@ -443,6 +443,14 @@ void ULexWidget::MarkAllDirty()
 	bFlattenHierarchyIndexDirty = true;
 	bLayoutDirty = true;
 	bClipDirty = true;
+
+	bCacheWidthDirty = true;
+	bCacheHeightDirty = true;
+	bCacheAnchorLeftDirty = true;
+	bCacheAnchorRightDirty = true;
+	bCacheAnchorBottomDirty = true;
+	bCacheAnchorTopDirty = true;
+	
 	if (IsValid(Visual))
 	{
 		Visual->MarkAllDirty();
@@ -1235,6 +1243,13 @@ void ULexWidget::SetAnchorData(const FLexUIAnchorData& Value)
 	AnchorData.AnchoredPosition = Value.AnchoredPosition;
 	AnchorData.SizeDelta = Value.SizeDelta;
 
+	bCacheWidthDirty = true;
+	bCacheHeightDirty = true;
+	bCacheAnchorLeftDirty = true;
+	bCacheAnchorRightDirty = true;
+	bCacheAnchorBottomDirty = true;
+	bCacheAnchorTopDirty = true;
+
 	MarkAnchorDataChanged(true, true, true, false);
 	MarkLayoutDirty();
 }
@@ -1244,6 +1259,10 @@ void ULexWidget::SetPivot(FVector2D Value)
 	if (!AnchorData.Pivot.Equals(Value, 0.0f))
 	{
 		AnchorData.Pivot = Value;
+		bCacheAnchorLeftDirty = true;
+		bCacheAnchorRightDirty = true;
+		bCacheAnchorBottomDirty = true;
+		bCacheAnchorTopDirty = true;
 		MarkAnchorDataChanged(true, false, false, false);
 		MarkLayoutDirty();
 	}
@@ -2560,6 +2579,16 @@ void ULexWidget::SetClippingCornerRadius(FVector4f Value)
 		MarkClipDirty(false);
 	}
 }
+
+void ULexWidget::SetClippingMargin(FMargin Value)
+{
+	if (ClippingMargin != Value)
+	{
+		ClippingMargin = Value;
+		MarkClipDirty(false);
+	}
+}
+
 float ULexWidget::GetFinalRenderOpacity()const
 {
 	if (UIParent.IsValid())

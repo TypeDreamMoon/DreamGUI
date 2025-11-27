@@ -380,6 +380,8 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition="Clipping!=ELexWidgetClipping::Disabled&&Clipping!=ELexWidgetClipping::Inherit"))
 	FVector4f ClippingCornerRadius = FVector4f::Zero();
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition="Clipping!=ELexWidgetClipping::Disabled&&Clipping!=ELexWidgetClipping::Inherit"))
+	FMargin ClippingMargin = FMargin(0);
 	/**
 	 * If not WidgetActive, then not visible, not take layout space, not interactable, not hit-testable
 	 */
@@ -416,7 +418,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	FVector4f GetClippingCornerRadius()const { return ClippingCornerRadius; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	FMargin GetClippingMargin()const { return ClippingMargin; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetClippingCornerRadius(FVector4f Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetClippingMargin(FMargin Value);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	float GetRenderOpacity()const { return RenderOpacity; }

@@ -166,7 +166,7 @@ public:
 #pragma endregion
 
 	UFUNCTION(BlueprintCallable, meta = (ToolTip = "Assign start or update or omplete functions", WorldContext = "WorldContextObject", AutoCreateRefTerm="start,update,complete"), Category = LTween)
-		static ULTweener* VirtualCall(UObject* WorldContextObject, float duration, float delay, const FLTweenerSimpleDynamicDelegate& start, const FLTweenerFloatDynamicDelegate& update, const FLTweenerSimpleDynamicDelegate& complete)
+		static ULTweener* VirtualCall(UObject* WorldContextObject, float duration, float delay, const FLTweenSimpleDynamicDelegate& start, const FLTweenFloatDynamicDelegate& update, const FLTweenSimpleDynamicDelegate& complete)
 	{
 		auto Tweener = ULTweenManager::VirtualTo(WorldContextObject, duration);
 		if (Tweener)
@@ -199,7 +199,7 @@ public:
 	}
 
 	UFUNCTION(BlueprintCallable, meta = (ToolTip = "MainThread delay call function, Assign delayComplete to call", WorldContext = "WorldContextObject", AdvancedDisplay="affectByGamePause,affectByTimeDilation"), Category = LTween)
-		static ULTweener* DelayCall(UObject* WorldContextObject, float delayTime, const FLTweenerSimpleDynamicDelegate& delayComplete, bool affectByGamePause = true, bool affectByTimeDilation = true)
+		static ULTweener* DelayCall(UObject* WorldContextObject, float delayTime, const FLTweenSimpleDynamicDelegate& delayComplete, bool affectByGamePause = true, bool affectByTimeDilation = true)
 	{
 		auto Tweener = ULTweenManager::VirtualTo(WorldContextObject, delayTime);
 		if (Tweener)
@@ -227,7 +227,7 @@ public:
 		return Tweener;
 	}
 	UFUNCTION(BlueprintCallable, meta = (ToolTip = "MainThread delay frame call function, Assign delayComplete to call", WorldContext = "WorldContextObject", AdvancedDisplay = "affectByGamePause"), Category = LTween)
-		static ULTweener* DelayFrameCall(UObject* WorldContextObject, int frameCount, const FLTweenerSimpleDynamicDelegate& delayComplete, bool affectByGamePause = true)
+		static ULTweener* DelayFrameCall(UObject* WorldContextObject, int frameCount, const FLTweenSimpleDynamicDelegate& delayComplete, bool affectByGamePause = true)
 	{
 		auto Tweener = ULTweenManager::DelayFrameCall(WorldContextObject, frameCount);
 		if (Tweener)
@@ -256,7 +256,7 @@ public:
 	}
 
 	UFUNCTION(BlueprintCallable, meta = (ToolTip = "Assign start or update or omplete functions", WorldContext = "WorldContextObject", AutoCreateRefTerm = "start,update,complete"), Category = LTween)
-		static ULTweener* UpdateCall(UObject* WorldContextObject, const FLTweenerFloatDynamicDelegate& update)
+		static ULTweener* UpdateCall(UObject* WorldContextObject, const FLTweenFloatDynamicDelegate& update)
 	{
 		auto Tweener = ULTweenManager::UpdateCall(WorldContextObject);
 		if (Tweener)
@@ -363,7 +363,7 @@ public:
 	 * @return tweener
 	 */
 	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject"), Category = LTween)
-		static ULTweener* RepeatCall(UObject* WorldContextObject, FLTweenerSimpleDynamicDelegate callFunction, float delayTime, float interval = 1.0f, int repeatCount = 1)
+		static ULTweener* RepeatCall(UObject* WorldContextObject, FLTweenSimpleDynamicDelegate callFunction, float delayTime, float interval = 1.0f, int repeatCount = 1)
 	{
 		auto Tweener = ULTweenManager::VirtualTo(WorldContextObject, interval);
 		if (Tweener)

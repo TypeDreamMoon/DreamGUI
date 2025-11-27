@@ -1483,9 +1483,15 @@ void ULexCanvas::UpdateRootCanvasDrawCall()
 			WidgetList.Reset();
 			LOCAL::CollectRenderWidget(this->LexWidget.Get(), this, WidgetList);
 		}
+		//update layout from tail to head
+		for (int i = WidgetList.Num() - 1; i >= 0; i--)
+		{
+			auto& Widget = WidgetList[i];
+			Widget->UpdateLayout();
+		}
+		//update clip and geometry
 		for (const auto& Widget : WidgetList)
 		{
-			Widget->UpdateLayout();
 			Widget->UpdateClip(RootCanvas->ClipDataAsTexture, RootCanvas->ClipDataList);
 			if (Widget->GetWidgetActiveInHierarchy() && Widget->GetRenderCanvas() == this)
 			{
