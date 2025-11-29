@@ -1,12 +1,12 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/Components/LexLayoutGridContainer.h"
-#include "Core/Components/LexLayoutGridSelf.h"
+#include "Core/Components/LexLayoutContainerGrid.h"
+#include "Core/Components/LexLayoutSelfGrid.h"
 #include "LGUI.h"
 
-DECLARE_CYCLE_STAT(TEXT("LexLayout GridContainer RebuildLayout"), STAT_LexLayoutGridContainer, STATGROUP_LGUI);
+DECLARE_CYCLE_STAT(TEXT("LexLayoutContainer Grid"), STAT_LexLayoutContainerGrid, STATGROUP_LGUI);
 
-ULexLayoutGridContainer::ULexLayoutGridContainer()
+ULexLayoutContainerGrid::ULexLayoutContainerGrid()
 {
 	Rows = Columns =
 	{
@@ -16,13 +16,13 @@ ULexLayoutGridContainer::ULexLayoutGridContainer()
 }
 
 #if WITH_EDITOR
-void ULexLayoutGridContainer::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void ULexLayoutContainerGrid::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 #endif
 
-void ULexLayoutGridContainer::SetPadding(FMargin Value)
+void ULexLayoutContainerGrid::SetPadding(FMargin Value)
 {
 	if (Padding != Value)
 	{
@@ -31,7 +31,7 @@ void ULexLayoutGridContainer::SetPadding(FMargin Value)
 	}
 }
 
-void ULexLayoutGridContainer::SetRows(const TArray<FLexLayoutGridSize>& Value)
+void ULexLayoutContainerGrid::SetRows(const TArray<FLexLayoutGridSize>& Value)
 {
 	if (Rows != Value)
 	{
@@ -39,7 +39,7 @@ void ULexLayoutGridContainer::SetRows(const TArray<FLexLayoutGridSize>& Value)
 		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
-void ULexLayoutGridContainer::SetColumns(const TArray<FLexLayoutGridSize>& Value)
+void ULexLayoutContainerGrid::SetColumns(const TArray<FLexLayoutGridSize>& Value)
 {
 	if (Columns != Value)
 	{
@@ -47,7 +47,7 @@ void ULexLayoutGridContainer::SetColumns(const TArray<FLexLayoutGridSize>& Value
 		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 }
-void ULexLayoutGridContainer::SetSpacing(const FVector2D& Value)
+void ULexLayoutContainerGrid::SetSpacing(const FVector2D& Value)
 {
 	if (Spacing != Value)
 	{
@@ -56,9 +56,9 @@ void ULexLayoutGridContainer::SetSpacing(const FVector2D& Value)
 	}
 }
 
-void ULexLayoutGridContainer::UpdateLayout()
+void ULexLayoutContainerGrid::UpdateLayout()
 {
-	SCOPE_CYCLE_COUNTER(STAT_LexLayoutGridContainer);
+	SCOPE_CYCLE_COUNTER(STAT_LexLayoutContainerGrid);
 	auto Widget = GetWidget();
 	if (!Widget)return;
 	FVector2D StartPosition;
@@ -135,7 +135,7 @@ void ULexLayoutGridContainer::UpdateLayout()
 	for (auto& Child : Widget->GetUIChildren())
 	{
 		if (!Child->GetWidgetActiveInHierarchy())continue;
-		auto ChildLayoutSelf = Cast<ULexLayoutGridSelf>(Child->GetLayoutSelf());
+		auto ChildLayoutSelf = Cast<ULexLayoutSelfGrid>(Child->GetLayoutSelf());
 		if (ChildLayoutSelf && ChildLayoutSelf->GetIgnoreLayoutContainer())
 		{
 			continue;
@@ -230,7 +230,7 @@ void ULexLayoutGridContainer::UpdateLayout()
 	}
 }
 
-FLexLayoutControlAnchorData ULexLayoutGridContainer::GetLayoutControlAnchor(const ULexWidget* TargetWidget)const
+FLexLayoutControlAnchorData ULexLayoutContainerGrid::GetLayoutControlAnchor(const ULexWidget* TargetWidget)const
 {
 	FLexLayoutControlAnchorData Result;
 	auto ThisWidget = GetWidget();

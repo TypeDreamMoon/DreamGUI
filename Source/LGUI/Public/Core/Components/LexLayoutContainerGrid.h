@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "LexLayout.h"
 #include "Layout/Margin.h"
-#include "LexLayoutGridContainer.generated.h"
+#include "LexLayoutContainerGrid.generated.h"
 
 UENUM(BlueprintType)
 enum class ELexLayoutGridSizeType:uint8
@@ -51,18 +51,18 @@ struct LGUI_API FLexLayoutGridSize
 	}
 };
 
-class ULexLayoutGridSelf;
+class ULexLayoutSelfGrid;
 
 /**
  * Flexible & Responsive grid based layout.
  */
-UCLASS( ClassGroup=(LGUI), DisplayName="Grid Container")
-class LGUI_API ULexLayoutGridContainer : public ULexLayoutContainer
+UCLASS( ClassGroup=(LGUI), DisplayName="LayoutContainer-Grid")
+class LGUI_API ULexLayoutContainerGrid : public ULexLayoutContainer
 {
 	GENERATED_BODY()
 
 public:
-	ULexLayoutGridContainer();
+	ULexLayoutContainerGrid();
 
 private:
 	friend class FUIFlexibleGridLayoutCustomization;

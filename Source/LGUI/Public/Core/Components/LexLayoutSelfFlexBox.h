@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "LexLayout.h"
-#include "LexLayoutFlexBoxSelf.generated.h"
+#include "LexLayoutSelfFlexBox.generated.h"
 
 class ULexWidget;
 
@@ -143,53 +143,15 @@ struct FLexLayoutMinMaxSize
 	float CalculateSize(ULexWidget* Widget, bool IsVertical, bool IsMinOrMax)const;
 };
 
-UENUM(BlueprintType)
-enum class ELexLayoutAspectRatioType : uint8
-{
-	/**
-	 * Unlock aspect ratio
-	 */
-	None,
-	/**
-	 * Width control height
-	 */
-	WidthControlHeight,
-	/**
-	 * Height control width
-	 */
-	HeightControlWidth,
-};
-USTRUCT(BlueprintType)
-struct FLexLayoutAspectRatio
-{
-	GENERATED_BODY()
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
-	ELexLayoutAspectRatioType Type = ELexLayoutAspectRatioType::None;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
-	float Value = 1.0f;
-
-	bool operator==(const FLexLayoutAspectRatio& Other) const
-	{
-		return this->Type == Other.Type && this->Value == Other.Value;
-	}
-	bool operator!=(const FLexLayoutAspectRatio& Other) const
-	{
-		return this->Type != Other.Type || this->Value != Other.Value;
-	}
-};
-
 /**
  * Provide item properties for FlexBoxContainer, and we can also use it independently to easily control self size.
  */
-UCLASS(BlueprintType, DisplayName="FlexBox Self")
-class LGUI_API ULexLayoutFlexBoxSelf : public ULexLayoutSelf
+UCLASS(BlueprintType, DisplayName="LayoutSelf-FlexBox")
+class LGUI_API ULexLayoutSelfFlexBox : public ULexLayoutSelf
 {
 	GENERATED_BODY()
 private:
-	friend class FLexLayoutFlexBoxSelfCustomization;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true))
-	FLexLayoutAspectRatio AspectRatio;
+	friend class FLexLayoutSelfFlexBoxCustomization;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true))
 	FLexLayoutSize PreferredWidth;
@@ -239,34 +201,27 @@ public:
 	float GetShrinkForLayoutContainer(int Axis)const;
 
 	bool GetSecondaryAxisSizeCanStretchByLayoutContainer(int SecondaryAxis)const;
-	void SetSizeByLayoutContainer(FVector2f Value, int PrimaryAxis); 
+	void SetSizeByLayoutContainer(FVector2f Value, int PrimaryAxis);
+	
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	const FLexLayoutSize& GetPreferredWidth()const{return PreferredWidth;}
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	const FLexLayoutSize& GetPreferredHeight()const{return PreferredHeight;}
+	
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	const FLexLayoutMinMaxSize& GetMinWidth()const{return MinWidth;}
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	const FLexLayoutMinMaxSize& GetMinHeight()const{return MinHeight;}
 
 	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
-	FLexLayoutAspectRatio GetAspectRatio()const{return AspectRatio;}
+	const FLexLayoutMinMaxSize& GetMaxWidth()const{return MaxWidth;}
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	const FLexLayoutMinMaxSize& GetMaxHeight()const{return MaxHeight;}
 	
 	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
-	virtual const FLexLayoutSize& GetPreferredWidth()const{return PreferredWidth;}
+	float GetGrow()const{return Grow;}
 	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
-	virtual const FLexLayoutSize& GetPreferredHeight()const{return PreferredHeight;}
-	
-	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
-	virtual const FLexLayoutMinMaxSize& GetMinWidth()const{return MinWidth;}
-	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
-	virtual const FLexLayoutMinMaxSize& GetMinHeight()const{return MinHeight;}
-
-	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
-	virtual const FLexLayoutMinMaxSize& GetMaxWidth()const{return MaxWidth;}
-	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
-	virtual const FLexLayoutMinMaxSize& GetMaxHeight()const{return MaxHeight;}
-	
-	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
-	virtual float GetGrow()const{return Grow;}
-	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
-	virtual float GetShrink()const{return Shrink;}
-
-	
-	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
-	void SetAspectRatio(const FLexLayoutAspectRatio& Value);
+	float GetShrink()const{return Shrink;}
 	
 	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
 	void SetPreferredWidth(const FLexLayoutSize& Value);
@@ -284,7 +239,7 @@ public:
 	void SetMaxHeight(const FLexLayoutMinMaxSize& Value);
 
 	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
-	virtual void SetGrow(float Value);
+	void SetGrow(float Value);
 	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
-	virtual void SetShrink(float Value);
+	void SetShrink(float Value);
 };

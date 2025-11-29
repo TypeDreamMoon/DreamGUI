@@ -1,7 +1,7 @@
 #pragma once
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
-#include "Core/Components/LexLayoutFlexBoxSelf.h"
+#include "Core/Components/LexLayoutSelfFlexBox.h"
 #include "Widgets/Input/SSegmentedControl.h"
 
 #define LOCTEXT_NAMESPACE "LexLayoutMinMaxSizeCustomization"

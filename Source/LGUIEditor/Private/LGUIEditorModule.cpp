@@ -79,12 +79,12 @@
 #include "Core/LexUIFontEmojiData.h"
 #include "Core/LexUIImageBrush.h"
 #include "Core/Components/LexImage.h"
-#include "Core/Components/LexLayoutFlexBoxSelf.h"
-#include "Core/Components/LexLayoutFlexBoxContainer.h"
+#include "Core/Components/LexLayoutSelfFlexBox.h"
+#include "Core/Components/LexLayoutContainerFlexBox.h"
 #include "DetailCustomization/LexImageBrushStructCustomization.h"
 #include "DetailCustomization/LexLayoutContainerCustomization.h"
-#include "DetailCustomization/LexLayoutFlexBoxSelfCustomization.h"
-#include "DetailCustomization/LexLayoutFlexBoxContainerCustomization.h"
+#include "DetailCustomization/LexLayoutSelfFlexBoxCustomization.h"
+#include "DetailCustomization/LexLayoutContainerFlexBoxCustomization.h"
 #include "DetailCustomization/LexUIEventDelegatePresetParamCustomization.h"
 #include "DetailCustomization/LexUIFontEmojiDataCustomization.h"
 
@@ -296,8 +296,8 @@ void FLGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIImageBrush::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexImageBrushStructCustomization::MakeInstance));
 		
 		PropertyModule.RegisterCustomClassLayout(ULexLayoutContainer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutContainerCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(ULexLayoutFlexBoxContainer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutFlexBoxContainerCustomization::MakeInstance));
-		PropertyModule.RegisterCustomClassLayout(ULexLayoutFlexBoxSelf::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutFlexBoxSelfCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexLayoutContainerFlexBox::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutContainerFlexBoxCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexLayoutSelfFlexBox::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutSelfFlexBoxCustomization::MakeInstance));
 	}
 	//register asset
 	{
@@ -523,8 +523,8 @@ void FLGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIImageBrush::StaticStruct()->GetFName());
 		
 		PropertyModule.UnregisterCustomClassLayout(ULexLayoutContainer::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(ULexLayoutFlexBoxContainer::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(ULexLayoutFlexBoxSelf::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexLayoutContainerFlexBox::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexLayoutSelfFlexBox::StaticClass()->GetFName());
 	}
 	//unregister asset
 	{

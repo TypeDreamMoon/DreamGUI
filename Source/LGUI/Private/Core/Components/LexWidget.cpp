@@ -2521,7 +2521,6 @@ void ULexWidget::ForceRebuildLayoutImmediately(const ULexWidget* InWidget)
 void ULexWidget::MarkLayoutDirty()const
 {
 	ULexWidget::MarkLayoutForRebuild(this);
-	MarkCanvasUpdate(false, true, false);
 }
 
 void ULexWidget::MarkClipDirty(bool InClipTypeChanged) const

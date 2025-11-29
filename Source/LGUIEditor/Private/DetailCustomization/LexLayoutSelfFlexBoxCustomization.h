@@ -6,15 +6,15 @@
 /**
  * 
  */
-class FLexLayoutFlexBoxContainerCustomization : public IDetailCustomization
+class FLexLayoutSelfFlexBoxCustomization : public IDetailCustomization
 {
 public:
-	FLexLayoutFlexBoxContainerCustomization();
-	~FLexLayoutFlexBoxContainerCustomization();
+	FLexLayoutSelfFlexBoxCustomization();
+	~FLexLayoutSelfFlexBoxCustomization();
 
 	static TSharedRef<IDetailCustomization> MakeInstance();
 	/** IDetailCustomization interface */
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
 private:
-	TArray<TWeakObjectPtr<class ULexLayoutFlexBoxContainer>> TargetScriptArray;
+	TArray<TWeakObjectPtr<class ULexLayoutSelfFlexBox>> TargetScriptArray;
 };

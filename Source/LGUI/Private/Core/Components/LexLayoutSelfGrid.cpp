@@ -1,33 +1,33 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/Components/LexLayoutGridSelf.h"
-#include "Core/Components/LexLayoutGridContainer.h"
+#include "Core/Components/LexLayoutSelfGrid.h"
+#include "Core/Components/LexLayoutContainerGrid.h"
 
-void ULexLayoutGridSelf::BeginPlay()
+void ULexLayoutSelfGrid::BeginPlay()
 {
 	Super::BeginPlay();
 }
 
-FLexLayoutControlAnchorData ULexLayoutGridSelf::GetLayoutControlAnchor(const ULexWidget* Widget) const
+FLexLayoutControlAnchorData ULexLayoutSelfGrid::GetLayoutControlAnchor(const ULexWidget* Widget) const
 {
 	return FLexLayoutControlAnchorData();
 }
 
 #if WITH_EDITOR
-void ULexLayoutGridSelf::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void ULexLayoutSelfGrid::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 #endif
 
-void ULexLayoutGridSelf::SetSizeByLayoutContainer(FVector2f Value)
+void ULexLayoutSelfGrid::SetSizeByLayoutContainer(FVector2f Value)
 {
 	auto Widget = GetWidget();
 	if (!Widget)return;
 	Widget->SetSizeDelta(FVector2D(Value));
 }
 
-void ULexLayoutGridSelf::SetRowIndex(int Value)
+void ULexLayoutSelfGrid::SetRowIndex(int Value)
 {
 	if (RowIndex != Value)
 	{
@@ -35,7 +35,7 @@ void ULexLayoutGridSelf::SetRowIndex(int Value)
 		ULexWidget::MarkLayoutForRebuild(GetWidget()->GetUIParent());
 	}
 }
-void ULexLayoutGridSelf::SetRowCount(int Value)
+void ULexLayoutSelfGrid::SetRowCount(int Value)
 {
 	if (RowCount != Value)
 	{
@@ -43,7 +43,7 @@ void ULexLayoutGridSelf::SetRowCount(int Value)
 		ULexWidget::MarkLayoutForRebuild(GetWidget()->GetUIParent());
 	}
 }
-void ULexLayoutGridSelf::SetColumnIndex(int Value)
+void ULexLayoutSelfGrid::SetColumnIndex(int Value)
 {
 	if (ColumnIndex != Value)
 	{
@@ -51,7 +51,7 @@ void ULexLayoutGridSelf::SetColumnIndex(int Value)
 		ULexWidget::MarkLayoutForRebuild(GetWidget()->GetUIParent());
 	}
 }
-void ULexLayoutGridSelf::SetColumnCount(int Value)
+void ULexLayoutSelfGrid::SetColumnCount(int Value)
 {
 	if (ColumnCount != Value)
 	{

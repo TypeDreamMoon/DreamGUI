@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "LexLayout.h"
-#include "LexLayoutFlexBoxContainer.generated.h"
+#include "LexLayoutContainerFlexBox.generated.h"
 
 class ULexWidget;
 
@@ -68,8 +68,8 @@ enum class ELexLayoutFlexBoxSecondaryAxisLineAlignment :uint8
 /**
  * This layout act like html/css3-flex layout
  */
-UCLASS(BlueprintType, DisplayName="FlexBox Container")
-class LGUI_API ULexLayoutFlexBoxContainer : public ULexLayoutContainer
+UCLASS(BlueprintType, DisplayName="LayoutContainer-FlexBox")
+class LGUI_API ULexLayoutContainerFlexBox : public ULexLayoutContainer
 {
 	GENERATED_BODY()
 private:
@@ -131,7 +131,6 @@ private:
 	FVector2f TotalMinSize;
 	FVector2f TotalMaxSize;
 	FVector2f TotalPreferredSize;
-	void SetChildPositionAndSize(ULexWidget* Child, FVector2f Pos, FVector2f AreaSize, int PrimaryAxis, int SecondaryAxis, float SecondaryPreferred, bool ReverseX, bool ReverseY);
 
 	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* TargetWidget)const override;
 public:

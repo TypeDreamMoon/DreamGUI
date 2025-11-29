@@ -100,7 +100,7 @@ void FLexRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		;
 	};
 
-	auto CreateVectorPropertyWithUnitMode = [&](FName PropertyName, IDetailGroup& Group, FText PropertyDisplayName, bool PropertyVisible) {
+	auto CreateVectorPropertyWithUnitMode = [&](FName PropertyName, IDetailGroup& Group, FText PropertyDisplayName, const TAttribute<bool>& IsEnabledAttribute) {
 		auto PropertyHandle = DetailBuilder.GetProperty(PropertyName);
 		PropertyHandle->SetPropertyDisplayName(PropertyDisplayName);
 		auto PropertyUnitHandle = DetailBuilder.GetProperty(FName(*(PropertyName.ToString() + TEXT("UnitMode"))));
@@ -126,7 +126,7 @@ void FLexRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		}
 		Group.AddWidgetRow()
 		.PropertyHandleList({ PropertyHandle })
-		.Visibility(PropertyVisible ? EVisibility::Visible : EVisibility::Hidden)
+		.IsEnabled(IsEnabledAttribute)
 		.NameContent()
 		[
 			SNew(SBox)
@@ -153,13 +153,13 @@ void FLexRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 
 #define TO_TEXT(x) #x
 
-#define AddPropertyRowToGroup(PropertyName, DisplayName, Group, PropertyVisible)\
+#define AddPropertyRowToGroup(PropertyName, DisplayName, Group, IsEnabledAttribute)\
 auto PropertyName##Handle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexRectBlock, PropertyName));\
 PropertyName##Handle->SetPropertyDisplayName(LOCTEXT(TO_TEXT(PropertyName##_DisplayName), TO_TEXT(DisplayName)));\
-Group.AddPropertyRow(PropertyName##Handle).Visibility(PropertyVisible ? EVisibility::Visible : EVisibility::Hidden);
+Group.AddPropertyRow(PropertyName##Handle).IsEnabled(IsEnabledAttribute);
 
-#define AddVectorPropertyRowToGroup(PropertyName, DisplayName, Group, PropertyVisible)\
-CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, PropertyName), Group, LOCTEXT(TO_TEXT(PropertyName##_DisplayName), TO_TEXT(DisplayName)), PropertyVisible);
+#define AddVectorPropertyRowToGroup(PropertyName, DisplayName, Group, IsEnabledAttribute)\
+CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, PropertyName), Group, LOCTEXT(TO_TEXT(PropertyName##_DisplayName), TO_TEXT(DisplayName)), IsEnabledAttribute);
 
 	IDetailCategoryBuilder& LGUICategory = DetailBuilder.EditCategory("LGUI");
 	
@@ -285,27 +285,19 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 	;
 	LGUICategory.AddProperty(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexRectBlock, bSoftEdge)));
 
+	//body
 	auto EnableBodyHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexRectBlock, bEnableBody));
 	EnableBodyHandle->SetPropertyDisplayName(LOCTEXT("EnableBody_DisplayName", "Body"));
 	auto& BodyGroup = LGUICategory.AddGroup(GET_MEMBER_NAME_CHECKED(ULexRectBlock, bEnableBody), EnableBodyHandle->GetPropertyDisplayName(), false, true);
-	BodyGroup.HeaderRow()
-		.PropertyHandleList({ EnableBodyHandle })
-		.NameContent()
-		[
-			EnableBodyHandle->CreatePropertyNameWidget()
-		]
-		.ValueContent()
-		[
-			EnableBodyHandle->CreatePropertyValueWidget()
-		]
-	;
-
-	bool bEnableBody = true;
-	EnableBodyHandle->GetValue(bEnableBody);
-	EnableBodyHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder]() {DetailBuilder.ForceRefreshDetails(); }));
-	if (bEnableBody)
+	BodyGroup.HeaderProperty(EnableBodyHandle);
 	{
-		AddPropertyRowToGroup(BodyColor, Color, BodyGroup, bEnableBody);
+		auto EnableBodyAttribute = TAttribute<bool>::CreateLambda([=]()
+		{
+			bool bEnable = false;
+			EnableBodyHandle->GetValue(bEnable);
+			return bEnable;
+		});
+		AddPropertyRowToGroup(BodyColor, Color, BodyGroup, EnableBodyAttribute);
 
 		ELexRectBlockTextureMode BodyTextureMode;
 		auto BodyTextureModeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexRectBlock, BodyTextureMode));
@@ -341,7 +333,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 			;
 		auto TempBodyTextureHandle = BodyTextureMode == ELexRectBlockTextureMode::Texture ? BodyTextureHandle : BodySpriteTextureHandle;
 		TextureGroup.HeaderRow()
-			.PropertyHandleList({ TempBodyTextureHandle })
+			.PropertyHandleList({ BodyTextureHandle, BodySpriteTextureHandle })
 			.NameContent()
 			[
 				SNew(SBox)
@@ -410,6 +402,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 			[
 				TempBodyTextureHandle->CreatePropertyValueWidget()
 			]
+			.IsEnabled(EnableBodyAttribute)
 		;
 		TextureGroup.AddWidgetRow()
 			.ValueContent()
@@ -439,149 +432,125 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 					return FReply::Handled();
 				})
 			]
+			.IsEnabled(EnableBodyAttribute)
 		;
 
-		UObject* BodyTexture = nullptr;
-		TempBodyTextureHandle->GetValue(BodyTexture);
-		TempBodyTextureHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder]() {DetailBuilder.ForceRefreshDetails(); }));
-		AddPropertyRowToGroup(BodyTextureScaleMode, Scale Mode, TextureGroup, BodyTexture != nullptr);
+		auto BodyTextureScaleModeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexRectBlock, BodyTextureScaleMode));
+		BodyTextureScaleModeHandle->SetPropertyDisplayName(LOCTEXT("BodyTextureScaleMode_DisplayName", "Scale Mode"));
+		TextureGroup.AddPropertyRow(BodyTextureScaleModeHandle).IsEnabled(TAttribute<bool>::CreateLambda([=]()
+		{
+			UObject* BodyTexture = nullptr;
+			TempBodyTextureHandle->GetValue(BodyTexture);
+			return BodyTexture != nullptr && EnableBodyAttribute.Get();
+		}));
 
+		//gradient
 		auto EnableBodyGradientHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexRectBlock, bEnableBodyGradient));
 		EnableBodyGradientHandle->SetPropertyDisplayName(LOCTEXT("EnableBodyGradient_DisplayName", "Gradient"));
 		auto& BodyGradientGroup = BodyGroup.AddGroup(GET_MEMBER_NAME_CHECKED(ULexRectBlock, bEnableBodyGradient), EnableBodyGradientHandle->GetPropertyDisplayName(), true);
-		BodyGradientGroup.HeaderRow()
-			.PropertyHandleList({ EnableBodyGradientHandle })
-			.NameContent()
-			[
-				EnableBodyGradientHandle->CreatePropertyNameWidget()
-			]
-		.ValueContent()
-			[
-				EnableBodyGradientHandle->CreatePropertyValueWidget()
-			]
-		;
-
-		bool bEnableBodyGradient;
-		EnableBodyGradientHandle->GetValue(bEnableBodyGradient);
-		EnableBodyGradientHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder]() {DetailBuilder.ForceRefreshDetails(); }));
-		AddPropertyRowToGroup(BodyGradientColor, Color, BodyGradientGroup, bEnableBodyGradient);
-		AddVectorPropertyRowToGroup(BodyGradientCenter, Center, BodyGradientGroup, bEnableBodyGradient);
-		AddVectorPropertyRowToGroup(BodyGradientRadius, Radius, BodyGradientGroup, bEnableBodyGradient);
-		AddPropertyRowToGroup(BodyGradientRotation, Rotation, BodyGradientGroup, bEnableBodyGradient);
+		BodyGradientGroup.HeaderProperty(EnableBodyGradientHandle).IsEnabled(EnableBodyAttribute);
+		{
+			auto IsEnableGradientAttribute = TAttribute<bool>::CreateLambda([=]()
+			{
+				bool bEnable = false;
+				EnableBodyGradientHandle->GetValue(bEnable);
+				return bEnable && EnableBodyAttribute.Get();
+			});
+			AddPropertyRowToGroup(BodyGradientColor, Color, BodyGradientGroup, IsEnableGradientAttribute);
+			AddVectorPropertyRowToGroup(BodyGradientCenter, Center, BodyGradientGroup, IsEnableGradientAttribute);
+			AddVectorPropertyRowToGroup(BodyGradientRadius, Radius, BodyGradientGroup, IsEnableGradientAttribute);
+			AddPropertyRowToGroup(BodyGradientRotation, Rotation, BodyGradientGroup, IsEnableGradientAttribute);
+		}
 	}
 
+	//border
 	auto BorderHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexRectBlock, bEnableBorder));
 	BorderHandle->SetPropertyDisplayName(LOCTEXT("bEnableBorder_DisplayName", "Border"));
 	auto& BorderGroup = LGUICategory.AddGroup(GET_MEMBER_NAME_CHECKED(ULexRectBlock, bEnableBorder), BorderHandle->GetPropertyDisplayName(), false, true);
-	BorderGroup.HeaderRow()
-		.PropertyHandleList({ BorderHandle })
-		.NameContent()
-		[
-			BorderHandle->CreatePropertyNameWidget()
-		]
-		.ValueContent()
-		[
-			BorderHandle->CreatePropertyValueWidget()
-		]
-	;
-	bool bEnableBorder = false;
-	BorderHandle->GetValue(bEnableBorder);
-	BorderHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder]() {DetailBuilder.ForceRefreshDetails(); }));
-	AddVectorPropertyRowToGroup(BorderWidth, Width, BorderGroup, bEnableBorder);
-	AddPropertyRowToGroup(BorderColor, Color, BorderGroup, bEnableBorder);
-
-	if (bEnableBorder)
+	BorderGroup.HeaderProperty(BorderHandle);
 	{
+		auto IsEnableBorderAttribute = TAttribute<bool>::CreateLambda([=]()
+		{
+			bool bEnable = false;
+			BorderHandle->GetValue(bEnable);
+			return bEnable;
+		});
+		AddVectorPropertyRowToGroup(BorderWidth, Width, BorderGroup, IsEnableBorderAttribute);
+		AddPropertyRowToGroup(BorderColor, Color, BorderGroup, IsEnableBorderAttribute);
+
+		//gradient
 		auto BorderGradientHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexRectBlock, bEnableBorderGradient));
 		BorderGradientHandle->SetPropertyDisplayName(LOCTEXT("bEnableBorderGradient_DisplayName", "Gradient"));
 		auto& BorderGradientGroup = BorderGroup.AddGroup(GET_MEMBER_NAME_CHECKED(ULexRectBlock, bEnableBorderGradient), BorderGradientHandle->GetPropertyDisplayName(), true);
-		BorderGradientGroup.HeaderRow()
-			.PropertyHandleList({ BorderGradientHandle })
-			.NameContent()
-			[
-				BorderGradientHandle->CreatePropertyNameWidget()
-			]
-			.ValueContent()
-			[
-				BorderGradientHandle->CreatePropertyValueWidget()
-			]
-			.Visibility(bEnableBorder ? EVisibility::Visible : EVisibility::Hidden)
-		;
-		bool bEnableBorderGradient = false;
-		BorderGradientHandle->GetValue(bEnableBorderGradient);
-		BorderGradientHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder]() {DetailBuilder.ForceRefreshDetails(); }));
-		AddPropertyRowToGroup(BorderGradientColor, Color, BorderGradientGroup, bEnableBorderGradient);
-		AddVectorPropertyRowToGroup(BorderGradientCenter, Center, BorderGradientGroup, bEnableBorderGradient);
-		AddVectorPropertyRowToGroup(BorderGradientRadius, Radius, BorderGradientGroup, bEnableBorderGradient);
-		AddPropertyRowToGroup(BorderGradientRotation, Rotation, BorderGradientGroup, bEnableBorderGradient);
+		BorderGradientGroup.HeaderProperty(BorderGradientHandle).IsEnabled(IsEnableBorderAttribute);
+		{
+			auto IsEnableGradientAttribute = TAttribute<bool>::CreateLambda([=]()
+			{
+				bool bEnableGradient = false;
+				BorderGradientHandle->GetValue(bEnableGradient);
+				return bEnableGradient && IsEnableBorderAttribute.Get();
+			});
+			AddPropertyRowToGroup(BorderGradientColor, Color, BorderGradientGroup, IsEnableGradientAttribute);
+			AddVectorPropertyRowToGroup(BorderGradientCenter, Center, BorderGradientGroup, IsEnableGradientAttribute);
+			AddVectorPropertyRowToGroup(BorderGradientRadius, Radius, BorderGradientGroup, IsEnableGradientAttribute);
+			AddPropertyRowToGroup(BorderGradientRotation, Rotation, BorderGradientGroup, IsEnableGradientAttribute);
+		}
 	}
 
+	//inner shadow
 	auto InnerShadowHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexRectBlock, bEnableInnerShadow));
 	InnerShadowHandle->SetPropertyDisplayName(LOCTEXT("bEnableInnerShadow_DisplayName", "Inner Shadow"));
 	auto& InnerShadowGroup = LGUICategory.AddGroup(GET_MEMBER_NAME_CHECKED(ULexRectBlock, bEnableBorder), InnerShadowHandle->GetPropertyDisplayName(), false, true);
-	InnerShadowGroup.HeaderRow()
-		.PropertyHandleList({ InnerShadowHandle })
-		.NameContent()
-		[
-			InnerShadowHandle->CreatePropertyNameWidget()
-		]
-		.ValueContent()
-		[
-			InnerShadowHandle->CreatePropertyValueWidget()
-		]
-	;
-	bool bEnableInnerShadow = false;
-	InnerShadowHandle->GetValue(bEnableInnerShadow);
-	InnerShadowHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder]() {DetailBuilder.ForceRefreshDetails(); }));
-	AddPropertyRowToGroup(InnerShadowColor, Color, InnerShadowGroup, bEnableInnerShadow);
-	AddVectorPropertyRowToGroup(InnerShadowSize, Size, InnerShadowGroup, bEnableInnerShadow);
-	AddVectorPropertyRowToGroup(InnerShadowBlur, Blur, InnerShadowGroup, bEnableInnerShadow);
-	AddPropertyRowToGroup(InnerShadowAngle, Angle, InnerShadowGroup, bEnableInnerShadow);
-	AddVectorPropertyRowToGroup(InnerShadowDistance, Distance, InnerShadowGroup, bEnableInnerShadow);
+	InnerShadowGroup.HeaderProperty(InnerShadowHandle);
+	{
+		auto IsEnabledAttribute = TAttribute<bool>::CreateLambda([=]()
+		{
+			bool bEnable = false;
+			InnerShadowHandle->GetValue(bEnable);
+			return bEnable;
+		});
+		AddPropertyRowToGroup(InnerShadowColor, Color, InnerShadowGroup, IsEnabledAttribute);
+		AddVectorPropertyRowToGroup(InnerShadowSize, Size, InnerShadowGroup, IsEnabledAttribute);
+		AddVectorPropertyRowToGroup(InnerShadowBlur, Blur, InnerShadowGroup, IsEnabledAttribute);
+		AddPropertyRowToGroup(InnerShadowAngle, Angle, InnerShadowGroup, IsEnabledAttribute);
+		AddVectorPropertyRowToGroup(InnerShadowDistance, Distance, InnerShadowGroup, IsEnabledAttribute);
+	}
 
+	//outer shadow
 	auto OuterShadowHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexRectBlock, bEnableOuterShadow));
 	OuterShadowHandle->SetPropertyDisplayName(LOCTEXT("EnableOuterShadow_DisplayName", "Outer Shadow"));
 	auto& OuterShadowGroup = LGUICategory.AddGroup(GET_MEMBER_NAME_CHECKED(ULexRectBlock, bEnableOuterShadow), OuterShadowHandle->GetPropertyDisplayName(), false, true);
-	OuterShadowGroup.HeaderRow()
-		.PropertyHandleList({ OuterShadowHandle })
-		.NameContent()
-		[
-			OuterShadowHandle->CreatePropertyNameWidget()
-		]
-		.ValueContent()
-		[
-			OuterShadowHandle->CreatePropertyValueWidget()
-		]
-	;
-	bool bEnableOuterShadow = false;
-	OuterShadowHandle->GetValue(bEnableOuterShadow);
-	OuterShadowHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder]() {DetailBuilder.ForceRefreshDetails(); }));
-	AddPropertyRowToGroup(OuterShadowColor, Color, OuterShadowGroup, bEnableOuterShadow);
-	AddVectorPropertyRowToGroup(OuterShadowSize, Size, OuterShadowGroup, bEnableOuterShadow);
-	AddVectorPropertyRowToGroup(OuterShadowBlur, Blur, OuterShadowGroup, bEnableOuterShadow);
-	AddPropertyRowToGroup(OuterShadowAngle, Angle, OuterShadowGroup, bEnableOuterShadow);
-	AddVectorPropertyRowToGroup(OuterShadowDistance, Distance, OuterShadowGroup, bEnableOuterShadow);
+	OuterShadowGroup.HeaderProperty(OuterShadowHandle);
+	{
+		auto IsEnabledAttribute = TAttribute<bool>::CreateLambda([=]()
+		{
+			bool bEnable = false;
+			OuterShadowHandle->GetValue(bEnable);
+			return bEnable;
+		});
+		AddPropertyRowToGroup(OuterShadowColor, Color, OuterShadowGroup, IsEnabledAttribute);
+		AddVectorPropertyRowToGroup(OuterShadowSize, Size, OuterShadowGroup, IsEnabledAttribute);
+		AddVectorPropertyRowToGroup(OuterShadowBlur, Blur, OuterShadowGroup, IsEnabledAttribute);
+		AddPropertyRowToGroup(OuterShadowAngle, Angle, OuterShadowGroup, IsEnabledAttribute);
+		AddVectorPropertyRowToGroup(OuterShadowDistance, Distance, OuterShadowGroup, IsEnabledAttribute);
+	}
 
+	//radial fill
 	auto RadialFillHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexRectBlock, bEnableRadialFill));
 	RadialFillHandle->SetPropertyDisplayName(LOCTEXT("EnableRadialFill_DisplayName", "Radial Fill"));
 	auto& RadialFillGroup = LGUICategory.AddGroup(GET_MEMBER_NAME_CHECKED(ULexRectBlock, bEnableRadialFill), RadialFillHandle->GetPropertyDisplayName(), false, true);
-	RadialFillGroup.HeaderRow()
-		.PropertyHandleList({ RadialFillHandle })
-		.NameContent()
-		[
-			RadialFillHandle->CreatePropertyNameWidget()
-		]
-		.ValueContent()
-		[
-			RadialFillHandle->CreatePropertyValueWidget()
-		]
-	;
-	bool bEnableRadialFill = false;
-	RadialFillHandle->GetValue(bEnableRadialFill);
-	RadialFillHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder]() {DetailBuilder.ForceRefreshDetails(); }));
-	AddVectorPropertyRowToGroup(RadialFillCenter, Center, RadialFillGroup, bEnableRadialFill);
-	AddPropertyRowToGroup(RadialFillRotation, Rotation, RadialFillGroup, bEnableRadialFill);
-	AddPropertyRowToGroup(RadialFillAngle, Angle, RadialFillGroup, bEnableRadialFill);
+	RadialFillGroup.HeaderProperty(RadialFillHandle);
+	{
+		auto IsEnabledAttribute = TAttribute<bool>::CreateLambda([=]()
+		{
+			bool bEnable = false;
+			RadialFillHandle->GetValue(bEnable);
+			return bEnable;
+		});
+		AddVectorPropertyRowToGroup(RadialFillCenter, Center, RadialFillGroup, IsEnabledAttribute);
+		AddPropertyRowToGroup(RadialFillRotation, Rotation, RadialFillGroup, IsEnabledAttribute);
+		AddPropertyRowToGroup(RadialFillAngle, Angle, RadialFillGroup, IsEnabledAttribute);
+	}
 
 	auto TintColorHandle = DetailBuilder.GetProperty(ULexRectBlock::GetPropertyName_Color(), ULexVisual::StaticClass());
 	TintColorHandle->SetPropertyDisplayName(LOCTEXT("TintColor", "Tint Color"));

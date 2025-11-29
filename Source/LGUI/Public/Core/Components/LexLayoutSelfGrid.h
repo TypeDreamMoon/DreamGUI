@@ -4,13 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "LexLayout.h"
-#include "LexLayoutGridSelf.generated.h"
+#include "LexLayoutSelfGrid.generated.h"
 
 /**
  * Provide item properties for GridContainer,
  */
-UCLASS( ClassGroup=(LGUI), DisplayName="Grid Self")
-class LGUI_API ULexLayoutGridSelf : public ULexLayoutSelf
+UCLASS( ClassGroup=(LGUI), DisplayName="LayoutSelf-Grid")
+class LGUI_API ULexLayoutSelfGrid : public ULexLayoutSelf
 {
 	GENERATED_BODY()
 

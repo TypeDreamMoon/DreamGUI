@@ -1,7 +1,7 @@
 #pragma once
 #include "DetailWidgetRow.h"
 #include "LGUIEditorStyle.h"
-#include "Core/Components/LexLayoutFlexBoxContainer.h"
+#include "Core/Components/LexLayoutContainerFlexBox.h"
 #include "Widgets/Input/SSegmentedControl.h"
 
 #define LOCTEXT_NAMESPACE "LexLayoutFlexBoxDirectionCustomization"

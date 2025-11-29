@@ -45,9 +45,6 @@ float LexUI_sdRoundRect(float2 p, float2 b, float4 r)
     r.x = (p.y > 0.0) ? r.x : r.y;
     float2 q = abs(p) - b + r.x;
     float d = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
-    // modified by me
-    d = d / fwidth(d);
-    d = saturate(0.5 - d);
     return d;
 }
 float LexUI_sdRoundRectInnerShadow(float2 p, float2 b, float4 r, float shadowSize)
@@ -226,24 +223,8 @@ float LexUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler, f
     float2 sdQuadSize = _QuadSize * 0.5f;
     float2 sdFragCoord = (UV0 * 2.0f - float2(1.0f, 1.0f)) * sdQuadSize;
     float dOuter = LexUI_sdRoundRect(sdFragCoord, sdQuadSize, _CornerRadius);
-    
-    //outer shadow
-    if (_EnableOuterShadow)
-    {
-        half4 outerShadowColor = _OuterShadowColor;
-        float4 cornerRadius = _CornerRadius + _OuterShadowSize;
-        float outerShadow = LexUI_sdRoundRectOuterShadow(sdFragCoord - _OuterShadowOffset, sdQuadSize + _OuterShadowSize, cornerRadius, _OuterShadowBlur * 0.5f);
-        outerShadowColor.a *= outerShadow;
-        float outerMask = 1.0f - dOuter;
-        half bodyVisible = sign(_EnableBody + _EnableBorder + _EnableInnerShadow); //is body visible?
-        outerShadowColor.a *= lerp(
-        outerMask // if body not visible, make it smooth
-        , sign(outerMask) //if body is visible, make it no smooth, because smooth can show a thin transparent line between body and outshadow
-        , bodyVisible);
-        color = LexUI_BlendPremul(color, outerShadowColor);
-        //outerShadowColor.rgb *= outerShadowColor.a;
-        //color = color * (1.0 - outerShadowColor.a) + outerShadowColor;
-    }
+    float dOuterSharp = dOuter / fwidth(dOuter);
+    float dOuter01 = saturate(-dOuterSharp);
     
     //inner body
     if (_EnableBody)
@@ -269,8 +250,10 @@ float LexUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler, f
             bodyColor = lerp(_GradientColor * MainTexColor, bodyColor, gradientLerpAlpha);
         }
         
-        bodyColor.a *= dOuter;
-        color = LexUI_BlendPremul(color, bodyColor);
+        bodyColor.a *= dOuter01;
+        
+        bodyColor.rgb *= bodyColor.a;
+        color = color * (1 - bodyColor.a) + bodyColor;
     }
     
     if (_EnableInnerShadow)
@@ -278,11 +261,14 @@ float LexUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler, f
         float2 quadSize = sdQuadSize - _InnerShadowSize + _InnerShadowBlur * 0.5f;
         float4 cornerRadius = _CornerRadius + _InnerShadowBlur * 0.5f - _InnerShadowSize;
         cornerRadius = max(cornerRadius, _InnerShadowBlur);
-        float innerShadow = LexUI_sdRoundRectInnerShadow(sdFragCoord - _InnerShadowOffset.xy, quadSize, cornerRadius, _InnerShadowBlur);
+        float sdInnerShadow = LexUI_sdRoundRectInnerShadow(sdFragCoord - _InnerShadowOffset.xy, quadSize, cornerRadius, _InnerShadowBlur);
+        sdInnerShadow = pow(sdInnerShadow, 2.2);
         half4 innerShadowColor = _InnerShadowColor;
-        innerShadowColor.a *= innerShadow;
-        innerShadowColor.a *= dOuter;
-        color = LexUI_BlendPremul(color, innerShadowColor);
+        innerShadowColor.a *= sdInnerShadow;
+        innerShadowColor.rgb *= innerShadowColor.a;
+        color = color * (1 - innerShadowColor.a) + innerShadowColor;
+        color.a *= dOuter01;
+        color.rgb *= dOuter01;
     }
 
     if (_EnableBorder * sign(abs(_BorderWidth)))
@@ -294,10 +280,32 @@ float LexUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler, f
             borderColor = lerp(_BorderGradientColor, borderColor, borderGradientLerpAlpha);
         }
         float dInner = LexUI_sdRoundRect(sdFragCoord, sdQuadSize - _BorderWidth, _CornerRadius - _BorderWidth);
-        borderColor.a *= (1.0f - dInner);
-        borderColor.a *= dOuter;
+        float dInnerSharp = dInner / fwidth(dInner);
+        float dInner01 = saturate(-dInnerSharp);
+        borderColor.a *= 1 - dInner01;
         borderColor.a = saturate(borderColor.a);
-        color = LexUI_BlendAlpha(color, borderColor);
+        borderColor.rgb *= borderColor.a;
+        color = color * (1 - borderColor.a) + borderColor;
+        color.a *= dOuter01;
+        color.rgb *= dOuter01;
+    }
+
+    //outer shadow
+    if (_EnableOuterShadow)
+    {
+        half4 outerShadowColor = _OuterShadowColor;
+        float4 cornerRadius = _CornerRadius + _OuterShadowSize;
+        float sdOuterShadow = LexUI_sdRoundRectOuterShadow(sdFragCoord - _OuterShadowOffset, sdQuadSize + _OuterShadowSize, cornerRadius, _OuterShadowBlur * 0.5f);
+        sdOuterShadow = pow(sdOuterShadow, 2.2);
+        outerShadowColor.a *= sdOuterShadow;
+        float outerMask = 1.0f - dOuter01;
+        half bodyVisible = sign(_EnableBody + _EnableBorder + _EnableInnerShadow); //is body visible?
+        outerShadowColor.a *= lerp(
+        outerMask // if body not visible, make it smooth
+        , sign(outerMask) //if body is visible, make it no smooth, because smooth can show a thin transparent line between body and outshadow
+        , bodyVisible);
+        outerShadowColor.rgb *= outerShadowColor.a;
+        color = outerShadowColor * (1.0 - color.a) + color;
     }
 
     if (_EnableRadialFill * sign(max(0, 360.0f - _RadialFillAngle)))

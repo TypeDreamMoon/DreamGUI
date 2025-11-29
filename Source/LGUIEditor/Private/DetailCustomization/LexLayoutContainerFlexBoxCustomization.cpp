@@ -1,34 +1,34 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "DetailCustomization/LexLayoutFlexBoxContainerCustomization.h"
+#include "DetailCustomization/LexLayoutContainerFlexBoxCustomization.h"
 #include "LGUIEditorUtils.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
-#include "Core/Components/LexLayoutFlexBoxContainer.h"
+#include "Core/Components/LexLayoutContainerFlexBox.h"
 #include "PropertyType/LexLayoutFlexBoxDirectionCustomization.h"
 
 #define LOCTEXT_NAMESPACE "LexLayoutFlexBoxCustomization"
-FLexLayoutFlexBoxContainerCustomization::FLexLayoutFlexBoxContainerCustomization()
+FLexLayoutContainerFlexBoxCustomization::FLexLayoutContainerFlexBoxCustomization()
 {
 }
 
-FLexLayoutFlexBoxContainerCustomization::~FLexLayoutFlexBoxContainerCustomization()
+FLexLayoutContainerFlexBoxCustomization::~FLexLayoutContainerFlexBoxCustomization()
 {
 	
 }
 
-TSharedRef<IDetailCustomization> FLexLayoutFlexBoxContainerCustomization::MakeInstance()
+TSharedRef<IDetailCustomization> FLexLayoutContainerFlexBoxCustomization::MakeInstance()
 {
-	return MakeShareable(new FLexLayoutFlexBoxContainerCustomization);
+	return MakeShareable(new FLexLayoutContainerFlexBoxCustomization);
 }
-void FLexLayoutFlexBoxContainerCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
+void FLexLayoutContainerFlexBoxCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
 	TArray<TWeakObjectPtr<UObject>> targetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(targetObjects);
 	TargetScriptArray.Empty();
 	for (auto item : targetObjects)
 	{
-		if (auto validItem = Cast<ULexLayoutFlexBoxContainer>(item.Get()))
+		if (auto validItem = Cast<ULexLayoutContainerFlexBox>(item.Get()))
 		{
 			TargetScriptArray.Add(validItem);
 		}
