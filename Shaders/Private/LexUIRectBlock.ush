@@ -109,7 +109,7 @@ float4 LexUI_BlendPremul(float4 bottom, float4 top)
 #endif
 }
 
-float LexUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler, float2 UV0, float2 UV1, float2 UV2, float2 UV3, Texture2D DataTex, inout float3 Color, inout float Alpha)
+float LexUI_CalculateRectBlock(Texture2D MainTex, SamplerState MainTexSampler, float2 UV0, float2 UV2, float2 UV3, Texture2D DataTex, inout float3 Color, inout float Alpha)
 {
     half _TextureScaleMode;
     float4 _CornerRadius;

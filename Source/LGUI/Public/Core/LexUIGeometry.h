@@ -206,7 +206,7 @@ public:
 		, TArray<FLexUITextLineProperty>& cacheLinePropertyArray, TArray<FLexUITextCharProperty>& cacheCharPropertyArray, TArray<FLexUIText_RichTextCustomTag>& cacheRichTextCustomTagArray
 		, TArray<FLexUIText_RichTextImageTag>& cacheRichTextImageTagArray
 		, TArray<FLexUIText_Emoji>& cacheEmojiArray
-		, ULexUIFontData_BaseObject* font, bool richText, int32 richTextFilterFlags);
+		, ULexUIFontData_BaseObject* font, bool bRichText, int32 richTextFilterFlags);
 #pragma endregion
 
 public:

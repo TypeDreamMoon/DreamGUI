@@ -14,8 +14,9 @@ class ULexUIRichTextCustomStyleData;
 
 /**
  * UV channels-
- *		UV2: XY- bold and scale of DistanceField font
- *		UV3: X- tell if this draw-call need font texture (UV3.x > 0.5) or not (UV3.x < 0.5) and what type of font it is (Sdf(>1.0) or bitmap(>1.5))
+ *		UV0: FontTexture coordinate
+ *		UV1: Default LexCanvas use, check LexCanvas
+ *		UV2: X- bold size of DistanceField font
  */
 UCLASS(ClassGroup = (LGUI), Blueprintable)
 class LGUI_API ULexText : public ULexVisualBatchMesh, public ILexUICultureChangedInterface
@@ -81,8 +82,14 @@ protected:
 	/** Use a custom material to render this text */
     UPROPERTY(EditAnywhere, Category = "LexUI")
     UMaterialInterface* OverrideMaterial = nullptr;
+	/**
+	 * Use full rect area to generate char mesh, useful for effects of OverrideMaterial.
+	 * Only valid for SDF font.
+	 */
+	UPROPERTY(EditAnywhere, Category = "LexUI")
+	bool bMeshUseFullRect = false;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		ELexUITextFontStyle FontStyle = ELexUITextFontStyle::None;
+	ELexUITextFontStyle FontStyle = ELexUITextFontStyle::None;
 	/**
 	 * rich text support, eg:
 	 * <b>Bold</b>

@@ -49,9 +49,9 @@ class ULexUISpriteData_BaseObject;
 /**
  * UV channel-
  *		UV0: full 0~1 UV coordinate for calculate sdf
- *		UV1: Widget property data coordinate, include clipData coordinate in data texture
+ *		UV1: Default LexCanvas use, check LexCanvas
  *		UV2: Body texture's coordinate
- *		UV3: X for RectBlock data coordinate
+ *		UV3: X- for RectBlock data coordinate
  */
 UCLASS(ClassGroup = (LGUI), NotBlueprintable)
 class LGUI_API ULexRectBlock : public ULexVisualBatchMesh

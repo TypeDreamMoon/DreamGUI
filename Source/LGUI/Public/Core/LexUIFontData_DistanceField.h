@@ -77,6 +77,7 @@ public:
 	virtual bool GetShouldAffectByPixelPerfect() override{ return false; }
 	virtual bool GetNeedObjectScale() override{ return true; }//sdf font need scale value in material
 	virtual float GetFontTextureMark() override{ return 2; }
+	virtual float GetBoldRatio() override{ return BoldRatio; }
 	//End ULexUIFontData_BaseObject interface
 protected:
 	float ItalicSlop = 0.0f; float OneDivideFontSize = 1.0f;
