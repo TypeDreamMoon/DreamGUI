@@ -1489,7 +1489,7 @@ void ULexCanvas::UpdateRootCanvasDrawCall()
 			auto& Widget = WidgetList[i];
 			Widget->UpdateLayout();
 		}
-		//update clip and geometry
+		//update clip and geometry from head to tail
 		for (const auto& Widget : WidgetList)
 		{
 			Widget->UpdateClip(RootCanvas->ClipDataAsTexture, RootCanvas->ClipDataList);
@@ -2281,7 +2281,7 @@ UMaterialInterface* ULexCanvas::GetDefaultMaterial()const
 {
 	if (!DefaultMaterial)
 	{
-		DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/LexUI_ImageAndFont"));;
+		DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/LexUI_ImageAndFont"));
 	}
 	return DefaultMaterial;
 }

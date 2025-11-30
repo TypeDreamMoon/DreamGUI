@@ -72,7 +72,7 @@ FLGUIPrefabEditor::~FLGUIPrefabEditor()
 
 	ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();
  	FLGUIEditorModule::Get().OnHierarchyChanged.RemoveAll(this);
-	USelection::SelectionChangedEvent.RemoveAll(this);
+	// USelection::SelectionChangedEvent.RemoveAll(this);
 }
 
 FLGUIPrefabEditor* FLGUIPrefabEditor::GetEditorForPrefabIfValid(ULGUIPrefab* InPrefab)
@@ -350,22 +350,22 @@ void FLGUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const TS
 	{
 		OutlinerPtr->RequestRefresh();
 	});
-	USelection::SelectionChangedEvent.AddSPLambda(this, [=, this](UObject*)
-	{
-		TSet<ULexWidget*> SelectedItems;
-		auto SelectedActors = LGUIEditorTools::GetSelectedActors();
-		for (auto Actor : SelectedActors)
-		{
-			if (Actor->GetWorld() == this->GetWorld())
-			{
-				if (auto WidgetActor = Cast<ALexWidgetActor>(Actor))
-				{
-					SelectedItems.Add(WidgetActor->GetLexWidget());
-				}
-			}
-		}
-		this->SelectWidgets(SelectedItems, false, false);
-	});
+	// USelection::SelectionChangedEvent.AddSPLambda(this, [=, this](UObject* NewSelection)
+	// {
+	// 	TSet<ULexWidget*> SelectedItems;
+	// 	auto SelectedActors = LGUIEditorTools::GetSelectedActors();
+	// 	for (auto Actor : SelectedActors)
+	// 	{
+	// 		if (Actor->GetWorld() == this->GetWorld())
+	// 		{
+	// 			if (auto WidgetActor = Cast<ALexWidgetActor>(Actor))
+	// 			{
+	// 				SelectedItems.Add(WidgetActor->GetLexWidget());
+	// 			}
+	// 		}
+	// 	}
+	// 	this->SelectWidgets(SelectedItems, false, false);
+	// });
 
 	auto UnexpendActorGuidSet = PrefabBeingEdited->PrefabDataForPrefabEditor.UnexpandActorSet;
 	TSet<AActor*> UnexpendActorSet;

@@ -2,7 +2,6 @@
 
 #include "Core/Components/LexText.h"
 #include "Core/LexUIGeometry.h"
-#include "Core/Components/LexCanvas.h"
 #include "Materials/MaterialInterface.h"
 #include "Core/LexUIFontData_BaseObject.h"
 #include "Core/LexUIRichTextImageData_BaseObject.h"
@@ -302,7 +301,7 @@ void ULexText::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, b
 
 void ULexText::OnFillWidgetPropertyDataForMaterial()
 {
-	FillWidgetPropertyDataForMaterial_SimpleRect(this, this->Font->GetFontTextureMark());
+	FillWidgetPropertyDataForMaterial(this, this->Font->GetFontTextureMark());
 }
 
 void ULexText::OnFillWidgetPropertyDataForMaterial_FirstPixel()
@@ -630,6 +629,15 @@ void ULexText::SetOverrideMaterial(UMaterialInterface* Value)
 	{
 		OverrideMaterial = Value;
 		MarkMaterialDirty();
+	}
+}
+
+void ULexText::SetExpandMeshSize(float Value)
+{
+	if (ExpandMeshSize != Value)
+	{
+		ExpandMeshSize = Value;
+		MarkVerticesDirty(false, true, true, false);
 	}
 }
 

@@ -296,13 +296,10 @@ void SLGUIPrefabEditorDetails::RefreshOverrideParameter()
 
 UObject* SLGUIPrefabEditorDetails::GetActorContextAsObject() const
 {
-	auto& SelectedObjects = DetailsView->GetSelectedObjects();
-	if (SelectedObjects.Num() > 0)
+	auto SelectedWidgets = PrefabEditorPtr.Pin()->GetSelectedWidgets();
+	if (SelectedWidgets.Num() > 0 && SelectedWidgets[0].IsValid())
 	{
-		if (auto Actor = SelectedObjects[0]->GetTypedOuter<AActor>())
-		{
-			return Actor;
-		}
+		return SelectedWidgets[0]->GetOwner();
 	}
 	return nullptr;
 }

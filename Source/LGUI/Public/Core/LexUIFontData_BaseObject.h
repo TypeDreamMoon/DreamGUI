@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AssetTypeCategories.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/FRichTextParser.h"
 #include "LexUIFontData_BaseObject.generated.h"
@@ -61,11 +62,11 @@ public:
 
 	virtual UMaterialInterface* GetFontMaterial()PURE_VIRTUAL(ULGUISpriteData_BaseObject::GetFontMaterial, return nullptr;);
 	virtual UTexture2D* GetFontTexture()PURE_VIRTUAL(ULGUISpriteData_BaseObject::GetFontTexture, return nullptr;);
-	virtual FLexUICharData GetCharData(const uint32& charCode, const float& charSize) PURE_VIRTUAL(ULGUIFontData_BaseObject::GetCharData, return FLexUICharData(););
+	virtual FLexUICharData GetCharData(const uint32& CharCode, const float& CharSize) PURE_VIRTUAL(ULGUIFontData_BaseObject::GetCharData, return FLexUICharData(););
 	virtual bool HasKerning() { return false; }
-	virtual float GetKerning(const uint32& leftCharIndex, const uint32& rightCharIndex, const float& charSize) { return 0; }
-	virtual float GetLineHeight(const float& fontSize) { return fontSize; }
-	virtual float GetVerticalOffset(const float& fontSize) { return 0; }
+	virtual float GetKerning(const uint32& LeftCharIndex, const uint32& RightCharIndex, const float& CharSize) { return 0; }
+	virtual float GetLineHeight(const float& FontSize) { return FontSize; }
+	virtual float GetVerticalOffset(const float& FontSize) { return 0; }
 	virtual float GetFontSizeLimit() { return MAX_FLT; }
 	virtual bool GetRequireNormalAndTangent() { return false; }
 	virtual bool GetShouldAffectByPixelPerfect() { return true; }
@@ -89,6 +90,7 @@ public:
 	virtual void RemoveUIText(ULexText* InText) {}
 
 	ULexUIFontEmojiData* GetEmojiData()const{return EmojiData;}
+	const TArray<TObjectPtr<UMaterialInterface>>& GetPresetMaterials()const{return PresetMaterials;}
 
 	static ULexUIFontData_BaseObject* GetDefaultFont();
 
@@ -102,7 +104,13 @@ public:
 	DECLARE_EVENT(ULexUIFontData_BaseObject, FLexUIFontEmojiDataRefreshEvent);
 	/** Called when emoji data changed, and need LexText to refresh. */
 	FLexUIFontEmojiDataRefreshEvent OnEmojiDataChanged;
-private:
+protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 	TObjectPtr<ULexUIFontEmojiData> EmojiData;
+
+	/**
+	 * Put materials here so LexText can easily select OverrideMaterial from this array.
+	 */
+	UPROPERTY(EditAnywhere, Category = "LGUI")
+	TArray<TObjectPtr<UMaterialInterface>> PresetMaterials;
 };

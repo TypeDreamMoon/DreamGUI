@@ -10,6 +10,7 @@
 
 ULexSpriteBase::ULexSpriteBase(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
+	Sprite = ULexUISpriteData::GetDefaultWhiteSolid();
 }
 
 void ULexSpriteBase::BeginPlay()

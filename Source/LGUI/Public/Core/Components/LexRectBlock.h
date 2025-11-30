@@ -26,7 +26,7 @@ UENUM(BlueprintType)
 enum class ELexRectBlockTextureScaleMode: uint8
 {
 	Stretch,
-	Fit,
+	FitIn,
 	Envelop,
 };
 UENUM(BlueprintType)
@@ -53,7 +53,7 @@ class ULexUISpriteData_BaseObject;
  *		UV2: Body texture's coordinate
  *		UV3: X- for RectBlock data coordinate
  */
-UCLASS(ClassGroup = (LGUI), NotBlueprintable)
+UCLASS(ClassGroup = (LGUI), BlueprintType, Blueprintable)
 class LGUI_API ULexRectBlock : public ULexVisualBatchMesh
 	, public ILexUISpriteRenderInterface
 {
@@ -92,7 +92,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
 		FColor BodyColor = FColor::White;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
-		ELexRectBlockTextureMode BodyTextureMode = ELexRectBlockTextureMode::Texture;
+		ELexRectBlockTextureMode BodyTextureMode = ELexRectBlockTextureMode::Sprite;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect", meta = (DisplayThumbnail = "false"))
 		TObjectPtr<class UTexture> BodyTexture = nullptr;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect", meta = (DisplayThumbnail = "false"))

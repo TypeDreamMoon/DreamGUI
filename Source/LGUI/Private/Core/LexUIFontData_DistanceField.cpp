@@ -20,15 +20,37 @@ ULexUIFontData_DistanceField::ULexUIFontData_DistanceField()
 {
 	InitialSize = ELexUIAtlasTextureSizeType::SIZE_1024x1024;
 	RectPackCellSize = 1024;
+
+	PresetMaterials.Add(LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/TextEffects/MI_DropShadow")));
+	PresetMaterials.Add(LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/TextEffects/MI_Outline")));
+	PresetMaterials.Add(LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/TextEffects/MI_OutlineOnly")));
 }
 
-bool ULexUIFontData_DistanceField::GetCharDataFromCache(const uint32& charCode, const float& charSize, FLexUICharData& OutResult)
+bool ULexUIFontData_DistanceField::GetCharDataFromCache(const uint32& CharCode, const float& CharSize, FLexUICharData& OutResult)
 {
-	if (auto charData = CharDataMap.Find(charCode))
+	if (auto charData = CharDataMap.Find(CharCode))
 	{
 		OutResult = FLexUICharData(*charData);
+		float vertexOffset;
+		if (ExpandMeshSize <= 0)//shrink mesh to reduce empty area of SDFRadius
+		{
+			vertexOffset = SDFRadius - SampleFontSize * 0.02f;//0.02: slightly expand it in-case too sharp edge
+		}
+		else
+		{
+			vertexOffset = (SDFRadius - ExpandMeshSize) - SampleFontSize * 0.02f;//0.02: slightly expand it in-case too sharp edge
+		}
+		OutResult.Width -= vertexOffset + vertexOffset;
+		OutResult.Height -= vertexOffset + vertexOffset;
+		OutResult.XOffset += vertexOffset;
+		OutResult.YOffset -= vertexOffset;
+		float uvOffset = vertexOffset * OneDivideTextureSize;
+		OutResult.MinUV.X += uvOffset;
+		OutResult.MaxUV.Y -= uvOffset;
+		OutResult.MaxUV.X -= uvOffset;
+		OutResult.MinUV.Y += uvOffset;
 		//scale char by font size
-		float scale = charSize * OneDivideFontSize;
+		float scale = CharSize * OneDivideFontSize;
 		OutResult.Width *= scale;
 		OutResult.Height *= scale;
 		OutResult.XOffset *= scale;
@@ -38,19 +60,20 @@ bool ULexUIFontData_DistanceField::GetCharDataFromCache(const uint32& charCode, 
 	}
 	return false;
 }
-void ULexUIFontData_DistanceField::AddCharDataToCache(const uint32& charCode, const float& charSize, FLexUICharData& charData)
+void ULexUIFontData_DistanceField::AddCharDataToCache(const uint32& CharCode, const float& CharSize, FLexUICharData& CharData)
 {
-	float vertexOffset = SDFRadius - SampleFontSize * 0.02f;//slightly expand it in-case too sharp edge
-	charData.Width -= vertexOffset + vertexOffset;
-	charData.Height -= vertexOffset + vertexOffset;
-	charData.XOffset += vertexOffset;
-	charData.YOffset -= vertexOffset;
-	float uvOffset = vertexOffset * OneDivideTextureSize;
-	charData.MinUV.X += uvOffset;
-	charData.MaxUV.Y -= uvOffset;
-	charData.MaxUV.X -= uvOffset;
-	charData.MinUV.Y += uvOffset;
-	CharDataMap.Add(charCode, charData);
+	// shrink mesh to reduce empty area of SDFRadius
+	// float vertexOffset = SDFRadius - SampleFontSize * 0.02f;//slightly expand it in-case too sharp edge
+	// CharData.Width -= vertexOffset + vertexOffset;
+	// CharData.Height -= vertexOffset + vertexOffset;
+	// CharData.XOffset += vertexOffset;
+	// CharData.YOffset -= vertexOffset;
+	// float uvOffset = vertexOffset * OneDivideTextureSize;
+	// CharData.MinUV.X += uvOffset;
+	// CharData.MaxUV.Y -= uvOffset;
+	// CharData.MaxUV.X -= uvOffset;
+	// CharData.MinUV.Y += uvOffset;
+	CharDataMap.Add(CharCode, CharData);
 }
 void ULexUIFontData_DistanceField::ScaleDownUVofCachedChars()
 {
@@ -63,10 +86,10 @@ void ULexUIFontData_DistanceField::ScaleDownUVofCachedChars()
 		mapValue.MinUV.Y *= 0.5f;
 	}
 }
-bool ULexUIFontData_DistanceField::RenderGlyph(const uint32& charCode, const float& charSize, FGlyphBitmap& OutResult)
+bool ULexUIFontData_DistanceField::RenderGlyph(const uint32& CharCode, const float& CharSize, FGlyphBitmap& OutResult)
 {
 #if WITH_FREETYPE
-	auto slot = RenderGlyphOnFreeType(charCode, SampleFontSize);
+	auto slot = RenderGlyphOnFreeType(CharCode, SampleFontSize);
 	if (slot == nullptr)
 	{
 		return false;
@@ -138,7 +161,7 @@ UTexture2D* ULexUIFontData_DistanceField::CreateFontTexture(int InTextureSize)
 	ResultTexture->CompressionSettings = TextureCompressionSettings::TC_DistanceFieldFont;
 	ResultTexture->LODGroup = TextureGroup::TEXTUREGROUP_UI;
 	ResultTexture->SRGB = false;
-	ResultTexture->Filter = TextureFilter::TF_Trilinear;
+	ResultTexture->Filter = TextureFilter::TF_Bilinear;
 	ResultTexture->UpdateResource();
 
 	return ResultTexture;
@@ -163,6 +186,7 @@ void ULexUIFontData_DistanceField::PrepareForPushCharData(ULexText* InText)
 	ItalicSlop = FMath::Tan(FMath::DegreesToRadians(ItalicAngle));
 	OneDivideFontSize = 1.0f / SampleFontSize;
 	SDFRadius = SampleFontSize * 0.25f;//use 1/4 of FontSize can get good result
+	ExpandMeshSize = InText->GetExpandMeshSize();
 }
 
 bool ULexUIFontData_DistanceField::GetRequireNormalAndTangent()

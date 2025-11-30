@@ -191,8 +191,18 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 			CornerRadiusWHandle->SetValue(CornerRadiusX);
 		}
 		}));
+
 	LGUICategory.AddCustomRow(LOCTEXT("CornerRadius", "CornerRadius"), false)
-	.PropertyHandleList({ CornerRadiusHandle })
+	.PropertyHandleList({ UniformSetCornerRadiusHandle, CornerRadiusUnitModeHandle, CornerRadiusHandle })
+	.OverrideResetToDefault(FResetToDefaultOverride::Create(TAttribute<bool>::CreateLambda([=]()
+	{
+		return UniformSetCornerRadiusHandle->CanResetToDefault() || CornerRadiusUnitModeHandle->CanResetToDefault() || CornerRadiusHandle->CanResetToDefault();
+	}), FSimpleDelegate::CreateLambda([=]()
+	{
+		UniformSetCornerRadiusHandle->ResetToDefault();
+		CornerRadiusUnitModeHandle->ResetToDefault();
+		CornerRadiusHandle->ResetToDefault();
+	})))
 	.NameContent()
 	[
 		SNew(SBox)
@@ -333,7 +343,16 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 			;
 		auto TempBodyTextureHandle = BodyTextureMode == ELexRectBlockTextureMode::Texture ? BodyTextureHandle : BodySpriteTextureHandle;
 		TextureGroup.HeaderRow()
-			.PropertyHandleList({ BodyTextureHandle, BodySpriteTextureHandle })
+			.PropertyHandleList({ BodyTextureModeHandle, BodyTextureHandle, BodySpriteTextureHandle })
+			.OverrideResetToDefault(FResetToDefaultOverride::Create(TAttribute<bool>::CreateLambda([=]()
+			{
+				return BodyTextureModeHandle->CanResetToDefault() || BodyTextureHandle->CanResetToDefault() || BodySpriteTextureHandle->CanResetToDefault();
+			}), FSimpleDelegate::CreateLambda([=]()
+			{
+				BodyTextureModeHandle->ResetToDefault();
+				BodyTextureHandle->ResetToDefault();
+				BodySpriteTextureHandle->ResetToDefault();
+			})))
 			.NameContent()
 			[
 				SNew(SBox)

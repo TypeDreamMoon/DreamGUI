@@ -12,7 +12,7 @@
 /**
  * LexImage is render entry for Sprite & Texture & Material
  */
-UCLASS(BlueprintType)
+UCLASS(ClassGroup = (LGUI), BlueprintType, Blueprintable)
 class LGUI_API ULexImage : public ULexVisualBatchMesh, public ILexUISpriteRenderInterface
 {
 	GENERATED_BODY()

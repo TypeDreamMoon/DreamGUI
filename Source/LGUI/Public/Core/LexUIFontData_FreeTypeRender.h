@@ -117,11 +117,11 @@ public:
 	virtual void InitFont()override;
 	virtual UMaterialInterface* GetFontMaterial()override { return nullptr; }
 	virtual UTexture2D* GetFontTexture()override;
-	virtual FLexUICharData GetCharData(const uint32& charCode, const float& charSize)override;
+	virtual FLexUICharData GetCharData(const uint32& CharCode, const float& CharSize)override;
 	virtual bool HasKerning()override { return bHasKerning; }
-	virtual float GetKerning(const uint32& leftCharIndex, const uint32& rightCharIndex, const float& charSize)override;
-	virtual float GetLineHeight(const float& fontSize)override;
-	virtual float GetVerticalOffset(const float& fontSize)override;
+	virtual float GetKerning(const uint32& LeftCharCode, const uint32& RightCharCode, const float& CharSize)override;
+	virtual float GetLineHeight(const float& FontSize)override;
+	virtual float GetVerticalOffset(const float& FontSize)override;
 	virtual float GetFontSizeLimit()override { return 200.0f; }//limit font size to 200. too large font size will result in extreme large texture
 
 	virtual void AddUIText(ULexText* InText)override;
@@ -180,16 +180,16 @@ protected:
 	 * Insert rect into area, assign pixel if succeed
 	 * return: if glyph can fit in rect area return true, else false
 	 */
-	bool PackRectAndInsertChar(const FGlyphBitmap& InGlyphBitmap, rbp::MaxRectsBinPack& InOutBinpack, UTexture2D* InTexture, FLexUICharData& OutResult);
+	bool PackRectAndInsertChar(const FGlyphBitmap& InGlyphBitmap, rbp::MaxRectsBinPack& InOutBinPack, UTexture2D* InTexture, FLexUICharData& OutResult);
 	void UpdateFontTextureRegion(UTexture2D* InTexture, FUpdateTextureRegion2D* Region, uint32 SrcPitch, uint32 SrcBpp, uint8* SrcData);
 	void RenewFontTexture(int oldTextureSize, int newTextureSize);
 
 	virtual UTexture2D* CreateFontTexture(int InTextureSize)PURE_VIRTUAL(ULGUIFreeTypeRenderFontData::CreateFontTexture, return nullptr;);
 	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize);
 
-	virtual bool GetCharDataFromCache(const uint32& charCode, const float& charSize, FLexUICharData& OutResult) { return false; };
-	virtual void AddCharDataToCache(const uint32& charCode, const float& charSize, FLexUICharData& charData) {};
-	virtual bool RenderGlyph(const uint32& charCode, const float& charSize, FGlyphBitmap& OutResult) { return false; };
+	virtual bool GetCharDataFromCache(const uint32& CharCode, const float& CharSize, FLexUICharData& OutResult) { return false; };
+	virtual void AddCharDataToCache(const uint32& CharCode, const float& CharSize, FLexUICharData& CharData) {};
+	virtual bool RenderGlyph(const uint32& CharCode, const float& CharSize, FGlyphBitmap& OutResult) { return false; };
 	virtual void ScaleDownUVofCachedChars() {};
 	virtual void ClearCharDataCache() {};
 public:

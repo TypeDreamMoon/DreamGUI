@@ -8,6 +8,19 @@ public class LGUIEditor : ModuleRules
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
         CppStandard = CppStandardVersion.Cpp20;
+        
+        OptimizeCode = CodeOptimization.Default;
+
+        // disable optimize in editor and debug-build
+        if (Target.bBuildEditor || Target.Configuration == UnrealTargetConfiguration.Debug)
+        {
+	        OptimizeCode = CodeOptimization.Never;
+			
+	        //(optional) enable debug symbol
+	        bUseUnity = false;
+	        bUseRTTI = true;
+	        bEnableExceptions = true;
+        }
 
         string EnginSourceFolder = EngineDirectory + "/Source/";
         PrivateIncludePaths.AddRange(

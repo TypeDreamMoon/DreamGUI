@@ -19,5 +19,6 @@ public:
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
 private:
 	TWeakObjectPtr<class ULexText> TargetScriptPtr;
+	TArray<TWeakObjectPtr<UMaterialInterface>> PresetMaterials;
 	void ForceRefresh(IDetailLayoutBuilder* DetailBuilder);
 };

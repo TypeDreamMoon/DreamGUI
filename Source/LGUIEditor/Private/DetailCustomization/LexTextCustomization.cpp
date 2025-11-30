@@ -9,6 +9,7 @@
 #include "DetailCategoryBuilder.h"
 #include "IDetailGroup.h"
 #include "MaterialDomain.h"
+#include "Core/LexUIFontData_BaseObject.h"
 #include "PropertyType/LexTextAlignmentCustomization.h"
 #include "PropertyType/LexTextFontStyleCustomization.h"
 
@@ -37,7 +38,9 @@ void FLexTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder
 	}
 	
 	IDetailCategoryBuilder& LGUICategory = DetailBuilder.EditCategory("LGUI");
-	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexText, Font));
+	auto Font_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, Font));
+	Font_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexTextCustomization::ForceRefresh, &DetailBuilder));
+	LGUICategory.AddProperty(Font_PH);
 	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexText, Text));
 
 	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexText, FontSize));
@@ -57,15 +60,15 @@ void FLexTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder
 	OverflowTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexTextCustomization::ForceRefresh, &DetailBuilder));
 	LGUICategory.AddProperty(OverflowTypeHandle);
 	
-	TArray<FName> needToHidePropertyName;
-	auto RichTextHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, bRichText));
-	RichTextHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexTextCustomization::ForceRefresh, &DetailBuilder));
-	bool richText = false;
-	RichTextHandle->GetValue(richText);
-	if (richText)
+	TArray<FName> NeedToHidePropertyNames;
+	auto RichText_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, bRichText));
+	RichText_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexTextCustomization::ForceRefresh, &DetailBuilder));
+	bool bRichText = false;
+	RichText_PH->GetValue(bRichText);
+	if (bRichText)
 	{
-		IDetailGroup& RichTextGroup = LGUICategory.AddGroup(FName("RichText"), RichTextHandle->GetPropertyDisplayName());
-		RichTextGroup.HeaderProperty(RichTextHandle);
+		IDetailGroup& RichTextGroup = LGUICategory.AddGroup(FName("RichText"), RichText_PH->GetPropertyDisplayName());
+		RichTextGroup.HeaderProperty(RichText_PH);
 		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, RichTextTagFilterFlags)));
 		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, RichTextCustomStyleData)));
 		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, RichTextImageData)));
@@ -74,15 +77,15 @@ void FLexTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder
 	}
 	else
 	{
-		LGUICategory.AddProperty(RichTextHandle);
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, RichTextCustomStyleData));
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, RichTextImageData));
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, bListRichTextImageObjectInOutliner));
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, CreatedRichTextImageObjectArray));
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(ULexText, RichTextTagFilterFlags));
+		LGUICategory.AddProperty(RichText_PH);
+		NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexText, RichTextCustomStyleData));
+		NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexText, RichTextImageData));
+		NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexText, bListRichTextImageObjectInOutliner));
+		NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexText, CreatedRichTextImageObjectArray));
+		NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexText, RichTextTagFilterFlags));
 	}
 
-	for (auto item : needToHidePropertyName)
+	for (auto item : NeedToHidePropertyNames)
 	{
 		DetailBuilder.HideProperty(item);
 	}
@@ -92,6 +95,71 @@ void FLexTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder
 		DetailBuilder.ForceRefreshDetails();
 		}));
 	LGUICategory.AddProperty(OverrideMaterial_PH);
+	{
+		ULexUIFontData_BaseObject* Font = nullptr;
+		Font_PH->GetValue(*(UObject**)&Font);
+		if (Font)
+		{
+			for (auto Item : Font->GetPresetMaterials())
+			{
+				if (IsValid(Item))
+				{
+					PresetMaterials.Add(Item);
+				}
+			}
+		}
+	}
+	LGUICategory.AddCustomRow(LOCTEXT("PresetOverrideMaterialsRow", "PresetOverrideMaterials"))
+	.Visibility(PresetMaterials.Num() > 0 ? EVisibility::Visible : EVisibility::Collapsed)
+	.ValueContent()
+	[
+		SNew(SBox)
+		.VAlign(VAlign_Center)
+		[
+			SNew(SComboButton)
+			.HasDownArrow(true)
+			.ButtonContent()
+			[
+				SNew(STextBlock)
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+				.Text(LOCTEXT("PresetMaterials_PropertyName", "PresetMaterials"))
+				.ToolTipText(LOCTEXT("PresetMaterials_ToolTip", "Here list PresetMaterials from LexUIFont, you can easily set these materials to OverrideMaterial."))
+			]
+			.MenuContent()
+			[
+				SNew(SVerticalBox)
+				+SVerticalBox::Slot()
+				.AutoHeight()
+				[
+					SNew(SListView<TWeakObjectPtr<UMaterialInterface>>)
+					.ListItemsSource(&PresetMaterials)
+					.OnGenerateRow_Lambda([=](TWeakObjectPtr<UMaterialInterface> Item, const TSharedRef<STableViewBase>& OwnerTable)
+					{
+						return SNew(STableRow<TWeakObjectPtr<UMaterialInterface>>, OwnerTable)
+							[
+								SNew(SBox)
+								.VAlign(VAlign_Center)
+								.Padding(6, 4)
+								[
+									SNew(STextBlock)
+									.Font(IDetailLayoutBuilder::GetDetailFont())
+									.Text(FText::FromString(Item->GetName()))
+									.ToolTipText(FText::FromString(Item->GetPathName()))
+								]
+							];
+					})
+					.OnSelectionChanged_Lambda([=](TWeakObjectPtr<UMaterialInterface> Item, ESelectInfo::Type SelectInfo)
+					{
+						if (auto MatItem = Item.Get())
+						{
+							OverrideMaterial_PH->SetValue(*(UObject**)&MatItem);
+						}
+					})
+				]
+			]
+		]
+	]
+	;
 	LGUICategory.AddCustomRow(LOCTEXT("MaterialDomainErrorTipRow", "MaterialDomainErrorTip"))
 	.Visibility(TAttribute<EVisibility>::CreateSPLambda(this, [=]()
 	{
@@ -123,6 +191,7 @@ void FLexTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder
 		.AutoWrapText(true)
 	]
 	;
+	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexText, ExpandMeshSize));
 }
 void FLexTextCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
 {

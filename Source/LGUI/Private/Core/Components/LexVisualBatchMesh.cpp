@@ -471,7 +471,7 @@ void ULexVisualBatchMesh::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangl
 
 void ULexVisualBatchMesh::OnFillWidgetPropertyDataForMaterial()
 {
-	FillWidgetPropertyDataForMaterial_SimpleRect(this, 0);
+	FillWidgetPropertyDataForMaterial(this, 0);
 }
 
 void ULexVisualBatchMesh::OnFillWidgetPropertyDataForMaterial_FirstPixel()

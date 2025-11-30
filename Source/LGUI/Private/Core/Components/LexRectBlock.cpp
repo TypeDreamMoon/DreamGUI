@@ -14,7 +14,7 @@
 
 
 
-#define LOCTEXT_NAMESPACE "UIProceduralRect"
+#define LOCTEXT_NAMESPACE "LexRectBlock"
 
 
 void ULexRectBlockData::PostInitProperties()
@@ -231,6 +231,8 @@ FName ULexRectBlock::DataTextureParameterName = TEXT("LexUI_RectBlockDataTexture
 ULexRectBlock::ULexRectBlock(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
 	bNeedUpdateBlockData = true;
+	BodyTexture = FLexUIUtils::GetDefaultWhiteTexture();
+	BodySpriteTexture = ULexUISpriteData::GetDefaultWhiteSolid();
 }
 
 void ULexRectBlock::BeginPlay()
@@ -321,28 +323,34 @@ void ULexRectBlock::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 	if (auto Property = PropertyChangedEvent.Property)
 	{
 		auto PropertyName = Property->GetFName();
-		SetUnitChange(CornerRadius)
-		else SetUnitChange(BodyGradientCenter)
-		else SetUnitChange(BodyGradientRadius)
+		if (!this->GetName().StartsWith(TEXT("Default__")))
+		{
+			SetUnitChange(CornerRadius)
+			else SetUnitChange(BodyGradientCenter)
+			else SetUnitChange(BodyGradientRadius)
 
-		else SetUnitChange(BorderWidth)
-		else SetUnitChange(BorderGradientCenter)
-		else SetUnitChange(BorderGradientRadius)
+			else SetUnitChange(BorderWidth)
+			else SetUnitChange(BorderGradientCenter)
+			else SetUnitChange(BorderGradientRadius)
 
-		else SetUnitChange(InnerShadowSize)
-		else SetUnitChange(InnerShadowBlur)
-		else SetUnitChange(InnerShadowDistance)
+			else SetUnitChange(InnerShadowSize)
+			else SetUnitChange(InnerShadowBlur)
+			else SetUnitChange(InnerShadowDistance)
 
-		else SetUnitChange(RadialFillCenter)
+			else SetUnitChange(RadialFillCenter)
 
-		else SetUnitChange(OuterShadowSize)
-		else SetUnitChange(OuterShadowBlur)
-		else SetUnitChange(OuterShadowDistance)
+			else SetUnitChange(OuterShadowSize)
+			else SetUnitChange(OuterShadowBlur)
+			else SetUnitChange(OuterShadowDistance)
+		}
 
 		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexRectBlock, BodyTextureMode))
 		{
-			MarkTextureDirty();
-			MarkUVDirty();
+			if (!this->GetName().StartsWith(TEXT("Default__")))
+			{
+				MarkTextureDirty();
+				MarkUVDirty();
+			}
 		}
 		
 		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexRectBlock, bUniformSetCornerRadius))
@@ -361,9 +369,12 @@ bool ULexRectBlock::CanEditChange(const FProperty* InProperty) const
 	static auto RaycastSupportCornerRadius_Name = GET_MEMBER_NAME_CHECKED(ULexRectBlock, bRaycastSupportCornerRadius);
 	if (PropertyName == RaycastSupportCornerRadius_Name)
 	{
-		if (!GetWidget()->GetRaycastableInHierarchy() || RaycastType != ELexVisualRaycastType::Rect)
+		if (!this->GetName().StartsWith(TEXT("Default__")))
 		{
-			return false;
+			if (!GetWidget()->GetRaycastableInHierarchy() || RaycastType != ELexVisualRaycastType::Rect)
+			{
+				return false;
+			}
 		}
 	}
 	return Super::CanEditChange(InProperty);
@@ -564,7 +575,7 @@ void ULexRectBlock::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChang
 		, this->GetValueWithUnitMode(OuterShadowBlur, OuterShadowBlurUnitMode, Widget->GetWidth(), Widget->GetHeight(), 1)
 		, this->bSoftEdge,
 		Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot())
-		, SimpleRectSpriteData, IsValid(BodySpriteTexture) ? BodySpriteTexture->GetSpriteInfo() : SimpleRectSpriteData
+		, SimpleRectSpriteData, BodyTextureMode == ELexRectBlockTextureMode::Sprite ? (IsValid(BodySpriteTexture) ? BodySpriteTexture->GetSpriteInfo() : SimpleRectSpriteData) : SimpleRectSpriteData
 		, Widget->GetRenderCanvas(), this, GetFinalColor(),
 		InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 	);

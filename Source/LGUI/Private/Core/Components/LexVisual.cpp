@@ -91,7 +91,10 @@ void ULexVisual::BeginPlay()
 void ULexVisual::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
-	MarkAllDirty();
+	if (!this->GetName().StartsWith(TEXT("Default__")))
+	{
+		MarkAllDirty();
+	}
 }
 
 bool ULexVisual::CanEditChange(const FProperty* InProperty) const
@@ -102,23 +105,32 @@ bool ULexVisual::CanEditChange(const FProperty* InProperty) const
 	static auto VisiblePixelThreshold_Name = GET_MEMBER_NAME_CHECKED(ULexVisual, VisiblePixelThreshold);
 	if (PropertyName == RayCastType_Name)
 	{
-		if (!GetWidget()->GetRaycastableInHierarchy())
+		if (!this->GetName().StartsWith(TEXT("Default__")))
 		{
-			return false;
+			if (!GetWidget()->GetRaycastableInHierarchy())
+			{
+				return false;
+			}
 		}
 	}
 	else if (PropertyName == CustomRaycastObject_Name)
 	{
-		if (!GetWidget()->GetRaycastableInHierarchy() || RaycastType!=ELexVisualRaycastType::Custom)
+		if (!this->GetName().StartsWith(TEXT("Default__")))
 		{
-			return false;
+			if (!GetWidget()->GetRaycastableInHierarchy() || RaycastType!=ELexVisualRaycastType::Custom)
+			{
+				return false;
+			}
 		}
 	}
 	else if (PropertyName == VisiblePixelThreshold_Name)
 	{
-		if (!GetWidget()->GetRaycastableInHierarchy() || RaycastType!=ELexVisualRaycastType::VisiblePixel)
+		if (!this->GetName().StartsWith(TEXT("Default__")))
 		{
-			return false;
+			if (!GetWidget()->GetRaycastableInHierarchy() || RaycastType!=ELexVisualRaycastType::VisiblePixel)
+			{
+				return false;
+			}
 		}
 	}
 	return UObject::CanEditChange(InProperty);
@@ -353,11 +365,11 @@ bool ULexVisual::LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVe
 }
 
 int ULexVisual::WidgetPropertyDataLength =
-	sizeof(FVector2f)//1st pixel's xy channel: x.byte1- font mark, byte2- extra marks, y- clip data coordinate
-	+ sizeof(FVector2f)//1st pixel's zw channel: width & height
-	+ sizeof(FVector2f)//2nd pixels' xy channel: widget rect center position
+	sizeof(FVector2f)//1st pixel, x: byte1- font mark, byte2- extra marks; y: clip data coordinate
+	+ sizeof(FVector2f)//1st pixel, zw: widget width & height
+	+ sizeof(FVector2f)//2nd pixel, xy: widget rect center position
 ;
-void ULexVisual::FillWidgetPropertyDataForMaterial_SimpleRect(ULexVisual* Visual, uint8 FontMark)
+void ULexVisual::FillWidgetPropertyDataForMaterial(ULexVisual* Visual, uint8 FontMark)
 {
 	auto StartPosition = Visual->WidgetPropertyDataStartPosition;
 	if (StartPosition <= INDEX_NONE)return;
@@ -436,14 +448,6 @@ void ULexVisual::FillWidgetPropertyDataForMaterial_FirstPixel(ULexVisual* Visual
 	FMemory::Memcpy(BlockBuffer + BlockBufferOffset, &Size, sizeof(FVector2f));
 	BlockBufferOffset += sizeof(FVector2f);
 	Data->UpdateBlock(0, StartPosition, BlockBuffer, 1);
-}
-
-void ULexVisual::FillWidgetPropertyDataForMaterial_FontChar(ULexUIDataAsTexture* DataTexture, int CharIndex,
-                                                            int DataOffset, int StartPosition)
-{
-	uint8* BlockBuffer = new uint8[WidgetPropertyDataLength];
-	FMemory::Memzero(BlockBuffer, WidgetPropertyDataLength);
-	int BlockBufferOffset = DataOffset;
 }
 
 #pragma region TweenAnimation

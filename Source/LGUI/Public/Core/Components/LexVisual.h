@@ -215,9 +215,8 @@ protected:
 	int ClipDataStartPosition = 0;
 	int WidgetPropertyDataStartPosition = INDEX_NONE;
 
-	static void FillWidgetPropertyDataForMaterial_SimpleRect(ULexVisual* Visual, uint8 FontMark);
+	static void FillWidgetPropertyDataForMaterial(ULexVisual* Visual, uint8 FontMark);
 	static void FillWidgetPropertyDataForMaterial_FirstPixel(ULexVisual* Visual, uint8 FontMark);
-	static void FillWidgetPropertyDataForMaterial_FontChar(ULexUIDataAsTexture* DataTexture, int CharIndex, int DataOffset, int StartPosition);
 public:
 #pragma region TweenAnimation
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")

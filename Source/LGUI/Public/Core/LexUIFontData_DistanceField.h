@@ -79,17 +79,18 @@ public:
 	virtual float GetFontTextureMark() override{ return 2; }
 	virtual float GetBoldRatio() override{ return BoldRatio; }
 	//End ULexUIFontData_BaseObject interface
+	float GetSampleFontSize()const{return SampleFontSize;}
 protected:
-	float ItalicSlop = 0.0f; float OneDivideFontSize = 1.0f;
+	float ItalicSlop = 0.0f; float OneDivideFontSize = 1.0f; float ExpandMeshSize = 0;
 	TMap<uint32, FLexUICharData> CharDataMap;
 	TMap<FLexUIDistanceFieldFontKerningPair, int16> KerningPairsMap;
 	virtual UTexture2D* CreateFontTexture(int InTextureSize)override;
 	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize)override;
 
-	virtual bool GetCharDataFromCache(const uint32& charCode, const float& charSize, FLexUICharData& OutResult)override;
-	virtual void AddCharDataToCache(const uint32& charCode, const float& charSize, FLexUICharData& charData)override;
+	virtual bool GetCharDataFromCache(const uint32& CharCode, const float& CharSize, FLexUICharData& OutResult)override;
+	virtual void AddCharDataToCache(const uint32& CharCode, const float& CharSize, FLexUICharData& CharData)override;
 	virtual void ScaleDownUVofCachedChars()override;
-	virtual bool RenderGlyph(const uint32& charCode, const float& charSize, FGlyphBitmap& OutResult)override;
+	virtual bool RenderGlyph(const uint32& CharCode, const float& CharSize, FGlyphBitmap& OutResult)override;
 	virtual void ClearCharDataCache()override;
 
 	//SDF font already have space between glyphs

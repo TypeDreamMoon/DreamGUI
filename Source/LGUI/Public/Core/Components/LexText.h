@@ -83,11 +83,11 @@ protected:
     UPROPERTY(EditAnywhere, Category = "LexUI")
     UMaterialInterface* OverrideMaterial = nullptr;
 	/**
-	 * Use full rect area to generate char mesh, useful for effects of OverrideMaterial.
+	 * Expand character's rect area to generate bigger mesh, useful for effects of OverrideMaterial.
 	 * Only valid for SDF font.
 	 */
 	UPROPERTY(EditAnywhere, Category = "LexUI")
-	bool bMeshUseFullRect = false;
+	float ExpandMeshSize = 0;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 	ELexUITextFontStyle FontStyle = ELexUITextFontStyle::None;
 	/**
@@ -207,6 +207,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI") ELexUITextParagraphHorizontalAlign GetParagraphHorizontalAlignment()const { return HAlign; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") ELexUITextParagraphVerticalAlign GetParagraphVerticalAlignment()const { return VAlign; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") UMaterialInterface* GetOverrideMaterial()const{return OverrideMaterial;}
+	UFUNCTION(BlueprintCallable, Category = "LGUI") float GetExpandMeshSize()const{return ExpandMeshSize;}
 
 	/** indicating whether the text is Truncated or using Ellipsis */
 	UFUNCTION(BlueprintCallable, Category = "LGUI") bool IsTextTruncated()const;
@@ -241,6 +242,8 @@ public:
 		void SetRichTextCustomStyleData(ULexUIRichTextCustomStyleData* Value);
 	UFUNCTION(BlueprintCallable, Category = "LexUI")
     	void SetOverrideMaterial(UMaterialInterface* Value);
+	UFUNCTION(BlueprintCallable, Category = "LexUI")
+	void SetExpandMeshSize(float Value);
 private:
 	void ClearCreatedRichTextImageObject();
 	void ClearEmojiObject();

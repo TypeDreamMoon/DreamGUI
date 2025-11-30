@@ -362,19 +362,19 @@ void ULexUIFontData_FreeTypeRender::InitFont()
 #endif
 }
 
-float ULexUIFontData_FreeTypeRender::GetKerning(const uint32& leftCharIndex, const uint32& rightCharIndex, const float& charSize)
+float ULexUIFontData_FreeTypeRender::GetKerning(const uint32& LeftCharCode, const uint32& RightCharCode, const float& CharSize)
 {
 #if WITH_FREETYPE
 	if (Face == nullptr)return 0;
 	if (!bHasKerning)return 0;
-	auto error = FT_Set_Pixel_Sizes(Face, 0, charSize);
+	auto error = FT_Set_Pixel_Sizes(Face, 0, CharSize);
 	if (error)
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
 		return 0;
 	}
 	FT_Vector kerning;
-	error = FT_Get_Kerning(Face, FT_Get_Char_Index(Face, leftCharIndex), FT_Get_Char_Index(Face, rightCharIndex), FT_KERNING_DEFAULT, &kerning);
+	error = FT_Get_Kerning(Face, FT_Get_Char_Index(Face, LeftCharCode), FT_Get_Char_Index(Face, RightCharCode), FT_KERNING_DEFAULT, &kerning);
 	if (error)
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d FT_Get_Kerning error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
@@ -385,26 +385,26 @@ float ULexUIFontData_FreeTypeRender::GetKerning(const uint32& leftCharIndex, con
 	return 0;
 #endif
 }
-float ULexUIFontData_FreeTypeRender::GetLineHeight(const float& fontSize)
+float ULexUIFontData_FreeTypeRender::GetLineHeight(const float& FontSize)
 {
 #if WITH_FREETYPE
-	if (Face == nullptr)return fontSize;
-	auto error = FT_Set_Pixel_Sizes(Face, 0, fontSize);
+	if (Face == nullptr)return FontSize;
+	auto error = FT_Set_Pixel_Sizes(Face, 0, FontSize);
 	if (error)
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
-		return fontSize;
+		return FontSize;
 	}
-	return LineHeightType == ELexUIDynamicFontLineHeightType::FromFontFace ? (Face->size->metrics.height >> 6) : fontSize;
+	return LineHeightType == ELexUIDynamicFontLineHeightType::FromFontFace ? (Face->size->metrics.height >> 6) : FontSize;
 #else
 	return fontSize;
 #endif
 }
-float ULexUIFontData_FreeTypeRender::GetVerticalOffset(const float& fontSize)
+float ULexUIFontData_FreeTypeRender::GetVerticalOffset(const float& FontSize)
 {
 #if WITH_FREETYPE
-	if (Face == nullptr)return fontSize;
-	auto error = FT_Set_Pixel_Sizes(Face, 0, fontSize);
+	if (Face == nullptr)return FontSize;
+	auto error = FT_Set_Pixel_Sizes(Face, 0, FontSize);
 	if (error)
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
@@ -435,14 +435,14 @@ void ULexUIFontData_FreeTypeRender::SetUnrealFont(UFontFace* Value)
 	UnrealFont = Value;
 }
 
-FLexUICharData ULexUIFontData_FreeTypeRender::GetCharData(const uint32& charCode, const float& charSize)
+FLexUICharData ULexUIFontData_FreeTypeRender::GetCharData(const uint32& CharCode, const float& CharSize)
 {
 	auto Result = FLexUICharData();
-	if (charSize <= 0.0f)return Result;
-	if (!GetCharDataFromCache(charCode, charSize, Result))//if charData not cached, then create it and add to cache
+	if (CharSize <= 0.0f)return Result;
+	if (!GetCharDataFromCache(CharCode, CharSize, Result))//if charData not cached, then create it and add to cache
 	{
 		FGlyphBitmap glyphBitmap;
-		if (!RenderGlyph(charCode, charSize, glyphBitmap))//no valid glyph
+		if (!RenderGlyph(CharCode, CharSize, glyphBitmap))//no valid glyph
 		{
 			return Result;
 		}
@@ -491,13 +491,13 @@ FLexUICharData ULexUIFontData_FreeTypeRender::GetCharData(const uint32& charCode
 			goto PACK_AND_INSERT;
 		}
 
-		AddCharDataToCache(charCode, charSize, uiCharData);
-		GetCharDataFromCache(charCode, charSize, Result);
+		AddCharDataToCache(CharCode, CharSize, uiCharData);
+		GetCharDataFromCache(CharCode, CharSize, Result);
 	}
 	return Result;
 }
 
-bool ULexUIFontData_FreeTypeRender::PackRectAndInsertChar(const FGlyphBitmap& InGlyphBitmap, rbp::MaxRectsBinPack& InOutBinpack, UTexture2D* InTexture, FLexUICharData& OutResult)
+bool ULexUIFontData_FreeTypeRender::PackRectAndInsertChar(const FGlyphBitmap& InGlyphBitmap, rbp::MaxRectsBinPack& InOutBinPack, UTexture2D* InTexture, FLexUICharData& OutResult)
 {
 	if (InGlyphBitmap.width <= 0 || InGlyphBitmap.height <= 0)//glyph no need to display, could be space
 	{
@@ -518,7 +518,7 @@ bool ULexUIFontData_FreeTypeRender::PackRectAndInsertChar(const FGlyphBitmap& In
 	int charRectHeight = InGlyphBitmap.height + SPACE_BETWEEN_GLYPH_RECTx2;
 	auto method = rbp::MaxRectsBinPack::RectBestAreaFit;
 
-	auto packedRect = InOutBinpack.Insert(charRectWidth, charRectHeight, method);
+	auto packedRect = InOutBinPack.Insert(charRectWidth, charRectHeight, method);
 	if (packedRect.height <= 0)//means this area cannot fit the char
 	{
 		return false;
