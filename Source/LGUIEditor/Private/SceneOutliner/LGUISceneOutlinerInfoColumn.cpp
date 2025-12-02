@@ -243,7 +243,7 @@ namespace LGUISceneOutliner
 	{
 		if (AActor* actor = GetActorFromTreeItem(TreeItem))
 		{
-			if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(actor))
+			if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(actor))
 			{
 				if (PrefabHelperObject->IsActorBelongsToSubPrefab(actor))//is sub prefab
 				{
@@ -295,8 +295,8 @@ namespace LGUISceneOutliner
 	{
 		if (auto ParentActor = Actor->GetAttachParentActor())
 		{
-			auto PrefabHelperObjectForParent = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(ParentActor);
-			auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(Actor);
+			auto PrefabHelperObjectForParent = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(ParentActor);
+			auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(Actor);
 			if (PrefabHelperObject != nullptr && PrefabHelperObjectForParent != nullptr)
 			{
 				if (!PrefabHelperObject->IsActorBelongsToSubPrefab(Actor) && PrefabHelperObjectForParent->IsActorBelongsToSubPrefab(ParentActor))
@@ -337,7 +337,7 @@ namespace LGUISceneOutliner
 	{
 		if (auto actor = GetActorFromTreeItem(TreeItem))
 		{
-			if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(actor))
+			if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(actor))
 			{
 				if (!PrefabHelperObject->IsActorBelongsToSubPrefab(actor))//is sub prefab
 				{
@@ -365,7 +365,7 @@ namespace LGUISceneOutliner
 	{
 		if (auto actor = GetActorFromTreeItem(TreeItem))
 		{
-			if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(actor))
+			if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(actor))
 			{
 				if (PrefabHelperObject->IsActorBelongsToSubPrefab(actor))//is sub prefab
 				{
@@ -386,7 +386,7 @@ namespace LGUISceneOutliner
 	{
 		if (auto actor = GetActorFromTreeItem(TreeItem))
 		{
-			if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(actor))
+			if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(actor))
 			{
 				if (!PrefabHelperObject->IsActorBelongsToSubPrefab(actor))//is sub prefab
 				{

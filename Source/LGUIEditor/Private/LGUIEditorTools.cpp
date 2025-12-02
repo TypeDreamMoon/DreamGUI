@@ -873,7 +873,7 @@ void LGUIEditorTools::ReplaceActorByClass(UClass* ActorClass)
 				ChildrenOriginPositionArray.Add(UIComp, { UIComp->GetSiblingIndex(), UIComp->GetRelativeLocation()});
 			}
 		}
-		if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(Actor))
+		if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(Actor))
 		{
 			if (PrefabHelperObject->CleanupInvalidSubPrefab())//do cleanup before everything else
 			{
@@ -987,7 +987,7 @@ void LGUIEditorTools::DuplicateSelectedActors_Impl()//@todo: fix bug: duplicate 
 		TMap<TObjectPtr<AActor>, FLGUISubPrefabData> DuplicatedSubPrefabMap;
 		TMap<FGuid, TObjectPtr<UObject>> OutMapGuidToObject;
 		TMap<UObject*, FGuid> InMapObjectToGuid;
-		if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(Actor))
+		if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(Actor))
 		{
 			PrefabHelperObject->CleanupInvalidSubPrefab();//do cleanup before everything else
 			PrefabHelperObject->Modify();
@@ -1089,7 +1089,7 @@ void LGUIEditorTools::CopySelectedActors_Impl()
 		prefab->AddToRoot();
 		TMap<UObject*, FGuid> MapObjectToGuid;
 		TMap<TObjectPtr<AActor>, FLGUISubPrefabData> SubPrefabMap;
-		if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(Actor))
+		if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(Actor))
 		{
 			SubPrefabMap = PrefabHelperObject->SubPrefabMap;
 
@@ -1168,7 +1168,7 @@ void LGUIEditorTools::PasteSelectedActors_Impl()
 	ULGUIPrefabHelperObject* PrefabHelperObject = nullptr;
 	if (parentComp)
 	{
-		PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(parentComp->GetOwner());
+		PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(parentComp->GetOwner());
 	}
 	if (!PrefabHelperObject)
 	{
@@ -1318,17 +1318,15 @@ void LGUIEditorTools::DeleteActors_Impl(const TArray<AActor*>& InActors)
 	auto confirmResult = FMessageDialog::Open(EAppMsgType::YesNo, FText::FromString(confirmMsg));
 	if (confirmResult != EAppReturnType::Yes)return;
 
-	ULGUIPrefabManagerObject::Instance->bIsProcessingDelete = true;
 	auto RootActorList = LGUIEditorTools::GetRootActorListFromSelection(InActors);
 	GEditor->BeginTransaction(LOCTEXT("DestroyActor_Transaction", "LGUI Destroy Actor"));
 	GEditor->GetSelectedActors()->DeselectAll();
 	for (auto Actor : RootActorList)
 	{
-		bool shouldDeletePrefab = false;
-
-		auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(Actor);
+		auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(Actor);
 		if (PrefabHelperObject != nullptr)
 		{
+			PrefabHelperObject->SetCanNotifyAttachment(false);
 			PrefabHelperObject->Modify();
 			PrefabHelperObject->SetAnythingDirty();
 			TArray<AActor*> ChildrenActors;
@@ -1338,6 +1336,7 @@ void LGUIEditorTools::DeleteActors_Impl(const TArray<AActor*>& InActors)
 				PrefabHelperObject->RemoveSubPrefabByAnyActorOfSubPrefab(ChildActor);
 			}
 			FLexUIUtils::DestroyActorWithHierarchy(Actor);
+			PrefabHelperObject->SetCanNotifyAttachment(true);
 		}
 		else//common actor
 		{
@@ -1346,7 +1345,6 @@ void LGUIEditorTools::DeleteActors_Impl(const TArray<AActor*>& InActors)
 	}
 	GEditor->EndTransaction();
 	CleanupPrefabsInWorld(RootActorList[0]->GetWorld());
-	ULGUIPrefabManagerObject::Instance->bIsProcessingDelete = false;
 }
 
 bool LGUIEditorTools::CanDuplicateActor()
@@ -1380,7 +1378,7 @@ bool LGUIEditorTools::CanDeleteActor()
 	if (SelectedActors.Num() == 0)return false;
 	for (auto Actor : SelectedActors)
 	{
-		if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(Actor))
+		if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(Actor))
 		{
 			if (!PrefabHelperObject->IsSubPrefabRootActor(Actor)//allowed to delete sub prefab's root actor
 				&& PrefabHelperObject->IsActorBelongsToSubPrefab(Actor))//not allowed to delete sub prefab's actor
@@ -1773,7 +1771,7 @@ void LGUIEditorTools::CreatePrefabAsset()//@todo: make some referenced parameter
 		FMessageDialog::Open(EAppMsgType::Ok, Message);
 		return;
 	}
-	auto OldPrefabHelperObject = GetPrefabHelperObject_WhichManageThisActor(selectedActor);
+	auto OldPrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(selectedActor);
 	if (IsValid(OldPrefabHelperObject) && OldPrefabHelperObject->LoadedRootActor == selectedActor)//If create prefab from an existing prefab's root actor, this is not allowed
 	{
 		auto Message = LOCTEXT("CreatePrefabError_BelongToOtherPrefab", "This actor is a root actor of another prefab, this is not allowed! Instead you can duplicate the prefab asset.");
@@ -1822,7 +1820,7 @@ void LGUIEditorTools::CreatePrefabAsset()//@todo: make some referenced parameter
 				auto OutPrefab = NewObject<ULGUIPrefab>(package, ULGUIPrefab::StaticClass(), *fileName, EObjectFlags::RF_Public | EObjectFlags::RF_Standalone);
 				FAssetRegistryModule::AssetCreated(OutPrefab);
 
-				auto PrefabHelperObjectWhichManageThisActor = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(selectedActor);
+				auto PrefabHelperObjectWhichManageThisActor = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(selectedActor);
 				if (PrefabHelperObjectWhichManageThisActor == nullptr)//not exist, means in level editor and not create PrefabManagerActor yet, so create it
 				{
 					auto ManagerActor = ALGUIPrefabLevelManagerActor::GetInstance(selectedActor->GetLevel());
@@ -2031,7 +2029,7 @@ void LGUIEditorTools::UnpackPrefab()
 	GEditor->BeginTransaction(FText::FromString(TEXT("LGUI UnpackPrefab")));
 	auto SelectedActor = GetFirstSelectedActor();
 	if (SelectedActor == nullptr)return;
-	auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
+	auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
 	if (PrefabHelperObject != nullptr)
 	{
 		check(PrefabHelperObject->SubPrefabMap.Contains(SelectedActor) || PrefabHelperObject->MissingPrefab.Contains(SelectedActor));//should already filtered by menu
@@ -2047,7 +2045,7 @@ void LGUIEditorTools::SelectPrefabAsset()
 	GEditor->BeginTransaction(FText::FromString(TEXT("LGUI SelectPrefabAsset")));
 	auto SelectedActor = GetFirstSelectedActor();
 	if (SelectedActor == nullptr)return;
-	auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
+	auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
 	if (PrefabHelperObject != nullptr)
 	{
 		check(PrefabHelperObject->SubPrefabMap.Contains(SelectedActor));//should have being checked in Browse button
@@ -2066,7 +2064,7 @@ void LGUIEditorTools::OpenPrefabAsset()
 {
 	auto SelectedActor = GetFirstSelectedActor();
 	if (SelectedActor == nullptr)return;
-	auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
+	auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
 	if (PrefabHelperObject != nullptr)
 	{
 		check(PrefabHelperObject->SubPrefabMap.Contains(SelectedActor));//should have being check in menu
@@ -2083,7 +2081,7 @@ void LGUIEditorTools::UpdateLevelPrefab()
 {
 	auto SelectedActor = GetFirstSelectedActor();
 	if (SelectedActor == nullptr)return;
-	if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
+	if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
 	{
 		if (auto SubPrefabDataPtr = PrefabHelperObject->SubPrefabMap.Find(SelectedActor))
 		{
@@ -2096,26 +2094,13 @@ void LGUIEditorTools::ToggleLevelPrefabAutoUpdate()
 {
 	auto SelectedActor = GetFirstSelectedActor();
 	if (SelectedActor == nullptr)return;
-	if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
+	if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
 	{
 		if (auto SubPrefabDataPtr = PrefabHelperObject->SubPrefabMap.Find(SelectedActor))
 		{
 			SubPrefabDataPtr->bAutoUpdate = !SubPrefabDataPtr->bAutoUpdate;
 		}
 	}
-}
-
-ULGUIPrefabHelperObject* LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(AActor* InActor)
-{
-	if (!IsValid(InActor))return nullptr;
-	for (TObjectIterator<ULGUIPrefabHelperObject> Itr; Itr; ++Itr)
-	{
-		if (Itr->IsActorBelongsToThis(InActor))
-		{
-			return *Itr;
-		}
-	}
-	return nullptr;
 }
 
 void LGUIEditorTools::CleanupPrefabsInWorld(UWorld* World)

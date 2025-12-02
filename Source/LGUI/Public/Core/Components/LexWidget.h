@@ -664,8 +664,6 @@ public:
 #if WITH_EDITORONLY_DATA
 	/** This is a helper component for calculate bounds, so we can double-click to focus on this UIItem */
 	UPROPERTY(Transient, NonTransactional)TObjectPtr<class ULexWidgetEditorHelperComp> HelperComp = nullptr;//@todo: better way to replace this?
-	/** Expand children in editor */
-	UPROPERTY()bool bIsExpanded = true;
 #endif
 };
 

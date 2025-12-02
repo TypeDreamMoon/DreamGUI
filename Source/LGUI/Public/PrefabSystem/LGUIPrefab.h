@@ -145,7 +145,7 @@ public:
 	UPROPERTY(EditAnywhere)
 		TEnumAsByte<ELevelViewportType> ViewportType = ELevelViewportType::LVT_OrthoYZ;
 	UPROPERTY(EditAnywhere)
-		TSet<FGuid> UnexpandActorSet;
+		TSet<FGuid> UnexpandWidgetSet;
 };
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FLGUIPrefab_LoadPrefabCallback, AActor*, LoadedRootActor);
@@ -178,14 +178,6 @@ public:
 	/** put actual FName in this array, and store index in prefab */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
 		TArray<FName> ReferenceNameList;
-#pragma region Before Prefab-Version 3
-	/** put actual FString in this array, and store index in prefab */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
-		TArray<FString> ReferenceStringList;
-	/** put actual FText in this array, and store index in prefab */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
-		TArray<FText> ReferenceTextList;
-#pragma endregion Before Prefab-Version 3
 #endif
 
 #if WITH_EDITORONLY_DATA
@@ -239,7 +231,7 @@ public:
 	UPROPERTY(Instanced, Transient)
 		TObjectPtr<class UThumbnailInfo> ThumbnailInfo;
 	UPROPERTY(Transient)
-		bool ThumbnailDirty = false;
+		bool bThumbnailDirty = false;
 	UPROPERTY()
 		FLGUIPrefabDataForPrefabEditor PrefabDataForPrefabEditor;
 private:
@@ -249,7 +241,7 @@ private:
 public:
 	/**
 	 * LoadPrefab to create actor.
-	 * Awake function in LGUILifeCycleBehaviour and LGUIPrefabInterface will be called right after LoadPrefab is done.
+	 * Awake function in LexUIBehaviour and LGUIPrefabInterface will be called right after LoadPrefab is done.
 	 * @param InParent Parent scene component that the created root actor will be attached to. Can be null so the created root actor will not attach to anyone.
 	 * @param InCallbackBeforeAwake This callback function will execute before Awake event, parameter "Actor" is the loaded root actor.
 	 * @param SetRelativeTransformToIdentity Set created root actor's transform to zero after load.
@@ -258,7 +250,7 @@ public:
 		AActor* LoadPrefab(UObject* WorldContextObject, USceneComponent* InParent, const FLGUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake, bool SetRelativeTransformToIdentity = false);
 	/**
 	 * LoadPrefab to create actor.
-	 * Awake function in LGUILifeCycleBehaviour and LGUIPrefabInterface will be called right after LoadPrefab is done.
+	 * Awake function in LexUIBehaviour and LGUIPrefabInterface will be called right after LoadPrefab is done.
 	 * @param InParent Parent scene component that the created root actor will be attached to. Can be null so the created root actor will not attach to anyone.
 	 * @param Location Set created root actor's location after load.
 	 * @param Rotation Set created root actor's rotation after load.
@@ -269,7 +261,7 @@ public:
 	AActor* LoadPrefabWithTransform(UObject* WorldContextObject, USceneComponent* InParent, FVector Location, FQuat Rotation, FVector Scale, const TFunction<void(AActor*)>& InCallbackBeforeAwake);
 	/**
 	 * LoadPrefab to create actor.
-	 * Awake function in LGUILifeCycleBehaviour and LGUIPrefabInterface will be called right after LoadPrefab is done.
+	 * Awake function in LexUIBehaviour and LGUIPrefabInterface will be called right after LoadPrefab is done.
 	 * @param InParent Parent scene component that the created root actor will be attached to. Can be null so the created root actor will not attach to anyone.
 	 * @param InReplaceAssetMap Replace source asset to dest before load the prefab.
 	 * @param InReplaceClassMap Replace source class to dest before load the prefab.
@@ -278,7 +270,7 @@ public:
 		AActor* LoadPrefabWithReplacement(UObject* WorldContextObject, USceneComponent* InParent, const TMap<UObject*, UObject*>& InReplaceAssetMap, const TMap<UClass*, UClass*>& InReplaceClassMap, const FLGUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake);
 	/**
 	 * LoadPrefab to create actor.
-	 * Awake function in LGUILifeCycleBehaviour and LGUIPrefabInterface will be called right after LoadPrefab is done.
+	 * Awake function in LexUIBehaviour and LGUIPrefabInterface will be called right after LoadPrefab is done.
 	 * @param InParent Parent scene component that the created root actor will be attached to. Can be null so the created root actor will not attach to anyone.
 	 * @param InCallbackBeforeAwake This callback function will execute before Awake event, parameter "Actor" is the loaded root actor.
 	 * @param SetRelativeTransformToIdentity Set created root actor's transform to zero after load.

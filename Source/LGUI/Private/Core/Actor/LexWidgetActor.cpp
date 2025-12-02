@@ -27,8 +27,36 @@ void ALexWidgetActor::BeginPlay()
 	}
 }
 
+void ALexWidgetActor::BeginDestroy()
+{
+	Super::BeginDestroy();
+}
+
+#if WITH_EDITOR
+#include "PrefabSystem/LGUIPrefabHelperObject.h"
+bool ALexWidgetActor::bIsSetCanNotifyAttachmentWhenDestroy = false;
+#endif
 void ALexWidgetActor::Destroyed()
 {
+#if WITH_EDITOR
+	ULGUIPrefabHelperObject* PrefabHelperObject = nullptr;
+	if (!bIsSetCanNotifyAttachmentWhenDestroy)
+	{
+		bIsSetCanNotifyAttachmentWhenDestroy = true;
+		ULGUIPrefabManagerObject::AddOneShotTickFunction([=]()
+		{
+			bIsSetCanNotifyAttachmentWhenDestroy = false;
+		}, 1);
+		PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(this);
+		if (PrefabHelperObject != nullptr)
+		{
+			PrefabHelperObject->SetCanNotifyAttachment(false);
+			PrefabHelperObject->Modify();
+			PrefabHelperObject->SetAnythingDirty();
+		}
+	}
+#endif
+	
 	Super::Destroyed();
 	TArray<AActor*> AttachedActors;
 	GetAttachedActors(AttachedActors);
@@ -39,6 +67,13 @@ void ALexWidgetActor::Destroyed()
 			Child->Destroy();
 		}
 	}
+
+#if WITH_EDITOR
+	if (PrefabHelperObject != nullptr)
+	{
+		PrefabHelperObject->SetCanNotifyAttachment(true);
+	}
+#endif
 }
 
 #if WITH_EDITOR

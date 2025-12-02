@@ -576,7 +576,7 @@ bool ULGUIPrefabHelperObject::RefreshOnSubPrefabDirty(ULGUIPrefab* InSubPrefab, 
 		if (this->PrefabAsset != nullptr)//could be null in level editor
 		{
 #if WITH_EDITOR
-			this->PrefabAsset->ThumbnailDirty = true;
+			this->PrefabAsset->bThumbnailDirty = true;
 #endif
 			this->PrefabAsset->MarkPackageDirty();
 		}
@@ -762,17 +762,6 @@ void ULGUIPrefabHelperObject::OnLevelActorDeleted(AActor* Actor)
 	if (!bCanNotifyAttachment)return;
 	if (this->IsInsidePrefabEditor())return;
 
-	if (this->SubPrefabMap.Contains(Actor))
-	{
-		if (!ULGUIPrefabManagerObject::GetIsProcessingDelete())//delete by Unreal, should not allowed, but I can't prevent this operation, so I remove the sub prefab of it
-		{
-			this->Modify();
-			this->RemoveSubPrefabByAnyActorOfSubPrefab(Actor);
-			FLexUIUtils::DestroyActorWithHierarchy(Actor);
-			return;
-		}
-	}
-
 	auto ActorBelongsToPrefab = false;
 	for (auto& KeyValue : MapGuidToObject)
 	{
@@ -820,8 +809,9 @@ void ULGUIPrefabHelperObject::CheckAttachment()
 	if (!bCanNotifyAttachment)return;
 	if (!AttachmentActor.Actor.IsValid())return;
 
-	auto CheckActorBlueprintInLevelActorRestruction = [](TWeakObjectPtr<AActor> Actor){
+	auto CheckActorBlueprintInLevelActorRestruction = [=, this](TWeakObjectPtr<AActor> Actor){
 		if (!Actor.IsValid())return true;
+		if (!this->IsInsidePrefabEditor())return true;//only concern PrefabEditor
 		if (Actor->GetClass() && Actor->GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint))
 		{
 			auto InfoText = LOCTEXT("DetectRestructureActorBlueprintInPrefabInstance", "Looks like you are trying to modify actor-blueprint in a child Prefab.\
@@ -2125,6 +2115,19 @@ void ULGUIPrefabHelperObject::OnNewVersionDismissAllClicked()
 		}
 	}
 	NewVersionPrefabNotificationArray.Empty();
+}
+
+ULGUIPrefabHelperObject* ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(AActor* InActor)
+{
+	if (!IsValid(InActor))return nullptr;
+	for (TObjectIterator<ULGUIPrefabHelperObject> Itr; Itr; ++Itr)
+	{
+		if (Itr->IsActorBelongsToThis(InActor))
+		{
+			return *Itr;
+		}
+	}
+	return nullptr;
 }
 
 #endif

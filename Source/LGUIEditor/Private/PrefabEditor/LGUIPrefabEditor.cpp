@@ -366,19 +366,7 @@ void FLGUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const TS
 	// 	}
 	// 	this->SelectWidgets(SelectedItems, false, false);
 	// });
-
-	auto UnexpendActorGuidSet = PrefabBeingEdited->PrefabDataForPrefabEditor.UnexpandActorSet;
-	TSet<AActor*> UnexpendActorSet;
-	for (auto& ItemActorGuid : UnexpendActorGuidSet)
-	{
-		if (auto ObjectPtr = PrefabHelperObject->MapGuidToObject.Find(ItemActorGuid))
-		{
-			if (auto Actor = Cast<AActor>(*ObjectPtr))
-			{
-				UnexpendActorSet.Add(Actor);
-			}
-		}
-	}
+	
 	OutlinerPtr = SNew(SLexWidgetEditorHierarchyView, PrefabEditorPtr);
 
 	BindCommands();
@@ -492,17 +480,21 @@ void FLGUIPrefabEditor::OnApply()
 	if (CheckBeforeSaveAsset())
 	{
 		SaveViewState();
-		TArray<ULexWidget*> UnexpandActorArray;
-		TSet<FGuid> UnexpandActorGuidArray;
-		OutlinerPtr->GetExpandWidgets(UnexpandActorArray);
+		TSet<TWeakObjectPtr<ULexWidget>> ExpandWidgetSet;
+		OutlinerPtr->GetExpandWidgets(ExpandWidgetSet);
+		TSet<FGuid> UnexpandWidgetGuidArray;
 		for (auto& KeyValue : PrefabHelperObject->MapGuidToObject)
 		{
-			if (UnexpandActorArray.Contains(KeyValue.Value))
+			if (auto Widget = Cast<ULexWidget>(KeyValue.Value))
 			{
-				UnexpandActorGuidArray.Add(KeyValue.Key);
+				if (!ExpandWidgetSet.Contains(Widget))
+				{
+					UnexpandWidgetGuidArray.Add(KeyValue.Key);
+				}
 			}
 		}
-		PrefabBeingEdited->PrefabDataForPrefabEditor.UnexpandActorSet = UnexpandActorGuidArray;
+		PrefabBeingEdited->PrefabDataForPrefabEditor.UnexpandWidgetSet = UnexpandWidgetGuidArray;
+		PrefabBeingEdited->bThumbnailDirty = true;
 
 		//refresh parameter, remove invalid
 		for (auto& KeyValue : PrefabHelperObject->SubPrefabMap)
@@ -597,9 +589,12 @@ TArray<TWeakObjectPtr<ULexWidget>> FLGUIPrefabEditor::GetSelectedWidgets()
 	TArray<TWeakObjectPtr<ULexWidget>> SelectedWidgets;
 	for (auto Actor : SelectedActors)
 	{
-		if (auto Widget = Cast<ULexWidget>(Actor->GetRootComponent()))
+		if (Actor.IsValid())
 		{
-			SelectedWidgets.Add(Widget);
+			if (auto Widget = Cast<ULexWidget>(Actor->GetRootComponent()))
+			{
+				SelectedWidgets.Add(Widget);
+			}
 		}
 	}
 	return SelectedWidgets;

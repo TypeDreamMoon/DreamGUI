@@ -525,8 +525,8 @@ if (Widget->GetOwner()->FindComponentByClass<Class>())\
 				// 		{
 				// 			if (auto ParentActor = Widget->GetOwner()->GetAttachParentActor())
 				// 			{
-				// 				auto PrefabHelperObjectForParent = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(ParentActor);
-				// 				auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(Widget->GetOwner());
+				// 				auto PrefabHelperObjectForParent = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(ParentActor);
+				// 				auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(Widget->GetOwner());
 				// 				if (PrefabHelperObject != nullptr && PrefabHelperObjectForParent != nullptr)
 				// 				{
 				// 					if (!PrefabHelperObject->IsActorBelongsToSubPrefab(Widget->GetOwner()) && PrefabHelperObjectForParent->IsActorBelongsToSubPrefab(ParentActor))

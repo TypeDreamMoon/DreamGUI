@@ -558,7 +558,7 @@ public:
 		auto Actor = WeakSequence.IsValid() ? WeakSequence->GetTypedOuter<AActor>() : nullptr;
 		if (Actor)
 		{
-			if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(Actor))
+			if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(Actor))
 			{
 				PrefabHelperObject->SetAnythingDirty();
 			}

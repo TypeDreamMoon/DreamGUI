@@ -12,13 +12,6 @@ void ULexLayoutContainerFlexBox::UpdateLayout()
     SCOPE_CYCLE_COUNTER(STAT_LexLayoutContainerFlexBox);
     auto Widget = GetWidget();
     if (!Widget)return;
-    if (Direction == ELexLayoutFlexBoxDirectionType::None)
-    {
-        TotalMinSize[0] = TotalPreferredSize[0] = Widget->GetWidth();
-        TotalMinSize[1] = TotalPreferredSize[1] = Widget->GetHeight();
-        TotalMaxSize[0] = TotalMaxSize[1] = UE_MAX_FLT;
-        return;
-    }
     Children.Empty();
     for (auto& ChildWidget : Widget->GetUIChildren())
     {

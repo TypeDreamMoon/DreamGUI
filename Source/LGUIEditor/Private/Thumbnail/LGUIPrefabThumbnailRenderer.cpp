@@ -18,17 +18,16 @@ ULGUIPrefabThumbnailRenderer::ULGUIPrefabThumbnailRenderer()
 
 bool ULGUIPrefabThumbnailRenderer::CanVisualizeAsset(UObject* Object)
 {
-	if (auto prefab = Cast<ULGUIPrefab>(Object))
+	if (Object->IsA(ULGUIPrefab::StaticClass()))
 		return true;
 	return false;
 }
 void ULGUIPrefabThumbnailRenderer::Draw(UObject* Object, int32 X, int32 Y, uint32 Width, uint32 Height, FRenderTarget* RenderTarget, FCanvas* Canvas, bool bAdditionalViewFamily)
 {
-	auto prefab = Cast<ULGUIPrefab>(Object);
-	if (IsValid(prefab))
+	if (auto Prefab = Cast<ULGUIPrefab>(Object))
 	{
-		TSharedRef<FLGUIPrefabThumbnailScene> ThumbnailScene = ThumbnailScenes.EnsureThumbnailScene(prefab->GetPathName());
-		ThumbnailScene->SetPrefab(prefab);
+		TSharedRef<FLGUIPrefabThumbnailScene> ThumbnailScene = ThumbnailScenes.EnsureThumbnailScene(Prefab->GetPathName());
+		ThumbnailScene->SetPrefab(Prefab);
 		if (!ThumbnailScene->IsValidForVisualization())
 			return;
 
@@ -43,8 +42,10 @@ void ULGUIPrefabThumbnailRenderer::Draw(UObject* Object, int32 X, int32 Y, uint3
 
 		//draw prefab icon
 		static FString LGUIBasePath = IPluginManager::Get().FindPlugin(TEXT("LGUI"))->GetBaseDir();
-		LGUIEditorUtils::DrawThumbnailIcon(LGUIBasePath + (prefab->GetIsPrefabVariant() ? TEXT("/Resources/Icons/PrefabVariant_40x.png") : TEXT("/Resources/Icons/Prefab_40x.png"))
+		LGUIEditorUtils::DrawThumbnailIcon(LGUIBasePath + (Prefab->GetIsPrefabVariant() ? TEXT("/Resources/Icons/PrefabVariant_40x.png") : TEXT("/Resources/Icons/Prefab_40x.png"))
 			, X, Y, Width, Height, Canvas);
+
+		Prefab->bThumbnailDirty = false;
 	}
 }
 void ULGUIPrefabThumbnailRenderer::BeginDestroy()

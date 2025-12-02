@@ -386,7 +386,7 @@ void SLGUIPrefabSequenceEditor::OnEditingPrefabChanged(AActor* RootActor)
 		
 		for (AActor* ChildActor : ChildrenActors)
 		{
-			ULGUIPrefabHelperObject* PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(RootActor);
+			ULGUIPrefabHelperObject* PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(RootActor);
 			if (PrefabHelperObject)
 			{
 				//skip sub prefab's PrefabSequenceComponent

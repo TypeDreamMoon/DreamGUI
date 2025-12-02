@@ -8,6 +8,9 @@
 #include "Widgets/Input/SSearchBox.h"
 #include "Core/Components/LexRectBlock.h"
 #include "Framework/Commands/GenericCommands.h"
+#include "PrefabSystem/LGUIPrefab.h"
+#include "PrefabSystem/LGUIPrefabHelperObject.h"
+#include "PrefabSystem/LGUIPrefabManager.h"
 
 #define LOCTEXT_NAMESPACE "LexWidgetEditorHierarchyView"
 
@@ -61,6 +64,33 @@ void SLexWidgetEditorHierarchyView::Construct(const FArguments& InArgs, TSharedP
 	bRefreshRequested = true;
 	
 	InManager->OnSelectedWidgetsChanged.AddRaw(this, &SLexWidgetEditorHierarchyView::OnEditorSelectionChanged);
+
+	auto PrefabHelperObject = InManager->GetPrefabHelperObject();
+	auto UnexpandWidgetGuidSet = InManager->GetPrefabBeingEdited()->PrefabDataForPrefabEditor.UnexpandWidgetSet;
+	TSet<ULexWidget*> UnexpendWidgetSet;
+	for (auto& ItemActorGuid : UnexpandWidgetGuidSet)
+	{
+		if (auto ObjectPtr = PrefabHelperObject->MapGuidToObject.Find(ItemActorGuid))
+		{
+			if (auto Widget = Cast<ULexWidget>(*ObjectPtr))
+			{
+				UnexpendWidgetSet.Add(Widget);
+			}
+		}
+	}
+
+	ULGUIPrefabManagerObject::AddOneShotTickFunction([=, this]()
+	{
+		TSet<TWeakObjectPtr<ULexWidget>> VisitingItems;
+		WidgetTreeView->GetExpandedItems(VisitingItems);
+		for (auto& Item : VisitingItems)
+		{
+			if (UnexpendWidgetSet.Contains(Item.Get()))
+			{
+				WidgetTreeView->SetItemExpansion(Item, false);
+			}
+		}
+	},1);
 }
 SLexWidgetEditorHierarchyView::~SLexWidgetEditorHierarchyView()
 {
@@ -364,7 +394,7 @@ void SLexWidgetEditorHierarchyView::OnSearchChanged(const FText& InFilterText)
 
 void SLexWidgetEditorHierarchyView::OnExpansionChanged(TWeakObjectPtr<ULexWidget> Item, bool bExpanded)
 {
-	Item->bIsExpanded = bExpanded;
+	ExpansionMap.FindOrAdd(Item.Get()) = bExpanded;
 }
 TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 {
@@ -372,14 +402,9 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 	return FLGUIEditorModule::Get().MakeEditorToolsMenu(false, false, true, false, false, false);
 }
 
-void SLexWidgetEditorHierarchyView::GetExpandWidgets(TArray<ULexWidget*>& OutExpandActors)
+void SLexWidgetEditorHierarchyView::GetExpandWidgets(TSet<TWeakObjectPtr<ULexWidget>>& OutExpandWidgets)
 {
-	TSet< TWeakObjectPtr<ULexWidget> > ExpandedItems;
-	WidgetTreeView->GetExpandedItems(ExpandedItems);
-	for (auto Item : ExpandedItems)
-	{
-		OutExpandActors.Add(Item.Get());
-	}
+	WidgetTreeView->GetExpandedItems(OutExpandWidgets);
 }
 
 void SLexWidgetEditorHierarchyView::UpdateItemsExpansionFromModel()
@@ -423,29 +448,36 @@ void SLexWidgetEditorHierarchyView::RecursiveExpand(ULexWidget* Widget, EExpandB
 	switch (ExpandBehavior)
 	{
 	case EExpandBehavior::NeverExpand:
-	{
-		bShouldExpandItem = false;
-	}
-	break;
+		{
+			bShouldExpandItem = false;
+		}
+		break;
 
 	case EExpandBehavior::RestoreFromPrevious:
-	{
-		bShouldExpandItem = ExpandedItemNames.Contains(Widget->GetName());
-	}
-	break;
+		{
+			bShouldExpandItem = ExpandedItemNames.Contains(Widget->GetName());
+		}
+		break;
 
 	case EExpandBehavior::AlwaysExpand:
-	{
-		bShouldExpandItem = true;
-	}
-	break;
+		{
+			bShouldExpandItem = true;
+		}
+		break;
 
 	case EExpandBehavior::FromModel:
 	default:
-	{
-		bShouldExpandItem = Widget->bIsExpanded;
-	}
-	break;
+		{
+			if (auto ValuePtr = ExpansionMap.Find(Widget))
+			{
+				bShouldExpandItem = *ValuePtr;
+			}
+			else
+			{
+				bShouldExpandItem = true;
+			}
+		}
+		break;
 	}
 
 	WidgetTreeView->SetItemExpansion(Widget, bShouldExpandItem);

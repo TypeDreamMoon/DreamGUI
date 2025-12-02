@@ -214,14 +214,6 @@ bool ULGUIPrefabManagerObject::GetIsBlueprintCompiling()
 	}
 	return false;
 }
-bool ULGUIPrefabManagerObject::GetIsProcessingDelete()
-{
-	if (InitCheck())
-	{
-		return Instance->bIsProcessingDelete;
-	}
-	return false;
-}
 
 void ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged()
 {

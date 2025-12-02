@@ -22,12 +22,16 @@ TWeakObjectPtr<ULexUIFontData_BaseObject> ULexText::CurrentUsingFontData = nullp
 #endif
 ULexText::ULexText(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
-#if WITH_EDITORONLY_DATA
+#if WITH_EDITOR
 	if (ULexText::CurrentUsingFontData.IsValid())
 	{
 		Font = CurrentUsingFontData.Get();
 	}
+	else
 #endif
+	{
+		Font = ULexUIFontData_BaseObject::GetDefaultFont();
+	}
 	CacheTextGeometryData = FLexUITextGeometryCache(this);
 	UIGeometry->bIsFont = true;
 }
@@ -350,83 +354,85 @@ void ULexText::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEven
 	auto Property = PropertyChangedEvent.Property;
 	if (MemberProperty != nullptr && Property != nullptr)
 	{
-		auto PropertyName = Property->GetFName();
-		auto MemberPropertyName = MemberProperty->GetFName();
-		if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, Text))
+		if (!this->GetName().StartsWith(TEXT("Default__")))
 		{
-			if (IsValid(Font))
+			auto MemberPropertyName = MemberProperty->GetFName();
+			if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, Text))
 			{
-				RegisterFont();
-			}
-			ConditionalUpdateCacheTextGeometry();
-		}
-		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, Font))
-		{
-			ULexText::CurrentUsingFontData = Font;
-			ClearEmojiObject();
-			ConditionalUpdateCacheTextGeometry();
-		}
-		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, bUseKerning))
-		{
-			MarkVertexPositionDirty();
-			CacheTextGeometryData.MarkDirty();
-		}
-		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, bListRichTextImageObjectInOutliner))
-		{
-			for (auto& imageObj : CreatedRichTextImageObjectArray)
-			{
-				if (IsValid(imageObj))
+				if (IsValid(Font))
 				{
-					auto bListedInSceneOutliner_Property = FindFProperty<FBoolProperty>(AActor::StaticClass(), TEXT("bListedInSceneOutliner"));
-					bListedInSceneOutliner_Property->SetPropertyValue_InContainer(imageObj->GetOwner(), bListRichTextImageObjectInOutliner);
+					RegisterFont();
+				}
+				ConditionalUpdateCacheTextGeometry();
+			}
+			else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, Font))
+			{
+				ULexText::CurrentUsingFontData = Font;
+				ClearEmojiObject();
+				ConditionalUpdateCacheTextGeometry();
+			}
+			else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, bUseKerning))
+			{
+				MarkVertexPositionDirty();
+				CacheTextGeometryData.MarkDirty();
+			}
+			else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, bListRichTextImageObjectInOutliner))
+			{
+				for (auto& imageObj : CreatedRichTextImageObjectArray)
+				{
+					if (IsValid(imageObj))
+					{
+						auto bListedInSceneOutliner_Property = FindFProperty<FBoolProperty>(AActor::StaticClass(), TEXT("bListedInSceneOutliner"));
+						bListedInSceneOutliner_Property->SetPropertyValue_InContainer(imageObj->GetOwner(), bListRichTextImageObjectInOutliner);
+					}
+				}
+#if WITH_EDITOR
+				ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();
+#endif
+			}
+			else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, bRichText))
+			{
+				if (bRichText)
+				{
+					ConditionalUpdateCacheTextGeometry();
+				}
+				else
+				{
+					ClearCreatedRichTextImageObject();
 				}
 			}
-#if WITH_EDITOR
-			ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();
-#endif
+			else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, RichTextImageData))
+			{
+				UnregisterOnRichTextImageDataChange();
+				if (!IsValid(RichTextImageData))//clear richTextImageData, then need to delete created object
+				{
+					ClearCreatedRichTextImageObject();
+				}
+				else
+				{
+					ConditionalUpdateCacheTextGeometry();
+				}
+			}
+			else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, RichTextTagFilterFlags))
+			{
+				if (!(RichTextTagFilterFlags & (1 << (int)ELexUIText_RichTextTagFilterFlags::Image)))
+				{
+					ClearCreatedRichTextImageObject();
+				}
+				else
+				{
+					ConditionalUpdateCacheTextGeometry();
+				}
+			}
+			else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, RichTextCustomStyleData))
+			{
+				if (IsValid(RichTextCustomStyleData))
+				{
+					RegisterOnRichTextCustomStyleDataChange();
+				}
+			}
+			ULexWidget::MarkLayoutForRebuild(GetWidget());
 		}
-		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, bRichText))
-		{
-			if (bRichText)
-			{
-				ConditionalUpdateCacheTextGeometry();
-			}
-			else
-			{
-				ClearCreatedRichTextImageObject();
-			}
-		}
-		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, RichTextImageData))
-		{
-			UnregisterOnRichTextImageDataChange();
-			if (!IsValid(RichTextImageData))//clear richTextImageData, then need to delete created object
-			{
-				ClearCreatedRichTextImageObject();
-			}
-			else
-			{
-				ConditionalUpdateCacheTextGeometry();
-			}
-		}
-		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, RichTextTagFilterFlags))
-		{
-			if (!(RichTextTagFilterFlags & (1 << (int)ELexUIText_RichTextTagFilterFlags::Image)))
-			{
-				ClearCreatedRichTextImageObject();
-			}
-			else
-			{
-				ConditionalUpdateCacheTextGeometry();
-			}
-		}
-		else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, RichTextCustomStyleData))
-		{
-			if (IsValid(RichTextCustomStyleData))
-			{
-				RegisterOnRichTextCustomStyleDataChange();
-			}
-		}
-		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 }

@@ -194,15 +194,13 @@ namespace LGUIPrefabSystem8
 		if (bIsEditorOrRuntime)
 		{
 			InPrefab->BinaryData = ToBinary;
-			InPrefab->ThumbnailDirty = true;
+			InPrefab->bThumbnailDirty = true;
 			InPrefab->CreateTime = FDateTime::UtcNow();
 
 			//clear old reference data
 			InPrefab->ReferenceAssetList.Empty();
 			InPrefab->ReferenceClassList.Empty();
 			InPrefab->ReferenceNameList.Empty();
-			InPrefab->ReferenceTextList.Empty();
-			InPrefab->ReferenceStringList.Empty();
 			//fill new reference data
 			InPrefab->ReferenceAssetList = this->ReferenceAssetList;
 			InPrefab->ReferenceClassList = this->ReferenceClassList;

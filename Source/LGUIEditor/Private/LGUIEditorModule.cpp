@@ -618,7 +618,7 @@ bool FLGUIEditorModule::CanUnpackActorForPrefab()
 {
 	auto SelectedActor = LGUIEditorTools::GetFirstSelectedActor();
 	if (SelectedActor == nullptr)return false;
-	if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
+	if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
 	{
 		if (PrefabHelperObject->SubPrefabMap.Contains(SelectedActor))
 		{
@@ -639,7 +639,7 @@ bool FLGUIEditorModule::CanBrowsePrefab()
 {
 	auto SelectedActor = LGUIEditorTools::GetFirstSelectedActor();
 	if (SelectedActor == nullptr)return false;
-	if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
+	if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
 	{
 		if (PrefabHelperObject->SubPrefabMap.Contains(SelectedActor))
 		{
@@ -657,7 +657,7 @@ bool FLGUIEditorModule::CanUpdateLevelPrefab()
 {
 	auto SelectedActor = LGUIEditorTools::GetFirstSelectedActor();
 	if (SelectedActor == nullptr)return false;
-	if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
+	if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
 	{
 		if (PrefabHelperObject->SubPrefabMap.Contains(SelectedActor) && !PrefabHelperObject->IsInsidePrefabEditor())//Can only update prefab in level editor
 		{
@@ -675,7 +675,7 @@ ECheckBoxState FLGUIEditorModule::GetAutoUpdateLevelPrefab()const
 {
 	auto SelectedActor = LGUIEditorTools::GetFirstSelectedActor();
 	if (SelectedActor == nullptr)return ECheckBoxState::Undetermined;
-	if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
+	if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
 	{
 		if (auto SubPrefabDataPtr = PrefabHelperObject->SubPrefabMap.Find(SelectedActor))
 		{
@@ -697,7 +697,7 @@ bool FLGUIEditorModule::CanCheckPrefabOverrideParameter()const
 {
 	auto SelectedActor = LGUIEditorTools::GetFirstSelectedActor();
 	if (SelectedActor == nullptr)return false;
-	if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
+	if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
 	{
 		for (auto& KeyValue : PrefabHelperObject->SubPrefabMap)
 		{
@@ -719,7 +719,7 @@ bool FLGUIEditorModule::CanReplaceActor()
 	auto SelectedActor = LGUIEditorTools::GetFirstSelectedActor();
 	if (SelectedActor == nullptr)return false;
 	if (!LGUIEditorTools::IsActorCompatibleWithLGUIToolsMenu(SelectedActor))return false;
-	if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
+	if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
 	{
 		if (PrefabHelperObject->IsActorBelongsToSubPrefab(SelectedActor))//sub prefab's actor not allow replace
 		{
@@ -739,7 +739,7 @@ bool FLGUIEditorModule::CanCreatePrefab()
 	if (SelectedActor == nullptr)return false;
 	if (!LGUIEditorTools::IsActorCompatibleWithLGUIToolsMenu(SelectedActor))return false;
 	if (SelectedActor->HasAnyFlags(EObjectFlags::RF_Transient))return false;
-	if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
+	if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
 	{
 		if (PrefabHelperObject->LoadedRootActor == SelectedActor)
 		{
@@ -761,7 +761,7 @@ void FLGUIEditorModule::MarkOutlinerSelectionChange()
 {
 	auto SelectedActor = LGUIEditorTools::GetFirstSelectedActor();
 	if (SelectedActor == nullptr)return;
-	auto NewPrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
+	auto NewPrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
 	if (CurrentPrefabHelperObject != NewPrefabHelperObject)
 	{
 		CurrentPrefabHelperObject = NewPrefabHelperObject;

@@ -41,10 +41,6 @@ public:
 				{
 					PropertyHandle->SetValue((uint8)NewValue);
 				})
-				+ SSegmentedControl<ELexLayoutFlexBoxDirectionType>::Slot(ELexLayoutFlexBoxDirectionType::None)
-				//.Text(LOCTEXT("None", "N"))
-				.Icon(FLGUIEditorStyle::Get().GetBrush("WidgetSize_Off"))
-				.ToolTip(LOCTEXT("LayoutDirectionNone_Tooltip", "None"))
 				+ SSegmentedControl<ELexLayoutFlexBoxDirectionType>::Slot(ELexLayoutFlexBoxDirectionType::Horizontal)
 				.Icon(FLGUIEditorStyle::Get().GetBrush("LayoutDirection_Horizontal"))
 				.ToolTip(LOCTEXT("LayoutDirectionHorizontal_Tooltip", "Horizontal"))

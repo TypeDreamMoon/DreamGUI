@@ -64,7 +64,7 @@ void FLGUIPrefabThumbnailScene::SpawnPreviewActor()
 				}
 				RootActor->AttachToComponent(AgentRootActor->GetLexWidget(), FAttachmentTransformRules::KeepRelativeTransform);
 				RootCanvas->MarkCanvasUpdate(true, true, true, true);
-				RootCanvas->SetRenderMode(ELexRenderMode::WorldSpace);
+				RootCanvas->SetRenderMode((ELexRenderMode)CurrentPrefab->PrefabDataForPrefabEditor.CanvasRenderMode);
 
 				if (PrefabRootUIItem)
 				{
@@ -155,7 +155,7 @@ bool FLGUIPrefabThumbnailScene::IsValidForVisualization()
 	}
 	if (PreviewActorsBound.ContainsNaN())
 	{
-		UE_LOG(LGUIEditor, Warning, TEXT("[FLGUIPrefabThumbnailScene::IsValidForVisualization]prefab:%s bounds is invalid!"), *(CurrentPrefab->GetPathName()));
+		UE_LOG(LGUIEditor, Warning, TEXT("[%s].%d Prefab:'%s' bounds is invalid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(CurrentPrefab->GetPathName()));
 		return false;
 	}
 	return true;
@@ -185,14 +185,14 @@ void FLGUIPrefabThumbnailScene::SetPrefab(class ULGUIPrefab* Prefab)
 	}
 	if (CurrentPrefab.IsValid() && IsValid(Prefab))
 	{
-		if (CurrentPrefab == Prefab && !CurrentPrefab->ThumbnailDirty)
+		if (CurrentPrefab == Prefab && !CurrentPrefab->bThumbnailDirty)
 		{
 			return;
 		}
 		ClearOldActors();
 	}
 	CurrentPrefab = Prefab;
-	CurrentPrefab->ThumbnailDirty = false;
+	CurrentPrefab->bThumbnailDirty = false;
 	if (IsValid(Prefab))
 	{
 		SpawnPreviewActor();

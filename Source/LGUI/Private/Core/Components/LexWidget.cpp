@@ -546,6 +546,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 				}
 			}
 			MarkDimensionChanged(false, true, true);//change Visual could cause LayoutSelf size change
+			MarkLayoutForRebuild(this);
 		}
 		else if (MemberName == LayoutContainerName)
 		{
@@ -562,6 +563,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 				LayoutContainer->UpdateLayout();
 			}
 			MarkDimensionChanged(false, true, true);//change LayoutContainer could cause LayoutSelf size change
+			MarkLayoutForRebuild(this);
 		}
 		else if (MemberName == LayoutSelfName)
 		{
@@ -2483,8 +2485,8 @@ void ULexWidget::MarkLayoutForRebuild(const ULexWidget* InWidget)
 			if (auto ParentLayout = ParentWidget->GetLayoutContainer())
 			{
 				auto ControlChildAnchor = ParentLayout->GetLayoutControlAnchor(TargetWidget);
-				//auto ControlSelfAnchor = ParentLayout->GetLayoutControlAnchor(ParentWidget);
-				if (ControlChildAnchor.AnyControl())//parent layout can control itself and children, then move up 
+				auto ControlSelfAnchor = ParentLayout->GetLayoutControlAnchor(ParentWidget);
+				if (ControlChildAnchor.AnyControl() && ControlSelfAnchor.AnyControl())//parent layout can control itself and children, then move up 
 				{
 					TargetWidget = ParentWidget;
 					continue;

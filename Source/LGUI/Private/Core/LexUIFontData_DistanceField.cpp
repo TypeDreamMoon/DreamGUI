@@ -516,30 +516,7 @@ void ULexUIFontData_DistanceField::PushCharData(
 void ULexUIFontData_DistanceField::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
-	if (auto Property = PropertyChangedEvent.Property)
-	{
-		auto PropertyName = Property->GetFName();
-		if (
-			PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_DistanceField, SampleFontSize)
-			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_DistanceField, SDFRadius)
-			)
-		{
-			ReloadFont();
-		}
-		if (
-			PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_DistanceField, ItalicAngle)
-			|| PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIFontData_DistanceField, BoldRatio)
-			)
-		{
-			for (auto& textItem : RenderTextArray)
-			{
-				if (textItem.IsValid())
-				{
-					textItem->ApplyFontMaterialChange();
-				}
-			}
-		}
-	}
+	ReloadFont();
 }
 #endif
 

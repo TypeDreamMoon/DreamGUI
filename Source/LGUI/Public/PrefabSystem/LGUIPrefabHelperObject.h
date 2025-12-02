@@ -152,5 +152,8 @@ private:
 	void OnNewVersionDismissClicked(AActor* InPrefabRootActor);
 	void OnNewVersionUpdateAllClicked();
 	void OnNewVersionDismissAllClicked();
+
+public:
+	static ULGUIPrefabHelperObject* GetPrefabHelperObject_WhichManageThisActor(AActor* InActor);
 #endif
 };

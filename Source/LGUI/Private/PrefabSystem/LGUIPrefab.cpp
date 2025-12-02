@@ -616,8 +616,6 @@ void ULGUIPrefab::CopyDataTo(ULGUIPrefab* TargetPrefab)
 	TargetPrefab->ReferenceAssetList = this->ReferenceAssetList;
 	TargetPrefab->ReferenceClassList = this->ReferenceClassList;
 	TargetPrefab->ReferenceNameList = this->ReferenceNameList;
-	TargetPrefab->ReferenceStringList = this->ReferenceStringList;
-	TargetPrefab->ReferenceTextList = this->ReferenceTextList;
 	TargetPrefab->BinaryData = this->BinaryData;
 	TargetPrefab->PrefabVersion = this->PrefabVersion;
 	TargetPrefab->EngineMajorVersion = this->EngineMajorVersion;

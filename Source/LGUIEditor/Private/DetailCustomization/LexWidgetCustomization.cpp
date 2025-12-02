@@ -72,7 +72,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			{
 				if (ValidItem->GetWorld()->WorldType == EWorldType::Editor)
 				{
-					if (auto PrefabHelper = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(ValidItem->GetOwner()))
+					if (auto PrefabHelper = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(ValidItem->GetOwner()))
 					{
 						bIsSubPrefab = PrefabHelper->IsActorBelongsToSubPrefab(ValidItem->GetOwner());
 					}
@@ -732,7 +732,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		bool bIsInsidePrefabEditor = false;
 		if (TargetScriptArray.Num() > 0 && TargetScriptArray[0].IsValid())
 		{
-			if (auto PrefabHelperObject = LGUIEditorTools::GetPrefabHelperObject_WhichManageThisActor(TargetScriptArray[0]->GetOwner()))
+			if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(TargetScriptArray[0]->GetOwner()))
 			{
 				if (PrefabHelperObject->IsInsidePrefabEditor())
 				{

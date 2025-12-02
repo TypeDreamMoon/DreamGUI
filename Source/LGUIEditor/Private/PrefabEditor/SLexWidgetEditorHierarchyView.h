@@ -35,7 +35,7 @@ public:
 	TWeakObjectPtr<ULexWidget> SetSelectionByNodeObject(ULexWidget* Element);
 	void SetSelectionsByNodeObjects(const TArray<TWeakObjectPtr<ULexWidget>>& ElementArray);
 	void ClearSelection();
-	void GetExpandWidgets(TArray<ULexWidget*>& OutExpandActors);
+	void GetExpandWidgets(TSet<TWeakObjectPtr<ULexWidget>>& OutExpandWidgets);
 
 	TWeakObjectPtr<ULexWidget> DragingItem;
 private:
@@ -88,6 +88,7 @@ protected:
 	TSharedPtr<class SSearchBox> SearchBoxPtr;
 	/** The filter used by the search box */
 	TSharedPtr<WidgetTextFilter> SearchBoxWidgetFilter;
+	TMap<ULexWidget*, bool> ExpansionMap;
 
 	/** Has a full refresh of the tree been requested?  This happens when the user is filtering the tree */
 	bool bRefreshRequested;

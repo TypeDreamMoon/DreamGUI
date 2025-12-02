@@ -11,7 +11,6 @@ class ULexWidget;
 UENUM(BlueprintType, Category = LGUI)
 enum class ELexLayoutFlexBoxDirectionType :uint8
 {
-	None,
 	Horizontal,
 	HorizontalReverse,
 	Vertical,
@@ -78,7 +77,7 @@ private:
 	 * Direction defines the primary axis, if Direction is Horizontal or HorizontalReversed then secondary axis would be vertical.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", meta = (AllowPrivateAccess = true))
-	ELexLayoutFlexBoxDirectionType Direction = ELexLayoutFlexBoxDirectionType::None;
+	ELexLayoutFlexBoxDirectionType Direction = ELexLayoutFlexBoxDirectionType::Horizontal;
 	/**
 	 * Controls whether the container is single-line or multi-line, and the direction of the secondary-axis, which determines the direction new lines are stacked in.
 	 */

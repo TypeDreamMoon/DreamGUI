@@ -75,7 +75,6 @@ public:
 	static void UpdateLevelPrefab();
 	static void ToggleLevelPrefabAutoUpdate();
 	static void CleanupPrefabsInWorld(UWorld* World);
-	static ULGUIPrefabHelperObject* GetPrefabHelperObject_WhichManageThisActor(AActor* InActor);
 	static bool IsSelectUIActor();
 	static bool IsCanvasActor(AActor* InActor);
 	static int GetDrawcallCount(AActor* InActor);
