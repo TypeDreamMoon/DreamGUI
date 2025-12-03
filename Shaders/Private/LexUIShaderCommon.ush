@@ -1,5 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 #include "/Engine/Private/Common.ush"
+#include "/Engine/Public/Platform.ush"
 
 struct FLexUIVertexFactoryInterpolantsVSToPS
 {
@@ -8,7 +9,7 @@ struct FLexUIVertexFactoryInterpolantsVSToPS
     //float4 TangentToWorld0 : TEXCOORD3;
     //float4 TangentToWorld2 : TEXCOORD4;
 	
-    float4 Color : COLOR0;
+    HALF4_TYPE Color : COLOR0;
 
 #if NUM_TEX_COORD_INTERPOLATORS
 	float4	TexCoords[(NUM_TEX_COORD_INTERPOLATORS + 1) / 2]	: TEXCOORD0;
@@ -36,30 +37,30 @@ void SetUV(inout FLexUIVertexFactoryInterpolantsVSToPS Interpolants, int UVIndex
 }
 #endif
 
-float4 GetColor(FLexUIVertexFactoryInterpolantsVSToPS Interpolants)
+HALF4_TYPE GetColor(FLexUIVertexFactoryInterpolantsVSToPS Interpolants)
 {
 	return Interpolants.Color;
 }
 
-void SetColor(inout FLexUIVertexFactoryInterpolantsVSToPS Interpolants, float4 InValue)
+void SetColor(inout FLexUIVertexFactoryInterpolantsVSToPS Interpolants, HALF4_TYPE InValue)
 {
 	Interpolants.Color = InValue;
 }
 
-float4 GetTangentToWorld2(FLexUIVertexFactoryInterpolantsVSToPS Interpolants)
+HALF4_TYPE GetTangentToWorld2(FLexUIVertexFactoryInterpolantsVSToPS Interpolants)
 {
     return Interpolants.TangentToWorld2;
 }
 
-float4 GetTangentToWorld0(FLexUIVertexFactoryInterpolantsVSToPS Interpolants)
+HALF4_TYPE GetTangentToWorld0(FLexUIVertexFactoryInterpolantsVSToPS Interpolants)
 {
     return Interpolants.TangentToWorld0;
 }
 
 void SetTangents(inout FLexUIVertexFactoryInterpolantsVSToPS Interpolants, float3 InTangentToWorld0, float3 InTangentToWorld2, float InTangentToWorldSign)
 {
-    Interpolants.TangentToWorld0 = float4(InTangentToWorld0, 0);
-    Interpolants.TangentToWorld2 = float4(InTangentToWorld2, InTangentToWorldSign);
+    Interpolants.TangentToWorld0 = HALF4_TYPE(InTangentToWorld0, 0);
+    Interpolants.TangentToWorld2 = HALF4_TYPE(InTangentToWorld2, InTangentToWorldSign);
 }
 
 half3x3 CalcTangentToLocal(HALF3_TYPE TangentInputX, HALF4_TYPE TangentInputZ, out float TangentSign)

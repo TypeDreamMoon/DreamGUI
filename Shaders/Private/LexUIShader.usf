@@ -280,4 +280,8 @@ void MainPS(
 #endif
 	OutColor.a = lerp(_SceneDepthBlend * OutColor.a, OutColor.a, DepthFadeValue);
 #endif
+
+#if MATERIALBLENDING_ALPHACOMPOSITE
+	OutColor.rgb *= OutColor.a;
+#endif
 }
