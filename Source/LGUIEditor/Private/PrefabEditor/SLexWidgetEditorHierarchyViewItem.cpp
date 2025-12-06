@@ -299,21 +299,7 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 				.ColorAndOpacity(FSlateColor::UseForeground())
 				.Image_Lambda([=, this]()
 				{
-					if (!Widget.IsValid())return (const FSlateBrush*)nullptr;
-					
-#define RETURN_BRUSH(Class)\
-if (Widget->GetOwner()->FindComponentByClass<Class>())\
-{\
-	return *FLGUIEditorModule::Get().InteractableClassIconMap.Find(Class::StaticClass());\
-}
-					RETURN_BRUSH(UUITextInputComponent);
-					RETURN_BRUSH(UUIButtonComponent);
-					RETURN_BRUSH(UUIToggleComponent);
-					RETURN_BRUSH(UUISliderComponent);
-					RETURN_BRUSH(UUIScrollbarComponent);
-					RETURN_BRUSH(UUIDropdownComponent);
-					RETURN_BRUSH(UUIScrollViewComponent);
-					return (const FSlateBrush*)nullptr;
+					return FLGUIEditorModule::Get().GetVisualIconBrush(Widget.Get());
 				})
 			]
 

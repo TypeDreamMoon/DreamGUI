@@ -3,7 +3,6 @@
 #include "SLexWidgetHierarchyPickerView.h"
 #include "LGUIPrefabEditor.h"
 #include "SLexWidgetHierarchyPickerViewItem.h"
-#include "Core/Actor/LexWidgetActor.h"
 #include "Widgets/Layout/SScrollBorder.h"
 #include "Widgets/Input/SSearchBox.h"
 #include "Core/Components/LexRectBlock.h"
@@ -72,57 +71,42 @@ void SLexWidgetHierarchyPickerView::RefreshImmediately()
 void SLexWidgetHierarchyPickerView::RefreshTree()
 {
 	RootWidgets.Empty();
-	RootWidgets.Add(MakeShared<SLexWidgetHierarchyPickerView_DataItem>(Manager.Pin()->GetLoadedRootActor()->GetActorLabel(), Manager.Pin()->GetLoadedRootActor()));
+	if (auto RootItem = Cast<ULexWidget>(Manager.Pin()->GetLoadedRootActor()->GetRootComponent()))
+	{
+		RootWidgets.Add(MakeShared<FLexWidgetHierarchyPickerView_DataItem>(Manager.Pin()->GetLoadedRootActor()->GetActorLabel(), RootItem));
+	}
 
 	struct LOCAL
 	{
 		static void CollectChildren(DataType InParent, UClass* InObjectClass)
 		{
-			if (InParent->Object->IsA(InObjectClass))
+			if (InParent->Widget->GetOwner()->IsA(InObjectClass))
 			{
+				InParent->ValidObjectArray.Add(InParent->Widget->GetOwner());
 				InParent->bContainsValidObject = true;
 			}
-			TArray< DataType > OutChildren;
-			if (auto WidgetActor = Cast<ALexWidgetActor>(InParent->Object))
+			
+			ForEachObjectWithOuter(InParent->Widget->GetOwner(), [=](UObject* SubObject)
 			{
-				auto CompArray = WidgetActor->GetComponents();
-				for (auto& Comp : CompArray)
+				if (SubObject->IsA(InObjectClass))
 				{
-					if(Comp->HasAnyFlags(EObjectFlags::RF_Transient))continue;
-					if (Comp->IsVisualizationComponent())continue;
-					OutChildren.Add(MakeShared<SLexWidgetHierarchyPickerView_DataItem>(Comp->GetName(), Comp));
-				}
-				auto& Children = WidgetActor->GetLexWidget()->GetUIChildren();
-				for (auto& Child : Children)
-				{
-					OutChildren.Add(MakeShared<SLexWidgetHierarchyPickerView_DataItem>(Child->GetOwner()->GetActorLabel(), Child->GetOwner()));
-				}
-			}
-			else if (auto Comp = Cast<UActorComponent>(InParent->Object))
-			{
-				ForEachObjectWithOuter(Comp, [&](UObject* Object)
-				{
-					if (Object->GetClass()->IsChildOf(InObjectClass))
-					{
-						OutChildren.Add(MakeShared<SLexWidgetHierarchyPickerView_DataItem>(Object->GetName(), Object));
-					}
-				});
-			}
-			for (int i = 0; i < OutChildren.Num(); i++)
-			{
-				auto Child = OutChildren[i];
-				CollectChildren(Child, InObjectClass);
-				if (Child->bContainsValidObject)
-				{
+					InParent->ValidObjectArray.Add(SubObject);
 					InParent->bContainsValidObject = true;
 				}
-				else
+			});
+
+			auto WidgetChildren = InParent->Widget->GetUIChildren();
+			for (int i = 0; i < WidgetChildren.Num(); i++)
+			{
+				auto ChildWidget = WidgetChildren[i];
+				auto ChildData = MakeShared<FLexWidgetHierarchyPickerView_DataItem>(ChildWidget->GetDisplayName(), ChildWidget);
+				CollectChildren(ChildData, InObjectClass);
+				if (ChildData->bContainsValidObject)
 				{
-					OutChildren.RemoveAt(i);
-					i--;
+					InParent->bContainsValidObject = true;
+					InParent->Children.Add(ChildData);
 				}
 			}
-			InParent->Children = OutChildren;
 		}
 	};
 	LOCAL::CollectChildren(RootWidgets[0], ObjectClass);
@@ -143,6 +127,7 @@ void SLexWidgetHierarchyPickerView::RebuildTreeView()
 		.OnGenerateRow(this, &SLexWidgetHierarchyPickerView::OnGenerateRow)
 		.OnSelectionChanged(this, &SLexWidgetHierarchyPickerView::OnSelectionChanged)
 		.OnSetExpansionRecursive(this, &SLexWidgetHierarchyPickerView::SetItemExpansionRecursive)
+		.SelectionMode(ESelectionMode::Type::Single)
 		.TreeItemsSource(&TreeRootWidgets)
 		//.OnMouseButtonClick(this, &SLexWidgetHierarchyView::WidgetHierarchy_OnMouseClick)
 		;
@@ -163,19 +148,13 @@ void SLexWidgetHierarchyPickerView::RebuildTreeView()
 TSharedRef< ITableRow > SLexWidgetHierarchyPickerView::OnGenerateRow(DataType InItem, const TSharedRef<STableViewBase>& OwnerTable)
 {
 	return SNew(SLexWidgetHierarchyPickerViewItem, OwnerTable, InItem, Manager.Pin(), ObjectClass)
-		.IsEnabled(InItem->Object->IsA(ObjectClass))
+		.OnSelectObject(OnSelectItem)
+		.IsEnabled(InItem->ValidObjectArray.Num() > 0)
 		;
 }
 void SLexWidgetHierarchyPickerView::OnSelectionChanged(DataType SelectedItem, ESelectInfo::Type SelectInfo)
 {
-	if (SelectedItem == nullptr)
-	{
-		OnSelectItem.ExecuteIfBound(nullptr);
-	}
-	else
-	{
-		OnSelectItem.ExecuteIfBound(SelectedItem->Object.Get());
-	}
+	
 }
 void SLexWidgetHierarchyPickerView::OnGetChildren(DataType InParent, TArray< DataType >& OutChildren)
 {

@@ -1123,6 +1123,25 @@ void FLGUIEditorModule::CreateUIElementSubMenu(FMenuBuilder& MenuBuilder)
 	MenuBuilder.EndSection();
 }
 
+const FSlateBrush* FLGUIEditorModule::GetVisualIconBrush(ULexWidget* Widget)
+{
+	if (!IsValid(Widget))return nullptr;
+					
+#define RETURN_BRUSH(Class)\
+if (Widget->GetOwner()->FindComponentByClass<Class>())\
+{\
+return *InteractableClassIconMap.Find(Class::StaticClass());\
+}
+	RETURN_BRUSH(UUITextInputComponent);
+	RETURN_BRUSH(UUIButtonComponent);
+	RETURN_BRUSH(UUIToggleComponent);
+	RETURN_BRUSH(UUISliderComponent);
+	RETURN_BRUSH(UUIScrollbarComponent);
+	RETURN_BRUSH(UUIDropdownComponent);
+	RETURN_BRUSH(UUIScrollViewComponent);
+	return nullptr;
+}
+
 bool FLGUIEditorModule::IsValidClassName(const FString& InName)
 {
 	return 

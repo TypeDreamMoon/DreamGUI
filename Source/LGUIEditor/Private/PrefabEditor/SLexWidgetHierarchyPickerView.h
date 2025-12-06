@@ -11,17 +11,27 @@
 class FLGUIPrefabEditor;
 class ULexWidget;
 
-struct SLexWidgetHierarchyPickerView_DataItem
+struct FLexWidgetHierarchyPickerView_ValidObjectData
+{
+	TArray<TWeakObjectPtr<UObject>> ValidObjectArray;
+	TArray<FLexWidgetHierarchyPickerView_ValidObjectData> ChildDataArray;
+};
+
+struct FLexWidgetHierarchyPickerView_DataItem
 {
 	FString DisplayText;
-	TWeakObjectPtr<UObject> Object;
+	TWeakObjectPtr<ULexWidget> Widget;
 	bool bContainsValidObject = false;
-	TArray<TSharedPtr<SLexWidgetHierarchyPickerView_DataItem>> Children;
+	TArray<TSharedPtr<FLexWidgetHierarchyPickerView_DataItem>> Children;
+	TArray<TWeakObjectPtr<UObject>> ValidObjectArray;
 
-	SLexWidgetHierarchyPickerView_DataItem(FString InDisplayText, TWeakObjectPtr<UObject> InObject)
+	TSharedPtr<FLexWidgetHierarchyPickerView_ValidObjectData> ValidActor;
+	TArray<TSharedPtr<FLexWidgetHierarchyPickerView_ValidObjectData>> ValidComponentArray;
+
+	FLexWidgetHierarchyPickerView_DataItem(FString InDisplayText, TWeakObjectPtr<ULexWidget> InWidget)
 	{
 		this->DisplayText = InDisplayText;
-		this->Object = InObject;
+		this->Widget = InWidget;
 	}
 };
 
@@ -30,7 +40,7 @@ DECLARE_DELEGATE_OneParam(FOnSelectItem, UObject*);
 class SLexWidgetHierarchyPickerView : public SCompoundWidget
 {
 public:
-	typedef TSharedPtr<SLexWidgetHierarchyPickerView_DataItem> DataType;
+	typedef TSharedPtr<FLexWidgetHierarchyPickerView_DataItem> DataType;
 	typedef TTextFilter<DataType> WidgetTextFilter;
 public:
 	SLATE_BEGIN_ARGS(SLexWidgetHierarchyPickerView)
@@ -72,8 +82,8 @@ protected:
 	/** The filter used by the search box */
 	TSharedPtr<WidgetTextFilter> SearchBoxWidgetFilter;
 
-	bool bRefreshRequested;
+	bool bRefreshRequested = true;
 	FOnSelectItem OnSelectItem;
-	UClass* ObjectClass;
+	UClass* ObjectClass = nullptr;
 };
 

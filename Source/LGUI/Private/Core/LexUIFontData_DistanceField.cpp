@@ -21,7 +21,8 @@ ULexUIFontData_DistanceField::ULexUIFontData_DistanceField()
 	InitialSize = ELexUIAtlasTextureSizeType::SIZE_1024x1024;
 	RectPackCellSize = 1024;
 
-	PresetMaterials.Add(LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/TextEffects/MI_DropShadow")));
+	PresetMaterials.Add(LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/TextEffects/MI_DropShadowSoft")));
+	PresetMaterials.Add(LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/TextEffects/MI_DropShadowHard")));
 	PresetMaterials.Add(LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/TextEffects/MI_Outline")));
 	PresetMaterials.Add(LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/TextEffects/MI_OutlineOnly")));
 }

@@ -10,6 +10,7 @@
 #include "IDetailsView.h"
 #include "PropertyHandle.h"
 
+class ULexWidget;
 class FToolBarBuilder;
 class FMenuBuilder;
 DECLARE_LOG_CATEGORY_EXTERN(LGUIEditor, Log, All);
@@ -26,14 +27,15 @@ public:
 	virtual void ShutdownModule() override;
 
 	static FLGUIEditorModule& Get();
-
-	TMap<UClass*, const FSlateBrush*> InteractableClassIconMap;
+	
 	TSharedRef<SWidget> MakeEditorToolsMenu(bool InitialSetup, bool ComponentAction, bool OpenWindow, bool PreviewInViewport, bool EditorCameraControl, bool Others);
 	TSharedPtr<class FUICommandList> PluginCommands;
 	TArray<TSharedPtr<class FAssetTypeActions_Base>> AssetTypeActionsArray;
 	void MarkOutlinerSelectionChange();
 	DECLARE_EVENT(FLGUIEditorModule, FOnHierarchyChanged);
 	FOnHierarchyChanged OnHierarchyChanged;
+
+	const FSlateBrush* GetVisualIconBrush(ULexWidget* Widget);
 private:
 
 	bool IsValidClassName(const FString& InName);
@@ -69,6 +71,8 @@ private:
 
 	void ApplyLGUIColumnInfo(bool value, bool refreshSceneOutliner);
 	TWeakObjectPtr<class ULGUIPrefabHelperObject> CurrentPrefabHelperObject;
+
+	TMap<UClass*, const FSlateBrush*> InteractableClassIconMap;
 private:
 	TSharedRef<SDockTab> HandleSpawnDynamicSpriteAtlasViewerTab(const FSpawnTabArgs& SpawnTabArgs);
 	TSharedRef<SDockTab> HandleSpawnLGUIPrefabSequenceTab(const FSpawnTabArgs& SpawnTabArgs);

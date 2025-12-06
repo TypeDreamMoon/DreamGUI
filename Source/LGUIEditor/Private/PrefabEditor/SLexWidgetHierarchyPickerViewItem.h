@@ -14,16 +14,20 @@ class FLGUIPrefabEditor;
 class SLexWidgetHierarchyPickerViewItem : public STableRow<SLexWidgetHierarchyPickerView::DataType>
 {
 public:
+	DECLARE_DELEGATE_OneParam(FOnSelectObject, UObject*);
+	
 	SLATE_BEGIN_ARGS(SLexWidgetHierarchyPickerViewItem) {}
+		SLATE_EVENT(FOnSelectObject, OnSelectObject)
 	SLATE_END_ARGS()
 	void Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& InOwnerTableView, SLexWidgetHierarchyPickerView::DataType InModel
 		, TSharedPtr<FLGUIPrefabEditor> InManager, UClass* InObjectClass);
 
-private:
-	FText GetItemText() const;
-	FText GetTypeText() const;
-	
+	virtual ~SLexWidgetHierarchyPickerViewItem();
+
+private:	
 	TWeakPtr<SLexWidgetEditorHierarchyView> HierarchyView;
 	TWeakPtr<FLGUIPrefabEditor> Manager;
 	SLexWidgetHierarchyPickerView::DataType Model;
+	TSharedPtr<SMenuAnchor> MenuAnchor;
+	FMenuBuilder* MenuBuilder = nullptr;
 };

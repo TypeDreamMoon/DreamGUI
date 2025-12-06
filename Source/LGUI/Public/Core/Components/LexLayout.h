@@ -53,7 +53,7 @@ struct FLexLayoutControlAnchorData
 	}
 };
 
-UCLASS(BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)
+UCLASS(Abstract, DefaultToInstanced, EditInlineNew)
 class LGUI_API ULexLayout : public ULexWidgetSubObjectBehaviour
 {
 	GENERATED_BODY()
@@ -90,7 +90,7 @@ protected:
  * LayoutSelf can handle self size.
  * This base class just provide IgnoreLayout.
  */
-UCLASS(BlueprintType, DefaultToInstanced, EditInlineNew, DisplayName="LayoutSelf")
+UCLASS(BlueprintType, DefaultToInstanced, EditInlineNew)
 class LGUI_API ULexLayoutSelf : public ULexLayout
 {
 	GENERATED_BODY()
