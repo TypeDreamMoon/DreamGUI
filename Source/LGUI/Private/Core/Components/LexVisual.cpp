@@ -87,6 +87,15 @@ void ULexVisual::BeginPlay()
 	bTransformChanged = true;
 }
 
+void ULexVisual::BeginDestroy()
+{
+	Super::BeginDestroy();
+	if (auto Widget = GetWidget())
+	{
+		Widget->RemoveVisual();
+	}
+}
+
 #if WITH_EDITOR
 void ULexVisual::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {

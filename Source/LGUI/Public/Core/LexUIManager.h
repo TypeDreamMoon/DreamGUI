@@ -194,7 +194,7 @@ public:
 	static bool RaycastHitUI(UWorld* InWorld, const TArray<ULexWidget*>& InWidgets, const FVector& LineStart, const FVector& LineEnd
 		, ULexWidget*& ResultSelectTarget, int& InOutTargetIndexInHitArray
 	);
-	void DrawFrameOnWidget(ULexWidget* InItem, bool ScreenOrWorld = false);
+	static void DrawFrameOnWidget(ULexWidget* InItem, bool ScreenOrWorld = false);
 	void DrawNavigationArrow(UWorld* InWorld, const TArray<FVector>& InControlPoints, const FVector& InArrowPointA, const FVector& InArrowPointB, FColor const& InColor, void* Object, const FString& DebugName, bool ScreenOrWorld = false);
 	void DrawNavigationVisualizerOnUISelectable(UWorld* InWorld, UUISelectableComponent* InSelectable, bool IsScreenSpace = false);
 	FEditorViewportClient* GetEditorViewportClient();
@@ -225,4 +225,6 @@ public:
 	static void AddLexUIBehaviourForLifecycleEvent(ULexUIBehaviour* InComp);
 	static void AddLexUIBehavioursForUpdate(ULexUIBehaviour* InComp);
 	static void RemoveLexUIBehavioursFromUpdate(ULexUIBehaviour* InComp);
+	static void AddLexUIBehavioursForStart(ULexUIBehaviour* InComp);
+	static void RemoveLexUIBehavioursFromStart(ULexUIBehaviour* InComp);
 };

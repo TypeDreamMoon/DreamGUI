@@ -13,6 +13,14 @@ void ULexLayoutSelfAspectRatio::CalculateSize()
     bIsCalculatingSize = true;
     switch (AspectRatioType)
     {
+    case ELexLayoutAspectRatioType::None:
+#if WITH_EDITOR
+    	if (GetWorld() && !GetWorld()->IsGameWorld())//editor mode will set AspectRatio to Width/Height
+    	{
+    		AspectRatio = Widget->GetWidth() / Widget->GetHeight();
+    	}
+#endif
+    	break;
     case ELexLayoutAspectRatioType::HeightControlWidth:
     	{
     		auto Width = Widget->GetHeight() * AspectRatio;

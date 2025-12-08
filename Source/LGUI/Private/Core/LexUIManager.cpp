@@ -187,7 +187,7 @@ ULexUIEditorManagerObject::ULexUIEditorManagerObject()
 			ULexUIManagerWorldSubsystem::RefreshAllUI();
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditor_ReplaceObjectPropertyForApplyOrRevert.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, FName& InPropertyName) {
-			if (auto Widget = Cast<ULexWidget>(InObject))
+			if (InObject->IsA<ULexWidget>())
 			{
 				if (InPropertyName == USceneComponent::GetRelativeLocationPropertyName())
 				{
@@ -1093,8 +1093,8 @@ TArray<ULexUIManagerWorldSubsystem*> ULexUIManagerWorldSubsystem::InstanceArray;
 bool ULexUIManagerWorldSubsystem::bIsPlaying = false;
 #endif
 
-DECLARE_CYCLE_STAT(TEXT("LGUILifeCycleBehaviour Update"), STAT_LGUILifeCycleBehaviourUpdate, STATGROUP_LGUI);
-DECLARE_CYCLE_STAT(TEXT("LGUILifeCycleBehaviour Start"), STAT_LGUILifeCycleBehaviourStart, STATGROUP_LGUI);
+DECLARE_CYCLE_STAT(TEXT("LexUIBehaviour Update"), STAT_LexUIBehaviourUpdate, STATGROUP_LGUI);
+DECLARE_CYCLE_STAT(TEXT("LexUIBehaviour Start"), STAT_LexUIBehaviourStart, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("Canvas Update"), STAT_UpdateCanvas, STATGROUP_LGUI);
 void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 {
@@ -1108,31 +1108,33 @@ void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 			if (this->GetWorld()->WorldType == EWorldType::Game
 				|| this->GetWorld()->WorldType == EWorldType::PIE
 				|| this->GetWorld()->WorldType == EWorldType::Editor
-				|| this->GetWorld()->WorldType == EWorldType::EditorPreview
+				// || this->GetWorld()->WorldType == EWorldType::EditorPreview
 				)
 			{
-				auto DrawFrame = [this](const TArray<TWeakObjectPtr<ULexCanvas>>& CanvasArray) {
-					for (auto& Canvas : CanvasArray)
+				struct LOCAL
+				{
+					static void ForEachWidget(ULexWidget* Widget)
 					{
-						auto& WidgetArray = Canvas->GetWidgetArray();
-						for (auto& Widget : WidgetArray)
-						{
-							if (!IsValid(Widget))continue;
+						if (!IsValid(Widget))return;
 
-							bool bIsScreenSpace = false;
-							if (Widget->GetWorld()->IsGameWorld())
-							{
-								auto RenderCanvas = Widget->GetRenderCanvas();
-								bIsScreenSpace = RenderCanvas->IsRenderToScreenSpace() || RenderCanvas->IsRenderToRenderTarget();
-							}
-							DrawFrameOnWidget(Widget, bIsScreenSpace);
+						bool bIsScreenSpace = false;
+						if (Widget->GetWorld()->IsGameWorld())
+						{
+							auto RenderCanvas = Widget->GetRenderCanvas();
+							bIsScreenSpace = RenderCanvas->IsRenderToScreenSpace() || RenderCanvas->IsRenderToRenderTarget();
+						}
+						DrawFrameOnWidget(Widget, bIsScreenSpace);
+
+						for (auto& Child : Widget->GetUIChildren())
+						{
+							ForEachWidget(Child);
 						}
 					}
-					};
-				DrawFrame(ScreenSpaceCanvasArray);
-				DrawFrame(WorldSpaceUECanvasArray);
-				DrawFrame(WorldSpaceLexCanvasArray);
-				DrawFrame(RenderTargetSpaceLexUICanvasArray);
+				};
+				for (auto Widget : AllRootWidgetArray)
+				{
+					LOCAL::ForEachWidget(Widget.Get());
+				}
 			}
 		}
 
@@ -1171,12 +1173,12 @@ void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 		}
 	}
 
-	//LGUILifeCycleBehaviour start
+	//LexUIBehaviour start
 	{
 		if (LexUIBehavioursForStart.Num() > 0)
 		{
 			bIsExecutingStart = true;
-			SCOPE_CYCLE_COUNTER(STAT_LGUILifeCycleBehaviourStart);
+			SCOPE_CYCLE_COUNTER(STAT_LexUIBehaviourStart);
 			for (int i = 0; i < LexUIBehavioursForStart.Num(); i++)
 			{
 				auto item = LexUIBehavioursForStart[i];
@@ -1194,12 +1196,12 @@ void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 		}
 	}
 
-	//LGUILifeCycleBehaviour update
+	//LexUIBehaviour update
 	{
 		bIsExecutingUpdate = true;
 		auto bIsGamePaused = GetWorld()->IsPaused();
 		auto Settings = GetDefault<ULexUISettings>();
-		SCOPE_CYCLE_COUNTER(STAT_LGUILifeCycleBehaviourUpdate);
+		SCOPE_CYCLE_COUNTER(STAT_LexUIBehaviourUpdate);
 		for (int i = 0; i < LexUIBehavioursForUpdate.Num(); i++)
 		{
 			CurrentExecutingUpdateIndex = i;
@@ -1372,22 +1374,82 @@ void ULexUIManagerWorldSubsystem::RemoveLexUIBehavioursFromUpdate(ULexUIBehaviou
 			}
 			else
 			{
-				UE_LOG(LGUI, Warning, TEXT("[ULGUIManagerWorldSubsystem::RemoveLGUILifeCycleBehavioursFromUpdate]Not exist, comp:%s"), *(InComp->GetPathName()));
+				UE_LOG(LGUI, Warning, TEXT("[%s].%d Not exist, comp:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(InComp->GetPathName()));
 			}
 
 			//cleanup array
-			int inValidCount = 0;
+			int InvalidCount = 0;
 			for (int i = updateArray.Num() - 1; i >= 0; i--)
 			{
 				if (!updateArray[i].IsValid())
 				{
 					updateArray.RemoveAt(i);
+					InvalidCount++;
+				}
+			}
+			if (InvalidCount > 0)
+			{
+				UE_LOG(LGUI, Warning, TEXT("[%s].%d Cleanup %d invalid LexUIBehaviour"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, InvalidCount);
+			}
+		}
+	}
+}
+void ULexUIManagerWorldSubsystem::AddLexUIBehavioursForStart(ULexUIBehaviour* InComp)
+{
+	if (IsValid(InComp))
+	{
+		if (auto Instance = GetInstance(InComp->GetWorld()))
+		{
+			int32 index = INDEX_NONE;
+			if (!Instance->LexUIBehavioursForStart.Find(InComp, index))
+			{
+				Instance->LexUIBehavioursForStart.Add(InComp);
+				return;
+			}
+			UE_LOG(LGUI, Warning, TEXT("[%s].%d Already exist, comp:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(InComp->GetPathName()));
+		}
+	}
+}
+void ULexUIManagerWorldSubsystem::RemoveLexUIBehavioursFromStart(ULexUIBehaviour* InComp)
+{
+	if (IsValid(InComp))
+	{
+		if (auto Instance = GetInstance(InComp->GetWorld()))
+		{
+			auto& startArray = Instance->LexUIBehavioursForStart;
+			int32 index = INDEX_NONE;
+			if (startArray.Find(InComp, index))
+			{
+				if (Instance->bIsExecutingStart)
+				{
+					if (!InComp->bIsStartCalled)//if already called start then nothing to do, because start array will be cleared after execute start
+					{
+						startArray.RemoveAt(index);//not execute start yet, safe to remove
+					}
+				}
+				else
+				{
+					startArray.RemoveAt(index);//not executing start, safe to remove
+				}
+			}
+			else
+			{
+				UE_LOG(LGUI, Warning, TEXT("[%s].%d Not exist, comp:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(InComp->GetPathName()));
+			}
+
+			//cleanup array
+			int inValidCount = 0;
+			for (int i = startArray.Num() - 1; i >= 0; i--)
+			{
+				if (!startArray[i].IsValid())
+				{
+					startArray.RemoveAt(i);
 					inValidCount++;
 				}
 			}
 			if (inValidCount > 0)
 			{
-				UE_LOG(LGUI, Warning, TEXT("[ULGUIManagerWorldSubsystem::RemoveLGUILifeCycleBehavioursFromUpdate]Cleanup %d invalid LGUILifeCycleBehaviour"), inValidCount);
+				UE_LOG(LGUI, Warning, TEXT("[%s].%d Cleanup %d invalid LexUIBehaviour"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, inValidCount);
 			}
 		}
 	}

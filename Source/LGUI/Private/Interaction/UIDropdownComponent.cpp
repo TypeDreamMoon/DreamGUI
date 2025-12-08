@@ -8,6 +8,7 @@
 #include "Core/Components/LexImage.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexText.h"
+#include "Core/Components/LexVisualEmpty.h"
 #include "Interaction/UIButtonComponent.h"
 #if WITH_EDITOR
 #include "Utils/LexUIUtils.h"
@@ -88,27 +89,28 @@ void UUIDropdownComponent::Show()
 	//show list
 	ListRoot->SetWidgetActive(true);
 	ShowOrHideTweener = ListRoot->RenderOpacityTo(1, 0.3f, 0, ELTweenEase::OutCubic);
-	auto canvasOnListRoot = ListRoot->GetOwner()->FindComponentByClass<ULexCanvas>();
-	if (!IsValid(canvasOnListRoot))
+	auto CanvasOnListRoot = ListRoot->GetOwner()->FindComponentByClass<ULexCanvas>();
+	if (!IsValid(CanvasOnListRoot))
 	{
-		canvasOnListRoot = NewObject<ULexCanvas>(ListRoot.Get());
-		canvasOnListRoot->RegisterComponent();
+		CanvasOnListRoot = NewObject<ULexCanvas>(ListRoot.Get());
+		CanvasOnListRoot->RegisterComponent();
+		ListRoot->GetOwner()->AddInstanceComponent(CanvasOnListRoot);
 	}
 
-	bool sortOrderSet = false;
+	bool bSortOrderSet = false;
 	if (BlockerActor.IsValid())
 	{
 		if (auto blockerCanvas = BlockerActor->FindComponentByClass<ULexCanvas>())
 		{
-			canvasOnListRoot->SetSortOrder(blockerCanvas->GetSortOrder() + 1, true);
-			sortOrderSet = true;
+			CanvasOnListRoot->SetSortOrder(blockerCanvas->GetSortOrder() + 1, true);
+			bSortOrderSet = true;
 		}
 	}
-	if(!sortOrderSet)
+	if(!bSortOrderSet)
 	{
-		canvasOnListRoot->SetSortOrderToHighestOfHierarchy(true);
+		CanvasOnListRoot->SetSortOrderToHighestOfHierarchy(true);
 	}
-	canvasOnListRoot->SetOverrideSorting(true);
+	CanvasOnListRoot->SetOverrideSorting(true);
 
 	//create list item as options
 	if (!ItemTemplate.IsValid())
@@ -130,83 +132,83 @@ void UUIDropdownComponent::Show()
 	}
 
 	//set position
-	auto tempVerticalPosition = VerticalPosition;
-	auto tempHorizontalPosition = HorizontalPosition;
-	if (tempVerticalPosition == EUIDropdownVerticalPosition::Automatic
-		|| tempHorizontalPosition == EUIDropdownHorizontalPosition::Automatic
+	auto TempVerticalPosition = VerticalPosition;
+	auto TempHorizontalPosition = HorizontalPosition;
+	if (TempVerticalPosition == EUIDropdownVerticalPosition::Automatic
+		|| TempHorizontalPosition == EUIDropdownHorizontalPosition::Automatic
 		)
 	{
-		//search up til find clipped canvas, or root canvas
-		auto clipUIItem = GetWidget();
+		//search up til find clipped widget, if not found then use root widget
+		auto ClipWidget = GetWidget();
 		while (true)
 		{
-			if (clipUIItem->GetClipping() != ELexWidgetClipping::Disabled)
+			if (ClipWidget->GetClipping() != ELexWidgetClipping::Disabled)
 			{
 				break;
 			}
 			else
 			{
-				auto upperCanvas = clipUIItem->GetUIParent();
-				if (!upperCanvas)
+				auto ParentWidget = ClipWidget->GetUIParent();
+				if (!ParentWidget)
 				{
 					break;
 				}
 				else
 				{
-					clipUIItem = upperCanvas;
+					ClipWidget = ParentWidget;
 				}
 			}
 		}
 
-		FTransform selfToClipSpaceTf;
-		auto inverseClipSpaceTf = clipUIItem->GetComponentTransform().Inverse();
-		FTransform::Multiply(&selfToClipSpaceTf, &GetWidget()->GetComponentTransform(), &inverseClipSpaceTf);
-		if (tempVerticalPosition == EUIDropdownVerticalPosition::Automatic)
+		FTransform SelfToClipSpaceTf;
+		auto InverseClipSpaceTf = ClipWidget->GetComponentTransform().Inverse();
+		FTransform::Multiply(&SelfToClipSpaceTf, &GetWidget()->GetComponentTransform(), &InverseClipSpaceTf);
+		if (TempVerticalPosition == EUIDropdownVerticalPosition::Automatic)
 		{
 			//convert top point position from drop-down's self to root ui space, and tell if it is inside root rect
-			FVector listBottomInClipSpace;
+			FVector ListBottomInClipSpace;
 			if (VerticalOverlap)
 			{
-				auto selfTop = GetWidget()->GetLocalSpaceTop();
-				auto listBottomInSelfSpace = selfTop - ListRoot->GetHeight();
-				listBottomInClipSpace = selfToClipSpaceTf.TransformPosition(FVector(0, 0, listBottomInSelfSpace));
+				auto SelfTop = GetWidget()->GetLocalSpaceTop();
+				auto ListBottomInSelfSpace = SelfTop - ListRoot->GetHeight();
+				ListBottomInClipSpace = SelfToClipSpaceTf.TransformPosition(FVector(0, 0, ListBottomInSelfSpace));
 			}
 			else
 			{
-				auto selfBottom = GetWidget()->GetLocalSpaceBottom();
-				auto listBottomInSelfSpace = selfBottom - ListRoot->GetHeight();
-				listBottomInClipSpace = selfToClipSpaceTf.TransformPosition(FVector(0, 0, listBottomInSelfSpace));
+				auto SelfBottom = GetWidget()->GetLocalSpaceBottom();
+				auto ListBottomInSelfSpace = SelfBottom - ListRoot->GetHeight();
+				ListBottomInClipSpace = SelfToClipSpaceTf.TransformPosition(FVector(0, 0, ListBottomInSelfSpace));
 			}
-			if (listBottomInClipSpace.Z < clipUIItem->GetLocalSpaceBottom())
+			if (ListBottomInClipSpace.Z < ClipWidget->GetLocalSpaceBottom())
 			{
-				tempVerticalPosition = EUIDropdownVerticalPosition::Top;
+				TempVerticalPosition = EUIDropdownVerticalPosition::Top;
 			}
 			else
 			{
-				tempVerticalPosition = EUIDropdownVerticalPosition::Bottom;//default is bottom
+				TempVerticalPosition = EUIDropdownVerticalPosition::Bottom;//default is bottom
 			}
 		}
-		if (tempHorizontalPosition == EUIDropdownHorizontalPosition::Automatic)
+		if (TempHorizontalPosition == EUIDropdownHorizontalPosition::Automatic)
 		{
-			auto selfRight = GetWidget()->GetLocalSpaceRight();
-			auto listRightInCanvasSpace = selfToClipSpaceTf.TransformPosition(FVector(0, selfRight + ListRoot->GetWidth(), 0));
-			if (listRightInCanvasSpace.Y > clipUIItem->GetLocalSpaceRight())
+			auto SelfRight = GetWidget()->GetLocalSpaceRight();
+			auto ListRightInCanvasSpace = SelfToClipSpaceTf.TransformPosition(FVector(0, SelfRight + ListRoot->GetWidth(), 0));
+			if (ListRightInCanvasSpace.Y > ClipWidget->GetLocalSpaceRight())
 			{
-				tempHorizontalPosition = EUIDropdownHorizontalPosition::Left;
+				TempHorizontalPosition = EUIDropdownHorizontalPosition::Left;
 			}
 			else
 			{
-				tempHorizontalPosition = EUIDropdownHorizontalPosition::Right;//default is right
+				TempHorizontalPosition = EUIDropdownHorizontalPosition::Right;//default is right
 			}
 		}
 	}
 
-	FVector2D pivot(0.5f, 0);
-	switch (tempVerticalPosition)
+	FVector2D Pivot(0.5f, 0);
+	switch (TempVerticalPosition)
 	{
 	case EUIDropdownVerticalPosition::Top:
 	{
-		pivot.Y = 0.0f;
+		Pivot.Y = 0.0f;
 		if (VerticalOverlap)
 		{
 			ListRoot->SetVerticalAnchorMinMax(FVector2D(0.0f, 0.0f), true);
@@ -218,12 +220,12 @@ void UUIDropdownComponent::Show()
 	}break;
 	case EUIDropdownVerticalPosition::Middle:
 	{
-		pivot.Y = 0.5f;
+		Pivot.Y = 0.5f;
 		ListRoot->SetVerticalAnchorMinMax(FVector2D(0.5f, 0.5f), true);
 	}break;
 	case EUIDropdownVerticalPosition::Bottom:
 	{
-		pivot.Y = 1.0f;
+		Pivot.Y = 1.0f;
 		if (VerticalOverlap)
 		{
 			ListRoot->SetVerticalAnchorMinMax(FVector2D(1.0f, 1.0f), true);
@@ -236,27 +238,27 @@ void UUIDropdownComponent::Show()
 	}
 	ListRoot->SetVerticalAnchoredPosition(0);
 
-	switch (tempHorizontalPosition)
+	switch (TempHorizontalPosition)
 	{
 	case EUIDropdownHorizontalPosition::Left:
 	{
-		pivot.X = 1.0f;
+		Pivot.X = 1.0f;
 		ListRoot->SetHorizontalAnchorMinMax(FVector2D(0.0f, 0.0f), true);
 	}break;
 	case EUIDropdownHorizontalPosition::Center:
 	{
-		pivot.X = 0.5f;
+		Pivot.X = 0.5f;
 		ListRoot->SetHorizontalAnchorMinMax(FVector2D(0.5f, 0.5f), true);
 	}break;
 	case EUIDropdownHorizontalPosition::Right:
 	{
-		pivot.X = 0.0f;
+		Pivot.X = 0.0f;
 		ListRoot->SetHorizontalAnchorMinMax(FVector2D(1.0f, 1.0f), true);
 	}break;
 	}
 	ListRoot->SetHorizontalAnchoredPosition(0);
 
-	ListRoot->SetPivot(pivot);
+	ListRoot->SetPivot(Pivot);
 }
 void UUIDropdownComponent::Hide()
 {
@@ -285,35 +287,36 @@ void UUIDropdownComponent::Hide()
 }
 void UUIDropdownComponent::CreateBlocker()
 {
-	auto blocker = this->GetWorld()->SpawnActor<ALexWidgetActor>();
+	auto WidgetActor = this->GetWorld()->SpawnActor<ALexWidgetActor>();
 #if WITH_EDITOR
-	blocker->SetActorLabel(TEXT("UIDropdown_Blocker"));
+	WidgetActor->SetActorLabel(TEXT("UIDropdown_Blocker"));
 #endif
-	auto blockerUIItem = blocker->GetLexWidget();
-	blockerUIItem->AttachToComponent(this->GetWidget()->GetRootCanvas()->GetLexWidget(), FAttachmentTransformRules::KeepRelativeTransform);
-	blockerUIItem->SetSizeDelta(FVector2D::ZeroVector);
-	blockerUIItem->SetAnchorMin(FVector2D(0.0f, 0.0f));
-	blockerUIItem->SetAnchorMax(FVector2D(1.0f, 1.0f));
-	auto blockerCanvas = NewObject<ULexCanvas>(blocker);
-	blockerCanvas->RegisterComponent();
-	blocker->AddInstanceComponent(blockerCanvas);
-	blockerCanvas->SetOverrideSorting(true);
-	blockerCanvas->SetSortOrderToHighestOfHierarchy();
-	blockerCanvas->SetTraceChannel(this->GetWidget()->GetRootCanvas()->GetTraceChannel());
-	auto blockerButton = NewObject<UUIButtonComponent>(blocker);
-	blockerButton->RegisterComponent();
-	blocker->AddInstanceComponent(blockerButton);
-	blockerButton->GetOnClickEvent().AddWeakLambda(this, [this] {
+	auto BlockerWidget = WidgetActor->GetLexWidget();
+	BlockerWidget->AttachToComponent(this->GetWidget()->GetRootCanvas()->GetLexWidget(), FAttachmentTransformRules::KeepRelativeTransform);
+	BlockerWidget->SetSizeDelta(FVector2D::ZeroVector);
+	BlockerWidget->SetAnchorMin(FVector2D(0.0f, 0.0f));
+	BlockerWidget->SetAnchorMax(FVector2D(1.0f, 1.0f));
+	BlockerWidget->CreateNewVisual<ULexVisualEmpty>();//Need visual to do raycast
+	auto BlockerCanvas = NewObject<ULexCanvas>(WidgetActor);
+	BlockerCanvas->RegisterComponent();
+	WidgetActor->AddInstanceComponent(BlockerCanvas);
+	BlockerCanvas->SetOverrideSorting(true);
+	BlockerCanvas->SetSortOrderToHighestOfHierarchy();
+	BlockerCanvas->SetTraceChannel(this->GetWidget()->GetRootCanvas()->GetTraceChannel());
+	auto BlockerButton = NewObject<UUIButtonComponent>(WidgetActor);
+	BlockerButton->RegisterComponent();
+	WidgetActor->AddInstanceComponent(BlockerButton);
+	BlockerButton->GetOnClickEvent().AddWeakLambda(this, [this] {
 		this->Hide();
 		});
-	BlockerActor = blocker;
+	BlockerActor = WidgetActor;
 }
 void UUIDropdownComponent::CreateListItems()
 {
 	auto ItemTemplateWidget = ItemTemplate->GetWidget();
 	if (!IsValid(ItemTemplateWidget))
 	{
-		UE_LOG(LGUI, Error, TEXT("[%s].%d ItemTemplate must be a UIItem!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		UE_LOG(LGUI, Error, TEXT("[%s].%d ItemTemplate must be a LexWidget!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
 	ItemTemplateWidget->SetWidgetActive(true);
@@ -334,31 +337,29 @@ void UUIDropdownComponent::CreateListItems()
 		CreatedItemArray.Add(script);
 	}
 	ItemTemplateWidget->SetWidgetActive(false);
-	// if (auto contentLayout = contentUIItem->GetOwner()->FindComponentByClass<UUILayoutBase>())
-	// {
-	// 	contentLayout->OnRebuildLayout();
-	// }
-	float heightOffset = 0;
-	if (auto viewportUIItem = ScrollViewContentWidget->GetUIParent())
+	
+	ScrollViewContentWidget->ForceUpdateLayout();
+	float HeightOffset = 0;
+	if (auto ViewportWidget = ScrollViewContentWidget->GetUIParent())
 	{
-		heightOffset = ListRoot->GetHeight() - viewportUIItem->GetHeight();
+		HeightOffset = ListRoot->GetHeight() - ViewportWidget->GetHeight();
 	}
 	//if content is larger smaller than MaxHeight, then make the ListRoot smaller too
-	if (ScrollViewContentWidget->GetHeight() + heightOffset < MaxHeight)
+	if (ScrollViewContentWidget->GetHeight() + HeightOffset < MaxHeight)
 	{
-		ListRoot->SetHeight(ScrollViewContentWidget->GetHeight() + heightOffset);
+		ListRoot->SetHeight(ScrollViewContentWidget->GetHeight() + HeightOffset);
 	}
-	//if content is bigger than MaxHeight, then make the ListRoot as MaxHeight, so the scollview will work
-	else if (ScrollViewContentWidget->GetHeight() + heightOffset > MaxHeight)
+	//if content is bigger than MaxHeight, then make the ListRoot as MaxHeight, so the scroll-view will work
+	else if (ScrollViewContentWidget->GetHeight() + HeightOffset > MaxHeight)
 	{
-		ListRoot->SetHeight(MaxHeight + heightOffset);
+		ListRoot->SetHeight(MaxHeight + HeightOffset);
 	}
 }
 FUIDropdownOptionData UUIDropdownComponent::GetOption(int index)const
 {
 	if (index >= Options.Num())
 	{
-		UE_LOG(LGUI, Error, TEXT("[%s]index: %d out of range: %d!"), ANSI_TO_TCHAR(__FUNCTION__), index, Options.Num());
+		UE_LOG(LGUI, Error, TEXT("[%s].%d index: %d out of range: %d!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, index, Options.Num());
 		return FUIDropdownOptionData();
 	}
 	return Options[index];
@@ -528,6 +529,12 @@ UUIDropdownItemComponent::UUIDropdownItemComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
+}
+
+void UUIDropdownItemComponent::Awake()
+{
+	Super::Awake();
+	this->SetCanExecuteUpdate(false);
 }
 
 void UUIDropdownItemComponent::Init(int32 Index, const FUIDropdownOptionData& Data, const TFunction<void()>& OnSelect)

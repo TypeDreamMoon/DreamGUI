@@ -530,7 +530,7 @@ bool ULGUIPrefabHelperObject::RefreshOnSubPrefabDirty(ULGUIPrefab* InSubPrefab, 
 
 			//apply override parameter.
 			{
-				//clear invaid first
+				//clear not valid objects first
 				for (int i = SubPrefabData.ObjectOverrideParameterArray.Num() - 1; i >= 0; i--)
 				{
 					auto& Item = SubPrefabData.ObjectOverrideParameterArray[i];

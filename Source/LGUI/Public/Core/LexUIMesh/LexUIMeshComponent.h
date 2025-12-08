@@ -83,7 +83,7 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FLexUIMeshSceneProxyCreateDeleteDelegate, c
 
 //LexUI render mesh
 //@todo: split this class to: one for UE renderer && one for LexUI renderer, will it be more efficient?
-UCLASS(ClassGroup = (LGUI), Blueprintable)
+UCLASS(ClassGroup = (LGUI))
 class LGUI_API ULexUIMeshComponent : public UMeshComponent
 {
 	GENERATED_BODY()

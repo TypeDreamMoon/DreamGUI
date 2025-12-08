@@ -47,13 +47,17 @@ protected:
 
 	uint8 bIsAwakeCalled : 1 = false;
 	uint8 bIsStartCalled : 1 = false;
+	uint8 bIsEnableCalled : 1 = false;
 	uint8 bCanExecuteUpdate : 1 = true;
+	uint8 bIsAddedToUpdate : 1 = false;
 	/** use this to tell if the class is compiled from blueprint, only blueprint can execute ReceiveXXX. */
 	uint8 bCanExecuteBlueprintEvent : 1;
 private:
 	friend class ULexUIManagerWorldSubsystem;
 	void Call_Awake();
+	void Call_OnEnable();
 	void Call_Start();
+	void Call_OnDisable();
 	UPROPERTY(Transient, Getter=GetWidget, DisplayName=Widget, BlueprintReadOnly, Category=LexUIBehaviour, meta=(AllowPrivateAccess=true))
 	mutable TObjectPtr<ULexWidget> CacheWidget = nullptr;
 	UPROPERTY(Transient, Getter=GetSceneComponent, DisplayName=SceneComponent, BlueprintReadOnly, Category=LexUIBehaviour, meta=(AllowPrivateAccess=true))
@@ -64,14 +68,18 @@ protected:
 	/**
 	 * This function is always called before any Start functions and also after a prefab is loaded.
 	 * This is a good replacement for BeginPlay in LexUI's Prefab workflow. Because Awake will execute after all prefab serialization and object reference is done.
-	 * NOTE!!! If RootComponent is UIItem: if UIItem is not "ActiveInHierarchy" during start up, then Awake is not called until "ActiveInHierarchy" becomes true.
+	 * NOTE!!! If RootComponent is LexWidget: if LexWidget is not "ActiveInHierarchy" during start up, then Awake is not called until "ActiveInHierarchy" becomes true.
 	 * Awake execute order in prefab: higher in hierarchy will execute earlier, so scripts on root actor will execute the first.
 	 */
 	virtual void Awake();
+	/** Executed after Awake when WidgetActiveInHierarchy is true, or when WidgetActiveInHierarchy become true. */
+	virtual void OnEnable();
 	/** Start is called before the first frame update. */
 	virtual void Start();
 	/** Update is called once per frame. */
 	virtual void Update(float DeltaTime);
+	/** Executed when WidgetActiveInHierarchy become false. */
+	virtual void OnDisable();
 
 	virtual void OnWidgetActiveChanged(bool WidgetActive);
 	virtual void OnTransformChanged();
@@ -101,10 +109,14 @@ protected:
 	 * Awake execute order in prefab: higher in hierarchy will execute earlier, so scripts on root actor will execute the first.
 	 */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Awake"), Category = "LexUIBehaviour")void ReceiveAwake();
+	/** Executed after Awake when WidgetActiveInHierarchy is true, or when WidgetActiveInHierarchy become true. */
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnEnable"), Category = "LexUIBehaviour")void ReceiveOnEnable();
 	/** Start is called before the first frame update. */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Start"), Category = "LexUIBehaviour")void ReceiveStart();
 	/** Update is called once per frame. */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Update"), Category = "LexUIBehaviour")void ReceiveUpdate(float DeltaTime);
+	/** Executed when WidgetActiveInHierarchy become false. */
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnDisable"), Category = "LGUILifeCycleBehaviour")void ReceiveOnDisable();
 
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnWidgetActiveChanged"), Category = "LexUIBehaviour") void ReceiveOnWidgetActiveChanged(bool WidgetActive);
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnTransformChanged"), Category = "LexUIBehaviour") void ReceiveOnTransformChanged();
@@ -120,7 +132,6 @@ protected:
 public:
 	/**
 	 * Set if this component can execute "Update" event or not. "CanExecuteUpdate" is true by default.
-	 * NOTE!!! This will not immediately affect "Update" event, "Update" event's state will only change after "Awake" "Start" "OnEnable" "OnDisable".
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LexUIBehaviour")
 		void SetCanExecuteUpdate(bool Value);

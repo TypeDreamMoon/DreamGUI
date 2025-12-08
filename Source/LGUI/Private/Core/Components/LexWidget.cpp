@@ -494,6 +494,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		static const FName RaycastableName = GET_MEMBER_NAME_CHECKED(ULexWidget, Raycastable);
 		static const FName ClippingName = GET_MEMBER_NAME_CHECKED(ULexWidget, Clipping);
 		static const FName ClippingCornerRadiusName = GET_MEMBER_NAME_CHECKED(ULexWidget, ClippingCornerRadius);
+		static const FName ClippingMarginName = GET_MEMBER_NAME_CHECKED(ULexWidget, ClippingMargin);
 		static const FName VisualName = GET_MEMBER_NAME_CHECKED(ULexWidget, Visual);
 		static const FName LayoutContainerName = GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutContainer);
 		static const FName LayoutSelfName = GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutSelf);
@@ -503,6 +504,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		if (MemberName == AnchorDataName
 		|| MemberName == WidgetActiveName
 		|| MemberName == ClippingCornerRadiusName
+		|| MemberName == ClippingMarginName
 		)
 		{
 			this->MarkAnchorDataChanged(true, true, true);
@@ -532,17 +534,20 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 				{
 					RenderCanvas->RegisterVisual(this, Visual->WidgetPropertyDataStartPosition);
 				}
-				if (GetWorld()->IsGameWorld())
+				if (auto World = GetWorld())
 				{
-					if (this->HasBegunPlay())
+					if (World->IsGameWorld())
 					{
-						Visual->BeginPlay();
+						if (this->HasBegunPlay())
+						{
+							Visual->BeginPlay();
+						}
+						Visual->Call_OnRegister();
 					}
-					Visual->Call_OnRegister();
-				}
-				else
-				{
-					Visual->Call_OnRegister();
+					else
+					{
+						Visual->Call_OnRegister();
+					}
 				}
 			}
 			MarkDimensionChanged(false, true, true);//change Visual could cause LayoutSelf size change
@@ -552,13 +557,16 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		{
 			if (IsValid(LayoutContainer))
 			{
-				if (GetWorld()->IsGameWorld())
+				if (auto World = GetWorld())
 				{
-					if (this->HasBegunPlay())
+					if (World->IsGameWorld())
 					{
-						LayoutContainer->BeginPlay();
+						if (this->HasBegunPlay())
+						{
+							LayoutContainer->BeginPlay();
+						}
+						LayoutContainer->Call_OnRegister();
 					}
-					LayoutContainer->Call_OnRegister();
 				}
 				LayoutContainer->UpdateLayout();
 			}
@@ -569,13 +577,16 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		{
 			if (IsValid(LayoutSelf))
 			{
-				if (GetWorld()->IsGameWorld())
+				if (auto World = GetWorld())
 				{
-					if (this->HasBegunPlay())
+					if (World->IsGameWorld())
 					{
-						LayoutSelf->BeginPlay();
+						if (this->HasBegunPlay())
+						{
+							LayoutSelf->BeginPlay();
+						}
+						LayoutSelf->Call_OnRegister();
 					}
-					LayoutSelf->Call_OnRegister();
 				}
 				LayoutSelf->UpdateLayout();
 			}
@@ -642,17 +653,20 @@ void ULexWidget::PreEditChange(FProperty* PropertyAboutToChange)
 				RenderCanvas->MarkVisualWillChange(Visual);
 				RenderCanvas->UnregisterVisual(this, Visual->WidgetPropertyDataStartPosition);
 			}
-			if (GetWorld()->IsGameWorld())
+			if (auto World = GetWorld())
 			{
-				if (this->HasBegunPlay())
+				if (World->IsGameWorld())
 				{
-					Visual->EndPlay();
+					if (this->HasBegunPlay())
+					{
+						Visual->EndPlay();
+					}
+					Visual->Call_OnUnregister();
 				}
-				Visual->Call_OnUnregister();
-			}
-			else
-			{
-				Visual->Call_OnUnregister();
+				else
+				{
+					Visual->Call_OnUnregister();
+				}
 			}
 			Visual->ConditionalBeginDestroy();
 		}
@@ -661,17 +675,20 @@ void ULexWidget::PreEditChange(FProperty* PropertyAboutToChange)
 	{
 		if (IsValid(LayoutContainer))
 		{
-			if (GetWorld()->IsGameWorld())
+			if (auto World = GetWorld())
 			{
-				if (this->HasBegunPlay())
+				if (World->IsGameWorld())
 				{
-					LayoutContainer->EndPlay();
+					if (this->HasBegunPlay())
+					{
+						LayoutContainer->EndPlay();
+					}
+					LayoutContainer->Call_OnUnregister();
 				}
-				LayoutContainer->Call_OnUnregister();
-			}
-			else
-			{
-				LayoutContainer->Call_OnUnregister();
+				else
+				{
+					LayoutContainer->Call_OnUnregister();
+				}
 			}
 			LayoutContainer->ConditionalBeginDestroy();
 		}
@@ -1026,6 +1043,10 @@ void ULexWidget::OnRegister()
 	{
 		LayoutContainer->Call_OnRegister();
 	}
+	if (IsValid(LayoutSelf))
+	{
+		LayoutSelf->Call_OnRegister();
+	}
 	if (IsValid(Visual))
 	{
 		Visual->Call_OnRegister();
@@ -1060,6 +1081,10 @@ void ULexWidget::OnUnregister()
 	if (IsValid(LayoutContainer))
 	{
 		LayoutContainer->Call_OnUnregister();
+	}
+	if (IsValid(LayoutSelf))
+	{
+		LayoutSelf->Call_OnUnregister();
 	}
 	if (IsValid(Visual))
 	{
@@ -1977,6 +2002,18 @@ void ULexWidget::UpdateVisual() const
 	}
 }
 
+void ULexWidget::ForceUpdateLayout() const
+{
+	if (IsValid(LayoutContainer))
+	{
+		LayoutContainer->UpdateLayout();
+	}
+	if (IsValid(LayoutSelf))
+	{
+		LayoutSelf->UpdateLayout();
+	}
+}
+
 void ULexWidget::SetRenderCanvas(ULexCanvas* InNewCanvas)
 {
 	auto OldRenderCanvas = RenderCanvas;
@@ -2731,26 +2768,53 @@ ULexVisual* ULexWidget::CreateNewVisual(TSubclassOf<ULexVisual> VisualClass)
 	}
 	if (IsValid(OldVisual))
 	{
-		if (GetWorld()->IsGameWorld())
+		if (auto World = GetWorld())
 		{
-			if (this->HasBegunPlay())
+			if (World->IsGameWorld())
 			{
-				OldVisual->EndPlay();
+				if (this->HasBegunPlay())
+				{
+					OldVisual->EndPlay();
+				}
 			}
 		}
-		OldVisual->OnUnregister();
+		OldVisual->Call_OnUnregister();
 	}
 	
 	NewVisual->Call_OnRegister();
-	if (GetWorld()->IsGameWorld())
+	if (auto World = GetWorld())
 	{
-		if (this->HasBegunPlay())
+		if (World->IsGameWorld())
 		{
-			NewVisual->BeginPlay();
+			if (this->HasBegunPlay())
+			{
+				NewVisual->BeginPlay();
+			}
 		}
 	}
 	Visual = NewVisual;
 	return NewVisual;
+}
+
+void ULexWidget::RemoveVisual()
+{
+	auto OldVisual = Visual;
+	Visual = nullptr;
+
+	if (IsValid(OldVisual))
+	{
+		if (auto World = GetWorld())
+		{
+			if (World->IsGameWorld())
+			{
+				if (this->HasBegunPlay())
+				{
+					OldVisual->EndPlay();
+				}
+			}
+		}
+		OldVisual->Call_OnUnregister();
+	}
 }
 
 ULexLayoutContainer* ULexWidget::CreateNewLayoutContainer(TSubclassOf<ULexLayoutContainer> LayoutClass)
@@ -2759,22 +2823,28 @@ ULexLayoutContainer* ULexWidget::CreateNewLayoutContainer(TSubclassOf<ULexLayout
 	auto NewLayout = NewObject<ULexLayoutContainer>(this, LayoutClass);
 	if (IsValid(OldLayout))
 	{
-		if (GetWorld()->IsGameWorld())
+		if (auto World = GetWorld())
 		{
-			if (this->HasBegunPlay())
+			if (World->IsGameWorld())
 			{
-				OldLayout->EndPlay();
+				if (this->HasBegunPlay())
+				{
+					OldLayout->EndPlay();
+				}
 			}
 		}
 		OldLayout->Call_OnUnregister();
 	}
 	
 	NewLayout->Call_OnRegister();
-	if (GetWorld()->IsGameWorld())
+	if (auto World = GetWorld())
 	{
-		if (this->HasBegunPlay())
+		if (World->IsGameWorld())
 		{
-			NewLayout->BeginPlay();
+			if (this->HasBegunPlay())
+			{
+				NewLayout->BeginPlay();
+			}
 		}
 	}
 	LayoutContainer = NewLayout;
@@ -2783,33 +2853,81 @@ ULexLayoutContainer* ULexWidget::CreateNewLayoutContainer(TSubclassOf<ULexLayout
 	return NewLayout;
 }
 
+void ULexWidget::RemoveLayoutContainer()
+{
+	auto OldLayout = LayoutContainer;
+	LayoutContainer = nullptr;
+
+	if (IsValid(OldLayout))
+	{
+		if (auto World = GetWorld())
+		{
+			if (World->IsGameWorld())
+			{
+				if (this->HasBegunPlay())
+				{
+					OldLayout->EndPlay();
+				}
+			}
+		}
+		OldLayout->Call_OnUnregister();
+	}
+}
+
 ULexLayoutSelf* ULexWidget::CreateNewLayoutSelf(TSubclassOf<ULexLayoutSelf> LayoutClass)
 {
 	auto OldLayout = LayoutSelf;
 	auto NewLayout = NewObject<ULexLayoutSelf>(this, LayoutClass);
 	if (IsValid(OldLayout))
 	{
-		if (GetWorld()->IsGameWorld())
+		if (auto World = GetWorld())
 		{
-			if (this->HasBegunPlay())
+			if (World->IsGameWorld())
 			{
-				OldLayout->EndPlay();
+				if (this->HasBegunPlay())
+				{
+					OldLayout->EndPlay();
+				}
 			}
 		}
 		OldLayout->Call_OnUnregister();
 	}
 	
 	NewLayout->Call_OnRegister();
-	if (GetWorld()->IsGameWorld())
+	if (auto World = GetWorld())
 	{
-		if (this->HasBegunPlay())
+		if (World->IsGameWorld())
 		{
-			NewLayout->BeginPlay();
+			if (this->HasBegunPlay())
+			{
+				NewLayout->BeginPlay();
+			}
 		}
 	}
 	LayoutSelf = NewLayout;
 	LayoutSelf->UpdateLayout();
 	return NewLayout;
+}
+
+void ULexWidget::RemoveLayoutSelf()
+{
+	auto OldLayout = LayoutSelf;
+	LayoutSelf = nullptr;
+
+	if (IsValid(OldLayout))
+	{
+		if (auto World = GetWorld())
+		{
+			if (World->IsGameWorld())
+			{
+				if (this->HasBegunPlay())
+				{
+					OldLayout->EndPlay();
+				}
+			}
+		}
+		OldLayout->Call_OnUnregister();
+	}
 }
 
 #if WITH_EDITOR

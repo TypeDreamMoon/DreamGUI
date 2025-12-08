@@ -25,7 +25,7 @@ public:
 	/**
 	 * Called when LGUIPrefab finish load. This is called later than BeginPlay.
 	 *		Awake execute order in prefab: higher in hierarchy will execute earlier, so scripts on root actor will execute the first. Actor execute first, then execute on component.
-	 *		And this Awake is execute later than LGUILifeCycleBehaviour's Awake when in same prefab.
+	 *		And this Awake is execute later than LexUIBehaviour's Awake when in same prefab.
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = LGUI)
 		void Awake();

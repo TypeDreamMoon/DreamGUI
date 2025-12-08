@@ -215,7 +215,7 @@ class LGUI_API UUIDropdownItemComponent : public ULexUIBehaviour, public ILexPoi
 
 public:
 	UUIDropdownItemComponent();
-
+	virtual void Awake()override;
 protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Dropdown")
 		TWeakObjectPtr<ULexText> Text;
@@ -235,12 +235,14 @@ protected:
 	 * @param Data Item's data.
 	 * @param OnSelectCallback Callback function that need to be executed by user, when select this item.
 	 */
-	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Init"), Category = "LGUI-Dropdown")void ReceiveInit(int32 Index, const FUIDropdownOptionData& Data, const FUIDropdownItem_OnSelect& OnSelectCallback);
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Init"), Category = "LGUI-Dropdown")
+	void ReceiveInit(int32 Index, const FUIDropdownOptionData& Data, const FUIDropdownItem_OnSelect& OnSelectCallback);
 	/**
 	 * Set this item's selection state.
 	 * When select other item, then need to de-select this one.
 	 */
-	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "SetSelectionState"), Category = "LGUI-Dropdown")void ReceiveSetSelectionState(bool InSelect);
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "SetSelectionState"), Category = "LGUI-Dropdown")
+	void ReceiveSetSelectionState(bool InSelect);
 public:
 	/**
 	 * Called by UIDropdownComponent when create a item. Use this to initialize.

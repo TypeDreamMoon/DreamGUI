@@ -1,10 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Interaction/UIScrollViewComponent.h"
-#include "LGUI.h"
 #include "LTweenManager.h"
-#include "Core/Actor/LexWidgetActor.h"
-#include "Utils/LexUIUtils.h"
 #include "Core/LexUISettings.h"
 
 void UUIScrollViewHelper::Awake()

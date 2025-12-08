@@ -1487,7 +1487,10 @@ void ULexCanvas::UpdateRootCanvasDrawCall()
 		for (int i = WidgetList.Num() - 1; i >= 0; i--)
 		{
 			auto& Widget = WidgetList[i];
-			Widget->UpdateLayout();
+			if (Widget->GetWidgetActiveInHierarchy() && Widget->GetRenderCanvas() == this)
+			{
+				Widget->UpdateLayout();
+			}
 		}
 		//update clip and geometry from head to tail
 		for (const auto& Widget : WidgetList)
@@ -2241,7 +2244,10 @@ void ULexCanvas::SetSortOrder(int32 InSortOrder, bool InPropagateToChildrenCanva
 			this->SortOrder = InSortOrder;
 		}
 
-		SortDrawCall();
+		if (CheckRootCanvas())
+		{
+			RootCanvas->bNeedToSortRenderPriority = true;
+		}
 	}
 }
 void ULexCanvas::SetSortOrderToHighestOfHierarchy(bool InPropagateToChildrenCanvas)

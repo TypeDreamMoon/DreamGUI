@@ -176,9 +176,14 @@ public:
 	/** Called by LexCanvas, when LexCanvas is unregistered on self actor */
 	void UnregisterRenderCanvas();
 
+	/** Called by LexCanvas to update layout */
 	void UpdateLayout()const;
+	/** Called by LexCanvas */
 	void UpdateClip(ULexUIDataAsTexture* ClipDataTexture, TArray<TSharedPtr<FLexUIClipData>>& ClipDataList);
+	/** Called by LexCanvas */
 	void UpdateVisual()const;
+	
+	void ForceUpdateLayout()const;
 protected:
 	void RenewRenderCanvasRecursive(ULexCanvas* InParentRenderCanvas);
 
@@ -380,6 +385,9 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition="Clipping!=ELexWidgetClipping::Disabled&&Clipping!=ELexWidgetClipping::Inherit"))
 	FVector4f ClippingCornerRadius = FVector4f::Zero();
+	/**
+	 * Expand clip area outward.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition="Clipping!=ELexWidgetClipping::Disabled&&Clipping!=ELexWidgetClipping::Inherit"))
 	FMargin ClippingMargin = FMargin(0);
 	/**
@@ -502,7 +510,9 @@ public:
 		static_assert(TPointerIsConvertibleFromTo<T, const ULexVisual>::Value, "'T' template parameter to CreateNewVisual must be derived from ULexVisual");
 		return (T*)CreateNewVisual(T::StaticClass());
 	}
-
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void RemoveVisual();
+	
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	ULexLayoutContainer* GetLayoutContainer()const { return LayoutContainer; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI", meta=(DeterminesOutputType="LayoutClass"))
@@ -513,6 +523,8 @@ public:
 		static_assert(TPointerIsConvertibleFromTo<T, const ULexLayoutContainer>::Value, "'T' template parameter to CreateNewLayoutContainer must be derived from ULexLayout");
 		return (T*)CreateNewLayoutContainer(T::StaticClass());
 	}
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void RemoveLayoutContainer();
 	
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	ULexLayoutSelf* GetLayoutSelf()const{return LayoutSelf;}
@@ -524,6 +536,8 @@ public:
 		static_assert(TPointerIsConvertibleFromTo<T, const ULexLayoutSelf>::Value, "'T' template parameter to CreateNewLayoutSelf must be derived from ULexLayout");
 		return (T*)CreateNewLayoutSelf(T::StaticClass());
 	}
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void RemoveLayoutSelf();
 
 	const TWeakPtr<FLexUIClipData>& GetClipData()const{return ClipData;}
 

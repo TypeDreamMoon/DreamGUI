@@ -6,6 +6,7 @@
 #include "Components/SceneComponent.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexWidget.h"
+#include "PrefabSystem/LGUIPrefabManager.h"
 
 ULexUIBehaviour::ULexUIBehaviour()
 {
@@ -94,8 +95,24 @@ bool ULexUIBehaviour::IsAllowToCallAwake() const
 	{
 		return Widget->GetWidgetActiveInHierarchy();
 	}
-	return false;
+	return true;
 }
+
+void ULexUIBehaviour::OnEnable()
+{
+	if (bCanExecuteBlueprintEvent)
+	{
+		ReceiveOnEnable();
+	}
+}
+void ULexUIBehaviour::OnDisable()
+{
+	if (bCanExecuteBlueprintEvent)
+	{
+		ReceiveOnDisable();
+	}
+}
+
 void ULexUIBehaviour::Awake()
 {
 	if (bCanExecuteBlueprintEvent)
@@ -147,6 +164,76 @@ void ULexUIBehaviour::Call_Awake()
 #endif
 	bIsAwakeCalled = true;
 	Awake();
+}
+
+void ULexUIBehaviour::Call_OnEnable()
+{
+#if WITH_EDITOR
+	if (!this->GetWorld()->IsGameWorld())//edit mode
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Should never reach this point!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
+		return;
+	}
+#endif
+#if !UE_BUILD_SHIPPING
+	if (bIsEnableCalled)
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d OnEnable already executed!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
+		return;
+	}
+#endif
+	bIsEnableCalled = true;
+
+	OnEnable();
+	if (!bIsStartCalled)
+	{
+		ULexUIManagerWorldSubsystem::AddLexUIBehavioursForStart(this);
+	}
+	else
+	{
+		if (bCanExecuteUpdate && !bIsAddedToUpdate)
+		{
+			bIsAddedToUpdate = true;
+			ULexUIManagerWorldSubsystem::AddLexUIBehavioursForUpdate(this);
+		}
+	}
+}
+
+void ULexUIBehaviour::Call_OnDisable()
+{
+#if WITH_EDITOR
+	if (!this->GetWorld()->IsGameWorld())//edit mode
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Should never reach this point!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
+		return;
+	}
+#endif
+#if !UE_BUILD_SHIPPING
+	if (!bIsEnableCalled)
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d OnEnable not executed!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
+		return;
+	}
+#endif
+	bIsEnableCalled = false;
+
+	OnDisable();
+	if (!bIsStartCalled)
+	{
+		ULexUIManagerWorldSubsystem::RemoveLexUIBehavioursFromStart(this);
+	}
+	else
+	{
+		if (bIsAddedToUpdate)
+		{
+			bIsAddedToUpdate = false;
+			ULexUIManagerWorldSubsystem::RemoveLexUIBehavioursFromUpdate(this);
+		}
+	}
 }
 
 void ULexUIBehaviour::Call_Start()
@@ -443,15 +530,55 @@ void ULexUIBehaviour::Call_OnWidgetActiveChanged(bool WidgetActive)
 		if (bIsAwakeCalled)
 		{
 			OnWidgetActiveChanged(WidgetActive);
-		}
-		else
-		{
-			auto ThisPtr = MakeWeakObjectPtr(this);
-			CallbacksBeforeAwake[(int)ECallbackFunctionType::OnWidgetActiveChanged] = [=]() {
-				if (ThisPtr.IsValid())
+			if (WidgetActive)
+			{
+				if (!bIsEnableCalled)
 				{
-					ThisPtr->OnWidgetActiveChanged(WidgetActive);
-				}};
+#if WITH_EDITOR
+					if (!this->GetWorld()->IsGameWorld())//edit mode
+					{
+
+					}
+					else
+#endif
+					{
+						Call_OnEnable();
+					}
+				}
+			}
+			else
+			{
+				if (bIsEnableCalled)
+				{
+#if WITH_EDITOR
+					if (!this->GetWorld()->IsGameWorld())//edit mode
+					{
+
+					}
+					else
+#endif
+					{
+						Call_OnDisable();
+					}
+				}
+			}
+		}
+		else//awake not called, should be the first time that get WidgetActive
+		{
+			if (auto PrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(this->GetWorld()))
+			{
+				if (!PrefabManager->IsPrefabSystemProcessingActor(this->GetOwner()))//If processing by prefab system, that means not finish deserialize yet, then not allowed to call Awake
+				{
+					if (WidgetActive)
+					{
+						Call_Awake();
+						if (!bIsEnableCalled)
+						{
+							Call_OnEnable();
+						}
+					}
+				}
+			}
 		}
 	}
 }

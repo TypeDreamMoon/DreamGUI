@@ -553,7 +553,7 @@ namespace LGUIPrefabSystem8
 							}
 							else if (auto Obj = Cast<UObject>(ExitObject))
 							{
-								Obj->MarkAsGarbage();
+								Obj->ConditionalBeginDestroy();
 								Obj->Rename(nullptr);
 							}
 							UE_LOG(LGUI, Warning, TEXT("[%s].%d Object '%s' already exist on outer '%s', will destroy and rename exiting one. Prefab: '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(ObjectData.ObjectName.ToString()), *(OuterObjectPtr->GetPathName()), *PrefabAssetPath);

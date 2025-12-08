@@ -86,10 +86,11 @@ bool FLexUIClipData::IsPointVisible(const FVector& WorldPoint) const
 	{
 		auto TargetWidget = TargetClip->Widget;
 		auto LocalPoint = TargetWidget->GetComponentTransform().InverseTransformPosition(WorldPoint);
-		if (LocalPoint.Y < Widget->GetLocalSpaceLeft())return false;
-		if (LocalPoint.Y > Widget->GetLocalSpaceRight())return false;
-		if (LocalPoint.Z < Widget->GetLocalSpaceBottom())return false;
-		if (LocalPoint.Z > Widget->GetLocalSpaceTop())return false;
+		auto ClippingMargin = TargetWidget->GetClippingMargin();
+		if (LocalPoint.Y < TargetWidget->GetLocalSpaceLeft() - ClippingMargin.Left)return false;
+		if (LocalPoint.Y > TargetWidget->GetLocalSpaceRight() + ClippingMargin.Right)return false;
+		if (LocalPoint.Z < TargetWidget->GetLocalSpaceBottom() - ClippingMargin.Bottom)return false;
+		if (LocalPoint.Z > TargetWidget->GetLocalSpaceTop() + ClippingMargin.Top)return false;
 		if (!IsPointVisible_CheckCornerRadius(FVector2D(LocalPoint.Y, LocalPoint.Z), TargetWidget.Get()))
 			return false;
 		if (!TargetClip->Parent.IsValid())
@@ -107,52 +108,65 @@ bool FLexUIClipData::IsPointVisible_CheckCornerRadius(const FVector2D& InLocalHi
 	auto CornerRadius = InWidget->GetClippingCornerRadius();
 	if (CornerRadius.X <= 0 && CornerRadius.Y <= 0 && CornerRadius.Z <= 0 && CornerRadius.W <= 0)
 		return true;
-	auto HalfWidth = InWidget->GetWidth() * 0.5f;
-	auto HalfHeight = InWidget->GetHeight() * 0.5f;
+	auto ClippingMargin = InWidget->GetClippingMargin();
+	auto HalfWidth = (InWidget->GetWidth() + ClippingMargin.Left + ClippingMargin.Right) * 0.5f;
+	auto HalfHeight = (InWidget->GetHeight() + ClippingMargin.Bottom + ClippingMargin.Top) * 0.5f;
 	auto MinSize = FMath::Min(HalfWidth, HalfHeight);
 	CornerRadius.X = FMath::Min(CornerRadius.X, MinSize);
 	CornerRadius.Y = FMath::Min(CornerRadius.Y, MinSize);
 	CornerRadius.Z = FMath::Min(CornerRadius.Z, MinSize);
 	CornerRadius.W = FMath::Min(CornerRadius.W, MinSize);
-	auto Radius = CornerRadius.X;
-	auto CenterPos = FVector2D(InWidget->GetLocalSpaceRight() - Radius, InWidget->GetLocalSpaceBottom() + Radius);
-	if (InLocalHitPoint.X > CenterPos.X && InLocalHitPoint.Y < CenterPos.Y)//right bottom area of rect
+	//right bottom area of rect
 	{
-		if (FVector2D::DistSquared(InLocalHitPoint, CenterPos) > Radius * Radius)
+		auto Radius = CornerRadius.X;
+		auto RoundCornerCenterPos = FVector2D(InWidget->GetLocalSpaceRight() + ClippingMargin.Right - Radius, InWidget->GetLocalSpaceBottom() - ClippingMargin.Bottom + Radius);
+		if (InLocalHitPoint.X > RoundCornerCenterPos.X && InLocalHitPoint.Y < RoundCornerCenterPos.Y)
 		{
-			return false;
+			if (FVector2D::DistSquared(InLocalHitPoint, RoundCornerCenterPos) > Radius * Radius)
+			{
+				return false;
+			}
+			return true;
 		}
-		return true;
 	}
-	Radius = CornerRadius.Y;
-	CenterPos = FVector2D(InWidget->GetLocalSpaceRight() - Radius, InWidget->GetLocalSpaceTop() - Radius);
-	if (InLocalHitPoint.X > CenterPos.X && InLocalHitPoint.Y > CenterPos.Y)//right top area of rect
+	//right top area of rect
 	{
-		if (FVector2D::DistSquared(InLocalHitPoint, CenterPos) > Radius * Radius)
+		auto Radius = CornerRadius.Y;
+		auto RoundCornerCenterPos = FVector2D(InWidget->GetLocalSpaceRight() + ClippingMargin.Right - Radius, InWidget->GetLocalSpaceTop() + ClippingMargin.Top - Radius);
+		if (InLocalHitPoint.X > RoundCornerCenterPos.X && InLocalHitPoint.Y > RoundCornerCenterPos.Y)
 		{
-			return false;
+			if (FVector2D::DistSquared(InLocalHitPoint, RoundCornerCenterPos) > Radius * Radius)
+			{
+				return false;
+			}
+			return true;
 		}
-		return true;
 	}
-	Radius = CornerRadius.Z;
-	CenterPos = FVector2D(InWidget->GetLocalSpaceLeft() + Radius, InWidget->GetLocalSpaceTop() - Radius);
-	if (InLocalHitPoint.X < CenterPos.X && InLocalHitPoint.Y > CenterPos.Y)//left top area of rect
+	//left top area of rect
 	{
-		if (FVector2D::DistSquared(InLocalHitPoint, CenterPos) > Radius * Radius)
+		auto Radius = CornerRadius.Z;
+		auto RoundCornerCenterPos = FVector2D(InWidget->GetLocalSpaceLeft() - ClippingMargin.Left + Radius, InWidget->GetLocalSpaceTop() + ClippingMargin.Top - Radius);
+		if (InLocalHitPoint.X < RoundCornerCenterPos.X && InLocalHitPoint.Y > RoundCornerCenterPos.Y)
 		{
-			return false;
+			if (FVector2D::DistSquared(InLocalHitPoint, RoundCornerCenterPos) > Radius * Radius)
+			{
+				return false;
+			}
+			return true;
 		}
-		return true;
 	}
-	Radius = CornerRadius.W;
-	CenterPos = FVector2D(InWidget->GetLocalSpaceLeft() + Radius, InWidget->GetLocalSpaceBottom() + Radius);
-	if (InLocalHitPoint.X < CenterPos.X && InLocalHitPoint.Y < CenterPos.Y)//left bottom area of rect
+	//left bottom area of rect
 	{
-		if (FVector2D::DistSquared(InLocalHitPoint, CenterPos) > Radius * Radius)
+		auto Radius = CornerRadius.W;
+		auto RoundCornerCenterPos = FVector2D(InWidget->GetLocalSpaceLeft() - ClippingMargin.Left + Radius, InWidget->GetLocalSpaceBottom() - ClippingMargin.Bottom + Radius);
+		if (InLocalHitPoint.X < RoundCornerCenterPos.X && InLocalHitPoint.Y < RoundCornerCenterPos.Y)
 		{
-			return false;
+			if (FVector2D::DistSquared(InLocalHitPoint, RoundCornerCenterPos) > Radius * Radius)
+			{
+				return false;
+			}
+			return true;
 		}
-		return true;
 	}
 	return true;
 }

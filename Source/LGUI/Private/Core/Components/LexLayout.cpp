@@ -3,6 +3,14 @@
 #include "Core/Components/LexLayout.h"
 #include "Core/Components/LexWidget.h"
 
+void ULexLayoutContainer::BeginDestroy()
+{
+	Super::BeginDestroy();
+	if (auto Widget = GetWidget())
+	{
+		Widget->RemoveLayoutContainer();
+	}
+}
 
 #if WITH_EDITOR
 void ULexLayout::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
@@ -28,6 +36,15 @@ void ULexLayoutSelf::PostEditChangeProperty(FPropertyChangedEvent& PropertyChang
 	}
 }
 #endif
+
+void ULexLayoutSelf::BeginDestroy()
+{
+	Super::BeginDestroy();
+	if (auto Widget = GetWidget())
+	{
+		Widget->RemoveLayoutSelf();
+	}
+}
 
 void ULexLayoutSelf::SetIgnoreLayoutContainer(bool Value)
 {
