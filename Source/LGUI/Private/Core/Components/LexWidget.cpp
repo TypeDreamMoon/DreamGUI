@@ -626,10 +626,10 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 			};
 			LOCAL::MarkDirty(this);
 		}
-		ULGUIPrefabManagerObject::AddOneShotTickFunction([this]()
+		ULGUIPrefabManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)]()
 		{
-			EditorForceUpdate();
-			UpdateBounds();
+			WeakThis->EditorForceUpdate();
+			WeakThis->UpdateBounds();
 		}, 1);
 
 		if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, bListChildrenInSceneOutliner))
@@ -1336,7 +1336,7 @@ void ULexWidget::SetAnchorMin(FVector2D Value)
 	}
 	else
 	{
-		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if LexWidget have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
 	}
 }
 void ULexWidget::SetAnchorMax(FVector2D Value)
@@ -1379,7 +1379,7 @@ void ULexWidget::SetAnchorMax(FVector2D Value)
 	}
 	else
 	{
-		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if LexWidget have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
 	}
 }
 
@@ -1407,7 +1407,7 @@ void ULexWidget::SetHorizontalAndVerticalAnchorMinMax(FVector2D MinValue, FVecto
 	}
 	else
 	{
-		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if LexWidget have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
 	}
 }
 
@@ -1453,7 +1453,7 @@ void ULexWidget::SetHorizontalAnchorMinMax(FVector2D Value, bool bKeepSize, bool
 	}
 	else
 	{
-		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if LexWidget have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
 	}
 }
 void ULexWidget::SetVerticalAnchorMinMax(FVector2D Value, bool bKeepSize, bool bKeepRelativeLocation)
@@ -1498,7 +1498,7 @@ void ULexWidget::SetVerticalAnchorMinMax(FVector2D Value, bool bKeepSize, bool b
 	}
 	else
 	{
-		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if LexWidget have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
 	}
 }
 
@@ -1507,6 +1507,10 @@ void ULexWidget::SetAnchoredPosition(FVector2D Value)
 	if (!AnchorData.AnchoredPosition.Equals(Value, 0.0f))
 	{
 		AnchorData.AnchoredPosition = Value;
+		bCacheAnchorBottomDirty = true;
+		bCacheAnchorTopDirty = true;
+		bCacheAnchorLeftDirty = true;
+		bCacheAnchorRightDirty = true;
 		MarkAnchorDataChanged(false, false, false, false);
 		MarkLayoutDirty();
 	}
@@ -1517,6 +1521,8 @@ void ULexWidget::SetHorizontalAnchoredPosition(float Value)
 	if (AnchorData.AnchoredPosition.X != Value)
 	{
 		AnchorData.AnchoredPosition.X = Value;
+		bCacheAnchorLeftDirty = true;
+		bCacheAnchorRightDirty = true;
 		MarkAnchorDataChanged(false, false, false, false);
 		MarkLayoutDirty();
 	}
@@ -1526,6 +1532,8 @@ void ULexWidget::SetVerticalAnchoredPosition(float Value)
 	if (AnchorData.AnchoredPosition.Y != Value)
 	{
 		AnchorData.AnchoredPosition.Y = Value;
+		bCacheAnchorBottomDirty = true;
+		bCacheAnchorTopDirty = true;
 		MarkAnchorDataChanged(false, false, false, false);
 		MarkLayoutDirty();
 	}
@@ -1538,6 +1546,10 @@ void ULexWidget::SetSizeDelta(FVector2D Value)
 		AnchorData.SizeDelta = Value;
 		bCacheWidthDirty = true;
 		bCacheHeightDirty = true;
+		bCacheAnchorBottomDirty = true;
+		bCacheAnchorTopDirty = true;
+		bCacheAnchorLeftDirty = true;
+		bCacheAnchorRightDirty = true;
 		MarkAnchorDataChanged(false, true, true, false);
 		MarkLayoutDirty();
 	}
@@ -1666,7 +1678,7 @@ void ULexWidget::SetAnchorLeft(float Value)
 	}
 	else
 	{
-		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if LexWidget have parent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)
 	}
 }
 void ULexWidget::SetAnchorTop(float Value)
@@ -1699,7 +1711,7 @@ void ULexWidget::SetAnchorTop(float Value)
 	}
 	else
 	{
-		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if LexWidget have parent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)
 	}
 }
 void ULexWidget::SetAnchorRight(float Value)
@@ -1732,7 +1744,7 @@ void ULexWidget::SetAnchorRight(float Value)
 	}
 	else
 	{
-		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if LexWidget have parent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)
 	}
 }
 void ULexWidget::SetAnchorBottom(float Value)
@@ -1765,7 +1777,7 @@ void ULexWidget::SetAnchorBottom(float Value)
 	}
 	else
 	{
-		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if UIItem have parent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if LexWidget have parent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)
 	}
 }
 
@@ -2399,21 +2411,19 @@ void ULexWidget::MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged,
 	}
 	else
 	{
-		if (InWidthChanged || InHeightChanged)
+		for (auto& Child : GetUIChildren())
 		{
-			for (auto& Child : GetUIChildren())
+			if (!IsValid(Child))continue;
+			bool ChildWidthChange = false, ChildHeightChange = false;
+			if (InWidthChanged && Child->AnchorData.IsHorizontalStretched())
 			{
-				bool ChildWidthChange = false, ChildHeightChange = false;
-				if (InWidthChanged && Child->AnchorData.IsHorizontalStretched())
-				{
-					ChildWidthChange = true;
-				}
-				if (InHeightChanged && Child->AnchorData.IsVerticalStretched())
-				{
-					ChildHeightChange = true;
-				}
-				Child->MarkAnchorDataChanged(false, ChildWidthChange, ChildHeightChange);
+				ChildWidthChange = true;
 			}
+			if (InHeightChanged && Child->AnchorData.IsVerticalStretched())
+			{
+				ChildHeightChange = true;
+			}
+			Child->MarkAnchorDataChanged(false, ChildWidthChange, ChildHeightChange);
 		}
 	}
 }

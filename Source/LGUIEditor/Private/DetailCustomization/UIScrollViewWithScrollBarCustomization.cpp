@@ -65,70 +65,10 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 	category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, HorizontalScrollbarWidget));
 	IDetailPropertyRow& HorizontalScrollbarVisibilityProperty = category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, HorizontalScrollbarVisibility));
 	HorizontalScrollbarVisibilityProperty.IsEnabled(IsValid(HorizontalScrollbar));
-	if (HorizontalScrollbarVisibility == ELexUIScrollViewScrollbarVisibility::AutoHideAndExpandViewport)
-	{
-		bool showWarning = false;
-		if (IsValid(Viewport))
-		{
-			if (Viewport->GetAttachParent() != TargetScriptPtr->GetWidget())
-			{
-				showWarning = true;
-			}
-		}
-		else
-		{
-			showWarning = true;
-		}
-		if (IsValid(HorizontalScrollbar))
-		{
-			if (HorizontalScrollbar->GetWidget()->GetAttachParent() != TargetScriptPtr->GetWidget())
-			{
-				showWarning = true;
-			}
-		}
-		else
-		{
-			showWarning = false;
-		}
-		if (showWarning)
-		{
-			LGUIEditorUtils::ShowError(&category, LOCTEXT("ViewportOrScrollbarAttachError", "For this visibility mode, Viewport and HorizontalScrollbar must be a child of ScrollViewWithScrollBar"));
-		}
-	}
 
 	category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, VerticalScrollbarWidget));
 	IDetailPropertyRow& VerticalScrollbarVisibilityProperty = category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, VerticalScrollbarVisibility));
 	VerticalScrollbarVisibilityProperty.IsEnabled(IsValid(VerticalScrollbar));
-	if (VerticalScrollbarVisibility == ELexUIScrollViewScrollbarVisibility::AutoHideAndExpandViewport)
-	{
-		bool showWarning = false;
-		if (IsValid(Viewport))
-		{
-			if (Viewport->GetAttachParent() != TargetScriptPtr->GetWidget())
-			{
-				showWarning = true;
-			}
-		}
-		else
-		{
-			showWarning = true;
-		}
-		if (IsValid(VerticalScrollbar))
-		{
-			if (VerticalScrollbar->GetWidget()->GetAttachParent() != TargetScriptPtr->GetWidget())
-			{
-				showWarning = true;
-			}
-		}
-		else
-		{
-			showWarning = false;
-		}
-		if (showWarning)
-		{
-			LGUIEditorUtils::ShowError(&category, LOCTEXT("ViewportOrScrollbarAttachError", "For this visibility mode, Viewport and HorizontalScrollbar must be a child of ScrollViewWithScrollBar"));
-		}
-	}
 
 	auto KeepProgressHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, KeepProgress));
 	KeepProgressHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));

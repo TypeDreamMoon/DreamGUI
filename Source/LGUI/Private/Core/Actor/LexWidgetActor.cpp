@@ -99,7 +99,6 @@ void ALexWidgetActor::SetIsTemporarilyHiddenInEditor(bool bIsHidden)
 					{
 						bShouldNotify = true;
 					}
-					GetLexWidget()->SetWidgetActive(false);
 				}
 				else
 				{
@@ -107,11 +106,17 @@ void ALexWidgetActor::SetIsTemporarilyHiddenInEditor(bool bIsHidden)
 					{
 						bShouldNotify = true;
 					}
-					GetLexWidget()->SetWidgetActive(true);
 				}
 				if (bShouldNotify)
 				{
-					FLexUIUtils::NotifyPropertyChanged(GetLexWidget(), ULexWidget::GetPropertyName_WidgetActive());
+					FLexUIUtils::ChangePropertyWithNotify(GetLexWidget(), ULexWidget::GetPropertyName_WidgetActive(), [=, this]()
+					{
+						GetLexWidget()->SetWidgetActive(!bIsHidden);
+					});
+				}
+				else
+				{
+					GetLexWidget()->SetWidgetActive(!bIsHidden);
 				}
 			}
 			ULGUIPrefabManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)] {

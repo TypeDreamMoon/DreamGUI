@@ -156,6 +156,40 @@ void FLexUIUtils::NotifyPropertyChanged(UObject* Object, FName PropertyName)
 	auto Property = FindFProperty<FProperty>(Object->GetClass(), PropertyName);
 	NotifyPropertyChanged(Object, Property);
 }
+
+void FLexUIUtils::ChangePropertyWithNotify(UObject* Object, FProperty* Property,
+	TFunctionRef<void()> ChangePropertyFunction)
+{
+	if (!IsValid(Object))
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d InValid object!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
+		return;
+	}
+	if (Property == nullptr)
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d InValid property!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
+		return;
+	}
+
+	FEditPropertyChain PropertyChain;
+	PropertyChain.AddHead(Property);
+	Object->PreEditChange(PropertyChain);
+	ChangePropertyFunction();
+	TArray<UObject*> ModifiedObjects;
+	ModifiedObjects.Add(Object);
+	FPropertyChangedEvent PropertyChangedEvent(Property, EPropertyChangeType::ValueSet, MakeArrayView(ModifiedObjects));
+	FPropertyChangedChainEvent PropertyChangedChainEvent(PropertyChain, PropertyChangedEvent);
+	Object->PostEditChangeChainProperty(PropertyChangedChainEvent);
+}
+
+void FLexUIUtils::ChangePropertyWithNotify(UObject* Object, FName PropertyName, TFunctionRef<void()> ChangePropertyFunction)
+{
+	auto Property = FindFProperty<FProperty>(Object->GetClass(), PropertyName);
+	ChangePropertyWithNotify(Object, Property, ChangePropertyFunction);
+}
+
 void FLexUIUtils::NotifyPropertyPreChange(UObject* Object, FProperty* Property)
 {
 	if (!IsValid(Object))

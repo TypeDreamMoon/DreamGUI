@@ -15,9 +15,6 @@ enum class ELexUIScrollViewScrollbarVisibility :uint8
 	Permanent,
 	//Auto hide scrollbar when content's size less than viewport's size.
 	AutoHide,
-	//Same like AutoHide, but also expand viewport size when hide scrollbar.
-	//For this mode, viewport and scrollbar must directly attach to ScrollViewWithScrollBar.
-	AutoHideAndExpandViewport,
 };
 
 //ScrollView with scrollbars
@@ -38,11 +35,11 @@ private:
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollViewWithScrollbar")
 		TWeakObjectPtr<UUIScrollbarComponent> HorizontalScrollbar;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollViewWithScrollbar")
-		ELexUIScrollViewScrollbarVisibility HorizontalScrollbarVisibility = ELexUIScrollViewScrollbarVisibility::AutoHideAndExpandViewport;
+		ELexUIScrollViewScrollbarVisibility HorizontalScrollbarVisibility = ELexUIScrollViewScrollbarVisibility::AutoHide;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollViewWithScrollbar")
 		TWeakObjectPtr<UUIScrollbarComponent> VerticalScrollbar;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollViewWithScrollbar")
-		ELexUIScrollViewScrollbarVisibility VerticalScrollbarVisibility = ELexUIScrollViewScrollbarVisibility::AutoHideAndExpandViewport;
+		ELexUIScrollViewScrollbarVisibility VerticalScrollbarVisibility = ELexUIScrollViewScrollbarVisibility::AutoHide;
 
 	virtual void CalculateHorizontalRange()override;
 	virtual void CalculateVerticalRange()override;
@@ -55,21 +52,7 @@ private:
 	bool CheckScrollbarParameter();
 	void OnHorizontalScrollbar(float InScrollValue);
 	void OnVerticalScrollbar(float InScrollValue);
-	enum class EScrollbarLayoutAction :uint8
-	{
-		None,
-		NeedToShow,
-		NeedToHide,
-	};
-	EScrollbarLayoutAction HorizontalScrollbarLayoutActionType = EScrollbarLayoutAction::None;
-	EScrollbarLayoutAction VerticalScrollbarLayoutActionType = EScrollbarLayoutAction::None;
 
-	void OnScrollbarSiblingIndexChanged();
-	void OnScrollbarAttachmentChanged();
-	void LateUpdateScrollbarLayout();
-	
-	void UpdateScrollbarLayout();
-	bool bLayoutDirty = false;
 public:
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")

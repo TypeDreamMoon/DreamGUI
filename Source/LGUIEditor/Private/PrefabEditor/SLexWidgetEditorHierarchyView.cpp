@@ -302,16 +302,12 @@ TSharedRef< ITableRow > SLexWidgetEditorHierarchyView::OnGenerateRow(TWeakObject
 {
 	return SNew(SLexWidgetEditorHierarchyViewItem, OwnerTable, InItem, SharedThis(this), Manager.Pin())
 	.MouseEnter_Lambda([=, this] {
-	// Manager.Pin()->HoverHierarchyNode(InItem);
 		})
 	.MouseExit_Lambda([=, this] {
-	// Manager.Pin()->HoverHierarchyNode(nullptr);
 		})
-		// .IsEnabled_Lambda([=, this](){
-		// 	return InItem->GetOwner() != Manager.Pin()->GetRootAgentActor();
-		// })
 	;
 }
+
 void SLexWidgetEditorHierarchyView::OnSelectionChanged(TWeakObjectPtr<ULexWidget> SelectedItem, ESelectInfo::Type SelectInfo)
 {
 	if (SelectInfo != ESelectInfo::Direct)
@@ -326,21 +322,6 @@ void SLexWidgetEditorHierarchyView::OnSelectionChanged(TWeakObjectPtr<ULexWidget
 			NewSelectedItems.Add(Item.Get());
 		}
 		Manager.Pin()->SelectWidgets(NewSelectedItems, false);
-
-		//TSet<FLexWidgetReference> Clear;
-		//Manager.Pin()->SelectWidgets(Clear, false);
-
-		//for (TWeakObjectPtr<ULexWidget>& Item : SelectedItems)
-		//{
-		//	Item->OnSelection();
-		//}
-
-		//if (RootWidgets.Num() > 0)
-		//{
-		//	RootWidgets[0]->RefreshSelection();
-		//}
-
-		//BlueprintEditor.Pin()->PasteDropLocation = FVector2D(0, 0);
 
 		bIsUpdatingSelection = false;
 	}

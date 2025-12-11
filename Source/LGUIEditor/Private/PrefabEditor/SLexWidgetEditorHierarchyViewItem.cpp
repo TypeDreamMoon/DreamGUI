@@ -564,12 +564,12 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 void SLexWidgetEditorHierarchyViewItem::OnMouseEnter(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
 	MouseEnter.ExecuteIfBound();
-	STableRow< TWeakObjectPtr<ULexWidget> >::OnMouseEnter(MyGeometry, MouseEvent);
+	STableRow::OnMouseEnter(MyGeometry, MouseEvent);
 }
 void SLexWidgetEditorHierarchyViewItem::OnMouseLeave(const FPointerEvent& MouseEvent)
 {
 	MouseExit.ExecuteIfBound();
-	STableRow< TWeakObjectPtr<ULexWidget> >::OnMouseLeave(MouseEvent);
+	STableRow::OnMouseLeave(MouseEvent);
 }
 void SLexWidgetEditorHierarchyViewItem::RequestEditName()
 {
@@ -733,18 +733,31 @@ FSlateColor SLexWidgetEditorHierarchyViewItem::GetItemColorAndOpacity() const
 		{
 			if (PrefabHelperObject->IsActorBelongsToSubPrefab(Widget->GetOwner()))//is sub prefab
 			{
-				return FLinearColor(FColor(124,171,240, 255));
+				if (Widget->GetWidgetActiveInHierarchy())
+				{
+					return FLinearColor(FColor(124,171,240, 255));
+				}
+				return FLinearColor(FColor(124,171,240, 100));
 			}
 			else
 			{
 				if (PrefabHelperObject->IsActorBelongsToMissingSubPrefab(Widget->GetOwner()))
 				{
-					return FSlateColor(FColor::Red);
+					if (Widget->GetWidgetActiveInHierarchy())
+					{
+						return FSlateColor(FColor::Red);
+					}
+					return FSlateColor(FColor(255, 0, 0, 100));
 				}
 			}
 		}
+		if (Widget->GetWidgetActiveInHierarchy())
+		{
+			return FSlateColor(FColor(192,192,192,255));
+		}
+		return FSlateColor(FColor(192,192,192,100));
 	}
-	return FSlateColor(FColor(192,192,192,255));
+	return FSlateColor(FColor(192,192,192,100));
 }
 
 bool SLexWidgetEditorHierarchyViewItem::IsReadOnly() const
@@ -776,8 +789,6 @@ void SLexWidgetEditorHierarchyViewItem::OnNameTextCommited(const FText& InText, 
 	GEditor->BeginTransaction(LOCTEXT("ChangeWidgetName_Transaction", "Change Name"));
 	Widget->Modify();
 	Widget->GetOwner()->SetActorLabel(InText.ToString(), true);
-	// FLexUIUtils::NotifyPropertyChanged(Widget->GetOwner(), "ActorLabel");
-	// Widget->SetDisplayName(InText.ToString());
 	GEditor->EndTransaction();
 
 	HierarchyView.Pin()->RequestRefresh();
@@ -786,7 +797,10 @@ FReply SLexWidgetEditorHierarchyViewItem::OnToggleVisibility()
 {
 	GEditor->BeginTransaction(LOCTEXT("ToggleWidgetVisibility_Transaction", "Toggle Visibility"));
 	Widget->Modify();
-	Widget->SetWidgetActive(!Widget->GetWidgetActive());
+	FLexUIUtils::ChangePropertyWithNotify(Widget.Get(), ULexWidget::GetPropertyName_WidgetActive(), [=, this]()
+	{
+		Widget->SetWidgetActive(!Widget->GetWidgetActive());
+	});
 	GEditor->EndTransaction();
 
 	return FReply::Handled();

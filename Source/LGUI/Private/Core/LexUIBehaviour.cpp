@@ -38,6 +38,7 @@ void ULexUIBehaviour::OnRegister()
 		Widget->GetWidgetActiveChangedEvent().AddUObject(this, &ULexUIBehaviour::Call_OnWidgetActiveChanged);
 		Widget->GetTransformChangedEvent().AddUObject(this, &ULexUIBehaviour::Call_OnTransformChanged);
 		Widget->GetDimensionChangedEvent().AddUObject(this, &ULexUIBehaviour::Call_OnDimensionsChanged);
+		Widget->GetChildDimensionChangedEvent().AddUObject(this, &ULexUIBehaviour::Call_OnChildDimensionsChanged);
 		Widget->GetAttachmentChangedEvent().AddUObject(this, &ULexUIBehaviour::Call_OnAttachmentChanged);
 		Widget->GetSiblingIndexChangedEvent().AddUObject(this, &ULexUIBehaviour::Call_OnSiblingIndexChanged);
 		Widget->GetInteractableChangedEvent().AddUObject(this, &ULexUIBehaviour::Call_OnInteractableChanged);
@@ -52,6 +53,7 @@ void ULexUIBehaviour::OnUnregister()
 		CacheWidget->GetWidgetActiveChangedEvent().RemoveAll(this);
 		CacheWidget->GetTransformChangedEvent().RemoveAll(this);
 		CacheWidget->GetDimensionChangedEvent().RemoveAll(this);
+		CacheWidget->GetChildDimensionChangedEvent().RemoveAll(this);
 		CacheWidget->GetAttachmentChangedEvent().RemoveAll(this);
 		CacheWidget->GetSiblingIndexChangedEvent().RemoveAll(this);
 		CacheWidget->GetInteractableChangedEvent().RemoveAll(this);

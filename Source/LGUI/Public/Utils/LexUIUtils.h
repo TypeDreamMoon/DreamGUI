@@ -137,6 +137,8 @@ public:
 #if WITH_EDITOR
 	static void NotifyPropertyChanged(UObject* Object, FProperty* Property);
 	static void NotifyPropertyChanged(UObject* Object, FName PropertyName);
+	static void ChangePropertyWithNotify(UObject* Object, FProperty* Property, TFunctionRef<void()> ChangePropertyFunction);
+	static void ChangePropertyWithNotify(UObject* Object, FName PropertyName, TFunctionRef<void()> ChangePropertyFunction);
 	static void NotifyPropertyPreChange(UObject* Object, FProperty* Property);
 	static void NotifyPropertyPreChange(UObject* Object, FName PropertyName);
 #endif

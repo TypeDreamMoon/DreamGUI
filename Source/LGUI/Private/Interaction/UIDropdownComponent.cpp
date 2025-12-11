@@ -5,6 +5,7 @@
 #include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexCanvas.h"
 #include "LexUIBPLibrary.h"
+#include "Core/LexUIClipData.h"
 #include "Core/Components/LexImage.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexText.h"
@@ -50,16 +51,14 @@ void UUIDropdownComponent::PostEditChangeProperty(FPropertyChangedEvent& Propert
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (Options.Num() > 0)
 	{
-		auto tempValue = FMath::Clamp(Value, 0, Options.Num() - 1);
+		auto TempValue = FMath::Clamp(Value, 0, Options.Num() - 1);
 		if (CaptionText.IsValid())
 		{
-			CaptionText->SetText(Options[tempValue].Text);
-			FLexUIUtils::NotifyPropertyChanged(CaptionText.Get(), ULexText::GetPropertyName_Text());
+			CaptionText->SetText(Options[TempValue].Text);
 		}
 		if (CaptionImage.IsValid())
 		{
-			CaptionImage->SetBrush(Options[tempValue].ImageBrush);
-			FLexUIUtils::NotifyPropertyChanged(CaptionText.Get(), ULexImage::GetPropertyName_Brush());
+			CaptionImage->SetBrush(Options[TempValue].ImageBrush);
 		}
 	}
 }
@@ -138,67 +137,91 @@ void UUIDropdownComponent::Show()
 		|| TempHorizontalPosition == EUIDropdownHorizontalPosition::Automatic
 		)
 	{
-		//search up til find clipped widget, if not found then use root widget
-		auto ClipWidget = GetWidget();
-		while (true)
+		auto ThisWidget = GetWidget();
+		if (ThisWidget->GetClipData().IsValid())//have valid ClipData, then use ClipData to tell if the Dropdown list visible
 		{
-			if (ClipWidget->GetClipping() != ELexWidgetClipping::Disabled)
+			auto ClipData = ThisWidget->GetClipData().Pin();
+			if (TempVerticalPosition == EUIDropdownVerticalPosition::Automatic)
 			{
-				break;
-			}
-			else
-			{
-				auto ParentWidget = ClipWidget->GetUIParent();
-				if (!ParentWidget)
+				FVector ListBottomWorldSpace;
+				if (VerticalOverlap)
 				{
-					break;
+					auto SelfTop = ThisWidget->GetLocalSpaceTop();
+					auto ListBottomInSelfSpace = SelfTop - ListRoot->GetHeight();
+					ListBottomWorldSpace = ThisWidget->GetComponentTransform().TransformPosition(FVector(0, 0, ListBottomInSelfSpace));
 				}
 				else
 				{
-					ClipWidget = ParentWidget;
+					auto SelfBottom = ThisWidget->GetLocalSpaceBottom();
+					auto ListBottomInSelfSpace = SelfBottom - ListRoot->GetHeight();
+					ListBottomWorldSpace = ThisWidget->GetComponentTransform().TransformPosition(FVector(0, 0, ListBottomInSelfSpace));
+				}
+				if (!ClipData->IsPointVisible(ListBottomWorldSpace))
+				{
+					TempVerticalPosition = EUIDropdownVerticalPosition::Top;
+				}
+				else
+				{
+					TempVerticalPosition = EUIDropdownVerticalPosition::Bottom;//default is bottom
+				}
+			}
+			if (TempHorizontalPosition == EUIDropdownHorizontalPosition::Automatic)
+			{
+				auto SelfRight = ThisWidget->GetLocalSpaceRight();
+				auto ListRightWorldSpace = ThisWidget->GetComponentTransform().TransformPosition(FVector(0, SelfRight + ListRoot->GetWidth(), 0));
+				if (!ClipData->IsPointVisible(ListRightWorldSpace))
+				{
+					TempHorizontalPosition = EUIDropdownHorizontalPosition::Left;
+				}
+				else
+				{
+					TempHorizontalPosition = EUIDropdownHorizontalPosition::Right;//default is right
 				}
 			}
 		}
-
-		FTransform SelfToClipSpaceTf;
-		auto InverseClipSpaceTf = ClipWidget->GetComponentTransform().Inverse();
-		FTransform::Multiply(&SelfToClipSpaceTf, &GetWidget()->GetComponentTransform(), &InverseClipSpaceTf);
-		if (TempVerticalPosition == EUIDropdownVerticalPosition::Automatic)
+		else//no valid ClipData, then use RootCanvas
 		{
-			//convert top point position from drop-down's self to root ui space, and tell if it is inside root rect
-			FVector ListBottomInClipSpace;
-			if (VerticalOverlap)
+			auto RootCanvasWidget = ThisWidget->GetRootCanvas()->GetLexWidget();
+			FTransform SelfToCanvasSpaceTf;
+			auto InverseCanvasSpaceTf = RootCanvasWidget->GetComponentTransform().Inverse();
+			FTransform::Multiply(&SelfToCanvasSpaceTf, &ThisWidget->GetComponentTransform(), &InverseCanvasSpaceTf);
+			if (TempVerticalPosition == EUIDropdownVerticalPosition::Automatic)
 			{
-				auto SelfTop = GetWidget()->GetLocalSpaceTop();
-				auto ListBottomInSelfSpace = SelfTop - ListRoot->GetHeight();
-				ListBottomInClipSpace = SelfToClipSpaceTf.TransformPosition(FVector(0, 0, ListBottomInSelfSpace));
+				//convert top point position from drop-down's self to root ui space, and tell if it is inside root rect
+				FVector ListBottomInClipSpace;
+				if (VerticalOverlap)
+				{
+					auto SelfTop = ThisWidget->GetLocalSpaceTop();
+					auto ListBottomInSelfSpace = SelfTop - ListRoot->GetHeight();
+					ListBottomInClipSpace = SelfToCanvasSpaceTf.TransformPosition(FVector(0, 0, ListBottomInSelfSpace));
+				}
+				else
+				{
+					auto SelfBottom = ThisWidget->GetLocalSpaceBottom();
+					auto ListBottomInSelfSpace = SelfBottom - ListRoot->GetHeight();
+					ListBottomInClipSpace = SelfToCanvasSpaceTf.TransformPosition(FVector(0, 0, ListBottomInSelfSpace));
+				}
+				if (ListBottomInClipSpace.Z < RootCanvasWidget->GetLocalSpaceBottom())
+				{
+					TempVerticalPosition = EUIDropdownVerticalPosition::Top;
+				}
+				else
+				{
+					TempVerticalPosition = EUIDropdownVerticalPosition::Bottom;//default is bottom
+				}
 			}
-			else
+			if (TempHorizontalPosition == EUIDropdownHorizontalPosition::Automatic)
 			{
-				auto SelfBottom = GetWidget()->GetLocalSpaceBottom();
-				auto ListBottomInSelfSpace = SelfBottom - ListRoot->GetHeight();
-				ListBottomInClipSpace = SelfToClipSpaceTf.TransformPosition(FVector(0, 0, ListBottomInSelfSpace));
-			}
-			if (ListBottomInClipSpace.Z < ClipWidget->GetLocalSpaceBottom())
-			{
-				TempVerticalPosition = EUIDropdownVerticalPosition::Top;
-			}
-			else
-			{
-				TempVerticalPosition = EUIDropdownVerticalPosition::Bottom;//default is bottom
-			}
-		}
-		if (TempHorizontalPosition == EUIDropdownHorizontalPosition::Automatic)
-		{
-			auto SelfRight = GetWidget()->GetLocalSpaceRight();
-			auto ListRightInCanvasSpace = SelfToClipSpaceTf.TransformPosition(FVector(0, SelfRight + ListRoot->GetWidth(), 0));
-			if (ListRightInCanvasSpace.Y > ClipWidget->GetLocalSpaceRight())
-			{
-				TempHorizontalPosition = EUIDropdownHorizontalPosition::Left;
-			}
-			else
-			{
-				TempHorizontalPosition = EUIDropdownHorizontalPosition::Right;//default is right
+				auto SelfRight = ThisWidget->GetLocalSpaceRight();
+				auto ListRightInCanvasSpace = SelfToCanvasSpaceTf.TransformPosition(FVector(0, SelfRight + ListRoot->GetWidth(), 0));
+				if (ListRightInCanvasSpace.Y > RootCanvasWidget->GetLocalSpaceRight())
+				{
+					TempHorizontalPosition = EUIDropdownHorizontalPosition::Left;
+				}
+				else
+				{
+					TempHorizontalPosition = EUIDropdownHorizontalPosition::Right;//default is right
+				}
 			}
 		}
 	}

@@ -145,18 +145,17 @@ bool UUIScrollViewComponent::CheckParameters()
     auto Widget = GetWidget();
     if (Content.IsValid() && ContentParent.IsValid() && Widget)
         return true;
-    if (!Content.IsValid())
-        return false;
+    if (!Widget)return false;
+    if (!Content.IsValid())return false;
     ContentParent = Content->GetUIParent();
-    if (ContentParent != nullptr)
+    if (!ContentParent.IsValid())return false;
+    //add helper comp to detect size change
     {
-        auto ContentParentHelperComp = NewObject<UUIScrollViewHelper>(ContentParent->GetOwner());
-        ContentParentHelperComp->TargetComp = this;
-        ContentParentHelperComp->RegisterComponent();
+        auto HelperComp = NewObject<UUIScrollViewHelper>(ContentParent->GetOwner());
+        HelperComp->TargetComp = this;
+        HelperComp->RegisterComponent();
     }
-    if (Content.IsValid() && ContentParent.IsValid() && Widget)
-        return true;
-    return false;
+    return true;
 }
 
 bool UUIScrollViewComponent::CheckValidHit(USceneComponent *InHitComp)

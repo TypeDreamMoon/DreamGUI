@@ -159,9 +159,9 @@ private:
 	FLexLayoutSize PreferredHeight;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true))
-	FLexLayoutMinMaxSize MinWidth = FLexLayoutMinMaxSize(0);
+	FLexLayoutMinMaxSize MinWidth;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true))
-	FLexLayoutMinMaxSize MinHeight = FLexLayoutMinMaxSize(0);
+	FLexLayoutMinMaxSize MinHeight;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true))
 	FLexLayoutMinMaxSize MaxWidth;
