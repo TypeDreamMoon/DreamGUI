@@ -124,7 +124,6 @@ private:
 	void OnLevelActorAttached(AActor* Actor, const AActor* AttachTo);
 	void OnLevelActorDetached(AActor* Actor, const AActor* DetachFrom);
 	void OnLevelActorDeleted(AActor* Actor);
-	void OnComponentCreateDelete(bool InCreateOrDelete, UActorComponent* InComponent, AActor* InActor);
 
 	struct FAttachmentActorStruct
 	{

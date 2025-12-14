@@ -15,13 +15,11 @@
 #include "Misc/FeedbackContext.h"
 #include "LGUIPrefabEditorCommand.h"
 #include "Framework/MultiBox/MultiBoxExtender.h"
-#include "LGUIEditorTools.h"
-#include "Engine/Selection.h"
+#include "LexUIEditorTools.h"
 #include "ToolMenus.h"
 #include "Editor.h"
 #include "SLexWidgetEditorHierarchyView.h"
 #include "Core/LexUIManager.h"
-#include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexWidget.h"
 #include "Framework/Commands/GenericCommands.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
@@ -32,7 +30,7 @@
 
 
 
-const FName PrefabEditorAppName = FName(TEXT("LGUIPrefabEditorApp"));
+const FName PrefabEditorAppName = FName(TEXT("LexUIPrefabEditorApp"));
 
 TArray<FLGUIPrefabEditor*> FLGUIPrefabEditor::LGUIPrefabEditorInstanceCollection;
 
@@ -299,16 +297,20 @@ void FLGUIPrefabEditor::UnregisterTabSpawners(const TSharedRef<FTabManager>& InT
 
 void FLGUIPrefabEditor::PostUndo(bool bSuccess)
 {
-	ULGUIPrefabManagerObject::AddOneShotTickFunction([=, this] {
+	ULexUIEditorManagerObject::AddOneShotTickFunction([=, this] {
 		ULexUIManagerWorldSubsystem::RefreshAllUI();
 		OutlinerPtr->RequestRefresh();
+		SelectedActors = ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->GetSelection()->GetSelectedActors();
+		OnSelectedWidgetsChanged.Broadcast();
 		}, 1);
 }
 void FLGUIPrefabEditor::PostRedo(bool bSuccess)
 {
-	ULGUIPrefabManagerObject::AddOneShotTickFunction([=, this] {
+	ULexUIEditorManagerObject::AddOneShotTickFunction([=, this] {
 		ULexUIManagerWorldSubsystem::RefreshAllUI();
 		OutlinerPtr->RequestRefresh();
+		SelectedActors = ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->GetSelection()->GetSelectedActors();
+		OnSelectedWidgetsChanged.Broadcast();
 		}, 1);
 }
 
@@ -407,7 +409,7 @@ void FLGUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const TS
 	InitAssetEditor(Mode, InitToolkitHost, PrefabEditorAppName, StandaloneDefaultLayout, true, true, PrefabBeingEdited);
 
 	// After opening a prefab, broadcast event to LGUIPrefabSequencerEditor
-	LGUIEditorTools::OnEditingPrefabChanged.Broadcast(GetPreviewScene().GetRootAgentActor());
+	FLexUIEditorTools::OnEditingPrefabChanged.Broadcast(GetPreviewScene().GetRootAgentActor());
 }
 
 TArray<AActor*> FLGUIPrefabEditor::GetAllActors()
@@ -502,10 +504,10 @@ void FLGUIPrefabEditor::OnApply()
 			KeyValue.Value.CheckParameters();
 		}
 
-		LGUIEditorTools::OnBeforeApplyPrefab.Broadcast(PrefabHelperObject);
+		FLexUIEditorTools::OnBeforeApplyPrefab.Broadcast(PrefabHelperObject);
 		PrefabHelperObject->SavePrefab();
-		LGUIEditorTools::RefreshLevelLoadedPrefab(PrefabHelperObject->PrefabAsset);
-		LGUIEditorTools::RefreshOnSubPrefabChange(PrefabHelperObject->PrefabAsset);
+		FLexUIEditorTools::RefreshLevelLoadedPrefab(PrefabHelperObject->PrefabAsset);
+		FLexUIEditorTools::RefreshOnSubPrefabChange(PrefabHelperObject->PrefabAsset);
 	}
 }
 
@@ -545,6 +547,9 @@ void FLGUIPrefabEditor::AddReferencedObjects(FReferenceCollector& Collector)
 
 void FLGUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bAppendOrToggle, bool bNotifyGEditor)
 {
+	const FScopedTransaction Transaction(LOCTEXT("SelectionChanged_Transaction", "Select Widgets"));
+	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->GetSelection()->Modify();
+	
 	TSet<ULexWidget*> TempSelection;
 	for (auto& Widget : Widgets)
 	{
@@ -561,7 +566,7 @@ void FLGUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bAp
 		SelectedActors.Empty();
 		if (bNotifyGEditor)
 		{
-			GEditor->SelectNone(true, true);
+			ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->GetSelection()->SelectNone();
 		}
 	}
 
@@ -577,7 +582,7 @@ void FLGUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bAp
 		}
 		if (bNotifyGEditor)
 		{
-			GEditor->SelectActor(Widget->GetOwner(), true, true);
+			ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->GetSelection()->SelectActor(Widget->GetOwner());
 		}
 	}
 	
@@ -658,37 +663,37 @@ void FLGUIPrefabEditor::BindCommands()
 	ToolkitCommands->MapAction(
 		FGenericCommands::Get().Copy,
 		FExecuteAction::CreateRaw(this, &FLGUIPrefabEditor::OnCopy),
-		FCanExecuteAction::CreateStatic(&LGUIEditorTools::CanCopyActor),
+		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCopyActor),
 		FGetActionCheckState(),
-		FIsActionButtonVisible::CreateStatic(&LGUIEditorTools::CanCopyActor)
+		FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCopyActor)
 	);
 	ToolkitCommands->MapAction(
 		FGenericCommands::Get().Cut,
 		FExecuteAction::CreateRaw(this, &FLGUIPrefabEditor::OnCut),
-		FCanExecuteAction::CreateStatic(&LGUIEditorTools::CanCutActor),
+		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCutActor),
 		FGetActionCheckState(),
-		FIsActionButtonVisible::CreateStatic(&LGUIEditorTools::CanCutActor)
+		FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCutActor)
 	);
 	ToolkitCommands->MapAction(
 		FGenericCommands::Get().Paste,
 		FExecuteAction::CreateRaw(this, &FLGUIPrefabEditor::OnPaste),
-		FCanExecuteAction::CreateStatic(&LGUIEditorTools::CanPasteActor),
+		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanPasteActor),
 		FGetActionCheckState(),
-		FIsActionButtonVisible::CreateStatic(&LGUIEditorTools::CanPasteActor)
+		FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanPasteActor)
 	);
 	ToolkitCommands->MapAction(
 		FGenericCommands::Get().Duplicate,
 		FExecuteAction::CreateRaw(this, &FLGUIPrefabEditor::OnDuplicate),
-		FCanExecuteAction::CreateStatic(&LGUIEditorTools::CanDuplicateActor),
+		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanDuplicateActor),
 		FGetActionCheckState(),
-		FIsActionButtonVisible::CreateStatic(&LGUIEditorTools::CanDuplicateActor)
+		FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanDuplicateActor)
 	);
 	ToolkitCommands->MapAction(
 		FGenericCommands::Get().Delete,
 		FExecuteAction::CreateRaw(this, &FLGUIPrefabEditor::OnDelete),
-		FCanExecuteAction::CreateStatic(&LGUIEditorTools::CanDeleteActor),
+		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanDeleteActor),
 		FGetActionCheckState(),
-		FIsActionButtonVisible::CreateStatic(&LGUIEditorTools::CanDeleteActor)
+		FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanDeleteActor)
 	);
 }
 void FLGUIPrefabEditor::ExtendToolbar()
@@ -717,30 +722,30 @@ void FLGUIPrefabEditor::ExtendToolbar()
 
 void FLGUIPrefabEditor::OnCopy()
 {
-	LGUIEditorTools::CopySelectedActors_Impl();
+	FLexUIEditorTools::CopySelectedActors_Impl();
 }
 
 void FLGUIPrefabEditor::OnPaste()
 {
-	LGUIEditorTools::PasteSelectedActors_Impl();
+	FLexUIEditorTools::PasteSelectedActors_Impl();
 	OutlinerPtr->RequestRefresh();
 }
 
 void FLGUIPrefabEditor::OnCut()
 {
-	LGUIEditorTools::CutSelectedActors_Impl();
+	FLexUIEditorTools::CutSelectedActors_Impl();
 	OutlinerPtr->RequestRefresh();
 }
 
 void FLGUIPrefabEditor::OnDuplicate()
 {
-	LGUIEditorTools::DuplicateSelectedActors_Impl();
+	FLexUIEditorTools::DuplicateSelectedActors_Impl();
 	OutlinerPtr->RequestRefresh();
 }
 
 void FLGUIPrefabEditor::OnDelete()
 {
-	LGUIEditorTools::DeleteSelectedActors_Impl();
+	FLexUIEditorTools::DeleteSelectedActors_Impl();
 	OutlinerPtr->RequestRefresh();
 }
 
@@ -1014,7 +1019,7 @@ FReply FLGUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent& 
 
 				if (OutlinerPtr.IsValid())
 				{
-					ULGUIPrefabManagerObject::AddOneShotTickFunction([=, this] {
+					ULexUIEditorManagerObject::AddOneShotTickFunction([=, this] {
 						for (auto& Actor : CreatedActorArray)
 						{
 							//OutlinerPtr->UnexpandActorForDragDroppedPrefab(Actor);
@@ -1055,10 +1060,10 @@ FReply FLGUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent& 
 			}
 			if (CreatedActorArray.Num() > 0)
 			{
-				GEditor->SelectNone(true, true);
+				ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->GetSelection()->SelectNone();
 				for (auto& Actor : CreatedActorArray)
 				{
-					GEditor->SelectActor(Actor, true, true, false, true);
+					ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->GetSelection()->SelectActor(Actor);
 				}
 			}
 			GEditor->EndTransaction();

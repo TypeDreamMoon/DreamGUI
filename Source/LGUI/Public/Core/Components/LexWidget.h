@@ -112,6 +112,10 @@ public:
 	{
 		return GET_MEMBER_NAME_CHECKED(ULexWidget, bWidgetActive);
 	}
+	static FName GetPropertyName_DisplayName()
+	{
+		return GET_MEMBER_NAME_CHECKED(ULexWidget, DisplayName);
+	}
 	template<class T>
 	static T* GetComponentInParentUI(AActor* InActor, bool IncludeUnregisteredComponent = true)
 	{

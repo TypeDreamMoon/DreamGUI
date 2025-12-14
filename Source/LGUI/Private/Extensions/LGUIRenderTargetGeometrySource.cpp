@@ -20,6 +20,7 @@
 #include "SceneInterface.h"
 #include "RayTracingInstance.h"
 #include "RayTracingGeometry.h"
+#include "Core/LexUIManager.h"
 #if WITH_EDITOR
 #include "PrefabSystem/LGUIPrefabManager.h"
 #endif
@@ -481,7 +482,7 @@ bool ULGUIRenderTargetGeometrySource::CheckStaticMesh()const
 #if WITH_EDITOR
 						if (!this->GetWorld()->IsGameWorld())
 						{
-							ULGUIPrefabManagerObject::AddOneShotTickFunction([this] {
+							ULexUIEditorManagerObject::AddOneShotTickFunction([this] {
 								StaticMeshComp->SetMaterial(0, MaterialInstance);
 								}, 1);
 						}
@@ -1158,7 +1159,7 @@ void ULGUIRenderTargetGeometrySource::UpdateMaterialInstance()
 #if WITH_EDITOR
 					if (!this->GetWorld()->IsGameWorld())
 					{
-						ULGUIPrefabManagerObject::AddOneShotTickFunction([this] {
+						ULexUIEditorManagerObject::AddOneShotTickFunction([this] {
 							StaticMeshComp->SetMaterial(0, MaterialInstance);
 							}, 1);
 					}

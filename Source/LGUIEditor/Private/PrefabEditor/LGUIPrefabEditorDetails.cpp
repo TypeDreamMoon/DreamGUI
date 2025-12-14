@@ -1,8 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "LGUIPrefabEditorDetails.h"
-#include "Engine/Selection.h"
-#include "LevelEditor.h"
 #include "Modules/ModuleManager.h"
 #include "ISCSEditorUICustomization.h"
 #include "GameFramework/Actor.h"
@@ -11,13 +9,13 @@
 #include "Misc/NotifyHook.h"
 #include "LGUIPrefabEditor.h"
 #include "DetailLayoutBuilder.h"
-#include "DetailsViewObjectFilter.h"
 #include "LexWidgetDetailPropertyExtensionHandler.h"
-#include "LGUIPrefabOverrideDataViewer.h"
+#include "LexUIPrefabOverrideDataViewer.h"
 #include "PrefabSystem/LGUIPrefab.h"
-#include "LGUIEditorTools.h"
+#include "LexUIEditorTools.h"
 #include "SSubobjectEditorModule.h"
 #include "SSubobjectInstanceEditor.h"
+#include "Core/LexUIManager.h"
 #include "Core/Components/LexWidget.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 
@@ -209,15 +207,16 @@ void SLGUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLGU
 										+SHorizontalBox::Slot()
 										.AutoWidth()
 										[
-											SAssignNew(OverrideParameterEditor, SLGUIPrefabOverrideDataViewer, PrefabEditorPtr.Pin()->GetPrefabHelperObject())
+											SNew(SLexUIPrefabOverrideDataViewer, [=, this]()
+											{
+												return CachedActor.Get();
+											})
 											.AfterRevertPrefab_Lambda([=, this](ULGUIPrefab* PrefabAsset) {
-												RefreshOverrideParameter();
 												})
 											.AfterApplyPrefab_Lambda([=, this](ULGUIPrefab* PrefabAsset){
-												RefreshOverrideParameter();
-												LGUIEditorTools::RefreshLevelLoadedPrefab(PrefabAsset);
-												LGUIEditorTools::RefreshOnSubPrefabChange(PrefabAsset);
-												LGUIEditorTools::RefreshOpenedPrefabEditor(PrefabAsset);
+												FLexUIEditorTools::RefreshLevelLoadedPrefab(PrefabAsset);
+												FLexUIEditorTools::RefreshOnSubPrefabChange(PrefabAsset);
+												FLexUIEditorTools::RefreshOpenedPrefabEditor(PrefabAsset);
 												})
 										]
 									]
@@ -288,12 +287,6 @@ bool SLGUIPrefabEditorDetails::IsEditorAllowEditing()const
 	return true;
 }
 
-void SLGUIPrefabEditorDetails::RefreshOverrideParameter()
-{
-	FLGUISubPrefabData SubPrefabData = PrefabEditorPtr.Pin()->GetSubPrefabDataForActor(CachedActor.Get());
-	OverrideParameterEditor->RefreshDataContent(SubPrefabData.ObjectOverrideParameterArray, nullptr);
-}
-
 UObject* SLGUIPrefabEditorDetails::GetActorContextAsObject() const
 {
 	auto SelectedWidgets = PrefabEditorPtr.Pin()->GetSelectedWidgets();
@@ -319,10 +312,6 @@ void SLGUIPrefabEditorDetails::OnEditorSelectionChanged()
 			}
 
 			CachedActor = Actor;
-			if (Actor != PrefabEditorPtr.Pin()->GetRootAgentActor())
-			{
-				RefreshOverrideParameter();
-			}
 			if (SubobjectEditor)
 			{
 				SubobjectEditor->ClearSelection();
@@ -401,15 +390,15 @@ void SLGUIPrefabEditorDetails::OnSubObjectSelectionChanged(const TArray<FSubobje
 		{
 			if (SelectedComponents.Num() > 0)
 			{
-				GEditor->SelectNone(true, true);
+				ULexUIManagerWorldSubsystem::GetInstance(PrefabEditorPtr.Pin()->GetWorld())->GetSelection()->SelectNone();
 				for (auto Comp : SelectedComponents)
 				{
-					GEditor->SelectComponent(Comp, true, true);
+					ULexUIManagerWorldSubsystem::GetInstance(PrefabEditorPtr.Pin()->GetWorld())->GetSelection()->SelectComponent(Comp);
 				}
 			}
 			else
 			{
-				GEditor->SelectNone(true, true);
+				ULexUIManagerWorldSubsystem::GetInstance(PrefabEditorPtr.Pin()->GetWorld())->GetSelection()->SelectNone();
 			}
 		}
 	}

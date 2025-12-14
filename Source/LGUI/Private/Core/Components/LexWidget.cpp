@@ -626,7 +626,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 			};
 			LOCAL::MarkDirty(this);
 		}
-		ULGUIPrefabManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)]()
+		ULexUIEditorManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)]()
 		{
 			WeakThis->EditorForceUpdate();
 			WeakThis->UpdateBounds();

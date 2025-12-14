@@ -8,6 +8,7 @@
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "Core/ILexUISpriteRenderInterface.h"
 #include "TextureResource.h"
+#include "Core/LexUIManager.h"
 
 #define LOCTEXT_NAMESPACE "LexUIStaticSpriteAtlasData"
 
@@ -135,7 +136,7 @@ void ULexUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChanged
 							break;
 						}
 						auto WeakThis = TWeakObjectPtr<ULexUIStaticSpriteAtlasData>(this);
-						ULGUIPrefabManagerObject::AddOneShotTickFunction([=] {
+						ULexUIEditorManagerObject::AddOneShotTickFunction([=] {
 							if (WeakThis.IsValid())
 							{
 								WeakThis->bIsYesToAll = false;
@@ -159,7 +160,7 @@ void ULexUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChanged
 			{
 				bIsAddedToDelayedCall = true;
 				auto WeakThis = TWeakObjectPtr<ULexUIStaticSpriteAtlasData>(this);
-				ULGUIPrefabManagerObject::AddOneShotTickFunction([=] {
+				ULexUIEditorManagerObject::AddOneShotTickFunction([=] {
 					if (WeakThis.IsValid())
 					{
 						WeakThis->MarkNotInitialized();

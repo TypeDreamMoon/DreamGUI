@@ -2,6 +2,7 @@
 
 #include "PrefabSystem/LGUIPrefabLevelManagerActor.h"
 #include "LGUI.h"
+#include "Core/LexUIManager.h"
 #include "Utils/LexUIUtils.h"
 #include "Core/Components/LexWidget.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
@@ -108,7 +109,7 @@ void ALGUIPrefabLevelManagerActor::CollectWhenCreate()
 			}
 		});
 	}
-	ULGUIPrefabManagerObject::AddOneShotTickFunction([Actor = MakeWeakObjectPtr(this)]{
+	ULexUIEditorManagerObject::AddOneShotTickFunction([Actor = MakeWeakObjectPtr(this)]{
 		if (Actor.IsValid())
 		{
 			if (auto World = Actor->GetWorld())
@@ -149,7 +150,7 @@ void ALGUIPrefabLevelManagerActor::Destroyed()
 	CleanupWhenDestroy();
 	if (!this->GetWorld()->IsGameWorld())
 	{
-		ULGUIPrefabManagerObject::AddOneShotTickFunction([Actor = this, World = this->GetWorld()]() {
+		ULexUIEditorManagerObject::AddOneShotTickFunction([Actor = this, World = this->GetWorld()]() {
 			auto InfoText = LOCTEXT("DeleteLGUIPrefabLevelManagerActor", "\
 LGUIPrefabLevelManagerActor is being destroyed!\
 \nThis actor is responsible for managing LGUI-Prefabs in current level, if you delete it then all LGUI-Prefabs linked in the level will be lost!\

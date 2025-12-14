@@ -1,15 +1,12 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LevelEditorMenuExtensions/LGUILevelEditorExtensions.h"
-#include "EngineModule.h"
+#include "LevelEditorMenuExtensions/LexUILevelEditorExtensions.h"
 #include "Engine/EngineTypes.h"
-#include "LGUIEditorStyle.h"
 #include "LevelEditor.h"
-#include "Core/Components/LexWidget.h"
 #include "LGUIEditorModule.h"
-#include "LGUIEditorTools.h"
+#include "LexUIEditorTools.h"
 
-#define LOCTEXT_NAMESPACE "FLGUILevelEditorExtensions"
+#define LOCTEXT_NAMESPACE "LexUILevelEditorExtensions"
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -18,24 +15,27 @@ FDelegateHandle LevelEditorMenuExtenderDelegateHandle;
 
 //////////////////////////////////////////////////////////////////////////
 
-class FLGUILevelEditorExtensions_Impl
+class FLexUILevelEditorExtensions_Impl
 {
 public:
-	static void CreateLGUISubMenu(FMenuBuilder& MenuBuilder)
+	static void CreateLexUISubMenu(FMenuBuilder& MenuBuilder)
 	{
 		MenuBuilder.AddWidget(
-			FLGUIEditorModule::Get().MakeEditorToolsMenu(false, false, false, false, false, false)
+		FLGUIEditorModule::Get().MakeEditorToolsMenu(false, false, false, false, []()
+			{
+				return FLexUIEditorTools::GetFirstSelectedActor();
+			})
 			, FText::GetEmpty()
 		);
 	}
 	static void CreateHelperButtons(FMenuBuilder& MenuBuilder)
 	{
-		MenuBuilder.BeginSection("LGUI", LOCTEXT("LGUILevelEditorHeading", "LGUI"));
+		MenuBuilder.BeginSection("LexUI", LOCTEXT("LexUILevelEditorHeading", "LexUI"));
 		{
 			MenuBuilder.AddSubMenu(
-				LOCTEXT("LGUIEditorTools", "LGUI Editor Tools"),
+				LOCTEXT("LexUIEditorTools", "LexUI Editor Tools"),
 				FText::GetEmpty(),
-				FNewMenuDelegate::CreateStatic(&FLGUILevelEditorExtensions_Impl::CreateLGUISubMenu),
+				FNewMenuDelegate::CreateStatic(&FLexUILevelEditorExtensions_Impl::CreateLexUISubMenu),
 				FUIAction(),
 				NAME_None, EUserInterfaceActionType::None
 			);
@@ -47,25 +47,25 @@ public:
 		TSharedRef<FExtender> Extender(new FExtender());
 		if (SelectedActors.Num() == 1//only support one selection
 			&& IsValid(SelectedActors[0])
-			&& LGUIEditorTools::IsActorCompatibleWithLGUIToolsMenu(SelectedActors[0])//only show menu with supported actor
+			&& FLexUIEditorTools::IsActorCompatibleWithLexUIToolsMenu(SelectedActors[0])//only show menu with supported actor
 			)
 		{
 			Extender->AddMenuExtension(
-				"ActorType",
-				EExtensionHook::Before,
+				"ActorTypeTools",
+				EExtensionHook::After,
 				nullptr,
-				FMenuExtensionDelegate::CreateStatic(&FLGUILevelEditorExtensions_Impl::CreateHelperButtons)
+				FMenuExtensionDelegate::CreateStatic(&FLexUILevelEditorExtensions_Impl::CreateHelperButtons)
 			);
 		}
 		return Extender;
 	}
 };
 
-// FLGUILevelEditorExtensions
+// FLexUILevelEditorExtensions
 
-void FLGUILevelEditorExtensions::InstallHooks()
+void FLexUILevelEditorExtensions::InstallHooks()
 {
-	LevelEditorMenuExtenderDelegate = FLevelEditorModule::FLevelViewportMenuExtender_SelectedActors::CreateStatic(&FLGUILevelEditorExtensions_Impl::OnExtendLevelEditorMenu);
+	LevelEditorMenuExtenderDelegate = FLevelEditorModule::FLevelViewportMenuExtender_SelectedActors::CreateStatic(&FLexUILevelEditorExtensions_Impl::OnExtendLevelEditorMenu);
 
 	FLevelEditorModule& LevelEditorModule = FModuleManager::Get().LoadModuleChecked<FLevelEditorModule>("LevelEditor");
 	auto& MenuExtenders = LevelEditorModule.GetAllLevelViewportContextMenuExtenders();
@@ -73,7 +73,7 @@ void FLGUILevelEditorExtensions::InstallHooks()
 	LevelEditorMenuExtenderDelegateHandle = MenuExtenders.Last().GetHandle();
 }
 
-void FLGUILevelEditorExtensions::RemoveHooks()
+void FLexUILevelEditorExtensions::RemoveHooks()
 {
 	if (FModuleManager::Get().IsModuleLoaded("LevelEditor"))
 	{

@@ -28,7 +28,7 @@
 #include "Misc/TextFilter.h"
 #include "PropertyCustomizationHelpers.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
-#include "LGUIEditorTools.h"
+#include "LexUIEditorTools.h"
 
 #define LOCTEXT_NAMESPACE "SLGUIPrefabSequenceEditor"
 
@@ -164,8 +164,8 @@ private:
 SLGUIPrefabSequenceEditor::~SLGUIPrefabSequenceEditor()
 {
 	FCoreUObjectDelegates::OnObjectsReplaced.Remove(OnObjectsReplacedHandle);
-	LGUIEditorTools::OnEditingPrefabChanged.Remove(EditingPrefabChangedHandle);
-	LGUIEditorTools::OnBeforeApplyPrefab.Remove(OnBeforeApplyPrefabHandle);
+	FLexUIEditorTools::OnEditingPrefabChanged.Remove(EditingPrefabChangedHandle);
+	FLexUIEditorTools::OnBeforeApplyPrefab.Remove(OnBeforeApplyPrefabHandle);
 }
 
 void SLGUIPrefabSequenceEditor::Construct(const FArguments& InArgs)
@@ -289,8 +289,8 @@ void SLGUIPrefabSequenceEditor::Construct(const FArguments& InArgs)
 	OnObjectsReplacedHandle = FCoreUObjectDelegates::OnObjectsReplaced.AddSP(this, &SLGUIPrefabSequenceEditor::OnObjectsReplaced);
 
 	PrefabSequenceEditor->AssignSequence(GetLGUIPrefabSequence());
-	EditingPrefabChangedHandle = LGUIEditorTools::OnEditingPrefabChanged.AddRaw(this, &SLGUIPrefabSequenceEditor::OnEditingPrefabChanged);
-	OnBeforeApplyPrefabHandle = LGUIEditorTools::OnBeforeApplyPrefab.AddRaw(this, &SLGUIPrefabSequenceEditor::OnBeforeApplyPrefab);
+	EditingPrefabChangedHandle = FLexUIEditorTools::OnEditingPrefabChanged.AddRaw(this, &SLGUIPrefabSequenceEditor::OnEditingPrefabChanged);
+	OnBeforeApplyPrefabHandle = FLexUIEditorTools::OnBeforeApplyPrefab.AddRaw(this, &SLGUIPrefabSequenceEditor::OnBeforeApplyPrefab);
 }
 
 void SLGUIPrefabSequenceEditor::AssignLGUIPrefabSequenceComponent(TWeakObjectPtr<ULGUIPrefabSequenceComponent> InSequenceComponent)

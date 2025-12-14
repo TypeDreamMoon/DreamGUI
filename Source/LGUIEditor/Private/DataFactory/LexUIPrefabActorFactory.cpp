@@ -5,11 +5,12 @@
 #include "PrefabSystem/LGUIPrefabLevelManagerActor.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
-#include "LGUIEditorTools.h"
+#include "LexUIEditorTools.h"
 #include "AssetRegistry/AssetData.h"
 #include "Utils/LexUIUtils.h"
 #include "Editor.h"
 #include "EditorActorFolders.h"
+#include "Core/LexUIManager.h"
 
 
 #define LOCTEXT_NAMESPACE "LexUIPrefabActorFactory"
@@ -53,10 +54,10 @@ void ULexUIPrefabActorFactory::PostSpawnActor(UObject* Asset, AActor* InNewActor
 	auto PrefabActor = CastChecked<ALGUIPrefabLoadHelperActor>(InNewActor);
 
 	PrefabActor->PrefabAsset = Prefab;
-	auto SelectedActor = LGUIEditorTools::GetFirstSelectedActor();
+	auto SelectedActor = FLexUIEditorTools::GetFirstSelectedActor();
 	if (SelectedActor != nullptr && PrefabActor->GetWorld() == SelectedActor->GetWorld())
 	{
-		LGUIEditorTools::MakeCurrentLevel(SelectedActor);
+		FLexUIEditorTools::MakeCurrentLevel(SelectedActor);
 		auto ParentComp = SelectedActor->GetRootComponent();
 		PrefabActor->LoadPrefab(ParentComp);
 	}
@@ -66,7 +67,7 @@ void ULexUIPrefabActorFactory::PostSpawnActor(UObject* Asset, AActor* InNewActor
 	}
 	PrefabActor->MoveActorToPrefabFolder();
 	PrefabActor->SetFlags(EObjectFlags::RF_Transient);
-	ULGUIPrefabManagerObject::AddOneShotTickFunction([WeakTarget = MakeWeakObjectPtr(PrefabActor)]() {
+	ULexUIEditorManagerObject::AddOneShotTickFunction([WeakTarget = MakeWeakObjectPtr(PrefabActor)]() {
 		if (WeakTarget.IsValid())
 		{
 			GEditor->SelectActor(WeakTarget.Get(), false, true, false, true);

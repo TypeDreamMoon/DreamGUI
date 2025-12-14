@@ -9,7 +9,7 @@
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
-#include "LGUIEditorTools.h"
+#include "LexUIEditorTools.h"
 #include "LGUIHeaders.h"
 
 #define LOCTEXT_NAMESPACE "LGUIFreeTypeRenderFontDataCustomization"

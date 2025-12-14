@@ -14,7 +14,7 @@
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
-#include "LGUIEditorTools.h"
+#include "LexUIEditorTools.h"
 
 #define LOCTEXT_NAMESPACE "LGUISpriteDataCustomization"
 
@@ -124,7 +124,7 @@ void FLexUISpriteDataCustomization::CustomizeDetails(IDetailLayoutBuilder& Detai
 				.VAlign(EVerticalAlignment::VAlign_Center)
 				.Text(LOCTEXT("OpenAtlas", "Open Atlas Viewer"))
 				.OnClicked_Lambda([]() {
-				LGUIEditorTools::OpenAtlasViewer_Impl();
+				FLexUIEditorTools::OpenAtlasViewer_Impl();
 				return FReply::Handled();
 					})
 			]

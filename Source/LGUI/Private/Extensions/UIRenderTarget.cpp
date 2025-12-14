@@ -9,6 +9,7 @@
 #include "Core/LexUIGeometry.h"
 #include "Core/LexUISpriteInfo.h"
 #include "Core/LexUICustomMeshSource.h"
+#include "Core/LexUIManager.h"
 
 #define LOCTEXT_NAMESPACE "UIRenderTarget"
 
@@ -42,7 +43,7 @@ UTexture* UUIRenderTarget::GetTextureToCreateGeometry()
 #if WITH_EDITOR
 	if (!Result && !GetWorld()->IsGameWorld())//if not find valid texture (because canvas not create rendertarget yet, and edit mode not register the callback event), then get it next frame
 	{
-		ULGUIPrefabManagerObject::AddOneShotTickFunction([this]() {
+		ULexUIEditorManagerObject::AddOneShotTickFunction([this]() {
 			MarkTextureDirty();
 			});
 	}

@@ -28,10 +28,9 @@ public:
 
 	static FLGUIEditorModule& Get();
 	
-	TSharedRef<SWidget> MakeEditorToolsMenu(bool InitialSetup, bool ComponentAction, bool OpenWindow, bool PreviewInViewport, bool EditorCameraControl, bool Others);
+	TSharedRef<SWidget> MakeEditorToolsMenu(bool InitialSetup, bool ComponentAction, bool EditorCameraControl, bool Others, TFunction<AActor*()> GetSelectedActorFunction);
 	TSharedPtr<class FUICommandList> PluginCommands;
 	TArray<TSharedPtr<class FAssetTypeActions_Base>> AssetTypeActionsArray;
-	void MarkOutlinerSelectionChange();
 	DECLARE_EVENT(FLGUIEditorModule, FOnHierarchyChanged);
 	FOnHierarchyChanged OnHierarchyChanged;
 
@@ -40,23 +39,13 @@ private:
 
 	bool IsValidClassName(const FString& InName);
 
-	void CreateUIElementSubMenu(FMenuBuilder& MenuBuilder);
-	void CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder);
-	void CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder);
-	void CreateCommonActorSubMenu(FMenuBuilder& MenuBuilder);
-	void CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder);
+	void CreateUIElementSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction);
+	void CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction);
+	void CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction);
+	void CreateCommonActorSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction);
+	void CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction);
 	void BasicSetupSubMenu(FMenuBuilder& MenuBuilder);
-	void ReplaceActorSubMenu(FMenuBuilder& MenuBuilder);
-	void CopyWidgetReferenceSubMenu(FMenuBuilder& MenuBuilder);
-	void CopyComponentReferenceSubMenu(FMenuBuilder& MenuBuilder);
-	bool CanUnpackActorForPrefab();
-	bool CanBrowsePrefab();
-	bool CanUpdateLevelPrefab();
-	ECheckBoxState GetAutoUpdateLevelPrefab()const;
-	bool CanCreatePrefab();
-	bool CanCheckPrefabOverrideParameter()const;
-	bool CanReplaceActor();
-	bool CanCreateActor();
+	void ReplaceActorSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction);
 
 	void AddEditorToolsToToolbarExtension(FToolBarBuilder& Builder);
 
@@ -76,9 +65,6 @@ private:
 private:
 	TSharedRef<SDockTab> HandleSpawnDynamicSpriteAtlasViewerTab(const FSpawnTabArgs& SpawnTabArgs);
 	TSharedRef<SDockTab> HandleSpawnLGUIPrefabSequenceTab(const FSpawnTabArgs& SpawnTabArgs);
-	TSharedPtr<class SLGUIPrefabOverrideDataViewer> PrefabOverrideDataViewer = nullptr;
-	void CheckPrefabOverrideDataViewerEntry();
-
 	
 	FDelegateHandle SequenceEditorHandle;
 	FDelegateHandle OnInitializeSequenceHandle;

@@ -1,18 +1,23 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "SLexWidgetEditorHierarchyView.h"
+
+#include "LexUIEditorTools.h"
 #include "LGUIEditorModule.h"
 #include "LGUIPrefabEditor.h"
+#include "LexUIPrefabOverrideDataViewer.h"
 #include "SLexWidgetEditorHierarchyViewItem.h"
+#include "Core/LexUIManager.h"
 #include "Widgets/Layout/SScrollBorder.h"
 #include "Widgets/Input/SSearchBox.h"
 #include "Core/Components/LexRectBlock.h"
 #include "Framework/Commands/GenericCommands.h"
 #include "PrefabSystem/LGUIPrefab.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
 
 #define LOCTEXT_NAMESPACE "LexWidgetEditorHierarchyView"
+
+UE_DISABLE_OPTIMIZATION
 
 void SLexWidgetEditorHierarchyView::Construct(const FArguments& InArgs, TSharedPtr<FLGUIPrefabEditor> InManager)
 {
@@ -79,7 +84,7 @@ void SLexWidgetEditorHierarchyView::Construct(const FArguments& InArgs, TSharedP
 		}
 	}
 
-	ULGUIPrefabManagerObject::AddOneShotTickFunction([=, this]()
+	ULexUIEditorManagerObject::AddOneShotTickFunction([=, this]()
 	{
 		TSet<TWeakObjectPtr<ULexWidget>> VisitingItems;
 		WidgetTreeView->GetExpandedItems(VisitingItems);
@@ -379,8 +384,22 @@ void SLexWidgetEditorHierarchyView::OnExpansionChanged(TWeakObjectPtr<ULexWidget
 }
 TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 {
-	FLGUIEditorModule::Get().MarkOutlinerSelectionChange();
-	return FLGUIEditorModule::Get().MakeEditorToolsMenu(false, false, true, false, false, false);
+	return FLGUIEditorModule::Get().MakeEditorToolsMenu(false, false, false, false
+	, [this]()
+	{
+		if (Manager.IsValid())
+		{
+			if (Manager.Pin()->GetSelectedActors().Num() == 1)
+			{
+				auto Actor = Manager.Pin()->GetSelectedActors()[0];
+				if (Actor.IsValid())
+				{
+					return Actor.Get();
+				}
+			}
+		}
+		return (AActor*)nullptr;
+	});
 }
 
 void SLexWidgetEditorHierarchyView::GetExpandWidgets(TSet<TWeakObjectPtr<ULexWidget>>& OutExpandWidgets)
@@ -489,5 +508,7 @@ void SLexWidgetEditorHierarchyView::SetItemExpansionRecursive(TWeakObjectPtr<ULe
 		RecursiveExpand(Model.Get(), bInExpansionState ? EExpandBehavior::AlwaysExpand : EExpandBehavior::NeverExpand);
 	}
 }
+
+UE_ENABLE_OPTIMIZATION
 
 #undef LOCTEXT_NAMESPACE

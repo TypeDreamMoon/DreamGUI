@@ -10,7 +10,7 @@
 #include "Utils/LexUIUtils.h"
 #include "LGUIEditorStyle.h"
 #include "SceneOutliner/LGUISceneOutlinerButton.h"
-#include "LGUIEditorTools.h"
+#include "LexUIEditorTools.h"
 #include "SortHelper.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #include "PrefabEditor/LGUIPrefabEditor.h"
@@ -66,7 +66,7 @@ namespace LGUISceneOutliner
 		{
 			return SNew(SBox);
 		}
-		if (!LGUIEditorTools::IsActorCompatibleWithLGUIToolsMenu(actor))
+		if (!FLexUIEditorTools::IsActorCompatibleWithLexUIToolsMenu(actor))
 		{
 			return SNew(SBox);
 		}
@@ -76,9 +76,6 @@ namespace LGUISceneOutliner
 			.ButtonStyle(FLGUIEditorStyle::Get(), "EmptyButton")
 			.ContentPadding(FMargin(0))
 			.HasDownArrow(false)
-			.OnComboBoxOpened(FOnComboBoxOpened::CreateLambda([=]() {//@todo: make it a callback
-				FLGUIEditorModule::Get().MarkOutlinerSelectionChange();
-				}))
 			.Visibility(bIsRootAgentActor ? EVisibility::HitTestInvisible : EVisibility::Visible)
 			.ButtonContent()
 			[
@@ -175,7 +172,10 @@ namespace LGUISceneOutliner
 			]
 			.MenuContent()
 			[
-				FLGUIEditorModule::Get().MakeEditorToolsMenu(false, false, false, false, false, false)
+				FLGUIEditorModule::Get().MakeEditorToolsMenu(false, false, false, false, []()
+				{
+					return FLexUIEditorTools::GetFirstSelectedActor();
+				})
 			];
 
 		result->_TreeItemActor = actor;
@@ -279,7 +279,7 @@ namespace LGUISceneOutliner
 	{
 		if (AActor* actor = GetActorFromTreeItem(TreeItem))
 		{
-			return LGUIEditorTools::IsCanvasActor(actor) ? EVisibility::Visible : EVisibility::Hidden;
+			return FLexUIEditorTools::IsCanvasActor(actor) ? EVisibility::Visible : EVisibility::Hidden;
 		}
 		return EVisibility::Hidden;
 	}
@@ -287,7 +287,7 @@ namespace LGUISceneOutliner
 	{
 		if (AActor* actor = GetActorFromTreeItem(TreeItem))
 		{
-			return LGUIEditorTools::IsCanvasActor(actor) ? EVisibility::Visible : EVisibility::Hidden;
+			return FLexUIEditorTools::IsCanvasActor(actor) ? EVisibility::Visible : EVisibility::Hidden;
 		}
 		return EVisibility::Hidden;
 	}
@@ -320,7 +320,7 @@ namespace LGUISceneOutliner
 	{
 		if (AActor* actor = GetActorFromTreeItem(TreeItem))
 		{
-			return LGUIEditorTools::IsCanvasActor(actor) ? FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 0.4f)) : FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
+			return FLexUIEditorTools::IsCanvasActor(actor) ? FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 0.4f)) : FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
 		}
 		return FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
 	}
@@ -329,7 +329,7 @@ namespace LGUISceneOutliner
 		int drawcallCount = 0;
 		if (AActor* actor = GetActorFromTreeItem(TreeItem))
 		{
-			drawcallCount = LGUIEditorTools::GetDrawcallCount(actor);
+			drawcallCount = FLexUIEditorTools::GetDrawcallCount(actor);
 		}
 		return FText::FromString(FString::Printf(TEXT("%d"), drawcallCount));
 	}

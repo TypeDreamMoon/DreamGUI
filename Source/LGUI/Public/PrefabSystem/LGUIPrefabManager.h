@@ -7,9 +7,6 @@
 #include "LGUIPrefabManager.generated.h"
 
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FLGUIEditorTickMulticastDelegate, float);
-DECLARE_MULTICAST_DELEGATE_ThreeParams(FLGUIEditorManagerOnComponentCreateDelete, bool, UActorComponent*, AActor*);
-
 class ULGUIPrefab;
 class ULGUIPrefabHelperObject;
 
@@ -32,36 +29,17 @@ public:
 	//end TickableEditorObject interface
 #if WITH_EDITORONLY_DATA
 private:
-	int32 PrevEditorViewportCount = 0;
-	FLGUIEditorTickMulticastDelegate EditorTick;
 	TUniquePtr<FPreviewScene> PreviewSceneForPrefabPackage;
-	bool bIsBlueprintCompiling = false;
 private:
-	friend class LGUIEditorTools;
+	friend class FLexUIEditorTools;
 	bool bShouldBroadcastLevelActorListChanged = false;
 #endif
 #if WITH_EDITOR
 private:
-	TArray<TTuple<int, TFunction<void()>>> OneShotFunctionsToExecuteInTick;
-	FLGUIEditorManagerOnComponentCreateDelete OnComponentCreateDeleteEvent;
-public:
-	static void AddOneShotTickFunction(const TFunction<void()>& InFunction, int InDelayFrameCount = 0);
-	static FDelegateHandle RegisterEditorTickFunction(const TFunction<void(float)>& InFunction);
-	static void UnregisterEditorTickFunction(const FDelegateHandle& InDelegateHandle);
-	static FLGUIEditorManagerOnComponentCreateDelete& OnComponentCreateDelete() { InitCheck(); return Instance->OnComponentCreateDeleteEvent; }
-private:
 	static bool InitCheck();
 public:
 	static ULGUIPrefabManagerObject* GetInstance(bool CreateIfNotValid = false);
-	static bool IsSelected(AActor* InObject);
-	static bool AnySelectedIsChildOf(AActor* InObject);
 	static UWorld* GetPreviewWorldForPrefabPackage();
-	static bool GetIsBlueprintCompiling();
-private:
-	FDelegateHandle OnBlueprintPreCompileDelegateHandle;
-	FDelegateHandle OnBlueprintCompiledDelegateHandle;
-	void OnBlueprintPreCompile(UBlueprint* InBlueprint);
-	void OnBlueprintCompiled();
 public:
 	static void MarkBroadcastLevelActorListChanged();
 private:

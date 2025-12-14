@@ -2,6 +2,7 @@
 
 #include "Extensions/LexImageSequencePlayer.h"
 #include "LTweenBPLibrary.h"
+#include "Core/LexUIManager.h"
 #include "Core/Components/LexTexture.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 
@@ -37,7 +38,7 @@ void ULexImageSequencePlayer::OnRegister()
 #if WITH_EDITOR
 	if (GetWorld() && GetWorld()->WorldType == EWorldType::Editor)
 	{
-		EditorPlayDelegateHandle = ULGUIPrefabManagerObject::RegisterEditorTickFunction([this](float deltaTime) {
+		EditorPlayDelegateHandle = ULexUIEditorManagerObject::RegisterEditorTickFunction([this](float deltaTime) {
 			if (!bPreviewInEditor)return;
 			if (!CanPlay())return;
 			Duration = GetDuration();
@@ -53,7 +54,7 @@ void ULexImageSequencePlayer::OnUnregister()
 #if WITH_EDITOR
 	if (EditorPlayDelegateHandle.IsValid())
 	{
-		ULGUIPrefabManagerObject::UnregisterEditorTickFunction(EditorPlayDelegateHandle);
+		ULexUIEditorManagerObject::UnregisterEditorTickFunction(EditorPlayDelegateHandle);
 	}
 #endif
 }

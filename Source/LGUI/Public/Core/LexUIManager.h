@@ -16,8 +16,7 @@ class UUISelectableComponent;
 class ULexUIBehaviour;
 class ULexBaseInputModule;
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FLGUIEditorTickMulticastDelegate, float);
-DECLARE_MULTICAST_DELEGATE_ThreeParams(FLGUIEditorManagerOnComponentCreateDelete, bool, UActorComponent*, AActor*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FLexUIEditorTickMulticastDelegate, float);
 
 UCLASS(NotBlueprintable, NotBlueprintType, Transient, NotPlaceable)
 class LGUI_API ULexUIEditorManagerObject :public UObject, public FTickableGameObject
@@ -38,26 +37,23 @@ public:
 	//end TickableEditorObject interface
 #if WITH_EDITORONLY_DATA
 private:
-	TMap<int32, uint32> EditorViewportIndexToKeyMap;
-	int32 PrevEditorViewportCount = 0;
-	int32 PrevScreenSpaceOverlayCanvasCount = 1;
-	FSimpleMulticastDelegate EditorViewportIndexAndKeyChange;
 	static bool bIsBlueprintCompiling;
+	FLexUIEditorTickMulticastDelegate EditorTick;
+	TArray<TTuple<int, TFunction<void()>>> OneShotFunctionsToExecuteInTick;
 public:
-	int32 CurrentActiveViewportIndex = 0;
-	uint32 CurrentActiveViewportKey = 0;
+	static void AddOneShotTickFunction(const TFunction<void()>& InFunction, int InDelayFrameCount = 0);
+	static FDelegateHandle RegisterEditorTickFunction(const TFunction<void(float)>& InFunction);
+	static void UnregisterEditorTickFunction(const FDelegateHandle& InDelegateHandle);
+public:
 	static int IndexOfClickSelectUI;
 #endif
 #if WITH_EDITOR
 	static bool GetIsBlueprintCompiling(){return bIsBlueprintCompiling;}
-	static FDelegateHandle RegisterEditorViewportIndexAndKeyChange(const TFunction<void()>& InFunction);
-	static void UnregisterEditorViewportIndexAndKeyChange(const FDelegateHandle& InDelegateHandle);
+	static bool IsSelected(AActor* InObject);
 private:
 	static bool InitCheck();
 public:
 	static ULexUIEditorManagerObject* GetInstance(bool CreateIfNotValid = false);
-	void CheckEditorViewportIndexAndKey();
-	uint32 GetViewportKeyFromIndex(int32 InViewportIndex);
 private:
 	FDelegateHandle OnBlueprintPreCompileDelegateHandle;
 	FDelegateHandle OnBlueprintCompiledDelegateHandle;
@@ -67,7 +63,7 @@ private:
 	FDelegateHandle OnAssetReimportDelegateHandle;
 	void OnAssetReimport(UObject* asset);
 	FDelegateHandle OnActorLabelChangedDelegateHandle;
-	void OnActorLabelChanged(AActor* actor);
+	void OnActorLabelChanged(AActor* Actor);
 	FDelegateHandle OnMapOpenedDelegateHandle;
 	void OnMapOpened(const FString& FileName, bool AsTemplate);
 	FDelegateHandle OnPackageReloadedDelegateHandle;
@@ -75,11 +71,23 @@ private:
 #endif
 };
 
-struct FLGUILifeCycleBehaviourArrayContainer
+UCLASS(NotBlueprintable, NotBlueprintType, Transient)
+class LGUI_API ULexUISelection : public UObject
 {
-	TArray<TWeakObjectPtr<ULexUIBehaviour>> LGUILifeCycleBehaviourArray;
-	/** Functions that wait for prefab serialization complete then execute */
-	TArray<TFunction<void()>> Functions;
+	GENERATED_BODY()
+
+public:
+	virtual bool IsEditorOnly() const override{return true;}
+	void SelectActor(AActor* Actor);
+	void SelectComponent(UActorComponent* Component);
+	void SelectNone();
+	bool IsSelected(AActor* Actor)const;
+	TArray<TWeakObjectPtr<AActor>> GetSelectedActors()const{return SelectedActorArray;}
+private:
+	UPROPERTY(VisibleAnywhere, Category = "LGUI")
+	TArray<TWeakObjectPtr<AActor>> SelectedActorArray;
+	UPROPERTY(VisibleAnywhere, Category = "LGUI")
+	TArray<TWeakObjectPtr<UActorComponent>> SelectedComponentArray;
 };
 
 class ILexUICultureChangedInterface;
@@ -110,6 +118,11 @@ private:
 	FTSTicker::FDelegateHandle EditorTickDelegateHandle;
 	static bool bIsPlaying;
 #endif
+#if WITH_EDITORONLY_DATA
+	UPROPERTY(VisibleAnywhere, Category = "LGUI")
+	TObjectPtr<ULexUISelection> Selection;
+#endif
+
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<ULexWidget>> AllRootWidgetArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
@@ -153,6 +166,8 @@ public:
 	static void AddRootWidget(ULexWidget* InWidget);
 	static void RemoveRootWidget(ULexWidget* InWidget);
 	const TArray<TWeakObjectPtr<ULexWidget>>& GetAllRootUIItemArray()const { return AllRootWidgetArray; }
+
+	ULexUISelection* GetSelection() { return Selection; }
 #endif
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
@@ -194,7 +209,7 @@ public:
 	static bool RaycastHitUI(UWorld* InWorld, const TArray<ULexWidget*>& InWidgets, const FVector& LineStart, const FVector& LineEnd
 		, ULexWidget*& ResultSelectTarget, int& InOutTargetIndexInHitArray
 	);
-	static void DrawFrameOnWidget(ULexWidget* InItem, bool ScreenOrWorld = false);
+	void DrawFrameOnWidget(ULexWidget* InItem, bool ScreenOrWorld = false);
 	void DrawNavigationArrow(UWorld* InWorld, const TArray<FVector>& InControlPoints, const FVector& InArrowPointA, const FVector& InArrowPointB, FColor const& InColor, void* Object, const FString& DebugName, bool ScreenOrWorld = false);
 	void DrawNavigationVisualizerOnUISelectable(UWorld* InWorld, UUISelectableComponent* InSelectable, bool IsScreenSpace = false);
 	FEditorViewportClient* GetEditorViewportClient();
@@ -209,8 +224,14 @@ private:
 	void OnEndOfFrame();
 #endif
 private:
+	struct FLexUIBehaviourArrayContainer
+	{
+		TArray<TWeakObjectPtr<ULexUIBehaviour>> LexUIBehaviourArray;
+		/** Functions that wait for prefab serialization complete then execute */
+		TArray<TFunction<void()>> Functions;
+	};
 	/** Map prefab-deserialize-section-id to LexUIBehaviour array */
-	TMap<FGuid, FLGUILifeCycleBehaviourArrayContainer> LexUIBehaviours_PrefabSystemProcessing;
+	TMap<FGuid, FLexUIBehaviourArrayContainer> LexUIBehaviours_PrefabSystemProcessing;
 	void ProcessLexUILifecycleEvent(ULexUIBehaviour* InComp);
 public:
 	void BeginPrefabSystemProcessingActor(const FGuid& InSessionId);

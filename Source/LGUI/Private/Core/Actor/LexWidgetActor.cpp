@@ -1,6 +1,8 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/Actor/LexWidgetActor.h"
+
+#include "Core/LexUIManager.h"
 #include "Core/Components/LexWidget.h"
 #if WITH_EDITOR
 #include "PrefabSystem/LGUIPrefabManager.h"
@@ -43,7 +45,7 @@ void ALexWidgetActor::Destroyed()
 	if (!bIsSetCanNotifyAttachmentWhenDestroy)
 	{
 		bIsSetCanNotifyAttachmentWhenDestroy = true;
-		ULGUIPrefabManagerObject::AddOneShotTickFunction([=]()
+		ULexUIEditorManagerObject::AddOneShotTickFunction([=]()
 		{
 			bIsSetCanNotifyAttachmentWhenDestroy = false;
 		}, 1);
@@ -119,7 +121,7 @@ void ALexWidgetActor::SetIsTemporarilyHiddenInEditor(bool bIsHidden)
 					GetLexWidget()->SetWidgetActive(!bIsHidden);
 				}
 			}
-			ULGUIPrefabManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)] {
+			ULexUIEditorManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)] {
 				FirstTemporarilyHiddenActor = nullptr;
 				if (WeakThis.IsValid())
 				{

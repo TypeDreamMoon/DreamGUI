@@ -21,6 +21,7 @@
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #if WITH_EDITOR
 #include "Editor.h"
+#include "Selection.h"
 #include "EditorViewportClient.h"
 #include "PrefabSystem/LGUIPrefab.h"
 #include "Core/LexUISpriteData.h"
@@ -296,7 +297,27 @@ void ULexUIEditorManagerObject::BeginDestroy()
 void ULexUIEditorManagerObject::Tick(float DeltaTime)
 {
 #if WITH_EDITOR
-	CheckEditorViewportIndexAndKey();
+	if (EditorTick.IsBound())
+	{
+		EditorTick.Broadcast(DeltaTime);
+	}
+	if (OneShotFunctionsToExecuteInTick.Num() > 0)
+	{
+		for (int i = 0; i < OneShotFunctionsToExecuteInTick.Num(); i++)
+		{
+			auto& Item = OneShotFunctionsToExecuteInTick[i];
+			if (Item.Key <= 0)
+			{
+				Item.Value();
+				OneShotFunctionsToExecuteInTick.RemoveAt(i);
+				i--;
+			}
+			else
+			{
+				Item.Key--;
+			}
+		}
+	}
 #endif
 }
 TStatId ULexUIEditorManagerObject::GetStatId() const
@@ -305,16 +326,26 @@ TStatId ULexUIEditorManagerObject::GetStatId() const
 }
 
 #if WITH_EDITOR
-FDelegateHandle ULexUIEditorManagerObject::RegisterEditorViewportIndexAndKeyChange(const TFunction<void()>& InFunction)
+
+void ULexUIEditorManagerObject::AddOneShotTickFunction(const TFunction<void()>& InFunction, int InDelayFrameCount)
 {
 	InitCheck();
-	return Instance->EditorViewportIndexAndKeyChange.AddLambda(InFunction);
+	InDelayFrameCount = FMath::Max(0, InDelayFrameCount);
+	TTuple<int, TFunction<void()>> Item;
+	Item.Key = InDelayFrameCount;
+	Item.Value = InFunction;
+	Instance->OneShotFunctionsToExecuteInTick.Add(Item);
 }
-void ULexUIEditorManagerObject::UnregisterEditorViewportIndexAndKeyChange(const FDelegateHandle& InDelegateHandle)
+FDelegateHandle ULexUIEditorManagerObject::RegisterEditorTickFunction(const TFunction<void(float)>& InFunction)
+{
+	InitCheck();
+	return Instance->EditorTick.AddLambda(InFunction);
+}
+void ULexUIEditorManagerObject::UnregisterEditorTickFunction(const FDelegateHandle& InDelegateHandle)
 {
 	if (Instance != nullptr)
 	{
-		Instance->EditorViewportIndexAndKeyChange.Remove(InDelegateHandle);
+		Instance->EditorTick.Remove(InDelegateHandle);
 	}
 }
 
@@ -326,13 +357,18 @@ ULexUIEditorManagerObject* ULexUIEditorManagerObject::GetInstance(bool CreateIfN
 	}
 	return Instance;
 }
+bool ULexUIEditorManagerObject::IsSelected(AActor* InObject)
+{
+	if (!IsValid(GEditor))return false;
+	return GEditor->GetSelectedActors()->IsSelected(InObject);
+}
 bool ULexUIEditorManagerObject::InitCheck()
 {
 	if (Instance == nullptr)
 	{
+		UE_LOG(LGUI, Log, TEXT("[%s].%d No Instance of class %s, create it"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *ULexUIEditorManagerObject::StaticClass()->GetName());
 		Instance = NewObject<ULexUIEditorManagerObject>();
 		Instance->AddToRoot();
-		UE_LOG(LGUI, Log, TEXT("[%s].%d No Instance for LGUIManagerObject, create!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		Instance->OnActorLabelChangedDelegateHandle = FCoreDelegates::OnActorLabelChanged.AddUObject(Instance, &ULexUIEditorManagerObject::OnActorLabelChanged);
 		//open map
 		Instance->OnMapOpenedDelegateHandle = FEditorDelegates::OnMapOpened.AddUObject(Instance, &ULexUIEditorManagerObject::OnMapOpened);
@@ -355,7 +391,7 @@ void ULexUIEditorManagerObject::OnBlueprintPreCompile(UBlueprint* InBlueprint)
 }
 void ULexUIEditorManagerObject::OnBlueprintCompiled()
 {
-	ULGUIPrefabManagerObject::AddOneShotTickFunction([] {
+	ULexUIEditorManagerObject::AddOneShotTickFunction([] {
 		bIsBlueprintCompiling = false;
 		ULexUIManagerWorldSubsystem::RefreshAllUI();
 		});
@@ -409,77 +445,45 @@ void ULexUIEditorManagerObject::OnPackageReloaded(EPackageReloadPhase Phase, FPa
 	}
 }
 
-void ULexUIEditorManagerObject::OnActorLabelChanged(AActor* actor)
+void ULexUIEditorManagerObject::OnActorLabelChanged(AActor* Actor)
 {
-	if (!IsValid(actor))return;
-	auto World = actor->GetWorld();
+	if (!IsValid(Actor))return;
+	auto World = Actor->GetWorld();
 	if (!IsValid(World))return;
 	if (World->IsGameWorld())return;
-	if (auto rootComp = actor->GetRootComponent())
+	if (auto RootComp = Actor->GetRootComponent())
 	{
-		if (auto rootUIComp = Cast<ULexWidget>(rootComp))
+		if (auto Widget = Cast<ULexWidget>(RootComp))
 		{
-			auto actorLabel = actor->GetActorLabel();
-			if (actorLabel.StartsWith("//"))
-			{
-				actorLabel = actorLabel.Right(actorLabel.Len() - 2);
-			}
-			rootUIComp->SetDisplayName(actorLabel);
+			Widget->SetDisplayName(Actor->GetActorLabel());
 
-			FLexUIUtils::NotifyPropertyChanged(rootUIComp, FName(TEXT("displayName")));
+			FLexUIUtils::NotifyPropertyChanged(Widget, ULexWidget::GetPropertyName_DisplayName());
 		}
 	}
 }
 
-void ULexUIEditorManagerObject::CheckEditorViewportIndexAndKey()
+void ULexUISelection::SelectActor(AActor* Actor)
 {
-	if (!IsValid(GEditor))return;
-	auto& viewportClients = GEditor->GetAllViewportClients();
-	if (PrevEditorViewportCount != viewportClients.Num())
-	{
-		PrevEditorViewportCount = viewportClients.Num();
-		EditorViewportIndexToKeyMap.Reset();
-		for (FEditorViewportClient* viewportClient : viewportClients)
-		{
-			auto viewKey = viewportClient->ViewState.GetReference()->GetViewKey();
-			EditorViewportIndexToKeyMap.Add(viewportClient->ViewIndex, viewKey);
-		}
-
-		if (EditorViewportIndexAndKeyChange.IsBound())
-		{
-			EditorViewportIndexAndKeyChange.Broadcast();
-		}
-	}
-
-	if (auto viewport = GEditor->GetActiveViewport())
-	{
-		if (auto viewportClient = viewport->GetClient())
-		{
-			if (ULexUIEditorManagerObject::Instance != nullptr)
-			{
-				auto editorViewportClient = (FEditorViewportClient*)viewportClient;
-				CurrentActiveViewportIndex = editorViewportClient->ViewIndex;
-				CurrentActiveViewportKey = ULexUIEditorManagerObject::Instance->GetViewportKeyFromIndex(editorViewportClient->ViewIndex);
-			}
-		}
-	}
+	SelectedActorArray.Add(Actor);
 }
-uint32 ULexUIEditorManagerObject::GetViewportKeyFromIndex(int32 InViewportIndex)
+void ULexUISelection::SelectComponent(UActorComponent* Component)
 {
-	if (auto key = EditorViewportIndexToKeyMap.Find(InViewportIndex))
-	{
-		return *key;
-	}
-	return 0;
+	SelectedComponentArray.Add(Component);
 }
-#endif
+void ULexUISelection::SelectNone()
+{
+	SelectedActorArray.Empty();
+	SelectedComponentArray.Empty();
+}
 
+bool ULexUISelection::IsSelected(AActor* Actor)const
+{
+	return SelectedActorArray.Contains(Actor);
+}
 
-
-#if WITH_EDITOR
 void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool ScreenOrWorld)
 {
-	if (ULGUIPrefabManagerObject::IsSelected(Widget->GetOwner()))//select self
+	if (Selection->IsSelected(Widget->GetOwner()))//select self
 	{
 		auto RectDrawColor = FColor(160, 160, 160, 255);//gray means normal object
 		auto DrawWidget = [=](ULexWidget* InWidget, const FColor& Color)
@@ -615,7 +619,7 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 {
 	auto SourceWidget = InSelectable->GetWidget();
 	if (!IsValid(SourceWidget))return;
-	const FColor Color = ULGUIPrefabManagerObject::IsSelected(SourceWidget->GetOwner()) ? FColor(255, 255, 0, 255) : FColor(140, 140, 0, 255);
+	const FColor Color = ULexUIEditorManagerObject::IsSelected(SourceWidget->GetOwner()) ? FColor(255, 255, 0, 255) : FColor(140, 140, 0, 255);
 	constexpr float Offset = 2;
 	constexpr float ArrowSize = 5;
 	
@@ -1032,6 +1036,8 @@ void ULexUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 		bIsPlaying = true;
 	}
 	FCoreDelegates::OnEndFrame.AddUObject(this, &ULexUIManagerWorldSubsystem::OnEndOfFrame);
+	ULexUIEditorManagerObject::GetInstance(true);//make sure it is created
+	Selection = NewObject<ULexUISelection>(this, NAME_None, RF_Transactional);
 #endif
 	//localization
 	OnCultureChangedDelegateHandle = FInternationalization::Get().OnCultureChanged().AddUObject(this, &ULexUIManagerWorldSubsystem::OnCultureChanged);
@@ -1100,10 +1106,9 @@ void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 {
 	//editor draw helper frame
 #if WITH_EDITOR
-	if (IsValid(GEditor))
 	{
 		auto Settings = GetDefault<ULexUIEditorSettings>();
-		if (Settings->bDrawHelperFrame && GEditor->GetSelectedActorCount() > 0)
+		if (Settings->bDrawHelperFrame)
 		{
 			if (this->GetWorld()->WorldType == EWorldType::Game
 				|| this->GetWorld()->WorldType == EWorldType::PIE
@@ -1113,7 +1118,7 @@ void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 			{
 				struct LOCAL
 				{
-					static void ForEachWidget(ULexWidget* Widget)
+					static void ForEachWidget(ULexUIManagerWorldSubsystem* LexUIManager, ULexWidget* Widget)
 					{
 						if (!IsValid(Widget))return;
 
@@ -1123,17 +1128,17 @@ void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 							auto RenderCanvas = Widget->GetRenderCanvas();
 							bIsScreenSpace = RenderCanvas->IsRenderToScreenSpace() || RenderCanvas->IsRenderToRenderTarget();
 						}
-						DrawFrameOnWidget(Widget, bIsScreenSpace);
+						LexUIManager->DrawFrameOnWidget(Widget, bIsScreenSpace);
 
 						for (auto& Child : Widget->GetUIChildren())
 						{
-							ForEachWidget(Child);
+							ForEachWidget(LexUIManager, Child);
 						}
 					}
 				};
 				for (auto Widget : AllRootWidgetArray)
 				{
-					LOCAL::ForEachWidget(Widget.Get());
+					LOCAL::ForEachWidget(this, Widget.Get());
 				}
 			}
 		}
@@ -1310,7 +1315,7 @@ void ULexUIManagerWorldSubsystem::AddLexUIBehaviourForLifecycleEvent(ULexUIBehav
 			{
 				if (auto ArrayPtr = Instance->LexUIBehaviours_PrefabSystemProcessing.Find(SessionId))
 				{
-					auto& CompArray = ArrayPtr->LGUILifeCycleBehaviourArray;
+					auto& CompArray = ArrayPtr->LexUIBehaviourArray;
 #if !UE_BUILD_SHIPPING
 					if (CompArray.Contains(InComp))
 					{
@@ -1750,7 +1755,7 @@ void ULexUIManagerWorldSubsystem::ProcessLexUILifecycleEvent(ULexUIBehaviour* In
 }
 void ULexUIManagerWorldSubsystem::BeginPrefabSystemProcessingActor(const FGuid& InSessionId)
 {
-	FLGUILifeCycleBehaviourArrayContainer Container;
+	FLexUIBehaviourArrayContainer Container;
 	LexUIBehaviours_PrefabSystemProcessing.Add(InSessionId, Container);
 }
 void ULexUIManagerWorldSubsystem::EndPrefabSystemProcessingActor(const FGuid& InSessionId)
@@ -1763,17 +1768,17 @@ void ULexUIManagerWorldSubsystem::EndPrefabSystemProcessingActor(const FGuid& In
 			Function();
 		}
 
-		auto& LGUILifeCycleBehaviourArray = ArrayPtr->LGUILifeCycleBehaviourArray;
-		auto Count = LGUILifeCycleBehaviourArray.Num();
+		auto& LexUIBehaviourArray = ArrayPtr->LexUIBehaviourArray;
+		auto Count = LexUIBehaviourArray.Num();
 		for (int i = 0; i < Count; i++)
 		{
-			auto& Item = LGUILifeCycleBehaviourArray[i];
+			auto& Item = LexUIBehaviourArray[i];
 			if (Item.IsValid())
 			{
 				ProcessLexUILifecycleEvent(Item.Get());
 			}
 #if !UE_BUILD_SHIPPING
-			if (LGUILifeCycleBehaviourArray.Num() != Count)
+			if (LexUIBehaviourArray.Num() != Count)
 			{
 				UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			}

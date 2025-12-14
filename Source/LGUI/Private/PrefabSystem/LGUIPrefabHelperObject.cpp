@@ -2,6 +2,7 @@
 
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #include "LGUI.h"
+#include "Core/LexUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "PrefabSystem/LGUIPrefab.h"
 #include "Utils/LexUIUtils.h"
@@ -35,14 +36,13 @@ void ULGUIPrefabHelperObject::MarkAsManagerObject()
 {
 	if (bIsMarkedAsManagerObject)return;
 	bIsMarkedAsManagerObject = true;
-	ULGUIPrefabManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]{
+	ULexUIEditorManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]{
 		if (Object.IsValid())
 		{
 			GEditor->OnLevelActorAttached().AddUObject(Object.Get(), &ULGUIPrefabHelperObject::OnLevelActorAttached);
 			GEditor->OnLevelActorDetached().AddUObject(Object.Get(), &ULGUIPrefabHelperObject::OnLevelActorDetached);
 			GEditor->OnLevelActorDeleted().AddUObject(Object.Get(), &ULGUIPrefabHelperObject::OnLevelActorDeleted);
 			Object->bCanNotifyAttachment = true;
-			ULGUIPrefabManagerObject::OnComponentCreateDelete().AddUObject(Object.Get(), &ULGUIPrefabHelperObject::OnComponentCreateDelete);
 		}
 		}, 1);
 
@@ -700,7 +700,7 @@ void ULGUIPrefabHelperObject::TryCollectPropertyToOverride(UObject* InObject, FP
 
 void ULGUIPrefabHelperObject::OnLevelActorAttached(AActor* Actor, const AActor* AttachTo)
 {
-	if (ULGUIPrefabManagerObject::GetIsBlueprintCompiling())return;
+	if (ULexUIEditorManagerObject::GetIsBlueprintCompiling())return;
 	if (!bCanNotifyAttachment)return;
 	if (Actor->GetWorld() != this->GetPrefabWorld())return;
 	if (auto PrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(Actor->GetWorld()))
@@ -720,7 +720,7 @@ void ULGUIPrefabHelperObject::OnLevelActorAttached(AActor* Actor, const AActor* 
 			AttachmentActor.AttachTo = (AActor*)AttachTo;
 			AttachmentActor.DetachFrom = nullptr;
 			this->bAlreadyShowMessageAtThisFrame = false;
-			ULGUIPrefabManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]() {
+			ULexUIEditorManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]() {
 				if (Object.IsValid())
 				{
 					Object->CheckAttachment();
@@ -736,7 +736,7 @@ void ULGUIPrefabHelperObject::OnLevelActorAttached(AActor* Actor, const AActor* 
 }
 void ULGUIPrefabHelperObject::OnLevelActorDetached(AActor* Actor, const AActor* DetachFrom)
 {
-	if (ULGUIPrefabManagerObject::GetIsBlueprintCompiling())return;
+	if (ULexUIEditorManagerObject::GetIsBlueprintCompiling())return;
 	if (!bCanNotifyAttachment)return;
 	if (Actor->GetWorld() != this->GetPrefabWorld())return;
 	if (auto PrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(Actor->GetWorld()))
@@ -748,7 +748,7 @@ void ULGUIPrefabHelperObject::OnLevelActorDetached(AActor* Actor, const AActor* 
 	AttachmentActor.AttachTo = nullptr;
 	AttachmentActor.DetachFrom = (AActor*)DetachFrom;
 	this->bAlreadyShowMessageAtThisFrame = false;
-	ULGUIPrefabManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]() {
+	ULexUIEditorManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]() {
 		if (Object.IsValid())
 		{
 			Object->CheckAttachment();
@@ -758,7 +758,7 @@ void ULGUIPrefabHelperObject::OnLevelActorDetached(AActor* Actor, const AActor* 
 
 void ULGUIPrefabHelperObject::OnLevelActorDeleted(AActor* Actor)
 {
-	if (ULGUIPrefabManagerObject::GetIsBlueprintCompiling())return;
+	if (ULexUIEditorManagerObject::GetIsBlueprintCompiling())return;
 	if (!bCanNotifyAttachment)return;
 	if (this->IsInsidePrefabEditor())return;
 
@@ -778,8 +778,8 @@ void ULGUIPrefabHelperObject::OnLevelActorDeleted(AActor* Actor)
 	{
 		this->Modify();
 		this->bAlreadyShowMessageAtThisFrame = false;
-		ULGUIPrefabManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]() {
-			if (ULGUIPrefabManagerObject::GetIsBlueprintCompiling())return;
+		ULexUIEditorManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]() {
+			if (ULexUIEditorManagerObject::GetIsBlueprintCompiling())return;
 			if (!Object->bAlreadyShowMessageAtThisFrame)
 			{
 				Object->bAlreadyShowMessageAtThisFrame = true;
@@ -791,7 +791,7 @@ void ULGUIPrefabHelperObject::OnLevelActorDeleted(AActor* Actor)
 			}, 1);
 	}
 
-	ULGUIPrefabManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]() {
+	ULexUIEditorManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]() {
 		if (Object.IsValid())
 		{
 			if (Object->CleanupInvalidLinkToSubPrefabObject())
@@ -805,7 +805,7 @@ void ULGUIPrefabHelperObject::OnLevelActorDeleted(AActor* Actor)
 bool ULGUIPrefabHelperObject::bFirstTimeShow_RestructActorBlueprint = true;
 void ULGUIPrefabHelperObject::CheckAttachment()
 {
-	if (ULGUIPrefabManagerObject::GetIsBlueprintCompiling())return;
+	if (ULexUIEditorManagerObject::GetIsBlueprintCompiling())return;
 	if (!bCanNotifyAttachment)return;
 	if (!AttachmentActor.Actor.IsValid())return;
 
@@ -896,38 +896,6 @@ You should know that using actor-blueprint inside Prefab is not a good idea, so 
 	break;
 	}
 	AttachmentActor = FAttachmentActorStruct();
-}
-
-void ULGUIPrefabHelperObject::OnComponentCreateDelete(bool InCreateOrDelete, UActorComponent* InComponent, AActor* InActor)
-{
-#if 0//not work as I want, toooooooo many unexpected operations can trigger this
-	if (!bCanNotifyComponentCreateDelete)return;
-	if (InComponent->IsDefaultSubobject())return;
-	if (this->IsActorBelongsToSubPrefab(InActor))
-	{
-		bAlreadyShowMessageAtThisFrame = false;
-		ULGUIPrefabManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this), InCreateOrDelete]() {
-			if (ULGUIPrefabManagerObject::GetIsBlueprintCompiling())return;
-			if (!Object.IsValid())return;
-			if (!Object->bAlreadyShowMessageAtThisFrame)
-			{
-				Object->bAlreadyShowMessageAtThisFrame = true;
-				if (InCreateOrDelete)
-				{
-					auto InfoText = LOCTEXT("CannotAddComponentToPrefabInstance", "Children of a Prefab instance cannot add or remove component, the added component will not saved to prefab.\
-\n\nYou can open the prefab in prefab editor to add or remove component, or unpack the prefab instance to remove its prefab connection.");
-					FMessageDialog::Open(EAppMsgType::Ok, InfoText);
-				}
-				else
-				{
-					auto InfoText = LOCTEXT("CannotAddComponentToPrefabInstance", "Children of a Prefab instance cannot add or remove component, the removed component will still exist inside prefab.\
-\n\nYou can open the prefab in prefab editor to add or remove component, or unpack the prefab instance to remove its prefab connection.");
-					FMessageDialog::Open(EAppMsgType::Ok, InfoText);
-				}
-			}
-			}, 1);
-	}
-#endif
 }
 
 UWorld* ULGUIPrefabHelperObject::GetPrefabWorld() const
@@ -1931,8 +1899,6 @@ void ULGUIPrefabHelperObject::SetAnythingDirty()
 
 #if WITH_EDITOR
 #include "Editor.h"
-#include "EditorActorFolders.h"
-#include "Core/LexUIManager.h"
 #include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
 #endif

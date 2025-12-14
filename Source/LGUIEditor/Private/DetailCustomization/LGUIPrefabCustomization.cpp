@@ -8,7 +8,7 @@
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
-#include "LGUIEditorTools.h"
+#include "LexUIEditorTools.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabCustomization"
 
@@ -352,7 +352,7 @@ FReply FLGUIPrefabCustomization::OnClickRecreteAllButton()
 	}
 	else
 	{
-		auto AllPrefabs = LGUIEditorTools::GetAllPrefabArray();
+		auto AllPrefabs = FLexUIEditorTools::GetAllPrefabArray();
 		for (auto Prefab : AllPrefabs)
 		{
 			if (
@@ -372,7 +372,7 @@ FReply FLGUIPrefabCustomization::OnClickEditPrefabButton()
 }
 FReply FLGUIPrefabCustomization::OnClickRecreateAgentObjects()
 {
-	auto AllPrefabs = LGUIEditorTools::GetAllPrefabArray();
+	auto AllPrefabs = FLexUIEditorTools::GetAllPrefabArray();
 	for (auto Prefab : AllPrefabs)
 	{
 		Prefab->MakeAgentObjectsInPreviewWorld();

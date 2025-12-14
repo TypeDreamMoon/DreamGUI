@@ -15,7 +15,7 @@
 #include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Utils/LexUIUtils.h"
-#include "LGUIEditorTools.h"
+#include "LexUIEditorTools.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #include "PrefabAnimation/LGUIPrefabSequenceComponent.h"
 #include "Core/Actor/LexWidgetActor.h"

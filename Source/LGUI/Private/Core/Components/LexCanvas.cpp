@@ -783,7 +783,7 @@ void ULexCanvas::EnsureDataForRebuild()
 		}
 	};
 	EnsureDrawCallObjectReference();
-	ULGUIPrefabManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)]() {
+	ULexUIEditorManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)]() {
 		if (WeakThis.IsValid())
 		{
 			LOCAL::RecheckRootCanvasRecursive(WeakThis.Get());
@@ -2957,7 +2957,7 @@ void ULexCanvas::RegisterCanvasScaler()
 #if WITH_EDITOR
 	if (GetWorld() && !GetWorld()->IsGameWorld())
 	{
-		EditorTickDelegateHandle = ULGUIPrefabManagerObject::RegisterEditorTickFunction([this](float deltaTime) {
+		EditorTickDelegateHandle = ULexUIEditorManagerObject::RegisterEditorTickFunction([this](float deltaTime) {
 			this->OnEditorTick(deltaTime);
 			});
 	}
@@ -2998,7 +2998,7 @@ void ULexCanvas::UnregisterCanvasScaler()
 #if WITH_EDITOR
 	if (EditorTickDelegateHandle.IsValid())
 	{
-		ULGUIPrefabManagerObject::UnregisterEditorTickFunction(EditorTickDelegateHandle);
+		ULexUIEditorManagerObject::UnregisterEditorTickFunction(EditorTickDelegateHandle);
 	}
 #endif
 	//reset the canvasScale to default
@@ -3145,7 +3145,7 @@ void ULexCanvas::OnEditorTick(float DeltaTime)
 			)
 		{
 			DrawViewportArea();
-			if (ULGUIPrefabManagerObject::IsSelected(this->GetOwner()))
+			if (ULexUIEditorManagerObject::IsSelected(this->GetOwner()))
 			{
 				DrawVirtualCamera();
 			}

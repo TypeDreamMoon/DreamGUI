@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 
 
-class FLGUILevelEditorExtensions
+class FLexUILevelEditorExtensions
 {
 public:
 	static void InstallHooks();

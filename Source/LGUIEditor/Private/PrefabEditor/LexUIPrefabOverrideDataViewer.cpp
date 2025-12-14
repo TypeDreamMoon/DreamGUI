@@ -1,6 +1,6 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUIPrefabOverrideDataViewer.h"
+#include "LexUIPrefabOverrideDataViewer.h"
 #include "PrefabSystem/LGUIPrefab.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #include "LGUIPrefabEditor.h"
@@ -8,24 +8,43 @@
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabOverrideDataViewer"
 
-void SLGUIPrefabOverrideDataViewer::Construct(const FArguments& InArgs, ULGUIPrefabHelperObject* InPrefabHelperObject)
+void SLexUIPrefabOverrideDataViewer::Construct(const FArguments& InArgs, TFunction<AActor*()> InGetSelectedActorFunction)
 {
 	AfterRevertPrefab = InArgs._AfterRevertPrefab;
 	AfterApplyPrefab = InArgs._AfterApplyPrefab;
 
-	PrefabHelperObject = InPrefabHelperObject;
+	GetSelectedActorFunction = InGetSelectedActorFunction;
+	auto SelectedActor = InGetSelectedActorFunction();
+	if (!SelectedActor)return;
+	PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
 	RootContentVerticalBox = SNew(SVerticalBox);
 	ChildSlot
 	[
 		RootContentVerticalBox.ToSharedRef()
 	]
 	;
+	RefreshDataContent();
 }
-void SLGUIPrefabOverrideDataViewer::SetPrefabHelperObject(ULGUIPrefabHelperObject* InPrefabHelperObject)
+
+void SLexUIPrefabOverrideDataViewer::RefreshDataContent()
 {
-	PrefabHelperObject = InPrefabHelperObject; 
+	auto SelectedActor = GetSelectedActorFunction();
+	if (!SelectedActor)return;
+	if (!PrefabHelperObject.IsValid())return;
+	
+	bool bIsSubPrefabRoot = false;
+	for (auto& KeyValue : PrefabHelperObject->SubPrefabMap)
+	{
+		if (KeyValue.Key == SelectedActor)
+		{
+			bIsSubPrefabRoot = true;
+			break;
+		}
+	}
+	this->RefreshDataContent(PrefabHelperObject->GetSubPrefabData(SelectedActor).ObjectOverrideParameterArray, bIsSubPrefabRoot ? nullptr : SelectedActor);
 }
-void SLGUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLGUIPrefabOverrideParameterData> ObjectOverrideParameterArray, AActor* InReferenceActor)
+
+void SLexUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLGUIPrefabOverrideParameterData> ObjectOverrideParameterArray, AActor* InReferenceActor)
 {
 	RootContentVerticalBox->ClearChildren();
 	if (ObjectOverrideParameterArray.Num() == 0)return;
@@ -176,6 +195,7 @@ void SLGUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLGUIPrefabOverrid
 					PropertyCustomizationHelpers::MakeResetButton(
 						FSimpleDelegate::CreateLambda([=, this]() {
 							PrefabHelperObject->RevertPrefabOverride(DataItem.Object.Get(), PropertyName);
+							RefreshDataContent();
 							AfterRevertPrefab.ExecuteIfBound(PrefabHelperObject->GetPrefabAssetBySubPrefabObject(DataItem.Object.Get()));
 						})
 						, LOCTEXT("ResetThisParameter", "Click to revert this parameter to prefab's default value.")
@@ -196,6 +216,7 @@ void SLGUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLGUIPrefabOverrid
 					PropertyCustomizationHelpers::MakeUseSelectedButton(
 						FSimpleDelegate::CreateLambda([=, this]() {
 							PrefabHelperObject->ApplyPrefabOverride(DataItem.Object.Get(), PropertyName);
+							RefreshDataContent();
 							AfterApplyPrefab.ExecuteIfBound(PrefabHelperObject->GetPrefabAssetBySubPrefabObject(DataItem.Object.Get()));
 						})
 						, LOCTEXT("ApplyThisParameter", "Click to apply this parameter to origin prefab.")

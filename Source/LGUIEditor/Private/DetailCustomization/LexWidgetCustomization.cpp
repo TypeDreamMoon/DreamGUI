@@ -10,7 +10,7 @@
 #include "PropertyCustomizationHelpers.h"
 #include "HAL/PlatformApplicationMisc.h"
 #include "LGUIEditorUtils.h"
-#include "LGUIEditorTools.h"
+#include "LexUIEditorTools.h"
 #include "LGUIHeaders.h"
 #include "PrefabEditor/LGUIPrefabEditor.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
@@ -1113,7 +1113,7 @@ FReply FLexWidgetCustomization::OnClickFixDisplayNameButton(bool singleOrAll, TS
 				SelectedActors.Add(UIItem->GetOwner());
 			}
 		}
-		auto SelectedRootActors = LGUIEditorTools::GetRootActorListFromSelection(SelectedActors);
+		auto SelectedRootActors = FLexUIEditorTools::GetRootActorListFromSelection(SelectedActors);
 		for (auto& RootActor : SelectedRootActors)
 		{
 			TArray<AActor*> ChildrenActors;

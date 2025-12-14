@@ -24,8 +24,6 @@ public:
     void Construct(const FArguments& Args, TSharedPtr<FLGUIPrefabEditor> InPrefabEditor);
 
 	virtual ~SLGUIPrefabEditorDetails();
-public:
-	void RefreshOverrideParameter();
 private:
 	UObject* GetActorContextAsObject() const;
 	void OnEditorSelectionChanged();
@@ -40,7 +38,6 @@ private:
 	EVisibility GetPrefabButtonVisibility()const;
 	bool IsEditorAllowEditing()const;
 
-	TSharedPtr<class SLGUIPrefabOverrideDataViewer> OverrideParameterEditor;
 	TSharedPtr<class IDetailsView> DetailsView;
 	TSharedPtr<class SBox> ComponentsBox;
 	TSharedPtr<class SSubobjectEditor> SubobjectEditor;

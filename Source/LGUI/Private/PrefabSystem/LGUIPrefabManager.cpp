@@ -3,7 +3,6 @@
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "LGUI.h"
 #include "Engine/World.h"
-#include "Core/LexUISettings.h"
 #include "Engine/Engine.h"
 #if WITH_EDITOR
 #include "Editor.h"
@@ -11,7 +10,6 @@
 #include "Engine/Selection.h"
 #include "EditorViewportClient.h"
 #include "PrefabSystem/LGUIPrefab.h"
-#include "EngineUtils.h"
 #endif
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabManagerObject"
@@ -44,20 +42,6 @@ void ULGUIPrefabManagerObject::BeginDestroy()
 	{
 		FCoreUObjectDelegates::OnPackageReloaded.Remove(OnPackageReloadedDelegateHandle);
 	}
-	if (OnBlueprintPreCompileDelegateHandle.IsValid())
-	{
-		if (GEditor)
-		{
-			GEditor->OnBlueprintPreCompile().Remove(OnBlueprintPreCompileDelegateHandle);
-		}
-	}
-	if (OnBlueprintCompiledDelegateHandle.IsValid())
-	{
-		if (GEditor)
-		{
-			GEditor->OnBlueprintCompiled().Remove(OnBlueprintCompiledDelegateHandle);
-		}
-	}
 #endif
 	Instance = nullptr;
 }
@@ -65,27 +49,6 @@ void ULGUIPrefabManagerObject::BeginDestroy()
 void ULGUIPrefabManagerObject::Tick(float DeltaTime)
 {
 #if WITH_EDITOR
-	if (EditorTick.IsBound())
-	{
-		EditorTick.Broadcast(DeltaTime);
-	}
-	if (OneShotFunctionsToExecuteInTick.Num() > 0)
-	{
-		for (int i = 0; i < OneShotFunctionsToExecuteInTick.Num(); i++)
-		{
-			auto& Item = OneShotFunctionsToExecuteInTick[i];
-			if (Item.Key <= 0)
-			{
-				Item.Value();
-				OneShotFunctionsToExecuteInTick.RemoveAt(i);
-				i--;
-			}
-			else
-			{
-				Item.Key--;
-			}
-		}
-	}
 	if (bShouldBroadcastLevelActorListChanged)
 	{
 		bShouldBroadcastLevelActorListChanged = false;
@@ -102,28 +65,6 @@ TStatId ULGUIPrefabManagerObject::GetStatId() const
 }
 
 #if WITH_EDITOR
-
-void ULGUIPrefabManagerObject::AddOneShotTickFunction(const TFunction<void()>& InFunction, int InDelayFrameCount)
-{
-	InitCheck();
-	InDelayFrameCount = FMath::Max(0, InDelayFrameCount);
-	TTuple<int, TFunction<void()>> Item;
-	Item.Key = InDelayFrameCount;
-	Item.Value = InFunction;
-	Instance->OneShotFunctionsToExecuteInTick.Add(Item);
-}
-FDelegateHandle ULGUIPrefabManagerObject::RegisterEditorTickFunction(const TFunction<void(float)>& InFunction)
-{
-	InitCheck();
-	return Instance->EditorTick.AddLambda(InFunction);
-}
-void ULGUIPrefabManagerObject::UnregisterEditorTickFunction(const FDelegateHandle& InDelegateHandle)
-{
-	if (Instance != nullptr)
-	{
-		Instance->EditorTick.Remove(InDelegateHandle);
-	}
-}
 
 ULGUIPrefabManagerObject* ULGUIPrefabManagerObject::GetInstance(bool CreateIfNotValid)
 {
@@ -147,24 +88,9 @@ bool ULGUIPrefabManagerObject::InitCheck()
 		{
 			//reimport asset
 			Instance->OnAssetReimportDelegateHandle = GEditor->GetEditorSubsystem<UImportSubsystem>()->OnAssetReimport.AddUObject(Instance, &ULGUIPrefabManagerObject::OnAssetReimport);
-			//blueprint recompile
-			Instance->OnBlueprintPreCompileDelegateHandle = GEditor->OnBlueprintPreCompile().AddUObject(Instance, &ULGUIPrefabManagerObject::OnBlueprintPreCompile);
-			Instance->OnBlueprintCompiledDelegateHandle = GEditor->OnBlueprintCompiled().AddUObject(Instance, &ULGUIPrefabManagerObject::OnBlueprintCompiled);
 		}
 	}
 	return true;
-}
-
-void ULGUIPrefabManagerObject::OnBlueprintPreCompile(UBlueprint* InBlueprint)
-{
-	bIsBlueprintCompiling = true;
-}
-void ULGUIPrefabManagerObject::OnBlueprintCompiled()
-{
-	bIsBlueprintCompiling = true;
-	AddOneShotTickFunction([this] {
-		bIsBlueprintCompiling = false; 
-		}, 2);
 }
 
 void ULGUIPrefabManagerObject::OnAssetReimport(UObject* asset)
@@ -206,14 +132,6 @@ UWorld* ULGUIPrefabManagerObject::GetPreviewWorldForPrefabPackage()
 	}
 	return PreviewScene->GetWorld();
 }
-bool ULGUIPrefabManagerObject::GetIsBlueprintCompiling()
-{
-	if (InitCheck())
-	{
-		return Instance->bIsBlueprintCompiling;
-	}
-	return false;
-}
 
 void ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged()
 {
@@ -221,26 +139,6 @@ void ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged()
 	{
 		Instance->bShouldBroadcastLevelActorListChanged = true;
 	}
-}
-
-bool ULGUIPrefabManagerObject::IsSelected(AActor* InObject)
-{
-	if (!IsValid(GEditor))return false;
-	return GEditor->GetSelectedActors()->IsSelected(InObject);
-}
-
-bool ULGUIPrefabManagerObject::AnySelectedIsChildOf(AActor* InObject)
-{
-	if (!IsValid(GEditor))return false;
-	for (FSelectionIterator itr(GEditor->GetSelectedActorIterator()); itr; ++itr)
-	{
-		auto itrActor = Cast<AActor>(*itr);
-		if (IsValid(itrActor) && itrActor->IsAttachedTo(InObject))
-		{
-			return true;
-		}
-	}
-	return false;
 }
 
 ULGUIPrefabManagerObject::FSerialize_SortChildrenActors ULGUIPrefabManagerObject::OnSerialize_SortChildrenActors;
