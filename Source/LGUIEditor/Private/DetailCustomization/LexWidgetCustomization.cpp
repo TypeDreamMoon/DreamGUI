@@ -13,7 +13,6 @@
 #include "LexUIEditorTools.h"
 #include "LGUIHeaders.h"
 #include "PrefabEditor/LGUIPrefabEditor.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
 
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
@@ -110,7 +109,129 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	ClippingGroup.HeaderProperty(Clipping_PH);
 	auto ClippingCornerRadius_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, ClippingCornerRadius));
 	auto ClippingMargin_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, ClippingMargin));
-	ClippingGroup.AddPropertyRow(ClippingCornerRadius_PH);
+	{
+		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, bUniformSetClippingCornerRadius));
+
+		auto UniformSetCornerRadiusHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, bUniformSetClippingCornerRadius));
+		auto CornerRadiusHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, ClippingCornerRadius));
+		auto CornerRadiusXHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, ClippingCornerRadius.X));
+		auto CornerRadiusYHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, ClippingCornerRadius.Y));
+		auto CornerRadiusZHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, ClippingCornerRadius.Z));
+		auto CornerRadiusWHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, ClippingCornerRadius.W));
+		auto CornerRadiusPropertyIsEnabledFunction = [=] {
+			bool bUniformSetCornerRadius = false;
+			UniformSetCornerRadiusHandle->GetValue(bUniformSetCornerRadius);
+			return !bUniformSetCornerRadius;
+		};
+
+		CornerRadiusXHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=] {
+			bool bUniformSetCornerRadius = false;
+			UniformSetCornerRadiusHandle->GetValue(bUniformSetCornerRadius);
+			if (bUniformSetCornerRadius)
+			{
+				float CornerRadiusX;
+				CornerRadiusXHandle->GetValue(CornerRadiusX);
+				CornerRadiusYHandle->SetValue(CornerRadiusX);
+				CornerRadiusZHandle->SetValue(CornerRadiusX);
+				CornerRadiusWHandle->SetValue(CornerRadiusX);
+			}
+			}));
+
+		ClippingGroup.AddWidgetRow()
+		.PropertyHandleList({ UniformSetCornerRadiusHandle, CornerRadiusHandle })
+		.OverrideResetToDefault(FResetToDefaultOverride::Create(TAttribute<bool>::CreateLambda([=]()
+		{
+			return UniformSetCornerRadiusHandle->CanResetToDefault() || CornerRadiusHandle->CanResetToDefault();
+		}), FSimpleDelegate::CreateLambda([=]()
+		{
+			UniformSetCornerRadiusHandle->ResetToDefault();
+			CornerRadiusHandle->ResetToDefault();
+		})))
+		.NameContent()
+		[
+			SNew(SBox)
+			.MinDesiredWidth(1000)
+			[
+				SNew(SHorizontalBox)
+				+SHorizontalBox::Slot()
+				.VAlign(VAlign_Center)
+				[
+					SNew(STextBlock)
+					.Text(CornerRadiusHandle->GetPropertyDisplayName())
+					.Font(IDetailLayoutBuilder::GetDetailFont())
+				]
+				+SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				.Padding(FMargin(4.0f, 0.0f, 0.0f, 0.0f))
+				[
+					SNew(SCheckBox)
+					.IsChecked_Lambda([=] {
+						bool bUniformSetCornerRadius = false;
+						UniformSetCornerRadiusHandle->GetValue(bUniformSetCornerRadius);
+						return bUniformSetCornerRadius ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+						})
+					.OnCheckStateChanged_Lambda([=](ECheckBoxState NewState){
+						bool bUniformSetCornerRadius = NewState == ECheckBoxState::Checked;
+						UniformSetCornerRadiusHandle->SetValue(bUniformSetCornerRadius);
+						})
+					.Style(FAppStyle::Get(), "TransparentCheckBox")
+					.ToolTipText(LOCTEXT("UniformSetCornerRadiusToolTip", "When locked, corner radius will all set with x value"))
+					[
+						SNew(SImage)
+						.Image_Lambda([=] {
+							bool bUniformSetCornerRadius = false;
+							UniformSetCornerRadiusHandle->GetValue(bUniformSetCornerRadius);
+							return bUniformSetCornerRadius ? FAppStyle::GetBrush(TEXT("Icons.Lock")) : FAppStyle::GetBrush(TEXT("Icons.Unlock"));
+							})
+						.ColorAndOpacity(FSlateColor::UseForeground())
+					]
+				]
+			]
+		]
+		.ValueContent()
+		.MinDesiredWidth(500)
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Center)
+			.FillWidth(1)
+			[
+				CornerRadiusXHandle->CreatePropertyValueWidget()
+			]
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Center)
+			.FillWidth(1)
+			[
+				SNew(SBox)
+				.IsEnabled_Lambda(CornerRadiusPropertyIsEnabledFunction)
+				[
+					CornerRadiusYHandle->CreatePropertyValueWidget()
+				]
+			]
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Center)
+			.FillWidth(1)
+			[
+				SNew(SBox)
+				.IsEnabled_Lambda(CornerRadiusPropertyIsEnabledFunction)
+				[
+					CornerRadiusZHandle->CreatePropertyValueWidget()
+				]
+			]
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Center)
+			.FillWidth(1)
+			[
+				SNew(SBox)
+				.IsEnabled_Lambda(CornerRadiusPropertyIsEnabledFunction)
+				[
+					CornerRadiusWHandle->CreatePropertyValueWidget()
+				]
+			]
+		]
+		;
+	}
 	ClippingGroup.AddPropertyRow(ClippingMargin_PH);
 
 	//anchor, width, height
@@ -687,7 +808,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		DetailBuilder.HideProperty(SiblingIndexHandle);
 		SiblingIndexHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
 			ForceUpdateUI();
-			ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();
+			ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();
 			}));
 		auto SiblingIndexWidget =
 			SNew(SHorizontalBox)
@@ -1081,7 +1202,7 @@ FReply FLexWidgetCustomization::OnClickIncreaseOrDecreaseSiblingIndex(bool Incre
 	}
 	GEditor->EndTransaction();
 
-	ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();
+	ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();
 	return FReply::Handled();
 }
 

@@ -1,9 +1,10 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/LexUIRichTextImageData.h"
+
+#include "Core/LexUIManager.h"
 #include "Extensions/UISpriteSequencePlayer.h"
 #include "Utils/LexUIUtils.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexWidget.h"
@@ -116,7 +117,7 @@ void ULexUIRichTextImageData::CreateOrUpdateObject(ULexWidget* parent, const TAr
 #if WITH_EDITOR
 	if (!parent->GetWorld()->IsGameWorld())//refresh on editor
 	{
-		ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();
+		ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();
 	}
 #endif
 }

@@ -128,12 +128,6 @@ private:
 	//void ExtendMenu();
 	void ExtendToolbar();
 
-	void OnCopy();
-	void OnPaste();
-	void OnCut();
-	void OnDuplicate();
-	void OnDelete();
-
 	FText GetApplyButtonStatusTooltip()const;
 	FSlateIcon GetApplyButtonStatusImage()const;
 

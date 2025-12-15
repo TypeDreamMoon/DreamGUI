@@ -40,10 +40,12 @@ private:
 	static bool bIsBlueprintCompiling;
 	FLexUIEditorTickMulticastDelegate EditorTick;
 	TArray<TTuple<int, TFunction<void()>>> OneShotFunctionsToExecuteInTick;
+	bool bShouldBroadcastLevelActorListChanged = false;
 public:
 	static void AddOneShotTickFunction(const TFunction<void()>& InFunction, int InDelayFrameCount = 0);
 	static FDelegateHandle RegisterEditorTickFunction(const TFunction<void(float)>& InFunction);
 	static void UnregisterEditorTickFunction(const FDelegateHandle& InDelegateHandle);
+	static void MarkBroadcastLevelActorListChanged();
 public:
 	static int IndexOfClickSelectUI;
 #endif
@@ -168,6 +170,8 @@ public:
 	const TArray<TWeakObjectPtr<ULexWidget>>& GetAllRootUIItemArray()const { return AllRootWidgetArray; }
 
 	ULexUISelection* GetSelection() { return Selection; }
+	
+	FSimpleMulticastDelegate EventOnOutlineChanged;
 #endif
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")

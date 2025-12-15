@@ -48,16 +48,7 @@ void ULGUIPrefabManagerObject::BeginDestroy()
 
 void ULGUIPrefabManagerObject::Tick(float DeltaTime)
 {
-#if WITH_EDITOR
-	if (bShouldBroadcastLevelActorListChanged)
-	{
-		bShouldBroadcastLevelActorListChanged = false;
-		if (IsValid(GEditor))
-		{
-			GEditor->BroadcastLevelActorListChanged();
-		}
-	}
-#endif
+
 }
 TStatId ULGUIPrefabManagerObject::GetStatId() const
 {
@@ -76,6 +67,7 @@ ULGUIPrefabManagerObject* ULGUIPrefabManagerObject::GetInstance(bool CreateIfNot
 }
 bool ULGUIPrefabManagerObject::InitCheck()
 {
+	if (!GEngine)return false;
 	if (Instance == nullptr)
 	{
 		Instance = NewObject<ULGUIPrefabManagerObject>();
@@ -131,14 +123,6 @@ UWorld* ULGUIPrefabManagerObject::GetPreviewWorldForPrefabPackage()
 		PreviewScene = MakeUnique<FPreviewScene>();
 	}
 	return PreviewScene->GetWorld();
-}
-
-void ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged()
-{
-	if (Instance != nullptr)
-	{
-		Instance->bShouldBroadcastLevelActorListChanged = true;
-	}
 }
 
 ULGUIPrefabManagerObject::FSerialize_SortChildrenActors ULGUIPrefabManagerObject::OnSerialize_SortChildrenActors;

@@ -390,13 +390,13 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 				//.Font(this, &SHierarchyViewItem::GetItemFont)
 				.Text(this, &SLexWidgetEditorHierarchyViewItem::GetItemText)
 				.ToolTipText(this, &SLexWidgetEditorHierarchyViewItem::GetItemTooltipText)
-				.ColorAndOpacity(this, &SLexWidgetEditorHierarchyViewItem::GetItemColorAndOpacity)
+				.ColorAndOpacity(this, &SLexWidgetEditorHierarchyViewItem::GetNameTextColorAndOpacity)
 				.IsReadOnly(this, &SLexWidgetEditorHierarchyViewItem::IsReadOnly)
 				.OnEnterEditingMode(this, &SLexWidgetEditorHierarchyViewItem::OnBeginNameTextEdit)
 				.OnExitEditingMode(this, &SLexWidgetEditorHierarchyViewItem::OnEndNameTextEdit)
 				.OnVerifyTextChanged(this, &SLexWidgetEditorHierarchyViewItem::OnVerifyNameTextChanged)
 				.OnTextCommitted(this, &SLexWidgetEditorHierarchyViewItem::OnNameTextCommited)
-				.IsSelected(this, &SLexWidgetEditorHierarchyViewItem::IsSelectedExclusively)
+				.IsSelected(this, &SLexWidgetEditorHierarchyViewItem::IsSelectedExclusively)				
 			]
 
 			// SubPrefab
@@ -502,8 +502,8 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 				// 	.WidthOverride(16)
 				// 	.HeightOverride(16)
 				// 	.Padding(FMargin(0))
-				// 	.HAlign(EHorizontalAlignment::HAlign_Center)
-				// 	.VAlign(EVerticalAlignment::VAlign_Center)
+				// 	.HAlign(HAlign_Center)
+				// 	.VAlign(VAlign_Center)
 				// 	[
 				// 		SNew(SImage)
 				// 		.Image(FLGUIEditorStyle::Get().GetBrush("PrefabPlusMarkWhite"))
@@ -553,8 +553,9 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 				})
 				[
 					SNew(STextBlock)
-						.Font(FAppStyle::Get().GetFontStyle("FontAwesome.10"))
-						.Text(this, &SLexWidgetEditorHierarchyViewItem::GetVisibilityBrushForWidget)
+					.Font(FAppStyle::Get().GetFontStyle("FontAwesome.10"))
+					.Text(this, &SLexWidgetEditorHierarchyViewItem::GetVisibilityBrushForWidget)
+					.ColorAndOpacity(this, &SLexWidgetEditorHierarchyViewItem::GetVisibilityIconColorAndOpacity)
 				]
 			]
 		],
@@ -725,7 +726,7 @@ FText SLexWidgetEditorHierarchyViewItem::GetItemTooltipText() const
 		: FText::GetEmpty();
 }
 
-FSlateColor SLexWidgetEditorHierarchyViewItem::GetItemColorAndOpacity() const
+FSlateColor SLexWidgetEditorHierarchyViewItem::GetNameTextColorAndOpacity() const
 {
 	if (Widget.IsValid())
 	{
@@ -737,7 +738,7 @@ FSlateColor SLexWidgetEditorHierarchyViewItem::GetItemColorAndOpacity() const
 				{
 					return FLinearColor(FColor(124,171,240, 255));
 				}
-				return FLinearColor(FColor(124,171,240, 100));
+				return FLinearColor(FColor(124,171,240, 128));
 			}
 			else
 			{
@@ -747,7 +748,7 @@ FSlateColor SLexWidgetEditorHierarchyViewItem::GetItemColorAndOpacity() const
 					{
 						return FSlateColor(FColor::Red);
 					}
-					return FSlateColor(FColor(255, 0, 0, 100));
+					return FSlateColor(FColor(255, 0, 0, 128));
 				}
 			}
 		}
@@ -755,9 +756,17 @@ FSlateColor SLexWidgetEditorHierarchyViewItem::GetItemColorAndOpacity() const
 		{
 			return FSlateColor(FColor(192,192,192,255));
 		}
-		return FSlateColor(FColor(192,192,192,100));
+		return FSlateColor(FColor(192,192,192,128));
 	}
-	return FSlateColor(FColor(192,192,192,100));
+	return FSlateColor(FColor(192,192,192,128));
+}
+
+FSlateColor SLexWidgetEditorHierarchyViewItem::GetVisibilityIconColorAndOpacity() const
+{
+	auto NameTextColorAndOpacity = GetNameTextColorAndOpacity();
+	auto Alpha = NameTextColorAndOpacity.GetSpecifiedColor().A * 255;
+	NameTextColorAndOpacity = FSlateColor(FColor(255,255,255,(uint8)Alpha));
+	return NameTextColorAndOpacity;
 }
 
 bool SLexWidgetEditorHierarchyViewItem::IsReadOnly() const
@@ -807,7 +816,7 @@ FReply SLexWidgetEditorHierarchyViewItem::OnToggleVisibility()
 }
 FText SLexWidgetEditorHierarchyViewItem::GetVisibilityBrushForWidget() const
 {
-	return Widget.IsValid() && Widget->GetWidgetActiveInHierarchy() ? FEditorFontGlyphs::Eye : FEditorFontGlyphs::Eye_Slash;
+	return Widget.IsValid() && Widget->GetWidgetActive() ? FEditorFontGlyphs::Eye : FEditorFontGlyphs::Eye_Slash;
 }
 
 bool SLexWidgetEditorHierarchyViewItem::SupportDrop(ULexWidget* Dragging, ULexWidget* Current, EItemDropZone DropZone)

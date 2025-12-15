@@ -34,7 +34,7 @@ float FLexLayoutSize::CalculateSize(ULexWidget* Widget, bool IsVertical)const
         case ELexLayoutSizeType::Percent:
             if (auto ParentWidget = Widget->GetUIParent())
             {
-                CalculatedValue = PercentValue * 0.01f * (IsVertical ? ParentWidget->GetHeight() : ParentWidget->GetWidth());
+                CalculatedValue = PercentValue * (IsVertical ? ParentWidget->GetHeight() : ParentWidget->GetWidth());
             }
             else
             {
@@ -68,7 +68,7 @@ float FLexLayoutMinMaxSize::CalculateSize(ULexWidget* Widget, bool IsVertical, b
         case ELexLayoutMinMaxSizeType::Percent:
             if (auto ParentWidget = Widget->GetUIParent())
             {
-                CalculatedValue = PercentValue * 0.01f * (IsVertical ? ParentWidget->GetHeight() : ParentWidget->GetWidth());
+                CalculatedValue = PercentValue * (IsVertical ? ParentWidget->GetHeight() : ParentWidget->GetWidth());
             }
             else
             {

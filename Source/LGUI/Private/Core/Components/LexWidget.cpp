@@ -318,7 +318,7 @@ void ULexWidget::ApplyListChildrenInSceneOutliner()
 		}
 	};
 	LOCAL::ApplyListChildrenInSceneOutliner(this, bListChildrenInSceneOutliner);
-	ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();
+	ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();
 }
 #endif
 
@@ -628,8 +628,11 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		}
 		ULexUIEditorManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)]()
 		{
-			WeakThis->EditorForceUpdate();
-			WeakThis->UpdateBounds();
+			if (WeakThis.IsValid())
+			{
+				WeakThis->EditorForceUpdate();
+				WeakThis->UpdateBounds();
+			}
 		}, 1);
 
 		if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, bListChildrenInSceneOutliner))
@@ -723,7 +726,23 @@ void ULexWidget::PostEditComponentMove(bool bFinished)
 void ULexWidget::PostEditUndo()
 {
 	Super::PostEditUndo();
-	ULexUIManagerWorldSubsystem::RefreshAllUI(this->GetWorld());
+	ULexUIEditorManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)]()
+	{
+		if (!WeakThis.IsValid())return;
+		//restore SiblingIndex
+		WeakThis->UIParent->UIChildren.Remove(WeakThis.Get());
+		WeakThis->UIParent->UIChildren.Insert(WeakThis.Get(), WeakThis->SiblingIndex);
+		for (int i = 0; i < WeakThis->UIParent->UIChildren.Num(); i++)
+		{
+			auto& UIChild = WeakThis->UIParent->UIChildren[i];
+			if (UIChild->SiblingIndex != i)
+			{
+				UIChild->SiblingIndex = i;
+			}
+		}
+		ULexUIManagerWorldSubsystem::RefreshAllUI(WeakThis->GetWorld());
+		ULexUIManagerWorldSubsystem::GetInstance(WeakThis->GetWorld())->EventOnOutlineChanged.Broadcast();
+	}, 1);
 }
 
 void ULexWidget::PostTransacted(const FTransactionObjectEvent& TransactionEvent)
@@ -882,7 +901,7 @@ void ULexWidget::OnChildAttached(USceneComponent* ChildComponent)
 			}
 		}
 
-		//make sure hierarchyindex all good
+		//make sure SiblingIndex all good
 		if (ChildWidget->SiblingIndex == INDEX_NONE)
 		{
 			for (int i = 0; i < UIChildren.Num(); i++)
@@ -992,16 +1011,6 @@ void ULexWidget::OnRegister()
 			if (this->GetOwner()->GetRootComponent() == this 
 				)
 			{
-				if (!HelperComp)
-				{
-					HelperComp = NewObject<ULexWidgetEditorHelperComp>(GetOwner(), NAME_None, RF_Transient | RF_TextExportTransient);
-					HelperComp->Parent = this;
-					HelperComp->Mobility = EComponentMobility::Movable;
-					HelperComp->SetIsVisualizationComponent(true);
-					HelperComp->SetupAttachment(this);
-					HelperComp->RegisterComponent();
-				}
-
 				//display name
 				auto PrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(this->GetWorld());
 				if (PrefabManager && PrefabManager->IsPrefabSystemProcessingActor(this->GetOwner()))//when load from prefab or duplicate by LGUI PrefabSystem, the displayName should be set from prefab
@@ -1069,11 +1078,6 @@ void ULexWidget::OnUnregister()
 				}
 			}
 		}
-	}
-	if (HelperComp)
-	{
-		HelperComp->DestroyComponent();
-		HelperComp = nullptr;
 	}
 #endif
 	CheckRootWidget();
@@ -2994,93 +2998,4 @@ ULTweener* ULexWidget::RenderOpacityTo(float endValue, float duration, float del
 	return Tweener;
 }
 #pragma endregion
-
-
-
-
-ULexWidgetEditorHelperComp::ULexWidgetEditorHelperComp()
-{
-	bSelectable = false;
-	bIsEditorOnly = true;
-	MarkAsEditorOnlySubobject();
-}
-
-#if WITH_EDITOR
-FPrimitiveSceneProxy* ULexWidgetEditorHelperComp::CreateSceneProxy()
-{
-	class FWidgetSceneProxy : public FPrimitiveSceneProxy
-	{
-	public:
-		SIZE_T GetTypeHash() const override
-		{
-			static size_t UniquePointer;
-			return reinterpret_cast<size_t>(&UniquePointer);
-		}
-
-		FWidgetSceneProxy(ULexWidget* InComponent, UPrimitiveComponent* InPrimitive)
-			: FPrimitiveSceneProxy(InPrimitive)
-		{
-			bWillEverBeLit = false;
-			Component = InComponent;
-		}
-
-		virtual void GetDynamicMeshElements(const TArray<const FSceneView*>& Views, const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, FMeshElementCollector& Collector) const override
-		{
-			return;
-		}
-
-		virtual FPrimitiveViewRelevance GetViewRelevance(const FSceneView* View) const override
-		{
-			FPrimitiveViewRelevance Result;
-			Result.bDrawRelevance = true;
-			Result.bDynamicRelevance = true;
-			Result.bShadowRelevance = IsShadowCast(View);
-			Result.bEditorPrimitiveRelevance = UseEditorCompositing(View);
-			return Result;
-		}
-		virtual uint32 GetMemoryFootprint(void) const override { return(sizeof(*this) + GetAllocatedSize()); }
-		uint32 GetAllocatedSize(void) const { return(FPrimitiveSceneProxy::GetAllocatedSize()); }
-	private:
-		TWeakObjectPtr<ULexWidget> Component;
-	};
-
-	return new FWidgetSceneProxy(this->Parent, this);
-}
-#endif
-
-UBodySetup* ULexWidgetEditorHelperComp::GetBodySetup()
-{
-	UpdateBodySetup();
-	return BodySetup;
-}
-void ULexWidgetEditorHelperComp::UpdateBodySetup()
-{
-	if (!IsValid(Parent))return;
-	if (!IsValid(BodySetup))
-	{
-		BodySetup = NewObject<UBodySetup>(this, NAME_None, RF_Transient);
-		BodySetup->CollisionTraceFlag = CTF_UseSimpleAsComplex;
-		FKBoxElem Box = FKBoxElem();
-		Box.SetTransform(FTransform::Identity);
-		BodySetup->AggGeom.BoxElems.Add(Box);
-	}
-	FKBoxElem* BoxElem = BodySetup->AggGeom.BoxElems.GetData();
-
-	auto Center = Parent->GetLocalSpaceCenter();
-	auto Origin = FVector(0, Center.X, Center.Y);
-
-	BoxElem->X = 0.0f;
-	BoxElem->Y = Parent->GetWidth();
-	BoxElem->Z = Parent->GetHeight();
-
-	BoxElem->Center = Origin;
-}
-FBoxSphereBounds ULexWidgetEditorHelperComp::CalcBounds(const FTransform& LocalToWorld) const
-{
-	if (!IsValid(Parent))return FBoxSphereBounds(EForceInit::ForceInit);
-	auto Center = Parent->GetLocalSpaceCenter();
-	auto Origin = FVector(0, Center.X, Center.Y);
-	return FBoxSphereBounds(Origin, FVector(1, Parent->GetWidth() * 0.5f, Parent->GetHeight() * 0.5f), (Parent->GetWidth() > Parent->GetHeight() ? Parent->GetWidth() : Parent->GetHeight()) * 0.5f).TransformBy(LocalToWorld);
-}
-
 

@@ -30,7 +30,7 @@ public:
 private:
 	FDelegateHandle OnSubPrefabNewVersionUpdatedDelegateHandle;
 	FDelegateHandle BeginPIEDelegateHandle;
-	void CollectWhenCreate();
+	void CheckWhenCreate();
 	void CleanupWhenDestroy();
 	static TMap<TWeakObjectPtr<ULevel>, TWeakObjectPtr<ALGUIPrefabLevelManagerActor>> MapLevelToManagerActor;
 public:

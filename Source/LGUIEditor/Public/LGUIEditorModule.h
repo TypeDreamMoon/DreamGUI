@@ -28,11 +28,9 @@ public:
 
 	static FLGUIEditorModule& Get();
 	
-	TSharedRef<SWidget> MakeEditorToolsMenu(bool InitialSetup, bool ComponentAction, bool EditorCameraControl, bool Others, TFunction<AActor*()> GetSelectedActorFunction);
+	TSharedRef<SWidget> MakeEditorToolsMenu(bool InitialSetup, bool ComponentAction, bool EditorCameraControl, bool Others, TFunction<AActor*()> GetSelectedActorFunction, TFunction<void(FMenuBuilder&)> ExtendEditMenuFunction);
 	TSharedPtr<class FUICommandList> PluginCommands;
 	TArray<TSharedPtr<class FAssetTypeActions_Base>> AssetTypeActionsArray;
-	DECLARE_EVENT(FLGUIEditorModule, FOnHierarchyChanged);
-	FOnHierarchyChanged OnHierarchyChanged;
 
 	const FSlateBrush* GetVisualIconBrush(ULexWidget* Widget);
 private:
@@ -49,16 +47,10 @@ private:
 
 	void AddEditorToolsToToolbarExtension(FToolBarBuilder& Builder);
 
-	void ToggleLGUIColumnInfo();
-	bool IsLGUIColumnInfoChecked();
-
-	void ToggleAnchorTool();
-	bool IsAnchorToolChecked();
-
 	void ToggleDrawHelperFrame();
 	bool IsDrawHelperFrameChecked();
 
-	void ApplyLGUIColumnInfo(bool value, bool refreshSceneOutliner);
+	void ApplyLexUIColumnInfoOnSceneOutliner();
 	TWeakObjectPtr<class ULGUIPrefabHelperObject> CurrentPrefabHelperObject;
 
 	TMap<UClass*, const FSlateBrush*> InteractableClassIconMap;

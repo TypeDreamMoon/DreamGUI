@@ -1975,7 +1975,7 @@ void ULGUIPrefabHelperObject::CheckPrefabVersion()
 		this->ClearInvalidObjectAndGuid();
 		GEditor->EndTransaction();
 
-		ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();//make outliner refresh
+		ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();//make outliner refresh
 	}
 }
 
@@ -2008,7 +2008,7 @@ void ULGUIPrefabHelperObject::OnNewVersionUpdateClicked(AActor* InPrefabRootActo
 			}
 			Item.Notification.Pin()->SetCompletionState(SNotificationItem::CS_None);
 			Item.Notification.Pin()->ExpireAndFadeout();
-			ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();//make outliner refresh
+			ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();//make outliner refresh
 		}
 		NewVersionPrefabNotificationArray.RemoveAt(FoundIndex);
 	}
@@ -2067,7 +2067,7 @@ void ULGUIPrefabHelperObject::OnNewVersionUpdateAllClicked()
 
 	if (bUpdated)
 	{
-		ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();//make outliner refresh
+		ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();//make outliner refresh
 	}
 }
 void ULGUIPrefabHelperObject::OnNewVersionDismissAllClicked()

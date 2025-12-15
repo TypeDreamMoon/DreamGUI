@@ -58,6 +58,8 @@ FLGUIPrefabEditor::FLGUIPrefabEditor()
 {
 	PrefabHelperObject = NewObject<ULGUIPrefabHelperObject>(GetTransientPackage(), NAME_None, EObjectFlags::RF_Transactional);
 	LGUIPrefabEditorInstanceCollection.Add(this);
+
+	GEditor->RegisterForUndo(this);
 }
 FLGUIPrefabEditor::~FLGUIPrefabEditor()
 {
@@ -66,11 +68,10 @@ FLGUIPrefabEditor::~FLGUIPrefabEditor()
 
 	LGUIPrefabEditorInstanceCollection.Remove(this);
 
-	GEditor->SelectNone(true, true);
+	ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();
+ 	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->EventOnOutlineChanged.RemoveAll(this);
 
-	ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();
- 	FLGUIEditorModule::Get().OnHierarchyChanged.RemoveAll(this);
-	// USelection::SelectionChangedEvent.RemoveAll(this);
+	GEditor->UnregisterForUndo(this);
 }
 
 FLGUIPrefabEditor* FLGUIPrefabEditor::GetEditorForPrefabIfValid(ULGUIPrefab* InPrefab)
@@ -297,21 +298,17 @@ void FLGUIPrefabEditor::UnregisterTabSpawners(const TSharedRef<FTabManager>& InT
 
 void FLGUIPrefabEditor::PostUndo(bool bSuccess)
 {
-	ULexUIEditorManagerObject::AddOneShotTickFunction([=, this] {
-		ULexUIManagerWorldSubsystem::RefreshAllUI();
-		OutlinerPtr->RequestRefresh();
-		SelectedActors = ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->GetSelection()->GetSelectedActors();
-		OnSelectedWidgetsChanged.Broadcast();
-		}, 1);
+	ULexUIManagerWorldSubsystem::RefreshAllUI();
+	SelectedActors = ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->GetSelection()->GetSelectedActors();
+	OnSelectedWidgetsChanged.Broadcast();
+	OutlinerPtr->RequestRefresh();
 }
 void FLGUIPrefabEditor::PostRedo(bool bSuccess)
 {
-	ULexUIEditorManagerObject::AddOneShotTickFunction([=, this] {
-		ULexUIManagerWorldSubsystem::RefreshAllUI();
-		OutlinerPtr->RequestRefresh();
-		SelectedActors = ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->GetSelection()->GetSelectedActors();
-		OnSelectedWidgetsChanged.Broadcast();
-		}, 1);
+	ULexUIManagerWorldSubsystem::RefreshAllUI();
+	SelectedActors = ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->GetSelection()->GetSelectedActors();
+	OnSelectedWidgetsChanged.Broadcast();
+	OutlinerPtr->RequestRefresh();
 }
 
 void FLGUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const TSharedPtr<IToolkitHost >& InitToolkitHost, ULGUIPrefab* InPrefab)
@@ -347,27 +344,11 @@ void FLGUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const TS
 	DetailsPtr = SNew(SLGUIPrefabEditorDetails, PrefabEditorPtr);
 
 	PrefabRawDataViewer = SNew(SLGUIPrefabRawDataViewer, PrefabEditorPtr, PrefabBeingEdited);
-
-	FLGUIEditorModule::Get().OnHierarchyChanged.AddSPLambda(this, [=, this]()
+	
+	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->EventOnOutlineChanged.AddSPLambda(this, [=, this]()
 	{
 		OutlinerPtr->RequestRefresh();
 	});
-	// USelection::SelectionChangedEvent.AddSPLambda(this, [=, this](UObject* NewSelection)
-	// {
-	// 	TSet<ULexWidget*> SelectedItems;
-	// 	auto SelectedActors = LGUIEditorTools::GetSelectedActors();
-	// 	for (auto Actor : SelectedActors)
-	// 	{
-	// 		if (Actor->GetWorld() == this->GetWorld())
-	// 		{
-	// 			if (auto WidgetActor = Cast<ALexWidgetActor>(Actor))
-	// 			{
-	// 				SelectedItems.Add(WidgetActor->GetLexWidget());
-	// 			}
-	// 		}
-	// 	}
-	// 	this->SelectWidgets(SelectedItems, false, false);
-	// });
 	
 	OutlinerPtr = SNew(SLexWidgetEditorHierarchyView, PrefabEditorPtr);
 
@@ -660,40 +641,84 @@ void FLGUIPrefabEditor::BindCommands()
 		FIsActionChecked()
 	);
 
+	TFunction<AActor*()> GetSelectedActor = [this]()
+	{
+		if (this->GetSelectedActors().Num() == 1)
+		{
+			auto Actor = this->GetSelectedActors()[0];
+			if (Actor.IsValid())
+			{
+				return Actor.Get();
+			}
+		}
+		return (AActor*)nullptr;
+	};
+	TFunction<TArray<AActor*>()> GetSelectedActorArray = [this]()
+	{
+		TArray<AActor*> SelectedActors;
+		if (this->GetSelectedActors().Num() > 0)
+		{
+			for (auto Actor : this->GetSelectedActors())
+			{
+				if (Actor.IsValid())
+				{
+					SelectedActors.Add(Actor.Get());
+				}
+			}
+			return SelectedActors;
+		}
+		return SelectedActors;
+	};
 	ToolkitCommands->MapAction(
 		FGenericCommands::Get().Copy,
-		FExecuteAction::CreateRaw(this, &FLGUIPrefabEditor::OnCopy),
-		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCopyActor),
+		FExecuteAction::CreateStatic(&FLexUIEditorTools::CopyActors, GetSelectedActorArray),
+		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCopyActor, GetSelectedActorArray),
 		FGetActionCheckState(),
-		FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCopyActor)
+		FIsActionButtonVisible()
 	);
 	ToolkitCommands->MapAction(
 		FGenericCommands::Get().Cut,
-		FExecuteAction::CreateRaw(this, &FLGUIPrefabEditor::OnCut),
-		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCutActor),
+		FExecuteAction::CreateSPLambda(this, [=, this]()
+		{
+			FLexUIEditorTools::CutActors(GetSelectedActorArray);
+			OutlinerPtr->RequestRefresh();
+		}),
+		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCutActor, GetSelectedActorArray),
 		FGetActionCheckState(),
-		FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCutActor)
+		FIsActionButtonVisible()
 	);
 	ToolkitCommands->MapAction(
 		FGenericCommands::Get().Paste,
-		FExecuteAction::CreateRaw(this, &FLGUIPrefabEditor::OnPaste),
-		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanPasteActor),
+		FExecuteAction::CreateSPLambda(this, [=, this]()
+		{
+			FLexUIEditorTools::PasteActors(GetSelectedActorArray);
+			OutlinerPtr->RequestRefresh();
+		}),
+		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanPasteActor, GetSelectedActor),
 		FGetActionCheckState(),
-		FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanPasteActor)
+		FIsActionButtonVisible()
 	);
 	ToolkitCommands->MapAction(
 		FGenericCommands::Get().Duplicate,
-		FExecuteAction::CreateRaw(this, &FLGUIPrefabEditor::OnDuplicate),
-		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanDuplicateActor),
+		FExecuteAction::CreateSPLambda(this, [=, this]()
+		{
+			FLexUIEditorTools::DuplicateActors(GetSelectedActorArray);
+			OutlinerPtr->RequestRefresh();
+		}),
+		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanDuplicateActor, GetSelectedActorArray),
 		FGetActionCheckState(),
-		FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanDuplicateActor)
+		FIsActionButtonVisible()
 	);
 	ToolkitCommands->MapAction(
 		FGenericCommands::Get().Delete,
-		FExecuteAction::CreateRaw(this, &FLGUIPrefabEditor::OnDelete),
-		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanDeleteActor),
+		FExecuteAction::CreateSPLambda(this, [=, this]()
+		{
+			FLexUIEditorTools::DeleteActors(GetSelectedActorArray);
+			OutlinerPtr->RequestRefresh();
+		}),
+		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanDeleteActor, GetSelectedActorArray),
 		FGetActionCheckState(),
-		FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanDeleteActor)
+		FIsActionButtonVisible()
 	);
 }
 void FLGUIPrefabEditor::ExtendToolbar()
@@ -718,35 +743,6 @@ void FLGUIPrefabEditor::ExtendToolbar()
 		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLGUIPrefabEditorCommand::Get().RawDataViewer));
 		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLGUIPrefabEditorCommand::Get().OpenPrefabHelperObject));
 	}
-}
-
-void FLGUIPrefabEditor::OnCopy()
-{
-	FLexUIEditorTools::CopySelectedActors_Impl();
-}
-
-void FLGUIPrefabEditor::OnPaste()
-{
-	FLexUIEditorTools::PasteSelectedActors_Impl();
-	OutlinerPtr->RequestRefresh();
-}
-
-void FLGUIPrefabEditor::OnCut()
-{
-	FLexUIEditorTools::CutSelectedActors_Impl();
-	OutlinerPtr->RequestRefresh();
-}
-
-void FLGUIPrefabEditor::OnDuplicate()
-{
-	FLexUIEditorTools::DuplicateSelectedActors_Impl();
-	OutlinerPtr->RequestRefresh();
-}
-
-void FLGUIPrefabEditor::OnDelete()
-{
-	FLexUIEditorTools::DeleteSelectedActors_Impl();
-	OutlinerPtr->RequestRefresh();
 }
 
 FText FLGUIPrefabEditor::GetApplyButtonStatusTooltip()const

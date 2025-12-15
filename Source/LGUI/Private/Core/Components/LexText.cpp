@@ -354,7 +354,7 @@ void ULexText::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEven
 	auto Property = PropertyChangedEvent.Property;
 	if (MemberProperty != nullptr && Property != nullptr)
 	{
-		if (!this->GetName().StartsWith(TEXT("Default__")))
+		if (this != GetDefault<ULexText>())
 		{
 			auto MemberPropertyName = MemberProperty->GetFName();
 			if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, Text))
@@ -387,7 +387,7 @@ void ULexText::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEven
 					}
 				}
 #if WITH_EDITOR
-				ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();
+				ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();
 #endif
 			}
 			else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, bRichText))

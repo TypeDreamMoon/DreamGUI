@@ -394,6 +394,10 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition="Clipping!=ELexWidgetClipping::Disabled&&Clipping!=ELexWidgetClipping::Inherit"))
 	FMargin ClippingMargin = FMargin(0);
+#if WITH_EDITORONLY_DATA
+	UPROPERTY(EditAnywhere, Category = "LGUI")
+	bool bUniformSetClippingCornerRadius = true;
+#endif
 	/**
 	 * If not WidgetActive, then not visible, not take layout space, not interactable, not hit-testable
 	 */
@@ -554,6 +558,16 @@ protected:
 	/** hierarchy index, hierarchy order, render order */
 	UPROPERTY(EditAnywhere, Category = LGUI, AdvancedDisplay)
 		int32 SiblingIndex = INDEX_NONE;
+	/**
+	 * Flatten depth/hierarchyIndex, relative to root LexWidget. Used by render and event
+	 * RootWidget - 0
+	 *	 Widget - 1
+	 *	 Widget - 2
+	 *	   Widget - 3
+	 *	   Widget - 4
+	 *	     Widget - 5
+	 *	 Widget - 6
+	 */
 	UPROPERTY(Transient, VisibleAnywhere, Category = LGUI, AdvancedDisplay)
 	mutable int32 FlattenHierarchyIndex = 0;
 	void MarkFlattenHierarchyIndexDirty();
@@ -678,30 +692,4 @@ public:
 	ULTweener* RenderOpacityTo(float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
 
 #pragma endregion
-public:
-#if WITH_EDITORONLY_DATA
-	/** This is a helper component for calculate bounds, so we can double-click to focus on this UIItem */
-	UPROPERTY(Transient, NonTransactional)TObjectPtr<class ULexWidgetEditorHelperComp> HelperComp = nullptr;//@todo: better way to replace this?
-#endif
-};
-
-
-//Editor only
-//This component is only a helper component for widget! Don't use this!
-//For widget's bounds, so we can double-click a widget and focus on it.
-UCLASS(HideCategories = (LOD, Physics, Collision, Activation, Cooking, Rendering, Actor, Input, Lighting, Mobile), NotBlueprintable, NotBlueprintType, Transient)
-class LGUI_API ULexWidgetEditorHelperComp : public UPrimitiveComponent
-{
-	GENERATED_BODY()
-public:
-	ULexWidgetEditorHelperComp();
-	virtual FBoxSphereBounds CalcBounds(const FTransform& LocalToWorld) const override;
-#if WITH_EDITOR
-	virtual FPrimitiveSceneProxy* CreateSceneProxy()override;
-#endif
-	UPROPERTY(Transient)TObjectPtr<ULexWidget> Parent = nullptr;
-	virtual UBodySetup* GetBodySetup()override;
-	UPROPERTY(Transient)
-		TObjectPtr<class UBodySetup> BodySetup;
-	void UpdateBodySetup();
 };

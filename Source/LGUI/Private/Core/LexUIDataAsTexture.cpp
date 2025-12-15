@@ -196,7 +196,7 @@ void ULexUIDataAsTexture::UnregisterBuffer(int InPosition)
 }
 void ULexUIDataAsTexture::UpdateBlock(int InPositionY, uint8* InData)
 {
-	if (Texture->GetResource())
+	if (IsValid(Texture) && Texture->GetResource())
 	{
 		auto TextureRes = (FTexture2DDynamicResource*)Texture->GetResource();
 		ENQUEUE_RENDER_COMMAND(FLexUIDataAsTexture_UpdateBlock)(

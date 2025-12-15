@@ -35,7 +35,8 @@ private:
 	void HandleDragLeave(const FDragDropEvent& DragDropEvent);
 	FText GetItemText() const;
 	FText GetItemTooltipText() const;
-	FSlateColor GetItemColorAndOpacity() const;
+	FSlateColor GetNameTextColorAndOpacity() const;
+	FSlateColor GetVisibilityIconColorAndOpacity() const;
 	bool IsReadOnly() const;
 	void OnBeginNameTextEdit();
 	void OnEndNameTextEdit();

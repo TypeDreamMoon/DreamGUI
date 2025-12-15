@@ -200,51 +200,51 @@ bool UUISliderComponent::OnNavigate_Implementation(ELexUINavigationDirection dir
 
 void UUISliderComponent::CalculateInputValue(ULexPointerEventData *eventData)
 {
-    ULexWidget *mainUIItem = nullptr;
-    ULexWidget *areaUIItem = nullptr;
+    ULexWidget *MainWidget = nullptr;
+    ULexWidget *AreaWidget = nullptr;
     if (CheckHandle())
     {
-        mainUIItem = Handle.Get();
-        areaUIItem = HandleArea.Get();
+        MainWidget = Handle.Get();
+        AreaWidget = HandleArea.Get();
     }
     else
     {
         if (CheckFill())
         {
-            mainUIItem = Fill.Get();
-            areaUIItem = FillArea.Get();
+            MainWidget = Fill.Get();
+            AreaWidget = FillArea.Get();
         }
     }
-    if (mainUIItem != nullptr && areaUIItem != nullptr)
+    if (MainWidget != nullptr && AreaWidget != nullptr)
     {
         //calculate value to 0-1 range
-        auto localPointerPosition = areaUIItem->GetComponentTransform().InverseTransformPosition(eventData->GetWorldPointInPlane());
+        auto localPointerPosition = AreaWidget->GetComponentTransform().InverseTransformPosition(eventData->GetWorldPointInPlane());
         float MinPosition = 0;
         float value01 = 0;
         switch (DirectionType)
         {
         case EUISliderDirectionType::LeftToRight:
         {
-            MinPosition = -areaUIItem->GetPivot().X * areaUIItem->GetWidth();
-            value01 = (localPointerPosition.Y - MinPosition) / areaUIItem->GetWidth();
+            MinPosition = -AreaWidget->GetPivot().X * AreaWidget->GetWidth();
+            value01 = (localPointerPosition.Y - MinPosition) / AreaWidget->GetWidth();
         }
         break;
         case EUISliderDirectionType::RightToLeft:
         {
-            MinPosition = -areaUIItem->GetPivot().X * areaUIItem->GetWidth();
-            value01 = 1.0f - (localPointerPosition.Y - MinPosition) / areaUIItem->GetWidth();
+            MinPosition = -AreaWidget->GetPivot().X * AreaWidget->GetWidth();
+            value01 = 1.0f - (localPointerPosition.Y - MinPosition) / AreaWidget->GetWidth();
         }
         break;
         case EUISliderDirectionType::BottomToTop:
         {
-            MinPosition = -areaUIItem->GetPivot().Y * areaUIItem->GetHeight();
-            value01 = (localPointerPosition.Z - MinPosition) / areaUIItem->GetHeight();
+            MinPosition = -AreaWidget->GetPivot().Y * AreaWidget->GetHeight();
+            value01 = (localPointerPosition.Z - MinPosition) / AreaWidget->GetHeight();
         }
         break;
         case EUISliderDirectionType::TopToBottom:
         {
-            MinPosition = -areaUIItem->GetPivot().Y * areaUIItem->GetHeight();
-            value01 = 1.0f - (localPointerPosition.Z - MinPosition) / areaUIItem->GetHeight();
+            MinPosition = -AreaWidget->GetPivot().Y * AreaWidget->GetHeight();
+            value01 = 1.0f - (localPointerPosition.Z - MinPosition) / AreaWidget->GetHeight();
         }
         break;
         }

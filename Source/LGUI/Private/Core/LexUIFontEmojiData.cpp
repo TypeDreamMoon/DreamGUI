@@ -1,9 +1,10 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/LexUIFontEmojiData.h"
+
+#include "Core/LexUIManager.h"
 #include "Extensions/UISpriteSequencePlayer.h"
 #include "Utils/LexUIUtils.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexWidget.h"
@@ -152,7 +153,7 @@ void ULexUIFontEmojiData::CreateOrUpdateObject(ULexWidget* parent, const TArray<
 #if WITH_EDITOR
 	if (!parent->GetWorld()->IsGameWorld())//refresh on editor
 	{
-		ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();
+		ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();
 	}
 #endif
 }

@@ -100,7 +100,7 @@ void ULexVisual::BeginDestroy()
 void ULexVisual::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
-	if (!this->GetName().StartsWith(TEXT("Default__")))
+	if (this != GetDefault<ULexVisual>())
 	{
 		MarkAllDirty();
 	}
@@ -114,7 +114,7 @@ bool ULexVisual::CanEditChange(const FProperty* InProperty) const
 	static auto VisiblePixelThreshold_Name = GET_MEMBER_NAME_CHECKED(ULexVisual, VisiblePixelThreshold);
 	if (PropertyName == RayCastType_Name)
 	{
-		if (!this->GetName().StartsWith(TEXT("Default__")))
+		if (this != GetDefault<ULexVisual>())
 		{
 			if (!GetWidget()->GetRaycastableInHierarchy())
 			{
@@ -124,7 +124,7 @@ bool ULexVisual::CanEditChange(const FProperty* InProperty) const
 	}
 	else if (PropertyName == CustomRaycastObject_Name)
 	{
-		if (!this->GetName().StartsWith(TEXT("Default__")))
+		if (this != GetDefault<ULexVisual>())
 		{
 			if (!GetWidget()->GetRaycastableInHierarchy() || RaycastType!=ELexVisualRaycastType::Custom)
 			{
@@ -134,7 +134,7 @@ bool ULexVisual::CanEditChange(const FProperty* InProperty) const
 	}
 	else if (PropertyName == VisiblePixelThreshold_Name)
 	{
-		if (!this->GetName().StartsWith(TEXT("Default__")))
+		if (this != GetDefault<ULexVisual>())
 		{
 			if (!GetWidget()->GetRaycastableInHierarchy() || RaycastType!=ELexVisualRaycastType::VisiblePixel)
 			{

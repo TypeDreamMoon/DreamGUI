@@ -9,7 +9,7 @@
 #include "Runtime/Launch/Resources/Version.h"
 #include "PrefabSystem/LGUIPrefabManager.h"
 #include "LGUI.h"
-#include "ObjectTools.h"
+#include "Core/LexUIManager.h"
 #include "Misc/NetworkVersion.h"
 #include "UObject/UObjectThreadContext.h"
 #include "PrefabSystem/LGUIPrefabSettings.h"
@@ -481,7 +481,7 @@ namespace LGUIPrefabSystem8
 		}
 
 #if WITH_EDITOR
-		ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();//UE5 will not auto refresh scene outliner and display actor label, so manually refresh it.
+		ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();//UE5 will not auto refresh scene outliner and display actor label, so manually refresh it.
 #endif
 
 		return CreatedRootActor;
@@ -549,12 +549,12 @@ namespace LGUIPrefabSystem8
 							if (auto Comp = Cast<UActorComponent>(ExitObject))
 							{
 								Comp->DestroyComponent();
-								Comp->Rename(nullptr);
+								Comp->Rename(nullptr, GetTransientPackage());
 							}
 							else if (auto Obj = Cast<UObject>(ExitObject))
 							{
 								Obj->ConditionalBeginDestroy();
-								Obj->Rename(nullptr);
+								Obj->Rename(nullptr, GetTransientPackage());
 							}
 							UE_LOG(LGUI, Warning, TEXT("[%s].%d Object '%s' already exist on outer '%s', will destroy and rename exiting one. Prefab: '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(ObjectData.ObjectName.ToString()), *(OuterObjectPtr->GetPathName()), *PrefabAssetPath);
 						}

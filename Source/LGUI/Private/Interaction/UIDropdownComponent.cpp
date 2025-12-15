@@ -11,9 +11,6 @@
 #include "Core/Components/LexText.h"
 #include "Core/Components/LexVisualEmpty.h"
 #include "Interaction/UIButtonComponent.h"
-#if WITH_EDITOR
-#include "Utils/LexUIUtils.h"
-#endif
 
 
 
@@ -474,9 +471,9 @@ void UUIDropdownComponent::SetUseInteractionBlock(bool InValue)
 	}
 }
 
-void UUIDropdownComponent::OnSelectItem(int index)
+void UUIDropdownComponent::OnSelectItem(int Index)
 {
-	SetValue(index, true);
+	SetValue(Index, true);
 	Hide();
 }
 void UUIDropdownComponent::ApplyValueToUI()

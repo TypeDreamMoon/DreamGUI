@@ -253,17 +253,18 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 		]
 	]
 	.ValueContent()
+	.MinDesiredWidth(500)
 	[
 		SNew(SHorizontalBox)
 		+ SHorizontalBox::Slot()
 		.VAlign(VAlign_Center)
-		.AutoWidth()
+		.FillWidth(1)
 		[
 			CornerRadiusXHandle->CreatePropertyValueWidget()
 		]
 		+ SHorizontalBox::Slot()
 		.VAlign(VAlign_Center)
-		.AutoWidth()
+		.FillWidth(1)
 		[
 			SNew(SBox)
 			.IsEnabled_Lambda(CornerRadiusPropertyIsEnabledFunction)
@@ -273,7 +274,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 		]
 		+ SHorizontalBox::Slot()
 		.VAlign(VAlign_Center)
-		.AutoWidth()
+		.FillWidth(1)
 		[
 			SNew(SBox)
 			.IsEnabled_Lambda(CornerRadiusPropertyIsEnabledFunction)
@@ -283,7 +284,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 		]
 		+ SHorizontalBox::Slot()
 		.VAlign(VAlign_Center)
-		.AutoWidth()
+		.FillWidth(1)
 		[
 			SNew(SBox)
 			.IsEnabled_Lambda(CornerRadiusPropertyIsEnabledFunction)

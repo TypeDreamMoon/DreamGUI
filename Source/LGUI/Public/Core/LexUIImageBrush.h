@@ -35,6 +35,7 @@ private:
 		, AllowedClasses = "/Script/Engine.Texture,/Script/Engine.MaterialInterface,/Script/Engine.SlateTextureAtlasInterface,/Script/LGUI.LexUISpriteData_BaseObject"))
 	TObjectPtr<UObject> ResourceObject;
 public:
+	FLexUIImageBrush();
 	static FName GetPropertyName_ResourceObject()
 	{
 		return GET_MEMBER_NAME_CHECKED(FLexUIImageBrush, ResourceObject);
@@ -42,7 +43,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush")
 	FColor TintColor = FColor::White;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush")
-	ELexUIImageBrushDrawType DrawAs = ELexUIImageBrushDrawType::None;
+	ELexUIImageBrushDrawType DrawAs = ELexUIImageBrushDrawType::Box;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush")
 	FVector2f ImageSize = FVector2f(32, 32);
 	/** Margin size from 0 to 1. */

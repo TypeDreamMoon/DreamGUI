@@ -26,8 +26,6 @@ public:
 	TSharedPtr<FUICommandInfo> FocusToScreenSpaceUI;
 	TSharedPtr<FUICommandInfo> FocusToSelectedUI;
 
-	TSharedPtr<FUICommandInfo> ToggleLGUIInfoColume;
 	TSharedPtr<FUICommandInfo> ToggleDrawHelperFrame;
-	TSharedPtr<FUICommandInfo> ToggleAnchorTool;
 	TSharedPtr<FUICommandInfo> ForceGC;
 };

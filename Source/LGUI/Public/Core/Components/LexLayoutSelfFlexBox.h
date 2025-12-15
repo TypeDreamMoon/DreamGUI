@@ -42,8 +42,8 @@ struct FLexLayoutSize
 #endif
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI", meta = (EditCondition = "Type == ELexLayoutSizeType::Fixed", UIMin=0))
 	float FixedValue = 100;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI", meta = (EditCondition = "Type == ELexLayoutSizeType::Percent", UIMin=0, UIMax=100))
-	float PercentValue = 50;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI", meta = (EditCondition = "Type == ELexLayoutSizeType::Percent", UIMin=0, UIMax=1))
+	float PercentValue = 0.5;
 
 	FLexLayoutSize(){}
 	FLexLayoutSize(ELexLayoutSizeType Type, float Value)

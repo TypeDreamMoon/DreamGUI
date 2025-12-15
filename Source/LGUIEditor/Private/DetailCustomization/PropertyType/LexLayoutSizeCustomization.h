@@ -2,6 +2,7 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
 #include "Core/Components/LexLayoutSelfFlexBox.h"
+#include "Widgets/Input/SNumericEntryBox.h"
 #include "Widgets/Input/SSegmentedControl.h"
 
 #define LOCTEXT_NAMESPACE "LexLayoutSizeCustomization"
@@ -209,7 +210,25 @@ public:
 							+SHorizontalBox::Slot()
 							.FillWidth(1.0f)
 							[
-								Percent_PH->CreatePropertyValueWidget()
+								SNew(SNumericEntryBox<float>)
+								.MinValue(0)
+								.MaxValue(100)
+								.AllowSpin(true)
+								.MinSliderValue(0)
+								.MaxSliderValue(100)
+								.OnValueChanged_Lambda([=](float Value)
+								{
+									Percent_PH->SetValue(Value * 0.01f);
+								})
+								.Value_Lambda([=]()
+								{
+									float Value = 0;
+									if (Percent_PH->GetValue(Value) == FPropertyAccess::Success)
+									{
+										return Value * 100;
+									}
+									return Value;
+								})
 							]
 							+SHorizontalBox::Slot()
 							.AutoWidth()

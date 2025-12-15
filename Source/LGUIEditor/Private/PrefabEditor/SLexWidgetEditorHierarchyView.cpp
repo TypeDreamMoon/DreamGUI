@@ -399,6 +399,26 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 			}
 		}
 		return (AActor*)nullptr;
+	}, [=, this](FMenuBuilder& MenuBuilder)
+	{
+		MenuBuilder.BeginSection("Edit", LOCTEXT("Edit", "Edit"));
+		{
+			MenuBuilder.PushCommandList(Manager.Pin()->GetToolkitCommands());
+			{
+				MenuBuilder.AddMenuEntry(FGenericCommands::Get().Copy);
+				MenuBuilder.AddMenuEntry(FGenericCommands::Get().Paste);
+				MenuBuilder.AddMenuEntry(FGenericCommands::Get().Cut);
+				MenuBuilder.AddMenuEntry(FGenericCommands::Get().Duplicate);
+				MenuBuilder.AddMenuEntry(FGenericCommands::Get().Delete);
+			}
+			MenuBuilder.PopCommandList();
+			MenuBuilder.PushCommandList(CommandList.ToSharedRef());
+			{
+				MenuBuilder.AddMenuEntry(FGenericCommands::Get().Rename);
+			}
+			MenuBuilder.PopCommandList();
+		}
+		MenuBuilder.EndSection();
 	});
 }
 

@@ -2,13 +2,10 @@
 
 #include "PrefabSystem/ActorSerializerBase.h"
 #include "Engine/World.h"
-#include "Core/LexUIManager.h"
 #include "PrefabSystem/LGUIObjectReaderAndWriter.h"
-#include "LGUI.h"
 #include "Misc/ConfigCacheIni.h"
 #if WITH_EDITOR
 #include "Tools/UEdMode.h"
-#include "Utils/LexUIUtils.h"
 #endif
 
 namespace LGUIPrefabSystem

@@ -273,6 +273,8 @@ protected:
 	int DataStartPosition = 0;
 	static FName DataTextureParameterName;
 
+	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
+
 	virtual void OnBeforeCreateOrUpdateGeometry()override;
 	virtual UTexture* GetTextureToCreateGeometry()override;
 	virtual UMaterialInterface* GetMaterialToCreateGeometry()override;

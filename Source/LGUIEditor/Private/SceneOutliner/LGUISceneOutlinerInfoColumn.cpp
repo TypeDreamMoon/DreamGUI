@@ -11,6 +11,7 @@
 #include "LGUIEditorStyle.h"
 #include "SceneOutliner/LGUISceneOutlinerButton.h"
 #include "LexUIEditorTools.h"
+#include "LGUIEditorCommands.h"
 #include "SortHelper.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #include "PrefabEditor/LGUIPrefabEditor.h"
@@ -175,6 +176,22 @@ namespace LGUISceneOutliner
 				FLGUIEditorModule::Get().MakeEditorToolsMenu(false, false, false, false, []()
 				{
 					return FLexUIEditorTools::GetFirstSelectedActor();
+				}, [=](FMenuBuilder& MenuBuilder)
+				{
+					MenuBuilder.BeginSection("ActorAction", LOCTEXT("ActorAction", "Edit Actor With Hierarchy"));
+					{
+						MenuBuilder.PushCommandList(FLGUIEditorModule::Get().PluginCommands.ToSharedRef());
+						{
+							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().CopyActor);
+							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().PasteActor);
+							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().CutActor);
+							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().DuplicateActor);
+							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().DestroyActor);
+							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().ToggleSpatiallyLoaded);
+						}
+						MenuBuilder.PopCommandList();
+					}
+					MenuBuilder.EndSection();
 				})
 			];
 

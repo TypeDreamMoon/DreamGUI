@@ -119,7 +119,7 @@ protected:
 	UPROPERTY(Transient) TArray<TWeakObjectPtr<class UUIDropdownItemComponent>> CreatedItemArray;
 	virtual bool OnPointerClick_Implementation(ULexPointerEventData* eventData)override;
 	virtual bool OnPointerDeselect_Implementation(ULexBaseEventData* eventData)override;
-	void OnSelectItem(int index);
+	void OnSelectItem(int Index);
 	void ApplyValueToUI();
 	virtual void CreateBlocker();
 	virtual void CreateListItems();

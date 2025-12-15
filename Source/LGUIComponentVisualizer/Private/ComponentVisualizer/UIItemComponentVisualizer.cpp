@@ -67,7 +67,6 @@ void FUIItemComponentVisualizer::DrawVisualization(const UActorComponent* Compon
 	}
 
 	//draw anchor tool
-	if (GetDefault<ULexUIEditorSettings>()->bShowAnchorTool)
 	{
 		if (!bHaveDrawPanelLayout)//anchor is controlled by panel layout, so no need to draw it
 		{
@@ -131,7 +130,6 @@ bool FUIItemComponentVisualizer::HandleInputKey(FEditorViewportClient* ViewportC
 }
 bool FUIItemComponentVisualizer::HandleInputDelta(FEditorViewportClient* ViewportClient, FViewport* Viewport, FVector& DeltaTranslate, FRotator& DeltalRotate, FVector& DeltaScale)
 {
-	if (!GetDefault<ULexUIEditorSettings>()->bShowAnchorTool)return false;
 	if (!TargetComp.IsValid())return false;
 	if (DeltaTranslate.IsZero())return false;
 

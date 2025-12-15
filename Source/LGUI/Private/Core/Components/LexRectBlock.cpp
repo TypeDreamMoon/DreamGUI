@@ -323,7 +323,7 @@ void ULexRectBlock::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 	if (auto Property = PropertyChangedEvent.Property)
 	{
 		auto PropertyName = Property->GetFName();
-		if (!this->GetName().StartsWith(TEXT("Default__")))
+		if (this != GetDefault<ULexRectBlock>())
 		{
 			SetUnitChange(CornerRadius)
 			else SetUnitChange(BodyGradientCenter)
@@ -346,7 +346,7 @@ void ULexRectBlock::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 
 		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexRectBlock, BodyTextureMode))
 		{
-			if (!this->GetName().StartsWith(TEXT("Default__")))
+			if (this != GetDefault<ULexRectBlock>())
 			{
 				MarkTextureDirty();
 				MarkUVDirty();
@@ -369,7 +369,7 @@ bool ULexRectBlock::CanEditChange(const FProperty* InProperty) const
 	static auto RaycastSupportCornerRadius_Name = GET_MEMBER_NAME_CHECKED(ULexRectBlock, bRaycastSupportCornerRadius);
 	if (PropertyName == RaycastSupportCornerRadius_Name)
 	{
-		if (!this->GetName().StartsWith(TEXT("Default__")))
+		if (this != GetDefault<ULexRectBlock>())
 		{
 			if (!GetWidget()->GetRaycastableInHierarchy() || RaycastType != ELexVisualRaycastType::Rect)
 			{
@@ -397,6 +397,11 @@ void ULexRectBlock::OnPostChangeSpriteProperty()
 	}
 }
 #endif
+
+void ULexRectBlock::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
+{
+	Super::OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
+}
 
 void ULexRectBlock::OnBeforeCreateOrUpdateGeometry()
 {

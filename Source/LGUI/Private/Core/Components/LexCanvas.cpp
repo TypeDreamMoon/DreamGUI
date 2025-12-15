@@ -4,9 +4,6 @@
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
 #include "Utils/LexUIUtils.h"
-#if WITH_EDITOR
-#include "DrawDebugHelpers.h"
-#endif
 #include "Core/LexUISettings.h"
 #include "Core/LexUIManager.h"
 #include "PrefabSystem/LGUIPrefabManager.h"

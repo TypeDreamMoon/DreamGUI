@@ -713,34 +713,6 @@ UWorld* FLexUIEditorTools::GetWorldFromSelection()
 	}
 	return GWorld;
 }
-void FLexUIEditorTools::CreateActorByClass(UClass* ActorClass, TFunction<void(AActor*)> Callback)
-{
-	auto selectedActor = GetFirstSelectedActor();
-	if (selectedActor == nullptr)return;
-	GEditor->BeginTransaction(LOCTEXT("CreateActor_Transaction", "LGUI Create Actor"));
-	MakeCurrentLevel(selectedActor);
-	AActor* newActor = GetWorldFromSelection()->SpawnActor<AActor>(ActorClass, FTransform::Identity, FActorSpawnParameters());
-	if (IsValid(newActor))
-	{
-		if (Callback != nullptr)
-		{
-			Callback(newActor);
-		}
-		if (selectedActor != nullptr)
-		{
-			auto SelectedRootComp = selectedActor->GetRootComponent();
-			auto NewRootComp = newActor->GetRootComponent();
-			if (SelectedRootComp && NewRootComp)
-			{
-				NewRootComp->SetMobility(SelectedRootComp->Mobility);
-				newActor->AttachToActor(selectedActor, FAttachmentTransformRules::KeepRelativeTransform);
-			}
-			GEditor->SelectActor(selectedActor, false, true);
-		}
-		GEditor->SelectActor(newActor, true, true);
-	}
-	GEditor->EndTransaction();
-}
 
 void FLexUIEditorTools::CreateLexWidget(TFunction<AActor*()> GetSelectedActorFunction, FString Name, UClass* VisualClass, TFunction<void(ULexWidget*)> Callback)
 {
@@ -749,7 +721,7 @@ void FLexUIEditorTools::CreateLexWidget(TFunction<AActor*()> GetSelectedActorFun
 	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return;
 	GEditor->BeginTransaction(LOCTEXT("CreateChildWidget_Transaction", "Create Child Widget"));
 	MakeCurrentLevel(SelectedActor);
-	auto NewActor = GetWorldFromSelection()->SpawnActor<ALexWidgetActor>(ALexWidgetActor::StaticClass(), FTransform::Identity, FActorSpawnParameters());
+	auto NewActor = SelectedActor->GetWorld()->SpawnActor<ALexWidgetActor>(ALexWidgetActor::StaticClass(), FTransform::Identity, FActorSpawnParameters());
 	if (IsValid(NewActor))
 	{
 		NewActor->SetActorLabel(Name);
@@ -767,7 +739,7 @@ void FLexUIEditorTools::CreateLexWidget(TFunction<AActor*()> GetSelectedActorFun
 			Callback(NewActor->GetLexWidget());
 		}
 		GEditor->SelectActor(NewActor, true, true);
-		FLGUIEditorModule::Get().OnHierarchyChanged.Broadcast();
+		ULexUIManagerWorldSubsystem::GetInstance(SelectedActor->GetWorld())->EventOnOutlineChanged.Broadcast();
 	}
 	GEditor->EndTransaction();
 }
@@ -779,7 +751,7 @@ void FLexUIEditorTools::CreateEmptyActor(TFunction<AActor*()> GetSelectedActorFu
 	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return;
 	GEditor->BeginTransaction(LOCTEXT("CreateEmptyActor_Transaction", "LGUI create empty actor"));
 	MakeCurrentLevel(SelectedActor);
-	AActor* newActor = GetWorldFromSelection()->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity, FActorSpawnParameters());
+	AActor* newActor = SelectedActor->GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity, FActorSpawnParameters());
 	if (IsValid(newActor))
 	{
 		//create SceneComponent
@@ -831,10 +803,9 @@ void FLexUIEditorTools::CreateUIControls(TFunction<AActor*()> GetSelectedActorFu
 	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return;
 	GEditor->BeginTransaction(LOCTEXT("CreateUIControl_Transaction", "LGUI Create UI Control"));
 	MakeCurrentLevel(SelectedActor);
-	auto prefab = LoadObject<ULGUIPrefab>(NULL, *InPrefabPath);
-	if (prefab)
+	if (auto Prefab = LoadObject<ULGUIPrefab>(NULL, *InPrefabPath))
 	{
-		auto actor = prefab->LoadPrefabInEditor(GetWorldFromSelection()
+		auto actor = Prefab->LoadPrefabInEditor(SelectedActor->GetWorld()
 			, SelectedActor == nullptr ? nullptr : SelectedActor->GetRootComponent());
 		GEditor->SelectActor(SelectedActor, false, true);
 		GEditor->SelectActor(actor, true, true);
@@ -965,16 +936,15 @@ void FLexUIEditorTools::ReplaceActorByClass(UClass* ActorClass)
 	}
 	GEditor->EndTransaction();
 }
-void FLexUIEditorTools::DuplicateSelectedActors_Impl()//@todo: fix bug: duplicate subprefab then undo, this operation will revert the source copied prefab to orignal state
+void FLexUIEditorTools::DuplicateActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)//@todo: fix bug: duplicate subprefab then undo, this operation will revert the source copied prefab to orignal state
 {
-	auto selectedActors = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
-	auto count = selectedActors.Num();
-	if (count == 0)
+	auto SelectedActors = GetSelectedActorArrayFunction();
+	if (SelectedActors.Num() == 0)
 	{
 		UE_LOG(LGUIEditor, Error, TEXT("NothingSelected"));
 		return;
 	}
-	auto RootActorList = FLexUIEditorTools::GetRootActorListFromSelection(selectedActors);
+	auto RootActorList = FLexUIEditorTools::GetRootActorListFromSelection(SelectedActors);
 	GEditor->BeginTransaction(LOCTEXT("DuplicateActor_Transaction", "LGUI Duplicate Actors"));
 	for (auto Actor : RootActorList)
 	{
@@ -1070,11 +1040,10 @@ void FLexUIEditorTools::DuplicateSelectedActors_Impl()//@todo: fix bug: duplicat
 	GEditor->EndTransaction();
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 }
-void FLexUIEditorTools::CopySelectedActors_Impl()
+void FLexUIEditorTools::CopyActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
 {
-	auto selectedActors = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
-	auto count = selectedActors.Num();
-	if (count == 0)
+	auto SelectedActors = GetSelectedActorArrayFunction();
+	if (SelectedActors.Num() == 0)
 	{
 		UE_LOG(LGUIEditor, Error, TEXT("NothingSelected"));
 		return;
@@ -1084,7 +1053,7 @@ void FLexUIEditorTools::CopySelectedActors_Impl()
 		KeyValuePair.Value->RemoveFromRoot();
 		KeyValuePair.Value->ConditionalBeginDestroy();
 	}
-	auto CopyActorList = FLexUIEditorTools::GetRootActorListFromSelection(selectedActors);
+	auto CopyActorList = FLexUIEditorTools::GetRootActorListFromSelection(SelectedActors);
 	CopiedActorPrefabMap.Reset();
 	for (auto Actor : CopyActorList)
 	{
@@ -1160,13 +1129,13 @@ void FLexUIEditorTools::CopySelectedActors_Impl()
 		CopiedActorPrefabMap.Add(Actor->GetActorLabel(), prefab);
 	}
 }
-void FLexUIEditorTools::PasteSelectedActors_Impl()
+void FLexUIEditorTools::PasteActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
 {
-	auto selectedActors = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
+	auto SelectedActors = GetSelectedActorArrayFunction();
 	USceneComponent* parentComp = nullptr;
-	if (selectedActors.Num() > 0)
+	if (SelectedActors.Num() > 0)
 	{
-		parentComp = selectedActors[0]->GetRootComponent();
+		parentComp = SelectedActors[0]->GetRootComponent();
 	}
 	ULGUIPrefabHelperObject* PrefabHelperObject = nullptr;
 	if (parentComp)
@@ -1199,7 +1168,7 @@ void FLexUIEditorTools::PasteSelectedActors_Impl()
 
 	PrefabHelperObject->SetCanNotifyAttachment(false);
 	GEditor->BeginTransaction(LOCTEXT("PasteActor_Transaction", "LGUI Paste Actors"));
-	for (auto item : selectedActors)
+	for (auto item : SelectedActors)
 	{
 		GEditor->SelectActor(item, false, true);
 	}
@@ -1236,22 +1205,20 @@ void FLexUIEditorTools::PasteSelectedActors_Impl()
 	GEditor->EndTransaction();
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 }
-void FLexUIEditorTools::DeleteSelectedActors_Impl()
+void FLexUIEditorTools::DeleteActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
 {
-	auto selectedActors = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
-	DeleteActors_Impl(selectedActors);
-	GEditor->SelectNone(true, true);
+	auto SelectedActors = GetSelectedActorArrayFunction();
+	DeleteActors_Impl(SelectedActors);
 }
-void FLexUIEditorTools::CutSelectedActors_Impl()
+void FLexUIEditorTools::CutActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
 {
-	CopySelectedActors_Impl();
-	DeleteSelectedActors_Impl();
+	CopyActors(GetSelectedActorArrayFunction);
+	DeleteActors(GetSelectedActorArrayFunction);
 }
-void FLexUIEditorTools::ToggleSelectedActorsSpatiallyLoaded_Impl()
+void FLexUIEditorTools::ToggleSelectedActorsSpatiallyLoaded(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
 {
-	auto selectedActors = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
-	auto count = selectedActors.Num();
-	if (count == 0)
+	auto SelectedActors = GetSelectedActorArrayFunction();
+	if (SelectedActors.Num() == 0)
 	{
 		UE_LOG(LGUIEditor, Error, TEXT("NothingSelected"));
 		return;
@@ -1280,7 +1247,7 @@ void FLexUIEditorTools::ToggleSelectedActorsSpatiallyLoaded_Impl()
 		}
 	};
 	GEditor->BeginTransaction(LOCTEXT("ToggleSpatiallyLoaded_Transaction", "LGUI Toggle Actors IsSpatiallyLoaded"));
-	auto ActorList = FLexUIEditorTools::GetRootActorListFromSelection(selectedActors);
+	auto ActorList = FLexUIEditorTools::GetRootActorListFromSelection(SelectedActors);
 	for (auto Actor : ActorList)
 	{
 		Actor->Modify();
@@ -1289,15 +1256,14 @@ void FLexUIEditorTools::ToggleSelectedActorsSpatiallyLoaded_Impl()
 	}
 	GEditor->EndTransaction();
 }
-ECheckBoxState FLexUIEditorTools::GetActorSpatiallyLoadedProperty()
+ECheckBoxState FLexUIEditorTools::GetActorsSpatiallyLoadedProperty(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
 {
-	auto selectedActors = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
-	auto count = selectedActors.Num();
-	if (count == 0)
+	auto SelectedActors = GetSelectedActorArrayFunction();
+	if (SelectedActors.Num() == 0)
 	{
 		return ECheckBoxState::Undetermined;
 	}
-	auto ActorList = FLexUIEditorTools::GetRootActorListFromSelection(selectedActors);
+	auto ActorList = FLexUIEditorTools::GetRootActorListFromSelection(SelectedActors);
 	bool bIsSpatiallyLoadedValue = ActorList[0]->GetIsSpatiallyLoaded();
 	for (int i = 1; i < ActorList.Num(); i++)
 	{
@@ -1311,19 +1277,12 @@ ECheckBoxState FLexUIEditorTools::GetActorSpatiallyLoadedProperty()
 
 void FLexUIEditorTools::DeleteActors_Impl(const TArray<AActor*>& InActors)
 {
-	auto count = InActors.Num();
-	if (count == 0)
-	{
-		UE_LOG(LGUIEditor, Error, TEXT("NothingSelected"));
-		return;
-	}
 	auto confirmMsg = FString::Printf(TEXT("Destroy selected actors? This will also destroy the children attached to selected actors."));
 	auto confirmResult = FMessageDialog::Open(EAppMsgType::YesNo, FText::FromString(confirmMsg));
 	if (confirmResult != EAppReturnType::Yes)return;
 
 	auto RootActorList = FLexUIEditorTools::GetRootActorListFromSelection(InActors);
 	GEditor->BeginTransaction(LOCTEXT("DestroyActor_Transaction", "LGUI Destroy Actor"));
-	GEditor->GetSelectedActors()->DeselectAll();
 	for (auto Actor : RootActorList)
 	{
 		auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(Actor);
@@ -1350,34 +1309,33 @@ void FLexUIEditorTools::DeleteActors_Impl(const TArray<AActor*>& InActors)
 	CleanupPrefabsInWorld(RootActorList[0]->GetWorld());
 }
 
-bool FLexUIEditorTools::CanDuplicateActor()
+bool FLexUIEditorTools::CanDuplicateActor(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
 {
-	auto SelectedActor = FLexUIEditorTools::GetFirstSelectedActor();
-	if (SelectedActor == nullptr)return false;
-	if (!FLexUIEditorTools::IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return false;
-	return true;
-}
-bool FLexUIEditorTools::CanCopyActor()
-{
-	auto SelectedActors = FLexUIEditorTools::GetSelectedActors();
+	auto SelectedActors = GetSelectedActorArrayFunction();
 	if (SelectedActors.Num() <= 0)return false;
 	return true;
 }
-bool FLexUIEditorTools::CanPasteActor()
+bool FLexUIEditorTools::CanCopyActor(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
+{
+	auto SelectedActors = GetSelectedActorArrayFunction();
+	if (SelectedActors.Num() <= 0)return false;
+	return true;
+}
+bool FLexUIEditorTools::CanPasteActor(TFunction<AActor*()> GetSelectedActorFunction)
 {
 	if (FLexUIEditorTools::CopiedActorPrefabMap.Num() == 0)return false;
-	auto SelectedActor = FLexUIEditorTools::GetFirstSelectedActor();
+	auto SelectedActor = GetSelectedActorFunction();
 	if (SelectedActor == nullptr)return false;
 	if (!FLexUIEditorTools::IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return false;
 	return true;
 }
-bool FLexUIEditorTools::CanCutActor()
+bool FLexUIEditorTools::CanCutActor(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
 {
-	return CanDeleteActor();
+	return CanDeleteActor(GetSelectedActorArrayFunction);
 }
-bool FLexUIEditorTools::CanDeleteActor()
+bool FLexUIEditorTools::CanDeleteActor(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
 {
-	auto SelectedActors = FLexUIEditorTools::GetSelectedActors();
+	auto SelectedActors = GetSelectedActorArrayFunction();
 	if (SelectedActors.Num() == 0)return false;
 	for (auto Actor : SelectedActors)
 	{
@@ -1392,11 +1350,11 @@ bool FLexUIEditorTools::CanDeleteActor()
 	}
 	return true;
 }
-bool FLexUIEditorTools::CanToggleActorSpatiallyLoaded()
+bool FLexUIEditorTools::CanToggleActorsSpatiallyLoaded(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
 {
-	auto selectedActors = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
-	if (selectedActors.Num() <= 0)return false;
-	auto ActorList = FLexUIEditorTools::GetRootActorListFromSelection(selectedActors);
+	auto SelectedActors = GetSelectedActorArrayFunction();
+	if (SelectedActors.Num() <= 0)return false;
+	auto ActorList = FLexUIEditorTools::GetRootActorListFromSelection(SelectedActors);
 	for (auto Actor : ActorList)
 	{
 		if (!Actor->CanChangeIsSpatiallyLoadedFlag())

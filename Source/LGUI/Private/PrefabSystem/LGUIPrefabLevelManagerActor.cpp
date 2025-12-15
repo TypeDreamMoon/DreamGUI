@@ -90,11 +90,11 @@ void ALGUIPrefabLevelManagerActor::PostInitProperties()
 	Super::PostInitProperties();
 	if (this != GetDefault<ALGUIPrefabLevelManagerActor>())
 	{
-		CollectWhenCreate();
+		CheckWhenCreate();
 	}
 }
 
-void ALGUIPrefabLevelManagerActor::CollectWhenCreate()
+void ALGUIPrefabLevelManagerActor::CheckWhenCreate()
 {
 	if (auto Level = this->GetLevel())
 	{
@@ -135,7 +135,7 @@ void ALGUIPrefabLevelManagerActor::PostActorCreated()
 	Super::PostActorCreated();
 	if (this != GetDefault<ALGUIPrefabLevelManagerActor>())
 	{
-		CollectWhenCreate();
+		CheckWhenCreate();
 	}
 }
 
@@ -151,15 +151,15 @@ void ALGUIPrefabLevelManagerActor::Destroyed()
 	if (!this->GetWorld()->IsGameWorld())
 	{
 		ULexUIEditorManagerObject::AddOneShotTickFunction([Actor = this, World = this->GetWorld()]() {
-			auto InfoText = LOCTEXT("DeleteLGUIPrefabLevelManagerActor", "\
+			auto InfoText = LOCTEXT("DeleteWarning", "\
 LGUIPrefabLevelManagerActor is being destroyed!\
-\nThis actor is responsible for managing LGUI-Prefabs in current level, if you delete it then all LGUI-Prefabs linked in the level will be lost!\
-\nCilck OK to confirm delete, or Cancel to undo it.");
+This actor is responsible for managing LGUI-Prefabs in current level, if you delete it then all LGUI-Prefabs linked in the level will be lost!\
+Click OK to confirm delete, or Cancel to undo it.");
 			auto Return = FMessageDialog::Open(EAppMsgType::OkCancel, InfoText);
 			if (Return == EAppReturnType::Cancel)
 			{
 				GEditor->UndoTransaction(false);
-				Actor->CollectWhenCreate();
+				Actor->CheckWhenCreate();
 			}
 			else if (Return == EAppReturnType::Ok)
 			{

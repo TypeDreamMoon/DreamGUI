@@ -318,6 +318,14 @@ void ULexUIEditorManagerObject::Tick(float DeltaTime)
 			}
 		}
 	}
+	if (bShouldBroadcastLevelActorListChanged)
+	{
+		bShouldBroadcastLevelActorListChanged = false;
+		if (IsValid(GEditor))
+		{
+			GEditor->BroadcastLevelActorListChanged();
+		}
+	}
 #endif
 }
 TStatId ULexUIEditorManagerObject::GetStatId() const
@@ -348,6 +356,13 @@ void ULexUIEditorManagerObject::UnregisterEditorTickFunction(const FDelegateHand
 		Instance->EditorTick.Remove(InDelegateHandle);
 	}
 }
+void ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged()
+{
+	if (InitCheck())
+	{
+		Instance->bShouldBroadcastLevelActorListChanged = true;
+	}
+}
 
 ULexUIEditorManagerObject* ULexUIEditorManagerObject::GetInstance(bool CreateIfNotValid)
 {
@@ -359,8 +374,15 @@ ULexUIEditorManagerObject* ULexUIEditorManagerObject::GetInstance(bool CreateIfN
 }
 bool ULexUIEditorManagerObject::IsSelected(AActor* InObject)
 {
-	if (!IsValid(GEditor))return false;
-	return GEditor->GetSelectedActors()->IsSelected(InObject);
+	if (GEditor && GEditor->GetSelectedActors()->IsSelected(InObject))
+	{
+		return true;
+	}
+	if (auto Manager = ULexUIManagerWorldSubsystem::GetInstance(InObject->GetWorld()))
+	{
+		return Manager->GetSelection()->IsSelected(InObject);
+	}
+	return false;
 }
 bool ULexUIEditorManagerObject::InitCheck()
 {
@@ -483,7 +505,7 @@ bool ULexUISelection::IsSelected(AActor* Actor)const
 
 void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool ScreenOrWorld)
 {
-	if (Selection->IsSelected(Widget->GetOwner()))//select self
+	if (ULexUIEditorManagerObject::IsSelected(Widget->GetOwner()))//select self
 	{
 		auto RectDrawColor = FColor(160, 160, 160, 255);//gray means normal object
 		auto DrawWidget = [=](ULexWidget* InWidget, const FColor& Color)

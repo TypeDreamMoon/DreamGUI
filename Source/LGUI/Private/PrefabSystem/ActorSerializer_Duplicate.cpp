@@ -5,17 +5,11 @@
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
 #include "Serialization/MemoryReader.h"
-#include "Serialization/BufferArchive.h"
 #include "Components/PrimitiveComponent.h"
 #include "Runtime/Launch/Resources/Version.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
 #include "LGUI.h"
+#include "Core/LexUIManager.h"
 #include "PrefabSystem/LGUIPrefabSettings.h"
-#if WITH_EDITOR
-#include "Tools/UEdMode.h"
-#include "Utils/LexUIUtils.h"
-#endif
-
 
 namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 {
@@ -70,7 +64,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 		}
 
 #if WITH_EDITOR
-		ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();//UE5 will not auto refresh scene outliner and display actor label, so manually refresh it.
+		ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();//UE5 will not auto refresh scene outliner and display actor label, so manually refresh it.
 #endif
 		return CreatedRootActor;
 	}
@@ -150,7 +144,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 			UE_LOG(LGUI, Log, TEXT("DuplicateActorWithPreparedData total time: %fms"), TimeSpan.GetTotalMilliseconds());
 		}
 #if WITH_EDITOR
-		ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();//UE5 will not auto refresh scene outliner and display actor label, so manually refresh it.
+		ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();//UE5 will not auto refresh scene outliner and display actor label, so manually refresh it.
 #endif
 		return CreatedRootActor;
 	}
@@ -222,7 +216,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 		UE_LOG(LGUI, Log, TEXT("End duplicate actor: '%s', total time: %fms"), *Name, TimeSpan.GetTotalMilliseconds());
 
 #if WITH_EDITOR
-		ULGUIPrefabManagerObject::MarkBroadcastLevelActorListChanged();//UE5 will not auto refresh scene outliner and display actor label, so manually refresh it.
+		ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();//UE5 will not auto refresh scene outliner and display actor label, so manually refresh it.
 #endif
 
 		return CreatedRootActor;

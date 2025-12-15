@@ -95,7 +95,6 @@ void FLGUIPrefabThumbnailScene::SpawnPreviewActor()
 void FLGUIPrefabThumbnailScene::GetBoundsRecursive(USceneComponent* RootComp, FBoxSphereBounds& OutBounds, bool& IsFirstPrimitive)const
 {
 	if (!IsValid(RootComp))return;
-	if (RootComp->IsA<ULexWidgetEditorHelperComp>())return;
 	if (RootComp->IsVisualizationComponent())return;
 	FBoxSphereBounds Bounds = FBoxSphereBounds(EForceInit::ForceInitToZero);
 	bool bIsValidBounds = false;

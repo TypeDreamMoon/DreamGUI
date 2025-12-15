@@ -30,9 +30,6 @@ public:
 #if WITH_EDITORONLY_DATA
 private:
 	TUniquePtr<FPreviewScene> PreviewSceneForPrefabPackage;
-private:
-	friend class FLexUIEditorTools;
-	bool bShouldBroadcastLevelActorListChanged = false;
 #endif
 #if WITH_EDITOR
 private:
@@ -40,8 +37,6 @@ private:
 public:
 	static ULGUIPrefabManagerObject* GetInstance(bool CreateIfNotValid = false);
 	static UWorld* GetPreviewWorldForPrefabPackage();
-public:
-	static void MarkBroadcastLevelActorListChanged();
 private:
 	FDelegateHandle OnAssetReimportDelegateHandle;
 	void OnAssetReimport(UObject* asset);

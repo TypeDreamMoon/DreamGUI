@@ -86,6 +86,7 @@
 #include "DetailCustomization/LexLayoutContainerFlexBoxCustomization.h"
 #include "DetailCustomization/LexUIEventDelegatePresetParamCustomization.h"
 #include "DetailCustomization/LexUIFontEmojiDataCustomization.h"
+#include "Framework/Commands/GenericCommands.h"
 #include "LevelEditorMenuExtensions/LexUILevelEditorExtensions.h"
 
 const FName FLGUIEditorModule::LGUIDynamicSpriteAtlasViewerName(TEXT("LGUIDynamicSpriteAtlasViewerName"));
@@ -117,48 +118,56 @@ void FLGUIEditorModule::StartupModule()
 	{
 		auto EditorCommands = FLGUIEditorCommands::Get();
 
+		TFunction<AActor*()> GetSelectedActor = []()
+		{
+			return FLexUIEditorTools::GetFirstSelectedActor();
+		};
+		TFunction<TArray<AActor*>()> GetSelectedActorArray = []()
+		{
+			return FLexUIEditorTools::GetSelectedActors();
+		};
 		//actor action
 		PluginCommands->MapAction(
 			EditorCommands.CopyActor,
-			FExecuteAction::CreateStatic(&FLexUIEditorTools::CopySelectedActors_Impl),
-			FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCopyActor),
+			FExecuteAction::CreateStatic(&FLexUIEditorTools::CopyActors, GetSelectedActorArray),
+			FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCopyActor, GetSelectedActorArray),
 			FGetActionCheckState(),
-			FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCopyActor)
+			FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCopyActor, GetSelectedActorArray)
 		);
 		PluginCommands->MapAction(
 			EditorCommands.CutActor,
-			FExecuteAction::CreateStatic(&FLexUIEditorTools::CutSelectedActors_Impl),
-			FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCutActor),
+			FExecuteAction::CreateStatic(&FLexUIEditorTools::CutActors, GetSelectedActorArray),
+			FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCutActor, GetSelectedActorArray),
 			FGetActionCheckState(),
-			FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCutActor)
+			FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCutActor, GetSelectedActorArray)
 		);
 		PluginCommands->MapAction(
 			EditorCommands.PasteActor,
-			FExecuteAction::CreateStatic(&FLexUIEditorTools::PasteSelectedActors_Impl),
-			FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanPasteActor),
+			FExecuteAction::CreateStatic(&FLexUIEditorTools::PasteActors, GetSelectedActorArray),
+			FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanPasteActor, GetSelectedActor),
 			FGetActionCheckState(),
-			FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanPasteActor)
+			FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanPasteActor, GetSelectedActor)
 		);
 		PluginCommands->MapAction(
 			EditorCommands.DuplicateActor,
-			FExecuteAction::CreateStatic(&FLexUIEditorTools::DuplicateSelectedActors_Impl),
-			FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanDuplicateActor),
+			FExecuteAction::CreateStatic(&FLexUIEditorTools::DuplicateActors, GetSelectedActorArray),
+			FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanDuplicateActor, GetSelectedActorArray),
 			FGetActionCheckState(),
-			FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanDuplicateActor)
+			FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanDuplicateActor, GetSelectedActorArray)
 		);
 		PluginCommands->MapAction(
 			EditorCommands.DestroyActor,
-			FExecuteAction::CreateStatic(&FLexUIEditorTools::DeleteSelectedActors_Impl),
-			FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanDeleteActor),
+			FExecuteAction::CreateStatic(&FLexUIEditorTools::DeleteActors, GetSelectedActorArray),
+			FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanDeleteActor, GetSelectedActorArray),
 			FGetActionCheckState(),
-			FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanDeleteActor)
+			FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanDeleteActor, GetSelectedActorArray)
 		);
 		PluginCommands->MapAction(
 			EditorCommands.ToggleSpatiallyLoaded,
-			FExecuteAction::CreateStatic(&FLexUIEditorTools::ToggleSelectedActorsSpatiallyLoaded_Impl),
-			FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanToggleActorSpatiallyLoaded),
-			FGetActionCheckState::CreateStatic(&FLexUIEditorTools::GetActorSpatiallyLoadedProperty),
-			FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanToggleActorSpatiallyLoaded)
+			FExecuteAction::CreateStatic(&FLexUIEditorTools::ToggleSelectedActorsSpatiallyLoaded, GetSelectedActorArray),
+			FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanToggleActorsSpatiallyLoaded, GetSelectedActorArray),
+			FGetActionCheckState::CreateStatic(&FLexUIEditorTools::GetActorsSpatiallyLoadedProperty, GetSelectedActorArray),
+			FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanToggleActorsSpatiallyLoaded, GetSelectedActorArray)
 		);
 
 		//component action
@@ -187,22 +196,10 @@ void FLGUIEditorModule::StartupModule()
 		);
 		//settings
 		PluginCommands->MapAction(
-			EditorCommands.ToggleLGUIInfoColume,
-			FExecuteAction::CreateRaw(this, &FLGUIEditorModule::ToggleLGUIColumnInfo),
-			FCanExecuteAction(),
-			FIsActionChecked::CreateRaw(this, &FLGUIEditorModule::IsLGUIColumnInfoChecked)
-		);
-		PluginCommands->MapAction(
 			EditorCommands.ToggleDrawHelperFrame,
 			FExecuteAction::CreateRaw(this, &FLGUIEditorModule::ToggleDrawHelperFrame),
 			FCanExecuteAction(),
 			FIsActionChecked::CreateRaw(this, &FLGUIEditorModule::IsDrawHelperFrameChecked)
-		);
-		PluginCommands->MapAction(
-			EditorCommands.ToggleAnchorTool,
-			FExecuteAction::CreateRaw(this, &FLGUIEditorModule::ToggleAnchorTool),
-			FCanExecuteAction(),
-			FIsActionChecked::CreateRaw(this, &FLGUIEditorModule::IsAnchorToolChecked)
 		);
 		//gc
 		PluginCommands->MapAction(
@@ -217,7 +214,7 @@ void FLGUIEditorModule::StartupModule()
 	}
 	//register SceneOutliner ColumnInfo
 	{
-		ApplyLGUIColumnInfo(IsLGUIColumnInfoChecked(), false);
+		ApplyLexUIColumnInfoOnSceneOutliner();
 	}
 	//register window
 	{
@@ -606,6 +603,22 @@ void FLGUIEditorModule::AddEditorToolsToToolbarExtension(FToolBarBuilder& Builde
 				return this->MakeEditorToolsMenu(true, true, true, true, []()
 				{
 					return FLexUIEditorTools::GetFirstSelectedActor();
+				}, [=, this](FMenuBuilder& MenuBuilder)
+				{
+					MenuBuilder.BeginSection("ActorAction", LOCTEXT("ActorAction", "Edit Actor With Hierarchy"));
+					{
+						MenuBuilder.PushCommandList(PluginCommands.ToSharedRef());
+						{
+							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().CopyActor);
+							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().PasteActor);
+							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().CutActor);
+							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().DuplicateActor);
+							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().DestroyActor);
+							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().ToggleSpatiallyLoaded);
+						}
+						MenuBuilder.PopCommandList();
+					}
+					MenuBuilder.EndSection();
 				});
 			}),
 			LOCTEXT("LGUITools", "LGUI Tools"),
@@ -616,10 +629,10 @@ void FLGUIEditorModule::AddEditorToolsToToolbarExtension(FToolBarBuilder& Builde
 	Builder.EndSection();
 }
 
-TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(bool InitialSetup, bool ComponentAction, bool EditorCameraControl, bool Others, TFunction<AActor*()> GetSelectedActorFunction)
+TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(bool InitialSetup, bool ComponentAction, bool EditorCameraControl, bool Others, TFunction<AActor*()> GetSelectedActorFunction, TFunction<void(FMenuBuilder&)> ExtendEditMenuFunction)
 {
 	FMenuBuilder MenuBuilder(true, PluginCommands);
-	auto commandList = FLGUIEditorCommands::Get();
+	auto EditorCommands = FLGUIEditorCommands::Get();
 
 	//prefab
 	{
@@ -786,23 +799,17 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(bool InitialSetup, bo
 	}
 	MenuBuilder.EndSection();
 
-	MenuBuilder.BeginSection("ActorAction", LOCTEXT("ActorAction", "Edit Actor With Hierarchy"));
+	if (ExtendEditMenuFunction != nullptr)
 	{
-		MenuBuilder.AddMenuEntry(commandList.CopyActor);
-		MenuBuilder.AddMenuEntry(commandList.PasteActor);
-		MenuBuilder.AddMenuEntry(commandList.CutActor);
-		MenuBuilder.AddMenuEntry(commandList.DuplicateActor);
-		MenuBuilder.AddMenuEntry(commandList.DestroyActor);
-		MenuBuilder.AddMenuEntry(commandList.ToggleSpatiallyLoaded);
+		ExtendEditMenuFunction(MenuBuilder);
 	}
-	MenuBuilder.EndSection();
 
 	if (ComponentAction)
 	{
 		MenuBuilder.BeginSection("ComponentAction", LOCTEXT("ComponentAction", "Edit Component"));
 		{
-			MenuBuilder.AddMenuEntry(commandList.CopyComponentValues);
-			MenuBuilder.AddMenuEntry(commandList.PasteComponentValues);
+			MenuBuilder.AddMenuEntry(EditorCommands.CopyComponentValues);
+			MenuBuilder.AddMenuEntry(EditorCommands.PasteComponentValues);
 		}
 		MenuBuilder.EndSection();
 	}
@@ -811,8 +818,8 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(bool InitialSetup, bo
 	{
 		MenuBuilder.BeginSection("EditorCamera", LOCTEXT("EditorCameraControl", "EditorCameraControl"));
 		{
-			MenuBuilder.AddMenuEntry(commandList.FocusToScreenSpaceUI);
-			MenuBuilder.AddMenuEntry(commandList.FocusToSelectedUI);
+			MenuBuilder.AddMenuEntry(EditorCommands.FocusToScreenSpaceUI);
+			MenuBuilder.AddMenuEntry(EditorCommands.FocusToSelectedUI);
 		}
 		MenuBuilder.EndSection();
 	}
@@ -821,10 +828,8 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(bool InitialSetup, bo
 	{
 		MenuBuilder.BeginSection("Others", LOCTEXT("Others", "Others"));
 		{
-			MenuBuilder.AddMenuEntry(commandList.ToggleLGUIInfoColume);
-			MenuBuilder.AddMenuEntry(commandList.ToggleDrawHelperFrame);
-			MenuBuilder.AddMenuEntry(commandList.ToggleAnchorTool);
-			MenuBuilder.AddMenuEntry(commandList.ForceGC);
+			MenuBuilder.AddMenuEntry(EditorCommands.ToggleDrawHelperFrame);
+			MenuBuilder.AddMenuEntry(EditorCommands.ForceGC);
 		}
 		MenuBuilder.EndSection();
 	}
@@ -1116,30 +1121,6 @@ void FLGUIEditorModule::CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder, TFu
 	}
 }
 
-void FLGUIEditorModule::ToggleLGUIColumnInfo()
-{
-	auto LGUIEditorSettings = GetMutableDefault<ULexUIEditorSettings>();
-	LGUIEditorSettings->ShowLexUIColumnInSceneOutliner = !LGUIEditorSettings->ShowLexUIColumnInSceneOutliner;
-	LGUIEditorSettings->SaveConfig();
-
-	ApplyLGUIColumnInfo(LGUIEditorSettings->ShowLexUIColumnInSceneOutliner, true);
-}
-bool FLGUIEditorModule::IsLGUIColumnInfoChecked()
-{
-	return GetDefault<ULexUIEditorSettings>()->ShowLexUIColumnInSceneOutliner;
-}
-
-void FLGUIEditorModule::ToggleAnchorTool()
-{
-	auto LGUIEditorSettings = GetMutableDefault<ULexUIEditorSettings>();
-	LGUIEditorSettings->bShowAnchorTool = !LGUIEditorSettings->bShowAnchorTool;
-	LGUIEditorSettings->SaveConfig();
-}
-bool FLGUIEditorModule::IsAnchorToolChecked()
-{
-	return GetDefault<ULexUIEditorSettings>()->bShowAnchorTool;
-}
-
 void FLGUIEditorModule::ToggleDrawHelperFrame()
 {
 	auto LGUIEditorSettings = GetMutableDefault<ULexUIEditorSettings>();
@@ -1151,44 +1132,12 @@ bool FLGUIEditorModule::IsDrawHelperFrameChecked()
 	return GetDefault<ULexUIEditorSettings>()->bDrawHelperFrame;
 }
 
-void FLGUIEditorModule::ApplyLGUIColumnInfo(bool value, bool refreshSceneOutliner)
+void FLGUIEditorModule::ApplyLexUIColumnInfoOnSceneOutliner()
 {
 	FSceneOutlinerModule& SceneOutlinerModule = FModuleManager::LoadModuleChecked< FSceneOutlinerModule >("SceneOutliner");
-	if (value)
-	{
-		FSceneOutlinerColumnInfo ColumnInfo(ESceneOutlinerColumnVisibility::Visible, 15, FCreateSceneOutlinerColumn::CreateStatic(&LGUISceneOutliner::FLGUISceneOutlinerInfoColumn::MakeInstance));
-		SceneOutlinerModule.RegisterDefaultColumnType<LGUISceneOutliner::FLGUISceneOutlinerInfoColumn>(ColumnInfo);
-	}
-	else
-	{
-		SceneOutlinerModule.UnRegisterColumnType<LGUISceneOutliner::FLGUISceneOutlinerInfoColumn>();
-	}
-
-	//refresh scene outliner
-	if (refreshSceneOutliner)
-	{
-		FLevelEditorModule& LevelEditorModule = FModuleManager::LoadModuleChecked<FLevelEditorModule>("LevelEditor");
-
-		TSharedPtr<FTabManager> LevelEditorTabManager = LevelEditorModule.GetLevelEditorTabManager();
-		if (LevelEditorTabManager->FindExistingLiveTab(FName("LevelEditorSceneOutliner")).IsValid())
-		{
-			if (LevelEditorTabManager.IsValid() && LevelEditorTabManager.Get())
-			{
-				if (LevelEditorTabManager->GetOwnerTab().IsValid())
-				{
-					LevelEditorTabManager->TryInvokeTab(FName("LevelEditorSceneOutliner"))->RequestCloseTab();
-				}
-			}
-
-			if (LevelEditorTabManager.IsValid() && LevelEditorTabManager.Get())
-			{
-				if (LevelEditorTabManager->GetOwnerTab().IsValid())
-				{
-					LevelEditorTabManager->TryInvokeTab(FName("LevelEditorSceneOutliner"));
-				}
-			}
-		}
-	}
+	
+	FSceneOutlinerColumnInfo ColumnInfo(ESceneOutlinerColumnVisibility::Visible, 15, FCreateSceneOutlinerColumn::CreateStatic(&LGUISceneOutliner::FLGUISceneOutlinerInfoColumn::MakeInstance));
+	SceneOutlinerModule.RegisterDefaultColumnType<LGUISceneOutliner::FLGUISceneOutlinerInfoColumn>(ColumnInfo);
 }
 
 void FLGUIEditorModule::CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction)

@@ -15,6 +15,7 @@ public:
 	void Call_OnUnregister();
 	virtual void BeginPlay(){};
 	virtual void EndPlay(){};
+	bool IsRegistered()const{return bIsRegistered;}
 
 	virtual void PostInitProperties() override;
 

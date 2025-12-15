@@ -10,10 +10,6 @@
 #include "Misc/NetworkVersion.h"
 #include "PrefabSystem/ILGUIPrefabInterface.h"
 #include "Runtime/Launch/Resources/Version.h"
-#if WITH_EDITOR
-#include "Tools/UEdMode.h"
-#include "Utils/LexUIUtils.h"
-#endif
 
 
 namespace LGUIPrefabSystem8
