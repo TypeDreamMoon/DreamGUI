@@ -286,42 +286,6 @@ void ULexWidget::SetAsLastSibling()
 	}
 }
 
-#if WITH_EDITOR
-void ULexWidget::ApplyListChildrenInSceneOutliner()
-{
-	struct LOCAL
-	{
-		static void ApplyListChildrenInSceneOutliner(ULexWidget* Widget, bool UpValue)
-		{
-			for (auto& Child : Widget->UIChildren)
-			{
-				bool bShouldListInSceneOutliner = false;
-				if (!UpValue)
-				{
-					bShouldListInSceneOutliner = false;
-				}
-				else
-				{
-					if (Child->bListChildrenInSceneOutliner)
-					{
-						bShouldListInSceneOutliner = true;
-					}
-					else
-					{
-						bShouldListInSceneOutliner = false;
-					}
-				}
-				auto bListedInSceneOutliner_Property = FindFProperty<FBoolProperty>(AActor::StaticClass(), TEXT("bListedInSceneOutliner"));
-				bListedInSceneOutliner_Property->SetPropertyValue_InContainer(Child->GetOwner(), bShouldListInSceneOutliner);
-				ApplyListChildrenInSceneOutliner(Child, UpValue);
-			}
-		}
-	};
-	LOCAL::ApplyListChildrenInSceneOutliner(this, bListChildrenInSceneOutliner);
-	ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();
-}
-#endif
-
 ULexWidget* ULexWidget::FindChildByDisplayName(const FString& InName, bool IncludeChildren)const
 {
 	int indexOfFirstSlash;
@@ -626,7 +590,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 			};
 			LOCAL::MarkDirty(this);
 		}
-		ULexUIEditorManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)]()
+		ULexUIManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)]()
 		{
 			if (WeakThis.IsValid())
 			{
@@ -634,11 +598,6 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 				WeakThis->UpdateBounds();
 			}
 		}, 1);
-
-		if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, bListChildrenInSceneOutliner))
-		{
-			ApplyListChildrenInSceneOutliner();
-		}
 	}
 }
 
@@ -726,9 +685,10 @@ void ULexWidget::PostEditComponentMove(bool bFinished)
 void ULexWidget::PostEditUndo()
 {
 	Super::PostEditUndo();
-	ULexUIEditorManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)]()
+	ULexUIManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)]()
 	{
 		if (!WeakThis.IsValid())return;
+		if (!WeakThis->UIParent.IsValid())return;
 		//restore SiblingIndex
 		WeakThis->UIParent->UIChildren.Remove(WeakThis.Get());
 		WeakThis->UIParent->UIChildren.Insert(WeakThis.Get(), WeakThis->SiblingIndex);

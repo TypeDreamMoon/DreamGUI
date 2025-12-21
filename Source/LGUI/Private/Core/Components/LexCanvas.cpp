@@ -659,7 +659,8 @@ bool ULexCanvas::CanEditChange(const FProperty* InProperty) const
 	if (InProperty)
 	{
 		auto MemberName = InProperty->GetFName();
-		bool bIsRootCanvas = this->IsRootCanvas();
+		bool bIsRootCanvas = this->IsRootCanvas()
+		|| this->GetWorld() == nullptr;//world is null maybe it is blueprint editor
 		if (MemberName == GET_MEMBER_NAME_CHECKED(ULexCanvas, ProjectionType))
 		{
 			return bIsRootCanvas;
@@ -780,7 +781,7 @@ void ULexCanvas::EnsureDataForRebuild()
 		}
 	};
 	EnsureDrawCallObjectReference();
-	ULexUIEditorManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)]() {
+	ULexUIManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)]() {
 		if (WeakThis.IsValid())
 		{
 			LOCAL::RecheckRootCanvasRecursive(WeakThis.Get());
@@ -2954,7 +2955,7 @@ void ULexCanvas::RegisterCanvasScaler()
 #if WITH_EDITOR
 	if (GetWorld() && !GetWorld()->IsGameWorld())
 	{
-		EditorTickDelegateHandle = ULexUIEditorManagerObject::RegisterEditorTickFunction([this](float deltaTime) {
+		EditorTickDelegateHandle = ULexUIManagerObject::RegisterEditorTickFunction([this](float deltaTime) {
 			this->OnEditorTick(deltaTime);
 			});
 	}
@@ -2995,7 +2996,7 @@ void ULexCanvas::UnregisterCanvasScaler()
 #if WITH_EDITOR
 	if (EditorTickDelegateHandle.IsValid())
 	{
-		ULexUIEditorManagerObject::UnregisterEditorTickFunction(EditorTickDelegateHandle);
+		ULexUIManagerObject::UnregisterEditorTickFunction(EditorTickDelegateHandle);
 	}
 #endif
 	//reset the canvasScale to default
@@ -3142,7 +3143,7 @@ void ULexCanvas::OnEditorTick(float DeltaTime)
 			)
 		{
 			DrawViewportArea();
-			if (ULexUIEditorManagerObject::IsSelected(this->GetOwner()))
+			if (ULexUIManagerObject::IsSelected(this->GetOwner()))
 			{
 				DrawVirtualCamera();
 			}
@@ -3160,15 +3161,17 @@ void ULexCanvas::OnEditorTick(float DeltaTime)
 					else
 #endif
 					{
-						auto ViewportClient = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld())->GetEditorViewportClient();
-						auto Viewport = ViewportClient->Viewport;
-						if (Viewport == nullptr)
+						if (auto ViewportClient = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld())->GetEditorViewportClient())
 						{
-							Viewport = GEditor->GetActiveViewport();
-						}
-						if (Viewport != nullptr)
-						{
-							NewViewportSize = Viewport->GetSizeXY();
+							auto Viewport = ViewportClient->Viewport;
+							if (Viewport == nullptr)
+							{
+								Viewport = GEditor->GetActiveViewport();
+							}
+							if (Viewport != nullptr)
+							{
+								NewViewportSize = Viewport->GetSizeXY();
+							}
 						}
 					}
 

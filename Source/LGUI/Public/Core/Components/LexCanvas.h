@@ -729,10 +729,10 @@ private:
 	TArray<TObjectPtr<UMaterialInstanceDynamic>> PooledUIMaterialList;//Default material pool.
 	TArray<TSharedPtr<FLexUIDrawCall>> UIDrawCallList;//DrawCall collection of this Canvas.
 	TArray<TSharedPtr<FLexUIDrawCall>> CacheUIDrawCallList;//Cached DrawCall collection.
-	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
+	UPROPERTY(Transient)
 	TArray<TObjectPtr<ULexWidget>> VisualWidgetList;//Use LexWidget instead of LexVisual, because we need LexWidget to get sub-canvas.
 	bool bNeedToGenerateWidgetList = true;
-	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
+	UPROPERTY(Transient)
 	TArray<TObjectPtr<ULexWidget>> WidgetList;//All LexWidget that belongs to this canvas
 	TSharedPtr<FLexUIDrawCall> DrawCallAsChildCanvas = nullptr;//DrawCall that represent this canvas when the canvas is render as child.
 	TAtomic<int> ThreadProcessingGeometryCount;

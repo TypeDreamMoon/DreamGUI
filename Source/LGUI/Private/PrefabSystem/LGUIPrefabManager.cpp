@@ -4,10 +4,10 @@
 #include "LGUI.h"
 #include "Engine/World.h"
 #include "Engine/Engine.h"
+#include "Core/Actor/LexWidgetRootActor.h"
 #if WITH_EDITOR
 #include "Editor.h"
 #include "DrawDebugHelpers.h"
-#include "Engine/Selection.h"
 #include "EditorViewportClient.h"
 #include "PrefabSystem/LGUIPrefab.h"
 #endif
@@ -72,7 +72,7 @@ bool ULGUIPrefabManagerObject::InitCheck()
 	{
 		Instance = NewObject<ULGUIPrefabManagerObject>();
 		Instance->AddToRoot();
-		UE_LOG(LGUI, Log, TEXT("[%s].%d No Instance for ULGUIPrefabManagerObject, create it!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		UE_LOG(LGUI, Log, TEXT("[%s].%d No Instance for %s, create it!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(ULGUIPrefabManagerObject::StaticClass()->GetName()));
 		//open map
 		Instance->OnMapOpenedDelegateHandle = FEditorDelegates::OnMapOpened.AddUObject(Instance, &ULGUIPrefabManagerObject::OnMapOpened);
 		Instance->OnPackageReloadedDelegateHandle = FCoreUObjectDelegates::OnPackageReloaded.AddUObject(Instance, &ULGUIPrefabManagerObject::OnPackageReloaded);
@@ -85,14 +85,19 @@ bool ULGUIPrefabManagerObject::InitCheck()
 	return true;
 }
 
-void ULGUIPrefabManagerObject::OnAssetReimport(UObject* asset)
+void ULGUIPrefabManagerObject::OnAssetReimport(UObject* Asset)
 {
-	if (IsValid(asset))
+	if (IsValid(Asset))
 	{
-		auto textureAsset = Cast<UTexture2D>(asset);
-		if (IsValid(textureAsset))
+		if (Asset->IsA<ULGUIPrefab>())
 		{
-			
+			for (TObjectIterator<ALexWidgetRootActor> Itr; Itr; ++Itr)
+			{
+				if (Itr->GetWorld())
+				{
+					Itr->CheckPrefabVersion();
+				}
+			}
 		}
 	}
 }

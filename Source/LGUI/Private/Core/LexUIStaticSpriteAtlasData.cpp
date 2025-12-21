@@ -136,7 +136,7 @@ void ULexUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChanged
 							break;
 						}
 						auto WeakThis = TWeakObjectPtr<ULexUIStaticSpriteAtlasData>(this);
-						ULexUIEditorManagerObject::AddOneShotTickFunction([=] {
+						ULexUIManagerObject::AddOneShotTickFunction([=] {
 							if (WeakThis.IsValid())
 							{
 								WeakThis->bIsYesToAll = false;
@@ -160,7 +160,7 @@ void ULexUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChanged
 			{
 				bIsAddedToDelayedCall = true;
 				auto WeakThis = TWeakObjectPtr<ULexUIStaticSpriteAtlasData>(this);
-				ULexUIEditorManagerObject::AddOneShotTickFunction([=] {
+				ULexUIManagerObject::AddOneShotTickFunction([=] {
 					if (WeakThis.IsValid())
 					{
 						WeakThis->MarkNotInitialized();

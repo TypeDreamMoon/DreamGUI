@@ -5,7 +5,7 @@
 #include "LexWidgetSubObjectBehaviour.generated.h"
 
 class ULexWidget;
-UCLASS(Blueprintable, BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)
+UCLASS(BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)
 class LGUI_API ULexWidgetSubObjectBehaviour : public UObject
 {
 	GENERATED_BODY()

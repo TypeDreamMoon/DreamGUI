@@ -188,6 +188,8 @@ void ULexUIFontData_DistanceField::PrepareForPushCharData(ULexText* InText)
 	OneDivideFontSize = 1.0f / SampleFontSize;
 	SDFRadius = SampleFontSize * 0.25f;//use 1/4 of FontSize can get good result
 	ExpandMeshSize = InText->GetExpandMeshSize();
+	auto CompScale = InText->GetWidget()->GetComponentScale();
+	ObjectScale = FMath::Max(CompScale.X, CompScale.Y);
 }
 
 bool ULexUIFontData_DistanceField::GetRequireNormalAndTangent()
@@ -377,6 +379,7 @@ void ULexUIFontData_DistanceField::PushCharData(
 	//uv
 	{
 		int addVertCount = 0;
+		auto tempFontScale = richTextProperty.Size * ObjectScale;
 		{
 			if (richTextProperty.Bold)
 			{
@@ -393,13 +396,13 @@ void ULexUIFontData_DistanceField::PushCharData(
 				vertices[verticesStartIndex + 3].TextureCoordinate[0] = charData.GetUV3();
 			}
 
-			//bold and scale
+			//bold and text-scale
 			{
 				auto tempBoldSize = richTextProperty.Bold ? BoldRatio * 0.5f : 0.0f;
-				vertices[verticesStartIndex].TextureCoordinate[2] = FVector2f(tempBoldSize, 0);
-				vertices[verticesStartIndex + 1].TextureCoordinate[2] = FVector2f(tempBoldSize, 0);
-				vertices[verticesStartIndex + 2].TextureCoordinate[2] = FVector2f(tempBoldSize, 0);
-				vertices[verticesStartIndex + 3].TextureCoordinate[2] = FVector2f(tempBoldSize, 0);
+				vertices[verticesStartIndex].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
+				vertices[verticesStartIndex + 1].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
+				vertices[verticesStartIndex + 2].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
+				vertices[verticesStartIndex + 3].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
 			}
 
 			addVertCount = 4;
@@ -414,10 +417,10 @@ void ULexUIFontData_DistanceField::PushCharData(
 			//bold and scale, bold is not needed for underline and strikethrough, but scale is needed
 			{
 				auto tempBoldSize = 0.0f;
-				vertices[verticesStartIndex + addVertCount].TextureCoordinate[2] = FVector2f(tempBoldSize, 0);
-				vertices[verticesStartIndex + addVertCount + 1].TextureCoordinate[2] = FVector2f(tempBoldSize, 0);
-				vertices[verticesStartIndex + addVertCount + 2].TextureCoordinate[2] = FVector2f(tempBoldSize, 0);
-				vertices[verticesStartIndex + addVertCount + 3].TextureCoordinate[2] = FVector2f(tempBoldSize, 0);
+				vertices[verticesStartIndex + addVertCount].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
+				vertices[verticesStartIndex + addVertCount + 1].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
+				vertices[verticesStartIndex + addVertCount + 2].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
+				vertices[verticesStartIndex + addVertCount + 3].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
 			}
 
 			addVertCount += 4;
@@ -432,10 +435,10 @@ void ULexUIFontData_DistanceField::PushCharData(
 			//bold and scale, bold is not needed for underline and strikethrough, but scale is needed
 			{
 				auto tempBoldSize = 0.0f;
-				vertices[verticesStartIndex + addVertCount].TextureCoordinate[2] = FVector2f(tempBoldSize, 0);
-				vertices[verticesStartIndex + addVertCount + 1].TextureCoordinate[2] = FVector2f(tempBoldSize, 0);
-				vertices[verticesStartIndex + addVertCount + 2].TextureCoordinate[2] = FVector2f(tempBoldSize, 0);
-				vertices[verticesStartIndex + addVertCount + 3].TextureCoordinate[2] = FVector2f(tempBoldSize, 0);
+				vertices[verticesStartIndex + addVertCount].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
+				vertices[verticesStartIndex + addVertCount + 1].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
+				vertices[verticesStartIndex + addVertCount + 2].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
+				vertices[verticesStartIndex + addVertCount + 3].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
 			}
 
 			addVertCount += 4;

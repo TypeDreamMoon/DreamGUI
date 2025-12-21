@@ -8,7 +8,7 @@
 
 class ULexWidget;
 UCLASS(ClassGroup = LGUI, HideCategories=(Rendering, Replication, Collision, HLOD, Physics, Networking, Input, Actor, Navigation, LevelInstance, Cooking))
-class LGUI_API ALexWidgetActor : public AActor, public ILGUIPrefabInterface
+class LGUI_API ALexWidgetActor : public AActor
 {
 	GENERATED_BODY()
 	
@@ -28,10 +28,5 @@ public:
 private:
 	UPROPERTY(Category = "LGUI", VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<ULexWidget> LexWidget;
-protected:
-	virtual void Awake_Implementation() override;
-	virtual void WidgetConstruct();
 
-	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "WidgetConstruct"), Category = "LGUI")
-	void ReceiveWidgetConstruct();
 };

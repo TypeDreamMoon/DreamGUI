@@ -73,7 +73,18 @@ bool ULexWorldSpaceRaycasterBase::GetAffectByGamePause()const
 bool ULexWorldSpaceRaycasterBase::GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd)
 {
 	auto RaycasterSrc = GetRaycasterSourceObject();
-	if (!RaycasterSrc)return false;
+	if (!RaycasterSrc)
+	{
+		auto DebugMsg = FString::Printf(TEXT("[%s].%d There is no RayCasterSourceObject! WorldSpaceRaycaster '%s' will not work!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__
+#if WITH_EDITOR
+			, *(this->GetOwner()->GetActorLabel())
+#else
+			, *this->GetPathName()
+#endif
+			);
+		GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, DebugMsg);
+		return false;
+	}
 	return RaycasterSrc->GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd);
 }
 
@@ -103,4 +114,9 @@ void ULexWorldSpaceRaycasterBase::SetTraceChannel(TEnumAsByte<ETraceTypeQuery> V
 void ULexWorldSpaceRaycasterBase::SetRaycasterSourceObject(ULexWorldSpaceRaycasterSource* Value)
 {
 	RaycasterSourceObject = Value;
+}
+
+void ULexWorldSpaceRaycasterBase::SetRaycasterSourceActor(ALexWorldSpaceRaycasterSourceActor* Value)
+{
+	RaycasterSourceActor = Value;
 }

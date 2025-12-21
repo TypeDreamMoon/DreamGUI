@@ -590,14 +590,6 @@ public:
 		void SetAsLastSibling();
 #pragma endregion SiblingIndex
 
-#if WITH_EDITORONLY_DATA
-private:
-	UPROPERTY(EditAnywhere, Category = LGUI)
-	bool bListChildrenInSceneOutliner = true;
-public:
-	void ApplyListChildrenInSceneOutliner();
-#endif
-
 #pragma region Name
 private:
 	/** 

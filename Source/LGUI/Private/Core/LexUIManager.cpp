@@ -31,14 +31,14 @@
 
 
 
-ULexUIEditorManagerObject* ULexUIEditorManagerObject::Instance = nullptr;
+ULexUIManagerObject* ULexUIManagerObject::Instance = nullptr;
 #if WITH_EDITOR
-int ULexUIEditorManagerObject::IndexOfClickSelectUI = INDEX_NONE;
-bool ULexUIEditorManagerObject::bIsBlueprintCompiling = false;
+int ULexUIManagerObject::IndexOfClickSelectUI = INDEX_NONE;
+bool ULexUIManagerObject::bIsBlueprintCompiling = false;
 #endif
-ULexUIEditorManagerObject::ULexUIEditorManagerObject()
+ULexUIManagerObject::ULexUIManagerObject()
 {
-	if (this == GetDefault<ULexUIEditorManagerObject>())
+	if (this == GetDefault<ULexUIManagerObject>())
 	{
 #if WITH_EDITOR
 		ULGUIPrefabManagerObject::OnSerialize_SortChildrenActors.BindStatic([](TArray<AActor*>& ChildrenActors) {
@@ -101,14 +101,14 @@ ULexUIEditorManagerObject::ULexUIEditorManagerObject()
 						AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
 					}
 				}
-				if (ULexUIManagerWorldSubsystem::RaycastHitUI(World, AllWidgetArray, LineStart, LineEnd, ClickHitUI, ULexUIEditorManagerObject::IndexOfClickSelectUI))
+				if (ULexUIManagerWorldSubsystem::RaycastHitUI(World, AllWidgetArray, LineStart, LineEnd, ClickHitUI, ULexUIManagerObject::IndexOfClickSelectUI))
 				{
 					ClickHitActor = ClickHitUI->GetOwner();
 				}
 			}
 			});
 		ULGUIPrefabManagerObject::OnPrefabEditorViewport_MouseMove.BindStatic([](UWorld* World) {
-			ULexUIEditorManagerObject::IndexOfClickSelectUI = INDEX_NONE;
+			ULexUIManagerObject::IndexOfClickSelectUI = INDEX_NONE;
 			});
 
 		ULGUIPrefabManagerObject::OnPrefabEditor_CreateRootAgent.BindStatic([](UWorld* World, UClass* RootActorClass, ULGUIPrefab* Prefab, AActor*& OutCreatedRootAgentActor)
@@ -250,7 +250,7 @@ ULexUIEditorManagerObject::ULexUIEditorManagerObject()
 #endif
 	}
 }
-void ULexUIEditorManagerObject::BeginDestroy()
+void ULexUIManagerObject::BeginDestroy()
 {
 #if WITH_EDITORONLY_DATA
 	if (OnAssetReimportDelegateHandle.IsValid())
@@ -294,7 +294,7 @@ void ULexUIEditorManagerObject::BeginDestroy()
 	Super::BeginDestroy();
 }
 
-void ULexUIEditorManagerObject::Tick(float DeltaTime)
+void ULexUIManagerObject::Tick(float DeltaTime)
 {
 #if WITH_EDITOR
 	if (EditorTick.IsBound())
@@ -328,14 +328,14 @@ void ULexUIEditorManagerObject::Tick(float DeltaTime)
 	}
 #endif
 }
-TStatId ULexUIEditorManagerObject::GetStatId() const
+TStatId ULexUIManagerObject::GetStatId() const
 {
 	RETURN_QUICK_DECLARE_CYCLE_STAT(ULGUIEditorManagerObject, STATGROUP_Tickables);
 }
 
 #if WITH_EDITOR
 
-void ULexUIEditorManagerObject::AddOneShotTickFunction(const TFunction<void()>& InFunction, int InDelayFrameCount)
+void ULexUIManagerObject::AddOneShotTickFunction(const TFunction<void()>& InFunction, int InDelayFrameCount)
 {
 	InitCheck();
 	InDelayFrameCount = FMath::Max(0, InDelayFrameCount);
@@ -344,19 +344,19 @@ void ULexUIEditorManagerObject::AddOneShotTickFunction(const TFunction<void()>& 
 	Item.Value = InFunction;
 	Instance->OneShotFunctionsToExecuteInTick.Add(Item);
 }
-FDelegateHandle ULexUIEditorManagerObject::RegisterEditorTickFunction(const TFunction<void(float)>& InFunction)
+FDelegateHandle ULexUIManagerObject::RegisterEditorTickFunction(const TFunction<void(float)>& InFunction)
 {
 	InitCheck();
 	return Instance->EditorTick.AddLambda(InFunction);
 }
-void ULexUIEditorManagerObject::UnregisterEditorTickFunction(const FDelegateHandle& InDelegateHandle)
+void ULexUIManagerObject::UnregisterEditorTickFunction(const FDelegateHandle& InDelegateHandle)
 {
 	if (Instance != nullptr)
 	{
 		Instance->EditorTick.Remove(InDelegateHandle);
 	}
 }
-void ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged()
+void ULexUIManagerObject::MarkBroadcastLevelActorListChanged()
 {
 	if (InitCheck())
 	{
@@ -364,7 +364,7 @@ void ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged()
 	}
 }
 
-ULexUIEditorManagerObject* ULexUIEditorManagerObject::GetInstance(bool CreateIfNotValid)
+ULexUIManagerObject* ULexUIManagerObject::GetInstance(bool CreateIfNotValid)
 {
 	if (CreateIfNotValid)
 	{
@@ -372,7 +372,7 @@ ULexUIEditorManagerObject* ULexUIEditorManagerObject::GetInstance(bool CreateIfN
 	}
 	return Instance;
 }
-bool ULexUIEditorManagerObject::IsSelected(AActor* InObject)
+bool ULexUIManagerObject::IsSelected(AActor* InObject)
 {
 	if (GEditor && GEditor->GetSelectedActors()->IsSelected(InObject))
 	{
@@ -384,65 +384,65 @@ bool ULexUIEditorManagerObject::IsSelected(AActor* InObject)
 	}
 	return false;
 }
-bool ULexUIEditorManagerObject::InitCheck()
+bool ULexUIManagerObject::InitCheck()
 {
 	if (Instance == nullptr)
 	{
-		UE_LOG(LGUI, Log, TEXT("[%s].%d No Instance of class %s, create it"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *ULexUIEditorManagerObject::StaticClass()->GetName());
-		Instance = NewObject<ULexUIEditorManagerObject>();
+		UE_LOG(LGUI, Log, TEXT("[%s].%d No Instance of class %s, create it"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *ULexUIManagerObject::StaticClass()->GetName());
+		Instance = NewObject<ULexUIManagerObject>();
 		Instance->AddToRoot();
-		Instance->OnActorLabelChangedDelegateHandle = FCoreDelegates::OnActorLabelChanged.AddUObject(Instance, &ULexUIEditorManagerObject::OnActorLabelChanged);
+		Instance->OnActorLabelChangedDelegateHandle = FCoreDelegates::OnActorLabelChanged.AddUObject(Instance, &ULexUIManagerObject::OnActorLabelChanged);
 		//open map
-		Instance->OnMapOpenedDelegateHandle = FEditorDelegates::OnMapOpened.AddUObject(Instance, &ULexUIEditorManagerObject::OnMapOpened);
-		Instance->OnPackageReloadedDelegateHandle = FCoreUObjectDelegates::OnPackageReloaded.AddUObject(Instance, &ULexUIEditorManagerObject::OnPackageReloaded);
+		Instance->OnMapOpenedDelegateHandle = FEditorDelegates::OnMapOpened.AddUObject(Instance, &ULexUIManagerObject::OnMapOpened);
+		Instance->OnPackageReloadedDelegateHandle = FCoreUObjectDelegates::OnPackageReloaded.AddUObject(Instance, &ULexUIManagerObject::OnPackageReloaded);
 		if (GEditor)
 		{
 			//reimport asset
-			Instance->OnAssetReimportDelegateHandle = GEditor->GetEditorSubsystem<UImportSubsystem>()->OnAssetReimport.AddUObject(Instance, &ULexUIEditorManagerObject::OnAssetReimport);
+			Instance->OnAssetReimportDelegateHandle = GEditor->GetEditorSubsystem<UImportSubsystem>()->OnAssetReimport.AddUObject(Instance, &ULexUIManagerObject::OnAssetReimport);
 			//blueprint recompile
-			Instance->OnBlueprintPreCompileDelegateHandle = GEditor->OnBlueprintPreCompile().AddUObject(Instance, &ULexUIEditorManagerObject::OnBlueprintPreCompile);
-			Instance->OnBlueprintCompiledDelegateHandle = GEditor->OnBlueprintCompiled().AddUObject(Instance, &ULexUIEditorManagerObject::OnBlueprintCompiled);
+			Instance->OnBlueprintPreCompileDelegateHandle = GEditor->OnBlueprintPreCompile().AddUObject(Instance, &ULexUIManagerObject::OnBlueprintPreCompile);
+			Instance->OnBlueprintCompiledDelegateHandle = GEditor->OnBlueprintCompiled().AddUObject(Instance, &ULexUIManagerObject::OnBlueprintCompiled);
 		}
 	}
 	return true;
 }
 
-void ULexUIEditorManagerObject::OnBlueprintPreCompile(UBlueprint* InBlueprint)
+void ULexUIManagerObject::OnBlueprintPreCompile(UBlueprint* InBlueprint)
 {
 	bIsBlueprintCompiling = true;
 }
-void ULexUIEditorManagerObject::OnBlueprintCompiled()
+void ULexUIManagerObject::OnBlueprintCompiled()
 {
-	ULexUIEditorManagerObject::AddOneShotTickFunction([] {
+	ULexUIManagerObject::AddOneShotTickFunction([] {
 		bIsBlueprintCompiling = false;
 		ULexUIManagerWorldSubsystem::RefreshAllUI();
 		});
 }
 
-void ULexUIEditorManagerObject::OnAssetReimport(UObject* asset)
+void ULexUIManagerObject::OnAssetReimport(UObject* Asset)
 {
-	if (IsValid(asset))
+	if (IsValid(Asset))
 	{
-		auto textureAsset = Cast<UTexture2D>(asset);
-		if (IsValid(textureAsset))
+		auto TextureAsset = Cast<UTexture2D>(Asset);
+		if (IsValid(TextureAsset))
 		{
-			bool needToRebuildUI = false;
+			bool bNeedToRebuildUI = false;
 			//find sprite data that reference this texture
 			for (TObjectIterator<ULexUISpriteData> Itr; Itr; ++Itr)
 			{
-				ULexUISpriteData* spriteData = *Itr;
-				if (IsValid(spriteData))
+				ULexUISpriteData* SpriteData = *Itr;
+				if (IsValid(SpriteData))
 				{
-					if (spriteData->GetSpriteTexture() == textureAsset)
+					if (SpriteData->GetSpriteTexture() == TextureAsset)
 					{
-						spriteData->ReloadTexture();
-						spriteData->MarkPackageDirty();
-						needToRebuildUI = true;
+						SpriteData->ReloadTexture();
+						SpriteData->MarkPackageDirty();
+						bNeedToRebuildUI = true;
 					}
 				}
 			}
 			//Refresh ui
-			if (needToRebuildUI)
+			if (bNeedToRebuildUI)
 			{
 				ULexUIManagerWorldSubsystem::RefreshAllUI();
 			}
@@ -450,12 +450,12 @@ void ULexUIEditorManagerObject::OnAssetReimport(UObject* asset)
 	}
 }
 
-void ULexUIEditorManagerObject::OnMapOpened(const FString& FileName, bool AsTemplate)
+void ULexUIManagerObject::OnMapOpened(const FString& FileName, bool AsTemplate)
 {
 
 }
 
-void ULexUIEditorManagerObject::OnPackageReloaded(EPackageReloadPhase Phase, FPackageReloadedEvent* Event)
+void ULexUIManagerObject::OnPackageReloaded(EPackageReloadPhase Phase, FPackageReloadedEvent* Event)
 {
 	if (Phase == EPackageReloadPhase::PostBatchPostGC && Event != nullptr && Event->GetNewPackage() != nullptr)
 	{
@@ -467,7 +467,7 @@ void ULexUIEditorManagerObject::OnPackageReloaded(EPackageReloadPhase Phase, FPa
 	}
 }
 
-void ULexUIEditorManagerObject::OnActorLabelChanged(AActor* Actor)
+void ULexUIManagerObject::OnActorLabelChanged(AActor* Actor)
 {
 	if (!IsValid(Actor))return;
 	auto World = Actor->GetWorld();
@@ -505,7 +505,7 @@ bool ULexUISelection::IsSelected(AActor* Actor)const
 
 void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool ScreenOrWorld)
 {
-	if (ULexUIEditorManagerObject::IsSelected(Widget->GetOwner()))//select self
+	if (ULexUIManagerObject::IsSelected(Widget->GetOwner()))//select self
 	{
 		auto RectDrawColor = FColor(160, 160, 160, 255);//gray means normal object
 		auto DrawWidget = [=](ULexWidget* InWidget, const FColor& Color)
@@ -641,7 +641,7 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 {
 	auto SourceWidget = InSelectable->GetWidget();
 	if (!IsValid(SourceWidget))return;
-	const FColor Color = ULexUIEditorManagerObject::IsSelected(SourceWidget->GetOwner()) ? FColor(255, 255, 0, 255) : FColor(140, 140, 0, 255);
+	const FColor Color = ULexUIManagerObject::IsSelected(SourceWidget->GetOwner()) ? FColor(255, 255, 0, 255) : FColor(140, 140, 0, 255);
 	constexpr float Offset = 2;
 	constexpr float ArrowSize = 5;
 	
@@ -1058,7 +1058,7 @@ void ULexUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 		bIsPlaying = true;
 	}
 	FCoreDelegates::OnEndFrame.AddUObject(this, &ULexUIManagerWorldSubsystem::OnEndOfFrame);
-	ULexUIEditorManagerObject::GetInstance(true);//make sure it is created
+	ULexUIManagerObject::GetInstance(true);//make sure it is created
 	Selection = NewObject<ULexUISelection>(this, NAME_None, RF_Transactional);
 #endif
 	//localization

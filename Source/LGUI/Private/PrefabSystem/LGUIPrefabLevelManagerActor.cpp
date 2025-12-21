@@ -109,7 +109,7 @@ void ALGUIPrefabLevelManagerActor::CheckWhenCreate()
 			}
 		});
 	}
-	ULexUIEditorManagerObject::AddOneShotTickFunction([Actor = MakeWeakObjectPtr(this)]{
+	ULexUIManagerObject::AddOneShotTickFunction([Actor = MakeWeakObjectPtr(this)]{
 		if (Actor.IsValid())
 		{
 			if (auto World = Actor->GetWorld())
@@ -150,7 +150,7 @@ void ALGUIPrefabLevelManagerActor::Destroyed()
 	CleanupWhenDestroy();
 	if (!this->GetWorld()->IsGameWorld())
 	{
-		ULexUIEditorManagerObject::AddOneShotTickFunction([Actor = this, World = this->GetWorld()]() {
+		ULexUIManagerObject::AddOneShotTickFunction([Actor = this, World = this->GetWorld()]() {
 			auto InfoText = LOCTEXT("DeleteWarning", "\
 LGUIPrefabLevelManagerActor is being destroyed!\
 This actor is responsible for managing LGUI-Prefabs in current level, if you delete it then all LGUI-Prefabs linked in the level will be lost!\

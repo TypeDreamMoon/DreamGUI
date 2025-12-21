@@ -68,7 +68,7 @@ FLGUIPrefabEditor::~FLGUIPrefabEditor()
 
 	LGUIPrefabEditorInstanceCollection.Remove(this);
 
-	ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();
+	ULexUIManagerObject::MarkBroadcastLevelActorListChanged();
  	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->EventOnOutlineChanged.RemoveAll(this);
 
 	GEditor->UnregisterForUndo(this);
@@ -1015,7 +1015,7 @@ FReply FLGUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent& 
 
 				if (OutlinerPtr.IsValid())
 				{
-					ULexUIEditorManagerObject::AddOneShotTickFunction([=, this] {
+					ULexUIManagerObject::AddOneShotTickFunction([=, this] {
 						for (auto& Actor : CreatedActorArray)
 						{
 							//OutlinerPtr->UnexpandActorForDragDroppedPrefab(Actor);

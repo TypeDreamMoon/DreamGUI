@@ -36,7 +36,7 @@ void ULGUIPrefabHelperObject::MarkAsManagerObject()
 {
 	if (bIsMarkedAsManagerObject)return;
 	bIsMarkedAsManagerObject = true;
-	ULexUIEditorManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]{
+	ULexUIManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]{
 		if (Object.IsValid())
 		{
 			GEditor->OnLevelActorAttached().AddUObject(Object.Get(), &ULGUIPrefabHelperObject::OnLevelActorAttached);
@@ -700,7 +700,7 @@ void ULGUIPrefabHelperObject::TryCollectPropertyToOverride(UObject* InObject, FP
 
 void ULGUIPrefabHelperObject::OnLevelActorAttached(AActor* Actor, const AActor* AttachTo)
 {
-	if (ULexUIEditorManagerObject::GetIsBlueprintCompiling())return;
+	if (ULexUIManagerObject::GetIsBlueprintCompiling())return;
 	if (!bCanNotifyAttachment)return;
 	if (Actor->GetWorld() != this->GetPrefabWorld())return;
 	if (auto PrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(Actor->GetWorld()))
@@ -720,7 +720,7 @@ void ULGUIPrefabHelperObject::OnLevelActorAttached(AActor* Actor, const AActor* 
 			AttachmentActor.AttachTo = (AActor*)AttachTo;
 			AttachmentActor.DetachFrom = nullptr;
 			this->bAlreadyShowMessageAtThisFrame = false;
-			ULexUIEditorManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]() {
+			ULexUIManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]() {
 				if (Object.IsValid())
 				{
 					Object->CheckAttachment();
@@ -736,7 +736,7 @@ void ULGUIPrefabHelperObject::OnLevelActorAttached(AActor* Actor, const AActor* 
 }
 void ULGUIPrefabHelperObject::OnLevelActorDetached(AActor* Actor, const AActor* DetachFrom)
 {
-	if (ULexUIEditorManagerObject::GetIsBlueprintCompiling())return;
+	if (ULexUIManagerObject::GetIsBlueprintCompiling())return;
 	if (!bCanNotifyAttachment)return;
 	if (Actor->GetWorld() != this->GetPrefabWorld())return;
 	if (auto PrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(Actor->GetWorld()))
@@ -748,7 +748,7 @@ void ULGUIPrefabHelperObject::OnLevelActorDetached(AActor* Actor, const AActor* 
 	AttachmentActor.AttachTo = nullptr;
 	AttachmentActor.DetachFrom = (AActor*)DetachFrom;
 	this->bAlreadyShowMessageAtThisFrame = false;
-	ULexUIEditorManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]() {
+	ULexUIManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]() {
 		if (Object.IsValid())
 		{
 			Object->CheckAttachment();
@@ -758,7 +758,7 @@ void ULGUIPrefabHelperObject::OnLevelActorDetached(AActor* Actor, const AActor* 
 
 void ULGUIPrefabHelperObject::OnLevelActorDeleted(AActor* Actor)
 {
-	if (ULexUIEditorManagerObject::GetIsBlueprintCompiling())return;
+	if (ULexUIManagerObject::GetIsBlueprintCompiling())return;
 	if (!bCanNotifyAttachment)return;
 	if (this->IsInsidePrefabEditor())return;
 
@@ -778,8 +778,8 @@ void ULGUIPrefabHelperObject::OnLevelActorDeleted(AActor* Actor)
 	{
 		this->Modify();
 		this->bAlreadyShowMessageAtThisFrame = false;
-		ULexUIEditorManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]() {
-			if (ULexUIEditorManagerObject::GetIsBlueprintCompiling())return;
+		ULexUIManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]() {
+			if (ULexUIManagerObject::GetIsBlueprintCompiling())return;
 			if (!Object->bAlreadyShowMessageAtThisFrame)
 			{
 				Object->bAlreadyShowMessageAtThisFrame = true;
@@ -791,7 +791,7 @@ void ULGUIPrefabHelperObject::OnLevelActorDeleted(AActor* Actor)
 			}, 1);
 	}
 
-	ULexUIEditorManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]() {
+	ULexUIManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]() {
 		if (Object.IsValid())
 		{
 			if (Object->CleanupInvalidLinkToSubPrefabObject())
@@ -805,7 +805,7 @@ void ULGUIPrefabHelperObject::OnLevelActorDeleted(AActor* Actor)
 bool ULGUIPrefabHelperObject::bFirstTimeShow_RestructActorBlueprint = true;
 void ULGUIPrefabHelperObject::CheckAttachment()
 {
-	if (ULexUIEditorManagerObject::GetIsBlueprintCompiling())return;
+	if (ULexUIManagerObject::GetIsBlueprintCompiling())return;
 	if (!bCanNotifyAttachment)return;
 	if (!AttachmentActor.Actor.IsValid())return;
 
@@ -1975,7 +1975,7 @@ void ULGUIPrefabHelperObject::CheckPrefabVersion()
 		this->ClearInvalidObjectAndGuid();
 		GEditor->EndTransaction();
 
-		ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();//make outliner refresh
+		ULexUIManagerObject::MarkBroadcastLevelActorListChanged();//make outliner refresh
 	}
 }
 
@@ -2008,7 +2008,7 @@ void ULGUIPrefabHelperObject::OnNewVersionUpdateClicked(AActor* InPrefabRootActo
 			}
 			Item.Notification.Pin()->SetCompletionState(SNotificationItem::CS_None);
 			Item.Notification.Pin()->ExpireAndFadeout();
-			ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();//make outliner refresh
+			ULexUIManagerObject::MarkBroadcastLevelActorListChanged();//make outliner refresh
 		}
 		NewVersionPrefabNotificationArray.RemoveAt(FoundIndex);
 	}
@@ -2067,7 +2067,7 @@ void ULGUIPrefabHelperObject::OnNewVersionUpdateAllClicked()
 
 	if (bUpdated)
 	{
-		ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();//make outliner refresh
+		ULexUIManagerObject::MarkBroadcastLevelActorListChanged();//make outliner refresh
 	}
 }
 void ULGUIPrefabHelperObject::OnNewVersionDismissAllClicked()

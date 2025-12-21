@@ -104,11 +104,11 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
 		FColor BodyGradientColor = FColor::Black;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
-		FVector2f BodyGradientCenter = FVector2f(50, 50);
+		FVector2f BodyGradientCenter = FVector2f(0.5f, 0.5f);
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
 		ELexRectBlockUnitMode BodyGradientCenterUnitMode = ELexRectBlockUnitMode::Percentage;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
-		FVector2f BodyGradientRadius = FVector2f(50, 50);
+		FVector2f BodyGradientRadius = FVector2f(0.5f, 0.5f);
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
 		ELexRectBlockUnitMode BodyGradientRadiusUnitMode = ELexRectBlockUnitMode::Percentage;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect", meta = (ClampMin = "0.0", ClampMax = "360.0"))
@@ -127,11 +127,11 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
 		FColor BorderGradientColor = FColor::Black;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
-		FVector2f BorderGradientCenter = FVector2f(50, 50);
+		FVector2f BorderGradientCenter = FVector2f(0.5f, 0.5f);
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
 		ELexRectBlockUnitMode BorderGradientCenterUnitMode = ELexRectBlockUnitMode::Percentage;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
-		FVector2f BorderGradientRadius = FVector2f(50, 50);
+		FVector2f BorderGradientRadius = FVector2f(0.5f, 0.5f);
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
 		ELexRectBlockUnitMode BorderGradientRadiusUnitMode = ELexRectBlockUnitMode::Percentage;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect", meta = (ClampMin = "0.0", ClampMax = "360.0"))
@@ -159,7 +159,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
 		bool bEnableRadialFill = false;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
-		FVector2f RadialFillCenter = FVector2f(50, 50);
+		FVector2f RadialFillCenter = FVector2f(0.5f, 0.5f);
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
 		ELexRectBlockUnitMode RadialFillCenterUnitMode = ELexRectBlockUnitMode::Percentage;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
@@ -216,11 +216,11 @@ protected:
 	{\
 		if (Property##UnitMode == ELexRectBlockUnitMode::Value)\
 		{\
-			Property = Property * 0.01f * (width < height ? width : height) * AdditionalScale;\
+			Property = Property * (width < height ? width : height) * AdditionalScale;\
 		}\
 		else\
 		{\
-			Property = Property * 100.0f / (width < height ? width : height) / AdditionalScale;\
+			Property = Property / (width < height ? width : height) / AdditionalScale;\
 		}\
 	}
 
@@ -229,13 +229,13 @@ protected:
 	{\
 		if (Property##UnitMode == ELexRectBlockUnitMode::Value)\
 		{\
-			Property.X = Property.X * 0.01f * width;\
-			Property.Y = Property.Y * 0.01f * height;\
+			Property.X = Property.X * width;\
+			Property.Y = Property.Y * height;\
 		}\
 		else\
 		{\
-			Property.X = Property.X * 100.0f / width;\
-			Property.Y = Property.Y * 100.0f / height;\
+			Property.X = Property.X / width;\
+			Property.Y = Property.Y / height;\
 		}\
 	}
 

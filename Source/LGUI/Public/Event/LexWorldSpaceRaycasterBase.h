@@ -112,4 +112,6 @@ public:
 	void SetTraceChannel(TEnumAsByte<ETraceTypeQuery> Value);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	void SetRaycasterSourceObject(ULexWorldSpaceRaycasterSource* Value);
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void SetRaycasterSourceActor(ALexWorldSpaceRaycasterSourceActor* Value);
 };

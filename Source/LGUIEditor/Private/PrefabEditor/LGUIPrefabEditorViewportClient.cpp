@@ -65,8 +65,6 @@ FLGUIPrefabEditorViewportClient::FLGUIPrefabEditorViewportClient(FLGUIPrefabEdit
 {
 	this->PrefabEditorPtr = InPrefabEditorPtr;
 
-	GEditor->SelectNone(true, true);
-
 	// The level editor fully supports mode tools and isn't doing any incompatible stuff with the Widget
 	ModeTools->SetWidgetMode(UE::Widget::WM_Translate);
 	Widget->SetUsesEditorModeTools(ModeTools.Get());
@@ -383,7 +381,6 @@ void FLGUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy* 
 	ULGUIPrefabManagerObject::OnPrefabEditorViewport_MouseClick.ExecuteIfBound(this->GetWorld(), RayOrigin, RayDirection, ClickHitActor);
 	if (ClickHitActor != nullptr)
 	{
-		LGUIPrefabViewportClickHandlers::ClickActor(this, ClickHitActor, Click, true);
 		if (auto LexWidget = Cast<ULexWidget>(ClickHitActor->GetRootComponent()))
 		{
 			PrefabEditorPtr.Pin()->SelectWidgets({LexWidget}, Click.IsControlDown());

@@ -124,15 +124,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = LGUI, meta = (ComponentClass = "ActorComponent", DeterminesOutputType = "ComponentClass", AutoCreateRefTerm = "InExcludeNode"))
 		static UActorComponent* GetComponentInChildren(AActor* InActor, TSubclassOf<UActorComponent> ComponentClass, bool IncludeSelf, const TSet<AActor*>& InExcludeNode);
 
-	UFUNCTION(BlueprintCallable, Category=LexUI, meta=(WorldContext = "WorldContextObject"))
-	static void CreateScreenSpaceUIRoot(UObject* WorldContextObject, bool bCreateDefaultEventSystem
-		, ALexWidgetActor*& OutRootWidgetActor, ULexCanvas*& OutCanvas);
-	UFUNCTION(BlueprintCallable, Category=LexUI, meta=(WorldContext = "WorldContextObject"))
-	static void LoadScreenSpaceUIPrefab(UObject* WorldContextObject, ULGUIPrefab* ScreenSpaceUIPrefab, bool bCreateDefaultEventSystem
-		, ALexWidgetActor*& OutRootWidgetActor, ULexCanvas*& OutCanvas);
-	UFUNCTION(BlueprintCallable, Category=LexUI, meta=(WorldContext = "WorldContextObject"))
-	static void CreateWorldSpaceUI(UObject* WorldContextObject, bool bCreateDefaultEventSystem
-		, bool bUseLexUIRenderer, ALexWidgetActor*& OutRootWidgetActor, ULexCanvas*& OutCanvas);
 public:
 #pragma region EventDelegate
 	UFUNCTION(BlueprintCallable, Category = LGUI)static void LexUIEventDelegateExecuteEmpty(const FLexUIEventDelegate& InEvent) { InEvent.FireEvent(); }

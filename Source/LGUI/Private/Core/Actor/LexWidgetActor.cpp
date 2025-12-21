@@ -23,10 +23,6 @@ ALexWidgetActor::ALexWidgetActor()
 void ALexWidgetActor::BeginPlay()
 {
 	Super::BeginPlay();
-	if (!ULGUIPrefabWorldSubsystem::IsLGUIPrefabSystemProcessingActor(this))
-	{
-		WidgetConstruct();
-	}
 }
 
 void ALexWidgetActor::BeginDestroy()
@@ -45,7 +41,7 @@ void ALexWidgetActor::Destroyed()
 	if (!bIsSetCanNotifyAttachmentWhenDestroy)
 	{
 		bIsSetCanNotifyAttachmentWhenDestroy = true;
-		ULexUIEditorManagerObject::AddOneShotTickFunction([=]()
+		ULexUIManagerObject::AddOneShotTickFunction([=]()
 		{
 			bIsSetCanNotifyAttachmentWhenDestroy = false;
 		}, 1);
@@ -121,7 +117,7 @@ void ALexWidgetActor::SetIsTemporarilyHiddenInEditor(bool bIsHidden)
 					GetLexWidget()->SetWidgetActive(!bIsHidden);
 				}
 			}
-			ULexUIEditorManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)] {
+			ULexUIManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)] {
 				FirstTemporarilyHiddenActor = nullptr;
 				if (WeakThis.IsValid())
 				{
@@ -134,17 +130,4 @@ void ALexWidgetActor::SetIsTemporarilyHiddenInEditor(bool bIsHidden)
 	Super::SetIsTemporarilyHiddenInEditor(bIsHidden);
 }
 #endif
-
-void ALexWidgetActor::Awake_Implementation()
-{
-	WidgetConstruct();
-}
-
-void ALexWidgetActor::WidgetConstruct()
-{
-	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
-	{
-		ReceiveWidgetConstruct();
-	}
-}
 

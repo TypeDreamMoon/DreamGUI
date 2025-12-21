@@ -247,8 +247,8 @@ namespace LGUIPrefabSystem
 		InArchive.SetFilterEditorOnly(!bIsEditorOrRuntime);
 		InArchive.SetWantBinaryPropertySerialization(false);
 
-		InArchive.ArNoDelta = true;
-		InArchive.ArNoIntraPropertyDelta = true;
+		InArchive.ArNoDelta = false;
+		InArchive.ArNoIntraPropertyDelta = false;
 
 		if (InArchive.IsLoading() && bOverrideVersions)
 		{

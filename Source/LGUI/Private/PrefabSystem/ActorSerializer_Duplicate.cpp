@@ -64,7 +64,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 		}
 
 #if WITH_EDITOR
-		ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();//UE5 will not auto refresh scene outliner and display actor label, so manually refresh it.
+		ULexUIManagerObject::MarkBroadcastLevelActorListChanged();//UE5 will not auto refresh scene outliner and display actor label, so manually refresh it.
 #endif
 		return CreatedRootActor;
 	}
@@ -144,7 +144,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 			UE_LOG(LGUI, Log, TEXT("DuplicateActorWithPreparedData total time: %fms"), TimeSpan.GetTotalMilliseconds());
 		}
 #if WITH_EDITOR
-		ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();//UE5 will not auto refresh scene outliner and display actor label, so manually refresh it.
+		ULexUIManagerObject::MarkBroadcastLevelActorListChanged();//UE5 will not auto refresh scene outliner and display actor label, so manually refresh it.
 #endif
 		return CreatedRootActor;
 	}
@@ -216,7 +216,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 		UE_LOG(LGUI, Log, TEXT("End duplicate actor: '%s', total time: %fms"), *Name, TimeSpan.GetTotalMilliseconds());
 
 #if WITH_EDITOR
-		ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();//UE5 will not auto refresh scene outliner and display actor label, so manually refresh it.
+		ULexUIManagerObject::MarkBroadcastLevelActorListChanged();//UE5 will not auto refresh scene outliner and display actor label, so manually refresh it.
 #endif
 
 		return CreatedRootActor;

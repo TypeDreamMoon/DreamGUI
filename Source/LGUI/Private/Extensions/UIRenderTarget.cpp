@@ -43,7 +43,7 @@ UTexture* UUIRenderTarget::GetTextureToCreateGeometry()
 #if WITH_EDITOR
 	if (!Result && !GetWorld()->IsGameWorld())//if not find valid texture (because canvas not create rendertarget yet, and edit mode not register the callback event), then get it next frame
 	{
-		ULexUIEditorManagerObject::AddOneShotTickFunction([this]() {
+		ULexUIManagerObject::AddOneShotTickFunction([this]() {
 			MarkTextureDirty();
 			});
 	}

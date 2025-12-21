@@ -153,7 +153,7 @@ void ULexUIFontEmojiData::CreateOrUpdateObject(ULexWidget* parent, const TArray<
 #if WITH_EDITOR
 	if (!parent->GetWorld()->IsGameWorld())//refresh on editor
 	{
-		ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();
+		ULexUIManagerObject::MarkBroadcastLevelActorListChanged();
 	}
 #endif
 }

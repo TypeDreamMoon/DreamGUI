@@ -117,7 +117,7 @@ void ULexUIRichTextImageData::CreateOrUpdateObject(ULexWidget* parent, const TAr
 #if WITH_EDITOR
 	if (!parent->GetWorld()->IsGameWorld())//refresh on editor
 	{
-		ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();
+		ULexUIManagerObject::MarkBroadcastLevelActorListChanged();
 	}
 #endif
 }

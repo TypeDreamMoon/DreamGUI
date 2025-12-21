@@ -138,7 +138,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			}));
 
 		ClippingGroup.AddWidgetRow()
-		.PropertyHandleList({ UniformSetCornerRadiusHandle, CornerRadiusHandle })
+		.PropertyHandleList({ CornerRadiusHandle, UniformSetCornerRadiusHandle })
 		.OverrideResetToDefault(FResetToDefaultOverride::Create(TAttribute<bool>::CreateLambda([=]()
 		{
 			return UniformSetCornerRadiusHandle->CanResetToDefault() || CornerRadiusHandle->CanResetToDefault();
@@ -236,67 +236,6 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 
 	//anchor, width, height
 	{
-		// TMap<EAnchorControlledByLayoutType, TArray<UObject*>> MultipleLayoutControlMap;
-		// if (IsAnchorControlledByMultipleLayout(MultipleLayoutControlMap))
-		// {
-		// 	FString ControlTypeString;
-		// 	for (auto& KeyValue : MultipleLayoutControlMap)
-		// 	{
-		// 		if (KeyValue.Value.Num() <= 1)continue;
-		// 		FString LayoutControlTypeString;
-		// 		switch (KeyValue.Key)
-		// 		{
-		// 		case EAnchorControlledByLayoutType::HorizontalAnchor:
-		// 			LayoutControlTypeString = "HorizontalAnchor";
-		// 			break;
-		// 		case EAnchorControlledByLayoutType::HorizontalAnchoredPosition:
-		// 			LayoutControlTypeString = "HorizontalAnchoredPosition";
-		// 			break;
-		// 		case EAnchorControlledByLayoutType::HorizontalSizeDelta:
-		// 			LayoutControlTypeString = "HorizontalSizeDelta";
-		// 			break;
-		// 		case EAnchorControlledByLayoutType::VerticalAnchor:
-		// 			LayoutControlTypeString = "VerticalAnchor";
-		// 			break;
-		// 		case EAnchorControlledByLayoutType::VerticalAnchoredPosition:
-		// 			LayoutControlTypeString = "VerticalAnchoredPosition";
-		// 			break;
-		// 		case EAnchorControlledByLayoutType::VerticalSizeDelta:
-		// 			LayoutControlTypeString = "VerticalSizeDelta";
-		// 			break;
-		// 		}
-		// 		ControlTypeString += FString::Printf(TEXT("Anchor '%s' is controlled by layout object:\n"), *LayoutControlTypeString);
-		// 		for (auto& ObjectItem : KeyValue.Value)
-		// 		{
-		// 			FString LayoutObjectNameString;
-		// 			if (auto Actor = Cast<AActor>(ObjectItem))
-		// 			{
-		// 				LayoutObjectNameString = Actor->GetActorLabel();
-		// 			}
-		// 			else if (auto Component = Cast<UActorComponent>(ObjectItem))
-		// 			{
-		// 				LayoutObjectNameString = FString::Printf(TEXT("%s.%s"), *Component->GetOwner()->GetActorLabel(), *Component->GetName());
-		// 			}
-		// 			else
-		// 			{
-		// 				LayoutObjectNameString = Component->GetName();
-		// 			}
-		// 			ControlTypeString += FString::Printf(TEXT("		'%s'\n"), *LayoutObjectNameString);
-		// 		}
-		// 	}
-		// 	auto MessageText = FText::Format(LOCTEXT("MultiLayoutControlAnchorInfoText", "[{0}].{1} Detect multiple layout control this UI's anchor, this may cause issue!\n{2}")
-		// 		, FText::FromString(ANSI_TO_TCHAR(__FUNCTION__)), __LINE__, FText::FromString(ControlTypeString));
-		// 	TransformCategory.AddCustomRow(LOCTEXT("MultiLayoutControlAnchorError", "MultiLayoutControlAnchorError"))
-		// 		.WholeRowContent()
-		// 		[
-		// 			SNew(STextBlock)
-		// 			.Text(MessageText)
-		// 			.ColorAndOpacity(FLinearColor(FColor::Yellow))
-		// 			.AutoWrapText(true)
-		// 		]
-		// 	;
-		// 	FLexUIUtils::EditorNotification(MessageText, 8.0f);
-		// }
 		auto AnchorHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData));
 		auto AnchorMinHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData.AnchorMin));
 		auto AnchorMaxHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData.AnchorMax));
@@ -379,7 +318,6 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		.MinDesiredWidth(500)
 		[
 			SNew(SBox)
-			.IsEnabled(this, &FLexWidgetCustomization::IsAnchorEditable)
 			[
 				SNew(SVerticalBox)
 				+SVerticalBox::Slot()
@@ -431,16 +369,31 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 				+SVerticalBox::Slot()
 				.AutoHeight()
 				[
-					SNew(SHorizontalBox)
-					+SHorizontalBox::Slot()
-					.FillWidth(0.5f)
+					SNew(SBox)
+					.IsEnabled_Lambda([=, this]()
+					{
+						if (TargetScriptArray.Num() > 0 && TargetScriptArray[0].IsValid())
+						{
+							auto Widget = TargetScriptArray[0];
+							if (Widget->IsCanvasWidget() && Widget->GetRenderCanvas() != nullptr && Widget->GetRenderCanvas()->IsRenderToScreenSpace())//is root canvas, and is render to screen space
+							{
+								return false;
+							}
+						}
+						return true;
+					})
 					[
-						MakeAnchorValueWidget(2)
-					]
-					+SHorizontalBox::Slot()
-					.FillWidth(0.5f)
-					[
-						MakeAnchorValueWidget(3)
+						SNew(SHorizontalBox)
+						+SHorizontalBox::Slot()
+						.FillWidth(0.5f)
+						[
+							MakeAnchorValueWidget(2)
+						]
+						+SHorizontalBox::Slot()
+						.FillWidth(0.5f)
+						[
+							MakeAnchorValueWidget(3)
+						]
 					]
 				]
 			]
@@ -808,7 +761,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		DetailBuilder.HideProperty(SiblingIndexHandle);
 		SiblingIndexHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
 			ForceUpdateUI();
-			ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();
+			ULexUIManagerObject::MarkBroadcastLevelActorListChanged();
 			}));
 		auto SiblingIndexWidget =
 			SNew(SHorizontalBox)
@@ -1202,7 +1155,7 @@ FReply FLexWidgetCustomization::OnClickIncreaseOrDecreaseSiblingIndex(bool Incre
 	}
 	GEditor->EndTransaction();
 
-	ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();
+	ULexUIManagerObject::MarkBroadcastLevelActorListChanged();
 	return FReply::Handled();
 }
 
@@ -1390,7 +1343,6 @@ bool FLexWidgetCustomization::IsAnchorEditable()const
 	if (TargetScriptArray.Num() > 0 && TargetScriptArray[0].IsValid())
 	{
 		auto Widget = TargetScriptArray[0];
-		if (FLGUIPrefabEditor::ActorIsRootAgent(Widget->GetOwner()))return true;//special for PrefabEditor's agent root actor
 		if (Widget->GetUIParent() != nullptr)return true;//not root
 		if (Widget->IsCanvasWidget() && Widget->GetRenderCanvas() != nullptr && Widget->GetRenderCanvas()->IsRenderToScreenSpace())//is root canvas, and is render to screen space
 		{
@@ -1884,45 +1836,6 @@ FLexLayoutControlAnchorData FLexWidgetCustomization::GetLayoutControlAnchorValue
 bool FLexWidgetCustomization::IsAnchorControlledByMultipleLayout(TMap<EAnchorControlledByLayoutType, TArray<UObject*>>& Result)const
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return false;
-
-	// auto Widget = TargetScriptArray[0];
-	// if (Widget.IsValid())
-	// {
-	// 	if (auto Manager = ULGUIManagerWorldSubsystem::GetInstance(World))
-	// 	{
-	// 		auto AllLayoutArray = Manager->GetAllLayoutArray();
-	// 		if (AllLayoutArray.Num() > 0)
-	// 		{
-	// 			for (auto& Item : AllLayoutArray)
-	// 			{
-	// 				FLGUICanLayoutControlAnchor ItemLayoutControl;
-	// 				if (ILGUILayoutInterface::Execute_GetCanLayoutControlAnchor(Item.Get(), TargetScriptArray[0].Get(), ItemLayoutControl))
-	// 				{
-	// 					if (ItemLayoutControl.bCanControlHorizontalAnchoredPosition)
-	// 					{
-	// 						Result.FindOrAdd(EAnchorControlledByLayoutType::HorizontalAnchoredPosition).Add(Item.Get());
-	// 					}
-	// 					if (ItemLayoutControl.bCanControlHorizontalSizeDelta)
-	// 					{
-	// 						Result.FindOrAdd(EAnchorControlledByLayoutType::HorizontalSizeDelta).Add(Item.Get());
-	// 					}
-	// 					if (ItemLayoutControl.bCanControlVerticalAnchoredPosition)
-	// 					{
-	// 						Result.FindOrAdd(EAnchorControlledByLayoutType::VerticalAnchoredPosition).Add(Item.Get());
-	// 					}
-	// 					if (ItemLayoutControl.bCanControlVerticalSizeDelta)
-	// 					{
-	// 						Result.FindOrAdd(EAnchorControlledByLayoutType::VerticalSizeDelta).Add(Item.Get());
-	// 					}
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// }
-	// for (auto& KeyValue : Result)
-	// {
-	// 	if (KeyValue.Value.Num() > 1)return true;
-	// }
 	return false;
 }
 

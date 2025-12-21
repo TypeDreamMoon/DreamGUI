@@ -21,7 +21,7 @@ void ULexLayout::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 void ULexLayoutContainer::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	UObject::PostEditChangeProperty(PropertyChangedEvent);
-	if (this != GetDefault<ULexLayoutContainer>())
+	if (!this->GetName().StartsWith("Default__"))
 	{
 		ULexWidget::MarkLayoutForRebuild(GetWidget());
 	}
@@ -30,7 +30,7 @@ void ULexLayoutContainer::PostEditChangeProperty(FPropertyChangedEvent& Property
 void ULexLayoutSelf::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	UObject::PostEditChangeProperty(PropertyChangedEvent);
-	if (this != GetDefault<ULexLayoutSelf>())
+	if (!this->GetName().StartsWith("Default__"))
 	{
 		ULexWidget::MarkLayoutForRebuild(GetWidget()->GetUIParent());
 	}

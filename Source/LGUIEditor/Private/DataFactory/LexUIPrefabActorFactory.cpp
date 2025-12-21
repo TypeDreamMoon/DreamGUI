@@ -67,7 +67,7 @@ void ULexUIPrefabActorFactory::PostSpawnActor(UObject* Asset, AActor* InNewActor
 	}
 	PrefabActor->MoveActorToPrefabFolder();
 	PrefabActor->SetFlags(EObjectFlags::RF_Transient);
-	ULexUIEditorManagerObject::AddOneShotTickFunction([WeakTarget = MakeWeakObjectPtr(PrefabActor)]() {
+	ULexUIManagerObject::AddOneShotTickFunction([WeakTarget = MakeWeakObjectPtr(PrefabActor)]() {
 		if (WeakTarget.IsValid())
 		{
 			GEditor->SelectActor(WeakTarget.Get(), false, true, false, true);

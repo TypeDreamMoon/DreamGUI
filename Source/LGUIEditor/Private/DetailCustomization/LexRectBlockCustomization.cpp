@@ -8,6 +8,7 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "IDetailGroup.h"
+#include "Widgets/Input/SNumericEntryBox.h"
 
 #define LOCTEXT_NAMESPACE "LexRectBlockCustomization"
 FLexRectBlockCustomization::FLexRectBlockCustomization()
@@ -100,7 +101,47 @@ void FLexRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		;
 	};
 
-	auto CreateVectorPropertyWithUnitMode = [&](FName PropertyName, IDetailGroup& Group, FText PropertyDisplayName, const TAttribute<bool>& IsEnabledAttribute) {
+	auto CreateNumericPropertyWithUnitMode = [](TSharedPtr<IPropertyHandle> PropertyHandle, TSharedPtr<IPropertyHandle> UnitModePropertyHandle, bool EnableMinMax)
+	{
+		auto GetUnitMode = [=]()
+		{
+			ELexRectBlockUnitMode UnitMode = ELexRectBlockUnitMode::Value;
+			UnitModePropertyHandle->GetValue(*(uint8*)&UnitMode);
+			return UnitMode;
+		};
+		return
+			SNew(SNumericEntryBox<float>)
+			.MinValue(EnableMinMax ? 0 : TOptional<float>())
+			.MaxValue_Lambda([=]()
+			{
+				if (!EnableMinMax)return TOptional<float>();
+				return GetUnitMode() == ELexRectBlockUnitMode::Percentage ? 100 : TOptional<float>();
+			})
+			.AllowSpin(true)
+			.MinSliderValue(EnableMinMax ? 0 : TOptional<float>())
+			.MaxSliderValue_Lambda([=]()
+			{
+				if (!EnableMinMax)return TOptional<float>();
+				return GetUnitMode() == ELexRectBlockUnitMode::Percentage ? 100 : TOptional<float>();
+			})
+			.OnValueChanged_Lambda([=](float Value)
+			{
+				Value = GetUnitMode() == ELexRectBlockUnitMode::Percentage ? Value * 0.01f : Value;
+				PropertyHandle->SetValue(Value);
+			})
+			.Value_Lambda([=]()
+			{
+				float Value = 0;
+				if (PropertyHandle->GetValue(Value) == FPropertyAccess::Success)
+				{
+					Value = GetUnitMode() == ELexRectBlockUnitMode::Percentage ? Value * 100 : Value;
+					return Value;
+				}
+				return Value;
+			});
+	};
+
+	auto CreateVectorPropertyWithUnitMode = [&](FName PropertyName, IDetailGroup& Group, FText PropertyDisplayName, const TAttribute<bool>& IsEnabledAttribute, bool EnableMinMax) {
 		auto PropertyHandle = DetailBuilder.GetProperty(PropertyName);
 		PropertyHandle->SetPropertyDisplayName(PropertyDisplayName);
 		auto PropertyUnitHandle = DetailBuilder.GetProperty(FName(*(PropertyName.ToString() + TEXT("UnitMode"))));
@@ -111,7 +152,7 @@ void FLexRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		{
 			ValueHorizontalBox->AddSlot()
 			[
-				PropertyHandle->CreatePropertyValueWidget()
+				CreateNumericPropertyWithUnitMode(PropertyHandle, PropertyUnitHandle, EnableMinMax)
 			];
 		}
 		else
@@ -119,9 +160,9 @@ void FLexRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 			for (uint32 i = 0; i < NumChildren; i++)
 			{
 				ValueHorizontalBox->AddSlot()
-					[
-						PropertyHandle->GetChildHandle(i)->CreatePropertyValueWidget()
-					];
+				[
+					CreateNumericPropertyWithUnitMode(PropertyHandle->GetChildHandle(i), PropertyUnitHandle, EnableMinMax)
+				];
 			}
 		}
 		Group.AddWidgetRow()
@@ -158,9 +199,9 @@ auto PropertyName##Handle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UL
 PropertyName##Handle->SetPropertyDisplayName(LOCTEXT(TO_TEXT(PropertyName##_DisplayName), TO_TEXT(DisplayName)));\
 Group.AddPropertyRow(PropertyName##Handle).IsEnabled(IsEnabledAttribute);
 
-#define AddVectorPropertyRowToGroup(PropertyName, DisplayName, Group, IsEnabledAttribute)\
-CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, PropertyName), Group, LOCTEXT(TO_TEXT(PropertyName##_DisplayName), TO_TEXT(DisplayName)), IsEnabledAttribute);
-
+#define AddVectorPropertyRowToGroup(PropertyName, DisplayName, Group, IsEnabledAttribute, EnableMinMax)\
+CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, PropertyName), Group, LOCTEXT(TO_TEXT(PropertyName##_DisplayName), TO_TEXT(DisplayName)), IsEnabledAttribute, EnableMinMax);
+	
 	IDetailCategoryBuilder& LGUICategory = DetailBuilder.EditCategory("LGUI");
 	
 	DetailBuilder.HideCategory(TEXT("LGUI-ProceduralRect"));
@@ -193,7 +234,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 		}));
 
 	LGUICategory.AddCustomRow(LOCTEXT("CornerRadius", "CornerRadius"), false)
-	.PropertyHandleList({ UniformSetCornerRadiusHandle, CornerRadiusUnitModeHandle, CornerRadiusHandle })
+	.PropertyHandleList({ CornerRadiusHandle, UniformSetCornerRadiusHandle, CornerRadiusUnitModeHandle })
 	.OverrideResetToDefault(FResetToDefaultOverride::Create(TAttribute<bool>::CreateLambda([=]()
 	{
 		return UniformSetCornerRadiusHandle->CanResetToDefault() || CornerRadiusUnitModeHandle->CanResetToDefault() || CornerRadiusHandle->CanResetToDefault();
@@ -260,7 +301,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 		.VAlign(VAlign_Center)
 		.FillWidth(1)
 		[
-			CornerRadiusXHandle->CreatePropertyValueWidget()
+			CreateNumericPropertyWithUnitMode(CornerRadiusXHandle, CornerRadiusUnitModeHandle, true)
 		]
 		+ SHorizontalBox::Slot()
 		.VAlign(VAlign_Center)
@@ -269,7 +310,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 			SNew(SBox)
 			.IsEnabled_Lambda(CornerRadiusPropertyIsEnabledFunction)
 			[
-				CornerRadiusYHandle->CreatePropertyValueWidget()
+				CreateNumericPropertyWithUnitMode(CornerRadiusYHandle, CornerRadiusUnitModeHandle, true)
 			]
 		]
 		+ SHorizontalBox::Slot()
@@ -279,7 +320,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 			SNew(SBox)
 			.IsEnabled_Lambda(CornerRadiusPropertyIsEnabledFunction)
 			[
-				CornerRadiusZHandle->CreatePropertyValueWidget()
+				CreateNumericPropertyWithUnitMode(CornerRadiusZHandle, CornerRadiusUnitModeHandle, true)
 			]
 		]
 		+ SHorizontalBox::Slot()
@@ -289,7 +330,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 			SNew(SBox)
 			.IsEnabled_Lambda(CornerRadiusPropertyIsEnabledFunction)
 			[
-				CornerRadiusWHandle->CreatePropertyValueWidget()
+				CreateNumericPropertyWithUnitMode(CornerRadiusWHandle, CornerRadiusUnitModeHandle, true)
 			]
 		]
 	]
@@ -477,8 +518,8 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 				return bEnable && EnableBodyAttribute.Get();
 			});
 			AddPropertyRowToGroup(BodyGradientColor, Color, BodyGradientGroup, IsEnableGradientAttribute);
-			AddVectorPropertyRowToGroup(BodyGradientCenter, Center, BodyGradientGroup, IsEnableGradientAttribute);
-			AddVectorPropertyRowToGroup(BodyGradientRadius, Radius, BodyGradientGroup, IsEnableGradientAttribute);
+			AddVectorPropertyRowToGroup(BodyGradientCenter, Center, BodyGradientGroup, IsEnableGradientAttribute, false);
+			AddVectorPropertyRowToGroup(BodyGradientRadius, Radius, BodyGradientGroup, IsEnableGradientAttribute, false);
 			AddPropertyRowToGroup(BodyGradientRotation, Rotation, BodyGradientGroup, IsEnableGradientAttribute);
 		}
 	}
@@ -495,7 +536,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 			BorderHandle->GetValue(bEnable);
 			return bEnable;
 		});
-		AddVectorPropertyRowToGroup(BorderWidth, Width, BorderGroup, IsEnableBorderAttribute);
+		AddVectorPropertyRowToGroup(BorderWidth, Width, BorderGroup, IsEnableBorderAttribute, true);
 		AddPropertyRowToGroup(BorderColor, Color, BorderGroup, IsEnableBorderAttribute);
 
 		//gradient
@@ -511,8 +552,8 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 				return bEnableGradient && IsEnableBorderAttribute.Get();
 			});
 			AddPropertyRowToGroup(BorderGradientColor, Color, BorderGradientGroup, IsEnableGradientAttribute);
-			AddVectorPropertyRowToGroup(BorderGradientCenter, Center, BorderGradientGroup, IsEnableGradientAttribute);
-			AddVectorPropertyRowToGroup(BorderGradientRadius, Radius, BorderGradientGroup, IsEnableGradientAttribute);
+			AddVectorPropertyRowToGroup(BorderGradientCenter, Center, BorderGradientGroup, IsEnableGradientAttribute, false);
+			AddVectorPropertyRowToGroup(BorderGradientRadius, Radius, BorderGradientGroup, IsEnableGradientAttribute, false);
 			AddPropertyRowToGroup(BorderGradientRotation, Rotation, BorderGradientGroup, IsEnableGradientAttribute);
 		}
 	}
@@ -530,10 +571,10 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 			return bEnable;
 		});
 		AddPropertyRowToGroup(InnerShadowColor, Color, InnerShadowGroup, IsEnabledAttribute);
-		AddVectorPropertyRowToGroup(InnerShadowSize, Size, InnerShadowGroup, IsEnabledAttribute);
-		AddVectorPropertyRowToGroup(InnerShadowBlur, Blur, InnerShadowGroup, IsEnabledAttribute);
+		AddVectorPropertyRowToGroup(InnerShadowSize, Size, InnerShadowGroup, IsEnabledAttribute, true);
+		AddVectorPropertyRowToGroup(InnerShadowBlur, Blur, InnerShadowGroup, IsEnabledAttribute, true);
 		AddPropertyRowToGroup(InnerShadowAngle, Angle, InnerShadowGroup, IsEnabledAttribute);
-		AddVectorPropertyRowToGroup(InnerShadowDistance, Distance, InnerShadowGroup, IsEnabledAttribute);
+		AddVectorPropertyRowToGroup(InnerShadowDistance, Distance, InnerShadowGroup, IsEnabledAttribute, true);
 	}
 
 	//outer shadow
@@ -549,10 +590,10 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 			return bEnable;
 		});
 		AddPropertyRowToGroup(OuterShadowColor, Color, OuterShadowGroup, IsEnabledAttribute);
-		AddVectorPropertyRowToGroup(OuterShadowSize, Size, OuterShadowGroup, IsEnabledAttribute);
-		AddVectorPropertyRowToGroup(OuterShadowBlur, Blur, OuterShadowGroup, IsEnabledAttribute);
+		AddVectorPropertyRowToGroup(OuterShadowSize, Size, OuterShadowGroup, IsEnabledAttribute, true);
+		AddVectorPropertyRowToGroup(OuterShadowBlur, Blur, OuterShadowGroup, IsEnabledAttribute, true);
 		AddPropertyRowToGroup(OuterShadowAngle, Angle, OuterShadowGroup, IsEnabledAttribute);
-		AddVectorPropertyRowToGroup(OuterShadowDistance, Distance, OuterShadowGroup, IsEnabledAttribute);
+		AddVectorPropertyRowToGroup(OuterShadowDistance, Distance, OuterShadowGroup, IsEnabledAttribute, true);
 	}
 
 	//radial fill
@@ -567,7 +608,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 			RadialFillHandle->GetValue(bEnable);
 			return bEnable;
 		});
-		AddVectorPropertyRowToGroup(RadialFillCenter, Center, RadialFillGroup, IsEnabledAttribute);
+		AddVectorPropertyRowToGroup(RadialFillCenter, Center, RadialFillGroup, IsEnabledAttribute, false);
 		AddPropertyRowToGroup(RadialFillRotation, Rotation, RadialFillGroup, IsEnabledAttribute);
 		AddPropertyRowToGroup(RadialFillAngle, Angle, RadialFillGroup, IsEnabledAttribute);
 	}

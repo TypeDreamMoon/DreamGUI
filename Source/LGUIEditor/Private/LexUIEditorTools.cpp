@@ -24,10 +24,10 @@
 #include "Layers/LayersSubsystem.h"
 #include "ActorEditorUtils.h"
 #include "Core/Components/LexLayout.h"
+#include "Core/Actor/LexWidgetRootActor.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Serialization/ArchiveReplaceObjectRef.h"
 #include "Logging/MessageLog.h"
-#include "Windows/WindowsPlatformApplicationMisc.h"
 
 #define LOCTEXT_NAMESPACE "LGUIEditorTools"
 
@@ -1530,9 +1530,9 @@ void FLexUIEditorTools::CreatePresetEventSystem_BasicSetup(bool WorldSpace)
 	}
 	auto CreateActor = [](const TCHAR* ClassName)
 	{
-		if (auto PresetEventSystemActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
+		if (auto ActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
 		{
-			auto Actor = GetWorldFromSelection()->SpawnActor<AActor>(PresetEventSystemActorClass);
+			auto Actor = GetWorldFromSelection()->SpawnActor<AActor>(ActorClass);
 			Actor->SetActorLabel(ClassName);
 		}
 		else
@@ -1563,9 +1563,9 @@ ULexWorldSpaceRaycasterSource* FLexUIEditorTools::CreatePresetWorldSpaceRaycaste
 	}
 	auto CreateActor = [](const TCHAR* ClassName)
 	{
-		if (auto PresetEventSystemActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
+		if (auto ActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
 		{
-			auto Actor = GetWorldFromSelection()->SpawnActor<AActor>(PresetEventSystemActorClass);
+			auto Actor = GetWorldFromSelection()->SpawnActor<AActor>(ActorClass);
 			Actor->SetActorLabel(ClassName);
 			return Actor;
 		}
@@ -1576,7 +1576,7 @@ ULexWorldSpaceRaycasterSource* FLexUIEditorTools::CreatePresetWorldSpaceRaycaste
 		}
 		return (AActor*)nullptr;
 	};
-	if (auto RaycasterSourceActor = CreateActor(TEXT("WorldSpaceRaycasterSourceActor")))
+	if (auto RaycasterSourceActor = CreateActor(TEXT("BP_PresetLexWorldSpaceRaycasterSource_Mouse_Actor")))
 	{
 		return RaycasterSourceActor->FindComponentByClass<ULexWorldSpaceRaycasterSource>();
 	}
@@ -1819,6 +1819,13 @@ void FLexUIEditorTools::RefreshLevelLoadedPrefab(ULGUIPrefab* InPrefab)
 			{
 				Itr->CheckPrefabVersion();
 			}
+		}
+	}
+	for (TObjectIterator<ALexWidgetRootActor> Itr; Itr; ++Itr)
+	{
+		if (Itr->GetWorld())
+		{
+			Itr->CheckPrefabVersion();
 		}
 	}
 }

@@ -38,7 +38,7 @@ void ULexImageSequencePlayer::OnRegister()
 #if WITH_EDITOR
 	if (GetWorld() && GetWorld()->WorldType == EWorldType::Editor)
 	{
-		EditorPlayDelegateHandle = ULexUIEditorManagerObject::RegisterEditorTickFunction([this](float deltaTime) {
+		EditorPlayDelegateHandle = ULexUIManagerObject::RegisterEditorTickFunction([this](float deltaTime) {
 			if (!bPreviewInEditor)return;
 			if (!CanPlay())return;
 			Duration = GetDuration();
@@ -54,7 +54,7 @@ void ULexImageSequencePlayer::OnUnregister()
 #if WITH_EDITOR
 	if (EditorPlayDelegateHandle.IsValid())
 	{
-		ULexUIEditorManagerObject::UnregisterEditorTickFunction(EditorPlayDelegateHandle);
+		ULexUIManagerObject::UnregisterEditorTickFunction(EditorPlayDelegateHandle);
 	}
 #endif
 }

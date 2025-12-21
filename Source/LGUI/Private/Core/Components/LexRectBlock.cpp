@@ -79,15 +79,15 @@ void ULexRectBlock::FillData(uint8* Data, float width, float height)
 
 float ULexRectBlock::GetValueWithUnitMode(float SourceValue, ELexRectBlockUnitMode UnitMode, float RectWidth, float RectHeight, float AdditionalScale)const
 {
-	return UnitMode == ELexRectBlockUnitMode::Value ? SourceValue : (SourceValue * 0.01f * (RectWidth < RectHeight ? RectWidth : RectHeight) * AdditionalScale);
+	return UnitMode == ELexRectBlockUnitMode::Value ? SourceValue : (SourceValue * (RectWidth < RectHeight ? RectWidth : RectHeight) * AdditionalScale);
 }
 FVector4f ULexRectBlock::GetValueWithUnitMode(const FVector4f& SourceValue, ELexRectBlockUnitMode UnitMode, float RectWidth, float RectHeight, float AdditionalScale)const
 {
-	return UnitMode == ELexRectBlockUnitMode::Value ? SourceValue : (SourceValue * 0.01f * (RectWidth < RectHeight ? RectWidth : RectHeight) * AdditionalScale);
+	return UnitMode == ELexRectBlockUnitMode::Value ? SourceValue : (SourceValue * (RectWidth < RectHeight ? RectWidth : RectHeight) * AdditionalScale);
 }
 FVector2f ULexRectBlock::GetValueWithUnitMode(const FVector2f& SourceValue, ELexRectBlockUnitMode UnitMode, float RectWidth, float RectHeight)const
 {
-	return UnitMode == ELexRectBlockUnitMode::Value ? SourceValue : (SourceValue * 0.01f * FVector2f(RectWidth, RectHeight));
+	return UnitMode == ELexRectBlockUnitMode::Value ? SourceValue : (SourceValue * FVector2f(RectWidth, RectHeight));
 }
 
 FVector2f ULexRectBlock::GetInnerShadowOffset(float RectWidth, float RectHeight)
@@ -218,11 +218,11 @@ void ULexRectBlock::OnCornerRadiusUnitModeChanged(float width, float height)
 {
 	if (CornerRadiusUnitMode == ELexRectBlockUnitMode::Value)//from percentage to value
 	{
-		CornerRadius = CornerRadius * 0.01f * (width < height ? width : height) * 0.5f;
+		CornerRadius = CornerRadius * (width < height ? width : height) * 0.5f;
 	}
 	else//from value to percentage
 	{
-		CornerRadius = CornerRadius * 100.0f / (width < height ? width : height) * 2.0f;
+		CornerRadius = CornerRadius / (width < height ? width : height) * 2.0f;
 	}
 }
 
@@ -323,7 +323,7 @@ void ULexRectBlock::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 	if (auto Property = PropertyChangedEvent.Property)
 	{
 		auto PropertyName = Property->GetFName();
-		if (this != GetDefault<ULexRectBlock>())
+		if (!this->GetName().StartsWith("Default__"))
 		{
 			SetUnitChange(CornerRadius)
 			else SetUnitChange(BodyGradientCenter)
@@ -346,7 +346,7 @@ void ULexRectBlock::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 
 		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexRectBlock, BodyTextureMode))
 		{
-			if (this != GetDefault<ULexRectBlock>())
+			if (!this->GetName().StartsWith("Default__"))
 			{
 				MarkTextureDirty();
 				MarkUVDirty();
@@ -369,7 +369,7 @@ bool ULexRectBlock::CanEditChange(const FProperty* InProperty) const
 	static auto RaycastSupportCornerRadius_Name = GET_MEMBER_NAME_CHECKED(ULexRectBlock, bRaycastSupportCornerRadius);
 	if (PropertyName == RaycastSupportCornerRadius_Name)
 	{
-		if (this != GetDefault<ULexRectBlock>())
+		if (!this->GetName().StartsWith("Default__"))
 		{
 			if (!GetWidget()->GetRaycastableInHierarchy() || RaycastType != ELexVisualRaycastType::Rect)
 			{

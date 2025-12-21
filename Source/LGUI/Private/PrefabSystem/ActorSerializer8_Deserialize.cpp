@@ -481,7 +481,7 @@ namespace LGUIPrefabSystem8
 		}
 
 #if WITH_EDITOR
-		ULexUIEditorManagerObject::MarkBroadcastLevelActorListChanged();//UE5 will not auto refresh scene outliner and display actor label, so manually refresh it.
+		ULexUIManagerObject::MarkBroadcastLevelActorListChanged();//UE5 will not auto refresh scene outliner and display actor label, so manually refresh it.
 #endif
 
 		return CreatedRootActor;

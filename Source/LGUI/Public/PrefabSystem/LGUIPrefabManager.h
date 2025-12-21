@@ -39,7 +39,7 @@ public:
 	static UWorld* GetPreviewWorldForPrefabPackage();
 private:
 	FDelegateHandle OnAssetReimportDelegateHandle;
-	void OnAssetReimport(UObject* asset);
+	void OnAssetReimport(UObject* Asset);
 	FDelegateHandle OnMapOpenedDelegateHandle;
 	void OnMapOpened(const FString& FileName, bool AsTemplate);
 	FDelegateHandle OnPackageReloadedDelegateHandle;

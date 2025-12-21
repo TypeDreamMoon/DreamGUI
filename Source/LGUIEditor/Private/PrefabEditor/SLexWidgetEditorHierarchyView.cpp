@@ -84,7 +84,7 @@ void SLexWidgetEditorHierarchyView::Construct(const FArguments& InArgs, TSharedP
 		}
 	}
 
-	ULexUIEditorManagerObject::AddOneShotTickFunction([=, this]()
+	ULexUIManagerObject::AddOneShotTickFunction([=, this]()
 	{
 		TSet<TWeakObjectPtr<ULexWidget>> VisitingItems;
 		WidgetTreeView->GetExpandedItems(VisitingItems);

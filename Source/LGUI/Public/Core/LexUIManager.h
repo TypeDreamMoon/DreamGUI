@@ -18,14 +18,17 @@ class ULexBaseInputModule;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FLexUIEditorTickMulticastDelegate, float);
 
+/**
+ * This manager is a single instance, mainly for manage LexUI in Editor
+ */
 UCLASS(NotBlueprintable, NotBlueprintType, Transient, NotPlaceable)
-class LGUI_API ULexUIEditorManagerObject :public UObject, public FTickableGameObject
+class LGUI_API ULexUIManagerObject :public UObject, public FTickableGameObject
 {
 	GENERATED_BODY()
 
 public:
-	static ULexUIEditorManagerObject* Instance;
-	ULexUIEditorManagerObject();
+	static ULexUIManagerObject* Instance;
+	ULexUIManagerObject();
 	virtual void BeginDestroy()override;
 public:
 	//begin TickableEditorObject interface
@@ -55,7 +58,7 @@ public:
 private:
 	static bool InitCheck();
 public:
-	static ULexUIEditorManagerObject* GetInstance(bool CreateIfNotValid = false);
+	static ULexUIManagerObject* GetInstance(bool CreateIfNotValid = false);
 private:
 	FDelegateHandle OnBlueprintPreCompileDelegateHandle;
 	FDelegateHandle OnBlueprintCompiledDelegateHandle;
@@ -63,7 +66,7 @@ private:
 	void OnBlueprintCompiled();
 private:
 	FDelegateHandle OnAssetReimportDelegateHandle;
-	void OnAssetReimport(UObject* asset);
+	void OnAssetReimport(UObject* Asset);
 	FDelegateHandle OnActorLabelChangedDelegateHandle;
 	void OnActorLabelChanged(AActor* Actor);
 	FDelegateHandle OnMapOpenedDelegateHandle;

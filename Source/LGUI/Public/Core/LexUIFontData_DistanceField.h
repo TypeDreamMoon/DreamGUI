@@ -81,7 +81,7 @@ public:
 	//End ULexUIFontData_BaseObject interface
 	float GetSampleFontSize()const{return SampleFontSize;}
 protected:
-	float ItalicSlop = 0.0f; float OneDivideFontSize = 1.0f; float ExpandMeshSize = 0;
+	float ItalicSlop = 0.0f; float OneDivideFontSize = 1.0f; float ExpandMeshSize = 0; float ObjectScale = 0;
 	TMap<uint32, FLexUICharData> CharDataMap;
 	TMap<FLexUIDistanceFieldFontKerningPair, int16> KerningPairsMap;
 	virtual UTexture2D* CreateFontTexture(int InTextureSize)override;

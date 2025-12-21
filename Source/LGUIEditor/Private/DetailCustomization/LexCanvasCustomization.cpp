@@ -13,7 +13,7 @@
 #include "IDetailGroup.h"
 #include "Widgets/Input/SSlider.h"
 
-#define LOCTEXT_NAMESPACE "LGUICanvasCustomization"
+#define LOCTEXT_NAMESPACE "LexCanvasCustomization"
 FLexCanvasCustomization::FLexCanvasCustomization()
 {
 }
@@ -136,7 +136,9 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	auto ForceRenderToTargetHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, bForceRenderToTarget));
 	ForceRenderToTargetHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexCanvasCustomization::ForceRefresh, &DetailBuilder));
 
-	if (TargetScriptArray[0]->IsRootCanvas())
+	if (TargetScriptArray[0]->IsRootCanvas()
+		|| TargetScriptArray[0]->GetWorld() == nullptr//maybe in blueprint editor, then world is null
+		)
 	{
 		if (TargetScriptArray[0]->GetParentCanvas() == nullptr)
 		{
@@ -314,8 +316,18 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	]
 	;
 	};
+
+	ELexRenderMode ActualRenderMode;
+	if (TargetScriptArray[0]->GetWorld() == nullptr)
+	{
+		ActualRenderMode = TargetScriptArray[0]->GetRenderMode();
+	}
+	else
+	{
+		ActualRenderMode = TargetScriptArray[0]->GetActualRenderMode();
+	}
 	
-	if (TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::WorldSpace || TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::WorldSpace_LexUI)
+	if (ActualRenderMode == ELexRenderMode::WorldSpace || ActualRenderMode == ELexRenderMode::WorldSpace_LexUI)
 	{
 		CanvasScalerCategory.AddCustomRow(LOCTEXT("WorldSpaceUIInfo", "WorldSpaceUIInfo"))
 			.WholeRowContent()
@@ -329,8 +341,8 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			];
 	}
 	else if (
-		TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::ScreenSpaceOverlay
-		|| TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::RenderTarget
+		ActualRenderMode == ELexRenderMode::ScreenSpaceOverlay
+		|| ActualRenderMode == ELexRenderMode::RenderTarget
 		)
 	{
 		CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, ScaleMode));
@@ -387,7 +399,7 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, NearClipPlane));
 		CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, FarClipPlane));
 
-		if (TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
+		if (ActualRenderMode == ELexRenderMode::ScreenSpaceOverlay)
 		{
 			CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, bFixedSizeInEditMode));
 			CanvasScalerCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, SizeInEditMode));
@@ -491,7 +503,7 @@ FText FLexCanvasCustomization::GetSortOrderInfo(TWeakObjectPtr<ULexCanvas> Targe
 					if (item->GetSortOrder() == TargetScript->GetSortOrder())
 						sortOrderCount++;
 				}
-				auto depthInfo = FText::Format(LOCTEXT("CanvasSortOrderTip", "All LGUICanvas of {0} with same SortOrder count: {1}\n"), spaceText, sortOrderCount);
+				auto depthInfo = FText::Format(LOCTEXT("CanvasSortOrderTip", "All LexCanvas of {0} with same SortOrder count: {1}\n"), spaceText, sortOrderCount);
 				return depthInfo;
 			}
 		}
