@@ -1,6 +1,6 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUIVectorInputBox.h"
+#include "LexUIVectorInputBox.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Layout/SBorder.h"
 #include "HAL/IConsoleManager.h"
@@ -9,7 +9,7 @@
 
 #define LOCTEXT_NAMESPACE "SLGUIVectorInputBox"
 
-void SLGUIVectorInputBox::Construct( const FArguments& InArgs )
+void SLexUIVectorInputBox::Construct( const FArguments& InArgs )
 {
 	TSharedRef<SHorizontalBox> HorizontalBox = SNew(SHorizontalBox);
 
@@ -24,7 +24,7 @@ void SLGUIVectorInputBox::Construct( const FArguments& InArgs )
 	if (InArgs._ShowW)ConstructW(InArgs, HorizontalBox);
 }
 
-void SLGUIVectorInputBox::ConstructX( const FArguments& InArgs, TSharedRef<SHorizontalBox> HorizontalBox )
+void SLexUIVectorInputBox::ConstructX( const FArguments& InArgs, TSharedRef<SHorizontalBox> HorizontalBox )
 {	
 	TSharedRef<SWidget> LabelWidget = SNullWidget::NullWidget;
 	if (InArgs._bColorAxisLabels)
@@ -80,7 +80,7 @@ void SLGUIVectorInputBox::ConstructX( const FArguments& InArgs, TSharedRef<SHori
 	
 }
 
-void SLGUIVectorInputBox::ConstructY( const FArguments& InArgs, TSharedRef<SHorizontalBox> HorizontalBox )
+void SLexUIVectorInputBox::ConstructY( const FArguments& InArgs, TSharedRef<SHorizontalBox> HorizontalBox )
 {
 	TSharedRef<SWidget> LabelWidget = SNullWidget::NullWidget;
 	if (InArgs._bColorAxisLabels)
@@ -136,7 +136,7 @@ void SLGUIVectorInputBox::ConstructY( const FArguments& InArgs, TSharedRef<SHori
 
 }
 
-void SLGUIVectorInputBox::ConstructZ( const FArguments& InArgs, TSharedRef<SHorizontalBox> HorizontalBox )
+void SLexUIVectorInputBox::ConstructZ( const FArguments& InArgs, TSharedRef<SHorizontalBox> HorizontalBox )
 {
 	TSharedRef<SWidget> LabelWidget = SNullWidget::NullWidget;
 	if (InArgs._bColorAxisLabels)
@@ -191,7 +191,7 @@ void SLGUIVectorInputBox::ConstructZ( const FArguments& InArgs, TSharedRef<SHori
 	];
 }
 
-void SLGUIVectorInputBox::ConstructW(const FArguments& InArgs, TSharedRef<SHorizontalBox> HorizontalBox)
+void SLexUIVectorInputBox::ConstructW(const FArguments& InArgs, TSharedRef<SHorizontalBox> HorizontalBox)
 {
 	TSharedRef<SWidget> LabelWidget = SNullWidget::NullWidget;
 	if (InArgs._bColorAxisLabels)

@@ -3,12 +3,13 @@
 #include "DetailCustomization/LexUIFontData_FreeTypeRenderCustomization.h"
 #include "Misc/FileHelper.h"
 #include "Core/LexUIFontData_FreeTypeRender.h"
-#include "Widget/LGUIFileBrowser.h"
+#include "Widget/LexUIFileBrowser.h"
 #include "Widgets/Input/STextComboBox.h"
 
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
+#include "DetailWidgetRow.h"
 #include "LexUIEditorTools.h"
 #include "LGUIHeaders.h"
 
@@ -85,7 +86,7 @@ void FLexUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayoutB
 			+ SHorizontalBox::Slot()
 			.MaxWidth(500)
 			[
-				SNew(SLGUIFileBrowser)
+				SNew(SLexUIFileBrowser)
 				.FolderPath(this, &FLexUIFontData_FreeTypeRenderCustomization::OnGetFontFilePath)
 				.DialogTitle(TEXT("Browse for a font data file"))
 				.DefaultFileName("font.ttf")

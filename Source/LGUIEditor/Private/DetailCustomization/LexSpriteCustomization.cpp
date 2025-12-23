@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/LexSpriteCustomization.h"
-#include "LGUIEditorUtils.h"
+#include "LexUIEditorUtils.h"
 #include "Core/Components/LexSprite.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "LGUIEditorModule.h"
@@ -65,7 +65,7 @@ void FLexSpriteCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	{
 		auto fillMethodProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, FillMethod));
 		fillMethodProperty->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexSpriteCustomization::ForceRefresh, &DetailBuilder));
-		LGUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, fillMethodProperty);
+		FLexUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, fillMethodProperty);
 		ELexUISpriteFillMethod fillMethod = TargetScriptPtr->FillMethod;
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, FillOrigin));
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, FillOriginType_Radial90));
@@ -101,8 +101,8 @@ void FLexSpriteCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		}
 			break;
 		}
-		LGUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, FillDirectionFlip)));
-		LGUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, FillAmount)));
+		FLexUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, FillDirectionFlip)));
+		FLexUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, FillAmount)));
 	}
 
 	if (DrawType != ELexUISpriteDrawType::Filled)

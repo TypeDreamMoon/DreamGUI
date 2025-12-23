@@ -2,7 +2,7 @@
 
 #include "DetailCustomization/UISpriteSheetTexturePlayerCustomization.h"
 #include "Extensions/UISpriteSheetTexturePlayer.h"
-#include "LGUIEditorUtils.h"
+#include "LexUIEditorUtils.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
@@ -24,6 +24,6 @@ void FUISpriteSheetTexturePlayerCustomization::CustomizeDetails(IDetailLayoutBui
 		UE_LOG(LGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
-	LGUIEditorUtils::ShowError_RequireComponent(&DetailBuilder, TargetScriptPtr.Get(), ULexTexture::StaticClass());
+	FLexUIEditorUtils::ShowError_RequireComponent(&DetailBuilder, TargetScriptPtr.Get(), ULexTexture::StaticClass());
 }
 #undef LOCTEXT_NAMESPACE

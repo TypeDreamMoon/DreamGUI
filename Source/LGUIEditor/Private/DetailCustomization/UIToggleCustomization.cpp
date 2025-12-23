@@ -1,7 +1,7 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/UIToggleCustomization.h"
-#include "LGUIEditorUtils.h"
+#include "LexUIEditorUtils.h"
 #include "Core/Components/LexWidget.h"
 #include "IDetailGroup.h"
 #include "Interaction/UIToggleGroupComponent.h"

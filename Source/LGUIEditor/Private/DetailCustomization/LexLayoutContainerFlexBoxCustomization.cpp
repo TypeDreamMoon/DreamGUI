@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/LexLayoutContainerFlexBoxCustomization.h"
-#include "LGUIEditorUtils.h"
+#include "LexUIEditorUtils.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "Core/Components/LexLayoutContainerFlexBox.h"

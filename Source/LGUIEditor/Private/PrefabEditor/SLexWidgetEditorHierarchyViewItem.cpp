@@ -3,6 +3,7 @@
 #include "SLexWidgetEditorHierarchyViewItem.h"
 
 #include "ClassIconFinder.h"
+#include "DetailLayoutBuilder.h"
 #include "SLexWidgetEditorHierarchyView.h"
 #include "Widgets/Text/SInlineEditableTextBlock.h"
 #include "DragAndDrop/DecoratedDragDropOp.h"

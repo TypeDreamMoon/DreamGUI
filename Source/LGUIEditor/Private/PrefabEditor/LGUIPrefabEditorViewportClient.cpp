@@ -68,6 +68,7 @@ FLGUIPrefabEditorViewportClient::FLGUIPrefabEditorViewportClient(FLGUIPrefabEdit
 	// The level editor fully supports mode tools and isn't doing any incompatible stuff with the Widget
 	ModeTools->SetWidgetMode(UE::Widget::WM_Translate);
 	Widget->SetUsesEditorModeTools(ModeTools.Get());
+	bShowWidget = false;
 
 	// GEditorModeTools serves as our draw helper
 	bUsesDrawHelper = true;

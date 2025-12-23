@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/LexTextureCustomization.h"
-#include "LGUIEditorUtils.h"
+#include "LexUIEditorUtils.h"
 #include "Core/Components/LexTexture.h"
 
 #include "LGUIEditorModule.h"
@@ -46,7 +46,7 @@ void FLexTextureCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 	{
 		auto fillMethodProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexTexture, FillMethod));
 		fillMethodProperty->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexTextureCustomization::ForceRefresh, &DetailBuilder));
-		LGUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, fillMethodProperty);
+		FLexUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, fillMethodProperty);
 		ELexUISpriteFillMethod fillMethod = TargetScriptPtr->FillMethod;
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexTexture, FillOrigin));
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexTexture, fillOriginType_Radial90));
@@ -82,8 +82,8 @@ void FLexTextureCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 		}
 			break;
 		}
-		LGUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexTexture, FillDirectionFlip)));
-		LGUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexTexture, FillAmount)));
+		FLexUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexTexture, FillDirectionFlip)));
+		FLexUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexTexture, FillAmount)));
 	}
 
 	if (DrawType != ELexUISpriteDrawType::Filled)

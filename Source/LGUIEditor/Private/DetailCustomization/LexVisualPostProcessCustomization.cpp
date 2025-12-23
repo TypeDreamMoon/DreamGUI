@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/LexVisualPostProcessCustomization.h"
-#include "LGUIEditorUtils.h"
+#include "LexUIEditorUtils.h"
 #include "Core/Components/LexVisualPostProcess.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"

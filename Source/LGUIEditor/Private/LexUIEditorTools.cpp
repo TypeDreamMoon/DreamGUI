@@ -230,7 +230,7 @@ namespace ReattachActorsHelper
 	}
 }
 
-struct LGUIEditorToolsHelperFunctionHolder
+struct FLexUIEditorToolsHelperFunctionHolder
 {
 public:
 	static TArray<AActor*> ConvertSelectionToActors(USelection* InSelection)
@@ -342,217 +342,6 @@ public:
 			}
 		}
 		return result;
-	}
-
-	//this function mostly copied from UnrealED/Private/EditorEngine.cpp::ReplaceActors
-	static TArray<AActor*> ReplaceActor(const TArray<AActor*>& ActorsToReplace, TSubclassOf<AActor> NewActorClass)
-	{
-		TArray<AActor*> Result;
-		// Cache for attachment info of all actors being converted.
-		TArray<ReattachActorsHelper::FActorAttachmentCache> AttachmentInfo;
-
-		// Maps actors from old to new for quick look-up.
-		TMap<AActor*, AActor*> ConvertedMap;
-
-		// Cache the current attachment states.
-		ReattachActorsHelper::CacheAttachments(ActorsToReplace, AttachmentInfo);
-
-		USelection* SelectedActors = GEditor->GetSelectedActors();
-		SelectedActors->BeginBatchSelectOperation();
-		SelectedActors->Modify();
-
-		for (int32 ActorIdx = 0; ActorIdx < ActorsToReplace.Num(); ++ActorIdx)
-		{
-			AActor* OldActor = ActorsToReplace[ActorIdx];//.Pop();
-			check(OldActor);
-			UWorld* World = OldActor->GetWorld();
-			ULevel* Level = OldActor->GetLevel();
-			AActor* NewActor = NULL;
-
-			// Unregister this actors components because we are effectively replacing it with an actor sharing the same ActorGuid.
-			// This allows it to be unregistered before a new actor with the same guid gets registered avoiding conflicts.
-			OldActor->UnregisterAllComponents();
-
-			const FName OldActorName = OldActor->GetFName();
-			const FName OldActorReplacedNamed = MakeUniqueObjectName(OldActor->GetOuter(), OldActor->GetClass(), *FString::Printf(TEXT("%s_REPLACED"), *OldActorName.ToString()));
-
-			FActorSpawnParameters SpawnParams;
-			SpawnParams.Name = OldActorName;
-			SpawnParams.bCreateActorPackage = false;
-			SpawnParams.OverridePackage = OldActor->GetExternalPackage();
-			SpawnParams.OverrideActorGuid = OldActor->GetActorGuid();
-
-			// Don't go through AActor::Rename here because we aren't changing outers (the actor's level) and we also don't want to reset loaders
-			// if the actor is using an external package. We really just want to rename that actor out of the way so we can spawn the new one in
-			// the exact same package, keeping the package name intact.
-			OldActor->UObject::Rename(*OldActorReplacedNamed.ToString(), OldActor->GetOuter(), REN_DoNotDirty | REN_DontCreateRedirectors | REN_ForceNoResetLoaders);
-
-			const FTransform OldTransform = OldActor->ActorToWorld();
-
-			// create the actor
-			NewActor = OldActor->GetWorld()->SpawnActor(NewActorClass, &OldTransform, SpawnParams);
-			//added by liuf, if no root component then add one
-			{
-				auto RootComponent = NewActor->GetRootComponent();
-				if (!RootComponent)
-				{
-					RootComponent = NewObject<USceneComponent>(NewActor, USceneComponent::GetDefaultSceneRootVariableName(), RF_Transactional);
-					RootComponent->Mobility = EComponentMobility::Movable;
-					RootComponent->bVisualizeComponent = false;
-
-					NewActor->SetRootComponent(RootComponent);
-					RootComponent->RegisterComponent();
-					NewActor->AddInstanceComponent(RootComponent);
-				}
-			}
-			// try to copy over properties
-			NewActor->UnregisterAllComponents();
-			UEngine::FCopyPropertiesForUnrelatedObjectsParams Options;
-			Options.bNotifyObjectReplacement = true;
-			UEditorEngine::CopyPropertiesForUnrelatedObjects(OldActor, NewActor, Options);
-			if (OldActor->GetRootComponent() != nullptr && NewActor->GetRootComponent() != nullptr)
-			{
-				UEditorEngine::CopyPropertiesForUnrelatedObjects(OldActor->GetRootComponent(), NewActor->GetRootComponent(), Options);
-			}
-			NewActor->RegisterAllComponents();
-			Result.Add(NewActor);
-
-			if (NewActor)
-			{
-				// The new actor might not have a root component
-				USceneComponent* const NewActorRootComponent = NewActor->GetRootComponent();
-				if (NewActorRootComponent)
-				{
-					if (!GetDefault<ULevelEditorMiscSettings>()->bReplaceRespectsScale || OldActor->GetRootComponent() == NULL)
-					{
-						NewActorRootComponent->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
-					}
-					else
-					{
-						NewActorRootComponent->SetRelativeScale3D(OldActor->GetRootComponent()->GetRelativeScale3D());
-					}
-
-					if (OldActor->GetRootComponent() != NULL)
-					{
-						NewActorRootComponent->SetMobility(OldActor->GetRootComponent()->Mobility);
-					}
-				}
-
-				NewActor->Layers.Empty();
-				ULayersSubsystem* LayersSubsystem = GEditor->GetEditorSubsystem<ULayersSubsystem>();
-				LayersSubsystem->AddActorToLayers(NewActor, OldActor->Layers);
-
-				// Preserve the label and tags from the old actor
-				NewActor->SetActorLabel(OldActor->GetActorLabel());
-				NewActor->Tags = OldActor->Tags;
-
-				// Allow actor derived classes a chance to replace properties.
-				NewActor->EditorReplacedActor(OldActor);
-
-				// Caches information for finding the new actor using the pre-converted actor.
-				ReattachActorsHelper::CacheActorConvert(OldActor, NewActor, ConvertedMap, AttachmentInfo[ActorIdx]);
-
-				if (SelectedActors->IsSelected(OldActor))
-				{
-					GEditor->SelectActor(OldActor, false, true);
-					GEditor->SelectActor(NewActor, true, true);
-				}
-
-				// Find compatible static mesh components and copy instance colors between them.
-				UStaticMeshComponent* NewActorStaticMeshComponent = NewActor->FindComponentByClass<UStaticMeshComponent>();
-				UStaticMeshComponent* OldActorStaticMeshComponent = OldActor->FindComponentByClass<UStaticMeshComponent>();
-				if (NewActorStaticMeshComponent != NULL && OldActorStaticMeshComponent != NULL)
-				{
-					NewActorStaticMeshComponent->CopyInstanceVertexColorsIfCompatible(OldActorStaticMeshComponent);
-				}
-
-				NewActor->InvalidateLightingCache();
-				NewActor->PostEditMove(true);
-				NewActor->MarkPackageDirty();
-
-				TSet<ULevel*> LevelsToRebuildBSP;
-				ABrush* Brush = Cast<ABrush>(OldActor);
-				if (Brush && !FActorEditorUtils::IsABuilderBrush(Brush)) // Track whether or not a brush actor was deleted.
-				{
-					ULevel* BrushLevel = OldActor->GetLevel();
-					if (BrushLevel && !Brush->IsVolumeBrush())
-					{
-						BrushLevel->Model->Modify();
-						LevelsToRebuildBSP.Add(BrushLevel);
-					}
-				}
-
-				// Replace references in the level script Blueprint with the new Actor
-				const bool bDontCreate = true;
-				ULevelScriptBlueprint* LSB = NewActor->GetLevel()->GetLevelScriptBlueprint(bDontCreate);
-				if (LSB)
-				{
-					// Only if the level script blueprint exists would there be references.  
-					FBlueprintEditorUtils::ReplaceAllActorRefrences(LSB, OldActor, NewActor);
-				}
-
-				LayersSubsystem->DisassociateActorFromLayers(OldActor);
-				World->EditorDestroyActor(OldActor, true);
-
-				// If any brush actors were modified, update the BSP in the appropriate levels
-				if (LevelsToRebuildBSP.Num())
-				{
-					FlushRenderingCommands();
-
-					for (ULevel* LevelToRebuild : LevelsToRebuildBSP)
-					{
-						GEditor->RebuildLevel(*LevelToRebuild);
-					}
-				}
-			}
-			else
-			{
-				// If creating the new Actor failed, put the old Actor's name back
-				OldActor->UObject::Rename(*OldActorName.ToString(), OldActor->GetOuter(), REN_DoNotDirty | REN_DontCreateRedirectors | REN_ForceNoResetLoaders);
-				OldActor->RegisterAllComponents();
-			}
-		}
-
-		SelectedActors->EndBatchSelectOperation();
-
-		// Reattaches actors based on their previous parent child relationship.
-		ReattachActorsHelper::ReattachActors(ConvertedMap, AttachmentInfo);
-
-		// Perform reference replacement on all Actors referenced by World
-		TArray<UObject*> ReferencedLevels;
-
-		for (const TPair<AActor*, AActor*>& ReplacedObj : ConvertedMap)
-		{
-			ReferencedLevels.AddUnique(ReplacedObj.Value->GetLevel());
-		}
-
-		for (UObject* Referencer : ReferencedLevels)
-		{
-			constexpr EArchiveReplaceObjectFlags ArFlags = (EArchiveReplaceObjectFlags::IgnoreOuterRef | EArchiveReplaceObjectFlags::TrackReplacedReferences);
-			FArchiveReplaceObjectRef<AActor> Ar(Referencer, ConvertedMap, ArFlags);
-
-			for (const TPair<UObject*, TArray<FProperty*>>& MapItem : Ar.GetReplacedReferences())
-			{
-				UObject* ModifiedObject = MapItem.Key;
-
-				if (!ModifiedObject->HasAnyFlags(RF_Transient) && ModifiedObject->GetOutermost() != GetTransientPackage() && !ModifiedObject->RootPackageHasAnyFlags(PKG_CompiledIn))
-				{
-					ModifiedObject->MarkPackageDirty();
-				}
-
-				for (FProperty* Property : MapItem.Value)
-				{
-					FPropertyChangedEvent PropertyEvent(Property);
-					ModifiedObject->PostEditChangeProperty(PropertyEvent);
-				}
-			}
-		}
-
-		GEditor->RedrawLevelEditingViewports();
-
-		ULevel::LevelDirtiedEvent.Broadcast();
-
-		return Result;
 	}
 };
 
@@ -749,7 +538,7 @@ void FLexUIEditorTools::CreateEmptyActor(TFunction<AActor*()> GetSelectedActorFu
 	auto SelectedActor = GetSelectedActorFunction();
 	if (SelectedActor == nullptr)return;
 	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return;
-	GEditor->BeginTransaction(LOCTEXT("CreateEmptyActor_Transaction", "LGUI create empty actor"));
+	GEditor->BeginTransaction(LOCTEXT("CreateEmptyActor_Transaction", "LexUI create empty actor"));
 	MakeCurrentLevel(SelectedActor);
 	AActor* newActor = SelectedActor->GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity, FActorSpawnParameters());
 	if (IsValid(newActor))
@@ -776,7 +565,7 @@ void FLexUIEditorTools::CreateEmptyActor(TFunction<AActor*()> GetSelectedActorFu
 
 AActor* FLexUIEditorTools::GetFirstSelectedActor()
 {
-	auto SelectedActors = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
+	auto SelectedActors = FLexUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
 	auto count = SelectedActors.Num();
 	if (count == 0)
 	{
@@ -793,7 +582,7 @@ AActor* FLexUIEditorTools::GetFirstSelectedActor()
 
 TArray<AActor*> FLexUIEditorTools::GetSelectedActors()
 {
-	return LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
+	return FLexUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
 }
 
 void FLexUIEditorTools::CreateUIControls(TFunction<AActor*()> GetSelectedActorFunction, FString InPrefabPath)
@@ -801,7 +590,7 @@ void FLexUIEditorTools::CreateUIControls(TFunction<AActor*()> GetSelectedActorFu
 	auto SelectedActor = GetSelectedActorFunction();
 	if (SelectedActor == nullptr)return;
 	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return;
-	GEditor->BeginTransaction(LOCTEXT("CreateUIControl_Transaction", "LGUI Create UI Control"));
+	GEditor->BeginTransaction(LOCTEXT("CreateUIControl_Transaction", "LexUI Create UI Control"));
 	MakeCurrentLevel(SelectedActor);
 	if (auto Prefab = LoadObject<ULGUIPrefab>(NULL, *InPrefabPath))
 	{
@@ -812,130 +601,11 @@ void FLexUIEditorTools::CreateUIControls(TFunction<AActor*()> GetSelectedActorFu
 	}
 	else
 	{
-		UE_LOG(LGUIEditor, Error, TEXT("[%s].%d Load control prefab error! Path:%s. Missing some content of LGUI plugin, reinstall this plugin may fix the issue."), ANSI_TO_TCHAR(__FUNCDNAME__), __LINE__, *InPrefabPath);
+		UE_LOG(LGUIEditor, Error, TEXT("[%s].%d Load control prefab error! Path:%s. Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), ANSI_TO_TCHAR(__FUNCDNAME__), __LINE__, *InPrefabPath);
 	}
 	GEditor->EndTransaction();
 }
-void FLexUIEditorTools::ReplaceActorByClass(UClass* ActorClass)
-{
-	auto selectedActors = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
-	auto count = selectedActors.Num();
-	if (count == 0)
-	{
-		UE_LOG(LGUIEditor, Error, TEXT("NothingSelected"));
-		return;
-	}
-	auto RootActorList = FLexUIEditorTools::GetRootActorListFromSelection(selectedActors);
 
-	GEditor->BeginTransaction(LOCTEXT("ReplaceUIElement_Transaction", "LGUI Replace UI Element"));
-	for (auto& Actor : RootActorList)
-	{
-		MakeCurrentLevel(Actor);
-		int HierarchyIndex = 0;
-		if (auto SourceUIItem = Cast<ULexWidget>(Actor->GetRootComponent()))
-		{
-			HierarchyIndex = SourceUIItem->GetSiblingIndex();
-		}
-		AActor* ReplacedActor = nullptr;
-		TArray<AActor*> ChildrenActors;
-		Actor->GetAttachedActors(ChildrenActors);
-		TMap<ULexWidget*, TTuple<int, FVector>> ChildrenOriginPositionArray;
-		for (auto& ChildActor : ChildrenActors)
-		{
-			if (auto UIComp = Cast<ULexWidget>(ChildActor->GetRootComponent()))
-			{
-				ChildrenOriginPositionArray.Add(UIComp, { UIComp->GetSiblingIndex(), UIComp->GetRelativeLocation()});
-			}
-		}
-		if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(Actor))
-		{
-			if (PrefabHelperObject->CleanupInvalidSubPrefab())//do cleanup before everything else
-			{
-				PrefabHelperObject->Modify();
-			}
-			bool bIsRootActor = PrefabHelperObject->LoadedRootActor == Actor;
-			if (bIsRootActor)
-			{
-				auto confirmMsg = LOCTEXT("Warning_ReplaceRootActorOfPrefab", "Trying to replace root actor of a prefab, this could cause unexpected error if other prefab or level is referencing this prefab!\
-\nDo you want to continue.");
-				auto confirmResult = FMessageDialog::Open(EAppMsgType::YesNo, confirmMsg);
-				if (confirmResult == EAppReturnType::Yes)
-				{
-					auto FindGuid = [&](UObject* Obj) {
-						for (auto& KeyValue : PrefabHelperObject->MapGuidToObject)
-						{
-							if (Obj == KeyValue.Value)
-							{
-								return KeyValue.Key;
-							}
-						}
-						return FGuid();
-					};
-					TArray<UObject*> OriginObjects;
-					GetObjectsWithOuter(PrefabHelperObject->LoadedRootActor, OriginObjects);
-					TMap<FName, FGuid> MapObjectNameToGuid;
-					for (auto& Object : OriginObjects)
-					{
-						auto FoundGuid = FindGuid(Object);
-						if (FoundGuid.IsValid())
-						{
-							MapObjectNameToGuid.Add(Object->GetFName(), FoundGuid);
-						}
-					}
-					FGuid RootActorGuid = FindGuid(PrefabHelperObject->LoadedRootActor);
-					FGuid RootCompGuid = FindGuid(PrefabHelperObject->LoadedRootActor->GetRootComponent());
-
-					PrefabHelperObject->SetCanNotifyAttachment(false);
-					ReplacedActor = LGUIEditorToolsHelperFunctionHolder::ReplaceActor({ Actor }, ActorClass)[0];
-					if (bIsRootActor)
-					{
-						PrefabHelperObject->LoadedRootActor = ReplacedActor;
-					}
-					TArray<UObject*> NewObjects;
-					GetObjectsWithOuter(ReplacedActor, NewObjects);
-					for (auto& KeyValue : MapObjectNameToGuid)
-					{
-						auto FoundIndex = NewObjects.IndexOfByPredicate([=](const UObject* Item) {
-							return Item->GetFName() == KeyValue.Key;
-							});
-						if (FoundIndex != INDEX_NONE)
-						{
-							PrefabHelperObject->MapGuidToObject[KeyValue.Value] = NewObjects[FoundIndex];
-						}
-					}
-					PrefabHelperObject->MapGuidToObject[RootActorGuid] = ReplacedActor;
-					PrefabHelperObject->MapGuidToObject[RootCompGuid] = ReplacedActor->GetRootComponent();
-
-					PrefabHelperObject->SetCanNotifyAttachment(true);
-				}
-			}
-			else
-			{
-				ReplacedActor = LGUIEditorToolsHelperFunctionHolder::ReplaceActor({ Actor }, ActorClass)[0];
-			}
-			PrefabHelperObject->SetAnythingDirty();
-		}
-		else
-		{
-			ReplacedActor = LGUIEditorToolsHelperFunctionHolder::ReplaceActor({ Actor }, ActorClass)[0];
-		}
-		if (IsValid(ReplacedActor))
-		{
-			if (auto ReplaceUIItem = Cast<ULexWidget>(ReplacedActor->GetRootComponent()))
-			{
-				ReplaceUIItem->SetSiblingIndex(HierarchyIndex);
-			}
-			for (auto& KeyValue : ChildrenOriginPositionArray)
-			{
-				auto UIItem = KeyValue.Key;
-				auto& Value = KeyValue.Value;
-				UIItem->SetRelativeLocation(Value.Get<1>());
-				UIItem->SetSiblingIndex(Value.Get<0>());
-			}
-		}
-	}
-	GEditor->EndTransaction();
-}
 void FLexUIEditorTools::DuplicateActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)//@todo: fix bug: duplicate subprefab then undo, this operation will revert the source copied prefab to orignal state
 {
 	auto SelectedActors = GetSelectedActorArrayFunction();
@@ -945,12 +615,12 @@ void FLexUIEditorTools::DuplicateActors(TFunction<TArray<AActor*>()> GetSelected
 		return;
 	}
 	auto RootActorList = FLexUIEditorTools::GetRootActorListFromSelection(SelectedActors);
-	GEditor->BeginTransaction(LOCTEXT("DuplicateActor_Transaction", "LGUI Duplicate Actors"));
+	GEditor->BeginTransaction(LOCTEXT("DuplicateActor_Transaction", "LexUI Duplicate Actors"));
 	for (auto Actor : RootActorList)
 	{
 		MakeCurrentLevel(Actor);
 		Actor->GetLevel()->Modify();
-		auto copiedActorLabel = LGUIEditorToolsHelperFunctionHolder::GetCopiedActorLabel(Actor->GetAttachParentActor(), Actor->GetActorLabel(), Actor->GetWorld());
+		auto copiedActorLabel = FLexUIEditorToolsHelperFunctionHolder::GetCopiedActorLabel(Actor->GetAttachParentActor(), Actor->GetActorLabel(), Actor->GetWorld());
 		AActor* copiedActor;
 		USceneComponent* Parent = nullptr;
 		if (Actor->GetAttachParentActor())
@@ -1167,7 +837,7 @@ void FLexUIEditorTools::PasteActors(TFunction<TArray<AActor*>()> GetSelectedActo
 	if (PrefabHelperObject == nullptr)return;
 
 	PrefabHelperObject->SetCanNotifyAttachment(false);
-	GEditor->BeginTransaction(LOCTEXT("PasteActor_Transaction", "LGUI Paste Actors"));
+	GEditor->BeginTransaction(LOCTEXT("PasteActor_Transaction", "LexUI Paste Actors"));
 	for (auto item : SelectedActors)
 	{
 		GEditor->SelectActor(item, false, true);
@@ -1182,7 +852,7 @@ void FLexUIEditorTools::PasteActors(TFunction<TArray<AActor*>()> GetSelectedActo
 		{
 			TMap<FGuid, TObjectPtr<UObject>> OutMapGuidToObject;
 			TMap<TObjectPtr<AActor>, FLGUISubPrefabData> LoadedSubPrefabMap;
-			auto copiedActorLabel = LGUIEditorToolsHelperFunctionHolder::GetCopiedActorLabel(parentComp->GetOwner(), KeyValuePair.Key, parentComp->GetWorld());
+			auto copiedActorLabel = FLexUIEditorToolsHelperFunctionHolder::GetCopiedActorLabel(parentComp->GetOwner(), KeyValuePair.Key, parentComp->GetWorld());
 			auto copiedActor = KeyValuePair.Value->LoadPrefabInEditor(parentComp->GetWorld(), parentComp, LoadedSubPrefabMap, OutMapGuidToObject, false);
 			for (auto& KeyValue : LoadedSubPrefabMap)
 			{
@@ -1208,7 +878,32 @@ void FLexUIEditorTools::PasteActors(TFunction<TArray<AActor*>()> GetSelectedActo
 void FLexUIEditorTools::DeleteActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
 {
 	auto SelectedActors = GetSelectedActorArrayFunction();
-	DeleteActors_Impl(SelectedActors);
+	auto RootActorList = FLexUIEditorTools::GetRootActorListFromSelection(SelectedActors);
+	GEditor->BeginTransaction(LOCTEXT("DestroyActor_Transaction", "LexUI Destroy Actor"));
+	for (auto Actor : RootActorList)
+	{
+		auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(Actor);
+		if (PrefabHelperObject != nullptr)
+		{
+			PrefabHelperObject->SetCanNotifyAttachment(false);
+			PrefabHelperObject->Modify();
+			PrefabHelperObject->SetAnythingDirty();
+			TArray<AActor*> ChildrenActors;
+			FLexUIUtils::CollectChildrenActors(Actor, ChildrenActors);
+			for (auto ChildActor : ChildrenActors)
+			{
+				PrefabHelperObject->RemoveSubPrefabByAnyActorOfSubPrefab(ChildActor);
+			}
+			FLexUIUtils::DestroyActorWithHierarchy(Actor);
+			PrefabHelperObject->SetCanNotifyAttachment(true);
+		}
+		else//common actor
+		{
+			FLexUIUtils::DestroyActorWithHierarchy(Actor);
+		}
+	}
+	GEditor->EndTransaction();
+	CleanupPrefabsInWorld(RootActorList[0]->GetWorld());
 }
 void FLexUIEditorTools::CutActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
 {
@@ -1246,7 +941,7 @@ void FLexUIEditorTools::ToggleSelectedActorsSpatiallyLoaded(TFunction<TArray<AAc
 			}
 		}
 	};
-	GEditor->BeginTransaction(LOCTEXT("ToggleSpatiallyLoaded_Transaction", "LGUI Toggle Actors IsSpatiallyLoaded"));
+	GEditor->BeginTransaction(LOCTEXT("ToggleSpatiallyLoaded_Transaction", "LexUI Toggle Actors IsSpatiallyLoaded"));
 	auto ActorList = FLexUIEditorTools::GetRootActorListFromSelection(SelectedActors);
 	for (auto Actor : ActorList)
 	{
@@ -1273,40 +968,6 @@ ECheckBoxState FLexUIEditorTools::GetActorsSpatiallyLoadedProperty(TFunction<TAr
 		}
 	}
 	return bIsSpatiallyLoadedValue ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
-}
-
-void FLexUIEditorTools::DeleteActors_Impl(const TArray<AActor*>& InActors)
-{
-	auto confirmMsg = FString::Printf(TEXT("Destroy selected actors? This will also destroy the children attached to selected actors."));
-	auto confirmResult = FMessageDialog::Open(EAppMsgType::YesNo, FText::FromString(confirmMsg));
-	if (confirmResult != EAppReturnType::Yes)return;
-
-	auto RootActorList = FLexUIEditorTools::GetRootActorListFromSelection(InActors);
-	GEditor->BeginTransaction(LOCTEXT("DestroyActor_Transaction", "LGUI Destroy Actor"));
-	for (auto Actor : RootActorList)
-	{
-		auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(Actor);
-		if (PrefabHelperObject != nullptr)
-		{
-			PrefabHelperObject->SetCanNotifyAttachment(false);
-			PrefabHelperObject->Modify();
-			PrefabHelperObject->SetAnythingDirty();
-			TArray<AActor*> ChildrenActors;
-			FLexUIUtils::CollectChildrenActors(Actor, ChildrenActors);
-			for (auto ChildActor : ChildrenActors)
-			{
-				PrefabHelperObject->RemoveSubPrefabByAnyActorOfSubPrefab(ChildActor);
-			}
-			FLexUIUtils::DestroyActorWithHierarchy(Actor);
-			PrefabHelperObject->SetCanNotifyAttachment(true);
-		}
-		else//common actor
-		{
-			FLexUIUtils::DestroyActorWithHierarchy(Actor);
-		}
-	}
-	GEditor->EndTransaction();
-	CleanupPrefabsInWorld(RootActorList[0]->GetWorld());
 }
 
 bool FLexUIEditorTools::CanDuplicateActor(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
@@ -1367,7 +1028,7 @@ bool FLexUIEditorTools::CanToggleActorsSpatiallyLoaded(TFunction<TArray<AActor*>
 
 void FLexUIEditorTools::CopyComponentValues_Impl()
 {
-	auto selectedComponents = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToComponents(GEditor->GetSelectedComponents());
+	auto selectedComponents = FLexUIEditorToolsHelperFunctionHolder::ConvertSelectionToComponents(GEditor->GetSelectedComponents());
 	auto count = selectedComponents.Num();
 	if (count == 0)
 	{
@@ -1383,7 +1044,7 @@ void FLexUIEditorTools::CopyComponentValues_Impl()
 }
 void FLexUIEditorTools::PasteComponentValues_Impl()
 {
-	auto selectedComponents = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToComponents(GEditor->GetSelectedComponents());
+	auto selectedComponents = FLexUIEditorToolsHelperFunctionHolder::ConvertSelectionToComponents(GEditor->GetSelectedComponents());
 	auto count = selectedComponents.Num();
 	if (count == 0)
 	{
@@ -1587,7 +1248,7 @@ void FLexUIEditorTools::AttachComponentToSelectedActor(TSubclassOf<UActorCompone
 {
 	GEditor->BeginTransaction(FText::FromString(TEXT("LGUI Attach Component to Actor")));
 
-	auto selectedActors = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
+	auto selectedActors = FLexUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
 	auto count = selectedActors.Num();
 	if (count == 0)
 	{
@@ -2113,25 +1774,6 @@ bool FLexUIEditorTools::CanCreateActor(TFunction<AActor*()> GetSelectedActorFunc
 	return true;
 }
 
-bool FLexUIEditorTools::CanReplaceActor(TFunction<AActor*()> GetSelectedActorFunction)
-{
-	auto SelectedActor = GetSelectedActorFunction();
-	if (SelectedActor == nullptr)return false;
-	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return false;
-	if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
-	{
-		if (PrefabHelperObject->IsActorBelongsToSubPrefab(SelectedActor))//sub prefab's actor not allow replace
-		{
-			return false;
-		}
-		else if (PrefabHelperObject->IsActorBelongsToMissingSubPrefab(SelectedActor))//missing sub prefab's actor not allowed
-		{
-			return false;
-		}
-	}
-	return true;
-}
-
 void FLexUIEditorTools::CleanupPrefabsInWorld(UWorld* World)
 {
 	for (TObjectIterator<ULGUIPrefabHelperObject> Itr; Itr; ++Itr)
@@ -2156,7 +1798,7 @@ bool FLexUIEditorTools::IsCanvasActor(AActor* InActor)
 }
 bool FLexUIEditorTools::IsSelectUIActor()
 {
-	auto selectedActors = LGUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
+	auto selectedActors = FLexUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
 	if (selectedActors.Num() > 0)
 	{
 		bool allIsUI = true;

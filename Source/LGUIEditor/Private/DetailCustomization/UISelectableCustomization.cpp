@@ -1,7 +1,7 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/UISelectableCustomization.h"
-#include "LGUIEditorUtils.h"
+#include "LexUIEditorUtils.h"
 #include "Core/Components/LexWidget.h"
 #include "IDetailGroup.h"
 #include "Interaction/UISelectableComponent.h"
@@ -36,7 +36,7 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		UE_LOG(LGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	}
 
-	LGUIEditorUtils::ShowError_MultiComponentNotAllowed(&DetailBuilder, TargetScriptPtr.Get(), LOCTEXT("MultipleUISelectableComponentError", "Multiple UISelectable component in one actor is not allowed!"));
+	FLexUIEditorUtils::ShowError_MultiComponentNotAllowed(&DetailBuilder, TargetScriptPtr.Get(), LOCTEXT("MultipleUISelectableComponentError", "Multiple UISelectable component in one actor is not allowed!"));
 
 	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("LGUI-Selectable");
 	auto Transition_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, TransitionType));
@@ -178,22 +178,22 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 	NavigationCategory.AddProperty(navigationLeftHandle);
 	if (navigationLeftValue == EUISelectableNavigationMode::Explicit)
 	{
-		LGUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationLeftSpecific)));
+		FLexUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationLeftSpecific)));
 	}
 	NavigationCategory.AddProperty(navigationRightHandle);
 	if (navigationRightValue == EUISelectableNavigationMode::Explicit)
 	{
-		LGUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationRightSpecific)));
+		FLexUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationRightSpecific)));
 	}
 	NavigationCategory.AddProperty(navigationUpHandle);
 	if (navigationUpValue == EUISelectableNavigationMode::Explicit)
 	{
-		LGUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationUpSpecific)));
+		FLexUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationUpSpecific)));
 	}
 	NavigationCategory.AddProperty(navigationDownHandle);
 	if (navigationDownValue == EUISelectableNavigationMode::Explicit)
 	{
-		LGUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationDownSpecific)));
+		FLexUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationDownSpecific)));
 	}
 
 	navigationNextHandle->GetValue(*(uint8*)&tempEnumValue);
@@ -205,12 +205,12 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 	NavigationCategory.AddProperty(navigationPrevHandle);
 	if (navigationPrevValue == EUISelectableNavigationMode::Explicit)
 	{
-		LGUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationPrevSpecific)));
+		FLexUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationPrevSpecific)));
 	}
 	NavigationCategory.AddProperty(navigationNextHandle);
 	if (navigationNextValue == EUISelectableNavigationMode::Explicit)
 	{
-		LGUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationNextSpecific)));
+		FLexUIEditorUtils::CreateSubDetail(&NavigationCategory, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectableComponent, NavigationNextSpecific)));
 	}
 	NavigationCategory.AddCustomRow(LOCTEXT("VisualizeNavigation", "VisualizeNavigation"))
 		.NameContent()

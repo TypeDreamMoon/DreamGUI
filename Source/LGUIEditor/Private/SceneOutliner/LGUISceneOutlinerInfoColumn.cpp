@@ -3,6 +3,7 @@
 #include "SceneOutliner/LGUISceneOutlinerInfoColumn.h"
 #include "LGUIEditorModule.h"
 #include "ActorTreeItem.h"
+#include "DetailLayoutBuilder.h"
 #include "SortHelper.h"
 #include "Widgets/Views/SHeaderRow.h"
 #include "Widgets/Colors/SColorBlock.h"
@@ -11,7 +12,7 @@
 #include "LGUIEditorStyle.h"
 #include "SceneOutliner/LGUISceneOutlinerButton.h"
 #include "LexUIEditorTools.h"
-#include "LGUIEditorCommands.h"
+#include "LexUIEditorCommands.h"
 #include "SortHelper.h"
 #include "PrefabSystem/LGUIPrefabHelperObject.h"
 #include "PrefabEditor/LGUIPrefabEditor.h"
@@ -182,12 +183,12 @@ namespace LGUISceneOutliner
 					{
 						MenuBuilder.PushCommandList(FLGUIEditorModule::Get().PluginCommands.ToSharedRef());
 						{
-							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().CopyActor);
-							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().PasteActor);
-							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().CutActor);
-							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().DuplicateActor);
-							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().DestroyActor);
-							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().ToggleSpatiallyLoaded);
+							MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().CopyActor);
+							MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().PasteActor);
+							MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().CutActor);
+							MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().DuplicateActor);
+							MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().DestroyActor);
+							MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().ToggleSpatiallyLoaded);
 						}
 						MenuBuilder.PopCommandList();
 					}

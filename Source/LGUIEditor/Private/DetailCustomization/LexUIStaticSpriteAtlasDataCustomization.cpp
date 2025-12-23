@@ -2,11 +2,11 @@
 
 #include "DetailCustomization/LexUIStaticSpriteAtlasDataCustomization.h"
 #include "Core/LexUIStaticSpriteAtlasData.h"
-#include "Core/LexUISpriteData.h"
 #include "Utils/LexUIUtils.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
+#include "DetailWidgetRow.h"
 
 #define LOCTEXT_NAMESPACE "LGUIStaticSpriteAtlasDataCustomization"
 

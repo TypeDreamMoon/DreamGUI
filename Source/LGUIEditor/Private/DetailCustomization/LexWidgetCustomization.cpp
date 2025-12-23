@@ -9,11 +9,9 @@
 #include "Widget/AnchorPreviewWidget.h"
 #include "PropertyCustomizationHelpers.h"
 #include "HAL/PlatformApplicationMisc.h"
-#include "LGUIEditorUtils.h"
+#include "LexUIEditorUtils.h"
 #include "LexUIEditorTools.h"
 #include "LGUIHeaders.h"
-#include "PrefabEditor/LGUIPrefabEditor.h"
-
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
@@ -24,6 +22,98 @@
 
 #define LOCTEXT_NAMESPACE "UIItemComponentDetails"
 
+class SLexWidgetSubObjectWidget : public SCompoundWidget
+{
+public:
+	SLATE_BEGIN_ARGS(SLexWidgetSubObjectWidget) {}
+	SLATE_END_ARGS()
+
+	void Construct(const FArguments& InArgs, TSharedPtr<IPropertyHandle> InPropertyHandle, bool InEditable)
+	{
+		PropertyHandle = InPropertyHandle;
+		auto VisualPropertyValueWidget = InPropertyHandle->CreatePropertyValueWidget();
+		if (!InEditable)
+		{
+			VisualPropertyValueWidget->SetEnabled(false);
+		}
+		ChildSlot
+		[
+			VisualPropertyValueWidget
+		];
+	}
+
+	virtual FReply OnMouseButtonUp(
+		const FGeometry& MyGeometry,
+		const FPointerEvent& MouseEvent) override
+	{
+		if (MouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
+		{
+			OpenContextMenu(MouseEvent);
+			return FReply::Handled();
+		}
+
+		return FReply::Unhandled();
+	}
+
+private:
+	TSharedPtr<IPropertyHandle> PropertyHandle;
+	static TWeakObjectPtr<UObject> CopiedObject;
+	
+	void OpenContextMenu(const FPointerEvent& MouseEvent)
+	{
+		FMenuBuilder MenuBuilder(true, nullptr);
+
+		MenuBuilder.AddMenuEntry(
+			LOCTEXT("CopyProps", "Copy all properties"),
+			LOCTEXT("CopyProps_Tooltip", "You copy all properties of this object then paste it to others"),
+			FSlateIcon(),
+			FUIAction(FExecuteAction::CreateLambda([=, this]()
+			{
+				UObject* Object = nullptr;
+				PropertyHandle->GetValue(Object);
+				if (Object)
+				{
+					CopiedObject = Object;
+				}
+			}), FCanExecuteAction::CreateLambda([=, this]()
+			{
+				UObject* Object = nullptr;
+				PropertyHandle->GetValue(Object);
+				return Object != nullptr;
+			}))
+		);
+		MenuBuilder.AddMenuEntry(
+			LOCTEXT("PasteProps", "Paste all properties"),
+			LOCTEXT("PasteProps_Tooltip", "You paste all properties of copied object to this"),
+			FSlateIcon(),
+			FUIAction(FExecuteAction::CreateLambda([=, this]()
+			{
+				UObject* Object = nullptr;
+				PropertyHandle->GetValue(Object);
+				if (Object)
+				{
+					UEngine::FCopyPropertiesForUnrelatedObjectsParams Options;
+					Options.bNotifyObjectReplacement = true;
+					UEditorEngine::CopyPropertiesForUnrelatedObjects(CopiedObject.Get(), Object, Options);
+				}
+			}), FCanExecuteAction::CreateLambda([=, this]()
+			{
+				UObject* Object = nullptr;
+				PropertyHandle->GetValue(Object);
+				return Object != nullptr && CopiedObject.IsValid();
+			}))
+		);
+
+		FSlateApplication::Get().PushMenu(
+			AsShared(),
+			FWidgetPath(),
+			MenuBuilder.MakeWidget(),
+			MouseEvent.GetScreenSpacePosition(),
+			FPopupTransitionEffect(FPopupTransitionEffect::ContextMenu)
+		);
+	}
+};
+TWeakObjectPtr<UObject> SLexWidgetSubObjectWidget::CopiedObject = nullptr;
 
 
 FLexWidgetCustomization::FLexWidgetCustomization()
@@ -86,7 +176,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		return;
 	}
 
-	LGUIEditorUtils::ShowError_MultiComponentNotAllowed(&DetailBuilder, TargetScriptArray[0].Get());
+	FLexUIEditorUtils::ShowError_MultiComponentNotAllowed(&DetailBuilder, TargetScriptArray[0].Get());
 
 	IDetailCategoryBuilder& LGUICategory = DetailBuilder.EditCategory("LGUI");
 	DetailBuilder.HideCategory("TransformCommon");
@@ -107,10 +197,9 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	auto Clipping_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, Clipping));
 	auto& ClippingGroup = LGUICategory.AddGroup(TEXT("ClippingGroup"), LOCTEXT("ClippingGroup", "Clipping"));
 	ClippingGroup.HeaderProperty(Clipping_PH);
-	auto ClippingCornerRadius_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, ClippingCornerRadius));
-	auto ClippingMargin_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, ClippingMargin));
 	{
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, bUniformSetClippingCornerRadius));
+		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, ClippingCornerRadius));
 
 		auto UniformSetCornerRadiusHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, bUniformSetClippingCornerRadius));
 		auto CornerRadiusHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, ClippingCornerRadius));
@@ -232,6 +321,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		]
 		;
 	}
+	auto ClippingMargin_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, ClippingMargin));
 	ClippingGroup.AddPropertyRow(ClippingMargin_PH);
 
 	//anchor, width, height
@@ -734,19 +824,19 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		SizeDeltaProperty.IsEnabled(this->IsAnchorEditable());
 	}
 	//pivot
-	auto PivotHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData.Pivot));
-	auto& PivotProperty = TransformCategory.AddProperty(PivotHandle);
-	PivotProperty.IsEnabled(this->IsAnchorEditable());
-	PivotHandle->SetOnPropertyValuePreChange(FSimpleDelegate::CreateLambda([=, this] {
+	auto Pivot_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData.Pivot));
+	auto& PivotPropertyRow = TransformCategory.AddProperty(Pivot_PH);
+	PivotPropertyRow.IsEnabled(this->IsAnchorEditable());
+	Pivot_PH->SetOnPropertyValuePreChange(FSimpleDelegate::CreateLambda([=, this] {
 		this->OnPrePivotChange();
 		}));
-	PivotHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
+	Pivot_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
 		this->OnPivotChanged();
 		}));
-	PivotHandle->SetOnChildPropertyValuePreChange(FSimpleDelegate::CreateLambda([=, this] {
+	Pivot_PH->SetOnChildPropertyValuePreChange(FSimpleDelegate::CreateLambda([=, this] {
 		this->OnPrePivotChange();
 		}));
-	PivotHandle->SetOnChildPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
+	Pivot_PH->SetOnChildPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
 		this->OnPivotChanged();
 		}));
 
@@ -757,9 +847,9 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	
 	//SiblingIndex
 	{
-		auto SiblingIndexHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, SiblingIndex));
-		DetailBuilder.HideProperty(SiblingIndexHandle);
-		SiblingIndexHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
+		auto SiblingIndex_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, SiblingIndex));
+		DetailBuilder.HideProperty(SiblingIndex_PH);
+		SiblingIndex_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
 			ForceUpdateUI();
 			ULexUIManagerObject::MarkBroadcastLevelActorListChanged();
 			}));
@@ -768,7 +858,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			+ SHorizontalBox::Slot()
 			.Padding(2, 0)
 			[
-				SiblingIndexHandle->CreatePropertyValueWidget()
+				SiblingIndex_PH->CreatePropertyValueWidget()
 			]
 			+ SHorizontalBox::Slot()
 			.Padding(2, 0)
@@ -778,8 +868,8 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 				.ToolTipText(LOCTEXT("IncreaseHierarchyOrder_Tooltip", "Move order up"))
 				.HAlign(EHorizontalAlignment::HAlign_Center)
 				.VAlign(EVerticalAlignment::VAlign_Center)
-				.IsEnabled_Static(LGUIEditorUtils::IsEnabledOnProperty, SiblingIndexHandle)
-				.OnClicked(this, &FLexWidgetCustomization::OnClickIncreaseOrDecreaseSiblingIndex, true, SiblingIndexHandle)
+				.IsEnabled_Static(FLexUIEditorUtils::IsEnabledOnProperty, SiblingIndex_PH)
+				.OnClicked(this, &FLexWidgetCustomization::OnClickIncreaseOrDecreaseSiblingIndex, true, SiblingIndex_PH)
 				[
 					SNew(STextBlock)
 					.Text(LOCTEXT("IncreaseHierarchyOrder", "+"))
@@ -794,8 +884,8 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 				.ToolTipText(LOCTEXT("DecreaseHierarchyOrder_Tooltip", "Move order down"))
 				.HAlign(EHorizontalAlignment::HAlign_Center)
 				.VAlign(EVerticalAlignment::VAlign_Center)
-				.IsEnabled_Static(LGUIEditorUtils::IsEnabledOnProperty, SiblingIndexHandle)
-				.OnClicked(this, &FLexWidgetCustomization::OnClickIncreaseOrDecreaseSiblingIndex, false, SiblingIndexHandle)
+				.IsEnabled_Static(FLexUIEditorUtils::IsEnabledOnProperty, SiblingIndex_PH)
+				.OnClicked(this, &FLexWidgetCustomization::OnClickIncreaseOrDecreaseSiblingIndex, false, SiblingIndex_PH)
 				[
 					SNew(STextBlock)
 					.Text(LOCTEXT("DecreaseHierarchyOrder", "-"))
@@ -816,7 +906,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		}
 		if (bIsInsidePrefabEditor)
 		{
-			LGUICategory.AddProperty(SiblingIndexHandle, EPropertyLocation::Advanced).IsEnabled(false);//not editable inside PrefabEditor, because we can drag-drop inside it
+			LGUICategory.AddProperty(SiblingIndex_PH, EPropertyLocation::Advanced).IsEnabled(false);//not editable inside PrefabEditor, because we can drag-drop inside it
 		}
 		else
 		{
@@ -825,17 +915,17 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 				FExecuteAction::CreateSP(this, &FLexWidgetCustomization::OnCopyHierarchyIndex)
 			))
 			.PasteAction(FUIAction(
-				FExecuteAction::CreateSP(this, &FLexWidgetCustomization::OnPasteHierarchyIndex, SiblingIndexHandle)
+				FExecuteAction::CreateSP(this, &FLexWidgetCustomization::OnPasteHierarchyIndex, SiblingIndex_PH)
 			))
 			.NameContent()
 			[
-				SiblingIndexHandle->CreatePropertyNameWidget()
+				SiblingIndex_PH->CreatePropertyNameWidget()
 			]
 			.ValueContent()
 			[
 				SiblingIndexWidget
 			]
-			.PropertyHandleList({ SiblingIndexHandle })
+			.PropertyHandleList({ SiblingIndex_PH })
 			;
 		}
 
@@ -843,12 +933,12 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	}
 		
 	//displayName
-	auto displayNamePropertyHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, DisplayName));
-	DetailBuilder.HideProperty(displayNamePropertyHandle);
+	auto DisplayName_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, DisplayName));
+	DetailBuilder.HideProperty(DisplayName_PH);
 	LGUICategory.AddCustomRow(LOCTEXT("DisplayName", "Display Name"), true)
 		.NameContent()
 		[
-			displayNamePropertyHandle->CreatePropertyNameWidget()
+			DisplayName_PH->CreatePropertyNameWidget()
 		]
 		.ValueContent()
 		.MinDesiredWidth(500)
@@ -861,7 +951,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 				SNew(SBox)
 				.VAlign(VAlign_Center)
 				[
-					displayNamePropertyHandle->CreatePropertyValueWidget(true)
+					DisplayName_PH->CreatePropertyValueWidget(true)
 				]
 			]
 			+SHorizontalBox::Slot()
@@ -869,7 +959,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			[
 				SNew(SButton)
 				.Text(LOCTEXT("FixDisplayName", "Fix it"))
-				.OnClicked(this, &FLexWidgetCustomization::OnClickFixDisplayNameButton, true, displayNamePropertyHandle)
+				.OnClicked(this, &FLexWidgetCustomization::OnClickFixDisplayNameButton, true, DisplayName_PH)
 				.HAlign(EHorizontalAlignment::HAlign_Center)
 				.Visibility(this, &FLexWidgetCustomization::GetDisplayNameWarningVisibility)
 				.ToolTipText(LOCTEXT("FixDisplayName_Tooltip", "DisplayName not equal to ActorLabel."))
@@ -879,7 +969,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			[
 				SNew(SButton)
 				.Text(LOCTEXT("FixDisplayNameOnHierarchy", "Fix all hierarchy"))
-				.OnClicked(this, &FLexWidgetCustomization::OnClickFixDisplayNameButton, false, displayNamePropertyHandle)
+				.OnClicked(this, &FLexWidgetCustomization::OnClickFixDisplayNameButton, false, DisplayName_PH)
 				.HAlign(EHorizontalAlignment::HAlign_Center)
 				.Visibility(this, &FLexWidgetCustomization::GetDisplayNameWarningVisibility)
 				.ToolTipText(LOCTEXT("FixDisplayNameOnHierarchy_Tooltip", "DisplayName not equal to ActorLabel."))
@@ -889,30 +979,25 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 
 	//Layout
 	{
-		auto LayoutProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutContainer));
+		auto Layout_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutContainer));
 		UObject* Layout = nullptr;
-		LayoutProperty->GetValue(Layout);
+		Layout_PH->GetValue(Layout);
 		auto& LayoutCategory = DetailBuilder.EditCategory("Layout");
-		auto LayoutPropertyValueWidget = LayoutProperty->CreatePropertyValueWidget();
-		if (bIsSubPrefab)
-		{
-			LayoutPropertyValueWidget->SetEnabled(false);
-		}
-		LayoutCategory.HeaderContent(LayoutPropertyValueWidget);
+		LayoutCategory.HeaderContent(SNew(SLexWidgetSubObjectWidget, Layout_PH, !bIsSubPrefab));
 		LayoutCategory.SetIsEmpty(!IsValid(Layout));
 		LayoutCategory.AddCustomRow(LOCTEXT("LayoutPlaceholder", "Placeholder"))
 			.Visibility(IsValid(Layout) ? EVisibility::Hidden : EVisibility::Visible)
 			.NameContent()
 			[
-				LayoutProperty->CreatePropertyNameWidget()
+				Layout_PH->CreatePropertyNameWidget()
 			]
 			.ValueContent()
 			[
-				LayoutPropertyValueWidget
+				Layout_PH->CreatePropertyValueWidget()
 			];
 		LayoutCategory.AddExternalObjects({ Layout }, EPropertyLocation::Default
 			, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
-		DetailBuilder.HideProperty(LayoutProperty);
+		DetailBuilder.HideProperty(Layout_PH);
 	}
 
 	//LayoutSelf
@@ -921,12 +1006,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		UObject* LayoutSelf = nullptr;
 		LayoutSelf_PH->GetValue(LayoutSelf);
 		auto& LayoutSelfCategory = DetailBuilder.EditCategory("LayoutSelf");
-		auto LayoutSelfPropertyValueWidget = LayoutSelf_PH->CreatePropertyValueWidget();
-		if (bIsSubPrefab)
-		{
-			LayoutSelfPropertyValueWidget->SetEnabled(false);
-		}
-		LayoutSelfCategory.HeaderContent(LayoutSelfPropertyValueWidget);
+		LayoutSelfCategory.HeaderContent(SNew(SLexWidgetSubObjectWidget, LayoutSelf_PH, !bIsSubPrefab));
 		LayoutSelfCategory.SetIsEmpty(!IsValid(LayoutSelf));
 		LayoutSelfCategory.AddCustomRow(LOCTEXT("LayoutPlaceholder", "Placeholder"))
 			.Visibility(IsValid(LayoutSelf) ? EVisibility::Hidden : EVisibility::Visible)
@@ -936,126 +1016,36 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			]
 			.ValueContent()
 			[
-				LayoutSelfPropertyValueWidget
+				LayoutSelf_PH->CreatePropertyValueWidget()
 			];
 		LayoutSelfCategory.AddExternalObjects({ LayoutSelf }, EPropertyLocation::Default
 			, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
 		DetailBuilder.HideProperty(LayoutSelf_PH);
 	}
 
-	auto& LayoutPropertyCategory = DetailBuilder.EditCategory("LayoutProperties");
-	auto LayoutProperty_None = LOCTEXT("LayoutProperty_None", "None");
-	auto LayoutProperty_MultiValue = LOCTEXT("LayoutProperty_MultiValue", "Multiple Values");
-	auto LayoutProperty_Disabled = LOCTEXT("LayoutProperty_Disabled", "Disabled");
-	auto LayoutPropertySource_None = LOCTEXT("LayoutPropertySource_None", "None");
-	auto CreateLayoutPropertyRow = [&](const FText& Label, const TFunction<float(ULexWidget*)>& GetWidgetLayoutPropertyFunction, const TFunction<UObject*(ULexWidget*)>& GetWidgetLayoutSourceFunction)
+	//visual
 	{
-		auto ValueWidget = SNew(STextBlock).Font(IDetailLayoutBuilder::GetDetailFont())
-			.Text(TAttribute<FText>::CreateLambda([=, this]()
-		{
-			if (TargetScriptArray.Num() <= 0)
-			{
-				return LayoutProperty_None;
-			}
-			if (TargetScriptArray.Num() > 1)
-			{
-				return LayoutProperty_MultiValue;
-			}
-			if (!TargetScriptArray[0].IsValid())
-			{
-				return LayoutProperty_None;
-			}
-			auto Value = GetWidgetLayoutPropertyFunction(TargetScriptArray[0].Get());
-			if (Value < 0)
-				return LayoutProperty_Disabled;
-			return FText::FromString(FString::SanitizeFloat(Value));
-		}));
-		auto SourceWidget = SNew(STextBlock).Font(IDetailLayoutBuilder::GetDetailFont())
-			.ToolTipText(LOCTEXT("LayoutPropertySource_ToolTip", "Current source object which provide this layout value"))
-			.Text(TAttribute<FText>::CreateLambda([=, this]()
-			{
-				if (TargetScriptArray.Num() <= 0)
-				{
-					return LayoutProperty_None;
-				}
-				if (TargetScriptArray.Num() > 1)
-				{
-					return LayoutProperty_MultiValue;
-				}
-				if (!TargetScriptArray[0].IsValid())
-				{
-					return LayoutProperty_None;
-				}
-				auto Value = GetWidgetLayoutSourceFunction(TargetScriptArray[0].Get());
-				if (Value)
-					return Value->GetClass()->GetDisplayNameText();
-				return LayoutPropertySource_None;
-			}));
-		
-		LayoutPropertyCategory.AddCustomRow(FText::Format(LOCTEXT("LayoutPropertyRowFormat", "LayoutProperty_{0}"), Label))
-		.IsEnabled(false)
-		.NameContent()
-		[
-			SNew(SBox)
+		auto Visual_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, Visual));
+		UObject* Visual = nullptr;
+		Visual_PH->GetValue(Visual);
+		IDetailCategoryBuilder& VisualCategory = DetailBuilder.EditCategory("Visual");
+		VisualCategory.HeaderContent(SNew(SLexWidgetSubObjectWidget, Visual_PH, !bIsSubPrefab));
+		VisualCategory.SetIsEmpty(Visual == nullptr);
+		VisualCategory.AddCustomRow(LOCTEXT("VisualPlaceholder", "Placeholder"))
+			.Visibility(IsValid(Visual) ? EVisibility::Hidden : EVisibility::Visible)
+			.NameContent()
 			[
-				SNew(STextBlock)
-				.Font(IDetailLayoutBuilder::GetDetailFont())
-				.Text(Label)
+				Visual_PH->CreatePropertyNameWidget()
 			]
-		]
-		.ValueContent()
-		[
-			SNew(SBox)
-			.WidthOverride(500)
+			.ValueContent()
 			[
-				SNew(SHorizontalBox)
-				+SHorizontalBox::Slot()
-				.FillWidth(1.0f)
-				[
-					ValueWidget
-				]
-				+SHorizontalBox::Slot()
-				.AutoWidth()
-				.HAlign(HAlign_Right)
-				[
-					SourceWidget
-				]
+				Visual_PH->CreatePropertyValueWidget()
 			]
-		]
-		;
-	};
-	// CreateLayoutPropertyRow(LOCTEXT("MinWidth", "Min Width"), &ULexWidget::GetMinWidth, &ULexWidget::GetMinWidthSource);
-	// CreateLayoutPropertyRow(LOCTEXT("MinHeight", "Min Height"), &ULexWidget::GetMinHeight, &ULexWidget::GetMinHeightSource);
-	// CreateLayoutPropertyRow(LOCTEXT("PreferredWidth", "Preferred Width"), &ULexWidget::GetPreferredWidth, &ULexWidget::GetPreferredWidthSource);
-	// CreateLayoutPropertyRow(LOCTEXT("PreferredHeight", "Preferred Height"), &ULexWidget::GetPreferredHeight, &ULexWidget::GetPreferredHeightSource);
-	// CreateLayoutPropertyRow(LOCTEXT("GetFlexibleWidth", "Flexible Width"), &ULexWidget::GetFlexibleWidth, &ULexWidget::GetFlexibleWidthSource);
-	// CreateLayoutPropertyRow(LOCTEXT("GetFlexibleHeight", "Flexible Height"), &ULexWidget::GetFlexibleHeight, &ULexWidget::GetFlexibleHeightSource);
-
-	auto VisualProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, Visual));
-	UObject* Visual = nullptr;
-	VisualProperty->GetValue(Visual);
-	IDetailCategoryBuilder& VisualCategory = DetailBuilder.EditCategory("Visual");
-	auto VisualPropertyValueWidget = VisualProperty->CreatePropertyValueWidget();
-	if (bIsSubPrefab)
-	{
-		VisualPropertyValueWidget->SetEnabled(false);
+			;
+		VisualCategory.AddExternalObjects({ Visual }, EPropertyLocation::Common
+			, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
+		DetailBuilder.HideProperty(Visual_PH);
 	}
-	VisualCategory.HeaderContent(VisualPropertyValueWidget);
-	VisualCategory.SetIsEmpty(Visual == nullptr);
-	VisualCategory.AddCustomRow(LOCTEXT("VisualPlaceholder", "Placeholder"))
-		.Visibility(IsValid(Visual) ? EVisibility::Hidden : EVisibility::Visible)
-		.NameContent()
-		[
-			VisualProperty->CreatePropertyNameWidget()
-		]
-		.ValueContent()
-		[
-			VisualProperty->CreatePropertyValueWidget()
-		]
-		;
-	VisualCategory.AddExternalObjects({ Visual }, EPropertyLocation::Common
-		, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
-	DetailBuilder.HideProperty(VisualProperty);
 }
 
 void FLexWidgetCustomization::OnPrePivotChange()

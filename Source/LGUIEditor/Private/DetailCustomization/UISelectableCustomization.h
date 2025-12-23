@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "IDetailCustomization.h"
-#include "LGUIEditorUtils.h"
+#include "LexUIEditorUtils.h"
 #pragma once
 
 /**

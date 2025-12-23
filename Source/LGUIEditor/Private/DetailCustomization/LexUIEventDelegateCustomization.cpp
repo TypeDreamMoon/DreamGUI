@@ -8,8 +8,8 @@
 #include "IPropertyUtilities.h"
 #include "IPropertyTypeCustomization.h"
 #include "PropertyCustomizationHelpers.h"
-#include "LGUIEditorUtils.h"
-#include "Widget/LGUIVectorInputBox.h"
+#include "LexUIEditorUtils.h"
+#include "Widget/LexUIVectorInputBox.h"
 #include "Widgets/Input/SRotatorInputBox.h"
 #include "Widgets/Colors/SColorBlock.h"
 #include "Widgets/Colors/SColorPicker.h"
@@ -19,6 +19,7 @@
 #include "SEnumCombo.h"
 #include "Serialization/BufferArchive.h"
 #include "LexUIEditableTextPropertyHandle.h"
+#include "LGUIEditorModule.h"
 #include "Widgets/Input/NumericUnitTypeInterface.inl"
 
 #define LOCTEXT_NAMESPACE "LGUIEventDelegateCustomization"
@@ -1374,7 +1375,7 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawFunctionParameter(TSha
 				.FillWidth(1.0f)
 				.Padding(0.0f, 2.0f)
 				[
-					SNew(SLGUIVectorInputBox)
+					SNew(SLexUIVectorInputBox)
 					.AllowSpin(false)
 					.bColorAxisLabels(true)
 					.EnableX(true)
@@ -1401,7 +1402,7 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawFunctionParameter(TSha
 				.FillWidth(1.0f)
 				.Padding(0.0f, 2.0f)
 				[
-					SNew(SLGUIVectorInputBox)
+					SNew(SLexUIVectorInputBox)
 					.AllowSpin(false)
 					.bColorAxisLabels(true)
 					.EnableX(true)
@@ -1432,7 +1433,7 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawFunctionParameter(TSha
 				.FillWidth(1.0f)
 				.Padding(0.0f, 2.0f)
 				[
-					SNew(SLGUIVectorInputBox)
+					SNew(SLexUIVectorInputBox)
 					.AllowSpin(false)
 					.bColorAxisLabels(true)
 					.EnableX(true)
@@ -1539,7 +1540,7 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawFunctionParameter(TSha
 				.FillWidth(1.0f)
 				.Padding(0.0f, 2.0f)
 				[
-					SNew(SLGUIVectorInputBox)
+					SNew(SLexUIVectorInputBox)
 					.AllowSpin(false)
 					.bColorAxisLabels(true)
 					.EnableX(true)
@@ -1738,7 +1739,7 @@ void FLexUIEventDelegateCustomization::ObjectValueChange(const FAssetData& InObj
 		//ObjectReference is not for HelperActor reference
 		if (InObj.IsValid() && InObj.GetClass()->IsChildOf(AActor::StaticClass()))
 		{
-			UE_LOG(LGUIEditor, Error, TEXT("Please use Actor type for referece Actor, UObject is for asset object referece"));
+			UE_LOG(LGUIEditor, Error, TEXT("Please use Actor type for reference Actor, UObject is for asset object reference"));
 			AActor* NullActor = nullptr;
 			ObjectReferenceHandle->SetValue(NullActor);
 		}

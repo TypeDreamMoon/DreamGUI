@@ -4,7 +4,7 @@
 #include "Core/Components/LexWidget.h"
 #include "LGUIComponentVisualizerModule.h"
 #include "LGUI.h"
-#include "LGUIEditorUtils.h"
+#include "LexUIEditorUtils.h"
 #include "Utils/LexUIUtils.h"
 #include "Interfaces/IPluginManager.h"
 #include "Core/LexUISettings.h"
@@ -70,7 +70,7 @@ void FUIItemComponentVisualizer::DrawVisualization(const UActorComponent* Compon
 	{
 		if (!bHaveDrawPanelLayout)//anchor is controlled by panel layout, so no need to draw it
 		{
-			static auto AnchorVisTexture = LGUIEditorUtils::LoadTexture(LGUIBasePath + TEXT("/Resources/Icons/AnchorVisSelector.png"));
+			static auto AnchorVisTexture = FLexUIEditorUtils::LoadTexture(LGUIBasePath + TEXT("/Resources/Icons/AnchorVisSelector.png"));
 			DrawHitProxy(LeftPoint, EUIItemVisualizerSelectorType::Left, AnchorVisTexture);
 			DrawHitProxy(RightPoint, EUIItemVisualizerSelectorType::Right, AnchorVisTexture);
 			DrawHitProxy(TopPoint, EUIItemVisualizerSelectorType::Top, AnchorVisTexture);
@@ -82,7 +82,7 @@ void FUIItemComponentVisualizer::DrawVisualization(const UActorComponent* Compon
 			DrawHitProxy(RightTopPoint, EUIItemVisualizerSelectorType::RightTop, AnchorVisTexture);
 		}
 
-		static auto PivotVisTexture = LGUIEditorUtils::LoadTexture(LGUIBasePath + TEXT("/Resources/Icons/PivotVisSelector.png"));
+		static auto PivotVisTexture = FLexUIEditorUtils::LoadTexture(LGUIBasePath + TEXT("/Resources/Icons/PivotVisSelector.png"));
 		DrawHitProxy(TargetComp->GetComponentLocation(), EUIItemVisualizerSelectorType::Pivot, PivotVisTexture);
 	}
 }

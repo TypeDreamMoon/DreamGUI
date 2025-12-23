@@ -2366,10 +2366,12 @@ void ULexWidget::MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged,
 		bCacheAnchorTopDirty = true;
 	}
 	MarkDimensionChanged(InPivotChanged, InWidthChanged, InHeightChanged);
-	if (IsValid(LayoutContainer))
+	if (IsValid(LayoutContainer) || IsValid(LayoutSelf))
 	{
+		this->bLayoutDirty = true;
 		for (auto& Child : GetUIChildren())
 		{
+			if (!IsValid(Child))continue;
 			Child->MarkAnchorDataChanged(InPivotChanged, InWidthChanged, InHeightChanged);
 		}
 	}

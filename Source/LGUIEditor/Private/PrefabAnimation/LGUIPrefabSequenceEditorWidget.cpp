@@ -238,7 +238,7 @@ public:
 
 			SequencerInitParams.ViewParams.bReadOnly = !NewSequence->IsEditable();
 			SequencerInitParams.ViewParams.AddMenuExtender = AddMenuExtender;
-			SequencerInitParams.ViewParams.UniqueName = "EmbeddedLGUIPrefabSequenceEditor";
+			SequencerInitParams.ViewParams.UniqueName = "EmbeddedLexUIPrefabSequenceEditor";
 			SequencerInitParams.ViewParams.ScrubberStyle = ESequencerScrubberStyle::FrameBlock;
 			SequencerInitParams.ViewParams.OnReceivedFocus.BindRaw(this, &SLGUIPrefabSequenceEditorWidgetImpl::OnSequencerReceivedFocus);
 			SequencerInitParams.bEditWithinLevelEditor = false;

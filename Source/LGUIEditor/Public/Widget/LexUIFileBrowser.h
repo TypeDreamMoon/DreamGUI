@@ -11,10 +11,10 @@ DECLARE_DELEGATE_OneParam(FOnStringChanged, const FString&);
 /**
  * 
  */
-class SLGUIFileBrowser : public SCompoundWidget
+class SLexUIFileBrowser : public SCompoundWidget
 {
 public:
-	SLATE_BEGIN_ARGS(SLGUIFileBrowser)
+	SLATE_BEGIN_ARGS(SLexUIFileBrowser)
 		
 		//: _LabelBackgroundColor(FLinearColor::Black)
 		//, _LabelBackgroundBrush(FEditorStyle::GetBrush("WhiteBrush"))
@@ -42,15 +42,15 @@ public:
 					.Text(InArgs._FolderPath)
 					.Font(IDetailLayoutBuilder::GetDetailFont())
 					.Padding(FMargin(5,3,25,3))
-					.OnTextCommitted(this, &SLGUIFileBrowser::OnPathTextCommited)
-					.OnTextChanged(this, &SLGUIFileBrowser::OnPathTextChanged)
+					.OnTextCommitted(this, &SLexUIFileBrowser::OnPathTextCommited)
+					.OnTextChanged(this, &SLexUIFileBrowser::OnPathTextChanged)
 				]
 				+SOverlay::Slot()
 				.HAlign(HAlign_Right)
 				[
 					SNew(SButton)
 					.ContentPadding(FMargin(4.0f, 0.0f))
-					.OnClicked(this, &SLGUIFileBrowser::OnBrowseButtonClicked, InArgs._DialogTitle, InArgs._FolderPath, InArgs._DefaultFileName, InArgs._Filter)
+					.OnClicked(this, &SLexUIFileBrowser::OnBrowseButtonClicked, InArgs._DialogTitle, InArgs._FolderPath, InArgs._DefaultFileName, InArgs._Filter)
 					.ToolTipText(LOCTEXT("BrowseForFile", "Browse for a file"))
 					.Text(LOCTEXT("...", "..."))
 				]

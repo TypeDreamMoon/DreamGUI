@@ -1,6 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Window/LGUIDynamicSpriteAtlasViewer.h"
+#include "Window/LexUIDynamicSpriteAtlasViewer.h"
+
+#include "DetailLayoutBuilder.h"
 #include "Widgets/Docking/SDockTab.h"
 #include "Core/Components/LexSpriteBase.h"
 #include "Core/LexUIDynamicSpriteAtlasData.h"
@@ -9,9 +11,9 @@
 
 #define LOCTEXT_NAMESPACE "LGUIDynamicSpriteAtlasViewer"
 
-void SLGUIDynamicSpriteAtlasViewer::Construct(const FArguments& Args, TSharedPtr<SDockTab> InOwnerTab)
+void SLexUIDynamicSpriteAtlasViewer::Construct(const FArguments& Args, TSharedPtr<SDockTab> InOwnerTab)
 {
-	InOwnerTab->SetOnTabClosed(SDockTab::FOnTabClosedCallback::CreateSP(this, &SLGUIDynamicSpriteAtlasViewer::CloseTabCallback));
+	InOwnerTab->SetOnTabClosed(SDockTab::FOnTabClosedCallback::CreateSP(this, &SLexUIDynamicSpriteAtlasViewer::CloseTabCallback));
 	if (ULexUIDynamicSpriteAtlasManager::Instance != nullptr)
 	{
 		FPropertyEditorModule& EditModule = FModuleManager::Get().GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
@@ -52,7 +54,7 @@ void SLGUIDynamicSpriteAtlasViewer::Construct(const FArguments& Args, TSharedPtr
 	}
 }
 
-void SLGUIDynamicSpriteAtlasViewer::CloseTabCallback(TSharedRef<SDockTab> TabClosed)
+void SLexUIDynamicSpriteAtlasViewer::CloseTabCallback(TSharedRef<SDockTab> TabClosed)
 {
 	
 }

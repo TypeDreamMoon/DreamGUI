@@ -1,12 +1,13 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #pragma once
-#include "IDetailCustomization.h"
-#include "LGUIEditorModule.h"
+#include "DetailCategoryBuilder.h"
+#include "DetailLayoutBuilder.h"
+#include "DetailWidgetRow.h"
 #include "IDetailPropertyRow.h"
 
 #define LOCTEXT_NAMESPACE "LGUIEditorUtils"
-class LGUIEDITOR_API LGUIEditorUtils
+class LGUIEDITOR_API FLexUIEditorUtils
 {
 #define ErrorInfoCategory TEXT("Error")
 public:

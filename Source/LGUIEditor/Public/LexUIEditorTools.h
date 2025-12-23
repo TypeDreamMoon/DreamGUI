@@ -30,7 +30,6 @@ public:
 	static void CreateLexWidget(TFunction<AActor*()> GetSelectedActorFunction, FString Name, UClass* VisualClass, TFunction<void(class ULexWidget*)> Callback);
 	static void CreateEmptyActor(TFunction<AActor*()> GetSelectedActorFunction);
 	static void CreateUIControls(TFunction<AActor*()> GetSelectedActorFunction, FString InPrefabPath);
-	static void ReplaceActorByClass(UClass* ActorClass);
 	static void DuplicateActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
 	static void CopyActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
 	static void PasteActors(TFunction<TArray<AActor*>()> GetSelectedActorFunction);
@@ -38,7 +37,6 @@ public:
 	static void CutActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
 	static void ToggleSelectedActorsSpatiallyLoaded(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
 	static ECheckBoxState GetActorsSpatiallyLoadedProperty(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
-	static void DeleteActors_Impl(const TArray<AActor*>& InActors);
 	static bool CanDuplicateActor(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
 	static bool CanCopyActor(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
 	static bool CanPasteActor(TFunction<AActor*()> GetSelectedActorFunction);
@@ -73,7 +71,6 @@ public:
 	static void ToggleLevelPrefabAutoUpdate(TFunction<AActor*()> GetSelectedActorFunction);
 	static bool CanCheckPrefabOverrideParameter(TFunction<AActor*()> GetSelectedActorFunction);
 	static bool CanCreateActor(TFunction<AActor*()> GetSelectedActorFunction);
-	static bool CanReplaceActor(TFunction<AActor*()> GetSelectedActorFunction);
 	static void CleanupPrefabsInWorld(UWorld* World);
 	static bool IsSelectUIActor();
 	static bool IsCanvasActor(AActor* InActor);

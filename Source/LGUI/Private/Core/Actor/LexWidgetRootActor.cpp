@@ -44,19 +44,23 @@ void ALexWidgetRootActor::LoadPrefab()
 	if (IsValid(WidgetPrefab))
 	{
 		LoadedActor = WidgetPrefab->LoadPrefab(this->GetWorld(), this->GetRootComponent());
+#if WITH_EDITOR
 		TArray<AActor*> AllLoadedActors;
 		FLexUIUtils::CollectChildrenActors(LoadedActor.Get(), AllLoadedActors);
+		bool bIsGameWorld = this->GetWorld()->IsGameWorld();
 		for (AActor* Actor : AllLoadedActors)
 		{
-			Actor->SetFlags(RF_Transient);
+			if (!bIsGameWorld)
+				Actor->SetFlags(RF_Transient);//set transient in edt mode because we don't want to save these actors in level, not set in game mode because no need to, and LexUIDuplicateActor need none-transient
 			auto bListedInSceneOutliner_Property = FindFProperty<FBoolProperty>(AActor::StaticClass(), TEXT("bListedInSceneOutliner"));
 			bListedInSceneOutliner_Property->SetPropertyValue_InContainer(Actor, bListInSceneOutliner);
 		}
 		OverallVersionMD5 = WidgetPrefab->GenerateOverallVersionMD5();//store version for auto update
+#endif
 	}
 #if WITH_EDITOR
 	auto World = GetWorld();
-	if (World && World->WorldType != EWorldType::EditorPreview && !World->IsGameWorld())//Edit mode and not BlueprintEditor
+	if (World && World->WorldType != EWorldType::EditorPreview && !World->IsGameWorld())//Edit mode and not BlueprintEditorPreview
 	{
 		ULexUIManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)]()
 		{

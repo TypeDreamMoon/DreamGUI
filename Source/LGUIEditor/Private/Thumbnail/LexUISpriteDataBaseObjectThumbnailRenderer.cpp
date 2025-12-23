@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Thumbnail/LGUISpriteDataBaseObjectThumbnailRenderer.h"
+#include "Thumbnail/LexUISpriteDataBaseObjectThumbnailRenderer.h"
 #include "EngineModule.h"
 #include "RendererInterface.h"
 #include "SceneView.h"
@@ -9,14 +9,14 @@
 #include "CanvasItem.h"
 #include "EditorStyleSet.h"
 #include "CanvasTypes.h"
-#include "LGUIEditorUtils.h"
+#include "LexUIEditorUtils.h"
 #include "Interfaces/IPluginManager.h"
 
-ULGUISpriteDataBaseObjectThumbnailRenderer::ULGUISpriteDataBaseObjectThumbnailRenderer()
+ULexUISpriteDataBaseObjectThumbnailRenderer::ULexUISpriteDataBaseObjectThumbnailRenderer()
 {
 
 }
-void ULGUISpriteDataBaseObjectThumbnailRenderer::Draw(UObject* Object, int32 X, int32 Y, uint32 Width, uint32 Height, FRenderTarget* RenderTarget, FCanvas* Canvas, bool bAdditionalViewFamily)
+void ULexUISpriteDataBaseObjectThumbnailRenderer::Draw(UObject* Object, int32 X, int32 Y, uint32 Width, uint32 Height, FRenderTarget* RenderTarget, FCanvas* Canvas, bool bAdditionalViewFamily)
 {
 	if (auto sprite = Cast<ULexUISpriteData_BaseObject>(Object))
 	{
@@ -24,7 +24,7 @@ void ULGUISpriteDataBaseObjectThumbnailRenderer::Draw(UObject* Object, int32 X, 
 	}
 	
 }
-void ULGUISpriteDataBaseObjectThumbnailRenderer::DrawFrame(class ULexUISpriteData_BaseObject* Sprite, int32 X, int32 Y, uint32 Width, uint32 Height, FRenderTarget*, FCanvas* Canvas, FBoxSphereBounds* OverrideRenderBounds)
+void ULexUISpriteDataBaseObjectThumbnailRenderer::DrawFrame(class ULexUISpriteData_BaseObject* Sprite, int32 X, int32 Y, uint32 Width, uint32 Height, FRenderTarget*, FCanvas* Canvas, FBoxSphereBounds* OverrideRenderBounds)
 {
 	const UTexture2D* SourceTexture = SourceTexture = Sprite->GetAtlasTexture();
 
@@ -76,9 +76,9 @@ void ULGUISpriteDataBaseObjectThumbnailRenderer::DrawFrame(class ULexUISpriteDat
 	}
 	//draw sprite icon
 	static FString LGUIBasePath = IPluginManager::Get().FindPlugin(TEXT("LGUI"))->GetBaseDir();
-	LGUIEditorUtils::DrawThumbnailIcon(LGUIBasePath + TEXT("/Resources/Icons/UISprite_40x.png"), X, Y, Width, Height, Canvas);
+	FLexUIEditorUtils::DrawThumbnailIcon(LGUIBasePath + TEXT("/Resources/Icons/UISprite_40x.png"), X, Y, Width, Height, Canvas);
 }
-void ULGUISpriteDataBaseObjectThumbnailRenderer::DrawGrid(int32 X, int32 Y, uint32 Width, uint32 Height, FCanvas* Canvas)
+void ULexUISpriteDataBaseObjectThumbnailRenderer::DrawGrid(int32 X, int32 Y, uint32 Width, uint32 Height, FCanvas* Canvas)
 {
 	static UTexture2D* GridTexture = Cast<UTexture2D>(FAppStyle::GetBrush("Checkerboard")->GetResourceObject());
 	if (GridTexture == nullptr)
@@ -101,7 +101,7 @@ void ULGUISpriteDataBaseObjectThumbnailRenderer::DrawGrid(int32 X, int32 Y, uint
 		GridTexture->GetResource(),
 		bAlphaBlend);
 }
-void ULGUISpriteDataBaseObjectThumbnailRenderer::BeginDestroy()
+void ULexUISpriteDataBaseObjectThumbnailRenderer::BeginDestroy()
 {
 	Super::BeginDestroy();
 }

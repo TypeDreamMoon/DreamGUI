@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/LexCanvasCustomization.h"
-#include "LGUIEditorUtils.h"
+#include "LexUIEditorUtils.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/LexUIManager.h"
 #include "HAL/PlatformApplicationMisc.h"
@@ -44,7 +44,7 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		return;
 	}
 
-	LGUIEditorUtils::ShowError_MultiComponentNotAllowed(&DetailBuilder, TargetScriptArray[0].Get());
+	FLexUIEditorUtils::ShowError_MultiComponentNotAllowed(&DetailBuilder, TargetScriptArray[0].Get());
 
 	auto RenderModeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderMode));
 	RenderModeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexCanvasCustomization::ForceRefresh, &DetailBuilder));
@@ -71,7 +71,7 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 				{
 					auto errMsg = FText::Format(LOCTEXT("MultipleScreenSpaceLexCanvasError", "[{0}].{1} Detect multiple LexCanvas rendered with ScreenSpaceOverlay mode, this is not allowed! There should be only one ScreenSpace UI in a world!")
 					, FText::FromString(ANSI_TO_TCHAR(__FUNCTION__)), __LINE__);
-					LGUIEditorUtils::ShowError(&DetailBuilder, errMsg);
+					FLexUIEditorUtils::ShowError(&DetailBuilder, errMsg);
 				}
 			}
 		}

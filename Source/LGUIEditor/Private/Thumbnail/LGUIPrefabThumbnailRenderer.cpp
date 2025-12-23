@@ -7,7 +7,7 @@
 #include "Engine/EngineTypes.h"
 #include "CanvasItem.h"
 #include "CanvasTypes.h"
-#include "LGUIEditorUtils.h"
+#include "LexUIEditorUtils.h"
 #include "Interfaces/IPluginManager.h"
 #include "PrefabSystem/LGUIPrefab.h"
 
@@ -42,7 +42,7 @@ void ULGUIPrefabThumbnailRenderer::Draw(UObject* Object, int32 X, int32 Y, uint3
 
 		//draw prefab icon
 		static FString LGUIBasePath = IPluginManager::Get().FindPlugin(TEXT("LGUI"))->GetBaseDir();
-		LGUIEditorUtils::DrawThumbnailIcon(LGUIBasePath + (Prefab->GetIsPrefabVariant() ? TEXT("/Resources/Icons/PrefabVariant_40x.png") : TEXT("/Resources/Icons/Prefab_40x.png"))
+		FLexUIEditorUtils::DrawThumbnailIcon(LGUIBasePath + (Prefab->GetIsPrefabVariant() ? TEXT("/Resources/Icons/PrefabVariant_40x.png") : TEXT("/Resources/Icons/Prefab_40x.png"))
 			, X, Y, Width, Height, Canvas);
 
 		Prefab->bThumbnailDirty = false;

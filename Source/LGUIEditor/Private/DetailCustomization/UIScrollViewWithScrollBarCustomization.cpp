@@ -1,7 +1,7 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/UIScrollViewWithScrollBarCustomization.h"
-#include "LGUIEditorUtils.h"
+#include "LexUIEditorUtils.h"
 #include "Interaction/UIScrollViewWithScrollbarComponent.h"
 
 #include "LGUIEditorModule.h"

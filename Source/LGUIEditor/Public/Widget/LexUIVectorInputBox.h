@@ -21,10 +21,10 @@ class SHorizontalBox;
 /**
  * Vector Slate control
  */
-class SLGUIVectorInputBox : public SCompoundWidget
+class SLexUIVectorInputBox : public SCompoundWidget
 {
 public:
-	SLATE_BEGIN_ARGS(SLGUIVectorInputBox)
+	SLATE_BEGIN_ARGS(SLexUIVectorInputBox)
 		: _Font( FCoreStyle::Get().GetFontStyle("NormalFont") )
 		, _AllowSpin(true)
 		, _SpinDelta(1)

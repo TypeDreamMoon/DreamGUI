@@ -1,16 +1,16 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUIEditorCommands.h"
+#include "LexUIEditorCommands.h"
 #include "LGUIEditorModule.h"
 #include "LGUIEditorStyle.h"
 
 #define LOCTEXT_NAMESPACE "FLGUIEditorCommands"
 
-FLGUIEditorCommands::FLGUIEditorCommands()
-	: TCommands<FLGUIEditorCommands>(TEXT("LGUIEditor"), NSLOCTEXT("Contexts", "LGUIEditor", "LGUIEditor Plugin"), NAME_None, FLGUIEditorStyle::GetStyleSetName())
+FLexUIEditorCommands::FLexUIEditorCommands()
+	: TCommands<FLexUIEditorCommands>(TEXT("LGUIEditor"), NSLOCTEXT("Contexts", "LGUIEditor", "LGUIEditor Plugin"), NAME_None, FLGUIEditorStyle::GetStyleSetName())
 {
 }
-void FLGUIEditorCommands::RegisterCommands()
+void FLexUIEditorCommands::RegisterCommands()
 {
 	UI_COMMAND(CopyActor, "Copy Actors", "Copy selected actors with hierarchy", EUserInterfaceActionType::Button, FInputChord(EKeys::C, EModifierKey::Shift | EModifierKey::Alt));
 	UI_COMMAND(PasteActor, "Paste Actors", "Paste actors with hierarchy", EUserInterfaceActionType::Button, FInputChord(EKeys::V, EModifierKey::Shift | EModifierKey::Alt));

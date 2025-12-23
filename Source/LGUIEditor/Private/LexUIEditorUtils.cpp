@@ -1,9 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUIEditorUtils.h"
+#include "LexUIEditorUtils.h"
 #include "CanvasItem.h"
 #include "CanvasTypes.h"
-#include "ImageUtils.h"
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
 #include "Misc/Paths.h"
@@ -11,8 +10,8 @@
 
 #define LOCTEXT_NAMESPACE "LGUIEditorUtils"
 
-TMap<FString, UTexture2D*> LGUIEditorUtils::TexturePathToTextureMap;
-UTexture2D* LGUIEditorUtils::LoadTexture(const FString& TextureFullPath)
+TMap<FString, UTexture2D*> FLexUIEditorUtils::TexturePathToTextureMap;
+UTexture2D* FLexUIEditorUtils::LoadTexture(const FString& TextureFullPath)
 {
 	auto LoadSpriteIconTextureFromFile = [TextureFullPath]()
 	{
@@ -61,7 +60,7 @@ UTexture2D* LGUIEditorUtils::LoadTexture(const FString& TextureFullPath)
 	}
 	return TexturePathToTextureMap[TextureFullPath];
 }
-void LGUIEditorUtils::DrawThumbnailIcon(const FString& TextureFullPath, int32 X, int32 Y, uint32 Width, uint32 Height, FCanvas* Canvas)
+void FLexUIEditorUtils::DrawThumbnailIcon(const FString& TextureFullPath, int32 X, int32 Y, uint32 Width, uint32 Height, FCanvas* Canvas)
 {
 	auto SpriteIconTexture = LoadTexture(TextureFullPath);
 	if (SpriteIconTexture != nullptr && SpriteIconTexture->GetResource() != nullptr)

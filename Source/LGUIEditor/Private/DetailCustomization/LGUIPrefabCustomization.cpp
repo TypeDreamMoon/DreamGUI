@@ -8,6 +8,7 @@
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
+#include "DetailWidgetRow.h"
 #include "LexUIEditorTools.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabCustomization"

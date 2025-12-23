@@ -5,7 +5,7 @@
 #include "LevelEditor.h"
 #include "LGUIEditorModule.h"
 #include "LexUIEditorTools.h"
-#include "LGUIEditorCommands.h"
+#include "LexUIEditorCommands.h"
 
 #define LOCTEXT_NAMESPACE "LexUILevelEditorExtensions"
 
@@ -31,12 +31,12 @@ public:
 				{
 					MenuBuilder.PushCommandList(FLGUIEditorModule::Get().PluginCommands.ToSharedRef());
 					{
-						MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().CopyActor);
-						MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().PasteActor);
-						MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().CutActor);
-						MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().DuplicateActor);
-						MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().DestroyActor);
-						MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().ToggleSpatiallyLoaded);
+						MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().CopyActor);
+						MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().PasteActor);
+						MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().CutActor);
+						MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().DuplicateActor);
+						MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().DestroyActor);
+						MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().ToggleSpatiallyLoaded);
 					}
 					MenuBuilder.PopCommandList();
 				}

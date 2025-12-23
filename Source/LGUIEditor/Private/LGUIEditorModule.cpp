@@ -12,20 +12,21 @@
 #include "SceneOutlinerModule.h"
 #include "SceneOutlinerPublicTypes.h"
 #include "AssetToolsModule.h"
+#include "DetailLayoutBuilder.h"
 #include "SceneView.h"
 #include "Kismet2/KismetEditorUtilities.h"
 
 #include "Engine/CollisionProfile.h"
 
 #include "LGUIEditorStyle.h"
-#include "LGUIEditorCommands.h"
+#include "LexUIEditorCommands.h"
 #include "LexUIEditorTools.h"
 
 #include "Thumbnail/LGUIPrefabThumbnailRenderer.h"
-#include "Thumbnail/LGUISpriteThumbnailRenderer.h"
-#include "Thumbnail/LGUISpriteDataBaseObjectThumbnailRenderer.h"
+#include "Thumbnail/LexUISpriteThumbnailRenderer.h"
+#include "Thumbnail/LexUISpriteDataBaseObjectThumbnailRenderer.h"
 #include "ContentBrowserExtensions/LexUIContentBrowserExtensions.h"
-#include "Window/LGUIDynamicSpriteAtlasViewer.h"
+#include "Window/LexUIDynamicSpriteAtlasViewer.h"
 
 #include "AssetTypeActions/AssetTypeActions_LexUISpriteData.h"
 #include "AssetTypeActions/AssetTypeActions_LexUIStaticSpriteAtlasData.h"
@@ -86,7 +87,6 @@
 #include "DetailCustomization/LexLayoutContainerFlexBoxCustomization.h"
 #include "DetailCustomization/LexUIEventDelegatePresetParamCustomization.h"
 #include "DetailCustomization/LexUIFontEmojiDataCustomization.h"
-#include "Framework/Commands/GenericCommands.h"
 #include "LevelEditorMenuExtensions/LexUILevelEditorExtensions.h"
 
 const FName FLGUIEditorModule::LGUIDynamicSpriteAtlasViewerName(TEXT("LGUIDynamicSpriteAtlasViewerName"));
@@ -108,7 +108,7 @@ void FLGUIEditorModule::StartupModule()
 	SequenceEditorHandle = SequencerModule.RegisterSequenceEditor(ULGUIPrefabSequence::StaticClass(), MakeUnique<FMovieSceneSequenceEditor_LGUIPrefabSequence>());
 	LGUIMaterialTrackEditorCreateTrackEditorHandle = SequencerModule.RegisterTrackEditor(FOnCreateTrackEditor::CreateStatic(&FLGUIMaterialTrackEditor::CreateTrackEditor));
 
-	FLGUIEditorCommands::Register();
+	FLexUIEditorCommands::Register();
 	
 	PluginCommands = MakeShareable(new FUICommandList);
 		
@@ -116,7 +116,7 @@ void FLGUIEditorModule::StartupModule()
 
 	//Editor tools
 	{
-		auto EditorCommands = FLGUIEditorCommands::Get();
+		auto EditorCommands = FLexUIEditorCommands::Get();
 
 		TFunction<AActor*()> GetSelectedActor = []()
 		{
@@ -223,7 +223,7 @@ void FLGUIEditorModule::StartupModule()
 			.SetDisplayName(LOCTEXT("LexUIDynamicSpriteAtlasTextureViewerName", "LexUI Dynamic-Sprite-Atlas Texture Viewer"))
 			.SetMenuType(ETabSpawnerMenuType::Hidden);
 		FGlobalTabmanager::Get()->RegisterNomadTabSpawner(LGUIPrefabSequenceTabName, FOnSpawnTab::CreateRaw(this, &FLGUIEditorModule::HandleSpawnLGUIPrefabSequenceTab))
-			.SetDisplayName(LOCTEXT("LexUIPrefabSequenceTabName", "LGUI Prefab Sequence"))
+			.SetDisplayName(LOCTEXT("LexUIPrefabSequenceTabName", "LexUI Prefab Sequence"))
 			.SetMenuType(ETabSpawnerMenuType::Hidden);
 	}
 	//register custom editor
@@ -337,8 +337,8 @@ void FLGUIEditorModule::StartupModule()
 	//register Thumbnail
 	{
 		UThumbnailManager::Get().RegisterCustomRenderer(ULGUIPrefab::StaticClass(), ULGUIPrefabThumbnailRenderer::StaticClass());
-		UThumbnailManager::Get().RegisterCustomRenderer(ULexUISpriteData::StaticClass(), ULGUISpriteThumbnailRenderer::StaticClass());
-		UThumbnailManager::Get().RegisterCustomRenderer(ULexUISpriteData_BaseObject::StaticClass(), ULGUISpriteDataBaseObjectThumbnailRenderer::StaticClass());
+		UThumbnailManager::Get().RegisterCustomRenderer(ULexUISpriteData::StaticClass(), ULexUISpriteThumbnailRenderer::StaticClass());
+		UThumbnailManager::Get().RegisterCustomRenderer(ULexUISpriteData_BaseObject::StaticClass(), ULexUISpriteDataBaseObjectThumbnailRenderer::StaticClass());
 	}
 	//register right mouse button in content browser
 	{
@@ -352,23 +352,23 @@ void FLGUIEditorModule::StartupModule()
 	{
 		if (ISettingsModule* SettingsModule = FModuleManager::GetModulePtr<ISettingsModule>("Settings"))
 		{
-			SettingsModule->RegisterSettings("Project", "Plugins", "LGUI",
-				LOCTEXT("LGUISettingsName", "LGUI"),
-				LOCTEXT("LGUISettingsDescription", "LGUI Settings"),
+			SettingsModule->RegisterSettings("Project", "Plugins", "LexUI",
+				LOCTEXT("LexUISettingsName", "LexUI"),
+				LOCTEXT("LexUISettingsDescription", "LexUI Settings"),
 				GetMutableDefault<ULexUISettings>());
-			SettingsModule->RegisterSettings("Project", "Plugins", "LGUI Editor",
-				LOCTEXT("LGUIEditorSettingsName", "LGUI Editor"),
-				LOCTEXT("LGUIEditorSettingsDescription", "LGUI Editor Settings"),
+			SettingsModule->RegisterSettings("Project", "Plugins", "LexUI Editor",
+				LOCTEXT("LexUIEditorSettingsName", "LexUI Editor"),
+				LOCTEXT("LexUIEditorSettingsDescription", "LexUI Editor Settings"),
 				GetMutableDefault<ULexUIEditorSettings>());
-			SettingsModule->RegisterSettings("Project", "Plugins", "LGUIPrefab",
-				LOCTEXT("LGUIPrefabSettingsName", "LGUIPrefab"),
-				LOCTEXT("LGUIPrefabSettingsDescription", "LGUIPrefab Settings"),
+			SettingsModule->RegisterSettings("Project", "Plugins", "LexUIPrefab",
+				LOCTEXT("LexUIPrefabSettingsName", "LexUIPrefab"),
+				LOCTEXT("LexUIPrefabSettingsDescription", "LexUIPrefab Settings"),
 				GetMutableDefault<ULGUIPrefabSettings>());
 
-			LGUIPrefabSequencerSettings = USequencerSettingsContainer::GetOrCreate<ULGUIPrefabSequencerSettings>(TEXT("EmbeddedLGUIPrefabSequenceEditor"));
-			SettingsModule->RegisterSettings("Editor", "ContentEditors", "EmbeddedLGUIPrefabSequenceEditor",
-				LOCTEXT("LGUIPrefabSequencerSettingsName", "LGUI Prefab Sequence Editor"),
-				LOCTEXT("LGUIPrefabSequencerSettingsDescription", "Configure the look and feel of the LGUI Prefab Sequence Editor."),
+			LGUIPrefabSequencerSettings = USequencerSettingsContainer::GetOrCreate<ULGUIPrefabSequencerSettings>(TEXT("EmbeddedLexUIPrefabSequenceEditor"));
+			SettingsModule->RegisterSettings("Editor", "ContentEditors", "EmbeddedLexUIPrefabSequenceEditor",
+				LOCTEXT("LexUIPrefabSequencerSettingsName", "LexUI Prefab Sequence Editor"),
+				LOCTEXT("LexUIPrefabSequencerSettingsDescription", "Configure the look and feel of the LexUI Prefab Sequence Editor."),
 				LGUIPrefabSequencerSettings);
 		}
 	}
@@ -432,7 +432,7 @@ void FLGUIEditorModule::ShutdownModule()
 	// we call this function before unloading the module.
 	FLGUIEditorStyle::Shutdown();
 
-	FLGUIEditorCommands::Unregister();
+	FLexUIEditorCommands::Unregister();
 
 	ULGUIPrefabSequence::OnInitializeSequence().Remove(OnInitializeSequenceHandle);
 	ISequencerModule* SequencerModule = FModuleManager::Get().GetModulePtr<ISequencerModule>("Sequencer");
@@ -550,10 +550,10 @@ void FLGUIEditorModule::ShutdownModule()
 	{
 		if (ISettingsModule* SettingsModule = FModuleManager::GetModulePtr<ISettingsModule>("Settings"))
 		{
-			SettingsModule->UnregisterSettings("Project", "Plugins", "LGUI");
-			SettingsModule->UnregisterSettings("Project", "Plugins", "LGUI Editor");
-			SettingsModule->UnregisterSettings("Project", "Plugins", "LGUI Prefab");
-			SettingsModule->UnregisterSettings("Project", "Plugins", "LGUIPrefabSequencerSettings");
+			SettingsModule->UnregisterSettings("Project", "Plugins", "LexUI");
+			SettingsModule->UnregisterSettings("Project", "Plugins", "LexUI Editor");
+			SettingsModule->UnregisterSettings("Project", "Plugins", "LexUI Prefab");
+			SettingsModule->UnregisterSettings("Project", "Plugins", "LexUIPrefabSequencerSettings");
 		}
 	}
 
@@ -579,7 +579,7 @@ FLGUIEditorModule& FLGUIEditorModule::Get()
 TSharedRef<SDockTab> FLGUIEditorModule::HandleSpawnDynamicSpriteAtlasViewerTab(const FSpawnTabArgs& SpawnTabArgs)
 {
 	auto ResultTab = SNew(SDockTab).TabRole(ETabRole::NomadTab);
-	auto TabContentWidget = SNew(SLGUIDynamicSpriteAtlasViewer, ResultTab);
+	auto TabContentWidget = SNew(SLexUIDynamicSpriteAtlasViewer, ResultTab);
 	ResultTab->SetContent(TabContentWidget);
 	return ResultTab;
 }
@@ -594,7 +594,7 @@ TSharedRef<SDockTab> FLGUIEditorModule::HandleSpawnLGUIPrefabSequenceTab(const F
 
 void FLGUIEditorModule::AddEditorToolsToToolbarExtension(FToolBarBuilder& Builder)
 {
-	Builder.BeginSection("LGUI");
+	Builder.BeginSection("LexUI");
 	{
 		Builder.AddComboButton(
 			FUIAction(),
@@ -609,20 +609,20 @@ void FLGUIEditorModule::AddEditorToolsToToolbarExtension(FToolBarBuilder& Builde
 					{
 						MenuBuilder.PushCommandList(PluginCommands.ToSharedRef());
 						{
-							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().CopyActor);
-							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().PasteActor);
-							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().CutActor);
-							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().DuplicateActor);
-							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().DestroyActor);
-							MenuBuilder.AddMenuEntry(FLGUIEditorCommands::Get().ToggleSpatiallyLoaded);
+							MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().CopyActor);
+							MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().PasteActor);
+							MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().CutActor);
+							MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().DuplicateActor);
+							MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().DestroyActor);
+							MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().ToggleSpatiallyLoaded);
 						}
 						MenuBuilder.PopCommandList();
 					}
 					MenuBuilder.EndSection();
 				});
 			}),
-			LOCTEXT("LGUITools", "LGUI Tools"),
-			LOCTEXT("LGUIEditorTools", "LGUI Editor Tools"),
+			LOCTEXT("LexUITools", "LexUI Tools"),
+			LOCTEXT("LexUIEditorTools", "LexUI Editor Tools"),
 			FSlateIcon(FLGUIEditorStyle::GetStyleSetName(), "LGUIEditor.EditorTools")
 		);
 	}
@@ -632,7 +632,7 @@ void FLGUIEditorModule::AddEditorToolsToToolbarExtension(FToolBarBuilder& Builde
 TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(bool InitialSetup, bool ComponentAction, bool EditorCameraControl, bool Others, TFunction<AActor*()> GetSelectedActorFunction, TFunction<void(FMenuBuilder&)> ExtendEditMenuFunction)
 {
 	FMenuBuilder MenuBuilder(true, PluginCommands);
-	auto EditorCommands = FLGUIEditorCommands::Get();
+	auto EditorCommands = FLexUIEditorCommands::Get();
 
 	//prefab
 	{
@@ -744,7 +744,7 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(bool InitialSetup, bo
 		MenuBuilder.EndSection();
 	}
 
-	MenuBuilder.BeginSection("LGUI Actor", LOCTEXT("LGUI Actor", "LGUI Actor Operations"));
+	MenuBuilder.BeginSection("LexUI Actor", LOCTEXT("LexUI Actor", "LexUI Actor Operations"));
 	{
 		MenuBuilder.AddSubMenu(
 			LOCTEXT("CreateUIElementSubMenu", "Create UI Element"),
@@ -785,17 +785,6 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(bool InitialSetup, bo
 				FNewMenuDelegate::CreateRaw(this, &FLGUIEditorModule::BasicSetupSubMenu)
 			);
 		}
-		MenuBuilder.AddSubMenu(
-			LOCTEXT("ReplaceActorMenu", "Replace this by..."),
-			LOCTEXT("ReplaceActorMenu_Tooltip", "Replace this actor with..."),
-			FNewMenuDelegate::CreateRaw(this, &FLGUIEditorModule::ReplaceActorSubMenu, GetSelectedActorFunction),
-			FUIAction(FExecuteAction()
-				, FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanReplaceActor, GetSelectedActorFunction)
-				, FGetActionCheckState()
-				, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanReplaceActor, GetSelectedActorFunction)),
-			NAME_None,
-			EUserInterfaceActionType::None
-		);
 	}
 	MenuBuilder.EndSection();
 
@@ -933,132 +922,6 @@ bool FLGUIEditorModule::IsValidClassName(const FString& InName)
 		&& !InName.Contains(TEXT("TRASH_"))
 		&& !InName.Contains(TEXT("_DEPRECATED"))
 		;
-}
-
-#include "IPlacementModeModule.h"
-#include "AssetSelection.h"
-#include "LevelEditorViewport.h"
-void FLGUIEditorModule::CreateCommonActorSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction)
-{
-	struct LOCAL
-	{
-		struct TempGWorldCurrentLevel
-		{
-			ULevel* OriginLevel = nullptr;
-			TempGWorldCurrentLevel(ULevel* NewLevel)
-			{
-				OriginLevel = GWorld->GetCurrentLevel();
-				GWorld->SetCurrentLevel(NewLevel);
-			}
-			~TempGWorldCurrentLevel()
-			{
-				GWorld->SetCurrentLevel(OriginLevel);
-			}
-		};
-		//reference from GEditor->UseActorFactory
-		static AActor* UseActorFactory(UActorFactory* Factory, const FAssetData& AssetData)
-		{
-			AActor* NewActor = nullptr;
-
-			if (auto SelectedActor = FLexUIEditorTools::GetFirstSelectedActor())
-			{
-				FLexUIEditorTools::MakeCurrentLevel(SelectedActor);
-				if (ULevel* DesiredLevel = SelectedActor->GetLevel())
-				{
-					TempGWorldCurrentLevel Temp(DesiredLevel);//temporary change level, because when create actor form asset, the function (PrivateAddActor) use level by GWorld->GetCurrentLevel
-					if (UObject* LoadedAsset = AssetData.GetAsset())
-					{
-						auto Actors = FLevelEditorViewportClient::TryPlacingActorFromObject(DesiredLevel, LoadedAsset, true, RF_Transactional, Factory);
-						if (Actors.Num() && (Actors[0] != nullptr))
-						{
-							NewActor = Actors[0];
-							NewActor->SetActorRelativeTransform(FTransform::Identity);
-
-							auto SelectedRootComp = SelectedActor->GetRootComponent();
-							auto NewRootComp = NewActor->GetRootComponent();
-							if (SelectedRootComp && NewRootComp)
-							{
-								NewRootComp->SetMobility(SelectedRootComp->Mobility);
-								NewActor->AttachToActor(SelectedActor, FAttachmentTransformRules::KeepRelativeTransform);
-							}
-						}
-					}
-				}
-			}
-
-			return NewActor;
-		}
-		//reference from SPlacementAssetMenuEntry::OnMouseButtonUp
-		static void CreateActor(TSharedPtr<FPlaceableItem> Item)
-		{
-			UActorFactory* Factory = Item->Factory;
-			if (!Item->Factory)
-			{
-				// If no actor factory was found or failed, add the actor from the uclass
-				UClass* AssetClass = Item->AssetData.GetClass();
-				if (AssetClass)
-				{
-					UObject* ClassObject = AssetClass->GetDefaultObject();
-					FActorFactoryAssetProxy::GetFactoryForAssetObject(ClassObject);
-				}
-			}
-			//reference from FLevelEditorActionCallbacks::AddActor
-			auto NewActor = UseActorFactory(Factory, Item->AssetData);
-			if (NewActor != NULL && IPlacementModeModule::IsAvailable())
-			{
-				IPlacementModeModule::Get().AddToRecentlyPlaced(Item->AssetData.GetAsset(), Factory);
-			}
-		}
-		static void CreateCommonActorMenuEntry(FMenuBuilder& InBuilder, TSharedPtr<FPlaceableItem> Item)
-		{
-			InBuilder.AddMenuEntry(
-				Item->DisplayName,
-				FText(),
-				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&LOCAL::CreateActor, Item))
-			);
-		}
-		static void MakeMenu(FMenuBuilder& MenuBuilder, const TArray<FPlacementCategoryInfo>& Categories, TFunction<AActor*()> GetSelectedActorFunction, IPlacementModeModule& PlacementMode)
-		{
-			for (auto GroupDataItem : Categories)
-			{
-				if (GroupDataItem.UniqueHandle == FBuiltInPlacementCategories::RecentlyPlaced())
-					GroupDataItem.DisplayName = LOCTEXT("RecentlyPlaced", "Recently Created");
-
-				PlacementMode.RegenerateItemsForCategory(GroupDataItem.UniqueHandle);
-				TArray<TSharedPtr<FPlaceableItem>> Items;
-				PlacementMode.GetItemsForCategory(GroupDataItem.UniqueHandle, Items);
-				if (Items.Num() <= 0)
-					continue;
-
-				MenuBuilder.AddSubMenu(
-					GroupDataItem.DisplayName,
-					FText(),
-					FNewMenuDelegate::CreateLambda([Items, UniqueHandle = GroupDataItem.UniqueHandle](FMenuBuilder& MenuBuilder) {
-						MenuBuilder.BeginSection(UniqueHandle);
-						{
-							MenuBuilder.AddSearchWidget();
-							for (auto& Item : Items)
-							{
-								CreateCommonActorMenuEntry(MenuBuilder, Item);
-							}
-						}
-						MenuBuilder.EndSection();
-						}),
-					FUIAction(FExecuteAction()
-						, FCanExecuteAction()
-						, FGetActionCheckState()
-						, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCreateActor, GetSelectedActorFunction)),
-					NAME_None, EUserInterfaceActionType::None
-				);
-			}
-		}
-	};
-
-	auto& PlacementMode = IPlacementModeModule::Get();
-	TArray<FPlacementCategoryInfo> Categories;
-	PlacementMode.GetSortedCategories(Categories);
-	LOCAL::MakeMenu(MenuBuilder, Categories, GetSelectedActorFunction, PlacementMode);
 }
 
 void FLGUIEditorModule::CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction)
@@ -1246,117 +1109,6 @@ void FLGUIEditorModule::BasicSetupSubMenu(FMenuBuilder& MenuBuilder)
 			FSlateIcon(),
 			FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateWorldSpaceUILexUIRenderer_BasicSetup))
 		);
-	}
-	MenuBuilder.EndSection();
-}
-
-void FLGUIEditorModule::ReplaceActorSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction)
-{
-	struct FPlaceableItem
-	{
-		UClass* Class;
-		FText DisplayName;
-		FPlaceableItem(UClass* InClass)
-		{
-			Class = InClass;
-			DisplayName = InClass->GetDisplayNameText();
-		}
-	};
-
-	struct FunctionContainer
-	{
-		static void ReplaceUIElement(FMenuBuilder& InBuilder, UClass* InClass)
-		{
-			auto ClassName = InClass->GetDisplayNameText().ToString();
-			ClassName.RemoveFromEnd("Actor");
-			InBuilder.AddMenuEntry(
-				FText::FromString(ClassName),
-				FText::Format(LOCTEXT("ReplaceUIElement", "ReplaceWith {0}"), FText::FromString(ClassName)),
-				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::ReplaceActorByClass, InClass))
-			);
-		}
-		static void CreateCommonActorMenuEntry(FMenuBuilder& InBuilder, const FPlaceableItem& Item)
-		{
-			InBuilder.AddMenuEntry(
-				Item.DisplayName,
-				FText::Format(LOCTEXT("ReplaceCommonActor", "ReplaceWith {0}"), Item.DisplayName),
-				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::ReplaceActorByClass, Item.Class))
-			);
-		}
-	};
-
-	MenuBuilder.BeginSection("Replace");
-	{
-		FunctionContainer::ReplaceUIElement(MenuBuilder, ALexWidgetActor::StaticClass());
-
-		for (TObjectIterator<UClass> ClassItr; ClassItr; ++ClassItr)
-		{
-			if (ClassItr->IsChildOf(ALexWidgetActor::StaticClass()))
-			{
-				if (*ClassItr != ALexWidgetActor::StaticClass()
-					&& !(ClassItr->HasAnyClassFlags(CLASS_Transient))
-					&& !(ClassItr->HasAnyClassFlags(CLASS_Abstract))
-					&& !(ClassItr->HasAnyClassFlags(CLASS_Deprecated))
-					&& !(ClassItr->HasAnyClassFlags(CLASS_NotPlaceable))
-					)
-				{
-					bool isBlueprint = ClassItr->HasAnyClassFlags(CLASS_CompiledFromBlueprint);
-					if (isBlueprint)
-					{
-						if (!IsValidClassName(ClassItr->GetName()))
-						{
-							continue;
-						}
-					}
-					FunctionContainer::ReplaceUIElement(MenuBuilder, *ClassItr);
-				}
-			}
-		}
-
-		
-		TArray<FPlaceableItem> AllValidActorArray;
-		for (TObjectIterator<UClass> ClassIt; ClassIt; ++ClassIt)
-		{
-			// Don't offer skeleton classes
-			bool bIsSkeletonClass = FKismetEditorUtilities::IsClassABlueprintSkeleton(*ClassIt);
-
-			if (!ClassIt->HasAllClassFlags(CLASS_NotPlaceable) &&
-				!ClassIt->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists) &&
-				ClassIt->IsChildOf(AActor::StaticClass()) &&
-				(!ClassIt->IsChildOf(ABrush::StaticClass()) || ClassIt->IsChildOf(AVolume::StaticClass())) &&
-				!bIsSkeletonClass)
-			{
-				if (!IsValidClassName(ClassIt->GetName()))
-				{
-					continue;
-				}
-				AllValidActorArray.Add(FPlaceableItem(*ClassIt));
-			}
-		}
-		Algo::Sort(AllValidActorArray, [](const FPlaceableItem A, const FPlaceableItem B) {
-			return A.DisplayName.CompareTo(B.DisplayName) < 0;
-			});
-
-		const FString AllActorGroupName = TEXT("All Classes");
-		MenuBuilder.AddSubMenu(
-			FText::FromString(AllActorGroupName),
-			FText(),
-			FNewMenuDelegate::CreateLambda([=](FMenuBuilder& ItemMenuBuilder) {
-				ItemMenuBuilder.BeginSection(FName(*AllActorGroupName));
-				{
-					ItemMenuBuilder.AddSearchWidget();
-					for (auto& PlaceableItem : AllValidActorArray)
-					{
-						FunctionContainer::CreateCommonActorMenuEntry(ItemMenuBuilder, PlaceableItem);
-					}
-				}
-				ItemMenuBuilder.EndSection();
-				}),
-			FUIAction(),
-					NAME_None, EUserInterfaceActionType::None
-					);
 	}
 	MenuBuilder.EndSection();
 }

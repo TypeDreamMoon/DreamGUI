@@ -4,11 +4,11 @@
 
 #include "Framework/Commands/Commands.h"
 
-class FLGUIEditorCommands : public TCommands<FLGUIEditorCommands>
+class FLexUIEditorCommands : public TCommands<FLexUIEditorCommands>
 {
 public:
 
-	FLGUIEditorCommands();
+	FLexUIEditorCommands();
 	// TCommands<> interface
 	virtual void RegisterCommands() override;
 

@@ -4,9 +4,6 @@
 
 #include "Modules/ModuleInterface.h"
 #include "PropertyEditorModule.h"
-#include "DetailLayoutBuilder.h"
-#include "DetailCategoryBuilder.h"
-#include "DetailWidgetRow.h"
 #include "IDetailsView.h"
 #include "PropertyHandle.h"
 
@@ -40,10 +37,8 @@ private:
 	void CreateUIElementSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction);
 	void CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction);
 	void CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction);
-	void CreateCommonActorSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction);
 	void CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction);
 	void BasicSetupSubMenu(FMenuBuilder& MenuBuilder);
-	void ReplaceActorSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction);
 
 	void AddEditorToolsToToolbarExtension(FToolBarBuilder& Builder);
 
