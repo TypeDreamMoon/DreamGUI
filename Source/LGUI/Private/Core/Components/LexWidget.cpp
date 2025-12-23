@@ -1978,18 +1978,6 @@ void ULexWidget::UpdateVisual() const
 	}
 }
 
-void ULexWidget::ForceUpdateLayout() const
-{
-	if (IsValid(LayoutContainer))
-	{
-		LayoutContainer->UpdateLayout();
-	}
-	if (IsValid(LayoutSelf))
-	{
-		LayoutSelf->UpdateLayout();
-	}
-}
-
 void ULexWidget::SetRenderCanvas(ULexCanvas* InNewCanvas)
 {
 	auto OldRenderCanvas = RenderCanvas;

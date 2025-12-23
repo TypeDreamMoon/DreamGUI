@@ -187,7 +187,6 @@ public:
 	/** Called by LexCanvas */
 	void UpdateVisual()const;
 	
-	void ForceUpdateLayout()const;
 protected:
 	void RenewRenderCanvasRecursive(ULexCanvas* InParentRenderCanvas);
 

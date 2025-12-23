@@ -357,8 +357,8 @@ void UUIDropdownComponent::CreateListItems()
 		CreatedItemArray.Add(script);
 	}
 	ItemTemplateWidget->SetWidgetActive(false);
-	
-	ScrollViewContentWidget->ForceUpdateLayout();
+
+	ULexWidget::ForceRebuildLayoutImmediately(ScrollViewContentWidget);
 	float HeightOffset = 0;
 	if (auto ViewportWidget = ScrollViewContentWidget->GetUIParent())
 	{
