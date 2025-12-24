@@ -9,13 +9,15 @@
 #include "DragAndDrop/DecoratedDragDropOp.h"
 #include "Styling/CoreStyle.h"
 #include "LGUIPrefabEditor.h"
-#include "LGUIHeaders.h"
 #include "ScopedTransaction.h"
 #include "EditorFontGlyphs.h"
 #include "Editor.h"
 #include "LGUIEditorModule.h"
 #include "LGUIEditorStyle.h"
+#include "Core/Components/LexCanvas.h"
+#include "Core/Components/LexVisual.h"
 #include "DragAndDrop/AssetDragDropOp.h"
+#include "PrefabSystem/LexUIPrefabHelperObject.h"
 
 #define LOCTEXT_NAMESPACE "LexWidgetEditorHierarchyViewItem"
 

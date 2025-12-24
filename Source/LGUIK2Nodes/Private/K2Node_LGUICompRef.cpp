@@ -1,19 +1,16 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 #include "K2Node_LGUICompRef.h"
-#include "LGUIHeaders.h"
 #include "EdGraphSchema_K2.h"
 #include "KismetCompiler.h"
-#include "KismetCompilerMisc.h"
-#include "KismetCompiledFunctionContext.h"
-#include "EdGraphUtilities.h"
 #include "Textures/SlateIcon.h"
 #include "BlueprintNodeSignature.h"
 #include "Engine/Blueprint.h"
-#include "SPinTypeSelector.h"
 #include "BlueprintActionDatabaseRegistrar.h"
 #include "BlueprintNodeSpawner.h"
 #include "K2Node_Variable.h"
 #include "K2Node_CallFunction.h"
+#include "LexUIBPLibrary.h"
+#include "LexUIComponentReference.h"
 
 #define LOCTEXT_NAMESPACE "UK2Node_LGUICompRef_GetComponent"
 

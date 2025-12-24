@@ -4,14 +4,11 @@
 #include "Misc/FileHelper.h"
 #include "Core/LexUIFontData_FreeTypeRender.h"
 #include "Widget/LexUIFileBrowser.h"
-#include "Widgets/Input/STextComboBox.h"
 
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailWidgetRow.h"
-#include "LexUIEditorTools.h"
-#include "LGUIHeaders.h"
 
 #define LOCTEXT_NAMESPACE "LGUIFreeTypeRenderFontDataCustomization"
 

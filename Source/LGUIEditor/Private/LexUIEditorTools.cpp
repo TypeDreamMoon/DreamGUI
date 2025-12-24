@@ -18,16 +18,13 @@
 #include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "LGUIEditorModule.h"
 #include "PrefabEditor/LGUIPrefabEditor.h"
-#include "LGUIHeaders.h"
-
-#include "Settings/LevelEditorMiscSettings.h"
-#include "Layers/LayersSubsystem.h"
-#include "ActorEditorUtils.h"
 #include "Core/Components/LexLayout.h"
 #include "Core/Actor/LexWidgetRootActor.h"
-#include "Kismet2/BlueprintEditorUtils.h"
-#include "Serialization/ArchiveReplaceObjectRef.h"
+#include "Event/LexEventSystem.h"
+#include "Event/LexWorldSpaceRaycasterBase.h"
 #include "Logging/MessageLog.h"
+#include "PrefabSystem/LGUIPrefabLevelManagerActor.h"
+#include "Utils/LexUIUtils.h"
 
 #define LOCTEXT_NAMESPACE "LGUIEditorTools"
 

@@ -2,11 +2,11 @@
 
 #include "DetailCustomization/LexSpriteBaseCustomization.h"
 #include "LexUIEditorUtils.h"
-#include "LGUIHeaders.h"
-
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
+#include "Core/LexUISpriteData_BaseObject.h"
+#include "Core/Components/LexSpriteBase.h"
 
 #define LOCTEXT_NAMESPACE "LexUISpriteBaseCustomization"
 FLexSpriteBaseCustomization::FLexSpriteBaseCustomization()

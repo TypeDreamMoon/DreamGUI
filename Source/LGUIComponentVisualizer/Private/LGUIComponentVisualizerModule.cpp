@@ -2,8 +2,6 @@
 
 #include "LGUIComponentVisualizerModule.h"
 
-#include "LGUIHeaders.h"
-#include "ComponentVisualizer/UIItemComponentVisualizer.h"
 #include "UnrealEdGlobals.h"
 #include "Editor/UnrealEdEngine.h"
 

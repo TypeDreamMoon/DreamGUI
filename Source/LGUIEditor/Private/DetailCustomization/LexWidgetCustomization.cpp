@@ -11,12 +11,15 @@
 #include "HAL/PlatformApplicationMisc.h"
 #include "LexUIEditorUtils.h"
 #include "LexUIEditorTools.h"
-#include "LGUIHeaders.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "UnrealEdGlobals.h"
+#include "Core/LexUIManager.h"
+#include "Core/Components/LexCanvas.h"
 #include "Editor/UnrealEdEngine.h"
+#include "PrefabSystem/LexUIPrefabHelperObject.h"
+#include "Utils/LexUIUtils.h"
 
 #include "Widgets/Input/SNumericEntryBox.h"
 
