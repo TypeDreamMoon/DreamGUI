@@ -84,7 +84,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
 		ELexRectBlockUnitMode CornerRadiusUnitMode = ELexRectBlockUnitMode::Percentage;
 	/** Prevent edge aliasing, useful when in 3d. */
-	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
+	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect", AdvancedDisplay)
 		bool bSoftEdge = true;
 
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")

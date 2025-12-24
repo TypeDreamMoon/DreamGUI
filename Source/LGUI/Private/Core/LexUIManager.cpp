@@ -1173,6 +1173,7 @@ void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 				if (!IsValid(Selectable->GetWorld()))continue;
 				if (!IsValid(Selectable->GetWidget()))continue;
 				if (!IsValid(Selectable->GetWidget()->GetRenderCanvas()))continue;
+				if (!Selectable->GetWidget()->GetWidgetActiveInHierarchy())continue;
 				if (!Selectable->GetWidget()->GetRaycastableInHierarchy())continue;
 
 				bool bIsScreenSpace = false;
