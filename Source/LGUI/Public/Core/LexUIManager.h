@@ -49,8 +49,7 @@ public:
 	static FDelegateHandle RegisterEditorTickFunction(const TFunction<void(float)>& InFunction);
 	static void UnregisterEditorTickFunction(const FDelegateHandle& InDelegateHandle);
 	static void MarkBroadcastLevelActorListChanged();
-public:
-	static int IndexOfClickSelectUI;
+
 #endif
 #if WITH_EDITOR
 	static bool GetIsBlueprintCompiling(){return bIsBlueprintCompiling;}

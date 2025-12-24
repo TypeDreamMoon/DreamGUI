@@ -8,7 +8,7 @@
 #include "Event/LexUIEventDelegate.h"
 #include "Event/LexUIEventDelegate_PresetParameter.h"
 #include "Core/LexUISpriteData_BaseObject.h"
-#include "PrefabSystem/LGUIPrefab.h"
+#include "PrefabSystem/LexUIPrefab.h"
 #include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "LexUIBPLibrary.generated.h"
 
@@ -17,7 +17,7 @@ class ALexWidgetActor;
 class ULexWidget;
 class ULexVisual;
 class UUISector;
-class ULGUIPrefab;
+class ULexUIPrefab;
 
 namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 {
@@ -51,7 +51,7 @@ public:
 	 * @param SetRelativeTransformToIdentity Set created root actor's transform to zero after load.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "InCallbackBeforeAwake,SetRelativeTransformToIdentity", UnsafeDuringActorConstruction = "true", WorldContext = "WorldContextObject", AutoCreateRefTerm="InCallbackBeforeAwake"), Category = LGUI)
-		static AActor* LoadPrefab(UObject* WorldContextObject, ULGUIPrefab* InPrefab, USceneComponent* InParent, const FLGUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake, bool SetRelativeTransformToIdentity = false);
+		static AActor* LoadPrefab(UObject* WorldContextObject, ULexUIPrefab* InPrefab, USceneComponent* InParent, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake, bool SetRelativeTransformToIdentity = false);
 	/**
 	 * LoadPrefab to create actor.
 	 * Awake function in LGUILifeCycleBehaviour and LGUIPrefabInterface will be called right after LoadPrefab is done.
@@ -62,8 +62,8 @@ public:
 	 * @param InCallbackBeforeAwake This callback function will execute before Awake event, parameter "Actor" is the loaded root actor.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "", UnsafeDuringActorConstruction = "true", WorldContext = "WorldContextObject", AutoCreateRefTerm = "InCallbackBeforeAwake"), Category = LGUI)
-		static AActor* LoadPrefabWithTransform(UObject* WorldContextObject, ULGUIPrefab* InPrefab, USceneComponent* InParent, FVector Location, FRotator Rotation, FVector Scale, const FLGUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake);
-	static AActor* LoadPrefabWithTransform(UObject* WorldContextObject, ULGUIPrefab* InPrefab, USceneComponent* InParent, FVector Location, FQuat Rotation, FVector Scale, const TFunction<void(AActor*)>& InCallbackBeforeAwake = nullptr);
+		static AActor* LoadPrefabWithTransform(UObject* WorldContextObject, ULexUIPrefab* InPrefab, USceneComponent* InParent, FVector Location, FRotator Rotation, FVector Scale, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake);
+	static AActor* LoadPrefabWithTransform(UObject* WorldContextObject, ULexUIPrefab* InPrefab, USceneComponent* InParent, FVector Location, FQuat Rotation, FVector Scale, const TFunction<void(AActor*)>& InCallbackBeforeAwake = nullptr);
 	/**
 	 * LoadPrefab to create actor.
 	 * Awake function in LGUILifeCycleBehaviour and LGUIPrefabInterface will be called right after LoadPrefab is done.
@@ -73,7 +73,7 @@ public:
 	 * @param InCallbackBeforeAwake This callback function will execute before Awake event, parameter "Actor" is the loaded root actor.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "", UnsafeDuringActorConstruction = "true", WorldContext = "WorldContextObject", AutoCreateRefTerm = "InCallbackBeforeAwake"), Category = LGUI)
-		static AActor* LoadPrefabWithReplacement(UObject* WorldContextObject, ULGUIPrefab* InPrefab, USceneComponent* InParent, const TMap<UObject*, UObject*>& InReplaceAssetMap, const TMap<UClass*, UClass*>& InReplaceClassMap, const FLGUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake);
+		static AActor* LoadPrefabWithReplacement(UObject* WorldContextObject, ULexUIPrefab* InPrefab, USceneComponent* InParent, const TMap<UObject*, UObject*>& InReplaceAssetMap, const TMap<UClass*, UClass*>& InReplaceClassMap, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake);
 
 	/**
 	 * Duplicate actor and all it's children actors

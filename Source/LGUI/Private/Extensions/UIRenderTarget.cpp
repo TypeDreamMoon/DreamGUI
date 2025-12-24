@@ -5,7 +5,7 @@
 #include "LGUI.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Utils/LexUIUtils.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/LexUISpriteInfo.h"
 #include "Core/LexUICustomMeshSource.h"

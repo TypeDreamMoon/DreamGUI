@@ -2,13 +2,13 @@
 
 #include "PrefabSystem/ActorSerializerBase.h"
 #include "Engine/World.h"
-#include "PrefabSystem/LGUIObjectReaderAndWriter.h"
+#include "PrefabSystem/LexUIObjectReaderAndWriter.h"
 #include "Misc/ConfigCacheIni.h"
 #if WITH_EDITOR
 #include "Tools/UEdMode.h"
 #endif
 
-namespace LGUIPrefabSystem
+namespace LexUIPrefabSystem
 {
 	bool ActorSerializerBase::ObjectIsTrash(UObject* InObject)
 	{
@@ -133,32 +133,32 @@ namespace LGUIPrefabSystem
 		}
 	}
 
-	TMap<UObject*, TArray<uint8>> ActorSerializerBase::SaveOverrideParameterToData(TArray<FLGUIPrefabOverrideParameterData> InData)
+	TMap<UObject*, TArray<uint8>> ActorSerializerBase::SaveOverrideParameterToData(TArray<FLexUIPrefabOverrideParameterData> InData)
 	{
 		this->bIsEditorOrRuntime = true;
 		TMap<UObject*, TArray<uint8>> MapObjectToOverrideDatas;
 		for (auto& DataItem : InData)
 		{
 			TArray<uint8> ObjectOverrideData;
-			FLGUIImmediateOverrideParameterObjectWriter Writer(DataItem.Object.Get(), ObjectOverrideData, *this, DataItem.MemberPropertyNames);
+			FLexUIImmediateOverrideParameterObjectWriter Writer(DataItem.Object.Get(), ObjectOverrideData, *this, DataItem.MemberPropertyNames);
 			MapObjectToOverrideDatas.Add(DataItem.Object.Get(), ObjectOverrideData);
 		}
 		return MapObjectToOverrideDatas;
 	}
 
-	void ActorSerializerBase::RestoreOverrideParameterFromData(TMap<UObject*, TArray<uint8>>& InData, TArray<FLGUIPrefabOverrideParameterData> InNameSetData)
+	void ActorSerializerBase::RestoreOverrideParameterFromData(TMap<UObject*, TArray<uint8>>& InData, TArray<FLexUIPrefabOverrideParameterData> InNameSetData)
 	{
 		this->bIsEditorOrRuntime = true;
 		for (auto& KeyValue : InData)
 		{
 			if (IsValid(KeyValue.Key))
 			{
-				auto Index = InNameSetData.IndexOfByPredicate([&](const FLGUIPrefabOverrideParameterData& Item) {
+				auto Index = InNameSetData.IndexOfByPredicate([&](const FLexUIPrefabOverrideParameterData& Item) {
 					return Item.Object.Get() == KeyValue.Key;
 					});
 				if (Index != INDEX_NONE)
 				{
-					FLGUIImmediateOverrideParameterObjectReader Reader(KeyValue.Key, KeyValue.Value, *this, InNameSetData[Index].MemberPropertyNames);
+					FLexUIImmediateOverrideParameterObjectReader Reader(KeyValue.Key, KeyValue.Value, *this, InNameSetData[Index].MemberPropertyNames);
 				}
 			}
 		}

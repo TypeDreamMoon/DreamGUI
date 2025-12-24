@@ -96,12 +96,12 @@
 #include "Interaction/UIToggleGroupComponent.h"
 #include "Interaction/UIDropdownComponent.h"
 
-#include "PrefabSystem/LGUIPrefab.h"
+#include "PrefabSystem/LexUIPrefab.h"
 #include "PrefabSystem/LGUIPrefabLevelManagerActor.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
-#include "PrefabSystem/LGUIPrefabSettings.h"
-#include "PrefabSystem/LGUIPrefabHelperObject.h"
-#include "PrefabSystem/ILGUIPrefabInterface.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefabSettings.h"
+#include "PrefabSystem/LexUIPrefabHelperObject.h"
+#include "PrefabSystem/ILexUIPrefabInterface.h"
 
 #include "Utils/LexUIUtils.h"
 

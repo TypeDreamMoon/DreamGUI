@@ -2,9 +2,9 @@
 
 #include "DataFactory/LexUIPrefabFactory.h"
 
-#include "PrefabSystem/LGUIPrefab.h"
-#include "PrefabSystem/LGUIPrefabHelperObject.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefab.h"
+#include "PrefabSystem/LexUIPrefabHelperObject.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
 #include "Core/Actor/LexWidgetActor.h"
 #if USE_CLASS_PICKER
 #include "ClassViewerFilter.h"
@@ -18,7 +18,7 @@
 
 ULexUIPrefabFactory::ULexUIPrefabFactory()
 {
-	SupportedClass = ULGUIPrefab::StaticClass();
+	SupportedClass = ULexUIPrefab::StaticClass();
 	bCreateNew = true;
 	bEditAfterNew = true;
 	RootActorClass = ALexWidgetActor::StaticClass();
@@ -104,14 +104,14 @@ UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent,
 {
 	if (SourcePrefab != nullptr)//prefab variant
 	{
-		ULGUIPrefab* NewAsset = NewObject<ULGUIPrefab>(InParent, Class, Name, Flags | RF_Transactional);
+		ULexUIPrefab* NewAsset = NewObject<ULexUIPrefab>(InParent, Class, Name, Flags | RF_Transactional);
 		NewAsset->bIsPrefabVariant = true;
-		ULGUIPrefabHelperObject* HelperObject = NewObject<ULGUIPrefabHelperObject>(GetTransientPackage());
+		ULexUIPrefabHelperObject* HelperObject = NewObject<ULexUIPrefabHelperObject>(GetTransientPackage());
 		HelperObject->PrefabAsset = NewAsset;
 		TMap<FGuid, TObjectPtr<UObject>> MapGuidToObject;
-		TMap<TObjectPtr<AActor>, FLGUISubPrefabData> SubPrefabMap;
-		HelperObject->LoadedRootActor = SourcePrefab->LoadPrefabWithExistingObjects(ULGUIPrefabManagerObject::GetPreviewWorldForPrefabPackage(), nullptr, MapGuidToObject, SubPrefabMap);
-		FLGUISubPrefabData SubPrefabData;
+		TMap<TObjectPtr<AActor>, FLexUISubPrefabData> SubPrefabMap;
+		HelperObject->LoadedRootActor = SourcePrefab->LoadPrefabWithExistingObjects(ULexUIPrefabManagerObject::GetPreviewWorldForPrefabPackage(), nullptr, MapGuidToObject, SubPrefabMap);
+		FLexUISubPrefabData SubPrefabData;
 		SubPrefabData.PrefabAsset = SourcePrefab;
 		SubPrefabData.MapGuidToObject = MapGuidToObject;
 		for (auto& KeyValue : MapGuidToObject)
@@ -128,11 +128,11 @@ UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent,
 	}
 	else
 	{
-		ULGUIPrefab* NewAsset = NewObject<ULGUIPrefab>(InParent, Class, Name, Flags | RF_Transactional);
+		ULexUIPrefab* NewAsset = NewObject<ULexUIPrefab>(InParent, Class, Name, Flags | RF_Transactional);
 		NewAsset->bIsPrefabVariant = false;
-		ULGUIPrefabHelperObject* HelperObject = NewObject<ULGUIPrefabHelperObject>(GetTransientPackage());
+		ULexUIPrefabHelperObject* HelperObject = NewObject<ULexUIPrefabHelperObject>(GetTransientPackage());
 		HelperObject->PrefabAsset = NewAsset;
-		HelperObject->LoadedRootActor = ULGUIPrefabManagerObject::GetPreviewWorldForPrefabPackage()->SpawnActor<ALexWidgetActor>(RootActorClass);
+		HelperObject->LoadedRootActor = ULexUIPrefabManagerObject::GetPreviewWorldForPrefabPackage()->SpawnActor<ALexWidgetActor>(RootActorClass);
 
 		HelperObject->LoadedRootActor->SetActorLabel(NewAsset->GetName());
 		if (!HelperObject->LoadedRootActor->GetRootComponent())

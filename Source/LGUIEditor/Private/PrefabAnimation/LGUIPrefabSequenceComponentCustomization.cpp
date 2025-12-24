@@ -55,7 +55,7 @@ void FLGUIPrefabSequenceComponentCustomization::CustomizeDetails(IDetailLayoutBu
 
 	bool bIsExternalTabAlreadyOpened = false;
 
-	TSharedPtr<SDockTab> ExistingTab = HostTabManager->FindExistingLiveTab(FLGUIEditorModule::LGUIPrefabSequenceTabName);
+	TSharedPtr<SDockTab> ExistingTab = HostTabManager->FindExistingLiveTab(FLGUIEditorModule::LexUIPrefabSequenceTabName);
 	if (ExistingTab.IsValid())
 	{
 		auto SequencerWidget = StaticCastSharedRef<SLGUIPrefabSequenceEditor>(ExistingTab->GetContent());
@@ -83,7 +83,7 @@ void FLGUIPrefabSequenceComponentCustomization::CustomizeDetails(IDetailLayoutBu
 
 FReply FLGUIPrefabSequenceComponentCustomization::InvokeSequencer()
 {
-	if (TSharedPtr<SDockTab> Tab = FGlobalTabmanager::Get()->TryInvokeTab(FLGUIEditorModule::LGUIPrefabSequenceTabName))
+	if (TSharedPtr<SDockTab> Tab = FGlobalTabmanager::Get()->TryInvokeTab(FLGUIEditorModule::LexUIPrefabSequenceTabName))
 	{
 		{
 			// Set up a delegate that forces a refresh of this panel when the tab is closed to ensure we see the inline widget

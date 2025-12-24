@@ -1,15 +1,12 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Thumbnail/LGUIPrefabThumbnailRenderer.h"
-#include "EngineModule.h"
 #include "RendererInterface.h"
 #include "SceneView.h"
 #include "Engine/EngineTypes.h"
-#include "CanvasItem.h"
-#include "CanvasTypes.h"
 #include "LexUIEditorUtils.h"
 #include "Interfaces/IPluginManager.h"
-#include "PrefabSystem/LGUIPrefab.h"
+#include "PrefabSystem/LexUIPrefab.h"
 
 ULGUIPrefabThumbnailRenderer::ULGUIPrefabThumbnailRenderer()
 {
@@ -18,13 +15,13 @@ ULGUIPrefabThumbnailRenderer::ULGUIPrefabThumbnailRenderer()
 
 bool ULGUIPrefabThumbnailRenderer::CanVisualizeAsset(UObject* Object)
 {
-	if (Object->IsA(ULGUIPrefab::StaticClass()))
+	if (Object->IsA(ULexUIPrefab::StaticClass()))
 		return true;
 	return false;
 }
 void ULGUIPrefabThumbnailRenderer::Draw(UObject* Object, int32 X, int32 Y, uint32 Width, uint32 Height, FRenderTarget* RenderTarget, FCanvas* Canvas, bool bAdditionalViewFamily)
 {
-	if (auto Prefab = Cast<ULGUIPrefab>(Object))
+	if (auto Prefab = Cast<ULexUIPrefab>(Object))
 	{
 		TSharedRef<FLGUIPrefabThumbnailScene> ThumbnailScene = ThumbnailScenes.EnsureThumbnailScene(Prefab->GetPathName());
 		ThumbnailScene->SetPrefab(Prefab);

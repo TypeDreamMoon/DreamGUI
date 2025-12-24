@@ -12,8 +12,8 @@
 #include "Widgets/Input/SSearchBox.h"
 #include "Core/Components/LexRectBlock.h"
 #include "Framework/Commands/GenericCommands.h"
-#include "PrefabSystem/LGUIPrefab.h"
-#include "PrefabSystem/LGUIPrefabHelperObject.h"
+#include "PrefabSystem/LexUIPrefab.h"
+#include "PrefabSystem/LexUIPrefabHelperObject.h"
 
 #define LOCTEXT_NAMESPACE "LexWidgetEditorHierarchyView"
 
@@ -384,7 +384,7 @@ void SLexWidgetEditorHierarchyView::OnExpansionChanged(TWeakObjectPtr<ULexWidget
 }
 TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 {
-	return FLGUIEditorModule::Get().MakeEditorToolsMenu(false, false, false, false
+	return FLGUIEditorModule::Get().MakeEditorToolsMenu(false, false
 	, [this]()
 	{
 		if (Manager.IsValid())

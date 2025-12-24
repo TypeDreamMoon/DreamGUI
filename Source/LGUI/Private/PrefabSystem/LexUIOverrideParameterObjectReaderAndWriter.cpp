@@ -1,30 +1,26 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "PrefabSystem/LGUIObjectReaderAndWriter.h"
+#include "PrefabSystem/LexUIObjectReaderAndWriter.h"
 #include "PrefabSystem/ActorSerializerBase.h"
 #include "Serialization/MemoryReader.h"
-#include "Serialization/BufferArchive.h"
-#include "GameFramework/Actor.h"
 #include "Engine/Blueprint.h"
 #include "GameFramework/Actor.h"
-#include "LGUI.h"
 
-namespace LGUIPrefabSystem
+namespace LexUIPrefabSystem
 {
-	FLGUIDuplicateOverrideParameterObjectWriter::FLGUIDuplicateOverrideParameterObjectWriter(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, const TArray<FName>& InOverridePropertyNames)
-		: FLGUIOverrideParameterObjectWriter(Bytes, InSerializer, InOverridePropertyNames)
+	FLexUIOverrideParameterObjectWriter::FLexUIOverrideParameterObjectWriter(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, const TArray<FName>& InOverridePropertyNames)
+		: FLexUIObjectWriter(Bytes, InSerializer, {})
+		, OverridePropertyNames(InOverridePropertyNames)
 	{
 		
 	}
-	bool FLGUIDuplicateOverrideParameterObjectWriter::ShouldSkipProperty(const FProperty* InProperty) const
+	bool FLexUIOverrideParameterObjectWriter::ShouldSkipProperty(const FProperty* InProperty) const
 	{
-		if (InProperty->HasAnyPropertyFlags(CPF_Transient | CPF_DuplicateTransient | CPF_NonPIEDuplicateTransient | CPF_DisableEditOnInstance)
-			|| InProperty->IsA<FMulticastDelegateProperty>()
-			|| InProperty->IsA<FDelegateProperty>()
-			)
+		if (LGUIPrefab_ShouldSkipProperty(InProperty))
 		{
 			return true;
 		}
+
 		if (CurrentIsMemberProperty(*this))
 		{
 			if (OverridePropertyNames.Contains(InProperty->GetFName()))
@@ -39,7 +35,7 @@ namespace LGUIPrefabSystem
 
 		return false;
 	}
-	bool FLGUIDuplicateOverrideParameterObjectWriter::SerializeObject(UObject* Object)
+	bool FLexUIOverrideParameterObjectWriter::SerializeObject(UObject* Object)
 	{
 		if (auto Function = Cast<UFunction>(Object))
 		{
@@ -85,43 +81,38 @@ namespace LGUIPrefabSystem
 		else
 		{
 			auto guidPtr = Serializer.MapObjectToGuid.Find(Object);
-			if (guidPtr != nullptr)//object belongs to this actor hierarchy
+			if (guidPtr != nullptr)
 			{
 				auto type = (uint8)EObjectType::ObjectReference;
 				*this << type;
 				*this << *guidPtr;
 				return true;
 			}
-			else//object not belongs to this actor hierarchy, just copy pointer
+			else
 			{
-				auto type = (uint8)EObjectType::NativeSerailizeForDuplicate;
-				*this << type;
-				ByteOrderSerialize(&Object, sizeof(Object));
-				return true;
+				return false;
 			}
 		}
 	}
-	FString FLGUIDuplicateOverrideParameterObjectWriter::GetArchiveName() const
+	FString FLexUIOverrideParameterObjectWriter::GetArchiveName() const
 	{
-		return TEXT("FLGUIDuplicateOverrideParameterObjectWriter");
+		return TEXT("FLGUIOverrideParameterObjectWriter");
 	}
 
 
-
-	FLGUIDuplicateOverrideParameterObjectReader::FLGUIDuplicateOverrideParameterObjectReader(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, const TArray<FName>& InOverridePropertyNames)
-		: FLGUIOverrideParameterObjectReader(Bytes, InSerializer, InOverridePropertyNames)
+	FLexUIOverrideParameterObjectReader::FLexUIOverrideParameterObjectReader(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, const TArray<FName>& InOverridePropertyNames)
+		: FLexUIObjectReader(Bytes, InSerializer, {})
+		, OverridePropertyNames(InOverridePropertyNames)
 	{
-
+		
 	}
-	bool FLGUIDuplicateOverrideParameterObjectReader::ShouldSkipProperty(const FProperty* InProperty) const
+	bool FLexUIOverrideParameterObjectReader::ShouldSkipProperty(const FProperty* InProperty) const
 	{
-		if (InProperty->HasAnyPropertyFlags(CPF_Transient | CPF_DuplicateTransient | CPF_NonPIEDuplicateTransient | CPF_DisableEditOnInstance)
-			|| InProperty->IsA<FMulticastDelegateProperty>()
-			|| InProperty->IsA<FDelegateProperty>()
-			)
+		if (LGUIPrefab_ShouldSkipProperty(InProperty))
 		{
 			return true;
 		}
+
 		if (CurrentIsMemberProperty(*this))
 		{
 			if (OverridePropertyNames.Contains(InProperty->GetFName()))
@@ -136,14 +127,14 @@ namespace LGUIPrefabSystem
 
 		return false;
 	}
-	bool FLGUIDuplicateOverrideParameterObjectReader::SerializeObject(UObject*& Object, bool CanSerializeClass)
+	bool FLexUIOverrideParameterObjectReader::SerializeObject(UObject*& Object, bool CanSerializeClass)
 	{
 		uint8 typeUint8 = 0;
 		*this << typeUint8;
 		auto type = (EObjectType)typeUint8;
 		switch (type)
 		{
-		case LGUIPrefabSystem::EObjectType::Class:
+		case LexUIPrefabSystem::EObjectType::Class:
 		{
 			check(CanSerializeClass);
 			int32 id = -1;
@@ -153,7 +144,7 @@ namespace LGUIPrefabSystem
 			return true;
 		}
 		break;
-		case LGUIPrefabSystem::EObjectType::Asset:
+		case LexUIPrefabSystem::EObjectType::Asset:
 		{
 			int32 id = -1;
 			*this << id;
@@ -162,7 +153,7 @@ namespace LGUIPrefabSystem
 			return true;
 		}
 		break;
-		case LGUIPrefabSystem::EObjectType::Function:
+		case LexUIPrefabSystem::EObjectType::Function:
 		{
 			int32 OuterClasstId = -1;
 			int32 FunctionNameId = -1;
@@ -176,7 +167,7 @@ namespace LGUIPrefabSystem
 			}
 		}
 		break;
-		case LGUIPrefabSystem::EObjectType::K2Node:
+		case LexUIPrefabSystem::EObjectType::K2Node:
 		{
 			int32 OuterObjectId = -1;
 			int32 NodeNameId = -1;
@@ -199,7 +190,7 @@ namespace LGUIPrefabSystem
 			}
 		}
 		break;
-		case LGUIPrefabSystem::EObjectType::ObjectReference:
+		case LexUIPrefabSystem::EObjectType::ObjectReference:
 		{
 			FGuid guid;
 			*this << guid;
@@ -210,17 +201,90 @@ namespace LGUIPrefabSystem
 			}
 		}
 		break;
-		case LGUIPrefabSystem::EObjectType::NativeSerailizeForDuplicate:
-		{
-			ByteOrderSerialize(&Object, sizeof(Object));
-			return true;
-		}
-		break;
 		}
 		return false;
 	}
-	FString FLGUIDuplicateOverrideParameterObjectReader::GetArchiveName() const
+	FString FLexUIOverrideParameterObjectReader::GetArchiveName() const
 	{
-		return TEXT("FLGUIDuplicateOverrideParameterObjectReader");
+		return TEXT("FLGUIOverrideParameterObjectReader");
+	}
+
+
+
+
+
+	FLexUIImmediateOverrideParameterObjectWriter::FLexUIImmediateOverrideParameterObjectWriter(UObject* Object, TArray< uint8 >& Bytes, ActorSerializerBase& Serializer, const TArray<FName>& InOverridePropertyNames)
+		: FObjectWriter(Bytes)
+		, OverridePropertyNames(InOverridePropertyNames)
+	{
+		SetIsLoading(false);
+		SetIsSaving(true);
+
+		Serializer.SetupArchive(*this);
+
+		Object->Serialize(*this);
+	}
+	bool FLexUIImmediateOverrideParameterObjectWriter::ShouldSkipProperty(const FProperty* InProperty) const
+	{
+		if (LGUIPrefab_ShouldSkipProperty(InProperty))
+		{
+			return true;
+		}
+
+		if (CurrentIsMemberProperty(*this))
+		{
+			if (OverridePropertyNames.Contains(InProperty->GetFName()))
+			{
+				return false;
+			}
+			else
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+	FString FLexUIImmediateOverrideParameterObjectWriter::GetArchiveName() const
+	{
+		return TEXT("FLGUIImmediateOverrideParameterObjectWriter");
+	}
+
+
+	FLexUIImmediateOverrideParameterObjectReader::FLexUIImmediateOverrideParameterObjectReader(UObject* Object, TArray< uint8 >& Bytes, ActorSerializerBase& Serializer, const TArray<FName>& InOverridePropertyNames)
+		: FObjectReader(Bytes)
+		, OverridePropertyNames(InOverridePropertyNames)
+	{
+		SetIsLoading(true);
+		SetIsSaving(false);
+
+		Serializer.SetupArchive(*this);
+
+		Object->Serialize(*this);
+	}
+	bool FLexUIImmediateOverrideParameterObjectReader::ShouldSkipProperty(const FProperty* InProperty) const
+	{
+		if (LGUIPrefab_ShouldSkipProperty(InProperty))
+		{
+			return true;
+		}
+
+		if (CurrentIsMemberProperty(*this))
+		{
+			if (OverridePropertyNames.Contains(InProperty->GetFName()))
+			{
+				return false;
+			}
+			else
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+	FString FLexUIImmediateOverrideParameterObjectReader::GetArchiveName() const
+	{
+		return TEXT("FLGUIImmediateOverrideParameterObjectReader");
 	}
 }

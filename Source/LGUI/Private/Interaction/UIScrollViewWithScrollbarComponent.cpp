@@ -5,7 +5,7 @@
 #include "LTweenBPLibrary.h"
 #include "Core/LexUIManager.h"
 #include "Interaction/UIScrollbarComponent.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
 
 
 UUIScrollViewWithScrollbarComponent::UUIScrollViewWithScrollbarComponent()

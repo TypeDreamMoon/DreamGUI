@@ -7,7 +7,7 @@
 /**
  * 
  */
-class FLGUIPrefabCustomization : public IDetailCustomization
+class FLexUIPrefabCustomization : public IDetailCustomization
 {
 public:
 
@@ -15,7 +15,7 @@ public:
 	/** IDetailCustomization interface */
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
 private:
-	TWeakObjectPtr<class ULGUIPrefab> TargetScriptPtr;
+	TWeakObjectPtr<class ULexUIPrefab> TargetScriptPtr;
 	FText GetEngineVersionText()const;
 	FText GetPrefabVersionText()const;
 	EVisibility ShouldShowFixEngineVersionButton()const;

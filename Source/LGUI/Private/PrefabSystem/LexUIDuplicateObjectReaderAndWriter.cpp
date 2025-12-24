@@ -1,22 +1,20 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "PrefabSystem/LGUIObjectReaderAndWriter.h"
+#include "PrefabSystem/LexUIObjectReaderAndWriter.h"
 #include "PrefabSystem/ActorSerializerBase.h"
 #include "Serialization/MemoryReader.h"
-#include "Serialization/BufferArchive.h"
 #include "GameFramework/Actor.h"
 #include "Engine/Blueprint.h"
 #include "GameFramework/Actor.h"
-#include "LGUI.h"
 
-namespace LGUIPrefabSystem
+namespace LexUIPrefabSystem
 {
-	FLGUIDuplicateObjectWriter::FLGUIDuplicateObjectWriter(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, TSet<FName> InSkipPropertyNames)
-		: FLGUIObjectWriter(Bytes, InSerializer, InSkipPropertyNames)
+	FLexUIDuplicateObjectWriter::FLexUIDuplicateObjectWriter(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, TSet<FName> InSkipPropertyNames)
+		: FLexUIObjectWriter(Bytes, InSerializer, InSkipPropertyNames)
 	{
 		
 	}
-	bool FLGUIDuplicateObjectWriter::ShouldSkipProperty(const FProperty* InProperty) const
+	bool FLexUIDuplicateObjectWriter::ShouldSkipProperty(const FProperty* InProperty) const
 	{
 		if (InProperty->HasAnyPropertyFlags(CPF_Transient | CPF_DuplicateTransient | CPF_NonPIEDuplicateTransient | CPF_DisableEditOnInstance)
 			|| InProperty->IsA<FMulticastDelegateProperty>()
@@ -34,7 +32,7 @@ namespace LGUIPrefabSystem
 
 		return false;
 	}
-	bool FLGUIDuplicateObjectWriter::SerializeObject(UObject* Object)
+	bool FLexUIDuplicateObjectWriter::SerializeObject(UObject* Object)
 	{
 		if (auto Function = Cast<UFunction>(Object))
 		{
@@ -114,19 +112,19 @@ namespace LGUIPrefabSystem
 			}
 		}
 	}
-	FString FLGUIDuplicateObjectWriter::GetArchiveName() const
+	FString FLexUIDuplicateObjectWriter::GetArchiveName() const
 	{
 		return TEXT("FLGUIDuplicateObjectReader");
 	}
 
 
 
-	FLGUIDuplicateObjectReader::FLGUIDuplicateObjectReader(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, TSet<FName> InSkipPropertyNames)
-		: FLGUIObjectReader(Bytes, InSerializer, InSkipPropertyNames)
+	FLexUIDuplicateObjectReader::FLexUIDuplicateObjectReader(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, TSet<FName> InSkipPropertyNames)
+		: FLexUIObjectReader(Bytes, InSerializer, InSkipPropertyNames)
 	{
 
 	}
-	bool FLGUIDuplicateObjectReader::ShouldSkipProperty(const FProperty* InProperty) const
+	bool FLexUIDuplicateObjectReader::ShouldSkipProperty(const FProperty* InProperty) const
 	{
 		if (InProperty->HasAnyPropertyFlags(CPF_Transient | CPF_DuplicateTransient | CPF_NonPIEDuplicateTransient | CPF_DisableEditOnInstance)
 			|| InProperty->IsA<FMulticastDelegateProperty>()
@@ -144,14 +142,14 @@ namespace LGUIPrefabSystem
 
 		return false;
 	}
-	bool FLGUIDuplicateObjectReader::SerializeObject(UObject*& Object, bool CanSerializeClass)
+	bool FLexUIDuplicateObjectReader::SerializeObject(UObject*& Object, bool CanSerializeClass)
 	{
 		uint8 typeUint8 = 0;
 		*this << typeUint8;
 		auto type = (EObjectType)typeUint8;
 		switch (type)
 		{
-		case LGUIPrefabSystem::EObjectType::Class:
+		case LexUIPrefabSystem::EObjectType::Class:
 		{
 			check(CanSerializeClass);
 			int32 id = -1;
@@ -161,7 +159,7 @@ namespace LGUIPrefabSystem
 			return true;
 		}
 		break;
-		case LGUIPrefabSystem::EObjectType::Asset:
+		case LexUIPrefabSystem::EObjectType::Asset:
 		{
 			int32 id = -1;
 			*this << id;
@@ -170,7 +168,7 @@ namespace LGUIPrefabSystem
 			return true;
 		}
 		break;
-		case LGUIPrefabSystem::EObjectType::Function:
+		case LexUIPrefabSystem::EObjectType::Function:
 		{
 			int32 OuterClasstId = -1;
 			int32 FunctionNameId = -1;
@@ -184,7 +182,7 @@ namespace LGUIPrefabSystem
 			}
 		}
 		break;
-		case LGUIPrefabSystem::EObjectType::K2Node:
+		case LexUIPrefabSystem::EObjectType::K2Node:
 		{
 			int32 OuterObjectId = -1;
 			int32 NodeNameId = -1;
@@ -207,7 +205,7 @@ namespace LGUIPrefabSystem
 			}
 		}
 		break;
-		case LGUIPrefabSystem::EObjectType::ObjectReference:
+		case LexUIPrefabSystem::EObjectType::ObjectReference:
 		{
 			FGuid guid;
 			*this << guid;
@@ -218,7 +216,7 @@ namespace LGUIPrefabSystem
 			}
 		}
 		break;
-		case LGUIPrefabSystem::EObjectType::NativeSerailizeForDuplicate:
+		case LexUIPrefabSystem::EObjectType::NativeSerailizeForDuplicate:
 		{
 			ByteOrderSerialize(&Object, sizeof(Object));
 			return true;
@@ -227,7 +225,7 @@ namespace LGUIPrefabSystem
 		}
 		return false;
 	}
-	FString FLGUIDuplicateObjectReader::GetArchiveName() const
+	FString FLexUIDuplicateObjectReader::GetArchiveName() const
 	{
 		return TEXT("FLGUIDuplicateObjectReader");
 	}

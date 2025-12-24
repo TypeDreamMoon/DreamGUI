@@ -27,7 +27,7 @@
 #include "Widgets/Text/SInlineEditableTextBlock.h"
 #include "Misc/TextFilter.h"
 #include "PropertyCustomizationHelpers.h"
-#include "PrefabSystem/LGUIPrefabHelperObject.h"
+#include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "LexUIEditorTools.h"
 
 #define LOCTEXT_NAMESPACE "SLGUIPrefabSequenceEditor"
@@ -362,7 +362,7 @@ void SLGUIPrefabSequenceEditor::RefreshAnimationList()
 	}
 }
 
-void SLGUIPrefabSequenceEditor::OnBeforeApplyPrefab(ULGUIPrefabHelperObject* InObject)
+void SLGUIPrefabSequenceEditor::OnBeforeApplyPrefab(ULexUIPrefabHelperObject* InObject)
 {
 	if (WeakSequenceComponent.IsValid())
 	{
@@ -386,7 +386,7 @@ void SLGUIPrefabSequenceEditor::OnEditingPrefabChanged(AActor* RootActor)
 		
 		for (AActor* ChildActor : ChildrenActors)
 		{
-			ULGUIPrefabHelperObject* PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(RootActor);
+			ULexUIPrefabHelperObject* PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(RootActor);
 			if (PrefabHelperObject)
 			{
 				//skip sub prefab's PrefabSequenceComponent

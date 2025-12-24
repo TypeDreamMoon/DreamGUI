@@ -1,20 +1,21 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "PrefabSystem/ActorSerializer8.h"
-#include "PrefabSystem/LGUIObjectReaderAndWriter.h"
+#include "PrefabSystem/LexUIObjectReaderAndWriter.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
 #include "Components/PrimitiveComponent.h"
 #include "Components/SplineComponent.h"
 #include "Runtime/Launch/Resources/Version.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
 #include "LGUI.h"
 #include "Core/LexUIManager.h"
+#include "Core/Components/LexWidget.h"
 #include "Misc/NetworkVersion.h"
 #include "UObject/UObjectThreadContext.h"
-#include "PrefabSystem/LGUIPrefabSettings.h"
+#include "PrefabSystem/LexUIPrefabSettings.h"
 #include "Serialization/MemoryReader.h"
-#include "PrefabSystem/ILGUIPrefabInterface.h"
+#include "PrefabSystem/ILexUIPrefabInterface.h"
 #include "PhysicsEngine/BodyInstance.h"
 #if WITH_EDITOR
 #include "Utils/LexUIUtils.h"
@@ -26,8 +27,8 @@
 
 namespace LGUIPrefabSystem8
 {
-	AActor* ActorSerializer::LoadPrefabWithExistingObjects(UWorld* InWorld, ULGUIPrefab* InPrefab, USceneComponent* Parent
-		, TMap<FGuid, TObjectPtr<UObject>>& InOutMapGuidToObjects, TMap<TObjectPtr<AActor>, FLGUISubPrefabData>& OutSubPrefabMap
+	AActor* ActorSerializer::LoadPrefabWithExistingObjects(UWorld* InWorld, ULexUIPrefab* InPrefab, USceneComponent* Parent
+		, TMap<FGuid, TObjectPtr<UObject>>& InOutMapGuidToObjects, TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& OutSubPrefabMap
 	)
 	{
 		if (!IsValid(InWorld))
@@ -60,11 +61,11 @@ namespace LGUIPrefabSystem8
 		serializer.bOverrideVersions = true;
 		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, bool InIsSceneComponent) {
 			auto ExcludeProperties = InIsSceneComponent ? serializer.GetSceneComponentExcludeProperties() : TSet<FName>();
-			LGUIPrefabSystem::FLGUIObjectReader Reader(InOutBuffer, serializer, ExcludeProperties);
+			LexUIPrefabSystem::FLexUIObjectReader Reader(InOutBuffer, serializer, ExcludeProperties);
 			Reader.DoSerialize(InObject);
 		};
 		serializer.WriterOrReaderFunctionForSubPrefabOverride = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, const TArray<FName>& InOverridePropertyNames) {
-			LGUIPrefabSystem::FLGUIOverrideParameterObjectReader Reader(InOutBuffer, serializer, InOverridePropertyNames);
+			LexUIPrefabSystem::FLexUIOverrideParameterObjectReader Reader(InOutBuffer, serializer, InOverridePropertyNames);
 			Reader.DoSerialize(InObject);
 		};
 		auto rootActor = serializer.DeserializeActor(Parent, InPrefab, nullptr, false, FVector::ZeroVector, FQuat::Identity, FVector::OneVector);
@@ -73,7 +74,7 @@ namespace LGUIPrefabSystem8
 		return rootActor;
 	}
 
-	AActor* ActorSerializer::LoadPrefab(UWorld* InWorld, ULGUIPrefab* InPrefab, USceneComponent* Parent, bool SetRelativeTransformToIdentity, TFunction<void(AActor*)> CallbackBeforeAwake)
+	AActor* ActorSerializer::LoadPrefab(UWorld* InWorld, ULexUIPrefab* InPrefab, USceneComponent* Parent, bool SetRelativeTransformToIdentity, TFunction<void(AActor*)> CallbackBeforeAwake)
 	{
 		if (!IsValid(InWorld))
 		{
@@ -95,11 +96,11 @@ namespace LGUIPrefabSystem8
 		serializer.bOverrideVersions = true;
 		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, bool InIsSceneComponent) {
 			auto ExcludeProperties = InIsSceneComponent ? serializer.GetSceneComponentExcludeProperties() : TSet<FName>();
-			LGUIPrefabSystem::FLGUIObjectReader Reader(InOutBuffer, serializer, ExcludeProperties);
+			LexUIPrefabSystem::FLexUIObjectReader Reader(InOutBuffer, serializer, ExcludeProperties);
 			Reader.DoSerialize(InObject);
 		};
 		serializer.WriterOrReaderFunctionForSubPrefabOverride = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, const TArray<FName>& InOverridePropertyNames) {
-			LGUIPrefabSystem::FLGUIOverrideParameterObjectReader Reader(InOutBuffer, serializer, InOverridePropertyNames);
+			LexUIPrefabSystem::FLexUIOverrideParameterObjectReader Reader(InOutBuffer, serializer, InOverridePropertyNames);
 			Reader.DoSerialize(InObject);
 		};
 		AActor* result = nullptr;
@@ -113,7 +114,7 @@ namespace LGUIPrefabSystem8
 		}
 		return result;
 	}
-	AActor* ActorSerializer::LoadPrefab(UWorld* InWorld, ULGUIPrefab* InPrefab, USceneComponent* Parent, FVector RelativeLocation, FQuat RelativeRotation, FVector RelativeScale, TFunction<void(AActor*)> CallbackBeforeAwake)
+	AActor* ActorSerializer::LoadPrefab(UWorld* InWorld, ULexUIPrefab* InPrefab, USceneComponent* Parent, FVector RelativeLocation, FQuat RelativeRotation, FVector RelativeScale, TFunction<void(AActor*)> CallbackBeforeAwake)
 	{
 		if (!IsValid(InWorld))
 		{
@@ -135,17 +136,17 @@ namespace LGUIPrefabSystem8
 		serializer.bOverrideVersions = true;
 		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, bool InIsSceneComponent) {
 			auto ExcludeProperties = InIsSceneComponent ? serializer.GetSceneComponentExcludeProperties() : TSet<FName>();
-			LGUIPrefabSystem::FLGUIObjectReader Reader(InOutBuffer, serializer, ExcludeProperties);
+			LexUIPrefabSystem::FLexUIObjectReader Reader(InOutBuffer, serializer, ExcludeProperties);
 			Reader.DoSerialize(InObject);
 		};
 		serializer.WriterOrReaderFunctionForSubPrefabOverride = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, const TArray<FName>& InOverridePropertyNames) {
-			LGUIPrefabSystem::FLGUIOverrideParameterObjectReader Reader(InOutBuffer, serializer, InOverridePropertyNames);
+			LexUIPrefabSystem::FLexUIOverrideParameterObjectReader Reader(InOutBuffer, serializer, InOverridePropertyNames);
 			Reader.DoSerialize(InObject);
 		};
 		return serializer.DeserializeActor(Parent, InPrefab, nullptr, true, RelativeLocation, RelativeRotation, RelativeScale);
 	}
 	AActor* ActorSerializer::LoadSubPrefab(
-		UWorld* InWorld, ULGUIPrefab* InPrefab, USceneComponent* Parent
+		UWorld* InWorld, ULexUIPrefab* InPrefab, USceneComponent* Parent
 		, const FGuid& InParentDeserializationSessionId
 		, TMap<FGuid, TObjectPtr<UObject>>& InMapGuidToObject
 		, const TFunction<void(AActor*, const TMap<FGuid, TObjectPtr<UObject>>&, const TMap<TObjectPtr<UObject>, FGuid>&, const TArray<AActor*>&, const TArray<UActorComponent*>&)>& InOnSubPrefabFinishDeserializeFunction
@@ -162,11 +163,11 @@ namespace LGUIPrefabSystem8
 		serializer.bIsSubPrefab = true;
 		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, bool InIsSceneComponent) {
 			auto ExcludeProperties = InIsSceneComponent ? serializer.GetSceneComponentExcludeProperties() : TSet<FName>();
-			LGUIPrefabSystem::FLGUIObjectReader Reader(InOutBuffer, serializer, ExcludeProperties);
+			LexUIPrefabSystem::FLexUIObjectReader Reader(InOutBuffer, serializer, ExcludeProperties);
 			Reader.DoSerialize(InObject);
 		};
 		serializer.WriterOrReaderFunctionForSubPrefabOverride = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, const TArray<FName>& InOverridePropertyNames) {
-			LGUIPrefabSystem::FLGUIOverrideParameterObjectReader Reader(InOutBuffer, serializer, InOverridePropertyNames);
+			LexUIPrefabSystem::FLexUIOverrideParameterObjectReader Reader(InOutBuffer, serializer, InOverridePropertyNames);
 			Reader.DoSerialize(InObject);
 		};
 		serializer.OnSubPrefabFinishDeserializeFunction = InOnSubPrefabFinishDeserializeFunction;
@@ -204,7 +205,7 @@ namespace LGUIPrefabSystem8
 #endif
 		if (LGUIPrefabManager == nullptr)
 		{
-			LGUIPrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(TargetWorld);
+			LGUIPrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(TargetWorld);
 		}
 		if (!bIsSubPrefab)
 		{
@@ -267,7 +268,7 @@ namespace LGUIPrefabSystem8
 					if (!ParentComp)
 					{
 #if WITH_EDITOR
-						if (TargetWorld != ULGUIPrefabManagerObject::GetPreviewWorldForPrefabPackage())//skip preview world, only show this in PrefabEditor or LevelEditor
+						if (TargetWorld != ULexUIPrefabManagerObject::GetPreviewWorldForPrefabPackage())//skip preview world, only show this in PrefabEditor or LevelEditor
 						{
 							auto MissingParentMsg = FText::Format(LOCTEXT("MissingParentMsg", "Prefab '{0}' fail to find parent for component '{1}.{2}', do you delete it? The component will attach to root")
 								, FText::FromString(PrefabAssetPath), FText::FromString(SceneComp->GetOwner()->GetActorLabel()), FText::FromString(SceneComp->GetName()));
@@ -337,7 +338,13 @@ namespace LGUIPrefabSystem8
 		{
 			if (!TargetWorld->IsGameWorld())
 			{
-				ULGUIPrefabManagerObject::OnDeserialize_ProcessComponentsBeforeRerunConstructionScript.ExecuteIfBound(AllComponents);
+				for (auto& Comp : AllComponents)
+				{
+					if (auto Widget = Cast<ULexWidget>(Comp))
+					{
+						Widget->CalculateTransformFromAnchor();
+					}
+				}
 				//refresh it
 				for (auto& Actor : AllActors)
 				{
@@ -375,16 +382,16 @@ namespace LGUIPrefabSystem8
 				for (int i = 0; i < AllActors.Num(); i++)
 				{
 					auto& Actor = AllActors[i];
-					if (Actor->GetClass()->ImplementsInterface(ULGUIPrefabInterface::StaticClass()))
+					if (Actor->GetClass()->ImplementsInterface(ULexUIPrefabInterface::StaticClass()))
 					{
-						ILGUIPrefabInterface::Execute_EditorAwake(Actor);
+						ILexUIPrefabInterface::Execute_EditorAwake(Actor);
 					}
 					auto Components = Actor->GetComponents();
 					for (auto& Comp : Components)
 					{
-						if (Comp->GetClass()->ImplementsInterface(ULGUIPrefabInterface::StaticClass()))
+						if (Comp->GetClass()->ImplementsInterface(ULexUIPrefabInterface::StaticClass()))
 						{
-							ILGUIPrefabInterface::Execute_EditorAwake(Comp);
+							ILexUIPrefabInterface::Execute_EditorAwake(Comp);
 						}
 					}
 				}
@@ -395,16 +402,16 @@ namespace LGUIPrefabSystem8
 				for (int i = 0; i < AllActors.Num(); i++)
 				{
 					auto& Actor = AllActors[i];
-					if (Actor->GetClass()->ImplementsInterface(ULGUIPrefabInterface::StaticClass()))
+					if (Actor->GetClass()->ImplementsInterface(ULexUIPrefabInterface::StaticClass()))
 					{
-						ILGUIPrefabInterface::Execute_Awake(Actor);
+						ILexUIPrefabInterface::Execute_Awake(Actor);
 					}
 					auto Components = Actor->GetComponents();
 					for (auto& Comp : Components)
 					{
-						if (Comp->GetClass()->ImplementsInterface(ULGUIPrefabInterface::StaticClass()))
+						if (Comp->GetClass()->ImplementsInterface(ULexUIPrefabInterface::StaticClass()))
 						{
-							ILGUIPrefabInterface::Execute_Awake(Comp);
+							ILexUIPrefabInterface::Execute_Awake(Comp);
 						}
 					}
 				}
@@ -417,7 +424,7 @@ namespace LGUIPrefabSystem8
 
 		return CreatedRootActor;
 	}
-	AActor* ActorSerializer::DeserializeActor(USceneComponent* Parent, ULGUIPrefab* InPrefab, const TFunction<void()>& InCallbackBeforeDeserialize, bool ReplaceTransform, FVector InLocation, FQuat InRotation, FVector InScale)
+	AActor* ActorSerializer::DeserializeActor(USceneComponent* Parent, ULexUIPrefab* InPrefab, const TFunction<void()>& InCallbackBeforeDeserialize, bool ReplaceTransform, FVector InLocation, FQuat InRotation, FVector InScale)
 	{
 		auto StartTime = FDateTime::Now();
 		PrefabAssetPath = InPrefab->GetPathName();
@@ -474,7 +481,7 @@ namespace LGUIPrefabSystem8
 		if (InCallbackBeforeDeserialize != nullptr)InCallbackBeforeDeserialize();
 		auto CreatedRootActor = DeserializeActorFromData(SaveData, Parent, ReplaceTransform, InLocation, InRotation, InScale);
 
-		if (ULGUIPrefabSettings::GetLogPrefabLoadTime())
+		if (ULexUIPrefabSettings::GetLogPrefabLoadTime())
 		{
 			auto TimeSpan = FDateTime::Now() - StartTime;
 			UE_LOG(LGUI, Log, TEXT("Load prefab: '%s', total time: %fms"), *InPrefab->GetName(), TimeSpan.GetTotalMilliseconds());
@@ -596,14 +603,14 @@ namespace LGUIPrefabSystem8
 				auto PrefabIndex = InActorData.PrefabAssetIndex;
 				if (auto PrefabAssetObject = FindAssetFromListByIndex(PrefabIndex))
 				{
-					if (auto SubPrefabAsset = Cast<ULGUIPrefab>(PrefabAssetObject))
+					if (auto SubPrefabAsset = Cast<ULexUIPrefab>(PrefabAssetObject))
 					{
 						AActor* SubPrefabRootActor = nullptr;
-						FLGUISubPrefabData SubPrefabData;
+						FLexUISubPrefabData SubPrefabData;
 						SubPrefabData.PrefabAsset = SubPrefabAsset;
 
 #if WITH_EDITOR
-						if (SubPrefabAsset->PrefabVersion < (uint16)ELGUIPrefabVersion::NewObjectOnNestedPrefab)
+						if (SubPrefabAsset->PrefabVersion < (uint16)ELexUIPrefabVersion::NewObjectOnNestedPrefab)
 						{
 							SubPrefabAsset->RecreatePrefab();//if is old version then recreate to make it new version
 						}
@@ -667,7 +674,7 @@ namespace LGUIPrefabSystem8
 
 									if (auto RecordDataPtr = InActorData.MapObjectGuidToSubPrefabOverrideParameter.Find(GuidInParent))
 									{
-										FLGUIPrefabOverrideParameterData OverrideDataItem;
+										FLexUIPrefabOverrideParameterData OverrideDataItem;
 										OverrideDataItem.MemberPropertyNames = RecordDataPtr->OverrideParameterNames;
 										OverrideDataItem.Object = ObjectInSubPrefab;
 										SubPrefabData.ObjectOverrideParameterArray.Add(OverrideDataItem);

@@ -5,7 +5,7 @@
 #include "Core/LexUISpriteData.h"
 #include "TextureCompiler.h"
 #include "Utils/LexUIUtils.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
 #include "Core/ILexUISpriteRenderInterface.h"
 #include "TextureResource.h"
 #include "Core/LexUIManager.h"

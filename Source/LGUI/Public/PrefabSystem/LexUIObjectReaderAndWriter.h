@@ -3,12 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Serialization/BufferArchive.h"
 #include "Serialization/ObjectWriter.h"
 #include "Serialization/ObjectReader.h"
 #include "Serialization/ArchiveSerializedPropertyChain.h"
 
-namespace LGUIPrefabSystem
+namespace LexUIPrefabSystem
 {
 	class ActorSerializerBase;
 
@@ -45,10 +44,10 @@ namespace LGUIPrefabSystem
 	}
 	bool LGUIPrefab_ShouldSkipProperty(const FProperty* InProperty);
 
-	class LGUI_API FLGUIObjectWriter : public FObjectWriter
+	class LGUI_API FLexUIObjectWriter : public FObjectWriter
 	{
 	public:
-		FLGUIObjectWriter(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, TSet<FName> InSkipPropertyNames);
+		FLexUIObjectWriter(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, TSet<FName> InSkipPropertyNames);
 		virtual void DoSerialize(UObject* Object);
 
 		virtual bool ShouldSkipProperty(const FProperty* InProperty) const override;
@@ -65,10 +64,10 @@ namespace LGUIPrefabSystem
 		ActorSerializerBase& Serializer;
 		TSet<FName> SkipPropertyNames;
 	};
-	class LGUI_API FLGUIObjectReader : public FObjectReader
+	class LGUI_API FLexUIObjectReader : public FObjectReader
 	{
 	public:
-		FLGUIObjectReader(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, TSet<FName> InSkipPropertyNames);
+		FLexUIObjectReader(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, TSet<FName> InSkipPropertyNames);
 		virtual void DoSerialize(UObject* Object);
 
 		virtual bool ShouldSkipProperty(const FProperty* InProperty) const override;
@@ -86,19 +85,19 @@ namespace LGUIPrefabSystem
 		TSet<FName> SkipPropertyNames;
 	};
 
-	class LGUI_API FLGUIDuplicateObjectWriter : public FLGUIObjectWriter
+	class LGUI_API FLexUIDuplicateObjectWriter : public FLexUIObjectWriter
 	{
 	public:
-		FLGUIDuplicateObjectWriter(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, TSet<FName> InSkipPropertyNames);
+		FLexUIDuplicateObjectWriter(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, TSet<FName> InSkipPropertyNames);
 
 		virtual bool ShouldSkipProperty(const FProperty* InProperty) const override;
 		virtual FString GetArchiveName() const override;
 		virtual bool SerializeObject(UObject* Object)override;
 	};
-	class LGUI_API FLGUIDuplicateObjectReader : public FLGUIObjectReader
+	class LGUI_API FLexUIDuplicateObjectReader : public FLexUIObjectReader
 	{
 	public:
-		FLGUIDuplicateObjectReader(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, TSet<FName> InSkipPropertyNames);
+		FLexUIDuplicateObjectReader(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, TSet<FName> InSkipPropertyNames);
 
 		virtual bool ShouldSkipProperty(const FProperty* InProperty) const override;
 		virtual FString GetArchiveName() const override;
@@ -107,10 +106,10 @@ namespace LGUIPrefabSystem
 
 
 
-	class LGUI_API FLGUIOverrideParameterObjectWriter : public FLGUIObjectWriter
+	class LGUI_API FLexUIOverrideParameterObjectWriter : public FLexUIObjectWriter
 	{
 	public:
-		FLGUIOverrideParameterObjectWriter(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, const TArray<FName>& InOverridePropertyNames);
+		FLexUIOverrideParameterObjectWriter(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, const TArray<FName>& InOverridePropertyNames);
 
 		virtual bool ShouldSkipProperty(const FProperty* InProperty) const override;
 		virtual FString GetArchiveName() const override;
@@ -118,10 +117,10 @@ namespace LGUIPrefabSystem
 	protected:
 		mutable TSet<FName> OverridePropertyNames;
 	};
-	class LGUI_API FLGUIOverrideParameterObjectReader : public FLGUIObjectReader
+	class LGUI_API FLexUIOverrideParameterObjectReader : public FLexUIObjectReader
 	{
 	public:
-		FLGUIOverrideParameterObjectReader(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, const TArray<FName>& InOverridePropertyNames);
+		FLexUIOverrideParameterObjectReader(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, const TArray<FName>& InOverridePropertyNames);
 
 		virtual bool ShouldSkipProperty(const FProperty* InProperty) const override;
 		virtual FString GetArchiveName() const override;
@@ -131,19 +130,19 @@ namespace LGUIPrefabSystem
 	};
 
 
-	class LGUI_API FLGUIDuplicateOverrideParameterObjectWriter : public FLGUIOverrideParameterObjectWriter
+	class LGUI_API FLexUIDuplicateOverrideParameterObjectWriter : public FLexUIOverrideParameterObjectWriter
 	{
 	public:
-		FLGUIDuplicateOverrideParameterObjectWriter(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, const TArray<FName>& InOverridePropertyNames);
+		FLexUIDuplicateOverrideParameterObjectWriter(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, const TArray<FName>& InOverridePropertyNames);
 
 		virtual bool ShouldSkipProperty(const FProperty* InProperty) const override;
 		virtual FString GetArchiveName() const override;
 		virtual bool SerializeObject(UObject* Object)override;
 	};
-	class LGUI_API FLGUIDuplicateOverrideParameterObjectReader : public FLGUIOverrideParameterObjectReader
+	class LGUI_API FLexUIDuplicateOverrideParameterObjectReader : public FLexUIOverrideParameterObjectReader
 	{
 	public:
-		FLGUIDuplicateOverrideParameterObjectReader(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, const TArray<FName>& InOverridePropertyNames);
+		FLexUIDuplicateOverrideParameterObjectReader(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, const TArray<FName>& InOverridePropertyNames);
 
 		virtual bool ShouldSkipProperty(const FProperty* InProperty) const override;
 		virtual FString GetArchiveName() const override;
@@ -151,20 +150,20 @@ namespace LGUIPrefabSystem
 	};
 
 
-	class LGUI_API FLGUIImmediateOverrideParameterObjectWriter : public FObjectWriter
+	class LGUI_API FLexUIImmediateOverrideParameterObjectWriter : public FObjectWriter
 	{
 	public:
-		FLGUIImmediateOverrideParameterObjectWriter(UObject* Object, TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, const TArray<FName>& InOverridePropertyNames);
+		FLexUIImmediateOverrideParameterObjectWriter(UObject* Object, TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, const TArray<FName>& InOverridePropertyNames);
 
 		virtual bool ShouldSkipProperty(const FProperty* InProperty) const override;
 		virtual FString GetArchiveName() const override;
 	private:
 		mutable TSet<FName> OverridePropertyNames;
 	};
-	class LGUI_API FLGUIImmediateOverrideParameterObjectReader : public FObjectReader
+	class LGUI_API FLexUIImmediateOverrideParameterObjectReader : public FObjectReader
 	{
 	public:
-		FLGUIImmediateOverrideParameterObjectReader(UObject* Object, TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, const TArray<FName>& InOverridePropertyNames);
+		FLexUIImmediateOverrideParameterObjectReader(UObject* Object, TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, const TArray<FName>& InOverridePropertyNames);
 
 		virtual bool ShouldSkipProperty(const FProperty* InProperty) const override;
 		virtual FString GetArchiveName() const override;

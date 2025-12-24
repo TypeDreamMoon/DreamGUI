@@ -1,25 +1,27 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "PrefabSystem/LGUIPrefabHelperObject.h"
+#include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "LGUI.h"
 #include "Core/LexUIManager.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
-#include "PrefabSystem/LGUIPrefab.h"
+#include "Core/Components/LexWidget.h"
+#include "PrefabSystem/LexUIPrefab.h"
 #include "Utils/LexUIUtils.h"
 #include "GameFramework/Actor.h"
-#include "PrefabSystem/LGUIObjectReaderAndWriter.h"
+#include "PrefabSystem/LexUIObjectReaderAndWriter.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
+
 #include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabManager"
 
 
-ULGUIPrefabHelperObject::ULGUIPrefabHelperObject()
+ULexUIPrefabHelperObject::ULexUIPrefabHelperObject()
 {
 	
 }
 
 #if WITH_EDITOR
-void ULGUIPrefabHelperObject::BeginDestroy()
+void ULexUIPrefabHelperObject::BeginDestroy()
 {
 	ClearLoadedPrefab();
 	Super::BeginDestroy();
@@ -32,25 +34,25 @@ void ULGUIPrefabHelperObject::BeginDestroy()
 #endif
 }
 
-void ULGUIPrefabHelperObject::MarkAsManagerObject()
+void ULexUIPrefabHelperObject::MarkAsManagerObject()
 {
 	if (bIsMarkedAsManagerObject)return;
 	bIsMarkedAsManagerObject = true;
 	ULexUIManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]{
 		if (Object.IsValid())
 		{
-			GEditor->OnLevelActorAttached().AddUObject(Object.Get(), &ULGUIPrefabHelperObject::OnLevelActorAttached);
-			GEditor->OnLevelActorDetached().AddUObject(Object.Get(), &ULGUIPrefabHelperObject::OnLevelActorDetached);
-			GEditor->OnLevelActorDeleted().AddUObject(Object.Get(), &ULGUIPrefabHelperObject::OnLevelActorDeleted);
+			GEditor->OnLevelActorAttached().AddUObject(Object.Get(), &ULexUIPrefabHelperObject::OnLevelActorAttached);
+			GEditor->OnLevelActorDetached().AddUObject(Object.Get(), &ULexUIPrefabHelperObject::OnLevelActorDetached);
+			GEditor->OnLevelActorDeleted().AddUObject(Object.Get(), &ULexUIPrefabHelperObject::OnLevelActorDeleted);
 			Object->bCanNotifyAttachment = true;
 		}
 		}, 1);
 
-	FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &ULGUIPrefabHelperObject::OnObjectPropertyChanged);
-	FCoreUObjectDelegates::OnPreObjectPropertyChanged.AddUObject(this, &ULGUIPrefabHelperObject::OnPreObjectPropertyChanged);
+	FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &ULexUIPrefabHelperObject::OnObjectPropertyChanged);
+	FCoreUObjectDelegates::OnPreObjectPropertyChanged.AddUObject(this, &ULexUIPrefabHelperObject::OnPreObjectPropertyChanged);
 }
 
-void ULGUIPrefabHelperObject::LoadPrefab(UWorld* InWorld, USceneComponent* InParent)
+void ULexUIPrefabHelperObject::LoadPrefab(UWorld* InWorld, USceneComponent* InParent)
 {
 	if (!IsValid(PrefabAsset))
 	{
@@ -66,14 +68,14 @@ void ULGUIPrefabHelperObject::LoadPrefab(UWorld* InWorld, USceneComponent* InPar
 
 		if (LoadedRootActor == nullptr)return;
 
-		ULGUIPrefabManagerObject::OnPrefabEditor_Refresh.ExecuteIfBound();
+		ULexUIManagerWorldSubsystem::RefreshAllUI();
 	}
 }
 #endif
 
 #if WITH_EDITOR
 
-void ULGUIPrefabHelperObject::SetActorPropertyInOutliner(AActor* Actor, bool InListed)
+void ULexUIPrefabHelperObject::SetActorPropertyInOutliner(AActor* Actor, bool InListed)
 {
 	auto bEditable_Property = FindFProperty<FBoolProperty>(AActor::StaticClass(), TEXT("bEditable"));
 	bEditable_Property->SetPropertyValue_InContainer(Actor, InListed);
@@ -87,7 +89,7 @@ void ULGUIPrefabHelperObject::SetActorPropertyInOutliner(AActor* Actor, bool InL
 	bListedInSceneOutliner_Property->SetPropertyValue_InContainer(Actor, InListed);
 }
 
-void ULGUIPrefabHelperObject::ClearLoadedPrefab()
+void ULexUIPrefabHelperObject::ClearLoadedPrefab()
 {
 	if (IsValid(LoadedRootActor))
 	{
@@ -97,7 +99,7 @@ void ULGUIPrefabHelperObject::ClearLoadedPrefab()
 	SubPrefabMap.Empty();
 }
 
-bool ULGUIPrefabHelperObject::IsActorBelongsToSubPrefab(const AActor* InActor)
+bool ULexUIPrefabHelperObject::IsActorBelongsToSubPrefab(const AActor* InActor)
 {
 	CleanupInvalidSubPrefab();
 	if (!IsValid(InActor))return false;
@@ -114,7 +116,7 @@ bool ULGUIPrefabHelperObject::IsActorBelongsToSubPrefab(const AActor* InActor)
 	}
 	return false;
 }
-bool ULGUIPrefabHelperObject::IsActorBelongsToMissingSubPrefab(const AActor* InActor)
+bool ULexUIPrefabHelperObject::IsActorBelongsToMissingSubPrefab(const AActor* InActor)
 {
 	if (!IsValid(InActor))return false;
 #if WITH_EDITOR
@@ -129,7 +131,7 @@ bool ULGUIPrefabHelperObject::IsActorBelongsToMissingSubPrefab(const AActor* InA
 	return false;
 }
 
-bool ULGUIPrefabHelperObject::IsSubPrefabRootActor(const AActor* InActor)
+bool ULexUIPrefabHelperObject::IsSubPrefabRootActor(const AActor* InActor)
 {
 	CleanupInvalidSubPrefab();
 	if (!IsValid(InActor))return false;
@@ -137,7 +139,7 @@ bool ULGUIPrefabHelperObject::IsSubPrefabRootActor(const AActor* InActor)
 }
 
 #include "PrefabSystem/LGUIPrefabLevelManagerActor.h"
-bool ULGUIPrefabHelperObject::IsActorBelongsToThis(const AActor* InActor)
+bool ULexUIPrefabHelperObject::IsActorBelongsToThis(const AActor* InActor)
 {
 	if (this->IsInsidePrefabEditor())
 	{
@@ -162,7 +164,7 @@ bool ULGUIPrefabHelperObject::IsActorBelongsToThis(const AActor* InActor)
 	return false;
 }
 
-void ULGUIPrefabHelperObject::ClearInvalidObjectAndGuid()
+void ULexUIPrefabHelperObject::ClearInvalidObjectAndGuid()
 {
 	TSet<FGuid> GuidsToRemove;
 	for (auto& KeyValue : MapGuidToObject)
@@ -190,7 +192,7 @@ void ULGUIPrefabHelperObject::ClearInvalidObjectAndGuid()
 	}
 }
 
-void ULGUIPrefabHelperObject::AddMemberPropertyToSubPrefab(AActor* InSubPrefabActor, UObject* InObject, FName InPropertyName)
+void ULexUIPrefabHelperObject::AddMemberPropertyToSubPrefab(AActor* InSubPrefabActor, UObject* InObject, FName InPropertyName)
 {
 	CleanupInvalidSubPrefab();
 	if (!IsValid(InSubPrefabActor))return;
@@ -206,7 +208,7 @@ void ULGUIPrefabHelperObject::AddMemberPropertyToSubPrefab(AActor* InSubPrefabAc
 	}
 }
 
-void ULGUIPrefabHelperObject::RemoveMemberPropertyFromSubPrefab(AActor* InSubPrefabActor, UObject* InObject, FName InPropertyName)
+void ULexUIPrefabHelperObject::RemoveMemberPropertyFromSubPrefab(AActor* InSubPrefabActor, UObject* InObject, FName InPropertyName)
 {
 	CleanupInvalidSubPrefab();
 	if (!IsValid(InSubPrefabActor))return;
@@ -223,14 +225,14 @@ void ULGUIPrefabHelperObject::RemoveMemberPropertyFromSubPrefab(AActor* InSubPre
 	}
 }
 
-void ULGUIPrefabHelperObject::RemoveAllMemberPropertyFromSubPrefab(AActor* InSubPrefabRootActor, bool InIncludeRootTransform)
+void ULexUIPrefabHelperObject::RemoveAllMemberPropertyFromSubPrefab(AActor* InSubPrefabRootActor, bool InIncludeRootTransform)
 {
 	CleanupInvalidSubPrefab();
 	if (!IsValid(InSubPrefabRootActor))return;
 	for (auto& KeyValue : SubPrefabMap)
 	{
 		auto SubPrefabRootActor = KeyValue.Key;
-		FLGUISubPrefabData& SubPrefabData = KeyValue.Value;
+		FLexUISubPrefabData& SubPrefabData = KeyValue.Value;
 		SubPrefabData.CheckParameters();
 		if (InSubPrefabRootActor == SubPrefabRootActor)
 		{
@@ -269,7 +271,7 @@ void ULGUIPrefabHelperObject::RemoveAllMemberPropertyFromSubPrefab(AActor* InSub
 	}
 }
 
-FLGUISubPrefabData ULGUIPrefabHelperObject::GetSubPrefabData(AActor* InSubPrefabActor)
+FLexUISubPrefabData ULexUIPrefabHelperObject::GetSubPrefabData(AActor* InSubPrefabActor)
 {
 	CleanupInvalidSubPrefab();
 	check(IsValid(InSubPrefabActor));
@@ -285,10 +287,10 @@ FLGUISubPrefabData ULGUIPrefabHelperObject::GetSubPrefabData(AActor* InSubPrefab
 			}
 		}
 	}
-	return FLGUISubPrefabData();
+	return FLexUISubPrefabData();
 }
 
-AActor* ULGUIPrefabHelperObject::GetSubPrefabRootActor(AActor* InSubPrefabActor)
+AActor* ULexUIPrefabHelperObject::GetSubPrefabRootActor(AActor* InSubPrefabActor)
 {
 	CleanupInvalidSubPrefab();
 	check(IsValid(InSubPrefabActor));
@@ -305,7 +307,7 @@ AActor* ULGUIPrefabHelperObject::GetSubPrefabRootActor(AActor* InSubPrefabActor)
 	return nullptr;
 }
 
-void ULGUIPrefabHelperObject::SavePrefab()
+void ULexUIPrefabHelperObject::SavePrefab()
 {
 	CleanupInvalidSubPrefab();
 	if (IsValid(PrefabAsset))
@@ -335,7 +337,7 @@ void ULGUIPrefabHelperObject::SavePrefab()
 	}
 }
 
-ULGUIPrefab* ULGUIPrefabHelperObject::GetSubPrefabAsset(AActor* InSubPrefabActor)
+ULexUIPrefab* ULexUIPrefabHelperObject::GetSubPrefabAsset(AActor* InSubPrefabActor)
 {
 	CleanupInvalidSubPrefab();
 	if (!IsValid(InSubPrefabActor))return nullptr;
@@ -352,7 +354,7 @@ ULGUIPrefab* ULGUIPrefabHelperObject::GetSubPrefabAsset(AActor* InSubPrefabActor
 	return nullptr;
 }
 
-void ULGUIPrefabHelperObject::MarkOverrideParameterFromParentPrefab(UObject* InObject, const TArray<FName>& InPropertyNames)
+void ULexUIPrefabHelperObject::MarkOverrideParameterFromParentPrefab(UObject* InObject, const TArray<FName>& InPropertyNames)
 {
 	AActor* Actor = Cast<AActor>(InObject);
 	UActorComponent* Component = Cast<UActorComponent>(InObject);
@@ -379,7 +381,7 @@ void ULGUIPrefabHelperObject::MarkOverrideParameterFromParentPrefab(UObject* InO
 		}
 	}
 }
-void ULGUIPrefabHelperObject::MarkOverrideParameterFromParentPrefab(UObject* InObject, FName InPropertyName)
+void ULexUIPrefabHelperObject::MarkOverrideParameterFromParentPrefab(UObject* InObject, FName InPropertyName)
 {
 	AActor* Actor = Cast<AActor>(InObject);
 	UActorComponent* Component = Cast<UActorComponent>(InObject);
@@ -411,7 +413,7 @@ void ULGUIPrefabHelperObject::MarkOverrideParameterFromParentPrefab(UObject* InO
 
 
 
-bool ULGUIPrefabHelperObject::RefreshOnSubPrefabDirty(ULGUIPrefab* InSubPrefab, AActor* InSubPrefabRootActor)
+bool ULexUIPrefabHelperObject::RefreshOnSubPrefabDirty(ULexUIPrefab* InSubPrefab, AActor* InSubPrefabRootActor)
 {
 	CleanupInvalidSubPrefab();
 
@@ -473,7 +475,7 @@ bool ULGUIPrefabHelperObject::RefreshOnSubPrefabDirty(ULGUIPrefab* InSubPrefab, 
 			}
 
 			//refresh sub-prefab's object
-			TMap<TObjectPtr<AActor>, FLGUISubPrefabData> TempSubSubPrefabMap;
+			TMap<TObjectPtr<AActor>, FLexUISubPrefabData> TempSubSubPrefabMap;
 			auto AttachParentActor = SubPrefabRootActor->GetAttachParentActor();
 			InSubPrefab->LoadPrefabWithExistingObjects(GetPrefabWorld()
 				, AttachParentActor == nullptr ? nullptr : AttachParentActor->GetRootComponent()
@@ -586,27 +588,27 @@ bool ULGUIPrefabHelperObject::RefreshOnSubPrefabDirty(ULGUIPrefab* InSubPrefab, 
 	bCanNotifyAttachment = true;
 	bCanCollectProperty = true;
 	bCanNotifyComponentCreateDelete = true;
-	ULGUIPrefabManagerObject::OnPrefabEditor_Refresh.ExecuteIfBound();
+	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	return AnythingChange;
 }
 
-void ULGUIPrefabHelperObject::OnObjectPropertyChanged(UObject* InObject, struct FPropertyChangedEvent& InPropertyChangedEvent)
+void ULexUIPrefabHelperObject::OnObjectPropertyChanged(UObject* InObject, struct FPropertyChangedEvent& InPropertyChangedEvent)
 {
 	if (!IsValid(InObject))return;
 	if (InPropertyChangedEvent.MemberProperty == nullptr || InPropertyChangedEvent.Property == nullptr)return;
-	if (LGUIPrefabSystem::LGUIPrefab_ShouldSkipProperty(InPropertyChangedEvent.MemberProperty))return;
-	if (LGUIPrefabSystem::LGUIPrefab_ShouldSkipProperty(InPropertyChangedEvent.Property))return;
+	if (LexUIPrefabSystem::LGUIPrefab_ShouldSkipProperty(InPropertyChangedEvent.MemberProperty))return;
+	if (LexUIPrefabSystem::LGUIPrefab_ShouldSkipProperty(InPropertyChangedEvent.Property))return;
 
 	TryCollectPropertyToOverride(InObject, InPropertyChangedEvent.MemberProperty);
 }
-void ULGUIPrefabHelperObject::OnPreObjectPropertyChanged(UObject* InObject, const class FEditPropertyChain& InEditPropertyChain)
+void ULexUIPrefabHelperObject::OnPreObjectPropertyChanged(UObject* InObject, const class FEditPropertyChain& InEditPropertyChain)
 {
 	if (!IsValid(InObject))return;
 	auto ActiveMemberNode = InEditPropertyChain.GetActiveMemberNode();
 	if (ActiveMemberNode == nullptr)return;
 	auto MemberProperty = ActiveMemberNode->GetValue();
 	if (MemberProperty == nullptr)return;
-	if (LGUIPrefabSystem::LGUIPrefab_ShouldSkipProperty(MemberProperty))return;
+	if (LexUIPrefabSystem::LGUIPrefab_ShouldSkipProperty(MemberProperty))return;
 	auto ActiveNode = InEditPropertyChain.GetActiveNode();
 	if (ActiveNode != ActiveMemberNode)
 	{
@@ -618,7 +620,7 @@ void ULGUIPrefabHelperObject::OnPreObjectPropertyChanged(UObject* InObject, cons
 	TryCollectPropertyToOverride(InObject, MemberProperty);
 }
 
-void ULGUIPrefabHelperObject::TryCollectPropertyToOverride(UObject* InObject, FProperty* InMemberProperty)
+void ULexUIPrefabHelperObject::TryCollectPropertyToOverride(UObject* InObject, FProperty* InMemberProperty)
 {
 	if (!bCanCollectProperty)return;
 	if (InObject->GetWorld() == this->GetPrefabWorld())
@@ -687,7 +689,17 @@ void ULGUIPrefabHelperObject::TryCollectPropertyToOverride(UObject* InObject, FP
 			{
 				SetAnythingDirty();
 				AddMemberPropertyToSubPrefab(PropertyActorInSubPrefab, InObject, PropertyName);
-				ULGUIPrefabManagerObject::OnPrefabEditor_AfterCollectPropertyToOverride.ExecuteIfBound(this, InObject, PropertyName);
+				if (auto Widget = Cast<ULexWidget>(InObject))
+				{
+					if (PropertyName == USceneComponent::GetRelativeLocationPropertyName())//if UI's relative location change, then record anchor data too
+					{
+						this->AddMemberPropertyToSubPrefab(Widget->GetOwner(), InObject, ULexWidget::GetPropertyName_AnchorData());
+					}
+					else if (PropertyName == ULexWidget::GetPropertyName_AnchorData())//if UI's anchor data change, then record relative location too
+					{
+						this->AddMemberPropertyToSubPrefab(Widget->GetOwner(), InObject, USceneComponent::GetRelativeLocationPropertyName());
+					}
+				}
 				//refresh override parameter
 			}
 		}
@@ -698,12 +710,12 @@ void ULGUIPrefabHelperObject::TryCollectPropertyToOverride(UObject* InObject, FP
 	}
 }
 
-void ULGUIPrefabHelperObject::OnLevelActorAttached(AActor* Actor, const AActor* AttachTo)
+void ULexUIPrefabHelperObject::OnLevelActorAttached(AActor* Actor, const AActor* AttachTo)
 {
 	if (ULexUIManagerObject::GetIsBlueprintCompiling())return;
 	if (!bCanNotifyAttachment)return;
 	if (Actor->GetWorld() != this->GetPrefabWorld())return;
-	if (auto PrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(Actor->GetWorld()))
+	if (auto PrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(Actor->GetWorld()))
 	{
 		if (PrefabManager->IsPrefabSystemProcessingActor(Actor))return;
 	}
@@ -734,12 +746,12 @@ void ULGUIPrefabHelperObject::OnLevelActorAttached(AActor* Actor, const AActor* 
 		}
 	}
 }
-void ULGUIPrefabHelperObject::OnLevelActorDetached(AActor* Actor, const AActor* DetachFrom)
+void ULexUIPrefabHelperObject::OnLevelActorDetached(AActor* Actor, const AActor* DetachFrom)
 {
 	if (ULexUIManagerObject::GetIsBlueprintCompiling())return;
 	if (!bCanNotifyAttachment)return;
 	if (Actor->GetWorld() != this->GetPrefabWorld())return;
-	if (auto PrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(Actor->GetWorld()))
+	if (auto PrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(Actor->GetWorld()))
 	{
 		if (PrefabManager->IsPrefabSystemProcessingActor(Actor))return;
 	}
@@ -756,7 +768,7 @@ void ULGUIPrefabHelperObject::OnLevelActorDetached(AActor* Actor, const AActor* 
 		}, 1);
 }
 
-void ULGUIPrefabHelperObject::OnLevelActorDeleted(AActor* Actor)
+void ULexUIPrefabHelperObject::OnLevelActorDeleted(AActor* Actor)
 {
 	if (ULexUIManagerObject::GetIsBlueprintCompiling())return;
 	if (!bCanNotifyAttachment)return;
@@ -802,8 +814,8 @@ void ULGUIPrefabHelperObject::OnLevelActorDeleted(AActor* Actor)
 		}, 1);
 }
 
-bool ULGUIPrefabHelperObject::bFirstTimeShow_RestructActorBlueprint = true;
-void ULGUIPrefabHelperObject::CheckAttachment()
+bool ULexUIPrefabHelperObject::bFirstTimeShow_RestructActorBlueprint = true;
+void ULexUIPrefabHelperObject::CheckAttachment()
 {
 	if (ULexUIManagerObject::GetIsBlueprintCompiling())return;
 	if (!bCanNotifyAttachment)return;
@@ -898,7 +910,7 @@ You should know that using actor-blueprint inside Prefab is not a good idea, so 
 	AttachmentActor = FAttachmentActorStruct();
 }
 
-UWorld* ULGUIPrefabHelperObject::GetPrefabWorld() const
+UWorld* ULexUIPrefabHelperObject::GetPrefabWorld() const
 {
 	if (RootAgentActorForPrefabEditor.IsValid())
 	{
@@ -910,7 +922,7 @@ UWorld* ULGUIPrefabHelperObject::GetPrefabWorld() const
 	}
 }
 
-bool ULGUIPrefabHelperObject::CleanupInvalidLinkToSubPrefabObject()
+bool ULexUIPrefabHelperObject::CleanupInvalidLinkToSubPrefabObject()
 {
 	auto IsValidParentLinkedGuid = [&](const FGuid& InCheckGuid) {
 		for (auto& SubPrefabKeyValue : SubPrefabMap)
@@ -944,18 +956,35 @@ bool ULGUIPrefabHelperObject::CleanupInvalidLinkToSubPrefabObject()
  * When revert, if the parameter is RelativeLocation, then UIItem's AnchorData will also be reverted. Revert parameter is just copy data from origin to dest, origin means the temporary created objects in prefab's preview world.
  * But since AnchorData is relative to parent, and parent may not have the same AnchorData (because parent is temporary created inside preview world), so we need to set parent's AnchorData to now object's parent's AnchorData.
  */
-void ULGUIPrefabHelperObject::CopyRootObjectParentAnchorData(UObject* InObject, UObject* OriginObject)
+void ULexUIPrefabHelperObject::CopyRootObjectParentAnchorData(UObject* InObject, UObject* OriginObject)
 {
 	if (auto SceneComp = Cast<USceneComponent>(InObject))
 	{
 		if (SubPrefabMap.Contains(SceneComp->GetOwner()))//if is sub prefab's root component
 		{
-			ULGUIPrefabManagerObject::OnPrefabEditor_CopyRootObjectParentAnchorData.ExecuteIfBound(this, InObject, OriginObject);
+			auto InObjectWidget = Cast<ULexWidget>(InObject);
+			auto OriginObjectWidget = Cast<ULexWidget>(OriginObject);
+			if (InObjectWidget != nullptr && OriginObjectWidget != nullptr)//if is Widget, we need to copy parent's property to origin object's parent property, to make anchor & location calculation right
+			{
+				auto InObjectParent = InObjectWidget->GetUIParent();
+				auto OriginObjectParent = OriginObjectWidget->GetUIParent();
+				if (InObjectParent != nullptr && OriginObjectParent != nullptr)
+				{
+					//copy relative location
+					auto RelativeLocationProperty = FindFProperty<FProperty>(InObjectParent->GetClass(), USceneComponent::GetRelativeLocationPropertyName());
+					RelativeLocationProperty->CopyCompleteValue_InContainer(OriginObjectParent, InObjectParent);
+					FLexUIUtils::NotifyPropertyChanged(OriginObjectParent, RelativeLocationProperty);
+					//copy anchor data
+					auto AnchorDataProperty = FindFProperty<FProperty>(InObjectParent->GetClass(), ULexWidget::GetPropertyName_AnchorData());
+					AnchorDataProperty->CopyCompleteValue_InContainer(OriginObjectParent, InObjectParent);
+					FLexUIUtils::NotifyPropertyChanged(OriginObjectParent, AnchorDataProperty);
+				}
+			}
 		}
 	}
 }
 
-void ULGUIPrefabHelperObject::RevertPrefabPropertyValue(UObject* ContextObject, FProperty* Property, void* ContainerPointerInSrc, void* ContainerPointerInPrefab, const FLGUISubPrefabData& SubPrefabData, int RawArrayIndex, bool IsInsideRawArray)
+void ULexUIPrefabHelperObject::RevertPrefabPropertyValue(UObject* ContextObject, FProperty* Property, void* ContainerPointerInSrc, void* ContainerPointerInPrefab, const FLexUISubPrefabData& SubPrefabData, int RawArrayIndex, bool IsInsideRawArray)
 {
 	if (Property->ArrayDim > 1 && !IsInsideRawArray)
 	{
@@ -1097,7 +1126,7 @@ void ULGUIPrefabHelperObject::RevertPrefabPropertyValue(UObject* ContextObject, 
 		Property->CopyCompleteValue_InContainer(ContainerPointerInSrc, ContainerPointerInPrefab);
 	}
 }
-void ULGUIPrefabHelperObject::RevertPrefabOverride(UObject* InObject, const TArray<FName>& InPropertyNames)
+void ULexUIPrefabHelperObject::RevertPrefabOverride(UObject* InObject, const TArray<FName>& InPropertyNames)
 {
 	GEditor->BeginTransaction(FText::Format(LOCTEXT("RevertPrefabOnObjectProperties", "Revert Prefab Override: {0}"), FText::FromString(InObject->GetName())));
 	InObject->Modify();
@@ -1155,11 +1184,11 @@ void ULGUIPrefabHelperObject::RevertPrefabOverride(UObject* InObject, const TArr
 	}
 	bCanCollectProperty = true;
 	GEditor->EndTransaction();
-	ULGUIPrefabManagerObject::OnPrefabEditor_Refresh.ExecuteIfBound();
+	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	//when apply or revert parameters in level editor, means we accept sub-prefab's current version, so we mark the version to newest, and we won't get 'update warning'.
 	RefreshSubPrefabVersion(GetSubPrefabRootActor(Actor));
 }
-void ULGUIPrefabHelperObject::RevertPrefabOverride(UObject* InObject, FName InPropertyName)
+void ULexUIPrefabHelperObject::RevertPrefabOverride(UObject* InObject, FName InPropertyName)
 {
 	AActor* Actor = Cast<AActor>(InObject);
 	UActorComponent* Component = Cast<UActorComponent>(InObject);
@@ -1214,12 +1243,12 @@ void ULGUIPrefabHelperObject::RevertPrefabOverride(UObject* InObject, FName InPr
 		GEditor->EndTransaction();
 	}
 	bCanCollectProperty = true;
-	ULGUIPrefabManagerObject::OnPrefabEditor_Refresh.ExecuteIfBound();
+	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	//when apply or revert parameters in level editor, means we accept sub-prefab's current version, so we mark the version to newest, and we won't get 'update warning'.
 	RefreshSubPrefabVersion(GetSubPrefabRootActor(Actor));
 }
 
-void ULGUIPrefabHelperObject::RevertAllPrefabOverride(UObject* InObject)
+void ULexUIPrefabHelperObject::RevertAllPrefabOverride(UObject* InObject)
 {
 	bCanCollectProperty = false;
 	{
@@ -1300,20 +1329,33 @@ void ULGUIPrefabHelperObject::RevertAllPrefabOverride(UObject* InObject)
 		RefreshSubPrefabVersion(GetSubPrefabRootActor(Actor));
 	}
 	bCanCollectProperty = true;
-	ULGUIPrefabManagerObject::OnPrefabEditor_Refresh.ExecuteIfBound();
+	ULexUIManagerWorldSubsystem::RefreshAllUI();
 }
 
-FName ULGUIPrefabHelperObject::ReplaceObjectPropertyForApplyOrRevert(UObject* InObject, FName InPropertyName)
+FName ULexUIPrefabHelperObject::ReplaceObjectPropertyForApplyOrRevert(UObject* InObject, FName InPropertyName)
 {
-	ULGUIPrefabManagerObject::OnPrefabEditor_ReplaceObjectPropertyForApplyOrRevert.ExecuteIfBound(this, InObject, InPropertyName);
+	if (InObject->IsA<ULexWidget>())
+	{
+		if (InPropertyName == USceneComponent::GetRelativeLocationPropertyName())
+		{
+			InPropertyName = ULexWidget::GetPropertyName_AnchorData();
+		}
+	}
 	return InPropertyName;
 }
-void ULGUIPrefabHelperObject::AfterObjectPropertyApplyOrRevert(UObject* InObject, FName InPropertyName)
+void ULexUIPrefabHelperObject::AfterObjectPropertyApplyOrRevert(UObject* InObject, FName InPropertyName)
 {
-	ULGUIPrefabManagerObject::OnPrefabEditor_AfterObjectPropertyApplyOrRevert.ExecuteIfBound(this, InObject, InPropertyName);
+	if (auto Widget = Cast<ULexWidget>(InObject))
+	{
+		if (InPropertyName == ULexWidget::GetPropertyName_AnchorData())
+		{
+			Widget->CalculateTransformFromAnchor();//calculate transform here, because when NotifyPropertyChanged the PostActorConstruction->MoveComponent will call then anchor will calculate from transform value which is wrong
+			this->RemoveMemberPropertyFromSubPrefab(Widget->GetOwner(), InObject, USceneComponent::GetRelativeLocationPropertyName());//remove RelativeLocation override because Widget use AnchorData to calculate RelativeLocation
+		}
+	}
 }
 
-void ULGUIPrefabHelperObject::ApplyPrefabPropertyValue(UObject* ContextObject, FProperty* Property, void* ContainerPointerInSrc, void* ContainerPointerInPrefab, const FLGUISubPrefabData& SubPrefabData, int RawArrayIndex, bool IsInsideRawArray)
+void ULexUIPrefabHelperObject::ApplyPrefabPropertyValue(UObject* ContextObject, FProperty* Property, void* ContainerPointerInSrc, void* ContainerPointerInPrefab, const FLexUISubPrefabData& SubPrefabData, int RawArrayIndex, bool IsInsideRawArray)
 {
 	if (Property->ArrayDim > 1 && !IsInsideRawArray)
 	{
@@ -1457,7 +1499,7 @@ void ULGUIPrefabHelperObject::ApplyPrefabPropertyValue(UObject* ContextObject, F
 		Property->CopyCompleteValue_InContainer(ContainerPointerInPrefab, ContainerPointerInSrc);
 	}
 }
-void ULGUIPrefabHelperObject::ApplyPrefabOverride(UObject* InObject, const TArray<FName>& InPropertyNames)
+void ULexUIPrefabHelperObject::ApplyPrefabOverride(UObject* InObject, const TArray<FName>& InPropertyNames)
 {
 	GEditor->BeginTransaction(FText::Format(LOCTEXT("ApplyPrefabOnObjectProperties", "Apply Prefab Override: {0}"), FText::FromString(InObject->GetName())));
 	InObject->Modify();
@@ -1526,11 +1568,11 @@ void ULGUIPrefabHelperObject::ApplyPrefabOverride(UObject* InObject, const TArra
 	}
 	bCanCollectProperty = true;
 	GEditor->EndTransaction();
-	ULGUIPrefabManagerObject::OnPrefabEditor_Refresh.ExecuteIfBound();
+	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	//when apply or revert parameters in level editor, means we accept sub-prefab's current version, so we mark the version to newest, and we won't get 'update warning'.
 	RefreshSubPrefabVersion(GetSubPrefabRootActor(Actor));
 }
-void ULGUIPrefabHelperObject::ApplyPrefabOverride(UObject* InObject, FName InPropertyName)
+void ULexUIPrefabHelperObject::ApplyPrefabOverride(UObject* InObject, FName InPropertyName)
 {
 	AActor* Actor = Cast<AActor>(InObject);
 	UActorComponent* Component = Cast<UActorComponent>(InObject);
@@ -1596,11 +1638,11 @@ void ULGUIPrefabHelperObject::ApplyPrefabOverride(UObject* InObject, FName InPro
 		GEditor->EndTransaction();
 	}
 	bCanCollectProperty = true;
-	ULGUIPrefabManagerObject::OnPrefabEditor_Refresh.ExecuteIfBound();
+	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	//when apply or revert parameters in level editor, means we accept sub-prefab's current version, so we mark the version to newest, and we won't get 'update warning'.
 	RefreshSubPrefabVersion(GetSubPrefabRootActor(Actor));
 }
-void ULGUIPrefabHelperObject::ApplyAllOverrideToPrefab(UObject* InObject)
+void ULexUIPrefabHelperObject::ApplyAllOverrideToPrefab(UObject* InObject)
 {
 	AActor* Actor = Cast<AActor>(InObject);
 	UActorComponent* Component = Cast<UActorComponent>(InObject);
@@ -1707,13 +1749,13 @@ void ULGUIPrefabHelperObject::ApplyAllOverrideToPrefab(UObject* InObject)
 		GEditor->EndTransaction();
 	}
 	bCanCollectProperty = true;
-	ULGUIPrefabManagerObject::OnPrefabEditor_Refresh.ExecuteIfBound();
+	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	//when apply or revert parameters in level editor, means we accept sub-prefab's current version, so we mark the version to newest, and we won't get 'update warning'.
 	RefreshSubPrefabVersion(GetSubPrefabRootActor(Actor));
 }
 #pragma endregion RevertAndApply
 
-void ULGUIPrefabHelperObject::RefreshSubPrefabVersion(AActor* InSubPrefabRootActor)
+void ULexUIPrefabHelperObject::RefreshSubPrefabVersion(AActor* InSubPrefabRootActor)
 {
 	if (IsInsidePrefabEditor())return;
 	if (InSubPrefabRootActor != nullptr)
@@ -1730,9 +1772,9 @@ void ULGUIPrefabHelperObject::RefreshSubPrefabVersion(AActor* InSubPrefabRootAct
 	}
 }
 
-void ULGUIPrefabHelperObject::MakePrefabAsSubPrefab(ULGUIPrefab* InPrefab, AActor* InActor, const TMap<FGuid, TObjectPtr<UObject>>& InSubMapGuidToObject, const TArray<FLGUIPrefabOverrideParameterData>& InObjectOverrideParameterArray)
+void ULexUIPrefabHelperObject::MakePrefabAsSubPrefab(ULexUIPrefab* InPrefab, AActor* InActor, const TMap<FGuid, TObjectPtr<UObject>>& InSubMapGuidToObject, const TArray<FLexUIPrefabOverrideParameterData>& InObjectOverrideParameterArray)
 {
-	FLGUISubPrefabData SubPrefabData;
+	FLexUISubPrefabData SubPrefabData;
 	SubPrefabData.PrefabAsset = InPrefab;
 	SubPrefabData.OverallVersionMD5 = InPrefab->GenerateOverallVersionMD5();
 	SubPrefabData.MapGuidToObject = InSubMapGuidToObject;
@@ -1762,12 +1804,17 @@ void ULGUIPrefabHelperObject::MakePrefabAsSubPrefab(ULGUIPrefab* InPrefab, AActo
 		}
 	}
 	SubPrefabMap.Add(InActor, SubPrefabData);
-	ULGUIPrefabManagerObject::OnPrefabEditor_AfterMakePrefabAsSubPrefab.ExecuteIfBound(this, InActor);
+	//mark SiblingIndex as default override parameter
+	auto RootComp = InActor->GetRootComponent();
+	if (auto RootUIComp = Cast<ULexWidget>(RootComp))
+	{
+		this->AddMemberPropertyToSubPrefab(InActor, RootUIComp, ULexWidget::GetPropertyName_SiblingIndex());
+	}
 
 	SetAnythingDirty();
 }
 
-void ULGUIPrefabHelperObject::RemoveSubPrefabByRootActor(AActor* InPrefabRootActor)
+void ULexUIPrefabHelperObject::RemoveSubPrefabByRootActor(AActor* InPrefabRootActor)
 {
 	if (SubPrefabMap.Contains(InPrefabRootActor))
 	{
@@ -1787,7 +1834,7 @@ void ULGUIPrefabHelperObject::RemoveSubPrefabByRootActor(AActor* InPrefabRootAct
 	ClearInvalidObjectAndGuid();
 }
 
-void ULGUIPrefabHelperObject::RemoveSubPrefabByAnyActorOfSubPrefab(AActor* InPrefabActor)
+void ULexUIPrefabHelperObject::RemoveSubPrefabByAnyActorOfSubPrefab(AActor* InPrefabActor)
 {
 	auto RootActor = GetSubPrefabRootActor(InPrefabActor);
 	if (RootActor)
@@ -1796,7 +1843,7 @@ void ULGUIPrefabHelperObject::RemoveSubPrefabByAnyActorOfSubPrefab(AActor* InPre
 	}
 }
 
-ULGUIPrefab* ULGUIPrefabHelperObject::GetPrefabAssetBySubPrefabObject(UObject* InObject)
+ULexUIPrefab* ULexUIPrefabHelperObject::GetPrefabAssetBySubPrefabObject(UObject* InObject)
 {
 	AActor* Actor = Cast<AActor>(InObject);
 	UActorComponent* Component = Cast<UActorComponent>(InObject);
@@ -1814,7 +1861,7 @@ ULGUIPrefab* ULGUIPrefabHelperObject::GetPrefabAssetBySubPrefabObject(UObject* I
 	return GetSubPrefabData(Actor).PrefabAsset;
 }
 
-bool ULGUIPrefabHelperObject::CleanupInvalidSubPrefab()
+bool ULexUIPrefabHelperObject::CleanupInvalidSubPrefab()
 {
 	bool bAnythingChanged = false;
 
@@ -1884,15 +1931,15 @@ bool ULGUIPrefabHelperObject::CleanupInvalidSubPrefab()
 	}
 	return bAnythingChanged;
 }
-bool ULGUIPrefabHelperObject::GetAnythingDirty()const
+bool ULexUIPrefabHelperObject::GetAnythingDirty()const
 {
 	return bAnythingDirty; 
 }
-void ULGUIPrefabHelperObject::SetNothingDirty()
+void ULexUIPrefabHelperObject::SetNothingDirty()
 { 
 	bAnythingDirty = false; 
 }
-void ULGUIPrefabHelperObject::SetAnythingDirty() 
+void ULexUIPrefabHelperObject::SetAnythingDirty() 
 {
 	bAnythingDirty = true; 
 }
@@ -1902,7 +1949,7 @@ void ULGUIPrefabHelperObject::SetAnythingDirty()
 #include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
 #endif
-void ULGUIPrefabHelperObject::CheckPrefabVersion()
+void ULexUIPrefabHelperObject::CheckPrefabVersion()
 {
 	CleanupInvalidSubPrefab();
 	bool bSomeAutoUpdate = false;
@@ -1952,13 +1999,13 @@ void ULGUIPrefabHelperObject::CheckPrefabVersion()
 				Info.FadeOutDuration = 0.0f;
 				Info.ExpireDuration = 0.0f;
 				Info.ButtonDetails.Add(FNotificationButtonInfo(LOCTEXT("UpdateToNewPrefabButton", "Update"), LOCTEXT("UpdateToNewPrefabButton_Tooltip", "Update the prefab to new.")
-					, FSimpleDelegate::CreateUObject(this, &ULGUIPrefabHelperObject::OnNewVersionUpdateClicked, KeyValue.Key.Get())));
+					, FSimpleDelegate::CreateUObject(this, &ULexUIPrefabHelperObject::OnNewVersionUpdateClicked, KeyValue.Key.Get())));
 				Info.ButtonDetails.Add(FNotificationButtonInfo(LOCTEXT("UpdateAllToNewPrefabButton", "Update All"), LOCTEXT("UpdateToAllNewPrefabButton_Tooltip", "Update all prefabs to new.")
-					, FSimpleDelegate::CreateUObject(this, &ULGUIPrefabHelperObject::OnNewVersionUpdateAllClicked)));
+					, FSimpleDelegate::CreateUObject(this, &ULexUIPrefabHelperObject::OnNewVersionUpdateAllClicked)));
 				Info.ButtonDetails.Add(FNotificationButtonInfo(LOCTEXT("DismissButton", "Dismiss"), LOCTEXT("DismissButton_Tooltip", "Dismiss this notification")
-					, FSimpleDelegate::CreateUObject(this, &ULGUIPrefabHelperObject::OnNewVersionDismissClicked, KeyValue.Key.Get())));
+					, FSimpleDelegate::CreateUObject(this, &ULexUIPrefabHelperObject::OnNewVersionDismissClicked, KeyValue.Key.Get())));
 				Info.ButtonDetails.Add(FNotificationButtonInfo(LOCTEXT("DismissAllButton", "Dismiss All"), LOCTEXT("DismissAllButton_Tooltip", "Dismiss all notifications")
-					, FSimpleDelegate::CreateUObject(this, &ULGUIPrefabHelperObject::OnNewVersionDismissAllClicked)));
+					, FSimpleDelegate::CreateUObject(this, &ULexUIPrefabHelperObject::OnNewVersionDismissAllClicked)));
 
 				auto Notification = FSlateNotificationManager::Get().AddNotification(Info);
 				Notification->SetCompletionState(SNotificationItem::CS_Pending);
@@ -1979,7 +2026,7 @@ void ULGUIPrefabHelperObject::CheckPrefabVersion()
 	}
 }
 
-void ULGUIPrefabHelperObject::OnNewVersionUpdateClicked(AActor* InPrefabRootActor)
+void ULexUIPrefabHelperObject::OnNewVersionUpdateClicked(AActor* InPrefabRootActor)
 {
 	auto FoundIndex = NewVersionPrefabNotificationArray.IndexOfByPredicate([SubPrefabRootActor = InPrefabRootActor](const FNotificationContainer& Item) {
 		return Item.SubPrefabRootActor == SubPrefabRootActor;
@@ -2013,7 +2060,7 @@ void ULGUIPrefabHelperObject::OnNewVersionUpdateClicked(AActor* InPrefabRootActo
 		NewVersionPrefabNotificationArray.RemoveAt(FoundIndex);
 	}
 }
-void ULGUIPrefabHelperObject::OnNewVersionDismissClicked(AActor* InPrefabRootActor)
+void ULexUIPrefabHelperObject::OnNewVersionDismissClicked(AActor* InPrefabRootActor)
 {
 	auto FoundIndex = NewVersionPrefabNotificationArray.IndexOfByPredicate([SubPrefabRootActor = InPrefabRootActor](const FNotificationContainer& Item) {
 		return Item.SubPrefabRootActor == SubPrefabRootActor;
@@ -2030,7 +2077,7 @@ void ULGUIPrefabHelperObject::OnNewVersionDismissClicked(AActor* InPrefabRootAct
 	}
 }
 
-void ULGUIPrefabHelperObject::OnNewVersionUpdateAllClicked()
+void ULexUIPrefabHelperObject::OnNewVersionUpdateAllClicked()
 {
 	GEditor->BeginTransaction(LOCTEXT("LGUIUpdateAllPrefab_Transaction", "LGUI Update Prefabs"));
 	this->Modify();
@@ -2070,7 +2117,7 @@ void ULGUIPrefabHelperObject::OnNewVersionUpdateAllClicked()
 		ULexUIManagerObject::MarkBroadcastLevelActorListChanged();//make outliner refresh
 	}
 }
-void ULGUIPrefabHelperObject::OnNewVersionDismissAllClicked()
+void ULexUIPrefabHelperObject::OnNewVersionDismissAllClicked()
 {
 	for (auto& Item : NewVersionPrefabNotificationArray)
 	{
@@ -2083,10 +2130,10 @@ void ULGUIPrefabHelperObject::OnNewVersionDismissAllClicked()
 	NewVersionPrefabNotificationArray.Empty();
 }
 
-ULGUIPrefabHelperObject* ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(AActor* InActor)
+ULexUIPrefabHelperObject* ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(AActor* InActor)
 {
 	if (!IsValid(InActor))return nullptr;
-	for (TObjectIterator<ULGUIPrefabHelperObject> Itr; Itr; ++Itr)
+	for (TObjectIterator<ULexUIPrefabHelperObject> Itr; Itr; ++Itr)
 	{
 		if (Itr->IsActorBelongsToThis(InActor))
 		{

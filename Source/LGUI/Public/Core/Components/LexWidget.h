@@ -6,7 +6,7 @@
 #include "Components/PrimitiveComponent.h"
 #include "LTweener.h"
 #include "Core/LexUIAnchorData.h"
-#include "PrefabSystem/ILGUIPrefabInterface.h"
+#include "PrefabSystem/ILexUIPrefabInterface.h"
 #include "LexWidget.generated.h"
 
 class ULexVisual;
@@ -61,7 +61,7 @@ enum class ELexWidgetInteractableType : uint8
  * Base class for almost all UI related things.
  */
 UCLASS(HideCategories = ( LOD, Physics, Collision, Activation, Cooking, Rendering, Actor, Input, Lighting, Mobile, Navigation), ClassGroup = (LGUI), NotBlueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API ULexWidget : public USceneComponent, public ILGUIPrefabInterface
+class LGUI_API ULexWidget : public USceneComponent, public ILexUIPrefabInterface
 {
 	GENERATED_BODY()
 
@@ -187,6 +187,7 @@ public:
 	/** Called by LexCanvas */
 	void UpdateVisual()const;
 	
+	void ForceUpdateLayout()const;
 protected:
 	void RenewRenderCanvasRecursive(ULexCanvas* InParentRenderCanvas);
 

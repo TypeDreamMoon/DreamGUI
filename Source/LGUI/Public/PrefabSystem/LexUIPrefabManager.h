@@ -4,20 +4,20 @@
 #include "CoreMinimal.h"
 #include "Tickable.h"
 #include "Subsystems/WorldSubsystem.h"
-#include "LGUIPrefabManager.generated.h"
+#include "LexUIPrefabManager.generated.h"
 
 
-class ULGUIPrefab;
-class ULGUIPrefabHelperObject;
+class ULexUIPrefab;
+class ULexUIPrefabHelperObject;
 
 UCLASS(NotBlueprintable, NotBlueprintType, Transient, NotPlaceable)
-class LGUI_API ULGUIPrefabManagerObject :public UObject, public FTickableGameObject
+class LGUI_API ULexUIPrefabManagerObject :public UObject, public FTickableGameObject
 {
 	GENERATED_BODY()
 
 public:
-	static ULGUIPrefabManagerObject* Instance;
-	ULGUIPrefabManagerObject();
+	static ULexUIPrefabManagerObject* Instance;
+	ULexUIPrefabManagerObject();
 	virtual void BeginDestroy()override;
 public:
 	//begin TickableEditorObject interface
@@ -35,7 +35,7 @@ private:
 private:
 	static bool InitCheck();
 public:
-	static ULGUIPrefabManagerObject* GetInstance(bool CreateIfNotValid = false);
+	static ULexUIPrefabManagerObject* GetInstance(bool CreateIfNotValid = false);
 	static UWorld* GetPreviewWorldForPrefabPackage();
 private:
 	FDelegateHandle OnAssetReimportDelegateHandle;
@@ -44,39 +44,11 @@ private:
 	void OnMapOpened(const FString& FileName, bool AsTemplate);
 	FDelegateHandle OnPackageReloadedDelegateHandle;
 	void OnPackageReloaded(EPackageReloadPhase Phase, FPackageReloadedEvent* Event);
-
-public:
-	DECLARE_DELEGATE_OneParam(FSerialize_SortChildrenActors, TArray<AActor*>&);
-	static FSerialize_SortChildrenActors OnSerialize_SortChildrenActors;
-	DECLARE_DELEGATE_OneParam(FDeserialize_Components, const TArray<UActorComponent*>&);
-	static FDeserialize_Components OnDeserialize_ProcessComponentsBeforeRerunConstructionScript;
-	DECLARE_DELEGATE_FourParams(FPrefabEditorViewport_MouseClick, UWorld*, const FVector&, const FVector&, AActor*&);
-	static FPrefabEditorViewport_MouseClick OnPrefabEditorViewport_MouseClick;
-	DECLARE_DELEGATE_OneParam(FPrefabEditorViewport_MouseMove, UWorld*);
-	static FPrefabEditorViewport_MouseMove OnPrefabEditorViewport_MouseMove;
-	DECLARE_DELEGATE_FourParams(FPrefabEditor_CreateRootAgent, UWorld*, UClass*, ULGUIPrefab*, AActor*&);
-	static FPrefabEditor_CreateRootAgent OnPrefabEditor_CreateRootAgent;
-	DECLARE_DELEGATE_ThreeParams(FPrefabEditor_GetBounds, USceneComponent*, FBox&, bool&);
-	static FPrefabEditor_GetBounds OnPrefabEditor_GetBounds;
-	DECLARE_DELEGATE_TwoParams(FPrefabEditor_SavePrefab, AActor*, ULGUIPrefab*);
-	static FPrefabEditor_SavePrefab OnPrefabEditor_SavePrefab;
-	DECLARE_DELEGATE(FPrefabEditor_Refresh);
-	static FPrefabEditor_Refresh OnPrefabEditor_Refresh;
-	DECLARE_DELEGATE_ThreeParams(FPrefabEditor_ReplaceObjectPropertyForApplyOrRevert, ULGUIPrefabHelperObject*, UObject*, FName&);
-	static FPrefabEditor_ReplaceObjectPropertyForApplyOrRevert OnPrefabEditor_ReplaceObjectPropertyForApplyOrRevert;
-	DECLARE_DELEGATE_ThreeParams(FPrefabEditor_AfterObjectPropertyApplyOrRevert, ULGUIPrefabHelperObject*, UObject*, FName);
-	static FPrefabEditor_AfterObjectPropertyApplyOrRevert OnPrefabEditor_AfterObjectPropertyApplyOrRevert;
-	DECLARE_DELEGATE_TwoParams(FPrefabEditor_AfterMakePrefabAsSubPrefab, ULGUIPrefabHelperObject*, AActor*);
-	static FPrefabEditor_AfterMakePrefabAsSubPrefab OnPrefabEditor_AfterMakePrefabAsSubPrefab;
-	DECLARE_DELEGATE_ThreeParams(FPrefabEditor_AfterCollectPropertyToOverride, ULGUIPrefabHelperObject*, UObject*, FName);
-	static FPrefabEditor_AfterCollectPropertyToOverride OnPrefabEditor_AfterCollectPropertyToOverride;
-	DECLARE_DELEGATE_ThreeParams(FPrefabEditor_CopyRootObjectParentAnchorData, ULGUIPrefabHelperObject*, UObject*, UObject*);
-	static FPrefabEditor_CopyRootObjectParentAnchorData OnPrefabEditor_CopyRootObjectParentAnchorData;
 #endif
 };
 
 UCLASS(NotBlueprintable, NotBlueprintType, Transient, NotPlaceable)
-class LGUI_API ULGUIPrefabWorldSubsystem : public UWorldSubsystem
+class LGUI_API ULexUIPrefabWorldSubsystem : public UWorldSubsystem
 {
 	GENERATED_BODY()
 public:
@@ -84,8 +56,8 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection)override {};
 	virtual void Deinitialize()override {};
 
-	static ULGUIPrefabWorldSubsystem* GetInstance(UWorld* World);
-	DECLARE_EVENT_OneParam(ULGUIPrefabWorldSubsystem, FDeserializeSession, const FGuid&);
+	static ULexUIPrefabWorldSubsystem* GetInstance(UWorld* World);
+	DECLARE_EVENT_OneParam(ULexUIPrefabWorldSubsystem, FDeserializeSession, const FGuid&);
 	FDeserializeSession OnBeginDeserializeSession;
 	FDeserializeSession OnEndDeserializeSession;
 private:

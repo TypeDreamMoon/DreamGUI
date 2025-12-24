@@ -4,35 +4,35 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "LGUIPrefab.h"
+#include "LexUIPrefab.h"
 #include "Serialization/BufferArchive.h"
 #include "Serialization/ObjectWriter.h"
 #include "Serialization/ObjectReader.h"
 #include "UObject/ObjectVersion.h"
 
-class ULGUIPrefabWorldSubsystem;
+class ULexUIPrefabWorldSubsystem;
 
-namespace LGUIPrefabSystem
+namespace LexUIPrefabSystem
 {
 	/*
 	 * serialize/deserialize actor with hierarchy
 	 */
 	class LGUI_API ActorSerializerBase
 	{
-		friend class FLGUIObjectReader;
-		friend class FLGUIObjectWriter;
-		friend class FLGUIDuplicateObjectReader;
-		friend class FLGUIDuplicateObjectWriter;
-		friend class FLGUIOverrideParameterObjectWriter;
-		friend class FLGUIOverrideParameterObjectReader;
-		friend class FLGUIDuplicateOverrideParameterObjectWriter;
-		friend class FLGUIDuplicateOverrideParameterObjectReader;
+		friend class FLexUIObjectReader;
+		friend class FLexUIObjectWriter;
+		friend class FLexUIDuplicateObjectReader;
+		friend class FLexUIDuplicateObjectWriter;
+		friend class FLexUIOverrideParameterObjectWriter;
+		friend class FLexUIOverrideParameterObjectReader;
+		friend class FLexUIDuplicateOverrideParameterObjectWriter;
+		friend class FLexUIDuplicateOverrideParameterObjectReader;
 
 	public:
 		virtual ~ActorSerializerBase() {}
 
-		TMap<UObject*, TArray<uint8>> SaveOverrideParameterToData(TArray<FLGUIPrefabOverrideParameterData> InData);
-		void RestoreOverrideParameterFromData(TMap<UObject*, TArray<uint8>>& InData, TArray<FLGUIPrefabOverrideParameterData> InNameSetData);
+		TMap<UObject*, TArray<uint8>> SaveOverrideParameterToData(TArray<FLexUIPrefabOverrideParameterData> InData);
+		void RestoreOverrideParameterFromData(TMap<UObject*, TArray<uint8>>& InData, TArray<FLexUIPrefabOverrideParameterData> InNameSetData);
 
 		virtual void SetupArchive(FArchive& InArchive);
 
@@ -57,7 +57,7 @@ namespace LGUIPrefabSystem
 		TArray<UObject*> ReferenceAssetList;
 		TArray<UClass*> ReferenceClassList;
 		TArray<FName> ReferenceNameList;
-		ULGUIPrefabWorldSubsystem* LGUIPrefabManager = nullptr;
+		ULexUIPrefabWorldSubsystem* LGUIPrefabManager = nullptr;
 
 		bool bOverrideVersions = false;
 		uint16 PrefabVersion = 0;

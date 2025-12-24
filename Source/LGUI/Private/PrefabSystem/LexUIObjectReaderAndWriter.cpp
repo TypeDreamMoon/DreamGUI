@@ -1,15 +1,13 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "PrefabSystem/LGUIObjectReaderAndWriter.h"
+#include "PrefabSystem/LexUIObjectReaderAndWriter.h"
 #include "PrefabSystem/ActorSerializerBase.h"
 #include "Serialization/MemoryReader.h"
-#include "Serialization/BufferArchive.h"
 #include "GameFramework/Actor.h"
 #include "Engine/Blueprint.h"
 #include "GameFramework/Actor.h"
-#include "LGUI.h"
 
-namespace LGUIPrefabSystem
+namespace LexUIPrefabSystem
 {
 	bool LGUIPrefab_ShouldSkipProperty(const FProperty* InProperty)
 	{
@@ -20,7 +18,7 @@ namespace LGUIPrefabSystem
 			;
 	}
 
-	FLGUIObjectWriter::FLGUIObjectWriter(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, TSet<FName> InSkipPropertyNames)
+	FLexUIObjectWriter::FLexUIObjectWriter(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, TSet<FName> InSkipPropertyNames)
 		: FObjectWriter(Bytes)
 		, Serializer(InSerializer)
 		, SkipPropertyNames(InSkipPropertyNames)
@@ -30,11 +28,11 @@ namespace LGUIPrefabSystem
 
 		Serializer.SetupArchive(*this);
 	}
-	void FLGUIObjectWriter::DoSerialize(UObject* Object)
+	void FLexUIObjectWriter::DoSerialize(UObject* Object)
 	{
 		Object->Serialize(*this);
 	}
-	bool FLGUIObjectWriter::ShouldSkipProperty(const FProperty* InProperty) const
+	bool FLexUIObjectWriter::ShouldSkipProperty(const FProperty* InProperty) const
 	{
 		if (LGUIPrefab_ShouldSkipProperty(InProperty))
 		{
@@ -49,14 +47,14 @@ namespace LGUIPrefabSystem
 
 		return false;
 	}
-	FArchive& FLGUIObjectWriter::operator<<(class FName& N)
+	FArchive& FLexUIObjectWriter::operator<<(class FName& N)
 	{
 		auto id = Serializer.FindOrAddNameFromList(N);
 		*this << id;
 
 		return *this;
 	}
-	bool FLGUIObjectWriter::SerializeObject(UObject* Object)
+	bool FLexUIObjectWriter::SerializeObject(UObject* Object)
 	{
 		if (auto Function = Cast<UFunction>(Object))
 		{
@@ -133,7 +131,7 @@ namespace LGUIPrefabSystem
 			}
 		}
 	}
-	FArchive& FLGUIObjectWriter::operator<<(UObject*& Res)
+	FArchive& FLexUIObjectWriter::operator<<(UObject*& Res)
 	{
 		if (Res != nullptr)
 		{
@@ -160,7 +158,7 @@ namespace LGUIPrefabSystem
 
 		return *this;
 	}
-	FArchive& FLGUIObjectWriter::operator<<(FObjectPtr& Value)
+	FArchive& FLexUIObjectWriter::operator<<(FObjectPtr& Value)
 	{
 		auto Res = Value.Get();
 		if (Res != nullptr)
@@ -188,7 +186,7 @@ namespace LGUIPrefabSystem
 
 		return *this;
 	}
-	FArchive& FLGUIObjectWriter::operator<<(FWeakObjectPtr& Value)
+	FArchive& FLexUIObjectWriter::operator<<(FWeakObjectPtr& Value)
 	{
 		if (Value.IsValid())
 		{
@@ -203,25 +201,25 @@ namespace LGUIPrefabSystem
 
 		return *this;
 	}
-	FArchive& FLGUIObjectWriter::operator<<(FLazyObjectPtr& Value)
+	FArchive& FLexUIObjectWriter::operator<<(FLazyObjectPtr& Value)
 	{
 		return FObjectWriter::operator<<(Value);
 	}
-	FArchive& FLGUIObjectWriter::operator<<(FSoftObjectPtr& Value)
+	FArchive& FLexUIObjectWriter::operator<<(FSoftObjectPtr& Value)
 	{
 		return FObjectWriter::operator<<(Value);
 	}
-	FArchive& FLGUIObjectWriter::operator<<(FSoftObjectPath& Value)
+	FArchive& FLexUIObjectWriter::operator<<(FSoftObjectPath& Value)
 	{
 		return FObjectWriter::operator<<(Value);
 	}
-	FString FLGUIObjectWriter::GetArchiveName() const
+	FString FLexUIObjectWriter::GetArchiveName() const
 	{
 		return TEXT("FLGUIObjectWriter");
 	}
 
 
-	FLGUIObjectReader::FLGUIObjectReader(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, TSet<FName> InSkipPropertyNames)
+	FLexUIObjectReader::FLexUIObjectReader(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, TSet<FName> InSkipPropertyNames)
 		: FObjectReader(Bytes)
 		, Serializer(InSerializer)
 		, SkipPropertyNames(InSkipPropertyNames)
@@ -231,11 +229,11 @@ namespace LGUIPrefabSystem
 
 		Serializer.SetupArchive(*this);
 	}
-	void FLGUIObjectReader::DoSerialize(UObject* Object)
+	void FLexUIObjectReader::DoSerialize(UObject* Object)
 	{
 		Object->Serialize(*this);
 	}
-	bool FLGUIObjectReader::ShouldSkipProperty(const FProperty* InProperty) const
+	bool FLexUIObjectReader::ShouldSkipProperty(const FProperty* InProperty) const
 	{
 		if (LGUIPrefab_ShouldSkipProperty(InProperty))
 		{
@@ -250,7 +248,7 @@ namespace LGUIPrefabSystem
 
 		return false;
 	}
-	FArchive& FLGUIObjectReader::operator<<(class FName& N)
+	FArchive& FLexUIObjectReader::operator<<(class FName& N)
 	{
 		int32 id = -1;
 		*this << id;
@@ -258,14 +256,14 @@ namespace LGUIPrefabSystem
 
 		return *this;
 	}
-	bool FLGUIObjectReader::SerializeObject(UObject*& Object, bool CanSerializeClass)
+	bool FLexUIObjectReader::SerializeObject(UObject*& Object, bool CanSerializeClass)
 	{
 		uint8 typeUint8 = 0;
 		*this << typeUint8;
 		auto type = (EObjectType)typeUint8;
 		switch (type)
 		{
-		case LGUIPrefabSystem::EObjectType::Class:
+		case LexUIPrefabSystem::EObjectType::Class:
 		{
 			check(CanSerializeClass);
 			int32 id = -1;
@@ -275,7 +273,7 @@ namespace LGUIPrefabSystem
 			return true;
 		}
 		break;
-		case LGUIPrefabSystem::EObjectType::Asset:
+		case LexUIPrefabSystem::EObjectType::Asset:
 		{
 			int32 id = -1;
 			*this << id;
@@ -284,7 +282,7 @@ namespace LGUIPrefabSystem
 			return true;
 		}
 		break;
-		case LGUIPrefabSystem::EObjectType::Function:
+		case LexUIPrefabSystem::EObjectType::Function:
 		{
 			int32 OuterClasstId = -1;
 			int32 FunctionNameId = -1;
@@ -298,7 +296,7 @@ namespace LGUIPrefabSystem
 			}
 		}
 		break;
-		case LGUIPrefabSystem::EObjectType::K2Node:
+		case LexUIPrefabSystem::EObjectType::K2Node:
 		{
 			int32 OuterObjectId = -1;
 			int32 NodeNameId = -1;
@@ -321,7 +319,7 @@ namespace LGUIPrefabSystem
 			}
 		}
 		break;
-		case LGUIPrefabSystem::EObjectType::ObjectReference:
+		case LexUIPrefabSystem::EObjectType::ObjectReference:
 		{
 			FGuid guid;
 			*this << guid;
@@ -335,7 +333,7 @@ namespace LGUIPrefabSystem
 		}
 		return false;
 	}
-	FArchive& FLGUIObjectReader::operator<<(UObject*& Value)
+	FArchive& FLexUIObjectReader::operator<<(UObject*& Value)
 	{
 		UObject* Res = nullptr;
 		SerializeObject(Res, true);
@@ -345,7 +343,7 @@ namespace LGUIPrefabSystem
 		}
 		return *this;
 	}
-	FArchive& FLGUIObjectReader::operator<<(FObjectPtr& Value)
+	FArchive& FLexUIObjectReader::operator<<(FObjectPtr& Value)
 	{
 		UObject* Res = nullptr;
 		SerializeObject(Res, true);
@@ -355,7 +353,7 @@ namespace LGUIPrefabSystem
 		}
 		return *this;
 	}
-	FArchive& FLGUIObjectReader::operator<<(FWeakObjectPtr& Value)
+	FArchive& FLexUIObjectReader::operator<<(FWeakObjectPtr& Value)
 	{
 		UObject* Res = nullptr;
 		SerializeObject(Res, false);
@@ -365,19 +363,19 @@ namespace LGUIPrefabSystem
 		}
 		return *this;
 	}
-	FArchive& FLGUIObjectReader::operator<<(FLazyObjectPtr& Value)
+	FArchive& FLexUIObjectReader::operator<<(FLazyObjectPtr& Value)
 	{
 		return FObjectReader::operator<<(Value);
 	}
-	FArchive& FLGUIObjectReader::operator<<(FSoftObjectPtr& Value)
+	FArchive& FLexUIObjectReader::operator<<(FSoftObjectPtr& Value)
 	{
 		return FObjectReader::operator<<(Value);
 	}
-	FArchive& FLGUIObjectReader::operator<<(FSoftObjectPath& Value)
+	FArchive& FLexUIObjectReader::operator<<(FSoftObjectPath& Value)
 	{
 		return FObjectReader::operator<<(Value);
 	}
-	FString FLGUIObjectReader::GetArchiveName() const
+	FString FLexUIObjectReader::GetArchiveName() const
 	{
 		return TEXT("FLGUIObjectReader");
 	}

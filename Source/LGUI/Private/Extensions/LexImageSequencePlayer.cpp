@@ -4,7 +4,7 @@
 #include "LTweenBPLibrary.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexTexture.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
 
 ULexImageSequencePlayer::ULexImageSequencePlayer()
 {
@@ -13,7 +13,7 @@ ULexImageSequencePlayer::ULexImageSequencePlayer()
 void ULexImageSequencePlayer::BeginPlay()
 {
 	Super::BeginPlay();	
-	if (!ULGUIPrefabWorldSubsystem::IsLGUIPrefabSystemProcessingActor(this->GetOwner()))
+	if (!ULexUIPrefabWorldSubsystem::IsLGUIPrefabSystemProcessingActor(this->GetOwner()))
 	{
 		Awake_Implementation();
 	}

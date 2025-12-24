@@ -4,14 +4,14 @@
 
 #include "ThumbnailRendering/DefaultSizedThumbnailRenderer.h"
 #include "ThumbnailHelpers.h"
-#include "PrefabSystem/LGUIPrefab.h"
+#include "PrefabSystem/LexUIPrefab.h"
 
 class FLGUIPrefabThumbnailScene :public FThumbnailPreviewScene
 {
 public:
 	FLGUIPrefabThumbnailScene();
 	bool IsValidForVisualization();
-	void SetPrefab(class ULGUIPrefab* Prefab);
+	void SetPrefab(class ULexUIPrefab* Prefab);
 protected:
 	virtual void GetViewMatrixParameters(const float InFOVDegrees, FVector& OutOrigin, float& OutOrbitPitch, float& OutOrbitYaw, float& OutOrbitZoom)const override;
 	virtual USceneThumbnailInfo* GetSceneThumbnailInfo(const float TargetDistance)const;
@@ -21,7 +21,7 @@ private:
 	void ClearOldActors();
 private:
 	int32 NumStartingActors;
-	TWeakObjectPtr<class ULGUIPrefab> CurrentPrefab;
+	TWeakObjectPtr<class ULexUIPrefab> CurrentPrefab;
 	FText CachedPrefabContent;
 	FBoxSphereBounds PreviewActorsBound;
 	bool bIsUI = false;

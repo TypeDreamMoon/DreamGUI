@@ -23,9 +23,6 @@ public:
 	TSharedPtr<FUICommandInfo> CopyComponentValues;
 	TSharedPtr<FUICommandInfo> PasteComponentValues;
 
-	TSharedPtr<FUICommandInfo> FocusToScreenSpaceUI;
-	TSharedPtr<FUICommandInfo> FocusToSelectedUI;
-
 	TSharedPtr<FUICommandInfo> ToggleDrawHelperFrame;
 	TSharedPtr<FUICommandInfo> ForceGC;
 };

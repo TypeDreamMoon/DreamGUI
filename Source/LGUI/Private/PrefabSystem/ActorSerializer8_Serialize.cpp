@@ -1,21 +1,22 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "PrefabSystem/ActorSerializer8.h"
-#include "PrefabSystem/LGUIObjectReaderAndWriter.h"
+#include "PrefabSystem/LexUIObjectReaderAndWriter.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
 #include "Components/PrimitiveComponent.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
 #include "LGUI.h"
+#include "Core/Components/LexWidget.h"
 #include "Misc/NetworkVersion.h"
-#include "PrefabSystem/ILGUIPrefabInterface.h"
+#include "PrefabSystem/ILexUIPrefabInterface.h"
 #include "Runtime/Launch/Resources/Version.h"
 
 
 namespace LGUIPrefabSystem8
 {
-	void ActorSerializer::SavePrefab(AActor* OriginRootActor, ULGUIPrefab* InPrefab
-		, TMap<UObject*, FGuid>& InOutMapObjectToGuid, TMap<TObjectPtr<AActor>, FLGUISubPrefabData>& InSubPrefabMap
+	void ActorSerializer::SavePrefab(AActor* OriginRootActor, ULexUIPrefab* InPrefab
+		, TMap<UObject*, FGuid>& InOutMapObjectToGuid, TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& InSubPrefabMap
 		, bool InForEditorOrRuntimeUse
 	)
 	{
@@ -67,11 +68,11 @@ namespace LGUIPrefabSystem8
 		serializer.bIsEditorOrRuntime = InForEditorOrRuntimeUse;
 		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, bool InIsSceneComponent) {
 			auto ExcludeProperties = InIsSceneComponent ? serializer.GetSceneComponentExcludeProperties() : TSet<FName>();
-			LGUIPrefabSystem::FLGUIObjectWriter Writer(InOutBuffer, serializer, ExcludeProperties);
+			LexUIPrefabSystem::FLexUIObjectWriter Writer(InOutBuffer, serializer, ExcludeProperties);
 			Writer.DoSerialize(InObject);
 		};
 		serializer.WriterOrReaderFunctionForSubPrefabOverride = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, const TArray<FName>& InOverridePropertyNames) {
-			LGUIPrefabSystem::FLGUIOverrideParameterObjectWriter Writer(InOutBuffer, serializer, InOverridePropertyNames);
+			LexUIPrefabSystem::FLexUIOverrideParameterObjectWriter Writer(InOutBuffer, serializer, InOverridePropertyNames);
 			Writer.DoSerialize(InObject);
 		};
 		serializer.SerializeActor(OriginRootActor, InPrefab);
@@ -83,9 +84,9 @@ namespace LGUIPrefabSystem8
 		for (int i = 0; i < TrySerializeActorArray.Num(); i++)
 		{
 			auto& Actor = TrySerializeActorArray[i];
-			if (Actor->GetClass()->ImplementsInterface(ULGUIPrefabInterface::StaticClass()))
+			if (Actor->GetClass()->ImplementsInterface(ULexUIPrefabInterface::StaticClass()))
 			{
-				ILGUIPrefabInterface::Execute_OnPreSavePrefab(Actor);
+				ILexUIPrefabInterface::Execute_OnPreSavePrefab(Actor);
 			}
 			FLGUIActorSaveData ActorSaveData;
 			if (auto SubPrefabDataPtr = SubPrefabMap.Find(Actor))//sub prefab's actor is not collected in WillSerializeActorArray
@@ -153,7 +154,7 @@ namespace LGUIPrefabSystem8
 	{
 		if (LGUIPrefabManager == nullptr)
 		{
-			LGUIPrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(OriginRootActor->GetWorld());
+			LGUIPrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(OriginRootActor->GetWorld());
 		}
 		CollectActorRecursive(OriginRootActor);
 		//serialize actor
@@ -161,7 +162,7 @@ namespace LGUIPrefabSystem8
 		//serialize objects and components
 		SerializeObjectArray(OutData.SavedObjects, OutData.SavedObjectData, OutData.MapSceneComponentToParent);
 	}
-	void ActorSerializer::SerializeActor(AActor* OriginRootActor, ULGUIPrefab* InPrefab)
+	void ActorSerializer::SerializeActor(AActor* OriginRootActor, ULexUIPrefab* InPrefab)
 	{
 
 		auto StartTime = FDateTime::Now();
@@ -268,14 +269,26 @@ namespace LGUIPrefabSystem8
 		TArray<AActor*> ChildrenActors;
 		Actor->GetAttachedActors(ChildrenActors);
 #if WITH_EDITOR
-		if (!ULGUIPrefabManagerObject::OnSerialize_SortChildrenActors.ExecuteIfBound(ChildrenActors))
-		{
-			//Actually normal UIItem's hierarchyIndex property can do the job, but sub prefab's root actor not, so sort it to make sure.
-			Algo::Sort(ChildrenActors, [](const AActor* A, const AActor* B) {
+		//Actually normal LexWidget's SiblingIndex property can do the job, but sub prefab's root actor not, so sort it to make sure.
+		Algo::Sort(ChildrenActors, [](const AActor* A, const AActor* B) {
+			auto ARoot = A->GetRootComponent();
+			auto BRoot = B->GetRootComponent();
+			if (ARoot != nullptr && BRoot != nullptr)
+			{
+				auto AUIRoot = Cast<ULexWidget>(ARoot);
+				auto BUIRoot = Cast<ULexWidget>(BRoot);
+				if (AUIRoot != nullptr && BUIRoot != nullptr)
+				{
+					return AUIRoot->GetSiblingIndex() < BUIRoot->GetSiblingIndex();//compare hierarch index for UI actor
+				}
+			}
+			else
+			{
 				//sort on ActorLabel so the Tick function can be predictable because deserialize order is determinate.
 				return A->GetActorLabel().Compare(B->GetActorLabel()) < 0;//compare name for normal actor
-				});
-		}
+			}
+			return false;
+			});
 #endif
 		for (auto ChildActor : ChildrenActors)
 		{
@@ -288,9 +301,9 @@ namespace LGUIPrefabSystem8
 		for (int i = 0; i < WillSerializeObjectArray.Num(); i++)
 		{
 			auto Object = WillSerializeObjectArray[i];
-			if (Object->GetClass()->ImplementsInterface(ULGUIPrefabInterface::StaticClass()))
+			if (Object->GetClass()->ImplementsInterface(ULexUIPrefabInterface::StaticClass()))
 			{
-				ILGUIPrefabInterface::Execute_OnPreSavePrefab(Object);
+				ILexUIPrefabInterface::Execute_OnPreSavePrefab(Object);
 			}
 			auto Class = Object->GetClass();
 			FLGUIObjectSaveData ObjectSaveDataItem;

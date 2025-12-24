@@ -12,7 +12,7 @@
 #include "DataFactory/LexUISpriteDataFactory.h"
 #include "DataFactory/LexUIPrefabFactory.h"
 #include "Engine/FontFace.h"
-#include "PrefabSystem/LGUIPrefab.h"
+#include "PrefabSystem/LexUIPrefab.h"
 
 #define LOCTEXT_NAMESPACE "LexUIContentBrowserExtensions"
 
@@ -44,7 +44,7 @@ public:
 			FSlateIcon(FLGUIEditorStyle::GetStyleSetName(), "LGUIEditor.SpriteDataAction")
 		);
 	}
-	static void CreatePrefabActionsSubMenu(FMenuBuilder& MenuBuilder, TArray<ULGUIPrefab*> SelectedAssets)
+	static void CreatePrefabActionsSubMenu(FMenuBuilder& MenuBuilder, TArray<ULexUIPrefab*> SelectedAssets)
 	{
 		MenuBuilder.AddSubMenu(
 			LOCTEXT("PrefabActionsSubMenuLabel", "LexUIPrefab"),
@@ -131,11 +131,11 @@ public:
 			EUserInterfaceActionType::Button);
 	}
 
-	static void PopulatePrefabActionMenu(FMenuBuilder& MenuBuilder, TArray<ULGUIPrefab*> SelectedAssets)
+	static void PopulatePrefabActionMenu(FMenuBuilder& MenuBuilder, TArray<ULexUIPrefab*> SelectedAssets)
 	{
 		struct LOCAL
 		{
-			static void CreatePrefabVariant(TArray<ULGUIPrefab*> Prefabs)
+			static void CreatePrefabVariant(TArray<ULexUIPrefab*> Prefabs)
 			{
 				FAssetToolsModule& AssetToolsModule = FModuleManager::Get().LoadModuleChecked<FAssetToolsModule>("AssetTools");
 				FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
@@ -157,7 +157,7 @@ public:
 					AssetToolsModule.Get().CreateUniqueAssetName(Prefab->GetOutermost()->GetName(), DefaultSuffix, /*out*/ PackageName, /*out*/ Name);
 					const FString PackagePath = FPackageName::GetLongPackagePath(PackageName);
 
-					if (UObject* NewAsset = AssetToolsModule.Get().CreateAsset(Name, PackagePath, ULGUIPrefab::StaticClass(), PrefabFactory))
+					if (UObject* NewAsset = AssetToolsModule.Get().CreateAsset(Name, PackagePath, ULexUIPrefab::StaticClass(), PrefabFactory))
 					{
 						ObjectsToSync.Add(NewAsset);
 					}
@@ -233,7 +233,7 @@ public:
 
 		// Run thru the assets to determine if any meet our criteria
 		TArray<UTexture2D*> Textures;
-		TArray<ULGUIPrefab*> Prefabs;
+		TArray<ULexUIPrefab*> Prefabs;
 		TArray<UFontFace*> Fonts;
 		for (auto AssetIt = SelectedAssets.CreateConstIterator(); AssetIt; ++AssetIt)
 		{
@@ -243,7 +243,7 @@ public:
 			{
 				Textures.Add(Texture);
 			}
-			else if (auto Prefab = Cast<ULGUIPrefab>(AssetObject))
+			else if (auto Prefab = Cast<ULexUIPrefab>(AssetObject))
 			{
 				Prefabs.Add(Prefab);
 			}

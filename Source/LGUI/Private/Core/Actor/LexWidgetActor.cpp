@@ -5,7 +5,7 @@
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexWidget.h"
 #if WITH_EDITOR
-#include "PrefabSystem/LGUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
 #include "Utils/LexUIUtils.h"
 #endif
 
@@ -31,13 +31,13 @@ void ALexWidgetActor::BeginDestroy()
 }
 
 #if WITH_EDITOR
-#include "PrefabSystem/LGUIPrefabHelperObject.h"
+#include "PrefabSystem/LexUIPrefabHelperObject.h"
 bool ALexWidgetActor::bIsSetCanNotifyAttachmentWhenDestroy = false;
 #endif
 void ALexWidgetActor::Destroyed()
 {
 #if WITH_EDITOR
-	ULGUIPrefabHelperObject* PrefabHelperObject = nullptr;
+	ULexUIPrefabHelperObject* PrefabHelperObject = nullptr;
 	if (!bIsSetCanNotifyAttachmentWhenDestroy)
 	{
 		bIsSetCanNotifyAttachmentWhenDestroy = true;
@@ -45,7 +45,7 @@ void ALexWidgetActor::Destroyed()
 		{
 			bIsSetCanNotifyAttachmentWhenDestroy = false;
 		}, 1);
-		PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(this);
+		PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(this);
 		if (PrefabHelperObject != nullptr)
 		{
 			PrefabHelperObject->SetCanNotifyAttachment(false);
@@ -78,7 +78,7 @@ void ALexWidgetActor::Destroyed()
 AActor* ALexWidgetActor::FirstTemporarilyHiddenActor = nullptr;
 void ALexWidgetActor::SetIsTemporarilyHiddenInEditor(bool bIsHidden)
 {
-	if (ULGUIPrefabWorldSubsystem::IsLGUIPrefabSystemProcessingActor(this))//when deserialize from prefab, no need to set it because everything is done when serialize it
+	if (ULexUIPrefabWorldSubsystem::IsLGUIPrefabSystemProcessingActor(this))//when deserialize from prefab, no need to set it because everything is done when serialize it
 	{
 
 	}

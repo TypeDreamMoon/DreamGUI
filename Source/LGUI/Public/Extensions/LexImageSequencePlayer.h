@@ -2,11 +2,11 @@
 
 #pragma once
 #include "Components/ActorComponent.h"
-#include "PrefabSystem/ILGUIPrefabInterface.h"
+#include "PrefabSystem/ILexUIPrefabInterface.h"
 #include "LexImageSequencePlayer.generated.h"
 
 UCLASS(Abstract)
-class LGUI_API ULexImageSequencePlayer : public UActorComponent, public ILGUIPrefabInterface
+class LGUI_API ULexImageSequencePlayer : public UActorComponent, public ILexUIPrefabInterface
 {
 	GENERATED_BODY()
 public:

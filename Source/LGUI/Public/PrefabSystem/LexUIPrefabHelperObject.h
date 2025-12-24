@@ -4,8 +4,8 @@
 
 #include "LGUI.h"
 #include "Components/SceneComponent.h"
-#include "LGUIPrefab.h"
-#include "LGUIPrefabHelperObject.generated.h"
+#include "LexUIPrefab.h"
+#include "LexUIPrefabHelperObject.generated.h"
 
 class AActor;
 
@@ -13,27 +13,27 @@ class AActor;
  * helper object for manage prefab's load/save
  */
 UCLASS(ClassGroup = (LGUI), NotBlueprintType, NotBlueprintable)
-class LGUI_API ULGUIPrefabHelperObject : public UObject
+class LGUI_API ULexUIPrefabHelperObject : public UObject
 {
 	GENERATED_BODY()
 
 public:	
-	ULGUIPrefabHelperObject();
+	ULexUIPrefabHelperObject();
 
 	/** Prefab object asset, null means this is a level prefab */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TObjectPtr<ULGUIPrefab> PrefabAsset = nullptr;
+		TObjectPtr<ULexUIPrefab> PrefabAsset = nullptr;
 	/** Root actor of this prefab, null means this is a level prefab */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TObjectPtr<AActor> LoadedRootActor = nullptr;
-	/** Map from guid to object, include all subprefab's object. Note object guid is not equals to subprefab's same object's guid. */
+	/** Map from guid to object, include all sub-prefab's object. Note object guid is not equals to sub-prefab's same object's guid. */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TMap<FGuid, TObjectPtr<UObject>> MapGuidToObject;
 	/** Map to sub prefab */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TMap<TObjectPtr<AActor>, FLGUISubPrefabData> SubPrefabMap;
+		TMap<TObjectPtr<AActor>, FLexUISubPrefabData> SubPrefabMap;
 #if WITH_EDITORONLY_DATA
-	/** Broken actor-subprefab collection, only for level's subprefab */
+	/** Broken actor-sub-prefab collection, only for level's sub-prefab */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TSet<TObjectPtr<AActor>> MissingPrefab;
 #endif
@@ -53,7 +53,7 @@ public:
 
 	static void SetActorPropertyInOutliner(AActor* Actor, bool InListed);
 
-	ULGUIPrefab* GetSubPrefabAsset(AActor* InSubPrefabActor);
+	ULexUIPrefab* GetSubPrefabAsset(AActor* InSubPrefabActor);
 	void SavePrefab();
 	void ClearLoadedPrefab();
 	bool IsActorBelongsToSubPrefab(const AActor* InActor);
@@ -68,19 +68,19 @@ public:
 	void AddMemberPropertyToSubPrefab(AActor* InSubPrefabActor, UObject* InObject, FName InPropertyName);
 	void RemoveMemberPropertyFromSubPrefab(AActor* InSubPrefabActor, UObject* InObject, FName InPropertyName);
 	void RemoveAllMemberPropertyFromSubPrefab(AActor* InSubPrefabActor, bool InIncludeRootTransform);
-	FLGUISubPrefabData GetSubPrefabData(AActor* InSubPrefabActor);
+	FLexUISubPrefabData GetSubPrefabData(AActor* InSubPrefabActor);
 	AActor* GetSubPrefabRootActor(AActor* InSubPrefabActor);
 	/** For parent prefab. When parent prefab want to apply override parameter to subprefab, but the parameter belongs to subprefab's subprefab, then we need to mark override parameter for subprefab. */
 	void MarkOverrideParameterFromParentPrefab(UObject* InObject, const TArray<FName>& InPropertyNames);
 	void MarkOverrideParameterFromParentPrefab(UObject* InObject, FName InPropertyName);
 
 	/** If sub prefab changed, then update parent prefab */
-	bool RefreshOnSubPrefabDirty(ULGUIPrefab* InSubPrefab, AActor* InSubPrefabRootActor = nullptr);
+	bool RefreshOnSubPrefabDirty(ULexUIPrefab* InSubPrefab, AActor* InSubPrefabRootActor = nullptr);
 
 	void CopyRootObjectParentAnchorData(UObject* InObject, UObject* OriginObject);
 
-	void RevertPrefabPropertyValue(UObject* ContextObject, FProperty* Property, void* ContainerPointerInSrc, void* ContainerPointerInDst, const FLGUISubPrefabData& SubPrefabData, int RawArrayIndex = 0, bool IsInsideRawArray = false);
-	void ApplyPrefabPropertyValue(UObject* ContextObject, FProperty* Property, void* ContainerPointerInSrc, void* ContainerPointerInDst, const FLGUISubPrefabData& SubPrefabData, int RawArrayIndex = 0, bool IsInsideRawArray = false);
+	void RevertPrefabPropertyValue(UObject* ContextObject, FProperty* Property, void* ContainerPointerInSrc, void* ContainerPointerInDst, const FLexUISubPrefabData& SubPrefabData, int RawArrayIndex = 0, bool IsInsideRawArray = false);
+	void ApplyPrefabPropertyValue(UObject* ContextObject, FProperty* Property, void* ContainerPointerInSrc, void* ContainerPointerInDst, const FLexUISubPrefabData& SubPrefabData, int RawArrayIndex = 0, bool IsInsideRawArray = false);
 	FName ReplaceObjectPropertyForApplyOrRevert(UObject* InObject, FName InPropertyName);
 	void AfterObjectPropertyApplyOrRevert(UObject* InObject, FName InPropertyName);
 
@@ -93,10 +93,10 @@ public:
 
 	void RefreshSubPrefabVersion(AActor* InSubPrefabRootActor);
 
-	void MakePrefabAsSubPrefab(ULGUIPrefab* InPrefab, AActor* InActor, const TMap<FGuid, TObjectPtr<UObject>>& InSubMapGuidToObject, const TArray<FLGUIPrefabOverrideParameterData>& InObjectOverrideParameterArray);
+	void MakePrefabAsSubPrefab(ULexUIPrefab* InPrefab, AActor* InActor, const TMap<FGuid, TObjectPtr<UObject>>& InSubMapGuidToObject, const TArray<FLexUIPrefabOverrideParameterData>& InObjectOverrideParameterArray);
 	void RemoveSubPrefabByRootActor(AActor* InPrefabRootActor);
 	void RemoveSubPrefabByAnyActorOfSubPrefab(AActor* InPrefabActor);
-	ULGUIPrefab* GetPrefabAssetBySubPrefabObject(UObject* InObject);
+	ULexUIPrefab* GetPrefabAssetBySubPrefabObject(UObject* InObject);
 	bool GetAnythingDirty()const;
 	void SetNothingDirty();
 	void SetAnythingDirty();
@@ -153,6 +153,6 @@ private:
 	void OnNewVersionDismissAllClicked();
 
 public:
-	static ULGUIPrefabHelperObject* GetPrefabHelperObject_WhichManageThisActor(AActor* InActor);
+	static ULexUIPrefabHelperObject* GetPrefabHelperObject_WhichManageThisActor(AActor* InActor);
 #endif
 };

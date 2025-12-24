@@ -5,7 +5,7 @@
 #include "Framework/Commands/Commands.h"
 #include "LGUIEditorStyle.h"
 
-class ULGUIPrefab;
+class ULexUIPrefab;
 
 class FLGUIPrefabEditorCommand : public TCommands<FLGUIPrefabEditorCommand>
 {

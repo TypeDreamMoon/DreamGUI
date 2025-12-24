@@ -1,7 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "PrefabSystem/ActorSerializer8.h"
-#include "PrefabSystem/LGUIObjectReaderAndWriter.h"
+#include "PrefabSystem/LexUIObjectReaderAndWriter.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
 #include "Serialization/MemoryReader.h"
@@ -9,7 +9,7 @@
 #include "Runtime/Launch/Resources/Version.h"
 #include "LGUI.h"
 #include "Core/LexUIManager.h"
-#include "PrefabSystem/LGUIPrefabSettings.h"
+#include "PrefabSystem/LexUIPrefabSettings.h"
 
 namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 {
@@ -43,7 +43,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 		//serialize
 		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, bool InIsSceneComponent) {
 			auto ExcludeProperties = InIsSceneComponent ? serializer.GetSceneComponentExcludeProperties() : TSet<FName>();
-			LGUIPrefabSystem::FLGUIDuplicateObjectWriter Writer(InOutBuffer, serializer, ExcludeProperties);
+			LexUIPrefabSystem::FLexUIDuplicateObjectWriter Writer(InOutBuffer, serializer, ExcludeProperties);
 			Writer.DoSerialize(InObject);
 		};
 		FLGUIPrefabSaveData SaveData;
@@ -52,12 +52,12 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 		//deserialize
 		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, bool InIsSceneComponent) {
 			auto ExcludeProperties = InIsSceneComponent ? serializer.GetSceneComponentExcludeProperties() : TSet<FName>();
-			LGUIPrefabSystem::FLGUIDuplicateObjectReader Reader(InOutBuffer, serializer, ExcludeProperties);
+			LexUIPrefabSystem::FLexUIDuplicateObjectReader Reader(InOutBuffer, serializer, ExcludeProperties);
 			Reader.DoSerialize(InObject);
 		};
 		auto CreatedRootActor = serializer.DeserializeActorFromData(SaveData, Parent, false, FVector::ZeroVector, FQuat::Identity, FVector::OneVector);
 
-		if (ULGUIPrefabSettings::GetLogPrefabLoadTime())
+		if (ULexUIPrefabSettings::GetLogPrefabLoadTime())
 		{
 			auto TimeSpan = FDateTime::Now() - StartTime;
 			UE_LOG(LGUI, Log, TEXT("Duplicate actor: '%s', total time: %fms"), *Name, TimeSpan.GetTotalMilliseconds());
@@ -99,7 +99,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 		//serialize
 		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, bool InIsSceneComponent) {
 			auto ExcludeProperties = InIsSceneComponent ? serializer.GetSceneComponentExcludeProperties() : TSet<FName>();
-			LGUIPrefabSystem::FLGUIDuplicateObjectWriter Writer(InOutBuffer, serializer, ExcludeProperties);
+			LexUIPrefabSystem::FLexUIDuplicateObjectWriter Writer(InOutBuffer, serializer, ExcludeProperties);
 			Writer.DoSerialize(InObject);
 		};
 		serializer.SerializeActorToData(OriginRootActor, OutData.ActorData);
@@ -107,11 +107,11 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 		//for deserialize, set once for all use
 		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, bool InIsSceneComponent) {
 			auto ExcludeProperties = InIsSceneComponent ? serializer.GetSceneComponentExcludeProperties() : TSet<FName>();
-			LGUIPrefabSystem::FLGUIDuplicateObjectReader Reader(InOutBuffer, serializer, ExcludeProperties);
+			LexUIPrefabSystem::FLexUIDuplicateObjectReader Reader(InOutBuffer, serializer, ExcludeProperties);
 			Reader.DoSerialize(InObject);
 		};
 
-		if (ULGUIPrefabSettings::GetLogPrefabLoadTime())
+		if (ULexUIPrefabSettings::GetLogPrefabLoadTime())
 		{
 			auto TimeSpan = FDateTime::Now() - StartTime;
 			UE_LOG(LGUI, Log, TEXT("PrepareData_ForDuplicate, actor: '%s' total time: %fms"), *Name, TimeSpan.GetTotalMilliseconds());
@@ -138,7 +138,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 		serializer.SubPrefabObjectOverrideData.Reset();
 
 		auto CreatedRootActor = serializer.DeserializeActorFromData(InData.ActorData, InParent, false, FVector::ZeroVector, FQuat::Identity, FVector::OneVector);
-		if (ULGUIPrefabSettings::GetLogPrefabLoadTime())
+		if (ULexUIPrefabSettings::GetLogPrefabLoadTime())
 		{
 			auto TimeSpan = FDateTime::Now() - StartTime;
 			UE_LOG(LGUI, Log, TEXT("DuplicateActorWithPreparedData total time: %fms"), TimeSpan.GetTotalMilliseconds());
@@ -150,9 +150,9 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 	}
 
 	AActor* ActorSerializer::DuplicateActorForEditor(AActor* OriginRootActor, USceneComponent* Parent
-		, const TMap<TObjectPtr<AActor>, FLGUISubPrefabData>& InSubPrefabMap
+		, const TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& InSubPrefabMap
 		, const TMap<UObject*, FGuid>& InMapObjectToGuid
-		, TMap<TObjectPtr<AActor>, FLGUISubPrefabData>& OutDuplicatedSubPrefabMap
+		, TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& OutDuplicatedSubPrefabMap
 		, TMap<FGuid, TObjectPtr<UObject>>& OutMapGuidToObject
 	)
 	{
@@ -187,11 +187,11 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 		serializer.SubPrefabMap = InSubPrefabMap;
 		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, bool InIsSceneComponent) {
 			auto ExcludeProperties = InIsSceneComponent ? serializer.GetSceneComponentExcludeProperties() : TSet<FName>();
-			LGUIPrefabSystem::FLGUIDuplicateObjectWriter Writer(InOutBuffer, serializer, ExcludeProperties);
+			LexUIPrefabSystem::FLexUIDuplicateObjectWriter Writer(InOutBuffer, serializer, ExcludeProperties);
 			Writer.DoSerialize(InObject);
 		};
 		serializer.WriterOrReaderFunctionForSubPrefabOverride = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, const TArray<FName>& InOverridePropertyNames) {
-			LGUIPrefabSystem::FLGUIDuplicateOverrideParameterObjectWriter Writer(InOutBuffer, serializer, InOverridePropertyNames);
+			LexUIPrefabSystem::FLexUIDuplicateOverrideParameterObjectWriter Writer(InOutBuffer, serializer, InOverridePropertyNames);
 			Writer.DoSerialize(InObject);
 		};
 		FLGUIPrefabSaveData SaveData;
@@ -201,11 +201,11 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 		serializer.SubPrefabMap = {};//clear it for deserializer to fill
 		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, bool InIsSceneComponent) {
 			auto ExcludeProperties = InIsSceneComponent ? serializer.GetSceneComponentExcludeProperties() : TSet<FName>();
-			LGUIPrefabSystem::FLGUIDuplicateObjectReader Reader(InOutBuffer, serializer, ExcludeProperties);
+			LexUIPrefabSystem::FLexUIDuplicateObjectReader Reader(InOutBuffer, serializer, ExcludeProperties);
 			Reader.DoSerialize(InObject);
 		};
 		serializer.WriterOrReaderFunctionForSubPrefabOverride = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, const TArray<FName>& InOverridePropertyNameSet) {
-			LGUIPrefabSystem::FLGUIDuplicateOverrideParameterObjectReader Reader(InOutBuffer, serializer, InOverridePropertyNameSet);
+			LexUIPrefabSystem::FLexUIDuplicateOverrideParameterObjectReader Reader(InOutBuffer, serializer, InOverridePropertyNameSet);
 			Reader.DoSerialize(InObject);
 		};
 		auto CreatedRootActor = serializer.DeserializeActorFromData(SaveData, Parent, false, FVector::ZeroVector, FQuat::Identity, FVector::OneVector);

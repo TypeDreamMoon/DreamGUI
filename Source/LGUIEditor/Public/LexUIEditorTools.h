@@ -7,11 +7,11 @@
 
 #pragma once
 class ULexWidget;
-class ULGUIPrefabHelperObject;
-class ULGUIPrefab;
+class ULexUIPrefabHelperObject;
+class ULexUIPrefab;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FEditingPrefabChangedDelegate, AActor*);
-DECLARE_MULTICAST_DELEGATE_OneParam(FBeforeApplyPrefabDelegate, ULGUIPrefabHelperObject*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FBeforeApplyPrefabDelegate, ULexUIPrefabHelperObject*);
 
 class LGUIEDITOR_API FLexUIEditorTools
 {
@@ -56,10 +56,10 @@ public:
 	
 	static bool CanCreatePrefab(TFunction<AActor*()> GetSelectedActorFunction);
 	static void CreatePrefabAsset(TFunction<AActor*()> GetSelectedActorFunction);
-	static void RefreshLevelLoadedPrefab(ULGUIPrefab* InPrefab);
-	static void RefreshOpenedPrefabEditor(ULGUIPrefab* InPrefab);
-	static void RefreshOnSubPrefabChange(ULGUIPrefab* InSubPrefab);
-	static TArray<ULGUIPrefab*> GetAllPrefabArray();
+	static void RefreshLevelLoadedPrefab(ULexUIPrefab* InPrefab);
+	static void RefreshOpenedPrefabEditor(ULexUIPrefab* InPrefab);
+	static void RefreshOnSubPrefabChange(ULexUIPrefab* InSubPrefab);
+	static TArray<ULexUIPrefab*> GetAllPrefabArray();
 	static bool CanUnpackActorForPrefab(TFunction<AActor*()> GetSelectedActorFunction);
 	static void UnpackPrefab(TFunction<AActor*()> GetSelectedActorFunction);
 	static void SelectPrefabAsset(TFunction<AActor*()> GetSelectedActorFunction);
@@ -75,11 +75,9 @@ public:
 	static bool IsSelectUIActor();
 	static bool IsCanvasActor(AActor* InActor);
 	static int GetDrawcallCount(AActor* InActor);
-	static void FocusToScreenSpaceUI();
-	static void FocusToSelectedUI();
 	static bool IsActorCompatibleWithLexUIToolsMenu(AActor* InActor);
 
-	static TMap<FString, TWeakObjectPtr<class ULGUIPrefab>> CopiedActorPrefabMap;//map ActorLabel to prefab
+	static TMap<FString, TWeakObjectPtr<class ULexUIPrefab>> CopiedActorPrefabMap;//map ActorLabel to prefab
 	static TWeakObjectPtr<class UActorComponent> CopiedComponent;
 	static bool HaveValidCopiedActors();
 	static bool HaveValidCopiedComponent();

@@ -6,13 +6,13 @@
 #include "Widgets/SCompoundWidget.h"
 
 class FLGUIPrefabEditor;
-struct FLGUIPrefabOverrideParameterData;
-class ULGUIPrefabHelperObject;
+struct FLexUIPrefabOverrideParameterData;
+class ULexUIPrefabHelperObject;
 class AActor;
-class ULGUIPrefab;
+class ULexUIPrefab;
 
-DECLARE_DELEGATE_OneParam(FLexUIPrefabOverrideDataViewer_AfterRevertPrefab, ULGUIPrefab*);
-DECLARE_DELEGATE_OneParam(FLexUIPrefabOverrideDataViewer_AfterApplyPrefab, ULGUIPrefab*);
+DECLARE_DELEGATE_OneParam(FLexUIPrefabOverrideDataViewer_AfterRevertPrefab, ULexUIPrefab*);
+DECLARE_DELEGATE_OneParam(FLexUIPrefabOverrideDataViewer_AfterApplyPrefab, ULexUIPrefab*);
 
 class SLexUIPrefabOverrideDataViewer : public SCompoundWidget
 {
@@ -25,11 +25,11 @@ public:
 	void Construct(const FArguments& InArgs, TFunction<AActor*()> GetSelectedActorFunction);
 private:
 	void RefreshDataContent();
-	void RefreshDataContent(TArray<FLGUIPrefabOverrideParameterData> ObjectOverrideParameterArray, AActor* InReferenceActor);
+	void RefreshDataContent(TArray<FLexUIPrefabOverrideParameterData> ObjectOverrideParameterArray, AActor* InReferenceActor);
 	FLexUIPrefabOverrideDataViewer_AfterRevertPrefab AfterRevertPrefab;
 	FLexUIPrefabOverrideDataViewer_AfterApplyPrefab AfterApplyPrefab;
 
 	TSharedPtr<SVerticalBox> RootContentVerticalBox;
-	TWeakObjectPtr<ULGUIPrefabHelperObject> PrefabHelperObject;
+	TWeakObjectPtr<ULexUIPrefabHelperObject> PrefabHelperObject;
 	TFunction<AActor*()> GetSelectedActorFunction = nullptr;
 };

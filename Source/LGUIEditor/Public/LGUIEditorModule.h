@@ -16,8 +16,8 @@ class FLGUIEditorModule : public IModuleInterface, public FGCObject
 {
 public:
 
-	static const FName LGUIDynamicSpriteAtlasViewerName;
-	static const FName LGUIPrefabSequenceTabName;
+	static const FName LexUIDynamicSpriteAtlasViewerTabName;
+	static const FName LexUIPrefabSequenceTabName;
 
 	/** IModuleInterface implementation */
 	virtual void StartupModule() override;
@@ -25,7 +25,7 @@ public:
 
 	static FLGUIEditorModule& Get();
 	
-	TSharedRef<SWidget> MakeEditorToolsMenu(bool InitialSetup, bool ComponentAction, bool EditorCameraControl, bool Others, TFunction<AActor*()> GetSelectedActorFunction, TFunction<void(FMenuBuilder&)> ExtendEditMenuFunction);
+	TSharedRef<SWidget> MakeEditorToolsMenu(bool ComponentAction, bool Others, TFunction<AActor*()> GetSelectedActorFunction, TFunction<void(FMenuBuilder&)> ExtendEditMenuFunction);
 	TSharedPtr<class FUICommandList> PluginCommands;
 	TArray<TSharedPtr<class FAssetTypeActions_Base>> AssetTypeActionsArray;
 
@@ -38,15 +38,13 @@ private:
 	void CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction);
 	void CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction);
 	void CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction);
-	void BasicSetupSubMenu(FMenuBuilder& MenuBuilder);
 
 	void AddEditorToolsToToolbarExtension(FToolBarBuilder& Builder);
 
 	void ToggleDrawHelperFrame();
 	bool IsDrawHelperFrameChecked();
 
-	void ApplyLexUIColumnInfoOnSceneOutliner();
-	TWeakObjectPtr<class ULGUIPrefabHelperObject> CurrentPrefabHelperObject;
+	TWeakObjectPtr<class ULexUIPrefabHelperObject> CurrentPrefabHelperObject;
 
 	TMap<UClass*, const FSlateBrush*> InteractableClassIconMap;
 private:

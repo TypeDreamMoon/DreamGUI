@@ -3,7 +3,7 @@
 #include "AssetTypeActions_LexUIPrefab.h"
 #include "Misc/PackageName.h"
 #include "Algo/Transform.h"
-#include "PrefabSystem/LGUIPrefab.h"
+#include "PrefabSystem/LexUIPrefab.h"
 #include "PrefabEditor/LGUIPrefabEditor.h"
 
 #define LOCTEXT_NAMESPACE "AssetTypeActions_LexUIPrefab"
@@ -21,7 +21,7 @@ FText FAssetTypeActions_LexUIPrefab::GetName() const
 
 UClass* FAssetTypeActions_LexUIPrefab::GetSupportedClass() const
 {
-	return ULGUIPrefab::StaticClass();
+	return ULexUIPrefab::StaticClass();
 }
 
 void FAssetTypeActions_LexUIPrefab::OpenAssetEditor( const TArray<UObject*>& InObjects, TSharedPtr<IToolkitHost> EditWithinLevelEditor )
@@ -31,7 +31,7 @@ void FAssetTypeActions_LexUIPrefab::OpenAssetEditor( const TArray<UObject*>& InO
 	const EToolkitMode::Type Mode = EditWithinLevelEditor.IsValid() ? EToolkitMode::WorldCentric : EToolkitMode::Standalone;
 	for (auto ObjIt = InObjects.CreateConstIterator(); ObjIt; ++ObjIt)
 	{
-		if (auto LGUIPrefab = Cast<ULGUIPrefab>(*ObjIt))
+		if (auto LGUIPrefab = Cast<ULexUIPrefab>(*ObjIt))
 		{
 			TSharedRef<FLGUIPrefabEditor> NewPrefabEditor(new FLGUIPrefabEditor());
 			NewPrefabEditor->InitPrefabEditor(Mode, EditWithinLevelEditor, LGUIPrefab);

@@ -3,10 +3,10 @@
 #pragma once
 
 #include "GameFramework/Actor.h"
-#include "PrefabSystem/LGUIPrefab.h"
+#include "PrefabSystem/LexUIPrefab.h"
 #include "LGUIPrefabLevelManagerActor.generated.h"
 
-class ULGUIPrefabHelperObject;
+class ULexUIPrefabHelperObject;
 
 /**
  * Wrapper or container for ULGUIPrefabHelperObject. One level should only have one LGUIPrefabLevelManagerActor.
@@ -36,10 +36,10 @@ private:
 public:
 	static FName PrefabFolderName;
 	static ALGUIPrefabLevelManagerActor* GetInstance(ULevel* InLevel, bool CreateIfNotExist = true);
-	static ALGUIPrefabLevelManagerActor* GetInstanceByPrefabHelperObject(ULGUIPrefabHelperObject* InHelperObject);
+	static ALGUIPrefabLevelManagerActor* GetInstanceByPrefabHelperObject(ULexUIPrefabHelperObject* InHelperObject);
 #endif
 #if WITH_EDITORONLY_DATA
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TObjectPtr<ULGUIPrefabHelperObject> PrefabHelperObject = nullptr;
+		TObjectPtr<ULexUIPrefabHelperObject> PrefabHelperObject = nullptr;
 #endif
 };

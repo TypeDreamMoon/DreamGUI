@@ -5,7 +5,7 @@
 #include "Core/Components/LexCanvas.h"
 #include "Core/LexUISettings.h"
 #include "Core/LexUIManager.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
 #include "PhysicsEngine/BodySetup.h"
 #include "LTweenManager.h"
 #include "Core/LexUIClipData.h"
@@ -49,7 +49,7 @@ ULexWidget::ULexWidget(const FObjectInitializer& ObjectInitializer) :Super(Objec
 void ULexWidget::BeginPlay()
 {
 	Super::BeginPlay();
-	if (!ULGUIPrefabWorldSubsystem::GetInstance(this->GetWorld())->IsPrefabSystemProcessingActor(this->GetOwner()))
+	if (!ULexUIPrefabWorldSubsystem::GetInstance(this->GetWorld())->IsPrefabSystemProcessingActor(this->GetOwner()))
 	{
 		Awake_Implementation();
 	}
@@ -840,7 +840,7 @@ void ULexWidget::OnChildAttached(USceneComponent* ChildComponent)
 		EnsureUIChildrenValid();//check
 		UIChildren.Add(ChildWidget);
 		
-		auto PrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(this->GetWorld());
+		auto PrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(this->GetWorld());
 		if (PrefabManager && PrefabManager->IsPrefabSystemProcessingActor(this->GetOwner()))//load from prefab or duplicated by LGUI PrefabSystem, then not set hierarchy index
 		{
 			//if is load from prefab system, then we don't need to sort children, because children is already sorted when save prefab
@@ -881,7 +881,7 @@ void ULexWidget::OnChildAttached(USceneComponent* ChildComponent)
 
 void ULexWidget::OnUIAttachedToParent()
 {
-	auto PrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(this->GetWorld());
+	auto PrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(this->GetWorld());
 	if (PrefabManager && PrefabManager->IsPrefabSystemProcessingActor(this->GetOwner()))//when load from prefab or duplicate by LGUI PrefabSystem, the ChildAttachmentChanged callback should execute til prefab serialization ready
 	{
 
@@ -939,7 +939,7 @@ void ULexWidget::OnAttachmentChanged()
 
 void ULexWidget::OnUIDetachedFromParent()
 {
-	auto PrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(this->GetWorld());
+	auto PrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(this->GetWorld());
 	if (PrefabManager && PrefabManager->IsPrefabSystemProcessingActor(this->GetOwner()))//when load from prefab or duplicate by LGUI PrefabSystem, the ChildAttachmentChanged callback should execute til prefab serialization ready
 	{
 		
@@ -972,7 +972,7 @@ void ULexWidget::OnRegister()
 				)
 			{
 				//display name
-				auto PrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(this->GetWorld());
+				auto PrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(this->GetWorld());
 				if (PrefabManager && PrefabManager->IsPrefabSystemProcessingActor(this->GetOwner()))//when load from prefab or duplicate by LGUI PrefabSystem, the displayName should be set from prefab
 				{
 
@@ -1975,6 +1975,18 @@ void ULexWidget::UpdateVisual() const
 	if (IsValid(Visual))
 	{
 		Visual->UpdateGeometry();
+	}
+}
+
+void ULexWidget::ForceUpdateLayout() const
+{
+	if (IsValid(LayoutContainer))
+	{
+		LayoutContainer->UpdateLayout();
+	}
+	if (IsValid(LayoutSelf))
+	{
+		LayoutSelf->UpdateLayout();
 	}
 }
 

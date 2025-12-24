@@ -3,7 +3,7 @@
 #pragma once
 
 #include "Components/ActorComponent.h"
-#include "PrefabSystem/ILGUIPrefabInterface.h"
+#include "PrefabSystem/ILexUIPrefabInterface.h"
 #include "MovieSceneSequencePlayer.h"
 #include "LexUIComponentReference.h"
 #include "LGUIPrefabSequenceComponent.generated.h"
@@ -17,7 +17,7 @@ class ULGUIPrefabSequencePlayer;
  */
 UCLASS(Blueprintable, ClassGroup=LGUI, hidecategories=(Collision, Cooking, Activation), meta=(BlueprintSpawnableComponent))
 class LGUI_API ULGUIPrefabSequenceComponent
-	: public UActorComponent, public ILGUIPrefabInterface
+	: public UActorComponent, public ILexUIPrefabInterface
 {
 public:
 	GENERATED_BODY()

@@ -395,7 +395,7 @@ void UUIRecyclableScrollViewComponent::SetCellTemplate(ALexWidgetActor* value)
     }
 }
 
-void UUIRecyclableScrollViewComponent::SetCellTemplatePrefab(class ULGUIPrefab* value)
+void UUIRecyclableScrollViewComponent::SetCellTemplatePrefab(class ULexUIPrefab* value)
 {
     if (CellTemplatePrefab != value)
     {

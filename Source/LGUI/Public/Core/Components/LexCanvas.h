@@ -6,7 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "Camera/CameraTypes.h"
 #include "Math/TransformCalculus2D.h"
-#include "PrefabSystem/ILGUIPrefabInterface.h"
+#include "PrefabSystem/ILexUIPrefabInterface.h"
 #include "LexCanvas.generated.h"
 
 class FLexUIClipData;
@@ -162,7 +162,7 @@ class UTextureRenderTarget2D;
  * Other UV channels usage, check LexText and LexRectBlock.
  */
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API ULexCanvas : public UActorComponent, public ILGUIPrefabInterface
+class LGUI_API ULexCanvas : public UActorComponent, public ILexUIPrefabInterface
 {
 	GENERATED_BODY()
 

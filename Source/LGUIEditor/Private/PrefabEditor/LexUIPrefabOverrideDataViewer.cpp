@@ -1,8 +1,8 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "LexUIPrefabOverrideDataViewer.h"
-#include "PrefabSystem/LGUIPrefab.h"
-#include "PrefabSystem/LGUIPrefabHelperObject.h"
+#include "PrefabSystem/LexUIPrefab.h"
+#include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "LGUIPrefabEditor.h"
 #include "PropertyCustomizationHelpers.h"
 
@@ -16,7 +16,7 @@ void SLexUIPrefabOverrideDataViewer::Construct(const FArguments& InArgs, TFuncti
 	GetSelectedActorFunction = InGetSelectedActorFunction;
 	auto SelectedActor = InGetSelectedActorFunction();
 	if (!SelectedActor)return;
-	PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
+	PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
 	RootContentVerticalBox = SNew(SVerticalBox);
 	ChildSlot
 	[
@@ -44,7 +44,7 @@ void SLexUIPrefabOverrideDataViewer::RefreshDataContent()
 	this->RefreshDataContent(PrefabHelperObject->GetSubPrefabData(SelectedActor).ObjectOverrideParameterArray, bIsSubPrefabRoot ? nullptr : SelectedActor);
 }
 
-void SLexUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLGUIPrefabOverrideParameterData> ObjectOverrideParameterArray, AActor* InReferenceActor)
+void SLexUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLexUIPrefabOverrideParameterData> ObjectOverrideParameterArray, AActor* InReferenceActor)
 {
 	RootContentVerticalBox->ClearChildren();
 	if (ObjectOverrideParameterArray.Num() == 0)return;

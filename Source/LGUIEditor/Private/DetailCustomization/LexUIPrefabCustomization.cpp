@@ -1,28 +1,27 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "DetailCustomization/LGUIPrefabCustomization.h"
-#include "PrefabSystem/LGUIPrefab.h"
-#include "PrefabSystem/LGUIPrefabHelperObject.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
-#include "Utils/LexUIUtils.h"
+#include "DetailCustomization/LexUIPrefabCustomization.h"
+#include "PrefabSystem/LexUIPrefab.h"
+#include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailWidgetRow.h"
 #include "LexUIEditorTools.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabCustomization"
 
-TSharedRef<IDetailCustomization> FLGUIPrefabCustomization::MakeInstance()
+TSharedRef<IDetailCustomization> FLexUIPrefabCustomization::MakeInstance()
 {
-	return MakeShareable(new FLGUIPrefabCustomization);
+	return MakeShareable(new FLexUIPrefabCustomization);
 }
 
-void FLGUIPrefabCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
+void FLexUIPrefabCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
 	TArray<TWeakObjectPtr<UObject>> targetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(targetObjects);
-	TargetScriptPtr = Cast<ULGUIPrefab>(targetObjects[0].Get());
+	TargetScriptPtr = Cast<ULexUIPrefab>(targetObjects[0].Get());
 	if (TargetScriptPtr == nullptr)
 	{
 		UE_LOG(LGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
@@ -42,9 +41,9 @@ void FLGUIPrefabCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 	//	;
 
 	//show prefab version
-	DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULGUIPrefab, EngineMajorVersion))->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {DetailBuilder.ForceRefreshDetails(); }));
-	DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULGUIPrefab, EngineMinorVersion))->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {DetailBuilder.ForceRefreshDetails(); }));
-	DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULGUIPrefab, PrefabVersion))->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {DetailBuilder.ForceRefreshDetails(); }));
+	DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUIPrefab, EngineMajorVersion))->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {DetailBuilder.ForceRefreshDetails(); }));
+	DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUIPrefab, EngineMinorVersion))->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {DetailBuilder.ForceRefreshDetails(); }));
+	DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUIPrefab, PrefabVersion))->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {DetailBuilder.ForceRefreshDetails(); }));
 	category.AddCustomRow(LOCTEXT("EngineVersion", "Engine Version"))
 		.NameContent()
 		[
@@ -65,10 +64,10 @@ void FLGUIPrefabCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 				.Padding(FMargin(4, 2))
 				[
 					SNew(STextBlock)
-					.Text(this, &FLGUIPrefabCustomization::GetEngineVersionText)
+					.Text(this, &FLexUIPrefabCustomization::GetEngineVersionText)
 					.ToolTipText(LOCTEXT("EngineVersionTooltip", "Engine's version when creating this prefab."))
 					.Font(IDetailLayoutBuilder::GetDetailFont())
-					.ColorAndOpacity(this, &FLGUIPrefabCustomization::GetEngineVersionTextColorAndOpacity)
+					.ColorAndOpacity(this, &FLexUIPrefabCustomization::GetEngineVersionTextColorAndOpacity)
 					.AutoWrapText(true)
 				]
 			]
@@ -77,16 +76,16 @@ void FLGUIPrefabCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 			[
 				SNew(SButton)
 				.Text(LOCTEXT("FixEngineVersion", "Fix it"))
-				.OnClicked(this, &FLGUIPrefabCustomization::OnClickRecreteButton)
-				.Visibility(this, &FLGUIPrefabCustomization::ShouldShowFixEngineVersionButton)
+				.OnClicked(this, &FLexUIPrefabCustomization::OnClickRecreteButton)
+				.Visibility(this, &FLexUIPrefabCustomization::ShouldShowFixEngineVersionButton)
 			]
 			+SHorizontalBox::Slot()
 			.MaxWidth(80)
 			[
 				SNew(SButton)
 				.Text(LOCTEXT("FixAllEngineVersion", "Fix all"))
-				.OnClicked(this, &FLGUIPrefabCustomization::OnClickRecreteAllButton)
-				.Visibility(this, &FLGUIPrefabCustomization::ShouldShowFixEngineVersionButton)
+				.OnClicked(this, &FLexUIPrefabCustomization::OnClickRecreteAllButton)
+				.Visibility(this, &FLexUIPrefabCustomization::ShouldShowFixEngineVersionButton)
 			]
 		]
 		;
@@ -110,10 +109,10 @@ void FLGUIPrefabCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 				.Padding(FMargin(4, 2))
 				[
 					SNew(STextBlock)
-					.Text(this, &FLGUIPrefabCustomization::GetPrefabVersionText)
+					.Text(this, &FLexUIPrefabCustomization::GetPrefabVersionText)
 					.ToolTipText(LOCTEXT("PrefabVersionTooltip", "LGUIPrefab system's version when creating this prefab."))
 					.Font(IDetailLayoutBuilder::GetDetailFont())
-					.ColorAndOpacity(this, &FLGUIPrefabCustomization::GetPrefabVersionTextColorAndOpacity)
+					.ColorAndOpacity(this, &FLexUIPrefabCustomization::GetPrefabVersionTextColorAndOpacity)
 					.AutoWrapText(true)
 				]
 			]
@@ -122,24 +121,24 @@ void FLGUIPrefabCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 			[
 				SNew(SButton)
 				.Text(LOCTEXT("FixPrefabVersion", "Fix it"))
-				.OnClicked(this, &FLGUIPrefabCustomization::OnClickRecreteButton)
+				.OnClicked(this, &FLexUIPrefabCustomization::OnClickRecreteButton)
 				.HAlign(EHorizontalAlignment::HAlign_Center)
-				.Visibility(this, &FLGUIPrefabCustomization::ShouldShowFixPrefabVersionButton)
+				.Visibility(this, &FLexUIPrefabCustomization::ShouldShowFixPrefabVersionButton)
 			]
 			+SHorizontalBox::Slot()
 			.MaxWidth(80)
 			[
 				SNew(SButton)
 				.Text(LOCTEXT("FixAllPrefabVersion", "Fix all"))
-				.OnClicked(this, &FLGUIPrefabCustomization::OnClickRecreteAllButton)
+				.OnClicked(this, &FLexUIPrefabCustomization::OnClickRecreteAllButton)
 				.HAlign(EHorizontalAlignment::HAlign_Center)
-				.Visibility(this, &FLGUIPrefabCustomization::ShouldShowFixPrefabVersionButton)
+				.Visibility(this, &FLexUIPrefabCustomization::ShouldShowFixPrefabVersionButton)
 			]
 		]
 		;
 
-	DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULGUIPrefab, PrefabHelperObject));
-	auto PrefabHelperObjectProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULGUIPrefab, PrefabHelperObject));
+	DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexUIPrefab, PrefabHelperObject));
+	auto PrefabHelperObjectProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUIPrefab, PrefabHelperObject));
 	category.AddCustomRow(LOCTEXT("PrefabHelperObject", "PrefabHelperObject"))
 		.NameContent()
 		[
@@ -159,7 +158,7 @@ void FLGUIPrefabCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 				.Padding(FMargin(4, 2))
 				[
 					SNew(STextBlock)
-					.Text(this, &FLGUIPrefabCustomization::AgentObjectText)
+					.Text(this, &FLexUIPrefabCustomization::AgentObjectText)
 					.Font(IDetailLayoutBuilder::GetDetailFont())
 				]
 			]
@@ -169,9 +168,9 @@ void FLGUIPrefabCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 				SNew(SButton)
 				.Text(LOCTEXT("FixPrefabHelperObject", "Fix"))
 				.ToolTipText(LOCTEXT("FixAgentRootActor_Tooltip", "Missing agent objects! This may cause cook & package fail. Click to fix it. Because we can't fix it in cook thread, so you need to do it manually."))
-				.OnClicked(this, &FLGUIPrefabCustomization::OnClickRecreateAgentObjects)
+				.OnClicked(this, &FLexUIPrefabCustomization::OnClickRecreateAgentObjects)
 				.HAlign(EHorizontalAlignment::HAlign_Center)
-				.Visibility(this, &FLGUIPrefabCustomization::ShouldShowFixAgentObjectsButton)
+				.Visibility(this, &FLexUIPrefabCustomization::ShouldShowFixAgentObjectsButton)
 			]
 		]
 	;
@@ -183,20 +182,20 @@ void FLGUIPrefabCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 			[
 				SNew(SButton)
 				.Text(LOCTEXT("RecreateThis", "Recreate this prefab"))
-				.OnClicked(this, &FLGUIPrefabCustomization::OnClickRecreteButton)
+				.OnClicked(this, &FLexUIPrefabCustomization::OnClickRecreteButton)
 				.HAlign(EHorizontalAlignment::HAlign_Center)
 			]
 			+ SHorizontalBox::Slot()
 			[
 				SNew(SButton)
 				.Text(LOCTEXT("RecreateAll", "Recreate all prefabs"))
-				.OnClicked(this, &FLGUIPrefabCustomization::OnClickRecreteAllButton)
+				.OnClicked(this, &FLexUIPrefabCustomization::OnClickRecreteAllButton)
 				.HAlign(EHorizontalAlignment::HAlign_Center)
 			]
 		]
 		;
 }
-FText FLGUIPrefabCustomization::GetEngineVersionText()const
+FText FLexUIPrefabCustomization::GetEngineVersionText()const
 {
 	if (TargetScriptPtr.IsValid())
 	{
@@ -214,7 +213,7 @@ FText FLGUIPrefabCustomization::GetEngineVersionText()const
 		return LOCTEXT("Error", "Error");
 	}
 }
-FText FLGUIPrefabCustomization::GetPrefabVersionText()const
+FText FLexUIPrefabCustomization::GetPrefabVersionText()const
 {
 	if (TargetScriptPtr.IsValid())
 	{
@@ -232,7 +231,7 @@ FText FLGUIPrefabCustomization::GetPrefabVersionText()const
 		return LOCTEXT("Error", "Error");
 	}
 }
-EVisibility FLGUIPrefabCustomization::ShouldShowFixEngineVersionButton()const
+EVisibility FLexUIPrefabCustomization::ShouldShowFixEngineVersionButton()const
 {
 	if (TargetScriptPtr.IsValid())
 	{
@@ -250,7 +249,7 @@ EVisibility FLGUIPrefabCustomization::ShouldShowFixEngineVersionButton()const
 		return EVisibility::Hidden;
 	}
 }
-FSlateColor FLGUIPrefabCustomization::GetEngineVersionTextColorAndOpacity()const
+FSlateColor FLexUIPrefabCustomization::GetEngineVersionTextColorAndOpacity()const
 {
 	if (TargetScriptPtr.IsValid())
 	{
@@ -268,7 +267,7 @@ FSlateColor FLGUIPrefabCustomization::GetEngineVersionTextColorAndOpacity()const
 		return FSlateColor::UseForeground();
 	}
 }
-FSlateColor FLGUIPrefabCustomization::GetPrefabVersionTextColorAndOpacity()const
+FSlateColor FLexUIPrefabCustomization::GetPrefabVersionTextColorAndOpacity()const
 {
 	if (TargetScriptPtr.IsValid())
 	{
@@ -286,7 +285,7 @@ FSlateColor FLGUIPrefabCustomization::GetPrefabVersionTextColorAndOpacity()const
 		return FSlateColor::UseForeground();
 	}
 }
-EVisibility FLGUIPrefabCustomization::ShouldShowFixPrefabVersionButton()const
+EVisibility FLexUIPrefabCustomization::ShouldShowFixPrefabVersionButton()const
 {
 	if (TargetScriptPtr.IsValid())
 	{
@@ -304,11 +303,11 @@ EVisibility FLGUIPrefabCustomization::ShouldShowFixPrefabVersionButton()const
 		return EVisibility::Hidden;
 	}
 }
-EVisibility FLGUIPrefabCustomization::ShouldShowFixAgentObjectsButton()const
+EVisibility FLexUIPrefabCustomization::ShouldShowFixAgentObjectsButton()const
 {
 	if (TargetScriptPtr.IsValid())
 	{
-		if (TargetScriptPtr->PrefabVersion >= (uint16)ELGUIPrefabVersion::BuildinFArchive
+		if (TargetScriptPtr->PrefabVersion >= (uint16)ELexUIPrefabVersion::BuildinFArchive
 			&& (!IsValid(TargetScriptPtr->PrefabHelperObject) || !IsValid(TargetScriptPtr->PrefabHelperObject->LoadedRootActor))
 			)
 		{
@@ -322,11 +321,11 @@ EVisibility FLGUIPrefabCustomization::ShouldShowFixAgentObjectsButton()const
 	}
 }
 
-FText FLGUIPrefabCustomization::AgentObjectText()const
+FText FLexUIPrefabCustomization::AgentObjectText()const
 {
 	if (TargetScriptPtr.IsValid())
 	{
-		if (TargetScriptPtr->PrefabVersion >= (uint16)ELGUIPrefabVersion::BuildinFArchive
+		if (TargetScriptPtr->PrefabVersion >= (uint16)ELexUIPrefabVersion::BuildinFArchive
 			&& (!IsValid(TargetScriptPtr->PrefabHelperObject) || !IsValid(TargetScriptPtr->PrefabHelperObject->LoadedRootActor))
 			)
 		{
@@ -336,7 +335,7 @@ FText FLGUIPrefabCustomization::AgentObjectText()const
 	return LOCTEXT("AgentObjectValid", "Valid");
 }
 
-FReply FLGUIPrefabCustomization::OnClickRecreteButton()
+FReply FLexUIPrefabCustomization::OnClickRecreteButton()
 {
 	if (auto Prefab = TargetScriptPtr.Get())
 	{
@@ -344,9 +343,9 @@ FReply FLGUIPrefabCustomization::OnClickRecreteButton()
 	}
 	return FReply::Handled();
 }
-FReply FLGUIPrefabCustomization::OnClickRecreteAllButton()
+FReply FLexUIPrefabCustomization::OnClickRecreteAllButton()
 {
-	auto World = ULGUIPrefabManagerObject::GetPreviewWorldForPrefabPackage();
+	auto World = ULexUIPrefabManagerObject::GetPreviewWorldForPrefabPackage();
 	if (!IsValid(World))
 	{
 		UE_LOG(LGUIEditor, Error, TEXT("[FLGUIPrefabCustomization::OnClickRecreteButton]Can not get World! This is wired..."));
@@ -367,11 +366,11 @@ FReply FLGUIPrefabCustomization::OnClickRecreteAllButton()
 	}
 	return FReply::Handled();
 }
-FReply FLGUIPrefabCustomization::OnClickEditPrefabButton()
+FReply FLexUIPrefabCustomization::OnClickEditPrefabButton()
 {
 	return FReply::Handled();
 }
-FReply FLGUIPrefabCustomization::OnClickRecreateAgentObjects()
+FReply FLexUIPrefabCustomization::OnClickRecreateAgentObjects()
 {
 	auto AllPrefabs = FLexUIEditorTools::GetAllPrefabArray();
 	for (auto Prefab : AllPrefabs)

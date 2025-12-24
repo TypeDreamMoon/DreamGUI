@@ -2,34 +2,24 @@
 
 #include "LGUIPrefabEditorViewportClient.h"
 #include "LGUIPrefabEditorViewport.h"
-#include "Components/ExponentialHeightFogComponent.h"
-#include "Components/SphereReflectionCaptureComponent.h"
 #include "SceneInterface.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Materials/Material.h"
 #include "Engine/StaticMesh.h"
 #include "Animation/AnimationAsset.h"
-#include "Kismet/GameplayStatics.h"
 #include "GameFramework/Actor.h"
-#include "Kismet/KismetMathLibrary.h"
-#include "GameFramework/Character.h"
 #include "Math/Vector.h"
 #include "Viewports.h"
-#include "Components/ShapeComponent.h"
-#include "Components/DrawFrustumComponent.h"
 #include "AssetEditorModeManager.h"
-#include "CanvasTypes.h"
 #include "EngineUtils.h"
-#include "EdMode.h"
 #include "Engine/Selection.h"
 #include "Misc/CoreDelegates.h"
 #include "SceneView.h"
-#include "Dialogs/Dialogs.h"
 #include "Editor/UnrealEdEngine.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Editor.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
 #include "LGUIPrefabEditorScene.h"
 #include "LGUIPrefabEditor.h"
 #include "MouseDeltaTracker.h"
@@ -39,16 +29,14 @@
 #include "UnrealWidget.h"
 #include "Elements/Framework/TypedElementRegistry.h"
 #include "Elements/Framework/EngineElementsLibrary.h"
-#include "Elements/Framework/TypedElementCommonActions.h"
-#include "Elements/Framework/TypedElementListObjectUtil.h"
 #include "Elements/Framework/TypedElementViewportInteraction.h"
-#include "Elements/Actor/ActorElementLevelEditorViewportInteractionCustomization.h"
-#include "Elements/Component/ComponentElementLevelEditorViewportInteractionCustomization.h"
 #include "InputState.h"
 #include "LevelViewportClickHandlers.h"
 #include "HModel.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "LGUIPrefabViewportClickHandlers.h"
+#include "Core/LexUIManager.h"
+#include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditorViewportClient"
@@ -379,7 +367,38 @@ void FLGUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy* 
 	FVector RayOrigin, RayDirection;
 	View.DeprojectScreenToWorld(FVector2D(HitX, HitY), View.UnscaledViewRect, View.ViewMatrices.GetInvViewProjectionMatrix(), RayOrigin, RayDirection);
 	AActor* ClickHitActor = nullptr;
-	ULGUIPrefabManagerObject::OnPrefabEditorViewport_MouseClick.ExecuteIfBound(this->GetWorld(), RayOrigin, RayDirection, ClickHitActor);
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
+	{
+		float LineTraceLength = 100000;
+		//find hit LexVisualBatchMesh
+		auto LineStart = RayOrigin;
+		auto LineEnd = RayOrigin + RayDirection * LineTraceLength;
+		ULexWidget* ClickHitUI = nullptr;
+		static TArray<ULexWidget*> AllWidgetArray;
+		AllWidgetArray.Reset();
+		{
+			for (auto& CanvasItem : LexUIManager->GetCanvasArray(ELexRenderMode::ScreenSpaceOverlay))
+			{
+				AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
+			}
+			for (auto& CanvasItem : LexUIManager->GetCanvasArray(ELexRenderMode::RenderTarget))
+			{
+				AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
+			}
+			for (auto& CanvasItem : LexUIManager->GetCanvasArray(ELexRenderMode::WorldSpace))
+			{
+				AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
+			}
+			for (auto& CanvasItem : LexUIManager->GetCanvasArray(ELexRenderMode::WorldSpace_LexUI))
+			{
+				AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
+			}
+		}
+		if (ULexUIManagerWorldSubsystem::RaycastHitUI(this->GetWorld(), AllWidgetArray, LineStart, LineEnd, ClickHitUI, IndexOfClickSelectUI))
+		{
+			ClickHitActor = ClickHitUI->GetOwner();
+		}
+	}
 	if (ClickHitActor != nullptr)
 	{
 		if (auto LexWidget = Cast<ULexWidget>(ClickHitActor->GetRootComponent()))
@@ -1052,7 +1071,7 @@ bool FLGUIPrefabEditorViewportClient::Internal_InputAxis(FViewport* InViewport, 
 // End override because PreviewScene is nullptr
 
 
-ULGUIPrefab* FLGUIPrefabEditorViewportClient::GetPrefabBeingEdited()const
+ULexUIPrefab* FLGUIPrefabEditorViewportClient::GetPrefabBeingEdited()const
 {
 	return PrefabEditorPtr.Pin()->GetPrefabBeingEdited();
 }
@@ -1207,7 +1226,7 @@ void FLGUIPrefabEditorViewportClient::CapturedMouseMove(FViewport* InViewport, i
 	
 	if (InMouseX != PrevMouseX || InMouseY != PrevMouseY)
 	{
-		ULGUIPrefabManagerObject::OnPrefabEditorViewport_MouseMove.ExecuteIfBound(this->GetWorld());
+		IndexOfClickSelectUI = INDEX_NONE;
 	}
 	PrevMouseX = InMouseX;
 	PrevMouseY = InMouseY;

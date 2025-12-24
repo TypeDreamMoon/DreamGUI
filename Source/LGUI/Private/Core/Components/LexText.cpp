@@ -9,7 +9,7 @@
 #include "Core/LexUIDrawCall.h"
 #include "Core/LexUIFontEmojiData.h"
 #include "Core/LexUIManager.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
 #include "Utils/LexUIUtils.h"
 #include "Engine/Texture2D.h"
 

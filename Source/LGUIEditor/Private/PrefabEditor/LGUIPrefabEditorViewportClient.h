@@ -12,7 +12,7 @@ class FLGUIPrefabPreviewManager;
 class FLGUIPrefabEditorScene;
 class ULexVisual;
 class FLGUIPrefabEditor;
-class ULGUIPrefab;
+class ULexUIPrefab;
 
 /** Viewport client for editor viewports. Contains common functionality for camera movement, rendering debug information, etc. */
 class FLGUIPrefabEditorViewportClient : public FEditorViewportClient
@@ -102,6 +102,7 @@ public:
 	// End
 private:
 	int PrevMouseX = 0, PrevMouseY = 0;
+	int IndexOfClickSelectUI = INDEX_NONE;
 
 	TWeakPtr<FLGUIPrefabEditor> PrefabEditorPtr;
 	// Are we currently manipulating something?
@@ -120,7 +121,7 @@ private:
 	bool bHasCachedElementsToManipulate = false;
 	FTypedElementListRef CachedElementsToManipulate;
 
-	ULGUIPrefab* GetPrefabBeingEdited()const;
+	ULexUIPrefab* GetPrefabBeingEdited()const;
 	/**
 	 * Collects the set of components and actors on which to apply move operations during or after drag operations.
 	 */

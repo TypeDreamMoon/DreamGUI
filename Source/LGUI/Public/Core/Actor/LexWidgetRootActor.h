@@ -8,7 +8,7 @@
 #include "LexWidgetRootActor.generated.h"
 
 class ULexCanvas;
-class ULGUIPrefab;
+class ULexUIPrefab;
 
 UCLASS()
 class LGUI_API ALexWidgetRootActor : public ALexWidgetActor
@@ -34,7 +34,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=LGUI)
 	TObjectPtr<ULexCanvas> Canvas;
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category=LGUI)
-	TObjectPtr<ULGUIPrefab> WidgetPrefab;
+	TObjectPtr<ULexUIPrefab> WidgetPrefab;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=LGUI)
 	TWeakObjectPtr<AActor> LoadedActor;
 

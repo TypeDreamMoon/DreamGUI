@@ -2,15 +2,18 @@
 
 #include "LGUIPrefabEditorScene.h"
 #include "PrefabEditor/LGUIPrefabEditor.h"
-#include "PrefabSystem/LGUIPrefab.h"
+#include "PrefabSystem/LexUIPrefab.h"
 #include "LGUIEditorModule.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/SphereReflectionCaptureComponent.h"
 #include "EngineUtils.h"
+#include "Core/Actor/LexWidgetActor.h"
+#include "Core/Components/LexWidget.h"
 #include "Engine/TextureCube.h"
+#include "Event/LexScreenSpaceRaycaster.h"
 #include "GameFramework/Actor.h"
 #include "Materials/MaterialInstanceConstant.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditorScene"
 
@@ -127,7 +130,7 @@ FLGUIPrefabEditorScene::FLGUIPrefabEditorScene(ConstructionValues CVS) :FPrefabS
 	}
 }
 
-USceneComponent* FLGUIPrefabEditorScene::GetParentComponentForPrefab(ULGUIPrefab* InPrefab)
+USceneComponent* FLGUIPrefabEditorScene::GetParentComponentForPrefab(ULexUIPrefab* InPrefab)
 {
 	if (RootAgentActor != nullptr)
 	{
@@ -144,7 +147,7 @@ USceneComponent* FLGUIPrefabEditorScene::GetParentComponentForPrefab(ULGUIPrefab
 			{
 				return nullptr;
 			}
-			RootSubPrefab = Cast<ULGUIPrefab>(RootSubPrefab->ReferenceAssetList[0]);
+			RootSubPrefab = Cast<ULexUIPrefab>(RootSubPrefab->ReferenceAssetList[0]);
 			if (!RootSubPrefab)
 			{
 				return nullptr;
@@ -154,20 +157,45 @@ USceneComponent* FLGUIPrefabEditorScene::GetParentComponentForPrefab(ULGUIPrefab
 	}
 	if (Prefab->ReferenceClassList.Num() > 0)
 	{
-		if (!ULGUIPrefabManagerObject::OnPrefabEditor_CreateRootAgent.ExecuteIfBound(this->GetWorld(), Prefab->ReferenceClassList[0], InPrefab, RootAgentActor))
 		{
-			auto CreatedActor = this->GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity, FActorSpawnParameters());
-			//create SceneComponent
+			if (Prefab->ReferenceClassList[0]->IsChildOf(ALexWidgetActor::StaticClass()))//ui
 			{
-				USceneComponent* RootComponent = NewObject<USceneComponent>(CreatedActor, USceneComponent::GetDefaultSceneRootVariableName(), RF_Transactional);
-				RootComponent->Mobility = EComponentMobility::Static;
-				RootComponent->bVisualizeComponent = false;
+				auto CanvasSize = Prefab->PrefabDataForPrefabEditor.CanvasSize;
+				//create Canvas for UI
+				auto RootUICanvasActor = this->GetWorld()->SpawnActor<ALexWidgetActor>(ALexWidgetActor::StaticClass(), FTransform::Identity);
+				RootUICanvasActor->GetRootComponent()->SetWorldLocationAndRotationNoPhysics(FVector::ZeroVector, FRotator(0, 0, 0));
 
-				CreatedActor->SetRootComponent(RootComponent);
-				RootComponent->RegisterComponent();
-				CreatedActor->AddInstanceComponent(RootComponent);
+				if (Prefab->PrefabDataForPrefabEditor.bNeedCanvas)
+				{
+					auto RenderMode = (ELexRenderMode)Prefab->PrefabDataForPrefabEditor.CanvasRenderMode;
+					auto CanvasComp = NewObject<ULexCanvas>(RootUICanvasActor);
+					CanvasComp->RegisterComponent();
+					RootUICanvasActor->AddInstanceComponent(CanvasComp);
+					CanvasComp->SetRenderMode(RenderMode);
+					CanvasComp->bFixedSizeInEditMode = true;
+				}
+
+				RootUICanvasActor->GetLexWidget()->SetWidth(CanvasSize.X);
+				RootUICanvasActor->GetLexWidget()->SetHeight(CanvasSize.Y);
+				RootUICanvasActor->GetLexWidget()->SetSiblingIndex(0);
+
+				RootAgentActor = RootUICanvasActor;
 			}
-			RootAgentActor = CreatedActor;
+			else//not ui
+			{
+				auto CreatedActor = this->GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity, FActorSpawnParameters());
+				//create SceneComponent
+				{
+					USceneComponent* RootComponent = NewObject<USceneComponent>(CreatedActor, USceneComponent::GetDefaultSceneRootVariableName(), RF_Transactional);
+					RootComponent->Mobility = EComponentMobility::Static;
+					RootComponent->bVisualizeComponent = false;
+
+					CreatedActor->SetRootComponent(RootComponent);
+					RootComponent->RegisterComponent();
+					CreatedActor->AddInstanceComponent(RootComponent);
+				}
+				RootAgentActor = CreatedActor;
+			}
 		}
 
 		//set properties

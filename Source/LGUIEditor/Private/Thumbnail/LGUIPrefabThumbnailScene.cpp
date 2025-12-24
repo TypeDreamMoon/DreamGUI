@@ -175,7 +175,7 @@ void FLGUIPrefabThumbnailScene::GetViewMatrixParameters(const float InFOVDegrees
 	OutOrbitYaw = ThumbnailInfo->OrbitYaw;
 	OutOrbitZoom = TargetDistance + ThumbnailInfo->OrbitZoom;
 }
-void FLGUIPrefabThumbnailScene::SetPrefab(class ULGUIPrefab* Prefab)
+void FLGUIPrefabThumbnailScene::SetPrefab(class ULexUIPrefab* Prefab)
 {
 	if (!CurrentPrefab.IsValid())
 	{
@@ -199,7 +199,7 @@ void FLGUIPrefabThumbnailScene::SetPrefab(class ULGUIPrefab* Prefab)
 }
 USceneThumbnailInfo* FLGUIPrefabThumbnailScene::GetSceneThumbnailInfo(const float TargetDistance)const
 {
-	ULGUIPrefab* Prefab = CurrentPrefab.Get();
+	ULexUIPrefab* Prefab = CurrentPrefab.Get();
 	check(Prefab);
 	USceneThumbnailInfo* ThumbnailInfo = Cast<USceneThumbnailInfo>(Prefab->ThumbnailInfo);
 	if (!IsValid(ThumbnailInfo))

@@ -6,7 +6,7 @@
 
 class UStaticMeshComponent;
 class UExponentialHeightFogComponent;
-class ULGUIPrefab;
+class ULexUIPrefab;
 class AActor;
 
 //Encapsulates a simple scene setup for Prefab Editor.
@@ -16,7 +16,7 @@ public:
 	FLGUIPrefabEditorScene(ConstructionValues CVS);
 
 	static const FString RootAgentActorName;
-	USceneComponent* GetParentComponentForPrefab(ULGUIPrefab* InPrefab);
+	USceneComponent* GetParentComponentForPrefab(ULexUIPrefab* InPrefab);
 	AActor* GetRootAgentActor()const { return RootAgentActor; }
 
 	bool IsWorldDefaultActor(AActor* InActor)const;

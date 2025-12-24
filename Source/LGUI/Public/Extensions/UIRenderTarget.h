@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "LexUIComponentReference.h"
-#include "PrefabSystem/ILGUIPrefabInterface.h"
+#include "PrefabSystem/ILexUIPrefabInterface.h"
 #include "Core/Components/LexCustomMesh.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "LGUIRenderTargetInteraction.h"

@@ -14,7 +14,7 @@ class ULGUIPrefabSequenceComponent;
 class ULGUIPrefabSequence;
 class SLGUIPrefabSequenceEditorWidget;
 struct FWidgetAnimationListItem;
-class ULGUIPrefabHelperObject;
+class ULexUIPrefabHelperObject;
 
 class SLGUIPrefabSequenceEditor : public SCompoundWidget
 {
@@ -35,7 +35,7 @@ private:
 	FDelegateHandle OnObjectsReplacedHandle;
 	FDelegateHandle EditingPrefabChangedHandle;
 	FDelegateHandle OnBeforeApplyPrefabHandle;
-	void OnBeforeApplyPrefab(ULGUIPrefabHelperObject* InObject);
+	void OnBeforeApplyPrefab(ULexUIPrefabHelperObject* InObject);
 
 	TSharedPtr<SLGUIPrefabSequenceEditorWidget> PrefabSequenceEditor;
 

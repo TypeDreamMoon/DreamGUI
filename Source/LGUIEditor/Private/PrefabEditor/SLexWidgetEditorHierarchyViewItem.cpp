@@ -617,7 +617,7 @@ TOptional<EItemDropZone> SLexWidgetEditorHierarchyViewItem::HandleCanAcceptDrop(
 			{
 #if 0
 				const auto& AssetData = AssetDragDropOp->GetAssets()[0];
-				if (AssetData.AssetClassPath == ULGUIPrefab::StaticClass()->GetClassPathName())
+				if (AssetData.AssetClassPath == ULexUIPrefab::StaticClass()->GetClassPathName())
 				{
 					
 				}

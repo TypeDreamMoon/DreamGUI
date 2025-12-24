@@ -3,11 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "LGUIPrefabSettings.generated.h"
+#include "LexUIPrefabSettings.generated.h"
 
-/** for LGUIPrefab config */
+/** for LexUIPrefab config */
 UCLASS(config=Engine, defaultconfig)
-class LGUI_API ULGUIPrefabSettings :public UObject
+class LGUI_API ULexUIPrefabSettings :public UObject
 {
 	GENERATED_BODY()
 public:

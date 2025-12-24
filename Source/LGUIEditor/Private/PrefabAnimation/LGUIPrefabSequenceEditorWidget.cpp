@@ -16,7 +16,7 @@
 #include "Framework/Application/SlateApplication.h"
 #include "Utils/LexUIUtils.h"
 #include "LexUIEditorTools.h"
-#include "PrefabSystem/LGUIPrefabHelperObject.h"
+#include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "PrefabAnimation/LGUIPrefabSequenceComponent.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "LevelEditor.h"
@@ -558,7 +558,7 @@ public:
 		auto Actor = WeakSequence.IsValid() ? WeakSequence->GetTypedOuter<AActor>() : nullptr;
 		if (Actor)
 		{
-			if (auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(Actor))
+			if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(Actor))
 			{
 				PrefabHelperObject->SetAnythingDirty();
 			}

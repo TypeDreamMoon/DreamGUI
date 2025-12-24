@@ -1,33 +1,33 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "PrefabSystem/LGUIPrefab.h"
+#include "PrefabSystem/LexUIPrefab.h"
 #include "LGUI.h"
 #if WITH_EDITOR
 #include "Core/Actor/LexWidgetActor.h"
 #endif
 #include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "Utils/LexUIUtils.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
-#include "PrefabSystem/LGUIPrefabHelperObject.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "Engine/Engine.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefab"
 
 
-FLGUISubPrefabData::FLGUISubPrefabData()
+FLexUISubPrefabData::FLexUISubPrefabData()
 {
 #if WITH_EDITORONLY_DATA
 	EditorIdentifyColor = FLinearColor::MakeRandomColor();
 #endif
 }
-void FLGUISubPrefabData::AddMemberProperty(UObject* InObject, FName InPropertyName)
+void FLexUISubPrefabData::AddMemberProperty(UObject* InObject, FName InPropertyName)
 {
-	auto Index = ObjectOverrideParameterArray.IndexOfByPredicate([=](const FLGUIPrefabOverrideParameterData& Item) {
+	auto Index = ObjectOverrideParameterArray.IndexOfByPredicate([=](const FLexUIPrefabOverrideParameterData& Item) {
 		return Item.Object == InObject;
 		});
 	if (Index == INDEX_NONE)
 	{
-		FLGUIPrefabOverrideParameterData DataItem;
+		FLexUIPrefabOverrideParameterData DataItem;
 		DataItem.Object = InObject;
 		DataItem.MemberPropertyNames.Add(InPropertyName);
 		ObjectOverrideParameterArray.Add(DataItem);
@@ -42,14 +42,14 @@ void FLGUISubPrefabData::AddMemberProperty(UObject* InObject, FName InPropertyNa
 	}
 }
 
-void FLGUISubPrefabData::AddMemberProperty(UObject* InObject, const TArray<FName>& InPropertyNames)
+void FLexUISubPrefabData::AddMemberProperty(UObject* InObject, const TArray<FName>& InPropertyNames)
 {
-	auto Index = ObjectOverrideParameterArray.IndexOfByPredicate([=](const FLGUIPrefabOverrideParameterData& Item) {
+	auto Index = ObjectOverrideParameterArray.IndexOfByPredicate([=](const FLexUIPrefabOverrideParameterData& Item) {
 		return Item.Object == InObject;
 		});
 	if (Index == INDEX_NONE)
 	{
-		FLGUIPrefabOverrideParameterData DataItem;
+		FLexUIPrefabOverrideParameterData DataItem;
 		DataItem.Object = InObject;
 		DataItem.MemberPropertyNames = InPropertyNames;
 		ObjectOverrideParameterArray.Add(DataItem);
@@ -67,9 +67,9 @@ void FLGUISubPrefabData::AddMemberProperty(UObject* InObject, const TArray<FName
 	}
 }
 
-void FLGUISubPrefabData::RemoveMemberProperty(UObject* InObject, FName InPropertyName)
+void FLexUISubPrefabData::RemoveMemberProperty(UObject* InObject, FName InPropertyName)
 {
-	auto Index = ObjectOverrideParameterArray.IndexOfByPredicate([=](const FLGUIPrefabOverrideParameterData& Item) {
+	auto Index = ObjectOverrideParameterArray.IndexOfByPredicate([=](const FLexUIPrefabOverrideParameterData& Item) {
 		return Item.Object == InObject;
 		});
 	if (Index != INDEX_NONE)
@@ -86,9 +86,9 @@ void FLGUISubPrefabData::RemoveMemberProperty(UObject* InObject, FName InPropert
 	}
 }
 
-void FLGUISubPrefabData::RemoveMemberProperty(UObject* InObject)
+void FLexUISubPrefabData::RemoveMemberProperty(UObject* InObject)
 {
-	auto Index = ObjectOverrideParameterArray.IndexOfByPredicate([=](const FLGUIPrefabOverrideParameterData& Item) {
+	auto Index = ObjectOverrideParameterArray.IndexOfByPredicate([=](const FLexUIPrefabOverrideParameterData& Item) {
 		return Item.Object == InObject;
 		});
 	if (Index != INDEX_NONE)
@@ -97,7 +97,7 @@ void FLGUISubPrefabData::RemoveMemberProperty(UObject* InObject)
 	}
 }
 
-bool FLGUISubPrefabData::CheckParameters()
+bool FLexUISubPrefabData::CheckParameters()
 {
 	bool AnythingChanged = false;
 	for (int i = 0; i < ObjectOverrideParameterArray.Num(); i++)
@@ -131,19 +131,19 @@ bool FLGUISubPrefabData::CheckParameters()
 	return AnythingChanged;
 }
 
-ULGUIPrefab::ULGUIPrefab()
+ULexUIPrefab::ULexUIPrefab()
 {
 
 }
 
 #if WITH_EDITOR
-void ULGUIPrefab::RefreshAgentObjectsInPreviewWorld()
+void ULexUIPrefab::RefreshAgentObjectsInPreviewWorld()
 {
 	ClearAgentObjectsInPreviewWorld();
 	MakeAgentObjectsInPreviewWorld();
 }
 
-void ULGUIPrefab::SetRootActorNameFromPrefab()
+void ULexUIPrefab::SetRootActorNameFromPrefab()
 {
 	if (GetPrefabHelperObject() && PrefabHelperObject->LoadedRootActor)
 	{
@@ -166,29 +166,29 @@ void ULGUIPrefab::SetRootActorNameFromPrefab()
 	}
 }
 
-void ULGUIPrefab::MakeAgentObjectsInPreviewWorld()
+void ULexUIPrefab::MakeAgentObjectsInPreviewWorld()
 {
-	if (PrefabVersion >= (uint16)ELGUIPrefabVersion::BuildinFArchive)
+	if (PrefabVersion >= (uint16)ELexUIPrefabVersion::BuildinFArchive)
 	{
 		if (!IsValid(PrefabHelperObject))
 		{
-			PrefabHelperObject = NewObject<ULGUIPrefabHelperObject>(this, "PrefabHelper");
+			PrefabHelperObject = NewObject<ULexUIPrefabHelperObject>(this, "PrefabHelper");
 			PrefabHelperObject->PrefabAsset = this;
 		}
 		if (!IsValid(PrefabHelperObject->LoadedRootActor))
 		{
-			if (auto World = ULGUIPrefabManagerObject::GetPreviewWorldForPrefabPackage())
+			if (auto World = ULexUIPrefabManagerObject::GetPreviewWorldForPrefabPackage())
 			{
 				if (!TempAgentActor.IsValid())
 				{
-					ULGUIPrefab* RootPrefab = this;
+					ULexUIPrefab* RootPrefab = this;
 					while (RootPrefab->GetIsPrefabVariant())
 					{
 						if (RootPrefab->ReferenceAssetList.Num() <= 0)
 						{
 							break;
 						}
-						RootPrefab = Cast<ULGUIPrefab>(RootPrefab->ReferenceAssetList[0]);
+						RootPrefab = Cast<ULexUIPrefab>(RootPrefab->ReferenceAssetList[0]);
 						if (!RootPrefab)
 						{
 							break;
@@ -213,7 +213,7 @@ void ULGUIPrefab::MakeAgentObjectsInPreviewWorld()
 		}
 	}
 }
-void ULGUIPrefab::ClearAgentObjectsInPreviewWorld()
+void ULexUIPrefab::ClearAgentObjectsInPreviewWorld()
 {
 	if (IsValid(PrefabHelperObject))
 	{
@@ -233,8 +233,8 @@ public:
 	uint32 ArEngineNetVer = 0;
 	uint32 ArGameNetVer = 0;
 
-	ULGUIPrefab* Prefab = nullptr;
-	FLGUIVersionScope(ULGUIPrefab* InPrefab)
+	ULexUIPrefab* Prefab = nullptr;
+	FLGUIVersionScope(ULexUIPrefab* InPrefab)
 	{
 		Prefab = InPrefab;
 		this->EngineMajorVersion = Prefab->EngineMajorVersion;
@@ -257,22 +257,22 @@ public:
 	}
 };
 
-ULGUIPrefabHelperObject* ULGUIPrefab::GetPrefabHelperObject()
+ULexUIPrefabHelperObject* ULexUIPrefab::GetPrefabHelperObject()
 {
 	if (!IsValid(PrefabHelperObject))
 	{
-		PrefabHelperObject = NewObject<ULGUIPrefabHelperObject>(this, "PrefabHelper");
+		PrefabHelperObject = NewObject<ULexUIPrefabHelperObject>(this, "PrefabHelper");
 		PrefabHelperObject->PrefabAsset = this;
 	}
 	if (!IsValid(PrefabHelperObject->LoadedRootActor))
 	{
-		auto World = ULGUIPrefabManagerObject::GetPreviewWorldForPrefabPackage();
+		auto World = ULexUIPrefabManagerObject::GetPreviewWorldForPrefabPackage();
 		PrefabHelperObject->LoadPrefab(World, nullptr);
 	}
 	return PrefabHelperObject;
 }
 
-void ULGUIPrefab::BeginCacheForCookedPlatformData(const ITargetPlatform* TargetPlatform)
+void ULexUIPrefab::BeginCacheForCookedPlatformData(const ITargetPlatform* TargetPlatform)
 {
 	BinaryDataForBuild.Empty();
 	if (!IsValid(PrefabHelperObject) || !IsValid(PrefabHelperObject->LoadedRootActor))
@@ -317,9 +317,9 @@ void ULGUIPrefab::BeginCacheForCookedPlatformData(const ITargetPlatform* TargetP
 		}
 	}
 }
-void ULGUIPrefab::WillNeverCacheCookedPlatformDataAgain()
+void ULexUIPrefab::WillNeverCacheCookedPlatformDataAgain()
 {
-	if (PrefabVersion >= (uint16)ELGUIPrefabVersion::BuildinFArchive)
+	if (PrefabVersion >= (uint16)ELexUIPrefabVersion::BuildinFArchive)
 	{
 		BinaryDataForBuild.Empty();
 		ReferenceAssetListForBuild.Empty();
@@ -327,9 +327,9 @@ void ULGUIPrefab::WillNeverCacheCookedPlatformDataAgain()
 		ReferenceNameListForBuild.Empty();
 	}
 }
-void ULGUIPrefab::ClearCachedCookedPlatformData(const ITargetPlatform* TargetPlatform)
+void ULexUIPrefab::ClearCachedCookedPlatformData(const ITargetPlatform* TargetPlatform)
 {
-	if (PrefabVersion >= (uint16)ELGUIPrefabVersion::BuildinFArchive)
+	if (PrefabVersion >= (uint16)ELexUIPrefabVersion::BuildinFArchive)
 	{
 		BinaryDataForBuild.Empty();
 		ReferenceAssetListForBuild.Empty();
@@ -338,16 +338,16 @@ void ULGUIPrefab::ClearCachedCookedPlatformData(const ITargetPlatform* TargetPla
 	}
 }
 
-void ULGUIPrefab::PostInitProperties()
+void ULexUIPrefab::PostInitProperties()
 {
 	Super::PostInitProperties();
 }
-void ULGUIPrefab::PostCDOContruct()
+void ULexUIPrefab::PostCDOContruct()
 {
 	Super::PostCDOContruct();
 }
 
-void ULGUIPrefab::PostRename(UObject* OldOuter, const FName OldName)
+void ULexUIPrefab::PostRename(UObject* OldOuter, const FName OldName)
 {
 	Super::PostRename(OldOuter, OldName);
 	if (this->GetName().Contains(TEXT("SKEL_")) || this->GetName().Contains(TEXT("TRASH_")))
@@ -357,12 +357,12 @@ void ULGUIPrefab::PostRename(UObject* OldOuter, const FName OldName)
 		SetRootActorNameFromPrefab();
 	}
 }
-void ULGUIPrefab::PreDuplicate(FObjectDuplicationParameters& DupParams)
+void ULexUIPrefab::PreDuplicate(FObjectDuplicationParameters& DupParams)
 {
 	Super::PreDuplicate(DupParams);
 }
 
-void ULGUIPrefab::PostDuplicate(bool bDuplicateForPIE)
+void ULexUIPrefab::PostDuplicate(bool bDuplicateForPIE)
 {
 	Super::PostDuplicate(bDuplicateForPIE);
 	if (this->GetName().Contains(TEXT("SKEL_")) || this->GetName().Contains(TEXT("TRASH_")))
@@ -373,12 +373,12 @@ void ULGUIPrefab::PostDuplicate(bool bDuplicateForPIE)
 	}
 }
 
-void ULGUIPrefab::PostLoad()
+void ULexUIPrefab::PostLoad()
 {
 	Super::PostLoad();
 }
 
-void ULGUIPrefab::BeginDestroy()
+void ULexUIPrefab::BeginDestroy()
 {
 #if WITH_EDITOR
 	if (IsValid(PrefabHelperObject))
@@ -390,17 +390,17 @@ void ULGUIPrefab::BeginDestroy()
 	Super::BeginDestroy();
 }
 
-void ULGUIPrefab::FinishDestroy()
+void ULexUIPrefab::FinishDestroy()
 {
 	Super::FinishDestroy();
 }
 
-void ULGUIPrefab::PostEditUndo()
+void ULexUIPrefab::PostEditUndo()
 {
 	Super::PostEditUndo();
 	RefreshAgentObjectsInPreviewWorld();
 }
-bool ULGUIPrefab::IsEditorOnly()const
+bool ULexUIPrefab::IsEditorOnly()const
 {
 	auto PathName = this->GetPathName();
 	if (PathName.StartsWith(TEXT("/LGUI/Prefabs/"))//LGUI's preset prefab no need to use in runtime
@@ -414,15 +414,15 @@ bool ULGUIPrefab::IsEditorOnly()const
 
 #endif
 
-AActor* ULGUIPrefab::LoadPrefab(UWorld* InWorld, USceneComponent* InParent, bool SetRelativeTransformToIdentity, const TFunction<void(AActor*)>& InCallbackBeforeAwake)
+AActor* ULexUIPrefab::LoadPrefab(UWorld* InWorld, USceneComponent* InParent, bool SetRelativeTransformToIdentity, const TFunction<void(AActor*)>& InCallbackBeforeAwake)
 {
 	AActor* LoadedRootActor = nullptr;
 	if (InWorld)
 	{
-		switch ((ELGUIPrefabVersion)PrefabVersion)
+		switch ((ELexUIPrefabVersion)PrefabVersion)
 		{
 		default:
-		case ELGUIPrefabVersion::NewObjectOnNestedPrefab:
+		case ELexUIPrefabVersion::NewObjectOnNestedPrefab:
 		{
 			LoadedRootActor = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::LoadPrefab(InWorld, this, InParent, SetRelativeTransformToIdentity, InCallbackBeforeAwake);
 		}
@@ -432,7 +432,7 @@ AActor* ULGUIPrefab::LoadPrefab(UWorld* InWorld, USceneComponent* InParent, bool
 	return LoadedRootActor;
 }
 
-AActor* ULGUIPrefab::LoadPrefab(UObject* WorldContextObject, USceneComponent* InParent, const FLGUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake, bool SetRelativeTransformToIdentity)
+AActor* ULexUIPrefab::LoadPrefab(UObject* WorldContextObject, USceneComponent* InParent, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake, bool SetRelativeTransformToIdentity)
 {
 	auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
 	if (World)
@@ -443,7 +443,7 @@ AActor* ULGUIPrefab::LoadPrefab(UObject* WorldContextObject, USceneComponent* In
 	}
 	return nullptr;
 }
-AActor* ULGUIPrefab::LoadPrefabWithTransform(UObject* WorldContextObject, USceneComponent* InParent, FVector Location, FRotator Rotation, FVector Scale, const FLGUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake)
+AActor* ULexUIPrefab::LoadPrefabWithTransform(UObject* WorldContextObject, USceneComponent* InParent, FVector Location, FRotator Rotation, FVector Scale, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake)
 {
 	AActor* LoadedRootActor = nullptr;
 	auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
@@ -452,10 +452,10 @@ AActor* ULGUIPrefab::LoadPrefabWithTransform(UObject* WorldContextObject, UScene
 		auto CallbackBeforeAwake = [&InCallbackBeforeAwake](AActor* RootActor) {
 			InCallbackBeforeAwake.ExecuteIfBound(RootActor);
 			};
-		switch ((ELGUIPrefabVersion)PrefabVersion)
+		switch ((ELexUIPrefabVersion)PrefabVersion)
 		{
 		default:
-		case ELGUIPrefabVersion::NewObjectOnNestedPrefab:
+		case ELexUIPrefabVersion::NewObjectOnNestedPrefab:
 		{
 			LoadedRootActor = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::LoadPrefab(World, this, InParent, Location, Rotation.Quaternion(), Scale, CallbackBeforeAwake);
 		}
@@ -464,7 +464,7 @@ AActor* ULGUIPrefab::LoadPrefabWithTransform(UObject* WorldContextObject, UScene
 	}
 	return LoadedRootActor;
 }
-AActor* ULGUIPrefab::LoadPrefabWithReplacement(UObject* WorldContextObject, USceneComponent* InParent, const TMap<UObject*, UObject*>& InReplaceAssetMap, const TMap<UClass*, UClass*>& InReplaceClassMap, const FLGUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake)
+AActor* ULexUIPrefab::LoadPrefabWithReplacement(UObject* WorldContextObject, USceneComponent* InParent, const TMap<UObject*, UObject*>& InReplaceAssetMap, const TMap<UClass*, UClass*>& InReplaceClassMap, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake)
 {
 	AActor* LoadedRootActor = nullptr;
 	auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
@@ -509,10 +509,10 @@ AActor* ULGUIPrefab::LoadPrefabWithReplacement(UObject* WorldContextObject, USce
 		auto CallbackBeforeAwake = [&InCallbackBeforeAwake](AActor* RootActor) {
 			InCallbackBeforeAwake.ExecuteIfBound(RootActor);
 			};
-		switch ((ELGUIPrefabVersion)PrefabVersion)
+		switch ((ELexUIPrefabVersion)PrefabVersion)
 		{
 		default:
-		case ELGUIPrefabVersion::NewObjectOnNestedPrefab:
+		case ELexUIPrefabVersion::NewObjectOnNestedPrefab:
 		{
 			LoadedRootActor = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::LoadPrefab(World, this, InParent, false, CallbackBeforeAwake);
 		}
@@ -547,16 +547,16 @@ AActor* ULGUIPrefab::LoadPrefabWithReplacement(UObject* WorldContextObject, USce
 	}
 	return LoadedRootActor;
 }
-AActor* ULGUIPrefab::LoadPrefabWithTransform(UObject* WorldContextObject, USceneComponent* InParent, FVector Location, FQuat Rotation, FVector Scale, const TFunction<void(AActor*)>& InCallbackBeforeAwake)
+AActor* ULexUIPrefab::LoadPrefabWithTransform(UObject* WorldContextObject, USceneComponent* InParent, FVector Location, FQuat Rotation, FVector Scale, const TFunction<void(AActor*)>& InCallbackBeforeAwake)
 {
 	AActor* LoadedRootActor = nullptr;
 	auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
 	if (World)
 	{
-		switch ((ELGUIPrefabVersion)PrefabVersion)
+		switch ((ELexUIPrefabVersion)PrefabVersion)
 		{
 		default:
-		case ELGUIPrefabVersion::NewObjectOnNestedPrefab:
+		case ELexUIPrefabVersion::NewObjectOnNestedPrefab:
 		{
 			LoadedRootActor = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::LoadPrefab(World, this, InParent, Location, Rotation, Scale, InCallbackBeforeAwake);
 		}
@@ -567,15 +567,15 @@ AActor* ULGUIPrefab::LoadPrefabWithTransform(UObject* WorldContextObject, UScene
 }
 
 #if WITH_EDITOR
-AActor* ULGUIPrefab::LoadPrefabWithExistingObjects(UWorld* InWorld, USceneComponent* InParent
-	, TMap<FGuid, TObjectPtr<UObject>>& InOutMapGuidToObject, TMap<TObjectPtr<AActor>, FLGUISubPrefabData>& OutSubPrefabMap
+AActor* ULexUIPrefab::LoadPrefabWithExistingObjects(UWorld* InWorld, USceneComponent* InParent
+	, TMap<FGuid, TObjectPtr<UObject>>& InOutMapGuidToObject, TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& OutSubPrefabMap
 )
 {
 	AActor* LoadedRootActor = nullptr;
-	switch ((ELGUIPrefabVersion)PrefabVersion)
+	switch ((ELexUIPrefabVersion)PrefabVersion)
 	{
 	default:
-	case ELGUIPrefabVersion::NewObjectOnNestedPrefab:
+	case ELexUIPrefabVersion::NewObjectOnNestedPrefab:
 	{
 		LoadedRootActor = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::LoadPrefabWithExistingObjects(InWorld, this, InParent
 			, InOutMapGuidToObject, OutSubPrefabMap
@@ -586,7 +586,7 @@ AActor* ULGUIPrefab::LoadPrefabWithExistingObjects(UWorld* InWorld, USceneCompon
 	return LoadedRootActor;
 }
 
-bool ULGUIPrefab::IsPrefabBelongsToThisSubPrefab(ULGUIPrefab* InPrefab, bool InRecursive)
+bool ULexUIPrefab::IsPrefabBelongsToThisSubPrefab(ULexUIPrefab* InPrefab, bool InRecursive)
 {
 	MakeAgentObjectsInPreviewWorld();
 	if (!PrefabHelperObject)return false;
@@ -611,7 +611,7 @@ bool ULGUIPrefab::IsPrefabBelongsToThisSubPrefab(ULGUIPrefab* InPrefab, bool InR
 	return false;
 }
 
-void ULGUIPrefab::CopyDataTo(ULGUIPrefab* TargetPrefab)
+void ULexUIPrefab::CopyDataTo(ULexUIPrefab* TargetPrefab)
 {
 	TargetPrefab->ReferenceAssetList = this->ReferenceAssetList;
 	TargetPrefab->ReferenceClassList = this->ReferenceClassList;
@@ -628,25 +628,25 @@ void ULGUIPrefab::CopyDataTo(ULGUIPrefab* TargetPrefab)
 	TargetPrefab->PrefabDataForPrefabEditor = this->PrefabDataForPrefabEditor;
 }
 
-FString ULGUIPrefab::GenerateOverallVersionMD5()
+FString ULexUIPrefab::GenerateOverallVersionMD5()
 {
 	struct LOCAL
 	{
-		static void CollectOverallPrefab(ULGUIPrefab* Parent, TArray<ULGUIPrefab*>& Collection)
+		static void CollectOverallPrefab(ULexUIPrefab* Parent, TArray<ULexUIPrefab*>& Collection)
 		{
 			Collection.Add(Parent);
 			for (auto& Item : Parent->ReferenceAssetList)
 			{
-				if (auto SubPrefab = Cast<ULGUIPrefab>(Item))
+				if (auto SubPrefab = Cast<ULexUIPrefab>(Item))
 				{
 					CollectOverallPrefab(SubPrefab, Collection);
 				}
 			}
 		}
 	};
-	TArray<ULGUIPrefab*> Collection;
+	TArray<ULexUIPrefab*> Collection;
 	LOCAL::CollectOverallPrefab(this, Collection);
-	Collection.Sort([](const ULGUIPrefab& A, const ULGUIPrefab& B) {
+	Collection.Sort([](const ULexUIPrefab& A, const ULexUIPrefab& B) {
 		return A.CreateTime > B.CreateTime;
 		});
 
@@ -658,8 +658,8 @@ FString ULGUIPrefab::GenerateOverallVersionMD5()
 	return FLexUIUtils::GetMD5String(CreateTimeOverall);
 }
 
-void ULGUIPrefab::SavePrefab(AActor* RootActor
-	, TMap<UObject*, FGuid>& InOutMapObjectToGuid, TMap<TObjectPtr<AActor>, FLGUISubPrefabData>& InSubPrefabMap
+void ULexUIPrefab::SavePrefab(AActor* RootActor
+	, TMap<UObject*, FGuid>& InOutMapObjectToGuid, TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& InSubPrefabMap
 	, bool InForEditorOrRuntimeUse
 )
 {
@@ -669,12 +669,12 @@ void ULGUIPrefab::SavePrefab(AActor* RootActor
 	);
 }
 
-void ULGUIPrefab::RecreatePrefab()
+void ULexUIPrefab::RecreatePrefab()
 {
-	auto World = ULGUIPrefabManagerObject::GetPreviewWorldForPrefabPackage();
+	auto World = ULexUIPrefabManagerObject::GetPreviewWorldForPrefabPackage();
 
 	TMap<FGuid, TObjectPtr<UObject>> MapGuidToObject;
-	TMap<TObjectPtr<AActor>, FLGUISubPrefabData> SubPrefabMap;
+	TMap<TObjectPtr<AActor>, FLexUISubPrefabData> SubPrefabMap;
 	auto RootActor = this->LoadPrefabWithExistingObjects(World, nullptr
 		, MapGuidToObject, SubPrefabMap
 	);
@@ -687,16 +687,16 @@ void ULGUIPrefab::RecreatePrefab()
 	this->RefreshAgentObjectsInPreviewWorld();
 }
 
-AActor* ULGUIPrefab::LoadPrefabInEditor(UWorld* InWorld, USceneComponent* InParent, bool SetRelativeTransformToIdentity)
+AActor* ULexUIPrefab::LoadPrefabInEditor(UWorld* InWorld, USceneComponent* InParent, bool SetRelativeTransformToIdentity)
 {
 	AActor* LoadedRootActor = nullptr;
-	switch ((ELGUIPrefabVersion)PrefabVersion)
+	switch ((ELexUIPrefabVersion)PrefabVersion)
 	{
 	default:
-	case ELGUIPrefabVersion::NewObjectOnNestedPrefab:
+	case ELexUIPrefabVersion::NewObjectOnNestedPrefab:
 	{
 		TMap<FGuid, TObjectPtr<UObject>> MapGuidToObject;
-		TMap<TObjectPtr<AActor>, FLGUISubPrefabData> SubPrefabMap;
+		TMap<TObjectPtr<AActor>, FLexUISubPrefabData> SubPrefabMap;
 		LoadedRootActor = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::LoadPrefabWithExistingObjects(InWorld, this
 			, InParent, MapGuidToObject, SubPrefabMap
 		);
@@ -706,13 +706,13 @@ AActor* ULGUIPrefab::LoadPrefabInEditor(UWorld* InWorld, USceneComponent* InPare
 	return LoadedRootActor;
 }
 
-AActor* ULGUIPrefab::LoadPrefabInEditor(UWorld* InWorld, USceneComponent* InParent, TMap<TObjectPtr<AActor>, FLGUISubPrefabData>& OutSubPrefabMap, TMap<FGuid, TObjectPtr<UObject>>& OutMapGuidToObject, bool SetRelativeTransformToIdentity)
+AActor* ULexUIPrefab::LoadPrefabInEditor(UWorld* InWorld, USceneComponent* InParent, TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& OutSubPrefabMap, TMap<FGuid, TObjectPtr<UObject>>& OutMapGuidToObject, bool SetRelativeTransformToIdentity)
 {
 	AActor* LoadedRootActor = nullptr;
-	switch ((ELGUIPrefabVersion)PrefabVersion)
+	switch ((ELexUIPrefabVersion)PrefabVersion)
 	{
 	default:
-	case ELGUIPrefabVersion::NewObjectOnNestedPrefab:
+	case ELexUIPrefabVersion::NewObjectOnNestedPrefab:
 	{
 		LoadedRootActor = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::LoadPrefabWithExistingObjects(InWorld, this
 			, InParent, OutMapGuidToObject, OutSubPrefabMap

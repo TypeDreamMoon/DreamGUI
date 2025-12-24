@@ -11,13 +11,13 @@
 #include "DetailLayoutBuilder.h"
 #include "LexWidgetDetailPropertyExtensionHandler.h"
 #include "LexUIPrefabOverrideDataViewer.h"
-#include "PrefabSystem/LGUIPrefab.h"
+#include "PrefabSystem/LexUIPrefab.h"
 #include "LexUIEditorTools.h"
 #include "SSubobjectEditorModule.h"
 #include "SSubobjectInstanceEditor.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexWidget.h"
-#include "PrefabSystem/LGUIPrefabHelperObject.h"
+#include "PrefabSystem/LexUIPrefabHelperObject.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditorDetailTab"
 
@@ -211,9 +211,9 @@ void SLGUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLGU
 											{
 												return CachedActor.Get();
 											})
-											.AfterRevertPrefab_Lambda([=, this](ULGUIPrefab* PrefabAsset) {
+											.AfterRevertPrefab_Lambda([=, this](ULexUIPrefab* PrefabAsset) {
 												})
-											.AfterApplyPrefab_Lambda([=, this](ULGUIPrefab* PrefabAsset){
+											.AfterApplyPrefab_Lambda([=, this](ULexUIPrefab* PrefabAsset){
 												FLexUIEditorTools::RefreshLevelLoadedPrefab(PrefabAsset);
 												FLexUIEditorTools::RefreshOnSubPrefabChange(PrefabAsset);
 												FLexUIEditorTools::RefreshOpenedPrefabEditor(PrefabAsset);

@@ -9,7 +9,7 @@
 #include "Core/Components/LexCanvas.h"
 #include "Event/LexEventSystem.h"
 #include "Event/LexWorldSpaceRaycasterBase.h"
-#include "PrefabSystem/LGUIPrefab.h"
+#include "PrefabSystem/LexUIPrefab.h"
 #include "Utils/LexUIUtils.h"
 
 #define LOCTEXT_NAMESPACE "LexWidgetRootActor"

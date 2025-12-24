@@ -22,7 +22,7 @@
 #include "RayTracingGeometry.h"
 #include "Core/LexUIManager.h"
 #if WITH_EDITOR
-#include "PrefabSystem/LGUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
 #endif
 
 #define LOCTEXT_NAMESPACE "LGUIRenderTargetGeometrySource"

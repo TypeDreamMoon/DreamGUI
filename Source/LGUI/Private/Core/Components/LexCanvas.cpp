@@ -6,7 +6,7 @@
 #include "Utils/LexUIUtils.h"
 #include "Core/LexUISettings.h"
 #include "Core/LexUIManager.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
 #include "Core/LexUIRender/LexUIRenderer.h"
 #include "Core/LexUIMesh/LexUIMeshComponent.h"
 #include "Core/LexUIDrawCall.h"
@@ -59,7 +59,7 @@ ULexCanvas::ULexCanvas()
 void ULexCanvas::BeginPlay()
 {
 	Super::BeginPlay();
-	if (!ULGUIPrefabWorldSubsystem::GetInstance(this->GetWorld())->IsPrefabSystemProcessingActor(this->GetOwner()))
+	if (!ULexUIPrefabWorldSubsystem::GetInstance(this->GetWorld())->IsPrefabSystemProcessingActor(this->GetOwner()))
 	{
 		Awake_Implementation();
 	}

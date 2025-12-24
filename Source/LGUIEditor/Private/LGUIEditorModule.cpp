@@ -8,9 +8,6 @@
 
 #include "ISettingsModule.h"
 
-#include "SceneOutliner/LGUISceneOutlinerInfoColumn.h"
-#include "SceneOutlinerModule.h"
-#include "SceneOutlinerPublicTypes.h"
 #include "AssetToolsModule.h"
 #include "DetailLayoutBuilder.h"
 #include "SceneView.h"
@@ -53,7 +50,7 @@
 #include "DetailCustomization/UISelectableCustomization.h"
 #include "DetailCustomization/UIToggleCustomization.h"
 #include "DetailCustomization/UITextInputCustomization.h"
-#include "DetailCustomization/LGUIPrefabCustomization.h"
+#include "DetailCustomization/LexUIPrefabCustomization.h"
 #include "DetailCustomization/LexUIEventDelegateCustomization.h"
 #include "DetailCustomization/LexUIComponentReferenceCustomization.h"
 #include "DetailCustomization/UIScrollViewWithScrollBarCustomization.h"
@@ -89,8 +86,8 @@
 #include "DetailCustomization/LexUIFontEmojiDataCustomization.h"
 #include "LevelEditorMenuExtensions/LexUILevelEditorExtensions.h"
 
-const FName FLGUIEditorModule::LGUIDynamicSpriteAtlasViewerName(TEXT("LGUIDynamicSpriteAtlasViewerName"));
-const FName FLGUIEditorModule::LGUIPrefabSequenceTabName(TEXT("LGUIPrefabSequenceTabName"));
+const FName FLGUIEditorModule::LexUIDynamicSpriteAtlasViewerTabName(TEXT("LexUIDynamicSpriteAtlasViewerName"));
+const FName FLGUIEditorModule::LexUIPrefabSequenceTabName(TEXT("LexUIPrefabSequenceTabName"));
 
 #define LOCTEXT_NAMESPACE "FLGUIEditorModule"
 DEFINE_LOG_CATEGORY(LGUIEditor);
@@ -185,15 +182,6 @@ void FLGUIEditorModule::StartupModule()
 			FGetActionCheckState(),
 			FIsActionButtonVisible::CreateLambda([] {return FLexUIEditorTools::HaveValidCopiedComponent(); })
 		);
-		//view
-		PluginCommands->MapAction(
-			EditorCommands.FocusToScreenSpaceUI,
-			FExecuteAction::CreateStatic(&FLexUIEditorTools::FocusToScreenSpaceUI)
-		);
-		PluginCommands->MapAction(
-			EditorCommands.FocusToSelectedUI,
-			FExecuteAction::CreateStatic(&FLexUIEditorTools::FocusToSelectedUI)
-		);
 		//settings
 		PluginCommands->MapAction(
 			EditorCommands.ToggleDrawHelperFrame,
@@ -212,17 +200,13 @@ void FLGUIEditorModule::StartupModule()
 		LevelEditorModule.GetToolBarExtensibilityManager()->AddExtender(toolbarExtender);
 		LevelEditorModule.GetGlobalLevelEditorActions()->Append(PluginCommands.ToSharedRef());
 	}
-	//register SceneOutliner ColumnInfo
-	{
-		ApplyLexUIColumnInfoOnSceneOutliner();
-	}
 	//register window
 	{
 		//atlas texture viewer
-		FGlobalTabmanager::Get()->RegisterNomadTabSpawner(LGUIDynamicSpriteAtlasViewerName, FOnSpawnTab::CreateRaw(this, &FLGUIEditorModule::HandleSpawnDynamicSpriteAtlasViewerTab))
+		FGlobalTabmanager::Get()->RegisterNomadTabSpawner(LexUIDynamicSpriteAtlasViewerTabName, FOnSpawnTab::CreateRaw(this, &FLGUIEditorModule::HandleSpawnDynamicSpriteAtlasViewerTab))
 			.SetDisplayName(LOCTEXT("LexUIDynamicSpriteAtlasTextureViewerName", "LexUI Dynamic-Sprite-Atlas Texture Viewer"))
 			.SetMenuType(ETabSpawnerMenuType::Hidden);
-		FGlobalTabmanager::Get()->RegisterNomadTabSpawner(LGUIPrefabSequenceTabName, FOnSpawnTab::CreateRaw(this, &FLGUIEditorModule::HandleSpawnLGUIPrefabSequenceTab))
+		FGlobalTabmanager::Get()->RegisterNomadTabSpawner(LexUIPrefabSequenceTabName, FOnSpawnTab::CreateRaw(this, &FLGUIEditorModule::HandleSpawnLGUIPrefabSequenceTab))
 			.SetDisplayName(LOCTEXT("LexUIPrefabSequenceTabName", "LexUI Prefab Sequence"))
 			.SetMenuType(ETabSpawnerMenuType::Hidden);
 	}
@@ -250,7 +234,7 @@ void FLGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomClassLayout(UUITextInputComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUITextInputCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUIScrollViewWithScrollbarComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUIScrollViewWithScrollBarCustomization::MakeInstance));
 		
-		PropertyModule.RegisterCustomClassLayout(ULGUIPrefab::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLGUIPrefabCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexUIPrefab::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexUIPrefabCustomization::MakeInstance));
 
 		PropertyModule.RegisterCustomClassLayout(UUISpriteSequencePlayer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteSequencePlayerCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(UUISpriteSheetTexturePlayer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FUISpriteSheetTexturePlayerCustomization::MakeInstance));
@@ -336,7 +320,7 @@ void FLGUIEditorModule::StartupModule()
 	}
 	//register Thumbnail
 	{
-		UThumbnailManager::Get().RegisterCustomRenderer(ULGUIPrefab::StaticClass(), ULGUIPrefabThumbnailRenderer::StaticClass());
+		UThumbnailManager::Get().RegisterCustomRenderer(ULexUIPrefab::StaticClass(), ULGUIPrefabThumbnailRenderer::StaticClass());
 		UThumbnailManager::Get().RegisterCustomRenderer(ULexUISpriteData::StaticClass(), ULexUISpriteThumbnailRenderer::StaticClass());
 		UThumbnailManager::Get().RegisterCustomRenderer(ULexUISpriteData_BaseObject::StaticClass(), ULexUISpriteDataBaseObjectThumbnailRenderer::StaticClass());
 	}
@@ -363,7 +347,7 @@ void FLGUIEditorModule::StartupModule()
 			SettingsModule->RegisterSettings("Project", "Plugins", "LexUIPrefab",
 				LOCTEXT("LexUIPrefabSettingsName", "LexUIPrefab"),
 				LOCTEXT("LexUIPrefabSettingsDescription", "LexUIPrefab Settings"),
-				GetMutableDefault<ULGUIPrefabSettings>());
+				GetMutableDefault<ULexUIPrefabSettings>());
 
 			LGUIPrefabSequencerSettings = USequencerSettingsContainer::GetOrCreate<ULGUIPrefabSequencerSettings>(TEXT("EmbeddedLexUIPrefabSequenceEditor"));
 			SettingsModule->RegisterSettings("Editor", "ContentEditors", "EmbeddedLexUIPrefabSequenceEditor",
@@ -441,16 +425,11 @@ void FLGUIEditorModule::ShutdownModule()
 		SequencerModule->UnregisterSequenceEditor(SequenceEditorHandle);
 		SequencerModule->UnRegisterTrackEditor(LGUIMaterialTrackEditorCreateTrackEditorHandle);
 	}
-
-	//unregister SceneOutliner ColumnInfo
-	{
-		FSceneOutlinerModule& SceneOutlinerModule = FModuleManager::LoadModuleChecked< FSceneOutlinerModule >("SceneOutliner");
-		SceneOutlinerModule.UnRegisterColumnType<LGUISceneOutliner::FLGUISceneOutlinerInfoColumn>();
-	}
+	
 	//unregister window
 	{
-		FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(LGUIDynamicSpriteAtlasViewerName);
-		FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(LGUIPrefabSequenceTabName);
+		FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(LexUIDynamicSpriteAtlasViewerTabName);
+		FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(LexUIPrefabSequenceTabName);
 	}
 	//unregister custom editor
 	if (UObjectInitialized() && FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
@@ -475,7 +454,7 @@ void FLGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(UUIToggleComponent::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUITextInputComponent::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(UUIScrollViewWithScrollbarComponent::StaticClass()->GetFName());
-		PropertyModule.UnregisterCustomClassLayout(ULGUIPrefab::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexUIPrefab::StaticClass()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(ULexMeshModifierTextAnimation_Property::StaticClass()->GetFName());
 
@@ -536,7 +515,7 @@ void FLGUIEditorModule::ShutdownModule()
 	//unregister thumbnail
 	if (UObjectInitialized())
 	{
-		UThumbnailManager::Get().UnregisterCustomRenderer(ULGUIPrefab::StaticClass());
+		UThumbnailManager::Get().UnregisterCustomRenderer(ULexUIPrefab::StaticClass());
 		UThumbnailManager::Get().UnregisterCustomRenderer(ULexUISpriteData::StaticClass());
 		UThumbnailManager::Get().UnregisterCustomRenderer(ULexUISpriteData_BaseObject::StaticClass());
 	}
@@ -600,7 +579,7 @@ void FLGUIEditorModule::AddEditorToolsToToolbarExtension(FToolBarBuilder& Builde
 			FUIAction(),
 			FOnGetContent::CreateLambda([=, this]()
 			{
-				return this->MakeEditorToolsMenu(true, true, true, true, []()
+				return this->MakeEditorToolsMenu(true, true, []()
 				{
 					return FLexUIEditorTools::GetFirstSelectedActor();
 				}, [=, this](FMenuBuilder& MenuBuilder)
@@ -629,7 +608,7 @@ void FLGUIEditorModule::AddEditorToolsToToolbarExtension(FToolBarBuilder& Builde
 	Builder.EndSection();
 }
 
-TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(bool InitialSetup, bool ComponentAction, bool EditorCameraControl, bool Others, TFunction<AActor*()> GetSelectedActorFunction, TFunction<void(FMenuBuilder&)> ExtendEditMenuFunction)
+TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(bool ComponentAction, bool Others, TFunction<AActor*()> GetSelectedActorFunction, TFunction<void(FMenuBuilder&)> ExtendEditMenuFunction)
 {
 	FMenuBuilder MenuBuilder(true, PluginCommands);
 	auto EditorCommands = FLexUIEditorCommands::Get();
@@ -727,9 +706,9 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(bool InitialSetup, bo
 								.AutoWidth()
 								[
 									SNew(SLexUIPrefabOverrideDataViewer, GetSelectedActorFunction)
-									.AfterRevertPrefab_Lambda([=, this](ULGUIPrefab* PrefabAsset) {
+									.AfterRevertPrefab_Lambda([=, this](ULexUIPrefab* PrefabAsset) {
 										})
-									.AfterApplyPrefab_Lambda([=, this](ULGUIPrefab* PrefabAsset) {
+									.AfterApplyPrefab_Lambda([=, this](ULexUIPrefab* PrefabAsset) {
 										FLexUIEditorTools::RefreshLevelLoadedPrefab(PrefabAsset);
 										FLexUIEditorTools::RefreshOnSubPrefabChange(PrefabAsset);
 										FLexUIEditorTools::RefreshOpenedPrefabEditor(PrefabAsset);
@@ -777,14 +756,6 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(bool InitialSetup, bo
 			NAME_None, EUserInterfaceActionType::None
 		);
 		CreateExtraPrefabsSubMenu(MenuBuilder, GetSelectedActorFunction);
-		if (InitialSetup)
-		{
-			MenuBuilder.AddSubMenu(
-				LOCTEXT("BasicSetup", "Basic Setup"),
-				LOCTEXT("BasicSetup", "Basic Setup"),
-				FNewMenuDelegate::CreateRaw(this, &FLGUIEditorModule::BasicSetupSubMenu)
-			);
-		}
 	}
 	MenuBuilder.EndSection();
 
@@ -799,16 +770,6 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(bool InitialSetup, bo
 		{
 			MenuBuilder.AddMenuEntry(EditorCommands.CopyComponentValues);
 			MenuBuilder.AddMenuEntry(EditorCommands.PasteComponentValues);
-		}
-		MenuBuilder.EndSection();
-	}
-
-	if (EditorCameraControl)
-	{
-		MenuBuilder.BeginSection("EditorCamera", LOCTEXT("EditorCameraControl", "EditorCameraControl"));
-		{
-			MenuBuilder.AddMenuEntry(EditorCommands.FocusToScreenSpaceUI);
-			MenuBuilder.AddMenuEntry(EditorCommands.FocusToSelectedUI);
 		}
 		MenuBuilder.EndSection();
 	}
@@ -928,7 +889,7 @@ void FLGUIEditorModule::CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder, TFu
 {
 	struct LOCAL
 	{
-		static void CreateExtraPrefab_SubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction, TArray<ULGUIPrefab*> InPrefabArray)
+		static void CreateExtraPrefab_SubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction, TArray<ULexUIPrefab*> InPrefabArray)
 		{
 			for (auto Prefab : InPrefabArray)
 			{
@@ -954,14 +915,14 @@ void FLGUIEditorModule::CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder, TFu
 
 		TArray<FAssetData> ScriptAssetList;
 		AssetRegistry.GetAssetsByPath(FName(*PrefabFolder.Path), ScriptAssetList, false);
-		TArray<ULGUIPrefab*> PrefabAssets;
-		auto PrefabClassName = ULGUIPrefab::StaticClass()->GetClassPathName();
+		TArray<ULexUIPrefab*> PrefabAssets;
+		auto PrefabClassName = ULexUIPrefab::StaticClass()->GetClassPathName();
 		for (auto Asset : ScriptAssetList)
 		{
 			if (Asset.AssetClassPath == PrefabClassName)
 			{
 				auto AssetObject = Asset.GetAsset();
-				if (auto Prefab = Cast<ULGUIPrefab>(AssetObject))
+				if (auto Prefab = Cast<ULexUIPrefab>(AssetObject))
 				{
 					PrefabAssets.Add(Prefab);
 				}
@@ -993,14 +954,6 @@ void FLGUIEditorModule::ToggleDrawHelperFrame()
 bool FLGUIEditorModule::IsDrawHelperFrameChecked()
 {
 	return GetDefault<ULexUIEditorSettings>()->bDrawHelperFrame;
-}
-
-void FLGUIEditorModule::ApplyLexUIColumnInfoOnSceneOutliner()
-{
-	FSceneOutlinerModule& SceneOutlinerModule = FModuleManager::LoadModuleChecked< FSceneOutlinerModule >("SceneOutliner");
-	
-	FSceneOutlinerColumnInfo ColumnInfo(ESceneOutlinerColumnVisibility::Visible, 15, FCreateSceneOutlinerColumn::CreateStatic(&LGUISceneOutliner::FLGUISceneOutlinerInfoColumn::MakeInstance));
-	SceneOutlinerModule.RegisterDefaultColumnType<LGUISceneOutliner::FLGUISceneOutlinerInfoColumn>(ColumnInfo);
 }
 
 void FLGUIEditorModule::CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction)
@@ -1083,32 +1036,6 @@ void FLGUIEditorModule::CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder, TFun
 		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedActorFunction, ULex2DLineChildrenAsPoints::StaticClass(), nullptr);
 		//FunctionContainer::CreateMenuEntryByPrefab(MenuBuilder, TEXT("UIWidget"), LOCTEXT("UIWidget", "UI Widget"), AUIWidgetActor::StaticClass()->GetToolTipText());
 		//FunctionContainer::CreateMenuEntryByPrefab(MenuBuilder, TEXT("UIRenderTarget"), LOCTEXT("UIRenderTarget", "UI Render Target"), AUIRenderTargetActor::StaticClass()->GetToolTipText());
-	}
-	MenuBuilder.EndSection();
-}
-
-void FLGUIEditorModule::BasicSetupSubMenu(FMenuBuilder& MenuBuilder)
-{
-	MenuBuilder.BeginSection("UIBasicSetup");
-	{
-		MenuBuilder.AddMenuEntry(
-			LOCTEXT("BasicSetup_ScreenSpaceUI", "Screen Space UI"),
-			LOCTEXT("BasicSetup_ScreenSpaceUI_Tooltip", "Create Screen Space UI"),
-			FSlateIcon(),
-			FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateScreenSpaceUI_BasicSetup))
-		);
-		MenuBuilder.AddMenuEntry(
-			LOCTEXT("BasicSetup_WorldSpaceUERenderer", "World Space UI - UE Renderer"),
-			LOCTEXT("BasicSetup_WorldSpaceUERenderer_Tooltip", "Render in world space by UE default render pipeline.\n This mode use engine's default render pipeline, so post process will affect ui."),
-			FSlateIcon(),
-			FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateWorldSpaceUIBuiltinRenderer_BasicSetup))
-		);
-		MenuBuilder.AddMenuEntry(
-			LOCTEXT("BasicSetup_WorldSpaceLexUIRenderer", "World Space UI - LexUI Renderer"),
-			LOCTEXT("BasicSetup_WorldSpaceLexUIRenderer_Tooltip", "Render in world space by LexUI's custom render pipeline.\n This mode use LexUI's custom render pipeline, will not be affected by post process."),
-			FSlateIcon(),
-			FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateWorldSpaceUILexUIRenderer_BasicSetup))
-		);
 	}
 	MenuBuilder.EndSection();
 }

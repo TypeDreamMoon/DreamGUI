@@ -23,7 +23,7 @@ public:
 };
 
 
-class ULGUIPrefab;
+class ULexUIPrefab;
 
 UCLASS(ClassGroup = (LGUI), Transient, NotBlueprintable, NotBlueprintType, NotPlaceable, HideCategories = (Rendering, Actor, Input))
 class ALGUIPrefabLoadHelperActor : public AActor
@@ -39,7 +39,7 @@ public:
 
 public:
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TObjectPtr<ULGUIPrefab> PrefabAsset = nullptr;
+		TObjectPtr<ULexUIPrefab> PrefabAsset = nullptr;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TObjectPtr<AActor> LoadedRootActor = nullptr;
 	void LoadPrefab(USceneComponent* InParent);

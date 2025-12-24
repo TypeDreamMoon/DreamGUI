@@ -1,16 +1,9 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "PrefabSystem/LGUIPrefabLevelManagerActor.h"
-#include "LGUI.h"
 #include "Core/LexUIManager.h"
-#include "Utils/LexUIUtils.h"
-#include "Core/Components/LexWidget.h"
-#include "PrefabSystem/LGUIPrefabHelperObject.h"
+#include "PrefabSystem/LexUIPrefabHelperObject.h"
 #if WITH_EDITOR
-#include "PrefabSystem/LGUIPrefabManager.h"
-#include "Framework/Notifications/NotificationManager.h"
-#include "Widgets/Notifications/SNotificationList.h"
-#include "EngineUtils.h"
 #include "Editor.h"
 #include "EditorActorFolders.h"
 #endif
@@ -24,7 +17,7 @@ ALGUIPrefabLevelManagerActor::ALGUIPrefabLevelManagerActor()
 	bIsEditorOnlyActor = true;
 
 #if WITH_EDITORONLY_DATA
-	PrefabHelperObject = CreateDefaultSubobject<ULGUIPrefabHelperObject>(TEXT("PrefabHelper"));
+	PrefabHelperObject = CreateDefaultSubobject<ULexUIPrefabHelperObject>(TEXT("PrefabHelper"));
 #endif
 }
 
@@ -68,7 +61,7 @@ ALGUIPrefabLevelManagerActor* ALGUIPrefabLevelManagerActor::GetInstance(ULevel* 
 	}
 }
 
-ALGUIPrefabLevelManagerActor* ALGUIPrefabLevelManagerActor::GetInstanceByPrefabHelperObject(ULGUIPrefabHelperObject* InHelperObject)
+ALGUIPrefabLevelManagerActor* ALGUIPrefabLevelManagerActor::GetInstanceByPrefabHelperObject(ULexUIPrefabHelperObject* InHelperObject)
 {
 	for (auto& KeyValue : MapLevelToManagerActor)
 	{
@@ -164,7 +157,7 @@ Click OK to confirm delete, or Cancel to undo it.");
 			else if (Return == EAppReturnType::Ok)
 			{
 				//cleanup LGUIPrefabHelperActor
-				for (TObjectIterator<ULGUIPrefabHelperObject> Itr; Itr; ++Itr)
+				for (TObjectIterator<ULexUIPrefabHelperObject> Itr; Itr; ++Itr)
 				{
 					Itr->CleanupInvalidSubPrefab();
 				}

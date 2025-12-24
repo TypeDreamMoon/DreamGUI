@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "PrefabSystem/ActorSerializerBase.h"
-#include "LGUIPrefab.h"
+#include "LexUIPrefab.h"
 #include "Serialization/BufferArchive.h"
 #include "Serialization/ObjectWriter.h"
 #include "Serialization/ObjectReader.h"
@@ -202,27 +202,27 @@ namespace LGUIPrefabSystem8
 	/*
 	 * serialize/deserialize actor with hierarchy.
 	 */
-	class LGUI_API ActorSerializer : public LGUIPrefabSystem::ActorSerializerBase
+	class LGUI_API ActorSerializer : public LexUIPrefabSystem::ActorSerializerBase
 	{
 	public:
 		/**
 		 * @param CallbackBeforeAwake	This callback function will execute before Awake event, parameter "Actor" is the loaded root actor.
 		 */
-		static AActor* LoadPrefab(UWorld* InWorld, ULGUIPrefab* InPrefab, USceneComponent* Parent, bool SetRelativeTransformToIdentity = true, TFunction<void(AActor*)> CallbackBeforeAwake = nullptr);
+		static AActor* LoadPrefab(UWorld* InWorld, ULexUIPrefab* InPrefab, USceneComponent* Parent, bool SetRelativeTransformToIdentity = true, TFunction<void(AActor*)> CallbackBeforeAwake = nullptr);
 		/**
 		 * @param CallbackBeforeAwake	This callback function will execute before Awake event, parameter "Actor" is the loaded root actor.
 		 */
-		static AActor* LoadPrefab(UWorld* InWorld, ULGUIPrefab* InPrefab, USceneComponent* Parent, FVector RelativeLocation, FQuat RelativeRotation, FVector RelativeScale, TFunction<void(AActor*)> CallbackBeforeAwake = nullptr);
+		static AActor* LoadPrefab(UWorld* InWorld, ULexUIPrefab* InPrefab, USceneComponent* Parent, FVector RelativeLocation, FQuat RelativeRotation, FVector RelativeScale, TFunction<void(AActor*)> CallbackBeforeAwake = nullptr);
 		/**
 		 * LoadPrefab and keep reference of objects.
 		 */
-		static AActor* LoadPrefabWithExistingObjects(UWorld* InWorld, ULGUIPrefab* InPrefab, USceneComponent* Parent
-			, TMap<FGuid, TObjectPtr<UObject>>& InOutMapGuidToObjects, TMap<TObjectPtr<AActor>, FLGUISubPrefabData>& OutSubPrefabMap
+		static AActor* LoadPrefabWithExistingObjects(UWorld* InWorld, ULexUIPrefab* InPrefab, USceneComponent* Parent
+			, TMap<FGuid, TObjectPtr<UObject>>& InOutMapGuidToObjects, TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& OutSubPrefabMap
 		);
 
 		/** Save prefab data for editor use. */
-		static void SavePrefab(AActor* RootActor, ULGUIPrefab* InPrefab
-			, TMap<UObject*, FGuid>& OutMapObjectToGuid, TMap<TObjectPtr<AActor>, FLGUISubPrefabData>& InSubPrefabMap
+		static void SavePrefab(AActor* RootActor, ULexUIPrefab* InPrefab
+			, TMap<UObject*, FGuid>& OutMapObjectToGuid, TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& InSubPrefabMap
 			, bool InForEditorOrRuntimeUse
 		);
 		
@@ -237,14 +237,14 @@ namespace LGUIPrefabSystem8
 		 * Editor version, duplicate actor with hierarchy, will also concern sub prefab.
 		 */
 		static AActor* DuplicateActorForEditor(AActor* OriginRootActor, USceneComponent* Parent
-			, const TMap<TObjectPtr<AActor>, FLGUISubPrefabData>& InSubPrefabMap
+			, const TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& InSubPrefabMap
 			, const TMap<UObject*, FGuid>& InMapObjectToGuid
-			, TMap<TObjectPtr<AActor>, FLGUISubPrefabData>& OutDuplicatedSubPrefabMap
+			, TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& OutDuplicatedSubPrefabMap
 			, TMap<FGuid, TObjectPtr<UObject>>& OutMapGuidToObject
 		);
 
 		static AActor* LoadSubPrefab(
-			UWorld* InWorld, ULGUIPrefab* InPrefab, USceneComponent* Parent
+			UWorld* InWorld, ULexUIPrefab* InPrefab, USceneComponent* Parent
 			, const FGuid& InParentDeserializationSessionId
 			, TMap<FGuid, TObjectPtr<UObject>>& InMapGuidToObject
 			, const TFunction<void(AActor*, const TMap<FGuid, TObjectPtr<UObject>>&, const TMap<TObjectPtr<UObject>, FGuid>&, const TArray<AActor*>&, const TArray<UActorComponent*>&)>& InOnSubPrefabFinishDeserializeFunction
@@ -263,7 +263,7 @@ namespace LGUIPrefabSystem8
 		//collection for all actors, include sub-prefab
 		TArray<AActor*> AllActors;
 
-		TMap<TObjectPtr<AActor>, FLGUISubPrefabData> SubPrefabMap;
+		TMap<TObjectPtr<AActor>, FLexUISubPrefabData> SubPrefabMap;
 		TArray<AActor*> SubPrefabActorArray;
 		TArray<FComponentDataStruct> SubPrefabRootComponents;
 		//this collection will collect all actors of this prefab, and root actor of sub prefab
@@ -282,12 +282,12 @@ namespace LGUIPrefabSystem8
 		TArray<FSubPrefabObjectOverrideParameterData> SubPrefabOverrideParameters;
 
 		//serialize actor
-		void SerializeActor(AActor* RootActor, ULGUIPrefab* InPrefab);
+		void SerializeActor(AActor* RootActor, ULexUIPrefab* InPrefab);
 		void SerializeActorArray(TMap<FGuid, FGuid>& MapSceneComponentToParent, TArray<FLGUIActorSaveData>& SavedActors, TMap<FGuid, TArray<uint8>>& SavedObjectData);
 		void SerializeObjectArray(TMap<FGuid, FLGUIObjectSaveData>& ObjectSaveDataArray, TMap<FGuid, TArray<uint8>>& SavedObjectData, TMap<FGuid, FGuid>& MapSceneComponentToParent);
 		void SerializeActorToData(AActor* RootActor, FLGUIPrefabSaveData& OutData);
 		//deserialize actor
-		AActor* DeserializeActor(USceneComponent* Parent, ULGUIPrefab* InPrefab, const TFunction<void()>& InCallbackBeforeDeserialize, bool ReplaceTransform = false, FVector InLocation = FVector::ZeroVector, FQuat InRotation = FQuat::Identity, FVector InScale = FVector::OneVector);
+		AActor* DeserializeActor(USceneComponent* Parent, ULexUIPrefab* InPrefab, const TFunction<void()>& InCallbackBeforeDeserialize, bool ReplaceTransform = false, FVector InLocation = FVector::ZeroVector, FQuat InRotation = FQuat::Identity, FVector InScale = FVector::OneVector);
 		AActor* DeserializeActorFromData(FLGUIPrefabSaveData& SaveData, USceneComponent* Parent, bool ReplaceTransform, FVector InLocation, FQuat InRotation, FVector InScale);
 		AActor* GenerateActorArray(TArray<FLGUIActorSaveData>& SavedActors, TMap<FGuid, FLGUIObjectSaveData>& InSavedObjects, TMap<FGuid, FGuid>& MapSceneComponentToParent, FGuid ParentGuid);
 		void GenerateObjectArray(TMap<FGuid, FLGUIObjectSaveData>& SavedObjects, TMap<FGuid, FGuid>& MapSceneComponentToParent);

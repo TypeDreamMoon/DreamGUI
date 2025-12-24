@@ -6,7 +6,7 @@
 #include "Toolkits/IToolkitHost.h"
 #include "AssetTypeActions_Base.h"
 
-class ULGUIPrefab;
+class ULexUIPrefab;
 
 class FAssetTypeActions_LexUIPrefab : public FAssetTypeActions_Base
 {

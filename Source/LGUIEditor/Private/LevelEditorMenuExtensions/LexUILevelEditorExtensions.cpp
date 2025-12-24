@@ -22,7 +22,7 @@ public:
 	static void CreateLexUISubMenu(FMenuBuilder& MenuBuilder)
 	{
 		MenuBuilder.AddWidget(
-		FLGUIEditorModule::Get().MakeEditorToolsMenu(false, false, false, false, []()
+		FLGUIEditorModule::Get().MakeEditorToolsMenu(false, false, []()
 			{
 				return FLexUIEditorTools::GetFirstSelectedActor();
 			}, [=](FMenuBuilder& MenuBuilder)

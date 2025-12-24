@@ -8,7 +8,7 @@
 #include "Utils/LexUIUtils.h"
 #include "Interfaces/IPluginManager.h"
 #include "Core/LexUISettings.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
 
 
 

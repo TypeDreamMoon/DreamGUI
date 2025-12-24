@@ -9,7 +9,7 @@
 
 class SLexWidgetEditorHierarchyView;
 class ULexWidget;
-class ULGUIPrefab;
+class ULexUIPrefab;
 class SLGUIPrefabEditorViewport;
 class SLGUIPrefabEditorDetails;
 class FLGUIPrefabEditorOutliner;
@@ -17,10 +17,10 @@ class SLGUIPrefabOverrideParameterEditor;
 class SLGUIPrefabRawDataViewer;
 class AActor;
 class FLGUIPrefabEditorScene;
-class ULGUIPrefabHelperObject;
+class ULexUIPrefabHelperObject;
 class ULGUIPrefabOverrideParameterHelperObject;
 class ULGUIPrefabOverrideHelperObject;
-struct FLGUISubPrefabData;
+struct FLexUISubPrefabData;
 
 /**
  * 
@@ -71,7 +71,7 @@ public:
 
 	bool CheckBeforeSaveAsset();
 
-	void InitPrefabEditor(const EToolkitMode::Type Mode, const TSharedPtr< class IToolkitHost >& InitToolkitHost, ULGUIPrefab* InPrefab);
+	void InitPrefabEditor(const EToolkitMode::Type Mode, const TSharedPtr< class IToolkitHost >& InitToolkitHost, ULexUIPrefab* InPrefab);
 	TArray<AActor*> GetAllActors();
 
 	/** Try to handle a drag-drop operation */
@@ -79,20 +79,20 @@ public:
 
 	FLGUIPrefabEditorScene& GetPreviewScene();
 	UWorld* GetWorld();
-	ULGUIPrefab* GetPrefabBeingEdited()const { return PrefabBeingEdited; }
+	ULexUIPrefab* GetPrefabBeingEdited()const { return PrefabBeingEdited; }
 
-	static FLGUIPrefabEditor* GetEditorForPrefabIfValid(ULGUIPrefab* InPrefab);
-	static ULGUIPrefabHelperObject* GetEditorPrefabHelperObjectForActor(AActor* InActor);
+	static FLGUIPrefabEditor* GetEditorForPrefabIfValid(ULexUIPrefab* InPrefab);
+	static ULexUIPrefabHelperObject* GetEditorPrefabHelperObjectForActor(AActor* InActor);
 	static bool WorldIsPrefabEditor(UWorld* InWorld);
 	static bool ActorIsRootAgent(AActor* InActor);
 	static void IterateAllPrefabEditor(const TFunction<void(FLGUIPrefabEditor*)>& InFunction);
-	bool RefreshOnSubPrefabDirty(ULGUIPrefab* InSubPrefab);
+	bool RefreshOnSubPrefabDirty(ULexUIPrefab* InSubPrefab);
 
 	bool GetSelectedObjectsBounds(FBoxSphereBounds& OutResult);
 	FBoxSphereBounds GetAllObjectsBounds();
 	bool ActorBelongsToSubPrefab(AActor* InSubPrefabActor);
 	bool ActorIsSubPrefabRoot(AActor* InSubPrefabRootActor);
-	FLGUISubPrefabData GetSubPrefabDataForActor(AActor* InSubPrefabActor);
+	FLexUISubPrefabData GetSubPrefabDataForActor(AActor* InSubPrefabActor);
 	void GetInitialViewSetting(FVector& OutLocation, FRotator& OutRotation, FVector& OutOrbitLocation, ELevelViewportType& OutViewType);
 
 	void OpenSubPrefab(AActor* InSubPrefabActor);
@@ -100,7 +100,7 @@ public:
 	bool GetAnythingDirty()const;
 	void CloseWithoutCheckDataDirty();
 
-	ULGUIPrefabHelperObject* GetPrefabHelperObject()const { return PrefabHelperObject; }
+	ULexUIPrefabHelperObject* GetPrefabHelperObject()const { return PrefabHelperObject; }
 	AActor* GetRootAgentActor();
 	AActor* GetLoadedRootActor();
 	void ApplyPrefab();
@@ -110,8 +110,8 @@ public:
 	/** Fires whenever the selected set of widgets changes */
 	FOnSelectedWidgetsChanged OnSelectedWidgetsChanged;
 private:
-	TObjectPtr<ULGUIPrefab> PrefabBeingEdited = nullptr;
-	TObjectPtr<ULGUIPrefabHelperObject> PrefabHelperObject = nullptr;
+	TObjectPtr<ULexUIPrefab> PrefabBeingEdited = nullptr;
+	TObjectPtr<ULexUIPrefabHelperObject> PrefabHelperObject = nullptr;
 	static TArray<FLGUIPrefabEditor*> LGUIPrefabEditorInstanceCollection;
 
 	TSharedPtr<SLGUIPrefabEditorViewport> ViewportPtr;

@@ -20,10 +20,11 @@
 #include "Editor.h"
 #include "SLexWidgetEditorHierarchyView.h"
 #include "Core/LexUIManager.h"
+#include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
 #include "Framework/Commands/GenericCommands.h"
-#include "PrefabSystem/LGUIPrefabHelperObject.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefabHelperObject.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
 #include "Utils/LexUIUtils.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditor"
@@ -56,7 +57,7 @@ FName GetPrefabWorldName()
 FLGUIPrefabEditor::FLGUIPrefabEditor()
 	:PreviewScene(FLGUIPrefabEditorScene::ConstructionValues().AllowAudioPlayback(true).ShouldSimulatePhysics(false).SetEditor(true).SetName(GetPrefabWorldName()))
 {
-	PrefabHelperObject = NewObject<ULGUIPrefabHelperObject>(GetTransientPackage(), NAME_None, EObjectFlags::RF_Transactional);
+	PrefabHelperObject = NewObject<ULexUIPrefabHelperObject>(GetTransientPackage(), NAME_None, EObjectFlags::RF_Transactional);
 	LGUIPrefabEditorInstanceCollection.Add(this);
 
 	GEditor->RegisterForUndo(this);
@@ -74,7 +75,7 @@ FLGUIPrefabEditor::~FLGUIPrefabEditor()
 	GEditor->UnregisterForUndo(this);
 }
 
-FLGUIPrefabEditor* FLGUIPrefabEditor::GetEditorForPrefabIfValid(ULGUIPrefab* InPrefab)
+FLGUIPrefabEditor* FLGUIPrefabEditor::GetEditorForPrefabIfValid(ULexUIPrefab* InPrefab)
 {
 	for (auto Instance : LGUIPrefabEditorInstanceCollection)
 	{
@@ -86,7 +87,7 @@ FLGUIPrefabEditor* FLGUIPrefabEditor::GetEditorForPrefabIfValid(ULGUIPrefab* InP
 	return nullptr;
 }
 
-ULGUIPrefabHelperObject* FLGUIPrefabEditor::GetEditorPrefabHelperObjectForActor(AActor* InActor)
+ULexUIPrefabHelperObject* FLGUIPrefabEditor::GetEditorPrefabHelperObjectForActor(AActor* InActor)
 {
 	for (auto Instance : LGUIPrefabEditorInstanceCollection)
 	{
@@ -130,7 +131,7 @@ void FLGUIPrefabEditor::IterateAllPrefabEditor(const TFunction<void(FLGUIPrefabE
 	}
 }
 
-bool FLGUIPrefabEditor::RefreshOnSubPrefabDirty(ULGUIPrefab* InSubPrefab)
+bool FLGUIPrefabEditor::RefreshOnSubPrefabDirty(ULexUIPrefab* InSubPrefab)
 {
 	return PrefabHelperObject->RefreshOnSubPrefabDirty(InSubPrefab);
 }
@@ -167,13 +168,18 @@ FBoxSphereBounds FLGUIPrefabEditor::GetAllObjectsBounds()
 		{
 			if (SceneComp->IsRegistered() && !SceneComp->IsVisualizationComponent())
 			{
-				if (!ULGUIPrefabManagerObject::OnPrefabEditor_GetBounds.ExecuteIfBound(SceneComp, Box, bIsValidBox))
+				if (auto Widget = Cast<ULexWidget>(SceneComp))
 				{
-					if (auto PrimitiveComp = Cast<UPrimitiveComponent>(SceneComp))
+					if (Widget->GetWidgetActiveInHierarchy())
 					{
-						Box = PrimitiveComp->Bounds.GetBox();
+						Box = Widget->Bounds.GetBox();
 						bIsValidBox = true;
 					}
+				}
+				else if (auto PrimitiveComp = Cast<UPrimitiveComponent>(SceneComp))
+				{
+					Box = PrimitiveComp->Bounds.GetBox();
+					bIsValidBox = true;
 				}
 			}
 		}
@@ -203,7 +209,7 @@ bool FLGUIPrefabEditor::ActorIsSubPrefabRoot(AActor* InSubPrefabRootActor)
 	return PrefabHelperObject->SubPrefabMap.Contains(InSubPrefabRootActor);
 }
 
-FLGUISubPrefabData FLGUIPrefabEditor::GetSubPrefabDataForActor(AActor* InSubPrefabActor)
+FLexUISubPrefabData FLGUIPrefabEditor::GetSubPrefabDataForActor(AActor* InSubPrefabActor)
 {
 	return PrefabHelperObject->GetSubPrefabData(InSubPrefabActor);
 }
@@ -311,7 +317,7 @@ void FLGUIPrefabEditor::PostRedo(bool bSuccess)
 	OutlinerPtr->RequestRefresh();
 }
 
-void FLGUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const TSharedPtr<IToolkitHost >& InitToolkitHost, ULGUIPrefab* InPrefab)
+void FLGUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const TSharedPtr<IToolkitHost >& InitToolkitHost, ULexUIPrefab* InPrefab)
 {
 	PrefabBeingEdited = InPrefab;
 	PrefabHelperObject->PrefabAsset = PrefabBeingEdited;
@@ -512,7 +518,16 @@ void FLGUIPrefabEditor::SaveViewState()
 	PrefabBeingEdited->PrefabDataForPrefabEditor.ViewportType = ViewportPtr->GetViewportClient()->GetViewportType();
 	if (auto RootAgentActor = GetPreviewScene().GetRootAgentActor())
 	{
-		if (!ULGUIPrefabManagerObject::OnPrefabEditor_SavePrefab.ExecuteIfBound(RootAgentActor, PrefabBeingEdited))
+		if (auto Widget = Cast<ULexWidget>(RootAgentActor->GetRootComponent()))
+		{
+			PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasSize = FIntPoint(Widget->GetWidth(), Widget->GetHeight());
+		}
+		if (auto Canvas = RootAgentActor->FindComponentByClass<ULexCanvas>())
+		{
+			PrefabBeingEdited->PrefabDataForPrefabEditor.bNeedCanvas = true;
+			PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasRenderMode = (uint8)Canvas->GetRenderMode();
+		}
+		else
 		{
 			PrefabBeingEdited->PrefabDataForPrefabEditor.bNeedCanvas = false;
 		}
@@ -901,7 +916,7 @@ FReply FLGUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent& 
 
 		if (NumAssets > 0)
 		{
-			TArray<ULGUIPrefab*> PrefabsToLoad;
+			TArray<ULexUIPrefab*> PrefabsToLoad;
 			TArray<UClass*> PotentialActorClassesToLoad;
 			TArray<UStaticMesh*> PotentialStaticMeshesToLoad;
 			auto IsSupportedActorClass = [](UClass* ActorClass) {
@@ -938,7 +953,7 @@ FReply FLGUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent& 
 						PotentialActorClass = AssetAsClass;
 					}
 				}
-				if (auto PrefabAsset = Cast<ULGUIPrefab>(Asset))
+				if (auto PrefabAsset = Cast<ULexUIPrefab>(Asset))
 				{
 					if (PrefabAsset->IsPrefabBelongsToThisSubPrefab(this->PrefabBeingEdited, true))
 					{
@@ -952,7 +967,7 @@ FReply FLGUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent& 
 						FMessageDialog::Open(EAppMsgType::Ok, MsgText);
 						return FReply::Unhandled();
 					}
-					if (PrefabAsset->PrefabVersion <= (uint16)ELGUIPrefabVersion::OldVersion)
+					if (PrefabAsset->PrefabVersion <= (uint16)ELexUIPrefabVersion::OldVersion)
 					{
 						auto MsgText = LOCTEXT("Error_UnsupportOldPrefabVersion", "Operation error! Target prefab's version is too old! Please make it newer: open the prefab and hit \"Save\" button.");
 						FMessageDialog::Open(EAppMsgType::Ok, MsgText);
@@ -1001,7 +1016,7 @@ FReply FLGUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent& 
 				for (auto& PrefabAsset : PrefabsToLoad)
 				{
 					TMap<FGuid, TObjectPtr<UObject>> SubPrefabMapGuidToObject;
-					TMap<TObjectPtr<AActor>, FLGUISubPrefabData> SubSubPrefabMap;
+					TMap<TObjectPtr<AActor>, FLexUISubPrefabData> SubSubPrefabMap;
 					auto LoadedSubPrefabRootActor = PrefabAsset->LoadPrefabWithExistingObjects(GetPreviewScene().GetWorld()
 						, CurrentSelectedActor->GetRootComponent()
 						, SubPrefabMapGuidToObject, SubSubPrefabMap

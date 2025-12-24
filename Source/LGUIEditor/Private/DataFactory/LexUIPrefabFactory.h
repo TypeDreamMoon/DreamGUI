@@ -14,7 +14,7 @@ class ULexUIPrefabFactory : public UFactory
 public:
 	ULexUIPrefabFactory();
 
-	class ULGUIPrefab* SourcePrefab = nullptr;
+	class ULexUIPrefab* SourcePrefab = nullptr;
 	UClass* RootActorClass = nullptr;
 	// UFactory interface
 #if USE_CLASS_PICKER

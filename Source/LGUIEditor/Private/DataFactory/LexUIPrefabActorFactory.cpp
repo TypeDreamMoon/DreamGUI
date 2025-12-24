@@ -1,10 +1,10 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DataFactory/LexUIPrefabActorFactory.h"
-#include "PrefabSystem/LGUIPrefab.h"
+#include "PrefabSystem/LexUIPrefab.h"
 #include "PrefabSystem/LGUIPrefabLevelManagerActor.h"
-#include "PrefabSystem/LGUIPrefabHelperObject.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefabHelperObject.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
 #include "LexUIEditorTools.h"
 #include "AssetRegistry/AssetData.h"
 #include "Utils/LexUIUtils.h"
@@ -26,7 +26,7 @@ ULexUIPrefabActorFactory::ULexUIPrefabActorFactory()
 
 bool ULexUIPrefabActorFactory::CanCreateActorFrom(const FAssetData& AssetData, FText& OutErrorMsg)
 {
-	if (AssetData.IsValid() && AssetData.GetClass()->IsChildOf(ULGUIPrefab::StaticClass()))
+	if (AssetData.IsValid() && AssetData.GetClass()->IsChildOf(ULexUIPrefab::StaticClass()))
 	{
 		return true;
 	}
@@ -36,7 +36,7 @@ bool ULexUIPrefabActorFactory::CanCreateActorFrom(const FAssetData& AssetData, F
 
 bool ULexUIPrefabActorFactory::PreSpawnActor(UObject* Asset, FTransform& InOutLocation)
 {
-	ULGUIPrefab* Prefab = CastChecked<ULGUIPrefab>(Asset);
+	ULexUIPrefab* Prefab = CastChecked<ULexUIPrefab>(Asset);
 
 	if (Prefab == NULL)
 	{
@@ -49,7 +49,7 @@ void ULexUIPrefabActorFactory::PostSpawnActor(UObject* Asset, AActor* InNewActor
 {
 	Super::PostSpawnActor(Asset, InNewActor);
 
-	ULGUIPrefab* Prefab = CastChecked<ULGUIPrefab>(Asset);
+	ULexUIPrefab* Prefab = CastChecked<ULexUIPrefab>(Asset);
 
 	auto PrefabActor = CastChecked<ALGUIPrefabLoadHelperActor>(InNewActor);
 
@@ -131,7 +131,7 @@ void ALGUIPrefabLoadHelperActor::LoadPrefab(USceneComponent* InParent)
 	auto PrefabHelperObject = ALGUIPrefabLevelManagerActor::GetInstance(this->GetLevel())->PrefabHelperObject;
 	PrefabHelperObject->SetCanNotifyAttachment(false);
 	TMap<FGuid, TObjectPtr<UObject>> SubPrefabMapGuidToObject;
-	TMap<TObjectPtr<AActor>, FLGUISubPrefabData> SubSubPrefabMap;
+	TMap<TObjectPtr<AActor>, FLexUISubPrefabData> SubSubPrefabMap;
 	LoadedRootActor = PrefabAsset->LoadPrefabWithExistingObjects(this->GetWorld()
 		, InParent
 		, SubPrefabMapGuidToObject, SubSubPrefabMap

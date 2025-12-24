@@ -17,13 +17,12 @@
 #include "Core/ILexUICultureChangedInterface.h"
 #include "Core/LexUIBehaviour.h"
 #include "Event/LexEventSystem.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
-#include "PrefabSystem/LGUIPrefabHelperObject.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefabHelperObject.h"
 #if WITH_EDITOR
 #include "Editor.h"
 #include "Selection.h"
 #include "EditorViewportClient.h"
-#include "PrefabSystem/LGUIPrefab.h"
 #include "Core/LexUISpriteData.h"
 #endif
 
@@ -33,222 +32,11 @@
 
 ULexUIManagerObject* ULexUIManagerObject::Instance = nullptr;
 #if WITH_EDITOR
-int ULexUIManagerObject::IndexOfClickSelectUI = INDEX_NONE;
 bool ULexUIManagerObject::bIsBlueprintCompiling = false;
 #endif
 ULexUIManagerObject::ULexUIManagerObject()
 {
-	if (this == GetDefault<ULexUIManagerObject>())
-	{
-#if WITH_EDITOR
-		ULGUIPrefabManagerObject::OnSerialize_SortChildrenActors.BindStatic([](TArray<AActor*>& ChildrenActors) {
-			//Actually normal UIItem's hierarchyIndex property can do the job, but sub prefab's root actor not, so sort it to make sure.
-			Algo::Sort(ChildrenActors, [](const AActor* A, const AActor* B) {
-				auto ARoot = A->GetRootComponent();
-				auto BRoot = B->GetRootComponent();
-				if (ARoot != nullptr && BRoot != nullptr)
-				{
-					auto AUIRoot = Cast<ULexWidget>(ARoot);
-					auto BUIRoot = Cast<ULexWidget>(BRoot);
-					if (AUIRoot != nullptr && BUIRoot != nullptr)
-					{
-						return AUIRoot->GetSiblingIndex() < BUIRoot->GetSiblingIndex();//compare hierarch index for UI actor
-					}
-				}
-				else
-				{
-					//sort on ActorLabel so the Tick function can be predictable because deserialize order is determinate.
-					return A->GetActorLabel().Compare(B->GetActorLabel()) < 0;//compare name for normal actor
-				}
-				return false;
-				});
-			});
-		ULGUIPrefabManagerObject::OnDeserialize_ProcessComponentsBeforeRerunConstructionScript.BindStatic([](const TArray<UActorComponent*>& Components) {
-			for (auto& Comp : Components)
-			{
-				if (auto Widget = Cast<ULexWidget>(Comp))
-				{
-					Widget->CalculateTransformFromAnchor();
-				}
-			}
-			});
 
-		ULGUIPrefabManagerObject::OnPrefabEditorViewport_MouseClick.BindStatic([](UWorld* World, const FVector& RayOrigin, const FVector& RayDirection, AActor*& ClickHitActor) {
-			if (auto LGUIManager = ULexUIManagerWorldSubsystem::GetInstance(World))
-			{
-				float LineTraceLength = 100000;
-				//find hit LexVisualBatchMesh
-				auto LineStart = RayOrigin;
-				auto LineEnd = RayOrigin + RayDirection * LineTraceLength;
-				ULexWidget* ClickHitUI = nullptr;
-				static TArray<ULexWidget*> AllWidgetArray;
-				AllWidgetArray.Reset();
-				{
-					for (auto& CanvasItem : LGUIManager->GetCanvasArray(ELexRenderMode::ScreenSpaceOverlay))
-					{
-						AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
-					}
-					for (auto& CanvasItem : LGUIManager->GetCanvasArray(ELexRenderMode::RenderTarget))
-					{
-						AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
-					}
-					for (auto& CanvasItem : LGUIManager->GetCanvasArray(ELexRenderMode::WorldSpace))
-					{
-						AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
-					}
-					for (auto& CanvasItem : LGUIManager->GetCanvasArray(ELexRenderMode::WorldSpace_LexUI))
-					{
-						AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
-					}
-				}
-				if (ULexUIManagerWorldSubsystem::RaycastHitUI(World, AllWidgetArray, LineStart, LineEnd, ClickHitUI, ULexUIManagerObject::IndexOfClickSelectUI))
-				{
-					ClickHitActor = ClickHitUI->GetOwner();
-				}
-			}
-			});
-		ULGUIPrefabManagerObject::OnPrefabEditorViewport_MouseMove.BindStatic([](UWorld* World) {
-			ULexUIManagerObject::IndexOfClickSelectUI = INDEX_NONE;
-			});
-
-		ULGUIPrefabManagerObject::OnPrefabEditor_CreateRootAgent.BindStatic([](UWorld* World, UClass* RootActorClass, ULGUIPrefab* Prefab, AActor*& OutCreatedRootAgentActor)
-			{
-				if (RootActorClass->IsChildOf(ALexWidgetActor::StaticClass()))//ui
-				{
-					auto CanvasSize = Prefab->PrefabDataForPrefabEditor.CanvasSize;
-					//create Canvas for UI
-					auto RootUICanvasActor = World->SpawnActor<ALexWidgetActor>(ALexWidgetActor::StaticClass(), FTransform::Identity);
-					RootUICanvasActor->GetRootComponent()->SetWorldLocationAndRotationNoPhysics(FVector::ZeroVector, FRotator(0, 0, 0));
-
-					if (Prefab->PrefabDataForPrefabEditor.bNeedCanvas)
-					{
-						auto RenderMode = (ELexRenderMode)Prefab->PrefabDataForPrefabEditor.CanvasRenderMode;
-						auto CanvasComp = NewObject<ULexCanvas>(RootUICanvasActor);
-						CanvasComp->RegisterComponent();
-						RootUICanvasActor->AddInstanceComponent(CanvasComp);
-						CanvasComp->SetRenderMode(RenderMode);
-						CanvasComp->bFixedSizeInEditMode = true;
-					}
-
-					RootUICanvasActor->GetLexWidget()->SetWidth(CanvasSize.X);
-					RootUICanvasActor->GetLexWidget()->SetHeight(CanvasSize.Y);
-					RootUICanvasActor->GetLexWidget()->SetSiblingIndex(0);
-
-					OutCreatedRootAgentActor = RootUICanvasActor;
-				}
-				else//not ui
-				{
-					auto CreatedActor = World->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity, FActorSpawnParameters());
-					//create SceneComponent
-					{
-						USceneComponent* RootComponent = NewObject<USceneComponent>(CreatedActor, USceneComponent::GetDefaultSceneRootVariableName(), RF_Transactional);
-						RootComponent->Mobility = EComponentMobility::Static;
-						RootComponent->bVisualizeComponent = false;
-
-						CreatedActor->SetRootComponent(RootComponent);
-						RootComponent->RegisterComponent();
-						CreatedActor->AddInstanceComponent(RootComponent);
-					}
-					OutCreatedRootAgentActor = CreatedActor;
-				}
-			});
-		ULGUIPrefabManagerObject::OnPrefabEditor_GetBounds.BindStatic([](USceneComponent* SceneComp, FBox& OutBounds, bool& OutValidBounds)
-			{
-				if (auto Widget = Cast<ULexWidget>(SceneComp))
-				{
-					if (Widget->GetWidgetActiveInHierarchy())
-					{
-						OutBounds = Widget->Bounds.GetBox();
-						OutValidBounds = true;
-					}
-				}
-				else if (auto PrimitiveComp = Cast<UPrimitiveComponent>(SceneComp))
-				{
-					OutBounds = PrimitiveComp->Bounds.GetBox();
-					OutValidBounds = true;
-				}
-			});
-		ULGUIPrefabManagerObject::OnPrefabEditor_SavePrefab.BindStatic([](AActor* RootAgentActor, ULGUIPrefab* Prefab)
-			{
-				if (auto Widget = Cast<ULexWidget>(RootAgentActor->GetRootComponent()))
-				{
-					Prefab->PrefabDataForPrefabEditor.CanvasSize = FIntPoint(Widget->GetWidth(), Widget->GetHeight());
-				}
-				if (auto Canvas = RootAgentActor->FindComponentByClass<ULexCanvas>())
-				{
-					Prefab->PrefabDataForPrefabEditor.bNeedCanvas = true;
-					Prefab->PrefabDataForPrefabEditor.CanvasRenderMode = (uint8)Canvas->GetRenderMode();
-				}
-				else
-				{
-					Prefab->PrefabDataForPrefabEditor.bNeedCanvas = false;
-				}
-			});
-		ULGUIPrefabManagerObject::OnPrefabEditor_Refresh.BindStatic([]() {
-			ULexUIManagerWorldSubsystem::RefreshAllUI();
-			});
-		ULGUIPrefabManagerObject::OnPrefabEditor_ReplaceObjectPropertyForApplyOrRevert.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, FName& InPropertyName) {
-			if (InObject->IsA<ULexWidget>())
-			{
-				if (InPropertyName == USceneComponent::GetRelativeLocationPropertyName())
-				{
-					InPropertyName = ULexWidget::GetPropertyName_AnchorData();
-				}
-			}
-			});
-		ULGUIPrefabManagerObject::OnPrefabEditor_AfterObjectPropertyApplyOrRevert.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, FName InPropertyName) {
-			if (auto Widget = Cast<ULexWidget>(InObject))
-			{
-				if (InPropertyName == ULexWidget::GetPropertyName_AnchorData())
-				{
-					Widget->CalculateTransformFromAnchor();//calculate transform here, because when NotifyPropertyChanged the PostActorConstruction->MoveComponent will call then anchor will calculate from transform value which is wrong
-					PrefabHelper->RemoveMemberPropertyFromSubPrefab(Widget->GetOwner(), InObject, USceneComponent::GetRelativeLocationPropertyName());//remove RelativeLocation override because Widget use AnchorData to calculate RelativeLocation
-				}
-			}
-			});
-		ULGUIPrefabManagerObject::OnPrefabEditor_AfterMakePrefabAsSubPrefab.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, AActor* InRootActor) {
-			//mark HierarchyIndex as default override parameter
-			auto RootComp = InRootActor->GetRootComponent();
-			if (auto RootUIComp = Cast<ULexWidget>(RootComp))
-			{
-				PrefabHelper->AddMemberPropertyToSubPrefab(InRootActor, RootUIComp, ULexWidget::GetPropertyName_SiblingIndex());
-			}
-			});
-		ULGUIPrefabManagerObject::OnPrefabEditor_AfterCollectPropertyToOverride.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, FName InPropertyName) {
-			if (auto Widget = Cast<ULexWidget>(InObject))
-			{
-				if (InPropertyName == USceneComponent::GetRelativeLocationPropertyName())//if UI's relative location change, then record anchor data too
-				{
-					PrefabHelper->AddMemberPropertyToSubPrefab(Widget->GetOwner(), InObject, ULexWidget::GetPropertyName_AnchorData());
-				}
-				else if (InPropertyName == ULexWidget::GetPropertyName_AnchorData())//if UI's anchor data change, then record relative location too
-				{
-					PrefabHelper->AddMemberPropertyToSubPrefab(Widget->GetOwner(), InObject, USceneComponent::GetRelativeLocationPropertyName());
-				}
-			}
-			});
-		ULGUIPrefabManagerObject::OnPrefabEditor_CopyRootObjectParentAnchorData.BindStatic([](ULGUIPrefabHelperObject* PrefabHelper, UObject* InObject, UObject* OriginObject) {
-			auto InObjectWidget = Cast<ULexWidget>(InObject);
-			auto OriginObjectWidget = Cast<ULexWidget>(OriginObject);
-			if (InObjectWidget != nullptr && OriginObjectWidget != nullptr)//if is Widget, we need to copy parent's property to origin object's parent property, to make anchor & location calculation right
-			{
-				auto InObjectParent = InObjectWidget->GetUIParent();
-				auto OriginObjectParent = OriginObjectWidget->GetUIParent();
-				if (InObjectParent != nullptr && OriginObjectParent != nullptr)
-				{
-					//copy relative location
-					auto RelativeLocationProperty = FindFProperty<FProperty>(InObjectParent->GetClass(), USceneComponent::GetRelativeLocationPropertyName());
-					RelativeLocationProperty->CopyCompleteValue_InContainer(OriginObjectParent, InObjectParent);
-					FLexUIUtils::NotifyPropertyChanged(OriginObjectParent, RelativeLocationProperty);
-					//copy anchor data
-					auto AnchorDataProperty = FindFProperty<FProperty>(InObjectParent->GetClass(), ULexWidget::GetPropertyName_AnchorData());
-					AnchorDataProperty->CopyCompleteValue_InContainer(OriginObjectParent, InObjectParent);
-					FLexUIUtils::NotifyPropertyChanged(OriginObjectParent, AnchorDataProperty);
-				}
-			}
-			});
-#endif
-	}
 }
 void ULexUIManagerObject::BeginDestroy()
 {
@@ -460,10 +248,6 @@ void ULexUIManagerObject::OnPackageReloaded(EPackageReloadPhase Phase, FPackageR
 	if (Phase == EPackageReloadPhase::PostBatchPostGC && Event != nullptr && Event->GetNewPackage() != nullptr)
 	{
 		auto Asset = Event->GetNewPackage()->FindAssetInPackage();
-		if (auto PrefabAsset = Cast<ULGUIPrefab>(Asset))
-		{
-			
-		}
 	}
 }
 
@@ -1067,7 +851,7 @@ void ULexUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 void ULexUIManagerWorldSubsystem::PostInitialize()
 {
 	Super::PostInitialize();
-	auto PrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(this->GetWorld());
+	auto PrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(this->GetWorld());
 	check(PrefabManager);
 	PrefabManager->OnBeginDeserializeSession.AddUObject(this, &ULexUIManagerWorldSubsystem::BeginPrefabSystemProcessingActor);
 	PrefabManager->OnEndDeserializeSession.AddUObject(this, &ULexUIManagerWorldSubsystem::EndPrefabSystemProcessingActor);
@@ -1173,7 +957,6 @@ void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 				if (!IsValid(Selectable->GetWorld()))continue;
 				if (!IsValid(Selectable->GetWidget()))continue;
 				if (!IsValid(Selectable->GetWidget()->GetRenderCanvas()))continue;
-				if (!Selectable->GetWidget()->GetWidgetActiveInHierarchy())continue;
 				if (!Selectable->GetWidget()->GetRaycastableInHierarchy())continue;
 
 				bool bIsScreenSpace = false;
@@ -1333,7 +1116,7 @@ void ULexUIManagerWorldSubsystem::AddLexUIBehaviourForLifecycleEvent(ULexUIBehav
 	{
 		if (auto Instance = GetInstance(InComp->GetWorld()))
 		{
-			auto SessionId = ULGUIPrefabWorldSubsystem::GetInstance(InComp->GetWorld())->GetPrefabSystemSessionIdForActor(InComp->GetOwner());
+			auto SessionId = ULexUIPrefabWorldSubsystem::GetInstance(InComp->GetWorld())->GetPrefabSystemSessionIdForActor(InComp->GetOwner());
 			if (SessionId.IsValid())//processing by prefab system, collect for further operation
 			{
 				if (auto ArrayPtr = Instance->LexUIBehaviours_PrefabSystemProcessing.Find(SessionId))
@@ -1813,7 +1596,7 @@ void ULexUIManagerWorldSubsystem::EndPrefabSystemProcessingActor(const FGuid& In
 }
 void ULexUIManagerWorldSubsystem::AddFunctionForPrefabSystemExecutionBeforeAwake(AActor* InPrefabActor, const TFunction<void()>& InFunction)
 {
-	auto SessionId = ULGUIPrefabWorldSubsystem::GetInstance(InPrefabActor->GetWorld())->GetPrefabSystemSessionIdForActor(InPrefabActor);
+	auto SessionId = ULexUIPrefabWorldSubsystem::GetInstance(InPrefabActor->GetWorld())->GetPrefabSystemSessionIdForActor(InPrefabActor);
 	if (SessionId.IsValid())
 	{
 		auto& Container = LexUIBehaviours_PrefabSystemProcessing[SessionId];

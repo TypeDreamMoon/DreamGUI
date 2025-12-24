@@ -6,7 +6,7 @@
 #include "Components/SceneComponent.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexWidget.h"
-#include "PrefabSystem/LGUIPrefabManager.h"
+#include "PrefabSystem/LexUIPrefabManager.h"
 
 ULexUIBehaviour::ULexUIBehaviour()
 {
@@ -567,7 +567,7 @@ void ULexUIBehaviour::Call_OnWidgetActiveChanged(bool WidgetActive)
 		}
 		else//awake not called, should be the first time that get WidgetActive
 		{
-			if (auto PrefabManager = ULGUIPrefabWorldSubsystem::GetInstance(this->GetWorld()))
+			if (auto PrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(this->GetWorld()))
 			{
 				if (!PrefabManager->IsPrefabSystemProcessingActor(this->GetOwner()))//If processing by prefab system, that means not finish deserialize yet, then not allowed to call Awake
 				{

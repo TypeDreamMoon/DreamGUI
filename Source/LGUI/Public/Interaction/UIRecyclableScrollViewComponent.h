@@ -112,7 +112,7 @@ protected:
 	 * Only valid if CellTemplateType is Prefab.
 	 */
 	UPROPERTY(EditAnywhere, Category = "LGUI-RecyclableScrollView")
-		TObjectPtr<class ULGUIPrefab> CellTemplatePrefab;
+		TObjectPtr<class ULexUIPrefab> CellTemplatePrefab;
 	/** When use horizontal scroll, this can set the row count in every cell. */
 	UPROPERTY(EditAnywhere, Category = "LGUI-RecyclableScrollView", meta = (ClampMin = "1", EditCondition = "Horizontal"))
 		uint16 Rows = 1;
@@ -157,7 +157,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-RecyclableScrollView")
 		ALexWidgetActor* GetCellTemplate()const { return CellTemplate; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-RecyclableScrollView")
-		class ULGUIPrefab* GetCellTemplatePrefab()const { return CellTemplatePrefab; }
+		class ULexUIPrefab* GetCellTemplatePrefab()const { return CellTemplatePrefab; }
 
 	/**
 	 * Delete all created cell objects.
@@ -192,7 +192,7 @@ public:
 	 * This function only set the parameter. If you want to refresh the display UI list, just call UpdateWithDataSource.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-RecyclableScrollView")
-		void SetCellTemplatePrefab(class ULGUIPrefab* value);
+		void SetCellTemplatePrefab(class ULexUIPrefab* value);
 
 	/** Recreate cell list. */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-RecyclableScrollView")

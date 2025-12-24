@@ -9,14 +9,14 @@
 #include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexCanvas.h"
 #include "Event/LexScreenSpaceRaycaster.h"
-#include "PrefabSystem/LGUIPrefab.h"
+#include "PrefabSystem/LexUIPrefab.h"
 #include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 
 void ULexUIBPLibrary::DestroyActorWithHierarchy(AActor* Target, bool WithHierarchy)
 {
 	FLexUIUtils::DestroyActorWithHierarchy(Target, WithHierarchy);
 }
-AActor* ULexUIBPLibrary::LoadPrefab(UObject* WorldContextObject, ULGUIPrefab* InPrefab, USceneComponent* InParent, const FLGUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake, bool SetRelativeTransformToIdentity)
+AActor* ULexUIBPLibrary::LoadPrefab(UObject* WorldContextObject, ULexUIPrefab* InPrefab, USceneComponent* InParent, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake, bool SetRelativeTransformToIdentity)
 {
 	if (!IsValid(InPrefab))
 	{
@@ -25,7 +25,7 @@ AActor* ULexUIBPLibrary::LoadPrefab(UObject* WorldContextObject, ULGUIPrefab* In
 	}
 	return InPrefab->LoadPrefab(WorldContextObject, InParent, InCallbackBeforeAwake, SetRelativeTransformToIdentity);
 }
-AActor* ULexUIBPLibrary::LoadPrefabWithTransform(UObject* WorldContextObject, ULGUIPrefab* InPrefab, USceneComponent* InParent, FVector Location, FRotator Rotation, FVector Scale, const FLGUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake)
+AActor* ULexUIBPLibrary::LoadPrefabWithTransform(UObject* WorldContextObject, ULexUIPrefab* InPrefab, USceneComponent* InParent, FVector Location, FRotator Rotation, FVector Scale, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake)
 {
 	if (!IsValid(InPrefab))
 	{
@@ -34,7 +34,7 @@ AActor* ULexUIBPLibrary::LoadPrefabWithTransform(UObject* WorldContextObject, UL
 	}
 	return InPrefab->LoadPrefabWithTransform(WorldContextObject, InParent, Location, Rotation, Scale, InCallbackBeforeAwake);
 }
-AActor* ULexUIBPLibrary::LoadPrefabWithTransform(UObject* WorldContextObject, ULGUIPrefab* InPrefab, USceneComponent* InParent, FVector Location, FQuat Rotation, FVector Scale, const TFunction<void(AActor*)>& InCallbackBeforeAwake)
+AActor* ULexUIBPLibrary::LoadPrefabWithTransform(UObject* WorldContextObject, ULexUIPrefab* InPrefab, USceneComponent* InParent, FVector Location, FQuat Rotation, FVector Scale, const TFunction<void(AActor*)>& InCallbackBeforeAwake)
 {
 	if (!IsValid(InPrefab))
 	{
@@ -43,7 +43,7 @@ AActor* ULexUIBPLibrary::LoadPrefabWithTransform(UObject* WorldContextObject, UL
 	}
 	return InPrefab->LoadPrefabWithTransform(WorldContextObject, InParent, Location, Rotation, Scale, InCallbackBeforeAwake);
 }
-AActor* ULexUIBPLibrary::LoadPrefabWithReplacement(UObject* WorldContextObject, ULGUIPrefab* InPrefab, USceneComponent* InParent, const TMap<UObject*, UObject*>& InReplaceAssetMap, const TMap<UClass*, UClass*>& InReplaceClassMap, const FLGUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake)
+AActor* ULexUIBPLibrary::LoadPrefabWithReplacement(UObject* WorldContextObject, ULexUIPrefab* InPrefab, USceneComponent* InParent, const TMap<UObject*, UObject*>& InReplaceAssetMap, const TMap<UClass*, UClass*>& InReplaceClassMap, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake)
 {
 	if (!IsValid(InPrefab))
 	{

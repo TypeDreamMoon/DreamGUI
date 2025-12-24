@@ -1,7 +1,7 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "LGUIPrefabRawDataViewer.h"
-#include "PrefabSystem/LGUIPrefab.h"
+#include "PrefabSystem/LexUIPrefab.h"
 #include "LGUIPrefabEditor.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabRawDataViewer"
