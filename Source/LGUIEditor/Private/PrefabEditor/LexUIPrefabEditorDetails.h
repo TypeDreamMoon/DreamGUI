@@ -11,10 +11,10 @@ class AActor;
 /**
  * 
  */
-class SLGUIPrefabEditorDetails : public SCompoundWidget
+class SLexUIPrefabEditorDetails : public SCompoundWidget
 {
 public:
-	SLATE_BEGIN_ARGS(SLGUIPrefabEditorDetails)
+	SLATE_BEGIN_ARGS(SLexUIPrefabEditorDetails)
     {
     }
 
@@ -23,7 +23,7 @@ public:
     /** Widget constructor */
     void Construct(const FArguments& Args, TSharedPtr<FLGUIPrefabEditor> InPrefabEditor);
 
-	virtual ~SLGUIPrefabEditorDetails();
+	virtual ~SLexUIPrefabEditorDetails();
 private:
 	UObject* GetActorContextAsObject() const;
 	void OnEditorSelectionChanged();
@@ -41,7 +41,8 @@ private:
 	TSharedPtr<class IDetailsView> DetailsView;
 	TSharedPtr<class SBox> ComponentsBox;
 	TSharedPtr<class SSubobjectEditor> SubobjectEditor;
+	TSharedPtr<class SLexUIPrefabOverrideDataViewer> PrefabOverrideDataViewer;
 	TWeakObjectPtr<AActor> CachedActor;
-	bool bIsSelectFromLGUIEditor = false;
+	bool bIsSelectFromLexUIEditor = false;
 	bool bIsSelectFromDetails = false;
 };

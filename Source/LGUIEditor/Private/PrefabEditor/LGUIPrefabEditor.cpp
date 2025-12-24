@@ -4,7 +4,7 @@
 #include "LGUIEditorModule.h"
 #include "LGUIPrefabEditorViewport.h"
 #include "LGUIPrefabEditorScene.h"
-#include "LGUIPrefabEditorDetails.h"
+#include "LexUIPrefabEditorDetails.h"
 #include "LGUIPrefabRawDataViewer.h"
 #include "EditorModeManager.h"
 #include "EngineUtils.h"
@@ -347,7 +347,7 @@ void FLGUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const TS
 
 	ViewportPtr = SNew(SLGUIPrefabEditorViewport, PrefabEditorPtr, PrefabBeingEdited->PrefabDataForPrefabEditor.ViewMode);
 	
-	DetailsPtr = SNew(SLGUIPrefabEditorDetails, PrefabEditorPtr);
+	DetailsPtr = SNew(SLexUIPrefabEditorDetails, PrefabEditorPtr);
 
 	PrefabRawDataViewer = SNew(SLGUIPrefabRawDataViewer, PrefabEditorPtr, PrefabBeingEdited);
 	

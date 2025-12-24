@@ -11,7 +11,7 @@ class SLexWidgetEditorHierarchyView;
 class ULexWidget;
 class ULexUIPrefab;
 class SLGUIPrefabEditorViewport;
-class SLGUIPrefabEditorDetails;
+class SLexUIPrefabEditorDetails;
 class FLGUIPrefabEditorOutliner;
 class SLGUIPrefabOverrideParameterEditor;
 class SLGUIPrefabRawDataViewer;
@@ -115,7 +115,7 @@ private:
 	static TArray<FLGUIPrefabEditor*> LGUIPrefabEditorInstanceCollection;
 
 	TSharedPtr<SLGUIPrefabEditorViewport> ViewportPtr;
-	TSharedPtr<SLGUIPrefabEditorDetails> DetailsPtr;
+	TSharedPtr<SLexUIPrefabEditorDetails> DetailsPtr;
 	TSharedPtr<SLexWidgetEditorHierarchyView> OutlinerPtr;
 	TSharedPtr<SLGUIPrefabRawDataViewer> PrefabRawDataViewer;
 

@@ -11,18 +11,4 @@ public:
 	FLexUIEditorCommands();
 	// TCommands<> interface
 	virtual void RegisterCommands() override;
-
-public:
-	TSharedPtr<FUICommandInfo> CopyActor;
-	TSharedPtr<FUICommandInfo> PasteActor;
-	TSharedPtr<FUICommandInfo> CutActor;
-	TSharedPtr<FUICommandInfo> DuplicateActor;
-	TSharedPtr<FUICommandInfo> DestroyActor;
-	TSharedPtr<FUICommandInfo> ToggleSpatiallyLoaded;
-
-	TSharedPtr<FUICommandInfo> CopyComponentValues;
-	TSharedPtr<FUICommandInfo> PasteComponentValues;
-
-	TSharedPtr<FUICommandInfo> ToggleDrawHelperFrame;
-	TSharedPtr<FUICommandInfo> ForceGC;
 };

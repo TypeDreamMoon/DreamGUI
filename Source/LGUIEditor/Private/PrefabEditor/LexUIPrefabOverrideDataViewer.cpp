@@ -14,9 +14,6 @@ void SLexUIPrefabOverrideDataViewer::Construct(const FArguments& InArgs, TFuncti
 	AfterApplyPrefab = InArgs._AfterApplyPrefab;
 
 	GetSelectedActorFunction = InGetSelectedActorFunction;
-	auto SelectedActor = InGetSelectedActorFunction();
-	if (!SelectedActor)return;
-	PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
 	RootContentVerticalBox = SNew(SVerticalBox);
 	ChildSlot
 	[
@@ -30,6 +27,7 @@ void SLexUIPrefabOverrideDataViewer::RefreshDataContent()
 {
 	auto SelectedActor = GetSelectedActorFunction();
 	if (!SelectedActor)return;
+	PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
 	if (!PrefabHelperObject.IsValid())return;
 	
 	bool bIsSubPrefabRoot = false;

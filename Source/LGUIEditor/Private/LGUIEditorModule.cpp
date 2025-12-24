@@ -111,12 +111,10 @@
 #include "Interaction/UISliderComponent.h"
 #include "Interaction/UITextInputComponent.h"
 #include "Interaction/UIToggleComponent.h"
-#include "LevelEditorMenuExtensions/LexUILevelEditorExtensions.h"
 #include "MeshModifier/LexMeshModifierBase.h"
 #include "MeshModifier/LexMeshModifierTextAnimation.h"
 #include "PrefabAnimation/LGUIPrefabSequence.h"
 #include "PrefabAnimation/LGUIPrefabSequenceComponent.h"
-#include "PrefabSystem/LexUIPrefabSettings.h"
 
 const FName FLGUIEditorModule::LexUIDynamicSpriteAtlasViewerTabName(TEXT("LexUIDynamicSpriteAtlasViewerName"));
 const FName FLGUIEditorModule::LexUIPrefabSequenceTabName(TEXT("LexUIPrefabSequenceTabName"));
@@ -140,98 +138,7 @@ void FLGUIEditorModule::StartupModule()
 	FLexUIEditorCommands::Register();
 	
 	PluginCommands = MakeShareable(new FUICommandList);
-		
-	FLevelEditorModule& LevelEditorModule = FModuleManager::LoadModuleChecked<FLevelEditorModule>("LevelEditor");
 
-	//Editor tools
-	{
-		auto EditorCommands = FLexUIEditorCommands::Get();
-
-		TFunction<AActor*()> GetSelectedActor = []()
-		{
-			return FLexUIEditorTools::GetFirstSelectedActor();
-		};
-		TFunction<TArray<AActor*>()> GetSelectedActorArray = []()
-		{
-			return FLexUIEditorTools::GetSelectedActors();
-		};
-		//actor action
-		PluginCommands->MapAction(
-			EditorCommands.CopyActor,
-			FExecuteAction::CreateStatic(&FLexUIEditorTools::CopyActors, GetSelectedActorArray),
-			FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCopyActor, GetSelectedActorArray),
-			FGetActionCheckState(),
-			FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCopyActor, GetSelectedActorArray)
-		);
-		PluginCommands->MapAction(
-			EditorCommands.CutActor,
-			FExecuteAction::CreateStatic(&FLexUIEditorTools::CutActors, GetSelectedActorArray),
-			FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCutActor, GetSelectedActorArray),
-			FGetActionCheckState(),
-			FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCutActor, GetSelectedActorArray)
-		);
-		PluginCommands->MapAction(
-			EditorCommands.PasteActor,
-			FExecuteAction::CreateStatic(&FLexUIEditorTools::PasteActors, GetSelectedActorArray),
-			FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanPasteActor, GetSelectedActor),
-			FGetActionCheckState(),
-			FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanPasteActor, GetSelectedActor)
-		);
-		PluginCommands->MapAction(
-			EditorCommands.DuplicateActor,
-			FExecuteAction::CreateStatic(&FLexUIEditorTools::DuplicateActors, GetSelectedActorArray),
-			FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanDuplicateActor, GetSelectedActorArray),
-			FGetActionCheckState(),
-			FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanDuplicateActor, GetSelectedActorArray)
-		);
-		PluginCommands->MapAction(
-			EditorCommands.DestroyActor,
-			FExecuteAction::CreateStatic(&FLexUIEditorTools::DeleteActors, GetSelectedActorArray),
-			FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanDeleteActor, GetSelectedActorArray),
-			FGetActionCheckState(),
-			FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanDeleteActor, GetSelectedActorArray)
-		);
-		PluginCommands->MapAction(
-			EditorCommands.ToggleSpatiallyLoaded,
-			FExecuteAction::CreateStatic(&FLexUIEditorTools::ToggleSelectedActorsSpatiallyLoaded, GetSelectedActorArray),
-			FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanToggleActorsSpatiallyLoaded, GetSelectedActorArray),
-			FGetActionCheckState::CreateStatic(&FLexUIEditorTools::GetActorsSpatiallyLoadedProperty, GetSelectedActorArray),
-			FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanToggleActorsSpatiallyLoaded, GetSelectedActorArray)
-		);
-
-		//component action
-		PluginCommands->MapAction(
-			EditorCommands.CopyComponentValues,
-			FExecuteAction::CreateStatic(&FLexUIEditorTools::CopyComponentValues_Impl),
-			FCanExecuteAction::CreateLambda([] {return GEditor->GetSelectedComponentCount() > 0; }),
-			FGetActionCheckState(),
-			FIsActionButtonVisible::CreateLambda([] {return GEditor->GetSelectedComponentCount() > 0; })
-		);
-		PluginCommands->MapAction(
-			EditorCommands.PasteComponentValues,
-			FExecuteAction::CreateStatic(&FLexUIEditorTools::PasteComponentValues_Impl),
-			FCanExecuteAction::CreateLambda([] {return FLexUIEditorTools::HaveValidCopiedComponent(); }),
-			FGetActionCheckState(),
-			FIsActionButtonVisible::CreateLambda([] {return FLexUIEditorTools::HaveValidCopiedComponent(); })
-		);
-		//settings
-		PluginCommands->MapAction(
-			EditorCommands.ToggleDrawHelperFrame,
-			FExecuteAction::CreateRaw(this, &FLGUIEditorModule::ToggleDrawHelperFrame),
-			FCanExecuteAction(),
-			FIsActionChecked::CreateRaw(this, &FLGUIEditorModule::IsDrawHelperFrameChecked)
-		);
-		//gc
-		PluginCommands->MapAction(
-			EditorCommands.ForceGC,
-			FExecuteAction::CreateStatic(&FLexUIEditorTools::ForceGC)
-		);
-
-		TSharedPtr<FExtender> toolbarExtender = MakeShareable(new FExtender);
-		toolbarExtender->AddToolBarExtension("Play", EExtensionHook::After, PluginCommands, FToolBarExtensionDelegate::CreateRaw(this, &FLGUIEditorModule::AddEditorToolsToToolbarExtension));
-		LevelEditorModule.GetToolBarExtensibilityManager()->AddExtender(toolbarExtender);
-		LevelEditorModule.GetGlobalLevelEditorActions()->Append(PluginCommands.ToSharedRef());
-	}
 	//register window
 	{
 		//atlas texture viewer
@@ -361,7 +268,6 @@ void FLGUIEditorModule::StartupModule()
 		if (!IsRunningCommandlet())
 		{
 			FLexUIContentBrowserExtensions::InstallHooks();
-			FLexUILevelEditorExtensions::InstallHooks();
 		}
 	}
 	//register setting
@@ -376,10 +282,6 @@ void FLGUIEditorModule::StartupModule()
 				LOCTEXT("LexUIEditorSettingsName", "LexUI Editor"),
 				LOCTEXT("LexUIEditorSettingsDescription", "LexUI Editor Settings"),
 				GetMutableDefault<ULexUIEditorSettings>());
-			SettingsModule->RegisterSettings("Project", "Plugins", "LexUIPrefab",
-				LOCTEXT("LexUIPrefabSettingsName", "LexUIPrefab"),
-				LOCTEXT("LexUIPrefabSettingsDescription", "LexUIPrefab Settings"),
-				GetMutableDefault<ULexUIPrefabSettings>());
 
 			LGUIPrefabSequencerSettings = USequencerSettingsContainer::GetOrCreate<ULGUIPrefabSequencerSettings>(TEXT("EmbeddedLexUIPrefabSequenceEditor"));
 			SettingsModule->RegisterSettings("Editor", "ContentEditors", "EmbeddedLexUIPrefabSequenceEditor",
@@ -554,7 +456,6 @@ void FLGUIEditorModule::ShutdownModule()
 	//unregister right mouse button in content browser
 	{
 		FLexUIContentBrowserExtensions::RemoveHooks();
-		FLexUILevelEditorExtensions::RemoveHooks();
 	}
 
 	//unregister setting
@@ -603,47 +504,9 @@ TSharedRef<SDockTab> FLGUIEditorModule::HandleSpawnLGUIPrefabSequenceTab(const F
 	return ResultTab;
 }
 
-void FLGUIEditorModule::AddEditorToolsToToolbarExtension(FToolBarBuilder& Builder)
-{
-	Builder.BeginSection("LexUI");
-	{
-		Builder.AddComboButton(
-			FUIAction(),
-			FOnGetContent::CreateLambda([=, this]()
-			{
-				return this->MakeEditorToolsMenu(true, true, []()
-				{
-					return FLexUIEditorTools::GetFirstSelectedActor();
-				}, [=, this](FMenuBuilder& MenuBuilder)
-				{
-					MenuBuilder.BeginSection("ActorAction", LOCTEXT("ActorAction", "Edit Actor With Hierarchy"));
-					{
-						MenuBuilder.PushCommandList(PluginCommands.ToSharedRef());
-						{
-							MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().CopyActor);
-							MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().PasteActor);
-							MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().CutActor);
-							MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().DuplicateActor);
-							MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().DestroyActor);
-							MenuBuilder.AddMenuEntry(FLexUIEditorCommands::Get().ToggleSpatiallyLoaded);
-						}
-						MenuBuilder.PopCommandList();
-					}
-					MenuBuilder.EndSection();
-				});
-			}),
-			LOCTEXT("LexUITools", "LexUI Tools"),
-			LOCTEXT("LexUIEditorTools", "LexUI Editor Tools"),
-			FSlateIcon(FLGUIEditorStyle::GetStyleSetName(), "LGUIEditor.EditorTools")
-		);
-	}
-	Builder.EndSection();
-}
-
-TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(bool ComponentAction, bool Others, TFunction<AActor*()> GetSelectedActorFunction, TFunction<void(FMenuBuilder&)> ExtendEditMenuFunction)
+TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(TFunction<AActor*()> GetSelectedActorFunction, TFunction<void(FMenuBuilder&)> ExtendEditMenuFunction)
 {
 	FMenuBuilder MenuBuilder(true, PluginCommands);
-	auto EditorCommands = FLexUIEditorCommands::Get();
 
 	//prefab
 	{
@@ -794,26 +657,6 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(bool ComponentAction,
 	if (ExtendEditMenuFunction != nullptr)
 	{
 		ExtendEditMenuFunction(MenuBuilder);
-	}
-
-	if (ComponentAction)
-	{
-		MenuBuilder.BeginSection("ComponentAction", LOCTEXT("ComponentAction", "Edit Component"));
-		{
-			MenuBuilder.AddMenuEntry(EditorCommands.CopyComponentValues);
-			MenuBuilder.AddMenuEntry(EditorCommands.PasteComponentValues);
-		}
-		MenuBuilder.EndSection();
-	}
-
-	if (Others)
-	{
-		MenuBuilder.BeginSection("Others", LOCTEXT("Others", "Others"));
-		{
-			MenuBuilder.AddMenuEntry(EditorCommands.ToggleDrawHelperFrame);
-			MenuBuilder.AddMenuEntry(EditorCommands.ForceGC);
-		}
-		MenuBuilder.EndSection();
 	}
 
 	return MenuBuilder.MakeWidget();
@@ -975,17 +818,6 @@ void FLGUIEditorModule::CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder, TFu
 			);
 		}
 	}
-}
-
-void FLGUIEditorModule::ToggleDrawHelperFrame()
-{
-	auto LGUIEditorSettings = GetMutableDefault<ULexUIEditorSettings>();
-	LGUIEditorSettings->bDrawHelperFrame = !LGUIEditorSettings->bDrawHelperFrame;
-	LGUIEditorSettings->SaveConfig();
-}
-bool FLGUIEditorModule::IsDrawHelperFrameChecked()
-{
-	return GetDefault<ULexUIEditorSettings>()->bDrawHelperFrame;
 }
 
 void FLGUIEditorModule::CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction)

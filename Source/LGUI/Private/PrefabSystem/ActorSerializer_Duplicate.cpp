@@ -9,7 +9,7 @@
 #include "Runtime/Launch/Resources/Version.h"
 #include "LGUI.h"
 #include "Core/LexUIManager.h"
-#include "PrefabSystem/LexUIPrefabSettings.h"
+#include "Core/LexUISettings.h"
 
 namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 {
@@ -57,7 +57,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 		};
 		auto CreatedRootActor = serializer.DeserializeActorFromData(SaveData, Parent, false, FVector::ZeroVector, FQuat::Identity, FVector::OneVector);
 
-		if (ULexUIPrefabSettings::GetLogPrefabLoadTime())
+		if (GetDefault<ULexUIEditorSettings>()->bLogPrefabLoadTime)
 		{
 			auto TimeSpan = FDateTime::Now() - StartTime;
 			UE_LOG(LGUI, Log, TEXT("Duplicate actor: '%s', total time: %fms"), *Name, TimeSpan.GetTotalMilliseconds());
@@ -111,7 +111,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 			Reader.DoSerialize(InObject);
 		};
 
-		if (ULexUIPrefabSettings::GetLogPrefabLoadTime())
+		if (GetDefault<ULexUIEditorSettings>()->bLogPrefabLoadTime)
 		{
 			auto TimeSpan = FDateTime::Now() - StartTime;
 			UE_LOG(LGUI, Log, TEXT("PrepareData_ForDuplicate, actor: '%s' total time: %fms"), *Name, TimeSpan.GetTotalMilliseconds());
@@ -138,7 +138,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 		serializer.SubPrefabObjectOverrideData.Reset();
 
 		auto CreatedRootActor = serializer.DeserializeActorFromData(InData.ActorData, InParent, false, FVector::ZeroVector, FQuat::Identity, FVector::OneVector);
-		if (ULexUIPrefabSettings::GetLogPrefabLoadTime())
+		if (GetDefault<ULexUIEditorSettings>()->bLogPrefabLoadTime)
 		{
 			auto TimeSpan = FDateTime::Now() - StartTime;
 			UE_LOG(LGUI, Log, TEXT("DuplicateActorWithPreparedData total time: %fms"), TimeSpan.GetTotalMilliseconds());

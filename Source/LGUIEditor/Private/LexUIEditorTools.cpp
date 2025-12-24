@@ -343,7 +343,6 @@ public:
 };
 
 TMap<FString, TWeakObjectPtr<class ULexUIPrefab>> FLexUIEditorTools::CopiedActorPrefabMap;
-TWeakObjectPtr<class UActorComponent> FLexUIEditorTools::CopiedComponent;
 
 FString FLexUIEditorTools::LGUIPresetPrefabPath = TEXT("/LGUI/Prefabs/");
 
@@ -1023,56 +1022,6 @@ bool FLexUIEditorTools::CanToggleActorsSpatiallyLoaded(TFunction<TArray<AActor*>
 	return true;
 }
 
-void FLexUIEditorTools::CopyComponentValues_Impl()
-{
-	auto selectedComponents = FLexUIEditorToolsHelperFunctionHolder::ConvertSelectionToComponents(GEditor->GetSelectedComponents());
-	auto count = selectedComponents.Num();
-	if (count == 0)
-	{
-		UE_LOG(LGUIEditor, Error, TEXT("NothingSelected"));
-		return;
-	}
-	else if (count > 1)
-	{
-		UE_LOG(LGUIEditor, Error, TEXT("Only support one component"));
-		return;
-	}
-	CopiedComponent = selectedComponents[0];
-}
-void FLexUIEditorTools::PasteComponentValues_Impl()
-{
-	auto selectedComponents = FLexUIEditorToolsHelperFunctionHolder::ConvertSelectionToComponents(GEditor->GetSelectedComponents());
-	auto count = selectedComponents.Num();
-	if (count == 0)
-	{
-		UE_LOG(LGUIEditor, Error, TEXT("NothingSelected"));
-		return;
-	}
-	if (CopiedComponent.IsValid())
-	{
-		GEditor->BeginTransaction(LOCTEXT("PasteComponentValues_Transaction", "LGUI Paste Component Proeprties"));
-		UEngine::FCopyPropertiesForUnrelatedObjectsParams Options;
-		Options.bNotifyObjectReplacement = true;
-		for (UActorComponent* SelectedComp : selectedComponents)
-		{
-			if (SelectedComp->IsRegistered() && SelectedComp->AllowReregistration())
-			{
-				SelectedComp->UnregisterComponent();
-			}
-			UEditorEngine::CopyPropertiesForUnrelatedObjects(CopiedComponent.Get(), SelectedComp, Options);
-			if (!SelectedComp->IsRegistered())
-			{
-				SelectedComp->RegisterComponent();
-			}
-		}
-		GEditor->EndTransaction();
-		ULexUIManagerWorldSubsystem::RefreshAllUI();
-	}
-	else
-	{
-		UE_LOG(LGUIEditor, Error, TEXT("Selected component is missing!"));
-	}
-}
 void FLexUIEditorTools::OpenAtlasViewer_Impl()
 {
 	FGlobalTabmanager::Get()->TryInvokeTab(FLGUIEditorModule::LexUIDynamicSpriteAtlasViewerTabName);
@@ -1285,11 +1234,6 @@ bool FLexUIEditorTools::HaveValidCopiedActors()
 	}
 	return true;
 }
-bool FLexUIEditorTools::HaveValidCopiedComponent()
-{
-	return CopiedComponent.IsValid();
-}
-
 
 bool FLexUIEditorTools::CanCreatePrefab(TFunction<AActor*()> GetSelectedActorFunction)
 {
@@ -1861,12 +1805,6 @@ bool FLexUIEditorTools::IsActorCompatibleWithLexUIToolsMenu(AActor* InActor)
 	}
 	return false;
 }
-
-void FLexUIEditorTools::ForceGC()
-{
-	GEngine->ForceGarbageCollection();
-}
-
 
 
 #undef LOCTEXT_NAMESPACE

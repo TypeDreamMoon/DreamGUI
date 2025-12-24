@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUIPrefabEditorDetails.h"
+#include "LexUIPrefabEditorDetails.h"
 #include "Modules/ModuleManager.h"
 #include "ISCSEditorUICustomization.h"
 #include "GameFramework/Actor.h"
@@ -21,11 +21,11 @@
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditorDetailTab"
 
-class LGUISCSEditorUICustomization : public ISCSEditorUICustomization
+class LexUISCSEditorUICustomization : public ISCSEditorUICustomization
 {
 	TWeakPtr<FLGUIPrefabEditor> PrefabEditor;
 public:
-	LGUISCSEditorUICustomization(TSharedPtr<FLGUIPrefabEditor> InPrefabEditor)
+	LexUISCSEditorUICustomization(TSharedPtr<FLGUIPrefabEditor> InPrefabEditor)
 	{
 		PrefabEditor = InPrefabEditor;
 	}
@@ -65,11 +65,11 @@ public:
 	}
 };
 
-void SLGUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLGUIPrefabEditor> InPrefabEditor)
+void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLGUIPrefabEditor> InPrefabEditor)
 {
 	PrefabEditorPtr = InPrefabEditor;
 
-	InPrefabEditor->OnSelectedWidgetsChanged.AddRaw(this, &SLGUIPrefabEditorDetails::OnEditorSelectionChanged);
+	InPrefabEditor->OnSelectedWidgetsChanged.AddRaw(this, &SLexUIPrefabEditorDetails::OnEditorSelectionChanged);
 
     FPropertyEditorModule& PropPlugin = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
     FDetailsViewArgs DetailsViewArgs;
@@ -87,20 +87,20 @@ void SLGUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLGU
     //DetailsViewArgs.HostCommandList = InCommandList;
 
     DetailsView = PropPlugin.CreateDetailView(DetailsViewArgs);
-    DetailsView->SetIsPropertyReadOnlyDelegate(FIsPropertyReadOnly::CreateSP(this, &SLGUIPrefabEditorDetails::IsPropertyReadOnly));
+    DetailsView->SetIsPropertyReadOnlyDelegate(FIsPropertyReadOnly::CreateSP(this, &SLexUIPrefabEditorDetails::IsPropertyReadOnly));
 
 	TSharedRef<FLexWidgetDetailPropertyExtensionHandler> BindingHandler = MakeShareable(new FLexWidgetDetailPropertyExtensionHandler(PrefabEditorPtr));
 	DetailsView->SetExtensionHandler(BindingHandler);
 
 	FModuleManager::LoadModuleChecked<FSubobjectEditorModule>("SubobjectEditor");
 	SubobjectEditor = SNew(SSubobjectInstanceEditor)
-		.AllowEditing(this, &SLGUIPrefabEditorDetails::IsEditorAllowEditing)
-		.ObjectContext(this, &SLGUIPrefabEditorDetails::GetActorContextAsObject)
-		.OnSelectionUpdated(this, &SLGUIPrefabEditorDetails::OnSubObjectSelectionChanged)
-		.OnItemDoubleClicked(this, &SLGUIPrefabEditorDetails::OnSubObjectItemDoubleClicked);
+		.AllowEditing(this, &SLexUIPrefabEditorDetails::IsEditorAllowEditing)
+		.ObjectContext(this, &SLexUIPrefabEditorDetails::GetActorContextAsObject)
+		.OnSelectionUpdated(this, &SLexUIPrefabEditorDetails::OnSubObjectSelectionChanged)
+		.OnItemDoubleClicked(this, &SLexUIPrefabEditorDetails::OnSubObjectItemDoubleClicked);
 
 	
-	TSharedPtr<ISCSEditorUICustomization> Customization = MakeShared<LGUISCSEditorUICustomization>(InPrefabEditor);
+	TSharedPtr<ISCSEditorUICustomization> Customization = MakeShared<LexUISCSEditorUICustomization>(InPrefabEditor);
 	SubobjectEditor->SetUICustomization(Customization);
 	auto ButtonBox = SubobjectEditor->GetToolButtonsBox().ToSharedRef();
 	DetailsView->SetNameAreaCustomContent(ButtonBox);
@@ -119,9 +119,9 @@ void SLGUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLGU
 			.AutoHeight()
 			[
 				SNew(SBox)
-				.Visibility(this, &SLGUIPrefabEditorDetails::GetPrefabButtonVisibility)
-				.IsEnabled(this, &SLGUIPrefabEditorDetails::IsPrefabButtonEnable)
-				.HeightOverride(this, &SLGUIPrefabEditorDetails::GetPrefabButtonHeight)
+				.Visibility(this, &SLexUIPrefabEditorDetails::GetPrefabButtonVisibility)
+				.IsEnabled(this, &SLexUIPrefabEditorDetails::IsPrefabButtonEnable)
+				.HeightOverride(this, &SLexUIPrefabEditorDetails::GetPrefabButtonHeight)
 				[
 					SNew(SHorizontalBox)
 					+SHorizontalBox::Slot()
@@ -207,7 +207,7 @@ void SLGUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLGU
 										+SHorizontalBox::Slot()
 										.AutoWidth()
 										[
-											SNew(SLexUIPrefabOverrideDataViewer, [=, this]()
+											SAssignNew(PrefabOverrideDataViewer, SLexUIPrefabOverrideDataViewer, [=, this]()
 											{
 												return CachedActor.Get();
 											})
@@ -255,11 +255,11 @@ void SLGUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLGU
 		];
 }
 
-SLGUIPrefabEditorDetails::~SLGUIPrefabEditorDetails()
+SLexUIPrefabEditorDetails::~SLexUIPrefabEditorDetails()
 {
 }
 
-bool SLGUIPrefabEditorDetails::IsPrefabButtonEnable()const
+bool SLexUIPrefabEditorDetails::IsPrefabButtonEnable()const
 {
 	if (PrefabEditorPtr.IsValid() && CachedActor.IsValid())
 	{
@@ -268,17 +268,17 @@ bool SLGUIPrefabEditorDetails::IsPrefabButtonEnable()const
 	return false;
 }
 
-FOptionalSize SLGUIPrefabEditorDetails::GetPrefabButtonHeight()const
+FOptionalSize SLexUIPrefabEditorDetails::GetPrefabButtonHeight()const
 {
 	return IsPrefabButtonEnable() ? 26 : 0;
 }
 
-EVisibility SLGUIPrefabEditorDetails::GetPrefabButtonVisibility()const
+EVisibility SLexUIPrefabEditorDetails::GetPrefabButtonVisibility()const
 {
 	return IsPrefabButtonEnable() ? EVisibility::Visible : EVisibility::Hidden;
 }
 
-bool SLGUIPrefabEditorDetails::IsEditorAllowEditing()const
+bool SLexUIPrefabEditorDetails::IsEditorAllowEditing()const
 {
 	if (PrefabEditorPtr.IsValid() && CachedActor.IsValid())
 	{
@@ -287,7 +287,7 @@ bool SLGUIPrefabEditorDetails::IsEditorAllowEditing()const
 	return true;
 }
 
-UObject* SLGUIPrefabEditorDetails::GetActorContextAsObject() const
+UObject* SLexUIPrefabEditorDetails::GetActorContextAsObject() const
 {
 	auto SelectedWidgets = PrefabEditorPtr.Pin()->GetSelectedWidgets();
 	if (SelectedWidgets.Num() > 0 && SelectedWidgets[0].IsValid())
@@ -297,10 +297,10 @@ UObject* SLGUIPrefabEditorDetails::GetActorContextAsObject() const
 	return nullptr;
 }
 
-void SLGUIPrefabEditorDetails::OnEditorSelectionChanged()
+void SLexUIPrefabEditorDetails::OnEditorSelectionChanged()
 {
 	if (bIsSelectFromDetails)return;
-	bIsSelectFromLGUIEditor = true;
+	bIsSelectFromLexUIEditor = true;
 	auto SelectedWidgets = PrefabEditorPtr.Pin()->GetSelectedWidgets();
 	if (SelectedWidgets.Num() > 0)
 	{
@@ -312,6 +312,7 @@ void SLGUIPrefabEditorDetails::OnEditorSelectionChanged()
 			}
 
 			CachedActor = Actor;
+			PrefabOverrideDataViewer->RefreshDataContent();
 			if (SubobjectEditor)
 			{
 				SubobjectEditor->ClearSelection();
@@ -341,6 +342,7 @@ void SLGUIPrefabEditorDetails::OnEditorSelectionChanged()
 		if (SelectedObjectList.Num() == 0)
 		{
 			CachedActor = nullptr;
+			PrefabOverrideDataViewer->RefreshDataContent();
 			SubobjectEditor->ClearSelection();
 			SubobjectEditor->UpdateTree();
 		}
@@ -353,13 +355,14 @@ void SLGUIPrefabEditorDetails::OnEditorSelectionChanged()
 			DetailsView->SetObjects(SelectedObjectList, true);
 		}
 		CachedActor = nullptr;
+		PrefabOverrideDataViewer->RefreshDataContent();
 		SubobjectEditor->ClearSelection();
 		SubobjectEditor->UpdateTree();
 	}
-	bIsSelectFromLGUIEditor = false;
+	bIsSelectFromLexUIEditor = false;
 }
 
-void SLGUIPrefabEditorDetails::OnSubObjectSelectionChanged(const TArray<FSubobjectEditorTreeNodePtrType>& SelectedNodes)
+void SLexUIPrefabEditorDetails::OnSubObjectSelectionChanged(const TArray<FSubobjectEditorTreeNodePtrType>& SelectedNodes)
 {
 	bIsSelectFromDetails = true;
 	if (SelectedNodes.Num() > 0)
@@ -386,7 +389,7 @@ void SLGUIPrefabEditorDetails::OnSubObjectSelectionChanged(const TArray<FSubobje
 		{
 			DetailsView->SetObjects(SelectedObjects);
 		}
-		if (!bIsSelectFromLGUIEditor)
+		if (!bIsSelectFromLexUIEditor)
 		{
 			if (SelectedComponents.Num() > 0)
 			{
@@ -405,12 +408,12 @@ void SLGUIPrefabEditorDetails::OnSubObjectSelectionChanged(const TArray<FSubobje
 	bIsSelectFromDetails = false;
 }
 
-void SLGUIPrefabEditorDetails::OnSubObjectItemDoubleClicked(const FSubobjectEditorTreeNodePtrType ClickedNode)
+void SLexUIPrefabEditorDetails::OnSubObjectItemDoubleClicked(const FSubobjectEditorTreeNodePtrType ClickedNode)
 {
 
 }
 
-bool SLGUIPrefabEditorDetails::IsPropertyReadOnly(const FPropertyAndParent& InPropertyAndParent)
+bool SLexUIPrefabEditorDetails::IsPropertyReadOnly(const FPropertyAndParent& InPropertyAndParent)
 {
 	return false;
 }

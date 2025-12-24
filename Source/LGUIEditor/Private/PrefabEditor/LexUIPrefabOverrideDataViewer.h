@@ -23,8 +23,8 @@ public:
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& InArgs, TFunction<AActor*()> GetSelectedActorFunction);
-private:
 	void RefreshDataContent();
+private:
 	void RefreshDataContent(TArray<FLexUIPrefabOverrideParameterData> ObjectOverrideParameterArray, AActor* InReferenceActor);
 	FLexUIPrefabOverrideDataViewer_AfterRevertPrefab AfterRevertPrefab;
 	FLexUIPrefabOverrideDataViewer_AfterApplyPrefab AfterApplyPrefab;

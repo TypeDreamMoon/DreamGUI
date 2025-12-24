@@ -159,8 +159,15 @@ public:
 	/**
 	 * Draw helper box on selected UI element.
 	 */
-	UPROPERTY(config)
+	UPROPERTY(EditAnywhere, config, Category = "LGUI Editor")
 		bool bDrawHelperFrame = true;
+
+	/**
+		 * For load prefab debug, display a log that shows how much time a LoadPrefab cost.
+		 */
+	UPROPERTY(EditAnywhere, config, Category = "LGUI")
+	bool bLogPrefabLoadTime = false;
+
 	/**
 	 * Draw navigation visualizer
 	 */

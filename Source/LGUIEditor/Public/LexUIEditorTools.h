@@ -43,8 +43,6 @@ public:
 	static bool CanCutActor(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
 	static bool CanDeleteActor(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
 	static bool CanToggleActorsSpatiallyLoaded(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
-	static void CopyComponentValues_Impl();
-	static void PasteComponentValues_Impl();
 	static void OpenAtlasViewer_Impl();
 	static void CreateScreenSpaceUI_BasicSetup();
 	static void CreateWorldSpaceUIBuiltinRenderer_BasicSetup();
@@ -78,11 +76,7 @@ public:
 	static bool IsActorCompatibleWithLexUIToolsMenu(AActor* InActor);
 
 	static TMap<FString, TWeakObjectPtr<class ULexUIPrefab>> CopiedActorPrefabMap;//map ActorLabel to prefab
-	static TWeakObjectPtr<class UActorComponent> CopiedComponent;
 	static bool HaveValidCopiedActors();
-	static bool HaveValidCopiedComponent();
 
 	static void MakeCurrentLevel(AActor* InActor);
-
-	static void ForceGC();
 };

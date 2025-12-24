@@ -10,10 +10,10 @@
 #include "PrefabSystem/LexUIPrefabManager.h"
 #include "LGUI.h"
 #include "Core/LexUIManager.h"
+#include "Core/LexUISettings.h"
 #include "Core/Components/LexWidget.h"
 #include "Misc/NetworkVersion.h"
 #include "UObject/UObjectThreadContext.h"
-#include "PrefabSystem/LexUIPrefabSettings.h"
 #include "Serialization/MemoryReader.h"
 #include "PrefabSystem/ILexUIPrefabInterface.h"
 #include "PhysicsEngine/BodyInstance.h"
@@ -481,7 +481,7 @@ namespace LGUIPrefabSystem8
 		if (InCallbackBeforeDeserialize != nullptr)InCallbackBeforeDeserialize();
 		auto CreatedRootActor = DeserializeActorFromData(SaveData, Parent, ReplaceTransform, InLocation, InRotation, InScale);
 
-		if (ULexUIPrefabSettings::GetLogPrefabLoadTime())
+		if (GetDefault<ULexUIEditorSettings>()->bLogPrefabLoadTime)
 		{
 			auto TimeSpan = FDateTime::Now() - StartTime;
 			UE_LOG(LGUI, Log, TEXT("Load prefab: '%s', total time: %fms"), *InPrefab->GetName(), TimeSpan.GetTotalMilliseconds());

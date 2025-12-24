@@ -384,8 +384,7 @@ void SLexWidgetEditorHierarchyView::OnExpansionChanged(TWeakObjectPtr<ULexWidget
 }
 TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 {
-	return FLGUIEditorModule::Get().MakeEditorToolsMenu(false, false
-	, [this]()
+	TFunction<AActor*()> GetSelectedActorFunction = [this]()
 	{
 		if (Manager.IsValid())
 		{
@@ -399,7 +398,20 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 			}
 		}
 		return (AActor*)nullptr;
-	}, [=, this](FMenuBuilder& MenuBuilder)
+	};
+	TFunction<TArray<AActor*>()> GetSelectedActorsFunction = [this]()
+	{
+		TArray<AActor*> Actors;
+		if (Manager.IsValid())
+		{
+			for (auto Actor : Manager.Pin()->GetSelectedActors())
+			{
+				Actors.Add(Actor.Get());
+			}
+		}
+		return Actors;
+	};
+	return FLGUIEditorModule::Get().MakeEditorToolsMenu( GetSelectedActorFunction, [=, this](FMenuBuilder& MenuBuilder)
 	{
 		MenuBuilder.BeginSection("Edit", LOCTEXT("Edit", "Edit"));
 		{
@@ -417,6 +429,17 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 				MenuBuilder.AddMenuEntry(FGenericCommands::Get().Rename);
 			}
 			MenuBuilder.PopCommandList();
+
+			MenuBuilder.AddMenuEntry(
+				LOCTEXT("IsSpatiallyLoaded", "IsSpatiallyLoaded"),
+				LOCTEXT("IsSpatiallyLoaded_Tooltip", "Toggle selected actor (and children actor) IsSpatiallyLoaded property for WorldPartition"),
+				FSlateIcon(),
+				FUIAction(
+				FExecuteAction::CreateStatic(&FLexUIEditorTools::ToggleSelectedActorsSpatiallyLoaded, GetSelectedActorsFunction),
+				FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanToggleActorsSpatiallyLoaded, GetSelectedActorsFunction),
+				FGetActionCheckState::CreateStatic(&FLexUIEditorTools::GetActorsSpatiallyLoadedProperty, GetSelectedActorsFunction),
+				FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanToggleActorsSpatiallyLoaded, GetSelectedActorsFunction)
+				), NAME_None, EUserInterfaceActionType::ToggleButton);
 		}
 		MenuBuilder.EndSection();
 	});
