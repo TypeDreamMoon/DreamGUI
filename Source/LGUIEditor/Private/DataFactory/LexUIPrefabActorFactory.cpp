@@ -2,15 +2,12 @@
 
 #include "DataFactory/LexUIPrefabActorFactory.h"
 #include "PrefabSystem/LexUIPrefab.h"
-#include "PrefabSystem/LGUIPrefabLevelManagerActor.h"
-#include "PrefabSystem/LexUIPrefabHelperObject.h"
-#include "PrefabSystem/LexUIPrefabManager.h"
 #include "LexUIEditorTools.h"
 #include "AssetRegistry/AssetData.h"
-#include "Utils/LexUIUtils.h"
 #include "Editor.h"
-#include "EditorActorFolders.h"
-#include "Core/LexUIManager.h"
+#include "Core/Actor/LexWidgetRootActor.h"
+#include "Core/Components/LexWidget.h"
+#include "Event/LexScreenSpaceRaycaster.h"
 
 
 #define LOCTEXT_NAMESPACE "LexUIPrefabActorFactory"
@@ -19,7 +16,6 @@
 ULexUIPrefabActorFactory::ULexUIPrefabActorFactory()
 {
 	DisplayName = LOCTEXT("PrefabDisplayName", "Prefab");
-	NewActorClass = ALGUIPrefabLoadHelperActor::StaticClass();
 	bShowInEditorQuickMenu = false;
 	bUseSurfaceOrientation = false;
 }
@@ -49,94 +45,49 @@ void ULexUIPrefabActorFactory::PostSpawnActor(UObject* Asset, AActor* InNewActor
 {
 	Super::PostSpawnActor(Asset, InNewActor);
 
-	ULexUIPrefab* Prefab = CastChecked<ULexUIPrefab>(Asset);
+	auto Prefab = CastChecked<ULexUIPrefab>(Asset);
 
-	auto PrefabActor = CastChecked<ALGUIPrefabLoadHelperActor>(InNewActor);
-
-	PrefabActor->PrefabAsset = Prefab;
+	auto PrefabActor = CastChecked<ALexWidgetRootActor>(InNewActor);
+	PrefabActor->GetLexWidget()->SetSizeDelta(Prefab->PrefabDataForPrefabEditor.CanvasSize);
+	PrefabActor->SetPrefab(Prefab);
 	auto SelectedActor = FLexUIEditorTools::GetFirstSelectedActor();
 	if (SelectedActor != nullptr && PrefabActor->GetWorld() == SelectedActor->GetWorld())
 	{
 		FLexUIEditorTools::MakeCurrentLevel(SelectedActor);
 		auto ParentComp = SelectedActor->GetRootComponent();
-		PrefabActor->LoadPrefab(ParentComp);
+		PrefabActor->GetRootComponent()->AttachToComponent(ParentComp, FAttachmentTransformRules::KeepRelativeTransform);
 	}
-	else
-	{
-		PrefabActor->LoadPrefab(nullptr);
-	}
-	PrefabActor->MoveActorToPrefabFolder();
-	PrefabActor->SetFlags(EObjectFlags::RF_Transient);
-	ULexUIManagerObject::AddOneShotTickFunction([WeakTarget = MakeWeakObjectPtr(PrefabActor)]() {
-		if (WeakTarget.IsValid())
-		{
-			GEditor->SelectActor(WeakTarget.Get(), false, true, false, true);
-			GEditor->SelectActor(WeakTarget->LoadedRootActor, true, true, false, true);
-		}
-		});
 }
 
 UObject* ULexUIPrefabActorFactory::GetAssetFromActorInstance(AActor* ActorInstance)
 {
 	check(ActorInstance->IsA(NewActorClass));
-	auto PrefabActor = CastChecked<ALGUIPrefabLoadHelperActor>(ActorInstance);
-	return PrefabActor->PrefabAsset;
+	auto PrefabActor = CastChecked<ALexWidgetRootActor>(ActorInstance);
+	return PrefabActor->GetPrefab();
+}
+
+UClass* ULexUIPrefabActorFactory::GetDefaultActorClass(const FAssetData& AssetData)
+{
+	if (auto Prefab = Cast<ULexUIPrefab>(AssetData.GetAsset()))
+	{
+		FString ClassName;
+		auto RenderMode = (ELexRenderMode)Prefab->PrefabDataForPrefabEditor.CanvasRenderMode;
+		switch (RenderMode)
+		{
+		case ELexRenderMode::WorldSpace:
+			ClassName = TEXT("WorldSpaceRoot_UERenderer");
+			break;
+		case ELexRenderMode::WorldSpace_LexUI:
+			ClassName = TEXT("WorldSpaceRoot_LexRenderer");
+			break;
+		case ELexRenderMode::ScreenSpaceOverlay:
+			ClassName = TEXT("ScreenSpaceRoot");
+		}
+		
+		NewActorClass = LoadClass<ALexWidgetRootActor>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), *ClassName, *ClassName));
+		return NewActorClass;
+	}
+	return nullptr;
 }
 
 #undef LOCTEXT_NAMESPACE
-
-
-
-// Sets default values
-ALGUIPrefabLoadHelperActor::ALGUIPrefabLoadHelperActor()
-{
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = false;
-	bIsEditorOnlyActor = true;
-	bListedInSceneOutliner = false;
-}
-
-void ALGUIPrefabLoadHelperActor::BeginPlay()
-{
-	Super::BeginPlay();
-}
-
-void ALGUIPrefabLoadHelperActor::Destroyed()
-{
-	Super::Destroyed();
-	if (IsValid(LoadedRootActor))
-	{
-		if (auto PrefabManagerActor = ALGUIPrefabLevelManagerActor::GetInstance(this->GetLevel()))
-		{
-			PrefabManagerActor->PrefabHelperObject->RemoveSubPrefabByAnyActorOfSubPrefab(LoadedRootActor);
-			FLexUIUtils::DestroyActorWithHierarchy(LoadedRootActor, true);
-		}
-	}
-}
-void ALGUIPrefabLoadHelperActor::BeginDestroy()
-{
-	Super::BeginDestroy();
-}
-
-void ALGUIPrefabLoadHelperActor::MoveActorToPrefabFolder()
-{
-	FActorFolders::Get().CreateFolder(*this->GetWorld(), FFolder(FFolder::FRootObject(this), ALGUIPrefabLevelManagerActor::PrefabFolderName));
-	this->SetFolderPath(ALGUIPrefabLevelManagerActor::PrefabFolderName);
-}
-
-void ALGUIPrefabLoadHelperActor::LoadPrefab(USceneComponent* InParent)
-{
-	if (this->GetWorld() != nullptr && this->GetWorld()->IsGameWorld())return;
-	if (IsValid(LoadedRootActor))return;
-	auto PrefabHelperObject = ALGUIPrefabLevelManagerActor::GetInstance(this->GetLevel())->PrefabHelperObject;
-	PrefabHelperObject->SetCanNotifyAttachment(false);
-	TMap<FGuid, TObjectPtr<UObject>> SubPrefabMapGuidToObject;
-	TMap<TObjectPtr<AActor>, FLexUISubPrefabData> SubSubPrefabMap;
-	LoadedRootActor = PrefabAsset->LoadPrefabWithExistingObjects(this->GetWorld()
-		, InParent
-		, SubPrefabMapGuidToObject, SubSubPrefabMap
-	);
-	PrefabHelperObject->MakePrefabAsSubPrefab(PrefabAsset, LoadedRootActor, SubPrefabMapGuidToObject, {});
-	PrefabHelperObject->SetCanNotifyAttachment(true);
-}
-

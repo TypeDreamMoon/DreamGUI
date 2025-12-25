@@ -49,5 +49,10 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	UFUNCTION(BlueprintCallable, Category=LGUI)
+	void SetPrefab(ULexUIPrefab* Value);
+	UFUNCTION(BlueprintCallable, Category=LGUI)
+	ULexUIPrefab* GetPrefab()const{return WidgetPrefab;}
+	
+	UFUNCTION(BlueprintCallable, Category=LGUI)
 	AActor* GetLoadedActor()const{return LoadedActor.Get();}
 };

@@ -25,7 +25,7 @@ public:
 #endif
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		virtual ULexWidget* GetLexWidget()const { return LexWidget;}
-private:
+protected:
 	UPROPERTY(Category = "LGUI", VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<ULexWidget> LexWidget;
 

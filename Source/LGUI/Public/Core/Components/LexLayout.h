@@ -84,6 +84,8 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 	virtual void BeginDestroy() override;
+
+	virtual void PostReinitProperties()override;
 };
 
 /**
@@ -104,6 +106,7 @@ public:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 	virtual void BeginDestroy() override;
+	virtual void PostReinitProperties()override;
 	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* Widget) const override{return FLexLayoutControlAnchorData();}
 
 	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")

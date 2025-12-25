@@ -25,12 +25,6 @@ void ULexWidgetSubObjectBehaviour::Call_OnUnregister()
 void ULexWidgetSubObjectBehaviour::PostInitProperties()
 {
 	UObject::PostInitProperties();
-// #if WITH_EDITOR
-// 	if (!this->GetName().StartsWith(TEXT("Default__")))
-// 	{
-// 		check(GetWidget() != nullptr);
-// 	}
-// #endif
 }
 
 ULexWidget* ULexWidgetSubObjectBehaviour::GetWidget() const

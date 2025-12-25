@@ -98,6 +98,7 @@ private:
 					UEngine::FCopyPropertiesForUnrelatedObjectsParams Options;
 					Options.bNotifyObjectReplacement = true;
 					UEditorEngine::CopyPropertiesForUnrelatedObjects(CopiedObject.Get(), Object, Options);
+					Object->PostReinitProperties();
 				}
 			}), FCanExecuteAction::CreateLambda([=, this]()
 			{

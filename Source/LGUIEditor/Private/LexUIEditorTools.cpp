@@ -23,7 +23,6 @@
 #include "Event/LexEventSystem.h"
 #include "Event/LexWorldSpaceRaycasterBase.h"
 #include "Logging/MessageLog.h"
-#include "PrefabSystem/LGUIPrefabLevelManagerActor.h"
 #include "Utils/LexUIUtils.h"
 
 #define LOCTEXT_NAMESPACE "LGUIEditorTools"
@@ -344,7 +343,7 @@ public:
 
 TMap<FString, TWeakObjectPtr<class ULexUIPrefab>> FLexUIEditorTools::CopiedActorPrefabMap;
 
-FString FLexUIEditorTools::LGUIPresetPrefabPath = TEXT("/LGUI/Prefabs/");
+FString FLexUIEditorTools::LexUIPresetPrefabPath = TEXT("/LGUI/Prefabs/");
 
 FString FLexUIEditorTools::GetUniqueNumericName(const FString& InPrefix, const TArray<FString>& InExistNames)
 {
@@ -490,14 +489,6 @@ TArray<AActor*> FLexUIEditorTools::GetRootActorListFromSelection(const TArray<AA
 	}
 	return RootActorList;
 }
-UWorld* FLexUIEditorTools::GetWorldFromSelection()
-{
-	if (auto selectedActor = GetFirstSelectedActor())
-	{
-		return selectedActor->GetWorld();
-	}
-	return GWorld;
-}
 
 void FLexUIEditorTools::CreateLexWidget(TFunction<AActor*()> GetSelectedActorFunction, FString Name, UClass* VisualClass, TFunction<void(ULexWidget*)> Callback)
 {
@@ -574,11 +565,6 @@ AActor* FLexUIEditorTools::GetFirstSelectedActor()
 		return nullptr;
 	}
 	return SelectedActors[0];
-}
-
-TArray<AActor*> FLexUIEditorTools::GetSelectedActors()
-{
-	return FLexUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
 }
 
 void FLexUIEditorTools::CreateUIControls(TFunction<AActor*()> GetSelectedActorFunction, FString InPrefabPath)
@@ -808,28 +794,6 @@ void FLexUIEditorTools::PasteActors(TFunction<TArray<AActor*>()> GetSelectedActo
 	{
 		PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(parentComp->GetOwner());
 	}
-	if (!PrefabHelperObject)
-	{
-		UWorld* World = nullptr;
-		if (parentComp != nullptr)
-		{
-			World = parentComp->GetWorld();
-		}
-		else
-		{
-			World = GWorld;
-		}
-		if (World)
-		{
-			if (auto Level = World->GetCurrentLevel())
-			{
-				if (auto ManagerActor = ALGUIPrefabLevelManagerActor::GetInstance(Level))
-				{
-					PrefabHelperObject = ManagerActor->PrefabHelperObject;
-				}
-			}
-		}
-	}
 	if (PrefabHelperObject == nullptr)return;
 
 	PrefabHelperObject->SetCanNotifyAttachment(false);
@@ -1022,206 +986,6 @@ bool FLexUIEditorTools::CanToggleActorsSpatiallyLoaded(TFunction<TArray<AActor*>
 	return true;
 }
 
-void FLexUIEditorTools::OpenAtlasViewer_Impl()
-{
-	FGlobalTabmanager::Get()->TryInvokeTab(FLGUIEditorModule::LexUIDynamicSpriteAtlasViewerTabName);
-}
-
-void FLexUIEditorTools::CreateScreenSpaceUI_BasicSetup()
-{
-	FString prefabPath(TEXT("/LGUI/Prefabs/ScreenSpaceUI"));
-	auto prefab = LoadObject<ULexUIPrefab>(NULL, *prefabPath);
-	if (prefab)
-	{
-		GEditor->BeginTransaction(FText::FromString(TEXT("LexUI Create Screen Space UI")));
-		GetWorldFromSelection()->GetCurrentLevel()->MarkPackageDirty();
-		auto actor = prefab->LoadPrefabInEditor(GetWorldFromSelection(), nullptr, true);
-		actor->GetRootComponent()->SetRelativeScale3D(FVector::OneVector);
-		actor->GetRootComponent()->SetRelativeLocation(FVector(0, 0, 250));
-		if (auto selectedActor = GetFirstSelectedActor())
-		{
-			GEditor->SelectActor(selectedActor, false, true);
-		}
-		GEditor->SelectActor(actor, true, true);
-		CreatePresetEventSystem_BasicSetup(false);
-		GEditor->EndTransaction();
-		ULexUIManagerWorldSubsystem::RefreshAllUI();
-	}
-	else
-	{
-		UE_LOG(LGUIEditor, Error, TEXT("[%s].%d Load control prefab error! Path:%s. Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), 
-			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *prefabPath);
-	}
-}
-void FLexUIEditorTools::CreateWorldSpaceUIBuiltinRenderer_BasicSetup()
-{
-	FString prefabPath(TEXT("/LGUI/Prefabs/WorldSpaceUI_UERenderer"));
-	auto prefab = LoadObject<ULexUIPrefab>(NULL, *prefabPath);
-	if (prefab)
-	{
-		GEditor->BeginTransaction(FText::FromString(TEXT("LexUI Create World Space UI - UE Renderer")));
-		GetWorldFromSelection()->GetCurrentLevel()->MarkPackageDirty();
-		auto actor = prefab->LoadPrefabInEditor(GetWorldFromSelection(), nullptr, true);
-		actor->SetActorLabel(TEXT("WorldSpaceUI-UERenderer"));
-		actor->GetRootComponent()->SetRelativeLocation(FVector(0, 0, 250));
-		actor->GetRootComponent()->SetWorldScale3D(FVector::OneVector);
-		if (auto selectedActor = GetFirstSelectedActor())
-		{
-			GEditor->SelectActor(selectedActor, false, true);
-		}
-		GEditor->SelectActor(actor, true, true);
-		CreatePresetEventSystem_BasicSetup(true);
-		auto RaycasterSource = CreatePresetWorldSpaceRaycasterSource();
-		auto Raycaster = actor->GetComponentByClass<ULexWorldSpaceRaycasterBase>();
-		if (RaycasterSource && Raycaster)
-		{
-			Raycaster->SetRaycasterSourceObject(RaycasterSource);
-		}
-		GEditor->EndTransaction();
-		ULexUIManagerWorldSubsystem::RefreshAllUI();
-	}
-	else
-	{
-		UE_LOG(LGUIEditor, Error, TEXT("[%s].%d Load control prefab error! Path:%s. Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), 
-			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *prefabPath);
-	}
-}
-void FLexUIEditorTools::CreateWorldSpaceUILexUIRenderer_BasicSetup()
-{
-	FString prefabPath(TEXT("/LGUI/Prefabs/WorldSpaceUI_LexUIRenderer"));
-	auto prefab = LoadObject<ULexUIPrefab>(NULL, *prefabPath);
-	if (prefab)
-	{
-		GEditor->BeginTransaction(FText::FromString(TEXT("LexUI Create World Space UI - LexUI Renderer")));
-		GetWorldFromSelection()->GetCurrentLevel()->MarkPackageDirty();
-		auto actor = prefab->LoadPrefabInEditor(GetWorldFromSelection(), nullptr, true);
-		actor->SetActorLabel(TEXT("WorldSpaceUI-LexUIRenderer"));
-		actor->GetRootComponent()->SetRelativeLocation(FVector(0, 0, 250));
-		actor->GetRootComponent()->SetWorldScale3D(FVector::OneVector);
-		if (auto selectedActor = GetFirstSelectedActor())
-		{
-			GEditor->SelectActor(selectedActor, false, true);
-		}
-		GEditor->SelectActor(actor, true, true);
-		CreatePresetEventSystem_BasicSetup(true);
-		auto RaycasterSource = CreatePresetWorldSpaceRaycasterSource();
-		auto Raycaster = actor->GetComponentByClass<ULexWorldSpaceRaycasterBase>();
-		if (RaycasterSource && Raycaster)
-		{
-			Raycaster->SetRaycasterSourceObject(RaycasterSource);
-		}
-		GEditor->EndTransaction();
-		ULexUIManagerWorldSubsystem::RefreshAllUI();
-	}
-	else
-	{
-		UE_LOG(LGUIEditor, Error, TEXT("[%s].%d Load control prefab error! Path:%s. Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), 
-			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *prefabPath);
-	}
-}
-void FLexUIEditorTools::CreatePresetEventSystem_BasicSetup(bool WorldSpace)
-{
-	bool bEventSystemExits = false;
-	bool bWorldSpaceRaycasterExists = false;
-	for (TActorIterator<AActor> ActorItr(GetWorldFromSelection()); ActorItr; ++ActorItr)
-	{
-		auto Actor = *ActorItr;
-		if (Actor->FindComponentByClass<ULexEventSystem>())
-		{
-			bEventSystemExits = true;
-		}
-		if (Actor->FindComponentByClass<ULexWorldSpaceRaycasterBase>())
-		{
-			bWorldSpaceRaycasterExists = true;
-		}
-	}
-	auto CreateActor = [](const TCHAR* ClassName)
-	{
-		if (auto ActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
-		{
-			auto Actor = GetWorldFromSelection()->SpawnActor<AActor>(ActorClass);
-			Actor->SetActorLabel(ClassName);
-		}
-		else
-		{
-			UE_LOG(LGUIEditor, Error, TEXT("[%s].%d Load %s error! Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), 
-			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ClassName);
-		}
-	};
-	if (!bEventSystemExits)
-	{
-		CreateActor(TEXT("BP_PresetLexEventSystemActor"));
-	}
-	if (WorldSpace && !bWorldSpaceRaycasterExists)
-	{
-		CreateActor(TEXT("BP_PresetLexWorldSpaceRaycasterSource_Mouse_Actor"));
-	}
-}
-
-ULexWorldSpaceRaycasterSource* FLexUIEditorTools::CreatePresetWorldSpaceRaycasterSource()
-{
-	for (TActorIterator<AActor> ActorItr(GetWorldFromSelection()); ActorItr; ++ActorItr)
-	{
-		auto Actor = *ActorItr;
-		if (auto RaycasterSource = Actor->FindComponentByClass<ULexWorldSpaceRaycasterSource>())
-		{
-			return RaycasterSource;
-		}
-	}
-	auto CreateActor = [](const TCHAR* ClassName)
-	{
-		if (auto ActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
-		{
-			auto Actor = GetWorldFromSelection()->SpawnActor<AActor>(ActorClass);
-			Actor->SetActorLabel(ClassName);
-			return Actor;
-		}
-		else
-		{
-			UE_LOG(LGUIEditor, Error, TEXT("[%s].%d Load %s error! Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), 
-			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ClassName);
-		}
-		return (AActor*)nullptr;
-	};
-	if (auto RaycasterSourceActor = CreateActor(TEXT("BP_PresetLexWorldSpaceRaycasterSource_Mouse_Actor")))
-	{
-		return RaycasterSourceActor->FindComponentByClass<ULexWorldSpaceRaycasterSource>();
-	}
-	return nullptr;
-}
-
-void FLexUIEditorTools::AttachComponentToSelectedActor(TSubclassOf<UActorComponent> InComponentClass)
-{
-	GEditor->BeginTransaction(FText::FromString(TEXT("LGUI Attach Component to Actor")));
-
-	auto selectedActors = FLexUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
-	auto count = selectedActors.Num();
-	if (count == 0)
-	{
-		UE_LOG(LGUIEditor, Error, TEXT("NothingSelected"));
-		return;
-	}
-	UActorComponent* lastCreatedComponent = nullptr;
-	for (auto actor : selectedActors)
-	{
-		if (IsValid(actor))
-		{
-			auto comp = NewObject<UActorComponent>(actor, InComponentClass, *FComponentEditorUtils::GenerateValidVariableName(InComponentClass, actor), RF_Transactional);
-			actor->AddInstanceComponent(comp);
-			comp->RegisterComponent();
-			lastCreatedComponent = comp;
-		}
-	}
-
-	GEditor->EndTransaction();
-
-	if (selectedActors.Num() == 1)
-	{
-		GEditor->SelectNone(true, true);
-		GEditor->SelectActor(lastCreatedComponent->GetOwner(), true, true, false, true);
-		GEditor->SelectComponent(lastCreatedComponent, true, true, false);
-	}
-}
 bool FLexUIEditorTools::HaveValidCopiedActors()
 {
 	if (CopiedActorPrefabMap.Num() == 0)return false;
@@ -1264,12 +1028,6 @@ void FLexUIEditorTools::CreatePrefabAsset(TFunction<AActor*()> GetSelectedActorF
 	auto SelectedActor = GetSelectedActorFunction();
 	if (SelectedActor == nullptr)return;
 	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return;
-	if (Cast<ALGUIPrefabLoadHelperActor>(SelectedActor) != nullptr || Cast<ALGUIPrefabLevelManagerActor>(SelectedActor) != nullptr)
-	{
-		auto Message = LOCTEXT("CreatePrefabError_PrefabActor", "Cannot create prefab on a LGUIPrefabLoadHelperActor or LGUIPrefabLevelManagerActor!");
-		FMessageDialog::Open(EAppMsgType::Ok, Message);
-		return;
-	}
 	auto OldPrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
 	if (IsValid(OldPrefabHelperObject) && OldPrefabHelperObject->LoadedRootActor == SelectedActor)//If create prefab from an existing prefab's root actor, this is not allowed
 	{
@@ -1320,14 +1078,6 @@ void FLexUIEditorTools::CreatePrefabAsset(TFunction<AActor*()> GetSelectedActorF
 				FAssetRegistryModule::AssetCreated(OutPrefab);
 
 				auto PrefabHelperObjectWhichManageThisActor = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
-				if (PrefabHelperObjectWhichManageThisActor == nullptr)//not exist, means in level editor and not create PrefabManagerActor yet, so create it
-				{
-					auto ManagerActor = ALGUIPrefabLevelManagerActor::GetInstance(SelectedActor->GetLevel());
-					if (ManagerActor != nullptr)
-					{
-						PrefabHelperObjectWhichManageThisActor = ManagerActor->PrefabHelperObject;
-					}
-				}
 				check(PrefabHelperObjectWhichManageThisActor != nullptr)
 				{
 					struct LOCAL
@@ -1380,21 +1130,17 @@ void FLexUIEditorTools::CreatePrefabAsset(TFunction<AActor*()> GetSelectedActorF
 					OutPrefab->SavePrefab(SelectedActor, MapObjectToGuid, SubPrefabMap);//save prefab second step, store sub prefab data
 					OutPrefab->RefreshAgentObjectsInPreviewWorld();
 
-					//make it as subprefab
+					//make it as sub-prefab
 					TMap<FGuid, TObjectPtr<UObject>> MapGuidToObject;
 					for (auto KeyValue : MapObjectToGuid)
 					{
 						MapGuidToObject.Add(KeyValue.Value, KeyValue.Key);
 					}
 					PrefabHelperObjectWhichManageThisActor->MakePrefabAsSubPrefab(OutPrefab, SelectedActor, MapGuidToObject, {});
-					if (auto PrefabManagerActor = ALGUIPrefabLevelManagerActor::GetInstanceByPrefabHelperObject(PrefabHelperObjectWhichManageThisActor))
-					{
-						PrefabManagerActor->MarkPackageDirty();
-					}
 
 					if (OldPrefabHelperObject != nullptr && OldPrefabHelperObject->PrefabAsset != nullptr)
 					{
-						if (auto PrefabEditor = FLGUIPrefabEditor::GetEditorForPrefabIfValid(OldPrefabHelperObject->PrefabAsset))//if is create prefab inside a prefab editor, then apply the prefab editor
+						if (auto PrefabEditor = FLGUIPrefabEditor::GetEditorForPrefabIfValid(OldPrefabHelperObject->PrefabAsset))//if prefab is inside prefab editor, then apply the prefab editor
 						{
 							PrefabEditor->ApplyPrefab();
 						}
@@ -1411,7 +1157,7 @@ void FLexUIEditorTools::CreatePrefabAsset(TFunction<AActor*()> GetSelectedActorF
 	}
 }
 
-void FLexUIEditorTools::RefreshLevelLoadedPrefab(ULexUIPrefab* InPrefab)
+void FLexUIEditorTools::RefreshLevelLoadedPrefab()
 {
 	for (TObjectIterator<ULexUIPrefabHelperObject> Itr; Itr; ++Itr)
 	{
@@ -1723,58 +1469,6 @@ void FLexUIEditorTools::CleanupPrefabsInWorld(UWorld* World)
 	}
 }
 
-bool FLexUIEditorTools::IsCanvasActor(AActor* InActor)
-{
-	if (auto rootComp = InActor->GetRootComponent())
-	{
-		if (auto rootUIItem = Cast<ULexWidget>(rootComp))
-		{
-			if (rootUIItem->IsCanvasWidget())
-			{
-				return true;
-			}
-		}
-	}
-	return false;
-}
-bool FLexUIEditorTools::IsSelectUIActor()
-{
-	auto selectedActors = FLexUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
-	if (selectedActors.Num() > 0)
-	{
-		bool allIsUI = true;
-		for (auto actor : selectedActors)
-		{
-			if (IsValid(actor))
-			{
-				if (auto rootComp = actor->GetRootComponent())
-				{
-					auto uiRootComp = Cast<ULexWidget>(rootComp);
-					if (uiRootComp == nullptr)
-					{
-						allIsUI = false;
-					}
-				}
-			}
-		}
-		return allIsUI;
-	}
-	return false;
-}
-int FLexUIEditorTools::GetDrawcallCount(AActor* InActor)
-{
-	if (auto rootComp = InActor->GetRootComponent())
-	{
-		if (auto rootUIItem = Cast<ULexWidget>(rootComp))
-		{
-			if (auto canvas = rootUIItem->GetRenderCanvas())
-			{
-				return canvas->GetDrawCallCount();
-			}
-		}
-	}
-	return 0;
-}
 void FLexUIEditorTools::MakeCurrentLevel(AActor* InActor)
 {
 	if (IsValid(InActor) && InActor->GetWorld() && InActor->GetLevel())

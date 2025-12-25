@@ -181,7 +181,7 @@ void FLGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomClassLayout(ULexUIFontEmojiData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexUIFontEmojiDataCustomization::MakeInstance));
 
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexUIEventDelegateCustomization::MakeInstance));
-		//PropertyModule.RegisterCustomPropertyTypeLayout(FLGUIEventDelegateTwoParam::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLGUIEventDelegateTwoParamCustomization::MakeInstance));
+		//PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegateTwoParam::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexUIEventDelegateTwoParamCustomization::MakeInstance));
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Empty::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Bool::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Float::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
@@ -604,7 +604,7 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(TFunction<AActor*()> 
 									.AfterRevertPrefab_Lambda([=, this](ULexUIPrefab* PrefabAsset) {
 										})
 									.AfterApplyPrefab_Lambda([=, this](ULexUIPrefab* PrefabAsset) {
-										FLexUIEditorTools::RefreshLevelLoadedPrefab(PrefabAsset);
+										FLexUIEditorTools::RefreshLevelLoadedPrefab();
 										FLexUIEditorTools::RefreshOnSubPrefabChange(PrefabAsset);
 										FLexUIEditorTools::RefreshOpenedPrefabEditor(PrefabAsset);
 										})
@@ -686,7 +686,7 @@ void FLGUIEditorModule::CreateUIElementSubMenu(FMenuBuilder& MenuBuilder, TFunct
 				FText::FromString(InControlName),
 				InTooltip,
 				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateUIControls, GetSelectedActorFunction, FLexUIEditorTools::LGUIPresetPrefabPath + InControlName))
+				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateUIControls, GetSelectedActorFunction, FLexUIEditorTools::LexUIPresetPrefabPath + InControlName))
 			);
 		}
 		static void CreateEmptyActorMenuEntry(FMenuBuilder& InBuilder, TFunction<AActor*()> GetSelectedActorFunction)
@@ -885,7 +885,7 @@ void FLGUIEditorModule::CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder, TFun
 				InLabel,
 				InTooltip,
 				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateUIControls, GetSelectedActorFunction, FLexUIEditorTools::LGUIPresetPrefabPath + InControlName))
+				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateUIControls, GetSelectedActorFunction, FLexUIEditorTools::LexUIPresetPrefabPath + InControlName))
 			);
 		}
 	};

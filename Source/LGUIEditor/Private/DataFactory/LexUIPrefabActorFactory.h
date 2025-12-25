@@ -17,33 +17,9 @@ public:
 	virtual bool PreSpawnActor(UObject* Asset, FTransform& InOutLocation) override;
 	virtual void PostSpawnActor(UObject* Asset, AActor* NewActor) override;
 	virtual UObject* GetAssetFromActorInstance(AActor* ActorInstance) override;
+	virtual UClass* GetDefaultActorClass(const FAssetData& AssetData) override;
 	//virtual FQuat AlignObjectToSurfaceNormal(const FVector& InSurfaceNormal, const FQuat& ActorRotation) const override;
 	//~ End UActorFactory
-
-};
-
-
-class ULexUIPrefab;
-
-UCLASS(ClassGroup = (LGUI), Transient, NotBlueprintable, NotBlueprintType, NotPlaceable, HideCategories = (Rendering, Actor, Input))
-class ALGUIPrefabLoadHelperActor : public AActor
-{
-	GENERATED_BODY()
-public:
-	// Sets default values for this actor's properties
-	ALGUIPrefabLoadHelperActor();
-
-	virtual void BeginPlay()override;
-	virtual void Destroyed()override;
-	virtual void BeginDestroy() override;
-
-public:
-	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TObjectPtr<ULexUIPrefab> PrefabAsset = nullptr;
-	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TObjectPtr<AActor> LoadedRootActor = nullptr;
-	void LoadPrefab(USceneComponent* InParent);
-	void MoveActorToPrefabFolder();
 
 };
 

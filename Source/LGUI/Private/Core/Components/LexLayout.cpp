@@ -12,6 +12,26 @@ void ULexLayoutContainer::BeginDestroy()
 	}
 }
 
+void ULexLayoutContainer::PostReinitProperties()
+{
+	Super::PostReinitProperties();
+#if WITH_EDITOR
+	if (!this->GetName().StartsWith("Default__"))
+	{
+		if (auto Widget = GetWidget())
+		{
+			if (auto World = Widget->GetWorld())
+			{
+				if (!World->IsGameWorld())
+				{
+					ULexWidget::MarkLayoutForRebuild(Widget);
+				}
+			}
+		}
+	}
+#endif
+}
+
 #if WITH_EDITOR
 void ULexLayout::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
@@ -44,6 +64,25 @@ void ULexLayoutSelf::BeginDestroy()
 	{
 		Widget->RemoveLayoutSelf();
 	}
+}
+void ULexLayoutSelf::PostReinitProperties()
+{
+	Super::PostReinitProperties();
+#if WITH_EDITOR
+	if (!this->GetName().StartsWith("Default__"))
+	{
+		if (auto Widget = GetWidget())
+		{
+			if (auto World = Widget->GetWorld())
+			{
+				if (!World->IsGameWorld())
+				{
+					ULexWidget::MarkLayoutForRebuild(Widget);
+				}
+			}
+		}
+	}
+#endif
 }
 
 void ULexLayoutSelf::SetIgnoreLayoutContainer(bool Value)

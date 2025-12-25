@@ -214,7 +214,7 @@ void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLG
 											.AfterRevertPrefab_Lambda([=, this](ULexUIPrefab* PrefabAsset) {
 												})
 											.AfterApplyPrefab_Lambda([=, this](ULexUIPrefab* PrefabAsset){
-												FLexUIEditorTools::RefreshLevelLoadedPrefab(PrefabAsset);
+												FLexUIEditorTools::RefreshLevelLoadedPrefab();
 												FLexUIEditorTools::RefreshOnSubPrefabChange(PrefabAsset);
 												FLexUIEditorTools::RefreshOpenedPrefabEditor(PrefabAsset);
 												})

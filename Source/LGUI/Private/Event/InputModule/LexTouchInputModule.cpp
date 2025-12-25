@@ -20,14 +20,14 @@ void ULexTouchInputModule::ProcessInput()
 			{
 				if (eventData->bNowIsTriggerPressed || eventData->bPrevIsTriggerPressed)
 				{
-					FLexUIHitResult LGUIHitResult;
-					bool lineTraceHitSomething = LineTrace(eventData, LGUIHitResult);
-					bool resultHitSomething = false;
-					FHitResult hitResult;
-					ProcessPointerEvent(EventSystem.Get(), eventData, lineTraceHitSomething, LGUIHitResult, resultHitSomething, hitResult);
+					FLexUIHitResult LexHitResult;
+					bool bLineTraceHitSomething = LineTrace(eventData, LexHitResult);
+					bool bResultHitSomething = false;
+					FHitResult HitResult;
+					ProcessPointerEvent(EventSystem.Get(), eventData, bLineTraceHitSomething, LexHitResult, bResultHitSomething, HitResult);
 
-					auto tempHitComp = (USceneComponent*)hitResult.Component.Get();
-					EventSystem->RaiseHitEvent(resultHitSomething, hitResult, tempHitComp);
+					auto TempHitComp = (USceneComponent*)HitResult.Component.Get();
+					EventSystem->RaiseHitEvent(bResultHitSomething, HitResult, TempHitComp);
 				}
 			}
 		}
@@ -44,13 +44,13 @@ void ULexTouchInputModule::InputScroll(const FVector2D& inAxisValue)
 {
 	if (!EventSystem.IsValid())return;
 
-	auto eventData = EventSystem->GetPointerEventData(0, true);
-	if (IsValid(eventData->EnterComponent))
+	auto EventData = EventSystem->GetPointerEventData(0, true);
+	if (IsValid(EventData->EnterComponent))
 	{
-		if (inAxisValue != FVector2D::ZeroVector || eventData->ScrollAxisValue != inAxisValue)
+		if (inAxisValue != FVector2D::ZeroVector || EventData->ScrollAxisValue != inAxisValue)
 		{
-			eventData->ScrollAxisValue = inAxisValue;
-			EventSystem->CallOnPointerScroll(eventData->EnterComponent, eventData, eventData->EnterComponentEventFireType);
+			EventData->ScrollAxisValue = inAxisValue;
+			EventSystem->CallOnPointerScroll(EventData->EnterComponent, EventData, EventData->EnterComponentEventFireType);
 		}
 	}
 }
@@ -59,13 +59,13 @@ void ULexTouchInputModule::InputTouchTrigger(bool inTouchPress, int inTouchID, c
 {
 	if (!EventSystem.IsValid())return;
 
-	auto eventData = EventSystem->GetPointerEventData(inTouchID, true);
-	EventSystem->SetPointerInputType(eventData, ELexUIPointerInputType::Pointer);
-	eventData->bNowIsTriggerPressed = inTouchPress;
-	eventData->PointerPosition = inTouchPointPosition;
+	auto EventData = EventSystem->GetPointerEventData(inTouchID, true);
+	EventSystem->SetPointerInputType(EventData, ELexUIPointerInputType::Pointer);
+	EventData->bNowIsTriggerPressed = inTouchPress;
+	EventData->PointerPosition = inTouchPointPosition;
 	if (inTouchPress)
 	{
-		eventData->PressPointerPosition = eventData->PointerPosition;
+		EventData->PressPointerPosition = EventData->PointerPosition;
 	}
 }
 

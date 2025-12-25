@@ -125,9 +125,9 @@ void FLexUISpriteDataCustomization::CustomizeDetails(IDetailLayoutBuilder& Detai
 				.VAlign(EVerticalAlignment::VAlign_Center)
 				.Text(LOCTEXT("OpenAtlas", "Open Atlas Viewer"))
 				.OnClicked_Lambda([]() {
-				FLexUIEditorTools::OpenAtlasViewer_Impl();
-				return FReply::Handled();
-					})
+					FGlobalTabmanager::Get()->TryInvokeTab(FLGUIEditorModule::LexUIDynamicSpriteAtlasViewerTabName);
+					return FReply::Handled();
+				})
 			]
 		]
 	]

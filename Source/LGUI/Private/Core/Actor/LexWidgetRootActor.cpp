@@ -1,12 +1,12 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
-
 #include "Core/Actor/LexWidgetRootActor.h"
 
 #include "EngineUtils.h"
 #include "LGUI.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
+#include "Core/Components/LexWidget.h"
 #include "Event/LexEventSystem.h"
 #include "Event/LexWorldSpaceRaycasterBase.h"
 #include "PrefabSystem/LexUIPrefab.h"
@@ -20,6 +20,7 @@ ALexWidgetRootActor::ALexWidgetRootActor()
 	PrimaryActorTick.bStartWithTickEnabled = false;
 
 	Canvas = CreateDefaultSubobject<ULexCanvas>(FName("Canvas"));
+	LexWidget->SetSizeDelta(FVector2D(1920, 1080));
 }
 
 void ALexWidgetRootActor::BeginPlay()
@@ -105,7 +106,7 @@ void ALexWidgetRootActor::CheckNecessaryObjects()
 		auto MsgReturn = FMessageDialog::Open(EAppMsgCategory::Warning, EAppMsgType::YesNo, LOCTEXT("MissingEventSystem", "There is no LexEventSystem in the world! LexUI will not interactable without LexEventSystem, would you like to create a default one?"));
 		if (MsgReturn == EAppReturnType::Yes)
 		{
-			auto ClassName = TEXT("BP_PresetLexEventSystemActor");
+			auto ClassName = TEXT("LexEventSystemActor");
 			if (auto ActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
 			{
 				auto Actor = this->GetWorld()->SpawnActor<AActor>(ActorClass);
@@ -133,10 +134,10 @@ void ALexWidgetRootActor::CheckNecessaryObjects()
 		}
 		if (!ExistWorldSpaceRaycasterSource)
 		{
-			auto MsgReturn = FMessageDialog::Open(EAppMsgCategory::Warning, EAppMsgType::YesNo, LOCTEXT("MissingWorldSpaceRaycasterSource", "There is no WorldSpaceRaycasterSource in the world! WorldSpaceUI will not interactable without WorldSpaceRaycasterSource, would you like to create a default one?"));
+			auto MsgReturn = FMessageDialog::Open(EAppMsgCategory::Warning, EAppMsgType::YesNo, LOCTEXT("MissingWorldSpaceRaycasterSource", "There is no WorldSpaceRaycasterSource in the world! WorldSpaceUI will not interactable without WorldSpaceRaycasterSource, would you like to create a default one which use MouseInput?"));
 			if (MsgReturn == EAppReturnType::Yes)
 			{
-				auto ClassName = TEXT("BP_PresetLexWorldSpaceRaycasterSource_Mouse_Actor");
+				auto ClassName = TEXT("LexWorldSpaceRaycasterSource_Mouse");
 				if (auto ActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
 				{
 					auto Actor = this->GetWorld()->SpawnActor<AActor>(ActorClass);
@@ -152,10 +153,12 @@ void ALexWidgetRootActor::CheckNecessaryObjects()
 		}
 		if (ExistWorldSpaceRaycasterSource)
 		{
-			auto WorldSpaceRaycaster = this->FindComponentByClass<ULexWorldSpaceRaycasterBase>();
-			if (auto RaycasterSourceActor = Cast<ALexWorldSpaceRaycasterSourceActor>(ExistWorldSpaceRaycasterSource->GetOwner()))
+			if (auto WorldSpaceRaycaster = this->FindComponentByClass<ULexWorldSpaceRaycasterBase>())
 			{
-				WorldSpaceRaycaster->SetRaycasterSourceActor(RaycasterSourceActor);
+				if (auto RaycasterSourceActor = Cast<ALexWorldSpaceRaycasterSourceActor>(ExistWorldSpaceRaycasterSource->GetOwner()))
+				{
+					WorldSpaceRaycaster->SetRaycasterSourceActor(RaycasterSourceActor);
+				}
 			}
 		}
 	}
@@ -186,6 +189,15 @@ void ALexWidgetRootActor::CheckPrefabVersion()
 void ALexWidgetRootActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+}
+
+void ALexWidgetRootActor::SetPrefab(ULexUIPrefab* Value)
+{
+	if (WidgetPrefab != Value)
+	{
+		WidgetPrefab = Value;
+		LoadPrefab();
+	}
 }
 
 #undef LOCTEXT_NAMESPACE

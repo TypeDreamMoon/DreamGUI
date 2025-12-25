@@ -18,11 +18,10 @@ class LGUIEDITOR_API FLexUIEditorTools
 private:
 	static FString PrevSavePrefabFolder;
 public:
-	static FString LGUIPresetPrefabPath;
+	static FString LexUIPresetPrefabPath;
 	static FEditingPrefabChangedDelegate OnEditingPrefabChanged;
 	static FBeforeApplyPrefabDelegate OnBeforeApplyPrefab;
 	static AActor* GetFirstSelectedActor();
-	static TArray<AActor*> GetSelectedActors();
 	static FString GetUniqueNumericName(const FString& InPrefix, const TArray<FString>& InExistNames);
 	static FString GetNameForNewWidget(ULexWidget* InParentWidget, const FString& InBaseName);
 	static FString GetNamePrefixForCopy(const FString& InSrcName, FString& OutNumericSuffix);
@@ -43,18 +42,10 @@ public:
 	static bool CanCutActor(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
 	static bool CanDeleteActor(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
 	static bool CanToggleActorsSpatiallyLoaded(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
-	static void OpenAtlasViewer_Impl();
-	static void CreateScreenSpaceUI_BasicSetup();
-	static void CreateWorldSpaceUIBuiltinRenderer_BasicSetup();
-	static void CreateWorldSpaceUILexUIRenderer_BasicSetup();
-	static void CreatePresetEventSystem_BasicSetup(bool WorldSpace);
-	static class ULexWorldSpaceRaycasterSource* CreatePresetWorldSpaceRaycasterSource();
-	static void AttachComponentToSelectedActor(TSubclassOf<UActorComponent> InComponentClass);
-	static UWorld* GetWorldFromSelection();
 	
 	static bool CanCreatePrefab(TFunction<AActor*()> GetSelectedActorFunction);
 	static void CreatePrefabAsset(TFunction<AActor*()> GetSelectedActorFunction);
-	static void RefreshLevelLoadedPrefab(ULexUIPrefab* InPrefab);
+	static void RefreshLevelLoadedPrefab();
 	static void RefreshOpenedPrefabEditor(ULexUIPrefab* InPrefab);
 	static void RefreshOnSubPrefabChange(ULexUIPrefab* InSubPrefab);
 	static TArray<ULexUIPrefab*> GetAllPrefabArray();
@@ -70,9 +61,6 @@ public:
 	static bool CanCheckPrefabOverrideParameter(TFunction<AActor*()> GetSelectedActorFunction);
 	static bool CanCreateActor(TFunction<AActor*()> GetSelectedActorFunction);
 	static void CleanupPrefabsInWorld(UWorld* World);
-	static bool IsSelectUIActor();
-	static bool IsCanvasActor(AActor* InActor);
-	static int GetDrawcallCount(AActor* InActor);
 	static bool IsActorCompatibleWithLexUIToolsMenu(AActor* InActor);
 
 	static TMap<FString, TWeakObjectPtr<class ULexUIPrefab>> CopiedActorPrefabMap;//map ActorLabel to prefab

@@ -96,6 +96,26 @@ void ULexVisual::BeginDestroy()
 	}
 }
 
+void ULexVisual::PostReinitProperties()
+{
+	Super::PostReinitProperties();
+#if WITH_EDITOR
+	if (!this->GetName().StartsWith("Default__"))
+	{
+		if (auto Widget = GetWidget())
+		{
+			if (auto World = Widget->GetWorld())
+			{
+				if (!World->IsGameWorld())
+				{
+					MarkAllDirty();
+				}
+			}
+		}
+	}
+#endif
+}
+
 #if WITH_EDITOR
 void ULexVisual::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {

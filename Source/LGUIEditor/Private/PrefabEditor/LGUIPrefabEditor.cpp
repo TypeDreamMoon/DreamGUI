@@ -493,7 +493,7 @@ void FLGUIPrefabEditor::OnApply()
 
 		FLexUIEditorTools::OnBeforeApplyPrefab.Broadcast(PrefabHelperObject);
 		PrefabHelperObject->SavePrefab();
-		FLexUIEditorTools::RefreshLevelLoadedPrefab(PrefabHelperObject->PrefabAsset);
+		FLexUIEditorTools::RefreshLevelLoadedPrefab();
 		FLexUIEditorTools::RefreshOnSubPrefabChange(PrefabHelperObject->PrefabAsset);
 	}
 }

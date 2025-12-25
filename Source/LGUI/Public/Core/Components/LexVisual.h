@@ -101,6 +101,7 @@ public:
 protected:
 	friend class FLexVisualCustomization;
 	friend class ULexWidget;
+	virtual void PostReinitProperties() override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual bool CanEditChange(const FProperty* InProperty) const override;

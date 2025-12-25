@@ -138,7 +138,6 @@ bool ULexUIPrefabHelperObject::IsSubPrefabRootActor(const AActor* InActor)
 	return SubPrefabMap.Contains(InActor);
 }
 
-#include "PrefabSystem/LGUIPrefabLevelManagerActor.h"
 bool ULexUIPrefabHelperObject::IsActorBelongsToThis(const AActor* InActor)
 {
 	if (this->IsInsidePrefabEditor())
@@ -148,16 +147,6 @@ bool ULexUIPrefabHelperObject::IsActorBelongsToThis(const AActor* InActor)
 			if (InActor->IsAttachedTo(LoadedRootActor) || InActor == LoadedRootActor)
 			{
 				return true;
-			}
-		}
-	}
-	else
-	{
-		if (auto Level = InActor->GetLevel())
-		{
-			if (auto ManagerActor = ALGUIPrefabLevelManagerActor::GetInstance(Level, false))
-			{
-				return ManagerActor->PrefabHelperObject == this;//if this level have a PrefabManagerActor, then all actor is belongs to this PrefabHelperObject.
 			}
 		}
 	}
