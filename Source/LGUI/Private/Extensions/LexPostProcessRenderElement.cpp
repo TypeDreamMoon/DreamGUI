@@ -159,6 +159,15 @@ void ULexPostProcessRenderElement::OnUpdateGeometry(FLexUIGeometry& InGeo, bool 
 				Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), SpriteInfo, RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
+		if (InVertexUVChanged)
+		{
+			FLexUISpriteInfo SimpleRectSpriteInfo;		
+			auto& vertices = InGeo.Vertices;
+			vertices[0].TextureCoordinate[2] = SimpleRectSpriteInfo.GetUV0();
+			vertices[1].TextureCoordinate[2] = SimpleRectSpriteInfo.GetUV1();
+			vertices[2].TextureCoordinate[2] = SimpleRectSpriteInfo.GetUV2();
+			vertices[3].TextureCoordinate[2] = SimpleRectSpriteInfo.GetUV3();
+		}
 	}
 	else
 	{

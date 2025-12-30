@@ -4,13 +4,6 @@
 #include "LGUI.h"
 #include "Engine/World.h"
 #include "Engine/Engine.h"
-#include "Core/Actor/LexWidgetRootActor.h"
-#if WITH_EDITOR
-#include "Editor.h"
-#include "DrawDebugHelpers.h"
-#include "EditorViewportClient.h"
-#include "PrefabSystem/LexUIPrefab.h"
-#endif
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabManagerObject"
 
@@ -23,105 +16,21 @@ ULexUIPrefabManagerObject::ULexUIPrefabManagerObject()
 void ULexUIPrefabManagerObject::BeginDestroy()
 {
 	Super::BeginDestroy();
-#if WITH_EDITORONLY_DATA
-	if (OnAssetReimportDelegateHandle.IsValid())
-	{
-		if (GEditor)
-		{
-			if (auto ImportSubsystem = GEditor->GetEditorSubsystem<UImportSubsystem>())
-			{
-				ImportSubsystem->OnAssetReimport.Remove(OnAssetReimportDelegateHandle);
-			}
-		}
-	}
-	if (OnMapOpenedDelegateHandle.IsValid())
-	{
-		FEditorDelegates::OnMapOpened.Remove(OnMapOpenedDelegateHandle);
-	}
-	if (OnPackageReloadedDelegateHandle.IsValid())
-	{
-		FCoreUObjectDelegates::OnPackageReloaded.Remove(OnPackageReloadedDelegateHandle);
-	}
-#endif
 	Instance = nullptr;
-}
-
-void ULexUIPrefabManagerObject::Tick(float DeltaTime)
-{
-
-}
-TStatId ULexUIPrefabManagerObject::GetStatId() const
-{
-	RETURN_QUICK_DECLARE_CYCLE_STAT(ULGUIPrefabManagerObject, STATGROUP_Tickables);
 }
 
 #if WITH_EDITOR
 
-ULexUIPrefabManagerObject* ULexUIPrefabManagerObject::GetInstance(bool CreateIfNotValid)
+UWorld* ULexUIPrefabManagerObject::GetPreviewWorldForPrefabPackage()
 {
-	if (CreateIfNotValid)
-	{
-		InitCheck();
-	}
-	return Instance;
-}
-bool ULexUIPrefabManagerObject::InitCheck()
-{
-	if (!GEngine)return false;
+	if (!GEngine)return nullptr;
 	if (Instance == nullptr)
 	{
 		Instance = NewObject<ULexUIPrefabManagerObject>();
 		Instance->AddToRoot();
 		UE_LOG(LGUI, Log, TEXT("[%s].%d No Instance for %s, create it!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(ULexUIPrefabManagerObject::StaticClass()->GetName()));
-		//open map
-		Instance->OnMapOpenedDelegateHandle = FEditorDelegates::OnMapOpened.AddUObject(Instance, &ULexUIPrefabManagerObject::OnMapOpened);
-		Instance->OnPackageReloadedDelegateHandle = FCoreUObjectDelegates::OnPackageReloaded.AddUObject(Instance, &ULexUIPrefabManagerObject::OnPackageReloaded);
-		if (GEditor)
-		{
-			//reimport asset
-			Instance->OnAssetReimportDelegateHandle = GEditor->GetEditorSubsystem<UImportSubsystem>()->OnAssetReimport.AddUObject(Instance, &ULexUIPrefabManagerObject::OnAssetReimport);
-		}
 	}
-	return true;
-}
-
-void ULexUIPrefabManagerObject::OnAssetReimport(UObject* Asset)
-{
-	if (IsValid(Asset))
-	{
-		if (Asset->IsA<ULexUIPrefab>())
-		{
-			for (TObjectIterator<ALexWidgetRootActor> Itr; Itr; ++Itr)
-			{
-				if (Itr->GetWorld())
-				{
-					Itr->CheckPrefabVersion();
-				}
-			}
-		}
-	}
-}
-
-void ULexUIPrefabManagerObject::OnMapOpened(const FString& FileName, bool AsTemplate)
-{
-
-}
-
-void ULexUIPrefabManagerObject::OnPackageReloaded(EPackageReloadPhase Phase, FPackageReloadedEvent* Event)
-{
-	if (Phase == EPackageReloadPhase::PostBatchPostGC && Event != nullptr && Event->GetNewPackage() != nullptr)
-	{
-		auto Asset = Event->GetNewPackage()->FindAssetInPackage();
-		if (auto PrefabAsset = Cast<ULexUIPrefab>(Asset))
-		{
-			
-		}
-	}
-}
-
-UWorld* ULexUIPrefabManagerObject::GetPreviewWorldForPrefabPackage()
-{
-	InitCheck();
+	
 	auto& PreviewScene = Instance->PreviewSceneForPrefabPackage;
 	if (!PreviewScene)
 	{
@@ -161,7 +70,7 @@ FGuid ULexUIPrefabWorldSubsystem::GetPrefabSystemSessionIdForActor(AActor* InAct
 	return FGuid();
 }
 
-bool ULexUIPrefabWorldSubsystem::IsLGUIPrefabSystemProcessingActor(AActor* InActor)
+bool ULexUIPrefabWorldSubsystem::IsLexUIPrefabSystemProcessingActor(AActor* InActor)
 {
 	if (auto PrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(InActor->GetWorld()))
 	{

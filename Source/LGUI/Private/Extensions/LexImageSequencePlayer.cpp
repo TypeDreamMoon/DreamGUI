@@ -13,7 +13,7 @@ ULexImageSequencePlayer::ULexImageSequencePlayer()
 void ULexImageSequencePlayer::BeginPlay()
 {
 	Super::BeginPlay();	
-	if (!ULexUIPrefabWorldSubsystem::IsLGUIPrefabSystemProcessingActor(this->GetOwner()))
+	if (!ULexUIPrefabWorldSubsystem::IsLexUIPrefabSystemProcessingActor(this->GetOwner()))
 	{
 		Awake_Implementation();
 	}

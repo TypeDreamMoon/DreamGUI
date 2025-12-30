@@ -88,76 +88,141 @@ void ALexWidgetRootActor::PostEditChangeProperty(FPropertyChangedEvent& Property
 	}
 }
 
+#include "Dialog/SCustomDialog.h"
+bool ALexWidgetRootActor::bNeedCheckEventSystem = true;
+bool ALexWidgetRootActor::bNeverCheckEventSystem = false;
+bool ALexWidgetRootActor::bNeedCheckRaycasterSource = true;
+bool ALexWidgetRootActor::bNeverCheckRaycasterSource = false;
 void ALexWidgetRootActor::CheckNecessaryObjects()
 {
-	//check if there is EventSystem in editor
-	bool bEventSystemExits = false;
-	for (TActorIterator<AActor> ActorItr(this->GetWorld()); ActorItr; ++ActorItr)
+	if (bNeedCheckEventSystem)
 	{
-		auto Actor = *ActorItr;
-		if (Actor->FindComponentByClass<ULexEventSystem>())
-		{
-			bEventSystemExits = true;
-			break;
-		}
-	}
-	if (!bEventSystemExits)
-	{
-		auto MsgReturn = FMessageDialog::Open(EAppMsgCategory::Warning, EAppMsgType::YesNo, LOCTEXT("MissingEventSystem", "There is no LexEventSystem in the world! LexUI will not interactable without LexEventSystem, would you like to create a default one?"));
-		if (MsgReturn == EAppReturnType::Yes)
-		{
-			auto ClassName = TEXT("LexEventSystemActor");
-			if (auto ActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
-			{
-				auto Actor = this->GetWorld()->SpawnActor<AActor>(ActorClass);
-				Actor->SetActorLabel(ClassName);
-			}
-			else
-			{
-				UE_LOG(LGUI, Error, TEXT("[%s].%d Load %s error! Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), 
-				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ClassName);
-			}
-		}
-	}
-	//check if there is WorldSpaceRaycaster if this is WorldSpace UI
-	if (this->Canvas->GetRenderMode() == ELexRenderMode::WorldSpace || this->Canvas->GetRenderMode() == ELexRenderMode::WorldSpace_LexUI)
-	{
-		ULexWorldSpaceRaycasterSource* ExistWorldSpaceRaycasterSource = nullptr;
+		bNeedCheckEventSystem = false;
+		//check if there is EventSystem in editor
+		bool bEventSystemExits = false;
 		for (TActorIterator<AActor> ActorItr(this->GetWorld()); ActorItr; ++ActorItr)
 		{
 			auto Actor = *ActorItr;
-			if (auto Comp = Actor->FindComponentByClass<ULexWorldSpaceRaycasterSource>())
+			if (Actor->FindComponentByClass<ULexEventSystem>())
 			{
-				ExistWorldSpaceRaycasterSource = Comp;
+				bEventSystemExits = true;
 				break;
 			}
 		}
-		if (!ExistWorldSpaceRaycasterSource)
+		if (!bEventSystemExits)
 		{
-			auto MsgReturn = FMessageDialog::Open(EAppMsgCategory::Warning, EAppMsgType::YesNo, LOCTEXT("MissingWorldSpaceRaycasterSource", "There is no WorldSpaceRaycasterSource in the world! WorldSpaceUI will not interactable without WorldSpaceRaycasterSource, would you like to create a default one which use MouseInput?"));
-			if (MsgReturn == EAppReturnType::Yes)
+			auto Dialog =
+				SNew(SCustomDialog)
+				.Title(LOCTEXT("MessageDialogTitle", "Message"))
+				.Content()
+				[
+					SNew(SBox)
+					.Padding(20, 10)
+					.MaxDesiredWidth(500)
+					[
+						SNew(STextBlock)
+						.AutoWrapText(true)
+						.Text(LOCTEXT("MissingEventSystem", "There is no LexEventSystem in the world! LexUI will not interactable without LexEventSystem, would you like to create a default one?"))
+					]
+				]
+				.Buttons({
+					SCustomDialog::FButton(
+						LOCTEXT("DialogBtnYes", "Yes"),
+						FSimpleDelegate::CreateLambda([=, this]()
+						{
+							auto ClassName = TEXT("LexEventSystemActor");
+							if (auto ActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
+							{
+								auto Actor = this->GetWorld()->SpawnActor<AActor>(ActorClass);
+								Actor->SetActorLabel(ClassName);
+							}
+							else
+							{
+								UE_LOG(LGUI, Error, TEXT("[%s].%d Load %s error! Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), 
+								ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ClassName);
+							}
+						})),
+					SCustomDialog::FButton(
+						LOCTEXT("DialogBtnNo", "No")),
+					SCustomDialog::FButton(
+						LOCTEXT("DialogBtnNoToAll", "NoAndNeverShowAgain"),
+						FSimpleDelegate::CreateLambda([=]()
+						{
+							bNeverCheckEventSystem = true;
+						}))
+				});
+			Dialog->ShowModal();
+		}
+	}
+	if (bNeedCheckRaycasterSource)
+	{
+		bNeedCheckRaycasterSource = false;
+		//check if there is WorldSpaceRaycaster when this is WorldSpace UI
+		if (this->Canvas->GetRenderMode() == ELexRenderMode::WorldSpace || this->Canvas->GetRenderMode() == ELexRenderMode::WorldSpace_LexUI)
+		{
+			ULexWorldSpaceRaycasterSource* ExistWorldSpaceRaycasterSource = nullptr;
+			for (TActorIterator<AActor> ActorItr(this->GetWorld()); ActorItr; ++ActorItr)
 			{
-				auto ClassName = TEXT("LexWorldSpaceRaycasterSource_Mouse");
-				if (auto ActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
+				auto Actor = *ActorItr;
+				if (auto Comp = Actor->FindComponentByClass<ULexWorldSpaceRaycasterSource>())
 				{
-					auto Actor = this->GetWorld()->SpawnActor<AActor>(ActorClass);
-					Actor->SetActorLabel(ClassName);
-					ExistWorldSpaceRaycasterSource = Actor->FindComponentByClass<ULexWorldSpaceRaycasterSource>();
-				}
-				else
-				{
-					UE_LOG(LGUI, Error, TEXT("[%s].%d Load %s error! Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), 
-					ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ClassName);
+					ExistWorldSpaceRaycasterSource = Comp;
+					break;
 				}
 			}
-		}
-		if (ExistWorldSpaceRaycasterSource)
-		{
-			if (auto WorldSpaceRaycaster = this->FindComponentByClass<ULexWorldSpaceRaycasterBase>())
+			if (!ExistWorldSpaceRaycasterSource)
 			{
-				if (auto RaycasterSourceActor = Cast<ALexWorldSpaceRaycasterSourceActor>(ExistWorldSpaceRaycasterSource->GetOwner()))
+				auto Dialog =
+				SNew(SCustomDialog)
+				.Title(LOCTEXT("MessageDialogTitle", "Message"))
+				.Content()
+				[
+					SNew(SBox)
+					.Padding(20, 10)
+					.MaxDesiredWidth(500)
+					[
+						SNew(STextBlock)
+						.AutoWrapText(true)
+						.Text(LOCTEXT("MissingWorldSpaceRaycasterSource", "There is no WorldSpaceRaycasterSource in the world! WorldSpaceUI will not interactable without WorldSpaceRaycasterSource, would you like to create a default one which use mouse input?"))
+					]
+				]
+				.Buttons({
+					SCustomDialog::FButton(
+						LOCTEXT("DialogBtnYes", "Yes"),
+						FSimpleDelegate::CreateLambda([=, &ExistWorldSpaceRaycasterSource, this]()
+						{
+							auto ClassName = TEXT("LexWorldSpaceRaycasterSource_Mouse");
+							if (auto ActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
+							{
+								auto Actor = this->GetWorld()->SpawnActor<AActor>(ActorClass);
+								Actor->SetActorLabel(ClassName);
+								ExistWorldSpaceRaycasterSource = Actor->FindComponentByClass<ULexWorldSpaceRaycasterSource>();
+							}
+							else
+							{
+								UE_LOG(LGUI, Error, TEXT("[%s].%d Load %s error! Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), 
+								ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ClassName);
+							}
+						})),
+					SCustomDialog::FButton(
+						LOCTEXT("DialogBtnNo", "No")),
+					SCustomDialog::FButton(
+						LOCTEXT("DialogBtnNoToAll", "NoAndNeverShowAgain"),
+						FSimpleDelegate::CreateLambda([=]()
+						{
+							bNeverCheckRaycasterSource = true;
+						}))
+				});
+				Dialog->ShowModal();
+			}
+			if (ExistWorldSpaceRaycasterSource)
+			{
+				if (auto WorldSpaceRaycaster = this->FindComponentByClass<ULexWorldSpaceRaycasterBase>())
 				{
-					WorldSpaceRaycaster->SetRaycasterSourceActor(RaycasterSourceActor);
+					if (auto RaycasterSourceActor = Cast<ALexWorldSpaceRaycasterSourceActor>(ExistWorldSpaceRaycasterSource->GetOwner()))
+					{
+						WorldSpaceRaycaster->SetRaycasterSourceActor(RaycasterSourceActor);
+					}
 				}
 			}
 		}
@@ -177,11 +242,34 @@ void ALexWidgetRootActor::ApplyListInSceneOutliner()
 	ULexUIManagerObject::MarkBroadcastLevelActorListChanged();
 }
 
+void ALexWidgetRootActor::MarkNeedCheckNecessaryObjects()
+{
+	if (!bNeverCheckEventSystem)
+	{
+		bNeedCheckEventSystem = true;
+	}
+	if (!bNeverCheckRaycasterSource)
+	{
+		bNeedCheckRaycasterSource = true;
+	}
+}
+
 void ALexWidgetRootActor::CheckPrefabVersion()
 {
-	if (OverallVersionMD5 != WidgetPrefab->GenerateOverallVersionMD5())
+	if (IsValid(WidgetPrefab))
 	{
-		LoadPrefab();
+		if (OverallVersionMD5 != WidgetPrefab->GenerateOverallVersionMD5())
+		{
+			LoadPrefab();
+		}
+	}
+	else
+	{
+		if (LoadedActor.IsValid())
+		{
+			FLexUIUtils::DestroyActorWithHierarchy(LoadedActor.Get());
+			LoadedActor = nullptr;
+		}
 	}
 }
 #endif

@@ -1,51 +1,52 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Thumbnail/LGUIPrefabThumbnailScene.h"
+#include "Thumbnail/LexUIPrefabThumbnailScene.h"
 #include "Components/PrimitiveComponent.h"
 #include "ThumbnailRendering/SceneThumbnailInfo.h"
 #include "Core/Components/LexCanvas.h"
 #include "LGUIEditorModule.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexWidget.h"
+#include "PrefabSystem/LexUIPrefab.h"
 
 
-FLGUIPrefabInstanceThumbnailScene::FLGUIPrefabInstanceThumbnailScene()
+FLexUIPrefabInstanceThumbnailScene::FLexUIPrefabInstanceThumbnailScene()
 {
 	InstancedThumbnailScenes.Reserve(MAX_NUM_SCENES);
 }
-TSharedPtr<FLGUIPrefabThumbnailScene> FLGUIPrefabInstanceThumbnailScene::FindThumbnailScene(const FString& InPrefabPath)const
+TSharedPtr<FLexUIPrefabThumbnailScene> FLexUIPrefabInstanceThumbnailScene::FindThumbnailScene(const FString& InPrefabPath)const
 {
 	return InstancedThumbnailScenes.FindRef(InPrefabPath);
 }
-TSharedRef<FLGUIPrefabThumbnailScene> FLGUIPrefabInstanceThumbnailScene::EnsureThumbnailScene(const FString& InPrefabPath)
+TSharedRef<FLexUIPrefabThumbnailScene> FLexUIPrefabInstanceThumbnailScene::EnsureThumbnailScene(const FString& InPrefabPath)
 {
-	TSharedPtr<FLGUIPrefabThumbnailScene> ExistingThumbnailScene = InstancedThumbnailScenes.FindRef(InPrefabPath);
+	TSharedPtr<FLexUIPrefabThumbnailScene> ExistingThumbnailScene = InstancedThumbnailScenes.FindRef(InPrefabPath);
 	if (!ExistingThumbnailScene.IsValid())
 	{
 		if (InstancedThumbnailScenes.Num() >= MAX_NUM_SCENES)
 		{
 			InstancedThumbnailScenes.Reset();
 		}
-		ExistingThumbnailScene = MakeShareable(new FLGUIPrefabThumbnailScene());
+		ExistingThumbnailScene = MakeShareable(new FLexUIPrefabThumbnailScene());
 		InstancedThumbnailScenes.Add(InPrefabPath, ExistingThumbnailScene);
 	}
 	return ExistingThumbnailScene.ToSharedRef();
 }
-void FLGUIPrefabInstanceThumbnailScene::Clear()
+void FLexUIPrefabInstanceThumbnailScene::Clear()
 {
 	InstancedThumbnailScenes.Reset();
 }
 
 
 
-FLGUIPrefabThumbnailScene::FLGUIPrefabThumbnailScene()
+FLexUIPrefabThumbnailScene::FLexUIPrefabThumbnailScene()
 	:FThumbnailPreviewScene()
 	, NumStartingActors(0)
 	, CurrentPrefab(nullptr)
 {
 	NumStartingActors = GetWorld()->GetCurrentLevel()->Actors.Num();
 }
-void FLGUIPrefabThumbnailScene::SpawnPreviewActor()
+void FLexUIPrefabThumbnailScene::SpawnPreviewActor()
 {
 	if (CurrentPrefab.IsValid())
 	{
@@ -92,7 +93,7 @@ void FLGUIPrefabThumbnailScene::SpawnPreviewActor()
 		}
 	}
 }
-void FLGUIPrefabThumbnailScene::GetBoundsRecursive(USceneComponent* RootComp, FBoxSphereBounds& OutBounds, bool& IsFirstPrimitive)const
+void FLexUIPrefabThumbnailScene::GetBoundsRecursive(USceneComponent* RootComp, FBoxSphereBounds& OutBounds, bool& IsFirstPrimitive)const
 {
 	if (!IsValid(RootComp))return;
 	if (RootComp->IsVisualizationComponent())return;
@@ -134,7 +135,7 @@ void FLGUIPrefabThumbnailScene::GetBoundsRecursive(USceneComponent* RootComp, FB
 		GetBoundsRecursive(childComp, OutBounds, IsFirstPrimitive);
 	}
 }
-void FLGUIPrefabThumbnailScene::ClearOldActors()
+void FLexUIPrefabThumbnailScene::ClearOldActors()
 {
 	auto Level = GetWorld()->GetCurrentLevel();
 	for (int i = NumStartingActors; i < Level->Actors.Num(); i++)
@@ -145,7 +146,7 @@ void FLGUIPrefabThumbnailScene::ClearOldActors()
 		}
 	}
 }
-bool FLGUIPrefabThumbnailScene::IsValidForVisualization()
+bool FLexUIPrefabThumbnailScene::IsValidForVisualization()
 {
 	if (CurrentPrefab.Get())
 	{
@@ -159,7 +160,7 @@ bool FLGUIPrefabThumbnailScene::IsValidForVisualization()
 	}
 	return true;
 }
-void FLGUIPrefabThumbnailScene::GetViewMatrixParameters(const float InFOVDegrees, FVector& OutOrigin, float& OutOrbitPitch, float& OutOrbitYaw, float& OutOrbitZoom)const
+void FLexUIPrefabThumbnailScene::GetViewMatrixParameters(const float InFOVDegrees, FVector& OutOrigin, float& OutOrbitPitch, float& OutOrbitYaw, float& OutOrbitZoom)const
 {
 	const float HalfFOVRadians = FMath::DegreesToRadians<float>(InFOVDegrees) * 0.5f;
 
@@ -175,7 +176,7 @@ void FLGUIPrefabThumbnailScene::GetViewMatrixParameters(const float InFOVDegrees
 	OutOrbitYaw = ThumbnailInfo->OrbitYaw;
 	OutOrbitZoom = TargetDistance + ThumbnailInfo->OrbitZoom;
 }
-void FLGUIPrefabThumbnailScene::SetPrefab(class ULexUIPrefab* Prefab)
+void FLexUIPrefabThumbnailScene::SetPrefab(class ULexUIPrefab* Prefab)
 {
 	if (!CurrentPrefab.IsValid())
 	{
@@ -197,7 +198,7 @@ void FLGUIPrefabThumbnailScene::SetPrefab(class ULexUIPrefab* Prefab)
 		SpawnPreviewActor();
 	}
 }
-USceneThumbnailInfo* FLGUIPrefabThumbnailScene::GetSceneThumbnailInfo(const float TargetDistance)const
+USceneThumbnailInfo* FLexUIPrefabThumbnailScene::GetSceneThumbnailInfo(const float TargetDistance)const
 {
 	ULexUIPrefab* Prefab = CurrentPrefab.Get();
 	check(Prefab);

@@ -6,6 +6,7 @@
 #include "Tickable.h"
 #include "LexUIManager.generated.h"
 
+struct FLexUIHelperLineVertex;
 class ULexEventSystem;
 class ULexWidget;
 class ULexVisualBatchMesh;
@@ -87,6 +88,7 @@ public:
 	void SelectNone();
 	bool IsSelected(AActor* Actor)const;
 	TArray<TWeakObjectPtr<AActor>> GetSelectedActors()const{return SelectedActorArray;}
+	FSimpleMulticastDelegate OnSelectionChanged;
 private:
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 	TArray<TWeakObjectPtr<AActor>> SelectedActorArray;
@@ -171,7 +173,7 @@ public:
 	static void RemoveRootWidget(ULexWidget* InWidget);
 	const TArray<TWeakObjectPtr<ULexWidget>>& GetAllRootUIItemArray()const { return AllRootWidgetArray; }
 
-	ULexUISelection* GetSelection() { return Selection; }
+	static ULexUISelection* GetSelection(UWorld* InWorld);
 	
 	FSimpleMulticastDelegate EventOnOutlineChanged;
 #endif
@@ -224,6 +226,7 @@ public:
 	static void DrawDebugBox(UWorld* InWorld, const FVector& Center, const FMatrix44f& LocalToWorld, FVector const& Box, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
 	static void DrawDebugLineStream(UWorld* InWorld, const FMatrix44f& LocalToWorld, const TArray<FVector3f>& LineStreamPoints, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
 	static void DrawDebugLine(UWorld* InWorld, const FMatrix44f& LocalToWorld, const TArray<FVector3f>& LinePoints, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
+	static void DrawDebugLine(UWorld* InWorld, const FMatrix44f& LocalToWorld, const TArray<FLexUIHelperLineVertex>& LinePoints, void* Object, const FString& DebugName, bool ScreenOrWorld);
 private:
 	//this is cached when call GetEditorViewportClient
 	FEditorViewportClient* CacheViewportClient = nullptr;

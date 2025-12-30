@@ -10,12 +10,12 @@
 #include "Engine/World.h"
 #include "Interaction/UISelectableComponent.h"
 #include "Core/LexUISettings.h"
-#include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexVisual.h"
 #include "Engine/Engine.h"
 #include "Core/LexUIRender/LexUIRenderer.h"
 #include "Core/ILexUICultureChangedInterface.h"
 #include "Core/LexUIBehaviour.h"
+#include "Core/Actor/LexWidgetRootActor.h"
 #include "Event/LexEventSystem.h"
 #include "PrefabSystem/LexUIPrefabManager.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
@@ -166,9 +166,9 @@ bool ULexUIManagerObject::IsSelected(AActor* InObject)
 	{
 		return true;
 	}
-	if (auto Manager = ULexUIManagerWorldSubsystem::GetInstance(InObject->GetWorld()))
+	if (auto Selection = ULexUIManagerWorldSubsystem::GetSelection(InObject->GetWorld()))
 	{
-		return Manager->GetSelection()->IsSelected(InObject);
+		return Selection->IsSelected(InObject);
 	}
 	return false;
 }
@@ -211,8 +211,7 @@ void ULexUIManagerObject::OnAssetReimport(UObject* Asset)
 {
 	if (IsValid(Asset))
 	{
-		auto TextureAsset = Cast<UTexture2D>(Asset);
-		if (IsValid(TextureAsset))
+		if (auto TextureAsset = Cast<UTexture2D>(Asset))
 		{
 			bool bNeedToRebuildUI = false;
 			//find sprite data that reference this texture
@@ -233,6 +232,16 @@ void ULexUIManagerObject::OnAssetReimport(UObject* Asset)
 			if (bNeedToRebuildUI)
 			{
 				ULexUIManagerWorldSubsystem::RefreshAllUI();
+			}
+		}
+		else if (Asset->IsA<ULexUIPrefab>())
+		{
+			for (TObjectIterator<ALexWidgetRootActor> Itr; Itr; ++Itr)
+			{
+				if (Itr->GetWorld())
+				{
+					Itr->CheckPrefabVersion();
+				}
 			}
 		}
 	}
@@ -271,15 +280,18 @@ void ULexUIManagerObject::OnActorLabelChanged(AActor* Actor)
 void ULexUISelection::SelectActor(AActor* Actor)
 {
 	SelectedActorArray.Add(Actor);
+	OnSelectionChanged.Broadcast();
 }
 void ULexUISelection::SelectComponent(UActorComponent* Component)
 {
 	SelectedComponentArray.Add(Component);
+	OnSelectionChanged.Broadcast();
 }
 void ULexUISelection::SelectNone()
 {
 	SelectedActorArray.Empty();
 	SelectedComponentArray.Empty();
+	OnSelectionChanged.Broadcast();
 }
 
 bool ULexUISelection::IsSelected(AActor* Actor)const
@@ -756,6 +768,23 @@ void ULexUIManagerWorldSubsystem::DrawDebugLine(UWorld* InWorld, const FMatrix44
 		else
 		{
 			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperLineKey(Object, DebugName), FLexUIHelperLineRenderParameter(Lines, LocalToWorld));
+		}
+	}
+}
+
+void ULexUIManagerWorldSubsystem::DrawDebugLine(UWorld* InWorld, const FMatrix44f& LocalToWorld,
+	const TArray<FLexUIHelperLineVertex>& LinePoints, void* Object, const FString& DebugName, bool ScreenOrWorld)
+{
+	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, true);
+	if (ViewExtension.IsValid())
+	{
+		if (ScreenOrWorld)
+		{
+			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperLineKey(Object, DebugName), FLexUIHelperLineRenderParameter(LinePoints, LocalToWorld));
+		}
+		else
+		{
+			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperLineKey(Object, DebugName), FLexUIHelperLineRenderParameter(LinePoints, LocalToWorld));
 		}
 	}
 }
@@ -1332,6 +1361,15 @@ void ULexUIManagerWorldSubsystem::RemoveRootWidget(ULexWidget* InWidget)
 #endif
 		Instance->AllRootWidgetArray.RemoveSingle(InWidget);
 	}
+}
+
+ULexUISelection* ULexUIManagerWorldSubsystem::GetSelection(UWorld* InWorld)
+{
+	if (auto Instance = GetInstance(InWorld))
+	{
+		return Instance->Selection;
+	}
+	return nullptr;
 }
 #endif
 

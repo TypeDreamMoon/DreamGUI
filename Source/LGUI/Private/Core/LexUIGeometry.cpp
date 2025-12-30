@@ -2281,7 +2281,7 @@ void FLexUIGeometry::UpdateUIText(const FString& Content
 	fontSize = FMath::Clamp(fontSize, 0.0f, maxFontSize);
 	bool pixelPerfect = LexText->GetShouldAffectByPixelSnapping() && LexText->GetWidget()->GetPixelSnappingInHierarchy();
 	float rootCanvasScale = renderCanvas->GetRootCanvas()->GetCanvasScale();
-	float dynamicPixelsPerUnit = renderCanvas->GetActualDynamicPixelsPerUnit() * rootCanvasScale;
+	float dynamicPixelsPerUnit = LexText->GetDynamicPixelsPerUnit() * rootCanvasScale;
 	float oneDivideRootCanvasScale = 1.0f / rootCanvasScale;
 	float oneDivideDynamicPixelsPerUnit = 1.0f / dynamicPixelsPerUnit;
 	bool shouldScaleFontSizeWithRootCanvas = false;

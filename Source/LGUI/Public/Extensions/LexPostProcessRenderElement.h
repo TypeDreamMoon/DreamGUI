@@ -11,6 +11,10 @@ class ULexVisualPostProcess;
 /**
  * This component will grab post-process result image and display here. Not support rotate.
  * NOTE!!! This only valid when target PostProcess RenderType is set to RenderTarget and FullScreen is set to false.
+ * UV channel:
+ *		UV0: Rect UV from (0,0) to (1,1)
+ *		UV1: Check LexCanvas
+ *		UV2: TextureCoordinate for sampling PostProcess RenderTarget
  */
 UCLASS(ClassGroup = (LGUI), Blueprintable)
 class LGUI_API ULexPostProcessRenderElement : public ULexVisualBatchMesh

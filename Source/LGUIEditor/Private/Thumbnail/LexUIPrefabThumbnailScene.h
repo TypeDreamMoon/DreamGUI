@@ -2,16 +2,16 @@
 
 #pragma once
 
-#include "ThumbnailRendering/DefaultSizedThumbnailRenderer.h"
 #include "ThumbnailHelpers.h"
-#include "PrefabSystem/LexUIPrefab.h"
 
-class FLGUIPrefabThumbnailScene :public FThumbnailPreviewScene
+class ULexUIPrefab;
+
+class FLexUIPrefabThumbnailScene :public FThumbnailPreviewScene
 {
 public:
-	FLGUIPrefabThumbnailScene();
+	FLexUIPrefabThumbnailScene();
 	bool IsValidForVisualization();
-	void SetPrefab(class ULexUIPrefab* Prefab);
+	void SetPrefab(ULexUIPrefab* Prefab);
 protected:
 	virtual void GetViewMatrixParameters(const float InFOVDegrees, FVector& OutOrigin, float& OutOrbitPitch, float& OutOrbitYaw, float& OutOrbitZoom)const override;
 	virtual USceneThumbnailInfo* GetSceneThumbnailInfo(const float TargetDistance)const;
@@ -21,22 +21,22 @@ private:
 	void ClearOldActors();
 private:
 	int32 NumStartingActors;
-	TWeakObjectPtr<class ULexUIPrefab> CurrentPrefab;
+	TWeakObjectPtr<ULexUIPrefab> CurrentPrefab;
 	FText CachedPrefabContent;
 	FBoxSphereBounds PreviewActorsBound;
 	bool bIsUI = false;
 };
 
-class FLGUIPrefabInstanceThumbnailScene
+class FLexUIPrefabInstanceThumbnailScene
 {
 public:
-	FLGUIPrefabInstanceThumbnailScene();
+	FLexUIPrefabInstanceThumbnailScene();
 
-	TSharedPtr<FLGUIPrefabThumbnailScene> FindThumbnailScene(const FString& InPrefabPath) const;
-	TSharedRef<FLGUIPrefabThumbnailScene> EnsureThumbnailScene(const FString& InPrefabPath);
+	TSharedPtr<FLexUIPrefabThumbnailScene> FindThumbnailScene(const FString& InPrefabPath) const;
+	TSharedRef<FLexUIPrefabThumbnailScene> EnsureThumbnailScene(const FString& InPrefabPath);
 	void Clear();
 
 private:
-	TMap<FString, TSharedPtr<FLGUIPrefabThumbnailScene>> InstancedThumbnailScenes;
+	TMap<FString, TSharedPtr<FLexUIPrefabThumbnailScene>> InstancedThumbnailScenes;
 	const int32 MAX_NUM_SCENES = 400;
 };

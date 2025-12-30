@@ -165,7 +165,6 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, BlendDepth));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, DepthFade));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, bEnableDepthTest));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, bPreviewWithLexUIRenderer));
 			break;
 		case ELexRenderMode::WorldSpace_LexUI:
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTarget));
@@ -174,12 +173,10 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTargetSizeMode));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTargetResolutionScale));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, bEnableDepthTest));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, bPreviewWithLexUIRenderer));
 			break;
 		case ELexRenderMode::RenderTarget:
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, BlendDepth));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, DepthFade));
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, bPreviewWithLexUIRenderer));
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, TraceChannel));
 			break;
 		}
@@ -193,7 +190,6 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTargetSizeMode));
 		needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, RenderTargetResolutionScale));
 		needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, bEnableDepthTest));
-		needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, bPreviewWithLexUIRenderer));
 		needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, TraceChannel));
 
 		auto overrideParametersHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexCanvas, OverrideParameters));
@@ -201,10 +197,6 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		if (!TargetScriptArray[0]->GetOverrideDefaultMaterial())
 		{
 			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, DefaultMaterial));
-		}
-		if (!TargetScriptArray[0]->GetOverrideDynamicPixelsPerUnit())
-		{
-			needToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexCanvas, DynamicPixelsPerUnit));
 		}
 		if (!TargetScriptArray[0]->GetOverrideRequireNormalAndTangent())
 		{

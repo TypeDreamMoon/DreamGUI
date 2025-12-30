@@ -646,6 +646,14 @@ void ULexText::SetExpandMeshSize(float Value)
 		MarkVerticesDirty(false, true, true, false);
 	}
 }
+void ULexText::SetDynamicPixelsPerUnit(float Value)
+{
+	if (DynamicPixelsPerUnit != Value)
+	{
+		DynamicPixelsPerUnit = Value;
+		MarkVerticesDirty(false, true, true, false);
+	}
+}
 
 void ULexText::ClearCreatedRichTextImageObject()
 {

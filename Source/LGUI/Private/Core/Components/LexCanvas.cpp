@@ -130,13 +130,10 @@ void ULexCanvas::UpdateRootCanvas()
 		{
 			auto ActualRenderMode = GetActualRenderMode();
 #if WITH_EDITOR
-			if (bPreviewWithLexUIRenderer)
+			if (!GetWorld()->IsGameWorld())//edit mode
 			{
-				if (!GetWorld()->IsGameWorld())//edit mode
-				{
-					if (ActualRenderMode == ELexRenderMode::ScreenSpaceOverlay)
-						ActualRenderMode = ELexRenderMode::WorldSpace_LexUI;
-				}
+				if (ActualRenderMode == ELexRenderMode::ScreenSpaceOverlay)
+					ActualRenderMode = ELexRenderMode::WorldSpace_LexUI;
 			}
 #endif
 			switch (ActualRenderMode)
@@ -1612,119 +1609,7 @@ void ULexCanvas::UpdateDrawCallMesh_Implement()
 	{
 		FPlatformProcess::Sleep(0.001f);
 	}
-#if 1
-	//use ParallelFor to slightly optimize, mainly for the GetCombined function
-	FCriticalSection Mutex;
-	ParallelFor(UIDrawCallList.Num(), [&](int index)
-	{
-		auto DrawCallItem = UIDrawCallList[index];
-		switch (DrawCallItem->Type)
-		{
-		case ELexUIDrawCallType::DirectMesh:
-		{
-			auto MeshSection = DrawCallItem->DrawCallRenderSection;
-			if (!MeshSection.IsValid())
-			{
-				Mutex.Lock();
-				MeshSection = UIMesh->CreateRenderSection(ELexUIRenderSectionType::Mesh);
 
-				DrawCallItem->DrawCallRenderSection = MeshSection;
-				DrawCallItem->DirectMeshVisualObject->OnMeshDataReady();
-				UIMesh->CreateRenderSectionRenderData(MeshSection.Pin());
-				Mutex.Unlock();
-				//create new mesh section, need to sort it
-				bNeedToSortRenderPriority = true;
-				bNeedToUpdateBounds = true;
-				MarkRootCanvasNeedToUpdateChildrenCanvasBounds();
-			}
-		}
-		break;
-		case ELexUIDrawCallType::BatchMesh:
-		{
-			auto RenderSection = DrawCallItem->DrawCallRenderSection;
-			if (!RenderSection.IsValid())
-			{
-				Mutex.Lock();
-				RenderSection = UIMesh->CreateRenderSection(ELexUIRenderSectionType::Mesh);
-				Mutex.Unlock();
-				DrawCallItem->DrawCallRenderSection = RenderSection;
-				//create new mesh section, need to sort it
-				bNeedToSortRenderPriority = true;
-				DrawCallItem->bNeedToUpdateVertex = true;
-			}
-			if (DrawCallItem->bNeedToUpdateVertex)
-			{
-				auto RenderSectionPtr = RenderSection.Pin();
-				check(RenderSectionPtr->Type == ELexUIRenderSectionType::Mesh);
-				auto MeshSectionPtr = (FLexUIMeshSection*)RenderSectionPtr.Get();
-				MeshSectionPtr->vertices.Reset();
-				MeshSectionPtr->triangles.Reset();
-				DrawCallItem->GetCombined(MeshSectionPtr->vertices, MeshSectionPtr->triangles);
-				if (MeshSectionPtr->prevVertexCount != MeshSectionPtr->vertices.Num() || MeshSectionPtr->prevIndexCount != MeshSectionPtr->triangles.Num())
-				{
-					MeshSectionPtr->prevVertexCount = MeshSectionPtr->vertices.Num();
-					MeshSectionPtr->prevIndexCount = MeshSectionPtr->triangles.Num();
-					Mutex.Lock();
-					UIMesh->CreateRenderSectionRenderData(RenderSectionPtr);
-					Mutex.Unlock();
-				}
-				else
-				{
-					UIMesh->UpdateMeshSectionRenderData(RenderSectionPtr, true, GetActualRequireNormalAndTangent());
-				}
-				DrawCallItem->bNeedToUpdateVertex = false;
-				DrawCallItem->bVertexPositionChanged = false;
-				bNeedToUpdateBounds = true;
-				MarkRootCanvasNeedToUpdateChildrenCanvasBounds();
-			}
-		}
-		break;
-		case ELexUIDrawCallType::PostProcess:
-		{
-			//only LGUI renderer can render post process
-			if (this->GetActualRenderMode() == ELexRenderMode::WorldSpace)
-			{
-				return;
-			}
-
-			if (!DrawCallItem->DrawCallRenderSection.IsValid())
-			{
-				Mutex.Lock();
-				auto RenderSection = UIMesh->CreateRenderSection(ELexUIRenderSectionType::PostProcess);
-				auto ChildCanvasSection = (FLexUIPostProcessSection*)RenderSection.Get();
-				ChildCanvasSection->PostProcessVisualObject = DrawCallItem->PostProcessVisualObject;
-				UIMesh->CreateRenderSectionRenderData(RenderSection);
-				Mutex.Unlock();
-				DrawCallItem->DrawCallRenderSection = RenderSection;
-				//create new section, need to sort it
-				bNeedToSortRenderPriority = true;
-				bNeedToUpdateBounds = true;
-				MarkRootCanvasNeedToUpdateChildrenCanvasBounds();
-			}
-		}
-		break;
-		case ELexUIDrawCallType::ChildCanvas:
-		{
-			if (!DrawCallItem->DrawCallRenderSection.IsValid())
-			{
-				Mutex.Lock();
-				auto RenderSection = UIMesh->CreateRenderSection(ELexUIRenderSectionType::ChildCanvas);
-				auto ChildCanvasSection = (FLexUIChildCanvasSection*)RenderSection.Get();
-				ChildCanvasSection->ChildCanvasMeshComponent = DrawCallItem->ChildCanvas->GetUIMesh();
-				ChildCanvasSection->ChildCanvasMeshComponent->SetParentCanvasMeshComp(this->UIMesh.Get());
-				UIMesh->CreateRenderSectionRenderData(RenderSection);
-				Mutex.Unlock();
-				DrawCallItem->DrawCallRenderSection = RenderSection;
-				//create new section, need to sort it
-				bNeedToSortRenderPriority = true;
-				bNeedToUpdateBounds = true;
-				MarkRootCanvasNeedToUpdateChildrenCanvasBounds();
-			}
-		}
-		break;
-		}
-	});
-#else
 	for (int i = 0; i < UIDrawCallList.Num(); i++)
 	{
 		auto DrawCallItem = UIDrawCallList[i];
@@ -1824,7 +1709,7 @@ void ULexCanvas::UpdateDrawCallMesh_Implement()
 		break;
 		}
 	}
-#endif
+	
 	if (this->IsRootCanvas() && this->bRootCanvasNeedToUpdateChildrenCanvasBounds)
 	{
 		this->bRootCanvasNeedToUpdateChildrenCanvasBounds = false;
@@ -1842,16 +1727,8 @@ float ULexCanvas::GetLastRenderTime()const
 #if WITH_EDITOR
 	if (!GetWorld()->IsGameWorld())//edit mode
 	{
-		if (bPreviewWithLexUIRenderer)
-		{
-			if (TempRenderMode == ELexRenderMode::ScreenSpaceOverlay)
-				TempRenderMode = ELexRenderMode::WorldSpace_LexUI;
-		}
-		else
-		{
-			if (TempRenderMode == ELexRenderMode::ScreenSpaceOverlay)
-				TempRenderMode = ELexRenderMode::WorldSpace;
-		}
+		if (TempRenderMode == ELexRenderMode::ScreenSpaceOverlay)
+			TempRenderMode = ELexRenderMode::WorldSpace_LexUI;
 	}
 #endif
 	if (RenderModeIsLexRendererOrUERenderer(TempRenderMode))
@@ -1886,13 +1763,10 @@ void ULexCanvas::CheckUIMesh()const
 		{
 			auto ActualRenderMode = GetActualRenderMode();
 #if WITH_EDITOR
-			if (bPreviewWithLexUIRenderer)
+			if (!GetWorld()->IsGameWorld())//edit mode
 			{
-				if (!GetWorld()->IsGameWorld())//edit mode
-				{
-					if (ActualRenderMode == ELexRenderMode::ScreenSpaceOverlay)
-						ActualRenderMode = ELexRenderMode::WorldSpace_LexUI;
-				}
+				if (ActualRenderMode == ELexRenderMode::ScreenSpaceOverlay)
+					ActualRenderMode = ELexRenderMode::WorldSpace_LexUI;
 			}
 #endif
 			switch (ActualRenderMode)
@@ -2317,42 +2191,6 @@ void ULexCanvas::SetTraceChannel(TEnumAsByte<ETraceTypeQuery> InTraceChannel)
 	{
 		TraceChannel = InTraceChannel;
 	}
-}
-
-void ULexCanvas::SetDynamicPixelsPerUnit(float Value)
-{
-	if (DynamicPixelsPerUnit != Value)
-	{
-		DynamicPixelsPerUnit = Value;
-		for (int i = 0; i < UIDrawCallList.Num(); i++)
-		{
-			UIDrawCallList[i]->bVertexPositionChanged = true;
-		}
-		MarkCanvasUpdate(false, true, false);
-	}
-}
-
-float ULexCanvas::GetActualDynamicPixelsPerUnit()const
-{
-	if (IsRootCanvas())
-	{
-		return DynamicPixelsPerUnit;
-	}
-	else
-	{
-		if (GetOverrideDynamicPixelsPerUnit())
-		{
-			return DynamicPixelsPerUnit;
-		}
-		else
-		{
-			if (ParentCanvas.IsValid())
-			{
-				return ParentCanvas->GetActualDynamicPixelsPerUnit();
-			}
-		}
-	}
-	return DynamicPixelsPerUnit;
 }
 
 float ULexCanvas::GetActualBlendDepth()const

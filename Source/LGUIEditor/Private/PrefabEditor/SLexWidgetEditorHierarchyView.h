@@ -66,7 +66,6 @@ protected:
 	};
 	/** Recursively expands the models based on the expansion set. */
 	void RecursiveExpand(ULexWidget* Widget, EExpandBehavior ExpandBehavior);
-	void RestoreSelectedItems();
 	void OnExpansionChanged(TWeakObjectPtr<ULexWidget> Item, bool bExpanded);
 	void SetItemExpansionRecursive(TWeakObjectPtr<ULexWidget> Model, bool bInExpansionState);
 	void OnSelectionChanged(TWeakObjectPtr<ULexWidget> SelectedItem, ESelectInfo::Type SelectInfo);

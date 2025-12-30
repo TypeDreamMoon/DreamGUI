@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Thumbnail/LGUIPrefabThumbnailRenderer.h"
+#include "Thumbnail/LexUIPrefabThumbnailRenderer.h"
 #include "RendererInterface.h"
 #include "SceneView.h"
 #include "Engine/EngineTypes.h"
@@ -8,22 +8,22 @@
 #include "Interfaces/IPluginManager.h"
 #include "PrefabSystem/LexUIPrefab.h"
 
-ULGUIPrefabThumbnailRenderer::ULGUIPrefabThumbnailRenderer()
+ULexUIPrefabThumbnailRenderer::ULexUIPrefabThumbnailRenderer()
 {
 
 }
 
-bool ULGUIPrefabThumbnailRenderer::CanVisualizeAsset(UObject* Object)
+bool ULexUIPrefabThumbnailRenderer::CanVisualizeAsset(UObject* Object)
 {
 	if (Object->IsA(ULexUIPrefab::StaticClass()))
 		return true;
 	return false;
 }
-void ULGUIPrefabThumbnailRenderer::Draw(UObject* Object, int32 X, int32 Y, uint32 Width, uint32 Height, FRenderTarget* RenderTarget, FCanvas* Canvas, bool bAdditionalViewFamily)
+void ULexUIPrefabThumbnailRenderer::Draw(UObject* Object, int32 X, int32 Y, uint32 Width, uint32 Height, FRenderTarget* RenderTarget, FCanvas* Canvas, bool bAdditionalViewFamily)
 {
 	if (auto Prefab = Cast<ULexUIPrefab>(Object))
 	{
-		TSharedRef<FLGUIPrefabThumbnailScene> ThumbnailScene = ThumbnailScenes.EnsureThumbnailScene(Prefab->GetPathName());
+		TSharedRef<FLexUIPrefabThumbnailScene> ThumbnailScene = ThumbnailScenes.EnsureThumbnailScene(Prefab->GetPathName());
 		ThumbnailScene->SetPrefab(Prefab);
 		if (!ThumbnailScene->IsValidForVisualization())
 			return;
@@ -45,7 +45,7 @@ void ULGUIPrefabThumbnailRenderer::Draw(UObject* Object, int32 X, int32 Y, uint3
 		Prefab->bThumbnailDirty = false;
 	}
 }
-void ULGUIPrefabThumbnailRenderer::BeginDestroy()
+void ULexUIPrefabThumbnailRenderer::BeginDestroy()
 {
 	ThumbnailScenes.Clear();
 	Super::BeginDestroy();

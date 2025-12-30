@@ -266,11 +266,6 @@ void SLexWidgetEditorHierarchyView::OnEditorSelectionChanged()
 	if (!bIsUpdatingSelection)
 	{
 		WidgetTreeView->ClearSelection();
-		// if ( RootWidgets.Num() > 0 )
-		// {
-		// 	RootWidgets[0]->RefreshSelection();
-		// }
-		RestoreSelectedItems();
 
 		auto SelectedWidgets = Manager.Pin()->GetSelectedWidgets();
 		if (SelectedWidgets.Num() == 0)
@@ -285,6 +280,17 @@ void SLexWidgetEditorHierarchyView::OnEditorSelectionChanged()
 				SelectedItems.Add(Item.Get());
 			}
 			SetSelectionsByNodeObjects(SelectedItems);
+
+			//expand
+			if (SelectedItems.Num() == 1)
+			{
+				ULexWidget* Widget = SelectedItems[0].Get();
+				while (Widget != nullptr)
+				{
+					WidgetTreeView->SetItemExpansion(Widget, true);
+					Widget = Widget->GetUIParent();
+				}
+			}
 		}
 	}
 }
@@ -530,18 +536,6 @@ void SLexWidgetEditorHierarchyView::RecursiveExpand(ULexWidget* Widget, EExpandB
 	{
 		RecursiveExpand(Child, ExpandBehavior);
 	}
-}
-
-void SLexWidgetEditorHierarchyView::RestoreSelectedItems()
-{
-	WidgetTreeView->SetSelectionMode(ESelectionMode::Single);
-
-	// for ( TSharedPtr<FHierarchyModel>& Model : RootWidgets )
-	// {
-	// 	RecursiveSelection(Model);
-	// }
-
-	WidgetTreeView->SetSelectionMode(ESelectionMode::Multi);
 }
 
 void SLexWidgetEditorHierarchyView::SetItemExpansionRecursive(TWeakObjectPtr<ULexWidget> Model, bool bInExpansionState)

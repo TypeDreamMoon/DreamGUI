@@ -60,6 +60,8 @@ public:
 private:
 	virtual bool OnRequestClose()override;
 	// End of FAssetEditorToolkit
+	void SyncSelection();
+	bool bIsSelecting = false;
 public:
 	/** FGCObject interface */
 	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
@@ -112,7 +114,7 @@ public:
 private:
 	TObjectPtr<ULexUIPrefab> PrefabBeingEdited = nullptr;
 	TObjectPtr<ULexUIPrefabHelperObject> PrefabHelperObject = nullptr;
-	static TArray<FLGUIPrefabEditor*> LGUIPrefabEditorInstanceCollection;
+	static TArray<FLGUIPrefabEditor*> PrefabEditorInstanceCollection;
 
 	TSharedPtr<SLGUIPrefabEditorViewport> ViewportPtr;
 	TSharedPtr<SLexUIPrefabEditorDetails> DetailsPtr;

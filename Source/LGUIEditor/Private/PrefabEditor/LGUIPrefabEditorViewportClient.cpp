@@ -19,7 +19,6 @@
 #include "Editor/UnrealEdEngine.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Editor.h"
-#include "PrefabSystem/LexUIPrefabManager.h"
 #include "LGUIPrefabEditorScene.h"
 #include "LGUIPrefabEditor.h"
 #include "MouseDeltaTracker.h"
@@ -33,15 +32,311 @@
 #include "InputState.h"
 #include "LevelViewportClickHandlers.h"
 #include "HModel.h"
+#include "LGUIEditorModule.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "LGUIPrefabViewportClickHandlers.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
+#include "Core/LexUIRender/LexUIVertex.h"
+#include "Utils/LexUIUtils.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditorViewportClient"
 
 IMPLEMENT_HIT_PROXY(HLevelSocketProxy, HHitProxy);
+
+class FLexUITransformWidget
+{
+private:
+	int PressMouseX = 0, PressMouseY = 0; FVector PressAxisHitPoint = FVector::Zero();
+	FTransform PressMatrix = FTransform::Identity;
+	FTransform LocalToWorldMatrix = FTransform::Identity;
+	TWeakObjectPtr<ULexUIManagerWorldSubsystem> LexUIManager;
+	TWeakObjectPtr<UWorld> World;
+	TArray<FLexUIHelperLineVertex> LineAxis;
+	const float AxisLength = 100.0f;
+	const float AxisPlaneSize = 30.0f;
+	FColor ColorAxisX = FColor::Red, ColorAxisY = FColor::Green, ColorAxisZ = FColor::Blue;
+	FColor HighlightColor = FColor::Yellow;
+	FString DebugName;
+	const float HitDistance = 10.0f;
+	enum class EAxisType
+	{
+		None, X, Y, Z, YZ, ZX, XY, 
+	};
+	EAxisType AxisType = EAxisType::None;
+	bool bIsMousePressedAtThisFrame = false;
+	bool bIsMouseReleasedAtThisFrame = false;
+	bool bIsDragging = false;
+	TWeakObjectPtr<ULexWidget> SelectedWidget;
+	FLGUIPrefabEditorViewportClient* ViewportClient = nullptr;
+	FSceneViewFamilyContext* ViewFamily = nullptr;
+	void UpdateAxis()
+	{
+		auto SceneView = ViewportClient->CalcSceneView( ViewFamily );
+		auto MouseX = ViewportClient->Viewport->GetMouseX();
+		auto MouseY = ViewportClient->Viewport->GetMouseY();
+		if (bIsDragging)
+		{
+			if (SelectedWidget.IsValid())
+			{
+				FVector RayOrigin, RayDirection;
+				FSceneView::DeprojectScreenToWorld(FVector2D(MouseX, MouseY), SceneView->UnscaledViewRect, SceneView->ViewMatrices.GetInvViewProjectionMatrix(), RayOrigin, RayDirection);
+
+				auto Center = LocalToWorldMatrix.GetTranslation();
+				FVector A = FVector::Zero(), B = FVector(BIG_NUMBER);
+				const float Far = 1e6f;
+				auto LineStartOfMouse = RayOrigin - RayDirection * Far;
+				auto LineEndOfMouse = RayOrigin + RayDirection * Far;
+				FVector Diff = FVector::ZeroVector;
+				switch (AxisType)
+				{
+				case EAxisType::YZ:
+					{
+						auto HitPoint = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, LocalToWorldMatrix.GetUnitAxis(EAxis::X));
+						Diff = HitPoint - PressAxisHitPoint;
+					}
+					break;
+				case EAxisType::ZX:
+					{
+						auto HitPoint = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, LocalToWorldMatrix.GetUnitAxis(EAxis::Y));
+						Diff = HitPoint - PressAxisHitPoint;
+					}
+					break;
+				case EAxisType::XY:
+					{
+						auto HitPoint = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, LocalToWorldMatrix.GetUnitAxis(EAxis::Z));
+						Diff = HitPoint - PressAxisHitPoint;
+					}
+					break;
+				case EAxisType::X:
+					{
+						FMath::SegmentDistToSegment(LineStartOfMouse, LineEndOfMouse, LocalToWorldMatrix.TransformPosition(FVector(-Far, 0, 0)), LocalToWorldMatrix.TransformPosition(FVector(Far, 0, 0)), A, B);
+						Diff = B - PressAxisHitPoint;
+					}
+					break;
+				case EAxisType::Y:
+					{
+						FMath::SegmentDistToSegment(LineStartOfMouse, LineEndOfMouse, LocalToWorldMatrix.TransformPosition(FVector(0, -Far, 0)), LocalToWorldMatrix.TransformPosition(FVector(0, Far, 0)), A, B);
+						Diff = B - PressAxisHitPoint;
+					}
+					break;
+				case EAxisType::Z:
+					{
+						FMath::SegmentDistToSegment(LineStartOfMouse, LineEndOfMouse, LocalToWorldMatrix.TransformPosition(FVector(0, 0, -Far)), LocalToWorldMatrix.TransformPosition(FVector(0, 0, Far)), A, B);
+						Diff = B - PressAxisHitPoint;
+					}
+					break;
+				}
+				LocalToWorldMatrix.SetTranslation(PressMatrix.GetTranslation() + Diff);
+				FLexUIUtils::ChangePropertyWithNotify(SelectedWidget.Get(), USceneComponent::GetRelativeLocationPropertyName(), [=, this]
+				{
+					SelectedWidget->SetWorldTransform(LocalToWorldMatrix);
+				});
+			}
+		}
+		else
+		{
+			//reset color
+			{
+				for (int i = 0; i < 18; i++)
+				{
+					LineAxis[i].Color = i < 6 ? ColorAxisX : (i < 12 ? ColorAxisY : ColorAxisZ);
+				}
+			}
+			
+			const float Far = 1e6f;
+			FVector RayOrigin, RayDirection;
+			FSceneView::DeprojectScreenToWorld(FVector2D(MouseX, MouseY), SceneView->UnscaledViewRect, SceneView->ViewMatrices.GetInvViewProjectionMatrix(), RayOrigin, RayDirection);
+			FVector LineEnd = RayOrigin + RayDirection * Far;
+
+			auto Center = LocalToWorldMatrix.GetTranslation();
+
+			//yz plane
+			{
+				auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, LocalToWorldMatrix.GetUnitAxis(EAxis::X));
+				auto IntersectPointLocalSpace = LocalToWorldMatrix.InverseTransformPosition(IntersectPoint);
+				bool IsHit = IntersectPointLocalSpace.Y > 0 && IntersectPointLocalSpace.Y < AxisPlaneSize && IntersectPointLocalSpace.Z > 0 && IntersectPointLocalSpace.Z < AxisPlaneSize;
+				LineAxis[2].Color = LineAxis[3].Color = LineAxis[4].Color = LineAxis[5].Color =
+					IsHit ? HighlightColor : ColorAxisX;
+				if (IsHit)
+				{
+					AxisType = EAxisType::YZ;
+					if (bIsMousePressedAtThisFrame)
+					{
+						PressAxisHitPoint = IntersectPoint;
+					}
+					return;
+				}
+			}
+			//zx plane
+			{
+				auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, LocalToWorldMatrix.GetUnitAxis(EAxis::Y));
+				auto IntersectPointLocalSpace = LocalToWorldMatrix.InverseTransformPosition(IntersectPoint);
+				bool IsHit = IntersectPointLocalSpace.Z > 0 && IntersectPointLocalSpace.Z < AxisPlaneSize && IntersectPointLocalSpace.X > 0 && IntersectPointLocalSpace.X < AxisPlaneSize;
+				LineAxis[8].Color = LineAxis[9].Color = LineAxis[10].Color = LineAxis[11].Color =
+					IsHit ? HighlightColor : ColorAxisY;
+				if (IsHit)
+				{
+					AxisType = EAxisType::ZX;
+					if (bIsMousePressedAtThisFrame)
+					{
+						PressAxisHitPoint = IntersectPoint;
+					}
+					return;
+				}
+			}
+			//xy plane
+			{
+				auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, LocalToWorldMatrix.GetUnitAxis(EAxis::Z));
+				auto IntersectPointLocalSpace = LocalToWorldMatrix.InverseTransformPosition(IntersectPoint);
+				bool IsHit = IntersectPointLocalSpace.Z < AxisPlaneSize && IntersectPointLocalSpace.Z > 0 && IntersectPointLocalSpace.X < AxisPlaneSize && IntersectPointLocalSpace.X > 0;
+				LineAxis[14].Color = LineAxis[15].Color = LineAxis[16].Color = LineAxis[17].Color =
+					IsHit ? HighlightColor : ColorAxisZ;
+				if (IsHit)
+				{
+					AxisType = EAxisType::XY;
+					if (bIsMousePressedAtThisFrame)
+					{
+						PressAxisHitPoint = IntersectPoint;
+					}
+					return;
+				}
+			}
+			
+			FVector A = FVector::Zero(), B = FVector(BIG_NUMBER);
+
+			FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, LocalToWorldMatrix.TransformPosition(FVector(AxisLength, 0, 0)), A, B);
+			auto DistanceToX = FVector::Dist(A, B);
+			LineAxis[0].Color = LineAxis[1].Color = DistanceToX < HitDistance ? HighlightColor : ColorAxisX;
+			if (DistanceToX < HitDistance)
+			{
+				AxisType = EAxisType::X;
+				if (bIsMousePressedAtThisFrame)
+				{
+					PressAxisHitPoint = B;
+				}
+				return;
+			}
+
+			FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, LocalToWorldMatrix.TransformPosition(FVector(0, AxisLength, 0)), A, B);
+			auto DistanceToY = FVector::Dist(A, B);
+			LineAxis[6].Color = LineAxis[7].Color = DistanceToY < HitDistance ? HighlightColor : ColorAxisY;
+			if (DistanceToY < HitDistance)
+			{
+				AxisType = EAxisType::Y;
+				if (bIsMousePressedAtThisFrame)
+				{
+					PressAxisHitPoint = B;
+				}
+				return;
+			}
+
+			FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, LocalToWorldMatrix.TransformPosition(FVector(0, 0, AxisLength)), A, B);
+			auto DistanceToZ = FVector::Dist(A, B);
+			LineAxis[12].Color = LineAxis[13].Color = DistanceToZ < HitDistance ? HighlightColor : ColorAxisZ;
+			if (DistanceToZ < HitDistance)
+			{
+				AxisType = EAxisType::Z;
+				if (bIsMousePressedAtThisFrame)
+				{
+					PressAxisHitPoint = B;
+				}
+				return;
+			}
+		}
+	}
+	TUniquePtr<FScopedTransaction> Transaction = nullptr;
+public:
+	FLexUITransformWidget(UWorld* InWorld, ULexWidget* InWidget, FLGUIPrefabEditorViewportClient* InViewportClient)
+	{
+		World = InWorld;
+		SelectedWidget = InWidget;
+		LocalToWorldMatrix = SelectedWidget->GetComponentTransform();
+		LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(InWorld);
+		DebugName = TEXT("LexUITransformWidget");
+		
+		{
+			//axis x
+			new(LineAxis) FLexUIHelperLineVertex(FVector3f(0,0,0), ColorAxisX);
+			new(LineAxis) FLexUIHelperLineVertex(FVector3f(AxisLength,0,0), ColorAxisX);
+			//axis yz
+			new(LineAxis) FLexUIHelperLineVertex(FVector3f(0, AxisPlaneSize, 0), ColorAxisX);
+			new(LineAxis) FLexUIHelperLineVertex(FVector3f(0, AxisPlaneSize, AxisPlaneSize), ColorAxisX);
+			new(LineAxis) FLexUIHelperLineVertex(FVector3f(0, 0,  AxisPlaneSize), ColorAxisX);
+			new(LineAxis) FLexUIHelperLineVertex(FVector3f(0, AxisPlaneSize, AxisPlaneSize), ColorAxisX);
+
+			//axis y
+			new(LineAxis) FLexUIHelperLineVertex(FVector3f(0,0, 0), ColorAxisY);
+			new(LineAxis) FLexUIHelperLineVertex(FVector3f(0,AxisLength, 0), ColorAxisY);
+			//axis zx
+			new(LineAxis) FLexUIHelperLineVertex(FVector3f(AxisPlaneSize, 0, 0), ColorAxisY);
+			new(LineAxis) FLexUIHelperLineVertex(FVector3f(AxisPlaneSize, 0, AxisPlaneSize), ColorAxisY);
+			new(LineAxis) FLexUIHelperLineVertex(FVector3f(0, 0, AxisPlaneSize), ColorAxisY);
+			new(LineAxis) FLexUIHelperLineVertex(FVector3f(AxisPlaneSize, 0, AxisPlaneSize), ColorAxisY);
+
+			//axis z
+			new(LineAxis) FLexUIHelperLineVertex(FVector3f(0,0,0), ColorAxisZ);
+			new(LineAxis) FLexUIHelperLineVertex(FVector3f(0,0,AxisLength), ColorAxisZ);
+			//axis xy
+			new(LineAxis) FLexUIHelperLineVertex(FVector3f(AxisPlaneSize, 0,0), ColorAxisZ);
+			new(LineAxis) FLexUIHelperLineVertex(FVector3f(AxisPlaneSize, AxisPlaneSize, 0), ColorAxisZ);
+			new(LineAxis) FLexUIHelperLineVertex(FVector3f(0, AxisPlaneSize, 0), ColorAxisZ);
+			new(LineAxis) FLexUIHelperLineVertex(FVector3f(AxisPlaneSize, AxisPlaneSize, 0), ColorAxisZ);
+		}
+
+		ViewportClient = InViewportClient;
+		ViewFamily = new FSceneViewFamilyContext(FSceneViewFamily::ConstructionValues(
+			InViewportClient->Viewport,
+			InViewportClient->GetScene(),
+			InViewportClient->EngineShowFlags)
+			.SetRealtimeUpdate( true ) );
+	}
+	~FLexUITransformWidget()
+	{
+		delete ViewFamily;
+	}
+	void Tick()
+	{
+		UpdateAxis();
+		ULexUIManagerWorldSubsystem::DrawDebugLine(World.Get(), FMatrix44f(LocalToWorldMatrix.ToMatrixWithScale()), LineAxis, this, DebugName, false);
+	}
+	bool IsDragging()const{return bIsDragging;}
+	bool HandleInputKey(const FInputKeyEventArgs& EventArgs)
+	{
+		if (EventArgs.Key == EKeys::LeftMouseButton)
+		{
+			if (EventArgs.Event == IE_Pressed)
+			{
+				bIsMousePressedAtThisFrame = true;
+				UpdateAxis();
+				bIsMousePressedAtThisFrame = false;
+				if (AxisType != EAxisType::None)
+				{
+					bIsDragging = true;
+					PressMouseX = EventArgs.Viewport->GetMouseX();
+					PressMouseY = EventArgs.Viewport->GetMouseY();
+					PressMatrix = LocalToWorldMatrix;
+					Transaction = MakeUnique<FScopedTransaction>(LOCTEXT("MoveWidget", "Move Widget"));
+					SelectedWidget->Modify();
+					return true;
+				}
+			}
+			else if (EventArgs.Event == IE_Released)
+			{
+				bIsMouseReleasedAtThisFrame = true;
+				AxisType = EAxisType::None;
+				if (bIsDragging)
+				{
+					bIsDragging = false;
+					Transaction.Reset();
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+};
 
 FLGUIPrefabEditorViewportClient::FLGUIPrefabEditorViewportClient(FLGUIPrefabEditorScene& InPreviewScene
 	, TWeakPtr<FLGUIPrefabEditor> InPrefabEditorPtr
@@ -51,8 +346,7 @@ FLGUIPrefabEditorViewportClient::FLGUIPrefabEditorViewportClient(FLGUIPrefabEdit
 	, TrackingTransaction()
 	, CachedElementsToManipulate(UTypedElementRegistry::GetInstance()->CreateElementList())
 {
-	this->PrefabEditorPtr = InPrefabEditorPtr;
-
+	PrefabEditorPtr = InPrefabEditorPtr;
 	// The level editor fully supports mode tools and isn't doing any incompatible stuff with the Widget
 	ModeTools->SetWidgetMode(UE::Widget::WM_Translate);
 	Widget->SetUsesEditorModeTools(ModeTools.Get());
@@ -81,10 +375,7 @@ FLGUIPrefabEditorViewportClient::FLGUIPrefabEditorViewportClient(FLGUIPrefabEdit
 	EngineShowFlags.SetSelection(true);
 	EngineShowFlags.SetSelectionOutline(true);
 
-	if (UWorld* PreviewWorld = this->GetWorld())
-	{
-		PreviewWorld->bAllowAudioPlayback = false;
-	}
+	PrefabScene->GetWorld()->bAllowAudioPlayback = false;
 
 	FVector InitialViewLocation;
 	FRotator InitialViewRotation;
@@ -95,10 +386,27 @@ FLGUIPrefabEditorViewportClient::FLGUIPrefabEditorViewportClient(FLGUIPrefabEdit
 	this->ViewportType = InitialViewportType;
 	SetViewRotation(InitialViewRotation);
 	SetLookAtLocation(InitialViewOrbitLocation);
+
+	OnSelectionChangedDelegateHandle = PrefabEditorPtr.Pin()->OnSelectedWidgetsChanged.AddLambda([=, this]()
+	{
+		auto SelectedWidgets = PrefabEditorPtr.Pin()->GetSelectedWidgets();
+		if (SelectedWidgets.Num() == 1)
+		{
+			TransformWidget = MakeUnique<FLexUITransformWidget>(PrefabScene->GetWorld(), SelectedWidgets[0].Get(), this);
+		}
+		else
+		{
+			TransformWidget.Reset();
+		}
+	});
 }
 
 FLGUIPrefabEditorViewportClient::~FLGUIPrefabEditorViewportClient()
 {
+	if (PrefabEditorPtr.IsValid())
+	{
+		PrefabEditorPtr.Pin()->OnSelectedWidgetsChanged.Remove(OnSelectionChangedDelegateHandle);
+	}
 }
 
 
@@ -334,16 +642,26 @@ void FLGUIPrefabEditorViewportClient::Tick(float DeltaSeconds)
 {
 	FEditorViewportClient::Tick(DeltaSeconds);
 
-	float RequestDelta = DeltaSeconds;
+	TickWorld(DeltaSeconds);
+
+	if (TransformWidget.IsValid())
 	{
-		TickWorld(RequestDelta);
+		TransformWidget->Tick();
 	}
 }
 
 
 bool FLGUIPrefabEditorViewportClient::InputKey(const FInputKeyEventArgs& EventArgs)
 {
-	bool bHandled = GUnrealEd->ComponentVisManager.HandleInputKey(this, EventArgs.Viewport, EventArgs.Key, EventArgs.Event);
+	bool bHandled = false;
+	if (TransformWidget.IsValid())
+	{
+		TransformWidget->HandleInputKey(EventArgs);
+	}
+	if (!bHandled)
+	{
+		bHandled = GUnrealEd->ComponentVisManager.HandleInputKey(this, EventArgs.Viewport, EventArgs.Key, EventArgs.Event);
+	}
 	if (!bHandled)
 	{
 		bool Res = FEditorViewportClient::InputKey(EventArgs);
@@ -558,6 +876,11 @@ void FLGUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy* 
 
 bool FLGUIPrefabEditorViewportClient::InputWidgetDelta(FViewport* InViewport, EAxisList::Type InCurrentAxis, FVector& Drag, FRotator& Rot, FVector& Scale)
 {
+	if (TransformWidget.IsValid() && TransformWidget->IsDragging())
+	{
+		return true;
+	}
+	
 	if (GUnrealEd->ComponentVisManager.IsActive() && GUnrealEd->ComponentVisManager.HandleInputDelta(this, InViewport, Drag, Rot, Scale))
 	{
 		return true;
@@ -711,44 +1034,37 @@ void FLGUIPrefabEditorViewportClient::NudgeSelectedObjects(const struct FInputEv
 	const int32 MouseX = InViewport->GetMouseX();
 	const int32 MouseY = InViewport->GetMouseY();
 
+	if (Event == IE_Pressed)
+	{
+		GEditor->BeginTransaction(LOCTEXT("MoveWidget", "Move Widget"));
+		for (auto LexWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
+		{
+			LexWidget->Modify();
+		}
+	}
+	else if (Event == IE_Released)
+	{
+		GEditor->EndTransaction();
+	}
+	
 	if (Event == IE_Pressed || Event == IE_Repeat)
 	{
-		// If this is a pressed event, start tracking.
-		if (!bIsTracking && Event == IE_Pressed)
+		FVector2D MouseDelta(0,0);
+		if (Key == EKeys::Left) MouseDelta.X = -1;
+		else if (Key == EKeys::Right) MouseDelta.X = 1;
+		else if (Key == EKeys::Up) MouseDelta.Y = 1;
+		else if (Key == EKeys::Down) MouseDelta.Y = -1;
+		if (GetDefault<ULevelEditorViewportSettings>()->bEnableActorSnap)
 		{
-			// without the check for !bIsTracking, the following code would cause a new transaction to be created
-			// for each "nudge" that occurred while the key was held down.  Disabling this code prevents the transaction
-			// from being constantly recreated while as long as the key is held, so that the entire move is considered an atomic action (and
-			// doing undo reverts the entire movement, as opposed to just the last nudge that occurred while the key was held down)
-			MouseDeltaTracker->StartTracking(this, MouseX, MouseY, InputState, true);
-			bIsTracking = true;
+			MouseDelta *= GEditor->GetGridSize();
 		}
-
-		FIntPoint StartMousePos;
-		InViewport->GetMousePos(StartMousePos);
-		FKey VirtualKey = EKeys::MouseX;
-		EAxisList::Type VirtualAxis = GetHorizAxis();
-		float VirtualDelta = GEditor->GetGridSize() * (Key == EKeys::Left ? -1 : 1);
-		if (Key == EKeys::Up || Key == EKeys::Down)
+		
+		for (auto LexWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
 		{
-			VirtualKey = EKeys::MouseY;
-			VirtualAxis = GetVertAxis();
-			VirtualDelta = GEditor->GetGridSize() * (Key == EKeys::Up ? 1 : -1);
+			auto AnchoredPos = LexWidget->GetAnchoredPosition();
+			AnchoredPos += MouseDelta;
+			LexWidget->SetAnchoredPosition(AnchoredPos);
 		}
-
-		bWidgetAxisControlledByDrag = false;
-		Widget->SetCurrentAxis(VirtualAxis);
-		MouseDeltaTracker->AddDelta(this, VirtualKey, static_cast<int32>(VirtualDelta), 1);
-		Widget->SetCurrentAxis(VirtualAxis);
-		UpdateMouseDelta();
-		InViewport->SetMouse(StartMousePos.X, StartMousePos.Y);
-	}
-	else if (bIsTracking && Event == IE_Released)
-	{
-		bWidgetAxisControlledByDrag = false;
-		MouseDeltaTracker->EndTracking(this);
-		bIsTracking = false;
-		Widget->SetCurrentAxis(EAxisList::None);
 	}
 
 	RedrawAllViewportsIntoThisScene();

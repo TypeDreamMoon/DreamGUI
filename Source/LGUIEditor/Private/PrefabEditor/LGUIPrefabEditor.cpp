@@ -1,7 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "LGUIPrefabEditor.h"
-#include "LGUIEditorModule.h"
 #include "LGUIPrefabEditorViewport.h"
 #include "LGUIPrefabEditorScene.h"
 #include "LexUIPrefabEditorDetails.h"
@@ -33,7 +32,7 @@
 
 const FName PrefabEditorAppName = FName(TEXT("LexUIPrefabEditorApp"));
 
-TArray<FLGUIPrefabEditor*> FLGUIPrefabEditor::LGUIPrefabEditorInstanceCollection;
+TArray<FLGUIPrefabEditor*> FLGUIPrefabEditor::PrefabEditorInstanceCollection;
 
 struct FLGUIPrefabEditorTabs
 {
@@ -58,7 +57,7 @@ FLGUIPrefabEditor::FLGUIPrefabEditor()
 	:PreviewScene(FLGUIPrefabEditorScene::ConstructionValues().AllowAudioPlayback(true).ShouldSimulatePhysics(false).SetEditor(true).SetName(GetPrefabWorldName()))
 {
 	PrefabHelperObject = NewObject<ULexUIPrefabHelperObject>(GetTransientPackage(), NAME_None, EObjectFlags::RF_Transactional);
-	LGUIPrefabEditorInstanceCollection.Add(this);
+	PrefabEditorInstanceCollection.Add(this);
 
 	GEditor->RegisterForUndo(this);
 }
@@ -67,17 +66,18 @@ FLGUIPrefabEditor::~FLGUIPrefabEditor()
 	PrefabHelperObject->ConditionalBeginDestroy();
 	PrefabHelperObject = nullptr;
 
-	LGUIPrefabEditorInstanceCollection.Remove(this);
+	PrefabEditorInstanceCollection.Remove(this);
 
 	ULexUIManagerObject::MarkBroadcastLevelActorListChanged();
  	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->EventOnOutlineChanged.RemoveAll(this);
+	ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->OnSelectionChanged.RemoveAll(this);
 
 	GEditor->UnregisterForUndo(this);
 }
 
 FLGUIPrefabEditor* FLGUIPrefabEditor::GetEditorForPrefabIfValid(ULexUIPrefab* InPrefab)
 {
-	for (auto Instance : LGUIPrefabEditorInstanceCollection)
+	for (auto Instance : PrefabEditorInstanceCollection)
 	{
 		if (Instance->PrefabBeingEdited == InPrefab)
 		{
@@ -89,7 +89,7 @@ FLGUIPrefabEditor* FLGUIPrefabEditor::GetEditorForPrefabIfValid(ULexUIPrefab* In
 
 ULexUIPrefabHelperObject* FLGUIPrefabEditor::GetEditorPrefabHelperObjectForActor(AActor* InActor)
 {
-	for (auto Instance : LGUIPrefabEditorInstanceCollection)
+	for (auto Instance : PrefabEditorInstanceCollection)
 	{
 		if (InActor->GetWorld() == Instance->GetWorld())
 		{
@@ -101,7 +101,7 @@ ULexUIPrefabHelperObject* FLGUIPrefabEditor::GetEditorPrefabHelperObjectForActor
 
 bool FLGUIPrefabEditor::WorldIsPrefabEditor(UWorld* InWorld)
 {
-	for (auto Instance : LGUIPrefabEditorInstanceCollection)
+	for (auto Instance : PrefabEditorInstanceCollection)
 	{
 		if (Instance->GetWorld() == InWorld)
 		{
@@ -113,7 +113,7 @@ bool FLGUIPrefabEditor::WorldIsPrefabEditor(UWorld* InWorld)
 
 bool FLGUIPrefabEditor::ActorIsRootAgent(AActor* InActor)
 {
-	for (auto Instance : LGUIPrefabEditorInstanceCollection)
+	for (auto Instance : PrefabEditorInstanceCollection)
 	{
 		if (InActor == Instance->GetPreviewScene().GetRootAgentActor())
 		{
@@ -125,7 +125,7 @@ bool FLGUIPrefabEditor::ActorIsRootAgent(AActor* InActor)
 
 void FLGUIPrefabEditor::IterateAllPrefabEditor(const TFunction<void(FLGUIPrefabEditor*)>& InFunction)
 {
-	for (auto Instance : LGUIPrefabEditorInstanceCollection)
+	for (auto Instance : PrefabEditorInstanceCollection)
 	{
 		InFunction(Instance);
 	}
@@ -265,6 +265,13 @@ bool FLGUIPrefabEditor::OnRequestClose()
 	return true;
 }
 
+void FLGUIPrefabEditor::SyncSelection()
+{
+	SelectedActors = ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->GetSelectedActors();
+	OnSelectedWidgetsChanged.Broadcast();
+	OutlinerPtr->RequestRefresh();
+}
+
 void FLGUIPrefabEditor::RegisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)
 {
 	WorkspaceMenuCategory = InTabManager->AddLocalWorkspaceMenuCategory(LOCTEXT("WorkspaceMenu_LGUIPrefabEditor", "LGUIPrefab Editor"));
@@ -305,14 +312,14 @@ void FLGUIPrefabEditor::UnregisterTabSpawners(const TSharedRef<FTabManager>& InT
 void FLGUIPrefabEditor::PostUndo(bool bSuccess)
 {
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
-	SelectedActors = ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->GetSelection()->GetSelectedActors();
+	SelectedActors = ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->GetSelectedActors();
 	OnSelectedWidgetsChanged.Broadcast();
 	OutlinerPtr->RequestRefresh();
 }
 void FLGUIPrefabEditor::PostRedo(bool bSuccess)
 {
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
-	SelectedActors = ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->GetSelection()->GetSelectedActors();
+	SelectedActors = ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->GetSelectedActors();
 	OnSelectedWidgetsChanged.Broadcast();
 	OutlinerPtr->RequestRefresh();
 }
@@ -354,6 +361,10 @@ void FLGUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const TS
 	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->EventOnOutlineChanged.AddSPLambda(this, [=, this]()
 	{
 		OutlinerPtr->RequestRefresh();
+	});
+	ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->OnSelectionChanged.AddSPLambda(this, [=, this]
+	{
+		SyncSelection();
 	});
 	
 	OutlinerPtr = SNew(SLexWidgetEditorHierarchyView, PrefabEditorPtr);
@@ -543,8 +554,10 @@ void FLGUIPrefabEditor::AddReferencedObjects(FReferenceCollector& Collector)
 
 void FLGUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bAppendOrToggle, bool bNotifyGEditor)
 {
+	if (bIsSelecting)return;
+	bIsSelecting = true;
 	const FScopedTransaction Transaction(LOCTEXT("SelectionChanged_Transaction", "Select Widgets"));
-	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->GetSelection()->Modify();
+	ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->Modify();
 	
 	TSet<ULexWidget*> TempSelection;
 	for (auto& Widget : Widgets)
@@ -562,7 +575,7 @@ void FLGUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bAp
 		SelectedActors.Empty();
 		if (bNotifyGEditor)
 		{
-			ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->GetSelection()->SelectNone();
+			ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->SelectNone();
 		}
 	}
 
@@ -578,11 +591,12 @@ void FLGUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bAp
 		}
 		if (bNotifyGEditor)
 		{
-			ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->GetSelection()->SelectActor(Widget->GetOwner());
+			ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->SelectActor(Widget->GetOwner());
 		}
 	}
 	
 	OnSelectedWidgetsChanged.Broadcast();
+	bIsSelecting = false;
 }
 
 TArray<TWeakObjectPtr<ULexWidget>> FLGUIPrefabEditor::GetSelectedWidgets()
@@ -1071,10 +1085,10 @@ FReply FLGUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent& 
 			}
 			if (CreatedActorArray.Num() > 0)
 			{
-				ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->GetSelection()->SelectNone();
+				ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->SelectNone();
 				for (auto& Actor : CreatedActorArray)
 				{
-					ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->GetSelection()->SelectActor(Actor);
+					ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->SelectActor(Actor);
 				}
 			}
 			GEditor->EndTransaction();

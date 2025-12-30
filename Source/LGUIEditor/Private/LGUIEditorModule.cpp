@@ -17,7 +17,7 @@
 #include "LexUIEditorCommands.h"
 #include "LexUIEditorTools.h"
 
-#include "Thumbnail/LGUIPrefabThumbnailRenderer.h"
+#include "Thumbnail/LexUIPrefabThumbnailRenderer.h"
 #include "Thumbnail/LexUISpriteThumbnailRenderer.h"
 #include "Thumbnail/LexUISpriteDataBaseObjectThumbnailRenderer.h"
 #include "ContentBrowserExtensions/LexUIContentBrowserExtensions.h"
@@ -115,6 +115,7 @@
 #include "MeshModifier/LexMeshModifierTextAnimation.h"
 #include "PrefabAnimation/LGUIPrefabSequence.h"
 #include "PrefabAnimation/LGUIPrefabSequenceComponent.h"
+#include "PrefabSystem/LexUIPrefab.h"
 
 const FName FLGUIEditorModule::LexUIDynamicSpriteAtlasViewerTabName(TEXT("LexUIDynamicSpriteAtlasViewerName"));
 const FName FLGUIEditorModule::LexUIPrefabSequenceTabName(TEXT("LexUIPrefabSequenceTabName"));
@@ -259,7 +260,7 @@ void FLGUIEditorModule::StartupModule()
 	}
 	//register Thumbnail
 	{
-		UThumbnailManager::Get().RegisterCustomRenderer(ULexUIPrefab::StaticClass(), ULGUIPrefabThumbnailRenderer::StaticClass());
+		UThumbnailManager::Get().RegisterCustomRenderer(ULexUIPrefab::StaticClass(), ULexUIPrefabThumbnailRenderer::StaticClass());
 		UThumbnailManager::Get().RegisterCustomRenderer(ULexUISpriteData::StaticClass(), ULexUISpriteThumbnailRenderer::StaticClass());
 		UThumbnailManager::Get().RegisterCustomRenderer(ULexUISpriteData_BaseObject::StaticClass(), ULexUISpriteDataBaseObjectThumbnailRenderer::StaticClass());
 	}

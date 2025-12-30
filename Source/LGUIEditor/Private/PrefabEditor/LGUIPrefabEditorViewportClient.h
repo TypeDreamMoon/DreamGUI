@@ -103,6 +103,8 @@ public:
 private:
 	int PrevMouseX = 0, PrevMouseY = 0;
 	int IndexOfClickSelectUI = INDEX_NONE;
+	TUniquePtr<class FLexUITransformWidget> TransformWidget = nullptr;
+	FDelegateHandle OnSelectionChangedDelegateHandle;
 
 	TWeakPtr<FLGUIPrefabEditor> PrefabEditorPtr;
 	// Are we currently manipulating something?

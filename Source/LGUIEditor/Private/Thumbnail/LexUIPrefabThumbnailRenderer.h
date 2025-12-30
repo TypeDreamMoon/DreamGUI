@@ -2,15 +2,16 @@
 
 #pragma once
 
-#include "LGUIPrefabThumbnailScene.h"
-#include "LGUIPrefabThumbnailRenderer.generated.h"
+#include "LexUIPrefabThumbnailScene.h"
+#include "ThumbnailRendering/DefaultSizedThumbnailRenderer.h"
+#include "LexUIPrefabThumbnailRenderer.generated.h"
 
 UCLASS()
-class ULGUIPrefabThumbnailRenderer :public UDefaultSizedThumbnailRenderer
+class ULexUIPrefabThumbnailRenderer :public UDefaultSizedThumbnailRenderer
 {
 	GENERATED_BODY()
 public:
-	ULGUIPrefabThumbnailRenderer();
+	ULexUIPrefabThumbnailRenderer();
 
 	virtual bool CanVisualizeAsset(UObject* Object)override;
 	virtual void Draw(UObject* Object, int32 X, int32 Y, uint32 Width, uint32 Height, FRenderTarget*, FCanvas* Canvas, bool bAdditionalViewFamily)override;
@@ -18,5 +19,5 @@ public:
 	virtual void BeginDestroy()override;
 
 private:
-	FLGUIPrefabInstanceThumbnailScene ThumbnailScenes;
+	FLexUIPrefabInstanceThumbnailScene ThumbnailScenes;
 };

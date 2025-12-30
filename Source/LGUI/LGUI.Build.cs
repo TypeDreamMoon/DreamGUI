@@ -88,6 +88,7 @@ public class LGUI : ModuleRules
                 "EditorStyle",
                 "TargetPlatform",
                 "LevelEditor",
+                "ToolWidgets",//SCustomDialog
             }
             );
         }

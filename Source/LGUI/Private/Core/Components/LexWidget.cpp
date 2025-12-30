@@ -484,10 +484,11 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 			this->Call_SiblingIndexChanged();
 			ApplySiblingIndex();
 		}
-		else if (MemberName == FName(TEXT("RelativeLocation")))
+		else if (MemberName == GetRelativeLocationPropertyName() || MemberName == GetRelativeRotationPropertyName() || MemberName == GetRelativeScale3DPropertyName())
 		{
 			CalculateAnchorFromTransform();
 			UpdateComponentToWorld();
+			OnUpdateTransform(EUpdateTransformFlags::None);
 			MarkLayoutDirty();
 		}
 		else if (MemberName == VisualName)

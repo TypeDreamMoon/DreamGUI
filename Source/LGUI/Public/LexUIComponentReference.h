@@ -8,8 +8,6 @@
 
 /**
  * For direct reference a ActorComponent
- * Update in LGUI3: Directly reference the ActorComponent object instead of component's name, so the reference will not lose after component name changes.
- *					But this result in an issue: BlueprintCreatedComponents will not be saved, so only use this for InstancedComponents.
  */ 
 USTRUCT(BlueprintType)
 struct LGUI_API FLexUIComponentReference

@@ -78,7 +78,7 @@ void ALexWidgetActor::Destroyed()
 AActor* ALexWidgetActor::FirstTemporarilyHiddenActor = nullptr;
 void ALexWidgetActor::SetIsTemporarilyHiddenInEditor(bool bIsHidden)
 {
-	if (ULexUIPrefabWorldSubsystem::IsLGUIPrefabSystemProcessingActor(this))//when deserialize from prefab, no need to set it because everything is done when serialize it
+	if (ULexUIPrefabWorldSubsystem::IsLexUIPrefabSystemProcessingActor(this))//when deserialize from prefab, no need to set it because everything is done when serialize it
 	{
 
 	}

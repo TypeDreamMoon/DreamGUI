@@ -117,6 +117,12 @@ protected:
 	/** rich text image data for rendering image inside UIText */
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (EditCondition = "bRichText"))
 		TObjectPtr<ULexUIRichTextImageData_BaseObject> RichTextImageData = nullptr;
+	/**
+	 * The amount of pixels per unit to use for dynamically created bitmap texture, such as BitmapFont. 
+	 * But!!! Do not set this value too large if you already have large font size of LexText, because that will result in extremely large texture! 
+	 */
+	UPROPERTY(EditAnywhere, Category = "LGUI", AdvancedDisplay)
+	float DynamicPixelsPerUnit = 1.0f;
 	/** created object for rich text image */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI", Transient, AdvancedDisplay)
 	TArray<TObjectPtr<ULexWidget>> CreatedRichTextImageObjectArray;
@@ -208,6 +214,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI") ELexUITextParagraphVerticalAlign GetParagraphVerticalAlignment()const { return VAlign; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI") UMaterialInterface* GetOverrideMaterial()const{return OverrideMaterial;}
 	UFUNCTION(BlueprintCallable, Category = "LGUI") float GetExpandMeshSize()const{return ExpandMeshSize;}
+	UFUNCTION(BlueprintCallable, Category = "LGUI") float GetDynamicPixelsPerUnit()const { return DynamicPixelsPerUnit; }
 
 	/** indicating whether the text is Truncated or using Ellipsis */
 	UFUNCTION(BlueprintCallable, Category = "LGUI") bool IsTextTruncated()const;
@@ -244,6 +251,8 @@ public:
     	void SetOverrideMaterial(UMaterialInterface* Value);
 	UFUNCTION(BlueprintCallable, Category = "LexUI")
 	void SetExpandMeshSize(float Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetDynamicPixelsPerUnit(float Value);
 private:
 	void ClearCreatedRichTextImageObject();
 	void ClearEmojiObject();

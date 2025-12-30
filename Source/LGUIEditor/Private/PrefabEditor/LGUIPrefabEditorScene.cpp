@@ -164,11 +164,11 @@ USceneComponent* FLGUIPrefabEditorScene::GetParentComponentForPrefab(ULexUIPrefa
 				//create Canvas for UI
 				auto RootUICanvasActor = this->GetWorld()->SpawnActor<ALexWidgetActor>(ALexWidgetActor::StaticClass(), FTransform::Identity);
 				RootUICanvasActor->GetRootComponent()->SetWorldLocationAndRotationNoPhysics(FVector::ZeroVector, FRotator(0, 0, 0));
-
-				if (Prefab->PrefabDataForPrefabEditor.bNeedCanvas)
+				auto CanvasComp = RootUICanvasActor->FindComponentByClass<ULexCanvas>();
+				if (Prefab->PrefabDataForPrefabEditor.bNeedCanvas || CanvasComp == nullptr)
 				{
 					auto RenderMode = (ELexRenderMode)Prefab->PrefabDataForPrefabEditor.CanvasRenderMode;
-					auto CanvasComp = NewObject<ULexCanvas>(RootUICanvasActor);
+					CanvasComp = NewObject<ULexCanvas>(RootUICanvasActor);
 					CanvasComp->RegisterComponent();
 					RootUICanvasActor->AddInstanceComponent(CanvasComp);
 					CanvasComp->SetRenderMode(RenderMode);

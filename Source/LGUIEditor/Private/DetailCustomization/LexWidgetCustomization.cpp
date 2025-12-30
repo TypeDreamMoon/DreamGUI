@@ -2242,17 +2242,11 @@ void FLexWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPropert
 }
 void FLexWidgetCustomization::OnAnchorValueChanged(float Value, TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)
 {
-	GEditor->BeginTransaction(LOCTEXT("ChangeAnchorValue_Transaction", "Change LGUI Anchor Value"));
-	for (auto& Item : TargetScriptArray)
-	{
-		Item->Modify();
-	}
 	ApplyValueChanged(Value, AnchorHandle, AnchorValueIndex, false);
-	GEditor->EndTransaction();
 }
 void FLexWidgetCustomization::OnAnchorValueCommitted(float Value, ETextCommit::Type commitType, TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)
 {
-	GEditor->BeginTransaction(LOCTEXT("CommitAnchorValue_Transaction", "Commit LGUI Anchor Value"));
+	GEditor->BeginTransaction(LOCTEXT("ChangeWidgetAnchor_Transaction", "Change Widget Anchor"));
 	for (auto& Item : TargetScriptArray)
 	{
 		Item->Modify();
@@ -2263,7 +2257,7 @@ void FLexWidgetCustomization::OnAnchorValueCommitted(float Value, ETextCommit::T
 
 void FLexWidgetCustomization::OnAnchorValueSliderMovementBegin()
 {
-	GEditor->BeginTransaction(LOCTEXT("SlideAnchorValue_Transaction", "Slide LGUI Anchor Value"));
+	GEditor->BeginTransaction(LOCTEXT("SlideChangeWidgetAnchor_Transaction", "Change Widget Anchor"));
 	for (auto& Item : TargetScriptArray)
 	{
 		Item->Modify();

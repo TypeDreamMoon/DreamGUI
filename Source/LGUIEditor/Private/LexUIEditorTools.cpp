@@ -497,6 +497,7 @@ void FLexUIEditorTools::CreateLexWidget(TFunction<AActor*()> GetSelectedActorFun
 	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return;
 	GEditor->BeginTransaction(LOCTEXT("CreateChildWidget_Transaction", "Create Child Widget"));
 	MakeCurrentLevel(SelectedActor);
+	ULexUIManagerWorldSubsystem::GetSelection(SelectedActor->GetWorld())->Modify();
 	auto NewActor = SelectedActor->GetWorld()->SpawnActor<ALexWidgetActor>(ALexWidgetActor::StaticClass(), FTransform::Identity, FActorSpawnParameters());
 	if (IsValid(NewActor))
 	{
@@ -504,7 +505,7 @@ void FLexUIEditorTools::CreateLexWidget(TFunction<AActor*()> GetSelectedActorFun
 		if (SelectedActor != nullptr)
 		{
 			NewActor->AttachToActor(SelectedActor, FAttachmentTransformRules::KeepRelativeTransform);
-			GEditor->SelectActor(SelectedActor, false, true);
+			ULexUIManagerWorldSubsystem::GetSelection(SelectedActor->GetWorld())->SelectNone();
 		}
 		if (VisualClass)
 		{
@@ -514,8 +515,7 @@ void FLexUIEditorTools::CreateLexWidget(TFunction<AActor*()> GetSelectedActorFun
 		{
 			Callback(NewActor->GetLexWidget());
 		}
-		GEditor->SelectActor(NewActor, true, true);
-		ULexUIManagerWorldSubsystem::GetInstance(SelectedActor->GetWorld())->EventOnOutlineChanged.Broadcast();
+		ULexUIManagerWorldSubsystem::GetSelection(SelectedActor->GetWorld())->SelectActor(NewActor);
 	}
 	GEditor->EndTransaction();
 }

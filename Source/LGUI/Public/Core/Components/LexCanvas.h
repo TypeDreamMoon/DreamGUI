@@ -64,7 +64,6 @@ UENUM(BlueprintType, meta = (Bitflags), Category = LGUI)
 enum class ELexCanvasOverrideParameters :uint8
 {
 	DefaultMaterial,
-	DynamicPixelsPerUnit,
 	RequireNormalAndTangent,
 	BlendDepth,
 	DepthFade,
@@ -159,7 +158,7 @@ class UTextureRenderTarget2D;
  * Default UV channels-
  *		UV0: Texture coordinate
  *		UV1: X- Widget property data coordinate, include clipData coordinate in data texture
- * Other UV channels usage, check LexText and LexRectBlock.
+ * Other UV channels are defined by LexVisual, check LexText and LexRectBlock.
  */
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class LGUI_API ULexCanvas : public UActorComponent, public ILexUIPrefabInterface
@@ -300,14 +299,6 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, Category = LGUI, meta = (ClampMin = "0.01", EditCondition="RenderTargetSizeMode==ELexCanvasRenderTargetSizeMode::RenderTargetFitToCanvas"))
 		float RenderTargetResolutionScale = 1.0f;
-#if WITH_EDITORONLY_DATA
-	/**
-	 * When in edit mode, show the Screen-Space-Overlay UI with LexUIRenderer.
-	 * LexUIRenderer can show the color and texture at final result, not affect by post process.
-	 */
-	UPROPERTY(EditAnywhere, Category = "LGUI")
-		bool bPreviewWithLexUIRenderer = false;
-#endif
 	/**
 	 * true- Use custom sort order.
 	 * false- Use default sort order management, which is based on hierarchy order.
@@ -320,13 +311,6 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta=(EditCondition="bOverrideSorting"))
 		int16 SortOrder = 0;
-	
-	/**
-	 * The amount of pixels per unit to use for dynamically created bitmap texture, such as BitmapFont for UIText. 
-	 * But!!! Do not set this value too large if you already have large font size of UIText, because that will result in extremely large texture! 
-	 */
-	UPROPERTY(EditAnywhere, Category = "LGUI")
-		float DynamicPixelsPerUnit = 1.0f;
 
 	/** Enable/disable normal and tangent in vertex data. */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
@@ -336,10 +320,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category = LGUI, meta = (DisplayThumbnail = "false"))
 	mutable TObjectPtr<UMaterialInterface> DefaultMaterial;
 
-	/** For "World Space - LGUI Renderer" only, render with blend depth, 0-occlude by scene depth, 1-all visible, 0.5-half transparent. */
+	/** For "World Space - LexUI Renderer" only, render with blend depth, 0-occlude by scene depth, 1-all visible, 0.5-half transparent. */
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 		float BlendDepth = 0.0f;
-	/** For "World Space - LGUI Renderer" only, render with depth fade effect. */
+	/** For "World Space - LexUI Renderer" only, render with depth fade effect. */
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (ClampMin = "0", ClampMax = "10"))
 		int DepthFade = 0;
 	/**
@@ -410,7 +394,6 @@ private:
 
 public:
 	FORCEINLINE bool GetOverrideDefaultMaterial()const						{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::DefaultMaterial); }
-	FORCEINLINE bool GetOverrideDynamicPixelsPerUnit()const					{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::DynamicPixelsPerUnit); }
 	FORCEINLINE bool GetOverrideRequireNormalAndTangent()const				{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::RequireNormalAndTangent); }
 	FORCEINLINE bool GetOverrideBlendDepth()const							{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::BlendDepth); }
 	FORCEINLINE bool GetOverrideDepthFade()const							{ return OverrideParameters & (1 << (int)ELexCanvasOverrideParameters::DepthFade); }
@@ -530,14 +513,6 @@ public:
 	bool GetRequireNormalAndTangent()const { return bRequireNormalAndTangent; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	void SetRequireNormalAndTangent(bool Value);
-	
-	/** Get actual DynamicPixelsPerUnit of canvas. This property may inherit from parent canvas depend on OverrideParameters property. */
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		float GetActualDynamicPixelsPerUnit()const;
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		float GetDynamicPixelsPerUnit()const { return DynamicPixelsPerUnit; }
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetDynamicPixelsPerUnit(float Value);
 
 	int GetDrawCallCount()const;
 

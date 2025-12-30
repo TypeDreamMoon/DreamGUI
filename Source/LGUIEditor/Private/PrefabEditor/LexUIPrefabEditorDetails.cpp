@@ -393,15 +393,15 @@ void SLexUIPrefabEditorDetails::OnSubObjectSelectionChanged(const TArray<FSubobj
 		{
 			if (SelectedComponents.Num() > 0)
 			{
-				ULexUIManagerWorldSubsystem::GetInstance(PrefabEditorPtr.Pin()->GetWorld())->GetSelection()->SelectNone();
+				ULexUIManagerWorldSubsystem::GetSelection(PrefabEditorPtr.Pin()->GetWorld())->SelectNone();
 				for (auto Comp : SelectedComponents)
 				{
-					ULexUIManagerWorldSubsystem::GetInstance(PrefabEditorPtr.Pin()->GetWorld())->GetSelection()->SelectComponent(Comp);
+					ULexUIManagerWorldSubsystem::GetSelection(PrefabEditorPtr.Pin()->GetWorld())->SelectComponent(Comp);
 				}
 			}
 			else
 			{
-				ULexUIManagerWorldSubsystem::GetInstance(PrefabEditorPtr.Pin()->GetWorld())->GetSelection()->SelectNone();
+				ULexUIManagerWorldSubsystem::GetSelection(PrefabEditorPtr.Pin()->GetWorld())->SelectNone();
 			}
 		}
 	}
