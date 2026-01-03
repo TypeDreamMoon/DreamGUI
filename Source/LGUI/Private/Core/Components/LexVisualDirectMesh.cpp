@@ -67,7 +67,7 @@ TWeakObjectPtr<ULexUIMeshComponent> ULexVisualDirectMesh::GetUIMesh()const
 }
 void ULexVisualDirectMesh::ClearMeshData()
 {
-	GetWidget()->MarkCanvasUpdate(false, false, false, true);
+	GetWidget()->MarkCanvasUpdate(false, false, true);
 }
 void ULexVisualDirectMesh::OnMeshDataReady()
 {

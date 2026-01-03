@@ -191,7 +191,7 @@ void ULexTexture::OnDimensionChanged(bool InPivotChange, bool InWidthChange, boo
         {
         	auto Widget = GetWidget();
             SpriteInfo.ApplyUV(0, 0, Widget->GetWidth(), Widget->GetHeight(), 1.0f / SpriteInfo.Width, 1.0f / SpriteInfo.Height);
-            MarkUVDirty();
+            MarkVertexUVDirty();
         }
 	}
 	if (UVRectControlMode != ELexUITextureUVRectControlMode::None)
@@ -199,7 +199,7 @@ void ULexTexture::OnDimensionChanged(bool InPivotChange, bool InWidthChange, boo
 		if (InWidthChange || InHeightChange)
 		{
 			CheckSpriteData();
-			MarkUVDirty();
+			MarkVertexUVDirty();
 		}
 	}
     if (InPivotChange || InWidthChange || InHeightChange)
@@ -222,7 +222,7 @@ void ULexTexture::SetSpriteInfo(FLexUISpriteInfo Value)
 	if (SpriteInfo != Value)
 	{
 		SpriteInfo = Value;
-		MarkUVDirty();
+		MarkVertexUVDirty();
 		CheckSpriteData();
 	}
 }
@@ -232,7 +232,7 @@ void ULexTexture::SetUVRect(FVector4f Value)
 	if (UVRect != Value)
 	{
 		UVRect = Value;
-		MarkUVDirty();
+		MarkVertexUVDirty();
 		CheckSpriteData();
 	}
 }
@@ -246,7 +246,7 @@ void ULexTexture::SetTexture(UTexture* Value)
 			|| UVRectControlMode == ELexUITextureUVRectControlMode::KeepAspectRatio_Envelope
 			)
 		{
-			MarkUVDirty();
+			MarkVertexUVDirty();
 		}
 		CheckSpriteData();
 	}
@@ -308,7 +308,7 @@ void ULexTexture::SetUVRectControlMode(ELexUITextureUVRectControlMode Value)
 	if (UVRectControlMode != Value)
 	{
 		UVRectControlMode = Value;
-		MarkUVDirty();
+		MarkVertexUVDirty();
 		CheckSpriteData();
 	}
 }

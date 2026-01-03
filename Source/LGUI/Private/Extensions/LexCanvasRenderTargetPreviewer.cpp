@@ -112,7 +112,7 @@ void ULexCanvasRenderTargetPreviewer::UpdateSpriteData()
 			SpriteInfo.MaxUV.Y = 1;
 			SpriteInfo.MaxUV.X = 1;
 
-			MarkUVDirty();
+			MarkVertexUVDirty();
 		}
 	}
 }

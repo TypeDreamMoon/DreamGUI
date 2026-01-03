@@ -719,7 +719,7 @@ FBoxSphereBounds ULexWidget::CalcBounds(const FTransform& LocalToWorld) const
 }
 void ULexWidget::EditorForceUpdate()
 {
-	MarkCanvasUpdate(true, true, true, true);
+	MarkCanvasUpdate(true, true, true);
 }
 void ULexWidget::EnsureDataForRebuild()
 {
@@ -2134,7 +2134,7 @@ void ULexWidget::CalculateWidgetActive_Recursive()
 				//callback
 				Widget->Call_WidgetActiveChanged();
 				//canvas update
-				Widget->MarkCanvasUpdate(false, false, false, true);
+				Widget->MarkCanvasUpdate(false, false, true);
 				//tell parent layout
 				if (auto Parent = Widget->GetUIParent())
 				{
@@ -2395,11 +2395,11 @@ void ULexWidget::MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged,
 	}
 }
 
-void ULexWidget::MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawCall)const
+void ULexWidget::MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bForceRebuildDrawCall)const
 {
 	if (RenderCanvas.IsValid())
 	{
-		RenderCanvas->MarkCanvasUpdate(bMaterialOrTextureChanged, bTransformOrVertexPositionChanged, bHierarchyOrderChanged, bForceRebuildDrawCall);
+		RenderCanvas->MarkCanvasUpdate(bMaterialOrTextureChanged, bTransformOrVertexPositionChanged, bForceRebuildDrawCall);
 	}
 }
 
@@ -2923,7 +2923,7 @@ void ULexWidget::SetIsTemporarilyHiddenInEditor_Recursive_By_WidgetActive()
 	//callback
 	Call_WidgetActiveChanged();
 	//canvas update
-	MarkCanvasUpdate(false, false, false, true);
+	MarkCanvasUpdate(false, false, true);
 
 	//affect children
 	for (auto& uiChild : UIChildren)

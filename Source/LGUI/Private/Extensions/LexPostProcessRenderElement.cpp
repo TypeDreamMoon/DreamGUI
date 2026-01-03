@@ -4,25 +4,26 @@
 #include "Extensions/LexPostProcessRenderElement.h"
 
 #include "Core/LexUIGeometry.h"
+#include "Core/LexUISpriteInfo.h"
+#include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexVisualPostProcess.h"
 #include "Engine/TextureRenderTarget2D.h"
+
+FName ULexPostProcessRenderElement::LexUI_World2PostProcess_Row1 = FName(TEXT("LexUI_World2PostProcess_Row1"));
+FName ULexPostProcessRenderElement::LexUI_World2PostProcess_Row2 = FName(TEXT("LexUI_World2PostProcess_Row2"));
+FName ULexPostProcessRenderElement::LexUI_World2PostProcess_Row3 = FName(TEXT("LexUI_World2PostProcess_Row3"));
+FName ULexPostProcessRenderElement::LexUI_World2PostProcess_Row4 = FName(TEXT("LexUI_World2PostProcess_Row4"));
 
 void ULexPostProcessRenderElement::BeginPlay()
 {
 	Super::BeginPlay();
-	if (!bHasRegisterPostProcessChangedEvent)
-	{
-		RegisterPostProcessChangedEvent();
-	}
+	RegisterPostProcessChangedEvent();
 }
 
 void ULexPostProcessRenderElement::EndPlay()
 {
 	Super::EndPlay();
-	if (bHasRegisterPostProcessChangedEvent)
-	{
-		UnregisterPostProcessChangedEvent();
-	}
+	UnregisterPostProcessChangedEvent();
 }
 
 #if WITH_EDITOR
@@ -45,11 +46,21 @@ void ULexPostProcessRenderElement::PostEditChangeProperty(struct FPropertyChange
 		{
 			RegisterPostProcessChangedEvent();
 			MarkTextureDirty();
-			UpdateSpriteData();
+		}
+		else if (PropName == GET_MEMBER_NAME_CHECKED(ULexPostProcessRenderElement, Material))
+		{
+			MaterialInstanceDynamic = nullptr;
+			MarkMaterialDirty();
 		}
 	}
 }
 #endif
+
+void ULexPostProcessRenderElement::OnRegister()
+{
+	Super::OnRegister();
+	
+}
 
 void ULexPostProcessRenderElement::RegisterPostProcessChangedEvent()
 {
@@ -59,16 +70,15 @@ void ULexPostProcessRenderElement::RegisterPostProcessChangedEvent()
 		bHasRegisterPostProcessChangedEvent = true;
 		PostProcess->GetWidget()->GetDimensionChangedEvent().AddWeakLambda(this, [=, this](bool, bool, bool)
 		{
-			UpdateSpriteData();
+			MarkCanvasUpdate();
 		});
 		PostProcess->GetWidget()->GetTransformChangedEvent().AddWeakLambda(this, [=, this]()
 		{
-			UpdateSpriteData();
+			MarkCanvasUpdate();
 		});
 		PostProcess->GetRenderTargetChangedEvent().AddWeakLambda(this, [=, this](UTextureRenderTarget2D*)
 		{
 			MarkTextureDirty();
-			UpdateSpriteData();
 		});
 	}
 }
@@ -85,42 +95,61 @@ void ULexPostProcessRenderElement::UnregisterPostProcessChangedEvent()
 	}
 }
 
-void ULexPostProcessRenderElement::UpdateSpriteData()
+void ULexPostProcessRenderElement::SetMaterialParameter()
 {
 	if (PostProcess.IsValid())
 	{
-		if (auto RenderTarget = PostProcess->GetOutputRenderTarget())
+		CheckMaterialInstanceDynamic();
+		if (IsValid(MaterialInstanceDynamic))
 		{
-			SpriteInfo.Width = RenderTarget->SizeX;
-			SpriteInfo.Height = RenderTarget->SizeY;
-			
-			auto ThisToPostProcessSpace = PostProcess->GetWidget()->GetComponentTransform().Inverse() * GetWidget()->GetComponentTransform();
-			auto ThisLeftBottomPoint2D = this->GetWidget()->GetLocalSpaceLeftBottomPoint();
-			auto ThisLeftBottomPointWorld = ThisToPostProcessSpace.TransformPosition(FVector(0, ThisLeftBottomPoint2D.X, ThisLeftBottomPoint2D.Y));
-			auto LeftBottomPoint2D = FVector2D(ThisLeftBottomPointWorld.Y, ThisLeftBottomPointWorld.Z);
-			auto PostProcessLeftBottomPoint2D = PostProcess->GetWidget()->GetLocalSpaceLeftBottomPoint();
-			LeftBottomPoint2D -= PostProcessLeftBottomPoint2D;
-			
-			SpriteInfo.MinUV.X = LeftBottomPoint2D.X / PostProcess->GetWidget()->GetWidth();
-			SpriteInfo.MaxUV.Y = 1 - LeftBottomPoint2D.Y / PostProcess->GetWidget()->GetHeight();
-			SpriteInfo.MinUV.Y = SpriteInfo.MaxUV.Y - this->GetWidget()->GetHeight() / PostProcess->GetWidget()->GetHeight();
-			SpriteInfo.MaxUV.X = this->GetWidget()->GetWidth() / PostProcess->GetWidget()->GetWidth() + SpriteInfo.MinUV.X;
-
-			MarkUVDirty();
+			if (PostProcess.IsValid())
+			{
+				if (PostProcess->GetRenderType() == ELexBackgroundBlurRenderType::RenderTarget)
+				{
+					SetMaterialMatrixProperty(PostProcess.Get(), MaterialInstanceDynamic);
+				}
+			}
 		}
 	}
+}
+
+void ULexPostProcessRenderElement::CheckMaterialInstanceDynamic()
+{
+	if (!IsValid(MaterialInstanceDynamic))
+	{
+		if (IsValid(Material))
+		{
+			MaterialInstanceDynamic = UMaterialInstanceDynamic::Create(Material, this);
+			MaterialInstanceDynamic->SetFlags(RF_Transient);
+		}
+	}
+}
+
+void ULexPostProcessRenderElement::SetMaterialMatrixProperty(ULexVisualPostProcess* PostProcess, UMaterialInstanceDynamic* MID)
+{
+	auto WorldToPPTransform = PostProcess->GetWidget()->GetComponentTransform().Inverse();
+	auto WorldToPPMatrix = FMatrix44f(WorldToPPTransform.ToMatrixWithScale());
+	auto Size = PostProcess->GetWidget()->GetSize();
+	auto Min = PostProcess->GetWidget()->GetLocalSpaceLeftBottomPoint();
+	auto& M = WorldToPPMatrix.M;
+	M[0][3] = Size.X;
+	M[1][3] = Size.Y;
+	M[2][3] = Min.X;
+	M[3][3] = Min.Y;
+	MID->SetVectorParameterValue(LexUI_World2PostProcess_Row1, FVector4f(M[0][0], M[0][1], M[0][2], M[0][3]));
+	MID->SetVectorParameterValue(LexUI_World2PostProcess_Row2, FVector4f(M[1][0], M[1][1], M[1][2], M[1][3]));
+	MID->SetVectorParameterValue(LexUI_World2PostProcess_Row3, FVector4f(M[2][0], M[2][1], M[2][2], M[2][3]));
+	MID->SetVectorParameterValue(LexUI_World2PostProcess_Row4, FVector4f(M[3][0], M[3][1], M[3][2], M[3][3]));
 }
 
 void ULexPostProcessRenderElement::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
 {
 	Super::OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
-	UpdateSpriteData();
 }
 
 void ULexPostProcessRenderElement::OnTransformChanged()
 {
 	Super::OnTransformChanged();
-	UpdateSpriteData();
 }
 
 UTexture* ULexPostProcessRenderElement::GetTextureToCreateGeometry()
@@ -137,15 +166,14 @@ UTexture* ULexPostProcessRenderElement::GetTextureToCreateGeometry()
 
 UMaterialInterface* ULexPostProcessRenderElement::GetMaterialToCreateGeometry()
 {
-	return Material;
+	CheckMaterialInstanceDynamic();
+	return MaterialInstanceDynamic;
 }
 
 void ULexPostProcessRenderElement::OnBeforeCreateOrUpdateGeometry()
 {
-	if (!bHasRegisterPostProcessChangedEvent)
-	{
-		RegisterPostProcessChangedEvent();
-	}
+	RegisterPostProcessChangedEvent();
+	SetMaterialParameter();//this will set parameter no mater geometry changes
 }
 
 void ULexPostProcessRenderElement::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged,
@@ -153,21 +181,13 @@ void ULexPostProcessRenderElement::OnUpdateGeometry(FLexUIGeometry& InGeo, bool 
 {
 	if (InGeo.Texture != nullptr)
 	{
+		FLexUISpriteInfo SimpleRectSpriteInfo;		
 		auto Widget = GetWidget();
 		auto RenderCanvas = Widget->GetRenderCanvas();
 		FLexUIGeometry::UpdateUIRectSimpleVertex(&InGeo,
-				Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), SpriteInfo, RenderCanvas, this, GetFinalColor(),
+				Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), SimpleRectSpriteInfo, RenderCanvas, this, GetFinalColor(),
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
-		if (InVertexUVChanged)
-		{
-			FLexUISpriteInfo SimpleRectSpriteInfo;		
-			auto& vertices = InGeo.Vertices;
-			vertices[0].TextureCoordinate[2] = SimpleRectSpriteInfo.GetUV0();
-			vertices[1].TextureCoordinate[2] = SimpleRectSpriteInfo.GetUV1();
-			vertices[2].TextureCoordinate[2] = SimpleRectSpriteInfo.GetUV2();
-			vertices[3].TextureCoordinate[2] = SimpleRectSpriteInfo.GetUV3();
-		}
 	}
 	else
 	{

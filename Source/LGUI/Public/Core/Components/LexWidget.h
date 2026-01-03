@@ -362,7 +362,7 @@ public:
 	void MarkTransformChanged(bool InPositionChanged, bool InScaleChanged);
 	void MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged);
 	void MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged, bool InDiscardCache = true);
-	virtual void MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawCall = false)const;
+	virtual void MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bForceRebuildDrawCall = false)const;
 
 private:
 	float GetLayoutProperty(TFunctionRef<float(ULexLayoutSelf*)> GetLayoutSelfProperty

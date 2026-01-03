@@ -209,11 +209,10 @@ public:
 	 * And about draw-call's rebuild, it's not actually force rebuild, it will check and reuse prev draw-call if possible.
 	 * @param	bMaterialOrTextureChanged	Material or texture change
 	 * @param	bTransformOrVertexPositionChanged	UI element's transform change, or vertex position change
-	 * @param	bHierarchyOrderChanged	UI element's hierarchy order change
 	 * @param	bForceRebuildDrawCall	Mark it rebuild no matter what parameter change.
 	 */
-	void MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawCall = false);
-	void MarkCanvasUpdateRecursive(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawCall = false);
+	void MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bForceRebuildDrawCall = false);
+	void MarkCanvasUpdateRecursive(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bForceRebuildDrawCall = false);
 
 	static void BuildProjectionMatrix(FIntPoint InViewportSize, ECameraProjectionMode::Type InProjectionType, float FOV, float FarClipPlane, float NearClipPlane, FMatrix& OutProjectionMatrix);
 	FMatrix GetViewProjectionMatrix()const;
@@ -661,7 +660,6 @@ private:
 	uint32 bCanTickUpdate:1;//if Canvas can update from tick
 	uint32 bShouldRebuildDrawCall : 1;
 	uint32 bShouldClearCachedDrawCall : 1;//mark this to true will delete all cached draw-call and rebuild all draw-call
-	uint32 bShouldSortVisualOrder : 1;//if any visual LexWidget's hierarchy change, then we need to sort visual list
 	uint32 bNeedToSortRenderPriority : 1;
 	uint32 bHasAddToLexScreenSpaceRenderer : 1;//is this canvas added to LGUI screen space renderer
 	uint32 bRequestUpdateForRenderTarget : 1;//request update when RenderTargetUpdateMode is WhenRequest

@@ -69,7 +69,7 @@ void ULexVisualBatchMesh::MarkVerticesDirty()
 	bLocalVertexPositionChanged = true;
 	bUVChanged = true;
 	bColorChanged = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false, true);
+	GetWidget()->MarkCanvasUpdate(false, false, true);
 }
 
 void ULexVisualBatchMesh::MarkVerticesDirty(bool InTriangleDirty, bool InVertexPositionDirty, bool InVertexUVDirty, bool InVertexColorDirty)
@@ -85,9 +85,14 @@ void ULexVisualBatchMesh::MarkVertexPositionDirty()
 {
 	MarkVerticesDirty(false, true, false, false);
 }
-void ULexVisualBatchMesh::MarkUVDirty()
+void ULexVisualBatchMesh::MarkVertexUVDirty()
 {
 	MarkVerticesDirty(false, false, true, false);
+}
+
+void ULexVisualBatchMesh::MarkCanvasUpdate()
+{
+	GetWidget()->MarkCanvasUpdate(false, false, false);
 }
 
 void ULexVisualBatchMesh::MarkTextureDirty()

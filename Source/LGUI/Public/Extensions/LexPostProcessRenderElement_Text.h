@@ -4,18 +4,19 @@
 
 #include "CoreMinimal.h"
 #include "Core/Components/LexVisualBatchMesh.h"
-#include "LexPostProcessRenderElement.generated.h"
+#include "Core/Components/LexText.h"
+#include "LexPostProcessRenderElement_Text.generated.h"
 
 class ULexVisualPostProcess;
 /**
  * This component will grab post-process result image and display here.
  * NOTE!!! This only valid when target PostProcess RenderType is set to RenderTarget and bUseFullSize is set to false.
  * UV channel:
- *		UV0: Rect UV from (0,0) to (1,1)
- *		UV1: Check LexCanvas
+ *		UV0 ~ UV2: Check LexText
+ *		UV3: TextureCoordinate for sampling PostProcess RenderTarget
  */
 UCLASS(ClassGroup = (LGUI), Blueprintable)
-class LGUI_API ULexPostProcessRenderElement : public ULexVisualBatchMesh
+class LGUI_API ULexPostProcessRenderElement_Text : public ULexText
 {
 	GENERATED_BODY()
 protected:
@@ -25,12 +26,9 @@ protected:
 	virtual void PreEditChange(FProperty* PropertyAboutToChange) override;
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
-	virtual void OnRegister() override;
 
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 	TWeakObjectPtr<ULexVisualPostProcess> PostProcess;
-	UPROPERTY(EditAnywhere, Category = "LGUI")
-	TObjectPtr<UMaterialInterface> Material;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI", Transient)
 	TObjectPtr<UMaterialInstanceDynamic> MaterialInstanceDynamic;
 
@@ -40,6 +38,8 @@ protected:
 	void SetMaterialParameter();
 	void CheckMaterialInstanceDynamic();
 
+	static FName LexUI_PostProcessTexture;
+
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
 	virtual void OnTransformChanged() override;
 	
@@ -47,10 +47,4 @@ protected:
 	virtual UMaterialInterface* GetMaterialToCreateGeometry() override;
 	virtual void OnBeforeCreateOrUpdateGeometry() override;
 	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged) override;
-public:
-	static FName LexUI_World2PostProcess_Row1;
-	static FName LexUI_World2PostProcess_Row2;
-	static FName LexUI_World2PostProcess_Row3;
-	static FName LexUI_World2PostProcess_Row4;
-	static void SetMaterialMatrixProperty(ULexVisualPostProcess* PostProcess, UMaterialInstanceDynamic* MID);
 };

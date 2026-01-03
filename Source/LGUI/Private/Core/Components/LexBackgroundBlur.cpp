@@ -314,7 +314,7 @@ void ULexBackgroundBlur::SetBlurStrength(float Value)
 	if (BlurStrength != Value)
 	{
 		BlurStrength = Value;
-		GetWidget()->MarkCanvasUpdate(false, false, false, false);
+		GetWidget()->MarkCanvasUpdate(false, false, false);
 		SendOthersDataToRenderProxy();
 	}
 }
@@ -324,7 +324,7 @@ void ULexBackgroundBlur::SetApplyAlphaToBlur(bool Value)
 	if (ApplyAlphaToBlur != Value)
 	{
 		ApplyAlphaToBlur = Value;
-		GetWidget()->MarkCanvasUpdate(false, false, false, false);
+		GetWidget()->MarkCanvasUpdate(false, false, false);
 		SendOthersDataToRenderProxy();
 	}
 }
@@ -335,7 +335,7 @@ void ULexBackgroundBlur::SetMaxDownSampleLevel(int Value)
 	{
 		MaxDownSampleLevel = Value;
 		Inv_SampleLevelInterval = 1.0f / MAX_BlurStrength * MaxDownSampleLevel;
-		GetWidget()->MarkCanvasUpdate(false, false, false, false);
+		GetWidget()->MarkCanvasUpdate(false, false, false);
 		SendOthersDataToRenderProxy();
 	}
 }

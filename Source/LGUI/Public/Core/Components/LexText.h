@@ -164,6 +164,7 @@ public:
 	virtual void OnFillWidgetPropertyDataForMaterial_FirstPixel() override;
 	virtual void OnCultureChanged_Implementation()override;
 
+	void CheckRequireNormalAndTangent();
 public:
 	void ApplyFontTextureScaleUp();
 	void ApplyFontTextureChange();

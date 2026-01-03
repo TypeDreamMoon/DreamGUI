@@ -9,6 +9,7 @@
 #include "Core/LexUIDrawCall.h"
 #include "Core/LexUIFontEmojiData.h"
 #include "Core/LexUIManager.h"
+#include "Core/Components/LexCanvas.h"
 #include "PrefabSystem/LexUIPrefabManager.h"
 #include "Utils/LexUIUtils.h"
 #include "Engine/Texture2D.h"
@@ -228,7 +229,7 @@ void ULexText::OnTransformChanged()
 		if (!PrevScale2DForUIText.Equals(CompScale2D))
 		{
 			PrevScale2DForUIText = CompScale2D;
-			MarkUVDirty();//object scale value is stored in uv2. @todo: this should defined in font
+			MarkVertexUVDirty();//object scale value is stored in uv2. @todo: this should defined in font
 		}
 	}
 }
@@ -237,7 +238,7 @@ void ULexText::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool I
 {
 	Super::OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
 	MarkVertexPositionDirty();
-	MarkUVDirty();
+	MarkVertexUVDirty();
 }
 
 UTexture* ULexText::GetTextureToCreateGeometry()
@@ -299,6 +300,7 @@ void ULexText::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, b
 {
 	if (InTriangleChanged || InVertexPositionChanged || InVertexUVChanged || InVertexColorChanged)
 	{
+		CheckRequireNormalAndTangent();
 		UpdateCacheTextGeometry();
 	}
 }
@@ -318,6 +320,20 @@ void ULexText::OnCultureChanged_Implementation()
 	auto originText = Text;
 	Text = FText::GetEmpty();//just make it work, because SetText will compare text value
 	SetText(originText);
+}
+
+void ULexText::CheckRequireNormalAndTangent()
+{
+	if (IsValid(Font) && Font->GetRequireNormalAndTangent())
+	{
+		if (auto Canvas = GetWidget()->GetRenderCanvas())
+		{
+			if (auto RootCanvas = Canvas->GetRootCanvas())
+			{
+				RootCanvas->SetRequireNormalAndTangent(true);
+			}
+		}
+	}
 }
 
 

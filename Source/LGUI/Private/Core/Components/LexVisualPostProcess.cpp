@@ -306,7 +306,7 @@ void ULexVisualPostProcess::SetRenderType(ELexBackgroundBlurRenderType Value)
 	if (RenderType != Value)
 	{
 		RenderType = Value;
-		GetWidget()->MarkCanvasUpdate(false, false, false, false);
+		GetWidget()->MarkCanvasUpdate(false, false, false);
 		SendRenderTargetToRenderProxy();
 	}
 }

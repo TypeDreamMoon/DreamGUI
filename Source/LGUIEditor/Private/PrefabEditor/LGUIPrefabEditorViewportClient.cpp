@@ -49,8 +49,10 @@ class FLexUITransformWidget
 {
 private:
 	int PressMouseX = 0, PressMouseY = 0; FVector PressAxisHitPoint = FVector::Zero();
-	FTransform PressMatrix = FTransform::Identity;
-	FTransform LocalToWorldMatrix = FTransform::Identity;
+	FTransform ThisTransformWhenPress = FTransform::Identity;
+	FTransform ThisTransform = FTransform::Identity;
+	FTransform RenderTransform = FTransform::Identity;
+	float PressRenderScale = 1.0f;
 	TWeakObjectPtr<ULexUIManagerWorldSubsystem> LexUIManager;
 	TWeakObjectPtr<UWorld> World;
 	TArray<FLexUIHelperLineVertex> LineAxis;
@@ -59,7 +61,6 @@ private:
 	FColor ColorAxisX = FColor::Red, ColorAxisY = FColor::Green, ColorAxisZ = FColor::Blue;
 	FColor HighlightColor = FColor::Yellow;
 	FString DebugName;
-	const float HitDistance = 10.0f;
 	enum class EAxisType
 	{
 		None, X, Y, Z, YZ, ZX, XY, 
@@ -76,6 +77,31 @@ private:
 		auto SceneView = ViewportClient->CalcSceneView( ViewFamily );
 		auto MouseX = ViewportClient->Viewport->GetMouseX();
 		auto MouseY = ViewportClient->Viewport->GetMouseY();
+
+		RenderTransform = ThisTransform;
+		float RenderScale = 1;
+		if (bIsDragging)
+		{
+			RenderScale = PressRenderScale;
+			RenderTransform.SetScale3D(FVector(RenderScale, RenderScale, RenderScale));
+		}
+		else
+		{
+			if (ViewportClient->GetViewportType() != LVT_Perspective)
+			{
+				RenderScale = ViewportClient->GetViewTransform().GetOrthoZoom() * 0.0001f;
+			}
+			else
+			{
+				RenderScale = FVector::Dist(ViewportClient->GetViewLocation(), ThisTransform.GetTranslation()) * 0.002f;
+			}
+			if (bIsMousePressedAtThisFrame)
+			{
+				PressRenderScale = RenderScale; 
+			}
+		}
+		RenderTransform.SetScale3D(FVector(RenderScale, RenderScale, RenderScale));
+		
 		if (bIsDragging)
 		{
 			if (SelectedWidget.IsValid())
@@ -83,7 +109,7 @@ private:
 				FVector RayOrigin, RayDirection;
 				FSceneView::DeprojectScreenToWorld(FVector2D(MouseX, MouseY), SceneView->UnscaledViewRect, SceneView->ViewMatrices.GetInvViewProjectionMatrix(), RayOrigin, RayDirection);
 
-				auto Center = LocalToWorldMatrix.GetTranslation();
+				auto Center = ThisTransform.GetTranslation();
 				FVector A = FVector::Zero(), B = FVector(BIG_NUMBER);
 				const float Far = 1e6f;
 				auto LineStartOfMouse = RayOrigin - RayDirection * Far;
@@ -93,50 +119,54 @@ private:
 				{
 				case EAxisType::YZ:
 					{
-						auto HitPoint = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, LocalToWorldMatrix.GetUnitAxis(EAxis::X));
+						auto HitPoint = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, ThisTransform.GetUnitAxis(EAxis::X));
 						Diff = HitPoint - PressAxisHitPoint;
 					}
 					break;
 				case EAxisType::ZX:
 					{
-						auto HitPoint = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, LocalToWorldMatrix.GetUnitAxis(EAxis::Y));
+						auto HitPoint = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, ThisTransform.GetUnitAxis(EAxis::Y));
 						Diff = HitPoint - PressAxisHitPoint;
 					}
 					break;
 				case EAxisType::XY:
 					{
-						auto HitPoint = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, LocalToWorldMatrix.GetUnitAxis(EAxis::Z));
+						auto HitPoint = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, ThisTransform.GetUnitAxis(EAxis::Z));
 						Diff = HitPoint - PressAxisHitPoint;
 					}
 					break;
 				case EAxisType::X:
 					{
-						FMath::SegmentDistToSegment(LineStartOfMouse, LineEndOfMouse, LocalToWorldMatrix.TransformPosition(FVector(-Far, 0, 0)), LocalToWorldMatrix.TransformPosition(FVector(Far, 0, 0)), A, B);
+						FMath::SegmentDistToSegment(LineStartOfMouse, LineEndOfMouse, ThisTransform.TransformPosition(FVector(-Far, 0, 0)), ThisTransform.TransformPosition(FVector(Far, 0, 0)), A, B);
 						Diff = B - PressAxisHitPoint;
 					}
 					break;
 				case EAxisType::Y:
 					{
-						FMath::SegmentDistToSegment(LineStartOfMouse, LineEndOfMouse, LocalToWorldMatrix.TransformPosition(FVector(0, -Far, 0)), LocalToWorldMatrix.TransformPosition(FVector(0, Far, 0)), A, B);
+						FMath::SegmentDistToSegment(LineStartOfMouse, LineEndOfMouse, ThisTransform.TransformPosition(FVector(0, -Far, 0)), ThisTransform.TransformPosition(FVector(0, Far, 0)), A, B);
 						Diff = B - PressAxisHitPoint;
 					}
 					break;
 				case EAxisType::Z:
 					{
-						FMath::SegmentDistToSegment(LineStartOfMouse, LineEndOfMouse, LocalToWorldMatrix.TransformPosition(FVector(0, 0, -Far)), LocalToWorldMatrix.TransformPosition(FVector(0, 0, Far)), A, B);
+						FMath::SegmentDistToSegment(LineStartOfMouse, LineEndOfMouse, ThisTransform.TransformPosition(FVector(0, 0, -Far)), ThisTransform.TransformPosition(FVector(0, 0, Far)), A, B);
 						Diff = B - PressAxisHitPoint;
 					}
 					break;
 				}
-				LocalToWorldMatrix.SetTranslation(PressMatrix.GetTranslation() + Diff);
+				ThisTransform.SetTranslation(ThisTransformWhenPress.GetTranslation() + Diff);
 				FLexUIUtils::ChangePropertyWithNotify(SelectedWidget.Get(), USceneComponent::GetRelativeLocationPropertyName(), [=, this]
 				{
-					SelectedWidget->SetWorldTransform(LocalToWorldMatrix);
+					SelectedWidget->SetWorldTransform(ThisTransform);
 				});
 			}
 		}
 		else
 		{
+			if (SelectedWidget.IsValid())
+			{
+				ThisTransform = SelectedWidget->GetComponentTransform();
+			}
 			//reset color
 			{
 				for (int i = 0; i < 18; i++)
@@ -144,18 +174,18 @@ private:
 					LineAxis[i].Color = i < 6 ? ColorAxisX : (i < 12 ? ColorAxisY : ColorAxisZ);
 				}
 			}
+			AxisType = EAxisType::None;
 			
 			const float Far = 1e6f;
 			FVector RayOrigin, RayDirection;
 			FSceneView::DeprojectScreenToWorld(FVector2D(MouseX, MouseY), SceneView->UnscaledViewRect, SceneView->ViewMatrices.GetInvViewProjectionMatrix(), RayOrigin, RayDirection);
 			FVector LineEnd = RayOrigin + RayDirection * Far;
 
-			auto Center = LocalToWorldMatrix.GetTranslation();
-
+			auto Center = ThisTransform.GetTranslation();
 			//yz plane
 			{
-				auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, LocalToWorldMatrix.GetUnitAxis(EAxis::X));
-				auto IntersectPointLocalSpace = LocalToWorldMatrix.InverseTransformPosition(IntersectPoint);
+				auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::X));
+				auto IntersectPointLocalSpace = RenderTransform.InverseTransformPosition(IntersectPoint);
 				bool IsHit = IntersectPointLocalSpace.Y > 0 && IntersectPointLocalSpace.Y < AxisPlaneSize && IntersectPointLocalSpace.Z > 0 && IntersectPointLocalSpace.Z < AxisPlaneSize;
 				LineAxis[2].Color = LineAxis[3].Color = LineAxis[4].Color = LineAxis[5].Color =
 					IsHit ? HighlightColor : ColorAxisX;
@@ -171,8 +201,8 @@ private:
 			}
 			//zx plane
 			{
-				auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, LocalToWorldMatrix.GetUnitAxis(EAxis::Y));
-				auto IntersectPointLocalSpace = LocalToWorldMatrix.InverseTransformPosition(IntersectPoint);
+				auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::Y));
+				auto IntersectPointLocalSpace = RenderTransform.InverseTransformPosition(IntersectPoint);
 				bool IsHit = IntersectPointLocalSpace.Z > 0 && IntersectPointLocalSpace.Z < AxisPlaneSize && IntersectPointLocalSpace.X > 0 && IntersectPointLocalSpace.X < AxisPlaneSize;
 				LineAxis[8].Color = LineAxis[9].Color = LineAxis[10].Color = LineAxis[11].Color =
 					IsHit ? HighlightColor : ColorAxisY;
@@ -188,8 +218,8 @@ private:
 			}
 			//xy plane
 			{
-				auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, LocalToWorldMatrix.GetUnitAxis(EAxis::Z));
-				auto IntersectPointLocalSpace = LocalToWorldMatrix.InverseTransformPosition(IntersectPoint);
+				auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::Z));
+				auto IntersectPointLocalSpace = RenderTransform.InverseTransformPosition(IntersectPoint);
 				bool IsHit = IntersectPointLocalSpace.Z < AxisPlaneSize && IntersectPointLocalSpace.Z > 0 && IntersectPointLocalSpace.X < AxisPlaneSize && IntersectPointLocalSpace.X > 0;
 				LineAxis[14].Color = LineAxis[15].Color = LineAxis[16].Color = LineAxis[17].Color =
 					IsHit ? HighlightColor : ColorAxisZ;
@@ -206,10 +236,11 @@ private:
 			
 			FVector A = FVector::Zero(), B = FVector(BIG_NUMBER);
 
-			FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, LocalToWorldMatrix.TransformPosition(FVector(AxisLength, 0, 0)), A, B);
+			const float HitThreshold = 10.0f * RenderScale;
+			FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, RenderTransform.TransformPosition(FVector(AxisLength, 0, 0)), A, B);
 			auto DistanceToX = FVector::Dist(A, B);
-			LineAxis[0].Color = LineAxis[1].Color = DistanceToX < HitDistance ? HighlightColor : ColorAxisX;
-			if (DistanceToX < HitDistance)
+			LineAxis[0].Color = LineAxis[1].Color = DistanceToX < HitThreshold ? HighlightColor : ColorAxisX;
+			if (DistanceToX < HitThreshold)
 			{
 				AxisType = EAxisType::X;
 				if (bIsMousePressedAtThisFrame)
@@ -219,10 +250,10 @@ private:
 				return;
 			}
 
-			FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, LocalToWorldMatrix.TransformPosition(FVector(0, AxisLength, 0)), A, B);
+			FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, RenderTransform.TransformPosition(FVector(0, AxisLength, 0)), A, B);
 			auto DistanceToY = FVector::Dist(A, B);
-			LineAxis[6].Color = LineAxis[7].Color = DistanceToY < HitDistance ? HighlightColor : ColorAxisY;
-			if (DistanceToY < HitDistance)
+			LineAxis[6].Color = LineAxis[7].Color = DistanceToY < HitThreshold ? HighlightColor : ColorAxisY;
+			if (DistanceToY < HitThreshold)
 			{
 				AxisType = EAxisType::Y;
 				if (bIsMousePressedAtThisFrame)
@@ -232,10 +263,10 @@ private:
 				return;
 			}
 
-			FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, LocalToWorldMatrix.TransformPosition(FVector(0, 0, AxisLength)), A, B);
+			FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, RenderTransform.TransformPosition(FVector(0, 0, AxisLength)), A, B);
 			auto DistanceToZ = FVector::Dist(A, B);
-			LineAxis[12].Color = LineAxis[13].Color = DistanceToZ < HitDistance ? HighlightColor : ColorAxisZ;
-			if (DistanceToZ < HitDistance)
+			LineAxis[12].Color = LineAxis[13].Color = DistanceToZ < HitThreshold ? HighlightColor : ColorAxisZ;
+			if (DistanceToZ < HitThreshold)
 			{
 				AxisType = EAxisType::Z;
 				if (bIsMousePressedAtThisFrame)
@@ -252,7 +283,7 @@ public:
 	{
 		World = InWorld;
 		SelectedWidget = InWidget;
-		LocalToWorldMatrix = SelectedWidget->GetComponentTransform();
+		ThisTransform = SelectedWidget->GetComponentTransform();
 		LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(InWorld);
 		DebugName = TEXT("LexUITransformWidget");
 		
@@ -299,7 +330,7 @@ public:
 	void Tick()
 	{
 		UpdateAxis();
-		ULexUIManagerWorldSubsystem::DrawDebugLine(World.Get(), FMatrix44f(LocalToWorldMatrix.ToMatrixWithScale()), LineAxis, this, DebugName, false);
+		ULexUIManagerWorldSubsystem::DrawDebugLine(World.Get(), FMatrix44f(RenderTransform.ToMatrixWithScale()), LineAxis, this, DebugName, false);
 	}
 	bool IsDragging()const{return bIsDragging;}
 	bool HandleInputKey(const FInputKeyEventArgs& EventArgs)
@@ -316,7 +347,7 @@ public:
 					bIsDragging = true;
 					PressMouseX = EventArgs.Viewport->GetMouseX();
 					PressMouseY = EventArgs.Viewport->GetMouseY();
-					PressMatrix = LocalToWorldMatrix;
+					ThisTransformWhenPress = ThisTransform;
 					Transaction = MakeUnique<FScopedTransaction>(LOCTEXT("MoveWidget", "Move Widget"));
 					SelectedWidget->Modify();
 					return true;

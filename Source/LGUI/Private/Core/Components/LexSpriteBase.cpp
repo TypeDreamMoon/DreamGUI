@@ -98,7 +98,7 @@ void ULexSpriteBase::SetSprite(ULexUISpriteData_BaseObject* Value, bool bSetSize
 			MarkTextureDirty();
 		}
 		Sprite = Value;
-		MarkUVDirty();
+		MarkVertexUVDirty();
 		if (bSetSize) SetSizeFromSpriteData();
 	}
 }

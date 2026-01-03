@@ -110,7 +110,8 @@ protected:
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
 public:
 	void MarkVertexPositionDirty();
-	void MarkUVDirty();
+	void MarkVertexUVDirty();
+	void MarkCanvasUpdate();
 	virtual void MarkTextureDirty();
 	virtual void MarkMaterialDirty();
 	virtual void MarkVerticesDirty(bool InTriangleDirty, bool InVertexPositionDirty, bool InVertexUVDirty, bool InVertexColorDirty);

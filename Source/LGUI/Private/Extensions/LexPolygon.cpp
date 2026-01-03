@@ -245,7 +245,7 @@ void ULexPolygon::SetUVType(ELexPolygonUVType value)
 	if (UVType != value)
 	{
 		UVType = value;
-		MarkUVDirty();
+		MarkVertexUVDirty();
 	}
 }
 void ULexPolygon::SetVertexOffsetArray(const TArray<float>& value)

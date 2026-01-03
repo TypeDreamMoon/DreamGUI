@@ -50,7 +50,7 @@ void ULexBackgroundPixelate::SetPixelateStrength(float Value)
 	if (PixelateStrength != Value)
 	{
 		PixelateStrength = Value;
-		GetWidget()->MarkCanvasUpdate(false, false, false, false);
+		GetWidget()->MarkCanvasUpdate(false, false, false);
 		SendOthersDataToRenderProxy();
 	}
 }
@@ -60,7 +60,7 @@ void ULexBackgroundPixelate::SetApplyAlphaToStrength(bool Value)
 	if (ApplyAlphaToStrength != Value)
 	{
 		ApplyAlphaToStrength = Value;
-		GetWidget()->MarkCanvasUpdate(false, false, false, false);
+		GetWidget()->MarkCanvasUpdate(false, false, false);
 		SendOthersDataToRenderProxy();
 	}
 }

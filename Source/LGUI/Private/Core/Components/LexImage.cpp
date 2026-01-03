@@ -283,7 +283,7 @@ void ULexImage::SetBrush_LexUISprite(ULexUISpriteData_BaseObject* Value)
 			}
 			MarkTextureDirty();
 		}
-		MarkUVDirty();
+		MarkVertexUVDirty();
 		Brush.SetResourceObject(Value);
 		return;
 	}
@@ -331,7 +331,7 @@ void ULexImage::SetBrush_SlateSprite(TScriptInterface<ISlateTextureAtlasInterfac
 		{
 			MarkTextureDirty();
 		}
-		MarkUVDirty();
+		MarkVertexUVDirty();
 		Brush.SetResourceObject(Value.GetObject());
 		return;
 	}

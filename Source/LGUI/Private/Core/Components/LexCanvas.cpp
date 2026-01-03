@@ -46,7 +46,6 @@ ULexCanvas::ULexCanvas()
 
 	bCanTickUpdate = true;
 	bShouldRebuildDrawCall = true;
-	bShouldSortVisualOrder = true;
 	bAnythingChangedForRenderTarget = true;
 	bPrevAnythingChangedForRenderTarget = true;
 
@@ -81,7 +80,7 @@ void ULexCanvas::Awake_Implementation()
 	{
 		bPrevIsVisible = false;
 	}
-	MarkCanvasUpdate(true, true, true, true);
+	MarkCanvasUpdate(true, true, true);
 
 	bNeedToSortRenderPriority = true;
 
@@ -465,7 +464,7 @@ void ULexCanvas::SetParentCanvas(ULexCanvas* InParentCanvas)
 	if (ParentCanvas != InParentCanvas)
 	{
 		this->ClearDrawCall();
-		this->MarkCanvasUpdate(false, false, true, true);
+		this->MarkCanvasUpdate(false, false, true);
 		if (ParentCanvas.IsValid())
 		{
 			//if render as child, then delete render section
@@ -478,14 +477,14 @@ void ULexCanvas::SetParentCanvas(ULexCanvas* InParentCanvas)
 
 			ParentCanvas->ChildrenCanvasArray.Remove(this);
 			ParentCanvas->bNeedToGenerateWidgetList = true;
-			ParentCanvas->MarkCanvasUpdate(false, false, true, true);
+			ParentCanvas->MarkCanvasUpdate(false, false, true);
 		}
 		ParentCanvas = InParentCanvas;
 		if (ParentCanvas.IsValid())
 		{
 			ParentCanvas->bNeedToGenerateWidgetList = true;
 			ParentCanvas->ChildrenCanvasArray.AddUnique(this);
-			ParentCanvas->MarkCanvasUpdate(false, false, true, true);
+			ParentCanvas->MarkCanvasUpdate(false, false, true);
 		}
 	}
 }
@@ -573,8 +572,7 @@ void ULexCanvas::OnWidgetActiveChanged(bool WidgetActive)
 		if (ParentCanvas.IsValid())
 		{
 			ParentCanvas->bNeedToGenerateWidgetList = true;
-			ParentCanvas->MarkCanvasUpdate(false, false, true//why make this to true? because we need to sort UIRenderableList, and set bShouldSortRenderableOrder to true can do it
-				, true);
+			ParentCanvas->MarkCanvasUpdate(false, false, true);
 
 		}
 	}
@@ -583,7 +581,7 @@ void ULexCanvas::OnWidgetActiveChanged(bool WidgetActive)
 		if (ParentCanvas.IsValid())
 		{
 			ParentCanvas->bNeedToGenerateWidgetList = true;
-			ParentCanvas->MarkCanvasUpdate(false, false, false, true);
+			ParentCanvas->MarkCanvasUpdate(false, false, true);
 		}
 	}
 }
@@ -627,26 +625,22 @@ bool ULexCanvas::IsRenderByLexUIRendererOrUERenderer()const
 	return false;
 }
 
-void ULexCanvas::MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawCall)
+void ULexCanvas::MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bForceRebuildDrawCall)
 {
 	this->bCanTickUpdate = true;
-	if (bMaterialOrTextureChanged || bTransformOrVertexPositionChanged || bHierarchyOrderChanged || bForceRebuildDrawCall)
+	if (bMaterialOrTextureChanged || bTransformOrVertexPositionChanged || bForceRebuildDrawCall)
 	{
 		this->bShouldRebuildDrawCall = true;
 	}
-	if (bHierarchyOrderChanged)
-	{
-		this->bShouldSortVisualOrder = true;
-	}
 }
-void ULexCanvas::MarkCanvasUpdateRecursive(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bHierarchyOrderChanged, bool bForceRebuildDrawCall)
+void ULexCanvas::MarkCanvasUpdateRecursive(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bForceRebuildDrawCall)
 {
-	this->MarkCanvasUpdate(bMaterialOrTextureChanged, bTransformOrVertexPositionChanged, bHierarchyOrderChanged, bForceRebuildDrawCall);
+	this->MarkCanvasUpdate(bMaterialOrTextureChanged, bTransformOrVertexPositionChanged, bForceRebuildDrawCall);
 	for (auto& ChildCanvas : this->ChildrenCanvasArray)
 	{
 		if (!ChildCanvas.IsValid())continue;
 		if (ChildCanvas->bForceRenderToTarget)continue;
-		ChildCanvas->MarkCanvasUpdateRecursive(bMaterialOrTextureChanged, bTransformOrVertexPositionChanged, bHierarchyOrderChanged, bForceRebuildDrawCall);
+		ChildCanvas->MarkCanvasUpdateRecursive(bMaterialOrTextureChanged, bTransformOrVertexPositionChanged, bForceRebuildDrawCall);
 	}
 }
 
@@ -760,7 +754,7 @@ void ULexCanvas::EnsureDataForRebuild()
 		static void RecheckRootCanvasRecursive(ULexCanvas* Target)
 		{
 			Target->CheckRootCanvas(true);
-			Target->MarkCanvasUpdate(true, true, true, true);
+			Target->MarkCanvasUpdate(true, true, true);
 			Target->CheckRenderMode(false);
 			Target->bShouldClearCachedDrawCall = true;
 			for (int i = Target->ChildrenCanvasArray.Num() - 1; i >= 0; i--)
@@ -2481,7 +2475,7 @@ void ULexCanvas::SetRenderMode(ELexRenderMode Value)
 	if (RenderMode != Value)
 	{
 		RenderMode = Value;
-		MarkCanvasUpdate(false, false, false, true);
+		MarkCanvasUpdate(false, false, true);
 		CheckRenderMode(true);
 
 		UnregisterCanvasScaler();
@@ -2496,7 +2490,7 @@ void ULexCanvas::SetForceRenderToTarget(bool Value)
 		bForceRenderToTarget = Value;
 		if (bForceRenderToTarget)
 		{
-			MarkCanvasUpdate(false, false, false, true);
+			MarkCanvasUpdate(false, false, true);
 			LexWidget->MarkAllDirtyRecursive();
 		}
 	}
@@ -2533,7 +2527,7 @@ void ULexCanvas::SetRenderTargetClearColor(FColor Value)
 		if (CheckRootCanvas() && RootCanvas == this)
 		{
 			this->bRequestUpdateForRenderTarget = true;
-			this->MarkCanvasUpdate(false, false, false, false);
+			this->MarkCanvasUpdate(false, false, false);
 		}
 	}
 }
@@ -2964,7 +2958,7 @@ void ULexCanvas::OnViewportParameterChanged()
 				this->CanvasScale = TempCanvasScale;
 
 				LexWidget->MarkAllDirtyRecursive();
-				this->MarkCanvasUpdate(false, true, false, true);
+				this->MarkCanvasUpdate(false, true, true);
 			}
 		}
 	}
