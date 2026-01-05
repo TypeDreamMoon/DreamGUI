@@ -361,7 +361,7 @@ void FLexUISpriteDataCustomization::CheckSprite()
 	}
 	if (auto DynamicSpriteAtlasData = ULexUIDynamicSpriteAtlasManager::Find(TargetScriptPtr->PackingTag))
 	{
-		DynamicSpriteAtlasData->CheckSprite(TargetScriptPtr->PackingTag);
+		DynamicSpriteAtlasData->CheckSprite();
 	}
 }
 

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "LexUISettings.h"
 #include "Engine/DataAsset.h"
 #include "Utils/MaxRectsBinPack/MaxRectsBinPack.h"
 #include "Engine/Texture2D.h"
@@ -19,7 +20,7 @@ class LGUI_API ULexUIStaticSpriteAtlasData :public UObject
 	GENERATED_BODY()
 private:
 	friend class FLexUIStaticSpriteAtlasDataCustomization;
-	/** weather or not use srgb for generate atlas texture */
+	/** weather or not use srgb for generated atlas texture */
 	UPROPERTY(EditAnywhere, Category = "Atlas-Setting")
 		bool AtlasTextureUseSRGB = true;
 	UPROPERTY(EditAnywhere, Category = "Atlas-Setting")
@@ -31,14 +32,14 @@ private:
 	/** Repeat edge pixel fill spaced between other sprites in atlas texture */
 	UPROPERTY(EditAnywhere, Category = "Atlas-Setting")
 		int32 EdgePixelPadding = 2;
-	/** If the result atlas texture's size is larger than this, then packing operation will abort. */
+	/** If packing atlas texture's size is larger than this, then packing operation will abort. */
 	UPROPERTY(EditAnywhere, Category = "Atlas-Setting")
-		uint32 MaxAtlasTextureSize = 4096;
+	ELexUIAtlasTextureSizeType MaxTextureSize = ELexUIAtlasTextureSizeType::SIZE_2048x2048;
 #endif
 
 	/** Generated atlas texture. */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI")
-		TObjectPtr<UTexture2D> AtlasTexture = nullptr;
+		TArray<TObjectPtr<UTexture2D>> AtlasTextureArray;
 #if WITH_EDITORONLY_DATA
 	/** Collected Sprite array to pack. */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
@@ -54,9 +55,9 @@ private:
 	 * @todo: Actually I want to save this only in cook time (reduce editor asset size), but I can't get texture's pixel data in cook time.
 	 */
 	UPROPERTY()
-		TArray<uint8> TextureMipData;
+	TArray<uint8> TextureMipData;
 	UPROPERTY()
-		uint32 TextureSize;
+	TArray<int32> TextureSizeArray;
 #if WITH_EDITOR
 public:
 	virtual void PreEditChange(FProperty* PropertyAboutToChange)override;
@@ -77,7 +78,7 @@ public:
 	virtual void WillNeverCacheCookedPlatformDataAgain()override;
 	virtual void ClearCachedCookedPlatformData(const ITargetPlatform* TargetPlatform)override;
 private:
-	bool PackAtlasTest(uint32 size, TArray<rbp::Rect>& result);
+	bool TryPackAtlas(ULexUISpriteData* Sprite, rbp::MaxRectsBinPack& RectBinPack, TArray<rbp::Rect>& PackedRects, TArray<ULexUISpriteData*>& PackedSprites);
 	bool bWarningIsAlreadyAppearedAtCurrentPackingSession = false;
 	bool bIsYesToAll = false;
 	bool bIsNoToAll = false;
@@ -89,7 +90,7 @@ private:
 public:
 	bool InitCheck();
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		UTexture2D* GetAtlasTexture();
+		UTexture2D* GetAtlasTexture(int32 Index);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		bool ReadPixel(const FVector2D& InUV, FColor& OutPixel);
+		bool ReadPixel(int InTextureIndex, const FVector2D& InUV, FColor& OutPixel);
 };

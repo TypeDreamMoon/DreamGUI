@@ -10,9 +10,8 @@
 #include "LexUISettings.h"
 #include "LexUIFontData_FreeTypeRender.generated.h"
 
-
-class UTexture2D;
 class ULexText;
+
 #if WITH_FREETYPE
 struct FT_GlyphSlotRec_;
 struct FT_LibraryRec_;
@@ -26,9 +25,9 @@ enum class ELexUIDynamicFontDataType :uint8
 	CustomFontFile,
 	/**
 	 * Use existing UnrealEngine's font.
-	 * Note: if UnrealEngine's font use 'Lazy Load' loading policy, then LGUI will load target font file by itself.
+	 * Note: if UnrealEngine's font use 'Lazy Load' loading policy, then LexUI will load target font file by itself.
 	 */
-	UnrealFont,
+	EngineFont,
 };
 
 UENUM(BlueprintType)
@@ -62,7 +61,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		bool bUseExternalFileOrEmbedInToUAsset = false;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		TObjectPtr<class UFontFace> UnrealFont;
+		TObjectPtr<class UFontFace> EngineFont;
 
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 	bool bCultureFont = false;
@@ -80,24 +79,25 @@ protected:
 		bool bHasKerning = false;
 	
 	/**
-	 * when packing char pixel into one single atlas texture, we will use this size to create a blank texture, then insert char pixel. if texture is full(cannot insert anymore), a new larger texture will be created.
-	 * if initialSize is too small, some lag or freeze may happen when creating new texture.
-	 * if initialSize is too big, it is not much efficient to sample very big texture on GPU.
+	 * when packing char pixel into one single atlas texture, LexUI will use this size to create a blank Texture2DArray, then insert char pixel.
 	*/
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		ELexUIAtlasTextureSizeType InitialSize = ELexUIAtlasTextureSizeType::SIZE_1024x1024;
+	ELexUIAtlasTextureSizeType TextureSizeType = ELexUIAtlasTextureSizeType::SIZE_2048x2048;
 	/**
-	 * rect pack use small cells to pack glyph in, and move to next cell if current cell is full. smaller value get better performance, but leave more garbage area.
-	 * this value defines the cell size. must not larger than InitialSize and only allow pow of 2.
+	 * rect pack use small cells to pack glyphs, and move to next cell if current cell is full. smaller value get better performance, but leave more garbage area.
 	 */
-	UPROPERTY(EditAnywhere, Category = "LGUI")
-		int32 RectPackCellSize = 256;
+	UPROPERTY(VisibleAnywhere, Category = "LGUI")
+	ELexUIAtlasTextureSizeType RectPackCellSizeType = ELexUIAtlasTextureSizeType::SIZE_256x256;
 
 	/** Texture of this font */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI")
-		TObjectPtr<UTexture2D> Texture;
+		TObjectPtr<UTexture2DArray> Texture;
+	/** IntermediateTexture for Updating Texture2DArray. */ 
+	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI")
+	TObjectPtr<UTexture2D> IntermediateTexture;
+	int32 CurrentTextureSlice = 0;
 
-	/** if not find char in current font, LGUI will search the char in this font array until find it. */
+	/** if not find char in current font, LexUI will search the char in this font array until find it. */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		TArray<TObjectPtr<ULexUIFontData_FreeTypeRender>> FallbackFontArray;
 
@@ -116,7 +116,7 @@ public:
 	//Begin ULexUIFontData_BaseObject interface
 	virtual void InitFont()override;
 	virtual UMaterialInterface* GetFontMaterial()override { return nullptr; }
-	virtual UTexture2D* GetFontTexture()override;
+	virtual UTexture2DArray* GetFontTexture()override;
 	virtual FLexUICharData GetCharData(const uint32& CharCode, const float& CharSize)override;
 	virtual bool HasKerning()override { return bHasKerning; }
 	virtual float GetKerning(const uint32& LeftCharCode, const uint32& RightCharCode, const float& CharSize)override;
@@ -129,7 +129,7 @@ public:
 	//End ULexUIFontData_BaseObject interface
 
 	void SetFontType(ELexUIDynamicFontDataType Value);
-	void SetUnrealFont(UFontFace* Value);
+	void SetEngineFont(UFontFace* Value);
 protected:
 	/** Collection of UIText which use this font to render. */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI")
@@ -145,9 +145,7 @@ protected:
 
 	/** for rect packing */
 	rbp::MaxRectsBinPack BinPack;
-	TArray<rbp::Rect> FreeRects;
-	/** current texture size */
-	int32 TextureSize;
+	TArray<rbp::Rect> FreeRectCells;
 	/** 1.0 / textureSize */
 	float OneDivideTextureSize;
 
@@ -180,17 +178,17 @@ protected:
 	 * Insert rect into area, assign pixel if succeed
 	 * return: if glyph can fit in rect area return true, else false
 	 */
-	bool PackRectAndInsertChar(const FGlyphBitmap& InGlyphBitmap, rbp::MaxRectsBinPack& InOutBinPack, UTexture2D* InTexture, FLexUICharData& OutResult);
-	void UpdateFontTextureRegion(UTexture2D* InTexture, FUpdateTextureRegion2D* Region, uint32 SrcPitch, uint32 SrcBpp, uint8* SrcData);
-	void RenewFontTexture(int oldTextureSize, int newTextureSize);
+	bool PackRectAndInsertChar(const FGlyphBitmap& InGlyphBitmap, rbp::MaxRectsBinPack& InOutBinPack, UTexture2DArray* InTexture, FLexUICharData& OutResult);
+	void UpdateFontTextureRegion(uint32 PosX, uint32 PosY, uint32 Slice, FUpdateTextureRegion2D* Region, uint32 SrcPitch, uint32 SrcBpp, uint8* SrcData);
+	void RenewFontTexture();
 
-	virtual UTexture2D* CreateFontTexture(int InTextureSize)PURE_VIRTUAL(ULGUIFreeTypeRenderFontData::CreateFontTexture, return nullptr;);
+	virtual UTexture2DArray* CreateFontTexture(int InTextureSize, int InSliceCount)PURE_VIRTUAL(ULexUIFontData_FreeTypeRender::CreateFontTexture, return nullptr;);
+	virtual UTexture2D* CreateIntermediateTexture(int InTextureSize)PURE_VIRTUAL(ULexUIFontData_FreeTypeRender::CreateIntermediateTexture, return nullptr;);
 	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize);
 
 	virtual bool GetCharDataFromCache(const uint32& CharCode, const float& CharSize, FLexUICharData& OutResult) { return false; };
 	virtual void AddCharDataToCache(const uint32& CharCode, const float& CharSize, FLexUICharData& CharData) {};
 	virtual bool RenderGlyph(const uint32& CharCode, const float& CharSize, FGlyphBitmap& OutResult) { return false; };
-	virtual void ScaleDownUVofCachedChars() {};
 	virtual void ClearCharDataCache() {};
 public:
 #if WITH_EDITOR

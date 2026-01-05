@@ -39,9 +39,9 @@ const FLexUIAtlasSettings& ULexUISettings::GetAtlasSettings(const FName& InPacki
 		return Settings->DefaultAtlasSetting;
 	}
 }
-int32 ULexUISettings::GetAtlasTextureInitialSize(const FName& InPackingTag)
+int32 ULexUISettings::GetAtlasTextureMaxSize(const FName& InPackingTag)
 {
-	return ConvertAtlasTextureSizeTypeToSize(GetAtlasSettings(InPackingTag).AtlasTextureInitialSize);
+	return ConvertAtlasTextureSizeTypeToSize(GetAtlasSettings(InPackingTag).AtlasTextureMaxSize);
 }
 bool ULexUISettings::GetAtlasTextureSRGB(const FName& InPackingTag)
 {
@@ -73,7 +73,7 @@ float ULexUISettings::GetAutoBatchThreshold()
 }
 int32 ULexUISettings::ConvertAtlasTextureSizeTypeToSize(const ELexUIAtlasTextureSizeType& InType)
 {
-	return ((int32)FMath::Pow(2.0, (double)InType)) * 256;
+	return 1 << ((int32)InType + 8);
 }
 int32 ULexUISettings::GetPriorityInSceneViewExtension()
 {

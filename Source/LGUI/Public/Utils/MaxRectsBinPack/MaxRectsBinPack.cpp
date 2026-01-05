@@ -152,7 +152,7 @@ namespace rbp {
 		binWidth = newWidth;
 		binHeight = newHeight;
 	}
-	void MaxRectsBinPack::PrepareExpendSizeForText(int newWidth, int newHeight, TArray<Rect>& outFreeRectangles, int cellSize, bool resetFreeAndUsedRects)
+	void MaxRectsBinPack::PrepareRectCellsForText(int newWidth, int newHeight, TArray<Rect>& outFreeRectangles, int cellSize, bool resetFreeAndUsedRects)
 	{
 		if (binWidth > newWidth || binHeight > newHeight)//new size is smaller
 			return;
@@ -217,12 +217,18 @@ namespace rbp {
 		binWidth = newWidth;
 		binHeight = newHeight;
 	}
-	void MaxRectsBinPack::DoExpendSizeForText(Rect rect)
+	void MaxRectsBinPack::DoRectCellsForText(Rect rect)
 	{
 		usedRectangles.Reset();
 		freeRectangles.Reset();
 		freeRectangles.Add(rect);
 	}
+
+	bool MaxRectsBinPack::IsEmpty()const
+	{
+		return usedRectangles.IsEmpty();
+	}
+	
 #define MAXINT32       2147483647
 	Rect MaxRectsBinPack::Insert(int width, int height, FreeRectChoiceHeuristic method)
 	{

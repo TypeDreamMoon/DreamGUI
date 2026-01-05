@@ -294,7 +294,6 @@ protected:
 public:
 #pragma region ILexUISpriteRenderInterface
 	virtual ULexUISpriteData_BaseObject* SpriteRenderGetSprite_Implementation()const override { return BodySpriteTexture; }
-	virtual void ApplyAtlasTextureScaleUp_Implementation()override;
 	virtual void ApplyAtlasTextureChange_Implementation()override;
 #pragma endregion
 

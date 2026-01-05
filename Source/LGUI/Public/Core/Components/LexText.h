@@ -166,7 +166,6 @@ public:
 
 	void CheckRequireNormalAndTangent();
 public:
-	void ApplyFontTextureScaleUp();
 	void ApplyFontTextureChange();
 	void ApplyFontMaterialChange();
 	void ApplyRecreateText();

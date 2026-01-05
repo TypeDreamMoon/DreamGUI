@@ -20,6 +20,4 @@ public:
 		ULexUISpriteData_BaseObject* SpriteRenderGetSprite()const;
 	UFUNCTION(BlueprintNativeEvent, Category = "LGUI")
 		void ApplyAtlasTextureChange();
-	UFUNCTION(BlueprintNativeEvent, Category = "LGUI")
-		void ApplyAtlasTextureScaleUp();
 };

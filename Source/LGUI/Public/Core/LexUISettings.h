@@ -46,12 +46,10 @@ struct LGUI_API FLexUIAtlasSettings
 	GENERATED_BODY()
 public:
 	/**
-	 * when packing sprites into one single texture, we will use this size to create a blank texture, then insert sprites. if texture is full(cannot insert anymore Sprite), a new larger texture will be created. 
-	 * if initialSize is too small, some lag or freeze may happen when creating new texture.
-	 * if initialSize is too large, it is not efficient to sample large texture on GPU.
+	 * when packing sprites into one atlas texture, LexUI will use this size to create a blank texture then insert sprites.
 	*/
 	UPROPERTY(EditAnywhere, config, Category = Sprite)
-		ELexUIAtlasTextureSizeType AtlasTextureInitialSize = ELexUIAtlasTextureSizeType::SIZE_1024x1024;
+		ELexUIAtlasTextureSizeType AtlasTextureMaxSize = ELexUIAtlasTextureSizeType::SIZE_2048x2048;
 	/** weather or not use srgb for generate atlas texture */
 	UPROPERTY(EditAnywhere, config, Category = Sprite)
 		bool AtlasTextureUseSRGB = true;
@@ -128,7 +126,7 @@ public:
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)override;
 #endif
 public:
-	static int32 GetAtlasTextureInitialSize(const FName& InPackingTag);
+	static int32 GetAtlasTextureMaxSize(const FName& InPackingTag);
 	static bool GetAtlasTextureSRGB(const FName& InPackingTag);
 	static int32 GetAtlasTexturePadding(const FName& InPackingTag);
 	static TextureFilter GetAtlasTextureFilter(const FName& InPackingTag);

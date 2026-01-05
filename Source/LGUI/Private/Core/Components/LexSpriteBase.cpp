@@ -49,28 +49,6 @@ void ULexSpriteBase::ApplyAtlasTextureChange_Implementation()
 	}
 	GetWidget()->MarkCanvasUpdate(true, true, false);
 }
-void ULexSpriteBase::ApplyAtlasTextureScaleUp_Implementation()
-{
-	auto& vertices = UIGeometry->Vertices;
-	if (vertices.Num() != 0)
-	{
-		for (int i = 0; i < vertices.Num(); i++)
-		{
-			auto& uv = vertices[i];
-			uv.TextureCoordinate[0].X *= 0.5f;
-			uv.TextureCoordinate[0].Y *= 0.5f;
-		}
-	}
-	UIGeometry->Texture = Sprite->GetAtlasTexture();
-	if (DrawCall.IsValid())
-	{
-		DrawCall->Texture = UIGeometry->Texture;
-		DrawCall->bTextureChanged = true;
-		DrawCall->bNeedToUpdateVertex = true;
-	}
-	MarkVerticesDirty(false, true, true, false);
-	GetWidget()->MarkCanvasUpdate(true, true, false);
-}
 
 void ULexSpriteBase::SetSprite(ULexUISpriteData_BaseObject* Value, bool bSetSize)
 {

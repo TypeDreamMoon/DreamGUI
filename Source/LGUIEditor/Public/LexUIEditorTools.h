@@ -63,7 +63,7 @@ public:
 	static void CleanupPrefabsInWorld(UWorld* World);
 	static bool IsActorCompatibleWithLexUIToolsMenu(AActor* InActor);
 
-	static TMap<FString, TWeakObjectPtr<class ULexUIPrefab>> CopiedActorPrefabMap;//map ActorLabel to prefab
+	static TMap<FString, TWeakObjectPtr<ULexUIPrefab>> CopiedActorPrefabMap;//map ActorLabel to prefab
 	static bool HaveValidCopiedActors();
 
 	static void MakeCurrentLevel(AActor* InActor);

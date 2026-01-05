@@ -84,12 +84,12 @@ protected:
 	float ItalicSlop = 0.0f; float OneDivideFontSize = 1.0f; float ExpandMeshSize = 0; float ObjectScale = 0;
 	TMap<uint32, FLexUICharData> CharDataMap;
 	TMap<FLexUIDistanceFieldFontKerningPair, int16> KerningPairsMap;
-	virtual UTexture2D* CreateFontTexture(int InTextureSize)override;
+	virtual UTexture2DArray* CreateFontTexture(int InTextureSize, int InSliceCount)override;
+	virtual UTexture2D* CreateIntermediateTexture(int InTextureSize) override;
 	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize)override;
 
 	virtual bool GetCharDataFromCache(const uint32& CharCode, const float& CharSize, FLexUICharData& OutResult)override;
 	virtual void AddCharDataToCache(const uint32& CharCode, const float& CharSize, FLexUICharData& CharData)override;
-	virtual void ScaleDownUVofCachedChars()override;
 	virtual bool RenderGlyph(const uint32& CharCode, const float& CharSize, FGlyphBitmap& OutResult)override;
 	virtual void ClearCharDataCache()override;
 

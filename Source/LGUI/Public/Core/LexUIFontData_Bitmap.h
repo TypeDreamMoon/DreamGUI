@@ -57,12 +57,12 @@ public:
 protected:
 	float BoldSize; float ItalicSlop;
 	TMap<FLexUIFontKeyData, FLexUICharData> CharDataMap;
-	virtual UTexture2D* CreateFontTexture(int InTextureSize)override;
+	virtual UTexture2DArray* CreateFontTexture(int InTextureSize, int InSliceCount)override;
+	virtual UTexture2D* CreateIntermediateTexture(int InTextureSize) override;
 	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize)override;
 
 	virtual bool GetCharDataFromCache(const uint32& charCode, const float& charSize, FLexUICharData& OutResult)override;
 	virtual void AddCharDataToCache(const uint32& charCode, const float& charSize, FLexUICharData& charData)override;
-	virtual void ScaleDownUVofCachedChars()override;
 	virtual bool RenderGlyph(const uint32& charCode, const float& charSize, FGlyphBitmap& OutResult)override;
 	virtual void ClearCharDataCache()override;
 

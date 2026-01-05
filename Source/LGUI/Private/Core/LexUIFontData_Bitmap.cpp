@@ -4,6 +4,7 @@
 #include "Core/Components/LexText.h"
 #include "TextureResource.h"
 #include "Engine/Texture2D.h"
+#include "Engine/Texture2DArray.h"
 #if WITH_FREETYPE
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -388,17 +389,7 @@ void ULexUIFontData_Bitmap::AddCharDataToCache(const uint32& charCode, const flo
 {
 	CharDataMap.Add(FLexUIFontKeyData(charCode, charSize), charData);
 }
-void ULexUIFontData_Bitmap::ScaleDownUVofCachedChars()
-{
-	for (auto& charDataItem : CharDataMap)
-	{
-		auto& mapValue = charDataItem.Value;
-		mapValue.MinUV.X *= 0.5f;
-		mapValue.MaxUV.Y *= 0.5f;
-		mapValue.MaxUV.X *= 0.5f;
-		mapValue.MinUV.Y *= 0.5f;
-	}
-}
+
 bool ULexUIFontData_Bitmap::RenderGlyph(const uint32& charCode, const float& charSize, FGlyphBitmap& OutResult)
 {
 #if WITH_FREETYPE
@@ -435,40 +426,76 @@ void ULexUIFontData_Bitmap::ClearCharDataCache()
 	CharDataMap.Empty();
 }
 
-UTexture2D* ULexUIFontData_Bitmap::CreateFontTexture(int InTextureSize)
+UTexture2DArray* ULexUIFontData_Bitmap::CreateFontTexture(int InTextureSize, int InSliceCount)
+{
+	static int TextureNameSuffix = 0;
+	auto NewTexture = NewObject<UTexture2DArray>(
+		GetTransientPackage()
+		, FName(*FString::Printf(TEXT("LexUIFontData_Bitmap_Texture_%d"), TextureNameSuffix++))
+		, RF_Transient);
+
+	auto PixelFormat = PF_B8G8R8A8;
+	auto PlatformData = new FTexturePlatformData();
+	PlatformData->SizeX = InTextureSize;
+	PlatformData->SizeY = InTextureSize;
+	PlatformData->PixelFormat = PixelFormat;
+	PlatformData->SetNumSlices(InSliceCount);
+	NewTexture->SetPlatformData(PlatformData);
+
+	// Allocate first mipmap.
+	int32 NumBlocksX = InTextureSize / GPixelFormats[PixelFormat].BlockSizeX;
+	int32 NumBlocksY = InTextureSize / GPixelFormats[PixelFormat].BlockSizeY;
+	FTexture2DMipMap* Mip = new FTexture2DMipMap(InTextureSize, InTextureSize, InSliceCount);
+	NewTexture->GetPlatformData()->Mips.Add(Mip);
+	Mip->BulkData.Lock(LOCK_READ_WRITE);
+	void* MipData = Mip->BulkData.Realloc((int64)GPixelFormats[PixelFormat].BlockBytes * NumBlocksX * NumBlocksY * InSliceCount);
+	FColor* PixelPtr = static_cast<FColor*>(MipData);
+	constexpr FColor DefaultColor = FColor(255, 255, 255, 0);
+	for (int i = 0, count = InTextureSize * InTextureSize * InSliceCount; i < count; i++)
+	{
+		PixelPtr[i] = DefaultColor;
+	}
+	Mip->BulkData.Unlock();
+
+	NewTexture->CompressionSettings = TextureCompressionSettings::TC_EditorIcon;
+	NewTexture->LODGroup = TextureGroup::TEXTUREGROUP_UI;
+	NewTexture->SRGB = false;
+	NewTexture->Filter = TextureFilter::TF_Trilinear;
+	NewTexture->UpdateResource();
+
+	return NewTexture;
+}
+
+UTexture2D* ULexUIFontData_Bitmap::CreateIntermediateTexture(int InTextureSize)
 {
 	static int TextureNameSuffix = 0;
 	auto ResultTexture = NewObject<UTexture2D>(
 		GetTransientPackage(),
-		FName(*FString::Printf(TEXT("LexUIFontData_Texture_%d"), TextureNameSuffix++)),
-		EObjectFlags::RF_Transient
+		FName(*FString::Printf(TEXT("LexUIFontData_Bitmap_Intermediate_%d"), TextureNameSuffix++)),
+		RF_Transient
 	);
 	auto PlatformData = new FTexturePlatformData();
 	PlatformData->SizeX = InTextureSize;
 	PlatformData->SizeY = InTextureSize;
-	PlatformData->PixelFormat = PF_B8G8R8A8;
+	PlatformData->PixelFormat = PF_R8;
 	// Allocate first mipmap.
-	int32 NumBlocksX = InTextureSize / GPixelFormats[PF_B8G8R8A8].BlockSizeX;
-	int32 NumBlocksY = InTextureSize / GPixelFormats[PF_B8G8R8A8].BlockSizeY;
+	int32 NumBlocksX = InTextureSize / GPixelFormats[PF_R8].BlockSizeX;
+	int32 NumBlocksY = InTextureSize / GPixelFormats[PF_R8].BlockSizeY;
 	FTexture2DMipMap* Mip = new FTexture2DMipMap();
 	PlatformData->Mips.Add(Mip);
 	Mip->SizeX = InTextureSize;
 	Mip->SizeY = InTextureSize;
+	int DataSize = NumBlocksX * NumBlocksY * GPixelFormats[PF_R8].BlockBytes;
 	Mip->BulkData.Lock(LOCK_READ_WRITE);
-	void* dataPtr = Mip->BulkData.Realloc(NumBlocksX * NumBlocksY * GPixelFormats[PF_B8G8R8A8].BlockBytes);
-	FColor* pixelPtr = static_cast<FColor*>(dataPtr);
-	const FColor DefaultColor = FColor(255, 255, 255, 0);
-	for (int i = 0, count = InTextureSize * InTextureSize; i < count; i++)
-	{
-		pixelPtr[i] = DefaultColor;
-	}
+	void* DataPtr = Mip->BulkData.Realloc(DataSize);
+	FMemory::Memzero(DataPtr, DataSize);
 	Mip->BulkData.Unlock();
 	ResultTexture->SetPlatformData(PlatformData);
 
-	ResultTexture->CompressionSettings = TextureCompressionSettings::TC_EditorIcon;
+	ResultTexture->CompressionSettings = TextureCompressionSettings::TC_DistanceFieldFont;
 	ResultTexture->LODGroup = TextureGroup::TEXTUREGROUP_UI;
 	ResultTexture->SRGB = false;
-	ResultTexture->Filter = TextureFilter::TF_Trilinear;
+	ResultTexture->Filter = TextureFilter::TF_Bilinear;
 	ResultTexture->UpdateResource();
 
 	return ResultTexture;

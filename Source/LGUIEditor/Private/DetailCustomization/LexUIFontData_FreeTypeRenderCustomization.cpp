@@ -51,21 +51,21 @@ void FLexUIFontData_FreeTypeRenderCustomization::CustomizeDetails(IDetailLayoutB
 	;
 	lguiCategory.AddProperty(fontTypeHandle);
 	TArray<FName> propertiesNeedToHide;
-	if (fontType == ELexUIDynamicFontDataType::UnrealFont)
+	if (fontType == ELexUIDynamicFontDataType::EngineFont)
 	{
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, FontFilePath));
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, bUseRelativeFilePath));
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, bUseExternalFileOrEmbedInToUAsset));
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, FontFace));
 
-		lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, UnrealFont));
+		lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, EngineFont));
 	}
 	else
 	{
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, FontFilePath));
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, bUseRelativeFilePath));
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, bUseExternalFileOrEmbedInToUAsset));
-		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, UnrealFont));
+		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, EngineFont));
 		propertiesNeedToHide.Add(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, FontFace));
 
 		auto fontFilePathHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUIFontData_FreeTypeRender, FontFilePath));

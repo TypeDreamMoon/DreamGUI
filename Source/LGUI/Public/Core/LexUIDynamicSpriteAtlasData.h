@@ -17,11 +17,13 @@ USTRUCT()
 struct LGUI_API FLexUIDynamicSpriteAtlasData
 {
 	GENERATED_BODY()
+	UPROPERTY(VisibleAnywhere, Category = "LGUI")
+	FName PackingTag;
 	/** AtlasTexture is the real texture for render */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI")
-	TObjectPtr<UTexture2D> AtlasTexture = nullptr;
+	TArray<TObjectPtr<UTexture2D>> AtlasTextureArray;
 	/** information needed when insert a Sprite */
-	rbp::MaxRectsBinPack AtlasBinPack;
+	TArray<rbp::MaxRectsBinPack> AtlasBinPackArray;
 	/** sprites belong to this atlas */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 	TArray<TObjectPtr<ULexUISpriteData>> SpriteDataArray;
@@ -29,19 +31,15 @@ struct LGUI_API FLexUIDynamicSpriteAtlasData
 	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI", AdvancedDisplay)
 	TArray<TWeakObjectPtr<UObject>> RenderSpriteArray;
 
-	void EnsureAtlasTexture(const FName& packingTag);
-	void CreateAtlasTexture(const FName& packingTag, int oldTextureSize, int newTextureSize);
-	/** create a new texture with size * 2 */
-	int32 ExpendTextureSize(const FName& packingTag);
-	int32 GetWillExpendTextureSize()const;
-	void CheckSprite(const FName& packingTag);
+	void EnsureAtlasTexture();
+	void CreateAtlasTexture(int InTextureSize);
+	/** expand texture array */
+	void ExpandAtlasAreaArray();
+	void CheckSprite();
+	int32 GetAtlasTextureSize();
 
-	class FLGUIAtlasTextureExpandEvent : public TMulticastDelegate<void(UTexture2D*, int32)>//why not use DECLARE_EVENT here? because DECLARE_EVENT use "friend class XXX", but I need "friend struct"
-	{
-		friend struct FLexUIDynamicSpriteAtlasData;
-	};
-	/** atlas texture size may change when dynamic packing, this event will be called when that happen. */
-	FLGUIAtlasTextureExpandEvent OnTextureSizeExpanded;
+	bool PackSprite(ULexUISpriteData* Sprite);
+	void CopySpriteTextureToAtlas(ULexUISpriteData* InSprite, UTexture2D* InAtlasTexture, rbp::Rect InPackedRect, int32 InAtlasTexturePadding);
 };
 
 UCLASS(NotBlueprintable, NotBlueprintType)
@@ -58,8 +56,8 @@ protected:
 public:
 	static bool InitCheck();
 	const TMap<FName, FLexUIDynamicSpriteAtlasData>& GetAtlasMap() { return AtlasMap; }
-	static FLexUIDynamicSpriteAtlasData* FindOrAdd(const FName& packingTag);
-	static FLexUIDynamicSpriteAtlasData* Find(const FName& packingTag);
+	static FLexUIDynamicSpriteAtlasData* FindOrAdd(const FName& InPackingTag);
+	static FLexUIDynamicSpriteAtlasData* Find(const FName& InPackingTag);
 	static void ResetAtlasMap();
 
 	/**
@@ -68,7 +66,7 @@ public:
 	 * Default "Main" tag is not allowed to be disposed.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		static void DisposeAtlasByPackingTag(FName inPackingTag);
+		static void DisposeAtlasByPackingTag(FName InPackingTag);
 
 	DECLARE_EVENT(ULexUIDynamicSpriteAtlasManager, FLexUIAtlasMapChangeEvent);
 

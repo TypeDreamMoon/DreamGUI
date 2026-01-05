@@ -56,7 +56,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI") ULexUISpriteData_BaseObject* GetSprite()const { return Sprite; }
 #pragma region LexUISpriteRenderInterface
 	virtual ULexUISpriteData_BaseObject* SpriteRenderGetSprite_Implementation()const override{ return Sprite; }
-	virtual void ApplyAtlasTextureScaleUp_Implementation()override;
 	virtual void ApplyAtlasTextureChange_Implementation()override;
 #pragma endregion
 

@@ -2,12 +2,11 @@
 
 #include "Core/LexUIFontData_DistanceField.h"
 #include "Core/Components/LexText.h"
-#include "Core/LexUIManager.h"
-#include "Utils/LexUIUtils.h"
 #include "Materials/MaterialInterface.h"
 #include "TextureResource.h"
 #include "Engine/Texture2D.h"
 #define SDF_IMPLEMENTATION
+#include "Engine/Texture2DArray.h"
 #include "Utils/sdf/sdf.h"
 #if WITH_FREETYPE
 #include <ft2build.h>
@@ -18,8 +17,7 @@
 
 ULexUIFontData_DistanceField::ULexUIFontData_DistanceField()
 {
-	InitialSize = ELexUIAtlasTextureSizeType::SIZE_1024x1024;
-	RectPackCellSize = 1024;
+	RectPackCellSizeType = ELexUIAtlasTextureSizeType::SIZE_512x512;
 
 	PresetMaterials.Add(LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/TextEffects/MI_DropShadowSoft")));
 	PresetMaterials.Add(LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/TextEffects/MI_DropShadowHard")));
@@ -76,17 +74,7 @@ void ULexUIFontData_DistanceField::AddCharDataToCache(const uint32& CharCode, co
 	// CharData.MinUV.Y += uvOffset;
 	CharDataMap.Add(CharCode, CharData);
 }
-void ULexUIFontData_DistanceField::ScaleDownUVofCachedChars()
-{
-	for (auto& charDataItem : CharDataMap)
-	{
-		auto& mapValue = charDataItem.Value;
-		mapValue.MinUV.X *= 0.5f;
-		mapValue.MaxUV.Y *= 0.5f;
-		mapValue.MaxUV.X *= 0.5f;
-		mapValue.MinUV.Y *= 0.5f;
-	}
-}
+
 bool ULexUIFontData_DistanceField::RenderGlyph(const uint32& CharCode, const float& CharSize, FGlyphBitmap& OutResult)
 {
 #if WITH_FREETYPE
@@ -133,31 +121,71 @@ void ULexUIFontData_DistanceField::ClearCharDataCache()
 	LineHeight = VerticalOffset = -1;
 }
 
-UTexture2D* ULexUIFontData_DistanceField::CreateFontTexture(int InTextureSize)
+UTexture2DArray* ULexUIFontData_DistanceField::CreateFontTexture(int InTextureSize, int InSliceCount)
+{
+	static int TextureNameSuffix = 0;
+	auto NewTexture = NewObject<UTexture2DArray>(
+		GetTransientPackage()
+		, FName(*FString::Printf(TEXT("LexUIFontData_DistanceField_Texture_%d"), TextureNameSuffix++))
+		, RF_Transient);
+	auto PixelFormat = PF_R8;
+
+	auto PlatformData = new FTexturePlatformData();
+	PlatformData->SizeX = InTextureSize;
+	PlatformData->SizeY = InTextureSize;
+	PlatformData->PixelFormat = PixelFormat;
+	PlatformData->SetNumSlices(InSliceCount);
+	NewTexture->SetPlatformData(PlatformData);
+
+	// Allocate first mipmap.
+	int32 NumBlocksX = InTextureSize / GPixelFormats[PixelFormat].BlockSizeX;
+	int32 NumBlocksY = InTextureSize / GPixelFormats[PixelFormat].BlockSizeY;
+	FTexture2DMipMap* Mip = new FTexture2DMipMap(InTextureSize, InTextureSize, InSliceCount);
+	PlatformData->Mips.Add(Mip);
+	auto DataSize = (int64)GPixelFormats[PixelFormat].BlockBytes * NumBlocksX * NumBlocksY * InSliceCount;
+	Mip->BulkData.Lock(LOCK_READ_WRITE);
+	Mip->BulkData.Realloc(DataSize);
+	void* DataPtr = Mip->BulkData.Realloc(DataSize);
+	FMemory::Memzero(DataPtr, DataSize);
+	Mip->BulkData.Unlock();
+	
+	NewTexture->CompressionSettings = TextureCompressionSettings::TC_DistanceFieldFont;
+	NewTexture->LODGroup = TextureGroup::TEXTUREGROUP_UI;
+	NewTexture->SRGB = false;
+	NewTexture->Filter = TextureFilter::TF_Bilinear;
+	NewTexture->UpdateResource();
+
+	return NewTexture;
+}
+
+UTexture2D* ULexUIFontData_DistanceField::CreateIntermediateTexture(int InTextureSize)
 {
 	static int TextureNameSuffix = 0;
 	auto ResultTexture = NewObject<UTexture2D>(
 		GetTransientPackage(),
-		FName(*FString::Printf(TEXT("LexUIFontData_DistanceField_Texture_%d"), TextureNameSuffix++)),
-		EObjectFlags::RF_Transient
+		FName(*FString::Printf(TEXT("LexUIFontData_DistanceField_Intermediate_%d"), TextureNameSuffix++)),
+		RF_Transient
 	);
+	auto PixelFormat = PF_R8;
+	
 	auto PlatformData = new FTexturePlatformData();
 	PlatformData->SizeX = InTextureSize;
 	PlatformData->SizeY = InTextureSize;
-	PlatformData->PixelFormat = PF_R8;
+	PlatformData->PixelFormat = PixelFormat;
+	ResultTexture->SetPlatformData(PlatformData);
+	
 	// Allocate first mipmap.
-	int32 NumBlocksX = InTextureSize / GPixelFormats[PF_R8].BlockSizeX;
-	int32 NumBlocksY = InTextureSize / GPixelFormats[PF_R8].BlockSizeY;
+	int32 NumBlocksX = InTextureSize / GPixelFormats[PixelFormat].BlockSizeX;
+	int32 NumBlocksY = InTextureSize / GPixelFormats[PixelFormat].BlockSizeY;
 	FTexture2DMipMap* Mip = new FTexture2DMipMap();
 	PlatformData->Mips.Add(Mip);
 	Mip->SizeX = InTextureSize;
 	Mip->SizeY = InTextureSize;
-	int DataSize = NumBlocksX * NumBlocksY * GPixelFormats[PF_R8].BlockBytes;
+	int DataSize = NumBlocksX * NumBlocksY * GPixelFormats[PixelFormat].BlockBytes;
 	Mip->BulkData.Lock(LOCK_READ_WRITE);
-	void* dataPtr = Mip->BulkData.Realloc(DataSize);
-	FMemory::Memzero(dataPtr, DataSize);
+	void* DataPtr = Mip->BulkData.Realloc(DataSize);
+	FMemory::Memzero(DataPtr, DataSize);
 	Mip->BulkData.Unlock();
-	ResultTexture->SetPlatformData(PlatformData);
 
 	ResultTexture->CompressionSettings = TextureCompressionSettings::TC_DistanceFieldFont;
 	ResultTexture->LODGroup = TextureGroup::TEXTUREGROUP_UI;
@@ -404,6 +432,13 @@ void ULexUIFontData_DistanceField::PushCharData(
 				vertices[verticesStartIndex + 2].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
 				vertices[verticesStartIndex + 3].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
 			}
+			//slice of texture array
+			{
+				vertices[verticesStartIndex].TextureCoordinate[1].Y = charData.SliceIndex;
+				vertices[verticesStartIndex + 1].TextureCoordinate[1].Y = charData.SliceIndex;
+				vertices[verticesStartIndex + 2].TextureCoordinate[1].Y = charData.SliceIndex;
+				vertices[verticesStartIndex + 3].TextureCoordinate[1].Y = charData.SliceIndex;
+			}
 
 			addVertCount = 4;
 		}
@@ -422,6 +457,13 @@ void ULexUIFontData_DistanceField::PushCharData(
 				vertices[verticesStartIndex + addVertCount + 2].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
 				vertices[verticesStartIndex + addVertCount + 3].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
 			}
+			//slice of texture array
+			{
+				vertices[verticesStartIndex].TextureCoordinate[1].Y = underlineCharGeo.SliceIndex;
+				vertices[verticesStartIndex + 1].TextureCoordinate[1].Y = underlineCharGeo.SliceIndex;
+				vertices[verticesStartIndex + 2].TextureCoordinate[1].Y = underlineCharGeo.SliceIndex;
+				vertices[verticesStartIndex + 3].TextureCoordinate[1].Y = underlineCharGeo.SliceIndex;
+			}
 
 			addVertCount += 4;
 		}
@@ -439,6 +481,13 @@ void ULexUIFontData_DistanceField::PushCharData(
 				vertices[verticesStartIndex + addVertCount + 1].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
 				vertices[verticesStartIndex + addVertCount + 2].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
 				vertices[verticesStartIndex + addVertCount + 3].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
+			}
+			//slice of texture array
+			{
+				vertices[verticesStartIndex].TextureCoordinate[1].Y = strikethroughCharGeo.SliceIndex;
+				vertices[verticesStartIndex + 1].TextureCoordinate[1].Y = strikethroughCharGeo.SliceIndex;
+				vertices[verticesStartIndex + 2].TextureCoordinate[1].Y = strikethroughCharGeo.SliceIndex;
+				vertices[verticesStartIndex + 3].TextureCoordinate[1].Y = strikethroughCharGeo.SliceIndex;
 			}
 
 			addVertCount += 4;

@@ -43,6 +43,9 @@ private:
 	 */
 	UPROPERTY(EditAnywhere, Category = "AtlasPacking")
 		TObjectPtr<ULexUIStaticSpriteAtlasData> PackingAtlas = nullptr;
+	/** Texture index in atlas texture array */
+	UPROPERTY(VisibleAnywhere, Category = "AtlasPacking")
+	int32 TextureIndex = 0;
 	/**
 	 * Sprites that have same PackingTag will be packed into same atlas at runtime. If PackingTag is None, then the LexSprite which render this LexUISpriteData will be treated as a LexTexture.
 	 * Not support mipmaps.
@@ -56,10 +59,8 @@ private:
 private:
 	bool bIsInitialized = false;
 	UPROPERTY(Transient)TObjectPtr<UTexture2D> AtlasTexture = nullptr;
-	bool PackageSprite();
-	bool InsertTexture(FLexUIDynamicSpriteAtlasData* InAtlasData);
+	bool PackSprite();
 	void CheckSpriteTexture();
-	void CopySpriteTextureToAtlas(rbp::Rect InPackedRect, int32 InAtlasTexturePadding);
 public:
 	bool GetUseEdgePixelPadding()const { return bUseEdgePixelPadding; }
 	ULexUIStaticSpriteAtlasData* GetPackingAtlas()const { return PackingAtlas; }

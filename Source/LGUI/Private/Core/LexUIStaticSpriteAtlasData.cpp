@@ -5,7 +5,6 @@
 #include "Core/LexUISpriteData.h"
 #include "TextureCompiler.h"
 #include "Utils/LexUIUtils.h"
-#include "PrefabSystem/LexUIPrefabManager.h"
 #include "Core/ILexUISpriteRenderInterface.h"
 #include "TextureResource.h"
 #include "Core/LexUIManager.h"
@@ -171,11 +170,6 @@ void ULexUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChanged
 					}, 0);
 			}
 		}
-		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUIStaticSpriteAtlasData, MaxAtlasTextureSize))
-		{
-			MaxAtlasTextureSize = FMath::RoundUpToPowerOfTwo(MaxAtlasTextureSize);
-			MaxAtlasTextureSize = FMath::Clamp(MaxAtlasTextureSize, (uint32)256, (uint32)8192);
-		}
 	}
 }
 void ULexUIStaticSpriteAtlasData::AddSpriteData(ULexUISpriteData* InSpriteData)
@@ -253,13 +247,13 @@ void ULexUIStaticSpriteAtlasData::CheckSprite()
 }
 bool ULexUIStaticSpriteAtlasData::PackAtlas()
 {
-	AtlasTexture = nullptr;
+	AtlasTextureArray.Empty();
 
 	if (SpriteDataArray.Num() <= 0)return false;
 	for (int i = 0; i < SpriteDataArray.Num(); i++)
 	{
-		ULexUISpriteData* spriteDataItem = SpriteDataArray[i];
-		if (!IsValid(spriteDataItem))
+		ULexUISpriteData* SpriteData = SpriteDataArray[i];
+		if (!IsValid(SpriteData))
 		{
 			if (!bWarningIsAlreadyAppearedAtCurrentPackingSession)
 			{
@@ -272,27 +266,27 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 			}
 			return false;
 		}
-		if (!IsValid(spriteDataItem->GetSpriteTexture()))
+		if (!IsValid(SpriteData->GetSpriteTexture()))
 		{
 			if (!bWarningIsAlreadyAppearedAtCurrentPackingSession)
 			{
 				bWarningIsAlreadyAppearedAtCurrentPackingSession = true;
 				auto ErrMsg = FText::Format(LOCTEXT("SpriteDataTextureError", "{0} Packing atlas for LGUIStaticSpriteAtlasData: '{1}', but SpriteData's texture is not valid of spriteData: '{2}'")
 					, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__))
-					, FText::FromString(this->GetPathName()), FText::FromString(spriteDataItem->GetPathName()));
+					, FText::FromString(this->GetPathName()), FText::FromString(SpriteData->GetPathName()));
 				UE_LOG(LGUI, Error, TEXT("%s"), *ErrMsg.ToString());
 				FLexUIUtils::EditorNotification(ErrMsg, false, 10.0f);
 			}
 			return false;
 		}
-		if (spriteDataItem->PackingAtlas != this)
+		if (SpriteData->PackingAtlas != this)
 		{
 			if (!bWarningIsAlreadyAppearedAtCurrentPackingSession)
 			{
 				bWarningIsAlreadyAppearedAtCurrentPackingSession = true;
 				auto ErrMsg = FText::Format(LOCTEXT("SpritePackingAtlasError", "{0} Packing atlas for LexUIStaticSpriteAtlasData: '{1}', but SpriteData's packingAtlas is not this one, spriteData '{2}', at index: {3}")
 					, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__))
-					, FText::FromString(this->GetPathName()), FText::FromString(spriteDataItem->GetPathName()), i);
+					, FText::FromString(this->GetPathName()), FText::FromString(SpriteData->GetPathName()), i);
 				UE_LOG(LGUI, Error, TEXT("%s"), *ErrMsg.ToString());
 				FLexUIUtils::EditorNotification(ErrMsg, false, 10.0f);
 			}
@@ -300,250 +294,283 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 		}
 	}
 
+	auto MaxAtlasTextureSize = ULexUISettings::ConvertAtlasTextureSizeTypeToSize(MaxTextureSize);
 	//pack
-	uint32 packSize = 16;//start from minimal size 16
-	TArray<rbp::Rect> packResult;
-	packResult.SetNumUninitialized(SpriteDataArray.Num());
-	while (!PackAtlasTest(packSize, packResult))
+	struct FAtlasSpriteBinPackContainer
 	{
-		packSize *= 2;
-	}
-	if (packSize > MaxAtlasTextureSize)
+		rbp::MaxRectsBinPack BinPack;
+		TArray<rbp::Rect> PackedRects;
+		TArray<ULexUISpriteData*> SpritesBelongToAtlas;
+	};
+	TArray<FAtlasSpriteBinPackContainer> AtlasSpriteBinPackArray;
+
+	for (int i = 0; i < SpriteDataArray.Num(); i++)
 	{
-		if (!bWarningIsAlreadyAppearedAtCurrentPackingSession)
+		auto SpriteData = SpriteDataArray[i];
+		bool bCanPackInExistingAtlas = false;
+		for (int AtlasIndex = 0; AtlasIndex < AtlasSpriteBinPackArray.Num(); AtlasIndex++)
 		{
-			bWarningIsAlreadyAppearedAtCurrentPackingSession = true;
-			auto ErrMsg = FText::Format(LOCTEXT("AtlasSizeTooLargeError", "{0} Package Sprite atlas fail! Atlas texture size {1} larger than {2}: {3}! Please remove some large size Sprite, or split to multiple atlas.")
-				, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__))
-				, packSize
-				, FText::FromName(GET_MEMBER_NAME_CHECKED(ULexUIStaticSpriteAtlasData, MaxAtlasTextureSize))
-				, MaxAtlasTextureSize);
-			UE_LOG(LGUI, Error, TEXT("%s"), *ErrMsg.ToString());
-			FLexUIUtils::EditorNotification(ErrMsg, false, 10.0f);
-		}
-		return false;
-	}
-
-	//create texture
-	auto PlatformData = new FTexturePlatformData();
-	PlatformData->SizeX = packSize;
-	PlatformData->SizeY = packSize;
-	PlatformData->PixelFormat = PF_B8G8R8A8;
-
-	int32 atlasSize = packSize;
-	auto pixelBufferLength = atlasSize * atlasSize * GPixelFormats[PF_B8G8R8A8].BlockBytes;
-	uint8* pixelData = new uint8[pixelBufferLength];
-	FMemory::Memset(pixelData, 0, pixelBufferLength);//default is transparent black
-	//copy pixels
-	FColor* atlasColorBuffer = static_cast<FColor*>((void*)pixelData);
-	float atlasTextureSizeInv = 1.0f / atlasSize;
-	for (int spriteIndex = 0; spriteIndex < SpriteDataArray.Num(); spriteIndex++)
-	{
-		auto spriteDataItem = SpriteDataArray[spriteIndex];
-		if (IsValid(spriteDataItem) && IsValid(spriteDataItem->GetSpriteTexture()))
-		{
-			auto spriteTexture = spriteDataItem->GetSpriteTexture();
-			ULexUISpriteData::CheckAndApplySpriteTextureSetting(spriteTexture);
-#if WITH_EDITOR
-			FTextureCompilingManager::Get().FinishCompilation({ spriteTexture });
-#endif
-			int32 spriteWidth = spriteTexture->GetSizeX();
-			int32 spriteHeight = spriteTexture->GetSizeY();
-			const FColor* spriteColorBuffer = static_cast<const FColor*>(spriteTexture->GetPlatformData()->Mips[0].BulkData.LockReadOnly());
-			rbp::Rect rect = packResult[spriteIndex];
-
-			int destY = rect.y * atlasSize;
-			int spritePixelIndex = 0;
-			for (int32 texY = 0; texY < spriteHeight; texY++)
+			auto& AtlasSpriteBinPack = AtlasSpriteBinPackArray[AtlasIndex];
+			if (TryPackAtlas(SpriteData, AtlasSpriteBinPack.BinPack, AtlasSpriteBinPack.PackedRects, AtlasSpriteBinPack.SpritesBelongToAtlas))
 			{
-				int destX = rect.x + destY;
-				for (int32 texX = 0; texX < spriteWidth; texX++)
+				bCanPackInExistingAtlas = true;
+				SpriteData->TextureIndex = AtlasIndex;
+				break;
+			}
+		}
+		if (!bCanPackInExistingAtlas)//can't pack in existing atlas, create a new one
+		{
+			int32 PackSize = 32;//start from very small size
+			rbp::MaxRectsBinPack RectBinPack(PackSize, PackSize, false);
+			TArray<rbp::Rect> PackedRects;
+			TArray<ULexUISpriteData*> SpritesBelongToAtlas;
+			while (!TryPackAtlas(SpriteData, RectBinPack, PackedRects, SpritesBelongToAtlas))
+			{
+				PackSize *= 2;
+				if (PackSize > MaxAtlasTextureSize)
 				{
-					int dstPixelIndex = destX + texX;
-					atlasColorBuffer[dstPixelIndex] = spriteColorBuffer[spritePixelIndex];
-					spritePixelIndex++;
+					break;
 				}
-				destY += atlasSize;
+				RectBinPack = rbp::MaxRectsBinPack(PackSize, PackSize, false);
+			}
+			if (PackSize > MaxAtlasTextureSize)
+			{
+				if (!bWarningIsAlreadyAppearedAtCurrentPackingSession)
+				{
+					bWarningIsAlreadyAppearedAtCurrentPackingSession = true;
+					auto ErrMsg = FText::Format(LOCTEXT("AtlasSizeTooLargeError", "{0} Package Sprite atlas fail! Atlas texture size {1} larger than {2}: {3}! Please remove some large size Sprite, or split to multiple atlas.")
+						, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__))
+						, PackSize
+						, FText::FromName(GET_MEMBER_NAME_CHECKED(ULexUIStaticSpriteAtlasData, MaxTextureSize))
+						, MaxAtlasTextureSize);
+					UE_LOG(LGUI, Error, TEXT("%s"), *ErrMsg.ToString());
+					FLexUIUtils::EditorNotification(ErrMsg, false, 10.0f);
+				}
+				return false;
+			}
+			AtlasSpriteBinPackArray.Add({RectBinPack, PackedRects, SpritesBelongToAtlas});
+		}
+	}
+
+	TextureSizeArray.Reset();
+	TextureMipData.Reset();
+	for (int i = 0; i < AtlasSpriteBinPackArray.Num(); i++)
+	{
+		auto& AtlasSpriteBinPack = AtlasSpriteBinPackArray[i];
+		//create texture
+		auto PlatformData = new FTexturePlatformData();
+		PlatformData->SizeX = AtlasSpriteBinPack.BinPack.GetBinWidth();
+		PlatformData->SizeY = AtlasSpriteBinPack.BinPack.GetBinHeight();
+		PlatformData->PixelFormat = PF_B8G8R8A8;
+
+		int32 AtlasSize = AtlasSpriteBinPack.BinPack.GetBinWidth();
+		auto PixelBufferLength = AtlasSize * AtlasSize * GPixelFormats[PF_B8G8R8A8].BlockBytes;
+		uint8* PixelData = new uint8[PixelBufferLength];
+		FMemory::Memset(PixelData, 0, PixelBufferLength);//default is transparent black
+		//copy pixels
+		FColor* AtlasColorBuffer = static_cast<FColor*>((void*)PixelData);
+		float InvAtlasTextureSize = 1.0f / AtlasSize;
+		for (int SpriteIndex = 0; SpriteIndex < AtlasSpriteBinPack.SpritesBelongToAtlas.Num(); SpriteIndex++)
+		{
+			auto SpriteData = AtlasSpriteBinPack.SpritesBelongToAtlas[SpriteIndex];
+			auto SpriteTexture = SpriteData->GetSpriteTexture();
+			ULexUISpriteData::CheckAndApplySpriteTextureSetting(SpriteTexture);
+#if WITH_EDITOR
+			FTextureCompilingManager::Get().FinishCompilation({ SpriteTexture });
+#endif
+			int32 SpriteWidth = SpriteTexture->GetSizeX();
+			int32 SpriteHeight = SpriteTexture->GetSizeY();
+			const FColor* SpriteColorBuffer = static_cast<const FColor*>(SpriteTexture->GetPlatformData()->Mips[0].BulkData.LockReadOnly());
+			rbp::Rect Rect = AtlasSpriteBinPack.PackedRects[SpriteIndex];
+
+			int DestY = Rect.y * AtlasSize;
+			int SpritePixelIndex = 0;
+			for (int32 TexY = 0; TexY < SpriteHeight; TexY++)
+			{
+				int DestX = Rect.x + DestY;
+				for (int32 TexX = 0; TexX < SpriteWidth; TexX++)
+				{
+					int DestPixelIndex = DestX + TexX;
+					AtlasColorBuffer[DestPixelIndex] = SpriteColorBuffer[SpritePixelIndex];
+					SpritePixelIndex++;
+				}
+				DestY += AtlasSize;
 			}
 			//pixel padding
-			if (spriteDataItem->GetUseEdgePixelPadding() && EdgePixelPadding > 0)
+			if (SpriteData->GetUseEdgePixelPadding() && EdgePixelPadding > 0)
 			{
 				//left
-				destY = rect.y * atlasSize;
-				for (int paddingIndex = 0; paddingIndex < EdgePixelPadding; paddingIndex++)
+				DestY = Rect.y * AtlasSize;
+				for (int PaddingIndex = 0; PaddingIndex < EdgePixelPadding; PaddingIndex++)
 				{
-					int destX = destY + rect.x - paddingIndex - 1;
-					int dstPixelIndex = destX;
-					for (int heightIndex = 0; heightIndex < spriteHeight; heightIndex++)
+					int DestX = DestY + Rect.x - PaddingIndex - 1;
+					int DestPixelIndex = DestX;
+					for (int HeightIndex = 0; HeightIndex < SpriteHeight; HeightIndex++)
 					{
-						atlasColorBuffer[dstPixelIndex] = atlasColorBuffer[dstPixelIndex + 1];
-						dstPixelIndex += atlasSize;
+						AtlasColorBuffer[DestPixelIndex] = AtlasColorBuffer[DestPixelIndex + 1];
+						DestPixelIndex += AtlasSize;
 					}
 				}
 				//right
-				destY = rect.y * atlasSize;
-				for (int paddingIndex = 0; paddingIndex < EdgePixelPadding; paddingIndex++)
+				DestY = Rect.y * AtlasSize;
+				for (int PaddingIndex = 0; PaddingIndex < EdgePixelPadding; PaddingIndex++)
 				{
-					int destX = destY + rect.x + rect.width + paddingIndex;
-					int dstPixelIndex = destX;
-					for (int heightIndex = 0; heightIndex < spriteHeight; heightIndex++)
+					int DestX = DestY + Rect.x + Rect.width + PaddingIndex;
+					int DestPixelIndex = DestX;
+					for (int HeightIndex = 0; HeightIndex < SpriteHeight; HeightIndex++)
 					{
-						atlasColorBuffer[dstPixelIndex] = atlasColorBuffer[dstPixelIndex - 1];
-						dstPixelIndex += atlasSize;
+						AtlasColorBuffer[DestPixelIndex] = AtlasColorBuffer[DestPixelIndex - 1];
+						DestPixelIndex += AtlasSize;
 					}
 				}
 				//top, with corner
-				destY = (rect.y - 1) * atlasSize;
-				for (int paddingIndex = 0; paddingIndex < EdgePixelPadding; paddingIndex++)
+				DestY = (Rect.y - 1) * AtlasSize;
+				for (int PaddingIndex = 0; PaddingIndex < EdgePixelPadding; PaddingIndex++)
 				{
-					int destX = destY + rect.x;
-					int dstPixelIndex = destX - EdgePixelPadding;
-					for (int widthIndex = -EdgePixelPadding; widthIndex < spriteWidth + EdgePixelPadding; widthIndex++)
+					int DestX = DestY + Rect.x;
+					int DestPixelIndex = DestX - EdgePixelPadding;
+					for (int WidthIndex = -EdgePixelPadding; WidthIndex < SpriteWidth + EdgePixelPadding; WidthIndex++)
 					{
-						atlasColorBuffer[dstPixelIndex] = atlasColorBuffer[dstPixelIndex + atlasSize];
-						dstPixelIndex += 1;
+						AtlasColorBuffer[DestPixelIndex] = AtlasColorBuffer[DestPixelIndex + AtlasSize];
+						DestPixelIndex += 1;
 					}
-					destY -= atlasSize;
+					DestY -= AtlasSize;
 				}
 				//bottom, with corner
-				destY = (rect.y + rect.height) * atlasSize;
-				for (int paddingIndex = 0; paddingIndex < EdgePixelPadding; paddingIndex++)
+				DestY = (Rect.y + Rect.height) * AtlasSize;
+				for (int PaddingIndex = 0; PaddingIndex < EdgePixelPadding; PaddingIndex++)
 				{
-					int destX = destY + rect.x;
-					int dstPixelIndex = destX - EdgePixelPadding;
-					for (int widthIndex = -EdgePixelPadding; widthIndex < spriteWidth + EdgePixelPadding; widthIndex++)
+					int DestX = DestY + Rect.x;
+					int DestPixelIndex = DestX - EdgePixelPadding;
+					for (int WidthIndex = -EdgePixelPadding; WidthIndex < SpriteWidth + EdgePixelPadding; WidthIndex++)
 					{
-						atlasColorBuffer[dstPixelIndex] = atlasColorBuffer[dstPixelIndex - atlasSize];
-						dstPixelIndex += 1;
+						AtlasColorBuffer[DestPixelIndex] = AtlasColorBuffer[DestPixelIndex - AtlasSize];
+						DestPixelIndex += 1;
 					}
-					destY += atlasSize;
+					DestY += AtlasSize;
 				}
 			}
 
-			spriteDataItem->ApplySpriteInfoAfterStaticPack(rect, atlasTextureSizeInv);
-			spriteTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
+			SpriteData->ApplySpriteInfoAfterStaticPack(Rect, InvAtlasTextureSize);
+			SpriteTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
 		}
-	}
 
-	//store data
-	TextureMipData.SetNumUninitialized(pixelBufferLength);
-	FMemory::Memcpy(TextureMipData.GetData(), pixelData, pixelBufferLength);
-	TextureSize = packSize;
+		//store data
+		auto PrevDataLength = TextureMipData.Num();
+		TextureMipData.AddUninitialized(PixelBufferLength);
+		FMemory::Memcpy(TextureMipData.GetData() + PrevDataLength, PixelData, PixelBufferLength);
+		TextureSizeArray.Add(AtlasSize);
 
-	//generate mipmaps
-	{
-		int mipsAdd = 0;
-		//Declaring buffers here to reduce reallocs
-		//We double buffer mips, using the prior buffer to build the next buffer
-		TArray<FColor> mipRGBAs1;
-		TArray<FColor> mipRGBAs2;
-
-		//Access source data
-		auto priorData = reinterpret_cast<const FColor*>(pixelData);
-		int mipSize = atlasSize;
-
-		while (true)
+		//generate mipmaps
 		{
-			auto* mipRGBAs = mipsAdd & 1 ? &mipRGBAs1 : &mipRGBAs2;
-			auto srcWidth = mipSize;
-			mipSize = mipSize >> 1;
-			if (mipSize == 0)
-			{
-				break;
-			}
+			int mipsAdd = 0;
+			//Declaring buffers here to reduce reallocs
+			//We double buffer mips, using the prior buffer to build the next buffer
+			TArray<FColor> mipRGBAs1;
+			TArray<FColor> mipRGBAs2;
 
-			mipRGBAs->Reset();
-			mipRGBAs->AddUninitialized(mipSize* mipSize);
+			//Access source data
+			auto priorData = reinterpret_cast<const FColor*>(PixelData);
+			int mipSize = AtlasSize;
 
-			//Average out the values
-			auto* dataOut = mipRGBAs->GetData();
-			for (int y = 0; y < mipSize; y++)
+			while (true)
 			{
-				auto* srcData0 = priorData + (srcWidth * y * 2);
-				auto* srcData1 = srcData0 + srcWidth;
-				for (int x = 0; x < mipSize; x++)
+				auto* mipRGBAs = mipsAdd & 1 ? &mipRGBAs1 : &mipRGBAs2;
+				auto srcWidth = mipSize;
+				mipSize = mipSize >> 1;
+				if (mipSize == 0)
 				{
-					auto srcColor1 = *srcData0++;
-					auto srcColor2 = *srcData0++;
-					auto srcColor3 = *srcData1++;
-					auto srcColor4 = *srcData1++;
-					int totalR = srcColor1.R;
-					int totalG = srcColor1.G;
-					int totalB = srcColor1.B;
-					int totalA = srcColor1.A;
-
-					totalR += srcColor2.R;
-					totalG += srcColor2.G;
-					totalB += srcColor2.B;
-					totalA += srcColor2.A;
-
-					totalR += srcColor3.R;
-					totalG += srcColor3.G;
-					totalB += srcColor3.B;
-					totalA += srcColor3.A;
-
-					totalR += srcColor4.R;
-					totalG += srcColor4.G;
-					totalB += srcColor4.B;
-					totalA += srcColor4.A;
-
-					totalR >>= 2;
-					totalG >>= 2;
-					totalB >>= 2;
-					totalA >>= 2;
-
-					*dataOut = FColor((uint8)totalR, (uint8)totalG, (uint8)totalB, (uint8)totalA);
-					dataOut++;
+					break;
 				}
+
+				mipRGBAs->Reset();
+				mipRGBAs->AddUninitialized(mipSize* mipSize);
+
+				//Average out the values
+				auto* dataOut = mipRGBAs->GetData();
+				for (int y = 0; y < mipSize; y++)
+				{
+					auto* srcData0 = priorData + (srcWidth * y * 2);
+					auto* srcData1 = srcData0 + srcWidth;
+					for (int x = 0; x < mipSize; x++)
+					{
+						auto srcColor1 = *srcData0++;
+						auto srcColor2 = *srcData0++;
+						auto srcColor3 = *srcData1++;
+						auto srcColor4 = *srcData1++;
+						int totalR = srcColor1.R;
+						int totalG = srcColor1.G;
+						int totalB = srcColor1.B;
+						int totalA = srcColor1.A;
+
+						totalR += srcColor2.R;
+						totalG += srcColor2.G;
+						totalB += srcColor2.B;
+						totalA += srcColor2.A;
+
+						totalR += srcColor3.R;
+						totalG += srcColor3.G;
+						totalB += srcColor3.B;
+						totalA += srcColor3.A;
+
+						totalR += srcColor4.R;
+						totalG += srcColor4.G;
+						totalB += srcColor4.B;
+						totalA += srcColor4.A;
+
+						totalR >>= 2;
+						totalG >>= 2;
+						totalB >>= 2;
+						totalA >>= 2;
+
+						*dataOut = FColor((uint8)totalR, (uint8)totalG, (uint8)totalB, (uint8)totalA);
+						dataOut++;
+					}
+				}
+
+				auto mipBufferLength = mipRGBAs->Num() * GPixelFormats[PF_B8G8R8A8].BlockBytes;
+				priorData = mipRGBAs->GetData();
+				mipsAdd++;
+
+				//store mip data
+				auto PrevLength = TextureMipData.Num();
+				TextureMipData.AddUninitialized(mipBufferLength);
+				FMemory::Memcpy(TextureMipData.GetData() + PrevLength, mipRGBAs->GetData(), mipBufferLength);
 			}
-
-			auto mipBufferLength = mipRGBAs->Num() * GPixelFormats[PF_B8G8R8A8].BlockBytes;
-			priorData = mipRGBAs->GetData();
-			mipsAdd++;
-
-			//store mip data
-			auto prevLength = TextureMipData.Num();
-			TextureMipData.AddUninitialized(mipBufferLength);
-			FMemory::Memcpy(TextureMipData.GetData() + prevLength, mipRGBAs->GetData(), mipBufferLength);
 		}
-	}
 
-	delete[] pixelData;
+		delete[] PixelData;
+	}
 
 	return true;
 }
-bool ULexUIStaticSpriteAtlasData::PackAtlasTest(uint32 size, TArray<rbp::Rect>& result)
+bool ULexUIStaticSpriteAtlasData::TryPackAtlas(ULexUISpriteData* Sprite, rbp::MaxRectsBinPack& RectBinPack, TArray<rbp::Rect>& PackedRects, TArray<ULexUISpriteData*>& PackedSprites)
 {
-	rbp::MaxRectsBinPack atlasBinPack;
-	atlasBinPack.Init(size, size, false);
-	auto methold = rbp::MaxRectsBinPack::FreeRectChoiceHeuristic::RectBestAreaFit;
-	for (int i = 0; i < SpriteDataArray.Num(); i++)
-	{
-		auto spriteDataItem = SpriteDataArray[i];
-		auto calculatedEdgePixelPadding = spriteDataItem->GetUseEdgePixelPadding() ? EdgePixelPadding : 0;
-		auto spriteTexture = spriteDataItem->GetSpriteTexture();
-		auto space = SpaceBetweenSprites + calculatedEdgePixelPadding + calculatedEdgePixelPadding;
-		//add space
+	auto CalculatedEdgePixelPadding = Sprite->GetUseEdgePixelPadding() ? EdgePixelPadding : 0;
+	auto SpriteTexture = Sprite->GetSpriteTexture();
+	auto Space = SpaceBetweenSprites + CalculatedEdgePixelPadding + CalculatedEdgePixelPadding;
+	//add space
 #if WITH_EDITOR
-		FTextureCompilingManager::Get().FinishCompilation({ spriteTexture });
+	FTextureCompilingManager::Get().FinishCompilation({ SpriteTexture });
 #endif
-		int insertRectWidth = spriteTexture->GetSizeX() + space;
-		int insertRectHeight = spriteTexture->GetSizeY() + space;
-		auto rect = atlasBinPack.Insert(insertRectWidth, insertRectHeight, methold);
-		if (rect.width <= 0)//cannot fit, should expend size
-		{
-			return false;
-		}
-		//remove space
-		rect.x += calculatedEdgePixelPadding;
-		rect.y += calculatedEdgePixelPadding;
-		rect.width -= space;
-		rect.height -= space;
-
-		result[i] = rect;
+	int InsertRectWidth = SpriteTexture->GetSizeX() + Space;
+	int InsertRectHeight = SpriteTexture->GetSizeY() + Space;
+	auto Rect = RectBinPack.Insert(InsertRectWidth, InsertRectHeight, rbp::MaxRectsBinPack::FreeRectChoiceHeuristic::RectBestAreaFit);
+	if (Rect.width <= 0)//cannot fit
+	{
+		return false;
 	}
+	//remove space
+	Rect.x += CalculatedEdgePixelPadding;
+	Rect.y += CalculatedEdgePixelPadding;
+	Rect.width -= Space;
+	Rect.height -= Space;
+
+	PackedRects.Add(Rect);
+	PackedSprites.Add(Sprite);
 	return true;
 }
+
 void ULexUIStaticSpriteAtlasData::BeginCacheForCookedPlatformData(const ITargetPlatform* TargetPlatform)
 {
 	
@@ -635,82 +662,87 @@ bool ULexUIStaticSpriteAtlasData::InitCheck()
 #endif
 		bIsInitialized = true;
 
+		uint32 TextureDataOffset = 0;
 		static int TextureNameSuffix = 0;
-		//create texture
-		auto texture = NewObject<UTexture2D>(
-			GetTransientPackage(),
-			FName(*FString::Printf(TEXT("LexUIStaticSpriteAtlasData_Texture_%d"), TextureNameSuffix++)),
-			EObjectFlags::RF_Transient
-		);
-		auto PlatformData = new FTexturePlatformData();
-		PlatformData->SizeX = TextureSize;
-		PlatformData->SizeY = TextureSize;
-		PlatformData->PixelFormat = PF_B8G8R8A8;
-		texture->SetPlatformData(PlatformData);
-
-		//mipmaps
+		for (int i = 0; i < TextureSizeArray.Num(); i++)
 		{
-			uint32 textureDataOffset = 0;
-			int mipSize = TextureSize;
-			while (true)
+			auto TextureSize = TextureSizeArray[i];
+			//create texture
+			auto NewNewTexture = NewObject<UTexture2D>(
+				GetTransientPackage(),
+				FName(*FString::Printf(TEXT("LexUIStaticSpriteAtlasData_Texture_%d"), TextureNameSuffix++)),
+				EObjectFlags::RF_Transient
+			);
+			auto PlatformData = new FTexturePlatformData();
+			PlatformData->SizeX = TextureSize;
+			PlatformData->SizeY = TextureSize;
+			PlatformData->PixelFormat = PF_B8G8R8A8;
+			NewNewTexture->SetPlatformData(PlatformData);
+
+			//mipmaps
 			{
-				// Allocate next mipmap.
-				auto mip = new FTexture2DMipMap;
-				texture->GetPlatformData()->Mips.Add(mip);
-				mip->SizeX = mipSize;
-				mip->SizeY = mipSize;
-				mip->BulkData.Lock(LOCK_READ_WRITE);
-				auto pixelBufferLength = mipSize * mipSize * GPixelFormats[PF_B8G8R8A8].BlockBytes;
-				void* mipData = mip->BulkData.Realloc(pixelBufferLength);
-				FMemory::Memcpy(mipData, TextureMipData.GetData() + textureDataOffset, pixelBufferLength);
-				mip->BulkData.Unlock();
-
-				mipSize = mipSize >> 1;
-				if (mipSize == 0)
+				int mipSize = TextureSize;
+				while (true)
 				{
-					break;
-				}
-				textureDataOffset += pixelBufferLength;
-			}
-		}
+					// Allocate next mipmap.
+					auto mip = new FTexture2DMipMap;
+					NewNewTexture->GetPlatformData()->Mips.Add(mip);
+					mip->SizeX = mipSize;
+					mip->SizeY = mipSize;
+					mip->BulkData.Lock(LOCK_READ_WRITE);
+					auto pixelBufferLength = mipSize * mipSize * GPixelFormats[PF_B8G8R8A8].BlockBytes;
+					void* mipData = mip->BulkData.Realloc(pixelBufferLength);
+					FMemory::Memcpy(mipData, TextureMipData.GetData() + TextureDataOffset, pixelBufferLength);
+					mip->BulkData.Unlock();
 
+					mipSize = mipSize >> 1;
+					if (mipSize == 0)
+					{
+						break;
+					}
+					TextureDataOffset += pixelBufferLength;
+				}
+			}
+
+			NewNewTexture->CompressionSettings = TextureCompressionSettings::TC_EditorIcon;
+			NewNewTexture->LODGroup = TextureGroup::TEXTUREGROUP_UI;
+			NewNewTexture->SRGB = AtlasTextureUseSRGB;
+			NewNewTexture->Filter = AtlasTextureFilter;
+			NewNewTexture->UpdateResource();
+
+			this->AtlasTextureArray.Add(NewNewTexture);
+#if WITH_EDITOR
+			for (auto& sprite : RenderSpriteArray)
+			{
+				if (sprite.IsValid())
+				{
+					ILexUISpriteRenderInterface::Execute_ApplyAtlasTextureChange(sprite.Get());
+				}
+			}
+#endif
+		}
 #if !WITH_EDITOR
 		//empty it to reduce memory usage
 		TextureMipData.Empty();
 #endif
-
-		texture->CompressionSettings = TextureCompressionSettings::TC_EditorIcon;
-		texture->LODGroup = TextureGroup::TEXTUREGROUP_UI;
-		texture->SRGB = AtlasTextureUseSRGB;
-		texture->Filter = AtlasTextureFilter;
-		texture->UpdateResource();
-
-		this->AtlasTexture = texture;
-#if WITH_EDITOR
-		for (auto& sprite : RenderSpriteArray)
-		{
-			if (sprite.IsValid())
-			{
-				ILexUISpriteRenderInterface::Execute_ApplyAtlasTextureChange(sprite.Get());
-			}
-		}
-#endif
 	}
 	return bIsInitialized;
 }
-UTexture2D* ULexUIStaticSpriteAtlasData::GetAtlasTexture()
+UTexture2D* ULexUIStaticSpriteAtlasData::GetAtlasTexture(int32 Index)
 {
-	InitCheck();
-	return AtlasTexture;
+	check(bIsInitialized);
+	return AtlasTextureArray[Index];
 }
-bool ULexUIStaticSpriteAtlasData::ReadPixel(const FVector2D& InUV, FColor& OutPixel)
+bool ULexUIStaticSpriteAtlasData::ReadPixel(int InTextureIndex, const FVector2D& InUV, FColor& OutPixel)
 {
 	InitCheck();
 
+	auto AtlasTexture = AtlasTextureArray[InTextureIndex];
 	auto PlatformData = AtlasTexture->GetPlatformData();
 	if (PlatformData && PlatformData->Mips.Num() > 0)
 	{
 		auto Pixels = static_cast<FColor*>(PlatformData->Mips[0].BulkData.Lock(LOCK_READ_ONLY));
+		auto TextureSize = AtlasTexture->GetSizeX();
 		auto uvInFullSize = FIntPoint(InUV.X * TextureSize, InUV.Y * TextureSize);
 		auto PixelIndex = uvInFullSize.Y * TextureSize + uvInFullSize.X;
 		OutPixel = Pixels[PixelIndex];

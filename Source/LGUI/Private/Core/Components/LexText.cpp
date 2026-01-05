@@ -13,7 +13,7 @@
 #include "PrefabSystem/LexUIPrefabManager.h"
 #include "Utils/LexUIUtils.h"
 #include "Engine/Texture2D.h"
-
+#include "Engine/Texture2DArray.h"
 
 
 #define LOCTEXT_NAMESPACE "UIText"
@@ -35,27 +35,6 @@ ULexText::ULexText(const FObjectInitializer& ObjectInitializer):Super(ObjectInit
 	}
 	CacheTextGeometryData = FLexUITextGeometryCache(this);
 	UIGeometry->bIsFont = true;
-}
-void ULexText::ApplyFontTextureScaleUp()
-{
-	auto& vertices = UIGeometry->Vertices;
-	if (vertices.Num() != 0)
-	{
-		for (int i = 0; i < vertices.Num(); i++)
-		{
-			auto& uv = vertices[i].TextureCoordinate[0];
-			uv *= 0.5f;
-		}
-	}
-	UIGeometry->Texture = GetTextureToCreateGeometry();
-		if (DrawCall.IsValid())
-		{
-			DrawCall->Texture = UIGeometry->Texture;
-			DrawCall->bTextureChanged = true;
-			DrawCall->bNeedToUpdateVertex = true;
-		}
-	MarkVerticesDirty(false, true, true, false);
-	GetWidget()->MarkCanvasUpdate(true, true, false);
 }
 
 void ULexText::ApplyFontTextureChange()

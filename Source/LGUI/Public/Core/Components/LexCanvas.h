@@ -157,7 +157,7 @@ class UTextureRenderTarget2D;
  * Canvas is for render and update all UI elements.
  * Default UV channels-
  *		UV0: Texture coordinate
- *		UV1: X- Widget property data coordinate, include clipData coordinate in data texture
+ *		UV1: X- Widget property data coordinate, including clipData coordinate in data texture; Y- Slice index of texture array
  * Other UV channels are defined by LexVisual, check LexText and LexRectBlock.
  */
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))

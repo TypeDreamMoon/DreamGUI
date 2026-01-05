@@ -341,7 +341,7 @@ public:
 	}
 };
 
-TMap<FString, TWeakObjectPtr<class ULexUIPrefab>> FLexUIEditorTools::CopiedActorPrefabMap;
+TMap<FString, TWeakObjectPtr<ULexUIPrefab>> FLexUIEditorTools::CopiedActorPrefabMap;
 
 FString FLexUIEditorTools::LexUIPresetPrefabPath = TEXT("/LGUI/Prefabs/");
 

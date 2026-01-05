@@ -51,31 +51,6 @@ ULexUISpriteData_BaseObject* ULexImage::SpriteRenderGetSprite_Implementation() c
 	return nullptr;
 }
 
-void ULexImage::ApplyAtlasTextureScaleUp_Implementation()
-{
-	check(bHasAddToSprite);
-	auto& vertices = UIGeometry->Vertices;
-	if (vertices.Num() != 0)
-	{
-		for (int i = 0; i < vertices.Num(); i++)
-		{
-			auto& uv = vertices[i];
-			uv.TextureCoordinate[0].X *= 0.5f;
-			uv.TextureCoordinate[0].Y *= 0.5f;
-		}
-	}
-	auto LexSprite = (ULexUISpriteData_BaseObject*)Brush.GetResourceObject();
-	UIGeometry->Texture = LexSprite->GetAtlasTexture();
-	if (DrawCall.IsValid())
-	{
-		DrawCall->Texture = UIGeometry->Texture;
-		DrawCall->bTextureChanged = true;
-		DrawCall->bNeedToUpdateVertex = true;
-	}
-	MarkVerticesDirty(false, true, true, false);
-	GetWidget()->MarkCanvasUpdate(true, true, false);
-}
-
 void ULexImage::ApplyAtlasTextureChange_Implementation()
 {
 	check(bHasAddToSprite);

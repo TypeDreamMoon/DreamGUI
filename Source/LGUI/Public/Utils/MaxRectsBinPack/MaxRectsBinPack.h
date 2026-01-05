@@ -57,8 +57,8 @@ namespace rbp {
 		/// add by lexliu to expend the binpack size
 		void ExpendSize(int newWidth, int newHeight);
 		/// add by lexliu to expend the binpack size, for uitext, prevent too many small rects
-		void PrepareExpendSizeForText(int newWidth, int newHeight, TArray<Rect>& outFreeRectangles, int cellSize, bool resetFreeAndUsedRects = true);
-		void DoExpendSizeForText(Rect rect);
+		void PrepareRectCellsForText(int newWidth, int newHeight, TArray<Rect>& outFreeRectangles, int cellSize, bool resetFreeAndUsedRects = true);
+		void DoRectCellsForText(Rect rect);
 
 		/// Specifies the different heuristic rules that can be used when deciding where to place a new rectangle.
 		enum FreeRectChoiceHeuristic
@@ -78,6 +78,8 @@ namespace rbp {
 
 		/// Inserts a single rectangle into the bin, possibly rotated.
 		Rect Insert(int width, int height, FreeRectChoiceHeuristic method);
+
+		bool IsEmpty()const;
 
 		/// Computes the ratio of used surface area to the total bin area.
 		float Occupancy() const;

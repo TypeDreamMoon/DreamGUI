@@ -42,7 +42,6 @@ protected:
 public:
 #pragma region ILexUISpriteRenderInterface
 	virtual ULexUISpriteData_BaseObject* SpriteRenderGetSprite_Implementation()const override;
-	virtual void ApplyAtlasTextureScaleUp_Implementation()override;
 	virtual void ApplyAtlasTextureChange_Implementation()override;
 #pragma endregion
 	UFUNCTION(BlueprintCallable, Category = "Image")

@@ -619,30 +619,6 @@ void ULexRectBlock::ApplyAtlasTextureChange_Implementation()
 	}
 	GetWidget()->MarkCanvasUpdate(true, true, false);
 }
-void ULexRectBlock::ApplyAtlasTextureScaleUp_Implementation()
-{
-	if (BodyTextureMode != ELexRectBlockTextureMode::Sprite)return;
-	check(BodySpriteTexture);
-	auto& vertices = UIGeometry->Vertices;
-	if (vertices.Num() != 0)
-	{
-		for (int i = 0; i < vertices.Num(); i++)
-		{
-			auto& uv = vertices[i].TextureCoordinate[2];//sprite uv is at channel 2
-			uv.X *= 0.5f;
-			uv.Y *= 0.5f;
-		}
-	}
-	UIGeometry->Texture = BodySpriteTexture->GetAtlasTexture();
-	if (DrawCall.IsValid())
-	{
-		DrawCall->Texture = UIGeometry->Texture;
-		DrawCall->bTextureChanged = true;
-		DrawCall->bNeedToUpdateVertex = true;
-	}
-	MarkVerticesDirty(false, true, true, false);
-	GetWidget()->MarkCanvasUpdate(true, true, false);
-}
 
 void ULexRectBlock::SetCornerRadius(const FVector4& value)
 {

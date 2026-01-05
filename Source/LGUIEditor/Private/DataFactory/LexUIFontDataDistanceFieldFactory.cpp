@@ -16,8 +16,8 @@ UObject* ULexUIFontDataDistanceFieldFactory::FactoryCreateNew(UClass* Class, UOb
 	auto LexUIFont = NewObject<ULexUIFontData_DistanceField>(InParent, Class, Name, Flags | RF_Transactional);
 	if (SourceFont.IsValid())
 	{
-		LexUIFont->SetFontType(ELexUIDynamicFontDataType::UnrealFont);
-		LexUIFont->SetUnrealFont(SourceFont.Get());
+		LexUIFont->SetFontType(ELexUIDynamicFontDataType::EngineFont);
+		LexUIFont->SetEngineFont(SourceFont.Get());
 		LexUIFont->ReloadFont();
 	}
 	return LexUIFont;

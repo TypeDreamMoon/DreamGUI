@@ -18,6 +18,7 @@ struct FLexUICharData
 	float XAdvance = 0;
 	FVector2f MinUV;
 	FVector2f MaxUV;
+	int32 SliceIndex = 0;//texture index in Texture2DArray
 
 	bool IsValid()const
 	{
@@ -60,9 +61,9 @@ class LGUI_API ULexUIFontData_BaseObject : public UObject
 public:
 	virtual void InitFont()PURE_VIRTUAL(ULGUISpriteData_BaseObject::InitFont, );
 
-	virtual UMaterialInterface* GetFontMaterial()PURE_VIRTUAL(ULGUISpriteData_BaseObject::GetFontMaterial, return nullptr;);
-	virtual UTexture2D* GetFontTexture()PURE_VIRTUAL(ULGUISpriteData_BaseObject::GetFontTexture, return nullptr;);
-	virtual FLexUICharData GetCharData(const uint32& CharCode, const float& CharSize) PURE_VIRTUAL(ULGUIFontData_BaseObject::GetCharData, return FLexUICharData(););
+	virtual UMaterialInterface* GetFontMaterial()PURE_VIRTUAL(ULexUIFontData_BaseObject::GetFontMaterial, return nullptr;);
+	virtual UTexture2DArray* GetFontTexture()PURE_VIRTUAL(ULexUIFontData_BaseObject::GetFontTexture, return nullptr;);
+	virtual FLexUICharData GetCharData(const uint32& CharCode, const float& CharSize) PURE_VIRTUAL(ULexUIFontData::GetCharData, return FLexUICharData(););
 	virtual bool HasKerning() { return false; }
 	virtual float GetKerning(const uint32& LeftCharIndex, const uint32& RightCharIndex, const float& CharSize) { return 0; }
 	virtual float GetLineHeight(const float& FontSize) { return FontSize; }
