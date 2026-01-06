@@ -88,22 +88,24 @@ TSharedRef< FSlateStyleSet > FLGUIEditorStyle::Create()
 	Style->Set("ClassIcon.UIWidget", new IMAGE_BRUSH(TEXT("UIWidget_16x"), Icon16x16));
 	Style->Set("ClassIcon.UIRenderTarget", new IMAGE_BRUSH(TEXT("UIRenderTarget_16x"), Icon16x16));
 	Style->Set("ClassIcon.UICustomMesh", new IMAGE_BRUSH(TEXT("UICustomMesh_16x"), Icon16x16));
-	Style->Set("ClassIcon.LGUICustomMesh", new IMAGE_BRUSH(TEXT("UICustomMesh_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexUICustomMesh", new IMAGE_BRUSH(TEXT("UICustomMesh_16x"), Icon16x16));
 
 	Style->Set("ClassThumbnail.LexUIEventSystemActor", new IMAGE_BRUSH(TEXT("EventSystem_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.LexUIEventSystem", new IMAGE_BRUSH(TEXT("EventSystem_40x"), Icon40x40));
 	Style->Set("ClassIcon.LexUIEventSystemActor", new IMAGE_BRUSH(TEXT("EventSystem_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexUIEventSystem", new IMAGE_BRUSH(TEXT("EventSystem_16x"), Icon16x16));
 
-	Style->Set("ClassThumbnail.LGUIPrefab", new IMAGE_BRUSH(TEXT("Prefab_40x"), Icon40x40));
-	Style->Set("ClassIcon.LGUIPrefab", new IMAGE_BRUSH(TEXT("Prefab_16x"), Icon16x16));
-	Style->Set("ClassThumbnail.LGUIPrefabActor", new IMAGE_BRUSH(TEXT("Prefab_40x"), Icon40x40));
-	Style->Set("ClassIcon.LGUIPrefabActor", new IMAGE_BRUSH(TEXT("Prefab_16x"), Icon16x16));
-	Style->Set("ClassThumbnail.LGUISpriteData", new IMAGE_BRUSH(TEXT("Sprite_40x"), Icon40x40));
-	Style->Set("ClassIcon.LGUISpriteData", new IMAGE_BRUSH(TEXT("Sprite_16x"), Icon16x16));
+	Style->Set("ClassThumbnail.LexUIPrefab", new IMAGE_BRUSH(TEXT("Prefab_40x"), Icon40x40));
+	Style->Set("ClassIcon.LexUIPrefab", new IMAGE_BRUSH(TEXT("Prefab_16x"), Icon16x16));
+	Style->Set("ClassThumbnail.LexUIPrefabActor", new IMAGE_BRUSH(TEXT("Prefab_40x"), Icon40x40));
+	Style->Set("ClassIcon.LexUIPrefabActor", new IMAGE_BRUSH(TEXT("Prefab_16x"), Icon16x16));
+	Style->Set("ClassThumbnail.LexUISpriteData", new IMAGE_BRUSH(TEXT("Sprite_40x"), Icon40x40));
+	Style->Set("ClassIcon.LexUISpriteData", new IMAGE_BRUSH(TEXT("Sprite_16x"), Icon16x16));
+	Style->Set("ClassThumbnail.LexUIStaticSpriteAtlasData", new IMAGE_BRUSH(TEXT("SpriteAtlas_40x"), Icon40x40));
+	Style->Set("ClassIcon.LexUIStaticSpriteAtlasData", new IMAGE_BRUSH(TEXT("SpriteAtlas_16x"), Icon16x16));
 
-	Style->Set("ClassThumbnail.LGUIBaseInputModule", new IMAGE_BRUSH(TEXT("InputModule_40x"), Icon40x40));
-	Style->Set("ClassIcon.LGUIBaseInputModule", new IMAGE_BRUSH(TEXT("InputModule_16x"), Icon16x16));
+	Style->Set("ClassThumbnail.LexUIBaseInputModule", new IMAGE_BRUSH(TEXT("InputModule_40x"), Icon40x40));
+	Style->Set("ClassIcon.LexUIBaseInputModule", new IMAGE_BRUSH(TEXT("InputModule_16x"), Icon16x16));
 
 	Style->Set("LGUIEditor.SpriteDataAction", new IMAGE_BRUSH(TEXT("UISprite_16x"), Icon16x16));
 	Style->Set("LGUIEditor.SpriteDataCreate", new IMAGE_BRUSH(TEXT("SpriteDataCreate_16x"), Icon16x16));

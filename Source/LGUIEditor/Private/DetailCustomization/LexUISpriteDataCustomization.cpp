@@ -56,87 +56,103 @@ void FLexUISpriteDataCustomization::CustomizeDetails(IDetailLayoutBuilder& Detai
 	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.MaxUV));
 	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.BorderMinUV));
 	lguiCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteInfo.BorderMaxUV));
-	IDetailCategoryBuilder& atlasPackingCategory = DetailBuilder.EditCategory("AtlasPacking");
-	auto PackingAtlasProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, PackingAtlas));
-	atlasPackingCategory.AddProperty(PackingAtlasProperty);
-	PackingAtlasProperty->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([this, &DetailBuilder] {
+
+	TArray<FName> PropertiesNeedToHide;
+	IDetailCategoryBuilder& AtlasPackingCategory = DetailBuilder.EditCategory("AtlasPacking");
+	auto PackingType_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, PackingType));
+	ELexUISpritePackingType PackingType;
+	PackingType_PH->GetValue(*(uint8*)&PackingType);
+	PackingType_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder]()
+	{
+		DetailBuilder.ForceRefreshDetails();
+	}));
+	AtlasPackingCategory.AddProperty(PackingType_PH);
+
+	switch (PackingType)
+	{
+	case ELexUISpritePackingType::Static:
+		break;
+	case ELexUISpritePackingType::Dynamic:
+		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, PackingAtlas));
+		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, AtlasTextureIndex));
+		break;
+	}
+	auto PackingAtlas_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, PackingAtlas));
+	PackingAtlas_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([this, &DetailBuilder] {
 		DetailBuilder.ForceRefreshDetails();
 		}));
-	auto PackingTagProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, PackingTag));
-	DetailBuilder.HideProperty(PackingTagProperty);
-	
 	RefreshNameList(nullptr);
 	if (ULexUIDynamicSpriteAtlasManager::Instance != nullptr)
 	{
 		ULexUIDynamicSpriteAtlasManager::Instance->OnAtlasMapChanged.AddSP(this, &FLexUISpriteDataCustomization::RefreshNameList, &DetailBuilder);
 	}
-	atlasPackingCategory.AddCustomRow(LOCTEXT("PackingTag", "Packing Tag"))
-	.NameContent()
-	[
-		PackingTagProperty->CreatePropertyNameWidget()
-	]
-	.ValueContent()
-	[
-		SNew(SBox)
-		.IsEnabled_Lambda([this] {
-			return !IsValid(TargetScriptPtr->GetPackingAtlas());
-			})
+	DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, PackingTag));
+	auto PackingTag_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, PackingTag));
+	if (PackingType == ELexUISpritePackingType::Dynamic)
+	{
+		AtlasPackingCategory.AddCustomRow(LOCTEXT("PackingTag", "Packing Tag"))
+		.NameContent()
 		[
-			SNew(SHorizontalBox)
-			+SHorizontalBox::Slot()
-			.AutoWidth()
+			PackingTag_PH->CreatePropertyNameWidget()
+		]
+		.ValueContent()
+		[
+			SNew(SBox)
 			[
-				SNew(SBox)
-				.MinDesiredWidth(120)
-				.Padding(FMargin(0, 2, 0, 2))
+				SNew(SHorizontalBox)
+				+SHorizontalBox::Slot()
+				.AutoWidth()
 				[
-					//PackingTagProperty->CreatePropertyValueWidget()
-					SNew(SComboButton)
-					.HasDownArrow(true)
-					.ButtonContent()
+					SNew(SBox)
+					.MinDesiredWidth(120)
+					.Padding(FMargin(0, 2, 0, 2))
 					[
-						SNew(SHorizontalBox)
-						+SHorizontalBox::Slot()
+						//PackingTagProperty->CreatePropertyValueWidget()
+						SNew(SComboButton)
+						.HasDownArrow(true)
+						.ButtonContent()
 						[
-							SNew(SEditableText)
-							.OnTextCommitted(this, &FLexUISpriteDataCustomization::OnPackingTagTextCommited, PackingTagProperty, &DetailBuilder)
-							.Text(this, &FLexUISpriteDataCustomization::GetPackingTagText, PackingTagProperty)
+							SNew(SHorizontalBox)
+							+SHorizontalBox::Slot()
+							[
+								SNew(SEditableText)
+								.OnTextCommitted(this, &FLexUISpriteDataCustomization::OnPackingTagTextCommited, PackingTag_PH, &DetailBuilder)
+								.Text(this, &FLexUISpriteDataCustomization::GetPackingTagText, PackingTag_PH)
+							]
 						]
-					]
-					.MenuContent()
-					[
-						SNew(SVerticalBox)
-						+SVerticalBox::Slot()
-						.AutoHeight()
+						.MenuContent()
 						[
-							SNew(SListView<TSharedPtr<FName>>)
-							.ListItemsSource(&NameList)
-							.OnGenerateRow(this, &FLexUISpriteDataCustomization::GenerateComboItem)
-							.OnSelectionChanged(this, &FLexUISpriteDataCustomization::HandleRequiredParamComboChanged, PackingTagProperty, &DetailBuilder)
+							SNew(SVerticalBox)
+							+SVerticalBox::Slot()
+							.AutoHeight()
+							[
+								SNew(SListView<TSharedPtr<FName>>)
+								.ListItemsSource(&NameList)
+								.OnGenerateRow(this, &FLexUISpriteDataCustomization::GenerateComboItem)
+								.OnSelectionChanged(this, &FLexUISpriteDataCustomization::HandleRequiredParamComboChanged, PackingTag_PH, &DetailBuilder)
+							]
 						]
 					]
 				]
-			]
-			+SHorizontalBox::Slot()
-			.Padding(FMargin(2))
-			.AutoWidth()
-			[
-				SNew(SButton)
-				.VAlign(EVerticalAlignment::VAlign_Center)
-				.Text(LOCTEXT("OpenAtlas", "Open Atlas Viewer"))
-				.OnClicked_Lambda([]() {
-					FGlobalTabmanager::Get()->TryInvokeTab(FLGUIEditorModule::LexUIDynamicSpriteAtlasViewerTabName);
-					return FReply::Handled();
-				})
+				+SHorizontalBox::Slot()
+				.Padding(FMargin(2))
+				.AutoWidth()
+				[
+					SNew(SButton)
+					.VAlign(EVerticalAlignment::VAlign_Center)
+					.Text(LOCTEXT("OpenAtlas", "Open Atlas Viewer"))
+					.OnClicked_Lambda([]() {
+						FGlobalTabmanager::Get()->TryInvokeTab(FLGUIEditorModule::LexUIDynamicSpriteAtlasViewerTabName);
+						return FReply::Handled();
+					})
+				]
 			]
 		]
-	]
-	;
-	atlasPackingCategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, bUseEdgePixelPadding));
-
+		;
+	}
+	
 	//if change PackingTag, clear all sprites and repack
-	auto packingTagHangle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, PackingTag));
-	packingTagHangle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([] {ULexUISpriteData::MarkAllSpritesNeedToReinitialize(); }));
+	PackingTag_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([] {ULexUISpriteData::MarkAllSpritesNeedToReinitialize(); }));
 	//if change SpriteTexture, clear all sprites and repack
 	auto spriteTextureHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteTexture));
 	spriteTextureHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&DetailBuilder] {ULexUISpriteData::MarkAllSpritesNeedToReinitialize(); DetailBuilder.ForceRefreshDetails(); }));

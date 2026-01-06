@@ -15,6 +15,15 @@ class ULexSpriteBase;
 
 #define WARNING_ATLAS_SIZE 4096
 
+UENUM(BlueprintType)
+enum class ELexUISpritePackingType : uint8
+{
+	/** Static packing, Sprite will be packed in editor no matter if it used, not support runtime packing, support mipmap. */
+	Static,
+	/** Dynamic packing. Sprite will be packed when using, support runtime packing, not support mipmap. */
+	Dynamic,
+};
+
 /**
  * A Sprite-data type that can do automatic packing
  */
@@ -22,6 +31,7 @@ UCLASS(BlueprintType)
 class LGUI_API ULexUISpriteData :public ULexUISpriteData_BaseObject
 {
 	GENERATED_BODY()
+	ULexUISpriteData();
 private:
 	friend class FLexUISpriteDataCustomization;
 	friend class ULexUISpriteDataFactory;
@@ -37,22 +47,24 @@ private:
 	UPROPERTY(EditAnywhere, Category = LGUI)
 		FLexUISpriteInfo SpriteInfo;
 
+	UPROPERTY(EditAnywhere, Category = "AtlasPacking")
+	ELexUISpritePackingType PackingType = ELexUISpritePackingType::Static;
 	/**
 	 * Use a StaticSpriteAtlasData to pack multiple sprites into single atlas texture. The packing process is in editor and cook time, no performance impact at runtime.
 	 * Support mipmaps.
 	 */
-	UPROPERTY(EditAnywhere, Category = "AtlasPacking")
+	UPROPERTY(EditAnywhere, Category = "AtlasPacking", meta=(EditCondition="PackingType==ELexUISpritePackingType::Static"))
 		TObjectPtr<ULexUIStaticSpriteAtlasData> PackingAtlas = nullptr;
 	/** Texture index in atlas texture array */
-	UPROPERTY(VisibleAnywhere, Category = "AtlasPacking")
-	int32 TextureIndex = 0;
+	UPROPERTY(VisibleAnywhere, Category = "AtlasPacking", meta=(EditCondition="PackingType==ELexUISpritePackingType::Static"))
+	int32 AtlasTextureIndex = 0;
 	/**
 	 * Sprites that have same PackingTag will be packed into same atlas at runtime. If PackingTag is None, then the LexSprite which render this LexUISpriteData will be treated as a LexTexture.
 	 * Not support mipmaps.
-	 * Only valid if PackingAtlas is empty.
 	 */
-	UPROPERTY(EditAnywhere, Category = "AtlasPacking")
+	UPROPERTY(EditAnywhere, Category = "AtlasPacking", meta=(EditCondition="PackingType==ELexUISpritePackingType::Dynamic"))
 		FName PackingTag = TEXT("Main");
+	
 	/** Repeat edge pixel fill spaced between other sprites in atlas texture */
 	UPROPERTY(EditAnywhere, Category = "AtlasPacking")
 		bool bUseEdgePixelPadding = true;
@@ -82,15 +94,14 @@ public:
 
 	/**
 	 * Create a LexUISpriteData with provided parameter. This can use at runtime
-	 * @param Outer						Outer of the result LGUISpriteData
-	 * @param inSpriteTexture			Use this texture to create
-	 * @param inHorizontalBorder		Horizontal border value, x for left, y for right, will be convert to uint16</param>
-	 * @param inVerticalBorder			Vertical border value, x for top, y for bottom, will be convert to uint16</param>
-	 * @param inPackingTag				see "PackingTag" property
+	 * @param Outer						Outer of the result LexUISpriteData
+	 * @param InSpriteTexture			Use this texture to create
+	 * @param InBorder					Border value
+	 * @param InPackingTag				See "PackingTag" property
 	 * @return							Created LexUISpriteData, nullptr if something wrong.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		static ULexUISpriteData* CreateLexUISpriteData(UObject* Outer, UTexture2D* inSpriteTexture, FVector2D inHorizontalBorder = FVector2D::ZeroVector, FVector2D inVerticalBorder = FVector2D::ZeroVector, FName inPackingTag = TEXT("Main"));
+		static ULexUISpriteData* CreateLexUISpriteData(UObject* Outer, UTexture2D* InSpriteTexture, FMargin InBorder, FName InPackingTag = TEXT("Main"));
 
 	/**
 	 * If texture is changed, use this to reload texture.

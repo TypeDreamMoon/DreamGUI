@@ -690,15 +690,6 @@ void FLGUIEditorModule::CreateUIElementSubMenu(FMenuBuilder& MenuBuilder, TFunct
 				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateUIControls, GetSelectedActorFunction, FLexUIEditorTools::LexUIPresetPrefabPath + InControlName))
 			);
 		}
-		static void CreateEmptyActorMenuEntry(FMenuBuilder& InBuilder, TFunction<AActor*()> GetSelectedActorFunction)
-		{
-			InBuilder.AddMenuEntry(
-				LOCTEXT("CreateEmptyActor", "Create empty actor"),
-				LOCTEXT("CreateEmptyActor_Tooltip", "Create empty actor with a SceneComponent as RootComponent, and can be replaced by other SceneComponent type."),
-				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateEmptyActor, GetSelectedActorFunction))
-			);
-		}
 	};
 
 	MenuBuilder.BeginSection("UIElement");

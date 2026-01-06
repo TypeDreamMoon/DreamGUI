@@ -52,6 +52,11 @@ void FLexUISpriteInfo::ApplyBorderUV(float texFullWidthReciprocal, float texFull
 	BorderMinUV.Y = MinUV.Y + Border.Top * texFullHeightReciprocal;
 }
 
+ULexUISpriteData::ULexUISpriteData()
+{
+	// PackingAtlas = LoadObject<ULexUIStaticSpriteAtlasData>(NULL, TEXT("/LGUI/DefaultSpriteAtlasData"));
+}
+
 bool ULexUISpriteData::PackSprite()
 {
 	CheckAndApplySpriteTextureSetting(SpriteTexture);
@@ -67,12 +72,13 @@ bool ULexUISpriteData::PackSprite()
 	}
 	else//all area cannot fit the texture, then show a warning
 	{
-		auto WarningMsg = FText::Format(LOCTEXT("PackageSprite_AtlasSize_Warning", "{0} Can't pack sprite texture:{1}!\
-\nTry reduce sprite texture size, or maybe don't use it as sprite.\
-\nAlso remember to dispose unused atlas by call function DisposeAtlasByPackingTag from LGUIDynamicSpriteAtlasManager.\
-")
+		auto WarningMsg = FText::Format(LOCTEXT("PackageSprite_AtlasSize_Warning", "{0} Can't pack sprite texture:{1}!"
+"\nTry reduce sprite texture size, or maybe don't use it as sprite."
+"\nAlso remember to dispose unused atlas by call function DisposeAtlasByPackingTag from {2}."
+)
 			, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__))
 			, FText::FromString(SpriteTexture->GetPathName())
+			, FText::FromString(ULexUIDynamicSpriteAtlasManager::StaticClass()->GetName())
 			);
 		UE_LOG(LGUI, Warning, TEXT("%s"), *WarningMsg.ToString());
 #if WITH_EDITOR
@@ -86,7 +92,7 @@ void ULexUISpriteData::CheckSpriteTexture()
 {
 	if (SpriteTexture == nullptr)
 	{
-		SpriteTexture = LoadObject<UTexture2D>(NULL, TEXT("/LGUI/Textures/LGUIPreset_WhiteSolid"));
+		SpriteTexture = LoadObject<UTexture2D>(NULL, TEXT("/LGUI/Textures/LexUIPreset_WhiteSolid"));
 	}
 }
 
@@ -195,15 +201,6 @@ void ULexUISpriteData::PostEditChangeChainProperty(struct FPropertyChangedChainE
 
 bool ULexUISpriteData::CanEditChange(const FProperty* InProperty) const
 {
-	if (InProperty)
-	{
-		FString PropertyName = InProperty->GetName();
-
-		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(ULexUISpriteData, PackingTag))
-		{
-			return IsValid(PackingAtlas);
-		}
-	}
 	return Super::CanEditChange(InProperty);
 }
 void ULexUISpriteData::MarkAllSpritesNeedToReinitialize()
@@ -269,7 +266,7 @@ void ULexUISpriteData::InitSpriteData()
 #endif
 			if (PackingAtlas->InitCheck())
 			{
-				AtlasTexture = PackingAtlas->GetAtlasTexture(TextureIndex);
+				AtlasTexture = PackingAtlas->GetAtlasTexture(AtlasTextureIndex);
 				//no need to set spriteInfo because it is already set when do static pack
 				return;
 			}
@@ -344,44 +341,34 @@ const FName& ULexUISpriteData::GetPackingTag()const
 	return PackingTag;
 }
 
-ULexUISpriteData* ULexUISpriteData::CreateLexUISpriteData(UObject* Outer, UTexture2D* inSpriteTexture, FVector2D inHorizontalBorder /* = FVector2D::ZeroVector */, FVector2D inVerticalBorder /* = FVector2D::ZeroVector */, FName inPackingTag /* = TEXT("Main") */)
+ULexUISpriteData* ULexUISpriteData::CreateLexUISpriteData(UObject* Outer, UTexture2D* InSpriteTexture, FMargin InBorder, FName InPackingTag /* = TEXT("Main") */)
 {
-	if (!IsValid(inSpriteTexture))
+	if (!IsValid(InSpriteTexture))
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d Input texture not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return nullptr;
 	}
 	// check size
-	if (inSpriteTexture)
+	int32 atlasPadding = ULexUISettings::GetAtlasTexturePadding(InPackingTag);
+	if (InSpriteTexture->GetSurfaceWidth() + atlasPadding * 2 > WARNING_ATLAS_SIZE || InSpriteTexture->GetSurfaceHeight() + atlasPadding * 2 > WARNING_ATLAS_SIZE)
 	{
-		int32 atlasPadding = 0;
-		auto lguiSetting = GetDefault<ULexUISettings>()->DefaultAtlasSetting.SpaceBetweenSprites;
-		if (inSpriteTexture->GetSizeX() + atlasPadding * 2 > WARNING_ATLAS_SIZE || inSpriteTexture->GetSizeY() + atlasPadding * 2 > WARNING_ATLAS_SIZE)
-		{
-			auto warningMsg = FText::Format(LOCTEXT("CreateLexUISpriteData_Size_Warning", "{0} Target texture width or height is too large! Consider use UITexture to render this texture.")
-				, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)));
-			UE_LOG(LGUI, Warning, TEXT("%s"), *warningMsg.ToString());
+		auto warningMsg = FText::Format(LOCTEXT("CreateLexUISpriteData_Size_Warning", "{0} Target texture width or height is too large! Consider use LexImage to render this texture.")
+			, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)));
+		UE_LOG(LGUI, Warning, TEXT("%s"), *warningMsg.ToString());
 #if WITH_EDITOR
-			FLexUIUtils::EditorNotification(warningMsg, false);
+		FLexUIUtils::EditorNotification(warningMsg, false);
 #endif
-		}
-		// Apply setting for Sprite creation
-		//inSpriteTexture->MipGenSettings = TextureMipGenSettings::TMGS_NoMipmaps;
-		CheckAndApplySpriteTextureSetting(inSpriteTexture);
 	}
+	// Apply setting for Sprite creation
+	CheckAndApplySpriteTextureSetting(InSpriteTexture);
 
 	ULexUISpriteData* result = NewObject<ULexUISpriteData>(IsValid(Outer) ? Outer : GetTransientPackage());
-	if (inSpriteTexture)
-	{
-		result->SpriteTexture = inSpriteTexture;
-		auto& spriteInfo = result->SpriteInfo;
-		spriteInfo.Width = inSpriteTexture->GetSizeX();
-		spriteInfo.Height = inSpriteTexture->GetSizeY();
-		spriteInfo.Border.Left = (uint16)inHorizontalBorder.X;
-		spriteInfo.Border.Right = (uint16)inHorizontalBorder.Y;
-		spriteInfo.Border.Top = (uint16)inVerticalBorder.X;
-		spriteInfo.Border.Bottom = (uint16)inVerticalBorder.Y;
-	}
+	result->PackingTag = InPackingTag;
+	result->SpriteTexture = InSpriteTexture;
+	auto& spriteInfo = result->SpriteInfo;
+	spriteInfo.Width = InSpriteTexture->GetSizeX();
+	spriteInfo.Height = InSpriteTexture->GetSizeY();
+	spriteInfo.Border = InBorder;
 	return result;
 }
 
@@ -423,7 +410,7 @@ bool ULexUISpriteData::ReadPixel(const FVector2D& InUV, FColor& OutPixel)const
 {
 	if (PackingAtlas != nullptr)
 	{
-		return PackingAtlas->ReadPixel(TextureIndex, InUV, OutPixel);
+		return PackingAtlas->ReadPixel(AtlasTextureIndex, InUV, OutPixel);
 	}
 	return false;
 }
@@ -434,7 +421,7 @@ bool ULexUISpriteData::SupportReadPixel()const
 
 ULexUISpriteData* ULexUISpriteData::GetDefaultWhiteSolid()
 {
-	static auto defaultWhiteSolid = LoadObject<ULexUISpriteData>(NULL, TEXT("/LGUI/LGUIPreset_WhiteSolid"));
+	static auto defaultWhiteSolid = LoadObject<ULexUISpriteData>(NULL, TEXT("/LGUI/LexUIPreset_WhiteSolid"));
 	if (defaultWhiteSolid == nullptr)
 	{
 		auto errMsg = FText::Format(LOCTEXT("MissingDefaultContent", "{0} Load default Sprite error! Missing some content of LGUI plugin, reinstall this plugin may fix the issue.")
@@ -449,7 +436,7 @@ ULexUISpriteData* ULexUISpriteData::GetDefaultWhiteSolid()
 }
 ULexUISpriteData* ULexUISpriteData::GetDefaultFrameRect()
 {
-	static auto defaultFrameRect = LoadObject<ULexUISpriteData>(NULL, TEXT("/LGUI/LGUIPreset_Rect_Sprite"));
+	static auto defaultFrameRect = LoadObject<ULexUISpriteData>(NULL, TEXT("/LGUI/LexUIPreset_Rect_Sprite"));
 	if (defaultFrameRect == nullptr)
 	{
 		auto errMsg = FText::Format(LOCTEXT("MissingDefaultContent", "{0} Load default sprite error! Missing some content of LexUI plugin, reinstall this plugin may fix the issue.")

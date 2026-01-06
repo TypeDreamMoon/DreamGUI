@@ -347,19 +347,19 @@ FString FLexUIEditorTools::LexUIPresetPrefabPath = TEXT("/LGUI/Prefabs/");
 
 FString FLexUIEditorTools::GetUniqueNumericName(const FString& InPrefix, const TArray<FString>& InExistNames)
 {
-	auto ExtractNumetric = [](const FString& InString, int32& Num) {
-		int NumetricStringIndex = -1;
-		FString SubNumetricString;
-		int NumetricStringCharCount = 0;
+	auto ExtractNumeric = [](const FString& InString, int32& Num) {
+		int NumericStringIndex = -1;
+		FString SubNumericString;
+		int NumericStringCharCount = 0;
 		for (int i = InString.Len() - 1; i >= 0; i--)
 		{
 			auto SubChar = InString[i];
 			if (SubChar >= '0' && SubChar <= '9')
 			{
-				NumetricStringIndex = i;
+				NumericStringIndex = i;
 
-				NumetricStringCharCount++;
-				if (NumetricStringCharCount >= 4)
+				NumericStringCharCount++;
+				if (NumericStringCharCount >= 4)
 				{
 					break;
 				}
@@ -369,9 +369,9 @@ FString FLexUIEditorTools::GetUniqueNumericName(const FString& InPrefix, const T
 				break;
 			}
 		}
-		if (NumetricStringIndex != -1)
+		if (NumericStringIndex != -1)
 		{
-			auto NumetricSubString = InString.Right(InString.Len() - NumetricStringIndex);
+			auto NumetricSubString = InString.Right(InString.Len() - NumericStringIndex);
 			Num = FCString::Atoi(*NumetricSubString);
 			return true;
 		}
@@ -386,7 +386,7 @@ FString FLexUIEditorTools::GetUniqueNumericName(const FString& InPrefix, const T
 		auto& Item = InExistNames[i];
 		if (Item.Len() == 0)continue;
 		int Num;
-		if (ExtractNumetric(Item, Num))
+		if (ExtractNumeric(Item, Num))
 		{
 			if (Num > MaxNumSuffix)
 			{
@@ -520,36 +520,6 @@ void FLexUIEditorTools::CreateLexWidget(TFunction<AActor*()> GetSelectedActorFun
 	GEditor->EndTransaction();
 }
 
-void FLexUIEditorTools::CreateEmptyActor(TFunction<AActor*()> GetSelectedActorFunction)
-{
-	auto SelectedActor = GetSelectedActorFunction();
-	if (SelectedActor == nullptr)return;
-	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return;
-	GEditor->BeginTransaction(LOCTEXT("CreateEmptyActor_Transaction", "LexUI create empty actor"));
-	MakeCurrentLevel(SelectedActor);
-	AActor* newActor = SelectedActor->GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity, FActorSpawnParameters());
-	if (IsValid(newActor))
-	{
-		//create SceneComponent
-		{
-			USceneComponent* RootComponent = NewObject<USceneComponent>(newActor, USceneComponent::GetDefaultSceneRootVariableName(), RF_Transactional);
-			RootComponent->Mobility = EComponentMobility::Movable;
-			RootComponent->bVisualizeComponent = false;
-
-			newActor->SetRootComponent(RootComponent);
-			RootComponent->RegisterComponent();
-			newActor->AddInstanceComponent(RootComponent);
-		}
-		if (SelectedActor != nullptr)
-		{
-			newActor->AttachToActor(SelectedActor, FAttachmentTransformRules::KeepRelativeTransform);
-			GEditor->SelectActor(SelectedActor, false, true);
-		}
-		GEditor->SelectActor(newActor, true, true);
-	}
-	GEditor->EndTransaction();
-}
-
 AActor* FLexUIEditorTools::GetFirstSelectedActor()
 {
 	auto SelectedActors = FLexUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
@@ -574,12 +544,13 @@ void FLexUIEditorTools::CreateUIControls(TFunction<AActor*()> GetSelectedActorFu
 	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return;
 	GEditor->BeginTransaction(LOCTEXT("CreateUIControl_Transaction", "LexUI Create UI Control"));
 	MakeCurrentLevel(SelectedActor);
+	ULexUIManagerWorldSubsystem::GetSelection(SelectedActor->GetWorld())->Modify();
 	if (auto Prefab = LoadObject<ULexUIPrefab>(NULL, *InPrefabPath))
 	{
-		auto actor = Prefab->LoadPrefabInEditor(SelectedActor->GetWorld()
+		auto Actor = Prefab->LoadPrefabInEditor(SelectedActor->GetWorld()
 			, SelectedActor == nullptr ? nullptr : SelectedActor->GetRootComponent());
-		GEditor->SelectActor(SelectedActor, false, true);
-		GEditor->SelectActor(actor, true, true);
+		ULexUIManagerWorldSubsystem::GetSelection(SelectedActor->GetWorld())->SelectNone();
+		ULexUIManagerWorldSubsystem::GetSelection(SelectedActor->GetWorld())->SelectActor(Actor);
 	}
 	else
 	{
@@ -598,12 +569,14 @@ void FLexUIEditorTools::DuplicateActors(TFunction<TArray<AActor*>()> GetSelected
 	}
 	auto RootActorList = FLexUIEditorTools::GetRootActorListFromSelection(SelectedActors);
 	GEditor->BeginTransaction(LOCTEXT("DuplicateActor_Transaction", "LexUI Duplicate Actors"));
+	ULexUIManagerWorldSubsystem::GetSelection(SelectedActors[0]->GetWorld())->Modify();
+	ULexUIManagerWorldSubsystem::GetSelection(SelectedActors[0]->GetWorld())->SelectNone();
 	for (auto Actor : RootActorList)
 	{
 		MakeCurrentLevel(Actor);
 		Actor->GetLevel()->Modify();
-		auto copiedActorLabel = FLexUIEditorToolsHelperFunctionHolder::GetCopiedActorLabel(Actor->GetAttachParentActor(), Actor->GetActorLabel(), Actor->GetWorld());
-		AActor* copiedActor;
+		auto CopiedActorLabel = FLexUIEditorToolsHelperFunctionHolder::GetCopiedActorLabel(Actor->GetAttachParentActor(), Actor->GetActorLabel(), Actor->GetWorld());
+		AActor* CopiedActor;
 		USceneComponent* Parent = nullptr;
 		if (Actor->GetAttachParentActor())
 		{
@@ -662,8 +635,8 @@ void FLexUIEditorTools::DuplicateActors(TFunction<TArray<AActor*>()> GetSelected
 					}
 				}
 			}
-			copiedActor = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::DuplicateActorForEditor(Actor, Parent, PrefabHelperObject->SubPrefabMap, InMapObjectToGuid, DuplicatedSubPrefabMap, OutMapGuidToObject);
-			if (auto UIItem = Cast<ULexWidget>(copiedActor->GetRootComponent()))
+			CopiedActor = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::DuplicateActorForEditor(Actor, Parent, PrefabHelperObject->SubPrefabMap, InMapObjectToGuid, DuplicatedSubPrefabMap, OutMapGuidToObject);
+			if (auto UIItem = Cast<ULexWidget>(CopiedActor->GetRootComponent()))
 			{
 				if (auto UIParent = Cast<ULexWidget>(Parent))
 				{
@@ -683,11 +656,10 @@ void FLexUIEditorTools::DuplicateActors(TFunction<TArray<AActor*>()> GetSelected
 		}
 		else 
 		{
-			copiedActor = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::DuplicateActorForEditor(Actor, Parent, {}, InMapObjectToGuid, DuplicatedSubPrefabMap, OutMapGuidToObject);
+			CopiedActor = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::DuplicateActorForEditor(Actor, Parent, {}, InMapObjectToGuid, DuplicatedSubPrefabMap, OutMapGuidToObject);
 		}
-		copiedActor->SetActorLabel(copiedActorLabel);
-		GEditor->SelectActor(Actor, false, true);
-		GEditor->SelectActor(copiedActor, true, true);
+		CopiedActor->SetActorLabel(CopiedActorLabel);
+		ULexUIManagerWorldSubsystem::GetSelection(CopiedActor->GetWorld())->SelectActor(CopiedActor);
 	}
 	GEditor->EndTransaction();
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
@@ -798,10 +770,8 @@ void FLexUIEditorTools::PasteActors(TFunction<TArray<AActor*>()> GetSelectedActo
 
 	PrefabHelperObject->SetCanNotifyAttachment(false);
 	GEditor->BeginTransaction(LOCTEXT("PasteActor_Transaction", "LexUI Paste Actors"));
-	for (auto item : SelectedActors)
-	{
-		GEditor->SelectActor(item, false, true);
-	}
+	ULexUIManagerWorldSubsystem::GetSelection(SelectedActors[0]->GetWorld())->Modify();
+	ULexUIManagerWorldSubsystem::GetSelection(SelectedActors[0]->GetWorld())->SelectNone();
 	if (IsValid(parentComp))
 	{
 		MakeCurrentLevel(parentComp->GetOwner());
@@ -813,7 +783,7 @@ void FLexUIEditorTools::PasteActors(TFunction<TArray<AActor*>()> GetSelectedActo
 			TMap<FGuid, TObjectPtr<UObject>> OutMapGuidToObject;
 			TMap<TObjectPtr<AActor>, FLexUISubPrefabData> LoadedSubPrefabMap;
 			auto copiedActorLabel = FLexUIEditorToolsHelperFunctionHolder::GetCopiedActorLabel(parentComp->GetOwner(), KeyValuePair.Key, parentComp->GetWorld());
-			auto copiedActor = KeyValuePair.Value->LoadPrefabInEditor(parentComp->GetWorld(), parentComp, LoadedSubPrefabMap, OutMapGuidToObject, false);
+			auto CopiedActor = KeyValuePair.Value->LoadPrefabInEditor(parentComp->GetWorld(), parentComp, LoadedSubPrefabMap, OutMapGuidToObject, false);
 			for (auto& KeyValue : LoadedSubPrefabMap)
 			{
 				TMap<FGuid, TObjectPtr<UObject>> SubMapGuidToObject;
@@ -823,8 +793,8 @@ void FLexUIEditorTools::PasteActors(TFunction<TArray<AActor*>()> GetSelectedActo
 				}
 				PrefabHelperObject->MakePrefabAsSubPrefab(KeyValue.Value.PrefabAsset, KeyValue.Key, SubMapGuidToObject, KeyValue.Value.ObjectOverrideParameterArray);
 			}
-			copiedActor->SetActorLabel(copiedActorLabel);
-			GEditor->SelectActor(copiedActor, true, true, true);
+			CopiedActor->SetActorLabel(copiedActorLabel);
+			ULexUIManagerWorldSubsystem::GetSelection(CopiedActor->GetWorld())->SelectActor(CopiedActor);
 		}
 		else
 		{

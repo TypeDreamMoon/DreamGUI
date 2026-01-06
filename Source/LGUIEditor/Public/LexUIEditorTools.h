@@ -27,7 +27,6 @@ public:
 	static FString GetNamePrefixForCopy(const FString& InSrcName, FString& OutNumericSuffix);
 	static TArray<AActor*> GetRootActorListFromSelection(const TArray<AActor*>& selectedActors);
 	static void CreateLexWidget(TFunction<AActor*()> GetSelectedActorFunction, FString Name, UClass* VisualClass, TFunction<void(class ULexWidget*)> Callback);
-	static void CreateEmptyActor(TFunction<AActor*()> GetSelectedActorFunction);
 	static void CreateUIControls(TFunction<AActor*()> GetSelectedActorFunction, FString InPrefabPath);
 	static void DuplicateActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
 	static void CopyActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);

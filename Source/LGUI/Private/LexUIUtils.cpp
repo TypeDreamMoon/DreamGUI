@@ -240,7 +240,7 @@ FColor FLexUIUtils::MultiplyColor(FColor A, FColor B)
 
 UTexture* FLexUIUtils::GetDefaultWhiteTexture()
 {
-	auto defaultWhiteSolid = LoadObject<UTexture2D>(NULL, TEXT("/LGUI/Textures/LGUIPreset_WhiteSolid"));
+	auto defaultWhiteSolid = LoadObject<UTexture2D>(NULL, TEXT("/LGUI/Textures/LexUIPreset_WhiteSolid"));
 	if (!IsValid(defaultWhiteSolid))
 	{
 		auto errMsg = FText::Format(LOCTEXT("MissingDefaultContent", "{0} Load default texture error! Missing some content of LexUI plugin, reinstall this plugin may fix the issue.")

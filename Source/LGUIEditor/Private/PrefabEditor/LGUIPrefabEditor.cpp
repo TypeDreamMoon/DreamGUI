@@ -535,14 +535,9 @@ void FLGUIPrefabEditor::SaveViewState()
 		}
 		if (auto Canvas = RootAgentActor->FindComponentByClass<ULexCanvas>())
 		{
-			PrefabBeingEdited->PrefabDataForPrefabEditor.bNeedCanvas = true;
 			PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasRenderMode = (uint8)Canvas->GetRenderMode();
 		}
-		else
-		{
-			PrefabBeingEdited->PrefabDataForPrefabEditor.bNeedCanvas = false;
-		}
-	}
+ 	}
 	PrefabBeingEdited->PrefabDataForPrefabEditor.ViewMode = ViewportPtr->GetViewportClient()->GetViewMode();
 }
 

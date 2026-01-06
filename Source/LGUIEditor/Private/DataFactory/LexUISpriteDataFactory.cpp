@@ -21,14 +21,13 @@ UObject* ULexUISpriteDataFactory::FactoryCreateNew(UClass* Class, UObject* InPar
 	bool isDefaltTexture = false;
 	if (SpriteTexture == nullptr)
 	{
-		SpriteTexture = LoadObject<UTexture2D>(NULL, TEXT("/LGUI/Textures/LGUIPreset_WhiteSolid"));
+		SpriteTexture = LoadObject<UTexture2D>(NULL, TEXT("/LGUI/Textures/LexUIPreset_WhiteSolid"));
 		isDefaltTexture = true;
 	}
 	// check size
 	if (SpriteTexture.IsValid() && !isDefaltTexture)
 	{
-		int32 atlasPadding = 0;
-		auto lguiSetting = GetDefault<ULexUISettings>()->DefaultAtlasSetting.SpaceBetweenSprites;
+		int32 atlasPadding = GetDefault<ULexUISettings>()->DefaultAtlasSetting.SpaceBetweenSprites;
 		if (SpriteTexture->GetSurfaceWidth() + atlasPadding * 2 > WARNING_ATLAS_SIZE || SpriteTexture->GetSurfaceHeight() + atlasPadding * 2 > WARNING_ATLAS_SIZE)
 		{
 			auto LogMsg = LOCTEXT("TextureSizeError", "Target texture width or height is too large! Consider use UITexture to render this texture.");

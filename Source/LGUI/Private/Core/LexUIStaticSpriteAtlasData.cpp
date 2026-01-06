@@ -304,9 +304,9 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 	};
 	TArray<FAtlasSpriteBinPackContainer> AtlasSpriteBinPackArray;
 
-	for (int i = 0; i < SpriteDataArray.Num(); i++)
+	for (int SpriteIndex = 0; SpriteIndex < SpriteDataArray.Num(); SpriteIndex++)
 	{
-		auto SpriteData = SpriteDataArray[i];
+		auto SpriteData = SpriteDataArray[SpriteIndex];
 		bool bCanPackInExistingAtlas = false;
 		for (int AtlasIndex = 0; AtlasIndex < AtlasSpriteBinPackArray.Num(); AtlasIndex++)
 		{
@@ -314,8 +314,20 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 			if (TryPackAtlas(SpriteData, AtlasSpriteBinPack.BinPack, AtlasSpriteBinPack.PackedRects, AtlasSpriteBinPack.SpritesBelongToAtlas))
 			{
 				bCanPackInExistingAtlas = true;
-				SpriteData->TextureIndex = AtlasIndex;
+				SpriteData->AtlasTextureIndex = AtlasIndex;
 				break;
+			}
+			else
+			{
+				if (AtlasSpriteBinPack.BinPack.GetBinWidth() < MaxAtlasTextureSize)//not reach max size, expand it and try again
+				{
+					int32 PackSize = AtlasSpriteBinPack.BinPack.GetBinWidth();
+					PackSize *= 2;
+					AtlasSpriteBinPack.BinPack.ExpendSize(PackSize, PackSize);
+					AtlasIndex--;//try pack to this bin pack atlas again
+					continue;
+				}
+				//already reach max size, goto next bin pack
 			}
 		}
 		if (!bCanPackInExistingAtlas)//can't pack in existing atlas, create a new one
@@ -592,16 +604,16 @@ bool ULexUIStaticSpriteAtlasData::CheckInvalidSpriteData()const
 {
 	for (int i = 0; i < SpriteDataArray.Num(); i++)
 	{
-		ULexUISpriteData* spriteDataItem = SpriteDataArray[i];
-		if (!IsValid(spriteDataItem))
+		auto SpriteData = SpriteDataArray[i];
+		if (!IsValid(SpriteData))
 		{
 			return true;
 		}
-		else if (!IsValid(spriteDataItem->GetSpriteTexture()))
+		else if (!IsValid(SpriteData->GetSpriteTexture()))
 		{
 			return true;
 		}
-		else if (spriteDataItem->PackingAtlas != this)
+		else if (SpriteData->PackingAtlas != this)
 		{
 			return true;
 		}
@@ -613,18 +625,18 @@ void ULexUIStaticSpriteAtlasData::CleanupInvalidSpriteData()
 	auto PrevCount = SpriteDataArray.Num();
 	for (int i = 0; i < SpriteDataArray.Num(); i++)
 	{
-		ULexUISpriteData* spriteDataItem = SpriteDataArray[i];
-		if (!IsValid(spriteDataItem))
+		auto SpriteData = SpriteDataArray[i];
+		if (!IsValid(SpriteData))
 		{
 			SpriteDataArray.RemoveAt(i);
 			i--;
 		}
-		else if (!IsValid(spriteDataItem->GetSpriteTexture()))
+		else if (!IsValid(SpriteData->GetSpriteTexture()))
 		{
 			SpriteDataArray.RemoveAt(i);
 			i--;
 		}
-		else if (spriteDataItem->PackingAtlas != this)
+		else if (SpriteData->PackingAtlas != this)
 		{
 			SpriteDataArray.RemoveAt(i);
 			i--;
