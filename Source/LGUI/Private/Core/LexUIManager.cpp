@@ -1334,6 +1334,17 @@ void ULexUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 	}
 }
 
+ULexUISelection* ULexUIManagerWorldSubsystem::GetSelection(UWorld* InWorld)
+{
+	if (auto Instance = GetInstance(InWorld))
+	{
+		return Instance->Selection;
+	}
+	return nullptr;
+}
+#endif
+
+
 void ULexUIManagerWorldSubsystem::AddRootWidget(ULexWidget* InWidget)
 {
 	if (auto Instance = GetInstance(InWidget->GetWorld()))
@@ -1362,16 +1373,6 @@ void ULexUIManagerWorldSubsystem::RemoveRootWidget(ULexWidget* InWidget)
 		Instance->AllRootWidgetArray.RemoveSingle(InWidget);
 	}
 }
-
-ULexUISelection* ULexUIManagerWorldSubsystem::GetSelection(UWorld* InWorld)
-{
-	if (auto Instance = GetInstance(InWorld))
-	{
-		return Instance->Selection;
-	}
-	return nullptr;
-}
-#endif
 
 void ULexUIManagerWorldSubsystem::AddCanvas(ULexCanvas* InCanvas, ELexRenderMode InCurrentRenderMode)
 {
@@ -1559,7 +1560,7 @@ void ULexUIManagerWorldSubsystem::AddEventSystem(ULexEventSystem* InEventSystem)
 #if WITH_EDITOR
 			Instance->GetOwner()->GetActorLabel();
 #else
-			instance->GetOwner()->GetName();
+			Instance->GetOwner()->GetName();
 #endif
 		FString ErrorMsg = FString::Printf(TEXT("[%s].%d LexEventSystem component is already exist in actor:%s, pathName:%s, world:%s, multiple LexEventSystem with same UserIndex in same world is not allowed!")
 			, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *ActorName, *Instance->GetPathName(), *GetWorld()->GetPathName());

@@ -15,7 +15,7 @@
 
 namespace LGUIPrefabSystem8
 {
-	void ActorSerializer::SavePrefab(AActor* OriginRootActor, ULexUIPrefab* InPrefab
+	bool ActorSerializer::SavePrefab(AActor* OriginRootActor, ULexUIPrefab* InPrefab
 		, TMap<UObject*, FGuid>& InOutMapObjectToGuid, TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& InSubPrefabMap
 		, bool InForEditorOrRuntimeUse
 	)
@@ -23,27 +23,27 @@ namespace LGUIPrefabSystem8
 		if (!OriginRootActor || !InPrefab)
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d OriginRootActor Or InPrefab is null!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			return;
+			return false;
 		}
 		if (!IsValid(OriginRootActor))
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d OriginRootActor is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			return;
+			return false;
 		}
 		if (!OriginRootActor->GetWorld())
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d Cannot get World from OriginRootActor!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			return;
+			return false;
 		}
 		if (OriginRootActor->HasAnyFlags(EObjectFlags::RF_Transient))
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d OriginRootActor is transient!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			return;
+			return false;
 		}
 		if (!InForEditorOrRuntimeUse && OriginRootActor->IsEditorOnly())
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d OriginRootActor is editor only!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			return;
+			return false;
 		}
 		ActorSerializer serializer;
 		serializer.TargetWorld = OriginRootActor->GetWorld();
@@ -75,8 +75,9 @@ namespace LGUIPrefabSystem8
 			LexUIPrefabSystem::FLexUIOverrideParameterObjectWriter Writer(InOutBuffer, serializer, InOverridePropertyNames);
 			Writer.DoSerialize(InObject);
 		};
-		serializer.SerializeActor(OriginRootActor, InPrefab);
+		bool saveResult = serializer.SerializeActor(OriginRootActor, InPrefab);
 		InOutMapObjectToGuid = serializer.MapObjectToGuid;
+		return saveResult;
 	}
 
 	void ActorSerializer::SerializeActorArray(TMap<FGuid, FGuid>& MapSceneComponentToParent, TArray<FLGUIActorSaveData>& SavedActors, TMap<FGuid, TArray<uint8>>& SavedObjectData)
@@ -162,9 +163,8 @@ namespace LGUIPrefabSystem8
 		//serialize objects and components
 		SerializeObjectArray(OutData.SavedObjects, OutData.SavedObjectData, OutData.MapSceneComponentToParent);
 	}
-	void ActorSerializer::SerializeActor(AActor* OriginRootActor, ULexUIPrefab* InPrefab)
+	bool ActorSerializer::SerializeActor(AActor* OriginRootActor, ULexUIPrefab* InPrefab)
 	{
-
 		auto StartTime = FDateTime::Now();
 
 		FLGUIPrefabSaveData SaveData;
@@ -185,7 +185,7 @@ namespace LGUIPrefabSystem8
 		if (ToBinary.Num() <= 0)
 		{
 			UE_LOG(LGUI, Warning, TEXT("Save binary length is 0!"));
-			return;
+			return false;
 		}
 #if WITH_EDITOR
 		if (bIsEditorOrRuntime)
@@ -208,8 +208,6 @@ namespace LGUIPrefabSystem8
 			InPrefab->ArchiveLicenseeVer = GPackageFileLicenseeUEVersion;
 			InPrefab->ArEngineNetVer = FNetworkVersion::GetNetworkProtocolVersion(FEngineNetworkCustomVersion::Guid);
 			InPrefab->ArGameNetVer = FNetworkVersion::GetNetworkProtocolVersion(FGameNetworkCustomVersion::Guid);
-
-			InPrefab->MarkPackageDirty();
 		}
 		else
 #endif
@@ -234,6 +232,8 @@ namespace LGUIPrefabSystem8
 
 		auto TimeSpan = FDateTime::Now() - StartTime;
 		UE_LOG(LGUI, Log, TEXT("Take %fs saving prefab: %s"), TimeSpan.GetTotalSeconds(), *InPrefab->GetName());
+		
+		return true;
 	}
 
 	void ActorSerializer::CollectActorRecursive(AActor* Actor)

@@ -18,7 +18,7 @@ class ULexUIPrefab;
 class FLGUIPrefabEditorViewportClient : public FEditorViewportClient
 {
 public:
-	FLGUIPrefabEditorViewportClient(FLGUIPrefabEditorScene& InPreviewScene, TWeakPtr<FLGUIPrefabEditor> InPrefabEditorPtr, const TSharedRef<class SLGUIPrefabEditorViewport>& InEditorViewportPtr);
+	FLGUIPrefabEditorViewportClient(TWeakPtr<FLGUIPrefabEditor> InPrefabEditorPtr, const TSharedRef<class SLGUIPrefabEditorViewport>& InEditorViewportPtr);
 
 	virtual ~FLGUIPrefabEditorViewportClient();
 
@@ -92,7 +92,6 @@ public:
 
 	bool FocusViewportToTargets();
 
-	FLGUIPrefabEditorScene* PrefabScene = nullptr;
 	// Begin override because PreviewScene is nullptr
 	virtual UWorld* GetWorld()const override;
 	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;

@@ -1,6 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/LexUIDynamicSpriteAtlasData.h"
+
+#include "LGUI.h"
 #include "Core/LexUIStaticSpriteAtlasData.h"
 #include "Core/LexUISettings.h"
 #include "Core/LexUISpriteData.h"
@@ -31,6 +33,7 @@ void FLexUIDynamicSpriteAtlasData::CreateAtlasTexture(int InTextureSize)
 	NewTexture->SRGB = ULexUISettings::GetAtlasTextureSRGB(PackingTag);
 	NewTexture->Filter = ULexUISettings::GetAtlasTextureFilter(PackingTag);
 	NewTexture->UpdateResource();
+	NewTexture->AddToRoot();
 	
 	this->AtlasTextureArray.Add(NewTexture);
 
@@ -156,7 +159,16 @@ bool FLexUIDynamicSpriteAtlasData::PackSprite(ULexUISpriteData* Sprite)
 void FLexUIDynamicSpriteAtlasData::CopySpriteTextureToAtlas(ULexUISpriteData* InSprite, UTexture2D* InAtlasTexture, rbp::Rect InPackedRect, int32 InAtlasTexturePadding)
 {
 	auto SpriteTexture = InSprite->GetSpriteTexture();
-	check (SpriteTexture->GetResource() != nullptr && InAtlasTexture->GetResource() != nullptr);
+	if (!SpriteTexture->GetResource())
+	{
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d Sprite:%s Texture:%s Resource is null!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *InSprite->GetPathName(), *SpriteTexture->GetPathName());
+		return;
+	}
+	if (!InAtlasTexture->GetResource())
+	{
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d PackingTag:%s Texture:%s Resource is null!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->PackingTag.ToString(), *InAtlasTexture->GetPathName());
+		return;
+	}
 	
 	FBox2D srcRegionBox(FVector2D(0, 0), FVector2D(InPackedRect.width, InPackedRect.height));
 	FBox2D dstRegionBox(FVector2D(InPackedRect.x, InPackedRect.y), FVector2D(InPackedRect.x + InPackedRect.width, InPackedRect.y + InPackedRect.height));
@@ -337,6 +349,13 @@ void ULexUIDynamicSpriteAtlasManager::ResetAtlasMap()
 {
 	if (Instance != nullptr)
 	{
+		for (auto& AtlasMapKeyValue : Instance->AtlasMap)
+		{
+			for (auto& AtlasTexture : AtlasMapKeyValue.Value.AtlasTextureArray)
+			{
+				AtlasTexture->RemoveFromRoot();
+			}
+		}
 		Instance->AtlasMap.Empty();
 		if (Instance->OnAtlasMapChanged.IsBound())
 		{

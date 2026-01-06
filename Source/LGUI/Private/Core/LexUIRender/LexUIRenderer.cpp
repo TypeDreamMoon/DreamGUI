@@ -107,7 +107,7 @@ int32 FLexUIRenderer::GetPriority() const
 #if WITH_EDITOR
 	auto Priority = ULexUISettings::GetPriorityInSceneViewExtension();
 #else
-	static auto Priority = ULGUISettings::GetPriorityInSceneViewExtension();
+	static auto Priority = ULexUISettings::GetPriorityInSceneViewExtension();
 #endif
 	return Priority;
 }

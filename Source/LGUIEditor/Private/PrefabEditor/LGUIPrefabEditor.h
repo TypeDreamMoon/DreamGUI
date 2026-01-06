@@ -4,7 +4,7 @@
 #include "UObject/GCObject.h"
 #include "Toolkits/IToolkitHost.h"
 #include "Toolkits/AssetEditorToolkit.h"
-#include "LGUIPrefabEditorScene.h"
+#include "PrefabSystem/LexUIPrefab.h"
 #pragma once
 
 class SLexWidgetEditorHierarchyView;
@@ -58,7 +58,6 @@ public:
 	virtual void OnToolkitHostingFinished(const TSharedRef<class IToolkit>& Toolkit) override;
 	virtual void SaveAsset_Execute()override;
 private:
-	virtual bool OnRequestClose()override;
 	// End of FAssetEditorToolkit
 	void SyncSelection();
 	bool bIsSelecting = false;
@@ -71,20 +70,17 @@ public:
 	const TArray<TWeakObjectPtr<AActor>>& GetSelectedActors(){return SelectedActors;}
 	TArray<TWeakObjectPtr<ULexWidget>> GetSelectedWidgets();
 
-	bool CheckBeforeSaveAsset();
-
 	void InitPrefabEditor(const EToolkitMode::Type Mode, const TSharedPtr< class IToolkitHost >& InitToolkitHost, ULexUIPrefab* InPrefab);
 	TArray<AActor*> GetAllActors();
 
 	/** Try to handle a drag-drop operation */
 	FReply TryHandleAssetDragDropOperation(const FDragDropEvent& DragDropEvent, ULexWidget* InParentWidget = nullptr);
 
-	FLGUIPrefabEditorScene& GetPreviewScene();
+	FLexUIPrefabInstanceScene* GetPreviewScene();
 	UWorld* GetWorld();
 	ULexUIPrefab* GetPrefabBeingEdited()const { return PrefabBeingEdited; }
 
 	static FLGUIPrefabEditor* GetEditorForPrefabIfValid(ULexUIPrefab* InPrefab);
-	static ULexUIPrefabHelperObject* GetEditorPrefabHelperObjectForActor(AActor* InActor);
 	static bool WorldIsPrefabEditor(UWorld* InWorld);
 	static bool ActorIsRootAgent(AActor* InActor);
 	static void IterateAllPrefabEditor(const TFunction<void(FLGUIPrefabEditor*)>& InFunction);
@@ -102,10 +98,9 @@ public:
 	bool GetAnythingDirty()const;
 	void CloseWithoutCheckDataDirty();
 
-	ULexUIPrefabHelperObject* GetPrefabHelperObject()const { return PrefabHelperObject; }
+	ULexUIPrefabHelperObject* GetPrefabHelperObject()const { return PrefabBeingEdited->GetPrefabHelperObject(); }
 	AActor* GetRootAgentActor();
 	AActor* GetLoadedRootActor();
-	void ApplyPrefab();
 
 	/** Fires whenever the selected set of widgets changing */
 	FOnSelectedWidgetsChanged OnSelectedWidgetsChanging;
@@ -113,7 +108,6 @@ public:
 	FOnSelectedWidgetsChanged OnSelectedWidgetsChanged;
 private:
 	TObjectPtr<ULexUIPrefab> PrefabBeingEdited = nullptr;
-	TObjectPtr<ULexUIPrefabHelperObject> PrefabHelperObject = nullptr;
 	static TArray<FLGUIPrefabEditor*> PrefabEditorInstanceCollection;
 
 	TSharedPtr<SLGUIPrefabEditorViewport> ViewportPtr;
@@ -122,8 +116,6 @@ private:
 	TSharedPtr<SLGUIPrefabRawDataViewer> PrefabRawDataViewer;
 
 	TArray<TWeakObjectPtr<AActor>> SelectedActors;
-
-	FLGUIPrefabEditorScene PreviewScene;
 private:
 
 	void BindCommands();

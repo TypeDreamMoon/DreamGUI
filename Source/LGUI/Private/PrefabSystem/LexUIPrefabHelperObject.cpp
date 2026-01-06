@@ -34,10 +34,17 @@ void ULexUIPrefabHelperObject::BeginDestroy()
 #endif
 }
 
-void ULexUIPrefabHelperObject::MarkAsManagerObject()
+void ULexUIPrefabHelperObject::Init(ULexUIPrefab* InPrefab, FLexUIPrefabInstanceScene* InPrefabInstanceScene)
 {
-	if (bIsMarkedAsManagerObject)return;
-	bIsMarkedAsManagerObject = true;
+	PrefabAsset = InPrefab;
+	PrefabInstanceWorld = InPrefabInstanceScene->GetWorld();
+	LoadedRootActor = PrefabAsset->LoadPrefabWithExistingObjects(InPrefabInstanceScene->GetWorld()
+		, InPrefabInstanceScene->GetParentComponentForPrefab(PrefabAsset)
+		, MapGuidToObject, SubPrefabMap
+	);
+	if (LoadedRootActor == nullptr)return;
+	
+	RootAgentActorForPrefabInstance = InPrefabInstanceScene->GetRootAgentActor();
 	ULexUIManagerObject::AddOneShotTickFunction([Object = MakeWeakObjectPtr(this)]{
 		if (Object.IsValid())
 		{
@@ -50,26 +57,8 @@ void ULexUIPrefabHelperObject::MarkAsManagerObject()
 
 	FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &ULexUIPrefabHelperObject::OnObjectPropertyChanged);
 	FCoreUObjectDelegates::OnPreObjectPropertyChanged.AddUObject(this, &ULexUIPrefabHelperObject::OnPreObjectPropertyChanged);
-}
 
-void ULexUIPrefabHelperObject::LoadPrefab(UWorld* InWorld, USceneComponent* InParent)
-{
-	if (!IsValid(PrefabAsset))
-	{
-		UE_LOG(LGUI, Error, TEXT("[%s].%d LoadPrefab failed! PrefabAsset=%s, InParentComp=%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *GetNameSafe(PrefabAsset), *GetNameSafe(InParent));
-		return;
-	}
-	if (!IsValid(LoadedRootActor))
-	{
-		LoadedRootActor = PrefabAsset->LoadPrefabWithExistingObjects(InWorld
-			, InParent
-			, MapGuidToObject, SubPrefabMap
-		);
-
-		if (LoadedRootActor == nullptr)return;
-
-		ULexUIManagerWorldSubsystem::RefreshAllUI();
-	}
+	ULexUIManagerWorldSubsystem::RefreshAllUI();
 }
 #endif
 
@@ -140,14 +129,11 @@ bool ULexUIPrefabHelperObject::IsSubPrefabRootActor(const AActor* InActor)
 
 bool ULexUIPrefabHelperObject::IsActorBelongsToThis(const AActor* InActor)
 {
-	if (this->IsInsidePrefabEditor())
+	if (IsValid(this->LoadedRootActor))
 	{
-		if (IsValid(this->LoadedRootActor))
+		if (InActor->IsAttachedTo(LoadedRootActor) || InActor == LoadedRootActor)
 		{
-			if (InActor->IsAttachedTo(LoadedRootActor) || InActor == LoadedRootActor)
-			{
-				return true;
-			}
+			return true;
 		}
 	}
 	return false;
@@ -317,8 +303,8 @@ void ULexUIPrefabHelperObject::SavePrefab()
 		{
 			MapGuidToObject.Add(KeyValue.Value, KeyValue.Key);
 		}
-		PrefabAsset->RefreshAgentObjectsInPreviewWorld();
 		bAnythingDirty = false;
+		PrefabAsset->EnsureInstanceObjects();
 	}
 	else
 	{
@@ -432,7 +418,6 @@ bool ULexUIPrefabHelperObject::RefreshOnSubPrefabDirty(ULexUIPrefab* InSubPrefab
 			TSet<FGuid> ExtraObjectsGuidsToRemove;
 			TSet<UObject*> ExtraObjectsToDelete;
 			//check objects to delete: compare guid in sub-prefab's assets and this parent stored guid
-			SubPrefabData.PrefabAsset->ClearAgentObjectsInPreviewWorld();//force it create new agent object and use new data, because the prefab's sub-prefab or sub-sub-prefab could change
 			auto& MapGuidToObjectInSubPrefab = SubPrefabData.PrefabAsset->GetPrefabHelperObject()->MapGuidToObject;
 			for (auto& KeyValue : SubPrefabMapGuidToObject)
 			{
@@ -560,10 +545,7 @@ bool ULexUIPrefabHelperObject::RefreshOnSubPrefabDirty(ULexUIPrefab* InSubPrefab
 
 	if (AnythingChange)
 	{
-		if (this->IsInsidePrefabEditor())
-		{
-			this->SavePrefab();
-		}
+		this->SavePrefab();
 		if (this->PrefabAsset != nullptr)//could be null in level editor
 		{
 #if WITH_EDITOR
@@ -761,7 +743,6 @@ void ULexUIPrefabHelperObject::OnLevelActorDeleted(AActor* Actor)
 {
 	if (ULexUIManagerObject::GetIsBlueprintCompiling())return;
 	if (!bCanNotifyAttachment)return;
-	if (this->IsInsidePrefabEditor())return;
 
 	auto ActorBelongsToPrefab = false;
 	for (auto& KeyValue : MapGuidToObject)
@@ -812,7 +793,6 @@ void ULexUIPrefabHelperObject::CheckAttachment()
 
 	auto CheckActorBlueprintInLevelActorRestruction = [=, this](TWeakObjectPtr<AActor> Actor){
 		if (!Actor.IsValid())return true;
-		if (!this->IsInsidePrefabEditor())return true;//only concern PrefabEditor
 		if (Actor->GetClass() && Actor->GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint))
 		{
 			auto InfoText = LOCTEXT("DetectRestructureActorBlueprintInPrefabInstance", "Looks like you are trying to modify actor-blueprint in a child Prefab.\
@@ -839,12 +819,9 @@ You should know that using actor-blueprint inside Prefab is not a good idea, so 
 	EAttachementError AttachementError = EAttachementError::None;
 	if (SubPrefabMap.Contains(AttachmentActor.Actor.Get()))//is sub prefab root actor
 	{
-		if (IsInsidePrefabEditor())
+		if (!AttachmentActor.AttachTo.IsValid() || AttachmentActor.AttachTo == RootAgentActorForPrefabInstance.Get())//sub prefab root actor cannot attach to world or root agent
 		{
-			if (!AttachmentActor.AttachTo.IsValid() || AttachmentActor.AttachTo == RootAgentActorForPrefabEditor.Get())//sub prefab root actor cannot attach to world or root agent
-			{
-				AttachementError = EAttachementError::CannotRestructurePrefabInstance;
-			}
+			AttachementError = EAttachementError::CannotRestructurePrefabInstance;
 		}
 	}
 	else if (
@@ -855,16 +832,13 @@ You should know that using actor-blueprint inside Prefab is not a good idea, so 
 	{
 		AttachementError = EAttachementError::CannotRestructurePrefabInstance;
 	}
-	if (IsInsidePrefabEditor())
+	if (AttachmentActor.AttachTo == nullptr)//cannot attach to world
 	{
-		if (AttachmentActor.AttachTo == nullptr)//cannot attach to world
-		{
-			AttachementError = EAttachementError::ActorMustBelongToRoot;
-		}
-		if (AttachmentActor.AttachTo == RootAgentActorForPrefabEditor.Get())//cannot attach actor to root agent
-		{
-			AttachementError = EAttachementError::ActorMustBelongToRoot;
-		}
+		AttachementError = EAttachementError::ActorMustBelongToRoot;
+	}
+	if (AttachmentActor.AttachTo == RootAgentActorForPrefabInstance.Get())//cannot attach actor to root agent
+	{
+		AttachementError = EAttachementError::ActorMustBelongToRoot;
 	}
 	switch (AttachementError)
 	{
@@ -901,14 +875,7 @@ You should know that using actor-blueprint inside Prefab is not a good idea, so 
 
 UWorld* ULexUIPrefabHelperObject::GetPrefabWorld() const
 {
-	if (RootAgentActorForPrefabEditor.IsValid())
-	{
-		return RootAgentActorForPrefabEditor->GetWorld();
-	}
-	else
-	{
-		return Super::GetWorld();
-	}
+	return PrefabInstanceWorld.Get();
 }
 
 bool ULexUIPrefabHelperObject::CleanupInvalidLinkToSubPrefabObject()
@@ -1746,7 +1713,6 @@ void ULexUIPrefabHelperObject::ApplyAllOverrideToPrefab(UObject* InObject)
 
 void ULexUIPrefabHelperObject::RefreshSubPrefabVersion(AActor* InSubPrefabRootActor)
 {
-	if (IsInsidePrefabEditor())return;
 	if (InSubPrefabRootActor != nullptr)
 	{
 		auto& SubPrefabData = SubPrefabMap[InSubPrefabRootActor];
@@ -1930,7 +1896,8 @@ void ULexUIPrefabHelperObject::SetNothingDirty()
 }
 void ULexUIPrefabHelperObject::SetAnythingDirty() 
 {
-	bAnythingDirty = true; 
+	bAnythingDirty = true;
+	PrefabAsset->MarkPackageDirty();
 }
 
 #if WITH_EDITOR
@@ -1941,78 +1908,25 @@ void ULexUIPrefabHelperObject::SetAnythingDirty()
 void ULexUIPrefabHelperObject::CheckPrefabVersion()
 {
 	CleanupInvalidSubPrefab();
-	bool bSomeAutoUpdate = false;
+	GEditor->BeginTransaction(LOCTEXT("LGUIAutoUpdatePrefab_Transaction", "LGUI Update Prefabs"));
+	this->Modify();
 	for (auto& KeyValue : SubPrefabMap)
 	{
 		auto& SubPrefabData = KeyValue.Value;
 		if (SubPrefabData.OverallVersionMD5 != SubPrefabData.PrefabAsset->GenerateOverallVersionMD5())
 		{
-			if (SubPrefabData.bAutoUpdate)
-			{
-				bSomeAutoUpdate = true;
-			}
-		}
-	}
-	if (bSomeAutoUpdate)
-	{
-		GEditor->BeginTransaction(LOCTEXT("LGUIAutoUpdatePrefab_Transaction", "LGUI Update Prefabs"));
-		this->Modify();
-	}
-	for (auto& KeyValue : SubPrefabMap)
-	{
-		auto& SubPrefabData = KeyValue.Value;
-		if (SubPrefabData.OverallVersionMD5 != SubPrefabData.PrefabAsset->GenerateOverallVersionMD5())
-		{
-			if (SubPrefabData.bAutoUpdate)
-			{
 				KeyValue.Key->GetLevel()->Modify();
 				this->RefreshOnSubPrefabDirty(SubPrefabData.PrefabAsset, KeyValue.Key);
 				auto InfoText = FText::Format(LOCTEXT("AutoUpdatePrefabInfo", "Auto update old version prefab to latest version:\nActor:'{0}' Prefab:'{1}'."), FText::FromString(KeyValue.Key->GetActorLabel()), FText::FromString(SubPrefabData.PrefabAsset->GetName()));
 				UE_LOG(LGUI, Log, TEXT("%s"), *InfoText.ToString());
 				FLexUIUtils::EditorNotification(InfoText, true);
-			}
-			else
-			{
-				auto FoundIndex = NewVersionPrefabNotificationArray.IndexOfByPredicate([SubPrefabRootActor = KeyValue.Key](const FNotificationContainer& Item) {
-					return Item.SubPrefabRootActor == SubPrefabRootActor;
-					});
-				if (FoundIndex != INDEX_NONE)
-				{
-					return;
-				}
-				auto InfoText = FText::Format(LOCTEXT("OldPrefabVersion", "Detect old prefab: Actor:'{0}' Prefab:'{1}', Would you want to update it?"), FText::FromString(KeyValue.Key->GetActorLabel()), FText::FromString(SubPrefabData.PrefabAsset->GetName()));
-				FNotificationInfo Info(InfoText);
-				Info.bFireAndForget = false;
-				Info.bUseLargeFont = true;
-				Info.bUseThrobber = false;
-				Info.FadeOutDuration = 0.0f;
-				Info.ExpireDuration = 0.0f;
-				Info.ButtonDetails.Add(FNotificationButtonInfo(LOCTEXT("UpdateToNewPrefabButton", "Update"), LOCTEXT("UpdateToNewPrefabButton_Tooltip", "Update the prefab to new.")
-					, FSimpleDelegate::CreateUObject(this, &ULexUIPrefabHelperObject::OnNewVersionUpdateClicked, KeyValue.Key.Get())));
-				Info.ButtonDetails.Add(FNotificationButtonInfo(LOCTEXT("UpdateAllToNewPrefabButton", "Update All"), LOCTEXT("UpdateToAllNewPrefabButton_Tooltip", "Update all prefabs to new.")
-					, FSimpleDelegate::CreateUObject(this, &ULexUIPrefabHelperObject::OnNewVersionUpdateAllClicked)));
-				Info.ButtonDetails.Add(FNotificationButtonInfo(LOCTEXT("DismissButton", "Dismiss"), LOCTEXT("DismissButton_Tooltip", "Dismiss this notification")
-					, FSimpleDelegate::CreateUObject(this, &ULexUIPrefabHelperObject::OnNewVersionDismissClicked, KeyValue.Key.Get())));
-				Info.ButtonDetails.Add(FNotificationButtonInfo(LOCTEXT("DismissAllButton", "Dismiss All"), LOCTEXT("DismissAllButton_Tooltip", "Dismiss all notifications")
-					, FSimpleDelegate::CreateUObject(this, &ULexUIPrefabHelperObject::OnNewVersionDismissAllClicked)));
-
-				auto Notification = FSlateNotificationManager::Get().AddNotification(Info);
-				Notification->SetCompletionState(SNotificationItem::CS_Pending);
-				FNotificationContainer Item;
-				Item.SubPrefabRootActor = KeyValue.Key;
-				Item.Notification = Notification;
-				NewVersionPrefabNotificationArray.Add(Item);
-			}
 		}
 	}
 
-	if (bSomeAutoUpdate)
-	{
-		this->ClearInvalidObjectAndGuid();
-		GEditor->EndTransaction();
+	this->ClearInvalidObjectAndGuid();
+	GEditor->EndTransaction();
 
-		ULexUIManagerObject::MarkBroadcastLevelActorListChanged();//make outliner refresh
-	}
+	ULexUIManagerObject::MarkBroadcastLevelActorListChanged();//make outliner refresh
 }
 
 void ULexUIPrefabHelperObject::OnNewVersionUpdateClicked(AActor* InPrefabRootActor)

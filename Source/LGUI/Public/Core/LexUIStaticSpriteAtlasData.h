@@ -49,27 +49,36 @@ private:
 	/** collection of all objects that use this atlas to render. Object must implement IUISpriteRenderableInterface. */
 	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI", AdvancedDisplay)
 		TArray<TWeakObjectPtr<UObject>> RenderSpriteArray;
-#endif
 	/**
 	 * Store texture mip data, so we can recreate atlas texture with this data.
-	 * @todo: Actually I want to save this only in cook time (reduce editor asset size), but I can't get texture's pixel data in cook time.
 	 */
+	UPROPERTY(Transient)
+	TArray<uint8> TexturePixelData;
 	UPROPERTY()
-	TArray<uint8> TextureMipData;
+	FString TexturePixelDataMD5;
+	UPROPERTY()
+	bool bIsAtlasPackDirty = true;
+#endif
 	UPROPERTY()
 	TArray<int32> TextureSizeArray;
+	UPROPERTY()
+	TArray<uint8> TexturePixelDataForBuild;
 #if WITH_EDITOR
+	FString GetCacheDataPath(const FString& InFileName)const;
+	/** Check Sprite and render Sprite, remove not valid. */
+	void CheckSprite();
+	bool PackAtlas();
 public:
+	virtual void PostInitProperties() override;
 	virtual void PreEditChange(FProperty* PropertyAboutToChange)override;
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)override;
 	void AddSpriteData(ULexUISpriteData* InSpriteData);
 	void RemoveSpriteData(ULexUISpriteData* InSpriteData);
 	void AddRenderSprite(TScriptInterface<ILexUISpriteRenderInterface> InSprite);
 	void RemoveRenderSprite(TScriptInterface<ILexUISpriteRenderInterface> InSprite);
-	/** Check Sprite and render Sprite, remove not valid. */
-	void CheckSprite();
-	bool PackAtlas();
+	
 	void MarkNotInitialized();
+	void MarkAtlasPackDirty();
 	/** Return true if some spriteData is invalid */
 	bool CheckInvalidSpriteData()const;
 	void CleanupInvalidSpriteData();
@@ -87,8 +96,8 @@ private:
 private:
 	bool bIsInitialized = false;
 	virtual void BeginDestroy()override;
-public:
 	bool InitCheck();
+public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		UTexture2D* GetAtlasTexture(int32 Index);
 	UFUNCTION(BlueprintCallable, Category = LGUI)

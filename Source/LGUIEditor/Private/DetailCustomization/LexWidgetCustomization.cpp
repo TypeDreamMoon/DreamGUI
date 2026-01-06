@@ -896,43 +896,8 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 					.Font(IDetailLayoutBuilder::GetDetailFont())
 				]
 			];
-
-		bool bIsInsidePrefabEditor = false;
-		if (TargetScriptArray.Num() > 0 && TargetScriptArray[0].IsValid())
-		{
-			if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(TargetScriptArray[0]->GetOwner()))
-			{
-				if (PrefabHelperObject->IsInsidePrefabEditor())
-				{
-					bIsInsidePrefabEditor = true;
-				}
-			}
-		}
-		if (bIsInsidePrefabEditor)
-		{
-			LGUICategory.AddProperty(SiblingIndex_PH, EPropertyLocation::Advanced).IsEnabled(false);//not editable inside PrefabEditor, because we can drag-drop inside it
-		}
-		else
-		{
-			LGUICategory.AddCustomRow(LOCTEXT("SiblingIndexManager", "SiblingIndexManager"), true)
-			.CopyAction(FUIAction(
-				FExecuteAction::CreateSP(this, &FLexWidgetCustomization::OnCopyHierarchyIndex)
-			))
-			.PasteAction(FUIAction(
-				FExecuteAction::CreateSP(this, &FLexWidgetCustomization::OnPasteHierarchyIndex, SiblingIndex_PH)
-			))
-			.NameContent()
-			[
-				SiblingIndex_PH->CreatePropertyNameWidget()
-			]
-			.ValueContent()
-			[
-				SiblingIndexWidget
-			]
-			.PropertyHandleList({ SiblingIndex_PH })
-			;
-		}
-
+		
+		LGUICategory.AddProperty(SiblingIndex_PH, EPropertyLocation::Advanced).IsEnabled(false);//not editable inside PrefabEditor, because we can drag-drop inside it
 		LGUICategory.AddProperty(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, FlattenHierarchyIndex)), EPropertyLocation::Advanced);
 	}
 		

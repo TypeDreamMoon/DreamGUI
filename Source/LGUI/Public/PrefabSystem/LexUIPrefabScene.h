@@ -1,8 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
-/*=============================================================================
-	PrefabScene.h: Preview scene definitions.
-=============================================================================*/
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #pragma once
 
@@ -10,12 +6,14 @@
 #include "UObject/GCObject.h"
 #include "Engine/World.h"
 
+#if WITH_EDITOR
+
 class FSceneInterface;
 
 /**
  * This is a replacement for PreviewScene
  */
-class LGUIEDITOR_API FPrefabScene : public FGCObject
+class LGUI_API FLexUIPrefabScene : public FGCObject
 {
 public:
 	struct ConstructionValues
@@ -70,8 +68,8 @@ public:
 	};
 
 	// for physical correct light computations we multiply diffuse and specular lights by PI (see LABEL_RealEnergy)
-	FPrefabScene(ConstructionValues CVS = ConstructionValues());
-	virtual ~FPrefabScene();
+	FLexUIPrefabScene(ConstructionValues CVS = ConstructionValues());
+	virtual ~FLexUIPrefabScene();
 
 	/**
 	 * Adds a component to the preview scene.  This attaches the component to the scene, and takes ownership of it.
@@ -128,3 +126,5 @@ protected:
 	/** This controls whether or not all mip levels of textures used by UMeshComponents added to this preview window should be loaded and remain loaded. */
 	bool bForceAllUsedMipsResident;
 };
+
+#endif

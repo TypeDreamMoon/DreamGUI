@@ -2,32 +2,26 @@
 
 #pragma once
 #include "CoreMinimal.h"
-#include "PrefabScene.h"
+#include "LexUIPrefabScene.h"
+
+#if WITH_EDITOR
 
 class UStaticMeshComponent;
-class UExponentialHeightFogComponent;
 class ULexUIPrefab;
 class AActor;
 
 //Encapsulates a simple scene setup for Prefab Editor.
-class FLGUIPrefabEditorScene : public FPrefabScene
+class LGUI_API FLexUIPrefabInstanceScene : public FLexUIPrefabScene
 {
 public:
-	FLGUIPrefabEditorScene(ConstructionValues CVS);
-
+	FLexUIPrefabInstanceScene(ConstructionValues CVS);
+	~FLexUIPrefabInstanceScene(){}
+	
 	static const FString RootAgentActorName;
 	USceneComponent* GetParentComponentForPrefab(ULexUIPrefab* InPrefab);
 	AActor* GetRootAgentActor()const { return RootAgentActor; }
-
-	bool IsWorldDefaultActor(AActor* InActor)const;
 private:
-
-	/** Editor accessory components **/
-	UStaticMeshComponent* m_EditorFloorComp;
-	UStaticMeshComponent* m_EditorSkyComp;
-	UExponentialHeightFogComponent* m_EditorHeightFogComponent;
-
-	TArray<AActor*> WorldDefaultActors;
 
 	AActor* RootAgentActor = nullptr;
 };
+#endif

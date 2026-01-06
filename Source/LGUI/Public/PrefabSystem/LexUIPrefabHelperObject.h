@@ -40,16 +40,13 @@ public:
 
 #if WITH_EDITOR
 	virtual void BeginDestroy()override;
-	/** Make this prefab as manager object, will register some editor callbacks */
-	void MarkAsManagerObject();
-	bool GetIsManagerObject()const { return bIsMarkedAsManagerObject; }
 #if WITH_EDITORONLY_DATA
 	/** The root agent actor in prefab editor's outliner named [RootAgent] */
-	UPROPERTY(Transient)TWeakObjectPtr<AActor> RootAgentActorForPrefabEditor = nullptr;
+	TWeakObjectPtr<AActor> RootAgentActorForPrefabInstance = nullptr;
+	TWeakObjectPtr<UWorld> PrefabInstanceWorld = nullptr;
 #endif
-	bool IsInsidePrefabEditor() { return RootAgentActorForPrefabEditor.IsValid(); }
 
-	void LoadPrefab(UWorld* InWorld, USceneComponent* InParent);
+	void Init(ULexUIPrefab* InPrefab, class FLexUIPrefabInstanceScene* InPrefabInstanceScene);
 
 	static void SetActorPropertyInOutliner(AActor* Actor, bool InListed);
 
@@ -109,7 +106,6 @@ public:
 	bool CleanupInvalidSubPrefab();
 	void SetCanNotifyAttachment(bool value) { bCanNotifyAttachment = value; }
 private:
-	bool bIsMarkedAsManagerObject = false;
 	bool bAnythingDirty = false;
 	bool bCanCollectProperty = true;
 	bool bCanNotifyAttachment = false;

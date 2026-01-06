@@ -5,11 +5,12 @@
 #if WITH_EDITOR
 #include "Core/Actor/LexWidgetActor.h"
 #endif
+
 #include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "Utils/LexUIUtils.h"
-#include "PrefabSystem/LexUIPrefabManager.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "Engine/Engine.h"
+#include "UObject/ObjectSaveContext.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefab"
 
@@ -137,11 +138,6 @@ ULexUIPrefab::ULexUIPrefab()
 }
 
 #if WITH_EDITOR
-void ULexUIPrefab::RefreshAgentObjectsInPreviewWorld()
-{
-	ClearAgentObjectsInPreviewWorld();
-	MakeAgentObjectsInPreviewWorld();
-}
 
 void ULexUIPrefab::SetRootActorNameFromPrefab()
 {
@@ -166,62 +162,30 @@ void ULexUIPrefab::SetRootActorNameFromPrefab()
 	}
 }
 
-void ULexUIPrefab::MakeAgentObjectsInPreviewWorld()
+FLexUIPrefabInstanceScene* ULexUIPrefab::GetPrefabInstanceScene()
+{
+	if (!PrefabInstanceScene)PrefabInstanceScene = MakeUnique<FLexUIPrefabInstanceScene>(
+				FLexUIPrefabInstanceScene::ConstructionValues()
+				.AllowAudioPlayback(true)
+				.ShouldSimulatePhysics(false)
+				.SetEditor(true)
+				);
+	return PrefabInstanceScene.Get();
+}
+
+void ULexUIPrefab::EnsureInstanceObjects()
 {
 	if (PrefabVersion >= (uint16)ELexUIPrefabVersion::BuildinFArchive)
 	{
 		if (!IsValid(PrefabHelperObject))
 		{
 			PrefabHelperObject = NewObject<ULexUIPrefabHelperObject>(this, "PrefabHelper");
-			PrefabHelperObject->PrefabAsset = this;
+			PrefabHelperObject->Init(this, GetPrefabInstanceScene());
 		}
-		if (!IsValid(PrefabHelperObject->LoadedRootActor))
-		{
-			if (auto World = ULexUIPrefabManagerObject::GetPreviewWorldForPrefabPackage())
-			{
-				if (!TempAgentActor.IsValid())
-				{
-					ULexUIPrefab* RootPrefab = this;
-					while (RootPrefab->GetIsPrefabVariant())
-					{
-						if (RootPrefab->ReferenceAssetList.Num() <= 0)
-						{
-							break;
-						}
-						RootPrefab = Cast<ULexUIPrefab>(RootPrefab->ReferenceAssetList[0]);
-						if (!RootPrefab)
-						{
-							break;
-						}
-					}
-					UClass* RootActorClass = nullptr;
-					if (RootPrefab != nullptr)
-					{
-						if (RootPrefab->ReferenceClassList.Num() > 0)
-						{
-							if (RootPrefab->ReferenceClassList[0]->IsChildOf(ALexWidgetActor::StaticClass()))
-							{
-								//root actor is UI, need to create a UI actor, or root actor may calculated wrong RelativeLocation
-								RootActorClass = ALexWidgetActor::StaticClass();
-							}
-						}
-					}
-					TempAgentActor = World->SpawnActor<AActor>(RootActorClass, FTransform::Identity);
-				}
-				PrefabHelperObject->LoadPrefab(World, (TempAgentActor.IsValid() && TempAgentActor->GetRootComponent()) ? TempAgentActor->GetRootComponent() : nullptr);
-			}
-		}
-	}
-}
-void ULexUIPrefab::ClearAgentObjectsInPreviewWorld()
-{
-	if (IsValid(PrefabHelperObject))
-	{
-		PrefabHelperObject->ClearLoadedPrefab();
 	}
 }
 
-struct FLGUIVersionScope
+struct FLexUIPrefabVersionScope
 {
 public:
 	uint16 PrefabVersion = 0;
@@ -234,7 +198,7 @@ public:
 	uint32 ArGameNetVer = 0;
 
 	ULexUIPrefab* Prefab = nullptr;
-	FLGUIVersionScope(ULexUIPrefab* InPrefab)
+	FLexUIPrefabVersionScope(ULexUIPrefab* InPrefab)
 	{
 		Prefab = InPrefab;
 		this->EngineMajorVersion = Prefab->EngineMajorVersion;
@@ -245,7 +209,7 @@ public:
 		this->ArEngineNetVer = Prefab->ArEngineNetVer;
 		this->ArGameNetVer = Prefab->ArGameNetVer;
 	}
-	~FLGUIVersionScope()
+	~FLexUIPrefabVersionScope()
 	{
 		Prefab->EngineMajorVersion = this->EngineMajorVersion;
 		Prefab->EngineMinorVersion = this->EngineMinorVersion;
@@ -259,16 +223,7 @@ public:
 
 ULexUIPrefabHelperObject* ULexUIPrefab::GetPrefabHelperObject()
 {
-	if (!IsValid(PrefabHelperObject))
-	{
-		PrefabHelperObject = NewObject<ULexUIPrefabHelperObject>(this, "PrefabHelper");
-		PrefabHelperObject->PrefabAsset = this;
-	}
-	if (!IsValid(PrefabHelperObject->LoadedRootActor))
-	{
-		auto World = ULexUIPrefabManagerObject::GetPreviewWorldForPrefabPackage();
-		PrefabHelperObject->LoadPrefab(World, nullptr);
-	}
+	EnsureInstanceObjects();
 	return PrefabHelperObject;
 }
 
@@ -278,12 +233,12 @@ void ULexUIPrefab::BeginCacheForCookedPlatformData(const ITargetPlatform* Target
 	if (!IsValid(PrefabHelperObject) || !IsValid(PrefabHelperObject->LoadedRootActor))
 	{
 		UE_LOG(LGUI, Log, TEXT("[%s].%d AgentObjects not valid, recreate it! prefab: '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetPathName()));
-		MakeAgentObjectsInPreviewWorld();
+		EnsureInstanceObjects();
 	}
 
 	//serialize to runtime data
 	{
-		FLGUIVersionScope VersionProtect(this);
+		FLexUIPrefabVersionScope VersionProtect(this);
 		//check override parameter. although parameter is refreshed when sub prefab change, but what if sub prefab is changed outside of editor?
 		bool AnythingChange = false;
 		for (auto& KeyValue : PrefabHelperObject->SubPrefabMap)
@@ -383,8 +338,11 @@ void ULexUIPrefab::BeginDestroy()
 #if WITH_EDITOR
 	if (IsValid(PrefabHelperObject))
 	{
-		ClearAgentObjectsInPreviewWorld();
 		PrefabHelperObject->ConditionalBeginDestroy();
+	}
+	if (PrefabInstanceScene.IsValid())
+	{
+		PrefabInstanceScene.Reset();
 	}
 #endif
 	Super::BeginDestroy();
@@ -398,18 +356,13 @@ void ULexUIPrefab::FinishDestroy()
 void ULexUIPrefab::PostEditUndo()
 {
 	Super::PostEditUndo();
-	RefreshAgentObjectsInPreviewWorld();
+	EnsureInstanceObjects();
 }
-bool ULexUIPrefab::IsEditorOnly()const
+
+void ULexUIPrefab::PreSave(FObjectPreSaveContext SaveContext)
 {
-	auto PathName = this->GetPathName();
-	if (PathName.StartsWith(TEXT("/LGUI/Prefabs/"))//LGUI's preset prefab no need to use in runtime
-		|| PathName.Contains(TEXT("/EditorOnly/"))//if prefab stays in a folder named "EditorOnly" then skip it too
-		)
-	{
-		return true;
-	}
-	return false;
+	UObject::PreSave(SaveContext);
+	PrefabHelperObject->SavePrefab();
 }
 
 #endif
@@ -588,7 +541,7 @@ AActor* ULexUIPrefab::LoadPrefabWithExistingObjects(UWorld* InWorld, USceneCompo
 
 bool ULexUIPrefab::IsPrefabBelongsToThisSubPrefab(ULexUIPrefab* InPrefab, bool InRecursive)
 {
-	MakeAgentObjectsInPreviewWorld();
+	EnsureInstanceObjects();
 	if (!PrefabHelperObject)return false;
 	if (this == InPrefab)return false;
 	for (auto& KeyValue : PrefabHelperObject->SubPrefabMap)
@@ -655,15 +608,15 @@ FString ULexUIPrefab::GenerateOverallVersionMD5()
 	{
 		CreateTimeOverall += Item->CreateTime.ToIso8601();
 	}
-	return FLexUIUtils::GetMD5String(CreateTimeOverall);
+	return FLexUIUtils::GetMD5String(FLexUIUtils::GetMD5(CreateTimeOverall));
 }
 
-void ULexUIPrefab::SavePrefab(AActor* RootActor
+bool ULexUIPrefab::SavePrefab(AActor* RootActor
 	, TMap<UObject*, FGuid>& InOutMapObjectToGuid, TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& InSubPrefabMap
 	, bool InForEditorOrRuntimeUse
 )
 {
-	LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::SavePrefab(RootActor, this
+	return LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::SavePrefab(RootActor, this
 		, InOutMapObjectToGuid, InSubPrefabMap
 		, InForEditorOrRuntimeUse
 	);
@@ -671,11 +624,9 @@ void ULexUIPrefab::SavePrefab(AActor* RootActor
 
 void ULexUIPrefab::RecreatePrefab()
 {
-	auto World = ULexUIPrefabManagerObject::GetPreviewWorldForPrefabPackage();
-
 	TMap<FGuid, TObjectPtr<UObject>> MapGuidToObject;
 	TMap<TObjectPtr<AActor>, FLexUISubPrefabData> SubPrefabMap;
-	auto RootActor = this->LoadPrefabWithExistingObjects(World, nullptr
+	auto RootActor = this->LoadPrefabWithExistingObjects(GetPrefabInstanceScene()->GetWorld(), nullptr
 		, MapGuidToObject, SubPrefabMap
 	);
 	TMap<UObject*, FGuid> MapObjectToGuid;
@@ -684,7 +635,7 @@ void ULexUIPrefab::RecreatePrefab()
 		MapObjectToGuid.Add(KeyValue.Value, KeyValue.Key);
 	}
 	this->SavePrefab(RootActor, MapObjectToGuid, SubPrefabMap);
-	this->RefreshAgentObjectsInPreviewWorld();
+	this->EnsureInstanceObjects();
 }
 
 AActor* ULexUIPrefab::LoadPrefabInEditor(UWorld* InWorld, USceneComponent* InParent, bool SetRelativeTransformToIdentity)

@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AssetTypeCategories.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/FRichTextParser.h"
 #include "LexUIFontData_BaseObject.generated.h"

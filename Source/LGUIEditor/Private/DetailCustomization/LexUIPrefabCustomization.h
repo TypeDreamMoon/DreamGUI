@@ -22,11 +22,8 @@ private:
 	FSlateColor GetEngineVersionTextColorAndOpacity()const;
 	FSlateColor GetPrefabVersionTextColorAndOpacity()const;
 	EVisibility ShouldShowFixPrefabVersionButton()const;
-	EVisibility ShouldShowFixAgentObjectsButton()const;
-	FText AgentObjectText()const;
 
 	FReply OnClickRecreteButton();
 	FReply OnClickRecreteAllButton();
 	FReply OnClickEditPrefabButton();
-	FReply OnClickRecreateAgentObjects();
 };

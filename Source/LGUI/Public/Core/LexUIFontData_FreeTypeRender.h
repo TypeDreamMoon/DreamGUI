@@ -90,10 +90,10 @@ protected:
 	ELexUIAtlasTextureSizeType RectPackCellSizeType = ELexUIAtlasTextureSizeType::SIZE_256x256;
 
 	/** Texture of this font */
-	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI")
+	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TObjectPtr<UTexture2DArray> Texture;
 	/** IntermediateTexture for Updating Texture2DArray. */ 
-	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI")
+	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 	TObjectPtr<UTexture2D> IntermediateTexture;
 	int32 CurrentTextureSlice = 0;
 

@@ -109,18 +109,23 @@ UTexture2D* FLexUIUtils::CreateTexture(int32 InSize, FColor InDefaultColor, UObj
 
 TArray<uint8> FLexUIUtils::GetMD5(const FString& InString)
 {
+	return GetMD5((unsigned char*)TCHAR_TO_ANSI(*InString), FCString::Strlen(*InString));
+}
+
+TArray<uint8> FLexUIUtils::GetMD5(uint8* InData, uint64 InSize)
+{
 	FMD5 Md5Gen;
-	Md5Gen.Update((unsigned char*)TCHAR_TO_ANSI(*InString), FCString::Strlen(*InString));
+	Md5Gen.Update(InData, InSize);
 	TArray<uint8> Digest;
 	Digest.SetNumZeroed(16);
 	Md5Gen.Final(Digest.GetData());
 	return Digest;
 }
-FString FLexUIUtils::GetMD5String(const FString& InString)
+
+FString FLexUIUtils::GetMD5String(const TArray<uint8>& InMD5Digits)
 {
-	TArray<uint8> MD5Digest = GetMD5(InString);
 	FString Md5String;
-	for (TArray<uint8>::TConstIterator it(MD5Digest); it; ++it)
+	for (TArray<uint8>::TConstIterator it(InMD5Digits); it; ++it)
 	{
 		Md5String += FString::Printf(TEXT("%02x"), *it);
 	}
@@ -238,7 +243,7 @@ FColor FLexUIUtils::MultiplyColor(FColor A, FColor B)
 	return result;
 }
 
-UTexture* FLexUIUtils::GetDefaultWhiteTexture()
+UTexture2D* FLexUIUtils::GetDefaultWhiteTexture()
 {
 	auto defaultWhiteSolid = LoadObject<UTexture2D>(NULL, TEXT("/LGUI/Textures/LexUIPreset_WhiteSolid"));
 	if (!IsValid(defaultWhiteSolid))

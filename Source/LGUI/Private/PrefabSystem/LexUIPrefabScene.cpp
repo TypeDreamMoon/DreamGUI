@@ -1,24 +1,20 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-/*=============================================================================
-	PrefabScene.cpp: Preview scene implementation.
-=============================================================================*/
-
-#include "PrefabScene.h"
+#include "PrefabSystem/LexUIPrefabScene.h"
 #include "Misc/ConfigCacheIni.h"
 #include "UObject/Package.h"
 #include "SceneInterface.h"
 #include "Components/MeshComponent.h"
 #include "AudioDevice.h"
-#include "Engine/TextureCube.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/SkyLightComponent.h"
 #include "Components/LineBatchComponent.h"
 #include "Components/ReflectionCaptureComponent.h"
 #include "GameFramework/GameModeBase.h"
-#include "GameFramework/GameMode.h"
 
-FPrefabScene::FPrefabScene(FPrefabScene::ConstructionValues CVS)
+#if WITH_EDITOR
+
+FLexUIPrefabScene::FLexUIPrefabScene(FLexUIPrefabScene::ConstructionValues CVS)
 	: PreviewWorld(nullptr)
 	, bForceAllUsedMipsResident(CVS.bForceMipsResident)
 {
@@ -91,7 +87,7 @@ FPrefabScene::FPrefabScene(FPrefabScene::ConstructionValues CVS)
 	}
 }
 
-FPrefabScene::~FPrefabScene()
+FLexUIPrefabScene::~FLexUIPrefabScene()
 {
 	// Stop any audio components playing in this scene
 	if (GEngine)
@@ -117,7 +113,10 @@ FPrefabScene::~FPrefabScene()
 			UMeshComponent* pMesh = Cast<UMeshComponent>(Component);
 			if (pMesh != NULL)
 			{
-				pMesh->SetTextureForceResidentFlag(false);
+				if (!IsEngineExitRequested())
+				{
+					pMesh->SetTextureForceResidentFlag(false);
+				}
 			}
 		}
 
@@ -134,7 +133,7 @@ FPrefabScene::~FPrefabScene()
 	}
 }
 
-void FPrefabScene::AddComponent(UActorComponent* Component,const FTransform& LocalToWorld, bool bAttachToRoot /*= false*/)
+void FLexUIPrefabScene::AddComponent(UActorComponent* Component,const FTransform& LocalToWorld, bool bAttachToRoot /*= false*/)
 {
 	Components.AddUnique(Component);
 
@@ -168,7 +167,7 @@ void FPrefabScene::AddComponent(UActorComponent* Component,const FTransform& Loc
 	GetScene()->UpdateSpeedTreeWind(0.0);
 }
 
-void FPrefabScene::RemoveComponent(UActorComponent* Component)
+void FLexUIPrefabScene::RemoveComponent(UActorComponent* Component)
 {
 	Component->UnregisterComponent();
 	Components.Remove(Component);
@@ -184,18 +183,18 @@ void FPrefabScene::RemoveComponent(UActorComponent* Component)
 	}
 }
 
-void FPrefabScene::AddReferencedObjects( FReferenceCollector& Collector )
+void FLexUIPrefabScene::AddReferencedObjects( FReferenceCollector& Collector )
 {
 	Collector.AddReferencedObjects( Components );
 	Collector.AddReferencedObject( PreviewWorld );
 }
 
-FString FPrefabScene::GetReferencerName() const
+FString FLexUIPrefabScene::GetReferencerName() const
 {
-	return TEXT("FPrefabScene");
+	return TEXT("FLexUIPrefabScene");
 }
 
-void FPrefabScene::UpdateCaptureContents()
+void FLexUIPrefabScene::UpdateCaptureContents()
 {
 	// This function is called from FAdvancedPrefabScene::Tick, FBlueprintEditor::Tick, and FThumbnailPrefabScene::Tick,
 	// so assume we are inside a Tick function.
@@ -205,7 +204,7 @@ void FPrefabScene::UpdateCaptureContents()
 	UReflectionCaptureComponent::UpdateReflectionCaptureContents(PreviewWorld, nullptr, false, false, bInsideTick);
 }
 
-void FPrefabScene::ClearLineBatcher()
+void FLexUIPrefabScene::ClearLineBatcher()
 {
 	if (LineBatcher != NULL)
 	{
@@ -214,13 +213,13 @@ void FPrefabScene::ClearLineBatcher()
 }
 
 /** Accessor for finding the current direction of the preview scene's DirectionalLight. */
-FRotator FPrefabScene::GetLightDirection()
+FRotator FLexUIPrefabScene::GetLightDirection()
 {
 	return DirectionalLight->GetComponentTransform().GetUnitAxis( EAxis::X ).Rotation();
 }
 
 /** Function for modifying the current direction of the preview scene's DirectionalLight. */
-void FPrefabScene::SetLightDirection(const FRotator& InLightDir)
+void FLexUIPrefabScene::SetLightDirection(const FRotator& InLightDir)
 {
 #if WITH_EDITOR
 	DirectionalLight->PreEditChange(NULL);
@@ -232,7 +231,7 @@ void FPrefabScene::SetLightDirection(const FRotator& InLightDir)
 #endif // WITH_EDITOR
 }
 
-void FPrefabScene::SetLightBrightness(float LightBrightness)
+void FLexUIPrefabScene::SetLightBrightness(float LightBrightness)
 {
 #if WITH_EDITOR
 	DirectionalLight->PreEditChange(NULL);
@@ -243,7 +242,7 @@ void FPrefabScene::SetLightBrightness(float LightBrightness)
 #endif // WITH_EDITOR
 }
 
-void FPrefabScene::SetLightColor(const FColor& LightColor)
+void FLexUIPrefabScene::SetLightColor(const FColor& LightColor)
 {
 #if WITH_EDITOR
 	DirectionalLight->PreEditChange(NULL);
@@ -254,17 +253,17 @@ void FPrefabScene::SetLightColor(const FColor& LightColor)
 #endif // WITH_EDITOR
 }
 
-void FPrefabScene::SetSkyBrightness(float SkyBrightness)
+void FLexUIPrefabScene::SetSkyBrightness(float SkyBrightness)
 {
 	SkyLight->SetIntensity(SkyBrightness);
 }
 
-void FPrefabScene::SetSkyCubemap(UTextureCube* Cubemap)
+void FLexUIPrefabScene::SetSkyCubemap(UTextureCube* Cubemap)
 {
 	SkyLight->SetCubemap(Cubemap);
 }
 
-void FPrefabScene::LoadSettings(const TCHAR* Section)
+void FLexUIPrefabScene::LoadSettings(const TCHAR* Section)
 {
 	FRotator LightDir;
 	if ( GConfig->GetRotator( Section, TEXT("LightDir"), LightDir, GEditorPerProjectIni ) )
@@ -273,13 +272,15 @@ void FPrefabScene::LoadSettings(const TCHAR* Section)
 	}
 }
 
-void FPrefabScene::SaveSettings(const TCHAR* Section)
+void FLexUIPrefabScene::SaveSettings(const TCHAR* Section)
 {
 	GConfig->SetRotator( Section, TEXT("LightDir"), GetLightDirection(), GEditorPerProjectIni );
 }
 
-FLinearColor FPrefabScene::GetBackgroundColor() const
+FLinearColor FLexUIPrefabScene::GetBackgroundColor() const
 {
 	FLinearColor BackgroundColor = FColor(55, 55, 55);
 	return BackgroundColor;
 }
+
+#endif

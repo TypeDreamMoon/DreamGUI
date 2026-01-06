@@ -867,7 +867,7 @@ bool ULexCanvas::Is2DUITransform(const FTransform& Transform)
 #if WITH_EDITOR
 	float threshold = ULexUISettings::GetAutoBatchThreshold();
 #else
-	static float threshold = ULGUISettings::GetAutoBatchThreshold();
+	static float threshold = ULexUISettings::GetAutoBatchThreshold();
 #endif
 	if (FMath::Abs(Transform.GetLocation().X) > threshold)//location X moved
 	{

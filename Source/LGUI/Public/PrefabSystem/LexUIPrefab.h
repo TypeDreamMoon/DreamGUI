@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "Misc/NetworkVersion.h"
 #include "Engine/EngineBaseTypes.h"
+#include "LexUIPrefabInstanceScene.h"
 #include "LexUIPrefab.generated.h"
 
 #define LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE "PrefabSystem/ActorSerializer8.h"
@@ -106,8 +107,6 @@ public:
 #if WITH_EDITORONLY_DATA
 	/** For level editor, combine all create time (include all sub prefab) to create this MD5, to tell if this prefab is latest version. */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")FString OverallVersionMD5;
-	/** For level editor, true means it will not show a dialog box and do the update if detect new version. */
-	UPROPERTY(VisibleAnywhere, Category = "LGUI")bool bAutoUpdate = true;
 	/** Temporary color for quick identify in editor */
 	FLinearColor EditorIdentifyColor;
 #endif
@@ -141,7 +140,7 @@ public:
 	UPROPERTY(EditAnywhere)
 		TEnumAsByte<EViewModeIndex> ViewMode = EViewModeIndex::VMI_Lit;//editor viewport's view-mode
 	UPROPERTY(EditAnywhere)
-		TEnumAsByte<ELevelViewportType> ViewportType = ELevelViewportType::LVT_OrthoYZ;
+		uint8 ViewportType = 2;//ELevelViewportType::LVT_OrthoYZ
 	UPROPERTY(EditAnywhere)
 		TSet<FGuid> UnexpandWidgetSet;
 };
@@ -233,8 +232,9 @@ public:
 	UPROPERTY()
 		FLexUIPrefabDataForPrefabEditor PrefabDataForPrefabEditor;
 private:
-	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI")
+	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI", DuplicateTransient)
 		TObjectPtr<ULexUIPrefabHelperObject> PrefabHelperObject = nullptr;
+	TUniquePtr<FLexUIPrefabInstanceScene> PrefabInstanceScene;
 #endif
 public:
 	/**
@@ -291,9 +291,8 @@ private:
 	TWeakObjectPtr<AActor> TempAgentActor;//actor for agent objects in preview world
 	void SetRootActorNameFromPrefab();
 public:
-	void MakeAgentObjectsInPreviewWorld();
-	void ClearAgentObjectsInPreviewWorld();
-	void RefreshAgentObjectsInPreviewWorld();
+	FLexUIPrefabInstanceScene* GetPrefabInstanceScene();
+	void EnsureInstanceObjects();
 	ULexUIPrefabHelperObject* GetPrefabHelperObject();
 
 	virtual void BeginCacheForCookedPlatformData(const ITargetPlatform* TargetPlatform)override;
@@ -308,9 +307,9 @@ public:
 	virtual void BeginDestroy()override;
 	virtual void FinishDestroy()override;
 	virtual void PostEditUndo()override;
-	virtual bool IsEditorOnly()const override;
+	virtual void PreSave(FObjectPreSaveContext SaveContext) override;
 
-	void SavePrefab(AActor* RootActor
+	bool SavePrefab(AActor* RootActor
 		, TMap<UObject*, FGuid>& InOutMapObjectToGuid, TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& InSubPrefabMap
 		, bool InForEditorOrRuntimeUse = true
 	);

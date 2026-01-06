@@ -177,6 +177,7 @@ void ULexUIStaticSpriteAtlasData::AddSpriteData(ULexUISpriteData* InSpriteData)
 	if (!SpriteDataArray.Contains(InSpriteData))
 	{
 		SpriteDataArray.Add(InSpriteData);
+		CheckSprite();
 		MarkPackageDirty();
 		MarkNotInitialized();
 	}
@@ -186,6 +187,7 @@ void ULexUIStaticSpriteAtlasData::RemoveSpriteData(ULexUISpriteData* InSpriteDat
 	if (SpriteDataArray.Contains(InSpriteData))
 	{
 		SpriteDataArray.Remove(InSpriteData);
+		CheckSprite();
 		MarkPackageDirty();
 		MarkNotInitialized();
 	}
@@ -198,6 +200,12 @@ void ULexUIStaticSpriteAtlasData::RemoveRenderSprite(TScriptInterface<ILexUISpri
 {
 	RenderSpriteArray.Remove(InSprite.GetObject());
 }
+
+FString ULexUIStaticSpriteAtlasData::GetCacheDataPath(const FString& InFileName) const
+{
+	return FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("LexUI"), TEXT("StaticAtlasData"), *InFileName);
+}
+
 void ULexUIStaticSpriteAtlasData::CheckSprite()
 {
 	for (int i = this->SpriteDataArray.Num() - 1; i >= 0; i--)
@@ -258,7 +266,7 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 			if (!bWarningIsAlreadyAppearedAtCurrentPackingSession)
 			{
 				bWarningIsAlreadyAppearedAtCurrentPackingSession = true;
-				auto ErrMsg = FText::Format(LOCTEXT("SpriteDataError", "{0} Packing atlas for LGUIStaticSpriteAtlasData: '{1}', but SpriteData is not valid in spriteArray at index {2}")
+				auto ErrMsg = FText::Format(LOCTEXT("SpriteDataError", "{0} Packing atlas for LexUIStaticSpriteAtlasData: '{1}', but SpriteData is not valid in spriteArray at index {2}")
 					, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__))
 					, FText::FromString(this->GetPathName()), i);
 				UE_LOG(LGUI, Error, TEXT("%s"), *ErrMsg.ToString());
@@ -307,6 +315,8 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 	for (int SpriteIndex = 0; SpriteIndex < SpriteDataArray.Num(); SpriteIndex++)
 	{
 		auto SpriteData = SpriteDataArray[SpriteIndex];
+		auto SpriteTexture = SpriteData->GetSpriteTexture();
+		if (SpriteTexture->GetPlatformData()->Mips.Num() == 0)continue;
 		bool bCanPackInExistingAtlas = false;
 		for (int AtlasIndex = 0; AtlasIndex < AtlasSpriteBinPackArray.Num(); AtlasIndex++)
 		{
@@ -365,7 +375,7 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 	}
 
 	TextureSizeArray.Reset();
-	TextureMipData.Reset();
+	TexturePixelData.Reset();
 	for (int i = 0; i < AtlasSpriteBinPackArray.Num(); i++)
 	{
 		auto& AtlasSpriteBinPack = AtlasSpriteBinPackArray[i];
@@ -463,14 +473,18 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 				}
 			}
 
-			SpriteData->ApplySpriteInfoAfterStaticPack(Rect, InvAtlasTextureSize);
 			SpriteTexture->GetPlatformData()->Mips[0].BulkData.Unlock();
+			bool bSpriteDirty = SpriteData->ApplySpriteInfoAfterStaticPack(Rect, InvAtlasTextureSize);
+			if (bSpriteDirty)
+			{
+				SpriteData->MarkPackageDirty();
+			}
 		}
 
 		//store data
-		auto PrevDataLength = TextureMipData.Num();
-		TextureMipData.AddUninitialized(PixelBufferLength);
-		FMemory::Memcpy(TextureMipData.GetData() + PrevDataLength, PixelData, PixelBufferLength);
+		auto PrevDataLength = TexturePixelData.Num();
+		TexturePixelData.AddUninitialized(PixelBufferLength);
+		FMemory::Memcpy(TexturePixelData.GetData() + PrevDataLength, PixelData, PixelBufferLength);
 		TextureSizeArray.Add(AtlasSize);
 
 		//generate mipmaps
@@ -545,17 +559,32 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 				mipsAdd++;
 
 				//store mip data
-				auto PrevLength = TextureMipData.Num();
-				TextureMipData.AddUninitialized(mipBufferLength);
-				FMemory::Memcpy(TextureMipData.GetData() + PrevLength, mipRGBAs->GetData(), mipBufferLength);
+				auto PrevLength = TexturePixelData.Num();
+				TexturePixelData.AddUninitialized(mipBufferLength);
+				FMemory::Memcpy(TexturePixelData.GetData() + PrevLength, mipRGBAs->GetData(), mipBufferLength);
 			}
 		}
 
 		delete[] PixelData;
 	}
+	auto OldCacheDataPath = this->GetCacheDataPath(TexturePixelDataMD5);
+	if (FPaths::FileExists(OldCacheDataPath))
+	{
+		IFileManager::Get().Delete(*OldCacheDataPath);
+	}
+	TexturePixelDataMD5 = FLexUIUtils::GetMD5String(FLexUIUtils::GetMD5(TexturePixelData.GetData(), TexturePixelData.Num()));
+	auto NewCacheDataPath = this->GetCacheDataPath(TexturePixelDataMD5);
+	FFileHelper::SaveArrayToFile(TexturePixelData, *NewCacheDataPath);
+	ULexUIManagerWorldSubsystem::RefreshAllUI();
 
 	return true;
 }
+
+void ULexUIStaticSpriteAtlasData::PostInitProperties()
+{
+	UObject::PostInitProperties();
+}
+
 bool ULexUIStaticSpriteAtlasData::TryPackAtlas(ULexUISpriteData* Sprite, rbp::MaxRectsBinPack& RectBinPack, TArray<rbp::Rect>& PackedRects, TArray<ULexUISpriteData*>& PackedSprites)
 {
 	auto CalculatedEdgePixelPadding = Sprite->GetUseEdgePixelPadding() ? EdgePixelPadding : 0;
@@ -585,21 +614,49 @@ bool ULexUIStaticSpriteAtlasData::TryPackAtlas(ULexUISpriteData* Sprite, rbp::Ma
 
 void ULexUIStaticSpriteAtlasData::BeginCacheForCookedPlatformData(const ITargetPlatform* TargetPlatform)
 {
-	
+	bool bCacheDataValid = false;
+	auto CacheDataPath = this->GetCacheDataPath(TexturePixelDataMD5);
+	if (FPaths::FileExists(CacheDataPath))
+	{
+		TArray<uint8> TextureData;
+		if (FFileHelper::LoadFileToArray(TextureData, *CacheDataPath))
+		{
+			auto FileMD5 = FLexUIUtils::GetMD5String(FLexUIUtils::GetMD5(TextureData.GetData(), TextureData.Num()));
+			if (FileMD5 == TexturePixelDataMD5)
+			{
+				TexturePixelDataForBuild = TextureData;
+				bCacheDataValid = true;
+			}
+		}
+	}
+	if (!bCacheDataValid)
+	{
+		auto Msg = FText::Format(LOCTEXT("WrongTextureData", "Cooking LexUIStaticSpriteAtlasData:{0}, get wrong texture data in cache! You should manny click \"Pack Atlas\" button to build atlas texture!")
+			, FText::FromString(this->GetPathName()));
+		FLexUIUtils::EditorNotification(Msg, false);
+	}
 }
 void ULexUIStaticSpriteAtlasData::WillNeverCacheCookedPlatformDataAgain()
 {
-	
+	TexturePixelDataForBuild.Empty();
 }
 void ULexUIStaticSpriteAtlasData::ClearCachedCookedPlatformData(const ITargetPlatform* TargetPlatform)
 {
-	
+	TexturePixelDataForBuild.Empty();
 }
 void ULexUIStaticSpriteAtlasData::MarkNotInitialized()
 {
 	bIsInitialized = false;
 	bWarningIsAlreadyAppearedAtCurrentPackingSession = false;
 }
+
+void ULexUIStaticSpriteAtlasData::MarkAtlasPackDirty()
+{
+	bIsAtlasPackDirty = true;
+	TexturePixelDataMD5 = "";
+	MarkPackageDirty();
+}
+
 bool ULexUIStaticSpriteAtlasData::CheckInvalidSpriteData()const
 {
 	for (int i = 0; i < SpriteDataArray.Num(); i++)
@@ -667,20 +724,62 @@ bool ULexUIStaticSpriteAtlasData::InitCheck()
 	if (!bIsInitialized)
 	{
 #if WITH_EDITOR
-		if (!PackAtlas())
+		if (TexturePixelDataForBuild.Num() == 0)//no need to pack in cook process
 		{
-			return false;
+			if (!bIsAtlasPackDirty)
+			{
+				bool bCacheDataValid = false;
+				auto CacheDataPath = this->GetCacheDataPath(TexturePixelDataMD5);
+				if (FPaths::FileExists(CacheDataPath))
+				{
+					TArray<uint8> TextureData;
+					if (FFileHelper::LoadFileToArray(TextureData, *CacheDataPath))
+					{
+						auto FileMD5 = FLexUIUtils::GetMD5String(FLexUIUtils::GetMD5(TextureData.GetData(), TextureData.Num()));
+						if (FileMD5 == TexturePixelDataMD5)
+						{
+							TexturePixelData = TextureData;
+							bCacheDataValid = true;
+						}
+						else
+						{
+							IFileManager::Get().Delete(*CacheDataPath);
+						}
+					}
+				}
+				if (!bCacheDataValid)
+				{
+					bIsAtlasPackDirty = true;
+				}
+			}
+			if (bIsAtlasPackDirty)
+			{
+				bIsAtlasPackDirty = false;
+				auto bPackAtlasSuccess = PackAtlas();
+				if (!bPackAtlasSuccess)
+				{
+					return false;
+				}
+			}
 		}
 #endif
 		bIsInitialized = true;
+		
+		auto& DataArray =
+#if WITH_EDITOR
+			TexturePixelData;
+#else
+			TexturePixelDataForBuild;
+#endif
 
+		this->AtlasTextureArray.Empty();
 		uint32 TextureDataOffset = 0;
 		static int TextureNameSuffix = 0;
 		for (int i = 0; i < TextureSizeArray.Num(); i++)
 		{
 			auto TextureSize = TextureSizeArray[i];
 			//create texture
-			auto NewNewTexture = NewObject<UTexture2D>(
+			auto NewTexture = NewObject<UTexture2D>(
 				GetTransientPackage(),
 				FName(*FString::Printf(TEXT("LexUIStaticSpriteAtlasData_Texture_%d"), TextureNameSuffix++)),
 				EObjectFlags::RF_Transient
@@ -689,7 +788,7 @@ bool ULexUIStaticSpriteAtlasData::InitCheck()
 			PlatformData->SizeX = TextureSize;
 			PlatformData->SizeY = TextureSize;
 			PlatformData->PixelFormat = PF_B8G8R8A8;
-			NewNewTexture->SetPlatformData(PlatformData);
+			NewTexture->SetPlatformData(PlatformData);
 
 			//mipmaps
 			{
@@ -698,13 +797,13 @@ bool ULexUIStaticSpriteAtlasData::InitCheck()
 				{
 					// Allocate next mipmap.
 					auto mip = new FTexture2DMipMap;
-					NewNewTexture->GetPlatformData()->Mips.Add(mip);
+					NewTexture->GetPlatformData()->Mips.Add(mip);
 					mip->SizeX = mipSize;
 					mip->SizeY = mipSize;
 					mip->BulkData.Lock(LOCK_READ_WRITE);
 					auto pixelBufferLength = mipSize * mipSize * GPixelFormats[PF_B8G8R8A8].BlockBytes;
 					void* mipData = mip->BulkData.Realloc(pixelBufferLength);
-					FMemory::Memcpy(mipData, TextureMipData.GetData() + TextureDataOffset, pixelBufferLength);
+					FMemory::Memcpy(mipData, DataArray.GetData() + TextureDataOffset, pixelBufferLength);
 					mip->BulkData.Unlock();
 
 					mipSize = mipSize >> 1;
@@ -716,13 +815,13 @@ bool ULexUIStaticSpriteAtlasData::InitCheck()
 				}
 			}
 
-			NewNewTexture->CompressionSettings = TextureCompressionSettings::TC_EditorIcon;
-			NewNewTexture->LODGroup = TextureGroup::TEXTUREGROUP_UI;
-			NewNewTexture->SRGB = AtlasTextureUseSRGB;
-			NewNewTexture->Filter = AtlasTextureFilter;
-			NewNewTexture->UpdateResource();
+			NewTexture->CompressionSettings = TextureCompressionSettings::TC_EditorIcon;
+			NewTexture->LODGroup = TextureGroup::TEXTUREGROUP_UI;
+			NewTexture->SRGB = AtlasTextureUseSRGB;
+			NewTexture->Filter = AtlasTextureFilter;
+			NewTexture->UpdateResource();
 
-			this->AtlasTextureArray.Add(NewNewTexture);
+			this->AtlasTextureArray.Add(NewTexture);
 #if WITH_EDITOR
 			for (auto& sprite : RenderSpriteArray)
 			{
@@ -735,15 +834,15 @@ bool ULexUIStaticSpriteAtlasData::InitCheck()
 		}
 #if !WITH_EDITOR
 		//empty it to reduce memory usage
-		TextureMipData.Empty();
+		TexturePixelDataForBuild.Empty();
 #endif
 	}
 	return bIsInitialized;
 }
 UTexture2D* ULexUIStaticSpriteAtlasData::GetAtlasTexture(int32 Index)
 {
-	check(bIsInitialized);
-	return AtlasTextureArray[Index];
+	InitCheck();
+	return AtlasTextureArray.IsValidIndex(Index) ? AtlasTextureArray[Index] : nullptr;
 }
 bool ULexUIStaticSpriteAtlasData::ReadPixel(int InTextureIndex, const FVector2D& InUV, FColor& OutPixel)
 {

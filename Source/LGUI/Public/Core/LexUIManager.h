@@ -169,14 +169,12 @@ private:
 public:
 #if WITH_EDITOR
 	static void RefreshAllUI(UWorld* InWorld = nullptr);
+	static ULexUISelection* GetSelection(UWorld* InWorld);
+	FSimpleMulticastDelegate EventOnOutlineChanged;
+#endif
 	static void AddRootWidget(ULexWidget* InWidget);
 	static void RemoveRootWidget(ULexWidget* InWidget);
 	const TArray<TWeakObjectPtr<ULexWidget>>& GetAllRootUIItemArray()const { return AllRootWidgetArray; }
-
-	static ULexUISelection* GetSelection(UWorld* InWorld);
-	
-	FSimpleMulticastDelegate EventOnOutlineChanged;
-#endif
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	static void RegisterLexUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem);

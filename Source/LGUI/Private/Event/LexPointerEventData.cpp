@@ -87,7 +87,7 @@ FString ULexPointerEventData::ToString()const
 #if WITH_EDITOR
 			* (EnterComponent->GetOwner()->GetActorLabel()),
 #else
-			* (enterComponent->GetOwner()->GetName()),
+			* (EnterComponent->GetOwner()->GetName()),
 #endif
 			* (EnterComponent->GetPathName()));
 	}
@@ -109,7 +109,7 @@ FString ULexPointerEventData::ToString()const
 #if WITH_EDITOR
 			* (DragComponent->GetOwner()->GetActorLabel()),
 #else
-			* (dragComponent->GetOwner()->GetName()),
+			* (DragComponent->GetOwner()->GetName()),
 #endif
 			* (DragComponent->GetPathName()));
 	}
@@ -197,7 +197,7 @@ FString ULexPointerEventData::ToString()const
 #if WITH_EDITOR
 			* (PressComponent->GetOwner()->GetActorLabel()),
 #else
-			* (pressComponent->GetOwner()->GetName()),
+			* (PressComponent->GetOwner()->GetName()),
 #endif
 			* (PressComponent->GetPathName()));
 	}

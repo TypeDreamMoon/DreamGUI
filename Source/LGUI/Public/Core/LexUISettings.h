@@ -161,15 +161,14 @@ public:
 		bool bDrawHelperFrame = true;
 
 	/**
-		 * For load prefab debug, display a log that shows how much time a LoadPrefab cost.
-		 */
-	UPROPERTY(EditAnywhere, config, Category = "LGUI")
-	bool bLogPrefabLoadTime = false;
-
-	/**
 	 * Draw navigation visualizer
 	 */
 	UPROPERTY(Transient)
 		bool bDrawSelectableNavigationVisualizer = false;
 #endif
+	/**
+	 * For load prefab debug, display a log that shows how much time a LoadPrefab cost.
+	 */
+	UPROPERTY(EditAnywhere, config, Category = "LGUI")
+	bool bLogPrefabLoadTime = false;
 };

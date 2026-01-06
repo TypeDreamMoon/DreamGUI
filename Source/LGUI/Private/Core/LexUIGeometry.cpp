@@ -340,7 +340,7 @@ void FLexUIGeometry::UpdateUIRectBorderVertex(FLexUIGeometry* uiGeo, bool fillCe
 )
 {
 	auto& triangles = uiGeo->Triangles;
-	int triangleCount = 54;
+	int triangleCount;
 	if (fillCenter)
 	{
 		triangleCount = 54;

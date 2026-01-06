@@ -213,6 +213,7 @@ void ULexUIFontData_FreeTypeRender::InitFreeType()
 		BinPack.PrepareRectCellsForText(TextureSize, TextureSize, FreeRectCells, RectPackCellSize, false);
 		RenewFontTexture();
 		IntermediateTexture = CreateIntermediateTexture(RectPackCellSize);
+		IntermediateTexture->AddToRoot();
 		OneDivideTextureSize = 1.0f / TextureSize;
 
 		ClearCharDataCache();
@@ -327,6 +328,15 @@ void ULexUIFontData_FreeTypeRender::BeginDestroy()
 	if (OnCultureChangedDelegateHandle.IsValid())
 	{
 		FInternationalization::Get().OnCultureChanged().Remove(OnCultureChangedDelegateHandle);
+	}
+
+	if (IsValid(IntermediateTexture))
+	{
+		IntermediateTexture->RemoveFromRoot();
+	}
+	if (IsValid(Texture))
+	{
+		Texture->RemoveFromRoot();
 	}
 }
 
@@ -574,26 +584,28 @@ void ULexUIFontData_FreeTypeRender::UpdateFontTextureRegion(uint32 PosX, uint32 
 void ULexUIFontData_FreeTypeRender::RenewFontTexture()
 {
 	//get old texture pointer
-	auto OldTexture = TStrongObjectPtr<UTexture2DArray>(Texture);//use a strong-ref to prevent old texture from GC, because we need copy old texture data to new texture 
+	auto OldTexture = Texture; 
 	//create new texture
 	auto TextureSize = ULexUISettings::ConvertAtlasTextureSizeTypeToSize(TextureSizeType);
-	Texture = CreateFontTexture(TextureSize, OldTexture.IsValid() ? OldTexture->GetArraySize() + 1 : 1);
-	check(Texture);
+	Texture = CreateFontTexture(TextureSize, OldTexture ? OldTexture->GetArraySize() + 1 : 1);
+	Texture->AddToRoot();
+
 	//copy old texture to new one
-	if (OldTexture.IsValid())
+	if (OldTexture)
 	{
-		auto NewTexture = Texture;
-		if (OldTexture->GetResource() != nullptr && NewTexture->GetResource() != nullptr)
+		auto OldTextureResource = OldTexture->GetResource();
+		auto NewTextureResource = Texture->GetResource();
+		if (OldTextureResource != nullptr && NewTextureResource != nullptr)
 		{
 			ENQUEUE_RENDER_COMMAND(FLexUIFontData_UpdateAndCopyFontTexture)([
-					OldTexture
-					, NewTexture
+					OldTextureResource
+					, NewTextureResource
 					, TextureSize = TextureSize
 					, SliceCount = OldTexture->GetArraySize()
 					](FRHICommandListImmediate& RHICmdList)
 			{
-				auto OldTextureRHI = OldTexture->GetResource()->GetTexture2DArrayRHI();
-				auto NewTextureRHI = NewTexture->GetResource()->GetTexture2DArrayRHI();
+				auto OldTextureRHI = OldTextureResource->GetTexture2DArrayRHI();
+				auto NewTextureRHI = NewTextureResource->GetTexture2DArrayRHI();
 				if (OldTextureRHI->IsValid() && NewTextureRHI->IsValid())
 				{
 					FRHICopyTextureInfo CopyInfo;
@@ -612,6 +624,7 @@ void ULexUIFontData_FreeTypeRender::RenewFontTexture()
 				}
 			});
 		}
+		OldTexture->RemoveFromRoot();//we should not worry about gc because render thread only need texture resource, not texture object
 	}
 
 	for (auto textItem : RenderTextArray)

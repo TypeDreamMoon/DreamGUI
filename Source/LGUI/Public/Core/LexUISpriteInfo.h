@@ -51,9 +51,18 @@ public:
 	
 	bool HasBorder()const;
 	bool HasPadding()const;
-	void ApplyUV(int32 InX, int32 InY, int32 InWidth, int32 InHeight, float texFullWidthReciprocal, float texFullHeightReciprocal);
-	void ApplyUV(int32 InX, int32 InY, int32 InWidth, int32 InHeight, float texFullWidthReciprocal, float texFullHeightReciprocal, const FVector4f& uvRect);
-	void ApplyBorderUV(float texFullWidthReciprocal, float texFullHeightReciprocal);
+	/**
+	 * @return true for anything dirty
+	 */
+	bool ApplyUV(int32 InX, int32 InY, int32 InWidth, int32 InHeight, float texFullWidthReciprocal, float texFullHeightReciprocal);
+	/**
+	 * @return true for anything dirty
+	 */
+	bool ApplyUV(int32 InX, int32 InY, int32 InWidth, int32 InHeight, float texFullWidthReciprocal, float texFullHeightReciprocal, const FVector4f& uvRect);
+	/**
+	 * @return true for anything dirty
+	 */
+	bool ApplyBorderUV(float texFullWidthReciprocal, float texFullHeightReciprocal);
 	void ScaleUV(float InMultiply)
 	{
 		MinUV *= InMultiply;

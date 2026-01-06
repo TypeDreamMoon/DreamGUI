@@ -19,7 +19,7 @@ void SLGUIPrefabEditorViewport::BindCommands()
 }
 TSharedRef<FEditorViewportClient> SLGUIPrefabEditorViewport::MakeEditorViewportClient()
 {
-	EditorViewportClient = MakeShareable(new FLGUIPrefabEditorViewportClient(this->PrefabEditorPtr.Pin()->GetPreviewScene(), this->PrefabEditorPtr, SharedThis(this)));
+	EditorViewportClient = MakeShareable(new FLGUIPrefabEditorViewportClient(this->PrefabEditorPtr, SharedThis(this)));
 	EditorViewportClient->bSetListenerPosition = false;
 	EditorViewportClient->SetRealtime(true);
 	EditorViewportClient->SetShowStats(true);

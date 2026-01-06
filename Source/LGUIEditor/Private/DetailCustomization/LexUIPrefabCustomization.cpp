@@ -137,43 +137,6 @@ void FLexUIPrefabCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		]
 		;
 
-	DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexUIPrefab, PrefabHelperObject));
-	auto PrefabHelperObjectProperty = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUIPrefab, PrefabHelperObject));
-	category.AddCustomRow(LOCTEXT("PrefabHelperObject", "PrefabHelperObject"))
-		.NameContent()
-		[
-			SNew(STextBlock)
-			.Text(LOCTEXT("AgentObjectsWidgetName", "AgentObjects"))
-			.Font(IDetailLayoutBuilder::GetDetailFont())
-		]
-		.ValueContent()
-		.MinDesiredWidth(500)
-		[
-			SNew(SHorizontalBox)
-			+ SHorizontalBox::Slot()
-			.AutoWidth()
-			[
-				SNew(SBox)
-				.VAlign(EVerticalAlignment::VAlign_Center)
-				.Padding(FMargin(4, 2))
-				[
-					SNew(STextBlock)
-					.Text(this, &FLexUIPrefabCustomization::AgentObjectText)
-					.Font(IDetailLayoutBuilder::GetDetailFont())
-				]
-			]
-			+SHorizontalBox::Slot()
-			.AutoWidth()
-			[
-				SNew(SButton)
-				.Text(LOCTEXT("FixPrefabHelperObject", "Fix"))
-				.ToolTipText(LOCTEXT("FixAgentRootActor_Tooltip", "Missing agent objects! This may cause cook & package fail. Click to fix it. Because we can't fix it in cook thread, so you need to do it manually."))
-				.OnClicked(this, &FLexUIPrefabCustomization::OnClickRecreateAgentObjects)
-				.HAlign(EHorizontalAlignment::HAlign_Center)
-				.Visibility(this, &FLexUIPrefabCustomization::ShouldShowFixAgentObjectsButton)
-			]
-		]
-	;
 	category.AddCustomRow(LOCTEXT("AdditionalButton", "Additional Button"), true)
 		.WholeRowContent()
 		[
@@ -303,37 +266,6 @@ EVisibility FLexUIPrefabCustomization::ShouldShowFixPrefabVersionButton()const
 		return EVisibility::Hidden;
 	}
 }
-EVisibility FLexUIPrefabCustomization::ShouldShowFixAgentObjectsButton()const
-{
-	if (TargetScriptPtr.IsValid())
-	{
-		if (TargetScriptPtr->PrefabVersion >= (uint16)ELexUIPrefabVersion::BuildinFArchive
-			&& (!IsValid(TargetScriptPtr->PrefabHelperObject) || !IsValid(TargetScriptPtr->PrefabHelperObject->LoadedRootActor))
-			)
-		{
-			return EVisibility::Visible;
-		}
-		return EVisibility::Hidden;
-	}
-	else
-	{
-		return EVisibility::Hidden;
-	}
-}
-
-FText FLexUIPrefabCustomization::AgentObjectText()const
-{
-	if (TargetScriptPtr.IsValid())
-	{
-		if (TargetScriptPtr->PrefabVersion >= (uint16)ELexUIPrefabVersion::BuildinFArchive
-			&& (!IsValid(TargetScriptPtr->PrefabHelperObject) || !IsValid(TargetScriptPtr->PrefabHelperObject->LoadedRootActor))
-			)
-		{
-			return LOCTEXT("AgentObjectNotValid", "NotValid");
-		}
-	}
-	return LOCTEXT("AgentObjectValid", "Valid");
-}
 
 FReply FLexUIPrefabCustomization::OnClickRecreteButton()
 {
@@ -368,15 +300,6 @@ FReply FLexUIPrefabCustomization::OnClickRecreteAllButton()
 }
 FReply FLexUIPrefabCustomization::OnClickEditPrefabButton()
 {
-	return FReply::Handled();
-}
-FReply FLexUIPrefabCustomization::OnClickRecreateAgentObjects()
-{
-	auto AllPrefabs = FLexUIEditorTools::GetAllPrefabArray();
-	for (auto Prefab : AllPrefabs)
-	{
-		Prefab->MakeAgentObjectsInPreviewWorld();
-	}
 	return FReply::Handled();
 }
 

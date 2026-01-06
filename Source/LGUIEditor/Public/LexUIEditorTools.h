@@ -53,10 +53,6 @@ public:
 	static void SelectPrefabAsset(TFunction<AActor*()> GetSelectedActorFunction);
 	static bool CanBrowsePrefabAsset(TFunction<AActor*()> GetSelectedActorFunction);
 	static void OpenPrefabAsset(TFunction<AActor*()> GetSelectedActorFunction);
-	static bool CanUpdateLevelPrefab(TFunction<AActor*()> GetSelectedActorFunction);
-	static void UpdateLevelPrefab(TFunction<AActor*()> GetSelectedActorFunction);
-	static ECheckBoxState GetAutoUpdateLevelPrefab(TFunction<AActor*()> GetSelectedActorFunction);
-	static void ToggleLevelPrefabAutoUpdate(TFunction<AActor*()> GetSelectedActorFunction);
 	static bool CanCheckPrefabOverrideParameter(TFunction<AActor*()> GetSelectedActorFunction);
 	static bool CanCreateActor(TFunction<AActor*()> GetSelectedActorFunction);
 	static void CleanupPrefabsInWorld(UWorld* World);

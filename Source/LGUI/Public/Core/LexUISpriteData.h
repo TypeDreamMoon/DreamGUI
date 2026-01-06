@@ -76,7 +76,10 @@ private:
 public:
 	bool GetUseEdgePixelPadding()const { return bUseEdgePixelPadding; }
 	ULexUIStaticSpriteAtlasData* GetPackingAtlas()const { return PackingAtlas; }
-	void ApplySpriteInfoAfterStaticPack(const rbp::Rect& InPackedRect, float InAtlasTextureSizeInv);
+	/**
+	 * @return anything changed
+	 */
+	bool ApplySpriteInfoAfterStaticPack(const rbp::Rect& InPackedRect, float InAtlasTextureSizeInv);
 	//Begin ULexUISpriteData_BaseObject interface
 	virtual UTexture2D * GetAtlasTexture()override;
 	virtual const FLexUISpriteInfo& GetSpriteInfo()override;
@@ -114,6 +117,7 @@ public:
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)override;
 	virtual void PostEditChangeChainProperty(struct FPropertyChangedChainEvent& PropertyChangedEvent) override;
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
+	virtual void BeginCacheForCookedPlatformData(const ITargetPlatform* TargetPlatform) override;
 	static void MarkAllSpritesNeedToReinitialize();
 #endif
 	static void CheckAndApplySpriteTextureSetting(UTexture2D* InSpriteTexture);

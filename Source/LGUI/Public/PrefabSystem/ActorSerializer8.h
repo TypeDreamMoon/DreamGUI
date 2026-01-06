@@ -220,8 +220,10 @@ namespace LGUIPrefabSystem8
 			, TMap<FGuid, TObjectPtr<UObject>>& InOutMapGuidToObjects, TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& OutSubPrefabMap
 		);
 
-		/** Save prefab data for editor use. */
-		static void SavePrefab(AActor* RootActor, ULexUIPrefab* InPrefab
+		/** Save prefab data for editor use.
+		 * @return If save prefab success
+		 */
+		static bool SavePrefab(AActor* RootActor, ULexUIPrefab* InPrefab
 			, TMap<UObject*, FGuid>& OutMapObjectToGuid, TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& InSubPrefabMap
 			, bool InForEditorOrRuntimeUse
 		);
@@ -282,7 +284,7 @@ namespace LGUIPrefabSystem8
 		TArray<FSubPrefabObjectOverrideParameterData> SubPrefabOverrideParameters;
 
 		//serialize actor
-		void SerializeActor(AActor* RootActor, ULexUIPrefab* InPrefab);
+		bool SerializeActor(AActor* RootActor, ULexUIPrefab* InPrefab);
 		void SerializeActorArray(TMap<FGuid, FGuid>& MapSceneComponentToParent, TArray<FLGUIActorSaveData>& SavedActors, TMap<FGuid, TArray<uint8>>& SavedObjectData);
 		void SerializeObjectArray(TMap<FGuid, FLGUIObjectSaveData>& ObjectSaveDataArray, TMap<FGuid, TArray<uint8>>& SavedObjectData, TMap<FGuid, FGuid>& MapSceneComponentToParent);
 		void SerializeActorToData(AActor* RootActor, FLGUIPrefabSaveData& OutData);

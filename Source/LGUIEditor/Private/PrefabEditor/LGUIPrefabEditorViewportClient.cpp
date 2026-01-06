@@ -19,7 +19,6 @@
 #include "Editor/UnrealEdEngine.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Editor.h"
-#include "LGUIPrefabEditorScene.h"
 #include "LGUIPrefabEditor.h"
 #include "MouseDeltaTracker.h"
 #include "Misc/ITransaction.h"
@@ -32,13 +31,13 @@
 #include "InputState.h"
 #include "LevelViewportClickHandlers.h"
 #include "HModel.h"
-#include "LGUIEditorModule.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "LGUIPrefabViewportClickHandlers.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/LexUIRender/LexUIVertex.h"
+#include "PrefabSystem/LexUIPrefabInstanceScene.h"
 #include "Utils/LexUIUtils.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditorViewportClient"
@@ -369,11 +368,9 @@ public:
 	}
 };
 
-FLGUIPrefabEditorViewportClient::FLGUIPrefabEditorViewportClient(FLGUIPrefabEditorScene& InPreviewScene
-	, TWeakPtr<FLGUIPrefabEditor> InPrefabEditorPtr
+FLGUIPrefabEditorViewportClient::FLGUIPrefabEditorViewportClient(TWeakPtr<FLGUIPrefabEditor> InPrefabEditorPtr
 	, const TSharedRef<SLGUIPrefabEditorViewport>& InEditorViewportPtr)
 	: FEditorViewportClient(&GLevelEditorModeTools(), nullptr, StaticCastSharedRef<SEditorViewport>(InEditorViewportPtr))
-	, PrefabScene(&InPreviewScene)
 	, TrackingTransaction()
 	, CachedElementsToManipulate(UTypedElementRegistry::GetInstance()->CreateElementList())
 {
@@ -406,8 +403,6 @@ FLGUIPrefabEditorViewportClient::FLGUIPrefabEditorViewportClient(FLGUIPrefabEdit
 	EngineShowFlags.SetSelection(true);
 	EngineShowFlags.SetSelectionOutline(true);
 
-	PrefabScene->GetWorld()->bAllowAudioPlayback = false;
-
 	FVector InitialViewLocation;
 	FRotator InitialViewRotation;
 	FVector InitialViewOrbitLocation;
@@ -423,7 +418,7 @@ FLGUIPrefabEditorViewportClient::FLGUIPrefabEditorViewportClient(FLGUIPrefabEdit
 		auto SelectedWidgets = PrefabEditorPtr.Pin()->GetSelectedWidgets();
 		if (SelectedWidgets.Num() == 1)
 		{
-			TransformWidget = MakeUnique<FLexUITransformWidget>(PrefabScene->GetWorld(), SelectedWidgets[0].Get(), this);
+			TransformWidget = MakeUnique<FLexUITransformWidget>(GetWorld(), SelectedWidgets[0].Get(), this);
 		}
 		else
 		{
@@ -1270,12 +1265,12 @@ bool FLGUIPrefabEditorViewportClient::FocusViewportToTargets()
 // These implementation are copied from FEditorViewportClient
 UWorld* FLGUIPrefabEditorViewportClient::GetWorld()const
 {
-	return PrefabScene->GetWorld();
+	return PrefabEditorPtr.Pin()->GetWorld();
 }
 void FLGUIPrefabEditorViewportClient::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	FEditorViewportClient::AddReferencedObjects(Collector);
-	PrefabScene->AddReferencedObjects(Collector);
+	PrefabEditorPtr.Pin()->GetPreviewScene()->AddReferencedObjects(Collector);
 }
 namespace PreviewLightConstants
 {
@@ -1294,6 +1289,7 @@ namespace PreviewLightConstants
 void FLGUIPrefabEditorViewportClient::DrawPreviewLightVisualization(const FSceneView* View, FPrimitiveDrawInterface* PDI)
 {
 	// Draw the indicator of the current light direction if it was recently moved
+	auto PrefabScene = PrefabEditorPtr.Pin()->GetPreviewScene();
 	if ((PrefabScene != nullptr) && (PrefabScene->DirectionalLight != nullptr) && (MovingPreviewLightTimer > 0.0f))
 	{
 		const float A = MovingPreviewLightTimer / PreviewLightConstants::MovingPreviewLightTimerDuration;
@@ -1338,6 +1334,7 @@ void FLGUIPrefabEditorViewportClient::DrawPreviewLightVisualization(const FScene
 }
 FLinearColor FLGUIPrefabEditorViewportClient::GetBackgroundColor() const
 {
+	auto PrefabScene = PrefabEditorPtr.Pin()->GetPreviewScene();
 	return PrefabScene ? PrefabScene->GetBackgroundColor() : FColor(55, 55, 55);
 }
 namespace EditorViewportClient
@@ -1375,6 +1372,7 @@ bool FLGUIPrefabEditorViewportClient::Internal_InputAxis(FViewport* InViewport, 
 	const float DragX = (Key == EKeys::MouseX) ? Delta : 0.f;
 	const float DragY = (Key == EKeys::MouseY) ? Delta : 0.f;
 
+	auto PrefabScene = PrefabEditorPtr.Pin()->GetPreviewScene();
 	if (bLightMoveDown && bMouseButtonDown && PrefabScene)
 	{
 		// Adjust the preview light direction

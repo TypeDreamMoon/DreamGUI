@@ -16,25 +16,33 @@
 
 #define LOCTEXT_NAMESPACE "LGUISpriteData"
 
-void FLexUISpriteInfo::ApplyUV(int32 InX, int32 InY, int32 InWidth, int32 InHeight, float texFullWidthReciprocal, float texFullHeightReciprocal)
+bool FLexUISpriteInfo::ApplyUV(int32 InX, int32 InY, int32 InWidth, int32 InHeight, float texFullWidthReciprocal, float texFullHeightReciprocal)
 {
+	auto NewMinUV = FVector2f(InX * texFullWidthReciprocal, InY * texFullHeightReciprocal);
+	auto NewMaxUV = FVector2f((InX + InWidth) * texFullWidthReciprocal, (InY + InHeight) * texFullHeightReciprocal);
+	
+	if (Width == InWidth && Height == InHeight && MinUV == NewMinUV && MaxUV == NewMaxUV)
+		return false;
+	
 	Width = InWidth;
 	Height = InHeight;
-
-	MinUV.X = InX * texFullWidthReciprocal;
-	MaxUV.Y = (InY + InHeight) * texFullHeightReciprocal;
-	MaxUV.X = (InX + InWidth) * texFullWidthReciprocal;
-	MinUV.Y = InY * texFullHeightReciprocal;
+	MinUV = NewMinUV;
+	MaxUV = NewMaxUV;
+	return true;
 }
-void FLexUISpriteInfo::ApplyUV(int32 InX, int32 InY, int32 InWidth, int32 InHeight, float texFullWidthReciprocal, float texFullHeightReciprocal, const FVector4f& uvRect)
+bool FLexUISpriteInfo::ApplyUV(int32 InX, int32 InY, int32 InWidth, int32 InHeight, float texFullWidthReciprocal, float texFullHeightReciprocal, const FVector4f& uvRect)
 {
+	auto NewMinUV = FVector2f(InX * texFullWidthReciprocal + uvRect.X, InY * texFullHeightReciprocal + uvRect.Y);
+	auto NewMaxUV = FVector2f((InX + InWidth) * texFullWidthReciprocal * uvRect.Z + uvRect.X, (InY + InHeight) * texFullHeightReciprocal * uvRect.W + uvRect.Y);
+	
+	if (Width == InWidth && Height == InHeight && MinUV == NewMinUV && MaxUV == NewMaxUV)
+		return false;
+	
 	Width = InWidth;
 	Height = InHeight;
-
-	MinUV.X = InX * texFullWidthReciprocal + uvRect.X;
-	MaxUV.Y = (InY + InHeight) * texFullHeightReciprocal * uvRect.W + uvRect.Y;
-	MaxUV.X = (InX + InWidth) * texFullWidthReciprocal * uvRect.Z + uvRect.X;
-	MinUV.Y = InY * texFullHeightReciprocal + uvRect.Y;
+	MinUV = NewMinUV;
+	MaxUV = NewMaxUV;
+	return true;
 }
 bool FLexUISpriteInfo::HasBorder()const
 {
@@ -44,12 +52,15 @@ bool FLexUISpriteInfo::HasPadding()const
 {
 	return Padding.Left != 0 || Padding.Right != 0 || Padding.Top != 0 || Padding.Bottom != 0;
 }
-void FLexUISpriteInfo::ApplyBorderUV(float texFullWidthReciprocal, float texFullHeightReciprocal)
+bool FLexUISpriteInfo::ApplyBorderUV(float texFullWidthReciprocal, float texFullHeightReciprocal)
 {
-	BorderMinUV.X = MinUV.X + Border.Left * texFullWidthReciprocal;
-	BorderMaxUV.X = MaxUV.X - Border.Right * texFullWidthReciprocal;
-	BorderMaxUV.Y = MaxUV.Y - Border.Bottom * texFullHeightReciprocal;
-	BorderMinUV.Y = MinUV.Y + Border.Top * texFullHeightReciprocal;
+	auto NewBorderMinUV = FVector2f(MinUV.X + Border.Left * texFullWidthReciprocal, MinUV.Y + Border.Top * texFullHeightReciprocal);
+	auto NewBorderMaxUV = FVector2f(MaxUV.X - Border.Right * texFullWidthReciprocal, MaxUV.Y - Border.Bottom * texFullHeightReciprocal);
+	if (BorderMinUV == NewBorderMinUV && BorderMaxUV == NewBorderMaxUV)
+		return false;
+	BorderMinUV = NewBorderMinUV;
+	BorderMaxUV = NewBorderMaxUV;
+	return true;
 }
 
 ULexUISpriteData::ULexUISpriteData()
@@ -92,15 +103,16 @@ void ULexUISpriteData::CheckSpriteTexture()
 {
 	if (SpriteTexture == nullptr)
 	{
-		SpriteTexture = LoadObject<UTexture2D>(NULL, TEXT("/LGUI/Textures/LexUIPreset_WhiteSolid"));
+		SpriteTexture = FLexUIUtils::GetDefaultWhiteTexture();
 	}
 }
 
-void ULexUISpriteData::ApplySpriteInfoAfterStaticPack(const rbp::Rect& InPackedRect, float InAtlasTextureSizeInv)
+bool ULexUISpriteData::ApplySpriteInfoAfterStaticPack(const rbp::Rect& InPackedRect, float InAtlasTextureSizeInv)
 {
-	SpriteInfo.ApplyUV(InPackedRect.x, InPackedRect.y, InPackedRect.width, InPackedRect.height, InAtlasTextureSizeInv, InAtlasTextureSizeInv);
-	SpriteInfo.ApplyBorderUV(InAtlasTextureSizeInv, InAtlasTextureSizeInv);
+	bool bBaseInfoDirty = SpriteInfo.ApplyUV(InPackedRect.x, InPackedRect.y, InPackedRect.width, InPackedRect.height, InAtlasTextureSizeInv, InAtlasTextureSizeInv);
+	bool bBorderInfoDirty = SpriteInfo.ApplyBorderUV(InAtlasTextureSizeInv, InAtlasTextureSizeInv);
 	bIsInitialized = false;
+	return bBaseInfoDirty || bBorderInfoDirty;
 }
 #if WITH_EDITOR
 void ULexUISpriteData::PreEditChange(FProperty* PropertyAboutToChange)
@@ -112,6 +124,7 @@ void ULexUISpriteData::PreEditChange(FProperty* PropertyAboutToChange)
 		if (IsValid(PackingAtlas))
 		{
 			PackingAtlas->RemoveSpriteData(this);
+			PackingAtlas->MarkAtlasPackDirty();
 		}
 	}
 }
@@ -125,6 +138,10 @@ void ULexUISpriteData::PostEditChangeProperty(struct FPropertyChangedEvent& Prop
 		auto PropertyName = PropertyChangedEvent.Property->GetFName();
 		if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteTexture))
 		{
+			if (PackingType == ELexUISpritePackingType::Static && PackingAtlas)
+			{
+				PackingAtlas->MarkAtlasPackDirty();
+			}
 			if (SpriteTexture != nullptr)
 			{
 				CheckAndApplySpriteTextureSetting(SpriteTexture);
@@ -134,24 +151,26 @@ void ULexUISpriteData::PostEditChangeProperty(struct FPropertyChangedEvent& Prop
 				SpriteInfo.Width = SpriteTexture->GetSizeX();
 				SpriteInfo.Height = SpriteTexture->GetSizeY();
 			}
+			this->ReloadTexture();
 		}
 		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUISpriteData, PackingTag))
 		{
 			this->ReloadTexture();
 		}
-		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUISpriteData, SpriteTexture))
-		{
-			this->ReloadTexture();
-		}
 		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUISpriteData, bUseEdgePixelPadding))
 		{
+			if (PackingType == ELexUISpritePackingType::Static && PackingAtlas)
+			{
+				PackingAtlas->MarkAtlasPackDirty();
+			}
 			this->ReloadTexture();
 		}
 		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUISpriteData, PackingAtlas))
 		{
 			if (IsValid(PackingAtlas))
 			{
-				PackingAtlas->CheckSprite();
+				PackingAtlas->AddSpriteData(this);
+				PackingAtlas->MarkAtlasPackDirty();
 			}
 			if (auto DynamicSpriteAtlasData = ULexUIDynamicSpriteAtlasManager::Find(PackingTag))
 			{
@@ -203,6 +222,11 @@ bool ULexUISpriteData::CanEditChange(const FProperty* InProperty) const
 {
 	return Super::CanEditChange(InProperty);
 }
+
+void ULexUISpriteData::BeginCacheForCookedPlatformData(const ITargetPlatform* TargetPlatform)
+{
+}
+
 void ULexUISpriteData::MarkAllSpritesNeedToReinitialize()
 {
 	ULexUIDynamicSpriteAtlasManager::ResetAtlasMap();
@@ -234,9 +258,9 @@ void ULexUISpriteData::ReloadTexture()
 	bIsInitialized = false;
 
 #if WITH_EDITOR
-	if (IsValid(PackingAtlas))
+	if (PackingType == ELexUISpritePackingType::Static && IsValid(PackingAtlas))
 	{
-		PackingAtlas->RemoveSpriteData(this);
+		PackingAtlas->MarkAtlasPackDirty();
 		PackingAtlas->MarkNotInitialized();
 	}
 #endif
@@ -258,60 +282,68 @@ void ULexUISpriteData::InitSpriteData()
 {
 	if (!bIsInitialized)
 	{
-		if (IsValid(PackingAtlas))
-		{
 #if WITH_EDITOR
-			//add it again as check if it exists in packingAtlas
-			PackingAtlas->AddSpriteData(this);
-#endif
-			if (PackingAtlas->InitCheck())
-			{
-				AtlasTexture = PackingAtlas->GetAtlasTexture(AtlasTextureIndex);
-				//no need to set spriteInfo because it is already set when do static pack
-				return;
-			}
-			else
-			{
-				UE_LOG(LGUI, Error, TEXT("[%s].%d PackingAtlas:%s pack error, will fallback to use PackingTag!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(PackingAtlas->GetPathName()));
-			}
-		}
-		if (SpriteTexture == nullptr)
+		if (IsRunningCookCommandlet())
 		{
-			UE_LOG(LGUI, Error, TEXT("[%s].%d SpriteData:%s SpriteTexture is null!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetPathName()));
+			bIsInitialized = true;
 			return;
 		}
-		if (!PackingTag.IsNone())//need to pack to atlas
+#endif
+		if (PackingType == ELexUISpritePackingType::Static)
 		{
-#if WITH_EDITOR
-			FTextureCompilingManager::Get().FinishCompilation({ SpriteTexture });
-#endif
-			if (PackSprite())
+			if (IsValid(PackingAtlas))
 			{
-				bIsInitialized = true;
-			}
-			else
-			{
-				auto WarningMsg = FString::Printf(TEXT("[%s].%d Pack Sprite fail. Will automatically clear PackingTag to make it valid."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-				UE_LOG(LGUI, Warning, TEXT("%s"), *WarningMsg);
-#if WITH_EDITOR
-				FLexUIUtils::EditorNotification(FText::FromString(WarningMsg), false);
-#endif
-				PackingTag = NAME_None;
-				this->MarkPackageDirty();
-				bIsInitialized = false;
+				AtlasTexture = PackingAtlas->GetAtlasTexture(AtlasTextureIndex);
+				if (AtlasTexture)
+				{
+					bIsInitialized = true;
+				}
+				else
+				{
+					UE_LOG(LGUI, Warning, TEXT("[%s].%d SpriteData:%s AtlasTexture is null! "), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetPathName()));
+				}
 			}
 		}
-		else//no need to pack to atlas, so spriteTexture self is the atlas
+		else
 		{
-			AtlasTexture = SpriteTexture;
-			auto SizeX = AtlasTexture->GetSizeX();
-			auto SizeY = AtlasTexture->GetSizeY();
-			check(SizeX != 0 && SizeY != 0);
-			float atlasTextureWidthInv = 1.0f / SizeX;
-			float atlasTextureHeightInv = 1.0f / SizeY;
-			//spriteInfo.ApplyUV(0, 0, AtlasTexture->GetSizeX(), AtlasTexture->GetSizeY(), atlasTextureWidthInv, atlasTextureHeightInv);
-			SpriteInfo.ApplyBorderUV(atlasTextureWidthInv, atlasTextureHeightInv);
-			bIsInitialized = true;
+			if (SpriteTexture == nullptr)
+			{
+				UE_LOG(LGUI, Error, TEXT("[%s].%d SpriteData:%s SpriteTexture is null!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetPathName()));
+				return;
+			}
+			if (!PackingTag.IsNone())//need to pack to atlas
+			{
+#if WITH_EDITOR
+				FTextureCompilingManager::Get().FinishCompilation({ SpriteTexture });
+#endif
+				if (PackSprite())
+				{
+					bIsInitialized = true;
+				}
+				else
+				{
+					auto WarningMsg = FString::Printf(TEXT("[%s].%d Pack Sprite fail. Will automatically clear PackingTag to make it valid."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+					UE_LOG(LGUI, Warning, TEXT("%s"), *WarningMsg);
+#if WITH_EDITOR
+					FLexUIUtils::EditorNotification(FText::FromString(WarningMsg), false);
+#endif
+					PackingTag = NAME_None;
+					this->MarkPackageDirty();
+					bIsInitialized = false;
+				}
+			}
+			else//no need to pack to atlas, so spriteTexture self is the atlas
+			{
+				AtlasTexture = SpriteTexture;
+				auto SizeX = AtlasTexture->GetSizeX();
+				auto SizeY = AtlasTexture->GetSizeY();
+				check(SizeX != 0 && SizeY != 0);
+				float atlasTextureWidthInv = 1.0f / SizeX;
+				float atlasTextureHeightInv = 1.0f / SizeY;
+				//spriteInfo.ApplyUV(0, 0, AtlasTexture->GetSizeX(), AtlasTexture->GetSizeY(), atlasTextureWidthInv, atlasTextureHeightInv);
+				SpriteInfo.ApplyBorderUV(atlasTextureWidthInv, atlasTextureHeightInv);
+				bIsInitialized = true;
+			}
 		}
 	}
 }
@@ -374,19 +406,23 @@ ULexUISpriteData* ULexUISpriteData::CreateLexUISpriteData(UObject* Outer, UTextu
 
 void ULexUISpriteData::AddUISprite(TScriptInterface<class ILexUISpriteRenderInterface> InUISprite)
 {
-	if (IsValid(PackingAtlas))
+	if (PackingType == ELexUISpritePackingType::Static)
 	{
-		InitSpriteData();
+		if (IsValid(PackingAtlas))
+		{
 #if WITH_EDITOR
-		//packingAtlas only need to collect Sprite in editor
-		PackingAtlas->AddRenderSprite(InUISprite);
+			//packingAtlas only need to collect Sprite in editor
+			PackingAtlas->AddRenderSprite(InUISprite);
 #endif
+		}
 	}
-	else if (!PackingTag.IsNone())
+	else
 	{
-		InitSpriteData();
-		auto& spriteArray = ULexUIDynamicSpriteAtlasManager::FindOrAdd(PackingTag)->RenderSpriteArray;
-		spriteArray.AddUnique(InUISprite.GetObject());
+		if (!PackingTag.IsNone())
+		{
+			auto& spriteArray = ULexUIDynamicSpriteAtlasManager::FindOrAdd(PackingTag)->RenderSpriteArray;
+			spriteArray.AddUnique(InUISprite.GetObject());
+		}
 	}
 }
 void ULexUISpriteData::RemoveUISprite(TScriptInterface<class ILexUISpriteRenderInterface> InUISprite)

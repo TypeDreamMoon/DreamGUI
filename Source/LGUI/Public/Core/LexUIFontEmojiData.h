@@ -9,8 +9,8 @@
 USTRUCT(BlueprintType)
 struct LGUI_API FLexUIFontEmojiKey
 {
-#if WITH_EDITORONLY_DATA
 	GENERATED_BODY()
+#if WITH_EDITORONLY_DATA
 	UPROPERTY(EditAnywhere, Category=LGUI)
 	FString EmojiChar;
 #endif

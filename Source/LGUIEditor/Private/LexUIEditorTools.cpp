@@ -1098,7 +1098,7 @@ void FLexUIEditorTools::CreatePrefabAsset(TFunction<AActor*()> GetSelectedActorF
 						PrefabHelperObjectWhichManageThisActor->RemoveSubPrefabByAnyActorOfSubPrefab(KeyValue.Key);//remove prefab from origin PrefabHelperObject
 					}
 					OutPrefab->SavePrefab(SelectedActor, MapObjectToGuid, SubPrefabMap);//save prefab second step, store sub prefab data
-					OutPrefab->RefreshAgentObjectsInPreviewWorld();
+					OutPrefab->EnsureInstanceObjects();
 
 					//make it as sub-prefab
 					TMap<FGuid, TObjectPtr<UObject>> MapGuidToObject;
@@ -1107,14 +1107,6 @@ void FLexUIEditorTools::CreatePrefabAsset(TFunction<AActor*()> GetSelectedActorF
 						MapGuidToObject.Add(KeyValue.Value, KeyValue.Key);
 					}
 					PrefabHelperObjectWhichManageThisActor->MakePrefabAsSubPrefab(OutPrefab, SelectedActor, MapGuidToObject, {});
-
-					if (OldPrefabHelperObject != nullptr && OldPrefabHelperObject->PrefabAsset != nullptr)
-					{
-						if (auto PrefabEditor = FLGUIPrefabEditor::GetEditorForPrefabIfValid(OldPrefabHelperObject->PrefabAsset))//if prefab is inside prefab editor, then apply the prefab editor
-						{
-							PrefabEditor->ApplyPrefab();
-						}
-					}
 				}
 				CleanupPrefabsInWorld(SelectedActor->GetWorld());
 			}
@@ -1131,13 +1123,7 @@ void FLexUIEditorTools::RefreshLevelLoadedPrefab()
 {
 	for (TObjectIterator<ULexUIPrefabHelperObject> Itr; Itr; ++Itr)
 	{
-		if (Itr->GetIsManagerObject())
-		{
-			if (!Itr->IsInsidePrefabEditor())
-			{
-				Itr->CheckPrefabVersion();
-			}
-		}
+		Itr->CheckPrefabVersion();
 	}
 	for (TObjectIterator<ALexWidgetRootActor> Itr; Itr; ++Itr)
 	{
@@ -1342,65 +1328,6 @@ void FLexUIEditorTools::OpenPrefabAsset(TFunction<AActor*()> GetSelectedActorFun
 	}
 }
 
-bool FLexUIEditorTools::CanUpdateLevelPrefab(TFunction<AActor*()> GetSelectedActorFunction)
-{
-	auto SelectedActor = GetSelectedActorFunction();
-	if (SelectedActor == nullptr)return false;
-	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return false;
-	if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
-	{
-		if (PrefabHelperObject->SubPrefabMap.Contains(SelectedActor) && !PrefabHelperObject->IsInsidePrefabEditor())//Can only update prefab in level editor
-		{
-			return true;
-		}
-		return false;
-	}
-	else
-	{
-		return false;
-	}
-}
-void FLexUIEditorTools::UpdateLevelPrefab(TFunction<AActor*()> GetSelectedActorFunction)
-{
-	auto SelectedActor = GetSelectedActorFunction();
-	if (SelectedActor == nullptr)return;
-	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return;
-	if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
-	{
-		if (auto SubPrefabDataPtr = PrefabHelperObject->SubPrefabMap.Find(SelectedActor))
-		{
-			PrefabHelperObject->RefreshOnSubPrefabDirty(SubPrefabDataPtr->PrefabAsset, SelectedActor);
-		}
-	}
-}
-
-ECheckBoxState FLexUIEditorTools::GetAutoUpdateLevelPrefab(TFunction<AActor*()> GetSelectedActorFunction)
-{
-	auto SelectedActor = GetSelectedActorFunction();
-	if (SelectedActor == nullptr)return ECheckBoxState::Undetermined;
-	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return ECheckBoxState::Undetermined;
-	if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
-	{
-		if (auto SubPrefabDataPtr = PrefabHelperObject->SubPrefabMap.Find(SelectedActor))
-		{
-			return SubPrefabDataPtr->bAutoUpdate ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
-		}
-	}
-	return ECheckBoxState::Undetermined;
-}
-void FLexUIEditorTools::ToggleLevelPrefabAutoUpdate(TFunction<AActor*()> GetSelectedActorFunction)
-{
-	auto SelectedActor = GetSelectedActorFunction();
-	if (SelectedActor == nullptr)return;
-	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return;
-	if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
-	{
-		if (auto SubPrefabDataPtr = PrefabHelperObject->SubPrefabMap.Find(SelectedActor))
-		{
-			SubPrefabDataPtr->bAutoUpdate = !SubPrefabDataPtr->bAutoUpdate;
-		}
-	}
-}
 bool FLexUIEditorTools::CanCheckPrefabOverrideParameter(TFunction<AActor*()> GetSelectedActorFunction)
 {
 	auto SelectedActor = GetSelectedActorFunction();

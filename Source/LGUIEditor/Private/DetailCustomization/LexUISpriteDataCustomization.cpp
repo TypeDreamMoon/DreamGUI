@@ -373,7 +373,7 @@ void FLexUISpriteDataCustomization::CheckSprite()
 	//check invalid RenderSprite in atlas
 	if (IsValid(TargetScriptPtr->PackingAtlas))
 	{
-		TargetScriptPtr->PackingAtlas->CheckSprite();
+		TargetScriptPtr->PackingAtlas->CleanupInvalidSpriteData();
 	}
 	if (auto DynamicSpriteAtlasData = ULexUIDynamicSpriteAtlasManager::Find(TargetScriptPtr->PackingTag))
 	{

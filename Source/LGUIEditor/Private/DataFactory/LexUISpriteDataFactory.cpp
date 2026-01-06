@@ -5,6 +5,7 @@
 #include "Core/LexUISettings.h"
 #include "Core/LexUISpriteData.h"
 #include "Framework/Notifications/NotificationManager.h"
+#include "Utils/LexUIUtils.h"
 #include "Widgets/Notifications/SNotificationList.h"
 
 #define LOCTEXT_NAMESPACE "LexUISpriteDataFactory"
@@ -21,7 +22,7 @@ UObject* ULexUISpriteDataFactory::FactoryCreateNew(UClass* Class, UObject* InPar
 	bool isDefaltTexture = false;
 	if (SpriteTexture == nullptr)
 	{
-		SpriteTexture = LoadObject<UTexture2D>(NULL, TEXT("/LGUI/Textures/LexUIPreset_WhiteSolid"));
+		SpriteTexture = FLexUIUtils::GetDefaultWhiteTexture();
 		isDefaltTexture = true;
 	}
 	// check size

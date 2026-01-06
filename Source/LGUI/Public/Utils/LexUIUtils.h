@@ -133,7 +133,8 @@ public:
 	static UTexture2D* CreateTexture(int32 InSize, FColor InDefaultColor = FColor::Transparent, class UObject* InOuter = GetTransientPackage(), FName InDefaultName = NAME_None);
 
 	static TArray<uint8> GetMD5(const FString& InString);
-	static FString GetMD5String(const FString& InString);
+	static TArray<uint8> GetMD5(uint8* InData, uint64 InSize);
+	static FString GetMD5String(const TArray<uint8>& InMD5Digits);
 #if WITH_EDITOR
 	static void NotifyPropertyChanged(UObject* Object, FProperty* Property);
 	static void NotifyPropertyChanged(UObject* Object, FName PropertyName);
@@ -148,7 +149,7 @@ public:
 
 	static float Color255To1_Table[256];
 
-	static UTexture* GetDefaultWhiteTexture();
+	static UTexture2D* GetDefaultWhiteTexture();
 	static int CeilPowerOfTwo(int v)
 	{
 		if (v <= 1)

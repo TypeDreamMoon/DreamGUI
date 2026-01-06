@@ -550,26 +550,6 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(TFunction<AActor*()> 
 					, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanBrowsePrefabAsset, GetSelectedActorFunction))
 			);
 			MenuBuilder.AddMenuEntry(
-				LOCTEXT("UpdateLevelPrefab", "Update Prefab"),
-				LOCTEXT("UpdateLevelPrefab_Tooltip", "Update this prefab to latest version"),
-				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::UpdateLevelPrefab, GetSelectedActorFunction)
-					, FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanUpdateLevelPrefab, GetSelectedActorFunction)
-					, FGetActionCheckState()
-					, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanUpdateLevelPrefab, GetSelectedActorFunction))
-			);
-			MenuBuilder.AddMenuEntry(
-				LOCTEXT("AutoUpdateLevelPrefab", "Auto Update Prefab"),
-				LOCTEXT("AutoUpdateLevelPrefab_Tooltip", "Auto update this prefab when detect newer version"),
-				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::ToggleLevelPrefabAutoUpdate, GetSelectedActorFunction)
-					, FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanUpdateLevelPrefab, GetSelectedActorFunction)
-					, FGetActionCheckState::CreateStatic(&FLexUIEditorTools::GetAutoUpdateLevelPrefab, GetSelectedActorFunction)
-					, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanUpdateLevelPrefab, GetSelectedActorFunction)),
-				NAME_None,
-				EUserInterfaceActionType::ToggleButton
-			);
-			MenuBuilder.AddMenuEntry(
 				FUIAction(FExecuteAction()
 					, FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCheckPrefabOverrideParameter, GetSelectedActorFunction)
 					, FGetActionCheckState()

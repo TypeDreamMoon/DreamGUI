@@ -68,14 +68,14 @@ void FLexUIStaticSpriteAtlasDataCustomization::CustomizeDetails(IDetailLayoutBui
 			.HAlign(EHorizontalAlignment::HAlign_Center)
 			.OnClicked_Lambda([this] {
 				TargetScriptPtr->MarkNotInitialized();
+				TargetScriptPtr->MarkAtlasPackDirty();
 				TargetScriptPtr->InitCheck();
-				TargetScriptPtr->MarkPackageDirty();
 				return FReply::Handled();
 			})
 		];
 
-	auto TextureMipDataHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUIStaticSpriteAtlasData, TextureMipData));
-	auto TextureMipDataBufferSize = TargetScriptPtr->TextureMipData.Num();
+	auto TextureMipDataHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexUIStaticSpriteAtlasData, TexturePixelData));
+	auto TextureMipDataBufferSize = TargetScriptPtr->TexturePixelData.Num();
 	auto TextureMipDataBufferSize_kb = (double)TextureMipDataBufferSize / 1024;
 	auto TextureMipDataBufferSize_mb = TextureMipDataBufferSize_kb / 1024;
 	FString DisplyTextureMipDataBufferSize;
