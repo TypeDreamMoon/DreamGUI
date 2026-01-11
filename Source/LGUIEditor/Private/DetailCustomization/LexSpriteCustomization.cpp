@@ -42,7 +42,11 @@ void FLexSpriteCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	category.AddProperty(spriteTypeHandle);
 	spriteTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexSpriteCustomization::ForceRefresh, &DetailBuilder));
 	auto DrawType = TargetScriptPtr->DrawType;
-	if (DrawType == ELexUISpriteDrawType::Sliced || DrawType == ELexUISpriteDrawType::SlicedFrame)
+	if (DrawType == ELexUISpriteDrawType::Normal)
+	{
+		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, PixelsPerUnitMultiplier));
+	}
+	else if (DrawType == ELexUISpriteDrawType::Sliced || DrawType == ELexUISpriteDrawType::SlicedFrame)
 	{
 		if (TargetScriptPtr->Sprite != nullptr)
 		{
@@ -67,6 +71,7 @@ void FLexSpriteCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		fillMethodProperty->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexSpriteCustomization::ForceRefresh, &DetailBuilder));
 		FLexUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, fillMethodProperty);
 		ELexUISpriteFillMethod fillMethod = TargetScriptPtr->FillMethod;
+		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, PixelsPerUnitMultiplier));
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, FillOrigin));
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, FillOriginType_Radial90));
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, FillOriginType_Radial180));
@@ -103,6 +108,10 @@ void FLexSpriteCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		}
 		FLexUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, FillDirectionFlip)));
 		FLexUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, FillAmount)));
+	}
+	else if (DrawType == ELexUISpriteDrawType::Filled)
+	{
+		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexSprite, PixelsPerUnitMultiplier));
 	}
 
 	if (DrawType != ELexUISpriteDrawType::Filled)

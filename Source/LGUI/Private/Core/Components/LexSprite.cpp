@@ -79,6 +79,7 @@ void ULexSprite::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged,
 		if (Sprite->GetSpriteInfo().HasBorder())
 		{
 			FLexUIGeometry::UpdateUIRectBorderVertex(&InGeo, DrawType == ELexUISpriteDrawType::Sliced, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), Sprite->GetSpriteInfo(), RenderCanvas, this, GetFinalColor(),
+				PixelsPerUnitMultiplier, 
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 		}
@@ -243,6 +244,19 @@ void ULexSprite::SetDrawType(ELexUISpriteDrawType Value) {
 		}
 	}
 }
+
+void ULexSprite::SetPixelsPerUnitMultiplier(float Value)
+{
+	if (PixelsPerUnitMultiplier != Value)
+	{
+		PixelsPerUnitMultiplier = Value;
+		if (DrawType == ELexUISpriteDrawType::Sliced || DrawType == ELexUISpriteDrawType::SlicedFrame)
+		{
+			MarkVertexPositionDirty();
+		}
+	}
+}
+
 void ULexSprite::SetFillMethod(ELexUISpriteFillMethod Value)
 {
 	if (FillMethod != Value)

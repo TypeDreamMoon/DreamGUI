@@ -166,6 +166,7 @@ void ULexImage::OnUpdateGeometry(FLexUIGeometry& InMesh, bool InTriangleChanged,
 			}
 			FLexUIGeometry::UpdateUIRectBorderVertex(&InMesh, bFillCenter, RenderSize.X, RenderSize.Y, FVector2f(Pivot)
 				, SpriteInfo, RenderCanvas, this, FinalColor
+				, Brush.PixelsPerUnitMultiplier
 				, InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged);
 		}
 		break;

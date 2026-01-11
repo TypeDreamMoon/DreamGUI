@@ -52,6 +52,8 @@ public:
 	/** UV region for an image, xy for min and zw for max. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush")
 	FVector4f UVRegion = FVector4f(0,0,1,1);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush")
+	float PixelsPerUnitMultiplier = 1;
 	
 	UObject* GetResourceObject()const { return ResourceObject; }
 	void SetResourceObject(UObject* Value) { ResourceObject = Value; }

@@ -86,6 +86,11 @@ void FLexTextureCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuil
 		FLexUIEditorUtils::CreateSubDetail(&category, &DetailBuilder, DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexTexture, FillAmount)));
 	}
 
+	if (DrawType != ELexUISpriteDrawType::Sliced && DrawType != ELexUISpriteDrawType::SlicedFrame)
+	{
+		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexTexture, PixelsPerUnitMultiplier));
+	}
+
 	if (DrawType != ELexUISpriteDrawType::Filled)
 	{
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexTexture, FillMethod));

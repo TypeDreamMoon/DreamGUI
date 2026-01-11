@@ -1,7 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/Components/LexTexture.h"
-#include "LGUI.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/Components/LexCanvas.h"
 
@@ -53,66 +52,9 @@ void ULexTexture::CheckSpriteData()
 		SpriteInfo.Height = Texture->GetSurfaceHeight();
 		if (DrawType != ELexUISpriteDrawType::Tiled)
 		{
-			ApplyUVRect();
 			SpriteInfo.ApplyUV(0, 0, SpriteInfo.Width, SpriteInfo.Height, 1.0f / SpriteInfo.Width, 1.0f / SpriteInfo.Height, UVRect);
 			SpriteInfo.ApplyBorderUV(1.0f / SpriteInfo.Width, 1.0f / SpriteInfo.Height);
 		}
-	}
-}
-
-void ULexTexture::ApplyUVRect()
-{
-	switch (UVRectControlMode)
-	{
-	default:
-	case ELexUITextureUVRectControlMode::None:
-		break;
-	case ELexUITextureUVRectControlMode::KeepAspectRatio_FitIn:
-		{
-			auto Widget = GetWidget();
-			auto TextureWidth = Texture->GetSurfaceWidth();
-			auto TextureHeight = Texture->GetSurfaceHeight();
-			auto TextureAspect = TextureWidth / TextureHeight;
-			auto ThisWidth = Widget->GetWidth();
-			auto ThisHeight = Widget->GetHeight();
-			auto ThisAspect = ThisWidth / ThisHeight;
-			if (TextureAspect > ThisAspect)
-			{
-				auto VerticalScale = TextureAspect / ThisAspect;
-				auto VerticalOffset = (1.0f - VerticalScale) * 0.5f;
-				UVRect = FVector4f(0, VerticalOffset, 1, VerticalScale);
-			}
-			else
-			{
-				auto HorizontalScale = ThisAspect / TextureAspect;
-				auto HorizontalOffset = (1.0f - HorizontalScale) * 0.5f;
-				UVRect = FVector4f(HorizontalOffset, 0, HorizontalScale, 1);
-			}
-		}
-		break;
-	case ELexUITextureUVRectControlMode::KeepAspectRatio_Envelope:
-		{
-			auto Widget = GetWidget();
-			auto TextureWidth = Texture->GetSurfaceWidth();
-			auto TextureHeight = Texture->GetSurfaceHeight();
-			auto TextureAspect = TextureWidth / TextureHeight;
-			auto ThisWidth = Widget->GetWidth();
-			auto ThisHeight = Widget->GetHeight();
-			auto ThisAspect = ThisWidth / ThisHeight;
-			if (TextureAspect > ThisAspect)
-			{
-				auto HorizontalScale = ThisAspect / TextureAspect;
-				auto HorizontalOffset = (1.0f - HorizontalScale) * 0.5f;
-				UVRect = FVector4f(HorizontalOffset, 0, HorizontalScale, 1);
-			}
-			else
-			{
-				auto VerticalScale = TextureAspect / ThisAspect;
-				auto VerticalOffset = (1.0f - VerticalScale) * 0.5f;
-				UVRect = FVector4f(0, VerticalOffset, 1, VerticalScale);
-			}
-		}
-		break;
 	}
 }
 
@@ -133,6 +75,7 @@ void ULexTexture::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged
 		if (SpriteInfo.HasBorder())
 		{
 			FLexUIGeometry::UpdateUIRectBorderVertex(&InGeo, DrawType == ELexUISpriteDrawType::Sliced, Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), SpriteInfo, RenderCanvas, this, GetFinalColor(),
+				PixelsPerUnitMultiplier, 
 				InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged
 			);
 		}
@@ -194,14 +137,6 @@ void ULexTexture::OnDimensionChanged(bool InPivotChange, bool InWidthChange, boo
             MarkVertexUVDirty();
         }
 	}
-	if (UVRectControlMode != ELexUITextureUVRectControlMode::None)
-	{
-		if (InWidthChange || InHeightChange)
-		{
-			CheckSpriteData();
-			MarkVertexUVDirty();
-		}
-	}
     if (InPivotChange || InWidthChange || InHeightChange)
     {
         MarkVertexPositionDirty();
@@ -237,17 +172,23 @@ void ULexTexture::SetUVRect(FVector4f Value)
 	}
 }
 
+void ULexTexture::SetPixelsPerUnitMultiplier(float Value)
+{
+	if (PixelsPerUnitMultiplier != Value)
+	{
+		PixelsPerUnitMultiplier = Value;
+		if (DrawType == ELexUISpriteDrawType::Sliced || DrawType == ELexUISpriteDrawType::SlicedFrame)
+		{
+			MarkVertexPositionDirty();
+		}
+	}
+}
+
 void ULexTexture::SetTexture(UTexture* Value)
 {
 	if (Texture != Value)
 	{
 		Super::SetTexture(Value);
-		if (UVRectControlMode == ELexUITextureUVRectControlMode::KeepAspectRatio_FitIn
-			|| UVRectControlMode == ELexUITextureUVRectControlMode::KeepAspectRatio_Envelope
-			)
-		{
-			MarkVertexUVDirty();
-		}
 		CheckSpriteData();
 	}
 }
@@ -303,14 +244,4 @@ void ULexTexture::SetFillAmount(float Value)
 		}
 	}
 }
-void ULexTexture::SetUVRectControlMode(ELexUITextureUVRectControlMode Value)
-{
-	if (UVRectControlMode != Value)
-	{
-		UVRectControlMode = Value;
-		MarkVertexUVDirty();
-		CheckSpriteData();
-	}
-}
-
 

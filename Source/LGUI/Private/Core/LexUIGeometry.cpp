@@ -137,7 +137,7 @@ void AdjustPixelPerfectPos_For_UIText(TArray<FLexUIOriginVertexData>& originVert
 
 #pragma region UISprite_UITexture_Simple
 void FLexUIGeometry::UpdateUIRectSimpleVertex(FLexUIGeometry* uiGeo,
-	const float& width, const float& height, const FVector2f& pivot, const FLexUISpriteInfo& spriteInfo, ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
+	float width, float height, const FVector2f& pivot, const FLexUISpriteInfo& spriteInfo, ULexCanvas* renderCanvas, ULexVisual* uiComp, FColor color,
 	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 )
 {
@@ -209,10 +209,10 @@ void FLexUIGeometry::UpdateUIRectSimpleVertex(FLexUIGeometry* uiGeo,
 	}
 }
 void FLexUIGeometry::UpdateRectBlockVertex(FLexUIGeometry* uiGeo,
-	bool bEnableOuterShadow, const FVector2f& outerShadowOffset, const float& outerShadowSize, const float& outerShadowBlur, bool bSoftEdge,
-	const float& width, const float& height, const FVector2f& pivot, 
+	bool bEnableOuterShadow, const FVector2f& outerShadowOffset, float outerShadowSize, float outerShadowBlur, bool bSoftEdge,
+	float width, float height, const FVector2f& pivot, 
 	const FLexUISpriteInfo& uniformSpriteInfo, const FLexUISpriteInfo& spriteInfo,
-	ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
+	ULexCanvas* renderCanvas, ULexVisual* uiComp, FColor color,
 	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 )
 {
@@ -335,7 +335,8 @@ void FLexUIGeometry::UpdateRectBlockVertex(FLexUIGeometry* uiGeo,
 #pragma endregion
 #pragma region UISprite_UITexture_Border
 void FLexUIGeometry::UpdateUIRectBorderVertex(FLexUIGeometry* uiGeo, bool fillCenter,
-	const float& width, const float& height, const FVector2f& pivot, const FLexUISpriteInfo& spriteInfo, ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
+	float width, float height, const FVector2f& pivot, const FLexUISpriteInfo& spriteInfo, ULexCanvas* renderCanvas, ULexVisual* uiComp, FColor color,
+	float pixelsPerUnitMultiplier,
 	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 )
 {
@@ -391,18 +392,18 @@ void FLexUIGeometry::UpdateUIRectBorderVertex(FLexUIGeometry* uiGeo, bool fillCe
 			float geoHeight = halfH * 2;
 			//vertices
 			float x0, x1, x2, x3, y0, y1, y2, y3;
-			int widthBorder = spriteInfo.Border.Left + spriteInfo.Border.Right;
-			int heightBorder = spriteInfo.Border.Top + spriteInfo.Border.Bottom;
+			float widthBorder = (spriteInfo.Border.Left + spriteInfo.Border.Right) * pixelsPerUnitMultiplier;
+			float heightBorder = (spriteInfo.Border.Top + spriteInfo.Border.Bottom) * pixelsPerUnitMultiplier;
 			float widthScale = geoWidth < widthBorder ? geoWidth / widthBorder : 1.0f;
 			float heightScale = geoHeight < heightBorder ? geoHeight / heightBorder : 1.0f;
 			x0 = (-halfW + pivotOffsetX);
-			x1 = (x0 + spriteInfo.Border.Left * widthScale);
+			x1 = (x0 + spriteInfo.Border.Left * widthScale * pixelsPerUnitMultiplier);
 			x3 = (halfW + pivotOffsetX);
-			x2 = (x3 - spriteInfo.Border.Right * widthScale);
+			x2 = (x3 - spriteInfo.Border.Right * widthScale * pixelsPerUnitMultiplier);
 			y0 = (-halfH + pivotOffsetY);
-			y1 = (y0 + spriteInfo.Border.Bottom * heightScale);
+			y1 = (y0 + spriteInfo.Border.Bottom * heightScale * pixelsPerUnitMultiplier);
 			y3 = (halfH + pivotOffsetY);
-			y2 = (y3 - spriteInfo.Border.Top * heightScale);
+			y2 = (y3 - spriteInfo.Border.Top * heightScale * pixelsPerUnitMultiplier);
 
 			originVertices[0].Position = FVector3f(0, x0, y0);
 			originVertices[1].Position = FVector3f(0, x1, y0);
@@ -477,7 +478,7 @@ void FLexUIGeometry::UpdateUIRectBorderVertex(FLexUIGeometry* uiGeo, bool fillCe
 
 #pragma region UISprite_Tiled
 void FLexUIGeometry::UpdateUIRectTiledVertex(FLexUIGeometry* uiGeo,
-	const FLexUISpriteInfo& spriteInfo, ULexCanvas* renderCanvas, ULexVisual* uiComp, const float& width, const float& height, const FVector2f& pivot, const int& widthRectCount, const int& heightRectCount, const float& widthRemainedRectSize, const float& heightRemainedRectSize, const FColor& color,
+	const FLexUISpriteInfo& spriteInfo, ULexCanvas* renderCanvas, ULexVisual* uiComp, float width, float height, const FVector2f& pivot, const int& widthRectCount, const int& heightRectCount, float widthRemainedRectSize, float heightRemainedRectSize, FColor color,
 	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 )
 {
@@ -580,9 +581,9 @@ void FLexUIGeometry::UpdateUIRectTiledVertex(FLexUIGeometry* uiGeo,
 #pragma endregion
 
 #pragma region UISprite_Fill_Horizontal_Vertial
-void FLexUIGeometry::UpdateUIRectFillHorizontalVerticalVertex(FLexUIGeometry* uiGeo, const float& width, const float& height, const FVector2f& pivot
+void FLexUIGeometry::UpdateUIRectFillHorizontalVerticalVertex(FLexUIGeometry* uiGeo, float width, float height, const FVector2f& pivot
 	, const FLexUISpriteInfo& spriteInfo, bool flipDirection, float fillAmount, bool horizontalOrVertical
-	, ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
+	, ULexCanvas* renderCanvas, ULexVisual* uiComp, FColor color,
 	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 )
 {
@@ -734,9 +735,9 @@ void FLexUIGeometry::UpdateUIRectFillHorizontalVerticalVertex(FLexUIGeometry* ui
 }
 #pragma endregion
 #pragma region UISprite_Fill_Radial90
-void FLexUIGeometry::UpdateUIRectFillRadial90Vertex(FLexUIGeometry* uiGeo, const float& width, const float& height, const FVector2f& pivot
+void FLexUIGeometry::UpdateUIRectFillRadial90Vertex(FLexUIGeometry* uiGeo, float width, float height, const FVector2f& pivot
 	, const FLexUISpriteInfo& spriteInfo, bool flipDirection, float fillAmount, ELexUISpriteFillOriginType_Radial90 originType
-	, ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
+	, ULexCanvas* renderCanvas, ULexVisual* uiComp, FColor color,
 	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 )
 {
@@ -1089,9 +1090,9 @@ void FLexUIGeometry::UpdateUIRectFillRadial90Vertex(FLexUIGeometry* uiGeo, const
 }
 #pragma endregion
 #pragma region UISprite_Fill_Radial180
-void FLexUIGeometry::UpdateUIRectFillRadial180Vertex(FLexUIGeometry* uiGeo, const float& width, const float& height, const FVector2f& pivot
+void FLexUIGeometry::UpdateUIRectFillRadial180Vertex(FLexUIGeometry* uiGeo, float width, float height, const FVector2f& pivot
 	, const FLexUISpriteInfo& spriteInfo, bool flipDirection, float fillAmount, ELexUISpriteFillOriginType_Radial180 originType
-	, ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
+	, ULexCanvas* renderCanvas, ULexVisual* uiComp, FColor color,
 	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 )
 {
@@ -1654,9 +1655,9 @@ void FLexUIGeometry::UpdateUIRectFillRadial180Vertex(FLexUIGeometry* uiGeo, cons
 }
 #pragma endregion
 #pragma region UISprite_Fill_Radial360
-void FLexUIGeometry::UpdateUIRectFillRadial360Vertex(FLexUIGeometry* uiGeo, const float& width, const float& height, const FVector2f& pivot
+void FLexUIGeometry::UpdateUIRectFillRadial360Vertex(FLexUIGeometry* uiGeo, float width, float height, const FVector2f& pivot
 	, const FLexUISpriteInfo& spriteInfo, bool flipDirection, float fillAmount, ELexUISpriteFillOriginType_Radial360 originType
-	, ULexCanvas* renderCanvas, ULexVisual* uiComp, const FColor& color,
+	, ULexCanvas* renderCanvas, ULexVisual* uiComp, FColor color,
 	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 )
 {
@@ -2267,7 +2268,7 @@ void UIGeometry_AlignUITextLineVertexForRichText(ELexUITextParagraphHorizontalAl
 void FLexUIGeometry::UpdateUIText(const FString& Content
 	, TArray<FLexUIText_TextProcessingElement>& TextProcessingArray
 	, float width, float height, const FVector2f& pivot
-	, const FColor& color, uint8 RenderOpacityForRichText, const FVector2f& fontSpace, FLexUIGeometry* uiGeo, float fontSize
+	, FColor color, uint8 RenderOpacityForRichText, const FVector2f& fontSpace, FLexUIGeometry* uiGeo, float fontSize
 	, ELexUITextParagraphHorizontalAlign paragraphHAlign, ELexUITextParagraphVerticalAlign paragraphVAlign, ELexUITextOverflowType overflowType
 	, ETextWrappingPolicy wrappingPolicy, bool bUseKerning
 	, ELexUITextFontStyle fontStyle, FVector2f& textPreferredSize, bool& outTruncated
@@ -3177,7 +3178,7 @@ void FLexUIGeometry::OffsetVertices(TArray<FLexUIOriginVertexData>& vertices, in
 		vertex.Z += offsetY;
 	}
 }
-void FLexUIGeometry::UpdateUIColor(FLexUIGeometry* uiGeo, const FColor& color)
+void FLexUIGeometry::UpdateUIColor(FLexUIGeometry* uiGeo, FColor color)
 {
 	auto& vertices = uiGeo->Vertices;
 	for (int i = 0; i < vertices.Num(); i++)
@@ -3187,7 +3188,7 @@ void FLexUIGeometry::UpdateUIColor(FLexUIGeometry* uiGeo, const FColor& color)
 }
 
 void FLexUIGeometry::CalculatePivotOffset(
-	const float& width, const float& height, const FVector2f& pivot
+	float width, float height, const FVector2f& pivot
 	, float& pivotOffsetX, float& pivotOffsetY
 )
 {
@@ -3196,7 +3197,7 @@ void FLexUIGeometry::CalculatePivotOffset(
 }
 
 void FLexUIGeometry::CalculateOffsetAndSize(
-	const float& width, const float& height, const FVector2f& pivot, const FLexUISpriteInfo& spriteInfo
+	float width, float height, const FVector2f& pivot, const FLexUISpriteInfo& spriteInfo
 	, float& pivotOffsetX, float& pivotOffsetY, float& halfWidth, float& halfHeight
 )
 {

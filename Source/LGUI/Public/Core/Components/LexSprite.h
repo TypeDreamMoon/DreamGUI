@@ -68,6 +68,8 @@ protected:
 	friend class FLexSpriteCustomization;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		ELexUISpriteDrawType DrawType = ELexUISpriteDrawType::Normal;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ImageBrush")
+	float PixelsPerUnitMultiplier = 1;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		ELexUISpriteFillMethod FillMethod = ELexUISpriteFillMethod::Horizontal;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
@@ -98,12 +100,14 @@ protected:
 	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI") ELexUISpriteDrawType GetSpriteDrawType()const { return DrawType; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") float GetPixelsPerUnitMultiplier() const { return PixelsPerUnitMultiplier; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")	ELexUISpriteFillMethod GetFillMethod()const { return FillMethod; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")	uint8 GetFillOrigin()const { return FillOrigin; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")	bool GetFillDirectionFlip()const { return FillDirectionFlip; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")	float GetFillAmount()const { return FillAmount; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI") void SetDrawType(ELexUISpriteDrawType Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI") void SetPixelsPerUnitMultiplier(float Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI") void SetFillMethod(ELexUISpriteFillMethod Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI") void SetFillOrigin(uint8 Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI") void SetFillDirectionFlip(bool Value);

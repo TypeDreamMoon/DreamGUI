@@ -14,6 +14,7 @@ public:
 private:
 	EVisibility GetMarginPropertyVisibility() const;
 	EVisibility GetUVRegionPropertyVisibility() const;
+	EVisibility GetPixelsPerUnitMultiplierPropertyVisibility() const;
 
 	/** Callback for determining image size reset button visibility */
 	bool IsImageSizeResetToDefaultVisible(TSharedPtr<IPropertyHandle> PropertyHandle) const;

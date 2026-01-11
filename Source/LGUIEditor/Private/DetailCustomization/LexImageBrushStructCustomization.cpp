@@ -257,6 +257,7 @@ void FLexImageBrushStructCustomization::CustomizeChildren( TSharedRef<IPropertyH
 	TSharedPtr<IPropertyHandle> MarginProperty = StructPropertyHandle->GetChildHandle( TEXT("Margin") );
 	TSharedPtr<IPropertyHandle> UVRegionProperty = StructPropertyHandle->GetChildHandle( TEXT("UVRegion") );
 	TSharedPtr<IPropertyHandle> TintProperty = StructPropertyHandle->GetChildHandle( TEXT("TintColor") );
+	auto PixelsPerUnitMultiplierProperty = StructPropertyHandle->GetChildHandle( TEXT("PixelsPerUnitMultiplier") );
 	ResourceObjectProperty = StructPropertyHandle->GetChildHandle( TEXT("ResourceObject") );
 	ImageTypeProperty = StructPropertyHandle->GetChildHandle(TEXT("ImageType"));
 
@@ -303,6 +304,8 @@ void FLexImageBrushStructCustomization::CustomizeChildren( TSharedRef<IPropertyH
 	.Visibility( TAttribute<EVisibility>::CreateSP(this, &FLexImageBrushStructCustomization::GetMarginPropertyVisibility ) );
 	StructBuilder.AddProperty(UVRegionProperty.ToSharedRef())
 	.Visibility( TAttribute<EVisibility>::CreateSP(this, &FLexImageBrushStructCustomization::GetUVRegionPropertyVisibility ) );
+	StructBuilder.AddProperty(PixelsPerUnitMultiplierProperty.ToSharedRef())
+	.Visibility(TAttribute<EVisibility>::CreateSP(this, &FLexImageBrushStructCustomization::GetPixelsPerUnitMultiplierPropertyVisibility));
 }
 
 EVisibility FLexImageBrushStructCustomization::GetMarginPropertyVisibility() const
@@ -329,6 +332,14 @@ EVisibility FLexImageBrushStructCustomization::GetUVRegionPropertyVisibility()co
 		return EVisibility::Collapsed;
 	}
 	return (Result == FPropertyAccess::MultipleValues || Cast<ISlateTextureAtlasInterface>(ResourceObject) == nullptr) ? EVisibility::Visible : EVisibility::Collapsed;
+}
+
+EVisibility FLexImageBrushStructCustomization::GetPixelsPerUnitMultiplierPropertyVisibility() const
+{
+	uint8 DrawAsType;
+	FPropertyAccess::Result Result = DrawAsProperty->GetValue( DrawAsType );
+	
+	return (Result == FPropertyAccess::MultipleValues || DrawAsType == ESlateBrushDrawType::Box || DrawAsType == ESlateBrushDrawType::Border) ? EVisibility::Visible : EVisibility::Collapsed;
 }
 
 bool FLexImageBrushStructCustomization::IsImageSizeResetToDefaultVisible(TSharedPtr<IPropertyHandle> PropertyHandle) const
