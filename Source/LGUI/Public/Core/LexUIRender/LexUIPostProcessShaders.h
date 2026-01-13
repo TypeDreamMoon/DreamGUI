@@ -82,6 +82,30 @@ public:
 	}
 private:
 };
+class FLexUISimpleCopyTargetPS_BlendAlpha : public FLexUISimpleCopyTargetPS
+{
+	DECLARE_SHADER_TYPE(FLexUISimpleCopyTargetPS_BlendAlpha, Global);
+public:
+	FLexUISimpleCopyTargetPS_BlendAlpha() {}
+	FLexUISimpleCopyTargetPS_BlendAlpha(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUISimpleCopyTargetPS(Initializer)
+	{
+		BlendAlphaParameter.Bind(Initializer.ParameterMap, TEXT("_BlendAlpha"));
+	}
+	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
+	{
+		OutEnvironment.SetDefine(TEXT("LEXUI_BLENDALPHA"), true);
+		FLexUISimpleCopyTargetPS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+	}
+	void SetBlendAlpha(FRHICommandListImmediate& RHICmdList, float BlendAlpha)
+	{
+		FRHIBatchedShaderParameters& BatchedParameters = RHICmdList.GetScratchShaderParameters();
+		SetShaderValue(BatchedParameters, BlendAlphaParameter, BlendAlpha);
+		RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
+	}
+private:
+	LAYOUT_FIELD(FShaderParameter, BlendAlphaParameter);
+};
 class FLexUIPostProcessGaussianBlurPS :public FLexUIPostProcessShader
 {
 	DECLARE_SHADER_TYPE(FLexUIPostProcessGaussianBlurPS, Global);

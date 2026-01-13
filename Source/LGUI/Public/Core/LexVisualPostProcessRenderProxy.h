@@ -24,7 +24,6 @@ public:
 private:
 	TWeakPtr<FLexUIRenderer, ESPMode::ThreadSafe> LexRenderer;
 	bool bIsWorld = false;//is world space or screen space
-	ULexCanvas* RenderCanvasPtr = nullptr;
 public:
 	virtual bool CanRender() const = 0;
 	/**
@@ -55,6 +54,7 @@ public:
 	TArray<FLexUIPostProcessVertex> RenderMeshRegionToScreenVertexArray;
 	FVector2f RectSize;
 	FTexture2DResource* MaskTexture = nullptr;
+	bool bUseFullSize = false;
 	//output target
 	FTextureRenderTargetResource* RenderTargetResource = nullptr;
 

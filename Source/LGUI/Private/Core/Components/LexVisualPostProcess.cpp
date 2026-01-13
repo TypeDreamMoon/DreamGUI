@@ -253,12 +253,14 @@ void ULexVisualPostProcess::SendRegionVertexDataToRenderProxy()
 			FVector2f RectSize;
 			FMatrix44f objectToWorldMatrix;
 			FTexture2DDynamicResource* ClipDataTexture = nullptr;
+			bool bUseFullSize;
 		};
 		auto updateData = new FUIPostProcess_SendRegionVertexDataToRenderProxy();
 		updateData->renderMeshRegionToScreenVertexArray = this->RenderMeshRegionToScreenVertexArray;
 		updateData->renderScreenToMeshRegionVertexArray = this->RenderScreenToMeshRegionVertexArray;
 		updateData->RectSize = FVector2f(Widget->GetWidth(), Widget->GetHeight());
 		updateData->objectToWorldMatrix = FMatrix44f(RenderCanvas->GetLexWidget()->GetComponentTransform().ToMatrixWithScale());
+		updateData->bUseFullSize = bUseFullSize;
 		auto ClipDataTex = this->GetClipDataTexture();
 		if (IsValid(ClipDataTex) && ClipDataTex->GetResource() != nullptr)
 		{
@@ -272,6 +274,7 @@ void ULexVisualPostProcess::SendRegionVertexDataToRenderProxy()
 					TempRenderProxy->RectSize = updateData->RectSize;
 					TempRenderProxy->ObjectToWorldMatrix = updateData->objectToWorldMatrix;
 					TempRenderProxy->ClipDataTexture = updateData->ClipDataTexture;
+					TempRenderProxy->bUseFullSize = updateData->bUseFullSize;
 					delete updateData;
 				});
 	}

@@ -194,13 +194,13 @@ public:
 			}
 			else
 			{
-				Renderer->CopyRenderTarget(GraphBuilder, GlobalShaderMap, PixelateEffectRenderTargetTexture, ScreenTargetTexture, false
+				Renderer->CopyRenderTarget(GraphBuilder, GlobalShaderMap, PixelateEffectRenderTargetTexture, ScreenTargetTexture
 					, TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
 			}
 		}
 		else
 		{
-			Renderer->CopyRenderTarget(GraphBuilder, GlobalShaderMap, PixelateEffectRenderTargetTexture, RenderTargetResource->GetRenderTargetTexture(), true
+			Renderer->CopyRenderTarget_ColorCorrect(GraphBuilder, GlobalShaderMap, PixelateEffectRenderTargetTexture, RenderTargetResource->GetRenderTargetTexture()
 					, TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI());
 		}
 

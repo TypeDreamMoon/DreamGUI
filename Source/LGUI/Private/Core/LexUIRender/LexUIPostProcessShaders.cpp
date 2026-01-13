@@ -7,6 +7,7 @@ IMPLEMENT_SHADER_TYPE(, FLexUISimplePostProcessVS, TEXT("/Plugin/LGUI/Private/Po
 IMPLEMENT_SHADER_TYPE(, FLexUIPostProcessGaussianBlurPS, TEXT("/Plugin/LGUI/Private/PostProcess/LexUIPostProcessGaussianBlur.usf"), TEXT("GaussianBlurPS"), SF_Pixel)
 IMPLEMENT_SHADER_TYPE(, FLexUISimpleCopyTargetPS, TEXT("/Plugin/LGUI/Private/PostProcess/LexUIPostProcessPixelShader.usf"), TEXT("SimpleCopyTargetPS"), SF_Pixel)
 IMPLEMENT_SHADER_TYPE(, FLexUISimpleCopyTargetPS_ColorCorrect, TEXT("/Plugin/LGUI/Private/PostProcess/LexUIPostProcessPixelShader.usf"), TEXT("SimpleCopyTargetPS"), SF_Pixel)
+IMPLEMENT_SHADER_TYPE(, FLexUISimpleCopyTargetPS_BlendAlpha, TEXT("/Plugin/LGUI/Private/PostProcess/LexUIPostProcessPixelShader.usf"), TEXT("SimpleCopyTargetPS"), SF_Pixel)
 
 
 

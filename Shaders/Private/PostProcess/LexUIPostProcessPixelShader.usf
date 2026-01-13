@@ -21,12 +21,19 @@ float3 LinearizeColor(float3 EncodedColor)
 #endif
 }
 
+#if LEXUI_BLENDALPHA
+half _BlendAlpha;
+#endif
+
 void SimpleCopyTargetPS(
     SimpleVSToPS input,
     out float4 OutColor : SV_Target0
 )
 {
     OutColor = _MainTex.Sample(_MainTexSampler, input.uv);
+#if LEXUI_BLENDALPHA
+    OutColor.a *= _BlendAlpha;
+#endif
 #if LEXUI_COLORCORRECT
     OutColor.rgb = LinearizeColor(OutColor.rgb);
 #endif

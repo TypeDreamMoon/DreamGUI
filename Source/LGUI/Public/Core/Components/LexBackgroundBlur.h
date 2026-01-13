@@ -23,15 +23,14 @@ private:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 	/** Blur effect strength. */
-	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (ClampMin = "0.0", ClampMax = 100.0f))
-		float BlurStrength = 10.0f;
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (ClampMin = 0.0, ClampMax = 1.0f))
+		float BlurStrength = 0.1f;
 	/** Will alpha affect blur strength? If true, then 0 alpha means 0 blur strength, and 1 alpha means full blur strength. */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		bool ApplyAlphaToBlur = true;
 	
-	/** No need to change this because default value can give you good result. */
 	UPROPERTY(EditAnywhere, Category = "LGUI", AdvancedDisplay)
-		int MaxDownSampleLevel = 6;
+		int MaxDownSampleLevel = 7;
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	float GetBlurStrength() const { return BlurStrength; }
@@ -49,7 +48,6 @@ public:
 	virtual TSharedPtr<FLexVisualPostProcessRenderProxy> GetRenderProxy()override;
 	virtual void MarkAllDirty()override;
 private:
-	float Inv_SampleLevelInterval = 1.0f;
 	FORCEINLINE float GetBlurStrengthInternal();
 	virtual void SendRegionVertexDataToRenderProxy()override;
 	void SendOthersDataToRenderProxy();

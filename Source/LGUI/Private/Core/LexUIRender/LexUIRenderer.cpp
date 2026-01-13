@@ -140,7 +140,7 @@ void FLexUIRenderer::PostRenderBasePass_RenderThread(FRHICommandListImmediate& R
 }
 
 void FLexUIRenderer::CopyRenderTarget(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap, FTextureRHIRef Src, FTextureRHIRef Dst
-	, bool ColorCorrect, FRHISamplerState* SrcTextureSamplerState
+	, FRHISamplerState* SrcTextureSamplerState
 )
 {
 	auto* PassParameters = GraphBuilder.AllocParameters<FRenderTargetParameters>();
@@ -149,7 +149,7 @@ void FLexUIRenderer::CopyRenderTarget(FRDGBuilder& GraphBuilder, FGlobalShaderMa
 		RDG_EVENT_NAME("LexUICopyRenderTarget"),
 		PassParameters,
 		ERDGPassFlags::Raster,
-		[this, GlobalShaderMap, Src, Dst, ColorCorrect, SrcTextureSamplerState](FRHICommandListImmediate& RHICmdList)
+		[this, GlobalShaderMap, Src, Dst, SrcTextureSamplerState](FRHICommandListImmediate& RHICmdList)
 		{
 			RHICmdList.SetViewport(0, 0, 0, Dst->GetSizeXYZ().X, Dst->GetSizeXYZ().Y, 1.0f);
 
@@ -163,20 +163,80 @@ void FLexUIRenderer::CopyRenderTarget(FRDGBuilder& GraphBuilder, FGlobalShaderMa
 			GraphicsPSOInit.NumSamples = Dst->GetNumSamples();
 			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIPostProcessVertexDeclaration();
 			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-			if (ColorCorrect)
-			{
-				TShaderMapRef<FLexUISimpleCopyTargetPS_ColorCorrect> PixelShader(GlobalShaderMap);
-				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
-				PixelShader->SetParameters(RHICmdList, Src, SrcTextureSamplerState);
-			}
-			else
-			{
-				TShaderMapRef<FLexUISimpleCopyTargetPS> PixelShader(GlobalShaderMap);
-				GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
-				PixelShader->SetParameters(RHICmdList, Src, SrcTextureSamplerState);
-			}
+			TShaderMapRef<FLexUISimpleCopyTargetPS> PixelShader(GlobalShaderMap);
+			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+			PixelShader->SetParameters(RHICmdList, Src, SrcTextureSamplerState);
+			VertexShader->SetParameters(RHICmdList);
+
+			DrawFullScreenQuad(RHICmdList);
+		});
+}
+
+void FLexUIRenderer::CopyRenderTarget_ColorCorrect(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap,
+	FTextureRHIRef Src, FTextureRHIRef Dst, FRHISamplerState* SrcTextureSamplerState)
+{
+	auto* PassParameters = GraphBuilder.AllocParameters<FRenderTargetParameters>();
+	PassParameters->RenderTargets[0] = FRenderTargetBinding(RegisterExternalTexture(GraphBuilder, Dst, TEXT("LexUICopyRenderTarget_ColorCorrect")), ERenderTargetLoadAction::ELoad);
+	GraphBuilder.AddPass(
+		RDG_EVENT_NAME("LexUICopyRenderTarget_ColorCorrect"),
+		PassParameters,
+		ERDGPassFlags::Raster,
+		[this, GlobalShaderMap, Src, Dst, SrcTextureSamplerState](FRHICommandListImmediate& RHICmdList)
+		{
+			RHICmdList.SetViewport(0, 0, 0, Dst->GetSizeXYZ().X, Dst->GetSizeXYZ().Y, 1.0f);
+
+			TShaderMapRef<FLexUISimplePostProcessVS> VertexShader(GlobalShaderMap);
+			FGraphicsPipelineStateInitializer GraphicsPSOInit;
+			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
+			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
+			GraphicsPSOInit.BlendState = TStaticBlendState<>::GetRHI();
+			GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+			GraphicsPSOInit.NumSamples = Dst->GetNumSamples();
+			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIPostProcessVertexDeclaration();
+			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+			TShaderMapRef<FLexUISimpleCopyTargetPS_ColorCorrect> PixelShader(GlobalShaderMap);
+			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+			PixelShader->SetParameters(RHICmdList, Src, SrcTextureSamplerState);
+			VertexShader->SetParameters(RHICmdList);
+
+			DrawFullScreenQuad(RHICmdList);
+		});
+}
+
+void FLexUIRenderer::CopyRenderTarget_BlendAlpha(FRDGBuilder& GraphBuilder, FGlobalShaderMap* GlobalShaderMap,
+                                                 FTextureRHIRef Src, FTextureRHIRef Dst, float BlendAlpha, FRHISamplerState* SrcTextureSamplerState)
+{
+	auto* PassParameters = GraphBuilder.AllocParameters<FRenderTargetParameters>();
+	PassParameters->RenderTargets[0] = FRenderTargetBinding(RegisterExternalTexture(GraphBuilder, Dst, TEXT("LexUICopyRenderTarget_BlendAlpha")), ERenderTargetLoadAction::ELoad);
+	GraphBuilder.AddPass(
+		RDG_EVENT_NAME("LexUICopyRenderTarget_BlendAlpha"),
+		PassParameters,
+		ERDGPassFlags::Raster,
+		[this, GlobalShaderMap, Src, Dst, SrcTextureSamplerState, BlendAlpha](FRHICommandListImmediate& RHICmdList)
+		{
+			RHICmdList.SetViewport(0, 0, 0, Dst->GetSizeXYZ().X, Dst->GetSizeXYZ().Y, 1.0f);
+
+
+			TShaderMapRef<FLexUISimplePostProcessVS> VertexShader(GlobalShaderMap);
+			FGraphicsPipelineStateInitializer GraphicsPSOInit;
+			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
+			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
+			GraphicsPSOInit.BlendState = TStaticBlendState<CW_RGBA, BO_Add, BF_SourceAlpha, BF_InverseSourceAlpha, BO_Add, BF_InverseDestAlpha, BF_One>::GetRHI();
+			GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+			GraphicsPSOInit.NumSamples = Dst->GetNumSamples();
+			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIPostProcessVertexDeclaration();
+			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+
+			TShaderMapRef<FLexUISimpleCopyTargetPS_BlendAlpha> PixelShader(GlobalShaderMap);
+			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+			PixelShader->SetParameters(RHICmdList, Src, SrcTextureSamplerState);
+			PixelShader->SetBlendAlpha(RHICmdList, BlendAlpha);
+
 			VertexShader->SetParameters(RHICmdList);
 
 			DrawFullScreenQuad(RHICmdList);

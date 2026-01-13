@@ -109,9 +109,21 @@ public:
 		FRDGBuilder& GraphBuilder,
 		FGlobalShaderMap* GlobalShaderMap,
 		FTextureRHIRef Src, FTextureRHIRef Dst,
-		bool ColorCorrect = false,
 		FRHISamplerState* SrcTextureSamplerState = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI()
 	);
+	void CopyRenderTarget_ColorCorrect(
+		FRDGBuilder& GraphBuilder,
+		FGlobalShaderMap* GlobalShaderMap,
+		FTextureRHIRef Src, FTextureRHIRef Dst,
+		FRHISamplerState* SrcTextureSamplerState = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI()
+	);
+	void CopyRenderTarget_BlendAlpha(
+		FRDGBuilder& GraphBuilder,
+		FGlobalShaderMap* GlobalShaderMap,
+		FTextureRHIRef Src, FTextureRHIRef Dst,
+		float BlendAlpha,
+		FRHISamplerState* SrcTextureSamplerState = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI()
+		);
 	void CopyRenderTargetOnMeshRegion(
 		FRDGBuilder& GraphBuilder,
 		FRDGTextureRef Dst,

@@ -270,9 +270,11 @@ void ULexUIManagerObject::OnActorLabelChanged(AActor* Actor)
 	{
 		if (auto Widget = Cast<ULexWidget>(RootComp))
 		{
-			Widget->SetDisplayName(Actor->GetActorLabel());
-
-			FLexUIUtils::NotifyPropertyChanged(Widget, ULexWidget::GetPropertyName_DisplayName());
+			if (Widget->GetDisplayName() != Actor->GetActorLabel())
+			{
+				Widget->SetDisplayName(Actor->GetActorLabel());
+				FLexUIUtils::NotifyPropertyChanged(Widget, ULexWidget::GetPropertyName_DisplayName());
+			}
 		}
 	}
 }
