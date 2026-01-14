@@ -195,9 +195,8 @@ void ULexUIBehaviour::Call_OnEnable()
 	}
 	else
 	{
-		if (bCanExecuteUpdate && !bIsAddedToUpdate)
+		if (bCanExecuteUpdate)
 		{
-			bIsAddedToUpdate = true;
 			ULexUIManagerWorldSubsystem::AddLexUIBehavioursForUpdate(this);
 		}
 	}
@@ -230,11 +229,7 @@ void ULexUIBehaviour::Call_OnDisable()
 	}
 	else
 	{
-		if (bIsAddedToUpdate)
-		{
-			bIsAddedToUpdate = false;
-			ULexUIManagerWorldSubsystem::RemoveLexUIBehavioursFromUpdate(this);
-		}
+		ULexUIManagerWorldSubsystem::RemoveLexUIBehavioursFromUpdate(this);
 	}
 }
 

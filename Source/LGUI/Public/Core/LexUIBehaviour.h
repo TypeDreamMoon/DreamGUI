@@ -49,7 +49,6 @@ protected:
 	uint8 bIsStartCalled : 1 = false;
 	uint8 bIsEnableCalled : 1 = false;
 	uint8 bCanExecuteUpdate : 1 = true;
-	uint8 bIsAddedToUpdate : 1 = false;
 	/** use this to tell if the class is compiled from blueprint, only blueprint can execute ReceiveXXX. */
 	uint8 bCanExecuteBlueprintEvent : 1;
 private:

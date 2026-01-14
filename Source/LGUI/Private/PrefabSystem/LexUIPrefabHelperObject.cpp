@@ -741,18 +741,8 @@ void ULexUIPrefabHelperObject::OnLevelActorDeleted(AActor* Actor)
 	if (ULexUIManagerObject::GetIsBlueprintCompiling())return;
 	if (!bCanNotifyAttachment)return;
 	if (Actor->GetWorld() != GetPrefabWorld())return;//only handle actor that belongs to PrefabInstanceWorld
-
-	auto ActorBelongsToPrefab = false;
-	for (auto& KeyValue : MapGuidToObject)
-	{
-		if (KeyValue.Value == Actor)
-		{
-			ActorBelongsToPrefab = true;
-			break;
-		}
-	}
-
-	if (ActorBelongsToPrefab//Cannot delete sub prefab's actor. Why cannot use IsActorBelongsToSubPrefab()? Because already dettached when deleted
+	
+	if (this->IsActorBelongsToSubPrefab(Actor)//Cannot delete sub prefab's actor
 		&& !this->SubPrefabMap.Contains(Actor)//But sub prefab's root actor is good to delete
 		)
 	{
