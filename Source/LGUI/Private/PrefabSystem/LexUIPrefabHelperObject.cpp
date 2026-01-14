@@ -27,10 +27,6 @@ void ULexUIPrefabHelperObject::BeginDestroy()
 	Super::BeginDestroy();
 #if WITH_EDITORONLY_DATA
 	bCanNotifyAttachment = false;
-	if (NewVersionPrefabNotificationArray.Num() > 0)
-	{
-		OnNewVersionDismissAllClicked();
-	}
 #endif
 }
 
@@ -139,7 +135,7 @@ bool ULexUIPrefabHelperObject::IsActorBelongsToThis(const AActor* InActor)
 	return false;
 }
 
-void ULexUIPrefabHelperObject::ClearInvalidObjectAndGuid()
+bool ULexUIPrefabHelperObject::ClearInvalidObjectAndGuid()
 {
 	TSet<FGuid> GuidsToRemove;
 	for (auto& KeyValue : MapGuidToObject)
@@ -165,6 +161,7 @@ void ULexUIPrefabHelperObject::ClearInvalidObjectAndGuid()
 			}
 		}
 	}
+	return GuidsToRemove.Num() > 0;
 }
 
 void ULexUIPrefabHelperObject::AddMemberPropertyToSubPrefab(AActor* InSubPrefabActor, UObject* InObject, FName InPropertyName)
@@ -743,6 +740,7 @@ void ULexUIPrefabHelperObject::OnLevelActorDeleted(AActor* Actor)
 {
 	if (ULexUIManagerObject::GetIsBlueprintCompiling())return;
 	if (!bCanNotifyAttachment)return;
+	if (Actor->GetWorld() != GetPrefabWorld())return;//only handle actor that belongs to PrefabInstanceWorld
 
 	auto ActorBelongsToPrefab = false;
 	for (auto& KeyValue : MapGuidToObject)
@@ -1902,135 +1900,30 @@ void ULexUIPrefabHelperObject::SetAnythingDirty()
 
 #if WITH_EDITOR
 #include "Editor.h"
-#include "Framework/Notifications/NotificationManager.h"
-#include "Widgets/Notifications/SNotificationList.h"
 #endif
 void ULexUIPrefabHelperObject::CheckPrefabVersion()
 {
-	CleanupInvalidSubPrefab();
-	GEditor->BeginTransaction(LOCTEXT("LGUIAutoUpdatePrefab_Transaction", "LGUI Update Prefabs"));
-	this->Modify();
+	bool bAnythingChanged = CleanupInvalidSubPrefab();
 	for (auto& KeyValue : SubPrefabMap)
 	{
 		auto& SubPrefabData = KeyValue.Value;
 		if (SubPrefabData.OverallVersionMD5 != SubPrefabData.PrefabAsset->GenerateOverallVersionMD5())
 		{
-				KeyValue.Key->GetLevel()->Modify();
-				this->RefreshOnSubPrefabDirty(SubPrefabData.PrefabAsset, KeyValue.Key);
-				auto InfoText = FText::Format(LOCTEXT("AutoUpdatePrefabInfo", "Auto update old version prefab to latest version:\nActor:'{0}' Prefab:'{1}'."), FText::FromString(KeyValue.Key->GetActorLabel()), FText::FromString(SubPrefabData.PrefabAsset->GetName()));
-				UE_LOG(LGUI, Log, TEXT("%s"), *InfoText.ToString());
-				FLexUIUtils::EditorNotification(InfoText, true);
+			this->RefreshOnSubPrefabDirty(SubPrefabData.PrefabAsset, KeyValue.Key);
+			bAnythingChanged = true;
 		}
 	}
 
-	this->ClearInvalidObjectAndGuid();
-	GEditor->EndTransaction();
+	if (this->ClearInvalidObjectAndGuid())
+	{
+		bAnythingChanged = true;
+	}
+	if (bAnythingChanged)
+	{
+		this->PrefabAsset->MarkPackageDirty();
+	}
 
 	ULexUIManagerObject::MarkBroadcastLevelActorListChanged();//make outliner refresh
-}
-
-void ULexUIPrefabHelperObject::OnNewVersionUpdateClicked(AActor* InPrefabRootActor)
-{
-	auto FoundIndex = NewVersionPrefabNotificationArray.IndexOfByPredicate([SubPrefabRootActor = InPrefabRootActor](const FNotificationContainer& Item) {
-		return Item.SubPrefabRootActor == SubPrefabRootActor;
-	});
-	if (FoundIndex != INDEX_NONE)
-	{
-		auto Item = NewVersionPrefabNotificationArray[FoundIndex];
-		if (Item.Notification.IsValid())
-		{
-			auto SubPrefabDataPtr = SubPrefabMap.Find(InPrefabRootActor);
-			if (SubPrefabDataPtr != nullptr)
-			{
-				GEditor->BeginTransaction(LOCTEXT("LGUIUpdatePrefab_Transaction", "LGUI Update Prefabs"));
-				InPrefabRootActor->GetLevel()->Modify();
-				this->Modify();
-				if (SubPrefabDataPtr->OverallVersionMD5 == SubPrefabDataPtr->PrefabAsset->GenerateOverallVersionMD5())
-				{
-					Item.Notification.Pin()->SetText(LOCTEXT("AlreadyUpdated", "Already updated."));
-				}
-				else
-				{
-					this->RefreshOnSubPrefabDirty(SubPrefabDataPtr->PrefabAsset, InPrefabRootActor);
-				}
-				this->ClearInvalidObjectAndGuid();
-				GEditor->EndTransaction();
-			}
-			Item.Notification.Pin()->SetCompletionState(SNotificationItem::CS_None);
-			Item.Notification.Pin()->ExpireAndFadeout();
-			ULexUIManagerObject::MarkBroadcastLevelActorListChanged();//make outliner refresh
-		}
-		NewVersionPrefabNotificationArray.RemoveAt(FoundIndex);
-	}
-}
-void ULexUIPrefabHelperObject::OnNewVersionDismissClicked(AActor* InPrefabRootActor)
-{
-	auto FoundIndex = NewVersionPrefabNotificationArray.IndexOfByPredicate([SubPrefabRootActor = InPrefabRootActor](const FNotificationContainer& Item) {
-		return Item.SubPrefabRootActor == SubPrefabRootActor;
-		});
-	if (FoundIndex != INDEX_NONE)
-	{
-		auto Item = NewVersionPrefabNotificationArray[FoundIndex];
-		if (Item.Notification.IsValid())
-		{
-			Item.Notification.Pin()->SetCompletionState(SNotificationItem::CS_None);
-			Item.Notification.Pin()->ExpireAndFadeout();
-		}
-		NewVersionPrefabNotificationArray.RemoveAt(FoundIndex);
-	}
-}
-
-void ULexUIPrefabHelperObject::OnNewVersionUpdateAllClicked()
-{
-	GEditor->BeginTransaction(LOCTEXT("LGUIUpdateAllPrefab_Transaction", "LGUI Update Prefabs"));
-	this->Modify();
-
-	bool bUpdated = false;
-	for (auto& Item : NewVersionPrefabNotificationArray)
-	{
-		if (Item.Notification.IsValid())
-		{
-			if (Item.SubPrefabRootActor.IsValid())
-			{
-				auto SubPrefabDataPtr = SubPrefabMap.Find(Item.SubPrefabRootActor.Get());
-				if (SubPrefabDataPtr != nullptr)
-				{
-					if (SubPrefabDataPtr->OverallVersionMD5 == SubPrefabDataPtr->PrefabAsset->GenerateOverallVersionMD5())
-					{
-						Item.Notification.Pin()->SetText(LOCTEXT("AlreadyUpdated", "Already updated."));
-					}
-					else
-					{
-						Item.SubPrefabRootActor->GetLevel()->Modify();
-						this->RefreshOnSubPrefabDirty(SubPrefabDataPtr->PrefabAsset, Item.SubPrefabRootActor.Get());
-						bUpdated = true;
-					}
-				}
-			}
-			Item.Notification.Pin()->SetCompletionState(SNotificationItem::CS_None);
-			Item.Notification.Pin()->ExpireAndFadeout();
-		}
-	}
-	NewVersionPrefabNotificationArray.Empty();
-	this->ClearInvalidObjectAndGuid();
-	GEditor->EndTransaction();
-
-	if (bUpdated)
-	{
-		ULexUIManagerObject::MarkBroadcastLevelActorListChanged();//make outliner refresh
-	}
-}
-void ULexUIPrefabHelperObject::OnNewVersionDismissAllClicked()
-{
-	for (auto& Item : NewVersionPrefabNotificationArray)
-	{
-		if (Item.Notification.IsValid())
-		{
-			Item.Notification.Pin()->SetCompletionState(SNotificationItem::CS_None);
-			Item.Notification.Pin()->ExpireAndFadeout();
-		}
-	}
-	NewVersionPrefabNotificationArray.Empty();
 }
 
 ULexUIPrefabHelperObject* ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(AActor* InActor)

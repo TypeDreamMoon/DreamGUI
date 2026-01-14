@@ -5,6 +5,8 @@
 #include "LexUIEditorTools.h"
 #include "AssetRegistry/AssetData.h"
 #include "Editor.h"
+#include "LGUIEditorModule.h"
+#include "Core/LexUIManager.h"
 #include "Core/Actor/LexWidgetRootActor.h"
 #include "Core/Components/LexWidget.h"
 #include "Event/LexScreenSpaceRaycaster.h"
@@ -58,6 +60,24 @@ void ULexUIPrefabActorFactory::PostSpawnActor(UObject* Asset, AActor* InNewActor
 		auto ParentComp = SelectedActor->GetRootComponent();
 		PrefabActor->GetRootComponent()->AttachToComponent(ParentComp, FAttachmentTransformRules::KeepRelativeTransform);
 	}
+
+	auto World = InNewActor->GetWorld();
+	if (World && World->WorldType != EWorldType::EditorPreview && !World->IsGameWorld())//Edit mode and not BlueprintEditorPreview
+	{
+		ULexUIManagerObject::AddOneShotTickFunction([WeakPrefabActor = MakeWeakObjectPtr(PrefabActor)]()
+		{
+			if (WeakPrefabActor.IsValid())
+			{
+				WeakPrefabActor->CheckNecessaryObjects();
+			}
+		}, 1);
+	}
+}
+
+void ULexUIPrefabActorFactory::PostPlaceAsset(TArrayView<const FTypedElementHandle> InHandle,
+	const FAssetPlacementInfo& InPlacementInfo, const FPlacementOptions& InPlacementOptions)
+{
+	Super::PostPlaceAsset(InHandle, InPlacementInfo, InPlacementOptions);
 }
 
 UObject* ULexUIPrefabActorFactory::GetAssetFromActorInstance(AActor* ActorInstance)

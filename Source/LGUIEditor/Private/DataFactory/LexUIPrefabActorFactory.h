@@ -16,6 +16,7 @@ public:
 	virtual bool CanCreateActorFrom(const FAssetData& AssetData, FText& OutErrorMsg) override;
 	virtual bool PreSpawnActor(UObject* Asset, FTransform& InOutLocation) override;
 	virtual void PostSpawnActor(UObject* Asset, AActor* NewActor) override;
+	virtual void PostPlaceAsset(TArrayView<const FTypedElementHandle> InHandle, const FAssetPlacementInfo& InPlacementInfo, const FPlacementOptions& InPlacementOptions) override;
 	virtual UObject* GetAssetFromActorInstance(AActor* ActorInstance) override;
 	virtual UClass* GetDefaultActorClass(const FAssetData& AssetData) override;
 	//virtual FQuat AlignObjectToSurfaceNormal(const FVector& InSurfaceNormal, const FQuat& ActorRotation) const override;

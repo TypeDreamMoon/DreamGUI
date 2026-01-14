@@ -25,7 +25,10 @@ FLexUIClipData::FLexUIClipData(const TSharedPtr<FLexUIClipData>& InParent, ULexU
 
 FLexUIClipData::~FLexUIClipData()
 {
-	this->DataTexture->UnregisterBuffer(this->BufferStartPos);
+	if (DataTexture.IsValid())
+	{
+		this->DataTexture->UnregisterBuffer(this->BufferStartPos);
+	}
 }
 
 void FLexUIClipData::Add2DTranslationToMatrix(FMatrix44d& Matrix, const FVector2d& Translation)

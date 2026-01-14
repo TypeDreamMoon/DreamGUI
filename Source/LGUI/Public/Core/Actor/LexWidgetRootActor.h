@@ -24,13 +24,13 @@ protected:
 	void LoadPrefab();
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-	void CheckNecessaryObjects();
 	void ApplyListInSceneOutliner();
 	static bool bNeedCheckEventSystem;
 	static bool bNeverCheckEventSystem;
 	static bool bNeedCheckRaycasterSource;
 	static bool bNeverCheckRaycasterSource;
 public:
+	void CheckNecessaryObjects();
 	static void MarkNeedCheckNecessaryObjects();
 	void CheckPrefabVersion();
 #endif

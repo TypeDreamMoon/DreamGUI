@@ -61,7 +61,7 @@ public:
 	bool IsActorBelongsToMissingSubPrefab(const AActor* InActor);
 	bool IsSubPrefabRootActor(const AActor* InActor);
 	bool IsActorBelongsToThis(const AActor* InActor);
-	void ClearInvalidObjectAndGuid();
+	bool ClearInvalidObjectAndGuid();
 	void AddMemberPropertyToSubPrefab(AActor* InSubPrefabActor, UObject* InObject, FName InPropertyName);
 	void RemoveMemberPropertyFromSubPrefab(AActor* InSubPrefabActor, UObject* InObject, FName InPropertyName);
 	void RemoveAllMemberPropertyFromSubPrefab(AActor* InSubPrefabActor, bool InIncludeRootTransform);
@@ -98,7 +98,6 @@ public:
 	void SetNothingDirty();
 	void SetAnythingDirty();
 	void CheckPrefabVersion();
-	void DismissAllVersionNotifications() { OnNewVersionDismissAllClicked(); }
 	FSimpleMulticastDelegate OnSubPrefabNewVersionUpdated;
 	/**
 	 * @return	true if anything changed
@@ -136,17 +135,6 @@ private:
 	 * @return true if anything change
 	 */
 	bool CleanupInvalidLinkToSubPrefabObject();
-
-	struct FNotificationContainer
-	{
-		TWeakObjectPtr<AActor> SubPrefabRootActor;
-		TWeakPtr<SNotificationItem> Notification;
-	};
-	TArray<FNotificationContainer> NewVersionPrefabNotificationArray;
-	void OnNewVersionUpdateClicked(AActor* InPrefabRootActor);
-	void OnNewVersionDismissClicked(AActor* InPrefabRootActor);
-	void OnNewVersionUpdateAllClicked();
-	void OnNewVersionDismissAllClicked();
 
 public:
 	static ULexUIPrefabHelperObject* GetPrefabHelperObject_WhichManageThisActor(AActor* InActor);
