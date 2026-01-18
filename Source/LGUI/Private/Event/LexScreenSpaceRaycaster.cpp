@@ -53,7 +53,7 @@ bool ULexScreenSpaceRaycaster::ShouldStartDrag(ULexPointerEventData* InPointerEv
 	FVector2D pressMousePos = FVector2D(InPointerEventData->PressPointerPosition);
 	return FVector2D::DistSquared(pressMousePos, mousePos) > DragThresholdSquare;
 }
-bool ULexScreenSpaceRaycaster::GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd)
+bool ULexScreenSpaceRaycaster::GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, float& OutRayLength)
 {
 	if (!RootCanvas.IsValid())
 		return false;
@@ -67,13 +67,14 @@ bool ULexScreenSpaceRaycaster::GenerateRay(ULexPointerEventData* InPointerEventD
 
 	DeprojectViewPointToWorld(ViewProjectionMatrix, mousePos01, OutRayOrigin, OutRayDirection);
 	OutRayEnd = OutRayOrigin + OutRayDirection * RayLength;
+	OutRayLength = RayLength;
 	return true;
 }
 
 void ULexScreenSpaceRaycaster::Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResult)
 {
 	if (!RootCanvas.IsValid())return;
-	Super::RaycastUI(InPointerEventData, RootCanvas.Get(), TOptional<ETraceTypeQuery>(), OutRayOrigin, OutRayDirection, OutRayEnd, OutHitResult);
+	Super::RaycastUI(InPointerEventData, RootCanvas.Get(), OutRayOrigin, OutRayDirection, OutRayEnd, OutHitResult);
 }
 
 void ULexScreenSpaceRaycaster::DeprojectViewPointToWorld(const FMatrix& InViewProjectionMatrix, const FVector2D& InViewPoint01, FVector& OutWorldLocation, FVector& OutWorldDirection)

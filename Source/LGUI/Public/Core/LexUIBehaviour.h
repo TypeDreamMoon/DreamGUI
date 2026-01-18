@@ -140,4 +140,7 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "LexUIBehaviour")
 	ULexWidget* GetWidget() const;
+	
+	UFUNCTION(BlueprintCallable, Category = "LexUIBehaviour")
+	void DestroyWidget()const;
 };

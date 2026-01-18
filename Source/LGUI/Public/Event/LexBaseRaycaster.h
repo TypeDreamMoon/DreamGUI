@@ -41,9 +41,10 @@ protected:
 		ELexUIEventFireType EventFireType = ELexUIEventFireType::TargetActorAndAllItsComponents;
 	
 	FVector CurrentRayOrigin = FVector::ZeroVector, CurrentRayDirection = FVector(1, 0, 0);
+	float CurrentRayLength = 0.0f;
 public:
 	/** Called by raycaster to get ray */
-	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd) PURE_VIRTUAL(ULGUIBaseRaycaster::GenerateRay, return false;);
+	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, float& OutRayLength) PURE_VIRTUAL(ULGUIBaseRaycaster::GenerateRay, return false;);
 	/** Called by InputModule to raycast hit test */
 	virtual void Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResultArray) PURE_VIRTUAL(ULGUIBaseRaycaster::Raycast, );
 	/** Called by InputModule to decide if current trigger press need to convert to drag */
@@ -65,10 +66,12 @@ public:
 	FVector GetRayOrigin()const { return CurrentRayOrigin; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	FVector GetRayDirection()const { return CurrentRayDirection; }
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	virtual float GetRayLength()const { return CurrentRayLength; }
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	void SetPointerID(int32 Value);
 protected:
-	void RaycastUI(ULexPointerEventData* InPointerEventData, ULexCanvas* InRootCanvas, TOptional<ETraceTypeQuery> InOptionalTraceChannel, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResultArray);
+	void RaycastUI(ULexPointerEventData* InPointerEventData, ULexCanvas* InRootCanvas, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResultArray);
 	void RaycastWorld(ULexPointerEventData* InPointerEventData, bool InRequireFaceIndex, ETraceTypeQuery InTraceChannel, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResultArray);
 };

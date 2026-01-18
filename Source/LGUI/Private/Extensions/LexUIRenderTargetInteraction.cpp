@@ -1,11 +1,11 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Extensions/LGUIRenderTargetInteraction.h"
+#include "Extensions/LexUIRenderTargetInteraction.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexCanvas.h"
 #include "LGUI.h"
 #include "Event/LexWorldSpaceRaycasterBase.h"
-#include "Extensions/LGUIRenderTargetGeometrySource.h"
+#include "Extensions/LexUIRenderTargetGeometrySource.h"
 #include "Event/LexScreenSpaceRaycaster.h"
 #include "Engine/World.h"
 #include "Event/LexEventSystem.h"
@@ -13,41 +13,41 @@
 
 #define LOCTEXT_NAMESPACE "LGUIRenderTargetInteraction"
 
-ULGUIRenderTargetInteraction::ULGUIRenderTargetInteraction()
+ULexUIRenderTargetInteraction::ULexUIRenderTargetInteraction()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = true;
 }
 
-void ULGUIRenderTargetInteraction::BeginPlay()
+void ULexUIRenderTargetInteraction::BeginPlay()
 {
 	Super::BeginPlay();
 	PointerEventData = NewObject<ULexPointerEventData>(this);
 	PointerEventData->PointerID = -1;//make it -1, different from LGUIEventSystem created
 }
 
-void ULGUIRenderTargetInteraction::OnRegister()
+void ULexUIRenderTargetInteraction::OnRegister()
 {
 	Super::OnRegister();
 }
 
-void ULGUIRenderTargetInteraction::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void ULexUIRenderTargetInteraction::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	if (!IsValid(LineTraceSource))
 	{
-		LineTraceSource = GetOwner()->FindComponentByInterface(ULGUIRenderTargetInteractionSourceInterface::StaticClass());
+		LineTraceSource = GetOwner()->FindComponentByInterface(ULexUIRenderTargetInteractionSourceInterface::StaticClass());
 		if (!IsValid(LineTraceSource))
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d InteractionSource is not valid! LGUIRenderTargetInteraction need a valid component which inherit %s on the same actor!")
-				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(ULGUIRenderTargetInteractionSourceInterface::StaticClass()->GetName()));
+				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(ULexUIRenderTargetInteractionSourceInterface::StaticClass()->GetName()));
 			return;
 		}
 	}
 	if (!TargetCanvas.IsValid())
 	{
-		TargetCanvas = ILGUIRenderTargetInteractionSourceInterface::Execute_GetTargetCanvas(LineTraceSource);
+		TargetCanvas = ILexUIRenderTargetInteractionSourceInterface::Execute_GetTargetCanvas(LineTraceSource);
 		if (!TargetCanvas.IsValid())
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d TargetCanvas is not valid! LGUIRenderTargetInteraction need to get a vaild LGUICanvas from InteractionSource!")
@@ -65,16 +65,16 @@ void ULGUIRenderTargetInteraction::TickComponent(float DeltaTime, ELevelTick Tic
 	ULexPointerInputModule::ProcessPointerEvent(nullptr, PointerEventData, lineTraceHitSomething, hitResultContainer, resultHitSomething, hitResult);
 }
 
-void ULGUIRenderTargetInteraction::ActivateRaycaster()
+void ULexUIRenderTargetInteraction::ActivateRaycaster()
 {
 	//skip Activate && Deactivate, because ULGUIRenderTargetInteraction will process input and interaction by itself
 }
-void ULGUIRenderTargetInteraction::DeactivateRaycaster()
+void ULexUIRenderTargetInteraction::DeactivateRaycaster()
 {
 	
 }
 
-bool ULGUIRenderTargetInteraction::LineTrace(FLexUIHitResult& OutHitResult)
+bool ULexUIRenderTargetInteraction::LineTrace(FLexUIHitResult& OutHitResult)
 {
 	if (InputPointerEventData->Raycaster == nullptr)return false;
 	auto RayOrigin = InputPointerEventData->Raycaster->GetRayOrigin();
@@ -83,7 +83,7 @@ bool ULGUIRenderTargetInteraction::LineTrace(FLexUIHitResult& OutHitResult)
 	auto RayEnd = RayOrigin + RayDirection * RayLength;
 
 	FVector2D HitUV;
-	if (ILGUIRenderTargetInteractionSourceInterface::Execute_PerformLineTrace(LineTraceSource, InputPointerEventData->FaceIndex, InputPointerEventData->WorldPoint, RayOrigin, RayEnd, HitUV))
+	if (ILexUIRenderTargetInteractionSourceInterface::Execute_PerformLineTrace(LineTraceSource, InputPointerEventData->FaceIndex, InputPointerEventData->WorldPoint, RayOrigin, RayEnd, HitUV))
 	{
 		auto ViewProjectionMatrix = TargetCanvas->GetViewProjectionMatrix();
 		FVector2D mousePos01 = HitUV;
@@ -115,7 +115,7 @@ bool ULGUIRenderTargetInteraction::LineTrace(FLexUIHitResult& OutHitResult)
 	return false;
 }
 
-bool ULGUIRenderTargetInteraction::ShouldStartDrag(ULexPointerEventData* InPointerEventData)
+bool ULexUIRenderTargetInteraction::ShouldStartDrag(ULexPointerEventData* InPointerEventData)
 {
 	if (bHoldToDrag)
 	{
@@ -128,22 +128,22 @@ bool ULGUIRenderTargetInteraction::ShouldStartDrag(ULexPointerEventData* InPoint
 	FVector2D pressMousePos = FVector2D(InPointerEventData->PressPointerPosition);
 	return FVector2D::DistSquared(pressMousePos, mousePos) > DragThresholdSquare;
 }
-void ULGUIRenderTargetInteraction::Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResultArray)
+void ULexUIRenderTargetInteraction::Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResultArray)
 {
-	return Super::RaycastUI(InPointerEventData, TargetCanvas.Get(), TOptional<ETraceTypeQuery>(), OutRayOrigin, OutRayDirection, OutRayEnd, OutHitResultArray);
+	return Super::RaycastUI(InPointerEventData, TargetCanvas.Get(), OutRayOrigin, OutRayDirection, OutRayEnd, OutHitResultArray);
 }
 
 
-bool ULGUIRenderTargetInteraction::OnPointerEnter_Implementation(ULexPointerEventData* EventData)
+bool ULexUIRenderTargetInteraction::OnPointerEnter_Implementation(ULexPointerEventData* EventData)
 {
 	InputPointerEventData = EventData;
 	return bAllowEventBubbleUp;
 }
-bool ULGUIRenderTargetInteraction::OnPointerExit_Implementation(ULexPointerEventData* EventData)
+bool ULexUIRenderTargetInteraction::OnPointerExit_Implementation(ULexPointerEventData* EventData)
 {
 	return bAllowEventBubbleUp;
 }
-bool ULGUIRenderTargetInteraction::OnPointerDown_Implementation(ULexPointerEventData* EventData)
+bool ULexUIRenderTargetInteraction::OnPointerDown_Implementation(ULexPointerEventData* EventData)
 {
 	PointerEventData->PressPointerPosition = PointerEventData->PointerPosition;
 	PointerEventData->PressTime = GetWorld()->TimeSeconds;
@@ -151,13 +151,13 @@ bool ULGUIRenderTargetInteraction::OnPointerDown_Implementation(ULexPointerEvent
 	PointerEventData->MouseButtonType = EventData->MouseButtonType;
 	return bAllowEventBubbleUp;
 }
-bool ULGUIRenderTargetInteraction::OnPointerUp_Implementation(ULexPointerEventData* EventData)
+bool ULexUIRenderTargetInteraction::OnPointerUp_Implementation(ULexPointerEventData* EventData)
 {
 	PointerEventData->ReleaseTime = GetWorld()->TimeSeconds;
 	PointerEventData->bNowIsTriggerPressed = false;
 	return bAllowEventBubbleUp;
 }
-bool ULGUIRenderTargetInteraction::OnPointerScroll_Implementation(ULexPointerEventData* EventData)
+bool ULexUIRenderTargetInteraction::OnPointerScroll_Implementation(ULexPointerEventData* EventData)
 {
 	auto inAxisValue = EventData->ScrollAxisValue;
 	if (IsValid(PointerEventData->EnterComponent))

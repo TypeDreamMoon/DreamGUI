@@ -2,13 +2,12 @@
 
 #pragma once
 
-#if 0
 #include "CoreMinimal.h"
-#include "Core/LGUILifeCycleBehaviour.h"
 #include "Components/WidgetInteractionComponent.h"
-#include "Event/Interface/LGUIPointerEnterExitInterface.h"
-#include "Event/Interface/LGUIPointerDownUpInterface.h"
-#include "Event/Interface/LGUIPointerScrollInterface.h"
+#include "Core/LexUIBehaviour.h"
+#include "Event/Interface/LexPointerDownUpInterface.h"
+#include "Event/Interface/LexPointerEnterExitInterface.h"
+#include "Event/Interface/LexPointerScrollInterface.h"
 #include "UIWidgetInteraction.generated.h"
 
 class UUIWidget;
@@ -34,10 +33,10 @@ public:
  * This component should be placed on a actor which have a LGUIRenderTargetGeometrySource component.
  */
 UCLASS(ClassGroup = LGUI, meta = (BlueprintSpawnableComponent), Blueprintable)
-class LGUI_API UUIWidgetInteraction : public ULGUILifeCycleBehaviour
-	, public ILGUIPointerEnterExitInterface
-	, public ILGUIPointerDownUpInterface
-	, public ILGUIPointerScrollInterface
+class LGUI_API UUIWidgetInteraction : public ULexUIBehaviour
+	, public ILexPointerEnterExitInterface
+	, public ILexPointerDownUpInterface
+	, public ILexPointerScrollInterface
 {
 	GENERATED_BODY()
 	
@@ -51,19 +50,19 @@ protected:
 	UPROPERTY(VisibleAnywhere, Transient, Category = LGUI, AdvancedDisplay)
 		UUIWidgetInteractionManager* Helper = nullptr;
 
-	virtual bool OnPointerEnter_Implementation(ULGUIPointerEventData* EventData)override;
-	virtual bool OnPointerExit_Implementation(ULGUIPointerEventData* EventData)override;
-	virtual bool OnPointerDown_Implementation(ULGUIPointerEventData* EventData)override;
-	virtual bool OnPointerUp_Implementation(ULGUIPointerEventData* EventData)override;
-	virtual bool OnPointerScroll_Implementation(ULGUIPointerEventData* EventData)override;
+	virtual bool OnPointerEnter_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerExit_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerDown_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerUp_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerScroll_Implementation(ULexPointerEventData* EventData)override;
 
-	ULGUIPointerEventData* CurrentPointerEventData = nullptr;
+	ULexPointerEventData* CurrentPointerEventData = nullptr;
 
 public:
 
 	// Begin ActorComponent interface
 	virtual void Awake() override;
-	virtual void OnDestroy() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void Update(float DeltaTime) override;
 	// End UActorComponent
 
@@ -259,4 +258,3 @@ private:
 	/** Returns the path to the widget that is currently beneath the pointer */
 	FWidgetPath DetermineWidgetUnderPointer();
 };
-#endif

@@ -12,14 +12,14 @@
 #include "Engine/GameInstance.h"
 #include "Engine/GameViewportClient.h"
 #include "Core/LexUICustomMeshSource.h"
+#include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
 
 #define LOCTEXT_NAMESPACE "UIWidget"
 
-#if 0
 UUIWidget::UUIWidget(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
-	bTickInEditor = true;
+	
 }
 
 bool UUIWidget::SupportDrawCallBatching()const
@@ -149,7 +149,7 @@ void UUIWidget::OnWidgetVisibilityChanged(ESlateVisibility InVisibility)
 	ensure(UmgWidget);
 	ensure(bOnWidgetVisibilityChangedRegistered);
 
-	if (InVisibility != ELexWidgetVisibility::Collapsed && InVisibility != ELexWidgetVisibility::Hidden)
+	if (InVisibility != ESlateVisibility::Collapsed && InVisibility != ESlateVisibility::Hidden)
 	{
 		if (ShouldReenableComponentTickWhenWidgetBecomesVisible())
 		{
@@ -199,7 +199,7 @@ void UUIWidget::SetTickMode(ETickMode InTickMode)
 bool UUIWidget::IsWidgetVisible() const
 {
 	//  If we are in World Space, if the component or the SlateWindow is not visible the Widget is not visible.
-	if ((!GetWidget()->IsVisibleForRender() || !SlateWindow.IsValid() || !SlateWindow->GetVisibility().IsVisible()))
+	if ((!GetWidget()->GetWidgetActiveInHierarchy() || !SlateWindow.IsValid() || !SlateWindow->GetVisibility().IsVisible()))
 	{
 		return false;
 	}
@@ -230,9 +230,9 @@ void UUIWidget::OnUnregister()
 	Super::OnUnregister();
 }
 
-void UUIWidget::DestroyComponent()
+void UUIWidget::BeginDestroy()
 {
-	Super::DestroyComponent();
+	Super::BeginDestroy();
 
 	ReleaseResources();
 }
@@ -361,6 +361,43 @@ void UUIWidget::TickComponent(float DeltaTime)
 #endif // !UE_SERVER
 }
 
+void UUIWidget::SetComponentTickEnabled(bool bEnable)
+{
+	if (bIsTickEnabled == bEnable)return;
+	if (GetWorld())
+	{
+		if (bEnable)
+		{
+#if WITH_EDITOR
+			if (!GetWorld()->IsGameWorld())
+			{
+				EditorTickHandle = ULexUIManagerObject::GetEditorTickDelegate().AddUObject(this, &UUIWidget::TickComponent);
+			}
+			else
+#endif
+			{
+				Tweener = ULTweenBPLibrary::UpdateCall(this, FLTweenUpdateDelegate::CreateUObject(this, &UUIWidget::TickComponent));
+			}
+		}
+		else
+		{
+#if WITH_EDITOR
+			if (!GetWorld()->IsGameWorld())
+			{
+				if (EditorTickHandle.IsValid())
+					ULexUIManagerObject::GetEditorTickDelegate().Remove(EditorTickHandle);
+			}
+			else
+#endif
+			{
+				if (Tweener.IsValid())
+					ULTweenBPLibrary::KillIfIsTweening(this, Tweener.Get());
+			}
+		}
+		bIsTickEnabled = bEnable;
+	}
+}
+
 bool UUIWidget::ShouldReenableComponentTickWhenWidgetBecomesVisible() const
 {
 	return (TickMode != ETickMode::Disabled) || bRedrawRequested;
@@ -438,7 +475,7 @@ void UUIWidget::DrawWidgetToRenderTarget(float DeltaTime)
 
 		LastWidgetRenderTime = GetCurrentTime();
 
-		if (TickMode == ETickMode::Disabled && IsComponentTickEnabled())
+		if (TickMode == ETickMode::Disabled && bIsTickEnabled)
 		{
 			SetComponentTickEnabled(false);
 		}
@@ -492,7 +529,7 @@ void UUIWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 		{
 			if (IsValid(CustomMesh))//custom mesh use geometry raycast to get precise uv
 			{
-				this->SetRaycastType(ELexVisualHitTestType::Mesh);
+				this->SetRaycastType(ELexVisualRaycastType::Mesh);
 			}
 		}
 	}
@@ -785,6 +822,5 @@ void UUIWidget::SetWidgetClass(TSubclassOf<UUserWidget> InWidgetClass)
 		}
 	}
 }
-#endif
 
 #undef LOCTEXT_NAMESPACE

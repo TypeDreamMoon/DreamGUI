@@ -2787,7 +2787,7 @@ void ULexCanvas::RegisterCanvasScaler()
 #if WITH_EDITOR
 	if (GetWorld() && !GetWorld()->IsGameWorld())
 	{
-		EditorTickDelegateHandle = ULexUIManagerObject::RegisterEditorTickFunction([this](float deltaTime) {
+		EditorTickDelegateHandle = ULexUIManagerObject::GetEditorTickDelegate().AddWeakLambda(this, [this](float deltaTime) {
 			this->OnEditorTick(deltaTime);
 			});
 	}
@@ -2828,7 +2828,7 @@ void ULexCanvas::UnregisterCanvasScaler()
 #if WITH_EDITOR
 	if (EditorTickDelegateHandle.IsValid())
 	{
-		ULexUIManagerObject::UnregisterEditorTickFunction(EditorTickDelegateHandle);
+		ULexUIManagerObject::GetEditorTickDelegate().Remove(EditorTickDelegateHandle);
 	}
 #endif
 	//reset the canvasScale to default

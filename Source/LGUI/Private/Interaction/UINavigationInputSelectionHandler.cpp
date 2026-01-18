@@ -68,6 +68,7 @@ void UUINavigationInputSelectionHandler::SelectNone()
 	}
 	auto Widget = GetWidget();
 	if (!Widget)return;
+	if (!CurrentSelected.IsValid())return;
 
 	for (auto& Tweener : TweenerCollection)
 	{
@@ -75,11 +76,11 @@ void UUINavigationInputSelectionHandler::SelectNone()
 	}
 	TweenerCollection.Reset();
 	
-	if (CurrentSelected.IsValid())
+	auto Tweener = Widget->RenderOpacityTo(0.0f, AnimDuration, 0, ELTweenEase::Linear)
+	->OnComplete([=, this]()
 	{
-		auto Tweener = Widget->RenderOpacityTo(0.0f, AnimDuration, 0, ELTweenEase::Linear);
-		TweenerCollection.Add(Tweener);
-		Widget->AttachToComponent(CurrentSelected->GetWidgetRootActor()->GetLexWidget(), FAttachmentTransformRules::KeepWorldTransform);
-	}
+		this->DestroyWidget();
+	});
+	TweenerCollection.Add(Tweener);
 	CurrentSelected = nullptr;
 }

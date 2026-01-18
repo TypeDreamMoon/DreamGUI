@@ -480,7 +480,6 @@ void ULexPointerInputModule::ProcessPointerEvent(ULexEventSystem* eventSystem, U
 }
 bool ULexPointerInputModule::Navigate(ELexUINavigationDirection InDirection, ULexPointerEventData* InPointerEventData, FLexUIHitResult& OutLexUIHitResult)
 {
-	if (InDirection == ELexUINavigationDirection::None)return false;
 	auto CurrentHover = InPointerEventData->HighlightComponentForNavigation.Get();
 	UActorComponent* CurrentNavigateObject = nullptr;
 	if (IsValid(CurrentHover))

@@ -2,12 +2,9 @@
 
 #pragma once
 
-#if 0
 #include "CoreMinimal.h"
-#include "PrefabSystem/ILGUIPrefabInterface.h"
-#include "Core/Components/UICustomMesh.h"
+#include "Core/Components/LexCustomMesh.h"
 #include "Components/WidgetComponent.h"
-#include "Core/Actor/LexWidgetActor.h"
 #include "UIWidget.generated.h"
 
 class ULGUICustomMesh;
@@ -16,7 +13,7 @@ class ULGUICustomMesh;
  * LGUI Widget can render a UMG widget as LGUI's element, and interact with it by UIWidgetInteraction component.
  */
 UCLASS(ClassGroup = (LGUI), NotBlueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIWidget : public UUICustomMesh
+class LGUI_API UUIWidget : public ULexCustomMesh
 {
 	GENERATED_BODY()
 	
@@ -32,12 +29,19 @@ protected:
 	virtual void EndPlay() override;
 	virtual void OnRegister() override;
 	virtual void OnUnregister() override;
-	virtual void DestroyComponent() override;
-	void TickComponent(float DeltaTime);
+	virtual void BeginDestroy() override;
 #if WITH_EDITOR
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
+private:
+	void TickComponent(float DeltaTime);
+	void SetComponentTickEnabled(bool bEnable);
+#if WITH_EDITOR
+	FDelegateHandle EditorTickHandle;
+#endif
+	TWeakObjectPtr<class ULTweener> Tweener = nullptr;
+	bool bIsTickEnabled = false;
 public:
 	/** Ensures the user widget is initialized */
 	virtual void InitWidget();
@@ -306,4 +310,3 @@ private:
 	bool bRenderCleared;
 	bool bOnWidgetVisibilityChangedRegistered;
 };
-#endif

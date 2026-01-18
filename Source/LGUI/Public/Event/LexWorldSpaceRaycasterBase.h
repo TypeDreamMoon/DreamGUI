@@ -100,7 +100,7 @@ protected:
 	TEnumAsByte<ETraceTypeQuery> TraceChannel;
 public:
 	virtual bool GetAffectByGamePause()const override;
-	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd) override;
+	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, float& OutRayLength) override;
 	virtual bool ShouldStartDrag(ULexPointerEventData* InPointerEventData) override;
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)

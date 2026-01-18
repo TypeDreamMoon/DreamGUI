@@ -7,35 +7,35 @@
 #include "LexUIComponentReference.h"
 #include "Interfaces/Interface_CollisionDataProvider.h"
 #include "DynamicMeshBuilder.h"
-#include "LGUIRenderTargetInteraction.h"
-#include "LGUIRenderTargetGeometrySource.generated.h"
+#include "LexUIRenderTargetInteraction.h"
+#include "LexUIRenderTargetGeometrySource.generated.h"
 
 class ULexCanvas;
 class ULexWorldSpaceRaycasterSource;
 
 UENUM(BlueprintType, Category = LGUI)
-enum class ELGUIRenderTargetGeometryMode : uint8
+enum class ELexUIRenderTargetGeometryMode : uint8
 {
 	Plane = 0,
 	Cylinder = 1,
 
 	/**
 	 * RenderTarget mapped onto a static mesh. This component must attach to target StaticMeshComponent so we can find and use it.
-	 * And in order to interact by LGUIRenderTargetInteraction, the 'Support UV From Hit Results' must be enabled in project settings.
+	 * And in order to interact by LexUIRenderTargetInteraction, the 'Support UV From Hit Results' must be enabled in project settings.
 	 */
 	StaticMesh = 100,
 };
 
 /**
- * This component can generate a geometry to display LGUI's render target, and perform interaction source for LGUIRenderTargetInteraction component.
+ * This component can generate a geometry to display LexUI's render target, and perform interaction source for LexUIRenderTargetInteraction component.
  */
 UCLASS(ClassGroup = LGUI, Blueprintable, meta = (BlueprintSpawnableComponent), hidecategories = (Object, Activation, "Components|Activation"))
-class LGUI_API ULGUIRenderTargetGeometrySource : public UMeshComponent, public IInterface_CollisionDataProvider, public ILGUIRenderTargetInteractionSourceInterface
+class LGUI_API ULexUIRenderTargetGeometrySource : public UMeshComponent, public IInterface_CollisionDataProvider, public ILexUIRenderTargetInteractionSourceInterface
 {
 	GENERATED_BODY()
 	
 public:	
-	ULGUIRenderTargetGeometrySource();
+	ULexUIRenderTargetGeometrySource();
 	virtual void BeginPlay()override;
 	virtual void EndPlay(EEndPlayReason::Type Reason)override;
 
@@ -43,7 +43,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = LGUI)
 		FLexUIComponentReference TargetCanvas;
 	UPROPERTY(EditAnywhere, Category = LGUI)
-		ELGUIRenderTargetGeometryMode GeometryMode = ELGUIRenderTargetGeometryMode::Plane;
+		ELexUIRenderTargetGeometryMode GeometryMode = ELexUIRenderTargetGeometryMode::Plane;
 	UPROPERTY(EditAnywhere, Category = LGUI)
 		FVector2D Pivot = FVector2D(0.5f, 0.5f);
 	/** Curvature of a cylindrical widget in degrees. */
@@ -131,7 +131,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		ULexCanvas* GetCanvas()const;
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		ELGUIRenderTargetGeometryMode GetGeometryMode()const { return GeometryMode; }
+		ELexUIRenderTargetGeometryMode GetGeometryMode()const { return GeometryMode; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		FVector2D GetPivot()const { return Pivot; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
@@ -146,7 +146,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetCanvas(ULexCanvas* Value);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetGeometryMode(ELGUIRenderTargetGeometryMode Value);
+		void SetGeometryMode(ELexUIRenderTargetGeometryMode Value);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetPivot(const FVector2D Value);
 	UFUNCTION(BlueprintCallable, Category = LGUI)

@@ -28,5 +28,6 @@ void ULexWorldSpaceRaycaster::BeginPlay()
 void ULexWorldSpaceRaycaster::Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResultArray)
 {
 	if (!RootCanvas.IsValid())return;
-	return Super::RaycastUI(InPointerEventData, RootCanvas.Get(), TraceChannel.GetValue(), OutRayOrigin, OutRayDirection, OutRayEnd, OutHitResultArray);
+	if (RootCanvas->GetTraceChannel() != TraceChannel.GetValue())return;
+	return Super::RaycastUI(InPointerEventData, RootCanvas.Get(), OutRayOrigin, OutRayDirection, OutRayEnd, OutHitResultArray);
 }

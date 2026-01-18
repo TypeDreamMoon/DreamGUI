@@ -132,18 +132,13 @@ void ULexUIManagerObject::AddOneShotTickFunction(const TFunction<void()>& InFunc
 	Item.Value = InFunction;
 	Instance->OneShotFunctionsToExecuteInTick.Add(Item);
 }
-FDelegateHandle ULexUIManagerObject::RegisterEditorTickFunction(const TFunction<void(float)>& InFunction)
+
+FLexUIEditorTickMulticastDelegate& ULexUIManagerObject::GetEditorTickDelegate()
 {
 	InitCheck();
-	return Instance->EditorTick.AddLambda(InFunction);
+	return Instance->EditorTick;
 }
-void ULexUIManagerObject::UnregisterEditorTickFunction(const FDelegateHandle& InDelegateHandle)
-{
-	if (Instance != nullptr)
-	{
-		Instance->EditorTick.Remove(InDelegateHandle);
-	}
-}
+
 void ULexUIManagerObject::MarkBroadcastLevelActorListChanged()
 {
 	if (InitCheck())

@@ -1,12 +1,14 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/LexUIBehaviour.h"
+
 #include "LGUI.h"
 #include "Core/LexUIManager.h"
 #include "Components/SceneComponent.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexWidget.h"
 #include "PrefabSystem/LexUIPrefabManager.h"
+#include "Utils/LexUIUtils.h"
 
 ULexUIBehaviour::ULexUIBehaviour()
 {
@@ -290,6 +292,11 @@ ULexWidget* ULexUIBehaviour::GetWidget() const
 		}
 	}
 	return CacheWidget.Get();
+}
+
+void ULexUIBehaviour::DestroyWidget() const
+{
+	FLexUIUtils::DestroyActorWithHierarchy(GetOwner());
 }
 
 void ULexUIBehaviour::OnInteractableChanged(bool Interactable) 

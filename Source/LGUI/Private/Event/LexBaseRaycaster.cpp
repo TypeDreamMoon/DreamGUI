@@ -50,10 +50,10 @@ void ULexBaseRaycaster::OnUnregister()
 }
 
 void ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, ULexCanvas* InRootCanvas,
-	TOptional<ETraceTypeQuery> InOptionalTraceChannel, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd,
+	FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd,
 	TArray<FHitResult>& OutHitResultArray)
 {
-	if (GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd))
+	if (GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd, CurrentRayLength))
 	{
 		CurrentRayOrigin = OutRayOrigin;
 		CurrentRayDirection = OutRayDirection;
@@ -180,8 +180,11 @@ void ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, ULex
 
 void ULexBaseRaycaster::RaycastWorld(ULexPointerEventData* InPointerEventData, bool InRequireFaceIndex, ETraceTypeQuery InTraceChannel, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResultArray)
 {
-	if (GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd))
+	if (GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd, CurrentRayLength))
 	{
+		CurrentRayOrigin = OutRayOrigin;
+		CurrentRayDirection = OutRayDirection;
+		
 		FCollisionQueryParams queryParams = FCollisionQueryParams::DefaultQueryParam;
 		queryParams.bReturnFaceIndex = InRequireFaceIndex;
 		this->GetWorld()->LineTraceMultiByChannel(OutHitResultArray, OutRayOrigin, OutRayEnd, UEngineTypes::ConvertToCollisionChannel(InTraceChannel), queryParams);

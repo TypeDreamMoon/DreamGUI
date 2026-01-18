@@ -47,8 +47,7 @@ private:
 	bool bShouldBroadcastLevelActorListChanged = false;
 public:
 	static void AddOneShotTickFunction(const TFunction<void()>& InFunction, int InDelayFrameCount = 0);
-	static FDelegateHandle RegisterEditorTickFunction(const TFunction<void(float)>& InFunction);
-	static void UnregisterEditorTickFunction(const FDelegateHandle& InDelegateHandle);
+	static FLexUIEditorTickMulticastDelegate& GetEditorTickDelegate();
 	static void MarkBroadcastLevelActorListChanged();
 
 #endif

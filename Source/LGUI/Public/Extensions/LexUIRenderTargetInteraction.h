@@ -9,23 +9,23 @@
 #include "Event/Interface/LexPointerEnterExitInterface.h"
 #include "Event/Interface/LexPointerDownUpInterface.h"
 #include "Event/Interface/LexPointerScrollInterface.h"
-#include "LGUIRenderTargetInteraction.generated.h"
+#include "LexUIRenderTargetInteraction.generated.h"
 
 class ULexCanvas;
 class ULexEventSystem;
 
 /**
- * Interface for LGUIRenderTargetInteraction to provide raycast info.
+ * Interface for LexUIRenderTargetInteraction to provide raycast info.
  */
 UINTERFACE(Blueprintable, MinimalAPI)
-class ULGUIRenderTargetInteractionSourceInterface : public UInterface
+class ULexUIRenderTargetInteractionSourceInterface : public UInterface
 {
 	GENERATED_BODY()
 };
 /**
- * Interface for LGUIRenderTargetInteraction to provide raycast info.
+ * Interface for LexUIRenderTargetInteraction to provide raycast info.
  */
-class LGUI_API ILGUIRenderTargetInteractionSourceInterface
+class LGUI_API ILexUIRenderTargetInteractionSourceInterface
 {
 	GENERATED_BODY()
 public:
@@ -36,11 +36,11 @@ public:
 };
 
 /**
- * Perform a raycaster and interaction for LGUICanvas with RenderMode of RenderTarget.
- * This component should be placed on a actor which have a ILGUIRenderTargetInteractionSourceInterface component.
+ * Perform a raycaster and interaction for LexUICanvas with RenderMode of RenderTarget.
+ * This component should be placed on a actor which have a ILexUIRenderTargetInteractionSourceInterface component.
  */
 UCLASS(ClassGroup = LGUI, meta = (BlueprintSpawnableComponent), Blueprintable)
-class LGUI_API ULGUIRenderTargetInteraction : public ULexScreenSpaceRaycaster
+class LGUI_API ULexUIRenderTargetInteraction : public ULexScreenSpaceRaycaster
 	, public ILexPointerEnterExitInterface
 	, public ILexPointerDownUpInterface
 	, public ILexPointerScrollInterface
@@ -48,7 +48,7 @@ class LGUI_API ULGUIRenderTargetInteraction : public ULexScreenSpaceRaycaster
 	GENERATED_BODY()
 	
 public:	
-	ULGUIRenderTargetInteraction();
+	ULexUIRenderTargetInteraction();
 	virtual void BeginPlay()override;
 	virtual void OnRegister()override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)override;
@@ -65,7 +65,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, Transient, Category = LGUI, AdvancedDisplay) TObjectPtr<ULexPointerEventData> PointerEventData = nullptr;
 	TWeakObjectPtr<ULexPointerEventData> InputPointerEventData = nullptr;
 
-	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd)override { return true; }
+	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, float& OutRayLength)override { return true; }
 	virtual bool ShouldStartDrag(ULexPointerEventData* InPointerEventData)override;
 	virtual void Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResultArray)override;
 

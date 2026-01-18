@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Extensions/LGUIRenderTargetGeometrySource.h"
+#include "Extensions/LexUIRenderTargetGeometrySource.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexCanvas.h"
 #include "LGUI.h"
@@ -57,7 +57,7 @@ public:
 		static size_t UniquePointer;
 		return reinterpret_cast<size_t>(&UniquePointer);
 	}
-	FLGUIRenderTargetGeometrySource_SceneProxy(ULGUIRenderTargetGeometrySource* Component)
+	FLGUIRenderTargetGeometrySource_SceneProxy(ULexUIRenderTargetGeometrySource* Component)
 		: FPrimitiveSceneProxy(Component)
 		, RenderTarget(Component->GetRenderTarget())
 		, MaterialInstance(Component->GetMaterialInstance())
@@ -214,7 +214,7 @@ public:
 
 	virtual void GetDynamicMeshElements(const TArray<const FSceneView*>& Views, const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, FMeshElementCollector& Collector) const override
 	{
-		if (GeometryMode == ELGUIRenderTargetGeometryMode::StaticMesh)
+		if (GeometryMode == ELexUIRenderTargetGeometryMode::StaticMesh)
 		{
 			return;
 		}
@@ -249,8 +249,8 @@ public:
 			{
 				switch (GeometryMode)
 				{
-				case ELGUIRenderTargetGeometryMode::Plane:
-				case ELGUIRenderTargetGeometryMode::Cylinder:
+				case ELexUIRenderTargetGeometryMode::Plane:
+				case ELexUIRenderTargetGeometryMode::Cylinder:
 				{
 					for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
 					{
@@ -402,7 +402,7 @@ public:
 private:
 	UTextureRenderTarget2D* RenderTarget = nullptr;
 	UMaterialInstanceDynamic* MaterialInstance = nullptr;
-	ELGUIRenderTargetGeometryMode GeometryMode = ELGUIRenderTargetGeometryMode::Plane;
+	ELexUIRenderTargetGeometryMode GeometryMode = ELexUIRenderTargetGeometryMode::Plane;
 	FLGUIRenderTargetGeometrySourceMeshProxySection* Section = nullptr;
 
 	FMaterialRelevance MaterialRelevance;
@@ -413,7 +413,7 @@ private:
 #define PARAMETER_NAME_FLIPY "FlipY"
 
 
-ULGUIRenderTargetGeometrySource::ULGUIRenderTargetGeometrySource()
+ULexUIRenderTargetGeometrySource::ULexUIRenderTargetGeometrySource()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
@@ -421,21 +421,21 @@ ULGUIRenderTargetGeometrySource::ULGUIRenderTargetGeometrySource()
 	TargetCanvas = FLexUIComponentReference(ULexCanvas::StaticClass());
 }
 
-void ULGUIRenderTargetGeometrySource::BeginPlay()
+void ULexUIRenderTargetGeometrySource::BeginPlay()
 {
 	Super::BeginPlay();
 	BeginCheckRenderTarget();
 }
-void ULGUIRenderTargetGeometrySource::EndPlay(EEndPlayReason::Type Reason)
+void ULexUIRenderTargetGeometrySource::EndPlay(EEndPlayReason::Type Reason)
 {
 	Super::EndPlay(Reason);
 	EndCheckRenderTarget();
 }
 
-void ULGUIRenderTargetGeometrySource::BeginCheckRenderTarget()
+void ULexUIRenderTargetGeometrySource::BeginCheckRenderTarget()
 {
 	if (CheckRenderTargetTickTweener.IsValid())return;
-	CheckRenderTargetTickTweener = ULTweenBPLibrary::UpdateCall(this, [=, WeakThis = TWeakObjectPtr<ULGUIRenderTargetGeometrySource>(this)](float deltaTime) {
+	CheckRenderTargetTickTweener = ULTweenBPLibrary::UpdateCall(this, [=, WeakThis = TWeakObjectPtr<ULexUIRenderTargetGeometrySource>(this)](float deltaTime) {
 		if (WeakThis.IsValid())
 		{
 			WeakThis->CheckRenderTargetTick();
@@ -446,13 +446,13 @@ void ULGUIRenderTargetGeometrySource::BeginCheckRenderTarget()
 		CheckRenderTargetTickTweener->SetAffectByGamePause(false)->SetAffectByTimeDilation(false);
 	}
 }
-void ULGUIRenderTargetGeometrySource::EndCheckRenderTarget()
+void ULexUIRenderTargetGeometrySource::EndCheckRenderTarget()
 {
 	if (!CheckRenderTargetTickTweener.IsValid())return;
 	ULTweenBPLibrary::KillIfIsTweening(this, CheckRenderTargetTickTweener.Get());
 	CheckRenderTargetTickTweener.Reset();
 }
-void ULGUIRenderTargetGeometrySource::CheckRenderTargetTick()
+void ULexUIRenderTargetGeometrySource::CheckRenderTargetTick()
 {
 	if (IsValid(GetRenderTarget()))
 	{
@@ -465,10 +465,10 @@ void ULGUIRenderTargetGeometrySource::CheckRenderTargetTick()
 	}
 }
 
-bool ULGUIRenderTargetGeometrySource::CheckStaticMesh()const
+bool ULexUIRenderTargetGeometrySource::CheckStaticMesh()const
 {
 	if (StaticMeshComp.IsValid())return true;
-	if (GeometryMode == ELGUIRenderTargetGeometryMode::StaticMesh)
+	if (GeometryMode == ELexUIRenderTargetGeometryMode::StaticMesh)
 	{
 		if (auto ParentComp = this->GetAttachParent())
 		{
@@ -509,7 +509,7 @@ bool ULGUIRenderTargetGeometrySource::CheckStaticMesh()const
 	return false;
 }
 
-FPrimitiveSceneProxy* ULGUIRenderTargetGeometrySource::CreateSceneProxy()
+FPrimitiveSceneProxy* ULexUIRenderTargetGeometrySource::CreateSceneProxy()
 {
 	if (GetCanvas())
 	{
@@ -539,7 +539,7 @@ FPrimitiveSceneProxy* ULGUIRenderTargetGeometrySource::CreateSceneProxy()
 				return reinterpret_cast<size_t>(&UniquePointer);
 			}
 
-			FWidgetBoxProxy(const ULGUIRenderTargetGeometrySource* InComponent)
+			FWidgetBoxProxy(const ULexUIRenderTargetGeometrySource* InComponent)
 				: FPrimitiveSceneProxy(InComponent)
 				, BoxExtents(1.f, InComponent->GetRenderTargetSize().X / 2.0f, InComponent->GetRenderTargetSize().Y / 2.0f)
 			{
@@ -593,7 +593,7 @@ FPrimitiveSceneProxy* ULGUIRenderTargetGeometrySource::CreateSceneProxy()
 #endif
 	return nullptr;
 }
-FBoxSphereBounds ULGUIRenderTargetGeometrySource::CalcBounds(const FTransform& LocalToWorld) const
+FBoxSphereBounds ULexUIRenderTargetGeometrySource::CalcBounds(const FTransform& LocalToWorld) const
 {
 	auto RenderTargetSize = GetRenderTargetSize();
 	const float Width = ComputeComponentWidth();
@@ -613,12 +613,12 @@ FBoxSphereBounds ULGUIRenderTargetGeometrySource::CalcBounds(const FTransform& L
 
 	return NewBounds;
 }
-UBodySetup* ULGUIRenderTargetGeometrySource::GetBodySetup()
+UBodySetup* ULexUIRenderTargetGeometrySource::GetBodySetup()
 {
 	UpdateBodySetup(false);
 	return BodySetup;
 }
-FCollisionShape ULGUIRenderTargetGeometrySource::GetCollisionShape(float Inflation) const
+FCollisionShape ULexUIRenderTargetGeometrySource::GetCollisionShape(float Inflation) const
 {
 	auto RenderTargetSize = GetRenderTargetSize();
 
@@ -632,7 +632,7 @@ FCollisionShape ULGUIRenderTargetGeometrySource::GetCollisionShape(float Inflati
 
 	return FCollisionShape::MakeBox(BoxHalfExtent);
 }
-void ULGUIRenderTargetGeometrySource::OnRegister()
+void ULexUIRenderTargetGeometrySource::OnRegister()
 {
 	Super::OnRegister();
 	if (this->GetWorld() != nullptr)
@@ -653,19 +653,19 @@ void ULGUIRenderTargetGeometrySource::OnRegister()
 #endif
 	}
 }
-void ULGUIRenderTargetGeometrySource::OnUnregister()
+void ULexUIRenderTargetGeometrySource::OnUnregister()
 {
 	Super::OnUnregister();
 }
-void ULGUIRenderTargetGeometrySource::DestroyComponent(bool bPromoteChildren)
+void ULexUIRenderTargetGeometrySource::DestroyComponent(bool bPromoteChildren)
 {
 	Super::DestroyComponent(bPromoteChildren);
 }
-UMaterialInterface* ULGUIRenderTargetGeometrySource::GetMaterial(int32 MaterialIndex) const
+UMaterialInterface* ULexUIRenderTargetGeometrySource::GetMaterial(int32 MaterialIndex) const
 {
 	return Super::GetMaterial(MaterialIndex);
 }
-void ULGUIRenderTargetGeometrySource::SetMaterial(int32 ElementIndex, UMaterialInterface* Material)
+void ULexUIRenderTargetGeometrySource::SetMaterial(int32 ElementIndex, UMaterialInterface* Material)
 {
 	Super::SetMaterial(ElementIndex, Material);
 	MaterialInstance = nullptr;
@@ -678,7 +678,7 @@ void ULGUIRenderTargetGeometrySource::SetMaterial(int32 ElementIndex, UMaterialI
 		UpdateMaterialInstance();
 }
 
-void ULGUIRenderTargetGeometrySource::GetUsedMaterials(TArray<UMaterialInterface*>& OutMaterials, bool bGetDebugMaterials) const
+void ULexUIRenderTargetGeometrySource::GetUsedMaterials(TArray<UMaterialInterface*>& OutMaterials, bool bGetDebugMaterials) const
 {
 	if (MaterialInstance)
 	{
@@ -686,28 +686,28 @@ void ULGUIRenderTargetGeometrySource::GetUsedMaterials(TArray<UMaterialInterface
 	}
 }
 
-int32 ULGUIRenderTargetGeometrySource::GetNumMaterials() const
+int32 ULexUIRenderTargetGeometrySource::GetNumMaterials() const
 {
 	return FMath::Max<int32>(OverrideMaterials.Num(), 1);
 }
 
-bool ULGUIRenderTargetGeometrySource::GetTriMeshSizeEstimates(struct FTriMeshCollisionDataEstimates& OutTriMeshEstimates, bool bInUseAllTriData) const
+bool ULexUIRenderTargetGeometrySource::GetTriMeshSizeEstimates(struct FTriMeshCollisionDataEstimates& OutTriMeshEstimates, bool bInUseAllTriData) const
 {
 	if (!GetRenderTarget())return false;
-	if (GeometryMode == ELGUIRenderTargetGeometryMode::StaticMesh)return true;
+	if (GeometryMode == ELexUIRenderTargetGeometryMode::StaticMesh)return true;
 	if (Vertices.Num() == 0 || Triangles.Num() == 0)return true;
 	OutTriMeshEstimates.VerticeCount = Vertices.Num();
 	return true;
 }
-bool ULGUIRenderTargetGeometrySource::GetPhysicsTriMeshData(struct FTriMeshCollisionData* CollisionData, bool InUseAllTriData)
+bool ULexUIRenderTargetGeometrySource::GetPhysicsTriMeshData(struct FTriMeshCollisionData* CollisionData, bool InUseAllTriData)
 {
 	auto RenderTarget = GetRenderTarget();
 	if (!RenderTarget)return false;
 
 	switch (GeometryMode)
 	{
-	case ELGUIRenderTargetGeometryMode::Plane:
-	case ELGUIRenderTargetGeometryMode::Cylinder:
+	case ELexUIRenderTargetGeometryMode::Plane:
+	case ELexUIRenderTargetGeometryMode::Cylinder:
 	{
 		// See if we should copy UVs
 		bool bCopyUVs = UPhysicsSettings::Get()->bSupportUVFromHitResults;
@@ -747,7 +747,7 @@ bool ULGUIRenderTargetGeometrySource::GetPhysicsTriMeshData(struct FTriMeshColli
 		return true;
 	}
 	break;
-	case ELGUIRenderTargetGeometryMode::StaticMesh:
+	case ELexUIRenderTargetGeometryMode::StaticMesh:
 	{
 		return false;
 	}
@@ -755,24 +755,24 @@ bool ULGUIRenderTargetGeometrySource::GetPhysicsTriMeshData(struct FTriMeshColli
 	}
 	return false;
 }
-bool ULGUIRenderTargetGeometrySource::ContainsPhysicsTriMeshData(bool InUseAllTriData) const
+bool ULexUIRenderTargetGeometrySource::ContainsPhysicsTriMeshData(bool InUseAllTriData) const
 {
 	if (!GetRenderTarget())return false;
-	if (GeometryMode == ELGUIRenderTargetGeometryMode::StaticMesh)return false;
+	if (GeometryMode == ELexUIRenderTargetGeometryMode::StaticMesh)return false;
 	if (Vertices.Num() == 0 || Triangles.Num() == 0)return false;
 	return true;
 }
-bool ULGUIRenderTargetGeometrySource::WantsNegXTriMesh() 
+bool ULexUIRenderTargetGeometrySource::WantsNegXTriMesh() 
 {
 	return false; 
 }
 
-void ULGUIRenderTargetGeometrySource::UpdateCollision()
+void ULexUIRenderTargetGeometrySource::UpdateCollision()
 {
 	UpdateBodySetup(true);
 	RecreatePhysicsState();
 }
-void ULGUIRenderTargetGeometrySource::UpdateMeshData()
+void ULexUIRenderTargetGeometrySource::UpdateMeshData()
 {
 	auto PrevNumVerts = Vertices.Num();
 	auto PrevNumIndex = Triangles.Num();
@@ -791,7 +791,7 @@ void ULGUIRenderTargetGeometrySource::UpdateMeshData()
 	
 	switch (GeometryMode)
 	{
-	case ELGUIRenderTargetGeometryMode::Plane:
+	case ELexUIRenderTargetGeometryMode::Plane:
 	{
 		float U = -RenderTarget->SizeX * Pivot.X;
 		float V = -RenderTarget->SizeY * Pivot.Y;
@@ -827,7 +827,7 @@ void ULGUIRenderTargetGeometrySource::UpdateMeshData()
 		Triangles.Add(3);
 	}
 	break;
-	case ELGUIRenderTargetGeometryMode::Cylinder:
+	case ELexUIRenderTargetGeometryMode::Cylinder:
 	{
 		auto ArcAngle = FMath::Max(FMath::DegreesToRadians(FMath::Abs(GetCylinderArcAngle())), 0.01f);
 		auto ArcAngleSign = FMath::Sign(GetCylinderArcAngle());
@@ -933,50 +933,50 @@ void ULGUIRenderTargetGeometrySource::UpdateMeshData()
 	}
 }
 
-ULexCanvas* ULGUIRenderTargetGeometrySource::GetTargetCanvas_Implementation()const
+ULexCanvas* ULexUIRenderTargetGeometrySource::GetTargetCanvas_Implementation()const
 {
 	return GetCanvas();
 }
-bool ULGUIRenderTargetGeometrySource::PerformLineTrace_Implementation(const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV)
+bool ULexUIRenderTargetGeometrySource::PerformLineTrace_Implementation(const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV)
 {
 	return LineTraceHitUV(InHitFaceIndex, InHitPoint, InLineStart, InLineEnd, OutHitUV);
 }
 
 #if WITH_EDITOR
-bool ULGUIRenderTargetGeometrySource::CanEditChange(const FProperty* InProperty) const
+bool ULexUIRenderTargetGeometrySource::CanEditChange(const FProperty* InProperty) const
 {
 	if (InProperty)
 	{
 		FString PropertyName = InProperty->GetName();
 
-		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(ULGUIRenderTargetGeometrySource, CylinderArcAngle))
+		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(ULexUIRenderTargetGeometrySource, CylinderArcAngle))
 		{
-			return GeometryMode == ELGUIRenderTargetGeometryMode::Cylinder;
+			return GeometryMode == ELexUIRenderTargetGeometryMode::Cylinder;
 		}
-		else if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(ULGUIRenderTargetGeometrySource, bOverrideStaticMeshMaterial))
+		else if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(ULexUIRenderTargetGeometrySource, bOverrideStaticMeshMaterial))
 		{
-			return GeometryMode == ELGUIRenderTargetGeometryMode::StaticMesh;
+			return GeometryMode == ELexUIRenderTargetGeometryMode::StaticMesh;
 		}
-		else if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(ULGUIRenderTargetGeometrySource, bEnableInteractOnBackside))
+		else if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(ULexUIRenderTargetGeometrySource, bEnableInteractOnBackside))
 		{
-			return GeometryMode != ELGUIRenderTargetGeometryMode::StaticMesh;
+			return GeometryMode != ELexUIRenderTargetGeometryMode::StaticMesh;
 		}
 	}
 
 	return Super::CanEditChange(InProperty);
 }
-void ULGUIRenderTargetGeometrySource::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void ULexUIRenderTargetGeometrySource::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
 	if (auto Property = PropertyChangedEvent.MemberProperty)
 	{
 		auto PropertyName = Property->GetName();
-		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(ULGUIRenderTargetGeometrySource, CylinderArcAngle))
+		if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(ULexUIRenderTargetGeometrySource, CylinderArcAngle))
 		{
 			CylinderArcAngle = FMath::Sign(CylinderArcAngle) * FMath::Clamp(FMath::Abs(CylinderArcAngle), 1.0f, 180.0f);
 		}
-		else if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(ULGUIRenderTargetGeometrySource, TargetCanvas))
+		else if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(ULexUIRenderTargetGeometrySource, TargetCanvas))
 		{
 			if (!TargetCanvas.IsValidComponentReference())
 			{
@@ -992,7 +992,7 @@ void ULGUIRenderTargetGeometrySource::PostEditChangeProperty(FPropertyChangedEve
 }
 #endif
 
-ULexCanvas* ULGUIRenderTargetGeometrySource::GetCanvas()const
+ULexCanvas* ULexUIRenderTargetGeometrySource::GetCanvas()const
 {
 	if (TargetCanvasObject.IsValid())
 	{
@@ -1023,7 +1023,7 @@ ULexCanvas* ULGUIRenderTargetGeometrySource::GetCanvas()const
 	return Canvas;
 }
 
-void ULGUIRenderTargetGeometrySource::SetCanvas(ULexCanvas* Value)
+void ULexUIRenderTargetGeometrySource::SetCanvas(ULexCanvas* Value)
 {
 	if (TargetCanvasObject.Get() != Value)
 	{
@@ -1036,7 +1036,7 @@ void ULGUIRenderTargetGeometrySource::SetCanvas(ULexCanvas* Value)
 	}
 }
 
-void ULGUIRenderTargetGeometrySource::SetGeometryMode(ELGUIRenderTargetGeometryMode Value)
+void ULexUIRenderTargetGeometrySource::SetGeometryMode(ELexUIRenderTargetGeometryMode Value)
 {
 	if (GeometryMode != Value)
 	{
@@ -1047,7 +1047,7 @@ void ULGUIRenderTargetGeometrySource::SetGeometryMode(ELGUIRenderTargetGeometryM
 		UpdateCollision(); // Mark collision as dirty
 	}
 }
-void ULGUIRenderTargetGeometrySource::SetPivot(const FVector2D Value)
+void ULexUIRenderTargetGeometrySource::SetPivot(const FVector2D Value)
 {
 	if (Pivot != Value)
 	{
@@ -1058,7 +1058,7 @@ void ULGUIRenderTargetGeometrySource::SetPivot(const FVector2D Value)
 		UpdateCollision(); // Mark collision as dirty
 	}
 }
-void ULGUIRenderTargetGeometrySource::SetCylinderArcAngle(float Value)
+void ULexUIRenderTargetGeometrySource::SetCylinderArcAngle(float Value)
 {
 	if (CylinderArcAngle != Value)
 	{
@@ -1071,14 +1071,14 @@ void ULGUIRenderTargetGeometrySource::SetCylinderArcAngle(float Value)
 	}
 }
 
-void ULGUIRenderTargetGeometrySource::SetEnableInteractOnBackside(bool Value)
+void ULexUIRenderTargetGeometrySource::SetEnableInteractOnBackside(bool Value)
 {
 	if (bEnableInteractOnBackside != Value)
 	{
 		bEnableInteractOnBackside = Value;
 	}
 }
-void ULGUIRenderTargetGeometrySource::SetFlipVerticalOnGLES(bool Value)
+void ULexUIRenderTargetGeometrySource::SetFlipVerticalOnGLES(bool Value)
 {
 	if (bFlipVerticalOnGLES != Value)
 	{
@@ -1096,7 +1096,7 @@ void ULGUIRenderTargetGeometrySource::SetFlipVerticalOnGLES(bool Value)
 	}
 }
 
-FIntPoint ULGUIRenderTargetGeometrySource::GetRenderTargetSize()const
+FIntPoint ULexUIRenderTargetGeometrySource::GetRenderTargetSize()const
 {
 	if (auto RenderTarget = GetRenderTarget())
 	{
@@ -1105,14 +1105,14 @@ FIntPoint ULGUIRenderTargetGeometrySource::GetRenderTargetSize()const
 	return FIntPoint(2, 2);
 }
 
-void ULGUIRenderTargetGeometrySource::UpdateLocalBounds()
+void ULexUIRenderTargetGeometrySource::UpdateLocalBounds()
 {
 	// Update global bounds
 	UpdateBounds();
 	// Need to send to render thread
 	MarkRenderTransformDirty();
 }
-void ULGUIRenderTargetGeometrySource::UpdateBodySetup(bool bIsDirty)
+void ULexUIRenderTargetGeometrySource::UpdateBodySetup(bool bIsDirty)
 {
 	if (!GetRenderTarget())return;
 	if (!BodySetup || bIsDirty)
@@ -1140,7 +1140,7 @@ void ULGUIRenderTargetGeometrySource::UpdateBodySetup(bool bIsDirty)
 	}
 }
 
-void ULGUIRenderTargetGeometrySource::UpdateMaterialInstance()
+void ULexUIRenderTargetGeometrySource::UpdateMaterialInstance()
 {
 	if (MaterialInstance == nullptr)
 	{
@@ -1152,7 +1152,7 @@ void ULGUIRenderTargetGeometrySource::UpdateMaterialInstance()
 		if (SourceMat)
 		{
 			MaterialInstance = UMaterialInstanceDynamic::Create(SourceMat, this);
-			if (GeometryMode == ELGUIRenderTargetGeometryMode::StaticMesh && bOverrideStaticMeshMaterial)
+			if (GeometryMode == ELexUIRenderTargetGeometryMode::StaticMesh && bOverrideStaticMeshMaterial)
 			{
 				if (CheckStaticMesh())
 				{
@@ -1176,7 +1176,7 @@ void ULGUIRenderTargetGeometrySource::UpdateMaterialInstance()
 	UpdateMaterialInstanceParameters();
 }
 
-void ULGUIRenderTargetGeometrySource::UpdateMaterialInstanceParameters()
+void ULexUIRenderTargetGeometrySource::UpdateMaterialInstanceParameters()
 {
 	if (MaterialInstance)
 	{
@@ -1190,18 +1190,18 @@ void ULGUIRenderTargetGeometrySource::UpdateMaterialInstanceParameters()
 #endif
 	}
 }
-UMaterialInterface* ULGUIRenderTargetGeometrySource::GetPresetMaterial()const
+UMaterialInterface* ULexUIRenderTargetGeometrySource::GetPresetMaterial()const
 {
 	auto MatPath = TEXT("/LGUI/Materials/LGUI_RenderTargetMaterial");
 	return LoadObject<UMaterialInterface>(NULL, MatPath);
 }
 
-UMaterialInstanceDynamic* ULGUIRenderTargetGeometrySource::GetMaterialInstance()const
+UMaterialInstanceDynamic* ULexUIRenderTargetGeometrySource::GetMaterialInstance()const
 {
 	return MaterialInstance;
 }
 
-UTextureRenderTarget2D* ULGUIRenderTargetGeometrySource::GetRenderTarget()const
+UTextureRenderTarget2D* ULexUIRenderTargetGeometrySource::GetRenderTarget()const
 {
 	if (auto Canvas = GetCanvas())
 	{
@@ -1210,7 +1210,7 @@ UTextureRenderTarget2D* ULGUIRenderTargetGeometrySource::GetRenderTarget()const
 	return nullptr;
 }
 
-float ULGUIRenderTargetGeometrySource::ComputeComponentWidth() const
+float ULexUIRenderTargetGeometrySource::ComputeComponentWidth() const
 {
 	auto RenderTargetSize = GetRenderTargetSize();
 	switch (GeometryMode)
@@ -1218,11 +1218,11 @@ float ULGUIRenderTargetGeometrySource::ComputeComponentWidth() const
 	default:
 		return 0.0f;
 		break;
-	case ELGUIRenderTargetGeometryMode::Plane:
+	case ELexUIRenderTargetGeometryMode::Plane:
 		return RenderTargetSize.X;
 		break;
 
-	case ELGUIRenderTargetGeometryMode::Cylinder:
+	case ELexUIRenderTargetGeometryMode::Cylinder:
 		const float ArcAngleRadians = FMath::DegreesToRadians(CylinderArcAngle);
 		const float Radius = RenderTargetSize.X / ArcAngleRadians;
 		return 2.0f * Radius * FMath::Sin(0.5f * ArcAngleRadians);
@@ -1230,7 +1230,7 @@ float ULGUIRenderTargetGeometrySource::ComputeComponentWidth() const
 	}
 }
 
-float ULGUIRenderTargetGeometrySource::ComputeComponentHeight() const
+float ULexUIRenderTargetGeometrySource::ComputeComponentHeight() const
 {
 	auto RenderTargetSize = GetRenderTargetSize();
 	switch (GeometryMode)
@@ -1238,14 +1238,14 @@ float ULGUIRenderTargetGeometrySource::ComputeComponentHeight() const
 	default:
 		return 0.0f;
 		break;
-	case ELGUIRenderTargetGeometryMode::Plane:
-	case ELGUIRenderTargetGeometryMode::Cylinder:
+	case ELexUIRenderTargetGeometryMode::Plane:
+	case ELexUIRenderTargetGeometryMode::Cylinder:
 		return RenderTargetSize.Y;
 		break;
 	}
 }
 
-float ULGUIRenderTargetGeometrySource::ComputeComponentThickness() const
+float ULexUIRenderTargetGeometrySource::ComputeComponentThickness() const
 {
 	auto RenderTargetSize = GetRenderTargetSize();
 	switch (GeometryMode)
@@ -1253,11 +1253,11 @@ float ULGUIRenderTargetGeometrySource::ComputeComponentThickness() const
 	default:
 		return 0.0f;
 		break;
-	case ELGUIRenderTargetGeometryMode::Plane:
+	case ELexUIRenderTargetGeometryMode::Plane:
 		return 0.00f;
 		break;
 
-	case ELGUIRenderTargetGeometryMode::Cylinder:
+	case ELexUIRenderTargetGeometryMode::Cylinder:
 		const float ArcAngleRadians = FMath::DegreesToRadians(CylinderArcAngle);
 		const float Radius = RenderTargetSize.X / ArcAngleRadians;
 		return Radius * (1.0f - FMath::Cos(0.5f * ArcAngleRadians));
@@ -1266,12 +1266,12 @@ float ULGUIRenderTargetGeometrySource::ComputeComponentThickness() const
 }
 
 #include "Kismet/GameplayStatics.h"
-bool ULGUIRenderTargetGeometrySource::LineTraceHitUV(const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV)const
+bool ULexUIRenderTargetGeometrySource::LineTraceHitUV(const int32& InHitFaceIndex, const FVector& InHitPoint, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutHitUV)const
 {
 	switch (GeometryMode)
 	{
 	default:
-	case ELGUIRenderTargetGeometryMode::Plane:
+	case ELexUIRenderTargetGeometryMode::Plane:
 	{
 		auto InverseTf = GetComponentTransform().Inverse();
 		auto LocalHitPoint = InverseTf.TransformPosition(InHitPoint);
@@ -1284,7 +1284,7 @@ bool ULGUIRenderTargetGeometrySource::LineTraceHitUV(const int32& InHitFaceIndex
 		return true;
 	}
 	break;
-	case ELGUIRenderTargetGeometryMode::Cylinder:
+	case ELexUIRenderTargetGeometryMode::Cylinder:
 	{
 		if (InHitFaceIndex >= 0)
 		{
@@ -1402,7 +1402,7 @@ bool ULGUIRenderTargetGeometrySource::LineTraceHitUV(const int32& InHitFaceIndex
 		}
 	}
 	break;
-	case ELGUIRenderTargetGeometryMode::StaticMesh:
+	case ELexUIRenderTargetGeometryMode::StaticMesh:
 	{
 		if (CheckStaticMesh())
 		{

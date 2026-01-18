@@ -40,13 +40,12 @@ protected:
 public:
 	virtual bool GetAffectByGamePause()const override;
 	virtual bool ShouldStartDrag(ULexPointerEventData* InPointerEventData)override;
-	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd)override;
+	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, float& OutRayLength)override;
 	virtual void Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResult)override;
 
 	static void DeprojectViewPointToWorld(const FMatrix& InViewProjectionMatrix, const FVector2D& InViewPoint01, FVector& OutWorldLocation, FVector& OutWorldDirection);
 
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-	float GetRayLength()const { return RayLength; }
+	virtual float GetRayLength()const override { return RayLength; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	float GetDragThreshold()const { return DragThreshold; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)

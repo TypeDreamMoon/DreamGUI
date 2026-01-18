@@ -1,16 +1,13 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Extensions/UIWidgetInteraction.h"
-#include "LGUI.h"
 #include "Extensions/UIWidget.h"
-#include "Event/LexEventSystem.h"
 #include "Framework/Application/SlateUser.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Event/LexBaseRaycaster.h"
 
 #define LOCTEXT_NAMESPACE "UIWidgetInteraction"
 
-#if 0
 UUIWidgetInteractionManager* UUIWidgetInteractionManager::Instance = nullptr;
 
 UUIWidgetInteraction::UUIWidgetInteraction()
@@ -18,7 +15,7 @@ UUIWidgetInteraction::UUIWidgetInteraction()
 	
 }
 
-bool UUIWidgetInteraction::OnPointerEnter_Implementation(ULGUIPointerEventData* EventData)
+bool UUIWidgetInteraction::OnPointerEnter_Implementation(ULexPointerEventData* EventData)
 {
 	if (CurrentPointerEventData == nullptr)
 	{
@@ -28,12 +25,12 @@ bool UUIWidgetInteraction::OnPointerEnter_Implementation(ULGUIPointerEventData* 
 		if (Interactions.CurrentInteraction == nullptr)
 		{
 			Interactions.CurrentInteraction = this;
-			this->SetEnable(true);//hover in, enable update
+			this->SetCanExecuteUpdate(true);//hover in, enable update
 		}
 	}
 	return bAllowEventBubbleUp;
 }
-bool UUIWidgetInteraction::OnPointerExit_Implementation(ULGUIPointerEventData* EventData)
+bool UUIWidgetInteraction::OnPointerExit_Implementation(ULexPointerEventData* EventData)
 {
 	if (CurrentPointerEventData == EventData)
 	{
@@ -44,23 +41,23 @@ bool UUIWidgetInteraction::OnPointerExit_Implementation(ULGUIPointerEventData* E
 		{
 			SimulatePointerMovement();//pointer exit;
 			Interactions.CurrentInteraction = nullptr;
-			this->SetEnable(false);//hover out, disable update
+			this->SetCanExecuteUpdate(false);//hover out, disable update
 		}
 	}
 	return bAllowEventBubbleUp;
 }
-bool UUIWidgetInteraction::OnPointerDown_Implementation(ULGUIPointerEventData* EventData)
+bool UUIWidgetInteraction::OnPointerDown_Implementation(ULexPointerEventData* EventData)
 {
 	FKey PressKey;
-	switch (EventData->mouseButtonType)
+	switch (EventData->MouseButtonType)
 	{
-	case EMouseButtonType::Left:
+	case ELexUIMouseButtonType::Left:
 		PressKey = EKeys::LeftMouseButton;
 		break;
-	case EMouseButtonType::Middle:
+	case ELexUIMouseButtonType::Middle:
 		PressKey = EKeys::MiddleMouseButton;
 		break;
-	case EMouseButtonType::Right:
+	case ELexUIMouseButtonType::Right:
 		PressKey = EKeys::RightMouseButton;
 		break;
 	}
@@ -70,18 +67,18 @@ bool UUIWidgetInteraction::OnPointerDown_Implementation(ULGUIPointerEventData* E
 	}
 	return bAllowEventBubbleUp;
 }
-bool UUIWidgetInteraction::OnPointerUp_Implementation(ULGUIPointerEventData* EventData)
+bool UUIWidgetInteraction::OnPointerUp_Implementation(ULexPointerEventData* EventData)
 {
 	FKey ReleaseKey;
-	switch (EventData->mouseButtonType)
+	switch (EventData->MouseButtonType)
 	{
-	case EMouseButtonType::Left:
+	case ELexUIMouseButtonType::Left:
 		ReleaseKey = EKeys::LeftMouseButton;
 		break;
-	case EMouseButtonType::Middle:
+	case ELexUIMouseButtonType::Middle:
 		ReleaseKey = EKeys::MiddleMouseButton;
 		break;
-	case EMouseButtonType::Right:
+	case ELexUIMouseButtonType::Right:
 		ReleaseKey = EKeys::RightMouseButton;
 		break;
 	}
@@ -91,9 +88,9 @@ bool UUIWidgetInteraction::OnPointerUp_Implementation(ULGUIPointerEventData* Eve
 	}
 	return bAllowEventBubbleUp;
 }
-bool UUIWidgetInteraction::OnPointerScroll_Implementation(ULGUIPointerEventData* EventData)
+bool UUIWidgetInteraction::OnPointerScroll_Implementation(ULexPointerEventData* EventData)
 {
-	auto inAxisValue = EventData->scrollAxisValue;
+	auto inAxisValue = EventData->ScrollAxisValue;
 	ScrollWheel(inAxisValue.Y);
 	return bAllowEventBubbleUp;
 }
@@ -122,13 +119,13 @@ void UUIWidgetInteraction::Awake()
 			Interactions.AllInteractions.Add(this);
 		}
 	}
-	WidgetComponent = GetOwner()->FindComponentByClass<UUIWidget>();
-	this->SetEnable(false);//disable update by default
+	WidgetComponent = Cast<UUIWidget>(GetWidget()->GetVisual());
+	this->SetCanExecuteUpdate(false);//disable update by default
 }
 
-void UUIWidgetInteraction::OnDestroy()
+void UUIWidgetInteraction::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	Super::OnDestroy();
+	Super::EndPlay(EndPlayReason);
 
 	if (FSlateApplication::IsInitialized())
 	{
@@ -229,13 +226,13 @@ FWidgetPath UUIWidgetInteraction::DetermineWidgetUnderPointer()
 
 	LastLocalHitLocation = LocalHitLocation;
 	FWidgetTraceResult TraceResult;
-	if (CurrentPointerEventData != nullptr && CurrentPointerEventData->raycaster != nullptr)
+	if (CurrentPointerEventData != nullptr && CurrentPointerEventData->Raycaster != nullptr)
 	{
-		auto RayOrigin = CurrentPointerEventData->raycaster->GetRayOrigin();
-		auto RayDirection = CurrentPointerEventData->raycaster->GetRayDirection();
-		auto RayEnd = RayOrigin + RayDirection * CurrentPointerEventData->raycaster->GetRayLength();
+		auto RayOrigin = CurrentPointerEventData->Raycaster->GetRayOrigin();
+		auto RayDirection = CurrentPointerEventData->Raycaster->GetRayDirection();
+		auto RayEnd = RayOrigin + RayDirection * CurrentPointerEventData->Raycaster->GetRayLength();
 
-		WidgetComponent->GetLocalHitLocation(CurrentPointerEventData->faceIndex, CurrentPointerEventData->worldPoint, RayOrigin, RayEnd, TraceResult.LocalHitLocation);
+		WidgetComponent->GetLocalHitLocation(CurrentPointerEventData->FaceIndex, CurrentPointerEventData->WorldPoint, RayOrigin, RayEnd, TraceResult.LocalHitLocation);
 		TraceResult.HitWidgetPath = FWidgetPath(WidgetComponent->GetHitWidgetPath(TraceResult.LocalHitLocation, /*bIgnoreEnabledStatus*/ false));
 
 		LocalHitLocation = TraceResult.LocalHitLocation;
@@ -283,7 +280,7 @@ void UUIWidgetInteraction::SimulatePointerMovement()
 	FWidgetPath WidgetPathUnderFinger = DetermineWidgetUnderPointer();
 	if (CurrentPointerEventData != nullptr)
 	{
-		PrevPointerIndex = CurrentPointerEventData->pointerID;
+		PrevPointerIndex = CurrentPointerEventData->PointerID;
 	}
 	if (PrevPointerIndex >= 0)
 	{
@@ -566,5 +563,4 @@ FVector2D UUIWidgetInteraction::Get2DHitLocation() const
 {
 	return LocalHitLocation;
 }
-#endif
 #undef LOCTEXT_NAMESPACE

@@ -70,7 +70,7 @@ bool ULexWorldSpaceRaycasterBase::GetAffectByGamePause()const
 	return GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
 }
 
-bool ULexWorldSpaceRaycasterBase::GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd)
+bool ULexWorldSpaceRaycasterBase::GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, float& OutRayLength)
 {
 	auto RaycasterSrc = GetRaycasterSourceObject();
 	if (!RaycasterSrc)
@@ -85,6 +85,7 @@ bool ULexWorldSpaceRaycasterBase::GenerateRay(ULexPointerEventData* InPointerEve
 		GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, DebugMsg);
 		return false;
 	}
+	OutRayLength = RaycasterSrc->GetRayLength();
 	return RaycasterSrc->GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd);
 }
 
