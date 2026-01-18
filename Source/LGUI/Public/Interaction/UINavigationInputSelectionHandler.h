@@ -7,6 +7,7 @@
 #include "UINavigationInputSelectionHandler.generated.h"
 
 
+class ULexCanvas;
 class ULTweener;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
@@ -18,6 +19,8 @@ public:
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
 	float AnimDuration = 0.25f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
+	TWeakObjectPtr<ULexCanvas> ThisCanvas = nullptr;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LGUI", AdvancedDisplay)
 	TWeakObjectPtr<ULexWidget> CurrentSelected = nullptr;
 

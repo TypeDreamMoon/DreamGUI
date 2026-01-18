@@ -4,6 +4,7 @@
 
 #include "LTweenBPLibrary.h"
 #include "Core/Actor/LexWidgetRootActor.h"
+#include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
 
 UUINavigationInputSelectionHandler::UUINavigationInputSelectionHandler()
@@ -39,6 +40,11 @@ void UUINavigationInputSelectionHandler::SelectWidget(ULexWidget* InSelected)
 		TweenerCollection.Add(Tweener);
 		Tweener = ULTweenBPLibrary::LocalRotationQuaternionTo(Widget, FQuat::Identity, AnimDuration, 0, ELTweenEase::InOutSine);
 		TweenerCollection.Add(Tweener);
+
+		if (ThisCanvas.IsValid())
+		{
+			ThisCanvas->SetSortOrderToHighestOfHierarchy(false);
+		}
 	}
 	else if (InSelected != nullptr)
 	{
@@ -50,12 +56,16 @@ void UUINavigationInputSelectionHandler::SelectWidget(ULexWidget* InSelected)
 		Widget->SetRelativeLocation(Pos3D);
 		Widget->SetSizeDelta(InSelected->GetSize());
 		Widget->SetRelativeRotation(FQuat::Identity);
+
+		if (ThisCanvas.IsValid())
+		{
+			ThisCanvas->SetSortOrderToHighestOfHierarchy(false);
+		}
 	}
 	else if (PrevSelected.IsValid())
 	{
 		auto Tweener = Widget->RenderOpacityTo(0.0f, AnimDuration, 0, ELTweenEase::Linear);
 		TweenerCollection.Add(Tweener);
-		Widget->AttachToComponent(PrevSelected->GetWidgetRootActor()->GetLexWidget(), FAttachmentTransformRules::KeepWorldTransform);
 	}
 }
 

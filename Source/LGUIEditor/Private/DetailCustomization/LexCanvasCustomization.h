@@ -18,7 +18,6 @@ public:
 private:
 	TArray<TWeakObjectPtr<class ULexCanvas>> TargetScriptArray;
 	void ForceRefresh(class IDetailLayoutBuilder* DetailBuilder);
-	FText GetSortOrderInfo(TWeakObjectPtr<class ULexCanvas> InTargetScript)const;
 	FText GetDrawcallInfo()const;
 	FText GetDrawcallInfoTooltip()const;
 	void OnCopySortOrder();
