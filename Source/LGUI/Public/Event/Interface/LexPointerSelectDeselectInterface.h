@@ -25,11 +25,11 @@ public:
 	 * @return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up.
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = LGUI)
-		bool OnPointerSelect(ULexBaseEventData* eventData);
+		bool OnPointerSelect(ULexBaseEventData* EventData);
 	/**
 	 * Called when LexUI EventSystem deselect this object.
 	 * @return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up.
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = LGUI)
-		bool OnPointerDeselect(ULexBaseEventData* eventData);
+		bool OnPointerDeselect(ULexBaseEventData* EventData);
 };

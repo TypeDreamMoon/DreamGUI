@@ -9,6 +9,7 @@
 #include "Core/Components/LexWidget.h"
 #include "Event/LexEventSystem.h"
 #include "Event/LexWorldSpaceRaycasterBase.h"
+#include "Interaction/UINavigationInputSelectionHandler.h"
 #include "PrefabSystem/LexUIPrefab.h"
 #include "Utils/LexUIUtils.h"
 
@@ -21,6 +22,8 @@ ALexWidgetRootActor::ALexWidgetRootActor()
 
 	Canvas = CreateDefaultSubobject<ULexCanvas>(FName("Canvas"));
 	LexWidget->SetSizeDelta(FVector2D(1920, 1080));
+
+	NavigationSelectionPrefab = LoadObject<ULexUIPrefab>(NULL, TEXT("/LGUI/Prefabs/NavigationSelectionInputHandler"));
 }
 
 void ALexWidgetRootActor::BeginPlay()
@@ -273,6 +276,18 @@ void ALexWidgetRootActor::SetPrefab(ULexUIPrefab* Value)
 		WidgetPrefab = Value;
 		LoadPrefab();
 	}
+}
+
+UUINavigationInputSelectionHandler* ALexWidgetRootActor::GetNavigationSelection()
+{
+	if (!NavigationSelection.IsValid())
+	{
+		if (auto WidgetActor = Cast<ALexWidgetActor>(NavigationSelectionPrefab->LoadPrefab(this->GetWorld(), this->GetLexWidget())))
+		{
+			NavigationSelection = WidgetActor->FindComponentByClass<UUINavigationInputSelectionHandler>();
+		}
+	}
+	return NavigationSelection.Get();
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -1,0 +1,85 @@
+// Copyright 2019-Present LexLiu. All Rights Reserved.
+
+#include "Interaction/UINavigationInputSelectionHandler.h"
+
+#include "LTweenBPLibrary.h"
+#include "Core/Actor/LexWidgetRootActor.h"
+#include "Core/Components/LexWidget.h"
+
+UUINavigationInputSelectionHandler::UUINavigationInputSelectionHandler()
+{
+}
+
+void UUINavigationInputSelectionHandler::SelectWidget(ULexWidget* InSelected)
+{
+	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
+	{
+		ReceiveSelectWidget(InSelected);
+		return;
+	}
+	auto Widget = GetWidget();
+	if (!Widget)return;
+
+	for (auto& Tweener : TweenerCollection)
+	{
+		ULTweenBPLibrary::KillIfIsTweening(this, Tweener.Get());
+	}
+	TweenerCollection.Reset();
+	
+	auto PrevSelected = CurrentSelected;
+	CurrentSelected = InSelected;
+	if (InSelected != nullptr && PrevSelected.IsValid())
+	{
+		Widget->AttachToComponent(InSelected, FAttachmentTransformRules::KeepWorldTransform);
+		auto Pos2D = InSelected->GetLocalSpaceCenter();
+		auto Pos3D = FVector(0, Pos2D.X, Pos2D.Y);
+		auto Tweener = ULTweenBPLibrary::LocalPositionTo(Widget, Pos3D, AnimDuration, 0, ELTweenEase::InOutSine);
+		TweenerCollection.Add(Tweener);
+		Tweener = Widget->SizeDeltaTo(InSelected->GetSize(), AnimDuration, 0, ELTweenEase::InOutSine);
+		TweenerCollection.Add(Tweener);
+		Tweener = ULTweenBPLibrary::LocalRotationQuaternionTo(Widget, FQuat::Identity, AnimDuration, 0, ELTweenEase::InOutSine);
+		TweenerCollection.Add(Tweener);
+	}
+	else if (InSelected != nullptr)
+	{
+		auto Tweener = Widget->RenderOpacityTo(1.0f, AnimDuration, 0, ELTweenEase::Linear);
+		TweenerCollection.Add(Tweener);
+		Widget->AttachToComponent(InSelected, FAttachmentTransformRules::KeepWorldTransform);
+		auto Pos2D = InSelected->GetLocalSpaceCenter();
+		auto Pos3D = FVector(0, Pos2D.X, Pos2D.Y);
+		Widget->SetRelativeLocation(Pos3D);
+		Widget->SetSizeDelta(InSelected->GetSize());
+		Widget->SetRelativeRotation(FQuat::Identity);
+	}
+	else if (PrevSelected.IsValid())
+	{
+		auto Tweener = Widget->RenderOpacityTo(0.0f, AnimDuration, 0, ELTweenEase::Linear);
+		TweenerCollection.Add(Tweener);
+		Widget->AttachToComponent(PrevSelected->GetWidgetRootActor()->GetLexWidget(), FAttachmentTransformRules::KeepWorldTransform);
+	}
+}
+
+void UUINavigationInputSelectionHandler::SelectNone()
+{
+	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
+	{
+		ReceiveSelectNone();
+		return;
+	}
+	auto Widget = GetWidget();
+	if (!Widget)return;
+
+	for (auto& Tweener : TweenerCollection)
+	{
+		ULTweenBPLibrary::KillIfIsTweening(this, Tweener.Get());
+	}
+	TweenerCollection.Reset();
+	
+	if (CurrentSelected.IsValid())
+	{
+		auto Tweener = Widget->RenderOpacityTo(0.0f, AnimDuration, 0, ELTweenEase::Linear);
+		TweenerCollection.Add(Tweener);
+		Widget->AttachToComponent(CurrentSelected->GetWidgetRootActor()->GetLexWidget(), FAttachmentTransformRules::KeepWorldTransform);
+	}
+	CurrentSelected = nullptr;
+}

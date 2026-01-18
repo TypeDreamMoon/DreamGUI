@@ -487,19 +487,8 @@ ULTweener* ULexVisual::ColorTo(FColor endValue, float duration, float delay, ELT
 	auto Tweener = ULTweenManager::To(this, FLTweenColorGetterFunction::CreateUObject(this, &ULexVisual::GetColor), FLTweenColorSetterFunction::CreateUObject(this, &ULexVisual::SetColor), endValue, duration);
 	if (Tweener)
 	{
-		bool bAffectByGamePause;
-		bool bAffectByTimeDilation;
-		if (GetWidget()->IsScreenSpaceOverlayUI())
-		{
-			bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-		}
-		else
-		{
-			bAffectByGamePause = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-		}
-		Tweener->SetEase(ease)->SetDelay(delay)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
+		Tweener->SetEase(ease)->SetDelay(delay);
+		ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
 	}
 	return Tweener;
 }
@@ -510,19 +499,8 @@ ULTweener* ULexVisual::ColorFrom(FColor startValue, float duration, float delay,
 	auto Tweener = ULTweenManager::To(this, FLTweenColorGetterFunction::CreateUObject(this, &ULexVisual::GetColor), FLTweenColorSetterFunction::CreateUObject(this, &ULexVisual::SetColor), endValue, duration);
 	if (Tweener)
 	{
-		bool bAffectByGamePause;
-		bool bAffectByTimeDilation;
-		if (GetWidget()->IsScreenSpaceOverlayUI())
-		{
-			bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-		}
-		else
-		{
-			bAffectByGamePause = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-		}
-		Tweener->SetEase(ease)->SetDelay(delay)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
+		Tweener->SetEase(ease)->SetDelay(delay);
+		ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
 	}
 	return Tweener;
 }
@@ -532,19 +510,8 @@ ULTweener* ULexVisual::AlphaTo(float endValue, float duration, float delay, ELTw
 	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexVisual::GetAlpha), FLTweenFloatSetterFunction::CreateUObject(this, &ULexVisual::SetAlpha), endValue, duration);
 	if (Tweener)
 	{
-		bool bAffectByGamePause;
-		bool bAffectByTimeDilation;
-		if (GetWidget()->IsScreenSpaceOverlayUI())
-		{
-			bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-		}
-		else
-		{
-			bAffectByGamePause = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-		}
-		Tweener->SetEase(ease)->SetDelay(delay)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
+		Tweener->SetEase(ease)->SetDelay(delay);
+		ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
 	}
 	return Tweener;
 }
@@ -555,19 +522,8 @@ ULTweener* ULexVisual::AlphaFrom(float startValue, float duration, float delay, 
 	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexVisual::GetAlpha), FLTweenFloatSetterFunction::CreateUObject(this, &ULexVisual::SetAlpha), endValue, duration);
 	if (Tweener)
 	{
-		bool bAffectByGamePause;
-		bool bAffectByTimeDilation;
-		if (GetWidget()->IsScreenSpaceOverlayUI())
-		{
-			bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-		}
-		else
-		{
-			bAffectByGamePause = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-		}
-		Tweener->SetEase(ease)->SetDelay(delay)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
+		Tweener->SetEase(ease)->SetDelay(delay);
+		ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
 	}
 	return Tweener;
 }

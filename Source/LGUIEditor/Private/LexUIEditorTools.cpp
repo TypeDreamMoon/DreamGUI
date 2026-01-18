@@ -1145,7 +1145,7 @@ void FLexUIEditorTools::RefreshOpenedPrefabEditor(ULexUIPrefab* InPrefab)
 			if (Result == EAppReturnType::Yes)
 			{
 				//reopen this prefab editor
-				PrefabEditor->CloseWithoutCheckDataDirty();
+				PrefabEditor->CloseWindow(EAssetEditorCloseReason::AssetEditorHostClosed);
 				UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
 				AssetEditorSubsystem->OpenEditorForAsset(InPrefab);
 			}
@@ -1153,7 +1153,7 @@ void FLexUIEditorTools::RefreshOpenedPrefabEditor(ULexUIPrefab* InPrefab)
 		else
 		{
 			//reopen this prefab editor
-			PrefabEditor->CloseWithoutCheckDataDirty();
+			PrefabEditor->CloseWindow(EAssetEditorCloseReason::AssetEditorHostClosed);
 			UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
 			AssetEditorSubsystem->OpenEditorForAsset(InPrefab);
 		}
@@ -1255,14 +1255,15 @@ bool FLexUIEditorTools::CanUnpackActorForPrefab(TFunction<AActor*()> GetSelected
 	}
 }
 void FLexUIEditorTools::UnpackPrefab(TFunction<AActor*()> GetSelectedActorFunction)
-{
+{	
 	auto SelectedActor = GetSelectedActorFunction();
 	if (SelectedActor == nullptr)return;
 	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return;
-	GEditor->BeginTransaction(FText::FromString(TEXT("LGUI UnpackPrefab")));
+	GEditor->BeginTransaction(FText::FromString(TEXT("LexUI UnpackPrefab")));
 	auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
 	if (PrefabHelperObject != nullptr)
 	{
+		SelectedActor->GetWorld()->Modify();
 		check(PrefabHelperObject->SubPrefabMap.Contains(SelectedActor) || PrefabHelperObject->MissingPrefab.Contains(SelectedActor));//should already filtered by menu
 		PrefabHelperObject->Modify();
 		PrefabHelperObject->RemoveSubPrefabByRootActor(SelectedActor);//the SelectedActor must be root actor, should already filtered by menu
@@ -1276,7 +1277,6 @@ void FLexUIEditorTools::SelectPrefabAsset(TFunction<AActor*()> GetSelectedActorF
 	auto SelectedActor = GetSelectedActorFunction();
 	if (SelectedActor == nullptr)return;
 	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return;
-	GEditor->BeginTransaction(FText::FromString(TEXT("LGUI SelectPrefabAsset")));
 	auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
 	if (PrefabHelperObject != nullptr)
 	{
@@ -1289,7 +1289,6 @@ void FLexUIEditorTools::SelectPrefabAsset(TFunction<AActor*()> GetSelectedActorF
 			GEditor->SyncBrowserToObjects(ObjectsToSync);
 		}
 	}
-	GEditor->EndTransaction();
 }
 bool FLexUIEditorTools::CanBrowsePrefabAsset(TFunction<AActor*()> GetSelectedActorFunction)
 {

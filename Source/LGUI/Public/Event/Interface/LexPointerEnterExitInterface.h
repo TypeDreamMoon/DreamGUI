@@ -25,11 +25,11 @@ public:
 	 * @return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up.
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = LGUI)
-		bool OnPointerEnter(ULexPointerEventData* eventData);
+		bool OnPointerEnter(ULexPointerEventData* EventData);
 	/**
 	 * Called when pointer exit this object.
 	 * @return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up.
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = LGUI)
-		bool OnPointerExit(ULexPointerEventData* eventData);
+		bool OnPointerExit(ULexPointerEventData* EventData);
 };

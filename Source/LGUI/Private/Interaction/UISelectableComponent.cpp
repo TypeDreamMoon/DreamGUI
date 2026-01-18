@@ -9,7 +9,9 @@
 #include "Core/Components/LexCanvas.h"
 #include "Event/LexEventSystem.h"
 #include "Core/LexUISettings.h"
+#include "Core/Actor/LexWidgetRootActor.h"
 #include "Core/Components/LexImage.h"
+#include "Interaction/UINavigationInputSelectionHandler.h"
 
 
 void UUITransitionComponent::StopTransition() 
@@ -95,7 +97,7 @@ void UUISelectableComponent::OnRegister()
 	Super::OnRegister();
 	ULexUIManagerWorldSubsystem::AddSelectable(this);
 	CurrentSelectionState = GetSelectionState();
-	ApplySelectionState(true);
+	ApplyPointerSelectionState(true);
 }
 void UUISelectableComponent::OnUnregister()
 {
@@ -109,7 +111,7 @@ void UUISelectableComponent::PostEditChangeProperty(FPropertyChangedEvent& Prope
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (PropertyChangedEvent.Property)
 	{
-		ApplySelectionState(true);
+		ApplyPointerSelectionState(true);
 	}
 }
 #endif
@@ -121,16 +123,16 @@ void UUISelectableComponent::OnInteractableChanged(bool IsEnabled)
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())//is editor, just set properties immediately
 	{
-		ApplySelectionState(true);
+		ApplyPointerSelectionState(true);
 	}
 	else
 #endif
 	{
-		ApplySelectionState(false);
+		ApplyPointerSelectionState(false);
 	}
 }
 
-void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
+void UUISelectableComponent::ApplyPointerSelectionState(bool ImmediateSet)
 {
 	if (TransitionType != EUISelectableTransitionType::Custom)
 	{
@@ -283,19 +285,7 @@ void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 			}), FLTweenColorSetterFunction::CreateUObject(TransitionTarget.Get(), &ULexVisual::SetColor), Color.GetValue(), AnimDuration);
 			if (TransitionTweener)
 			{
-				bool bAffectByGamePause = false;
-				bool bAffectByTimeDilation = false;
-				if (this->GetWidget()->IsScreenSpaceOverlayUI())
-				{
-					bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
-					bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-				}
-				else
-				{
-					bAffectByGamePause = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
-					bAffectByTimeDilation = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-				}
-				TransitionTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
+				ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), TransitionTweener);
 			}
 		}
 	}
@@ -323,19 +313,7 @@ void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 					}), FLTweenColorSetterFunction::CreateUObject(TransitionTargetAsLexImage, &ULexImage::SetBrushTintColor), Brush.GetValue().TintColor, AnimDuration);
 					if (TransitionTweener)
 					{
-						bool bAffectByGamePause = false;
-						bool bAffectByTimeDilation = false;
-						if (this->GetWidget()->IsScreenSpaceOverlayUI())
-						{
-							bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
-							bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-						}
-						else
-						{
-							bAffectByGamePause = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
-							bAffectByTimeDilation = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-						}
-						TransitionTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
+						ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), TransitionTweener);
 					}
 				}
 			}
@@ -343,43 +321,72 @@ void UUISelectableComponent::ApplySelectionState(bool ImmediateSet)
 	}
 }
 
-bool UUISelectableComponent::OnPointerEnter_Implementation(ULexPointerEventData* eventData)
+bool UUISelectableComponent::CheckNavigationSelectionState()
 {
-	IsPointerInsideThis = true;
-	CurrentSelectionState = GetSelectionState();
-	ApplySelectionState(false);
-	return AllowEventBubbleUp;
-}
-bool UUISelectableComponent::OnPointerExit_Implementation(ULexPointerEventData* eventData)
-{
-	IsPointerInsideThis = false;
-	CurrentSelectionState = GetSelectionState();
-	ApplySelectionState(false);
-	return AllowEventBubbleUp;
-}
-bool UUISelectableComponent::OnPointerDown_Implementation(ULexPointerEventData* eventData)
-{
-	IsPointerDown = true;
-	CurrentSelectionState = GetSelectionState();
-	ApplySelectionState(false);
-	if (auto eventSystemInstance = ULexEventSystem::GetLexEventSystemInstance(this, IsValid(eventData) ? eventData->UserIndex : 0))
+	if (!NavigationSelection.IsValid())
 	{
-		eventSystemInstance->SetSelectComponent(GetWidget(), eventData, eventData->EnterComponentEventFireType);
+		if (auto Widget = GetWidget())
+		{
+			if (auto WidgetRootActor = Widget->GetWidgetRootActor())
+			{
+				NavigationSelection = WidgetRootActor->GetNavigationSelection();
+			}
+		}
+	}
+	return NavigationSelection.IsValid();
+}
+
+bool UUISelectableComponent::OnPointerEnter_Implementation(ULexPointerEventData* EventData)
+{
+	bIsPointerInsideThis = true;
+	CurrentSelectionState = GetSelectionState();
+	ApplyPointerSelectionState(false);
+	if (EventData->InputType == ELexUIPointerInputType::Navigation)
+	{
+		if (CheckNavigationSelectionState())
+		{
+			NavigationSelection->SelectWidget(GetWidget());
+		}
+	}
+	else
+	{
+		if (NavigationSelection.IsValid())
+		{
+			NavigationSelection->SelectNone();
+		}
 	}
 	return AllowEventBubbleUp;
 }
-bool UUISelectableComponent::OnPointerUp_Implementation(ULexPointerEventData* eventData)
+bool UUISelectableComponent::OnPointerExit_Implementation(ULexPointerEventData* EventData)
 {
-	IsPointerDown = false;
+	bIsPointerInsideThis = false;
 	CurrentSelectionState = GetSelectionState();
-	ApplySelectionState(false);
+	ApplyPointerSelectionState(false);
 	return AllowEventBubbleUp;
 }
-bool UUISelectableComponent::OnPointerSelect_Implementation(ULexBaseEventData* eventData)
+bool UUISelectableComponent::OnPointerDown_Implementation(ULexPointerEventData* EventData)
+{
+	bIsPointerDown = true;
+	CurrentSelectionState = GetSelectionState();
+	ApplyPointerSelectionState(false);
+	if (auto eventSystemInstance = ULexEventSystem::GetLexEventSystemInstance(this, IsValid(EventData) ? EventData->UserIndex : 0))
+	{
+		eventSystemInstance->SetSelectComponent(GetWidget(), EventData, EventData->EnterComponentEventFireType);
+	}
+	return AllowEventBubbleUp;
+}
+bool UUISelectableComponent::OnPointerUp_Implementation(ULexPointerEventData* EventData)
+{
+	bIsPointerDown = false;
+	CurrentSelectionState = GetSelectionState();
+	ApplyPointerSelectionState(false);
+	return AllowEventBubbleUp;
+}
+bool UUISelectableComponent::OnPointerSelect_Implementation(ULexBaseEventData* EventData)
 {
 	return AllowEventBubbleUp;
 }
-bool UUISelectableComponent::OnPointerDeselect_Implementation(ULexBaseEventData* eventData)
+bool UUISelectableComponent::OnPointerDeselect_Implementation(ULexBaseEventData* EventData)
 {
 	return AllowEventBubbleUp;
 }
@@ -388,9 +395,9 @@ EUISelectableSelectionState UUISelectableComponent::GetSelectionState()const
 {
 	if (!IsInteractable())
 		return EUISelectableSelectionState::Disabled;
-	if (IsPointerDown)
+	if (bIsPointerDown)
 		return EUISelectableSelectionState::Pressed;
-	if (IsPointerInsideThis)
+	if (bIsPointerInsideThis)
 		return EUISelectableSelectionState::Hovered;
 	return EUISelectableSelectionState::Normal;
 }
@@ -400,7 +407,7 @@ void UUISelectableComponent::SetTransitionTarget(ULexVisual* Value)
 	if (TransitionTarget != Value)
 	{
 		TransitionTarget = Value;
-		ApplySelectionState(false);
+		ApplyPointerSelectionState(false);
 	}
 }
 void UUISelectableComponent::SetNormalColor(FColor Value)
@@ -408,7 +415,7 @@ void UUISelectableComponent::SetNormalColor(FColor Value)
 	NormalColor = Value;
 	if (CurrentSelectionState == EUISelectableSelectionState::Normal)
 	{
-		ApplySelectionState(false);
+		ApplyPointerSelectionState(false);
 	}
 }
 void UUISelectableComponent::SetHoveredColor(FColor Value)
@@ -416,7 +423,7 @@ void UUISelectableComponent::SetHoveredColor(FColor Value)
 	HoveredColor = Value;
 	if (CurrentSelectionState == EUISelectableSelectionState::Hovered)
 	{
-		ApplySelectionState(false);
+		ApplyPointerSelectionState(false);
 	}
 }
 void UUISelectableComponent::SetPressedColor(FColor Value)
@@ -424,7 +431,7 @@ void UUISelectableComponent::SetPressedColor(FColor Value)
 	PressedColor = Value;
 	if (CurrentSelectionState == EUISelectableSelectionState::Pressed)
 	{
-		ApplySelectionState(false);
+		ApplyPointerSelectionState(false);
 	}
 }
 void UUISelectableComponent::SetDisabledColor(FColor Value)
@@ -432,7 +439,7 @@ void UUISelectableComponent::SetDisabledColor(FColor Value)
 	DisabledColor = Value;
 	if (CurrentSelectionState == EUISelectableSelectionState::Disabled)
 	{
-		ApplySelectionState(false);
+		ApplyPointerSelectionState(false);
 	}
 }
 void UUISelectableComponent::SetNormalImageBrush(const FLexUIImageBrush& Value)
@@ -440,7 +447,7 @@ void UUISelectableComponent::SetNormalImageBrush(const FLexUIImageBrush& Value)
 	NormalImageBrush = Value;
 	if (CurrentSelectionState == EUISelectableSelectionState::Normal)
 	{
-		ApplySelectionState(false);
+		ApplyPointerSelectionState(false);
 	}
 }
 void UUISelectableComponent::SetHoveredImageBrush(const FLexUIImageBrush& Value)
@@ -448,7 +455,7 @@ void UUISelectableComponent::SetHoveredImageBrush(const FLexUIImageBrush& Value)
 	HoveredImageBrush = Value;
 	if (CurrentSelectionState == EUISelectableSelectionState::Hovered)
 	{
-		ApplySelectionState(false);
+		ApplyPointerSelectionState(false);
 	}
 }
 void UUISelectableComponent::SetPressedImageBrush(const FLexUIImageBrush& Value)
@@ -456,7 +463,7 @@ void UUISelectableComponent::SetPressedImageBrush(const FLexUIImageBrush& Value)
 	PressedImageBrush = Value;
 	if (CurrentSelectionState == EUISelectableSelectionState::Pressed)
 	{
-		ApplySelectionState(false);
+		ApplyPointerSelectionState(false);
 	}
 }
 void UUISelectableComponent::SetDisabledImageBrush(const FLexUIImageBrush& Value)
@@ -464,7 +471,7 @@ void UUISelectableComponent::SetDisabledImageBrush(const FLexUIImageBrush& Value
 	DisabledImageBrush = Value;
 	if (CurrentSelectionState == EUISelectableSelectionState::Disabled)
 	{
-		ApplySelectionState(false);
+		ApplyPointerSelectionState(false);
 	}
 }
 void UUISelectableComponent::SetSelectionState(EUISelectableSelectionState NewState)
@@ -472,19 +479,23 @@ void UUISelectableComponent::SetSelectionState(EUISelectableSelectionState NewSt
 	if (CurrentSelectionState != NewState)
 	{
 		CurrentSelectionState = NewState;
-		ApplySelectionState(false);
+		ApplyPointerSelectionState(false);
 	}
 }
 bool UUISelectableComponent::IsInteractable()const
 {
 	if (auto Widget = GetWidget())
 	{
-		return Widget->GetInteractableInHierarchy() && bInteractable;
+		return Widget->GetWidgetActiveInHierarchy() && Widget->GetInteractableInHierarchy() && bInteractable;
 	}
 	return bInteractable;
 }
 
 #pragma region Navigation
+bool UUISelectableComponent::CanNavigateHere_Implementation() const
+{
+	return IsInteractable() && GetCanNavigateHere();
+}
 bool UUISelectableComponent::OnNavigate_Implementation(ELexUINavigationDirection direction, TScriptInterface<ILexNavigationInterface>& result)
 {
 	UUISelectableComponent* Selectable = nullptr;
@@ -543,9 +554,9 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 
 UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirection, USceneComponent* InParent)
 {
-	auto LGUIManagerActor = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld());
-	if (LGUIManagerActor == nullptr)return nullptr;
-	const auto& SelectableArray = LGUIManagerActor->GetAllSelectableArray();
+	auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld());
+	if (LexUIManager == nullptr)return nullptr;
+	const auto& SelectableArray = LexUIManager->GetAllSelectableArray();
 
 	auto GetPointOnRectEdge = [](ULexWidget* rect, FVector2D dir)
 	{
@@ -648,45 +659,57 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 }
 UUISelectableComponent* UUISelectableComponent::FindDefaultSelectable(UObject* WorldContextObject)
 {
-	if (auto LGUIManagerActor = ULexUIManagerWorldSubsystem::GetInstance(WorldContextObject->GetWorld()))
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(WorldContextObject->GetWorld()))
 	{
-		const auto& SelectableArray = LGUIManagerActor->GetAllSelectableArray();
+		const auto& SelectableArray = LexUIManager->GetAllSelectableArray();
 		if (SelectableArray.Num() > 0)
 		{
-			auto Selectable = SelectableArray[0].Get();
-			//default selectable is the most "prev" one, so we need to find it
-			TSet<UUISelectableComponent*> FoundSelectables;
-			while (true)
+			UUISelectableComponent* Selectable = nullptr;
+			for (int i = 0; i < SelectableArray.Num(); i++)
 			{
-				FoundSelectables.Add(Selectable);
-				//change navigation mode to auto, so we can find selectable only by position (exclude explicit)
-				auto OriginNavigationLeftMode = Selectable->NavigationLeft;
-				auto OriginNavigationUpMode = Selectable->NavigationUp;
-				auto OriginNavigationPrevMode = Selectable->NavigationPrev;
-				Selectable->NavigationLeft = EUISelectableNavigationMode::Auto;
-				Selectable->NavigationUp = EUISelectableNavigationMode::Auto;
-				Selectable->NavigationPrev = EUISelectableNavigationMode::Auto;
-
-				auto PrevSelectable = Selectable->FindSelectableOnPrev();
-
-				//restore navigation mode
-				Selectable->NavigationLeft = OriginNavigationLeftMode;
-				Selectable->NavigationUp = OriginNavigationUpMode;
-				Selectable->NavigationPrev = OriginNavigationPrevMode;
-
-				if (!IsValid(PrevSelectable) 
-					|| PrevSelectable == Selectable
-					|| FoundSelectables.Contains(PrevSelectable)//incase cycle loop, eg: A is left and B is top, A's top return B, and B's left return A
-					)
+				auto SelectableItem = SelectableArray[i];
+				if (SelectableItem->IsInteractable() && SelectableItem->GetCanNavigateHere())
 				{
+					Selectable = SelectableItem.Get();//find a interactable one
 					break;
 				}
-				else
-				{
-					Selectable = PrevSelectable;
-				}
 			}
-			return Selectable;
+			if (Selectable)
+			{
+				//default selectable is the most "prev" one, so we need to find it
+				TSet<UUISelectableComponent*> FoundSelectables;
+				while (true)
+				{
+					FoundSelectables.Add(Selectable);
+					//change navigation mode to auto, so we can find selectable only by position (exclude explicit)
+					auto OriginNavigationLeftMode = Selectable->NavigationLeft;
+					auto OriginNavigationUpMode = Selectable->NavigationUp;
+					auto OriginNavigationPrevMode = Selectable->NavigationPrev;
+					Selectable->NavigationLeft = EUISelectableNavigationMode::Auto;
+					Selectable->NavigationUp = EUISelectableNavigationMode::Auto;
+					Selectable->NavigationPrev = EUISelectableNavigationMode::Auto;
+
+					auto PrevSelectable = Selectable->FindSelectableOnPrev();
+
+					//restore navigation mode
+					Selectable->NavigationLeft = OriginNavigationLeftMode;
+					Selectable->NavigationUp = OriginNavigationUpMode;
+					Selectable->NavigationPrev = OriginNavigationPrevMode;
+
+					if (!IsValid(PrevSelectable) 
+						|| PrevSelectable == Selectable
+						|| FoundSelectables.Contains(PrevSelectable)//incase cycle loop, eg: A is left and B is top, A's top return B, and B's left return A
+						)
+					{
+						break;
+					}
+					else
+					{
+						Selectable = PrevSelectable;
+					}
+				}
+				return Selectable;
+			}
 		}
 	}
 	return nullptr;

@@ -1218,14 +1218,14 @@ void UUITextInputComponent::OnDimensionsChanged(bool PivotChanged, bool WidthCha
 	this->UpdateAfterTextChange(false);//if size change, need to recalculate text input area
 }
 
-bool UUITextInputComponent::OnPointerEnter_Implementation(ULexPointerEventData* eventData)
+bool UUITextInputComponent::OnPointerEnter_Implementation(ULexPointerEventData* EventData)
 {
-	Super::OnPointerEnter_Implementation(eventData);
+	Super::OnPointerEnter_Implementation(EventData);
 	if (bAutoActivateInputWhenNavigateIn)
 	{
-		if (eventData->InputType == ELexUIPointerInputType::Navigation)
+		if (EventData->InputType == ELexUIPointerInputType::Navigation)
 		{
-			ActivateInput(eventData);
+			ActivateInput(EventData);
 		}
 	}
 	if (APlayerController* pc = this->GetWorld()->GetFirstPlayerController())
@@ -1234,36 +1234,36 @@ bool UUITextInputComponent::OnPointerEnter_Implementation(ULexPointerEventData* 
 	}
 	return AllowEventBubbleUp;
 }
-bool UUITextInputComponent::OnPointerExit_Implementation(ULexPointerEventData* eventData)
+bool UUITextInputComponent::OnPointerExit_Implementation(ULexPointerEventData* EventData)
 {
-	Super::OnPointerExit_Implementation(eventData);
+	Super::OnPointerExit_Implementation(EventData);
 	if (APlayerController* pc = this->GetWorld()->GetFirstPlayerController())
 	{
 		pc->CurrentMouseCursor = EMouseCursor::Default;
 	}
 	return AllowEventBubbleUp;
 }
-bool UUITextInputComponent::OnPointerSelect_Implementation(ULexBaseEventData* eventData)
+bool UUITextInputComponent::OnPointerSelect_Implementation(ULexBaseEventData* EventData)
 {
-	Super::OnPointerSelect_Implementation(eventData);
-	//ActivateInput(eventData);//handled at PointerClick
+	Super::OnPointerSelect_Implementation(EventData);
+	//ActivateInput(EventData);//handled at PointerClick
 	return AllowEventBubbleUp;
 }
-bool UUITextInputComponent::OnPointerDeselect_Implementation(ULexBaseEventData* eventData)
+bool UUITextInputComponent::OnPointerDeselect_Implementation(ULexBaseEventData* EventData)
 {
-	Super::OnPointerDeselect_Implementation(eventData);
+	Super::OnPointerDeselect_Implementation(EventData);
 	DeactivateInput();
 	return AllowEventBubbleUp;
 }
-bool UUITextInputComponent::OnPointerClick_Implementation(ULexPointerEventData* eventData)
+bool UUITextInputComponent::OnPointerClick_Implementation(ULexPointerEventData* EventData)
 {
 	if (!bInputActive)//need active input
 	{
-		ActivateInput(eventData);
+		ActivateInput(EventData);
 	}
 	return AllowEventBubbleUp;
 }
-bool UUITextInputComponent::OnPointerBeginDrag_Implementation(ULexPointerEventData* eventData)
+bool UUITextInputComponent::OnPointerBeginDrag_Implementation(ULexPointerEventData* EventData)
 {
 	if (bInputActive)
 	{
@@ -1274,7 +1274,7 @@ bool UUITextInputComponent::OnPointerBeginDrag_Implementation(ULexPointerEventDa
 		return true;
 	}
 }
-bool UUITextInputComponent::OnPointerDrag_Implementation(ULexPointerEventData* eventData)
+bool UUITextInputComponent::OnPointerDrag_Implementation(ULexPointerEventData* EventData)
 {
 	if (bInputActive)
 	{
@@ -1282,7 +1282,7 @@ bool UUITextInputComponent::OnPointerDrag_Implementation(ULexPointerEventData* e
 		{
 			FVector2f caretPosition;
 			int tempCaretPositionLineIndex;
-			TextVisual->FindCaretByWorldPosition(eventData->GetWorldPointInPlane(), caretPosition, tempCaretPositionLineIndex, CaretPositionIndex);
+			TextVisual->FindCaretByWorldPosition(EventData->GetWorldPointInPlane(), caretPosition, tempCaretPositionLineIndex, CaretPositionIndex);
 			auto displayCaretCount = TextVisual->GetLastCaret() + 1;
 
 			//@todo:caret move speed depend on drag distance
@@ -1325,7 +1325,7 @@ bool UUITextInputComponent::OnPointerDrag_Implementation(ULexPointerEventData* e
 		return true;
 	}
 }
-bool UUITextInputComponent::OnPointerEndDrag_Implementation(ULexPointerEventData* eventData)
+bool UUITextInputComponent::OnPointerEndDrag_Implementation(ULexPointerEventData* EventData)
 {
 	if (bInputActive)
 	{
@@ -1336,16 +1336,16 @@ bool UUITextInputComponent::OnPointerEndDrag_Implementation(ULexPointerEventData
 		return true;
 	}
 }
-bool UUITextInputComponent::OnPointerDown_Implementation(ULexPointerEventData* eventData)
+bool UUITextInputComponent::OnPointerDown_Implementation(ULexPointerEventData* EventData)
 {
-	Super::OnPointerDown_Implementation(eventData);
+	Super::OnPointerDown_Implementation(EventData);
 	if (bInputActive)//if already active, then put caret position at mouse position
 	{
 		if (TextVisual != nullptr)
 		{
 			//caret position when press, UIText space
 			auto PressCaretPosition = FVector2f(0, 0);
-			TextVisual->FindCaretByWorldPosition(eventData->GetWorldPointInPlane(), PressCaretPosition, PressCaretPositionLineIndex, PressCaretPositionIndex);
+			TextVisual->FindCaretByWorldPosition(EventData->GetWorldPointInPlane(), PressCaretPosition, PressCaretPositionLineIndex, PressCaretPositionIndex);
 			PressCaretPositionIndex = PressCaretPositionIndex + VisibleCaretStartIndex;
 			CaretPositionIndex = PressCaretPositionIndex;
 			PressCaretPositionLineIndex = PressCaretPositionLineIndex + VisibleCaretStartLineIndex;
@@ -1357,12 +1357,12 @@ bool UUITextInputComponent::OnPointerDown_Implementation(ULexPointerEventData* e
 
 	return AllowEventBubbleUp;
 }
-bool UUITextInputComponent::OnPointerUp_Implementation(ULexPointerEventData* eventData)
+bool UUITextInputComponent::OnPointerUp_Implementation(ULexPointerEventData* EventData)
 {
-	Super::OnPointerUp_Implementation(eventData);
+	Super::OnPointerUp_Implementation(EventData);
 	return AllowEventBubbleUp;
 }
-void UUITextInputComponent::ActivateInput(ULexPointerEventData* eventData)
+void UUITextInputComponent::ActivateInput(ULexPointerEventData* EventData)
 {
 	if (TextVisual == nullptr)
 	{
@@ -1424,13 +1424,13 @@ void UUITextInputComponent::ActivateInput(ULexPointerEventData* eventData)
 	BindKeys();
 	UpdatePlaceHolderComponent();
 	//set is selected
-	if (auto eventSystem = ULexEventSystem::GetLexEventSystemInstance(this, IsValid(eventData) ? eventData->UserIndex : 0))
+	if (auto eventSystem = ULexEventSystem::GetLexEventSystemInstance(this, IsValid(EventData) ? EventData->UserIndex : 0))
 	{
 		if (auto Widget = GetWidget())
 		{
-			if (IsValid(eventData))
+			if (IsValid(EventData))
 			{
-				eventSystem->SetSelectComponent(Widget, eventData, eventData->PressComponentEventFireType);
+				eventSystem->SetSelectComponent(Widget, EventData, EventData->PressComponentEventFireType);
 			}
 			else
 			{

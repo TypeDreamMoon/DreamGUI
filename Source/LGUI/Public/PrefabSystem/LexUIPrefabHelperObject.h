@@ -95,7 +95,6 @@ public:
 	void RemoveSubPrefabByAnyActorOfSubPrefab(AActor* InPrefabActor);
 	ULexUIPrefab* GetPrefabAssetBySubPrefabObject(UObject* InObject);
 	bool GetAnythingDirty()const;
-	void SetNothingDirty();
 	void SetAnythingDirty();
 	void CheckPrefabVersion();
 	FSimpleMulticastDelegate OnSubPrefabNewVersionUpdated;

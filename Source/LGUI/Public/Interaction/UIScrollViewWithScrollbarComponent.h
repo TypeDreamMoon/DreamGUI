@@ -45,8 +45,8 @@ private:
 	virtual void CalculateVerticalRange()override;
 	virtual bool CheckValidHit(USceneComponent* InHitComp)override;
 	virtual void UpdateProgress(bool InFireEvent = true)override;
-	virtual bool OnPointerDrag_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerScroll_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerDrag_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerScroll_Implementation(ULexPointerEventData* EventData)override;
 	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> HorizontalScrollbarWidget;
 	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> VerticalScrollbarWidget;
 	bool CheckScrollbarParameter();

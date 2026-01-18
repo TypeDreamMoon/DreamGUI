@@ -461,9 +461,16 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 		{
 			if (auto ViewportClient = GetEditorViewportClient())
 			{
-				auto ViewLocation = ViewportClient->GetViewLocation();
-				float Distance = FVector::Distance(WorldPoint, ViewLocation);
-				return Distance * 0.01f;
+				if (ViewportClient->IsOrtho())
+				{
+					return ViewportClient->GetOrthoZoom() * 0.001f; 
+				}
+				else
+				{
+					auto ViewLocation = ViewportClient->GetViewLocation();
+					float Distance = FVector::Distance(WorldPoint, ViewLocation);
+					return Distance * 0.01f;
+				}
 			}
 		}
 		return ArrowSize;

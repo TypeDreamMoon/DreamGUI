@@ -59,16 +59,16 @@
 #include "PrefabEditor/LexUIPrefabOverrideDataViewer.h"
 #include "Engine/Selection.h"
 
-#include "PrefabAnimation/LGUIPrefabSequenceComponentCustomization.h"
-#include "PrefabAnimation/MovieSceneSequenceEditor_LGUIPrefabSequence.h"
+#include "PrefabAnimation/LexUIPrefabSequenceComponentCustomization.h"
+#include "PrefabAnimation/MovieSceneSequenceEditor_LexUIPrefabSequence.h"
 #include "SequencerSettings.h"
 #include "ISequencerModule.h"
 #include "LexUIComponentReference.h"
-#include "PrefabAnimation/LGUIPrefabSequenceEditor.h"
+#include "PrefabAnimation/LexUIPrefabSequenceEditor.h"
 #include "MovieSceneToolsProjectSettings.h"
 #include "UMGStyle.h"
-#include "PrefabAnimation/LGUIMaterialTrackEditor.h"
-#include "PrefabAnimation/LGUIPrefabSequencerSettings.h"
+#include "PrefabAnimation/LexUIMaterialTrackEditor.h"
+#include "PrefabAnimation/LexUIPrefabSequencerSettings.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetTypeActions/AssetTypeActions_LexUIFontEmojiData.h"
@@ -113,8 +113,8 @@
 #include "Interaction/UIToggleComponent.h"
 #include "MeshModifier/LexMeshModifierBase.h"
 #include "MeshModifier/LexMeshModifierTextAnimation.h"
-#include "PrefabAnimation/LGUIPrefabSequence.h"
-#include "PrefabAnimation/LGUIPrefabSequenceComponent.h"
+#include "PrefabSystem/PrefabAnimation/LexUIPrefabSequence.h"
+#include "PrefabSystem/PrefabAnimation/LexUIPrefabSequenceComponent.h"
 #include "PrefabSystem/LexUIPrefab.h"
 
 const FName FLGUIEditorModule::LexUIDynamicSpriteAtlasViewerTabName(TEXT("LexUIDynamicSpriteAtlasViewerName"));
@@ -130,11 +130,11 @@ void FLGUIEditorModule::StartupModule()
 	FLGUIEditorStyle::Initialize();
 	FLGUIEditorStyle::ReloadTextures();
 
-	OnInitializeSequenceHandle = ULGUIPrefabSequence::OnInitializeSequence().AddStatic(FLGUIEditorModule::OnInitializeSequence);
+	OnInitializeSequenceHandle = ULexUIPrefabSequence::OnInitializeSequence().AddStatic(FLGUIEditorModule::OnInitializeSequence);
 
 	ISequencerModule& SequencerModule = FModuleManager::Get().LoadModuleChecked<ISequencerModule>("Sequencer");
-	SequenceEditorHandle = SequencerModule.RegisterSequenceEditor(ULGUIPrefabSequence::StaticClass(), MakeUnique<FMovieSceneSequenceEditor_LGUIPrefabSequence>());
-	LGUIMaterialTrackEditorCreateTrackEditorHandle = SequencerModule.RegisterTrackEditor(FOnCreateTrackEditor::CreateStatic(&FLGUIMaterialTrackEditor::CreateTrackEditor));
+	SequenceEditorHandle = SequencerModule.RegisterSequenceEditor(ULexUIPrefabSequence::StaticClass(), MakeUnique<FMovieSceneSequenceEditor_LexUIPrefabSequence>());
+	LexUIMaterialTrackEditorCreateTrackEditorHandle = SequencerModule.RegisterTrackEditor(FOnCreateTrackEditor::CreateStatic(&FLexUIMaterialTrackEditor::CreateTrackEditor));
 
 	FLexUIEditorCommands::Register();
 	
@@ -146,7 +146,7 @@ void FLGUIEditorModule::StartupModule()
 		FGlobalTabmanager::Get()->RegisterNomadTabSpawner(LexUIDynamicSpriteAtlasViewerTabName, FOnSpawnTab::CreateRaw(this, &FLGUIEditorModule::HandleSpawnDynamicSpriteAtlasViewerTab))
 			.SetDisplayName(LOCTEXT("LexUIDynamicSpriteAtlasTextureViewerName", "LexUI Dynamic-Sprite-Atlas Texture Viewer"))
 			.SetMenuType(ETabSpawnerMenuType::Hidden);
-		FGlobalTabmanager::Get()->RegisterNomadTabSpawner(LexUIPrefabSequenceTabName, FOnSpawnTab::CreateRaw(this, &FLGUIEditorModule::HandleSpawnLGUIPrefabSequenceTab))
+		FGlobalTabmanager::Get()->RegisterNomadTabSpawner(LexUIPrefabSequenceTabName, FOnSpawnTab::CreateRaw(this, &FLGUIEditorModule::HandleSpawnLexUIPrefabSequenceTab))
 			.SetDisplayName(LOCTEXT("LexUIPrefabSequenceTabName", "LexUI Prefab Sequence"))
 			.SetMenuType(ETabSpawnerMenuType::Hidden);
 	}
@@ -212,7 +212,7 @@ void FLGUIEditorModule::StartupModule()
 
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIComponentReference::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexUIComponentReferenceCustomization::MakeInstance));
 
-		PropertyModule.RegisterCustomClassLayout(ULGUIPrefabSequenceComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLGUIPrefabSequenceComponentCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexUIPrefabSequenceComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexUIPrefabSequenceComponentCustomization::MakeInstance));
 		
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIImageBrush::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexImageBrushStructCustomization::MakeInstance));
 		
@@ -284,11 +284,11 @@ void FLGUIEditorModule::StartupModule()
 				LOCTEXT("LexUIEditorSettingsDescription", "LexUI Editor Settings"),
 				GetMutableDefault<ULexUIEditorSettings>());
 
-			LGUIPrefabSequencerSettings = USequencerSettingsContainer::GetOrCreate<ULGUIPrefabSequencerSettings>(TEXT("EmbeddedLexUIPrefabSequenceEditor"));
+			LexUIPrefabSequencerSettings = USequencerSettingsContainer::GetOrCreate<ULexUIPrefabSequencerSettings>(TEXT("EmbeddedLexUIPrefabSequenceEditor"));
 			SettingsModule->RegisterSettings("Editor", "ContentEditors", "EmbeddedLexUIPrefabSequenceEditor",
 				LOCTEXT("LexUIPrefabSequencerSettingsName", "LexUI Prefab Sequence Editor"),
 				LOCTEXT("LexUIPrefabSequencerSettingsDescription", "Configure the look and feel of the LexUI Prefab Sequence Editor."),
-				LGUIPrefabSequencerSettings);
+				LexUIPrefabSequencerSettings);
 		}
 	}
 	//blueprint
@@ -334,7 +334,7 @@ void FLGUIEditorModule::StartupModule()
 		};
 }
 
-void FLGUIEditorModule::OnInitializeSequence(ULGUIPrefabSequence* Sequence)
+void FLGUIEditorModule::OnInitializeSequence(ULexUIPrefabSequence* Sequence)
 {
 	auto* ProjectSettings = GetDefault<UMovieSceneToolsProjectSettings>();
 	UMovieScene* MovieScene = Sequence->GetMovieScene();
@@ -353,12 +353,12 @@ void FLGUIEditorModule::ShutdownModule()
 
 	FLexUIEditorCommands::Unregister();
 
-	ULGUIPrefabSequence::OnInitializeSequence().Remove(OnInitializeSequenceHandle);
+	ULexUIPrefabSequence::OnInitializeSequence().Remove(OnInitializeSequenceHandle);
 	ISequencerModule* SequencerModule = FModuleManager::Get().GetModulePtr<ISequencerModule>("Sequencer");
 	if (SequencerModule)
 	{
 		SequencerModule->UnregisterSequenceEditor(SequenceEditorHandle);
-		SequencerModule->UnRegisterTrackEditor(LGUIMaterialTrackEditorCreateTrackEditorHandle);
+		SequencerModule->UnRegisterTrackEditor(LexUIMaterialTrackEditorCreateTrackEditorHandle);
 	}
 	
 	//unregister window
@@ -427,7 +427,7 @@ void FLGUIEditorModule::ShutdownModule()
 
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIComponentReference::StaticStruct()->GetFName());
 
-		PropertyModule.UnregisterCustomClassLayout(ULGUIPrefabSequenceComponent::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexUIPrefabSequenceComponent::StaticClass()->GetFName());
 
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIImageBrush::StaticStruct()->GetFName());
 		
@@ -477,7 +477,7 @@ void FLGUIEditorModule::ShutdownModule()
 
 void FLGUIEditorModule::AddReferencedObjects(FReferenceCollector& Collector)
 {
-	Collector.AddReferencedObject(LGUIPrefabSequencerSettings);
+	Collector.AddReferencedObject(LexUIPrefabSequencerSettings);
 }
 FString FLGUIEditorModule::GetReferencerName() const 
 {
@@ -497,10 +497,10 @@ TSharedRef<SDockTab> FLGUIEditorModule::HandleSpawnDynamicSpriteAtlasViewerTab(c
 	return ResultTab;
 }
 
-TSharedRef<SDockTab> FLGUIEditorModule::HandleSpawnLGUIPrefabSequenceTab(const FSpawnTabArgs& SpawnTabArgs)
+TSharedRef<SDockTab> FLGUIEditorModule::HandleSpawnLexUIPrefabSequenceTab(const FSpawnTabArgs& SpawnTabArgs)
 {
 	auto ResultTab = SNew(SDockTab).TabRole(ETabRole::NomadTab);
-	auto TabContentWidget = SNew(SLGUIPrefabSequenceEditor);
+	auto TabContentWidget = SNew(SLexUIPrefabSequenceEditor);
 	ResultTab->SetContent(TabContentWidget);
 	return ResultTab;
 }
@@ -513,6 +513,7 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(TFunction<AActor*()> 
 	{
 		MenuBuilder.BeginSection("Prefab", LOCTEXT("Prefab", "Prefab"));
 		{
+#if 0//we can create prefab in content browser, so this seems not necessary
 			MenuBuilder.AddMenuEntry(
 				LOCTEXT("CreatePrefab", "Create Prefab"),
 				LOCTEXT("CreatePrefab_Tooltip", "Use selected actor to create a new prefab"),
@@ -522,6 +523,7 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(TFunction<AActor*()> 
 					, FGetActionCheckState()
 					, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCreatePrefab, GetSelectedActorFunction))
 			);
+#endif
 			MenuBuilder.AddMenuEntry(
 				LOCTEXT("UnpackPrefab", "Unpack this Prefab"),
 				LOCTEXT("UnpackPrefab_Tooltip", "Unpack the actor from related prefab asset"),

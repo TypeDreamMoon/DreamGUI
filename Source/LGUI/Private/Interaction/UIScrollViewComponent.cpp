@@ -164,13 +164,13 @@ bool UUIScrollViewComponent::CheckValidHit(USceneComponent *InHitComp)
     return (InHitComp->IsAttachedTo(Widget) || InHitComp == Widget); //make sure hit component is child of this or is this
 }
 
-bool UUIScrollViewComponent::OnPointerBeginDrag_Implementation(ULexPointerEventData *eventData)
+bool UUIScrollViewComponent::OnPointerBeginDrag_Implementation(ULexPointerEventData *EventData)
 {
-    if (CheckParameters() && CheckValidHit(eventData->DragComponent))
+    if (CheckParameters() && CheckValidHit(EventData->DragComponent))
     {
-        PrevPointerPosition = eventData->PressWorldPoint;
-        auto CurrentPointerPosition = eventData->GetWorldPointInPlane();
-        const auto localMoveDelta = eventData->PressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
+        PrevPointerPosition = EventData->PressWorldPoint;
+        auto CurrentPointerPosition = EventData->GetWorldPointInPlane();
+        const auto localMoveDelta = EventData->PressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
         PrevPointerPosition = CurrentPointerPosition;
         bAllowHorizontalScroll = false;
         bAllowVerticalScroll = false;
@@ -197,7 +197,7 @@ bool UUIScrollViewComponent::OnPointerBeginDrag_Implementation(ULexPointerEventD
             }
         }
         bCanUpdateAfterDrag = false;
-        OnPointerDrag_Implementation(eventData);
+        OnPointerDrag_Implementation(EventData);
     }
     else
     {
@@ -206,13 +206,13 @@ bool UUIScrollViewComponent::OnPointerBeginDrag_Implementation(ULexPointerEventD
     return AllowEventBubbleUp;
 }
 
-bool UUIScrollViewComponent::OnPointerDrag_Implementation(ULexPointerEventData *eventData)
+bool UUIScrollViewComponent::OnPointerDrag_Implementation(ULexPointerEventData *EventData)
 {
     if (!Content.IsValid())
         return AllowEventBubbleUp;
     auto Position = Content->GetRelativeLocation();
-    auto CurrentPointerPosition = eventData->GetWorldPointInPlane();
-    auto localMoveDelta = eventData->PressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
+    auto CurrentPointerPosition = EventData->GetWorldPointInPlane();
+    auto localMoveDelta = EventData->PressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
     PrevPointerPosition = CurrentPointerPosition;
     if (bAllowHorizontalScroll)
     {
@@ -247,11 +247,11 @@ bool UUIScrollViewComponent::OnPointerDrag_Implementation(ULexPointerEventData *
     return AllowEventBubbleUp;
 }
 
-bool UUIScrollViewComponent::OnPointerEndDrag_Implementation(ULexPointerEventData *eventData)
+bool UUIScrollViewComponent::OnPointerEndDrag_Implementation(ULexPointerEventData *EventData)
 {
     auto Position = Content->GetRelativeLocation();
-    auto CurrentPointerPosition = eventData->GetWorldPointInPlane();
-    const auto localMoveDelta = eventData->PressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
+    auto CurrentPointerPosition = EventData->GetWorldPointInPlane();
+    const auto localMoveDelta = EventData->PressWorldToLocalTransform.TransformVector(CurrentPointerPosition - PrevPointerPosition);
     if (bAllowHorizontalScroll)
     {
         bCanUpdateAfterDrag = true;
@@ -264,17 +264,17 @@ bool UUIScrollViewComponent::OnPointerEndDrag_Implementation(ULexPointerEventDat
     }
     return AllowEventBubbleUp;
 }
-bool UUIScrollViewComponent::OnPointerScroll_Implementation(ULexPointerEventData *eventData)
+bool UUIScrollViewComponent::OnPointerScroll_Implementation(ULexPointerEventData *EventData)
 {
-    if (CheckParameters() && CheckValidHit(eventData->EnterComponent))
+    if (CheckParameters() && CheckValidHit(EventData->EnterComponent))
     {
-        if (eventData->ScrollAxisValue != FVector2D::ZeroVector)
+        if (EventData->ScrollAxisValue != FVector2D::ZeroVector)
         {
             bAllowHorizontalScroll = false;
             bAllowVerticalScroll = false;
             if (OnlyOneDirection && Horizontal && Vertical)
             {
-                if (FMath::Abs(eventData->ScrollAxisValue.X) > FMath::Abs(eventData->ScrollAxisValue.Y))
+                if (FMath::Abs(EventData->ScrollAxisValue.X) > FMath::Abs(EventData->ScrollAxisValue.Y))
                 {
                     bAllowHorizontalScroll = true;
                 }
@@ -298,7 +298,7 @@ bool UUIScrollViewComponent::OnPointerScroll_Implementation(ULexPointerEventData
             auto Position = Content->GetRelativeLocation();
             if (bAllowHorizontalScroll)
             {
-                auto delta = eventData->ScrollAxisValue.X * ScrollSensitivity;
+                auto delta = EventData->ScrollAxisValue.X * ScrollSensitivity;
                 bCanUpdateAfterDrag = true;
                 if ((Position.Y < HorizontalRange.X || Position.Y > HorizontalRange.Y) && RestrictRectArea)
                 {
@@ -314,7 +314,7 @@ bool UUIScrollViewComponent::OnPointerScroll_Implementation(ULexPointerEventData
             }
             if (bAllowVerticalScroll)
             {
-                auto delta = eventData->ScrollAxisValue.Y * -ScrollSensitivity;
+                auto delta = EventData->ScrollAxisValue.Y * -ScrollSensitivity;
                 bCanUpdateAfterDrag = true;
                 if ((Position.Z < VerticalRange.X || Position.Z > VerticalRange.Y) && RestrictRectArea)
                 {
@@ -479,7 +479,7 @@ void UUIScrollViewComponent::ScrollTo(ULexWidget* InChild, bool InEaseAnimation,
     TargetContentPos.Y = FMath::Clamp(TargetContentPos.Y, VerticalRange.X, VerticalRange.Y);
     if (InEaseAnimation)
     {
-        auto tweener = ULTweenManager::To(this, FLTweenVector2DGetterFunction::CreateWeakLambda(this
+        auto Tweener = ULTweenManager::To(this, FLTweenVector2DGetterFunction::CreateWeakLambda(this
             , [this] {
                 auto ContentLocation = Content->GetRelativeLocation();
                 return FVector2D(ContentLocation.Y, ContentLocation.Z);
@@ -487,24 +487,9 @@ void UUIScrollViewComponent::ScrollTo(ULexWidget* InChild, bool InEaseAnimation,
             , FLTweenVector2DSetterFunction::CreateWeakLambda(this, [this](FVector2D value) {
                 this->SetScrollValue(value);
                 }), TargetContentPos, InAnimationDuration);
-        if (tweener)
+        if (Tweener)
         {
-            bool bAffectByGamePause = false;
-            bool bAffectByTimeDilation = false;
-            if (this->GetWidget())
-            {
-                if (this->GetWidget()->IsScreenSpaceOverlayUI())
-                {
-                    bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
-                    bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-                }
-                else
-                {
-                    bAffectByGamePause = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
-                    bAffectByTimeDilation = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-                }
-            }
-            tweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
+            ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
         }
     }
     else

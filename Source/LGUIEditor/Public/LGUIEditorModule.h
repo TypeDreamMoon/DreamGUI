@@ -44,14 +44,14 @@ private:
 	TMap<UClass*, const FSlateBrush*> InteractableClassIconMap;
 private:
 	TSharedRef<SDockTab> HandleSpawnDynamicSpriteAtlasViewerTab(const FSpawnTabArgs& SpawnTabArgs);
-	TSharedRef<SDockTab> HandleSpawnLGUIPrefabSequenceTab(const FSpawnTabArgs& SpawnTabArgs);
+	TSharedRef<SDockTab> HandleSpawnLexUIPrefabSequenceTab(const FSpawnTabArgs& SpawnTabArgs);
 	
 	FDelegateHandle SequenceEditorHandle;
 	FDelegateHandle OnInitializeSequenceHandle;
-	FName LGUIPrefabSequenceComponentName;
-	static void OnInitializeSequence(class ULGUIPrefabSequence* Sequence);
-	FDelegateHandle LGUIMaterialTrackEditorCreateTrackEditorHandle;
-	TObjectPtr<class USequencerSettings> LGUIPrefabSequencerSettings = nullptr;
+	FName LexUIPrefabSequenceComponentName;
+	static void OnInitializeSequence(class ULexUIPrefabSequence* Sequence);
+	FDelegateHandle LexUIMaterialTrackEditorCreateTrackEditorHandle;
+	TObjectPtr<class USequencerSettings> LexUIPrefabSequencerSettings = nullptr;
 
 	/** FGCObject interface */
 	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;

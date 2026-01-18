@@ -499,16 +499,16 @@ void UUIDropdownComponent::ApplyValueToUI()
 		}
 	}
 }
-bool UUIDropdownComponent::OnPointerClick_Implementation(ULexPointerEventData* eventData)
+bool UUIDropdownComponent::OnPointerClick_Implementation(ULexPointerEventData* EventData)
 {
 	Show();
 	return AllowEventBubbleUp;
 }
-bool UUIDropdownComponent::OnPointerDeselect_Implementation(ULexBaseEventData* eventData)
+bool UUIDropdownComponent::OnPointerDeselect_Implementation(ULexBaseEventData* EventData)
 {
-	if (IsValid(eventData->SelectedComponent))
+	if (IsValid(EventData->SelectedComponent))
 	{
-		if (!eventData->SelectedComponent->IsAttachedTo(this->GetWidget()))
+		if (!EventData->SelectedComponent->IsAttachedTo(this->GetWidget()))
 		{
 			Hide();
 		}
@@ -591,7 +591,7 @@ void UUIDropdownItemComponent::SetSelectionState(const bool& InSelect)
 		ReceiveSetSelectionState(InSelect);
 	}
 }
-bool UUIDropdownItemComponent::OnPointerClick_Implementation(ULexPointerEventData* eventData)
+bool UUIDropdownItemComponent::OnPointerClick_Implementation(ULexPointerEventData* EventData)
 {
 	return false;
 }

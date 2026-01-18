@@ -26,13 +26,13 @@ protected:
 	/** find a common root actor of two actors. return nullptr if no common root */
 	static AActor* FindCommonRoot(AActor* actorA, AActor* actorB);
 
-	bool Navigate(ELexUINavigationDirection direction, ULexPointerEventData* InPointerEventData, FLexUIHitResult& hitResult);
+	bool Navigate(ELexUINavigationDirection InDirection, ULexPointerEventData* InPointerEventData, FLexUIHitResult& hitResult);
 	void ProcessInputForNavigation();
 	void ProcessInputForNavigation(ULexPointerEventData* InPointerEventData);
 	void ClearEventByID(int pointerID);
 	static bool CanHandleInterface(USceneComponent* targetComp, UClass* targetInterfaceClass, ELexUIEventFireType eventFireType);
 	static USceneComponent* GetEventHandle(USceneComponent* targetComp, UClass* targetInterfaceClass, ELexUIEventFireType eventFireType);
-	static void DeselectIfSelectionChanged(ULexEventSystem* eventSystem, USceneComponent* currentPressed, ULexBaseEventData* eventData);
+	static void DeselectIfSelectionChanged(ULexEventSystem* eventSystem, USceneComponent* currentPressed, ULexBaseEventData* EventData);
 public:
 	virtual void ClearEvent()override;
 

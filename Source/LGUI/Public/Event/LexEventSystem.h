@@ -74,8 +74,8 @@ public:
 		void SetRaycastEnable(bool bEnable, bool bClearEvent = false);
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetSelectComponent(USceneComponent* InSelectComp, ULexBaseEventData* eventData, ELexUIEventFireType eventFireType);
-	static void SetSelectComponent(ULexEventSystem* InEventSystem, USceneComponent* InSelectComp, ULexBaseEventData* eventData, ELexUIEventFireType eventFireType);
+		void SetSelectComponent(USceneComponent* InSelectComp, ULexBaseEventData* EventData, ELexUIEventFireType eventFireType);
+	static void SetSelectComponent(ULexEventSystem* InEventSystem, USceneComponent* InSelectComp, ULexBaseEventData* EventData, ELexUIEventFireType eventFireType);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetSelectComponentWithDefault(USceneComponent* InSelectComp);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
@@ -352,7 +352,7 @@ public:
 	void CallOnPointerSelect(USceneComponent* RootComponent, ULexBaseEventData* EventData, ELexUIEventFireType EventFireType);
 	void CallOnPointerDeselect(USceneComponent* RootComponent, ULexBaseEventData* EventData, ELexUIEventFireType EventFireType);
 	
-	void LogEventData(ULexBaseEventData* eventData);
+	void LogEventData(ULexBaseEventData* EventData);
 };
 
 /*

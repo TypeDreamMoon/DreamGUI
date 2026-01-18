@@ -3,7 +3,7 @@
 #include "Interaction/UIButtonComponent.h"
 #include "LGUI.h"
 
-bool UUIButtonComponent::OnPointerClick_Implementation(ULexPointerEventData* eventData)
+bool UUIButtonComponent::OnPointerClick_Implementation(ULexPointerEventData* EventData)
 {
 	OnClickCPP.Broadcast();
 	OnClickBP.Broadcast();

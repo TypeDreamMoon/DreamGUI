@@ -136,33 +136,33 @@ void UUISliderComponent::SetNavigationChangeInterval(float InValue)
     NavigationChangeInterval = InValue;
 }
 
-bool UUISliderComponent::OnPointerDown_Implementation(ULexPointerEventData *eventData)
+bool UUISliderComponent::OnPointerDown_Implementation(ULexPointerEventData *EventData)
 {
-    Super::OnPointerDown_Implementation(eventData);
-    if (eventData->InputType == ELexUIPointerInputType::Pointer)
+    Super::OnPointerDown_Implementation(EventData);
+    if (EventData->InputType == ELexUIPointerInputType::Pointer)
     {
-        CalculateInputValue(eventData);
+        CalculateInputValue(EventData);
     }
     return AllowEventBubbleUp;
 }
-bool UUISliderComponent::OnPointerUp_Implementation(ULexPointerEventData *eventData)
+bool UUISliderComponent::OnPointerUp_Implementation(ULexPointerEventData *EventData)
 {
-    Super::OnPointerUp_Implementation(eventData);
+    Super::OnPointerUp_Implementation(EventData);
     return AllowEventBubbleUp;
 }
-bool UUISliderComponent::OnPointerBeginDrag_Implementation(ULexPointerEventData *eventData)
+bool UUISliderComponent::OnPointerBeginDrag_Implementation(ULexPointerEventData *EventData)
 {
-    CalculateInputValue(eventData);
+    CalculateInputValue(EventData);
     return AllowEventBubbleUp;
 }
-bool UUISliderComponent::OnPointerDrag_Implementation(ULexPointerEventData *eventData)
+bool UUISliderComponent::OnPointerDrag_Implementation(ULexPointerEventData *EventData)
 {
-    CalculateInputValue(eventData);
+    CalculateInputValue(EventData);
     return AllowEventBubbleUp;
 }
-bool UUISliderComponent::OnPointerEndDrag_Implementation(ULexPointerEventData *eventData)
+bool UUISliderComponent::OnPointerEndDrag_Implementation(ULexPointerEventData *EventData)
 {
-    CalculateInputValue(eventData);
+    CalculateInputValue(EventData);
     return AllowEventBubbleUp;
 }
 bool UUISliderComponent::OnNavigate_Implementation(ELexUINavigationDirection direction, TScriptInterface<ILexNavigationInterface>& result)
@@ -198,7 +198,7 @@ bool UUISliderComponent::OnNavigate_Implementation(ELexUINavigationDirection dir
     }
 }
 
-void UUISliderComponent::CalculateInputValue(ULexPointerEventData *eventData)
+void UUISliderComponent::CalculateInputValue(ULexPointerEventData *EventData)
 {
     ULexWidget *MainWidget = nullptr;
     ULexWidget *AreaWidget = nullptr;
@@ -218,7 +218,7 @@ void UUISliderComponent::CalculateInputValue(ULexPointerEventData *eventData)
     if (MainWidget != nullptr && AreaWidget != nullptr)
     {
         //calculate value to 0-1 range
-        auto localPointerPosition = AreaWidget->GetComponentTransform().InverseTransformPosition(eventData->GetWorldPointInPlane());
+        auto localPointerPosition = AreaWidget->GetComponentTransform().InverseTransformPosition(EventData->GetWorldPointInPlane());
         float MinPosition = 0;
         float value01 = 0;
         switch (DirectionType)

@@ -25,17 +25,17 @@ public:
 	 * @return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up.
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = LGUI)
-		bool OnPointerBeginDrag(ULexPointerEventData* eventData);
+		bool OnPointerBeginDrag(ULexPointerEventData* EventData);
 	/**
 	 * Called when dragging this object.
 	 * @return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up.
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = LGUI)
-		bool OnPointerDrag(ULexPointerEventData* eventData);
+		bool OnPointerDrag(ULexPointerEventData* EventData);
 	/**
 	 * Called when drag this object end.
 	 * @return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up.
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = LGUI)
-		bool OnPointerEndDrag(ULexPointerEventData* eventData);
+		bool OnPointerEndDrag(ULexPointerEventData* EventData);
 };

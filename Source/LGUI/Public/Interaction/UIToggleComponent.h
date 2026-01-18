@@ -108,7 +108,7 @@ protected:
 
 	void SetValue(bool Value, bool SendCallback);
 	void ApplyValueToUI(bool ImmediateSet);
-	virtual bool OnPointerClick_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerClick_Implementation(ULexPointerEventData* EventData)override;
 public:
 	FLexUIMulticastDelegateBool& GetOnValueChangedEvent(){ return OnValueChangedCPP;}
 

@@ -38,8 +38,8 @@ private:
 	/** Font size when render glyph. */
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (UIMin = "16", UIMax = "100"))
 		int SampleFontSize = 64;
-	/** The radius of the distance field in pixels. Will automatically set to a quarter of FontSize */
-	UPROPERTY(VisibleAnywhere, Transient, Category = "LGUI")
+	/** The radius of the distance field in pixels. Normally just use 1/4 of FontSize */
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (UIMin = "1"))
 		int SDFRadius = 16;
 	/** Angle of italic style in degree */
 	UPROPERTY(EditAnywhere, Category = "LGUI")

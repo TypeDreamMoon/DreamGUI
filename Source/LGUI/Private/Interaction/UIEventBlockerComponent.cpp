@@ -3,51 +3,51 @@
 #include "Interaction/UIEventBlockerComponent.h"
 #include "LGUI.h"
 
-bool UUIEventBlockerComponent::OnPointerEnter_Implementation(ULexPointerEventData* eventData)
+bool UUIEventBlockerComponent::OnPointerEnter_Implementation(ULexPointerEventData* EventData)
 {
 	return AllowEventBubbleUp;
 }
-bool UUIEventBlockerComponent::OnPointerExit_Implementation(ULexPointerEventData* eventData)
+bool UUIEventBlockerComponent::OnPointerExit_Implementation(ULexPointerEventData* EventData)
 {
 	return AllowEventBubbleUp;
 }
-bool UUIEventBlockerComponent::OnPointerDown_Implementation(ULexPointerEventData* eventData)
+bool UUIEventBlockerComponent::OnPointerDown_Implementation(ULexPointerEventData* EventData)
 {
 	return AllowEventBubbleUp;
 }
-bool UUIEventBlockerComponent::OnPointerUp_Implementation(ULexPointerEventData* eventData)
+bool UUIEventBlockerComponent::OnPointerUp_Implementation(ULexPointerEventData* EventData)
 {
 	return AllowEventBubbleUp;
 }
-bool UUIEventBlockerComponent::OnPointerClick_Implementation(ULexPointerEventData* eventData)
+bool UUIEventBlockerComponent::OnPointerClick_Implementation(ULexPointerEventData* EventData)
 {
 	return AllowEventBubbleUp;
 }
-bool UUIEventBlockerComponent::OnPointerBeginDrag_Implementation(ULexPointerEventData* eventData)
+bool UUIEventBlockerComponent::OnPointerBeginDrag_Implementation(ULexPointerEventData* EventData)
 {
 	return AllowEventBubbleUp;
 }
-bool UUIEventBlockerComponent::OnPointerDrag_Implementation(ULexPointerEventData* eventData)
+bool UUIEventBlockerComponent::OnPointerDrag_Implementation(ULexPointerEventData* EventData)
 {
 	return AllowEventBubbleUp;
 }
-bool UUIEventBlockerComponent::OnPointerEndDrag_Implementation(ULexPointerEventData* eventData)
+bool UUIEventBlockerComponent::OnPointerEndDrag_Implementation(ULexPointerEventData* EventData)
 {
 	return AllowEventBubbleUp;
 }
-bool UUIEventBlockerComponent::OnPointerDragDrop_Implementation(ULexPointerEventData* eventData)
+bool UUIEventBlockerComponent::OnPointerDragDrop_Implementation(ULexPointerEventData* EventData)
 {
 	return AllowEventBubbleUp;
 }
-bool UUIEventBlockerComponent::OnPointerScroll_Implementation(ULexPointerEventData* eventData)
+bool UUIEventBlockerComponent::OnPointerScroll_Implementation(ULexPointerEventData* EventData)
 {
 	return AllowEventBubbleUp;
 }
-bool UUIEventBlockerComponent::OnPointerSelect_Implementation(ULexBaseEventData* eventData)
+bool UUIEventBlockerComponent::OnPointerSelect_Implementation(ULexBaseEventData* EventData)
 {
 	return AllowEventBubbleUp;
 }
-bool UUIEventBlockerComponent::OnPointerDeselect_Implementation(ULexBaseEventData* eventData)
+bool UUIEventBlockerComponent::OnPointerDeselect_Implementation(ULexBaseEventData* EventData)
 {
 	return AllowEventBubbleUp;
 }

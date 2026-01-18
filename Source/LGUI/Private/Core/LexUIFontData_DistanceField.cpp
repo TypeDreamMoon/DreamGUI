@@ -214,10 +214,11 @@ void ULexUIFontData_DistanceField::PrepareForPushCharData(ULexText* InText)
 {
 	ItalicSlop = FMath::Tan(FMath::DegreesToRadians(ItalicAngle));
 	OneDivideFontSize = 1.0f / SampleFontSize;
-	SDFRadius = SampleFontSize * 0.25f;//use 1/4 of FontSize can get good result
 	ExpandMeshSize = InText->GetExpandMeshSize();
 	auto CompScale = InText->GetWidget()->GetComponentScale();
-	ObjectScale = FMath::Max(CompScale.X, CompScale.Y);
+	ObjectScale = FMath::Max(CompScale.X, CompScale.Y)
+		* SampleFontSize / SDFRadius
+		;
 }
 
 bool ULexUIFontData_DistanceField::GetRequireNormalAndTangent()

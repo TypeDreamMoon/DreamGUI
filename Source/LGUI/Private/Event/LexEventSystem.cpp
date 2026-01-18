@@ -136,25 +136,25 @@ bool ULexEventSystem::IsPointerOverUIByPointerID(int PointerID)
 
 void ULexEventSystem::SetHighlightedComponentForNavigation(USceneComponent* InComp, int InPointerID)
 {
-	if (auto eventData = GetPointerEventData(InPointerID, true))
+	if (auto EventData = GetPointerEventData(InPointerID, true))
 	{
-		eventData->SetHighlightedComponentForNavigation(InComp);
+		EventData->SetHighlightedComponentForNavigation(InComp);
 	}
 }
 USceneComponent* ULexEventSystem::GetHighlightedComponentForNavigation(int InPointerID)const
 {
-	if (auto eventData = GetPointerEventData(InPointerID, false))
+	if (auto EventData = GetPointerEventData(InPointerID, false))
 	{
-		return eventData->GetHighlightedComponentForNavigation();
+		return EventData->GetHighlightedComponentForNavigation();
 	}
 	return nullptr;
 }
 
 bool ULexEventSystem::SetPointerInputTypeByPointerID(int InPointerID, ELexUIPointerInputType InInputType)
 {
-	if (auto eventData = GetPointerEventData(InPointerID, false))
+	if (auto EventData = GetPointerEventData(InPointerID, false))
 	{
-		return SetPointerInputType(eventData, InInputType);
+		return SetPointerInputType(EventData, InInputType);
 	}
 	return false;
 }
@@ -170,69 +170,69 @@ bool ULexEventSystem::SetPointerInputType(ULexPointerEventData* InPointerEventDa
 }
 void ULexEventSystem::ActivateNavigationInput(int InPointerID, USceneComponent* InDefaultHighlightedComponent)
 {
-	if (auto eventData = GetPointerEventData(InPointerID, false))
+	if (auto EventData = GetPointerEventData(InPointerID, false))
 	{
-		SetPointerInputType(eventData, ELexUIPointerInputType::Navigation);
-		eventData->SetHighlightedComponentForNavigation(InDefaultHighlightedComponent);
+		SetPointerInputType(EventData, ELexUIPointerInputType::Navigation);
+		EventData->SetHighlightedComponentForNavigation(InDefaultHighlightedComponent);
 	}
 }
 
-void ULexEventSystem::SetSelectComponent(USceneComponent* InSelectComp, ULexBaseEventData* eventData, ELexUIEventFireType eventFireType)
+void ULexEventSystem::SetSelectComponent(USceneComponent* InSelectComp, ULexBaseEventData* EventData, ELexUIEventFireType eventFireType)
 {
-	if (eventData->SelectedComponent != InSelectComp)//select new object
+	if (EventData->SelectedComponent != InSelectComp)//select new object
 	{
-		auto oldSelectedComp = eventData->SelectedComponent;
-		eventData->SelectedComponent = InSelectComp;
+		auto oldSelectedComp = EventData->SelectedComponent;
+		EventData->SelectedComponent = InSelectComp;
 		if (IsValid(oldSelectedComp))
 		{
-			CallOnPointerDeselect(oldSelectedComp, eventData, eventFireType);
+			CallOnPointerDeselect(oldSelectedComp, EventData, eventFireType);
 		}
-		if (IsValid(eventData->SelectedComponent))
+		if (IsValid(EventData->SelectedComponent))
 		{
-			CallOnPointerSelect(eventData->SelectedComponent, eventData, eventFireType);
+			CallOnPointerSelect(EventData->SelectedComponent, EventData, eventFireType);
 		}
-		eventData->SelectedComponentEventFireType = eventFireType;
+		EventData->SelectedComponentEventFireType = eventFireType;
 	}
 }
 
-void ULexEventSystem::SetSelectComponent(ULexEventSystem* InEventSystem, USceneComponent* InSelectComp, ULexBaseEventData* eventData, ELexUIEventFireType eventFireType)
+void ULexEventSystem::SetSelectComponent(ULexEventSystem* InEventSystem, USceneComponent* InSelectComp, ULexBaseEventData* EventData, ELexUIEventFireType eventFireType)
 {
 	if (InEventSystem != nullptr)
 	{
-		InEventSystem->SetSelectComponent(InSelectComp, eventData, eventFireType);
+		InEventSystem->SetSelectComponent(InSelectComp, EventData, eventFireType);
 	}
 	else
 	{
-		if (eventData->SelectedComponent != InSelectComp)//select new object
+		if (EventData->SelectedComponent != InSelectComp)//select new object
 		{
-			auto oldSelectedComp = eventData->SelectedComponent;
-			eventData->SelectedComponent = InSelectComp;
+			auto oldSelectedComp = EventData->SelectedComponent;
+			EventData->SelectedComponent = InSelectComp;
 			if (IsValid(oldSelectedComp))
 			{
-				ExecuteEvent_OnPointerDeselect(oldSelectedComp, eventData, eventFireType, false);
+				ExecuteEvent_OnPointerDeselect(oldSelectedComp, EventData, eventFireType, false);
 			}
-			if (IsValid(eventData->SelectedComponent))
+			if (IsValid(EventData->SelectedComponent))
 			{
-				ExecuteEvent_OnPointerSelect(eventData->SelectedComponent, eventData, eventFireType, false);
+				ExecuteEvent_OnPointerSelect(EventData->SelectedComponent, EventData, eventFireType, false);
 			}
-			eventData->SelectedComponentEventFireType = eventFireType;
+			EventData->SelectedComponentEventFireType = eventFireType;
 		}
 	}
 }
 
 USceneComponent* ULexEventSystem::GetCurrentSelectedComponent(int InPointerID)const
 {
-	if (auto eventData = GetPointerEventData(InPointerID, false))
+	if (auto EventData = GetPointerEventData(InPointerID, false))
 	{
-		return eventData->SelectedComponent;
+		return EventData->SelectedComponent;
 	}
 	return nullptr;
 }
 
 void ULexEventSystem::SetSelectComponentWithDefault(USceneComponent* InSelectComp)
 {
-	auto eventData = GetPointerEventData(0, true);
-	SetSelectComponent(InSelectComp, eventData, eventData->PressComponentEventFireType);
+	auto EventData = GetPointerEventData(0, true);
+	SetSelectComponent(InSelectComp, EventData, EventData->PressComponentEventFireType);
 }
 
 void ULexEventSystem::LogEventData(ULexBaseEventData* inEventData)

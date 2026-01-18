@@ -7,6 +7,7 @@
 #include "GameFramework/Actor.h"
 #include "LexWidgetRootActor.generated.h"
 
+class UUINavigationInputSelectionHandler;
 class ULexCanvas;
 class ULexUIPrefab;
 
@@ -42,6 +43,14 @@ protected:
 	TObjectPtr<ULexUIPrefab> WidgetPrefab;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=LGUI)
 	TWeakObjectPtr<AActor> LoadedActor;
+	/**
+	 * For navigation input, show a selection widget
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=LGUI)
+	TObjectPtr<ULexUIPrefab> NavigationSelectionPrefab;
+
+	UPROPERTY(VisibleAnywhere, Transient, BlueprintReadOnly, Category=LGUI, AdvancedDisplay)
+	TWeakObjectPtr<UUINavigationInputSelectionHandler> NavigationSelection;
 
 #if WITH_EDITORONLY_DATA
 private:
@@ -57,7 +66,8 @@ public:
 	void SetPrefab(ULexUIPrefab* Value);
 	UFUNCTION(BlueprintCallable, Category=LGUI)
 	ULexUIPrefab* GetPrefab()const{return WidgetPrefab;}
-	
 	UFUNCTION(BlueprintCallable, Category=LGUI)
 	AActor* GetLoadedActor()const{return LoadedActor.Get();}
+	UFUNCTION(BlueprintCallable, Category=LGUI)
+	UUINavigationInputSelectionHandler* GetNavigationSelection();
 };

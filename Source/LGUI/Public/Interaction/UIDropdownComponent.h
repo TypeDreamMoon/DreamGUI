@@ -117,8 +117,8 @@ protected:
 	TWeakObjectPtr<ULTweener> ShowOrHideTweener;
 	TWeakObjectPtr<ALexWidgetActor> BlockerActor;
 	UPROPERTY(Transient) TArray<TWeakObjectPtr<class UUIDropdownItemComponent>> CreatedItemArray;
-	virtual bool OnPointerClick_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerDeselect_Implementation(ULexBaseEventData* eventData)override;
+	virtual bool OnPointerClick_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerDeselect_Implementation(ULexBaseEventData* EventData)override;
 	void OnSelectItem(int Index);
 	void ApplyValueToUI();
 	virtual void CreateBlocker();
@@ -256,7 +256,7 @@ public:
 	 * When select other item, then need to de-select this one.
 	 */
 	virtual void SetSelectionState(const bool& InSelect);
-	virtual bool OnPointerClick_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerClick_Implementation(ULexPointerEventData* EventData)override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Dropdown")
 	ULexText* GetText()const { return Text.Get(); }

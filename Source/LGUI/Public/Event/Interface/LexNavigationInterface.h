@@ -21,11 +21,16 @@ class LGUI_API ILexNavigationInterface
 	GENERATED_BODY()
 public:
 	/**
+	 * @return true if we can navigate from other to this, false otherwise
+	 */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = LGUI)
+	bool CanNavigateHere()const;
+	/**
 	 * Called when a navigation event occurs.
 	 * @param direction navigation direction
 	 * @param result navigate next object
 	 * @return true if this action can navigation to next, false if no need to navigate to next
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = LGUI)
-		bool OnNavigate(ELexUINavigationDirection direction, TScriptInterface<ILexNavigationInterface>& result);
+	bool OnNavigate(ELexUINavigationDirection direction, TScriptInterface<ILexNavigationInterface>& result);
 };

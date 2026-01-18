@@ -9,6 +9,7 @@
 #include "PhysicsEngine/BodySetup.h"
 #include "LTweenManager.h"
 #include "Core/LexUIClipData.h"
+#include "Core/Actor/LexWidgetRootActor.h"
 #include "Core/Components/LexLayout.h"
 #include "Core/Components/LexVisual.h"
 #if WITH_EDITOR
@@ -2252,6 +2253,15 @@ ULexCanvas* ULexWidget::GetRootCanvas()const
 	return nullptr;
 }
 
+ALexWidgetRootActor* ULexWidget::GetWidgetRootActor() const
+{
+	if (auto RootCanvas = GetRootCanvas())
+	{
+		return Cast<ALexWidgetRootActor>(RootCanvas->GetOwner());
+	}
+	return nullptr;
+}
+
 FVector2D ULexWidget::GetLocalSpaceLeftBottomPoint()const
 {
 	FVector2D leftBottomPoint;
@@ -2944,9 +2954,41 @@ ULTweener* ULexWidget::RenderOpacityTo(float endValue, float duration, float del
 	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexWidget::GetRenderOpacity), FLTweenFloatSetterFunction::CreateUObject(this, &ULexWidget::SetRenderOpacity), endValue, duration);
 	if (Tweener)
 	{
+		Tweener->SetEase(ease)->SetDelay(delay);
+		ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+
+ULTweener* ULexWidget::SizeDeltaTo(const FVector2D& endValue, float duration, float delay, ELTweenEase ease)
+{
+	auto Tweener = ULTweenManager::To(this, FLTweenVector2DGetterFunction::CreateUObject(this, &ULexWidget::GetSizeDelta), FLTweenVector2DSetterFunction::CreateUObject(this, &ULexWidget::SetSizeDelta), endValue, duration);
+	if (Tweener)
+	{
+		Tweener->SetEase(ease)->SetDelay(delay);
+		ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+
+ULTweener* ULexWidget::AnchoredPositionTo(const FVector2D& endValue, float duration, float delay, ELTweenEase ease)
+{
+	auto Tweener = ULTweenManager::To(this, FLTweenVector2DGetterFunction::CreateUObject(this, &ULexWidget::GetSizeDelta), FLTweenVector2DSetterFunction::CreateUObject(this, &ULexWidget::SetSizeDelta), endValue, duration);
+	if (Tweener)
+	{
+		Tweener->SetEase(ease)->SetDelay(delay);
+		ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+
+void ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(ULexWidget* Widget, ULTweener* Tweener)
+{
+	if (Tweener)
+	{
 		bool bAffectByGamePause;
 		bool bAffectByTimeDilation;
-		if (this->IsScreenSpaceOverlayUI())
+		if (Widget->IsScreenSpaceOverlayUI())
 		{
 			bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
 			bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;
@@ -2956,9 +2998,8 @@ ULTweener* ULexWidget::RenderOpacityTo(float endValue, float duration, float del
 			bAffectByGamePause = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
 			bAffectByTimeDilation = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByTimeDilation;
 		}
-		Tweener->SetEase(ease)->SetDelay(delay)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
+		Tweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
 	}
-	return Tweener;
 }
 #pragma endregion
 

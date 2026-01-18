@@ -96,7 +96,6 @@ public:
 	void OpenSubPrefab(AActor* InSubPrefabActor);
 	void SelectSubPrefab(AActor* InSubPrefabActor);
 	bool GetAnythingDirty()const;
-	void CloseWithoutCheckDataDirty();
 
 	ULexUIPrefabHelperObject* GetPrefabHelperObject()const { return PrefabBeingEdited->GetPrefabHelperObject(); }
 	AActor* GetRootAgentActor();
@@ -125,10 +124,9 @@ private:
 	FText GetApplyButtonStatusTooltip()const;
 	FSlateIcon GetApplyButtonStatusImage()const;
 
-	void OnApply();
 	void OnOpenRawDataViewerPanel();
 	void OnOpenPrefabHelperObjectDetailsPanel();
-	void SaveViewState();
+	void SaveEditorState();
 
 	TSharedRef<SDockTab> SpawnTab_Viewport(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_Details(const FSpawnTabArgs& Args);

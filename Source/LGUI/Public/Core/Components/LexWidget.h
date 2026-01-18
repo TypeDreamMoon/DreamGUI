@@ -9,6 +9,7 @@
 #include "PrefabSystem/ILexUIPrefabInterface.h"
 #include "LexWidget.generated.h"
 
+class ALexWidgetRootActor;
 class ULexVisual;
 class ULexLayoutSelf;
 class ULexLayoutContainer;
@@ -349,6 +350,8 @@ public:
 	/** Get root canvas of hierarchy */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		ULexCanvas* GetRootCanvas()const;
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	ALexWidgetRootActor* GetWidgetRootActor()const;
 
 	/** mark all dirty for UI element to update, include all children */
 	void MarkAllDirtyRecursive();
@@ -641,7 +644,7 @@ public:
 
 	bool IsCanvasWidget()const { return bIsCanvasWidget; }
 
-	/** return root UIItem in hierarchy, could be null if not initialized yet. */
+	/** return root Widget in hierarchy, could be null if not initialized yet. */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		ULexWidget* GetRootWidgetInHierarchy()const { return RootWidget.Get(); }
 
@@ -682,6 +685,12 @@ public:
 #pragma region TweenAnimation
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")
 	ULTweener* RenderOpacityTo(float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")
+	ULTweener* SizeDeltaTo(const FVector2D& endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")
+	ULTweener* AnchoredPositionTo(const FVector2D& endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
 
+	UFUNCTION(BlueprintCallable, Category = "LTweenLGUI")
+	static void SetWidgetTweenerAffectByGamePauseAndTimeDilation(ULexWidget* Widget, ULTweener* Tweener);
 #pragma endregion
 };

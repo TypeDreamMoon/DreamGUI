@@ -110,16 +110,16 @@ public:
 	FLexUIMulticastDelegateBaseEventData& GetOnPointerSelectEvent(){return OnPointerSelectCPP;}
 	FLexUIMulticastDelegateBaseEventData& GetOnPointerDeselectEvent(){return OnPointerDeselectCPP;}
 	
-	virtual bool OnPointerEnter_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerExit_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerDown_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerUp_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerClick_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerBeginDrag_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerDrag_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerEndDrag_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerDragDrop_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerScroll_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerSelect_Implementation(ULexBaseEventData* eventData)override;
-	virtual bool OnPointerDeselect_Implementation(ULexBaseEventData* eventData)override;
+	virtual bool OnPointerEnter_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerExit_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerDown_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerUp_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerClick_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerBeginDrag_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerDrag_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerEndDrag_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerDragDrop_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerScroll_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerSelect_Implementation(ULexBaseEventData* EventData)override;
+	virtual bool OnPointerDeselect_Implementation(ULexBaseEventData* EventData)override;
 };

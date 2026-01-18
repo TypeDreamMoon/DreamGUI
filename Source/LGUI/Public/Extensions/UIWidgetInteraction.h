@@ -51,11 +51,11 @@ protected:
 	UPROPERTY(VisibleAnywhere, Transient, Category = LGUI, AdvancedDisplay)
 		UUIWidgetInteractionManager* Helper = nullptr;
 
-	virtual bool OnPointerEnter_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerExit_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerDown_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerUp_Implementation(ULGUIPointerEventData* eventData)override;
-	virtual bool OnPointerScroll_Implementation(ULGUIPointerEventData* eventData)override;
+	virtual bool OnPointerEnter_Implementation(ULGUIPointerEventData* EventData)override;
+	virtual bool OnPointerExit_Implementation(ULGUIPointerEventData* EventData)override;
+	virtual bool OnPointerDown_Implementation(ULGUIPointerEventData* EventData)override;
+	virtual bool OnPointerUp_Implementation(ULGUIPointerEventData* EventData)override;
+	virtual bool OnPointerScroll_Implementation(ULGUIPointerEventData* EventData)override;
 
 	ULGUIPointerEventData* CurrentPointerEventData = nullptr;
 

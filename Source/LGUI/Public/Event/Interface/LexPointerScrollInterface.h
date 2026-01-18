@@ -25,5 +25,5 @@ public:
 	 * @return Allow event bubble up? If all interface of same actor's components return true, then the event can bubble up.
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = LGUI)
-		bool OnPointerScroll(ULexPointerEventData* eventData);
+		bool OnPointerScroll(ULexPointerEventData* EventData);
 };

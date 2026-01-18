@@ -121,16 +121,16 @@ void UUIScrollbarComponent::SetNavigationChangeInterval(float InValue)
     NavigationChangeInterval = InValue;
 }
 
-bool UUIScrollbarComponent::OnPointerDown_Implementation(ULexPointerEventData* eventData)
+bool UUIScrollbarComponent::OnPointerDown_Implementation(ULexPointerEventData* EventData)
 {
-    Super::OnPointerDown_Implementation(eventData);
-    if (eventData->InputType == ELexUIPointerInputType::Pointer)
+    Super::OnPointerDown_Implementation(EventData);
+    if (EventData->InputType == ELexUIPointerInputType::Pointer)
     {
         if (CheckHandle())
         {
-            if (eventData->EnterComponent != Handle)
+            if (EventData->EnterComponent != Handle)
             {
-                const auto& pointerInHandleAreaSpace = HandleArea->GetComponentTransform().InverseTransformPosition(eventData->WorldPoint);
+                const auto& pointerInHandleAreaSpace = HandleArea->GetComponentTransform().InverseTransformPosition(EventData->WorldPoint);
                 float value01 = Value;
                 switch (DirectionType)
                 {
@@ -202,25 +202,25 @@ bool UUIScrollbarComponent::OnPointerDown_Implementation(ULexPointerEventData* e
     }
     return AllowEventBubbleUp;
 }
-bool UUIScrollbarComponent::OnPointerUp_Implementation(ULexPointerEventData *eventData)
+bool UUIScrollbarComponent::OnPointerUp_Implementation(ULexPointerEventData *EventData)
 {
-    Super::OnPointerUp_Implementation(eventData);
+    Super::OnPointerUp_Implementation(EventData);
     return AllowEventBubbleUp;
 }
-bool UUIScrollbarComponent::OnPointerBeginDrag_Implementation(ULexPointerEventData *eventData)
+bool UUIScrollbarComponent::OnPointerBeginDrag_Implementation(ULexPointerEventData *EventData)
 {
     PressValue = Value;
-    CalculateInputValue(eventData);
+    CalculateInputValue(EventData);
     return AllowEventBubbleUp;
 }
-bool UUIScrollbarComponent::OnPointerDrag_Implementation(ULexPointerEventData *eventData)
+bool UUIScrollbarComponent::OnPointerDrag_Implementation(ULexPointerEventData *EventData)
 {
-    CalculateInputValue(eventData);
+    CalculateInputValue(EventData);
     return AllowEventBubbleUp;
 }
-bool UUIScrollbarComponent::OnPointerEndDrag_Implementation(ULexPointerEventData *eventData)
+bool UUIScrollbarComponent::OnPointerEndDrag_Implementation(ULexPointerEventData *EventData)
 {
-    CalculateInputValue(eventData);
+    CalculateInputValue(EventData);
     return AllowEventBubbleUp;
 }
 bool UUIScrollbarComponent::OnNavigate_Implementation(ELexUINavigationDirection direction, TScriptInterface<ILexNavigationInterface>& result)
@@ -250,11 +250,11 @@ bool UUIScrollbarComponent::OnNavigate_Implementation(ELexUINavigationDirection 
     }
 }
 
-void UUIScrollbarComponent::CalculateInputValue(ULexPointerEventData *eventData)
+void UUIScrollbarComponent::CalculateInputValue(ULexPointerEventData *EventData)
 {
     if (CheckHandle())
     {
-        auto localCumulativeMoveDelta = eventData->PressWorldToLocalTransform.TransformVector(eventData->GetWorldPointInPlane() - eventData->PressWorldPoint);
+        auto localCumulativeMoveDelta = EventData->PressWorldToLocalTransform.TransformVector(EventData->GetWorldPointInPlane() - EventData->PressWorldPoint);
         localCumulativeMoveDelta.X = 0;
         float slideAreaSize = 0;
         float handleSize = 0;

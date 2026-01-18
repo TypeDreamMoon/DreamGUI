@@ -7,8 +7,8 @@
 #include "LexUIPrefabInstanceScene.h"
 #include "LexUIPrefab.generated.h"
 
-#define LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE "PrefabSystem/ActorSerializer8.h"
-#define LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE LGUIPrefabSystem8
+#define LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE "PrefabSystem/ActorSerializer.h"
+#define LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE LexUIPrefabSystem
 
 enum class ELexUIPrefabVersion : uint16
 {

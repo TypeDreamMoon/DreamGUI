@@ -284,7 +284,7 @@ void SLexWidgetEditorHierarchyView::OnEditorSelectionChanged()
 			//expand
 			if (SelectedItems.Num() == 1)
 			{
-				ULexWidget* Widget = SelectedItems[0].Get();
+				auto Widget = SelectedItems[0]->GetUIParent();
 				while (Widget != nullptr)
 				{
 					WidgetTreeView->SetItemExpansion(Widget, true);

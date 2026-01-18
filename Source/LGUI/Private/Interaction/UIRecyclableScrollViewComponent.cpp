@@ -292,7 +292,7 @@ void UUIRecyclableScrollViewComponent::ScrollToByDataIndex(int InDataIndex, bool
         TargetContentPos = FMath::Clamp(-TargetContentPos, HorizontalRange.X, HorizontalRange.Y);
         if (InEaseAnimation)
         {
-            auto tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateWeakLambda(this
+            auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateWeakLambda(this
                 , [this] {
                     auto ContentLocation = Content->GetRelativeLocation();
                     return ContentLocation.Y;
@@ -300,24 +300,9 @@ void UUIRecyclableScrollViewComponent::ScrollToByDataIndex(int InDataIndex, bool
                 , FLTweenFloatSetterFunction::CreateWeakLambda(this, [this](float value) {
                     this->SetScrollValue(FVector2D(value, 0));
                     }), TargetContentPos, InAnimationDuration);
-            if (tweener)
+            if (Tweener)
             {
-                bool bAffectByGamePause = false;
-                bool bAffectByTimeDilation = false;
-                if (this->GetWidget())
-                {
-                    if (this->GetWidget()->IsScreenSpaceOverlayUI())
-                    {
-                        bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
-                        bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-                    }
-                    else
-                    {
-                        bAffectByGamePause = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
-                        bAffectByTimeDilation = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-                    }
-                }
-                tweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
+                ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
             }
         }
         else
@@ -352,7 +337,7 @@ void UUIRecyclableScrollViewComponent::ScrollToByDataIndex(int InDataIndex, bool
         TargetContentPos = FMath::Clamp(-TargetContentPos, VerticalRange.X, VerticalRange.Y);
         if (InEaseAnimation)
         {
-            auto tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateWeakLambda(this
+            auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateWeakLambda(this
                 , [this] {
                     auto ContentLocation = Content->GetRelativeLocation();
                     return ContentLocation.Z;
@@ -360,24 +345,9 @@ void UUIRecyclableScrollViewComponent::ScrollToByDataIndex(int InDataIndex, bool
                 , FLTweenFloatSetterFunction::CreateWeakLambda(this, [this](float value) {
                     this->SetScrollValue(FVector2D(0, value));
                     }), TargetContentPos, InAnimationDuration);
-            if (tweener)
+            if (Tweener)
             {
-                bool bAffectByGamePause = false;
-                bool bAffectByTimeDilation = false;
-                if (this->GetWidget())
-                {
-                    if (this->GetWidget()->IsScreenSpaceOverlayUI())
-                    {
-                        bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
-                        bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-                    }
-                    else
-                    {
-                        bAffectByGamePause = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
-                        bAffectByTimeDilation = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-                    }
-                }
-                tweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
+                ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
             }
         }
         else

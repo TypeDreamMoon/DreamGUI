@@ -1878,10 +1878,6 @@ bool ULexUIPrefabHelperObject::GetAnythingDirty()const
 {
 	return bAnythingDirty; 
 }
-void ULexUIPrefabHelperObject::SetNothingDirty()
-{ 
-	bAnythingDirty = false; 
-}
 void ULexUIPrefabHelperObject::SetAnythingDirty() 
 {
 	bAnythingDirty = true;

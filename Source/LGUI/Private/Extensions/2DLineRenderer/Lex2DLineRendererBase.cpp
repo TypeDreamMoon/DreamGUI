@@ -456,19 +456,8 @@ ULTweener* ULex2DLineRendererBase::LineWidthTo(float endValue, float duration, f
 	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULex2DLineRendererBase::GetLineWidth), FLTweenFloatSetterFunction::CreateUObject(this, &ULex2DLineRendererBase::SetLineWidth), endValue, duration);
 	if (Tweener)
 	{
-		bool bAffectByGamePause;
-		bool bAffectByTimeDilation;
-		if (GetWidget()->IsScreenSpaceOverlayUI())
-		{
-			bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-		}
-		else
-		{
-			bAffectByGamePause = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
-			bAffectByTimeDilation = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-		}
-		Tweener->SetEase(easeType)->SetDelay(delay)->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
+		Tweener->SetEase(easeType)->SetDelay(delay);
+		ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), Tweener);
 	}
 	return Tweener;
 }

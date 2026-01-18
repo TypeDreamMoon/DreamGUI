@@ -18,11 +18,11 @@ UUIWidgetInteraction::UUIWidgetInteraction()
 	
 }
 
-bool UUIWidgetInteraction::OnPointerEnter_Implementation(ULGUIPointerEventData* eventData)
+bool UUIWidgetInteraction::OnPointerEnter_Implementation(ULGUIPointerEventData* EventData)
 {
 	if (CurrentPointerEventData == nullptr)
 	{
-		CurrentPointerEventData = eventData;
+		CurrentPointerEventData = EventData;
 
 		auto& Interactions = UUIWidgetInteractionManager::Instance->MapVirtualUserIndexToInteraction[VirtualUserIndex];
 		if (Interactions.CurrentInteraction == nullptr)
@@ -33,9 +33,9 @@ bool UUIWidgetInteraction::OnPointerEnter_Implementation(ULGUIPointerEventData* 
 	}
 	return bAllowEventBubbleUp;
 }
-bool UUIWidgetInteraction::OnPointerExit_Implementation(ULGUIPointerEventData* eventData)
+bool UUIWidgetInteraction::OnPointerExit_Implementation(ULGUIPointerEventData* EventData)
 {
-	if (CurrentPointerEventData == eventData)
+	if (CurrentPointerEventData == EventData)
 	{
 		CurrentPointerEventData = nullptr;
 
@@ -49,10 +49,10 @@ bool UUIWidgetInteraction::OnPointerExit_Implementation(ULGUIPointerEventData* e
 	}
 	return bAllowEventBubbleUp;
 }
-bool UUIWidgetInteraction::OnPointerDown_Implementation(ULGUIPointerEventData* eventData)
+bool UUIWidgetInteraction::OnPointerDown_Implementation(ULGUIPointerEventData* EventData)
 {
 	FKey PressKey;
-	switch (eventData->mouseButtonType)
+	switch (EventData->mouseButtonType)
 	{
 	case EMouseButtonType::Left:
 		PressKey = EKeys::LeftMouseButton;
@@ -70,10 +70,10 @@ bool UUIWidgetInteraction::OnPointerDown_Implementation(ULGUIPointerEventData* e
 	}
 	return bAllowEventBubbleUp;
 }
-bool UUIWidgetInteraction::OnPointerUp_Implementation(ULGUIPointerEventData* eventData)
+bool UUIWidgetInteraction::OnPointerUp_Implementation(ULGUIPointerEventData* EventData)
 {
 	FKey ReleaseKey;
-	switch (eventData->mouseButtonType)
+	switch (EventData->mouseButtonType)
 	{
 	case EMouseButtonType::Left:
 		ReleaseKey = EKeys::LeftMouseButton;
@@ -91,9 +91,9 @@ bool UUIWidgetInteraction::OnPointerUp_Implementation(ULGUIPointerEventData* eve
 	}
 	return bAllowEventBubbleUp;
 }
-bool UUIWidgetInteraction::OnPointerScroll_Implementation(ULGUIPointerEventData* eventData)
+bool UUIWidgetInteraction::OnPointerScroll_Implementation(ULGUIPointerEventData* EventData)
 {
-	auto inAxisValue = eventData->scrollAxisValue;
+	auto inAxisValue = EventData->scrollAxisValue;
 	ScrollWheel(inAxisValue.Y);
 	return bAllowEventBubbleUp;
 }

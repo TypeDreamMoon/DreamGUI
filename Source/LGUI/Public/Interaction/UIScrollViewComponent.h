@@ -118,11 +118,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
 		void RectRangeChanged();
 	
-	virtual bool OnPointerBeginDrag_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerDrag_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerEndDrag_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerBeginDrag_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerDrag_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerEndDrag_Implementation(ULexPointerEventData* EventData)override;
 
-	virtual bool OnPointerScroll_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerScroll_Implementation(ULexPointerEventData* EventData)override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
 		ULexWidget* GetContent()const { return Content.Get(); }

@@ -10,6 +10,7 @@
 #include "Core/LexUIImageBrush.h"
 #include "UISelectableComponent.generated.h"
 
+class UUINavigationInputSelectionHandler;
 class UUISelectableComponent;
 class ULexVisual;
 class ULTweener;
@@ -199,9 +200,11 @@ protected:
 	float AnimDuration = 0.2f;
 
 	EUISelectableSelectionState CurrentSelectionState = EUISelectableSelectionState::Normal;
-	void ApplySelectionState(bool ImmediateSet);
-	bool IsPointerInsideThis = false;
-	bool IsPointerDown = false;
+	void ApplyPointerSelectionState(bool ImmediateSet);
+	bool bIsPointerInsideThis = false;
+	bool bIsPointerDown = false;
+	bool CheckNavigationSelectionState();
+	TWeakObjectPtr<UUINavigationInputSelectionHandler> NavigationSelection;
 #pragma endregion
 	/**
 	 * Can we navigate from other selectable object to this one?
@@ -361,11 +364,12 @@ public:
 	virtual UUISelectableComponent* FindSelectableOnPrev();
 #pragma endregion
 protected:
-	virtual bool OnPointerEnter_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerExit_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerDown_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerUp_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerSelect_Implementation(ULexBaseEventData* eventData)override;
-	virtual bool OnPointerDeselect_Implementation(ULexBaseEventData* eventData)override;
+	virtual bool OnPointerEnter_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerExit_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerDown_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerUp_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerSelect_Implementation(ULexBaseEventData* EventData)override;
+	virtual bool OnPointerDeselect_Implementation(ULexBaseEventData* EventData)override;
+	virtual bool CanNavigateHere_Implementation() const override;
 	virtual bool OnNavigate_Implementation(ELexUINavigationDirection direction, TScriptInterface<ILexNavigationInterface>& result)override;
 };

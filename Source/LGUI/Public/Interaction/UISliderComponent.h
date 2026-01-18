@@ -111,16 +111,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Slider")
 	void SetNavigationChangeInterval(float InValue);
 	
-	virtual bool OnPointerDown_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerUp_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerBeginDrag_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerDrag_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerEndDrag_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerDown_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerUp_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerBeginDrag_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerDrag_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerEndDrag_Implementation(ULexPointerEventData* EventData)override;
 	virtual bool OnNavigate_Implementation(ELexUINavigationDirection direction, TScriptInterface<ILexNavigationInterface>& result)override;
 private:
 	bool CheckFill();
 	bool CheckHandle();
-	void CalculateInputValue(ULexPointerEventData* eventData);
+	void CalculateInputValue(ULexPointerEventData* EventData);
 	void SetValue(float InValue, bool FireEvent);
 	void ApplyValueToUI();
 #if WITH_EDITOR

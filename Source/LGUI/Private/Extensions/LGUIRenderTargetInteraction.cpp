@@ -134,32 +134,32 @@ void ULGUIRenderTargetInteraction::Raycast(ULexPointerEventData* InPointerEventD
 }
 
 
-bool ULGUIRenderTargetInteraction::OnPointerEnter_Implementation(ULexPointerEventData* eventData)
+bool ULGUIRenderTargetInteraction::OnPointerEnter_Implementation(ULexPointerEventData* EventData)
 {
-	InputPointerEventData = eventData;
+	InputPointerEventData = EventData;
 	return bAllowEventBubbleUp;
 }
-bool ULGUIRenderTargetInteraction::OnPointerExit_Implementation(ULexPointerEventData* eventData)
+bool ULGUIRenderTargetInteraction::OnPointerExit_Implementation(ULexPointerEventData* EventData)
 {
 	return bAllowEventBubbleUp;
 }
-bool ULGUIRenderTargetInteraction::OnPointerDown_Implementation(ULexPointerEventData* eventData)
+bool ULGUIRenderTargetInteraction::OnPointerDown_Implementation(ULexPointerEventData* EventData)
 {
 	PointerEventData->PressPointerPosition = PointerEventData->PointerPosition;
 	PointerEventData->PressTime = GetWorld()->TimeSeconds;
 	PointerEventData->bNowIsTriggerPressed = true;
-	PointerEventData->MouseButtonType = eventData->MouseButtonType;
+	PointerEventData->MouseButtonType = EventData->MouseButtonType;
 	return bAllowEventBubbleUp;
 }
-bool ULGUIRenderTargetInteraction::OnPointerUp_Implementation(ULexPointerEventData* eventData)
+bool ULGUIRenderTargetInteraction::OnPointerUp_Implementation(ULexPointerEventData* EventData)
 {
 	PointerEventData->ReleaseTime = GetWorld()->TimeSeconds;
 	PointerEventData->bNowIsTriggerPressed = false;
 	return bAllowEventBubbleUp;
 }
-bool ULGUIRenderTargetInteraction::OnPointerScroll_Implementation(ULexPointerEventData* eventData)
+bool ULGUIRenderTargetInteraction::OnPointerScroll_Implementation(ULexPointerEventData* EventData)
 {
-	auto inAxisValue = eventData->ScrollAxisValue;
+	auto inAxisValue = EventData->ScrollAxisValue;
 	if (IsValid(PointerEventData->EnterComponent))
 	{
 		if (inAxisValue != FVector2D::ZeroVector || PointerEventData->ScrollAxisValue != inAxisValue)

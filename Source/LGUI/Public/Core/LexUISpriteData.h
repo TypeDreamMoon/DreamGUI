@@ -48,7 +48,7 @@ private:
 		FLexUISpriteInfo SpriteInfo;
 
 	UPROPERTY(EditAnywhere, Category = "AtlasPacking")
-	ELexUISpritePackingType PackingType = ELexUISpritePackingType::Static;
+	ELexUISpritePackingType PackingType = ELexUISpritePackingType::Dynamic;
 	/**
 	 * Use a StaticSpriteAtlasData to pack multiple sprites into single atlas texture. The packing process is in editor and cook time, no performance impact at runtime.
 	 * Support mipmaps.

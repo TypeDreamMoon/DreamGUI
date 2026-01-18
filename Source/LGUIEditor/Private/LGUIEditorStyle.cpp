@@ -67,6 +67,8 @@ TSharedRef< FSlateStyleSet > FLGUIEditorStyle::Create()
 	Style->Set("ClassThumbnail.UIRenderTarget", new IMAGE_BRUSH(TEXT("UIRenderTarget_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.UICustomMesh", new IMAGE_BRUSH(TEXT("UICustomMesh_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.LGUICustomMesh", new IMAGE_BRUSH(TEXT("UICustomMesh_40x"), Icon40x40));
+	Style->Set("ClassThumbnail.LexUIFontData_BaseObject", new IMAGE_BRUSH(TEXT("Font_40x"), Icon40x40));
+	Style->Set("ClassThumbnail.LexUIFontEmojiData", new IMAGE_BRUSH(TEXT("FontEmoji_40x"), Icon40x40));
 
 	Style->Set("ClassIcon.LexCanvas", new IMAGE_BRUSH(TEXT("LexCanvas_16x"), Icon16x16));
 	Style->Set("ClassIcon.UISpriteBase", new IMAGE_BRUSH(TEXT("UISprite_16x"), Icon16x16));
@@ -89,6 +91,8 @@ TSharedRef< FSlateStyleSet > FLGUIEditorStyle::Create()
 	Style->Set("ClassIcon.UIRenderTarget", new IMAGE_BRUSH(TEXT("UIRenderTarget_16x"), Icon16x16));
 	Style->Set("ClassIcon.UICustomMesh", new IMAGE_BRUSH(TEXT("UICustomMesh_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexUICustomMesh", new IMAGE_BRUSH(TEXT("UICustomMesh_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexUIFontData_BaseObject", new IMAGE_BRUSH(TEXT("Font_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexUIFontEmojiData", new IMAGE_BRUSH(TEXT("FontEmoji_16x"), Icon16x16));
 
 	Style->Set("ClassThumbnail.LexUIEventSystemActor", new IMAGE_BRUSH(TEXT("EventSystem_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.LexUIEventSystem", new IMAGE_BRUSH(TEXT("EventSystem_40x"), Icon40x40));

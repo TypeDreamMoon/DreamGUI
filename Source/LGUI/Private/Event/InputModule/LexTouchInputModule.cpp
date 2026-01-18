@@ -10,21 +10,21 @@ void ULexTouchInputModule::ProcessInput()
 
 	for (auto& keyValue : EventSystem->GetPointerEventDataMap())
 	{
-		auto& eventData = keyValue.Value;
-		switch (eventData->InputType)
+		auto& EventData = keyValue.Value;
+		switch (EventData->InputType)
 		{
 		default:
 		case ELexUIPointerInputType::Pointer:
 		{
-			if (IsValid(eventData))
+			if (IsValid(EventData))
 			{
-				if (eventData->bNowIsTriggerPressed || eventData->bPrevIsTriggerPressed)
+				if (EventData->bNowIsTriggerPressed || EventData->bPrevIsTriggerPressed)
 				{
 					FLexUIHitResult LexHitResult;
-					bool bLineTraceHitSomething = LineTrace(eventData, LexHitResult);
+					bool bLineTraceHitSomething = LineTrace(EventData, LexHitResult);
 					bool bResultHitSomething = false;
 					FHitResult HitResult;
-					ProcessPointerEvent(EventSystem.Get(), eventData, bLineTraceHitSomething, LexHitResult, bResultHitSomething, HitResult);
+					ProcessPointerEvent(EventSystem.Get(), EventData, bLineTraceHitSomething, LexHitResult, bResultHitSomething, HitResult);
 
 					auto TempHitComp = (USceneComponent*)HitResult.Component.Get();
 					EventSystem->RaiseHitEvent(bResultHitSomething, HitResult, TempHitComp);
@@ -34,7 +34,7 @@ void ULexTouchInputModule::ProcessInput()
 		break;
 		case ELexUIPointerInputType::Navigation:
 		{
-			ProcessInputForNavigation(eventData);
+			ProcessInputForNavigation(EventData);
 		}
 		break;
 		}
@@ -73,7 +73,7 @@ void ULexTouchInputModule::InputTouchMoved(int inTouchID, const FVector& inTouch
 {
 	if (!EventSystem.IsValid())return;
 
-	auto eventData = EventSystem->GetPointerEventData(inTouchID, true);
-	EventSystem->SetPointerInputType(eventData, ELexUIPointerInputType::Pointer);
-	eventData->PointerPosition = inTouchPointPosition;
+	auto EventData = EventSystem->GetPointerEventData(inTouchID, true);
+	EventSystem->SetPointerInputType(EventData, ELexUIPointerInputType::Pointer);
+	EventData->PointerPosition = inTouchPointPosition;
 }

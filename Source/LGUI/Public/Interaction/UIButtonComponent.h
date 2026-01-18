@@ -20,7 +20,7 @@ protected:
 	FSimpleMulticastDelegate OnClickCPP;
 	UPROPERTY(BlueprintAssignable, Category = "LGUI-Toggle", DisplayName="OnClick")
 	FUIButtonClickedEvent OnClickBP;
-	virtual bool OnPointerClick_Implementation(ULexPointerEventData* eventData)override;
+	virtual bool OnPointerClick_Implementation(ULexPointerEventData* EventData)override;
 public:
 	FSimpleMulticastDelegate& GetOnClickEvent(){return OnClickCPP;}
 };

@@ -249,7 +249,7 @@ public:
 		void SetReadOnly(bool Value);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
-	void ActivateInput(ULexPointerEventData* eventData = nullptr);
+	void ActivateInput(ULexPointerEventData* EventData = nullptr);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Input")
 	void DeactivateInput(bool InFireEvent = true);
 	
@@ -330,16 +330,16 @@ protected:
 	virtual void OnInteractableChanged(bool Interactable) override;
 	virtual void OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
 
-	virtual bool OnPointerEnter_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerExit_Implementation(ULexPointerEventData* eventData)override;
-	virtual bool OnPointerSelect_Implementation(ULexBaseEventData* eventData) override;
-	virtual bool OnPointerDeselect_Implementation(ULexBaseEventData* eventData) override;
-	virtual bool OnPointerClick_Implementation(ULexPointerEventData* eventData) override;
-	virtual bool OnPointerBeginDrag_Implementation(ULexPointerEventData* eventData) override;
-	virtual bool OnPointerDrag_Implementation(ULexPointerEventData* eventData) override;
-	virtual bool OnPointerEndDrag_Implementation(ULexPointerEventData* eventData) override;
-	virtual bool OnPointerDown_Implementation(ULexPointerEventData* eventData) override;
-	virtual bool OnPointerUp_Implementation(ULexPointerEventData* eventData) override;
+	virtual bool OnPointerEnter_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerExit_Implementation(ULexPointerEventData* EventData)override;
+	virtual bool OnPointerSelect_Implementation(ULexBaseEventData* EventData) override;
+	virtual bool OnPointerDeselect_Implementation(ULexBaseEventData* EventData) override;
+	virtual bool OnPointerClick_Implementation(ULexPointerEventData* EventData) override;
+	virtual bool OnPointerBeginDrag_Implementation(ULexPointerEventData* EventData) override;
+	virtual bool OnPointerDrag_Implementation(ULexPointerEventData* EventData) override;
+	virtual bool OnPointerEndDrag_Implementation(ULexPointerEventData* EventData) override;
+	virtual bool OnPointerDown_Implementation(ULexPointerEventData* EventData) override;
+	virtual bool OnPointerUp_Implementation(ULexPointerEventData* EventData) override;
 
 private:
 	friend class FVirtualKeyboardEntry;

@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "PrefabSystem/ActorSerializer8.h"
+#include "PrefabSystem/ActorSerializer.h"
 #include "PrefabSystem/LexUIObjectReaderAndWriter.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
@@ -46,7 +46,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 			LexUIPrefabSystem::FLexUIDuplicateObjectWriter Writer(InOutBuffer, serializer, ExcludeProperties);
 			Writer.DoSerialize(InObject);
 		};
-		FLGUIPrefabSaveData SaveData;
+		FLexUIPrefabSaveData SaveData;
 		serializer.SerializeActorToData(OriginRootActor, SaveData);
 
 		//deserialize
@@ -194,7 +194,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 			LexUIPrefabSystem::FLexUIDuplicateOverrideParameterObjectWriter Writer(InOutBuffer, serializer, InOverridePropertyNames);
 			Writer.DoSerialize(InObject);
 		};
-		FLGUIPrefabSaveData SaveData;
+		FLexUIPrefabSaveData SaveData;
 		serializer.SerializeActorToData(OriginRootActor, SaveData);
 
 		//deserialize

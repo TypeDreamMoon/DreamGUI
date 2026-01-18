@@ -181,19 +181,7 @@ void UUIToggleComponent::ApplyValueToUI(bool immediateSet)
 			}), FLTweenColorSetterFunction::CreateUObject(ToggleTransitionTarget.Get(), &ULexVisual::SetColor), Color.GetValue(), ToggleDuration);
 			if (ToggleTransitionTweener)
 			{
-				bool bAffectByGamePause = false;
-				bool bAffectByTimeDilation = false;
-				if (this->GetWidget()->IsScreenSpaceOverlayUI())
-				{
-					bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
-					bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-				}
-				else
-				{
-					bAffectByGamePause = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
-					bAffectByTimeDilation = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-				}
-				ToggleTransitionTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
+				ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), ToggleTransitionTweener);
 			}
 		}
 	}
@@ -221,19 +209,7 @@ void UUIToggleComponent::ApplyValueToUI(bool immediateSet)
 					}), FLTweenColorSetterFunction::CreateUObject(ToggleTransitionTargetAsLexImage, &ULexImage::SetBrushTintColor), Brush.GetValue().TintColor, ToggleDuration);
 					if (ToggleTransitionTweener)
 					{
-						bool bAffectByGamePause = false;
-						bool bAffectByTimeDilation = false;
-						if (this->GetWidget()->IsScreenSpaceOverlayUI())
-						{
-							bAffectByGamePause = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByGamePause;
-							bAffectByTimeDilation = GetDefault<ULexUISettings>()->bScreenSpaceUIAffectByTimeDilation;
-						}
-						else
-						{
-							bAffectByGamePause = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByGamePause;
-							bAffectByTimeDilation = GetDefault<ULexUISettings>()->bWorldSpaceUIAffectByTimeDilation;
-						}
-						ToggleTransitionTweener->SetAffectByGamePause(bAffectByGamePause)->SetAffectByTimeDilation(bAffectByTimeDilation);
+						ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), ToggleTransitionTweener);
 					}
 				}
 			}
@@ -267,7 +243,7 @@ void UUIToggleComponent::SetValueWithoutNotify(bool Value)
 	SetValue(Value, false);
 }
 
-bool UUIToggleComponent::OnPointerClick_Implementation(ULexPointerEventData* eventData)
+bool UUIToggleComponent::OnPointerClick_Implementation(ULexPointerEventData* EventData)
 {
 	SetValue(!bIsOn);
 	return AllowEventBubbleUp;
