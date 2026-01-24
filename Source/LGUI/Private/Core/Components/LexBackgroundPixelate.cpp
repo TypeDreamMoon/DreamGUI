@@ -3,14 +3,8 @@
 #include "Core/Components/LexBackgroundPixelate.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
-#include "Core/LexUISpriteData.h"
-#include "Engine/TextureRenderTarget2D.h"
-#include "Core/LexUIRender/LexUIPostProcessShaders.h"
-#include "Core/LexUIRender/LexUIVertex.h"
 #include "PipelineStateCache.h"
 #include "Core/LexUIRender/LexUIRenderer.h"
-#include "Core/Components/LexCanvas.h"
-#include "Core/LexUISettings.h"
 #include "RenderTargetPool.h"
 #include "Core/LexVisualPostProcessRenderProxy.h"
 #include "RHIStaticStates.h"
@@ -211,9 +205,9 @@ public:
 
 void ULexBackgroundPixelate::SendOthersDataToRenderProxy()
 {
-	if (RenderProxy.IsValid())
+	if (RenderProxy != nullptr)
 	{
-		auto TempRenderProxy = (FUIBackgroundPixelateRenderProxy*)(RenderProxy.Get());
+		auto TempRenderProxy = (FUIBackgroundPixelateRenderProxy*)RenderProxy;
 		float pixelateStrengthWidthAlpha = this->GetStrengthInternal();
 		ENQUEUE_RENDER_COMMAND(FLexBackgroundPixelate_UpdateData)
 			([TempRenderProxy, pixelateStrengthWidthAlpha](FRHICommandListImmediate& RHICmdList)
@@ -223,11 +217,11 @@ void ULexBackgroundPixelate::SendOthersDataToRenderProxy()
 	}
 }
 
-TSharedPtr<FLexVisualPostProcessRenderProxy> ULexBackgroundPixelate::GetRenderProxy()
+FLexVisualPostProcessRenderProxy* ULexBackgroundPixelate::GetRenderProxy()
 {
-	if (!RenderProxy.IsValid())
+	if (RenderProxy == nullptr)
 	{
-		RenderProxy = MakeShared<FUIBackgroundPixelateRenderProxy>();
+		RenderProxy = new FUIBackgroundPixelateRenderProxy();
 		SendRegionVertexDataToRenderProxy();
 		SendMaskTextureToRenderProxy();
 	}

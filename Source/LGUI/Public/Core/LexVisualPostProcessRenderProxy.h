@@ -2,10 +2,10 @@
 
 #pragma once
 
-#include "LexUIGeometry.h"
 #include "LexUIRender/ILexUIRendererPrimitive.h"
 #include "LexUIRender/LexUIVertex.h"
 #include "RHIStaticStates.h"
+#include "SceneTextures.h"
 
 class ULexCanvas;
 class ULexVisualPostProcess;
@@ -55,6 +55,7 @@ public:
 	FVector2f RectSize;
 	FTexture2DResource* MaskTexture = nullptr;
 	bool bUseFullSize = false;
+	FBox BoundingBox;
 	//output target
 	FTextureRenderTargetResource* RenderTargetResource = nullptr;
 

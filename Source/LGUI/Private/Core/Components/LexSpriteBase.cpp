@@ -42,11 +42,6 @@ void ULexSpriteBase::EndPlay()
 void ULexSpriteBase::ApplyAtlasTextureChange_Implementation()
 {
 	UIGeometry->Texture = Sprite->GetAtlasTexture();
-	if (DrawCall.IsValid())
-	{
-		DrawCall->Texture = UIGeometry->Texture;
-		DrawCall->bTextureChanged = true;
-	}
 	GetWidget()->MarkCanvasUpdate(true, true, false);
 }
 

@@ -7,12 +7,10 @@
 #include "MeshBatch.h"
 #include "RHIResources.h"
 #include "GlobalShader.h"
-#include "SceneTextures.h"
 
 class FLexUIRenderer;
 class FSceneViewFamily;
 class FLexVisualPostProcessRenderProxy;
-enum class ELGUICanvasDepthMode :uint8;
 
 struct FLexUIMeshBatchContainer
 {

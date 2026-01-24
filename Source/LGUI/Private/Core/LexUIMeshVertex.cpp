@@ -23,8 +23,8 @@ void FLGUIMeshVertexDeclaration::ReleaseRHI()
 {
 	VertexDeclarationRHI.SafeRelease();
 }
-TGlobalResource<FLGUIMeshVertexDeclaration> GLGUIVertexDeclaration;
+TGlobalResource<FLGUIMeshVertexDeclaration> GLexUIVertexDeclaration;
 FVertexDeclarationRHIRef& GetLexUIMeshVertexDeclaration()
 {
-	return GLGUIVertexDeclaration.VertexDeclarationRHI;
+	return GLexUIVertexDeclaration.VertexDeclarationRHI;
 }

@@ -54,10 +54,26 @@ public:
 	TWeakObjectPtr<UTexture> Texture = nullptr;
 	TWeakObjectPtr<UMaterialInterface> Material = nullptr;
 	bool bIsFont = false;
+	bool bSupportDrawcallBatching = true;
 
 	FTransform TransformRelativeToCanvas;
 	FVector2D BoundsMin2DInCanvasSpace;
 	FVector2D BoundsMax2DInCanvasSpace;
+
+	void CopyFrom(const FLexUIGeometry& Other)
+	{
+		OriginVertices = Other.OriginVertices;
+		Vertices = Other.Vertices;
+		Triangles = Other.Triangles;
+		
+		Texture = Other.Texture;
+		Material = Other.Material;
+		bIsFont = Other.bIsFont;
+		bSupportDrawcallBatching = Other.bSupportDrawcallBatching;
+		
+		BoundsMin2DInCanvasSpace = Other.BoundsMin2DInCanvasSpace;
+		BoundsMax2DInCanvasSpace = Other.BoundsMax2DInCanvasSpace;
+	}
 
 	/** 
 	 * Clear vertices and triangle indices data and keep memory, so when the data array do SetNumUninitialized (or similar function, which just change num but not memory), the origin data is still there.

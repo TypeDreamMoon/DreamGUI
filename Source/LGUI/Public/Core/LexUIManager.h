@@ -28,7 +28,6 @@ class LGUI_API ULexUIManagerObject :public UObject, public FTickableGameObject
 	GENERATED_BODY()
 
 public:
-	static ULexUIManagerObject* Instance;
 	ULexUIManagerObject();
 	virtual void BeginDestroy()override;
 public:
@@ -41,13 +40,14 @@ public:
 	//end TickableEditorObject interface
 #if WITH_EDITORONLY_DATA
 private:
+	static ULexUIManagerObject* Instance;
 	static bool bIsBlueprintCompiling;
 	FLexUIEditorTickMulticastDelegate EditorTick;
 	TArray<TTuple<int, TFunction<void()>>> OneShotFunctionsToExecuteInTick;
 	bool bShouldBroadcastLevelActorListChanged = false;
 public:
 	static void AddOneShotTickFunction(const TFunction<void()>& InFunction, int InDelayFrameCount = 0);
-	static FLexUIEditorTickMulticastDelegate& GetEditorTickDelegate();
+	FLexUIEditorTickMulticastDelegate& GetEditorTickDelegate();
 	static void MarkBroadcastLevelActorListChanged();
 
 #endif

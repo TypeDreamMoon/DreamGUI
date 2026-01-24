@@ -25,6 +25,7 @@
 #endif
 #include "Core/LexUISettings.h"
 #include "ClearQuad.h"
+#include "Core/LexUIMeshVertex.h"
 #if WITH_EDITOR
 #include "Core/LexUIRender/LexUIHelperLineShaders.h"
 #endif

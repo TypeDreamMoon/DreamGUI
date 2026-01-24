@@ -80,7 +80,7 @@ protected:
 
 #pragma region BlockData
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
-		FVector4f CornerRadius = FVector4f::One();
+		FVector4f CornerRadius = FVector4f(0.1f, 0.1f, 0.1f, 0.1f);
 	UPROPERTY(EditAnywhere, Category = "LGUI-ProceduralRect")
 		ELexRectBlockUnitMode CornerRadiusUnitMode = ELexRectBlockUnitMode::Percentage;
 	/** Prevent edge aliasing, useful when in 3d. */

@@ -371,7 +371,10 @@ void UUIWidget::SetComponentTickEnabled(bool bEnable)
 #if WITH_EDITOR
 			if (!GetWorld()->IsGameWorld())
 			{
-				EditorTickHandle = ULexUIManagerObject::GetEditorTickDelegate().AddUObject(this, &UUIWidget::TickComponent);
+				if (auto LexUIManagerObject = ULexUIManagerObject::GetInstance(true))
+				{
+					EditorTickHandle = LexUIManagerObject->GetEditorTickDelegate().AddUObject(this, &UUIWidget::TickComponent);
+				}
 			}
 			else
 #endif
@@ -385,7 +388,12 @@ void UUIWidget::SetComponentTickEnabled(bool bEnable)
 			if (!GetWorld()->IsGameWorld())
 			{
 				if (EditorTickHandle.IsValid())
-					ULexUIManagerObject::GetEditorTickDelegate().Remove(EditorTickHandle);
+				{
+					if (auto LexUIManagerObject = ULexUIManagerObject::GetInstance(false))
+					{
+						LexUIManagerObject->GetEditorTickDelegate().Remove(EditorTickHandle);
+					}
+				}
 			}
 			else
 #endif

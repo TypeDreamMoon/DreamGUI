@@ -33,6 +33,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void BeginDestroy() override;
 	virtual void OnUnregister() override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -97,8 +98,7 @@ public:
 	void MarkVertexPositionDirty();
 	void MarkUVDirty();
 public:
-	virtual TSharedPtr<FLexVisualPostProcessRenderProxy> GetRenderProxy()PURE_VIRTUAL(UUIPostProcessRenderable::GetRenderProxy, return 0;);
-	virtual bool IsRenderProxyValid()const;
+	virtual FLexVisualPostProcessRenderProxy* GetRenderProxy()PURE_VIRTUAL(UUIPostProcessRenderable::GetRenderProxy, return 0;);
 	virtual bool HaveValidData()const;
 
 	virtual bool LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const override;
@@ -108,7 +108,7 @@ private:
 	/** vertex's uv change */
 	uint8 bUVChanged : 1;
 protected:
-	TSharedPtr<FLexVisualPostProcessRenderProxy> RenderProxy = nullptr;
+	FLexVisualPostProcessRenderProxy* RenderProxy = nullptr;
 	/** update ui geometry */
 	virtual void OnUpdateGeometry(bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged);
 	/** update region vertex data */

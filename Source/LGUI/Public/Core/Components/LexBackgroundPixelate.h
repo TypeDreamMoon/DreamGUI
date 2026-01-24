@@ -40,7 +40,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetApplyAlphaToStrength(bool Value);
 
-	virtual TSharedPtr<FLexVisualPostProcessRenderProxy> GetRenderProxy()override;
+	virtual FLexVisualPostProcessRenderProxy* GetRenderProxy()override;
 	virtual void MarkAllDirty()override;
 protected:
 	FORCEINLINE float GetStrengthInternal();

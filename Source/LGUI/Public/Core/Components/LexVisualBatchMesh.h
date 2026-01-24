@@ -99,14 +99,6 @@ protected:
 	 */
 	void ApplyGeometryModifier(bool triangleChanged, bool uvChanged, bool colorChanged, bool vertexPositionChanged);
 
-public:
-	/** 
-	 * Return a created MaterialInstanceDynamic that rendering this UI item, may shared by other UI item. if this UI item is not renderred yet, then return nullptr.
-	 * LGUI only create MaterialInstanceDynamic when specified material have one of these LGUI material parameter: [LexUI_MainTexture, LexUI_FontTexture, LexUI_ClipDataTexture].
-	 */
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		UMaterialInstanceDynamic* GetMaterialInstanceDynamic()const;
-protected:
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
 public:
 	void MarkVertexPositionDirty();
@@ -117,7 +109,7 @@ public:
 	virtual void MarkVerticesDirty(bool InTriangleDirty, bool InVertexPositionDirty, bool InVertexUVDirty, bool InVertexColorDirty);
 
 	/** 
-	 * Mark vertices dirty, then LGUI will trigger UpdateGeometry process, and OnUpdateGeometry will executed in next render update.
+	 * Mark vertices dirty, then LGUI will trigger UpdateGeometry process, and OnUpdateGeometry will execute in next render update.
 	 * Call this if you want to update vertex data. 
 	 * For blueprint easily use.
 	 */

@@ -6,11 +6,9 @@
 #include "Core/LexUIFontData_BaseObject.h"
 #include "Core/LexUIRichTextImageData_BaseObject.h"
 #include "Core/LexUIRichTextCustomStyleData.h"
-#include "Core/LexUIDrawCall.h"
 #include "Core/LexUIFontEmojiData.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
-#include "PrefabSystem/LexUIPrefabManager.h"
 #include "Utils/LexUIUtils.h"
 #include "Engine/Texture2D.h"
 #include "Engine/Texture2DArray.h"
@@ -44,12 +42,6 @@ void ULexText::ApplyFontTextureChange()
 		MarkVerticesDirty(true, true, true, true);
 		MarkTextureDirty();
 		UIGeometry->Texture = GetTextureToCreateGeometry();
-		if (DrawCall.IsValid())
-		{
-			DrawCall->Texture = UIGeometry->Texture;
-			DrawCall->bTextureChanged = true;
-			DrawCall->bNeedToUpdateVertex = true;
-		}
 	}
 }
 
@@ -60,13 +52,6 @@ void ULexText::ApplyFontMaterialChange()
 		MarkVerticesDirty(true, true, true, true);
 		MarkMaterialDirty();
 		UIGeometry->Material = GetMaterialToCreateGeometry();
-		if (DrawCall.IsValid())
-		{
-			DrawCall->Material = UIGeometry->Material;
-			DrawCall->bMaterialChanged = true;
-			DrawCall->bMaterialNeedToReassign = true;
-			DrawCall->bNeedToUpdateVertex = true;
-		}
 	}
 }
 

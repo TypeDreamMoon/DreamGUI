@@ -173,8 +173,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LexUI")
 	virtual bool LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const;
 
-	TSharedPtr<FLexUIDrawCall> DrawCall = nullptr;//drawcall that response for this UI.
-
 	int GetClipDataStartPosition()const;
 	UTexture* GetClipDataTexture()const;
 

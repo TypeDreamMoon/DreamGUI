@@ -869,7 +869,7 @@ void FLGUIEditorModule::CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder, TFun
 		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedActorFunction, ULexPolygon::StaticClass(), nullptr);
 		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedActorFunction, ULexPolygonLine::StaticClass(), nullptr);
 		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedActorFunction, ULexRing::StaticClass(), nullptr);
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedActorFunction, ULexStaticMesh::StaticClass(), nullptr);
+		//FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedActorFunction, ULexStaticMesh::StaticClass(), nullptr);
 		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedActorFunction, ULex2DLineRaw::StaticClass(), nullptr);
 		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedActorFunction, ULex2DLineChildrenAsPoints::StaticClass(), nullptr);
 		//FunctionContainer::CreateMenuEntryByPrefab(MenuBuilder, TEXT("UIWidget"), LOCTEXT("UIWidget", "UI Widget"), AUIWidgetActor::StaticClass()->GetToolTipText());

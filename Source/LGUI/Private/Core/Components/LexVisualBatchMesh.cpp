@@ -97,20 +97,12 @@ void ULexVisualBatchMesh::MarkCanvasUpdate()
 
 void ULexVisualBatchMesh::MarkTextureDirty()
 {
-	if (DrawCall.IsValid())
-	{
-		UIGeometry->Texture = GetTextureToCreateGeometry();
-		DrawCall->bTextureChanged = true;
-	}
+	UIGeometry->Texture = GetTextureToCreateGeometry();
 	GetWidget()->MarkCanvasUpdate(true, false, false);
 }
 void ULexVisualBatchMesh::MarkMaterialDirty()
 {
-	if (DrawCall.IsValid())
-	{
-		UIGeometry->Material = GetMaterialToCreateGeometry();
-		DrawCall->bMaterialChanged = true;
-	}
+	UIGeometry->Material = GetMaterialToCreateGeometry();
 	GetWidget()->MarkCanvasUpdate(true, false, false);
 }
 
@@ -119,25 +111,10 @@ void ULexVisualBatchMesh::MarkAllDirty()
 	bLocalVertexPositionChanged = true;
 	bUVChanged = true;
 	bTriangleChanged = true;
-	if (DrawCall.IsValid())
-	{
-		UIGeometry->Texture = GetTextureToCreateGeometry();
-		DrawCall->bTextureChanged = true;
-
-		UIGeometry->Material = GetMaterialToCreateGeometry();
-		DrawCall->bMaterialChanged = true;
-	}
+	UIGeometry->Texture = GetTextureToCreateGeometry();
+	UIGeometry->Material = GetMaterialToCreateGeometry();
 	GetWidget()->MarkCanvasUpdate(true, false, false);
 	Super::MarkAllDirty();
-}
-
-UMaterialInstanceDynamic* ULexVisualBatchMesh::GetMaterialInstanceDynamic()const
-{
-	if (DrawCall.IsValid() && DrawCall->RenderMaterial.IsValid() && DrawCall->bMaterialContainsLexUIParameter)
-	{
-		return (UMaterialInstanceDynamic*)DrawCall->RenderMaterial.Get();
-	}
-	return nullptr;
 }
 
 void ULexVisualBatchMesh::GeometryModifierWillChangeVertexData(bool& OutTriangleIndices, bool& OutVertexPosition, bool& OutUV, bool& OutColor)
@@ -196,17 +173,34 @@ void ULexVisualBatchMesh::UpdateGeometry()
 	check(Canvas);
 
 	OnBeforeCreateOrUpdateGeometry();
-	if (!DrawCall.IsValid()//not add to render yet
-		)
+	
+	UIGeometry->Texture = GetTextureToCreateGeometry();
+	UIGeometry->Material = GetMaterialToCreateGeometry();
+	
+	//when use pixel-perfect, the pixel-perfect calculation will take consider transform matrix, so we need to recalculate geometry if pixel-perfect & bTransformChanged
+	bool pixelPerfect = this->GetShouldAffectByPixelSnapping() && Widget->GetPixelSnappingInHierarchy();
+	bool pixelPerfectAffectTransform = pixelPerfect && bTransformChanged;
+	if (bTriangleChanged || bLocalVertexPositionChanged || pixelPerfectAffectTransform || bColorChanged || bUVChanged)
 	{
 		UIGeometry->Clear();
-		UIGeometry->Texture = GetTextureToCreateGeometry();
-		UIGeometry->Material = GetMaterialToCreateGeometry();
-		OnUpdateGeometry(*(UIGeometry.Get()), true, true, true, true);
+		//check if GeometryModifier will affect vertex data, if so we need to update these data in OnUpdateGeometry
+		{
+			bool TempTriangleIndices = false, TempVertexPosition = false, TempUV = false, TempColor = false;
+			GeometryModifierWillChangeVertexData(TempTriangleIndices, TempVertexPosition, TempUV, TempColor);
+			if (TempTriangleIndices)bTriangleChanged = true;
+			if (TempVertexPosition)bLocalVertexPositionChanged = true;
+			if (TempUV)bUVChanged = true;
+			if (TempColor)bColorChanged = true;
+		}
+		OnUpdateGeometry(*(UIGeometry.Get()), bTriangleChanged, bLocalVertexPositionChanged || pixelPerfectAffectTransform, bUVChanged, bColorChanged);
 		UpdateGeometryWidgetPropertyData(*(UIGeometry.Get()), this->WidgetPropertyDataStartPosition);
-		OnFillWidgetPropertyDataForMaterial();
-		ApplyGeometryModifier(true, true, true, true);
-
+		ApplyGeometryModifier(bTriangleChanged, bUVChanged, bColorChanged, bLocalVertexPositionChanged);
+	}
+	if (bLocalVertexPositionChanged || bTransformChanged || pixelPerfectAffectTransform)
+	{
+		CalculateLocalBounds();//CalculateLocalBounds must stay before TransformVertices, because TransformVertices will also cache bounds for Canvas to check 2d overlap.
+		FLexUIGeometry::TransformVertices(Canvas, this, this->UIGeometry.Get());
+#if 0
 		//it is ok to use AsyncTask here, because we can make sure it completes in current frame
 		Canvas->IncreaseThreadProcessingGeometry();
 		AsyncTask(ENamedThreads::Type::AnyBackgroundHiPriTask, [this, Canvas]()
@@ -215,52 +209,18 @@ void ULexVisualBatchMesh::UpdateGeometry()
 			FLexUIGeometry::TransformVertices(Canvas, this, this->UIGeometry.Get());
 			Canvas->DecreaseThreadProcessingGeometry();
 		});
-	}
-	else//if geometry is created, update data
-	{
-		//when use pixel-perfect, the pixel-perfect calculation will take consider transform matrix, so we need to recalculate geometry if pixel-perfect & bTransformChanged
-		bool pixelPerfect = this->GetShouldAffectByPixelSnapping() && Widget->GetPixelSnappingInHierarchy();
-		bool pixelPerfectAffectTransform = pixelPerfect && bTransformChanged;
-		if (bTriangleChanged || bLocalVertexPositionChanged || pixelPerfectAffectTransform || bColorChanged || bUVChanged)
-		{
-			UIGeometry->Clear();
-			//check if GeometryModifier will affect vertex data, if so we need to update these data in OnUpdateGeometry
-			{
-				bool TempTriangleIndices = false, TempVertexPosition = false, TempUV = false, TempColor = false;
-				GeometryModifierWillChangeVertexData(TempTriangleIndices, TempVertexPosition, TempUV, TempColor);
-				if (TempTriangleIndices)bTriangleChanged = true;
-				if (TempVertexPosition)bLocalVertexPositionChanged = true;
-				if (TempUV)bUVChanged = true;
-				if (TempColor)bColorChanged = true;
-			}
-			OnUpdateGeometry(*(UIGeometry.Get()), bTriangleChanged, bLocalVertexPositionChanged || pixelPerfectAffectTransform, bUVChanged, bColorChanged);
-			UpdateGeometryWidgetPropertyData(*(UIGeometry.Get()), this->WidgetPropertyDataStartPosition);
-			ApplyGeometryModifier(bTriangleChanged, bUVChanged, bColorChanged, bLocalVertexPositionChanged);
-			DrawCall->bNeedToUpdateVertex = true;
-		}
-		if (bLocalVertexPositionChanged || bTransformChanged || pixelPerfectAffectTransform)
-		{
-			//it is ok to use AsyncTask here, because we can make sure it completes in current frame
-			Canvas->IncreaseThreadProcessingGeometry();
-			AsyncTask(ENamedThreads::Type::AnyBackgroundHiPriTask, [this, Canvas]()
-			{
-				CalculateLocalBounds();//CalculateLocalBounds must stay before TransformVertices, because TransformVertices will also cache bounds for Canvas to check 2d overlap.
-				FLexUIGeometry::TransformVertices(Canvas, this, this->UIGeometry.Get());
-				Canvas->DecreaseThreadProcessingGeometry();
-			});
-			DrawCall->bNeedToUpdateVertex = true;
+#endif
 
-			OnFillWidgetPropertyDataForMaterial();
-		}
-		else
-		{
-			if (bClipDataPositionChanged)
-			{
-				OnFillWidgetPropertyDataForMaterial_FirstPixel();
-				DrawCall->bNeedToUpdateVertex = true;
-			}
-        }
+		OnFillWidgetPropertyDataForMaterial();
 	}
+	else
+	{
+		if (bClipDataPositionChanged)
+		{
+			OnFillWidgetPropertyDataForMaterial_FirstPixel();
+		}
+    }
+	
 	if (UIGeometry->OriginVertices.Num() >= LEXUI_MAX_VERTEX_COUNT)
 	{
 		auto errorMsg = FText::Format(NSLOCTEXT("LexVisualBatchMesh", "TooManyTrianglesInSingleUIElement", "{0} Too many vertex ({1}) in single UI element: {2}")

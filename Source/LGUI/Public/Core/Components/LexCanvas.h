@@ -9,6 +9,7 @@
 #include "PrefabSystem/ILexUIPrefabInterface.h"
 #include "LexCanvas.generated.h"
 
+class FLexUIRenderData;
 class FLexUIClipData;
 class ULexUIDataAsTexture;
 
@@ -142,6 +143,17 @@ protected:
 	 */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "ConvertPositionFromCanvasToViewport"), Category = "LGUI")
 	bool ReceiveConvertPositionFromCanvasToViewport(const FVector2D& InPosition, FVector2D& Result)const;
+};
+
+USTRUCT(BlueprintType, Category = LGUI)
+struct FLexCanvasDynamicMaterialArrayContainer
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, Category = LGUI)
+	TArray<TObjectPtr<UMaterialInstanceDynamic>> MaterialArray;
+
+	int CurrentIndex = 0;
 };
 
 class ULexWidget;
@@ -649,8 +661,6 @@ public:
 private:
 	void SetSortOrderAdditionalValueRecursive(int32 InAdditionalValue);
 	void UpdateRenderTarget(bool CallEvent);
-	/** Check if any invalid in list. Currently use in editor after undo check or rebuild. */
-	void EnsureDrawCallObjectReference();
 public:
 	/** Called from LexUIManagerActor. Update this canvas if it is a RootCanvas */
 	void UpdateRootCanvas();
@@ -659,7 +669,6 @@ public:
 private:
 	uint32 bCanTickUpdate:1;//if Canvas can update from tick
 	uint32 bShouldRebuildDrawCall : 1;
-	uint32 bShouldClearCachedDrawCall : 1;//mark this to true will delete all cached draw-call and rebuild all draw-call
 	uint32 bNeedToSortRenderPriority : 1;
 	uint32 bHasAddToLexScreenSpaceRenderer : 1;//is this canvas added to LGUI screen space renderer
 	uint32 bRequestUpdateForRenderTarget : 1;//request update when RenderTargetUpdateMode is WhenRequest
@@ -700,8 +709,11 @@ private:
 	mutable TWeakObjectPtr<ULexUIMeshComponent> UIMesh;//current using UIMesh.
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	TArray<TObjectPtr<UMaterialInstanceDynamic>> PooledUIMaterialList;//Default material pool.
+	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
+	TArray<TObjectPtr<UMaterialInstanceDynamic>> UsingUIMaterialList;
+	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
+	TMap<TObjectPtr<UMaterialInterface>, FLexCanvasDynamicMaterialArrayContainer> MapSrcMatToDynamicMat;//@todo: delete not using material
 	TArray<TSharedPtr<FLexUIDrawCall>> UIDrawCallList;//DrawCall collection of this Canvas.
-	TArray<TSharedPtr<FLexUIDrawCall>> CacheUIDrawCallList;//Cached DrawCall collection.
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<ULexWidget>> VisualWidgetList;//Use LexWidget instead of LexVisual, because we need LexWidget to get sub-canvas.
 	bool bNeedToGenerateWidgetList = true;
@@ -741,14 +753,13 @@ private:
 	/** mark render finish */
 	void MarkFinishUpdateRootCanvasDrawCall();
 
-	void BatchDrawCall_Implement(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, TArray<TSharedPtr<FLexUIDrawCall>>& InUIDrawCallList, TArray<TSharedPtr<FLexUIDrawCall>>& InCacheUIDrawCallList, bool& OutNeedToSortRenderPriority);
-	void UpdateDrawCallMesh_Implement();
-	void UpdateDrawCallMaterial_Implement();
+	void PrepareDrawCallBatchingData(TArray<TSharedPtr<FLexUIRenderData>>& OutRenderDataArray);
+	void BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, const TArray<TSharedPtr<FLexUIRenderData>>& InRenderDataArray, TArray<TSharedPtr<FLexUIDrawCall>>& InOutUIDrawCallList);
+	void UpdateDrawCallMesh(bool InRebuildDrawCall);
+	void UpdateDrawCallMaterial();
 	void SortDrawCall();
 public:
 	static bool Is2DUITransform(const FTransform& Transform);
 private:
-	UMaterialInstanceDynamic* GetUIMaterialFromPool();
-	void AddUIMaterialToPool(UMaterialInstanceDynamic* uiMat);
 	void CheckUIMesh()const;
 };

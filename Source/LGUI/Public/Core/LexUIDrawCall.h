@@ -2,12 +2,12 @@
 
 #pragma once
 #include "CoreMinimal.h"
+#include "LexUIGeometry.h"
 #include "Engine/Texture.h"
 #include "Core/LexUIMeshIndex.h"
 #include "Core/LexUIQuadTree.h"
 
 class ULexVisualPostProcess;
-class FLexUIGeometry;
 struct FLexUIMeshVertex;
 class UMaterialInterface;
 class UMaterialInstanceDynamic;
@@ -23,6 +23,38 @@ enum class ELexUIDrawCallType :uint8
 	PostProcess,
 	DirectMesh,
 	ChildCanvas,
+};
+
+class FLexUIRenderData
+{
+public:
+	virtual ~FLexUIRenderData() {}
+	ELexUIDrawCallType Type = ELexUIDrawCallType::BatchMesh;
+};
+class FLexUIRenderData_BatchMesh: public FLexUIRenderData
+{
+public:
+	FLexUIRenderData_BatchMesh(){Type = ELexUIDrawCallType::BatchMesh;}
+	FLexUIGeometry BatchMeshGeometry;
+	TWeakObjectPtr<ULexVisualBatchMesh> BatchMeshVisualObject;
+};
+class FLexUIRenderData_PostProcess: public FLexUIRenderData
+{
+public:
+	FLexUIRenderData_PostProcess(){Type = ELexUIDrawCallType::PostProcess;}
+	TWeakObjectPtr<ULexVisualPostProcess> PostProcessVisualObject;//post process object
+};
+class FLexUIRenderData_DirectMesh: public FLexUIRenderData
+{
+public:
+	FLexUIRenderData_DirectMesh(){Type = ELexUIDrawCallType::DirectMesh;}
+	TWeakObjectPtr<ULexVisualDirectMesh> DirectMeshVisualObject;
+};
+class FLexUIRenderData_ChildCanvas: public FLexUIRenderData
+{
+public:
+	FLexUIRenderData_ChildCanvas(){Type = ELexUIDrawCallType::ChildCanvas;}
+	TWeakObjectPtr<class ULexCanvas> ChildCanvas;
 };
 
 class LGUI_API FLexUIDrawCall
@@ -48,21 +80,16 @@ public:
 	TWeakObjectPtr<UMaterialInterface> Material = nullptr;//draw-call use this material to render, can be null to use default material
 	TWeakObjectPtr<UMaterialInterface> RenderMaterial = nullptr;//actual material that render this draw-call
 	TWeakObjectPtr<ULexUIMeshComponent> DrawCallMesh = nullptr;//mesh for render this draw-call
-	TWeakPtr<FLexUIRenderSection> DrawCallRenderSection = nullptr;//section of mesh which render this draw-call
-
-	bool bMaterialContainsLexUIParameter = false;//if Material contains LGUI's parameter, then a MaterialInstanceDynamic will be created and stored as RenderMaterial, otherwise RenderMaterial is same as Material
-	bool bMaterialChanged = true;
-	bool bMaterialNeedToReassign = true;//once a mesh section is recreated, and the material is still valid, then we need to re-assign the material to newly created mesh section
-	bool bTextureChanged = true;
-
-	bool bNeedToUpdateVertex = true;
-	bool bVertexPositionChanged = true;//if vertex position changed? use for update bounds
 
 	TWeakObjectPtr<ULexVisualPostProcess> PostProcessVisualObject;//post process object
 
 	TWeakObjectPtr<ULexVisualDirectMesh> DirectMeshVisualObject;
 
-	TArray<TWeakObjectPtr<ULexVisualBatchMesh>> BatchMeshVisualObjectList;//BatchMesh object collections belong to this draw-call, must be sorted on hierarchy-index
+	TArray<TWeakObjectPtr<ULexVisualBatchMesh>> BatchMeshVisualArray;
+	TArray<FLexUIGeometry> BatchMeshGeometryArray;//BatchMesh's geometry collections belong to this draw-call, must be sorted on hierarchy-index
+	TArray<FLexUIMeshVertex> CombinedBatchMeshGeometryVertices;
+	TArray<FLexUIMeshIndexBufferType> CombinedBatchMeshGeometryTriangles;
+	FBox CombinedBounds;
 	bool bNeedToSortBatchMeshVisualObjectList = false;//need to sort BatchMeshRenderObjectList?
 	TUniquePtr<LexUIQuadTree::Node> BatchMeshTreeNode = nullptr;
 	int32 VerticesCount = 0;//vertices count of all BatchMeshRenderObjectList
@@ -72,7 +99,7 @@ public:
 
 	TWeakObjectPtr<class ULexCanvas> ChildCanvas;//insert point to sort child canvas
 public:
-	void GetCombined(TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndexBufferType>& triangles)const;
-	void CopyUpdateState(FLexUIDrawCall* Target);
-	bool CanConsumeUIGeometryForBatchMesh(FLexUIGeometry* geo, int32 itemVertCount);
+	void CopyBatchMeshGeometry();
+	void ApplyCombinedBatchMeshGeometry();
+	bool CanConsumeUIGeometryForBatchMesh(const FLexUIGeometry* geo)const;
 };

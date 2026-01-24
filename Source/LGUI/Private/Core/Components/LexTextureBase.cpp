@@ -3,7 +3,6 @@
 #include "Core/Components/LexTextureBase.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
-#include "Core/Components/LexCanvas.h"
 #include "Materials/MaterialInterface.h"
 #include "Utils/LexUIUtils.h"
 #include "TextureResource.h"

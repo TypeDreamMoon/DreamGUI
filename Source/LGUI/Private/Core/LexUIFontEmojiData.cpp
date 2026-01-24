@@ -13,7 +13,6 @@
 
 #if WITH_EDITOR
 
-UE_DISABLE_OPTIMIZATION
 void FLexUIFontEmojiKey::ApplyEmoji()
 {
 	int ValidLength = 0;
@@ -46,7 +45,6 @@ void FLexUIFontEmojiKey::ApplyEmoji()
 		VariantSelector = 0;
 	}
 }
-UE_ENABLE_OPTIMIZATION
 
 void ULexUIFontEmojiData::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {

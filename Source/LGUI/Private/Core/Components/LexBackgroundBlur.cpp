@@ -2,7 +2,6 @@
 
 #include "Core/Components/LexBackgroundBlur.h"
 
-#include "ClearQuad.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/LexUIRender/LexUIPostProcessShaders.h"
@@ -12,7 +11,6 @@
 #include "RenderTargetPool.h"
 #include "Core/LexVisualPostProcessRenderProxy.h"
 #include "RHIStaticStates.h"
-#include "Engine/TextureRenderTarget2D.h"
 
 ULexBackgroundBlur::ULexBackgroundBlur(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
@@ -324,9 +322,9 @@ public:
 
 void ULexBackgroundBlur::SendOthersDataToRenderProxy()
 {
-	if (RenderProxy.IsValid())
+	if (RenderProxy != nullptr)
 	{
-		auto BackgroundBlurRenderProxy = (FUIBackgroundBlurRenderProxy*)(RenderProxy.Get());
+		auto BackgroundBlurRenderProxy = (FUIBackgroundBlurRenderProxy*)RenderProxy;
 		struct FUIBackgroundBlurUpdateOthersData
 		{
 			float BlurStrengthWithAlpha;
@@ -384,11 +382,11 @@ float ULexBackgroundBlur::GetBlurStrengthInternal()
 	return BlurStrength;
 }
 
-TSharedPtr<FLexVisualPostProcessRenderProxy> ULexBackgroundBlur::GetRenderProxy()
+FLexVisualPostProcessRenderProxy* ULexBackgroundBlur::GetRenderProxy()
 {
-	if (!RenderProxy.IsValid())
+	if (RenderProxy == nullptr)
 	{
-		RenderProxy = MakeShared<FUIBackgroundBlurRenderProxy>();
+		RenderProxy = new FUIBackgroundBlurRenderProxy();
 		SendRegionVertexDataToRenderProxy();
 		SendMaskTextureToRenderProxy();
 		SendRenderTargetToRenderProxy();
@@ -400,9 +398,9 @@ TSharedPtr<FLexVisualPostProcessRenderProxy> ULexBackgroundBlur::GetRenderProxy(
 void ULexBackgroundBlur::SendRegionVertexDataToRenderProxy()
 {
 	Super::SendRegionVertexDataToRenderProxy();
-	if (RenderProxy.IsValid())
+	if (RenderProxy != nullptr)
 	{
-		auto BackgroundBlurRenderProxy = (FUIBackgroundBlurRenderProxy*)(RenderProxy.Get());
+		auto BackgroundBlurRenderProxy = (FUIBackgroundBlurRenderProxy*)RenderProxy;
 		auto blurStrengthWithAlpha = this->GetBlurStrengthInternal();
 		ENQUEUE_RENDER_COMMAND(FLexBackgroundBlur_UpdateData)
 			([BackgroundBlurRenderProxy, blurStrengthWithAlpha](FRHICommandListImmediate& RHICmdList)

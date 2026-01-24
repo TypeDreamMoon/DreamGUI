@@ -26,6 +26,16 @@ void ULexVisualPostProcess::BeginPlay()
 	bUVChanged = true;
 }
 
+void ULexVisualPostProcess::BeginDestroy()
+{
+	Super::BeginDestroy();
+	ENQUEUE_RENDER_COMMAND(FLexPostProcess_ReleaseRenderProxy)
+			([RenderProxyPtr = RenderProxy](FRHICommandListImmediate& RHICmdList)
+				{
+					delete RenderProxyPtr;
+				});
+}
+
 void ULexVisualPostProcess::OnUnregister()
 {
 	Super::OnUnregister();
@@ -107,35 +117,23 @@ void ULexVisualPostProcess::UpdateGeometry()
 	check(RenderCanvas);
 
 	Super::UpdateGeometry();
-	if (!DrawCall.IsValid()//not add to render yet
-		)
+	
+	if (bLocalVertexPositionChanged || bUVChanged || bColorChanged)
 	{
 		Geometry->Clear();
-		OnUpdateGeometry(true, true, true, true);
-		UpdateGeometryClipData(*Geometry.Get(), ClipDataStartPosition);
-		FLexUIGeometry::TransformVertices(RenderCanvas, this, Geometry.Get());
-
-		UpdateRegionVertex();
+		OnUpdateGeometry(false, bLocalVertexPositionChanged, bUVChanged, bColorChanged);
 	}
-	else//if geometry is created, update data
+	if (bClipDataPositionChanged)
 	{
-		if (bLocalVertexPositionChanged || bUVChanged || bColorChanged)
-		{
-			Geometry->Clear();
-			OnUpdateGeometry(false, bLocalVertexPositionChanged, bUVChanged, bColorChanged);
-		}
-		if (bClipDataPositionChanged)
-		{
-			UpdateGeometryClipData(*Geometry.Get(), ClipDataStartPosition);
-		}
-		if (bLocalVertexPositionChanged || bTransformChanged)
-		{
-			FLexUIGeometry::TransformVertices(RenderCanvas, this, Geometry.Get());
-		}
-		if (bLocalVertexPositionChanged || bUVChanged || bColorChanged || bTransformChanged || bClipDataPositionChanged)
-		{
-			UpdateRegionVertex();
-		}
+		UpdateGeometryClipData(*Geometry.Get(), ClipDataStartPosition);
+	}
+	if (bLocalVertexPositionChanged || bTransformChanged)
+	{
+		FLexUIGeometry::TransformVertices(RenderCanvas, this, Geometry.Get());
+	}
+	if (bLocalVertexPositionChanged || bUVChanged || bColorChanged || bTransformChanged || bClipDataPositionChanged)
+	{
+		UpdateRegionVertex();
 	}
 
 	bLocalVertexPositionChanged = false;
@@ -243,9 +241,9 @@ void ULexVisualPostProcess::SendRegionVertexDataToRenderProxy()
 {
 	auto Widget = bUseFullSize ? GetWidget()->GetRenderCanvas()->GetRootCanvas()->GetLexWidget() : this->GetWidget();
 	auto RenderCanvas = Widget->GetRenderCanvas();
-	if (RenderProxy.IsValid() && RenderCanvas)
+	if (RenderProxy && RenderCanvas)
 	{
-		auto TempRenderProxy = RenderProxy.Get();
+		auto TempRenderProxy = RenderProxy;
 		struct FUIPostProcess_SendRegionVertexDataToRenderProxy
 		{
 			TArray<FLexUIPostProcessCopyMeshRegionVertex> renderScreenToMeshRegionVertexArray;
@@ -254,6 +252,7 @@ void ULexVisualPostProcess::SendRegionVertexDataToRenderProxy()
 			FMatrix44f objectToWorldMatrix;
 			FTexture2DDynamicResource* ClipDataTexture = nullptr;
 			bool bUseFullSize;
+			FBox BoundingBox;
 		};
 		auto updateData = new FUIPostProcess_SendRegionVertexDataToRenderProxy();
 		updateData->renderMeshRegionToScreenVertexArray = this->RenderMeshRegionToScreenVertexArray;
@@ -261,6 +260,15 @@ void ULexVisualPostProcess::SendRegionVertexDataToRenderProxy()
 		updateData->RectSize = FVector2f(Widget->GetWidth(), Widget->GetHeight());
 		updateData->objectToWorldMatrix = FMatrix44f(RenderCanvas->GetLexWidget()->GetComponentTransform().ToMatrixWithScale());
 		updateData->bUseFullSize = bUseFullSize;
+		{
+			updateData->BoundingBox = FBox(EForceInit::ForceInit);
+			FVector2D Min, Max;
+			this->GetGeometryBoundsInLocalSpace(Min, Max);
+			auto WorldMin = this->GetWidget()->GetComponentToWorld().TransformPosition(FVector(0, Min.X, Min.Y));
+			auto WorldMax = this->GetWidget()->GetComponentToWorld().TransformPosition(FVector(0, Max.X, Max.Y));
+			updateData->BoundingBox += WorldMin;
+			updateData->BoundingBox += WorldMax;
+		}
 		auto ClipDataTex = this->GetClipDataTexture();
 		if (IsValid(ClipDataTex) && ClipDataTex->GetResource() != nullptr)
 		{
@@ -275,6 +283,7 @@ void ULexVisualPostProcess::SendRegionVertexDataToRenderProxy()
 					TempRenderProxy->ObjectToWorldMatrix = updateData->objectToWorldMatrix;
 					TempRenderProxy->ClipDataTexture = updateData->ClipDataTexture;
 					TempRenderProxy->bUseFullSize = updateData->bUseFullSize;
+					TempRenderProxy->BoundingBox = updateData->BoundingBox;
 					delete updateData;
 				});
 	}
@@ -325,9 +334,9 @@ void ULexVisualPostProcess::SetUseFullSize(bool Value)
 
 void ULexVisualPostProcess::SendMaskTextureToRenderProxy()
 {
-	if (RenderProxy.IsValid())
+	if (RenderProxy)
 	{
-		auto TempRenderProxy = RenderProxy.Get();
+		auto TempRenderProxy = RenderProxy;
 		FTexture2DResource* MaskTextureResource = nullptr;
 		if (IsValid(this->MaskTexture) && this->MaskTexture->GetResource() != nullptr)
 		{
@@ -343,9 +352,9 @@ void ULexVisualPostProcess::SendMaskTextureToRenderProxy()
 
 void ULexVisualPostProcess::SendRenderTargetToRenderProxy()
 {
-	if (RenderProxy.IsValid())
+	if (RenderProxy)
 	{
-		auto TempRenderProxy = RenderProxy.Get();
+		auto TempRenderProxy = RenderProxy;
 		FTextureRenderTargetResource* RenderTargetResource = nullptr;
 		if (!bUseFullSize && RenderType == ELexBackgroundBlurRenderType::RenderTarget && IsValid(OutputRenderTarget))
 		{
@@ -361,11 +370,6 @@ void ULexVisualPostProcess::SendRenderTargetToRenderProxy()
 					TempRenderProxy->RenderTargetResource = RenderTargetResource;
 				});
 	}
-}
-
-bool ULexVisualPostProcess::IsRenderProxyValid()const
-{
-	return RenderProxy.IsValid();
 }
 
 bool ULexVisualPostProcess::HaveValidData()const
