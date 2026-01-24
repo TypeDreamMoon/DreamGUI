@@ -31,6 +31,7 @@ protected:
 	static bool bNeedCheckRaycasterSource;
 	static bool bNeverCheckRaycasterSource;
 public:
+	bool bIsSpawnFromPrefabFactory = false;
 	void CheckNecessaryObjects();
 	static void MarkNeedCheckNecessaryObjects();
 	void CheckPrefabVersion();

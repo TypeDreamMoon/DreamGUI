@@ -5,7 +5,6 @@
 #include "LexUIEditorTools.h"
 #include "AssetRegistry/AssetData.h"
 #include "Editor.h"
-#include "LGUIEditorModule.h"
 #include "Core/LexUIManager.h"
 #include "Core/Actor/LexWidgetRootActor.h"
 #include "Core/Components/LexWidget.h"
@@ -42,6 +41,17 @@ bool ULexUIPrefabActorFactory::PreSpawnActor(UObject* Asset, FTransform& InOutLo
 		return false;
 	}
 	return true;
+}
+
+AActor* ULexUIPrefabActorFactory::SpawnActor(UObject* InAsset, ULevel* InLevel, const FTransform& InTransform,
+	const FActorSpawnParameters& InSpawnParams)
+{
+	auto Actor = Super::SpawnActor(InAsset, InLevel, InTransform, InSpawnParams);
+	if (auto RootActor = CastChecked<ALexWidgetRootActor>(Actor))
+	{
+		RootActor->bIsSpawnFromPrefabFactory = true;
+	}
+	return Actor;
 }
 
 void ULexUIPrefabActorFactory::PostSpawnActor(UObject* Asset, AActor* InNewActor)

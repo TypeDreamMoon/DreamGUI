@@ -62,6 +62,23 @@ void ALexWidgetRootActor::LoadPrefab()
 		OverallVersionMD5 = WidgetPrefab->GenerateOverallVersionMD5();//store version for auto update
 #endif
 	}
+#if WITH_EDITOR
+	if (!bIsSpawnFromPrefabFactory)//if spawn from prefab-factory then the "CheckNecessaryObjects" is handled from there
+	{
+		auto World = GetWorld();
+		if (World && World->WorldType != EWorldType::EditorPreview && !World->IsGameWorld())//Edit mode and not BlueprintEditorPreview
+		{
+			ULexUIManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)]()
+			{
+				if (WeakThis.IsValid())
+				{
+					WeakThis->CheckNecessaryObjects();
+					MarkNeedCheckNecessaryObjects();
+				}
+			}, 1);
+		}
+	}
+#endif
 }
 
 #if WITH_EDITOR
