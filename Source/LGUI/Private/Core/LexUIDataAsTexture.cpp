@@ -70,16 +70,16 @@ void ULexUIDataAsTexture::CreateTexture()
 		ENQUEUE_RENDER_COMMAND(FLexUIDataAsTexture_ZeroMemory)(
 			[TextureRes, Width = TextureWidth, Height = TextureHeight, BytesPerPixel = BytesPerPixel](FRHICommandListImmediate& RHICmdList)
 			{
-				uint8* Data = new uint8[Width * Height * BytesPerPixel];
-				FMemory::Memzero(Data, Width * Height * BytesPerPixel);
+				TArray<uint8> Data;
+				Data.SetNumUninitialized(Width * Height * BytesPerPixel);
+				FMemory::Memzero(Data.GetData(), Data.Num());
 				RHICmdList.UpdateTexture2D(
 					TextureRes->GetTexture2DRHI(),
 					0,
 					FUpdateTextureRegion2D(0, 0, 0, 0, Width, Height),
 					BytesPerPixel * Width,
-					Data
+					Data.GetData()
 				);
-				delete Data;
 			});
 	}
 
@@ -194,43 +194,100 @@ void ULexUIDataAsTexture::UnregisterBuffer(int InPosition)
 {
 	NotUsingPositionArray.Add(InPosition);
 }
-void ULexUIDataAsTexture::UpdateBlock(int InPositionY, uint8* InData)
+void ULexUIDataAsTexture::UpdateBlock(int InPositionY, TArray<uint8> InData)
 {
-	if (IsValid(Texture) && Texture->GetResource())
+	if (bBatchUpdateMode)
 	{
-		auto TextureRes = (FTexture2DDynamicResource*)Texture->GetResource();
-		ENQUEUE_RENDER_COMMAND(FLexUIDataAsTexture_UpdateBlock)(
-			[TextureRes, InPositionY, InData, BlockSizeInByte = this->BlockSizeInByte, BlockPixelCount = this->BlockPixelCount](FRHICommandListImmediate& RHICmdList)
-			{
-				RHICmdList.UpdateTexture2D(
-					TextureRes->GetTexture2DRHI(),
-					0,
-					FUpdateTextureRegion2D(0, InPositionY, 0, 0, BlockPixelCount, 1),
-					BlockSizeInByte,
-					InData
-				);
-				delete InData;
-			});
+		FPendingUpdateData Data;
+		Data.PosX = 0;
+		Data.PosY = InPositionY;
+		Data.Data = MoveTemp(InData);
+		Data.DataPixelCount = this->BlockPixelCount;
+		PendingUpdateDataArray.Add(MoveTemp(Data));
+	}
+	else
+	{
+		if (IsValid(Texture) && Texture->GetResource())
+		{
+			auto TextureRes = (FTexture2DDynamicResource*)Texture->GetResource();
+			ENQUEUE_RENDER_COMMAND(FLexUIDataAsTexture_UpdateBlock)(
+				[TextureRes, InPositionY, InData = MoveTemp(InData), BlockSizeInByte = this->BlockSizeInByte, BlockPixelCount = this->BlockPixelCount](FRHICommandListImmediate& RHICmdList)
+				{
+					RHICmdList.UpdateTexture2D(
+						TextureRes->GetTexture2DRHI(),
+						0,
+						FUpdateTextureRegion2D(0, InPositionY, 0, 0, BlockPixelCount, 1),
+						BlockSizeInByte,
+						InData.GetData()
+					);
+				});
+		}
 	}
 }
 
-void ULexUIDataAsTexture::UpdateBlock(int InPositionX, int InPositionY, uint8* InData, int InDataPixelCount)
+void ULexUIDataAsTexture::UpdateBlock(int InPositionX, int InPositionY, TArray<uint8> InData, int InDataPixelCount)
 {
-	if (Texture->GetResource())
+	if (bBatchUpdateMode)
+	{
+		FPendingUpdateData Data;
+		Data.PosX = InPositionX;
+		Data.PosY = InPositionY;
+		Data.Data = MoveTemp(InData);
+		Data.DataPixelCount = InDataPixelCount;
+		PendingUpdateDataArray.Add(MoveTemp(Data));
+	}
+	else
+	{
+		if (IsValid(Texture) && Texture->GetResource())
+		{
+			auto TextureRes = (FTexture2DDynamicResource*)Texture->GetResource();
+			ENQUEUE_RENDER_COMMAND(FLexUIDataAsTexture_UpdateBlock)(
+				[TextureRes, InPositionX, InPositionY, InData = MoveTemp(InData), BlockSizeInByte = this->BlockSizeInByte, InDataPixelCount](FRHICommandListImmediate& RHICmdList)
+				{
+					RHICmdList.UpdateTexture2D(
+						TextureRes->GetTexture2DRHI(),
+						0,
+						FUpdateTextureRegion2D(InPositionX, InPositionY, 0, 0, InDataPixelCount, 1),
+						BlockSizeInByte,
+						InData.GetData()
+					);
+				});
+		}
+	}
+}
+
+void ULexUIDataAsTexture::PrepareForBatchUpdate()
+{
+	check(!bBatchUpdateMode);
+	bBatchUpdateMode = true;
+}
+
+void ULexUIDataAsTexture::Flush()
+{
+	check(bBatchUpdateMode);
+	bBatchUpdateMode = false;
+	if (PendingUpdateDataArray.Num() <= 0)return;
+	if (IsValid(Texture) && Texture->GetResource())
 	{
 		auto TextureRes = (FTexture2DDynamicResource*)Texture->GetResource();
-		ENQUEUE_RENDER_COMMAND(FLexUIDataAsTexture_UpdateBlock)(
-			[TextureRes, InPositionX, InPositionY, InData, BlockSizeInByte = this->BlockSizeInByte, InDataPixelCount](FRHICommandListImmediate& RHICmdList)
+		ENQUEUE_RENDER_COMMAND(FLexUIDataAsTexture_FlushData)(
+			[TextureRes, PendingUpdateDataArray = MoveTemp(PendingUpdateDataArray), BlockSizeInByte = this->BlockSizeInByte](FRHICommandListImmediate& RHICmdList)
 			{
-				RHICmdList.UpdateTexture2D(
-					TextureRes->GetTexture2DRHI(),
-					0,
-					FUpdateTextureRegion2D(InPositionX, InPositionY, 0, 0, InDataPixelCount, 1),
-					BlockSizeInByte,
-					InData
-				);
-				delete InData;
+				for (auto& PendingUpdateData : PendingUpdateDataArray)
+				{
+					RHICmdList.UpdateTexture2D(
+						TextureRes->GetTexture2DRHI(),
+						0,
+						FUpdateTextureRegion2D(PendingUpdateData.PosX, PendingUpdateData.PosY, 0, 0, PendingUpdateData.DataPixelCount, 1),
+						BlockSizeInByte,
+						PendingUpdateData.Data.GetData()
+					);
+				}
 			});
+	}
+	else
+	{
+		PendingUpdateDataArray.Reset();
 	}
 }
 

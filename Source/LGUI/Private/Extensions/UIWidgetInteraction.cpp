@@ -1,6 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Extensions/UIWidgetInteraction.h"
+
+#include "Core/Components/LexWidget.h"
 #include "Extensions/UIWidget.h"
 #include "Framework/Application/SlateUser.h"
 #include "Framework/Application/SlateApplication.h"

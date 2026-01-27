@@ -15,9 +15,9 @@ struct LGUI_API FLexUIFontEmojiKey
 	FString EmojiChar;
 #endif
 	UPROPERTY()
-	uint32 EmojiCode;
+	uint32 EmojiCode = 0;
 	UPROPERTY()
-	uint16 VariantSelector;
+	uint16 VariantSelector = 0;
 
 	FLexUIFontEmojiKey(){}
 	FLexUIFontEmojiKey(uint32 InEmojiCode)

@@ -3,6 +3,7 @@
 #include "LGUI/Public/MeshModifier/LexMeshModifierPositionAsUV.h"
 #include "Core/Components/LexCanvas.h"
 #include "LGUI.h"
+#include "Core/Components/LexWidget.h"
 
 
 ULexMeshModifierPositionAsUV::ULexMeshModifierPositionAsUV()

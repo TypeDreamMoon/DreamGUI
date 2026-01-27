@@ -28,33 +28,16 @@ enum class ELexUIDrawCallType :uint8
 class FLexUIRenderData
 {
 public:
-	virtual ~FLexUIRenderData() {}
 	ELexUIDrawCallType Type = ELexUIDrawCallType::BatchMesh;
-};
-class FLexUIRenderData_BatchMesh: public FLexUIRenderData
-{
-public:
-	FLexUIRenderData_BatchMesh(){Type = ELexUIDrawCallType::BatchMesh;}
+
 	FLexUIGeometry BatchMeshGeometry;
 	TWeakObjectPtr<ULexVisualBatchMesh> BatchMeshVisualObject;
-};
-class FLexUIRenderData_PostProcess: public FLexUIRenderData
-{
-public:
-	FLexUIRenderData_PostProcess(){Type = ELexUIDrawCallType::PostProcess;}
+
 	TWeakObjectPtr<ULexVisualPostProcess> PostProcessVisualObject;//post process object
-};
-class FLexUIRenderData_DirectMesh: public FLexUIRenderData
-{
-public:
-	FLexUIRenderData_DirectMesh(){Type = ELexUIDrawCallType::DirectMesh;}
+
 	TWeakObjectPtr<ULexVisualDirectMesh> DirectMeshVisualObject;
-};
-class FLexUIRenderData_ChildCanvas: public FLexUIRenderData
-{
-public:
-	FLexUIRenderData_ChildCanvas(){Type = ELexUIDrawCallType::ChildCanvas;}
-	TWeakObjectPtr<class ULexCanvas> ChildCanvas;
+
+	TWeakObjectPtr<ULexCanvas> ChildCanvas;
 };
 
 class LGUI_API FLexUIDrawCall
@@ -67,7 +50,7 @@ public:
 	FLexUIDrawCall(LexUIQuadTree::Rectangle InCanvasRect)
 	{
 		Type = ELexUIDrawCallType::BatchMesh;
-		BatchMeshTreeNode = MakeUnique<LexUIQuadTree::Node>(InCanvasRect);
+		BatchMeshTreeNode = MakeShared<LexUIQuadTree::Node>(InCanvasRect);
 	}
 	~FLexUIDrawCall()
 	{
@@ -79,7 +62,6 @@ public:
 	TWeakObjectPtr<UTexture> FontTexture = nullptr;//draw-call use this texture to render font
 	TWeakObjectPtr<UMaterialInterface> Material = nullptr;//draw-call use this material to render, can be null to use default material
 	TWeakObjectPtr<UMaterialInterface> RenderMaterial = nullptr;//actual material that render this draw-call
-	TWeakObjectPtr<ULexUIMeshComponent> DrawCallMesh = nullptr;//mesh for render this draw-call
 
 	TWeakObjectPtr<ULexVisualPostProcess> PostProcessVisualObject;//post process object
 
@@ -91,7 +73,7 @@ public:
 	TArray<FLexUIMeshIndexBufferType> CombinedBatchMeshGeometryTriangles;
 	FBox CombinedBounds;
 	bool bNeedToSortBatchMeshVisualObjectList = false;//need to sort BatchMeshRenderObjectList?
-	TUniquePtr<LexUIQuadTree::Node> BatchMeshTreeNode = nullptr;
+	TSharedPtr<LexUIQuadTree::Node> BatchMeshTreeNode = nullptr;
 	int32 VerticesCount = 0;//vertices count of all BatchMeshRenderObjectList
 	int32 IndicesCount = 0;//triangle indices count of all BatchMeshRenderObjectList
 
@@ -100,6 +82,6 @@ public:
 	TWeakObjectPtr<class ULexCanvas> ChildCanvas;//insert point to sort child canvas
 public:
 	void CopyBatchMeshGeometry();
-	void ApplyCombinedBatchMeshGeometry();
-	bool CanConsumeUIGeometryForBatchMesh(const FLexUIGeometry* geo)const;
+	void ApplyBatchMeshGeometryToCombined();
+	bool CanConsumeUIGeometryForBatchMesh(const FLexUIGeometry& geo)const;
 };

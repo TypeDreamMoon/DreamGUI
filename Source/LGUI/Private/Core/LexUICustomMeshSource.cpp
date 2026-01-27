@@ -5,6 +5,7 @@
 #include "LGUI.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/LexUIGeometry.h"
+#include "Core/Components/LexWidget.h"
 
 DECLARE_CYCLE_STAT(TEXT("LGUICustomMesh Blueprint.OnFillMesh"), STAT_LGUICustomMesh_OnFillMesh, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("LGUICustomMesh Blueprint.GetHitUV"), STAT_LGUICustomMesh_GetHitUV, STATGROUP_LGUI);

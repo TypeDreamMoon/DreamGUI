@@ -10,6 +10,7 @@
 #include "Utils/LexUIUtils.h"
 #include "Core/LexUISpriteData.h"
 #include "Core/LexUISpriteData_BaseObject.h"
+#include "Core/Components/LexWidget.h"
 
 
 #define LOCTEXT_NAMESPACE "LexRectBlock"
@@ -591,10 +592,11 @@ void ULexRectBlock::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChang
 		bNeedUpdateBlockData = false;
 
 		auto BlockSize = RectBlockData->GetBlockSizeInByte();
-		uint8* BlockBuffer = new uint8[BlockSize];
-		FMemory::Memzero(BlockBuffer, BlockSize);
-		FillData(BlockBuffer, Widget->GetWidth(), Widget->GetHeight());
-		RectBlockData->UpdateBlock(DataStartPosition, BlockBuffer);
+		TArray<uint8> BlockBuffer;
+		BlockBuffer.SetNumUninitialized(BlockSize);
+		FMemory::Memzero(BlockBuffer.GetData(), BlockSize);
+		FillData(BlockBuffer.GetData(), Widget->GetWidth(), Widget->GetHeight());
+		RectBlockData->UpdateBlock(DataStartPosition, MoveTemp(BlockBuffer));
 	}
 }
 

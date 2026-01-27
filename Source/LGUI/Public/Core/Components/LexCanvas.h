@@ -5,11 +5,12 @@
 #include "Layout/Margin.h"
 #include "Components/ActorComponent.h"
 #include "Camera/CameraTypes.h"
+#include "Core/LexCanvasDrawCallProcessingRunnable.h"
+#include "Core/LexUIDrawCall.h"
 #include "Math/TransformCalculus2D.h"
 #include "PrefabSystem/ILexUIPrefabInterface.h"
 #include "LexCanvas.generated.h"
 
-class FLexUIRenderData;
 class FLexUIClipData;
 class ULexUIDataAsTexture;
 
@@ -156,12 +157,24 @@ struct FLexCanvasDynamicMaterialArrayContainer
 	int CurrentIndex = 0;
 };
 
+struct FLexCanvasPreparedDrawCallData
+{
+	TArray<FLexUIRenderData> DataArray;
+	FVector2D LeftBottomPoint;
+	FVector2D RightTopPoint;
+	uint64 FrameNumber = 0;
+};
+struct FLexCanvasPendingDrawCallData
+{
+	TArray<FLexUIDrawCall> DrawCallArray;
+	uint64 FrameNumber = 0;//the frame number when pushing this draw-call
+};
+
 class ULexWidget;
 class ULexVisual;
 class ULexVisualBatchMesh;
 class ULexVisualDirectMesh;
 class ULexUIMeshComponent;
-class FLexUIDrawCall;
 class FLexVisualPostProcessRenderProxy;
 class UTextureRenderTarget2D;
 
@@ -198,6 +211,7 @@ public:
 	virtual void OnRegister()override;
 	virtual void OnUnregister()override;
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy)override;
+	virtual void PostInitProperties() override;
 
 	static FName GetPropertyName_TraceChannel()
 	{
@@ -657,10 +671,12 @@ public:
 	static FName LexUI_FontTextureMaterialParameterName;
 	static FName LexUI_ClipDataTexture_MaterialParameterName;
 	static FName LexUI_WidgetPropertyDataTexture_MaterialParameterName;
+	static FName LexUI_IsRenderByLexUIRenderer_MaterialParameterName;
 	bool IsMaterialContainsLexUIParameter(UMaterialInterface* InMaterial);
 private:
 	void SetSortOrderAdditionalValueRecursive(int32 InAdditionalValue);
 	void UpdateRenderTarget(bool CallEvent);
+	void CheckRenderTargetUpdate();
 public:
 	/** Called from LexUIManagerActor. Update this canvas if it is a RootCanvas */
 	void UpdateRootCanvas();
@@ -676,7 +692,6 @@ private:
 	uint32 bPrevAnythingChangedForRenderTarget : 1;//same as upper one, but the prev frame
 	uint32 bHasSetInitialStateForLexWorldSpaceRenderer : 1;//is LGUI world space renderer's initial state set
 	uint32 bNeedToVerifyMaterials : 1;
-	uint32 bRootCanvasNeedToUpdateChildrenCanvasBounds : 1;//if child canvas's UIMesh's bounds change, then need to notify root canvas to update it's UIMesh's bounds
 
 	uint32 bPrevIsVisible : 1;//is LexWidget active in prev frame?
 
@@ -713,7 +728,11 @@ private:
 	TArray<TObjectPtr<UMaterialInstanceDynamic>> UsingUIMaterialList;
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	TMap<TObjectPtr<UMaterialInterface>, FLexCanvasDynamicMaterialArrayContainer> MapSrcMatToDynamicMat;//@todo: delete not using material
-	TArray<TSharedPtr<FLexUIDrawCall>> UIDrawCallList;//DrawCall collection of this Canvas.
+	TSharedPtr<TQueue<FLexCanvasPreparedDrawCallData>> PreparedDrawCallDataQueue;
+	TSharedPtr<TQueue<FLexCanvasPendingDrawCallData>> PendingRebuildDrawCallQueue;
+	TQueue<FLexCanvasPendingDrawCallData> PendingUpdateDrawCallQueue;
+	FLexCanvasPendingDrawCallData CurrentDrawCallData;//current drawing draw-call
+	TUniquePtr<FLexCanvasDrawCallProcessingRunnable> DrawCallProcessingRunnable;
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<ULexWidget>> VisualWidgetList;//Use LexWidget instead of LexVisual, because we need LexWidget to get sub-canvas.
 	bool bNeedToGenerateWidgetList = true;
@@ -738,8 +757,7 @@ public:
 	void RemoveClipData(const TSharedPtr<FLexUIClipData>& InClipData);
 	UTexture* GetClipDataTexture()const;
 	ULexUIDataAsTexture* GetWidgetPropertyDataAsTexture()const{return WidgetPropertyDataAsTexture;}
-
-	const TArray<TSharedPtr<FLexUIDrawCall>>& GetUIDrawCallList()const { return UIDrawCallList; }
+	
 	const TArray<TWeakObjectPtr<ULexCanvas>>& GetChildrenCanvasArray()const{return ChildrenCanvasArray;}
 	
 	static FTransform2D ConvertTo2DTransform(const FTransform& Transform);
@@ -749,16 +767,16 @@ private:
 	/** canvas array belong to this canvas in hierarchy. */
 	UPROPERTY(Transient) TArray<TWeakObjectPtr<ULexCanvas>> ChildrenCanvasArray;
 	/** update Canvas's draw-call */
-	void UpdateRootCanvasDrawCall();
+	void UpdateCanvasDrawCall();
 	/** mark render finish */
-	void MarkFinishUpdateRootCanvasDrawCall();
+	void MarkFinishUpdateCanvasDrawCall();
 
-	void PrepareDrawCallBatchingData(TArray<TSharedPtr<FLexUIRenderData>>& OutRenderDataArray);
-	void BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, const TArray<TSharedPtr<FLexUIRenderData>>& InRenderDataArray, TArray<TSharedPtr<FLexUIDrawCall>>& InOutUIDrawCallList);
-	void UpdateDrawCallMesh(bool InRebuildDrawCall);
+	void PrepareDrawCallBatchingData(TArray<FLexUIRenderData>& OutRenderDataArray);
+	void UpdateDrawCallMesh();
 	void UpdateDrawCallMaterial();
 	void SortDrawCall();
 public:
+	static void BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop, const TArray<FLexUIRenderData>& InRenderDataArray, TArray<FLexUIDrawCall>& InOutUIDrawCallList);
 	static bool Is2DUITransform(const FTransform& Transform);
 private:
 	void CheckUIMesh()const;

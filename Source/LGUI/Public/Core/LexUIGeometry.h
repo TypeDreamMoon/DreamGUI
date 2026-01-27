@@ -60,11 +60,12 @@ public:
 	FVector2D BoundsMin2DInCanvasSpace;
 	FVector2D BoundsMax2DInCanvasSpace;
 
-	void CopyFrom(const FLexUIGeometry& Other)
+	void CopyDataForPrepare(const FLexUIGeometry& Other)
 	{
-		OriginVertices = Other.OriginVertices;
-		Vertices = Other.Vertices;
-		Triangles = Other.Triangles;
+		Vertices.SetNumUninitialized(Other.Vertices.Num());
+		FMemory::Memcpy(Vertices.GetData(), Other.Vertices.GetData(), Other.Vertices.Num() * sizeof(FLexUIMeshVertex));
+		Triangles.SetNumUninitialized(Other.Triangles.Num());
+		FMemory::Memcpy(Triangles.GetData(), Other.Triangles.GetData(), Other.Triangles.Num() * sizeof(FLexUIMeshIndexBufferType));
 		
 		Texture = Other.Texture;
 		Material = Other.Material;
@@ -96,32 +97,6 @@ public:
 		Vertices.Reset();
 		Triangles.Reset();
 		OriginVertices.Reset();
-	}
-	/**
-	 * Fill this data to another.
-	 * @return true if any data size changed, false otherwise
-	 */
-	bool CopyTo(FLexUIGeometry* Target)
-	{
-		bool verticesCountChanged = false;
-		if (Vertices.Num() != Target->Vertices.Num())
-		{
-			Target->Vertices.SetNumUninitialized(Vertices.Num());
-			Target->OriginVertices.SetNumUninitialized(Vertices.Num());
-			verticesCountChanged = true;
-		}
-		FMemory::Memcpy(Target->OriginVertices.GetData(), OriginVertices.GetData(), OriginVertices.Num() * sizeof(FLexUIOriginVertexData));
-		FMemory::Memcpy(Target->Vertices.GetData(), Vertices.GetData(), Vertices.Num() * sizeof(FLexUIMeshVertex));
-
-		bool triangleCountChanged = false;
-		if (Triangles.Num() != Target->Triangles.Num())
-		{
-			Target->Triangles.SetNumUninitialized(Triangles.Num());
-			triangleCountChanged = true;
-		}
-		FMemory::Memcpy(Target->Triangles.GetData(), Triangles.GetData(), Triangles.Num() * sizeof(FLexUIMeshIndexBufferType));
-
-		return verticesCountChanged || triangleCountChanged;
 	}
 
 	/**

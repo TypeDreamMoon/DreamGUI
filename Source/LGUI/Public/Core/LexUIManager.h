@@ -38,9 +38,9 @@ public:
 	virtual TStatId GetStatId() const override;
 	virtual bool IsEditorOnly()const override { return true; }
 	//end TickableEditorObject interface
-#if WITH_EDITORONLY_DATA
 private:
 	static ULexUIManagerObject* Instance;
+#if WITH_EDITORONLY_DATA
 	static bool bIsBlueprintCompiling;
 	FLexUIEditorTickMulticastDelegate EditorTick;
 	TArray<TTuple<int, TFunction<void()>>> OneShotFunctionsToExecuteInTick;

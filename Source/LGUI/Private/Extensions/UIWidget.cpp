@@ -14,6 +14,7 @@
 #include "Core/LexUICustomMeshSource.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
+#include "Core/Components/LexWidget.h"
 
 #define LOCTEXT_NAMESPACE "UIWidget"
 

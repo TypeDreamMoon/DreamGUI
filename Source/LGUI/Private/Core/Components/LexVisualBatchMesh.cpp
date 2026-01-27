@@ -7,6 +7,7 @@
 #include "LGUI/Public/MeshModifier/LexMeshModifierBase.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Core/LexUIDrawCall.h"
+#include "Core/Components/LexWidget.h"
 
 DECLARE_CYCLE_STAT(TEXT("LexVisualBatchMesh GeometryModifier"), STAT_ApplyModifier, STATGROUP_LGUI);
 
@@ -142,7 +143,7 @@ void ULexVisualBatchMesh::GeometryModifierWillChangeVertexData(bool& OutTriangle
 
 void ULexVisualBatchMesh::ApplyGeometryModifier(bool triangleChanged, bool uvChanged, bool colorChanged, bool vertexPositionChanged)
 {
-	SCOPE_CYCLE_COUNTER(STAT_ApplyModifier);
+	// SCOPE_CYCLE_COUNTER(STAT_ApplyModifier);
 
 	int count = MeshModifierArray.Num();
 	if (count > 0)
@@ -164,8 +165,6 @@ DECLARE_CYCLE_STAT(TEXT("LexVisualBatchMesh UpdateGeometry"), STAT_UpdateGeometr
 void ULexVisualBatchMesh::UpdateGeometry()
 {
 	SCOPE_CYCLE_COUNTER(STAT_UpdateGeometry);
-
-	Super::UpdateGeometry();
 
 	auto Widget = this->GetWidget();
 	check(Widget);
@@ -198,8 +197,6 @@ void ULexVisualBatchMesh::UpdateGeometry()
 	}
 	if (bLocalVertexPositionChanged || bTransformChanged || pixelPerfectAffectTransform)
 	{
-		CalculateLocalBounds();//CalculateLocalBounds must stay before TransformVertices, because TransformVertices will also cache bounds for Canvas to check 2d overlap.
-		FLexUIGeometry::TransformVertices(Canvas, this, this->UIGeometry.Get());
 #if 0
 		//it is ok to use AsyncTask here, because we can make sure it completes in current frame
 		Canvas->IncreaseThreadProcessingGeometry();
@@ -209,6 +206,9 @@ void ULexVisualBatchMesh::UpdateGeometry()
 			FLexUIGeometry::TransformVertices(Canvas, this, this->UIGeometry.Get());
 			Canvas->DecreaseThreadProcessingGeometry();
 		});
+#else
+		CalculateLocalBounds();//CalculateLocalBounds must stay before TransformVertices, because TransformVertices will also cache bounds for Canvas to check 2d overlap.
+		FLexUIGeometry::TransformVertices(Canvas, this, this->UIGeometry.Get());
 #endif
 
 		OnFillWidgetPropertyDataForMaterial();
@@ -419,7 +419,7 @@ void ULexVisualBatchMesh::OnBeforeCreateOrUpdateGeometry()
 	}
 }
 
-DECLARE_CYCLE_STAT(TEXT("LexVisualBatchMesh Blueprint.OnFillMesh"), STAT_BatchGeometryRenderable_OnFillMesh, STATGROUP_LGUI);
+DECLARE_CYCLE_STAT(TEXT("LexVisualBatchMesh Blueprint.OnFillMesh"), STAT_LexVisualBatchMesh_OnFillMesh, STATGROUP_LGUI);
 void ULexVisualBatchMesh::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
 	if (GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native))
@@ -429,14 +429,14 @@ void ULexVisualBatchMesh::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangl
 			GeometryHelper = NewObject<ULexUIGeometryHelper>(this);
 		}
 		GeometryHelper->UIGeo = &InGeo;
-		SCOPE_CYCLE_COUNTER(STAT_BatchGeometryRenderable_OnFillMesh);
+		SCOPE_CYCLE_COUNTER(STAT_LexVisualBatchMesh_OnFillMesh);
 		ReceiveOnUpdateGeometry(GeometryHelper, InTriangleChanged, InVertexPositionChanged, InVertexUVChanged, InVertexColorChanged);
 	}
 }
 
 void ULexVisualBatchMesh::OnFillWidgetPropertyDataForMaterial()
 {
-	FillWidgetPropertyDataForMaterial(this, 0);
+	FillWidgetPropertyDataForMaterial(this, 0, this->GetPropertiesForMaterial_Size(), this->GetPropertiesForMaterial_CenterPosition());
 }
 
 void ULexVisualBatchMesh::OnFillWidgetPropertyDataForMaterial_FirstPixel()

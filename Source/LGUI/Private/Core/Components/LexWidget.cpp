@@ -789,12 +789,19 @@ void ULexWidget::EnsureDataForRebuild()
 bool ULexWidget::MoveComponentImpl(const FVector& Delta, const FQuat& NewRotation, bool bSweep, FHitResult* Hit, EMoveComponentFlags MoveFlags, ETeleportType Teleport)
 {
 	auto result = Super::MoveComponentImpl(Delta, NewRotation, bSweep, Hit, MoveFlags, Teleport);
-	if (this->IsRegistered()//check if registerred, because it may called from reconstruction.
+	if (this->IsRegistered()//check if registered, because it may called from reconstruction.
 		)
 	{
 		if (bCanSetAnchorFromTransform)
 		{
-			CalculateAnchorFromTransform();
+			auto Pos = this->GetRelativeLocation();
+			auto Pos2D = FVector2D(Pos.Y, Pos.Z);
+			if (Pos2D != PrevLocation2D)
+			{
+				PrevLocation2D = Pos2D;
+				CalculateAnchorFromTransform();
+				MarkLayoutDirty();
+			}
 		}
 	}
 	return result;
@@ -803,15 +810,8 @@ void ULexWidget::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, E
 {
 	Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
 	
-	if (this->IsCanvasWidget() && this->RenderCanvas.IsValid())
-	{
-		//This is mainly to mark LGUICanvas's bIsViewProjectionMatrixDirty to true.
-		//For the condition LGUI_Tutorials/Tutorials/UIRenderTarget, when move LGUIRenderTarget at runtime, the LGUICanvas's RenderTarget's matrix not update, result in wrong interaction.
-		this->RenderCanvas->MarkSizeChanged();
-	}
-	MarkLayoutDirty();
 	auto CompScale3D = this->GetComponentScale();
-	auto CompScale2D = FVector2f(CompScale3D.Y, CompScale3D.Z);
+	auto CompScale2D = FVector2D(CompScale3D.Y, CompScale3D.Z);
 	bool ScaleChanged = PrevScale2D != CompScale2D;
 	PrevScale2D = CompScale2D;
 	MarkTransformChanged(true, ScaleChanged);
@@ -2342,19 +2342,13 @@ void ULexWidget::MarkTransformChanged(bool InPositionChanged, bool InScaleChange
 		this->RenderCanvas->MarkCanvasUpdate(false, true, false);//mark canvas to update
 		if (this->IsCanvasWidget())
 		{
+			//This is mainly to mark LGUICanvas's bIsViewProjectionMatrixDirty to true.
+			//For the condition LGUI_Tutorials/Tutorials/UIRenderTarget, when move LGUIRenderTarget at runtime, the LGUICanvas's RenderTarget's matrix not update, result in wrong interaction.
 			this->RenderCanvas->MarkSizeChanged();
 		}
 	}
 
 	Call_TransformChanged();
-
-	for (auto& UIChild : UIChildren)
-	{
-		if (IsValid(UIChild))
-		{
-			UIChild->MarkTransformChanged(InPositionChanged, InScaleChanged);
-		}
-	}
 }
 
 void ULexWidget::MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged, bool InDiscardCache)

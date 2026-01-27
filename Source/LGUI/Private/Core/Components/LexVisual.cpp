@@ -9,6 +9,7 @@
 #include "TextureResource.h"
 #include "Core/LexUIClipData.h"
 #include "Core/LexUIDataAsTexture.h"
+#include "Core/Components/LexWidget.h"
 #include "Engine/Texture2D.h"
 
 
@@ -393,13 +394,15 @@ bool ULexVisual::LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVe
 	return LineTraceUIRect(OutHit, Start, End);
 }
 
+DECLARE_CYCLE_STAT(TEXT("LexVisual FillWidgetPropertyDataForMaterial"), STAT_FillWidgetPropertyData, STATGROUP_LGUI);
 int ULexVisual::WidgetPropertyDataLength =
 	sizeof(FVector2f)//1st pixel, x: byte1- font mark, byte2- extra marks; y: clip data coordinate
 	+ sizeof(FVector2f)//1st pixel, zw: widget width & height
 	+ sizeof(FVector2f)//2nd pixel, xy: widget rect center position
 ;
-void ULexVisual::FillWidgetPropertyDataForMaterial(ULexVisual* Visual, uint8 FontMark)
+void ULexVisual::FillWidgetPropertyDataForMaterial(ULexVisual* Visual, uint8 FontMark, bool bNeedSize, bool bNeedCenterPosition)
 {
+	SCOPE_CYCLE_COUNTER(STAT_FillWidgetPropertyData);
 	auto StartPosition = Visual->WidgetPropertyDataStartPosition;
 	if (StartPosition <= INDEX_NONE)return;
 	auto Widget = Visual->GetWidget();
@@ -408,39 +411,44 @@ void ULexVisual::FillWidgetPropertyDataForMaterial(ULexVisual* Visual, uint8 Fon
 	if (!Canvas)return;
 	auto Data = Canvas->GetWidgetPropertyDataAsTexture();
 	if (!Data)return;
-	uint8* BlockBuffer = new uint8[WidgetPropertyDataLength];
-	FMemory::Memzero(BlockBuffer, WidgetPropertyDataLength);
+	TArray<uint8> BlockBuffer;
+	BlockBuffer.SetNumUninitialized(WidgetPropertyDataLength);
+	FMemory::Memzero(BlockBuffer.GetData(), WidgetPropertyDataLength);
 	int BlockBufferOffset = 0;
 	
 	{
-		uint8 ExtraMark =
-			(Canvas->IsRenderByLexUIRendererOrUERenderer() ? 1 : 0) << 7
-		;
+		uint8 ExtraMark = 0;
 		uint32 Marks =
 			FontMark << 24
 			| ExtraMark << 16
 		;
-		FMemory::Memcpy(BlockBuffer + BlockBufferOffset, &Marks, 4);
+		FMemory::Memcpy(BlockBuffer.GetData() + BlockBufferOffset, &Marks, 4);
 		BlockBufferOffset += 4;
 		uint32 ClipDataStartPosition = Visual->ClipDataStartPosition;
-		FMemory::Memcpy(BlockBuffer + BlockBufferOffset, &ClipDataStartPosition, 4);
+		FMemory::Memcpy(BlockBuffer.GetData() + BlockBufferOffset, &ClipDataStartPosition, 4);
 		BlockBufferOffset += 4;
 	}
 	
 	//width & height
-	auto Size = FVector2f(Widget->GetWidth(), Widget->GetHeight());
-	FMemory::Memcpy(BlockBuffer + BlockBufferOffset, &Size, sizeof(FVector2f));
+	if (bNeedSize)
+	{
+		auto Size = FVector2f(Widget->GetWidth(), Widget->GetHeight());
+		FMemory::Memcpy(BlockBuffer.GetData() + BlockBufferOffset, &Size, sizeof(FVector2f));
+	}
 	BlockBufferOffset += sizeof(FVector2f);
 	
 	//widget rect center position in canvas space
-	auto WidgetToWorldMatrix = Widget->GetComponentTransform().ToMatrixWithScale();
-	auto WidgetLocalSpaceCenter = Widget->GetLocalSpaceCenter();
-	auto CenterPositionInWorldSpace = WidgetToWorldMatrix.TransformPosition(FVector(0, WidgetLocalSpaceCenter.X, WidgetLocalSpaceCenter.Y));
-	auto CenterPositionInCanvasSpace = Canvas->GetLexWidget()->GetComponentTransform().InverseTransformPosition(CenterPositionInWorldSpace);
-	FMemory::Memcpy(BlockBuffer + BlockBufferOffset, &CenterPositionInCanvasSpace, sizeof(FVector2f));
+	if (bNeedCenterPosition)
+	{
+		auto WidgetToWorldMatrix = Widget->GetComponentTransform().ToMatrixWithScale();
+		auto WidgetLocalSpaceCenter = Widget->GetLocalSpaceCenter();
+		auto CenterPositionInWorldSpace = WidgetToWorldMatrix.TransformPosition(FVector(0, WidgetLocalSpaceCenter.X, WidgetLocalSpaceCenter.Y));
+		auto CenterPositionInCanvasSpace = Canvas->GetLexWidget()->GetComponentTransform().InverseTransformPosition(CenterPositionInWorldSpace);
+		FMemory::Memcpy(BlockBuffer.GetData() + BlockBufferOffset, &CenterPositionInCanvasSpace, sizeof(FVector2f));
+	}
 	BlockBufferOffset += sizeof(FVector2f);
 	
-	Data->UpdateBlock(StartPosition, BlockBuffer);
+	Data->UpdateBlock(StartPosition, MoveTemp(BlockBuffer));
 }
 
 void ULexVisual::FillWidgetPropertyDataForMaterial_FirstPixel(ULexVisual* Visual, uint8 FontMark)
@@ -453,8 +461,9 @@ void ULexVisual::FillWidgetPropertyDataForMaterial_FirstPixel(ULexVisual* Visual
 	if (!Canvas)return;
 	auto Data = Canvas->GetWidgetPropertyDataAsTexture();
 	if (!Data)return;
-	uint8* BlockBuffer = new uint8[WidgetPropertyDataLength];
-	FMemory::Memzero(BlockBuffer, WidgetPropertyDataLength);
+	TArray<uint8> BlockBuffer;
+	BlockBuffer.SetNumUninitialized(WidgetPropertyDataLength);
+	FMemory::Memzero(BlockBuffer.GetData(), WidgetPropertyDataLength);
 	int BlockBufferOffset = 0;
 	
 	{
@@ -465,18 +474,18 @@ void ULexVisual::FillWidgetPropertyDataForMaterial_FirstPixel(ULexVisual* Visual
 			FontMark << 24
 			| ExtraMark << 16
 		;
-		FMemory::Memcpy(BlockBuffer + BlockBufferOffset, &Marks, 4);
+		FMemory::Memcpy(BlockBuffer.GetData() + BlockBufferOffset, &Marks, 4);
 		BlockBufferOffset += 4;
 		uint32 ClipDataStartPosition = Visual->ClipDataStartPosition;
-		FMemory::Memcpy(BlockBuffer + BlockBufferOffset, &ClipDataStartPosition, 4);
+		FMemory::Memcpy(BlockBuffer.GetData() + BlockBufferOffset, &ClipDataStartPosition, 4);
 		BlockBufferOffset += 4;
 	}
 	
 	//width & height
 	auto Size = FVector2f(Widget->GetWidth(), Widget->GetHeight());
-	FMemory::Memcpy(BlockBuffer + BlockBufferOffset, &Size, sizeof(FVector2f));
+	FMemory::Memcpy(BlockBuffer.GetData() + BlockBufferOffset, &Size, sizeof(FVector2f));
 	BlockBufferOffset += sizeof(FVector2f);
-	Data->UpdateBlock(0, StartPosition, BlockBuffer, 1);
+	Data->UpdateBlock(0, StartPosition, MoveTemp(BlockBuffer), 1);
 }
 
 #pragma region TweenAnimation

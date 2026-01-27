@@ -5,6 +5,7 @@
 #include "Core/LexUIGeometry.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/LexUISpriteData_BaseObject.h"
+#include "Core/Components/LexWidget.h"
 
 
 ULexSprite::ULexSprite(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)

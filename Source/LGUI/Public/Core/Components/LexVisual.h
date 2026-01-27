@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include "LexWidget.h"
 #include "LexWidgetSubObjectBehaviour.h"
 #include "LTweener.h"
 #include "Utils/LexUIUtils.h"
@@ -11,7 +10,6 @@
 class FLexUIGeometry;
 class UMaterialInterface;
 class ULexCanvas;
-class FLexUIDrawCall;
 class ULexVisualCustomRaycast;
 class ULexVisual;
 
@@ -215,7 +213,7 @@ protected:
 	int ClipDataStartPosition = 0;
 	int WidgetPropertyDataStartPosition = INDEX_NONE;
 
-	static void FillWidgetPropertyDataForMaterial(ULexVisual* Visual, uint8 FontMark);
+	static void FillWidgetPropertyDataForMaterial(ULexVisual* Visual, uint8 FontMark, bool bNeedSize, bool bNeedCenterPosition);
 	static void FillWidgetPropertyDataForMaterial_FirstPixel(ULexVisual* Visual, uint8 FontMark);
 public:
 #pragma region TweenAnimation

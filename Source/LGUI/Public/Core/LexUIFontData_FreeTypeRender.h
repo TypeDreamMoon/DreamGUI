@@ -170,7 +170,7 @@ protected:
 	{
 		int width, height, hOffset, vOffset, hAdvance;
 		/** memory will be passed to render thread and delete there too */
-		unsigned char* buffer;
+		TArray<unsigned char> buffer;
 		/** single pixel data size in byte, eg: RGBA8-4 A8-1 */
 		int pixelSize;
 	};
@@ -178,8 +178,8 @@ protected:
 	 * Insert rect into area, assign pixel if succeed
 	 * return: if glyph can fit in rect area return true, else false
 	 */
-	bool PackRectAndInsertChar(const FGlyphBitmap& InGlyphBitmap, rbp::MaxRectsBinPack& InOutBinPack, UTexture2DArray* InTexture, FLexUICharData& OutResult);
-	void UpdateFontTextureRegion(uint32 PosX, uint32 PosY, uint32 Slice, FUpdateTextureRegion2D* Region, uint32 SrcPitch, uint32 SrcBpp, uint8* SrcData);
+	bool PackRectAndInsertChar(FGlyphBitmap InGlyphBitmap, rbp::MaxRectsBinPack& InOutBinPack, UTexture2DArray* InTexture, FLexUICharData& OutResult);
+	void UpdateFontTextureRegion(uint32 PosX, uint32 PosY, uint32 Slice, FUpdateTextureRegion2D Region, uint32 SrcPitch, uint32 SrcBpp, TArray<uint8> SrcData);
 	void RenewFontTexture();
 
 	virtual UTexture2DArray* CreateFontTexture(int InTextureSize, int InSliceCount)PURE_VIRTUAL(ULexUIFontData_FreeTypeRender::CreateFontTexture, return nullptr;);

@@ -6,6 +6,7 @@
 #include "Core/LexUIMesh/LexUIMeshComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Core/LexUIDrawCall.h"
+#include "Core/Components/LexWidget.h"
 
 ULexVisualDirectMesh::ULexVisualDirectMesh(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {

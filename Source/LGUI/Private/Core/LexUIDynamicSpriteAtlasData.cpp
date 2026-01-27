@@ -182,24 +182,24 @@ void FLexUIDynamicSpriteAtlasData::CopySpriteTextureToAtlas(ULexUISpriteData* In
 		int32 SpaceBetweenSprites;
 		rbp::Rect PackedRect;
 	};
-	FUpdateTextureRegionsData* RegionData = new FUpdateTextureRegionsData;
-	RegionData->SpriteTextureResource = (FTexture2DResource*)SpriteTexture->GetResource();
-	RegionData->AtlasTextureResource = (FTexture2DResource*)InAtlasTexture->GetResource();
-	RegionData->SrcRegionBox = srcRegionBox;
-	RegionData->DstRegionBox = dstRegionBox;
-	RegionData->SpaceBetweenSprites = InSprite->bUseEdgePixelPadding ? InAtlasTexturePadding : 0;
-	RegionData->PackedRect = InPackedRect;
+	FUpdateTextureRegionsData RegionData;
+	RegionData.SpriteTextureResource = (FTexture2DResource*)SpriteTexture->GetResource();
+	RegionData.AtlasTextureResource = (FTexture2DResource*)InAtlasTexture->GetResource();
+	RegionData.SrcRegionBox = srcRegionBox;
+	RegionData.DstRegionBox = dstRegionBox;
+	RegionData.SpaceBetweenSprites = InSprite->bUseEdgePixelPadding ? InAtlasTexturePadding : 0;
+	RegionData.PackedRect = InPackedRect;
 
 	ENQUEUE_RENDER_COMMAND(FLexUISpriteData_CopyTextureData)(
-		[RegionData](FRHICommandListImmediate& RHICmdList)
+		[RegionData = MoveTemp(RegionData)](FRHICommandListImmediate& RHICmdList)
 	{
-		auto spriteTextureRHIRef = RegionData->SpriteTextureResource->GetTexture2DRHI();
-		auto atlasTextureRHIRef = RegionData->AtlasTextureResource->GetTexture2DRHI();
-		auto srcRegionPosition = RegionData->SrcRegionBox.Min;
-		auto srcRegionSize = RegionData->SrcRegionBox.GetSize();
-		auto dstRegionPosition = RegionData->DstRegionBox.Min;
-		auto packedRect = RegionData->PackedRect;
-		auto spaceBetweenSprites = RegionData->SpaceBetweenSprites;
+		auto spriteTextureRHIRef = RegionData.SpriteTextureResource->GetTexture2DRHI();
+		auto atlasTextureRHIRef = RegionData.AtlasTextureResource->GetTexture2DRHI();
+		auto srcRegionPosition = RegionData.SrcRegionBox.Min;
+		auto srcRegionSize = RegionData.SrcRegionBox.GetSize();
+		auto dstRegionPosition = RegionData.DstRegionBox.Min;
+		auto packedRect = RegionData.PackedRect;
+		auto spaceBetweenSprites = RegionData.SpaceBetweenSprites;
 		//origin image
 		FRHICopyTextureInfo CopyInfo;
 		CopyInfo.SourcePosition = FIntVector(srcRegionPosition.X, srcRegionPosition.Y, 0);
@@ -295,7 +295,6 @@ void FLexUIDynamicSpriteAtlasData::CopySpriteTextureToAtlas(ULexUISpriteData* In
 				}
 			}
 		}
-		delete RegionData;
 	});
 }
 

@@ -118,7 +118,7 @@ struct FLexUIText_Emoji
 {
 	GENERATED_BODY()
 	/** Emoji char */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = LGUI) int32 EmojiCode;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = LGUI) int32 EmojiCode = 0;
 	/** image object position */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = LGUI) FVector2D Position = FVector2D::ZeroVector;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = LGUI) FVector2D Size = FVector2D::ZeroVector;

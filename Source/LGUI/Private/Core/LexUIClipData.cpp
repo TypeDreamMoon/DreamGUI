@@ -42,8 +42,9 @@ void FLexUIClipData::UpdateData()
 	if (!bNeedUpdateData)return;
 	bNeedUpdateData = false;
 	
-	uint8* BlockBuffer = new uint8[BlockSizeInBytes];
-	FMemory::Memzero(BlockBuffer, BlockSizeInBytes);
+	TArray<uint8> BlockBuffer;
+	BlockBuffer.SetNumUninitialized(BlockSizeInBytes);
+	FMemory::Memzero(BlockBuffer.GetData(), BlockSizeInBytes);
 	int BlockDataOffset = 0;
 	auto RenderCanvasWidget = this->GetWidget()->GetRenderCanvas()->GetLexWidget();
 	auto CanvasToWorldMatrix = RenderCanvasWidget->GetComponentTransform().ToMatrixWithScale();
@@ -67,11 +68,11 @@ void FLexUIClipData::UpdateData()
 		M[2][3] = 0;//softness
 		M[3][3] = 1;//isValid
 		CanvasToWidgetMatrix = CanvasToWidgetMatrix.GetTransposed();//matrix in memory is aligned as row-primary, so transpose it then in hlsl we can read as column-primary
-		FMemory::Memcpy(BlockBuffer + BlockDataOffset, &CanvasToWidgetMatrix, sizeof(FMatrix44f));
+		FMemory::Memcpy(BlockBuffer.GetData() + BlockDataOffset, &CanvasToWidgetMatrix, sizeof(FMatrix44f));
 		BlockDataOffset += sizeof(FMatrix44f);
 		auto CornerRadius = TargetClip->GetWidget()->GetClippingCornerRadius();
 		CornerRadius = FVector4f(CornerRadius.Y, CornerRadius.X, CornerRadius.W, CornerRadius.Z);//flip vertical
-		FMemory::Memcpy(BlockBuffer + BlockDataOffset, &CornerRadius, sizeof(FVector4f));
+		FMemory::Memcpy(BlockBuffer.GetData() + BlockDataOffset, &CornerRadius, sizeof(FVector4f));
 		BlockDataOffset += sizeof(FVector4f);
 		if (!TargetClip->Parent.IsValid())
 		{
@@ -79,7 +80,7 @@ void FLexUIClipData::UpdateData()
 		}
 		TargetClip = TargetClip->Parent.Pin().Get();
 	}
-	DataTexture->UpdateBlock(BufferStartPos, BlockBuffer);
+	DataTexture->UpdateBlock(BufferStartPos, MoveTemp(BlockBuffer));
 }
 
 bool FLexUIClipData::IsPointVisible(const FVector& WorldPoint) const

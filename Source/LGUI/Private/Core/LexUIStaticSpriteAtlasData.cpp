@@ -387,10 +387,11 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 
 		int32 AtlasSize = AtlasSpriteBinPack.BinPack.GetBinWidth();
 		auto PixelBufferLength = AtlasSize * AtlasSize * GPixelFormats[PF_B8G8R8A8].BlockBytes;
-		uint8* PixelData = new uint8[PixelBufferLength];
-		FMemory::Memset(PixelData, 0, PixelBufferLength);//default is transparent black
+		TArray<uint8> PixelData;
+		PixelData.SetNumUninitialized(PixelBufferLength);
+		FMemory::Memset(PixelData.GetData(), 0, PixelBufferLength);//default is transparent black
 		//copy pixels
-		FColor* AtlasColorBuffer = static_cast<FColor*>((void*)PixelData);
+		FColor* AtlasColorBuffer = static_cast<FColor*>((void*)PixelData.GetData());
 		float InvAtlasTextureSize = 1.0f / AtlasSize;
 		for (int SpriteIndex = 0; SpriteIndex < AtlasSpriteBinPack.SpritesBelongToAtlas.Num(); SpriteIndex++)
 		{
@@ -484,7 +485,7 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 		//store data
 		auto PrevDataLength = TexturePixelData.Num();
 		TexturePixelData.AddUninitialized(PixelBufferLength);
-		FMemory::Memcpy(TexturePixelData.GetData() + PrevDataLength, PixelData, PixelBufferLength);
+		FMemory::Memcpy(TexturePixelData.GetData() + PrevDataLength, PixelData.GetData(), PixelBufferLength);
 		TextureSizeArray.Add(AtlasSize);
 
 		//generate mipmaps
@@ -496,7 +497,7 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 			TArray<FColor> mipRGBAs2;
 
 			//Access source data
-			auto priorData = reinterpret_cast<const FColor*>(PixelData);
+			auto priorData = reinterpret_cast<const FColor*>(PixelData.GetData());
 			int mipSize = AtlasSize;
 
 			while (true)
@@ -564,8 +565,6 @@ bool ULexUIStaticSpriteAtlasData::PackAtlas()
 				FMemory::Memcpy(TexturePixelData.GetData() + PrevLength, mipRGBAs->GetData(), mipBufferLength);
 			}
 		}
-
-		delete[] PixelData;
 	}
 	auto OldCacheDataPath = this->GetCacheDataPath(TexturePixelDataMD5);
 	if (FPaths::FileExists(OldCacheDataPath))

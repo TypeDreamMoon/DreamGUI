@@ -3,6 +3,7 @@
 #include "Interaction/UIScrollViewComponent.h"
 #include "LTweenManager.h"
 #include "Core/LexUISettings.h"
+#include "Core/Components/LexWidget.h"
 
 void UUIScrollViewHelper::Awake()
 {

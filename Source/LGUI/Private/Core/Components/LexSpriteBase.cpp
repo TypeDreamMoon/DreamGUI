@@ -7,6 +7,7 @@
 #include "Core/LexUISpriteData.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/LexUIDrawCall.h"
+#include "Core/Components/LexWidget.h"
 
 ULexSpriteBase::ULexSpriteBase(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {

@@ -1,7 +1,7 @@
 #include "/Engine/Private/GammaCorrectionCommon.ush"
 
 void LexUI_ReadWidgetProperty(float CoordinateInDataTex, Texture2D DataTex
-    , inout float FontMark, inout float IsRenderByLexUIRenderer
+    , inout float FontMark
     , inout float ClipDataCoordinate
     , inout float2 WidgetSize, inout float2 WidgetCenterPosition
     )
@@ -15,7 +15,7 @@ void LexUI_ReadWidgetProperty(float CoordinateInDataTex, Texture2D DataTex
     uint FontMarkUint = (MarksUint >> 24) & 0x000000ff;
     uint ExtraMarkUint = (MarksUint >> 16) & 0x000000ff;
     
-    IsRenderByLexUIRenderer = (ExtraMarkUint >> 7) & 1;    
+    // IsRenderByLexUIRenderer = (ExtraMarkUint >> 7) & 1;    
     FontMark = FontMarkUint;
     ClipDataCoordinate = asuint(PixelData.y);
     WidgetSize = PixelData.zw;

@@ -7,6 +7,7 @@
 #include "DetailCategoryBuilder.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/Components/LexSpriteBase.h"
+#include "Core/Components/LexWidget.h"
 
 #define LOCTEXT_NAMESPACE "LexUISpriteBaseCustomization"
 FLexSpriteBaseCustomization::FLexSpriteBaseCustomization()

@@ -3,8 +3,8 @@
 #include "Extensions/UISpriteSheetTexturePlayer.h"
 
 #include "LGUI.h"
-#include "LTweenBPLibrary.h"
 #include "Core/Components/LexTexture.h"
+#include "Core/Components/LexWidget.h"
 
 #if WITH_EDITOR
 void UUISpriteSheetTexturePlayer::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)

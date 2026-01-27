@@ -9,6 +9,7 @@
 #include "Core/LexUIFontEmojiData.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
+#include "Core/Components/LexWidget.h"
 #include "Utils/LexUIUtils.h"
 #include "Engine/Texture2D.h"
 #include "Engine/Texture2DArray.h"
@@ -271,7 +272,7 @@ void ULexText::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, b
 
 void ULexText::OnFillWidgetPropertyDataForMaterial()
 {
-	FillWidgetPropertyDataForMaterial(this, this->Font->GetFontTextureMark());
+	FillWidgetPropertyDataForMaterial(this, this->Font->GetFontTextureMark(), this->GetPropertiesForMaterial_Size(), this->GetPropertiesForMaterial_CenterPosition());
 }
 
 void ULexText::OnFillWidgetPropertyDataForMaterial_FirstPixel()

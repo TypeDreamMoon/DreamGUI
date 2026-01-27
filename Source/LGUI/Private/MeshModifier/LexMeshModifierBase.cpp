@@ -3,6 +3,7 @@
 #include "LGUI/Public/MeshModifier/LexMeshModifierBase.h"
 #include "LGUI.h"
 #include "Core/Components/LexVisualBatchMesh.h"
+#include "Core/Components/LexWidget.h"
 
 ULexMeshModifierBase::ULexMeshModifierBase()
 {

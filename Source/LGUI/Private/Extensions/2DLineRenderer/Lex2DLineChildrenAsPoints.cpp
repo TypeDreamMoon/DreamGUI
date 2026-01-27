@@ -4,6 +4,7 @@
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/Components/LexCanvas.h"
+#include "Core/Components/LexWidget.h"
 
 ULex2DLineChildrenAsPoints::ULex2DLineChildrenAsPoints(const FObjectInitializer &ObjectInitializer) : Super(ObjectInitializer)
 {

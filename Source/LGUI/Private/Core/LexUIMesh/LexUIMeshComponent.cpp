@@ -14,7 +14,6 @@
 #include "Materials/MaterialRenderProxy.h"
 #include "MaterialDomain.h"
 #include "PrimitiveSceneProxy.h"
-#include "ToolMenusEditor.h"
 #include "Core/LexUIDrawCall.h"
 #include "Core/LexVisualPostProcessRenderProxy.h"
 #include "Core/Components/LexVisualPostProcess.h"
@@ -937,7 +936,7 @@ uint32 FLexUIRenderSceneProxy::DebugNameIndex = 0;
 
 void FLexUIRenderSection_Mesh::UpdateSectionBox(const FTransform& LocalToWorld)
 {
-	BoundingBox = BoundingBox.TransformBy(LocalToWorld);
+	//mesh bounds already in canvas space
 }
 
 void FLexUIRenderSection_Mesh::ClearBeforePool()

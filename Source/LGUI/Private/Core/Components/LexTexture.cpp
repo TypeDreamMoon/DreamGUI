@@ -3,7 +3,7 @@
 #include "Core/Components/LexTexture.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/Components/LexCanvas.h"
-
+#include "Core/Components/LexWidget.h"
 
 
 ULexTexture::ULexTexture(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)

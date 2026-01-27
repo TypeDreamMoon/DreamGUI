@@ -6,7 +6,7 @@
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "LTweenManager.h"
 #include "Core/Components/LexCanvas.h"
-
+#include "Core/Components/LexWidget.h"
 
 
 ULexPolygon::ULexPolygon(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)

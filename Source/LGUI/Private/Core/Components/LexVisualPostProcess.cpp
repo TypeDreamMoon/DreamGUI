@@ -5,6 +5,7 @@
 #include "Core/Components/LexCanvas.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/LexVisualPostProcessRenderProxy.h"
+#include "Core/Components/LexWidget.h"
 #include "Engine/TextureRenderTarget2D.h"
 
 

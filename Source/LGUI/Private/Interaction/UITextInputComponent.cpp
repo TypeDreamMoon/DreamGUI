@@ -14,6 +14,7 @@
 #include "Core/LexUISpriteData.h"
 #include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexImage.h"
+#include "Core/Components/LexWidget.h"
 #include "Engine/GameViewportClient.h"
 
 

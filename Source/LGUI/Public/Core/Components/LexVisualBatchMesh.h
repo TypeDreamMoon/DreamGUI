@@ -73,6 +73,17 @@ public:
 		static FVector2D CalculatePivotOffset(float InWidth, float InHeight, const FVector2D& InPivot);
 };
 
+/** Widget's properties which can access in material */
+UENUM(BlueprintType, meta = (Bitflags), Category = LGUI)
+enum class ELexVisualPropertiesForMaterial :uint8
+{
+	//width & height
+	Size,
+	//widget rect center position in canvas space
+	CenterPosition,
+};
+ENUM_CLASS_FLAGS(ELexVisualPropertiesForMaterial);
+
 /** UI element which have render geometry, and can be batched and renderred by LGUICanvas */
 UCLASS(Abstract, Blueprintable, ClassGroup=(LGUI))
 class LGUI_API ULexVisualBatchMesh : public ULexVisual
@@ -122,12 +133,18 @@ public:
 	virtual bool LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const override;
 	/** is this UI element type support draw-call batching? */
 	virtual bool SupportDrawCallBatching()const { return true; }
+
+	FORCEINLINE bool GetPropertiesForMaterial_Size()const{ return PropertiesForMaterial & (1 << (int)ELexVisualPropertiesForMaterial::Size); }
+	FORCEINLINE bool GetPropertiesForMaterial_CenterPosition()const{ return PropertiesForMaterial & (1 << (int)ELexVisualPropertiesForMaterial::CenterPosition); }
 protected:
 	virtual bool LineTraceVisiblePixel(float InAlphaThreshold, FHitResult& OutHit, const FVector& Start, const FVector& End)const;
 	virtual bool ReadPixelFromMainTexture(const FVector2D& InUV, FColor& OutPixel)const { return false; }
 protected:
 	friend class FLexVisualBatchMeshCustomization;
 
+	/** enable properties for material */
+	UPROPERTY(EditAnywhere, Category = LGUI, meta = (Bitmask, BitmaskEnum = "/Script/LGUI.ELexVisualPropertiesForMaterial"))
+	int8 PropertiesForMaterial = 0;
 	UPROPERTY(EditAnywhere, Instanced, Category = "LGUI", AdvancedDisplay)
 	TArray<TObjectPtr<ULexMeshModifierBase>> MeshModifierArray;
 

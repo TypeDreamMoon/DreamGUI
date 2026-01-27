@@ -4,6 +4,7 @@
 #include "Core/LexUIGeometry.h"
 #include "Core/Components/LexText.h"
 #include "Core/LexUIFontData_BaseObject.h"
+#include "Core/Components/LexWidget.h"
 
 FLexUITextGeometryCache::FLexUITextGeometryCache(ULexText* InUIText)
 {

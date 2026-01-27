@@ -7,6 +7,7 @@
 #include "Core/LexUISpriteInfo.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexVisualPostProcess.h"
+#include "Core/Components/LexWidget.h"
 #include "Engine/TextureRenderTarget2D.h"
 
 FName ULexPostProcessRenderElement::LexUI_World2PostProcess_Row1 = FName(TEXT("LexUI_World2PostProcess_Row1"));
