@@ -1,7 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "DetailCustomization/LexUISpriteDataCustomization.h"
-#include "DesktopPlatformModule.h"
 #include "Core/LexUISettings.h"
 #include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
@@ -15,7 +14,6 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailWidgetRow.h"
-#include "LexUIEditorTools.h"
 
 #define LOCTEXT_NAMESPACE "LGUISpriteDataCustomization"
 

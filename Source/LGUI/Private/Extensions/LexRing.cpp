@@ -84,7 +84,6 @@ void ULexRing::SetSegment(int newValue)
 }
 
 
-#include "Core/LexUISettings.h"
 ULTweener* ULexRing::StartAngleTo(float endValue, float duration, float delay, ELTweenEase easeType)
 {
 	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexRing::GetStartAngle), FLTweenFloatSetterFunction::CreateUObject(this, &ULexRing::SetStartAngle), endValue, duration);

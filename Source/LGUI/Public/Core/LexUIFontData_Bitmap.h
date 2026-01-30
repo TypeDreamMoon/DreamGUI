@@ -67,7 +67,7 @@ protected:
 	virtual void ClearCharDataCache()override;
 
 	virtual bool GetSupportDynamicPixelsPerUnit()override { return true; }
-	virtual float GetFontTextureMark() override{ return 1; }
+	virtual uint8 GetFontTextureMark() override{ return 1; }
 public:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;

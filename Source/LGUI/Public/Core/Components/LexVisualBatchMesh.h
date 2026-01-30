@@ -157,10 +157,7 @@ protected:
 	virtual void OnBeforeCreateOrUpdateGeometry();
 	/** fill and update ui geometry */
 	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged);
-	/** fill widget property data for access in material */
-	virtual void OnFillWidgetPropertyDataForMaterial();
-	/** Same as OnFillWidgetPropertyDataForMaterial but only update 1st pixel (16bytes data), when only the clip data position changed. */
-	virtual void OnFillWidgetPropertyDataForMaterial_FirstPixel();
+	virtual uint8 GetFontMark_WidgetPropertyDataForMaterial(){return 0;}
 
 	virtual void UpdateGeometry()override final;
 	virtual void GetGeometryBoundsInLocalSpace(FVector2D& OutMinPoint, FVector2D& OutMaxPoint)const override;
@@ -186,6 +183,8 @@ private:
 	uint8 bUVChanged:1;
 	/** triangle index change */
 	uint8 bTriangleChanged:1;
+	uint8 bTextureChanged:1;
+	uint8 bMaterialChanged:1;
 	FVector LocalMinPoint3D = FVector::ZeroVector, LocalMaxPoint3D = FVector::ZeroVector;
 	void CalculateLocalBounds();
 	UPROPERTY(Transient)TObjectPtr<ULexUIGeometryHelper> GeometryHelper = nullptr;

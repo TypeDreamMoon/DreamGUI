@@ -914,7 +914,6 @@ void ULexRectBlock::SetRaycastSupportCornerRadius(bool value)
 
 #pragma region TweenAnimation
 #include "LTweenManager.h"
-#include "Core/LexUISettings.h"
 ULTweener* ULexRectBlock::BodyColorTo(FColor endValue, float duration, float delay, ELTweenEase ease)
 {
 	auto Tweener = ULTweenManager::To(this, FLTweenColorGetterFunction::CreateWeakLambda(this, [this] {

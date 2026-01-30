@@ -76,7 +76,7 @@ public:
 	virtual float GetVerticalOffset(const float& fontSize) override;
 	virtual bool GetShouldAffectByPixelPerfect() override{ return false; }
 	virtual bool GetNeedObjectScale() override{ return true; }//sdf font need scale value in material
-	virtual float GetFontTextureMark() override{ return 2; }
+	virtual uint8 GetFontTextureMark() override{ return 2; }
 	virtual float GetBoldRatio() override{ return BoldRatio; }
 	//End ULexUIFontData_BaseObject interface
 	float GetSampleFontSize()const{return SampleFontSize;}

@@ -270,14 +270,9 @@ void ULexText::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, b
 	}
 }
 
-void ULexText::OnFillWidgetPropertyDataForMaterial()
+uint8 ULexText::GetFontMark_WidgetPropertyDataForMaterial()
 {
-	FillWidgetPropertyDataForMaterial(this, this->Font->GetFontTextureMark(), this->GetPropertiesForMaterial_Size(), this->GetPropertiesForMaterial_CenterPosition());
-}
-
-void ULexText::OnFillWidgetPropertyDataForMaterial_FirstPixel()
-{
-	FillWidgetPropertyDataForMaterial_FirstPixel(this, this->Font->GetFontTextureMark());
+	return this->Font->GetFontTextureMark();
 }
 
 void ULexText::OnCultureChanged_Implementation()

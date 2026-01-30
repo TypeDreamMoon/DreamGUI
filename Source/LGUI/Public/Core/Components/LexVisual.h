@@ -213,8 +213,10 @@ protected:
 	int ClipDataStartPosition = 0;
 	int WidgetPropertyDataStartPosition = INDEX_NONE;
 
-	static void FillWidgetPropertyDataForMaterial(ULexVisual* Visual, uint8 FontMark, bool bNeedSize, bool bNeedCenterPosition);
-	static void FillWidgetPropertyDataForMaterial_FirstPixel(ULexVisual* Visual, uint8 FontMark);
+	void FillWidgetPropertyDataForMaterial(uint8 FontMark, bool bNeedSize, bool bNeedCenterPosition)const;
+	void FillWidgetPropertyDataForMaterial_ClipDataCoordinate(class ULexUIDataAsTexture* DataAsTexture)const;
+	// Fill initial mark data, only do this when first create widget property data
+	void FillWidgetPropertyDataForMaterial_InitialMark(class ULexUIDataAsTexture* DataAsTexture, uint8 FontMark)const;
 public:
 #pragma region TweenAnimation
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")

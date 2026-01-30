@@ -6,7 +6,6 @@
 #include "Core/LexUISettings.h"
 #include "Core/LexUIManager.h"
 #include "PrefabSystem/LexUIPrefabManager.h"
-#include "PhysicsEngine/BodySetup.h"
 #include "LTweenManager.h"
 #include "Core/LexUIClipData.h"
 #include "Core/Actor/LexWidgetRootActor.h"

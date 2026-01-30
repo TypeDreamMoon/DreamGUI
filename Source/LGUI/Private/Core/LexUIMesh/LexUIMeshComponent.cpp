@@ -1147,7 +1147,6 @@ void ULexUIMeshComponent::UpdateMeshSectionRenderData(TSharedPtr<FLexUIRenderSec
 			uint32 IndexBufferDataLength;
 			bool RequireNormalAndTangent;
 			FLexUIMeshSectionProxy* Section;
-			FLexUIRenderSceneProxy* SceneProxy;
 		};
 		UpdateMeshSectionDataStruct* UpdateData = new UpdateMeshSectionDataStruct();
 		UpdateData->Section = (FLexUIMeshSectionProxy*)MeshSection->RenderProxy;
@@ -1156,7 +1155,6 @@ void ULexUIMeshComponent::UpdateMeshSectionRenderData(TSharedPtr<FLexUIRenderSec
 		UpdateData->VertexBufferData.AddUninitialized(NumVerts);
 		FMemory::Memcpy(UpdateData->VertexBufferData.GetData(), MeshSection->vertices.GetData(), NumVerts * sizeof(FLexUIMeshVertex));
 		UpdateData->NumVerts = NumVerts;
-		UpdateData->SceneProxy = (FLexUIRenderSceneProxy*)SceneProxy;
 		const int32 NumIndices = MeshSection->triangleIndices.Num();
 		const uint32 IndexBufferDataLength = NumIndices * sizeof(FLexUIMeshIndexBufferType);
 		UpdateData->IndexBufferData.AddUninitialized(NumIndices);
@@ -1166,9 +1164,9 @@ void ULexUIMeshComponent::UpdateMeshSectionRenderData(TSharedPtr<FLexUIRenderSec
 		UpdateData->RequireNormalAndTangent = InRequireNormalAndTangent;
 		//update data
 		ENQUEUE_RENDER_COMMAND(FLexUIMeshUpdate)(
-			[UpdateData](FRHICommandListImmediate& RHICmdList)
+			[UpdateData, SceneProxy = (FLexUIRenderSceneProxy*)SceneProxy](FRHICommandListImmediate& RHICmdList)
 			{
-				UpdateData->SceneProxy->UpdateSection_RenderThread(
+				SceneProxy->UpdateSection_RenderThread(
 					RHICmdList
 					, UpdateData->VertexBufferData.GetData()
 					, UpdateData->NumVerts

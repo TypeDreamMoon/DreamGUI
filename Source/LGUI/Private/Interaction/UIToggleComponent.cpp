@@ -5,7 +5,6 @@
 #include "LTweenManager.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexVisual.h"
-#include "Core/LexUISettings.h"
 #include "Core/Components/LexImage.h"
 
 

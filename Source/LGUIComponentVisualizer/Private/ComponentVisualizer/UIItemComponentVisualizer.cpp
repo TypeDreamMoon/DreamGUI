@@ -2,13 +2,9 @@
 
 #include "UIItemComponentVisualizer.h"
 #include "Core/Components/LexWidget.h"
-#include "LGUIComponentVisualizerModule.h"
-#include "LGUI.h"
 #include "LexUIEditorUtils.h"
 #include "Utils/LexUIUtils.h"
 #include "Interfaces/IPluginManager.h"
-#include "Core/LexUISettings.h"
-#include "PrefabSystem/LexUIPrefabManager.h"
 
 
 

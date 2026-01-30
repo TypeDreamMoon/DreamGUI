@@ -816,7 +816,7 @@ void ULexCanvas::RegisterVisual(ULexWidget* InWidget, int& OutWidgetPropertyData
 	if (!IsValid(WidgetPropertyDataAsTexture))
 	{
 		WidgetPropertyDataAsTexture = NewObject<ULexUIDataAsTexture>(this, ULexUIDataAsTexture::StaticClass(), NAME_None, RF_Transient);
-		WidgetPropertyDataAsTexture->Init(ULexVisual::WidgetPropertyDataLength, ELexUIDataAsTexturePixelFormat::R32G32B32A32, 4);
+		WidgetPropertyDataAsTexture->Init(ULexVisual::WidgetPropertyDataLength, ELexUIDataAsTexturePixelFormat::R32, 128);
 		WidgetPropertyDataAsTexture->OnDataTextureChange.AddUObject(this, &ULexCanvas::OnWidgetPropertyDataTextureChanged);
 	}
 	OutWidgetPropertyDataStartPosition = WidgetPropertyDataAsTexture->RegisterBuffer();
@@ -1002,7 +1002,6 @@ void ULexCanvas::PrepareDrawCallBatchingData(TArray<FLexUIRenderData>& OutRender
 
 DECLARE_CYCLE_STAT(TEXT("Canvas BatchDrawCallAsync"), STAT_BatchDrawCall, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("Canvas BatchDrawCall/OverlapTest"), STAT_OverlapTest, STATGROUP_LGUI);
-DECLARE_CYCLE_STAT(TEXT("Canvas BatchDrawCall/SortBatchMeshInDrawCall"), STAT_SortBatchMeshInDrawCall, STATGROUP_LGUI);
 
 void ULexCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const FVector2D& InCanvasRightTop,
 	const TArray<FLexUIRenderData>& InRenderDataArray, TArray<FLexUIDrawCall>& InOutUIDrawCallList)
@@ -1021,7 +1020,7 @@ void ULexCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const F
 			);
 	};
 	auto OverlapWithOtherDrawCall = [&](const FLexUIGeometry& InGeo, const FLexUIDrawCall& OtherDrawCallItem) {
-		SCOPE_CYCLE_COUNTER(STAT_OverlapTest);
+		// SCOPE_CYCLE_COUNTER(STAT_OverlapTest);
 		switch (OtherDrawCallItem.Type)
 		{
 		case ELexUIDrawCallType::BatchMesh:
@@ -1235,11 +1234,13 @@ void ULexCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const F
 	}
 }
 
+DECLARE_CYCLE_STAT(TEXT("Canvas UpdateDrawCall"), STAT_UpdateDrawCall, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("Canvas CopyBatchMeshGeometry&UpdateMeshSection"), STAT_CopyBatchMeshGeometry, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("Canvas UpdateLayout"), STAT_UpdateLayout, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("Canvas UpdateClipAndGeometry"), STAT_UpdateClipAndGeometry, STATGROUP_LGUI);
 void ULexCanvas::UpdateCanvasDrawCall()
-{		
+{
+	SCOPE_CYCLE_COUNTER(STAT_UpdateDrawCall)
 	/**
 	 * Why use bPrevIsVisible?:
 	 * If Canvas is rendering in frame 1, and in frame 2 the Canvas is disabled(set WidgetActive to false), then the Canvas will not do draw-call calculation, and the prev existing draw-call mesh is still there and render,
@@ -1317,6 +1318,10 @@ void ULexCanvas::UpdateCanvasDrawCall()
 			}
 		}
 		WidgetPropertyDataAsTexture->Flush();
+		while (ThreadProcessingGeometryCount != 0)
+		{
+			FPlatformProcess::Sleep(0.001f);
+		}
 		
 		if (bShouldRebuildDrawCall)
 		{
@@ -1425,10 +1430,6 @@ void ULexCanvas::UpdateDrawCallMesh()
 	// 	 */
 	// 	UIMesh->MarkRenderStateDirty();
 	// }
-	while (ThreadProcessingGeometryCount != 0)
-	{
-		FPlatformProcess::Sleep(0.001f);
-	}
 
 	for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
 	{
