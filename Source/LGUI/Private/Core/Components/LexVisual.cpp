@@ -80,6 +80,8 @@ ULexVisual::ULexVisual(const FObjectInitializer& ObjectInitializer) :Super(Objec
 
 	bColorChanged = true;
 	bTransformChanged = true;
+	bClipDataPositionChanged = true;
+	bWidgetPropertyDataStartPositionChanged = true;
 }
 
 void ULexVisual::BeginPlay()
@@ -191,6 +193,11 @@ void ULexVisual::OnTransformChanged()
 	GetWidget()->MarkCanvasUpdate(false, true, false);
 }
 
+void ULexVisual::OnRenderCanvasChanged(ULexCanvas* InOldCanvas, ULexCanvas* InNewCanvas)
+{
+	
+}
+
 void ULexVisual::MarkColorDirty()
 {
 	bColorChanged = true;
@@ -238,6 +245,15 @@ void ULexVisual::GetGeometryBounds3DInLocalSpace(FVector& OutMinPoint, FVector& 
 	const auto MaxPoint2D = Widget->GetLocalSpaceRightTopPoint();
 	OutMinPoint = FVector(0.1f, MinPoint2D.X, MinPoint2D.Y);
 	OutMaxPoint = FVector(0.1f, MaxPoint2D.X, MaxPoint2D.Y);
+}
+
+void ULexVisual::SetWidgetPropertyDataStartPosition(int InPosition)
+{
+	if (WidgetPropertyDataStartPosition != InPosition)
+	{
+		WidgetPropertyDataStartPosition = InPosition;
+		bWidgetPropertyDataStartPositionChanged = true;
+	}
 }
 
 bool ULexVisual::LineTraceUIRect(FHitResult& OutHit, const FVector& Start, const FVector& End)const
@@ -401,7 +417,7 @@ int ULexVisual::WidgetPropertyDataLength =
 	+ sizeof(float)//3rd pixel, widget width & height, half precision float
 	+ sizeof(float)//4th pixel, widget rect center position in canvas space, half precision float
 ;
-void ULexVisual::FillWidgetPropertyDataForMaterial(uint8 FontMark, bool bNeedSize, bool bNeedCenterPosition)const
+void ULexVisual::FillWidgetPropertyDataForMaterial(bool bNeedSize, bool bNeedCenterPosition)const
 {
 	SCOPE_CYCLE_COUNTER(STAT_FillWidgetPropertyData);
 	auto StartPosition = this->WidgetPropertyDataStartPosition;
@@ -413,26 +429,9 @@ void ULexVisual::FillWidgetPropertyDataForMaterial(uint8 FontMark, bool bNeedSiz
 	auto Data = Canvas->GetWidgetPropertyDataAsTexture();
 	if (!Data)return;
 	TArray<uint8> BlockBuffer;
-	BlockBuffer.SetNumUninitialized(WidgetPropertyDataLength);
-	FMemory::Memzero(BlockBuffer.GetData(), WidgetPropertyDataLength);
+	BlockBuffer.SetNumUninitialized(8);
+	FMemory::Memzero(BlockBuffer.GetData(), 8);
 	int BlockBufferOffset = 0;
-
-	//marks
-	{
-		uint8 ExtraMark = 0;
-		uint32 Marks =
-			FontMark << 24
-			| ExtraMark << 16
-		;
-		FMemory::Memcpy(BlockBuffer.GetData() + BlockBufferOffset, &Marks, 4);
-		BlockBufferOffset += 4;
-	}
-
-	//clip data position
-	{
-		FMemory::Memcpy(BlockBuffer.GetData() + BlockBufferOffset, &this->ClipDataStartPosition, 4);
-		BlockBufferOffset += 4;
-	}
 	
 	//width & height
 	if (bNeedSize)
@@ -454,7 +453,7 @@ void ULexVisual::FillWidgetPropertyDataForMaterial(uint8 FontMark, bool bNeedSiz
 	}
 	BlockBufferOffset += sizeof(FVector2DHalf);
 	
-	Data->UpdateBlock(StartPosition, MoveTemp(BlockBuffer));
+	Data->UpdateBlock(2, StartPosition, MoveTemp(BlockBuffer), 2);
 }
 
 void ULexVisual::FillWidgetPropertyDataForMaterial_ClipDataCoordinate(ULexUIDataAsTexture* DataAsTexture)const

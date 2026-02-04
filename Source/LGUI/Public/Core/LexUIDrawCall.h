@@ -28,6 +28,10 @@ enum class ELexUIDrawCallType :uint8
 class FLexUIRenderData
 {
 public:
+	FLexUIRenderData(ELexUIDrawCallType InType)
+	{
+		Type = InType;
+	}
 	ELexUIDrawCallType Type = ELexUIDrawCallType::BatchMesh;
 
 	FLexUIGeometry BatchMeshGeometry;

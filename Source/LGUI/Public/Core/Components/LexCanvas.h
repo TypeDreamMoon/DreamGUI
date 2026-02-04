@@ -5,6 +5,7 @@
 #include "Layout/Margin.h"
 #include "Components/ActorComponent.h"
 #include "Camera/CameraTypes.h"
+#include "Core/LexCanvasAsyncFunctionRunnable.h"
 #include "Core/LexCanvasDrawCallProcessingRunnable.h"
 #include "Core/LexUIDrawCall.h"
 #include "Math/TransformCalculus2D.h"
@@ -359,7 +360,7 @@ protected:
 		bool bEnableDepthTest = false;
 	/** For not root canvas, inherit or override parent canvas parameters. */
 	UPROPERTY(EditAnywhere, Category = LGUI, meta = (Bitmask, BitmaskEnum = "/Script/LGUI.ELexCanvasOverrideParameters"))
-		int8 OverrideParameters;
+		int8 OverrideParameters = 0;
 
 	/**
 	 * TraceChannel for line trace of EventSystem interaction.
@@ -655,8 +656,8 @@ private:
 
 public:
 	void MarkVisualWillChange(ULexVisual* InOldVisual);
-	void RegisterVisual(ULexWidget* InWidget, int& OutWidgetPropertyDataStartPosition);
-	void UnregisterVisual(ULexWidget* InVisual, int& InOutWidgetPropertyDataStartPosition);
+	void RegisterVisual(ULexVisual* InVisual);
+	void UnregisterVisual(ULexVisual* InVisual);
 
 	void AddLexWidget(ULexWidget* InWidget);
 	void RemoveLexWidget(ULexWidget* InWidget);
@@ -672,7 +673,7 @@ public:
 	static FName LexUI_ClipDataTexture_MaterialParameterName;
 	static FName LexUI_WidgetPropertyDataTexture_MaterialParameterName;
 	static FName LexUI_IsRenderByLexUIRenderer_MaterialParameterName;
-	bool IsMaterialContainsLexUIParameter(UMaterialInterface* InMaterial);
+	static bool IsMaterialContainsLexUIParameter(const UMaterialInterface* InMaterial);
 private:
 	void SetSortOrderAdditionalValueRecursive(int32 InAdditionalValue);
 	void UpdateRenderTarget(bool CallEvent);
@@ -692,6 +693,7 @@ private:
 	uint32 bPrevAnythingChangedForRenderTarget : 1;//same as upper one, but the prev frame
 	uint32 bHasSetInitialStateForLexWorldSpaceRenderer : 1;//is LGUI world space renderer's initial state set
 	uint32 bNeedToVerifyMaterials : 1;
+	mutable uint32 bNeedToSetClipDataTextureMaterialParameter : 1;
 
 	uint32 bPrevIsVisible : 1;//is LexWidget active in prev frame?
 
@@ -733,13 +735,13 @@ private:
 	TQueue<FLexCanvasPendingDrawCallData> PendingUpdateDrawCallQueue;
 	FLexCanvasPendingDrawCallData CurrentDrawCallData;//current drawing draw-call
 	TUniquePtr<FLexCanvasDrawCallProcessingRunnable> DrawCallProcessingRunnable;
+	TUniquePtr<FLexCanvasAsyncFunctionRunnable> TransformVerticesAsyncFunctionRunnable;
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<ULexWidget>> VisualWidgetList;//Use LexWidget instead of LexVisual, because we need LexWidget to get sub-canvas.
 	bool bNeedToGenerateWidgetList = true;
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<ULexWidget>> WidgetList;//All LexWidget that belongs to this canvas
 	TSharedPtr<FLexUIDrawCall> DrawCallAsChildCanvas = nullptr;//DrawCall that represent this canvas when the canvas is render as child.
-	TAtomic<int> ThreadProcessingGeometryCount;
 
 	//clip data is stored in root canvas
 	TArray<TSharedPtr<FLexUIClipData>> ClipDataList;
@@ -750,9 +752,9 @@ private:
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	TObjectPtr<ULexUIDataAsTexture> WidgetPropertyDataAsTexture;//widget properties coordinate stored in UV1.y
 	void OnWidgetPropertyDataTextureChanged(UTexture* NewTexture);
+	void CheckWidgetPropertyData();
 public:
-	void IncreaseThreadProcessingGeometry(){ThreadProcessingGeometryCount.IncrementExchange();}
-	void DecreaseThreadProcessingGeometry(){ThreadProcessingGeometryCount.DecrementExchange();}
+	void PushAsyncFunction_TransformVertices(const TFunction<void()>& InFunction);
 	/** Called by LexWidget to delete clip data */
 	void RemoveClipData(const TSharedPtr<FLexUIClipData>& InClipData);
 	UTexture* GetClipDataTexture()const;
@@ -761,7 +763,7 @@ public:
 	const TArray<TWeakObjectPtr<ULexCanvas>>& GetChildrenCanvasArray()const{return ChildrenCanvasArray;}
 	
 	static FTransform2D ConvertTo2DTransform(const FTransform& Transform);
-	static void CalculateVisual2DBounds(ULexVisual* item, const FTransform2D& transform, FVector2D& min, FVector2D& max);
+	static void CalculateVisual2DBounds(ULexVisual* Visual, const FTransform2D& OutTransform2D, FVector2D& OutMin, FVector2D& OutMax);
 private:
 
 	/** canvas array belong to this canvas in hierarchy. */

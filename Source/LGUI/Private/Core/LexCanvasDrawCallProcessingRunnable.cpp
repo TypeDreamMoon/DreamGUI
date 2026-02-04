@@ -18,21 +18,22 @@ uint32 FLexCanvasDrawCallProcessingRunnable::Run()
 {
 	while (bIsRunning)
 	{
-		if (bIsRunning) // make sure we were not told to exit during the wait
+		if (!PreparedDrawCallDataQueue->IsEmpty())
 		{
-			if (!PreparedDrawCallDataQueue->IsEmpty())
+			FLexCanvasPreparedDrawCallData PreparedDrawCallData;
+			while (!PreparedDrawCallDataQueue->IsEmpty())//discard old data and get the newest one
 			{
-				FLexCanvasPreparedDrawCallData PreparedDrawCallData;
-				while (!PreparedDrawCallDataQueue->IsEmpty())//discard old data and get the newest one
-				{
-					PreparedDrawCallDataQueue->Dequeue(PreparedDrawCallData);
-				}
-				FLexCanvasPendingDrawCallData PendingDrawCallData;
-				PendingDrawCallData.FrameNumber = PreparedDrawCallData.FrameNumber;
-				ULexCanvas::BatchDrawCallAsync(PreparedDrawCallData.LeftBottomPoint, PreparedDrawCallData.RightTopPoint, PreparedDrawCallData.DataArray, PendingDrawCallData.DrawCallArray);
-				//push to main thread queue
-				RebuildDrawCallQueue->Enqueue(MoveTemp(PendingDrawCallData));
+				PreparedDrawCallDataQueue->Dequeue(PreparedDrawCallData);
 			}
+			FLexCanvasPendingDrawCallData PendingDrawCallData;
+			PendingDrawCallData.FrameNumber = PreparedDrawCallData.FrameNumber;
+			ULexCanvas::BatchDrawCallAsync(PreparedDrawCallData.LeftBottomPoint, PreparedDrawCallData.RightTopPoint, PreparedDrawCallData.DataArray, PendingDrawCallData.DrawCallArray);
+			//push to main thread queue
+			RebuildDrawCallQueue->Enqueue(MoveTemp(PendingDrawCallData));
+		}
+		else
+		{
+			FPlatformProcess::Sleep(0.001f);
 		}
 	}
 

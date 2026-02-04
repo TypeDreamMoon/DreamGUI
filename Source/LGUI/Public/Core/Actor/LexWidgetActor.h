@@ -3,7 +3,6 @@
 #pragma once
 
 #include "GameFramework/Actor.h"
-#include "PrefabSystem/ILexUIPrefabInterface.h"
 #include "LexWidgetActor.generated.h"
 
 class ULexWidget;

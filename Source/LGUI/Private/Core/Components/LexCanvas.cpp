@@ -42,6 +42,9 @@ ULexCanvas::ULexCanvas()
 	bPrevIsVisible = true;
 	bNeedToVerifyMaterials = true;
 	bUIMeshNeedToSetInitialParameters = true;
+	bNeedToSetClipDataTextureMaterialParameter = true;
+	bNeedToSortRenderPriority = true;
+	bRequestUpdateForRenderTarget = true;
 
 	bCanTickUpdate = true;
 	bShouldRebuildDrawCall = true;
@@ -366,6 +369,10 @@ void ULexCanvas::OnComponentDestroyed(bool bDestroyingHierarchy)
 	{
 		DrawCallProcessingRunnable->Stop();
 	}
+	if (TransformVerticesAsyncFunctionRunnable.IsValid())
+	{
+		TransformVerticesAsyncFunctionRunnable->Stop();
+	}
 }
 
 void ULexCanvas::PostInitProperties()
@@ -384,6 +391,11 @@ void ULexCanvas::PostInitProperties()
 		}
 		DrawCallProcessingRunnable->Start(PreparedDrawCallDataQueue, PendingRebuildDrawCallQueue);
 	}
+	if (TransformVerticesAsyncFunctionRunnable == nullptr)
+	{
+		TransformVerticesAsyncFunctionRunnable = MakeUnique<FLexCanvasAsyncFunctionRunnable>();
+		TransformVerticesAsyncFunctionRunnable->Start();
+	}
 }
 
 void ULexCanvas::ClearDrawCall()
@@ -396,7 +408,7 @@ void ULexCanvas::ClearDrawCall()
 
 	PooledUIMaterialList.Empty();
 	UsingUIMaterialList.Empty();
-	CurrentDrawCallData.DrawCallArray.Empty();//@todo: thread racing
+	CurrentDrawCallData.DrawCallArray.Empty();
 }
 
 void ULexCanvas::RemoveFromViewExtension(bool PropogateToChildrenCanvas)
@@ -465,7 +477,12 @@ bool ULexCanvas::CheckRootCanvas(bool forceRecheck)const
 		}
 		return ResultCanvas;
 	};
-	RootCanvas = FindRootCanvas(this->GetOwner());
+	auto NewRootCanvas = FindRootCanvas(this->GetOwner());
+	if (NewRootCanvas != RootCanvas)
+	{
+		RootCanvas = NewRootCanvas;
+		bNeedToSetClipDataTextureMaterialParameter = true;
+	}
 	if (RootCanvas.IsValid())
 	{
 		return true;
@@ -481,13 +498,6 @@ void ULexCanvas::SetParentCanvas(ULexCanvas* InParentCanvas)
 		this->MarkCanvasUpdate(false, false, true);
 		if (ParentCanvas.IsValid())
 		{
-			//@todo
-			//if render as child, then delete render section
-			// if (DrawCallAsChildCanvas.IsValid() && DrawCallAsChildCanvas->DrawCallRenderSection.IsValid())
-			// {
-			// 	DrawCallAsChildCanvas->DrawCallMesh->PoolRenderSection(DrawCallAsChildCanvas->DrawCallRenderSection.Pin());
-			// 	DrawCallAsChildCanvas->DrawCallRenderSection = nullptr;
-			// }
 			this->DrawCallAsChildCanvas = nullptr;
 
 			ParentCanvas->ChildrenCanvasArray.Remove(this);
@@ -809,29 +819,24 @@ void ULexCanvas::MarkVisualWillChange(ULexVisual* InOldVisual)
 	MarkCanvasUpdate(false, false, false);
 }
 
-void ULexCanvas::RegisterVisual(ULexWidget* InWidget, int& OutWidgetPropertyDataStartPosition)
+void ULexCanvas::RegisterVisual(ULexVisual* InVisual)
 {
-	VisualWidgetList.AddUnique(InWidget);
-	
-	if (!IsValid(WidgetPropertyDataAsTexture))
-	{
-		WidgetPropertyDataAsTexture = NewObject<ULexUIDataAsTexture>(this, ULexUIDataAsTexture::StaticClass(), NAME_None, RF_Transient);
-		WidgetPropertyDataAsTexture->Init(ULexVisual::WidgetPropertyDataLength, ELexUIDataAsTexturePixelFormat::R32, 128);
-		WidgetPropertyDataAsTexture->OnDataTextureChange.AddUObject(this, &ULexCanvas::OnWidgetPropertyDataTextureChanged);
-	}
-	OutWidgetPropertyDataStartPosition = WidgetPropertyDataAsTexture->RegisterBuffer();
+	VisualWidgetList.AddUnique(InVisual->GetWidget());
+	CheckWidgetPropertyData();
+	InVisual->SetWidgetPropertyDataStartPosition(WidgetPropertyDataAsTexture->RegisterBuffer());
 }
 
-void ULexCanvas::UnregisterVisual(ULexWidget* InWidget, int& InOutWidgetPropertyDataStartPosition)
+void ULexCanvas::UnregisterVisual(ULexVisual* InVisual)
 {
-	VisualWidgetList.Remove(InWidget);
-	if (InOutWidgetPropertyDataStartPosition > INDEX_NONE)
+	VisualWidgetList.Remove(InVisual->GetWidget());
+	auto WidgetPropertyDataStartPosition = InVisual->GetWidgetPropertyDataStartPosition();
+	if (WidgetPropertyDataStartPosition > INDEX_NONE)
 	{
 		if (IsValid(WidgetPropertyDataAsTexture))
 		{
-			WidgetPropertyDataAsTexture->UnregisterBuffer(InOutWidgetPropertyDataStartPosition);
+			WidgetPropertyDataAsTexture->UnregisterBuffer(WidgetPropertyDataStartPosition);
 		}
-		InOutWidgetPropertyDataStartPosition = INDEX_NONE;
+		InVisual->SetWidgetPropertyDataStartPosition(INDEX_NONE);
 	}
 }
 
@@ -949,7 +954,7 @@ void ULexCanvas::PrepareDrawCallBatchingData(TArray<FLexUIRenderData>& OutRender
 			if (ChildCanvas == nullptr)continue;//normally this won't be nullptr, but when redo in editor this breaks
 			if (ChildCanvas->bForceRenderToTarget)continue;//skip this type
 			if (ChildCanvas->GetOverrideSorting())continue;//override sorting means render by itself, then no need to use it as child-canvas
-			auto RenderData = FLexUIRenderData();
+			auto RenderData = FLexUIRenderData(ELexUIDrawCallType::ChildCanvas);
 			RenderData.ChildCanvas = ChildCanvas;
 			OutRenderDataArray.Add(MoveTemp(RenderData));
 		}
@@ -971,7 +976,7 @@ void ULexCanvas::PrepareDrawCallBatchingData(TArray<FLexUIRenderData>& OutRender
 					if (ItemGeo == nullptr)continue;
 					if (ItemGeo->Vertices.Num() == 0)continue;
 					if (ItemGeo->Vertices.Num() > LEXUI_MAX_VERTEX_COUNT)continue;
-					auto RenderData = FLexUIRenderData();
+					auto RenderData = FLexUIRenderData(ELexUIDrawCallType::BatchMesh);
 					RenderData.BatchMeshGeometry.CopyDataForPrepare(*ItemGeo);
 					RenderData.BatchMeshVisualObject = LexVisualBatchMesh;
 					OutRenderDataArray.Add(MoveTemp(RenderData));
@@ -981,7 +986,7 @@ void ULexCanvas::PrepareDrawCallBatchingData(TArray<FLexUIRenderData>& OutRender
 				{
 					auto LexVisualPostProcess = static_cast<ULexVisualPostProcess*>(Visual);
 					if (!LexVisualPostProcess->HaveValidData())continue;
-					auto RenderData = FLexUIRenderData();
+					auto RenderData = FLexUIRenderData(ELexUIDrawCallType::PostProcess);
 					RenderData.PostProcessVisualObject = LexVisualPostProcess;
 					OutRenderDataArray.Add(MoveTemp(RenderData));
 				}
@@ -990,7 +995,7 @@ void ULexCanvas::PrepareDrawCallBatchingData(TArray<FLexUIRenderData>& OutRender
 				{
 					auto LexVisualDirectMesh = static_cast<ULexVisualDirectMesh*>(Visual);
 					if (!LexVisualDirectMesh->HaveValidData())continue;
-					auto RenderData = FLexUIRenderData();
+					auto RenderData = FLexUIRenderData(ELexUIDrawCallType::DirectMesh);
 					RenderData.DirectMeshVisualObject = LexVisualDirectMesh;
 					OutRenderDataArray.Add(MoveTemp(RenderData));
 				}
@@ -1304,6 +1309,7 @@ void ULexCanvas::UpdateCanvasDrawCall()
 				}
 			}
 		}
+		CheckWidgetPropertyData();
 		WidgetPropertyDataAsTexture->PrepareForBatchUpdate();
 		//update clip and geometry from head to tail
 		{
@@ -1318,10 +1324,14 @@ void ULexCanvas::UpdateCanvasDrawCall()
 			}
 		}
 		WidgetPropertyDataAsTexture->Flush();
-		while (ThreadProcessingGeometryCount != 0)
+		UE_LOG(LGUI, Error, TEXT("Begin wait for AsyncFunction, num:%d"), TransformVerticesAsyncFunctionRunnable->NumItems());
+		auto Time = FDateTime::Now();
+		while (!TransformVerticesAsyncFunctionRunnable->IsEmpty())
 		{
 			FPlatformProcess::Sleep(0.001f);
 		}
+		auto TimeSpan = FDateTime::Now() - Time;
+		UE_LOG(LGUI, Error, TEXT("Wait for AsyncFunction timeSpan:%f"), TimeSpan.GetTotalMilliseconds());
 		
 		if (bShouldRebuildDrawCall)
 		{
@@ -1407,6 +1417,7 @@ void ULexCanvas::UpdateCanvasDrawCall()
 		// 	}
 		// }
 	}
+	UIMesh->FlushRenderCommand();
 
 	if (this == RootCanvas)
 	{
@@ -1635,7 +1646,7 @@ FName ULexCanvas::LexUI_ClipDataTexture_MaterialParameterName = FName(TEXT("LexU
 FName ULexCanvas::LexUI_WidgetPropertyDataTexture_MaterialParameterName = FName(TEXT("LexUI_WidgetPropertyDataTexture"));
 FName ULexCanvas::LexUI_IsRenderByLexUIRenderer_MaterialParameterName = FName(TEXT("LexUI_IsRenderByLexUIRenderer"));
 
-bool ULexCanvas::IsMaterialContainsLexUIParameter(UMaterialInterface* InMaterial)
+bool ULexCanvas::IsMaterialContainsLexUIParameter(const UMaterialInterface* InMaterial)
 {
 	static TArray<FMaterialParameterInfo> ParameterInfos;
 	static TArray<FGuid> ParameterIds;
@@ -1652,7 +1663,9 @@ bool ULexCanvas::IsMaterialContainsLexUIParameter(UMaterialInterface* InMaterial
 		});
 	return FoundIndex != INDEX_NONE;
 }
+
 DECLARE_CYCLE_STAT(TEXT("Canvas UpdateDrawCallMaterial"), STAT_UpdateDrawCallMaterial, STATGROUP_LGUI);
+DECLARE_CYCLE_STAT(TEXT("Canvas SetMaterialParameter"), STAT_SetMaterialParameter, STATGROUP_LGUI);
 void ULexCanvas::UpdateDrawCallMaterial()
 {
 	SCOPE_CYCLE_COUNTER(STAT_UpdateDrawCallMaterial);
@@ -1677,6 +1690,13 @@ void ULexCanvas::UpdateDrawCallMaterial()
 		}
 	}
 
+	auto SetParameterForNewlyCreatedMaterial = [&](UMaterialInstanceDynamic* InMaterialInstanceDynamic)
+	{
+		InMaterialInstanceDynamic->SetScalarParameterValue(LexUI_IsRenderByLexUIRenderer_MaterialParameterName, this->IsRenderByLexUIRendererOrUERenderer());
+		InMaterialInstanceDynamic->SetTextureParameterValue(LexUI_WidgetPropertyDataTexture_MaterialParameterName, this->WidgetPropertyDataAsTexture->GetDataTexture());
+		InMaterialInstanceDynamic->SetTextureParameterValue(LexUI_ClipDataTexture_MaterialParameterName, RootCanvas->ClipDataAsTexture->GetDataTexture());
+	};
+
 	for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
 	{
 		auto& DrawCallItem = CurrentDrawCallData.DrawCallArray[i];
@@ -1686,23 +1706,26 @@ void ULexCanvas::UpdateDrawCallMaterial()
 		case ELexUIDrawCallType::DirectMesh:
 			{
 				UMaterialInterface* RenderMat = nullptr;
-				bool bContainsLexUIParam = false;
+				bool bShouldSetMaterialParameter = false;
 				if (DrawCallItem.Material.IsValid())
 				{
 					if (DrawCallItem.Material->IsA<UMaterialInstanceDynamic>())
 					{
-						RenderMat = DrawCallItem.Material.Get();
-						bContainsLexUIParam = IsMaterialContainsLexUIParameter(RenderMat);
+						auto RenderMatDynamic = static_cast<UMaterialInstanceDynamic*>(RenderMat);
+						RenderMat = RenderMatDynamic;
+						bShouldSetMaterialParameter = true;
+						SetParameterForNewlyCreatedMaterial(RenderMatDynamic);
 					}
 					else
 					{
 						auto DynamicMaterialContainerPtr = MapSrcMatToDynamicMat.Find(DrawCallItem.Material.Get());
 						if (!DynamicMaterialContainerPtr)
 						{
-							bContainsLexUIParam = IsMaterialContainsLexUIParameter(DrawCallItem.Material.Get());
-							if (bContainsLexUIParam)
+							if (IsMaterialContainsLexUIParameter(DrawCallItem.Material.Get()))
 							{
+								bShouldSetMaterialParameter = true;
 								auto RenderMatDynamic = UMaterialInstanceDynamic::Create(DrawCallItem.Material.Get(), this);
+								SetParameterForNewlyCreatedMaterial(RenderMatDynamic);
 								auto MaterialContainer = FLexCanvasDynamicMaterialArrayContainer();
 								MaterialContainer.MaterialArray.Add(RenderMatDynamic);
 								MaterialContainer.CurrentIndex = 1;
@@ -1723,12 +1746,13 @@ void ULexCanvas::UpdateDrawCallMaterial()
 						}
 						else
 						{
-							bContainsLexUIParam = true;//if contained in data-map, then definitely contains LexUIParam
+							bShouldSetMaterialParameter = true;
 							auto& MaterialArray = DynamicMaterialContainerPtr->MaterialArray;
 							if (!MaterialArray.IsValidIndex(DynamicMaterialContainerPtr->CurrentIndex))//material use up, need more
 							{
 								auto RenderMatDynamic = UMaterialInstanceDynamic::Create(DrawCallItem.Material.Get(), this);
 								MaterialArray.Add(RenderMatDynamic);
+								SetParameterForNewlyCreatedMaterial(RenderMatDynamic);
 								RenderMat = RenderMatDynamic;
 								DynamicMaterialContainerPtr->CurrentIndex++;
 								bNeedToVerifyMaterials = true;//verify material when new material will be used
@@ -1759,36 +1783,40 @@ void ULexCanvas::UpdateDrawCallMaterial()
 						if (PooledUIMaterialList.Num() == 0)
 						{
 							auto SrcMaterial = GetDefaultMaterial();
-							auto UIMat = UMaterialInstanceDynamic::Create(SrcMaterial, this);
-							UIMat->SetFlags(RF_Transient);
-							UsingUIMaterialList.Add(UIMat);
+							auto RenderMatDynamic = UMaterialInstanceDynamic::Create(SrcMaterial, this);
+							RenderMatDynamic->SetFlags(RF_Transient);
+							UsingUIMaterialList.Add(RenderMatDynamic);
+							SetParameterForNewlyCreatedMaterial(RenderMatDynamic);
 							bNeedToVerifyMaterials = true;//verify material when new material will be used
-							return UIMat;
+							return RenderMatDynamic;
 						}
 						else
 						{
-							auto UIMat = PooledUIMaterialList[PooledUIMaterialList.Num() - 1];
+							auto RenderMatDynamic = PooledUIMaterialList[PooledUIMaterialList.Num() - 1];
 							PooledUIMaterialList.RemoveAt(PooledUIMaterialList.Num() - 1);
-							UsingUIMaterialList.Add(UIMat);
-							return UIMat.Get();
+							UsingUIMaterialList.Add(RenderMatDynamic);
+							return RenderMatDynamic.Get();
 						}
 					};
 					RenderMat = GetUIMaterialFromPool();
-					bContainsLexUIParam = true;//pooled material definitely contains LexUIParam
+					bShouldSetMaterialParameter = true;//pooled material definitely contains LexUIParam
 				}
-				if (bContainsLexUIParam)
+				if (bShouldSetMaterialParameter)
 				{
-					auto RenderMat_MID = (UMaterialInstanceDynamic*)RenderMat;
+					SCOPE_CYCLE_COUNTER(STAT_SetMaterialParameter)
+					auto RenderMat_MID = static_cast<UMaterialInstanceDynamic*>(RenderMat);
 					RenderMat_MID->SetTextureParameterValue(LexUI_MainTextureMaterialParameterName, DrawCallItem.Texture.Get());
 					RenderMat_MID->SetTextureParameterValue(LexUI_FontTextureMaterialParameterName, DrawCallItem.FontTexture.Get());
-					RenderMat_MID->SetTextureParameterValue(LexUI_ClipDataTexture_MaterialParameterName, RootCanvas->ClipDataAsTexture->GetDataTexture());
-					RenderMat_MID->SetTextureParameterValue(LexUI_WidgetPropertyDataTexture_MaterialParameterName, WidgetPropertyDataAsTexture->GetDataTexture());
-					RenderMat_MID->SetScalarParameterValue(LexUI_IsRenderByLexUIRenderer_MaterialParameterName, this->IsRenderByLexUIRendererOrUERenderer());
+					if (bNeedToSetClipDataTextureMaterialParameter)
+					{
+						RenderMat_MID->SetTextureParameterValue(LexUI_ClipDataTexture_MaterialParameterName, RootCanvas->ClipDataAsTexture->GetDataTexture());
+					}
 				}
 				UIMesh->SetMeshSectionMaterial(i, RenderMat);
 			}
 			break;
 		case ELexUIDrawCallType::PostProcess:
+		case ELexUIDrawCallType::ChildCanvas:
 			{
 
 			}
@@ -1800,6 +1828,8 @@ void ULexCanvas::UpdateDrawCallMaterial()
 	{
 		MarkNeedVerifyMaterials();//tell parent canvas to verify material
 	}
+
+	bNeedToSetClipDataTextureMaterialParameter = false;
 }
 
 void ULexCanvas::MarkNeedVerifyMaterials()
@@ -1942,7 +1972,7 @@ UMaterialInterface* ULexCanvas::GetDefaultMaterial()const
 {
 	if (!DefaultMaterial)
 	{
-		DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/LexUI_ImageAndFont"));
+		DefaultMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/LGUI/Materials/LexUI_ImageAndFont"));
 	}
 	return DefaultMaterial;
 }
@@ -2124,11 +2154,8 @@ void ULexCanvas::BuildProjectionMatrix(FIntPoint InViewportSize, ECameraProjecti
 	}
 	else
 	{
-		float XAxisMultiplier;
-		float YAxisMultiplier;
-
-		XAxisMultiplier = 1.0f;
-		YAxisMultiplier = InViewportSize.X / (float)InViewportSize.Y;
+		float XAxisMultiplier = 1.0f;
+		float YAxisMultiplier = InViewportSize.X / (float)InViewportSize.Y;
 
 		if ((int32)ERHIZBuffer::IsInverted)
 		{
@@ -2423,6 +2450,21 @@ void ULexCanvas::OnWidgetPropertyDataTextureChanged(UTexture* NewTexture)
 	MarkCanvasUpdate(true, false, true);
 }
 
+void ULexCanvas::CheckWidgetPropertyData()
+{
+	if (!IsValid(WidgetPropertyDataAsTexture))
+	{
+		WidgetPropertyDataAsTexture = NewObject<ULexUIDataAsTexture>(this, ULexUIDataAsTexture::StaticClass(), NAME_None, RF_Transient);
+		WidgetPropertyDataAsTexture->Init(ULexVisual::WidgetPropertyDataLength, ELexUIDataAsTexturePixelFormat::R32, 128);
+		WidgetPropertyDataAsTexture->OnDataTextureChange.AddUObject(this, &ULexCanvas::OnWidgetPropertyDataTextureChanged);
+	}
+}
+
+void ULexCanvas::PushAsyncFunction_TransformVertices(const TFunction<void()>& InFunction)
+{
+	TransformVerticesAsyncFunctionRunnable->PushFunction(InFunction);
+}
+
 void ULexCanvas::RemoveClipData(const TSharedPtr<FLexUIClipData>& InClipData)
 {
 	RootCanvas->ClipDataList.Remove(InClipData);
@@ -2450,17 +2492,17 @@ FORCEINLINE void GetMinMax(T a, T b, T c, T d, T& min, T& max)
 	min = FMath::Min(abMin, cdMin);
 	max = FMath::Max(abMax, cdMax);
 }
-void ULexCanvas::CalculateVisual2DBounds(ULexVisual* item, const FTransform2D& transform, FVector2D& min, FVector2D& max)
+void ULexCanvas::CalculateVisual2DBounds(ULexVisual* Visual, const FTransform2D& OutTransform2D, FVector2D& OutMin, FVector2D& OutMax)
 {
 	FVector2D LocalPoint1, LocalPoint2;
-	item->GetGeometryBoundsInLocalSpace(LocalPoint1, LocalPoint2);
-	const auto Point1 = transform.TransformPoint(LocalPoint1);
-	const auto Point2 = transform.TransformPoint(LocalPoint2);
-	const auto Point3 = transform.TransformPoint(FVector2D(LocalPoint2.X, LocalPoint1.Y));
-	const auto Point4 = transform.TransformPoint(FVector2D(LocalPoint1.X, LocalPoint2.Y));
+	Visual->GetGeometryBoundsInLocalSpace(LocalPoint1, LocalPoint2);
+	const auto Point1 = OutTransform2D.TransformPoint(LocalPoint1);
+	const auto Point2 = OutTransform2D.TransformPoint(LocalPoint2);
+	const auto Point3 = OutTransform2D.TransformPoint(FVector2D(LocalPoint2.X, LocalPoint1.Y));
+	const auto Point4 = OutTransform2D.TransformPoint(FVector2D(LocalPoint1.X, LocalPoint2.Y));
 
-	GetMinMax(Point1.X, Point2.X, Point3.X, Point4.X, min.X, max.X);
-	GetMinMax(Point1.Y, Point2.Y, Point3.Y, Point4.Y, min.Y, max.Y);
+	GetMinMax(Point1.X, Point2.X, Point3.X, Point4.X, OutMin.X, OutMax.X);
+	GetMinMax(Point1.Y, Point2.Y, Point3.Y, Point4.Y, OutMin.Y, OutMax.Y);
 }
 
 #undef LOCTEXT_NAMESPACE

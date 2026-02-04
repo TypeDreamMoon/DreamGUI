@@ -17,6 +17,7 @@
 #include "Core/LexUIDrawCall.h"
 #include "Core/LexVisualPostProcessRenderProxy.h"
 #include "Core/Components/LexVisualPostProcess.h"
+#include "Core/Components/LexWidget.h"
 
 
 #define LOCTEXT_NAMESPACE "LexUIMeshComponent"
@@ -227,7 +228,8 @@ public:
 	{
 		SCOPE_CYCLE_COUNTER(STAT_CreateRenderSection);
 #if !UE_BUILD_SHIPPING
-		DebugName = FName(FString::Printf(TEXT("%s_SceneProxy_%d"), *InComponent->GetName(), DebugNameIndex++));
+		static int DebugNameSuffix = 0;
+		DebugName = FString::Printf(TEXT("%s_SceneProxy_%d"), *InCanvasPtr->GetLexWidget()->GetDisplayName(), DebugNameSuffix++);
 #endif
 		LexUIRenderer = InComponent->LexUIRenderer;
 		RenderCanvasPtr = InCanvasPtr;
@@ -263,7 +265,9 @@ public:
 		SectionArray.SetNumZeroed(SrcSections.Num());
 		for (int SectionIndex = 0; SectionIndex < SrcSections.Num(); SectionIndex++)
 		{
-			SectionArray[SectionIndex] = CreateSectionData(SrcSections[SectionIndex].Get());
+			auto Section = CreateSectionData(SrcSections[SectionIndex].Get());
+			check(Section);
+			SectionArray[SectionIndex] = Section;
 		}
 		bNeedToSortRenderSections = true;
 	}
@@ -271,22 +275,21 @@ public:
 	void AddSectionData(FLexUIRenderSection* SrcSection)
 	{
 		auto Section = CreateSectionData(SrcSection);
-		if (Section != nullptr)
-		{
-			ENQUEUE_RENDER_COMMAND(FLexUIRenderSceneProxy_AddSectionData)(
-				[this, Section](FRHICommandListImmediate& RHICmdList)
-				{
-					SectionArray.Add(Section);
-				}
-			);
-			bNeedToSortRenderSections = true;
-		}
+		check (Section);
+		ENQUEUE_RENDER_COMMAND(FLexUIRenderSceneProxy_AddSectionData)(
+			[this, Section](FRHICommandListImmediate& RHICmdList)
+			{
+				SectionArray.Add(Section);
+			}
+		);
+		bNeedToSortRenderSections = true;
 	}
 
 	void RecreateSectionData(FLexUIRenderSection* InSrcSection)
 	{
 		auto OldSection = InSrcSection->RenderProxy;
 		auto NewSection = CreateSectionData(InSrcSection);
+		check(NewSection);
 		ENQUEUE_RENDER_COMMAND(FLGUIRenderSceneProxy_ReplaceSectionData)(
 			[this, OldSection, NewSection](FRHICommandListImmediate& RHICmdList) {
 				auto SectionIndex = SectionArray.IndexOfByKey(OldSection);
@@ -333,14 +336,13 @@ public:
 				auto NewSectionProxy = new FLexUIMeshSectionProxy(GetScene().GetFeatureLevel());
 				// vertex and index buffer
 				const auto& SrcVertices = SrcSection->vertices;
-				int NumVerts = SrcVertices.Num();
-				NewSectionProxy->ValidVerticesCount = NumVerts;
-				NewSectionProxy->NumPrimitives = SrcSection->triangleIndices.Num() / 3;
+				NewSectionProxy->ValidVerticesCount = SrcSection->ValidVerticesNum;
+				NewSectionProxy->NumPrimitives = SrcSection->ValidTriangleIndicesNum / 3;
 				if (bIsSupportLexUIRenderer)
 				{
 					auto& LexUIVertices = NewSectionProxy->LexUIVertexBuffers.Vertices;
-					LexUIVertices.SetNumUninitialized(NumVerts);
-					FMemory::Memcpy(LexUIVertices.GetData(), SrcVertices.GetData(), NumVerts * sizeof(FLexUIMeshVertex));
+					LexUIVertices.SetNumUninitialized(SrcVertices.Num());
+					FMemory::Memcpy(LexUIVertices.GetData(), SrcVertices.GetData(), SrcVertices.Num() * sizeof(FLexUIMeshVertex));
 					NewSectionProxy->IndexBuffer.Indices = SrcSection->triangleIndices;
 
 					// Enqueue initialization of render resource
@@ -445,15 +447,7 @@ public:
 			}
 		}
 	}
-
-	void EnableSectionData_RenderThread(FLexUIRenderSectionProxy* Section)
-	{
-		Section->bCanRender = true;
-	}
-	void DisableSectionData_RenderThread(FLexUIRenderSectionProxy* Section)
-	{
-		Section->Disable();
-	}
+	
 	void PoolAllSectionData_RenderThread()
 	{
 		for (int i = 0; i < SectionArray.Num(); i++)
@@ -499,6 +493,9 @@ public:
 
 	virtual ~FLexUIRenderSceneProxy()
 	{
+#if !UE_BUILD_SHIPPING
+		DebugName = FString::Printf(TEXT("%s_Deleted"), *DebugName);
+#endif
 		for(auto Section : SectionArray)
 		{
 			if (Section != nullptr)
@@ -540,8 +537,8 @@ public:
 
 	/** Called on render thread to assign new dynamic data */
 	void UpdateSection_RenderThread(FRHICommandListImmediate& RHICmdList
-		, FLexUIMeshVertex* MeshVertexData, const int32& NumVerts
-		, FLexUIMeshIndexBufferType* MeshIndexData, const uint32& IndexDataLength, const int32& NumTriangles
+		, const FLexUIMeshVertex* MeshVertexData, const int32& NumVerts
+		, const FLexUIMeshIndexBufferType* MeshIndexData, const int32& NumTriangles
 		, bool RequireNormalAndTangent
 		, FLexUIMeshSectionProxy* Section)
 	{
@@ -585,12 +582,12 @@ public:
 				RHICmdList.UnlockBuffer(VertexBuffer.VertexBufferRHI);
 			}
 
-{
-	auto& VertexBuffer = Section->VertexBuffers.ColorVertexBuffer;
-	void* VertexBufferData = RHICmdList.LockBuffer(VertexBuffer.VertexBufferRHI, 0, VertexBuffer.GetNumVertices() * VertexBuffer.GetStride(), RLM_WriteOnly);
-	FMemory::Memcpy(VertexBufferData, VertexBuffer.GetVertexData(), VertexBuffer.GetNumVertices() * VertexBuffer.GetStride());
-	RHICmdList.UnlockBuffer(VertexBuffer.VertexBufferRHI);
-}
+			{
+				auto& VertexBuffer = Section->VertexBuffers.ColorVertexBuffer;
+				void* VertexBufferData = RHICmdList.LockBuffer(VertexBuffer.VertexBufferRHI, 0, VertexBuffer.GetNumVertices() * VertexBuffer.GetStride(), RLM_WriteOnly);
+				FMemory::Memcpy(VertexBufferData, VertexBuffer.GetVertexData(), VertexBuffer.GetNumVertices() * VertexBuffer.GetStride());
+				RHICmdList.UnlockBuffer(VertexBuffer.VertexBufferRHI);
+			}
 
 			if (RequireNormalAndTangent)
 			{
@@ -609,9 +606,10 @@ public:
 		}
 
 		Section->NumPrimitives = NumTriangles;
+		uint32 IndicesDataLength = NumTriangles * 3 * sizeof(FLexUIMeshIndexBufferType);
 		// Lock index buffer
-		auto IndexBufferData = RHICmdList.LockBuffer(Section->IndexBuffer.IndexBufferRHI, 0, IndexDataLength, RLM_WriteOnly);
-		FMemory::Memcpy(IndexBufferData, (void*)MeshIndexData, IndexDataLength);
+		auto IndexBufferData = RHICmdList.LockBuffer(Section->IndexBuffer.IndexBufferRHI, 0, IndicesDataLength, RLM_WriteOnly);
+		FMemory::Memcpy(IndexBufferData, (void*)MeshIndexData, IndicesDataLength);
 		RHICmdList.UnlockBuffer(Section->IndexBuffer.IndexBufferRHI);
 	}
 
@@ -915,10 +913,7 @@ private:
 	bool bIsLexUIRenderToWorld = false;
 	bool bNeedToSortRenderSections = true;
 	ULexCanvas* RenderCanvasPtr = nullptr;
-#if !UE_BUILD_SHIPPING
-	FName DebugName;
-	static uint32 DebugNameIndex;
-#endif
+
 	bool bIsRenderFromParent = false;
 	/** If have parent then render in parent */
 	FLexUIRenderSceneProxy* ParentSceneProxy = nullptr;
@@ -928,9 +923,6 @@ private:
 	 */
 	float* CanvasLastRenderTime = nullptr;
 };
-#if !UE_BUILD_SHIPPING
-uint32 FLexUIRenderSceneProxy::DebugNameIndex = 0;
-#endif
 
 
 
@@ -1008,10 +1000,21 @@ TSharedPtr<FLexUIRenderSection> ULexUIMeshComponent::SetupRenderSection(ELexUIRe
 	case ELexUIRenderSectionType::Mesh:
 		{
 			auto MeshSectionPtr = (FLexUIRenderSection_Mesh*)RenderSection.Get();
-			bool bNeedExpandMeshSection = MeshSectionPtr->vertices.Num() < InDrawCallData->CombinedBatchMeshGeometryVertices.Num()
-            				|| MeshSectionPtr->triangleIndices.Num() < InDrawCallData->CombinedBatchMeshGeometryTriangles.Num();
-			MeshSectionPtr->vertices = InDrawCallData->CombinedBatchMeshGeometryVertices;
-			MeshSectionPtr->triangleIndices = InDrawCallData->CombinedBatchMeshGeometryTriangles;
+			bool bNeedExpandMeshSection = false;
+			if (MeshSectionPtr->vertices.Num() < InDrawCallData->CombinedBatchMeshGeometryVertices.Num())
+			{
+				MeshSectionPtr->vertices.SetNumUninitialized(InDrawCallData->CombinedBatchMeshGeometryVertices.Num());
+				bNeedExpandMeshSection = true;
+			}
+			MeshSectionPtr->ValidVerticesNum = InDrawCallData->CombinedBatchMeshGeometryVertices.Num();
+			FMemory::Memcpy(MeshSectionPtr->vertices.GetData(), InDrawCallData->CombinedBatchMeshGeometryVertices.GetData(), InDrawCallData->CombinedBatchMeshGeometryVertices.Num() * sizeof(FLexUIMeshVertex));
+			if (MeshSectionPtr->triangleIndices.Num() < InDrawCallData->CombinedBatchMeshGeometryTriangles.Num())
+			{
+				MeshSectionPtr->triangleIndices.SetNumUninitialized(InDrawCallData->CombinedBatchMeshGeometryTriangles.Num());
+				bNeedExpandMeshSection = true;
+			}
+			MeshSectionPtr->ValidTriangleIndicesNum = InDrawCallData->CombinedBatchMeshGeometryTriangles.Num();
+			FMemory::Memcpy(MeshSectionPtr->triangleIndices.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.Num() * sizeof(FLexUIMeshIndexBufferType));
 			MeshSectionPtr->BoundingBox = InDrawCallData->CombinedBounds;
 			if (MeshSectionPtr->RenderProxy)//if we have valid render-proxy then recreate date or update data
 			{
@@ -1036,7 +1039,7 @@ TSharedPtr<FLexUIRenderSection> ULexUIMeshComponent::SetupRenderSection(ELexUIRe
 		break;
 	case ELexUIRenderSectionType::PostProcess:
 		{
-			auto PostProcessSectionPtr = (FLexUIRenderSection_PostProcess*)RenderSection.Get();
+			auto PostProcessSectionPtr = static_cast<FLexUIRenderSection_PostProcess*>(RenderSection.Get());
 			PostProcessSectionPtr->PostProcessVisualObject = InDrawCallData->PostProcessVisualObject;
 			auto PostProcessVisualObject = InDrawCallData->PostProcessVisualObject;
 			auto BoundingBox = FBox(EForceInit::ForceInit);
@@ -1049,7 +1052,7 @@ TSharedPtr<FLexUIRenderSection> ULexUIMeshComponent::SetupRenderSection(ELexUIRe
 			{
 				if (this->SceneProxy != nullptr)
 				{
-					auto ThisSceneProxy = (FLexUIRenderSceneProxy*)this->SceneProxy;//SceneProxy could change before the RENDER_COMMAND execute, so do necessary check in SetChildCanvasSectionData_RenderThread
+					auto ThisSceneProxy = static_cast<FLexUIRenderSceneProxy*>(this->SceneProxy);//SceneProxy could change before the RENDER_COMMAND execute, so do necessary check in SetChildCanvasSectionData_RenderThread
 					auto RenderProxy = PostProcessSectionPtr->PostProcessVisualObject->GetRenderProxy();
 					ThisSceneProxy->UpdatePostProcessSection(PostProcessSectionPtr, RenderProxy);
 				}
@@ -1058,7 +1061,7 @@ TSharedPtr<FLexUIRenderSection> ULexUIMeshComponent::SetupRenderSection(ELexUIRe
 			{
 				if (this->SceneProxy != nullptr)
 				{
-					auto ThisSceneProxy = (FLexUIRenderSceneProxy*)this->SceneProxy;
+					auto ThisSceneProxy = static_cast<FLexUIRenderSceneProxy*>(this->SceneProxy);
 					ThisSceneProxy->AddSectionData(PostProcessSectionPtr);
 				}
 			}
@@ -1066,14 +1069,14 @@ TSharedPtr<FLexUIRenderSection> ULexUIMeshComponent::SetupRenderSection(ELexUIRe
 		break;
 	case ELexUIRenderSectionType::ChildCanvas:
 		{
-			auto ChildCanvasSectionPtr = (FLexUIRenderSection_ChildCanvas*)RenderSection.Get();
+			auto ChildCanvasSectionPtr = static_cast<FLexUIRenderSection_ChildCanvas*>(RenderSection.Get());
 			ChildCanvasSectionPtr->ChildCanvasMeshComponent = InDrawCallData->ChildCanvas->GetUIMesh();
 			ChildCanvasSectionPtr->ChildCanvasMeshComponent->SetParentCanvasMeshComp(InDrawCallData->ChildCanvas->GetUIMesh());
 			auto ChildCanvasMeshComp = ChildCanvasSectionPtr->ChildCanvasMeshComponent;
 			ChildCanvasMeshComp->OnSceneProxyCreated.AddWeakLambda(this, [this](ULexUIMeshComponent* InMesh, FLexUIRenderSceneProxy* InSceneProxy) {
 				if (this->SceneProxy != nullptr)
 				{
-					auto ThisSceneProxy = (FLexUIRenderSceneProxy*)this->SceneProxy;//SceneProxy could change before the RENDER_COMMAND execute, so do necessary check in SetChildCanvasSectionData_RenderThread
+					auto ThisSceneProxy = static_cast<FLexUIRenderSceneProxy*>(this->SceneProxy);//SceneProxy could change before the RENDER_COMMAND execute, so do necessary check in SetChildCanvasSectionData_RenderThread
 					ENQUEUE_RENDER_COMMAND(FLexUIRenderSceneProxy_ReassignChildCanvasSectionData)(
 						[ThisSceneProxy, CompID = InMesh->GetPrimitiveSceneId(), InSceneProxy](FRHICommandListImmediate& RHICmdList) {
 							ThisSceneProxy->SetChildCanvasSectionData_RenderThread(CompID, InSceneProxy);
@@ -1084,7 +1087,7 @@ TSharedPtr<FLexUIRenderSection> ULexUIMeshComponent::SetupRenderSection(ELexUIRe
 			{
 				if (this->SceneProxy != nullptr)
 				{
-					auto ThisSceneProxy = (FLexUIRenderSceneProxy*)this->SceneProxy;//SceneProxy could change before the RENDER_COMMAND execute, so do necessary check in SetChildCanvasSectionData_RenderThread
+					auto ThisSceneProxy = static_cast<FLexUIRenderSceneProxy*>(this->SceneProxy);//SceneProxy could change before the RENDER_COMMAND execute, so do necessary check in SetChildCanvasSectionData_RenderThread
 					ThisSceneProxy->UpdateChildCanvasSection(ChildCanvasSectionPtr, InDrawCallData->ChildCanvas->GetUIMesh());
 				}
 			}
@@ -1092,7 +1095,7 @@ TSharedPtr<FLexUIRenderSection> ULexUIMeshComponent::SetupRenderSection(ELexUIRe
 			{
 				if (this->SceneProxy != nullptr)
 				{
-					auto ThisSceneProxy = (FLexUIRenderSceneProxy*)this->SceneProxy;
+					auto ThisSceneProxy = static_cast<FLexUIRenderSceneProxy*>(this->SceneProxy);
 					ThisSceneProxy->AddSectionData(ChildCanvasSectionPtr);
 				}
 			}
@@ -1108,7 +1111,7 @@ void ULexUIMeshComponent::UpdateMeshSection(int Index, FLexUIDrawCall* InDrawCal
 {
 	auto& RenderSection = RenderSectionArray[Index];
 	
-	auto MeshSectionPtr = (FLexUIRenderSection_Mesh*)RenderSection.Get();
+	auto MeshSectionPtr = static_cast<FLexUIRenderSection_Mesh*>(RenderSection.Get());
 	if (MeshSectionPtr->RenderProxy)//if we have valid render-proxy then recreate date or update data
 	{
 		FMemory::Memcpy(MeshSectionPtr->vertices.GetData(), InDrawCallData->CombinedBatchMeshGeometryVertices.GetData(), InDrawCallData->CombinedBatchMeshGeometryVertices.Num() * sizeof(FLexUIMeshVertex));
@@ -1117,12 +1120,12 @@ void ULexUIMeshComponent::UpdateMeshSection(int Index, FLexUIDrawCall* InDrawCal
 	}
 	else//no valid render-proxy, because it is newly created
 	{
-		MeshSectionPtr->vertices = InDrawCallData->CombinedBatchMeshGeometryVertices;
-		MeshSectionPtr->triangleIndices = InDrawCallData->CombinedBatchMeshGeometryTriangles;
+		FMemory::Memcpy(MeshSectionPtr->vertices.GetData(), InDrawCallData->CombinedBatchMeshGeometryVertices.GetData(), InDrawCallData->CombinedBatchMeshGeometryVertices.Num() * sizeof(FLexUIMeshVertex));
+		FMemory::Memcpy(MeshSectionPtr->triangleIndices.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.Num() * sizeof(FLexUIMeshIndexBufferType));
 		MeshSectionPtr->BoundingBox = InDrawCallData->CombinedBounds;
 		if (this->SceneProxy != nullptr)
 		{
-			auto ThisSceneProxy = (FLexUIRenderSceneProxy*)this->SceneProxy;
+			auto ThisSceneProxy = static_cast<FLexUIRenderSceneProxy*>(this->SceneProxy);
 			ThisSceneProxy->AddSectionData(MeshSectionPtr);
 		}
 	}
@@ -1136,48 +1139,21 @@ void ULexUIMeshComponent::UpdateMeshSectionRenderData(TSharedPtr<FLexUIRenderSec
 	if (SceneProxy)
 	{
 		check(InRenderSection->Type == ELexUIRenderSectionType::Mesh);
-		auto MeshSection = (FLexUIRenderSection_Mesh*)InRenderSection.Get();
+		auto MeshSection = StaticCastSharedPtr<FLexUIRenderSection_Mesh>(InRenderSection);
 
-		struct UpdateMeshSectionDataStruct
-		{
-			TArray<FLexUIMeshVertex> VertexBufferData;
-			int32 NumVerts;
-			int32 NumTriangles;
-			TArray<FLexUIMeshIndexBufferType> IndexBufferData;
-			uint32 IndexBufferDataLength;
-			bool RequireNormalAndTangent;
-			FLexUIMeshSectionProxy* Section;
-		};
-		UpdateMeshSectionDataStruct* UpdateData = new UpdateMeshSectionDataStruct();
-		UpdateData->Section = (FLexUIMeshSectionProxy*)MeshSection->RenderProxy;
+		UpdateMeshSectionDataStruct UpdateData;
+		UpdateData.Section = static_cast<FLexUIMeshSectionProxy*>(MeshSection->RenderProxy);
 		//vertex data
-		const int32 NumVerts = MeshSection->vertices.Num();
-		UpdateData->VertexBufferData.AddUninitialized(NumVerts);
-		FMemory::Memcpy(UpdateData->VertexBufferData.GetData(), MeshSection->vertices.GetData(), NumVerts * sizeof(FLexUIMeshVertex));
-		UpdateData->NumVerts = NumVerts;
-		const int32 NumIndices = MeshSection->triangleIndices.Num();
-		const uint32 IndexBufferDataLength = NumIndices * sizeof(FLexUIMeshIndexBufferType);
-		UpdateData->IndexBufferData.AddUninitialized(NumIndices);
-		UpdateData->NumTriangles = NumIndices / 3;
-		FMemory::Memcpy(UpdateData->IndexBufferData.GetData(), MeshSection->triangleIndices.GetData(), IndexBufferDataLength);
-		UpdateData->IndexBufferDataLength = IndexBufferDataLength;
-		UpdateData->RequireNormalAndTangent = InRequireNormalAndTangent;
-		//update data
-		ENQUEUE_RENDER_COMMAND(FLexUIMeshUpdate)(
-			[UpdateData, SceneProxy = (FLexUIRenderSceneProxy*)SceneProxy](FRHICommandListImmediate& RHICmdList)
-			{
-				SceneProxy->UpdateSection_RenderThread(
-					RHICmdList
-					, UpdateData->VertexBufferData.GetData()
-					, UpdateData->NumVerts
-					, UpdateData->IndexBufferData.GetData()
-					, UpdateData->IndexBufferDataLength
-					, UpdateData->NumTriangles
-					, UpdateData->RequireNormalAndTangent
-					, UpdateData->Section
-				);
-				delete UpdateData;
-			});
+		const int32 NumVerts = MeshSection->ValidVerticesNum;
+		UpdateData.VertexBufferData.AddUninitialized(NumVerts);
+		FMemory::Memcpy(UpdateData.VertexBufferData.GetData(), MeshSection->vertices.GetData(), NumVerts * sizeof(FLexUIMeshVertex));
+		UpdateData.NumVerts = NumVerts;
+		const int32 NumIndices = MeshSection->ValidTriangleIndicesNum;
+		UpdateData.IndexBufferData.AddUninitialized(NumIndices);
+		UpdateData.NumTriangles = NumIndices / 3;
+		FMemory::Memcpy(UpdateData.IndexBufferData.GetData(), MeshSection->triangleIndices.GetData(), NumIndices * sizeof(FLexUIMeshIndexBufferType));
+		UpdateData.RequireNormalAndTangent = InRequireNormalAndTangent;
+		PendingUpdateMeshSectionDataArray.Add(MoveTemp(UpdateData));
 	}
 }
 
@@ -1186,56 +1162,23 @@ void ULexUIMeshComponent::ExpandMeshSectionRenderData(TSharedPtr<FLexUIRenderSec
 	if (SceneProxy)
 	{
 		check(InRenderSection->Type == ELexUIRenderSectionType::Mesh);
-		auto ThisSceneProxy = (FLexUIRenderSceneProxy*)SceneProxy;
-		if (InRenderSection->RenderProxy == nullptr)
-		{
-			ThisSceneProxy->CreateSectionData(InRenderSection.Get());
-		}
-		else
-		{
-			ThisSceneProxy->RecreateSectionData(InRenderSection.Get());
-		}
+		auto ThisSceneProxy = static_cast<FLexUIRenderSceneProxy*>(SceneProxy);
+		ThisSceneProxy->RecreateSectionData(InRenderSection.Get());
 	}
-}
-
-void ULexUIMeshComponent::PoolRenderSection(TSharedPtr<FLexUIRenderSection> InRenderSection)
-{
-	if (SceneProxy)
-	{
-		if (auto RenderSectionProxy = InRenderSection->RenderProxy)
-		{
-			auto LexUIMeshSceneProxy = (FLexUIRenderSceneProxy*)SceneProxy;
-			ENQUEUE_RENDER_COMMAND(FLexUIMeshSectionProxy_PoolAllSectionData)(
-					[LexUIMeshSceneProxy, RenderSectionProxy](FRHICommandListImmediate& RHICmdList) {
-						LexUIMeshSceneProxy->DisableSectionData_RenderThread(RenderSectionProxy);
-					});
-		}
-	}
-
-	if (InRenderSection->Type == ELexUIRenderSectionType::ChildCanvas)
-	{
-		auto ChildCanvasSection = (FLexUIRenderSection_ChildCanvas*)InRenderSection.Get();
-		ChildCanvasSection->ChildCanvasMeshComponent->ClearParentCanvasMeshComp(this);
-	}
-
-	RenderSectionArray.Remove(InRenderSection);
-	InRenderSection->ClearBeforePool();
-	RenderSectionPool.Add(InRenderSection);
 }
 
 void ULexUIMeshComponent::PoolAllRenderSection()
 {
-	auto LexUIMeshSceneProxy = (FLexUIRenderSceneProxy*)SceneProxy;
+	if (SceneProxy)
+	{
+		auto LexUIMeshSceneProxy = static_cast<FLexUIRenderSceneProxy*>(SceneProxy);
+		ENQUEUE_RENDER_COMMAND(FLexUIMeshSectionProxy_PoolAllSectionData)(
+			[LexUIMeshSceneProxy](FRHICommandListImmediate& RHICmdList) {
+				LexUIMeshSceneProxy->PoolAllSectionData_RenderThread();
+			});
+	}
 	for (auto& RenderSection : RenderSectionArray)
 	{
-		if (LexUIMeshSceneProxy)
-		{
-			ENQUEUE_RENDER_COMMAND(FLexUIMeshSectionProxy_PoolAllSectionData)(
-				[LexUIMeshSceneProxy](FRHICommandListImmediate& RHICmdList) {
-					LexUIMeshSceneProxy->PoolAllSectionData_RenderThread();
-				});
-		}
-
 		if (RenderSection->Type == ELexUIRenderSectionType::ChildCanvas)
 		{
 			auto ChildCanvasSection = (FLexUIRenderSection_ChildCanvas*)RenderSection.Get();
@@ -1254,14 +1197,12 @@ void ULexUIMeshComponent::SetRenderSectionRenderPriority(int32 InSectionIndex, i
 	RenderSection->RenderPriority = InSortPriority;
 	if (SceneProxy)
 	{
-		auto LexUIMeshSceneProxy = (FLexUIRenderSceneProxy*)SceneProxy;
-		auto RenderProxy = RenderSection->RenderProxy;
-		if (RenderProxy != nullptr)
+		if (RenderSection->RenderProxy)
 		{
-			ENQUEUE_RENDER_COMMAND(FLexUIMeshSectionProxy_SetMeshSectionRenderPriority)(
-				[LexUIMeshSceneProxy, RenderProxy, InSortPriority](FRHICommandListImmediate& RHICmdList) {
-					LexUIMeshSceneProxy->SetRenderSectionRenderPriority_RenderThread(RenderProxy, InSortPriority);
-				});
+			UpdateRenderSectionPriority UpdateData;
+			UpdateData.SectionProxy = RenderSection->RenderProxy;
+			UpdateData.RenderPriority = InSortPriority;
+			PendingUpdateRenderSectionPriorityArray.Add(MoveTemp(UpdateData));
 		}
 	}
 }
@@ -1273,20 +1214,79 @@ void ULexUIMeshComponent::SetMeshSectionMaterial(int32 InSectionIndex, UMaterial
 	((FLexUIRenderSection_Mesh*)RenderSection.Get())->material = InMaterial;
 	if (SceneProxy)
 	{
-		auto LexUIMeshSceneProxy = (FLexUIRenderSceneProxy*)SceneProxy;
-		auto RenderProxy = RenderSection->RenderProxy;
-		if (RenderProxy != nullptr)
+		if (RenderSection->RenderProxy)
 		{
-			ENQUEUE_RENDER_COMMAND(FLexUIMeshSectionProxy_SetMeshSectionMaterial)(
-				[LexUIMeshSceneProxy, RenderProxy, InMaterial](FRHICommandListImmediate& RHICmdList) {
-					LexUIMeshSceneProxy->SetMeshSectionMaterial_RenderThread(RenderProxy, InMaterial);
-				});
+			UpdateMeshSectionMaterialDataStruct UpdateData;
+			UpdateData.SectionProxy = RenderSection->RenderProxy;
+			UpdateData.Material = InMaterial;
+			PendingUpdateMeshSectionMaterialDataArray.Add(MoveTemp(UpdateData));
 		}
 	}
 }
 
 void ULexUIMeshComponent::VerifyMaterials()
 {
+#if 1
+	if (OverrideMaterials.Num())
+	{
+		for (int32 MatIndex = 0; MatIndex < OverrideMaterials.Num(); MatIndex++)
+		{
+			if (UMaterialInterface* MatInterface = OverrideMaterials[MatIndex].Get())
+			{
+				MatInterface->OnRemovedAsOverride(this);
+			}
+		}
+		// Precache PSOs again
+		// PrecachePSOs();
+		OverrideMaterials.Reset();
+	}
+	auto SetMaterialForUI = [=, this](int ElementIndex, UMaterialInterface* Material)
+	{
+		// Grow the array if the new index is too large
+		if (OverrideMaterials.Num() <= ElementIndex)
+		{
+			OverrideMaterials.AddZeroed(ElementIndex + 1 - OverrideMaterials.Num());
+		}
+
+		// Set the material and invalidate things
+		OverrideMaterials[ElementIndex] = Material;
+
+		if (Material)
+		{
+			Material->OnAssignedAsOverride(this);
+		}
+
+		// Precache PSOs again
+		// PrecachePSOs();
+
+		if (Material)
+		{
+			Material->AddToCluster(this, true);
+		}
+	};
+	int MatIndex = 0;
+	for (auto& RenderSectionItem : RenderSectionArray)
+	{
+		switch (RenderSectionItem->Type)
+		{
+		case ELexUIRenderSectionType::Mesh:
+			{
+				auto MeshSection = (FLexUIRenderSection_Mesh*)RenderSectionItem.Get();
+				SetMaterialForUI(MatIndex++, MeshSection->material);
+			}
+			break;
+		case ELexUIRenderSectionType::ChildCanvas:
+			{
+				auto ChildCanvasSection = (FLexUIRenderSection_ChildCanvas*)RenderSectionItem.Get();
+				for (auto ChildMat : ChildCanvasSection->ChildCanvasMeshComponent->OverrideMaterials)
+				{
+					SetMaterialForUI(MatIndex++, ChildMat);
+				}
+			}
+			break;
+		}
+	}
+#else
 	this->EmptyOverrideMaterials();
 
 	int MatIndex = 0;
@@ -1311,6 +1311,7 @@ void ULexUIMeshComponent::VerifyMaterials()
 		break;
 		}
 	}
+#endif
 }
 
 void ULexUIMeshComponent::SetParentCanvasMeshComp(ULexUIMeshComponent* InMesh)
@@ -1438,6 +1439,54 @@ void ULexUIMeshComponent::ClearRenderData()
 	RenderSectionArray.Reset();
 	OnSceneProxyCreated.Clear();
 	LexUIRenderer = nullptr;
+}
+
+DECLARE_CYCLE_STAT(TEXT("LexUIMesh FlushRenderCommand"), STAT_LexUIMesh_FlushRenderCommand, STATGROUP_LGUI);
+void ULexUIMeshComponent::FlushRenderCommand()
+{
+	SCOPE_CYCLE_COUNTER(STAT_LexUIMesh_FlushRenderCommand)
+	if (PendingUpdateMeshSectionDataArray.Num() > 0)
+	{
+		//update data
+		ENQUEUE_RENDER_COMMAND(FLexUIMeshUpdate)(
+			[PendingUpdateMeshSectionDataArray = MoveTemp(PendingUpdateMeshSectionDataArray), SceneProxy = (FLexUIRenderSceneProxy*)SceneProxy](FRHICommandListImmediate& RHICmdList)
+			{
+				for (auto& UpdateData : PendingUpdateMeshSectionDataArray)
+				{
+					SceneProxy->UpdateSection_RenderThread(
+						RHICmdList
+						, UpdateData.VertexBufferData.GetData()
+						, UpdateData.NumVerts
+						, UpdateData.IndexBufferData.GetData()
+						, UpdateData.NumTriangles
+						, UpdateData.RequireNormalAndTangent
+						, UpdateData.Section
+					);
+				}
+			});
+	}
+	if (PendingUpdateRenderSectionPriorityArray.Num() > 0)
+	{
+		auto LexUIMeshSceneProxy = (FLexUIRenderSceneProxy*)SceneProxy;
+		ENQUEUE_RENDER_COMMAND(FLexUIMeshSectionProxy_SetMeshSectionRenderPriority)(
+			[LexUIMeshSceneProxy, PendingUpdateRenderSectionPriorityArray = MoveTemp(PendingUpdateRenderSectionPriorityArray)](FRHICommandListImmediate& RHICmdList) {
+				for (auto& UpdateData : PendingUpdateRenderSectionPriorityArray)
+				{
+					LexUIMeshSceneProxy->SetRenderSectionRenderPriority_RenderThread(UpdateData.SectionProxy, UpdateData.RenderPriority);
+				}
+			});
+	}
+	if (PendingUpdateMeshSectionMaterialDataArray.Num() > 0)
+	{
+		auto LexUIMeshSceneProxy = (FLexUIRenderSceneProxy*)SceneProxy;
+		ENQUEUE_RENDER_COMMAND(FLexUIMeshSectionProxy_SetMeshSectionMaterial)(
+			[LexUIMeshSceneProxy, PendingUpdateMeshSectionMaterialDataArray = MoveTemp(PendingUpdateMeshSectionMaterialDataArray)](FRHICommandListImmediate& RHICmdList) {
+				for (auto& UpdateData : PendingUpdateMeshSectionMaterialDataArray)
+				{
+					LexUIMeshSceneProxy->SetMeshSectionMaterial_RenderThread(UpdateData.SectionProxy, UpdateData.Material);
+				}
+			});
+	}
 }
 
 int32 ULexUIMeshComponent::GetNumMaterials() const

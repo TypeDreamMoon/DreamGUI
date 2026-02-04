@@ -940,7 +940,6 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 		);
 
 		RenderView->ViewUniformBuffer = TUniformBufferRef<FViewUniformShaderParameters>::CreateUniformBufferImmediate(ViewUniformShaderParameters, UniformBuffer_SingleFrame);
-
 		
 		//collect render primitive to a sequence
 		TArray<FLexUIPrimitiveDataContainer> RenderSequenceArray;
@@ -957,7 +956,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 				}
 			}
 		}
-
+		
 		const FMinimalSceneTextures& SceneTextures = ((FViewFamilyInfo*)InView.Family)->GetSceneTextures();
 		bool bIsDepthStencilCleared = false;
 		bool bIsRenderTarget = RendererType == ELexUIRendererType::RenderTarget;
@@ -980,8 +979,8 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 							ScreenSpaceRenderParameter.ViewProjectionMatrix,
 							/*IsWorldSpace*/false,
 							/*IsRenderToRenderTarget*/bIsRenderTarget,
-							/*BlendDepthForWorld*/0.0f,//actually this value will no work because 'IsWorldSpace' is false
-							/*BlendDepthForWorld*/0.0f,//actually this value will no work because 'IsWorldSpace' is false
+							/*BlendDepthForWorld*/0.0f,//actually this value will not work because 'IsWorldSpace' is false
+							/*BlendDepthForWorld*/0.0f,//actually this value will not work because 'IsWorldSpace' is false
 							ViewRect,
 							DepthTextureScaleOffset,
 							ColorTextureScaleOffset
@@ -1017,7 +1016,6 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 						FGraphicsPipelineStateInitializer GraphicsPSOInit;
 						RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
 						RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
-						
 						MeshBatchArray.Reset();
 						FSceneRenderingBulkObjectAllocator Allocator;
 						FLexUIMeshElementCollector meshCollector(RenderView->GetFeatureLevel(), Allocator, RHICmdList);

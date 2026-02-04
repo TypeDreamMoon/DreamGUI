@@ -39,6 +39,8 @@ struct FLexUIRenderSection_Mesh : public FLexUIRenderSection
 
 	TArray<FLexUIMeshIndexBufferType> triangleIndices;
 	TArray<FLexUIMeshVertex> vertices;
+	int32 ValidVerticesNum = 0;
+	int32 ValidTriangleIndicesNum = 0;
 
 	UMaterialInterface* material = nullptr;
 
@@ -98,7 +100,6 @@ private:
 public:
 	TSharedPtr<FLexUIRenderSection> SetupRenderSection(ELexUIRenderSectionType InType, FLexUIDrawCall* InDrawCallData);
 	void UpdateMeshSection(int Index, FLexUIDrawCall* InDrawCallData);
-	void PoolRenderSection(TSharedPtr<FLexUIRenderSection> InRenderSection);
 	void PoolAllRenderSection();
 	void SetRenderSectionRenderPriority(int32 InSectionIndex, int32 InSortPriority);
 	void SetMeshSectionMaterial(int32 InSectionIndex, UMaterialInterface* InMaterial);
@@ -107,6 +108,7 @@ public:
 	void SetSupportLexUIRenderer(bool InSupportOrNot, TWeakPtr<FLexUIRenderer, ESPMode::ThreadSafe> InLexUIRenderer, bool InIsRenderToWorld);
 	void SetSupportUERenderer(bool InSupportOrNot);
 	void ClearRenderData();
+	void FlushRenderCommand();
 
 	void SetUITranslucentSortPriority(int32 NewTranslucentSortPriority);
 
@@ -131,6 +133,29 @@ private:
 	//~ Begin USceneComponent Interface.
 	virtual FBoxSphereBounds CalcBounds(const FTransform& LocalToWorld) const override;
 	//~ Begin USceneComponent Interface.
+
+	struct UpdateMeshSectionDataStruct
+	{
+		TArray<FLexUIMeshVertex> VertexBufferData;
+		int32 NumVerts;
+		int32 NumTriangles;
+		TArray<FLexUIMeshIndexBufferType> IndexBufferData;
+		bool RequireNormalAndTangent;
+		FLexUIMeshSectionProxy* Section;
+	};
+	TArray<UpdateMeshSectionDataStruct> PendingUpdateMeshSectionDataArray;
+	struct UpdateRenderSectionPriority
+	{
+		FLexUIRenderSectionProxy* SectionProxy;
+		int RenderPriority;
+	};
+	TArray<UpdateRenderSectionPriority> PendingUpdateRenderSectionPriorityArray;
+	struct UpdateMeshSectionMaterialDataStruct
+	{
+		FLexUIRenderSectionProxy* SectionProxy;
+		UMaterialInterface* Material;
+	};
+	TArray<UpdateMeshSectionMaterialDataStruct> PendingUpdateMeshSectionMaterialDataArray;
 
 	friend class FLexUIRenderSceneProxy;
 

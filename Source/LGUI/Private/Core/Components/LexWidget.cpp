@@ -497,7 +497,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 			{
 				if (RenderCanvas.IsValid())
 				{
-					RenderCanvas->RegisterVisual(this, Visual->WidgetPropertyDataStartPosition);
+					RenderCanvas->RegisterVisual(Visual);
 				}
 				if (auto World = GetWorld())
 				{
@@ -614,7 +614,7 @@ void ULexWidget::PreEditChange(FProperty* PropertyAboutToChange)
 			if (RenderCanvas.IsValid())
 			{
 				RenderCanvas->MarkVisualWillChange(Visual);
-				RenderCanvas->UnregisterVisual(this, Visual->WidgetPropertyDataStartPosition);
+				RenderCanvas->UnregisterVisual(Visual);
 			}
 			if (auto World = GetWorld())
 			{
@@ -2008,7 +2008,7 @@ void ULexWidget::SetRenderCanvas(ULexCanvas* InNewCanvas)
 		if (IsValid(Visual))
 		{
 			OldRenderCanvas->MarkVisualWillChange(Visual);
-			OldRenderCanvas->UnregisterVisual(this, Visual->WidgetPropertyDataStartPosition);
+			OldRenderCanvas->UnregisterVisual(Visual);
 		}
 	}
 	if (RenderCanvas.IsValid())
@@ -2017,13 +2017,21 @@ void ULexWidget::SetRenderCanvas(ULexCanvas* InNewCanvas)
 		bClipDirty = true;//mark it dirty so it will be added to new canvas
 		if (IsValid(Visual))
 		{
-			RenderCanvas->RegisterVisual(this, Visual->WidgetPropertyDataStartPosition);
+			RenderCanvas->RegisterVisual(Visual);
 		}
 	}
 }
 
 void ULexWidget::UIHierarchyAttachmentChanged(ULexCanvas* ParentRenderCanvas, ULexWidget* ParentRoot)
 {
+#if WITH_EDITOR
+	static auto bListedInSceneOutliner_Property = FindFProperty<FBoolProperty>(AActor::StaticClass(), TEXT("bListedInSceneOutliner"));
+	if (auto ParentActor = this->GetAttachParentActor())
+	{
+		auto bListInSceneOutliner = bListedInSceneOutliner_Property->GetPropertyValue_InContainer(ParentActor);
+		bListedInSceneOutliner_Property->SetPropertyValue_InContainer(GetOwner(), bListInSceneOutliner);
+	}
+#endif
 	auto ThisRenderCanvas = GetOwner()->FindComponentByClass<ULexCanvas>();
 	if (ThisRenderCanvas != nullptr)
 	{
@@ -2075,6 +2083,10 @@ void ULexWidget::OnRenderCanvasChanged(ULexCanvas* OldCanvas, ULexCanvas* NewCan
 	if (IsValid(NewCanvas))
 	{
 		NewCanvas->AddLexWidget(this);
+	}
+	if (IsValid(Visual))
+	{
+		Visual->OnRenderCanvasChanged(OldCanvas, NewCanvas);
 	}
 }
 
@@ -2739,11 +2751,11 @@ ULexVisual* ULexWidget::CreateNewVisual(TSubclassOf<ULexVisual> VisualClass)
 		if (IsValid(OldVisual))
 		{
 			RenderCanvas->MarkVisualWillChange(OldVisual);
-			RenderCanvas->UnregisterVisual(this, OldVisual->WidgetPropertyDataStartPosition);
+			RenderCanvas->UnregisterVisual(OldVisual);
 		}
 		if (NewVisual)
 		{
-			RenderCanvas->RegisterVisual(this, NewVisual->WidgetPropertyDataStartPosition);
+			RenderCanvas->RegisterVisual(NewVisual);
 		}
 	}
 	if (IsValid(OldVisual))

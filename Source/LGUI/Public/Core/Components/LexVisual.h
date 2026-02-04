@@ -177,6 +177,7 @@ public:
 	virtual void OnPixelSnappingChanged(){};
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange){};
 	virtual void OnTransformChanged();
+	virtual void OnRenderCanvasChanged(ULexCanvas* InOldCanvas, ULexCanvas* InNewCanvas);
 	
 	void MarkColorDirty();
 	void CheckClipDataStartPosition();
@@ -206,16 +207,20 @@ public:
 	virtual float GetPreferredHeight()const{return -1;}
 
 	static int WidgetPropertyDataLength;
+
+	void SetWidgetPropertyDataStartPosition(int InPosition);
+	int GetWidgetPropertyDataStartPosition()const{return WidgetPropertyDataStartPosition;}
 protected:
 	uint8 bColorChanged : 1;
 	uint8 bTransformChanged : 1;
 	uint8 bClipDataPositionChanged : 1;
+	uint8 bWidgetPropertyDataStartPositionChanged : 1;
 	int ClipDataStartPosition = 0;
 	int WidgetPropertyDataStartPosition = INDEX_NONE;
 
-	void FillWidgetPropertyDataForMaterial(uint8 FontMark, bool bNeedSize, bool bNeedCenterPosition)const;
+	void FillWidgetPropertyDataForMaterial(bool bNeedSize, bool bNeedCenterPosition)const;
 	void FillWidgetPropertyDataForMaterial_ClipDataCoordinate(class ULexUIDataAsTexture* DataAsTexture)const;
-	// Fill initial mark data, only do this when first create widget property data
+	// Fill initial mark data, only do this when first create widget property data or when render canvas changed
 	void FillWidgetPropertyDataForMaterial_InitialMark(class ULexUIDataAsTexture* DataAsTexture, uint8 FontMark)const;
 public:
 #pragma region TweenAnimation

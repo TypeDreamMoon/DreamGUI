@@ -9,8 +9,7 @@
 #include "Core/LexUIDrawCall.h"
 #include "Core/Components/LexWidget.h"
 
-DECLARE_CYCLE_STAT(TEXT("LexVisualBatchMesh UpdateGeometry"), STAT_MyUpdateGeometry, STATGROUP_LGUI);
-// DECLARE_CYCLE_STAT(TEXT("LexVisualBatchMesh UpdateGeometry"), STAT_UpdateGeometry, STATGROUP_LGUI);
+DECLARE_CYCLE_STAT(TEXT("LexVisualBatchMesh UpdateGeometry"), STAT_LexUpdateGeometry, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("LexVisualBatchMesh TransformVertices"), STAT_TransformVertices, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("LexVisualBatchMesh BeforeUpdateGeometry"), STAT_BeforeUpdateGeometry, STATGROUP_LGUI);
 
@@ -25,6 +24,7 @@ ULexVisualBatchMesh::ULexVisualBatchMesh(const FObjectInitializer& ObjectInitial
 	bTriangleChanged = true;
 	bTextureChanged = true;
 	bMaterialChanged = true;
+	bWidgetPropertyDataFontMarkDirty = true;
 }
 
 void ULexVisualBatchMesh::BeginPlay()
@@ -168,6 +168,12 @@ void ULexVisualBatchMesh::ApplyGeometryModifier(bool triangleChanged, bool uvCha
 }
 
 
+void ULexVisualBatchMesh::OnRenderCanvasChanged(ULexCanvas* InOldCanvas, ULexCanvas* InNewCanvas)
+{
+	Super::OnRenderCanvasChanged(InOldCanvas, InNewCanvas);
+	bWidgetPropertyDataFontMarkDirty = true;
+}
+
 void ULexVisualBatchMesh::UpdateGeometry()
 {
 	auto Widget = this->GetWidget();
@@ -175,16 +181,19 @@ void ULexVisualBatchMesh::UpdateGeometry()
 	auto Canvas = Widget->GetRenderCanvas();
 	check(Canvas);
 
-	OnBeforeCreateOrUpdateGeometry();
-	if (bTextureChanged)
 	{
-		bTextureChanged = false;
-		UIGeometry->Texture = GetTextureToCreateGeometry();
-	}
-	if (bMaterialChanged)
-	{
-		bMaterialChanged = false;
-		UIGeometry->Material = GetMaterialToCreateGeometry();
+		SCOPE_CYCLE_COUNTER(STAT_BeforeUpdateGeometry)
+		OnBeforeCreateOrUpdateGeometry();
+		if (bTextureChanged)
+		{
+			bTextureChanged = false;
+			UIGeometry->Texture = GetTextureToCreateGeometry();
+		}
+		if (bMaterialChanged)
+		{
+			bMaterialChanged = false;
+			UIGeometry->Material = GetMaterialToCreateGeometry();
+		}
 	}
 	
 	//when use pixel-perfect, the pixel-perfect calculation will take consider transform matrix, so we need to recalculate geometry if pixel-perfect & bTransformChanged
@@ -192,7 +201,7 @@ void ULexVisualBatchMesh::UpdateGeometry()
 	bool pixelPerfectAffectTransform = pixelPerfect && bTransformChanged;
 	if (bTriangleChanged || bLocalVertexPositionChanged || pixelPerfectAffectTransform || bColorChanged || bUVChanged)
 	{
-		SCOPE_CYCLE_COUNTER(STAT_MyUpdateGeometry);
+		SCOPE_CYCLE_COUNTER(STAT_LexUpdateGeometry);
 		UIGeometry->Clear();
 		//check if GeometryModifier will affect vertex data, if so we need to update these data in OnUpdateGeometry
 		{
@@ -204,36 +213,46 @@ void ULexVisualBatchMesh::UpdateGeometry()
 			if (TempColor)bColorChanged = true;
 		}
 		OnUpdateGeometry(*(UIGeometry.Get()), bTriangleChanged, bLocalVertexPositionChanged || pixelPerfectAffectTransform, bUVChanged, bColorChanged);
-		UpdateGeometryWidgetPropertyData(*(UIGeometry.Get()), this->WidgetPropertyDataStartPosition);
 		ApplyGeometryModifier(bTriangleChanged, bUVChanged, bColorChanged, bLocalVertexPositionChanged);
+	}
+	if (bWidgetPropertyDataStartPositionChanged)
+	{
+		bWidgetPropertyDataStartPositionChanged = false;
+		UpdateGeometryWidgetPropertyData(*(UIGeometry.Get()), this->WidgetPropertyDataStartPosition);
+	}
+	if (bWidgetPropertyDataFontMarkDirty)
+	{
+		bWidgetPropertyDataFontMarkDirty = false;
+		FillWidgetPropertyDataForMaterial_InitialMark(Canvas->GetWidgetPropertyDataAsTexture(), GetFontMark_WidgetPropertyDataForMaterial());
+	}
+	if (bClipDataPositionChanged)
+	{
+		bClipDataPositionChanged = false;
+		/** Only update the clip data position coordinate. */
+		FillWidgetPropertyDataForMaterial_ClipDataCoordinate(Canvas->GetWidgetPropertyDataAsTexture());
 	}
 	if (bLocalVertexPositionChanged || bTransformChanged || pixelPerfectAffectTransform)
 	{
-		SCOPE_CYCLE_COUNTER(STAT_TransformVertices)
-#if 1
-		//it is ok to use AsyncTask here, because we can make sure it completes in current frame
-		Canvas->IncreaseThreadProcessingGeometry();
-		AsyncTask(ENamedThreads::Type::AnyBackgroundHiPriTask, [this, Canvas]()
 		{
+			SCOPE_CYCLE_COUNTER(STAT_TransformVertices)
+#if 1
+			//it is safe to do async calculation because we can be sure it finish in same frame
+			Canvas->PushAsyncFunction_TransformVertices([=, this]()
+			{
+				CalculateLocalBounds();
+				FLexUIGeometry::TransformVertices(Canvas, this, this->UIGeometry.Get());
+			});
+#else
 			CalculateLocalBounds();
 			FLexUIGeometry::TransformVertices(Canvas, this, this->UIGeometry.Get());
-			Canvas->DecreaseThreadProcessingGeometry();
-		});
-#else
-		CalculateLocalBounds();
-		FLexUIGeometry::TransformVertices(Canvas, this, this->UIGeometry.Get());
 #endif
-
-		FillWidgetPropertyDataForMaterial(GetFontMark_WidgetPropertyDataForMaterial(), this->GetPropertiesForMaterial_Size(), this->GetPropertiesForMaterial_CenterPosition());
-	}
-	else
-	{
-		if (bClipDataPositionChanged)
-		{
-			/** Only update the clip data position coordinate. */
-			FillWidgetPropertyDataForMaterial_ClipDataCoordinate(Canvas->GetWidgetPropertyDataAsTexture());
 		}
-    }
+
+		if (this->GetRequirePropertiesForMaterial_Size() || this->GetRequirePropertiesForMaterial_CenterPosition())
+		{
+			FillWidgetPropertyDataForMaterial(this->GetRequirePropertiesForMaterial_Size(), this->GetRequirePropertiesForMaterial_CenterPosition());
+		}
+	}
 	
 	if (UIGeometry->OriginVertices.Num() >= LEXUI_MAX_VERTEX_COUNT)
 	{
@@ -257,7 +276,6 @@ void ULexVisualBatchMesh::UpdateGeometry()
 	bUVChanged = false;
 	bColorChanged = false;
 	bTransformChanged = false;
-	bClipDataPositionChanged = false;
 }
 
 bool ULexVisualBatchMesh::LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const

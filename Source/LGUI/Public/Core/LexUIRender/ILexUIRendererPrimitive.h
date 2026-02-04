@@ -29,7 +29,7 @@ enum class ELexUIRendererPrimitiveType :uint8
 
 struct FLexUIPrimitiveSectionDataContainer
 {
-	void* SectionPointer = nullptr;
+	struct FLexUIRenderSectionProxy* SectionPointer = nullptr;
 };
 struct FLexUIPrimitiveDataContainer
 {
@@ -43,9 +43,12 @@ class ILexUIRendererPrimitive
 public:
 	virtual ~ILexUIRendererPrimitive() {}
 
+#if !UE_BUILD_SHIPPING
+	FString DebugName = TEXT("DebugNameNone");
+#endif
 	virtual bool CanRender() const = 0;
 	virtual int GetRenderPriority() const = 0;
-	/** For world space renderer to tell visibility, eg SceneCapture2D */
+	/** For world space renderer to tell visibility, e.g. SceneCapture2D */
 	virtual FPrimitiveComponentId GetPrimitiveComponentId() const = 0;
 	virtual FVector3f GetWorldPositionForSortTranslucent()const = 0;
 	virtual FBoxSphereBounds GetWorldBounds()const = 0;
