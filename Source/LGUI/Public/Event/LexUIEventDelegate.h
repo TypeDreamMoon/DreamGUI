@@ -108,7 +108,7 @@ private:
 		TObjectPtr<UObject> TargetObject = nullptr;
 	/** target function name */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		FName functionName;
+		FName FunctionName;
 	/** target function supported parameter type */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		ELexUIEventDelegateParameterType ParamType = ELexUIEventDelegateParameterType::None;
@@ -122,7 +122,7 @@ private:
 
 	/** use the function's native parameter? */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		bool UseNativeParameter = false;
+		bool bUseNativeParameter = false;
 private:
 	UPROPERTY(Transient) TObjectPtr<UFunction> CacheFunction = nullptr;
 public:
@@ -157,10 +157,10 @@ private:
 	friend class FLexUIEventDelegateCustomization;
 	/** event list */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		mutable TArray<FLexUIEventDelegateData> eventList;
+		mutable TArray<FLexUIEventDelegateData> EventList;
 	/** supported parameter type of this event */
 	UPROPERTY(EditAnywhere, Transient, Category = "LGUI", meta = (DisplayName = "NativeParameterType"))
-		ELexUIEventDelegateParameterType supportParameterType = ELexUIEventDelegateParameterType::Empty;
+		ELexUIEventDelegateParameterType SupportParameterType = ELexUIEventDelegateParameterType::Empty;
 	/** Parameter type must be the same as your declaration of FLexUIEventDelegate(LexUIEventDelegateParameterType InParameterType) */
 	void FireEvent(void* InParam)const;
 	void LogParameterError(ELexUIEventDelegateParameterType WrongParamType)const;

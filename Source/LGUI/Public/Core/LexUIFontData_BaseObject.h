@@ -72,7 +72,7 @@ public:
 	virtual bool GetShouldAffectByPixelPerfect() { return true; }
 	virtual bool GetNeedObjectScale() { return false; }
 	virtual bool GetSupportDynamicPixelsPerUnit() { return false; }
-	virtual float GetFontTextureMark() { return 0; }
+	virtual uint8 GetFontTextureMark() { return 0; }
 	virtual float GetBoldRatio() { return 0; }
 
 	/** this is called every time before create a string of char geometry */

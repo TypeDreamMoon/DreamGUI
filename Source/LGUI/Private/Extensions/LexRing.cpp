@@ -5,6 +5,7 @@
 #include "Core/LexUIGeometry.h"
 #include "Core/Components/LexCanvas.h"
 #include "LTweenManager.h"
+#include "Core/Components/LexWidget.h"
 
 ULexRing::ULexRing(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
@@ -83,7 +84,6 @@ void ULexRing::SetSegment(int newValue)
 }
 
 
-#include "Core/LexUISettings.h"
 ULTweener* ULexRing::StartAngleTo(float endValue, float duration, float delay, ELTweenEase easeType)
 {
 	auto Tweener = ULTweenManager::To(this, FLTweenFloatGetterFunction::CreateUObject(this, &ULexRing::GetStartAngle), FLTweenFloatSetterFunction::CreateUObject(this, &ULexRing::SetStartAngle), endValue, duration);

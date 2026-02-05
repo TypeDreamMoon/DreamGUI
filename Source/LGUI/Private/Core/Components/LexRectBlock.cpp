@@ -6,12 +6,11 @@
 #include "Core/LexUISpriteInfo.h"
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
-#include "Core/LexUIDrawCall.h"
 #include "Core/Components/LexTextureBase.h"
 #include "Utils/LexUIUtils.h"
 #include "Core/LexUISpriteData.h"
 #include "Core/LexUISpriteData_BaseObject.h"
-
+#include "Core/Components/LexWidget.h"
 
 
 #define LOCTEXT_NAMESPACE "LexRectBlock"
@@ -29,7 +28,6 @@ UMaterialInterface* ULexRectBlockData::GetMaterial()
 	}
 	return DefaultMaterial;
 }
-
 
 void ULexRectBlock::FillData(uint8* Data, float width, float height)
 {
@@ -559,12 +557,6 @@ bool ULexRectBlock::LineTraceUIRect(FHitResult& OutHit, const FVector& Start, co
 void ULexRectBlock::OnDataTextureChanged(class UTexture* Texture)
 {
 	UIGeometry->Texture = GetTextureToCreateGeometry();
-	if (DrawCall.IsValid())
-	{
-		DrawCall->Texture = UIGeometry->Texture;
-		DrawCall->bTextureChanged = true;
-		DrawCall->bNeedToUpdateVertex = true;
-	}
 	MarkVerticesDirty(false, true, true, false);
 	GetWidget()->MarkCanvasUpdate(true, true, false);
 }
@@ -600,10 +592,11 @@ void ULexRectBlock::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChang
 		bNeedUpdateBlockData = false;
 
 		auto BlockSize = RectBlockData->GetBlockSizeInByte();
-		uint8* BlockBuffer = new uint8[BlockSize];
-		FMemory::Memzero(BlockBuffer, BlockSize);
-		FillData(BlockBuffer, Widget->GetWidth(), Widget->GetHeight());
-		RectBlockData->UpdateBlock(DataStartPosition, BlockBuffer);
+		TArray<uint8> BlockBuffer;
+		BlockBuffer.SetNumUninitialized(BlockSize);
+		FMemory::Memzero(BlockBuffer.GetData(), BlockSize);
+		FillData(BlockBuffer.GetData(), Widget->GetWidth(), Widget->GetHeight());
+		RectBlockData->UpdateBlock(DataStartPosition, MoveTemp(BlockBuffer));
 	}
 }
 
@@ -612,11 +605,6 @@ void ULexRectBlock::ApplyAtlasTextureChange_Implementation()
 	if (BodyTextureMode != ELexRectBlockTextureMode::Sprite)return;
 	check(BodySpriteTexture);
 	UIGeometry->Texture = BodySpriteTexture->GetAtlasTexture();
-	if (DrawCall.IsValid())
-	{
-		DrawCall->Texture = UIGeometry->Texture;
-		DrawCall->bTextureChanged = true;
-	}
 	GetWidget()->MarkCanvasUpdate(true, true, false);
 }
 
@@ -926,7 +914,6 @@ void ULexRectBlock::SetRaycastSupportCornerRadius(bool value)
 
 #pragma region TweenAnimation
 #include "LTweenManager.h"
-#include "Core/LexUISettings.h"
 ULTweener* ULexRectBlock::BodyColorTo(FColor endValue, float duration, float delay, ELTweenEase ease)
 {
 	auto Tweener = ULTweenManager::To(this, FLTweenColorGetterFunction::CreateWeakLambda(this, [this] {

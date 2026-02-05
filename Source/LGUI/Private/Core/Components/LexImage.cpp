@@ -4,7 +4,6 @@
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/LexUIImageBrush.h"
-#include "Core/LexUIDrawCall.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/LexUISpriteData.h"
 #include "Slate/SlateTextureAtlasInterface.h"
@@ -56,11 +55,6 @@ void ULexImage::ApplyAtlasTextureChange_Implementation()
 	check(bHasAddToSprite);
 	auto LexSprite = (ULexUISpriteData_BaseObject*)Brush.GetResourceObject();
 	UIGeometry->Texture = LexSprite->GetAtlasTexture();
-	if (DrawCall.IsValid())
-	{
-		DrawCall->Texture = UIGeometry->Texture;
-		DrawCall->bTextureChanged = true;
-	}
 	GetWidget()->MarkCanvasUpdate(true, true, false);
 }
 

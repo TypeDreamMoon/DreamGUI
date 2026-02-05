@@ -3,17 +3,12 @@
 #include "Core/Components/LexBackgroundPixelate.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
-#include "Core/LexUISpriteData.h"
-#include "Engine/TextureRenderTarget2D.h"
-#include "Core/LexUIRender/LexUIPostProcessShaders.h"
-#include "Core/LexUIRender/LexUIVertex.h"
 #include "PipelineStateCache.h"
 #include "Core/LexUIRender/LexUIRenderer.h"
-#include "Core/Components/LexCanvas.h"
-#include "Core/LexUISettings.h"
 #include "RenderTargetPool.h"
 #include "Core/LexVisualPostProcessRenderProxy.h"
 #include "RHIStaticStates.h"
+#include "Core/Components/LexWidget.h"
 
 ULexBackgroundPixelate::ULexBackgroundPixelate(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
@@ -50,6 +45,7 @@ void ULexBackgroundPixelate::SetPixelateStrength(float Value)
 	if (PixelateStrength != Value)
 	{
 		PixelateStrength = Value;
+		//@todo: maybe we don't need MarkCanvasUpdate because PostProcess itself can handle update
 		GetWidget()->MarkCanvasUpdate(false, false, false);
 		SendOthersDataToRenderProxy();
 	}
@@ -60,6 +56,7 @@ void ULexBackgroundPixelate::SetApplyAlphaToStrength(bool Value)
 	if (ApplyAlphaToStrength != Value)
 	{
 		ApplyAlphaToStrength = Value;
+		//@todo: maybe we don't need MarkCanvasUpdate because PostProcess itself can handle update
 		GetWidget()->MarkCanvasUpdate(false, false, false);
 		SendOthersDataToRenderProxy();
 	}
@@ -211,9 +208,9 @@ public:
 
 void ULexBackgroundPixelate::SendOthersDataToRenderProxy()
 {
-	if (RenderProxy.IsValid())
+	if (RenderProxy != nullptr)
 	{
-		auto TempRenderProxy = (FUIBackgroundPixelateRenderProxy*)(RenderProxy.Get());
+		auto TempRenderProxy = (FUIBackgroundPixelateRenderProxy*)RenderProxy;
 		float pixelateStrengthWidthAlpha = this->GetStrengthInternal();
 		ENQUEUE_RENDER_COMMAND(FLexBackgroundPixelate_UpdateData)
 			([TempRenderProxy, pixelateStrengthWidthAlpha](FRHICommandListImmediate& RHICmdList)
@@ -223,11 +220,11 @@ void ULexBackgroundPixelate::SendOthersDataToRenderProxy()
 	}
 }
 
-TSharedPtr<FLexVisualPostProcessRenderProxy> ULexBackgroundPixelate::GetRenderProxy()
+FLexVisualPostProcessRenderProxy* ULexBackgroundPixelate::GetRenderProxy()
 {
-	if (!RenderProxy.IsValid())
+	if (RenderProxy == nullptr)
 	{
-		RenderProxy = MakeShared<FUIBackgroundPixelateRenderProxy>();
+		RenderProxy = new FUIBackgroundPixelateRenderProxy();
 		SendRegionVertexDataToRenderProxy();
 		SendMaskTextureToRenderProxy();
 	}

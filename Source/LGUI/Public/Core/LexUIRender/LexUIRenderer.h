@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "SceneViewExtension.h"
 #include "RendererInterface.h"
+#include "RenderGraphUtils.h"
 #include "RenderResource.h"
 #include "StaticMeshVertexData.h"
 #include "Core/LexUIRender/LexUIVertex.h"

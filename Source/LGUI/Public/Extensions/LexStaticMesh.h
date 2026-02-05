@@ -129,6 +129,8 @@ enum class ELexStaticMeshVertexColorType :uint8
 	//Use mesh's vertex color only, not consider LGUI's color parameter
 	NotAffectByUIColor,
 };
+
+#if 0
 /**
  * render a StaticMesh as UI element
  */
@@ -186,3 +188,5 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetReplaceMaterial(UMaterialInterface* value);
 };
+
+#endif

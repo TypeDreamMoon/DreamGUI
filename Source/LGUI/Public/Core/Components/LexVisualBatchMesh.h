@@ -73,6 +73,17 @@ public:
 		static FVector2D CalculatePivotOffset(float InWidth, float InHeight, const FVector2D& InPivot);
 };
 
+/** Widget's properties which can access in material */
+UENUM(BlueprintType, meta = (Bitflags), Category = LGUI)
+enum class ELexVisualPropertiesForMaterial :uint8
+{
+	//width & height
+	Size,
+	//widget rect center position in canvas space
+	CenterPosition,
+};
+ENUM_CLASS_FLAGS(ELexVisualPropertiesForMaterial);
+
 /** UI element which have render geometry, and can be batched and renderred by LGUICanvas */
 UCLASS(Abstract, Blueprintable, ClassGroup=(LGUI))
 class LGUI_API ULexVisualBatchMesh : public ULexVisual
@@ -99,14 +110,6 @@ protected:
 	 */
 	void ApplyGeometryModifier(bool triangleChanged, bool uvChanged, bool colorChanged, bool vertexPositionChanged);
 
-public:
-	/** 
-	 * Return a created MaterialInstanceDynamic that rendering this UI item, may shared by other UI item. if this UI item is not renderred yet, then return nullptr.
-	 * LGUI only create MaterialInstanceDynamic when specified material have one of these LGUI material parameter: [LexUI_MainTexture, LexUI_FontTexture, LexUI_ClipDataTexture].
-	 */
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		UMaterialInstanceDynamic* GetMaterialInstanceDynamic()const;
-protected:
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
 public:
 	void MarkVertexPositionDirty();
@@ -117,7 +120,7 @@ public:
 	virtual void MarkVerticesDirty(bool InTriangleDirty, bool InVertexPositionDirty, bool InVertexUVDirty, bool InVertexColorDirty);
 
 	/** 
-	 * Mark vertices dirty, then LGUI will trigger UpdateGeometry process, and OnUpdateGeometry will executed in next render update.
+	 * Mark vertices dirty, then LGUI will trigger UpdateGeometry process, and OnUpdateGeometry will execute in next render update.
 	 * Call this if you want to update vertex data. 
 	 * For blueprint easily use.
 	 */
@@ -130,12 +133,18 @@ public:
 	virtual bool LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const override;
 	/** is this UI element type support draw-call batching? */
 	virtual bool SupportDrawCallBatching()const { return true; }
+
+	FORCEINLINE bool GetRequirePropertiesForMaterial_Size()const{ return PropertiesForMaterial & (1 << (int)ELexVisualPropertiesForMaterial::Size); }
+	FORCEINLINE bool GetRequirePropertiesForMaterial_CenterPosition()const{ return PropertiesForMaterial & (1 << (int)ELexVisualPropertiesForMaterial::CenterPosition); }
 protected:
 	virtual bool LineTraceVisiblePixel(float InAlphaThreshold, FHitResult& OutHit, const FVector& Start, const FVector& End)const;
 	virtual bool ReadPixelFromMainTexture(const FVector2D& InUV, FColor& OutPixel)const { return false; }
 protected:
 	friend class FLexVisualBatchMeshCustomization;
 
+	/** enable properties for material */
+	UPROPERTY(EditAnywhere, Category = LGUI, meta = (Bitmask, BitmaskEnum = "/Script/LGUI.ELexVisualPropertiesForMaterial"))
+	int8 PropertiesForMaterial = 0;
 	UPROPERTY(EditAnywhere, Instanced, Category = "LGUI", AdvancedDisplay)
 	TArray<TObjectPtr<ULexMeshModifierBase>> MeshModifierArray;
 
@@ -148,10 +157,8 @@ protected:
 	virtual void OnBeforeCreateOrUpdateGeometry();
 	/** fill and update ui geometry */
 	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged);
-	/** fill widget property data for access in material */
-	virtual void OnFillWidgetPropertyDataForMaterial();
-	/** Same as OnFillWidgetPropertyDataForMaterial but only update 1st pixel (16bytes data), when only the clip data position changed. */
-	virtual void OnFillWidgetPropertyDataForMaterial_FirstPixel();
+	virtual uint8 GetFontMark_WidgetPropertyDataForMaterial(){return 0;}
+	virtual void OnRenderCanvasChanged(ULexCanvas* InOldCanvas, ULexCanvas* InNewCanvas) override;
 
 	virtual void UpdateGeometry()override final;
 	virtual void GetGeometryBoundsInLocalSpace(FVector2D& OutMinPoint, FVector2D& OutMaxPoint)const override;
@@ -177,6 +184,9 @@ private:
 	uint8 bUVChanged:1;
 	/** triangle index change */
 	uint8 bTriangleChanged:1;
+	uint8 bTextureChanged:1;
+	uint8 bMaterialChanged:1;
+	uint8 bWidgetPropertyDataFontMarkDirty : 1;
 	FVector LocalMinPoint3D = FVector::ZeroVector, LocalMaxPoint3D = FVector::ZeroVector;
 	void CalculateLocalBounds();
 	UPROPERTY(Transient)TObjectPtr<ULexUIGeometryHelper> GeometryHelper = nullptr;

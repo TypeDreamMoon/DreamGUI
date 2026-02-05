@@ -408,14 +408,16 @@ bool ULexUIFontData_Bitmap::RenderGlyph(const uint32& charCode, const float& cha
 	OutResult.pixelSize = 4;
 	//pixel color
 	int pixelCount = OutResult.width * OutResult.height;
-	FColor* regionColor = new FColor[pixelCount];
+	TArray<unsigned char> regionColorData;
+	regionColorData.SetNumUninitialized(pixelCount * OutResult.pixelSize);
+	FColor* regionColor = reinterpret_cast<FColor*>(regionColorData.GetData());
 	for (int i = 0; i < pixelCount; i++)
 	{
 		auto& pixelColor = regionColor[i];
 		pixelColor.R = pixelColor.G = pixelColor.B = 255;
 		pixelColor.A = slot->bitmap.buffer[i];
 	}
-	OutResult.buffer = (unsigned char*)regionColor;
+	OutResult.buffer = MoveTemp(regionColorData);
 	return true;
 #else
 	return false;

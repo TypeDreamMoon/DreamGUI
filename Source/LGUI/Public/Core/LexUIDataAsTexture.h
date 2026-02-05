@@ -44,6 +44,14 @@ private:
 	int CurrentPosition = 0;
 	bool bIsInitialized = false;
 	TArray<int> NotUsingPositionArray;
+	struct FPendingUpdateData
+	{
+		int PosX = 0, PosY = 0;
+		TArray<uint8> Data;
+		int DataPixelCount = 1;
+	};
+	TArray<FPendingUpdateData> PendingUpdateDataArray;
+	bool bBatchUpdateMode = false;
 
 	void CreateTexture();
 	bool ExpandTexture();
@@ -63,8 +71,12 @@ public:
 	 */
 	int RegisterBuffer();
 	void UnregisterBuffer(int InPosition);
-	void UpdateBlock(int InPositionY, uint8* InData);
-	void UpdateBlock(int InPositionX, int InPositionY, uint8* InData, int InDataPixelCount);
+	void UpdateBlock(int InPositionY, TArray<uint8> InData);
+	void UpdateBlock(int InPositionX, int InPositionY, TArray<uint8> InData, int InDataPixelCount);
+
+	bool GetIsBatchUpdateMode()const { return bBatchUpdateMode; }
+	void PrepareForBatchUpdate();
+	void Flush();
 
 	UTexture* GetDataTexture()const { return Texture; }
 

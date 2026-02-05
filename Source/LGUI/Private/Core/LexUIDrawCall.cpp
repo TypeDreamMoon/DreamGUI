@@ -2,63 +2,80 @@
 
 #include "Core/LexUIDrawCall.h"
 #include "Core/LexUIGeometry.h"
-#include "Core/Components/LexVisualBatchMesh.h"
 
-void FLexUIDrawCall::GetCombined(TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndexBufferType>& triangles)const
+void FLexUIDrawCall::CopyBatchMeshGeometry()
 {
-	int count = BatchMeshVisualObjectList.Num();
-	if (count == 1)
+	int VertOffset = 0;
+	constexpr int VertDataLength = sizeof(FLexUIMeshVertex);
+	for (int i = 0; i < BatchMeshVisualArray.Num(); i++)
 	{
-		auto uiGeo = BatchMeshVisualObjectList[0]->GetGeometry();
-		vertices = uiGeo->Vertices;
-		triangles = uiGeo->Triangles;
+		int VerticesDataNum = BatchMeshVisualArray[i]->GetGeometry()->Vertices.Num() * VertDataLength;
+		FMemory::Memcpy((uint8*)CombinedBatchMeshGeometryVertices.GetData() + VertOffset, BatchMeshVisualArray[i]->GetGeometry()->Vertices.GetData(), VerticesDataNum);
+		VertOffset+=VerticesDataNum;
+	}
+}
+
+void FLexUIDrawCall::ApplyBatchMeshGeometryToCombined()
+{
+	CombinedBatchMeshGeometryVertices.Reset();
+	CombinedBatchMeshGeometryTriangles.Reset();
+	CombinedBounds.Init();
+	
+	if (BatchMeshGeometryArray.Num() == 1)
+	{
+		auto& uiGeo = BatchMeshGeometryArray[0];
+		CombinedBatchMeshGeometryVertices.SetNumUninitialized(uiGeo.Vertices.Num());
+		FMemory::Memcpy(CombinedBatchMeshGeometryVertices.GetData(), uiGeo.Vertices.GetData(), uiGeo.Vertices.Num() * sizeof(FLexUIMeshVertex));
+		CombinedBatchMeshGeometryTriangles.SetNumUninitialized(uiGeo.Triangles.Num());
+		FMemory::Memcpy(CombinedBatchMeshGeometryTriangles.GetData(), uiGeo.Triangles.GetData(), uiGeo.Triangles.Num() * sizeof(FLexUIMeshIndexBufferType));
+		CombinedBounds += FVector(0.1f, uiGeo.BoundsMin2DInCanvasSpace.X, uiGeo.BoundsMin2DInCanvasSpace.Y);
+		CombinedBounds += FVector(0.1f, uiGeo.BoundsMax2DInCanvasSpace.X, uiGeo.BoundsMax2DInCanvasSpace.Y);
 	}
 	else
 	{
 		int prevVertexCount = 0;
 		int triangleIndicesIndex = 0;
-		vertices.Reserve(this->VerticesCount);
-		triangles.SetNumUninitialized(this->IndicesCount);
-		for (int geoIndex = 0; geoIndex < count; geoIndex++)
+		CombinedBatchMeshGeometryVertices.Reserve(this->VerticesCount);
+		CombinedBatchMeshGeometryTriangles.SetNumUninitialized(this->IndicesCount);
+		auto CombinedTriangleData = CombinedBatchMeshGeometryTriangles.GetData();
+		for (int geoIndex = 0; geoIndex < BatchMeshGeometryArray.Num(); geoIndex++)
 		{
-			auto uiGeo = BatchMeshVisualObjectList[geoIndex]->GetGeometry();
-			auto& geomTriangles = uiGeo->Triangles;
-			int triangleCount = geomTriangles.Num();
+			auto& uiGeo = BatchMeshGeometryArray[geoIndex];
+			int triangleCount = uiGeo.Triangles.Num();
 			if (triangleCount <= 0)continue;
-			vertices.Append(uiGeo->Vertices);
+			
+			CombinedBatchMeshGeometryVertices.AddUninitialized(uiGeo.Vertices.Num());
+			FMemory::Memcpy(CombinedBatchMeshGeometryVertices.GetData() + prevVertexCount, uiGeo.Vertices.GetData(), uiGeo.Vertices.Num() * sizeof(FLexUIMeshVertex));
+
+			auto TriangleData = uiGeo.Triangles.GetData();
 			for (int geomTriangleIndicesIndex = 0; geomTriangleIndicesIndex < triangleCount; geomTriangleIndicesIndex++)
 			{
-				auto triangleIndex = geomTriangles[geomTriangleIndicesIndex] + prevVertexCount;
-				triangles[triangleIndicesIndex++] = triangleIndex;
+				auto triangleIndex = TriangleData[geomTriangleIndicesIndex] + prevVertexCount;
+				CombinedTriangleData[triangleIndicesIndex++] = triangleIndex;
 			}
 
-			prevVertexCount += uiGeo->Vertices.Num();
+			CombinedBounds += FVector(0.1f, uiGeo.BoundsMin2DInCanvasSpace.X, uiGeo.BoundsMin2DInCanvasSpace.Y);
+			CombinedBounds += FVector(0.1f, uiGeo.BoundsMax2DInCanvasSpace.X, uiGeo.BoundsMax2DInCanvasSpace.Y);
+			
+			prevVertexCount += uiGeo.Vertices.Num();
 		}
 	}
 }
 
-void FLexUIDrawCall::CopyUpdateState(FLexUIDrawCall* Target)
-{
-	if (bMaterialChanged)Target->bMaterialChanged = true;
-	if (bTextureChanged)Target->bTextureChanged = true;
-	if (bNeedToUpdateVertex)Target->bNeedToUpdateVertex = true;
-	if (bVertexPositionChanged)Target->bVertexPositionChanged = true;
-}
-
-bool FLexUIDrawCall::CanConsumeUIGeometryForBatchMesh(FLexUIGeometry* geo, int32 itemVertCount)
+bool FLexUIDrawCall::CanConsumeUIGeometryForBatchMesh(const FLexUIGeometry& geo)const
 {
 	if (this->Type != ELexUIDrawCallType::BatchMesh)return false;
-	if (this->Material != geo->Material)return false;
-	if (geo->bIsFont)
+	if (this->Material != geo.Material)return false;
+	if (geo.bIsFont)
 	{
-		if (this->FontTexture != nullptr && this->FontTexture != geo->Texture)//draw-call also contains font but different of geo's
+		if (this->FontTexture != nullptr && this->FontTexture != geo.Texture)//draw-call also contains font but different of geo's
 			return false;
 	}
 	else
 	{
-		if (this->Texture != nullptr && this->Texture != geo->Texture)//draw-call also contains non-font but difference of geo's
+		if (this->Texture != nullptr && this->Texture != geo.Texture)//draw-call also contains non-font but difference of geo's
 			return false;
 	}
-	if (this->VerticesCount + itemVertCount >= LEXUI_MAX_VERTEX_COUNT)return false;
+	if (this->VerticesCount + geo.Vertices.Num() >= LEXUI_MAX_VERTEX_COUNT)return false;
 	return true;
 }

@@ -3,10 +3,10 @@
 #include "Extensions/UISpriteSequencePlayer.h"
 
 #include "LGUI.h"
-#include "LTweenBPLibrary.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/Components/LexSprite.h"
 #include "Core/Components/LexSpriteBase.h"
+#include "Core/Components/LexWidget.h"
 
 #if WITH_EDITOR
 void UUISpriteSequencePlayer::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)

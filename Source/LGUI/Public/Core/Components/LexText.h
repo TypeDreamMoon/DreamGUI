@@ -160,8 +160,7 @@ public:
 	virtual void OnBeforeCreateOrUpdateGeometry()override;
 	virtual bool GetShouldAffectByPixelSnapping()const override;
 	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
-	virtual void OnFillWidgetPropertyDataForMaterial() override;
-	virtual void OnFillWidgetPropertyDataForMaterial_FirstPixel() override;
+	virtual uint8 GetFontMark_WidgetPropertyDataForMaterial() override;
 	virtual void OnCultureChanged_Implementation()override;
 
 	void CheckRequireNormalAndTangent();

@@ -135,8 +135,7 @@ void ULexUIManagerObject::AddOneShotTickFunction(const TFunction<void()>& InFunc
 
 FLexUIEditorTickMulticastDelegate& ULexUIManagerObject::GetEditorTickDelegate()
 {
-	InitCheck();
-	return Instance->EditorTick;
+	return EditorTick;
 }
 
 void ULexUIManagerObject::MarkBroadcastLevelActorListChanged()
@@ -940,7 +939,6 @@ bool ULexUIManagerWorldSubsystem::bIsPlaying = false;
 
 DECLARE_CYCLE_STAT(TEXT("LexUIBehaviour Update"), STAT_LexUIBehaviourUpdate, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("LexUIBehaviour Start"), STAT_LexUIBehaviourStart, STATGROUP_LGUI);
-DECLARE_CYCLE_STAT(TEXT("Canvas Update"), STAT_UpdateCanvas, STATGROUP_LGUI);
 void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 {
 	//editor draw helper frame
@@ -1126,7 +1124,6 @@ void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 
 	//update draw-call
 	{
-		SCOPE_CYCLE_COUNTER(STAT_UpdateCanvas);
 		auto UpdateCanvas = [](TArray<TWeakObjectPtr<ULexCanvas>>& InCanvasArray) {
 			for (auto& Canvas : InCanvasArray)
 			{

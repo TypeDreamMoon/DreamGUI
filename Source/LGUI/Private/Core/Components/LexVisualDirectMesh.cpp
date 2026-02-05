@@ -6,6 +6,7 @@
 #include "Core/LexUIMesh/LexUIMeshComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Core/LexUIDrawCall.h"
+#include "Core/Components/LexWidget.h"
 
 ULexVisualDirectMesh::ULexVisualDirectMesh(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
@@ -51,18 +52,20 @@ void ULexVisualDirectMesh::UpdateGeometry()
 
 TWeakPtr<FLexUIRenderSection> ULexVisualDirectMesh::GetMeshSection()const
 {
-	if (DrawCall.IsValid())
-	{
-		return DrawCall->DrawCallRenderSection;
-	}
+	//@todo
+	// if (DrawCall.IsValid())
+	// {
+	// 	return DrawCall->DrawCallRenderSection;
+	// }
 	return nullptr;
 }
 TWeakObjectPtr<ULexUIMeshComponent> ULexVisualDirectMesh::GetUIMesh()const
 {
-	if (DrawCall.IsValid())
-	{
-		return DrawCall->DrawCallMesh;
-	}
+	//@todo
+	// if (DrawCall.IsValid())
+	// {
+	// 	return DrawCall->DrawCallMesh;
+	// }
 	return nullptr;
 }
 void ULexVisualDirectMesh::ClearMeshData()
@@ -82,8 +85,9 @@ bool ULexVisualDirectMesh::LineTraceUI(FHitResult& OutHit, const FVector& Start,
 	}
 	else if (RaycastType == ELexVisualRaycastType::Mesh)
 	{
-		if (!DrawCall.IsValid())return false;
-		if (!DrawCall->DrawCallRenderSection.IsValid())return false;
+		//@todo
+		// if (!DrawCall.IsValid())return false;
+		// if (!DrawCall->DrawCallRenderSection.IsValid())return false;
 
 		auto Widget = GetWidget();
 		auto inverseTf = Widget->GetComponentTransform().Inverse();
@@ -99,32 +103,33 @@ bool ULexVisualDirectMesh::LineTraceUI(FHitResult& OutHit, const FVector& Start,
 			//hit point inside rect area
 			if (IntersectionPoint.Y > Widget->GetLocalSpaceLeft() && IntersectionPoint.Y < Widget->GetLocalSpaceRight() && IntersectionPoint.Z > Widget->GetLocalSpaceBottom() && IntersectionPoint.Z < Widget->GetLocalSpaceTop())
 			{
+				//@todo
 				//triangle hit test
-				auto MeshSection = (FLexUIMeshSection*)DrawCall->DrawCallRenderSection.Pin().Get();
-				auto& vertices = MeshSection->vertices;
-				auto& triangleIndices = MeshSection->triangles;
-				int triangleCount = triangleIndices.Num() / 3;
-				int index = 0;
-				for (int i = 0; i < triangleCount; i++)
-				{
-					auto point0 = (FVector)(vertices[triangleIndices[index++]].Position);
-					auto point1 = (FVector)(vertices[triangleIndices[index++]].Position);
-					auto point2 = (FVector)(vertices[triangleIndices[index++]].Position);
-					FVector HitPoint, HitNormal;
-					if (FMath::SegmentTriangleIntersection(localSpaceRayOrigin, localSpaceRayEnd, point0, point1, point2, HitPoint, HitNormal))
-					{
-						OutHit.TraceStart = Start;
-						OutHit.TraceEnd = End;
-						OutHit.Component = (UPrimitiveComponent*)Widget;//acturally this convert is incorrect, but I need this pointer
-						OutHit.Location = Widget->GetComponentTransform().TransformPosition(HitPoint);
-						OutHit.Normal = Widget->GetComponentTransform().TransformVector(HitNormal);
-						OutHit.Normal.Normalize();
-						OutHit.Distance = FVector::Distance(Start, OutHit.Location);
-						OutHit.ImpactPoint = OutHit.Location;
-						OutHit.ImpactNormal = OutHit.Normal;
-						return true;
-					}
-				}
+				// auto MeshSection = (FLexUIRenderSection_Mesh*)DrawCall->DrawCallRenderSection.Pin().Get();
+				// auto& vertices = MeshSection->vertices;
+				// auto& triangleIndices = MeshSection->triangleIndices;
+				// int triangleCount = triangleIndices.Num() / 3;
+				// int index = 0;
+				// for (int i = 0; i < triangleCount; i++)
+				// {
+				// 	auto point0 = (FVector)(vertices[triangleIndices[index++]].Position);
+				// 	auto point1 = (FVector)(vertices[triangleIndices[index++]].Position);
+				// 	auto point2 = (FVector)(vertices[triangleIndices[index++]].Position);
+				// 	FVector HitPoint, HitNormal;
+				// 	if (FMath::SegmentTriangleIntersection(localSpaceRayOrigin, localSpaceRayEnd, point0, point1, point2, HitPoint, HitNormal))
+				// 	{
+				// 		OutHit.TraceStart = Start;
+				// 		OutHit.TraceEnd = End;
+				// 		OutHit.Component = (UPrimitiveComponent*)Widget;//acturally this convert is incorrect, but I need this pointer
+				// 		OutHit.Location = Widget->GetComponentTransform().TransformPosition(HitPoint);
+				// 		OutHit.Normal = Widget->GetComponentTransform().TransformVector(HitNormal);
+				// 		OutHit.Normal.Normalize();
+				// 		OutHit.Distance = FVector::Distance(Start, OutHit.Location);
+				// 		OutHit.ImpactPoint = OutHit.Location;
+				// 		OutHit.ImpactNormal = OutHit.Normal;
+				// 		return true;
+				// 	}
+				// }
 			}
 		}
 		return false;

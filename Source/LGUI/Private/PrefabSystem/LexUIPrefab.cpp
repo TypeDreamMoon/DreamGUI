@@ -362,7 +362,10 @@ void ULexUIPrefab::PostEditUndo()
 void ULexUIPrefab::PreSave(FObjectPreSaveContext SaveContext)
 {
 	UObject::PreSave(SaveContext);
-	PrefabHelperObject->SavePrefab();
+	if (IsValid(PrefabHelperObject))
+	{
+		PrefabHelperObject->SavePrefab();
+	}
 }
 
 #endif

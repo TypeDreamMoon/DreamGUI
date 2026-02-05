@@ -7,6 +7,7 @@
 #include "Core/LexUIMeshVertex.h"
 #include "LexUIMeshComponent.generated.h"
 
+class FLexUIDrawCall;
 struct FLexUIRenderSectionProxy;
 struct FLexUIMeshSectionProxy;
 struct FLexUIPostProcessSectionProxy;
@@ -26,53 +27,56 @@ struct FLexUIRenderSection
 	FBox BoundingBox = FBox(EForceInit::ForceInit);//world space bounding box
 
 	virtual void UpdateSectionBox(const FTransform& LocalToWorld) = 0;
+	virtual void ClearBeforePool() = 0;
 };
-struct FLexUIMeshSection : public FLexUIRenderSection
+struct FLexUIRenderSection_Mesh : public FLexUIRenderSection
 {
-	FLexUIMeshSection() 
+	FLexUIRenderSection_Mesh() 
 	{
 		Type = ELexUIRenderSectionType::Mesh; 
 	}
-	virtual ~FLexUIMeshSection()override{}
+	virtual ~FLexUIRenderSection_Mesh()override{}
 
-	TArray<FLexUIMeshIndexBufferType> triangles;
+	TArray<FLexUIMeshIndexBufferType> triangleIndices;
 	TArray<FLexUIMeshVertex> vertices;
-
-	int prevVertexCount = 0;
-	int prevIndexCount = 0;
+	int32 ValidVerticesNum = 0;
+	int32 ValidTriangleIndicesNum = 0;
 
 	UMaterialInterface* material = nullptr;
 
 	void Reset()
 	{
 		vertices.Reset();
-		triangles.Reset();
+		triangleIndices.Reset();
 	}
 	virtual void UpdateSectionBox(const FTransform& LocalToWorld) override;
+	virtual void ClearBeforePool() override;
 };
-struct FLexUIPostProcessSection : public FLexUIRenderSection
+struct FLexUIRenderSection_PostProcess : public FLexUIRenderSection
 {
-	FLexUIPostProcessSection()
+	FLexUIRenderSection_PostProcess()
 	{
 		Type = ELexUIRenderSectionType::PostProcess;
 	}
-	virtual ~FLexUIPostProcessSection()override{}
+	virtual ~FLexUIRenderSection_PostProcess()override{}
 
 	TWeakObjectPtr<class ULexVisualPostProcess> PostProcessVisualObject = nullptr;
 
 	virtual void UpdateSectionBox(const FTransform& LocalToWorld) override;
+	virtual void ClearBeforePool() override;
 };
-struct FLexUIChildCanvasSection : public FLexUIRenderSection
+struct FLexUIRenderSection_ChildCanvas : public FLexUIRenderSection
 {
-	FLexUIChildCanvasSection()
+	FLexUIRenderSection_ChildCanvas()
 	{
 		Type = ELexUIRenderSectionType::ChildCanvas;
 	}
-	virtual ~FLexUIChildCanvasSection()override{}
+	virtual ~FLexUIRenderSection_ChildCanvas()override{}
 
-	class ULexUIMeshComponent* ChildCanvasMeshComponent = nullptr;
+	TWeakObjectPtr<class ULexUIMeshComponent> ChildCanvasMeshComponent = nullptr;
 
 	virtual void UpdateSectionBox(const FTransform& LocalToWorld) override;
+	virtual void ClearBeforePool() override;
 };
 
 class FLexUIRenderer;
@@ -90,17 +94,21 @@ class LGUI_API ULexUIMeshComponent : public UMeshComponent
 
 public:
 	ULexUIMeshComponent();
-	void CreateRenderSectionRenderData(TSharedPtr<FLexUIRenderSection> InRenderSection);
-	void UpdateMeshSectionRenderData(TSharedPtr<FLexUIRenderSection> InRenderSection, bool InVertexPositionChanged, bool InRequireNormalAndTangent);
-	void DeleteRenderSection(TSharedPtr<FLexUIRenderSection> InRenderSection);
-	TSharedPtr<FLexUIRenderSection> CreateRenderSection(ELexUIRenderSectionType type);
-	void SetRenderSectionRenderPriority(TSharedPtr<FLexUIRenderSection> InRenderSection, int32 InSortPriority);
-	void SetMeshSectionMaterial(TSharedPtr<FLexUIRenderSection> InMeshSection, UMaterialInterface* InMaterial);
+private:
+	void UpdateMeshSectionRenderData(TSharedPtr<FLexUIRenderSection> InRenderSection, bool InRequireNormalAndTangent);
+	void ExpandMeshSectionRenderData(TSharedPtr<FLexUIRenderSection> InRenderSection);
+public:
+	TSharedPtr<FLexUIRenderSection> SetupRenderSection(ELexUIRenderSectionType InType, FLexUIDrawCall* InDrawCallData);
+	void UpdateMeshSection(int Index, FLexUIDrawCall* InDrawCallData);
+	void PoolAllRenderSection();
+	void SetRenderSectionRenderPriority(int32 InSectionIndex, int32 InSortPriority);
+	void SetMeshSectionMaterial(int32 InSectionIndex, UMaterialInterface* InMaterial);
 
 	void SetRenderCanvas(ULexCanvas* InCanvas);
 	void SetSupportLexUIRenderer(bool InSupportOrNot, TWeakPtr<FLexUIRenderer, ESPMode::ThreadSafe> InLexUIRenderer, bool InIsRenderToWorld);
 	void SetSupportUERenderer(bool InSupportOrNot);
 	void ClearRenderData();
+	void FlushRenderCommand();
 
 	void SetUITranslucentSortPriority(int32 NewTranslucentSortPriority);
 
@@ -120,10 +128,34 @@ public:
 	void UpdateLocalBounds();
 	void UpdateChildCanvasSectionBox();
 private:
-	TArray<TSharedPtr<FLexUIRenderSection>> RenderSections;
+	TArray<TSharedPtr<FLexUIRenderSection>> RenderSectionArray;
+	TArray<TSharedPtr<FLexUIRenderSection>> RenderSectionPool;
 	//~ Begin USceneComponent Interface.
 	virtual FBoxSphereBounds CalcBounds(const FTransform& LocalToWorld) const override;
 	//~ Begin USceneComponent Interface.
+
+	struct UpdateMeshSectionDataStruct
+	{
+		TArray<FLexUIMeshVertex> VertexBufferData;
+		int32 NumVerts;
+		int32 NumTriangles;
+		TArray<FLexUIMeshIndexBufferType> IndexBufferData;
+		bool RequireNormalAndTangent;
+		FLexUIMeshSectionProxy* Section;
+	};
+	TArray<UpdateMeshSectionDataStruct> PendingUpdateMeshSectionDataArray;
+	struct UpdateRenderSectionPriority
+	{
+		FLexUIRenderSectionProxy* SectionProxy;
+		int RenderPriority;
+	};
+	TArray<UpdateRenderSectionPriority> PendingUpdateRenderSectionPriorityArray;
+	struct UpdateMeshSectionMaterialDataStruct
+	{
+		FLexUIRenderSectionProxy* SectionProxy;
+		UMaterialInterface* Material;
+	};
+	TArray<UpdateMeshSectionMaterialDataStruct> PendingUpdateMeshSectionMaterialDataArray;
 
 	friend class FLexUIRenderSceneProxy;
 

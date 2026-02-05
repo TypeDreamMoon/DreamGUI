@@ -9,10 +9,8 @@ public class LGUI : ModuleRules
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
         CppStandard = CppStandardVersion.Cpp20;
         
-        OptimizeCode = CodeOptimization.Default;
-
         // disable optimize in editor and debug-build
-        if (Target.bBuildEditor || Target.Configuration == UnrealTargetConfiguration.Debug)
+        if (Target.bBuildEditor && Target.Configuration == UnrealTargetConfiguration.Debug)
         {
 	        OptimizeCode = CodeOptimization.Never;
 			
@@ -20,6 +18,10 @@ public class LGUI : ModuleRules
 	        bUseUnity = false;
 	        bUseRTTI = true;
 	        bEnableExceptions = true;
+        }
+        else
+        {
+	        OptimizeCode = CodeOptimization.Always;
         }
         
         string EnginSourceFolder = EngineDirectory + "/Source/";

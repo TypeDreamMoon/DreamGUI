@@ -5,6 +5,7 @@
 #include "Core/LexUIGeometry.h"
 #include "Core/Components/LexCanvas.h"
 #include "LTweenManager.h"
+#include "Core/Components/LexWidget.h"
 
 ULexPolygonLine::ULexPolygonLine(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {

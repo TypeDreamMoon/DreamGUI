@@ -6,7 +6,7 @@
 #include "Core/Components/LexCanvas.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "LTweenManager.h"
-#include "Core/LexUISettings.h"
+#include "Core/Components/LexWidget.h"
 
 DECLARE_CYCLE_STAT(TEXT("UI2DLine Update"), STAT_2DLineUpdate, STATGROUP_LGUI);
 

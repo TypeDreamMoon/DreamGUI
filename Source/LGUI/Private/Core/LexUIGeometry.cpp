@@ -10,6 +10,7 @@
 #include "Core/LexUIRichTextImageData_BaseObject.h"
 #include "Core/FRichTextParser.h"
 #include "Core/LexUIFontEmojiData.h"
+#include "Core/Components/LexWidget.h"
 
 
 FORCEINLINE float RoundToFloat(float value)

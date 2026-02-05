@@ -377,7 +377,8 @@ private:
 		, TFunctionRef<float(ULexVisual*)> GetVisualProperty
 		)const;
 	
-	FVector2f PrevScale2D = FVector2f::One();
+	FVector2D PrevLocation2D = FVector2D::Zero();
+	FVector2D PrevScale2D = FVector2D::One();
 	mutable uint8 bNeedSortUIChildren : 1;
 	uint8 bIsDetaching : 1;
 

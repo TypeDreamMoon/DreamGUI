@@ -67,7 +67,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		TObjectPtr<UActorComponent> CellComponent = nullptr;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		TObjectPtr<ULexWidget> UIItem = nullptr;
+		TObjectPtr<ULexWidget> Widget = nullptr;
 };
 
 UENUM(BlueprintType)

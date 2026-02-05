@@ -32,7 +32,7 @@ TArray<FString> FLexUIEventDelegateCustomization::CopySourceData;
 
 TSharedPtr<IPropertyHandleArray> FLexUIEventDelegateCustomization::GetEventListHandle()const
 {
-	return PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegate, eventList))->AsArray();
+	return PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegate, EventList))->AsArray();
 }
 
 void FLexUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyHandle> InPropertyHandle, IDetailChildrenBuilder& ChildBuilder, IPropertyTypeCustomizationUtils& CustomizationUtils)
@@ -113,7 +113,7 @@ void FLexUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyHan
 		check(*Iter);
 		auto Item = (FLexUIEventDelegate*)(*Iter);
 		EventDelegateInstances[Iter.GetIndex()] = Item;
-		for (auto& listItem : Item->eventList)
+		for (auto& listItem : Item->EventList)
 		{
 			listItem.CheckTargetObject();
 		}
@@ -122,7 +122,7 @@ void FLexUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyHan
 	auto EventListHandle = GetEventListHandle();
 	auto RefreshDelegate = FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::UpdateEventsLayout);
 	EventListHandle->SetOnNumElementsChanged(RefreshDelegate);
-	auto NativeParameterTypeHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegate, supportParameterType));
+	auto NativeParameterTypeHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegate, SupportParameterType));
 	NativeParameterTypeHandle->SetOnPropertyValueChanged(RefreshDelegate);
 
 	auto EventParameterType = GetNativeParameterType();
@@ -236,7 +236,7 @@ FText FLexUIEventDelegateCustomization::GetEventTitleName()const
 FText FLexUIEventDelegateCustomization::GetEventItemFunctionName(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const
 {
 	//function
-	auto FunctionNameHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, functionName));
+	auto FunctionNameHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, FunctionName));
 	FName FunctionFName;
 	FunctionNameHandle->GetValue(FunctionFName);
 	FString FunctionName = FunctionFName.ToString();
@@ -314,7 +314,7 @@ EVisibility FLexUIEventDelegateCustomization::GetNativeParameterWidgetVisibility
 {
 	auto TargetObject = GetEventItemTargetObject(EventItemPropertyHandle);
 	//function
-	auto FunctionNameHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, functionName));
+	auto FunctionNameHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, FunctionName));
 	FName FunctionFName;
 	FunctionNameHandle->GetValue(FunctionFName);
 	//parameterType
@@ -330,7 +330,7 @@ EVisibility FLexUIEventDelegateCustomization::GetNativeParameterWidgetVisibility
 	if (IsValid(TargetObject) && IsValid(EventFunction))
 	{
 		bool bUseNativeParameter = false;
-		auto UseNativeParameterHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, UseNativeParameter));
+		auto UseNativeParameterHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, bUseNativeParameter));
 		UseNativeParameterHandle->GetValue(bUseNativeParameter);
 
 		if ((EventParameterType == FunctionParameterType) && bUseNativeParameter)//support native parameter
@@ -345,7 +345,7 @@ EVisibility FLexUIEventDelegateCustomization::GetDrawFunctionParameterWidgetVisi
 {
 	auto TargetObject = GetEventItemTargetObject(EventItemPropertyHandle);
 	//function
-	auto FunctionNameHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, functionName));
+	auto FunctionNameHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, FunctionName));
 	FName FunctionFName;
 	FunctionNameHandle->GetValue(FunctionFName);
 	//parameterType
@@ -361,7 +361,7 @@ EVisibility FLexUIEventDelegateCustomization::GetDrawFunctionParameterWidgetVisi
 	if (IsValid(TargetObject) && IsValid(EventFunction))
 	{
 		bool bUseNativeParameter = false;
-		auto UseNativeParameterHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, UseNativeParameter));
+		auto UseNativeParameterHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, bUseNativeParameter));
 		UseNativeParameterHandle->GetValue(bUseNativeParameter);
 
 		if ((EventParameterType == FunctionParameterType) && bUseNativeParameter)//support native parameter
@@ -380,7 +380,7 @@ EVisibility FLexUIEventDelegateCustomization::GetNotValidParameterWidgetVisibili
 {
 	auto TargetObject = GetEventItemTargetObject(EventItemPropertyHandle);
 	//function
-	auto FunctionNameHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, functionName));
+	auto FunctionNameHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, FunctionName));
 	FName FunctionFName;
 	FunctionNameHandle->GetValue(FunctionFName);
 	//parameterType
@@ -503,7 +503,7 @@ void FLexUIEventDelegateCustomization::UpdateEventsLayout()
 		HelperActorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::OnActorParameterChange, ItemPropertyHandle));
 			
 		//function
-		auto FunctionNameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, functionName));
+		auto FunctionNameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, FunctionName));
 		FName FunctionFName;
 		FunctionNameHandle->GetValue(FunctionFName);
 		//parameterType
@@ -521,7 +521,7 @@ void FLexUIEventDelegateCustomization::UpdateEventsLayout()
 		if (IsValid(TargetObject) && IsValid(EventFunction))
 		{
 			bool bUseNativeParameter = false;
-			auto UseNativeParameterHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, UseNativeParameter));
+			auto UseNativeParameterHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, bUseNativeParameter));
 			UseNativeParameterHandle->GetValue(bUseNativeParameter);
 				
 			if (EventParameterType != FunctionParameterType)//check "bUseNativeParameter" parameter
@@ -946,10 +946,10 @@ void FLexUIEventDelegateCustomization::OnSelectActorSelf(TSharedRef<IPropertyHan
 }
 void FLexUIEventDelegateCustomization::OnSelectFunction(FName FuncName, ELexUIEventDelegateParameterType ParamType, bool UseNativeParameter, TSharedRef<IPropertyHandle> ItemPropertyHandle)
 {
-	auto nameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, functionName));
+	auto nameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, FunctionName));
 	nameHandle->SetValue(FuncName);
 	SetEventDataParameterType(ItemPropertyHandle, ParamType);
-	auto UseNativeParameterHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, UseNativeParameter));
+	auto UseNativeParameterHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, bUseNativeParameter));
 	UseNativeParameterHandle->SetValue(UseNativeParameter);
 
 	UpdateEventsLayout();
@@ -962,7 +962,7 @@ void FLexUIEventDelegateCustomization::SetEventDataParameterType(TSharedRef<IPro
 }
 ELexUIEventDelegateParameterType FLexUIEventDelegateCustomization::GetNativeParameterType()const
 {
-	auto NativeParameterTypeHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegate, supportParameterType));
+	auto NativeParameterTypeHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegate, SupportParameterType));
 	uint8 supportParameterTypeUint8;
 	NativeParameterTypeHandle->GetValue(supportParameterTypeUint8);
 	ELexUIEventDelegateParameterType eventParameterType = (ELexUIEventDelegateParameterType)supportParameterTypeUint8;
@@ -970,7 +970,7 @@ ELexUIEventDelegateParameterType FLexUIEventDelegateCustomization::GetNativePara
 }
 void FLexUIEventDelegateCustomization::AddNativeParameterTypeProperty(IDetailChildrenBuilder& ChildBuilder)
 {
-	auto NativeParameterTypeHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegate, supportParameterType));
+	auto NativeParameterTypeHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegate, SupportParameterType));
 	ChildBuilder.AddProperty(NativeParameterTypeHandle.ToSharedRef());
 }
 ELexUIEventDelegateParameterType FLexUIEventDelegateCustomization::GetEventDataParameterType(TSharedRef<IPropertyHandle> EventDataItemHandle)const

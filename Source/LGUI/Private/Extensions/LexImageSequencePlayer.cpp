@@ -38,13 +38,16 @@ void ULexImageSequencePlayer::OnRegister()
 #if WITH_EDITOR
 	if (GetWorld() && GetWorld()->WorldType == EWorldType::Editor)
 	{
-		EditorPlayDelegateHandle = ULexUIManagerObject::GetEditorTickDelegate().AddWeakLambda(this, [this](float deltaTime) {
-			if (!bPreviewInEditor)return;
-			if (!CanPlay())return;
-			Duration = GetDuration();
-			PrepareForPlay();
-			UpdateAnimation(deltaTime);
-			});
+		if (auto LexUIManagerObject = ULexUIManagerObject::GetInstance(true))
+		{
+			EditorPlayDelegateHandle = LexUIManagerObject->GetEditorTickDelegate().AddWeakLambda(this, [this](float deltaTime) {
+				if (!bPreviewInEditor)return;
+				if (!CanPlay())return;
+				Duration = GetDuration();
+				PrepareForPlay();
+				UpdateAnimation(deltaTime);
+				});
+		}
 	}
 #endif
 }
@@ -54,7 +57,10 @@ void ULexImageSequencePlayer::OnUnregister()
 #if WITH_EDITOR
 	if (EditorPlayDelegateHandle.IsValid())
 	{
-		ULexUIManagerObject::GetEditorTickDelegate().Remove(EditorPlayDelegateHandle);
+		if (auto LexUIManagerObject = ULexUIManagerObject::GetInstance(false))
+		{
+			LexUIManagerObject->GetEditorTickDelegate().Remove(EditorPlayDelegateHandle);
+		}
 	}
 #endif
 }

@@ -190,7 +190,7 @@ void ULexUIStaticMeshCacheData::ClearMeshData()
 
 
 
-
+#if 0
 ULexStaticMesh::ULexStaticMesh(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
 }
@@ -241,7 +241,7 @@ void ULexStaticMesh::UpdateMeshColor(bool updateToDrawcallMesh)
 	auto numIndices = sourceIndexData.Num();
 	if (numVertices > 0 && numIndices > 0)
 	{
-		auto MeshSection = (FLexUIMeshSection*)DrawCall->DrawCallRenderSection.Pin().Get();
+		auto MeshSection = (FLexUIRenderSection_Mesh*)DrawCall->DrawCallRenderSection.Pin().Get();
 		auto& VertexData = MeshSection->vertices;
 
 		VertexData.SetNumUninitialized(numVertices);
@@ -291,7 +291,7 @@ void ULexStaticMesh::CreateGeometry()
 	auto numIndices = sourceIndexData.Num();
 	if (numVertices > 0 && numIndices > 0)
 	{
-		auto MeshSection = (FLexUIMeshSection*)DrawCall->DrawCallRenderSection.Pin().Get();
+		auto MeshSection = (FLexUIRenderSection_Mesh*)DrawCall->DrawCallRenderSection.Pin().Get();
 		auto& VertexData = MeshSection->vertices;
 
 		VertexData.SetNumUninitialized(numVertices);
@@ -339,7 +339,7 @@ void ULexStaticMesh::CreateGeometry()
 			}
 		}
 
-		auto& IndexData = MeshSection->triangles;
+		auto& IndexData = MeshSection->triangleIndices;
 		IndexData.SetNumUninitialized(numIndices);
 		for (int i = 0; i < numIndices; i++)
 		{
@@ -365,7 +365,7 @@ void ULexStaticMesh::UpdateMeshTransform(bool updateToDrawcallMesh)
 	const auto& itemTf = Widget->GetComponentTransform();
 	FTransform::Multiply(&itemToCanvasTf, &itemTf, &inverseCanvasTf);
 
-	auto MeshSection = (FLexUIMeshSection*)DrawCall->DrawCallRenderSection.Pin().Get();
+	auto MeshSection = (FLexUIRenderSection_Mesh*)DrawCall->DrawCallRenderSection.Pin().Get();
 
 	const auto& sourceVertexData = meshCache->GetVertexData();
 	auto numVertices = sourceVertexData.Num();
@@ -568,3 +568,5 @@ void ULexStaticMesh::SetVertexColorType(ELexStaticMeshVertexColorType value)
 }
 
 #undef LOCTEXT_NAMESPACE
+
+#endif

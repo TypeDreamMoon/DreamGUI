@@ -2,10 +2,8 @@
 
 #include "DetailCustomization/UISelectableCustomization.h"
 #include "LexUIEditorUtils.h"
-#include "Core/Components/LexWidget.h"
 #include "IDetailGroup.h"
 #include "Interaction/UISelectableComponent.h"
-#include "Core/Components/LexSprite.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"

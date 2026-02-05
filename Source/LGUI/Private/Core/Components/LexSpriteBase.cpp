@@ -7,6 +7,7 @@
 #include "Core/LexUISpriteData.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/LexUIDrawCall.h"
+#include "Core/Components/LexWidget.h"
 
 ULexSpriteBase::ULexSpriteBase(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
@@ -42,11 +43,6 @@ void ULexSpriteBase::EndPlay()
 void ULexSpriteBase::ApplyAtlasTextureChange_Implementation()
 {
 	UIGeometry->Texture = Sprite->GetAtlasTexture();
-	if (DrawCall.IsValid())
-	{
-		DrawCall->Texture = UIGeometry->Texture;
-		DrawCall->bTextureChanged = true;
-	}
 	GetWidget()->MarkCanvasUpdate(true, true, false);
 }
 

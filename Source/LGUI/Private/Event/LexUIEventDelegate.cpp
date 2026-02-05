@@ -390,7 +390,7 @@ FString ULexUIEventDelegateParameterHelper::ParameterTypeToName(ELexUIEventDeleg
 
 void FLexUIEventDelegateData::Execute()
 {
-	if (UseNativeParameter)
+	if (bUseNativeParameter)
 	{
 		auto errMsg = LOCTEXT("NativeParameterError", "LGUIEventDelegateData.Execute, If use NativeParameter, you must FireEvent with your own parameter!");
 #if WITH_EDITOR
@@ -432,7 +432,7 @@ void FLexUIEventDelegateData::Execute(void* InParam, ELexUIEventDelegateParamete
 		return;
 	}
 
-	if (UseNativeParameter)//should use native parameter (pass in param)
+	if (bUseNativeParameter)//should use native parameter (pass in param)
 	{
 		if (ParamType != InParameterType)//function's supported parameter is equal to event's parameter
 		{
@@ -504,7 +504,7 @@ bool FLexUIEventDelegateData::CheckFunctionParameter()const
 		return false;
 	}
 
-	auto TargetFunction = TargetObject->FindFunction(functionName);
+	auto TargetFunction = TargetObject->FindFunction(FunctionName);
 	if (!TargetFunction)
 	{
 		return false;
@@ -572,12 +572,12 @@ bool FLexUIEventDelegateData::CheckTargetObject()
 }
 void FLexUIEventDelegateData::FindAndExecute(UObject* Target, void* ParamData)
 {
-	CacheFunction = Target->FindFunction(functionName);
+	CacheFunction = Target->FindFunction(FunctionName);
 	if (CacheFunction)
 	{
 		if (!ULexUIEventDelegateParameterHelper::IsStillSupported(CacheFunction, ParamType))
 		{
-			auto errMsg = FText::Format(LOCTEXT("FunctionNotSupport", "LGUIEventDelegateData.FindAndExecute, Target function: {0} not supported!"), FText::FromName(functionName));
+			auto errMsg = FText::Format(LOCTEXT("FunctionNotSupport", "LGUIEventDelegateData.FindAndExecute, Target function: {0} not supported!"), FText::FromName(FunctionName));
 #if WITH_EDITOR
 			FLexUIUtils::EditorNotification(errMsg, false, 10);
 #endif
@@ -598,7 +598,7 @@ void FLexUIEventDelegateData::FindAndExecute(UObject* Target, void* ParamData)
 	}
 	else
 	{
-		auto errMsg = FText::Format(LOCTEXT("FunctionNotExist", "LGUIEventDelegateData.FindAndExecute, Target function: {0} not exist!"), FText::FromName(functionName));
+		auto errMsg = FText::Format(LOCTEXT("FunctionNotExist", "LGUIEventDelegateData.FindAndExecute, Target function: {0} not exist!"), FText::FromName(FunctionName));
 #if WITH_EDITOR
 		FLexUIUtils::EditorNotification(errMsg, false, 10);
 #endif
@@ -657,19 +657,19 @@ FLexUIEventDelegate::FLexUIEventDelegate()
 }
 FLexUIEventDelegate::FLexUIEventDelegate(ELexUIEventDelegateParameterType InParameterType)
 {
-	supportParameterType = InParameterType;
+	SupportParameterType = InParameterType;
 }
 
 bool FLexUIEventDelegate::IsBound()const
 {
-	return eventList.Num() != 0;
+	return EventList.Num() != 0;
 }
 void FLexUIEventDelegate::FireEvent()const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::Empty)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::Empty)
 	{
-		for (auto& item : eventList)
+		for (auto& item : EventList)
 		{
 			item.Execute();
 		}
@@ -681,7 +681,7 @@ void FLexUIEventDelegate::LogParameterError(ELexUIEventDelegateParameterType Wro
 {
 	auto enumObject = FindObject<UEnum>(nullptr, TEXT("/Script/LGUI.ELGUIEventDelegateParameterType"), true);
 	auto errMsg = FText::Format(LOCTEXT("ParameterTypeMismatch", "LGUIEventDelegate parameter type must be the same as your declaration. support parameter type: {0}, execute parameter type: {1}")
-		, enumObject->GetDisplayNameTextByValue((int64)supportParameterType)
+		, enumObject->GetDisplayNameTextByValue((int64)SupportParameterType)
 		, enumObject->GetDisplayNameTextByValue((int64)WrongParamType)
 	);
 #if WITH_EDITOR
@@ -691,16 +691,16 @@ void FLexUIEventDelegate::LogParameterError(ELexUIEventDelegateParameterType Wro
 }
 void FLexUIEventDelegate::FireEvent(void* InParam)const
 {
-	for (auto& item : eventList)
+	for (auto& item : EventList)
 	{
-		item.Execute(InParam, supportParameterType);
+		item.Execute(InParam, SupportParameterType);
 	}
 }
 
 void FLexUIEventDelegate::FireEvent(bool InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::Bool)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::Bool)
 	{
 		FireEvent(&InParam);
 	}
@@ -708,8 +708,8 @@ void FLexUIEventDelegate::FireEvent(bool InParam)const
 }
 void FLexUIEventDelegate::FireEvent(float InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::Float)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::Float)
 	{
 		FireEvent(&InParam);
 	}
@@ -717,8 +717,8 @@ void FLexUIEventDelegate::FireEvent(float InParam)const
 }
 void FLexUIEventDelegate::FireEvent(double InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::Double)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::Double)
 	{
 		FireEvent(&InParam);
 	}
@@ -726,8 +726,8 @@ void FLexUIEventDelegate::FireEvent(double InParam)const
 }
 void FLexUIEventDelegate::FireEvent(int8 InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::Int8)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::Int8)
 	{
 		FireEvent(&InParam);
 	}
@@ -735,8 +735,8 @@ void FLexUIEventDelegate::FireEvent(int8 InParam)const
 }
 void FLexUIEventDelegate::FireEvent(uint8 InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::UInt8)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::UInt8)
 	{
 		FireEvent(&InParam);
 	}
@@ -744,8 +744,8 @@ void FLexUIEventDelegate::FireEvent(uint8 InParam)const
 }
 void FLexUIEventDelegate::FireEvent(int16 InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::Int16)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::Int16)
 	{
 		FireEvent(&InParam);
 	}
@@ -753,8 +753,8 @@ void FLexUIEventDelegate::FireEvent(int16 InParam)const
 }
 void FLexUIEventDelegate::FireEvent(uint16 InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::UInt16)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::UInt16)
 	{
 		FireEvent(&InParam);
 	}
@@ -762,8 +762,8 @@ void FLexUIEventDelegate::FireEvent(uint16 InParam)const
 }
 void FLexUIEventDelegate::FireEvent(int32 InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::Int32)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::Int32)
 	{
 		FireEvent(&InParam);
 	}
@@ -771,8 +771,8 @@ void FLexUIEventDelegate::FireEvent(int32 InParam)const
 }
 void FLexUIEventDelegate::FireEvent(uint32 InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::UInt32)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::UInt32)
 	{
 		FireEvent(&InParam);
 	}
@@ -780,8 +780,8 @@ void FLexUIEventDelegate::FireEvent(uint32 InParam)const
 }
 void FLexUIEventDelegate::FireEvent(int64 InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::Int64)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::Int64)
 	{
 		FireEvent(&InParam);
 	}
@@ -789,8 +789,8 @@ void FLexUIEventDelegate::FireEvent(int64 InParam)const
 }
 void FLexUIEventDelegate::FireEvent(uint64 InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::UInt64)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::UInt64)
 	{
 		FireEvent(&InParam);
 	}
@@ -798,8 +798,8 @@ void FLexUIEventDelegate::FireEvent(uint64 InParam)const
 }
 void FLexUIEventDelegate::FireEvent(FVector2D InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::Vector2)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::Vector2)
 	{
 		FireEvent(&InParam);
 	}
@@ -807,8 +807,8 @@ void FLexUIEventDelegate::FireEvent(FVector2D InParam)const
 }
 void FLexUIEventDelegate::FireEvent(FVector InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::Vector3)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::Vector3)
 	{
 		FireEvent(&InParam);
 	}
@@ -816,8 +816,8 @@ void FLexUIEventDelegate::FireEvent(FVector InParam)const
 }
 void FLexUIEventDelegate::FireEvent(FVector4 InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::Vector4)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::Vector4)
 	{
 		FireEvent(&InParam);
 	}
@@ -825,8 +825,8 @@ void FLexUIEventDelegate::FireEvent(FVector4 InParam)const
 }
 void FLexUIEventDelegate::FireEvent(FColor InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::Color)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::Color)
 	{
 		FireEvent(&InParam);
 	}
@@ -834,8 +834,8 @@ void FLexUIEventDelegate::FireEvent(FColor InParam)const
 }
 void FLexUIEventDelegate::FireEvent(FLinearColor InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::LinearColor)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::LinearColor)
 	{
 		FireEvent(&InParam);
 	}
@@ -843,8 +843,8 @@ void FLexUIEventDelegate::FireEvent(FLinearColor InParam)const
 }
 void FLexUIEventDelegate::FireEvent(FQuat InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::Quaternion)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::Quaternion)
 	{
 		FireEvent(&InParam);
 	}
@@ -852,8 +852,8 @@ void FLexUIEventDelegate::FireEvent(FQuat InParam)const
 }
 void FLexUIEventDelegate::FireEvent(const FString& InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::String)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::String)
 	{
 		FireEvent((void*)&InParam);
 	}
@@ -861,8 +861,8 @@ void FLexUIEventDelegate::FireEvent(const FString& InParam)const
 }
 void FLexUIEventDelegate::FireEvent(UObject* InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::Object)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::Object)
 	{
 		FireEvent(&InParam);
 	}
@@ -870,8 +870,8 @@ void FLexUIEventDelegate::FireEvent(UObject* InParam)const
 }
 void FLexUIEventDelegate::FireEvent(AActor* InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::Actor)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::Actor)
 	{
 		FireEvent(&InParam);
 	}
@@ -879,8 +879,8 @@ void FLexUIEventDelegate::FireEvent(AActor* InParam)const
 }
 void FLexUIEventDelegate::FireEvent(ULexPointerEventData* InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::PointerEvent)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::PointerEvent)
 	{
 		FireEvent(&InParam);
 	}
@@ -888,8 +888,8 @@ void FLexUIEventDelegate::FireEvent(ULexPointerEventData* InParam)const
 }
 void FLexUIEventDelegate::FireEvent(UClass* InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::Class)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::Class)
 	{
 		FireEvent(&InParam);
 	}
@@ -897,8 +897,8 @@ void FLexUIEventDelegate::FireEvent(UClass* InParam)const
 }
 void FLexUIEventDelegate::FireEvent(FRotator InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::Rotator)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::Rotator)
 	{
 		FireEvent(&InParam);
 	}
@@ -906,8 +906,8 @@ void FLexUIEventDelegate::FireEvent(FRotator InParam)const
 }
 void FLexUIEventDelegate::FireEvent(const FName& InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::Name)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::Name)
 	{
 		FireEvent((void*)&InParam);
 	}
@@ -915,8 +915,8 @@ void FLexUIEventDelegate::FireEvent(const FName& InParam)const
 }
 void FLexUIEventDelegate::FireEvent(const FText& InParam)const
 {
-	if (eventList.Num() == 0)return;
-	if (supportParameterType == ELexUIEventDelegateParameterType::Text)
+	if (EventList.Num() == 0)return;
+	if (SupportParameterType == ELexUIEventDelegateParameterType::Text)
 	{
 		FireEvent((void*)&InParam);
 	}
@@ -926,7 +926,7 @@ void FLexUIEventDelegate::FireEvent(const FText& InParam)const
 #if WITH_EDITOR
 bool FLexUIEventDelegate::CheckFunctionParameter()const
 {
-	for (auto& item : eventList)
+	for (auto& item : EventList)
 	{
 		if (!item.CheckFunctionParameter())
 		{

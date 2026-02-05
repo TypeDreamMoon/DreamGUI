@@ -3,10 +3,10 @@
 #include "Core/Components/LexTextureBase.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
-#include "Core/Components/LexCanvas.h"
 #include "Materials/MaterialInterface.h"
 #include "Utils/LexUIUtils.h"
 #include "TextureResource.h"
+#include "Core/Components/LexWidget.h"
 #include "Engine/Texture2D.h"
 
 #define LOCTEXT_NAMESPACE "UITextureBase"

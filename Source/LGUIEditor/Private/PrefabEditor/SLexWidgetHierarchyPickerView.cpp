@@ -6,6 +6,7 @@
 #include "Widgets/Layout/SScrollBorder.h"
 #include "Widgets/Input/SSearchBox.h"
 #include "Core/Components/LexRectBlock.h"
+#include "Core/Components/LexWidget.h"
 
 #define LOCTEXT_NAMESPACE "LexWidgetHierarchyPickerView"
 

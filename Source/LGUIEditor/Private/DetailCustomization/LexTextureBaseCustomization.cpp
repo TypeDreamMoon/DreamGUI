@@ -7,6 +7,7 @@
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
+#include "Core/Components/LexWidget.h"
 
 #define LOCTEXT_NAMESPACE "UITextureBaseCustomization"
 FLexTextureBaseCustomization::FLexTextureBaseCustomization()

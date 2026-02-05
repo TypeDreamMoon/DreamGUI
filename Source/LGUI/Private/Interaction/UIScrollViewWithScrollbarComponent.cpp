@@ -4,6 +4,7 @@
 
 #include "LTweenBPLibrary.h"
 #include "Core/LexUIManager.h"
+#include "Core/Components/LexWidget.h"
 #include "Interaction/UIScrollbarComponent.h"
 #include "PrefabSystem/LexUIPrefabManager.h"
 

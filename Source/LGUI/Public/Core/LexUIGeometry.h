@@ -54,10 +54,27 @@ public:
 	TWeakObjectPtr<UTexture> Texture = nullptr;
 	TWeakObjectPtr<UMaterialInterface> Material = nullptr;
 	bool bIsFont = false;
+	bool bSupportDrawcallBatching = true;
 
 	FTransform TransformRelativeToCanvas;
 	FVector2D BoundsMin2DInCanvasSpace;
 	FVector2D BoundsMax2DInCanvasSpace;
+
+	void CopyDataForPrepare(const FLexUIGeometry& Other)
+	{
+		Vertices.SetNumUninitialized(Other.Vertices.Num());
+		FMemory::Memcpy(Vertices.GetData(), Other.Vertices.GetData(), Other.Vertices.Num() * sizeof(FLexUIMeshVertex));
+		Triangles.SetNumUninitialized(Other.Triangles.Num());
+		FMemory::Memcpy(Triangles.GetData(), Other.Triangles.GetData(), Other.Triangles.Num() * sizeof(FLexUIMeshIndexBufferType));
+		
+		Texture = Other.Texture;
+		Material = Other.Material;
+		bIsFont = Other.bIsFont;
+		bSupportDrawcallBatching = Other.bSupportDrawcallBatching;
+		
+		BoundsMin2DInCanvasSpace = Other.BoundsMin2DInCanvasSpace;
+		BoundsMax2DInCanvasSpace = Other.BoundsMax2DInCanvasSpace;
+	}
 
 	/** 
 	 * Clear vertices and triangle indices data and keep memory, so when the data array do SetNumUninitialized (or similar function, which just change num but not memory), the origin data is still there.
@@ -80,32 +97,6 @@ public:
 		Vertices.Reset();
 		Triangles.Reset();
 		OriginVertices.Reset();
-	}
-	/**
-	 * Fill this data to another.
-	 * @return true if any data size changed, false otherwise
-	 */
-	bool CopyTo(FLexUIGeometry* Target)
-	{
-		bool verticesCountChanged = false;
-		if (Vertices.Num() != Target->Vertices.Num())
-		{
-			Target->Vertices.SetNumUninitialized(Vertices.Num());
-			Target->OriginVertices.SetNumUninitialized(Vertices.Num());
-			verticesCountChanged = true;
-		}
-		FMemory::Memcpy(Target->OriginVertices.GetData(), OriginVertices.GetData(), OriginVertices.Num() * sizeof(FLexUIOriginVertexData));
-		FMemory::Memcpy(Target->Vertices.GetData(), Vertices.GetData(), Vertices.Num() * sizeof(FLexUIMeshVertex));
-
-		bool triangleCountChanged = false;
-		if (Triangles.Num() != Target->Triangles.Num())
-		{
-			Target->Triangles.SetNumUninitialized(Triangles.Num());
-			triangleCountChanged = true;
-		}
-		FMemory::Memcpy(Target->Triangles.GetData(), Triangles.GetData(), Triangles.Num() * sizeof(FLexUIMeshIndexBufferType));
-
-		return verticesCountChanged || triangleCountChanged;
 	}
 
 	/**
