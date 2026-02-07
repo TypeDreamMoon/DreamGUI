@@ -1,7 +1,7 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUIPrefabEditorViewportClient.h"
-#include "LGUIPrefabEditorViewport.h"
+#include "LexUIPrefabEditorViewportClient.h"
+#include "LexUIPrefabEditorViewport.h"
 #include "SceneInterface.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -19,7 +19,7 @@
 #include "Editor/UnrealEdEngine.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Editor.h"
-#include "LGUIPrefabEditor.h"
+#include "LexUIPrefabEditor.h"
 #include "MouseDeltaTracker.h"
 #include "Misc/ITransaction.h"
 #include "UnrealEdGlobals.h"
@@ -32,7 +32,7 @@
 #include "LevelViewportClickHandlers.h"
 #include "HModel.h"
 #include "Components/InstancedStaticMeshComponent.h"
-#include "LGUIPrefabViewportClickHandlers.h"
+#include "LexUIPrefabViewportClickHandlers.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
@@ -69,7 +69,7 @@ private:
 	bool bIsMouseReleasedAtThisFrame = false;
 	bool bIsDragging = false;
 	TWeakObjectPtr<ULexWidget> SelectedWidget;
-	FLGUIPrefabEditorViewportClient* ViewportClient = nullptr;
+	FLexUIPrefabEditorViewportClient* ViewportClient = nullptr;
 	FSceneViewFamilyContext* ViewFamily = nullptr;
 	void UpdateAxis()
 	{
@@ -278,7 +278,7 @@ private:
 	}
 	TUniquePtr<FScopedTransaction> Transaction = nullptr;
 public:
-	FLexUITransformWidget(UWorld* InWorld, ULexWidget* InWidget, FLGUIPrefabEditorViewportClient* InViewportClient)
+	FLexUITransformWidget(UWorld* InWorld, ULexWidget* InWidget, FLexUIPrefabEditorViewportClient* InViewportClient)
 	{
 		World = InWorld;
 		SelectedWidget = InWidget;
@@ -368,8 +368,8 @@ public:
 	}
 };
 
-FLGUIPrefabEditorViewportClient::FLGUIPrefabEditorViewportClient(TWeakPtr<FLGUIPrefabEditor> InPrefabEditorPtr
-	, const TSharedRef<SLGUIPrefabEditorViewport>& InEditorViewportPtr)
+FLexUIPrefabEditorViewportClient::FLexUIPrefabEditorViewportClient(TWeakPtr<FLexUIPrefabEditor> InPrefabEditorPtr
+	, const TSharedRef<SLexUIPrefabEditorViewport>& InEditorViewportPtr)
 	: FEditorViewportClient(&GLevelEditorModeTools(), nullptr, StaticCastSharedRef<SEditorViewport>(InEditorViewportPtr))
 	, TrackingTransaction()
 	, CachedElementsToManipulate(UTypedElementRegistry::GetInstance()->CreateElementList())
@@ -427,7 +427,7 @@ FLGUIPrefabEditorViewportClient::FLGUIPrefabEditorViewportClient(TWeakPtr<FLGUIP
 	});
 }
 
-FLGUIPrefabEditorViewportClient::~FLGUIPrefabEditorViewportClient()
+FLexUIPrefabEditorViewportClient::~FLexUIPrefabEditorViewportClient()
 {
 	if (PrefabEditorPtr.IsValid())
 	{
@@ -508,7 +508,7 @@ static float GPerspFrustumAspectRatio=1.77777f;
 static float GPerspFrustumStartDist=GNearClippingPlane;
 static float GPerspFrustumEndDist=UE_FLOAT_HUGE_DISTANCE;
 static FMatrix GPerspViewMatrix;
-void FLGUIPrefabEditorViewportClient::Draw(const FSceneView* View, FPrimitiveDrawInterface* PDI)
+void FLexUIPrefabEditorViewportClient::Draw(const FSceneView* View, FPrimitiveDrawInterface* PDI)
 {
 	FMemMark Mark(FMemStack::Get());
 
@@ -628,7 +628,7 @@ void FLGUIPrefabEditorViewportClient::Draw(const FSceneView* View, FPrimitiveDra
 
 	Mark.Pop();
 }
-void FLGUIPrefabEditorViewportClient::DrawCanvas(FViewport& InViewport, FSceneView& View, FCanvas& Canvas)
+void FLexUIPrefabEditorViewportClient::DrawCanvas(FViewport& InViewport, FSceneView& View, FCanvas& Canvas)
 {	
 	if (GUnrealEd != nullptr && !IsInGameView())
 	{
@@ -638,7 +638,7 @@ void FLGUIPrefabEditorViewportClient::DrawCanvas(FViewport& InViewport, FSceneVi
 	FEditorViewportClient::DrawCanvas(InViewport, View, Canvas);
 }
 
-void FLGUIPrefabEditorViewportClient::ReceivedFocus(FViewport* InViewport)
+void FLexUIPrefabEditorViewportClient::ReceivedFocus(FViewport* InViewport)
 {
 	if (!bReceivedFocusRecently)
 	{
@@ -657,14 +657,14 @@ void FLGUIPrefabEditorViewportClient::ReceivedFocus(FViewport* InViewport)
 	FEditorViewportClient::ReceivedFocus(InViewport);
 }
 
-void FLGUIPrefabEditorViewportClient::LostFocus(FViewport* InViewport)
+void FLexUIPrefabEditorViewportClient::LostFocus(FViewport* InViewport)
 {
 	FEditorViewportClient::LostFocus(InViewport);
 
 	GEditor->SetPreviewMeshMode(false);
 }
 
-void FLGUIPrefabEditorViewportClient::Tick(float DeltaSeconds)
+void FLexUIPrefabEditorViewportClient::Tick(float DeltaSeconds)
 {
 	FEditorViewportClient::Tick(DeltaSeconds);
 
@@ -677,7 +677,7 @@ void FLGUIPrefabEditorViewportClient::Tick(float DeltaSeconds)
 }
 
 
-bool FLGUIPrefabEditorViewportClient::InputKey(const FInputKeyEventArgs& EventArgs)
+bool FLexUIPrefabEditorViewportClient::InputKey(const FInputKeyEventArgs& EventArgs)
 {
 	bool bHandled = false;
 	if (TransformWidget.IsValid())
@@ -704,7 +704,7 @@ bool FLGUIPrefabEditorViewportClient::InputKey(const FInputKeyEventArgs& EventAr
 	return bHandled;
 }
 
-void FLGUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy* HitProxy, FKey Key, EInputEvent Event, uint32 HitX, uint32 HitY)
+void FLexUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy* HitProxy, FKey Key, EInputEvent Event, uint32 HitX, uint32 HitY)
 {
 	const FViewportClick Click(&View, this, Key, Event, HitX, HitY);
 
@@ -764,7 +764,7 @@ void FLGUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy* 
 
 	if (Click.GetKey() == EKeys::MiddleMouseButton && !Click.IsAltDown() && !Click.IsShiftDown())
 	{
-		LGUIPrefabViewportClickHandlers::ClickViewport(this, Click);
+		LexUIPrefabViewportClickHandlers::ClickViewport(this, Click);
 		return;
 	}
 	if (!ModeTools->HandleClick(this, HitProxy, Click))
@@ -773,7 +773,7 @@ void FLGUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy* 
 
 		if (HitProxy == NULL)
 		{
-			LGUIPrefabViewportClickHandlers::ClickBackdrop(this, Click);
+			LexUIPrefabViewportClickHandlers::ClickBackdrop(this, Click);
 		}
 		else if (HitProxy->IsA(HWidgetAxis::StaticGetType()))
 		{
@@ -819,7 +819,7 @@ void FLGUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy* 
 		{
 			// Component vis manager handled the click
 		}
-		else if (HitElement && LGUIPrefabViewportClickHandlers::ClickElement(this, HitElement, Click))
+		else if (HitElement && LexUIPrefabViewportClickHandlers::ClickElement(this, HitElement, Click))
 		{
 			// Element handled the click
 		}
@@ -850,12 +850,12 @@ void FLGUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy* 
 
 				if (bSelectComponent)
 				{
-					bComponentSelected = LGUIPrefabViewportClickHandlers::ClickComponent(this, ActorHitProxy, Click);
+					bComponentSelected = LexUIPrefabViewportClickHandlers::ClickComponent(this, ActorHitProxy, Click);
 				}
 
 				if (!bComponentSelected)
 				{
-					LGUIPrefabViewportClickHandlers::ClickActor(this, ConsideredActor, Click, true);
+					LexUIPrefabViewportClickHandlers::ClickActor(this, ConsideredActor, Click, true);
 				}
 
 				// We clicked an actor, allow the pivot to reposition itself.
@@ -864,7 +864,7 @@ void FLGUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy* 
 		}
 		else if (HitProxy->IsA(HInstancedStaticMeshInstance::StaticGetType()))
 		{
-			LGUIPrefabViewportClickHandlers::ClickActor(this, ((HInstancedStaticMeshInstance*)HitProxy)->Component->GetOwner(), Click, true);
+			LexUIPrefabViewportClickHandlers::ClickActor(this, ((HInstancedStaticMeshInstance*)HitProxy)->Component->GetOwner(), Click, true);
 		}
 		//else if (HitProxy->IsA(HBSPBrushVert::StaticGetType()) && ((HBSPBrushVert*)HitProxy)->Brush.IsValid())
 		//{
@@ -873,7 +873,7 @@ void FLGUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy* 
 		//}
 		else if (HitProxy->IsA(HStaticMeshVert::StaticGetType()))
 		{
-			LGUIPrefabViewportClickHandlers::ClickStaticMeshVertex(this, ((HStaticMeshVert*)HitProxy)->Actor, ((HStaticMeshVert*)HitProxy)->Vertex, Click);
+			LexUIPrefabViewportClickHandlers::ClickStaticMeshVertex(this, ((HStaticMeshVert*)HitProxy)->Actor, ((HStaticMeshVert*)HitProxy)->Vertex, Click);
 		}
 		//else if (BrushSubsystem && BrushSubsystem->ProcessClickOnBrushGeometry(this, HitProxy, Click))
 		//{
@@ -890,17 +890,17 @@ void FLGUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy* 
 			uint32 SurfaceIndex = INDEX_NONE;
 			if (ModelHit->ResolveSurface(SceneView, HitX, HitY, SurfaceIndex))
 			{
-				LGUIPrefabViewportClickHandlers::ClickSurface(this, ModelHit->GetModel(), SurfaceIndex, Click);
+				LexUIPrefabViewportClickHandlers::ClickSurface(this, ModelHit->GetModel(), SurfaceIndex, Click);
 			}
 		}
 		else if (HitProxy->IsA(HLevelSocketProxy::StaticGetType()))
 		{
-			LGUIPrefabViewportClickHandlers::ClickLevelSocket(this, HitProxy, Click);
+			LexUIPrefabViewportClickHandlers::ClickLevelSocket(this, HitProxy, Click);
 		}
 	}
 }
 
-bool FLGUIPrefabEditorViewportClient::InputWidgetDelta(FViewport* InViewport, EAxisList::Type InCurrentAxis, FVector& Drag, FRotator& Rot, FVector& Scale)
+bool FLexUIPrefabEditorViewportClient::InputWidgetDelta(FViewport* InViewport, EAxisList::Type InCurrentAxis, FVector& Drag, FRotator& Rot, FVector& Scale)
 {
 	if (TransformWidget.IsValid() && TransformWidget->IsDragging())
 	{
@@ -964,7 +964,7 @@ bool FLGUIPrefabEditorViewportClient::InputWidgetDelta(FViewport* InViewport, EA
 
 	return bHandled;
 }
-UE::Widget::EWidgetMode FLGUIPrefabEditorViewportClient::GetWidgetMode() const
+UE::Widget::EWidgetMode FLexUIPrefabEditorViewportClient::GetWidgetMode() const
 {
 	if (GUnrealEd->ComponentVisManager.IsActive() && GUnrealEd->ComponentVisManager.IsVisualizingArchetype())
 	{
@@ -973,7 +973,7 @@ UE::Widget::EWidgetMode FLGUIPrefabEditorViewportClient::GetWidgetMode() const
 
 	return FEditorViewportClient::GetWidgetMode();
 }
-FVector FLGUIPrefabEditorViewportClient::GetWidgetLocation() const
+FVector FLexUIPrefabEditorViewportClient::GetWidgetLocation() const
 {
 	FVector ComponentVisWidgetLocation;
 	if (GUnrealEd->ComponentVisManager.GetWidgetLocation(this, ComponentVisWidgetLocation))
@@ -983,7 +983,7 @@ FVector FLGUIPrefabEditorViewportClient::GetWidgetLocation() const
 
 	return FEditorViewportClient::GetWidgetLocation();
 }
-FMatrix FLGUIPrefabEditorViewportClient::GetWidgetCoordSystem() const
+FMatrix FLexUIPrefabEditorViewportClient::GetWidgetCoordSystem() const
 {
 	FMatrix ComponentVisWidgetCoordSystem;
 	if (GUnrealEd->ComponentVisManager.GetCustomInputCoordinateSystem(this, ComponentVisWidgetCoordSystem))
@@ -993,11 +993,11 @@ FMatrix FLGUIPrefabEditorViewportClient::GetWidgetCoordSystem() const
 
 	return FEditorViewportClient::GetWidgetCoordSystem();
 }
-int32 FLGUIPrefabEditorViewportClient::GetCameraSpeedSetting() const
+int32 FLexUIPrefabEditorViewportClient::GetCameraSpeedSetting() const
 {
 	return GetDefault<UEditorPerProjectUserSettings>()->SCSViewportCameraSpeed;
 }
-void FLGUIPrefabEditorViewportClient::SetCameraSpeedSetting(int32 SpeedSetting)
+void FLexUIPrefabEditorViewportClient::SetCameraSpeedSetting(int32 SpeedSetting)
 {
 	GetMutableDefault<UEditorPerProjectUserSettings>()->SCSViewportCameraSpeed = SpeedSetting;
 }
@@ -1006,7 +1006,7 @@ void FLGUIPrefabEditorViewportClient::SetCameraSpeedSetting(int32 SpeedSetting)
  * Returns the horizontal axis for this viewport.
  */
 
-EAxisList::Type FLGUIPrefabEditorViewportClient::GetHorizAxis() const
+EAxisList::Type FLexUIPrefabEditorViewportClient::GetHorizAxis() const
 {
 	switch (GetViewportType())
 	{
@@ -1031,7 +1031,7 @@ EAxisList::Type FLGUIPrefabEditorViewportClient::GetHorizAxis() const
  * Returns the vertical axis for this viewport.
  */
 
-EAxisList::Type FLGUIPrefabEditorViewportClient::GetVertAxis() const
+EAxisList::Type FLexUIPrefabEditorViewportClient::GetVertAxis() const
 {
 	switch (GetViewportType())
 	{
@@ -1051,7 +1051,7 @@ EAxisList::Type FLGUIPrefabEditorViewportClient::GetVertAxis() const
 
 	return EAxisList::Y;
 }
-void FLGUIPrefabEditorViewportClient::NudgeSelectedObjects(const struct FInputEventState& InputState)
+void FLexUIPrefabEditorViewportClient::NudgeSelectedObjects(const struct FInputEventState& InputState)
 {
 	FViewport* InViewport = InputState.GetViewport();
 	EInputEvent Event = InputState.GetInputEvent();
@@ -1096,12 +1096,12 @@ void FLGUIPrefabEditorViewportClient::NudgeSelectedObjects(const struct FInputEv
 	RedrawAllViewportsIntoThisScene();
 }
 
-void FLGUIPrefabEditorViewportClient::ApplyDeltaToActors(const FVector& InDrag, const FRotator& InRot, const FVector& InScale)
+void FLexUIPrefabEditorViewportClient::ApplyDeltaToActors(const FVector& InDrag, const FRotator& InRot, const FVector& InScale)
 {
 	ApplyDeltaToSelectedElements(FTransform(InRot, InDrag, InScale));
 }
 
-void FLGUIPrefabEditorViewportClient::ApplyDeltaToActor(AActor* InActor, const FVector& InDeltaDrag, const FRotator& InDeltaRot, const FVector& InDeltaScale)
+void FLexUIPrefabEditorViewportClient::ApplyDeltaToActor(AActor* InActor, const FVector& InDeltaDrag, const FRotator& InDeltaRot, const FVector& InDeltaScale)
 {
 	if (FTypedElementHandle ActorElementHandle = UEngineElementsLibrary::AcquireEditorActorElementHandle(InActor))
 	{
@@ -1109,7 +1109,7 @@ void FLGUIPrefabEditorViewportClient::ApplyDeltaToActor(AActor* InActor, const F
 	}
 }
 
-void FLGUIPrefabEditorViewportClient::ApplyDeltaToComponent(USceneComponent* InComponent, const FVector& InDeltaDrag, const FRotator& InDeltaRot, const FVector& InDeltaScale)
+void FLexUIPrefabEditorViewportClient::ApplyDeltaToComponent(USceneComponent* InComponent, const FVector& InDeltaDrag, const FRotator& InDeltaRot, const FVector& InDeltaScale)
 {
 	if (FTypedElementHandle ComponentElementHandle = UEngineElementsLibrary::AcquireEditorComponentElementHandle(InComponent))
 	{
@@ -1117,7 +1117,7 @@ void FLGUIPrefabEditorViewportClient::ApplyDeltaToComponent(USceneComponent* InC
 	}
 }
 
-void FLGUIPrefabEditorViewportClient::ApplyDeltaToSelectedElements(const FTransform& InDeltaTransform)
+void FLexUIPrefabEditorViewportClient::ApplyDeltaToSelectedElements(const FTransform& InDeltaTransform)
 {
 	if (InDeltaTransform.GetTranslation().IsZero() && InDeltaTransform.Rotator().IsZero() && InDeltaTransform.GetScale3D().IsZero())
 	{
@@ -1145,7 +1145,7 @@ void FLGUIPrefabEditorViewportClient::ApplyDeltaToSelectedElements(const FTransf
 	ViewportInteraction->UpdateGizmoManipulation(ElementsToManipulate, GetWidgetMode(), Widget ? Widget->GetCurrentAxis() : EAxisList::None, InputState, ModifiedDeltaTransform);
 }
 
-void FLGUIPrefabEditorViewportClient::ApplyDeltaToElement(const FTypedElementHandle& InElementHandle, const FTransform& InDeltaTransform)
+void FLexUIPrefabEditorViewportClient::ApplyDeltaToElement(const FTypedElementHandle& InElementHandle, const FTransform& InDeltaTransform)
 {
 	FInputDeviceState InputState;
 	InputState.SetModifierKeyStates(IsShiftPressed(), IsAltPressed(), IsCtrlPressed(), IsCmdPressed());
@@ -1153,13 +1153,13 @@ void FLGUIPrefabEditorViewportClient::ApplyDeltaToElement(const FTypedElementHan
 	ViewportInteraction->ApplyDeltaToElement(InElementHandle, GetWidgetMode(), Widget ? Widget->GetCurrentAxis() : EAxisList::None, InputState, InDeltaTransform);
 }
 
-FTypedElementListConstRef FLGUIPrefabEditorViewportClient::GetElementsToManipulate(const bool bForceRefresh)
+FTypedElementListConstRef FLexUIPrefabEditorViewportClient::GetElementsToManipulate(const bool bForceRefresh)
 {
 	CacheElementsToManipulate(bForceRefresh);
 	return CachedElementsToManipulate;
 }
 
-void FLGUIPrefabEditorViewportClient::CacheElementsToManipulate(const bool bForceRefresh)
+void FLexUIPrefabEditorViewportClient::CacheElementsToManipulate(const bool bForceRefresh)
 {
 	if (bForceRefresh)
 	{
@@ -1200,7 +1200,7 @@ void FLGUIPrefabEditorViewportClient::CacheElementsToManipulate(const bool bForc
 		bHasCachedElementsToManipulate = true;
 	}
 }
-void FLGUIPrefabEditorViewportClient::ResetElementsToManipulate(const bool bClearList)
+void FLexUIPrefabEditorViewportClient::ResetElementsToManipulate(const bool bClearList)
 {
 	if (bClearList)
 	{
@@ -1209,7 +1209,7 @@ void FLGUIPrefabEditorViewportClient::ResetElementsToManipulate(const bool bClea
 	bHasCachedElementsToManipulate = false;
 }
 
-void FLGUIPrefabEditorViewportClient::ResetElementsToManipulateFromSelectionChange(const UTypedElementSelectionSet* InSelectionSet)
+void FLexUIPrefabEditorViewportClient::ResetElementsToManipulateFromSelectionChange(const UTypedElementSelectionSet* InSelectionSet)
 {
 	check(InSelectionSet == GetSelectionSet());
 
@@ -1218,7 +1218,7 @@ void FLGUIPrefabEditorViewportClient::ResetElementsToManipulateFromSelectionChan
 	ResetElementsToManipulate(/*bClearList*/false);
 }
 
-void FLGUIPrefabEditorViewportClient::ResetElementsToManipulateFromProcessingDeferredElementsToDestroy()
+void FLexUIPrefabEditorViewportClient::ResetElementsToManipulateFromProcessingDeferredElementsToDestroy()
 {
 	if (!bHasCachedElementsToManipulate)
 	{
@@ -1227,23 +1227,23 @@ void FLGUIPrefabEditorViewportClient::ResetElementsToManipulateFromProcessingDef
 	}
 }
 
-const UTypedElementSelectionSet* FLGUIPrefabEditorViewportClient::GetSelectionSet() const
+const UTypedElementSelectionSet* FLexUIPrefabEditorViewportClient::GetSelectionSet() const
 {
 	return GEditor->GetSelectedActors()->GetElementSelectionSet();
 }
 
-UTypedElementSelectionSet* FLGUIPrefabEditorViewportClient::GetMutableSelectionSet() const
+UTypedElementSelectionSet* FLexUIPrefabEditorViewportClient::GetMutableSelectionSet() const
 {
 	return GEditor->GetSelectedActors()->GetElementSelectionSet();
 }
 
 
-void FLGUIPrefabEditorViewportClient::TickWorld(float DeltaSeconds)
+void FLexUIPrefabEditorViewportClient::TickWorld(float DeltaSeconds)
 {
 	GetWorld()->Tick(LEVELTICK_All, DeltaSeconds);
 }
 
-bool FLGUIPrefabEditorViewportClient::FocusViewportToTargets()
+bool FLexUIPrefabEditorViewportClient::FocusViewportToTargets()
 {
 	if (!PrefabEditorPtr.IsValid())
 	{
@@ -1263,11 +1263,11 @@ bool FLGUIPrefabEditorViewportClient::FocusViewportToTargets()
 
 // Begin override because PreviewScene is nullptr
 // These implementation are copied from FEditorViewportClient
-UWorld* FLGUIPrefabEditorViewportClient::GetWorld()const
+UWorld* FLexUIPrefabEditorViewportClient::GetWorld()const
 {
 	return PrefabEditorPtr.Pin()->GetWorld();
 }
-void FLGUIPrefabEditorViewportClient::AddReferencedObjects(FReferenceCollector& Collector)
+void FLexUIPrefabEditorViewportClient::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	FEditorViewportClient::AddReferencedObjects(Collector);
 	PrefabEditorPtr.Pin()->GetPreviewScene()->AddReferencedObjects(Collector);
@@ -1286,7 +1286,7 @@ namespace PreviewLightConstants
 
 	// Note: MinMouseRadius must be greater than MinArrowLength
 }
-void FLGUIPrefabEditorViewportClient::DrawPreviewLightVisualization(const FSceneView* View, FPrimitiveDrawInterface* PDI)
+void FLexUIPrefabEditorViewportClient::DrawPreviewLightVisualization(const FSceneView* View, FPrimitiveDrawInterface* PDI)
 {
 	// Draw the indicator of the current light direction if it was recently moved
 	auto PrefabScene = PrefabEditorPtr.Pin()->GetPreviewScene();
@@ -1332,7 +1332,7 @@ void FLGUIPrefabEditorViewportClient::DrawPreviewLightVisualization(const FScene
 		DrawDirectionalArrow(PDI, ArrowToWorld, ArrowColor, ArrowLength, ArrowSize, SDPG_World, ArrowThickness);
 	}
 }
-FLinearColor FLGUIPrefabEditorViewportClient::GetBackgroundColor() const
+FLinearColor FLexUIPrefabEditorViewportClient::GetBackgroundColor() const
 {
 	auto PrefabScene = PrefabEditorPtr.Pin()->GetPreviewScene();
 	return PrefabScene ? PrefabScene->GetBackgroundColor() : FColor(55, 55, 55);
@@ -1350,7 +1350,7 @@ public:
 	TMap <FKey, float> AxisDeltaValues;
 	TMap <FKey, EInputEvent> KeyEventValues;
 };
-bool FLGUIPrefabEditorViewportClient::Internal_InputAxis(FViewport* InViewport, FInputDeviceId DeviceID, FKey Key, float Delta, float DeltaTime, int32 NumSamples, bool bGamepad)
+bool FLexUIPrefabEditorViewportClient::Internal_InputAxis(FViewport* InViewport, FInputDeviceId DeviceID, FKey Key, float Delta, float DeltaTime, int32 NumSamples, bool bGamepad)
 {
 	if (bDisableInput)
 	{
@@ -1416,7 +1416,7 @@ bool FLGUIPrefabEditorViewportClient::Internal_InputAxis(FViewport* InViewport, 
 // End override because PreviewScene is nullptr
 
 
-ULexUIPrefab* FLGUIPrefabEditorViewportClient::GetPrefabBeingEdited()const
+ULexUIPrefab* FLexUIPrefabEditorViewportClient::GetPrefabBeingEdited()const
 {
 	return PrefabEditorPtr.Pin()->GetPrefabBeingEdited();
 }
@@ -1450,7 +1450,7 @@ namespace LevelEditorViewportClientHelper
 	}
 }
 
-void FLGUIPrefabEditorViewportClient::GetSelectedActorsAndComponentsForMove(TArray<AActor*>& OutActorsToMove, TArray<USceneComponent*>& OutComponentsToMove) const
+void FLexUIPrefabEditorViewportClient::GetSelectedActorsAndComponentsForMove(TArray<AActor*>& OutActorsToMove, TArray<USceneComponent*>& OutComponentsToMove) const
 {
 	OutActorsToMove.Reset();
 	OutComponentsToMove.Reset();
@@ -1527,7 +1527,7 @@ void FLGUIPrefabEditorViewportClient::GetSelectedActorsAndComponentsForMove(TArr
 	}
 }
 
-bool FLGUIPrefabEditorViewportClient::CanMoveActorInViewport(const AActor* InActor) const
+bool FLexUIPrefabEditorViewportClient::CanMoveActorInViewport(const AActor* InActor) const
 {
 	if (!GEditor || !InActor)
 	{
@@ -1562,7 +1562,7 @@ bool FLGUIPrefabEditorViewportClient::CanMoveActorInViewport(const AActor* InAct
 
 #include "UnrealWidget.h"
 
-void FLGUIPrefabEditorViewportClient::CapturedMouseMove(FViewport* InViewport, int32 InMouseX, int32 InMouseY)
+void FLexUIPrefabEditorViewportClient::CapturedMouseMove(FViewport* InViewport, int32 InMouseX, int32 InMouseY)
 {
 	// Commit to any pending transactions now
 	TrackingTransaction.PromotePendingToActive();
@@ -1577,20 +1577,20 @@ void FLGUIPrefabEditorViewportClient::CapturedMouseMove(FViewport* InViewport, i
 	PrevMouseY = InMouseY;
 }
 
-void FLGUIPrefabEditorViewportClient::MouseEnter(FViewport* InViewport, int32 x, int32 y)
+void FLexUIPrefabEditorViewportClient::MouseEnter(FViewport* InViewport, int32 x, int32 y)
 {
 	FEditorViewportClient::MouseEnter(InViewport, x, y);
 }
-void FLGUIPrefabEditorViewportClient::MouseMove(FViewport* InViewport, int32 x, int32 y)
+void FLexUIPrefabEditorViewportClient::MouseMove(FViewport* InViewport, int32 x, int32 y)
 {
 	FEditorViewportClient::MouseMove(InViewport, x, y);
 }
-void FLGUIPrefabEditorViewportClient::MouseLeave(FViewport* InViewport)
+void FLexUIPrefabEditorViewportClient::MouseLeave(FViewport* InViewport)
 {
 	FEditorViewportClient::MouseLeave(InViewport);
 }
 
-void FLGUIPrefabEditorViewportClient::TrackingStarted(const struct FInputEventState& InInputState, bool bIsDraggingWidget, bool bNudge)
+void FLexUIPrefabEditorViewportClient::TrackingStarted(const struct FInputEventState& InInputState, bool bIsDraggingWidget, bool bNudge)
 {
 	// Begin transacting.  Give the current editor mode an opportunity to do the transacting.
 	const bool bTrackingHandledExternally = ModeTools->StartTracking(this, Viewport);
@@ -1705,7 +1705,7 @@ void FLGUIPrefabEditorViewportClient::TrackingStarted(const struct FInputEventSt
 		}
 	}
 }
-void FLGUIPrefabEditorViewportClient::TrackingStopped()
+void FLexUIPrefabEditorViewportClient::TrackingStopped()
 {
 	const bool AltDown = IsAltPressed();
 	const bool ShiftDown = IsShiftPressed();
@@ -1792,7 +1792,7 @@ void FLGUIPrefabEditorViewportClient::TrackingStopped()
 	}
 }
 
-void FLGUIPrefabEditorViewportClient::AbortTracking()
+void FLexUIPrefabEditorViewportClient::AbortTracking()
 {
 	if (TrackingTransaction.IsActive())
 	{
@@ -1806,7 +1806,7 @@ void FLGUIPrefabEditorViewportClient::AbortTracking()
 	}
 }
 
-bool FLGUIPrefabEditorViewportClient::HaveSelectedObjectsBeenChanged() const
+bool FLexUIPrefabEditorViewportClient::HaveSelectedObjectsBeenChanged() const
 {
 	return (TrackingTransaction.TransCount > 0 || TrackingTransaction.IsActive()) && (MouseDeltaTracker->HasReceivedDelta() || MouseDeltaTracker->WasExternalMovement());
 }

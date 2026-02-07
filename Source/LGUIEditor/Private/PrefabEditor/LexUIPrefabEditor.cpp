@@ -1,11 +1,10 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUIPrefabEditor.h"
-#include "LGUIPrefabEditorViewport.h"
+#include "LexUIPrefabEditor.h"
+#include "LexUIPrefabEditorViewport.h"
 #include "LexUIPrefabEditorDetails.h"
-#include "LGUIPrefabRawDataViewer.h"
+#include "LexUIPrefabRawDataViewer.h"
 #include "EditorModeManager.h"
-#include "EngineUtils.h"
 #include "GameFramework/Actor.h"
 #include "AssetSelection.h"
 #include "DragAndDrop/AssetDragDropOp.h"
@@ -15,7 +14,7 @@
 #include "LexUIEditorTools.h"
 #include "ToolMenus.h"
 #include "Editor.h"
-#include "SLexWidgetEditorHierarchyView.h"
+#include "LexWidgetEditorHierarchyView.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
@@ -24,15 +23,13 @@
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "Utils/LexUIUtils.h"
 
-#define LOCTEXT_NAMESPACE "LGUIPrefabEditor"
-
-
+#define LOCTEXT_NAMESPACE "LexUIPrefabEditor"
 
 const FName PrefabEditorAppName = FName(TEXT("LexUIPrefabEditorApp"));
 
-TArray<FLGUIPrefabEditor*> FLGUIPrefabEditor::PrefabEditorInstanceCollection;
+TArray<FLexUIPrefabEditor*> FLexUIPrefabEditor::PrefabEditorInstanceCollection;
 
-struct FLGUIPrefabEditorTabs
+struct FLexUIPrefabEditorTabs
 {
 	// Tab identifiers
 	static const FName DetailsID;
@@ -41,23 +38,23 @@ struct FLGUIPrefabEditorTabs
 	static const FName PrefabRawDataViewerID;
 };
 
-const FName FLGUIPrefabEditorTabs::DetailsID(TEXT("Details"));
-const FName FLGUIPrefabEditorTabs::ViewportID(TEXT("Viewport"));
-const FName FLGUIPrefabEditorTabs::OutlinerID(TEXT("Outliner"));
-const FName FLGUIPrefabEditorTabs::PrefabRawDataViewerID(TEXT("PrefabRawDataViewer"));
+const FName FLexUIPrefabEditorTabs::DetailsID(TEXT("Details"));
+const FName FLexUIPrefabEditorTabs::ViewportID(TEXT("Viewport"));
+const FName FLexUIPrefabEditorTabs::OutlinerID(TEXT("Outliner"));
+const FName FLexUIPrefabEditorTabs::PrefabRawDataViewerID(TEXT("PrefabRawDataViewer"));
 
 FName GetPrefabWorldName()
 {
 	static uint32 NameSuffix = 0;
 	return FName(*FString::Printf(TEXT("PrefabEditorWorld_%d"), NameSuffix++));
 }
-FLGUIPrefabEditor::FLGUIPrefabEditor()
+FLexUIPrefabEditor::FLexUIPrefabEditor()
 {
 	PrefabEditorInstanceCollection.Add(this);
 
 	GEditor->RegisterForUndo(this);
 }
-FLGUIPrefabEditor::~FLGUIPrefabEditor()
+FLexUIPrefabEditor::~FLexUIPrefabEditor()
 {
 	PrefabEditorInstanceCollection.Remove(this);
 
@@ -68,7 +65,7 @@ FLGUIPrefabEditor::~FLGUIPrefabEditor()
 	GEditor->UnregisterForUndo(this);
 }
 
-FLGUIPrefabEditor* FLGUIPrefabEditor::GetEditorForPrefabIfValid(ULexUIPrefab* InPrefab)
+FLexUIPrefabEditor* FLexUIPrefabEditor::GetEditorForPrefabIfValid(ULexUIPrefab* InPrefab)
 {
 	for (auto Instance : PrefabEditorInstanceCollection)
 	{
@@ -80,7 +77,7 @@ FLGUIPrefabEditor* FLGUIPrefabEditor::GetEditorForPrefabIfValid(ULexUIPrefab* In
 	return nullptr;
 }
 
-bool FLGUIPrefabEditor::WorldIsPrefabEditor(UWorld* InWorld)
+bool FLexUIPrefabEditor::WorldIsPrefabEditor(UWorld* InWorld)
 {
 	for (auto Instance : PrefabEditorInstanceCollection)
 	{
@@ -92,7 +89,19 @@ bool FLGUIPrefabEditor::WorldIsPrefabEditor(UWorld* InWorld)
 	return false;
 }
 
-bool FLGUIPrefabEditor::ActorIsRootAgent(AActor* InActor)
+TWeakPtr<FLexUIPrefabEditor> FLexUIPrefabEditor::GetEditorByWorld(UWorld* InWorld)
+{
+	for (auto Instance : PrefabEditorInstanceCollection)
+	{
+		if (Instance->GetWorld() == InWorld)
+		{
+			return SharedThis(Instance);
+		}
+	}
+	return nullptr;
+}
+
+bool FLexUIPrefabEditor::ActorIsRootAgent(AActor* InActor)
 {
 	for (auto Instance : PrefabEditorInstanceCollection)
 	{
@@ -104,7 +113,7 @@ bool FLGUIPrefabEditor::ActorIsRootAgent(AActor* InActor)
 	return false;
 }
 
-void FLGUIPrefabEditor::IterateAllPrefabEditor(const TFunction<void(FLGUIPrefabEditor*)>& InFunction)
+void FLexUIPrefabEditor::IterateAllPrefabEditor(const TFunction<void(FLexUIPrefabEditor*)>& InFunction)
 {
 	for (auto Instance : PrefabEditorInstanceCollection)
 	{
@@ -112,12 +121,12 @@ void FLGUIPrefabEditor::IterateAllPrefabEditor(const TFunction<void(FLGUIPrefabE
 	}
 }
 
-bool FLGUIPrefabEditor::RefreshOnSubPrefabDirty(ULexUIPrefab* InSubPrefab)
+bool FLexUIPrefabEditor::RefreshOnSubPrefabDirty(ULexUIPrefab* InSubPrefab)
 {
 	return GetPrefabHelperObject()->RefreshOnSubPrefabDirty(InSubPrefab);
 }
 
-bool FLGUIPrefabEditor::GetSelectedObjectsBounds(FBoxSphereBounds& OutResult)
+bool FLexUIPrefabEditor::GetSelectedObjectsBounds(FBoxSphereBounds& OutResult)
 {
 	FBoxSphereBounds Bounds = FBoxSphereBounds(EForceInit::ForceInitToZero);
 	bool IsFirstBounds = true;
@@ -138,7 +147,7 @@ bool FLGUIPrefabEditor::GetSelectedObjectsBounds(FBoxSphereBounds& OutResult)
 	return IsFirstBounds == false;
 }
 
-FBoxSphereBounds FLGUIPrefabEditor::GetAllObjectsBounds()
+FBoxSphereBounds FLexUIPrefabEditor::GetAllObjectsBounds()
 {
 	FBoxSphereBounds Bounds;
 	bool IsFirstBounds = true;
@@ -180,26 +189,26 @@ FBoxSphereBounds FLGUIPrefabEditor::GetAllObjectsBounds()
 	return Bounds;
 }
 
-bool FLGUIPrefabEditor::ActorBelongsToSubPrefab(AActor* InActor)
+bool FLexUIPrefabEditor::ActorBelongsToSubPrefab(AActor* InActor)
 {
 	return GetPrefabHelperObject()->IsActorBelongsToSubPrefab(InActor);
 }
 
-bool FLGUIPrefabEditor::ActorIsSubPrefabRoot(AActor* InSubPrefabRootActor)
+bool FLexUIPrefabEditor::ActorIsSubPrefabRoot(AActor* InSubPrefabRootActor)
 {
 	return GetPrefabHelperObject()->SubPrefabMap.Contains(InSubPrefabRootActor);
 }
 
-FLexUISubPrefabData FLGUIPrefabEditor::GetSubPrefabDataForActor(AActor* InSubPrefabActor)
+FLexUISubPrefabData FLexUIPrefabEditor::GetSubPrefabDataForActor(AActor* InSubPrefabActor)
 {
 	return GetPrefabHelperObject()->GetSubPrefabData(InSubPrefabActor);
 }
 
-void FLGUIPrefabEditor::OpenSubPrefab(AActor* InSubPrefabActor)
+void FLexUIPrefabEditor::OpenSubPrefab(AActor* InSubPrefabActor)
 {
 	if (auto SubPrefabAsset = GetPrefabHelperObject()->GetSubPrefabAsset(InSubPrefabActor))
 	{
-		auto PrefabEditor = FLGUIPrefabEditor::GetEditorForPrefabIfValid(SubPrefabAsset);
+		auto PrefabEditor = FLexUIPrefabEditor::GetEditorForPrefabIfValid(SubPrefabAsset);
 		if (!PrefabEditor)
 		{
 			UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
@@ -207,7 +216,7 @@ void FLGUIPrefabEditor::OpenSubPrefab(AActor* InSubPrefabActor)
 		}
 	}
 }
-void FLGUIPrefabEditor::SelectSubPrefab(AActor* InSubPrefabActor)
+void FLexUIPrefabEditor::SelectSubPrefab(AActor* InSubPrefabActor)
 {
 	if (auto SubPrefabAsset = GetPrefabHelperObject()->GetSubPrefabAsset(InSubPrefabActor))
 	{
@@ -217,63 +226,63 @@ void FLGUIPrefabEditor::SelectSubPrefab(AActor* InSubPrefabActor)
 	}
 }
 
-bool FLGUIPrefabEditor::GetAnythingDirty()const 
+bool FLexUIPrefabEditor::GetAnythingDirty()const 
 { 
 	return GetPrefabHelperObject()->GetAnythingDirty();
 }
 
-void FLGUIPrefabEditor::SyncSelection()
+void FLexUIPrefabEditor::SyncSelection()
 {
 	SelectedActors = ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->GetSelectedActors();
 	OnSelectedWidgetsChanged.Broadcast();
 	OutlinerPtr->RequestRefresh();
 }
 
-void FLGUIPrefabEditor::RegisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)
+void FLexUIPrefabEditor::RegisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)
 {
-	WorkspaceMenuCategory = InTabManager->AddLocalWorkspaceMenuCategory(LOCTEXT("WorkspaceMenu_LGUIPrefabEditor", "LGUIPrefab Editor"));
+	WorkspaceMenuCategory = InTabManager->AddLocalWorkspaceMenuCategory(LOCTEXT("WorkspaceMenu_LexUIPrefabEditor", "LexUIPrefab Editor"));
 	auto WorkspaceMenuCategoryRef = WorkspaceMenuCategory.ToSharedRef();
 
 	FAssetEditorToolkit::RegisterTabSpawners(InTabManager);
 
-	InTabManager->RegisterTabSpawner(FLGUIPrefabEditorTabs::ViewportID, FOnSpawnTab::CreateSP(this, &FLGUIPrefabEditor::SpawnTab_Viewport))
+	InTabManager->RegisterTabSpawner(FLexUIPrefabEditorTabs::ViewportID, FOnSpawnTab::CreateSP(this, &FLexUIPrefabEditor::SpawnTab_Viewport))
 		.SetDisplayName(LOCTEXT("ViewportTab", "Viewport"))
 		.SetGroup(WorkspaceMenuCategoryRef)
 		.SetIcon(FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Viewports"));
 
-	InTabManager->RegisterTabSpawner(FLGUIPrefabEditorTabs::DetailsID, FOnSpawnTab::CreateSP(this, &FLGUIPrefabEditor::SpawnTab_Details))
+	InTabManager->RegisterTabSpawner(FLexUIPrefabEditorTabs::DetailsID, FOnSpawnTab::CreateSP(this, &FLexUIPrefabEditor::SpawnTab_Details))
 		.SetDisplayName(LOCTEXT("DetailsTabLabel", "Details"))
 		.SetGroup(WorkspaceMenuCategoryRef)
 		.SetIcon(FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Details"));
 
-	InTabManager->RegisterTabSpawner(FLGUIPrefabEditorTabs::OutlinerID, FOnSpawnTab::CreateSP(this, &FLGUIPrefabEditor::SpawnTab_Outliner))
+	InTabManager->RegisterTabSpawner(FLexUIPrefabEditorTabs::OutlinerID, FOnSpawnTab::CreateSP(this, &FLexUIPrefabEditor::SpawnTab_Outliner))
 		.SetDisplayName(LOCTEXT("OutlinerTabLabel", "Outliner"))
 		.SetGroup(WorkspaceMenuCategoryRef)
 		.SetIcon(FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Outliner"));
 
-	InTabManager->RegisterTabSpawner(FLGUIPrefabEditorTabs::PrefabRawDataViewerID, FOnSpawnTab::CreateSP(this, &FLGUIPrefabEditor::SpawnTab_PrefabRawDataViewer))
+	InTabManager->RegisterTabSpawner(FLexUIPrefabEditorTabs::PrefabRawDataViewerID, FOnSpawnTab::CreateSP(this, &FLexUIPrefabEditor::SpawnTab_PrefabRawDataViewer))
 		.SetDisplayName(LOCTEXT("PrefabRawDataViewerTabLabel", "PrefabRawDataViewer"))
 		.SetGroup(WorkspaceMenuCategoryRef)
 		;
 }
-void FLGUIPrefabEditor::UnregisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)
+void FLexUIPrefabEditor::UnregisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)
 {
 	FAssetEditorToolkit::UnregisterTabSpawners(InTabManager);
 
-	InTabManager->UnregisterTabSpawner(FLGUIPrefabEditorTabs::ViewportID);
-	InTabManager->UnregisterTabSpawner(FLGUIPrefabEditorTabs::DetailsID);
-	InTabManager->UnregisterTabSpawner(FLGUIPrefabEditorTabs::OutlinerID);
-	InTabManager->UnregisterTabSpawner(FLGUIPrefabEditorTabs::PrefabRawDataViewerID);
+	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::ViewportID);
+	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::DetailsID);
+	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::OutlinerID);
+	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::PrefabRawDataViewerID);
 }
 
-void FLGUIPrefabEditor::PostUndo(bool bSuccess)
+void FLexUIPrefabEditor::PostUndo(bool bSuccess)
 {
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	SelectedActors = ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->GetSelectedActors();
 	OnSelectedWidgetsChanged.Broadcast();
 	OutlinerPtr->RequestRefresh();
 }
-void FLGUIPrefabEditor::PostRedo(bool bSuccess)
+void FLexUIPrefabEditor::PostRedo(bool bSuccess)
 {
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	SelectedActors = ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->GetSelectedActors();
@@ -281,7 +290,7 @@ void FLGUIPrefabEditor::PostRedo(bool bSuccess)
 	OutlinerPtr->RequestRefresh();
 }
 
-void FLGUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const TSharedPtr<IToolkitHost >& InitToolkitHost, ULexUIPrefab* InPrefab)
+void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const TSharedPtr<IToolkitHost >& InitToolkitHost, ULexUIPrefab* InPrefab)
 {
 	PrefabBeingEdited = InPrefab;
 	if (PrefabBeingEdited->ReferenceClassList.Contains(nullptr))
@@ -299,13 +308,13 @@ void FLGUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const TS
 	
 	PrefabBeingEdited->EnsureInstanceObjects();
 
-	TSharedPtr<FLGUIPrefabEditor> PrefabEditorPtr = SharedThis(this);
+	TSharedPtr<FLexUIPrefabEditor> PrefabEditorPtr = SharedThis(this);
 
-	ViewportPtr = SNew(SLGUIPrefabEditorViewport, PrefabEditorPtr, PrefabBeingEdited->PrefabDataForPrefabEditor.ViewMode);
+	ViewportPtr = SNew(SLexUIPrefabEditorViewport, PrefabEditorPtr, PrefabBeingEdited->PrefabDataForPrefabEditor.ViewMode);
 	
 	DetailsPtr = SNew(SLexUIPrefabEditorDetails, PrefabEditorPtr);
 
-	PrefabRawDataViewer = SNew(SLGUIPrefabRawDataViewer, PrefabEditorPtr, PrefabBeingEdited);
+	PrefabRawDataViewer = SNew(SLexUIPrefabRawDataViewer, PrefabEditorPtr, PrefabBeingEdited);
 	
 	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->EventOnOutlineChanged.AddSPLambda(this, [=, this]()
 	{
@@ -322,7 +331,7 @@ void FLGUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const TS
 	ExtendToolbar();
 
 	// Default layout
-	const TSharedRef<FTabManager::FLayout> StandaloneDefaultLayout = FTabManager::NewLayout("Standalone_LGUIPrefabEditor_Layout_v1")
+	const TSharedRef<FTabManager::FLayout> StandaloneDefaultLayout = FTabManager::NewLayout("Standalone_LexUIPrefabEditor_Layout_v1")
 		->AddArea
 		(
 			FTabManager::NewPrimaryArea()
@@ -336,37 +345,37 @@ void FLGUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const TS
 				(
 					FTabManager::NewStack()
 					->SetSizeCoefficient(0.2f)
-					->AddTab(FLGUIPrefabEditorTabs::OutlinerID, ETabState::OpenedTab)
+					->AddTab(FLexUIPrefabEditorTabs::OutlinerID, ETabState::OpenedTab)
 				)
 				->Split
 				(
 					FTabManager::NewStack()
 					->SetSizeCoefficient(0.6f)
-					->AddTab(FLGUIPrefabEditorTabs::ViewportID, ETabState::OpenedTab)
+					->AddTab(FLexUIPrefabEditorTabs::ViewportID, ETabState::OpenedTab)
 				)
 				->Split
 				(
 					FTabManager::NewStack()
 					->SetSizeCoefficient(0.2f)
-					->AddTab(FLGUIPrefabEditorTabs::DetailsID, ETabState::OpenedTab)
+					->AddTab(FLexUIPrefabEditorTabs::DetailsID, ETabState::OpenedTab)
 				)
 			)
 		);
 
 	InitAssetEditor(Mode, InitToolkitHost, PrefabEditorAppName, StandaloneDefaultLayout, true, true, PrefabBeingEdited);
 
-	// After opening a prefab, broadcast event to LGUIPrefabSequencerEditor
+	// After opening a prefab, broadcast event to LexUIPrefabSequencerEditor
 	FLexUIEditorTools::OnEditingPrefabChanged.Broadcast(GetPreviewScene()->GetRootAgentActor());
 }
 
-TArray<AActor*> FLGUIPrefabEditor::GetAllActors()
+TArray<AActor*> FLexUIPrefabEditor::GetAllActors()
 {
 	TArray<AActor*> AllActors;
 	FLexUIUtils::CollectChildrenActors(GetPrefabHelperObject()->LoadedRootActor, AllActors, true);
 	return AllActors;
 }
 
-void FLGUIPrefabEditor::GetInitialViewSetting(FVector& OutLocation, FRotator& OutRotation, FVector& OutOrbitLocation, ELevelViewportType& OutViewType)
+void FLexUIPrefabEditor::GetInitialViewSetting(FVector& OutLocation, FRotator& OutRotation, FVector& OutOrbitLocation, ELevelViewportType& OutViewType)
 {
 	auto& PrefabEditorData = PrefabBeingEdited->PrefabDataForPrefabEditor;
 	auto SceneBounds = this->GetAllObjectsBounds();
@@ -391,17 +400,17 @@ void FLGUIPrefabEditor::GetInitialViewSetting(FVector& OutLocation, FRotator& Ou
 	OutViewType = (ELevelViewportType)PrefabEditorData.ViewportType;
 }
 
-AActor* FLGUIPrefabEditor::GetRootAgentActor()
+AActor* FLexUIPrefabEditor::GetRootAgentActor()
 {
 	return GetPreviewScene()->GetRootAgentActor();
 }
 
-AActor* FLGUIPrefabEditor::GetLoadedRootActor()
+AActor* FLexUIPrefabEditor::GetLoadedRootActor()
 {
 	return GetPrefabHelperObject()->LoadedRootActor;
 }
 
-void FLGUIPrefabEditor::SaveAsset_Execute()
+void FLexUIPrefabEditor::SaveAsset_Execute()
 {
 	SaveEditorState();
 	FAssetEditorToolkit::SaveAsset_Execute();//save asset
@@ -412,17 +421,17 @@ void FLGUIPrefabEditor::SaveAsset_Execute()
 	FLexUIEditorTools::RefreshOnSubPrefabChange(GetPrefabHelperObject()->PrefabAsset);
 }
 
-void FLGUIPrefabEditor::OnOpenRawDataViewerPanel()
+void FLexUIPrefabEditor::OnOpenRawDataViewerPanel()
 {
-	this->InvokeTab(FLGUIPrefabEditorTabs::PrefabRawDataViewerID);
+	this->InvokeTab(FLexUIPrefabEditorTabs::PrefabRawDataViewerID);
 }
-void FLGUIPrefabEditor::OnOpenPrefabHelperObjectDetailsPanel()
+void FLexUIPrefabEditor::OnOpenPrefabHelperObjectDetailsPanel()
 {
 	UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
 	AssetEditorSubsystem->OpenEditorForAsset(GetPrefabHelperObject());
 }
 
-void FLGUIPrefabEditor::SaveEditorState()
+void FLexUIPrefabEditor::SaveEditorState()
 {
 	//save view location and rotation
 	auto ViewTransform = ViewportPtr->GetViewportClient()->GetViewTransform();
@@ -456,7 +465,7 @@ void FLGUIPrefabEditor::SaveEditorState()
 			}
 		}
 	}
-	PrefabBeingEdited->PrefabDataForPrefabEditor.UnexpandWidgetSet = UnexpandWidgetGuidArray;
+	PrefabBeingEdited->PrefabDataForPrefabEditor.UnexpandedWidgetSet = UnexpandWidgetGuidArray;
 	PrefabBeingEdited->bThumbnailDirty = true;
 
 	//refresh parameter, remove invalid
@@ -466,12 +475,12 @@ void FLGUIPrefabEditor::SaveEditorState()
 	}
 }
 
-void FLGUIPrefabEditor::AddReferencedObjects(FReferenceCollector& Collector)
+void FLexUIPrefabEditor::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	Collector.AddReferencedObject(PrefabBeingEdited);
 }
 
-void FLGUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bAppendOrToggle, bool bNotifyGEditor)
+void FLexUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bAppendOrToggle, bool bNotifyGEditor)
 {
 	if (bIsSelecting)return;
 	bIsSelecting = true;
@@ -518,7 +527,7 @@ void FLGUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bAp
 	bIsSelecting = false;
 }
 
-TArray<TWeakObjectPtr<ULexWidget>> FLGUIPrefabEditor::GetSelectedWidgets()
+TArray<TWeakObjectPtr<ULexWidget>> FLexUIPrefabEditor::GetSelectedWidgets()
 {
 	TArray<TWeakObjectPtr<ULexWidget>> SelectedWidgets;
 	for (auto Actor : SelectedActors)
@@ -534,28 +543,28 @@ TArray<TWeakObjectPtr<ULexWidget>> FLGUIPrefabEditor::GetSelectedWidgets()
 	return SelectedWidgets;
 }
 
-FLexUIPrefabInstanceScene* FLGUIPrefabEditor::GetPreviewScene()
+FLexUIPrefabInstanceScene* FLexUIPrefabEditor::GetPreviewScene()
 { 
 	return PrefabBeingEdited->GetPrefabInstanceScene();
 }
 
-UWorld* FLGUIPrefabEditor::GetWorld()
+UWorld* FLexUIPrefabEditor::GetWorld()
 {
 	return PrefabBeingEdited->GetPrefabInstanceScene()->GetWorld();
 }
 
-void FLGUIPrefabEditor::BindCommands()
+void FLexUIPrefabEditor::BindCommands()
 {
 	const FLexUIPrefabEditorCommand& PrefabEditorCommands = FLexUIPrefabEditorCommand::Get();
 	ToolkitCommands->MapAction(
 		PrefabEditorCommands.RawDataViewer,
-		FExecuteAction::CreateSP(this, &FLGUIPrefabEditor::OnOpenRawDataViewerPanel),
+		FExecuteAction::CreateSP(this, &FLexUIPrefabEditor::OnOpenRawDataViewerPanel),
 		FCanExecuteAction(),
 		FIsActionChecked()
 	);
 	ToolkitCommands->MapAction(
 		PrefabEditorCommands.OpenPrefabHelperObject,
-		FExecuteAction::CreateSP(this, &FLGUIPrefabEditor::OnOpenPrefabHelperObjectDetailsPanel),
+		FExecuteAction::CreateSP(this, &FLexUIPrefabEditor::OnOpenPrefabHelperObjectDetailsPanel),
 		FCanExecuteAction(),
 		FIsActionChecked()
 	);
@@ -640,7 +649,7 @@ void FLGUIPrefabEditor::BindCommands()
 		FIsActionButtonVisible()
 	);
 }
-void FLGUIPrefabEditor::ExtendToolbar()
+void FLexUIPrefabEditor::ExtendToolbar()
 {
 	const FName MenuName = GetToolMenuToolbarName();
 	if (!UToolMenus::Get()->IsMenuRegistered(MenuName))
@@ -652,17 +661,17 @@ void FLGUIPrefabEditor::ExtendToolbar()
 
 	FToolMenuInsert InsertAfterAssetSection("Asset", EToolMenuInsertType::After);
 	{
-		FToolMenuSection& Section = ToolBar->AddSection("LGUIPrefabCommands", TAttribute<FText>(), InsertAfterAssetSection);
+		FToolMenuSection& Section = ToolBar->AddSection("LexUIPrefabCommands", TAttribute<FText>(), InsertAfterAssetSection);
 		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().RawDataViewer));
 		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().OpenPrefabHelperObject));
 	}
 }
 
-FText FLGUIPrefabEditor::GetApplyButtonStatusTooltip()const
+FText FLexUIPrefabEditor::GetApplyButtonStatusTooltip()const
 {
 	return GetAnythingDirty() ? LOCTEXT("Apply_Tooltip", "Dirty, need to apply") : LOCTEXT("Apply_Tooltip", "Good to go");
 }
-FSlateIcon FLGUIPrefabEditor::GetApplyButtonStatusImage()const
+FSlateIcon FLexUIPrefabEditor::GetApplyButtonStatusImage()const
 {
 	static const FName CompileStatusBackground("Blueprint.CompileStatus.Background");
 	static const FName CompileStatusUnknown("Blueprint.CompileStatus.Overlay.Unknown");
@@ -671,7 +680,7 @@ FSlateIcon FLGUIPrefabEditor::GetApplyButtonStatusImage()const
 	return FSlateIcon(FAppStyle::GetAppStyleSetName(), CompileStatusBackground, NAME_None, GetAnythingDirty() ? CompileStatusUnknown : CompileStatusGood);
 }
 
-TSharedRef<SDockTab> FLGUIPrefabEditor::SpawnTab_Viewport(const FSpawnTabArgs& Args)
+TSharedRef<SDockTab> FLexUIPrefabEditor::SpawnTab_Viewport(const FSpawnTabArgs& Args)
 {
 	return SNew(SDockTab)
 		.Label(LOCTEXT("ViewportTab_Title", "Viewport"))
@@ -679,7 +688,7 @@ TSharedRef<SDockTab> FLGUIPrefabEditor::SpawnTab_Viewport(const FSpawnTabArgs& A
 			ViewportPtr.ToSharedRef()
 		];
 }
-TSharedRef<SDockTab> FLGUIPrefabEditor::SpawnTab_Details(const FSpawnTabArgs& Args)
+TSharedRef<SDockTab> FLexUIPrefabEditor::SpawnTab_Details(const FSpawnTabArgs& Args)
 {
 	// Spawn the tab
 	return SNew(SDockTab)
@@ -688,7 +697,7 @@ TSharedRef<SDockTab> FLGUIPrefabEditor::SpawnTab_Details(const FSpawnTabArgs& Ar
 			DetailsPtr.ToSharedRef()
 		];
 }
-TSharedRef<SDockTab> FLGUIPrefabEditor::SpawnTab_Outliner(const FSpawnTabArgs& Args)
+TSharedRef<SDockTab> FLexUIPrefabEditor::SpawnTab_Outliner(const FSpawnTabArgs& Args)
 {
 	// Spawn the tab
 	return SNew(SDockTab)
@@ -698,7 +707,7 @@ TSharedRef<SDockTab> FLGUIPrefabEditor::SpawnTab_Outliner(const FSpawnTabArgs& A
 		];
 }
 
-TSharedRef<SDockTab> FLGUIPrefabEditor::SpawnTab_PrefabRawDataViewer(const FSpawnTabArgs& Args)
+TSharedRef<SDockTab> FLexUIPrefabEditor::SpawnTab_PrefabRawDataViewer(const FSpawnTabArgs& Args)
 {
 	// Spawn the tab
 	return SNew(SDockTab)
@@ -708,7 +717,7 @@ TSharedRef<SDockTab> FLGUIPrefabEditor::SpawnTab_PrefabRawDataViewer(const FSpaw
 		];
 }
 
-bool FLGUIPrefabEditor::IsFilteredActor(const AActor* Actor)
+bool FLexUIPrefabEditor::IsFilteredActor(const AActor* Actor)
 {
 	if (Actor == nullptr)
 	{
@@ -722,7 +731,7 @@ bool FLGUIPrefabEditor::IsFilteredActor(const AActor* Actor)
 	return true;
 }
 
-void FLGUIPrefabEditor::OnOutlinerActorDoubleClick(AActor* Actor)
+void FLexUIPrefabEditor::OnOutlinerActorDoubleClick(AActor* Actor)
 {
 	// Create a bounding volume of all of the selected actors.
 	FBox BoundingBox(ForceInit);
@@ -767,44 +776,44 @@ void FLGUIPrefabEditor::OnOutlinerActorDoubleClick(AActor* Actor)
 	ViewportPtr->GetViewportClient()->FocusViewportOnBox(BoundingBox);
 }
 
-FName FLGUIPrefabEditor::GetToolkitFName() const
+FName FLexUIPrefabEditor::GetToolkitFName() const
 {
-	return FName("LGUIPrefabEditor");
+	return FName("LexUIPrefabEditor");
 }
-FText FLGUIPrefabEditor::GetBaseToolkitName() const
+FText FLexUIPrefabEditor::GetBaseToolkitName() const
 {
-	return LOCTEXT("LGUIPrefabEditorAppLabel", "LGUI Prefab Editor");
+	return LOCTEXT("LexUIPrefabEditorAppLabel", "LexUI Prefab Editor");
 }
-FText FLGUIPrefabEditor::GetToolkitName() const
+FText FLexUIPrefabEditor::GetToolkitName() const
 {
 	return FText::FromString(PrefabBeingEdited->GetName());
 }
-FText FLGUIPrefabEditor::GetToolkitToolTipText() const
+FText FLexUIPrefabEditor::GetToolkitToolTipText() const
 {
 	return FAssetEditorToolkit::GetToolTipTextForObject(PrefabBeingEdited);
 }
-FLinearColor FLGUIPrefabEditor::GetWorldCentricTabColorScale() const
+FLinearColor FLexUIPrefabEditor::GetWorldCentricTabColorScale() const
 {
 	return FLinearColor::White;
 }
-FString FLGUIPrefabEditor::GetWorldCentricTabPrefix() const
+FString FLexUIPrefabEditor::GetWorldCentricTabPrefix() const
 {
-	return TEXT("LGUIPrefabEditor");
+	return TEXT("LexUIPrefabEditor");
 }
-FString FLGUIPrefabEditor::GetDocumentationLink() const
+FString FLexUIPrefabEditor::GetDocumentationLink() const
 {
 	return TEXT("");
 }
-void FLGUIPrefabEditor::OnToolkitHostingStarted(const TSharedRef<IToolkit>& Toolkit)
+void FLexUIPrefabEditor::OnToolkitHostingStarted(const TSharedRef<IToolkit>& Toolkit)
 {
 
 }
-void FLGUIPrefabEditor::OnToolkitHostingFinished(const TSharedRef<IToolkit>& Toolkit)
+void FLexUIPrefabEditor::OnToolkitHostingFinished(const TSharedRef<IToolkit>& Toolkit)
 {
 
 }
 
-FReply FLGUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent& DragDropEvent, ULexWidget* InParentWidget)
+FReply FLexUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent& DragDropEvent, ULexWidget* InParentWidget)
 {
 	TSharedPtr<FDragDropOperation> Operation = DragDropEvent.GetOperation();
 	if (Operation.IsValid() && Operation->IsOfType<FAssetDragDropOp>())

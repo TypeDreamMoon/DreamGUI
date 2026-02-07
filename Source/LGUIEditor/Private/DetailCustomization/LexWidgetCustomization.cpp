@@ -1326,19 +1326,19 @@ TSharedPtr<IPropertyHandle> FLexWidgetCustomization::GetAnchorPropertyHandle(IDe
 		case 0://anchored position y, stretch left
 			if (AnchorMinValue.X == AnchorMaxValue.X)
 				return DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData.AnchoredPosition.X));
-			return DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, CacheAnchorLeft));
+			return DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, CacheAnchorOffsetLeft));
 		case 1://anchored position z, stretch top
 			if (AnchorMinValue.Y == AnchorMaxValue.Y)
 				return DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData.AnchoredPosition.Y));
-			return DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, CacheAnchorTop));
+			return DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, CacheAnchorOffsetTop));
 		case 2://width, stretch right
 			if (AnchorMinValue.X == AnchorMaxValue.X)
 				return DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData.SizeDelta.X));
-			return DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, CacheAnchorRight));
+			return DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, CacheAnchorOffsetRight));
 		case 3://height, stretch bottom
 			if (AnchorMinValue.Y == AnchorMaxValue.Y)
 				return DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData.SizeDelta.Y));
-			return DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, CacheAnchorBottom));
+			return DetailBuilder->GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, CacheAnchorOffsetBottom));
 		}
 	}
 	return nullptr;
@@ -1502,7 +1502,7 @@ FText FLexWidgetCustomization::GetAnchorLabelTooltipText(TSharedRef<IPropertyHan
 		}
 		else
 		{
-			return FText::Format(LOCTEXT("AnchoredLeft_Tooltip", "Calculated distance to parent's left anchor point. Related function: {0} / {1}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, GetAnchorLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, SetAnchorLeft)));
+			return FText::Format(LOCTEXT("AnchoredLeft_Tooltip", "Calculated distance to parent's left anchor point. Related function: {0} / {1}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, GetAnchorOffsetLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, SetAnchorOffsetLeft)));
 		}
 	}
 	break;
@@ -1514,7 +1514,7 @@ FText FLexWidgetCustomization::GetAnchorLabelTooltipText(TSharedRef<IPropertyHan
 		}
 		else
 		{
-			return FText::Format(LOCTEXT("AnchoredTop_Tooltip", "Calculated distance to parent's top anchor point. Related function: {0} / {1}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, GetAnchorLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, SetAnchorLeft)));
+			return FText::Format(LOCTEXT("AnchoredTop_Tooltip", "Calculated distance to parent's top anchor point. Related function: {0} / {1}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, GetAnchorOffsetLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, SetAnchorOffsetLeft)));
 		}
 	}
 	break;
@@ -1526,7 +1526,7 @@ FText FLexWidgetCustomization::GetAnchorLabelTooltipText(TSharedRef<IPropertyHan
 		}
 		else
 		{
-			return FText::Format(LOCTEXT("AnchoredRight_Tooltip", "Calculated distance to parent's right anchor point. Related function: {0} / {1}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, GetAnchorLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, SetAnchorLeft)));
+			return FText::Format(LOCTEXT("AnchoredRight_Tooltip", "Calculated distance to parent's right anchor point. Related function: {0} / {1}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, GetAnchorOffsetLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, SetAnchorOffsetLeft)));
 		}
 	}
 	break;
@@ -1538,7 +1538,7 @@ FText FLexWidgetCustomization::GetAnchorLabelTooltipText(TSharedRef<IPropertyHan
 		}
 		else
 		{
-			return FText::Format(LOCTEXT("AnchoredBottom_Tooltip", "Calculated distance to parent's bottom anchor point. Related function: {0} / {0}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, GetAnchorLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, SetAnchorLeft)));
+			return FText::Format(LOCTEXT("AnchoredBottom_Tooltip", "Calculated distance to parent's bottom anchor point. Related function: {0} / {0}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, GetAnchorOffsetLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, SetAnchorOffsetLeft)));
 		}
 	}
 	break;
@@ -1716,8 +1716,8 @@ void FLexWidgetCustomization::OnSelectAnchor(LGUIAnchorPreviewWidget::UIAnchorHo
 				break;
 			case LGUIAnchorPreviewWidget::UIAnchorHorizontalAlign::Stretch:
 			{
-				Widget->SetAnchorLeft(0);
-				Widget->SetAnchorRight(0);
+				Widget->SetAnchorOffsetLeft(0);
+				Widget->SetAnchorOffsetRight(0);
 			}
 				break;
 			}
@@ -1740,20 +1740,20 @@ void FLexWidgetCustomization::OnSelectAnchor(LGUIAnchorPreviewWidget::UIAnchorHo
 				break;
 			case LGUIAnchorPreviewWidget::UIAnchorVerticalAlign::Stretch:
 			{
-				Widget->SetAnchorBottom(0);
-				Widget->SetAnchorTop(0);
+				Widget->SetAnchorOffsetBottom(0);
+				Widget->SetAnchorOffsetTop(0);
 			}
 				break;
 			}
 		}
 		if (ShiftPressed)
 		{
-			FMargin PrevAnchorAsMargin(Widget->GetAnchorLeft(), Widget->GetAnchorTop(), Widget->GetAnchorRight(), Widget->GetAnchorBottom());
+			FMargin PrevAnchorAsMargin(Widget->GetAnchorOffsetLeft(), Widget->GetAnchorOffsetTop(), Widget->GetAnchorOffsetRight(), Widget->GetAnchorOffsetBottom());
 			Widget->SetPivot(DesiredPivot);
-			Widget->SetAnchorLeft(PrevAnchorAsMargin.Left);
-			Widget->SetAnchorRight(PrevAnchorAsMargin.Right);
-			Widget->SetAnchorBottom(PrevAnchorAsMargin.Bottom);
-			Widget->SetAnchorTop(PrevAnchorAsMargin.Top);
+			Widget->SetAnchorOffsetLeft(PrevAnchorAsMargin.Left);
+			Widget->SetAnchorOffsetRight(PrevAnchorAsMargin.Right);
+			Widget->SetAnchorOffsetBottom(PrevAnchorAsMargin.Bottom);
+			Widget->SetAnchorOffsetTop(PrevAnchorAsMargin.Top);
 		}
 
 		FLexUIUtils::NotifyPropertyChanged(Widget.Get(), GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData));
@@ -1895,7 +1895,7 @@ TOptional<float> FLexWidgetCustomization::GetAnchorValue(TSharedRef<IPropertyHan
 				}
 				else
 				{
-					return Item->GetAnchorLeft();
+					return Item->GetAnchorOffsetLeft();
 				}
 			};
 			if (AnchoredPositionAccessResult == FPropertyAccess::Result::Success)
@@ -1943,7 +1943,7 @@ TOptional<float> FLexWidgetCustomization::GetAnchorValue(TSharedRef<IPropertyHan
 				}
 				else
 				{
-					return Item->GetAnchorTop();
+					return Item->GetAnchorOffsetTop();
 				}
 			};
 			if (AnchoredPositionAccessResult == FPropertyAccess::Result::Success)
@@ -1991,7 +1991,7 @@ TOptional<float> FLexWidgetCustomization::GetAnchorValue(TSharedRef<IPropertyHan
 				}
 				else
 				{
-					return Item->GetAnchorRight();
+					return Item->GetAnchorOffsetRight();
 				}
 			};
 			if (SizeDeltaAccessResult == FPropertyAccess::Result::Success)
@@ -2039,7 +2039,7 @@ TOptional<float> FLexWidgetCustomization::GetAnchorValue(TSharedRef<IPropertyHan
 				}
 				else
 				{
-					return Item->GetAnchorBottom();
+					return Item->GetAnchorOffsetBottom();
 				}
 			};
 			if (SizeDeltaAccessResult == FPropertyAccess::Result::Success)
@@ -2119,7 +2119,7 @@ void FLexWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPropert
 		{
 			for (auto& Item : TargetScriptArray)
 			{
-				Item->SetAnchorLeft(Value);
+				Item->SetAnchorOffsetLeft(Value);
 			}
 		}
 	}
@@ -2137,7 +2137,7 @@ void FLexWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPropert
 		{
 			for (auto& Item : TargetScriptArray)
 			{
-				Item->SetAnchorTop(Value);
+				Item->SetAnchorOffsetTop(Value);
 			}
 		}
 	}
@@ -2155,7 +2155,7 @@ void FLexWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPropert
 		{
 			for (auto& Item : TargetScriptArray)
 			{
-				Item->SetAnchorRight(Value);
+				Item->SetAnchorOffsetRight(Value);
 			}
 		}
 	}
@@ -2173,7 +2173,7 @@ void FLexWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPropert
 		{
 			for (auto& Item : TargetScriptArray)
 			{
-				Item->SetAnchorBottom(Value);
+				Item->SetAnchorOffsetBottom(Value);
 			}
 		}
 	}

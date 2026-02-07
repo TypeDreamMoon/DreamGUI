@@ -17,7 +17,7 @@
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "LGUIEditorModule.h"
-#include "PrefabEditor/LGUIPrefabEditor.h"
+#include "PrefabEditor/LexUIPrefabEditor.h"
 #include "Core/Components/LexLayout.h"
 #include "Core/Actor/LexWidgetRootActor.h"
 #include "Event/LexEventSystem.h"
@@ -1136,7 +1136,7 @@ void FLexUIEditorTools::RefreshLevelLoadedPrefab()
 
 void FLexUIEditorTools::RefreshOpenedPrefabEditor(ULexUIPrefab* InPrefab)
 {
-	if (auto PrefabEditor = FLGUIPrefabEditor::GetEditorForPrefabIfValid(InPrefab))//refresh opened prefab
+	if (auto PrefabEditor = FLexUIPrefabEditor::GetEditorForPrefabIfValid(InPrefab))//refresh opened prefab
 	{
 		if (PrefabEditor->GetAnythingDirty())
 		{
@@ -1174,7 +1174,7 @@ void FLexUIEditorTools::RefreshOnSubPrefabChange(ULexUIPrefab* InSubPrefab)
 				if (Prefab->IsPrefabBelongsToThisSubPrefab(InSubPrefab, false))
 				{
 					//check if is opened by prefab editor
-					if (auto PrefabEditor = FLGUIPrefabEditor::GetEditorForPrefabIfValid(Prefab))//refresh opened prefab
+					if (auto PrefabEditor = FLexUIPrefabEditor::GetEditorForPrefabIfValid(Prefab))//refresh opened prefab
 					{
 						PrefabEditor->RefreshOnSubPrefabDirty(InSubPrefab);
 					}
@@ -1389,7 +1389,7 @@ void FLexUIEditorTools::MakeCurrentLevel(AActor* InActor)
 bool FLexUIEditorTools::IsActorCompatibleWithLexUIToolsMenu(AActor* InActor)
 {
 	if (InActor->IsA<ALexWidgetActor>()
-		&& !FLGUIPrefabEditor::ActorIsRootAgent(InActor))
+		&& !FLexUIPrefabEditor::ActorIsRootAgent(InActor))
 	{
 		return true;
 	}

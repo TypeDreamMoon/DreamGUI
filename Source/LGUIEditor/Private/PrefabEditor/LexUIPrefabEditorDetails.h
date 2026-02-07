@@ -5,7 +5,7 @@
 #include "SSubobjectEditor.h"
 #pragma once
 
-class FLGUIPrefabEditor;
+class FLexUIPrefabEditor;
 class AActor;
 
 /**
@@ -21,7 +21,7 @@ public:
     SLATE_END_ARGS()
 
     /** Widget constructor */
-    void Construct(const FArguments& Args, TSharedPtr<FLGUIPrefabEditor> InPrefabEditor);
+    void Construct(const FArguments& Args, TSharedPtr<FLexUIPrefabEditor> InPrefabEditor);
 
 	virtual ~SLexUIPrefabEditorDetails();
 private:
@@ -30,7 +30,7 @@ private:
 	void OnSubObjectSelectionChanged(const TArray<FSubobjectEditorTreeNodePtrType>& SelectedNodes);
 	void OnSubObjectItemDoubleClicked(const FSubobjectEditorTreeNodePtrType ClickedNode);
 
-	TWeakPtr<FLGUIPrefabEditor> PrefabEditorPtr;
+	TWeakPtr<FLexUIPrefabEditor> PrefabEditorPtr;
 
 	bool IsPropertyReadOnly(const FPropertyAndParent& InPropertyAndParent);
 	bool IsPrefabButtonEnable()const;

@@ -41,7 +41,7 @@ protected:
 	void CheckMaterialInstanceDynamic();
 
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
-	virtual void OnTransformChanged() override;
+	virtual void OnTransformChanged(bool InPositionChanged, bool InScaleChanged) override;
 	
 	virtual UTexture* GetTextureToCreateGeometry()override;
 	virtual UMaterialInterface* GetMaterialToCreateGeometry() override;

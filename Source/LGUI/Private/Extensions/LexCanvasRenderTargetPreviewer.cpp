@@ -124,9 +124,9 @@ void ULexCanvasRenderTargetPreviewer::OnDimensionChanged(bool InPivotChange, boo
 	UpdateSpriteData();
 }
 
-void ULexCanvasRenderTargetPreviewer::OnTransformChanged()
+void ULexCanvasRenderTargetPreviewer::OnTransformChanged(bool InPositionChanged, bool InScaleChanged)
 {
-	Super::OnTransformChanged();
+	Super::OnTransformChanged(InPositionChanged, InScaleChanged);
 	UpdateSpriteData();
 }
 

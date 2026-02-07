@@ -230,15 +230,17 @@ protected:
 	//UPROPERTY(EditAnywhere, Transient, Getter="GetHeight", Setter="SetHeight", Category = "LGUI-AnchorData", DisplayName="Height")
 	mutable float CacheHeight = 0;
 	//UPROPERTY(EditAnywhere, Transient, Getter="GetAnchorLeft", Setter="SetAnchorLeft", Category = "LGUI-AnchorData", DisplayName="AnchorLeft")
-	mutable float CacheAnchorLeft = 0;
+	mutable float CacheAnchorOffsetLeft = 0;
 	//UPROPERTY(EditAnywhere, Transient, Getter="GetAnchorRight", Setter="SetAnchorRight", Category = "LGUI-AnchorData", DisplayName="AnchorRight")
-	mutable float CacheAnchorRight = 0;
+	mutable float CacheAnchorOffsetRight = 0;
 	//UPROPERTY(EditAnywhere, Transient, Getter="GetAnchorTop", Setter="SetAnchorTop", Category = "LGUI-AnchorData", DisplayName="AnchorTop")
-	mutable float CacheAnchorTop = 0;
+	mutable float CacheAnchorOffsetTop = 0;
 	//UPROPERTY(EditAnywhere, Transient, Getter="GetAnchorBottom", Setter="SetAnchorBottom", Category = "LGUI-AnchorData", DisplayName="AnchorBottom")
-	mutable float CacheAnchorBottom = 0;
+	mutable float CacheAnchorOffsetBottom = 0;
 	
-	mutable uint8 bCacheWidthDirty : 1 = true, bCacheHeightDirty : 1 = true, bCacheAnchorLeftDirty : 1 = true, bCacheAnchorRightDirty : 1 = true, bCacheAnchorTopDirty : 1 = true, bCacheAnchorBottomDirty : 1 = true;
+	mutable uint8 bCacheWidthDirty : 1 = true, bCacheHeightDirty : 1 = true,
+	bCacheAnchorOffsetLeftDirty : 1 = true, bCacheAnchorOffsetRightDirty : 1 = true,
+	bCacheAnchorOffsetTopDirty : 1 = true, bCacheAnchorOffsetBottomDirty : 1 = true;
 	uint8 bCanSetAnchorFromTransform : 1 = false;
 	
 #pragma region AnchorData
@@ -269,13 +271,13 @@ public:
 	FVector2D GetSize() const{return FVector2D(GetWidth(), GetHeight());}
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-		float GetAnchorLeft()const;
+		float GetAnchorOffsetLeft()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-		float GetAnchorTop()const;
+		float GetAnchorOffsetTop()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-		float GetAnchorRight()const;
+		float GetAnchorOffsetRight()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-		float GetAnchorBottom()const;
+		float GetAnchorOffsetBottom()const;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
 		void SetAnchorData(const FLexUIAnchorData& Value);
@@ -311,16 +313,16 @@ public:
 
 	/** This function only valid if UIItem have parent */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-		void SetAnchorLeft(float Value);
+		void SetAnchorOffsetLeft(float Value);
 	/** This function only valid if UIItem have parent */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-		void SetAnchorTop(float Value);
+		void SetAnchorOffsetTop(float Value);
 	/** This function only valid if UIItem have parent */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-		void SetAnchorRight(float Value);
+		void SetAnchorOffsetRight(float Value);
 	/** This function only valid if UIItem have parent */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
-		void SetAnchorBottom(float Value);
+		void SetAnchorOffsetBottom(float Value);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
 		FVector2D GetLocalSpaceLeftBottomPoint()const;

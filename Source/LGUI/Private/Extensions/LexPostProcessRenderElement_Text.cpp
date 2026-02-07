@@ -122,9 +122,9 @@ void ULexPostProcessRenderElement_Text::OnDimensionChanged(bool InPivotChange, b
 	Super::OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
 }
 
-void ULexPostProcessRenderElement_Text::OnTransformChanged()
+void ULexPostProcessRenderElement_Text::OnTransformChanged(bool InPositionChanged, bool InScaleChanged)
 {
-	Super::OnTransformChanged();
+	Super::OnTransformChanged(InPositionChanged, InScaleChanged);
 }
 
 UTexture* ULexPostProcessRenderElement_Text::GetTextureToCreateGeometry()

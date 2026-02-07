@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "Widgets/SCompoundWidget.h"
 
-class FLGUIPrefabEditor;
+class FLexUIPrefabEditor;
 struct FLexUIPrefabOverrideParameterData;
 class ULexUIPrefabHelperObject;
 class AActor;

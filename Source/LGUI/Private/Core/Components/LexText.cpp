@@ -184,17 +184,14 @@ void ULexText::OnUnregister()
 	}
 }
 
-void ULexText::OnTransformChanged()
+void ULexText::OnTransformChanged(bool InPositionChanged, bool InScaleChanged)
 {
-	Super::OnTransformChanged();
+	Super::OnTransformChanged(InPositionChanged, InScaleChanged);
 	if (IsValid(Font) && Font->GetNeedObjectScale())//some font need object scale (SDF font), so detect scale change and mark update
 	{
-		auto CompScale3D = GetWidget()->GetComponentScale();
-		auto CompScale2D = FVector2f(CompScale3D.Y, CompScale3D.Z);
-		if (!PrevScale2DForUIText.Equals(CompScale2D))
+		if (InScaleChanged)
 		{
-			PrevScale2DForUIText = CompScale2D;
-			MarkVertexUVDirty();//object scale value is stored in uv2. @todo: this should defined in font
+			MarkVertexUVDirty();//object scale value is stored in uv2. @todo: font should tell
 		}
 	}
 }

@@ -31,7 +31,7 @@ protected:
 	virtual void EndPlay()override;
 	virtual void OnRegister()override;
 	virtual void OnUnregister()override;
-	virtual void OnTransformChanged()override;
+	virtual void OnTransformChanged(bool InPositionChanged, bool InScaleChanged)override;
 public:
 #if WITH_EDITOR
 	virtual void PreEditChange(FProperty* PropertyAboutToChange) override;
@@ -137,7 +137,6 @@ protected:
 #endif
 private:
 	bool bHasAddToFont = false;
-	FVector2f PrevScale2DForUIText = FVector2f::One();
 
 	mutable FLexUITextGeometryCache CacheTextGeometryData;
 	void UpdateCacheTextGeometry()const;

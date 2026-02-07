@@ -3,9 +3,6 @@
 #include "DetailCustomization/LexUIEventDelegateCustomization.h"
 #include "LGUIEditorStyle.h"
 #include "IDetailChildrenBuilder.h"
-#include "IDetailPropertyRow.h"
-#include "IDetailGroup.h"
-#include "IPropertyUtilities.h"
 #include "IPropertyTypeCustomization.h"
 #include "PropertyCustomizationHelpers.h"
 #include "LexUIEditorUtils.h"
@@ -20,13 +17,13 @@
 #include "Serialization/BufferArchive.h"
 #include "LexUIEditableTextPropertyHandle.h"
 #include "LGUIEditorModule.h"
+#include "PrefabEditor/LexUIPrefabEditor.h"
+#include "PrefabEditor/LexWidgetHierarchyPickerView.h"
 #include "Widgets/Input/NumericUnitTypeInterface.inl"
 
-#define LOCTEXT_NAMESPACE "LGUIEventDelegateCustomization"
+#define LOCTEXT_NAMESPACE "LexUIEventDelegateCustomization"
 
-
-
-#define LGUIEventActorSelfName "(ActorSelf)"
+#define LexUIEventActorSelfName "(ActorSelf)"
 
 TArray<FString> FLexUIEventDelegateCustomization::CopySourceData;
 
@@ -118,6 +115,8 @@ void FLexUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyHan
 			listItem.CheckTargetObject();
 		}
 	}
+
+	PrefabEditor = FLexUIPrefabEditor::GetEditorByWorld(OutObject->GetWorld());
 
 	auto EventListHandle = GetEventListHandle();
 	auto RefreshDelegate = FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::UpdateEventsLayout);
@@ -289,7 +288,7 @@ FText FLexUIEventDelegateCustomization::GetComponentDisplayName(TSharedRef<IProp
 	{
 		if (TargetObject == HelperActor)
 		{
-			ComponentDisplayName = LGUIEventActorSelfName;
+			ComponentDisplayName = LexUIEventActorSelfName;
 		}
 		else
 		{
@@ -760,6 +759,10 @@ void FLexUIEventDelegateCustomization::UpdateEventsLayout()
 										SNew(SBox)
 										.Padding(FMargin(0, 0, 6, 0))
 										[
+											PrefabEditor.IsValid()
+											?
+											DrawActorSelectorWidgetForPrefabEditor(EventItemIndex)
+											:
 											HelperActorHandle->CreatePropertyValueWidget()
 										]
 									]
@@ -982,6 +985,91 @@ ELexUIEventDelegateParameterType FLexUIEventDelegateCustomization::GetEventDataP
 	return functionParameterType;
 }
 
+TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawActorSelectorWidgetForPrefabEditor(int32 itemIndex)
+{
+	auto EventListHandle = GetEventListHandle();
+	auto ItemPropertyHandle = EventListHandle->GetElement(itemIndex);
+	auto HelperActorHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperActor));
+	UObject* Object = nullptr;
+	if (HelperActorHandle->GetValue(Object) != FPropertyAccess::Success)return SNullWidget::NullWidget;
+	auto NoneObjectText = LOCTEXT("None", "None");
+	auto GetText = [=, this]()
+	{
+		if (Object == nullptr)return NoneObjectText;
+		if (!PrefabEditor.IsValid())return NoneObjectText;
+		if (auto Actor = Cast<AActor>(Object))
+		{
+			return FText::FromString(Actor->GetActorLabel());
+		}
+		else
+		{
+			auto OuterActor = Object->GetTypedOuter<AActor>();
+			return FText::FromString(Object->GetPathName(OuterActor));
+		}
+	};
+	auto GetTooltipText = [=, this]()
+	{
+		if (Object == nullptr)return NoneObjectText;
+		if (!PrefabEditor.IsValid())return NoneObjectText;
+		AActor* Actor = nullptr;
+		FString PathStr;
+		if (auto CastActor = Cast<AActor>(Object))
+		{
+			Actor = CastActor;
+		}
+		else
+		{
+			Actor = Object->GetTypedOuter<AActor>();
+			PathStr = "." + Object->GetPathName(Actor);
+		}
+		auto RootAgentActor = PrefabEditor.Pin()->GetRootAgentActor();
+		while (Actor && Actor != RootAgentActor)
+		{
+			PathStr = "/" + Actor->GetActorLabel() + PathStr;
+			Actor = Actor->GetAttachParentActor();
+		}
+		return FText::FromString(PathStr);
+	};
+	return
+		SNew(SBox)
+		.IsEnabled_Lambda([=]()
+		{
+			return HelperActorHandle->IsEditable();
+		})
+		.WidthOverride(5000)
+		[
+			SNew(SBox)
+			.MinDesiredWidth(125)
+			.Padding(0, 0)
+			[
+				SAssignNew(ActorPickerComboButton, SComboButton)
+				.HasDownArrow(true)
+				.ToolTipText_Lambda(GetTooltipText)
+				.ButtonContent()
+				[
+					SNew(STextBlock)
+					.Font(IDetailLayoutBuilder::GetDetailFont())
+					.Text_Lambda(GetText)
+				]
+				.MenuContent()
+				[
+					SNew(SBox)
+					.Padding(4, 0)
+					[
+						SNew(SLexWidgetHierarchyPickerView, PrefabEditor.Pin(), AActor::StaticClass())
+						.OnSelectItem_Lambda([=, this](UObject* InItem)
+						{
+							// InPropertyHandle->SetValue(InItem);
+							HelperActorHandle->SetValueFromFormattedString(InItem->GetPathName());
+							ActorPickerComboButton->SetIsOpen(false);
+						})
+					]
+				]
+			]
+		]
+	;
+}
+
 TSharedRef<SWidget> FLexUIEventDelegateCustomization::MakeComponentSelectorMenu(int32 itemIndex)
 {
 	auto EventListHandle = GetEventListHandle();
@@ -1003,7 +1091,7 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::MakeComponentSelectorMenu(
 		+ SHorizontalBox::Slot()
 		[
 			SNew(STextBlock)
-			.Text(FText::FromString(LGUIEventActorSelfName))
+			.Text(FText::FromString(LexUIEventActorSelfName))
 			.Font(IDetailLayoutBuilder::GetDetailFont())
 		]
 		//+SHorizontalBox::Slot()

@@ -1,8 +1,8 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "SLexWidgetHierarchyPickerViewItem.h"
+#include "LexWidgetHierarchyPickerViewItem.h"
 #include "Styling/CoreStyle.h"
-#include "LGUIPrefabEditor.h"
+#include "LexUIPrefabEditor.h"
 #include "ScopedTransaction.h"
 #include "Editor.h"
 #include "LGUIEditorModule.h"
@@ -51,10 +51,9 @@ private:
 };
 
 void SLexWidgetHierarchyPickerViewItem::Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& InOwnerTableView, SLexWidgetHierarchyPickerView::DataType InModel
-	, TSharedPtr<FLGUIPrefabEditor> InManager, UClass* InObjectClass)
+	, UClass* InObjectClass)
 {
 	Model = InModel;
-	Manager = InManager;
 
 	auto Widget = Model->Widget;
 

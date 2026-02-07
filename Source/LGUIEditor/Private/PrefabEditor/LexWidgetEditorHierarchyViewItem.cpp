@@ -1,14 +1,14 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "SLexWidgetEditorHierarchyViewItem.h"
+#include "LexWidgetEditorHierarchyViewItem.h"
 
 #include "ClassIconFinder.h"
 #include "DetailLayoutBuilder.h"
-#include "SLexWidgetEditorHierarchyView.h"
+#include "LexWidgetEditorHierarchyView.h"
 #include "Widgets/Text/SInlineEditableTextBlock.h"
 #include "DragAndDrop/DecoratedDragDropOp.h"
 #include "Styling/CoreStyle.h"
-#include "LGUIPrefabEditor.h"
+#include "LexUIPrefabEditor.h"
 #include "ScopedTransaction.h"
 #include "EditorFontGlyphs.h"
 #include "Editor.h"
@@ -30,7 +30,7 @@ public:
 
 	virtual void OnDrop(bool bDropWasHandled, const FPointerEvent& MouseEvent) override;
 
-	bool HasOriginatedFrom(const TSharedPtr<FLGUIPrefabEditor>& Manager)
+	bool HasOriginatedFrom(const TSharedPtr<FLexUIPrefabEditor>& Manager)
 	{
 		for (const FItem& Item : DraggedWidgets)
 		{
@@ -57,10 +57,10 @@ public:
 	FScopedTransaction* Transaction;
 
 	/** Constructs a new drag/drop operation */
-	static TSharedRef<FHierarchyLexWidgetDragDropOp> New(TSharedPtr<FLGUIPrefabEditor> Editor, const TArray<ULexWidget*>& InWidgets);
+	static TSharedRef<FHierarchyLexWidgetDragDropOp> New(TSharedPtr<FLexUIPrefabEditor> Editor, const TArray<ULexWidget*>& InWidgets);
 };
 
-TSharedRef<FHierarchyLexWidgetDragDropOp> FHierarchyLexWidgetDragDropOp::New(TSharedPtr<FLGUIPrefabEditor> Editor, const TArray<ULexWidget*>& InWidgets)
+TSharedRef<FHierarchyLexWidgetDragDropOp> FHierarchyLexWidgetDragDropOp::New(TSharedPtr<FLexUIPrefabEditor> Editor, const TArray<ULexWidget*>& InWidgets)
 {
 	check(InWidgets.Num() > 0);
 
@@ -116,7 +116,7 @@ void FHierarchyLexWidgetDragDropOp::OnDrop(bool bDropWasHandled, const FPointerE
 
 
 
-TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone, bool bIsDrop, TSharedPtr<FLGUIPrefabEditor> Manager, ULexWidget* TargetItem, TOptional<int32> Index = TOptional<int32>())
+TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone, bool bIsDrop, TSharedPtr<FLexUIPrefabEditor> Manager, ULexWidget* TargetItem, TOptional<int32> Index = TOptional<int32>())
 {
 	auto TargetTemplate = TargetItem;
 
@@ -253,7 +253,7 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 }
 
 
-void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& InOwnerTableView, TWeakObjectPtr<ULexWidget> InModel, TSharedPtr<SLexWidgetEditorHierarchyView> InHierarchyView, TSharedPtr<FLGUIPrefabEditor> InManager)
+void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& InOwnerTableView, TWeakObjectPtr<ULexWidget> InModel, TSharedPtr<SLexWidgetEditorHierarchyView> InHierarchyView, TSharedPtr<FLexUIPrefabEditor> InManager)
 {
 	Widget = InModel;
 	MouseEnter = InArgs._MouseEnter;

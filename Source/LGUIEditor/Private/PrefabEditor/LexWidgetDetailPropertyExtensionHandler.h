@@ -4,16 +4,16 @@
 #include "CoreMinimal.h"
 #include "IDetailPropertyExtensionHandler.h"
 
-class FLGUIPrefabEditor;
+class FLexUIPrefabEditor;
 
 class FLexWidgetDetailPropertyExtensionHandler : public IDetailPropertyExtensionHandler
 {
 public:
-	FLexWidgetDetailPropertyExtensionHandler(TWeakPtr<FLGUIPrefabEditor> InPrefabEditor);
+	FLexWidgetDetailPropertyExtensionHandler(TWeakPtr<FLexUIPrefabEditor> InPrefabEditor);
 
 	virtual bool IsPropertyExtendable(const UClass* InObjectClass, const IPropertyHandle& PropertyHandle)const override;
 	virtual void ExtendWidgetRow(FDetailWidgetRow& InWidgetRow, const IDetailLayoutBuilder& InDetailBuilder, const UClass* InObjectClass, TSharedPtr<IPropertyHandle> PropertyHandle) override;
 private:
-	TWeakPtr<FLGUIPrefabEditor> PrefabEditorPtr;
+	TWeakPtr<FLexUIPrefabEditor> PrefabEditorPtr;
 	TSharedPtr<SComboButton> PickerButton;
 };

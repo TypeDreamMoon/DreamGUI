@@ -6,7 +6,7 @@
 #include "Core/LexUITextData.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexLayout.h"
-#include "PrefabEditor/LGUIPrefabEditor.h"
+#include "PrefabEditor/LexUIPrefabEditor.h"
 #include "Utils/LexUIUtils.h"
 #include "Widgets/Input/SNumericEntryBox.h"
 #include "Widgets/Input/SSegmentedControl.h"
@@ -496,7 +496,7 @@ private:
 		if (TargetScriptArray.Num() > 0 && TargetScriptArray[0].IsValid())
 		{
 			auto Widget = TargetScriptArray[0];
-			if (FLGUIPrefabEditor::ActorIsRootAgent(Widget->GetOwner()))return true;//special for PrefabEditor's agent root actor
+			if (FLexUIPrefabEditor::ActorIsRootAgent(Widget->GetOwner()))return true;//special for PrefabEditor's agent root actor
 			if (Widget->GetUIParent() != nullptr)return true;//not root
 			if (Widget->IsCanvasWidget() && Widget->GetRenderCanvas() != nullptr && Widget->GetRenderCanvas()->IsRenderToScreenSpace())//is root canvas, and is render to screen space
 			{
@@ -676,7 +676,7 @@ private:
 				}
 				else
 				{
-					return FText::Format(LOCTEXT("AnchoredLeft_Tooltip", "Calculated distance to parent's left anchor point. Related function: {0} / {1}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, GetAnchorLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, SetAnchorLeft)));
+					return FText::Format(LOCTEXT("AnchoredLeft_Tooltip", "Calculated distance to parent's left anchor point. Related function: {0} / {1}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, GetAnchorOffsetLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, SetAnchorOffsetLeft)));
 				}
 			}
 			break;
@@ -688,7 +688,7 @@ private:
 				}
 				else
 				{
-					return FText::Format(LOCTEXT("AnchoredTop_Tooltip", "Calculated distance to parent's top anchor point. Related function: {0} / {1}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, GetAnchorLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, SetAnchorLeft)));
+					return FText::Format(LOCTEXT("AnchoredTop_Tooltip", "Calculated distance to parent's top anchor point. Related function: {0} / {1}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, GetAnchorOffsetLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, SetAnchorOffsetLeft)));
 				}
 			}
 			break;
@@ -700,7 +700,7 @@ private:
 				}
 				else
 				{
-					return FText::Format(LOCTEXT("AnchoredRight_Tooltip", "Calculated distance to parent's right anchor point. Related function: {0} / {1}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, GetAnchorLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, SetAnchorLeft)));
+					return FText::Format(LOCTEXT("AnchoredRight_Tooltip", "Calculated distance to parent's right anchor point. Related function: {0} / {1}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, GetAnchorOffsetLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, SetAnchorOffsetLeft)));
 				}
 			}
 			break;
@@ -712,7 +712,7 @@ private:
 				}
 				else
 				{
-					return FText::Format(LOCTEXT("AnchoredBottom_Tooltip", "Calculated distance to parent's bottom anchor point. Related function: {0} / {0}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, GetAnchorLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, SetAnchorLeft)));
+					return FText::Format(LOCTEXT("AnchoredBottom_Tooltip", "Calculated distance to parent's bottom anchor point. Related function: {0} / {0}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, GetAnchorOffsetLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, SetAnchorOffsetLeft)));
 				}
 			}
 			break;
@@ -891,8 +891,8 @@ private:
 					break;
 				case LGUIAnchorPreviewWidget::UIAnchorHorizontalAlign::Stretch:
 					{
-						Widget->SetAnchorLeft(0);
-						Widget->SetAnchorRight(0);
+						Widget->SetAnchorOffsetLeft(0);
+						Widget->SetAnchorOffsetRight(0);
 					}
 					break;
 				}
@@ -915,20 +915,20 @@ private:
 					break;
 				case LGUIAnchorPreviewWidget::UIAnchorVerticalAlign::Stretch:
 					{
-						Widget->SetAnchorBottom(0);
-						Widget->SetAnchorTop(0);
+						Widget->SetAnchorOffsetBottom(0);
+						Widget->SetAnchorOffsetTop(0);
 					}
 					break;
 				}
 			}
 			if (ShiftPressed)
 			{
-				FMargin PrevAnchorAsMargin(Widget->GetAnchorLeft(), Widget->GetAnchorTop(), Widget->GetAnchorRight(), Widget->GetAnchorBottom());
+				FMargin PrevAnchorAsMargin(Widget->GetAnchorOffsetLeft(), Widget->GetAnchorOffsetTop(), Widget->GetAnchorOffsetRight(), Widget->GetAnchorOffsetBottom());
 				Widget->SetPivot(DesiredPivot);
-				Widget->SetAnchorLeft(PrevAnchorAsMargin.Left);
-				Widget->SetAnchorRight(PrevAnchorAsMargin.Right);
-				Widget->SetAnchorBottom(PrevAnchorAsMargin.Bottom);
-				Widget->SetAnchorTop(PrevAnchorAsMargin.Top);
+				Widget->SetAnchorOffsetLeft(PrevAnchorAsMargin.Left);
+				Widget->SetAnchorOffsetRight(PrevAnchorAsMargin.Right);
+				Widget->SetAnchorOffsetBottom(PrevAnchorAsMargin.Bottom);
+				Widget->SetAnchorOffsetTop(PrevAnchorAsMargin.Top);
 			}
 
 			FLexUIUtils::NotifyPropertyChanged(Widget.Get(), "AnchorData");
@@ -1101,7 +1101,7 @@ private:
 						}
 						else
 						{
-							return Item->GetAnchorLeft();
+							return Item->GetAnchorOffsetLeft();
 						}
 					};
 					if (AnchoredPositionAccessResult == FPropertyAccess::Result::Success)
@@ -1149,7 +1149,7 @@ private:
 						}
 						else
 						{
-							return Item->GetAnchorTop();
+							return Item->GetAnchorOffsetTop();
 						}
 					};
 					if (AnchoredPositionAccessResult == FPropertyAccess::Result::Success)
@@ -1197,7 +1197,7 @@ private:
 						}
 						else
 						{
-							return Item->GetAnchorRight();
+							return Item->GetAnchorOffsetRight();
 						}
 					};
 					if (SizeDeltaAccessResult == FPropertyAccess::Result::Success)
@@ -1245,7 +1245,7 @@ private:
 						}
 						else
 						{
-							return Item->GetAnchorBottom();
+							return Item->GetAnchorOffsetBottom();
 						}
 					};
 					if (SizeDeltaAccessResult == FPropertyAccess::Result::Success)
@@ -1313,7 +1313,7 @@ private:
 				{
 					for (auto& Item : TargetScriptArray)
 					{
-						Item->SetAnchorLeft(Value);
+						Item->SetAnchorOffsetLeft(Value);
 					}
 				}
 			}
@@ -1331,7 +1331,7 @@ private:
 				{
 					for (auto& Item : TargetScriptArray)
 					{
-						Item->SetAnchorTop(Value);
+						Item->SetAnchorOffsetTop(Value);
 					}
 				}
 			}
@@ -1349,7 +1349,7 @@ private:
 				{
 					for (auto& Item : TargetScriptArray)
 					{
-						Item->SetAnchorRight(Value);
+						Item->SetAnchorOffsetRight(Value);
 					}
 				}
 			}
@@ -1367,7 +1367,7 @@ private:
 				{
 					for (auto& Item : TargetScriptArray)
 					{
-						Item->SetAnchorBottom(Value);
+						Item->SetAnchorOffsetBottom(Value);
 					}
 				}
 			}

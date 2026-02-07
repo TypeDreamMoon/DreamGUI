@@ -43,7 +43,7 @@ protected:
 	virtual void UpdateGeometry()override final;
 
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
-	virtual void OnTransformChanged() override;
+	virtual void OnTransformChanged(bool InPositionChanged, bool InScaleChanged) override;
 	virtual void MarkAllDirty()override;
 
 protected:

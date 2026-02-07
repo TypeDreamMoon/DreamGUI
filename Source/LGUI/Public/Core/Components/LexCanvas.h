@@ -226,7 +226,7 @@ private:
 	TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> GetRenderTargetViewExtension();
 public:
 	/** mark canvas layout dirty */
-	void MarkSizeChanged();
+	void MarkTransformOrDimentionChanged();
 	/**
 	 * Mark update this Canvas. Canvas don't need to update every frame, only update when need to.
 	 * Some rules if update could trigger draw-call's rebuild:

@@ -1,6 +1,6 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUIPrefabViewportClickHandlers.h"
+#include "LexUIPrefabViewportClickHandlers.h"
 #include "LevelViewportClickHandlers.h"
 #include "UObject/Class.h"
 #include "InputCoreTypes.h"
@@ -30,14 +30,14 @@
 #include "Subsystems/BrushEditingSubsystem.h"
 #include "Elements/Framework/TypedElementSelectionSet.h"
 #include "AssetSelection.h"
-#include "LGUIPrefabEditorViewportClient.h"
+#include "LexUIPrefabEditorViewportClient.h"
 #include "LGUIEditorModule.h"
 
 #define LOCTEXT_NAMESPACE "ClickHandlers"
 
-namespace LGUIPrefabViewportClickHandlers
+namespace LexUIPrefabViewportClickHandlers
 {
-	static const UTypedElementSelectionSet* PrivateGetElementSelectionSet(FLGUIPrefabEditorViewportClient* ViewportClient)
+	static const UTypedElementSelectionSet* PrivateGetElementSelectionSet(FLexUIPrefabEditorViewportClient* ViewportClient)
 	{
 		//if (TSharedPtr<ILevelEditor> LevelEditor = ViewportClient->ParentLevelEditor.Pin())
 		//{
@@ -46,7 +46,7 @@ namespace LGUIPrefabViewportClickHandlers
 		return nullptr;
 	}
 
-	static UTypedElementSelectionSet* PrivateGetMutableElementSelectionSet(FLGUIPrefabEditorViewportClient* ViewportClient)
+	static UTypedElementSelectionSet* PrivateGetMutableElementSelectionSet(FLexUIPrefabEditorViewportClient* ViewportClient)
 	{
 		//if (TSharedPtr<ILevelEditor> LevelEditor = ViewportClient->ParentLevelEditor.Pin())
 		//{
@@ -55,7 +55,7 @@ namespace LGUIPrefabViewportClickHandlers
 		return nullptr;
 	}
 
-	static void PrivateSummonContextMenu( FLGUIPrefabEditorViewportClient* ViewportClient, const FTypedElementHandle& HitProxyElement = FTypedElementHandle())
+	static void PrivateSummonContextMenu( FLexUIPrefabEditorViewportClient* ViewportClient, const FTypedElementHandle& HitProxyElement = FTypedElementHandle())
 	{
 		//if( ViewportClient->ParentLevelEditor.IsValid() )
 		//{
@@ -63,7 +63,7 @@ namespace LGUIPrefabViewportClickHandlers
 		//}
 	}	
 
-	static void PrivateSummonViewportMenu( FLGUIPrefabEditorViewportClient* ViewportClient )
+	static void PrivateSummonViewportMenu( FLexUIPrefabEditorViewportClient* ViewportClient )
 	{
 		//if (ViewportClient->ParentLevelEditor.IsValid())
 		//{
@@ -114,7 +114,7 @@ namespace LGUIPrefabViewportClickHandlers
 		}
 	}
 
-	bool ClickViewport(FLGUIPrefabEditorViewportClient* ViewportClient, const FViewportClick& Click)
+	bool ClickViewport(FLexUIPrefabEditorViewportClient* ViewportClient, const FViewportClick& Click)
 	{
 		if (Click.GetKey() == EKeys::MiddleMouseButton && Click.IsControlDown())
 		{
@@ -124,7 +124,7 @@ namespace LGUIPrefabViewportClickHandlers
 		return false;
 	}
 
-	bool ClickElement(FLGUIPrefabEditorViewportClient* ViewportClient, const FTypedElementHandle& HitElement, const FViewportClick& Click)
+	bool ClickElement(FLexUIPrefabEditorViewportClient* ViewportClient, const FTypedElementHandle& HitElement, const FViewportClick& Click)
 	{
 		// Pivot snapping
 		if (Click.GetKey() == EKeys::MiddleMouseButton && Click.IsAltDown())
@@ -212,7 +212,7 @@ namespace LGUIPrefabViewportClickHandlers
 		return bHandledClick;
 	}
 
-	bool ClickActor(FLGUIPrefabEditorViewportClient* ViewportClient,AActor* Actor,const FViewportClick& Click,bool bAllowSelectionChange)
+	bool ClickActor(FLexUIPrefabEditorViewportClient* ViewportClient,AActor* Actor,const FViewportClick& Click,bool bAllowSelectionChange)
 	{
 		// Pivot snapping
 		if( Click.GetKey() == EKeys::MiddleMouseButton && Click.IsAltDown() )
@@ -378,7 +378,7 @@ namespace LGUIPrefabViewportClickHandlers
 		return false;
 	}
 
-	bool ClickComponent(FLGUIPrefabEditorViewportClient* ViewportClient, HActor* ActorHitProxy, const FViewportClick& Click)
+	bool ClickComponent(FLexUIPrefabEditorViewportClient* ViewportClient, HActor* ActorHitProxy, const FViewportClick& Click)
 	{
 		//@todo hotkeys for component placement?
 		
@@ -490,7 +490,7 @@ namespace LGUIPrefabViewportClickHandlers
 		return bComponentClicked;
 	}
 
-	void ClickBrushVertex(FLGUIPrefabEditorViewportClient* ViewportClient,ABrush* InBrush,FVector* InVertex,const FViewportClick& Click)
+	void ClickBrushVertex(FLexUIPrefabEditorViewportClient* ViewportClient,ABrush* InBrush,FVector* InVertex,const FViewportClick& Click)
 	{
 		// Pivot snapping
 		if( Click.GetKey() == EKeys::MiddleMouseButton && Click.IsAltDown() )
@@ -531,7 +531,7 @@ namespace LGUIPrefabViewportClickHandlers
 		}
 	}
 
-	void ClickStaticMeshVertex(FLGUIPrefabEditorViewportClient* ViewportClient,AActor* InActor,FVector& InVertex,const FViewportClick& Click)
+	void ClickStaticMeshVertex(FLexUIPrefabEditorViewportClient* ViewportClient,AActor* InActor,FVector& InVertex,const FViewportClick& Click)
 	{
 		// Pivot snapping
 		if( Click.GetKey() == EKeys::MiddleMouseButton && Click.IsAltDown() )
@@ -564,7 +564,7 @@ namespace LGUIPrefabViewportClickHandlers
 	}
 	static FBspSurf GSaveSurf;
 
-	void ClickSurface(FLGUIPrefabEditorViewportClient* ViewportClient,UModel* Model,int32 iSurf,const FViewportClick& Click)
+	void ClickSurface(FLexUIPrefabEditorViewportClient* ViewportClient,UModel* Model,int32 iSurf,const FViewportClick& Click)
 	{
 		// Gizmos can cause BSP surfs to become selected without this check
 		if(Click.GetKey() == EKeys::RightMouseButton && Click.IsControlDown())
@@ -841,7 +841,7 @@ namespace LGUIPrefabViewportClickHandlers
 		}
 	}
 
-	void ClickBackdrop(FLGUIPrefabEditorViewportClient* ViewportClient,const FViewportClick& Click)
+	void ClickBackdrop(FLexUIPrefabEditorViewportClient* ViewportClient,const FViewportClick& Click)
 	{
 		// Pivot snapping
 		if( Click.GetKey() == EKeys::MiddleMouseButton && Click.IsAltDown() )
@@ -904,7 +904,7 @@ namespace LGUIPrefabViewportClickHandlers
 		}
 	}
 
-	void ClickLevelSocket(FLGUIPrefabEditorViewportClient* ViewportClient, HHitProxy* HitProxy, const FViewportClick& Click)
+	void ClickLevelSocket(FLexUIPrefabEditorViewportClient* ViewportClient, HHitProxy* HitProxy, const FViewportClick& Click)
 	{
 		const FScopedTransaction Transaction( NSLOCTEXT("UnrealEd", "LevelSocketClicked", "Level Socket Clicked") );
 

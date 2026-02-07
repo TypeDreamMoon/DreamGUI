@@ -406,8 +406,6 @@ void ULexCanvas::ClearDrawCall()
 		bUIMeshNeedToSetInitialParameters = true;
 	}
 
-	PooledUIMaterialList.Empty();
-	UsingUIMaterialList.Empty();
 	CurrentDrawCallData.DrawCallArray.Empty();
 }
 
@@ -891,7 +889,7 @@ void ULexCanvas::SetOverrideProjectionMatrix(bool Override, FMatrix Value)
 	OverrideProjectionMatrix = Value;
 }
 
-void ULexCanvas::MarkSizeChanged()
+void ULexCanvas::MarkTransformOrDimentionChanged()
 {
 	bIsViewProjectionMatrixDirty = true;
 }
@@ -1324,14 +1322,14 @@ void ULexCanvas::UpdateCanvasDrawCall()
 			}
 		}
 		WidgetPropertyDataAsTexture->Flush();
-		UE_LOG(LGUI, Error, TEXT("Begin wait for AsyncFunction, num:%d"), TransformVerticesAsyncFunctionRunnable->NumItems());
-		auto Time = FDateTime::Now();
+		//UE_LOG(LGUI, Error, TEXT("Begin wait for AsyncFunction, num:%d"), TransformVerticesAsyncFunctionRunnable->NumItems());
+		//auto Time = FDateTime::Now();
 		while (!TransformVerticesAsyncFunctionRunnable->IsEmpty())
 		{
 			FPlatformProcess::Sleep(0.001f);
 		}
-		auto TimeSpan = FDateTime::Now() - Time;
-		UE_LOG(LGUI, Error, TEXT("Wait for AsyncFunction timeSpan:%f"), TimeSpan.GetTotalMilliseconds());
+		//auto TimeSpan = FDateTime::Now() - Time;
+		//UE_LOG(LGUI, Error, TEXT("Wait for AsyncFunction timeSpan:%f"), TimeSpan.GetTotalMilliseconds());
 		
 		if (bShouldRebuildDrawCall)
 		{
@@ -1672,15 +1670,8 @@ void ULexCanvas::UpdateDrawCallMaterial()
 
 	//pool and reuse material
 	{
-		for (int i = 0; i < UsingUIMaterialList.Num(); i++)
-		{
-			auto UIMat = UsingUIMaterialList[i];
-			if (UIMat->Parent == GetDefaultMaterial())
-			{
-				UsingUIMaterialList.Remove(UIMat);
-				PooledUIMaterialList.Add(UIMat);
-			}
-		}
+		PooledUIMaterialList.Append(UsingUIMaterialList);
+		UsingUIMaterialList.Reset();
 	}
 	//reset index for dynamic material
 	{
@@ -1973,6 +1964,10 @@ UMaterialInterface* ULexCanvas::GetDefaultMaterial()const
 	if (!DefaultMaterial)
 	{
 		DefaultMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/LGUI/Materials/LexUI_ImageAndFont"));
+		if (!DefaultMaterial)
+		{
+			UE_LOG(LGUI, Error, TEXT("[%s].%d Load DefaultMaterial error! Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		}
 	}
 	return DefaultMaterial;
 }

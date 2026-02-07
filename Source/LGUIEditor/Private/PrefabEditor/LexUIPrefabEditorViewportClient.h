@@ -8,19 +8,17 @@
 #include "Animation/AnimInstance.h"
 #include "LevelEditorViewport.h"
 
-class FLGUIPrefabPreviewManager;
-class FLGUIPrefabEditorScene;
 class ULexVisual;
-class FLGUIPrefabEditor;
+class FLexUIPrefabEditor;
 class ULexUIPrefab;
 
 /** Viewport client for editor viewports. Contains common functionality for camera movement, rendering debug information, etc. */
-class FLGUIPrefabEditorViewportClient : public FEditorViewportClient
+class FLexUIPrefabEditorViewportClient : public FEditorViewportClient
 {
 public:
-	FLGUIPrefabEditorViewportClient(TWeakPtr<FLGUIPrefabEditor> InPrefabEditorPtr, const TSharedRef<class SLGUIPrefabEditorViewport>& InEditorViewportPtr);
+	FLexUIPrefabEditorViewportClient(TWeakPtr<FLexUIPrefabEditor> InPrefabEditorPtr, const TSharedRef<class SLexUIPrefabEditorViewport>& InEditorViewportPtr);
 
-	virtual ~FLGUIPrefabEditorViewportClient();
+	virtual ~FLexUIPrefabEditorViewportClient()override;
 
 	// FViewElementDrawer interface
 	virtual void Draw(const FSceneView* View, FPrimitiveDrawInterface* PDI) override;
@@ -105,7 +103,7 @@ private:
 	TUniquePtr<class FLexUITransformWidget> TransformWidget = nullptr;
 	FDelegateHandle OnSelectionChangedDelegateHandle;
 
-	TWeakPtr<FLGUIPrefabEditor> PrefabEditorPtr;
+	TWeakPtr<FLexUIPrefabEditor> PrefabEditorPtr;
 	// Are we currently manipulating something?
 	bool bManipulating = false;
 	FTrackingTransaction TrackingTransaction;

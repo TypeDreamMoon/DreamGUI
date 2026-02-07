@@ -1,12 +1,12 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUIPrefabRawDataViewer.h"
+#include "LexUIPrefabRawDataViewer.h"
 #include "PrefabSystem/LexUIPrefab.h"
-#include "LGUIPrefabEditor.h"
+#include "LexUIPrefabEditor.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabRawDataViewer"
 
-void SLGUIPrefabRawDataViewer::Construct(const FArguments& InArgs, TSharedPtr<FLGUIPrefabEditor> InPrefabEditorPtr, UObject* InObject)
+void SLexUIPrefabRawDataViewer::Construct(const FArguments& InArgs, TSharedPtr<FLexUIPrefabEditor> InPrefabEditorPtr, UObject* InObject)
 {
 	PrefabEditorPtr = InPrefabEditorPtr;
 	FPropertyEditorModule& EditModule = FModuleManager::Get().GetModuleChecked<FPropertyEditorModule>("PropertyEditor");

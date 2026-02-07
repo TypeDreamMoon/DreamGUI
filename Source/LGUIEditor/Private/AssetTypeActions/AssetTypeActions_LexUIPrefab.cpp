@@ -4,7 +4,7 @@
 #include "Misc/PackageName.h"
 #include "Algo/Transform.h"
 #include "PrefabSystem/LexUIPrefab.h"
-#include "PrefabEditor/LGUIPrefabEditor.h"
+#include "PrefabEditor/LexUIPrefabEditor.h"
 
 #define LOCTEXT_NAMESPACE "AssetTypeActions_LexUIPrefab"
 
@@ -33,7 +33,7 @@ void FAssetTypeActions_LexUIPrefab::OpenAssetEditor( const TArray<UObject*>& InO
 	{
 		if (auto LGUIPrefab = Cast<ULexUIPrefab>(*ObjIt))
 		{
-			TSharedRef<FLGUIPrefabEditor> NewPrefabEditor(new FLGUIPrefabEditor());
+			TSharedRef<FLexUIPrefabEditor> NewPrefabEditor(new FLexUIPrefabEditor());
 			NewPrefabEditor->InitPrefabEditor(Mode, EditWithinLevelEditor, LGUIPrefab);
 		}
 	}

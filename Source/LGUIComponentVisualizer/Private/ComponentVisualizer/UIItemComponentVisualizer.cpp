@@ -164,12 +164,12 @@ bool FUIItemComponentVisualizer::HandleInputDelta(FEditorViewportClient* Viewpor
 		if (LocalSpaceDeltaTranslate.Y != 0 || LocalSpaceDeltaTranslate.Z != 0)
 		{
 			auto DeltaTranslatePivot = FVector2D(LocalSpaceDeltaTranslate.Y / TargetComp->GetWidth(), LocalSpaceDeltaTranslate.Z / TargetComp->GetHeight());
-			FMargin PrevAnchorAsMargin(TargetComp->GetAnchorLeft(), TargetComp->GetAnchorTop(), TargetComp->GetAnchorRight(), TargetComp->GetAnchorBottom());
+			FMargin PrevAnchorAsMargin(TargetComp->GetAnchorOffsetLeft(), TargetComp->GetAnchorOffsetTop(), TargetComp->GetAnchorOffsetRight(), TargetComp->GetAnchorOffsetBottom());
 			TargetComp->SetPivot(TargetComp->GetPivot() + DeltaTranslatePivot);
-			TargetComp->SetAnchorLeft(PrevAnchorAsMargin.Left);
-			TargetComp->SetAnchorRight(PrevAnchorAsMargin.Right);
-			TargetComp->SetAnchorBottom(PrevAnchorAsMargin.Bottom);
-			TargetComp->SetAnchorTop(PrevAnchorAsMargin.Top);
+			TargetComp->SetAnchorOffsetLeft(PrevAnchorAsMargin.Left);
+			TargetComp->SetAnchorOffsetRight(PrevAnchorAsMargin.Right);
+			TargetComp->SetAnchorOffsetBottom(PrevAnchorAsMargin.Bottom);
+			TargetComp->SetAnchorOffsetTop(PrevAnchorAsMargin.Top);
 			bAnchorChanged = true;
 		}
 	}
@@ -179,10 +179,10 @@ bool FUIItemComponentVisualizer::HandleInputDelta(FEditorViewportClient* Viewpor
 	{
 		if (LocalSpaceDeltaTranslate.Y != 0)
 		{
-			TargetComp->SetAnchorLeft(TargetComp->GetAnchorLeft() + LocalSpaceDeltaTranslate.Y);
+			TargetComp->SetAnchorOffsetLeft(TargetComp->GetAnchorOffsetLeft() + LocalSpaceDeltaTranslate.Y);
 			if (IsAltDown(Viewport))
 			{
-				TargetComp->SetAnchorRight(TargetComp->GetAnchorRight() + LocalSpaceDeltaTranslate.Y);
+				TargetComp->SetAnchorOffsetRight(TargetComp->GetAnchorOffsetRight() + LocalSpaceDeltaTranslate.Y);
 			}
 			bAnchorChanged = true;
 		}
@@ -191,10 +191,10 @@ bool FUIItemComponentVisualizer::HandleInputDelta(FEditorViewportClient* Viewpor
 	{
 		if (LocalSpaceDeltaTranslate.Y != 0)
 		{
-			TargetComp->SetAnchorRight(TargetComp->GetAnchorRight() - LocalSpaceDeltaTranslate.Y);
+			TargetComp->SetAnchorOffsetRight(TargetComp->GetAnchorOffsetRight() - LocalSpaceDeltaTranslate.Y);
 			if (IsAltDown(Viewport))
 			{
-				TargetComp->SetAnchorLeft(TargetComp->GetAnchorLeft() - LocalSpaceDeltaTranslate.Y);
+				TargetComp->SetAnchorOffsetLeft(TargetComp->GetAnchorOffsetLeft() - LocalSpaceDeltaTranslate.Y);
 			}
 			bAnchorChanged = true;
 		}
@@ -203,10 +203,10 @@ bool FUIItemComponentVisualizer::HandleInputDelta(FEditorViewportClient* Viewpor
 	{
 		if (LocalSpaceDeltaTranslate.Z != 0)
 		{
-			TargetComp->SetAnchorBottom(TargetComp->GetAnchorBottom() + LocalSpaceDeltaTranslate.Z);
+			TargetComp->SetAnchorOffsetBottom(TargetComp->GetAnchorOffsetBottom() + LocalSpaceDeltaTranslate.Z);
 			if (IsAltDown(Viewport))
 			{
-				TargetComp->SetAnchorTop(TargetComp->GetAnchorTop() + LocalSpaceDeltaTranslate.Z);
+				TargetComp->SetAnchorOffsetTop(TargetComp->GetAnchorOffsetTop() + LocalSpaceDeltaTranslate.Z);
 			}
 			bAnchorChanged = true;
 		}
@@ -215,10 +215,10 @@ bool FUIItemComponentVisualizer::HandleInputDelta(FEditorViewportClient* Viewpor
 	{
 		if (LocalSpaceDeltaTranslate.Z != 0)
 		{
-			TargetComp->SetAnchorTop(TargetComp->GetAnchorTop() - LocalSpaceDeltaTranslate.Z);
+			TargetComp->SetAnchorOffsetTop(TargetComp->GetAnchorOffsetTop() - LocalSpaceDeltaTranslate.Z);
 			if (IsAltDown(Viewport))
 			{
-				TargetComp->SetAnchorBottom(TargetComp->GetAnchorBottom() - LocalSpaceDeltaTranslate.Z);
+				TargetComp->SetAnchorOffsetBottom(TargetComp->GetAnchorOffsetBottom() - LocalSpaceDeltaTranslate.Z);
 			}
 			bAnchorChanged = true;
 		}

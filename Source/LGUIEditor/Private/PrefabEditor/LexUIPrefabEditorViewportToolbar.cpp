@@ -1,19 +1,19 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "LGUIPrefabEditorViewportToolbar.h"
-#include "LGUIPrefabEditorViewport.h"
+#include "LexUIPrefabEditorViewportToolbar.h"
+#include "LexUIPrefabEditorViewport.h"
 
 #define LOCTEXT_NAMESPACE "SLGUIPrefabEditorViewportToolbar"
 
 ///////////////////////////////////////////////////////////
 // SSpriteEditorViewportToolbar
 
-void SLGUIPrefabEditorViewportToolbar::Construct(const FArguments& InArgs, TSharedPtr<class ICommonEditorViewportToolbarInfoProvider> InInfoProvider)
+void SLexUIPrefabEditorViewportToolbar::Construct(const FArguments& InArgs, TSharedPtr<class ICommonEditorViewportToolbarInfoProvider> InInfoProvider)
 {
 	SCommonEditorViewportToolbarBase::Construct(SCommonEditorViewportToolbarBase::FArguments(), InInfoProvider);
 }
 
-TSharedRef<SWidget> SLGUIPrefabEditorViewportToolbar::GenerateShowMenu() const
+TSharedRef<SWidget> SLexUIPrefabEditorViewportToolbar::GenerateShowMenu() const
 {
 	GetInfoProvider().OnFloatingButtonClicked();
 	

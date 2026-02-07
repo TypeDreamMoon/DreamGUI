@@ -10,30 +10,25 @@
 class SLexWidgetEditorHierarchyView;
 class ULexWidget;
 class ULexUIPrefab;
-class SLGUIPrefabEditorViewport;
+class SLexUIPrefabEditorViewport;
 class SLexUIPrefabEditorDetails;
-class FLGUIPrefabEditorOutliner;
-class SLGUIPrefabOverrideParameterEditor;
-class SLGUIPrefabRawDataViewer;
+class SLexUIPrefabRawDataViewer;
 class AActor;
-class FLGUIPrefabEditorScene;
 class ULexUIPrefabHelperObject;
-class ULGUIPrefabOverrideParameterHelperObject;
-class ULGUIPrefabOverrideHelperObject;
 struct FLexUISubPrefabData;
 
 /**
  * 
  */
-class FLGUIPrefabEditor : public FAssetEditorToolkit
+class FLexUIPrefabEditor : public FAssetEditorToolkit
 	, public FGCObject, public FEditorUndoClient
 {
 public:
 	DECLARE_MULTICAST_DELEGATE(FOnSelectedWidgetsChanged)
 	DECLARE_MULTICAST_DELEGATE(FOnWidgetPreviewUpdated)
 	
-	FLGUIPrefabEditor();
-	~FLGUIPrefabEditor();
+	FLexUIPrefabEditor();
+	virtual ~FLexUIPrefabEditor()override;
 
 	// IToolkit interface
 	virtual void RegisterTabSpawners(const TSharedRef<class FTabManager>& TabManager) override;
@@ -80,10 +75,11 @@ public:
 	UWorld* GetWorld();
 	ULexUIPrefab* GetPrefabBeingEdited()const { return PrefabBeingEdited; }
 
-	static FLGUIPrefabEditor* GetEditorForPrefabIfValid(ULexUIPrefab* InPrefab);
+	static FLexUIPrefabEditor* GetEditorForPrefabIfValid(ULexUIPrefab* InPrefab);
 	static bool WorldIsPrefabEditor(UWorld* InWorld);
+	static TWeakPtr<FLexUIPrefabEditor> GetEditorByWorld(UWorld* InWorld);
 	static bool ActorIsRootAgent(AActor* InActor);
-	static void IterateAllPrefabEditor(const TFunction<void(FLGUIPrefabEditor*)>& InFunction);
+	static void IterateAllPrefabEditor(const TFunction<void(FLexUIPrefabEditor*)>& InFunction);
 	bool RefreshOnSubPrefabDirty(ULexUIPrefab* InSubPrefab);
 
 	bool GetSelectedObjectsBounds(FBoxSphereBounds& OutResult);
@@ -107,12 +103,12 @@ public:
 	FOnSelectedWidgetsChanged OnSelectedWidgetsChanged;
 private:
 	TObjectPtr<ULexUIPrefab> PrefabBeingEdited = nullptr;
-	static TArray<FLGUIPrefabEditor*> PrefabEditorInstanceCollection;
+	static TArray<FLexUIPrefabEditor*> PrefabEditorInstanceCollection;
 
-	TSharedPtr<SLGUIPrefabEditorViewport> ViewportPtr;
+	TSharedPtr<SLexUIPrefabEditorViewport> ViewportPtr;
 	TSharedPtr<SLexUIPrefabEditorDetails> DetailsPtr;
 	TSharedPtr<SLexWidgetEditorHierarchyView> OutlinerPtr;
-	TSharedPtr<SLGUIPrefabRawDataViewer> PrefabRawDataViewer;
+	TSharedPtr<SLexUIPrefabRawDataViewer> PrefabRawDataViewer;
 
 	TArray<TWeakObjectPtr<AActor>> SelectedActors;
 private:

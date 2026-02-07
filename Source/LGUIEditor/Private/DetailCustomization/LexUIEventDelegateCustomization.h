@@ -5,6 +5,7 @@
 #pragma once
 
 
+class FLexUIPrefabEditor;
 /**
  * 
  */
@@ -73,6 +74,9 @@ private:
 		}
 		return result;
 	}
+	TWeakPtr<FLexUIPrefabEditor> PrefabEditor;
+	TSharedPtr<SComboButton> ActorPickerComboButton;
+	TSharedRef<SWidget> DrawActorSelectorWidgetForPrefabEditor(int32 itemIndex);
 	TSharedRef<SWidget> MakeComponentSelectorMenu(int32 itemIndex);
 	TSharedRef<SWidget> MakeFunctionSelectorMenu(int32 itemIndex);
 	void OnActorParameterChange(TSharedRef<IPropertyHandle> ItemPropertyHandle);

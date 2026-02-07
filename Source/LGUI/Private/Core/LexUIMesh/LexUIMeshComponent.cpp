@@ -1016,7 +1016,7 @@ TSharedPtr<FLexUIRenderSection> ULexUIMeshComponent::SetupRenderSection(ELexUIRe
 			MeshSectionPtr->ValidTriangleIndicesNum = InDrawCallData->CombinedBatchMeshGeometryTriangles.Num();
 			FMemory::Memcpy(MeshSectionPtr->triangleIndices.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.Num() * sizeof(FLexUIMeshIndexBufferType));
 			MeshSectionPtr->BoundingBox = InDrawCallData->CombinedBounds;
-			if (MeshSectionPtr->RenderProxy)//if we have valid render-proxy then recreate date or update data
+			if (MeshSectionPtr->RenderProxy)//if we have valid render-proxy then recreate data or update data
 			{
 				if (bNeedExpandMeshSection)
 				{
@@ -1271,13 +1271,13 @@ void ULexUIMeshComponent::VerifyMaterials()
 		{
 		case ELexUIRenderSectionType::Mesh:
 			{
-				auto MeshSection = (FLexUIRenderSection_Mesh*)RenderSectionItem.Get();
+				auto MeshSection = StaticCastSharedPtr<FLexUIRenderSection_Mesh>(RenderSectionItem);
 				SetMaterialForUI(MatIndex++, MeshSection->material);
 			}
 			break;
 		case ELexUIRenderSectionType::ChildCanvas:
 			{
-				auto ChildCanvasSection = (FLexUIRenderSection_ChildCanvas*)RenderSectionItem.Get();
+				auto ChildCanvasSection = StaticCastSharedPtr<FLexUIRenderSection_ChildCanvas>(RenderSectionItem);
 				for (auto ChildMat : ChildCanvasSection->ChildCanvasMeshComponent->OverrideMaterials)
 				{
 					SetMaterialForUI(MatIndex++, ChildMat);

@@ -7,17 +7,17 @@
 #include "SEditorViewport.h"
 #include "SCommonEditorViewportToolbarBase.h"
 
-class FLGUIPrefabEditor;
-class FLGUIPrefabEditorViewportClient;
+class FLexUIPrefabEditor;
+class FLexUIPrefabEditorViewportClient;
 
 //Encapsulates a simple scene setup for preview or thumbnail rendering.
-class SLGUIPrefabEditorViewport : public SEditorViewport, public ICommonEditorViewportToolbarInfoProvider
+class SLexUIPrefabEditorViewport : public SEditorViewport, public ICommonEditorViewportToolbarInfoProvider
 {
 public:
-	SLATE_BEGIN_ARGS(SLGUIPrefabEditorViewport) {}
+	SLATE_BEGIN_ARGS(SLexUIPrefabEditorViewport) {}
 	SLATE_END_ARGS()
 
-	void Construct(const FArguments& InArgs, TSharedPtr<FLGUIPrefabEditor> InPrefabEditor, EViewModeIndex InViewMode);
+	void Construct(const FArguments& InArgs, TSharedPtr<FLexUIPrefabEditor> InPrefabEditor, EViewModeIndex InViewMode);
 
 	// SEditorViewport interface
 	virtual void BindCommands() override;
@@ -39,9 +39,9 @@ public:
 
 private:
 	// Pointer back to owning sprite editor instance (the keeper of state)
-	TWeakPtr<FLGUIPrefabEditor> PrefabEditorPtr;
+	TWeakPtr<FLexUIPrefabEditor> PrefabEditorPtr;
 	EViewModeIndex ViewMode = EViewModeIndex::VMI_Lit;
 
 	// Viewport client
-	TSharedPtr<FLGUIPrefabEditorViewportClient> EditorViewportClient;
+	TSharedPtr<FLexUIPrefabEditorViewportClient> EditorViewportClient;
 };

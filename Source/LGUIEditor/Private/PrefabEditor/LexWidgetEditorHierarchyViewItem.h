@@ -9,7 +9,7 @@
 
 class SLexWidgetEditorHierarchyView;
 class ULexWidget;
-class FLGUIPrefabEditor;
+class FLexUIPrefabEditor;
 
 class SLexWidgetEditorHierarchyViewItem : public STableRow<TWeakObjectPtr<ULexWidget>>
 {
@@ -19,7 +19,7 @@ public:
 		SLATE_EVENT(FSimpleDelegate, MouseExit)
 	SLATE_END_ARGS()
 	void Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& InOwnerTableView, TWeakObjectPtr<ULexWidget> InModel
-		, TSharedPtr<SLexWidgetEditorHierarchyView> InHierarchyView, TSharedPtr<FLGUIPrefabEditor> InManager);
+		, TSharedPtr<SLexWidgetEditorHierarchyView> InHierarchyView, TSharedPtr<FLexUIPrefabEditor> InManager);
 
 	// Begin SWidget
 	virtual void OnMouseEnter(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
@@ -49,7 +49,7 @@ private:
 
 private:
 	TWeakPtr<SLexWidgetEditorHierarchyView> HierarchyView;
-	TWeakPtr<FLGUIPrefabEditor> Manager;
+	TWeakPtr<FLexUIPrefabEditor> Manager;
 	FSimpleDelegate MouseEnter;
 	FSimpleDelegate MouseExit;
 	/** Edit box for the name. */

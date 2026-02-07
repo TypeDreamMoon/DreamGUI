@@ -1,12 +1,12 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "SLexWidgetEditorHierarchyView.h"
+#include "LexWidgetEditorHierarchyView.h"
 
 #include "LexUIEditorTools.h"
 #include "LGUIEditorModule.h"
-#include "LGUIPrefabEditor.h"
+#include "LexUIPrefabEditor.h"
 #include "LexUIPrefabOverrideDataViewer.h"
-#include "SLexWidgetEditorHierarchyViewItem.h"
+#include "LexWidgetEditorHierarchyViewItem.h"
 #include "Core/LexUIManager.h"
 #include "Widgets/Layout/SScrollBorder.h"
 #include "Widgets/Input/SSearchBox.h"
@@ -19,7 +19,7 @@
 
 UE_DISABLE_OPTIMIZATION
 
-void SLexWidgetEditorHierarchyView::Construct(const FArguments& InArgs, TSharedPtr<FLGUIPrefabEditor> InManager)
+void SLexWidgetEditorHierarchyView::Construct(const FArguments& InArgs, TSharedPtr<FLexUIPrefabEditor> InManager)
 {
 	Manager = InManager;
 	bRebuildTreeRequested = false;
@@ -71,7 +71,7 @@ void SLexWidgetEditorHierarchyView::Construct(const FArguments& InArgs, TSharedP
 	InManager->OnSelectedWidgetsChanged.AddRaw(this, &SLexWidgetEditorHierarchyView::OnEditorSelectionChanged);
 
 	auto PrefabHelperObject = InManager->GetPrefabHelperObject();
-	auto UnexpandWidgetGuidSet = InManager->GetPrefabBeingEdited()->PrefabDataForPrefabEditor.UnexpandWidgetSet;
+	auto UnexpandWidgetGuidSet = InManager->GetPrefabBeingEdited()->PrefabDataForPrefabEditor.UnexpandedWidgetSet;
 	TSet<ULexWidget*> UnexpendWidgetSet;
 	for (auto& ItemActorGuid : UnexpandWidgetGuidSet)
 	{

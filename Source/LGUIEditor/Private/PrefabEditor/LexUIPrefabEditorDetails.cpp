@@ -7,7 +7,7 @@
 #include "UnrealEdGlobals.h"
 #include "Editor/UnrealEdEngine.h"
 #include "Misc/NotifyHook.h"
-#include "LGUIPrefabEditor.h"
+#include "LexUIPrefabEditor.h"
 #include "DetailLayoutBuilder.h"
 #include "LexWidgetDetailPropertyExtensionHandler.h"
 #include "LexUIPrefabOverrideDataViewer.h"
@@ -23,9 +23,9 @@
 
 class LexUISCSEditorUICustomization : public ISCSEditorUICustomization
 {
-	TWeakPtr<FLGUIPrefabEditor> PrefabEditor;
+	TWeakPtr<FLexUIPrefabEditor> PrefabEditor;
 public:
-	LexUISCSEditorUICustomization(TSharedPtr<FLGUIPrefabEditor> InPrefabEditor)
+	LexUISCSEditorUICustomization(TSharedPtr<FLexUIPrefabEditor> InPrefabEditor)
 	{
 		PrefabEditor = InPrefabEditor;
 	}
@@ -65,7 +65,7 @@ public:
 	}
 };
 
-void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLGUIPrefabEditor> InPrefabEditor)
+void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLexUIPrefabEditor> InPrefabEditor)
 {
 	PrefabEditorPtr = InPrefabEditor;
 

@@ -3,13 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "SLexWidgetHierarchyPickerView.h"
+#include "LexWidgetHierarchyPickerView.h"
 #include "Widgets/Views/STreeView.h"
 #include "Widgets/Views/STableRow.h"
 
 class SLexWidgetEditorHierarchyView;
 class ULexWidget;
-class FLGUIPrefabEditor;
+class FLexUIPrefabEditor;
 
 class SLexWidgetHierarchyPickerViewItem : public STableRow<SLexWidgetHierarchyPickerView::DataType>
 {
@@ -20,13 +20,12 @@ public:
 		SLATE_EVENT(FOnSelectObject, OnSelectObject)
 	SLATE_END_ARGS()
 	void Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& InOwnerTableView, SLexWidgetHierarchyPickerView::DataType InModel
-		, TSharedPtr<FLGUIPrefabEditor> InManager, UClass* InObjectClass);
+		, UClass* InObjectClass);
 
 	virtual ~SLexWidgetHierarchyPickerViewItem();
 
 private:	
 	TWeakPtr<SLexWidgetEditorHierarchyView> HierarchyView;
-	TWeakPtr<FLGUIPrefabEditor> Manager;
 	SLexWidgetHierarchyPickerView::DataType Model;
 	TSharedPtr<SMenuAnchor> MenuAnchor;
 	FMenuBuilder* MenuBuilder = nullptr;

@@ -4,16 +4,16 @@
 
 #include "DetailLayoutBuilder.h"
 #include "IPropertyUtilities.h"
-#include "LGUIPrefabEditor.h"
+#include "LexUIPrefabEditor.h"
 #include "PropertyCustomizationHelpers.h"
-#include "SLexWidgetHierarchyPickerView.h"
+#include "LexWidgetHierarchyPickerView.h"
 #include "Core/Components/LexLayout.h"
 #include "Core/Components/LexVisual.h"
 #include "Core/Components/LexWidget.h"
 
 #define LOCTEXT_NAMESPACE "LexWidgetDetailPropertyExtensionHandler"
 
-FLexWidgetDetailPropertyExtensionHandler::FLexWidgetDetailPropertyExtensionHandler(TWeakPtr<FLGUIPrefabEditor> InPrefabEditor)
+FLexWidgetDetailPropertyExtensionHandler::FLexWidgetDetailPropertyExtensionHandler(TWeakPtr<FLexUIPrefabEditor> InPrefabEditor)
 {
 	PrefabEditorPtr = InPrefabEditor;
 }

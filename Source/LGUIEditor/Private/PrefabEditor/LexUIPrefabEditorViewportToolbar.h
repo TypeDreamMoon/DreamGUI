@@ -8,10 +8,10 @@
 #include "SCommonEditorViewportToolbarBase.h"
 
 // In-viewport toolbar AnchorData used in the sprite editor
-class SLGUIPrefabEditorViewportToolbar : public SCommonEditorViewportToolbarBase
+class SLexUIPrefabEditorViewportToolbar : public SCommonEditorViewportToolbarBase
 {
 public:
-	SLATE_BEGIN_ARGS(SLGUIPrefabEditorViewportToolbar) {}
+	SLATE_BEGIN_ARGS(SLexUIPrefabEditorViewportToolbar) {}
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& InArgs, TSharedPtr<class ICommonEditorViewportToolbarInfoProvider> InInfoProvider);

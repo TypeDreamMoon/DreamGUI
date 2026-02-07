@@ -84,9 +84,9 @@ void ULexVisualPostProcess::OnDimensionChanged(bool InPivotChange, bool InWidthC
 		UpdateRenderTarget();
 	}
 }
-void ULexVisualPostProcess::OnTransformChanged()
+void ULexVisualPostProcess::OnTransformChanged(bool InPositionChanged, bool InScaleChanged)
 {
-	Super::OnTransformChanged();
+	Super::OnTransformChanged(InPositionChanged, InScaleChanged);
 	UpdateRenderTarget();
 }
 

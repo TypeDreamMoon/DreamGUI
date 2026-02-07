@@ -12,8 +12,6 @@
 #include "Core/Components/LexLayout.h"
 #include "Core/Components/LexVisual.h"
 #if WITH_EDITOR
-#include "DrawDebugHelpers.h"
-#include "EditorViewportClient.h"
 #include "UObject/UnrealType.h"
 #endif
 
@@ -36,10 +34,10 @@ ULexWidget::ULexWidget(const FObjectInitializer& ObjectInitializer) :Super(Objec
 	bIsCanvasWidget = false;
 	bCacheWidthDirty = true;
 	bCacheHeightDirty = true;
-	bCacheAnchorBottomDirty = true;
-	bCacheAnchorTopDirty = true;
-	bCacheAnchorLeftDirty = true;
-	bCacheAnchorRightDirty = true;
+	bCacheAnchorOffsetBottomDirty = true;
+	bCacheAnchorOffsetTopDirty = true;
+	bCacheAnchorOffsetLeftDirty = true;
+	bCacheAnchorOffsetRightDirty = true;
 
 	bLayoutDirty = true;
 	bClipDirty = true;
@@ -97,21 +95,15 @@ void ULexWidget::EditorAwake_Implementation()
 #pragma region CallbackEvents
 void ULexWidget::Call_InteractableChanged()
 {
-	if (this->GetOwner() == nullptr)return;
-	if (this->GetWorld() == nullptr)return;
 	OnInteractableChangedEvent.Broadcast(this->GetInteractableInHierarchy());
 }
 void ULexWidget::Call_TransformChanged()
 {
-	if (this->GetOwner() == nullptr)return;
-	if (this->GetWorld() == nullptr)return;
 	OnTransformChangedEvent.Broadcast();
 }
 
 void ULexWidget::Call_DimensionsChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged)
 {
-	if (this->GetOwner() == nullptr)return;
-	if (this->GetWorld() == nullptr)return;
 	OnDimensionChangedEvent.Broadcast(InPivotChanged, InWidthChanged, InHeightChanged);
 
 	if (UIParent.IsValid())
@@ -122,34 +114,24 @@ void ULexWidget::Call_DimensionsChanged(bool InPivotChanged, bool InWidthChanged
 
 void ULexWidget::Call_ChildDimensionsChanged(ULexWidget* Child, bool InPivotChanged, bool InWidthChanged, bool InHeightChanged)
 {
-	if (this->GetOwner() == nullptr)return;
-	if (this->GetWorld() == nullptr)return;
 	OnChildDimensionChangedEvent.Broadcast(Child, InPivotChanged, InWidthChanged, InHeightChanged);
 }
 
 void ULexWidget::Call_AttachmentChanged()
 {
-	if (this->GetOwner() == nullptr)return;
-	if (this->GetWorld() == nullptr)return;
 	OnAttachmentChangedEvent.Broadcast();
 }
 
 void ULexWidget::Call_SiblingIndexChanged()
 {
-	if (this->GetOwner() == nullptr)return;
-	if (this->GetWorld() == nullptr)return;
 	OnSiblingIndexChangedEvent.Broadcast();
 }
 void ULexWidget::Call_WidgetActiveChanged()
 {
-	if (this->GetOwner() == nullptr)return;
-	if (this->GetWorld() == nullptr)return;
 	OnWidgetActiveChangedEvent.Broadcast(this->GetWidgetActiveInHierarchy());
 }
 void ULexWidget::Call_RaycastableChanged()
 {
-	if (this->GetOwner() == nullptr)return;
-	if (this->GetWorld() == nullptr)return;
 	OnRaycastableChangedEvent.Broadcast(this->GetRaycastableInHierarchy());
 }
 #pragma endregion
@@ -410,10 +392,10 @@ void ULexWidget::MarkAllDirty()
 
 	bCacheWidthDirty = true;
 	bCacheHeightDirty = true;
-	bCacheAnchorLeftDirty = true;
-	bCacheAnchorRightDirty = true;
-	bCacheAnchorBottomDirty = true;
-	bCacheAnchorTopDirty = true;
+	bCacheAnchorOffsetLeftDirty = true;
+	bCacheAnchorOffsetRightDirty = true;
+	bCacheAnchorOffsetBottomDirty = true;
+	bCacheAnchorOffsetTopDirty = true;
 	
 	if (IsValid(Visual))
 	{
@@ -788,43 +770,59 @@ void ULexWidget::EnsureDataForRebuild()
 bool ULexWidget::MoveComponentImpl(const FVector& Delta, const FQuat& NewRotation, bool bSweep, FHitResult* Hit, EMoveComponentFlags MoveFlags, ETeleportType Teleport)
 {
 	auto result = Super::MoveComponentImpl(Delta, NewRotation, bSweep, Hit, MoveFlags, Teleport);
+	return result;
+}
+DECLARE_CYCLE_STAT(TEXT("LexWidget OnUpdateTransform"), STAT_OnUpdateTransform, STATGROUP_LGUI);
+void ULexWidget::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
+{
+	SCOPE_CYCLE_COUNTER(STAT_OnUpdateTransform)
+	Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
+	// UE_LOG(LGUI, Error, TEXT("OnUpdateTransform Flag:%d %s"), (int)UpdateTransformFlags, *this->GetDisplayName());
 	if (this->IsRegistered()//check if registered, because it may called from reconstruction.
 		)
 	{
-		if (bCanSetAnchorFromTransform)
+		bool bPositionChanged = false, bRotationChanged = false, bScaleChanged = false;
 		{
 			auto Pos = this->GetRelativeLocation();
 			auto Pos2D = FVector2D(Pos.Y, Pos.Z);
 			if (Pos2D != PrevLocation2D)
 			{
 				PrevLocation2D = Pos2D;
-				CalculateAnchorFromTransform();
-				MarkLayoutDirty();
+				bPositionChanged = true;
+			}
+			auto CompScale3D = this->GetComponentScale();
+			auto CompScale2D = FVector2D(CompScale3D.Y, CompScale3D.Z);
+			if (PrevScale2D != CompScale2D)
+			{
+				PrevScale2D = CompScale2D;
+				bScaleChanged = true;
+			}
+			MarkTransformChanged(bPositionChanged, bScaleChanged);
+			if (LayoutContainer)
+			{
+				LayoutContainer->OnTransformChanged();
+			}
+			if (LayoutSelf)
+			{
+				LayoutSelf->OnTransformChanged();
+			}
+			if (Visual)
+			{
+				Visual->OnTransformChanged(bPositionChanged, bScaleChanged);
 			}
 		}
-	}
-	return result;
-}
-void ULexWidget::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
-{
-	Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
-	
-	auto CompScale3D = this->GetComponentScale();
-	auto CompScale2D = FVector2D(CompScale3D.Y, CompScale3D.Z);
-	bool ScaleChanged = PrevScale2D != CompScale2D;
-	PrevScale2D = CompScale2D;
-	MarkTransformChanged(true, ScaleChanged);
-	if (IsValid(LayoutContainer))
-	{
-		LayoutContainer->OnTransformChanged();
-	}
-	if (GetLayoutSelf())
-	{
-		LayoutSelf->OnTransformChanged();
-	}
-	if (IsValid(Visual))
-	{
-		Visual->OnTransformChanged();
+
+		if (UpdateTransformFlags == EUpdateTransformFlags::None)//called directly
+		{
+			if (bCanSetAnchorFromTransform)
+			{
+				if (bPositionChanged)
+				{
+					CalculateAnchorFromTransform();
+					MarkLayoutDirty();
+				}
+			}
+		}
 	}
 }
 
@@ -1111,10 +1109,10 @@ void ULexWidget::CalculateAnchorFromTransform()
 		CalculatedAnchoredPosition.Y = TempRelativeLocation.Z;
 	}
 
-	bCacheAnchorLeftDirty = true;
-	bCacheAnchorRightDirty = true;
-	bCacheAnchorBottomDirty = true;
-	bCacheAnchorTopDirty = true;
+	bCacheAnchorOffsetLeftDirty = true;
+	bCacheAnchorOffsetRightDirty = true;
+	bCacheAnchorOffsetBottomDirty = true;
+	bCacheAnchorOffsetTopDirty = true;
 
 	if (AnchorData.AnchoredPosition != CalculatedAnchoredPosition)
 	{
@@ -1237,10 +1235,10 @@ void ULexWidget::SetAnchorData(const FLexUIAnchorData& Value)
 
 	bCacheWidthDirty = true;
 	bCacheHeightDirty = true;
-	bCacheAnchorLeftDirty = true;
-	bCacheAnchorRightDirty = true;
-	bCacheAnchorBottomDirty = true;
-	bCacheAnchorTopDirty = true;
+	bCacheAnchorOffsetLeftDirty = true;
+	bCacheAnchorOffsetRightDirty = true;
+	bCacheAnchorOffsetBottomDirty = true;
+	bCacheAnchorOffsetTopDirty = true;
 
 	MarkAnchorDataChanged(true, true, true, false);
 	MarkLayoutDirty();
@@ -1251,10 +1249,10 @@ void ULexWidget::SetPivot(FVector2D Value)
 	if (!AnchorData.Pivot.Equals(Value, 0.0f))
 	{
 		AnchorData.Pivot = Value;
-		bCacheAnchorLeftDirty = true;
-		bCacheAnchorRightDirty = true;
-		bCacheAnchorBottomDirty = true;
-		bCacheAnchorTopDirty = true;
+		bCacheAnchorOffsetLeftDirty = true;
+		bCacheAnchorOffsetRightDirty = true;
+		bCacheAnchorOffsetBottomDirty = true;
+		bCacheAnchorOffsetTopDirty = true;
 		MarkAnchorDataChanged(true, false, false, false);
 		MarkLayoutDirty();
 	}
@@ -1266,14 +1264,14 @@ void ULexWidget::SetAnchorMin(FVector2D Value)
 	{
 		if (!AnchorData.AnchorMin.Equals(Value, 0.0f))
 		{
-			auto CurrentLeft = this->GetAnchorLeft();
-			auto CurrentBottom = this->GetAnchorBottom();
+			auto CurrentLeft = this->GetAnchorOffsetLeft();
+			auto CurrentBottom = this->GetAnchorOffsetBottom();
 
 			AnchorData.AnchorMin = Value;
 			
 			//SetAnchorLeft
 			{
-				auto CurrentRight = this->GetAnchorRight();
+				auto CurrentRight = this->GetAnchorOffsetRight();
 				CacheWidth = this->UIParent->GetWidth() * (this->AnchorData.AnchorMax.X - this->AnchorData.AnchorMin.X) - CurrentRight - CurrentLeft;
 				//SetWidth
 				{
@@ -1285,7 +1283,7 @@ void ULexWidget::SetAnchorMin(FVector2D Value)
 
 			//SetAnchorBottom
 			{
-				auto CurrentTop = this->GetAnchorTop();
+				auto CurrentTop = this->GetAnchorOffsetTop();
 				CacheHeight = this->UIParent->GetHeight() * (this->AnchorData.AnchorMax.Y - this->AnchorData.AnchorMin.Y) - CurrentTop - CurrentBottom;
 				//SetHeight
 				{
@@ -1310,14 +1308,14 @@ void ULexWidget::SetAnchorMax(FVector2D Value)
 	{
 		if (!AnchorData.AnchorMax.Equals(Value, 0.0f))
 		{
-			auto CurrentRight = this->GetAnchorRight();
-			auto CurrentTop = this->GetAnchorTop();
+			auto CurrentRight = this->GetAnchorOffsetRight();
+			auto CurrentTop = this->GetAnchorOffsetTop();
 
 			AnchorData.AnchorMax = Value;
 
 			//SetAnchorRight
 			{
-				auto CurrentLeft = this->GetAnchorLeft();
+				auto CurrentLeft = this->GetAnchorOffsetLeft();
 				CacheWidth = this->UIParent->GetWidth() * (this->AnchorData.AnchorMax.X - this->AnchorData.AnchorMin.X) - CurrentRight - CurrentLeft;
 				//SetWidth
 				{
@@ -1328,7 +1326,7 @@ void ULexWidget::SetAnchorMax(FVector2D Value)
 			}
 			//SetAnchorTop
 			{
-				auto CurrentBottom = this->GetAnchorBottom();
+				auto CurrentBottom = this->GetAnchorOffsetBottom();
 				CacheHeight = this->UIParent->GetHeight() * (this->AnchorData.AnchorMax.Y - this->AnchorData.AnchorMin.Y) - CurrentTop - CurrentBottom;
 				//SetHeight
 				{
@@ -1382,8 +1380,8 @@ void ULexWidget::SetHorizontalAnchorMinMax(FVector2D Value, bool bKeepSize, bool
 	{
 		if (AnchorData.AnchorMin.X != Value.X || AnchorData.AnchorMax.X != Value.Y)
 		{
-			auto CurrentLeft = this->GetAnchorLeft();
-			auto CurrentRight = this->GetAnchorRight();
+			auto CurrentLeft = this->GetAnchorOffsetLeft();
+			auto CurrentRight = this->GetAnchorOffsetRight();
 
 			if (bKeepSize)
 			{
@@ -1427,8 +1425,8 @@ void ULexWidget::SetVerticalAnchorMinMax(FVector2D Value, bool bKeepSize, bool b
 	{
 		if (AnchorData.AnchorMin.Y != Value.X || AnchorData.AnchorMax.Y != Value.Y)
 		{
-			auto CurrentBottom = this->GetAnchorBottom();
-			auto CurrentTop = this->GetAnchorTop();
+			auto CurrentBottom = this->GetAnchorOffsetBottom();
+			auto CurrentTop = this->GetAnchorOffsetTop();
 
 			if (bKeepSize)
 			{
@@ -1472,10 +1470,10 @@ void ULexWidget::SetAnchoredPosition(FVector2D Value)
 	if (!AnchorData.AnchoredPosition.Equals(Value, 0.0f))
 	{
 		AnchorData.AnchoredPosition = Value;
-		bCacheAnchorBottomDirty = true;
-		bCacheAnchorTopDirty = true;
-		bCacheAnchorLeftDirty = true;
-		bCacheAnchorRightDirty = true;
+		bCacheAnchorOffsetBottomDirty = true;
+		bCacheAnchorOffsetTopDirty = true;
+		bCacheAnchorOffsetLeftDirty = true;
+		bCacheAnchorOffsetRightDirty = true;
 		MarkAnchorDataChanged(false, false, false, false);
 		MarkLayoutDirty();
 	}
@@ -1486,8 +1484,8 @@ void ULexWidget::SetHorizontalAnchoredPosition(float Value)
 	if (AnchorData.AnchoredPosition.X != Value)
 	{
 		AnchorData.AnchoredPosition.X = Value;
-		bCacheAnchorLeftDirty = true;
-		bCacheAnchorRightDirty = true;
+		bCacheAnchorOffsetLeftDirty = true;
+		bCacheAnchorOffsetRightDirty = true;
 		MarkAnchorDataChanged(false, false, false, false);
 		MarkLayoutDirty();
 	}
@@ -1497,8 +1495,8 @@ void ULexWidget::SetVerticalAnchoredPosition(float Value)
 	if (AnchorData.AnchoredPosition.Y != Value)
 	{
 		AnchorData.AnchoredPosition.Y = Value;
-		bCacheAnchorBottomDirty = true;
-		bCacheAnchorTopDirty = true;
+		bCacheAnchorOffsetBottomDirty = true;
+		bCacheAnchorOffsetTopDirty = true;
 		MarkAnchorDataChanged(false, false, false, false);
 		MarkLayoutDirty();
 	}
@@ -1511,23 +1509,23 @@ void ULexWidget::SetSizeDelta(FVector2D Value)
 		AnchorData.SizeDelta = Value;
 		bCacheWidthDirty = true;
 		bCacheHeightDirty = true;
-		bCacheAnchorBottomDirty = true;
-		bCacheAnchorTopDirty = true;
-		bCacheAnchorLeftDirty = true;
-		bCacheAnchorRightDirty = true;
+		bCacheAnchorOffsetBottomDirty = true;
+		bCacheAnchorOffsetTopDirty = true;
+		bCacheAnchorOffsetLeftDirty = true;
+		bCacheAnchorOffsetRightDirty = true;
 		MarkAnchorDataChanged(false, true, true, false);
 		MarkLayoutDirty();
 	}
 }
 
-float ULexWidget::GetAnchorLeft()const
+float ULexWidget::GetAnchorOffsetLeft()const
 {
-	if (bCacheAnchorLeftDirty)
+	if (bCacheAnchorOffsetLeftDirty)
 	{
-		bCacheAnchorLeftDirty = false;
+		bCacheAnchorOffsetLeftDirty = false;
 		if (this->UIParent.IsValid())
 		{
-			CacheAnchorLeft =
+			CacheAnchorOffsetLeft =
 				this->GetLocalSpaceLeft()//local space left
 				+ this->GetRelativeLocation().Y//convert to parent space
 				-
@@ -1537,19 +1535,19 @@ float ULexWidget::GetAnchorLeft()const
 		}
 		else
 		{
-			CacheAnchorLeft = this->GetLocalSpaceLeft();//local space left
+			CacheAnchorOffsetLeft = this->GetLocalSpaceLeft();//local space left
 		}
 	}
-	return CacheAnchorLeft;
+	return CacheAnchorOffsetLeft;
 }
-float ULexWidget::GetAnchorTop()const
+float ULexWidget::GetAnchorOffsetTop()const
 {
-	if (bCacheAnchorTopDirty)
+	if (bCacheAnchorOffsetTopDirty)
 	{
-		bCacheAnchorTopDirty = false;
+		bCacheAnchorOffsetTopDirty = false;
 		if (this->UIParent.IsValid())
 		{
-			CacheAnchorTop =
+			CacheAnchorOffsetTop =
 				-(
 					this->GetLocalSpaceTop()
 					+ this->GetRelativeLocation().Z
@@ -1561,19 +1559,19 @@ float ULexWidget::GetAnchorTop()const
 		}
 		else
 		{
-			CacheAnchorTop = this->GetLocalSpaceTop();
+			CacheAnchorOffsetTop = this->GetLocalSpaceTop();
 		}
 	}
-	return CacheAnchorTop;
+	return CacheAnchorOffsetTop;
 }
-float ULexWidget::GetAnchorRight()const
+float ULexWidget::GetAnchorOffsetRight()const
 {
-	if (bCacheAnchorRightDirty)
+	if (bCacheAnchorOffsetRightDirty)
 	{
-		bCacheAnchorRightDirty = false;
+		bCacheAnchorOffsetRightDirty = false;
 		if (this->UIParent.IsValid())
 		{
-			CacheAnchorRight =
+			CacheAnchorOffsetRight =
 				-(
 					this->GetLocalSpaceRight()
 					+ this->GetRelativeLocation().Y
@@ -1585,19 +1583,19 @@ float ULexWidget::GetAnchorRight()const
 		}
 		else
 		{
-			CacheAnchorRight = this->GetLocalSpaceRight();
+			CacheAnchorOffsetRight = this->GetLocalSpaceRight();
 		}
 	}
-	return CacheAnchorRight;
+	return CacheAnchorOffsetRight;
 }
-float ULexWidget::GetAnchorBottom()const
+float ULexWidget::GetAnchorOffsetBottom()const
 {
-	if (bCacheAnchorBottomDirty)
+	if (bCacheAnchorOffsetBottomDirty)
 	{
-		bCacheAnchorBottomDirty = false;
+		bCacheAnchorOffsetBottomDirty = false;
 		if (this->UIParent.IsValid())
 		{
-			CacheAnchorBottom =
+			CacheAnchorOffsetBottom =
 				this->GetLocalSpaceBottom()
 				+ this->GetRelativeLocation().Z
 				-
@@ -1607,21 +1605,21 @@ float ULexWidget::GetAnchorBottom()const
 		}
 		else
 		{
-			CacheAnchorBottom = this->GetLocalSpaceBottom();
+			CacheAnchorOffsetBottom = this->GetLocalSpaceBottom();
 		}
 	}
-	return CacheAnchorBottom;
+	return CacheAnchorOffsetBottom;
 }
 
-void ULexWidget::SetAnchorLeft(float Value)
+void ULexWidget::SetAnchorOffsetLeft(float Value)
 {
 	if (this->UIParent.IsValid())
 	{
-		if (CacheAnchorLeft != Value || bCacheAnchorLeftDirty)
+		if (CacheAnchorOffsetLeft != Value || bCacheAnchorOffsetLeftDirty)
 		{
-			bCacheAnchorLeftDirty = false;
-			CacheAnchorLeft = Value;
-			auto CurrentRight = this->GetAnchorRight();
+			bCacheAnchorOffsetLeftDirty = false;
+			CacheAnchorOffsetLeft = Value;
+			auto CurrentRight = this->GetAnchorOffsetRight();
 			CacheWidth = this->UIParent->GetWidth() * (this->AnchorData.AnchorMax.X - this->AnchorData.AnchorMin.X) - CurrentRight - Value;
 			//SetWidth
 			{
@@ -1639,22 +1637,22 @@ void ULexWidget::SetAnchorLeft(float Value)
 			MarkAnchorDataChanged(false, true, false, false);
 			MarkLayoutDirty();
 		}
-		bCacheAnchorLeftDirty = false;
+		bCacheAnchorOffsetLeftDirty = false;
 	}
 	else
 	{
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if LexWidget have parent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)
 	}
 }
-void ULexWidget::SetAnchorTop(float Value)
+void ULexWidget::SetAnchorOffsetTop(float Value)
 {
 	if (this->UIParent.IsValid())
 	{
-		if (CacheAnchorTop != Value || bCacheAnchorTopDirty)
+		if (CacheAnchorOffsetTop != Value || bCacheAnchorOffsetTopDirty)
 		{
-			bCacheAnchorTopDirty = false;
-			CacheAnchorTop = Value;
-			auto CurrentBottom = this->GetAnchorBottom();
+			bCacheAnchorOffsetTopDirty = false;
+			CacheAnchorOffsetTop = Value;
+			auto CurrentBottom = this->GetAnchorOffsetBottom();
 			CacheHeight = this->UIParent->GetHeight() * (this->AnchorData.AnchorMax.Y - this->AnchorData.AnchorMin.Y) - Value - CurrentBottom;
 			//SetHeight
 			{
@@ -1672,22 +1670,22 @@ void ULexWidget::SetAnchorTop(float Value)
 			MarkAnchorDataChanged(false, false, true, false);
 			MarkLayoutDirty();
 		}
-		bCacheAnchorTopDirty = false;
+		bCacheAnchorOffsetTopDirty = false;
 	}
 	else
 	{
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if LexWidget have parent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)
 	}
 }
-void ULexWidget::SetAnchorRight(float Value)
+void ULexWidget::SetAnchorOffsetRight(float Value)
 {
 	if (this->UIParent.IsValid())
 	{
-		if (CacheAnchorRight != Value || bCacheAnchorRightDirty)
+		if (CacheAnchorOffsetRight != Value || bCacheAnchorOffsetRightDirty)
 		{
-			bCacheAnchorRightDirty = false;
-			CacheAnchorRight = Value;
-			auto CurrentLeft = this->GetAnchorLeft();
+			bCacheAnchorOffsetRightDirty = false;
+			CacheAnchorOffsetRight = Value;
+			auto CurrentLeft = this->GetAnchorOffsetLeft();
 			CacheWidth = this->UIParent->GetWidth() * (this->AnchorData.AnchorMax.X - this->AnchorData.AnchorMin.X) - Value - CurrentLeft;
 			//SetWidth
 			{
@@ -1705,22 +1703,22 @@ void ULexWidget::SetAnchorRight(float Value)
 			MarkAnchorDataChanged(false, true, false, false);
 			MarkLayoutDirty();
 		}
-		bCacheAnchorRightDirty = false;
+		bCacheAnchorOffsetRightDirty = false;
 	}
 	else
 	{
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if LexWidget have parent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)
 	}
 }
-void ULexWidget::SetAnchorBottom(float Value)
+void ULexWidget::SetAnchorOffsetBottom(float Value)
 {
 	if (this->UIParent.IsValid())
 	{
-		if (CacheAnchorBottom != Value || bCacheAnchorBottomDirty)
+		if (CacheAnchorOffsetBottom != Value || bCacheAnchorOffsetBottomDirty)
 		{
-			bCacheAnchorBottomDirty = false;
-			CacheAnchorBottom = Value;
-			auto CurrentTop = this->GetAnchorTop();
+			bCacheAnchorOffsetBottomDirty = false;
+			CacheAnchorOffsetBottom = Value;
+			auto CurrentTop = this->GetAnchorOffsetTop();
 			CacheHeight = this->UIParent->GetHeight() * (this->AnchorData.AnchorMax.Y - this->AnchorData.AnchorMin.Y) - CurrentTop - Value;
 			//SetHeight
 			{
@@ -1738,7 +1736,7 @@ void ULexWidget::SetAnchorBottom(float Value)
 			MarkAnchorDataChanged(false, false, true, false);
 			MarkLayoutDirty();
 		}
-		bCacheAnchorBottomDirty = false;
+		bCacheAnchorOffsetBottomDirty = false;
 	}
 	else
 	{
@@ -2062,10 +2060,10 @@ void ULexWidget::UIHierarchyAttachmentChanged(ULexCanvas* ParentRenderCanvas, UL
 	{
 		bCacheWidthDirty = true;
 		bCacheHeightDirty = true;
-		bCacheAnchorLeftDirty = true;
-		bCacheAnchorRightDirty = true;
-		bCacheAnchorBottomDirty = true;
-		bCacheAnchorTopDirty = true;
+		bCacheAnchorOffsetLeftDirty = true;
+		bCacheAnchorOffsetRightDirty = true;
+		bCacheAnchorOffsetBottomDirty = true;
+		bCacheAnchorOffsetTopDirty = true;
 		
 		MarkAnchorDataChanged(false, true, true, false);
 		MarkLayoutDirty();
@@ -2335,7 +2333,7 @@ void ULexWidget::MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged, 
 		this->RenderCanvas->MarkCanvasUpdate(false, InPivotChanged || InWidthChanged || InHeightChanged, false);//mark canvas to update
 		if (this->IsCanvasWidget())
 		{
-			this->RenderCanvas->MarkSizeChanged();
+			this->RenderCanvas->MarkTransformOrDimentionChanged();
 		}
 	}
 
@@ -2355,7 +2353,7 @@ void ULexWidget::MarkTransformChanged(bool InPositionChanged, bool InScaleChange
 		{
 			//This is mainly to mark LGUICanvas's bIsViewProjectionMatrixDirty to true.
 			//For the condition LGUI_Tutorials/Tutorials/UIRenderTarget, when move LGUIRenderTarget at runtime, the LGUICanvas's RenderTarget's matrix not update, result in wrong interaction.
-			this->RenderCanvas->MarkSizeChanged();
+			this->RenderCanvas->MarkTransformOrDimentionChanged();
 		}
 	}
 
@@ -2376,10 +2374,10 @@ void ULexWidget::MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged,
 		{
 			bCacheHeightDirty = true;
 		}
-		bCacheAnchorLeftDirty = true;
-		bCacheAnchorRightDirty = true;
-		bCacheAnchorBottomDirty = true;
-		bCacheAnchorTopDirty = true;
+		bCacheAnchorOffsetLeftDirty = true;
+		bCacheAnchorOffsetRightDirty = true;
+		bCacheAnchorOffsetBottomDirty = true;
+		bCacheAnchorOffsetTopDirty = true;
 	}
 	MarkDimensionChanged(InPivotChanged, InWidthChanged, InHeightChanged);
 	if (IsValid(LayoutContainer) || IsValid(LayoutSelf))

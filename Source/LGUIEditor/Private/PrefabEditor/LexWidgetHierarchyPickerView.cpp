@@ -1,8 +1,8 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "SLexWidgetHierarchyPickerView.h"
-#include "LGUIPrefabEditor.h"
-#include "SLexWidgetHierarchyPickerViewItem.h"
+#include "LexWidgetHierarchyPickerView.h"
+#include "LexUIPrefabEditor.h"
+#include "LexWidgetHierarchyPickerViewItem.h"
 #include "Widgets/Layout/SScrollBorder.h"
 #include "Widgets/Input/SSearchBox.h"
 #include "Core/Components/LexRectBlock.h"
@@ -10,7 +10,7 @@
 
 #define LOCTEXT_NAMESPACE "LexWidgetHierarchyPickerView"
 
-void SLexWidgetHierarchyPickerView::Construct(const FArguments& InArgs, TSharedPtr<FLGUIPrefabEditor> InManager, UClass* InObjectClass)
+void SLexWidgetHierarchyPickerView::Construct(const FArguments& InArgs, TSharedPtr<FLexUIPrefabEditor> InManager, UClass* InObjectClass)
 {
 	Manager = InManager;
 	OnSelectItem = InArgs._OnSelectItem;
@@ -148,7 +148,7 @@ void SLexWidgetHierarchyPickerView::RebuildTreeView()
 
 TSharedRef< ITableRow > SLexWidgetHierarchyPickerView::OnGenerateRow(DataType InItem, const TSharedRef<STableViewBase>& OwnerTable)
 {
-	return SNew(SLexWidgetHierarchyPickerViewItem, OwnerTable, InItem, Manager.Pin(), ObjectClass)
+	return SNew(SLexWidgetHierarchyPickerViewItem, OwnerTable, InItem, ObjectClass)
 		.OnSelectObject(OnSelectItem)
 		.IsEnabled(InItem->ValidObjectArray.Num() > 0)
 		;

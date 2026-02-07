@@ -8,7 +8,7 @@
 #include "Framework/Views/TreeFilterHandler.h"
 #include "Misc/TextFilter.h"
 
-class FLGUIPrefabEditor;
+class FLexUIPrefabEditor;
 class ULexWidget;
 
 class SLexWidgetEditorHierarchyView : public SCompoundWidget
@@ -20,8 +20,8 @@ public:
 	{}
 	SLATE_END_ARGS()
 
-	void Construct(const FArguments& InArgs, TSharedPtr<FLGUIPrefabEditor> InManager);
-	virtual ~SLexWidgetEditorHierarchyView();
+	void Construct(const FArguments& InArgs, TSharedPtr<FLexUIPrefabEditor> InManager);
+	virtual ~SLexWidgetEditorHierarchyView()override;
 
 	// Begin SWidget
 	virtual void Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime) override;
@@ -74,7 +74,7 @@ protected:
 	bool CanRename() const;
 	void BeginRename();
 
-	TWeakPtr<FLGUIPrefabEditor> Manager;
+	TWeakPtr<FLexUIPrefabEditor> Manager;
 	TSharedPtr<FUICommandList> CommandList;
 	TSharedPtr< TreeFilterHandler< TWeakObjectPtr<ULexWidget> > > FilterHandler;
 	TArray< TWeakObjectPtr<ULexWidget> > RootWidgets;

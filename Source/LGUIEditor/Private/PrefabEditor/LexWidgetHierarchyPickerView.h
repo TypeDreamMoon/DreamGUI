@@ -8,7 +8,7 @@
 #include "Framework/Views/TreeFilterHandler.h"
 #include "Misc/TextFilter.h"
 
-class FLGUIPrefabEditor;
+class FLexUIPrefabEditor;
 class ULexWidget;
 
 struct FLexWidgetHierarchyPickerView_ValidObjectData
@@ -48,7 +48,7 @@ public:
 		SLATE_EVENT(FOnSelectItem, OnSelectItem)
 	SLATE_END_ARGS()
 
-	void Construct(const FArguments& InArgs, TSharedPtr<FLGUIPrefabEditor> InManager, UClass* InObjectClass);
+	void Construct(const FArguments& InArgs, TSharedPtr<FLexUIPrefabEditor> InManager, UClass* InObjectClass);
 	virtual ~SLexWidgetHierarchyPickerView();
 
 	// Begin SWidget
@@ -71,7 +71,7 @@ protected:
 	void UpdateItemsExpansionFromModel();
 	void OnSelectionChanged(DataType SelectedItem, ESelectInfo::Type SelectInfo);
 
-	TWeakPtr<FLGUIPrefabEditor> Manager;
+	TWeakPtr<FLexUIPrefabEditor> Manager;
 	TSharedPtr< TreeFilterHandler< DataType > > FilterHandler;
 	TArray< DataType > RootWidgets;
 	TArray< DataType > TreeRootWidgets;

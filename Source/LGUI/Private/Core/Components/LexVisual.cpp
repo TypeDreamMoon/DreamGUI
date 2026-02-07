@@ -187,10 +187,9 @@ UTexture* ULexVisual::GetClipDataTexture() const
 	return nullptr;
 }
 
-void ULexVisual::OnTransformChanged()
+void ULexVisual::OnTransformChanged(bool InPositionChanged, bool InScaleChanged)
 {
 	bTransformChanged = true;
-	GetWidget()->MarkCanvasUpdate(false, true, false);
 }
 
 void ULexVisual::OnRenderCanvasChanged(ULexCanvas* InOldCanvas, ULexCanvas* InNewCanvas)

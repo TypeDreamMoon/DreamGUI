@@ -92,7 +92,7 @@ protected:
  * LayoutSelf can handle self size.
  * This base class just provide IgnoreLayout.
  */
-UCLASS(BlueprintType, DefaultToInstanced, EditInlineNew)
+UCLASS(BlueprintType, DefaultToInstanced, EditInlineNew, DisplayName="LayoutSelf-IgnoreLayout")
 class LGUI_API ULexLayoutSelf : public ULexLayout
 {
 	GENERATED_BODY()

@@ -176,7 +176,7 @@ public:
 
 	virtual void OnPixelSnappingChanged(){};
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange){};
-	virtual void OnTransformChanged();
+	virtual void OnTransformChanged(bool InPositionChanged, bool InScaleChanged);
 	virtual void OnRenderCanvasChanged(ULexCanvas* InOldCanvas, ULexCanvas* InNewCanvas);
 	
 	void MarkColorDirty();

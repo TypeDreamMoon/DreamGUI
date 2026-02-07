@@ -127,22 +127,22 @@ struct FLexUIPrefabDataForPrefabEditor
 {
 	GENERATED_BODY()
 public:
-	UPROPERTY(EditAnywhere)
-		FVector ViewLocation = FVector::ZeroVector;
-	UPROPERTY(EditAnywhere)
-		FRotator ViewRotation = FRotator::ZeroRotator;
-	UPROPERTY(EditAnywhere)
-		FVector ViewOrbitLocation = FVector::ZeroVector;
-	UPROPERTY(EditAnywhere)
-		FIntPoint CanvasSize = FIntPoint(1920, 1080);
-	UPROPERTY(EditAnywhere)
-		uint8 CanvasRenderMode = 3;//default LexCanvas's render mode is ELexUIRenderMode::WorldSpace_LexUI
-	UPROPERTY(EditAnywhere)
-		TEnumAsByte<EViewModeIndex> ViewMode = EViewModeIndex::VMI_Lit;//editor viewport's view-mode
-	UPROPERTY(EditAnywhere)
-		uint8 ViewportType = 2;//ELevelViewportType::LVT_OrthoYZ
-	UPROPERTY(EditAnywhere)
-		TSet<FGuid> UnexpandWidgetSet;
+	UPROPERTY()
+	FVector ViewLocation = FVector::ZeroVector;
+	UPROPERTY()
+	FRotator ViewRotation = FRotator::ZeroRotator;
+	UPROPERTY()
+	FVector ViewOrbitLocation = FVector::ZeroVector;
+	UPROPERTY()
+	FIntPoint CanvasSize = FIntPoint(1920, 1080);
+	UPROPERTY()
+	uint8 CanvasRenderMode = 3;//default LexCanvas's render mode is ELexUIRenderMode::WorldSpace_LexUI
+	UPROPERTY()
+	TEnumAsByte<EViewModeIndex> ViewMode = EViewModeIndex::VMI_Lit;//editor viewport's view-mode
+	UPROPERTY()
+	uint8 ViewportType = 2;//ELevelViewportType::LVT_OrthoYZ
+	UPROPERTY()
+	TSet<FGuid> UnexpandedWidgetSet;
 };
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FLexUIPrefab_LoadPrefabCallback, AActor*, LoadedRootActor);
