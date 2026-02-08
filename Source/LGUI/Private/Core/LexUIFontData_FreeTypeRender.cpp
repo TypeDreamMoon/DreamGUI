@@ -552,8 +552,12 @@ void ULexUIFontData_FreeTypeRender::UpdateFontTextureRegion(uint32 PosX, uint32 
 	ENQUEUE_RENDER_COMMAND(FLexUIFontData_UpdateFontTextureRegionData)(
 		[RegionData = MoveTemp(RegionData), IntermediateTexture2DRes, Texture2DArrayRes](FRHICommandListImmediate& RHICmdList)
 		{
+			auto IntermediateTexRHI = IntermediateTexture2DRes->GetTexture2DRHI();
+			auto TexRHI = Texture2DArrayRes->GetTexture2DArrayRHI();
+			check(IntermediateTexRHI && IntermediateTexRHI->IsValid());
+			check(TexRHI && TexRHI->IsValid());
 			RHICmdList.UpdateTexture2D(
-				IntermediateTexture2DRes->GetTexture2DRHI(),
+				IntermediateTexRHI,
 				0,
 				RegionData.Region,
 				RegionData.SrcPitch,
@@ -571,7 +575,7 @@ void ULexUIFontData_FreeTypeRender::UpdateFontTextureRegion(uint32 PosX, uint32 
 			CopyInfo.SourcePosition = FIntVector(0, 0, 0);
 			CopyInfo.DestPosition = FIntVector(RegionData.PosX, RegionData.PosY, 0);
 			CopyInfo.Size = FIntVector(RegionData.Region.Width, RegionData.Region.Height, 0);
-			RHICmdList.CopyTexture(IntermediateTexture2DRes->GetTexture2DRHI(), Texture2DArrayRes->GetTexture2DArrayRHI(), CopyInfo);
+			RHICmdList.CopyTexture(IntermediateTexRHI, TexRHI, CopyInfo);
 		});
 }
 void ULexUIFontData_FreeTypeRender::RenewFontTexture()
@@ -588,35 +592,33 @@ void ULexUIFontData_FreeTypeRender::RenewFontTexture()
 	{
 		auto OldTextureResource = OldTexture->GetResource();
 		auto NewTextureResource = Texture->GetResource();
-		if (OldTextureResource != nullptr && NewTextureResource != nullptr)
+		check(OldTextureResource);
+		check(NewTextureResource);
+		ENQUEUE_RENDER_COMMAND(FLexUIFontData_UpdateAndCopyFontTexture)([
+				OldTextureResource
+				, NewTextureResource
+				, TextureSize = TextureSize
+				, SliceCount = OldTexture->GetArraySize()
+				](FRHICommandListImmediate& RHICmdList)
 		{
-			ENQUEUE_RENDER_COMMAND(FLexUIFontData_UpdateAndCopyFontTexture)([
-					OldTextureResource
-					, NewTextureResource
-					, TextureSize = TextureSize
-					, SliceCount = OldTexture->GetArraySize()
-					](FRHICommandListImmediate& RHICmdList)
-			{
-				auto OldTextureRHI = OldTextureResource->GetTexture2DArrayRHI();
-				auto NewTextureRHI = NewTextureResource->GetTexture2DArrayRHI();
-				if (OldTextureRHI->IsValid() && NewTextureRHI->IsValid())
-				{
-					FRHICopyTextureInfo CopyInfo;
-					CopyInfo.SourcePosition = FIntVector(0, 0, 0);
-					CopyInfo.Size = FIntVector(TextureSize, TextureSize, 0);
-					CopyInfo.DestPosition = FIntVector(0, 0, 0);
-					CopyInfo.SourceSliceIndex = 0;
-					CopyInfo.DestSliceIndex = 0;
-					CopyInfo.NumMips = 1;
-					CopyInfo.NumSlices = SliceCount;
-					RHICmdList.CopyTexture(
-						OldTextureRHI
-						, NewTextureRHI
-						, CopyInfo
-						);
-				}
-			});
-		}
+			auto OldTextureRHI = OldTextureResource->GetTexture2DArrayRHI();
+			auto NewTextureRHI = NewTextureResource->GetTexture2DArrayRHI();
+			check(OldTextureRHI && OldTextureRHI->IsValid());
+			check(NewTextureRHI && NewTextureRHI->IsValid());
+			FRHICopyTextureInfo CopyInfo;
+			CopyInfo.SourcePosition = FIntVector(0, 0, 0);
+			CopyInfo.Size = FIntVector(TextureSize, TextureSize, 0);
+			CopyInfo.DestPosition = FIntVector(0, 0, 0);
+			CopyInfo.SourceSliceIndex = 0;
+			CopyInfo.DestSliceIndex = 0;
+			CopyInfo.NumMips = 1;
+			CopyInfo.NumSlices = SliceCount;
+			RHICmdList.CopyTexture(
+				OldTextureRHI
+				, NewTextureRHI
+				, CopyInfo
+				);
+		});
 		OldTexture->RemoveFromRoot();//we should not worry about gc because render thread only need texture resource, not texture object
 	}
 

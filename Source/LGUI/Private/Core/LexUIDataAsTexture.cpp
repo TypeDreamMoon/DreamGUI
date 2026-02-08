@@ -71,8 +71,7 @@ void ULexUIDataAsTexture::CreateTexture()
 			[TextureRes, Width = TextureWidth, Height = TextureHeight, BytesPerPixel = BytesPerPixel](FRHICommandListImmediate& RHICmdList)
 			{
 				TArray<uint8> Data;
-				Data.SetNumUninitialized(Width * Height * BytesPerPixel);
-				FMemory::Memzero(Data.GetData(), Data.Num());
+				Data.SetNumZeroed(Width * Height * BytesPerPixel);
 				RHICmdList.UpdateTexture2D(
 					TextureRes->GetTexture2DRHI(),
 					0,

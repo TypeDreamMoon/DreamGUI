@@ -120,6 +120,7 @@ void ULexVisualBatchMesh::MarkAllDirty()
 	bTriangleChanged = true;
 	bTextureChanged = true;
 	bMaterialChanged = true;
+	bWidgetPropertyDataFontMarkDirty = true;
 	GetWidget()->MarkCanvasUpdate(true, false, false);
 	Super::MarkAllDirty();
 }

@@ -405,8 +405,11 @@ void ULexCanvas::ClearDrawCall()
 		UIMesh->ClearRenderData();
 		bUIMeshNeedToSetInitialParameters = true;
 	}
-
+	PooledUIMaterialList.Empty();
+	UsingUIMaterialList.Empty();
+	MapSrcMatToDynamicMat.Empty();
 	CurrentDrawCallData.DrawCallArray.Empty();
+	bNeedToSetClipDataTextureMaterialParameter = true;
 }
 
 void ULexCanvas::RemoveFromViewExtension(bool PropogateToChildrenCanvas)
@@ -1379,6 +1382,7 @@ void ULexCanvas::UpdateCanvasDrawCall()
 						//PendingDrawCallData.DrawCallArray.Add(DrawCallItem);
 					}
 					//PendingUpdateDrawCallQueue.Enqueue(MoveTemp(PendingDrawCallData));
+					UIMesh->UpdateLocalBounds();//update bounds for UE-Renderer
 				}
 			}
 		}
@@ -1499,13 +1503,13 @@ void ULexCanvas::UpdateDrawCallMesh()
 		}
 	}
 	
-	if (this->IsRootCanvas() && bNeedToUpdateBounds)
+	if (this->IsRootCanvas())
 	{
 		UIMesh->UpdateChildCanvasSectionBox();
 	}
 	if (bNeedToUpdateBounds)
 	{
-		UIMesh->UpdateLocalBounds();
+		UIMesh->UpdateLocalBounds();//update bounds for UE-Renderer
 	}
 }
 

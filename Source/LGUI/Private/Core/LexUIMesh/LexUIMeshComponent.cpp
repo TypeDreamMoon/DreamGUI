@@ -266,7 +266,6 @@ public:
 		for (int SectionIndex = 0; SectionIndex < SrcSections.Num(); SectionIndex++)
 		{
 			auto Section = CreateSectionData(SrcSections[SectionIndex].Get());
-			check(Section);
 			SectionArray[SectionIndex] = Section;
 		}
 		bNeedToSortRenderSections = true;
@@ -331,6 +330,7 @@ public:
 				if (SrcSection->vertices.Num() == 0 || SrcSection->triangleIndices.Num() == 0)
 				{
 					SrcSection->RenderProxy = nullptr;
+					check(0);
 					return nullptr;
 				}
 				auto NewSectionProxy = new FLexUIMeshSectionProxy(GetScene().GetFeatureLevel());
@@ -560,7 +560,6 @@ public:
 		}
 		if(bIsSupportUERenderer)
 		{
-#if 0//looks like these code is not necessary
 			for (int i = 0; i < NumVerts; i++)
 			{
 				auto& LexUIVert = MeshVertexData[i];
@@ -573,7 +572,6 @@ public:
 				Section->VertexBuffers.StaticMeshVertexBuffer.SetVertexUV(i, 2, LexUIVert.TextureCoordinate[2]);
 				Section->VertexBuffers.StaticMeshVertexBuffer.SetVertexUV(i, 3, LexUIVert.TextureCoordinate[3]);
 			}
-#endif
 
 			{
 				auto& VertexBuffer = Section->VertexBuffers.PositionVertexBuffer;
@@ -928,7 +926,7 @@ private:
 
 void FLexUIRenderSection_Mesh::UpdateSectionBox(const FTransform& LocalToWorld)
 {
-	//mesh bounds already in canvas space
+	BoundingBox = BoundingBox.TransformBy(LocalToWorld);
 }
 
 void FLexUIRenderSection_Mesh::ClearBeforePool()
@@ -1016,6 +1014,7 @@ TSharedPtr<FLexUIRenderSection> ULexUIMeshComponent::SetupRenderSection(ELexUIRe
 			MeshSectionPtr->ValidTriangleIndicesNum = InDrawCallData->CombinedBatchMeshGeometryTriangles.Num();
 			FMemory::Memcpy(MeshSectionPtr->triangleIndices.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.Num() * sizeof(FLexUIMeshIndexBufferType));
 			MeshSectionPtr->BoundingBox = InDrawCallData->CombinedBounds;
+			MeshSectionPtr->UpdateSectionBox(GetComponentTransform());
 			if (MeshSectionPtr->RenderProxy)//if we have valid render-proxy then recreate data or update data
 			{
 				if (bNeedExpandMeshSection)
@@ -1112,17 +1111,20 @@ void ULexUIMeshComponent::UpdateMeshSection(int Index, FLexUIDrawCall* InDrawCal
 	auto& RenderSection = RenderSectionArray[Index];
 	
 	auto MeshSectionPtr = static_cast<FLexUIRenderSection_Mesh*>(RenderSection.Get());
-	if (MeshSectionPtr->RenderProxy)//if we have valid render-proxy then recreate date or update data
+	if (MeshSectionPtr->RenderProxy)//if we have valid render-proxy then recreate or update data
 	{
+		MeshSectionPtr->BoundingBox = InDrawCallData->CombinedBounds;
+		MeshSectionPtr->UpdateSectionBox(GetComponentTransform());
 		FMemory::Memcpy(MeshSectionPtr->vertices.GetData(), InDrawCallData->CombinedBatchMeshGeometryVertices.GetData(), InDrawCallData->CombinedBatchMeshGeometryVertices.Num() * sizeof(FLexUIMeshVertex));
 		FMemory::Memcpy(MeshSectionPtr->triangleIndices.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.Num() * sizeof(FLexUIMeshIndexBufferType));
 		UpdateMeshSectionRenderData(RenderSection, RenderCanvas->GetActualRequireNormalAndTangent());
 	}
 	else//no valid render-proxy, because it is newly created
 	{
+		MeshSectionPtr->BoundingBox = InDrawCallData->CombinedBounds;
+		MeshSectionPtr->UpdateSectionBox(GetComponentTransform());
 		FMemory::Memcpy(MeshSectionPtr->vertices.GetData(), InDrawCallData->CombinedBatchMeshGeometryVertices.GetData(), InDrawCallData->CombinedBatchMeshGeometryVertices.Num() * sizeof(FLexUIMeshVertex));
 		FMemory::Memcpy(MeshSectionPtr->triangleIndices.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.Num() * sizeof(FLexUIMeshIndexBufferType));
-		MeshSectionPtr->BoundingBox = InDrawCallData->CombinedBounds;
 		if (this->SceneProxy != nullptr)
 		{
 			auto ThisSceneProxy = static_cast<FLexUIRenderSceneProxy*>(this->SceneProxy);
@@ -1135,7 +1137,6 @@ DECLARE_CYCLE_STAT(TEXT("LexUIMesh UpdateMeshSection_GT"), STAT_UpdateMeshSectio
 void ULexUIMeshComponent::UpdateMeshSectionRenderData(TSharedPtr<FLexUIRenderSection> InRenderSection, bool InRequireNormalAndTangent)
 {
 	SCOPE_CYCLE_COUNTER(STAT_UpdateMeshSectionGT);
-	InRenderSection->UpdateSectionBox(GetComponentTransform());
 	if (SceneProxy)
 	{
 		check(InRenderSection->Type == ELexUIRenderSectionType::Mesh);
@@ -1354,11 +1355,11 @@ void ULexUIMeshComponent::UpdateChildCanvasSectionBox()
 			{
 				if (RenderSectionItem->Type == ELexUIRenderSectionType::ChildCanvas)
 				{
-					auto ChildCanvasSection = (FLexUIRenderSection_ChildCanvas*)RenderSectionItem.Get();
+					auto ChildCanvasSection = StaticCastSharedPtr<FLexUIRenderSection_ChildCanvas>(RenderSectionItem);
 					if (ChildCanvasSection->ChildCanvasMeshComponent != nullptr)
 					{
 						UpdateChildCanvasSectionBox_Recursive(ChildCanvasSection->ChildCanvasMeshComponent->RenderSectionArray);
-						ChildCanvasSection->UpdateSectionBox(ChildCanvasSection->ChildCanvasMeshComponent->GetComponentToWorld());
+						ChildCanvasSection->UpdateSectionBox(FTransform::Identity);//how we can be sure that children canvas bounds is ready? because we update child canvas drawcall before parent
 					}
 				}
 			}
@@ -1367,7 +1368,7 @@ void ULexUIMeshComponent::UpdateChildCanvasSectionBox()
 	LOCAL::UpdateChildCanvasSectionBox_Recursive(RenderSectionArray);
 }
 
-void ULexUIMeshComponent::UpdateLocalBounds()
+void ULexUIMeshComponent::UpdateLocalBounds() 
 {
 	UpdateBounds();// Update global bounds		
 	MarkRenderTransformDirty();// Need to send to render thread

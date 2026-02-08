@@ -227,6 +227,7 @@ void ULexVisual::MarkAllDirty()
 	bColorChanged = true;
 	bTransformChanged = true;
 	bClipDataPositionChanged = true;
+	bWidgetPropertyDataStartPositionChanged = true;
 	GetWidget()->MarkCanvasUpdate(false, true, false);
 }
 
