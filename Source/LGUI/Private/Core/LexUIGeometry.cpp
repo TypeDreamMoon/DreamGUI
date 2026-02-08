@@ -217,7 +217,6 @@ void FLexUIGeometry::UpdateRectBlockVertex(FLexUIGeometry* uiGeo,
 	bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged
 )
 {
-	//@todo: use a 9-sliced mesh for OuterShadow to reduce overdraw
 	auto& triangles = uiGeo->Triangles;
 	LexUIGeometrySetArrayNum(triangles, 6);
 	if (InTriangleChanged)

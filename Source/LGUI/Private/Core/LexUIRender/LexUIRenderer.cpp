@@ -56,7 +56,7 @@ void FLexUIRenderer::SetupView(FSceneViewFamily& InViewFamily, FSceneView& InVie
 	
 	if (ScreenSpaceRenderParameter.RootCanvas.IsValid())
 	{
-		//@todo: these parameters should use ENQUE_RENDER_COMMAND to pass to render thread
+		//@todo: these parameters should use ENQUEUE_RENDER_COMMAND to pass to render thread
 		auto ViewLocation = ScreenSpaceRenderParameter.RootCanvas->GetViewLocation();
 		auto ViewRotationMatrix = FInverseRotationMatrix(ScreenSpaceRenderParameter.RootCanvas->GetViewRotator()) * FMatrix(
 			FPlane(0, 0, 1, 0),
@@ -73,10 +73,10 @@ void FLexUIRenderer::SetupView(FSceneViewFamily& InViewFamily, FSceneView& InVie
 		ScreenSpaceRenderParameter.bEnableDepthTest = ScreenSpaceRenderParameter.RootCanvas->GetEnableDepthTest();
 	}
 
-	if (auto LGUISettings = GetDefault<ULexUISettings>())
+	if (auto LexUISettings = GetDefault<ULexUISettings>())
 	{
-		NumSamples_MSAA = LGUISettings->AntiAliasingMethod == ELexUIRendererAntiAliasingMethod::MSAA ? (uint8)LGUISettings->MSAASampleCount : 1;
-		bFrustumCulling = LGUISettings->bFrustumCulling;
+		NumSamples_MSAA = LexUISettings->AntiAliasingMethod == ELexUIRendererAntiAliasingMethod::MSAA ? (uint8)LexUISettings->MSAASampleCount : 1;
+		bFrustumCulling = LexUISettings->bFrustumCulling;
 	}
 	else
 	{

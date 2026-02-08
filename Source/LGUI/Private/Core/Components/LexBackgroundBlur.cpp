@@ -349,8 +349,6 @@ void ULexBackgroundBlur::SetBlurStrength(float Value)
 	if (BlurStrength != Value)
 	{
 		BlurStrength = Value;
-		//@todo: maybe we don't need MarkCanvasUpdate because PostProcess itself can handle update
-		GetWidget()->MarkCanvasUpdate(false, false, false);
 		SendOthersDataToRenderProxy();
 	}
 }
@@ -360,8 +358,6 @@ void ULexBackgroundBlur::SetApplyAlphaToBlur(bool Value)
 	if (ApplyAlphaToBlur != Value)
 	{
 		ApplyAlphaToBlur = Value;
-		//@todo: maybe we don't need MarkCanvasUpdate because PostProcess itself can handle update
-		GetWidget()->MarkCanvasUpdate(false, false, false);
 		SendOthersDataToRenderProxy();
 	}
 }
@@ -371,8 +367,6 @@ void ULexBackgroundBlur::SetMaxDownSampleLevel(int Value)
 	if (MaxDownSampleLevel != Value)
 	{
 		MaxDownSampleLevel = Value;
-		//@todo: maybe we don't need MarkCanvasUpdate because PostProcess itself can handle update
-		GetWidget()->MarkCanvasUpdate(false, false, false);
 		SendOthersDataToRenderProxy();
 	}
 }
