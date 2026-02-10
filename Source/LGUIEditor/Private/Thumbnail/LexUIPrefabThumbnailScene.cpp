@@ -64,7 +64,7 @@ void FLexUIPrefabThumbnailScene::SpawnPreviewActor()
 					RootActor->AddInstanceComponent(RootCanvas);
 				}
 				RootActor->AttachToComponent(AgentRootActor->GetLexWidget(), FAttachmentTransformRules::KeepRelativeTransform);
-				RootCanvas->MarkCanvasUpdate(true, true, true);
+				RootCanvas->MarkCanvasUpdate(true);
 				RootCanvas->SetRenderMode((ELexRenderMode)CurrentPrefab->PrefabDataForPrefabEditor.CanvasRenderMode);
 
 				if (PrefabRootUIItem)

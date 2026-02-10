@@ -24,7 +24,7 @@ void ULexMeshModifierBase::PostEditChangeProperty(FPropertyChangedEvent& Propert
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (GetLexVisual())
 	{
-		CacheLexVisual->GetWidget()->EditorForceUpdate();
+		CacheLexVisual->GetWidget()->MarkCanvasUpdate(true);
 	}
 }
 #endif

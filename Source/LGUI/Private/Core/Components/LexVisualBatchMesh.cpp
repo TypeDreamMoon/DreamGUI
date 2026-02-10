@@ -75,7 +75,7 @@ void ULexVisualBatchMesh::MarkVerticesDirty()
 	bLocalVertexPositionChanged = true;
 	bUVChanged = true;
 	bColorChanged = true;
-	GetWidget()->MarkCanvasUpdate(false, false, true);
+	GetWidget()->MarkCanvasUpdate(true);
 }
 
 void ULexVisualBatchMesh::MarkVerticesDirty(bool InTriangleDirty, bool InVertexPositionDirty, bool InVertexUVDirty, bool InVertexColorDirty)
@@ -84,7 +84,7 @@ void ULexVisualBatchMesh::MarkVerticesDirty(bool InTriangleDirty, bool InVertexP
 	bLocalVertexPositionChanged = bLocalVertexPositionChanged || InVertexPositionDirty;
 	bUVChanged = bUVChanged || InVertexUVDirty;
 	bColorChanged = bColorChanged || InVertexColorDirty;
-	GetWidget()->MarkCanvasUpdate(false, bLocalVertexPositionChanged, false);
+	GetWidget()->MarkCanvasUpdate(bLocalVertexPositionChanged);
 }
 
 void ULexVisualBatchMesh::MarkVertexPositionDirty()
@@ -98,18 +98,18 @@ void ULexVisualBatchMesh::MarkVertexUVDirty()
 
 void ULexVisualBatchMesh::MarkCanvasUpdate()
 {
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 
 void ULexVisualBatchMesh::MarkTextureDirty()
 {
 	bTextureChanged = true;
-	GetWidget()->MarkCanvasUpdate(true, false, false);
+	GetWidget()->MarkCanvasUpdate(true);
 }
 void ULexVisualBatchMesh::MarkMaterialDirty()
 {
 	bMaterialChanged = true;
-	GetWidget()->MarkCanvasUpdate(true, false, false);
+	GetWidget()->MarkCanvasUpdate(true);
 }
 
 void ULexVisualBatchMesh::MarkAllDirty()
@@ -119,7 +119,7 @@ void ULexVisualBatchMesh::MarkAllDirty()
 	bTriangleChanged = true;
 	bTextureChanged = true;
 	bMaterialChanged = true;
-	GetWidget()->MarkCanvasUpdate(true, false, false);
+	GetWidget()->MarkCanvasUpdate(true);
 	Super::MarkAllDirty();
 }
 
@@ -234,11 +234,14 @@ void ULexVisualBatchMesh::UpdateGeometry()
 		{
 			SCOPE_CYCLE_COUNTER(STAT_TransformVertices)
 #if 1
+			check(!UIGeometry->bIsCalculating);//this should not happen
+			UIGeometry->bIsCalculating = true;
 			//it is safe to do async calculation because we can be sure it finish in same frame
 			Canvas->PushAsyncFunction_TransformVertices([=, this]()
 			{
 				CalculateLocalBounds();
 				FLexUIGeometry::TransformVertices(Canvas, this, this->UIGeometry.Get());
+				UIGeometry->bIsCalculating = false;
 			});
 #else
 			CalculateLocalBounds();

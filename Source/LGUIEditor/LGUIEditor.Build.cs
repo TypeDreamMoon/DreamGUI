@@ -21,7 +21,7 @@ public class LGUIEditor : ModuleRules
         }
         else
         {
-	        OptimizeCode = CodeOptimization.Always;
+	        OptimizeCode = CodeOptimization.Default;
         }
 
         string EnginSourceFolder = EngineDirectory + "/Source/";

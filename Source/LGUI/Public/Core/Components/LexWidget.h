@@ -97,8 +97,6 @@ public:
 	virtual void PostTransacted(const FTransactionObjectEvent& TransactionEvent)override;
 	/** USceneComponent Interface. Only needed for show rect range in editor */
 	virtual FBoxSphereBounds CalcBounds(const FTransform& LocalToWorld) const override;
-	/** update UI immediately in edit mode */
-	virtual void EditorForceUpdate();//@todo: remove this
 	void EnsureDataForRebuild();
 #endif
 	static FName GetPropertyName_AnchorData()
@@ -367,7 +365,7 @@ public:
 	void MarkTransformChanged(bool InPositionChanged, bool InScaleChanged);
 	void MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged);
 	void MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged, bool InDiscardCache = true);
-	virtual void MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bForceRebuildDrawCall = false)const;
+	virtual void MarkCanvasUpdate(bool bRebuildDrawCall)const;
 
 private:
 	float GetLayoutProperty(TFunctionRef<float(ULexLayoutSelf*)> GetLayoutSelfProperty

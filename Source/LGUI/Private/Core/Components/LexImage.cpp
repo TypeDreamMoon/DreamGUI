@@ -55,7 +55,7 @@ void ULexImage::ApplyAtlasTextureChange_Implementation()
 	check(bHasAddToSprite);
 	auto LexSprite = (ULexUISpriteData_BaseObject*)Brush.GetResourceObject();
 	UIGeometry->Texture = LexSprite->GetAtlasTexture();
-	GetWidget()->MarkCanvasUpdate(true, true, false);
+	GetWidget()->MarkCanvasUpdate(true);
 }
 
 ULexImage::ULexImage(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)

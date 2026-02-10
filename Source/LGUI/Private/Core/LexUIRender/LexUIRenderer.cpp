@@ -422,12 +422,12 @@ void FLexUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(ERHIFeat
 #define LGUI_ENABLE_SCENETEXTURES 0//not render in clean project, so disable it
 #endif
 
-DECLARE_CYCLE_STAT(TEXT("LexUI RHIRender"), STAT_LGUI_RHIRender, STATGROUP_LGUI);
+DECLARE_CYCLE_STAT(TEXT("LexUI RHIRenderMesh"), STAT_LGUI_RHIRenderMesh, STATGROUP_LGUI);
+DECLARE_CYCLE_STAT(TEXT("LexUI RHIRenderPostProcess"), STAT_LGUI_RHIRenderPostProcess, STATGROUP_LGUI);
 void FLexUIRenderer::RenderLexUI_RenderThread(
 	FRDGBuilder& GraphBuilder
 	, FSceneView& InView)
 {
-	SCOPE_CYCLE_COUNTER(STAT_LGUI_RHIRender);
 	if (ScreenSpaceRenderParameter.PrimitiveArray.Num() <= 0 && WorldSpaceRenderCanvasParameterArray.Num() <= 0
 #if WITH_EDITOR
 		&& ScreenSpaceHelperLineMap.Num() <= 0
@@ -699,6 +699,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 							{
 								if (auto Primitive = RenderPrimitiveItem.Primitive->LexUI_GetPostProcessElement(RenderPrimitiveItem.Sections[i].SectionPointer))
 								{
+									SCOPE_CYCLE_COUNTER(STAT_LGUI_RHIRenderPostProcess);
 									Primitive->OnRenderPostProcess_RenderThread(
 										GraphBuilder,
 										SceneTextures,
@@ -733,6 +734,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 									, SceneDepthTexST = DepthTextureScaleOffset, NumSamples, GammaValue
 									, bRenderWireframe, bRenderLit, WireframeMaterialInstance](FRHICommandListImmediate& RHICmdList)
 								{
+									SCOPE_CYCLE_COUNTER(STAT_LGUI_RHIRenderMesh);
 									FGraphicsPipelineStateInitializer GraphicsPSOInit;
 									RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
 									RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
@@ -970,6 +972,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 				{
 					if (auto Primitive = RenderSequenceItem.Primitive->LexUI_GetPostProcessElement(RenderSequenceItem.Sections[i].SectionPointer))
 					{
+						SCOPE_CYCLE_COUNTER(STAT_LGUI_RHIRenderPostProcess);
 						Primitive->OnRenderPostProcess_RenderThread(
 							GraphBuilder,
 							SceneTextures,
@@ -1013,6 +1016,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 						, NumSamples, ValidDepth = LexUIScreenSpaceDepthRDGTexture != nullptr, GammaValue
 						, bRenderLit, bRenderWireframe, WireframeMaterialInstance](FRHICommandListImmediate& RHICmdList)
 					{
+						SCOPE_CYCLE_COUNTER(STAT_LGUI_RHIRenderMesh);
 						FGraphicsPipelineStateInitializer GraphicsPSOInit;
 						RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
 						RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);

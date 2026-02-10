@@ -36,7 +36,7 @@ void FLexTextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 			if (validItem->GetWorld() && validItem->GetWorld()->WorldType == EWorldType::Editor)
 			{
 				validItem->CheckTexture();
-				validItem->GetWidget()->EditorForceUpdate();
+				validItem->GetWidget()->MarkCanvasUpdate(true);
 			}
 		}
 	}
@@ -127,7 +127,7 @@ void FLexTextureBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& Detail
 						item->Modify();
 						item->SetSizeFromTexture();
 						FLexUIUtils::NotifyPropertyChanged(item.Get(), ULexWidget::GetPropertyName_AnchorData());
-						item->GetWidget()->EditorForceUpdate();
+						item->GetWidget()->MarkCanvasUpdate(true);
 					}
 				}
 				GEditor->EndTransaction();

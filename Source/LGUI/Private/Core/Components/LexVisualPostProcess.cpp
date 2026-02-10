@@ -93,12 +93,12 @@ void ULexVisualPostProcess::OnTransformChanged(bool InPositionChanged, bool InSc
 void ULexVisualPostProcess::MarkVertexPositionDirty()
 {
 	bLocalVertexPositionChanged = true;
-	GetWidget()->MarkCanvasUpdate(false, true, false);
+	GetWidget()->MarkCanvasUpdate(true);
 }
 void ULexVisualPostProcess::MarkUVDirty()
 {
 	bUVChanged = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 
 void ULexVisualPostProcess::MarkAllDirty()
@@ -212,7 +212,7 @@ void ULexVisualPostProcess::UpdateRegionVertex()
 		copyVert.LocalPosition = Vertices[i].Position;
 	}
 	
-	const int VertexBufferSize = 4;
+	constexpr int VertexBufferSize = 4;
 	if (RenderMeshRegionToScreenVertexArray.Num() != VertexBufferSize)
 	{
 		RenderMeshRegionToScreenVertexArray.SetNumZeroed(VertexBufferSize);
@@ -300,7 +300,7 @@ void ULexVisualPostProcess::SetMaskTexture(UTexture2D* Value)
 		bLocalVertexPositionChanged = true;
 		bUVChanged = true;
 		bColorChanged = true;
-		GetWidget()->MarkCanvasUpdate(false, true, false);
+		GetWidget()->MarkCanvasUpdate(true);
 	}
 }
 void ULexVisualPostProcess::SetMaskTextureUVRect(const FVector4& Value)
@@ -310,7 +310,7 @@ void ULexVisualPostProcess::SetMaskTextureUVRect(const FVector4& Value)
 		MaskTextureUVRect = Value;
 
 		bUVChanged = true;
-		GetWidget()->MarkCanvasUpdate(false, false, false);
+		GetWidget()->MarkCanvasUpdate(false);
 	}
 }
 
@@ -319,7 +319,7 @@ void ULexVisualPostProcess::SetRenderType(ELexBackgroundBlurRenderType Value)
 	if (RenderType != Value)
 	{
 		RenderType = Value;
-		GetWidget()->MarkCanvasUpdate(false, false, false);
+		GetWidget()->MarkCanvasUpdate(false);
 		SendRenderTargetToRenderProxy();
 	}
 }

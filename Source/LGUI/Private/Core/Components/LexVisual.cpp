@@ -201,7 +201,7 @@ void ULexVisual::OnRenderCanvasChanged(ULexCanvas* InOldCanvas, ULexCanvas* InNe
 void ULexVisual::MarkColorDirty()
 {
 	bColorChanged = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 
 void ULexVisual::CheckClipDataStartPosition()
@@ -229,7 +229,7 @@ void ULexVisual::MarkAllDirty()
 	bClipDataPositionChanged = true;
 	bWidgetPropertyDataStartPositionChanged = true;
 	bWidgetPropertyDataFontMarkDirty = true;
-	GetWidget()->MarkCanvasUpdate(false, true, false);
+	GetWidget()->MarkCanvasUpdate(true);
 }
 
 void ULexVisual::GetGeometryBoundsInLocalSpace(FVector2D& OutMinPoint, FVector2D& OutMaxPoint)const

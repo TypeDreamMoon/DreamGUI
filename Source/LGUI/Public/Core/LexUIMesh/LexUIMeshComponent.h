@@ -13,6 +13,8 @@ struct FLexUISectionProxy_Mesh;
 struct FLexUIRenderSectionProxy_PostProcess;
 struct FLexUIRenderSectionProxy_ChildCanvas;
 
+#define DEBUG_PRINT_MESH_MEMORY 0
+
 enum class ELexUIRenderSectionType :uint8
 {
 	Mesh, DirectMesh, PostProcess, ChildCanvas,
@@ -100,6 +102,7 @@ class LGUI_API ULexUIMeshComponent : public UMeshComponent
 
 public:
 	ULexUIMeshComponent();
+	virtual void PostInitProperties() override;
 private:
 	void UpdateMeshSectionRenderData(FLexUIRenderSection_Mesh* InMeshSection, bool InRequireNormalAndTangent);
 	void ExpandMeshSectionRenderData(FLexUIRenderSection_Mesh* InMeshSection);
@@ -112,7 +115,7 @@ public:
 	void SetRenderSectionRenderPriority(int32 InSectionIndex, int32 InSortPriority);
 	void SetMeshSectionMaterial(int32 InSectionIndex, UMaterialInterface* InMaterial);
 
-	void SetRenderCanvas(ULexCanvas* InCanvas);
+	void Init(ULexCanvas* InCanvas);
 	void SetSupportLexUIRenderer(bool InSupportOrNot, TWeakPtr<FLexUIRenderer, ESPMode::ThreadSafe> InLexUIRenderer, bool InIsRenderToWorld);
 	void SetSupportUERenderer(bool InSupportOrNot);
 	void ClearRenderData();
@@ -138,6 +141,19 @@ public:
 private:
 	TArray<TSharedPtr<FLexUIRenderSection>> RenderSectionArray;
 	TDoubleLinkedList<TSharedPtr<FLexUIRenderSection>> RenderSectionPool;
+	struct FMeshRenderSectionPool
+	{
+		FMeshRenderSectionPool() = default;
+		FMeshRenderSectionPool(const FMeshRenderSectionPool& Other)
+		{
+		}
+		TDoubleLinkedList<TSharedPtr<FLexUIRenderSection_Mesh>> RenderSections;
+	};
+	TArray<FMeshRenderSectionPool> RenderSectionMesh_CascadePool;//for mesh section pool, sorted by vertex buffer size, to prevent memory waste of big vertex and index buffer
+	TDoubleLinkedList<TSharedPtr<FLexUIRenderSection_Mesh>>& GetRenderSectionMeshPool(int32 InNumVertices);
+#if DEBUG_PRINT_MESH_MEMORY
+	int ExpandMeshSectionCount = 0;
+#endif
 	//~ Begin USceneComponent Interface.
 	virtual FBoxSphereBounds CalcBounds(const FTransform& LocalToWorld) const override;
 	//~ Begin USceneComponent Interface.

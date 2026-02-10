@@ -36,7 +36,7 @@ void FLexSpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
 			if (validItem->GetWorld() && validItem->GetWorld()->WorldType == EWorldType::Editor)
 			{
 				validItem->CheckSpriteData();
-				validItem->GetWidget()->EditorForceUpdate();
+				validItem->GetWidget()->MarkCanvasUpdate(true);
 			}
 		}
 	}
@@ -126,7 +126,7 @@ void FLexSpriteBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailB
 						item->Modify();
 						item->SetSizeFromSpriteData();
 						FLexUIUtils::NotifyPropertyChanged(item.Get(), ULexWidget::GetPropertyName_AnchorData());
-						item->GetWidget()->EditorForceUpdate();
+						item->GetWidget()->MarkCanvasUpdate(true);
 					}
 				}
 				GEditor->EndTransaction();

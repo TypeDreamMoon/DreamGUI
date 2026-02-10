@@ -36,7 +36,7 @@ void ULexRectBlock::FillData(uint8* Data, float width, float height)
 	uint8 BoolAsByte = PackBoolToByte(bEnableBody, bEnableOuterShadow, bEnableBodyGradient, bEnableBorder, bEnableBorderGradient, bEnableInnerShadow, bEnableRadialFill, false);
 	Fill8BytesToData(Data
 		, BoolAsByte
-		, (uint8)BodyTextureScaleMode
+		, static_cast<uint8>(BodyTextureScaleMode)
 		, 0, 0
 		, DataOffset);
 
@@ -169,8 +169,7 @@ uint8 ULexRectBlock::PackBoolToByte(
 	, bool v7
 )
 {
-	uint8 Result;
-	Result =
+	uint8 Result =
 		((v0 ? 1 : 0) << 7)
 		| ((v1 ? 1 : 0) << 6)
 		| ((v2 ? 1 : 0) << 5)
@@ -558,7 +557,6 @@ void ULexRectBlock::OnDataTextureChanged(class UTexture* Texture)
 {
 	UIGeometry->Texture = GetTextureToCreateGeometry();
 	MarkVerticesDirty(false, true, true, false);
-	GetWidget()->MarkCanvasUpdate(true, true, false);
 }
 
 void ULexRectBlock::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
@@ -605,14 +603,14 @@ void ULexRectBlock::ApplyAtlasTextureChange_Implementation()
 	if (BodyTextureMode != ELexRectBlockTextureMode::Sprite)return;
 	check(BodySpriteTexture);
 	UIGeometry->Texture = BodySpriteTexture->GetAtlasTexture();
-	GetWidget()->MarkCanvasUpdate(true, true, false);
+	GetWidget()->MarkCanvasUpdate(true);
 }
 
 void ULexRectBlock::SetCornerRadius(const FVector4& value)
 {
-	this->CornerRadius = (FVector4f)value;
+	this->CornerRadius = FVector4f(value);
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetEnableBody(bool value)
 {
@@ -624,7 +622,7 @@ void ULexRectBlock::SetBodyColor(const FColor& value)
 {
 	this->BodyColor = value;
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetBodyTexture(UTexture* value)
 {
@@ -704,38 +702,38 @@ void ULexRectBlock::SetBodyTextureScaleMode(ELexRectBlockTextureScaleMode value)
 {
 	this->BodyTextureScaleMode = value;
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 
 void ULexRectBlock::SetEnableBodyGradient(bool value)
 {
 	this->bEnableBodyGradient = value;
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetBodyGradientColor(const FColor& value)
 {
 	this->BodyGradientColor = value;
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetBodyGradientCenter(const FVector2D& value)
 {
-	this->BodyGradientCenter = (FVector2f)value;
+	this->BodyGradientCenter = FVector2f(value);
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetBodyGradientRadius(const FVector2D& value)
 {
-	this->BodyGradientRadius = (FVector2f)value;
+	this->BodyGradientRadius = FVector2f(value);
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetBodyGradientRotation(float value)
 {
 	this->BodyGradientRotation = value;
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 
 void ULexRectBlock::SetEnableBorder(bool value)
@@ -748,68 +746,68 @@ void ULexRectBlock::SetBorderWidth(float value)
 {
 	this->BorderWidth = value;
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetBorderColor(const FColor& value)
 {
 	this->BorderColor = value;
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetEnableBorderGradient(bool value)
 {
 	this->bEnableBorderGradient = value;
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetBorderGradientColor(const FColor& value)
 {
 	this->BorderGradientColor = value;
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetBorderGradientCenter(const FVector2D& value)
 {
-	this->BorderGradientCenter = (FVector2f)value;
+	this->BorderGradientCenter = FVector2f(value);
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetBorderGradientRadius(const FVector2D& value)
 {
-	this->BorderGradientRadius = (FVector2f)value;
+	this->BorderGradientRadius = FVector2f(value);
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetBorderGradientRotation(float value)
 {
 	this->BorderGradientRotation = value;
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 
 void ULexRectBlock::SetEnableInnerShadow(bool value)
 {
 	this->bEnableInnerShadow = value;
 	bNeedUpdateBlockData = true;
-	MarkVertexPositionDirty();
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetInnerShadowColor(const FColor& value)
 {
 	this->InnerShadowColor = value;
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetInnerShadowSize(float value)
 {
 	this->InnerShadowSize = value;
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetInnerShadowBlur(float value)
 {
 	this->InnerShadowBlur = value;
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetInnerShadowAngle(float value)
 {
@@ -828,13 +826,13 @@ void ULexRectBlock::SetEnableRadialFill(bool value)
 {
 	this->bEnableRadialFill = value;
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetRadialFillCenter(const FVector2D& value)
 {
-	this->RadialFillCenter = (FVector2f)value;
+	this->RadialFillCenter = FVector2f(value);
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetRadialFillRotation(float value)
 {
@@ -858,19 +856,19 @@ void ULexRectBlock::SetOuterShadowColor(const FColor& value)
 {
 	this->OuterShadowColor = value;
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetOuterShadowSize(float value)
 {
 	this->OuterShadowSize = value;
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetOuterShadowBlur(float value)
 {
 	this->OuterShadowBlur = value;
 	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);
+	GetWidget()->MarkCanvasUpdate(false);
 }
 void ULexRectBlock::SetOuterShadowAngle(float value)
 {
@@ -890,7 +888,7 @@ void ULexRectBlock::Set##Property##UnitMode(ELexRectBlockUnitMode value)\
 {\
 	this->Property##UnitMode = value;\
 	bNeedUpdateBlockData = true;\
-	GetWidget()->MarkCanvasUpdate(false, false, false);\
+	GetWidget()->MarkCanvasUpdate(false);\
 }
 
 FunctionSetPropertyUnitMode(CornerRadius);
@@ -934,7 +932,7 @@ ULTweener* ULexRectBlock::BodyAlphaTo(float endValue, float duration, float dela
 		return FLexUIUtils::Color255To1_Table[this->BodyColor.A];
 		}), FLTweenFloatSetterFunction::CreateWeakLambda(this, [this](float value) {
 			auto PropertyValue = this->BodyColor;
-			PropertyValue.A = (uint8)(value * 255.0f);
+			PropertyValue.A = static_cast<uint8>(value * 255.0f);
 			this->SetBodyColor(PropertyValue);
 			}), endValue, duration);
 	if (Tweener)

@@ -187,13 +187,13 @@ void ULexWidget::MarkFlattenHierarchyIndexDirty()
 		&& RenderCanvas->IsRegistered()//@todo: why need to check IsRegistered? the only way to set RenderCanvas is SetRenderCanvas function, but when I debug on SetRenderCanvas it's not called at all, so RenderCanvas should not valid here, no clue yet
 		)
 	{
-		RenderCanvas->MarkCanvasUpdate(false, false, true);
+		RenderCanvas->MarkCanvasUpdate(true);
 		//if this LexWidget have a LGUICanvas, then we need to tell the upper canvas that hierarchy order change, in order to sort render order between canvas
 		if (this->bIsCanvasWidget)
 		{
 			if (RenderCanvas->GetParentCanvas().IsValid())
 			{
-				RenderCanvas->GetParentCanvas()->MarkCanvasUpdate(false, false, true);
+				RenderCanvas->GetParentCanvas()->MarkCanvasUpdate(true);
 			}
 		}
 	}
@@ -577,7 +577,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		{
 			if (WeakThis.IsValid())
 			{
-				WeakThis->EditorForceUpdate();
+				WeakThis->MarkCanvasUpdate(true);
 				WeakThis->UpdateBounds();
 			}
 		}, 1);
@@ -662,7 +662,7 @@ bool ULexWidget::CanEditChange(const FEditPropertyChain& PropertyChain) const
 void ULexWidget::PostEditComponentMove(bool bFinished)
 {
 	Super::PostEditComponentMove(bFinished);
-	EditorForceUpdate();
+	MarkCanvasUpdate(true);
 }
 
 void ULexWidget::PostEditUndo()
@@ -698,10 +698,6 @@ FBoxSphereBounds ULexWidget::CalcBounds(const FTransform& LocalToWorld) const
 	auto Center = this->GetLocalSpaceCenter();
 	auto Origin = FVector(0, Center.X, Center.Y);
 	return FBoxSphereBounds(Origin, FVector(1, this->GetWidth() * 0.5f, this->GetHeight() * 0.5f), (this->GetWidth() > this->GetHeight() ? this->GetWidth() : this->GetHeight()) * 0.5f).TransformBy(LocalToWorld);
-}
-void ULexWidget::EditorForceUpdate()
-{
-	MarkCanvasUpdate(true, true, true);
 }
 void ULexWidget::EnsureDataForRebuild()
 {
@@ -778,8 +774,7 @@ void ULexWidget::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, E
 	SCOPE_CYCLE_COUNTER(STAT_OnUpdateTransform)
 	Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
 	// UE_LOG(LGUI, Error, TEXT("OnUpdateTransform Flag:%d %s"), (int)UpdateTransformFlags, *this->GetDisplayName());
-	if (this->IsRegistered()//check if registered, because it may called from reconstruction.
-		)
+	check(this->bRegistered);//check if registered, because it may called from reconstruction.
 	{
 		bool bPositionChanged = false, bRotationChanged = false, bScaleChanged = false;
 		{
@@ -874,7 +869,7 @@ void ULexWidget::OnChildAttached(USceneComponent* ChildComponent)
 			}
 		}
 
-		MarkCanvasUpdate(false, false, false);
+		MarkCanvasUpdate(false);
 	}
 }
 
@@ -923,7 +918,6 @@ void ULexWidget::OnChildDetached(USceneComponent* ChildComponent)
 		}
 		ChildWidget->UIParent = nullptr;
 		MarkLayoutDirty();
-		MarkCanvasUpdate(false, false, false);
 	}
 }
 
@@ -2144,7 +2138,7 @@ void ULexWidget::CalculateWidgetActive_Recursive()
 				//callback
 				Widget->Call_WidgetActiveChanged();
 				//canvas update
-				Widget->MarkCanvasUpdate(false, false, true);
+				Widget->MarkCanvasUpdate(true);
 				//tell parent layout
 				if (auto Parent = Widget->GetUIParent())
 				{
@@ -2330,7 +2324,7 @@ void ULexWidget::MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged, 
 
 	if (this->RenderCanvas.IsValid())
 	{
-		this->RenderCanvas->MarkCanvasUpdate(false, InPivotChanged || InWidthChanged || InHeightChanged, false);//mark canvas to update
+		this->RenderCanvas->MarkCanvasUpdate(InPivotChanged || InWidthChanged || InHeightChanged);//mark canvas to update
 		if (this->IsCanvasWidget())
 		{
 			this->RenderCanvas->MarkTransformOrDimentionChanged();
@@ -2348,7 +2342,7 @@ void ULexWidget::MarkTransformChanged(bool InPositionChanged, bool InScaleChange
 	}
 	if (this->RenderCanvas.IsValid())
 	{
-		this->RenderCanvas->MarkCanvasUpdate(false, true, false);//mark canvas to update
+		this->RenderCanvas->MarkCanvasUpdate(true);//mark canvas to update
 		if (this->IsCanvasWidget())
 		{
 			//This is mainly to mark LGUICanvas's bIsViewProjectionMatrixDirty to true.
@@ -2408,11 +2402,11 @@ void ULexWidget::MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged,
 	}
 }
 
-void ULexWidget::MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bForceRebuildDrawCall)const
+void ULexWidget::MarkCanvasUpdate(bool bRebuildDrawCall)const
 {
 	if (RenderCanvas.IsValid())
 	{
-		RenderCanvas->MarkCanvasUpdate(bMaterialOrTextureChanged, bTransformOrVertexPositionChanged, bForceRebuildDrawCall);
+		RenderCanvas->MarkCanvasUpdate(bRebuildDrawCall);
 	}
 }
 
@@ -2506,7 +2500,7 @@ void ULexWidget::MarkLayoutForRebuild(const ULexWidget* InWidget)
 	while (TargetWidget)
 	{
 		TargetWidget->bLayoutDirty = true;
-		TargetWidget->MarkCanvasUpdate(false, true, false);
+		TargetWidget->MarkCanvasUpdate(true);
 		if (auto ParentWidget = TargetWidget->GetUIParent())
 		{
 			if (auto ParentLayout = ParentWidget->GetLayoutContainer())
@@ -2521,7 +2515,7 @@ void ULexWidget::MarkLayoutForRebuild(const ULexWidget* InWidget)
 				if (ControlChildAnchor.AnyControl())//parent layout only control children, then stop here
 				{
 					ParentWidget->bLayoutDirty = true;;
-					ParentWidget->MarkCanvasUpdate(false, true, false);
+					ParentWidget->MarkCanvasUpdate(true);
 					break;
 				}
 			}
@@ -2936,7 +2930,7 @@ void ULexWidget::SetIsTemporarilyHiddenInEditor_Recursive_By_WidgetActive()
 	//callback
 	Call_WidgetActiveChanged();
 	//canvas update
-	MarkCanvasUpdate(false, false, true);
+	MarkCanvasUpdate(true);
 
 	//affect children
 	for (auto& uiChild : UIChildren)

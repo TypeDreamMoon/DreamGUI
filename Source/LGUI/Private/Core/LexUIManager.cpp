@@ -1329,7 +1329,7 @@ void ULexUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 			if (RootWidget.IsValid())
 			{
 				RootWidget->EnsureDataForRebuild();
-				RootWidget->EditorForceUpdate();
+				RootWidget->MarkCanvasUpdate(true);
 			}
 		}
 	}

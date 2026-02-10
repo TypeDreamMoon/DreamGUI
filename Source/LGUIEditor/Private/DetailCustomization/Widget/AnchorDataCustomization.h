@@ -42,13 +42,6 @@ public:
 			if (auto ValidItem = Cast<ULexWidget>(Item.Get()))
 			{
 				TargetScriptArray.Add(ValidItem);
-				if (ValidItem->GetWorld() != nullptr)
-				{
-					if (ValidItem->GetWorld()->WorldType == EWorldType::Editor)
-					{
-						ValidItem->EditorForceUpdate();
-					}
-				}
 			}
 		}
 		
@@ -933,7 +926,7 @@ private:
 
 			FLexUIUtils::NotifyPropertyChanged(Widget.Get(), "AnchorData");
 		}
-		TargetScriptArray[0]->EditorForceUpdate();
+		TargetScriptArray[0]->MarkCanvasUpdate(true);
 		PropertyUtilities->RequestForceRefresh();
 		GEditor->EndTransaction();
 	}

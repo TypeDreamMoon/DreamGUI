@@ -37,7 +37,7 @@ void FLexRectBlockCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 			TargetScriptArray.Add(TWeakObjectPtr<ULexRectBlock>(validItem));
 			if (validItem->GetWorld() && validItem->GetWorld()->WorldType == EWorldType::Editor)
 			{
-				validItem->GetWidget()->EditorForceUpdate();
+				validItem->GetWidget()->MarkCanvasUpdate(true);
 			}
 		}
 	}
@@ -487,7 +487,7 @@ CreateVectorPropertyWithUnitMode(GET_MEMBER_NAME_CHECKED(ULexRectBlock, Property
 							item->Modify();
 							item->SetSizeFromBodyTexture();
 							FLexUIUtils::NotifyPropertyChanged(item.Get(), ULexWidget::GetPropertyName_AnchorData());
-							item->GetWidget()->EditorForceUpdate();
+							item->GetWidget()->MarkCanvasUpdate(true);
 						}
 					}
 					GEditor->EndTransaction();

@@ -44,6 +44,45 @@ public:
 class LGUI_API FLexUIGeometry
 {
 public:
+	FLexUIGeometry() = default;
+
+	// Explicit copy constructor
+	FLexUIGeometry(const FLexUIGeometry& Other)
+		: OriginVertices(Other.OriginVertices),
+		  Vertices(Other.Vertices),
+		  Triangles(Other.Triangles),
+		  Texture(Other.Texture),
+		  Material(Other.Material),
+		  bIsFont(Other.bIsFont),
+		  bSupportDrawcallBatching(Other.bSupportDrawcallBatching),
+		  TransformRelativeToCanvas(Other.TransformRelativeToCanvas),
+		  BoundsMin2DInCanvasSpace(Other.BoundsMin2DInCanvasSpace),
+		  BoundsMax2DInCanvasSpace(Other.BoundsMax2DInCanvasSpace)
+	{
+		bIsCalculating.store(Other.bIsCalculating.load());
+	}
+
+	// Explicit assignment operator
+	FLexUIGeometry& operator=(const FLexUIGeometry& Other)
+	{
+		if (this != &Other)
+		{
+			OriginVertices = Other.OriginVertices;
+			Vertices = Other.Vertices;
+			Triangles = Other.Triangles;
+			Texture = Other.Texture;
+			Material = Other.Material;
+			bIsFont = Other.bIsFont;
+			bSupportDrawcallBatching = Other.bSupportDrawcallBatching;
+			TransformRelativeToCanvas = Other.TransformRelativeToCanvas;
+			BoundsMin2DInCanvasSpace = Other.BoundsMin2DInCanvasSpace;
+			BoundsMax2DInCanvasSpace = Other.BoundsMax2DInCanvasSpace;
+			bIsCalculating.store(Other.bIsCalculating.load());
+		}
+		return *this;
+	}
+
+	std::atomic<bool> bIsCalculating = false;
 	//local space vertex position/ normal/ tangent
 	TArray<FLexUIOriginVertexData> OriginVertices;
 	//vertex buffer, position/normal/tangent is stored as transformed space(Canvas space), origin position/normal/tangent is stored in originVertices/originNormals/originTangents

@@ -147,7 +147,7 @@ protected:
 	bool ReceiveConvertPositionFromCanvasToViewport(const FVector2D& InPosition, FVector2D& Result)const;
 };
 
-USTRUCT(BlueprintType, Category = LGUI)
+USTRUCT()
 struct FLexCanvasDynamicMaterialArrayContainer
 {
 	GENERATED_BODY()
@@ -156,6 +156,16 @@ struct FLexCanvasDynamicMaterialArrayContainer
 	TArray<TObjectPtr<UMaterialInstanceDynamic>> MaterialArray;
 
 	int CurrentIndex = 0;
+};
+
+USTRUCT()
+struct FLexCanvasMaterialParameterCache
+{
+	GENERATED_BODY()
+	UPROPERTY(VisibleAnywhere, Category=LGUI)
+	TWeakObjectPtr<UTexture> Texture = nullptr;
+	UPROPERTY(VisibleAnywhere, Category=LGUI)
+	TWeakObjectPtr<UTexture> FontTexture = nullptr;
 };
 
 struct FLexCanvasPreparedDrawCallData
@@ -234,12 +244,9 @@ public:
 	 *		2. Transform & vertex position change, draw-call could overlap with each other
 	 *		3. Hierarchy order change, this is directly related to render order
 	 * And about draw-call's rebuild, it's not actually force rebuild, it will check and reuse prev draw-call if possible.
-	 * @param	bMaterialOrTextureChanged	Material or texture change
-	 * @param	bTransformOrVertexPositionChanged	UI element's transform change, or vertex position change
-	 * @param	bForceRebuildDrawCall	Mark it rebuild no matter what parameter change.
+	 * @param	bRebuildDrawCall	When we need rebuild draw-call? Material or texture change, transform or vertex position change, add or remove ui element
 	 */
-	void MarkCanvasUpdate(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bForceRebuildDrawCall = false);
-	void MarkCanvasUpdateRecursive(bool bMaterialOrTextureChanged, bool bTransformOrVertexPositionChanged, bool bForceRebuildDrawCall = false);
+	void MarkCanvasUpdate(bool bRebuildDrawCall);
 
 	static void BuildProjectionMatrix(FIntPoint InViewportSize, ECameraProjectionMode::Type InProjectionType, float FOV, float FarClipPlane, float NearClipPlane, FMatrix& OutProjectionMatrix);
 	FMatrix GetViewProjectionMatrix()const;
@@ -724,12 +731,16 @@ private:
 
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	mutable TWeakObjectPtr<ULexUIMeshComponent> UIMesh;//current using UIMesh.
+	//DefaultMaterial created MaterialInstanceDynamic pool 
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
-	TArray<TObjectPtr<UMaterialInstanceDynamic>> PooledUIMaterialList;//Default material pool.
+	TArray<TObjectPtr<UMaterialInstanceDynamic>> PooledDefaultMaterialList;
+	//Currently using material inside PooledDefaultMaterialList from this start index to end
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
-	TArray<TObjectPtr<UMaterialInstanceDynamic>> UsingUIMaterialList;
+	int UsingMaterialStartIndex = 0;
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	TMap<TObjectPtr<UMaterialInterface>, FLexCanvasDynamicMaterialArrayContainer> MapSrcMatToDynamicMat;//@todo: delete not using material
+	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
+	TMap<TObjectPtr<UMaterialInterface>, FLexCanvasMaterialParameterCache> MapMatToParamCache;
 	TSharedPtr<TQueue<FLexCanvasPreparedDrawCallData>> PreparedDrawCallDataQueue;
 	TSharedPtr<TQueue<FLexCanvasPendingDrawCallData>> PendingRebuildDrawCallQueue;
 	TQueue<FLexCanvasPendingDrawCallData> PendingUpdateDrawCallQueue;

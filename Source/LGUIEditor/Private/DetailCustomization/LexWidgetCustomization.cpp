@@ -145,7 +145,7 @@ void FLexWidgetCustomization::ForceUpdateUI()
 	{
 		if (item.IsValid())
 		{
-			item->EditorForceUpdate();
+			item->MarkCanvasUpdate(true);
 		}
 	}
 }
@@ -169,7 +169,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 					{
 						bIsSubPrefab = PrefabHelper->IsActorBelongsToSubPrefab(ValidItem->GetOwner());
 					}
-					ValidItem->EditorForceUpdate();
+					ValidItem->MarkCanvasUpdate(true);
 				}
 			}
 		}
@@ -1758,7 +1758,7 @@ void FLexWidgetCustomization::OnSelectAnchor(LGUIAnchorPreviewWidget::UIAnchorHo
 
 		FLexUIUtils::NotifyPropertyChanged(Widget.Get(), GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData));
 	}
-	TargetScriptArray[0]->EditorForceUpdate();
+	TargetScriptArray[0]->MarkCanvasUpdate(true);
 	DetailBuilder->ForceRefreshDetails();
 	GEditor->EndTransaction();
 }

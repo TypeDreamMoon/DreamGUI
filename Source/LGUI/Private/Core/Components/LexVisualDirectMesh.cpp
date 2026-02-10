@@ -43,7 +43,7 @@ void ULexVisualDirectMesh::OnDimensionChanged(bool InPivotChange, bool InWidthCh
 
 void ULexVisualDirectMesh::ClearMeshData()
 {
-	GetWidget()->MarkCanvasUpdate(false, false, true);
+	GetWidget()->MarkCanvasUpdate(true);
 	if (Mesh.IsValid() && MeshSection.IsValid())
 	{
 		//@todo: maybe we should remove render section

@@ -43,7 +43,7 @@ void ULexSpriteBase::EndPlay()
 void ULexSpriteBase::ApplyAtlasTextureChange_Implementation()
 {
 	UIGeometry->Texture = Sprite->GetAtlasTexture();
-	GetWidget()->MarkCanvasUpdate(true, true, false);
+	GetWidget()->MarkCanvasUpdate(true);
 }
 
 void ULexSpriteBase::SetSprite(ULexUISpriteData_BaseObject* Value, bool bSetSize)

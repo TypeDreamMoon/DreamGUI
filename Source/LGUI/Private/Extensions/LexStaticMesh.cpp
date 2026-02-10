@@ -330,7 +330,7 @@ void ULexStaticMesh::PostEditChangeProperty(FPropertyChangedEvent& PropertyChang
 				{
 					OnMeshDataChangeDelegateHandle = MeshCache->OnMeshDataChange.AddUObject(this, &ULexStaticMesh::OnStaticMeshDataChange);
 				}
-				GetWidget()->MarkCanvasUpdate(true, false, false);
+				GetWidget()->MarkCanvasUpdate(true);
 			}
 			else
 			{
@@ -345,7 +345,7 @@ void ULexStaticMesh::PostEditChangeProperty(FPropertyChangedEvent& PropertyChang
 			}
 			else
 			{
-				GetWidget()->MarkCanvasUpdate(true, false, false);
+				GetWidget()->MarkCanvasUpdate(true);
 			}
 		}
 	}
@@ -449,7 +449,7 @@ void ULexStaticMesh::SetReplaceMaterial(UMaterialInterface* Value)
 		}
 		else
 		{
-			GetWidget()->MarkCanvasUpdate(true, false, false);
+			GetWidget()->MarkCanvasUpdate(true);
 		}
 	}
 }
