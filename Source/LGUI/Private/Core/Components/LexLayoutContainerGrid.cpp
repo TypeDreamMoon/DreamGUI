@@ -129,9 +129,10 @@ void ULexLayoutContainerGrid::UpdateLayout()
 			, -OffsetYRatio * InvRowTotalRatio * ThisFreeHeight - OffsetYConstant - RowIndex * Spacing.Y
 		);
 	};
-	TArray<ULexWidget*> NotLocatedWidgets;
+	TDoubleLinkedList<ULexWidget*> NotLocatedWidgetList;
 	TArray<int> AlreadyFilledRows;
 	TArray<int> AlreadyFilledColumns;
+	//firstly locate widgets with layout self data, then locate widgets without layout self data in left grid cell
 	for (auto& Child : Widget->GetUIChildren())
 	{
 		if (!Child->GetWidgetActiveInHierarchy())continue;
@@ -162,7 +163,7 @@ void ULexLayoutContainerGrid::UpdateLayout()
 		}
 		else
 		{
-			NotLocatedWidgets.Add(Child);
+			NotLocatedWidgetList.AddTail(Child);
 			continue;
 		}
 		float ColumnRatio = 0, ColumnConstant = 0;
@@ -208,7 +209,8 @@ void ULexLayoutContainerGrid::UpdateLayout()
 			ChildLayoutSelf->SetSizeByLayoutContainer(FVector2f(ColumnSize, RowSize));
 		}
 	}
-	if (NotLocatedWidgets.Num() > 0)
+	//locate widgets without layout self data in left grid cell
+	if (NotLocatedWidgetList.Num() > 0)
 	{
 		for (int ColumnIndex = 0; ColumnIndex < Columns.Num(); ColumnIndex++)
 		{
@@ -216,10 +218,10 @@ void ULexLayoutContainerGrid::UpdateLayout()
 			{
 				if (!AlreadyFilledColumns.Contains(ColumnIndex) && !AlreadyFilledRows.Contains(RowIndex))
 				{
-					auto ChildWidget = NotLocatedWidgets[0];
+					auto ChildWidget = NotLocatedWidgetList.GetHead()->GetValue();
+					NotLocatedWidgetList.RemoveNode(NotLocatedWidgetList.GetHead());
 					
-					NotLocatedWidgets.RemoveAt(0);
-					if (NotLocatedWidgets.Num() <= 0)//break the loop if all widgets are located
+					if (NotLocatedWidgetList.Num() <= 0)//break the loop if all widgets are located
 					{
 						ColumnIndex = Columns.Num();
 						RowIndex = Rows.Num();

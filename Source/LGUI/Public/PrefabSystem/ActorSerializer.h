@@ -297,7 +297,7 @@ namespace LexUIPrefabSystem
 		/** Mark of this deserialization session. If nested prefab, this is still the root prefab's value. */
 		FGuid DeserializationSessionId = FGuid();
 		bool bIsSubPrefab = false;
-		/** A temperary string for log if is loading or saving prefab (not duplicate). */
+		/** A temporary string for log if loading or saving prefab (not duplicate). */
 		FString PrefabAssetPath;
 		
 		struct FSubPrefabObjectOverideData

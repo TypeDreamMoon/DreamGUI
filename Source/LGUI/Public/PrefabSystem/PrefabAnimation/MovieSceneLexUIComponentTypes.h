@@ -61,8 +61,8 @@ struct LGUI_API FMovieSceneLexUIComponentTypes
 {
 	~FMovieSceneLexUIComponentTypes();
 
-	TComponentTypeID<FLexUIMaterialPath> LGUIMaterialPath;
-	TComponentTypeID<FLexUIMaterialHandle> LGUIMaterialHandle;
+	TComponentTypeID<FLexUIMaterialPath> LexUIMaterialPath;
+	TComponentTypeID<FLexUIMaterialHandle> LexUIMaterialHandle;
 
 	static void Destroy();
 

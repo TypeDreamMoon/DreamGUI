@@ -1451,13 +1451,14 @@ void ULexCanvas::UpdateDrawCallMesh()
 		{
 		case ELexUIDrawCallType::DirectMesh:
 			{
-				//@todo
-				// auto MeshSection = UIMesh->GetRenderSection(ELexUIRenderSectionType::Mesh);
-				// DrawCallItem.DrawCallRenderSection = MeshSection;
-				// DrawCallItem.DirectMeshVisualObject->OnMeshDataReady();
-				// //create new mesh section, need to sort it
-				// bNeedToSortRenderPriority = true;
-				// bNeedToUpdateBounds = true;
+				if (!DrawCallItem.DirectMeshVisualObject.IsValid())
+				{
+					UE_LOG(LGUI, Warning, TEXT("[%s].%d Invalid DirectMesh draw-call, will ignore it"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+					continue;
+				}
+				UIMesh->SetupRenderSection(ELexUIRenderSectionType::DirectMesh, &DrawCallItem);
+				bNeedToSortRenderPriority = true;
+				bNeedToUpdateBounds = true;
 			}
 			break;
 		case ELexUIDrawCallType::BatchMesh:
@@ -1698,7 +1699,6 @@ void ULexCanvas::UpdateDrawCallMaterial()
 		switch (DrawCallItem.Type)
 		{
 		case ELexUIDrawCallType::BatchMesh:
-		case ELexUIDrawCallType::DirectMesh:
 			{
 				UMaterialInterface* RenderMat = nullptr;
 				bool bShouldSetMaterialParameter = false;
@@ -1812,6 +1812,7 @@ void ULexCanvas::UpdateDrawCallMaterial()
 			break;
 		case ELexUIDrawCallType::PostProcess:
 		case ELexUIDrawCallType::ChildCanvas:
+		case ELexUIDrawCallType::DirectMesh:
 			{
 
 			}

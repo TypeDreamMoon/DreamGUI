@@ -25,6 +25,7 @@ public:
 	// End of TCommand<> interface
 
 public:
+	TSharedPtr<FUICommandInfo> Apply;
 	TSharedPtr<FUICommandInfo> RawDataViewer;
 	TSharedPtr<FUICommandInfo> OpenPrefabHelperObject;
 };

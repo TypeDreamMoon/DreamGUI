@@ -475,6 +475,11 @@ void FLexUIPrefabEditor::SaveEditorState()
 	}
 }
 
+void FLexUIPrefabEditor::OnApply()
+{
+	GetPrefabHelperObject()->SavePrefab();
+}
+
 void FLexUIPrefabEditor::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	Collector.AddReferencedObject(PrefabBeingEdited);
@@ -556,6 +561,12 @@ UWorld* FLexUIPrefabEditor::GetWorld()
 void FLexUIPrefabEditor::BindCommands()
 {
 	const FLexUIPrefabEditorCommand& PrefabEditorCommands = FLexUIPrefabEditorCommand::Get();
+	ToolkitCommands->MapAction(
+		PrefabEditorCommands.Apply,
+		FExecuteAction::CreateSP(this, &FLexUIPrefabEditor::OnApply),
+		FCanExecuteAction(),
+		FIsActionChecked()
+	);
 	ToolkitCommands->MapAction(
 		PrefabEditorCommands.RawDataViewer,
 		FExecuteAction::CreateSP(this, &FLexUIPrefabEditor::OnOpenRawDataViewerPanel),
@@ -661,7 +672,13 @@ void FLexUIPrefabEditor::ExtendToolbar()
 
 	FToolMenuInsert InsertAfterAssetSection("Asset", EToolMenuInsertType::After);
 	{
+		auto ApplyButtonMenuEntry = FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().Apply
+			, LOCTEXT("Apply", "Apply")
+			, TAttribute<FText>(this, &FLexUIPrefabEditor::GetApplyButtonStatusTooltip)
+			, TAttribute<FSlateIcon>(this, &FLexUIPrefabEditor::GetApplyButtonStatusImage));
+		
 		FToolMenuSection& Section = ToolBar->AddSection("LexUIPrefabCommands", TAttribute<FText>(), InsertAfterAssetSection);
+		Section.AddEntry(ApplyButtonMenuEntry);
 		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().RawDataViewer));
 		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().OpenPrefabHelperObject));
 	}

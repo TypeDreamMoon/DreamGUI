@@ -126,7 +126,7 @@ protected:
 	virtual bool LineTraceUIGeometry(FLexUIGeometry* InGeo, FHitResult& OutHit, const FVector& Start, const FVector& End)const;
 	virtual bool LineTraceUICustom(FHitResult& OutHit, const FVector& Start, const FVector& End)const;
 	
-	void UpdateGeometryWidgetPropertyData(FLexUIGeometry& InMesh, int InDataStartPosition);
+	void UpdateGeometryWidgetPropertyData(TArray<struct FLexUIMeshVertex>& InVertices, int InValidNumVertices, int InDataStartPosition);
 public:
 	static const FName GetPropertyName_Color()
 	{
@@ -185,7 +185,7 @@ public:
 	
 	/** Called by LexCanvas when begin to collect geometry for render */
 	virtual void UpdateGeometry() {};
-	/** Called by LexCanvas after create MaterialInstanceDynamic for this object or it's drawcall */
+	/** Called by LexCanvas after create MaterialInstanceDynamic for this object or it's draw-call */
 	virtual void OnMaterialInstanceDynamicCreated(class UMaterialInstanceDynamic* mat) {};
 
 	/** will this UI element affected by canvas's pixel perfect property? */
@@ -215,6 +215,7 @@ protected:
 	uint8 bTransformChanged : 1;
 	uint8 bClipDataPositionChanged : 1;
 	uint8 bWidgetPropertyDataStartPositionChanged : 1;
+	uint8 bWidgetPropertyDataFontMarkDirty : 1;
 	int ClipDataStartPosition = 0;
 	int WidgetPropertyDataStartPosition = INDEX_NONE;
 

@@ -9,13 +9,13 @@
 
 class FLexUIDrawCall;
 struct FLexUIRenderSectionProxy;
-struct FLexUIMeshSectionProxy;
-struct FLexUIPostProcessSectionProxy;
-struct FLexUIChildCanvasSectionProxy;
+struct FLexUISectionProxy_Mesh;
+struct FLexUIRenderSectionProxy_PostProcess;
+struct FLexUIRenderSectionProxy_ChildCanvas;
 
 enum class ELexUIRenderSectionType :uint8
 {
-	Mesh, PostProcess, ChildCanvas,
+	Mesh, DirectMesh, PostProcess, ChildCanvas,
 };
 struct FLexUIRenderSection
 {
@@ -26,7 +26,6 @@ struct FLexUIRenderSection
 	FLexUIRenderSectionProxy* RenderProxy = nullptr;
 	FBox BoundingBox = FBox(EForceInit::ForceInit);//world space bounding box
 
-	virtual void UpdateSectionBox(const FTransform& LocalToWorld) = 0;
 	virtual void ClearBeforePool() = 0;
 };
 struct FLexUIRenderSection_Mesh : public FLexUIRenderSection
@@ -37,20 +36,29 @@ struct FLexUIRenderSection_Mesh : public FLexUIRenderSection
 	}
 	virtual ~FLexUIRenderSection_Mesh()override{}
 
-	TArray<FLexUIMeshIndexBufferType> triangleIndices;
-	TArray<FLexUIMeshVertex> vertices;
+	TArray<FLexUIMeshIndexBufferType> TriangleIndices;
+	TArray<FLexUIMeshVertex> Vertices;
 	int32 ValidVerticesNum = 0;
 	int32 ValidTriangleIndicesNum = 0;
 
-	UMaterialInterface* material = nullptr;
+	UMaterialInterface* Material = nullptr;
 
 	void Reset()
 	{
-		vertices.Reset();
-		triangleIndices.Reset();
+		Vertices.Reset();
+		TriangleIndices.Reset();
 	}
-	virtual void UpdateSectionBox(const FTransform& LocalToWorld) override;
 	virtual void ClearBeforePool() override;
+};
+struct FLexUIRenderSection_DirectMesh : public FLexUIRenderSection_Mesh
+{
+	FLexUIRenderSection_DirectMesh()
+	{
+		Type = ELexUIRenderSectionType::DirectMesh;
+	}
+	virtual ~FLexUIRenderSection_DirectMesh()override{}
+
+	TWeakObjectPtr<class ULexVisualDirectMesh> DirectMeshVisualObject = nullptr;
 };
 struct FLexUIRenderSection_PostProcess : public FLexUIRenderSection
 {
@@ -62,7 +70,6 @@ struct FLexUIRenderSection_PostProcess : public FLexUIRenderSection
 
 	TWeakObjectPtr<class ULexVisualPostProcess> PostProcessVisualObject = nullptr;
 
-	virtual void UpdateSectionBox(const FTransform& LocalToWorld) override;
 	virtual void ClearBeforePool() override;
 };
 struct FLexUIRenderSection_ChildCanvas : public FLexUIRenderSection
@@ -75,7 +82,6 @@ struct FLexUIRenderSection_ChildCanvas : public FLexUIRenderSection
 
 	TWeakObjectPtr<class ULexUIMeshComponent> ChildCanvasMeshComponent = nullptr;
 
-	virtual void UpdateSectionBox(const FTransform& LocalToWorld) override;
 	virtual void ClearBeforePool() override;
 };
 
@@ -95,11 +101,13 @@ class LGUI_API ULexUIMeshComponent : public UMeshComponent
 public:
 	ULexUIMeshComponent();
 private:
-	void UpdateMeshSectionRenderData(TSharedPtr<FLexUIRenderSection> InRenderSection, bool InRequireNormalAndTangent);
-	void ExpandMeshSectionRenderData(TSharedPtr<FLexUIRenderSection> InRenderSection);
+	void UpdateMeshSectionRenderData(FLexUIRenderSection_Mesh* InMeshSection, bool InRequireNormalAndTangent);
+	void ExpandMeshSectionRenderData(FLexUIRenderSection_Mesh* InMeshSection);
 public:
 	TSharedPtr<FLexUIRenderSection> SetupRenderSection(ELexUIRenderSectionType InType, FLexUIDrawCall* InDrawCallData);
 	void UpdateMeshSection(int Index, FLexUIDrawCall* InDrawCallData);
+	void SetupDirectMeshRenderSection(FLexUIRenderSection_DirectMesh* InDirectMeshSection, bool bNeedExpandMeshSection, UMaterialInterface* InMaterial);
+	void SetDirectMeshRenderSectionMaterial(FLexUIRenderSection_DirectMesh* InDirectMeshSection, UMaterialInterface* InMaterial);
 	void PoolAllRenderSection();
 	void SetRenderSectionRenderPriority(int32 InSectionIndex, int32 InSortPriority);
 	void SetMeshSectionMaterial(int32 InSectionIndex, UMaterialInterface* InMaterial);
@@ -129,7 +137,7 @@ public:
 	void UpdateChildCanvasSectionBox();
 private:
 	TArray<TSharedPtr<FLexUIRenderSection>> RenderSectionArray;
-	TArray<TSharedPtr<FLexUIRenderSection>> RenderSectionPool;
+	TDoubleLinkedList<TSharedPtr<FLexUIRenderSection>> RenderSectionPool;
 	//~ Begin USceneComponent Interface.
 	virtual FBoxSphereBounds CalcBounds(const FTransform& LocalToWorld) const override;
 	//~ Begin USceneComponent Interface.
@@ -141,7 +149,7 @@ private:
 		int32 NumTriangles;
 		TArray<FLexUIMeshIndexBufferType> IndexBufferData;
 		bool RequireNormalAndTangent;
-		FLexUIMeshSectionProxy* Section;
+		FLexUISectionProxy_Mesh* Section;
 	};
 	TArray<UpdateMeshSectionDataStruct> PendingUpdateMeshSectionDataArray;
 	struct UpdateRenderSectionPriority

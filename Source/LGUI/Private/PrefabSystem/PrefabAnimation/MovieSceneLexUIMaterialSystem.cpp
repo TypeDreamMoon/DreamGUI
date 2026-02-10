@@ -99,7 +99,7 @@ UMovieSceneLexUIMaterialSystem::UMovieSceneLexUIMaterialSystem(const FObjectInit
 	FMovieSceneLexUIComponentTypes*    LGUIComponents  = FMovieSceneLexUIComponentTypes::Get();
 	FMovieSceneTracksComponentTypes* TracksComponents  = FMovieSceneTracksComponentTypes::Get();
 
-	RelevantComponent = LGUIComponents->LGUIMaterialHandle;
+	RelevantComponent = LGUIComponents->LexUIMaterialHandle;
 	Phase = ESystemPhase::Instantiation;
 
 	if (HasAnyFlags(RF_ClassDefaultObject))
@@ -116,12 +116,12 @@ void UMovieSceneLexUIMaterialSystem::OnLink()
 	using namespace UE::MovieScene;
 
 	FBuiltInComponentTypes*       BuiltInComponents = FBuiltInComponentTypes::Get();
-	FMovieSceneLexUIComponentTypes* LGUIComponents  = FMovieSceneLexUIComponentTypes::Get();
+	FMovieSceneLexUIComponentTypes* LexUIComponents  = FMovieSceneLexUIComponentTypes::Get();
 
 	SystemImpl.MaterialSwitcherStorage = Linker->PreAnimatedState.GetOrCreateStorage<FPreAnimatedLexUIMaterialSwitcherStorage>();
 	SystemImpl.MaterialParameterStorage = Linker->PreAnimatedState.GetOrCreateStorage<FPreAnimatedLexUIMaterialParameterStorage>();
 
-	SystemImpl.OnLink(Linker, BuiltInComponents->BoundObject, LGUIComponents->LGUIMaterialHandle);
+	SystemImpl.OnLink(Linker, BuiltInComponents->BoundObject, LexUIComponents->LexUIMaterialHandle);
 }
 
 void UMovieSceneLexUIMaterialSystem::OnUnlink()
@@ -134,9 +134,9 @@ void UMovieSceneLexUIMaterialSystem::OnRun(FSystemTaskPrerequisites& InPrerequis
 	using namespace UE::MovieScene;
 
 	FBuiltInComponentTypes*       BuiltInComponents = FBuiltInComponentTypes::Get();
-	FMovieSceneLexUIComponentTypes* LGUIComponents  = FMovieSceneLexUIComponentTypes::Get();
+	FMovieSceneLexUIComponentTypes* LexUIComponents  = FMovieSceneLexUIComponentTypes::Get();
 
-	SystemImpl.OnRun(Linker, BuiltInComponents->BoundObject, LGUIComponents->LGUIMaterialHandle, InPrerequisites, Subsequents);
+	SystemImpl.OnRun(Linker, BuiltInComponents->BoundObject, LexUIComponents->LexUIMaterialHandle, InPrerequisites, Subsequents);
 }
 
 void UMovieSceneLexUIMaterialSystem::SavePreAnimatedState(const FPreAnimationParameters& InParameters)
@@ -144,7 +144,7 @@ void UMovieSceneLexUIMaterialSystem::SavePreAnimatedState(const FPreAnimationPar
 	using namespace UE::MovieScene;
 
 	FBuiltInComponentTypes*       BuiltInComponents = FBuiltInComponentTypes::Get();
-	FMovieSceneLexUIComponentTypes* LGUIComponents  = FMovieSceneLexUIComponentTypes::Get();
+	FMovieSceneLexUIComponentTypes* LexUIComponents  = FMovieSceneLexUIComponentTypes::Get();
 
-	SystemImpl.SavePreAnimatedState(Linker, BuiltInComponents->BoundObject, LGUIComponents->LGUIMaterialHandle, InParameters);
+	SystemImpl.SavePreAnimatedState(Linker, BuiltInComponents->BoundObject, LexUIComponents->LexUIMaterialHandle, InParameters);
 }

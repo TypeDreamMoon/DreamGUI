@@ -56,6 +56,7 @@ private:
 	// End of FAssetEditorToolkit
 	void SyncSelection();
 	bool bIsSelecting = false;
+	void OnApply();
 public:
 	/** FGCObject interface */
 	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;

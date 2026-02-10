@@ -78,6 +78,8 @@ public:
 	/** Material to be used with the specified vector art data. */
 	UMaterialInterface* GetMaterial() const;
 
+	const FBox& GetMeshBounds() const { return MeshBounds; }
+
 	/** Convert the static mesh data into slate vector art on demand. Does nothing in a cooked build. */
 	void EnsureValidData();
 
@@ -117,6 +119,9 @@ private:
 	/** @see GetMaterial() */
 	UPROPERTY()
 		TObjectPtr<UMaterialInterface> Material;
+	
+	UPROPERTY()
+	FBox MeshBounds;
 };
 
 UENUM(BlueprintType, Category = LGUI)
@@ -130,7 +135,6 @@ enum class ELexStaticMeshVertexColorType :uint8
 	NotAffectByUIColor,
 };
 
-#if 0
 /**
  * render a StaticMesh as UI element
  */
@@ -144,33 +148,32 @@ public:
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		TObjectPtr<ULexUIStaticMeshCacheData> meshCache;
+		TObjectPtr<ULexUIStaticMeshCacheData> MeshCache;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		ELexStaticMeshVertexColorType vertexColorType = ELexStaticMeshVertexColorType::NotAffectByUIColor;
+		ELexStaticMeshVertexColorType VertexColorType = ELexStaticMeshVertexColorType::NotAffectByUIColor;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		TObjectPtr<UMaterialInterface> ReplaceMaterial;
 #if WITH_EDITOR
 	virtual void PreEditChange(FProperty* PropertyAboutToChange)override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
+	virtual void PostInitProperties() override;
 	void OnStaticMeshDataChange();
 #endif
 #if WITH_EDITORONLY_DATA
 	FDelegateHandle OnMeshDataChangeDelegateHandle;
 #endif
 	
-	virtual void OnMeshDataReady()override;
+	virtual void OnSupplyMeshSection(TWeakObjectPtr<ULexUIMeshComponent> InMesh, TWeakPtr<FLexUIRenderSection_DirectMesh> InSection)override;
 	void CreateGeometry();
 	virtual void UpdateGeometry()override;
-	void UpdateMeshTransform(bool updateToDrawcallMesh);
-	void UpdateMeshColor(bool updateToDrawcallMesh);
 	virtual bool HaveValidData()const override;
 	virtual UMaterialInterface* GetMaterial()const override;
 public:
 	/** return 'MeshCache' property */
 	UFUNCTION(BlueprintCallable, Category = "LGUI") 
-		ULexUIStaticMeshCacheData* GetMeshCache()const { return meshCache; }
+		ULexUIStaticMeshCacheData* GetMeshCache()const { return MeshCache; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		ELexStaticMeshVertexColorType GetVertexColorType()const { return vertexColorType; }
+		ELexStaticMeshVertexColorType GetVertexColorType()const { return VertexColorType; }
 	/** Get the 'ReplaceMaterial' property */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		class UMaterialInterface* GetReplaceMaterial()const { return ReplaceMaterial; }
@@ -182,11 +185,10 @@ public:
 		class UMaterialInstanceDynamic* GetOrCreateDynamicMaterialInstance();
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetMesh(ULexUIStaticMeshCacheData* value);
+		void SetMesh(ULexUIStaticMeshCacheData* Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetVertexColorType(ELexStaticMeshVertexColorType value);
+		void SetVertexColorType(ELexStaticMeshVertexColorType Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		void SetReplaceMaterial(UMaterialInterface* value);
+		void SetReplaceMaterial(UMaterialInterface* Value);
 };
 
-#endif

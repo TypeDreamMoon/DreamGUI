@@ -6,10 +6,12 @@
 #include "Core/Components/LexCanvas.h"
 #include "LexVisualDirectMesh.generated.h"
 
-struct FLexUIRenderSection;
+struct FLexUIRenderSection_DirectMesh;
 class ULexUIMeshComponent;
 /** 
- * UI element that render directly to LGUICanvas's mesh section. Each UIDirectMeshRenderable is considered as a drawcall.
+ * UI element that can update mesh data directly to LexCanvas's mesh section. Each LexVisualDirectMesh is considered as a draw-call.
+ * This is mainly for custom mesh which have huge vertex data and change frequently, so that we can avoid the overhead of updating each visual element from LexCanvas.
+ * Officially use it for LexStaticMesh and particle system.
  */
 UCLASS(Abstract, NotBlueprintable)
 class LGUI_API ULexVisualDirectMesh : public ULexVisual
@@ -21,26 +23,30 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void BeginDestroy() override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
-	virtual void UpdateGeometry()override;
 
+	/** enable properties for material */
+	UPROPERTY(EditAnywhere, Category = LGUI, meta = (Bitmask, BitmaskEnum = "/Script/LGUI.ELexVisualPropertiesForMaterial"))
+	int8 PropertiesForMaterial = 0;
+	
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
-
-	void MarkVertexPositionDirty();
-
 	virtual void MarkAllDirty()override;
-
 	virtual bool LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const override;
+	void PostFillMeshData();
 public:
-	/** Called by Canvas when this UI element have valid mesh data. */
-	virtual void OnMeshDataReady();
-	virtual TWeakPtr<FLexUIRenderSection> GetMeshSection()const;
-	virtual TWeakObjectPtr<ULexUIMeshComponent> GetUIMesh()const;
+	FORCEINLINE bool GetRequirePropertiesForMaterial_Size()const{ return PropertiesForMaterial & (1 << (int)ELexVisualPropertiesForMaterial::Size); }
+	FORCEINLINE bool GetRequirePropertiesForMaterial_CenterPosition()const{ return PropertiesForMaterial & (1 << (int)ELexVisualPropertiesForMaterial::CenterPosition); }
+	
+	/** Called by LexUIMesh when apply mesh data to this UI element. */
+	virtual void OnSupplyMeshSection(TWeakObjectPtr<ULexUIMeshComponent> InMesh, TWeakPtr<FLexUIRenderSection_DirectMesh> InSection);
 	virtual void ClearMeshData();
 	virtual bool HaveValidData()const PURE_VIRTUAL(UUIDirectMeshRenderable::HaveValidData, return true;);
 	virtual UMaterialInterface* GetMaterial()const PURE_VIRTUAL(UUIDirectMeshRenderable::GetMaterial, return nullptr;);
 protected:
 	uint8 bLocalVertexPositionChanged : 1;
+	TWeakObjectPtr<ULexUIMeshComponent> Mesh;
+	TWeakPtr<FLexUIRenderSection_DirectMesh> MeshSection;
 };

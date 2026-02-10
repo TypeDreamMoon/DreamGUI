@@ -82,6 +82,7 @@ ULexVisual::ULexVisual(const FObjectInitializer& ObjectInitializer) :Super(Objec
 	bTransformChanged = true;
 	bClipDataPositionChanged = true;
 	bWidgetPropertyDataStartPositionChanged = true;
+	bWidgetPropertyDataFontMarkDirty = true;
 }
 
 void ULexVisual::BeginPlay()
@@ -194,7 +195,7 @@ void ULexVisual::OnTransformChanged(bool InPositionChanged, bool InScaleChanged)
 
 void ULexVisual::OnRenderCanvasChanged(ULexCanvas* InOldCanvas, ULexCanvas* InNewCanvas)
 {
-	
+	bWidgetPropertyDataFontMarkDirty = true;
 }
 
 void ULexVisual::MarkColorDirty()
@@ -213,12 +214,11 @@ void ULexVisual::CheckClipDataStartPosition()
 	}
 }
 
-void ULexVisual::UpdateGeometryWidgetPropertyData(FLexUIGeometry& InMesh, int InDataStartPosition)
+void ULexVisual::UpdateGeometryWidgetPropertyData(TArray<FLexUIMeshVertex>& InVertices, int InValidNumVertices, int InDataStartPosition)
 {
-	auto& vertices = InMesh.Vertices;
-	for (int i = 0; i < vertices.Num(); i++)
+	for (int i = 0; i < InValidNumVertices; i++)
 	{
-		vertices[i].TextureCoordinate[1].X = InDataStartPosition;
+		InVertices[i].TextureCoordinate[1].X = InDataStartPosition;
 	}
 }
 
@@ -228,6 +228,7 @@ void ULexVisual::MarkAllDirty()
 	bTransformChanged = true;
 	bClipDataPositionChanged = true;
 	bWidgetPropertyDataStartPositionChanged = true;
+	bWidgetPropertyDataFontMarkDirty = true;
 	GetWidget()->MarkCanvasUpdate(false, true, false);
 }
 

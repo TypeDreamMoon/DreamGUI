@@ -1,8 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/Components/LexVisualDirectMesh.h"
-#include "LGUI.h"
-#include "Core/Components/LexCanvas.h"
 #include "Core/LexUIMesh/LexUIMeshComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Core/LexUIDrawCall.h"
@@ -18,6 +16,11 @@ void ULexVisualDirectMesh::BeginPlay()
 {
 	Super::BeginPlay();
 	bLocalVertexPositionChanged = true;
+}
+
+void ULexVisualDirectMesh::BeginDestroy()
+{
+	Super::BeginDestroy();
 }
 
 #if WITH_EDITOR
@@ -36,45 +39,20 @@ void ULexVisualDirectMesh::MarkAllDirty()
 void ULexVisualDirectMesh::OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)
 {
     Super::OnDimensionChanged(InPivotChange, InWidthChange, InHeightChange);
-	MarkVertexPositionDirty();
 }
 
-void ULexVisualDirectMesh::MarkVertexPositionDirty()
-{
-	bLocalVertexPositionChanged = true;
-	GetWidget()->MarkCanvasUpdate(false, false, false);//since DirectMeshRenderable will always take a drawcall, we don't need to rebuild drawcall on it
-}
-void ULexVisualDirectMesh::UpdateGeometry()
-{
-	Super::UpdateGeometry();
-}
-
-
-TWeakPtr<FLexUIRenderSection> ULexVisualDirectMesh::GetMeshSection()const
-{
-	//@todo
-	// if (DrawCall.IsValid())
-	// {
-	// 	return DrawCall->DrawCallRenderSection;
-	// }
-	return nullptr;
-}
-TWeakObjectPtr<ULexUIMeshComponent> ULexVisualDirectMesh::GetUIMesh()const
-{
-	//@todo
-	// if (DrawCall.IsValid())
-	// {
-	// 	return DrawCall->DrawCallMesh;
-	// }
-	return nullptr;
-}
 void ULexVisualDirectMesh::ClearMeshData()
 {
 	GetWidget()->MarkCanvasUpdate(false, false, true);
+	if (Mesh.IsValid() && MeshSection.IsValid())
+	{
+		//@todo: maybe we should remove render section
+	}
 }
-void ULexVisualDirectMesh::OnMeshDataReady()
+void ULexVisualDirectMesh::OnSupplyMeshSection(TWeakObjectPtr<ULexUIMeshComponent> InMesh, TWeakPtr<FLexUIRenderSection_DirectMesh> InSection)
 {
-
+	Mesh = InMesh;
+	MeshSection = InSection;
 }
 
 bool ULexVisualDirectMesh::LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const
@@ -137,5 +115,35 @@ bool ULexVisualDirectMesh::LineTraceUI(FHitResult& OutHit, const FVector& Start,
 	else
 	{
 		return LineTraceUICustom(OutHit, Start, End);
+	}
+}
+
+void ULexVisualDirectMesh::PostFillMeshData()
+{
+	if (!MeshSection.IsValid())return;
+	auto Widget = GetWidget();
+	auto Canvas = Widget->GetRenderCanvas();
+	if (bWidgetPropertyDataStartPositionChanged)
+	{
+		bWidgetPropertyDataStartPositionChanged = false;
+		UpdateGeometryWidgetPropertyData(MeshSection.Pin()->Vertices, MeshSection.Pin()->ValidVerticesNum, this->WidgetPropertyDataStartPosition);
+	}
+	if (bWidgetPropertyDataFontMarkDirty)
+	{
+		bWidgetPropertyDataFontMarkDirty = false;
+		FillWidgetPropertyDataForMaterial_InitialMark(Canvas->GetWidgetPropertyDataAsTexture(), 0);
+	}
+	if (bClipDataPositionChanged)
+	{
+		bClipDataPositionChanged = false;
+		/** Only update the clip data position coordinate. */
+		FillWidgetPropertyDataForMaterial_ClipDataCoordinate(Canvas->GetWidgetPropertyDataAsTexture());
+	}
+	if (bLocalVertexPositionChanged || bTransformChanged)
+	{
+		if (this->GetRequirePropertiesForMaterial_Size() || this->GetRequirePropertiesForMaterial_CenterPosition())
+		{
+			FillWidgetPropertyDataForMaterial(this->GetRequirePropertiesForMaterial_Size(), this->GetRequirePropertiesForMaterial_CenterPosition());
+		}
 	}
 }

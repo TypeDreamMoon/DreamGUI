@@ -604,32 +604,32 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 		TArray<FWorldSpaceRenderParameterSequence> RenderSequenceArray;
 		for (auto& WorldRenderParameter : WorldSpaceRenderCanvasParameterArray)
 		{
-			if (WorldRenderParameter.Primitive->CanRender())
+			if (WorldRenderParameter.Primitive->LexUI_CanRender())
 			{
 				bool bIsPrimitiveVisible = false;//default is not visible
 				if (InView.ShowOnlyPrimitives.IsSet())
 				{
-					bIsPrimitiveVisible = InView.ShowOnlyPrimitives.GetValue().Contains(WorldRenderParameter.Primitive->GetPrimitiveComponentId());
+					bIsPrimitiveVisible = InView.ShowOnlyPrimitives.GetValue().Contains(WorldRenderParameter.Primitive->LexUI_GetPrimitiveComponentId());
 				}
 				else
 				{
-					bIsPrimitiveVisible = !InView.HiddenPrimitives.Contains(WorldRenderParameter.Primitive->GetPrimitiveComponentId());
+					bIsPrimitiveVisible = !InView.HiddenPrimitives.Contains(WorldRenderParameter.Primitive->LexUI_GetPrimitiveComponentId());
 				}
 				if (bIsPrimitiveVisible)
 				{
-					auto WorldBounds = WorldRenderParameter.Primitive->GetWorldBounds();
+					auto WorldBounds = WorldRenderParameter.Primitive->LexUI_GetWorldBounds();
 					if (!bFrustumCulling 
 						|| (bFrustumCulling && InView.CullingFrustum.IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))//simple View Frustum Culling
 						)
 					{
 						FWorldSpaceRenderParameterSequence Item;
-						WorldRenderParameter.Primitive->CollectRenderData(Item.RenderDataArray, CurrentWorldTime);
+						WorldRenderParameter.Primitive->LexUI_CollectRenderData(Item.RenderDataArray, CurrentWorldTime);
 						if (Item.RenderDataArray.Num() > 0)
 						{
 							Item.BlendDepth = WorldRenderParameter.BlendDepth;
 							Item.DepthFade = WorldRenderParameter.DepthFade;
-							Item.WorldPosition = WorldRenderParameter.Primitive->GetWorldPositionForSortTranslucent();
-							Item.RenderPriority = WorldRenderParameter.Primitive->GetRenderPriority();
+							Item.WorldPosition = WorldRenderParameter.Primitive->LexUI_GetWorldPositionForSortTranslucent();
+							Item.RenderPriority = WorldRenderParameter.Primitive->LexUI_GetRenderPriority();
 							RenderSequenceArray.Add(Item);
 						}
 					}
@@ -670,7 +670,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 			{
 				bNeedSortWorldSpaceRenderCanvas = false;
 
-				auto InViewPosition = (FVector3f)RenderView->ViewMatrices.GetViewOrigin();
+				auto InViewPosition = FVector3f(RenderView->ViewMatrices.GetViewOrigin());
 				for (auto& Item : RenderSequenceArray)
 				{
 					Item.DistToCamera = FVector3f::DistSquared(InViewPosition, Item.WorldPosition);
@@ -697,7 +697,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 						{
 							for (int i = 0; i < RenderPrimitiveItem.Sections.Num(); i++)
 							{
-								if (auto Primitive = RenderPrimitiveItem.Primitive->GetPostProcessElement(RenderPrimitiveItem.Sections[i].SectionPointer))
+								if (auto Primitive = RenderPrimitiveItem.Primitive->LexUI_GetPostProcessElement(RenderPrimitiveItem.Sections[i].SectionPointer))
 								{
 									Primitive->OnRenderPostProcess_RenderThread(
 										GraphBuilder,
@@ -739,8 +739,8 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 
 									MeshBatchArray.Reset();
 									FSceneRenderingBulkObjectAllocator Allocator;
-									FLexUIMeshElementCollector meshCollector(RenderView->GetFeatureLevel(), Allocator, RHICmdList);
-									RenderPrimitiveItem.Primitive->GetMeshElements(*RenderView->Family, (FMeshElementCollector*)&meshCollector, RenderPrimitiveItem, MeshBatchArray);
+									FLexUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Allocator, RHICmdList);
+									RenderPrimitiveItem.Primitive->LexUI_GetMeshElements(*RenderView->Family, reinterpret_cast<FMeshElementCollector*>(&MeshCollector), RenderPrimitiveItem, MeshBatchArray);
 									for (int MeshIndex = 0; MeshIndex < MeshBatchArray.Num(); MeshIndex++)
 									{
 										auto& MeshBatchContainer = MeshBatchArray[MeshIndex];
@@ -760,14 +760,14 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 											
 											if (DepthFade <= 0)
 											{
-												TShaderRef<FLexUIScreenRenderVS> VertexShader;
-												TShaderRef<FLexUIWorldRenderPS> PixelShader;
 												FMaterialShaderTypes ShaderTypes;
 												ShaderTypes.AddShaderType<FLexUIScreenRenderVS>();
 												ShaderTypes.AddShaderType<FLexUIWorldRenderPS>();
 												FMaterialShaders Shaders;
 												if (Material->TryGetShaders(ShaderTypes, nullptr, Shaders))
 												{
+													TShaderRef<FLexUIScreenRenderVS> VertexShader;
+													TShaderRef<FLexUIWorldRenderPS> PixelShader;
 													Shaders.TryGetVertexShader(VertexShader);
 													Shaders.TryGetPixelShader(PixelShader);
 
@@ -795,14 +795,14 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 											}
 											else
 											{
-												TShaderRef<FLexUIScreenRenderVS> VertexShader;
-												TShaderRef<FLexUIWorldRenderDepthFadePS> PixelShader;
 												FMaterialShaderTypes ShaderTypes;
 												ShaderTypes.AddShaderType<FLexUIScreenRenderVS>();
 												ShaderTypes.AddShaderType<FLexUIWorldRenderDepthFadePS>();
 												FMaterialShaders Shaders;
 												if (Material->TryGetShaders(ShaderTypes, nullptr, Shaders))
 												{
+													TShaderRef<FLexUIScreenRenderVS> VertexShader;
+													TShaderRef<FLexUIWorldRenderDepthFadePS> PixelShader;
 													Shaders.TryGetVertexShader(VertexShader);
 													Shaders.TryGetPixelShader(PixelShader);
 
@@ -945,14 +945,14 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 		TArray<FLexUIPrimitiveDataContainer> RenderSequenceArray;
 		for (auto Primitive : ScreenSpaceRenderParameter.PrimitiveArray)
 		{
-			if (Primitive->CanRender())
+			if (Primitive->LexUI_CanRender())
 			{
-				auto WorldBounds = Primitive->GetWorldBounds();
+				auto WorldBounds = Primitive->LexUI_GetWorldBounds();
 				if (!bFrustumCulling 
 					|| (bFrustumCulling && RenderView->CullingFrustum.IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))//simple View Frustum Culling
 					)
 				{
-					Primitive->CollectRenderData(RenderSequenceArray, CurrentWorldTime);
+					Primitive->LexUI_CollectRenderData(RenderSequenceArray, CurrentWorldTime);
 				}
 			}
 		}
@@ -968,7 +968,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 			{
 				for (int i = 0; i < RenderSequenceItem.Sections.Num(); i++)
 				{
-					if (auto Primitive = RenderSequenceItem.Primitive->GetPostProcessElement(RenderSequenceItem.Sections[i].SectionPointer))
+					if (auto Primitive = RenderSequenceItem.Primitive->LexUI_GetPostProcessElement(RenderSequenceItem.Sections[i].SectionPointer))
 					{
 						Primitive->OnRenderPostProcess_RenderThread(
 							GraphBuilder,
@@ -1018,8 +1018,8 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 						RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
 						MeshBatchArray.Reset();
 						FSceneRenderingBulkObjectAllocator Allocator;
-						FLexUIMeshElementCollector meshCollector(RenderView->GetFeatureLevel(), Allocator, RHICmdList);
-						RenderSequenceItem.Primitive->GetMeshElements(*RenderView->Family, (FMeshElementCollector*)&meshCollector,
+						FLexUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Allocator, RHICmdList);
+						RenderSequenceItem.Primitive->LexUI_GetMeshElements(*RenderView->Family, reinterpret_cast<FMeshElementCollector*>(&MeshCollector),
 						RenderSequenceItem, MeshBatchArray);
 
 						for (int MeshIndex = 0; MeshIndex < MeshBatchArray.Num(); MeshIndex++)
@@ -1039,15 +1039,15 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 								auto Material = (bWireframe ? WireframeMaterialInstance : Mesh.MaterialRenderProxy)
 								->GetMaterialNoFallback(RenderView->GetFeatureLevel());//why not use "GetIncompleteMaterialWithFallback" here? because fallback material cann't render with LexUIRenderer
 								if (!Material)return;
-							
-								TShaderRef<FLexUIScreenRenderVS> VertexShader;
-								TShaderRef<FLexUIScreenRenderPS> PixelShader;
+								
 								FMaterialShaderTypes ShaderTypes;
 								ShaderTypes.AddShaderType<FLexUIScreenRenderVS>();
 								ShaderTypes.AddShaderType<FLexUIScreenRenderPS>();
 								FMaterialShaders Shaders;
 								if (Material->TryGetShaders(ShaderTypes, nullptr, Shaders))
 								{
+									TShaderRef<FLexUIScreenRenderVS> VertexShader;
+									TShaderRef<FLexUIScreenRenderPS> PixelShader;
 									Shaders.TryGetVertexShader(VertexShader);
 									Shaders.TryGetPixelShader(PixelShader);
 
@@ -1287,7 +1287,7 @@ void FLexUIRenderer::SortScreenSpacePrimitiveRenderPriority_RenderThread()
 {
 	ScreenSpaceRenderParameter.PrimitiveArray.Sort([](ILexUIRendererPrimitive& A, ILexUIRendererPrimitive& B)
 		{
-			return A.GetRenderPriority() < B.GetRenderPriority();
+			return A.LexUI_GetRenderPriority() < B.LexUI_GetRenderPriority();
 		});
 }
 

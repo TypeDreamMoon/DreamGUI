@@ -186,7 +186,6 @@ private:
 	uint8 bTriangleChanged:1;
 	uint8 bTextureChanged:1;
 	uint8 bMaterialChanged:1;
-	uint8 bWidgetPropertyDataFontMarkDirty : 1;
 	FVector LocalMinPoint3D = FVector::ZeroVector, LocalMaxPoint3D = FVector::ZeroVector;
 	void CalculateLocalBounds();
 	UPROPERTY(Transient)TObjectPtr<ULexUIGeometryHelper> GeometryHelper = nullptr;

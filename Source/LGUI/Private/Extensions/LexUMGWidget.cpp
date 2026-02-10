@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Extensions/UIWidget.h"
+#include "Extensions/LexUMGWidget.h"
 #include "LTweenBPLibrary.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Slate/WidgetRenderer.h"
@@ -18,12 +18,12 @@
 
 #define LOCTEXT_NAMESPACE "UIWidget"
 
-UUIWidget::UUIWidget(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
+ULexUMGWidget::ULexUMGWidget(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
 	
 }
 
-bool UUIWidget::SupportDrawCallBatching()const
+bool ULexUMGWidget::SupportDrawCallBatching()const
 {
 	if (IsValid(CustomMesh))
 	{
@@ -34,15 +34,15 @@ bool UUIWidget::SupportDrawCallBatching()const
 		return true;
 	}
 }
-void UUIWidget::OnBeforeCreateOrUpdateGeometry()
+void ULexUMGWidget::OnBeforeCreateOrUpdateGeometry()
 {
 
 }
-UTexture* UUIWidget::GetTextureToCreateGeometry()
+UTexture* ULexUMGWidget::GetTextureToCreateGeometry()
 {
 	return RenderTarget;
 }
-void UUIWidget::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
+void ULexUMGWidget::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)
 {
 	if (IsValid(CustomMesh))
 	{
@@ -62,14 +62,14 @@ void UUIWidget::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, 
 
 
 
-void UUIWidget::BeginPlay()
+void ULexUMGWidget::BeginPlay()
 {
 	Super::BeginPlay();
 	SetComponentTickEnabled(TickMode != ETickMode::Disabled);
 	InitWidget();
 }
 
-void UUIWidget::EndPlay()
+void ULexUMGWidget::EndPlay()
 {
 	Super::EndPlay();
 
@@ -77,7 +77,7 @@ void UUIWidget::EndPlay()
 	ReleaseResources();
 }
 
-void UUIWidget::OnLevelRemovedFromWorld(ULevel* InLevel, UWorld* InWorld)
+void ULexUMGWidget::OnLevelRemovedFromWorld(ULevel* InLevel, UWorld* InWorld)
 {
 	// If the InLevel is null, it's a signal that the entire world is about to disappear, so
 	// go ahead and remove this widget from the viewport, it could be holding onto too many
@@ -88,7 +88,7 @@ void UUIWidget::OnLevelRemovedFromWorld(ULevel* InLevel, UWorld* InWorld)
 	}
 }
 
-void UUIWidget::OnRegister()
+void ULexUMGWidget::OnRegister()
 {
 	Super::OnRegister();
 
@@ -121,7 +121,7 @@ void UUIWidget::OnRegister()
 #endif
 }
 
-void UUIWidget::SetWindowFocusable(bool bInWindowFocusable)
+void ULexUMGWidget::SetWindowFocusable(bool bInWindowFocusable)
 {
 	bWindowFocusable = bInWindowFocusable;
 	if (SlateWindow.IsValid())
@@ -130,7 +130,7 @@ void UUIWidget::SetWindowFocusable(bool bInWindowFocusable)
 	}
 };
 
-EVisibility UUIWidget::ConvertWindowVisibilityToVisibility(EWindowVisibility visibility)
+EVisibility ULexUMGWidget::ConvertWindowVisibilityToVisibility(EWindowVisibility visibility)
 {
 	switch (visibility)
 	{
@@ -144,7 +144,7 @@ EVisibility UUIWidget::ConvertWindowVisibilityToVisibility(EWindowVisibility vis
 	}
 }
 
-void UUIWidget::OnWidgetVisibilityChanged(ESlateVisibility InVisibility)
+void ULexUMGWidget::OnWidgetVisibilityChanged(ESlateVisibility InVisibility)
 {
 	ensure(TickMode != ETickMode::Enabled);
 	ensure(UmgWidget);
@@ -165,7 +165,7 @@ void UUIWidget::OnWidgetVisibilityChanged(ESlateVisibility InVisibility)
 	}
 }
 
-void UUIWidget::SetWindowVisibility(EWindowVisibility InVisibility)
+void ULexUMGWidget::SetWindowVisibility(EWindowVisibility InVisibility)
 {
 	WindowVisibility = InVisibility;
 	if (SlateWindow.IsValid())
@@ -191,13 +191,13 @@ void UUIWidget::SetWindowVisibility(EWindowVisibility InVisibility)
 	}
 }
 
-void UUIWidget::SetTickMode(ETickMode InTickMode)
+void ULexUMGWidget::SetTickMode(ETickMode InTickMode)
 {
 	TickMode = InTickMode;
 	SetComponentTickEnabled(InTickMode != ETickMode::Disabled);
 }
 
-bool UUIWidget::IsWidgetVisible() const
+bool ULexUMGWidget::IsWidgetVisible() const
 {
 	//  If we are in World Space, if the component or the SlateWindow is not visible the Widget is not visible.
 	if ((!GetWidget()->GetWidgetActiveInHierarchy() || !SlateWindow.IsValid() || !SlateWindow->GetVisibility().IsVisible()))
@@ -215,7 +215,7 @@ bool UUIWidget::IsWidgetVisible() const
 	return SlateWidget.IsValid() && SlateWidget->GetVisibility().IsVisible();
 }
 
-void UUIWidget::OnUnregister()
+void ULexUMGWidget::OnUnregister()
 {
 #if !UE_SERVER
 	FWorldDelegates::LevelRemovedFromWorld.RemoveAll(this);
@@ -231,14 +231,14 @@ void UUIWidget::OnUnregister()
 	Super::OnUnregister();
 }
 
-void UUIWidget::BeginDestroy()
+void ULexUMGWidget::BeginDestroy()
 {
 	Super::BeginDestroy();
 
 	ReleaseResources();
 }
 
-void UUIWidget::ReleaseResources()
+void ULexUMGWidget::ReleaseResources()
 {
 	if (UmgWidget)
 	{
@@ -264,7 +264,7 @@ void UUIWidget::ReleaseResources()
 	UnregisterWindow();
 }
 
-void UUIWidget::RegisterWindow()
+void ULexUMGWidget::RegisterWindow()
 {
 	if (SlateWindow.IsValid())
 	{
@@ -292,7 +292,7 @@ void UUIWidget::RegisterWindow()
 	}
 }
 
-void UUIWidget::UnregisterWindow()
+void ULexUMGWidget::UnregisterWindow()
 {
 	if (SlateWindow.IsValid())
 	{
@@ -305,7 +305,7 @@ void UUIWidget::UnregisterWindow()
 	}
 }
 
-void UUIWidget::TickComponent(float DeltaTime)
+void ULexUMGWidget::TickComponent(float DeltaTime)
 {
 	if (IsRunningDedicatedServer())
 	{
@@ -331,7 +331,7 @@ void UUIWidget::TickComponent(float DeltaTime)
 			SetComponentTickEnabled(false);
 			if (!bOnWidgetVisibilityChangedRegistered)
 			{
-				UmgWidget->OnNativeVisibilityChanged.AddUObject(this, &UUIWidget::OnWidgetVisibilityChanged);
+				UmgWidget->OnNativeVisibilityChanged.AddUObject(this, &ULexUMGWidget::OnWidgetVisibilityChanged);
 				bOnWidgetVisibilityChangedRegistered = true;
 			}
 		}
@@ -362,7 +362,7 @@ void UUIWidget::TickComponent(float DeltaTime)
 #endif // !UE_SERVER
 }
 
-void UUIWidget::SetComponentTickEnabled(bool bEnable)
+void ULexUMGWidget::SetComponentTickEnabled(bool bEnable)
 {
 	if (bIsTickEnabled == bEnable)return;
 	if (GetWorld())
@@ -374,13 +374,13 @@ void UUIWidget::SetComponentTickEnabled(bool bEnable)
 			{
 				if (auto LexUIManagerObject = ULexUIManagerObject::GetInstance(true))
 				{
-					EditorTickHandle = LexUIManagerObject->GetEditorTickDelegate().AddUObject(this, &UUIWidget::TickComponent);
+					EditorTickHandle = LexUIManagerObject->GetEditorTickDelegate().AddUObject(this, &ULexUMGWidget::TickComponent);
 				}
 			}
 			else
 #endif
 			{
-				Tweener = ULTweenBPLibrary::UpdateCall(this, FLTweenUpdateDelegate::CreateUObject(this, &UUIWidget::TickComponent));
+				Tweener = ULTweenBPLibrary::UpdateCall(this, FLTweenUpdateDelegate::CreateUObject(this, &ULexUMGWidget::TickComponent));
 			}
 		}
 		else
@@ -407,12 +407,12 @@ void UUIWidget::SetComponentTickEnabled(bool bEnable)
 	}
 }
 
-bool UUIWidget::ShouldReenableComponentTickWhenWidgetBecomesVisible() const
+bool ULexUMGWidget::ShouldReenableComponentTickWhenWidgetBecomesVisible() const
 {
 	return (TickMode != ETickMode::Disabled) || bRedrawRequested;
 }
 
-bool UUIWidget::ShouldDrawWidget() const
+bool ULexUMGWidget::ShouldDrawWidget() const
 {
 	const float RenderTimeThreshold = .5f;
 	if (auto RenderCanvas = GetWidget()->GetRenderCanvas())
@@ -431,7 +431,7 @@ bool UUIWidget::ShouldDrawWidget() const
 	return false;
 }
 
-void UUIWidget::DrawWidgetToRenderTarget(float DeltaTime)
+void ULexUMGWidget::DrawWidgetToRenderTarget(float DeltaTime)
 {
 	if (GUsingNullRHI)
 	{
@@ -491,14 +491,14 @@ void UUIWidget::DrawWidgetToRenderTarget(float DeltaTime)
 	}
 }
 
-double UUIWidget::GetCurrentTime() const
+double ULexUMGWidget::GetCurrentTime() const
 {
 	return (TimingPolicy == EWidgetTimingPolicy::RealTime) ? FApp::GetCurrentTime() : static_cast<double>(GetWorld()->GetTimeSeconds());
 }
 
 #if WITH_EDITOR
 
-bool UUIWidget::CanEditChange(const FProperty* InProperty) const
+bool ULexUMGWidget::CanEditChange(const FProperty* InProperty) const
 {
 	if (InProperty)
 	{
@@ -508,7 +508,7 @@ bool UUIWidget::CanEditChange(const FProperty* InProperty) const
 	return Super::CanEditChange(InProperty);
 }
 
-void UUIWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void ULexUMGWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	FProperty* Property = PropertyChangedEvent.MemberProperty;
 
@@ -534,7 +534,7 @@ void UUIWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 		{
 			SetWindowVisibility(WindowVisibility);
 		}
-		else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIWidget, CustomMesh))
+		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUMGWidget, CustomMesh))
 		{
 			if (IsValid(CustomMesh))//custom mesh use geometry raycast to get precise uv
 			{
@@ -548,7 +548,7 @@ void UUIWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 
 #endif
 
-void UUIWidget::InitWidget()
+void ULexUMGWidget::InitWidget()
 {
 	if (IsRunningDedicatedServer())
 	{
@@ -570,17 +570,17 @@ void UUIWidget::InitWidget()
 	}
 }
 
-void UUIWidget::SetManuallyRedraw(bool bUseManualRedraw)
+void ULexUMGWidget::SetManuallyRedraw(bool bUseManualRedraw)
 {
 	bManuallyRedraw = bUseManualRedraw;
 }
 
-UUserWidget* UUIWidget::GetUMGWidget() const
+UUserWidget* ULexUMGWidget::GetUMGWidget() const
 {
 	return UmgWidget;
 }
 
-void UUIWidget::SetWidget(UUserWidget* InWidget)
+void ULexUMGWidget::SetWidget(UUserWidget* InWidget)
 {
 	if (InWidget != nullptr)
 	{
@@ -592,7 +592,7 @@ void UUIWidget::SetWidget(UUserWidget* InWidget)
 	UpdateWidget();
 }
 
-void UUIWidget::SetSlateWidget(const TSharedPtr<SWidget>& InSlateWidget)
+void ULexUMGWidget::SetSlateWidget(const TSharedPtr<SWidget>& InSlateWidget)
 {
 	if (UmgWidget != nullptr)
 	{
@@ -609,7 +609,7 @@ void UUIWidget::SetSlateWidget(const TSharedPtr<SWidget>& InSlateWidget)
 	UpdateWidget();
 }
 
-void UUIWidget::UpdateWidget()
+void ULexUMGWidget::UpdateWidget()
 {
 	// Don't do any work if Slate is not initialized
 	if (FSlateApplication::IsInitialized() && IsValid(this))
@@ -678,7 +678,7 @@ void UUIWidget::UpdateWidget()
 	}
 }
 
-void UUIWidget::UpdateRenderTarget(FIntPoint DesiredRenderTargetSize)
+void ULexUMGWidget::UpdateRenderTarget(FIntPoint DesiredRenderTargetSize)
 {
 	bool bClearColorChanged = false;
 
@@ -713,7 +713,7 @@ void UUIWidget::UpdateRenderTarget(FIntPoint DesiredRenderTargetSize)
 	}
 }
 
-void UUIWidget::GetLocalHitLocation(int32 InHitFaceIndex, const FVector& InWorldHitLocation, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutLocalWidgetHitLocation) const
+void ULexUMGWidget::GetLocalHitLocation(int32 InHitFaceIndex, const FVector& InWorldHitLocation, const FVector& InLineStart, const FVector& InLineEnd, FVector2D& OutLocalWidgetHitLocation) const
 {
 	if (IsValid(CustomMesh))
 	{
@@ -738,23 +738,23 @@ void UUIWidget::GetLocalHitLocation(int32 InHitFaceIndex, const FVector& InWorld
 	}
 }
 
-UUserWidget* UUIWidget::GetUserWidgetObject() const
+UUserWidget* ULexUMGWidget::GetUserWidgetObject() const
 {
 	return UmgWidget;
 }
 
-UTextureRenderTarget2D* UUIWidget::GetRenderTarget() const
+UTextureRenderTarget2D* ULexUMGWidget::GetRenderTarget() const
 {
 	return RenderTarget;
 }
 
-const TSharedPtr<SWidget>& UUIWidget::GetSlateWidget() const
+const TSharedPtr<SWidget>& ULexUMGWidget::GetSlateWidget() const
 {
 	return SlateWidget;
 }
 
 
-TArray<FWidgetAndPointer> UUIWidget::GetHitWidgetPath(FVector2D WidgetSpaceHitCoordinate, bool bIgnoreEnabledStatus, float CursorRadius /*= 0.0f*/)
+TArray<FWidgetAndPointer> ULexUMGWidget::GetHitWidgetPath(FVector2D WidgetSpaceHitCoordinate, bool bIgnoreEnabledStatus, float CursorRadius /*= 0.0f*/)
 {
 	const FVector2D& LocalHitLocation = WidgetSpaceHitCoordinate;
 	const FVirtualPointerPosition VirtualMouseCoordinate(LocalHitLocation, LastLocalHitLocation);
@@ -778,17 +778,17 @@ TArray<FWidgetAndPointer> UUIWidget::GetHitWidgetPath(FVector2D WidgetSpaceHitCo
 	return ArrangedWidgets;
 }
 
-TSharedPtr<SWindow> UUIWidget::GetSlateWindow() const
+TSharedPtr<SWindow> ULexUMGWidget::GetSlateWindow() const
 {
 	return SlateWindow;
 }
 
-FVector2D UUIWidget::GetCurrentDrawSize() const
+FVector2D ULexUMGWidget::GetCurrentDrawSize() const
 {
 	return CurrentDrawSize;
 }
 
-void UUIWidget::RequestRenderUpdate()
+void ULexUMGWidget::RequestRenderUpdate()
 {
 	bRedrawRequested = true;
 	if (TickMode == ETickMode::Disabled)
@@ -797,7 +797,7 @@ void UUIWidget::RequestRenderUpdate()
 	}
 }
 
-void UUIWidget::SetBackgroundColor(const FLinearColor NewBackgroundColor)
+void ULexUMGWidget::SetBackgroundColor(const FLinearColor NewBackgroundColor)
 {
 	if (NewBackgroundColor != this->BackgroundColor)
 	{
@@ -806,12 +806,12 @@ void UUIWidget::SetBackgroundColor(const FLinearColor NewBackgroundColor)
 	}
 }
 
-TSharedPtr< SWindow > UUIWidget::GetVirtualWindow() const
+TSharedPtr< SWindow > ULexUMGWidget::GetVirtualWindow() const
 {
 	return StaticCastSharedPtr<SWindow>(SlateWindow);
 }
 
-void UUIWidget::SetWidgetClass(TSubclassOf<UUserWidget> InWidgetClass)
+void ULexUMGWidget::SetWidgetClass(TSubclassOf<UUserWidget> InWidgetClass)
 {
 	if (WidgetClass != InWidgetClass)
 	{

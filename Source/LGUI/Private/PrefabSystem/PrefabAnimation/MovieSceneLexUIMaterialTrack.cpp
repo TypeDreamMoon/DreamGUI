@@ -36,12 +36,12 @@ void UMovieSceneLexUIMaterialTrack::ExtendEntityImpl(UMovieSceneParameterSection
 	using namespace UE::MovieScene;
 
 	FBuiltInComponentTypes* BuiltInComponents = FBuiltInComponentTypes::Get();
-	FMovieSceneLexUIComponentTypes* LGUIComponents = FMovieSceneLexUIComponentTypes::Get();
+	FMovieSceneLexUIComponentTypes* LexUIComponents = FMovieSceneLexUIComponentTypes::Get();
 
 	// Material parameters are always absolute blends for the time being
 	OutImportedEntity->AddBuilder(
 		FEntityBuilder()
-		.Add(LGUIComponents->LGUIMaterialPath, FLexUIMaterialPath(PropertyName))
+		.Add(LexUIComponents->LexUIMaterialPath, FLexUIMaterialPath(PropertyName))
 		.AddTagConditional(BuiltInComponents->Tags.AbsoluteBlend, !Section->GetBlendType().IsValid())
 	);
 }

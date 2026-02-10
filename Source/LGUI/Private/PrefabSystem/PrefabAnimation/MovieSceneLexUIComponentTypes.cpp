@@ -20,8 +20,8 @@ FMovieSceneLexUIComponentTypes::FMovieSceneLexUIComponentTypes()
 {
 	FComponentRegistry* ComponentRegistry = UMovieSceneEntitySystemLinker::GetComponents();
 
-	ComponentRegistry->NewComponentType(&LGUIMaterialPath, TEXT("LexUI Material Path"), EComponentTypeFlags::CopyToChildren | EComponentTypeFlags::CopyToOutput);
-	ComponentRegistry->NewComponentType(&LGUIMaterialHandle, TEXT("LexUI Material Handle"), EComponentTypeFlags::CopyToOutput);
+	ComponentRegistry->NewComponentType(&LexUIMaterialPath, TEXT("LexUI Material Path"), EComponentTypeFlags::CopyToChildren | EComponentTypeFlags::CopyToOutput);
+	ComponentRegistry->NewComponentType(&LexUIMaterialHandle, TEXT("LexUI Material Handle"), EComponentTypeFlags::CopyToOutput);
 	/** Initializer that initializes the value of an FLGUIMaterialHandle derived from an FLGUIMaterialPath */
 	struct FLGUIMaterialHandleInitializer : TChildEntityInitializer<FLexUIMaterialPath, FLexUIMaterialHandle>
 	{
@@ -69,7 +69,7 @@ FMovieSceneLexUIComponentTypes::FMovieSceneLexUIComponentTypes()
 		}
 	};
 
-	ComponentRegistry->Factories.DefineChildComponent(FLGUIMaterialHandleInitializer(LGUIMaterialPath, LGUIMaterialHandle));
+	ComponentRegistry->Factories.DefineChildComponent(FLGUIMaterialHandleInitializer(LexUIMaterialPath, LexUIMaterialHandle));
 }
 
 FMovieSceneLexUIComponentTypes::~FMovieSceneLexUIComponentTypes()

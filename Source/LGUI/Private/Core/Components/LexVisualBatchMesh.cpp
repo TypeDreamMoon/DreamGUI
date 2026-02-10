@@ -24,7 +24,6 @@ ULexVisualBatchMesh::ULexVisualBatchMesh(const FObjectInitializer& ObjectInitial
 	bTriangleChanged = true;
 	bTextureChanged = true;
 	bMaterialChanged = true;
-	bWidgetPropertyDataFontMarkDirty = true;
 }
 
 void ULexVisualBatchMesh::BeginPlay()
@@ -120,7 +119,6 @@ void ULexVisualBatchMesh::MarkAllDirty()
 	bTriangleChanged = true;
 	bTextureChanged = true;
 	bMaterialChanged = true;
-	bWidgetPropertyDataFontMarkDirty = true;
 	GetWidget()->MarkCanvasUpdate(true, false, false);
 	Super::MarkAllDirty();
 }
@@ -172,7 +170,6 @@ void ULexVisualBatchMesh::ApplyGeometryModifier(bool triangleChanged, bool uvCha
 void ULexVisualBatchMesh::OnRenderCanvasChanged(ULexCanvas* InOldCanvas, ULexCanvas* InNewCanvas)
 {
 	Super::OnRenderCanvasChanged(InOldCanvas, InNewCanvas);
-	bWidgetPropertyDataFontMarkDirty = true;
 }
 
 void ULexVisualBatchMesh::UpdateGeometry()
@@ -219,7 +216,7 @@ void ULexVisualBatchMesh::UpdateGeometry()
 	if (bWidgetPropertyDataStartPositionChanged)
 	{
 		bWidgetPropertyDataStartPositionChanged = false;
-		UpdateGeometryWidgetPropertyData(*(UIGeometry.Get()), this->WidgetPropertyDataStartPosition);
+		UpdateGeometryWidgetPropertyData(UIGeometry->Vertices, UIGeometry->Vertices.Num(), this->WidgetPropertyDataStartPosition);
 	}
 	if (bWidgetPropertyDataFontMarkDirty)
 	{

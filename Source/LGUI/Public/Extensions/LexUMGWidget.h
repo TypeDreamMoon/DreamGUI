@@ -5,20 +5,19 @@
 #include "CoreMinimal.h"
 #include "Core/Components/LexCustomMesh.h"
 #include "Components/WidgetComponent.h"
-#include "UIWidget.generated.h"
+#include "LexUMGWidget.generated.h"
 
-class ULGUICustomMesh;
 
 /**
- * LGUI Widget can render a UMG widget as LGUI's element, and interact with it by UIWidgetInteraction component.
+ * LexUMGWidget can render a UMG widget as LexUI's element, and interact with it by UIWidgetInteraction component.
  */
 UCLASS(ClassGroup = (LGUI), NotBlueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIWidget : public ULexCustomMesh
+class LGUI_API ULexUMGWidget : public ULexCustomMesh
 {
 	GENERATED_BODY()
 	
 public:	
-	UUIWidget(const FObjectInitializer& ObjectInitializer);
+	ULexUMGWidget(const FObjectInitializer& ObjectInitializer);
 protected:
 	virtual bool SupportDrawCallBatching()const override;
 	virtual void OnBeforeCreateOrUpdateGeometry()override;

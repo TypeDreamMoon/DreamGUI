@@ -4,7 +4,7 @@
 #include "RHI.h"
 
 
-void FLGUIMeshVertexDeclaration::InitRHI(FRHICommandListBase& RHICmdList)
+void FLexUIMeshVertexDeclaration::InitRHI(FRHICommandListBase& RHICmdList)
 {
 	FVertexDeclarationElementList Elements;
 	uint32 Stride = sizeof(FLexUIMeshVertex);
@@ -19,11 +19,11 @@ void FLGUIMeshVertexDeclaration::InitRHI(FRHICommandListBase& RHICmdList)
 	Elements.Add(FVertexElement(0, STRUCT_OFFSET(FLexUIMeshVertex, TangentZ), VET_PackedNormal, Index++, Stride));
 	VertexDeclarationRHI = RHICreateVertexDeclaration(Elements);
 }
-void FLGUIMeshVertexDeclaration::ReleaseRHI()
+void FLexUIMeshVertexDeclaration::ReleaseRHI()
 {
 	VertexDeclarationRHI.SafeRelease();
 }
-TGlobalResource<FLGUIMeshVertexDeclaration> GLexUIVertexDeclaration;
+TGlobalResource<FLexUIMeshVertexDeclaration> GLexUIVertexDeclaration;
 FVertexDeclarationRHIRef& GetLexUIMeshVertexDeclaration()
 {
 	return GLexUIVertexDeclaration.VertexDeclarationRHI;

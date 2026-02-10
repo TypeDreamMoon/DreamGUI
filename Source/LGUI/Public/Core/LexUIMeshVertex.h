@@ -40,11 +40,11 @@ struct LGUI_API FLexUIMeshVertex
 	};
 };
 
-class LGUI_API FLGUIMeshVertexDeclaration : public FRenderResource
+class LGUI_API FLexUIMeshVertexDeclaration : public FRenderResource
 {
 public:
 	FVertexDeclarationRHIRef VertexDeclarationRHI;
-	virtual ~FLGUIMeshVertexDeclaration() {}
+	virtual ~FLexUIMeshVertexDeclaration() {}
 	virtual void InitRHI(FRHICommandListBase& RHICmdList)override;
 	virtual void ReleaseRHI()override;
 };

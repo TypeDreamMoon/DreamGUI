@@ -8,32 +8,32 @@
 #include "Event/Interface/LexPointerDownUpInterface.h"
 #include "Event/Interface/LexPointerEnterExitInterface.h"
 #include "Event/Interface/LexPointerScrollInterface.h"
-#include "UIWidgetInteraction.generated.h"
+#include "LexUMGWidgetInteraction.generated.h"
 
-class UUIWidget;
-class UUIWidgetInteraction;
+class ULexUMGWidget;
+class ULexUMGWidgetInteraction;
 
 UCLASS()
-class LGUI_API UUIWidgetInteractionManager : public UObject
+class LGUI_API ULexUMGWidgetInteractionManager : public UObject
 {
 	GENERATED_BODY()
 public:
 
-	static UUIWidgetInteractionManager* Instance;
+	static ULexUMGWidgetInteractionManager* Instance;
 	struct FInteractionContainer
 	{
-		TArray<UUIWidgetInteraction*> AllInteractions;
-		UUIWidgetInteraction* CurrentInteraction = nullptr;
+		TArray<ULexUMGWidgetInteraction*> AllInteractions;
+		ULexUMGWidgetInteraction* CurrentInteraction = nullptr;
 	};
 	TMap<int, FInteractionContainer> MapVirtualUserIndexToInteraction;
 };
 
 /**
- * Perform a raycaster and interaction for LGUIRenderTargetGeometrySource object, which shows the LGUI RenderTarget UI.
- * This component should be placed on a actor which have a LGUIRenderTargetGeometrySource component.
+ * Perform a raycaster and interaction for LexUMGWidget, which shows UMG widget.
+ * This component should be placed on a actor which have a LexUMGWidget component.
  */
 UCLASS(ClassGroup = LGUI, meta = (BlueprintSpawnableComponent), Blueprintable)
-class LGUI_API UUIWidgetInteraction : public ULexUIBehaviour
+class LGUI_API ULexUMGWidgetInteraction : public ULexUIBehaviour
 	, public ILexPointerEnterExitInterface
 	, public ILexPointerDownUpInterface
 	, public ILexPointerScrollInterface
@@ -41,14 +41,14 @@ class LGUI_API UUIWidgetInteraction : public ULexUIBehaviour
 	GENERATED_BODY()
 	
 public:	
-	UUIWidgetInteraction();
+	ULexUMGWidgetInteraction();
 	
 protected:
 	/** inherited events of this component can bubble up? */
 	UPROPERTY(EditAnywhere, Category = LGUI)
 		bool bAllowEventBubbleUp = false;
 	UPROPERTY(VisibleAnywhere, Transient, Category = LGUI, AdvancedDisplay)
-		UUIWidgetInteractionManager* Helper = nullptr;
+		ULexUMGWidgetInteractionManager* Helper = nullptr;
 
 	virtual bool OnPointerEnter_Implementation(ULexPointerEventData* EventData)override;
 	virtual bool OnPointerExit_Implementation(ULexPointerEventData* EventData)override;
@@ -212,7 +212,7 @@ protected:
 	void GetRelatedComponentsToIgnoreInAutomaticHitTesting(TArray<UPrimitiveComponent*>& IgnorePrimitives) const;
 
 	/** Returns true if the inteaction component can interact with the supplied widget component */
-	bool CanInteractWithComponent(UUIWidget* Component) const;
+	bool CanInteractWithComponent(ULexUMGWidget* Component) const;
 
 protected:
 
@@ -239,7 +239,7 @@ protected:
 
 	/** The widget component we're currently hovering over. */
 	UPROPERTY(Transient)
-	TObjectPtr<UUIWidget> WidgetComponent;
+	TObjectPtr<ULexUMGWidget> WidgetComponent;
 
 	/** Are we hovering over any interactive widgets. */
 	UPROPERTY(Transient)
