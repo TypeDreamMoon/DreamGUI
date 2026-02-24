@@ -10,8 +10,8 @@ ULexLayoutContainerGrid::ULexLayoutContainerGrid()
 {
 	Rows = Columns =
 	{
-		FLexLayoutGridSize(1.0f),
-		FLexLayoutGridSize(1.0f),
+		FLexLayoutGridSize(ELexLayoutGridSizeType::Ratio, 1.0f),
+		FLexLayoutGridSize(ELexLayoutGridSizeType::Ratio, 1.0f),
 	};
 }
 
@@ -74,7 +74,7 @@ void ULexLayoutContainerGrid::UpdateLayout()
 	{
 		if (Item.Type == ELexLayoutGridSizeType::Ratio)
 		{
-			ColumnTotalRatio += Item.FixedValue;
+			ColumnTotalRatio += Item.RatioValue;
 		}
 		else
 		{
@@ -85,7 +85,7 @@ void ULexLayoutContainerGrid::UpdateLayout()
 	{
 		if (Item.Type == ELexLayoutGridSizeType::Ratio)
 		{
-			RowTotalRatio += Item.FixedValue;
+			RowTotalRatio += Item.RatioValue;
 		}
 		else
 		{
@@ -105,7 +105,7 @@ void ULexLayoutContainerGrid::UpdateLayout()
 			auto& Column = Columns[i];
 			if (Column.Type == ELexLayoutGridSizeType::Ratio)
 			{
-				OffsetXRatio += Column.FixedValue;
+				OffsetXRatio += Column.RatioValue;
 			}
 			else
 			{
@@ -117,7 +117,7 @@ void ULexLayoutContainerGrid::UpdateLayout()
 			auto& Row = Rows[i];
 			if (Row.Type == ELexLayoutGridSizeType::Ratio)
 			{
-				OffsetYRatio += Row.FixedValue;
+				OffsetYRatio += Row.RatioValue;
 			}
 			else
 			{
@@ -125,47 +125,44 @@ void ULexLayoutContainerGrid::UpdateLayout()
 			}
 		}
 		return StartPosition + FVector2D(
-			OffsetXRatio * InvColumnTotalRatio * ThisFreeWidth + OffsetXConstant + ColumnIndex * Spacing.X
-			, -OffsetYRatio * InvRowTotalRatio * ThisFreeHeight - OffsetYConstant - RowIndex * Spacing.Y
+			(ColumnTotalRatio == 0 ? ThisFreeWidth : OffsetXRatio * InvColumnTotalRatio * ThisFreeWidth) + OffsetXConstant + ColumnIndex * Spacing.X
+			, -(RowTotalRatio == 0 ? ThisFreeHeight : OffsetYRatio * InvRowTotalRatio * ThisFreeHeight) - OffsetYConstant - RowIndex * Spacing.Y
 		);
 	};
 	TDoubleLinkedList<ULexWidget*> NotLocatedWidgetList;
 	TArray<int> AlreadyFilledRows;
 	TArray<int> AlreadyFilledColumns;
 	//firstly locate widgets with layout self data, then locate widgets without layout self data in left grid cell
-	for (auto& Child : Widget->GetUIChildren())
+	for (auto& ChildWidget : Widget->GetUIChildren())
 	{
-		if (!Child->GetWidgetActiveInHierarchy())continue;
-		auto ChildLayoutSelf = Cast<ULexLayoutSelfGrid>(Child->GetLayoutSelf());
+		if (!ChildWidget->GetWidgetActiveInHierarchy())continue;
+		auto ChildLayoutSelf = Cast<ULexLayoutSelfGrid>(ChildWidget->GetLayoutSelf());
 		if (ChildLayoutSelf && ChildLayoutSelf->GetIgnoreLayoutContainer())
 		{
 			continue;
 		}
 
-		auto AnchorMin = Child->GetAnchorMin();
-		auto AnchorMax = Child->GetAnchorMax();
+		auto AnchorMin = ChildWidget->GetAnchorMin();
+		auto AnchorMax = ChildWidget->GetAnchorMax();
 		if (AnchorMin.X != AnchorMax.X)//custom anchor not support
 		{
-			Child->SetHorizontalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
+			ChildWidget->SetHorizontalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
 		}
 		if (AnchorMin.Y != AnchorMax.Y)
 		{
-			Child->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
+			ChildWidget->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
 		}
 
-		int ColumnIndex = 0, ColumnCount = 1, RowIndex = 0, RowCount = 1;
-		if (ChildLayoutSelf)
+		if (!ChildLayoutSelf)
 		{
-			ColumnIndex = ChildLayoutSelf->GetColumnIndex();
-			ColumnCount = ChildLayoutSelf->GetColumnCount();
-			RowIndex = ChildLayoutSelf->GetRowIndex();
-			RowCount = ChildLayoutSelf->GetRowCount();
-		}
-		else
-		{
-			NotLocatedWidgetList.AddTail(Child);
+			NotLocatedWidgetList.AddTail(ChildWidget);
 			continue;
 		}
+		
+		int ColumnIndex = ChildLayoutSelf->GetColumnIndex();
+		int ColumnCount = ChildLayoutSelf->GetColumnCount();
+		int RowIndex = ChildLayoutSelf->GetRowIndex();
+		int RowCount = ChildLayoutSelf->GetRowCount();
 		float ColumnRatio = 0, ColumnConstant = 0;
 		for (int i = ColumnIndex, Count = FMath::Min(i + ColumnCount, Columns.Num()); i < Count; i++)
 		{
@@ -173,7 +170,7 @@ void ULexLayoutContainerGrid::UpdateLayout()
 			auto& Column = Columns[i];
 			if (Column.Type == ELexLayoutGridSizeType::Ratio)
 			{
-				ColumnRatio += Column.FixedValue;
+				ColumnRatio += Column.RatioValue;
 			}
 			else
 			{
@@ -187,22 +184,22 @@ void ULexLayoutContainerGrid::UpdateLayout()
 			auto& Row = Rows[i];
 			if (Row.Type == ELexLayoutGridSizeType::Ratio)
 			{
-				RowRatio += Row.FixedValue;
+				RowRatio += Row.RatioValue;
 			}
 			else
 			{
 				RowConstant += Row.FixedValue;
 			}
 		}
-		float ColumnSize = ThisFreeWidth * ColumnRatio * InvColumnTotalRatio + ColumnConstant + (ColumnCount - 1) * Spacing.X;
-		float RowSize = ThisFreeHeight * RowRatio * InvRowTotalRatio + RowConstant + (RowCount - 1) * Spacing.Y;
+		float ColumnSize = (ColumnTotalRatio == 0 ? ThisFreeWidth : ThisFreeWidth * ColumnRatio * InvColumnTotalRatio) + ColumnConstant + (ColumnCount - 1) * Spacing.X;
+		float RowSize = (RowTotalRatio == 0 ? ThisFreeHeight : ThisFreeHeight * RowRatio * InvRowTotalRatio) + RowConstant + (RowCount - 1) * Spacing.Y;
 		auto AnchorOffset = GetOffset(FMath::Min(ColumnIndex, Columns.Num() - 1), FMath::Min(RowIndex, Rows.Num() - 1));
-		float AnchorOffsetX = ColumnSize * (Child->GetPivot().X) + AnchorOffset.X;
-		float AnchorOffsetY = -RowSize * (1.0f - Child->GetPivot().Y) + AnchorOffset.Y;
-		AnchorMin = Child->GetAnchorMin();
+		float AnchorOffsetX = ColumnSize * (ChildWidget->GetPivot().X) + AnchorOffset.X;
+		float AnchorOffsetY = -RowSize * (1.0f - ChildWidget->GetPivot().Y) + AnchorOffset.Y;
+		AnchorMin = ChildWidget->GetAnchorMin();
 		AnchorOffsetX -= AnchorMin.X * Widget->GetWidth();
 		AnchorOffsetY += (1 - AnchorMin.Y) * Widget->GetHeight();
-		Child->SetAnchoredPosition(FVector2D(AnchorOffsetX, AnchorOffsetY));
+		ChildWidget->SetAnchoredPosition(FVector2D(AnchorOffsetX, AnchorOffsetY));
 
 		if (ChildLayoutSelf)
 		{
@@ -220,6 +217,36 @@ void ULexLayoutContainerGrid::UpdateLayout()
 				{
 					auto ChildWidget = NotLocatedWidgetList.GetHead()->GetValue();
 					NotLocatedWidgetList.RemoveNode(NotLocatedWidgetList.GetHead());
+
+					float ColumnRatio = 0, ColumnConstant = 0;
+					auto& Column = Columns[ColumnIndex];
+					if (Column.Type == ELexLayoutGridSizeType::Ratio)
+					{
+						ColumnRatio = Column.RatioValue;
+					}
+					else
+					{
+						ColumnConstant = Column.FixedValue;
+					}
+					float RowRatio = 0, RowConstant = 0;
+					auto& Row = Rows[RowIndex];
+					if (Row.Type == ELexLayoutGridSizeType::Ratio)
+					{
+						RowRatio = Row.RatioValue;
+					}
+					else
+					{
+						RowConstant = Row.FixedValue;
+					}
+					float ColumnSize = (ColumnTotalRatio == 0 ? ThisFreeWidth : ThisFreeWidth * ColumnRatio * InvColumnTotalRatio) + ColumnConstant;
+					float RowSize = (RowTotalRatio == 0 ? ThisFreeHeight : ThisFreeHeight * RowRatio * InvRowTotalRatio) + RowConstant;
+					auto AnchorOffset = GetOffset(FMath::Min(ColumnIndex, Columns.Num() - 1), FMath::Min(RowIndex, Rows.Num() - 1));
+					float AnchorOffsetX = ColumnSize * (ChildWidget->GetPivot().X) + AnchorOffset.X;
+					float AnchorOffsetY = -RowSize * (1.0f - ChildWidget->GetPivot().Y) + AnchorOffset.Y;
+					auto AnchorMin = ChildWidget->GetAnchorMin();
+					AnchorOffsetX -= AnchorMin.X * Widget->GetWidth();
+					AnchorOffsetY += (1 - AnchorMin.Y) * Widget->GetHeight();
+					ChildWidget->SetAnchoredPosition(FVector2D(AnchorOffsetX, AnchorOffsetY));
 					
 					if (NotLocatedWidgetList.Num() <= 0)//break the loop if all widgets are located
 					{
@@ -251,8 +278,6 @@ FLexLayoutControlAnchorData ULexLayoutContainerGrid::GetLayoutControlAnchor(cons
 		{
 			Result.bCanControlHorizontalPosition = true;
 			Result.bCanControlVerticalPosition = true;
-			Result.bCanControlHorizontalSize = true;
-			Result.bCanControlVerticalSize = true;
 		}
 	}
 	return Result;

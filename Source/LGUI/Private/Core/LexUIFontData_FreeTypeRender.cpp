@@ -365,7 +365,7 @@ float ULexUIFontData_FreeTypeRender::GetKerning(const uint32& LeftCharCode, cons
 		UE_LOG(LGUI, Error, TEXT("[%s].%d FT_Get_Kerning error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
 		return 0;
 	}
-	return kerning.x >> 6;
+	return kerning.x / 64.0f;
 #else
 	return 0;
 #endif
@@ -380,7 +380,7 @@ float ULexUIFontData_FreeTypeRender::GetLineHeight(const float& FontSize)
 		UE_LOG(LGUI, Error, TEXT("[%s].%d FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
 		return FontSize;
 	}
-	return LineHeightType == ELexUIDynamicFontLineHeightType::FromFontFace ? (Face->size->metrics.height >> 6) : FontSize;
+	return LineHeightType == ELexUIDynamicFontLineHeightType::FromFontFace ? (Face->size->metrics.height / 64.0f) : FontSize;
 #else
 	return fontSize;
 #endif
@@ -395,7 +395,7 @@ float ULexUIFontData_FreeTypeRender::GetVerticalOffset(const float& FontSize)
 		UE_LOG(LGUI, Error, TEXT("[%s].%d FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
 		return 0;
 	}
-	return -((Face->size->metrics.ascender + Face->size->metrics.descender) >> 6) * 0.5f;
+	return -((Face->size->metrics.ascender + Face->size->metrics.descender) / 64.0f) * 0.5f;
 #else
 	return fontSize;
 #endif

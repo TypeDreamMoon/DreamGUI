@@ -168,7 +168,7 @@ protected:
 
 	struct FGlyphBitmap
 	{
-		int width, height, hOffset, vOffset, hAdvance;
+		float width, height, hOffset, vOffset, hAdvance;
 		/** memory will be passed to render thread and delete there too */
 		TArray<unsigned char> buffer;
 		/** single pixel data size in byte, eg: RGBA8-4 A8-1 */

@@ -10,7 +10,14 @@ void ULexLayoutSelfGrid::BeginPlay()
 
 FLexLayoutControlAnchorData ULexLayoutSelfGrid::GetLayoutControlAnchor(const ULexWidget* Widget) const
 {
-	return FLexLayoutControlAnchorData();
+	FLexLayoutControlAnchorData Result;
+	auto ThisWidget = GetWidget();
+	if (ThisWidget == Widget)//self
+	{
+		Result.bCanControlHorizontalSize = true;
+		Result.bCanControlVerticalSize = true;
+	}
+	return Result;
 }
 
 #if WITH_EDITOR

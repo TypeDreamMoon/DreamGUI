@@ -109,7 +109,7 @@ bool ULexUIFontData_DistanceField::RenderGlyph(const uint32& CharCode, const flo
 	OutResult.height = glyphHeight;
 	OutResult.hOffset = slot->bitmap_left - SDFRadius;
 	OutResult.vOffset = slot->bitmap_top + SDFRadius;
-	OutResult.hAdvance = slot->metrics.horiAdvance >> 6;
+	OutResult.hAdvance = slot->metrics.horiAdvance / 64.0f;
 	OutResult.buffer = MoveTemp(sdfResult);
 	OutResult.pixelSize = 1;
 	return true;

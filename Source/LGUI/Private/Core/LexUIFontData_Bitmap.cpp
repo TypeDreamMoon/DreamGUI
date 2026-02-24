@@ -404,7 +404,7 @@ bool ULexUIFontData_Bitmap::RenderGlyph(const uint32& charCode, const float& cha
 	OutResult.height = slot->bitmap.rows;
 	OutResult.hOffset = slot->bitmap_left;
 	OutResult.vOffset = slot->bitmap_top;
-	OutResult.hAdvance = slot->metrics.horiAdvance >> 6;
+	OutResult.hAdvance = slot->metrics.horiAdvance / 64.0f;
 	OutResult.pixelSize = 4;
 	//pixel color
 	int pixelCount = OutResult.width * OutResult.height;

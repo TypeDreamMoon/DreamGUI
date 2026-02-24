@@ -637,7 +637,7 @@ public:
 		uint32 IndicesDataLength = NumTriangles * 3 * sizeof(FLexUIMeshIndexBufferType);
 		// Lock index buffer
 		auto IndexBufferData = RHICmdList.LockBuffer(Section->IndexBuffer.IndexBufferRHI, 0, IndicesDataLength, RLM_WriteOnly);
-		FMemory::Memcpy(IndexBufferData, (void*)MeshIndexData, IndicesDataLength);
+		FMemory::Memcpy(IndexBufferData, MeshIndexData, IndicesDataLength);
 		RHICmdList.UnlockBuffer(Section->IndexBuffer.IndexBufferRHI);
 	}
 

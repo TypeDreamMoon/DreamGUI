@@ -37,10 +37,18 @@ struct LGUI_API FLexLayoutGridSize
 	float RatioValue = 1.0f;
 
 	FLexLayoutGridSize() {}
-	FLexLayoutGridSize(float InFixedValue)
+	FLexLayoutGridSize(ELexLayoutGridSizeType InType, float InValue)
 	{
-		this->FixedValue = InFixedValue;
-		this->Type = ELexLayoutGridSizeType::Fixed;
+		this->Type = InType;
+		switch (InType)
+		{
+			case ELexLayoutGridSizeType::Fixed:
+			this->FixedValue = InValue;
+			break;
+			case ELexLayoutGridSizeType::Ratio:
+			this->RatioValue = InValue;
+			break;
+		}
 	}
 	bool operator == (const FLexLayoutGridSize& Other)const
 	{
