@@ -667,7 +667,7 @@ protected:
 	mutable uint32 bNeedRecreateClip : 1 = true;
 	
 	uint32 bCacheWidgetActiveInHierarchy : 1 = true;
-	uint8 bCacheInteractableInHierarchy : 1 = true;
+	uint32 bCacheInteractableInHierarchy : 1 = true;
 	uint32 bCacheRaycastableInHierarchy : 1 = true;
 
 	/** Only for root widget, if dirty then we need to recalculate flatten hierarchy index */
