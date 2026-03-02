@@ -547,6 +547,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	void SetRequireNormalAndTangent(bool Value);
 
+	UFUNCTION(BlueprintCallable, Category = LGUI)
 	int GetDrawCallCount()const;
 
 	/** Override LexUI's screen space UI render's camera location. */
@@ -742,8 +743,8 @@ private:
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	TMap<TObjectPtr<UMaterialInterface>, FLexCanvasMaterialParameterCache> MapMatToParamCache;
 	TSharedPtr<TQueue<FLexCanvasPreparedDrawCallData>> PreparedDrawCallDataQueue;
+	uint64 NewestDrawCallFrameNumber = 0;
 	TSharedPtr<TQueue<FLexCanvasPendingDrawCallData>> PendingRebuildDrawCallQueue;
-	TQueue<FLexCanvasPendingDrawCallData> PendingUpdateDrawCallQueue;
 	FLexCanvasPendingDrawCallData CurrentDrawCallData;//current drawing draw-call
 	TUniquePtr<FLexCanvasDrawCallProcessingRunnable> DrawCallProcessingRunnable;
 	TUniquePtr<FLexCanvasAsyncFunctionRunnable> TransformVerticesAsyncFunctionRunnable;

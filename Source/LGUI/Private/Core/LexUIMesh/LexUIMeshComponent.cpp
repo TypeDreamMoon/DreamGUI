@@ -1266,6 +1266,7 @@ void ULexUIMeshComponent::SetDirectMeshRenderSectionMaterial(FLexUIRenderSection
 	}
 }
 
+#define LATE_FLUSH_RENDER_CMD 1
 DECLARE_CYCLE_STAT(TEXT("LexUIMesh UpdateMeshSection_GT"), STAT_UpdateMeshSectionGT, STATGROUP_LGUI);
 void ULexUIMeshComponent::UpdateMeshSectionRenderData(FLexUIRenderSection_Mesh* InMeshSection, bool InRequireNormalAndTangent)
 {
@@ -1284,7 +1285,25 @@ void ULexUIMeshComponent::UpdateMeshSectionRenderData(FLexUIRenderSection_Mesh* 
 		UpdateData.NumTriangles = NumIndices / 3;
 		FMemory::Memcpy(UpdateData.IndexBufferData.GetData(), InMeshSection->TriangleIndices.GetData(), NumIndices * sizeof(FLexUIMeshIndexBufferType));
 		UpdateData.RequireNormalAndTangent = InRequireNormalAndTangent;
+		//update data
+#if LATE_FLUSH_RENDER_CMD
 		PendingUpdateMeshSectionDataArray.Add(MoveTemp(UpdateData));
+#else
+		auto LexUIMeshSceneProxy = static_cast<FLexUIRenderSceneProxy*>(SceneProxy);
+		ENQUEUE_RENDER_COMMAND(FLexUIMeshUpdate)(
+			[LexUIMeshSceneProxy, UpdateData = MoveTemp(UpdateData)](FRHICommandListImmediate& RHICmdList)
+			{
+				LexUIMeshSceneProxy->UpdateSection_RenderThread(
+					RHICmdList
+					, UpdateData.VertexBufferData.GetData()
+					, UpdateData.NumVerts
+					, UpdateData.IndexBufferData.GetData()
+					, UpdateData.NumTriangles
+					, UpdateData.RequireNormalAndTangent
+					, UpdateData.Section
+				);
+			});
+#endif
 	}
 }
 
@@ -1345,7 +1364,15 @@ void ULexUIMeshComponent::SetRenderSectionRenderPriority(int32 InSectionIndex, i
 			UpdateRenderSectionPriority UpdateData;
 			UpdateData.SectionProxy = RenderSection->RenderProxy;
 			UpdateData.RenderPriority = InSortPriority;
+#if LATE_FLUSH_RENDER_CMD
 			PendingUpdateRenderSectionPriorityArray.Add(MoveTemp(UpdateData));
+#else
+			auto LexUIMeshSceneProxy = static_cast<FLexUIRenderSceneProxy*>(SceneProxy);
+			ENQUEUE_RENDER_COMMAND(FLexUIMeshSectionProxy_SetMeshSectionRenderPriority)(
+				[LexUIMeshSceneProxy, UpdateData = MoveTemp(UpdateData)](FRHICommandListImmediate& RHICmdList) {
+					LexUIMeshSceneProxy->SetRenderSectionRenderPriority_RenderThread(UpdateData.SectionProxy, UpdateData.RenderPriority);
+				});
+#endif
 		}
 	}
 }
@@ -1362,7 +1389,15 @@ void ULexUIMeshComponent::SetMeshSectionMaterial(int32 InSectionIndex, UMaterial
 			UpdateMeshSectionMaterialDataStruct UpdateData;
 			UpdateData.SectionProxy = RenderSection->RenderProxy;
 			UpdateData.Material = InMaterial;
+#if LATE_FLUSH_RENDER_CMD
 			PendingUpdateMeshSectionMaterialDataArray.Add(MoveTemp(UpdateData));
+#else
+			auto LexUIMeshSceneProxy = static_cast<FLexUIRenderSceneProxy*>(SceneProxy);
+			ENQUEUE_RENDER_COMMAND(FLexUIMeshSectionProxy_SetMeshSectionMaterial)(
+				[LexUIMeshSceneProxy, UpdateData = MoveTemp(UpdateData)](FRHICommandListImmediate& RHICmdList) {
+					LexUIMeshSceneProxy->SetMeshSectionMaterial_RenderThread(UpdateData.SectionProxy, UpdateData.Material);
+				});
+#endif
 		}
 	}
 }

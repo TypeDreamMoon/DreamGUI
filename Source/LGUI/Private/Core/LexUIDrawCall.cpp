@@ -5,13 +5,12 @@
 
 void FLexUIDrawCall::CopyBatchMeshGeometry()
 {
-	int VertOffset = 0;
-	constexpr int VertDataLength = sizeof(FLexUIMeshVertex);
-	for (int i = 0; i < BatchMeshVisualArray.Num(); i++)
+	int PrevVertCount = 0;
+	for (int geoIndex = 0; geoIndex < BatchMeshGeometryArray.Num(); geoIndex++)
 	{
-		int VerticesDataNum = BatchMeshVisualArray[i]->GetGeometry()->Vertices.Num() * VertDataLength;
-		FMemory::Memcpy((uint8*)CombinedBatchMeshGeometryVertices.GetData() + VertOffset, BatchMeshVisualArray[i]->GetGeometry()->Vertices.GetData(), VerticesDataNum);
-		VertOffset+=VerticesDataNum;
+		auto uiGeo = BatchMeshVisualArray[geoIndex]->GetGeometry();
+		FMemory::Memcpy(CombinedBatchMeshGeometryVertices.GetData() + PrevVertCount, uiGeo->Vertices.GetData(), uiGeo->Vertices.Num() * sizeof(FLexUIMeshVertex));
+		PrevVertCount += uiGeo->Vertices.Num();
 	}
 }
 

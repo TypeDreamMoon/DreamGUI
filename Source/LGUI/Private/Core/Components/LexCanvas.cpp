@@ -1264,6 +1264,7 @@ void ULexCanvas::UpdateCanvasDrawCall()
 	}
 
 	//update draw-call
+	bool bHasPendingUpdateData = false;
 	if (bCanTickUpdate)
 	{
 		bCanTickUpdate = false;
@@ -1322,6 +1323,7 @@ void ULexCanvas::UpdateCanvasDrawCall()
 		if (bShouldRebuildDrawCall)
 		{
 			bShouldRebuildDrawCall = false;
+			NewestDrawCallFrameNumber = GFrameCounter;
 
 			//rect size minimal at 100, so UIQuadTree can work properly (prevent too small rect)
 			//@todo: use a better size, maybe screen size (only for screen space UI)
@@ -1346,30 +1348,7 @@ void ULexCanvas::UpdateCanvasDrawCall()
 		}
 		else
 		{
-			//current draw-call data only need to update, then we compare the frame-number,
-			//if frame-number is greater than current rendering draw-call's frame-number, that means we can safely update it
-			auto FrameCounter = GFrameCounter;
-			if (FrameCounter > CurrentDrawCallData.FrameNumber)
-			{
-				if (PendingRebuildDrawCallQueue->IsEmpty())//if there is a rebuild pending, then no need update
-				{
-					SCOPE_CYCLE_COUNTER(STAT_CopyBatchMeshGeometry);
-					// FPendingDrawCallData PendingDrawCallData;
-					//PendingDrawCallData.FrameNumber = GFrameCounter;
-					for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
-					{
-						auto& DrawCallItem = CurrentDrawCallData.DrawCallArray[i];
-						if (DrawCallItem.Type == ELexUIDrawCallType::BatchMesh)
-						{
-							DrawCallItem.CopyBatchMeshGeometry();
-							UIMesh->UpdateMeshSection(i, &DrawCallItem);
-						}
-						//PendingDrawCallData.DrawCallArray.Add(DrawCallItem);
-					}
-					//PendingUpdateDrawCallQueue.Enqueue(MoveTemp(PendingDrawCallData));
-					UIMesh->UpdateLocalBounds();//update bounds for UE-Renderer
-				}
-			}
+			bHasPendingUpdateData = true;
 		}
 	}
 
@@ -1392,17 +1371,25 @@ void ULexCanvas::UpdateCanvasDrawCall()
 	}
 	else
 	{
-		// if (!PendingUpdateDrawCallQueue.IsEmpty())
-		// {
-		// 	FPendingDrawCallData PendingUpdateDrawCallData;
-		// 	while (!PendingUpdateDrawCallQueue.IsEmpty())
-		// 		PendingUpdateDrawCallQueue.Dequeue(PendingUpdateDrawCallData);
-		//
-		// 	for (auto& DrawCallItem : PendingUpdateDrawCallData.DrawCallArray)
-		// 	{
-		// 		
-		// 	}
-		// }
+		if (bHasPendingUpdateData && PreparedDrawCallDataQueue->IsEmpty())//make sure there is no pending data in async thread, if there is pending data we may update draw-call with wrong data
+		{
+			//current draw-call data only need to update, then we compare the frame-number,
+			//if frame-number is greater than current rendering draw-call's frame-number, that means we can safely update it
+			if (GFrameCounter > CurrentDrawCallData.FrameNumber && CurrentDrawCallData.FrameNumber == NewestDrawCallFrameNumber)
+			{
+				SCOPE_CYCLE_COUNTER(STAT_CopyBatchMeshGeometry);
+
+				for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
+				{
+					auto& DrawCallItem = CurrentDrawCallData.DrawCallArray[i];
+					if (DrawCallItem.Type == ELexUIDrawCallType::BatchMesh)
+					{
+						DrawCallItem.CopyBatchMeshGeometry();
+						UIMesh->UpdateMeshSection(i, &DrawCallItem);
+					}
+				}
+			}
+		}
 	}
 	UIMesh->FlushRenderCommand();
 
