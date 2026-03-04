@@ -197,7 +197,7 @@ void ULexVisualBatchMesh::UpdateGeometry()
 	//when use pixel-perfect, the pixel-perfect calculation will take consider transform matrix, so we need to recalculate geometry if pixel-perfect & bTransformChanged
 	bool pixelPerfect = this->GetShouldAffectByPixelSnapping() && Widget->GetPixelSnappingInHierarchy();
 	bool pixelPerfectAffectTransform = pixelPerfect && bTransformChanged;
-	if (bTriangleChanged || bLocalVertexPositionChanged || pixelPerfectAffectTransform || bColorChanged || bUVChanged)
+	if (GetAnythingDirty() || pixelPerfectAffectTransform)
 	{
 		SCOPE_CYCLE_COUNTER(STAT_LexUpdateGeometry);
 		UIGeometry->Clear();
@@ -298,6 +298,12 @@ bool ULexVisualBatchMesh::LineTraceUI(FHitResult& OutHit, const FVector& Start, 
 		break;
 	}
 }
+
+bool ULexVisualBatchMesh::GetAnythingDirty()const
+{
+	return bTriangleChanged || bLocalVertexPositionChanged || bColorChanged || bUVChanged;
+}
+
 bool ULexVisualBatchMesh::LineTraceVisiblePixel(float InAlphaThreshold, FHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
 	auto Widget = this->GetWidget();

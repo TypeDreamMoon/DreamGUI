@@ -283,7 +283,9 @@ protected:
 	//virtual void OnAnchorChange(bool InPivotChange, bool InWidthChange, bool InHeightChange, bool InDiscardCache = true)override;
 	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged)override;
 	virtual void MarkAllDirty()override;
+	virtual bool GetAnythingDirty() const override;
 
+	void MarkNeedUpdateBlockData();
 	void OnDataTextureChanged(class UTexture* Texture);
 	FDelegateHandle OnDataTextureChangedDelegateHandle;
 	uint8 bNeedUpdateBlockData : 1;

@@ -159,6 +159,8 @@ protected:
 	virtual void OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, bool InVertexPositionChanged, bool InVertexUVChanged, bool InVertexColorChanged);
 	virtual uint8 GetFontMark_WidgetPropertyDataForMaterial(){return 0;}
 	virtual void OnRenderCanvasChanged(ULexCanvas* InOldCanvas, ULexCanvas* InNewCanvas) override;
+	/** return true means any data dirty, then update geometry (go OnUpdateGeometry), otherwise return false. */
+	virtual bool GetAnythingDirty()const;
 
 	virtual void UpdateGeometry()override final;
 	virtual void GetGeometryBoundsInLocalSpace(FVector2D& OutMinPoint, FVector2D& OutMaxPoint)const override;

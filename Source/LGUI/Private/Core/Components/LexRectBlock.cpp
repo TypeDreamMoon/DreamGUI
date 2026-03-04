@@ -451,6 +451,17 @@ void ULexRectBlock::MarkAllDirty()
 	bNeedUpdateBlockData = true;
 }
 
+bool ULexRectBlock::GetAnythingDirty() const
+{
+	return Super::GetAnythingDirty() || bNeedUpdateBlockData;
+}
+
+void ULexRectBlock::MarkNeedUpdateBlockData()
+{
+	bNeedUpdateBlockData = true;
+	GetWidget()->MarkCanvasUpdate(false);
+}
+
 bool ULexRectBlock::LineTraceUI_CheckCornerRadius(const FVector2D& InLocalHitPoint)const
 {
 	auto Widget = GetWidget();
@@ -609,8 +620,7 @@ void ULexRectBlock::ApplyAtlasTextureChange_Implementation()
 void ULexRectBlock::SetCornerRadius(const FVector4& value)
 {
 	this->CornerRadius = FVector4f(value);
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetEnableBody(bool value)
 {
@@ -621,8 +631,7 @@ void ULexRectBlock::SetEnableBody(bool value)
 void ULexRectBlock::SetBodyColor(const FColor& value)
 {
 	this->BodyColor = value;
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetBodyTexture(UTexture* value)
 {
@@ -701,39 +710,33 @@ void ULexRectBlock::SetSoftEdge(bool value)
 void ULexRectBlock::SetBodyTextureScaleMode(ELexRectBlockTextureScaleMode value)
 {
 	this->BodyTextureScaleMode = value;
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 
 void ULexRectBlock::SetEnableBodyGradient(bool value)
 {
 	this->bEnableBodyGradient = value;
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetBodyGradientColor(const FColor& value)
 {
 	this->BodyGradientColor = value;
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetBodyGradientCenter(const FVector2D& value)
 {
 	this->BodyGradientCenter = FVector2f(value);
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetBodyGradientRadius(const FVector2D& value)
 {
 	this->BodyGradientRadius = FVector2f(value);
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetBodyGradientRotation(float value)
 {
 	this->BodyGradientRotation = value;
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 
 void ULexRectBlock::SetEnableBorder(bool value)
@@ -745,69 +748,58 @@ void ULexRectBlock::SetEnableBorder(bool value)
 void ULexRectBlock::SetBorderWidth(float value)
 {
 	this->BorderWidth = value;
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetBorderColor(const FColor& value)
 {
 	this->BorderColor = value;
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetEnableBorderGradient(bool value)
 {
 	this->bEnableBorderGradient = value;
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetBorderGradientColor(const FColor& value)
 {
 	this->BorderGradientColor = value;
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetBorderGradientCenter(const FVector2D& value)
 {
 	this->BorderGradientCenter = FVector2f(value);
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetBorderGradientRadius(const FVector2D& value)
 {
 	this->BorderGradientRadius = FVector2f(value);
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetBorderGradientRotation(float value)
 {
 	this->BorderGradientRotation = value;
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 
 void ULexRectBlock::SetEnableInnerShadow(bool value)
 {
 	this->bEnableInnerShadow = value;
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetInnerShadowColor(const FColor& value)
 {
 	this->InnerShadowColor = value;
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetInnerShadowSize(float value)
 {
 	this->InnerShadowSize = value;
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetInnerShadowBlur(float value)
 {
 	this->InnerShadowBlur = value;
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetInnerShadowAngle(float value)
 {
@@ -825,14 +817,12 @@ void ULexRectBlock::SetInnerShadowDistance(float value)
 void ULexRectBlock::SetEnableRadialFill(bool value)
 {
 	this->bEnableRadialFill = value;
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetRadialFillCenter(const FVector2D& value)
 {
 	this->RadialFillCenter = FVector2f(value);
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetRadialFillRotation(float value)
 {
@@ -855,20 +845,17 @@ void ULexRectBlock::SetEnableOuterShadow(bool value)
 void ULexRectBlock::SetOuterShadowColor(const FColor& value)
 {
 	this->OuterShadowColor = value;
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetOuterShadowSize(float value)
 {
 	this->OuterShadowSize = value;
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetOuterShadowBlur(float value)
 {
 	this->OuterShadowBlur = value;
-	bNeedUpdateBlockData = true;
-	GetWidget()->MarkCanvasUpdate(false);
+	MarkNeedUpdateBlockData();
 }
 void ULexRectBlock::SetOuterShadowAngle(float value)
 {
@@ -887,8 +874,7 @@ void ULexRectBlock::SetOuterShadowDistance(float value)
 void ULexRectBlock::Set##Property##UnitMode(ELexRectBlockUnitMode value)\
 {\
 	this->Property##UnitMode = value;\
-	bNeedUpdateBlockData = true;\
-	GetWidget()->MarkCanvasUpdate(false);\
+	MarkNeedUpdateBlockData();\
 }
 
 FunctionSetPropertyUnitMode(CornerRadius);
