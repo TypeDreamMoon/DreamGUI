@@ -434,7 +434,7 @@ FLexUICharData ULexUIFontData_FreeTypeRender::GetCharData(const uint32& CharCode
 
 		FLexUICharData uiCharData;
 	PACK_AND_INSERT:
-		if (!PackRectAndInsertChar(MoveTemp(glyphBitmap), BinPack, Texture, uiCharData))
+		if (!PackRectAndInsertChar(glyphBitmap, BinPack, Texture, uiCharData))
 		{
 			if (FreeRectCells.Num() > 0)//use free cells
 			{
@@ -466,7 +466,7 @@ FLexUICharData ULexUIFontData_FreeTypeRender::GetCharData(const uint32& CharCode
 	return Result;
 }
 
-bool ULexUIFontData_FreeTypeRender::PackRectAndInsertChar(FGlyphBitmap InGlyphBitmap, rbp::MaxRectsBinPack& InOutBinPack, UTexture2DArray* InTexture, FLexUICharData& OutResult)
+bool ULexUIFontData_FreeTypeRender::PackRectAndInsertChar(const FGlyphBitmap& InGlyphBitmap, rbp::MaxRectsBinPack& InOutBinPack, UTexture2DArray* InTexture, FLexUICharData& OutResult)
 {
 	if (InGlyphBitmap.width <= 0 || InGlyphBitmap.height <= 0)//glyph no need to display, could be space
 	{
@@ -501,7 +501,7 @@ bool ULexUIFontData_FreeTypeRender::PackRectAndInsertChar(FGlyphBitmap InGlyphBi
 		packedRect.height -= SPACE_BETWEEN_GLYPH_RECTx2;
 
 		auto UpdateRegion = FUpdateTextureRegion2D(0, 0, 0, 0, InGlyphBitmap.width, InGlyphBitmap.height);
-		UpdateFontTextureRegion(packedRect.x, packedRect.y, CurrentTextureSlice, MoveTemp(UpdateRegion), packedRect.width * InGlyphBitmap.pixelSize, InGlyphBitmap.pixelSize, MoveTemp(InGlyphBitmap.buffer));
+		UpdateFontTextureRegion(packedRect.x, packedRect.y, CurrentTextureSlice, MoveTemp(UpdateRegion), packedRect.width * InGlyphBitmap.pixelSize, InGlyphBitmap.pixelSize, MoveTemp(const_cast<FGlyphBitmap&>(InGlyphBitmap).buffer));
 
 		OutResult.Width = InGlyphBitmap.width + SPACE_NEED_EXPENDx2;
 		OutResult.Height = InGlyphBitmap.height + SPACE_NEED_EXPENDx2;

@@ -178,7 +178,7 @@ protected:
 	 * Insert rect into area, assign pixel if succeed
 	 * return: if glyph can fit in rect area return true, else false
 	 */
-	bool PackRectAndInsertChar(FGlyphBitmap InGlyphBitmap, rbp::MaxRectsBinPack& InOutBinPack, UTexture2DArray* InTexture, FLexUICharData& OutResult);
+	bool PackRectAndInsertChar(const FGlyphBitmap& InGlyphBitmap, rbp::MaxRectsBinPack& InOutBinPack, UTexture2DArray* InTexture, FLexUICharData& OutResult);
 	void UpdateFontTextureRegion(uint32 PosX, uint32 PosY, uint32 Slice, FUpdateTextureRegion2D Region, uint32 SrcPitch, uint32 SrcBpp, TArray<uint8> SrcData);
 	void RenewFontTexture();
 
