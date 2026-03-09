@@ -577,31 +577,6 @@ void ULexPointerInputModule::ProcessInputForNavigation(ULexPointerEventData* Eve
 		EventSystem->RaiseHitEvent(bResultHitSomething, HitResult, TempHitComp);
 	}
 }
-void ULexPointerInputModule::InputNavigation(ELexUINavigationDirection direction, bool pressOrRelease, int pointerID)
-{
-	auto EventData = EventSystem->GetPointerEventData(pointerID, true);
-	if (pressOrRelease)
-	{
-		EventSystem->SetPointerInputType(EventData, ELexUIPointerInputType::Navigation);
-		EventData->NavigateDirection = direction;
-	}
-	else
-	{
-		EventData->NavigateDirection = ELexUINavigationDirection::None;
-	}
-	EventData->NavigateTickTime = 0;
-}
-void ULexPointerInputModule::InputTriggerForNavigation(bool inTriggerPress, int pointerID)
-{
-	auto EventData = EventSystem->GetPointerEventData(pointerID, true);
-	if (inTriggerPress)
-	{
-		EventSystem->SetPointerInputType(EventData, ELexUIPointerInputType::Navigation);
-	}
-	EventData->NavigateTickTime = 0;
-	EventData->bNowIsTriggerPressed = inTriggerPress;
-}
-
 void ULexPointerInputModule::ClearEventByID(int pointerID)
 {
 	auto EventData = EventSystem->GetPointerEventData(pointerID, false);

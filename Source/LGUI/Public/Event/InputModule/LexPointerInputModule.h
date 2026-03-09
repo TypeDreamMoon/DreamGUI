@@ -35,11 +35,4 @@ protected:
 	static void DeselectIfSelectionChanged(ULexEventSystem* eventSystem, USceneComponent* currentPressed, ULexBaseEventData* EventData);
 public:
 	virtual void ClearEvent()override;
-
-	/** input for gamepad or keyboard navigation */
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void InputNavigation(ELexUINavigationDirection direction, bool pressOrRelease, int pointerID);
-	/** input for gamepad or keyboard press and release */
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void InputTriggerForNavigation(bool triggerPress, int pointerID);
 };

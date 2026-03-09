@@ -19,34 +19,44 @@ public:
 	virtual void ProcessInput()override;
 	/** input for mouse press and release */
 	UFUNCTION(BlueprintCallable, Category = LGUI, meta = (AdvancedDisplay = "inMouseButtonType"))
-		void InputTrigger(bool inTriggerPress, ELexUIMouseButtonType inMouseButtonType = ELexUIMouseButtonType::Left);
+		void InputTrigger(const FVector& InMousePosition, bool InTriggerPress, ELexUIMouseButtonType InMouseButtonType = ELexUIMouseButtonType::Left);
 	/**
 	 * input for scroll
-	 * @param	inAxisValue		Use a 2d vector for scroll value. For mouse scroll just fill X&Y with mouse scroll value; For touchpad input use X for horizontal and Y for vertical.
+	 * @param	InAxisValue		Use a 2d vector for scroll value. For mouse scroll just fill X&Y with mouse scroll value; For touchpad input use X for horizontal and Y for vertical.
 	 */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void InputScroll(const FVector2D& inAxisValue);
+		void InputScroll(const FVector2D& InAxisValue);
 	/**
 	 * see "bOverrideMousePosition" property
 	 */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void InputOverrideMousePosition(const FVector2D& inMousePosition);
-	/**
-	 * should we use custom mouse position?
-	 * if set to true, then you should call InputOverrideMousePosition to set mouse position;
-	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = LGUI)
-		bool bOverrideMousePosition = false;
+		void InputMouseMove(const FVector& InMousePosition);
+	/** input for touch press and release */
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void InputTouchTrigger(bool InTouchPress, int InTouchID, const FVector& InTouchPointPosition);
+	/** input for touch point moved */
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void InputTouchMoved(int InTouchID, const FVector& InTouchPointPosition);
+	/** get current mouse position, return (0,0) if mouse position is not valid */
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void GetMousePosition(FVector2D& OutMousePos)const;
+
+	/** input for gamepad or keyboard navigation */
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void InputNavigation(ELexUINavigationDirection InDirection, bool InPressOrRelease, int InPointerID);
+	/** input for gamepad or keyboard press and release */
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	void InputTriggerForNavigation(bool InTriggerPress, int InPointerID);
 protected:
-	FVector2D overrideMousePosition;
+	void CommonInputTrigger(const FVector& InPointerPosition, bool InTriggerPress, int InPointerID, ELexUIMouseButtonType InMouseButtonType = ELexUIMouseButtonType::Left);
 	struct StandaloneInputData
 	{
-		bool triggerPress;
-		float pressTime;
-		float releaseTime;
-		ELexUIMouseButtonType mouseButtonType;
-		FVector2D mousePosition;
+		bool bTriggerPress;
+		float PressTime;
+		float ReleaseTime;
+		int PointerID;
+		ELexUIMouseButtonType MouseButtonType;
+		FVector PointerPosition;
 	};
-	TArray<StandaloneInputData> standaloneInputDataArray;//collect input data into array in input event, and process these input data in ProcessInput. This can solve the condition: multiple mouse button input in one frame
-	FORCEINLINE bool GetMousePosition(FVector2D& OutMousePos);
+	TArray<StandaloneInputData> StandaloneInputDataArray;//collect input data into array in input event, and process these input data in ProcessInput. This can solve the condition: multiple mouse button input in one frame
 };
