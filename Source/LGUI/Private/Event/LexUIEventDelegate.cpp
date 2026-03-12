@@ -679,8 +679,8 @@ void FLexUIEventDelegate::FireEvent()const
 }
 void FLexUIEventDelegate::LogParameterError(ELexUIEventDelegateParameterType WrongParamType)const
 {
-	auto enumObject = FindObject<UEnum>(nullptr, TEXT("/Script/LGUI.ELGUIEventDelegateParameterType"), true);
-	auto errMsg = FText::Format(LOCTEXT("ParameterTypeMismatch", "LGUIEventDelegate parameter type must be the same as your declaration. support parameter type: {0}, execute parameter type: {1}")
+	auto enumObject = FindObject<UEnum>(nullptr, TEXT("/Script/LGUI.ELexUIEventDelegateParameterType"), EFindObjectFlags::ExactClass);
+	auto errMsg = FText::Format(LOCTEXT("ParameterTypeMismatch", "LexUIEventDelegate parameter type must be the same as your declaration. support parameter type: {0}, execute parameter type: {1}")
 		, enumObject->GetDisplayNameTextByValue((int64)SupportParameterType)
 		, enumObject->GetDisplayNameTextByValue((int64)WrongParamType)
 	);

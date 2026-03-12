@@ -1,7 +1,7 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "LexUIPrefabViewportClickHandlers.h"
-#include "LevelViewportClickHandlers.h"
+#include "ViewportSelectionUtilities.h"
 #include "UObject/Class.h"
 #include "InputCoreTypes.h"
 #include "GameFramework/Actor.h"
@@ -15,7 +15,6 @@
 #include "Engine/PointLight.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/TargetPoint.h"
-#include "AssetRegistry/AssetData.h"
 #include "Engine/Selection.h"
 #include "Editor.h"
 #include "EditorModeManager.h"
@@ -27,7 +26,6 @@
 #include "Logging/MessageLog.h"
 #include "ActorEditorUtils.h"
 #include "LightMap.h"
-#include "Subsystems/BrushEditingSubsystem.h"
 #include "Elements/Framework/TypedElementSelectionSet.h"
 #include "AssetSelection.h"
 #include "LexUIPrefabEditorViewportClient.h"

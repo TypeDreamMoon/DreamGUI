@@ -2,19 +2,13 @@
 
 #include "LexUIPrefabEditorViewportClient.h"
 #include "LexUIPrefabEditorViewport.h"
-#include "SceneInterface.h"
 #include "Components/DirectionalLightComponent.h"
-#include "Components/StaticMeshComponent.h"
-#include "Materials/Material.h"
-#include "Engine/StaticMesh.h"
 #include "Animation/AnimationAsset.h"
 #include "GameFramework/Actor.h"
 #include "Math/Vector.h"
-#include "Viewports.h"
 #include "AssetEditorModeManager.h"
 #include "EngineUtils.h"
 #include "Engine/Selection.h"
-#include "Misc/CoreDelegates.h"
 #include "SceneView.h"
 #include "Editor/UnrealEdEngine.h"
 #include "Kismet2/KismetEditorUtilities.h"
@@ -23,13 +17,12 @@
 #include "MouseDeltaTracker.h"
 #include "Misc/ITransaction.h"
 #include "UnrealEdGlobals.h"
-#include "Editor/EditorPerProjectUserSettings.h"
 #include "UnrealWidget.h"
 #include "Elements/Framework/TypedElementRegistry.h"
 #include "Elements/Framework/EngineElementsLibrary.h"
 #include "Elements/Framework/TypedElementViewportInteraction.h"
 #include "InputState.h"
-#include "LevelViewportClickHandlers.h"
+#include "ViewportSelectionUtilities.h"
 #include "HModel.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "LexUIPrefabViewportClickHandlers.h"
@@ -992,14 +985,6 @@ FMatrix FLexUIPrefabEditorViewportClient::GetWidgetCoordSystem() const
 	}
 
 	return FEditorViewportClient::GetWidgetCoordSystem();
-}
-int32 FLexUIPrefabEditorViewportClient::GetCameraSpeedSetting() const
-{
-	return GetDefault<UEditorPerProjectUserSettings>()->SCSViewportCameraSpeed;
-}
-void FLexUIPrefabEditorViewportClient::SetCameraSpeedSetting(int32 SpeedSetting)
-{
-	GetMutableDefault<UEditorPerProjectUserSettings>()->SCSViewportCameraSpeed = SpeedSetting;
 }
 
 /**

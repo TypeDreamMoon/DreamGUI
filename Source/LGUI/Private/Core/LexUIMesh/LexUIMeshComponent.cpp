@@ -3,7 +3,6 @@
 #include "Core/LexUIMesh/LexUIMeshComponent.h"
 #include "DynamicMeshBuilder.h"
 #include "PhysicsEngine/BodySetup.h"
-#include "Containers/ResourceArray.h"
 #include "StaticMeshResources.h"
 #include "Materials/Material.h"
 #include "Core/LexUIRender/ILexUIRendererPrimitive.h"
@@ -19,40 +18,20 @@
 #include "Core/Components/LexVisualDirectMesh.h"
 #include "Core/Components/LexVisualPostProcess.h"
 #include "Core/Components/LexWidget.h"
+#include "RHIResourceUtils.h"
 
 
 #define LOCTEXT_NAMESPACE "LexUIMeshComponent"
 
-class FLexUIMeshVertexResourceArray : public FResourceArrayInterface
-{
-public:
-	FLexUIMeshVertexResourceArray(void* InData, uint32 InSize)
-		:Data(InData)
-		,Size(InSize)
-	{
-
-	}
-	virtual const void* GetResourceData() const override { return Data; }
-	virtual uint32 GetResourceDataSize() const override { return Size; }
-	virtual void Discard() override { }
-	virtual bool IsStatic() const override { return false; }
-	virtual bool GetAllowCPUAccess() const override { return false; }
-	virtual void SetAllowCPUAccess(bool bInNeedsCPUAccess) override { }
-private: 
-	void* Data;
-	uint32 Size;
-};
 class FLexUIVertexBuffer : public FVertexBuffer
 {
 public:
 	TArray<FLexUIMeshVertex> Vertices;
 	virtual void InitRHI(FRHICommandListBase& RHICmdList)override
 	{
-		const uint32 SizeInBytes = Vertices.Num() * sizeof(FLexUIMeshVertex);
-
-		FLexUIMeshVertexResourceArray ResourceArray(Vertices.GetData(), SizeInBytes);
-		FRHIResourceCreateInfo CreateInfo(TEXT("LexUIVertexBuffer"), &ResourceArray);
-		VertexBufferRHI = RHICmdList.CreateVertexBuffer(SizeInBytes, BUF_Dynamic, CreateInfo);
+		VertexBufferRHI = UE::RHIResourceUtils::CreateVertexBufferFromArray(
+			RHICmdList, TEXT("LexUIVertexBuffer"), EBufferUsageFlags::Dynamic, MakeConstArrayView(Vertices)
+			);
 	}
 };
 
@@ -63,7 +42,7 @@ enum class ELexUIRenderSectionProxyType :uint8
 };
 struct FLexUIRenderSectionProxy
 {
-	virtual ~FLexUIRenderSectionProxy()
+	virtual ~FLexUIRenderSectionProxy() 
 	{
 
 	}
@@ -234,7 +213,7 @@ public:
 	}
 	FLexUIRenderSceneProxy(ULexUIMeshComponent* InComponent, ULexCanvas* InCanvasPtr, FLexUIRenderSceneProxy* InParentSceneProxy)
 		: FPrimitiveSceneProxy(InComponent)
-		, MaterialRelevance(InComponent->GetMaterialRelevance(GetScene().GetFeatureLevel()))
+		, MaterialRelevance(InComponent->GetMaterialRelevance(GetScene().GetShaderPlatform()))
 		, RenderPriority(InComponent->TranslucencySortPriority)
 	{
 		SCOPE_CYCLE_COUNTER(STAT_CreateRenderSection);

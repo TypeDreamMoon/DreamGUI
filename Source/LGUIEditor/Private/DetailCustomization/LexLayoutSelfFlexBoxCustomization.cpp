@@ -40,8 +40,8 @@ void FLexLayoutSelfFlexBoxCustomization::CustomizeDetails(IDetailLayoutBuilder& 
 		return;
 	}
 
-	DetailBuilder.GetDetailsView()->RegisterInstancedCustomPropertyTypeLayout(FLexLayoutSize::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexLayoutSizeCustomization::MakeInstance));
-	DetailBuilder.GetDetailsView()->RegisterInstancedCustomPropertyTypeLayout(FLexLayoutMinMaxSize::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexLayoutMinMaxSizeCustomization::MakeInstance));
+	DetailBuilder.GetDetailsViewSharedPtr()->RegisterInstancedCustomPropertyTypeLayout(FLexLayoutSize::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexLayoutSizeCustomization::MakeInstance));
+	DetailBuilder.GetDetailsViewSharedPtr()->RegisterInstancedCustomPropertyTypeLayout(FLexLayoutMinMaxSize::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexLayoutMinMaxSizeCustomization::MakeInstance));
 }
 
 #undef LOCTEXT_NAMESPACE

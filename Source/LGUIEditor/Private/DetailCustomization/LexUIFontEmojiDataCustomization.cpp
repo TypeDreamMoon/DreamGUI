@@ -30,6 +30,6 @@ void FLexUIFontEmojiDataCustomization::CustomizeDetails(IDetailLayoutBuilder& De
 		return;
 	}
 	
-	DetailBuilder.GetDetailsView()->RegisterInstancedCustomPropertyTypeLayout(FLexUIFontEmojiKey::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexUIFontEmojiKeyCustomization::MakeInstance));
+	DetailBuilder.GetDetailsViewSharedPtr()->RegisterInstancedCustomPropertyTypeLayout(FLexUIFontEmojiKey::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexUIFontEmojiKeyCustomization::MakeInstance));
 }
 #undef LOCTEXT_NAMESPACE

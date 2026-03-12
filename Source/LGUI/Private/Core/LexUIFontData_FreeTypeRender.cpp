@@ -111,6 +111,8 @@ void ULexUIFontData_FreeTypeRender::InitFreeType()
 
 	if (FontType == ELexUIDynamicFontDataType::EngineFont)
 	{
+#if WITH_EDITOR
+		//editor use data from EngineFont
 		if (IsValid(EngineFont))
 		{
 			if (EngineFont->GetFontFaceData()->HasData())
@@ -135,6 +137,10 @@ void ULexUIFontData_FreeTypeRender::InitFreeType()
 			UE_LOG(LGUI, Error, TEXT("[%s].%d Font:%s, trying to load Unreal's font face, but not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetName()));
 			return;
 		}
+#else
+		//from UE5.6, runtime use cached data, because UnrealFont's runtime data is not usable for freetype
+		NewFontFace(FontBinaryArray);
+#endif
 	}
 	else
 	{
@@ -665,6 +671,22 @@ void ULexUIFontData_FreeTypeRender::PostEditChangeProperty(FPropertyChangedEvent
 			}
 			ReloadFont();
 		}
+	}
+}
+
+void ULexUIFontData_FreeTypeRender::BeginCacheForCookedPlatformData(const ITargetPlatform* TargetPlatform)
+{
+	if (FontType == ELexUIDynamicFontDataType::EngineFont)
+	{
+		FontBinaryArray = EngineFont->GetFontFaceData()->GetData();
+	}
+}
+
+void ULexUIFontData_FreeTypeRender::ClearCachedCookedPlatformData(const ITargetPlatform* TargetPlatform)
+{
+	if (FontType == ELexUIDynamicFontDataType::EngineFont)
+	{
+		FontBinaryArray.Empty();
 	}
 }
 #endif

@@ -39,7 +39,7 @@ void FLexLayoutContainerFlexBoxCustomization::CustomizeDetails(IDetailLayoutBuil
 		return;
 	}
 
-	DetailBuilder.GetDetailsView()->RegisterInstancedCustomPropertyTypeLayout(TEXT("ELexLayoutFlexBoxDirectionType"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexLayoutFlexBoxDirectionCustomization::MakeInstance));
+	DetailBuilder.GetDetailsViewSharedPtr()->RegisterInstancedCustomPropertyTypeLayout(TEXT("ELexLayoutFlexBoxDirectionType"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexLayoutFlexBoxDirectionCustomization::MakeInstance));
 }
 
 #undef LOCTEXT_NAMESPACE

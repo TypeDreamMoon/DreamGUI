@@ -5,11 +5,8 @@
 #include "Core/LexUIRender/LexUIVertex.h"
 #include "Core/LexUIRender/LexUIPostProcessShaders.h"
 #include "Core/LexUIRender/LexUIResolveShaders.h"
-#include "Modules/ModuleManager.h"
 #include "LGUI.h"
 #include "SceneView.h"
-#include "Widgets/SWindow.h"
-#include "StaticMeshVertexData.h"
 #include "PipelineStateCache.h"
 #include "SceneRendering.h"
 #include "Core/LexUIRender/ILexUIRendererPrimitive.h"
@@ -19,12 +16,14 @@
 #include "TextureResource.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Core/LexVisualPostProcessRenderProxy.h"
+#include "SceneTextures.h"
 #if WITH_EDITOR
 #include "Engine/Engine.h"
 #include "Editor/EditorEngine.h"
 #endif
 #include "Core/LexUISettings.h"
 #include "ClearQuad.h"
+#include "RHIResourceUtils.h"
 #include "Core/LexUIMeshVertex.h"
 #if WITH_EDITOR
 #include "Core/LexUIRender/LexUIHelperLineShaders.h"
@@ -95,10 +94,6 @@ void FLexUIRenderer::BeginRenderViewFamily(FSceneViewFamily& InViewFamily)
 {
 
 }
-void FLexUIRenderer::PostRenderView_RenderThread(FRHICommandListImmediate& RHICmdList, FSceneView& InView)
-{
-
-}
 void FLexUIRenderer::PostRenderView_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView)
 {
 	RenderLexUI_RenderThread(GraphBuilder, InView);
@@ -131,11 +126,11 @@ bool FLexUIRenderer::IsActiveThisFrame_Internal(const FSceneViewExtensionContext
 	if (World.Get() != Context.GetWorld())return false;//only render self world
 	return true;
 }
-void FLexUIRenderer::PreRenderView_RenderThread(FRHICommandListImmediate& RHICmdList, FSceneView& InView)
+void FLexUIRenderer::PreRenderView_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView)
 {
 	
 }
-void FLexUIRenderer::PostRenderBasePass_RenderThread(FRHICommandListImmediate& RHICmdList, FSceneView& InView)
+void FLexUIRenderer::PostRenderBasePassDeferred_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, const FRenderTargetBindingSlots& RenderTargets, TRDGUniformBufferRef<FSceneTextureUniformParameters> SceneTextures)
 {
 
 }
@@ -295,13 +290,10 @@ void FLexUIRenderer::CopyRenderTargetOnMeshRegion(
 
 				PixelShader->SetParameters(RHICmdList, MVP, bIsRenderTarget, Src, SrcTextureScaleOffset);
 			}
-
-			uint32 VertexBufferSize = 4 * sizeof(FLexUIPostProcessCopyMeshRegionVertex);
-			FRHIResourceCreateInfo CreateInfo(TEXT("CopyRenderTargetOnMeshRegion"));
-			FBufferRHIRef VertexBufferRHI = RHICmdList.CreateVertexBuffer(VertexBufferSize, BUF_Volatile, CreateInfo);
-			void* VoidPtr = RHICmdList.LockBuffer(VertexBufferRHI, 0, VertexBufferSize, RLM_WriteOnly);
-			FMemory::Memcpy(VoidPtr, RegionVertexData.GetData(), VertexBufferSize);
-			RHICmdList.UnlockBuffer(VertexBufferRHI);
+			
+			FBufferRHIRef VertexBufferRHI = UE::RHIResourceUtils::CreateVertexBufferFromArray(
+			RHICmdList, TEXT("CopyRenderTargetOnMeshRegion"), EBufferUsageFlags::Volatile, MakeConstArrayView(RegionVertexData)
+			);
 
 			RHICmdList.SetStreamSource(0, VertexBufferRHI, 0);
 			RHICmdList.DrawIndexedPrimitive(GLexUIFullScreenQuadIndexBuffer.IndexBufferRHI, 0, 0, 4, 0, 2, 1);
@@ -619,7 +611,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 				{
 					auto WorldBounds = WorldRenderParameter.Primitive->LexUI_GetWorldBounds();
 					if (!bFrustumCulling 
-						|| (bFrustumCulling && InView.CullingFrustum.IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))//simple View Frustum Culling
+						|| (bFrustumCulling && InView.GetCullingFrustum().IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))//simple View Frustum Culling
 						)
 					{
 						FWorldSpaceRenderParameterSequence Item;
@@ -951,7 +943,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 			{
 				auto WorldBounds = Primitive->LexUI_GetWorldBounds();
 				if (!bFrustumCulling 
-					|| (bFrustumCulling && RenderView->CullingFrustum.IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))//simple View Frustum Culling
+					|| (bFrustumCulling && RenderView->GetCullingFrustum().IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))//simple View Frustum Culling
 					)
 				{
 					Primitive->LexUI_CollectRenderData(RenderSequenceArray, CurrentWorldTime);
@@ -1138,11 +1130,12 @@ public:
 	{
 		const int32 NumDummyVerts = 3;
 		const uint32 Size = sizeof(FVector4f) * NumDummyVerts;
-		FRHIResourceCreateInfo CreateInfo(TEXT("FLexUIDummySceneColorResolveBuffer"));
-		VertexBufferRHI = RHICmdList.CreateBuffer(Size, BUF_Static | BUF_VertexBuffer, 0, ERHIAccess::VertexOrIndexBuffer, CreateInfo);
-		void* BufferData = RHICmdList.LockBuffer(VertexBufferRHI, 0, Size, RLM_WriteOnly);
-		FMemory::Memset(BufferData, 0, Size);
-		RHICmdList.UnlockBuffer(VertexBufferRHI);
+		const FRHIBufferCreateDesc CreateDesc =
+			FRHIBufferCreateDesc::CreateVertex(TEXT("FLexUIDummySceneColorResolveBuffer"), Size)
+			.AddUsage(EBufferUsageFlags::Static)
+			.DetermineInitialState();
+
+		VertexBufferRHI = RHICmdList.CreateBuffer(CreateDesc);
 	}
 };
 
@@ -1403,12 +1396,9 @@ void FLexUIRenderer::RenderHelperLineArray_RenderThread(TMap<FLexUIHelperLineKey
 					
 			for (auto& LineRenderParameter : LineMap)
 			{
-				VertexShader->SetParameters(RHICmdList, LineRenderParameter.Value.LocalToWorld * ViewProjectionMatrix);
-				FRHIResourceCreateInfo CreateInfo(TEXT("LexUIHelperLineRenderVertexBuffer"));
-				FBufferRHIRef VertexBufferRHI = RHICmdList.CreateVertexBuffer(sizeof(FLexUIHelperLineVertex) * LineRenderParameter.Value.LinePoints.Num(), BUF_Volatile, CreateInfo);
-				auto* VoidPtr = RHICmdList.LockBuffer(VertexBufferRHI, 0, sizeof(FLexUIHelperLineVertex) * LineRenderParameter.Value.LinePoints.Num(), RLM_WriteOnly);
-				FMemory::Memcpy(VoidPtr, LineRenderParameter.Value.LinePoints.GetData(), sizeof(FLexUIHelperLineVertex) * LineRenderParameter.Value.LinePoints.Num());
-				RHICmdList.UnlockBuffer(VertexBufferRHI);
+				FBufferRHIRef VertexBufferRHI = UE::RHIResourceUtils::CreateVertexBufferFromArray(
+					RHICmdList, TEXT("LexUIHelperLineRenderVertexBuffer"), EBufferUsageFlags::Volatile, MakeConstArrayView(LineRenderParameter.Value.LinePoints)
+				);
 
 				RHICmdList.SetStreamSource(0, VertexBufferRHI, 0);
 
@@ -1474,7 +1464,7 @@ void FLexUIRenderer::AddWorldSpaceLineRender(const FLexUIHelperLineKey& InKey, c
 
 void FLexUIFullScreenQuadVertexBuffer::InitRHI(FRHICommandListBase& RHICmdList)
 {
-	TResourceArray<FLexUIPostProcessVertex, VERTEXBUFFER_ALIGNMENT> Vertices;
+	TArray<FLexUIPostProcessVertex> Vertices;
 	Vertices.SetNumUninitialized(4);
 
 	Vertices[0] = FLexUIPostProcessVertex(FVector3f(-1, -1, 0), FVector2f(0.0f, 1.0f));
@@ -1482,8 +1472,9 @@ void FLexUIFullScreenQuadVertexBuffer::InitRHI(FRHICommandListBase& RHICmdList)
 	Vertices[2] = FLexUIPostProcessVertex(FVector3f(-1, 1, 0), FVector2f(0.0f, 0.0f));
 	Vertices[3] = FLexUIPostProcessVertex(FVector3f(1, 1, 0), FVector2f(1.0f, 0.0f));
 
-	FRHIResourceCreateInfo CreateInfo(TEXT("LexUIFullScreenQuadVertexBuffer"), &Vertices);
-	VertexBufferRHI = RHICmdList.CreateVertexBuffer(Vertices.GetResourceDataSize(), BUF_Static, CreateInfo);
+	VertexBufferRHI = UE::RHIResourceUtils::CreateVertexBufferFromArray(
+		RHICmdList, TEXT("LexUIFullScreenQuadVertexBuffer"), EBufferUsageFlags::Static, MakeConstArrayView(Vertices)
+	);
 }
 void FLexUIFullScreenQuadIndexBuffer::InitRHI(FRHICommandListBase& RHICmdList)
 {
@@ -1492,14 +1483,10 @@ void FLexUIFullScreenQuadIndexBuffer::InitRHI(FRHICommandListBase& RHICmdList)
 		0, 2, 3,
 		0, 3, 1
 	};
-
-	TResourceArray<uint16, INDEXBUFFER_ALIGNMENT> IndexBuffer;
-	uint32 NumIndices = UE_ARRAY_COUNT(Indices);
-	IndexBuffer.AddUninitialized(NumIndices);
-	FMemory::Memcpy(IndexBuffer.GetData(), Indices, NumIndices * sizeof(uint16));
-
-	FRHIResourceCreateInfo CreateInfo(TEXT("LexUIFullScreenQuadIndexBuffer"), &IndexBuffer);
-	IndexBufferRHI = RHICmdList.CreateIndexBuffer(sizeof(uint16), IndexBuffer.GetResourceDataSize(), BUF_Static, CreateInfo);
+	
+	IndexBufferRHI = UE::RHIResourceUtils::CreateIndexBufferFromArray(
+		RHICmdList, TEXT("LexUIFullScreenQuadIndexBuffer"), EBufferUsageFlags::Static, MakeConstArrayView(Indices)
+	);
 }
 void FLexUIFullScreenSlicedQuadIndexBuffer::InitRHI(FRHICommandListBase& RHICmdList)
 {
@@ -1522,14 +1509,10 @@ void FLexUIFullScreenSlicedQuadIndexBuffer::InitRHI(FRHICommandListBase& RHICmdL
 		}
 		vStartIndex += wSeg + 1;
 	}
-
-	TResourceArray<uint16, INDEXBUFFER_ALIGNMENT> IndexBuffer;
-	uint32 NumIndices = UE_ARRAY_COUNT(Indices);
-	IndexBuffer.AddUninitialized(NumIndices);
-	FMemory::Memcpy(IndexBuffer.GetData(), Indices, NumIndices * sizeof(uint16));
-
-	FRHIResourceCreateInfo CreateInfo(TEXT("LexUIFullScreenSlicedQuadIndexBuffer"), &IndexBuffer);
-	IndexBufferRHI = RHICmdList.CreateIndexBuffer(sizeof(uint16), IndexBuffer.GetResourceDataSize(), BUF_Static, CreateInfo);
+	
+	IndexBufferRHI = UE::RHIResourceUtils::CreateIndexBufferFromArray(
+		RHICmdList, TEXT("LexUIFullScreenSlicedQuadIndexBuffer"), EBufferUsageFlags::Static, MakeConstArrayView(Indices)
+	);
 }
 
 

@@ -28,6 +28,7 @@ public class LGUI : ModuleRules
         PrivateIncludePaths.AddRange(
                 new string[] {
                     EnginSourceFolder + "/Runtime/Renderer/Private",//#include "SceneRendering.h", #include "ScenePrivate.h"
+					EnginSourceFolder + "/Runtime/Renderer/Internal",//#include "SceneTextures.h"
                 });
 
         PublicDependencyModuleNames.AddRange(

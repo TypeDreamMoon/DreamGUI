@@ -30,7 +30,7 @@
 #define MIN_SEG 4
 #define MAX_SEG 32
 
-class FLGUIRenderTargetGeometrySourceMeshProxySection
+class FLexUIRenderTargetGeometrySourceMeshProxySection
 {
 public:
 	/** Vertex buffer for this section */
@@ -44,12 +44,12 @@ public:
 	FRayTracingGeometry RayTracingGeometry;
 #endif
 
-	FLGUIRenderTargetGeometrySourceMeshProxySection(ERHIFeatureLevel::Type InFeatureLevel)
-		: VertexFactory(InFeatureLevel, "FLGUIRenderTargetGeometrySourceMeshProxySection")
+	FLexUIRenderTargetGeometrySourceMeshProxySection(ERHIFeatureLevel::Type InFeatureLevel)
+		: VertexFactory(InFeatureLevel, "FLexUIRenderTargetGeometrySourceMeshProxySection")
 	{}
 };
 
-class FLGUIRenderTargetGeometrySource_SceneProxy : public FPrimitiveSceneProxy
+class FLexUIRenderTargetGeometrySource_SceneProxy : public FPrimitiveSceneProxy
 {
 public:
 	SIZE_T GetTypeHash() const override
@@ -57,15 +57,15 @@ public:
 		static size_t UniquePointer;
 		return reinterpret_cast<size_t>(&UniquePointer);
 	}
-	FLGUIRenderTargetGeometrySource_SceneProxy(ULexUIRenderTargetGeometrySource* Component)
+	FLexUIRenderTargetGeometrySource_SceneProxy(ULexUIRenderTargetGeometrySource* Component)
 		: FPrimitiveSceneProxy(Component)
 		, RenderTarget(Component->GetRenderTarget())
 		, MaterialInstance(Component->GetMaterialInstance())
 		, GeometryMode(Component->GetGeometryMode())
 	{
-		MaterialRelevance = MaterialInstance->GetRelevance_Concurrent(GetScene().GetFeatureLevel());
+		MaterialRelevance = MaterialInstance->GetRelevance_Concurrent(GetScene().GetShaderPlatform());
 
-		Section = new FLGUIRenderTargetGeometrySourceMeshProxySection(GetScene().GetFeatureLevel());
+		Section = new FLexUIRenderTargetGeometrySourceMeshProxySection(GetScene().GetFeatureLevel());
 
 		// Copy index buffer
 		Section->IndexBuffer.Indices = Component->Triangles;
@@ -113,7 +113,7 @@ public:
 #endif
 	}
 
-	virtual ~FLGUIRenderTargetGeometrySource_SceneProxy()
+	virtual ~FLexUIRenderTargetGeometrySource_SceneProxy()
 	{
 		if (Section != nullptr)
 		{
@@ -348,6 +348,16 @@ public:
 
 	virtual void GetDynamicRayTracingInstances(FRayTracingInstanceCollector& Collector) override final
 	{
+		TConstArrayView<const FSceneView*> Views = Collector.GetViews();
+		const uint32 VisibilityMap = Collector.GetVisibilityMap();
+
+		// RT geometry will be generated based on first active view and then reused for all other views
+		// TODO: Expose a way for developers to control whether to reuse RT geometry or create one per-view
+		const int32 FirstActiveViewIndex = FMath::CountTrailingZeros(VisibilityMap);
+		checkf(Views.IsValidIndex(FirstActiveViewIndex), TEXT("There should be at least one active view when calling GetDynamicRayTracingInstances(...)."));
+
+		const FSceneView* FirstActiveView = Views[FirstActiveViewIndex];
+		
 		if (Section != nullptr)
 		{
 			FMaterialRenderProxy* MaterialProxy = MaterialInstance->GetRenderProxy();
@@ -370,7 +380,7 @@ public:
 				MeshBatch.Type = PT_TriangleList;
 				MeshBatch.DepthPriorityGroup = SDPG_World;
 				MeshBatch.bCanApplyViewModeOverrides = false;
-				MeshBatch.CastRayTracedShadow = IsShadowCast(Collector.GetReferenceView());
+				MeshBatch.CastRayTracedShadow = IsShadowCast(FirstActiveView);
 
 				FMeshBatchElement& BatchElement = MeshBatch.Elements[0];
 				BatchElement.IndexBuffer = &Section->IndexBuffer;
@@ -392,7 +402,16 @@ public:
 				BatchElement.MaxVertexIndex = Section->VertexBuffers.PositionVertexBuffer.GetNumVertices() - 1;
 
 				RayTracingInstance.Materials.Add(MeshBatch);
-				Collector.AddRayTracingInstance(MoveTemp(RayTracingInstance));
+				
+				for (int32 ViewIndex = 0; ViewIndex < Views.Num(); ViewIndex++)
+				{
+					if ((VisibilityMap & (1 << ViewIndex)) == 0)
+					{
+						continue;
+					}
+
+					Collector.AddRayTracingInstance(ViewIndex, RayTracingInstance);
+				}
 			}
 		}
 	}
@@ -403,7 +422,7 @@ private:
 	UTextureRenderTarget2D* RenderTarget = nullptr;
 	UMaterialInstanceDynamic* MaterialInstance = nullptr;
 	ELexUIRenderTargetGeometryMode GeometryMode = ELexUIRenderTargetGeometryMode::Plane;
-	FLGUIRenderTargetGeometrySourceMeshProxySection* Section = nullptr;
+	FLexUIRenderTargetGeometrySourceMeshProxySection* Section = nullptr;
 
 	FMaterialRelevance MaterialRelevance;
 };
@@ -521,7 +540,7 @@ FPrimitiveSceneProxy* ULexUIRenderTargetGeometrySource::CreateSceneProxy()
 #if WITH_EDITOR
 				bIsValidSceneProxy = true;
 #endif
-				return new FLGUIRenderTargetGeometrySource_SceneProxy(this);
+				return new FLexUIRenderTargetGeometrySource_SceneProxy(this);
 			}
 		}
 	}
@@ -908,12 +927,12 @@ void ULexUIRenderTargetGeometrySource::UpdateMeshData()
 			{
 				TArray<FDynamicMeshVertex> VertexData;
 				TArray<uint16> IndexData;
-				FLGUIRenderTargetGeometrySource_SceneProxy* Proxy = nullptr;
+				FLexUIRenderTargetGeometrySource_SceneProxy* Proxy = nullptr;
 			};
 			auto UpdateData = new FUpdateMeshDataStruct();
 			UpdateData->VertexData = Vertices;
 			UpdateData->IndexData = Triangles;
-			UpdateData->Proxy = (FLGUIRenderTargetGeometrySource_SceneProxy*)SceneProxy;
+			UpdateData->Proxy = (FLexUIRenderTargetGeometrySource_SceneProxy*)SceneProxy;
 			ENQUEUE_RENDER_COMMAND(FLGUIRenderTargetGeometrySourceMeshSectionUpdate)
 				([UpdateData](FRHICommandListImmediate& RHICmdList) {
 				UpdateData->Proxy->UpdateSection_RenderThread(

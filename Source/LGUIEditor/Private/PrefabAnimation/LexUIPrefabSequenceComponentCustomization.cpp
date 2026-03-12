@@ -46,7 +46,7 @@ void FLexUIPrefabSequenceComponentCustomization::CustomizeDetails(IDetailLayoutB
 		return;
 	}
 
-	const IDetailsView* DetailsView = DetailBuilder.GetDetailsView();
+	auto DetailsView = DetailBuilder.GetDetailsViewSharedPtr();
 	TSharedPtr<FTabManager> HostTabManager = FGlobalTabmanager::Get();
 
 	DetailBuilder.HideProperty("Sequence");

@@ -89,7 +89,7 @@ private:
 	void UpdateLocalBounds();
 	void UpdateCollision();
 	void UpdateMeshData();
-	friend class FLGUIRenderTargetGeometrySource_SceneProxy;
+	friend class FLexUIRenderTargetGeometrySource_SceneProxy;
 	TArray<FDynamicMeshVertex> Vertices;
 	TArray<uint16> Triangles;
 #if WITH_EDITOR

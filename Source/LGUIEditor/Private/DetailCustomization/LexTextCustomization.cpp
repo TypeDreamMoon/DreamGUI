@@ -48,13 +48,13 @@ void FLexTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder
 
 	//text alignment
 	{
-		DetailBuilder.GetDetailsView()->RegisterInstancedCustomPropertyTypeLayout(TEXT("ELexUITextParagraphHorizontalAlign"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexTextAlignmentCustomization::MakeInstance, true));
-		DetailBuilder.GetDetailsView()->RegisterInstancedCustomPropertyTypeLayout(TEXT("ELexUITextParagraphVerticalAlign"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexTextAlignmentCustomization::MakeInstance, false));
+		DetailBuilder.GetDetailsViewSharedPtr()->RegisterInstancedCustomPropertyTypeLayout(TEXT("ELexUITextParagraphHorizontalAlign"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexTextAlignmentCustomization::MakeInstance, true));
+		DetailBuilder.GetDetailsViewSharedPtr()->RegisterInstancedCustomPropertyTypeLayout(TEXT("ELexUITextParagraphVerticalAlign"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexTextAlignmentCustomization::MakeInstance, false));
 		LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexText, HAlign));
 		LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexText, VAlign));
 	}
 	//font style
-	DetailBuilder.GetDetailsView()->RegisterInstancedCustomPropertyTypeLayout(TEXT("ELexUITextFontStyle"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexTextFontStyleCustomization::MakeInstance));
+	DetailBuilder.GetDetailsViewSharedPtr()->RegisterInstancedCustomPropertyTypeLayout(TEXT("ELexUITextFontStyle"), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FLexTextFontStyleCustomization::MakeInstance));
 
 	auto OverflowTypeHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, OverflowType));
 	OverflowTypeHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexTextCustomization::ForceRefresh, &DetailBuilder));

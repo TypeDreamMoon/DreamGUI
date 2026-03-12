@@ -28,7 +28,7 @@ TSharedRef<FEditorViewportClient> SLexUIPrefabEditorViewport::MakeEditorViewport
 	return EditorViewportClient.ToSharedRef();
 }
 
-TSharedPtr<SWidget> SLexUIPrefabEditorViewport::MakeViewportToolbar()
+TSharedPtr<SWidget> SLexUIPrefabEditorViewport::BuildViewportToolbar()
 {
 	return SNew(SLexUIPrefabEditorViewportToolbar, SharedThis(this));
 }

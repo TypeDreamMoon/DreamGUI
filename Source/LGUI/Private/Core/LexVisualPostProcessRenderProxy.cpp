@@ -5,6 +5,8 @@
 #include "Core/LexUIRender/LexUIVertex.h"
 #include "Rendering/Texture2DResource.h"
 #include "Core/LexUIRender/LexUIRenderer.h"
+#include "RHIResourceUtils.h"
+#include "SceneTextures.h"
 
 FLexVisualPostProcessRenderProxy::FLexVisualPostProcessRenderProxy()
 {
@@ -156,13 +158,10 @@ void FLexVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 				}
 				IndexBuffer = GLexUIFullScreenQuadIndexBuffer.IndexBufferRHI;
 			}
-
-			uint32 VertexBufferSize = RenderMeshRegionToScreenVertexArray.Num() * sizeof(FLexUIPostProcessVertex);
-			FRHIResourceCreateInfo CreateInfo(TEXT("RenderMeshOnScreen"));
-			FBufferRHIRef VertexBufferRHI = RHICmdList.CreateVertexBuffer(VertexBufferSize, BUF_Volatile, CreateInfo);
-			void* VoidPtr = RHICmdList.LockBuffer(VertexBufferRHI, 0, VertexBufferSize, RLM_WriteOnly);
-			FPlatformMemory::Memcpy(VoidPtr, RenderMeshRegionToScreenVertexArray.GetData(), VertexBufferSize);
-			RHICmdList.UnlockBuffer(VertexBufferRHI);
+			
+			FBufferRHIRef VertexBufferRHI = UE::RHIResourceUtils::CreateVertexBufferFromArray(
+				RHICmdList, TEXT("RenderMeshOnScreen"), EBufferUsageFlags::Volatile, MakeConstArrayView(RenderMeshRegionToScreenVertexArray)
+			);
 			RHICmdList.SetStreamSource(0, VertexBufferRHI, 0);
 			RHICmdList.DrawIndexedPrimitive(IndexBuffer, 0, 0, RenderMeshRegionToScreenVertexArray.Num(), 0, TriangleCount, 1);
 			VertexBufferRHI.SafeRelease();

@@ -295,7 +295,6 @@ void FLexUIUtils::LogObjectFlags(UObject* obj)
 \n	RF_TagGarbageTemp:%d\
 \n	RF_NeedInitialization:%d\
 \n	RF_NeedLoad:%d\
-\n	RF_KeepForCooker:%d\
 \n	RF_NeedPostLoad:%d\
 \n	RF_NeedPostLoadSubobjects:%d\
 \n	RF_NewerVersionExists:%d\
@@ -325,7 +324,6 @@ void FLexUIUtils::LogObjectFlags(UObject* obj)
 , obj->HasAnyFlags(EObjectFlags::RF_TagGarbageTemp)
 , obj->HasAnyFlags(EObjectFlags::RF_NeedInitialization)
 , obj->HasAnyFlags(EObjectFlags::RF_NeedLoad)
-, obj->HasAnyFlags(EObjectFlags::RF_KeepForCooker)
 , obj->HasAnyFlags(EObjectFlags::RF_NeedPostLoad)
 , obj->HasAnyFlags(EObjectFlags::RF_NeedPostLoadSubobjects)
 , obj->HasAnyFlags(EObjectFlags::RF_NewerVersionExists)
