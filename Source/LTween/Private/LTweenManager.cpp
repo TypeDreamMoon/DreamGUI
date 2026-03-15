@@ -140,12 +140,14 @@ FLTweenManagerCreated ULTweenManager::OnLTweenManagerCreated;
 //~USubsystem interface
 void ULTweenManager::Initialize(FSubsystemCollectionBase& Collection)
 {
+	Super::Initialize(Collection);
 	const UGameInstance* LocalGameInstance = GetGameInstance();
 	check(LocalGameInstance);
 }
 
 void ULTweenManager::Deinitialize()
 {
+	Super::Deinitialize();
 	tweenerList.Empty();
 }
 

@@ -20,12 +20,6 @@ public:
 	ULexUIPrefabManagerObject();
 	virtual void BeginDestroy()override;
 	virtual bool IsEditorOnly()const override { return true; }
-#if WITH_EDITOR
-private:
-	TUniquePtr<FPreviewScene> PreviewSceneForPrefabPackage;
-public:
-	static UWorld* GetPreviewWorldForPrefabPackage();
-#endif
 };
 
 UCLASS(NotBlueprintable, NotBlueprintType, Transient, NotPlaceable)
@@ -34,8 +28,6 @@ class LGUI_API ULexUIPrefabWorldSubsystem : public UWorldSubsystem
 	GENERATED_BODY()
 public:
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override { return true; }
-	virtual void Initialize(FSubsystemCollectionBase& Collection)override {};
-	virtual void Deinitialize()override {};
 
 	static ULexUIPrefabWorldSubsystem* GetInstance(UWorld* World);
 	DECLARE_EVENT_OneParam(ULexUIPrefabWorldSubsystem, FDeserializeSession, const FGuid&);

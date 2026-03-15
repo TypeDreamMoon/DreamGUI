@@ -44,6 +44,8 @@ public:
 	virtual UE::Widget::EWidgetMode GetWidgetMode() const override;
 	virtual FVector GetWidgetLocation() const override;
 	virtual FMatrix GetWidgetCoordSystem() const override;
+ 
+	virtual void SetViewportType(ELevelViewportType InViewportType) override;
 	// End of FEditorViewportClient interface
 
 	/**

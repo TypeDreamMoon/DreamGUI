@@ -405,6 +405,7 @@ FLexUIPrefabEditorViewportClient::FLexUIPrefabEditorViewportClient(TWeakPtr<FLex
 	this->ViewportType = InitialViewportType;
 	SetViewRotation(InitialViewRotation);
 	SetLookAtLocation(InitialViewOrbitLocation);
+	GetPrefabBeingEdited()->GetPrefabInstanceScene()->SetSkyCubeVisibility(IsPerspective());
 
 	OnSelectionChangedDelegateHandle = PrefabEditorPtr.Pin()->OnSelectedWidgetsChanged.AddLambda([=, this]()
 	{
@@ -706,7 +707,7 @@ void FLexUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy*
 	AActor* ClickHitActor = nullptr;
 	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
 	{
-		float LineTraceLength = 100000;
+		float LineTraceLength = 100000000;
 		//find hit LexVisualBatchMesh
 		auto LineStart = RayOrigin;
 		auto LineEnd = RayOrigin + RayDirection * LineTraceLength;
@@ -985,6 +986,12 @@ FMatrix FLexUIPrefabEditorViewportClient::GetWidgetCoordSystem() const
 	}
 
 	return FEditorViewportClient::GetWidgetCoordSystem();
+}
+
+void FLexUIPrefabEditorViewportClient::SetViewportType(ELevelViewportType InViewportType)
+{
+	FEditorViewportClient::SetViewportType(InViewportType);
+	GetPrefabBeingEdited()->GetPrefabInstanceScene()->SetSkyCubeVisibility(IsPerspective());
 }
 
 /**

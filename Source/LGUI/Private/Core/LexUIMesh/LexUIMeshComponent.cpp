@@ -1311,7 +1311,10 @@ void ULexUIMeshComponent::PoolAllRenderSection()
 		if (RenderSection->Type == ELexUIRenderSectionType::ChildCanvas)
 		{
 			auto ChildCanvasSection = static_cast<FLexUIRenderSection_ChildCanvas*>(RenderSection.Get());
-			ChildCanvasSection->ChildCanvasMeshComponent->ClearParentCanvasMeshComp(this);
+			if (ChildCanvasSection->ChildCanvasMeshComponent.IsValid())
+			{
+				ChildCanvasSection->ChildCanvasMeshComponent->ClearParentCanvasMeshComp(this);
+			}
 		}
 
 		RenderSection->ClearBeforePool();

@@ -132,15 +132,41 @@ bool FLexUIPrefabEditor::GetSelectedObjectsBounds(FBoxSphereBounds& OutResult)
 	bool IsFirstBounds = true;
 	for (auto& Actor : SelectedActors)
 	{
-		auto Box = Actor->GetComponentsBoundingBox();
-		if (IsFirstBounds)
+		if (auto WidgetComp = Cast<ULexWidget>(Actor->GetRootComponent()))
 		{
-			IsFirstBounds = false;
-			Bounds = Box;
-		}
-		else
-		{
-			Bounds = Bounds + Box;
+			if (!WidgetComp->GetWidgetActiveInHierarchy())
+			{
+				continue;
+			}
+			if (auto Visual = WidgetComp->GetVisual())
+			{
+				FVector Min, Max;
+				Visual->GetGeometryBounds3DInLocalSpace(Min, Max);
+				auto LocalBounds = FBox(Min, Max);
+				auto Box = LocalBounds.TransformBy(WidgetComp->GetComponentTransform());
+				if (IsFirstBounds)
+				{
+					Bounds = Box;
+					IsFirstBounds = false;
+				}
+				else
+				{
+					Bounds = Bounds + Box;
+				}
+			}
+			else
+			{
+				auto Box = WidgetComp->Bounds;
+				if (IsFirstBounds)
+				{
+					IsFirstBounds = false;
+					Bounds = Box;
+				}
+				else
+				{
+					Bounds = Bounds + Box;
+				}
+			}
 		}
 	}
 	OutResult = Bounds;

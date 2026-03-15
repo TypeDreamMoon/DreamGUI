@@ -611,6 +611,15 @@ void ULexUIManagerWorldSubsystem::OnEndOfFrame()
 	CacheViewportClient = nullptr;
 }
 
+void ULexUIManagerWorldSubsystem::OnEnginePreExit()
+{
+	for (TObjectIterator<ULexUIPrefab> Itr; Itr; ++Itr)
+	{
+		auto Prefab = *Itr;
+		Prefab->ClearPrefabInstanceScene();
+	}
+}
+
 void ULexUIManagerWorldSubsystem::DrawDebugRect(UWorld* InWorld, const FVector& Center, const FMatrix44f& LocalToWorld, FVector2D const& Rect, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld)
 {
 	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, true);
@@ -806,16 +815,16 @@ bool ULexUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULe
 			{
 				if (Widget->GetWidgetActiveInHierarchy() && Widget->GetRenderCanvas() != nullptr)
 				{
-					FHitResult hitInfo;
+					FHitResult HitInfo;
 					auto OriginRaycastType = Visual->GetRaycastType();
 					auto OriginVisibility = Widget->GetRaycastable();
 					Visual->SetRaycastType(ELexVisualRaycastType::Mesh);//in editor selection, make the ray hit actural triangle
 					Widget->SetRaycastable(ELexWidgetRaycastableType::Enabled);
-					if (Visual->LineTraceUI(hitInfo, LineStart, LineEnd))
+					if (Visual->LineTraceUI(HitInfo, LineStart, LineEnd))
 					{
-						if (Widget->IsPointVisibleOnClip(hitInfo.Location))
+						if (Widget->IsPointVisibleOnClip(HitInfo.Location))
 						{
-							HitResultArray.Add(hitInfo);
+							HitResultArray.Add(HitInfo);
 						}
 					}
 					Visual->SetRaycastType(OriginRaycastType);
@@ -874,6 +883,7 @@ void ULexUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 		bIsPlaying = true;
 	}
 	FCoreDelegates::OnEndFrame.AddUObject(this, &ULexUIManagerWorldSubsystem::OnEndOfFrame);
+	FCoreDelegates::OnEnginePreExit.AddUObject(this, &ULexUIManagerWorldSubsystem::OnEnginePreExit);
 	ULexUIManagerObject::GetInstance(true);//make sure it is created
 	Selection = NewObject<ULexUISelection>(this, NAME_None, RF_Transactional);
 #endif

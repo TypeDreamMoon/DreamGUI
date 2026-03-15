@@ -3,7 +3,6 @@
 #include "PrefabSystem/LexUIPrefabManager.h"
 #include "LGUI.h"
 #include "Engine/World.h"
-#include "Engine/Engine.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabManagerObject"
 
@@ -18,27 +17,6 @@ void ULexUIPrefabManagerObject::BeginDestroy()
 	Super::BeginDestroy();
 	Instance = nullptr;
 }
-
-#if WITH_EDITOR
-
-UWorld* ULexUIPrefabManagerObject::GetPreviewWorldForPrefabPackage()
-{
-	if (!GEngine)return nullptr;
-	if (Instance == nullptr)
-	{
-		Instance = NewObject<ULexUIPrefabManagerObject>();
-		Instance->AddToRoot();
-		UE_LOG(LGUI, Log, TEXT("[%s].%d No Instance for %s, create it!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(ULexUIPrefabManagerObject::StaticClass()->GetName()));
-	}
-	
-	auto& PreviewScene = Instance->PreviewSceneForPrefabPackage;
-	if (!PreviewScene)
-	{
-		PreviewScene = MakeUnique<FPreviewScene>();
-	}
-	return PreviewScene->GetWorld();
-}
-#endif
 
 
 ULexUIPrefabWorldSubsystem* ULexUIPrefabWorldSubsystem::GetInstance(UWorld* World)

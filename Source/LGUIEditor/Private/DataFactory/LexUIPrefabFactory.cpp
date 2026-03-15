@@ -110,7 +110,7 @@ UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent,
 		HelperObject->PrefabAsset = NewAsset;
 		TMap<FGuid, TObjectPtr<UObject>> MapGuidToObject;
 		TMap<TObjectPtr<AActor>, FLexUISubPrefabData> SubPrefabMap;
-		HelperObject->LoadedRootActor = SourcePrefab->LoadPrefabWithExistingObjects(ULexUIPrefabManagerObject::GetPreviewWorldForPrefabPackage(), nullptr, MapGuidToObject, SubPrefabMap);
+		HelperObject->LoadedRootActor = SourcePrefab->LoadPrefabWithExistingObjects(SourcePrefab->GetPrefabInstanceScene()->GetWorld(), nullptr, MapGuidToObject, SubPrefabMap);
 		FLexUISubPrefabData SubPrefabData;
 		SubPrefabData.PrefabAsset = SourcePrefab;
 		SubPrefabData.MapGuidToObject = MapGuidToObject;
@@ -132,7 +132,7 @@ UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent,
 		NewAsset->bIsPrefabVariant = false;
 		ULexUIPrefabHelperObject* HelperObject = NewObject<ULexUIPrefabHelperObject>(GetTransientPackage());
 		HelperObject->PrefabAsset = NewAsset;
-		HelperObject->LoadedRootActor = ULexUIPrefabManagerObject::GetPreviewWorldForPrefabPackage()->SpawnActor<ALexWidgetActor>(RootActorClass);
+		HelperObject->LoadedRootActor = SourcePrefab->GetPrefabInstanceScene()->GetWorld()->SpawnActor<ALexWidgetActor>(RootActorClass);
 
 		HelperObject->LoadedRootActor->SetActorLabel(NewAsset->GetName());
 		if (!HelperObject->LoadedRootActor->GetRootComponent())

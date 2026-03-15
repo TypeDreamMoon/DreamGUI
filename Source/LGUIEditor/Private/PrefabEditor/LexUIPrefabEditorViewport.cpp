@@ -34,7 +34,7 @@ TSharedPtr<SWidget> SLexUIPrefabEditorViewport::BuildViewportToolbar()
 }
 EVisibility SLexUIPrefabEditorViewport::GetTransformToolbarVisibility() const
 {
-	return EVisibility::Visible;
+	return EVisibility::Hidden;
 }
 void SLexUIPrefabEditorViewport::OnFocusViewportToSelection()
 {

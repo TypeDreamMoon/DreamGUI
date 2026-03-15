@@ -24,6 +24,5 @@ private:
 	EVisibility ShouldShowFixPrefabVersionButton()const;
 
 	FReply OnClickRecreteButton();
-	FReply OnClickRecreteAllButton();
 	FReply OnClickEditPrefabButton();
 };

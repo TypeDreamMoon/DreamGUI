@@ -63,6 +63,7 @@ FLexUIPrefabInstanceScene::FLexUIPrefabInstanceScene(ConstructionValues CVS) :FL
 		InstancedSkyMaterial->PostLoad();
 		SkyComponent->SetMaterial(0, InstancedSkyMaterial);
 		AddComponent(SkyComponent, SphereTransform);
+		SkySphereComponent = SkyComponent;
 	}
 }
 
@@ -117,6 +118,11 @@ USceneComponent* FLexUIPrefabInstanceScene::GetParentComponentForPrefab(ULexUIPr
 	RootAgentActor->GetRootComponent()->SetWorldLocationAndRotationNoPhysics(FVector::ZeroVector, FRotator(0, 0, 0));
 
 	return RootAgentActor->GetRootComponent();
+}
+
+void FLexUIPrefabInstanceScene::SetSkyCubeVisibility(bool bVisible)
+{
+	SkySphereComponent->SetVisibility(bVisible);
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -1396,6 +1396,7 @@ void FLexUIRenderer::RenderHelperLineArray_RenderThread(TMap<FLexUIHelperLineKey
 					
 			for (auto& LineRenderParameter : LineMap)
 			{
+				VertexShader->SetParameters(RHICmdList, LineRenderParameter.Value.LocalToWorld * ViewProjectionMatrix);
 				FBufferRHIRef VertexBufferRHI = UE::RHIResourceUtils::CreateVertexBufferFromArray(
 					RHICmdList, TEXT("LexUIHelperLineRenderVertexBuffer"), EBufferUsageFlags::Volatile, MakeConstArrayView(LineRenderParameter.Value.LinePoints)
 				);
@@ -1424,39 +1425,37 @@ void FLexUIRenderer::RenderHelperLineArray_RenderThread(TMap<FLexUIHelperLineKey
 
 void FLexUIRenderer::AddScreenSpaceLineRender(const FLexUIHelperLineKey& InKey, const FLexUIHelperLineRenderParameter& InLineParameter)
 {
-	auto Buffer = new FLexUIHelperLineRenderParameter(InLineParameter);
+	auto Buffer = FLexUIHelperLineRenderParameter(InLineParameter);
 	auto ViewExtension = this;
 	ENQUEUE_RENDER_COMMAND(FLexUIRender_AddLineRender)(
-		[ViewExtension, InKey, Buffer](FRHICommandListImmediate& RHICmdList)
+		[ViewExtension, InKey, Buffer = MoveTemp(Buffer)](FRHICommandListImmediate& RHICmdList)
 		{
 			if (!ViewExtension->ScreenSpaceHelperLineMap.Contains(InKey))
 			{
-				ViewExtension->ScreenSpaceHelperLineMap.Add(InKey, *Buffer);
+				ViewExtension->ScreenSpaceHelperLineMap.Add(InKey, Buffer);
 			}
 			else
 			{
-				ViewExtension->ScreenSpaceHelperLineMap[InKey] = *Buffer;
+				ViewExtension->ScreenSpaceHelperLineMap[InKey] = Buffer;
 			}
-			delete Buffer;
 		}
 	);
 }
 void FLexUIRenderer::AddWorldSpaceLineRender(const FLexUIHelperLineKey& InKey, const FLexUIHelperLineRenderParameter& InLineParameter)
 {
-	auto Buffer = new FLexUIHelperLineRenderParameter(InLineParameter);
+	auto Buffer = FLexUIHelperLineRenderParameter(InLineParameter);
 	auto ViewExtension = this;
 	ENQUEUE_RENDER_COMMAND(FLexUIRender_AddLineRender)(
-		[ViewExtension, InKey, Buffer](FRHICommandListImmediate& RHICmdList)
+		[ViewExtension, InKey, Buffer = MoveTemp(Buffer)](FRHICommandListImmediate& RHICmdList)
 		{
 			if (!ViewExtension->WorldSpaceHelperLineMap.Contains(InKey))
 			{
-				ViewExtension->WorldSpaceHelperLineMap.Add(InKey, *Buffer);
+				ViewExtension->WorldSpaceHelperLineMap.Add(InKey, Buffer);
 			}
 			else
 			{
-				ViewExtension->WorldSpaceHelperLineMap[InKey] = *Buffer;
+				ViewExtension->WorldSpaceHelperLineMap[InKey] = Buffer;
 			}
-			delete Buffer;
 		}
 	);
 }

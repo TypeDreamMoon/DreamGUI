@@ -268,14 +268,14 @@ bool ULexVisual::LineTraceUIRect(FHitResult& OutHit, const FVector& Start, const
 	//start and end point must be different side of X plane
 	if (FMath::Sign(LocalSpaceRayOrigin.X) != FMath::Sign(LocalSpaceRayEnd.X))
 	{
-		auto result = FMath::LinePlaneIntersection(LocalSpaceRayOrigin, LocalSpaceRayEnd, FVector::ZeroVector, FVector(1, 0, 0));
+		auto Result = FMath::LinePlaneIntersection(LocalSpaceRayOrigin, LocalSpaceRayEnd, FVector::ZeroVector, FVector(1, 0, 0));
 		//hit point inside rect area
-		if (result.Y > Widget->GetLocalSpaceLeft() && result.Y < Widget->GetLocalSpaceRight() && result.Z > Widget->GetLocalSpaceBottom() && result.Z < Widget->GetLocalSpaceTop())
+		if (Result.Y > Widget->GetLocalSpaceLeft() && Result.Y < Widget->GetLocalSpaceRight() && Result.Z > Widget->GetLocalSpaceBottom() && Result.Z < Widget->GetLocalSpaceTop())
 		{
 			OutHit.TraceStart = Start;
 			OutHit.TraceEnd = End;
 			OutHit.Component = (UPrimitiveComponent*)Widget;//acturally this convert is incorrect, but I need this pointer
-			OutHit.Location = Widget->GetComponentTransform().TransformPosition(result);
+			OutHit.Location = Widget->GetComponentTransform().TransformPosition(Result);
 			OutHit.Normal = Widget->GetComponentTransform().TransformVector(FVector(1, 0, 0));
 			OutHit.Normal.Normalize();
 			OutHit.Distance = FVector::Distance(Start, OutHit.Location);

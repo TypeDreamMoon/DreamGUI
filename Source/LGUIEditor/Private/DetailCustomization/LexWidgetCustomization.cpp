@@ -1505,7 +1505,6 @@ FText FLexWidgetCustomization::GetAnchorLabelTooltipText(TSharedRef<IPropertyHan
 			return FText::Format(LOCTEXT("AnchoredLeft_Tooltip", "Calculated distance to parent's left anchor point. Related function: {0} / {1}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, GetAnchorOffsetLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, SetAnchorOffsetLeft)));
 		}
 	}
-	break;
 	case 1://anchored position y, stretch top
 	{
 		if (AnchorMinValue.Y == AnchorMaxValue.Y)
@@ -1517,7 +1516,6 @@ FText FLexWidgetCustomization::GetAnchorLabelTooltipText(TSharedRef<IPropertyHan
 			return FText::Format(LOCTEXT("AnchoredTop_Tooltip", "Calculated distance to parent's top anchor point. Related function: {0} / {1}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, GetAnchorOffsetLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, SetAnchorOffsetLeft)));
 		}
 	}
-	break;
 	case 2://width, stretch right
 	{
 		if (AnchorMinValue.X == AnchorMaxValue.X)
@@ -1529,7 +1527,6 @@ FText FLexWidgetCustomization::GetAnchorLabelTooltipText(TSharedRef<IPropertyHan
 			return FText::Format(LOCTEXT("AnchoredRight_Tooltip", "Calculated distance to parent's right anchor point. Related function: {0} / {1}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, GetAnchorOffsetLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, SetAnchorOffsetLeft)));
 		}
 	}
-	break;
 	case 3://height, stretch bottom
 	{
 		if (AnchorMinValue.Y == AnchorMaxValue.Y)
@@ -1541,9 +1538,7 @@ FText FLexWidgetCustomization::GetAnchorLabelTooltipText(TSharedRef<IPropertyHan
 			return FText::Format(LOCTEXT("AnchoredBottom_Tooltip", "Calculated distance to parent's bottom anchor point. Related function: {0} / {0}."), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, GetAnchorOffsetLeft)), FText::FromString(GET_FUNCTION_NAME_STRING_CHECKED(ULexWidget, SetAnchorOffsetLeft)));
 		}
 	}
-	break;
 	}
-	return LOCTEXT("AnchorError", "Error");
 }
 
 LGUIAnchorPreviewWidget::UIAnchorHorizontalAlign FLexWidgetCustomization::GetAnchorHAlign(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle)const

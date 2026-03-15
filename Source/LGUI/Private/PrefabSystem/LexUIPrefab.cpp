@@ -173,6 +173,14 @@ FLexUIPrefabInstanceScene* ULexUIPrefab::GetPrefabInstanceScene()
 	return PrefabInstanceScene.Get();
 }
 
+void ULexUIPrefab::ClearPrefabInstanceScene()
+{
+	if (PrefabInstanceScene.IsValid())
+	{
+		PrefabInstanceScene.Reset();
+	}
+}
+
 void ULexUIPrefab::EnsureInstanceObjects()
 {
 	if (PrefabVersion >= (uint16)ELexUIPrefabVersion::BuildinFArchive)
@@ -335,6 +343,10 @@ void ULexUIPrefab::PostLoad()
 
 void ULexUIPrefab::BeginDestroy()
 {
+	if (this->GetName() == TEXT("NewLexUIPrefab"))
+	{
+		UE_LOG(LGUI, Error, TEXT(""));
+	}
 #if WITH_EDITOR
 	if (IsValid(PrefabHelperObject))
 	{

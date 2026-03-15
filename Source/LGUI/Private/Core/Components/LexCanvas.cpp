@@ -1461,7 +1461,7 @@ void ULexCanvas::UpdateDrawCallMesh()
 			break;
 		case ELexUIDrawCallType::ChildCanvas:
 			{
-				if (!DrawCallItem.PostProcessVisualObject.IsValid())
+				if (!DrawCallItem.ChildCanvas.IsValid())
 				{
 					UE_LOG(LGUI, Warning, TEXT("[%s].%d Invalid ChildCanvas draw-call, will ignore it"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 					continue;
@@ -2171,7 +2171,7 @@ FMatrix ULexCanvas::GetViewProjectionMatrix()const
 	{
 		if (!CheckLexWidget())
 		{
-			UE_LOG(LGUI, Error, TEXT("[%s].%d UIItem not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+			UE_LOG(LGUI, Error, TEXT("[%s].%d Widget not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			return CacheViewProjectionMatrix;
 		}
 		bIsViewProjectionMatrixDirty = false;

@@ -15,13 +15,14 @@ class LGUI_API FLexUIPrefabInstanceScene : public FLexUIPrefabScene
 {
 public:
 	FLexUIPrefabInstanceScene(ConstructionValues CVS);
-	~FLexUIPrefabInstanceScene(){}
 	
 	static const FString RootAgentActorName;
 	USceneComponent* GetParentComponentForPrefab(ULexUIPrefab* InPrefab);
 	AActor* GetRootAgentActor()const { return RootAgentActor; }
+	void SetSkyCubeVisibility(bool bVisible);
 private:
 
 	AActor* RootAgentActor = nullptr;
+	UStaticMeshComponent* SkySphereComponent = nullptr;
 };
 #endif

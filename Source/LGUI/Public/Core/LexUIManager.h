@@ -228,6 +228,7 @@ private:
 	//this is cached when call GetEditorViewportClient
 	FEditorViewportClient* CacheViewportClient = nullptr;
 	void OnEndOfFrame();
+	void OnEnginePreExit();
 #endif
 private:
 	struct FLexUIBehaviourArrayContainer

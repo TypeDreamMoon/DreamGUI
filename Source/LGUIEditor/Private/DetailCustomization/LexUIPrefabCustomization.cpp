@@ -7,8 +7,6 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailWidgetRow.h"
-#include "LexUIEditorTools.h"
-#include "PrefabSystem/LexUIPrefabManager.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabCustomization"
 
@@ -79,14 +77,6 @@ void FLexUIPrefabCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 				.OnClicked(this, &FLexUIPrefabCustomization::OnClickRecreteButton)
 				.Visibility(this, &FLexUIPrefabCustomization::ShouldShowFixEngineVersionButton)
 			]
-			+SHorizontalBox::Slot()
-			.MaxWidth(80)
-			[
-				SNew(SButton)
-				.Text(LOCTEXT("FixAllEngineVersion", "Fix all"))
-				.OnClicked(this, &FLexUIPrefabCustomization::OnClickRecreteAllButton)
-				.Visibility(this, &FLexUIPrefabCustomization::ShouldShowFixEngineVersionButton)
-			]
 		]
 		;
 	category.AddCustomRow(LOCTEXT("PrefabVersion", "Prefab Version"))
@@ -125,36 +115,16 @@ void FLexUIPrefabCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 				.HAlign(EHorizontalAlignment::HAlign_Center)
 				.Visibility(this, &FLexUIPrefabCustomization::ShouldShowFixPrefabVersionButton)
 			]
-			+SHorizontalBox::Slot()
-			.MaxWidth(80)
-			[
-				SNew(SButton)
-				.Text(LOCTEXT("FixAllPrefabVersion", "Fix all"))
-				.OnClicked(this, &FLexUIPrefabCustomization::OnClickRecreteAllButton)
-				.HAlign(EHorizontalAlignment::HAlign_Center)
-				.Visibility(this, &FLexUIPrefabCustomization::ShouldShowFixPrefabVersionButton)
-			]
 		]
 		;
 
 	category.AddCustomRow(LOCTEXT("AdditionalButton", "Additional Button"), true)
 		.WholeRowContent()
 		[
-			SNew(SHorizontalBox)
-			+ SHorizontalBox::Slot()
-			[
-				SNew(SButton)
-				.Text(LOCTEXT("RecreateThis", "Recreate this prefab"))
-				.OnClicked(this, &FLexUIPrefabCustomization::OnClickRecreteButton)
-				.HAlign(EHorizontalAlignment::HAlign_Center)
-			]
-			+ SHorizontalBox::Slot()
-			[
-				SNew(SButton)
-				.Text(LOCTEXT("RecreateAll", "Recreate all prefabs"))
-				.OnClicked(this, &FLexUIPrefabCustomization::OnClickRecreteAllButton)
-				.HAlign(EHorizontalAlignment::HAlign_Center)
-			]
+			SNew(SButton)
+			.Text(LOCTEXT("RecreateThis", "Recreate this prefab"))
+			.OnClicked(this, &FLexUIPrefabCustomization::OnClickRecreteButton)
+			.HAlign(EHorizontalAlignment::HAlign_Center)
 		]
 		;
 }
@@ -272,29 +242,6 @@ FReply FLexUIPrefabCustomization::OnClickRecreteButton()
 	if (auto Prefab = TargetScriptPtr.Get())
 	{
 		Prefab->RecreatePrefab();
-	}
-	return FReply::Handled();
-}
-FReply FLexUIPrefabCustomization::OnClickRecreteAllButton()
-{
-	auto World = ULexUIPrefabManagerObject::GetPreviewWorldForPrefabPackage();
-	if (!IsValid(World))
-	{
-		UE_LOG(LGUIEditor, Error, TEXT("[FLGUIPrefabCustomization::OnClickRecreteButton]Can not get World! This is wired..."));
-	}
-	else
-	{
-		auto AllPrefabs = FLexUIEditorTools::GetAllPrefabArray();
-		for (auto Prefab : AllPrefabs)
-		{
-			if (
-				Prefab->EngineMajorVersion != ENGINE_MAJOR_VERSION || Prefab->EngineMinorVersion != ENGINE_MINOR_VERSION
-				|| Prefab->PrefabVersion != LGUI_CURRENT_PREFAB_VERSION
-				)
-			{
-				Prefab->RecreatePrefab();
-			}
-		}
 	}
 	return FReply::Handled();
 }

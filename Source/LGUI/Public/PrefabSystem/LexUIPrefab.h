@@ -292,6 +292,7 @@ private:
 	void SetRootActorNameFromPrefab();
 public:
 	FLexUIPrefabInstanceScene* GetPrefabInstanceScene();
+	void ClearPrefabInstanceScene();
 	void EnsureInstanceObjects();
 	ULexUIPrefabHelperObject* GetPrefabHelperObject();
 
