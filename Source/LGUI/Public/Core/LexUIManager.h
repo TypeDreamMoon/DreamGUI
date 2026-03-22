@@ -6,7 +6,8 @@
 #include "Tickable.h"
 #include "LexUIManager.generated.h"
 
-struct FLexUIHelperLineVertex;
+struct FLexUIHelperGizmoRenderParameter;
+struct FLexUIHelperGizmoVertex;
 class ULexEventSystem;
 class ULexWidget;
 class ULexVisualBatchMesh;
@@ -223,7 +224,8 @@ public:
 	static void DrawDebugBox(UWorld* InWorld, const FVector& Center, const FMatrix44f& LocalToWorld, FVector const& Box, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
 	static void DrawDebugLineStream(UWorld* InWorld, const FMatrix44f& LocalToWorld, const TArray<FVector3f>& LineStreamPoints, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
 	static void DrawDebugLine(UWorld* InWorld, const FMatrix44f& LocalToWorld, const TArray<FVector3f>& LinePoints, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
-	static void DrawDebugLine(UWorld* InWorld, const FMatrix44f& LocalToWorld, const TArray<FLexUIHelperLineVertex>& LinePoints, void* Object, const FString& DebugName, bool ScreenOrWorld);
+	static void DrawDebugLine(UWorld* InWorld, const FMatrix44f& LocalToWorld, const TArray<FLexUIHelperGizmoVertex>& LinePoints, void* Object, const FString& DebugName, bool ScreenOrWorld);
+	static void DrawDebugMesh(UWorld* InWorld, const FLexUIHelperGizmoRenderParameter& Mesh, void* Object, const FString& DebugName, bool ScreenOrWorld);
 private:
 	//this is cached when call GetEditorViewportClient
 	FEditorViewportClient* CacheViewportClient = nullptr;

@@ -26,7 +26,7 @@
 #include "RHIResourceUtils.h"
 #include "Core/LexUIMeshVertex.h"
 #if WITH_EDITOR
-#include "Core/LexUIRender/LexUIHelperLineShaders.h"
+#include "Core/LexUIRender/LexUIHelperGizmoShaders.h"
 #endif
 
 
@@ -1358,7 +1358,7 @@ void FLexUIRenderer::UpdateRenderTargetRenderer(UTextureRenderTarget2D* InRender
 }
 
 #if WITH_EDITOR
-void FLexUIRenderer::RenderHelperLineArray_RenderThread(TMap<FLexUIHelperLineKey, FLexUIHelperLineRenderParameter>& LineMap
+void FLexUIRenderer::RenderHelperLineArray_RenderThread(TMap<FLexUIHelperGizmoKey, FLexUIHelperGizmoRenderParameter>& HelperGizmoDataMap
 , FRDGBuilder& GraphBuilder
 , FSceneView* RenderView
 , const FMatrix44f& ViewProjectionMatrix
@@ -1368,64 +1368,96 @@ void FLexUIRenderer::RenderHelperLineArray_RenderThread(TMap<FLexUIHelperLineKey
 , FGlobalShaderMap* GlobalShaderMap
 )
 {
-	if (LineMap.Num() <= 0)return;
+	if (HelperGizmoDataMap.Num() <= 0)return;
 	auto* PassParameters = GraphBuilder.AllocParameters<FRenderTargetParameters>();
 	PassParameters->RenderTargets[0] = FRenderTargetBinding(RenderTargetTexture, ERenderTargetLoadAction::ELoad);
 	GraphBuilder.AddPass(
 		RDG_EVENT_NAME("LexUI_RenderHelperLine"),
 		PassParameters,
 		ERDGPassFlags::Raster,
-		[this, &LineMap, RenderView, ViewProjectionMatrix, ViewRect, NumSamples, GlobalShaderMap](FRHICommandListImmediate& RHICmdList)
+		[this, &HelperGizmoDataMap, RenderView, ViewProjectionMatrix, ViewRect, NumSamples, GlobalShaderMap](FRHICommandListImmediate& RHICmdList)
 		{
-			TShaderMapRef<FLexUIHelperLineShaderVS> VertexShader(GlobalShaderMap);
-			TShaderMapRef<FLexUIHelperLineShaderPS> PixelShader(GlobalShaderMap);
+			TShaderMapRef<FLexUIHelperGizmoShaderVS> VertexShader(GlobalShaderMap);
+			TShaderMapRef<FLexUIHelperGizmoShaderPS> PixelShader(GlobalShaderMap);
 
 			RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
 
-			FGraphicsPipelineStateInitializer GraphicsPSOInit;
-			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-			FLexUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, EBlendMode::BLEND_Opaque, false, true, true, false, false);
-
-			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIHelperLineVertexDeclaration();
-			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-			GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_LineList;
-			GraphicsPSOInit.NumSamples = NumSamples;
-			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
-
-					
-			for (auto& LineRenderParameter : LineMap)
+			for (auto& RenderParameter : HelperGizmoDataMap)
 			{
-				VertexShader->SetParameters(RHICmdList, LineRenderParameter.Value.LocalToWorld * ViewProjectionMatrix);
-				FBufferRHIRef VertexBufferRHI = UE::RHIResourceUtils::CreateVertexBufferFromArray(
-					RHICmdList, TEXT("LexUIHelperLineRenderVertexBuffer"), EBufferUsageFlags::Volatile, MakeConstArrayView(LineRenderParameter.Value.LinePoints)
-				);
-
-				RHICmdList.SetStreamSource(0, VertexBufferRHI, 0);
-
-				int32 MaxVerticesAllowed = ((GDrawUPVertexCheckCount / sizeof(FSimpleElementVertex)) / 2) * 2;
-				/*
-				hack to avoid a crash when trying to render large numbers of line segments.
-				*/
-				MaxVerticesAllowed = FMath::Min(MaxVerticesAllowed, 64 * 1024);
-
-				int32 MinVertex = 0;
-				int32 TotalVerts = (LineRenderParameter.Value.LinePoints.Num() / 2) * 2;
-				while (MinVertex < TotalVerts)
+				switch (RenderParameter.Value.DrawType)
 				{
-					int32 NumLinePrims = FMath::Min(MaxVerticesAllowed, TotalVerts - MinVertex) / 2;
-					RHICmdList.DrawPrimitive(MinVertex, NumLinePrims, 1);
-					MinVertex += NumLinePrims * 2;
+				case ELexUIHelperGizmoDrawType::Line:
+					{
+						FGraphicsPipelineStateInitializer GraphicsPSOInit;
+						RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+						FLexUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, EBlendMode::BLEND_Opaque, false, true, true, false, false);
+
+						GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIHelperLineVertexDeclaration();
+						GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+						GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+						GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_LineList;
+						GraphicsPSOInit.NumSamples = NumSamples;
+						SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+						
+						VertexShader->SetParameters(RHICmdList, RenderParameter.Value.LocalToWorld * ViewProjectionMatrix);
+						FBufferRHIRef VertexBufferRHI = UE::RHIResourceUtils::CreateVertexBufferFromArray(
+							RHICmdList, TEXT("LexUIHelperGizmoRenderVertexBuffer"), EBufferUsageFlags::Volatile, MakeConstArrayView(RenderParameter.Value.VertexArray)
+						);
+						RHICmdList.SetStreamSource(0, VertexBufferRHI, 0);
+						
+						int32 MaxVerticesAllowed = ((GDrawUPVertexCheckCount / sizeof(FSimpleElementVertex)) / 2) * 2;
+						/*
+						hack to avoid a crash when trying to render large numbers of line segments.
+						*/
+						MaxVerticesAllowed = FMath::Min(MaxVerticesAllowed, 64 * 1024);
+
+						int32 MinVertex = 0;
+						int32 TotalVerts = (RenderParameter.Value.VertexArray.Num() / 2) * 2;
+						while (MinVertex < TotalVerts)
+						{
+							int32 NumLinePrims = FMath::Min(MaxVerticesAllowed, TotalVerts - MinVertex) / 2;
+							RHICmdList.DrawPrimitive(MinVertex, NumLinePrims, 1);
+							MinVertex += NumLinePrims * 2;
+						}
+						VertexBufferRHI.SafeRelease();
+					}
+					break;
+				case ELexUIHelperGizmoDrawType::Triangle:
+					{
+						FGraphicsPipelineStateInitializer GraphicsPSOInit;
+						RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+						FLexUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, EBlendMode::BLEND_Translucent, false, true, true, false, false);
+
+						GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIHelperLineVertexDeclaration();
+						GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+						GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+						GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+						GraphicsPSOInit.NumSamples = NumSamples;
+						SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+
+						VertexShader->SetParameters(RHICmdList, RenderParameter.Value.LocalToWorld * ViewProjectionMatrix);
+						FBufferRHIRef VertexBufferRHI = UE::RHIResourceUtils::CreateVertexBufferFromArray(
+							RHICmdList, TEXT("LexUIHelperGizmoRenderVertexBuffer"), EBufferUsageFlags::Volatile, MakeConstArrayView(RenderParameter.Value.VertexArray)
+						);
+						RHICmdList.SetStreamSource(0, VertexBufferRHI, 0);
+						
+						auto IndexBufferRHI = UE::RHIResourceUtils::CreateIndexBufferFromArray(
+							RHICmdList, TEXT("LexUIHelperGizmoRenderIndexBuffer"), EBufferUsageFlags::Volatile, MakeConstArrayView(RenderParameter.Value.IndexArray)
+						);
+						RHICmdList.DrawIndexedPrimitive(IndexBufferRHI, 0, 0, RenderParameter.Value.VertexArray.Num(), 0, RenderParameter.Value.IndexArray.Num() / 3, 1);
+						VertexBufferRHI.SafeRelease();
+						IndexBufferRHI.SafeRelease();
+					}
+					break;
 				}
-				VertexBufferRHI.SafeRelease();
 			}
-			LineMap.Reset();
+			HelperGizmoDataMap.Reset();
 		});
 }
 
-void FLexUIRenderer::AddScreenSpaceLineRender(const FLexUIHelperLineKey& InKey, const FLexUIHelperLineRenderParameter& InLineParameter)
+void FLexUIRenderer::AddScreenSpaceLineRender(const FLexUIHelperGizmoKey& InKey, const FLexUIHelperGizmoRenderParameter& InLineParameter)
 {
-	auto Buffer = FLexUIHelperLineRenderParameter(InLineParameter);
+	auto Buffer = FLexUIHelperGizmoRenderParameter(InLineParameter);
 	auto ViewExtension = this;
 	ENQUEUE_RENDER_COMMAND(FLexUIRender_AddLineRender)(
 		[ViewExtension, InKey, Buffer = MoveTemp(Buffer)](FRHICommandListImmediate& RHICmdList)
@@ -1441,9 +1473,9 @@ void FLexUIRenderer::AddScreenSpaceLineRender(const FLexUIHelperLineKey& InKey, 
 		}
 	);
 }
-void FLexUIRenderer::AddWorldSpaceLineRender(const FLexUIHelperLineKey& InKey, const FLexUIHelperLineRenderParameter& InLineParameter)
+void FLexUIRenderer::AddWorldSpaceLineRender(const FLexUIHelperGizmoKey& InKey, const FLexUIHelperGizmoRenderParameter& InLineParameter)
 {
-	auto Buffer = FLexUIHelperLineRenderParameter(InLineParameter);
+	auto Buffer = FLexUIHelperGizmoRenderParameter(InLineParameter);
 	auto ViewExtension = this;
 	ENQUEUE_RENDER_COMMAND(FLexUIRender_AddLineRender)(
 		[ViewExtension, InKey, Buffer = MoveTemp(Buffer)](FRHICommandListImmediate& RHICmdList)

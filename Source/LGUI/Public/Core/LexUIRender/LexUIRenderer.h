@@ -26,30 +26,54 @@ public:
 };
 
 #if WITH_EDITOR
-struct FLexUIHelperLineKey
+struct FLexUIHelperGizmoKey
 {
 	void* ObjectPtr = nullptr;
 	FString Tag;
-	bool operator==(const FLexUIHelperLineKey& other)const
+	bool operator==(const FLexUIHelperGizmoKey& other)const
 	{
 		return this->ObjectPtr == other.ObjectPtr && this->Tag == other.Tag;
 	}
-	friend FORCEINLINE uint32 GetTypeHash(const FLexUIHelperLineKey& other)
+	friend FORCEINLINE uint32 GetTypeHash(const FLexUIHelperGizmoKey& other)
 	{
 		return HashCombine(GetTypeHash(other.ObjectPtr), GetTypeHash(other.Tag));
 	}
 };
+enum class ELexUIHelperGizmoDrawType
+{
+	Line, Triangle,
+};
 /** Parameters for render editor helper line */
-struct FLexUIHelperLineRenderParameter
+struct FLexUIHelperGizmoRenderParameter
 {
 public:
-	FLexUIHelperLineRenderParameter(const TArray<FLexUIHelperLineVertex>& InLinePoints, const FMatrix44f& InLocalToWorld)
+	FLexUIHelperGizmoRenderParameter(){}
+	FLexUIHelperGizmoRenderParameter(const TArray<FLexUIHelperGizmoVertex>& InVertexArray, const FMatrix44f& InLocalToWorld)
 	{
-		LinePoints = InLinePoints;
+		VertexArray = InVertexArray;
 		LocalToWorld = InLocalToWorld;
+		DrawType = ELexUIHelperGizmoDrawType::Line;
 	}
+	FLexUIHelperGizmoRenderParameter(const TArray<FLexUIHelperGizmoVertex>& InVertexArray, const TArray<uint16>& InIndexArray)
+	{
+		VertexArray = InVertexArray;
+		IndexArray = InIndexArray;
+		LocalToWorld = FMatrix44f::Identity;
+		DrawType = ELexUIHelperGizmoDrawType::Triangle;
+	}
+	ELexUIHelperGizmoDrawType DrawType;
 	FMatrix44f LocalToWorld;
-	TArray<FLexUIHelperLineVertex> LinePoints;
+	TArray<FLexUIHelperGizmoVertex> VertexArray;
+	TArray<uint16> IndexArray;
+
+	void SetColor(const FColor& InColor, uint8 InAlpha = 255)
+	{
+		for (auto& Vertex : VertexArray)
+		{
+			Vertex.Color = InColor;
+			Vertex.Color.A = InAlpha;
+		}
+	}
 };
 #endif
 
@@ -202,9 +226,9 @@ private:
 #endif
 #if WITH_EDITOR
 private:
-	TMap<FLexUIHelperLineKey, FLexUIHelperLineRenderParameter> ScreenSpaceHelperLineMap;
-	TMap<FLexUIHelperLineKey, FLexUIHelperLineRenderParameter> WorldSpaceHelperLineMap;
-	void RenderHelperLineArray_RenderThread(TMap<FLexUIHelperLineKey, FLexUIHelperLineRenderParameter>& LineMap
+	TMap<FLexUIHelperGizmoKey, FLexUIHelperGizmoRenderParameter> ScreenSpaceHelperLineMap;
+	TMap<FLexUIHelperGizmoKey, FLexUIHelperGizmoRenderParameter> WorldSpaceHelperLineMap;
+	void RenderHelperLineArray_RenderThread(TMap<FLexUIHelperGizmoKey, FLexUIHelperGizmoRenderParameter>& HelperGizmoDataMap
 	, FRDGBuilder& GraphBuilder
 	, FSceneView* RenderView
 	, const FMatrix44f& ViewProjectionMatrix
@@ -213,8 +237,8 @@ private:
 	, FRDGTextureRef RenderTargetTexture
 	, FGlobalShaderMap* GlobalShaderMap);
 public:
-	void AddScreenSpaceLineRender(const FLexUIHelperLineKey& InKey, const FLexUIHelperLineRenderParameter& InLineParameter);
-	void AddWorldSpaceLineRender(const FLexUIHelperLineKey& InKey, const FLexUIHelperLineRenderParameter& InLineParameter);
+	void AddScreenSpaceLineRender(const FLexUIHelperGizmoKey& InKey, const FLexUIHelperGizmoRenderParameter& InLineParameter);
+	void AddWorldSpaceLineRender(const FLexUIHelperGizmoKey& InKey, const FLexUIHelperGizmoRenderParameter& InLineParameter);
 #endif
 };
 

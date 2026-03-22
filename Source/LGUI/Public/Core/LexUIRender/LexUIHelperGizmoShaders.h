@@ -5,14 +5,12 @@
 #include "CoreMinimal.h"
 #include "Shader.h"
 #include "ShaderParameterUtils.h"
-#include "MaterialShaderType.h"
-#include "Engine/Texture2D.h"
 
-class FLexUIHelperLineShader :public FGlobalShader
+class FLexUIHelperGizmoShader :public FGlobalShader
 {
 public:
-	FLexUIHelperLineShader() {}
-	FLexUIHelperLineShader(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+	FLexUIHelperGizmoShader() {}
+	FLexUIHelperGizmoShader(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
 		:FGlobalShader(Initializer)
 	{
 
@@ -32,13 +30,13 @@ public:
 };
 
 
-class FLexUIHelperLineShaderVS :public FLexUIHelperLineShader
+class FLexUIHelperGizmoShaderVS :public FLexUIHelperGizmoShader
 {
-	DECLARE_SHADER_TYPE(FLexUIHelperLineShaderVS, Global);
+	DECLARE_SHADER_TYPE(FLexUIHelperGizmoShaderVS, Global);
 public:
-	FLexUIHelperLineShaderVS() {}
-	FLexUIHelperLineShaderVS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLexUIHelperLineShader(Initializer)
+	FLexUIHelperGizmoShaderVS() {}
+	FLexUIHelperGizmoShaderVS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIHelperGizmoShader(Initializer)
 	{
 		MVPParameter.Bind(Initializer.ParameterMap, TEXT("_MVP"));
 	}
@@ -51,13 +49,13 @@ public:
 private:
 	LAYOUT_FIELD(FShaderParameter, MVPParameter);
 };
-class FLexUIHelperLineShaderPS :public FLexUIHelperLineShader
+class FLexUIHelperGizmoShaderPS :public FLexUIHelperGizmoShader
 {
-	DECLARE_SHADER_TYPE(FLexUIHelperLineShaderPS, Global);
+	DECLARE_SHADER_TYPE(FLexUIHelperGizmoShaderPS, Global);
 public:
-	FLexUIHelperLineShaderPS() {}
-	FLexUIHelperLineShaderPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
-		: FLexUIHelperLineShader(Initializer)
+	FLexUIHelperGizmoShaderPS() {}
+	FLexUIHelperGizmoShaderPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FLexUIHelperGizmoShader(Initializer)
 	{
 
 	}

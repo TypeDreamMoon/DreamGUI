@@ -403,28 +403,28 @@ void ULexUIManagerWorldSubsystem::DrawNavigationArrow(UWorld* InWorld, const TAr
 	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, true);
 	if (ViewExtension.IsValid())
 	{
-		TArray<FLexUIHelperLineVertex> Lines;
+		TArray<FLexUIHelperGizmoVertex> Lines;
 		//lines
 		FVector prevPoint = ResultPoints[0];
 		for (int i = 1; i < ResultPoints.Num(); i++)
 		{
-			new(Lines) FLexUIHelperLineVertex((FVector3f)prevPoint, InColor);
-			new(Lines) FLexUIHelperLineVertex((FVector3f)ResultPoints[i], InColor);
+			new(Lines) FLexUIHelperGizmoVertex((FVector3f)prevPoint, InColor);
+			new(Lines) FLexUIHelperGizmoVertex((FVector3f)ResultPoints[i], InColor);
 			prevPoint = ResultPoints[i];
 		}
 		//arrow
-		new(Lines) FLexUIHelperLineVertex((FVector3f)InControlPoints[3], InColor);
-		new(Lines) FLexUIHelperLineVertex((FVector3f)InArrowPointA, InColor);
-		new(Lines) FLexUIHelperLineVertex((FVector3f)InControlPoints[3], InColor);
-		new(Lines) FLexUIHelperLineVertex((FVector3f)InArrowPointB, InColor);
+		new(Lines) FLexUIHelperGizmoVertex((FVector3f)InControlPoints[3], InColor);
+		new(Lines) FLexUIHelperGizmoVertex((FVector3f)InArrowPointA, InColor);
+		new(Lines) FLexUIHelperGizmoVertex((FVector3f)InControlPoints[3], InColor);
+		new(Lines) FLexUIHelperGizmoVertex((FVector3f)InArrowPointB, InColor);
 
 		if (ScreenOrWorld)
 		{
-			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperLineKey(Object, DebugName), FLexUIHelperLineRenderParameter(Lines, FMatrix44f::Identity));
+			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), FLexUIHelperGizmoRenderParameter(Lines, FMatrix44f::Identity));
 		}
 		else
 		{
-			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperLineKey(Object, DebugName), FLexUIHelperLineRenderParameter(Lines, FMatrix44f::Identity));
+			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), FLexUIHelperGizmoRenderParameter(Lines, FMatrix44f::Identity));
 		}
 	}
 }
@@ -625,11 +625,11 @@ void ULexUIManagerWorldSubsystem::DrawDebugRect(UWorld* InWorld, const FVector& 
 	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, true);
 	if (ViewExtension.IsValid())
 	{
-		TArray<FLexUIHelperLineVertex> Lines;
+		TArray<FLexUIHelperGizmoVertex> Lines;
 		auto PushNewLine = [&](FVector Start, FVector End)
 		{
-			new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
-			new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
+			new(Lines) FLexUIHelperGizmoVertex(FVector3f(Center + Start), Color);
+			new(Lines) FLexUIHelperGizmoVertex(FVector3f(Center + End), Color);
 		};
 
 		auto Start = FVector(0, Rect.X, Rect.Y);
@@ -650,11 +650,11 @@ void ULexUIManagerWorldSubsystem::DrawDebugRect(UWorld* InWorld, const FVector& 
 
 		if (ScreenOrWorld)
 		{
-			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperLineKey(Object, DebugName), FLexUIHelperLineRenderParameter(Lines, LocalToWorld));
+			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), FLexUIHelperGizmoRenderParameter(Lines, LocalToWorld));
 		}
 		else
 		{
-			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperLineKey(Object, DebugName), FLexUIHelperLineRenderParameter(Lines, LocalToWorld));
+			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), FLexUIHelperGizmoRenderParameter(Lines, LocalToWorld));
 		}
 	}
 }
@@ -665,11 +665,11 @@ void ULexUIManagerWorldSubsystem::DrawDebugBox(UWorld* InWorld, const FVector& C
 	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, true);
 	if (ViewExtension.IsValid())
 	{
-		TArray<FLexUIHelperLineVertex> Lines;
+		TArray<FLexUIHelperGizmoVertex> Lines;
 		auto PushNewLine = [&](FVector Start, FVector End)
 		{
-			new(Lines) FLexUIHelperLineVertex(FVector3f(Center + Start), Color);
-			new(Lines) FLexUIHelperLineVertex(FVector3f(Center + End), Color);
+			new(Lines) FLexUIHelperGizmoVertex(FVector3f(Center + Start), Color);
+			new(Lines) FLexUIHelperGizmoVertex(FVector3f(Center + End), Color);
 		};
 
 		FVector Start, End;
@@ -723,11 +723,11 @@ void ULexUIManagerWorldSubsystem::DrawDebugBox(UWorld* InWorld, const FVector& C
 
 		if (ScreenOrWorld)
 		{
-			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperLineKey(Object, DebugName), FLexUIHelperLineRenderParameter(Lines, LocalToWorld));
+			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), FLexUIHelperGizmoRenderParameter(Lines, LocalToWorld));
 		}
 		else
 		{
-			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperLineKey(Object, DebugName), FLexUIHelperLineRenderParameter(Lines, LocalToWorld));
+			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), FLexUIHelperGizmoRenderParameter(Lines, LocalToWorld));
 		}
 	}
 }
@@ -739,22 +739,22 @@ void ULexUIManagerWorldSubsystem::DrawDebugLineStream(UWorld* InWorld, const FMa
 	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, true);
 	if (ViewExtension.IsValid())
 	{
-		TArray<FLexUIHelperLineVertex> Lines;
+		TArray<FLexUIHelperGizmoVertex> Lines;
 		//lines
 		auto prevPoint = LineStreamPoints[0];
 		for (int i = 1; i < LineStreamPoints.Num(); i++)
 		{
-			new(Lines) FLexUIHelperLineVertex(prevPoint, Color);
-			new(Lines) FLexUIHelperLineVertex(LineStreamPoints[i], Color);
+			new(Lines) FLexUIHelperGizmoVertex(prevPoint, Color);
+			new(Lines) FLexUIHelperGizmoVertex(LineStreamPoints[i], Color);
 			prevPoint = LineStreamPoints[i];
 		}
 		if (ScreenOrWorld)
 		{
-			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperLineKey(Object, DebugName), FLexUIHelperLineRenderParameter(Lines, LocalToWorld));
+			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), FLexUIHelperGizmoRenderParameter(Lines, LocalToWorld));
 		}
 		else
 		{
-			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperLineKey(Object, DebugName), FLexUIHelperLineRenderParameter(Lines, LocalToWorld));
+			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), FLexUIHelperGizmoRenderParameter(Lines, LocalToWorld));
 		}
 	}
 }
@@ -766,37 +766,53 @@ void ULexUIManagerWorldSubsystem::DrawDebugLine(UWorld* InWorld, const FMatrix44
 	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, true);
 	if (ViewExtension.IsValid())
 	{
-		TArray<FLexUIHelperLineVertex> Lines;
+		TArray<FLexUIHelperGizmoVertex> Lines;
 		//lines
 		for (int i = 0; i < LinePoints.Num(); i+=2)
 		{
-			new(Lines) FLexUIHelperLineVertex(LinePoints[i], Color);
-			new(Lines) FLexUIHelperLineVertex(LinePoints[i + 1], Color);
+			new(Lines) FLexUIHelperGizmoVertex(LinePoints[i], Color);
+			new(Lines) FLexUIHelperGizmoVertex(LinePoints[i + 1], Color);
 		}
 		if (ScreenOrWorld)
 		{
-			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperLineKey(Object, DebugName), FLexUIHelperLineRenderParameter(Lines, LocalToWorld));
+			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), FLexUIHelperGizmoRenderParameter(Lines, LocalToWorld));
 		}
 		else
 		{
-			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperLineKey(Object, DebugName), FLexUIHelperLineRenderParameter(Lines, LocalToWorld));
+			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), FLexUIHelperGizmoRenderParameter(Lines, LocalToWorld));
 		}
 	}
 }
 
 void ULexUIManagerWorldSubsystem::DrawDebugLine(UWorld* InWorld, const FMatrix44f& LocalToWorld,
-	const TArray<FLexUIHelperLineVertex>& LinePoints, void* Object, const FString& DebugName, bool ScreenOrWorld)
+	const TArray<FLexUIHelperGizmoVertex>& LinePoints, void* Object, const FString& DebugName, bool ScreenOrWorld)
 {
 	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, true);
 	if (ViewExtension.IsValid())
 	{
 		if (ScreenOrWorld)
 		{
-			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperLineKey(Object, DebugName), FLexUIHelperLineRenderParameter(LinePoints, LocalToWorld));
+			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), FLexUIHelperGizmoRenderParameter(LinePoints, LocalToWorld));
 		}
 		else
 		{
-			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperLineKey(Object, DebugName), FLexUIHelperLineRenderParameter(LinePoints, LocalToWorld));
+			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), FLexUIHelperGizmoRenderParameter(LinePoints, LocalToWorld));
+		}
+	}
+}
+
+void ULexUIManagerWorldSubsystem::DrawDebugMesh(UWorld* InWorld, const FLexUIHelperGizmoRenderParameter& Mesh, void* Object, const FString& DebugName, bool ScreenOrWorld)
+{
+	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, true);
+	if (ViewExtension.IsValid())
+	{
+		if (ScreenOrWorld)
+		{
+			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), Mesh);
+		}
+		else
+		{
+			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), Mesh);
 		}
 	}
 }

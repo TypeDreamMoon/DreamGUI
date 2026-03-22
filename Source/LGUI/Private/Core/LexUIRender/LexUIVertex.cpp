@@ -49,9 +49,9 @@ FVertexDeclarationRHIRef& GetLexUIPostProcessCopyMeshRegionVertexDeclaration()
 void FLexUIHelperLineVertexDeclaration::InitRHI(FRHICommandListBase& RHICmdList)
 {
 	FVertexDeclarationElementList Elements;
-	uint16 Stride = sizeof(FLexUIHelperLineVertex);
-	Elements.Add(FVertexElement(0, STRUCT_OFFSET(FLexUIHelperLineVertex, Position), VET_Float3, 0, Stride));
-	Elements.Add(FVertexElement(0, STRUCT_OFFSET(FLexUIHelperLineVertex, Color), VET_Color, 1, Stride));
+	uint16 Stride = sizeof(FLexUIHelperGizmoVertex);
+	Elements.Add(FVertexElement(0, STRUCT_OFFSET(FLexUIHelperGizmoVertex, Position), VET_Float3, 0, Stride));
+	Elements.Add(FVertexElement(0, STRUCT_OFFSET(FLexUIHelperGizmoVertex, Color), VET_Color, 1, Stride));
 	VertexDeclarationRHI = RHICreateVertexDeclaration(Elements);
 }
 void FLexUIHelperLineVertexDeclaration::ReleaseRHI()

@@ -58,14 +58,14 @@ public:
 LGUI_API FVertexDeclarationRHIRef& GetLexUIPostProcessCopyMeshRegionVertexDeclaration();
 
 
-/** Parameters for render editor helper line */
-struct LGUI_API FLexUIHelperLineVertex
+/** Parameters for render editor helper gizmo */
+struct LGUI_API FLexUIHelperGizmoVertex
 {
 public:
 	FVector3f Position = FVector3f::ZeroVector;
 	FColor Color = FColor::White;
 
-	FLexUIHelperLineVertex(FVector3f InPosition, FColor InColor)
+	FLexUIHelperGizmoVertex(FVector3f InPosition, FColor InColor)
 	{
 		Position = InPosition;
 		Color = InColor;
