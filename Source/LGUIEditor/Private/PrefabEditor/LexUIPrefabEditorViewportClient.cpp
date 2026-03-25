@@ -26,12 +26,10 @@
 #include "HModel.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "LexUIPrefabViewportClickHandlers.h"
-#include "LGUIEditorModule.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/LexUIRender/LexUIRenderer.h"
-#include "Core/LexUIRender/LexUIVertex.h"
 #include "PrefabSystem/LexUIPrefabInstanceScene.h"
 #include "Utils/LexUIUtils.h"
 
@@ -41,96 +39,7 @@ IMPLEMENT_HIT_PROXY(HLevelSocketProxy, HHitProxy);
 
 class FLexUITransformWidget
 {
-private:
-	static void StaticMeshToLexUIMeshRenderData(const UStaticMesh* DataSource, TArray<FLexUIHelperGizmoVertex>& OutVerts, TArray<uint16>& OutIndexes)
-	{
-		const FStaticMeshLODResources& LOD = DataSource->GetRenderData()->LODResources[0];
-		const int32 NumSections = LOD.Sections.Num();
-		if (NumSections > 1)
-		{
-			auto WarningText = FText::Format(LOCTEXT("StaticMeshHasMultipleSections", "StaticMesh {0} has {1} sections. UIStaticMesh expects a static mesh with 1 section."), FText::FromString(DataSource->GetName()), NumSections);
-	#if WITH_EDITOR
-			FLexUIUtils::EditorNotification(WarningText, false, 10);
-	#endif
-			UE_LOG(LGUIEditor, Warning, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *WarningText.ToString());
-		}
-
-		// Populate Vertex Data
-		{
-			const uint32 NumVerts = LOD.VertexBuffers.PositionVertexBuffer.GetNumVertices();
-			OutVerts.Empty();
-			OutVerts.Reserve(NumVerts);
-
-			static const int32 MAX_SUPPORTED_UV_SETS = 4;
-			const int32 TexCoordsPerVertex = LOD.GetNumTexCoords();
-			if (TexCoordsPerVertex > MAX_SUPPORTED_UV_SETS)
-			{
-				auto WarningText = FText::Format(LOCTEXT("StaticMeshHasTooManyUVSets", "StaticMesh {0} has {1} UV sets; LGUI vertex data supports at most {2}."), FText::FromString(DataSource->GetName()), TexCoordsPerVertex, MAX_SUPPORTED_UV_SETS);
-	#if WITH_EDITOR
-				FLexUIUtils::EditorNotification(WarningText, false, 10);
-	#endif
-				UE_LOG(LGUIEditor, Warning, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *WarningText.ToString());
-			}
-
-			for (uint32 i = 0; i < NumVerts; ++i)
-			{
-				// Copy Position
-				const FVector3f& Position = LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(i);
-
-				// Copy Color
-				FColor Color = (LOD.VertexBuffers.ColorVertexBuffer.GetNumVertices() > 0) ? LOD.VertexBuffers.ColorVertexBuffer.VertexColor(i) : FColor::White;
-
-				// Copy all the UVs that we have, and as many as we can fit.
-				const FVector2f& UV0 = (TexCoordsPerVertex > 0) ? LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(i, 0) : FVector2f(1, 1);
-
-				const FVector2f& UV1 = (TexCoordsPerVertex > 1) ? LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(i, 1) : FVector2f(1, 1);
-
-				const FVector2f& UV2 = (TexCoordsPerVertex > 2) ? LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(i, 2) : FVector2f(1, 1);
-
-				const FVector2f& UV3 = (TexCoordsPerVertex > 3) ? LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(i, 3) : FVector2f(1, 1);
-
-				const FVector3f TangentX = FVector3f(LOD.VertexBuffers.StaticMeshVertexBuffer.VertexTangentX(i));
-				const FVector3f TangentZ = FVector3f(LOD.VertexBuffers.StaticMeshVertexBuffer.VertexTangentZ(i));
-
-				OutVerts.Add(FLexUIHelperGizmoVertex(
-					Position,
-					Color
-				));
-			}
-		}
-
-		// Populate Index data
-		{
-			FIndexArrayView SourceIndexes = LOD.IndexBuffer.GetArrayView();
-			const int32 NumIndexes = SourceIndexes.Num();
-			OutIndexes.Empty();
-			OutIndexes.Reserve(NumIndexes);
-			for (int32 i = 0; i < NumIndexes; ++i)
-			{
-				OutIndexes.Add(SourceIndexes[i]);
-			}
-
-			// Sort the index buffer such that verts are drawn in Z-order.
-			// Assume that all triangles are coplanar with Z == SomeValue.
-			ensure(NumIndexes % 3 == 0);
-			for (int32 a = 0; a < NumIndexes; a += 3)
-			{
-				for (int32 b = 0; b < NumIndexes; b += 3)
-				{
-					const float VertADepth = LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(OutIndexes[a]).Z;
-					const float VertBDepth = LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(OutIndexes[b]).Z;
-					if (VertADepth < VertBDepth)
-					{
-						// Swap the order in which triangles will be drawn
-						Swap(OutIndexes[a + 0], OutIndexes[b + 0]);
-						Swap(OutIndexes[a + 1], OutIndexes[b + 1]);
-						Swap(OutIndexes[a + 2], OutIndexes[b + 2]);
-					}
-				}
-			}
-		}
-	}
-		
+private:		
 	int PressMouseX = 0, PressMouseY = 0; FVector PressAxisHitPoint = FVector::Zero();
 	FTransform ThisTransformWhenPress = FTransform::Identity;
 	FTransform ThisTransform = FTransform::Identity;
@@ -144,6 +53,7 @@ private:
 	FLexUIHelperGizmoRenderParameter MovePlaneYZ;
 	FLexUIHelperGizmoRenderParameter MovePlaneZX;
 	FLexUIHelperGizmoRenderParameter MovePlaneXY;
+	TWeakObjectPtr<UMaterialInterface> GizmoMaterial;
 	FVector MovePlaneYZCenter;
 	FVector MovePlaneZXCenter;
 	FVector MovePlaneXYCenter;
@@ -152,6 +62,7 @@ private:
 	FColor ColorAxisX = FColor::Red, ColorAxisY = FColor::Green, ColorAxisZ = FColor::Blue;
 	FColor HighlightColor = FColor::Yellow;
 	FString DebugName;
+	bool bCanTick = false;
 	enum class EAxisType
 	{
 		None, X, Y, Z, YZ, ZX, XY, 
@@ -162,10 +73,10 @@ private:
 	bool bIsDragging = false;
 	TWeakObjectPtr<ULexWidget> SelectedWidget;
 	FLexUIPrefabEditorViewportClient* ViewportClient = nullptr;
-	FSceneViewFamilyContext* ViewFamily = nullptr;
+	TUniquePtr<FSceneViewFamilyContext> ViewFamily = nullptr;
 	void UpdateAxis()
 	{
-		auto SceneView = ViewportClient->CalcSceneView( ViewFamily );
+		auto SceneView = ViewportClient->CalcSceneView( ViewFamily.Get() );
 		auto MouseX = ViewportClient->Viewport->GetMouseX();
 		auto MouseY = ViewportClient->Viewport->GetMouseY();
 
@@ -184,7 +95,7 @@ private:
 			}
 			else
 			{
-				RenderScale = FVector::Dist(ViewportClient->GetViewLocation(), ThisTransform.GetTranslation()) * 0.002f;
+				RenderScale = FVector::Dist(ViewportClient->GetViewLocation(), ThisTransform.GetTranslation()) * 1.5f / ViewportClient->Viewport->GetSizeXY().X;
 			}
 			if (bIsMousePressedAtThisFrame)
 			{
@@ -313,7 +224,7 @@ private:
 			{
 				auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::Z));
 				auto IntersectPointLocalSpace = RenderTransform.InverseTransformPosition(IntersectPoint);
-				bool bIsHit = IntersectPointLocalSpace.X > 0 && IntersectPointLocalSpace.X < AxisPlaneSize && IntersectPointLocalSpace.Y > 0 && IntersectPointLocalSpace.X < AxisPlaneSize;
+				bool bIsHit = IntersectPointLocalSpace.X > 0 && IntersectPointLocalSpace.X < AxisPlaneSize && IntersectPointLocalSpace.Y > 0 && IntersectPointLocalSpace.Y < AxisPlaneSize;
 				MovePlaneXY.SetColor(bIsHit ? HighlightColor : ColorAxisZ, PlaneAlpha);
 				if (bIsHit)
 				{
@@ -379,9 +290,10 @@ public:
 		LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(InWorld);
 		DebugName = TEXT("LexUITransformWidget");
 		
-		auto MoveAxisMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/LGUI/Meshes/MoveAxis"));
-		TArray<FLexUIHelperGizmoVertex> SrcMeshVertexArray; TArray<uint16> SrcMeshIndexArray;
-		StaticMeshToLexUIMeshRenderData(MoveAxisMesh, SrcMeshVertexArray, SrcMeshIndexArray);
+		auto MoveAxisMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/LGUI/EditorGizmo/MoveAxis"));
+		if (!MoveAxisMesh)return;
+		TArray<FLexUIMeshVertex> SrcMeshVertexArray; TArray<uint16> SrcMeshIndexArray;
+		FLexUIUtils::StaticMeshToLexUIMeshRenderData(MoveAxisMesh, SrcMeshVertexArray, SrcMeshIndexArray);
 		MoveAxisX = FLexUIHelperGizmoRenderParameter(SrcMeshVertexArray, SrcMeshIndexArray);
 		FRotator3f MoveAxisXRot = FRotator3f(-90, 0, 0);
 		for (auto& Vertex : MoveAxisX.VertexArray)
@@ -402,8 +314,8 @@ public:
 			Vertex.Color = ColorAxisZ;
 		}
 		
-		auto MovePlaneMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/LGUI/Meshes/MovePlane"));
-		StaticMeshToLexUIMeshRenderData(MovePlaneMesh, SrcMeshVertexArray, SrcMeshIndexArray);
+		auto MovePlaneMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/LGUI/EditorGizmo/MovePlane"));
+		FLexUIUtils::StaticMeshToLexUIMeshRenderData(MovePlaneMesh, SrcMeshVertexArray, SrcMeshIndexArray);
 		MovePlaneYZ = FLexUIHelperGizmoRenderParameter(SrcMeshVertexArray, SrcMeshIndexArray);
 		MovePlaneYZCenter = FVector(0, 0.15f, 0.15f);
 		for (auto& Vertex : MovePlaneYZ.VertexArray)
@@ -428,19 +340,36 @@ public:
 		}
 		
 		ViewportClient = InViewportClient;
-		ViewFamily = new FSceneViewFamilyContext(FSceneViewFamily::ConstructionValues(
+		ViewFamily = MakeUnique<FSceneViewFamilyContext>(FSceneViewFamily::ConstructionValues(
 			InViewportClient->Viewport,
 			InViewportClient->GetScene(),
 			InViewportClient->EngineShowFlags)
 			.SetRealtimeUpdate( true ) );
+
+		bCanTick = true;
 	}
 	~FLexUITransformWidget()
 	{
-		delete ViewFamily;
 	}
 	void Tick()
 	{
+		if (!bCanTick)return;
 		UpdateAxis();
+
+		if (!GizmoMaterial.IsValid())
+		{
+			GizmoMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/LGUI/EditorGizmo/GizmoMaterial"));
+		}
+		if (GizmoMaterial.IsValid())
+		{
+			MoveAxisX.MaterialRenderProxy = GizmoMaterial->GetRenderProxy();
+			MoveAxisY.MaterialRenderProxy = GizmoMaterial->GetRenderProxy();
+			MoveAxisZ.MaterialRenderProxy = GizmoMaterial->GetRenderProxy();
+			MovePlaneYZ.MaterialRenderProxy = GizmoMaterial->GetRenderProxy();
+			MovePlaneZX.MaterialRenderProxy = GizmoMaterial->GetRenderProxy();
+			MovePlaneXY.MaterialRenderProxy = GizmoMaterial->GetRenderProxy();
+		}
+		
 		auto LocalToWorld = FMatrix44f(RenderTransform.ToMatrixWithScale());
 		auto ViewLocation = ViewportClient->GetViewLocation();
 		struct FMovePlaneInfo

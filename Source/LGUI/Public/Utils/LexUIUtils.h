@@ -216,4 +216,5 @@ private:
 public:
 	static FColor ColorHSVDataToColorRGB(const FVector& InHSVColor);
 	static FVector ColorRGBToColorHSVData(const FColor& InRGBColor);
+	static void StaticMeshToLexUIMeshRenderData(const UStaticMesh* InMesh, TArray<struct FLexUIMeshVertex>& OutVerts, TArray<uint16>& OutIndexes);
 };

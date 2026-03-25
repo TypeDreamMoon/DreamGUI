@@ -2,6 +2,7 @@
 
 #pragma once
 #include "CoreMinimal.h"
+#include "LexUIMeshVertex.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "Tickable.h"
 #include "LexUIManager.generated.h"
@@ -219,12 +220,11 @@ public:
 	void DrawNavigationArrow(UWorld* InWorld, const TArray<FVector>& InControlPoints, const FVector& InArrowPointA, const FVector& InArrowPointB, FColor const& InColor, void* Object, const FString& DebugName, bool ScreenOrWorld = false);
 	void DrawNavigationVisualizerOnUISelectable(UWorld* InWorld, UUISelectableComponent* InSelectable, bool IsScreenSpace = false);
 	FEditorViewportClient* GetEditorViewportClient();
+	static UMaterialInterface* GetDefaultGizmoMaterial();
 	
 	static void DrawDebugRect(UWorld* InWorld, const FVector& Center, const FMatrix44f& LocalToWorld, FVector2D const& Rect, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
 	static void DrawDebugBox(UWorld* InWorld, const FVector& Center, const FMatrix44f& LocalToWorld, FVector const& Box, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
-	static void DrawDebugLineStream(UWorld* InWorld, const FMatrix44f& LocalToWorld, const TArray<FVector3f>& LineStreamPoints, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
 	static void DrawDebugLine(UWorld* InWorld, const FMatrix44f& LocalToWorld, const TArray<FVector3f>& LinePoints, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
-	static void DrawDebugLine(UWorld* InWorld, const FMatrix44f& LocalToWorld, const TArray<FLexUIHelperGizmoVertex>& LinePoints, void* Object, const FString& DebugName, bool ScreenOrWorld);
 	static void DrawDebugMesh(UWorld* InWorld, const FLexUIHelperGizmoRenderParameter& Mesh, void* Object, const FString& DebugName, bool ScreenOrWorld);
 private:
 	//this is cached when call GetEditorViewportClient

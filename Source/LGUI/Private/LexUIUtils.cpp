@@ -5,6 +5,8 @@
 #include "TextureResource.h"
 #include "Engine/Texture2D.h"
 #include "LGUI.h"
+#include "Core/LexUIMeshVertex.h"
+#include "LGUIEditor/Public/LGUIEditorModule.h"
 #if WITH_EDITOR
 #include "Editor.h"
 #include "Framework/Notifications/NotificationManager.h"
@@ -429,6 +431,101 @@ float FLexUIUtils::Color255To1_Table[256] =
 	,0.8901961,0.8941177,0.8980392,0.9019608,0.9058824,0.9098039,0.9137255,0.9176471,0.9215686,0.9254902,0.9294118,0.9333333,0.9372549,0.9411765,0.945098,0.9490196,0.9529412,0.9568627,0.9607843,0.9647059
 	,0.9686275,0.972549,0.9764706,0.9803922,0.9843137,0.9882353,0.9921569,0.9960784,1
 };
+
+void FLexUIUtils::StaticMeshToLexUIMeshRenderData(const UStaticMesh* InMesh, TArray<FLexUIMeshVertex>& OutVerts, TArray<uint16>& OutIndexes)
+{
+	const FStaticMeshLODResources& LOD = InMesh->GetRenderData()->LODResources[0];
+	const int32 NumSections = LOD.Sections.Num();
+	if (NumSections > 1)
+	{
+		auto WarningText = FText::Format(LOCTEXT("StaticMeshHasMultipleSections", "StaticMesh {0} has {1} sections. UIStaticMesh expects a static mesh with 1 section."), FText::FromString(InMesh->GetName()), NumSections);
+#if WITH_EDITOR
+		FLexUIUtils::EditorNotification(WarningText, false, 10);
+#endif
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *WarningText.ToString());
+	}
+
+	// Populate Vertex Data
+	{
+		const uint32 NumVerts = LOD.VertexBuffers.PositionVertexBuffer.GetNumVertices();
+		OutVerts.Empty();
+		OutVerts.Reserve(NumVerts);
+
+		static const int32 MAX_SUPPORTED_UV_SETS = 4;
+		const int32 TexCoordsPerVertex = LOD.GetNumTexCoords();
+		if (TexCoordsPerVertex > MAX_SUPPORTED_UV_SETS)
+		{
+			auto WarningText = FText::Format(LOCTEXT("StaticMeshHasTooManyUVSets", "StaticMesh {0} has {1} UV sets; LGUI vertex data supports at most {2}."), FText::FromString(InMesh->GetName()), TexCoordsPerVertex, MAX_SUPPORTED_UV_SETS);
+#if WITH_EDITOR
+			FLexUIUtils::EditorNotification(WarningText, false, 10);
+#endif
+			UE_LOG(LGUI, Warning, TEXT("[%s].%d %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *WarningText.ToString());
+		}
+
+		for (uint32 i = 0; i < NumVerts; ++i)
+		{
+			// Copy Position
+			const FVector3f& Position = LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(i);
+
+			// Copy Color
+			FColor Color = (LOD.VertexBuffers.ColorVertexBuffer.GetNumVertices() > 0) ? LOD.VertexBuffers.ColorVertexBuffer.VertexColor(i) : FColor::White;
+
+			// Copy all the UVs that we have, and as many as we can fit.
+			const FVector2f& UV0 = (TexCoordsPerVertex > 0) ? LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(i, 0) : FVector2f(1, 1);
+
+			const FVector2f& UV1 = (TexCoordsPerVertex > 1) ? LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(i, 1) : FVector2f(1, 1);
+
+			const FVector2f& UV2 = (TexCoordsPerVertex > 2) ? LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(i, 2) : FVector2f(1, 1);
+
+			const FVector2f& UV3 = (TexCoordsPerVertex > 3) ? LOD.VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(i, 3) : FVector2f(1, 1);
+
+			const FVector3f TangentX = FVector3f(LOD.VertexBuffers.StaticMeshVertexBuffer.VertexTangentX(i));
+			const FVector3f TangentZ = FVector3f(LOD.VertexBuffers.StaticMeshVertexBuffer.VertexTangentZ(i));
+
+			OutVerts.Add(FLexUIMeshVertex(
+				Position,
+				TangentX,
+				TangentZ,
+				Color,
+				UV0,
+				UV1,
+				UV2,
+				UV3
+			));
+		}
+	}
+
+	// Populate Index data
+	{
+		FIndexArrayView SourceIndexes = LOD.IndexBuffer.GetArrayView();
+		const int32 NumIndexes = SourceIndexes.Num();
+		OutIndexes.Empty();
+		OutIndexes.Reserve(NumIndexes);
+		for (int32 i = 0; i < NumIndexes; ++i)
+		{
+			OutIndexes.Add(SourceIndexes[i]);
+		}
+
+		// Sort the index buffer such that verts are drawn in Z-order.
+		// Assume that all triangles are coplanar with Z == SomeValue.
+		ensure(NumIndexes % 3 == 0);
+		for (int32 a = 0; a < NumIndexes; a += 3)
+		{
+			for (int32 b = 0; b < NumIndexes; b += 3)
+			{
+				const float VertADepth = LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(OutIndexes[a]).Z;
+				const float VertBDepth = LOD.VertexBuffers.PositionVertexBuffer.VertexPosition(OutIndexes[b]).Z;
+				if (VertADepth < VertBDepth)
+				{
+					// Swap the order in which triangles will be drawn
+					Swap(OutIndexes[a + 0], OutIndexes[b + 0]);
+					Swap(OutIndexes[a + 1], OutIndexes[b + 1]);
+					Swap(OutIndexes[a + 2], OutIndexes[b + 2]);
+				}
+			}
+		}
+	}
+}
 
 #undef LOCTEXT_NAMESPACE
 

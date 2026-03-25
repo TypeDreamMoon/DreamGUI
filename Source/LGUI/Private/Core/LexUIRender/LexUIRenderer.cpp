@@ -25,9 +25,6 @@
 #include "ClearQuad.h"
 #include "RHIResourceUtils.h"
 #include "Core/LexUIMeshVertex.h"
-#if WITH_EDITOR
-#include "Core/LexUIRender/LexUIHelperGizmoShaders.h"
-#endif
 
 
 
@@ -777,8 +774,8 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 
 													if (!bWireframe)
 													{
-														VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh);
-														PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh);
+														VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
+														PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
 														PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepth, SceneDepthTexST, PassParameters->SceneDepthTex->GetRHI());
 														PixelShader->SetGammaValue(RHICmdList, GammaValue);
 													}
@@ -812,8 +809,8 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 
 													if (!bWireframe)
 													{
-														VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh);
-														PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh);
+														VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
+														PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
 														PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepth, SceneDepthTexST, PassParameters->SceneDepthTex->GetRHI());
 														PixelShader->SetDepthFadeParameter(RHICmdList, DepthFade);
 														PixelShader->SetGammaValue(RHICmdList, GammaValue);
@@ -840,7 +837,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 			}
 #if WITH_EDITOR
 			RenderHelperLineArray_RenderThread(WorldSpaceHelperLineMap,
-				GraphBuilder, RenderView, ViewProjectionMatrix, ViewRect, NumSamples, RenderTargetTexture, GlobalShaderMap);
+				GraphBuilder, RenderView, ViewRect, NumSamples, RenderTargetTexture);
 #endif
 			GraphBuilder.AddPass(
 				RDG_EVENT_NAME("LexUI_RenderWorld_Clean"),
@@ -1060,8 +1057,8 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 
 									if (!bWireframe)
 									{
-										VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh);
-										PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh);
+										VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
+										PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
 										PixelShader->SetGammaValue(RHICmdList, GammaValue);
 									}
 
@@ -1085,7 +1082,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 
 #if WITH_EDITOR
 		RenderHelperLineArray_RenderThread(ScreenSpaceHelperLineMap,
-			GraphBuilder, RenderView, ScreenSpaceRenderParameter.ViewProjectionMatrix, ViewRect, NumSamples, RenderTargetTexture, GlobalShaderMap);
+			GraphBuilder, RenderView, ViewRect, NumSamples, RenderTargetTexture);
 #endif
 
 		GraphBuilder.AddPass(
@@ -1361,92 +1358,127 @@ void FLexUIRenderer::UpdateRenderTargetRenderer(UTextureRenderTarget2D* InRender
 void FLexUIRenderer::RenderHelperLineArray_RenderThread(TMap<FLexUIHelperGizmoKey, FLexUIHelperGizmoRenderParameter>& HelperGizmoDataMap
 , FRDGBuilder& GraphBuilder
 , FSceneView* RenderView
-, const FMatrix44f& ViewProjectionMatrix
 , const FIntRect& ViewRect
 , uint8 NumSamples
 , FRDGTextureRef RenderTargetTexture
-, FGlobalShaderMap* GlobalShaderMap
 )
 {
 	if (HelperGizmoDataMap.Num() <= 0)return;
+	const FMinimalSceneTextures& SceneTextures = ((FViewFamilyInfo*)RenderView->Family)->GetSceneTextures();
 	auto* PassParameters = GraphBuilder.AllocParameters<FRenderTargetParameters>();
 	PassParameters->RenderTargets[0] = FRenderTargetBinding(RenderTargetTexture, ERenderTargetLoadAction::ELoad);
 	GraphBuilder.AddPass(
 		RDG_EVENT_NAME("LexUI_RenderHelperLine"),
 		PassParameters,
 		ERDGPassFlags::Raster,
-		[this, &HelperGizmoDataMap, RenderView, ViewProjectionMatrix, ViewRect, NumSamples, GlobalShaderMap](FRHICommandListImmediate& RHICmdList)
+		[this, &HelperGizmoDataMap, RenderView, ViewRect, NumSamples](FRHICommandListImmediate& RHICmdList)
 		{
-			TShaderMapRef<FLexUIHelperGizmoShaderVS> VertexShader(GlobalShaderMap);
-			TShaderMapRef<FLexUIHelperGizmoShaderPS> PixelShader(GlobalShaderMap);
-
 			RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
 
-			for (auto& RenderParameter : HelperGizmoDataMap)
+			for (auto& KeyValueItem : HelperGizmoDataMap)
 			{
-				switch (RenderParameter.Value.DrawType)
+				auto& RenderParameter = KeyValueItem.Value;
+				if (!RenderParameter.MaterialRenderProxy)break;
+				switch (RenderParameter.DrawType)
 				{
 				case ELexUIHelperGizmoDrawType::Line:
 					{
-						FGraphicsPipelineStateInitializer GraphicsPSOInit;
-						RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-						FLexUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, EBlendMode::BLEND_Opaque, false, true, true, false, false);
-
-						GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIHelperLineVertexDeclaration();
-						GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-						GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-						GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_LineList;
-						GraphicsPSOInit.NumSamples = NumSamples;
-						SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
-						
-						VertexShader->SetParameters(RHICmdList, RenderParameter.Value.LocalToWorld * ViewProjectionMatrix);
-						FBufferRHIRef VertexBufferRHI = UE::RHIResourceUtils::CreateVertexBufferFromArray(
-							RHICmdList, TEXT("LexUIHelperGizmoRenderVertexBuffer"), EBufferUsageFlags::Volatile, MakeConstArrayView(RenderParameter.Value.VertexArray)
-						);
-						RHICmdList.SetStreamSource(0, VertexBufferRHI, 0);
-						
-						int32 MaxVerticesAllowed = ((GDrawUPVertexCheckCount / sizeof(FSimpleElementVertex)) / 2) * 2;
-						/*
-						hack to avoid a crash when trying to render large numbers of line segments.
-						*/
-						MaxVerticesAllowed = FMath::Min(MaxVerticesAllowed, 64 * 1024);
-
-						int32 MinVertex = 0;
-						int32 TotalVerts = (RenderParameter.Value.VertexArray.Num() / 2) * 2;
-						while (MinVertex < TotalVerts)
+						auto Material = RenderParameter.MaterialRenderProxy->GetMaterialNoFallback(RenderView->GetFeatureLevel());
+						FMaterialShaderTypes ShaderTypes;
+						ShaderTypes.AddShaderType<FLexUIScreenRenderVS>();
+						ShaderTypes.AddShaderType<FLexUIScreenRenderPS>();
+						FMaterialShaders Shaders;
+						if (Material->TryGetShaders(ShaderTypes, nullptr, Shaders))
 						{
-							int32 NumLinePrims = FMath::Min(MaxVerticesAllowed, TotalVerts - MinVertex) / 2;
-							RHICmdList.DrawPrimitive(MinVertex, NumLinePrims, 1);
-							MinVertex += NumLinePrims * 2;
+							TShaderRef<FLexUIScreenRenderVS> VertexShader;
+							TShaderRef<FLexUIScreenRenderPS> PixelShader;
+							Shaders.TryGetVertexShader(VertexShader);
+							Shaders.TryGetPixelShader(PixelShader);
+
+							FGraphicsPipelineStateInitializer GraphicsPSOInit;
+							RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+							FLexUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, Material->GetBlendMode()
+								, false, Material->IsTwoSided(), Material->ShouldDisableDepthTest(), false, false);
+
+							GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIMeshVertexDeclaration();
+							GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+							GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+							GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_LineList;
+							GraphicsPSOInit.NumSamples = NumSamples;
+							SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+
+							FSceneRenderingBulkObjectAllocator Allocator;
+							FLexUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Allocator, RHICmdList);
+							FDynamicPrimitiveUniformBuffer& DynamicPrimitiveUniformBuffer = MeshCollector.AllocateOneFrameResource<FDynamicPrimitiveUniformBuffer>();
+							auto LocalBounds = FBox();
+							DynamicPrimitiveUniformBuffer.Set(RHICmdList, FMatrix(RenderParameter.LocalToWorld), FMatrix(RenderParameter.LocalToWorld)
+								, FBoxSphereBounds(LocalBounds.TransformBy(FMatrix(RenderParameter.LocalToWorld))), FBoxSphereBounds(LocalBounds), false, false, false);
+							VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, RenderParameter.MaterialRenderProxy, Material, &DynamicPrimitiveUniformBuffer.UniformBuffer);
+							PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, RenderParameter.MaterialRenderProxy, Material, &DynamicPrimitiveUniformBuffer.UniformBuffer);
+								
+							FBufferRHIRef VertexBufferRHI = UE::RHIResourceUtils::CreateVertexBufferFromArray(
+								RHICmdList, TEXT("LexUIHelperGizmoRenderVertexBuffer"), EBufferUsageFlags::Volatile, MakeConstArrayView(RenderParameter.VertexArray)
+							);
+							RHICmdList.SetStreamSource(0, VertexBufferRHI, 0);
+							
+							auto IndexBufferRHI = UE::RHIResourceUtils::CreateIndexBufferFromArray(
+								RHICmdList, TEXT("LexUIHelperGizmoRenderIndexBuffer"), EBufferUsageFlags::Volatile, MakeConstArrayView(RenderParameter.IndexArray)
+							);
+							RHICmdList.DrawIndexedPrimitive(IndexBufferRHI, 0, 0, RenderParameter.VertexArray.Num(), 0, RenderParameter.IndexArray.Num() / 2, 1);
+							
+							VertexBufferRHI.SafeRelease();
+							IndexBufferRHI.SafeRelease();
 						}
-						VertexBufferRHI.SafeRelease();
 					}
 					break;
 				case ELexUIHelperGizmoDrawType::Triangle:
 					{
-						FGraphicsPipelineStateInitializer GraphicsPSOInit;
-						RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-						FLexUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, EBlendMode::BLEND_Translucent, false, true, true, false, false);
+						auto Material = RenderParameter.MaterialRenderProxy->GetMaterialNoFallback(RenderView->GetFeatureLevel());
+						FMaterialShaderTypes ShaderTypes;
+						ShaderTypes.AddShaderType<FLexUIScreenRenderVS>();
+						ShaderTypes.AddShaderType<FLexUIScreenRenderPS>();
+						FMaterialShaders Shaders;
+						if (Material->TryGetShaders(ShaderTypes, nullptr, Shaders))
+						{
+							TShaderRef<FLexUIScreenRenderVS> VertexShader;
+							TShaderRef<FLexUIScreenRenderPS> PixelShader;
+							Shaders.TryGetVertexShader(VertexShader);
+							Shaders.TryGetPixelShader(PixelShader);
 
-						GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIHelperLineVertexDeclaration();
-						GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-						GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-						GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
-						GraphicsPSOInit.NumSamples = NumSamples;
-						SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+							FGraphicsPipelineStateInitializer GraphicsPSOInit;
+							RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+							FLexUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, Material->GetBlendMode()
+								, false, Material->IsTwoSided(), Material->ShouldDisableDepthTest(), false, false);
 
-						VertexShader->SetParameters(RHICmdList, RenderParameter.Value.LocalToWorld * ViewProjectionMatrix);
-						FBufferRHIRef VertexBufferRHI = UE::RHIResourceUtils::CreateVertexBufferFromArray(
-							RHICmdList, TEXT("LexUIHelperGizmoRenderVertexBuffer"), EBufferUsageFlags::Volatile, MakeConstArrayView(RenderParameter.Value.VertexArray)
-						);
-						RHICmdList.SetStreamSource(0, VertexBufferRHI, 0);
-						
-						auto IndexBufferRHI = UE::RHIResourceUtils::CreateIndexBufferFromArray(
-							RHICmdList, TEXT("LexUIHelperGizmoRenderIndexBuffer"), EBufferUsageFlags::Volatile, MakeConstArrayView(RenderParameter.Value.IndexArray)
-						);
-						RHICmdList.DrawIndexedPrimitive(IndexBufferRHI, 0, 0, RenderParameter.Value.VertexArray.Num(), 0, RenderParameter.Value.IndexArray.Num() / 3, 1);
-						VertexBufferRHI.SafeRelease();
-						IndexBufferRHI.SafeRelease();
+							GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIMeshVertexDeclaration();
+							GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+							GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+							GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
+							GraphicsPSOInit.NumSamples = NumSamples;
+							SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+
+							FSceneRenderingBulkObjectAllocator Allocator;
+							FLexUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Allocator, RHICmdList);
+							FDynamicPrimitiveUniformBuffer& DynamicPrimitiveUniformBuffer = MeshCollector.AllocateOneFrameResource<FDynamicPrimitiveUniformBuffer>();
+							auto& LocalBounds = RenderParameter.LocalBounds;
+							DynamicPrimitiveUniformBuffer.Set(RHICmdList, FMatrix(RenderParameter.LocalToWorld), FMatrix(RenderParameter.LocalToWorld)
+								, FBoxSphereBounds(LocalBounds.TransformBy(FMatrix(RenderParameter.LocalToWorld))), FBoxSphereBounds(LocalBounds), false, false, false);
+							VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, RenderParameter.MaterialRenderProxy, Material, &DynamicPrimitiveUniformBuffer.UniformBuffer);
+							PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, RenderParameter.MaterialRenderProxy, Material, &DynamicPrimitiveUniformBuffer.UniformBuffer);
+								
+							FBufferRHIRef VertexBufferRHI = UE::RHIResourceUtils::CreateVertexBufferFromArray(
+								RHICmdList, TEXT("LexUIHelperGizmoRenderVertexBuffer"), EBufferUsageFlags::Volatile, MakeConstArrayView(RenderParameter.VertexArray)
+							);
+							RHICmdList.SetStreamSource(0, VertexBufferRHI, 0);
+							
+							auto IndexBufferRHI = UE::RHIResourceUtils::CreateIndexBufferFromArray(
+								RHICmdList, TEXT("LexUIHelperGizmoRenderIndexBuffer"), EBufferUsageFlags::Volatile, MakeConstArrayView(RenderParameter.IndexArray)
+							);
+							RHICmdList.DrawIndexedPrimitive(IndexBufferRHI, 0, 0, RenderParameter.VertexArray.Num(), 0, RenderParameter.IndexArray.Num() / 3, 1);
+							
+							VertexBufferRHI.SafeRelease();
+							IndexBufferRHI.SafeRelease();
+						}
 					}
 					break;
 				}

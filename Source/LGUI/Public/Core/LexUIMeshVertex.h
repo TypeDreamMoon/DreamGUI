@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "RenderResource.h"
 #include "PackedNormal.h"
-#include "RenderUtils.h"
 #include "RenderMath.h"
 
 #define LEXUI_VERTEX_TEXCOORDINATE_COUNT 4
@@ -26,6 +25,40 @@ struct LGUI_API FLexUIMeshVertex
 		{
 			TextureCoordinate[i] = FVector2f::ZeroVector;
 		}
+	}
+	FLexUIMeshVertex(const FVector3f& InPosition, const FColor& InColor):
+		Position(InPosition),
+		Color(InColor),
+		TangentX(FVector3f(1, 0, 0)),
+		TangentZ(FVector3f(0, 0, 1))
+	{
+		// basis determinant default to +1.0
+		TangentZ.Vector.W = 127;
+
+		for (int i = 0; i < LEXUI_VERTEX_TEXCOORDINATE_COUNT; i++)
+		{
+			TextureCoordinate[i] = FVector2f::ZeroVector;
+		}
+	}
+	FLexUIMeshVertex(
+		const FVector3f& InPosition
+		, const FVector3f& InTangentX
+		, const FVector3f& InTangentZ
+		, const FColor& InColor
+		, const FVector2f& InUV0
+		, const FVector2f& InUV1
+		, const FVector2f& InUV2
+		, const FVector2f& InUV3
+	)
+	{
+		Position = InPosition;
+		TangentX = InTangentX;
+		TangentZ = InTangentZ;
+		Color = InColor;
+		TextureCoordinate[0] = InUV0;
+		TextureCoordinate[1] = InUV1;
+		TextureCoordinate[2] = InUV2;
+		TextureCoordinate[3] = InUV3;
 	}
 
 	FVector3f Position;

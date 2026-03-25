@@ -7,6 +7,7 @@
 #include "RendererInterface.h"
 #include "RenderGraphUtils.h"
 #include "RenderResource.h"
+#include "Core/LexUIMeshVertex.h"
 #include "Core/LexUIRender/LexUIVertex.h"
 #include "Core/LexUIRender/ILexUIRendererPrimitive.h"
 
@@ -15,7 +16,7 @@ struct FLexUIPostProcessVertex;
 struct FLexUIPostProcessCopyMeshRegionVertex;
 class FGlobalShaderMap;
 
-class FLexUIMeshElementCollector : FMeshElementCollector//why use a custom collector? because default FMeshElementCollector have no public constructor
+class FLexUIMeshElementCollector : public FMeshElementCollector//why use a custom collector? because default FMeshElementCollector have no public constructor
 {
 public:
 	FLexUIMeshElementCollector(ERHIFeatureLevel::Type InFeatureLevel, FSceneRenderingBulkObjectAllocator& Allocator, FRHICommandList& InRHICmdList)
@@ -48,23 +49,27 @@ struct FLexUIHelperGizmoRenderParameter
 {
 public:
 	FLexUIHelperGizmoRenderParameter(){}
-	FLexUIHelperGizmoRenderParameter(const TArray<FLexUIHelperGizmoVertex>& InVertexArray, const FMatrix44f& InLocalToWorld)
+	FLexUIHelperGizmoRenderParameter(const TArray<FLexUIMeshVertex>& InVertexArray, const TArray<uint16>& InIndexArray, const FMatrix44f& InLocalToWorld, FMaterialRenderProxy* InMaterialRenderProxy)
 	{
 		VertexArray = InVertexArray;
+		IndexArray = InIndexArray;
 		LocalToWorld = InLocalToWorld;
 		DrawType = ELexUIHelperGizmoDrawType::Line;
+		MaterialRenderProxy = InMaterialRenderProxy;
 	}
-	FLexUIHelperGizmoRenderParameter(const TArray<FLexUIHelperGizmoVertex>& InVertexArray, const TArray<uint16>& InIndexArray)
+	FLexUIHelperGizmoRenderParameter(const TArray<FLexUIMeshVertex>& InVertexArray, const TArray<uint16>& InIndexArray)
 	{
 		VertexArray = InVertexArray;
 		IndexArray = InIndexArray;
 		LocalToWorld = FMatrix44f::Identity;
 		DrawType = ELexUIHelperGizmoDrawType::Triangle;
 	}
-	ELexUIHelperGizmoDrawType DrawType;
-	FMatrix44f LocalToWorld;
-	TArray<FLexUIHelperGizmoVertex> VertexArray;
+	ELexUIHelperGizmoDrawType DrawType = ELexUIHelperGizmoDrawType::Triangle;
+	FMatrix44f LocalToWorld = FMatrix44f::Identity;
+	FBox LocalBounds = FBox(EForceInit::ForceInit);
+	TArray<FLexUIMeshVertex> VertexArray;
 	TArray<uint16> IndexArray;
+	FMaterialRenderProxy* MaterialRenderProxy = nullptr;
 
 	void SetColor(const FColor& InColor, uint8 InAlpha = 255)
 	{
@@ -231,11 +236,10 @@ private:
 	void RenderHelperLineArray_RenderThread(TMap<FLexUIHelperGizmoKey, FLexUIHelperGizmoRenderParameter>& HelperGizmoDataMap
 	, FRDGBuilder& GraphBuilder
 	, FSceneView* RenderView
-	, const FMatrix44f& ViewProjectionMatrix
 	, const FIntRect& ViewRect
 	, uint8 NumSamples
 	, FRDGTextureRef RenderTargetTexture
-	, FGlobalShaderMap* GlobalShaderMap);
+	);
 public:
 	void AddScreenSpaceLineRender(const FLexUIHelperGizmoKey& InKey, const FLexUIHelperGizmoRenderParameter& InLineParameter);
 	void AddWorldSpaceLineRender(const FLexUIHelperGizmoKey& InKey, const FLexUIHelperGizmoRenderParameter& InLineParameter);
