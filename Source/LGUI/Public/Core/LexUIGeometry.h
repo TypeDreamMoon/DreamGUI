@@ -88,7 +88,7 @@ public:
 	//vertex buffer, position/normal/tangent is stored as transformed space(Canvas space), origin position/normal/tangent is stored in originVertices/originNormals/originTangents
 	TArray<FLexUIMeshVertex> Vertices;
 	//triangle indices
-	TArray<FLexUIMeshIndexBufferType> Triangles;
+	TArray<FLexUIMeshIndex> Triangles;
 
 	TWeakObjectPtr<UTexture> Texture = nullptr;
 	TWeakObjectPtr<UMaterialInterface> Material = nullptr;
@@ -104,7 +104,7 @@ public:
 		Vertices.SetNumUninitialized(Other.Vertices.Num());
 		FMemory::Memcpy(Vertices.GetData(), Other.Vertices.GetData(), Other.Vertices.Num() * sizeof(FLexUIMeshVertex));
 		Triangles.SetNumUninitialized(Other.Triangles.Num());
-		FMemory::Memcpy(Triangles.GetData(), Other.Triangles.GetData(), Other.Triangles.Num() * sizeof(FLexUIMeshIndexBufferType));
+		FMemory::Memcpy(Triangles.GetData(), Other.Triangles.GetData(), Other.Triangles.Num() * sizeof(FLexUIMeshIndex));
 		
 		Texture = Other.Texture;
 		Material = Other.Material;

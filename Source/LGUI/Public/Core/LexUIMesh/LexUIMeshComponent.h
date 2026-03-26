@@ -38,7 +38,7 @@ struct FLexUIRenderSection_Mesh : public FLexUIRenderSection
 	}
 	virtual ~FLexUIRenderSection_Mesh()override{}
 
-	TArray<FLexUIMeshIndexBufferType> TriangleIndices;
+	TArray<FLexUIMeshIndex> TriangleIndices;
 	TArray<FLexUIMeshVertex> Vertices;
 	int32 ValidVerticesNum = 0;
 	int32 ValidTriangleIndicesNum = 0;
@@ -163,7 +163,7 @@ private:
 		TArray<FLexUIMeshVertex> VertexBufferData;
 		int32 NumVerts;
 		int32 NumTriangles;
-		TArray<FLexUIMeshIndexBufferType> IndexBufferData;
+		TArray<FLexUIMeshIndex> IndexBufferData;
 		bool RequireNormalAndTangent;
 		FLexUISectionProxy_Mesh* Section;
 	};

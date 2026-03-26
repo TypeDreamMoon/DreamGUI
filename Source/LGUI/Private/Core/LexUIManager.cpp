@@ -375,7 +375,7 @@ void ULexUIManagerWorldSubsystem::DrawNavigationArrow(UWorld* InWorld, const TAr
 	if (InControlPoints.Num() != 4)return;
 	TArray<FVector3f> ResultPoints;
 	TArray<FLexUIMeshVertex> LinePointArray;
-	TArray<FLexUIMeshIndexBufferType> LineIndexArray;
+	TArray<FLexUIMeshIndex> LineIndexArray;
 	const int Segment = FMath::Min(40, FMath::CeilToInt(FVector::Distance(InControlPoints[0], InControlPoints[3]) * 0.5f));
 
 	auto CalculateCubicBezierPoint = [](float t, FVector p0, FVector p1, FVector p2, FVector p3)
@@ -635,7 +635,7 @@ void ULexUIManagerWorldSubsystem::DrawDebugRect(UWorld* InWorld, const FVector& 
 	if (ViewExtension.IsValid())
 	{
 		TArray<FLexUIMeshVertex> VertexArray;
-		TArray<FLexUIMeshIndexBufferType> IndexArray;
+		TArray<FLexUIMeshIndex> IndexArray;
 		auto PushNewLine = [&](FVector Start, FVector End)
 		{
 			IndexArray.Add(VertexArray.Num());
@@ -678,7 +678,7 @@ void ULexUIManagerWorldSubsystem::DrawDebugBox(UWorld* InWorld, const FVector& C
 	if (ViewExtension.IsValid())
 	{
 		TArray<FLexUIMeshVertex> VertexArray;
-		TArray<FLexUIMeshIndexBufferType> IndexArray;
+		TArray<FLexUIMeshIndex> IndexArray;
 		auto PushNewLine = [&](const FVector& Start, const FVector& End)
 		{
 			IndexArray.Add(VertexArray.Num());
@@ -755,7 +755,7 @@ void ULexUIManagerWorldSubsystem::DrawDebugLine(UWorld* InWorld, const FMatrix44
 	if (ViewExtension.IsValid())
 	{
 		TArray<FLexUIMeshVertex> VertexArray;
-		TArray<FLexUIMeshIndexBufferType> IndexArray;
+		TArray<FLexUIMeshIndex> IndexArray;
 		//lines
 		for (int i = 0; i < LinePoints.Num(); i+=2)
 		{

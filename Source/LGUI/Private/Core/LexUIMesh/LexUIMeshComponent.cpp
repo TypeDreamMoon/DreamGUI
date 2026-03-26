@@ -547,7 +547,7 @@ public:
 	/** Called on render thread to assign new dynamic data */
 	void UpdateSection_RenderThread(FRHICommandListImmediate& RHICmdList
 		, const FLexUIMeshVertex* MeshVertexData, const int32& NumVerts
-		, const FLexUIMeshIndexBufferType* MeshIndexData, const int32& NumTriangles
+		, const FLexUIMeshIndex* MeshIndexData, const int32& NumTriangles
 		, bool RequireNormalAndTangent
 		, FLexUISectionProxy_Mesh* Section)const
 	{
@@ -613,7 +613,7 @@ public:
 		}
 
 		Section->NumPrimitives = NumTriangles;
-		uint32 IndicesDataLength = NumTriangles * 3 * sizeof(FLexUIMeshIndexBufferType);
+		uint32 IndicesDataLength = NumTriangles * 3 * sizeof(FLexUIMeshIndex);
 		// Lock index buffer
 		auto IndexBufferData = RHICmdList.LockBuffer(Section->IndexBuffer.IndexBufferRHI, 0, IndicesDataLength, RLM_WriteOnly);
 		FMemory::Memcpy(IndexBufferData, MeshIndexData, IndicesDataLength);
@@ -1064,7 +1064,7 @@ TSharedPtr<FLexUIRenderSection> ULexUIMeshComponent::SetupRenderSection(ELexUIRe
 				bNeedExpandMeshSection = true;
 			}
 			MeshSectionPtr->ValidTriangleIndicesNum = InDrawCallData->CombinedBatchMeshGeometryTriangles.Num();
-			FMemory::Memcpy(MeshSectionPtr->TriangleIndices.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.Num() * sizeof(FLexUIMeshIndexBufferType));
+			FMemory::Memcpy(MeshSectionPtr->TriangleIndices.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.Num() * sizeof(FLexUIMeshIndex));
 			MeshSectionPtr->BoundingBox = InDrawCallData->CombinedBounds.TransformBy(GetComponentTransform());
 			if (MeshSectionPtr->RenderProxy)//if we have valid render-proxy then recreate data or update data
 			{
@@ -1183,14 +1183,14 @@ void ULexUIMeshComponent::UpdateMeshSection(int Index, FLexUIDrawCall* InDrawCal
 	{
 		MeshSectionPtr->BoundingBox = InDrawCallData->CombinedBounds.TransformBy(GetComponentTransform());
 		FMemory::Memcpy(MeshSectionPtr->Vertices.GetData(), InDrawCallData->CombinedBatchMeshGeometryVertices.GetData(), InDrawCallData->CombinedBatchMeshGeometryVertices.Num() * sizeof(FLexUIMeshVertex));
-		FMemory::Memcpy(MeshSectionPtr->TriangleIndices.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.Num() * sizeof(FLexUIMeshIndexBufferType));
+		FMemory::Memcpy(MeshSectionPtr->TriangleIndices.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.Num() * sizeof(FLexUIMeshIndex));
 		UpdateMeshSectionRenderData(MeshSectionPtr, RenderCanvas->GetActualRequireNormalAndTangent());
 	}
 	else//no valid render-proxy, because it is newly created
 	{
 		MeshSectionPtr->BoundingBox = InDrawCallData->CombinedBounds.TransformBy(GetComponentTransform());
 		FMemory::Memcpy(MeshSectionPtr->Vertices.GetData(), InDrawCallData->CombinedBatchMeshGeometryVertices.GetData(), InDrawCallData->CombinedBatchMeshGeometryVertices.Num() * sizeof(FLexUIMeshVertex));
-		FMemory::Memcpy(MeshSectionPtr->TriangleIndices.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.Num() * sizeof(FLexUIMeshIndexBufferType));
+		FMemory::Memcpy(MeshSectionPtr->TriangleIndices.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.GetData(), InDrawCallData->CombinedBatchMeshGeometryTriangles.Num() * sizeof(FLexUIMeshIndex));
 		if (this->SceneProxy != nullptr)
 		{
 			auto ThisSceneProxy = static_cast<FLexUIRenderSceneProxy*>(this->SceneProxy);
@@ -1263,7 +1263,7 @@ void ULexUIMeshComponent::UpdateMeshSectionRenderData(FLexUIRenderSection_Mesh* 
 		const int32 NumIndices = InMeshSection->ValidTriangleIndicesNum;
 		UpdateData.IndexBufferData.AddUninitialized(NumIndices);
 		UpdateData.NumTriangles = NumIndices / 3;
-		FMemory::Memcpy(UpdateData.IndexBufferData.GetData(), InMeshSection->TriangleIndices.GetData(), NumIndices * sizeof(FLexUIMeshIndexBufferType));
+		FMemory::Memcpy(UpdateData.IndexBufferData.GetData(), InMeshSection->TriangleIndices.GetData(), NumIndices * sizeof(FLexUIMeshIndex));
 		UpdateData.RequireNormalAndTangent = InRequireNormalAndTangent;
 		//update data
 #if LATE_FLUSH_RENDER_CMD

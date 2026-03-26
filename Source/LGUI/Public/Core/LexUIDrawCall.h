@@ -74,7 +74,7 @@ public:
 	TArray<TWeakObjectPtr<ULexVisualBatchMesh>> BatchMeshVisualArray;
 	TArray<FLexUIGeometry> BatchMeshGeometryArray;//BatchMesh's geometry collections belong to this draw-call, must be sorted on hierarchy-index
 	TArray<FLexUIMeshVertex> CombinedBatchMeshGeometryVertices;
-	TArray<FLexUIMeshIndexBufferType> CombinedBatchMeshGeometryTriangles;
+	TArray<FLexUIMeshIndex> CombinedBatchMeshGeometryTriangles;
 	FBox CombinedBounds;
 	bool bNeedToSortBatchMeshVisualObjectList = false;//need to sort BatchMeshRenderObjectList?
 	TSharedPtr<LexUIQuadTree::Node> BatchMeshTreeNode = nullptr;

@@ -16,7 +16,7 @@ void ULexUIFontData_Bitmap::PushCharData(
 	const LexUIRichTextParser::FRichTextParseResult& richTextProperty,
 	int verticesStartIndex, int indicesStartIndex,
 	int& outAdditionalVerticesCount, int& outAdditionalIndicesCount,
-	TArray<FLexUIOriginVertexData>& originVertices, TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndexBufferType>& triangleIndices
+	TArray<FLexUIOriginVertexData>& originVertices, TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndex>& triangleIndices
 )
 {
 	auto GetUnderlineOrStrikethroughCharGeo = [&](uint32 charCode, float overrideFontSize)
