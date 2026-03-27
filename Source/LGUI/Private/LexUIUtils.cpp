@@ -438,7 +438,7 @@ void FLexUIUtils::StaticMeshToLexUIMeshRenderData(const UStaticMesh* InMesh, TAr
 	const int32 NumSections = LOD.Sections.Num();
 	if (NumSections > 1)
 	{
-		auto WarningText = FText::Format(LOCTEXT("StaticMeshHasMultipleSections", "StaticMesh {0} has {1} sections. UIStaticMesh expects a static mesh with 1 section."), FText::FromString(InMesh->GetName()), NumSections);
+		auto WarningText = FText::Format(LOCTEXT("StaticMeshHasMultipleSections", "StaticMesh {0} has {1} sections, only the first one will be used."), FText::FromString(InMesh->GetName()), NumSections);
 #if WITH_EDITOR
 		FLexUIUtils::EditorNotification(WarningText, false, 10);
 #endif

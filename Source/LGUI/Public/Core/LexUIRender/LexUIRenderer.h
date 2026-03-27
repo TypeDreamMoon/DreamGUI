@@ -92,7 +92,7 @@ class LGUI_API FLexUIRenderer : public FSceneViewExtensionBase
 {
 public:
 	FLexUIRenderer(const FAutoRegister&, UWorld* InWorld, ELexUIRendererType InRendererType);
-	virtual ~FLexUIRenderer();
+	virtual ~FLexUIRenderer()override;
 
 	//begin ISceneViewExtension interfaces
 	virtual void SetupViewFamily(FSceneViewFamily& InViewFamily)override {};
@@ -106,7 +106,7 @@ public:
 
 	virtual void PostRenderBasePassDeferred_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, const FRenderTargetBindingSlots& RenderTargets, TRDGUniformBufferRef<FSceneTextureUniformParameters> SceneTextures)override;
 	virtual void PrePostProcessPass_RenderThread(FRDGBuilder& GraphBuilder, const FSceneView& View, const FPostProcessingInputs& Inputs)override {};
-	virtual void SubscribeToPostProcessingPass(EPostProcessingPass Pass, FAfterPassCallbackDelegateArray& InOutPassCallbacks, bool bIsPassEnabled)override {};
+	virtual void SubscribeToPostProcessingPass(EPostProcessingPass Pass, const FSceneView& InView, FAfterPassCallbackDelegateArray& InOutPassCallbacks, bool bIsPassEnabled)override {};
 
 	virtual void PostRenderView_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView)override;
 	virtual void PostRenderViewFamily_RenderThread(FRDGBuilder& GraphBuilder, FSceneViewFamily& InViewFamily)override {};
@@ -233,7 +233,7 @@ private:
 private:
 	TMap<FLexUIHelperGizmoKey, FLexUIHelperGizmoRenderParameter> ScreenSpaceHelperLineMap;
 	TMap<FLexUIHelperGizmoKey, FLexUIHelperGizmoRenderParameter> WorldSpaceHelperLineMap;
-	void RenderHelperLineArray_RenderThread(TMap<FLexUIHelperGizmoKey, FLexUIHelperGizmoRenderParameter>& HelperGizmoDataMap
+	void RenderHelperGizmo_RenderThread(TMap<FLexUIHelperGizmoKey, FLexUIHelperGizmoRenderParameter>& HelperGizmoDataMap
 	, FRDGBuilder& GraphBuilder
 	, FSceneView* RenderView
 	, const FIntRect& ViewRect

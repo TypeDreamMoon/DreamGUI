@@ -731,7 +731,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 									MeshBatchArray.Reset();
 									FSceneRenderingBulkObjectAllocator Allocator;
 									FLexUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Allocator, RHICmdList);
-									RenderPrimitiveItem.Primitive->LexUI_GetMeshElements(*RenderView->Family, reinterpret_cast<FMeshElementCollector*>(&MeshCollector), RenderPrimitiveItem, MeshBatchArray);
+									RenderPrimitiveItem.Primitive->LexUI_GetMeshElements(*RenderView->Family, MeshCollector, RenderPrimitiveItem, MeshBatchArray);
 									for (int MeshIndex = 0; MeshIndex < MeshBatchArray.Num(); MeshIndex++)
 									{
 										auto& MeshBatchContainer = MeshBatchArray[MeshIndex];
@@ -836,7 +836,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 				}
 			}
 #if WITH_EDITOR
-			RenderHelperLineArray_RenderThread(WorldSpaceHelperLineMap,
+			RenderHelperGizmo_RenderThread(WorldSpaceHelperLineMap,
 				GraphBuilder, RenderView, ViewRect, NumSamples, RenderTargetTexture);
 #endif
 			GraphBuilder.AddPass(
@@ -1012,7 +1012,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 						MeshBatchArray.Reset();
 						FSceneRenderingBulkObjectAllocator Allocator;
 						FLexUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Allocator, RHICmdList);
-						RenderSequenceItem.Primitive->LexUI_GetMeshElements(*RenderView->Family, reinterpret_cast<FMeshElementCollector*>(&MeshCollector),
+						RenderSequenceItem.Primitive->LexUI_GetMeshElements(*RenderView->Family, MeshCollector,
 						RenderSequenceItem, MeshBatchArray);
 
 						for (int MeshIndex = 0; MeshIndex < MeshBatchArray.Num(); MeshIndex++)
@@ -1081,7 +1081,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 		}
 
 #if WITH_EDITOR
-		RenderHelperLineArray_RenderThread(ScreenSpaceHelperLineMap,
+		RenderHelperGizmo_RenderThread(ScreenSpaceHelperLineMap,
 			GraphBuilder, RenderView, ViewRect, NumSamples, RenderTargetTexture);
 #endif
 
@@ -1355,7 +1355,7 @@ void FLexUIRenderer::UpdateRenderTargetRenderer(UTextureRenderTarget2D* InRender
 }
 
 #if WITH_EDITOR
-void FLexUIRenderer::RenderHelperLineArray_RenderThread(TMap<FLexUIHelperGizmoKey, FLexUIHelperGizmoRenderParameter>& HelperGizmoDataMap
+void FLexUIRenderer::RenderHelperGizmo_RenderThread(TMap<FLexUIHelperGizmoKey, FLexUIHelperGizmoRenderParameter>& HelperGizmoDataMap
 , FRDGBuilder& GraphBuilder
 , FSceneView* RenderView
 , const FIntRect& ViewRect
