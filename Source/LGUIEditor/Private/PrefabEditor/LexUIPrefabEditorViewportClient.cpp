@@ -29,6 +29,7 @@
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
+#include "Core/LexUIMesh/LexUIGizmoMesh.h"
 #include "Core/LexUIRender/LexUIRenderer.h"
 #include "PrefabSystem/LexUIPrefabInstanceScene.h"
 #include "Utils/LexUIUtils.h"
@@ -47,12 +48,12 @@ private:
 	float PressRenderScale = 1.0f;
 	TWeakObjectPtr<ULexUIManagerWorldSubsystem> LexUIManager;
 	TWeakObjectPtr<UWorld> World;
-	FLexUIHelperGizmoRenderParameter MoveAxisX;
-	FLexUIHelperGizmoRenderParameter MoveAxisY;
-	FLexUIHelperGizmoRenderParameter MoveAxisZ;
-	FLexUIHelperGizmoRenderParameter MovePlaneYZ;
-	FLexUIHelperGizmoRenderParameter MovePlaneZX;
-	FLexUIHelperGizmoRenderParameter MovePlaneXY;
+	TSharedPtr<FLexUIGizmoMesh> MoveAxisX;
+	TSharedPtr<FLexUIGizmoMesh> MoveAxisY;
+	TSharedPtr<FLexUIGizmoMesh> MoveAxisZ;
+	TSharedPtr<FLexUIGizmoMesh> MovePlaneYZ;
+	TSharedPtr<FLexUIGizmoMesh> MovePlaneZX;
+	TSharedPtr<FLexUIGizmoMesh> MovePlaneXY;
 	TWeakObjectPtr<UMaterialInterface> GizmoMaterial;
 	FVector MovePlaneYZCenter;
 	FVector MovePlaneZXCenter;
@@ -113,7 +114,7 @@ private:
 
 				auto Center = ThisTransform.GetTranslation();
 				FVector A = FVector::Zero(), B = FVector(BIG_NUMBER);
-				const float Far = 1e6f;
+				constexpr float Far = 1e6f;
 				auto LineStartOfMouse = RayOrigin - RayDirection * Far;
 				auto LineEndOfMouse = RayOrigin + RayDirection * Far;
 				FVector Diff = FVector::ZeroVector;
@@ -169,20 +170,20 @@ private:
 			{
 				ThisTransform = SelectedWidget->GetComponentTransform();
 			}
-			const uint8 AxisAlpha = 255;
-			const uint8 PlaneAlpha = 50;
+			constexpr uint8 AxisAlpha = 255;
+			constexpr uint8 PlaneAlpha = 50;
 			//reset color
 			{
-				MoveAxisX.SetColor(ColorAxisX, AxisAlpha);
-				MoveAxisY.SetColor(ColorAxisY, AxisAlpha);
-				MoveAxisZ.SetColor(ColorAxisZ, AxisAlpha);
-				MovePlaneYZ.SetColor(ColorAxisX, PlaneAlpha);
-				MovePlaneZX.SetColor(ColorAxisY, PlaneAlpha);
-				MovePlaneXY.SetColor(ColorAxisZ, PlaneAlpha);
+				MoveAxisX->SetColor(ColorAxisX.WithAlpha(AxisAlpha));
+				MoveAxisY->SetColor(ColorAxisY.WithAlpha(AxisAlpha));
+				MoveAxisZ->SetColor(ColorAxisZ.WithAlpha(AxisAlpha));
+				MovePlaneYZ->SetColor(ColorAxisX.WithAlpha(PlaneAlpha));
+				MovePlaneZX->SetColor(ColorAxisY.WithAlpha(PlaneAlpha));
+				MovePlaneXY->SetColor(ColorAxisZ.WithAlpha(PlaneAlpha));
 			}
 			AxisType = EAxisType::None;
 			
-			const float Far = 100000000;
+			constexpr float Far = 100000000;
 			FVector RayOrigin, RayDirection;
 			FSceneView::DeprojectScreenToWorld(FVector2D(MouseX, MouseY), SceneView->UnscaledViewRect, SceneView->ViewMatrices.GetInvViewProjectionMatrix(), RayOrigin, RayDirection);
 			FVector LineEnd = RayOrigin + RayDirection * Far;
@@ -193,7 +194,7 @@ private:
 				auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::X));
 				auto IntersectPointLocalSpace = RenderTransform.InverseTransformPosition(IntersectPoint);
 				bool bIsHit = IntersectPointLocalSpace.Y > 0 && IntersectPointLocalSpace.Y < AxisPlaneSize && IntersectPointLocalSpace.Z > 0 && IntersectPointLocalSpace.Z < AxisPlaneSize;
-				MovePlaneYZ.SetColor(bIsHit ? HighlightColor : ColorAxisX, PlaneAlpha);
+				MovePlaneYZ->SetColor((bIsHit ? HighlightColor : ColorAxisX).WithAlpha(PlaneAlpha));
 				if (bIsHit)
 				{
 					AxisType = EAxisType::YZ;
@@ -209,7 +210,7 @@ private:
 				auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::Y));
 				auto IntersectPointLocalSpace = RenderTransform.InverseTransformPosition(IntersectPoint);
 				bool bIsHit = IntersectPointLocalSpace.Z > 0 && IntersectPointLocalSpace.Z < AxisPlaneSize && IntersectPointLocalSpace.X > 0 && IntersectPointLocalSpace.X < AxisPlaneSize;
-				MovePlaneZX.SetColor(bIsHit ? HighlightColor : ColorAxisY, PlaneAlpha);
+				MovePlaneZX->SetColor((bIsHit ? HighlightColor : ColorAxisY).WithAlpha(PlaneAlpha));
 				if (bIsHit)
 				{
 					AxisType = EAxisType::ZX;
@@ -225,7 +226,7 @@ private:
 				auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::Z));
 				auto IntersectPointLocalSpace = RenderTransform.InverseTransformPosition(IntersectPoint);
 				bool bIsHit = IntersectPointLocalSpace.X > 0 && IntersectPointLocalSpace.X < AxisPlaneSize && IntersectPointLocalSpace.Y > 0 && IntersectPointLocalSpace.Y < AxisPlaneSize;
-				MovePlaneXY.SetColor(bIsHit ? HighlightColor : ColorAxisZ, PlaneAlpha);
+				MovePlaneXY->SetColor((bIsHit ? HighlightColor : ColorAxisZ).WithAlpha(PlaneAlpha));
 				if (bIsHit)
 				{
 					AxisType = EAxisType::XY;
@@ -242,7 +243,7 @@ private:
 			const float HitThreshold = 10.0f * RenderScale;
 			FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, RenderTransform.TransformPosition(FVector(AxisLength, 0, 0)), A, B);
 			auto DistanceToX = FVector::Dist(A, B);
-			MoveAxisX.SetColor(DistanceToX < HitThreshold ? HighlightColor : ColorAxisX, AxisAlpha);
+			MoveAxisX->SetColor((DistanceToX < HitThreshold ? HighlightColor : ColorAxisX).WithAlpha(AxisAlpha));
 			if (DistanceToX < HitThreshold)
 			{
 				AxisType = EAxisType::X;
@@ -255,7 +256,7 @@ private:
 
 			FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, RenderTransform.TransformPosition(FVector(0, AxisLength, 0)), A, B);
 			auto DistanceToY = FVector::Dist(A, B);
-			MoveAxisY.SetColor(DistanceToY < HitThreshold ? HighlightColor : ColorAxisY, AxisAlpha);
+			MoveAxisY->SetColor((DistanceToY < HitThreshold ? HighlightColor : ColorAxisY).WithAlpha(AxisAlpha));
 			if (DistanceToY < HitThreshold)
 			{
 				AxisType = EAxisType::Y;
@@ -268,7 +269,7 @@ private:
 
 			FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, RenderTransform.TransformPosition(FVector(0, 0, AxisLength)), A, B);
 			auto DistanceToZ = FVector::Dist(A, B);
-			MoveAxisZ.SetColor(DistanceToZ < HitThreshold ? HighlightColor : ColorAxisZ, AxisAlpha);
+			MoveAxisZ->SetColor((DistanceToZ < HitThreshold ? HighlightColor : ColorAxisZ).WithAlpha(AxisAlpha));
 			if (DistanceToZ < HitThreshold)
 			{
 				AxisType = EAxisType::Z;
@@ -292,51 +293,75 @@ public:
 		
 		auto MoveAxisMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/LGUI/EditorGizmo/MoveAxis"));
 		if (!MoveAxisMesh)return;
-		TArray<FLexUIMeshVertex> SrcMeshVertexArray; TArray<uint16> SrcMeshIndexArray;
+		TArray<FLexUIMeshVertex> SrcMeshVertexArray; TArray<FLexUIMeshIndex> SrcMeshIndexArray;
 		FLexUIUtils::StaticMeshToLexUIMeshRenderData(MoveAxisMesh, SrcMeshVertexArray, SrcMeshIndexArray);
-		MoveAxisX = FLexUIHelperGizmoRenderParameter(SrcMeshVertexArray, SrcMeshIndexArray);
-		FRotator3f MoveAxisXRot = FRotator3f(-90, 0, 0);
-		for (auto& Vertex : MoveAxisX.VertexArray)
 		{
-			Vertex.Position = MoveAxisXRot.RotateVector(Vertex.Position);
-			Vertex.Color = ColorAxisX;
+			auto VertexArray = SrcMeshVertexArray;
+			FRotator3f MoveAxisXRot = FRotator3f(-90, 0, 0);
+			for (auto& Vertex : VertexArray)
+			{
+				Vertex.Position = MoveAxisXRot.RotateVector(Vertex.Position);
+				Vertex.Color = ColorAxisX;
+			}
+			MoveAxisX = MakeShared<FLexUIGizmoMesh>(VertexArray, SrcMeshIndexArray, ELexUIGizmoMeshPrimitiveType::Triangle);
+			MoveAxisX->UpdateLocalBounds();
 		}
-		MoveAxisY = FLexUIHelperGizmoRenderParameter(SrcMeshVertexArray, SrcMeshIndexArray);
-		FRotator3f MoveAxisYRot = FRotator3f(0, 0, 90);
-		for (auto& Vertex : MoveAxisY.VertexArray)
 		{
-			Vertex.Position = MoveAxisYRot.RotateVector(Vertex.Position);
-			Vertex.Color = ColorAxisY;
+			auto VertexArray = SrcMeshVertexArray;
+			FRotator3f MoveAxisYRot = FRotator3f(0, 0, 90);
+			for (auto& Vertex : VertexArray)
+			{
+				Vertex.Position = MoveAxisYRot.RotateVector(Vertex.Position);
+				Vertex.Color = ColorAxisY;
+			}
+			MoveAxisY = MakeShared<FLexUIGizmoMesh>(VertexArray, SrcMeshIndexArray, ELexUIGizmoMeshPrimitiveType::Triangle);
+			MoveAxisY->UpdateLocalBounds();
 		}
-		MoveAxisZ = FLexUIHelperGizmoRenderParameter(SrcMeshVertexArray, SrcMeshIndexArray);
-		for (auto& Vertex : MoveAxisZ.VertexArray)
 		{
-			Vertex.Color = ColorAxisZ;
+			auto VertexArray = SrcMeshVertexArray;
+			for (auto& Vertex : VertexArray)
+			{
+				Vertex.Color = ColorAxisZ;
+			}
+			MoveAxisZ = MakeShared<FLexUIGizmoMesh>(VertexArray, SrcMeshIndexArray, ELexUIGizmoMeshPrimitiveType::Triangle);
+			MoveAxisZ->UpdateLocalBounds();
 		}
 		
 		auto MovePlaneMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/LGUI/EditorGizmo/MovePlane"));
 		FLexUIUtils::StaticMeshToLexUIMeshRenderData(MovePlaneMesh, SrcMeshVertexArray, SrcMeshIndexArray);
-		MovePlaneYZ = FLexUIHelperGizmoRenderParameter(SrcMeshVertexArray, SrcMeshIndexArray);
-		MovePlaneYZCenter = FVector(0, 0.15f, 0.15f);
-		for (auto& Vertex : MovePlaneYZ.VertexArray)
 		{
-			Vertex.Color = ColorAxisX;
+			auto VertexArray = SrcMeshVertexArray;
+			MovePlaneYZCenter = FVector(0, 0.15f, 0.15f);
+			for (auto& Vertex : VertexArray)
+			{
+				Vertex.Color = ColorAxisX;
+			}
+			MovePlaneYZ = MakeShared<FLexUIGizmoMesh>(VertexArray, SrcMeshIndexArray, ELexUIGizmoMeshPrimitiveType::Triangle);
+			MovePlaneYZ->UpdateLocalBounds();
 		}
-		MovePlaneZX = FLexUIHelperGizmoRenderParameter(SrcMeshVertexArray, SrcMeshIndexArray);
-		MovePlaneZXCenter = FVector(0.15f, 0, 0.15f);
-		FRotator3f MovePlaneZXRot = FRotator3f(0, -90, 0);
-		for (auto& Vertex : MovePlaneZX.VertexArray)
 		{
-			Vertex.Position = MovePlaneZXRot.RotateVector(Vertex.Position);
-			Vertex.Color = ColorAxisY;
+			auto VertexArray = SrcMeshVertexArray;
+			MovePlaneZXCenter = FVector(0.15f, 0, 0.15f);
+			FRotator3f MovePlaneZXRot = FRotator3f(0, -90, 0);
+			for (auto& Vertex : VertexArray)
+			{
+				Vertex.Position = MovePlaneZXRot.RotateVector(Vertex.Position);
+				Vertex.Color = ColorAxisY;
+			}
+			MovePlaneZX = MakeShared<FLexUIGizmoMesh>(VertexArray, SrcMeshIndexArray, ELexUIGizmoMeshPrimitiveType::Triangle);
+			MovePlaneZX->UpdateLocalBounds();
 		}
-		MovePlaneXY = FLexUIHelperGizmoRenderParameter(SrcMeshVertexArray, SrcMeshIndexArray);
-		MovePlaneXYCenter = FVector(0.15f, 0.15f, 0);
-		FRotator3f MovePlaneXYRot = FRotator3f(-90, 0, 0);
-		for (auto& Vertex : MovePlaneXY.VertexArray)
 		{
-			Vertex.Position = MovePlaneXYRot.RotateVector(Vertex.Position);
-			Vertex.Color = ColorAxisZ;
+			auto VertexArray = SrcMeshVertexArray;
+			MovePlaneXYCenter = FVector(0.15f, 0.15f, 0);
+			FRotator3f MovePlaneXYRot = FRotator3f(-90, 0, 0);
+			for (auto& Vertex : VertexArray)
+			{
+				Vertex.Position = MovePlaneXYRot.RotateVector(Vertex.Position);
+				Vertex.Color = ColorAxisZ;
+			}
+			MovePlaneXY = MakeShared<FLexUIGizmoMesh>(VertexArray, SrcMeshIndexArray, ELexUIGizmoMeshPrimitiveType::Triangle);
+			MovePlaneXY->UpdateLocalBounds();
 		}
 		
 		ViewportClient = InViewportClient;
@@ -356,32 +381,34 @@ public:
 		if (!bCanTick)return;
 		UpdateAxis();
 
+		auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(World.Get(), true);
+		if (!ViewExtension)return;
 		if (!GizmoMaterial.IsValid())
 		{
 			GizmoMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/LGUI/EditorGizmo/GizmoMaterial"));
 		}
 		if (GizmoMaterial.IsValid())
 		{
-			MoveAxisX.MaterialRenderProxy = GizmoMaterial->GetRenderProxy();
-			MoveAxisY.MaterialRenderProxy = GizmoMaterial->GetRenderProxy();
-			MoveAxisZ.MaterialRenderProxy = GizmoMaterial->GetRenderProxy();
-			MovePlaneYZ.MaterialRenderProxy = GizmoMaterial->GetRenderProxy();
-			MovePlaneZX.MaterialRenderProxy = GizmoMaterial->GetRenderProxy();
-			MovePlaneXY.MaterialRenderProxy = GizmoMaterial->GetRenderProxy();
+			MoveAxisX->Material
+			= MoveAxisY->Material
+			= MoveAxisZ->Material
+			= MovePlaneYZ->Material
+			= MovePlaneZX->Material
+			= MovePlaneXY->Material
+			= TStrongObjectPtr(GizmoMaterial.Get());
 		}
 		
-		auto LocalToWorld = FMatrix44f(RenderTransform.ToMatrixWithScale());
+		auto LocalToWorld = RenderTransform.ToMatrixWithScale();
 		auto ViewLocation = ViewportClient->GetViewLocation();
 		struct FMovePlaneInfo
 		{
 			double DistanceToCamera;
-			FLexUIHelperGizmoRenderParameter* RenderData;
-			FString DebugName;
+			TSharedPtr<FLexUIGizmoMesh> RenderData;
 		};
 		TArray<FMovePlaneInfo> MovePlanes;
-		MovePlanes.Add({ FVector::DistSquared(ViewLocation, RenderTransform.TransformPosition(MovePlaneYZCenter)), &MovePlaneYZ, DebugName + TEXT("_MovePlaneYZ") });
-		MovePlanes.Add({ FVector::DistSquared(ViewLocation, RenderTransform.TransformPosition(MovePlaneZXCenter)), &MovePlaneZX, DebugName + TEXT("_MovePlaneZX") });
-		MovePlanes.Add({ FVector::DistSquared(ViewLocation, RenderTransform.TransformPosition(MovePlaneXYCenter)), &MovePlaneXY, DebugName + TEXT("_MovePlaneXY") });
+		MovePlanes.Add({ FVector::DistSquared(ViewLocation, RenderTransform.TransformPosition(MovePlaneYZCenter)), MovePlaneYZ});
+		MovePlanes.Add({ FVector::DistSquared(ViewLocation, RenderTransform.TransformPosition(MovePlaneZXCenter)), MovePlaneZX});
+		MovePlanes.Add({ FVector::DistSquared(ViewLocation, RenderTransform.TransformPosition(MovePlaneXYCenter)), MovePlaneXY});
 		//simple sort on distance
 		MovePlanes.Sort([](const FMovePlaneInfo& A, const FMovePlaneInfo& B)
 		{			
@@ -389,16 +416,16 @@ public:
 		});
 		for (auto& MovePlane : MovePlanes)
 		{
-			MovePlane.RenderData->LocalToWorld = LocalToWorld;
-			ULexUIManagerWorldSubsystem::DrawDebugMesh(World.Get(), *MovePlane.RenderData, this, MovePlane.DebugName, false);
+			MovePlane.RenderData->LocalToWorldMatrix = LocalToWorld;
+			MovePlane.RenderData->Render(ViewExtension, false);
 		}
 
-		MoveAxisX.LocalToWorld = LocalToWorld;
-		ULexUIManagerWorldSubsystem::DrawDebugMesh(World.Get(), MoveAxisX, this, DebugName + TEXT("_MoveAxisX"), false);
-		MoveAxisY.LocalToWorld = LocalToWorld;
-		ULexUIManagerWorldSubsystem::DrawDebugMesh(World.Get(), MoveAxisY, this, DebugName + TEXT("_MoveAxisY"), false);
-		MoveAxisZ.LocalToWorld = LocalToWorld;
-		ULexUIManagerWorldSubsystem::DrawDebugMesh(World.Get(), MoveAxisZ, this, DebugName + TEXT("_MoveAxisZ"), false);
+		MoveAxisX->LocalToWorldMatrix = LocalToWorld;
+		MoveAxisX->Render(ViewExtension, false);
+		MoveAxisY->LocalToWorldMatrix = LocalToWorld;
+		MoveAxisY->Render(ViewExtension, false);
+		MoveAxisZ->LocalToWorldMatrix = LocalToWorld;
+		MoveAxisZ->Render(ViewExtension, false);
 	}
 	bool IsDragging()const{return bIsDragging;}
 	bool HandleInputKey(const FInputKeyEventArgs& EventArgs)

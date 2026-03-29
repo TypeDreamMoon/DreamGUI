@@ -77,9 +77,16 @@ class LGUI_API FLexUIMeshVertexDeclaration : public FRenderResource
 {
 public:
 	FVertexDeclarationRHIRef VertexDeclarationRHI;
-	virtual ~FLexUIMeshVertexDeclaration() {}
 	virtual void InitRHI(FRHICommandListBase& RHICmdList)override;
 	virtual void ReleaseRHI()override;
 };
 LGUI_API FVertexDeclarationRHIRef& GetLexUIMeshVertexDeclaration();
+
+class FLexUIMeshVertexBuffer : public FVertexBuffer
+{
+public:
+	bool bAutoClearVerticesAfterInitRHI = true;//clear Vertices after InitRHI
+	TArray<FLexUIMeshVertex> Vertices;
+	virtual void InitRHI(FRHICommandListBase& RHICmdList)override;
+};
 

@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Core/LexUIMeshVertex.h"
+#include "RHIResourceUtils.h"
 #include "RHI.h"
 
 
@@ -27,4 +28,15 @@ TGlobalResource<FLexUIMeshVertexDeclaration> GLexUIVertexDeclaration;
 FVertexDeclarationRHIRef& GetLexUIMeshVertexDeclaration()
 {
 	return GLexUIVertexDeclaration.VertexDeclarationRHI;
+}
+
+void FLexUIMeshVertexBuffer::InitRHI(FRHICommandListBase& RHICmdList)
+{
+	VertexBufferRHI = UE::RHIResourceUtils::CreateVertexBufferFromArray(
+		RHICmdList, TEXT("LexUIVertexBuffer"), EBufferUsageFlags::Dynamic, MakeConstArrayView(Vertices)
+		);
+	if (bAutoClearVerticesAfterInitRHI)
+	{
+		Vertices.Empty();
+	}
 }

@@ -2,7 +2,6 @@
 
 #include "Core/LexVisualPostProcessRenderProxy.h"
 #include "Core/LexUIRender/LexUIPostProcessShaders.h"
-#include "Core/LexUIRender/LexUIVertex.h"
 #include "Rendering/Texture2DResource.h"
 #include "Core/LexUIRender/LexUIRenderer.h"
 #include "RHIResourceUtils.h"

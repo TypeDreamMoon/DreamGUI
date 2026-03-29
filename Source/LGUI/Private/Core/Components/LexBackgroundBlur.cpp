@@ -5,13 +5,11 @@
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
 #include "Core/LexUIRender/LexUIPostProcessShaders.h"
-#include "Core/LexUIRender/LexUIVertex.h"
 #include "PipelineStateCache.h"
 #include "Core/LexUIRender/LexUIRenderer.h"
 #include "RenderTargetPool.h"
 #include "Core/LexVisualPostProcessRenderProxy.h"
 #include "RHIStaticStates.h"
-#include "Core/Components/LexWidget.h"
 
 ULexBackgroundBlur::ULexBackgroundBlur(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {

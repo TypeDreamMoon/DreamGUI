@@ -7,10 +7,9 @@
 #include "RendererInterface.h"
 #include "RenderGraphUtils.h"
 #include "RenderResource.h"
-#include "Core/LexUIMeshVertex.h"
-#include "Core/LexUIRender/LexUIVertex.h"
 #include "Core/LexUIRender/ILexUIRendererPrimitive.h"
 
+class FLexUIGizmoMesh;
 class ULexCanvas;
 struct FLexUIPostProcessVertex;
 struct FLexUIPostProcessCopyMeshRegionVertex;
@@ -25,62 +24,6 @@ public:
 		RHICmdList = &InRHICmdList;
 	}
 };
-
-#if WITH_EDITOR
-struct FLexUIHelperGizmoKey
-{
-	void* ObjectPtr = nullptr;
-	FString Tag;
-	bool operator==(const FLexUIHelperGizmoKey& other)const
-	{
-		return this->ObjectPtr == other.ObjectPtr && this->Tag == other.Tag;
-	}
-	friend FORCEINLINE uint32 GetTypeHash(const FLexUIHelperGizmoKey& other)
-	{
-		return HashCombine(GetTypeHash(other.ObjectPtr), GetTypeHash(other.Tag));
-	}
-};
-enum class ELexUIHelperGizmoDrawType
-{
-	Line, Triangle,
-};
-/** Parameters for render editor helper line */
-struct FLexUIHelperGizmoRenderParameter
-{
-public:
-	FLexUIHelperGizmoRenderParameter(){}
-	FLexUIHelperGizmoRenderParameter(const TArray<FLexUIMeshVertex>& InVertexArray, const TArray<uint16>& InIndexArray, const FMatrix44f& InLocalToWorld, FMaterialRenderProxy* InMaterialRenderProxy)
-	{
-		VertexArray = InVertexArray;
-		IndexArray = InIndexArray;
-		LocalToWorld = InLocalToWorld;
-		DrawType = ELexUIHelperGizmoDrawType::Line;
-		MaterialRenderProxy = InMaterialRenderProxy;
-	}
-	FLexUIHelperGizmoRenderParameter(const TArray<FLexUIMeshVertex>& InVertexArray, const TArray<uint16>& InIndexArray)
-	{
-		VertexArray = InVertexArray;
-		IndexArray = InIndexArray;
-		LocalToWorld = FMatrix44f::Identity;
-		DrawType = ELexUIHelperGizmoDrawType::Triangle;
-	}
-	ELexUIHelperGizmoDrawType DrawType = ELexUIHelperGizmoDrawType::Triangle;
-	FMatrix44f LocalToWorld = FMatrix44f::Identity;
-	FBox LocalBounds = FBox(EForceInit::ForceInit);
-	TArray<FLexUIMeshVertex> VertexArray;
-	TArray<uint16> IndexArray;
-	FMaterialRenderProxy* MaterialRenderProxy = nullptr;
-
-	void SetColor(const FColor& InColor, uint8 InAlpha = 255)
-	{
-		for (auto& Vertex : VertexArray)
-		{
-			Vertex.Color = InColor;
-			Vertex.Color.A = InAlpha;
-		}
-	}
-};
-#endif
 
 enum class ELexUIRendererType :uint8
 {
@@ -231,9 +174,9 @@ private:
 #endif
 #if WITH_EDITOR
 private:
-	TMap<FLexUIHelperGizmoKey, FLexUIHelperGizmoRenderParameter> ScreenSpaceHelperLineMap;
-	TMap<FLexUIHelperGizmoKey, FLexUIHelperGizmoRenderParameter> WorldSpaceHelperLineMap;
-	void RenderHelperGizmo_RenderThread(TMap<FLexUIHelperGizmoKey, FLexUIHelperGizmoRenderParameter>& HelperGizmoDataMap
+	TArray<TSharedPtr<FLexUIGizmoMesh>> ScreenSpaceGizmoMeshArray;
+	TArray<TSharedPtr<FLexUIGizmoMesh>> WorldSpaceGizmoMeshArray;
+	void RenderGizmoMesh_RenderThread(TArray<TSharedPtr<FLexUIGizmoMesh>>& HelperGizmoDataMap
 	, FRDGBuilder& GraphBuilder
 	, FSceneView* RenderView
 	, const FIntRect& ViewRect
@@ -241,8 +184,8 @@ private:
 	, FRDGTextureRef RenderTargetTexture
 	);
 public:
-	void AddScreenSpaceLineRender(const FLexUIHelperGizmoKey& InKey, const FLexUIHelperGizmoRenderParameter& InLineParameter);
-	void AddWorldSpaceLineRender(const FLexUIHelperGizmoKey& InKey, const FLexUIHelperGizmoRenderParameter& InLineParameter);
+	void AddScreenSpaceGizmoMesh(TSharedPtr<FLexUIGizmoMesh> InMesh);
+	void AddWorldSpaceGizmoMesh(TSharedPtr<FLexUIGizmoMesh> InMesh);
 #endif
 };
 

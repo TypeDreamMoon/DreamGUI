@@ -16,6 +16,7 @@
 #include "Core/ILexUICultureChangedInterface.h"
 #include "Core/LexUIBehaviour.h"
 #include "Core/Actor/LexWidgetRootActor.h"
+#include "Core/LexUIMesh/LexUIGizmoMesh.h"
 #include "Event/LexEventSystem.h"
 #include "PrefabSystem/LexUIPrefabManager.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
@@ -308,7 +309,7 @@ void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool Scr
 			RelativeOffset.Z = (0.5f - InWidget->GetPivot().Y) * InWidget->GetHeight();
 			auto Extends = FVector2D(InWidget->GetWidth(), InWidget->GetHeight()) * 0.5f;
 			ULexUIManagerWorldSubsystem::DrawDebugRect(InWidget->GetWorld()
-				, RelativeOffset, FMatrix44f(WorldTransform.ToMatrixWithScale())
+				, RelativeOffset, WorldTransform.ToMatrixWithScale()
 				, Extends, Color
 				, InWidget, InWidget->GetDisplayName(), ScreenOrWorld);
 		};
@@ -346,7 +347,7 @@ void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool Scr
 			RelativeOffset.Z = (0.5f - Widget->GetPivot().Y) * Widget->GetHeight();
 			auto Extends = FVector2D(Widget->GetWidth(), Widget->GetHeight()) * 0.5f;
 			ULexUIManagerWorldSubsystem::DrawDebugRect(Widget->GetWorld()
-				, RelativeOffset, FMatrix44f(WorldTransform.ToMatrixWithScale())
+				, RelativeOffset, WorldTransform.ToMatrixWithScale()
 				, Extends, RectDrawColor
 				, Widget, Widget->GetDisplayName(), ScreenOrWorld);
 
@@ -361,7 +362,7 @@ void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool Scr
 				if (WidgetExtends3D != GeometryBoundsExtends || RelativeOffset != GeometryRelativeOffset)
 				{
 					ULexUIManagerWorldSubsystem::DrawDebugBox(Widget->GetWorld()
-						, GeometryRelativeOffset, FMatrix44f(WorldTransform.ToMatrixWithScale())
+						, GeometryRelativeOffset, WorldTransform.ToMatrixWithScale()
 						, GeometryBoundsExtends, GeometryBoundsDrawColor
 						, Widget->GetVisual() , FString::Printf(TEXT("%s.Visual"), *Widget->GetDisplayName()), ScreenOrWorld);
 				}
@@ -374,8 +375,8 @@ void ULexUIManagerWorldSubsystem::DrawNavigationArrow(UWorld* InWorld, const TAr
 {
 	if (InControlPoints.Num() != 4)return;
 	TArray<FVector3f> ResultPoints;
-	TArray<FLexUIMeshVertex> LinePointArray;
-	TArray<FLexUIMeshIndex> LineIndexArray;
+	TArray<FLexUIMeshVertex> VertexArray;
+	TArray<FLexUIMeshIndex> IndexArray;
 	const int Segment = FMath::Min(40, FMath::CeilToInt(FVector::Distance(InControlPoints[0], InControlPoints[3]) * 0.5f));
 
 	auto CalculateCubicBezierPoint = [](float t, FVector p0, FVector p1, FVector p2, FVector p3)
@@ -394,37 +395,34 @@ void ULexUIManagerWorldSubsystem::DrawNavigationArrow(UWorld* InWorld, const TAr
 		return p;
 	};
 
-	LineIndexArray.Add(InControlPoints.Num());
-	new(LinePointArray) FLexUIMeshVertex(FVector3f(InControlPoints[0]), InColor);
+	IndexArray.Add(InControlPoints.Num());
+	new(VertexArray) FLexUIMeshVertex(FVector3f(InControlPoints[0]), InColor);
 	for (int i = 1; i <= Segment; i++)
 	{
 		float t = i / (float)Segment;
 		auto InterPoint = CalculateCubicBezierPoint(t, InControlPoints[0], InControlPoints[1], InControlPoints[2], InControlPoints[3]);
-		LineIndexArray.Add(InControlPoints.Num());
-		new(LinePointArray) FLexUIMeshVertex(FVector3f(InterPoint), InColor);
+		IndexArray.Add(InControlPoints.Num());
+		new(VertexArray) FLexUIMeshVertex(FVector3f(InterPoint), InColor);
 	}
 	
 	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, true);
 	if (ViewExtension.IsValid())
 	{
 		//arrow
-		LineIndexArray.Add(InControlPoints.Num());
-		new(LinePointArray) FLexUIMeshVertex(FVector3f(InControlPoints[3]), InColor);
-		LineIndexArray.Add(InControlPoints.Num());
-		new(LinePointArray) FLexUIMeshVertex(FVector3f(InArrowPointA), InColor);
-		LineIndexArray.Add(InControlPoints.Num());
-		new(LinePointArray) FLexUIMeshVertex(FVector3f(InControlPoints[3]), InColor);
-		LineIndexArray.Add(InControlPoints.Num());
-		new(LinePointArray) FLexUIMeshVertex(FVector3f(InArrowPointB), InColor);
+		IndexArray.Add(InControlPoints.Num());
+		new(VertexArray) FLexUIMeshVertex(FVector3f(InControlPoints[3]), InColor);
+		IndexArray.Add(InControlPoints.Num());
+		new(VertexArray) FLexUIMeshVertex(FVector3f(InArrowPointA), InColor);
+		IndexArray.Add(InControlPoints.Num());
+		new(VertexArray) FLexUIMeshVertex(FVector3f(InControlPoints[3]), InColor);
+		IndexArray.Add(InControlPoints.Num());
+		new(VertexArray) FLexUIMeshVertex(FVector3f(InArrowPointB), InColor);
 
-		if (ScreenOrWorld)
-		{
-			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), FLexUIHelperGizmoRenderParameter(LinePointArray, LineIndexArray, FMatrix44f::Identity, GetDefaultGizmoMaterial()->GetRenderProxy()));
-		}
-		else
-		{
-			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), FLexUIHelperGizmoRenderParameter(LinePointArray, LineIndexArray, FMatrix44f::Identity, GetDefaultGizmoMaterial()->GetRenderProxy()));
-		}
+		auto LineMesh = MakeShared<FLexUIGizmoMesh>(VertexArray, IndexArray, ELexUIGizmoMeshPrimitiveType::Line);
+		LineMesh->Material = TStrongObjectPtr(GetDefaultGizmoMaterial());
+		LineMesh->LocalToWorldMatrix = FMatrix::Identity;
+		LineMesh->UpdateLocalBounds();
+		LineMesh->Render(ViewExtension, ScreenOrWorld);
 	}
 }
 
@@ -629,7 +627,7 @@ void ULexUIManagerWorldSubsystem::OnEnginePreExit()
 	}
 }
 
-void ULexUIManagerWorldSubsystem::DrawDebugRect(UWorld* InWorld, const FVector& Center, const FMatrix44f& LocalToWorld, FVector2D const& Rect, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld)
+void ULexUIManagerWorldSubsystem::DrawDebugRect(UWorld* InWorld, const FVector& Center, const FMatrix& LocalToWorld, FVector2D const& Rect, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld)
 {
 	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, true);
 	if (ViewExtension.IsValid())
@@ -660,18 +658,15 @@ void ULexUIManagerWorldSubsystem::DrawDebugRect(UWorld* InWorld, const FVector& 
 		End = FVector(0, -Rect.X, -Rect.Y);
 		PushNewLine(Start, End);
 
-		if (ScreenOrWorld)
-		{
-			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), FLexUIHelperGizmoRenderParameter(VertexArray, IndexArray, LocalToWorld, GetDefaultGizmoMaterial()->GetRenderProxy()));
-		}
-		else
-		{
-			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), FLexUIHelperGizmoRenderParameter(VertexArray, IndexArray, LocalToWorld, GetDefaultGizmoMaterial()->GetRenderProxy()));
-		}
+		auto LineMesh = MakeShared<FLexUIGizmoMesh>(VertexArray, IndexArray, ELexUIGizmoMeshPrimitiveType::Line);
+		LineMesh->Material = TStrongObjectPtr(GetDefaultGizmoMaterial());
+		LineMesh->LocalToWorldMatrix = LocalToWorld;
+		LineMesh->UpdateLocalBounds();
+		LineMesh->Render(ViewExtension, ScreenOrWorld);
 	}
 }
 
-void ULexUIManagerWorldSubsystem::DrawDebugBox(UWorld* InWorld, const FVector& Center, const FMatrix44f& LocalToWorld,
+void ULexUIManagerWorldSubsystem::DrawDebugBox(UWorld* InWorld, const FVector& Center, const FMatrix& LocalToWorld,
 	FVector const& Box, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld)
 {
 	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, true);
@@ -736,18 +731,15 @@ void ULexUIManagerWorldSubsystem::DrawDebugBox(UWorld* InWorld, const FVector& C
 		End = FVector(-Box.X, -Box.Y, -Box.Z);
 		PushNewLine(Start, End);
 
-		if (ScreenOrWorld)
-		{
-			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), FLexUIHelperGizmoRenderParameter(VertexArray, IndexArray, LocalToWorld, GetDefaultGizmoMaterial()->GetRenderProxy()));
-		}
-		else
-		{
-			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), FLexUIHelperGizmoRenderParameter(VertexArray, IndexArray, LocalToWorld, GetDefaultGizmoMaterial()->GetRenderProxy()));
-		}
+		auto LineMesh = MakeShared<FLexUIGizmoMesh>(VertexArray, IndexArray, ELexUIGizmoMeshPrimitiveType::Line);
+		LineMesh->Material = TStrongObjectPtr(GetDefaultGizmoMaterial());
+		LineMesh->LocalToWorldMatrix = LocalToWorld;
+		LineMesh->UpdateLocalBounds();
+		LineMesh->Render(ViewExtension, ScreenOrWorld);
 	}
 }
 
-void ULexUIManagerWorldSubsystem::DrawDebugLine(UWorld* InWorld, const FMatrix44f& LocalToWorld,
+void ULexUIManagerWorldSubsystem::DrawDebugLine(UWorld* InWorld, const FMatrix& LocalToWorld,
 	const TArray<FVector3f>& LinePoints, FColor const& Color, void* Object, const FString& DebugName,
 	bool ScreenOrWorld)
 {
@@ -764,30 +756,11 @@ void ULexUIManagerWorldSubsystem::DrawDebugLine(UWorld* InWorld, const FMatrix44
 			IndexArray.Add(VertexArray.Num());
 			new(VertexArray) FLexUIMeshVertex(LinePoints[i + 1], Color);
 		}
-		if (ScreenOrWorld)
-		{
-			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), FLexUIHelperGizmoRenderParameter(VertexArray, IndexArray, LocalToWorld, GetDefaultGizmoMaterial()->GetRenderProxy()));
-		}
-		else
-		{
-			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), FLexUIHelperGizmoRenderParameter(VertexArray, IndexArray, LocalToWorld, GetDefaultGizmoMaterial()->GetRenderProxy()));
-		}
-	}
-}
-
-void ULexUIManagerWorldSubsystem::DrawDebugMesh(UWorld* InWorld, const FLexUIHelperGizmoRenderParameter& Mesh, void* Object, const FString& DebugName, bool ScreenOrWorld)
-{
-	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, true);
-	if (ViewExtension.IsValid())
-	{
-		if (ScreenOrWorld)
-		{
-			ViewExtension->AddScreenSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), Mesh);
-		}
-		else
-		{
-			ViewExtension->AddWorldSpaceLineRender(FLexUIHelperGizmoKey(Object, DebugName), Mesh);
-		}
+		auto LineMesh = MakeShared<FLexUIGizmoMesh>(VertexArray, IndexArray, ELexUIGizmoMeshPrimitiveType::Line);
+		LineMesh->Material = TStrongObjectPtr(GetDefaultGizmoMaterial());
+		LineMesh->LocalToWorldMatrix = LocalToWorld;
+		LineMesh->UpdateLocalBounds();
+		LineMesh->Render(ViewExtension, ScreenOrWorld);
 	}
 }
 

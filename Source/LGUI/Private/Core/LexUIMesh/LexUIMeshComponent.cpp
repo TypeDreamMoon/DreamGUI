@@ -23,18 +23,6 @@
 
 #define LOCTEXT_NAMESPACE "LexUIMeshComponent"
 
-class FLexUIVertexBuffer : public FVertexBuffer
-{
-public:
-	TArray<FLexUIMeshVertex> Vertices;
-	virtual void InitRHI(FRHICommandListBase& RHICmdList)override
-	{
-		VertexBufferRHI = UE::RHIResourceUtils::CreateVertexBufferFromArray(
-			RHICmdList, TEXT("LexUIVertexBuffer"), EBufferUsageFlags::Dynamic, MakeConstArrayView(Vertices)
-			);
-	}
-};
-
 
 enum class ELexUIRenderSectionProxyType :uint8
 {
@@ -62,7 +50,7 @@ struct FLexUISectionProxy_Mesh : public FLexUIRenderSectionProxy
 	UMaterialInterface* Material = nullptr;
 	/** Vertex buffer for this section */
 	FStaticMeshVertexBuffers VertexBuffers;
-	FLexUIVertexBuffer LexUIVertexBuffers;
+	FLexUIMeshVertexBuffer LexUIVertexBuffers;
 	/** Index buffer for this section */
 	FLexUIMeshIndexBuffer IndexBuffer;
 	/** Vertex factory for this section */
@@ -328,24 +316,27 @@ public:
 					, InSrcSection->Type == ELexUIRenderSectionType::DirectMesh//direct mesh should not clear data when pooling
 					);
 				// vertex and index buffer
-				const auto& SrcVertices = SrcSection->Vertices;
+				auto& Indices = NewSectionProxy->IndexBuffer.Indices;
+				Indices.SetNumUninitialized(SrcSection->TriangleIndices.Num());
+				FMemory::Memcpy(Indices.GetData(), SrcSection->TriangleIndices.GetData(), SrcSection->TriangleIndices.Num() * sizeof(FLexUIMeshIndex));
+
+				auto& SrcVertices = SrcSection->Vertices;
+				
 				NewSectionProxy->ValidVerticesCount = SrcSection->ValidVerticesNum;
 				NewSectionProxy->NumPrimitives = SrcSection->ValidTriangleIndicesNum / 3;
 				if (bIsSupportLexUIRenderer)
 				{
-					auto& LexUIVertices = NewSectionProxy->LexUIVertexBuffers.Vertices;
-					LexUIVertices.SetNumUninitialized(SrcVertices.Num());
-					FMemory::Memcpy(LexUIVertices.GetData(), SrcVertices.GetData(), SrcVertices.Num() * sizeof(FLexUIMeshVertex));
-					NewSectionProxy->IndexBuffer.Indices = SrcSection->TriangleIndices;
-
+					auto& Vertices = NewSectionProxy->LexUIVertexBuffers.Vertices;
+					Vertices.SetNumUninitialized(SrcVertices.Num());
+					FMemory::Memcpy(Vertices.GetData(), SrcVertices.GetData(), SrcVertices.Num() * sizeof(FLexUIMeshVertex));
+					
 					// Enqueue initialization of render resource
 					BeginInitResource(&NewSectionProxy->IndexBuffer);
 					BeginInitResource(&NewSectionProxy->LexUIVertexBuffers);
 				}
 				if (bIsSupportUERenderer)
 				{
-					NewSectionProxy->IndexBuffer.Indices = SrcSection->TriangleIndices;
-					NewSectionProxy->InitFromLexUIVertexData(SrcSection->Vertices);
+					NewSectionProxy->InitFromLexUIVertexData(SrcVertices);
 
 					// Enqueue initialization of render resource
 					BeginInitResource(&NewSectionProxy->VertexBuffers.PositionVertexBuffer);
@@ -534,7 +525,7 @@ public:
 			if (Section->Type == ELexUIRenderSectionProxyType::Mesh)
 			{
 				auto MeshSection = static_cast<FLexUISectionProxy_Mesh*>(Section);
-				auto VertexBufferSize = MeshSection->LexUIVertexBuffers.Vertices.Num() * sizeof(FLexUIVertexBuffer);
+				auto VertexBufferSize = MeshSection->LexUIVertexBuffers.Vertices.Num() * sizeof(FLexUIMeshVertexBuffer);
 				if (MaxVertexBufferSize < VertexBufferSize) MaxVertexBufferSize = VertexBufferSize;
 				MeshMemorySize += VertexBufferSize;
 				MeshMemorySize += MeshSection->IndexBuffer.Indices.Num() * sizeof(FLexUIMeshIndexBufferType);
@@ -546,8 +537,8 @@ public:
 
 	/** Called on render thread to assign new dynamic data */
 	void UpdateSection_RenderThread(FRHICommandListImmediate& RHICmdList
-		, const FLexUIMeshVertex* MeshVertexData, const int32& NumVerts
-		, const FLexUIMeshIndex* MeshIndexData, const int32& NumTriangles
+		, const TArray<FLexUIMeshVertex>& MeshVertexData, const int32& NumVerts
+		, const TArray<FLexUIMeshIndex>& MeshIndexData, const int32& NumTriangles
 		, bool RequireNormalAndTangent
 		, FLexUISectionProxy_Mesh* Section)const
 	{
@@ -564,7 +555,7 @@ public:
 		{
 			uint32 VertexDataLength = NumVerts * sizeof(FLexUIMeshVertex);
 			void* VertexBufferData = RHICmdList.LockBuffer(Section->LexUIVertexBuffers.VertexBufferRHI, 0, VertexDataLength, RLM_WriteOnly);
-			FMemory::Memcpy(VertexBufferData, MeshVertexData, VertexDataLength);
+			FMemory::Memcpy(VertexBufferData, MeshVertexData.GetData(), VertexDataLength);
 			RHICmdList.UnlockBuffer(Section->LexUIVertexBuffers.VertexBufferRHI);
 		}
 		if(bIsSupportUERenderer)
@@ -616,7 +607,7 @@ public:
 		uint32 IndicesDataLength = NumTriangles * 3 * sizeof(FLexUIMeshIndex);
 		// Lock index buffer
 		auto IndexBufferData = RHICmdList.LockBuffer(Section->IndexBuffer.IndexBufferRHI, 0, IndicesDataLength, RLM_WriteOnly);
-		FMemory::Memcpy(IndexBufferData, MeshIndexData, IndicesDataLength);
+		FMemory::Memcpy(IndexBufferData, MeshIndexData.GetData(), IndicesDataLength);
 		RHICmdList.UnlockBuffer(Section->IndexBuffer.IndexBufferRHI);
 	}
 
@@ -1681,9 +1672,9 @@ void ULexUIMeshComponent::FlushRenderCommand()
 				{
 					LexUIMeshSceneProxy->UpdateSection_RenderThread(
 						RHICmdList
-						, UpdateData.VertexBufferData.GetData()
+						, UpdateData.VertexBufferData
 						, UpdateData.NumVerts
-						, UpdateData.IndexBufferData.GetData()
+						, UpdateData.IndexBufferData
 						, UpdateData.NumTriangles
 						, UpdateData.RequireNormalAndTangent
 						, UpdateData.Section

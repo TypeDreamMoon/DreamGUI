@@ -2840,7 +2840,7 @@ void ULexCanvas::DrawViewportArea()
 	auto WorldTransform = LexWidget->GetComponentTransform();
 
 	ULexUIManagerWorldSubsystem::DrawDebugBox(GetWorld()
-		, FVector::Zero(), FMatrix44f(WorldTransform.ToMatrixWithScale())
+		, FVector::Zero(), WorldTransform.ToMatrixWithScale()
 		, RectExtends, RectDrawColor, this, FString::Printf(TEXT("%s.LexCanvas.ViewportArea"), *this->GetOwner()->GetActorLabel())
 		, false);
 }
@@ -2898,7 +2898,7 @@ void ULexCanvas::DrawVirtualCamera()
 	new(LinePoints)FVector3f(rightTopEnd);
 	new(LinePoints)FVector3f(leftTopEnd);
 
-	ULexUIManagerWorldSubsystem::DrawDebugLine(GetWorld(), FMatrix44f::Identity
+	ULexUIManagerWorldSubsystem::DrawDebugLine(GetWorld(), FMatrix::Identity
 		, LinePoints, lineColor, this, FString::Printf(TEXT("%s.LexCanvas.VirtualCamera"), *this->GetOwner()->GetActorLabel())
 		, false);
 

@@ -3,7 +3,6 @@
 #pragma once
 
 #include "LexVisualPostProcess.h"
-#include "Core/LexUIRender/LexUIVertex.h"
 #include "LexBackgroundPixelate.generated.h"
 
 /** 

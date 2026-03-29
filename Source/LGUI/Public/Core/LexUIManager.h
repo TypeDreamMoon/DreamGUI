@@ -222,10 +222,9 @@ public:
 	FEditorViewportClient* GetEditorViewportClient();
 	static UMaterialInterface* GetDefaultGizmoMaterial();
 	
-	static void DrawDebugRect(UWorld* InWorld, const FVector& Center, const FMatrix44f& LocalToWorld, FVector2D const& Rect, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
-	static void DrawDebugBox(UWorld* InWorld, const FVector& Center, const FMatrix44f& LocalToWorld, FVector const& Box, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
-	static void DrawDebugLine(UWorld* InWorld, const FMatrix44f& LocalToWorld, const TArray<FVector3f>& LinePoints, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
-	static void DrawDebugMesh(UWorld* InWorld, const FLexUIHelperGizmoRenderParameter& Mesh, void* Object, const FString& DebugName, bool ScreenOrWorld);
+	static void DrawDebugRect(UWorld* InWorld, const FVector& Center, const FMatrix& LocalToWorld, FVector2D const& Rect, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
+	static void DrawDebugBox(UWorld* InWorld, const FVector& Center, const FMatrix& LocalToWorld, FVector const& Box, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
+	static void DrawDebugLine(UWorld* InWorld, const FMatrix& LocalToWorld, const TArray<FVector3f>& LinePoints, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld);
 private:
 	//this is cached when call GetEditorViewportClient
 	FEditorViewportClient* CacheViewportClient = nullptr;

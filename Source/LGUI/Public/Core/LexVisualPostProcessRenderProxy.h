@@ -3,7 +3,7 @@
 #pragma once
 
 #include "LexUIRender/ILexUIRendererPrimitive.h"
-#include "LexUIRender/LexUIVertex.h"
+#include "LexUIRender/LexUIPostProcessVertex.h"
 #include "RHIStaticStates.h"
 #include "SceneTextures.h"
 

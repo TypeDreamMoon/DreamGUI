@@ -2,7 +2,6 @@
 
 #include "Core/LexUIRender/LexUIRenderer.h"
 #include "Core/LexUIRender/LexUIShaders.h"
-#include "Core/LexUIRender/LexUIVertex.h"
 #include "Core/LexUIRender/LexUIPostProcessShaders.h"
 #include "Core/LexUIRender/LexUIResolveShaders.h"
 #include "LGUI.h"
@@ -25,7 +24,8 @@
 #include "ClearQuad.h"
 #include "RHIResourceUtils.h"
 #include "Core/LexUIMeshVertex.h"
-
+#include "Core/LexUIMesh/LexUIGizmoMesh.h"
+#include "Core/LexUIRender/LexUIPostProcessVertex.h"
 
 
 #if WITH_EDITORONLY_DATA
@@ -419,8 +419,8 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 {
 	if (ScreenSpaceRenderParameter.PrimitiveArray.Num() <= 0 && WorldSpaceRenderCanvasParameterArray.Num() <= 0
 #if WITH_EDITOR
-		&& ScreenSpaceHelperLineMap.Num() <= 0
-		&& WorldSpaceHelperLineMap.Num() <= 0
+		&& ScreenSpaceGizmoMeshArray.Num() <= 0
+		&& WorldSpaceGizmoMeshArray.Num() <= 0
 #endif
 		)return;//nothing to render
 	bool bIsMainViewport = !(InView.bIsSceneCapture || InView.bIsReflectionCapture || InView.bIsPlanarReflection || InView.bIsVirtualTexture);
@@ -571,7 +571,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 	//Render world space
 	if (WorldSpaceRenderCanvasParameterArray.Num() > 0
 #if WITH_EDITOR
-		|| WorldSpaceHelperLineMap.Num() > 0
+		|| WorldSpaceGizmoMeshArray.Num() > 0
 #endif
 		)
 	{
@@ -627,7 +627,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 		}
 		if (RenderSequenceArray.Num() > 0
 #if WITH_EDITOR
-			|| WorldSpaceHelperLineMap.Num() > 0
+			|| WorldSpaceGizmoMeshArray.Num() > 0
 #endif
 			)
 		{
@@ -836,8 +836,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 				}
 			}
 #if WITH_EDITOR
-			RenderHelperGizmo_RenderThread(WorldSpaceHelperLineMap,
-				GraphBuilder, RenderView, ViewRect, NumSamples, RenderTargetTexture);
+			RenderGizmoMesh_RenderThread(WorldSpaceGizmoMeshArray, GraphBuilder, RenderView, ViewRect, NumSamples, RenderTargetTexture);
 #endif
 			GraphBuilder.AddPass(
 				RDG_EVENT_NAME("LexUI_RenderWorld_Clean"),
@@ -853,7 +852,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 	//Render screen space
 	if ((ScreenSpaceRenderParameter.PrimitiveArray.Num() > 0
 #if WITH_EDITOR
-		|| ScreenSpaceHelperLineMap.Num() > 0
+		|| ScreenSpaceGizmoMeshArray.Num() > 0
 #endif
 		)
 		&& bIsMainViewport
@@ -1081,8 +1080,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 		}
 
 #if WITH_EDITOR
-		RenderHelperGizmo_RenderThread(ScreenSpaceHelperLineMap,
-			GraphBuilder, RenderView, ViewRect, NumSamples, RenderTargetTexture);
+		RenderGizmoMesh_RenderThread(ScreenSpaceGizmoMeshArray, GraphBuilder, RenderView, ViewRect, NumSamples, RenderTargetTexture);
 #endif
 
 		GraphBuilder.AddPass(
@@ -1355,13 +1353,9 @@ void FLexUIRenderer::UpdateRenderTargetRenderer(UTextureRenderTarget2D* InRender
 }
 
 #if WITH_EDITOR
-void FLexUIRenderer::RenderHelperGizmo_RenderThread(TMap<FLexUIHelperGizmoKey, FLexUIHelperGizmoRenderParameter>& HelperGizmoDataMap
-, FRDGBuilder& GraphBuilder
-, FSceneView* RenderView
-, const FIntRect& ViewRect
-, uint8 NumSamples
-, FRDGTextureRef RenderTargetTexture
-)
+void FLexUIRenderer::RenderGizmoMesh_RenderThread(TArray<TSharedPtr<FLexUIGizmoMesh>>& HelperGizmoDataMap,
+	FRDGBuilder& GraphBuilder, FSceneView* RenderView, const FIntRect& ViewRect, uint8 NumSamples,
+	FRDGTextureRef RenderTargetTexture)
 {
 	if (HelperGizmoDataMap.Num() <= 0)return;
 	const FMinimalSceneTextures& SceneTextures = ((FViewFamilyInfo*)RenderView->Family)->GetSceneTextures();
@@ -1375,151 +1369,94 @@ void FLexUIRenderer::RenderHelperGizmo_RenderThread(TMap<FLexUIHelperGizmoKey, F
 		{
 			RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
 
-			for (auto& KeyValueItem : HelperGizmoDataMap)
+			FSceneRenderingBulkObjectAllocator Allocator;
+			FLexUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Allocator, RHICmdList);
+			
+			for (auto& RenderParameter : HelperGizmoDataMap)
 			{
-				auto& RenderParameter = KeyValueItem.Value;
-				if (!RenderParameter.MaterialRenderProxy)break;
-				switch (RenderParameter.DrawType)
+				if (!RenderParameter->Material.IsValid())continue;
+				auto& LocalBounds = RenderParameter->LocalBounds;
+				auto& LocalToWorldMatrix = RenderParameter->LocalToWorldMatrix;
+				auto WorldBounds = LocalBounds.TransformBy(LocalToWorldMatrix);
+				if (!RenderView->ViewFrustum.IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))continue;
+				
+				auto MaterialRenderProxy = RenderParameter->Material->GetRenderProxy();
+				auto Material = MaterialRenderProxy->GetMaterialNoFallback(RenderView->GetFeatureLevel());
+				FMaterialShaderTypes ShaderTypes;
+				ShaderTypes.AddShaderType<FLexUIScreenRenderVS>();
+				ShaderTypes.AddShaderType<FLexUIScreenRenderPS>();
+				FMaterialShaders Shaders;
+				if (Material->TryGetShaders(ShaderTypes, nullptr, Shaders))
 				{
-				case ELexUIHelperGizmoDrawType::Line:
+					uint32 NumPrimitives = 0;
+					EPrimitiveType PrimitiveType = EPrimitiveType::PT_TriangleList;
+					
+					switch (RenderParameter->GetPrimitiveType())
 					{
-						auto Material = RenderParameter.MaterialRenderProxy->GetMaterialNoFallback(RenderView->GetFeatureLevel());
-						FMaterialShaderTypes ShaderTypes;
-						ShaderTypes.AddShaderType<FLexUIScreenRenderVS>();
-						ShaderTypes.AddShaderType<FLexUIScreenRenderPS>();
-						FMaterialShaders Shaders;
-						if (Material->TryGetShaders(ShaderTypes, nullptr, Shaders))
+					case ELexUIGizmoMeshPrimitiveType::Line:
 						{
-							TShaderRef<FLexUIScreenRenderVS> VertexShader;
-							TShaderRef<FLexUIScreenRenderPS> PixelShader;
-							Shaders.TryGetVertexShader(VertexShader);
-							Shaders.TryGetPixelShader(PixelShader);
-
-							FGraphicsPipelineStateInitializer GraphicsPSOInit;
-							RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-							FLexUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, Material->GetBlendMode()
-								, false, Material->IsTwoSided(), Material->ShouldDisableDepthTest(), false, false);
-
-							GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIMeshVertexDeclaration();
-							GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-							GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-							GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_LineList;
-							GraphicsPSOInit.NumSamples = NumSamples;
-							SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
-
-							FSceneRenderingBulkObjectAllocator Allocator;
-							FLexUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Allocator, RHICmdList);
-							FDynamicPrimitiveUniformBuffer& DynamicPrimitiveUniformBuffer = MeshCollector.AllocateOneFrameResource<FDynamicPrimitiveUniformBuffer>();
-							auto LocalBounds = FBox();
-							DynamicPrimitiveUniformBuffer.Set(RHICmdList, FMatrix(RenderParameter.LocalToWorld), FMatrix(RenderParameter.LocalToWorld)
-								, FBoxSphereBounds(LocalBounds.TransformBy(FMatrix(RenderParameter.LocalToWorld))), FBoxSphereBounds(LocalBounds), false, false, false);
-							VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, RenderParameter.MaterialRenderProxy, Material, &DynamicPrimitiveUniformBuffer.UniformBuffer);
-							PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, RenderParameter.MaterialRenderProxy, Material, &DynamicPrimitiveUniformBuffer.UniformBuffer);
-								
-							FBufferRHIRef VertexBufferRHI = UE::RHIResourceUtils::CreateVertexBufferFromArray(
-								RHICmdList, TEXT("LexUIHelperGizmoRenderVertexBuffer"), EBufferUsageFlags::Volatile, MakeConstArrayView(RenderParameter.VertexArray)
-							);
-							RHICmdList.SetStreamSource(0, VertexBufferRHI, 0);
-							
-							auto IndexBufferRHI = UE::RHIResourceUtils::CreateIndexBufferFromArray(
-								RHICmdList, TEXT("LexUIHelperGizmoRenderIndexBuffer"), EBufferUsageFlags::Volatile, MakeConstArrayView(RenderParameter.IndexArray)
-							);
-							RHICmdList.DrawIndexedPrimitive(IndexBufferRHI, 0, 0, RenderParameter.VertexArray.Num(), 0, RenderParameter.IndexArray.Num() / 2, 1);
-							
-							VertexBufferRHI.SafeRelease();
-							IndexBufferRHI.SafeRelease();
+							NumPrimitives = RenderParameter->GetIndexBuffer().Indices.Num() / 2;
+							PrimitiveType = EPrimitiveType::PT_LineList;
 						}
-					}
-					break;
-				case ELexUIHelperGizmoDrawType::Triangle:
-					{
-						auto Material = RenderParameter.MaterialRenderProxy->GetMaterialNoFallback(RenderView->GetFeatureLevel());
-						FMaterialShaderTypes ShaderTypes;
-						ShaderTypes.AddShaderType<FLexUIScreenRenderVS>();
-						ShaderTypes.AddShaderType<FLexUIScreenRenderPS>();
-						FMaterialShaders Shaders;
-						if (Material->TryGetShaders(ShaderTypes, nullptr, Shaders))
+						break;
+					case ELexUIGizmoMeshPrimitiveType::Triangle:
 						{
-							TShaderRef<FLexUIScreenRenderVS> VertexShader;
-							TShaderRef<FLexUIScreenRenderPS> PixelShader;
-							Shaders.TryGetVertexShader(VertexShader);
-							Shaders.TryGetPixelShader(PixelShader);
-
-							FGraphicsPipelineStateInitializer GraphicsPSOInit;
-							RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-							FLexUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, Material->GetBlendMode()
-								, false, Material->IsTwoSided(), Material->ShouldDisableDepthTest(), false, false);
-
-							GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIMeshVertexDeclaration();
-							GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-							GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-							GraphicsPSOInit.PrimitiveType = EPrimitiveType::PT_TriangleList;
-							GraphicsPSOInit.NumSamples = NumSamples;
-							SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
-
-							FSceneRenderingBulkObjectAllocator Allocator;
-							FLexUIMeshElementCollector MeshCollector(RenderView->GetFeatureLevel(), Allocator, RHICmdList);
-							FDynamicPrimitiveUniformBuffer& DynamicPrimitiveUniformBuffer = MeshCollector.AllocateOneFrameResource<FDynamicPrimitiveUniformBuffer>();
-							auto& LocalBounds = RenderParameter.LocalBounds;
-							DynamicPrimitiveUniformBuffer.Set(RHICmdList, FMatrix(RenderParameter.LocalToWorld), FMatrix(RenderParameter.LocalToWorld)
-								, FBoxSphereBounds(LocalBounds.TransformBy(FMatrix(RenderParameter.LocalToWorld))), FBoxSphereBounds(LocalBounds), false, false, false);
-							VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, RenderParameter.MaterialRenderProxy, Material, &DynamicPrimitiveUniformBuffer.UniformBuffer);
-							PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, RenderParameter.MaterialRenderProxy, Material, &DynamicPrimitiveUniformBuffer.UniformBuffer);
-								
-							FBufferRHIRef VertexBufferRHI = UE::RHIResourceUtils::CreateVertexBufferFromArray(
-								RHICmdList, TEXT("LexUIHelperGizmoRenderVertexBuffer"), EBufferUsageFlags::Volatile, MakeConstArrayView(RenderParameter.VertexArray)
-							);
-							RHICmdList.SetStreamSource(0, VertexBufferRHI, 0);
-							
-							auto IndexBufferRHI = UE::RHIResourceUtils::CreateIndexBufferFromArray(
-								RHICmdList, TEXT("LexUIHelperGizmoRenderIndexBuffer"), EBufferUsageFlags::Volatile, MakeConstArrayView(RenderParameter.IndexArray)
-							);
-							RHICmdList.DrawIndexedPrimitive(IndexBufferRHI, 0, 0, RenderParameter.VertexArray.Num(), 0, RenderParameter.IndexArray.Num() / 3, 1);
-							
-							VertexBufferRHI.SafeRelease();
-							IndexBufferRHI.SafeRelease();
+							NumPrimitives = RenderParameter->GetIndexBuffer().Indices.Num() / 3;
+							PrimitiveType = EPrimitiveType::PT_TriangleList;
 						}
-					}
 					break;
+					}
+
+					TShaderRef<FLexUIScreenRenderVS> VertexShader;
+					TShaderRef<FLexUIScreenRenderPS> PixelShader;
+					Shaders.TryGetVertexShader(VertexShader);
+					Shaders.TryGetPixelShader(PixelShader);
+					
+					FDynamicPrimitiveUniformBuffer& DynamicPrimitiveUniformBuffer = MeshCollector.AllocateOneFrameResource<FDynamicPrimitiveUniformBuffer>();
+					DynamicPrimitiveUniformBuffer.Set(RHICmdList, LocalToWorldMatrix, LocalToWorldMatrix
+						, WorldBounds, LocalBounds, false, false, false);
+
+					FGraphicsPipelineStateInitializer GraphicsPSOInit;
+					RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+					FLexUIRenderer::SetGraphicPipelineState_BlendDepthStencilRasterize(RenderView->GetFeatureLevel(), GraphicsPSOInit, Material->GetBlendMode()
+						, false, Material->IsTwoSided(), Material->ShouldDisableDepthTest(), false, false);
+
+					GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GetLexUIMeshVertexDeclaration();
+					GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
+					GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
+					GraphicsPSOInit.NumSamples = NumSamples;
+					GraphicsPSOInit.PrimitiveType = PrimitiveType;
+					SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
+							
+					VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, &DynamicPrimitiveUniformBuffer.UniformBuffer);
+					PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, &DynamicPrimitiveUniformBuffer.UniformBuffer);
+						
+					RHICmdList.SetStreamSource(0, RenderParameter->GetVertexBuffer().GetRHI(), 0);
+					RHICmdList.DrawIndexedPrimitive(RenderParameter->GetIndexBuffer().GetRHI(), 0, 0, RenderParameter->GetNumVertices(), 0, NumPrimitives, 1);
 				}
 			}
 			HelperGizmoDataMap.Reset();
 		});
 }
 
-void FLexUIRenderer::AddScreenSpaceLineRender(const FLexUIHelperGizmoKey& InKey, const FLexUIHelperGizmoRenderParameter& InLineParameter)
+void FLexUIRenderer::AddScreenSpaceGizmoMesh(TSharedPtr<FLexUIGizmoMesh> InMesh)
 {
-	auto Buffer = FLexUIHelperGizmoRenderParameter(InLineParameter);
 	auto ViewExtension = this;
 	ENQUEUE_RENDER_COMMAND(FLexUIRender_AddLineRender)(
-		[ViewExtension, InKey, Buffer = MoveTemp(Buffer)](FRHICommandListImmediate& RHICmdList)
+		[ViewExtension, InMesh](FRHICommandListImmediate& RHICmdList)
 		{
-			if (!ViewExtension->ScreenSpaceHelperLineMap.Contains(InKey))
-			{
-				ViewExtension->ScreenSpaceHelperLineMap.Add(InKey, Buffer);
-			}
-			else
-			{
-				ViewExtension->ScreenSpaceHelperLineMap[InKey] = Buffer;
-			}
+			ViewExtension->ScreenSpaceGizmoMeshArray.Add(InMesh);
 		}
 	);
 }
-void FLexUIRenderer::AddWorldSpaceLineRender(const FLexUIHelperGizmoKey& InKey, const FLexUIHelperGizmoRenderParameter& InLineParameter)
+
+void FLexUIRenderer::AddWorldSpaceGizmoMesh(TSharedPtr<FLexUIGizmoMesh> InMesh)
 {
-	auto Buffer = FLexUIHelperGizmoRenderParameter(InLineParameter);
 	auto ViewExtension = this;
 	ENQUEUE_RENDER_COMMAND(FLexUIRender_AddLineRender)(
-		[ViewExtension, InKey, Buffer = MoveTemp(Buffer)](FRHICommandListImmediate& RHICmdList)
+		[ViewExtension, InMesh](FRHICommandListImmediate& RHICmdList)
 		{
-			if (!ViewExtension->WorldSpaceHelperLineMap.Contains(InKey))
-			{
-				ViewExtension->WorldSpaceHelperLineMap.Add(InKey, Buffer);
-			}
-			else
-			{
-				ViewExtension->WorldSpaceHelperLineMap[InKey] = Buffer;
-			}
+			ViewExtension->WorldSpaceGizmoMeshArray.Add(InMesh);
 		}
 	);
 }

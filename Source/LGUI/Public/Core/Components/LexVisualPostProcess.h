@@ -3,7 +3,7 @@
 #pragma once
 
 #include "LexVisual.h"
-#include "Core/LexUIRender/LexUIVertex.h"
+#include "Core/LexUIRender/LexUIPostProcessVertex.h"
 #include "LexVisualPostProcess.generated.h"
 
 class FLexVisualPostProcessRenderProxy;
