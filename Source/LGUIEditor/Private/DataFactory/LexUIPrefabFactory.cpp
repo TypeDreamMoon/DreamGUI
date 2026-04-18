@@ -132,7 +132,7 @@ UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent,
 		NewAsset->bIsPrefabVariant = false;
 		ULexUIPrefabHelperObject* HelperObject = NewObject<ULexUIPrefabHelperObject>(GetTransientPackage());
 		HelperObject->PrefabAsset = NewAsset;
-		HelperObject->LoadedRootActor = SourcePrefab->GetPrefabInstanceScene()->GetWorld()->SpawnActor<ALexWidgetActor>(RootActorClass);
+		HelperObject->LoadedRootActor = NewAsset->GetPrefabInstanceScene()->GetWorld()->SpawnActor<ALexWidgetActor>(RootActorClass);
 
 		HelperObject->LoadedRootActor->SetActorLabel(NewAsset->GetName());
 		if (!HelperObject->LoadedRootActor->GetRootComponent())

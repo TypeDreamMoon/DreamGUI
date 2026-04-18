@@ -20,6 +20,7 @@ uint32 FLexCanvasDrawCallProcessingRunnable::Run()
 	{
 		if (!PreparedDrawCallDataQueue->IsEmpty())
 		{
+			bIsBatching = true;
 			FLexCanvasPreparedDrawCallData PreparedDrawCallData;
 			while (!PreparedDrawCallDataQueue->IsEmpty())//discard old data and get the newest one
 			{
@@ -30,6 +31,7 @@ uint32 FLexCanvasDrawCallProcessingRunnable::Run()
 			ULexCanvas::BatchDrawCallAsync(PreparedDrawCallData.LeftBottomPoint, PreparedDrawCallData.RightTopPoint, PreparedDrawCallData.DataArray, PendingDrawCallData.DrawCallArray);
 			//push to main thread queue
 			RebuildDrawCallQueue->Enqueue(MoveTemp(PendingDrawCallData));
+			bIsBatching = false;
 		}
 		else
 		{

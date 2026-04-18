@@ -2,15 +2,12 @@
 
 #include "LexUIEditorTools.h"
 #include "Core/LexUIManager.h"
-#include "Widgets/Docking/SDockTab.h"
-#include "Misc/FileHelper.h"
 #include "Misc/MessageDialog.h"
 #include "DesktopPlatformModule.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/EngineTypes.h"
 #include "Kismet2/ComponentEditorUtils.h"
 #include "Widgets/SViewport.h"
-#include "EditorViewportClient.h"
 #include "Engine/Selection.h"
 #include "EngineUtils.h"
 #include "DataFactory/LexUIPrefabActorFactory.h"
@@ -20,229 +17,16 @@
 #include "PrefabEditor/LexUIPrefabEditor.h"
 #include "Core/Components/LexLayout.h"
 #include "Core/Actor/LexWidgetRootActor.h"
-#include "Event/LexEventSystem.h"
-#include "Event/LexWorldSpaceRaycasterBase.h"
-#include "Logging/MessageLog.h"
 #include "Utils/LexUIUtils.h"
 
 #define LOCTEXT_NAMESPACE "LGUIEditorTools"
 
 
-
 FEditingPrefabChangedDelegate FLexUIEditorTools::OnEditingPrefabChanged;
 FBeforeApplyPrefabDelegate FLexUIEditorTools::OnBeforeApplyPrefab;
 
-namespace ReattachActorsHelper
-{
-	/** Holds the actor and socket name for attaching. */
-	struct FActorAttachmentInfo
-	{
-		AActor* Actor;
-
-		FName SocketName;
-	};
-
-	/** Used to cache the attachment info for an actor. */
-	struct FActorAttachmentCache
-	{
-	public:
-		/** The post-conversion actor. */
-		AActor* NewActor;
-
-		/** The parent actor and socket. */
-		FActorAttachmentInfo ParentActor;
-
-		/** Children actors and the sockets they were attached to. */
-		TArray<FActorAttachmentInfo> AttachedActors;
-	};
-
-	/**
-	 * Caches the attachment info for the actors being converted.
-	 *
-	 * @param InActorsToReattach			List of actors to reattach.
-	 * @param InOutAttachmentInfo			List of attachment info for the list of actors.
-	 */
-	void CacheAttachments(const TArray<AActor*>& InActorsToReattach, TArray<FActorAttachmentCache>& InOutAttachmentInfo)
-	{
-		for (int32 ActorIdx = 0; ActorIdx < InActorsToReattach.Num(); ++ActorIdx)
-		{
-			AActor* ActorToReattach = InActorsToReattach[ActorIdx];
-
-			InOutAttachmentInfo.AddZeroed();
-
-			FActorAttachmentCache& CurrentAttachmentInfo = InOutAttachmentInfo[ActorIdx];
-
-			// Retrieve the list of attached actors.
-			TArray<AActor*> AttachedActors;
-			ActorToReattach->GetAttachedActors(AttachedActors);
-
-			// Cache the parent actor and socket name.
-			CurrentAttachmentInfo.ParentActor.Actor = ActorToReattach->GetAttachParentActor();
-			CurrentAttachmentInfo.ParentActor.SocketName = ActorToReattach->GetAttachParentSocketName();
-
-			// Required to restore attachments properly.
-			for (int32 AttachedActorIdx = 0; AttachedActorIdx < AttachedActors.Num(); ++AttachedActorIdx)
-			{
-				// Store the attached actor and socket name in the cache.
-				CurrentAttachmentInfo.AttachedActors.AddZeroed();
-				CurrentAttachmentInfo.AttachedActors[AttachedActorIdx].Actor = AttachedActors[AttachedActorIdx];
-				CurrentAttachmentInfo.AttachedActors[AttachedActorIdx].SocketName = AttachedActors[AttachedActorIdx]->GetAttachParentSocketName();
-
-				AActor* ChildActor = CurrentAttachmentInfo.AttachedActors[AttachedActorIdx].Actor;
-				ChildActor->Modify();
-				ChildActor->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
-			}
-
-			// Modify the actor so undo will reattach it.
-			ActorToReattach->Modify();
-			ActorToReattach->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
-		}
-	}
-
-	/**
-	 * Caches the actor old/new information, mapping the old actor to the new version for easy look-up and matching.
-	 *
-	 * @param InOldActor			The old version of the actor.
-	 * @param InNewActor			The new version of the actor.
-	 * @param InOutReattachmentMap	Map object for placing these in.
-	 * @param InOutAttachmentInfo	Update the required attachment info to hold the Converted Actor.
-	 */
-	void CacheActorConvert(AActor* InOldActor, AActor* InNewActor, TMap<AActor*, AActor*>& InOutReattachmentMap, FActorAttachmentCache& InOutAttachmentInfo)
-	{
-		// Add mapping data for the old actor to the new actor.
-		InOutReattachmentMap.Add(InOldActor, InNewActor);
-
-		// Set the converted actor so re-attachment can occur.
-		InOutAttachmentInfo.NewActor = InNewActor;
-	}
-
-	/**
-	 * Checks if two actors can be attached, creates Message Log messages if there are issues.
-	 *
-	 * @param InParentActor			The parent actor.
-	 * @param InChildActor			The child actor.
-	 * @param InOutErrorMessages	Errors with attaching the two actors are stored in this array.
-	 *
-	 * @return Returns true if the actors can be attached, false if they cannot.
-	 */
-	bool CanParentActors(AActor* InParentActor, AActor* InChildActor)
-	{
-		FText ReasonText;
-		if (GEditor->CanParentActors(InParentActor, InChildActor, &ReasonText))
-		{
-			return true;
-		}
-		else
-		{
-			FMessageLog("EditorErrors").Error(ReasonText);
-			return false;
-		}
-	}
-
-	/**
-	 * Reattaches actors to maintain the hierarchy they had previously using a conversion map and an array of attachment info. All errors displayed in Message Log along with notifications.
-	 *
-	 * @param InReattachmentMap			Used to find the corresponding new versions of actors using an old actor pointer.
-	 * @param InAttachmentInfo			Holds parent and child attachment data.
-	 */
-	void ReattachActors(TMap<AActor*, AActor*>& InReattachmentMap, TArray<FActorAttachmentCache>& InAttachmentInfo)
-	{
-		// Holds the errors for the message log.
-		FMessageLog EditorErrors("EditorErrors");
-		EditorErrors.NewPage(LOCTEXT("AttachmentLogPage", "Actor Reattachment"));
-
-		for (int32 ActorIdx = 0; ActorIdx < InAttachmentInfo.Num(); ++ActorIdx)
-		{
-			FActorAttachmentCache& CurrentAttachment = InAttachmentInfo[ActorIdx];
-
-			// Need to reattach all of the actors that were previously attached.
-			for (int32 AttachedIdx = 0; AttachedIdx < CurrentAttachment.AttachedActors.Num(); ++AttachedIdx)
-			{
-				// Check if the attached actor was converted. If it was it will be in the TMap.
-				AActor** CheckIfConverted = InReattachmentMap.Find(CurrentAttachment.AttachedActors[AttachedIdx].Actor);
-				if (CheckIfConverted)
-				{
-					// This should always be valid.
-					if (*CheckIfConverted)
-					{
-						AActor* ParentActor = CurrentAttachment.NewActor;
-						AActor* ChildActor = *CheckIfConverted;
-
-						if (CanParentActors(ParentActor, ChildActor))
-						{
-							// Attach the previously attached and newly converted actor to the current converted actor.
-							ChildActor->AttachToActor(ParentActor, FAttachmentTransformRules::KeepWorldTransform, CurrentAttachment.AttachedActors[AttachedIdx].SocketName);
-						}
-					}
-
-				}
-				else
-				{
-					AActor* ParentActor = CurrentAttachment.NewActor;
-					AActor* ChildActor = CurrentAttachment.AttachedActors[AttachedIdx].Actor;
-
-					if (CanParentActors(ParentActor, ChildActor))
-					{
-						// Since the actor was not converted, reattach the unconverted actor.
-						ChildActor->AttachToActor(ParentActor, FAttachmentTransformRules::KeepWorldTransform, CurrentAttachment.AttachedActors[AttachedIdx].SocketName);
-					}
-				}
-
-			}
-
-			// Check if the parent was converted.
-			AActor** CheckIfNewActor = InReattachmentMap.Find(CurrentAttachment.ParentActor.Actor);
-			if (CheckIfNewActor)
-			{
-				// Since the actor was converted, attach the current actor to it.
-				if (*CheckIfNewActor)
-				{
-					AActor* ParentActor = *CheckIfNewActor;
-					AActor* ChildActor = CurrentAttachment.NewActor;
-
-					if (CanParentActors(ParentActor, ChildActor))
-					{
-						ChildActor->AttachToActor(ParentActor, FAttachmentTransformRules::KeepWorldTransform, CurrentAttachment.ParentActor.SocketName);
-					}
-				}
-
-			}
-			else
-			{
-				AActor* ParentActor = CurrentAttachment.ParentActor.Actor;
-				AActor* ChildActor = CurrentAttachment.NewActor;
-
-				// Verify the parent is valid, the actor may not have actually been attached before.
-				if (ParentActor && CanParentActors(ParentActor, ChildActor))
-				{
-					// The parent was not converted, attach to the unconverted parent.
-					ChildActor->AttachToActor(ParentActor, FAttachmentTransformRules::KeepWorldTransform, CurrentAttachment.ParentActor.SocketName);
-				}
-			}
-		}
-
-		// Add the errors to the message log, notifications will also be displayed as needed.
-		EditorErrors.Notify(NSLOCTEXT("ActorAttachmentError", "AttachmentsFailed", "Attachments Failed!"));
-	}
-}
-
 struct FLexUIEditorToolsHelperFunctionHolder
 {
-public:
-	static TArray<AActor*> ConvertSelectionToActors(USelection* InSelection)
-	{
-		TArray<AActor*> result;
-		auto count = InSelection->Num();
-		for (int i = 0; i < count; i++)
-		{
-			auto obj = (AActor*)(InSelection->GetSelectedObject(i));
-			if (obj != nullptr)
-			{
-				result.Add(obj);
-			}
-		}
-		return result;
-	}
 	static FString GetLabelPrefixForCopy(const FString& srcActorLabel, FString& outNumetricSuffix)
 	{
 		int rightCount = 1;
@@ -254,7 +38,6 @@ public:
 		outNumetricSuffix = srcActorLabel.Right(rightCount);
 		return srcActorLabel.Left(srcActorLabel.Len() - rightCount);
 	}
-public:
 	static FString GetCopiedActorLabel(AActor* Parent, FString OriginActorLabel, UWorld* World)
 	{
 		TArray<AActor*> SameParentActorList;//all actors attached at same parent actor. if parent is null then get all actors
@@ -323,136 +106,11 @@ public:
 		}
 		return CopiedActorLabel;
 	}
-	
-public:
-	static TArray<UActorComponent*> ConvertSelectionToComponents(USelection* InSelection)
-	{
-		TArray<UActorComponent*> result;
-		auto count = InSelection->Num();
-		for (int i = 0; i < count; i++)
-		{
-			auto obj = (UActorComponent*)(InSelection->GetSelectedObject(i));
-			if (obj != nullptr)
-			{
-				result.Add(obj);
-			}
-		}
-		return result;
-	}
 };
 
 TMap<FString, TWeakObjectPtr<ULexUIPrefab>> FLexUIEditorTools::CopiedActorPrefabMap;
 
 FString FLexUIEditorTools::LexUIPresetPrefabPath = TEXT("/LGUI/Prefabs/");
-
-FString FLexUIEditorTools::GetUniqueNumericName(const FString& InPrefix, const TArray<FString>& InExistNames)
-{
-	auto ExtractNumeric = [](const FString& InString, int32& Num) {
-		int NumericStringIndex = -1;
-		FString SubNumericString;
-		int NumericStringCharCount = 0;
-		for (int i = InString.Len() - 1; i >= 0; i--)
-		{
-			auto SubChar = InString[i];
-			if (SubChar >= '0' && SubChar <= '9')
-			{
-				NumericStringIndex = i;
-
-				NumericStringCharCount++;
-				if (NumericStringCharCount >= 4)
-				{
-					break;
-				}
-			}
-			else
-			{
-				break;
-			}
-		}
-		if (NumericStringIndex != -1)
-		{
-			auto NumetricSubString = InString.Right(InString.Len() - NumericStringIndex);
-			Num = FCString::Atoi(*NumetricSubString);
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	};
-	int MaxNumSuffix = 0;
-	for (int i = 0; i < InExistNames.Num(); i++)//search from same level actors, and get the right suffix
-	{
-		auto& Item = InExistNames[i];
-		if (Item.Len() == 0)continue;
-		int Num;
-		if (ExtractNumeric(Item, Num))
-		{
-			if (Num > MaxNumSuffix)
-			{
-				MaxNumSuffix = Num;
-			}
-		}
-	}
-	return FString::Printf(TEXT("%s_%d"), *InPrefix, MaxNumSuffix + 1);
-}
-
-FString FLexUIEditorTools::GetNameForNewWidget(ULexWidget* InParentWidget, const FString& InBaseName)
-{
-	auto SiblingWidgetList = InParentWidget->GetUIChildren();
-
-	FString MaxNumericSuffixStr = TEXT("");//numeric suffix
-	auto OriginName = GetNamePrefixForCopy(InBaseName, MaxNumericSuffixStr);
-	int MaxNumericSuffixStrLength = MaxNumericSuffixStr.Len();
-	int SameNameActorCount = 0;//if actor name is same with source name, then collect it
-	for (int i = 0; i < SiblingWidgetList.Num(); i ++)//search from same level actors, and get the right suffix
-	{
-		auto WidgetItem = SiblingWidgetList[i];
-		auto WidgetItemName = WidgetItem->GetDisplayName();
-		if (WidgetItemName == OriginName)SameNameActorCount++;
-		if (OriginName.Len() == 0 || WidgetItemName.StartsWith(OriginName))
-		{
-			auto itemRightStr = WidgetItemName.Right(WidgetItemName.Len() - OriginName.Len());
-			if (!itemRightStr.IsNumeric())//if rest is not numeric
-			{
-				continue;
-			}
-			FString ItemNumericSuffixStr = itemRightStr;
-			int ItemNumeric = FCString::Atoi(*ItemNumericSuffixStr);
-			int MaxNumericSuffix = FCString::Atoi(*MaxNumericSuffixStr);
-			if (ItemNumeric > MaxNumericSuffix)
-			{
-				MaxNumericSuffix = ItemNumeric;
-				MaxNumericSuffixStr = FString::Printf(TEXT("%d"), MaxNumericSuffix);
-			}
-		}
-	}
-	FString CopiedName = OriginName;
-	if (!MaxNumericSuffixStr.IsEmpty() || SameNameActorCount > 0)
-	{
-		int MaxNumericSuffix = FCString::Atoi(*MaxNumericSuffixStr);
-		MaxNumericSuffix++;
-		FString NumericSuffixStr = FString::Printf(TEXT("%d"), MaxNumericSuffix);
-		while (NumericSuffixStr.Len() < MaxNumericSuffixStrLength)
-		{
-			NumericSuffixStr = TEXT("0") + NumericSuffixStr;
-		}
-		CopiedName += NumericSuffixStr;
-	}
-	return CopiedName;
-}
-
-FString FLexUIEditorTools::GetNamePrefixForCopy(const FString& InSrcName, FString& OutNumericSuffix)
-{
-	int RightCount = 1;
-	while (RightCount <= InSrcName.Len() && InSrcName.Right(RightCount).IsNumeric())
-	{
-		RightCount++;
-	}
-	RightCount--;
-	OutNumericSuffix = InSrcName.Right(RightCount);
-	return InSrcName.Left(InSrcName.Len() - RightCount);
-}
 
 TArray<AActor*> FLexUIEditorTools::GetRootActorListFromSelection(const TArray<AActor*>& selectedActors)
 {
@@ -518,23 +176,6 @@ void FLexUIEditorTools::CreateLexWidget(TFunction<AActor*()> GetSelectedActorFun
 		ULexUIManagerWorldSubsystem::GetSelection(SelectedActor->GetWorld())->SelectActor(NewActor);
 	}
 	GEditor->EndTransaction();
-}
-
-AActor* FLexUIEditorTools::GetFirstSelectedActor()
-{
-	auto SelectedActors = FLexUIEditorToolsHelperFunctionHolder::ConvertSelectionToActors(GEditor->GetSelectedActors());
-	auto count = SelectedActors.Num();
-	if (count == 0)
-	{
-		//UE_LOG(LGUIEditor, Error, TEXT("NothingSelected"));
-		return nullptr;
-	}
-	else if (count > 1)
-	{
-		//UE_LOG(LGUIEditor, Error, TEXT("Only support one component"));
-		return nullptr;
-	}
-	return SelectedActors[0];
 }
 
 void FLexUIEditorTools::CreateUIControls(TFunction<AActor*()> GetSelectedActorFunction, FString InPrefabPath)

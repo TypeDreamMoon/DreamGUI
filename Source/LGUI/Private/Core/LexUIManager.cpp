@@ -860,6 +860,7 @@ void ULexUIManagerWorldSubsystem::PostInitialize()
 	check(PrefabManager);
 	PrefabManager->OnBeginDeserializeSession.AddUObject(this, &ULexUIManagerWorldSubsystem::BeginPrefabSystemProcessingActor);
 	PrefabManager->OnEndDeserializeSession.AddUObject(this, &ULexUIManagerWorldSubsystem::EndPrefabSystemProcessingActor);
+	FWorldDelegates::OnWorldPreSendAllEndOfFrameUpdates.AddUObject(this, &ULexUIManagerWorldSubsystem::OnWorldPreSendAllEndOfFrameUpdates);
 }
 void ULexUIManagerWorldSubsystem::Deinitialize()
 {
@@ -884,6 +885,7 @@ void ULexUIManagerWorldSubsystem::Deinitialize()
 	{
 		FInternationalization::Get().OnCultureChanged().Remove(OnCultureChangedDelegateHandle);
 	}
+	FWorldDelegates::OnWorldPreSendAllEndOfFrameUpdates.RemoveAll(this);
 }
 TStatId ULexUIManagerWorldSubsystem::GetStatId() const
 {
@@ -912,70 +914,15 @@ bool ULexUIManagerWorldSubsystem::bIsPlaying = false;
 
 DECLARE_CYCLE_STAT(TEXT("LexUIBehaviour Update"), STAT_LexUIBehaviourUpdate, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("LexUIBehaviour Start"), STAT_LexUIBehaviourStart, STATGROUP_LGUI);
+
 void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 {
-	//editor draw helper frame
-#if WITH_EDITOR
-	{
-		auto Settings = GetDefault<ULexUIEditorSettings>();
-		if (Settings->bDrawHelperFrame)
-		{
-			if (this->GetWorld()->WorldType == EWorldType::Game
-				|| this->GetWorld()->WorldType == EWorldType::PIE
-				|| this->GetWorld()->WorldType == EWorldType::Editor
-				// || this->GetWorld()->WorldType == EWorldType::EditorPreview
-				)
-			{
-				struct LOCAL
-				{
-					static void ForEachWidget(ULexUIManagerWorldSubsystem* LexUIManager, ULexWidget* Widget)
-					{
-						if (!IsValid(Widget))return;
+	Super::Tick(DeltaTime);
+	this->TickLexUI(DeltaTime);
+}
 
-						bool bIsScreenSpace = false;
-						if (Widget->GetWorld()->IsGameWorld())
-						{
-							auto RenderCanvas = Widget->GetRenderCanvas();
-							bIsScreenSpace = RenderCanvas->IsRenderToScreenSpace() || RenderCanvas->IsRenderToRenderTarget();
-						}
-						LexUIManager->DrawFrameOnWidget(Widget, bIsScreenSpace);
-
-						for (auto& Child : Widget->GetUIChildren())
-						{
-							ForEachWidget(LexUIManager, Child);
-						}
-					}
-				};
-				for (auto Widget : AllRootWidgetArray)
-				{
-					LOCAL::ForEachWidget(this, Widget.Get());
-				}
-			}
-		}
-
-		if (Settings->bDrawSelectableNavigationVisualizer)
-		{
-			for (auto& Selectable : AllSelectableArray)
-			{
-				if (!Selectable.IsValid())continue;
-				if (!IsValid(Selectable->GetWorld()))continue;
-				if (!IsValid(Selectable->GetWidget()))continue;
-				if (!IsValid(Selectable->GetWidget()->GetRenderCanvas()))continue;
-				if (!Selectable->GetWidget()->GetRaycastableInHierarchy())continue;
-
-				bool bIsScreenSpace = false;
-				if (Selectable->GetWorld()->IsGameWorld())
-				{
-					auto RenderCanvas = Selectable->GetWidget()->GetRenderCanvas();
-					bIsScreenSpace = RenderCanvas->IsRenderToScreenSpace() || RenderCanvas->IsRenderToRenderTarget();
-				}
-				DrawNavigationVisualizerOnUISelectable(Selectable->GetWorld(), Selectable.Get()
-					, bIsScreenSpace);
-			}
-		}
-	}
-#endif
-
+void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
+{
 	//Update culture
 	{
 		if (bShouldUpdateOnCultureChanged)
@@ -1094,7 +1041,6 @@ void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 		PrevScreenSpaceOverlayCanvasCount = 0;
 	}
 #endif
-
 	//update draw-call
 	{
 		auto UpdateCanvas = [](TArray<TWeakObjectPtr<ULexCanvas>>& InCanvasArray) {
@@ -1103,6 +1049,100 @@ void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 				if (Canvas.IsValid())
 				{
 					Canvas->UpdateRootCanvas();
+				}
+			}
+		};
+		UpdateCanvas(ScreenSpaceCanvasArray);
+		UpdateCanvas(WorldSpaceUECanvasArray);
+		UpdateCanvas(WorldSpaceLexCanvasArray);
+		UpdateCanvas(RenderTargetSpaceLexUICanvasArray);
+	}
+}
+
+void ULexUIManagerWorldSubsystem::OnWorldPreSendAllEndOfFrameUpdates(UWorld* InWorld)
+{
+	if (InWorld == this->GetWorld())
+	{
+#if WITH_EDITOR
+		this->DrawHelperGizmo();
+#endif
+		this->SubmitCanvasDrawCall();
+	}
+}
+
+#if WITH_EDITOR
+void ULexUIManagerWorldSubsystem::DrawHelperGizmo()
+{
+	//editor draw helper frame
+	auto Settings = GetDefault<ULexUIEditorSettings>();
+	if (Settings->bDrawHelperFrame)
+	{
+		if (this->GetWorld()->WorldType == EWorldType::Game
+			|| this->GetWorld()->WorldType == EWorldType::PIE
+			|| this->GetWorld()->WorldType == EWorldType::Editor
+			// || this->GetWorld()->WorldType == EWorldType::EditorPreview
+			)
+		{
+			struct LOCAL
+			{
+				static void ForEachWidget(ULexUIManagerWorldSubsystem* LexUIManager, ULexWidget* Widget)
+				{
+					if (!IsValid(Widget))return;
+
+					bool bIsScreenSpace = false;
+					if (Widget->GetWorld()->IsGameWorld())
+					{
+						auto RenderCanvas = Widget->GetRenderCanvas();
+						bIsScreenSpace = RenderCanvas->IsRenderToScreenSpace() || RenderCanvas->IsRenderToRenderTarget();
+					}
+					LexUIManager->DrawFrameOnWidget(Widget, bIsScreenSpace);
+
+					for (auto& Child : Widget->GetUIChildren())
+					{
+						ForEachWidget(LexUIManager, Child);
+					}
+				}
+			};
+			for (auto Widget : AllRootWidgetArray)
+			{
+				LOCAL::ForEachWidget(this, Widget.Get());
+			}
+		}
+	}
+
+	if (Settings->bDrawSelectableNavigationVisualizer)
+	{
+		for (auto& Selectable : AllSelectableArray)
+		{
+			if (!Selectable.IsValid())continue;
+			if (!IsValid(Selectable->GetWorld()))continue;
+			if (!IsValid(Selectable->GetWidget()))continue;
+			if (!IsValid(Selectable->GetWidget()->GetRenderCanvas()))continue;
+			if (!Selectable->GetWidget()->GetRaycastableInHierarchy())continue;
+
+			bool bIsScreenSpace = false;
+			if (Selectable->GetWorld()->IsGameWorld())
+			{
+				auto RenderCanvas = Selectable->GetWidget()->GetRenderCanvas();
+				bIsScreenSpace = RenderCanvas->IsRenderToScreenSpace() || RenderCanvas->IsRenderToRenderTarget();
+			}
+			DrawNavigationVisualizerOnUISelectable(Selectable->GetWorld(), Selectable.Get()
+				, bIsScreenSpace);
+		}
+	}
+}
+#endif
+
+void ULexUIManagerWorldSubsystem::SubmitCanvasDrawCall()
+{
+	//update draw-call
+	{
+		auto UpdateCanvas = [](TArray<TWeakObjectPtr<ULexCanvas>>& InCanvasArray) {
+			for (auto& Canvas : InCanvasArray)
+			{
+				if (Canvas.IsValid() && Canvas->IsRootCanvas())
+				{
+					Canvas->UpdateDrawCallBatchData();
 				}
 			}
 		};

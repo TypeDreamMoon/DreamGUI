@@ -85,10 +85,6 @@ namespace LexUIPrefabSystem
 		for (int i = 0; i < TrySerializeActorArray.Num(); i++)
 		{
 			auto& Actor = TrySerializeActorArray[i];
-			if (Actor->GetClass()->ImplementsInterface(ULexUIPrefabInterface::StaticClass()))
-			{
-				ILexUIPrefabInterface::Execute_OnPreSavePrefab(Actor);
-			}
 			FLexUIActorSaveData ActorSaveData;
 			if (auto SubPrefabDataPtr = SubPrefabMap.Find(Actor))//sub prefab's actor is not collected in WillSerializeActorArray
 			{
@@ -301,10 +297,6 @@ namespace LexUIPrefabSystem
 		for (int i = 0; i < WillSerializeObjectArray.Num(); i++)
 		{
 			auto Object = WillSerializeObjectArray[i];
-			if (Object->GetClass()->ImplementsInterface(ULexUIPrefabInterface::StaticClass()))
-			{
-				ILexUIPrefabInterface::Execute_OnPreSavePrefab(Object);
-			}
 			auto Class = Object->GetClass();
 			FLexUIObjectSaveData ObjectSaveDataItem;
 			ObjectSaveDataItem.ObjectClass = FindOrAddClassFromList(Class);

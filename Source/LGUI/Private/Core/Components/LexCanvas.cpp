@@ -21,6 +21,7 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "Math/TransformCalculus2D.h"
 #include "TextureResource.h"
+#include "Camera/CameraComponent.h"
 #include "Core/LexCanvasDrawCallProcessingRunnable.h"
 #include "Core/LexUIClipData.h"
 #include "Core/LexUIDataAsTexture.h"
@@ -100,11 +101,6 @@ void ULexCanvas::Awake_Implementation()
 	{
 		CustomScale->Init(this);
 	}
-}
-
-void ULexCanvas::EditorAwake_Implementation()
-{
-	
 }
 
 void ULexCanvas::TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction )
@@ -1240,6 +1236,15 @@ DECLARE_CYCLE_STAT(TEXT("Canvas UpdateClipAndGeometry"), STAT_UpdateClipAndGeome
 void ULexCanvas::UpdateCanvasDrawCall()
 {
 	SCOPE_CYCLE_COUNTER(STAT_UpdateDrawCall)
+
+	//update children canvas
+	for (auto& item : ChildrenCanvasArray)
+	{
+		if (!item.IsValid())continue;
+		if (item->bForceRenderToTarget)continue;
+		item->UpdateCanvasDrawCall();
+	}
+	
 	/**
 	 * Why use bPrevIsVisible?:
 	 * If Canvas is rendering in frame 1, and in frame 2 the Canvas is disabled(set WidgetActive to false), then the Canvas will not do draw-call calculation, and the prev existing draw-call mesh is still there and render,
@@ -1253,18 +1258,10 @@ void ULexCanvas::UpdateCanvasDrawCall()
 			bCanTickUpdate = true;
 		}
 		bPrevIsVisible = bNowIsVisible;
-
-		//update children canvas
-		for (auto& item : ChildrenCanvasArray)
-		{
-			if (!item.IsValid())continue;
-			if (item->bForceRenderToTarget)continue;
-			item->UpdateCanvasDrawCall();
-		}
 	}
 
 	//update draw-call
-	bool bHasPendingUpdateData = false;
+	bHasPendingUpdateData = false;
 	if (bCanTickUpdate)
 	{
 		bCanTickUpdate = false;
@@ -1352,6 +1349,27 @@ void ULexCanvas::UpdateCanvasDrawCall()
 		}
 	}
 
+	if (this == RootCanvas)
+	{
+		CheckRenderTargetUpdate();
+	}
+}
+
+void ULexCanvas::UpdateDrawCallBatchData()
+{
+	//update children canvas
+	for (auto& item : ChildrenCanvasArray)
+	{
+		if (!item.IsValid())continue;
+		if (item->bForceRenderToTarget)continue;
+		item->UpdateDrawCallBatchData();
+	}
+	
+	while (DrawCallProcessingRunnable->IsBatching() || !PreparedDrawCallDataQueue->IsEmpty())
+	{
+		FPlatformProcess::Sleep(0.001f);
+	}
+
 	if (!PendingRebuildDrawCallQueue->IsEmpty())
 	{
 		while (!PendingRebuildDrawCallQueue->IsEmpty())
@@ -1377,8 +1395,6 @@ void ULexCanvas::UpdateCanvasDrawCall()
 			//if frame-number is greater than current rendering draw-call's frame-number, that means we can safely update it
 			if (GFrameCounter > CurrentDrawCallData.FrameNumber && CurrentDrawCallData.FrameNumber == NewestDrawCallFrameNumber)
 			{
-				SCOPE_CYCLE_COUNTER(STAT_CopyBatchMeshGeometry);
-
 				for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
 				{
 					auto& DrawCallItem = CurrentDrawCallData.DrawCallArray[i];
@@ -1391,11 +1407,9 @@ void ULexCanvas::UpdateCanvasDrawCall()
 			}
 		}
 	}
-	UIMesh->FlushRenderCommand();
-
-	if (this == RootCanvas)
+	if (UIMesh.IsValid())
 	{
-		CheckRenderTargetUpdate();
+		UIMesh->FlushRenderCommand();
 	}
 }
 
@@ -3048,48 +3062,117 @@ bool ULexCanvas::Project3DToScreen(const FVector& Position3D, FVector2D& OutPosi
 	return false;
 }
 
-#if 1
-#include "GameFramework/PlayerController.h"
-#include "Engine/LocalPlayer.h"
-bool ULexCanvas::ProjectWorldToScreen(APlayerController* Player, const FVector& Position3D, FVector2D& OutPosition2D)const
+bool ULexCanvas::ProjectWorldToScreenWithPlayerCamera(APlayerController* Player, UCameraComponent* PlayerCamera, const FVector& InPosition, FVector2D& OutPosition2D)
 {
-	ULocalPlayer* const LP = Player ? Player->GetLocalPlayer() : nullptr;
-	if (LP && LP->ViewportClient)
+	if (Player != nullptr && PlayerCamera != nullptr)
 	{
-		auto TempFovAngle = Player->PlayerCameraManager->GetFOVAngle() * (float)PI / 360.0f;
-		auto TempViewportSize = LP->ViewportClient->Viewport->GetSizeXY();
-		FMatrix ProjectionMatrix;
-		ULexCanvas::BuildProjectionMatrix(TempViewportSize, ECameraProjectionMode::Perspective
-			, TempFovAngle, 1000, 0.01f, ProjectionMatrix);
-
-		auto ViewLocation = Player->PlayerCameraManager->GetCameraLocation();
-		auto ViewRotationMatrix = FInverseRotationMatrix(Player->GetRootComponent()->GetComponentRotation()) * FMatrix(
-			FPlane(0, 0, 1, 0),
-			FPlane(1, 0, 0, 0),
-			FPlane(0, 1, 0, 0),
-			FPlane(0, 0, 0, 1));
-		auto ViewProjectionMatrix = FTranslationMatrix(-ViewLocation) * ViewRotationMatrix * ProjectionMatrix;
-
-		auto ScreenPos = ViewProjectionMatrix.TransformFVector4(FVector4(Position3D, 1.0f));
-		if (ScreenPos.W > 0.0f)
+		ULocalPlayer* const LP = Player ? Player->GetLocalPlayer() : nullptr;
+		if (LP && LP->ViewportClient)
 		{
-			// the result of this will be x and y coords in -1..1 projection space
-			const float RHW = 1.0f / ScreenPos.W;
-			FPlane PosInScreenSpace = FPlane(ScreenPos.X * RHW, ScreenPos.Y * RHW, ScreenPos.Z * RHW, ScreenPos.W);
+			FSceneViewProjectionData ProjectionData;
+			LP->GetProjectionData(LP->ViewportClient->Viewport, /*out*/ ProjectionData);
 
-			// Move from projection space to normalized 0..1 UI space
-			const float NormalizedX = (PosInScreenSpace.X / 2.f) + 0.5f;
-			const float NormalizedY = 1.f - (PosInScreenSpace.Y / 2.f) - 0.5f;
+			auto ViewLocation = PlayerCamera->GetComponentLocation();
+			auto ViewRotationMatrix = FInverseRotationMatrix(PlayerCamera->GetComponentRotation()) * FMatrix(
+				FPlane(0, 0, 1, 0),
+				FPlane(1, 0, 0, 0),
+				FPlane(0, 1, 0, 0),
+				FPlane(0, 0, 0, 1));
 
-			OutPosition2D.X = (NormalizedX * (float)ViewportSize.X);
-			OutPosition2D.Y = (NormalizedY * (float)ViewportSize.Y);
+			auto ViewRect = ProjectionData.GetConstrainedViewRect();
+			auto ViewportSize = ViewRect.Size();
+#if 0//not sure what is wrong but this calculation can't get correct result
+			auto FovInRadians = PlayerCamera->FieldOfView * UE_PI / 360.0f;//we need half fov so 360 instead of 180
+			FMatrix ProjectionMatrix;
+			ULexCanvas::BuildProjectionMatrix(ViewportSize, PlayerCamera->ProjectionMode
+				, FovInRadians, 1000000, 0.01f, ProjectionMatrix);
+			auto ViewProjectionMatrix = FTranslationMatrix(-ViewLocation) * ViewRotationMatrix * ProjectionMatrix;
+#else
+			ProjectionData.ViewOrigin = ViewLocation;
+			ProjectionData.ViewRotationMatrix = ViewRotationMatrix;
+			auto ViewProjectionMatrix = ProjectionData.ComputeViewProjectionMatrix();
+#endif
 
-			return ConvertPositionFromViewportToCanvas(FVector2D(OutPosition2D), OutPosition2D);
+			auto ScreenPos = ViewProjectionMatrix.TransformFVector4(FVector4(InPosition, 1.0f));
+			if (ScreenPos.W > 0.0f)
+			{
+				// the result of this will be x and y coords in -1..1 projection space
+				const float RHW = 1.0f / ScreenPos.W;
+				FPlane PosInScreenSpace = FPlane(ScreenPos.X * RHW, ScreenPos.Y * RHW, ScreenPos.Z * RHW, ScreenPos.W);
+
+				// Move from projection space to normalized 0..1 UI space
+				const float NormalizedX = (PosInScreenSpace.X * 0.5f) + 0.5f;
+				const float NormalizedY = 1 - (PosInScreenSpace.Y * 0.5f) - 0.5f;
+
+				FVector2D RayStartViewRectSpace(
+					NormalizedX * (float)ViewportSize.X,
+					NormalizedY * (float)ViewportSize.Y
+				);
+				
+				OutPosition2D = FVector2D(RayStartViewRectSpace.X, RayStartViewRectSpace.Y) + FVector2D(static_cast<float>(ViewRect.Min.X), static_cast<float>(ViewRect.Min.Y));
+				return true;
+			}
 		}
 	}
 	return false;
 }
+
+bool ULexCanvas::BuildViewProjectionMatrixForPlayerCamera(APlayerController* Player, UCameraComponent* PlayerCamera, FMatrix& OutViewProjectionMatrix)
+{
+	if (Player != nullptr && PlayerCamera != nullptr)
+	{
+		ULocalPlayer* const LP = Player ? Player->GetLocalPlayer() : nullptr;
+		if (LP && LP->ViewportClient)
+		{
+			FSceneViewProjectionData ProjectionData;
+			LP->GetProjectionData(LP->ViewportClient->Viewport, /*out*/ ProjectionData);
+
+			auto ViewLocation = PlayerCamera->GetComponentLocation();
+			auto ViewRotationMatrix = FInverseRotationMatrix(PlayerCamera->GetComponentRotation()) * FMatrix(
+				FPlane(0, 0, 1, 0),
+				FPlane(1, 0, 0, 0),
+				FPlane(0, 1, 0, 0),
+				FPlane(0, 0, 0, 1));
+
+			auto ViewRect = ProjectionData.GetConstrainedViewRect();
+			auto ViewportSize = ViewRect.Size();
+#if 0//not sure what is wrong but this calculation can't get correct result
+			auto FovInRadians = PlayerCamera->FieldOfView * UE_PI / 360.0f;//we need half fov so 360 instead of 180
+			FMatrix ProjectionMatrix;
+			ULexCanvas::BuildProjectionMatrix(ViewportSize, PlayerCamera->ProjectionMode
+				, FovInRadians, 1000000, 0.01f, ProjectionMatrix);
+			OutViewProjectionMatrix = FTranslationMatrix(-ViewLocation) * ViewRotationMatrix * ProjectionMatrix;
+#else
+			ProjectionData.ViewOrigin = ViewLocation;
+			ProjectionData.ViewRotationMatrix = ViewRotationMatrix;
+			OutViewProjectionMatrix = ProjectionData.ComputeViewProjectionMatrix();
 #endif
+		}
+	}
+	return false;
+}
+
+bool ULexCanvas::ProjectWorldToScreenWithViewProjectionMatrix(const FMatrix& InViewProjectionMatrix, const FVector2D& InViewportSize, const FVector& InPosition, FVector2D& OutPosition2D)
+{
+	auto ScreenPos = InViewProjectionMatrix.TransformFVector4(FVector4(InPosition, 1.0f));
+	if (ScreenPos.W > 0.0f)
+	{
+		// the result of this will be x and y coords in -1..1 projection space
+		const float RHW = 1.0f / ScreenPos.W;
+		FPlane PosInScreenSpace = FPlane(ScreenPos.X * RHW, ScreenPos.Y * RHW, ScreenPos.Z * RHW, ScreenPos.W);
+
+		// Move from projection space to normalized 0..1 UI space
+		const float NormalizedX = (PosInScreenSpace.X / 2.f) + 0.5f;
+		const float NormalizedY = 1.f - (PosInScreenSpace.Y / 2.f) - 0.5f;
+
+		OutPosition2D.X = (NormalizedX * (float)InViewportSize.X);
+		OutPosition2D.Y = (NormalizedY * (float)InViewportSize.Y);
+
+		OutPosition2D = FVector2D(OutPosition2D.X, InViewportSize.Y - OutPosition2D.Y);
+		return true;
+	}
+	return false;
+}
 
 #pragma endregion
 

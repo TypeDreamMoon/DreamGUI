@@ -103,8 +103,8 @@ TSharedRef< FSlateStyleSet > FLGUIEditorStyle::Create()
 	Style->Set("ClassIcon.LexUIPrefab", new IMAGE_BRUSH(TEXT("Prefab_16x"), Icon16x16));
 	Style->Set("ClassThumbnail.LexUIPrefabActor", new IMAGE_BRUSH(TEXT("Prefab_40x"), Icon40x40));
 	Style->Set("ClassIcon.LexUIPrefabActor", new IMAGE_BRUSH(TEXT("Prefab_16x"), Icon16x16));
-	Style->Set("ClassThumbnail.LexUISpriteData", new IMAGE_BRUSH(TEXT("Sprite_40x"), Icon40x40));
-	Style->Set("ClassIcon.LexUISpriteData", new IMAGE_BRUSH(TEXT("Sprite_16x"), Icon16x16));
+	Style->Set("ClassThumbnail.LexUISpriteData", new IMAGE_BRUSH(TEXT("UISprite_40x"), Icon40x40));
+	Style->Set("ClassIcon.LexUISpriteData", new IMAGE_BRUSH(TEXT("UISprite_16x"), Icon16x16));
 	Style->Set("ClassThumbnail.LexUIStaticSpriteAtlasData", new IMAGE_BRUSH(TEXT("SpriteAtlas_40x"), Icon40x40));
 	Style->Set("ClassIcon.LexUIStaticSpriteAtlasData", new IMAGE_BRUSH(TEXT("SpriteAtlas_16x"), Icon16x16));
 

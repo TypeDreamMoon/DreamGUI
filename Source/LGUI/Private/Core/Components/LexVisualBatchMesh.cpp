@@ -212,6 +212,10 @@ void ULexVisualBatchMesh::UpdateGeometry()
 		}
 		OnUpdateGeometry(*(UIGeometry.Get()), bTriangleChanged, bLocalVertexPositionChanged || pixelPerfectAffectTransform, bUVChanged, bColorChanged);
 		ApplyGeometryModifier(bTriangleChanged, bUVChanged, bColorChanged, bLocalVertexPositionChanged);
+		if (bTriangleChanged)//triangle change mostly means vertex count change, so we need to fill widget property
+		{
+			bWidgetPropertyDataStartPositionChanged = true;
+		}
 	}
 	if (bWidgetPropertyDataStartPositionChanged)
 	{

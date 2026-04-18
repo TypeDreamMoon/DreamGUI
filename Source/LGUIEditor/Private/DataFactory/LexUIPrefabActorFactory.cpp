@@ -63,13 +63,6 @@ void ULexUIPrefabActorFactory::PostSpawnActor(UObject* Asset, AActor* InNewActor
 	auto PrefabActor = CastChecked<ALexWidgetRootActor>(InNewActor);
 	PrefabActor->GetLexWidget()->SetSizeDelta(Prefab->PrefabDataForPrefabEditor.CanvasSize);
 	PrefabActor->SetPrefab(Prefab);
-	auto SelectedActor = FLexUIEditorTools::GetFirstSelectedActor();
-	if (SelectedActor != nullptr && PrefabActor->GetWorld() == SelectedActor->GetWorld())
-	{
-		FLexUIEditorTools::MakeCurrentLevel(SelectedActor);
-		auto ParentComp = SelectedActor->GetRootComponent();
-		PrefabActor->GetRootComponent()->AttachToComponent(ParentComp, FAttachmentTransformRules::KeepRelativeTransform);
-	}
 
 	auto World = InNewActor->GetWorld();
 	if (World && World->WorldType != EWorldType::EditorPreview && !World->IsGameWorld())//Edit mode and not BlueprintEditorPreview

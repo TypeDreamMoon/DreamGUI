@@ -34,7 +34,4 @@ public:
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = LGUI, CallInEditor)
 		void EditorAwake();
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = LGUI)
-	void OnPreSavePrefab();
 };

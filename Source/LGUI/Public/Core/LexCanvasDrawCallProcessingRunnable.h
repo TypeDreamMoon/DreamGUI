@@ -15,11 +15,13 @@ public:
 	virtual void Stop() override;
 	virtual void Exit() override;
 	//~ End FRunnable Interface
+	bool IsBatching()const { return bIsBatching; }
 
 private:
 	TSharedPtr<TQueue<FLexCanvasPreparedDrawCallData>> PreparedDrawCallDataQueue;
 	TSharedPtr<TQueue<FLexCanvasPendingDrawCallData>> RebuildDrawCallQueue;
 	
 	std::atomic<bool> bIsRunning = false;
+	std::atomic<bool> bIsBatching = false;
 	TUniquePtr<FRunnableThread> Thread;
 };

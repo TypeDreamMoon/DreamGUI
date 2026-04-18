@@ -100,7 +100,7 @@ private:
 class ILexUICultureChangedInterface;
 enum class ELexRenderMode : uint8;
 
-UCLASS(NotBlueprintable, NotBlueprintType, Transient, NotPlaceable)
+UCLASS(NotBlueprintable, NotBlueprintType, Transient)
 class LGUI_API ULexUIManagerWorldSubsystem : public UTickableWorldSubsystem
 {
 	GENERATED_BODY()
@@ -112,7 +112,13 @@ public:
 
 	virtual TStatId GetStatId() const override;
 	virtual bool IsTickableInEditor()const override{ return false; }//use Ticker in editor, because Ticker can also tick when drag vector2/3 value while normal tick can't
-	virtual void Tick(float DeltaTime) override;
+	virtual void Tick(float DeltaTime)override;
+	void TickLexUI(float DeltaTime);
+	void OnWorldPreSendAllEndOfFrameUpdates(UWorld* InWorld);
+#if WITH_EDITOR
+	void DrawHelperGizmo();
+#endif
+	void SubmitCanvasDrawCall();
 	virtual bool IsTickableWhenPaused() const override;
 
 	static ULexUIManagerWorldSubsystem* GetInstance(UWorld* InWorld);

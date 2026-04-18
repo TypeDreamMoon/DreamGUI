@@ -59,7 +59,6 @@ enum class ELexLayoutFlexBoxSecondaryAxisLineAlignment :uint8
 	End,
 	/**
 	 * Expand size to fill all area.
-	 * Stretch only works when ControlChildSize is checked.
 	 */
 	Stretch,
 };

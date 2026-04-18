@@ -137,7 +137,7 @@ void ALexWidgetRootActor::CheckNecessaryObjects()
 						LOCTEXT("DialogBtnYes", "Yes"),
 						FSimpleDelegate::CreateLambda([=, this]()
 						{
-							auto ClassName = TEXT("LexEventSystemActor");
+							auto ClassName = TEXT("LexEventSystemActor_EnhancedInput");
 							if (auto ActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
 							{
 								auto Actor = this->GetWorld()->SpawnActor<AActor>(ActorClass);
@@ -240,7 +240,7 @@ void ALexWidgetRootActor::ApplyListInSceneOutliner()
 {
 	if (!LoadedActor.IsValid())return;
 	TArray<AActor*> AllLoadedActors;
-	FLexUIUtils::CollectChildrenActors(LoadedActor.Get(), AllLoadedActors, false);
+	FLexUIUtils::CollectChildrenActors(LoadedActor.Get(), AllLoadedActors, true);
 	for (AActor* Actor : AllLoadedActors)
 	{
 		auto bListedInSceneOutliner_Property = FindFProperty<FBoolProperty>(AActor::StaticClass(), TEXT("bListedInSceneOutliner"));

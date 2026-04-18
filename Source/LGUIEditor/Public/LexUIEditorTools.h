@@ -21,10 +21,6 @@ public:
 	static FString LexUIPresetPrefabPath;
 	static FEditingPrefabChangedDelegate OnEditingPrefabChanged;
 	static FBeforeApplyPrefabDelegate OnBeforeApplyPrefab;
-	static AActor* GetFirstSelectedActor();
-	static FString GetUniqueNumericName(const FString& InPrefix, const TArray<FString>& InExistNames);
-	static FString GetNameForNewWidget(ULexWidget* InParentWidget, const FString& InBaseName);
-	static FString GetNamePrefixForCopy(const FString& InSrcName, FString& OutNumericSuffix);
 	static TArray<AActor*> GetRootActorListFromSelection(const TArray<AActor*>& selectedActors);
 	static void CreateLexWidget(TFunction<AActor*()> GetSelectedActorFunction, FString Name, UClass* VisualClass, TFunction<void(class ULexWidget*)> Callback);
 	static void CreateUIControls(TFunction<AActor*()> GetSelectedActorFunction, FString InPrefabPath);

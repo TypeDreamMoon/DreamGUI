@@ -60,7 +60,7 @@ void FLexUIRenderer::SetupView(FSceneViewFamily& InViewFamily, FSceneView& InVie
 			FPlane(0, 1, 0, 0),
 			FPlane(0, 0, 0, 1));
 		auto ProjectionMatrix = ScreenSpaceRenderParameter.RootCanvas->GetProjectionMatrix();
-		auto ViewProjectionMatrix = ScreenSpaceRenderParameter.RootCanvas->GetViewProjectionMatrix();
+		auto ViewProjectionMatrix = FMatrix44f(FTranslationMatrix(-ViewLocation) * ViewRotationMatrix * ProjectionMatrix);
 
 		ScreenSpaceRenderParameter.ViewOrigin = ViewLocation;
 		ScreenSpaceRenderParameter.ViewRotationMatrix = ViewRotationMatrix;

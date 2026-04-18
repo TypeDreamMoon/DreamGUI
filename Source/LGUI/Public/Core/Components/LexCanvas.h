@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include "Layout/Margin.h"
 #include "Components/ActorComponent.h"
 #include "Camera/CameraTypes.h"
 #include "Core/LexCanvasAsyncFunctionRunnable.h"
@@ -209,7 +208,6 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason)override;
 	//begin LGUIPrefabInterface
 	virtual void Awake_Implementation() override;
-	virtual void EditorAwake_Implementation() override;
 	//end LGUIPrefabInterface
 #if WITH_EDITOR
 public:
@@ -621,7 +619,7 @@ public:
 	 * @param Result LexCanvas space position, left bottom is zero point.
 	 * @return convert will fail if this LexCanvas is not root canvas
 	 */
-	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
+	UFUNCTION(BlueprintPure, Category = "LGUI-CanvasScaler")
 	bool ConvertPositionFromViewportToCanvas(const FVector2D& InPosition, FVector2D& Result)const;
 	/**
 	 * Convert position from LexCanvas space to viewport.
@@ -629,25 +627,32 @@ public:
 	 * @param Result in viewport, pixel unit, left top is zero point.
 	 * @return convert will fail if this LexCanvas is not root canvas
 	 */
-	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
+	UFUNCTION(BlueprintPure, Category = "LGUI-CanvasScaler")
 	bool ConvertPositionFromCanvasToViewport(const FVector2D& InPosition, FVector2D& Result)const;
 	/**
-	 * NOTE!!! This is only for screen-space-UI, don't use this for convert world space position!!!
 	 * Project 3D screen-space-UI element's position to 2D screen-space-UI.
+	 * NOTE!!! This is only for screen-space-UI, DON'T use this for convert world space position!!!
 	 * @param	Position3D	GetWorldLocation from the UI element (world location).
 	 * @param	OutPosition2D	2D Position in screen-space, left bottom is zero point.
 	 * @return 	convert will fail if this LexCanvas is not root canvas.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
+	UFUNCTION(BlueprintPure, Category = "LGUI-CanvasScaler")
 	bool Project3DToScreen(const FVector& Position3D, FVector2D& OutPosition2D)const;
-
 	/**
-	 * CAUTION!!! This is just a test or reference function.
-	 * Compare to built-in GameplayStatics::ProjectWorldToScreen, this function has no latency, however GameplayStatics::ProjectWorldToScreen use last frame's camera location & rotation
+	 * Project 3D world position to 2D screen-space-UI position with specific player's camera.
+	 * This function need player pawn contains a camera component, and use this camera to do projection, so it can be used for world space UI.
+	 * @param Player 
+	 * @param InPosition 
+	 * @param OutPosition2D 
+	 * @return 
 	 */
-	UFUNCTION(BlueprintCallable, Category = "LGUI-CanvasScaler")
-	bool ProjectWorldToScreen(class APlayerController* Player, const FVector& Position3D, FVector2D& OutPosition2D)const;
-
+	UFUNCTION(BlueprintPure, Category = "LGUI-CanvasScaler")
+	static bool ProjectWorldToScreenWithPlayerCamera(APlayerController* Player, class UCameraComponent* PlayerCamera, const FVector& InPosition, FVector2D& OutPosition2D);
+	UFUNCTION(BlueprintPure, Category = "LGUI-CanvasScaler")
+	static bool BuildViewProjectionMatrixForPlayerCamera(APlayerController* Player, class UCameraComponent* PlayerCamera, FMatrix& OutViewProjectionMatrix);
+	UFUNCTION(BlueprintPure, Category = "LGUI-CanvasScaler")
+	static bool ProjectWorldToScreenWithViewProjectionMatrix(const FMatrix& InViewProjectionMatrix, const FVector2D& InViewportSize, const FVector& InPosition, FVector2D& OutPosition2D);
+	
 private:
 #if WITH_EDITOR
 	FDelegateHandle EditorTickDelegateHandle;
@@ -689,11 +694,13 @@ private:
 public:
 	/** Called from LexUIManagerActor. Update this canvas if it is a RootCanvas */
 	void UpdateRootCanvas();
+	void UpdateDrawCallBatchData();
 	/**  */
 	void MarkNeedVerifyMaterials();
 private:
 	uint32 bCanTickUpdate:1;//if Canvas can update from tick
 	uint32 bShouldRebuildDrawCall : 1;
+	uint32 bHasPendingUpdateData : 1;
 	uint32 bNeedToSortRenderPriority : 1;
 	uint32 bHasAddToLexScreenSpaceRenderer : 1;//is this canvas added to LGUI screen space renderer
 	uint32 bRequestUpdateForRenderTarget : 1;//request update when RenderTargetUpdateMode is WhenRequest

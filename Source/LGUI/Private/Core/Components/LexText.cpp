@@ -414,7 +414,7 @@ void ULexText::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEven
 void ULexText::RegisterOnRichTextImageDataChange()
 {
 	RichTextImageDataChangedDelegateHandle = RichTextImageData->OnDataChange.AddWeakLambda(this, [this] {
-		this->MarkVerticesDirty(false, true, true, false);
+		this->MarkVerticesDirty(true, true, true, false);
 		});
 }
 void ULexText::UnregisterOnRichTextImageDataChange()
@@ -426,7 +426,7 @@ void ULexText::UnregisterOnRichTextImageDataChange()
 void ULexText::RegisterOnRichTextCustomStyleDataChange()
 {
 	RichTextCustomStyleDataChangedDelegateHandle = RichTextCustomStyleData->OnDataChange.AddWeakLambda(this, [this] {
-		this->MarkVerticesDirty(false, true, true, false);
+		this->MarkVerticesDirty(true, true, true, false);
 		});
 }
 void ULexText::UnregisterOnRichTextCustomStyleDataChange()
@@ -465,7 +465,7 @@ void ULexText::SetText(const FText& Value) {
 	if (!Text.EqualTo(Value))
 	{
 		Text = Value;
-		MarkVerticesDirty(false, true, true, false);
+		MarkVerticesDirty(true, true, true, false);
 		ULexWidget::MarkLayoutForRebuild(GetWidget());
 		ConditionalUpdateCacheTextGeometry();
 	}

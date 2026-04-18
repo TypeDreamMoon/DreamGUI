@@ -738,7 +738,7 @@ void FLexUIPrefabEditorViewportClient::DrawCanvas(FViewport& InViewport, FSceneV
 void FLexUIPrefabEditorViewportClient::ReceivedFocus(FViewport* InViewport)
 {
 	if (!bReceivedFocusRecently)
-	{
+	{ 
 		bReceivedFocusRecently = true;
 
 		// A few frames can pass between receiving focus and processing a click, so we use a timer to track whether we have recently received focus.

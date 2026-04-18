@@ -3,10 +3,10 @@
 #include "Core/Components/LexLayoutContainerChildSizeFitter.h"
 #include "LGUI.h"
 
-DECLARE_CYCLE_STAT(TEXT("LexLayoutSelf ChildSizeFitter"), STAT_LexLayoutSelfAspectRatio, STATGROUP_LGUI);
+DECLARE_CYCLE_STAT(TEXT("LexLayoutSelf ChildSizeFitter"), STAT_LexLayoutSelfChildSizeFitter, STATGROUP_LGUI);
 void ULexLayoutContainerChildSizeFitter::CalculateSize()
 {
-    SCOPE_CYCLE_COUNTER(STAT_LexLayoutSelfAspectRatio);
+    SCOPE_CYCLE_COUNTER(STAT_LexLayoutSelfChildSizeFitter);
     auto Widget = GetWidget();
     if (!Widget)return;
 	ULexWidget* ValidChild = nullptr;
