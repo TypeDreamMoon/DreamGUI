@@ -25,7 +25,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 }
 
 USTRUCT(BlueprintType)
-struct FLGUIDuplicateDataContainer
+struct FLexUIDuplicateDataContainer
 {
 	GENERATED_BODY()
 public:
@@ -85,12 +85,12 @@ public:
 	 * Optimized version of DuplicateActor node when you need to duplicate same actor for multiple times. Use the result data in DuplicateActorWithPreparedData node.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (DeterminesOutputType = "Target", UnsafeDuringActorConstruction = "true"), Category = LGUI)
-		static void PrepareDuplicateData(AActor* Target, FLGUIDuplicateDataContainer& Data);
+		static void PrepareDuplicateData(AActor* Target, FLexUIDuplicateDataContainer& Data);
 	/**
 	 * Use this with PrepareDuplicateData node.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (DeterminesOutputType = "Target", UnsafeDuringActorConstruction = "true"), Category = LGUI)
-		static AActor* DuplicateActorWithPreparedData(UPARAM(Ref) FLGUIDuplicateDataContainer& Data, USceneComponent* Parent);
+		static AActor* DuplicateActorWithPreparedData(UPARAM(Ref) FLexUIDuplicateDataContainer& Data, USceneComponent* Parent);
 	template<class T>
 	static T* DuplicateActorT(T* Target, USceneComponent* Parent)
 	{

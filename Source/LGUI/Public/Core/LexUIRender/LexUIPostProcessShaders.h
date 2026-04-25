@@ -91,7 +91,7 @@ public:
 		FLexUIPostProcessMainTexUB UB;
 		UB._MainTex = SceneTexture;
 		UB._MainTexSampler = SceneTextureSampler;
-		TUniformBufferRef<FLexUIPostProcessMainTexUB> UniformBuffer = TUniformBufferRef<FLexUIPostProcessMainTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
+		auto UniformBuffer = TUniformBufferRef<FLexUIPostProcessMainTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
 		SetUniformBufferParameter(BatchedParameters, GetUniformBufferParameter<FLexUIPostProcessMainTexUB>(), UniformBuffer);
 		
 		RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
@@ -155,7 +155,7 @@ public:
 		FLexUIPostProcessMainTexUB UB;
 		UB._MainTex = MainTexture;
 		UB._MainTexSampler = MainTextureSampler;
-		TUniformBufferRef<FLexUIPostProcessMainTexUB> UniformBuffer = TUniformBufferRef<FLexUIPostProcessMainTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
+		auto UniformBuffer = TUniformBufferRef<FLexUIPostProcessMainTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
 		SetUniformBufferParameter(BatchedParameters, GetUniformBufferParameter<FLexUIPostProcessMainTexUB>(), UniformBuffer);
 		
 		RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
@@ -211,11 +211,11 @@ public:
 	{
 		FRHIBatchedShaderParameters& BatchedParameters = RHICmdList.GetScratchShaderParameters();
 		
-		FLexUIRenderMeshMainTexUB UB;
+		FLexUIPostProcessMainTexUB UB;
 		UB._MainTex = MainTexture;
 		UB._MainTexSampler = MainTextureSampler;
-		TUniformBufferRef<FLexUIRenderMeshMainTexUB> UniformBuffer = TUniformBufferRef<FLexUIRenderMeshMainTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
-		SetUniformBufferParameter(BatchedParameters, GetUniformBufferParameter<FLexUIRenderMeshMainTexUB>(), UniformBuffer);
+		auto UniformBuffer = TUniformBufferRef<FLexUIPostProcessMainTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
+		SetUniformBufferParameter(BatchedParameters, GetUniformBufferParameter<FLexUIPostProcessMainTexUB>(), UniformBuffer);
 		
 		SetShaderValue(BatchedParameters, MVPParameter, MVP);
 		SetShaderValue(BatchedParameters, MainTextureScaleOffsetParameter, MainTextureScaleOffset);
@@ -240,7 +240,7 @@ public:
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
 		OutEnvironment.SetDefine(TEXT("LEXUI_COLORCORRECT"), true);
-		FLexUISimpleCopyTargetPS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		FLexUICopyMeshRegionPS::ModifyCompilationEnvironment(Parameters, OutEnvironment);
 	}
 private:
 };
@@ -315,7 +315,7 @@ public:
 		FLexUIRenderMeshMainTexUB UB;
 		UB._MainTex = MainTexture;
 		UB._MainTexSampler = MainTextureSampler;
-		TUniformBufferRef<FLexUIRenderMeshMainTexUB> UniformBuffer = TUniformBufferRef<FLexUIRenderMeshMainTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
+		auto UniformBuffer = TUniformBufferRef<FLexUIRenderMeshMainTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
 		SetUniformBufferParameter(BatchedParameters, GetUniformBufferParameter<FLexUIRenderMeshMainTexUB>(), UniformBuffer);
 		
 		RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
@@ -351,7 +351,7 @@ public:
 			FLexUIRenderMeshMainTexUB UB;
 			UB._MainTex = MainTexture;
 			UB._MainTexSampler = MainTextureSampler;
-			TUniformBufferRef<FLexUIRenderMeshMainTexUB> UniformBuffer = TUniformBufferRef<FLexUIRenderMeshMainTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
+			auto UniformBuffer = TUniformBufferRef<FLexUIRenderMeshMainTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
 			SetUniformBufferParameter(BatchedParameters, GetUniformBufferParameter<FLexUIRenderMeshMainTexUB>(), UniformBuffer);
 		}
 
@@ -359,7 +359,7 @@ public:
 			FLexUIRenderMeshMaskTexUB UB;
 			UB._MaskTex = MaskTexture;
 			UB._MaskTexSampler = MaskTextureSampler;
-			TUniformBufferRef<FLexUIRenderMeshMaskTexUB> UniformBuffer = TUniformBufferRef<FLexUIRenderMeshMaskTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
+			auto UniformBuffer = TUniformBufferRef<FLexUIRenderMeshMaskTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
 			SetUniformBufferParameter(BatchedParameters, GetUniformBufferParameter<FLexUIRenderMeshMaskTexUB>(), UniformBuffer);
 		}
 		
@@ -393,7 +393,7 @@ public:
 
 		FLexUIRenderMeshClipDataTexUB UB;
 		UB._ClipDataTex = ClipTexture;
-		TUniformBufferRef<FLexUIRenderMeshClipDataTexUB> UniformBuffer = TUniformBufferRef<FLexUIRenderMeshClipDataTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
+		auto UniformBuffer = TUniformBufferRef<FLexUIRenderMeshClipDataTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
 		SetUniformBufferParameter(BatchedParameters, GetUniformBufferParameter<FLexUIRenderMeshClipDataTexUB>(), UniformBuffer);
 		
 		SetShaderValue(BatchedParameters, InvMParameter, InvM);
@@ -426,7 +426,7 @@ public:
 		FLexUIRenderMeshDepthTexUB UB;
 		UB._SceneDepthTex = DepthTexture;
 		UB._SceneDepthTexSampler = DepthTextureSampler;
-		TUniformBufferRef<FLexUIRenderMeshDepthTexUB> UniformBuffer = TUniformBufferRef<FLexUIRenderMeshDepthTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
+		auto UniformBuffer = TUniformBufferRef<FLexUIRenderMeshDepthTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
 		SetUniformBufferParameter(BatchedParameters, GetUniformBufferParameter<FLexUIRenderMeshDepthTexUB>(), UniformBuffer);
 		
 		SetShaderValue(BatchedParameters, SceneDepthBlendParameter, DepthBlend);
@@ -490,7 +490,7 @@ public:
 
 		FLexUIRenderMeshClipDataTexUB UB;
 		UB._ClipDataTex = ClipTexture;
-		TUniformBufferRef<FLexUIRenderMeshClipDataTexUB> UniformBuffer = TUniformBufferRef<FLexUIRenderMeshClipDataTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
+		auto UniformBuffer = TUniformBufferRef<FLexUIRenderMeshClipDataTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
 		SetUniformBufferParameter(BatchedParameters, GetUniformBufferParameter<FLexUIRenderMeshClipDataTexUB>(), UniformBuffer);
 		
 		SetShaderValue(BatchedParameters, InvMParameter, InvM);
@@ -523,7 +523,7 @@ public:
 		FLexUIRenderMeshDepthTexUB UB;
 		UB._SceneDepthTex = DepthTexture;
 		UB._SceneDepthTexSampler = DepthTextureSampler;
-		TUniformBufferRef<FLexUIRenderMeshDepthTexUB> UniformBuffer = TUniformBufferRef<FLexUIRenderMeshDepthTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
+		auto UniformBuffer = TUniformBufferRef<FLexUIRenderMeshDepthTexUB>::CreateUniformBufferImmediate(UB, UniformBuffer_SingleFrame);
 		SetUniformBufferParameter(BatchedParameters, GetUniformBufferParameter<FLexUIRenderMeshDepthTexUB>(), UniformBuffer);
 		
 		SetShaderValue(BatchedParameters, SceneDepthBlendParameter, DepthBlend);

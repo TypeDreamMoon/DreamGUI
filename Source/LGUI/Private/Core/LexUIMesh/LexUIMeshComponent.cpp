@@ -226,7 +226,7 @@ public:
 					{
 						if (IsRenderToWorld)
 						{
-							TempRenderer.Pin()->AddWorldSpacePrimitive_RenderThread(InCanvasPtr, SceneProxy);
+							TempRenderer.Pin()->AddWorldSpacePrimitive_RenderThread(InCanvasPtr, InCanvasPtr->GetActualBlendDepth(), InCanvasPtr->GetActualDepthFade(), SceneProxy);
 						}
 						else
 						{
@@ -506,7 +506,7 @@ public:
 		{
 			if (bIsLexUIRenderToWorld)
 			{
-				LexUIRenderer.Pin()->RemoveWorldSpacePrimitive_RenderThread(RenderCanvasPtr, this);
+				LexUIRenderer.Pin()->RemoveWorldSpacePrimitive_RenderThread(this);
 			}
 			else
 			{
@@ -657,7 +657,6 @@ public:
 				{
 					if (VisibilityMap & (1 << ViewIndex))
 					{
-						const FSceneView* View = Views[ViewIndex];
 						// Draw the mesh.
 						FMeshBatch& Mesh = Collector.AllocateMesh();
 						FMeshBatchElement& BatchElement = Mesh.Elements[0];
@@ -1130,17 +1129,6 @@ TSharedPtr<FLexUIRenderSection> ULexUIMeshComponent::SetupRenderSection(ELexUIRe
 			auto ChildCanvasSectionPtr = static_cast<FLexUIRenderSection_ChildCanvas*>(RenderSection.Get());
 			ChildCanvasSectionPtr->ChildCanvasMeshComponent = InDrawCallData->ChildCanvas->GetUIMesh();
 			ChildCanvasSectionPtr->ChildCanvasMeshComponent->SetParentCanvasMeshComp(InDrawCallData->ChildCanvas->GetUIMesh());
-			auto ChildCanvasMeshComp = ChildCanvasSectionPtr->ChildCanvasMeshComponent;
-			ChildCanvasMeshComp->OnSceneProxyCreated.AddWeakLambda(this, [this](ULexUIMeshComponent* InMesh, FLexUIRenderSceneProxy* InSceneProxy) {
-				if (this->SceneProxy != nullptr)
-				{
-					auto ThisSceneProxy = static_cast<FLexUIRenderSceneProxy*>(this->SceneProxy);//SceneProxy could change before the RENDER_COMMAND execute, so do necessary check in SetChildCanvasSectionData_RenderThread
-					ENQUEUE_RENDER_COMMAND(FLexUIRenderSceneProxy_ReassignChildCanvasSectionData)(
-						[ThisSceneProxy, CompID = InMesh->GetPrimitiveSceneId(), InSceneProxy](FRHICommandListImmediate& RHICmdList) {
-							ThisSceneProxy->SetChildCanvasSectionData_RenderThread(CompID, InSceneProxy);
-						});
-				}
-				});
 			if (ChildCanvasSectionPtr->RenderProxy)
 			{
 				if (this->SceneProxy != nullptr)
@@ -1466,17 +1454,39 @@ void ULexUIMeshComponent::VerifyMaterials()
 #endif
 }
 
-void ULexUIMeshComponent::SetParentCanvasMeshComp(ULexUIMeshComponent* InMesh)
+void ULexUIMeshComponent::SetParentCanvasMeshComp(ULexUIMeshComponent* InParentCanvasMeshComp)
 {
-	if (ParentCanvasMeshComp != InMesh)
+	check (ParentCanvasMeshComp != InParentCanvasMeshComp);
 	{
-		ParentCanvasMeshComp = InMesh;
+		auto ChildCanvasMeshCom = this;
+		if (ParentCanvasMeshComp != nullptr)
+		{
+			ChildCanvasMeshCom->OnSceneProxyCreated.RemoveAll(ParentCanvasMeshComp.Get());
+		}
+		
+		ParentCanvasMeshComp = InParentCanvasMeshComp;
+
+		ChildCanvasMeshCom->OnSceneProxyCreated.AddWeakLambda(InParentCanvasMeshComp, [InParentCanvasMeshComp](ULexUIMeshComponent* InChildMeshComp, FLexUIRenderSceneProxy* InSceneProxy) {
+			if (InParentCanvasMeshComp->SceneProxy != nullptr)
+			{
+				auto ParentSceneProxy = static_cast<FLexUIRenderSceneProxy*>(InParentCanvasMeshComp->SceneProxy);//SceneProxy could change before the RENDER_COMMAND execute, so do necessary check in SetChildCanvasSectionData_RenderThread
+				ENQUEUE_RENDER_COMMAND(FLGUIRenderSceneProxy_ReassignChildCanvasSectionData)(
+					[ParentSceneProxy, CompID = InChildMeshComp->GetPrimitiveSceneId(), InSceneProxy](FRHICommandListImmediate& RHICmdList) {
+						ParentSceneProxy->SetChildCanvasSectionData_RenderThread(CompID, InSceneProxy);
+					});
+			}
+			});
 	}
 }
-void ULexUIMeshComponent::ClearParentCanvasMeshComp(ULexUIMeshComponent* InMesh)
+void ULexUIMeshComponent::ClearParentCanvasMeshComp(ULexUIMeshComponent* InParentCanvasMeshComp)
 {
-	if (ParentCanvasMeshComp == InMesh)//check, incase parent already change
+	check (ParentCanvasMeshComp == InParentCanvasMeshComp);//check, incase parent already change
 	{
+		auto ChildCanvasMeshCom = this;
+		if (ParentCanvasMeshComp != nullptr)
+		{
+			ChildCanvasMeshCom->OnSceneProxyCreated.RemoveAll(ParentCanvasMeshComp.Get());
+		}
 		ParentCanvasMeshComp = nullptr;
 	}
 }

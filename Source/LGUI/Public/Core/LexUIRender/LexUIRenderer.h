@@ -59,8 +59,8 @@ public:
 	//end ISceneViewExtension interfaces
 
 	//
-	void AddWorldSpacePrimitive_RenderThread(ULexCanvas* InCanvas, ILexUIRendererPrimitive* InPrimitive);
-	void RemoveWorldSpacePrimitive_RenderThread(ULexCanvas* InCanvas, ILexUIRendererPrimitive* InPrimitive);
+	void AddWorldSpacePrimitive_RenderThread(void* InCanvasPtr, float InBlendDepth, int InDepthFade, ILexUIRendererPrimitive* InPrimitive);
+	void RemoveWorldSpacePrimitive_RenderThread(ILexUIRendererPrimitive* InPrimitive);
 
 	void AddScreenSpacePrimitive_RenderThread(ILexUIRendererPrimitive* InPrimitive);
 	void RemoveScreenSpacePrimitive_RenderThread(ILexUIRendererPrimitive* InPrimitive);
@@ -127,7 +127,7 @@ private:
 		 * CAUTION! use this uobject pointer only in game-thread!
 		 * I use it in render-thread just as a pointer or a key, so it is safe here.
 		 */
-		ULexCanvas* RenderCanvas = nullptr;
+		void* RenderCanvasPtr = nullptr;
 		//blend depth, 0-occlude by depth, 1-all visible
 		float BlendDepth = 0.0f;
 		//depth fade effect

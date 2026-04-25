@@ -1213,14 +1213,14 @@ void FLexUIRenderer::AddResolvePass(
 	);
 }
 
-void FLexUIRenderer::AddWorldSpacePrimitive_RenderThread(ULexCanvas* InCanvas, ILexUIRendererPrimitive* InPrimitive)
+void FLexUIRenderer::AddWorldSpacePrimitive_RenderThread(void* InCanvasPtr, float InBlendDepth, int InDepthFade, ILexUIRendererPrimitive* InPrimitive)
 {
 	if (InPrimitive != nullptr)
 	{
 		FWorldSpaceRenderParameter RenderParameter;
-		RenderParameter.BlendDepth = InCanvas->GetActualBlendDepth();
-		RenderParameter.DepthFade = InCanvas->GetActualDepthFade();
-		RenderParameter.RenderCanvas = InCanvas;
+		RenderParameter.BlendDepth = InBlendDepth;
+		RenderParameter.DepthFade = InDepthFade;
+		RenderParameter.RenderCanvasPtr = InCanvasPtr;
 		RenderParameter.Primitive = InPrimitive;
 
 		WorldSpaceRenderCanvasParameterArray.Add(RenderParameter);
@@ -1231,7 +1231,7 @@ void FLexUIRenderer::AddWorldSpacePrimitive_RenderThread(ULexCanvas* InCanvas, I
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d Add nullptr as ILexUIRendererPrimitive!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	}
 }
-void FLexUIRenderer::RemoveWorldSpacePrimitive_RenderThread(ULexCanvas* InCanvas, ILexUIRendererPrimitive* InPrimitive)
+void FLexUIRenderer::RemoveWorldSpacePrimitive_RenderThread(ILexUIRendererPrimitive* InPrimitive)
 {
 	if (InPrimitive != nullptr)
 	{
@@ -1319,7 +1319,7 @@ void FLexUIRenderer::SetRenderCanvasDepthFade_RenderThread(ULexCanvas* InRenderC
 {
 	for (auto& RenderParameter : WorldSpaceRenderCanvasParameterArray)
 	{
-		if (RenderParameter.RenderCanvas == InRenderCanvas)
+		if (RenderParameter.RenderCanvasPtr == InRenderCanvas)
 		{
 			RenderParameter.BlendDepth = InBlendDepth;
 			RenderParameter.DepthFade = InDepthFade;

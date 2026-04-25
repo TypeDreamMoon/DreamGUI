@@ -41,9 +41,6 @@ void ULexBackgroundBlur::MarkAllDirty()
 	SendOthersDataToRenderProxy();
 }
 
-#define MAX_BlurStrength 100.0f
-#define INV_MAX_BlurStrength 0.01f
-
 DECLARE_CYCLE_STAT(TEXT("PostProcess_BackgroundBlur"), STAT_BackgroundBlur, STATGROUP_LGUI);
 class FUIBackgroundBlurRenderProxy : public FLexVisualPostProcessRenderProxy
 {
@@ -171,19 +168,13 @@ public:
 		float MagicNumber = 1.0f / 2.2f;//this is a magic number which can make blur transition feel smooth
 		uint32 SourceWidth = BlurEffectRenderTexture->GetSizeX();
 		uint32 SourceHeight = BlurEffectRenderTexture->GetSizeY();
-		int DownSampleCount = 0;
-		while (SourceWidth > 1 && SourceHeight > 1 && DownSampleCount < MaxDownSampleLevel)
-		{
-			SourceWidth >>= 1;
-			SourceHeight >>= 1;
-			DownSampleCount++;
-		}
-		float FilteredBlurStrength = FMath::Pow(BlurStrength, MagicNumber) * DownSampleCount;
+		auto MaxDownSampleCount = FMath::Min3(FMath::FloorLog2(SourceWidth), FMath::FloorLog2(SourceHeight), static_cast<uint32>(MaxDownSampleLevel));
+		float FilteredBlurStrength = FMath::Pow(BlurStrength, MagicNumber) * MaxDownSampleCount;//convert BlurStrength from 0~1 to 0~Count, with adjusted curvature
 		FRHITexture* PrevRT = BlurEffectRenderTexture;
 		SourceWidth = BlurEffectRenderTexture->GetSizeX();
 		SourceHeight = BlurEffectRenderTexture->GetSizeY();
-		TArray<TRefCountPtr<IPooledRenderTarget>> DownSampleRenderTargetArray;
-		for (int i = DownSampleCount; i >= 1; i--)
+		TArray<TRefCountPtr<IPooledRenderTarget>> DownSampleRenderTargetArray;//store rt from big to small
+		for (int i = MaxDownSampleCount; i >= 1; i--)
 		{
 			if (FilteredBlurStrength >= i)
 			{
@@ -192,14 +183,14 @@ public:
 				TRefCountPtr<IPooledRenderTarget> DownSampleRT;
 				FPooledRenderTargetDesc RenderTargetDesc(FPooledRenderTargetDesc::Create2DDesc(FIntPoint(SourceWidth, SourceHeight)
 					, BlurEffectRenderTexture->GetFormat(), FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable, false));
-				GRenderTargetPool.FindFreeElement(RHICmdList, RenderTargetDesc, DownSampleRT, *FString::Printf(TEXT("LexUI_DownsampleRT_%d"), DownSampleCount));
+				GRenderTargetPool.FindFreeElement(RHICmdList, RenderTargetDesc, DownSampleRT, *FString::Printf(TEXT("LexUI_DownsampleRT_%d"), i));
 				DownSampleRenderTargetArray.Add(DownSampleRT);
 				Renderer->CopyRenderTarget(GraphBuilder, GlobalShaderMap, PrevRT, DownSampleRT->GetRHI());
 			
 				PrevRT = DownSampleRT->GetRHI();
 			}
 		}
-		for (int i = DownSampleCount; i >= 1; i--)
+		for (int i = MaxDownSampleCount; i >= 1; i--)
 		{
 			if (FilteredBlurStrength >= i)
 			{
@@ -258,7 +249,7 @@ public:
 		TShaderMapRef<FLexUISimplePostProcessVS> VertexShader(GlobalShaderMap);
 		TShaderMapRef<FLexUIPostProcessGaussianBlurPS> PixelShader(GlobalShaderMap);
 		auto SamplerState = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
-		
+
 		BlurAmount = FMath::Clamp(BlurAmount, 0.0f, 1.0f);
 		BlurAmount = FMath::Pow(BlurAmount, MagicNumber);
 				

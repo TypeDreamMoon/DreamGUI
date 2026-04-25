@@ -57,11 +57,11 @@ AActor* ULexUIBPLibrary::DuplicateActor(AActor* Target, USceneComponent* Parent)
 {
 	return LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::DuplicateActor(Target, Parent);
 }
-void ULexUIBPLibrary::PrepareDuplicateData(AActor* Target, FLGUIDuplicateDataContainer& DataContainer)
+void ULexUIBPLibrary::PrepareDuplicateData(AActor* Target, FLexUIDuplicateDataContainer& DataContainer)
 {
 	DataContainer.bIsValid = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::PrepareDataForDuplicate(Target, DataContainer.DuplicateData);
 }
-AActor* ULexUIBPLibrary::DuplicateActorWithPreparedData(FLGUIDuplicateDataContainer& Data, USceneComponent* Parent)
+AActor* ULexUIBPLibrary::DuplicateActorWithPreparedData(FLexUIDuplicateDataContainer& Data, USceneComponent* Parent)
 {
 	if (Data.bIsValid)
 	{

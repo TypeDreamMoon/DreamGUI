@@ -124,8 +124,8 @@ public:
 	void SetUITranslucentSortPriority(int32 NewTranslucentSortPriority);
 
 	void VerifyMaterials();
-	void SetParentCanvasMeshComp(ULexUIMeshComponent* InMesh);
-	void ClearParentCanvasMeshComp(ULexUIMeshComponent* InMesh);
+	void SetParentCanvasMeshComp(ULexUIMeshComponent* InParentCanvasMeshComp);
+	void ClearParentCanvasMeshComp(ULexUIMeshComponent* InParentCanvasMeshComp);
 
 	//~ Begin UPrimitiveComponent Interface.
 	virtual FPrimitiveSceneProxy* CreateSceneProxy() override;

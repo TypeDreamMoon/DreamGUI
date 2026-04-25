@@ -515,7 +515,7 @@ void UUIRecyclableScrollViewComponent::InitializeOnDataSource()
     }
 
     //create more cells
-    FLGUIDuplicateDataContainer DuplicateData;
+    FLexUIDuplicateDataContainer DuplicateData;
     if (CacheCellList.Num() < VisibleCellCount)
     {
         ULexUIBPLibrary::PrepareDuplicateData(WorkingCellTemplate.Get(), DuplicateData);
