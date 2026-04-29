@@ -620,19 +620,19 @@ void FLexUIPrefabEditor::BindCommands()
 	};
 	TFunction<TArray<AActor*>()> GetSelectedActorArray = [this]()
 	{
-		TArray<AActor*> SelectedActors;
+		TArray<AActor*> TempSelectedActors;
 		if (this->GetSelectedActors().Num() > 0)
 		{
 			for (auto Actor : this->GetSelectedActors())
 			{
 				if (Actor.IsValid())
 				{
-					SelectedActors.Add(Actor.Get());
+					TempSelectedActors.Add(Actor.Get());
 				}
 			}
-			return SelectedActors;
+			return TempSelectedActors;
 		}
-		return SelectedActors;
+		return TempSelectedActors;
 	};
 	ToolkitCommands->MapAction(
 		FGenericCommands::Get().Copy,

@@ -1420,16 +1420,6 @@ void ULexCanvas::UpdateDrawCallMesh()
 	
 	UIMesh->PoolAllRenderSection();
 	bool bNeedToUpdateBounds = false;
-	//@todo
-	// if (UIDrawCallList.Num() == 0)
-	// {
-	// 	/** 
-	// 	 * no draw-call, need to mark it dirty so the previous created SceneProxy will be deleted.
-	// 	 * Solve the case: Set child-canvas inactive, but UIMesh of child-canvas did not clear scene-proxy, and the scene-proxy still contains reference of parent-scene-proxy.
-	// 	 */
-	// 	UIMesh->MarkRenderStateDirty();
-	// }
-
 	for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
 	{
 		auto& DrawCallItem = CurrentDrawCallData.DrawCallArray[i];
@@ -1807,7 +1797,9 @@ void ULexCanvas::UpdateDrawCallMaterial()
 		}
 	}
 
-	if (bNeedToVerifyMaterials)
+	if (bNeedToVerifyMaterials
+		|| CurrentDrawCallData.DrawCallArray.Num() == 0
+		)
 	{
 		MarkNeedVerifyMaterials();//tell parent canvas to verify material
 	}

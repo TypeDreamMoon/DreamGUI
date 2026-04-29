@@ -267,7 +267,7 @@ public:
 		auto OldSection = InSrcSection->RenderProxy;
 		auto NewSection = CreateSectionData(InSrcSection);
 		check(NewSection);
-		ENQUEUE_RENDER_COMMAND(FLGUIRenderSceneProxy_ReplaceSectionData)(
+		ENQUEUE_RENDER_COMMAND(FLexUIRenderSceneProxy_ReplaceSectionData)(
 			[this, OldSection, NewSection](FRHICommandListImmediate& RHICmdList) {
 				auto SectionIndex = SectionArray.IndexOfByKey(OldSection);
 				SectionArray[SectionIndex] = NewSection;
@@ -276,7 +276,7 @@ public:
 	}
 	void UpdatePostProcessSection(FLexUIRenderSection_PostProcess* InSrcSection, FLexVisualPostProcessRenderProxy* InRenderProxy)
 	{
-		ENQUEUE_RENDER_COMMAND(FLGUIRenderSceneProxy_ReplaceSectionData)(
+		ENQUEUE_RENDER_COMMAND(FLexUIRenderSceneProxy_ReplaceSectionData)(
 			[this, InSrcSection, InRenderProxy](FRHICommandListImmediate& RHICmdList) {
 				auto PostProcessRenderProxy = static_cast<FLexUIRenderSectionProxy_PostProcess*>(InSrcSection->RenderProxy);
 				PostProcessRenderProxy->PostProcessRenderProxy = InRenderProxy;
@@ -285,7 +285,7 @@ public:
 	}
 	void UpdateChildCanvasSection(FLexUIRenderSection_ChildCanvas* InSrcSection, ULexUIMeshComponent* InComp)
 	{
-		ENQUEUE_RENDER_COMMAND(FLGUIRenderSceneProxy_ReplaceSectionData)(
+		ENQUEUE_RENDER_COMMAND(FLexUIRenderSceneProxy_ReplaceSectionData)(
 			[this, InSrcSection, CompID = InComp->GetPrimitiveSceneId(), SceneProxy = InComp->SceneProxy](FRHICommandListImmediate& RHICmdList) {
 				auto ChildCanvasRenderProxy = static_cast<FLexUIRenderSectionProxy_ChildCanvas*>(InSrcSection->RenderProxy);
 				ChildCanvasRenderProxy->PrimitiveComponentID = CompID;
@@ -1456,7 +1456,7 @@ void ULexUIMeshComponent::VerifyMaterials()
 
 void ULexUIMeshComponent::SetParentCanvasMeshComp(ULexUIMeshComponent* InParentCanvasMeshComp)
 {
-	check (ParentCanvasMeshComp != InParentCanvasMeshComp);
+	if (ParentCanvasMeshComp != InParentCanvasMeshComp)
 	{
 		auto ChildCanvasMeshCom = this;
 		if (ParentCanvasMeshComp != nullptr)
@@ -1470,7 +1470,7 @@ void ULexUIMeshComponent::SetParentCanvasMeshComp(ULexUIMeshComponent* InParentC
 			if (InParentCanvasMeshComp->SceneProxy != nullptr)
 			{
 				auto ParentSceneProxy = static_cast<FLexUIRenderSceneProxy*>(InParentCanvasMeshComp->SceneProxy);//SceneProxy could change before the RENDER_COMMAND execute, so do necessary check in SetChildCanvasSectionData_RenderThread
-				ENQUEUE_RENDER_COMMAND(FLGUIRenderSceneProxy_ReassignChildCanvasSectionData)(
+				ENQUEUE_RENDER_COMMAND(FLexUIRenderSceneProxy_ReassignChildCanvasSectionData)(
 					[ParentSceneProxy, CompID = InChildMeshComp->GetPrimitiveSceneId(), InSceneProxy](FRHICommandListImmediate& RHICmdList) {
 						ParentSceneProxy->SetChildCanvasSectionData_RenderThread(CompID, InSceneProxy);
 					});
@@ -1480,7 +1480,7 @@ void ULexUIMeshComponent::SetParentCanvasMeshComp(ULexUIMeshComponent* InParentC
 }
 void ULexUIMeshComponent::ClearParentCanvasMeshComp(ULexUIMeshComponent* InParentCanvasMeshComp)
 {
-	check (ParentCanvasMeshComp == InParentCanvasMeshComp);//check, incase parent already change
+	if (ParentCanvasMeshComp == InParentCanvasMeshComp)//check, incase parent already change
 	{
 		auto ChildCanvasMeshCom = this;
 		if (ParentCanvasMeshComp != nullptr)
