@@ -25,7 +25,7 @@ namespace LexUIPrefabSystem
 		/** K2Node reference, currently for PrefabAnimation's event track. */
 		K2Node,
 		/** Only for duplicate, use native ObjectWriter/ObjectReader serialization method */
-		NativeSerailizeForDuplicate,
+		NativeSerializeForDuplicate,
 	};
 
 	/** 

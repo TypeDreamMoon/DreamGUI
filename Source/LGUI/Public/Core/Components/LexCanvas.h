@@ -678,7 +678,6 @@ public:
 	const TArray<ULexWidget*>& GetVisualWidgetArray()const { return VisualWidgetList; }
 	const TArray<ULexWidget*>& GetWidgetArray()const { return WidgetList; }
 
-	float GetLastRenderTime()const;
 	ULexUIMeshComponent* GetUIMesh()const { CheckUIMesh(); return UIMesh.Get(); }
 public:
 	static FName LexUI_MainTextureMaterialParameterName;

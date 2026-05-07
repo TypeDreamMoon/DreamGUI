@@ -94,6 +94,7 @@ void FLexUIGizmoMesh::UpdateLocalBounds()
 
 void FLexUIGizmoMesh::Render(TSharedPtr<FLexUIRenderer> LexUIRenderer, bool ScreenSpaceOrWorldSpace)
 {
+#if WITH_EDITOR
 	if (ScreenSpaceOrWorldSpace)
 	{
 		LexUIRenderer->AddScreenSpaceGizmoMesh(SharedThis(this));
@@ -102,4 +103,5 @@ void FLexUIGizmoMesh::Render(TSharedPtr<FLexUIRenderer> LexUIRenderer, bool Scre
 	{
 		LexUIRenderer->AddWorldSpaceGizmoMesh(SharedThis(this));
 	}
+#endif
 }

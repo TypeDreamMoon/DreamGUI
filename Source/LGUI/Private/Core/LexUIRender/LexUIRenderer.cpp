@@ -567,7 +567,6 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 	float GammaValue =
 		(RendererType == ELexUIRendererType::RenderTarget || !bIsMainViewport) ? 1.0f : EngineGamma;
 
-	auto CurrentWorldTime = InView.Family->Time.GetWorldTimeSeconds();
 	//Render world space
 	if (WorldSpaceRenderCanvasParameterArray.Num() > 0
 #if WITH_EDITOR
@@ -612,7 +611,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 						)
 					{
 						FWorldSpaceRenderParameterSequence Item;
-						WorldRenderParameter.Primitive->LexUI_CollectRenderData(Item.RenderDataArray, CurrentWorldTime);
+						WorldRenderParameter.Primitive->LexUI_CollectRenderData(Item.RenderDataArray);
 						if (Item.RenderDataArray.Num() > 0)
 						{
 							Item.BlendDepth = WorldRenderParameter.BlendDepth;
@@ -942,7 +941,7 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 					|| (bFrustumCulling && RenderView->GetCullingFrustum().IntersectBox(WorldBounds.Origin, WorldBounds.BoxExtent))//simple View Frustum Culling
 					)
 				{
-					Primitive->LexUI_CollectRenderData(RenderSequenceArray, CurrentWorldTime);
+					Primitive->LexUI_CollectRenderData(RenderSequenceArray);
 				}
 			}
 		}

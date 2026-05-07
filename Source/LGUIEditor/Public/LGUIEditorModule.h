@@ -3,9 +3,6 @@
 #pragma once
 
 #include "Modules/ModuleInterface.h"
-#include "PropertyEditorModule.h"
-#include "IDetailsView.h"
-#include "PropertyHandle.h"
 
 class ULexWidget;
 class FToolBarBuilder;

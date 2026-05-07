@@ -187,6 +187,8 @@ struct FLexUIRenderSectionProxy_ChildCanvas : public FLexUIRenderSectionProxy
 	}
 };
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FLexUIRenderSceneProxyReleaseDelegate, class FLexUIRenderSceneProxy*);
+
 DECLARE_CYCLE_STAT(TEXT("LexUIMesh CreateRenderSection"), STAT_CreateRenderSection, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("LexUIMesh UpdateMeshSection_RT"), STAT_UpdateMeshSectionRT, STATGROUP_LGUI);
 
@@ -199,7 +201,7 @@ public:
 		static size_t UniquePointer;
 		return reinterpret_cast<size_t>(&UniquePointer);
 	}
-	FLexUIRenderSceneProxy(ULexUIMeshComponent* InComponent, ULexCanvas* InCanvasPtr, FLexUIRenderSceneProxy* InParentSceneProxy)
+	FLexUIRenderSceneProxy(ULexUIMeshComponent* InComponent, ULexCanvas* InCanvasPtr, bool InIsRenderCanvas)
 		: FPrimitiveSceneProxy(InComponent)
 		, MaterialRelevance(InComponent->GetMaterialRelevance(GetScene().GetShaderPlatform()))
 		, RenderPriority(InComponent->TranslucencySortPriority)
@@ -211,22 +213,23 @@ public:
 #endif
 		LexUIRenderer = InComponent->LexUIRenderer;
 		RenderCanvasPtr = InCanvasPtr;
-		CanvasLastRenderTime = &RenderCanvasPtr->LastRenderTime;
 		bIsLexUIRenderToWorld = InComponent->bIsLexUIRenderToWorld;
-		ParentSceneProxy = InParentSceneProxy;
+		bIsRenderCanvas = InIsRenderCanvas;
 		if (LexUIRenderer.IsValid())
 		{
 			auto TempRenderer = LexUIRenderer;
 			auto SceneProxy = this;
 			auto IsRenderToWorld = bIsLexUIRenderToWorld;
+			auto BlendDepth = InCanvasPtr->GetActualBlendDepth();
+			auto DepthFade = InCanvasPtr->GetActualDepthFade();
 			ENQUEUE_RENDER_COMMAND(FLexUIRenderSceneProxy_AddPrimitive)(
-				[TempRenderer, SceneProxy, InCanvasPtr, IsRenderToWorld](FRHICommandListImmediate& RHICmdList)
+				[TempRenderer, SceneProxy, InCanvasPtr, BlendDepth, DepthFade, IsRenderToWorld](FRHICommandListImmediate& RHICmdList)
 				{
 					if (TempRenderer.IsValid())
 					{
 						if (IsRenderToWorld)
 						{
-							TempRenderer.Pin()->AddWorldSpacePrimitive_RenderThread(InCanvasPtr, InCanvasPtr->GetActualBlendDepth(), InCanvasPtr->GetActualDepthFade(), SceneProxy);
+							TempRenderer.Pin()->AddWorldSpacePrimitive_RenderThread(InCanvasPtr, BlendDepth, DepthFade, SceneProxy);
 						}
 						else
 						{
@@ -292,7 +295,6 @@ public:
 				if (SceneProxy != nullptr)
 				{
 					ChildCanvasRenderProxy->ChildCanvasSceneProxy = static_cast<FLexUIRenderSceneProxy*>(SceneProxy);
-					ChildCanvasRenderProxy->ChildCanvasSceneProxy->ParentSceneProxy = this;
 				}
 				ChildCanvasRenderProxy->bCanRender = true;
 			});
@@ -379,8 +381,9 @@ public:
 				NewSectionProxy->PrimitiveComponentID = ChildCanvasMeshItem->GetPrimitiveSceneId();
 				if (ChildCanvasMeshItem->SceneProxy != nullptr)
 				{
-					NewSectionProxy->ChildCanvasSceneProxy = static_cast<FLexUIRenderSceneProxy*>(ChildCanvasMeshItem->SceneProxy);
-					NewSectionProxy->ChildCanvasSceneProxy->ParentSceneProxy = this;
+					auto ChildSceneProxy = static_cast<FLexUIRenderSceneProxy*>(ChildCanvasMeshItem->SceneProxy);
+					NewSectionProxy->ChildCanvasSceneProxy = ChildSceneProxy;
+					ChildSceneProxy->OnRelease.AddRaw(this, &FLexUIRenderSceneProxy::ClearChildCanvasSectionData_RenderThread);
 				}
 
 				// Copy info
@@ -403,10 +406,10 @@ public:
 			{
 				auto ChildCanvasSection = static_cast<FLexUIRenderSectionProxy_ChildCanvas*>(Section);
 				if (ChildCanvasSection->PrimitiveComponentID == CompID
-					&& (ChildCanvasSection->ChildCanvasSceneProxy == nullptr || ChildCanvasSection->ChildCanvasSceneProxy->ParentSceneProxy == this)//check this because ParentSceneProxy could be a new one
 					)
 				{
 					ChildCanvasSection->ChildCanvasSceneProxy = SceneProxy;
+					ChildCanvasSection->ChildCanvasSceneProxy->OnRelease.AddRaw(this, &FLexUIRenderSceneProxy::ClearChildCanvasSectionData_RenderThread);
 				}
 			}
 		}
@@ -422,6 +425,7 @@ public:
 				auto ChildCanvasSection = static_cast<FLexUIRenderSectionProxy_ChildCanvas*>(Section);
 				if (ChildCanvasSection->ChildCanvasSceneProxy == SceneProxy)//child could already get new proxy, so need to check it
 				{
+					ChildCanvasSection->ChildCanvasSceneProxy->OnRelease.RemoveAll(this);
 					ChildCanvasSection->ChildCanvasSceneProxy = nullptr;
 					return;
 				}
@@ -472,8 +476,23 @@ public:
 			});
 	}
 
+	void DetachChildCanvasSection_RenderThread(FLexUIRenderSectionProxy* Section)
+	{
+		if (Section == nullptr || Section->Type != ELexUIRenderSectionProxyType::ChildCanvas)
+		{
+			return;
+		}
+		auto ChildCanvasSection = static_cast<FLexUIRenderSectionProxy_ChildCanvas*>(Section);
+		if (ChildCanvasSection->ChildCanvasSceneProxy != nullptr)
+		{
+			ChildCanvasSection->ChildCanvasSceneProxy->OnRelease.RemoveAll(this);
+		}
+		ChildCanvasSection->ChildCanvasSceneProxy = nullptr;
+	}
+
 	virtual ~FLexUIRenderSceneProxy()override
 	{
+		OnRelease.Broadcast(this);
 #if !UE_BUILD_SHIPPING
 		DebugName = FString::Printf(TEXT("%s_Deleted"), *DebugName);
 #endif
@@ -481,27 +500,11 @@ public:
 		{
 			if (Section != nullptr)
 			{
-				switch (Section->Type)
-				{
-				case ELexUIRenderSectionProxyType::ChildCanvas:
-					auto ChildCanvasSection = static_cast<FLexUIRenderSectionProxy_ChildCanvas*>(Section);
-					if (ChildCanvasSection->ChildCanvasSceneProxy)
-					{
-						if (ChildCanvasSection->ChildCanvasSceneProxy->ParentSceneProxy == this)//child canvas's ParentSceneProxy could already be new one, so check it
-						{
-							ChildCanvasSection->ChildCanvasSceneProxy->ParentSceneProxy = nullptr;
-						}
-					}
-					break;
-				}
+				DetachChildCanvasSection_RenderThread(Section);
 				delete Section;
 			}
 		}
 		SectionArray.Empty();
-		if (ParentSceneProxy)
-		{
-			ParentSceneProxy->ClearChildCanvasSectionData_RenderThread(this);
-		}
 		if (LexUIRenderer.IsValid())
 		{
 			if (bIsLexUIRenderToWorld)
@@ -614,7 +617,7 @@ public:
 	virtual void GetDynamicMeshElements(const TArray<const FSceneView*>& Views, const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, FMeshElementCollector& Collector) const override
 	{
 		if (!bIsSupportUERenderer) return;
-		if (ParentSceneProxy != nullptr)return;
+		if (!LexUI_CanRender())return;
 		GetMeshElements_UERenderer(Views, ViewFamily, VisibilityMap, Collector);
 	}
 	void GetMeshElements_UERenderer(const TArray<const FSceneView*>& Views, const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, FMeshElementCollector& Collector) const
@@ -709,13 +712,12 @@ public:
 	{
 		return FVector3f(GetLocalToWorld().GetOrigin()); 
 	}
-	virtual void LexUI_CollectRenderData(TArray<FLexUIPrimitiveDataContainer>& OutRenderData, float CurrentWorldTime) override
+	virtual void LexUI_CollectRenderData(TArray<FLexUIPrimitiveDataContainer>& OutRenderData) override
 	{
 #if DEBUG_PRINT_MESH_MEMORY
 		CalculateMeshMemorySize_RT();
 #endif
-		if (ParentSceneProxy != nullptr)return;
-		CollectRenderData_Implement(OutRenderData, CurrentWorldTime);
+		CollectRenderData_Implement(OutRenderData);
 	}
 	virtual void LexUI_GetMeshElements(const FSceneViewFamily& ViewFamily, FMeshElementCollector& Collector, const FLexUIPrimitiveDataContainer& PrimitiveData, TArray<FLexUIMeshBatchContainer>& ResultArray) override
 	{
@@ -778,7 +780,7 @@ public:
 	}
 	virtual bool LexUI_CanRender()const override
 	{
-		return ParentSceneProxy == nullptr && SectionArray.Num() > 0;
+		return bIsRenderCanvas && SectionArray.Num() > 0;
 	}
 	virtual FPrimitiveComponentId LexUI_GetPrimitiveComponentId() const override 
 	{
@@ -786,7 +788,7 @@ public:
 	}
 	virtual FBoxSphereBounds LexUI_GetWorldBounds()const override { return FPrimitiveSceneProxy::GetBounds(); }
 	//end ILexUIRendererPrimitive interface
-	void CollectRenderData_Implement(TArray<FLexUIPrimitiveDataContainer>& OutRenderDataArray, float CurrentWorldTime)
+	void CollectRenderData_Implement(TArray<FLexUIPrimitiveDataContainer>& OutRenderDataArray)
 	{
 		if (SectionArray.Num() <= 0)return;
 		if (bNeedToSortRenderSections)
@@ -794,7 +796,6 @@ public:
 			bNeedToSortRenderSections = false;
 			this->SortMeshSectionRenderPriority_RenderThread();
 		}
-		*CanvasLastRenderTime = CurrentWorldTime;
 
 		if (SectionArray[0] == nullptr)return;
 		auto PrevRenderSectionType = SectionArray[0]->Type;
@@ -846,7 +847,7 @@ public:
 					auto ChildSceneProxy = Section->ChildCanvasSceneProxy;
 					if (ChildSceneProxy != nullptr)
 					{
-						ChildSceneProxy->CollectRenderData_Implement(OutRenderDataArray, CurrentWorldTime);
+						ChildSceneProxy->CollectRenderData_Implement(OutRenderDataArray);
 					}
 				}
 				break;
@@ -893,10 +894,6 @@ public:
 	{
 		return(sizeof(*this) + GetAllocatedSize());
 	}
-	void SetParentSceneProxy_RenderThread(FLexUIRenderSceneProxy* InParentSceneProxy)
-	{
-		ParentSceneProxy = InParentSceneProxy;
-	}
 #if DEBUG_PRINT_MESH_MEMORY
 	uint32 GetMeshMemorySize()const { return MeshMemorySize; }
 	uint32 GetMaxVertexBufferSize()const{return MaxVertexBufferSize;}
@@ -914,15 +911,9 @@ private:
 	bool bIsSupportUERenderer = true;
 	bool bIsLexUIRenderToWorld = false;
 	bool bNeedToSortRenderSections = true;
-	ULexCanvas* RenderCanvasPtr = nullptr;
-
-	/** If have parent then render in parent */
-	FLexUIRenderSceneProxy* ParentSceneProxy = nullptr;
-	/**
-	 * This is a pointer to LexCanvas's LastRenderTime.
-	 * Why it is safe to use? Check PrimitiveSceneInfo.h OwnerLastRenderTime
-	 */
-	float* CanvasLastRenderTime = nullptr;
+	bool bIsRenderCanvas = false;
+	TWeakObjectPtr<ULexCanvas> RenderCanvasPtr = nullptr;
+	FLexUIRenderSceneProxyReleaseDelegate OnRelease;
 };
 
 
@@ -1290,9 +1281,11 @@ void ULexUIMeshComponent::PoolAllRenderSection()
 		if (RenderSection->Type == ELexUIRenderSectionType::ChildCanvas)
 		{
 			auto ChildCanvasSection = static_cast<FLexUIRenderSection_ChildCanvas*>(RenderSection.Get());
-			if (ChildCanvasSection->ChildCanvasMeshComponent.IsValid())
+			auto ChildCanvasMeshCom = ChildCanvasSection->ChildCanvasMeshComponent;
+			if (ChildCanvasMeshCom.IsValid())
 			{
-				ChildCanvasSection->ChildCanvasMeshComponent->ClearParentCanvasMeshComp(this);
+				ChildCanvasMeshCom->ClearParentCanvasMeshComp(this);
+				ChildCanvasMeshCom->OnSceneProxyCreated.RemoveAll(this);
 			}
 		}
 
@@ -1607,7 +1600,9 @@ FPrimitiveSceneProxy* ULexUIMeshComponent::CreateSceneProxy()
 	FLexUIRenderSceneProxy* Proxy = nullptr;
 	if (RenderSectionArray.Num() > 0)
 	{
-		Proxy = new FLexUIRenderSceneProxy(this, RenderCanvas.Get() , ParentCanvasMeshComp.IsValid() ? static_cast<FLexUIRenderSceneProxy*>(ParentCanvasMeshComp->SceneProxy) : nullptr);
+		Proxy = new FLexUIRenderSceneProxy(this, RenderCanvas.Get()
+			, !ParentCanvasMeshComp.IsValid()//child canvas is render by it's parent
+			);
 		OnSceneProxyCreated.Broadcast(this, Proxy);
 	}
 	return Proxy;
@@ -1664,6 +1659,7 @@ void ULexUIMeshComponent::ClearRenderData()
 		RenderSectionPoolItem.RenderSections.Empty();
 	}
 	OnSceneProxyCreated.Clear();
+	ParentCanvasMeshComp = nullptr;
 	LexUIRenderer = nullptr;
 }
 

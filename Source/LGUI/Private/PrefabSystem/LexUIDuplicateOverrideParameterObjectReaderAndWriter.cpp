@@ -92,7 +92,7 @@ namespace LexUIPrefabSystem
 			}
 			else//object not belongs to this actor hierarchy, just copy pointer
 			{
-				auto type = (uint8)EObjectType::NativeSerailizeForDuplicate;
+				auto type = (uint8)EObjectType::NativeSerializeForDuplicate;
 				*this << type;
 				ByteOrderSerialize(&Object, sizeof(Object));
 				return true;
@@ -208,7 +208,7 @@ namespace LexUIPrefabSystem
 			}
 		}
 		break;
-		case LexUIPrefabSystem::EObjectType::NativeSerailizeForDuplicate:
+		case LexUIPrefabSystem::EObjectType::NativeSerializeForDuplicate:
 		{
 			ByteOrderSerialize(&Object, sizeof(Object));
 			return true;

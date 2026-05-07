@@ -1490,26 +1490,6 @@ void ULexCanvas::UpdateDrawCallMesh()
 	}
 }
 
-float ULexCanvas::GetLastRenderTime()const
-{
-	auto TempRenderMode = GetActualRenderMode();
-#if WITH_EDITOR
-	if (!GetWorld()->IsGameWorld())//edit mode
-	{
-		if (TempRenderMode == ELexRenderMode::ScreenSpaceOverlay)
-			TempRenderMode = ELexRenderMode::WorldSpace_LexUI;
-	}
-#endif
-	if (RenderModeIsLexRendererOrUERenderer(TempRenderMode))
-	{
-		return LastRenderTime;
-	}
-	else
-	{
-		return GetUIMesh()->GetLastRenderTime();
-	}
-}
-
 void ULexCanvas::CheckUIMesh()const
 {
 	if (!UIMesh.IsValid())
