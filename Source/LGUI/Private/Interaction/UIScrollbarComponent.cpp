@@ -2,7 +2,7 @@
 
 #include "Interaction/UIScrollbarComponent.h"
 #include "LGUI.h"
-#include "Core/Actor/LexWidgetActor.h"
+#include "Core/Actor/LexWidgetContainer.h"
 #include "Core/Components/LexWidget.h"
 
 UUIScrollbarComponent::UUIScrollbarComponent()
@@ -27,7 +27,7 @@ bool UUIScrollbarComponent::CheckHandle()
         return true;
     if (!Handle.IsValid())
         return false;
-    HandleArea = Handle->GetUIParent();
+    HandleArea = Handle->GetParent();
     if (HandleArea.IsValid())
         return true;
     return false;

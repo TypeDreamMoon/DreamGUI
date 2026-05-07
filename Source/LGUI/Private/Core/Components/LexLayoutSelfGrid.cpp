@@ -39,7 +39,7 @@ void ULexLayoutSelfGrid::SetRowIndex(int Value)
 	if (RowIndex != Value)
 	{
 		RowIndex = Value;
-		ULexWidget::MarkLayoutForRebuild(GetWidget()->GetUIParent());
+		ULexWidget::MarkLayoutForRebuild(GetWidget()->GetParent());
 	}
 }
 void ULexLayoutSelfGrid::SetRowCount(int Value)
@@ -47,7 +47,7 @@ void ULexLayoutSelfGrid::SetRowCount(int Value)
 	if (RowCount != Value)
 	{
 		RowCount = Value;
-		ULexWidget::MarkLayoutForRebuild(GetWidget()->GetUIParent());
+		ULexWidget::MarkLayoutForRebuild(GetWidget()->GetParent());
 	}
 }
 void ULexLayoutSelfGrid::SetColumnIndex(int Value)
@@ -55,7 +55,7 @@ void ULexLayoutSelfGrid::SetColumnIndex(int Value)
 	if (ColumnIndex != Value)
 	{
 		ColumnIndex = Value;
-		ULexWidget::MarkLayoutForRebuild(GetWidget()->GetUIParent());
+		ULexWidget::MarkLayoutForRebuild(GetWidget()->GetParent());
 	}
 }
 void ULexLayoutSelfGrid::SetColumnCount(int Value)
@@ -63,6 +63,6 @@ void ULexLayoutSelfGrid::SetColumnCount(int Value)
 	if (ColumnCount != Value)
 	{
 		ColumnCount = Value;
-		ULexWidget::MarkLayoutForRebuild(GetWidget()->GetUIParent());
+		ULexWidget::MarkLayoutForRebuild(GetWidget()->GetParent());
 	}
 }

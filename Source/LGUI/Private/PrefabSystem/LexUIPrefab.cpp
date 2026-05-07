@@ -2,9 +2,6 @@
 
 #include "PrefabSystem/LexUIPrefab.h"
 #include "LGUI.h"
-#if WITH_EDITOR
-#include "Core/Actor/LexWidgetActor.h"
-#endif
 
 #include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "Utils/LexUIUtils.h"

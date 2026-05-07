@@ -910,8 +910,8 @@ void ULexUIPrefabHelperObject::CopyRootObjectParentAnchorData(UObject* InObject,
 			auto OriginObjectWidget = Cast<ULexWidget>(OriginObject);
 			if (InObjectWidget != nullptr && OriginObjectWidget != nullptr)//if is Widget, we need to copy parent's property to origin object's parent property, to make anchor & location calculation right
 			{
-				auto InObjectParent = InObjectWidget->GetUIParent();
-				auto OriginObjectParent = OriginObjectWidget->GetUIParent();
+				auto InObjectParent = InObjectWidget->GetParent();
+				auto OriginObjectParent = OriginObjectWidget->GetParent();
 				if (InObjectParent != nullptr && OriginObjectParent != nullptr)
 				{
 					//copy relative location

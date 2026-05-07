@@ -147,7 +147,7 @@ bool UUIScrollViewComponent::CheckParameters()
         return true;
     if (!Widget)return false;
     if (!Content.IsValid())return false;
-    ContentParent = Content->GetUIParent();
+    ContentParent = Content->GetParent();
     if (!ContentParent.IsValid())return false;
     //add helper comp to detect size change
     {

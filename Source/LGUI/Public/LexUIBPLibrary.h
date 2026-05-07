@@ -13,7 +13,7 @@
 #include "LexUIBPLibrary.generated.h"
 
 class ULexCanvas;
-class ALexWidgetActor;
+class ULexWidgetContainer;
 class ULexWidget;
 class ULexVisual;
 class UUISector;

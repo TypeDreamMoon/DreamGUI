@@ -5,7 +5,7 @@
 #include "ThumbnailRendering/SceneThumbnailInfo.h"
 #include "Core/Components/LexCanvas.h"
 #include "LGUIEditorModule.h"
-#include "Core/Actor/LexWidgetActor.h"
+#include "Core/Actor/LexWidgetContainer.h"
 #include "Core/Components/LexWidget.h"
 #include "PrefabSystem/LexUIPrefab.h"
 
@@ -56,7 +56,7 @@ void FLexUIPrefabThumbnailScene::SpawnPreviewActor()
 			{
 				auto RootCanvas = RootActor->FindComponentByClass<ULexCanvas>();
 				auto CanvasSize = CurrentPrefab->PrefabDataForPrefabEditor.CanvasSize;
-				auto AgentRootActor = GetWorld()->SpawnActor<ALexWidgetActor>();
+				auto AgentRootActor = GetWorld()->SpawnActor<ULexWidgetContainer>();
 				if (!RootCanvas)
 				{
 					RootCanvas = NewObject<ULexCanvas>(AgentRootActor);

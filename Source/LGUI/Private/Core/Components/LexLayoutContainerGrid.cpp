@@ -133,7 +133,7 @@ void ULexLayoutContainerGrid::UpdateLayout()
 	TArray<int> AlreadyFilledRows;
 	TArray<int> AlreadyFilledColumns;
 	//firstly locate widgets with layout self data, then locate widgets without layout self data in left grid cell
-	for (auto& ChildWidget : Widget->GetUIChildren())
+	for (auto& ChildWidget : Widget->GetChildren())
 	{
 		if (!ChildWidget->GetWidgetActiveInHierarchy())continue;
 		auto ChildLayoutSelf = Cast<ULexLayoutSelfGrid>(ChildWidget->GetLayoutSelf());
@@ -267,7 +267,7 @@ FLexLayoutControlAnchorData ULexLayoutContainerGrid::GetLayoutControlAnchor(cons
 	{
         
 	}
-	else if (ThisWidget->GetUIChildren().Contains(TargetWidget))//child
+	else if (ThisWidget->GetChildren().Contains(TargetWidget))//child
 	{
 		bool bIgnoreLayout = false;
 		if (auto LayoutSelf = TargetWidget->GetLayoutSelf())

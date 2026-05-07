@@ -156,7 +156,7 @@ void FLexUIEditorTools::CreateLexWidget(TFunction<AActor*()> GetSelectedActorFun
 	GEditor->BeginTransaction(LOCTEXT("CreateChildWidget_Transaction", "Create Child Widget"));
 	MakeCurrentLevel(SelectedActor);
 	ULexUIManagerWorldSubsystem::GetSelection(SelectedActor->GetWorld())->Modify();
-	auto NewActor = SelectedActor->GetWorld()->SpawnActor<ALexWidgetActor>(ALexWidgetActor::StaticClass(), FTransform::Identity, FActorSpawnParameters());
+	auto NewActor = SelectedActor->GetWorld()->SpawnActor<ULexWidgetContainer>(ULexWidgetContainer::StaticClass(), FTransform::Identity, FActorSpawnParameters());
 	if (IsValid(NewActor))
 	{
 		NewActor->SetActorLabel(Name);
@@ -1029,7 +1029,7 @@ void FLexUIEditorTools::MakeCurrentLevel(AActor* InActor)
 
 bool FLexUIEditorTools::IsActorCompatibleWithLexUIToolsMenu(AActor* InActor)
 {
-	if (InActor->IsA<ALexWidgetActor>()
+	if (InActor->IsA<ULexWidgetContainer>()
 		&& !FLexUIPrefabEditor::ActorIsRootAgent(InActor))
 	{
 		return true;

@@ -22,7 +22,7 @@ void ULex2DLineChildrenAsPoints::OnRegister()
 
 void ULex2DLineChildrenAsPoints::CalculatePoints()
 {
-    auto& SortedItemArray = GetWidget()->GetUIChildren();
+    auto& SortedItemArray = GetWidget()->GetChildren();
     int pointCount = SortedItemArray.Num();
     CurrentPointArray.Reset(pointCount);
     for (int i = 0; i < pointCount; i++)

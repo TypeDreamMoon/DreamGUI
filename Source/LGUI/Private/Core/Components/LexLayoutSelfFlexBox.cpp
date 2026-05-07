@@ -32,7 +32,7 @@ float FLexLayoutSize::CalculateSize(ULexWidget* Widget, bool IsVertical)const
             CalculatedValue = FixedValue;
             break;
         case ELexLayoutSizeType::Percent:
-            if (auto ParentWidget = Widget->GetUIParent())
+            if (auto ParentWidget = Widget->GetParent())
             {
                 CalculatedValue = PercentValue * (IsVertical ? ParentWidget->GetHeight() : ParentWidget->GetWidth());
             }
@@ -66,7 +66,7 @@ float FLexLayoutMinMaxSize::CalculateSize(ULexWidget* Widget, bool IsVertical, b
             CalculatedValue = FixedValue;
             break;
         case ELexLayoutMinMaxSizeType::Percent:
-            if (auto ParentWidget = Widget->GetUIParent())
+            if (auto ParentWidget = Widget->GetParent())
             {
                 CalculatedValue = PercentValue * (IsVertical ? ParentWidget->GetHeight() : ParentWidget->GetWidth());
             }
@@ -131,7 +131,7 @@ void ULexLayoutSelfFlexBox::CalculateSize()
 #endif
 
     bool bShouldSetWidgetSize = true;
-    if (auto ParentWidget = Widget->GetUIParent())
+    if (auto ParentWidget = Widget->GetParent())
     {
         if (Cast<ULexLayoutContainerFlexBox>(ParentWidget->GetLayoutContainer()) != nullptr)//if parent widget have FlexBoxContainer, then it will set this widget size
         {
@@ -372,7 +372,7 @@ void ULexLayoutSelfFlexBox::SetGrow(float Value)
     if (Grow != Value)
     {
         Grow = Value;
-        ULexWidget::MarkLayoutForRebuild(GetWidget()->GetUIParent());
+        ULexWidget::MarkLayoutForRebuild(GetWidget()->GetParent());
     }
 }
 
@@ -381,7 +381,7 @@ void ULexLayoutSelfFlexBox::SetShrink(float Value)
     if (Shrink != Value)
     {
         Shrink = Value;
-        ULexWidget::MarkLayoutForRebuild(GetWidget()->GetUIParent());
+        ULexWidget::MarkLayoutForRebuild(GetWidget()->GetParent());
     }
 }
 

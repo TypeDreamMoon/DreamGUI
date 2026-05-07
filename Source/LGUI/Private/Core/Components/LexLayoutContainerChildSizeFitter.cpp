@@ -10,7 +10,7 @@ void ULexLayoutContainerChildSizeFitter::CalculateSize()
     auto Widget = GetWidget();
     if (!Widget)return;
 	ULexWidget* ValidChild = nullptr;
-	for (auto& ChildWidget : Widget->GetUIChildren())
+	for (auto& ChildWidget : Widget->GetChildren())
 	{
 		if (!ChildWidget->GetWidgetActiveInHierarchy())continue;
 		if (auto ChildLayoutSelf = ChildWidget->GetLayoutSelf())

@@ -299,7 +299,7 @@ UUINavigationInputSelectionHandler* ALexWidgetRootActor::GetNavigationSelection(
 {
 	if (!NavigationSelection.IsValid())
 	{
-		if (auto WidgetActor = Cast<ALexWidgetActor>(NavigationSelectionPrefab->LoadPrefab(this->GetWorld(), this->GetLexWidget())))
+		if (auto WidgetActor = Cast<ULexWidgetContainer>(NavigationSelectionPrefab->LoadPrefab(this->GetWorld(), this->GetLexWidget())))
 		{
 			NavigationSelection = WidgetActor->FindComponentByClass<UUINavigationInputSelectionHandler>();
 		}

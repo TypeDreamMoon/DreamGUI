@@ -8,7 +8,7 @@
 #include "Layout/Margin.h"
 #include "UIRecyclableScrollViewComponent.generated.h"
 
-class ALexWidgetActor;
+class ULexWidgetContainer;
 
 
 UINTERFACE(Blueprintable, MinimalAPI)
@@ -106,7 +106,7 @@ protected:
 	 * Only valid if CellTemplateType is Actor.
 	 */
 	UPROPERTY(EditAnywhere, Category = "LGUI-RecyclableScrollView")
-		TObjectPtr<ALexWidgetActor> CellTemplate;
+		TObjectPtr<ULexWidgetContainer> CellTemplate;
 	/**
 	 * CellTemplatePrefab's root actor must have a ActorComponent which implement UIRecyclableScrollViewCell interface.
 	 * Only valid if CellTemplateType is Prefab.
@@ -155,7 +155,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-RecyclableScrollView")
 		EUIRecyclableScrollViewCellTemplateType GetCellTemplateType()const { return CellTemplateType; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-RecyclableScrollView")
-		ALexWidgetActor* GetCellTemplate()const { return CellTemplate; }
+		ULexWidgetContainer* GetCellTemplate()const { return CellTemplate; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-RecyclableScrollView")
 		class ULexUIPrefab* GetCellTemplatePrefab()const { return CellTemplatePrefab; }
 
@@ -186,7 +186,7 @@ public:
 	 * This function only set the parameter. If you want to refresh the display UI list, just call UpdateWithDataSource.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-RecyclableScrollView")
-		void SetCellTemplate(ALexWidgetActor* value);
+		void SetCellTemplate(ULexWidgetContainer* value);
 	/**
 	 * CellTemplatePrefab's root actor must have a ActorComponent which implement UIRecyclableScrollViewCell interface.
 	 * This function only set the parameter. If you want to refresh the display UI list, just call UpdateWithDataSource.
@@ -223,7 +223,7 @@ private:
 
 	void InitializeOnDataSource();
 	EUIRecyclableScrollViewCellTemplateType WorkingCellTemplateType = EUIRecyclableScrollViewCellTemplateType::Actor;
-	TWeakObjectPtr<ALexWidgetActor> WorkingCellTemplate = nullptr;//current using cell template, could be CellTemplate or CellTemplatePrefab's instance, tell by 'WorkingCellTemplateType'
+	TWeakObjectPtr<ULexWidgetContainer> WorkingCellTemplate = nullptr;//current using cell template, could be CellTemplate or CellTemplatePrefab's instance, tell by 'WorkingCellTemplateType'
 	FVector2D WorkingCellTemplateSize = FVector2D::ZeroVector;
 	FVector2D RangeArea = FVector2D::ZeroVector;//min max range point in parent location
 	FDelegateHandle OnScrollEventDelegateHandle;

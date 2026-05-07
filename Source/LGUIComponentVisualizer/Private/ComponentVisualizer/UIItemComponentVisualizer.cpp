@@ -57,7 +57,7 @@ void FUIItemComponentVisualizer::DrawVisualization(const UActorComponent* Compon
 
 	//draw panel layout button
 	bool bHaveDrawPanelLayout = false;
-	if (auto Parent = TargetComp->GetUIParent())
+	if (auto Parent = TargetComp->GetParent())
 	{
 		
 	}
@@ -109,7 +109,7 @@ bool FUIItemComponentVisualizer::VisProxyHandleClick(FEditorViewportClient* InVi
 		case EUIItemVisualizerSelectorType::PanelLayout_Top:
 		case EUIItemVisualizerSelectorType::PanelLayout_Bottom:
 		{
-			if (auto Parent = TargetComp->GetUIParent())
+			if (auto Parent = TargetComp->GetParent())
 			{
 
 			}

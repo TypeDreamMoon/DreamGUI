@@ -66,8 +66,7 @@ public:
 	virtual void Deinitialize() override;
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
 	//~End of USubsystem interface
-
-	//~FTickableObjectBase interface
+	
 	void Tick(ELTweenTickType TickType, float DeltaTime);
 	
 	UFUNCTION(BlueprintPure, Category = LTween, meta = (WorldContext = "WorldContextObject", DisplayName = "Get LTween Instance"))

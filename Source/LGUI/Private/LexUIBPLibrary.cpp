@@ -6,7 +6,7 @@
 #include "Utils/LexUIUtils.h"
 #include "Framework/Application/SlateApplication.h"
 #include "LGUI.h"
-#include "Core/Actor/LexWidgetActor.h"
+#include "Core/Actor/LexWidgetContainer.h"
 #include "Core/Components/LexCanvas.h"
 #include "Event/LexScreenSpaceRaycaster.h"
 #include "PrefabSystem/LexUIPrefab.h"

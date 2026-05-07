@@ -3,7 +3,7 @@
 #include "PrefabSystem/LexUIPrefabInstanceScene.h"
 #include "PrefabSystem/LexUIPrefab.h"
 #include "Components/DirectionalLightComponent.h"
-#include "Core/Actor/LexWidgetActor.h"
+#include "Core/Actor/LexWidgetContainer.h"
 #include "Core/Components/LexWidget.h"
 #include "Engine/TextureCube.h"
 #include "Event/LexScreenSpaceRaycaster.h"
@@ -95,7 +95,7 @@ USceneComponent* FLexUIPrefabInstanceScene::GetParentComponentForPrefab(ULexUIPr
 	
 	auto CanvasSize = Prefab->PrefabDataForPrefabEditor.CanvasSize;
 	//create Canvas for UI
-	auto RootUICanvasActor = this->GetWorld()->SpawnActor<ALexWidgetActor>(ALexWidgetActor::StaticClass(), FTransform::Identity);
+	auto RootUICanvasActor = this->GetWorld()->SpawnActor<ULexWidgetContainer>(ULexWidgetContainer::StaticClass(), FTransform::Identity);
 	RootUICanvasActor->GetRootComponent()->SetWorldLocationAndRotationNoPhysics(FVector::ZeroVector, FRotator(0, 0, 0));
 	{
 		auto RenderMode = (ELexRenderMode)Prefab->PrefabDataForPrefabEditor.CanvasRenderMode;

@@ -2,13 +2,12 @@
 
 #pragma once
 
-#include "Components/SceneComponent.h"
-#include "Components/PrimitiveComponent.h"
 #include "LTweener.h"
 #include "Core/LexUIAnchorData.h"
 #include "PrefabSystem/ILexUIPrefabInterface.h"
 #include "LexWidget.generated.h"
 
+class ULexUIBehaviour;
 class ALexWidgetRootActor;
 class ULexVisual;
 class ULexLayoutSelf;
@@ -61,8 +60,8 @@ enum class ELexWidgetInteractableType : uint8
 /**
  * Base class for almost all UI related things.
  */
-UCLASS(HideCategories = ( LOD, Physics, Collision, Activation, Cooking, Rendering, Actor, Input, Lighting, Mobile, Navigation), ClassGroup = (LGUI), NotBlueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API ULexWidget : public USceneComponent, public ILexUIPrefabInterface
+UCLASS(ClassGroup = (LGUI), NotBlueprintable)
+class LGUI_API ULexWidget : public UObject, public ILexUIPrefabInterface
 {
 	GENERATED_BODY()
 
@@ -76,12 +75,14 @@ public:
 	DECLARE_EVENT_OneParam(ULexWidget, FInteractableChangedEvent, bool/*Interactable*/);
 	DECLARE_EVENT_OneParam(ULexWidget, FRaycastableChangedEvent, bool/*Raycastable*/)
 	
-	ULexWidget(const FObjectInitializer& ObjectInitializer);
+	ULexWidget();
 
-	virtual void BeginPlay() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	void OnRegister();
+	void OnUnregister();
+
+	void BeginPlay();
+	void EndPlay();
 	//begin LGUIPrefabInterface
-	virtual void Awake_Implementation() override;
 	virtual void EditorAwake_Implementation() override;
 	//end LGUIPrefabInterface
 
@@ -91,12 +92,8 @@ public:
 	virtual void PreEditChange(FProperty* PropertyAboutToChange) override;
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
 	virtual bool CanEditChange(const FEditPropertyChain& PropertyChain) const override;
-	virtual void PostEditComponentMove(bool bFinished) override;
 	virtual void PostEditUndo()override;
-	//virtual void PostEditUndo(TSharedPtr<ITransactionObjectAnnotation> TransactionAnnotation)override;
-	virtual void PostTransacted(const FTransactionObjectEvent& TransactionEvent)override;
-	/** USceneComponent Interface. Only needed for show rect range in editor */
-	virtual FBoxSphereBounds CalcBounds(const FTransform& LocalToWorld) const override;
+	
 	void EnsureDataForRebuild();
 #endif
 	static FName GetPropertyName_AnchorData()
@@ -115,36 +112,9 @@ public:
 	{
 		return GET_MEMBER_NAME_CHECKED(ULexWidget, DisplayName);
 	}
-	template<class T>
-	static T* GetComponentInParentUI(AActor* InActor, bool IncludeUnregisteredComponent = true)
-	{
-		static_assert(TPointerIsConvertibleFromTo<T, const UActorComponent>::Value, "'T' template parameter to GetComponentInParent must be derived from UActorComponent");
-		T* ResultComp = nullptr;
-		AActor* ParentActor = InActor;
-		while (IsValid(ParentActor)
-			&& Cast<ULexWidget>(ParentActor->GetRootComponent()) != nullptr
-			)
-		{
-			ResultComp = ParentActor->FindComponentByClass<T>();
-			if (IsValid(ResultComp))
-			{
-				if (ResultComp->IsRegistered())
-				{
-					return ResultComp;
-				}
-				else
-				{
-					if (IncludeUnregisteredComponent)
-					{
-						return ResultComp;
-					}
-				}
-			}
-			ParentActor = ParentActor->GetAttachParentActor();
-		}
-		return nullptr;
-	}
-	
+
+	bool HasBegunPlay()const{return bHasBegunPlay;}
+
 #pragma region CallbackEvents
 private:
 	void Call_WidgetActiveChanged();
@@ -156,23 +126,126 @@ private:
 	void Call_InteractableChanged();
 	void Call_RaycastableChanged();
 #pragma endregion
-protected:
-	virtual bool MoveComponentImpl(const FVector& Delta, const FQuat& NewRotation, bool bSweep, FHitResult* Hit /* = NULL */, EMoveComponentFlags MoveFlags /* = MOVECOMP_NoFlags */, ETeleportType Teleport /* = ETeleportType::None */)override;
-	virtual void OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport = ETeleportType::None)override;
-	virtual void OnChildAttached(USceneComponent* ChildComponent)override;
-	virtual void OnChildDetached(USceneComponent* ChildComponent)override;
-	virtual void OnAttachmentChanged()override;
-	virtual void OnRegister()override;
-	virtual void OnUnregister()override;
+private:
+	/** Local space position */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Transform", Getter, Setter, meta=(AllowPrivateAccess = true))
+	FVector Location = FVector::ZeroVector;
+	/** Local space rotation */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Transform", Getter, Setter, meta = (AllowPrivateAccess = true))
+	FQuat Rotation = FQuat::Identity;
+	/** Local space scale */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Transform", Getter, Setter, meta = (AllowPrivateAccess = true, AllowPreserveRatio))
+	FVector Scale = FVector::OneVector;
 
-	void OnUIDetachedFromParent();
-	void OnUIAttachedToParent();
+public:
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	const FVector& GetRelativeLocation()const { return Location; }
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	const FQuat& GetRelativeRotation()const { return Rotation; }
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	const FVector& GetRelativeScale()const { return Scale; }
+
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	FVector GetWorldPosition()const;
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	FQuat GetWorldRotation()const;
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	FVector GetWorldScale()const;
+
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	FVector GetForwardVector()const;
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	FVector GetRightVector()const;
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	FVector GetUpVector()const;
+
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	void SetRelativeLocation(const FVector& Value);
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	void SetRelativeRotation(const FQuat& Value);
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	void SetRelativeScale(const FVector& Value);
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	void SetRelativeLocationAndRotation(const FVector& InPosition, const FQuat& InRotation);
+
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	void SetWorldLocation(const FVector& Value);
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	void SetWorldRotation(const FQuat& Value);
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	void SetWorldLocationAndRotation(const FVector& InPosition, const FQuat& InRotation);
+
+	FTransform GetLocalTransform()const;
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	const FTransform& GetObjectToWorldTransform()const;
+
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	ULexWidget* GetParent()const { return Parent.Get(); }
+	/**
+	 * Set parent of this widget, could use null to detach it from origin parent.
+	 * @InKeepWorldPosition true - keep world position & rotation & scale after change parent, false - keep relative position & rotation & scale.
+	 * @InSiblingIndex if InParent is a valid widget, then put the widget at specific index in parent's children list, -1 or other out of range value means the widget will be put at tail.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	void SetParent(ULexWidget* InParent, bool InKeepWorldPosition = true, int InSiblingIndex = -1);
+	/** Set the sibling index of this widget in its parent's children list. */
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	void SetSiblingIndex(int Value);
+	/** Recurses up the list of parents and returns true if this widget is a descendant of the InTarget. */
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	bool IsChildOf(const ULexWidget* InTarget)const;
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	const TArray<ULexWidget*>& GetChildren()const { return Children; }
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	int GetChildrenCount()const { return Children.Num(); }
+	
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	const TArray<ULexUIBehaviour*>& GetComponents()const{return Components;}
+	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (ComponentClass = "LexUIBehaviour", DeterminesOutputType = "ComponentClass"))
+	ULexUIBehaviour* GetComponent(TSubclassOf<ULexUIBehaviour> ComponentClass);
+	template<class T>
+	T* GetComponent()
+	{
+		static_assert(TPointerIsConvertibleFromTo<T, const ULexUIBehaviour>::Value, "'T' template parameter to GetComponent must be derived from ULexUIBehaviour");
+		return Cast<T>(GetComponent(T::StaticClass()));
+	}
+	template<class T>
+	T* GetComponentInParent(bool bIncludeSelf = false)
+	{
+		static_assert(TPointerIsConvertibleFromTo<T, const UActorComponent>::Value, "'T' template parameter to GetComponentInParent must be derived from UActorComponent");
+		T* ResultComp = nullptr;
+		ULexWidget* ParentActor = bIncludeSelf ? this : this->GetParent();
+		while (IsValid(ParentActor))
+		{
+			ResultComp = ParentActor->GetComponent<T>();
+			if (IsValid(ResultComp))
+			{
+				return ResultComp;
+			}
+			ParentActor = ParentActor->GetParent();
+		}
+		return nullptr;
+	}
+	void UpdateObjectToWorldTransform();
+	void CalculateObjectToWorldTransform(bool bPropagateToChildren = true);
+private:
+	mutable FTransform ObjectToWorldTransform;
+
+	virtual void OnUpdateTransform();
+	virtual void OnChildAttached(ULexWidget* ChildComponent);
+	virtual void OnChildDetached();
+
+	void OnDetachedFromParent();
+	void OnAttachedToParent();
 
 	/** UIItem's hierarchy changed */
-	void UIHierarchyAttachmentChanged(ULexCanvas* ParentRenderCanvas, ULexWidget* ParentRoot);
+	void OnHierarchyAttachmentChanged(ULexCanvas* ParentRenderCanvas, ULexWidget* ParentRoot);
 	/** called when RenderCanvas changed. */
 	virtual void OnRenderCanvasChanged(ULexCanvas* OldCanvas, ULexCanvas* NewCanvas);
 	void SetRenderCanvas(ULexCanvas* InNewCanvas);
+
+	UPROPERTY()
+	TArray<TObjectPtr<ULexUIBehaviour>> Components;
 public:
 	/** Called by LexCanvas, when a new LexCanvas is registered on self actor */
 	void RegisterRenderCanvas(ULexCanvas* InRenderCanvas);
@@ -210,11 +283,11 @@ public:
 	FRaycastableChangedEvent& GetRaycastableChangedEvent(){return OnRaycastableChangedEvent;}
 protected:
 	/** parent in hierarchy */
-	UPROPERTY(Transient) mutable TWeakObjectPtr<ULexWidget> UIParent = nullptr;
+	UPROPERTY(Transient) mutable TWeakObjectPtr<ULexWidget> Parent = nullptr;
 	/** root in hierarchy */
 	mutable TWeakObjectPtr<ULexWidget> RootWidget = nullptr;//don't mark this Transactional, because undo or redo will call register/unregister, which will trigger check RootUIItem
 	/** UI children array, sorted by hierarchy index */
-	UPROPERTY(Transient) mutable TArray<TObjectPtr<ULexWidget>> UIChildren;
+	UPROPERTY(Transient) mutable TArray<TObjectPtr<ULexWidget>> Children;
 	/** check valid, incase un-normally deleting actor, like undo */
 	void EnsureUIChildrenValid();
 	void EnsureUIChildrenSorted()const;
@@ -339,17 +412,10 @@ public:
 #pragma endregion
 	
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		ULexWidget* GetUIParent()const{ return UIParent.Get(); }
-	/** get UI children array, sorted by hierarchy index */
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		const TArray<ULexWidget*>& GetUIChildren()const { EnsureUIChildrenSorted(); return UIChildren; }
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		ULexWidget* GetUIChildByIndex(int index)const;
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	int GetIndexOfUIChild(ULexWidget* Child)const;
+	ULexWidget* GetChildByIndex(int index)const;
 	/** Get root canvas of hierarchy */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-		ULexCanvas* GetRootCanvas()const;
+	ULexCanvas* GetRootCanvas()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	ALexWidgetRootActor* GetWidgetRootActor()const;
 
@@ -362,7 +428,7 @@ public:
 	void CalculateTransformFromAnchor();
 	void CalculateTransformFromAnchor(bool& OutHorizontalPositionChanged, bool& OutVerticalPositionChanged);
 	
-	void MarkTransformChanged(bool InPositionChanged, bool InScaleChanged);
+	void MarkTransformChanged();
 	void MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged);
 	void MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged, bool InDiscardCache = true);
 	virtual void MarkCanvasUpdate(bool bRebuildDrawCall)const;
@@ -380,7 +446,7 @@ private:
 	FVector2D PrevLocation2D = FVector2D::Zero();
 	FVector2D PrevScale2D = FVector2D::One();
 	mutable uint8 bNeedSortUIChildren : 1;
-	uint8 bIsDetaching : 1;
+	uint8 bIsAttaching : 1 = false;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true, UIMin="0", UIMax="1"))
@@ -553,10 +619,6 @@ public:
 
 	const TWeakPtr<FLexUIClipData>& GetClipData()const{return ClipData;}
 
-#if WITH_EDITOR
-	void SetIsTemporarilyHiddenInEditor_Recursive_By_WidgetActive();
-#endif
-
 #pragma region SiblingIndex
 protected:
 	/** hierarchy index, hierarchy order, render order */
@@ -586,8 +648,6 @@ public:
 	/** Get index order of the widget from top most widget in flatten hierarchy. */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		int32 GetFlattenHierarchyIndex()const;
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetSiblingIndex(int32 InInt);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		void SetAsFirstSibling();
 	UFUNCTION(BlueprintCallable, Category = LGUI)
@@ -654,14 +714,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	static void ForceRebuildLayoutImmediately(const ULexWidget* InWidget);
 
-protected:
+private:
 	friend class FLexWidgetCustomization;
 	friend class ULexCanvas;
 	/** LexCanvas which render this UI element */
 	UPROPERTY(Transient) mutable TWeakObjectPtr<ULexCanvas> RenderCanvas = nullptr;
-	/** is this widget actor contains LexCanvas component */
-	UPROPERTY(Transient) mutable uint32 bIsCanvasWidget:1;
-
+	UPROPERTY(Transient) mutable TWeakObjectPtr<USceneComponent> CacheSceneComp = nullptr;
+	
+	/** is this widget contains LexCanvas component */
+	mutable uint32 bIsCanvasWidget:1;
+	
 	mutable uint32 bLayoutDirty : 1 = true;
 	mutable uint32 bClipDirty : 1 = true;
 	mutable uint32 bNeedRecreateClip : 1 = true;
@@ -669,6 +731,9 @@ protected:
 	uint32 bCacheWidgetActiveInHierarchy : 1 = true;
 	uint32 bCacheInteractableInHierarchy : 1 = true;
 	uint32 bCacheRaycastableInHierarchy : 1 = true;
+
+	uint32 bHasBegunPlay : 1 = false;
+	uint32 bIsRegistered : 1 = false;
 
 	/** Only for root widget, if dirty then we need to recalculate flatten hierarchy index */
 	mutable uint32 bFlattenHierarchyIndexDirty : 1;

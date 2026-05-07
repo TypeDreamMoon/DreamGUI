@@ -96,7 +96,7 @@ void SLexWidgetHierarchyPickerView::RefreshTree()
 				}
 			});
 
-			auto WidgetChildren = InParent->Widget->GetUIChildren();
+			auto WidgetChildren = InParent->Widget->GetChildren();
 			for (int i = 0; i < WidgetChildren.Num(); i++)
 			{
 				auto ChildWidget = WidgetChildren[i];

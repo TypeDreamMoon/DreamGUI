@@ -31,15 +31,15 @@ void ULexUIPrefabWorldSubsystem::EndPrefabSystemProcessingActor(const FGuid& InS
 {
 	OnEndDeserializeSession.Broadcast(InSessionId);
 }
-void ULexUIPrefabWorldSubsystem::AddActorForPrefabSystem(AActor* InActor, const FGuid& InSessionId)
+void ULexUIPrefabWorldSubsystem::AddActorForPrefabSystem(ULexWidget* InActor, const FGuid& InSessionId)
 {
 	AllActors_PrefabSystemProcessing.Add(InActor, InSessionId);
 }
-void ULexUIPrefabWorldSubsystem::RemoveActorForPrefabSystem(AActor* InActor, const FGuid& InSessionId)
+void ULexUIPrefabWorldSubsystem::RemoveActorForPrefabSystem(ULexWidget* InActor, const FGuid& InSessionId)
 {
 	AllActors_PrefabSystemProcessing.Remove(InActor);
 }
-FGuid ULexUIPrefabWorldSubsystem::GetPrefabSystemSessionIdForActor(AActor* InActor)
+FGuid ULexUIPrefabWorldSubsystem::GetPrefabSystemSessionIdForActor(ULexWidget* InActor)
 {
 	if (auto FoundPtr = AllActors_PrefabSystemProcessing.Find(InActor))
 	{
@@ -48,7 +48,7 @@ FGuid ULexUIPrefabWorldSubsystem::GetPrefabSystemSessionIdForActor(AActor* InAct
 	return FGuid();
 }
 
-bool ULexUIPrefabWorldSubsystem::IsLexUIPrefabSystemProcessingActor(AActor* InActor)
+bool ULexUIPrefabWorldSubsystem::IsLexUIPrefabSystemProcessingActor(ULexWidget* InActor)
 {
 	if (auto PrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(InActor->GetWorld()))
 	{
@@ -59,7 +59,7 @@ bool ULexUIPrefabWorldSubsystem::IsLexUIPrefabSystemProcessingActor(AActor* InAc
 	}
 	return false;
 }
-bool ULexUIPrefabWorldSubsystem::IsPrefabSystemProcessingActor(AActor* InActor)
+bool ULexUIPrefabWorldSubsystem::IsPrefabSystemProcessingActor(ULexWidget* InActor)
 {
 	return AllActors_PrefabSystemProcessing.Contains(InActor);
 }

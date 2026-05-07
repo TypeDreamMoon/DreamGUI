@@ -2,7 +2,7 @@
 
 #include "Interaction/UIDropdownComponent.h"
 #include "LGUI.h"
-#include "Core/Actor/LexWidgetActor.h"
+#include "Core/Actor/LexWidgetContainer.h"
 #include "Core/Components/LexCanvas.h"
 #include "LexUIBPLibrary.h"
 #include "Core/LexUIClipData.h"
@@ -307,7 +307,7 @@ void UUIDropdownComponent::Hide()
 }
 void UUIDropdownComponent::CreateBlocker()
 {
-	auto WidgetActor = this->GetWorld()->SpawnActor<ALexWidgetActor>();
+	auto WidgetActor = this->GetWorld()->SpawnActor<ULexWidgetContainer>();
 #if WITH_EDITOR
 	WidgetActor->SetActorLabel(TEXT("UIDropdown_Blocker"));
 #endif
@@ -340,7 +340,7 @@ void UUIDropdownComponent::CreateListItems()
 		return;
 	}
 	ItemTemplateWidget->SetWidgetActive(true);
-	auto ScrollViewContentWidget = ItemTemplateWidget->GetUIParent();
+	auto ScrollViewContentWidget = ItemTemplateWidget->GetParent();
 	for (int i = 0, count = Options.Num(); i < count; i++)
 	{
 		auto copiedItemActor = ULexUIBPLibrary::DuplicateActor(ItemTemplate->GetOwner(), ScrollViewContentWidget);
@@ -360,7 +360,7 @@ void UUIDropdownComponent::CreateListItems()
 
 	ULexWidget::ForceRebuildLayoutImmediately(ScrollViewContentWidget);
 	float HeightOffset = 0;
-	if (auto ViewportWidget = ScrollViewContentWidget->GetUIParent())
+	if (auto ViewportWidget = ScrollViewContentWidget->GetParent())
 	{
 		HeightOffset = ListRoot->GetHeight() - ViewportWidget->GetHeight();
 	}

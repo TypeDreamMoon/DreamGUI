@@ -6,7 +6,7 @@
 #include "Extensions/UISpriteSequencePlayer.h"
 #include "Utils/LexUIUtils.h"
 #include "Core/LexUISpriteData_BaseObject.h"
-#include "Core/Actor/LexWidgetActor.h"
+#include "Core/Actor/LexWidgetContainer.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexSprite.h"
 #include "Engine/World.h"
@@ -81,7 +81,7 @@ void ULexUIFontEmojiData::CreateOrUpdateObject(ULexWidget* parent, const TArray<
 	//create more
 	while (createdImageObjectArray.Num() < emojiData.Num())
 	{
-		auto spriteActor = parent->GetWorld()->SpawnActor<ALexWidgetActor>();
+		auto spriteActor = parent->GetWorld()->SpawnActor<ULexWidgetContainer>();
 		spriteActor->SetFlags(EObjectFlags::RF_Transient);
 		spriteActor->GetLexWidget()->AttachToComponent(parent, FAttachmentTransformRules::KeepRelativeTransform);
 		createdImageObjectArray.Push(spriteActor->GetLexWidget());

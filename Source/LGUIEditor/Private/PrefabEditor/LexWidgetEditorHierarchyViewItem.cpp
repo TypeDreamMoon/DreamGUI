@@ -87,7 +87,7 @@ TSharedRef<FHierarchyLexWidgetDragDropOp> FHierarchyLexWidgetDragDropOp::New(TSh
 
 		Widget->Modify();
 
-		DraggedWidget.WidgetParent = Widget->GetUIParent();
+		DraggedWidget.WidgetParent = Widget->GetParent();
 		if (DraggedWidget.WidgetParent)
 		{
 			DraggedWidget.WidgetParent->Modify();
@@ -136,11 +136,11 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 
 	if (TargetTemplate && (DropZone == EItemDropZone::AboveItem || DropZone == EItemDropZone::BelowItem))
 	{
-		if (auto TargetParentTemplate = TargetTemplate->GetUIParent())
+		if (auto TargetParentTemplate = TargetTemplate->GetParent())
 		{
 			int32 InsertIndex = TargetParentTemplate->GetIndexOfUIChild(TargetTemplate);
 			InsertIndex += (DropZone == EItemDropZone::AboveItem) ? 0 : 1;
-			InsertIndex = FMath::Clamp(InsertIndex, 0, TargetParentTemplate->GetUIChildren().Num());
+			InsertIndex = FMath::Clamp(InsertIndex, 0, TargetParentTemplate->GetChildren().Num());
 
 			TOptional<EItemDropZone> ParentZone = ProcessHierarchyDragDrop(DragDropEvent, EItemDropZone::OntoItem, bIsDrop, Manager, TargetParentTemplate, InsertIndex);
 			if (ParentZone.IsSet())
@@ -214,7 +214,7 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 						// If we're inserting at an index, and the widget we're moving is already
 						// in the hierarchy before the point we're moving it to, we need to reduce the index
 						// count by one, because the whole set is about to be shifted when it's removed.
-						const bool bInsertInSameParent = TemplateWidget->GetUIParent() == NewParent;
+						const bool bInsertInSameParent = TemplateWidget->GetParent() == NewParent;
 						const bool bNeedToDropIndex = NewParent->GetIndexOfUIChild(TemplateWidget) < Index.GetValue();
 
 						if (bInsertInSameParent && bNeedToDropIndex)

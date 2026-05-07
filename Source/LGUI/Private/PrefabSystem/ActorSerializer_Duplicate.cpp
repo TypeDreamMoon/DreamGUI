@@ -10,34 +10,25 @@
 #include "LGUI.h"
 #include "Core/LexUIManager.h"
 #include "Core/LexUISettings.h"
+#include "Core/Components/LexWidget.h"
 
 namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 {
-	AActor* ActorSerializer::DuplicateActor(AActor* OriginRootActor, USceneComponent* Parent)
+	ULexWidget* ActorSerializer::DuplicateActor(UObject* InOwnerObject, ULexWidget* OriginRootActor, ULexWidget* Parent)
 	{
 		if (!OriginRootActor)
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d OriginRootActor is null!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			return nullptr;
 		}
-		if (!OriginRootActor->GetWorld())
-		{
-			UE_LOG(LGUI, Error, TEXT("[%s].%d Cannot get World from OriginRootActor!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			return nullptr;
-		}
 		ActorSerializer serializer;
-		serializer.TargetWorld = OriginRootActor->GetWorld();
+		serializer.OwnerObject = InOwnerObject;
 #if !WITH_EDITOR
 		serializer.bIsEditorOrRuntime = false;
 #endif
 		serializer.bOverrideVersions = false;
 
-		auto Name =
-#if WITH_EDITOR
-			OriginRootActor->GetActorLabel();
-#else
-			OriginRootActor->GetPathName();
-#endif
+		auto Name = OriginRootActor->GetDisplayName();
 		auto StartTime = FDateTime::Now();
 
 		//serialize
@@ -68,29 +59,19 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 #endif
 		return CreatedRootActor;
 	}
-	bool ActorSerializer::PrepareDataForDuplicate(AActor* OriginRootActor, FDuplicateActorDataContainer& OutData)
+	bool ActorSerializer::PrepareDataForDuplicate(ULexWidget* OriginRootWidget, FDuplicateActorDataContainer& OutData)
 	{
-		if (!OriginRootActor)
+		if (!OriginRootWidget)
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d OriginRootActor is null!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			return false;
 		}
-		if (!OriginRootActor->GetWorld())
-		{
-			UE_LOG(LGUI, Error, TEXT("[%s].%d Cannot get World from OriginRootActor!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			return false;
-		}
 
-		auto Name =
-#if WITH_EDITOR
-			OriginRootActor->GetActorLabel();
-#else
-			OriginRootActor->GetPathName();
-#endif
+		auto Name = OriginRootWidget->GetDisplayName();
 		auto StartTime = FDateTime::Now();
 
 		auto& serializer = OutData.Serializer;
-		serializer.TargetWorld = OriginRootActor->GetWorld();
+		serializer.OwnerObject = OriginRootWidget->GetOuter();
 #if !WITH_EDITOR
 		serializer.bIsEditorOrRuntime = false;
 #endif
@@ -102,7 +83,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 			LexUIPrefabSystem::FLexUIDuplicateObjectWriter Writer(InOutBuffer, serializer, ExcludeProperties);
 			Writer.DoSerialize(InObject);
 		};
-		serializer.SerializeActorToData(OriginRootActor, OutData.ActorData);
+		serializer.SerializeActorToData(OriginRootWidget, OutData.ActorData);
 
 		//for deserialize, set once for all use
 		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, bool InIsSceneComponent) {
@@ -118,19 +99,19 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 		}
 		return true;
 	}
-	AActor* ActorSerializer::DuplicateActorWithPreparedData(FDuplicateActorDataContainer& InData, USceneComponent* InParent)
+	ULexWidget* ActorSerializer::DuplicateActorWithPreparedData(FDuplicateActorDataContainer& InData, ULexWidget* InParent)
 	{
 		auto StartTime = FDateTime::Now();
 		auto& serializer = InData.Serializer;//use copied, incase undesired data
 		//clear these data for deserializer use
-		serializer.WillSerializeActorArray.Reset();
+		serializer.WillSerializeWidgetArray.Reset();
 		serializer.WillSerializeObjectArray.Reset();
 		serializer.MapGuidToObject.Reset();
 		serializer.MapObjectToGuid.Reset();
 		serializer.ComponentsInThisPrefab.Reset();
 		serializer.SubPrefabMap.Reset();
 		serializer.SubPrefabRootComponents.Reset();
-		serializer.AllActors.Reset();
+		serializer.AllWidgets.Reset();
 		serializer.AllComponents.Reset();
 		serializer.SubPrefabOverrideParameters.Reset();
 		serializer.DeserializationSessionId = FGuid();
@@ -149,35 +130,25 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 		return CreatedRootActor;
 	}
 
-	AActor* ActorSerializer::DuplicateActorForEditor(AActor* OriginRootActor, USceneComponent* Parent
-		, const TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& InSubPrefabMap
+	ULexWidget* ActorSerializer::DuplicateActorForEditor(ULexWidget* OriginRootWidget, ULexWidget* Parent
+		, const TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& InSubPrefabMap
 		, const TMap<UObject*, FGuid>& InMapObjectToGuid
-		, TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& OutDuplicatedSubPrefabMap
+		, TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& OutDuplicatedSubPrefabMap
 		, TMap<FGuid, TObjectPtr<UObject>>& OutMapGuidToObject
 	)
 	{
-		if (!OriginRootActor)
+		if (!OriginRootWidget)
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d OriginRootActor is null!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			return nullptr;
 		}
-		if (!OriginRootActor->GetWorld())
-		{
-			UE_LOG(LGUI, Error, TEXT("[%s].%d Cannot get World from OriginRootActor!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			return nullptr;
-		}
 
-		auto Name =
-#if WITH_EDITOR
-			OriginRootActor->GetActorLabel();
-#else
-			OriginRootActor->GetPathName();
-#endif
+		auto Name = OriginRootWidget->GetDisplayName();
 		UE_LOG(LGUI, Log, TEXT("Begin duplicate actor: '%s'"), *Name);
 		auto StartTime = FDateTime::Now();
 
 		ActorSerializer serializer;
-		serializer.TargetWorld = OriginRootActor->GetWorld();
+		serializer.OwnerObject = Parent->GetOuter();
 		serializer.MapObjectToGuid = InMapObjectToGuid;
 #if !WITH_EDITOR
 		serializer.bIsEditorOrRuntime = false;
@@ -195,7 +166,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 			Writer.DoSerialize(InObject);
 		};
 		FLexUIPrefabSaveData SaveData;
-		serializer.SerializeActorToData(OriginRootActor, SaveData);
+		serializer.SerializeActorToData(OriginRootWidget, SaveData);
 
 		//deserialize
 		serializer.SubPrefabMap = {};//clear it for deserializer to fill

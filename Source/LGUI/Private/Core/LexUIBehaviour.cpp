@@ -5,7 +5,7 @@
 #include "LGUI.h"
 #include "Core/LexUIManager.h"
 #include "Components/SceneComponent.h"
-#include "Core/Actor/LexWidgetActor.h"
+#include "Core/Actor/LexWidgetContainer.h"
 #include "Core/Components/LexWidget.h"
 #include "PrefabSystem/LexUIPrefabManager.h"
 #include "Utils/LexUIUtils.h"
@@ -281,7 +281,7 @@ ULexWidget* ULexUIBehaviour::GetWidget() const
 	{
 		if (this->GetWorld())
 		{
-			if (auto Owner = Cast<ALexWidgetActor>(GetOwner()))
+			if (auto Owner = Cast<ULexWidgetContainer>(GetOwner()))
 			{
 				CacheWidget = Owner->GetLexWidget();
 			}

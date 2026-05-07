@@ -52,7 +52,7 @@ void ULexLayoutSelf::PostEditChangeProperty(FPropertyChangedEvent& PropertyChang
 	UObject::PostEditChangeProperty(PropertyChangedEvent);
 	if (!this->GetName().StartsWith("Default__"))
 	{
-		ULexWidget::MarkLayoutForRebuild(GetWidget()->GetUIParent());
+		ULexWidget::MarkLayoutForRebuild(GetWidget()->GetParent());
 	}
 }
 #endif
@@ -90,6 +90,6 @@ void ULexLayoutSelf::SetIgnoreLayoutContainer(bool Value)
 	if (bIgnoreLayoutContainer != Value)
 	{
 		bIgnoreLayoutContainer = Value;
-		ULexWidget::MarkLayoutForRebuild(GetWidget()->GetUIParent());
+		ULexWidget::MarkLayoutForRebuild(GetWidget()->GetParent());
 	}
 }

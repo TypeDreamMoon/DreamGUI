@@ -314,12 +314,12 @@ void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool Scr
 				, InWidget, InWidget->GetDisplayName(), ScreenOrWorld);
 		};
 		//parent
-		if (auto Parent = Widget->GetUIParent())
+		if (auto Parent = Widget->GetParent())
 		{
 			DrawWidget(Parent, RectDrawColor);
 		}
 		//child
-		for (auto& Child : Widget->GetUIChildren())
+		for (auto& Child : Widget->GetChildren())
 		{
 			if (IsValid(Child) && IsValid(Child->GetOwner()))
 			{
@@ -327,9 +327,9 @@ void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool Scr
 			}
 		}
 		//other object of same hierarchy is selected
-		if (auto Parent = Widget->GetUIParent())
+		if (auto Parent = Widget->GetParent())
 		{
-			for (auto& SiblingWidget : Parent->GetUIChildren())
+			for (auto& SiblingWidget : Parent->GetChildren())
 			{
 				if (IsValid(SiblingWidget) && SiblingWidget != Widget)
 				{

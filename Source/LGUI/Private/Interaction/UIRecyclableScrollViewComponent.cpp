@@ -2,7 +2,7 @@
 
 #include "Interaction/UIRecyclableScrollViewComponent.h"
 #include "LGUI.h"
-#include "Core/Actor/LexWidgetActor.h"
+#include "Core/Actor/LexWidgetContainer.h"
 #include "LexUIBPLibrary.h"
 #include "LTweenManager.h"
 #include "Core/Components/LexWidget.h"
@@ -356,7 +356,7 @@ void UUIRecyclableScrollViewComponent::ScrollToByDataIndex(int InDataIndex, bool
     }
 }
 
-void UUIRecyclableScrollViewComponent::SetCellTemplate(ALexWidgetActor* value)
+void UUIRecyclableScrollViewComponent::SetCellTemplate(ULexWidgetContainer* value)
 {
     if (CellTemplate != value)
     {
@@ -415,7 +415,7 @@ void UUIRecyclableScrollViewComponent::InitializeOnDataSource()
         if (WorkingCellTemplateType != EUIRecyclableScrollViewCellTemplateType::Prefab || !WorkingCellTemplate.IsValid())//WorkingCellTemplate is already created by prefab
         {
             auto CellTemplateInstance = CellTemplatePrefab->LoadPrefab(this->GetWorld(), Content.Get());
-            WorkingCellTemplate = Cast<ALexWidgetActor>(CellTemplateInstance);
+            WorkingCellTemplate = Cast<ULexWidgetContainer>(CellTemplateInstance);
         }
         if (!WorkingCellTemplate.IsValid())
         {
@@ -522,7 +522,7 @@ void UUIRecyclableScrollViewComponent::InitializeOnDataSource()
     }
     while (CacheCellList.Num() < VisibleCellCount)
     {
-        auto CopiedCell = (ALexWidgetActor*)ULexUIBPLibrary::DuplicateActorWithPreparedData(DuplicateData, Content.Get());
+        auto CopiedCell = (ULexWidgetContainer*)ULexUIBPLibrary::DuplicateActorWithPreparedData(DuplicateData, Content.Get());
         auto CellInterfaceClass = UUIRecyclableScrollViewCell::StaticClass();
         auto CellInterfaceComponent = GetComponentByInterface(CopiedCell, CellInterfaceClass);
         FUIRecyclableScrollViewCellContainer CellContainer;

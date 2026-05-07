@@ -172,7 +172,7 @@ TWeakObjectPtr<ULexWidget> SLexWidgetEditorHierarchyView::SetSelectionByNodeObje
 	{
 		static ULexWidget* RecursiveSearch(ULexWidget* Element, ULexWidget* Root)
 		{
-			auto& Children = Root->GetUIChildren();
+			auto& Children = Root->GetChildren();
 			for (auto& Item: Children)
 			{
 				if (Item == Element)
@@ -284,11 +284,11 @@ void SLexWidgetEditorHierarchyView::OnEditorSelectionChanged()
 			//expand
 			if (SelectedItems.Num() == 1)
 			{
-				auto Widget = SelectedItems[0]->GetUIParent();
+				auto Widget = SelectedItems[0]->GetParent();
 				while (Widget != nullptr)
 				{
 					WidgetTreeView->SetItemExpansion(Widget, true);
-					Widget = Widget->GetUIParent();
+					Widget = Widget->GetParent();
 				}
 			}
 		}
@@ -339,7 +339,7 @@ void SLexWidgetEditorHierarchyView::OnSelectionChanged(TWeakObjectPtr<ULexWidget
 }
 void SLexWidgetEditorHierarchyView::OnGetChildren(TWeakObjectPtr<ULexWidget> InParent, TArray< TWeakObjectPtr<ULexWidget> >& OutChildren)
 {
-	auto& Children = InParent->GetUIChildren();
+	auto& Children = InParent->GetChildren();
 #if 1
 	OutChildren.Append(Children);
 #else
@@ -531,7 +531,7 @@ void SLexWidgetEditorHierarchyView::RecursiveExpand(ULexWidget* Widget, EExpandB
 
 	WidgetTreeView->SetItemExpansion(Widget, bShouldExpandItem);
 
-	auto& Children = Widget->GetUIChildren();
+	auto& Children = Widget->GetChildren();
 	for (auto Child: Children)
 	{
 		RecursiveExpand(Child, ExpandBehavior);

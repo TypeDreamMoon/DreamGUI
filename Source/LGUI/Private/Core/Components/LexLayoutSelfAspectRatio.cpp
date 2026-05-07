@@ -35,7 +35,7 @@ void ULexLayoutSelfAspectRatio::CalculateSize()
     	break;
     case ELexLayoutAspectRatioType::FitInParent:
     	{
-    		if (auto ParentWidget = Widget->GetUIParent())
+    		if (auto ParentWidget = Widget->GetParent())
     		{
     			Widget->SetHorizontalAnchorMinMax(FVector2D(0.5, 0.5));
 				Widget->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5));
@@ -64,7 +64,7 @@ void ULexLayoutSelfAspectRatio::CalculateSize()
     	break;
     case ELexLayoutAspectRatioType::EnvelopeParent:
     	{
-    		if (auto ParentWidget = Widget->GetUIParent())
+    		if (auto ParentWidget = Widget->GetParent())
     		{
     			Widget->SetHorizontalAnchorMinMax(FVector2D(0.5, 0.5));
     			Widget->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5));

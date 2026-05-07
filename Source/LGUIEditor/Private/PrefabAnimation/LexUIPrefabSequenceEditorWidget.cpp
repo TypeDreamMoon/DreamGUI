@@ -17,7 +17,7 @@
 #include "Utils/LexUIUtils.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequenceComponent.h"
-#include "Core/Actor/LexWidgetActor.h"
+#include "Core/Actor/LexWidgetContainer.h"
 #include "LevelEditor.h"
 #include "Core/Components/LexImage.h"
 #include "Core/Components/LexLayout.h"
@@ -295,7 +295,7 @@ public:
 
 		UMovieSceneSequence* AnimationSequence = Sequencer->GetFocusedMovieSceneSequence();
 		UObject* BindingContext = WeakSequence.Get();
-		TSet<ALexWidgetActor*> SequencerSelectedWidgets;
+		TSet<ULexWidgetContainer*> SequencerSelectedWidgets;
 		for (FGuid Guid : ObjectGuids)
 		{
 			TArray<UObject*, TInlineAllocator<1>> BoundObjects;
@@ -306,7 +306,7 @@ public:
 			}
 			else
 			{
-				ALexWidgetActor* BoundWidget = Cast<ALexWidgetActor>(BoundObjects[0]);
+				ULexWidgetContainer* BoundWidget = Cast<ULexWidgetContainer>(BoundObjects[0]);
 				if (BoundWidget)
 				{
 					SequencerSelectedWidgets.Add(BoundWidget);
@@ -316,7 +316,7 @@ public:
 
 		if (SequencerSelectedWidgets.Num() != 0)
 		{
-			ALexWidgetActor* SelectedActor = *SequencerSelectedWidgets.begin();
+			ULexWidgetContainer* SelectedActor = *SequencerSelectedWidgets.begin();
 
 			// Sync Selection
 			GEditor->SelectNone(false, true, false);

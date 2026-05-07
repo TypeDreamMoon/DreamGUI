@@ -10,6 +10,7 @@
 #include "Serialization/ObjectReader.h"
 #include "UObject/ObjectVersion.h"
 
+class ULexWidget;
 class ULexUIPrefabWorldSubsystem;
 
 namespace LexUIPrefabSystem
@@ -36,8 +37,8 @@ namespace LexUIPrefabSystem
 
 		virtual void SetupArchive(FArchive& InArchive);
 
-		//Actor that belongs to this prefab. All UObjects which get outer of these actor can be serailized
-		TArray<AActor*> WillSerializeActorArray;
+		//Actor that belongs to this prefab. All UObjects which get outer of these actor can be serialized
+		TArray<ULexWidget*> WillSerializeWidgetArray;
 		//Common UObjects that need to serialize. Outer object should stay at lower index then sub object, so when deserialize the outer object will created ealier, then the sub object can use the correct outer.
 		TArray<UObject*> WillSerializeObjectArray;
 		bool ObjectBelongsToThisPrefab(UObject* InObject);
@@ -70,7 +71,7 @@ namespace LexUIPrefabSystem
 		TMap<UObject*, FGuid> MapObjectToGuid;
 
 	protected:
-		UWorld* TargetWorld = nullptr;//world that need to spawn actor
+		UObject* OwnerObject = nullptr;//world that need to spawn actor
 		bool bIsEditorOrRuntime = true;
 		static bool CanUseUnversionedPropertySerialization();
 	};

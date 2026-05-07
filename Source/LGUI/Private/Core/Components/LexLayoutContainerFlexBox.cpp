@@ -13,7 +13,7 @@ void ULexLayoutContainerFlexBox::UpdateLayout()
     auto Widget = GetWidget();
     if (!Widget)return;
     Children.Empty();
-    for (auto& ChildWidget : Widget->GetUIChildren())
+    for (auto& ChildWidget : Widget->GetChildren())
     {
         if (!ChildWidget->GetWidgetActiveInHierarchy())continue;
         if (auto ChildLayoutSelf = ChildWidget->GetLayoutSelf())
@@ -112,7 +112,7 @@ void ULexLayoutContainerFlexBox::UpdateLayout()
 
         float AnchoredPositionX = Pos[0] + AreaSize[0] * ChildWidget->GetPivot()[0];
         float AnchoredPositionY = -Pos[1] - AreaSize[1] * (1.0f - ChildWidget->GetPivot()[1]);
-        auto ParentWidget = ChildWidget->GetUIParent();
+        auto ParentWidget = ChildWidget->GetParent();
         auto AnchorMin = ChildWidget->GetAnchorMin();
         AnchoredPositionX += -AnchorMin.X * ParentWidget->GetWidth();
         AnchoredPositionY += (1 - AnchorMin.Y) * ParentWidget->GetHeight();
@@ -429,7 +429,7 @@ FLexLayoutControlAnchorData ULexLayoutContainerFlexBox::GetLayoutControlAnchor(c
     {
         
     }
-    else if (ThisWidget->GetUIChildren().Contains(TargetWidget))//child
+    else if (ThisWidget->GetChildren().Contains(TargetWidget))//child
     {
         bool bIgnoreLayout = false;
         if (auto LayoutSelf = TargetWidget->GetLayoutSelf())

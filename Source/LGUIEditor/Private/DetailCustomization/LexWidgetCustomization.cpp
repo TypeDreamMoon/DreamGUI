@@ -529,7 +529,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 							.Padding(FMargin(0, 0))
 							.AutoHeight()
 							[
-								TargetScriptArray[0]->GetUIParent() != nullptr
+								TargetScriptArray[0]->GetParent() != nullptr
 								?
 								SNew(SBox)
 								[
@@ -1089,9 +1089,9 @@ FReply FLexWidgetCustomization::OnClickIncreaseOrDecreaseSiblingIndex(bool Incre
 	for (auto& Item : TargetScriptArray)
 	{
 		Item->Modify();
-		if (auto Parent = Item->GetUIParent())
+		if (auto Parent = Item->GetParent())
 		{
-			for (auto Child : Parent->UIChildren)
+			for (auto Child : Parent->Children)
 			{
 				Child->Modify();
 			}
@@ -1102,9 +1102,9 @@ FReply FLexWidgetCustomization::OnClickIncreaseOrDecreaseSiblingIndex(bool Incre
 	{
 		HierarchyIndexHandle->SetValue(Item->SiblingIndex + (IncreaseOrDecrease ? 1 : -1));
 		//notify others
-		if (auto Parent = Item->GetUIParent())
+		if (auto Parent = Item->GetParent())
 		{
-			for (auto Child : Parent->UIChildren)
+			for (auto Child : Parent->Children)
 			{
 				auto HierarchyIndexProperty = FindFProperty<FIntProperty>(ULexWidget::StaticClass(), GET_MEMBER_NAME_CHECKED(ULexWidget, SiblingIndex));
 				check(HierarchyIndexProperty != nullptr);
@@ -1122,7 +1122,7 @@ EVisibility FLexWidgetCustomization::GetAnchorPresetButtonVisibility()const
 {
 	if (TargetScriptArray.Num() > 0 && TargetScriptArray[0].IsValid())
 	{
-		return TargetScriptArray[0]->GetUIParent() != nullptr ? EVisibility::Visible : EVisibility::Hidden;
+		return TargetScriptArray[0]->GetParent() != nullptr ? EVisibility::Visible : EVisibility::Hidden;
 	}
 	return EVisibility::Hidden;
 }
@@ -1302,7 +1302,7 @@ bool FLexWidgetCustomization::IsAnchorEditable()const
 	if (TargetScriptArray.Num() > 0 && TargetScriptArray[0].IsValid())
 	{
 		auto Widget = TargetScriptArray[0];
-		if (Widget->GetUIParent() != nullptr)return true;//not root
+		if (Widget->GetParent() != nullptr)return true;//not root
 		if (Widget->IsCanvasWidget() && Widget->GetRenderCanvas() != nullptr && Widget->GetRenderCanvas()->IsRenderToScreenSpace())//is root canvas, and is render to screen space
 		{
 			return false;
@@ -1775,7 +1775,7 @@ FLexLayoutControlAnchorData FLexWidgetCustomization::GetLayoutControlAnchorValue
 			auto LayoutSelfResult = Widget->LayoutSelf->GetLayoutControlAnchor(Widget.Get());
 			Result.Or(LayoutSelfResult);
 		}
-		if (auto Parent = Widget->GetUIParent())
+		if (auto Parent = Widget->GetParent())
 		{
 			if (auto ParentLayout = Parent->GetLayoutContainer())
 			{

@@ -553,7 +553,7 @@ void ULexCanvas::OnUIHierarchyAttachmentChanged()
 	ULexCanvas* NewParentCanvas = nullptr;
 	if (this->IsRegistered())
 	{
-		NewParentCanvas = ULexWidget::GetComponentInParentUI<ULexCanvas>(this->GetOwner()->GetAttachParentActor(), true);
+		NewParentCanvas = LexWidget->GetComponentInParent<ULexCanvas>(true);
 	}
 	SetParentCanvas(NewParentCanvas);
 }
@@ -1248,7 +1248,7 @@ void ULexCanvas::UpdateCanvasDrawCall()
 				WidgetCollection.Add(Widget);//maybe sub-canvas, so collect it before tell canvas
 				if (Widget->GetRenderCanvas() == ThisCanvas)
 				{
-					for (auto Child : Widget->GetUIChildren())
+					for (auto Child : Widget->GetChildren())
 					{
 						CollectRenderWidget(Child, ThisCanvas, WidgetCollection);
 					}
@@ -2167,7 +2167,7 @@ FRotator ULexCanvas::GetViewRotator()const
 	if (bOverrideViewRotation)
 		return OverrideViewRotation;
 
-	return LexWidget->GetComponentRotation();
+	return LexWidget->GetWorldRotation().Rotator();
 }
 FIntPoint ULexCanvas::GetViewportSize()const
 {

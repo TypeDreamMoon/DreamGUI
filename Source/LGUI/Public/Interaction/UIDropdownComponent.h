@@ -12,7 +12,7 @@
 
 class UUIToggleComponent;
 class ULexImage;
-class ALexWidgetActor;
+class ULexWidgetContainer;
 class ULexWidget;
 class ULexText;
 
@@ -115,7 +115,7 @@ protected:
 	bool bIsShow = false;
 	bool bNeedRecreate = true;
 	TWeakObjectPtr<ULTweener> ShowOrHideTweener;
-	TWeakObjectPtr<ALexWidgetActor> BlockerActor;
+	TWeakObjectPtr<ULexWidgetContainer> BlockerActor;
 	UPROPERTY(Transient) TArray<TWeakObjectPtr<class UUIDropdownItemComponent>> CreatedItemArray;
 	virtual bool OnPointerClick_Implementation(ULexPointerEventData* EventData)override;
 	virtual bool OnPointerDeselect_Implementation(ULexBaseEventData* EventData)override;

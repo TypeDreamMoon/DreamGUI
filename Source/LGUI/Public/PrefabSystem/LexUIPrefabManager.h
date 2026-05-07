@@ -7,6 +7,7 @@
 #include "LexUIPrefabManager.generated.h"
 
 
+class ULexWidget;
 class ULexUIPrefab;
 class ULexUIPrefabHelperObject;
 
@@ -36,13 +37,13 @@ public:
 private:
 	/** Map actor to prefab-deserialize-section-id */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	TMap<AActor*, FGuid> AllActors_PrefabSystemProcessing;
+	TMap<ULexWidget*, FGuid> AllActors_PrefabSystemProcessing;
 public:
 	void BeginPrefabSystemProcessingActor(const FGuid& InSessionId);
 	void EndPrefabSystemProcessingActor(const FGuid& InSessionId);
-	void AddActorForPrefabSystem(AActor* InActor, const FGuid& InSessionId);
-	void RemoveActorForPrefabSystem(AActor* InActor, const FGuid& InSessionId);
-	FGuid GetPrefabSystemSessionIdForActor(AActor* InActor);
+	void AddActorForPrefabSystem(ULexWidget* InActor, const FGuid& InSessionId);
+	void RemoveActorForPrefabSystem(ULexWidget* InActor, const FGuid& InSessionId);
+	FGuid GetPrefabSystemSessionIdForActor(ULexWidget* InActor);
 
 	/**
 	 * Tell if PrefabSystem is deserializing the actor, can use this function in BeginPlay, if this return true then means properties are not ready yet, then you should use ILGUIPrefabInterface and implement Awake instead of BeginPlay.
@@ -50,10 +51,10 @@ public:
 	 * (This static version function is for Blueprint easily use).
 	 */
 	UFUNCTION(BlueprintPure, BlueprintCallable, Category = "LGUI")
-		static bool IsLexUIPrefabSystemProcessingActor(AActor* InActor);
+		static bool IsLexUIPrefabSystemProcessingActor(ULexWidget* InActor);
 	/**
 	 * Tell if PrefabSystem is deserializing the actor, can use this function in BeginPlay, if this return true then means properties are not ready yet, then you should use ILGUIPrefabInterface and implement Awake instead of BeginPlay.
 	 * PrefabSystem is deserializing actor during LoadPrefab or DuplicateActor.
 	 */
-	bool IsPrefabSystemProcessingActor(AActor* InActor);
+	bool IsPrefabSystemProcessingActor(ULexWidget* InActor);
 };

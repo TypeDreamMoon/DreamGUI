@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Core/Actor/LexWidgetActor.h"
+#include "Core/Actor/LexWidgetContainer.h"
 #include "GameFramework/Actor.h"
 #include "LexWidgetRootActor.generated.h"
 
@@ -12,7 +12,7 @@ class ULexCanvas;
 class ULexUIPrefab;
 
 UCLASS()
-class LGUI_API ALexWidgetRootActor : public ALexWidgetActor
+class LGUI_API ALexWidgetRootActor : public ULexWidgetContainer
 {
 	GENERATED_BODY()
 

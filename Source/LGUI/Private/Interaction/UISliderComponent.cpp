@@ -2,7 +2,7 @@
 
 #include "Interaction/UISliderComponent.h"
 #include "LGUI.h"
-#include "Core/Actor/LexWidgetActor.h"
+#include "Core/Actor/LexWidgetContainer.h"
 #include "Core/Components/LexWidget.h"
 
 void UUISliderComponent::Awake()
@@ -22,7 +22,7 @@ bool UUISliderComponent::CheckFill()
         return true;
     if (!Fill.IsValid())
         return false;
-    FillArea = Fill->GetUIParent();
+    FillArea = Fill->GetParent();
     if (Fill.IsValid() && FillArea.IsValid())
         return true;
     return false;
@@ -33,7 +33,7 @@ bool UUISliderComponent::CheckHandle()
         return true;
     if (!Handle.IsValid())
         return false;
-    HandleArea = Handle->GetUIParent();
+    HandleArea = Handle->GetParent();
     if (HandleArea.IsValid())
         return true;
     return false;

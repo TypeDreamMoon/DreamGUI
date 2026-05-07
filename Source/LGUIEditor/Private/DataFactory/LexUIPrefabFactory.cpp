@@ -5,7 +5,7 @@
 #include "PrefabSystem/LexUIPrefab.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "PrefabSystem/LexUIPrefabManager.h"
-#include "Core/Actor/LexWidgetActor.h"
+#include "Core/Actor/LexWidgetContainer.h"
 #if USE_CLASS_PICKER
 #include "ClassViewerFilter.h"
 #include "ClassViewerModule.h"
@@ -21,7 +21,7 @@ ULexUIPrefabFactory::ULexUIPrefabFactory()
 	SupportedClass = ULexUIPrefab::StaticClass();
 	bCreateNew = true;
 	bEditAfterNew = true;
-	RootActorClass = ALexWidgetActor::StaticClass();
+	RootActorClass = ULexWidgetContainer::StaticClass();
 }
 
 #if USE_CLASS_PICKER
@@ -132,7 +132,7 @@ UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent,
 		NewAsset->bIsPrefabVariant = false;
 		ULexUIPrefabHelperObject* HelperObject = NewObject<ULexUIPrefabHelperObject>(GetTransientPackage());
 		HelperObject->PrefabAsset = NewAsset;
-		HelperObject->LoadedRootActor = NewAsset->GetPrefabInstanceScene()->GetWorld()->SpawnActor<ALexWidgetActor>(RootActorClass);
+		HelperObject->LoadedRootActor = ULexUIPrefabManagerObject::GetPreviewWorldForPrefabPackage()->SpawnActor<ALexWidgetActor>(RootActorClass);
 
 		HelperObject->LoadedRootActor->SetActorLabel(NewAsset->GetName());
 		if (!HelperObject->LoadedRootActor->GetRootComponent())

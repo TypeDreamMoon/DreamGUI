@@ -15,8 +15,8 @@
 
 namespace LexUIPrefabSystem
 {
-	bool ActorSerializer::SavePrefab(AActor* OriginRootActor, ULexUIPrefab* InPrefab
-		, TMap<UObject*, FGuid>& InOutMapObjectToGuid, TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& InSubPrefabMap
+	bool ActorSerializer::SavePrefab(ULexWidget* OriginRootActor, ULexUIPrefab* InPrefab
+		, TMap<UObject*, FGuid>& InOutMapObjectToGuid, TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& InSubPrefabMap
 		, bool InForEditorOrRuntimeUse
 	)
 	{
@@ -46,7 +46,7 @@ namespace LexUIPrefabSystem
 			return false;
 		}
 		ActorSerializer serializer;
-		serializer.TargetWorld = OriginRootActor->GetWorld();
+		serializer.OwnerObject = OriginRootActor->GetWorld();
 		for (auto& KeyValue : InOutMapObjectToGuid)//Preprocess the map, ignore invalid object
 		{
 			if (IsValid(KeyValue.Key))
@@ -59,7 +59,7 @@ namespace LexUIPrefabSystem
 		{
 			for (auto& GuidToObjectKeyValue : SubPrefabKeyValue.Value.MapGuidToObject)
 			{
-				if (auto SubPrefabActor = Cast<AActor>(GuidToObjectKeyValue.Value))
+				if (auto SubPrefabActor = Cast<ULexWidget>(GuidToObjectKeyValue.Value))
 				{
 					serializer.SubPrefabActorArray.Add(SubPrefabActor);
 				}
@@ -80,17 +80,17 @@ namespace LexUIPrefabSystem
 		return saveResult;
 	}
 
-	void ActorSerializer::SerializeActorArray(TMap<FGuid, FGuid>& MapSceneComponentToParent, TArray<FLexUIActorSaveData>& SavedActors, TMap<FGuid, TArray<uint8>>& SavedObjectData)
+	void ActorSerializer::SerializeActorArray(TMap<FGuid, FGuid>& MapWidgetToParent, TArray<FLexUIActorSaveData>& SavedActors, TMap<FGuid, TArray<uint8>>& SavedObjectData)
 	{
 		for (int i = 0; i < TrySerializeActorArray.Num(); i++)
 		{
-			auto& Actor = TrySerializeActorArray[i];
+			auto& Widget = TrySerializeActorArray[i];
 			FLexUIActorSaveData ActorSaveData;
-			if (auto SubPrefabDataPtr = SubPrefabMap.Find(Actor))//sub prefab's actor is not collected in WillSerializeActorArray
+			if (auto SubPrefabDataPtr = SubPrefabMap.Find(Widget))//sub prefab's actor is not collected in WillSerializeActorArray
 			{
 				ActorSaveData.bIsPrefab = true;
 				ActorSaveData.PrefabAssetIndex = FindOrAddAssetIdFromList(SubPrefabDataPtr->PrefabAsset);
-				ActorSaveData.ActorGuid = MapObjectToGuid[Actor];
+				ActorSaveData.ActorGuid = MapObjectToGuid[Widget];
 				ActorSaveData.MapObjectGuidFromParentPrefabToSubPrefab = SubPrefabDataPtr->MapObjectGuidFromParentPrefabToSubPrefab;
 
 				//serialize override parameter data
@@ -111,31 +111,25 @@ namespace LexUIPrefabSystem
 					ActorSaveData.MapObjectIdToNewlyCreatedId.Add({ DataItem.Key.RootActorGuidInParentPrefab, DataItem.Key.ObjectGuidInOriginPrefab }, DataItem.Value);
 				}
 
-				if (auto RootComp = Actor->GetRootComponent())
+				if (auto Parent = Widget->GetParent())
 				{
-					if (auto ParentComp = RootComp->GetAttachParent())
+					if (MapObjectToGuid.Contains(Parent))//check if parent component belongs to this prefab
 					{
-						if (MapObjectToGuid.Contains(ParentComp))//check if parent component belongs to this prefab
-						{
-							MapSceneComponentToParent.Add(MapObjectToGuid[RootComp], MapObjectToGuid[ParentComp]);
-						}
+						MapWidgetToParent.Add(MapObjectToGuid[Widget], MapObjectToGuid[Parent]);
 					}
 				}
 			}
 			else
 			{
-				auto ActorGuid = MapObjectToGuid[Actor];
+				auto ActorGuid = MapObjectToGuid[Widget];
 
-				ActorSaveData.ObjectClass = FindOrAddClassFromList(Actor->GetClass());
+				ActorSaveData.ObjectClass = FindOrAddClassFromList(Widget->GetClass());
 				ActorSaveData.ActorGuid = ActorGuid;
-				ActorSaveData.ObjectFlags = (uint32)Actor->GetFlags();
-				WriterOrReaderFunction(Actor, SavedObjectData.Add(ActorGuid), false);
-				if (auto RootComp = Actor->GetRootComponent())
-				{
-					ActorSaveData.RootComponentGuid = MapObjectToGuid[RootComp];
-				}
+				ActorSaveData.ObjectFlags = (uint32)Widget->GetFlags();
+				WriterOrReaderFunction(Widget, SavedObjectData.Add(ActorGuid), false);
+				ActorSaveData.RootComponentGuid = MapObjectToGuid[Widget];
 				TArray<UObject*> DefaultSubObjects;
-				Actor->GetDefaultSubobjects(DefaultSubObjects);
+				Widget->GetDefaultSubobjects(DefaultSubObjects);
 				for (auto DefaultSubObject : DefaultSubObjects)
 				{
 					FGuid DefaultSubObjectGuid;
@@ -147,19 +141,19 @@ namespace LexUIPrefabSystem
 			SavedActors.Add(ActorSaveData);
 		}
 	}
-	void ActorSerializer::SerializeActorToData(AActor* OriginRootActor, FLexUIPrefabSaveData& OutData)
+	void ActorSerializer::SerializeActorToData(ULexWidget* OriginRootActor, FLexUIPrefabSaveData& OutData)
 	{
 		if (LGUIPrefabManager == nullptr)
 		{
 			LGUIPrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(OriginRootActor->GetWorld());
 		}
-		CollectActorRecursive(OriginRootActor);
+		CollectWidgetRecursive(OriginRootActor);
 		//serialize actor
 		SerializeActorArray(OutData.MapSceneComponentToParent, OutData.SavedActors, OutData.SavedObjectData);
 		//serialize objects and components
 		SerializeObjectArray(OutData.SavedObjects, OutData.SavedObjectData, OutData.MapSceneComponentToParent);
 	}
-	bool ActorSerializer::SerializeActor(AActor* OriginRootActor, ULexUIPrefab* InPrefab)
+	bool ActorSerializer::SerializeActor(ULexWidget* OriginRootActor, ULexUIPrefab* InPrefab)
 	{
 		auto StartTime = FDateTime::Now();
 
@@ -232,63 +226,37 @@ namespace LexUIPrefabSystem
 		return true;
 	}
 
-	void ActorSerializer::CollectActorRecursive(AActor* Actor)
+	void ActorSerializer::CollectWidgetRecursive(ULexWidget* Widget)
 	{
-		if (!IsValid(Actor))return;
-		if (Actor->HasAnyFlags(EObjectFlags::RF_Transient))return;
+		if (!IsValid(Widget))return;
+		if (Widget->HasAnyFlags(EObjectFlags::RF_Transient))return;
 #if WITH_EDITOR
 		if (!bIsEditorOrRuntime)
 #endif
-		{
-			if (Actor->bIsEditorOnlyActor)return;
-		}
 		//collect actor
-		bool bIsSubPrefabActor = SubPrefabActorArray.Contains(Actor);
-		if (!bIsSubPrefabActor)//sub prefab's actor should not put to the list
+		bool bIsSubPrefab = SubPrefabActorArray.Contains(Widget);
+		if (!bIsSubPrefab)//sub prefab's actor should not put to the list
 		{
-			WillSerializeActorArray.Add(Actor);//sub-prefab just keep a reference, no need to serialize
-			TrySerializeActorArray.Add(Actor);
+			WillSerializeWidgetArray.Add(Widget);//sub-prefab just keep a reference, no need to serialize
+			TrySerializeActorArray.Add(Widget);
 		}
 		else
 		{
-			if (SubPrefabMap.Contains(Actor))//sub-prefab's root actor
+			if (SubPrefabMap.Contains(Widget))//sub-prefab's root actor
 			{
-				TrySerializeActorArray.Add(Actor);
+				TrySerializeActorArray.Add(Widget);
 			}
 		}
 		//collect all actors include sub-prefab's actor, because some property could reference it
-		if (!MapObjectToGuid.Contains(Actor))
+		if (!MapObjectToGuid.Contains(Widget))
 		{
-			MapObjectToGuid.Add(Actor, FGuid::NewGuid());
+			MapObjectToGuid.Add(Widget, FGuid::NewGuid());
 		}
 
-		TArray<AActor*> ChildrenActors;
-		Actor->GetAttachedActors(ChildrenActors);
-#if WITH_EDITOR
-		//Actually normal LexWidget's SiblingIndex property can do the job, but sub prefab's root actor not, so sort it to make sure.
-		Algo::Sort(ChildrenActors, [](const AActor* A, const AActor* B) {
-			auto ARoot = A->GetRootComponent();
-			auto BRoot = B->GetRootComponent();
-			if (ARoot != nullptr && BRoot != nullptr)
-			{
-				auto AUIRoot = Cast<ULexWidget>(ARoot);
-				auto BUIRoot = Cast<ULexWidget>(BRoot);
-				if (AUIRoot != nullptr && BUIRoot != nullptr)
-				{
-					return AUIRoot->GetSiblingIndex() < BUIRoot->GetSiblingIndex();//compare hierarch index for UI actor
-				}
-			}
-			else
-			{
-				//sort on ActorLabel so the Tick function can be predictable because deserialize order is determinate.
-				return A->GetActorLabel().Compare(B->GetActorLabel()) < 0;//compare name for normal actor
-			}
-			return false;
-			});
-#endif
-		for (auto ChildActor : ChildrenActors)
+		auto& Children = Widget->GetChildren();
+		for (auto& ChildWidget : Children)
 		{
-			CollectActorRecursive(ChildActor);//collect all actor, include subprefab's actor
+			CollectWidgetRecursive(ChildWidget);
 		}
 	}
 

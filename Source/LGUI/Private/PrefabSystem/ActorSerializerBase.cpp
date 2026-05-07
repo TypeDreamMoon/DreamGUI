@@ -1,6 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "PrefabSystem/ActorSerializerBase.h"
+
+#include "Core/Components/LexWidget.h"
 #include "Engine/World.h"
 #include "PrefabSystem/LexUIObjectReaderAndWriter.h"
 #include "Misc/ConfigCacheIni.h"
@@ -25,10 +27,10 @@ namespace LexUIPrefabSystem
 	}
 
 
-	//only allow object that belongs to some actor of this prefab
+	//only allow object that belongs to some widget of this prefab
 	bool ActorSerializerBase::ObjectBelongsToThisPrefab(UObject* InObject)
 	{
-		if (WillSerializeActorArray.Contains(InObject))
+		if (WillSerializeWidgetArray.Contains(InObject))
 		{
 			return true;
 		}
@@ -38,14 +40,14 @@ namespace LexUIPrefabSystem
 			&& !Outer->HasAnyFlags(EObjectFlags::RF_Transient)
 			)
 		{
-			if (WillSerializeActorArray.Contains(Outer))
+			if (WillSerializeWidgetArray.Contains(Outer))
 			{
 				return true;
 			}
 			else
 			{
-				if (Outer->GetClass()->IsChildOf(AActor::StaticClass())
-					)//not exist in WillSerailizeActorArray, but is a actor, means it not belongs to this prefab
+				if (Outer->IsA<ULexWidget>()
+					)//not exist in WillSerializeWidgetArray, but is a widget, means it not belongs to this prefab
 				{
 					return false;
 				}
@@ -64,21 +66,14 @@ namespace LexUIPrefabSystem
 #if WITH_EDITOR
 		if (Object->GetClass()->IsChildOf(UEdMode::StaticClass()))return false;
 		if (ObjectIsTrash(Object))return false;
-		if (Object->GetClass()->IsChildOf(UActorComponent::StaticClass()) && ((UActorComponent*)Object)->IsVisualizationComponent())return false;//skip visualization component
 #endif
 		if (Object->IsEditorOnly() && !bIsEditorOrRuntime)return false;
 		if (Object->IsAsset())return false;//skip asset, because asset is referenced directly
-		if (Object->GetWorld() != TargetWorld)return false;
+		if (Object->GetWorld() != OwnerObject)return false;
 		if (Object->HasAnyFlags(EObjectFlags::RF_Transient))return false;//skip transient object
-		if (Object->GetClass()->IsChildOf(AActor::StaticClass()))return false;//skip actor, because actor is collected in WillSerializeActorArray
-		if (WillSerializeActorArray.Contains(Object))return false;//already contains it (double check)
+		if (Object->IsA<ULexWidget>())return false;//skip actor, because actor is collected in WillSerializeActorArray
+		if (WillSerializeWidgetArray.Contains(Object))return false;//already contains it (double check)
 		if (!ObjectBelongsToThisPrefab(Object))return false;
-		/** 
-		 * I have no idea why use these two flags, just tested for UModel and get that these two flags can filter out most classes like:
-		 * XXXProperty, XXXDelegatepropertyWrapper, XXXWrapperObject, BlueprintMacros, BlueprintFunctionLibrary, XXX__PythonCallable
-		 * we don't need to serialize these classes of objects, like UModel will crash LGUI's serialization process
-		 */
-		if (!Object->GetClass()->HasAnyClassFlags(EClassFlags::CLASS_Constructed | EClassFlags::CLASS_HasInstancedReference))return false;
 
 		if (WillSerializeObjectArray.Contains(Object))
 		{
@@ -91,7 +86,7 @@ namespace LexUIPrefabSystem
 		auto Outer = Object->GetOuter();
 		check(Outer != nullptr);
 
-		if (WillSerializeActorArray.Contains(Outer))//outer is actor
+		if (WillSerializeWidgetArray.Contains(Outer))//outer is actor
 		{
 			WillSerializeObjectArray.Add(Object);
 			if (auto GuidPtr = MapObjectToGuid.Find(Object))
@@ -118,7 +113,7 @@ namespace LexUIPrefabSystem
 			}
 			auto Index = WillSerializeObjectArray.Add(Object);
 			while (Outer != nullptr
-				&& !WillSerializeActorArray.Contains(Outer)//Make sure Outer is not actor, because actor is created before any other objects, they will be stored in actor's data
+				&& !WillSerializeWidgetArray.Contains(Outer)//Make sure Outer is not actor, because actor is created before any other objects, they will be stored in actor's data
 				&& !WillSerializeObjectArray.Contains(Outer)//Make sure Outer is not inside array
 				)
 			{
