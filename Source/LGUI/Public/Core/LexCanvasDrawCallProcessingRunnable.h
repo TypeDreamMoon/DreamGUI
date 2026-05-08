@@ -1,14 +1,12 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #pragma once
-
-struct FLexCanvasPreparedDrawCallData;
-struct FLexCanvasPendingDrawCallData;
+#include "LexCanvasProcessingDrawCallData.h"
 
 class FLexCanvasDrawCallProcessingRunnable : public FRunnable
 {
 public:
-	void Start(const TSharedPtr<TQueue<FLexCanvasPreparedDrawCallData>>& InDrawCallDataQueue, const TSharedPtr<TQueue<FLexCanvasPendingDrawCallData>>& InRebuildDrawCallQueue);
+	void Start();
 
 	//~ Begin FRunnable Interface
 	virtual uint32 Run() override;
@@ -17,9 +15,13 @@ public:
 	//~ End FRunnable Interface
 	bool IsBatching()const { return bIsBatching; }
 
+	void PushPreparedDrawCallData(FLexCanvasPreparedDrawCallData InData);
+	bool TryGetDrawCallData(FLexCanvasPendingDrawCallData& OutData);
+
 private:
 	TSharedPtr<TQueue<FLexCanvasPreparedDrawCallData>> PreparedDrawCallDataQueue;
-	TSharedPtr<TQueue<FLexCanvasPendingDrawCallData>> RebuildDrawCallQueue;
+	TSharedPtr<TQueue<FLexCanvasPendingDrawCallData>> PendingRebuildDrawCallQueue;
+	FEvent* PreparedDrawCallDataQueueEvent = nullptr;
 	
 	std::atomic<bool> bIsRunning = false;
 	std::atomic<bool> bIsBatching = false;

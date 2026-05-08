@@ -59,7 +59,7 @@ public:
 		  BoundsMin2DInCanvasSpace(Other.BoundsMin2DInCanvasSpace),
 		  BoundsMax2DInCanvasSpace(Other.BoundsMax2DInCanvasSpace)
 	{
-		bIsCalculating.store(Other.bIsCalculating.load());
+		
 	}
 
 	// Explicit assignment operator
@@ -77,11 +77,11 @@ public:
 			TransformRelativeToCanvas = Other.TransformRelativeToCanvas;
 			BoundsMin2DInCanvasSpace = Other.BoundsMin2DInCanvasSpace;
 			BoundsMax2DInCanvasSpace = Other.BoundsMax2DInCanvasSpace;
-			bIsCalculating.store(Other.bIsCalculating.load());
 		}
 		return *this;
 	}
 
+	//is calculating vertices?
 	std::atomic<bool> bIsCalculating = false;
 	//local space vertex position/ normal/ tangent
 	TArray<FLexUIOriginVertexData> OriginVertices;

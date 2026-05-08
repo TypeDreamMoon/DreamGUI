@@ -6,6 +6,7 @@
 #include "Camera/CameraTypes.h"
 #include "Core/LexCanvasAsyncFunctionRunnable.h"
 #include "Core/LexCanvasDrawCallProcessingRunnable.h"
+#include "Core/LexCanvasProcessingDrawCallData.h"
 #include "Core/LexUIDrawCall.h"
 #include "Math/TransformCalculus2D.h"
 #include "PrefabSystem/ILexUIPrefabInterface.h"
@@ -165,19 +166,6 @@ struct FLexCanvasMaterialParameterCache
 	TWeakObjectPtr<UTexture> Texture = nullptr;
 	UPROPERTY(VisibleAnywhere, Category=LGUI)
 	TWeakObjectPtr<UTexture> FontTexture = nullptr;
-};
-
-struct FLexCanvasPreparedDrawCallData
-{
-	TArray<FLexUIRenderData> DataArray;
-	FVector2D LeftBottomPoint;
-	FVector2D RightTopPoint;
-	uint64 FrameNumber = 0;
-};
-struct FLexCanvasPendingDrawCallData
-{
-	TArray<FLexUIDrawCall> DrawCallArray;
-	uint64 FrameNumber = 0;//the frame number when pushing this draw-call
 };
 
 class ULexWidget;
@@ -697,24 +685,24 @@ public:
 	/**  */
 	void MarkNeedVerifyMaterials();
 private:
-	uint32 bCanTickUpdate:1;//if Canvas can update from tick
-	uint32 bShouldRebuildDrawCall : 1;
-	uint32 bHasPendingUpdateData : 1;
-	uint32 bNeedToSortRenderPriority : 1;
-	uint32 bHasAddToLexScreenSpaceRenderer : 1;//is this canvas added to LGUI screen space renderer
-	uint32 bRequestUpdateForRenderTarget : 1;//request update when RenderTargetUpdateMode is WhenRequest
-	uint32 bAnythingChangedForRenderTarget : 1;//if children canvas anything changed, then mark this property for root canvas, good for RenderTarget mode to update
-	uint32 bPrevAnythingChangedForRenderTarget : 1;//same as upper one, but the prev frame
-	uint32 bHasSetInitialStateForLexWorldSpaceRenderer : 1;//is LGUI world space renderer's initial state set
-	uint32 bNeedToVerifyMaterials : 1;
-	mutable uint32 bNeedToSetClipDataTextureMaterialParameter : 1;
+	uint32 bCanTickUpdate : 1 = true;//if Canvas can update from tick
+	uint32 bShouldRebuildDrawCall : 1 = true;
+	uint32 bHasPendingUpdateData : 1 = false;
+	uint32 bNeedToSortRenderPriority : 1 = true;
+	uint32 bHasAddToLexScreenSpaceRenderer : 1 = false;//is this canvas added to LGUI screen space renderer
+	uint32 bRequestUpdateForRenderTarget : 1 = true;//request update when RenderTargetUpdateMode is WhenRequest
+	uint32 bAnythingChangedForRenderTarget : 1 = true;//if children canvas anything changed, then mark this property for root canvas, good for RenderTarget mode to update
+	uint32 bPrevAnythingChangedForRenderTarget : 1 = true;//same as upper one, but the prev frame
+	uint32 bHasSetInitialStateForLexWorldSpaceRenderer : 1 = false;//is LGUI world space renderer's initial state set
+	uint32 bNeedToVerifyMaterials : 1 = true;
+	mutable uint32 bNeedToSetClipDataTextureMaterialParameter : 1 = true;
 
-	uint32 bPrevIsVisible : 1;//is LexWidget active in prev frame?
+	uint32 bPrevIsVisible : 1 = true;//is LexWidget active in prev frame?
 
-	uint32 bOverrideViewLocation:1, bOverrideViewRotation:1, bOverrideProjectionMatrix:1, bOverrideFovAngle :1;
+	uint32 bOverrideViewLocation:1=false, bOverrideViewRotation:1=false, bOverrideProjectionMatrix:1=false, bOverrideFovAngle:1=false;
 
-	mutable uint32 bUIMeshNeedToSetInitialParameters : 1;//after clear UIMesh, it will need to set initial parameters to use again
-	mutable uint32 bIsViewProjectionMatrixDirty : 1;
+	mutable uint32 bUIMeshNeedToSetInitialParameters : 1 = true;//after clear UIMesh, it will need to set initial parameters to use again
+	mutable uint32 bIsViewProjectionMatrixDirty : 1 = true;
 	mutable FMatrix CacheViewProjectionMatrix = FMatrix::Identity;//cache to prevent multiple calculation in same frame
 	mutable float LastRenderTime = 0;
 	friend class FLexUIRenderSceneProxy;
@@ -731,10 +719,10 @@ private:
 			;
 	}
 
-	FVector OverrideViewLocation;
-	FRotator OverrideViewRotation;
-	float OverrideFovAngle;
-	FMatrix OverrideProjectionMatrix;
+	FVector OverrideViewLocation = FVector::ZeroVector;
+	FRotator OverrideViewRotation = FRotator::ZeroRotator;
+	float OverrideFovAngle = 0;
+	FMatrix OverrideProjectionMatrix = FMatrix::Identity;
 
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	mutable TWeakObjectPtr<ULexUIMeshComponent> UIMesh;//current using UIMesh.
@@ -748,9 +736,7 @@ private:
 	TMap<TObjectPtr<UMaterialInterface>, FLexCanvasDynamicMaterialArrayContainer> MapSrcMatToDynamicMat;//@todo: delete not using material
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	TMap<TObjectPtr<UMaterialInterface>, FLexCanvasMaterialParameterCache> MapMatToParamCache;
-	TSharedPtr<TQueue<FLexCanvasPreparedDrawCallData>> PreparedDrawCallDataQueue;
 	uint64 NewestDrawCallFrameNumber = 0;
-	TSharedPtr<TQueue<FLexCanvasPendingDrawCallData>> PendingRebuildDrawCallQueue;
 	FLexCanvasPendingDrawCallData CurrentDrawCallData;//current drawing draw-call
 	TUniquePtr<FLexCanvasDrawCallProcessingRunnable> DrawCallProcessingRunnable;
 	TUniquePtr<FLexCanvasAsyncFunctionRunnable> TransformVerticesAsyncFunctionRunnable;

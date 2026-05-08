@@ -34,26 +34,6 @@ ULexCanvas::ULexCanvas()
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 
-	bHasAddToLexScreenSpaceRenderer = false;
-	bHasSetInitialStateForLexWorldSpaceRenderer = false;
-	bOverrideViewLocation = false;
-	bOverrideViewRotation = false;
-	bOverrideProjectionMatrix = false;
-	bOverrideFovAngle = false;
-	bPrevIsVisible = true;
-	bNeedToVerifyMaterials = true;
-	bUIMeshNeedToSetInitialParameters = true;
-	bNeedToSetClipDataTextureMaterialParameter = true;
-	bNeedToSortRenderPriority = true;
-	bRequestUpdateForRenderTarget = true;
-
-	bCanTickUpdate = true;
-	bShouldRebuildDrawCall = true;
-	bAnythingChangedForRenderTarget = true;
-	bPrevAnythingChangedForRenderTarget = true;
-
-	bIsViewProjectionMatrixDirty = true;
-
 	DefaultMeshType = ULexUIMeshComponent::StaticClass();
 	DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/LexUI_ImageAndFont"));
 }
@@ -377,15 +357,7 @@ void ULexCanvas::PostInitProperties()
 	if (DrawCallProcessingRunnable == nullptr)
 	{
 		DrawCallProcessingRunnable = MakeUnique<FLexCanvasDrawCallProcessingRunnable>();
-		if (!PreparedDrawCallDataQueue.IsValid())
-		{
-			PreparedDrawCallDataQueue = MakeShared<TQueue<FLexCanvasPreparedDrawCallData>>();
-		}
-		if (!PendingRebuildDrawCallQueue.IsValid())
-		{
-			PendingRebuildDrawCallQueue = MakeShared<TQueue<FLexCanvasPendingDrawCallData>>();
-		}
-		DrawCallProcessingRunnable->Start(PreparedDrawCallDataQueue, PendingRebuildDrawCallQueue);
+		DrawCallProcessingRunnable->Start();
 	}
 	if (TransformVerticesAsyncFunctionRunnable == nullptr)
 	{
@@ -1340,7 +1312,7 @@ void ULexCanvas::UpdateCanvasDrawCall()
 				PreparedDrawCallData.FrameNumber = GFrameCounter;
 				PrepareDrawCallBatchingData(PreparedDrawCallData.DataArray);
 				//push to async thread
-				PreparedDrawCallDataQueue->Enqueue(MoveTemp(PreparedDrawCallData));
+				DrawCallProcessingRunnable->PushPreparedDrawCallData(MoveTemp(PreparedDrawCallData));
 			}
 		}
 		else
@@ -1365,15 +1337,13 @@ void ULexCanvas::UpdateDrawCallBatchData()
 		item->UpdateDrawCallBatchData();
 	}
 	
-	while (DrawCallProcessingRunnable->IsBatching() || !PreparedDrawCallDataQueue->IsEmpty())
+	while (DrawCallProcessingRunnable->IsBatching())
 	{
 		FPlatformProcess::Sleep(0.001f);
 	}
 
-	if (!PendingRebuildDrawCallQueue->IsEmpty())
+	if (DrawCallProcessingRunnable->TryGetDrawCallData(CurrentDrawCallData))
 	{
-		while (!PendingRebuildDrawCallQueue->IsEmpty())
-			PendingRebuildDrawCallQueue->Dequeue(CurrentDrawCallData);
 		//update draw-call mesh
 		UpdateDrawCallMesh();
 		//update draw-call material
@@ -1389,7 +1359,7 @@ void ULexCanvas::UpdateDrawCallBatchData()
 	}
 	else
 	{
-		if (bHasPendingUpdateData && PreparedDrawCallDataQueue->IsEmpty())//make sure there is no pending data in async thread, if there is pending data we may update draw-call with wrong data
+		if (bHasPendingUpdateData)//make sure there is no pending data in async thread, if there is pending data we may update draw-call with wrong data
 		{
 			//current draw-call data only need to update, then we compare the frame-number,
 			//if frame-number is greater than current rendering draw-call's frame-number, that means we can safely update it

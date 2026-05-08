@@ -4,12 +4,13 @@
 
 #include "Core/Components/LexCanvas.h"
 
-void FLexCanvasDrawCallProcessingRunnable::Start(const TSharedPtr<TQueue<FLexCanvasPreparedDrawCallData>>& InDrawCallDataQueue, const TSharedPtr<TQueue<FLexCanvasPendingDrawCallData>>& InRebuildDrawCallQueue)
+void FLexCanvasDrawCallProcessingRunnable::Start()
 {
 	check (!bIsRunning);
 	check (PreparedDrawCallDataQueue == nullptr);
-	PreparedDrawCallDataQueue = InDrawCallDataQueue;
-	RebuildDrawCallQueue = InRebuildDrawCallQueue;
+	PreparedDrawCallDataQueue = MakeShared<TQueue<FLexCanvasPreparedDrawCallData>>();
+	PreparedDrawCallDataQueueEvent = FPlatformProcess::GetSynchEventFromPool();
+	PendingRebuildDrawCallQueue = MakeShared<TQueue<FLexCanvasPendingDrawCallData>>();
 	bIsRunning = true;
 	Thread.Reset(FRunnableThread::Create(this, TEXT("FLexCanvasDrawCallProcessingRunnable"), 0, TPri_Normal));
 }
@@ -18,24 +19,18 @@ uint32 FLexCanvasDrawCallProcessingRunnable::Run()
 {
 	while (bIsRunning)
 	{
-		if (!PreparedDrawCallDataQueue->IsEmpty())
+		if (PreparedDrawCallDataQueueEvent->Wait())
 		{
+			if (!bIsRunning)break;
 			bIsBatching = true;
 			FLexCanvasPreparedDrawCallData PreparedDrawCallData;
-			while (!PreparedDrawCallDataQueue->IsEmpty())//discard old data and get the newest one
-			{
-				PreparedDrawCallDataQueue->Dequeue(PreparedDrawCallData);
-			}
+			while (PreparedDrawCallDataQueue->Dequeue(PreparedDrawCallData)){}//discard old data and get the newest one
 			FLexCanvasPendingDrawCallData PendingDrawCallData;
 			PendingDrawCallData.FrameNumber = PreparedDrawCallData.FrameNumber;
 			ULexCanvas::BatchDrawCallAsync(PreparedDrawCallData.LeftBottomPoint, PreparedDrawCallData.RightTopPoint, PreparedDrawCallData.DataArray, PendingDrawCallData.DrawCallArray);
 			//push to main thread queue
-			RebuildDrawCallQueue->Enqueue(MoveTemp(PendingDrawCallData));
+			PendingRebuildDrawCallQueue->Enqueue(MoveTemp(PendingDrawCallData));
 			bIsBatching = false;
-		}
-		else
-		{
-			FPlatformProcess::Sleep(0.001f);
 		}
 	}
 
@@ -49,17 +44,29 @@ void FLexCanvasDrawCallProcessingRunnable::Stop()
 	}
 
 	bIsRunning = false;
-
+	PreparedDrawCallDataQueueEvent->Trigger();
+	FPlatformProcess::ReturnSynchEventToPool(PreparedDrawCallDataQueueEvent);
 	Thread->WaitForCompletion();
 }
 void FLexCanvasDrawCallProcessingRunnable::Exit()
 {
-	if (!bIsRunning)
+	Stop();
+}
+
+void FLexCanvasDrawCallProcessingRunnable::PushPreparedDrawCallData(FLexCanvasPreparedDrawCallData InData)
+{
+	PreparedDrawCallDataQueue->Enqueue(MoveTemp(InData));
+	PreparedDrawCallDataQueueEvent->Trigger();
+}
+
+bool FLexCanvasDrawCallProcessingRunnable::TryGetDrawCallData(FLexCanvasPendingDrawCallData& OutData)
+{
+	if (!PendingRebuildDrawCallQueue->IsEmpty())
 	{
-		return;
+		while (PendingRebuildDrawCallQueue->Dequeue(OutData))
+		{
+			return true;
+		}
 	}
-
-	bIsRunning = false;
-
-	Thread->WaitForCompletion();
+	return false;
 }

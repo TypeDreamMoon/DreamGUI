@@ -6,11 +6,13 @@ public:
 	void Start()
 	{
 		bIsRunning = true;
+		PreparedDrawCallDataQueueEvent = FPlatformProcess::GetSynchEventFromPool();
 		Thread.Reset(FRunnableThread::Create(this, TEXT("FLexCanvasDrawCallProcessingRunnable"), 0, TPri_Normal));
 	}
 	void PushFunction(const TFunction<void()>& InFunction)
 	{
 		FunctionQueue.Enqueue(InFunction);
+		PreparedDrawCallDataQueueEvent->Trigger();
 		ItemCount++;
 	}
 
@@ -20,7 +22,7 @@ public:
 	}
 	bool IsEmpty()const
 	{
-		return FunctionQueue.IsEmpty();
+		return ItemCount == 0;
 	}
 
 	//~ Begin FRunnable Interface
@@ -28,18 +30,13 @@ public:
 	{
 		while (bIsRunning)
 		{
-			if (!FunctionQueue.IsEmpty())
+			if (PreparedDrawCallDataQueueEvent->Wait())
 			{
-				while (!FunctionQueue.IsEmpty())
+				while (FunctionQueue.Dequeue(TempFunction))
 				{
-					FunctionQueue.Dequeue(TempFunction);
 					TempFunction();
 					ItemCount--;
 				}
-			}
-			else
-			{
-				FPlatformProcess::Sleep(0.001f);
 			}
 		}
 
@@ -53,19 +50,13 @@ public:
 		}
 
 		bIsRunning = false;
-
+		PreparedDrawCallDataQueueEvent->Trigger();
+		FPlatformProcess::ReturnSynchEventToPool(PreparedDrawCallDataQueueEvent);
 		Thread->WaitForCompletion();
 	}
 	virtual void Exit() override
 	{
-		if (!bIsRunning)
-		{
-			return;
-		}
-
-		bIsRunning = false;
-
-		Thread->WaitForCompletion();
+		Stop();
 	}
 	//~ End FRunnable Interface
 
@@ -73,6 +64,7 @@ private:
 	TFunction<void()> TempFunction = nullptr;
 	TQueue<TFunction<void()>, EQueueMode::Mpsc> FunctionQueue;
 	std::atomic<int> ItemCount = 0;
+	FEvent* PreparedDrawCallDataQueueEvent = nullptr;
 	
 	std::atomic<bool> bIsRunning = false;
 	TUniquePtr<FRunnableThread> Thread;
