@@ -83,6 +83,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		float GetAnimationFps()const { return AnimationFps; }
 
-	void CreateOrUpdateObject(class ULexWidget* parent, const TArray<FLexUIText_Emoji>& emojiArray, TArray<TObjectPtr<class ULexWidget>>& inOutCreatedImageObjectArray, bool listImageObjectInEditorOutliner);
+	void CreateOrUpdateObject(class ULexWidget* parent, const TArray<FLexUIText_Emoji>& emojiArray, TArray<TObjectPtr<class ULexWidget>>& inOutCreatedImageObjectArray);
 	bool GetImageSize(const uint32& emojiCode, FIntVector2& outSize);
 };

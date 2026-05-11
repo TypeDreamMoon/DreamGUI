@@ -41,7 +41,7 @@ public:
 
 private:
 	UPROPERTY(EditAnywhere, Category = LGUI)
-		FLexUIComponentReference TargetCanvas;
+		FLexUIComponentReference TargetWidgetPresenter;
 	UPROPERTY(EditAnywhere, Category = LGUI)
 		ELexUIRenderTargetGeometryMode GeometryMode = ELexUIRenderTargetGeometryMode::Plane;
 	UPROPERTY(EditAnywhere, Category = LGUI)

@@ -4,37 +4,27 @@
 
 #include "LGUI.h"
 #include "Core/LexUIManager.h"
-#include "Components/SceneComponent.h"
-#include "Core/Actor/LexWidgetContainer.h"
 #include "Core/Components/LexWidget.h"
 #include "PrefabSystem/LexUIPrefabManager.h"
-#include "Utils/LexUIUtils.h"
 
 ULexUIBehaviour::ULexUIBehaviour()
 {
-	PrimaryComponentTick.bCanEverTick = false;
-	PrimaryComponentTick.bStartWithTickEnabled = false;
-
 	bCanExecuteBlueprintEvent = GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native);
 	CallbacksBeforeAwake.SetNumZeroed((int)ECallbackFunctionType::COUNT);
 }
 
 void ULexUIBehaviour::BeginPlay()
 {
-	Super::BeginPlay();
 	ULexUIManagerWorldSubsystem::AddLexUIBehaviourForLifecycleEvent(this);
 }
-void ULexUIBehaviour::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void ULexUIBehaviour::TickComponent(float DeltaTime)
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 }
-void ULexUIBehaviour::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void ULexUIBehaviour::EndPlay()
 {
-	Super::EndPlay(EndPlayReason);
 }
 void ULexUIBehaviour::OnRegister()
 {
-	Super::OnRegister();
 	if (auto Widget = GetWidget())
 	{
 		Widget->GetWidgetActiveChangedEvent().AddUObject(this, &ULexUIBehaviour::Call_OnWidgetActiveChanged);
@@ -49,7 +39,6 @@ void ULexUIBehaviour::OnRegister()
 }
 void ULexUIBehaviour::OnUnregister()
 {
-	Super::OnUnregister();
 	if (IsValid(CacheWidget))
 	{
 		CacheWidget->GetWidgetActiveChangedEvent().RemoveAll(this);
@@ -73,6 +62,15 @@ void ULexUIBehaviour::PostEditChangeProperty(FPropertyChangedEvent& PropertyChan
 	}
 }
 #endif
+
+void ULexUIBehaviour::BeginDestroy()
+{
+	Super::BeginDestroy();
+	if (auto Widget = GetWidget())
+	{
+		Widget->RemoveComponent(this);
+	}
+}
 
 void ULexUIBehaviour::SetCanExecuteUpdate(bool Value)
 {
@@ -257,46 +255,18 @@ void ULexUIBehaviour::Call_Start()
 	Start();
 }
 
-USceneComponent* ULexUIBehaviour::GetSceneComponent()const
-{
-	if (!IsValid(CacheSceneComp))
-	{
-		if (this->GetWorld())
-		{
-			if (auto Owner = GetOwner())
-			{
-				CacheSceneComp = Owner->GetRootComponent();
-			}
-			else
-			{
-				UE_LOG(LGUI, Warning, TEXT("[%s].%d LexUIBehaviour must attach to Actor"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			}
-		}
-	}
-	return CacheSceneComp;
-}
 ULexWidget* ULexUIBehaviour::GetWidget() const
 {
 	if (!IsValid(CacheWidget))
 	{
-		if (this->GetWorld())
-		{
-			if (auto Owner = Cast<ULexWidgetContainer>(GetOwner()))
-			{
-				CacheWidget = Owner->GetLexWidget();
-			}
-			else
-			{
-				UE_LOG(LGUI, Warning, TEXT("[%s].%d LexUIBehaviour must attach to a LexWidgetActor"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			}
-		}
+		CacheWidget = this->GetTypedOuter<ULexWidget>();
 	}
 	return CacheWidget.Get();
 }
 
-void ULexUIBehaviour::DestroyWidget() const
+void ULexUIBehaviour::DestroyComponent()
 {
-	FLexUIUtils::DestroyActorWithHierarchy(GetOwner());
+	this->ConditionalBeginDestroy();
 }
 
 void ULexUIBehaviour::OnInteractableChanged(bool Interactable) 
@@ -571,7 +541,7 @@ void ULexUIBehaviour::Call_OnWidgetActiveChanged(bool WidgetActive)
 		{
 			if (auto PrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(this->GetWorld()))
 			{
-				if (!PrefabManager->IsPrefabSystemProcessingActor(this->GetOwner()))//If processing by prefab system, that means not finish deserialize yet, then not allowed to call Awake
+				if (!PrefabManager->IsPrefabSystemProcessingWidget(this->GetWidget()))//If processing by prefab system, that means not finish deserialize yet, then not allowed to call Awake
 				{
 					if (WidgetActive)
 					{

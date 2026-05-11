@@ -107,9 +107,9 @@ void ULexText::EndPlay()
 	for (int i = 0; i < CreatedRichTextImageObjectArray.Num(); i++)
 	{
 		auto item = CreatedRichTextImageObjectArray[i];
-		if (IsValid(item) && IsValid(item->GetOwner()))
+		if (IsValid(item))
 		{
-			FLexUIUtils::DestroyActorWithHierarchy(item->GetOwner());
+			item->DestroyWidget();
 		}
 	}
 	CreatedRichTextImageObjectArray.Empty();
@@ -348,20 +348,6 @@ void ULexText::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEven
 			{
 				MarkVertexPositionDirty();
 				CacheTextGeometryData.MarkDirty();
-			}
-			else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, bListRichTextImageObjectInOutliner))
-			{
-				for (auto& imageObj : CreatedRichTextImageObjectArray)
-				{
-					if (IsValid(imageObj))
-					{
-						auto bListedInSceneOutliner_Property = FindFProperty<FBoolProperty>(AActor::StaticClass(), TEXT("bListedInSceneOutliner"));
-						bListedInSceneOutliner_Property->SetPropertyValue_InContainer(imageObj->GetOwner(), bListRichTextImageObjectInOutliner);
-					}
-				}
-#if WITH_EDITOR
-				ULexUIManagerObject::MarkBroadcastLevelActorListChanged();
-#endif
 			}
 			else if (MemberPropertyName == GET_MEMBER_NAME_CHECKED(ULexText, bRichText))
 			{
@@ -630,11 +616,11 @@ void ULexText::SetDynamicPixelsPerUnit(float Value)
 
 void ULexText::ClearCreatedRichTextImageObject()
 {
-	for (auto& imageObj : CreatedRichTextImageObjectArray)
+	for (auto& ImageObj : CreatedRichTextImageObjectArray)
 	{
-		if (IsValid(imageObj))
+		if (IsValid(ImageObj))
 		{
-			FLexUIUtils::DestroyActorWithHierarchy(imageObj->GetOwner());
+			ImageObj->DestroyWidget();
 		}
 	}
 	CreatedRichTextImageObjectArray.Empty();
@@ -646,7 +632,7 @@ void ULexText::ClearEmojiObject()
 	{
 		if (IsValid(ItemObj))
 		{
-			FLexUIUtils::DestroyActorWithHierarchy(ItemObj->GetOwner());
+			ItemObj->DestroyWidget();
 		}
 	}
 	CreatedEmojiObjectArray.Empty();
@@ -778,26 +764,14 @@ const TArray<FLexUIText_RichTextImageTag>& ULexText::GetRichTextImageTagArray()c
 void ULexText::GenerateRichTextImageObject()
 {
 	if (!IsValid(RichTextImageData))return;
-	RichTextImageData->CreateOrUpdateObject(this->GetWidget(), CacheTextGeometryData.cacheRichTextImageTagArray, CreatedRichTextImageObjectArray, 
-#if WITH_EDITOR
-		bListRichTextImageObjectInOutliner
-#else
-		false
-#endif
-	);
+	RichTextImageData->CreateOrUpdateObject(this->GetWidget(), CacheTextGeometryData.cacheRichTextImageTagArray, CreatedRichTextImageObjectArray);
 }
 
 void ULexText::GenerateEmojiObject()
 {
 	if (auto EmojiData = Font->GetEmojiData())
 	{
-		EmojiData->CreateOrUpdateObject(this->GetWidget(), CacheTextGeometryData.cacheEmojiArray, CreatedEmojiObjectArray, 
-	#if WITH_EDITOR
-		bListEmojiObjectInOutliner
-	#else
-			false
-	#endif
-		);
+		EmojiData->CreateOrUpdateObject(this->GetWidget(), CacheTextGeometryData.cacheEmojiArray, CreatedEmojiObjectArray);
 	}
 }
 
@@ -1111,7 +1085,7 @@ void ULexText::FindCaretByWorldPosition(FVector inWorldPosition, FVector2f& outC
 		UpdateCacheTextGeometry();
 		auto& cacheLinePropertyArray = CacheTextGeometryData.cacheLinePropertyArray;
 
-		auto localPosition = GetWidget()->GetComponentTransform().InverseTransformPosition(inWorldPosition);
+		auto localPosition = GetWidget()->GetWorldTransform().InverseTransformPosition(inWorldPosition);
 		auto localPosition2D = FVector2f(localPosition.Y, localPosition.Z);
 
 		float nearestDistance = MAX_FLT;

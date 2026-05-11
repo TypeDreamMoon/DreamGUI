@@ -4,9 +4,8 @@
 #include "PrefabSystem/LexUIPrefab.h"
 #include "LexUIEditorTools.h"
 #include "AssetRegistry/AssetData.h"
-#include "Editor.h"
 #include "Core/LexUIManager.h"
-#include "Core/Actor/LexWidgetRootActor.h"
+#include "Core/Actor/LexWidgetPresenterComponent.h"
 #include "Core/Components/LexWidget.h"
 #include "Event/LexScreenSpaceRaycaster.h"
 
@@ -33,8 +32,8 @@ bool ULexUIPrefabActorFactory::CanCreateActorFrom(const FAssetData& AssetData, F
 
 bool ULexUIPrefabActorFactory::PreSpawnActor(UObject* Asset, FTransform& InOutLocation)
 {
-	ALexWidgetRootActor::MarkNeedCheckNecessaryObjects();
-	ULexUIPrefab* Prefab = CastChecked<ULexUIPrefab>(Asset);
+	ULexWidgetPresenterComponent::MarkNeedCheckNecessaryObjects();
+	auto Prefab = CastChecked<ULexUIPrefab>(Asset);
 
 	if (Prefab == NULL)
 	{
@@ -47,10 +46,10 @@ AActor* ULexUIPrefabActorFactory::SpawnActor(UObject* InAsset, ULevel* InLevel, 
 	const FActorSpawnParameters& InSpawnParams)
 {
 	auto Actor = Super::SpawnActor(InAsset, InLevel, InTransform, InSpawnParams);
-	if (auto RootActor = CastChecked<ALexWidgetRootActor>(Actor))
-	{
-		RootActor->bIsSpawnFromPrefabFactory = true;
-	}
+	auto WidgetPresenterComponent = NewObject<ULexWidgetPresenterComponent>(Actor, ULexWidgetPresenterComponent::StaticClass());
+	WidgetPresenterComponent->RegisterComponent();
+	Actor->AddInstanceComponent(WidgetPresenterComponent);
+	WidgetPresenterComponent->bIsSpawnFromPrefabFactory = true;
 	return Actor;
 }
 
@@ -60,18 +59,18 @@ void ULexUIPrefabActorFactory::PostSpawnActor(UObject* Asset, AActor* InNewActor
 
 	auto Prefab = CastChecked<ULexUIPrefab>(Asset);
 
-	auto PrefabActor = CastChecked<ALexWidgetRootActor>(InNewActor);
-	PrefabActor->GetLexWidget()->SetSizeDelta(Prefab->PrefabDataForPrefabEditor.CanvasSize);
-	PrefabActor->SetPrefab(Prefab);
+	auto WidgetPresenterComponent = InNewActor->FindComponentByClass<ULexWidgetPresenterComponent>();
+	WidgetPresenterComponent->GetRootWidget()->SetSizeDelta(Prefab->PrefabDataForPrefabEditor.CanvasSize);
+	WidgetPresenterComponent->SetPrefab(Prefab);
 
 	auto World = InNewActor->GetWorld();
 	if (World && World->WorldType != EWorldType::EditorPreview && !World->IsGameWorld())//Edit mode and not BlueprintEditorPreview
 	{
-		ULexUIManagerObject::AddOneShotTickFunction([WeakPrefabActor = MakeWeakObjectPtr(PrefabActor)]()
+		ULexUIManagerObject::AddOneShotTickFunction([WeakObject = MakeWeakObjectPtr(WidgetPresenterComponent)]()
 		{
-			if (WeakPrefabActor.IsValid())
+			if (WeakObject.IsValid())
 			{
-				WeakPrefabActor->CheckNecessaryObjects();
+				WeakObject->CheckNecessaryObjects();
 			}
 		}, 1);
 	}
@@ -85,9 +84,9 @@ void ULexUIPrefabActorFactory::PostPlaceAsset(TArrayView<const FTypedElementHand
 
 UObject* ULexUIPrefabActorFactory::GetAssetFromActorInstance(AActor* ActorInstance)
 {
-	check(ActorInstance->IsA(NewActorClass));
-	auto PrefabActor = CastChecked<ALexWidgetRootActor>(ActorInstance);
-	return PrefabActor->GetPrefab();
+	auto WidgetPresenterComponent = ActorInstance->FindComponentByClass<ULexWidgetPresenterComponent>();
+	check(WidgetPresenterComponent);
+	return WidgetPresenterComponent->GetPrefab();
 }
 
 UClass* ULexUIPrefabActorFactory::GetDefaultActorClass(const FAssetData& AssetData)
@@ -108,7 +107,7 @@ UClass* ULexUIPrefabActorFactory::GetDefaultActorClass(const FAssetData& AssetDa
 			ClassName = TEXT("ScreenSpaceRoot");
 		}
 		
-		NewActorClass = LoadClass<ALexWidgetRootActor>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), *ClassName, *ClassName));
+		NewActorClass = LoadClass<AActor>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), *ClassName, *ClassName));
 		return NewActorClass;
 	}
 	return nullptr;

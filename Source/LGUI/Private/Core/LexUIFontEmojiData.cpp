@@ -2,11 +2,8 @@
 
 #include "Core/LexUIFontEmojiData.h"
 
-#include "Core/LexUIManager.h"
 #include "Extensions/UISpriteSequencePlayer.h"
-#include "Utils/LexUIUtils.h"
 #include "Core/LexUISpriteData_BaseObject.h"
-#include "Core/Actor/LexWidgetContainer.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexSprite.h"
 #include "Engine/World.h"
@@ -68,45 +65,39 @@ void ULexUIFontEmojiData::BroadcastOnDataChange()
 	OnDataChange.Broadcast();
 }
 
-void ULexUIFontEmojiData::CreateOrUpdateObject(ULexWidget* parent, const TArray<FLexUIText_Emoji>& emojiData, TArray<TObjectPtr<ULexWidget>>& createdImageObjectArray, bool listImageObjectInEditorOutliner)
+void ULexUIFontEmojiData::CreateOrUpdateObject(ULexWidget* parent, const TArray<FLexUIText_Emoji>& emojiData, TArray<TObjectPtr<ULexWidget>>& createdImageObjectArray)
 {
 	//destroy extra
 	while (createdImageObjectArray.Num() > emojiData.Num())
 	{
 		auto lastIndex = createdImageObjectArray.Num() - 1;
 		auto imageObj = createdImageObjectArray[lastIndex];
-		FLexUIUtils::DestroyActorWithHierarchy(imageObj->GetOwner());
+		imageObj->DestroyWidget();
 		createdImageObjectArray.RemoveAt(lastIndex);
 	}
 	//create more
 	while (createdImageObjectArray.Num() < emojiData.Num())
 	{
-		auto spriteActor = parent->GetWorld()->SpawnActor<ULexWidgetContainer>();
-		spriteActor->SetFlags(EObjectFlags::RF_Transient);
-		spriteActor->GetLexWidget()->AttachToComponent(parent, FAttachmentTransformRules::KeepRelativeTransform);
-		createdImageObjectArray.Push(spriteActor->GetLexWidget());
+		auto Widget = NewObject<ULexWidget>(parent->GetOuter());
+		Widget->SetFlags(EObjectFlags::RF_Transient);
+		Widget->SetParent(parent, false);
+		Widget->CreateNewVisual<ULexSprite>();
+		createdImageObjectArray.Push(Widget);
 	}
 	//apply data
 	for (int i = 0; i < emojiData.Num(); i++)
 	{
 		auto ImageWidget = createdImageObjectArray[i];
-		auto ImageVisual = Cast<ULexSprite>(ImageWidget->GetVisual());
+		auto ImageVisual = (ULexSprite*)ImageWidget->GetVisual();
 		if (!ImageVisual)
 		{
 			ImageVisual = ImageWidget->CreateNewVisual<ULexSprite>();
 		}
-#if WITH_EDITOR
-		ImageWidget->GetOwner()->SetActorLabel(FString::Printf(TEXT("[%d]"), emojiData[i].EmojiCode));
-		if (!parent->GetWorld()->IsGameWorld())//set it only in edit mode
-		{
-			auto bListedInSceneOutliner_Property = FindFProperty<FBoolProperty>(AActor::StaticClass(), TEXT("bListedInSceneOutliner"));
-			bListedInSceneOutliner_Property->SetPropertyValue_InContainer(ImageWidget->GetOwner(), listImageObjectInEditorOutliner);
-		}
-#endif
+		ImageWidget->SetDisplayName(FString::Printf(TEXT("[%d]"), emojiData[i].EmojiCode));
 		if (auto imageItemPtr = DataMap.Find(emojiData[i].EmojiCode))
 		{
 			auto& spriteFrames = imageItemPtr->Frames;
-			auto sequencePlayerComp = ImageWidget->GetOwner()->FindComponentByClass<UUISpriteSequencePlayer>();
+			auto sequencePlayerComp = ImageWidget->GetComponent<UUISpriteSequencePlayer>();
 			if (spriteFrames.Num() == 0)
 			{
 				ImageVisual->SetSprite(nullptr, false);
@@ -127,10 +118,8 @@ void ULexUIFontEmojiData::CreateOrUpdateObject(ULexWidget* parent, const TArray<
 			{
 				if (!IsValid(sequencePlayerComp))
 				{
-					sequencePlayerComp = NewObject<UUISpriteSequencePlayer>(ImageWidget->GetOwner());
+					ImageWidget->AddComponent<UUISpriteSequencePlayer>();
 					sequencePlayerComp->SetSnapSpriteSize(false);
-					sequencePlayerComp->RegisterComponent();
-					ImageWidget->GetOwner()->AddInstanceComponent(sequencePlayerComp);
 				}
 				sequencePlayerComp->SetSpriteSequence(spriteFrames);
 				sequencePlayerComp->SetFps(imageItemPtr->OverrideAnimationFps < 0 ? AnimationFps : imageItemPtr->OverrideAnimationFps);
@@ -148,12 +137,6 @@ void ULexUIFontEmojiData::CreateOrUpdateObject(ULexWidget* parent, const TArray<
 			ImageWidget->SetSizeDelta(FVector2D(emojiData[i].Size));
 		}
 	}
-#if WITH_EDITOR
-	if (!parent->GetWorld()->IsGameWorld())//refresh on editor
-	{
-		ULexUIManagerObject::MarkBroadcastLevelActorListChanged();
-	}
-#endif
 }
 bool ULexUIFontEmojiData::GetImageSize(const uint32& emojiCode, FIntVector2& outSize)
 {

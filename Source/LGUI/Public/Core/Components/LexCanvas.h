@@ -2,16 +2,17 @@
 
 #pragma once
 
-#include "Components/ActorComponent.h"
 #include "Camera/CameraTypes.h"
 #include "Core/LexCanvasAsyncFunctionRunnable.h"
 #include "Core/LexCanvasDrawCallProcessingRunnable.h"
 #include "Core/LexCanvasProcessingDrawCallData.h"
+#include "Core/LexUIBehaviour.h"
 #include "Core/LexUIDrawCall.h"
 #include "Math/TransformCalculus2D.h"
 #include "PrefabSystem/ILexUIPrefabInterface.h"
 #include "LexCanvas.generated.h"
 
+class ULexWidgetPresenterComponent;
 class FLexUIClipData;
 class ULexUIDataAsTexture;
 
@@ -184,7 +185,7 @@ class UTextureRenderTarget2D;
  * Other UV channels are defined by LexVisual, check LexText and LexRectBlock.
  */
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API ULexCanvas : public UActorComponent, public ILexUIPrefabInterface
+class LGUI_API ULexCanvas : public ULexUIBehaviour, public ILexUIPrefabInterface
 {
 	GENERATED_BODY()
 
@@ -192,8 +193,7 @@ public:
 	ULexCanvas();
 protected:
 	virtual void BeginPlay() override;
-	virtual void TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction ) override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason)override;
+	virtual void EndPlay()override;
 	//begin LGUIPrefabInterface
 	virtual void Awake_Implementation() override;
 	//end LGUIPrefabInterface
@@ -207,7 +207,6 @@ public:
 #endif
 	virtual void OnRegister()override;
 	virtual void OnUnregister()override;
-	virtual void OnComponentDestroyed(bool bDestroyingHierarchy)override;
 	virtual void PostInitProperties() override;
 
 	static FName GetPropertyName_TraceChannel()
@@ -256,15 +255,16 @@ public:
 	/** is this the root canvas in hierarchy */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	bool IsRootCanvas()const;
+	/** Only called by LexWidgetPresenterComponent */
+	void SetWidgetPresenterComponent(ULexWidgetPresenterComponent* InPresenter);
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	ULexWidgetPresenterComponent* GetWidgetPresenterComponent() const{return WidgetPresenterComponent.Get();}
 
 	bool IsRenderToScreenSpace()const;
 	bool IsRenderToRenderTarget()const;
 	bool IsRenderToWorldSpace()const;
 	bool IsRenderByLexUIRendererOrUERenderer()const;
 
-	/** Return LexWidget component which this LexCanvas attach to. */
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-	ULexWidget* GetLexWidget()const { return LexWidget.Get(); }
 	TWeakObjectPtr<ULexCanvas> GetParentCanvas()const { return ParentCanvas; }
 
 	void SetParentCanvas(ULexCanvas* InParentCanvas);
@@ -280,8 +280,6 @@ protected:
 	/** nearest up parent Canvas */
 	UPROPERTY(Transient) TWeakObjectPtr<ULexCanvas> ParentCanvas = nullptr;
 
-	UPROPERTY(Transient) mutable TWeakObjectPtr<ULexWidget> LexWidget = nullptr;
-	bool CheckLexWidget()const;
 protected:
 	friend class FLexCanvasCustomization;
 	friend class FLexWidgetCustomization;
@@ -747,6 +745,9 @@ private:
 	TArray<TObjectPtr<ULexWidget>> WidgetList;//All LexWidget that belongs to this canvas
 	TSharedPtr<FLexUIDrawCall> DrawCallAsChildCanvas = nullptr;//DrawCall that represent this canvas when the canvas is render as child.
 
+	UPROPERTY(Transient)
+	mutable TWeakObjectPtr<ULexWidgetPresenterComponent> WidgetPresenterComponent = nullptr;
+	
 	//clip data is stored in root canvas
 	TArray<TSharedPtr<FLexUIClipData>> ClipDataList;
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)

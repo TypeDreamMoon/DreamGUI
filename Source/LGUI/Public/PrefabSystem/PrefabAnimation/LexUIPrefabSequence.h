@@ -64,10 +64,10 @@ public:
 	DECLARE_EVENT_OneParam(ULexUIPrefabSequence, FOnInitialize, ULexUIPrefabSequence*)
 	static FOnInitialize& OnInitializeSequence() { return OnInitializeSequenceEvent; }
 
-	bool IsObjectReferencesGood(AActor* InContextActor)const;
-	bool IsEditorHelpersGood(AActor* InContextActor)const;
-	void FixObjectReferences(AActor* InContextActor);
-	void FixEditorHelpers(AActor* InContextActor);
+	bool IsObjectReferencesGood(ULexWidget* InContextActor)const;
+	bool IsEditorHelpersGood(ULexWidget* InContextActor)const;
+	void FixObjectReferences(ULexWidget* InContextActor);
+	void FixEditorHelpers(ULexWidget* InContextActor);
 private:
 	static FOnInitialize OnInitializeSequenceEvent;
 #endif

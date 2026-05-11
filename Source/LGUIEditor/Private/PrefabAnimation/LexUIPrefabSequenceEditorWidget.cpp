@@ -17,7 +17,6 @@
 #include "Utils/LexUIUtils.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequenceComponent.h"
-#include "Core/Actor/LexWidgetContainer.h"
 #include "LevelEditor.h"
 #include "Core/Components/LexImage.h"
 #include "Core/Components/LexLayout.h"
@@ -139,7 +138,7 @@ public:
 		if (LocalLGUIPrefabSequence)
 		{
 			auto Component = LocalLGUIPrefabSequence->GetTypedOuter<ULexUIPrefabSequenceComponent>();
-			return Component->GetOwner();
+			return Component->GetWidget();
 		}
 		
 		return nullptr;
@@ -295,7 +294,7 @@ public:
 
 		UMovieSceneSequence* AnimationSequence = Sequencer->GetFocusedMovieSceneSequence();
 		UObject* BindingContext = WeakSequence.Get();
-		TSet<ULexWidgetContainer*> SequencerSelectedWidgets;
+		TSet<ULexWidget*> SequencerSelectedWidgets;
 		for (FGuid Guid : ObjectGuids)
 		{
 			TArray<UObject*, TInlineAllocator<1>> BoundObjects;
@@ -306,7 +305,7 @@ public:
 			}
 			else
 			{
-				ULexWidgetContainer* BoundWidget = Cast<ULexWidgetContainer>(BoundObjects[0]);
+				ULexWidget* BoundWidget = Cast<ULexWidget>(BoundObjects[0]);
 				if (BoundWidget)
 				{
 					SequencerSelectedWidgets.Add(BoundWidget);
@@ -316,11 +315,11 @@ public:
 
 		if (SequencerSelectedWidgets.Num() != 0)
 		{
-			ULexWidgetContainer* SelectedActor = *SequencerSelectedWidgets.begin();
+			ULexWidget* SelectedActor = *SequencerSelectedWidgets.begin();
 
 			// Sync Selection
-			GEditor->SelectNone(false, true, false);
-			GEditor->SelectActor(SelectedActor, true, true, true);
+			// GEditor->SelectNone(false, true, false);
+			// GEditor->SelectActor(SelectedActor, true, true, true);
 		}
 	}
 
@@ -555,10 +554,10 @@ public:
 	void OnSequenceChanged()
 	{
 		ULexUIPrefabSequence* LGUIPrefabSequence = WeakSequence.Get();
-		auto Actor = WeakSequence.IsValid() ? WeakSequence->GetTypedOuter<AActor>() : nullptr;
-		if (Actor)
+		auto Widget = WeakSequence.IsValid() ? WeakSequence->GetTypedOuter<ULexWidget>() : nullptr;
+		if (Widget)
 		{
-			if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(Actor))
+			if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(Widget))
 			{
 				PrefabHelperObject->SetAnythingDirty();
 			}

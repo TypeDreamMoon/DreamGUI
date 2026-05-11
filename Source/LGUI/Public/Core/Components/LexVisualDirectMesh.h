@@ -34,7 +34,7 @@ protected:
 	
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange)override;
 	virtual void MarkAllDirty()override;
-	virtual bool LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const override;
+	virtual bool LineTraceUI(FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const override;
 	void PostFillMeshData();
 public:
 	FORCEINLINE bool GetRequirePropertiesForMaterial_Size()const{ return PropertiesForMaterial & (1 << (int)ELexVisualPropertiesForMaterial::Size); }

@@ -72,7 +72,6 @@ void FLexTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder
 		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, RichTextTagFilterFlags)));
 		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, RichTextCustomStyleData)));
 		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, RichTextImageData)));
-		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, bListRichTextImageObjectInOutliner)));
 		RichTextGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexText, CreatedRichTextImageObjectArray)));
 	}
 	else
@@ -80,7 +79,6 @@ void FLexTextCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder
 		LGUICategory.AddProperty(RichText_PH);
 		NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexText, RichTextCustomStyleData));
 		NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexText, RichTextImageData));
-		NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexText, bListRichTextImageObjectInOutliner));
 		NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexText, CreatedRichTextImageObjectArray));
 		NeedToHidePropertyNames.Add(GET_MEMBER_NAME_CHECKED(ULexText, RichTextTagFilterFlags));
 	}

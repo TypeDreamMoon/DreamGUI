@@ -1,11 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "PrefabSystem/ActorSerializer.h"
+#include "PrefabSystem/WidgetSerializer.h"
 #include "PrefabSystem/LexUIObjectReaderAndWriter.h"
-#include "GameFramework/Actor.h"
-#include "Engine/World.h"
 #include "Serialization/MemoryReader.h"
-#include "Components/PrimitiveComponent.h"
 #include "Runtime/Launch/Resources/Version.h"
 #include "LGUI.h"
 #include "Core/LexUIManager.h"
@@ -14,21 +11,22 @@
 
 namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 {
-	ULexWidget* ActorSerializer::DuplicateActor(UObject* InOwnerObject, ULexWidget* OriginRootActor, ULexWidget* Parent)
+	ULexWidget* WidgetSerializer::DuplicateWidget(UWorld* InWorld, UObject* InOwnerObject, ULexWidget* OriginRootWidget, ULexWidget* Parent)
 	{
-		if (!OriginRootActor)
+		if (!OriginRootWidget)
 		{
-			UE_LOG(LGUI, Error, TEXT("[%s].%d OriginRootActor is null!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+			UE_LOG(LGUI, Error, TEXT("[%s].%d OriginRootWidget is null!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			return nullptr;
 		}
-		ActorSerializer serializer;
+		WidgetSerializer serializer;
+		serializer.World = InWorld;
 		serializer.OwnerObject = InOwnerObject;
 #if !WITH_EDITOR
 		serializer.bIsEditorOrRuntime = false;
 #endif
 		serializer.bOverrideVersions = false;
 
-		auto Name = OriginRootActor->GetDisplayName();
+		auto Name = OriginRootWidget->GetDisplayName();
 		auto StartTime = FDateTime::Now();
 
 		//serialize
@@ -38,7 +36,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 			Writer.DoSerialize(InObject);
 		};
 		FLexUIPrefabSaveData SaveData;
-		serializer.SerializeActorToData(OriginRootActor, SaveData);
+		serializer.SerializeWidgetToData(OriginRootWidget, SaveData);
 
 		//deserialize
 		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, bool InIsSceneComponent) {
@@ -46,7 +44,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 			LexUIPrefabSystem::FLexUIDuplicateObjectReader Reader(InOutBuffer, serializer, ExcludeProperties);
 			Reader.DoSerialize(InObject);
 		};
-		auto CreatedRootActor = serializer.DeserializeActorFromData(SaveData, Parent, false, FVector::ZeroVector, FQuat::Identity, FVector::OneVector);
+		auto CreatedRootWidget = serializer.DeserializeWidgetFromData(SaveData, Parent, false, FVector::ZeroVector, FQuat::Identity, FVector::OneVector);
 
 		if (GetDefault<ULexUIEditorSettings>()->bLogPrefabLoadTime)
 		{
@@ -54,16 +52,13 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 			UE_LOG(LGUI, Log, TEXT("Duplicate actor: '%s', total time: %fms"), *Name, TimeSpan.GetTotalMilliseconds());
 		}
 
-#if WITH_EDITOR
-		ULexUIManagerObject::MarkBroadcastLevelActorListChanged();//UE5 will not auto refresh scene outliner and display actor label, so manually refresh it.
-#endif
-		return CreatedRootActor;
+		return CreatedRootWidget;
 	}
-	bool ActorSerializer::PrepareDataForDuplicate(ULexWidget* OriginRootWidget, FDuplicateActorDataContainer& OutData)
+	bool WidgetSerializer::PrepareDataForDuplicate(ULexWidget* OriginRootWidget, FDuplicateWidgetDataContainer& OutData)
 	{
 		if (!OriginRootWidget)
 		{
-			UE_LOG(LGUI, Error, TEXT("[%s].%d OriginRootActor is null!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+			UE_LOG(LGUI, Error, TEXT("[%s].%d OriginRootWidget is null!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			return false;
 		}
 
@@ -83,7 +78,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 			LexUIPrefabSystem::FLexUIDuplicateObjectWriter Writer(InOutBuffer, serializer, ExcludeProperties);
 			Writer.DoSerialize(InObject);
 		};
-		serializer.SerializeActorToData(OriginRootWidget, OutData.ActorData);
+		serializer.SerializeWidgetToData(OriginRootWidget, OutData.WidgetData);
 
 		//for deserialize, set once for all use
 		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, bool InIsSceneComponent) {
@@ -99,38 +94,35 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 		}
 		return true;
 	}
-	ULexWidget* ActorSerializer::DuplicateActorWithPreparedData(FDuplicateActorDataContainer& InData, ULexWidget* InParent)
+	ULexWidget* WidgetSerializer::DuplicateWidgetWithPreparedData(UWorld* InWorld, UObject* InOwnerObject, FDuplicateWidgetDataContainer& InData, ULexWidget* InParent)
 	{
 		auto StartTime = FDateTime::Now();
 		auto& serializer = InData.Serializer;//use copied, incase undesired data
+		serializer.World = InWorld;
+		serializer.OwnerObject = InOwnerObject;
 		//clear these data for deserializer use
 		serializer.WillSerializeWidgetArray.Reset();
 		serializer.WillSerializeObjectArray.Reset();
 		serializer.MapGuidToObject.Reset();
 		serializer.MapObjectToGuid.Reset();
-		serializer.ComponentsInThisPrefab.Reset();
 		serializer.SubPrefabMap.Reset();
 		serializer.SubPrefabRootComponents.Reset();
 		serializer.AllWidgets.Reset();
-		serializer.AllComponents.Reset();
 		serializer.SubPrefabOverrideParameters.Reset();
 		serializer.DeserializationSessionId = FGuid();
 		serializer.bIsSubPrefab = false;
 		serializer.SubPrefabObjectOverrideData.Reset();
 
-		auto CreatedRootActor = serializer.DeserializeActorFromData(InData.ActorData, InParent, false, FVector::ZeroVector, FQuat::Identity, FVector::OneVector);
+		auto CreatedRootWidget = serializer.DeserializeWidgetFromData(InData.WidgetData, InParent, false, FVector::ZeroVector, FQuat::Identity, FVector::OneVector);
 		if (GetDefault<ULexUIEditorSettings>()->bLogPrefabLoadTime)
 		{
 			auto TimeSpan = FDateTime::Now() - StartTime;
-			UE_LOG(LGUI, Log, TEXT("DuplicateActorWithPreparedData total time: %fms"), TimeSpan.GetTotalMilliseconds());
+			UE_LOG(LGUI, Log, TEXT("DuplicateWidgetWithPreparedData total time: %fms"), TimeSpan.GetTotalMilliseconds());
 		}
-#if WITH_EDITOR
-		ULexUIManagerObject::MarkBroadcastLevelActorListChanged();//UE5 will not auto refresh scene outliner and display actor label, so manually refresh it.
-#endif
-		return CreatedRootActor;
+		return CreatedRootWidget;
 	}
 
-	ULexWidget* ActorSerializer::DuplicateActorForEditor(ULexWidget* OriginRootWidget, ULexWidget* Parent
+	ULexWidget* WidgetSerializer::DuplicateWidgetForEditor(UWorld* InWorld, ULexWidget* OriginRootWidget, ULexWidget* Parent
 		, const TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& InSubPrefabMap
 		, const TMap<UObject*, FGuid>& InMapObjectToGuid
 		, TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& OutDuplicatedSubPrefabMap
@@ -139,7 +131,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 	{
 		if (!OriginRootWidget)
 		{
-			UE_LOG(LGUI, Error, TEXT("[%s].%d OriginRootActor is null!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+			UE_LOG(LGUI, Error, TEXT("[%s].%d OriginRootWidget is null!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			return nullptr;
 		}
 
@@ -147,7 +139,8 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 		UE_LOG(LGUI, Log, TEXT("Begin duplicate actor: '%s'"), *Name);
 		auto StartTime = FDateTime::Now();
 
-		ActorSerializer serializer;
+		WidgetSerializer serializer;
+		serializer.World = InWorld;
 		serializer.OwnerObject = Parent->GetOuter();
 		serializer.MapObjectToGuid = InMapObjectToGuid;
 #if !WITH_EDITOR
@@ -166,7 +159,7 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 			Writer.DoSerialize(InObject);
 		};
 		FLexUIPrefabSaveData SaveData;
-		serializer.SerializeActorToData(OriginRootWidget, SaveData);
+		serializer.SerializeWidgetToData(OriginRootWidget, SaveData);
 
 		//deserialize
 		serializer.SubPrefabMap = {};//clear it for deserializer to fill
@@ -179,18 +172,14 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 			LexUIPrefabSystem::FLexUIDuplicateOverrideParameterObjectReader Reader(InOutBuffer, serializer, InOverridePropertyNameSet);
 			Reader.DoSerialize(InObject);
 		};
-		auto CreatedRootActor = serializer.DeserializeActorFromData(SaveData, Parent, false, FVector::ZeroVector, FQuat::Identity, FVector::OneVector);
+		auto CreatedRootWidget = serializer.DeserializeWidgetFromData(SaveData, Parent, false, FVector::ZeroVector, FQuat::Identity, FVector::OneVector);
 
 		OutDuplicatedSubPrefabMap = serializer.SubPrefabMap;
 		OutMapGuidToObject = serializer.MapGuidToObject;
 		auto TimeSpan = FDateTime::Now() - StartTime;
 		UE_LOG(LGUI, Log, TEXT("End duplicate actor: '%s', total time: %fms"), *Name, TimeSpan.GetTotalMilliseconds());
 
-#if WITH_EDITOR
-		ULexUIManagerObject::MarkBroadcastLevelActorListChanged();//UE5 will not auto refresh scene outliner and display actor label, so manually refresh it.
-#endif
-
-		return CreatedRootActor;
+		return CreatedRootWidget;
 	}
 }
 

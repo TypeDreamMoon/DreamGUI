@@ -3,29 +3,30 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Core/Actor/LexWidgetContainer.h"
 #include "GameFramework/Actor.h"
-#include "LexWidgetRootActor.generated.h"
+#include "LexWidgetPresenterComponent.generated.h"
 
+class ULexWidget;
 class UUINavigationInputSelectionHandler;
 class ULexCanvas;
 class ULexUIPrefab;
 
 UCLASS()
-class LGUI_API ALexWidgetRootActor : public ULexWidgetContainer
+class LGUI_API ULexWidgetPresenterComponent : public USceneComponent
 {
 	GENERATED_BODY()
 
 public:
-	ALexWidgetRootActor();
+	ULexWidgetPresenterComponent();
 
 protected:
 	virtual void BeginPlay() override;
-	virtual void PostRegisterAllComponents() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void OnRegister() override;
+	virtual void OnUnregister() override;
 	void LoadPrefab();
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-	void ApplyListInSceneOutliner();
 	static bool bNeedCheckEventSystem;
 	static bool bNeverCheckEventSystem;
 	static bool bNeedCheckRaycasterSource;
@@ -40,10 +41,12 @@ public:
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=LGUI)
 	TObjectPtr<ULexCanvas> Canvas;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=LGUI)
+	TObjectPtr<ULexWidget> RootWidget;
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category=LGUI)
 	TObjectPtr<ULexUIPrefab> WidgetPrefab;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=LGUI)
-	TWeakObjectPtr<AActor> LoadedActor;
+	TWeakObjectPtr<ULexWidget> LoadedWidget;
 	/**
 	 * For navigation input, show a selection widget
 	 */
@@ -55,20 +58,20 @@ protected:
 
 #if WITH_EDITORONLY_DATA
 private:
-	UPROPERTY(EditAnywhere, Category=LGUI)
-	bool bListInSceneOutliner = false;
 	UPROPERTY()
 	FString OverallVersionMD5;
 #endif
 public:
-	virtual void Tick(float DeltaTime) override;
-
 	UFUNCTION(BlueprintCallable, Category=LGUI)
 	void SetPrefab(ULexUIPrefab* Value);
 	UFUNCTION(BlueprintCallable, Category=LGUI)
 	ULexUIPrefab* GetPrefab()const{return WidgetPrefab;}
 	UFUNCTION(BlueprintCallable, Category=LGUI)
-	AActor* GetLoadedActor()const{return LoadedActor.Get();}
+	ULexWidget* GetLoadedWidget()const{return LoadedWidget.Get();}
 	UFUNCTION(BlueprintCallable, Category=LGUI)
 	UUINavigationInputSelectionHandler* GetNavigationSelection();
+	UFUNCTION(BlueprintCallable, Category=LGUI)
+	ULexCanvas* GetCanvas()const{return Canvas;}
+	UFUNCTION(BlueprintCallable, Category=LGUI)
+	ULexWidget* GetRootWidget()const{return RootWidget;}
 };

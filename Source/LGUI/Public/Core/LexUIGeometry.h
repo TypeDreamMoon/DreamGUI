@@ -253,7 +253,7 @@ public:
 	);
 	static void AdjustPixelPerfectPos(
 		TArray<FLexUIOriginVertexData>& originVertices, int startIndex, int count
-		, ULexCanvas* renderCanvas, ULexVisual* uiComp
+		, ULexCanvas* RenderCanvas, ULexVisual* Visual
 	);
 private:
 	static void OffsetVertices(TArray<FLexUIOriginVertexData>& vertices, int count, float offsetX, float offsetY);

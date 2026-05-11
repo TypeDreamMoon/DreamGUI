@@ -55,7 +55,7 @@ void ULexVisualDirectMesh::OnSupplyMeshSection(TWeakObjectPtr<ULexUIMeshComponen
 	MeshSection = InSection;
 }
 
-bool ULexVisualDirectMesh::LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const
+bool ULexVisualDirectMesh::LineTraceUI(FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
 	if (RaycastType == ELexVisualRaycastType::Rect)
 	{
@@ -68,7 +68,7 @@ bool ULexVisualDirectMesh::LineTraceUI(FHitResult& OutHit, const FVector& Start,
 		// if (!DrawCall->DrawCallRenderSection.IsValid())return false;
 
 		auto Widget = GetWidget();
-		auto inverseTf = Widget->GetComponentTransform().Inverse();
+		auto inverseTf = Widget->GetWorldTransform().Inverse();
 		auto localSpaceRayOrigin = inverseTf.TransformPosition(Start);
 		auto localSpaceRayEnd = inverseTf.TransformPosition(End);
 

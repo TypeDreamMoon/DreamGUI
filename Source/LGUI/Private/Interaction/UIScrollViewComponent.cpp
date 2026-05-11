@@ -151,22 +151,21 @@ bool UUIScrollViewComponent::CheckParameters()
     if (!ContentParent.IsValid())return false;
     //add helper comp to detect size change
     {
-        auto HelperComp = NewObject<UUIScrollViewHelper>(ContentParent->GetOwner());
+        auto HelperComp = ContentParent->AddComponent<UUIScrollViewHelper>();
         HelperComp->TargetComp = this;
-        HelperComp->RegisterComponent();
     }
     return true;
 }
 
-bool UUIScrollViewComponent::CheckValidHit(USceneComponent *InHitComp)
+bool UUIScrollViewComponent::CheckValidHit(ULexWidget *InHitComp)
 {
     auto Widget = GetWidget();
-    return (InHitComp->IsAttachedTo(Widget) || InHitComp == Widget); //make sure hit component is child of this or is this
+    return (InHitComp->IsChildOf(Widget) || InHitComp == Widget); //make sure hit component is child of this or is this
 }
 
 bool UUIScrollViewComponent::OnPointerBeginDrag_Implementation(ULexPointerEventData *EventData)
 {
-    if (CheckParameters() && CheckValidHit(EventData->DragComponent))
+    if (CheckParameters() && CheckValidHit(EventData->DragWidget))
     {
         PrevPointerPosition = EventData->PressWorldPoint;
         auto CurrentPointerPosition = EventData->GetWorldPointInPlane();
@@ -266,7 +265,7 @@ bool UUIScrollViewComponent::OnPointerEndDrag_Implementation(ULexPointerEventDat
 }
 bool UUIScrollViewComponent::OnPointerScroll_Implementation(ULexPointerEventData *EventData)
 {
-    if (CheckParameters() && CheckValidHit(EventData->EnterComponent))
+    if (CheckParameters() && CheckValidHit(EventData->EnterWidget))
     {
         if (EventData->ScrollAxisValue != FVector2D::ZeroVector)
         {
@@ -472,8 +471,8 @@ void UUIScrollViewComponent::ScrollTo(ULexWidget* InChild, bool InEaseAnimation,
 {
     if (!CheckParameters())return;
     auto CenterPos = InChild->GetLocalSpaceCenter();
-    auto CenterPosWorld = InChild->GetComponentTransform().TransformPosition(FVector(0, CenterPos.X, CenterPos.Y));
-    auto PosOffset = Content->GetComponentTransform().InverseTransformPosition(CenterPosWorld);
+    auto CenterPosWorld = InChild->GetWorldTransform().TransformPosition(FVector(0, CenterPos.X, CenterPos.Y));
+    auto PosOffset = Content->GetWorldTransform().InverseTransformPosition(CenterPosWorld);
     auto TargetContentPos = FVector2D(-PosOffset.Y, -PosOffset.Z);
     TargetContentPos.X = FMath::Clamp(TargetContentPos.X, HorizontalRange.X, HorizontalRange.Y);
     TargetContentPos.Y = FMath::Clamp(TargetContentPos.Y, VerticalRange.X, VerticalRange.Y);

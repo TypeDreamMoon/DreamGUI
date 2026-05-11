@@ -67,7 +67,7 @@ protected:
 
 	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, float& OutRayLength)override { return true; }
 	virtual bool ShouldStartDrag(ULexPointerEventData* InPointerEventData)override;
-	virtual void Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResultArray)override;
+	virtual void Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FLexUIHitResult>& OutHitResultArray)override;
 
 	virtual bool OnPointerEnter_Implementation(ULexPointerEventData* EventData)override;
 	virtual bool OnPointerExit_Implementation(ULexPointerEventData* EventData)override;
@@ -75,5 +75,5 @@ protected:
 	virtual bool OnPointerUp_Implementation(ULexPointerEventData* EventData)override;
 	virtual bool OnPointerScroll_Implementation(ULexPointerEventData* EventData)override;
 
-	bool LineTrace(FLexUIHitResult& OutHitResult);
+	bool LineTrace(FLexUIHitResultContainer& OutHitResult);
 };

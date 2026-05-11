@@ -209,7 +209,7 @@ public:
 		SCOPE_CYCLE_COUNTER(STAT_CreateRenderSection);
 #if !UE_BUILD_SHIPPING
 		static int DebugNameSuffix = 0;
-		DebugName = FString::Printf(TEXT("%s_SceneProxy_%d"), *InCanvasPtr->GetLexWidget()->GetDisplayName(), DebugNameSuffix++);
+		DebugName = FString::Printf(TEXT("%s_SceneProxy_%d"), *InCanvasPtr->GetWidget()->GetDisplayName(), DebugNameSuffix++);
 #endif
 		LexUIRenderer = InComponent->LexUIRenderer;
 		RenderCanvasPtr = InCanvasPtr;

@@ -15,7 +15,6 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "UnrealEdGlobals.h"
-#include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
 #include "Editor/UnrealEdEngine.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
@@ -165,9 +164,9 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			{
 				if (ValidItem->GetWorld()->WorldType == EWorldType::Editor)
 				{
-					if (auto PrefabHelper = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(ValidItem->GetOwner()))
+					if (auto PrefabHelper = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(ValidItem))
 					{
-						bIsSubPrefab = PrefabHelper->IsActorBelongsToSubPrefab(ValidItem->GetOwner());
+						bIsSubPrefab = PrefabHelper->IsWidgetBelongsToSubPrefab(ValidItem);
 					}
 					ValidItem->MarkCanvasUpdate(true);
 				}
@@ -179,8 +178,6 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		UE_LOG(LGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
-
-	FLexUIEditorUtils::ShowError_MultiComponentNotAllowed(&DetailBuilder, TargetScriptArray[0].Get());
 
 	IDetailCategoryBuilder& LGUICategory = DetailBuilder.EditCategory("LGUI");
 	DetailBuilder.HideCategory("TransformCommon");
@@ -855,7 +852,6 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		DetailBuilder.HideProperty(SiblingIndex_PH);
 		SiblingIndex_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
 			ForceUpdateUI();
-			ULexUIManagerObject::MarkBroadcastLevelActorListChanged();
 			}));
 		auto SiblingIndexWidget =
 			SNew(SHorizontalBox)
@@ -1031,52 +1027,18 @@ EVisibility FLexWidgetCustomization::GetDisplayNameWarningVisibility()const
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return EVisibility::Hidden;
 
-	if (auto actor = TargetScriptArray[0]->GetOwner())
+	auto actorLabel = TargetScriptArray[0]->GetDisplayName();
+	if (actorLabel.StartsWith("//"))
 	{
-		if (TargetScriptArray[0] == actor->GetRootComponent())
-		{
-			auto actorLabel = actor->GetActorLabel();
-			if (actorLabel.StartsWith("//"))
-			{
-				actorLabel = actorLabel.Right(actorLabel.Len() - 2);
-			}
-			if (TargetScriptArray[0]->GetDisplayName() == actorLabel)
-			{
-				return EVisibility::Hidden;
-			}
-			else
-			{
-				return EVisibility::Visible;
-			}
-		}
-		else
-		{
-			if (TargetScriptArray[0]->GetName() == TargetScriptArray[0]->GetDisplayName())
-			{
-				return EVisibility::Hidden;
-			}
-			else
-			{
-				return EVisibility::Visible;
-			}
-		}
+		actorLabel = actorLabel.Right(actorLabel.Len() - 2);
+	}
+	if (TargetScriptArray[0]->GetDisplayName() == actorLabel)
+	{
+		return EVisibility::Hidden;
 	}
 	else
 	{
-		auto name = TargetScriptArray[0]->GetName();
-		auto genVarSuffix = FString(TEXT("_GEN_VARIABLE"));
-		if (name.EndsWith(genVarSuffix))
-		{
-			name.RemoveAt(name.Len() - genVarSuffix.Len(), genVarSuffix.Len());
-		}
-		if (TargetScriptArray[0]->GetDisplayName() == name)
-		{
-			return EVisibility::Hidden;
-		}
-		else
-		{
-			return EVisibility::Visible;
-		}
+		return EVisibility::Visible;
 	}
 }
 
@@ -1114,7 +1076,6 @@ FReply FLexWidgetCustomization::OnClickIncreaseOrDecreaseSiblingIndex(bool Incre
 	}
 	GEditor->EndTransaction();
 
-	ULexUIManagerObject::MarkBroadcastLevelActorListChanged();
 	return FReply::Handled();
 }
 
@@ -1131,74 +1092,48 @@ FReply FLexWidgetCustomization::OnClickFixDisplayNameButton(bool singleOrAll, TS
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return FReply::Handled();
 
-	TArray<TWeakObjectPtr<ULexWidget>> UIItems;
+	TArray<TWeakObjectPtr<ULexWidget>> Widgets;
 	if (singleOrAll)
 	{
-		UIItems = TargetScriptArray;
+		Widgets = TargetScriptArray;
 	}
 	else
 	{
-		TArray<AActor*> SelectedActors;
+		TArray<ULexWidget*> SelectedWidgets;
 		for (auto& UIItem : TargetScriptArray)
 		{
-			if (!SelectedActors.Contains(UIItem->GetOwner()))
+			if (!SelectedWidgets.Contains(UIItem))
 			{
-				SelectedActors.Add(UIItem->GetOwner());
+				SelectedWidgets.Add(UIItem.Get());
 			}
 		}
-		auto SelectedRootActors = FLexUIEditorTools::GetRootActorListFromSelection(SelectedActors);
-		for (auto& RootActor : SelectedRootActors)
+		auto SelectedRootWidgets = FLexUIEditorTools::GetRootWidgetListFromSelection(SelectedWidgets);
+		for (auto& RootWidget : SelectedRootWidgets)
 		{
-			TArray<AActor*> ChildrenActors;
-			FLexUIUtils::CollectChildrenActors(RootActor, ChildrenActors, true);
-			for (auto& Actor : ChildrenActors)
+			TArray<ULexWidget*> ChildrenWidgets;
+			ULexWidget::CollectChildrenWidgets(RootWidget, ChildrenWidgets, true);
+			for (auto& ChildWidget : ChildrenWidgets)
 			{
-				if (auto UIItem = Cast<ULexWidget>(Actor->GetRootComponent()))
-				{
-					UIItems.Add(UIItem);
-				}
+				Widgets.Add(ChildWidget);
 			}
 		}
 	}
 
 	GEditor->BeginTransaction(LOCTEXT("FixDisplayName_Transaction", "Fix DisplayName"));
-	for (auto& UIItem : UIItems)
+	for (auto& Widget : Widgets)
 	{
-		UIItem->Modify();
+		Widget->Modify();
 	}
 
-	for (auto& UIItem : TargetScriptArray)
+	for (auto& Widget : TargetScriptArray)
 	{
 		FString DisplayName;
-		if (auto actor = UIItem->GetOwner())
-		{
-			if (UIItem == actor->GetRootComponent())
-			{
-				auto actorLabel = UIItem->GetOwner()->GetActorLabel();
-				if (actorLabel.StartsWith("//"))
-				{
-					actorLabel = actorLabel.Right(actorLabel.Len() - 2);
-				}
-				DisplayName = actorLabel;
-			}
-			else
-			{
-				DisplayName = UIItem->GetName();
-			}
-		}
-		else
-		{
-			auto name = UIItem->GetName();
-			auto genVarSuffix = FString(TEXT("_GEN_VARIABLE"));
-			if (name.EndsWith(genVarSuffix))
-			{
-				name.RemoveAt(name.Len() - genVarSuffix.Len(), genVarSuffix.Len());
-			}
-			DisplayName = name;
-		}
+		auto WidgetName = Widget->GetDisplayName();
+		DisplayName = WidgetName;
+
 		DisplayNameHandle->SetValue(DisplayName);
 
-		FLexUIUtils::NotifyPropertyChanged(UIItem.Get(), GET_MEMBER_NAME_CHECKED(ULexWidget, DisplayName));
+		FLexUIUtils::NotifyPropertyChanged(Widget.Get(), GET_MEMBER_NAME_CHECKED(ULexWidget, DisplayName));
 	}
 	GEditor->EndTransaction();
 
@@ -2086,18 +2021,6 @@ void FLexWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPropert
 	AnchorMinHandle->GetValue(AnchorMinValue);
 	FVector2D AnchorMaxValue;
 	AnchorMaxHandle->GetValue(AnchorMaxValue);
-
-	for (auto& Item : TargetScriptArray)
-	{
-		auto SceneComponent = Item.Get();
-		AActor* EditedActor = SceneComponent->GetOwner();
-		// Broadcast the first time an actor is about to move
-		GEditor->BroadcastBeginObjectMovement(*SceneComponent);
-		if (EditedActor && EditedActor->GetRootComponent() == SceneComponent)
-		{
-			GEditor->BroadcastBeginObjectMovement(*EditedActor);
-		}
-	}
 	
 	switch (AnchorValueIndex)
 	{
@@ -2173,18 +2096,6 @@ void FLexWidgetCustomization::ApplyValueChanged(float Value, TSharedRef<IPropert
 		}
 	}
 	break;
-	}
-	
-	for (auto& Item : TargetScriptArray)
-	{
-		auto SceneComponent = Item.Get();
-		AActor* EditedActor = SceneComponent->GetOwner();
-		// Broadcast when the actor is done moving
-		GEditor->BroadcastEndObjectMovement(*SceneComponent);
-		if (EditedActor && EditedActor->GetRootComponent() == SceneComponent)
-		{
-			GEditor->BroadcastEndObjectMovement(*EditedActor);
-		}
 	}
 
 	GUnrealEd->UpdatePivotLocationForSelection();

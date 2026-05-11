@@ -51,7 +51,7 @@ void ULexBaseRaycaster::OnUnregister()
 
 void ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, ULexCanvas* InRootCanvas,
 	FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd,
-	TArray<FHitResult>& OutHitResultArray)
+	TArray<FLexUIHitResult>& OutHitResultArray)
 {
 	if (GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd, CurrentRayLength))
 	{
@@ -99,7 +99,7 @@ void ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, ULex
 			{
 				if (!IsValid(VisualWidget))continue;
 
-				FHitResult ThisHit;
+				FLexUIHitResult ThisHit;
 				ThisHit.FaceIndex = INDEX_NONE;
 				if (
 					VisualWidget->GetRaycastableInHierarchy()
@@ -126,7 +126,7 @@ void ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, ULex
 			{
 				if (!IsValid(VisualWidget))continue;
 
-				FHitResult ThisHit;
+				FLexUIHitResult ThisHit;
 				ThisHit.FaceIndex = INDEX_NONE;
 				if (
 					VisualWidget->GetRaycastableInHierarchy()
@@ -155,7 +155,7 @@ void ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, ULex
 		
 		if (OutHitResultArray.Num() > 0)
 		{
-			OutHitResultArray.Sort([](const FHitResult& A, const FHitResult& B)
+			OutHitResultArray.Sort([](const FLexUIHitResult& A, const FLexUIHitResult& B)
 			{
 				auto AWidget = (ULexWidget*)(A.Component.Get());
 				auto BWidget = (ULexWidget*)(B.Component.Get());
@@ -178,17 +178,18 @@ void ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, ULex
 	}
 }
 
-void ULexBaseRaycaster::RaycastWorld(ULexPointerEventData* InPointerEventData, bool InRequireFaceIndex, ETraceTypeQuery InTraceChannel, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResultArray)
+void ULexBaseRaycaster::RaycastWorld(ULexPointerEventData* InPointerEventData, bool InRequireFaceIndex, ETraceTypeQuery InTraceChannel, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FLexUIHitResult>& OutHitResultArray)
 {
-	if (GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd, CurrentRayLength))
-	{
-		CurrentRayOrigin = OutRayOrigin;
-		CurrentRayDirection = OutRayDirection;
-		
-		FCollisionQueryParams queryParams = FCollisionQueryParams::DefaultQueryParam;
-		queryParams.bReturnFaceIndex = InRequireFaceIndex;
-		this->GetWorld()->LineTraceMultiByChannel(OutHitResultArray, OutRayOrigin, OutRayEnd, UEngineTypes::ConvertToCollisionChannel(InTraceChannel), queryParams);
-	}
+	check(0);
+	// if (GenerateRay(InPointerEventData, OutRayOrigin, OutRayDirection, OutRayEnd, CurrentRayLength))
+	// {
+	// 	CurrentRayOrigin = OutRayOrigin;
+	// 	CurrentRayDirection = OutRayDirection;
+	// 	
+	// 	FCollisionQueryParams queryParams = FCollisionQueryParams::DefaultQueryParam;
+	// 	queryParams.bReturnFaceIndex = InRequireFaceIndex;
+	// 	this->GetWorld()->LineTraceMultiByChannel(OutHitResultArray, OutRayOrigin, OutRayEnd, UEngineTypes::ConvertToCollisionChannel(InTraceChannel), queryParams);
+	// }
 }
 
 void ULexBaseRaycaster::SetPointerID(int32 Value)

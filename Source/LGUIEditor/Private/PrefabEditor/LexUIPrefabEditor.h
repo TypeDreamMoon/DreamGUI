@@ -60,14 +60,12 @@ private:
 public:
 	/** FGCObject interface */
 	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
-	virtual FString GetReferencerName()const { return TEXT("LGUIPrefabEditor"); }
+	virtual FString GetReferencerName()const override { return TEXT("LexUIPrefabEditor"); }
 
 	void SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bAppendOrToggle, bool bNotifyGEditor = true);
-	const TArray<TWeakObjectPtr<AActor>>& GetSelectedActors(){return SelectedActors;}
-	TArray<TWeakObjectPtr<ULexWidget>> GetSelectedWidgets();
+	const TArray<TWeakObjectPtr<ULexWidget>>& GetSelectedWidgets(){return SelectedWidgets;}
 
 	void InitPrefabEditor(const EToolkitMode::Type Mode, const TSharedPtr< class IToolkitHost >& InitToolkitHost, ULexUIPrefab* InPrefab);
-	TArray<AActor*> GetAllActors();
 
 	/** Try to handle a drag-drop operation */
 	FReply TryHandleAssetDragDropOperation(const FDragDropEvent& DragDropEvent, ULexWidget* InParentWidget = nullptr);
@@ -79,24 +77,24 @@ public:
 	static FLexUIPrefabEditor* GetEditorForPrefabIfValid(ULexUIPrefab* InPrefab);
 	static bool WorldIsPrefabEditor(UWorld* InWorld);
 	static TWeakPtr<FLexUIPrefabEditor> GetEditorByWorld(UWorld* InWorld);
-	static bool ActorIsRootAgent(AActor* InActor);
+	static bool WidgetIsRootAgent(ULexWidget* InWidget);
 	static void IterateAllPrefabEditor(const TFunction<void(FLexUIPrefabEditor*)>& InFunction);
 	bool RefreshOnSubPrefabDirty(ULexUIPrefab* InSubPrefab);
 
 	bool GetSelectedObjectsBounds(FBoxSphereBounds& OutResult);
 	FBoxSphereBounds GetAllObjectsBounds();
-	bool ActorBelongsToSubPrefab(AActor* InSubPrefabActor);
-	bool ActorIsSubPrefabRoot(AActor* InSubPrefabRootActor);
-	FLexUISubPrefabData GetSubPrefabDataForActor(AActor* InSubPrefabActor);
+	bool ActorBelongsToSubPrefab(ULexWidget* InSubPrefabActor);
+	bool ActorIsSubPrefabRoot(ULexWidget* InSubPrefabRootWidget);
+	FLexUISubPrefabData GetSubPrefabDataForActor(ULexWidget* InSubPrefabWidget);
 	void GetInitialViewSetting(FVector& OutLocation, FRotator& OutRotation, FVector& OutOrbitLocation, ELevelViewportType& OutViewType);
 
-	void OpenSubPrefab(AActor* InSubPrefabActor);
-	void SelectSubPrefab(AActor* InSubPrefabActor);
+	void OpenSubPrefab(ULexWidget* InSubPrefabWidget);
+	void SelectSubPrefab(ULexWidget* InSubPrefabWidget);
 	bool GetAnythingDirty()const;
 
 	ULexUIPrefabHelperObject* GetPrefabHelperObject()const { return PrefabBeingEdited->GetPrefabHelperObject(); }
-	AActor* GetRootAgentActor();
-	AActor* GetLoadedRootActor();
+	ULexWidget* GetRootAgentWidget();
+	ULexWidget* GetLoadedRootWidget();
 
 	/** Fires whenever the selected set of widgets changing */
 	FOnSelectedWidgetsChanged OnSelectedWidgetsChanging;
@@ -111,7 +109,7 @@ private:
 	TSharedPtr<SLexWidgetEditorHierarchyView> OutlinerPtr;
 	TSharedPtr<SLexUIPrefabRawDataViewer> PrefabRawDataViewer;
 
-	TArray<TWeakObjectPtr<AActor>> SelectedActors;
+	TArray<TWeakObjectPtr<ULexWidget>> SelectedWidgets;
 private:
 
 	void BindCommands();

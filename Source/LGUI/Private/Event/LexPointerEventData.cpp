@@ -3,20 +3,19 @@
 #include "Event/LexPointerEventData.h"
 #include "Event/LexBaseRaycaster.h"
 #include "LGUI.h"
-#include "GameFramework/Actor.h"
 #include "Core/Components/LexWidget.h"
 
-void ULexPointerEventData::SetHighlightedComponentForNavigation(USceneComponent* InComp)
+void ULexPointerEventData::SetHighlightedWidgetForNavigation(ULexWidget* InWidget)
 {
-	this->HighlightComponentForNavigation = InComp;
+	this->HighlightWidgetForNavigation = InWidget;
 	this->NavigateTickTime = 0;//trigger on next navigation process
 }
 
 bool ULexPointerEventData::IsPointerOverUI()
 {
-	if (this->EnterComponentStack.Num() > 0)
+	if (this->EnterWidgetStack.Num() > 0)
 	{
-		auto firstEnterComp = this->EnterComponentStack[0];
+		auto firstEnterComp = this->EnterWidgetStack[0];
 		if (auto UIItem = Cast<ULexWidget>(firstEnterComp))
 		{
 			return true;
@@ -81,41 +80,33 @@ FVector ULexPointerEventData::GetCumulativeMoveDelta()const
 FString ULexPointerEventData::ToString()const
 {
 	FString result;
-	if (IsValid(EnterComponent))
+	if (IsValid(EnterWidget))
 	{
-		result += FString::Printf(TEXT("\n		enterComponent actor:%s, comp:%s"),
-#if WITH_EDITOR
-			* (EnterComponent->GetOwner()->GetActorLabel()),
-#else
-			* (EnterComponent->GetOwner()->GetName()),
-#endif
-			* (EnterComponent->GetPathName()));
+		result += FString::Printf(TEXT("\n		enterWidget:%s, pathName:%s"),
+			* (EnterWidget->GetDisplayName()),
+			* (EnterWidget->GetPathName()));
 	}
 	else
 	{
-		result += TEXT("\n		enterComponent is null");
+		result += TEXT("\n		enterWidget is null");
 	}
-	if (EnterComponentStack.Num() > 0)
+	if (EnterWidgetStack.Num() > 0)
 	{
-		result += FString::Printf(TEXT("\n		enterActorStack count:%d"), EnterComponentStack.Num());
-	}
-	else
-	{
-		result += TEXT("\n		enterActorStack empty");
-	}
-	if (IsValid(DragComponent))
-	{
-		result += FString::Printf(TEXT("\n		dragComponent actor:%s, comp:%s"),
-#if WITH_EDITOR
-			* (DragComponent->GetOwner()->GetActorLabel()),
-#else
-			* (DragComponent->GetOwner()->GetName()),
-#endif
-			* (DragComponent->GetPathName()));
+		result += FString::Printf(TEXT("\n		enterWidgetStack count:%d"), EnterWidgetStack.Num());
 	}
 	else
 	{
-		result += TEXT("\n		dragComponent is null");
+		result += TEXT("\n		enterWidgetStack empty");
+	}
+	if (IsValid(DragWidget))
+	{
+		result += FString::Printf(TEXT("\n		dragWidget:%s, pathName:%s"),
+			* (DragWidget->GetDisplayName()),
+			* (DragWidget->GetPathName()));
+	}
+	else
+	{
+		result += TEXT("\n		dragWidget is null");
 	}
 	result += FString::Printf(TEXT("\n		worldPoint:%s"), *(WorldPoint.ToString()));
 	result += FString::Printf(TEXT("\n		moveDelta:%s"), *(WorldNormal.ToString()));
@@ -136,7 +127,7 @@ FString ULexPointerEventData::ToString()const
 		break;
 	}
 
-	result += FString::Printf(TEXT("\n		pressComponent:%s"), *(IsValid(PressComponent) ? PressComponent->GetName() : TEXT("null")));
+	result += FString::Printf(TEXT("\n		pressWidget:%s"), *(IsValid(PressWidget) ? PressWidget->GetDisplayName() : TEXT("null")));
 	result += FString::Printf(TEXT("\n		pressWorldPoint:%s"), *(PressWorldPoint.ToString()));
 	result += FString::Printf(TEXT("\n		pressWorldNormal:%s"), *(PressWorldNormal.ToString()));
 	result += FString::Printf(TEXT("\n		pressDistance:%f"), PressDistance);
@@ -147,7 +138,7 @@ FString ULexPointerEventData::ToString()const
 	result += FString::Printf(TEXT("\n		pressTime:%f"), PressTime);
 
 	result += FString::Printf(TEXT("\n		isDragging:%s"), bIsDragging ? TEXT("true") : TEXT("false"));
-	result += FString::Printf(TEXT("\n		dragComponent:%s"), *(IsValid(DragComponent) ? DragComponent->GetName() : TEXT("null")));
+	result += FString::Printf(TEXT("\n		dragWidget:%s"), *(IsValid(DragWidget) ? DragWidget->GetDisplayName() : TEXT("null")));
 
 	switch (EventType)
 	{
@@ -191,19 +182,15 @@ FString ULexPointerEventData::ToString()const
 
 
 
-	if (IsValid(PressComponent))
+	if (IsValid(PressWidget))
 	{
-		result += FString::Printf(TEXT("\n		pressHitComponent actor:%s, comp:%s"),
-#if WITH_EDITOR
-			* (PressComponent->GetOwner()->GetActorLabel()),
-#else
-			* (PressComponent->GetOwner()->GetName()),
-#endif
-			* (PressComponent->GetPathName()));
+		result += FString::Printf(TEXT("\n		pressHitWidget actor:%s, comp:%s"),
+			* (PressWidget->GetDisplayName()),
+			* (PressWidget->GetPathName()));
 	}
 	else
 	{
-		result += TEXT("\n		pressHitComponent is null");
+		result += TEXT("\n		pressHitWidget is null");
 	}
 	result += FString::Printf(TEXT("\n		pressWorldPoint:%s"), *(PressWorldPoint.ToString()));
 	result += FString::Printf(TEXT("\n		pressWorldNormal:%s"), *(PressWorldNormal.ToString()));

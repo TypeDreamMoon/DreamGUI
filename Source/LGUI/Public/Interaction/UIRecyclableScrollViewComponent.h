@@ -8,8 +8,6 @@
 #include "Layout/Margin.h"
 #include "UIRecyclableScrollViewComponent.generated.h"
 
-class ULexWidgetContainer;
-
 
 UINTERFACE(Blueprintable, MinimalAPI)
 class UUIRecyclableScrollViewCell : public UInterface
@@ -43,7 +41,7 @@ public:
 	 * @param	Component		ActorComponent which implement UIRecyclableScrollViewCell interface. Cast this component to your own type and do the init process.
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LGUI-RecyclableScrollView")
-		void InitOnCreate(UActorComponent* Component);
+		void InitOnCreate(ULexUIBehaviour* Component);
 
 	// Called before calling any "SetCell" function for all children
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LGUI-RecyclableScrollView")
@@ -53,7 +51,7 @@ public:
 	 * @param	Index			Cell's data index.
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LGUI-RecyclableScrollView")
-		void SetCell(UActorComponent* Component, int Index);
+		void SetCell(ULexUIBehaviour* Component, int Index);
 	// Called after calling "SetCell" function for all children
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LGUI-RecyclableScrollView")
 		void AfterSetCell();
@@ -65,7 +63,7 @@ struct FUIRecyclableScrollViewCellContainer
 	GENERATED_BODY()
 public:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		TObjectPtr<UActorComponent> CellComponent = nullptr;
+		TObjectPtr<ULexUIBehaviour> CellComponent = nullptr;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		TObjectPtr<ULexWidget> Widget = nullptr;
 };
@@ -89,7 +87,7 @@ protected:
 	virtual void Awake() override;
 	virtual void Start() override;
 	virtual void Update(float DeltaTime) override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void EndPlay() override;
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -106,7 +104,7 @@ protected:
 	 * Only valid if CellTemplateType is Actor.
 	 */
 	UPROPERTY(EditAnywhere, Category = "LGUI-RecyclableScrollView")
-		TObjectPtr<ULexWidgetContainer> CellTemplate;
+		TObjectPtr<ULexWidget> CellTemplate;
 	/**
 	 * CellTemplatePrefab's root actor must have a ActorComponent which implement UIRecyclableScrollViewCell interface.
 	 * Only valid if CellTemplateType is Prefab.
@@ -155,7 +153,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-RecyclableScrollView")
 		EUIRecyclableScrollViewCellTemplateType GetCellTemplateType()const { return CellTemplateType; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-RecyclableScrollView")
-		ULexWidgetContainer* GetCellTemplate()const { return CellTemplate; }
+		ULexWidget* GetCellTemplate()const { return CellTemplate; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-RecyclableScrollView")
 		class ULexUIPrefab* GetCellTemplatePrefab()const { return CellTemplatePrefab; }
 
@@ -186,7 +184,7 @@ public:
 	 * This function only set the parameter. If you want to refresh the display UI list, just call UpdateWithDataSource.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI-RecyclableScrollView")
-		void SetCellTemplate(ULexWidgetContainer* value);
+		void SetCellTemplate(ULexWidget* value);
 	/**
 	 * CellTemplatePrefab's root actor must have a ActorComponent which implement UIRecyclableScrollViewCell interface.
 	 * This function only set the parameter. If you want to refresh the display UI list, just call UpdateWithDataSource.
@@ -223,7 +221,7 @@ private:
 
 	void InitializeOnDataSource();
 	EUIRecyclableScrollViewCellTemplateType WorkingCellTemplateType = EUIRecyclableScrollViewCellTemplateType::Actor;
-	TWeakObjectPtr<ULexWidgetContainer> WorkingCellTemplate = nullptr;//current using cell template, could be CellTemplate or CellTemplatePrefab's instance, tell by 'WorkingCellTemplateType'
+	TWeakObjectPtr<ULexWidget> WorkingCellTemplate = nullptr;//current using cell template, could be CellTemplate or CellTemplatePrefab's instance, tell by 'WorkingCellTemplateType'
 	FVector2D WorkingCellTemplateSize = FVector2D::ZeroVector;
 	FVector2D RangeArea = FVector2D::ZeroVector;//min max range point in parent location
 	FDelegateHandle OnScrollEventDelegateHandle;

@@ -3,8 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/SceneComponent.h"
 #include "LexBaseEventData.generated.h"
+
+class ULexWidget;
 
 /** event execute type */
 UENUM(BlueprintType, Category = LGUI)
@@ -56,7 +57,7 @@ class LGUI_API ULexBaseEventData :public UObject
 public:
 	/** current selected component. when call Deselect interface, this is also the new selected component*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
-		TObjectPtr<USceneComponent> SelectedComponent = nullptr;
+		TObjectPtr<ULexWidget> SelectedComponent = nullptr;
 	/** event type*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
 		ELexUIPointerEventType EventType = ELexUIPointerEventType::Click;

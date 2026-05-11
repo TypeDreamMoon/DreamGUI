@@ -42,7 +42,7 @@ bool ULexUICustomMeshSource::GetHitUVbyFaceIndex(const ULexVisualBatchMesh* InLe
 
 	if (InHitFaceIndex >= 0)
 	{
-		auto InverseTf = InLexMesh->GetWidget()->GetComponentTransform().Inverse();
+		auto InverseTf = InLexMesh->GetWidget()->GetWorldTransform().Inverse();
 		auto LocalHitPoint = InverseTf.TransformPosition(InHitPoint);
 		if (Triangles.IsValidIndex(InHitFaceIndex * 3 + 2))
 		{

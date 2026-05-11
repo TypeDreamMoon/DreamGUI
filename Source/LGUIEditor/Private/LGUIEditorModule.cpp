@@ -505,7 +505,7 @@ TSharedRef<SDockTab> FLGUIEditorModule::HandleSpawnLexUIPrefabSequenceTab(const 
 	return ResultTab;
 }
 
-TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(TFunction<AActor*()> GetSelectedActorFunction, TFunction<void(FMenuBuilder&)> ExtendEditMenuFunction)
+TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(TFunction<ULexWidget*()> GetSelectedWidgetFunction, TFunction<void(FMenuBuilder&)> ExtendEditMenuFunction)
 {
 	FMenuBuilder MenuBuilder(true, PluginCommands);
 
@@ -516,46 +516,46 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(TFunction<AActor*()> 
 #if 0//we can create prefab in content browser, so this seems not necessary
 			MenuBuilder.AddMenuEntry(
 				LOCTEXT("CreatePrefab", "Create Prefab"),
-				LOCTEXT("CreatePrefab_Tooltip", "Use selected actor to create a new prefab"),
+				LOCTEXT("CreatePrefab_Tooltip", "Use selected Widget to create a new prefab"),
 				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreatePrefabAsset, GetSelectedActorFunction)
-					, FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCreatePrefab, GetSelectedActorFunction)
+				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreatePrefabAsset, GetSelectedWidgetFunction)
+					, FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCreatePrefab, GetSelectedWidgetFunction)
 					, FGetActionCheckState()
-					, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCreatePrefab, GetSelectedActorFunction))
+					, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCreatePrefab, GetSelectedWidgetFunction))
 			);
 #endif
 			MenuBuilder.AddMenuEntry(
 				LOCTEXT("UnpackPrefab", "Unpack this Prefab"),
-				LOCTEXT("UnpackPrefab_Tooltip", "Unpack the actor from related prefab asset"),
+				LOCTEXT("UnpackPrefab_Tooltip", "Unpack the Widget from related prefab asset"),
 				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::UnpackPrefab, GetSelectedActorFunction)
-					, FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanUnpackActorForPrefab, GetSelectedActorFunction)
+				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::UnpackPrefab, GetSelectedWidgetFunction)
+					, FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanUnpackWidgetForPrefab, GetSelectedWidgetFunction)
 					, FGetActionCheckState()
-					, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanUnpackActorForPrefab, GetSelectedActorFunction))
+					, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanUnpackWidgetForPrefab, GetSelectedWidgetFunction))
 			);
 			MenuBuilder.AddMenuEntry(
 				LOCTEXT("SelectPrefabAsset", "Browse to Prefab asset"),
 				LOCTEXT("SelectPrefabAsset_Tooltip", "Browse to Prefab asset in Content Browser"),
 				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::SelectPrefabAsset, GetSelectedActorFunction)
-					, FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanBrowsePrefabAsset, GetSelectedActorFunction)
+				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::SelectPrefabAsset, GetSelectedWidgetFunction)
+					, FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanBrowsePrefabAsset, GetSelectedWidgetFunction)
 					, FGetActionCheckState()
-					, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanBrowsePrefabAsset, GetSelectedActorFunction))
+					, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanBrowsePrefabAsset, GetSelectedWidgetFunction))
 			);
 			MenuBuilder.AddMenuEntry(
 				LOCTEXT("OpenPrefabAsset", "Open Prefab asset"),
 				LOCTEXT("OpenPrefabAsset_Tooltip", "Open Prefab asset in PrefabEditor"),
 				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::OpenPrefabAsset, GetSelectedActorFunction)
-					, FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanBrowsePrefabAsset, GetSelectedActorFunction)
+				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::OpenPrefabAsset, GetSelectedWidgetFunction)
+					, FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanBrowsePrefabAsset, GetSelectedWidgetFunction)
 					, FGetActionCheckState()
-					, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanBrowsePrefabAsset, GetSelectedActorFunction))
+					, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanBrowsePrefabAsset, GetSelectedWidgetFunction))
 			);
 			MenuBuilder.AddMenuEntry(
 				FUIAction(FExecuteAction()
-					, FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCheckPrefabOverrideParameter, GetSelectedActorFunction)
+					, FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCheckPrefabOverrideParameter, GetSelectedWidgetFunction)
 					, FGetActionCheckState()
-					, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCheckPrefabOverrideParameter, GetSelectedActorFunction))
+					, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCheckPrefabOverrideParameter, GetSelectedWidgetFunction))
 				, 
 				SNew(SComboButton)
 				.HasDownArrow(true)
@@ -583,7 +583,7 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(TFunction<AActor*()> 
 								+SHorizontalBox::Slot()
 								.AutoWidth()
 								[
-									SNew(SLexUIPrefabOverrideDataViewer, GetSelectedActorFunction)
+									SNew(SLexUIPrefabOverrideDataViewer, GetSelectedWidgetFunction)
 									.AfterRevertPrefab_Lambda([=, this](ULexUIPrefab* PrefabAsset) {
 										})
 									.AfterApplyPrefab_Lambda([=, this](ULexUIPrefab* PrefabAsset) {
@@ -601,39 +601,39 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(TFunction<AActor*()> 
 		MenuBuilder.EndSection();
 	}
 
-	MenuBuilder.BeginSection("LexUI Actor", LOCTEXT("LexUI Actor", "LexUI Actor Operations"));
+	MenuBuilder.BeginSection("LexUI Widget", LOCTEXT("LexUI Widget", "LexUI Widget Operations"));
 	{
 		MenuBuilder.AddSubMenu(
 			LOCTEXT("CreateUIElementSubMenu", "Create UI Element"),
 			LOCTEXT("CreateUIElementSubMenu_Tooltip", "Create UI Element"),
-			FNewMenuDelegate::CreateRaw(this, &FLGUIEditorModule::CreateUIElementSubMenu, GetSelectedActorFunction),
+			FNewMenuDelegate::CreateRaw(this, &FLGUIEditorModule::CreateUIElementSubMenu, GetSelectedWidgetFunction),
 			FUIAction(FExecuteAction()
 				, FCanExecuteAction()
 				, FGetActionCheckState()
-				, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCreateActor, GetSelectedActorFunction)),
+				, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCreateWidget, GetSelectedWidgetFunction)),
 			NAME_None, EUserInterfaceActionType::None
 		);
 		MenuBuilder.AddSubMenu(
 			LOCTEXT("CreateUIExtensionSubMenu", "Create UI Extension Element"),
 			LOCTEXT("CreateUIExtensionSubMenu_Tooltip", "Create UI Extension Element"),
-			FNewMenuDelegate::CreateRaw(this, &FLGUIEditorModule::CreateUIExtensionSubMenu, GetSelectedActorFunction),
+			FNewMenuDelegate::CreateRaw(this, &FLGUIEditorModule::CreateUIExtensionSubMenu, GetSelectedWidgetFunction),
 			FUIAction(FExecuteAction()
 				, FCanExecuteAction()
 				, FGetActionCheckState()
-				, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCreateActor, GetSelectedActorFunction)),
+				, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCreateWidget, GetSelectedWidgetFunction)),
 			NAME_None, EUserInterfaceActionType::None
 		);
 		MenuBuilder.AddSubMenu(
 			LOCTEXT("CreateUIPostProcessSubMenu", "Create UI Post Process"),
 			LOCTEXT("CreateUIPostProcessSubMenu_Tooltip", "Create UI Post Process"),
-			FNewMenuDelegate::CreateRaw(this, &FLGUIEditorModule::CreateUIPostProcessSubMenu, GetSelectedActorFunction),
+			FNewMenuDelegate::CreateRaw(this, &FLGUIEditorModule::CreateUIPostProcessSubMenu, GetSelectedWidgetFunction),
 			FUIAction(FExecuteAction()
 				, FCanExecuteAction()
 				, FGetActionCheckState()
-				, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCreateActor, GetSelectedActorFunction)),
+				, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCreateWidget, GetSelectedWidgetFunction)),
 			NAME_None, EUserInterfaceActionType::None
 		);
-		CreateExtraPrefabsSubMenu(MenuBuilder, GetSelectedActorFunction);
+		CreateExtraPrefabsSubMenu(MenuBuilder, GetSelectedWidgetFunction);
 	}
 	MenuBuilder.EndSection();
 
@@ -645,21 +645,21 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(TFunction<AActor*()> 
 	return MenuBuilder.MakeWidget();
 }
 
-void FLGUIEditorModule::CreateUIElementSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction)
+void FLGUIEditorModule::CreateUIElementSubMenu(FMenuBuilder& MenuBuilder, TFunction<ULexWidget*()> GetSelectedWidgetFunction)
 {
 	struct FunctionContainer
 	{
-		static void CreateWidgetVisualElementMenuEntry(FMenuBuilder& InBuilder, TFunction<AActor*()> GetSelectedActorFunction, FString Name, UClass* InVisualClass, TFunction<void(ULexWidget*)> Callback)
+		static void CreateWidgetVisualElementMenuEntry(FMenuBuilder& InBuilder, TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString Name, UClass* InVisualClass, TFunction<void(ULexWidget*)> Callback)
 		{
 			UClass* NameClass = InVisualClass ? InVisualClass : ULexWidget::StaticClass();
 			InBuilder.AddMenuEntry(
 				FText::FromString(NameClass->GetName()),
 				NameClass->GetToolTipText(),
 				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateLexWidget, GetSelectedActorFunction, Name, InVisualClass, Callback))
+				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateLexWidget, GetSelectedWidgetFunction, Name, InVisualClass, Callback))
 			);
 		}
-		static void CreateUIControlMenuEntry(FMenuBuilder& InBuilder, TFunction<AActor*()> GetSelectedActorFunction, const FString& InControlName, FText InTooltip = FText())
+		static void CreateUIControlMenuEntry(FMenuBuilder& InBuilder, TFunction<ULexWidget*()> GetSelectedWidgetFunction, const FString& InControlName, FText InTooltip = FText())
 		{
 			if (InTooltip.IsEmpty())
 			{
@@ -669,38 +669,38 @@ void FLGUIEditorModule::CreateUIElementSubMenu(FMenuBuilder& MenuBuilder, TFunct
 				FText::FromString(InControlName),
 				InTooltip,
 				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateUIControls, GetSelectedActorFunction, FLexUIEditorTools::LexUIPresetPrefabPath + InControlName))
+				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateUIControls, GetSelectedWidgetFunction, FLexUIEditorTools::LexUIPresetPrefabPath + InControlName))
 			);
 		}
 	};
 
 	MenuBuilder.BeginSection("UIElement");
 	{
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedActorFunction, "Widget", nullptr, nullptr);
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedActorFunction, "Text", ULexText::StaticClass(), nullptr);
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedActorFunction, "Image", ULexImage::StaticClass(), [](ULexWidget* InWidget)
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedWidgetFunction, "Widget", nullptr, nullptr);
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedWidgetFunction, "Text", ULexText::StaticClass(), nullptr);
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedWidgetFunction, "Image", ULexImage::StaticClass(), [](ULexWidget* InWidget)
 		{
 			if (auto Image = Cast<ULexImage>(InWidget->GetVisual()))
 			{
 				Image->SetBrush_LexUISprite(ULexUISpriteData::GetDefaultFrameRect());
 			}
 		});
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedActorFunction, "RectBlock", ULexRectBlock::StaticClass(), nullptr);
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedWidgetFunction, "RectBlock", ULexRectBlock::StaticClass(), nullptr);
 
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedActorFunction, TEXT("Button"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedActorFunction, TEXT("Toggle"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedActorFunction, TEXT("ToggleGroup"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedActorFunction, TEXT("HorizontalSlider"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedActorFunction, TEXT("VerticalSlider"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedActorFunction, TEXT("HorizontalScrollbar"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedActorFunction, TEXT("VerticalScrollbar"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedActorFunction, TEXT("Dropdown"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedActorFunction, TEXT("TextInput"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedActorFunction, TEXT("TextInputMultiline"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedActorFunction, TEXT("HorizontalScrollView"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedActorFunction, TEXT("VerticalScrollView"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedActorFunction, TEXT("HorizontalRecyclableScrollView"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedActorFunction, TEXT("VerticalRecyclableScrollView"));
+		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("Button"));
+		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("Toggle"));
+		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("ToggleGroup"));
+		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("HorizontalSlider"));
+		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("VerticalSlider"));
+		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("HorizontalScrollbar"));
+		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("VerticalScrollbar"));
+		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("Dropdown"));
+		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("TextInput"));
+		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("TextInputMultiline"));
+		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("HorizontalScrollView"));
+		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("VerticalScrollView"));
+		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("HorizontalRecyclableScrollView"));
+		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("VerticalRecyclableScrollView"));
 	}
 	MenuBuilder.EndSection();
 }
@@ -710,7 +710,7 @@ const FSlateBrush* FLGUIEditorModule::GetVisualIconBrush(ULexWidget* Widget)
 	if (!IsValid(Widget))return nullptr;
 					
 #define RETURN_BRUSH(Class)\
-if (Widget->GetOwner()->FindComponentByClass<Class>())\
+if (Widget->GetComponent<Class>())\
 {\
 return *InteractableClassIconMap.Find(Class::StaticClass());\
 }
@@ -734,11 +734,11 @@ bool FLGUIEditorModule::IsValidClassName(const FString& InName)
 		;
 }
 
-void FLGUIEditorModule::CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction)
+void FLGUIEditorModule::CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder, TFunction<ULexWidget*()> GetSelectedWidgetFunction)
 {
 	struct LOCAL
 	{
-		static void CreateExtraPrefab_SubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction, TArray<ULexUIPrefab*> InPrefabArray)
+		static void CreateExtraPrefab_SubMenu(FMenuBuilder& MenuBuilder, TFunction<ULexWidget*()> GetSelectedWidgetFunction, TArray<ULexUIPrefab*> InPrefabArray)
 		{
 			for (auto Prefab : InPrefabArray)
 			{
@@ -746,7 +746,7 @@ void FLGUIEditorModule::CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder, TFu
 					FText::FromString(FPaths::GetBaseFilename(Prefab->GetPathName())),
 					FText::FromString(Prefab->GetPathName()),
 					FSlateIcon(),
-					FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateUIControls, GetSelectedActorFunction, Prefab->GetPathName()))
+					FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateUIControls, GetSelectedWidgetFunction, Prefab->GetPathName()))
 				);
 			}
 		}
@@ -783,29 +783,29 @@ void FLGUIEditorModule::CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder, TFu
 			MenuBuilder.AddSubMenu(
 				FText::Format(LOCTEXT("CreateExtra", "CreateExtra {0}"), FText::FromString(PrefabFolder.Path)),
 				FText::Format(LOCTEXT("CreateExtra_Tooltip", "CreateExtra prefab from folder {0}"), FText::FromString(PrefabFolder.Path)),
-				FNewMenuDelegate::CreateStatic(&LOCAL::CreateExtraPrefab_SubMenu, GetSelectedActorFunction, PrefabAssets),
+				FNewMenuDelegate::CreateStatic(&LOCAL::CreateExtraPrefab_SubMenu, GetSelectedWidgetFunction, PrefabAssets),
 				FUIAction(FExecuteAction()
 					, FCanExecuteAction()
 					, FGetActionCheckState()
-					, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCreateActor, GetSelectedActorFunction)),
+					, FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanCreateWidget, GetSelectedWidgetFunction)),
 				NAME_None, EUserInterfaceActionType::None
 			);
 		}
 	}
 }
 
-void FLGUIEditorModule::CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction)
+void FLGUIEditorModule::CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder, TFunction<ULexWidget*()> GetSelectedWidgetFunction)
 {
 	struct FunctionContainer
 	{
-		static void CreateWidgetVisualElementMenuEntry(FMenuBuilder& InBuilder, TFunction<AActor*()> GetSelectedActorFunction, FString Name, UClass* InVisualClass, TFunction<void(ULexWidget*)> Callback)
+		static void CreateWidgetVisualElementMenuEntry(FMenuBuilder& InBuilder, TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString Name, UClass* InVisualClass, TFunction<void(ULexWidget*)> Callback)
 		{
 			UClass* NameClass = InVisualClass ? InVisualClass : ULexWidget::StaticClass();
 			InBuilder.AddMenuEntry(
 				FText::FromString(NameClass->GetName()),
 				NameClass->GetToolTipText(),
 				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateLexWidget, GetSelectedActorFunction, Name, InVisualClass, Callback))
+				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateLexWidget, GetSelectedWidgetFunction, Name, InVisualClass, Callback))
 			);
 		}
 	};
@@ -831,7 +831,7 @@ void FLGUIEditorModule::CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder, TF
 							continue;
 						}
 					}
-					FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedActorFunction, ClassItr->GetName(), *ClassItr, nullptr);
+					FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedWidgetFunction, ClassItr->GetName(), *ClassItr, nullptr);
 				}
 			}
 		}
@@ -839,39 +839,39 @@ void FLGUIEditorModule::CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder, TF
 	MenuBuilder.EndSection();
 }
 
-void FLGUIEditorModule::CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction)
+void FLGUIEditorModule::CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder, TFunction<ULexWidget*()> GetSelectedWidgetFunction)
 {
 	struct FunctionContainer
 	{
-		static void CreateWidgetVisualElementMenuEntry(FMenuBuilder& InBuilder, TFunction<AActor*()> GetSelectedActorFunction, UClass* InVisualClass, TFunction<void(ULexWidget*)> Callback)
+		static void CreateWidgetVisualElementMenuEntry(FMenuBuilder& InBuilder, TFunction<ULexWidget*()> GetSelectedWidgetFunction, UClass* InVisualClass, TFunction<void(ULexWidget*)> Callback)
 		{
 			UClass* NameClass = InVisualClass ? InVisualClass : ULexWidget::StaticClass();
 			InBuilder.AddMenuEntry(
 				FText::FromString(NameClass->GetName()),
 				NameClass->GetToolTipText(),
 				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateLexWidget, GetSelectedActorFunction, InVisualClass->GetName(), InVisualClass, Callback))
+				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateLexWidget, GetSelectedWidgetFunction, InVisualClass->GetName(), InVisualClass, Callback))
 			);
 		}
-		static void CreateMenuEntryByPrefab(FMenuBuilder& InBuilder, TFunction<AActor*()> GetSelectedActorFunction, const FString& InControlName, const FText& InLabel, const FText& InTooltip = FText::GetEmpty())
+		static void CreateMenuEntryByPrefab(FMenuBuilder& InBuilder, TFunction<ULexWidget*()> GetSelectedWidgetFunction, const FString& InControlName, const FText& InLabel, const FText& InTooltip = FText::GetEmpty())
 		{
 			InBuilder.AddMenuEntry(
 				InLabel,
 				InTooltip,
 				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateUIControls, GetSelectedActorFunction, FLexUIEditorTools::LexUIPresetPrefabPath + InControlName))
+				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateUIControls, GetSelectedWidgetFunction, FLexUIEditorTools::LexUIPresetPrefabPath + InControlName))
 			);
 		}
 	};
 
 	MenuBuilder.BeginSection("UIExtension");
 	{
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedActorFunction, ULexPolygon::StaticClass(), nullptr);
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedActorFunction, ULexPolygonLine::StaticClass(), nullptr);
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedActorFunction, ULexRing::StaticClass(), nullptr);
-		//FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedActorFunction, ULexStaticMesh::StaticClass(), nullptr);
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedActorFunction, ULex2DLineRaw::StaticClass(), nullptr);
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedActorFunction, ULex2DLineChildrenAsPoints::StaticClass(), nullptr);
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedWidgetFunction, ULexPolygon::StaticClass(), nullptr);
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedWidgetFunction, ULexPolygonLine::StaticClass(), nullptr);
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedWidgetFunction, ULexRing::StaticClass(), nullptr);
+		//FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedWidgetFunction, ULexStaticMesh::StaticClass(), nullptr);
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedWidgetFunction, ULex2DLineRaw::StaticClass(), nullptr);
+		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedWidgetFunction, ULex2DLineChildrenAsPoints::StaticClass(), nullptr);
 		//FunctionContainer::CreateMenuEntryByPrefab(MenuBuilder, TEXT("UIWidget"), LOCTEXT("UIWidget", "UI Widget"), AUIWidgetActor::StaticClass()->GetToolTipText());
 		//FunctionContainer::CreateMenuEntryByPrefab(MenuBuilder, TEXT("UIRenderTarget"), LOCTEXT("UIRenderTarget", "UI Render Target"), AUIRenderTargetActor::StaticClass()->GetToolTipText());
 	}

@@ -2,16 +2,9 @@
 
 #include "DataFactory/LexUIPrefabFactory.h"
 
+#include "Core/Components/LexWidget.h"
 #include "PrefabSystem/LexUIPrefab.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
-#include "PrefabSystem/LexUIPrefabManager.h"
-#include "Core/Actor/LexWidgetContainer.h"
-#if USE_CLASS_PICKER
-#include "ClassViewerFilter.h"
-#include "ClassViewerModule.h"
-#include "Kismet2/KismetEditorUtilities.h"
-#include "Kismet2/SClassPickerDialog.h"
-#endif
 
 #define LOCTEXT_NAMESPACE "LexUIPrefabFactory"
 
@@ -21,84 +14,7 @@ ULexUIPrefabFactory::ULexUIPrefabFactory()
 	SupportedClass = ULexUIPrefab::StaticClass();
 	bCreateNew = true;
 	bEditAfterNew = true;
-	RootActorClass = ULexWidgetContainer::StaticClass();
 }
-
-#if USE_CLASS_PICKER
-class FAssetClassParentFilter : public IClassViewerFilter
-{
-public:
-	FAssetClassParentFilter()
-		: DisallowedClassFlags(CLASS_None), bDisallowBlueprintBase(false)
-	{}
-
-	/** All children of these classes will be included unless filtered out by another setting. */
-	TSet< const UClass* > AllowedChildrenOfClasses;
-
-	/** Disallowed class flags. */
-	EClassFlags DisallowedClassFlags;
-
-	/** Disallow blueprint base classes. */
-	bool bDisallowBlueprintBase;
-
-	virtual bool IsClassAllowed(const FClassViewerInitializationOptions& InInitOptions, const UClass* InClass, TSharedRef< FClassViewerFilterFuncs > InFilterFuncs) override
-	{
-		bool bAllowed = !InClass->HasAnyClassFlags(DisallowedClassFlags)
-			&& InClass->CanCreateAssetOfClass()
-			&& InFilterFuncs->IfInChildOfClassesSet(AllowedChildrenOfClasses, InClass) != EFilterReturn::Failed;
-
-		if (bAllowed && bDisallowBlueprintBase)
-		{
-			if (FKismetEditorUtilities::CanCreateBlueprintOfClass(InClass))
-			{
-				return false;
-			}
-		}
-
-		return bAllowed;
-	}
-
-	virtual bool IsUnloadedClassAllowed(const FClassViewerInitializationOptions& InInitOptions, const TSharedRef< const IUnloadedBlueprintData > InUnloadedClassData, TSharedRef< FClassViewerFilterFuncs > InFilterFuncs) override
-	{
-		if (bDisallowBlueprintBase)
-		{
-			return false;
-		}
-
-		return !InUnloadedClassData->HasAnyClassFlags(DisallowedClassFlags)
-			&& InFilterFuncs->IfInChildOfClassesSet(AllowedChildrenOfClasses, InUnloadedClassData) != EFilterReturn::Failed;
-	}
-};
-bool ULexUIPrefabFactory::ConfigureProperties()
-{
-	// Null the CurveClass so we can get a clean class
-	RootActorClass = nullptr;
-
-	// Load the classviewer module to display a class picker
-	FClassViewerModule& ClassViewerModule = FModuleManager::LoadModuleChecked<FClassViewerModule>("ClassViewer");
-
-	// Fill in options
-	FClassViewerInitializationOptions Options;
-	Options.Mode = EClassViewerMode::ClassPicker;
-
-	TSharedPtr<FAssetClassParentFilter> Filter = MakeShareable(new FAssetClassParentFilter);
-	Options.ClassFilters.Add(Filter.ToSharedRef());
-
-	Filter->DisallowedClassFlags = CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists;
-	Filter->AllowedChildrenOfClasses.Add(ALexWidgetActor::StaticClass());
-
-	const FText TitleText = LOCTEXT("CreatePrefabOptions", "Pick Class as Root-Actor");
-	UClass* ChosenClass = nullptr;
-	const bool bPressedOk = SClassPickerDialog::PickClass(TitleText, Options, ChosenClass, AActor::StaticClass());
-
-	if (bPressedOk)
-	{
-		RootActorClass = ChosenClass;
-	}
-
-	return bPressedOk;
-}
-#endif
 
 UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent, FName Name, EObjectFlags Flags, UObject* Context, FFeedbackContext* Warn)
 {
@@ -109,8 +25,9 @@ UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent,
 		ULexUIPrefabHelperObject* HelperObject = NewObject<ULexUIPrefabHelperObject>(GetTransientPackage());
 		HelperObject->PrefabAsset = NewAsset;
 		TMap<FGuid, TObjectPtr<UObject>> MapGuidToObject;
-		TMap<TObjectPtr<AActor>, FLexUISubPrefabData> SubPrefabMap;
-		HelperObject->LoadedRootActor = SourcePrefab->LoadPrefabWithExistingObjects(SourcePrefab->GetPrefabInstanceScene()->GetWorld(), nullptr, MapGuidToObject, SubPrefabMap);
+		TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> SubPrefabMap;
+		auto World = SourcePrefab->GetPrefabInstanceScene()->GetWorld();
+		HelperObject->LoadedRootWidget = SourcePrefab->LoadPrefabWithExistingObjects(World, World, nullptr, MapGuidToObject, SubPrefabMap);
 		FLexUISubPrefabData SubPrefabData;
 		SubPrefabData.PrefabAsset = SourcePrefab;
 		SubPrefabData.MapGuidToObject = MapGuidToObject;
@@ -120,9 +37,10 @@ UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent,
 			SubPrefabData.MapObjectGuidFromParentPrefabToSubPrefab.Add(GuidInParent, KeyValue.Key);
 			HelperObject->MapGuidToObject.Add(GuidInParent, KeyValue.Value);
 		}
-		HelperObject->SubPrefabMap.Add(HelperObject->LoadedRootActor, SubPrefabData);
+		HelperObject->SubPrefabMap.Add(HelperObject->LoadedRootWidget, SubPrefabData);
 		HelperObject->SavePrefab();
-		HelperObject->LoadedRootActor->Destroy();
+		HelperObject->LoadedRootWidget = nullptr;
+		HelperObject->LoadedRootWidget->ConditionalBeginDestroy();
 		HelperObject->ConditionalBeginDestroy();
 		return NewAsset;
 	}
@@ -132,21 +50,11 @@ UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent,
 		NewAsset->bIsPrefabVariant = false;
 		ULexUIPrefabHelperObject* HelperObject = NewObject<ULexUIPrefabHelperObject>(GetTransientPackage());
 		HelperObject->PrefabAsset = NewAsset;
-		HelperObject->LoadedRootActor = ULexUIPrefabManagerObject::GetPreviewWorldForPrefabPackage()->SpawnActor<ALexWidgetActor>(RootActorClass);
-
-		HelperObject->LoadedRootActor->SetActorLabel(NewAsset->GetName());
-		if (!HelperObject->LoadedRootActor->GetRootComponent())
-		{
-			USceneComponent* RootComponent = NewObject<USceneComponent>(HelperObject->LoadedRootActor, USceneComponent::GetDefaultSceneRootVariableName(), RF_Transactional);
-			RootComponent->Mobility = EComponentMobility::Movable;
-			RootComponent->bVisualizeComponent = false;
-
-			HelperObject->LoadedRootActor->SetRootComponent(RootComponent);
-			RootComponent->RegisterComponent();
-			HelperObject->LoadedRootActor->AddInstanceComponent(RootComponent);
-		}
+		HelperObject->LoadedRootWidget = NewObject<ULexWidget>();
+		HelperObject->LoadedRootWidget->SetDisplayName(NewAsset->GetName());
 		HelperObject->SavePrefab();
-		HelperObject->LoadedRootActor->Destroy();
+		
+		HelperObject->LoadedRootWidget->DestroyWidget();
 		HelperObject->ConditionalBeginDestroy();
 		return NewAsset;
 	}

@@ -152,7 +152,7 @@ protected:
 
 protected:
 	virtual void Awake() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void EndPlay() override;
 
 	virtual void OnRegister()override;
 	virtual void OnUnregister()override;
@@ -351,7 +351,7 @@ public:
 	/**
 	 * Find UISelectable component inside InParent on specific direction.
 	 */
-	virtual UUISelectableComponent* FindSelectable(FVector InDirection, USceneComponent* InParent);
+	virtual UUISelectableComponent* FindSelectable(FVector InDirection, ULexWidget* InParent);
 	/**
      * Default selectable is the most "Prev" one (left top most).
 	 */

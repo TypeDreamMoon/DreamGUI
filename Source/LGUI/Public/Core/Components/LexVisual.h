@@ -7,6 +7,7 @@
 #include "Utils/LexUIUtils.h"
 #include "LexVisual.generated.h"
 
+struct FLexUIHitResult;
 class FLexUIGeometry;
 class UMaterialInterface;
 class ULexCanvas;
@@ -122,9 +123,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Raycast")
 	float VisiblePixelThreshold = 0.1f;
 
-	virtual bool LineTraceUIRect(FHitResult& OutHit, const FVector& Start, const FVector& End)const;
-	virtual bool LineTraceUIGeometry(FLexUIGeometry* InGeo, FHitResult& OutHit, const FVector& Start, const FVector& End)const;
-	virtual bool LineTraceUICustom(FHitResult& OutHit, const FVector& Start, const FVector& End)const;
+	virtual bool LineTraceUIRect(FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const;
+	virtual bool LineTraceUIGeometry(FLexUIGeometry* InGeo, FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const;
+	virtual bool LineTraceUICustom(FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const;
 	
 	void UpdateGeometryWidgetPropertyData(TArray<struct FLexUIMeshVertex>& InVertices, int InValidNumVertices, int InDataStartPosition);
 public:
@@ -169,7 +170,7 @@ public:
 		FColor GetFinalColor()const;
 
 	UFUNCTION(BlueprintCallable, Category = "LexUI")
-	virtual bool LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const;
+	virtual bool LineTraceUI(FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const;
 
 	int GetClipDataStartPosition()const;
 	UTexture* GetClipDataTexture()const;

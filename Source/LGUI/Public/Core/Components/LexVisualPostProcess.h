@@ -101,7 +101,7 @@ public:
 	virtual FLexVisualPostProcessRenderProxy* GetRenderProxy()PURE_VIRTUAL(UUIPostProcessRenderable::GetRenderProxy, return 0;);
 	virtual bool HaveValidData()const;
 
-	virtual bool LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const override;
+	virtual bool LineTraceUI(FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const override;
 private:
 	/** local vertex position changed */
 	uint8 bLocalVertexPositionChanged : 1;

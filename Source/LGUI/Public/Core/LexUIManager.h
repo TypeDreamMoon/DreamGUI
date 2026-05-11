@@ -2,11 +2,11 @@
 
 #pragma once
 #include "CoreMinimal.h"
-#include "LexUIMeshVertex.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "Tickable.h"
 #include "LexUIManager.generated.h"
 
+class ULexWidgetPresenterComponent;
 struct FLexUIHelperGizmoRenderParameter;
 struct FLexUIHelperGizmoVertex;
 class ULexEventSystem;
@@ -46,16 +46,14 @@ private:
 	static bool bIsBlueprintCompiling;
 	FLexUIEditorTickMulticastDelegate EditorTick;
 	TArray<TTuple<int, TFunction<void()>>> OneShotFunctionsToExecuteInTick;
-	bool bShouldBroadcastLevelActorListChanged = false;
 public:
 	static void AddOneShotTickFunction(const TFunction<void()>& InFunction, int InDelayFrameCount = 0);
 	FLexUIEditorTickMulticastDelegate& GetEditorTickDelegate();
-	static void MarkBroadcastLevelActorListChanged();
 
 #endif
 #if WITH_EDITOR
 	static bool GetIsBlueprintCompiling(){return bIsBlueprintCompiling;}
-	static bool IsSelected(AActor* InObject);
+	static bool IsSelected(ULexWidget* InObject);
 private:
 	static bool InitCheck();
 public:
@@ -68,8 +66,6 @@ private:
 private:
 	FDelegateHandle OnAssetReimportDelegateHandle;
 	void OnAssetReimport(UObject* Asset);
-	FDelegateHandle OnActorLabelChangedDelegateHandle;
-	void OnActorLabelChanged(AActor* Actor);
 	FDelegateHandle OnMapOpenedDelegateHandle;
 	void OnMapOpened(const FString& FileName, bool AsTemplate);
 	FDelegateHandle OnPackageReloadedDelegateHandle;
@@ -84,17 +80,17 @@ class LGUI_API ULexUISelection : public UObject
 
 public:
 	virtual bool IsEditorOnly() const override{return true;}
-	void SelectActor(AActor* Actor);
-	void SelectComponent(UActorComponent* Component);
+	void SelectWidget(ULexWidget* Widget);
+	void SelectComponent(ULexUIBehaviour* Component);
 	void SelectNone();
-	bool IsSelected(AActor* Actor)const;
-	TArray<TWeakObjectPtr<AActor>> GetSelectedActors()const{return SelectedActorArray;}
+	bool IsSelected(ULexWidget* Widget)const;
+	TArray<TWeakObjectPtr<ULexWidget>> GetSelectedWidgets()const{return SelectedWidgetArray;}
 	FSimpleMulticastDelegate OnSelectionChanged;
 private:
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	TArray<TWeakObjectPtr<AActor>> SelectedActorArray;
+	TArray<TWeakObjectPtr<ULexWidget>> SelectedWidgetArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	TArray<TWeakObjectPtr<UActorComponent>> SelectedComponentArray;
+	TArray<TWeakObjectPtr<ULexUIBehaviour>> SelectedComponentArray;
 };
 
 class ILexUICultureChangedInterface;
@@ -137,7 +133,7 @@ private:
 #endif
 
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<ULexWidget>> AllRootWidgetArray;
+	TArray<TWeakObjectPtr<ULexWidgetPresenterComponent>> AllWidgetPresenterArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<ULexCanvas>> ScreenSpaceCanvasArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
@@ -179,9 +175,8 @@ public:
 	static ULexUISelection* GetSelection(UWorld* InWorld);
 	FSimpleMulticastDelegate EventOnOutlineChanged;
 #endif
-	static void AddRootWidget(ULexWidget* InWidget);
-	static void RemoveRootWidget(ULexWidget* InWidget);
-	const TArray<TWeakObjectPtr<ULexWidget>>& GetAllRootUIItemArray()const { return AllRootWidgetArray; }
+	static void AddWidgetPresenter(ULexWidgetPresenterComponent* InWidgetPresenter);
+	static void RemoveWidgetPresenter(ULexWidgetPresenterComponent* InWidgetPresenter);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	static void RegisterLexUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem);
@@ -252,10 +247,10 @@ public:
 	void EndPrefabSystemProcessingActor(const FGuid& InSessionId);
 	/**
 	 * Add a function that execute after prefab system serialization and before Awake called
-	 * @param	InPrefabActor	Current prefab system processing actor
+	 * @param	InPrefabWidget	Current prefab system processing actor
 	 * @param	InFunction		Function to call after prefab system serialization complete and before Awake called
 	 */
-	void AddFunctionForPrefabSystemExecutionBeforeAwake(AActor* InPrefabActor, const TFunction<void()>& InFunction);
+	void AddFunctionForPrefabSystemExecutionBeforeAwake(ULexWidget* InPrefabWidget, const TFunction<void()>& InFunction);
 
 	static void AddLexUIBehaviourForLifecycleEvent(ULexUIBehaviour* InComp);
 	static void AddLexUIBehavioursForUpdate(ULexUIBehaviour* InComp);

@@ -29,6 +29,7 @@
 #include "PropertyCustomizationHelpers.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "LexUIEditorTools.h"
+#include "Core/Components/LexWidget.h"
 
 #define LOCTEXT_NAMESPACE "SLGUIPrefabSequenceEditor"
 
@@ -206,14 +207,13 @@ void SLexUIPrefabSequenceEditor::Construct(const FArguments& InArgs)
 								.Text_Lambda([=, this](){
 									if (WeakSequenceComponent.IsValid())
 									{
-										auto Actor = WeakSequenceComponent->GetOwner();
-										if (Actor)
+										if (auto Widget = WeakSequenceComponent->GetWidget())
 										{
-											auto DisplayText = Actor->GetActorLabel() + TEXT(".") + WeakSequenceComponent->GetName();
+											auto DisplayText = Widget->GetDisplayName() + TEXT(".") + WeakSequenceComponent->GetName();
 											return FText::FromString(DisplayText);
 										}
 									}
-									return LOCTEXT("NullSequenceComponent", "Null (LGUIPrefabSequence)");
+									return LOCTEXT("NullSequenceComponent", "Null (LexUIPrefabSequence)");
 								})
 								.ToolTipText(LOCTEXT("ObjectButtonTooltipText", "Actor.Component, click to select target"))
 								.IsEnabled_Lambda([=, this](){
@@ -224,9 +224,9 @@ void SLexUIPrefabSequenceEditor::Construct(const FArguments& InArgs)
 								.OnClicked_Lambda([=, this](){
 									if (WeakSequenceComponent.IsValid())
 									{
-										GEditor->SelectNone(true, true);
-										GEditor->SelectActor(WeakSequenceComponent->GetOwner(), true, true);
-										GEditor->SelectComponent(WeakSequenceComponent.Get(), true, true);
+										// GEditor->SelectNone(true, true);
+										// GEditor->SelectActor(WeakSequenceComponent, true, true);
+										// GEditor->SelectComponent(WeakSequenceComponent.Get(), true, true);
 									}
 									return FReply::Handled();
 								})
@@ -366,9 +366,9 @@ void SLexUIPrefabSequenceEditor::OnBeforeApplyPrefab(ULexUIPrefabHelperObject* I
 {
 	if (WeakSequenceComponent.IsValid())
 	{
-		if (auto Actor = WeakSequenceComponent->GetOwner())
+		if (auto Widget = WeakSequenceComponent->GetWidget())
 		{
-			if (InObject->IsActorBelongsToThis(Actor))
+			if (InObject->IsWidgetBelongsToThis(Widget))
 			{
 				this->AnimationListView->ClearSelection();
 			}
@@ -377,26 +377,23 @@ void SLexUIPrefabSequenceEditor::OnBeforeApplyPrefab(ULexUIPrefabHelperObject* I
 }
 
 // Trigger when opening a new prefab
-void SLexUIPrefabSequenceEditor::OnEditingPrefabChanged(AActor* RootActor)
+void SLexUIPrefabSequenceEditor::OnEditingPrefabChanged(ULexWidget* RootWidget)
 {
-	if (RootActor)
+	if (RootWidget)
 	{
-		TArray<AActor*> ChildrenActors;
-		RootActor->GetAttachedActors(ChildrenActors, true, true);
-		
-		for (AActor* ChildActor : ChildrenActors)
+		for (auto ChildWidget : RootWidget->GetChildren())
 		{
-			ULexUIPrefabHelperObject* PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(RootActor);
+			auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(RootWidget);
 			if (PrefabHelperObject)
 			{
 				//skip sub prefab's PrefabSequenceComponent
-				if (PrefabHelperObject->IsActorBelongsToSubPrefab(ChildActor))
+				if (PrefabHelperObject->IsWidgetBelongsToSubPrefab(ChildWidget))
 				{
 					continue;
 				}
 			}
 
-			ULexUIPrefabSequenceComponent* PrefabSequencerComponent = ChildActor->FindComponentByClass<ULexUIPrefabSequenceComponent>();
+			auto PrefabSequencerComponent = ChildWidget->GetComponent<ULexUIPrefabSequenceComponent>();
 			if (PrefabSequencerComponent)
 			{
 				AssignLGUIPrefabSequenceComponent(PrefabSequencerComponent);
@@ -470,7 +467,7 @@ TSharedPtr<SWidget> SLexUIPrefabSequenceEditor::OnContextMenuOpening()const
 			if (SelectedItems.Num() == 1)
 			{
 				auto SelectedItem = SelectedItems[0];
-				if (!SelectedItem->Animation->IsObjectReferencesGood(WeakSequenceComponent->GetOwner()))
+				if (!SelectedItem->Animation->IsObjectReferencesGood(WeakSequenceComponent->GetWidget()))
 				{
 					MenuBuilder.AddMenuSeparator();
 					MenuBuilder.AddMenuEntry(
@@ -478,7 +475,7 @@ TSharedPtr<SWidget> SLexUIPrefabSequenceEditor::OnContextMenuOpening()const
 						LOCTEXT("TryFixObjectReference_Tooltip", "LGUI can search target object by actor's path relative to ContextActor (Owner actor of LGUIPrefabSequenceComponent), so if ActorLabel and Actor's hierarchy is same as before, it is possible to fix the bad tracks."),
 						FSlateIcon(),
 						FUIAction(FExecuteAction::CreateLambda([=, this]() {
-							SelectedItem->Animation->FixObjectReferences(WeakSequenceComponent->GetOwner());
+							SelectedItem->Animation->FixObjectReferences(WeakSequenceComponent->GetWidget());
 							}))
 					);
 				}

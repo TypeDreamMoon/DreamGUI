@@ -11,7 +11,7 @@
 #include "Core/LexUIDataAsTexture.h"
 #include "Core/Components/LexWidget.h"
 #include "Engine/Texture2D.h"
-
+#include "Event/LexPointerEventData.h"
 
 
 bool ULexVisualCustomRaycast::Raycast(const ULexVisual* InVisual, const FVector& InLocalSpaceRayStart, const FVector& InLocalSpaceRayEnd, FVector& OutHitPoint, FVector& OutHitNormal)const
@@ -257,10 +257,10 @@ void ULexVisual::SetWidgetPropertyDataStartPosition(int InPosition)
 	}
 }
 
-bool ULexVisual::LineTraceUIRect(FHitResult& OutHit, const FVector& Start, const FVector& End)const
+bool ULexVisual::LineTraceUIRect(FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
 	auto Widget = GetWidget();
-	auto InverseTf = Widget->GetComponentTransform().Inverse();
+	auto InverseTf = Widget->GetWorldTransform().Inverse();
 	auto LocalSpaceRayOrigin = InverseTf.TransformPosition(Start);
 	auto LocalSpaceRayEnd = InverseTf.TransformPosition(End);
 
@@ -274,22 +274,21 @@ bool ULexVisual::LineTraceUIRect(FHitResult& OutHit, const FVector& Start, const
 		{
 			OutHit.TraceStart = Start;
 			OutHit.TraceEnd = End;
-			OutHit.Component = (UPrimitiveComponent*)Widget;//acturally this convert is incorrect, but I need this pointer
-			OutHit.Location = Widget->GetComponentTransform().TransformPosition(Result);
-			OutHit.Normal = Widget->GetComponentTransform().TransformVector(FVector(1, 0, 0));
+			OutHit.Component = Widget;
+			OutHit.Location = Widget->GetWorldTransform().TransformPosition(Result);
+			OutHit.Normal = Widget->GetWorldTransform().TransformVector(FVector(1, 0, 0));
 			OutHit.Normal.Normalize();
 			OutHit.Distance = FVector::Distance(Start, OutHit.Location);
 			OutHit.ImpactPoint = OutHit.Location;
-			OutHit.ImpactNormal = OutHit.Normal;
 			return true;
 		}
 	}
 	return false;
 }
-bool ULexVisual::LineTraceUIGeometry(FLexUIGeometry* InGeo, FHitResult& OutHit, const FVector& Start, const FVector& End)const
+bool ULexVisual::LineTraceUIGeometry(FLexUIGeometry* InGeo, FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
 	auto Widget = GetWidget();
-	const auto InverseTf = Widget->GetComponentTransform().Inverse();
+	const auto InverseTf = Widget->GetWorldTransform().Inverse();
 	const auto LocalSpaceRayOrigin = InverseTf.TransformPosition(Start);
 	const auto LocalSpaceRayEnd = InverseTf.TransformPosition(End);
 
@@ -313,13 +312,12 @@ bool ULexVisual::LineTraceUIGeometry(FLexUIGeometry* InGeo, FHitResult& OutHit, 
 			{
 				OutHit.TraceStart = Start;
 				OutHit.TraceEnd = End;
-				OutHit.Component = (UPrimitiveComponent*)Widget;//actually this convert is incorrect, but I need this pointer
-				OutHit.Location = Widget->GetComponentTransform().TransformPosition(HitPoint);
-				OutHit.Normal = Widget->GetComponentTransform().TransformVector(HitNormal);
+				OutHit.Component = Widget;//actually this convert is incorrect, but I need this pointer
+				OutHit.Location = Widget->GetWorldTransform().TransformPosition(HitPoint);
+				OutHit.Normal = Widget->GetWorldTransform().TransformVector(HitNormal);
 				OutHit.Normal.Normalize();
 				OutHit.Distance = FVector::Distance(Start, OutHit.Location);
 				OutHit.ImpactPoint = OutHit.Location;
-				OutHit.ImpactNormal = OutHit.Normal;
 				OutHit.FaceIndex = i;
 				return true;
 			}
@@ -328,7 +326,7 @@ bool ULexVisual::LineTraceUIGeometry(FLexUIGeometry* InGeo, FHitResult& OutHit, 
 	return false;
 }
 
-bool ULexVisual::LineTraceUICustom(FHitResult& OutHit, const FVector& Start, const FVector& End)const
+bool ULexVisual::LineTraceUICustom(FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
 	if (!IsValid(CustomRaycastObject))
 	{
@@ -336,7 +334,7 @@ bool ULexVisual::LineTraceUICustom(FHitResult& OutHit, const FVector& Start, con
 		return false;
 	}
 	auto Widget = GetWidget();
-	const auto InverseTf = Widget->GetComponentTransform().Inverse();
+	const auto InverseTf = Widget->GetWorldTransform().Inverse();
 	const auto LocalSpaceRayOrigin = InverseTf.TransformPosition(Start);
 	const auto LocalSpaceRayEnd = InverseTf.TransformPosition(End);
 
@@ -347,13 +345,12 @@ bool ULexVisual::LineTraceUICustom(FHitResult& OutHit, const FVector& Start, con
 		{
 			OutHit.TraceStart = Start;
 			OutHit.TraceEnd = End;
-			OutHit.Component = (UPrimitiveComponent*)Widget;//actually this convert is incorrect, but I need this pointer
-			OutHit.Location = Widget->GetComponentTransform().TransformPosition(HitPoint);
-			OutHit.Normal = Widget->GetComponentTransform().TransformVector(HitNormal);
+			OutHit.Component = Widget;//actually this convert is incorrect, but I need this pointer
+			OutHit.Location = Widget->GetWorldTransform().TransformPosition(HitPoint);
+			OutHit.Normal = Widget->GetWorldTransform().TransformVector(HitNormal);
 			OutHit.Normal.Normalize();
 			OutHit.Distance = FVector::Distance(Start, OutHit.Location);
 			OutHit.ImpactPoint = OutHit.Location;
-			OutHit.ImpactNormal = OutHit.Normal;
 			return true;
 		}
 	}
@@ -406,7 +403,7 @@ float ULexVisual::GetFinalAlpha01()const
 	return FLexUIUtils::Color255To1_Table[GetFinalAlpha()];
 }
 
-bool ULexVisual::LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const
+bool ULexVisual::LineTraceUI(FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
 	return LineTraceUIRect(OutHit, Start, End);
 }
@@ -445,10 +442,10 @@ void ULexVisual::FillWidgetPropertyDataForMaterial(bool bNeedSize, bool bNeedCen
 	//widget rect center position in canvas space
 	if (bNeedCenterPosition)
 	{
-		auto WidgetToWorldMatrix = Widget->GetComponentTransform().ToMatrixWithScale();
+		auto WidgetToWorldMatrix = Widget->GetWorldTransform().ToMatrixWithScale();
 		auto WidgetLocalSpaceCenter = Widget->GetLocalSpaceCenter();
 		auto CenterPositionInWorldSpace = WidgetToWorldMatrix.TransformPosition(FVector(0, WidgetLocalSpaceCenter.X, WidgetLocalSpaceCenter.Y));
-		auto CenterPositionInCanvasSpace = Canvas->GetLexWidget()->GetComponentTransform().InverseTransformPosition(CenterPositionInWorldSpace);
+		auto CenterPositionInCanvasSpace = Canvas->GetWidget()->GetWorldTransform().InverseTransformPosition(CenterPositionInWorldSpace);
 		auto CenterPosition2D = FVector2DHalf(CenterPositionInCanvasSpace.Y, CenterPositionInCanvasSpace.Z);
 		FMemory::Memcpy(BlockBuffer.GetData() + BlockBufferOffset, &CenterPosition2D, sizeof(FVector2DHalf));
 	}

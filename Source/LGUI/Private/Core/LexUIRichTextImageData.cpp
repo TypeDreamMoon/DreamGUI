@@ -6,7 +6,6 @@
 #include "Extensions/UISpriteSequencePlayer.h"
 #include "Utils/LexUIUtils.h"
 #include "Core/LexUISpriteData_BaseObject.h"
-#include "Core/Actor/LexWidgetContainer.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexSprite.h"
 #include "Engine/World.h"
@@ -34,73 +33,62 @@ void ULexUIRichTextImageData::BroadcastOnDataChange()
 	OnDataChange.Broadcast();
 }
 
-void ULexUIRichTextImageData::CreateOrUpdateObject(ULexWidget* parent, const TArray<FLexUIText_RichTextImageTag>& imageTagData, TArray<TObjectPtr<ULexWidget>>& createdImageObjectArray, bool listImageObjectInEditorOutliner)
+void ULexUIRichTextImageData::CreateOrUpdateObject(ULexWidget* parent, const TArray<FLexUIText_RichTextImageTag>& imageTagData, TArray<TObjectPtr<ULexWidget>>& CreatedImageObjectArray)
 {
 	//destroy extra
-	while (createdImageObjectArray.Num() > imageTagData.Num())
+	while (CreatedImageObjectArray.Num() > imageTagData.Num())
 	{
-		auto lastIndex = createdImageObjectArray.Num() - 1;
-		auto imageObj = createdImageObjectArray[lastIndex];
-		FLexUIUtils::DestroyActorWithHierarchy(imageObj->GetOwner());
-		createdImageObjectArray.RemoveAt(lastIndex);
+		auto lastIndex = CreatedImageObjectArray.Num() - 1;
+		auto imageObj = CreatedImageObjectArray[lastIndex];
+		imageObj->DestroyWidget();
+		CreatedImageObjectArray.RemoveAt(lastIndex);
 	}
 	//create more
-	while (createdImageObjectArray.Num() < imageTagData.Num())
+	while (CreatedImageObjectArray.Num() < imageTagData.Num())
 	{
-		auto spriteActor = parent->GetWorld()->SpawnActor<ULexWidgetContainer>();
-		spriteActor->SetFlags(EObjectFlags::RF_Transient);
-		spriteActor->GetLexWidget()->AttachToComponent(parent, FAttachmentTransformRules::KeepRelativeTransform);
-		createdImageObjectArray.Push(spriteActor->GetLexWidget());
+		auto Widget = NewObject<ULexWidget>(parent->GetOuter());
+		Widget->SetFlags(EObjectFlags::RF_Transient);
+		Widget->SetParent(parent, false);
+		Widget->CreateNewVisual<ULexSprite>();
+		CreatedImageObjectArray.Push(Widget);
 	}
 	//apply data
 	for (int i = 0; i < imageTagData.Num(); i++)
 	{
-		auto ImageWidget = createdImageObjectArray[i];
+		auto ImageWidget = CreatedImageObjectArray[i];
 		auto ImageVisual = (ULexSprite*)ImageWidget->GetVisual();
-#if WITH_EDITOR
-		ImageWidget->GetOwner()->SetActorLabel(FString::Printf(TEXT("[%s]"), *imageTagData[i].TagName.ToString()));
-		if (!parent->GetWorld()->IsGameWorld())//set it only in edit mode
-		{
-			auto bListedInSceneOutliner_Property = FindFProperty<FBoolProperty>(AActor::StaticClass(), TEXT("bListedInSceneOutliner"));
-			bListedInSceneOutliner_Property->SetPropertyValue_InContainer(ImageWidget->GetOwner(), listImageObjectInEditorOutliner);
-		}
-#endif
+		ImageWidget->SetDisplayName(FString::Printf(TEXT("[%s]"), *imageTagData[i].TagName.ToString()));
 		if (auto imageItemPtr = ImageMap.Find(imageTagData[i].TagName))
 		{
 			auto& spriteFrames = imageItemPtr->Frames;
-			auto sequencePlayerComp = ImageWidget->GetOwner()->FindComponentByClass<UUISpriteSequencePlayer>();
-			ULexUISpriteData_BaseObject* sprite = nullptr;
+			auto SequencePlayerComp = ImageWidget->GetComponent<UUISpriteSequencePlayer>();
 			if (spriteFrames.Num() == 0)
 			{
 				ImageVisual->SetSprite(nullptr, false);
-				if (IsValid(sequencePlayerComp))
+				if (IsValid(SequencePlayerComp))
 				{
-					sequencePlayerComp->DestroyComponent();
+					SequencePlayerComp->DestroyComponent();
 				}
 			}
 			else if (spriteFrames.Num() == 1)
 			{
-				sprite = spriteFrames[0];
-				if (IsValid(sequencePlayerComp))
+				if (IsValid(SequencePlayerComp))
 				{
-					sequencePlayerComp->DestroyComponent();
+					SequencePlayerComp->DestroyComponent();
 				}
 			}
 			else
 			{
-				sprite = spriteFrames[0];
-				if (!IsValid(sequencePlayerComp))
+				if (!IsValid(SequencePlayerComp))
 				{
-					sequencePlayerComp = NewObject<UUISpriteSequencePlayer>(ImageWidget->GetOwner());
-					sequencePlayerComp->SetSnapSpriteSize(false);
-					sequencePlayerComp->RegisterComponent();
-					ImageWidget->GetOwner()->AddInstanceComponent(sequencePlayerComp);
+					SequencePlayerComp = ImageWidget->AddComponent<UUISpriteSequencePlayer>();
+					SequencePlayerComp->SetSnapSpriteSize(false);
 				}
-				sequencePlayerComp->SetSpriteSequence(spriteFrames);
-				sequencePlayerComp->SetFps(imageItemPtr->OverrideAnimationFps < 0 ? AnimationFps : imageItemPtr->OverrideAnimationFps);
+				SequencePlayerComp->SetSpriteSequence(spriteFrames);
+				SequencePlayerComp->SetFps(imageItemPtr->OverrideAnimationFps < 0 ? AnimationFps : imageItemPtr->OverrideAnimationFps);
 				if (parent->GetWorld()->IsGameWorld())
 				{
-					sequencePlayerComp->Play();
+					SequencePlayerComp->Play();
 				}
 			}
 			ImageVisual->SetColor(imageTagData[i].TintColor);
@@ -114,12 +102,6 @@ void ULexUIRichTextImageData::CreateOrUpdateObject(ULexWidget* parent, const TAr
 			ImageWidget->SetSizeDelta(FVector2D(imageTagData[i].Size));
 		}
 	}
-#if WITH_EDITOR
-	if (!parent->GetWorld()->IsGameWorld())//refresh on editor
-	{
-		ULexUIManagerObject::MarkBroadcastLevelActorListChanged();
-	}
-#endif
 }
 bool ULexUIRichTextImageData::GetImageSize(const FName& imageTag, FIntVector2& outSize)
 {

@@ -168,7 +168,7 @@ private:
 		{
 			if (SelectedWidget.IsValid())
 			{
-				ThisTransform = SelectedWidget->GetComponentTransform();
+				ThisTransform = SelectedWidget->GetWorldTransform();
 			}
 			constexpr uint8 AxisAlpha = 255;
 			constexpr uint8 PlaneAlpha = 50;
@@ -287,7 +287,7 @@ public:
 	{
 		World = InWorld;
 		SelectedWidget = InWidget;
-		ThisTransform = SelectedWidget->GetComponentTransform();
+		ThisTransform = SelectedWidget->GetWorldTransform();
 		LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(InWorld);
 		DebugName = TEXT("LexUITransformWidget");
 		
@@ -807,7 +807,7 @@ void FLexUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy*
 
 	FVector RayOrigin, RayDirection;
 	View.DeprojectScreenToWorld(FVector2D(HitX, HitY), View.UnscaledViewRect, View.ViewMatrices.GetInvViewProjectionMatrix(), RayOrigin, RayDirection);
-	AActor* ClickHitActor = nullptr;
+	ULexWidget* ClickHitWidget = nullptr;
 	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
 	{
 		float LineTraceLength = 100000000;
@@ -837,15 +837,12 @@ void FLexUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy*
 		}
 		if (ULexUIManagerWorldSubsystem::RaycastHitUI(this->GetWorld(), AllWidgetArray, LineStart, LineEnd, ClickHitUI, IndexOfClickSelectUI))
 		{
-			ClickHitActor = ClickHitUI->GetOwner();
+			ClickHitWidget = ClickHitUI;
 		}
 	}
-	if (ClickHitActor != nullptr)
+	if (ClickHitWidget != nullptr)
 	{
-		if (auto LexWidget = Cast<ULexWidget>(ClickHitActor->GetRootComponent()))
-		{
-			PrefabEditorPtr.Pin()->SelectWidgets({LexWidget}, Click.IsControlDown());
-		}
+		PrefabEditorPtr.Pin()->SelectWidgets({ClickHitWidget}, Click.IsControlDown());
 		return;
 	}
 

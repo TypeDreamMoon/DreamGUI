@@ -10,13 +10,12 @@
 #include "Widgets/SViewport.h"
 #include "Engine/Selection.h"
 #include "EngineUtils.h"
-#include "DataFactory/LexUIPrefabActorFactory.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "LGUIEditorModule.h"
 #include "PrefabEditor/LexUIPrefabEditor.h"
 #include "Core/Components/LexLayout.h"
-#include "Core/Actor/LexWidgetRootActor.h"
+#include "Core/Actor/LexWidgetPresenterComponent.h"
 #include "Utils/LexUIUtils.h"
 
 #define LOCTEXT_NAMESPACE "LGUIEditorTools"
@@ -27,38 +26,38 @@ FBeforeApplyPrefabDelegate FLexUIEditorTools::OnBeforeApplyPrefab;
 
 struct FLexUIEditorToolsHelperFunctionHolder
 {
-	static FString GetLabelPrefixForCopy(const FString& srcActorLabel, FString& outNumetricSuffix)
+	static FString GetLabelPrefixForCopy(const FString& SrcWidgetName, FString& OutNumericSuffix)
 	{
 		int rightCount = 1;
-		while (rightCount <= srcActorLabel.Len() && srcActorLabel.Right(rightCount).IsNumeric())
+		while (rightCount <= SrcWidgetName.Len() && SrcWidgetName.Right(rightCount).IsNumeric())
 		{
 			rightCount++;
 		}
 		rightCount--;
-		outNumetricSuffix = srcActorLabel.Right(rightCount);
-		return srcActorLabel.Left(srcActorLabel.Len() - rightCount);
+		OutNumericSuffix = SrcWidgetName.Right(rightCount);
+		return SrcWidgetName.Left(SrcWidgetName.Len() - rightCount);
 	}
-	static FString GetCopiedActorLabel(AActor* Parent, FString OriginActorLabel, UWorld* World)
+	static FString GetCopiedWidgetLabel(ULexWidget* Parent, FString OriginWidgetName, UObject* Outer)
 	{
-		TArray<AActor*> SameParentActorList;//all actors attached at same parent actor. if parent is null then get all actors
-		for (TActorIterator<AActor> ActorItr(World); ActorItr; ++ActorItr)
+		TArray<ULexWidget*> SameParentWidgetList;//all widgets attached at same parent widget. if parent is null then get all widgets
+		for (TObjectIterator<ULexWidget> WidgetItr; WidgetItr; ++WidgetItr)
 		{
-			if (AActor* itemActor = *ActorItr)
+			if (auto ItemWidget = *WidgetItr)
 			{
-				if (IsValid(itemActor))
+				if (IsValid(ItemWidget) && ItemWidget->GetOuter() == Outer)
 				{
 					if (IsValid(Parent))
 					{
-						if (itemActor->GetAttachParentActor() == Parent)
+						if (ItemWidget->GetParent() == Parent)
 						{
-							SameParentActorList.Add(itemActor);
+							SameParentWidgetList.Add(ItemWidget);
 						}
 					}
 					else
 					{
-						if (itemActor->GetAttachParentActor() == nullptr)
+						if (ItemWidget->GetParent() == nullptr)
 						{
-							SameParentActorList.Add(itemActor);
+							SameParentWidgetList.Add(ItemWidget);
 						}
 					}
 				}
@@ -66,132 +65,131 @@ struct FLexUIEditorToolsHelperFunctionHolder
 		}
 	
 
-		FString MaxNumetricSuffixStr = TEXT("");//numetric suffix
-		OriginActorLabel = GetLabelPrefixForCopy(OriginActorLabel, MaxNumetricSuffixStr);
-		int MaxNumetricSuffixStrLength = MaxNumetricSuffixStr.Len();
-		int SameNameActorCount = 0;//if actor name is same with source name, then collect it
-		for (int i = 0; i < SameParentActorList.Num(); i ++)//search from same level actors, and get the right suffix
+		FString MaxNumericSuffixStr = TEXT("");//numeric suffix
+		OriginWidgetName = GetLabelPrefixForCopy(OriginWidgetName, MaxNumericSuffixStr);
+		int MaxNumericSuffixStrLength = MaxNumericSuffixStr.Len();
+		int SameNameWidgetCount = 0;//if widget name is same with source name, then collect it
+		for (int i = 0; i < SameParentWidgetList.Num(); i ++)//search from same level Widgets, and get the right suffix
 		{
-			auto item = SameParentActorList[i];
-			auto itemActorLabel = item->GetActorLabel();
-			if (itemActorLabel == OriginActorLabel)SameNameActorCount++;
-			if (OriginActorLabel.Len() == 0 || itemActorLabel.StartsWith(OriginActorLabel))
+			auto item = SameParentWidgetList[i];
+			auto ItemWidgetName = item->GetDisplayName();
+			if (ItemWidgetName == OriginWidgetName)SameNameWidgetCount++;
+			if (OriginWidgetName.Len() == 0 || ItemWidgetName.StartsWith(OriginWidgetName))
 			{
-				auto itemRightStr = itemActorLabel.Right(itemActorLabel.Len() - OriginActorLabel.Len());
+				auto itemRightStr = ItemWidgetName.Right(ItemWidgetName.Len() - OriginWidgetName.Len());
 				if (!itemRightStr.IsNumeric())//if rest is not numetric
 				{
 					continue;
 				}
 				FString itemNumetrixSuffixStr = itemRightStr;
 				int itemNumetrix = FCString::Atoi(*itemNumetrixSuffixStr);
-				int maxNumetrixSuffix = FCString::Atoi(*MaxNumetricSuffixStr);
+				int maxNumetrixSuffix = FCString::Atoi(*MaxNumericSuffixStr);
 				if (itemNumetrix > maxNumetrixSuffix)
 				{
 					maxNumetrixSuffix = itemNumetrix;
-					MaxNumetricSuffixStr = FString::Printf(TEXT("%d"), maxNumetrixSuffix);
+					MaxNumericSuffixStr = FString::Printf(TEXT("%d"), maxNumetrixSuffix);
 				}
 			}
 		}
-		FString CopiedActorLabel = OriginActorLabel;
-		if (!MaxNumetricSuffixStr.IsEmpty() || SameNameActorCount > 0)
+		FString CopiedWidgetLabel = OriginWidgetName;
+		if (!MaxNumericSuffixStr.IsEmpty() || SameNameWidgetCount > 0)
 		{
-			int MaxNumtrixSuffix = FCString::Atoi(*MaxNumetricSuffixStr);
-			MaxNumtrixSuffix++;
-			FString NumetrixSuffixStr = FString::Printf(TEXT("%d"), MaxNumtrixSuffix);
-			while (NumetrixSuffixStr.Len() < MaxNumetricSuffixStrLength)
+			int MaxNumrixSuffix = FCString::Atoi(*MaxNumericSuffixStr);
+			MaxNumrixSuffix++;
+			FString NumetrixSuffixStr = FString::Printf(TEXT("%d"), MaxNumrixSuffix);
+			while (NumetrixSuffixStr.Len() < MaxNumericSuffixStrLength)
 			{
 				NumetrixSuffixStr = TEXT("0") + NumetrixSuffixStr;
 			}
-			CopiedActorLabel += NumetrixSuffixStr;
+			CopiedWidgetLabel += NumetrixSuffixStr;
 		}
-		return CopiedActorLabel;
+		return CopiedWidgetLabel;
 	}
 };
 
-TMap<FString, TWeakObjectPtr<ULexUIPrefab>> FLexUIEditorTools::CopiedActorPrefabMap;
+TMap<FString, TWeakObjectPtr<ULexUIPrefab>> FLexUIEditorTools::CopiedWidgetPrefabMap;
 
 FString FLexUIEditorTools::LexUIPresetPrefabPath = TEXT("/LGUI/Prefabs/");
 
-TArray<AActor*> FLexUIEditorTools::GetRootActorListFromSelection(const TArray<AActor*>& selectedActors)
+TArray<ULexWidget*> FLexUIEditorTools::GetRootWidgetListFromSelection(const TArray<ULexWidget*>& InSelectedWidgets)
 {
-	TArray<AActor*> RootActorList;
-	auto count = selectedActors.Num();
-	//search upward find parent and put into list, only root actor can add to list
+	TArray<ULexWidget*> RootWidgetList;
+	auto count = InSelectedWidgets.Num();
+	//search upward find parent and put into list, only root Widget can add to list
 	for (int i = 0; i < count; i++)
 	{
-		auto obj = selectedActors[i];
-		auto parent = obj->GetAttachParentActor();
-		bool isRootActor = false;
+		auto obj = InSelectedWidgets[i];
+		auto parent = obj->GetParent();
+		bool isRootWidget = false;
 		while (true)
 		{
 			if (parent == nullptr)//top level
 			{
-				isRootActor = true;
+				isRootWidget = true;
 				break;
 			}
-			if (selectedActors.Contains(parent))//if parent is already in list, skip it
+			if (InSelectedWidgets.Contains(parent))//if parent is already in list, skip it
 			{
-				isRootActor = false;
+				isRootWidget = false;
 				break;
 			}
 			else//if not in list, keep search upward
 			{
-				parent = parent->GetAttachParentActor();
+				parent = parent->GetParent();
 				continue;
 			}
 		}
-		if (isRootActor)
+		if (isRootWidget)
 		{
-			RootActorList.Add(obj);
+			RootWidgetList.Add(obj);
 		}
 	}
-	return RootActorList;
+	return RootWidgetList;
 }
 
-void FLexUIEditorTools::CreateLexWidget(TFunction<AActor*()> GetSelectedActorFunction, FString Name, UClass* VisualClass, TFunction<void(ULexWidget*)> Callback)
+void FLexUIEditorTools::CreateLexWidget(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString Name, UClass* VisualClass, TFunction<void(ULexWidget*)> Callback)
 {
-	auto SelectedActor = GetSelectedActorFunction();
-	if (SelectedActor == nullptr)return;
-	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return;
+	auto SelectedWidget = GetSelectedWidgetFunction();
+	if (SelectedWidget == nullptr)return;
+	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return;
 	GEditor->BeginTransaction(LOCTEXT("CreateChildWidget_Transaction", "Create Child Widget"));
-	MakeCurrentLevel(SelectedActor);
-	ULexUIManagerWorldSubsystem::GetSelection(SelectedActor->GetWorld())->Modify();
-	auto NewActor = SelectedActor->GetWorld()->SpawnActor<ULexWidgetContainer>(ULexWidgetContainer::StaticClass(), FTransform::Identity, FActorSpawnParameters());
-	if (IsValid(NewActor))
+	ULexUIManagerWorldSubsystem::GetSelection(SelectedWidget->GetWorld())->Modify();
+	auto NewWidget = NewObject<ULexWidget>(SelectedWidget->GetOuter(), ULexWidget::StaticClass());
+	if (IsValid(NewWidget))
 	{
-		NewActor->SetActorLabel(Name);
-		if (SelectedActor != nullptr)
+		NewWidget->SetDisplayName(Name);
+		if (SelectedWidget != nullptr)
 		{
-			NewActor->AttachToActor(SelectedActor, FAttachmentTransformRules::KeepRelativeTransform);
-			ULexUIManagerWorldSubsystem::GetSelection(SelectedActor->GetWorld())->SelectNone();
+			NewWidget->SetParent(SelectedWidget, false);
+			ULexUIManagerWorldSubsystem::GetSelection(SelectedWidget->GetWorld())->SelectNone();
 		}
 		if (VisualClass)
 		{
-			NewActor->GetLexWidget()->CreateNewVisual(VisualClass);
+			NewWidget->CreateNewVisual(VisualClass);
 		}
 		if (Callback)
 		{
-			Callback(NewActor->GetLexWidget());
+			Callback(NewWidget);
 		}
-		ULexUIManagerWorldSubsystem::GetSelection(SelectedActor->GetWorld())->SelectActor(NewActor);
+		ULexUIManagerWorldSubsystem::GetSelection(SelectedWidget->GetWorld())->SelectWidget(NewWidget);
 	}
 	GEditor->EndTransaction();
 }
 
-void FLexUIEditorTools::CreateUIControls(TFunction<AActor*()> GetSelectedActorFunction, FString InPrefabPath)
+void FLexUIEditorTools::CreateUIControls(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString InPrefabPath)
 {
-	auto SelectedActor = GetSelectedActorFunction();
-	if (SelectedActor == nullptr)return;
-	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return;
+	auto SelectedWidget = GetSelectedWidgetFunction();
+	if (SelectedWidget == nullptr)return;
+	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return;
 	GEditor->BeginTransaction(LOCTEXT("CreateUIControl_Transaction", "LexUI Create UI Control"));
-	MakeCurrentLevel(SelectedActor);
-	ULexUIManagerWorldSubsystem::GetSelection(SelectedActor->GetWorld())->Modify();
+	ULexUIManagerWorldSubsystem::GetSelection(SelectedWidget->GetWorld())->Modify();
 	if (auto Prefab = LoadObject<ULexUIPrefab>(NULL, *InPrefabPath))
 	{
-		auto Actor = Prefab->LoadPrefabInEditor(SelectedActor->GetWorld()
-			, SelectedActor == nullptr ? nullptr : SelectedActor->GetRootComponent());
-		ULexUIManagerWorldSubsystem::GetSelection(SelectedActor->GetWorld())->SelectNone();
-		ULexUIManagerWorldSubsystem::GetSelection(SelectedActor->GetWorld())->SelectActor(Actor);
+		auto Widget = Prefab->LoadPrefabInEditor(SelectedWidget->GetWorld()
+			, SelectedWidget->GetOuter()
+			, SelectedWidget);
+		ULexUIManagerWorldSubsystem::GetSelection(SelectedWidget->GetWorld())->SelectNone();
+		ULexUIManagerWorldSubsystem::GetSelection(SelectedWidget->GetWorld())->SelectWidget(Widget);
 	}
 	else
 	{
@@ -200,64 +198,60 @@ void FLexUIEditorTools::CreateUIControls(TFunction<AActor*()> GetSelectedActorFu
 	GEditor->EndTransaction();
 }
 
-void FLexUIEditorTools::DuplicateActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)//@todo: fix bug: duplicate subprefab then undo, this operation will revert the source copied prefab to orignal state
+void FLexUIEditorTools::DuplicateWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction)
 {
-	auto SelectedActors = GetSelectedActorArrayFunction();
-	if (SelectedActors.Num() == 0)
+	auto SelectedWidgets = GetSelectedWidgetArrayFunction();
+	if (SelectedWidgets.Num() == 0)
 	{
 		UE_LOG(LGUIEditor, Error, TEXT("NothingSelected"));
 		return;
 	}
-	auto RootActorList = FLexUIEditorTools::GetRootActorListFromSelection(SelectedActors);
-	GEditor->BeginTransaction(LOCTEXT("DuplicateActor_Transaction", "LexUI Duplicate Actors"));
-	ULexUIManagerWorldSubsystem::GetSelection(SelectedActors[0]->GetWorld())->Modify();
-	ULexUIManagerWorldSubsystem::GetSelection(SelectedActors[0]->GetWorld())->SelectNone();
-	for (auto Actor : RootActorList)
+	auto RootWidgetList = FLexUIEditorTools::GetRootWidgetListFromSelection(SelectedWidgets);
+	GEditor->BeginTransaction(LOCTEXT("DuplicateWidget_Transaction", "LexUI Duplicate Widgets"));
+	ULexUIManagerWorldSubsystem::GetSelection(SelectedWidgets[0]->GetWorld())->Modify();
+	ULexUIManagerWorldSubsystem::GetSelection(SelectedWidgets[0]->GetWorld())->SelectNone();
+	for (auto Widget : RootWidgetList)
 	{
-		MakeCurrentLevel(Actor);
-		Actor->GetLevel()->Modify();
-		auto CopiedActorLabel = FLexUIEditorToolsHelperFunctionHolder::GetCopiedActorLabel(Actor->GetAttachParentActor(), Actor->GetActorLabel(), Actor->GetWorld());
-		AActor* CopiedActor;
-		USceneComponent* Parent = nullptr;
-		if (Actor->GetAttachParentActor())
+		Widget->GetOuter()->Modify();
+		auto CopiedWidgetName = FLexUIEditorToolsHelperFunctionHolder::GetCopiedWidgetLabel(Widget->GetParent(), Widget->GetDisplayName(), Widget->GetWorld());
+		ULexWidget* CopiedWidget;
+		ULexWidget* Parent = nullptr;
+		if (Widget->GetParent())
 		{
-			Parent = Actor->GetAttachParentActor()->GetRootComponent();
+			Parent = Widget->GetParent();
 		}
-		TMap<TObjectPtr<AActor>, FLexUISubPrefabData> DuplicatedSubPrefabMap;
+		TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> DuplicatedSubPrefabMap;
 		TMap<FGuid, TObjectPtr<UObject>> OutMapGuidToObject;
 		TMap<UObject*, FGuid> InMapObjectToGuid;
-		if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(Actor))
+		if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(Widget))
 		{
 			PrefabHelperObject->CleanupInvalidSubPrefab();//do cleanup before everything else
 			PrefabHelperObject->Modify();
-			PrefabHelperObject->SetCanNotifyAttachment(false);
 			struct LOCAL {
-				static void CollectSubPrefabActors(AActor* InActor, const TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& InSubPrefabMap, TArray<AActor*>& OutSubPrefabRootActors)
+				static void CollectSubPrefabWidgets(ULexWidget* InWidget, const TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& InSubPrefabMap, TArray<ULexWidget*>& OutSubPrefabRootWidgets)
 				{
-					if (InSubPrefabMap.Contains(InActor))
+					if (InSubPrefabMap.Contains(InWidget))
 					{
-						OutSubPrefabRootActors.Add(InActor);
+						OutSubPrefabRootWidgets.Add(InWidget);
 					}
 					else
 					{
-						TArray<AActor*> ChildrenActors;
-						InActor->GetAttachedActors(ChildrenActors);
-						for (auto& ChildActor : ChildrenActors)
+						for (auto& Child : InWidget->GetChildren())
 						{
-							CollectSubPrefabActors(ChildActor, InSubPrefabMap, OutSubPrefabRootActors);
+							CollectSubPrefabWidgets(Child, InSubPrefabMap, OutSubPrefabRootWidgets);
 						}
 					}
 				}
 			};
-			TArray<AActor*> SubPrefabRootActors;
-			LOCAL::CollectSubPrefabActors(Actor, PrefabHelperObject->SubPrefabMap, SubPrefabRootActors);//collect sub prefabs that is attached to this Actor
+			TArray<ULexWidget*> SubPrefabRootWidgets;
+			LOCAL::CollectSubPrefabWidgets(Widget, PrefabHelperObject->SubPrefabMap, SubPrefabRootWidgets);//collect sub prefabs that is attached to this Widget
 			for (auto& SubPrefabKeyValue : PrefabHelperObject->SubPrefabMap)//generate MapObjectToGuid
 			{
-				auto SubPrefabRootActor = SubPrefabKeyValue.Key;
-				if (SubPrefabRootActors.Contains(SubPrefabRootActor))
+				auto SubPrefabRootWidget = SubPrefabKeyValue.Key;
+				if (SubPrefabRootWidgets.Contains(SubPrefabRootWidget))
 				{
 					auto& SubPrefabData = SubPrefabKeyValue.Value;
-					PrefabHelperObject->RefreshOnSubPrefabDirty(SubPrefabData.PrefabAsset, SubPrefabRootActor);//need to update subprefab to latest before duplicate
+					PrefabHelperObject->RefreshOnSubPrefabDirty(SubPrefabData.PrefabAsset, SubPrefabRootWidget);//need to update subprefab to latest before duplicate
 					auto FindObjectGuidInParentPrefab = [&](FGuid InGuidInSubPrefab) {
 						for (auto& KeyValue : SubPrefabData.MapObjectGuidFromParentPrefabToSubPrefab)
 						{
@@ -276,14 +270,8 @@ void FLexUIEditorTools::DuplicateActors(TFunction<TArray<AActor*>()> GetSelected
 					}
 				}
 			}
-			CopiedActor = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::DuplicateActorForEditor(Actor, Parent, PrefabHelperObject->SubPrefabMap, InMapObjectToGuid, DuplicatedSubPrefabMap, OutMapGuidToObject);
-			if (auto UIItem = Cast<ULexWidget>(CopiedActor->GetRootComponent()))
-			{
-				if (auto UIParent = Cast<ULexWidget>(Parent))
-				{
-					UIItem->SetAsLastSibling();
-				}
-			}
+			CopiedWidget = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::DuplicateWidgetForEditor(Widget->GetWorld(), Widget, Parent, PrefabHelperObject->SubPrefabMap, InMapObjectToGuid, DuplicatedSubPrefabMap, OutMapGuidToObject);
+			CopiedWidget->SetAsLastSibling();
 			for (auto& KeyValue : DuplicatedSubPrefabMap)
 			{
 				TMap<FGuid, TObjectPtr<UObject>> SubMapGuidToObject;
@@ -293,40 +281,39 @@ void FLexUIEditorTools::DuplicateActors(TFunction<TArray<AActor*>()> GetSelected
 				}
 				PrefabHelperObject->MakePrefabAsSubPrefab(KeyValue.Value.PrefabAsset, KeyValue.Key, SubMapGuidToObject, KeyValue.Value.ObjectOverrideParameterArray);
 			}
-			PrefabHelperObject->SetCanNotifyAttachment(true);
 		}
 		else 
 		{
-			CopiedActor = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::DuplicateActorForEditor(Actor, Parent, {}, InMapObjectToGuid, DuplicatedSubPrefabMap, OutMapGuidToObject);
+			CopiedWidget = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::DuplicateWidgetForEditor(Widget->GetWorld(), Widget, Parent, {}, InMapObjectToGuid, DuplicatedSubPrefabMap, OutMapGuidToObject);
 		}
-		CopiedActor->SetActorLabel(CopiedActorLabel);
-		ULexUIManagerWorldSubsystem::GetSelection(CopiedActor->GetWorld())->SelectActor(CopiedActor);
+		CopiedWidget->SetDisplayName(CopiedWidgetName);
+		ULexUIManagerWorldSubsystem::GetSelection(CopiedWidget->GetWorld())->SelectWidget(CopiedWidget);
 	}
 	GEditor->EndTransaction();
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 }
-void FLexUIEditorTools::CopyActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
+void FLexUIEditorTools::CopyWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction)
 {
-	auto SelectedActors = GetSelectedActorArrayFunction();
-	if (SelectedActors.Num() == 0)
+	auto SelectedWidgets = GetSelectedWidgetArrayFunction();
+	if (SelectedWidgets.Num() == 0)
 	{
 		UE_LOG(LGUIEditor, Error, TEXT("NothingSelected"));
 		return;
 	}
-	for (auto KeyValuePair : CopiedActorPrefabMap)
+	for (auto KeyValuePair : CopiedWidgetPrefabMap)
 	{
 		KeyValuePair.Value->RemoveFromRoot();
 		KeyValuePair.Value->ConditionalBeginDestroy();
 	}
-	auto CopyActorList = FLexUIEditorTools::GetRootActorListFromSelection(SelectedActors);
-	CopiedActorPrefabMap.Reset();
-	for (auto Actor : CopyActorList)
+	auto CopyWidgetList = FLexUIEditorTools::GetRootWidgetListFromSelection(SelectedWidgets);
+	CopiedWidgetPrefabMap.Reset();
+	for (auto Widget : CopyWidgetList)
 	{
-		auto prefab = NewObject<ULexUIPrefab>();
-		prefab->AddToRoot();
+		auto Prefab = NewObject<ULexUIPrefab>();
+		Prefab->AddToRoot();
 		TMap<UObject*, FGuid> MapObjectToGuid;
-		TMap<TObjectPtr<AActor>, FLexUISubPrefabData> SubPrefabMap;
-		if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(Actor))
+		TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> SubPrefabMap;
+		if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(Widget))
 		{
 			SubPrefabMap = PrefabHelperObject->SubPrefabMap;
 
@@ -335,32 +322,30 @@ void FLexUIEditorTools::CopyActors(TFunction<TArray<AActor*>()> GetSelectedActor
 				PrefabHelperObject->Modify();
 			}
 			struct LOCAL {
-				static void CollectSubPrefabActors(AActor* InActor, const TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& InSubPrefabMap, TArray<AActor*>& OutSubPrefabRootActors)
+				static void CollectSubPrefabWidgets(ULexWidget* InWidget, const TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& InSubPrefabMap, TArray<ULexWidget*>& OutSubPrefabRootWidgets)
 				{
-					if (InSubPrefabMap.Contains(InActor))
+					if (InSubPrefabMap.Contains(InWidget))
 					{
-						OutSubPrefabRootActors.Add(InActor);
+						OutSubPrefabRootWidgets.Add(InWidget);
 					}
 					else
 					{
-						TArray<AActor*> ChildrenActors;
-						InActor->GetAttachedActors(ChildrenActors);
-						for (auto& ChildActor : ChildrenActors)
+						for (auto& ChildWidget : InWidget->GetChildren())
 						{
-							CollectSubPrefabActors(ChildActor, InSubPrefabMap, OutSubPrefabRootActors);
+							CollectSubPrefabWidgets(ChildWidget, InSubPrefabMap, OutSubPrefabRootWidgets);
 						}
 					}
 				}
 			};
-			TArray<AActor*> SubPrefabRootActors;
-			LOCAL::CollectSubPrefabActors(Actor, PrefabHelperObject->SubPrefabMap, SubPrefabRootActors);//collect sub prefabs that is attached to this Actor
+			TArray<ULexWidget*> SubPrefabRootWidgets;
+			LOCAL::CollectSubPrefabWidgets(Widget, PrefabHelperObject->SubPrefabMap, SubPrefabRootWidgets);//collect sub prefabs that is attached to this Widget
 			for (auto& SubPrefabKeyValue : PrefabHelperObject->SubPrefabMap)//generate MapObjectToGuid
 			{
-				auto SubPrefabRootActor = SubPrefabKeyValue.Key;
-				if (SubPrefabRootActors.Contains(SubPrefabRootActor))
+				auto SubPrefabRootWidget = SubPrefabKeyValue.Key;
+				if (SubPrefabRootWidgets.Contains(SubPrefabRootWidget))
 				{
 					auto& SubPrefabData = SubPrefabKeyValue.Value;
-					PrefabHelperObject->RefreshOnSubPrefabDirty(SubPrefabData.PrefabAsset, SubPrefabRootActor);//need to update subprefab to latest before duplicate
+					PrefabHelperObject->RefreshOnSubPrefabDirty(SubPrefabData.PrefabAsset, SubPrefabRootWidget);//need to update subprefab to latest before duplicate
 					auto FindObjectGuidInParentPrefab = [&](FGuid InGuidInSubPrefab) {
 						for (auto& KeyValue : SubPrefabData.MapObjectGuidFromParentPrefabToSubPrefab)
 						{
@@ -381,50 +366,45 @@ void FLexUIEditorTools::CopyActors(TFunction<TArray<AActor*>()> GetSelectedActor
 			}
 		}
 
-		TMap<TObjectPtr<AActor>, FLexUISubPrefabData> TempSubPrefabMap;
+		TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> TempSubPrefabMap;
 		for (auto& SubPrefabKeyValue : SubPrefabMap)
 		{
-			if (SubPrefabKeyValue.Key->IsAttachedTo(Actor) || SubPrefabKeyValue.Key == Actor)
+			if (SubPrefabKeyValue.Key->IsChildOf(Widget) || SubPrefabKeyValue.Key == Widget)
 			{
 				TempSubPrefabMap = SubPrefabMap;
 				break;
 			}
 		}
-		prefab->SavePrefab(Actor, MapObjectToGuid, TempSubPrefabMap);
-		CopiedActorPrefabMap.Add(Actor->GetActorLabel(), prefab);
+		Prefab->SavePrefab(Widget, MapObjectToGuid, TempSubPrefabMap);
+		CopiedWidgetPrefabMap.Add(Widget->GetDisplayName(), Prefab);
 	}
 }
-void FLexUIEditorTools::PasteActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
+void FLexUIEditorTools::PasteWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction)
 {
-	auto SelectedActors = GetSelectedActorArrayFunction();
-	USceneComponent* parentComp = nullptr;
-	if (SelectedActors.Num() > 0)
+	auto SelectedWidgets = GetSelectedWidgetArrayFunction();
+	ULexWidget* ParentWidget = nullptr;
+	if (SelectedWidgets.Num() > 0)
 	{
-		parentComp = SelectedActors[0]->GetRootComponent();
+		ParentWidget = SelectedWidgets[0];
 	}
 	ULexUIPrefabHelperObject* PrefabHelperObject = nullptr;
-	if (parentComp)
+	if (ParentWidget)
 	{
-		PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(parentComp->GetOwner());
+		PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(ParentWidget);
 	}
 	if (PrefabHelperObject == nullptr)return;
 
-	PrefabHelperObject->SetCanNotifyAttachment(false);
-	GEditor->BeginTransaction(LOCTEXT("PasteActor_Transaction", "LexUI Paste Actors"));
-	ULexUIManagerWorldSubsystem::GetSelection(SelectedActors[0]->GetWorld())->Modify();
-	ULexUIManagerWorldSubsystem::GetSelection(SelectedActors[0]->GetWorld())->SelectNone();
-	if (IsValid(parentComp))
-	{
-		MakeCurrentLevel(parentComp->GetOwner());
-	}
-	for (auto KeyValuePair : CopiedActorPrefabMap)
+	GEditor->BeginTransaction(LOCTEXT("PasteWidget_Transaction", "LexUI Paste Widgets"));
+	ULexUIManagerWorldSubsystem::GetSelection(SelectedWidgets[0]->GetWorld())->Modify();
+	ULexUIManagerWorldSubsystem::GetSelection(SelectedWidgets[0]->GetWorld())->SelectNone();
+	for (auto KeyValuePair : CopiedWidgetPrefabMap)
 	{
 		if (KeyValuePair.Value.IsValid())
 		{
 			TMap<FGuid, TObjectPtr<UObject>> OutMapGuidToObject;
-			TMap<TObjectPtr<AActor>, FLexUISubPrefabData> LoadedSubPrefabMap;
-			auto copiedActorLabel = FLexUIEditorToolsHelperFunctionHolder::GetCopiedActorLabel(parentComp->GetOwner(), KeyValuePair.Key, parentComp->GetWorld());
-			auto CopiedActor = KeyValuePair.Value->LoadPrefabInEditor(parentComp->GetWorld(), parentComp, LoadedSubPrefabMap, OutMapGuidToObject, false);
+			TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> LoadedSubPrefabMap;
+			auto CopiedWidgetName = FLexUIEditorToolsHelperFunctionHolder::GetCopiedWidgetLabel(ParentWidget, KeyValuePair.Key, ParentWidget->GetWorld());
+			auto CopiedWidget = KeyValuePair.Value->LoadPrefabInEditor(ParentWidget->GetWorld(), ParentWidget->GetOuter(), ParentWidget, LoadedSubPrefabMap, OutMapGuidToObject, false);
 			for (auto& KeyValue : LoadedSubPrefabMap)
 			{
 				TMap<FGuid, TObjectPtr<UObject>> SubMapGuidToObject;
@@ -434,147 +414,85 @@ void FLexUIEditorTools::PasteActors(TFunction<TArray<AActor*>()> GetSelectedActo
 				}
 				PrefabHelperObject->MakePrefabAsSubPrefab(KeyValue.Value.PrefabAsset, KeyValue.Key, SubMapGuidToObject, KeyValue.Value.ObjectOverrideParameterArray);
 			}
-			CopiedActor->SetActorLabel(copiedActorLabel);
-			ULexUIManagerWorldSubsystem::GetSelection(CopiedActor->GetWorld())->SelectActor(CopiedActor);
+			CopiedWidget->SetDisplayName(CopiedWidgetName);
+			ULexUIManagerWorldSubsystem::GetSelection(CopiedWidget->GetWorld())->SelectWidget(CopiedWidget);
 		}
 		else
 		{
-			UE_LOG(LGUIEditor, Error, TEXT("Source copied actor is missing!"));
+			UE_LOG(LGUIEditor, Error, TEXT("Source copied widget is missing!"));
 		}
 	}
-	PrefabHelperObject->SetCanNotifyAttachment(true);
 	GEditor->EndTransaction();
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 }
-void FLexUIEditorTools::DeleteActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
+void FLexUIEditorTools::DeleteWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction)
 {
-	auto SelectedActors = GetSelectedActorArrayFunction();
-	auto RootActorList = FLexUIEditorTools::GetRootActorListFromSelection(SelectedActors);
-	GEditor->BeginTransaction(LOCTEXT("DestroyActor_Transaction", "LexUI Destroy Actor"));
-	for (auto Actor : RootActorList)
+	auto SelectedWidgets = GetSelectedWidgetArrayFunction();
+	auto RootWidgetList = FLexUIEditorTools::GetRootWidgetListFromSelection(SelectedWidgets);
+	GEditor->BeginTransaction(LOCTEXT("DestroyWidget_Transaction", "LexUI Destroy Widget"));
+	for (auto Widget : RootWidgetList)
 	{
-		auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(Actor);
+		auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(Widget);
 		if (PrefabHelperObject != nullptr)
 		{
-			PrefabHelperObject->SetCanNotifyAttachment(false);
 			PrefabHelperObject->Modify();
 			PrefabHelperObject->SetAnythingDirty();
-			TArray<AActor*> ChildrenActors;
-			FLexUIUtils::CollectChildrenActors(Actor, ChildrenActors);
-			for (auto ChildActor : ChildrenActors)
+			TArray<ULexWidget*> ChildrenWidgets;
+			ULexWidget::CollectChildrenWidgets(Widget, ChildrenWidgets);
+			for (auto ChildWidget : ChildrenWidgets)
 			{
-				PrefabHelperObject->RemoveSubPrefabByAnyActorOfSubPrefab(ChildActor);
+				PrefabHelperObject->RemoveSubPrefabByAnyWidgetOfSubPrefab(ChildWidget);
 			}
-			FLexUIUtils::DestroyActorWithHierarchy(Actor);
-			PrefabHelperObject->SetCanNotifyAttachment(true);
+			Widget->ConditionalBeginDestroy();
 		}
-		else//common actor
+		else//common Widget
 		{
-			FLexUIUtils::DestroyActorWithHierarchy(Actor);
+			Widget->ConditionalBeginDestroy();
 		}
 	}
 	GEditor->EndTransaction();
-	CleanupPrefabsInWorld(RootActorList[0]->GetWorld());
+	CleanupPrefabsInWorld(RootWidgetList[0]->GetWorld());
 }
-void FLexUIEditorTools::CutActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
+void FLexUIEditorTools::CutWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction)
 {
-	CopyActors(GetSelectedActorArrayFunction);
-	DeleteActors(GetSelectedActorArrayFunction);
-}
-void FLexUIEditorTools::ToggleSelectedActorsSpatiallyLoaded(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
-{
-	auto SelectedActors = GetSelectedActorArrayFunction();
-	if (SelectedActors.Num() == 0)
-	{
-		UE_LOG(LGUIEditor, Error, TEXT("NothingSelected"));
-		return;
-	}
-	struct LOCAL
-	{
-		static void SetSpatiallyLoadedValue_Recursive(AActor* Actor, bool value)
-		{
-			if (Actor->CanChangeIsSpatiallyLoadedFlag())
-			{
-				if (Actor->GetIsSpatiallyLoaded() != value)
-				{
-					Actor->SetIsSpatiallyLoaded(value);
-					FLexUIUtils::NotifyPropertyChanged(Actor, AActor::GetIsSpatiallyLoadedPropertyName());
-				}
-			}
-			TArray<AActor*> ChildActors;
-			Actor->GetAttachedActors(ChildActors);
-			for (auto ChildActor : ChildActors)
-			{
-				if (IsValid(ChildActor))
-				{
-					SetSpatiallyLoadedValue_Recursive(ChildActor, value);
-				}
-			}
-		}
-	};
-	GEditor->BeginTransaction(LOCTEXT("ToggleSpatiallyLoaded_Transaction", "LexUI Toggle Actors IsSpatiallyLoaded"));
-	auto ActorList = FLexUIEditorTools::GetRootActorListFromSelection(SelectedActors);
-	for (auto Actor : ActorList)
-	{
-		Actor->Modify();
-		auto bIsSpatiallyLoadedValue = !Actor->GetIsSpatiallyLoaded();
-		LOCAL::SetSpatiallyLoadedValue_Recursive(Actor, bIsSpatiallyLoadedValue);
-	}
-	GEditor->EndTransaction();
-}
-ECheckBoxState FLexUIEditorTools::GetActorsSpatiallyLoadedProperty(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
-{
-	auto SelectedActors = GetSelectedActorArrayFunction();
-	if (SelectedActors.Num() == 0)
-	{
-		return ECheckBoxState::Undetermined;
-	}
-	auto ActorList = FLexUIEditorTools::GetRootActorListFromSelection(SelectedActors);
-	bool bIsSpatiallyLoadedValue = ActorList[0]->GetIsSpatiallyLoaded();
-	for (int i = 1; i < ActorList.Num(); i++)
-	{
-		if (bIsSpatiallyLoadedValue != ActorList[i]->GetIsSpatiallyLoaded())
-		{
-			return ECheckBoxState::Undetermined;
-		}
-	}
-	return bIsSpatiallyLoadedValue ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+	CopyWidgets(GetSelectedWidgetArrayFunction);
+	DeleteWidgets(GetSelectedWidgetArrayFunction);
 }
 
-bool FLexUIEditorTools::CanDuplicateActor(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
+bool FLexUIEditorTools::CanDuplicateWidget(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction)
 {
-	auto SelectedActors = GetSelectedActorArrayFunction();
-	if (SelectedActors.Num() <= 0)return false;
+	auto SelectedWidgets = GetSelectedWidgetArrayFunction();
+	if (SelectedWidgets.Num() <= 0)return false;
 	return true;
 }
-bool FLexUIEditorTools::CanCopyActor(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
+bool FLexUIEditorTools::CanCopyWidget(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction)
 {
-	auto SelectedActors = GetSelectedActorArrayFunction();
-	if (SelectedActors.Num() <= 0)return false;
+	auto SelectedWidgets = GetSelectedWidgetArrayFunction();
+	if (SelectedWidgets.Num() <= 0)return false;
 	return true;
 }
-bool FLexUIEditorTools::CanPasteActor(TFunction<AActor*()> GetSelectedActorFunction)
+bool FLexUIEditorTools::CanPasteWidget(TFunction<ULexWidget*()> GetSelectedWidgetFunction)
 {
-	if (FLexUIEditorTools::CopiedActorPrefabMap.Num() == 0)return false;
-	auto SelectedActor = GetSelectedActorFunction();
-	if (SelectedActor == nullptr)return false;
-	if (!FLexUIEditorTools::IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return false;
+	if (FLexUIEditorTools::CopiedWidgetPrefabMap.Num() == 0)return false;
+	auto SelectedWidget = GetSelectedWidgetFunction();
+	if (SelectedWidget == nullptr)return false;
+	if (!FLexUIEditorTools::IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return false;
 	return true;
 }
-bool FLexUIEditorTools::CanCutActor(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
+bool FLexUIEditorTools::CanCutWidget(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction)
 {
-	return CanDeleteActor(GetSelectedActorArrayFunction);
+	return CanDeleteWidget(GetSelectedWidgetArrayFunction);
 }
-bool FLexUIEditorTools::CanDeleteActor(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
+bool FLexUIEditorTools::CanDeleteWidget(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction)
 {
-	auto SelectedActors = GetSelectedActorArrayFunction();
-	if (SelectedActors.Num() == 0)return false;
-	for (auto Actor : SelectedActors)
+	auto SelectedWidgets = GetSelectedWidgetArrayFunction();
+	if (SelectedWidgets.Num() == 0)return false;
+	for (auto Widget : SelectedWidgets)
 	{
-		if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(Actor))
+		if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(Widget))
 		{
-			if (!PrefabHelperObject->IsSubPrefabRootActor(Actor)//allowed to delete sub prefab's root actor
-				&& PrefabHelperObject->IsActorBelongsToSubPrefab(Actor))//not allowed to delete sub prefab's actor
+			if (!PrefabHelperObject->IsSubPrefabRootWidget(Widget)//allowed to delete sub prefab's root Widget
+				&& PrefabHelperObject->IsWidgetBelongsToSubPrefab(Widget))//not allowed to delete sub prefab's Widget
 			{
 				return false;
 			}
@@ -582,25 +500,11 @@ bool FLexUIEditorTools::CanDeleteActor(TFunction<TArray<AActor*>()> GetSelectedA
 	}
 	return true;
 }
-bool FLexUIEditorTools::CanToggleActorsSpatiallyLoaded(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction)
-{
-	auto SelectedActors = GetSelectedActorArrayFunction();
-	if (SelectedActors.Num() <= 0)return false;
-	auto ActorList = FLexUIEditorTools::GetRootActorListFromSelection(SelectedActors);
-	for (auto Actor : ActorList)
-	{
-		if (!Actor->CanChangeIsSpatiallyLoadedFlag())
-		{
-			return false;
-		}
-	}
-	return true;
-}
 
-bool FLexUIEditorTools::HaveValidCopiedActors()
+bool FLexUIEditorTools::HaveValidCopiedWidgets()
 {
-	if (CopiedActorPrefabMap.Num() == 0)return false;
-	for (auto KeyValuePair : CopiedActorPrefabMap)
+	if (CopiedWidgetPrefabMap.Num() == 0)return false;
+	for (auto KeyValuePair : CopiedWidgetPrefabMap)
 	{
 		if (!KeyValuePair.Value.IsValid())
 		{
@@ -610,23 +514,23 @@ bool FLexUIEditorTools::HaveValidCopiedActors()
 	return true;
 }
 
-bool FLexUIEditorTools::CanCreatePrefab(TFunction<AActor*()> GetSelectedActorFunction)
+bool FLexUIEditorTools::CanCreatePrefab(TFunction<ULexWidget*()> GetSelectedWidgetFunction)
 {
-	auto SelectedActor = GetSelectedActorFunction();
-	if (SelectedActor == nullptr)return false;
-	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return false;
-	if (SelectedActor->HasAnyFlags(EObjectFlags::RF_Transient))return false;
-	if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
+	auto SelectedWidget = GetSelectedWidgetFunction();
+	if (SelectedWidget == nullptr)return false;
+	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return false;
+	if (SelectedWidget->HasAnyFlags(EObjectFlags::RF_Transient))return false;
+	if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
 	{
-		if (PrefabHelperObject->LoadedRootActor == SelectedActor)
+		if (PrefabHelperObject->LoadedRootWidget == SelectedWidget)
 		{
 			return false;
 		}
-		if (PrefabHelperObject->IsActorBelongsToSubPrefab(SelectedActor))
+		if (PrefabHelperObject->IsWidgetBelongsToSubPrefab(SelectedWidget))
 		{
 			return false;
 		}
-		else if (PrefabHelperObject->IsActorBelongsToMissingSubPrefab(SelectedActor))
+		else if (PrefabHelperObject->IsWidgetBelongsToMissingSubPrefab(SelectedWidget))
 		{
 			return false;
 		}
@@ -634,15 +538,15 @@ bool FLexUIEditorTools::CanCreatePrefab(TFunction<AActor*()> GetSelectedActorFun
 	return true;
 }
 FString FLexUIEditorTools::PrevSavePrefabFolder = TEXT("");
-void FLexUIEditorTools::CreatePrefabAsset(TFunction<AActor*()> GetSelectedActorFunction)//@todo: make some referenced parameter as override parameter(eg: Actor parameter reference other actor that is not belongs to prefab hierarchy)
+void FLexUIEditorTools::CreatePrefabAsset(TFunction<ULexWidget*()> GetSelectedWidgetFunction)//@todo: make some referenced parameter as override parameter(eg: Widget parameter reference other Widget that is not belongs to prefab hierarchy)
 {
-	auto SelectedActor = GetSelectedActorFunction();
-	if (SelectedActor == nullptr)return;
-	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return;
-	auto OldPrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
-	if (IsValid(OldPrefabHelperObject) && OldPrefabHelperObject->LoadedRootActor == SelectedActor)//If create prefab from an existing prefab's root actor, this is not allowed
+	auto SelectedWidget = GetSelectedWidgetFunction();
+	if (SelectedWidget == nullptr)return;
+	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return;
+	auto OldPrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget);
+	if (IsValid(OldPrefabHelperObject) && OldPrefabHelperObject->LoadedRootWidget == SelectedWidget)//If create prefab from an existing prefab's root Widget, this is not allowed
 	{
-		auto Message = LOCTEXT("CreatePrefabError_BelongToOtherPrefab", "This actor is a root actor of another prefab, this is not allowed! Instead you can duplicate the prefab asset.");
+		auto Message = LOCTEXT("CreatePrefabError_BelongToOtherPrefab", "This Widget is a root Widget of another prefab, this is not allowed! Instead you can duplicate the prefab asset.");
 		FMessageDialog::Open(EAppMsgType::Ok, Message);
 		return;
 	}
@@ -654,7 +558,7 @@ void FLexUIEditorTools::CreatePrefabAsset(TFunction<AActor*()> GetSelectedActorF
 			FSlateApplication::Get().FindBestParentWindowHandleForDialogs(FSlateApplication::Get().GetGameViewport()),
 			TEXT("Choose a path to save prefab asset, must inside Content folder"),
 			PrevSavePrefabFolder.IsEmpty() ? FPaths::ProjectContentDir() : PrevSavePrefabFolder,
-			SelectedActor->GetActorLabel() + TEXT("_Prefab"),
+			SelectedWidget->GetDisplayName() + TEXT("_Prefab"),
 			TEXT("*.*"),
 			EFileDialogFlags::None,
 			OutFileNames
@@ -688,8 +592,8 @@ void FLexUIEditorTools::CreatePrefabAsset(TFunction<AActor*()> GetSelectedActorF
 				auto OutPrefab = NewObject<ULexUIPrefab>(package, ULexUIPrefab::StaticClass(), *fileName, EObjectFlags::RF_Public | EObjectFlags::RF_Standalone);
 				FAssetRegistryModule::AssetCreated(OutPrefab);
 
-				auto PrefabHelperObjectWhichManageThisActor = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
-				check(PrefabHelperObjectWhichManageThisActor != nullptr)
+				auto PrefabHelperObjectWhichManageThisWidget = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget);
+				check(PrefabHelperObjectWhichManageThisWidget != nullptr)
 				{
 					struct LOCAL
 					{
@@ -710,35 +614,33 @@ void FLexUIEditorTools::CreatePrefabAsset(TFunction<AActor*()> GetSelectedActorF
 							}
 							return Result;
 						}
-						static void CollectSubPrefab(AActor* InActor, TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& InOutSubPrefabMap, ULexUIPrefabHelperObject* InPrefabHelperObject, const TMap<UObject*, FGuid>& InMapObjectToGuid)
+						static void CollectSubPrefab(ULexWidget* InWidget, TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& InOutSubPrefabMap, ULexUIPrefabHelperObject* InPrefabHelperObject, const TMap<UObject*, FGuid>& InMapObjectToGuid)
 						{
-							if (InPrefabHelperObject->IsActorBelongsToSubPrefab(InActor))
+							if (InPrefabHelperObject->IsWidgetBelongsToSubPrefab(InWidget))
 							{
-								auto OriginSubPrefabData = InPrefabHelperObject->GetSubPrefabData(InActor);
+								auto OriginSubPrefabData = InPrefabHelperObject->GetSubPrefabData(InWidget);
 								FLexUISubPrefabData SubPrefabData;
 								SubPrefabData.PrefabAsset = OriginSubPrefabData.PrefabAsset;
 								SubPrefabData.ObjectOverrideParameterArray = OriginSubPrefabData.ObjectOverrideParameterArray;
 								SubPrefabData.MapObjectGuidFromParentPrefabToSubPrefab = Make_MapGuidFromParentToSub(InMapObjectToGuid, InPrefabHelperObject, OriginSubPrefabData);
-								InOutSubPrefabMap.Add(InActor, SubPrefabData);
+								InOutSubPrefabMap.Add(InWidget, SubPrefabData);
 								return;
 							}
-							TArray<AActor*> ChildrenActors;
-							InActor->GetAttachedActors(ChildrenActors);
-							for (auto ChildActor : ChildrenActors)
+							for (auto& ChildWidget : InWidget->GetChildren())
 							{
-								CollectSubPrefab(ChildActor, InOutSubPrefabMap, InPrefabHelperObject, InMapObjectToGuid);//collect all actor, include subprefab's actor
+								CollectSubPrefab(ChildWidget, InOutSubPrefabMap, InPrefabHelperObject, InMapObjectToGuid);//collect all Widget, include subprefab's Widget
 							}
 						}
 					};
-					TMap<TObjectPtr<AActor>, FLexUISubPrefabData> SubPrefabMap;
+					TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> SubPrefabMap;
 					TMap<UObject*, FGuid> MapObjectToGuid;
-					OutPrefab->SavePrefab(SelectedActor, MapObjectToGuid, SubPrefabMap);//save prefab first step, just collect guid and sub prefab
-					LOCAL::CollectSubPrefab(SelectedActor, SubPrefabMap, PrefabHelperObjectWhichManageThisActor, MapObjectToGuid);
+					OutPrefab->SavePrefab(SelectedWidget, MapObjectToGuid, SubPrefabMap);//save prefab first step, just collect guid and sub prefab
+					LOCAL::CollectSubPrefab(SelectedWidget, SubPrefabMap, PrefabHelperObjectWhichManageThisWidget, MapObjectToGuid);
 					for (auto& KeyValue : SubPrefabMap)
 					{
-						PrefabHelperObjectWhichManageThisActor->RemoveSubPrefabByAnyActorOfSubPrefab(KeyValue.Key);//remove prefab from origin PrefabHelperObject
+						PrefabHelperObjectWhichManageThisWidget->RemoveSubPrefabByAnyWidgetOfSubPrefab(KeyValue.Key);//remove prefab from origin PrefabHelperObject
 					}
-					OutPrefab->SavePrefab(SelectedActor, MapObjectToGuid, SubPrefabMap);//save prefab second step, store sub prefab data
+					OutPrefab->SavePrefab(SelectedWidget, MapObjectToGuid, SubPrefabMap);//save prefab second step, store sub prefab data
 					OutPrefab->EnsureInstanceObjects();
 
 					//make it as sub-prefab
@@ -747,9 +649,9 @@ void FLexUIEditorTools::CreatePrefabAsset(TFunction<AActor*()> GetSelectedActorF
 					{
 						MapGuidToObject.Add(KeyValue.Value, KeyValue.Key);
 					}
-					PrefabHelperObjectWhichManageThisActor->MakePrefabAsSubPrefab(OutPrefab, SelectedActor, MapGuidToObject, {});
+					PrefabHelperObjectWhichManageThisWidget->MakePrefabAsSubPrefab(OutPrefab, SelectedWidget, MapGuidToObject, {});
 				}
-				CleanupPrefabsInWorld(SelectedActor->GetWorld());
+				CleanupPrefabsInWorld(SelectedWidget->GetWorld());
 			}
 			else
 			{
@@ -766,7 +668,7 @@ void FLexUIEditorTools::RefreshLevelLoadedPrefab()
 	{
 		Itr->CheckPrefabVersion();
 	}
-	for (TObjectIterator<ALexWidgetRootActor> Itr; Itr; ++Itr)
+	for (TObjectIterator<ULexWidgetPresenterComponent> Itr; Itr; ++Itr)
 	{
 		if (Itr->GetWorld())
 		{
@@ -873,18 +775,18 @@ TArray<ULexUIPrefab*> FLexUIEditorTools::GetAllPrefabArray()
 	return AllPrefabs;
 }
 
-bool FLexUIEditorTools::CanUnpackActorForPrefab(TFunction<AActor*()> GetSelectedActorFunction)
+bool FLexUIEditorTools::CanUnpackWidgetForPrefab(TFunction<ULexWidget*()> GetSelectedWidgetFunction)
 {
-	auto SelectedActor = GetSelectedActorFunction();
-	if (SelectedActor == nullptr)return false;
-	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return false;
-	if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
+	auto SelectedWidget = GetSelectedWidgetFunction();
+	if (SelectedWidget == nullptr)return false;
+	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return false;
+	if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
 	{
-		if (PrefabHelperObject->SubPrefabMap.Contains(SelectedActor))
+		if (PrefabHelperObject->SubPrefabMap.Contains(SelectedWidget))
 		{
 			return true;
 		}
-		else if (PrefabHelperObject->MissingPrefab.Contains(SelectedActor))
+		else if (PrefabHelperObject->MissingPrefab.Contains(SelectedWidget))
 		{
 			return true;
 		}
@@ -895,34 +797,34 @@ bool FLexUIEditorTools::CanUnpackActorForPrefab(TFunction<AActor*()> GetSelected
 		return false;
 	}
 }
-void FLexUIEditorTools::UnpackPrefab(TFunction<AActor*()> GetSelectedActorFunction)
+void FLexUIEditorTools::UnpackPrefab(TFunction<ULexWidget*()> GetSelectedWidgetFunction)
 {	
-	auto SelectedActor = GetSelectedActorFunction();
-	if (SelectedActor == nullptr)return;
-	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return;
+	auto SelectedWidget = GetSelectedWidgetFunction();
+	if (SelectedWidget == nullptr)return;
+	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return;
 	GEditor->BeginTransaction(FText::FromString(TEXT("LexUI UnpackPrefab")));
-	auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
+	auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget);
 	if (PrefabHelperObject != nullptr)
 	{
-		SelectedActor->GetWorld()->Modify();
-		check(PrefabHelperObject->SubPrefabMap.Contains(SelectedActor) || PrefabHelperObject->MissingPrefab.Contains(SelectedActor));//should already filtered by menu
+		SelectedWidget->GetWorld()->Modify();
+		check(PrefabHelperObject->SubPrefabMap.Contains(SelectedWidget) || PrefabHelperObject->MissingPrefab.Contains(SelectedWidget));//should already filtered by menu
 		PrefabHelperObject->Modify();
-		PrefabHelperObject->RemoveSubPrefabByRootActor(SelectedActor);//the SelectedActor must be root actor, should already filtered by menu
+		PrefabHelperObject->RemoveSubPrefabByRootWidget(SelectedWidget);//the SelectedWidget must be root Widget, should already filtered by menu
 	}
 	GEditor->EndTransaction();
-	CleanupPrefabsInWorld(SelectedActor->GetWorld());
+	CleanupPrefabsInWorld(SelectedWidget->GetWorld());
 }
 
-void FLexUIEditorTools::SelectPrefabAsset(TFunction<AActor*()> GetSelectedActorFunction)
+void FLexUIEditorTools::SelectPrefabAsset(TFunction<ULexWidget*()> GetSelectedWidgetFunction)
 {
-	auto SelectedActor = GetSelectedActorFunction();
-	if (SelectedActor == nullptr)return;
-	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return;
-	auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
+	auto SelectedWidget = GetSelectedWidgetFunction();
+	if (SelectedWidget == nullptr)return;
+	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return;
+	auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget);
 	if (PrefabHelperObject != nullptr)
 	{
-		check(PrefabHelperObject->SubPrefabMap.Contains(SelectedActor));//should have being checked in Browse button
-		auto PrefabAsset = PrefabHelperObject->GetSubPrefabAsset(SelectedActor);
+		check(PrefabHelperObject->SubPrefabMap.Contains(SelectedWidget));//should have being checked in Browse button
+		auto PrefabAsset = PrefabHelperObject->GetSubPrefabAsset(SelectedWidget);
 		if (IsValid(PrefabAsset))
 		{
 			TArray<UObject*> ObjectsToSync;
@@ -931,14 +833,14 @@ void FLexUIEditorTools::SelectPrefabAsset(TFunction<AActor*()> GetSelectedActorF
 		}
 	}
 }
-bool FLexUIEditorTools::CanBrowsePrefabAsset(TFunction<AActor*()> GetSelectedActorFunction)
+bool FLexUIEditorTools::CanBrowsePrefabAsset(TFunction<ULexWidget*()> GetSelectedWidgetFunction)
 {
-	auto SelectedActor = GetSelectedActorFunction();
-	if (SelectedActor == nullptr)return false;
-	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return false;
-	if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
+	auto SelectedWidget = GetSelectedWidgetFunction();
+	if (SelectedWidget == nullptr)return false;
+	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return false;
+	if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
 	{
-		if (PrefabHelperObject->SubPrefabMap.Contains(SelectedActor))
+		if (PrefabHelperObject->SubPrefabMap.Contains(SelectedWidget))
 		{
 			return true;
 		}
@@ -950,16 +852,16 @@ bool FLexUIEditorTools::CanBrowsePrefabAsset(TFunction<AActor*()> GetSelectedAct
 	}
 }
 
-void FLexUIEditorTools::OpenPrefabAsset(TFunction<AActor*()> GetSelectedActorFunction)
+void FLexUIEditorTools::OpenPrefabAsset(TFunction<ULexWidget*()> GetSelectedWidgetFunction)
 {
-	auto SelectedActor = GetSelectedActorFunction();
-	if (SelectedActor == nullptr)return;
-	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return;
-	auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
+	auto SelectedWidget = GetSelectedWidgetFunction();
+	if (SelectedWidget == nullptr)return;
+	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return;
+	auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget);
 	if (PrefabHelperObject != nullptr)
 	{
-		check(PrefabHelperObject->SubPrefabMap.Contains(SelectedActor));//should have being check in menu
-		auto PrefabAsset = PrefabHelperObject->GetSubPrefabAsset(SelectedActor);
+		check(PrefabHelperObject->SubPrefabMap.Contains(SelectedWidget));//should have being check in menu
+		auto PrefabAsset = PrefabHelperObject->GetSubPrefabAsset(SelectedWidget);
 		if (IsValid(PrefabAsset))
 		{
 			UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
@@ -968,16 +870,16 @@ void FLexUIEditorTools::OpenPrefabAsset(TFunction<AActor*()> GetSelectedActorFun
 	}
 }
 
-bool FLexUIEditorTools::CanCheckPrefabOverrideParameter(TFunction<AActor*()> GetSelectedActorFunction)
+bool FLexUIEditorTools::CanCheckPrefabOverrideParameter(TFunction<ULexWidget*()> GetSelectedWidgetFunction)
 {
-	auto SelectedActor = GetSelectedActorFunction();
-	if (SelectedActor == nullptr)return false;
-	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return false;
-	if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor))
+	auto SelectedWidget = GetSelectedWidgetFunction();
+	if (SelectedWidget == nullptr)return false;
+	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return false;
+	if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
 	{
 		for (auto& KeyValue : PrefabHelperObject->SubPrefabMap)
 		{
-			if (KeyValue.Key == SelectedActor || SelectedActor->IsAttachedTo(KeyValue.Key))
+			if (KeyValue.Key == SelectedWidget || SelectedWidget->IsChildOf(KeyValue.Key))
 			{
 				return true;
 			}
@@ -990,11 +892,11 @@ bool FLexUIEditorTools::CanCheckPrefabOverrideParameter(TFunction<AActor*()> Get
 	}
 }
 
-bool FLexUIEditorTools::CanCreateActor(TFunction<AActor*()> GetSelectedActorFunction)
+bool FLexUIEditorTools::CanCreateWidget(TFunction<ULexWidget*()> GetSelectedWidgetFunction)
 {
-	auto SelectedActor = GetSelectedActorFunction();
-	if (SelectedActor == nullptr)return false;
-	if (!IsActorCompatibleWithLexUIToolsMenu(SelectedActor))return false;
+	auto SelectedWidget = GetSelectedWidgetFunction();
+	if (SelectedWidget == nullptr)return false;
+	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return false;
 	return true;
 }
 
@@ -1006,31 +908,9 @@ void FLexUIEditorTools::CleanupPrefabsInWorld(UWorld* World)
 	}
 }
 
-void FLexUIEditorTools::MakeCurrentLevel(AActor* InActor)
+bool FLexUIEditorTools::IsWidgetCompatibleWithLexUIToolsMenu(ULexWidget* InWidget)
 {
-	if (IsValid(InActor) && InActor->GetWorld() && InActor->GetLevel())
-	{
-		if (InActor->GetWorld()->GetCurrentLevel() != InActor->GetLevel())
-		{
-			if (!InActor->GetWorld()->GetCurrentLevel()->bLocked)
-			{
-				if (!InActor->GetLevel()->IsCurrentLevel())
-				{
-					InActor->GetWorld()->SetCurrentLevel(InActor->GetLevel());
-				}
-			}
-			else
-			{
-				FLexUIUtils::EditorNotification(FText::FromString(FString::Printf(TEXT("The level of selected actor:%s is locked!"), *(InActor->GetActorLabel()))), false);
-			}
-		}
-	}
-}
-
-bool FLexUIEditorTools::IsActorCompatibleWithLexUIToolsMenu(AActor* InActor)
-{
-	if (InActor->IsA<ULexWidgetContainer>()
-		&& !FLexUIPrefabEditor::ActorIsRootAgent(InActor))
+	if (!FLexUIPrefabEditor::WidgetIsRootAgent(InWidget))
 	{
 		return true;
 	}

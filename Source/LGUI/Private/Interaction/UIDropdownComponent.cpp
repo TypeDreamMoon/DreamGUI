@@ -2,7 +2,6 @@
 
 #include "Interaction/UIDropdownComponent.h"
 #include "LGUI.h"
-#include "Core/Actor/LexWidgetContainer.h"
 #include "Core/Components/LexCanvas.h"
 #include "LexUIBPLibrary.h"
 #include "Core/LexUIClipData.h"
@@ -16,7 +15,6 @@
 
 UUIDropdownComponent::UUIDropdownComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
 }
 
 void UUIDropdownComponent::Awake()
@@ -85,18 +83,16 @@ void UUIDropdownComponent::Show()
 	//show list
 	ListRoot->SetWidgetActive(true);
 	ShowOrHideTweener = ListRoot->RenderOpacityTo(1, 0.3f, 0, ELTweenEase::OutCubic);
-	auto CanvasOnListRoot = ListRoot->GetOwner()->FindComponentByClass<ULexCanvas>();
-	if (!IsValid(CanvasOnListRoot))
+	auto CanvasOnListRoot = ListRoot->GetComponent<ULexCanvas>();
+	if (!CanvasOnListRoot)
 	{
-		CanvasOnListRoot = NewObject<ULexCanvas>(ListRoot.Get());
-		CanvasOnListRoot->RegisterComponent();
-		ListRoot->GetOwner()->AddInstanceComponent(CanvasOnListRoot);
+		CanvasOnListRoot = ListRoot->AddComponent<ULexCanvas>();
 	}
 
 	bool bSortOrderSet = false;
-	if (BlockerActor.IsValid())
+	if (BlockerWidget.IsValid())
 	{
-		if (auto blockerCanvas = BlockerActor->FindComponentByClass<ULexCanvas>())
+		if (auto blockerCanvas = BlockerWidget->GetComponent<ULexCanvas>())
 		{
 			CanvasOnListRoot->SetSortOrder(blockerCanvas->GetSortOrder() + 1, true);
 			bSortOrderSet = true;
@@ -119,8 +115,8 @@ void UUIDropdownComponent::Show()
 		bNeedRecreate = false;
 		for (auto item : CreatedItemArray)
 		{
-			auto itemActor = item->GetOwner();
-			ULexUIBPLibrary::DestroyActorWithHierarchy(itemActor, true);
+			auto ItemWidget = item->GetWidget();
+			ItemWidget->DestroyWidget();
 		}
 		CreatedItemArray.Reset();
 		//create items
@@ -145,13 +141,13 @@ void UUIDropdownComponent::Show()
 				{
 					auto SelfTop = ThisWidget->GetLocalSpaceTop();
 					auto ListBottomInSelfSpace = SelfTop - ListRoot->GetHeight();
-					ListBottomWorldSpace = ThisWidget->GetComponentTransform().TransformPosition(FVector(0, 0, ListBottomInSelfSpace));
+					ListBottomWorldSpace = ThisWidget->GetWorldTransform().TransformPosition(FVector(0, 0, ListBottomInSelfSpace));
 				}
 				else
 				{
 					auto SelfBottom = ThisWidget->GetLocalSpaceBottom();
 					auto ListBottomInSelfSpace = SelfBottom - ListRoot->GetHeight();
-					ListBottomWorldSpace = ThisWidget->GetComponentTransform().TransformPosition(FVector(0, 0, ListBottomInSelfSpace));
+					ListBottomWorldSpace = ThisWidget->GetWorldTransform().TransformPosition(FVector(0, 0, ListBottomInSelfSpace));
 				}
 				if (!ClipData->IsPointVisible(ListBottomWorldSpace))
 				{
@@ -165,7 +161,7 @@ void UUIDropdownComponent::Show()
 			if (TempHorizontalPosition == EUIDropdownHorizontalPosition::Automatic)
 			{
 				auto SelfRight = ThisWidget->GetLocalSpaceRight();
-				auto ListRightWorldSpace = ThisWidget->GetComponentTransform().TransformPosition(FVector(0, SelfRight + ListRoot->GetWidth(), 0));
+				auto ListRightWorldSpace = ThisWidget->GetWorldTransform().TransformPosition(FVector(0, SelfRight + ListRoot->GetWidth(), 0));
 				if (!ClipData->IsPointVisible(ListRightWorldSpace))
 				{
 					TempHorizontalPosition = EUIDropdownHorizontalPosition::Left;
@@ -178,10 +174,10 @@ void UUIDropdownComponent::Show()
 		}
 		else//no valid ClipData, then use RootCanvas
 		{
-			auto RootCanvasWidget = ThisWidget->GetRootCanvas()->GetLexWidget();
+			auto RootCanvasWidget = ThisWidget->GetRootCanvas()->GetWidget();
 			FTransform SelfToCanvasSpaceTf;
-			auto InverseCanvasSpaceTf = RootCanvasWidget->GetComponentTransform().Inverse();
-			FTransform::Multiply(&SelfToCanvasSpaceTf, &ThisWidget->GetComponentTransform(), &InverseCanvasSpaceTf);
+			auto InverseCanvasSpaceTf = RootCanvasWidget->GetWorldTransform().Inverse();
+			FTransform::Multiply(&SelfToCanvasSpaceTf, &ThisWidget->GetWorldTransform(), &InverseCanvasSpaceTf);
 			if (TempVerticalPosition == EUIDropdownVerticalPosition::Automatic)
 			{
 				//convert top point position from drop-down's self to root ui space, and tell if it is inside root rect
@@ -299,37 +295,29 @@ void UUIDropdownComponent::Hide()
 		ListRoot->SetWidgetActive(false);
 		}));
 
-	if (BlockerActor.IsValid())
+	if (BlockerWidget.IsValid())
 	{
-		BlockerActor->Destroy();
-		BlockerActor = nullptr;
+		BlockerWidget->DestroyWidget();
+		BlockerWidget = nullptr;
 	}
 }
 void UUIDropdownComponent::CreateBlocker()
 {
-	auto WidgetActor = this->GetWorld()->SpawnActor<ULexWidgetContainer>();
-#if WITH_EDITOR
-	WidgetActor->SetActorLabel(TEXT("UIDropdown_Blocker"));
-#endif
-	auto BlockerWidget = WidgetActor->GetLexWidget();
-	BlockerWidget->AttachToComponent(this->GetWidget()->GetRootCanvas()->GetLexWidget(), FAttachmentTransformRules::KeepRelativeTransform);
+	BlockerWidget = NewObject<ULexWidget>(this->GetWidget()->GetOuter());
+	BlockerWidget->SetDisplayName(TEXT("UIDropdown_Blocker"));
+	BlockerWidget->SetParent(this->GetWidget()->GetRootCanvas()->GetWidget(), false);
 	BlockerWidget->SetSizeDelta(FVector2D::ZeroVector);
 	BlockerWidget->SetAnchorMin(FVector2D(0.0f, 0.0f));
 	BlockerWidget->SetAnchorMax(FVector2D(1.0f, 1.0f));
 	BlockerWidget->CreateNewVisual<ULexVisualEmpty>();//Need visual to do raycast
-	auto BlockerCanvas = NewObject<ULexCanvas>(WidgetActor);
-	BlockerCanvas->RegisterComponent();
-	WidgetActor->AddInstanceComponent(BlockerCanvas);
+	auto BlockerCanvas = BlockerWidget->AddComponent<ULexCanvas>();
 	BlockerCanvas->SetOverrideSorting(true);
 	BlockerCanvas->SetSortOrderToHighestOfHierarchy();
 	BlockerCanvas->SetTraceChannel(this->GetWidget()->GetRootCanvas()->GetTraceChannel());
-	auto BlockerButton = NewObject<UUIButtonComponent>(WidgetActor);
-	BlockerButton->RegisterComponent();
-	WidgetActor->AddInstanceComponent(BlockerButton);
+	auto BlockerButton = BlockerWidget->AddComponent<UUIButtonComponent>();
 	BlockerButton->GetOnClickEvent().AddWeakLambda(this, [this] {
 		this->Hide();
 		});
-	BlockerActor = WidgetActor;
 }
 void UUIDropdownComponent::CreateListItems()
 {
@@ -343,17 +331,15 @@ void UUIDropdownComponent::CreateListItems()
 	auto ScrollViewContentWidget = ItemTemplateWidget->GetParent();
 	for (int i = 0, count = Options.Num(); i < count; i++)
 	{
-		auto copiedItemActor = ULexUIBPLibrary::DuplicateActor(ItemTemplate->GetOwner(), ScrollViewContentWidget);
-#if WITH_EDITOR
-		copiedItemActor->SetActorLabel(FString::Printf(TEXT("Item_%d"), i));
-#endif
-		auto script = copiedItemActor->FindComponentByClass<UUIDropdownItemComponent>();
+		auto CopiedItemWidget = ULexUIBPLibrary::DuplicateWidget(this->GetOuter()->GetWorld(), ItemTemplateWidget, ScrollViewContentWidget);
+		CopiedItemWidget->SetDisplayName(FString::Printf(TEXT("Item_%d"), i));
+		auto script = CopiedItemWidget->GetComponent<UUIDropdownItemComponent>();
 		int index = i;
 		script->Init(i, Options[i], [=, this]() {
 			this->OnSelectItem(index);
 			});
 		script->SetSelectionState(i == Value);
-		OnSetItemCustomDataFunction.ExecuteIfBound(i, script, copiedItemActor);
+		OnSetItemCustomDataFunction.ExecuteIfBound(i, script, CopiedItemWidget);
 		CreatedItemArray.Add(script);
 	}
 	ItemTemplateWidget->SetWidgetActive(false);
@@ -462,10 +448,10 @@ void UUIDropdownComponent::SetUseInteractionBlock(bool InValue)
 		bUseInteractionBlock = true;
 		if (!bUseInteractionBlock)
 		{
-			if (BlockerActor.IsValid())
+			if (BlockerWidget.IsValid())
 			{
-				BlockerActor->Destroy();
-				BlockerActor = nullptr;
+				BlockerWidget->DestroyWidget();
+				BlockerWidget = nullptr;
 			}
 		}
 	}
@@ -508,7 +494,7 @@ bool UUIDropdownComponent::OnPointerDeselect_Implementation(ULexBaseEventData* E
 {
 	if (IsValid(EventData->SelectedComponent))
 	{
-		if (!EventData->SelectedComponent->IsAttachedTo(this->GetWidget()))
+		if (!EventData->SelectedComponent->IsChildOf(this->GetWidget()))
 		{
 			Hide();
 		}
@@ -520,16 +506,16 @@ void UUIDropdownComponent::SetItemCustomDataFunction(const FUIDropdownComponentD
 {
 	OnSetItemCustomDataFunction = InFunction;
 }
-void UUIDropdownComponent::SetItemCustomDataFunction(const TFunction<void(int, class UUIDropdownItemComponent*, AActor*)>& InFunction)
+void UUIDropdownComponent::SetItemCustomDataFunction(const TFunction<void(int, class UUIDropdownItemComponent*, ULexWidget*)>& InFunction)
 {
 	OnSetItemCustomDataFunction.BindLambda(InFunction);
 }
 void UUIDropdownComponent::SetItemCustomDataFunction(const FUIDropdownComponentDynamicDelegate_SetItemCustomData& InFunction)
 {
-	OnSetItemCustomDataFunction.BindLambda([InFunction](int InItemIndex, UUIDropdownItemComponent* InItemScript, AActor* InItemActor) {
+	OnSetItemCustomDataFunction.BindLambda([InFunction](int InItemIndex, UUIDropdownItemComponent* InItemScript, ULexWidget* InItemWidget) {
 		if (InFunction.IsBound())
 		{
-			InFunction.Execute(InItemIndex, InItemScript, InItemActor);
+			InFunction.Execute(InItemIndex, InItemScript, InItemWidget);
 		}
 		else
 		{
@@ -547,8 +533,6 @@ void UUIDropdownComponent::ClearItemCustomDataFunction()
 
 UUIDropdownItemComponent::UUIDropdownItemComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
-	PrimaryComponentTick.bStartWithTickEnabled = false;
 }
 
 void UUIDropdownItemComponent::Awake()

@@ -8,6 +8,7 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Core/LexUIDrawCall.h"
 #include "Core/Components/LexWidget.h"
+#include "Event/LexPointerEventData.h"
 
 DECLARE_CYCLE_STAT(TEXT("LexVisualBatchMesh UpdateGeometry"), STAT_LexUpdateGeometry, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("LexVisualBatchMesh TransformVertices"), STAT_TransformVertices, STATGROUP_LGUI);
@@ -264,11 +265,7 @@ void ULexVisualBatchMesh::UpdateGeometry()
 		auto errorMsg = FText::Format(NSLOCTEXT("LexVisualBatchMesh", "TooManyTrianglesInSingleUIElement", "{0} Too many vertex ({1}) in single UI element: {2}")
 			, FText::FromString(FString::Printf(TEXT("[%s].%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__))
 			, UIGeometry->OriginVertices.Num()
-#if WITH_EDITOR
-			, FText::FromString(Widget->GetOwner()->GetActorLabel())
-#else
-			, FText::FromString(this->GetPathName())
-#endif
+			, FText::FromString(Widget->GetDisplayName())
 		);
 #if WITH_EDITOR
 		FLexUIUtils::EditorNotification(errorMsg, false, 10);
@@ -283,7 +280,7 @@ void ULexVisualBatchMesh::UpdateGeometry()
 	bTransformChanged = false;
 }
 
-bool ULexVisualBatchMesh::LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const
+bool ULexVisualBatchMesh::LineTraceUI(FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
 	switch (RaycastType)
 	{
@@ -308,10 +305,10 @@ bool ULexVisualBatchMesh::GetAnythingDirty()const
 	return bTriangleChanged || bLocalVertexPositionChanged || bColorChanged || bUVChanged;
 }
 
-bool ULexVisualBatchMesh::LineTraceVisiblePixel(float InAlphaThreshold, FHitResult& OutHit, const FVector& Start, const FVector& End)const
+bool ULexVisualBatchMesh::LineTraceVisiblePixel(float InAlphaThreshold, FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
 	auto Widget = this->GetWidget();
-	const auto InverseTf = Widget->GetComponentTransform().Inverse();
+	const auto InverseTf = Widget->GetWorldTransform().Inverse();
 	const auto LocalSpaceRayOrigin = InverseTf.TransformPosition(Start);
 	const auto LocalSpaceRayEnd = InverseTf.TransformPosition(End);
 
@@ -340,13 +337,12 @@ bool ULexVisualBatchMesh::LineTraceVisiblePixel(float InAlphaThreshold, FHitResu
 			{
 				OutHit.TraceStart = Start;
 				OutHit.TraceEnd = End;
-				OutHit.Component = (UPrimitiveComponent*)Widget;//acturally this convert is incorrect, but I need this pointer
-				OutHit.Location = Widget->GetComponentTransform().TransformPosition(OutHitPoint);
-				OutHit.Normal = Widget->GetComponentTransform().TransformVector(OutHitNormal);
+				OutHit.Component = Widget;
+				OutHit.Location = Widget->GetWorldTransform().TransformPosition(OutHitPoint);
+				OutHit.Normal = Widget->GetWorldTransform().TransformVector(OutHitNormal);
 				OutHit.Normal.Normalize();
 				OutHit.Distance = FVector::Distance(Start, OutHit.Location);
 				OutHit.ImpactPoint = OutHit.Location;
-				OutHit.ImpactNormal = OutHit.Normal;
 
 				auto baryCentric = FMath::ComputeBaryCentric2D(OutHitPoint, point0, point1, point2);
 				auto& uv0 = vertices[vertIndex0].TextureCoordinate[0];

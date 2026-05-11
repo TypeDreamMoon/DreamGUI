@@ -292,7 +292,7 @@ protected:
 	uint8 bHasAddToSprite : 1;
 protected:
 	bool LineTraceUI_CheckCornerRadius(const FVector2D& InLocalHitPoint)const;
-	virtual bool LineTraceUIRect(FHitResult& OutHit, const FVector& Start, const FVector& End)const override;
+	virtual bool LineTraceUIRect(FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const override;
 public:
 #pragma region ILexUISpriteRenderInterface
 	virtual ULexUISpriteData_BaseObject* SpriteRenderGetSprite_Implementation()const override { return BodySpriteTexture; }

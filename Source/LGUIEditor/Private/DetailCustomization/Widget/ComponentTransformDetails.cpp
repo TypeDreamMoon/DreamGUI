@@ -261,11 +261,9 @@ BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
 void FComponentTransformDetails::GenerateChildContent( IDetailChildrenBuilder& ChildrenBuilder )
 {
 	if (SelectedObjects.Num() <= 0)return;
-	const USceneComponent* Archetype = SelectedObjects[0].Get();
+	const auto* Archetype = SelectedObjects[0].Get();
 	if (!IsValid(Archetype))return;
 
-	UClass* SceneComponentClass = USceneComponent::StaticClass();
-		
 	FSlateFontInfo FontInfo = IDetailLayoutBuilder::GetDetailFont();
 
 	// Location
@@ -471,7 +469,7 @@ void FComponentTransformDetails::OnPreserveScaleRatioToggled( ECheckBoxState New
 
 bool FComponentTransformDetails::GetLocationResetVisibility() const
 {
-	const USceneComponent* Archetype = SelectedObjects[0].Get();
+	const auto* Archetype = SelectedObjects[0].Get();
 	if (!IsValid(Archetype))return false;
 	FVector targetLocation = FVector::ZeroVector;
 	if (!IsLocationXEnable())
@@ -515,7 +513,7 @@ void FComponentTransformDetails::OnLocationResetClicked()
 
 bool FComponentTransformDetails::GetRotationResetVisibility() const
 {
-	const USceneComponent* Archetype = SelectedObjects[0].Get();
+	const auto* Archetype = SelectedObjects[0].Get();
 	if (!IsValid(Archetype))return false;
 	return Archetype->GetRelativeRotation().Euler() != FVector::ZeroVector;
 }
@@ -533,9 +531,9 @@ void FComponentTransformDetails::OnRotationResetClicked()
 
 bool FComponentTransformDetails::GetScaleResetVisibility() const
 {
-	const USceneComponent* Archetype = SelectedObjects[0].Get();
+	const auto* Archetype = SelectedObjects[0].Get();
 	if (!IsValid(Archetype))return false;
-	return Archetype->GetRelativeScale3D() != FVector::OneVector;
+	return Archetype->GetRelativeScale() != FVector::OneVector;
 }
 
 void FComponentTransformDetails::OnScaleResetClicked()
@@ -561,7 +559,7 @@ void FComponentTransformDetails::CacheTransform()
 		if( ObjectPtr.IsValid() )
 		{
 			ULexWidget* Object = ObjectPtr.Get();
-			USceneComponent* SceneComponent = Object;
+			auto SceneComponent = Object;
 
 			FVector Loc;
 			FRotator Rot;
@@ -570,8 +568,8 @@ void FComponentTransformDetails::CacheTransform()
 			{
 				Loc = SceneComponent->GetRelativeLocation();
 				FRotator* FoundRotator = ObjectToRelativeRotationMap.Find(SceneComponent);
-				Rot = (bEditingRotationInUI && !Object->IsTemplate() && FoundRotator) ? *FoundRotator : SceneComponent->GetRelativeRotation();
-				Scale = SceneComponent->GetRelativeScale3D();
+				Rot = (bEditingRotationInUI && !Object->IsTemplate() && FoundRotator) ? *FoundRotator : SceneComponent->GetRelativeRotation().Rotator();
+				Scale = SceneComponent->GetRelativeScale();
 
 				if( ObjectIndex == 0 )
 				{
@@ -745,7 +743,6 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 			ULexWidget* SceneComponent = Object;
 			if (SceneComponent)
 			{
-				AActor* EditedActor = SceneComponent->GetOwner();
 				const bool bIsEditingTemplateObject = Object->IsTemplate();
 
 				FVector OldComponentValue;
@@ -765,7 +762,7 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 					}
 					break;
 				case ETransformField::Scale:
-					OldComponentValue = SceneComponent->GetRelativeScale3D();
+					OldComponentValue = SceneComponent->GetRelativeScale();
 					break;
 				}
 
@@ -787,16 +784,6 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 
 					if (bCommitted)
 					{
-						if (!bIsEditingTemplateObject)
-						{
-							// Broadcast the first time an actor is about to move
-							GEditor->BroadcastBeginObjectMovement(*SceneComponent);
-							if (EditedActor && EditedActor->GetRootComponent() == SceneComponent)
-							{
-								GEditor->BroadcastBeginObjectMovement(*EditedActor);
-							}
-						}
-
 						if (SceneComponent->HasAnyFlags(RF_DefaultSubObject))
 						{
 							// Default subobjects must be included in any undo/redo operations
@@ -806,10 +793,6 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 						// Have to downcast here because of function overloading and inheritance not playing nicely
 						// We don't call PreEditChange for non commit changes because most classes implement the version that doesn't check the interaction type
 						((UObject*)SceneComponent)->PreEditChange(PropertyChain);
-						if (EditedActor && EditedActor->GetRootComponent() == SceneComponent)
-						{
-							((UObject*)EditedActor)->PreEditChange(PropertyChain);
-						}
 					}
 
 					if (NotifyHook)
@@ -824,21 +807,12 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 							if (!bIsEditingTemplateObject)
 							{
 								// Update local cache for restoring later
-								ObjectToRelativeRotationMap.FindOrAdd(SceneComponent) = SceneComponent->GetRelativeRotation();
+								ObjectToRelativeRotationMap.FindOrAdd(SceneComponent) = SceneComponent->GetRelativeRotation().Rotator();
 							}
 
 							SceneComponent->SetRelativeLocation(NewComponentValue);
 
-							// Also forcibly set it as the cache may have changed it slightly
-							SceneComponent->SetRelativeLocation_Direct(NewComponentValue);
 							CachedLocation.Set(NewComponentValue);
-
-							// If it's a template, propagate the change out to any current instances of the object
-							if (bIsEditingTemplateObject)
-							{
-								TSet<USceneComponent*> UpdatedInstances;
-								FComponentEditorUtils::PropagateDefaultValueChange(SceneComponent, ValueProperty, OldComponentValue, NewComponentValue, UpdatedInstances);
-							}
 
 							break;
 						}
@@ -852,15 +826,8 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 								ObjectToRelativeRotationMap.FindOrAdd(SceneComponent) = NewRotation;
 							}
 
-							SceneComponent->SetRelativeRotationExact(NewRotation);
+							SceneComponent->SetRelativeRotation(NewRotation.Quaternion());
 							CachedRotation.Set(NewRotation);
-
-							// If it's a template, propagate the change out to any current instances of the object
-							if (bIsEditingTemplateObject)
-							{
-								TSet<USceneComponent*> UpdatedInstances;
-								FComponentEditorUtils::PropagateDefaultValueChange(SceneComponent, ValueProperty, FRotator::MakeFromEuler(OldComponentValue), NewRotation, UpdatedInstances);
-							}
 
 							break;
 						}
@@ -894,14 +861,7 @@ void FComponentTransformDetails::OnSetTransform(ETransformField::Type TransformF
 								}
 							}
 
-							SceneComponent->SetRelativeScale3D(NewComponentValue);
-
-							// If it's a template, propagate the change out to any current instances of the object
-							if (bIsEditingTemplateObject)
-							{
-								TSet<USceneComponent*> UpdatedInstances;
-								FComponentEditorUtils::PropagateDefaultValueChange(SceneComponent, ValueProperty, OldComponentValue, NewComponentValue, UpdatedInstances);
-							}
+							SceneComponent->SetRelativeScale(NewComponentValue);
 
 							break;
 						}
@@ -1022,7 +982,7 @@ void FComponentTransformDetails::OnSetTransformAxis(FVector::FReal NewValue, ETe
 	break;
 	case ETransformField::Scale:
 	{
-		FVector NewVector = GetAxisFilteredVector(Axis, FVector(NewValue), Archetype->GetRelativeScale3D());
+		FVector NewVector = GetAxisFilteredVector(Axis, FVector(NewValue), Archetype->GetRelativeScale());
 		OnSetTransform(TransformField, Axis, NewVector, bCommitted);
 	}
 	break;

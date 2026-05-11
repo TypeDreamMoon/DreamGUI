@@ -11,6 +11,7 @@
 #include "Core/LexUISpriteData.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "Core/Components/LexWidget.h"
+#include "Event/LexPointerEventData.h"
 
 
 #define LOCTEXT_NAMESPACE "LexRectBlock"
@@ -527,10 +528,10 @@ bool ULexRectBlock::LineTraceUI_CheckCornerRadius(const FVector2D& InLocalHitPoi
 	}
 	return true;
 }
-bool ULexRectBlock::LineTraceUIRect(FHitResult& OutHit, const FVector& Start, const FVector& End)const
+bool ULexRectBlock::LineTraceUIRect(FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
 	auto Widget = GetWidget();
-	auto InverseTf = Widget->GetComponentTransform().Inverse();
+	auto InverseTf = Widget->GetWorldTransform().Inverse();
 	auto LocalSpaceRayOrigin = InverseTf.TransformPosition(Start);
 	auto LocalSpaceRayEnd = InverseTf.TransformPosition(End);
 
@@ -544,13 +545,12 @@ bool ULexRectBlock::LineTraceUIRect(FHitResult& OutHit, const FVector& Start, co
 		{
 			OutHit.TraceStart = Start;
 			OutHit.TraceEnd = End;
-			OutHit.Component = (UPrimitiveComponent*)Widget;//acturally this convert is incorrect, but I need this pointer
-			OutHit.Location = Widget->GetComponentTransform().TransformPosition(result);
-			OutHit.Normal = Widget->GetComponentTransform().TransformVector(FVector(1, 0, 0));
+			OutHit.Component = Widget;
+			OutHit.Location = Widget->GetWorldTransform().TransformPosition(result);
+			OutHit.Normal = Widget->GetWorldTransform().TransformVector(FVector(1, 0, 0));
 			OutHit.Normal.Normalize();
 			OutHit.Distance = FVector::Distance(Start, OutHit.Location);
 			OutHit.ImpactPoint = OutHit.Location;
-			OutHit.ImpactNormal = OutHit.Normal;
 
 			//check corner radius
 			if (bRaycastSupportCornerRadius)

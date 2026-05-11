@@ -1011,22 +1011,22 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawActorSelectorWidgetFor
 	{
 		if (Object == nullptr)return NoneObjectText;
 		if (!PrefabEditor.IsValid())return NoneObjectText;
-		AActor* Actor = nullptr;
+		ULexWidget* Widget = nullptr;
 		FString PathStr;
-		if (auto CastActor = Cast<AActor>(Object))
+		if (auto CastWidget = Cast<ULexWidget>(Object))
 		{
-			Actor = CastActor;
+			Widget = CastWidget;
 		}
 		else
 		{
-			Actor = Object->GetTypedOuter<AActor>();
-			PathStr = "." + Object->GetPathName(Actor);
+			Widget = Object->GetTypedOuter<ULexWidget>();
+			PathStr = "." + Object->GetPathName(Widget);
 		}
-		auto RootAgentActor = PrefabEditor.Pin()->GetRootAgentActor();
-		while (Actor && Actor != RootAgentActor)
+		auto RootAgentActor = PrefabEditor.Pin()->GetRootAgentWidget();
+		while (Widget && Widget != RootAgentActor)
 		{
-			PathStr = "/" + Actor->GetActorLabel() + PathStr;
-			Actor = Actor->GetAttachParentActor();
+			PathStr = "/" + Widget->GetDisplayName() + PathStr;
+			Widget = Widget->GetParent();
 		}
 		return FText::FromString(PathStr);
 	};

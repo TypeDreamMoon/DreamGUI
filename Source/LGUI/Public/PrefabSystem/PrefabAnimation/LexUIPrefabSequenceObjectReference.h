@@ -5,6 +5,7 @@
 #include "UObject/LazyObjectPtr.h"
 #include "LexUIPrefabSequenceObjectReference.generated.h"
 
+class ULexWidget;
 class UActorComponent;
 
 /**
@@ -18,16 +19,16 @@ struct LGUI_API FLexUIPrefabSequenceObjectReference
 public:
 
 #if WITH_EDITOR
-	static FString GetActorPathRelativeToContextActor(AActor* InContextActor, AActor* InActor);
-	static AActor* GetActorFromContextActorByRelativePath(AActor* InContextActor, const FString& InPath);
-	bool FixObjectReferenceFromEditorHelpers(AActor* InContextActor);
+	static FString GetActorPathRelativeToContextActor(ULexWidget* InContextActor, ULexWidget* InActor);
+	static ULexWidget* GetActorFromContextActorByRelativePath(ULexWidget* InContextActor, const FString& InPath);
+	bool FixObjectReferenceFromEditorHelpers(ULexWidget* InContextActor);
 	bool CanFixObjectReferenceFromEditorHelpers()const;
-	bool IsObjectReferenceGood(AActor* InContextActor)const;
-	bool IsEditorHelpersGood(AActor* InContextActor)const;
+	bool IsObjectReferenceGood(ULexWidget* InContextActor)const;
+	bool IsEditorHelpersGood(ULexWidget* InContextActor)const;
 #endif
-	static bool CreateForObject(AActor* InContextActor, UObject* InObject, FLexUIPrefabSequenceObjectReference& OutResult);
+	static bool CreateForObject(ULexWidget* InContextActor, UObject* InObject, FLexUIPrefabSequenceObjectReference& OutResult);
 
-	bool InitHelpers(AActor* InContextActor);
+	bool InitHelpers(ULexWidget* InContextActor);
 	bool CheckTargetObject()const;
 	/**
 	 * Check whether this object reference is valid or not
@@ -59,7 +60,7 @@ private:
 
 	/** for direct reference actor. */
 	UPROPERTY()
-		TObjectPtr<AActor> HelperActor = nullptr;
+		TObjectPtr<ULexWidget> HelperActor = nullptr;
 	/** object path relative to owner actor
 	 * if path is empty then means actor self
 	 */
@@ -120,12 +121,12 @@ struct FLexUIPrefabSequenceObjectReferenceMap
 	void ResolveBinding(const FGuid& ObjectId, TArray<UObject*, TInlineAllocator<1>>& OutObjects) const;
 
 #if WITH_EDITOR
-	bool IsObjectReferencesGood(AActor* InContextActor)const;
-	bool IsEditorHelpersGood(AActor* InContextActor)const;
+	bool IsObjectReferencesGood(ULexWidget* InContextActor)const;
+	bool IsEditorHelpersGood(ULexWidget* InContextActor)const;
 	//return true if anything changed
-	bool FixObjectReferences(AActor* InContextActor);
+	bool FixObjectReferences(ULexWidget* InContextActor);
 	//return true if anything changed
-	bool FixEditorHelpers(AActor* InContextActor);
+	bool FixEditorHelpers(ULexWidget* InContextActor);
 #endif
 private:
 	

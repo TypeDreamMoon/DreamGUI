@@ -130,14 +130,14 @@ public:
 	virtual void MarkAllDirty()override;
 	FLexUIGeometry* GetGeometry()const { return UIGeometry.Get(); }
 
-	virtual bool LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const override;
+	virtual bool LineTraceUI(FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const override;
 	/** is this UI element type support draw-call batching? */
 	virtual bool SupportDrawCallBatching()const { return true; }
 
 	FORCEINLINE bool GetRequirePropertiesForMaterial_Size()const{ return PropertiesForMaterial & (1 << (int)ELexVisualPropertiesForMaterial::Size); }
 	FORCEINLINE bool GetRequirePropertiesForMaterial_CenterPosition()const{ return PropertiesForMaterial & (1 << (int)ELexVisualPropertiesForMaterial::CenterPosition); }
 protected:
-	virtual bool LineTraceVisiblePixel(float InAlphaThreshold, FHitResult& OutHit, const FVector& Start, const FVector& End)const;
+	virtual bool LineTraceVisiblePixel(float InAlphaThreshold, FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const;
 	virtual bool ReadPixelFromMainTexture(const FVector2D& InUV, FColor& OutPixel)const { return false; }
 protected:
 	friend class FLexVisualBatchMeshCustomization;

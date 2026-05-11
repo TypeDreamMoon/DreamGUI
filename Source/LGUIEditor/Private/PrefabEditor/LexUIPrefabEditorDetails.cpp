@@ -15,6 +15,7 @@
 #include "LexUIEditorTools.h"
 #include "SSubobjectEditorModule.h"
 #include "SSubobjectInstanceEditor.h"
+#include "Core/LexUIBehaviour.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexWidget.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
@@ -33,11 +34,11 @@ public:
 	{
 		if (Context.Num() == 1)
 		{
-			if (auto Actor = Cast<AActor>(Context[0]))
+			if (auto Widget = Cast<ULexWidget>(Context[0]))
 			{
 				if (auto HelperObj = PrefabEditor.Pin()->GetPrefabHelperObject())
 				{
-					if (HelperObj->IsActorBelongsToSubPrefab(Actor))
+					if (HelperObj->IsWidgetBelongsToSubPrefab(Widget))
 					{
 						return true;
 					}
@@ -50,11 +51,11 @@ public:
 	{
 		if (Context.Num() == 1)
 		{
-			if (auto Actor = Cast<AActor>(Context[0]))
+			if (auto Widget = Cast<ULexWidget>(Context[0]))
 			{
 				if (auto HelperObj = PrefabEditor.Pin()->GetPrefabHelperObject())
 				{
-					if (HelperObj->IsActorBelongsToSubPrefab(Actor))
+					if (HelperObj->IsWidgetBelongsToSubPrefab(Widget))
 					{
 						return true;
 					}
@@ -76,7 +77,7 @@ void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLe
     DetailsViewArgs.bUpdatesFromSelection = true;
     DetailsViewArgs.bLockable = true;
     DetailsViewArgs.NotifyHook = GUnrealEd;
-    DetailsViewArgs.ViewIdentifier = FName(TEXT("LGUIPrefabEditor"));
+    DetailsViewArgs.ViewIdentifier = FName(TEXT("LexUIPrefabEditor"));
     DetailsViewArgs.bCustomNameAreaLocation = true;
     DetailsViewArgs.bCustomFilterAreaLocation = false;
     DetailsViewArgs.DefaultsOnlyVisibility = EEditDefaultsOnlyNodeVisibility::Hide;
@@ -292,7 +293,7 @@ UObject* SLexUIPrefabEditorDetails::GetActorContextAsObject() const
 	auto SelectedWidgets = PrefabEditorPtr.Pin()->GetSelectedWidgets();
 	if (SelectedWidgets.Num() > 0 && SelectedWidgets[0].IsValid())
 	{
-		return SelectedWidgets[0]->GetOwner();
+		return SelectedWidgets[0].Get();
 	}
 	return nullptr;
 }
@@ -304,14 +305,14 @@ void SLexUIPrefabEditorDetails::OnEditorSelectionChanged()
 	auto SelectedWidgets = PrefabEditorPtr.Pin()->GetSelectedWidgets();
 	if (SelectedWidgets.Num() > 0)
 	{
-		if (AActor* Actor = SelectedWidgets[0]->GetOwner())
+		if (auto Widget = SelectedWidgets[0].Get())
 		{
-			if (Actor->GetWorld() != PrefabEditorPtr.Pin()->GetWorld())
+			if (Widget->GetWorld() != PrefabEditorPtr.Pin()->GetWorld())
 			{
 				return;
 			}
 
-			CachedActor = Actor;
+			CachedActor = Widget;
 			PrefabOverrideDataViewer->RefreshDataContent();
 			if (SubobjectEditor)
 			{
@@ -368,7 +369,7 @@ void SLexUIPrefabEditorDetails::OnSubObjectSelectionChanged(const TArray<FSubobj
 	if (SelectedNodes.Num() > 0)
 	{
 		TArray<UObject*> SelectedObjects;
-		TArray<UActorComponent*> SelectedComponents;
+		TArray<ULexUIBehaviour*> SelectedComponents;
 		for (auto& Node : SelectedNodes)
 		{
 			if (Node.IsValid())
@@ -377,7 +378,7 @@ void SLexUIPrefabEditorDetails::OnSubObjectSelectionChanged(const TArray<FSubobj
 				if (Object)
 				{
 					SelectedObjects.Add(Object);
-					if (auto Comp = Cast<UActorComponent>(Object))
+					if (auto Comp = Cast<ULexUIBehaviour>(Object))
 					{
 						SelectedComponents.Add(Comp);
 					}

@@ -20,25 +20,24 @@ FORCEINLINE float RoundToFloat(float value)
 
 DECLARE_CYCLE_STAT(TEXT("UIGeometry TransformPixelPerfectVertices"), STAT_TransformPixelPerfectVertices, STATGROUP_LGUI);
 
-void FLexUIGeometry::AdjustPixelPerfectPos(TArray<FLexUIOriginVertexData>& originVertices, int startIndex, int count, ULexCanvas* renderCanvas, ULexVisual* uiComp)
+void FLexUIGeometry::AdjustPixelPerfectPos(TArray<FLexUIOriginVertexData>& originVertices, int startIndex, int count, ULexCanvas* RenderCanvas, ULexVisual* Visual)
 {
 	SCOPE_CYCLE_COUNTER(STAT_TransformPixelPerfectVertices);
-	auto canvasUIItem = renderCanvas->GetRootCanvas()->GetLexWidget();
-	FTransform componentToCanvasTransform;
-	componentToCanvasTransform = uiComp->GetWidget()->GetComponentTransform() * canvasUIItem->GetComponentTransform().Inverse();
-	if (!ULexCanvas::Is2DUITransform(componentToCanvasTransform))return;//only 2d UI can do pixel perfect
-	FTransform canvasToComponentTransform = componentToCanvasTransform.Inverse();
+	auto CanvasWidget = RenderCanvas->GetRootCanvas()->GetWidget();
+	auto ComponentToCanvasTransform = Visual->GetWidget()->GetWorldTransform() * CanvasWidget->GetWorldTransform().Inverse();
+	if (!ULexCanvas::Is2DUITransform(ComponentToCanvasTransform))return;//only 2d UI can do pixel perfect
+	FTransform canvasToComponentTransform = ComponentToCanvasTransform.Inverse();
 
-	auto halfCanvasWidth = canvasUIItem->GetWidth() * 0.5f;
-	auto halfCanvasHeight = canvasUIItem->GetHeight() * 0.5f;
-	float rootCanvasScale = renderCanvas->GetRootCanvas()->GetCanvasScale();
+	auto halfCanvasWidth = CanvasWidget->GetWidth() * 0.5f;
+	auto halfCanvasHeight = CanvasWidget->GetHeight() * 0.5f;
+	float rootCanvasScale = RenderCanvas->GetRootCanvas()->GetCanvasScale();
 	float inv_RootCanvasScale = 1.0f / rootCanvasScale;
 
 	for (int i = startIndex; i < count; i++)
 	{
 		auto item = originVertices[i].Position;
 
-		auto canvasSpaceLocation = componentToCanvasTransform.TransformPosition(FVector(item));
+		auto canvasSpaceLocation = ComponentToCanvasTransform.TransformPosition(FVector(item));
 		canvasSpaceLocation.Y -= halfCanvasWidth;
 		canvasSpaceLocation.Z -= halfCanvasHeight;
 		float screenSpaceLocationY = canvasSpaceLocation.Y * rootCanvasScale;
@@ -51,18 +50,17 @@ void FLexUIGeometry::AdjustPixelPerfectPos(TArray<FLexUIOriginVertexData>& origi
 		originVertices[i].Position = FVector3f(canvasToComponentTransform.TransformPosition(FVector(item)));
 	}
 }
-void AdjustPixelPerfectPos_For_UIRectFillRadial360(TArray<FLexUIOriginVertexData>& originVertices, ULexCanvas* renderCanvas, ULexVisual* uiComp)
+void AdjustPixelPerfectPos_For_UIRectFillRadial360(TArray<FLexUIOriginVertexData>& originVertices, ULexCanvas* RenderCanvas, ULexVisual* Visual)
 {
 	SCOPE_CYCLE_COUNTER(STAT_TransformPixelPerfectVertices);
-	auto canvasUIItem = renderCanvas->GetRootCanvas()->GetLexWidget();
-	FTransform componentToCanvasTransform;
-	componentToCanvasTransform = uiComp->GetWidget()->GetComponentTransform() * canvasUIItem->GetComponentTransform().Inverse();
-	if (!ULexCanvas::Is2DUITransform(componentToCanvasTransform))return;//only 2d UI can do pixel perfect
-	FTransform canvasToComponentTransform = componentToCanvasTransform.Inverse();
+	auto CanvasWidget = RenderCanvas->GetRootCanvas()->GetWidget();
+	auto ComponentToCanvasTransform = Visual->GetWidget()->GetWorldTransform() * CanvasWidget->GetWorldTransform().Inverse();
+	if (!ULexCanvas::Is2DUITransform(ComponentToCanvasTransform))return;//only 2d UI can do pixel perfect
+	FTransform canvasToComponentTransform = ComponentToCanvasTransform.Inverse();
 
-	auto halfCanvasWidth = canvasUIItem->GetWidth() * 0.5f;
-	auto halfCanvasHeight = canvasUIItem->GetHeight() * 0.5f;
-	float rootCanvasScale = renderCanvas->GetRootCanvas()->GetCanvasScale();
+	auto halfCanvasWidth = CanvasWidget->GetWidth() * 0.5f;
+	auto halfCanvasHeight = CanvasWidget->GetHeight() * 0.5f;
+	float rootCanvasScale = RenderCanvas->GetRootCanvas()->GetCanvasScale();
 	float inv_RootCanvasScale = 1.0f / rootCanvasScale;
 
 	static TArray<int> vertArray = { 0, 2, 6, 8 };
@@ -71,7 +69,7 @@ void AdjustPixelPerfectPos_For_UIRectFillRadial360(TArray<FLexUIOriginVertexData
 		int vertIndex = vertArray[i];
 		auto originPos = originVertices[vertIndex].Position;
 
-		auto canvasSpaceLocation = componentToCanvasTransform.TransformPosition(FVector(originPos));
+		auto canvasSpaceLocation = ComponentToCanvasTransform.TransformPosition(FVector(originPos));
 		canvasSpaceLocation.Y -= halfCanvasWidth;
 		canvasSpaceLocation.Z -= halfCanvasHeight;
 		float screenSpaceLocationY = canvasSpaceLocation.Y * rootCanvasScale;
@@ -84,20 +82,19 @@ void AdjustPixelPerfectPos_For_UIRectFillRadial360(TArray<FLexUIOriginVertexData
 		originVertices[vertIndex].Position = FVector3f(canvasToComponentTransform.TransformPosition(canvasSpaceLocation));
 	}
 }
-void AdjustPixelPerfectPos_For_UIText(TArray<FLexUIOriginVertexData>& originVertices, const TArray<FLexUITextCharProperty>& cacheCharPropertyArray, ULexCanvas* renderCanvas, ULexVisual* uiComp)
+void AdjustPixelPerfectPos_For_UIText(TArray<FLexUIOriginVertexData>& originVertices, const TArray<FLexUITextCharProperty>& cacheCharPropertyArray, ULexCanvas* RenderCanvas, ULexVisual* Visual)
 {
 	SCOPE_CYCLE_COUNTER(STAT_TransformPixelPerfectVertices);
 	if (cacheCharPropertyArray.Num() <= 0)return;
 
-	auto canvasUIItem = renderCanvas->GetRootCanvas()->GetLexWidget();
-	FTransform componentToCanvasTransform;
-	componentToCanvasTransform = uiComp->GetWidget()->GetComponentTransform() * canvasUIItem->GetComponentTransform().Inverse();
-	if (!ULexCanvas::Is2DUITransform(componentToCanvasTransform))return;//only 2d UI can do pixel perfect
-	FTransform canvasToComponentTransform = componentToCanvasTransform.Inverse();
+	auto CanvasWidget = RenderCanvas->GetRootCanvas()->GetWidget();
+	auto ComponentToCanvasTransform = Visual->GetWidget()->GetWorldTransform() * CanvasWidget->GetWorldTransform().Inverse();
+	if (!ULexCanvas::Is2DUITransform(ComponentToCanvasTransform))return;//only 2d UI can do pixel perfect
+	FTransform canvasToComponentTransform = ComponentToCanvasTransform.Inverse();
 
-	auto halfCanvasWidth = canvasUIItem->GetWidth() * 0.5f;
-	auto halfCanvasHeight = canvasUIItem->GetHeight() * 0.5f;
-	float rootCanvasScale = renderCanvas->GetRootCanvas()->GetCanvasScale();
+	auto halfCanvasWidth = CanvasWidget->GetWidth() * 0.5f;
+	auto halfCanvasHeight = CanvasWidget->GetHeight() * 0.5f;
+	float rootCanvasScale = RenderCanvas->GetRootCanvas()->GetCanvasScale();
 	float inv_RootCanvasScale = 1.0f / rootCanvasScale;
 
 	for (int i = 0; i < cacheCharPropertyArray.Num(); i++)
@@ -111,7 +108,7 @@ void AdjustPixelPerfectPos_For_UIText(TArray<FLexUIOriginVertexData>& originVert
 		{
 			auto originPos = originVertices[vertStartIndex].Position;
 
-			auto canvasSpaceLocation = componentToCanvasTransform.TransformPosition(FVector(originPos));
+			auto canvasSpaceLocation = ComponentToCanvasTransform.TransformPosition(FVector(originPos));
 			canvasSpaceLocation.Y -= halfCanvasWidth;
 			canvasSpaceLocation.Z -= halfCanvasHeight;
 			float screenSpaceLocationX = canvasSpaceLocation.Y * rootCanvasScale;
@@ -3237,8 +3234,8 @@ void FLexUIGeometry::TransformVertices(ULexCanvas* canvas, ULexVisual* item, FLe
 		originVertices.AddDefaulted(vertexCount - originVertexCount);
 	}
 
-	auto inverseCanvasTf = canvas->GetLexWidget()->GetComponentTransform().Inverse();
-	const auto& itemTf = item->GetWidget()->GetComponentTransform();
+	auto inverseCanvasTf = canvas->GetWidget()->GetWorldTransform().Inverse();
+	const auto& itemTf = item->GetWidget()->GetWorldTransform();
 	FTransform itemToCanvasTf;
 	FTransform::Multiply(&itemToCanvasTf, &itemTf, &inverseCanvasTf);
 	uiGeo->TransformRelativeToCanvas = itemToCanvasTf;

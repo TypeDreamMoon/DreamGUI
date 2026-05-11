@@ -12,7 +12,6 @@
 #include "Widgets/SWindow.h"
 #include "Core/LexUIFontData_Bitmap.h"
 #include "Core/LexUISpriteData.h"
-#include "Core/Actor/LexWidgetActor.h"
 #include "Core/Components/LexImage.h"
 #include "Core/Components/LexWidget.h"
 #include "Engine/GameViewportClient.h"
@@ -64,10 +63,10 @@ void UUITextInputComponent::Update(float DeltaTime)
 	}
 }
 
-void UUITextInputComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void UUITextInputComponent::EndPlay()
 {
-	Super::EndPlay(EndPlayReason);
-	DeactivateInput(EndPlayReason != EEndPlayReason::EndPlayInEditor);
+	Super::EndPlay();
+	DeactivateInput(true);
 	if (TextInputMethodContext.IsValid())
 	{
 		TextInputMethodContext->Dispose();
@@ -985,7 +984,7 @@ void UUITextInputComponent::UpdateUITextComponent()
 		
 		if (bAllowMultiLine)//multi line, handle out of range chars
 		{
-			if (auto ClipWidget = TextVisual->GetWidget()->GetUIParent())
+			if (auto ClipWidget = TextVisual->GetWidget()->GetParent())
 			{
 				auto TextWidget = TextVisual->GetWidget();
 				auto TextAnchoredPos = TextWidget->GetAnchoredPosition();
@@ -1029,7 +1028,7 @@ void UUITextInputComponent::UpdateUITextComponent()
 		}
 		else//single line, handle out of range chars
 		{
-			if (auto ClipWidget = TextVisual->GetWidget()->GetUIParent())
+			if (auto ClipWidget = TextVisual->GetWidget()->GetParent())
 			{
 				auto TextWidget = TextVisual->GetWidget();
 				auto TextAnchoredPos = TextWidget->GetHorizontalAnchoredPosition();
@@ -1113,12 +1112,9 @@ void UUITextInputComponent::UpdateCaretPosition(FVector2f InCaretPosition, bool 
 	if (!TextVisual.IsValid())return;
 	if (!CaretWidget.IsValid())
 	{
-		auto CaretActor = this->GetWorld()->SpawnActor<ALexWidgetActor>();
-		CaretActor->AttachToActor(TextVisual->GetWidget()->GetOwner(), FAttachmentTransformRules::KeepRelativeTransform);
-#if WITH_EDITOR
-		CaretActor->SetActorLabel(TEXT("Caret"));
-#endif
-		CaretWidget = CaretActor->GetLexWidget();
+		CaretWidget = NewObject<ULexWidget>(this->GetWidget()->GetOuter());
+		CaretWidget->SetParent(TextVisual->GetWidget(), false);
+		CaretWidget->SetDisplayName(TEXT("Caret"));
 		CaretWidget->SetAnchorData(FLexUIAnchorData{FVector2D(0.5, 0.5)
 			, FVector2D(0, 0.5), FVector2D(0, 0.5)
 			, FVector2D::Zero(), FVector2D(CaretWidth, TextVisual->GetFontSize())});
@@ -1145,12 +1141,9 @@ void UUITextInputComponent::UpdateSelection()
 		int32 needToCreateSelectionMaskCount = SelectionPropertyArray.Num() - createdSelectionMaskCount;
 		for (int32 i = 0; i < needToCreateSelectionMaskCount; i++)
 		{
-			auto SpriteActor = this->GetWorld()->SpawnActor<ALexWidgetActor>();
-			SpriteActor->AttachToActor(TextVisual->GetWidget()->GetOwner(), FAttachmentTransformRules::KeepRelativeTransform);
-#if WITH_EDITOR
-			SpriteActor->SetActorLabel(FString::Printf(TEXT("Selection%d"), i + createdSelectionMaskCount));
-#endif
-			auto SpriteWidget = SpriteActor->GetLexWidget();
+			auto SpriteWidget = NewObject<ULexWidget>(this->GetWidget()->GetOuter());
+			SpriteWidget->SetParent(TextVisual->GetWidget(), false);
+			SpriteWidget->SetDisplayName(FString::Printf(TEXT("Selection%d"), i + createdSelectionMaskCount));
 			SpriteWidget->SetHeight(TextVisual->GetFontSize());
 			SpriteWidget->SetPivot(FVector2D(0, 0.5f));
 			auto SelectionVisual = SpriteWidget->CreateNewVisual<ULexImage>();
@@ -1425,17 +1418,17 @@ void UUITextInputComponent::ActivateInput(ULexPointerEventData* EventData)
 	BindKeys();
 	UpdatePlaceHolderComponent();
 	//set is selected
-	if (auto eventSystem = ULexEventSystem::GetLexEventSystemInstance(this, IsValid(EventData) ? EventData->UserIndex : 0))
+	if (auto EventSystem = ULexEventSystem::GetLexEventSystemInstance(this, IsValid(EventData) ? EventData->UserIndex : 0))
 	{
 		if (auto Widget = GetWidget())
 		{
 			if (IsValid(EventData))
 			{
-				eventSystem->SetSelectComponent(Widget, EventData, EventData->PressComponentEventFireType);
+				EventSystem->SetSelectWidget(Widget, EventData, EventData->PressComponentEventFireType);
 			}
 			else
 			{
-				eventSystem->SetSelectComponentWithDefault(Widget);
+				EventSystem->SetSelectComponentWithDefault(Widget);
 			}
 		}
 	}
@@ -1447,10 +1440,14 @@ void UUITextInputComponent::ActivateInput(ULexPointerEventData* EventData)
 
 void UUITextInputComponent::BindKeys()
 {
-	if (GetOwner()->InputComponent == nullptr)
+	if (!InputComponentAgent.IsValid())
 	{
-		GetOwner()->AutoReceiveInput = EAutoReceiveInput::Player0;
-		GetOwner()->PreInitializeComponents();
+		InputComponentAgent = this->GetWidget()->GetOuter()->GetWorld()->SpawnActor(AActor::StaticClass());
+#if WITH_EDITOR
+		InputComponentAgent->SetActorLabel(FString::Printf(TEXT("%s_InputComponentAgent"), *GetWidget()->GetDisplayName()));
+#endif
+		InputComponentAgent->AutoReceiveInput = EAutoReceiveInput::Player0;
+		InputComponentAgent->PreInitializeComponents();
 	}
 
 	static TArray<FKey> AllKeys = {
@@ -1563,22 +1560,21 @@ void UUITextInputComponent::BindKeys()
 	EKeys::Quote,
 	};
 
-	auto inputComp = GetOwner()->InputComponent;
+	auto InputComp = InputComponentAgent->InputComponent;
 	for (auto& Key : AllKeys)
 	{
 		if (!IgnoreKeys.Contains(Key))
 		{
-			inputComp->BindKey(Key, EInputEvent::IE_Pressed, this, &UUITextInputComponent::AnyKeyPressed);
-			inputComp->BindKey(Key, EInputEvent::IE_Repeat, this, &UUITextInputComponent::AnyKeyPressed);
+			InputComp->BindKey(Key, EInputEvent::IE_Pressed, this, &UUITextInputComponent::AnyKeyPressed);
+			InputComp->BindKey(Key, EInputEvent::IE_Repeat, this, &UUITextInputComponent::AnyKeyPressed);
 		}
 	}
 }
 void UUITextInputComponent::UnbindKeys()
 {
-	if (GetOwner()->InputComponent == nullptr)
+	if (!InputComponentAgent.IsValid())
 		return;
-	GetOwner()->InputComponent->DestroyComponent();
-	GetOwner()->InputComponent = nullptr;
+	InputComponentAgent->Destroy();
 }
 void UUITextInputComponent::DeactivateInput(bool InFireEvent)
 {

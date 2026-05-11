@@ -5,6 +5,8 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
 #include "IDetailPropertyRow.h"
+#include "Core/LexUIBehaviour.h"
+#include "Core/Components/LexWidget.h"
 
 #define LOCTEXT_NAMESPACE "LGUIEditorUtils"
 class LGUIEDITOR_API FLexUIEditorUtils
@@ -20,12 +22,11 @@ public:
 	template<class T>
 	static void ShowError_MultiComponentNotAllowed(IDetailLayoutBuilder* DetailBuilder, T* Component, const FText& ErrorMessage)
 	{
-		static_assert(TPointerIsConvertibleFromTo<T, const UActorComponent>::Value, "'T' template parameter to ShowWarning_MultiComponentNotAllowed must be derived from UActorComponent");
-		if (auto actor = Component->GetOwner())
+		static_assert(TPointerIsConvertibleFromTo<T, const ULexUIBehaviour>::Value, "'T' template parameter to ShowWarning_MultiComponentNotAllowed must be derived from UActorComponent");
+		if (auto Widget = Component->GetWidget())
 		{
-			TArray<UActorComponent*> components;
-			actor->GetComponents(T::StaticClass(), components);
-			if (components.Num() > 1)
+			auto Components = Widget->GetComponents(Component->GetClass());
+			if (Components.Num() > 1)
 			{
 				IDetailCategoryBuilder& lguiCategory = DetailBuilder->EditCategory(ErrorInfoCategory, FText::GetEmpty(), ECategoryPriority::Variable);
 				lguiCategory.AddCustomRow(LOCTEXT("MultiComponentNotAllowed_Tips", "MultiComponentNotAllowed_Tips"))
@@ -40,12 +41,11 @@ public:
 			}
 		}
 	}
-	static void ShowError_RequireComponent(IDetailLayoutBuilder* DetailBuilder, UActorComponent* Component, TSubclassOf<UActorComponent> RequireComponentType)
+	static void ShowError_RequireComponent(IDetailLayoutBuilder* DetailBuilder, ULexUIBehaviour* Component, TSubclassOf<ULexUIBehaviour> RequireComponentType)
 	{
-		if (auto actor = Component->GetOwner())
+		if (auto Widget = Component->GetWidget())
 		{
-			TArray<UActorComponent*> Components;
-			actor->GetComponents(RequireComponentType, Components);
+			auto Components = Widget->GetComponents(RequireComponentType);
 			if (Components.Num() == 0)
 			{
 				IDetailCategoryBuilder& lguiCategory = DetailBuilder->EditCategory(ErrorInfoCategory, FText::GetEmpty(), ECategoryPriority::Variable);
@@ -53,7 +53,7 @@ public:
 					.WholeRowContent()
 					[
 						SNew(STextBlock)
-						.Text(FText::Format(LOCTEXT("RequireComponentTip", "This component require {0} component on actor!"), FText::FromName(RequireComponentType->GetFName())))
+						.Text(FText::Format(LOCTEXT("RequireComponentTip", "This component require {0} component on widget!"), FText::FromName(RequireComponentType->GetFName())))
 						.ColorAndOpacity(FLinearColor(FColor::Red))
 						.AutoWrapText(true)
 					]

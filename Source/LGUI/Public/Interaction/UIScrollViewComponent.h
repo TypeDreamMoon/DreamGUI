@@ -95,7 +95,7 @@ protected:
 	virtual void CalculateHorizontalRange();
 	virtual void CalculateVerticalRange();
 	bool CheckParameters();
-	virtual bool CheckValidHit(USceneComponent* InHitComp);
+	virtual bool CheckValidHit(ULexWidget* InHitComp);
 	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> ContentParent = nullptr;//Content's parent
 	virtual void UpdateProgress(bool InFireEvent = true);
 	FVector2D Velocity = FVector2D(0, 0);//drag speed

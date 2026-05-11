@@ -58,10 +58,10 @@ void ULexUIRenderTargetInteraction::TickComponent(float DeltaTime, ELevelTick Ti
 	if (!InputPointerEventData.IsValid())
 		return;
 
-	FLexUIHitResult hitResultContainer;
+	FLexUIHitResultContainer hitResultContainer;
 	bool lineTraceHitSomething = LineTrace(hitResultContainer);
 	bool resultHitSomething = false;
-	FHitResult hitResult;
+	FLexUIHitResult hitResult;
 	ULexPointerInputModule::ProcessPointerEvent(nullptr, PointerEventData, lineTraceHitSomething, hitResultContainer, resultHitSomething, hitResult);
 }
 
@@ -74,7 +74,7 @@ void ULexUIRenderTargetInteraction::DeactivateRaycaster()
 	
 }
 
-bool ULexUIRenderTargetInteraction::LineTrace(FLexUIHitResult& OutHitResult)
+bool ULexUIRenderTargetInteraction::LineTrace(FLexUIHitResultContainer& OutHitResult)
 {
 	if (InputPointerEventData->Raycaster == nullptr)return false;
 	auto RayOrigin = InputPointerEventData->Raycaster->GetRayOrigin();
@@ -92,11 +92,11 @@ bool ULexUIRenderTargetInteraction::LineTrace(FLexUIHitResult& OutHitResult)
 		FVector OutRayOrigin, OutRayDirection;
 		ULexScreenSpaceRaycaster::DeprojectViewPointToWorld(ViewProjectionMatrix, mousePos01, OutRayOrigin, OutRayDirection);
 
-		TArray<FHitResult> HitResultArray;
+		TArray<FLexUIHitResult> HitResultArray;
 		this->Raycast(PointerEventData, OutRayOrigin, OutRayDirection, RayEnd, HitResultArray);
 		if (HitResultArray.Num() > 0)
 		{
-			FLexUIHitResult LexHitResult;
+			FLexUIHitResultContainer LexHitResult;
 			LexHitResult.HitResult = HitResultArray[0];
 			LexHitResult.EventFireType = this->GetEventFireType();
 			LexHitResult.Raycaster = this;
@@ -128,7 +128,7 @@ bool ULexUIRenderTargetInteraction::ShouldStartDrag(ULexPointerEventData* InPoin
 	FVector2D pressMousePos = FVector2D(InPointerEventData->PressPointerPosition);
 	return FVector2D::DistSquared(pressMousePos, mousePos) > DragThresholdSquare;
 }
-void ULexUIRenderTargetInteraction::Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResultArray)
+void ULexUIRenderTargetInteraction::Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FLexUIHitResult>& OutHitResultArray)
 {
 	return Super::RaycastUI(InPointerEventData, TargetCanvas.Get(), OutRayOrigin, OutRayDirection, OutRayEnd, OutHitResultArray);
 }
@@ -160,12 +160,12 @@ bool ULexUIRenderTargetInteraction::OnPointerUp_Implementation(ULexPointerEventD
 bool ULexUIRenderTargetInteraction::OnPointerScroll_Implementation(ULexPointerEventData* EventData)
 {
 	auto inAxisValue = EventData->ScrollAxisValue;
-	if (IsValid(PointerEventData->EnterComponent))
+	if (IsValid(PointerEventData->EnterWidget))
 	{
 		if (inAxisValue != FVector2D::ZeroVector || PointerEventData->ScrollAxisValue != inAxisValue)
 		{
 			PointerEventData->ScrollAxisValue = inAxisValue;
-			ULexEventSystem::ExecuteEvent_OnPointerScroll(PointerEventData->EnterComponent, PointerEventData, PointerEventData->EnterComponentEventFireType, true);
+			ULexEventSystem::ExecuteEvent_OnPointerScroll(PointerEventData->EnterWidget, PointerEventData, PointerEventData->EnterComponentEventFireType, true);
 		}
 	}
 	return bAllowEventBubbleUp;

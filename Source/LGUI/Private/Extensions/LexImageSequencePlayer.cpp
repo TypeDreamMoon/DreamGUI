@@ -8,27 +8,19 @@
 
 ULexImageSequencePlayer::ULexImageSequencePlayer()
 {
-	PrimaryComponentTick.bCanEverTick = false;
 }
 void ULexImageSequencePlayer::BeginPlay()
 {
 	Super::BeginPlay();	
-	if (!ULexUIPrefabWorldSubsystem::IsLexUIPrefabSystemProcessingActor(this->GetOwner()))
-	{
-		Awake_Implementation();
-	}
-}
-void ULexImageSequencePlayer::Awake_Implementation()
-{
 	if (bPlayOnStart)
 	{
 		Play();
 	}
 }
 
-void ULexImageSequencePlayer::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void ULexImageSequencePlayer::EndPlay()
 {
-	Super::EndPlay(EndPlayReason);
+	Super::EndPlay();
 	Stop();
 }
 

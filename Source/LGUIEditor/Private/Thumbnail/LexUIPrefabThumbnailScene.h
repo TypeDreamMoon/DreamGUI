@@ -4,6 +4,8 @@
 
 #include "ThumbnailHelpers.h"
 
+class ULexWidgetPresenterComponent;
+class ULexWidget;
 class ULexUIPrefab;
 
 class FLexUIPrefabThumbnailScene :public FThumbnailPreviewScene
@@ -16,15 +18,15 @@ protected:
 	virtual void GetViewMatrixParameters(const float InFOVDegrees, FVector& OutOrigin, float& OutOrbitPitch, float& OutOrbitYaw, float& OutOrbitZoom)const override;
 	virtual USceneThumbnailInfo* GetSceneThumbnailInfo(const float TargetDistance)const;
 	void SpawnPreviewActor();
-	void GetBoundsRecursive(USceneComponent* RootComp, FBoxSphereBounds& OutBounds, bool& IsFirstPrimitive)const;
+	void GetBoundsRecursive(ULexWidget* RootWidget, FBoxSphereBounds& OutBounds, bool& IsFirstPrimitive)const;
 private:
 	void ClearOldActors();
 private:
 	int32 NumStartingActors;
+	TWeakObjectPtr<ULexWidgetPresenterComponent> PresenterComponent;
 	TWeakObjectPtr<ULexUIPrefab> CurrentPrefab;
 	FText CachedPrefabContent;
 	FBoxSphereBounds PreviewActorsBound;
-	bool bIsUI = false;
 };
 
 class FLexUIPrefabInstanceThumbnailScene

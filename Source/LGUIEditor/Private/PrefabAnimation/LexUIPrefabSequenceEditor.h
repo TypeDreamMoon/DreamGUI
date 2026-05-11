@@ -10,6 +10,7 @@
 #include "Framework/Docking/TabManager.h"
 #include "Widgets/SCompoundWidget.h"
 
+class ULexWidget;
 class ULexUIPrefabSequenceComponent;
 class ULexUIPrefabSequence;
 class SLexUIPrefabSequenceEditorWidget;
@@ -29,7 +30,7 @@ public:
 	ULexUIPrefabSequence* GetLGUIPrefabSequence() const;
 	ULexUIPrefabSequenceComponent* GetSequenceComponent()const { return WeakSequenceComponent.Get(); }
 	void RefreshAnimationList();
-	void OnEditingPrefabChanged(AActor* RootActor);
+	void OnEditingPrefabChanged(ULexWidget* RootWidget);
 private:
 	TWeakObjectPtr<ULexUIPrefabSequenceComponent> WeakSequenceComponent;
 	FDelegateHandle OnObjectsReplacedHandle;

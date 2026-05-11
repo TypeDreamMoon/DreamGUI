@@ -25,54 +25,50 @@ public:
 		TObjectPtr<ULexUIPrefab> PrefabAsset = nullptr;
 	/** Root actor of this prefab, null means this is a level prefab */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TObjectPtr<AActor> LoadedRootActor = nullptr;
+		TObjectPtr<ULexWidget> LoadedRootWidget = nullptr;
 	/** Map from guid to object, include all sub-prefab's object. Note object guid is not equals to sub-prefab's same object's guid. */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TMap<FGuid, TObjectPtr<UObject>> MapGuidToObject;
 	/** Map to sub prefab */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TMap<TObjectPtr<AActor>, FLexUISubPrefabData> SubPrefabMap;
+		TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> SubPrefabMap;
 #if WITH_EDITORONLY_DATA
 	/** Broken actor-sub-prefab collection, only for level's sub-prefab */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TSet<TObjectPtr<AActor>> MissingPrefab;
+		TSet<TObjectPtr<ULexWidget>> MissingPrefab;
 #endif
 
 #if WITH_EDITOR
 	virtual void BeginDestroy()override;
 #if WITH_EDITORONLY_DATA
-	/** The root agent actor in prefab editor's outliner named [RootAgent] */
-	TWeakObjectPtr<AActor> RootAgentActorForPrefabInstance = nullptr;
 	TWeakObjectPtr<UWorld> PrefabInstanceWorld = nullptr;
 #endif
 
 	void Init(ULexUIPrefab* InPrefab, class FLexUIPrefabInstanceScene* InPrefabInstanceScene);
-
-	static void SetActorPropertyInOutliner(AActor* Actor, bool InListed);
-
-	ULexUIPrefab* GetSubPrefabAsset(AActor* InSubPrefabActor);
+	
+	ULexUIPrefab* GetSubPrefabAsset(ULexWidget* InSubPrefabWidget);
 	void SavePrefab();
 	void ClearLoadedPrefab();
-	bool IsActorBelongsToSubPrefab(const AActor* InActor);
+	bool IsWidgetBelongsToSubPrefab(const ULexWidget* InWidget);
 	/**
 	 * Actor was belongs to a sub prefab, but the prefab asset is missing..
 	 * Only call this function after IsActorBelongsToSubPrefab.
 	 */
-	bool IsActorBelongsToMissingSubPrefab(const AActor* InActor);
-	bool IsSubPrefabRootActor(const AActor* InActor);
-	bool IsActorBelongsToThis(const AActor* InActor);
+	bool IsWidgetBelongsToMissingSubPrefab(const ULexWidget* InWidget);
+	bool IsSubPrefabRootWidget(const ULexWidget* InWidget);
+	bool IsWidgetBelongsToThis(const ULexWidget* InWidget);
 	bool ClearInvalidObjectAndGuid();
-	void AddMemberPropertyToSubPrefab(AActor* InSubPrefabActor, UObject* InObject, FName InPropertyName);
-	void RemoveMemberPropertyFromSubPrefab(AActor* InSubPrefabActor, UObject* InObject, FName InPropertyName);
-	void RemoveAllMemberPropertyFromSubPrefab(AActor* InSubPrefabActor, bool InIncludeRootTransform);
-	FLexUISubPrefabData GetSubPrefabData(AActor* InSubPrefabActor);
-	AActor* GetSubPrefabRootActor(AActor* InSubPrefabActor);
+	void AddMemberPropertyToSubPrefab(ULexWidget* InSubPrefabWidget, UObject* InObject, FName InPropertyName);
+	void RemoveMemberPropertyFromSubPrefab(ULexWidget* InSubPrefabWidget, UObject* InObject, FName InPropertyName);
+	void RemoveAllMemberPropertyFromSubPrefab(ULexWidget* InSubPrefabActor, bool InIncludeRootTransform);
+	FLexUISubPrefabData GetSubPrefabData(ULexWidget* InSubPrefabWidget);
+	ULexWidget* GetSubPrefabRootWidget(ULexWidget* InSubPrefabWidget);
 	/** For parent prefab. When parent prefab want to apply override parameter to subprefab, but the parameter belongs to subprefab's subprefab, then we need to mark override parameter for subprefab. */
 	void MarkOverrideParameterFromParentPrefab(UObject* InObject, const TArray<FName>& InPropertyNames);
 	void MarkOverrideParameterFromParentPrefab(UObject* InObject, FName InPropertyName);
 
 	/** If sub prefab changed, then update parent prefab */
-	bool RefreshOnSubPrefabDirty(ULexUIPrefab* InSubPrefab, AActor* InSubPrefabRootActor = nullptr);
+	bool RefreshOnSubPrefabDirty(ULexUIPrefab* InSubPrefab, ULexWidget* InSubPrefabRootWidget = nullptr);
 
 	void CopyRootObjectParentAnchorData(UObject* InObject, UObject* OriginObject);
 
@@ -88,11 +84,11 @@ public:
 	void ApplyPrefabOverride(UObject* InObject, FName InPropertyName);
 	void ApplyAllOverrideToPrefab(UObject* InObject);
 
-	void RefreshSubPrefabVersion(AActor* InSubPrefabRootActor);
+	void RefreshSubPrefabVersion(ULexWidget* InSubPrefabRootWidget);
 
-	void MakePrefabAsSubPrefab(ULexUIPrefab* InPrefab, AActor* InActor, const TMap<FGuid, TObjectPtr<UObject>>& InSubMapGuidToObject, const TArray<FLexUIPrefabOverrideParameterData>& InObjectOverrideParameterArray);
-	void RemoveSubPrefabByRootActor(AActor* InPrefabRootActor);
-	void RemoveSubPrefabByAnyActorOfSubPrefab(AActor* InPrefabActor);
+	void MakePrefabAsSubPrefab(ULexUIPrefab* InPrefab, ULexWidget* InWidget, const TMap<FGuid, TObjectPtr<UObject>>& InSubMapGuidToObject, const TArray<FLexUIPrefabOverrideParameterData>& InObjectOverrideParameterArray);
+	void RemoveSubPrefabByRootWidget(ULexWidget* InPrefabRootWidget);
+	void RemoveSubPrefabByAnyWidgetOfSubPrefab(ULexWidget* InPrefabWidget);
 	ULexUIPrefab* GetPrefabAssetBySubPrefabObject(UObject* InObject);
 	bool GetAnythingDirty()const;
 	void SetAnythingDirty();
@@ -102,11 +98,9 @@ public:
 	 * @return	true if anything changed
 	 */
 	bool CleanupInvalidSubPrefab();
-	void SetCanNotifyAttachment(bool value) { bCanNotifyAttachment = value; }
 private:
 	bool bAnythingDirty = false;
 	bool bCanCollectProperty = true;
-	bool bCanNotifyAttachment = false;
 	bool bCanNotifyComponentCreateDelete = true;
 	bool bAlreadyShowMessageAtThisFrame = false;
 
@@ -114,19 +108,6 @@ private:
 	void OnPreObjectPropertyChanged(UObject* InObject, const class FEditPropertyChain& InEditPropertyChain);
 	void TryCollectPropertyToOverride(UObject* InObject, FProperty* InMemberProperty);
 
-	static bool bFirstTimeShow_RestructActorBlueprint;
-	void OnLevelActorAttached(AActor* Actor, const AActor* AttachTo);
-	void OnLevelActorDetached(AActor* Actor, const AActor* DetachFrom);
-	void OnLevelActorDeleted(AActor* Actor);
-
-	struct FAttachmentActorStruct
-	{
-		TWeakObjectPtr<AActor> Actor = nullptr;
-		TWeakObjectPtr<AActor> DetachFrom = nullptr;
-		TWeakObjectPtr<AActor> AttachTo = nullptr;
-	};
-	FAttachmentActorStruct AttachmentActor;
-	void CheckAttachment();
 	UWorld* GetPrefabWorld()const;
 
 	/**
@@ -136,6 +117,6 @@ private:
 	bool CleanupInvalidLinkToSubPrefabObject();
 
 public:
-	static ULexUIPrefabHelperObject* GetPrefabHelperObject_WhichManageThisActor(AActor* InActor);
+	static ULexUIPrefabHelperObject* GetPrefabHelperObject_WhichManageThisWidget(ULexWidget* InWidget);
 #endif
 };

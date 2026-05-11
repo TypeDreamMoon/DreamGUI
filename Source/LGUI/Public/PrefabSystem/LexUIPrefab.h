@@ -7,8 +7,10 @@
 #include "LexUIPrefabInstanceScene.h"
 #include "LexUIPrefab.generated.h"
 
-#define LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE "PrefabSystem/ActorSerializer.h"
+#define LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE "PrefabSystem/WidgetSerializer.h"
 #define LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE LexUIPrefabSystem
+
+class ULexWidget;
 
 enum class ELexUIPrefabVersion : uint16
 {
@@ -78,17 +80,17 @@ struct FLexUISubPrefabObjectUniqueId
 	GENERATED_BODY()
 public:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		FGuid RootActorGuidInParentPrefab;
+		FGuid RootWidgetGuidInParentPrefab;
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		FGuid ObjectGuidInOriginPrefab;
 
 	bool operator==(const FLexUISubPrefabObjectUniqueId& other)const
 	{
-		return this->RootActorGuidInParentPrefab == other.RootActorGuidInParentPrefab && this->ObjectGuidInOriginPrefab == other.ObjectGuidInOriginPrefab;
+		return this->RootWidgetGuidInParentPrefab == other.RootWidgetGuidInParentPrefab && this->ObjectGuidInOriginPrefab == other.ObjectGuidInOriginPrefab;
 	}
 	friend FORCEINLINE uint32 GetTypeHash(const FLexUISubPrefabObjectUniqueId& other)
 	{
-		return HashCombine(GetTypeHash(other.RootActorGuidInParentPrefab), GetTypeHash(other.ObjectGuidInOriginPrefab));
+		return HashCombine(GetTypeHash(other.RootWidgetGuidInParentPrefab), GetTypeHash(other.ObjectGuidInOriginPrefab));
 	}
 };
 
@@ -145,7 +147,7 @@ public:
 	TSet<FGuid> UnexpandedWidgetSet;
 };
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(FLexUIPrefab_LoadPrefabCallback, AActor*, LoadedRootActor);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FLexUIPrefab_LoadPrefabCallback, ULexWidget*, LoadedRootWidget);
 
 /**
  * Similar to Unity3D's Prefab. Store actor and it's hierarchy then serialize to asset, deserialize and restore when needed.
@@ -245,7 +247,7 @@ public:
 	 * @param SetRelativeTransformToIdentity Set created root actor's transform to zero after load.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "InCallbackBeforeAwake,SetRelativeTransformToIdentity", UnsafeDuringActorConstruction = "true", WorldContext = "WorldContextObject", AutoCreateRefTerm = "InCallbackBeforeAwake"), Category = LGUI)
-		AActor* LoadPrefab(UObject* WorldContextObject, USceneComponent* InParent, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake, bool SetRelativeTransformToIdentity = false);
+		ULexWidget* LoadPrefab(UObject* WorldContextObject, UObject* InOuter, ULexWidget* InParent, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake, bool SetRelativeTransformToIdentity = false);
 	/**
 	 * LoadPrefab to create actor.
 	 * Awake function in LexUIBehaviour and LexUIPrefabInterface will be called right after LoadPrefab is done.
@@ -255,17 +257,17 @@ public:
 	 * @param Scale Set created root actor's scale after load.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "InCallbackBeforeAwake", UnsafeDuringActorConstruction = "true", WorldContext = "WorldContextObject", AutoCreateRefTerm = "InCallbackBeforeAwake"), Category = LGUI)
-		AActor* LoadPrefabWithTransform(UObject* WorldContextObject, USceneComponent* InParent, FVector Location, FRotator Rotation, FVector Scale, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake);
-	AActor* LoadPrefabWithTransform(UObject* WorldContextObject, USceneComponent* InParent, FVector Location, FQuat Rotation, FVector Scale, const TFunction<void(AActor*)>& InCallbackBeforeAwake);
+		ULexWidget* LoadPrefabWithTransform(UObject* WorldContextObject, UObject* InOuter, ULexWidget* InParent, FVector Location, FRotator Rotation, FVector Scale, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake);
+	ULexWidget* LoadPrefabWithTransform(UObject* WorldContextObject, UObject* InOuter, ULexWidget* InParent, FVector Location, FQuat Rotation, FVector Scale, const TFunction<void(ULexWidget*)>& InCallbackBeforeAwake);
 	/**
 	 * LoadPrefab to create actor.
 	 * Awake function in LexUIBehaviour and LexUIPrefabInterface will be called right after LoadPrefab is done.
-	 * @param InParent Parent scene component that the created root actor will be attached to. Can be null so the created root actor will not attach to anyone.
+	 * @param InParent Parent widget that the created root actor will be attached to. Can be null so the created root actor will not attach to anyone.
 	 * @param InReplaceAssetMap Replace source asset to dest before load the prefab.
 	 * @param InReplaceClassMap Replace source class to dest before load the prefab.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "InCallbackBeforeAwake", UnsafeDuringActorConstruction = "true", WorldContext = "WorldContextObject", AutoCreateRefTerm = "InCallbackBeforeAwake"), Category = LGUI)
-		AActor* LoadPrefabWithReplacement(UObject* WorldContextObject, USceneComponent* InParent, const TMap<UObject*, UObject*>& InReplaceAssetMap, const TMap<UClass*, UClass*>& InReplaceClassMap, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake);
+		ULexWidget* LoadPrefabWithReplacement(UObject* WorldContextObject, UObject* InOuter, ULexWidget* InParent, const TMap<UObject*, UObject*>& InReplaceAssetMap, const TMap<UClass*, UClass*>& InReplaceClassMap, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake);
 	/**
 	 * LoadPrefab to create actor.
 	 * Awake function in LexUIBehaviour and LexUIPrefabInterface will be called right after LoadPrefab is done.
@@ -273,12 +275,12 @@ public:
 	 * @param InCallbackBeforeAwake This callback function will execute before Awake event, parameter "Actor" is the loaded root actor.
 	 * @param SetRelativeTransformToIdentity Set created root actor's transform to zero after load.
 	 */
-	AActor* LoadPrefab(UWorld* InWorld, USceneComponent* InParent, bool SetRelativeTransformToIdentity = false, const TFunction<void(AActor*)>& InCallbackBeforeAwake = nullptr);
+	ULexWidget* LoadPrefab(UWorld* InWorld, UObject* InOuter, ULexWidget* InParent, bool SetRelativeTransformToIdentity = false, const TFunction<void(ULexWidget*)>& InCallbackBeforeAwake = nullptr);
 	/**
 	 * LoadPrefab and keep reference of source objects.
 	 */
-	AActor* LoadPrefabWithExistingObjects(UWorld* InWorld, USceneComponent* InParent
-		, TMap<FGuid, TObjectPtr<UObject>>& InOutMapGuidToObject, TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& OutSubPrefabMap
+	ULexWidget* LoadPrefabWithExistingObjects(UWorld* InWorld, UObject* InOuter, ULexWidget* InParent
+		, TMap<FGuid, TObjectPtr<UObject>>& InOutMapGuidToObject, TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& OutSubPrefabMap
 	);
 	bool IsPrefabBelongsToThisSubPrefab(ULexUIPrefab* InPrefab, bool InRecursive);
 #if WITH_EDITOR
@@ -289,7 +291,7 @@ public:
 private:
 #if WITH_EDITOR
 	TWeakObjectPtr<AActor> TempAgentActor;//actor for agent objects in preview world
-	void SetRootActorNameFromPrefab();
+	void SetRootWidgetNameFromPrefab();
 public:
 	FLexUIPrefabInstanceScene* GetPrefabInstanceScene();
 	void ClearPrefabInstanceScene();
@@ -310,8 +312,8 @@ public:
 	virtual void PostEditUndo()override;
 	virtual void PreSave(FObjectPreSaveContext SaveContext) override;
 
-	bool SavePrefab(AActor* RootActor
-		, TMap<UObject*, FGuid>& InOutMapObjectToGuid, TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& InSubPrefabMap
+	bool SavePrefab(ULexWidget* RootWidget
+		, TMap<UObject*, FGuid>& InOutMapObjectToGuid, TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& InSubPrefabMap
 		, bool InForEditorOrRuntimeUse = true
 	);
 	void RecreatePrefab();
@@ -322,7 +324,7 @@ public:
 	/**
 	 * LoadPrefab in editor, will not keep reference of source prefab, So we can't apply changes after modify it.
 	 */
-	AActor* LoadPrefabInEditor(UWorld* InWorld, USceneComponent* Parent, bool SetRelativeTransformToIdentity = true);
-	AActor* LoadPrefabInEditor(UWorld* InWorld, USceneComponent* Parent, TMap<TObjectPtr<AActor>, FLexUISubPrefabData>& OutSubPrefabMap, TMap<FGuid, TObjectPtr<UObject>>& OutMapGuidToObject, bool SetRelativeTransformToIdentity = true);
+	ULexWidget* LoadPrefabInEditor(UWorld* InWorld, UObject* InOuter, ULexWidget* Parent);
+	ULexWidget* LoadPrefabInEditor(UWorld* InWorld, UObject* InOuter, ULexWidget* Parent, TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& OutSubPrefabMap, TMap<FGuid, TObjectPtr<UObject>>& OutMapGuidToObject, bool SetRelativeTransformToIdentity = true);
 #endif
 };

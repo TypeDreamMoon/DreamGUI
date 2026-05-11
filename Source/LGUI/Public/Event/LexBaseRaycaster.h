@@ -46,7 +46,7 @@ public:
 	/** Called by raycaster to get ray */
 	virtual bool GenerateRay(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, float& OutRayLength) PURE_VIRTUAL(ULGUIBaseRaycaster::GenerateRay, return false;);
 	/** Called by InputModule to raycast hit test */
-	virtual void Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResultArray) PURE_VIRTUAL(ULGUIBaseRaycaster::Raycast, );
+	virtual void Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FLexUIHitResult>& OutHitResultArray) PURE_VIRTUAL(ULGUIBaseRaycaster::Raycast, );
 	/** Called by InputModule to decide if current trigger press need to convert to drag */
 	virtual bool ShouldStartDrag(ULexPointerEventData* InPointerEventData) PURE_VIRTUAL(ULexBaseRaycaster::ShouldStartDrag, return false;);
 
@@ -72,6 +72,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	void SetPointerID(int32 Value);
 protected:
-	void RaycastUI(ULexPointerEventData* InPointerEventData, ULexCanvas* InRootCanvas, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResultArray);
-	void RaycastWorld(ULexPointerEventData* InPointerEventData, bool InRequireFaceIndex, ETraceTypeQuery InTraceChannel, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResultArray);
+	void RaycastUI(ULexPointerEventData* InPointerEventData, ULexCanvas* InRootCanvas, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FLexUIHitResult>& OutHitResultArray);
+	void RaycastWorld(ULexPointerEventData* InPointerEventData, bool InRequireFaceIndex, ETraceTypeQuery InTraceChannel, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FLexUIHitResult>& OutHitResultArray);
 };

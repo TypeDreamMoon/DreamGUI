@@ -128,7 +128,7 @@ void ULexPostProcessRenderElement::CheckMaterialInstanceDynamic()
 
 void ULexPostProcessRenderElement::SetMaterialMatrixProperty(ULexVisualPostProcess* PostProcess, UMaterialInstanceDynamic* MID)
 {
-	auto WorldToPPTransform = PostProcess->GetWidget()->GetComponentTransform().Inverse();
+	auto WorldToPPTransform = PostProcess->GetWidget()->GetWorldTransform().Inverse();
 	auto WorldToPPMatrix = FMatrix44f(WorldToPPTransform.ToMatrixWithScale());
 	auto Size = PostProcess->GetWidget()->GetSize();
 	auto Min = PostProcess->GetWidget()->GetLocalSpaceLeftBottomPoint();

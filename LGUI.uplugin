@@ -27,12 +27,6 @@
 			"WhitelistPlatforms": [ "Win64", "Mac", "Linux" ]
 		},
 		{
-			"Name": "LGUIComponentVisualizer",
-			"Type": "Editor",
-			"LoadingPhase": "PostEngineInit",
-			"WhitelistPlatforms": [ "Win64", "Mac", "Linux" ]
-		},
-		{
 			"Name": "LGUIK2Nodes",
 			"Type": "UncookedOnly",
 			"LoadingPhase": "Default",

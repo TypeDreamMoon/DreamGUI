@@ -222,9 +222,9 @@ void ULexStaticMesh::CreateGeometry()
 	auto Widget = GetWidget();
 	auto RenderCanvas = Widget->GetRenderCanvas();
 	FTransform ItemToCanvasTf;
-	auto CanvasUIItem = RenderCanvas->GetLexWidget();
-	auto InverseCanvasTf = CanvasUIItem->GetComponentTransform().Inverse();
-	const auto& ItemTf = Widget->GetComponentTransform();
+	auto CanvasUIItem = RenderCanvas->GetWidget();
+	auto InverseCanvasTf = CanvasUIItem->GetWorldTransform().Inverse();
+	const auto& ItemTf = Widget->GetWorldTransform();
 	FTransform::Multiply(&ItemToCanvasTf, &ItemTf, &InverseCanvasTf);
 	
 	bool bNeedExpandMeshSection = false;

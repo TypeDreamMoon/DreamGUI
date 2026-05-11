@@ -1,6 +1,6 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/Actor/LexWidgetRootActor.h"
+#include "Core/Actor/LexWidgetPresenterComponent.h"
 
 #include "EngineUtils.h"
 #include "LGUI.h"
@@ -11,54 +11,58 @@
 #include "Event/LexWorldSpaceRaycasterBase.h"
 #include "Interaction/UINavigationInputSelectionHandler.h"
 #include "PrefabSystem/LexUIPrefab.h"
-#include "Utils/LexUIUtils.h"
 
 #define LOCTEXT_NAMESPACE "LexWidgetRootActor"
 
-ALexWidgetRootActor::ALexWidgetRootActor()
+ULexWidgetPresenterComponent::ULexWidgetPresenterComponent()
 {
-	PrimaryActorTick.bCanEverTick = false;
-	PrimaryActorTick.bStartWithTickEnabled = false;
-
-	Canvas = CreateDefaultSubobject<ULexCanvas>(FName("Canvas"));
-	LexWidget->SetSizeDelta(FVector2D(1920, 1080));
+	RootWidget = CreateDefaultSubobject<ULexWidget>(FName("RootWidget"));
+	RootWidget->SetSizeDelta(FVector2D(1920, 1080));
+	RootWidget->SetDisplayName(TEXT("[RootAgent]"));
+	Canvas = RootWidget->AddComponent<ULexCanvas>();
+	Canvas->SetWidgetPresenterComponent(this);
 
 	NavigationSelectionPrefab = LoadObject<ULexUIPrefab>(NULL, TEXT("/LGUI/Prefabs/NavigationSelectionInputHandler"));
 }
 
-void ALexWidgetRootActor::BeginPlay()
+void ULexWidgetPresenterComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	RootWidget->BeginPlay();
 }
 
-void ALexWidgetRootActor::PostRegisterAllComponents()
+void ULexWidgetPresenterComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	Super::PostRegisterAllComponents();
+	Super::EndPlay(EndPlayReason);
+	RootWidget->EndPlay();
+}
+
+void ULexWidgetPresenterComponent::OnRegister()
+{
+	Super::OnRegister();
+	ULexUIManagerWorldSubsystem::AddWidgetPresenter(this);
+	RootWidget->OnRegister();
 	LoadPrefab();
 }
 
-void ALexWidgetRootActor::LoadPrefab()
+void ULexWidgetPresenterComponent::OnUnregister()
 {
-	if (LoadedActor.IsValid())
+	Super::OnUnregister();
+	RootWidget->OnUnregister();
+	ULexUIManagerWorldSubsystem::RemoveWidgetPresenter(this);
+}
+
+void ULexWidgetPresenterComponent::LoadPrefab()
+{
+	if (LoadedWidget.IsValid())
 	{
-		FLexUIUtils::DestroyActorWithHierarchy(LoadedActor.Get());
-		LoadedActor = nullptr;
+		LoadedWidget->DestroyWidget();
+		LoadedWidget = nullptr;
 	}
 	if (IsValid(WidgetPrefab))
 	{
-		LoadedActor = WidgetPrefab->LoadPrefab(this->GetWorld(), this->GetRootComponent());
+		LoadedWidget = WidgetPrefab->LoadPrefab(this->GetWorld(), this, RootWidget);
 #if WITH_EDITOR
-		TArray<AActor*> AllLoadedActors;
-		FLexUIUtils::CollectChildrenActors(LoadedActor.Get(), AllLoadedActors);
-		bool bIsGameWorld = this->GetWorld()->IsGameWorld();
-		for (AActor* Actor : AllLoadedActors)
-		{
-			if (!bIsGameWorld)
-				Actor->SetFlags(RF_Transient);//set transient in edt mode because we don't want to save these actors in level, not set in game mode because no need to, and LexUIDuplicateActor need none-transient
-			auto bListedInSceneOutliner_Property = FindFProperty<FBoolProperty>(AActor::StaticClass(), TEXT("bListedInSceneOutliner"));
-			bListedInSceneOutliner_Property->SetPropertyValue_InContainer(Actor, bListInSceneOutliner);
-		}
 		OverallVersionMD5 = WidgetPrefab->GenerateOverallVersionMD5();//store version for auto update
 #endif
 	}
@@ -82,25 +86,20 @@ void ALexWidgetRootActor::LoadPrefab()
 }
 
 #if WITH_EDITOR
-void ALexWidgetRootActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void ULexWidgetPresenterComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (PropertyChangedEvent.Property != nullptr)
 	{
-		auto MemberName = PropertyChangedEvent.GetMemberPropertyName();
-		if (MemberName == GET_MEMBER_NAME_CHECKED(ALexWidgetRootActor, bListInSceneOutliner))
-		{
-			ApplyListInSceneOutliner();
-		}
 	}
 }
 
 #include "Dialog/SCustomDialog.h"
-bool ALexWidgetRootActor::bNeedCheckEventSystem = true;
-bool ALexWidgetRootActor::bNeverCheckEventSystem = false;
-bool ALexWidgetRootActor::bNeedCheckRaycasterSource = true;
-bool ALexWidgetRootActor::bNeverCheckRaycasterSource = false;
-void ALexWidgetRootActor::CheckNecessaryObjects()
+bool ULexWidgetPresenterComponent::bNeedCheckEventSystem = true;
+bool ULexWidgetPresenterComponent::bNeverCheckEventSystem = false;
+bool ULexWidgetPresenterComponent::bNeedCheckRaycasterSource = true;
+bool ULexWidgetPresenterComponent::bNeverCheckRaycasterSource = false;
+void ULexWidgetPresenterComponent::CheckNecessaryObjects()
 {
 	if (bNeedCheckEventSystem)
 	{
@@ -224,7 +223,7 @@ void ALexWidgetRootActor::CheckNecessaryObjects()
 			}
 			if (ExistWorldSpaceRaycasterSource)
 			{
-				if (auto WorldSpaceRaycaster = this->FindComponentByClass<ULexWorldSpaceRaycasterBase>())
+				if (auto WorldSpaceRaycaster = this->GetOwner()->FindComponentByClass<ULexWorldSpaceRaycasterBase>())
 				{
 					if (auto RaycasterSourceActor = Cast<ALexWorldSpaceRaycasterSourceActor>(ExistWorldSpaceRaycasterSource->GetOwner()))
 					{
@@ -236,20 +235,7 @@ void ALexWidgetRootActor::CheckNecessaryObjects()
 	}
 }
 
-void ALexWidgetRootActor::ApplyListInSceneOutliner()
-{
-	if (!LoadedActor.IsValid())return;
-	TArray<AActor*> AllLoadedActors;
-	FLexUIUtils::CollectChildrenActors(LoadedActor.Get(), AllLoadedActors, true);
-	for (AActor* Actor : AllLoadedActors)
-	{
-		auto bListedInSceneOutliner_Property = FindFProperty<FBoolProperty>(AActor::StaticClass(), TEXT("bListedInSceneOutliner"));
-		bListedInSceneOutliner_Property->SetPropertyValue_InContainer(Actor, bListInSceneOutliner);
-	}
-	ULexUIManagerObject::MarkBroadcastLevelActorListChanged();
-}
-
-void ALexWidgetRootActor::MarkNeedCheckNecessaryObjects()
+void ULexWidgetPresenterComponent::MarkNeedCheckNecessaryObjects()
 {
 	if (!bNeverCheckEventSystem)
 	{
@@ -261,7 +247,7 @@ void ALexWidgetRootActor::MarkNeedCheckNecessaryObjects()
 	}
 }
 
-void ALexWidgetRootActor::CheckPrefabVersion()
+void ULexWidgetPresenterComponent::CheckPrefabVersion()
 {
 	if (IsValid(WidgetPrefab))
 	{
@@ -272,21 +258,16 @@ void ALexWidgetRootActor::CheckPrefabVersion()
 	}
 	else
 	{
-		if (LoadedActor.IsValid())
+		if (LoadedWidget.IsValid())
 		{
-			FLexUIUtils::DestroyActorWithHierarchy(LoadedActor.Get());
-			LoadedActor = nullptr;
+			LoadedWidget->DestroyWidget();
+			LoadedWidget = nullptr;
 		}
 	}
 }
 #endif
 
-void ALexWidgetRootActor::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-}
-
-void ALexWidgetRootActor::SetPrefab(ULexUIPrefab* Value)
+void ULexWidgetPresenterComponent::SetPrefab(ULexUIPrefab* Value)
 {
 	if (WidgetPrefab != Value)
 	{
@@ -295,13 +276,13 @@ void ALexWidgetRootActor::SetPrefab(ULexUIPrefab* Value)
 	}
 }
 
-UUINavigationInputSelectionHandler* ALexWidgetRootActor::GetNavigationSelection()
+UUINavigationInputSelectionHandler* ULexWidgetPresenterComponent::GetNavigationSelection()
 {
 	if (!NavigationSelection.IsValid())
 	{
-		if (auto WidgetActor = Cast<ULexWidgetContainer>(NavigationSelectionPrefab->LoadPrefab(this->GetWorld(), this->GetLexWidget())))
+		if (auto Widget = NavigationSelectionPrefab->LoadPrefab(this->GetWorld(), this, this->RootWidget.Get()))
 		{
-			NavigationSelection = WidgetActor->FindComponentByClass<UUINavigationInputSelectionHandler>();
+			NavigationSelection = Widget->GetComponent<UUINavigationInputSelectionHandler>();
 		}
 	}
 	return NavigationSelection.Get();

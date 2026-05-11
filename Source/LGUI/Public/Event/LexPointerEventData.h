@@ -6,6 +6,7 @@
 #include "Engine/HitResult.h"
 #include "LexPointerEventData.generated.h"
 
+class ULexWidget;
 class ULexBaseRaycaster;
 
 UENUM(BlueprintType, Category = LGUI)
@@ -52,13 +53,13 @@ public:
 
 	/** entered component */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		TObjectPtr<USceneComponent> EnterComponent = nullptr;
+		TObjectPtr<ULexWidget> EnterWidget = nullptr;
 	/** a stack list for store entered component. the latest enter one stay at num-1, first stay at 0. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		TArray<TObjectPtr<USceneComponent>> EnterComponentStack;
+		TArray<TObjectPtr<ULexWidget>> EnterWidgetStack;
 	/** a collection that current pointer hovering objects. the top most one stay at index 0 in array. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		TArray<TObjectPtr<USceneComponent>> HoverComponentArray;
+		TArray<TObjectPtr<ULexWidget>> HoverComponentArray;
 	/** current world space hit point */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
 		FVector WorldPoint = FVector(0, 0, 0);
@@ -85,7 +86,7 @@ public:
 
 	/** hit component when press */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		TObjectPtr<USceneComponent> PressComponent = nullptr;
+		TObjectPtr<ULexWidget> PressWidget = nullptr;
 	/** world space hit point when press and hit something */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
 		FVector PressWorldPoint = FVector(0, 0, 0);
@@ -122,7 +123,7 @@ public:
 		bool bIsDragging = false;
 	/** current dragging component */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
-		TObjectPtr<USceneComponent> DragComponent = nullptr;
+		TObjectPtr<ULexWidget> DragWidget = nullptr;
 
 	ELexUIEventFireType EnterComponentEventFireType = ELexUIEventFireType::TargetActorAndAllItsComponents;
 	ELexUIEventFireType PressComponentEventFireType = ELexUIEventFireType::TargetActorAndAllItsComponents;
@@ -135,13 +136,13 @@ public:
 	bool bNowIsTriggerPressed = false;
 	bool bPrevIsTriggerPressed = false;
 
-	TWeakObjectPtr<USceneComponent> HighlightComponentForNavigation = nullptr;
+	TWeakObjectPtr<ULexWidget> HighlightWidgetForNavigation = nullptr;
 	float NavigateTickTime = 0;
 	ELexUINavigationDirection NavigateDirection = ELexUINavigationDirection::None;
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		void SetHighlightedComponentForNavigation(USceneComponent* InComp);
+		void SetHighlightedWidgetForNavigation(ULexWidget* InWidget);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		USceneComponent* GetHighlightedComponentForNavigation()const { return HighlightComponentForNavigation.Get(); }
+		ULexWidget* GetHighlightedComponentForNavigation()const { return HighlightWidgetForNavigation.Get(); }
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		bool IsPointerOverUI();
@@ -166,14 +167,38 @@ public:
 		FVector GetCumulativeMoveDelta()const;
 };
 
+USTRUCT(BlueprintType)
 struct FLexUIHitResult
 {
-	FHitResult HitResult;
+	GENERATED_BODY()
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
+	int32 FaceIndex;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
+	float Time;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
+	float Distance;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
+	FVector Location;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
+	FVector ImpactPoint;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
+	FVector Normal;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
+	FVector TraceStart;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
+	FVector TraceEnd;
+
+	TWeakObjectPtr<ULexWidget> Component;
+
+};
+struct FLexUIHitResultContainer
+{
+	FLexUIHitResult HitResult;
 	ELexUIEventFireType EventFireType = ELexUIEventFireType::TargetActorAndAllItsComponents;
 
 	FVector RayOrigin = FVector(0, 0, 0), RayDirection = FVector(1, 0, 0), RayEnd = FVector(1, 0, 0);
 
 	ULexBaseRaycaster* Raycaster = nullptr;
 
-	TArray<USceneComponent*> HoverArray;
+	TArray<ULexWidget*> HoverArray;
 };

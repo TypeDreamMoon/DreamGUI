@@ -3,7 +3,7 @@
 #include "Interaction/UINavigationInputSelectionHandler.h"
 
 #include "LTweenBPLibrary.h"
-#include "Core/Actor/LexWidgetRootActor.h"
+#include "Core/Actor/LexWidgetPresenterComponent.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
 
@@ -31,15 +31,15 @@ void UUINavigationInputSelectionHandler::SelectWidget(ULexWidget* InSelected)
 	CurrentSelected = InSelected;
 	if (InSelected != nullptr && PrevSelected.IsValid())
 	{
-		Widget->AttachToComponent(InSelected, FAttachmentTransformRules::KeepWorldTransform);
+		Widget->SetParent(InSelected, true);
 		auto Pos2D = InSelected->GetLocalSpaceCenter();
 		auto Pos3D = FVector(0, Pos2D.X, Pos2D.Y);
-		auto Tweener = ULTweenBPLibrary::LocalPositionTo(Widget, Pos3D, AnimDuration, 0, ELTweenEase::InOutSine);
-		TweenerCollection.Add(Tweener);
-		Tweener = Widget->SizeDeltaTo(InSelected->GetSize(), AnimDuration, 0, ELTweenEase::InOutSine);
-		TweenerCollection.Add(Tweener);
-		Tweener = ULTweenBPLibrary::LocalRotationQuaternionTo(Widget, FQuat::Identity, AnimDuration, 0, ELTweenEase::InOutSine);
-		TweenerCollection.Add(Tweener);
+		// auto Tweener = ULTweenBPLibrary::LocalPositionTo(Widget, Pos3D, AnimDuration, 0, ELTweenEase::InOutSine);
+		// TweenerCollection.Add(Tweener);
+		// Tweener = Widget->SizeDeltaTo(InSelected->GetSize(), AnimDuration, 0, ELTweenEase::InOutSine);
+		// TweenerCollection.Add(Tweener);
+		// Tweener = ULTweenBPLibrary::LocalRotationQuaternionTo(Widget, FQuat::Identity, AnimDuration, 0, ELTweenEase::InOutSine);
+		// TweenerCollection.Add(Tweener);
 
 		if (ThisCanvas.IsValid())
 		{
@@ -50,7 +50,7 @@ void UUINavigationInputSelectionHandler::SelectWidget(ULexWidget* InSelected)
 	{
 		auto Tweener = Widget->RenderOpacityTo(1.0f, AnimDuration, 0, ELTweenEase::Linear);
 		TweenerCollection.Add(Tweener);
-		Widget->AttachToComponent(InSelected, FAttachmentTransformRules::KeepWorldTransform);
+		Widget->SetParent(InSelected, true);
 		auto Pos2D = InSelected->GetLocalSpaceCenter();
 		auto Pos3D = FVector(0, Pos2D.X, Pos2D.Y);
 		Widget->SetRelativeLocation(Pos3D);
@@ -89,7 +89,7 @@ void UUINavigationInputSelectionHandler::SelectNone()
 	auto Tweener = Widget->RenderOpacityTo(0.0f, AnimDuration, 0, ELTweenEase::Linear)
 	->OnComplete([=, this]()
 	{
-		this->DestroyWidget();
+		this->GetWidget()->DestroyWidget();
 	});
 	TweenerCollection.Add(Tweener);
 	CurrentSelected = nullptr;

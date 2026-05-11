@@ -12,6 +12,7 @@
 #include "Event/LexPointerEventData.h"
 #include "Event/InputModule/LexBaseInputModule.h"
 #include "LGUI.h"
+#include "Core/Components/LexWidget.h"
 
 #define LOCTEXT_NAMESPACE "LGUIEventSystemActor"
 
@@ -117,7 +118,7 @@ void ULexEventSystem::RemovePointerEventData(int PointerID)
 	PointerEventDataMap.Remove(PointerID);
 }
 
-void ULexEventSystem::RaiseHitEvent(bool bHitOrNot, const FHitResult& HitResult, USceneComponent* HitComponent)
+void ULexEventSystem::RaiseHitEvent(bool bHitOrNot, const FLexUIHitResult& HitResult, ULexWidget* HitComponent)
 {
 	if (bRayEventEnable)
 	{
@@ -134,14 +135,14 @@ bool ULexEventSystem::IsPointerOverUIByPointerID(int PointerID)
 	return false;
 }
 
-void ULexEventSystem::SetHighlightedComponentForNavigation(USceneComponent* InComp, int InPointerID)
+void ULexEventSystem::SetHighlightedComponentForNavigation(ULexWidget* InComp, int InPointerID)
 {
 	if (auto EventData = GetPointerEventData(InPointerID, true))
 	{
-		EventData->SetHighlightedComponentForNavigation(InComp);
+		EventData->SetHighlightedWidgetForNavigation(InComp);
 	}
 }
-USceneComponent* ULexEventSystem::GetHighlightedComponentForNavigation(int InPointerID)const
+ULexWidget* ULexEventSystem::GetHighlightedComponentForNavigation(int InPointerID)const
 {
 	if (auto EventData = GetPointerEventData(InPointerID, false))
 	{
@@ -168,59 +169,59 @@ bool ULexEventSystem::SetPointerInputType(ULexPointerEventData* InPointerEventDa
 	}
 	return false;
 }
-void ULexEventSystem::ActivateNavigationInput(int InPointerID, USceneComponent* InDefaultHighlightedComponent)
+void ULexEventSystem::ActivateNavigationInput(int InPointerID, ULexWidget* InDefaultHighlightedComponent)
 {
 	if (auto EventData = GetPointerEventData(InPointerID, false))
 	{
 		SetPointerInputType(EventData, ELexUIPointerInputType::Navigation);
-		EventData->SetHighlightedComponentForNavigation(InDefaultHighlightedComponent);
+		EventData->SetHighlightedWidgetForNavigation(InDefaultHighlightedComponent);
 	}
 }
 
-void ULexEventSystem::SetSelectComponent(USceneComponent* InSelectComp, ULexBaseEventData* EventData, ELexUIEventFireType eventFireType)
+void ULexEventSystem::SetSelectWidget(ULexWidget* InSelectWidget, ULexBaseEventData* EventData, ELexUIEventFireType EventFireType)
 {
-	if (EventData->SelectedComponent != InSelectComp)//select new object
+	if (EventData->SelectedComponent != InSelectWidget)//select new object
 	{
 		auto oldSelectedComp = EventData->SelectedComponent;
-		EventData->SelectedComponent = InSelectComp;
+		EventData->SelectedComponent = InSelectWidget;
 		if (IsValid(oldSelectedComp))
 		{
-			CallOnPointerDeselect(oldSelectedComp, EventData, eventFireType);
+			CallOnPointerDeselect(oldSelectedComp, EventData, EventFireType);
 		}
 		if (IsValid(EventData->SelectedComponent))
 		{
-			CallOnPointerSelect(EventData->SelectedComponent, EventData, eventFireType);
+			CallOnPointerSelect(EventData->SelectedComponent, EventData, EventFireType);
 		}
-		EventData->SelectedComponentEventFireType = eventFireType;
+		EventData->SelectedComponentEventFireType = EventFireType;
 	}
 }
 
-void ULexEventSystem::SetSelectComponent(ULexEventSystem* InEventSystem, USceneComponent* InSelectComp, ULexBaseEventData* EventData, ELexUIEventFireType eventFireType)
+void ULexEventSystem::SetSelectWidget(ULexEventSystem* InEventSystem, ULexWidget* InSelectWidget, ULexBaseEventData* EventData, ELexUIEventFireType EventFireType)
 {
 	if (InEventSystem != nullptr)
 	{
-		InEventSystem->SetSelectComponent(InSelectComp, EventData, eventFireType);
+		InEventSystem->SetSelectWidget(InSelectWidget, EventData, EventFireType);
 	}
 	else
 	{
-		if (EventData->SelectedComponent != InSelectComp)//select new object
+		if (EventData->SelectedComponent != InSelectWidget)//select new object
 		{
 			auto oldSelectedComp = EventData->SelectedComponent;
-			EventData->SelectedComponent = InSelectComp;
+			EventData->SelectedComponent = InSelectWidget;
 			if (IsValid(oldSelectedComp))
 			{
-				ExecuteEvent_OnPointerDeselect(oldSelectedComp, EventData, eventFireType, false);
+				ExecuteEvent_OnPointerDeselect(oldSelectedComp, EventData, EventFireType, false);
 			}
 			if (IsValid(EventData->SelectedComponent))
 			{
-				ExecuteEvent_OnPointerSelect(EventData->SelectedComponent, EventData, eventFireType, false);
+				ExecuteEvent_OnPointerSelect(EventData->SelectedComponent, EventData, EventFireType, false);
 			}
-			EventData->SelectedComponentEventFireType = eventFireType;
+			EventData->SelectedComponentEventFireType = EventFireType;
 		}
 	}
 }
 
-USceneComponent* ULexEventSystem::GetCurrentSelectedComponent(int InPointerID)const
+ULexWidget* ULexEventSystem::GetCurrentSelectedComponent(int InPointerID)const
 {
 	if (auto EventData = GetPointerEventData(InPointerID, false))
 	{
@@ -229,10 +230,10 @@ USceneComponent* ULexEventSystem::GetCurrentSelectedComponent(int InPointerID)co
 	return nullptr;
 }
 
-void ULexEventSystem::SetSelectComponentWithDefault(USceneComponent* InSelectComp)
+void ULexEventSystem::SetSelectComponentWithDefault(ULexWidget* InSelectWidget)
 {
 	auto EventData = GetPointerEventData(0, true);
-	SetSelectComponent(InSelectComp, EventData, EventData->PressComponentEventFireType);
+	SetSelectWidget(InSelectWidget, EventData, EventData->PressComponentEventFireType);
 }
 
 void ULexEventSystem::LogEventData(ULexBaseEventData* inEventData)
@@ -244,187 +245,187 @@ void ULexEventSystem::LogEventData(ULexBaseEventData* inEventData)
 }
 
 #pragma region CallEvent
-void ULexEventSystem::ExecuteEvent_OnPointerEnter(USceneComponent* RootComponent, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
+void ULexEventSystem::ExecuteEvent_OnPointerEnter(ULexWidget* TargetWidget, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
 {
 	PointerEventData->EventType = ELexUIPointerEventType::Enter;
-	ExecuteLexUIInterface(RootComponent,
+	ExecuteLexUIInterface(TargetWidget,
 		PointerEventData, EventFireType,
 		ULexPointerEnterExitInterface::StaticClass(),
 		ILexPointerEnterExitInterface::Execute_OnPointerEnter, AllowEventBubbleUp);
 }
-void ULexEventSystem::ExecuteEvent_OnPointerExit(USceneComponent* RootComponent, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
+void ULexEventSystem::ExecuteEvent_OnPointerExit(ULexWidget* TargetWidget, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
 {
 	PointerEventData->EventType = ELexUIPointerEventType::Exit; 
-	ExecuteLexUIInterface(RootComponent,
+	ExecuteLexUIInterface(TargetWidget,
 		PointerEventData, EventFireType,
 		ULexPointerEnterExitInterface::StaticClass(),
 		ILexPointerEnterExitInterface::Execute_OnPointerExit, AllowEventBubbleUp);
 }
-void ULexEventSystem::ExecuteEvent_OnPointerDown(USceneComponent* RootComponent, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
+void ULexEventSystem::ExecuteEvent_OnPointerDown(ULexWidget* TargetWidget, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
 {
 	PointerEventData->EventType = ELexUIPointerEventType::Down; 
-	ExecuteLexUIInterface(RootComponent,
+	ExecuteLexUIInterface(TargetWidget,
 		PointerEventData, EventFireType,
 		ULexPointerDownUpInterface::StaticClass(),
 		ILexPointerDownUpInterface::Execute_OnPointerDown, AllowEventBubbleUp);
 }
-void ULexEventSystem::ExecuteEvent_OnPointerUp(USceneComponent* RootComponent, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
+void ULexEventSystem::ExecuteEvent_OnPointerUp(ULexWidget* TargetWidget, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
 {
 	PointerEventData->EventType = ELexUIPointerEventType::Up; 
-	ExecuteLexUIInterface(RootComponent,
+	ExecuteLexUIInterface(TargetWidget,
 		PointerEventData, EventFireType,
 		ULexPointerDownUpInterface::StaticClass(),
 		ILexPointerDownUpInterface::Execute_OnPointerUp, AllowEventBubbleUp);
 }
-void ULexEventSystem::ExecuteEvent_OnPointerClick(USceneComponent* RootComponent, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
+void ULexEventSystem::ExecuteEvent_OnPointerClick(ULexWidget* TargetWidget, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
 {
 	PointerEventData->EventType = ELexUIPointerEventType::Click; 
-	ExecuteLexUIInterface(RootComponent,
+	ExecuteLexUIInterface(TargetWidget,
 		PointerEventData, EventFireType,
 		ULexPointerClickInterface::StaticClass(),
 		ILexPointerClickInterface::Execute_OnPointerClick, AllowEventBubbleUp);
 }
-void ULexEventSystem::ExecuteEvent_OnPointerBeginDrag(USceneComponent* RootComponent, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
+void ULexEventSystem::ExecuteEvent_OnPointerBeginDrag(ULexWidget* TargetWidget, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
 {
 	PointerEventData->EventType = ELexUIPointerEventType::BeginDrag; 
-	ExecuteLexUIInterface(RootComponent,
+	ExecuteLexUIInterface(TargetWidget,
 		PointerEventData, EventFireType,
 		ULexPointerDragInterface::StaticClass(),
 		ILexPointerDragInterface::Execute_OnPointerBeginDrag, AllowEventBubbleUp);
 }
-void ULexEventSystem::ExecuteEvent_OnPointerDrag(USceneComponent* RootComponent, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
+void ULexEventSystem::ExecuteEvent_OnPointerDrag(ULexWidget* TargetWidget, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
 {
 	PointerEventData->EventType = ELexUIPointerEventType::Drag; 
-	ExecuteLexUIInterface(RootComponent,
+	ExecuteLexUIInterface(TargetWidget,
 		PointerEventData, EventFireType,
 		ULexPointerDragInterface::StaticClass(),
 		ILexPointerDragInterface::Execute_OnPointerDrag, AllowEventBubbleUp);
 }
-void ULexEventSystem::ExecuteEvent_OnPointerEndDrag(USceneComponent* RootComponent, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
+void ULexEventSystem::ExecuteEvent_OnPointerEndDrag(ULexWidget* TargetWidget, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
 {
 	PointerEventData->EventType = ELexUIPointerEventType::EndDrag; 
-	ExecuteLexUIInterface(RootComponent,
+	ExecuteLexUIInterface(TargetWidget,
 		PointerEventData, EventFireType,
 		ULexPointerDragInterface::StaticClass(),
 		ILexPointerDragInterface::Execute_OnPointerEndDrag, AllowEventBubbleUp);
 }
-void ULexEventSystem::ExecuteEvent_OnPointerScroll(USceneComponent* RootComponent, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
+void ULexEventSystem::ExecuteEvent_OnPointerScroll(ULexWidget* TargetWidget, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
 {
 	PointerEventData->EventType = ELexUIPointerEventType::Scroll; 
-	ExecuteLexUIInterface(RootComponent,
+	ExecuteLexUIInterface(TargetWidget,
 		PointerEventData, EventFireType,
 		ULexPointerScrollInterface::StaticClass(),
 		ILexPointerScrollInterface::Execute_OnPointerScroll, AllowEventBubbleUp);
 }
-void ULexEventSystem::ExecuteEvent_OnPointerDragDrop(USceneComponent* RootComponent, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
+void ULexEventSystem::ExecuteEvent_OnPointerDragDrop(ULexWidget* TargetWidget, ULexPointerEventData* PointerEventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
 {
 	PointerEventData->EventType = ELexUIPointerEventType::DragDrop; 
-	ExecuteLexUIInterface(RootComponent,
+	ExecuteLexUIInterface(TargetWidget,
 		PointerEventData, EventFireType,
 		ULexPointerDragDropInterface::StaticClass(),
 		ILexPointerDragDropInterface::Execute_OnPointerDragDrop, AllowEventBubbleUp);
 }
-void ULexEventSystem::ExecuteEvent_OnPointerSelect(USceneComponent* RootComponent, ULexBaseEventData* EventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
+void ULexEventSystem::ExecuteEvent_OnPointerSelect(ULexWidget* TargetWidget, ULexBaseEventData* EventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
 {
 	EventData->EventType = ELexUIPointerEventType::Select; 
-	ExecuteLexUIInterface(RootComponent,
+	ExecuteLexUIInterface(TargetWidget,
 		EventData, EventFireType,
 		ULexPointerSelectDeselectInterface::StaticClass(),
 		ILexPointerSelectDeselectInterface::Execute_OnPointerSelect, AllowEventBubbleUp);
 }
-void ULexEventSystem::ExecuteEvent_OnPointerDeselect(USceneComponent* RootComponent, ULexBaseEventData* EventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
+void ULexEventSystem::ExecuteEvent_OnPointerDeselect(ULexWidget* TargetWidget, ULexBaseEventData* EventData, ELexUIEventFireType EventFireType, bool AllowEventBubbleUp)
 {
 	EventData->EventType = ELexUIPointerEventType::Deselect; 
-	ExecuteLexUIInterface(RootComponent,
+	ExecuteLexUIInterface(TargetWidget,
 		EventData, EventFireType,
 		ULexPointerSelectDeselectInterface::StaticClass(),
 		ILexPointerSelectDeselectInterface::Execute_OnPointerDeselect, AllowEventBubbleUp);
 }
 
 
-void ULexEventSystem::CallOnPointerEnter(USceneComponent* RootComponent, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType)
+void ULexEventSystem::CallOnPointerEnter(ULexWidget* TargetWidget, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType)
 {
 	LogEventData(EventData);
-	ExecuteEvent_OnPointerEnter(RootComponent, EventData, EventFireType, false);
+	ExecuteEvent_OnPointerEnter(TargetWidget, EventData, EventFireType, false);
 	InputEvent.Broadcast(EventData);
 	InputEventBP.Broadcast(EventData);
 }
-void ULexEventSystem::CallOnPointerExit(USceneComponent* RootComponent, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType)
+void ULexEventSystem::CallOnPointerExit(ULexWidget* TargetWidget, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType)
 {
 	LogEventData(EventData);
-	ExecuteEvent_OnPointerExit(RootComponent, EventData, EventFireType, false);
+	ExecuteEvent_OnPointerExit(TargetWidget, EventData, EventFireType, false);
 	InputEvent.Broadcast(EventData);
 	InputEventBP.Broadcast(EventData);
 }
-void ULexEventSystem::CallOnPointerDown(USceneComponent* RootComponent, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType)
+void ULexEventSystem::CallOnPointerDown(ULexWidget* TargetWidget, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType)
 {
 	LogEventData(EventData);
-	ExecuteEvent_OnPointerDown(RootComponent, EventData, EventFireType, true);
+	ExecuteEvent_OnPointerDown(TargetWidget, EventData, EventFireType, true);
 	InputEvent.Broadcast(EventData);
 	InputEventBP.Broadcast(EventData);
 }
-void ULexEventSystem::CallOnPointerUp(USceneComponent* RootComponent, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType)
+void ULexEventSystem::CallOnPointerUp(ULexWidget* TargetWidget, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType)
 {
 	LogEventData(EventData);
-	ExecuteEvent_OnPointerUp(RootComponent, EventData, EventFireType, true);
+	ExecuteEvent_OnPointerUp(TargetWidget, EventData, EventFireType, true);
 	InputEvent.Broadcast(EventData);
 	InputEventBP.Broadcast(EventData);
 }
-void ULexEventSystem::CallOnPointerClick(USceneComponent* RootComponent, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType)
+void ULexEventSystem::CallOnPointerClick(ULexWidget* TargetWidget, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType)
 {
 	LogEventData(EventData);
-	ExecuteEvent_OnPointerClick(RootComponent, EventData, EventFireType, true);
+	ExecuteEvent_OnPointerClick(TargetWidget, EventData, EventFireType, true);
 	InputEvent.Broadcast(EventData);
 	InputEventBP.Broadcast(EventData);
 }
-void ULexEventSystem::CallOnPointerBeginDrag(USceneComponent* RootComponent, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType)
+void ULexEventSystem::CallOnPointerBeginDrag(ULexWidget* TargetWidget, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType)
 {
 	LogEventData(EventData);
-	ExecuteEvent_OnPointerBeginDrag(RootComponent, EventData, EventFireType, true);
+	ExecuteEvent_OnPointerBeginDrag(TargetWidget, EventData, EventFireType, true);
 	InputEvent.Broadcast(EventData);
 	InputEventBP.Broadcast(EventData);
 }
-void ULexEventSystem::CallOnPointerDrag(USceneComponent* RootComponent, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType)
+void ULexEventSystem::CallOnPointerDrag(ULexWidget* TargetWidget, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType)
 {
 	LogEventData(EventData);
-	ExecuteEvent_OnPointerDrag(RootComponent, EventData, EventFireType, true);
+	ExecuteEvent_OnPointerDrag(TargetWidget, EventData, EventFireType, true);
 	InputEventBP.Broadcast(EventData);
 }
-void ULexEventSystem::CallOnPointerEndDrag(USceneComponent* RootComponent, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType)
+void ULexEventSystem::CallOnPointerEndDrag(ULexWidget* TargetWidget, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType)
 {
 	LogEventData(EventData);
-	ExecuteEvent_OnPointerEndDrag(RootComponent, EventData, EventFireType, true);
-	InputEvent.Broadcast(EventData);
-	InputEventBP.Broadcast(EventData);
-}
-
-void ULexEventSystem::CallOnPointerScroll(USceneComponent* RootComponent, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType)
-{
-	LogEventData(EventData);
-	ExecuteEvent_OnPointerScroll(RootComponent, EventData, EventFireType, true);
+	ExecuteEvent_OnPointerEndDrag(TargetWidget, EventData, EventFireType, true);
 	InputEvent.Broadcast(EventData);
 	InputEventBP.Broadcast(EventData);
 }
 
-void ULexEventSystem::CallOnPointerDragDrop(USceneComponent* RootComponent, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType)
+void ULexEventSystem::CallOnPointerScroll(ULexWidget* TargetWidget, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType)
 {
 	LogEventData(EventData);
-	ExecuteEvent_OnPointerDragDrop(RootComponent, EventData, EventFireType, true);
+	ExecuteEvent_OnPointerScroll(TargetWidget, EventData, EventFireType, true);
 	InputEvent.Broadcast(EventData);
 	InputEventBP.Broadcast(EventData);
 }
 
-void ULexEventSystem::CallOnPointerSelect(USceneComponent* RootComponent, ULexBaseEventData* EventData, ELexUIEventFireType EventFireType)
+void ULexEventSystem::CallOnPointerDragDrop(ULexWidget* TargetWidget, ULexPointerEventData* EventData, ELexUIEventFireType EventFireType)
 {
 	LogEventData(EventData);
-	ExecuteEvent_OnPointerSelect(RootComponent, EventData, EventFireType, false);
+	ExecuteEvent_OnPointerDragDrop(TargetWidget, EventData, EventFireType, true);
 	InputEvent.Broadcast(EventData);
 	InputEventBP.Broadcast(EventData);
 }
-void ULexEventSystem::CallOnPointerDeselect(USceneComponent* RootComponent, ULexBaseEventData* EventData, ELexUIEventFireType EventFireType)
+
+void ULexEventSystem::CallOnPointerSelect(ULexWidget* TargetWidget, ULexBaseEventData* EventData, ELexUIEventFireType EventFireType)
 {
 	LogEventData(EventData);
-	ExecuteEvent_OnPointerDeselect(RootComponent, EventData, EventFireType, false);
+	ExecuteEvent_OnPointerSelect(TargetWidget, EventData, EventFireType, false);
+	InputEvent.Broadcast(EventData);
+	InputEventBP.Broadcast(EventData);
+}
+void ULexEventSystem::CallOnPointerDeselect(ULexWidget* TargetWidget, ULexBaseEventData* EventData, ELexUIEventFireType EventFireType)
+{
+	LogEventData(EventData);
+	ExecuteEvent_OnPointerDeselect(TargetWidget, EventData, EventFireType, false);
 	InputEvent.Broadcast(EventData);
 	InputEventBP.Broadcast(EventData);
 }

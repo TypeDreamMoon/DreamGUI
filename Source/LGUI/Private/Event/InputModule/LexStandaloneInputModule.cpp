@@ -28,13 +28,13 @@ void ULexStandaloneInputModule::ProcessInput()
 			}
 			EventData->MouseButtonType = InputData.MouseButtonType;
 
-			FLexUIHitResult LexHitResult;
+			FLexUIHitResultContainer LexHitResult;
 			bool bLineTraceHitSomething = LineTrace(EventData, LexHitResult);
 			bool bResultHitSomething = false;
-			FHitResult HitResult;
+			FLexUIHitResult HitResult;
 			ProcessPointerEvent(EventSystem.Get(), EventData, bLineTraceHitSomething, LexHitResult, bResultHitSomething, HitResult);
 
-			auto TempHitComp = (USceneComponent*)HitResult.Component.Get();
+			auto TempHitComp = HitResult.Component.Get();
 			EventSystem->RaiseHitEvent(bResultHitSomething, HitResult, TempHitComp);
 		}
 		StandaloneInputDataArray.Reset();
@@ -49,13 +49,13 @@ void ULexStandaloneInputModule::ProcessInput()
 			default:
 			case ELexUIPointerInputType::Pointer:
 				{
-					FLexUIHitResult LexHitResult;
+					FLexUIHitResultContainer LexHitResult;
 					bool bLineTraceHitSomething = LineTrace(EventData, LexHitResult);
 					bool bResultHitSomething = false;
-					FHitResult HitResult;
+					FLexUIHitResult HitResult;
 					ProcessPointerEvent(EventSystem.Get(), EventData, bLineTraceHitSomething, LexHitResult, bResultHitSomething, HitResult);
 
-					auto TempHitComp = (USceneComponent*)HitResult.Component.Get();
+					auto TempHitComp = HitResult.Component.Get();
 					EventSystem->RaiseHitEvent(bResultHitSomething, HitResult, TempHitComp);
 				}
 				break;
@@ -73,12 +73,12 @@ void ULexStandaloneInputModule::InputScroll(const FVector2D& InAxisValue)
 	if (!EventSystem.IsValid())return;
 
 	auto EventData = EventSystem->GetPointerEventData(0, true);
-	if (IsValid(EventData->EnterComponent))
+	if (IsValid(EventData->EnterWidget))
 	{
 		if (InAxisValue != FVector2D::ZeroVector || EventData->ScrollAxisValue != InAxisValue)
 		{
 			EventData->ScrollAxisValue = InAxisValue;
-			EventSystem->CallOnPointerScroll(EventData->EnterComponent, EventData, EventData->EnterComponentEventFireType);
+			EventSystem->CallOnPointerScroll(EventData->EnterWidget, EventData, EventData->EnterComponentEventFireType);
 		}
 	}
 }

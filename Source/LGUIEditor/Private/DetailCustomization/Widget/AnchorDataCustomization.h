@@ -489,7 +489,7 @@ private:
 		if (TargetScriptArray.Num() > 0 && TargetScriptArray[0].IsValid())
 		{
 			auto Widget = TargetScriptArray[0];
-			if (FLexUIPrefabEditor::ActorIsRootAgent(Widget->GetOwner()))return true;//special for PrefabEditor's agent root actor
+			if (FLexUIPrefabEditor::WidgetIsRootAgent(Widget->GetOwner()))return true;//special for PrefabEditor's agent root actor
 			if (Widget->GetParent() != nullptr)return true;//not root
 			if (Widget->IsCanvasWidget() && Widget->GetRenderCanvas() != nullptr && Widget->GetRenderCanvas()->IsRenderToScreenSpace())//is root canvas, and is render to screen space
 			{

@@ -34,7 +34,7 @@ public:
 	{
 		for (const FItem& Item : DraggedWidgets)
 		{
-			if (!Item.Widget->IsAttachedTo(Manager->GetLoadedRootActor()->GetRootComponent()))
+			if (!Item.Widget->IsChildOf(Manager->GetLoadedRootWidget()))
 			{
 				return false;
 			}
@@ -69,7 +69,7 @@ TSharedRef<FHierarchyLexWidgetDragDropOp> FHierarchyLexWidgetDragDropOp::New(TSh
 	// Set the display text and the transaction name based on whether we're dragging a single or multiple widgets
 	if (InWidgets.Num() == 1)
 	{
-		Operation->CurrentHoverText = Operation->DefaultHoverText = FText::FromString(InWidgets[0]->GetOwner()->GetActorLabel());
+		Operation->CurrentHoverText = Operation->DefaultHoverText = FText::FromString(InWidgets[0]->GetDisplayName());
 		Operation->Transaction = new FScopedTransaction(LOCTEXT("MoveWidget", "Change Hierarchy"));
 	}
 	else
@@ -138,7 +138,7 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 	{
 		if (auto TargetParentTemplate = TargetTemplate->GetParent())
 		{
-			int32 InsertIndex = TargetParentTemplate->GetIndexOfUIChild(TargetTemplate);
+			int32 InsertIndex = TargetTemplate->GetSiblingIndex();
 			InsertIndex += (DropZone == EItemDropZone::AboveItem) ? 0 : 1;
 			InsertIndex = FMath::Clamp(InsertIndex, 0, TargetParentTemplate->GetChildren().Num());
 
@@ -187,7 +187,7 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 				});
 			const bool bIsChildOfDraggedObject = HierarchyDragDropOp->DraggedWidgets.ContainsByPredicate([TargetItem](const FHierarchyLexWidgetDragDropOp::FItem& DraggedItem)
 				{
-					return TargetItem->IsAttachedTo(DraggedItem.Widget);
+					return TargetItem->IsChildOf(DraggedItem.Widget);
 				});
 
 			if (bIsDraggedObject || bIsChildOfDraggedObject)
@@ -215,7 +215,7 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 						// in the hierarchy before the point we're moving it to, we need to reduce the index
 						// count by one, because the whole set is about to be shifted when it's removed.
 						const bool bInsertInSameParent = TemplateWidget->GetParent() == NewParent;
-						const bool bNeedToDropIndex = NewParent->GetIndexOfUIChild(TemplateWidget) < Index.GetValue();
+						const bool bNeedToDropIndex = TemplateWidget->GetSiblingIndex() < Index.GetValue();
 
 						if (bInsertInSameParent && bNeedToDropIndex)
 						{
@@ -223,16 +223,15 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 						}
 					}
 
-					TemplateWidget->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+					TemplateWidget->SetParent(nullptr, true);
 
 					if (Index.IsSet())
 					{
-						TemplateWidget->AttachToComponent(NewParent, FAttachmentTransformRules::KeepWorldTransform);
-						TemplateWidget->SetSiblingIndex(Index.GetValue());
+						TemplateWidget->SetParent(NewParent, true, Index.GetValue());
 					}
 					else
 					{
-						TemplateWidget->AttachToComponent(NewParent, FAttachmentTransformRules::KeepWorldTransform);
+						TemplateWidget->SetParent(NewParent, true);
 					}
 				}
 			}
@@ -417,16 +416,16 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 						{
 							if (auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject())
 							{
-								if (!PrefabHelperObject->IsActorBelongsToSubPrefab(Widget->GetOwner()))//is sub prefab
+								if (!PrefabHelperObject->IsWidgetBelongsToSubPrefab(Widget.Get()))//is sub prefab
 								{
-									if (PrefabHelperObject->IsActorBelongsToMissingSubPrefab(Widget->GetOwner()))
+									if (PrefabHelperObject->IsWidgetBelongsToMissingSubPrefab(Widget.Get()))
 									{
 										return FLGUIEditorStyle::Get().GetBrush("PrefabMarkBroken");
 									}
 								}
 								else
 								{
-									if (PrefabHelperObject->GetSubPrefabAsset(Widget->GetOwner())->GetIsPrefabVariant())
+									if (PrefabHelperObject->GetSubPrefabAsset(Widget.Get())->GetIsPrefabVariant())
 									{
 										return FLGUIEditorStyle::Get().GetBrush("PrefabVariantMarkWhite");
 									}
@@ -441,13 +440,13 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 						{
 							if (auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject())
 							{
-								if (PrefabHelperObject->IsActorBelongsToSubPrefab(Widget->GetOwner()))//is sub prefab
+								if (PrefabHelperObject->IsWidgetBelongsToSubPrefab(Widget.Get()))//is sub prefab
 								{
-									return FSlateColor(PrefabHelperObject->GetSubPrefabData(Widget->GetOwner()).EditorIdentifyColor);
+									return FSlateColor(PrefabHelperObject->GetSubPrefabData(Widget.Get()).EditorIdentifyColor);
 								}
 								else
 								{
-									if (PrefabHelperObject->IsActorBelongsToMissingSubPrefab(Widget->GetOwner()))
+									if (PrefabHelperObject->IsWidgetBelongsToMissingSubPrefab(Widget.Get()))
 									{
 										return FSlateColor(FColor::White);
 									}
@@ -462,13 +461,13 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 						{
 							if (auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject())
 							{
-								if (PrefabHelperObject->IsActorBelongsToSubPrefab(Widget->GetOwner()))//is sub prefab
+								if (PrefabHelperObject->IsWidgetBelongsToSubPrefab(Widget.Get()))//is sub prefab
 								{
 									return EVisibility::Visible;
 								}
 								else
 								{
-									if (PrefabHelperObject->IsActorBelongsToMissingSubPrefab(Widget->GetOwner()))
+									if (PrefabHelperObject->IsWidgetBelongsToMissingSubPrefab(Widget.Get()))
 									{
 										return EVisibility::Visible;
 									}
@@ -487,9 +486,9 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 						{
 							if (auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject())
 							{
-								if (!PrefabHelperObject->IsActorBelongsToSubPrefab(Widget->GetOwner()))//is sub prefab
+								if (!PrefabHelperObject->IsWidgetBelongsToSubPrefab(Widget.Get()))//is sub prefab
 								{
-									if (PrefabHelperObject->IsActorBelongsToMissingSubPrefab(Widget->GetOwner()))
+									if (PrefabHelperObject->IsWidgetBelongsToMissingSubPrefab(Widget.Get()))
 									{
 										return LOCTEXT("PrefabMarkBrokenTip", "This actor was part of another prefab, but the prefab asset is missing!");
 									}
@@ -547,7 +546,7 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 				{
 					if (Manager.IsValid() && Widget.IsValid())
 					{
-						if (Widget->GetOwner() == Manager.Pin()->GetRootAgentActor())
+						if (Widget == Manager.Pin()->GetRootAgentWidget())
 						{
 							return EVisibility::Hidden;
 						}
@@ -694,8 +693,7 @@ FReply SLexWidgetEditorHierarchyViewItem::HandleDragDetected(const FGeometry& My
 		auto PrefabHelper = Manager.Pin()->GetPrefabHelperObject();
 		for (auto Item : DraggedItems)
 		{
-			auto Actor = Item->GetOwner();
-			if (PrefabHelper->IsActorBelongsToSubPrefab(Actor) && !PrefabHelper->IsSubPrefabRootActor(Actor))
+			if (PrefabHelper->IsWidgetBelongsToSubPrefab(Item) && !PrefabHelper->IsSubPrefabRootWidget(Item))
 			{
 				bAllCanDrag = false;
 				break;;
@@ -720,7 +718,7 @@ void SLexWidgetEditorHierarchyViewItem::HandleDragLeave(const FDragDropEvent& Dr
 
 FText SLexWidgetEditorHierarchyViewItem::GetItemText() const
 {
-	return Widget.IsValid() ? FText::FromString(Widget->GetOwner()->GetActorLabel()) : FText::GetEmpty();
+	return Widget.IsValid() ? FText::FromString(Widget->GetDisplayName()) : FText::GetEmpty();
 }
 
 FText SLexWidgetEditorHierarchyViewItem::GetItemTooltipText() const
@@ -735,7 +733,7 @@ FSlateColor SLexWidgetEditorHierarchyViewItem::GetNameTextColorAndOpacity() cons
 	{
 		if (auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject())
 		{
-			if (PrefabHelperObject->IsActorBelongsToSubPrefab(Widget->GetOwner()))//is sub prefab
+			if (PrefabHelperObject->IsWidgetBelongsToSubPrefab(Widget.Get()))//is sub prefab
 			{
 				if (Widget->GetWidgetActiveInHierarchy())
 				{
@@ -745,7 +743,7 @@ FSlateColor SLexWidgetEditorHierarchyViewItem::GetNameTextColorAndOpacity() cons
 			}
 			else
 			{
-				if (PrefabHelperObject->IsActorBelongsToMissingSubPrefab(Widget->GetOwner()))
+				if (PrefabHelperObject->IsWidgetBelongsToMissingSubPrefab(Widget.Get()))
 				{
 					if (Widget->GetWidgetActiveInHierarchy())
 					{
@@ -778,7 +776,7 @@ bool SLexWidgetEditorHierarchyViewItem::IsReadOnly() const
 }
 void SLexWidgetEditorHierarchyViewItem::OnBeginNameTextEdit()
 {
-	InitialText = FText::FromString(Widget->GetOwner()->GetActorLabel());
+	InitialText = FText::FromString(Widget->GetDisplayName());
 }
 void SLexWidgetEditorHierarchyViewItem::OnEndNameTextEdit()
 {
@@ -800,7 +798,10 @@ void SLexWidgetEditorHierarchyViewItem::OnNameTextCommited(const FText& InText, 
 
 	GEditor->BeginTransaction(LOCTEXT("ChangeWidgetName_Transaction", "Change Name"));
 	Widget->Modify();
-	Widget->GetOwner()->SetActorLabel(InText.ToString(), true);
+	FLexUIUtils::ChangePropertyWithNotify(Widget.Get(), ULexWidget::GetPropertyName_DisplayName(), [=, this]()
+	{
+		Widget->SetDisplayName(InText.ToString());
+	});
 	GEditor->EndTransaction();
 
 	HierarchyView.Pin()->RequestRefresh();
@@ -824,7 +825,7 @@ FText SLexWidgetEditorHierarchyViewItem::GetVisibilityBrushForWidget() const
 
 bool SLexWidgetEditorHierarchyViewItem::SupportDrop(ULexWidget* Dragging, ULexWidget* Current, EItemDropZone DropZone)
 {
-	if (Current->GetOwner() == Manager.Pin()->GetLoadedRootActor())
+	if (Current == Manager.Pin()->GetLoadedRootWidget())
 	{
 		if (DropZone == EItemDropZone::OntoItem)
 		{
@@ -832,7 +833,7 @@ bool SLexWidgetEditorHierarchyViewItem::SupportDrop(ULexWidget* Dragging, ULexWi
 		}
 		return false;
 	}
-	if (Current->IsAttachedTo(Dragging))
+	if (Current->IsChildOf(Dragging))
 	{
 		return false;
 	}

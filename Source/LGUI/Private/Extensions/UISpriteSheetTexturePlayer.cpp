@@ -14,10 +14,7 @@ void UUISpriteSheetTexturePlayer::PostEditChangeProperty(FPropertyChangedEvent& 
 	{
 		if (!Texture.IsValid())
 		{
-			if (auto Widget = GetOwner()->FindComponentByClass<ULexWidget>())
-			{
-				Texture = Cast<ULexTexture>(Widget->GetVisual());
-			}
+			Texture = Cast<ULexTexture>(GetWidget()->GetVisual());
 		}
 		if (Texture.IsValid())
 		{
@@ -33,10 +30,7 @@ bool UUISpriteSheetTexturePlayer::CanPlay()
 {
 	if (!Texture.IsValid())
 	{
-		if (auto Widget = GetOwner()->FindComponentByClass<ULexWidget>())
-		{
-			Texture = Cast<ULexTexture>(Widget->GetVisual());
-		}
+		Texture = Cast<ULexTexture>(GetWidget()->GetVisual());
 	}
 	if (!Texture.IsValid())
 	{

@@ -726,7 +726,7 @@ void ULexUMGWidget::GetLocalHitLocation(int32 InHitFaceIndex, const FVector& InW
 	{
 		auto Widget = GetWidget();
 		// Find the hit location on the component
-		FVector ComponentHitLocation = Widget->GetComponentTransform().InverseTransformPosition(InWorldHitLocation);
+		FVector ComponentHitLocation = Widget->GetWorldTransform().InverseTransformPosition(InWorldHitLocation);
 
 		// Convert the 3D position of component space, into the 2D equivalent
 		auto LocationRelativeToLeftBottom = FVector2D(ComponentHitLocation.Y, ComponentHitLocation.Z) - Widget->GetLocalSpaceLeftBottomPoint();
@@ -801,7 +801,7 @@ void ULexUMGWidget::SetBackgroundColor(const FLinearColor NewBackgroundColor)
 	if (NewBackgroundColor != this->BackgroundColor)
 	{
 		this->BackgroundColor = NewBackgroundColor;
-		GetWidget()->MarkRenderStateDirty();
+		this->MarkColorDirty();
 	}
 }
 

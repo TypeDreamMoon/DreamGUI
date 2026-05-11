@@ -7,8 +7,9 @@
 #include "PrefabSystem/ILexUIPrefabInterface.h"
 #include "LexWidget.generated.h"
 
+class ULexWidgetSubObjectBehaviour;
 class ULexUIBehaviour;
-class ALexWidgetRootActor;
+class ULexWidgetPresenterComponent;
 class ULexVisual;
 class ULexLayoutSelf;
 class ULexLayoutContainer;
@@ -61,7 +62,7 @@ enum class ELexWidgetInteractableType : uint8
  * Base class for almost all UI related things.
  */
 UCLASS(ClassGroup = (LGUI), NotBlueprintable)
-class LGUI_API ULexWidget : public UObject, public ILexUIPrefabInterface
+class LGUI_API ULexWidget : public UObject
 {
 	GENERATED_BODY()
 
@@ -82,11 +83,10 @@ public:
 
 	void BeginPlay();
 	void EndPlay();
-	//begin LGUIPrefabInterface
-	virtual void EditorAwake_Implementation() override;
-	//end LGUIPrefabInterface
 
 	virtual void PostLoad()override;
+	virtual void BeginDestroy() override;
+	void DestroyWidget();
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual void PreEditChange(FProperty* PropertyAboutToChange) override;
@@ -112,8 +112,22 @@ public:
 	{
 		return GET_MEMBER_NAME_CHECKED(ULexWidget, DisplayName);
 	}
+	static FName GetPropertyName_Location()
+	{
+		return GET_MEMBER_NAME_CHECKED(ULexWidget, RelativeLocation);
+	}
+	static FName GetPropertyName_Rotation()
+	{
+		return GET_MEMBER_NAME_CHECKED(ULexWidget, RelativeRotation);
+	}
+	static FName GetPropertyName_Scale()
+	{
+		return GET_MEMBER_NAME_CHECKED(ULexWidget, RelativeScale);
+	}
 
 	bool HasBegunPlay()const{return bHasBegunPlay;}
+
+	static void CollectChildrenWidgets(ULexWidget* Target, TArray<ULexWidget*>& OutAllChildrenWidgets, bool IncludeTarget = true);
 
 #pragma region CallbackEvents
 private:
@@ -129,24 +143,24 @@ private:
 private:
 	/** Local space position */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Transform", Getter, Setter, meta=(AllowPrivateAccess = true))
-	FVector Location = FVector::ZeroVector;
+	FVector RelativeLocation = FVector::ZeroVector;
 	/** Local space rotation */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Transform", Getter, Setter, meta = (AllowPrivateAccess = true))
-	FQuat Rotation = FQuat::Identity;
+	FQuat RelativeRotation = FQuat::Identity;
 	/** Local space scale */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Transform", Getter, Setter, meta = (AllowPrivateAccess = true, AllowPreserveRatio))
-	FVector Scale = FVector::OneVector;
+	FVector RelativeScale = FVector::OneVector;
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Transform")
-	const FVector& GetRelativeLocation()const { return Location; }
+	const FVector& GetRelativeLocation()const { return RelativeLocation; }
 	UFUNCTION(BlueprintCallable, Category = "Transform")
-	const FQuat& GetRelativeRotation()const { return Rotation; }
+	const FQuat& GetRelativeRotation()const { return RelativeRotation; }
 	UFUNCTION(BlueprintCallable, Category = "Transform")
-	const FVector& GetRelativeScale()const { return Scale; }
+	const FVector& GetRelativeScale()const { return RelativeScale; }
 
 	UFUNCTION(BlueprintCallable, Category = "Transform")
-	FVector GetWorldPosition()const;
+	FVector GetWorldLocation()const;
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	FQuat GetWorldRotation()const;
 	UFUNCTION(BlueprintCallable, Category = "Transform")
@@ -166,18 +180,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	void SetRelativeScale(const FVector& Value);
 	UFUNCTION(BlueprintCallable, Category = "Transform")
-	void SetRelativeLocationAndRotation(const FVector& InPosition, const FQuat& InRotation);
+	void SetRelativeLocationAndRotation(const FVector& InLocation, const FQuat& InRotation);
 
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	void SetWorldLocation(const FVector& Value);
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	void SetWorldRotation(const FQuat& Value);
 	UFUNCTION(BlueprintCallable, Category = "Transform")
-	void SetWorldLocationAndRotation(const FVector& InPosition, const FQuat& InRotation);
+	void SetWorldLocationAndRotation(const FVector& InLocation, const FQuat& InRotation);
 
 	FTransform GetLocalTransform()const;
 	UFUNCTION(BlueprintCallable, Category = "Transform")
-	const FTransform& GetObjectToWorldTransform()const;
+	const FTransform& GetWorldTransform()const;
+
+	void SetWorldTransform(const FTransform& InWorldTransform);
 
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	ULexWidget* GetParent()const { return Parent.Get(); }
@@ -200,8 +216,10 @@ public:
 	int GetChildrenCount()const { return Children.Num(); }
 	
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	const TArray<ULexUIBehaviour*>& GetComponents()const{return Components;}
-	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (ComponentClass = "LexUIBehaviour", DeterminesOutputType = "ComponentClass"))
+	const TArray<ULexUIBehaviour*>& GetAllComponents()const{return Components;}
+	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (ComponentClass = "/Script/LGUI.LexUIBehaviour", DeterminesOutputType = "ComponentClass"))
+	TArray<ULexUIBehaviour*> GetComponents(TSubclassOf<ULexUIBehaviour> ComponentClass);
+	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (ComponentClass = "/Script/LGUI.LexUIBehaviour", DeterminesOutputType = "ComponentClass"))
 	ULexUIBehaviour* GetComponent(TSubclassOf<ULexUIBehaviour> ComponentClass);
 	template<class T>
 	T* GetComponent()
@@ -209,23 +227,40 @@ public:
 		static_assert(TPointerIsConvertibleFromTo<T, const ULexUIBehaviour>::Value, "'T' template parameter to GetComponent must be derived from ULexUIBehaviour");
 		return Cast<T>(GetComponent(T::StaticClass()));
 	}
+	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (DeterminesOutputType = "InterfaceClass"))
+	ULexUIBehaviour* GetComponentByInterface(UClass* InterfaceClass);
+	// template<class T UE_REQUIRES(TIsIInterface<T>::Value)>
+	// T* GetComponentByInterface() const
+	// {
+	// 	return Cast<T>(GetComponentByInterface(T::UClassType::StaticClass()));
+	// }
 	template<class T>
 	T* GetComponentInParent(bool bIncludeSelf = false)
 	{
-		static_assert(TPointerIsConvertibleFromTo<T, const UActorComponent>::Value, "'T' template parameter to GetComponentInParent must be derived from UActorComponent");
+		static_assert(TPointerIsConvertibleFromTo<T, const ULexUIBehaviour>::Value, "'T' template parameter to GetComponentInParent must be derived from ULexUIBehaviour");
 		T* ResultComp = nullptr;
-		ULexWidget* ParentActor = bIncludeSelf ? this : this->GetParent();
-		while (IsValid(ParentActor))
+		ULexWidget* ParentWidget = bIncludeSelf ? this : this->GetParent();
+		while (IsValid(ParentWidget))
 		{
-			ResultComp = ParentActor->GetComponent<T>();
+			ResultComp = ParentWidget->GetComponent<T>();
 			if (IsValid(ResultComp))
 			{
 				return ResultComp;
 			}
-			ParentActor = ParentActor->GetParent();
+			ParentWidget = ParentWidget->GetParent();
 		}
 		return nullptr;
 	}
+	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (ComponentClass = "/Sript/LGUI.LexUIBehaviour", DeterminesOutputType = "ComponentClass"))
+	ULexUIBehaviour* AddComponent(TSubclassOf<ULexUIBehaviour> ComponentClass);
+	template<class T>
+	T* AddComponent()
+	{
+		static_assert(TPointerIsConvertibleFromTo<T, const ULexUIBehaviour>::Value, "'T' template parameter to GetComponent must be derived from ULexUIBehaviour");
+		return Cast<T>(AddComponent(T::StaticClass()));
+	}
+	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (ComponentClass = "/Sript/LGUI.LexUIBehaviour"))
+	void RemoveComponent(ULexUIBehaviour* Component);
 	void UpdateObjectToWorldTransform();
 	void CalculateObjectToWorldTransform(bool bPropagateToChildren = true);
 private:
@@ -417,7 +452,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	ULexCanvas* GetRootCanvas()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	ALexWidgetRootActor* GetWidgetRootActor()const;
+	ULexWidgetPresenterComponent* GetWidgetPresenterComponent()const;
 
 	/** mark all dirty for UI element to update, include all children */
 	void MarkAllDirtyRecursive();
@@ -719,7 +754,6 @@ private:
 	friend class ULexCanvas;
 	/** LexCanvas which render this UI element */
 	UPROPERTY(Transient) mutable TWeakObjectPtr<ULexCanvas> RenderCanvas = nullptr;
-	UPROPERTY(Transient) mutable TWeakObjectPtr<USceneComponent> CacheSceneComp = nullptr;
 	
 	/** is this widget contains LexCanvas component */
 	mutable uint32 bIsCanvasWidget:1;

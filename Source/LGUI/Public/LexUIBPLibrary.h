@@ -21,7 +21,7 @@ class ULexUIPrefab;
 
 namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 {
-	struct FDuplicateActorDataContainer;
+	struct FDuplicateWidgetDataContainer;
 }
 
 USTRUCT(BlueprintType)
@@ -30,7 +30,7 @@ struct FLexUIDuplicateDataContainer
 	GENERATED_BODY()
 public:
 	bool bIsValid = false;
-	LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::FDuplicateActorDataContainer DuplicateData;
+	LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::FDuplicateWidgetDataContainer DuplicateData;
 };
 
 UCLASS()
@@ -39,63 +39,27 @@ class LGUI_API ULexUIBPLibrary : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
-	/** Delete actor and all it's children actors */
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "WithHierarchy", UnsafeDuringActorConstruction = "true"), Category = LGUI)
-		static void DestroyActorWithHierarchy(AActor* Target, bool WithHierarchy = true);
-
-	/**
-	 * LoadPrefab to create actor.
-	 * Awake function in LexUIBehaviour and LexUIPrefabInterface will be called right after LoadPrefab is done.
-	 * @param InParent Parent scene component that the created root actor will be attached to. Can be null so the created root actor will not attach to anyone.
-	 * @param InCallbackBeforeAwake This callback function will execute before Awake event, parameter "Actor" is the loaded root actor.
-	 * @param SetRelativeTransformToIdentity Set created root actor's transform to zero after load.
-	 */
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "InCallbackBeforeAwake,SetRelativeTransformToIdentity", UnsafeDuringActorConstruction = "true", WorldContext = "WorldContextObject", AutoCreateRefTerm="InCallbackBeforeAwake"), Category = LGUI)
-		static AActor* LoadPrefab(UObject* WorldContextObject, ULexUIPrefab* InPrefab, USceneComponent* InParent, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake, bool SetRelativeTransformToIdentity = false);
-	/**
-	 * LoadPrefab to create actor.
-	 * Awake function in LexUIBehaviour and LexUIPrefabInterface will be called right after LoadPrefab is done.
-	 * @param InParent Parent scene component that the created root actor will be attached to. Can be null so the created root actor will not attach to anyone.
-	 * @param Location Set created root actor's location after load.
-	 * @param Rotation Set created root actor's rotation after load.
-	 * @param Scale Set created root actor's scale after load.
-	 * @param InCallbackBeforeAwake This callback function will execute before Awake event, parameter "Actor" is the loaded root actor.
-	 */
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "", UnsafeDuringActorConstruction = "true", WorldContext = "WorldContextObject", AutoCreateRefTerm = "InCallbackBeforeAwake"), Category = LGUI)
-		static AActor* LoadPrefabWithTransform(UObject* WorldContextObject, ULexUIPrefab* InPrefab, USceneComponent* InParent, FVector Location, FRotator Rotation, FVector Scale, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake);
-	static AActor* LoadPrefabWithTransform(UObject* WorldContextObject, ULexUIPrefab* InPrefab, USceneComponent* InParent, FVector Location, FQuat Rotation, FVector Scale, const TFunction<void(AActor*)>& InCallbackBeforeAwake = nullptr);
-	/**
-	 * LoadPrefab to create actor.
-	 * Awake function in LexUIBehaviour and LexUIPrefabInterface will be called right after LoadPrefab is done.
-	 * @param InParent Parent scene component that the created root actor will be attached to. Can be null so the created root actor will not attach to anyone.
-	 * @param InReplaceAssetMap Replace source asset to dest before load the prefab.
-	 * @param InReplaceClassMap Replace source class to dest before load the prefab.
-	 * @param InCallbackBeforeAwake This callback function will execute before Awake event, parameter "Actor" is the loaded root actor.
-	 */
-	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "", UnsafeDuringActorConstruction = "true", WorldContext = "WorldContextObject", AutoCreateRefTerm = "InCallbackBeforeAwake"), Category = LGUI)
-		static AActor* LoadPrefabWithReplacement(UObject* WorldContextObject, ULexUIPrefab* InPrefab, USceneComponent* InParent, const TMap<UObject*, UObject*>& InReplaceAssetMap, const TMap<UClass*, UClass*>& InReplaceClassMap, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake);
-
 	/**
 	 * Duplicate actor and all it's children actors
 	 * If duplicate same actor for multiple times, then use PrepareDuplicateData node to get data, and pass the data to DuplicateActorWithPreparedData.
 	 */
-	UFUNCTION(BlueprintCallable, meta = (DeterminesOutputType = "Target", UnsafeDuringActorConstruction = "true", ToolTip = "Duplicate actor with hierarchy"), Category = LGUI)
-		static AActor* DuplicateActor(AActor* Target, USceneComponent* Parent);
+	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true", ToolTip = "Duplicate actor with hierarchy"), Category = LGUI)
+		static ULexWidget* DuplicateWidget(UObject* WorldContextObject, ULexWidget* Target, ULexWidget* Parent);
 	/**
 	 * Optimized version of DuplicateActor node when you need to duplicate same actor for multiple times. Use the result data in DuplicateActorWithPreparedData node.
 	 */
-	UFUNCTION(BlueprintCallable, meta = (DeterminesOutputType = "Target", UnsafeDuringActorConstruction = "true"), Category = LGUI)
-		static void PrepareDuplicateData(AActor* Target, FLexUIDuplicateDataContainer& Data);
+	UFUNCTION(BlueprintCallable, meta = (UnsafeDuringActorConstruction = "true"), Category = LGUI)
+		static void PrepareDuplicateData(ULexWidget* Target, FLexUIDuplicateDataContainer& Data);
 	/**
 	 * Use this with PrepareDuplicateData node.
 	 */
-	UFUNCTION(BlueprintCallable, meta = (DeterminesOutputType = "Target", UnsafeDuringActorConstruction = "true"), Category = LGUI)
-		static AActor* DuplicateActorWithPreparedData(UPARAM(Ref) FLexUIDuplicateDataContainer& Data, USceneComponent* Parent);
+	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"), Category = LGUI)
+		static ULexWidget* DuplicateWidgetWithPreparedData(UObject* WorldContextObject, UPARAM(Ref) FLexUIDuplicateDataContainer& Data, ULexWidget* Parent);
 	template<class T>
-	static T* DuplicateActorT(T* Target, USceneComponent* Parent)
+	static T* DuplicateWidgetT(T* Target, USceneComponent* Parent)
 	{
 		static_assert(TPointerIsConvertibleFromTo<T, const AActor>::Value, "'T' template parameter to DuplicateActor must be derived from AActor");
-		return (T*)ULexUIBPLibrary::DuplicateActor(Target, Parent);
+		return (T*)ULexUIBPLibrary::DuplicateWidget(Target, Parent);
 	}
 
 	/**

@@ -8,24 +8,12 @@
 
 ULexUIPrefabSequenceComponent::ULexUIPrefabSequenceComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
-	PrimaryComponentTick.bStartWithTickEnabled = false;
 	SequenceEventHandler = FLexUIComponentReference(UActorComponent::StaticClass());
 }
 
 void ULexUIPrefabSequenceComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	if (auto ManagerInstance = ULexUIPrefabWorldSubsystem::GetInstance(this->GetWorld()))
-	{
-		if (!ManagerInstance->IsPrefabSystemProcessingActor(this->GetOwner()))//if not processing by PrefabSystem, then mannually call initialize function
-		{
-			Awake_Implementation();
-		}
-	}
-}
-void ULexUIPrefabSequenceComponent::Awake_Implementation()
-{
 	InitSequencePlayer();
 
 	if (PlaybackSettings.bAutoPlay)
@@ -34,9 +22,9 @@ void ULexUIPrefabSequenceComponent::Awake_Implementation()
 	}
 }
 
-void ULexUIPrefabSequenceComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void ULexUIPrefabSequenceComponent::EndPlay()
 {
-	Super::EndPlay(EndPlayReason);
+	Super::EndPlay();
 
 	if (SequencePlayer)
 	{
@@ -76,13 +64,13 @@ void ULexUIPrefabSequenceComponent::PostLoad()
 }
 void ULexUIPrefabSequenceComponent::FixEditorHelpers()
 {
-	for (auto& Sequence : SequenceArray)
-	{
-		if (Sequence->IsObjectReferencesGood(GetOwner()) && !Sequence->IsEditorHelpersGood(this->GetOwner()))
-		{
-			Sequence->FixEditorHelpers(this->GetOwner());
-		}
-	}
+	// for (auto& Sequence : SequenceArray)
+	// {
+	// 	if (Sequence->IsObjectReferencesGood(GetOwner()) && !Sequence->IsEditorHelpersGood(this->GetOwner()))
+	// 	{
+	// 		Sequence->FixEditorHelpers(this->GetOwner());
+	// 	}
+	// }
 }
 
 UBlueprint* ULexUIPrefabSequenceComponent::GetSequenceBlueprint()const

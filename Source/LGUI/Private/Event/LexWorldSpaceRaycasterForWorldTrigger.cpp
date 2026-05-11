@@ -13,7 +13,7 @@ void ULexWorldSpaceRaycasterForWorldTrigger::BeginPlay()
 	Super::BeginPlay();
 }
 
-void ULexWorldSpaceRaycasterForWorldTrigger::Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResultArray)
+void ULexWorldSpaceRaycasterForWorldTrigger::Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FLexUIHitResult>& OutHitResultArray)
 {
 	return Super::RaycastWorld(InPointerEventData, bRequireFaceIndex, TraceChannel, OutRayOrigin, OutRayDirection, OutRayEnd, OutHitResultArray);
 }

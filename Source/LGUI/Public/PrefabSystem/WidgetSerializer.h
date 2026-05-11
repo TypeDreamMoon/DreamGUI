@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "PrefabSystem/ActorSerializerBase.h"
+#include "PrefabSystem/WidgetSerializerBase.h"
 #include "LexUIPrefab.h"
 #include "Serialization/BufferArchive.h"
 #include "Serialization/ObjectWriter.h"
@@ -78,34 +78,34 @@ namespace LexUIPrefabSystem
 	struct FLexUISubPrefabObjectUniqueIdSaveData
 	{
 	public:
-		FGuid RootActorGuidInParentPrefab;
+		FGuid RootWidgetGuidInParentPrefab;
 		FGuid ObjectGuidInOriginPrefab;
 
 		bool operator==(const FLexUISubPrefabObjectUniqueIdSaveData& other)const
 		{
-			return this->RootActorGuidInParentPrefab == other.RootActorGuidInParentPrefab && this->ObjectGuidInOriginPrefab == other.ObjectGuidInOriginPrefab;
+			return this->RootWidgetGuidInParentPrefab == other.RootWidgetGuidInParentPrefab && this->ObjectGuidInOriginPrefab == other.ObjectGuidInOriginPrefab;
 		}
 		friend FORCEINLINE uint32 GetTypeHash(const FLexUISubPrefabObjectUniqueIdSaveData& other)
 		{
-			return HashCombine(GetTypeHash(other.RootActorGuidInParentPrefab), GetTypeHash(other.ObjectGuidInOriginPrefab));
+			return HashCombine(GetTypeHash(other.RootWidgetGuidInParentPrefab), GetTypeHash(other.ObjectGuidInOriginPrefab));
 		}
 
 		friend FArchive& operator<<(FArchive& Ar, FLexUISubPrefabObjectUniqueIdSaveData& Data)
 		{
-			Ar << Data.RootActorGuidInParentPrefab;
+			Ar << Data.RootWidgetGuidInParentPrefab;
 			Ar << Data.ObjectGuidInOriginPrefab;
 			return Ar;
 		}
 		friend void operator<<(FStructuredArchive::FSlot Slot, FLexUISubPrefabObjectUniqueIdSaveData& Data)
 		{
 			FStructuredArchive::FRecord Record = Slot.EnterRecord();
-			Record << SA_VALUE(TEXT("RootActorGuidInParentPrefab"), Data.RootActorGuidInParentPrefab);
+			Record << SA_VALUE(TEXT("RootWidgetGuidInParentPrefab"), Data.RootWidgetGuidInParentPrefab);
 			Record << SA_VALUE(TEXT("ObjectGuidInOriginPrefab"), Data.ObjectGuidInOriginPrefab);
 		}
 	};
 
-	//Actor serialize and save data
-	struct FLexUIActorSaveData : FLexUICommonObjectSaveData
+	//Widget serialize and save data
+	struct FLexUIWidgetSaveData : FLexUICommonObjectSaveData
 	{
 	public:
 		bool bIsPrefab = false;
@@ -114,45 +114,45 @@ namespace LexUIPrefabSystem
 		TMap<FLexUISubPrefabObjectUniqueIdSaveData, FGuid> MapObjectIdToNewlyCreatedId;
 		TMap<FGuid, FGuid> MapObjectGuidFromParentPrefabToSubPrefab;//sub prefab's object use a different guid in parent prefab. So multiple same sub prefab can exist in same parent prefab.
 
-		FGuid ActorGuid;
+		FGuid WidgetGuid;
 
-		friend FArchive& operator<<(FArchive& Ar, FLexUIActorSaveData& ActorData)
+		friend FArchive& operator<<(FArchive& Ar, FLexUIWidgetSaveData& WidgetData)
 		{
-			Ar << ActorData.bIsPrefab;
-			if (ActorData.bIsPrefab)
+			Ar << WidgetData.bIsPrefab;
+			if (WidgetData.bIsPrefab)
 			{
-				Ar << ActorData.PrefabAssetIndex;
-				Ar << ActorData.ActorGuid;//sub prefab's root actor's guid
-				Ar << ActorData.MapObjectGuidToSubPrefabOverrideParameter;
-				Ar << ActorData.MapObjectIdToNewlyCreatedId;
-				Ar << ActorData.MapObjectGuidFromParentPrefabToSubPrefab;
+				Ar << WidgetData.PrefabAssetIndex;
+				Ar << WidgetData.WidgetGuid;//sub prefab's root actor's guid
+				Ar << WidgetData.MapObjectGuidToSubPrefabOverrideParameter;
+				Ar << WidgetData.MapObjectIdToNewlyCreatedId;
+				Ar << WidgetData.MapObjectGuidFromParentPrefabToSubPrefab;
 			}
 			else
 			{
-				Ar << ActorData.ActorGuid;
-				Ar << ActorData.ObjectClass;
-				Ar << ActorData.ObjectFlags;
+				Ar << WidgetData.WidgetGuid;
+				Ar << WidgetData.ObjectClass;
+				Ar << WidgetData.ObjectFlags;
 
-				Ar << ActorData.DefaultSubObjectGuidArray;
-				Ar << ActorData.DefaultSubObjectNameArray;
+				Ar << WidgetData.DefaultSubObjectGuidArray;
+				Ar << WidgetData.DefaultSubObjectNameArray;
 			}
 			return Ar;
 		}
-		friend void operator<<(FStructuredArchive::FSlot Slot, FLexUIActorSaveData& Data)
+		friend void operator<<(FStructuredArchive::FSlot Slot, FLexUIWidgetSaveData& Data)
 		{
 			FStructuredArchive::FRecord Record = Slot.EnterRecord();
 			Record << SA_VALUE(TEXT("bIsPrefab"), Data.bIsPrefab);
 			if (Data.bIsPrefab)
 			{
 				Record << SA_VALUE(TEXT("PrefabAssetIndex"), Data.PrefabAssetIndex);
-				Record << SA_VALUE(TEXT("ActorGuid"), Data.ActorGuid);
+				Record << SA_VALUE(TEXT("WidgetGuid"), Data.WidgetGuid);
 				Record << SA_VALUE(TEXT("SubPrefabOverrideParameterArray"), Data.MapObjectGuidToSubPrefabOverrideParameter);
 				Record << SA_VALUE(TEXT("MapObjectIdToNewlyCreatedId"), Data.MapObjectIdToNewlyCreatedId);
 				Record << SA_VALUE(TEXT("MapObjectGuidFromParentPrefabToSubPrefab"), Data.MapObjectGuidFromParentPrefabToSubPrefab);
 			}
 			else
 			{
-				Record << SA_VALUE(TEXT("ActorGuid"), Data.ActorGuid);
+				Record << SA_VALUE(TEXT("WidgetGuid"), Data.WidgetGuid);
 				Record << SA_VALUE(TEXT("ObjectClass"), Data.ObjectClass);
 				Record << SA_VALUE(TEXT("ObjectFlags"), Data.ObjectFlags);
 
@@ -165,7 +165,7 @@ namespace LexUIPrefabSystem
 	struct FLexUIPrefabSaveData
 	{
 	public:
-		TArray<FLexUIActorSaveData> SavedActors;
+		TArray<FLexUIWidgetSaveData> SavedWidgets;
 		TMap<FGuid, FLexUIObjectSaveData> SavedObjects;
 		/** Key as child, value as parent. */
 		TMap<FGuid, FGuid> MapSceneComponentToParent;
@@ -174,7 +174,7 @@ namespace LexUIPrefabSystem
 
 		friend FArchive& operator<<(FArchive& Ar, FLexUIPrefabSaveData& GameData)
 		{
-			Ar << GameData.SavedActors;
+			Ar << GameData.SavedWidgets;
 			Ar << GameData.SavedObjects;
 			Ar << GameData.MapSceneComponentToParent;
 			Ar << GameData.SavedObjectData;
@@ -183,85 +183,82 @@ namespace LexUIPrefabSystem
 		friend void operator<<(FStructuredArchive::FSlot Slot, FLexUIPrefabSaveData& Data)
 		{
 			FStructuredArchive::FRecord Record = Slot.EnterRecord();
-			Record << SA_VALUE(TEXT("SavedActor"), Data.SavedActors);
+			Record << SA_VALUE(TEXT("SavedWidgets"), Data.SavedWidgets);
 			Record << SA_VALUE(TEXT("SavedObjects"), Data.SavedObjects);
 			Record << SA_VALUE(TEXT("MapSceneComponentToParent"), Data.MapSceneComponentToParent);
 			Record << SA_VALUE(TEXT("SavedObjectReferences"), Data.SavedObjectData);
 		}
 	};
 
-	struct FDuplicateActorDataContainer;
+	struct FDuplicateWidgetDataContainer;
 
 	/*
 	 * serialize/deserialize actor with hierarchy.
 	 */
-	class LGUI_API ActorSerializer : public LexUIPrefabSystem::ActorSerializerBase
+	class LGUI_API WidgetSerializer : public LexUIPrefabSystem::WidgetSerializerBase
 	{
 	public:
 		/**
-		 * @param CallbackBeforeAwake	This callback function will execute before Awake event, parameter "Actor" is the loaded root actor.
+		 * @param CallbackBeforeAwake	This callback function will execute before Awake event, parameter "LexWidget" is the loaded root widget.
 		 */
-		static ULexWidget* LoadPrefab(UWorld* InWorld, ULexUIPrefab* InPrefab, ULexWidget* Parent, bool SetRelativeTransformToIdentity = true, TFunction<void(ULexWidget*)> CallbackBeforeAwake = nullptr);
+		static ULexWidget* LoadPrefab(UWorld* InWorld, UObject* InOuter, ULexUIPrefab* InPrefab, ULexWidget* Parent, bool SetRelativeTransformToIdentity = true, TFunction<void(ULexWidget*)> CallbackBeforeAwake = nullptr);
 		/**
-		 * @param CallbackBeforeAwake	This callback function will execute before Awake event, parameter "Actor" is the loaded root actor.
+		 * @param CallbackBeforeAwake	This callback function will execute before Awake event, parameter "LexWidget" is the loaded root widget.
 		 */
-		static ULexWidget* LoadPrefab(UWorld* InWorld, ULexUIPrefab* InPrefab, ULexWidget* Parent, FVector RelativeLocation, FQuat RelativeRotation, FVector RelativeScale, TFunction<void(ULexWidget*)> CallbackBeforeAwake = nullptr);
+		static ULexWidget* LoadPrefab(UWorld* InWorld, UObject* InOuter, ULexUIPrefab* InPrefab, ULexWidget* Parent, FVector RelativeLocation, FQuat RelativeRotation, FVector RelativeScale, TFunction<void(ULexWidget*)> CallbackBeforeAwake = nullptr);
 		/**
 		 * LoadPrefab and keep reference of objects.
 		 */
-		static ULexWidget* LoadPrefabWithExistingObjects(UWorld* InWorld, ULexUIPrefab* InPrefab, ULexWidget* Parent
+		static ULexWidget* LoadPrefabWithExistingObjects(UWorld* InWorld, UObject* InOuter, ULexUIPrefab* InPrefab, ULexWidget* Parent
 			, TMap<FGuid, TObjectPtr<UObject>>& InOutMapGuidToObjects, TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& OutSubPrefabMap
 		);
 
 		/** Save prefab data for editor use.
 		 * @return If save prefab success
 		 */
-		static bool SavePrefab(ULexWidget* RootActor, ULexUIPrefab* InPrefab
+		static bool SavePrefab(ULexWidget* RootWidget, ULexUIPrefab* InPrefab
 			, TMap<UObject*, FGuid>& OutMapObjectToGuid, TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& InSubPrefabMap
 			, bool InForEditorOrRuntimeUse
 		);
 		
 		/**
-		 * Duplicate actor with hierarchy
+		 * Duplicate widget with hierarchy
 		 */
-		static ULexWidget* DuplicateActor(UObject* InOwnerObject, ULexWidget* OriginRootActor, ULexWidget* Parent);
+		static ULexWidget* DuplicateWidget(UWorld* InWorld, UObject* InOwnerObject, ULexWidget* OriginRootWidget, ULexWidget* Parent);
 		/** Prepare one data and duplicate multiple times */
-		static bool PrepareDataForDuplicate(ULexWidget* RootActor, FDuplicateActorDataContainer& OutData);
-		static ULexWidget* DuplicateActorWithPreparedData(FDuplicateActorDataContainer& InData, ULexWidget* InParent);
+		static bool PrepareDataForDuplicate(ULexWidget* RootWidget, FDuplicateWidgetDataContainer& OutData);
+		static ULexWidget* DuplicateWidgetWithPreparedData(UWorld* InWorld, UObject* InOwnerObject, FDuplicateWidgetDataContainer& InData, ULexWidget* InParent);
 		/**
-		 * Editor version, duplicate actor with hierarchy, will also concern sub prefab.
+		 * Editor version, duplicate widget with hierarchy, will also concern sub prefab.
 		 */
-		static ULexWidget* DuplicateActorForEditor(ULexWidget* OriginRootWidget, ULexWidget* Parent
+		static ULexWidget* DuplicateWidgetForEditor(UWorld* InWorld, ULexWidget* OriginRootWidget, ULexWidget* Parent
 			, const TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& InSubPrefabMap
 			, const TMap<UObject*, FGuid>& InMapObjectToGuid
 			, TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& OutDuplicatedSubPrefabMap
 			, TMap<FGuid, TObjectPtr<UObject>>& OutMapGuidToObject
 		);
 
-		static ULexWidget* LoadSubPrefab(
+		static ULexWidget* LoadSubPrefab(UWorld* InWorld,
 			UObject* InOwnerObject, ULexUIPrefab* InPrefab, ULexWidget* Parent
 			, const FGuid& InParentDeserializationSessionId
 			, TMap<FGuid, TObjectPtr<UObject>>& InMapGuidToObject
-			, const TFunction<void(ULexWidget*, const TMap<FGuid, TObjectPtr<UObject>>&, const TMap<TObjectPtr<UObject>, FGuid>&, const TArray<ULexWidget*>&, const TArray<UActorComponent*>&)>& InOnSubPrefabFinishDeserializeFunction
+			, const TFunction<void(ULexWidget*, const TMap<FGuid, TObjectPtr<UObject>>&, const TMap<TObjectPtr<UObject>, FGuid>&, const TArray<ULexWidget*>&)>& InOnSubPrefabFinishDeserializeFunction
 		);
 
 	private:
 		struct FComponentDataStruct
 		{
-			UActorComponent* Component = nullptr;
+			ULexWidget* Component = nullptr;
 			FGuid SceneComponentParentGuid;
 		};
-		TArray<FComponentDataStruct> ComponentsInThisPrefab;
-		//include components in sub-prefab and sub-prefab's sub-prefab...
-		TArray<UActorComponent*> AllComponents;
-		//collection for all actors, include sub-prefab
+		//collection for all widgets, include sub-prefab
 		TArray<ULexWidget*> AllWidgets;
 
 		TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> SubPrefabMap;
-		TArray<ULexWidget*> SubPrefabActorArray;
+		TArray<ULexWidget*> SubPrefabWidgetArray;
 		TArray<FComponentDataStruct> SubPrefabRootComponents;
-		//this collection will collect all actors of this prefab, and root actor of sub prefab
-		TArray<ULexWidget*> TrySerializeActorArray;
+		//this collection will collect all widgets of this prefab, and root widget of sub prefab
+		TArray<ULexWidget*> TrySerializeWidgetArray;
 		//origin guid mean the object guid in it's origin prefab, not sub prefab
 		TMap<TObjectPtr<UObject>, FGuid> MapObjectToOriginGuid;
 
@@ -275,15 +272,15 @@ namespace LexUIPrefabSystem
 		};
 		TArray<FSubPrefabObjectOverrideParameterData> SubPrefabOverrideParameters;
 
-		//serialize actor
-		bool SerializeActor(ULexWidget* RootActor, ULexUIPrefab* InPrefab);
-		void SerializeActorArray(TMap<FGuid, FGuid>& MapWidgetToParent, TArray<FLexUIActorSaveData>& SavedActors, TMap<FGuid, TArray<uint8>>& SavedObjectData);
+		//serialize widget
+		bool SerializeWidget(ULexWidget* RootWidget, ULexUIPrefab* InPrefab);
+		void SerializeWidgetArray(TMap<FGuid, FGuid>& MapWidgetToParent, TArray<FLexUIWidgetSaveData>& SavedWidgets, TMap<FGuid, TArray<uint8>>& SavedObjectData);
 		void SerializeObjectArray(TMap<FGuid, FLexUIObjectSaveData>& ObjectSaveDataArray, TMap<FGuid, TArray<uint8>>& SavedObjectData, TMap<FGuid, FGuid>& MapSceneComponentToParent);
-		void SerializeActorToData(ULexWidget* RootActor, FLexUIPrefabSaveData& OutData);
-		//deserialize actor
-		ULexWidget* DeserializeActor(ULexWidget* Parent, ULexUIPrefab* InPrefab, const TFunction<void()>& InCallbackBeforeDeserialize, bool ReplaceTransform = false, FVector InLocation = FVector::ZeroVector, FQuat InRotation = FQuat::Identity, FVector InScale = FVector::OneVector);
-		ULexWidget* DeserializeActorFromData(FLexUIPrefabSaveData& SaveData, ULexWidget* Parent, bool ReplaceTransform, FVector InLocation, FQuat InRotation, FVector InScale);
-		ULexWidget* GenerateActorArray(TArray<FLexUIActorSaveData>& SavedActors, TMap<FGuid, FLexUIObjectSaveData>& InSavedObjects, TMap<FGuid, FGuid>& MapSceneComponentToParent, FGuid ParentGuid);
+		void SerializeWidgetToData(ULexWidget* RootWidget, FLexUIPrefabSaveData& OutData);
+		//deserialize widget
+		ULexWidget* DeserializeWidget(ULexWidget* Parent, ULexUIPrefab* InPrefab, const TFunction<void()>& InCallbackBeforeDeserialize, bool ReplaceTransform = false, FVector InLocation = FVector::ZeroVector, FQuat InRotation = FQuat::Identity, FVector InScale = FVector::OneVector);
+		ULexWidget* DeserializeWidgetFromData(FLexUIPrefabSaveData& SaveData, ULexWidget* Parent, bool ReplaceTransform, FVector InLocation, FQuat InRotation, FVector InScale);
+		ULexWidget* GenerateWidgetArray(TArray<FLexUIWidgetSaveData>& SavedWidgets, TMap<FGuid, FLexUIObjectSaveData>& InSavedObjects, TMap<FGuid, FGuid>& MapSceneComponentToParent, FGuid ParentGuid);
 		void GenerateObjectArray(TMap<FGuid, FLexUIObjectSaveData>& SavedObjects, TMap<FGuid, FGuid>& MapSceneComponentToParent);
 
 		/** Mark of this deserialization session. If nested prefab, this is still the root prefab's value. */
@@ -304,11 +301,11 @@ namespace LexUIPrefabSystem
 		TFunction<void(ULexWidget*)> CallbackBeforeAwake = nullptr;
 
 		/**
-		 * @param	ULexWidget*		SubPrefab's root actor
+		 * @param	ULexWidget*		SubPrefab's root widget
 		 * @param	const TMap<FGuid, UObject*>&	SubPrefab's map guid to all object
-		 * @param	const TArray<ULexWidget*>&		SubPrefab's all created actor
+		 * @param	const TArray<ULexWidget*>&		SubPrefab's all created widget
 		 */
-		TFunction<void(ULexWidget*, const TMap<FGuid, TObjectPtr<UObject>>&, const TMap<TObjectPtr<UObject>, FGuid>&, const TArray<ULexWidget*>&, const TArray<UActorComponent*>&)> OnSubPrefabFinishDeserializeFunction = nullptr;
+		TFunction<void(ULexWidget*, const TMap<FGuid, TObjectPtr<UObject>>&, const TMap<TObjectPtr<UObject>, FGuid>&, const TArray<ULexWidget*>&)> OnSubPrefabFinishDeserializeFunction = nullptr;
 
 		/**
 		 * Writer and Reader for serialize or deserialize
@@ -326,9 +323,9 @@ namespace LexUIPrefabSystem
 		TFunction<void(UObject*, TArray<uint8>&, const TArray<FName>&)> WriterOrReaderFunctionForSubPrefabOverride = nullptr;
 	};
 
-	struct FDuplicateActorDataContainer
+	struct FDuplicateWidgetDataContainer
 	{
-		FLexUIPrefabSaveData ActorData;
-		ActorSerializer Serializer;
+		FLexUIPrefabSaveData WidgetData;
+		WidgetSerializer Serializer;
 	};
 }

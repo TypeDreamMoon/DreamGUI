@@ -1,14 +1,13 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "PrefabSystem/LexUIObjectReaderAndWriter.h"
-#include "PrefabSystem/ActorSerializerBase.h"
+#include "PrefabSystem/WidgetSerializerBase.h"
 #include "Serialization/MemoryReader.h"
 #include "Engine/Blueprint.h"
-#include "GameFramework/Actor.h"
 
 namespace LexUIPrefabSystem
 {
-	FLexUIOverrideParameterObjectWriter::FLexUIOverrideParameterObjectWriter(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, const TArray<FName>& InOverridePropertyNames)
+	FLexUIOverrideParameterObjectWriter::FLexUIOverrideParameterObjectWriter(TArray< uint8 >& Bytes, WidgetSerializerBase& InSerializer, const TArray<FName>& InOverridePropertyNames)
 		: FLexUIObjectWriter(Bytes, InSerializer, {})
 		, OverridePropertyNames(InOverridePropertyNames)
 	{
@@ -70,7 +69,7 @@ namespace LexUIPrefabSystem
 			}
 			return false;
 		}
-		if (Object->IsAsset() && !Object->GetClass()->IsChildOf(AActor::StaticClass()))
+		if (Object->IsAsset())
 		{
 			auto id = Serializer.FindOrAddAssetIdFromList(Object);
 			auto type = (uint8)EObjectType::Asset;
@@ -100,7 +99,7 @@ namespace LexUIPrefabSystem
 	}
 
 
-	FLexUIOverrideParameterObjectReader::FLexUIOverrideParameterObjectReader(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, const TArray<FName>& InOverridePropertyNames)
+	FLexUIOverrideParameterObjectReader::FLexUIOverrideParameterObjectReader(TArray< uint8 >& Bytes, WidgetSerializerBase& InSerializer, const TArray<FName>& InOverridePropertyNames)
 		: FLexUIObjectReader(Bytes, InSerializer, {})
 		, OverridePropertyNames(InOverridePropertyNames)
 	{
@@ -213,7 +212,7 @@ namespace LexUIPrefabSystem
 
 
 
-	FLexUIImmediateOverrideParameterObjectWriter::FLexUIImmediateOverrideParameterObjectWriter(UObject* Object, TArray< uint8 >& Bytes, ActorSerializerBase& Serializer, const TArray<FName>& InOverridePropertyNames)
+	FLexUIImmediateOverrideParameterObjectWriter::FLexUIImmediateOverrideParameterObjectWriter(UObject* Object, TArray< uint8 >& Bytes, WidgetSerializerBase& Serializer, const TArray<FName>& InOverridePropertyNames)
 		: FObjectWriter(Bytes)
 		, OverridePropertyNames(InOverridePropertyNames)
 	{
@@ -251,7 +250,7 @@ namespace LexUIPrefabSystem
 	}
 
 
-	FLexUIImmediateOverrideParameterObjectReader::FLexUIImmediateOverrideParameterObjectReader(UObject* Object, TArray< uint8 >& Bytes, ActorSerializerBase& Serializer, const TArray<FName>& InOverridePropertyNames)
+	FLexUIImmediateOverrideParameterObjectReader::FLexUIImmediateOverrideParameterObjectReader(UObject* Object, TArray< uint8 >& Bytes, WidgetSerializerBase& Serializer, const TArray<FName>& InOverridePropertyNames)
 		: FObjectReader(Bytes)
 		, OverridePropertyNames(InOverridePropertyNames)
 	{

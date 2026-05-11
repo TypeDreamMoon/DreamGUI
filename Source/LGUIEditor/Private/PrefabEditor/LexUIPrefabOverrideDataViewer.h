@@ -8,7 +8,7 @@
 class FLexUIPrefabEditor;
 struct FLexUIPrefabOverrideParameterData;
 class ULexUIPrefabHelperObject;
-class AActor;
+class ULexWidget;
 class ULexUIPrefab;
 
 DECLARE_DELEGATE_OneParam(FLexUIPrefabOverrideDataViewer_AfterRevertPrefab, ULexUIPrefab*);
@@ -22,14 +22,14 @@ public:
 		SLATE_EVENT(FLexUIPrefabOverrideDataViewer_AfterApplyPrefab, AfterApplyPrefab)
 	SLATE_END_ARGS()
 
-	void Construct(const FArguments& InArgs, TFunction<AActor*()> GetSelectedActorFunction);
+	void Construct(const FArguments& InArgs, TFunction<ULexWidget*()> GetSelectedActorFunction);
 	void RefreshDataContent();
 private:
-	void RefreshDataContent(TArray<FLexUIPrefabOverrideParameterData> ObjectOverrideParameterArray, AActor* InReferenceActor);
+	void RefreshDataContent(TArray<FLexUIPrefabOverrideParameterData> ObjectOverrideParameterArray, ULexWidget* InReferenceWidget);
 	FLexUIPrefabOverrideDataViewer_AfterRevertPrefab AfterRevertPrefab;
 	FLexUIPrefabOverrideDataViewer_AfterApplyPrefab AfterApplyPrefab;
 
 	TSharedPtr<SVerticalBox> RootContentVerticalBox;
 	TWeakObjectPtr<ULexUIPrefabHelperObject> PrefabHelperObject;
-	TFunction<AActor*()> GetSelectedActorFunction = nullptr;
+	TFunction<ULexWidget*()> GetSelectedWidgetFunction = nullptr;
 };

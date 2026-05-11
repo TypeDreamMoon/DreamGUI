@@ -5,15 +5,16 @@
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "LexUIPrefabEditor.h"
 #include "PropertyCustomizationHelpers.h"
+#include "Core/Components/LexWidget.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabOverrideDataViewer"
 
-void SLexUIPrefabOverrideDataViewer::Construct(const FArguments& InArgs, TFunction<AActor*()> InGetSelectedActorFunction)
+void SLexUIPrefabOverrideDataViewer::Construct(const FArguments& InArgs, TFunction<ULexWidget*()> InGetSelectedWidgetFunction)
 {
 	AfterRevertPrefab = InArgs._AfterRevertPrefab;
 	AfterApplyPrefab = InArgs._AfterApplyPrefab;
 
-	GetSelectedActorFunction = InGetSelectedActorFunction;
+	GetSelectedWidgetFunction = InGetSelectedWidgetFunction;
 	RootContentVerticalBox = SNew(SVerticalBox);
 	ChildSlot
 	[
@@ -25,35 +26,35 @@ void SLexUIPrefabOverrideDataViewer::Construct(const FArguments& InArgs, TFuncti
 
 void SLexUIPrefabOverrideDataViewer::RefreshDataContent()
 {
-	auto SelectedActor = GetSelectedActorFunction();
-	if (!SelectedActor)return;
-	PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(SelectedActor);
+	auto SelectedWidget = GetSelectedWidgetFunction();
+	if (!SelectedWidget)return;
+	PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget);
 	if (!PrefabHelperObject.IsValid())return;
 	
 	bool bIsSubPrefabRoot = false;
 	for (auto& KeyValue : PrefabHelperObject->SubPrefabMap)
 	{
-		if (KeyValue.Key == SelectedActor)
+		if (KeyValue.Key == SelectedWidget)
 		{
 			bIsSubPrefabRoot = true;
 			break;
 		}
 	}
-	this->RefreshDataContent(PrefabHelperObject->GetSubPrefabData(SelectedActor).ObjectOverrideParameterArray, bIsSubPrefabRoot ? nullptr : SelectedActor);
+	this->RefreshDataContent(PrefabHelperObject->GetSubPrefabData(SelectedWidget).ObjectOverrideParameterArray, bIsSubPrefabRoot ? nullptr : SelectedWidget);
 }
 
-void SLexUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLexUIPrefabOverrideParameterData> ObjectOverrideParameterArray, AActor* InReferenceActor)
+void SLexUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLexUIPrefabOverrideParameterData> ObjectOverrideParameterArray, ULexWidget* InReferenceWidget)
 {
 	RootContentVerticalBox->ClearChildren();
 	if (ObjectOverrideParameterArray.Num() == 0)return;
 
 	auto RootObject = ObjectOverrideParameterArray[0].Object.Get();
-	if (InReferenceActor != nullptr)
+	if (InReferenceWidget != nullptr)
 	{
 		for (int i = 0; i < ObjectOverrideParameterArray.Num(); i++)
 		{
 			auto& Item = ObjectOverrideParameterArray[i];
-			if (!Item.Object->IsInOuter(InReferenceActor))
+			if (!Item.Object->IsInOuter(InReferenceWidget))
 			{
 				ObjectOverrideParameterArray.RemoveAt(i);
 				i--;
@@ -231,7 +232,7 @@ void SLexUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLexUIPrefabOverr
 		}
 	}
 	//revert all, apply all
-	if(InReferenceActor == nullptr)
+	if(InReferenceWidget == nullptr)
 	{
 		RootContentVerticalBox->AddSlot()
 		.AutoHeight()

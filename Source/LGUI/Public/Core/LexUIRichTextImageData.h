@@ -48,6 +48,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		float GetAnimationFps()const { return AnimationFps; }
 
-	virtual void CreateOrUpdateObject(class ULexWidget* parent, const TArray<FLexUIText_RichTextImageTag>& imageTagArray, TArray<TObjectPtr<class ULexWidget>>& inOutCreatedImageObjectArray, bool listImageObjectInEditorOutliner)override;
+	virtual void CreateOrUpdateObject(class ULexWidget* parent, const TArray<FLexUIText_RichTextImageTag>& imageTagArray, TArray<TObjectPtr<class ULexWidget>>& inOutCreatedImageObjectArray)override;
 	virtual bool GetImageSize(const FName& imageTag, FIntVector2& outSize)override;
 };

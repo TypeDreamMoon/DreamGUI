@@ -3,7 +3,7 @@
 #include "PrefabSystem/LexUIPrefabInstanceScene.h"
 #include "PrefabSystem/LexUIPrefab.h"
 #include "Components/DirectionalLightComponent.h"
-#include "Core/Actor/LexWidgetContainer.h"
+#include "Core/Actor/LexWidgetPresenterComponent.h"
 #include "Core/Components/LexWidget.h"
 #include "Engine/TextureCube.h"
 #include "Event/LexScreenSpaceRaycaster.h"
@@ -67,11 +67,11 @@ FLexUIPrefabInstanceScene::FLexUIPrefabInstanceScene(ConstructionValues CVS) :FL
 	}
 }
 
-USceneComponent* FLexUIPrefabInstanceScene::GetParentComponentForPrefab(ULexUIPrefab* InPrefab)
+ULexWidget* FLexUIPrefabInstanceScene::GetParentForLoadPrefab(ULexUIPrefab* InPrefab)
 {
-	if (RootAgentActor != nullptr)
+	if (WidgetPresenter != nullptr)
 	{
-		return RootAgentActor->GetRootComponent();
+		return WidgetPresenter->GetRootWidget();
 	}
 	if (!IsValid(InPrefab))return nullptr;
 	auto Prefab = InPrefab;
@@ -95,29 +95,43 @@ USceneComponent* FLexUIPrefabInstanceScene::GetParentComponentForPrefab(ULexUIPr
 	
 	auto CanvasSize = Prefab->PrefabDataForPrefabEditor.CanvasSize;
 	//create Canvas for UI
-	auto RootUICanvasActor = this->GetWorld()->SpawnActor<ULexWidgetContainer>(ULexWidgetContainer::StaticClass(), FTransform::Identity);
-	RootUICanvasActor->GetRootComponent()->SetWorldLocationAndRotationNoPhysics(FVector::ZeroVector, FRotator(0, 0, 0));
+	auto WidgetPresenterActor = this->GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity);
+	auto RootComponent = WidgetPresenterActor->GetRootComponent();
+	if (!RootComponent)
 	{
-		auto RenderMode = (ELexRenderMode)Prefab->PrefabDataForPrefabEditor.CanvasRenderMode;
-		auto CanvasComp = NewObject<ULexCanvas>(RootUICanvasActor, TEXT("LexCanvas"));
-		CanvasComp->RegisterComponent();
-		RootUICanvasActor->AddInstanceComponent(CanvasComp);
-		CanvasComp->SetRenderMode(RenderMode);
-		CanvasComp->bFixedSizeInEditMode = true;
+		RootComponent = NewObject<USceneComponent>(WidgetPresenterActor, USceneComponent::GetDefaultSceneRootVariableName(), RF_Transactional);
+		RootComponent->Mobility = EComponentMobility::Movable;
+		RootComponent->bVisualizeComponent = false;
+
+		WidgetPresenterActor->SetRootComponent(RootComponent);
+		RootComponent->RegisterComponent();
+		WidgetPresenterActor->AddInstanceComponent(RootComponent);
 	}
+	RootComponent->SetWorldLocationAndRotationNoPhysics(FVector::ZeroVector, FRotator(0, 0, 0));
+	auto LexWidgetPresenterComponent = NewObject<ULexWidgetPresenterComponent>(WidgetPresenterActor, TEXT("LexWidgetPresenter"));
+	LexWidgetPresenterComponent->bIsSpawnFromPrefabFactory = true;
+	LexWidgetPresenterComponent->RegisterComponent();
+	WidgetPresenterActor->AddInstanceComponent(LexWidgetPresenterComponent);
+	{
+		auto Canvas = LexWidgetPresenterComponent->GetCanvas();
+		auto RenderMode = (ELexRenderMode)Prefab->PrefabDataForPrefabEditor.CanvasRenderMode;
+		Canvas->SetRenderMode(RenderMode);
+		Canvas->bFixedSizeInEditMode = true;
+	}
+	auto RootWidget = LexWidgetPresenterComponent->GetRootWidget();
 
-	RootUICanvasActor->GetLexWidget()->SetWidth(CanvasSize.X);
-	RootUICanvasActor->GetLexWidget()->SetHeight(CanvasSize.Y);
-	RootUICanvasActor->GetLexWidget()->SetSiblingIndex(0);
+	RootWidget->SetWidth(CanvasSize.X);
+	RootWidget->SetHeight(CanvasSize.Y);
+	RootWidget->SetSiblingIndex(0);
 
-	RootAgentActor = RootUICanvasActor;
+	WidgetPresenter = LexWidgetPresenterComponent;
 
 	//set properties
-	RootAgentActor->SetLockLocation(true);
-	RootAgentActor->SetActorLabel(*RootAgentActorName);
-	RootAgentActor->GetRootComponent()->SetWorldLocationAndRotationNoPhysics(FVector::ZeroVector, FRotator(0, 0, 0));
+	WidgetPresenterActor->SetLockLocation(true);
+	WidgetPresenterActor->SetActorLabel(*RootAgentActorName);
+	WidgetPresenterActor->GetRootComponent()->SetWorldLocationAndRotationNoPhysics(FVector::ZeroVector, FRotator(0, 0, 0));
 
-	return RootAgentActor->GetRootComponent();
+	return RootWidget;
 }
 
 void FLexUIPrefabInstanceScene::SetSkyCubeVisibility(bool bVisible)

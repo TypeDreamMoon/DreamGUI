@@ -124,10 +124,10 @@ bool UUIScrollViewWithScrollbarComponent::CheckScrollbarParameter()
 
 	return false;
 }
-bool UUIScrollViewWithScrollbarComponent::CheckValidHit(USceneComponent* InHitComp)
+bool UUIScrollViewWithScrollbarComponent::CheckValidHit(ULexWidget* InHitComp)
 {
-	bool bHitHorizontalScrollbar = HorizontalScrollbarWidget.IsValid() && (InHitComp->IsAttachedTo(HorizontalScrollbarWidget.Get()) || InHitComp == HorizontalScrollbarWidget);
-	bool bHitVerticalScrollbar = VerticalScrollbarWidget.IsValid() && (InHitComp->IsAttachedTo(VerticalScrollbarWidget.Get()) || InHitComp == VerticalScrollbarWidget);
+	bool bHitHorizontalScrollbar = HorizontalScrollbarWidget.IsValid() && (InHitComp->IsChildOf(HorizontalScrollbarWidget.Get()) || InHitComp == HorizontalScrollbarWidget);
+	bool bHitVerticalScrollbar = VerticalScrollbarWidget.IsValid() && (InHitComp->IsChildOf(VerticalScrollbarWidget.Get()) || InHitComp == VerticalScrollbarWidget);
 	return Super::CheckValidHit(InHitComp)
 		&& !bHitHorizontalScrollbar && !bHitVerticalScrollbar;//make sure hit component is not scrollbar
 }

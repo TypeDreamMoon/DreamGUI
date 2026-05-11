@@ -129,12 +129,6 @@ protected:
 	/** created object for emoji */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI", Transient, AdvancedDisplay)
 	TArray<TObjectPtr<ULexWidget>> CreatedEmojiObjectArray;
-#if WITH_EDITORONLY_DATA
-	UPROPERTY(EditAnywhere, Category = "LGUI", AdvancedDisplay)
-	bool bListRichTextImageObjectInOutliner = true;
-	UPROPERTY(EditAnywhere, Category = "LGUI", AdvancedDisplay)
-	bool bListEmojiObjectInOutliner = true;
-#endif
 private:
 	bool bHasAddToFont = false;
 

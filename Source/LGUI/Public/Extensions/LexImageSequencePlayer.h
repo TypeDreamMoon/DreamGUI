@@ -2,11 +2,11 @@
 
 #pragma once
 #include "Components/ActorComponent.h"
-#include "PrefabSystem/ILexUIPrefabInterface.h"
+#include "Core/LexUIBehaviour.h"
 #include "LexImageSequencePlayer.generated.h"
 
 UCLASS(Abstract)
-class LGUI_API ULexImageSequencePlayer : public UActorComponent, public ILexUIPrefabInterface
+class LGUI_API ULexImageSequencePlayer : public ULexUIBehaviour
 {
 	GENERATED_BODY()
 public:
@@ -30,9 +30,8 @@ protected:
 		bool bAffectByTimeDilation = false;
 	bool bIsPlaying = false;
 
-	virtual void Awake_Implementation()override;
 	virtual void BeginPlay()override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason)override;
+	virtual void EndPlay()override;
 	virtual void OnRegister()override;
 	virtual void OnUnregister()override;
 #if WITH_EDITOR

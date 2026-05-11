@@ -12,7 +12,7 @@ UUIToggleComponent* UUIToggleTransition::GetToggleComponent() const
 {
 	if (!IsValid(UIToggleComp))
 	{
-		UIToggleComp = GetOwner()->FindComponentByClass<UUIToggleComponent>();
+		UIToggleComp = GetWidget()->GetComponent<UUIToggleComponent>();
 	}
 	return UIToggleComp;
 }
@@ -59,9 +59,9 @@ void UUIToggleComponent::Start()
 	ApplyValueToUI(true);
 }
 
-void UUIToggleComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void UUIToggleComponent::EndPlay()
 {
-	Super::EndPlay(EndPlayReason);
+	Super::EndPlay();
 	if (ToggleGroup.IsValid())
 	{
 		ToggleGroup->RemoveToggleComponent(this);

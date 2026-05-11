@@ -5,8 +5,9 @@
 #include "ThumbnailRendering/SceneThumbnailInfo.h"
 #include "Core/Components/LexCanvas.h"
 #include "LGUIEditorModule.h"
-#include "Core/Actor/LexWidgetContainer.h"
+#include "Core/Actor/LexWidgetPresenterComponent.h"
 #include "Core/Components/LexWidget.h"
+#include "Interaction/UIRecyclableScrollViewComponent.h"
 #include "PrefabSystem/LexUIPrefab.h"
 
 
@@ -50,38 +51,59 @@ void FLexUIPrefabThumbnailScene::SpawnPreviewActor()
 {
 	if (CurrentPrefab.IsValid())
 	{
-		if (auto RootActor = CurrentPrefab->LoadPrefabInEditor(GetWorld(), nullptr))
+		if (!PresenterComponent.IsValid())
 		{
-			if (auto PrefabRootUIItem = Cast<ULexWidget>(RootActor->GetRootComponent()))
+			auto CanvasSize = CurrentPrefab->PrefabDataForPrefabEditor.CanvasSize;
+			//create Canvas for UI
+			auto WidgetPresenterActor = this->GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity);
+			auto RootComponent = WidgetPresenterActor->GetRootComponent();
+			if (!RootComponent)
 			{
-				auto RootCanvas = RootActor->FindComponentByClass<ULexCanvas>();
-				auto CanvasSize = CurrentPrefab->PrefabDataForPrefabEditor.CanvasSize;
-				auto AgentRootActor = GetWorld()->SpawnActor<ULexWidgetContainer>();
-				if (!RootCanvas)
-				{
-					RootCanvas = NewObject<ULexCanvas>(AgentRootActor);
-					RootCanvas->RegisterComponent();
-					RootActor->AddInstanceComponent(RootCanvas);
-				}
-				RootActor->AttachToComponent(AgentRootActor->GetLexWidget(), FAttachmentTransformRules::KeepRelativeTransform);
-				RootCanvas->MarkCanvasUpdate(true);
-				RootCanvas->SetRenderMode((ELexRenderMode)CurrentPrefab->PrefabDataForPrefabEditor.CanvasRenderMode);
+				RootComponent = NewObject<USceneComponent>(WidgetPresenterActor, USceneComponent::GetDefaultSceneRootVariableName(), RF_Transactional);
+				RootComponent->Mobility = EComponentMobility::Movable;
+				RootComponent->bVisualizeComponent = false;
 
-				if (PrefabRootUIItem)
-				{
-					AgentRootActor->GetLexWidget()->SetWidth(CanvasSize.X);
-					AgentRootActor->GetLexWidget()->SetHeight(CanvasSize.Y);
-				}
-
-				bIsUI = true;
+				WidgetPresenterActor->SetRootComponent(RootComponent);
+				RootComponent->RegisterComponent();
+				WidgetPresenterActor->AddInstanceComponent(RootComponent);
 			}
-			else
+			RootComponent->SetWorldLocationAndRotationNoPhysics(FVector::ZeroVector, FRotator(0, 0, 0));
+			auto LexWidgetPresenterComponent = NewObject<ULexWidgetPresenterComponent>(WidgetPresenterActor, TEXT("LexWidgetPresenter"));
+			LexWidgetPresenterComponent->bIsSpawnFromPrefabFactory = true;
+			LexWidgetPresenterComponent->RegisterComponent();
+			WidgetPresenterActor->AddInstanceComponent(LexWidgetPresenterComponent);
 			{
-				bIsUI = false;
+				auto Canvas = LexWidgetPresenterComponent->GetCanvas();
+				auto RenderMode = (ELexRenderMode)CurrentPrefab->PrefabDataForPrefabEditor.CanvasRenderMode;
+				Canvas->SetRenderMode(RenderMode);
+				Canvas->bFixedSizeInEditMode = true;
 			}
+			auto RootWidget = LexWidgetPresenterComponent->GetRootWidget();
+
+			RootWidget->SetWidth(CanvasSize.X);
+			RootWidget->SetHeight(CanvasSize.Y);
+			RootWidget->SetSiblingIndex(0);
+
+			PresenterComponent = LexWidgetPresenterComponent;
+		}
+		if (auto RootWidget = CurrentPrefab->LoadPrefabInEditor(GetWorld(), PresenterComponent.Get(), PresenterComponent->GetRootWidget()))
+		{
+			auto RootCanvas = RootWidget->GetComponent<ULexCanvas>();
+			auto CanvasSize = CurrentPrefab->PrefabDataForPrefabEditor.CanvasSize;
+			auto AgentRootWidget = NewObject<ULexWidget>(RootWidget->GetOuter());
+			if (!RootCanvas)
+			{
+				RootCanvas = AgentRootWidget->AddComponent<ULexCanvas>();
+			}
+			RootWidget->SetParent(AgentRootWidget, false);
+			RootCanvas->MarkCanvasUpdate(true);
+			RootCanvas->SetRenderMode((ELexRenderMode)CurrentPrefab->PrefabDataForPrefabEditor.CanvasRenderMode);
+
+			AgentRootWidget->SetWidth(CanvasSize.X);
+			AgentRootWidget->SetHeight(CanvasSize.Y);
 
 			bool isFirstBounds = true;
-			GetBoundsRecursive(RootActor->GetRootComponent(), PreviewActorsBound, isFirstBounds);
+			GetBoundsRecursive(RootWidget, PreviewActorsBound, isFirstBounds);
 			if (isFirstBounds)
 			{
 				PreviewActorsBound = FBoxSphereBounds(EForceInit::ForceInitToZero);
@@ -93,46 +115,39 @@ void FLexUIPrefabThumbnailScene::SpawnPreviewActor()
 		}
 	}
 }
-void FLexUIPrefabThumbnailScene::GetBoundsRecursive(USceneComponent* RootComp, FBoxSphereBounds& OutBounds, bool& IsFirstPrimitive)const
+void FLexUIPrefabThumbnailScene::GetBoundsRecursive(ULexWidget* RootWidget, FBoxSphereBounds& OutBounds, bool& IsFirstPrimitive)const
 {
-	if (!IsValid(RootComp))return;
-	if (RootComp->IsVisualizationComponent())return;
-	FBoxSphereBounds Bounds = FBoxSphereBounds(EForceInit::ForceInitToZero);
+	if (!IsValid(RootWidget))return;
+	FBoxSphereBounds Bounds;
 	bool bIsValidBounds = false;
-	if (RootComp->IsRegistered())
+	if (RootWidget->GetWidgetActiveInHierarchy())
 	{
-		auto UIItem = Cast<ULexWidget>(RootComp);
-		if (UIItem != nullptr)
+		if (auto Visual = RootWidget->GetVisual())
 		{
-			if (UIItem->GetWidgetActiveInHierarchy())
-			{
-				Bounds = UIItem->Bounds;
-				bIsValidBounds = true;
-			}
+			FVector Min, Max;
+			Visual->GetGeometryBounds3DInLocalSpace(Min, Max);
+			FBox Box = FBox(Min, Max);
+			Bounds = FBoxSphereBounds(Box);
+			Bounds = Bounds.TransformBy(RootWidget->GetWorldTransform());
+			bIsValidBounds = true;
+		}
+	}
+	if (bIsValidBounds)
+	{
+		if (IsFirstPrimitive)
+		{
+			OutBounds = Bounds;
+			IsFirstPrimitive = false;
 		}
 		else
 		{
-			Bounds = RootComp->Bounds;
-			bIsValidBounds = true;
-		}
-		if (bIsValidBounds)
-		{
-			if (IsFirstPrimitive)
-			{
-				OutBounds = Bounds;
-				IsFirstPrimitive = false;
-			}
-			else
-			{
-				OutBounds = OutBounds + Bounds;
-			}
+			OutBounds = OutBounds + Bounds;
 		}
 	}
 
-	auto childrenArray = RootComp->GetAttachChildren();
-	for (auto childComp : childrenArray)
+	for (auto& ChildWidget : RootWidget->GetChildren())
 	{
-		GetBoundsRecursive(childComp, OutBounds, IsFirstPrimitive);
+		GetBoundsRecursive(ChildWidget, OutBounds, IsFirstPrimitive);
 	}
 }
 void FLexUIPrefabThumbnailScene::ClearOldActors()
@@ -208,17 +223,8 @@ USceneThumbnailInfo* FLexUIPrefabThumbnailScene::GetSceneThumbnailInfo(const flo
 		ThumbnailInfo = NewObject<USceneThumbnailInfo>(Prefab);
 		Prefab->ThumbnailInfo = ThumbnailInfo;
 	}
-	if (bIsUI)
-	{
-		ThumbnailInfo->OrbitPitch = 0;
-		ThumbnailInfo->OrbitYaw = 90.0f;
-		ThumbnailInfo->OrbitZoom = 0;
-	}
-	else
-	{
-		ThumbnailInfo->OrbitPitch = -11.25f;
-		ThumbnailInfo->OrbitYaw = -157.5f;
-		ThumbnailInfo->OrbitZoom = 0;
-	}
+	ThumbnailInfo->OrbitPitch = 0;
+	ThumbnailInfo->OrbitYaw = 90.0f;
+	ThumbnailInfo->OrbitZoom = 0;
 	return ThumbnailInfo;
 }

@@ -96,7 +96,7 @@ class LGUI_API UUITextInputComponent : public UUISelectableComponent, public ILe
 protected:	
 	virtual void Awake() override;
 	virtual void Update(float DeltaTime) override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void EndPlay() override;
 #if WITH_EDITOR
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -267,6 +267,7 @@ public:
 	 */
 	bool VerifyAndInsertCharAtCaretPosition(TCHAR Value);
 private:
+	TWeakObjectPtr<AActor> InputComponentAgent;
 	void BindKeys();
 	void UnbindKeys();
 	void AnyKeyPressed(FKey key);

@@ -1,8 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Interaction/UISliderComponent.h"
-#include "LGUI.h"
-#include "Core/Actor/LexWidgetContainer.h"
 #include "Core/Components/LexWidget.h"
 
 void UUISliderComponent::Awake()
@@ -218,7 +216,7 @@ void UUISliderComponent::CalculateInputValue(ULexPointerEventData *EventData)
     if (MainWidget != nullptr && AreaWidget != nullptr)
     {
         //calculate value to 0-1 range
-        auto localPointerPosition = AreaWidget->GetComponentTransform().InverseTransformPosition(EventData->GetWorldPointInPlane());
+        auto localPointerPosition = AreaWidget->GetWorldTransform().InverseTransformPosition(EventData->GetWorldPointInPlane());
         float MinPosition = 0;
         float value01 = 0;
         switch (DirectionType)

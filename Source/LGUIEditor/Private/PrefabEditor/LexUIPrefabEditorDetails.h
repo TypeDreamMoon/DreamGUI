@@ -6,7 +6,7 @@
 #pragma once
 
 class FLexUIPrefabEditor;
-class AActor;
+class ULexWidget;
 
 /**
  * 
@@ -42,7 +42,7 @@ private:
 	TSharedPtr<class SBox> ComponentsBox;
 	TSharedPtr<class SSubobjectEditor> SubobjectEditor;
 	TSharedPtr<class SLexUIPrefabOverrideDataViewer> PrefabOverrideDataViewer;
-	TWeakObjectPtr<AActor> CachedActor;
+	TWeakObjectPtr<ULexWidget> CachedActor;
 	bool bIsSelectFromLexUIEditor = false;
 	bool bIsSelectFromDetails = false;
 };

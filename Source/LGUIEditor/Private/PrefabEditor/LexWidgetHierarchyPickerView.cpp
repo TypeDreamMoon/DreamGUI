@@ -72,22 +72,22 @@ void SLexWidgetHierarchyPickerView::RefreshImmediately()
 void SLexWidgetHierarchyPickerView::RefreshTree()
 {
 	RootWidgets.Empty();
-	if (auto RootItem = Cast<ULexWidget>(Manager.Pin()->GetLoadedRootActor()->GetRootComponent()))
+	if (auto RootItem = Cast<ULexWidget>(Manager.Pin()->GetLoadedRootWidget()))
 	{
-		RootWidgets.Add(MakeShared<FLexWidgetHierarchyPickerView_DataItem>(Manager.Pin()->GetLoadedRootActor()->GetActorLabel(), RootItem));
+		RootWidgets.Add(MakeShared<FLexWidgetHierarchyPickerView_DataItem>(Manager.Pin()->GetLoadedRootWidget()->GetDisplayName(), RootItem));
 	}
 
 	struct LOCAL
 	{
 		static void CollectChildren(DataType InParent, UClass* InObjectClass)
 		{
-			if (InParent->Widget->GetOwner()->IsA(InObjectClass))
+			if (InParent->Widget->IsA(InObjectClass))
 			{
-				InParent->ValidObjectArray.Add(InParent->Widget->GetOwner());
+				InParent->ValidObjectArray.Add(InParent->Widget);
 				InParent->bContainsValidObject = true;
 			}
 			
-			ForEachObjectWithOuter(InParent->Widget->GetOwner(), [=](UObject* SubObject)
+			ForEachObjectWithOuter(InParent->Widget.Get(), [=](UObject* SubObject)
 			{
 				if (SubObject->IsA(InObjectClass))
 				{

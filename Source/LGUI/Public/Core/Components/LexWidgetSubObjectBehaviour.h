@@ -21,6 +21,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	ULexWidget* GetWidget()const;
+	ULexWidget* GetOwner()const{return GetWidget();}
 protected:
 	virtual void OnRegister(){};
 	virtual void OnUnregister(){};

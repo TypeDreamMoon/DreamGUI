@@ -21,6 +21,7 @@
 #include "RayTracingInstance.h"
 #include "RayTracingGeometry.h"
 #include "Core/LexUIManager.h"
+#include "Core/Actor/LexWidgetPresenterComponent.h"
 #if WITH_EDITOR
 #include "PrefabSystem/LexUIPrefabManager.h"
 #endif
@@ -437,7 +438,7 @@ ULexUIRenderTargetGeometrySource::ULexUIRenderTargetGeometrySource()
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 
-	TargetCanvas = FLexUIComponentReference(ULexCanvas::StaticClass());
+	TargetWidgetPresenter = FLexUIComponentReference(ULexWidgetPresenterComponent::StaticClass());
 }
 
 void ULexUIRenderTargetGeometrySource::BeginPlay()
@@ -995,9 +996,9 @@ void ULexUIRenderTargetGeometrySource::PostEditChangeProperty(FPropertyChangedEv
 		{
 			CylinderArcAngle = FMath::Sign(CylinderArcAngle) * FMath::Clamp(FMath::Abs(CylinderArcAngle), 1.0f, 180.0f);
 		}
-		else if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(ULexUIRenderTargetGeometrySource, TargetCanvas))
+		else if (PropertyName == GET_MEMBER_NAME_STRING_CHECKED(ULexUIRenderTargetGeometrySource, TargetWidgetPresenter))
 		{
-			if (!TargetCanvas.IsValidComponentReference())
+			if (!TargetWidgetPresenter.IsValidComponentReference())
 			{
 				TargetCanvasObject = nullptr;
 			}
@@ -1017,12 +1018,18 @@ ULexCanvas* ULexUIRenderTargetGeometrySource::GetCanvas()const
 	{
 		return TargetCanvasObject.Get();
 	}
-	if (!TargetCanvas.IsValidComponentReference())
+	if (!TargetWidgetPresenter.IsValidComponentReference())
 	{
-		UE_LOG(LGUI, Warning, TEXT("[%s].%d TargetCanvas not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d TargetWidgetPresenter not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return nullptr;
 	}
-	auto Canvas = TargetCanvas.GetComponent<ULexCanvas>();
+	auto WidgetPresenter = TargetWidgetPresenter.GetComponent<ULexWidgetPresenterComponent>();
+	if (WidgetPresenter == nullptr)
+	{
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d TargetWidgetPresenter not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return nullptr;
+	}
+	auto Canvas = WidgetPresenter->GetCanvas();
 	if (Canvas == nullptr)
 	{
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d TargetCanvas not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);

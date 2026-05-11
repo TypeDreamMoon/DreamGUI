@@ -1,13 +1,10 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Interaction/UIScrollbarComponent.h"
-#include "LGUI.h"
-#include "Core/Actor/LexWidgetContainer.h"
 #include "Core/Components/LexWidget.h"
 
 UUIScrollbarComponent::UUIScrollbarComponent()
 {
-    PrimaryComponentTick.bCanEverTick = false;
 }
 
 void UUIScrollbarComponent::Awake()
@@ -128,9 +125,9 @@ bool UUIScrollbarComponent::OnPointerDown_Implementation(ULexPointerEventData* E
     {
         if (CheckHandle())
         {
-            if (EventData->EnterComponent != Handle)
+            if (EventData->EnterWidget != Handle)
             {
-                const auto& pointerInHandleAreaSpace = HandleArea->GetComponentTransform().InverseTransformPosition(EventData->WorldPoint);
+                const auto& pointerInHandleAreaSpace = HandleArea->GetWorldTransform().InverseTransformPosition(EventData->WorldPoint);
                 float value01 = Value;
                 switch (DirectionType)
                 {

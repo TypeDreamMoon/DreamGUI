@@ -125,9 +125,9 @@ void ULexUMGWidgetInteraction::Awake()
 	this->SetCanExecuteUpdate(false);//disable update by default
 }
 
-void ULexUMGWidgetInteraction::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void ULexUMGWidgetInteraction::EndPlay()
 {
-	Super::EndPlay(EndPlayReason);
+	Super::EndPlay();
 
 	if (FSlateApplication::IsInitialized())
 	{
@@ -163,7 +163,7 @@ bool ULexUMGWidgetInteraction::CanSendInput()
 	return FSlateApplication::IsInitialized() && VirtualUser.IsValid() && WidgetComponent != nullptr;
 }
 
-void ULexUMGWidgetInteraction::SetCustomHitResult(const FHitResult& HitResult)
+void ULexUMGWidgetInteraction::SetCustomHitResult(const FLexUIHitResult& HitResult)
 {
 	CustomHitResult = HitResult;
 }
@@ -173,34 +173,6 @@ void ULexUMGWidgetInteraction::SetFocus(UWidget* FocusWidget)
 	if (VirtualUser.IsValid())
 	{
 		FSlateApplication::Get().SetUserFocus(VirtualUser->GetUserIndex(), FocusWidget->GetCachedWidget(), EFocusCause::SetDirectly);
-	}
-}
-
-void ULexUMGWidgetInteraction::GetRelatedComponentsToIgnoreInAutomaticHitTesting(TArray<UPrimitiveComponent*>& IgnorePrimitives) const
-{
-	TArray<USceneComponent*> SceneChildren;
-	if (AActor* Owner = GetOwner())
-	{
-		if (USceneComponent* Root = Owner->GetRootComponent())
-		{
-			Root = Root->GetAttachmentRoot();
-			Root->GetChildrenComponents(true, SceneChildren);
-			SceneChildren.Add(Root);
-		}
-	}
-
-	for (USceneComponent* SceneComponent : SceneChildren)
-	{
-		if (UPrimitiveComponent* PrimtiveComponet = Cast<UPrimitiveComponent>(SceneComponent))
-		{
-			// Don't ignore widget components that are siblings.
-			if (SceneComponent->IsA<ULexUMGWidget>())
-			{
-				continue;
-			}
-
-			IgnorePrimitives.Add(PrimtiveComponet);
-		}
 	}
 }
 

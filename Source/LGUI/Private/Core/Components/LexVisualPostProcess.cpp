@@ -154,7 +154,7 @@ void ULexVisualPostProcess::OnUpdateGeometry(bool InTriangleChanged, bool InVert
 		{
 			if (InVertexPositionChanged)
 			{
-				auto Widget = bUseFullSize ? GetWidget()->GetRenderCanvas()->GetRootCanvas()->GetLexWidget() : this->GetWidget();
+				auto Widget = bUseFullSize ? GetWidget()->GetRenderCanvas()->GetRootCanvas()->GetWidget() : this->GetWidget();
 				//offset and size
 				float pivotOffsetX = 0, pivotOffsetY = 0;
 				FLexUIGeometry::CalculatePivotOffset(Widget->GetWidth(), Widget->GetHeight(), FVector2f(Widget->GetPivot()), pivotOffsetX, pivotOffsetY);
@@ -240,7 +240,7 @@ void ULexVisualPostProcess::UpdateGeometryClipData(FLexUIGeometry& InMesh, int I
 
 void ULexVisualPostProcess::SendRegionVertexDataToRenderProxy()
 {
-	auto Widget = bUseFullSize ? GetWidget()->GetRenderCanvas()->GetRootCanvas()->GetLexWidget() : this->GetWidget();
+	auto Widget = bUseFullSize ? GetWidget()->GetRenderCanvas()->GetRootCanvas()->GetWidget() : this->GetWidget();
 	auto RenderCanvas = Widget->GetRenderCanvas();
 	if (RenderProxy && RenderCanvas)
 	{
@@ -259,14 +259,14 @@ void ULexVisualPostProcess::SendRegionVertexDataToRenderProxy()
 		updateData->renderMeshRegionToScreenVertexArray = this->RenderMeshRegionToScreenVertexArray;
 		updateData->renderScreenToMeshRegionVertexArray = this->RenderScreenToMeshRegionVertexArray;
 		updateData->RectSize = FVector2f(Widget->GetWidth(), Widget->GetHeight());
-		updateData->objectToWorldMatrix = FMatrix44f(RenderCanvas->GetLexWidget()->GetComponentTransform().ToMatrixWithScale());
+		updateData->objectToWorldMatrix = FMatrix44f(RenderCanvas->GetWidget()->GetWorldTransform().ToMatrixWithScale());
 		updateData->bUseFullSize = bUseFullSize;
 		{
 			updateData->BoundingBox = FBox(EForceInit::ForceInit);
 			FVector2D Min, Max;
 			this->GetGeometryBoundsInLocalSpace(Min, Max);
-			auto WorldMin = this->GetWidget()->GetComponentToWorld().TransformPosition(FVector(0, Min.X, Min.Y));
-			auto WorldMax = this->GetWidget()->GetComponentToWorld().TransformPosition(FVector(0, Max.X, Max.Y));
+			auto WorldMin = this->GetWidget()->GetWorldTransform().TransformPosition(FVector(0, Min.X, Min.Y));
+			auto WorldMax = this->GetWidget()->GetWorldTransform().TransformPosition(FVector(0, Max.X, Max.Y));
 			updateData->BoundingBox += WorldMin;
 			updateData->BoundingBox += WorldMax;
 		}
@@ -378,7 +378,7 @@ bool ULexVisualPostProcess::HaveValidData()const
 	return Geometry->Vertices.Num() > 0;
 }
 
-bool ULexVisualPostProcess::LineTraceUI(FHitResult& OutHit, const FVector& Start, const FVector& End)const
+bool ULexVisualPostProcess::LineTraceUI(FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const
 {
 	if (RaycastType == ELexVisualRaycastType::Rect)
 	{

@@ -62,7 +62,7 @@ public:
 
 	// Begin ActorComponent interface
 	virtual void Awake() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void EndPlay() override;
 	virtual void Update(float DeltaTime) override;
 	// End UActorComponent
 
@@ -151,7 +151,7 @@ public:
 	 * Set custom hit result.  This is only taken into account if InteractionSource is set to EWidgetInteractionSource::Custom.
 	 */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-	void SetCustomHitResult(const FHitResult& HitResult);
+	void SetCustomHitResult(const FLexUIHitResult& HitResult);
 
 	/**
 	 * Set the focus target of the virtual user managed by this component
@@ -205,12 +205,6 @@ protected:
 		FWidgetPath HitWidgetPath;
 	};
 
-	/**
-	 * Gets the list of components to ignore during hit testing.  Which is everything that is a parent/sibling of this
-	 * component that's not a Widget Component.  This is so traces don't get blocked by capsules and such around the player.
-	 */
-	void GetRelatedComponentsToIgnoreInAutomaticHitTesting(TArray<UPrimitiveComponent*>& IgnorePrimitives) const;
-
 	/** Returns true if the inteaction component can interact with the supplied widget component */
 	bool CanInteractWithComponent(ULexUMGWidget* Component) const;
 
@@ -227,7 +221,7 @@ protected:
 
 	/** Stores the custom hit result set by the player. */
 	UPROPERTY(Transient)
-	FHitResult CustomHitResult;
+	FLexUIHitResult CustomHitResult;
 
 	/** The 2D location on the widget component that was hit. */
 	UPROPERTY(Transient)

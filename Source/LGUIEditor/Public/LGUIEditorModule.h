@@ -22,7 +22,7 @@ public:
 
 	static FLGUIEditorModule& Get();
 	
-	TSharedRef<SWidget> MakeEditorToolsMenu(TFunction<AActor*()> GetSelectedActorFunction, TFunction<void(FMenuBuilder&)> ExtendEditMenuFunction);
+	TSharedRef<SWidget> MakeEditorToolsMenu(TFunction<ULexWidget*()> GetSelectedWidgetFunction, TFunction<void(FMenuBuilder&)> ExtendEditMenuFunction);
 	TSharedPtr<class FUICommandList> PluginCommands;
 	TArray<TSharedPtr<class FAssetTypeActions_Base>> AssetTypeActionsArray;
 
@@ -31,10 +31,10 @@ private:
 
 	bool IsValidClassName(const FString& InName);
 
-	void CreateUIElementSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction);
-	void CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction);
-	void CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction);
-	void CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder, TFunction<AActor*()> GetSelectedActorFunction);
+	void CreateUIElementSubMenu(FMenuBuilder& MenuBuilder, TFunction<ULexWidget*()> GetSelectedWidgetFunction);
+	void CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder, TFunction<ULexWidget*()> GetSelectedWidgetFunction);
+	void CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder, TFunction<ULexWidget*()> GetSelectedWidgetFunction);
+	void CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder, TFunction<ULexWidget*()> GetSelectedActorFunction);
 
 	TWeakObjectPtr<class ULexUIPrefabHelperObject> CurrentPrefabHelperObject;
 

@@ -19,16 +19,18 @@ class LGUI_API ULexUIBehaviour : public UObject
 	GENERATED_BODY()
 public:
 	ULexUIBehaviour();
+	friend class ULexWidget;
 protected:
 	virtual void BeginPlay();
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction);
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason);
+	virtual void TickComponent(float DeltaTime);
+	virtual void EndPlay();
 
 	virtual void OnRegister();
 	virtual void OnUnregister();
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
 #endif
+	virtual void BeginDestroy() override;
 
 	enum class ECallbackFunctionType :int32
 	{
@@ -51,6 +53,9 @@ protected:
 	uint8 bCanExecuteUpdate : 1 = true;
 	/** use this to tell if the class is compiled from blueprint, only blueprint can execute ReceiveXXX. */
 	uint8 bCanExecuteBlueprintEvent : 1;
+
+	UPROPERTY(EditAnywhere, Category=LexUIBehaviour)
+	uint8 bTickEvenWhenPaused : 1 = false;
 private:
 	friend class ULexUIManagerWorldSubsystem;
 	void Call_Awake();
@@ -59,8 +64,6 @@ private:
 	void Call_OnDisable();
 	UPROPERTY(Transient, Getter=GetWidget, DisplayName=Widget, BlueprintReadOnly, Category=LexUIBehaviour, meta=(AllowPrivateAccess=true))
 	mutable TObjectPtr<ULexWidget> CacheWidget = nullptr;
-	UPROPERTY(Transient, Getter=GetSceneComponent, DisplayName=SceneComponent, BlueprintReadOnly, Category=LexUIBehaviour, meta=(AllowPrivateAccess=true))
-	mutable TObjectPtr<USceneComponent> CacheSceneComp = nullptr;
 protected:
 
 	bool IsAllowToCallAwake()const;
@@ -133,14 +136,11 @@ public:
 	 * Set if this component can execute "Update" event or not. "CanExecuteUpdate" is true by default.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LexUIBehaviour")
-		void SetCanExecuteUpdate(bool Value);
-	
-	UFUNCTION(BlueprintCallable, Category = "LexUIBehaviour")
-	USceneComponent* GetSceneComponent()const;
+	void SetCanExecuteUpdate(bool Value);
 	
 	UFUNCTION(BlueprintCallable, Category = "LexUIBehaviour")
 	ULexWidget* GetWidget() const;
 	
 	UFUNCTION(BlueprintCallable, Category = "LexUIBehaviour")
-	void DestroyWidget()const;
+	void DestroyComponent();
 };

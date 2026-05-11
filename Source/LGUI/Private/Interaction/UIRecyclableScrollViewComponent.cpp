@@ -2,7 +2,6 @@
 
 #include "Interaction/UIRecyclableScrollViewComponent.h"
 #include "LGUI.h"
-#include "Core/Actor/LexWidgetContainer.h"
 #include "LexUIBPLibrary.h"
 #include "LTweenManager.h"
 #include "Core/Components/LexWidget.h"
@@ -24,13 +23,13 @@ void UUIRecyclableScrollViewComponent::Update(float DeltaTime)
     Super::Update(DeltaTime);
 }
 
-void UUIRecyclableScrollViewComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void UUIRecyclableScrollViewComponent::EndPlay()
 {
     if (OnScrollEventDelegateHandle.IsValid())
     {
         this->GetOnValueChangedEvent().Remove(OnScrollEventDelegateHandle);
     }
-    Super::EndPlay(EndPlayReason);
+    Super::EndPlay();
 }
 
 #if WITH_EDITOR
@@ -137,7 +136,7 @@ void UUIRecyclableScrollViewComponent::ClearAllCells()
     {
         if (IsValid(Item.Widget))
         {
-            ULexUIBPLibrary::DestroyActorWithHierarchy(Item.Widget->GetOwner());
+            Item.Widget->DestroyWidget();
         }
     }
     CacheCellList.Empty();
@@ -356,7 +355,7 @@ void UUIRecyclableScrollViewComponent::ScrollToByDataIndex(int InDataIndex, bool
     }
 }
 
-void UUIRecyclableScrollViewComponent::SetCellTemplate(ULexWidgetContainer* value)
+void UUIRecyclableScrollViewComponent::SetCellTemplate(ULexWidget* value)
 {
     if (CellTemplate != value)
     {
@@ -364,14 +363,15 @@ void UUIRecyclableScrollViewComponent::SetCellTemplate(ULexWidgetContainer* valu
     }
 }
 
-void UUIRecyclableScrollViewComponent::SetCellTemplatePrefab(class ULexUIPrefab* value)
+void UUIRecyclableScrollViewComponent::SetCellTemplatePrefab(ULexUIPrefab* value)
 {
     if (CellTemplatePrefab != value)
     {
         CellTemplatePrefab = value;
         if (WorkingCellTemplateType == EUIRecyclableScrollViewCellTemplateType::Prefab)//if WorkingCellTemplate is created by prefab, then we need to destroy it so a new one will be created from new prefab
         {
-            ULexUIBPLibrary::DestroyActorWithHierarchy(WorkingCellTemplate.Get());
+            WorkingCellTemplate->DestroyWidget();
+            WorkingCellTemplate = nullptr;
         }
     }
 }
@@ -383,17 +383,6 @@ void UUIRecyclableScrollViewComponent::InitializeOnDataSource()
     if (Horizontal == Vertical)return;
     DataItemCount = IUIRecyclableScrollViewDataSource::Execute_GetItemCount(DataSource);
 
-    auto GetComponentByInterface = [](AActor* InActor, UClass* InInterfaceClass) {
-        for (UActorComponent* Component : InActor->GetComponents())
-        {
-            if (Component && Component->GetClass()->ImplementsInterface(InInterfaceClass))
-            {
-                return Component;
-            }
-        }
-        return (UActorComponent*)nullptr;
-    };
-
     switch (CellTemplateType)
     {
     default:
@@ -401,7 +390,7 @@ void UUIRecyclableScrollViewComponent::InitializeOnDataSource()
     {
         if (!IsValid(CellTemplate))return;
         WorkingCellTemplate = CellTemplate;
-        if (GetComponentByInterface(WorkingCellTemplate.Get(), UUIRecyclableScrollViewCell::StaticClass()) == nullptr)
+        if (WorkingCellTemplate.Get()->GetComponentByInterface(UUIRecyclableScrollViewCell::StaticClass()) == nullptr)
         {
             UE_LOG(LGUI, Error, TEXT("[%s] CellTemplate's root actor must have a ActorComponent which implement UIRecyclableScrollViewCell interface!"), ANSI_TO_TCHAR(__FUNCTION__));
             return;
@@ -414,18 +403,20 @@ void UUIRecyclableScrollViewComponent::InitializeOnDataSource()
         if (!IsValid(CellTemplatePrefab))return;
         if (WorkingCellTemplateType != EUIRecyclableScrollViewCellTemplateType::Prefab || !WorkingCellTemplate.IsValid())//WorkingCellTemplate is already created by prefab
         {
-            auto CellTemplateInstance = CellTemplatePrefab->LoadPrefab(this->GetWorld(), Content.Get());
-            WorkingCellTemplate = Cast<ULexWidgetContainer>(CellTemplateInstance);
+            auto CellTemplateInstance = CellTemplatePrefab->LoadPrefab(this->GetWorld(), this->GetOuter(), Content.Get());
+            WorkingCellTemplate = CellTemplateInstance;
         }
         if (!WorkingCellTemplate.IsValid())
         {
-            ULexUIBPLibrary::DestroyActorWithHierarchy(WorkingCellTemplate.Get());
+            WorkingCellTemplate->DestroyWidget();
+            WorkingCellTemplate = nullptr;
             UE_LOG(LGUI, Error, TEXT("[%s] CellTemplatePrefab's root actor must be a UI actor!"), ANSI_TO_TCHAR(__FUNCTION__));
             return;
         }
-        if (GetComponentByInterface(WorkingCellTemplate.Get(), UUIRecyclableScrollViewCell::StaticClass()) == nullptr)
+        if (WorkingCellTemplate.Get()->GetComponentByInterface(UUIRecyclableScrollViewCell::StaticClass()) == nullptr)
         {
-            ULexUIBPLibrary::DestroyActorWithHierarchy(WorkingCellTemplate.Get());
+            WorkingCellTemplate->DestroyWidget();
+            WorkingCellTemplate = nullptr;
             UE_LOG(LGUI, Error, TEXT("[%s] CellTemplatePrefab's root actor must have a ActorComponent which implement UIRecyclableScrollViewCell interface!"), ANSI_TO_TCHAR(__FUNCTION__));
             return;
         }
@@ -433,8 +424,8 @@ void UUIRecyclableScrollViewComponent::InitializeOnDataSource()
     }
         break;
     }
-    WorkingCellTemplateSize.X = WorkingCellTemplate->GetLexWidget()->GetWidth();
-    WorkingCellTemplateSize.Y = WorkingCellTemplate->GetLexWidget()->GetHeight();
+    WorkingCellTemplateSize.X = WorkingCellTemplate->GetWidth();
+    WorkingCellTemplateSize.Y = WorkingCellTemplate->GetHeight();
 
 
     if (OnScrollEventDelegateHandle.IsValid())
@@ -492,9 +483,9 @@ void UUIRecyclableScrollViewComponent::InitializeOnDataSource()
         float ContentSize = VerticalCellCount * CellHeight + (VerticalCellCount - 1) * Space.Y + Padding.Bottom + Padding.Top;
         Content->SetHeight(ContentSize);
     }
-    WorkingCellTemplate->GetLexWidget()->SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.0f, 1.0f), FVector2D(0.0f, 1.0f), true, true);
+    WorkingCellTemplate->SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.0f, 1.0f), FVector2D(0.0f, 1.0f), true, true);
 
-    WorkingCellTemplate->GetLexWidget()->SetWidgetActive(true);
+    WorkingCellTemplate->SetWidgetActive(true);
     float CellWidth;
     float CellHeight;
     if (Horizontal)
@@ -522,23 +513,22 @@ void UUIRecyclableScrollViewComponent::InitializeOnDataSource()
     }
     while (CacheCellList.Num() < VisibleCellCount)
     {
-        auto CopiedCell = (ULexWidgetContainer*)ULexUIBPLibrary::DuplicateActorWithPreparedData(DuplicateData, Content.Get());
-        auto CellInterfaceClass = UUIRecyclableScrollViewCell::StaticClass();
-        auto CellInterfaceComponent = GetComponentByInterface(CopiedCell, CellInterfaceClass);
+        auto CopiedCell = ULexUIBPLibrary::DuplicateWidgetWithPreparedData(this, DuplicateData, Content.Get());
+        auto CellInterfaceComponent = CopiedCell->GetComponentByInterface(UUIRecyclableScrollViewCell::StaticClass());
         FUIRecyclableScrollViewCellContainer CellContainer;
-        CellContainer.Widget = CopiedCell->GetLexWidget();
+        CellContainer.Widget = CopiedCell;
         CellContainer.CellComponent = CellInterfaceComponent;
         check(CellInterfaceComponent != nullptr);
         IUIRecyclableScrollViewDataSource::Execute_InitOnCreate(DataSource, CellInterfaceComponent);
         CacheCellList.Add(CellContainer);
     }
-    WorkingCellTemplate->GetLexWidget()->SetWidgetActive(false);
+    WorkingCellTemplate->SetWidgetActive(false);
     //delete extra cells
     while (CacheCellList.Num() > VisibleCellCount)
     {
         int LastIndex = CacheCellList.Num() - 1;
         auto& Item = CacheCellList[LastIndex];
-        ULexUIBPLibrary::DestroyActorWithHierarchy(Item.Widget->GetOwner());
+        Item.Widget->DestroyWidget();
         CacheCellList.RemoveAt(LastIndex);
     }
     MinCellIndexInCacheCellList = 0;

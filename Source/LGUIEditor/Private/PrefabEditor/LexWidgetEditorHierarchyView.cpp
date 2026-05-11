@@ -2,15 +2,12 @@
 
 #include "LexWidgetEditorHierarchyView.h"
 
-#include "LexUIEditorTools.h"
 #include "LGUIEditorModule.h"
 #include "LexUIPrefabEditor.h"
-#include "LexUIPrefabOverrideDataViewer.h"
 #include "LexWidgetEditorHierarchyViewItem.h"
 #include "Core/LexUIManager.h"
 #include "Widgets/Layout/SScrollBorder.h"
 #include "Widgets/Input/SSearchBox.h"
-#include "Core/Components/LexRectBlock.h"
 #include "Framework/Commands/GenericCommands.h"
 #include "PrefabSystem/LexUIPrefab.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
@@ -221,7 +218,7 @@ void SLexWidgetEditorHierarchyView::RefreshImmediately()
 void SLexWidgetEditorHierarchyView::RefreshTree()
 {
 	RootWidgets.Empty();
-	if (auto RootItem = Cast<ULexWidget>(Manager.Pin()->GetRootAgentActor()->GetRootComponent()))
+	if (auto RootItem = Manager.Pin()->GetRootAgentWidget())
 	{
 		RootWidgets.Add(RootItem);
 	}
@@ -390,34 +387,34 @@ void SLexWidgetEditorHierarchyView::OnExpansionChanged(TWeakObjectPtr<ULexWidget
 }
 TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 {
-	TFunction<AActor*()> GetSelectedActorFunction = [this]()
+	TFunction<ULexWidget*()> GetSelectedWidgetFunction = [this]()
 	{
 		if (Manager.IsValid())
 		{
-			if (Manager.Pin()->GetSelectedActors().Num() == 1)
+			if (Manager.Pin()->GetSelectedWidgets().Num() == 1)
 			{
-				auto Actor = Manager.Pin()->GetSelectedActors()[0];
-				if (Actor.IsValid())
+				auto Widget = Manager.Pin()->GetSelectedWidgets()[0];
+				if (Widget.IsValid())
 				{
-					return Actor.Get();
+					return Widget.Get();
 				}
 			}
 		}
-		return (AActor*)nullptr;
+		return (ULexWidget*)nullptr;
 	};
-	TFunction<TArray<AActor*>()> GetSelectedActorsFunction = [this]()
+	TFunction<TArray<ULexWidget*>()> GetSelectedWidgetsFunction = [this]()
 	{
-		TArray<AActor*> Actors;
+		TArray<ULexWidget*> Widgets;
 		if (Manager.IsValid())
 		{
-			for (auto Actor : Manager.Pin()->GetSelectedActors())
+			for (auto Widget : Manager.Pin()->GetSelectedWidgets())
 			{
-				Actors.Add(Actor.Get());
+				Widgets.Add(Widget.Get());
 			}
 		}
-		return Actors;
+		return Widgets;
 	};
-	return FLGUIEditorModule::Get().MakeEditorToolsMenu( GetSelectedActorFunction, [=, this](FMenuBuilder& MenuBuilder)
+	return FLGUIEditorModule::Get().MakeEditorToolsMenu( GetSelectedWidgetFunction, [=, this](FMenuBuilder& MenuBuilder)
 	{
 		MenuBuilder.BeginSection("Edit", LOCTEXT("Edit", "Edit"));
 		{
@@ -435,17 +432,6 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 				MenuBuilder.AddMenuEntry(FGenericCommands::Get().Rename);
 			}
 			MenuBuilder.PopCommandList();
-
-			MenuBuilder.AddMenuEntry(
-				LOCTEXT("IsSpatiallyLoaded", "IsSpatiallyLoaded"),
-				LOCTEXT("IsSpatiallyLoaded_Tooltip", "Toggle selected actor (and children actor) IsSpatiallyLoaded property for WorldPartition"),
-				FSlateIcon(),
-				FUIAction(
-				FExecuteAction::CreateStatic(&FLexUIEditorTools::ToggleSelectedActorsSpatiallyLoaded, GetSelectedActorsFunction),
-				FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanToggleActorsSpatiallyLoaded, GetSelectedActorsFunction),
-				FGetActionCheckState::CreateStatic(&FLexUIEditorTools::GetActorsSpatiallyLoadedProperty, GetSelectedActorsFunction),
-				FIsActionButtonVisible::CreateStatic(&FLexUIEditorTools::CanToggleActorsSpatiallyLoaded, GetSelectedActorsFunction)
-				), NAME_None, EUserInterfaceActionType::ToggleButton);
 		}
 		MenuBuilder.EndSection();
 	});

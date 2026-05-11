@@ -1,15 +1,13 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "PrefabSystem/LexUIObjectReaderAndWriter.h"
-#include "PrefabSystem/ActorSerializerBase.h"
+#include "PrefabSystem/WidgetSerializerBase.h"
 #include "Serialization/MemoryReader.h"
-#include "GameFramework/Actor.h"
 #include "Engine/Blueprint.h"
-#include "GameFramework/Actor.h"
 
 namespace LexUIPrefabSystem
 {
-	FLexUIDuplicateObjectWriter::FLexUIDuplicateObjectWriter(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, TSet<FName> InSkipPropertyNames)
+	FLexUIDuplicateObjectWriter::FLexUIDuplicateObjectWriter(TArray< uint8 >& Bytes, WidgetSerializerBase& InSerializer, TSet<FName> InSkipPropertyNames)
 		: FLexUIObjectWriter(Bytes, InSerializer, InSkipPropertyNames)
 	{
 		
@@ -67,7 +65,7 @@ namespace LexUIPrefabSystem
 			}
 			return false;
 		}
-		if (Object->IsAsset() && !Object->GetClass()->IsChildOf(AActor::StaticClass()))
+		if (Object->IsAsset())
 		{
 			auto id = Serializer.FindOrAddAssetIdFromList(Object);
 			auto type = (uint8)EObjectType::Asset;
@@ -115,7 +113,7 @@ namespace LexUIPrefabSystem
 
 
 
-	FLexUIDuplicateObjectReader::FLexUIDuplicateObjectReader(TArray< uint8 >& Bytes, ActorSerializerBase& InSerializer, TSet<FName> InSkipPropertyNames)
+	FLexUIDuplicateObjectReader::FLexUIDuplicateObjectReader(TArray< uint8 >& Bytes, WidgetSerializerBase& InSerializer, TSet<FName> InSkipPropertyNames)
 		: FLexUIObjectReader(Bytes, InSerializer, InSkipPropertyNames)
 	{
 

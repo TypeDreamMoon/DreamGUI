@@ -10,7 +10,7 @@ class ULexWidget;
 class ULexUIPrefabHelperObject;
 class ULexUIPrefab;
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FEditingPrefabChangedDelegate, AActor*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FEditingPrefabChangedDelegate, ULexWidget*);
 DECLARE_MULTICAST_DELEGATE_OneParam(FBeforeApplyPrefabDelegate, ULexUIPrefabHelperObject*);
 
 class LGUIEDITOR_API FLexUIEditorTools
@@ -21,41 +21,36 @@ public:
 	static FString LexUIPresetPrefabPath;
 	static FEditingPrefabChangedDelegate OnEditingPrefabChanged;
 	static FBeforeApplyPrefabDelegate OnBeforeApplyPrefab;
-	static TArray<AActor*> GetRootActorListFromSelection(const TArray<AActor*>& selectedActors);
-	static void CreateLexWidget(TFunction<AActor*()> GetSelectedActorFunction, FString Name, UClass* VisualClass, TFunction<void(class ULexWidget*)> Callback);
-	static void CreateUIControls(TFunction<AActor*()> GetSelectedActorFunction, FString InPrefabPath);
-	static void DuplicateActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
-	static void CopyActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
-	static void PasteActors(TFunction<TArray<AActor*>()> GetSelectedActorFunction);
-	static void DeleteActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
-	static void CutActors(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
-	static void ToggleSelectedActorsSpatiallyLoaded(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
-	static ECheckBoxState GetActorsSpatiallyLoadedProperty(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
-	static bool CanDuplicateActor(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
-	static bool CanCopyActor(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
-	static bool CanPasteActor(TFunction<AActor*()> GetSelectedActorFunction);
-	static bool CanCutActor(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
-	static bool CanDeleteActor(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
-	static bool CanToggleActorsSpatiallyLoaded(TFunction<TArray<AActor*>()> GetSelectedActorArrayFunction);
+	static TArray<ULexWidget*> GetRootWidgetListFromSelection(const TArray<ULexWidget*>& InSelectedWidgets);
+	static void CreateLexWidget(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString Name, UClass* VisualClass, TFunction<void(class ULexWidget*)> Callback);
+	static void CreateUIControls(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString InPrefabPath);
+	static void DuplicateWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction);
+	static void CopyWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction);
+	static void PasteWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetFunction);
+	static void DeleteWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction);
+	static void CutWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction);
+	static bool CanDuplicateWidget(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction);
+	static bool CanCopyWidget(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction);
+	static bool CanPasteWidget(TFunction<ULexWidget*()> GetSelectedWidgetFunction);
+	static bool CanCutWidget(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction);
+	static bool CanDeleteWidget(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction);
 	
-	static bool CanCreatePrefab(TFunction<AActor*()> GetSelectedActorFunction);
-	static void CreatePrefabAsset(TFunction<AActor*()> GetSelectedActorFunction);
+	static bool CanCreatePrefab(TFunction<ULexWidget*()> GetSelectedWidgetFunction);
+	static void CreatePrefabAsset(TFunction<ULexWidget*()> GetSelectedWidgetFunction);
 	static void RefreshLevelLoadedPrefab();
 	static void RefreshOpenedPrefabEditor(ULexUIPrefab* InPrefab);
 	static void RefreshOnSubPrefabChange(ULexUIPrefab* InSubPrefab);
 	static TArray<ULexUIPrefab*> GetAllPrefabArray();
-	static bool CanUnpackActorForPrefab(TFunction<AActor*()> GetSelectedActorFunction);
-	static void UnpackPrefab(TFunction<AActor*()> GetSelectedActorFunction);
-	static void SelectPrefabAsset(TFunction<AActor*()> GetSelectedActorFunction);
-	static bool CanBrowsePrefabAsset(TFunction<AActor*()> GetSelectedActorFunction);
-	static void OpenPrefabAsset(TFunction<AActor*()> GetSelectedActorFunction);
-	static bool CanCheckPrefabOverrideParameter(TFunction<AActor*()> GetSelectedActorFunction);
-	static bool CanCreateActor(TFunction<AActor*()> GetSelectedActorFunction);
+	static bool CanUnpackWidgetForPrefab(TFunction<ULexWidget*()> GetSelectedWidgetFunction);
+	static void UnpackPrefab(TFunction<ULexWidget*()> GetSelectedWidgetFunction);
+	static void SelectPrefabAsset(TFunction<ULexWidget*()> GetSelectedWidgetFunction);
+	static bool CanBrowsePrefabAsset(TFunction<ULexWidget*()> GetSelectedWidgetFunction);
+	static void OpenPrefabAsset(TFunction<ULexWidget*()> GetSelectedWidgetFunction);
+	static bool CanCheckPrefabOverrideParameter(TFunction<ULexWidget*()> GetSelectedWidgetFunction);
+	static bool CanCreateWidget(TFunction<ULexWidget*()> GetSelectedWidgetFunction);
 	static void CleanupPrefabsInWorld(UWorld* World);
-	static bool IsActorCompatibleWithLexUIToolsMenu(AActor* InActor);
+	static bool IsWidgetCompatibleWithLexUIToolsMenu(ULexWidget* InWidget);
 
-	static TMap<FString, TWeakObjectPtr<ULexUIPrefab>> CopiedActorPrefabMap;//map ActorLabel to prefab
-	static bool HaveValidCopiedActors();
-
-	static void MakeCurrentLevel(AActor* InActor);
+	static TMap<FString, TWeakObjectPtr<ULexUIPrefab>> CopiedWidgetPrefabMap;//map ActorLabel to prefab
+	static bool HaveValidCopiedWidgets();
 };

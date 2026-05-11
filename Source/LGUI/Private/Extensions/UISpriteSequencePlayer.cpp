@@ -22,10 +22,7 @@ bool UUISpriteSequencePlayer::CanPlay()
 {
 	if (!Sprite.IsValid())
 	{
-		if (auto Widget = GetOwner()->FindComponentByClass<ULexWidget>())
-		{
-			Sprite = Cast<ULexSprite>(Widget->GetVisual());
-		}
+		Sprite = Cast<ULexSprite>(GetWidget()->GetVisual());
 	}
 	if (!Sprite.IsValid())
 	{

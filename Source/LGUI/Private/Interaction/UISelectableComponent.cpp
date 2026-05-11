@@ -8,7 +8,7 @@
 #include "LTweenManager.h"
 #include "Core/Components/LexCanvas.h"
 #include "Event/LexEventSystem.h"
-#include "Core/Actor/LexWidgetRootActor.h"
+#include "Core/Actor/LexWidgetPresenterComponent.h"
 #include "Core/Components/LexImage.h"
 #include "Core/Components/LexWidget.h"
 #include "Interaction/UINavigationInputSelectionHandler.h"
@@ -39,7 +39,7 @@ UUISelectableComponent* UUISelectableTransition::GetSelectableComponent() const
 {
 	if (!IsValid(UISelectableComp))
 	{
-		UISelectableComp = GetOwner()->FindComponentByClass<UUISelectableComponent>();
+		UISelectableComp = GetWidget()->GetComponent<UUISelectableComponent>();
 	}
 	return UISelectableComp;
 }
@@ -87,9 +87,9 @@ void UUISelectableComponent::Awake()
 	this->SetCanExecuteUpdate(false);
 }
 
-void UUISelectableComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void UUISelectableComponent::EndPlay()
 {
-	Super::EndPlay(EndPlayReason);
+	Super::EndPlay();
 }
 
 void UUISelectableComponent::OnRegister()
@@ -327,7 +327,7 @@ bool UUISelectableComponent::CheckNavigationSelectionState()
 	{
 		if (auto Widget = GetWidget())
 		{
-			if (auto WidgetRootActor = Widget->GetWidgetRootActor())
+			if (auto WidgetRootActor = Widget->GetWidgetPresenterComponent())
 			{
 				NavigationSelection = WidgetRootActor->GetNavigationSelection();
 			}
@@ -371,7 +371,7 @@ bool UUISelectableComponent::OnPointerDown_Implementation(ULexPointerEventData* 
 	ApplyPointerSelectionState(false);
 	if (auto eventSystemInstance = ULexEventSystem::GetLexEventSystemInstance(this, IsValid(EventData) ? EventData->UserIndex : 0))
 	{
-		eventSystemInstance->SetSelectComponent(GetWidget(), EventData, EventData->EnterComponentEventFireType);
+		eventSystemInstance->SetSelectWidget(GetWidget(), EventData, EventData->EnterComponentEventFireType);
 	}
 	return AllowEventBubbleUp;
 }
@@ -538,7 +538,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 		}
 		if (Widget->IsScreenSpaceOverlayUI() || Widget->IsRenderTargetUI())
 		{
-			auto rootCanvasUIItem = Widget->GetRootCanvas()->GetLexWidget();
+			auto rootCanvasUIItem = Widget->GetRootCanvas()->GetWidget();
 			return FindSelectable(InDirection, rootCanvasUIItem);
 		}
 		else
@@ -552,7 +552,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 	}
 }
 
-UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirection, USceneComponent* InParent)
+UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirection, ULexWidget* InParent)
 {
 	auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld());
 	if (LexUIManager == nullptr)return nullptr;
@@ -568,17 +568,17 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 	};
 
 	auto LocalPos = FVector::ZeroVector;
-	const USceneComponent* RestrictNavNode = nullptr;
+	const ULexWidget* RestrictNavNode = nullptr;
 	if (auto Widget = GetWidget())
 	{
-		auto localDir = Widget->GetComponentTransform().InverseTransformVectorNoScale(InDirection);
+		auto localDir = Widget->GetWorldTransform().InverseTransformVectorNoScale(InDirection);
 		LocalPos = GetPointOnRectEdge(Widget, FVector2D(localDir.Y, localDir.Z));
 		if (auto RestrictNavWidget = Widget->GetRestrictNavigationAreaWidget())
 		{
 			RestrictNavNode = RestrictNavWidget;
 		}
 	}
-	auto pos = this->GetSceneComponent()->GetComponentTransform().TransformPosition(LocalPos);
+	auto pos = this->GetWidget()->GetWorldTransform().TransformPosition(LocalPos);
 	auto thisWidget = this->GetWidget();
 	float maxScore = -MAX_flt;
 	UUISelectableComponent* bestPick = this;
@@ -589,7 +589,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 		if (sel == this || !sel.IsValid())
 			continue;
 
-		if (IsValid(InParent) && !sel->GetSceneComponent()->IsAttachedTo(InParent))
+		if (IsValid(InParent) && !sel->GetWidget()->IsChildOf(InParent))
 			continue;
 
 		if (!sel->IsInteractable())
@@ -614,7 +614,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 		}
 
 		//if navigation is restricted, only allow child of restrict node
-		if (RestrictNavNode && !sel->GetSceneComponent()->IsAttachedTo(RestrictNavNode))
+		if (RestrictNavNode && !sel->GetWidget()->IsChildOf(RestrictNavNode))
 		{
 			continue;
 		}
@@ -632,9 +632,9 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 		}
 		else
 		{
-			selCenter = sel->GetSceneComponent()->GetRelativeLocation();
+			selCenter = sel->GetWidget()->GetRelativeLocation();
 		}
-		auto selCenterInWorld = sel->GetSceneComponent()->GetComponentTransform().TransformPosition(selCenter);
+		auto selCenterInWorld = sel->GetWidget()->GetWorldTransform().TransformPosition(selCenter);
 		if (selWidget)
 		{
 			if (!selWidget->IsPointVisibleOnClip(selCenterInWorld))
@@ -722,7 +722,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnLeft()
 	}
 	if (NavigationLeft == EUISelectableNavigationMode::Auto)
 	{
-		return FindSelectable(-GetSceneComponent()->GetRightVector());
+		return FindSelectable(-GetWidget()->GetRightVector());
 	}
 	return nullptr;
 }
@@ -734,7 +734,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnRight()
 	}
 	if (NavigationRight == EUISelectableNavigationMode::Auto)
 	{
-		return FindSelectable(GetSceneComponent()->GetRightVector());
+		return FindSelectable(GetWidget()->GetRightVector());
 	}
 	return nullptr;
 }
@@ -746,7 +746,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnUp()
 	}
 	if (NavigationUp == EUISelectableNavigationMode::Auto)
 	{
-		return FindSelectable(GetSceneComponent()->GetUpVector());
+		return FindSelectable(GetWidget()->GetUpVector());
 	}
 	return nullptr;
 }
@@ -758,7 +758,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnDown()
 	}
 	if (NavigationDown == EUISelectableNavigationMode::Auto)
 	{
-		return FindSelectable(-GetSceneComponent()->GetUpVector());
+		return FindSelectable(-GetWidget()->GetUpVector());
 	}
 	return nullptr;
 }

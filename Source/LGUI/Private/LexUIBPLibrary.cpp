@@ -6,71 +6,34 @@
 #include "Utils/LexUIUtils.h"
 #include "Framework/Application/SlateApplication.h"
 #include "LGUI.h"
-#include "Core/Actor/LexWidgetContainer.h"
-#include "Core/Components/LexCanvas.h"
+#include "Core/Components/LexWidget.h"
 #include "Event/LexScreenSpaceRaycaster.h"
 #include "PrefabSystem/LexUIPrefab.h"
+
 #include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 
-void ULexUIBPLibrary::DestroyActorWithHierarchy(AActor* Target, bool WithHierarchy)
+ULexWidget* ULexUIBPLibrary::DuplicateWidget(UObject* WorldContextObject, ULexWidget* Target, ULexWidget* Parent)
 {
-	FLexUIUtils::DestroyActorWithHierarchy(Target, WithHierarchy);
-}
-AActor* ULexUIBPLibrary::LoadPrefab(UObject* WorldContextObject, ULexUIPrefab* InPrefab, USceneComponent* InParent, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake, bool SetRelativeTransformToIdentity)
-{
-	if (!IsValid(InPrefab))
+	if (auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull))
 	{
-		UE_LOG(LGUI, Error, TEXT("[%s].%d InPrefab not valid"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-		return nullptr;
+		return LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::DuplicateWidget(World, Parent->GetOuter(), Target, Parent);
 	}
-	return InPrefab->LoadPrefab(WorldContextObject, InParent, InCallbackBeforeAwake, SetRelativeTransformToIdentity);
+	return nullptr;
 }
-AActor* ULexUIBPLibrary::LoadPrefabWithTransform(UObject* WorldContextObject, ULexUIPrefab* InPrefab, USceneComponent* InParent, FVector Location, FRotator Rotation, FVector Scale, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake)
+void ULexUIBPLibrary::PrepareDuplicateData(ULexWidget* Target, FLexUIDuplicateDataContainer& DataContainer)
 {
-	if (!IsValid(InPrefab))
-	{
-		UE_LOG(LGUI, Error, TEXT("[%s].%d InPrefab not valid"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-		return nullptr;
-	}
-	return InPrefab->LoadPrefabWithTransform(WorldContextObject, InParent, Location, Rotation, Scale, InCallbackBeforeAwake);
+	DataContainer.bIsValid = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::PrepareDataForDuplicate(Target, DataContainer.DuplicateData);
 }
-AActor* ULexUIBPLibrary::LoadPrefabWithTransform(UObject* WorldContextObject, ULexUIPrefab* InPrefab, USceneComponent* InParent, FVector Location, FQuat Rotation, FVector Scale, const TFunction<void(AActor*)>& InCallbackBeforeAwake)
-{
-	if (!IsValid(InPrefab))
-	{
-		UE_LOG(LGUI, Error, TEXT("[%s].%d InPrefab not valid"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-		return nullptr;
-	}
-	return InPrefab->LoadPrefabWithTransform(WorldContextObject, InParent, Location, Rotation, Scale, InCallbackBeforeAwake);
-}
-AActor* ULexUIBPLibrary::LoadPrefabWithReplacement(UObject* WorldContextObject, ULexUIPrefab* InPrefab, USceneComponent* InParent, const TMap<UObject*, UObject*>& InReplaceAssetMap, const TMap<UClass*, UClass*>& InReplaceClassMap, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake)
-{
-	if (!IsValid(InPrefab))
-	{
-		UE_LOG(LGUI, Error, TEXT("[%s].%d InPrefab not valid"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-		return nullptr;
-	}
-	return InPrefab->LoadPrefabWithReplacement(WorldContextObject, InParent, InReplaceAssetMap, InReplaceClassMap, InCallbackBeforeAwake);
-}
-
-AActor* ULexUIBPLibrary::DuplicateActor(AActor* Target, USceneComponent* Parent)
-{
-	return LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::DuplicateActor(Target, Parent);
-}
-void ULexUIBPLibrary::PrepareDuplicateData(AActor* Target, FLexUIDuplicateDataContainer& DataContainer)
-{
-	DataContainer.bIsValid = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::PrepareDataForDuplicate(Target, DataContainer.DuplicateData);
-}
-AActor* ULexUIBPLibrary::DuplicateActorWithPreparedData(FLexUIDuplicateDataContainer& Data, USceneComponent* Parent)
+ULexWidget* ULexUIBPLibrary::DuplicateWidgetWithPreparedData(UObject* WorldContextObject, FLexUIDuplicateDataContainer& Data, ULexWidget* Parent)
 {
 	if (Data.bIsValid)
 	{
-		return LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::ActorSerializer::DuplicateActorWithPreparedData(Data.DuplicateData, Parent);
+		if (auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull))
+		{
+			return LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::DuplicateWidgetWithPreparedData(World, Parent->GetOuter(), Data.DuplicateData, Parent);
+		}
 	}
-	else
-	{
-		return nullptr;
-	}
+	return nullptr;
 }
 
 UActorComponent* ULexUIBPLibrary::GetComponentInParent(AActor* InActor, TSubclassOf<UActorComponent> ComponentClass, bool IncludeSelf, AActor* InStopNode)

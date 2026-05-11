@@ -25,15 +25,13 @@
 #include "Core/LexCanvasDrawCallProcessingRunnable.h"
 #include "Core/LexUIClipData.h"
 #include "Core/LexUIDataAsTexture.h"
+#include "Core/Actor/LexWidgetPresenterComponent.h"
 
 
 #define LOCTEXT_NAMESPACE "LexCanvas"
 
 ULexCanvas::ULexCanvas()
 {
-	PrimaryComponentTick.bCanEverTick = false;
-	PrimaryComponentTick.bStartWithTickEnabled = false;
-
 	DefaultMeshType = ULexUIMeshComponent::StaticClass();
 	DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/LexUI_ImageAndFont"));
 }
@@ -41,21 +39,21 @@ ULexCanvas::ULexCanvas()
 void ULexCanvas::BeginPlay()
 {
 	Super::BeginPlay();
-	if (!ULexUIPrefabWorldSubsystem::GetInstance(this->GetWorld())->IsPrefabSystemProcessingActor(this->GetOwner()))
+	if (!ULexUIPrefabWorldSubsystem::GetInstance(this->GetWorld())->IsPrefabSystemProcessingWidget(this->GetWidget()))
 	{
 		Awake_Implementation();
 	}
 }
-void ULexCanvas::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void ULexCanvas::EndPlay()
 {
-	Super::EndPlay(EndPlayReason);
+	Super::EndPlay();
 }
 
 void ULexCanvas::Awake_Implementation()
 {
 	CheckRootCanvas();
 	CurrentRenderMode = this->GetActualRenderMode();
-	if (CheckLexWidget())
+	if (auto LexWidget = GetWidget())
 	{
 		bPrevIsVisible = LexWidget->GetWidgetActiveInHierarchy();
 	}
@@ -81,11 +79,6 @@ void ULexCanvas::Awake_Implementation()
 	{
 		CustomScale->Init(this);
 	}
-}
-
-void ULexCanvas::TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction )
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 }
 
 TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> ULexCanvas::GetRenderTargetViewExtension()
@@ -154,13 +147,13 @@ void ULexCanvas::UpdateRootCanvas()
 			}
 		}
 		
-		if (!CheckLexWidget())return;
 		UpdateCanvasDrawCall();
 	}
 }
 
 void ULexCanvas::UpdateRenderTarget(bool CallEvent)
 {
+	auto LexWidget = GetWidget();
 	FIntPoint DesiredRenderTargetSize(LexWidget->GetWidth() * RenderTargetResolutionScale, LexWidget->GetHeight() * RenderTargetResolutionScale);
 	static const int32 MaxAllowedDrawSize = GetMax2DTextureDimension();
 	if (DesiredRenderTargetSize.X <= 0 || DesiredRenderTargetSize.Y <= 0)
@@ -287,7 +280,7 @@ void ULexCanvas::CheckRenderTargetUpdate()
 void ULexCanvas::OnRegister()
 {
 	Super::OnRegister();
-	if (CheckLexWidget())
+	if (auto LexWidget = GetWidget())
 	{
 		ULexUIManagerWorldSubsystem::AddCanvas(this, CurrentRenderMode);
 		//tell UIItem
@@ -311,30 +304,7 @@ void ULexCanvas::OnRegister()
 void ULexCanvas::OnUnregister()
 {
 	Super::OnUnregister();
-	ULexUIManagerWorldSubsystem::RemoveCanvas(this, CurrentRenderMode);
-
-	ClipDataList.Empty();
 	
-	{
-		//these three functions is from OnUIHierarchyChanged()
-		RemoveFromViewExtension(true);
-		CheckRootCanvas(true);
-		CheckRenderMode(true);
-	}
-
-	//tell UIItem
-	if (LexWidget.IsValid())
-	{
-		LexWidget->UnregisterRenderCanvas();
-		LexWidget->GetAttachmentChangedEvent().RemoveAll(this);
-		LexWidget->GetWidgetActiveChangedEvent().RemoveAll(this);
-	}
-
-	UnregisterCanvasScaler();
-}
-void ULexCanvas::OnComponentDestroyed(bool bDestroyingHierarchy)
-{
-	Super::OnComponentDestroyed(bDestroyingHierarchy);
 	ClearDrawCall();
 	if (UIMesh.IsValid())
 	{
@@ -349,6 +319,26 @@ void ULexCanvas::OnComponentDestroyed(bool bDestroyingHierarchy)
 	{
 		TransformVerticesAsyncFunctionRunnable->Stop();
 	}
+    	
+	ULexUIManagerWorldSubsystem::RemoveCanvas(this, CurrentRenderMode);
+
+	ClipDataList.Empty();
+	
+	{
+		//these three functions is from OnUIHierarchyChanged()
+		RemoveFromViewExtension(true);
+		CheckRenderMode(true);
+	}
+
+	//tell UIItem
+	if (auto LexWidget = GetWidget())
+	{
+		LexWidget->UnregisterRenderCanvas();
+		LexWidget->GetAttachmentChangedEvent().RemoveAll(this);
+		LexWidget->GetWidgetActiveChangedEvent().RemoveAll(this);
+	}
+
+	UnregisterCanvasScaler();
 }
 
 void ULexCanvas::PostInitProperties()
@@ -424,16 +414,13 @@ bool ULexCanvas::CheckRootCanvas(bool forceRecheck)const
 	}
 	if (RootCanvas.IsValid())return true;
 	if (this->GetWorld() == nullptr)return false;
-	auto FindRootCanvas = [](AActor* Actor)
+	auto FindRootCanvas = [](ULexWidget* Widget)
 	{
 		ULexCanvas* ResultCanvas = nullptr;
-		auto ParentActor = Actor;
-		while (ParentActor != nullptr
-			&& Cast<ULexWidget>(ParentActor->GetRootComponent()) != nullptr//root must be UI component
-			)
+		auto ParentWidget = Widget;
+		while (ParentWidget != nullptr)
 		{
-			auto FoundCanvas = ParentActor->FindComponentByClass<ULexCanvas>();
-			if (FoundCanvas)
+			if (auto FoundCanvas = ParentWidget->GetComponent<ULexCanvas>())
 			{
 				ResultCanvas = FoundCanvas;
 				if (FoundCanvas->bForceRenderToTarget)
@@ -441,11 +428,11 @@ bool ULexCanvas::CheckRootCanvas(bool forceRecheck)const
 					return ResultCanvas;
 				}
 			}
-			ParentActor = ParentActor->GetAttachParentActor();
+			ParentWidget = ParentWidget->GetParent();
 		}
 		return ResultCanvas;
 	};
-	auto NewRootCanvas = FindRootCanvas(this->GetOwner());
+	auto NewRootCanvas = FindRootCanvas(this->GetWidget());
 	if (NewRootCanvas != RootCanvas)
 	{
 		RootCanvas = NewRootCanvas;
@@ -482,38 +469,12 @@ void ULexCanvas::SetParentCanvas(ULexCanvas* InParentCanvas)
 	}
 }
 
-bool ULexCanvas::CheckLexWidget()const
-{
-	if (LexWidget.IsValid())return true;
-	if (this->GetWorld() == nullptr)return false;
-	LexWidget = Cast<ULexWidget>(GetOwner()->GetRootComponent());
-	if (!LexWidget.IsValid())
-	{
-		if (this->IsRegistered())
-		{
-			UE_LOG(LGUI, Warning, TEXT("[%s].%d LexCanvas component should only attach to a actor which have UIItem as RootComponent! %s")
-				, ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
-		}
-		return false;
-	}
-	else
-	{
-		return true;
-	}
-}
-void ULexCanvas::CheckRenderMode(bool PropogateToChildrenCanvas)
+void ULexCanvas::CheckRenderMode(bool PropagateToChildrenCanvas)
 {
 	const auto OldRenderMode = CurrentRenderMode;
-	if (this->IsRegistered())
+	if (CheckRootCanvas(true))
 	{
-		if (CheckRootCanvas(true))
-		{
-			CurrentRenderMode = RootCanvas->GetRenderMode();
-		}
-		else
-		{
-			CurrentRenderMode = ELexRenderMode::None;
-		}
+		CurrentRenderMode = RootCanvas->GetRenderMode();
 	}
 	else
 	{
@@ -522,7 +483,7 @@ void ULexCanvas::CheckRenderMode(bool PropogateToChildrenCanvas)
 	//if render space changed, we need to change recreate all render data
 	if (CurrentRenderMode != OldRenderMode)
 	{
-		if (CheckLexWidget())
+		if (auto LexWidget = GetWidget())
 		{
 			LexWidget->MarkRenderModeChangeRecursive(this, OldRenderMode, CurrentRenderMode);
 		}
@@ -533,13 +494,13 @@ void ULexCanvas::CheckRenderMode(bool PropogateToChildrenCanvas)
 		OnRenderModeChanged.Broadcast(this, OldRenderMode, CurrentRenderMode);
 	}
 
-	if (PropogateToChildrenCanvas)
+	if (PropagateToChildrenCanvas)
 	{
 		for (const auto& ChildCanvas : ChildrenCanvasArray)
 		{
 			if (!ChildCanvas.IsValid())continue;
 			if (ChildCanvas->bForceRenderToTarget)continue;
-			ChildCanvas->CheckRenderMode(PropogateToChildrenCanvas);
+			ChildCanvas->CheckRenderMode(PropagateToChildrenCanvas);
 		}
 	}
 }
@@ -547,20 +508,15 @@ void ULexCanvas::OnUIHierarchyAttachmentChanged()
 {
  	this->bCanTickUpdate = true;
 	RemoveFromViewExtension(true);
-	CheckRootCanvas(true);
 	CheckRenderMode(true);
 
-	ULexCanvas* NewParentCanvas = nullptr;
-	if (this->IsRegistered())
-	{
-		NewParentCanvas = LexWidget->GetComponentInParent<ULexCanvas>(true);
-	}
+	auto NewParentCanvas = GetWidget()->GetComponentInParent<ULexCanvas>(false);
 	SetParentCanvas(NewParentCanvas);
 }
 
 void ULexCanvas::OnWidgetActiveChanged(bool WidgetActive)
 {
-	if (LexWidget->GetWidgetActiveInHierarchy())
+	if (GetWidget()->GetWidgetActiveInHierarchy())
 	{
 		if (ParentCanvas.IsValid())
 		{
@@ -694,7 +650,7 @@ void ULexCanvas::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
-	if (CheckLexWidget())
+	if (auto LexWidget = GetWidget())
 	{
 		LexWidget->MarkAllDirtyRecursive();
 	}
@@ -736,7 +692,6 @@ void ULexCanvas::EnsureDataForRebuild()
 	{
 		static void RecheckRootCanvasRecursive(ULexCanvas* Target)
 		{
-			Target->CheckRootCanvas(true);
 			Target->MarkCanvasUpdate(true);
 			Target->CheckRenderMode(false);
 			for (int i = Target->ChildrenCanvasArray.Num() - 1; i >= 0; i--)
@@ -770,6 +725,11 @@ ULexCanvas* ULexCanvas::GetRootCanvas() const
 bool ULexCanvas::IsRootCanvas()const
 {
 	return GetRootCanvas() == this;
+}
+
+void ULexCanvas::SetWidgetPresenterComponent(ULexWidgetPresenterComponent* InPresenter)
+{
+	WidgetPresenterComponent = InPresenter;
 }
 
 void ULexCanvas::MarkVisualWillChange(ULexVisual* InOldVisual)
@@ -1216,7 +1176,9 @@ void ULexCanvas::UpdateCanvasDrawCall()
 		if (item->bForceRenderToTarget)continue;
 		item->UpdateCanvasDrawCall();
 	}
-	
+
+	auto LexWidget = GetWidget();
+	if (!LexWidget)return;
 	/**
 	 * Why use bPrevIsVisible?:
 	 * If Canvas is rendering in frame 1, and in frame 2 the Canvas is disabled(set WidgetActive to false), then the Canvas will not do draw-call calculation, and the prev existing draw-call mesh is still there and render,
@@ -1259,7 +1221,7 @@ void ULexCanvas::UpdateCanvasDrawCall()
 		{
 			bNeedToGenerateWidgetList = false;
 			WidgetList.Reset();
-			LOCAL::CollectRenderWidget(this->LexWidget.Get(), this, WidgetList);
+			LOCAL::CollectRenderWidget(GetWidget(), this, WidgetList);
 		}
 		//update layout from tail to head
 		{
@@ -1466,10 +1428,12 @@ void ULexCanvas::CheckUIMesh()const
 	{
 		auto MeshType = DefaultMeshType.Get();
 		if (MeshType == nullptr)MeshType = ULexUIMeshComponent::StaticClass();
-		auto ObjectName = MakeUniqueObjectName(this->GetOwner(), MeshType, FName(*this->GetLexWidget()->GetDisplayName()));
-		UIMesh = NewObject<ULexUIMeshComponent>(this->GetOwner(), MeshType, ObjectName, RF_Transient);
+		auto LexWidget = GetWidget();
+		auto ObjectName = MakeUniqueObjectName(LexWidget, MeshType, FName(*this->GetWidget()->GetDisplayName()));
+		auto OuterActor = LexWidget->GetTypedOuter<AActor>();
+		UIMesh = NewObject<ULexUIMeshComponent>(OuterActor, MeshType, ObjectName, RF_Transient);
 		UIMesh->RegisterComponent();
-		UIMesh->AttachToComponent(this->GetOwner()->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+		UIMesh->AttachToComponent(this->GetWidgetPresenterComponent(), FAttachmentTransformRules::KeepRelativeTransform);
 		UIMesh->SetRelativeTransform(FTransform::Identity);
 		UIMesh->Init(const_cast<ULexCanvas*>(this));
 		bUIMeshNeedToSetInitialParameters = true;
@@ -2040,7 +2004,7 @@ void ULexCanvas::SetRequireNormalAndTangent(bool Value)
 	{
 		bRequireNormalAndTangent = Value;
 		MarkCanvasUpdate(false);
-		if (CheckLexWidget())
+		if (auto LexWidget = GetWidget())
 		{
 			LexWidget->MarkAllDirtyRecursive();
 		}
@@ -2118,18 +2082,17 @@ float ULexCanvas::CalculateDistanceToCamera()const
 	}
 	else
 	{
-		return LexWidget->GetWidth() * 0.5f / FMath::Tan(FMath::DegreesToRadians(FieldOfView * 0.5f)) * LexWidget->GetComponentScale().X;
+		if (auto LexWidget = GetWidget())
+		{
+			return LexWidget->GetWidth() * 0.5f / FMath::Tan(FMath::DegreesToRadians(FieldOfView * 0.5f)) * LexWidget->GetWorldScale().X;
+		}
+		return 1;
 	}
 }
 FMatrix ULexCanvas::GetViewProjectionMatrix()const
 {
 	if (bIsViewProjectionMatrixDirty)
 	{
-		if (!CheckLexWidget())
-		{
-			UE_LOG(LGUI, Error, TEXT("[%s].%d Widget not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			return CacheViewProjectionMatrix;
-		}
 		bIsViewProjectionMatrixDirty = false;
 
 		FVector ViewLocation = GetViewLocation();
@@ -2152,6 +2115,7 @@ FMatrix ULexCanvas::GetProjectionMatrix()const
 
 	FMatrix ProjectionMatrix = FMatrix::Identity;
 	const float FOV = (bOverrideFovAngle ? OverrideFovAngle : FieldOfView) * (float)PI / 360.0f;
+	auto LexWidget = GetWidget();
 	BuildProjectionMatrix(FIntPoint(LexWidget->GetWidth(), LexWidget->GetHeight()), ProjectionType, FOV, FarClipPlane, NearClipPlane, ProjectionMatrix);
 	return ProjectionMatrix;
 }
@@ -2160,14 +2124,15 @@ FVector ULexCanvas::GetViewLocation()const
 	if (bOverrideViewLocation)
 		return OverrideViewLocation;
 
-	return LexWidget->GetComponentLocation() - LexWidget->GetForwardVector() * CalculateDistanceToCamera();
+	auto LexWidget = GetWidget();
+	return LexWidget->GetWorldLocation() - LexWidget->GetForwardVector() * CalculateDistanceToCamera();
 }
 FRotator ULexCanvas::GetViewRotator()const
 {
 	if (bOverrideViewRotation)
 		return OverrideViewRotation;
 
-	return LexWidget->GetWorldRotation().Rotator();
+	return GetWidget()->GetWorldRotation().Rotator();
 }
 FIntPoint ULexCanvas::GetViewportSize()const
 {
@@ -2177,7 +2142,7 @@ FIntPoint ULexCanvas::GetViewportSize()const
 #if WITH_EDITOR
 		if (!world->IsGameWorld())
 		{
-			if (CheckLexWidget())
+			if (auto LexWidget = GetWidget())
 			{
 				TempViewportSize.X = LexWidget->GetWidth();
 				TempViewportSize.Y = LexWidget->GetHeight();
@@ -2224,7 +2189,7 @@ void ULexCanvas::SetForceRenderToTarget(bool Value)
 		if (bForceRenderToTarget)
 		{
 			MarkCanvasUpdate(true);
-			LexWidget->MarkAllDirtyRecursive();
+			GetWidget()->MarkAllDirtyRecursive();
 		}
 	}
 }
@@ -2576,7 +2541,7 @@ void ULexCanvas::OnViewportParameterChanged()
 			|| this->GetRenderMode() == ELexRenderMode::RenderTarget
 			)
 		{
-			if (LexWidget.IsValid())
+			if (auto LexWidget = GetWidget())
 			{
 				float TempCanvasScale = 1.0f;
 				//adjust size
@@ -2693,7 +2658,7 @@ void ULexCanvas::OnEditorTick(float DeltaTime)
 			)
 		{
 			DrawViewportArea();
-			if (ULexUIManagerObject::IsSelected(this->GetOwner()))
+			if (ULexUIManagerObject::IsSelected(this->GetWidget()))
 			{
 				DrawVirtualCamera();
 			}
@@ -2791,13 +2756,14 @@ void DeprojectViewPointToWorld(const FMatrix& InViewProjectionMatrix, const FVec
 
 void ULexCanvas::DrawViewportArea()
 {
+	auto LexWidget = GetWidget();
 	auto RectExtends = FVector(0.1f, LexWidget->GetWidth(), LexWidget->GetHeight()) * 0.5f;
 	auto RectDrawColor = FColor(128, 128, 128, 128);//gray means normal object
-	auto WorldTransform = LexWidget->GetComponentTransform();
+	auto WorldTransform = LexWidget->GetWorldTransform();
 
 	ULexUIManagerWorldSubsystem::DrawDebugBox(GetWorld()
 		, FVector::Zero(), WorldTransform.ToMatrixWithScale()
-		, RectExtends, RectDrawColor, this, FString::Printf(TEXT("%s.LexCanvas.ViewportArea"), *this->GetOwner()->GetActorLabel())
+		, RectExtends, RectDrawColor, this, FString::Printf(TEXT("%s.LexCanvas.ViewportArea"), *this->GetWidget()->GetDisplayName())
 		, false);
 }
 
@@ -2855,7 +2821,7 @@ void ULexCanvas::DrawVirtualCamera()
 	new(LinePoints)FVector3f(leftTopEnd);
 
 	ULexUIManagerWorldSubsystem::DrawDebugLine(GetWorld(), FMatrix::Identity
-		, LinePoints, lineColor, this, FString::Printf(TEXT("%s.LexCanvas.VirtualCamera"), *this->GetOwner()->GetActorLabel())
+		, LinePoints, lineColor, this, FString::Printf(TEXT("%s.LexCanvas.VirtualCamera"), *this->GetWidget()->GetDisplayName())
 		, false);
 
 	// if (LexWidget.IsValid())

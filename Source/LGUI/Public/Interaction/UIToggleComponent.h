@@ -61,7 +61,7 @@ class LGUI_API UUIToggleComponent : public UUISelectableComponent, public ILexPo
 protected:
 	virtual void Awake() override;
 	virtual void Start() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void EndPlay() override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif

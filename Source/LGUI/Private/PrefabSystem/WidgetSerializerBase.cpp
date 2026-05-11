@@ -1,9 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "PrefabSystem/ActorSerializerBase.h"
-
+#include "PrefabSystem/WidgetSerializerBase.h"
 #include "Core/Components/LexWidget.h"
-#include "Engine/World.h"
 #include "PrefabSystem/LexUIObjectReaderAndWriter.h"
 #include "Misc/ConfigCacheIni.h"
 #if WITH_EDITOR
@@ -12,7 +10,7 @@
 
 namespace LexUIPrefabSystem
 {
-	bool ActorSerializerBase::ObjectIsTrash(UObject* InObject)
+	bool WidgetSerializerBase::ObjectIsTrash(UObject* InObject)
 	{
 		UObject* Outer = InObject;
 		while (Outer != nullptr)
@@ -28,7 +26,7 @@ namespace LexUIPrefabSystem
 
 
 	//only allow object that belongs to some widget of this prefab
-	bool ActorSerializerBase::ObjectBelongsToThisPrefab(UObject* InObject)
+	bool WidgetSerializerBase::ObjectBelongsToThisPrefab(UObject* InObject)
 	{
 		if (WillSerializeWidgetArray.Contains(InObject))
 		{
@@ -57,7 +55,7 @@ namespace LexUIPrefabSystem
 		return false;
 	}
 
-	bool ActorSerializerBase::CollectObjectToSerialize(UObject* Object, FGuid& OutGuid)
+	bool WidgetSerializerBase::CollectObjectToSerialize(UObject* Object, FGuid& OutGuid)
 	{
 		if (!IsValid(Object))return false;
 		if (!Object->IsValidLowLevel())return false;
@@ -128,7 +126,7 @@ namespace LexUIPrefabSystem
 		}
 	}
 
-	TMap<UObject*, TArray<uint8>> ActorSerializerBase::SaveOverrideParameterToData(TArray<FLexUIPrefabOverrideParameterData> InData)
+	TMap<UObject*, TArray<uint8>> WidgetSerializerBase::SaveOverrideParameterToData(TArray<FLexUIPrefabOverrideParameterData> InData)
 	{
 		this->bIsEditorOrRuntime = true;
 		TMap<UObject*, TArray<uint8>> MapObjectToOverrideDatas;
@@ -141,7 +139,7 @@ namespace LexUIPrefabSystem
 		return MapObjectToOverrideDatas;
 	}
 
-	void ActorSerializerBase::RestoreOverrideParameterFromData(TMap<UObject*, TArray<uint8>>& InData, TArray<FLexUIPrefabOverrideParameterData> InNameSetData)
+	void WidgetSerializerBase::RestoreOverrideParameterFromData(TMap<UObject*, TArray<uint8>>& InData, TArray<FLexUIPrefabOverrideParameterData> InNameSetData)
 	{
 		this->bIsEditorOrRuntime = true;
 		for (auto& KeyValue : InData)
@@ -160,7 +158,7 @@ namespace LexUIPrefabSystem
 	}
 
 
-	int32 ActorSerializerBase::FindOrAddAssetIdFromList(UObject* AssetObject)
+	int32 WidgetSerializerBase::FindOrAddAssetIdFromList(UObject* AssetObject)
 	{
 		if (!AssetObject)return -1;
 		int32 resultIndex;
@@ -175,7 +173,7 @@ namespace LexUIPrefabSystem
 		}
 	}
 
-	int32 ActorSerializerBase::FindOrAddClassFromList(UClass* Class)
+	int32 WidgetSerializerBase::FindOrAddClassFromList(UClass* Class)
 	{
 		if (!Class)return -1;
 		int32 resultIndex;
@@ -189,7 +187,7 @@ namespace LexUIPrefabSystem
 			return ReferenceClassList.Num() - 1;
 		}
 	}
-	int32 ActorSerializerBase::FindOrAddNameFromList(const FName& Name)
+	int32 WidgetSerializerBase::FindOrAddNameFromList(const FName& Name)
 	{
 		if (!Name.IsValid())return -1;
 		int32 resultIndex;
@@ -203,22 +201,22 @@ namespace LexUIPrefabSystem
 			return ReferenceNameList.Num() - 1;
 		}
 	}
-	FName ActorSerializerBase::FindNameFromListByIndex(int32 Id)
+	FName WidgetSerializerBase::FindNameFromListByIndex(int32 Id)
 	{
 		return ReferenceNameList.IsValidIndex(Id) ? ReferenceNameList.GetData()[Id] : NAME_None;
 	}
 
-	UObject* ActorSerializerBase::FindAssetFromListByIndex(int32 Id)
+	UObject* WidgetSerializerBase::FindAssetFromListByIndex(int32 Id)
 	{
 		return ReferenceAssetList.IsValidIndex(Id) ? ReferenceAssetList.GetData()[Id] : nullptr;
 	}
 
-	UClass* ActorSerializerBase::FindClassFromListByIndex(int32 Id)
+	UClass* WidgetSerializerBase::FindClassFromListByIndex(int32 Id)
 	{
 		return ReferenceClassList.IsValidIndex(Id) ? ReferenceClassList.GetData()[Id] : nullptr;
 	}
 
-	const TSet<FName>& ActorSerializerBase::GetSceneComponentExcludeProperties()
+	const TSet<FName>& WidgetSerializerBase::GetSceneComponentExcludeProperties()
 	{
 		static TSet<FName> result = {
 			FName("AttachParent") //exclude AttachParent property, because we need to mannually do the attachment so that AttachChildren property is good
@@ -226,14 +224,14 @@ namespace LexUIPrefabSystem
 		return result;
 	}
 
-	bool ActorSerializerBase::CanUseUnversionedPropertySerialization()
+	bool WidgetSerializerBase::CanUseUnversionedPropertySerialization()
 	{
 		bool bTemp;
 		static bool bAllow = GConfig->GetBool(TEXT("Core.System"), TEXT("CanUseUnversionedPropertySerialization"), bTemp, GEngineIni) && bTemp;
 		return bAllow;
 	}
 
-	void ActorSerializerBase::SetupArchive(FArchive& InArchive)
+	void WidgetSerializerBase::SetupArchive(FArchive& InArchive)
 	{
 		if (!bIsEditorOrRuntime)
 		{

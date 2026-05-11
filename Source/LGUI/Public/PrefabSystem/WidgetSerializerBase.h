@@ -18,7 +18,7 @@ namespace LexUIPrefabSystem
 	/*
 	 * serialize/deserialize actor with hierarchy
 	 */
-	class LGUI_API ActorSerializerBase
+	class LGUI_API WidgetSerializerBase
 	{
 		friend class FLexUIObjectReader;
 		friend class FLexUIObjectWriter;
@@ -30,7 +30,7 @@ namespace LexUIPrefabSystem
 		friend class FLexUIDuplicateOverrideParameterObjectReader;
 
 	public:
-		virtual ~ActorSerializerBase() {}
+		virtual ~WidgetSerializerBase() {}
 
 		TMap<UObject*, TArray<uint8>> SaveOverrideParameterToData(TArray<FLexUIPrefabOverrideParameterData> InData);
 		void RestoreOverrideParameterFromData(TMap<UObject*, TArray<uint8>>& InData, TArray<FLexUIPrefabOverrideParameterData> InNameSetData);
@@ -71,7 +71,8 @@ namespace LexUIPrefabSystem
 		TMap<UObject*, FGuid> MapObjectToGuid;
 
 	protected:
-		UObject* OwnerObject = nullptr;//world that need to spawn actor
+		UObject* OwnerObject = nullptr;//Outer object that hold our widget
+		UWorld* World = nullptr;
 		bool bIsEditorOrRuntime = true;
 		static bool CanUseUnversionedPropertySerialization();
 	};

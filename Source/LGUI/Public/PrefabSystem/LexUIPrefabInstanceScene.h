@@ -6,6 +6,8 @@
 
 #if WITH_EDITOR
 
+class ULexWidgetPresenterComponent;
+class ULexWidget;
 class UStaticMeshComponent;
 class ULexUIPrefab;
 class AActor;
@@ -17,12 +19,12 @@ public:
 	FLexUIPrefabInstanceScene(ConstructionValues CVS);
 	
 	static const FString RootAgentActorName;
-	USceneComponent* GetParentComponentForPrefab(ULexUIPrefab* InPrefab);
-	AActor* GetRootAgentActor()const { return RootAgentActor; }
+	ULexWidget* GetParentForLoadPrefab(ULexUIPrefab* InPrefab);
+	ULexWidgetPresenterComponent* GetWidgetPresenter()const { return WidgetPresenter; }
 	void SetSkyCubeVisibility(bool bVisible);
 private:
 
-	AActor* RootAgentActor = nullptr;
+	ULexWidgetPresenterComponent* WidgetPresenter = nullptr;
 	UStaticMeshComponent* SkySphereComponent = nullptr;
 };
 #endif

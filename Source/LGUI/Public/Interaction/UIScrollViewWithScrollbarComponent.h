@@ -43,7 +43,7 @@ private:
 
 	virtual void CalculateHorizontalRange()override;
 	virtual void CalculateVerticalRange()override;
-	virtual bool CheckValidHit(USceneComponent* InHitComp)override;
+	virtual bool CheckValidHit(ULexWidget* InHitComp)override;
 	virtual void UpdateProgress(bool InFireEvent = true)override;
 	virtual bool OnPointerDrag_Implementation(ULexPointerEventData* EventData)override;
 	virtual bool OnPointerScroll_Implementation(ULexPointerEventData* EventData)override;

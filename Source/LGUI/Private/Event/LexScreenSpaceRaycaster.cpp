@@ -4,6 +4,7 @@
 #include "Core/Components/LexCanvas.h"
 #include "LGUI.h"
 #include "Core/LexUISettings.h"
+#include "Core/Actor/LexWidgetPresenterComponent.h"
 
 #define LOCTEXT_NAMESPACE "LGUIScreenSpaceRaycaster"
 
@@ -16,8 +17,13 @@ void ULexScreenSpaceRaycaster::BeginPlay()
 	Super::BeginPlay();
 	if (!RootCanvas.IsValid())
 	{
-		auto Canvas = GetOwner()->FindComponentByClass<ULexCanvas>();
-		if (!IsValid(Canvas) || !Canvas->IsRootCanvas() || Canvas->GetActualRenderMode() != ELexRenderMode::ScreenSpaceOverlay)
+		auto WidgetPresenter = GetOwner()->FindComponentByClass<ULexWidgetPresenterComponent>();
+		if (!WidgetPresenter)
+		{
+			UE_LOG(LGUI, Error, TEXT("[%s].%d LexWidgetPresenterComponent is not valid! LexUIScreenSpaceRaycaster can only attach to a Actor which contains a ULexWidgetPresenterComponent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		}
+		auto Canvas = WidgetPresenter->GetCanvas();
+		if (!IsValid(Canvas) || Canvas->GetActualRenderMode() != ELexRenderMode::ScreenSpaceOverlay)
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d Canvas is not valid! LexUIScreenSpaceRaycaster can only attach to ScreenSpaceUI!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			return;
@@ -71,7 +77,7 @@ bool ULexScreenSpaceRaycaster::GenerateRay(ULexPointerEventData* InPointerEventD
 	return true;
 }
 
-void ULexScreenSpaceRaycaster::Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FHitResult>& OutHitResult)
+void ULexScreenSpaceRaycaster::Raycast(ULexPointerEventData* InPointerEventData, FVector& OutRayOrigin, FVector& OutRayDirection, FVector& OutRayEnd, TArray<FLexUIHitResult>& OutHitResult)
 {
 	if (!RootCanvas.IsValid())return;
 	Super::RaycastUI(InPointerEventData, RootCanvas.Get(), OutRayOrigin, OutRayDirection, OutRayEnd, OutHitResult);

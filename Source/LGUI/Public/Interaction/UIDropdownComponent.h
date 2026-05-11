@@ -26,16 +26,16 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FUIDropdownComponentDynamicDelegate, int32, In
  * Called when set data for every dropdown-option-list item.
  * @param InItemIndex Dropdown-option-list item index.
  * @param InItemScript The UIDropdownItemComponent script attached on dropdown-option-list item.
- * @param InItemActor The dropdown-option-list item actor.
+ * @param InItemWidget The dropdown-option-list item actor.
  */
-DECLARE_DELEGATE_ThreeParams(FUIDropdownComponentDelegate_SetItemCustomData, int, class UUIDropdownItemComponent*, AActor*);
+DECLARE_DELEGATE_ThreeParams(FUIDropdownComponentDelegate_SetItemCustomData, int, class UUIDropdownItemComponent*, ULexWidget*);
 /**
  * Called when set data for every dropdown-option-list item.
  * @param InItemIndex Dropdown-option-list item index.
  * @param InItemScript The UIDropdownItemComponent script attached on dropdown-option-list item.
- * @param InItemActor The dropdown-option-list item actor.
+ * @param InItemWidget The dropdown-option-list item actor.
  */
-DECLARE_DYNAMIC_DELEGATE_ThreeParams(FUIDropdownComponentDynamicDelegate_SetItemCustomData, int, InItemIndex, class UUIDropdownItemComponent*, InItemScript, AActor*, InItemActor);
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(FUIDropdownComponentDynamicDelegate_SetItemCustomData, int, InItemIndex, class UUIDropdownItemComponent*, InItemScript, ULexWidget*, InItemWidget);
 
 UENUM(BlueprintType, Category = LGUI)
 enum class EUIDropdownVerticalPosition : uint8
@@ -115,7 +115,7 @@ protected:
 	bool bIsShow = false;
 	bool bNeedRecreate = true;
 	TWeakObjectPtr<ULTweener> ShowOrHideTweener;
-	TWeakObjectPtr<ULexWidgetContainer> BlockerActor;
+	TWeakObjectPtr<ULexWidget> BlockerWidget;
 	UPROPERTY(Transient) TArray<TWeakObjectPtr<class UUIDropdownItemComponent>> CreatedItemArray;
 	virtual bool OnPointerClick_Implementation(ULexPointerEventData* EventData)override;
 	virtual bool OnPointerDeselect_Implementation(ULexBaseEventData* EventData)override;
@@ -192,7 +192,7 @@ public:
 	/**
 	 * Set custom function to customize option-list item, called when set data for every dropdown-option-list item.
 	 */
-	void SetItemCustomDataFunction(const TFunction<void(int, class UUIDropdownItemComponent*, AActor*)>& InFunction);
+	void SetItemCustomDataFunction(const TFunction<void(int, class UUIDropdownItemComponent*, ULexWidget*)>& InFunction);
 	/**
 	 * Set custom function to customize option-list item, called when set data for every dropdown-option-list item.
 	 */

@@ -15,7 +15,7 @@
 #include "Core/LexUIRender/LexUIRenderer.h"
 #include "Core/ILexUICultureChangedInterface.h"
 #include "Core/LexUIBehaviour.h"
-#include "Core/Actor/LexWidgetRootActor.h"
+#include "Core/Actor/LexWidgetPresenterComponent.h"
 #include "Core/LexUIMesh/LexUIGizmoMesh.h"
 #include "Event/LexEventSystem.h"
 #include "PrefabSystem/LexUIPrefabManager.h"
@@ -51,10 +51,6 @@ void ULexUIManagerObject::BeginDestroy()
 				ImportSubsystem->OnAssetReimport.Remove(OnAssetReimportDelegateHandle);
 			}
 		}
-	}
-	if (OnActorLabelChangedDelegateHandle.IsValid())
-	{
-		FCoreDelegates::OnActorLabelChanged.Remove(OnActorLabelChangedDelegateHandle);
 	}
 	if (OnMapOpenedDelegateHandle.IsValid())
 	{
@@ -107,14 +103,6 @@ void ULexUIManagerObject::Tick(float DeltaTime)
 			}
 		}
 	}
-	if (bShouldBroadcastLevelActorListChanged)
-	{
-		bShouldBroadcastLevelActorListChanged = false;
-		if (IsValid(GEditor))
-		{
-			GEditor->BroadcastLevelActorListChanged();
-		}
-	}
 #endif
 }
 TStatId ULexUIManagerObject::GetStatId() const
@@ -139,14 +127,6 @@ FLexUIEditorTickMulticastDelegate& ULexUIManagerObject::GetEditorTickDelegate()
 	return EditorTick;
 }
 
-void ULexUIManagerObject::MarkBroadcastLevelActorListChanged()
-{
-	if (InitCheck())
-	{
-		Instance->bShouldBroadcastLevelActorListChanged = true;
-	}
-}
-
 ULexUIManagerObject* ULexUIManagerObject::GetInstance(bool CreateIfNotValid)
 {
 	if (CreateIfNotValid)
@@ -155,12 +135,8 @@ ULexUIManagerObject* ULexUIManagerObject::GetInstance(bool CreateIfNotValid)
 	}
 	return Instance;
 }
-bool ULexUIManagerObject::IsSelected(AActor* InObject)
+bool ULexUIManagerObject::IsSelected(ULexWidget* InObject)
 {
-	if (GEditor && GEditor->GetSelectedActors()->IsSelected(InObject))
-	{
-		return true;
-	}
 	if (auto Selection = ULexUIManagerWorldSubsystem::GetSelection(InObject->GetWorld()))
 	{
 		return Selection->IsSelected(InObject);
@@ -174,7 +150,6 @@ bool ULexUIManagerObject::InitCheck()
 		UE_LOG(LGUI, Log, TEXT("[%s].%d No Instance of class %s, create it"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *ULexUIManagerObject::StaticClass()->GetName());
 		Instance = NewObject<ULexUIManagerObject>();
 		Instance->AddToRoot();
-		Instance->OnActorLabelChangedDelegateHandle = FCoreDelegates::OnActorLabelChanged.AddUObject(Instance, &ULexUIManagerObject::OnActorLabelChanged);
 		//open map
 		Instance->OnMapOpenedDelegateHandle = FEditorDelegates::OnMapOpened.AddUObject(Instance, &ULexUIManagerObject::OnMapOpened);
 		Instance->OnPackageReloadedDelegateHandle = FCoreUObjectDelegates::OnPackageReloaded.AddUObject(Instance, &ULexUIManagerObject::OnPackageReloaded);
@@ -231,7 +206,7 @@ void ULexUIManagerObject::OnAssetReimport(UObject* Asset)
 		}
 		else if (Asset->IsA<ULexUIPrefab>())
 		{
-			for (TObjectIterator<ALexWidgetRootActor> Itr; Itr; ++Itr)
+			for (TObjectIterator<ULexWidgetPresenterComponent> Itr; Itr; ++Itr)
 			{
 				if (Itr->GetWorld())
 				{
@@ -255,55 +230,36 @@ void ULexUIManagerObject::OnPackageReloaded(EPackageReloadPhase Phase, FPackageR
 	}
 }
 
-void ULexUIManagerObject::OnActorLabelChanged(AActor* Actor)
+void ULexUISelection::SelectWidget(ULexWidget* Widget)
 {
-	if (!IsValid(Actor))return;
-	auto World = Actor->GetWorld();
-	if (!IsValid(World))return;
-	if (World->IsGameWorld())return;
-	if (auto RootComp = Actor->GetRootComponent())
-	{
-		if (auto Widget = Cast<ULexWidget>(RootComp))
-		{
-			if (Widget->GetDisplayName() != Actor->GetActorLabel())
-			{
-				Widget->SetDisplayName(Actor->GetActorLabel());
-				FLexUIUtils::NotifyPropertyChanged(Widget, ULexWidget::GetPropertyName_DisplayName());
-			}
-		}
-	}
-}
-
-void ULexUISelection::SelectActor(AActor* Actor)
-{
-	SelectedActorArray.Add(Actor);
+	SelectedWidgetArray.Add(Widget);
 	OnSelectionChanged.Broadcast();
 }
-void ULexUISelection::SelectComponent(UActorComponent* Component)
+void ULexUISelection::SelectComponent(ULexUIBehaviour* Component)
 {
 	SelectedComponentArray.Add(Component);
 	OnSelectionChanged.Broadcast();
 }
 void ULexUISelection::SelectNone()
 {
-	SelectedActorArray.Empty();
+	SelectedWidgetArray.Empty();
 	SelectedComponentArray.Empty();
 	OnSelectionChanged.Broadcast();
 }
 
-bool ULexUISelection::IsSelected(AActor* Actor)const
+bool ULexUISelection::IsSelected(ULexWidget* Widget)const
 {
-	return SelectedActorArray.Contains(Actor);
+	return SelectedWidgetArray.Contains(Widget);
 }
 
 void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool ScreenOrWorld)
 {
-	if (ULexUIManagerObject::IsSelected(Widget->GetOwner()))//select self
+	if (ULexUIManagerObject::IsSelected(Widget))//select self
 	{
 		auto RectDrawColor = FColor(160, 160, 160, 255);//gray means normal object
 		auto DrawWidget = [=](ULexWidget* InWidget, const FColor& Color)
 		{
-			auto WorldTransform = InWidget->GetComponentTransform();
+			auto WorldTransform = InWidget->GetWorldTransform();
 			FVector RelativeOffset(0, 0, 0);
 			RelativeOffset.Y = (0.5f - InWidget->GetPivot().X) * InWidget->GetWidth();
 			RelativeOffset.Z = (0.5f - InWidget->GetPivot().Y) * InWidget->GetHeight();
@@ -321,7 +277,7 @@ void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool Scr
 		//child
 		for (auto& Child : Widget->GetChildren())
 		{
-			if (IsValid(Child) && IsValid(Child->GetOwner()))
+			if (IsValid(Child))
 			{
 				DrawWidget(Child, RectDrawColor);
 			}
@@ -341,7 +297,7 @@ void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool Scr
 		//self
 		{
 			RectDrawColor = FColor(0, 255, 0, 255);//green means selected object
-			auto WorldTransform = Widget->GetComponentTransform();
+			auto WorldTransform = Widget->GetWorldTransform();
 			FVector RelativeOffset(0, 0, 0);
 			RelativeOffset.Y = (0.5f - Widget->GetPivot().X) * Widget->GetWidth();
 			RelativeOffset.Z = (0.5f - Widget->GetPivot().Y) * Widget->GetHeight();
@@ -430,7 +386,7 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 {
 	auto SourceWidget = InSelectable->GetWidget();
 	if (!IsValid(SourceWidget))return;
-	const FColor Color = ULexUIManagerObject::IsSelected(SourceWidget->GetOwner()) ? FColor(255, 255, 0, 255) : FColor(140, 140, 0, 255);
+	const FColor Color = ULexUIManagerObject::IsSelected(SourceWidget) ? FColor(255, 255, 0, 255) : FColor(140, 140, 0, 255);
 	constexpr float Offset = 2;
 	constexpr float ArrowSize = 5;
 	
@@ -472,10 +428,10 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 		if (ToLeftComp != InSelectable)
 		{
 			auto SourceLeftPoint = FVector(0, SourceWidget->GetLocalSpaceLeft(), 0.5f * (SourceWidget->GetLocalSpaceTop() + SourceWidget->GetLocalSpaceBottom()) + Offset);
-			SourceLeftPoint = SourceWidget->GetComponentTransform().TransformPosition(SourceLeftPoint);
+			SourceLeftPoint = SourceWidget->GetWorldTransform().TransformPosition(SourceLeftPoint);
 			auto DestWidget = ToLeftComp->GetWidget();
 			auto LocalDestRightPoint = FVector(0, DestWidget->GetLocalSpaceRight(), 0.5f * (DestWidget->GetLocalSpaceTop() + DestWidget->GetLocalSpaceBottom()) + Offset);
-			auto DestRightPoint = DestWidget->GetComponentTransform().TransformPosition(LocalDestRightPoint);
+			auto DestRightPoint = DestWidget->GetWorldTransform().TransformPosition(LocalDestRightPoint);
 			float Distance = FVector::Distance(SourceLeftPoint, DestRightPoint);
 			Distance *= 0.2f;
 			auto ScaledArrowSize = ArrowSize;
@@ -483,8 +439,8 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 			{
 				ScaledArrowSize = GetArrowSizeScaledByDistanceToCamera(DestRightPoint);
 			}
-			auto ArrowPointA = DestWidget->GetComponentTransform().TransformPosition(LocalDestRightPoint + FVector(0, ScaledArrowSize, ScaledArrowSize));
-			auto ArrowPointB = DestWidget->GetComponentTransform().TransformPosition(LocalDestRightPoint + FVector(0, ScaledArrowSize, -ScaledArrowSize));
+			auto ArrowPointA = DestWidget->GetWorldTransform().TransformPosition(LocalDestRightPoint + FVector(0, ScaledArrowSize, ScaledArrowSize));
+			auto ArrowPointB = DestWidget->GetWorldTransform().TransformPosition(LocalDestRightPoint + FVector(0, ScaledArrowSize, -ScaledArrowSize));
 			DrawNavigationArrow(InWorld
 				, {
 					SourceLeftPoint,
@@ -501,10 +457,10 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 		if (ToRightComp != InSelectable)
 		{
 			auto SourceRightPoint = FVector(0, SourceWidget->GetLocalSpaceRight(), 0.5f * (SourceWidget->GetLocalSpaceTop() + SourceWidget->GetLocalSpaceBottom()) - Offset);
-			SourceRightPoint = SourceWidget->GetComponentTransform().TransformPosition(SourceRightPoint);
+			SourceRightPoint = SourceWidget->GetWorldTransform().TransformPosition(SourceRightPoint);
 			auto DestWidget = ToRightComp->GetWidget();
 			auto LocalDestLeftPoint = FVector(0, DestWidget->GetLocalSpaceLeft(), 0.5f * (DestWidget->GetLocalSpaceTop() + DestWidget->GetLocalSpaceBottom()) - Offset);
-			auto DestLeftPoint = DestWidget->GetComponentTransform().TransformPosition(LocalDestLeftPoint);
+			auto DestLeftPoint = DestWidget->GetWorldTransform().TransformPosition(LocalDestLeftPoint);
 			float Distance = FVector::Distance(SourceRightPoint, DestLeftPoint);
 			Distance *= 0.2f;
 			auto ScaledArrowSize = ArrowSize;
@@ -512,8 +468,8 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 			{
 				ScaledArrowSize = GetArrowSizeScaledByDistanceToCamera(DestLeftPoint);
 			}
-			auto ArrowPointA = DestWidget->GetComponentTransform().TransformPosition(LocalDestLeftPoint + FVector(0, -ScaledArrowSize, ScaledArrowSize));
-			auto ArrowPointB = DestWidget->GetComponentTransform().TransformPosition(LocalDestLeftPoint + FVector(0, -ScaledArrowSize, -ScaledArrowSize));
+			auto ArrowPointA = DestWidget->GetWorldTransform().TransformPosition(LocalDestLeftPoint + FVector(0, -ScaledArrowSize, ScaledArrowSize));
+			auto ArrowPointB = DestWidget->GetWorldTransform().TransformPosition(LocalDestLeftPoint + FVector(0, -ScaledArrowSize, -ScaledArrowSize));
 			DrawNavigationArrow(InWorld
 				, {
 					SourceRightPoint,
@@ -530,10 +486,10 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 		if (ToDownComp != InSelectable)
 		{
 			auto SourceDownPoint = FVector(0, 0.5f * (SourceWidget->GetLocalSpaceLeft() + SourceWidget->GetLocalSpaceRight()) - Offset, SourceWidget->GetLocalSpaceBottom());
-			SourceDownPoint = SourceWidget->GetComponentTransform().TransformPosition(SourceDownPoint);
+			SourceDownPoint = SourceWidget->GetWorldTransform().TransformPosition(SourceDownPoint);
 			auto DestWidget = ToDownComp->GetWidget();
 			auto LocalDestUpPoint = FVector(0, 0.5f * (DestWidget->GetLocalSpaceLeft() + DestWidget->GetLocalSpaceRight()) - Offset, DestWidget->GetLocalSpaceTop());
-			auto DestUpPoint = DestWidget->GetComponentTransform().TransformPosition(LocalDestUpPoint);
+			auto DestUpPoint = DestWidget->GetWorldTransform().TransformPosition(LocalDestUpPoint);
 			float Distance = FVector::Distance(SourceDownPoint, DestUpPoint);
 			Distance *= 0.2f;
 			auto ScaledArrowSize = ArrowSize;
@@ -541,8 +497,8 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 			{
 				ScaledArrowSize = GetArrowSizeScaledByDistanceToCamera(DestUpPoint);
 			}
-			auto ArrowPointA = DestWidget->GetComponentTransform().TransformPosition(LocalDestUpPoint + FVector(0, ScaledArrowSize, ScaledArrowSize));
-			auto ArrowPointB = DestWidget->GetComponentTransform().TransformPosition(LocalDestUpPoint + FVector(0, -ScaledArrowSize, ScaledArrowSize));
+			auto ArrowPointA = DestWidget->GetWorldTransform().TransformPosition(LocalDestUpPoint + FVector(0, ScaledArrowSize, ScaledArrowSize));
+			auto ArrowPointB = DestWidget->GetWorldTransform().TransformPosition(LocalDestUpPoint + FVector(0, -ScaledArrowSize, ScaledArrowSize));
 			DrawNavigationArrow(InWorld
 				, {
 					SourceDownPoint,
@@ -559,10 +515,10 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 		if (ToUpComp != InSelectable)
 		{
 			auto SourceUpPoint = FVector(0, 0.5f * (SourceWidget->GetLocalSpaceLeft() + SourceWidget->GetLocalSpaceRight()) + Offset, SourceWidget->GetLocalSpaceTop());
-			SourceUpPoint = SourceWidget->GetComponentTransform().TransformPosition(SourceUpPoint);
+			SourceUpPoint = SourceWidget->GetWorldTransform().TransformPosition(SourceUpPoint);
 			auto DestWidget = ToUpComp->GetWidget();
 			auto LocalDestDownPoint = FVector(0, 0.5f * (DestWidget->GetLocalSpaceLeft() + DestWidget->GetLocalSpaceRight()) + Offset, DestWidget->GetLocalSpaceBottom());
-			auto DestDownPoint = DestWidget->GetComponentTransform().TransformPosition(LocalDestDownPoint);
+			auto DestDownPoint = DestWidget->GetWorldTransform().TransformPosition(LocalDestDownPoint);
 			float Distance = FVector::Distance(SourceUpPoint, DestDownPoint);
 			Distance *= 0.2f;
 			auto ScaledArrowSize = ArrowSize;
@@ -570,8 +526,8 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 			{
 				ScaledArrowSize = GetArrowSizeScaledByDistanceToCamera(DestDownPoint);
 			}
-			auto ArrowPointA = DestWidget->GetComponentTransform().TransformPosition(LocalDestDownPoint + FVector(0, ScaledArrowSize, -ScaledArrowSize));
-			auto ArrowPointB = DestWidget->GetComponentTransform().TransformPosition(LocalDestDownPoint + FVector(0, -ScaledArrowSize, -ScaledArrowSize));
+			auto ArrowPointA = DestWidget->GetWorldTransform().TransformPosition(LocalDestDownPoint + FVector(0, ScaledArrowSize, -ScaledArrowSize));
+			auto ArrowPointB = DestWidget->GetWorldTransform().TransformPosition(LocalDestDownPoint + FVector(0, -ScaledArrowSize, -ScaledArrowSize));
 			DrawNavigationArrow(InWorld
 				, {
 					SourceUpPoint,
@@ -768,7 +724,7 @@ bool ULexUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULe
                                                , ULexWidget*& ResultSelectTarget, int& InOutTargetIndexInHitArray
 )
 {
-	TArray<FHitResult> HitResultArray;
+	TArray<FLexUIHitResult> HitResultArray;
 	for (auto Widget : InWidgets)
 	{
 		if (!IsValid(Widget))continue;
@@ -778,7 +734,7 @@ bool ULexUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULe
 			{
 				if (Widget->GetWidgetActiveInHierarchy() && Widget->GetRenderCanvas() != nullptr)
 				{
-					FHitResult HitInfo;
+					FLexUIHitResult HitInfo;
 					auto OriginRaycastType = Visual->GetRaycastType();
 					auto OriginVisibility = Widget->GetRaycastable();
 					Visual->SetRaycastType(ELexVisualRaycastType::Mesh);//in editor selection, make the ray hit actural triangle
@@ -798,7 +754,7 @@ bool ULexUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULe
 	}
 	if (HitResultArray.Num() > 0)//hit something
 	{
-		HitResultArray.Sort([](const FHitResult& A, const FHitResult& B)
+		HitResultArray.Sort([](const FLexUIHitResult& A, const FLexUIHitResult& B)
 			{
 				auto AWidget = (ULexWidget*)(A.Component.Get());
 				auto BWidget = (ULexWidget*)(B.Component.Get());
@@ -967,14 +923,13 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 		for (int i = 0; i < LexUIBehavioursForUpdate.Num(); i++)
 		{
 			CurrentExecutingUpdateIndex = i;
-			auto item = LexUIBehavioursForUpdate[i];
-			if (item.IsValid())
+			auto Behaviour = LexUIBehavioursForUpdate[i];
+			if (Behaviour.IsValid())
 			{
-				if (item->GetSceneComponent() && item->GetSceneComponent()->IsA(ULexWidget::StaticClass()))
+				if (auto Widget = Behaviour->GetWidget())
 				{
-					auto uiItem = (ULexWidget*)item->GetSceneComponent();
 					bool bAffectByGamePause;
-					if (uiItem->IsScreenSpaceOverlayUI())
+					if (Widget->IsScreenSpaceOverlayUI())
 					{
 						bAffectByGamePause = Settings->bScreenSpaceUIAffectByGamePause;
 					}
@@ -984,14 +939,14 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 					}
 					if (!bIsGamePaused || (bIsGamePaused && !bAffectByGamePause))
 					{
-						item->Update(DeltaTime);
+						Behaviour->Update(DeltaTime);
 					}
 				}
 				else
 				{
-					if (!bIsGamePaused || (bIsGamePaused && item->PrimaryComponentTick.bTickEvenWhenPaused))
+					if (!bIsGamePaused || (bIsGamePaused && Behaviour->bTickEvenWhenPaused))
 					{
-						item->Update(DeltaTime);
+						Behaviour->Update(DeltaTime);
 					}
 				}
 			}
@@ -1097,15 +1052,15 @@ void ULexUIManagerWorldSubsystem::DrawHelperGizmo()
 					}
 					LexUIManager->DrawFrameOnWidget(Widget, bIsScreenSpace);
 
-					for (auto& Child : Widget->GetUIChildren())
+					for (auto& Child : Widget->GetChildren())
 					{
 						ForEachWidget(LexUIManager, Child);
 					}
 				}
 			};
-			for (auto Widget : AllRootWidgetArray)
+			for (auto WidgetPresenter : AllWidgetPresenterArray)
 			{
-				LOCAL::ForEachWidget(this, Widget.Get());
+				LOCAL::ForEachWidget(this, WidgetPresenter->GetRootWidget());
 			}
 		}
 	}
@@ -1159,7 +1114,7 @@ void ULexUIManagerWorldSubsystem::AddLexUIBehaviourForLifecycleEvent(ULexUIBehav
 	{
 		if (auto Instance = GetInstance(InComp->GetWorld()))
 		{
-			auto SessionId = ULexUIPrefabWorldSubsystem::GetInstance(InComp->GetWorld())->GetPrefabSystemSessionIdForActor(InComp->GetOwner());
+			auto SessionId = ULexUIPrefabWorldSubsystem::GetInstance(InComp->GetWorld())->GetPrefabSystemSessionIdForWidget(InComp->GetWidget());
 			if (SessionId.IsValid())//processing by prefab system, collect for further operation
 			{
 				if (auto ArrayPtr = Instance->LexUIBehaviours_PrefabSystemProcessing.Find(SessionId))
@@ -1337,13 +1292,10 @@ void ULexUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 			}
 		}
 		auto Instance = InstanceItem;
-		for (auto& RootWidget : Instance->AllRootWidgetArray)
+		for (auto& WidgetPresenter : Instance->AllWidgetPresenterArray)
 		{
-			if (RootWidget.IsValid())
-			{
-				RootWidget->EnsureDataForRebuild();
-				RootWidget->MarkCanvasUpdate(true);
-			}
+			WidgetPresenter->GetRootWidget()->EnsureDataForRebuild();
+			WidgetPresenter->GetRootWidget()->MarkCanvasUpdate(true);
 		}
 	}
 }
@@ -1358,33 +1310,33 @@ ULexUISelection* ULexUIManagerWorldSubsystem::GetSelection(UWorld* InWorld)
 }
 #endif
 
-
-void ULexUIManagerWorldSubsystem::AddRootWidget(ULexWidget* InWidget)
+void ULexUIManagerWorldSubsystem::AddWidgetPresenter(ULexWidgetPresenterComponent* InWidgetPresenter)
 {
-	if (auto Instance = GetInstance(InWidget->GetWorld()))
+	if (auto Instance = GetInstance(InWidgetPresenter->GetWorld()))
 	{
 #if !UE_BUILD_SHIPPING
-		if (Instance->AllRootWidgetArray.Contains(InWidget))
+		if (Instance->AllWidgetPresenterArray.Contains(InWidgetPresenter))
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
 		}
 #endif
-		Instance->AllRootWidgetArray.AddUnique(InWidget);
+		Instance->AllWidgetPresenterArray.AddUnique(InWidgetPresenter);
 	}
 }
-void ULexUIManagerWorldSubsystem::RemoveRootWidget(ULexWidget* InWidget)
+
+void ULexUIManagerWorldSubsystem::RemoveWidgetPresenter(ULexWidgetPresenterComponent* InWidgetPresenter)
 {
-	if (auto Instance = GetInstance(InWidget->GetWorld()))
+	if (auto Instance = GetInstance(InWidgetPresenter->GetWorld()))
 	{
 #if !UE_BUILD_SHIPPING
-		if (!Instance->AllRootWidgetArray.Contains(InWidget))
+		if (!Instance->AllWidgetPresenterArray.Contains(InWidgetPresenter))
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
 		}
 #endif
-		Instance->AllRootWidgetArray.RemoveSingle(InWidget);
+		Instance->AllWidgetPresenterArray.RemoveSingle(InWidgetPresenter);
 	}
 }
 
@@ -1647,9 +1599,9 @@ void ULexUIManagerWorldSubsystem::EndPrefabSystemProcessingActor(const FGuid& In
 		LexUIBehaviours_PrefabSystemProcessing.Remove(InSessionId);
 	}
 }
-void ULexUIManagerWorldSubsystem::AddFunctionForPrefabSystemExecutionBeforeAwake(AActor* InPrefabActor, const TFunction<void()>& InFunction)
+void ULexUIManagerWorldSubsystem::AddFunctionForPrefabSystemExecutionBeforeAwake(ULexWidget* InPrefabWidget, const TFunction<void()>& InFunction)
 {
-	auto SessionId = ULexUIPrefabWorldSubsystem::GetInstance(InPrefabActor->GetWorld())->GetPrefabSystemSessionIdForActor(InPrefabActor);
+	auto SessionId = ULexUIPrefabWorldSubsystem::GetInstance(InPrefabWidget->GetWorld())->GetPrefabSystemSessionIdForWidget(InPrefabWidget);
 	if (SessionId.IsValid())
 	{
 		auto& Container = LexUIBehaviours_PrefabSystemProcessing[SessionId];

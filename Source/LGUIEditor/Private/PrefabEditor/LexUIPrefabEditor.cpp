@@ -10,12 +10,12 @@
 #include "DragAndDrop/AssetDragDropOp.h"
 #include "Misc/FeedbackContext.h"
 #include "LexUIPrefabEditorCommand.h"
-#include "Framework/MultiBox/MultiBoxExtender.h"
 #include "LexUIEditorTools.h"
 #include "ToolMenus.h"
 #include "Editor.h"
 #include "LexWidgetEditorHierarchyView.h"
 #include "Core/LexUIManager.h"
+#include "Core/Actor/LexWidgetPresenterComponent.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
 #include "Framework/Commands/GenericCommands.h"
@@ -58,7 +58,6 @@ FLexUIPrefabEditor::~FLexUIPrefabEditor()
 {
 	PrefabEditorInstanceCollection.Remove(this);
 
-	ULexUIManagerObject::MarkBroadcastLevelActorListChanged();
  	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->EventOnOutlineChanged.RemoveAll(this);
 	ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->OnSelectionChanged.RemoveAll(this);
 
@@ -101,11 +100,11 @@ TWeakPtr<FLexUIPrefabEditor> FLexUIPrefabEditor::GetEditorByWorld(UWorld* InWorl
 	return nullptr;
 }
 
-bool FLexUIPrefabEditor::ActorIsRootAgent(AActor* InActor)
+bool FLexUIPrefabEditor::WidgetIsRootAgent(ULexWidget* InWidget)
 {
 	for (auto Instance : PrefabEditorInstanceCollection)
 	{
-		if (InActor == Instance->GetPreviewScene()->GetRootAgentActor())
+		if (InWidget == Instance->GetPreviewScene()->GetWidgetPresenter()->GetRootWidget())
 		{
 			return true;
 		}
@@ -130,43 +129,34 @@ bool FLexUIPrefabEditor::GetSelectedObjectsBounds(FBoxSphereBounds& OutResult)
 {
 	FBoxSphereBounds Bounds = FBoxSphereBounds(EForceInit::ForceInitToZero);
 	bool IsFirstBounds = true;
-	for (auto& Actor : SelectedActors)
+	for (auto& Widget : SelectedWidgets)
 	{
-		if (auto WidgetComp = Cast<ULexWidget>(Actor->GetRootComponent()))
+		if (!Widget->GetWidgetActiveInHierarchy())
 		{
-			if (!WidgetComp->GetWidgetActiveInHierarchy())
-			{
-				continue;
-			}
-			if (auto Visual = WidgetComp->GetVisual())
-			{
-				FVector Min, Max;
-				Visual->GetGeometryBounds3DInLocalSpace(Min, Max);
-				auto LocalBounds = FBox(Min, Max);
-				auto Box = LocalBounds.TransformBy(WidgetComp->GetComponentTransform());
-				if (IsFirstBounds)
-				{
-					Bounds = Box;
-					IsFirstBounds = false;
-				}
-				else
-				{
-					Bounds = Bounds + Box;
-				}
-			}
-			else
-			{
-				auto Box = WidgetComp->Bounds;
-				if (IsFirstBounds)
-				{
-					IsFirstBounds = false;
-					Bounds = Box;
-				}
-				else
-				{
-					Bounds = Bounds + Box;
-				}
-			}
+			continue;
+		}
+		FBox LocalBounds;
+		if (auto Visual = Widget->GetVisual())
+		{
+			FVector Min, Max;
+			Visual->GetGeometryBounds3DInLocalSpace(Min, Max);
+			LocalBounds = FBox(Min, Max);
+		}
+		else
+		{
+			auto Min2D = Widget->GetLocalSpaceLeftBottomPoint();
+			auto Max2D = Widget->GetLocalSpaceRightTopPoint();
+			LocalBounds = FBox(FVector(0, Min2D.X, Min2D.Y), FVector(0, Max2D.X, Max2D.Y));
+		}
+		auto Box = LocalBounds.TransformBy(Widget->GetWorldTransform());
+		if (IsFirstBounds)
+		{
+			IsFirstBounds = false;
+			Bounds = Box;
+		}
+		else
+		{
+			Bounds = Bounds + Box;
 		}
 	}
 	OutResult = Bounds;
@@ -180,25 +170,28 @@ FBoxSphereBounds FLexUIPrefabEditor::GetAllObjectsBounds()
 	for (auto& KeyValue : GetPrefabHelperObject()->MapGuidToObject)
 	{
 		FBox Box; bool bIsValidBox = false;
-		if (auto SceneComp = Cast<USceneComponent>(KeyValue.Value))
+		if (auto Widget = Cast<ULexWidget>(KeyValue.Value))
 		{
-			if (SceneComp->IsRegistered() && !SceneComp->IsVisualizationComponent())
+			if (Widget->GetWidgetActiveInHierarchy())
 			{
-				if (auto Widget = Cast<ULexWidget>(SceneComp))
+				FBox LocalBounds;
+				if (auto Visual = Widget->GetVisual())
 				{
-					if (Widget->GetWidgetActiveInHierarchy())
-					{
-						Box = Widget->Bounds.GetBox();
-						bIsValidBox = true;
-					}
+					FVector Min, Max;
+					Visual->GetGeometryBounds3DInLocalSpace(Min, Max);
+					LocalBounds = FBox(Min, Max);
 				}
-				else if (auto PrimitiveComp = Cast<UPrimitiveComponent>(SceneComp))
+				else
 				{
-					Box = PrimitiveComp->Bounds.GetBox();
-					bIsValidBox = true;
+					auto Min2D = Widget->GetLocalSpaceLeftBottomPoint();
+					auto Max2D = Widget->GetLocalSpaceRightTopPoint();
+					LocalBounds = FBox(FVector(0, Min2D.X, Min2D.Y), FVector(0, Max2D.X, Max2D.Y));
 				}
+				Box = LocalBounds.TransformBy(Widget->GetWorldTransform());
+				bIsValidBox = true;
 			}
 		}
+
 		if (bIsValidBox)
 		{
 			if (IsFirstBounds)
@@ -215,24 +208,24 @@ FBoxSphereBounds FLexUIPrefabEditor::GetAllObjectsBounds()
 	return Bounds;
 }
 
-bool FLexUIPrefabEditor::ActorBelongsToSubPrefab(AActor* InActor)
+bool FLexUIPrefabEditor::ActorBelongsToSubPrefab(ULexWidget* InWidget)
 {
-	return GetPrefabHelperObject()->IsActorBelongsToSubPrefab(InActor);
+	return GetPrefabHelperObject()->IsWidgetBelongsToSubPrefab(InWidget);
 }
 
-bool FLexUIPrefabEditor::ActorIsSubPrefabRoot(AActor* InSubPrefabRootActor)
+bool FLexUIPrefabEditor::ActorIsSubPrefabRoot(ULexWidget* InSubPrefabRootWidget)
 {
-	return GetPrefabHelperObject()->SubPrefabMap.Contains(InSubPrefabRootActor);
+	return GetPrefabHelperObject()->SubPrefabMap.Contains(InSubPrefabRootWidget);
 }
 
-FLexUISubPrefabData FLexUIPrefabEditor::GetSubPrefabDataForActor(AActor* InSubPrefabActor)
+FLexUISubPrefabData FLexUIPrefabEditor::GetSubPrefabDataForActor(ULexWidget* InSubPrefabWidget)
 {
-	return GetPrefabHelperObject()->GetSubPrefabData(InSubPrefabActor);
+	return GetPrefabHelperObject()->GetSubPrefabData(InSubPrefabWidget);
 }
 
-void FLexUIPrefabEditor::OpenSubPrefab(AActor* InSubPrefabActor)
+void FLexUIPrefabEditor::OpenSubPrefab(ULexWidget* InSubPrefabWidget)
 {
-	if (auto SubPrefabAsset = GetPrefabHelperObject()->GetSubPrefabAsset(InSubPrefabActor))
+	if (auto SubPrefabAsset = GetPrefabHelperObject()->GetSubPrefabAsset(InSubPrefabWidget))
 	{
 		auto PrefabEditor = FLexUIPrefabEditor::GetEditorForPrefabIfValid(SubPrefabAsset);
 		if (!PrefabEditor)
@@ -242,9 +235,9 @@ void FLexUIPrefabEditor::OpenSubPrefab(AActor* InSubPrefabActor)
 		}
 	}
 }
-void FLexUIPrefabEditor::SelectSubPrefab(AActor* InSubPrefabActor)
+void FLexUIPrefabEditor::SelectSubPrefab(ULexWidget* InSubPrefabWidget)
 {
-	if (auto SubPrefabAsset = GetPrefabHelperObject()->GetSubPrefabAsset(InSubPrefabActor))
+	if (auto SubPrefabAsset = GetPrefabHelperObject()->GetSubPrefabAsset(InSubPrefabWidget))
 	{
 		TArray<UObject*> ObjectsToSync;
 		ObjectsToSync.Add(SubPrefabAsset);
@@ -259,7 +252,7 @@ bool FLexUIPrefabEditor::GetAnythingDirty()const
 
 void FLexUIPrefabEditor::SyncSelection()
 {
-	SelectedActors = ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->GetSelectedActors();
+	SelectedWidgets = ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->GetSelectedWidgets();
 	OnSelectedWidgetsChanged.Broadcast();
 	OutlinerPtr->RequestRefresh();
 }
@@ -304,14 +297,14 @@ void FLexUIPrefabEditor::UnregisterTabSpawners(const TSharedRef<FTabManager>& In
 void FLexUIPrefabEditor::PostUndo(bool bSuccess)
 {
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
-	SelectedActors = ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->GetSelectedActors();
+	SelectedWidgets = ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->GetSelectedWidgets();
 	OnSelectedWidgetsChanged.Broadcast();
 	OutlinerPtr->RequestRefresh();
 }
 void FLexUIPrefabEditor::PostRedo(bool bSuccess)
 {
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
-	SelectedActors = ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->GetSelectedActors();
+	SelectedWidgets = ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->GetSelectedWidgets();
 	OnSelectedWidgetsChanged.Broadcast();
 	OutlinerPtr->RequestRefresh();
 }
@@ -331,7 +324,7 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 	}
 
 	FLexUIPrefabEditorCommand::Register();
-	
+
 	PrefabBeingEdited->EnsureInstanceObjects();
 
 	TSharedPtr<FLexUIPrefabEditor> PrefabEditorPtr = SharedThis(this);
@@ -391,14 +384,7 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 	InitAssetEditor(Mode, InitToolkitHost, PrefabEditorAppName, StandaloneDefaultLayout, true, true, PrefabBeingEdited);
 
 	// After opening a prefab, broadcast event to LexUIPrefabSequencerEditor
-	FLexUIEditorTools::OnEditingPrefabChanged.Broadcast(GetPreviewScene()->GetRootAgentActor());
-}
-
-TArray<AActor*> FLexUIPrefabEditor::GetAllActors()
-{
-	TArray<AActor*> AllActors;
-	FLexUIUtils::CollectChildrenActors(GetPrefabHelperObject()->LoadedRootActor, AllActors, true);
-	return AllActors;
+	FLexUIEditorTools::OnEditingPrefabChanged.Broadcast(GetPreviewScene()->GetWidgetPresenter()->GetLoadedWidget());
 }
 
 void FLexUIPrefabEditor::GetInitialViewSetting(FVector& OutLocation, FRotator& OutRotation, FVector& OutOrbitLocation, ELevelViewportType& OutViewType)
@@ -426,14 +412,14 @@ void FLexUIPrefabEditor::GetInitialViewSetting(FVector& OutLocation, FRotator& O
 	OutViewType = (ELevelViewportType)PrefabEditorData.ViewportType;
 }
 
-AActor* FLexUIPrefabEditor::GetRootAgentActor()
+ULexWidget* FLexUIPrefabEditor::GetRootAgentWidget()
 {
-	return GetPreviewScene()->GetRootAgentActor();
+	return GetPreviewScene()->GetWidgetPresenter()->GetRootWidget();
 }
 
-AActor* FLexUIPrefabEditor::GetLoadedRootActor()
+ULexWidget* FLexUIPrefabEditor::GetLoadedRootWidget()
 {
-	return GetPrefabHelperObject()->LoadedRootActor;
+	return GetPrefabHelperObject()->LoadedRootWidget;
 }
 
 void FLexUIPrefabEditor::SaveAsset_Execute()
@@ -465,17 +451,11 @@ void FLexUIPrefabEditor::SaveEditorState()
 	PrefabBeingEdited->PrefabDataForPrefabEditor.ViewRotation = ViewTransform.GetRotation();
 	PrefabBeingEdited->PrefabDataForPrefabEditor.ViewOrbitLocation = ViewTransform.GetLookAt();
 	PrefabBeingEdited->PrefabDataForPrefabEditor.ViewportType = ViewportPtr->GetViewportClient()->GetViewportType();
-	if (auto RootAgentActor = GetPreviewScene()->GetRootAgentActor())
-	{
-		if (auto Widget = Cast<ULexWidget>(RootAgentActor->GetRootComponent()))
-		{
-			PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasSize = FIntPoint(Widget->GetWidth(), Widget->GetHeight());
-		}
-		if (auto Canvas = RootAgentActor->FindComponentByClass<ULexCanvas>())
-		{
-			PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasRenderMode = (uint8)Canvas->GetRenderMode();
-		}
- 	}
+	auto WidgetPresenter = GetPreviewScene()->GetWidgetPresenter();
+	auto RootAgentWidget = WidgetPresenter->GetRootWidget();
+	PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasSize = FIntPoint(RootAgentWidget->GetWidth(), RootAgentWidget->GetHeight());
+	auto RootCanvas = WidgetPresenter->GetCanvas();
+	PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasRenderMode = (uint8)RootCanvas->GetRenderMode();
 	PrefabBeingEdited->PrefabDataForPrefabEditor.ViewMode = ViewportPtr->GetViewportClient()->GetViewMode();
 
 	TSet<TWeakObjectPtr<ULexWidget>> ExpandWidgetSet;
@@ -531,7 +511,7 @@ void FLexUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bA
 
 	if (!bAppendOrToggle)
 	{
-		SelectedActors.Empty();
+		SelectedWidgets.Empty();
 		if (bNotifyGEditor)
 		{
 			ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->SelectNone();
@@ -540,38 +520,22 @@ void FLexUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bA
 
 	for ( const auto& Widget : TempSelection )
 	{
-		if ( bAppendOrToggle && SelectedActors.Contains(Widget->GetOwner()) )
+		if ( bAppendOrToggle && SelectedWidgets.Contains(Widget) )
 		{
-			SelectedActors.Remove(Widget->GetOwner());
+			SelectedWidgets.Remove(Widget);
 		}
 		else
 		{
-			SelectedActors.Add(Widget->GetOwner());
+			SelectedWidgets.Add(Widget);
 		}
 		if (bNotifyGEditor)
 		{
-			ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->SelectActor(Widget->GetOwner());
+			ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->SelectWidget(Widget);
 		}
 	}
 	
 	OnSelectedWidgetsChanged.Broadcast();
 	bIsSelecting = false;
-}
-
-TArray<TWeakObjectPtr<ULexWidget>> FLexUIPrefabEditor::GetSelectedWidgets()
-{
-	TArray<TWeakObjectPtr<ULexWidget>> SelectedWidgets;
-	for (auto Actor : SelectedActors)
-	{
-		if (Actor.IsValid())
-		{
-			if (auto Widget = Cast<ULexWidget>(Actor->GetRootComponent()))
-			{
-				SelectedWidgets.Add(Widget);
-			}
-		}
-	}
-	return SelectedWidgets;
 }
 
 FLexUIPrefabInstanceScene* FLexUIPrefabEditor::GetPreviewScene()
@@ -606,24 +570,24 @@ void FLexUIPrefabEditor::BindCommands()
 		FIsActionChecked()
 	);
 
-	TFunction<AActor*()> GetSelectedActor = [this]()
+	TFunction<ULexWidget*()> GetSelectedWidget = [this]()
 	{
-		if (this->GetSelectedActors().Num() == 1)
+		if (this->GetSelectedWidgets().Num() == 1)
 		{
-			auto Actor = this->GetSelectedActors()[0];
+			auto Actor = this->GetSelectedWidgets()[0];
 			if (Actor.IsValid())
 			{
 				return Actor.Get();
 			}
 		}
-		return (AActor*)nullptr;
+		return (ULexWidget*)nullptr;
 	};
-	TFunction<TArray<AActor*>()> GetSelectedActorArray = [this]()
+	TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArray = [this]()
 	{
-		TArray<AActor*> TempSelectedActors;
-		if (this->GetSelectedActors().Num() > 0)
+		TArray<ULexWidget*> TempSelectedActors;
+		if (this->GetSelectedWidgets().Num() > 0)
 		{
-			for (auto Actor : this->GetSelectedActors())
+			for (auto Actor : this->GetSelectedWidgets())
 			{
 				if (Actor.IsValid())
 				{
@@ -636,8 +600,8 @@ void FLexUIPrefabEditor::BindCommands()
 	};
 	ToolkitCommands->MapAction(
 		FGenericCommands::Get().Copy,
-		FExecuteAction::CreateStatic(&FLexUIEditorTools::CopyActors, GetSelectedActorArray),
-		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCopyActor, GetSelectedActorArray),
+		FExecuteAction::CreateStatic(&FLexUIEditorTools::CopyWidgets, GetSelectedWidgetArray),
+		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCopyWidget, GetSelectedWidgetArray),
 		FGetActionCheckState(),
 		FIsActionButtonVisible()
 	);
@@ -645,10 +609,10 @@ void FLexUIPrefabEditor::BindCommands()
 		FGenericCommands::Get().Cut,
 		FExecuteAction::CreateSPLambda(this, [=, this]()
 		{
-			FLexUIEditorTools::CutActors(GetSelectedActorArray);
+			FLexUIEditorTools::CutWidgets(GetSelectedWidgetArray);
 			OutlinerPtr->RequestRefresh();
 		}),
-		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCutActor, GetSelectedActorArray),
+		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanCutWidget, GetSelectedWidgetArray),
 		FGetActionCheckState(),
 		FIsActionButtonVisible()
 	);
@@ -656,10 +620,10 @@ void FLexUIPrefabEditor::BindCommands()
 		FGenericCommands::Get().Paste,
 		FExecuteAction::CreateSPLambda(this, [=, this]()
 		{
-			FLexUIEditorTools::PasteActors(GetSelectedActorArray);
+			FLexUIEditorTools::PasteWidgets(GetSelectedWidgetArray);
 			OutlinerPtr->RequestRefresh();
 		}),
-		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanPasteActor, GetSelectedActor),
+		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanPasteWidget, GetSelectedWidget),
 		FGetActionCheckState(),
 		FIsActionButtonVisible()
 	);
@@ -667,10 +631,10 @@ void FLexUIPrefabEditor::BindCommands()
 		FGenericCommands::Get().Duplicate,
 		FExecuteAction::CreateSPLambda(this, [=, this]()
 		{
-			FLexUIEditorTools::DuplicateActors(GetSelectedActorArray);
+			FLexUIEditorTools::DuplicateWidgets(GetSelectedWidgetArray);
 			OutlinerPtr->RequestRefresh();
 		}),
-		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanDuplicateActor, GetSelectedActorArray),
+		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanDuplicateWidget, GetSelectedWidgetArray),
 		FGetActionCheckState(),
 		FIsActionButtonVisible()
 	);
@@ -678,10 +642,10 @@ void FLexUIPrefabEditor::BindCommands()
 		FGenericCommands::Get().Delete,
 		FExecuteAction::CreateSPLambda(this, [=, this]()
 		{
-			FLexUIEditorTools::DeleteActors(GetSelectedActorArray);
+			FLexUIEditorTools::DeleteWidgets(GetSelectedWidgetArray);
 			OutlinerPtr->RequestRefresh();
 		}),
-		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanDeleteActor, GetSelectedActorArray),
+		FCanExecuteAction::CreateStatic(&FLexUIEditorTools::CanDeleteWidget, GetSelectedWidgetArray),
 		FGetActionCheckState(),
 		FIsActionButtonVisible()
 	);
@@ -908,17 +872,17 @@ FReply FLexUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent&
 				}
 			}
 
-			auto CurrentSelectedActor = InParentWidget != nullptr ? InParentWidget->GetOwner() :
-			(SelectedActors.Num() > 0 ? SelectedActors[0] : nullptr);
+			auto CurrentSelectedWidget = InParentWidget != nullptr ? InParentWidget :
+			(SelectedWidgets.Num() > 0 ? SelectedWidgets[0] : nullptr);
 			if (PrefabsToLoad.Num() > 0)
 			{
-				if (CurrentSelectedActor == nullptr)
+				if (CurrentSelectedWidget == nullptr)
 				{
 					auto MsgText = LOCTEXT("Error_NeedParentNode", "Please select a actor as parent actor");
 					FMessageDialog::Open(EAppMsgType::Ok, MsgText);
 					return FReply::Unhandled();
 				}
-				if (CurrentSelectedActor == GetPreviewScene()->GetRootAgentActor())
+				if (CurrentSelectedWidget == GetPreviewScene()->GetWidgetPresenter()->GetRootWidget())
 				{
 					auto MsgText = FText::Format(LOCTEXT("Error_RootCannotBeParentNode", "{0} cannot be parent actor of child prefab, please choose another actor."), FText::FromString(FLexUIPrefabInstanceScene::RootAgentActorName));
 					FMessageDialog::Open(EAppMsgType::Ok, MsgText);
@@ -931,28 +895,27 @@ FReply FLexUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent&
 			}
 
 			GEditor->BeginTransaction(LOCTEXT("CreateFromAssetDrop_Transaction", "LexUI Create from asset drop"));
-			TArray<AActor*> CreatedActorArray;
+			TArray<ULexWidget*> CreatedWidgetArray;
 			if (PrefabsToLoad.Num() > 0)
 			{
-				GetPrefabHelperObject()->SetCanNotifyAttachment(false);
 				for (auto& PrefabAsset : PrefabsToLoad)
 				{
 					TMap<FGuid, TObjectPtr<UObject>> SubPrefabMapGuidToObject;
-					TMap<TObjectPtr<AActor>, FLexUISubPrefabData> SubSubPrefabMap;
+					TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> SubSubPrefabMap;
 					auto LoadedSubPrefabRootActor = PrefabAsset->LoadPrefabWithExistingObjects(GetPreviewScene()->GetWorld()
-						, CurrentSelectedActor->GetRootComponent()
+						, GetPreviewScene()->GetWorld()
+						, CurrentSelectedWidget.Get()
 						, SubPrefabMapGuidToObject, SubSubPrefabMap
 					);
 
 					GetPrefabHelperObject()->MakePrefabAsSubPrefab(PrefabAsset, LoadedSubPrefabRootActor, SubPrefabMapGuidToObject, {});
-					CreatedActorArray.Add(LoadedSubPrefabRootActor);
+					CreatedWidgetArray.Add(LoadedSubPrefabRootActor);
 				}
-				GetPrefabHelperObject()->SetCanNotifyAttachment(true);
 
 				if (OutlinerPtr.IsValid())
 				{
 					ULexUIManagerObject::AddOneShotTickFunction([=, this] {
-						for (auto& Actor : CreatedActorArray)
+						for (auto& Actor : CreatedWidgetArray)
 						{
 							//OutlinerPtr->UnexpandActorForDragDroppedPrefab(Actor);
 						}
@@ -960,12 +923,12 @@ FReply FLexUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent&
 						}, 1);//delay execute, because the outliner not create actor yet
 				}
 			}
-			if (CreatedActorArray.Num() > 0)
+			if (CreatedWidgetArray.Num() > 0)
 			{
 				ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->SelectNone();
-				for (auto& Actor : CreatedActorArray)
+				for (auto& Widget : CreatedWidgetArray)
 				{
-					ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->SelectActor(Actor);
+					ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->SelectWidget(Widget);
 				}
 			}
 			GEditor->EndTransaction();

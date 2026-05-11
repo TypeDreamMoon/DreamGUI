@@ -7,6 +7,7 @@
 #include "Editor.h"
 #include "LGUIEditorModule.h"
 #include "LGUIEditorStyle.h"
+#include "Core/LexUIBehaviour.h"
 #include "Core/Components/LexVisual.h"
 #include "Core/Components/LexWidget.h"
 #include "Styling/SlateIconFinder.h"
@@ -58,12 +59,12 @@ void SLexWidgetHierarchyPickerViewItem::Construct(const FArguments& InArgs, cons
 	auto Widget = Model->Widget;
 
 	MenuBuilder = new FMenuBuilder(true, NULL, TSharedPtr<FExtender>(), false, &FCoreStyle::Get(), false);
-	auto WidgetActor = Model->Widget->GetOwner();
+	auto WidgetActor = Model->Widget.Get();
 	MenuBuilder->BeginSection("ActorSection", LOCTEXT("ActorMenu", "Actor"));
 	{
 		if (WidgetActor->IsA(InObjectClass))
 		{
-			MenuBuilder->AddMenuEntry(FText::FromString(FString::Printf(TEXT("%s (%s)"), *WidgetActor->GetActorLabel(), *WidgetActor->GetClass()->GetName())), FText::GetEmpty(), FSlateIconFinder::FindIconForClass(WidgetActor->GetClass())
+			MenuBuilder->AddMenuEntry(FText::FromString(FString::Printf(TEXT("%s (%s)"), *WidgetActor->GetDisplayName(), *WidgetActor->GetClass()->GetName())), FText::GetEmpty(), FSlateIconFinder::FindIconForClass(WidgetActor->GetClass())
 				, FUIAction(FExecuteAction::CreateLambda([=]()
 				{
 					InArgs._OnSelectObject.ExecuteIfBound(WidgetActor);
@@ -82,7 +83,7 @@ void SLexWidgetHierarchyPickerViewItem::Construct(const FArguments& InArgs, cons
 		if (SubObjects.Num() > 0)
 		{
 			MenuBuilder->AddSubMenu(
-				FText::FromString(FString::Printf(TEXT("%s (%s)"), *WidgetActor->GetActorLabel(), *WidgetActor->GetClass()->GetName())),
+				FText::FromString(FString::Printf(TEXT("%s (%s)"), *WidgetActor->GetDisplayName(), *WidgetActor->GetClass()->GetName())),
 				FText::GetEmpty(), FNewMenuDelegate::CreateLambda([=](FMenuBuilder& SubMenuBuilder)
 				{
 					for (UObject* Object : SubObjects)
@@ -98,10 +99,9 @@ void SLexWidgetHierarchyPickerViewItem::Construct(const FArguments& InArgs, cons
 	}
 	MenuBuilder->EndSection();
 	MenuBuilder->BeginSection("ComponentsSection", LOCTEXT("ComponentsMenu", "Components"));
-	auto Components = WidgetActor->GetComponents();
+	auto Components = WidgetActor->GetAllComponents();
 	for (auto Component : Components)
 	{
-		if (Component->IsVisualizationComponent())continue;
 		if (Component->IsA(InObjectClass))
 		{
 			MenuBuilder->AddMenuEntry(FText::FromString(FString::Printf(TEXT("%s (%s)"), *Component->GetName(), *Component->GetClass()->GetName())), FText::GetEmpty(), FSlateIconFinder::FindIconForClass(Component->GetClass())

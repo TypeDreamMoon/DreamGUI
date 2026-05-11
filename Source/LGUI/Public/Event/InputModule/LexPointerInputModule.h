@@ -17,22 +17,22 @@ class LGUI_API ULexPointerInputModule : public ULexBaseInputModule
 	GENERATED_BODY()
 
 public:
-	static void ProcessPointerEvent(ULexEventSystem* eventSystem, ULexPointerEventData* pointerEventData, bool pointerHitAnything, const FLexUIHitResult& hitResult, bool& OutIsHitSomething, FHitResult& OutHitResult);
+	static void ProcessPointerEvent(ULexEventSystem* eventSystem, ULexPointerEventData* pointerEventData, bool pointerHitAnything, const FLexUIHitResultContainer& hitResult, bool& OutIsHitSomething, FLexUIHitResult& OutHitResult);
 protected:
 	
-	bool LineTrace(ULexPointerEventData* InPointerEventData, FLexUIHitResult& OutLexHitResult);
-	TArray<FLexUIHitResult> MultiHitResult;//temp array for hit result
-	static void ProcessPointerEnterExit(ULexEventSystem* eventSystem, ULexPointerEventData* pointerEventData, USceneComponent* oldObj, USceneComponent* newObj, ELexUIEventFireType enterFireType);
+	bool LineTrace(ULexPointerEventData* InPointerEventData, FLexUIHitResultContainer& OutLexHitResult);
+	TArray<FLexUIHitResultContainer> MultiHitResult;//temp array for hit result
+	static void ProcessPointerEnterExit(ULexEventSystem* eventSystem, ULexPointerEventData* pointerEventData, ULexWidget* oldObj, ULexWidget* newObj, ELexUIEventFireType enterFireType);
 	/** find a common root actor of two actors. return nullptr if no common root */
-	static AActor* FindCommonRoot(AActor* actorA, AActor* actorB);
+	static ULexWidget* FindCommonRoot(ULexWidget* A, ULexWidget* B);
 
-	bool Navigate(ELexUINavigationDirection InDirection, ULexPointerEventData* InPointerEventData, FLexUIHitResult& hitResult);
+	bool Navigate(ELexUINavigationDirection InDirection, ULexPointerEventData* InPointerEventData, FLexUIHitResultContainer& hitResult);
 	void ProcessInputForNavigation();
 	void ProcessInputForNavigation(ULexPointerEventData* InPointerEventData);
 	void ClearEventByID(int pointerID);
-	static bool CanHandleInterface(USceneComponent* targetComp, UClass* targetInterfaceClass, ELexUIEventFireType eventFireType);
-	static USceneComponent* GetEventHandle(USceneComponent* targetComp, UClass* targetInterfaceClass, ELexUIEventFireType eventFireType);
-	static void DeselectIfSelectionChanged(ULexEventSystem* eventSystem, USceneComponent* currentPressed, ULexBaseEventData* EventData);
+	static bool CanHandleInterface(ULexWidget* targetComp, UClass* targetInterfaceClass, ELexUIEventFireType eventFireType);
+	static ULexWidget* GetEventHandle(ULexWidget* targetComp, UClass* targetInterfaceClass, ELexUIEventFireType eventFireType);
+	static void DeselectIfSelectionChanged(ULexEventSystem* eventSystem, ULexWidget* currentPressed, ULexBaseEventData* EventData);
 public:
 	virtual void ClearEvent()override;
 };

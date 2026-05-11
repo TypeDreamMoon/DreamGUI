@@ -6,6 +6,7 @@
 #include "PrefabSystem/ILexUIPrefabInterface.h"
 #include "MovieSceneSequencePlayer.h"
 #include "LexUIComponentReference.h"
+#include "Core/LexUIBehaviour.h"
 #include "LexUIPrefabSequenceComponent.generated.h"
 
 
@@ -17,7 +18,7 @@ class ULexUIPrefabSequencePlayer;
  */
 UCLASS(Blueprintable, ClassGroup=LGUI, hidecategories=(Collision, Cooking, Activation), meta=(BlueprintSpawnableComponent))
 class LGUI_API ULexUIPrefabSequenceComponent
-	: public UActorComponent, public ILexUIPrefabInterface
+	: public ULexUIBehaviour
 {
 public:
 	GENERATED_BODY()
@@ -52,10 +53,7 @@ public:
 	ULexUIPrefabSequence* DuplicateAnimationByIndex(int32 InIndex);
 	
 	virtual void BeginPlay()override;
-	// Begin ILGUIPrefabInterface
-	virtual void Awake_Implementation()override;
-	// End ILGUIPrefabInterface
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void EndPlay() override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual void PreDuplicate(FObjectDuplicationParameters& DupParams)override;
