@@ -9,7 +9,6 @@
 #include "Core/LexUIBehaviour.h"
 #include "Core/LexUIDrawCall.h"
 #include "Math/TransformCalculus2D.h"
-#include "PrefabSystem/ILexUIPrefabInterface.h"
 #include "LexCanvas.generated.h"
 
 class ULexWidgetPresenterComponent;
@@ -185,7 +184,7 @@ class UTextureRenderTarget2D;
  * Other UV channels are defined by LexVisual, check LexText and LexRectBlock.
  */
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API ULexCanvas : public ULexUIBehaviour, public ILexUIPrefabInterface
+class LGUI_API ULexCanvas : public ULexUIBehaviour
 {
 	GENERATED_BODY()
 
@@ -194,9 +193,6 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay()override;
-	//begin LGUIPrefabInterface
-	virtual void Awake_Implementation() override;
-	//end LGUIPrefabInterface
 #if WITH_EDITOR
 public:
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
@@ -268,6 +264,8 @@ public:
 	TWeakObjectPtr<ULexCanvas> GetParentCanvas()const { return ParentCanvas; }
 
 	void SetParentCanvas(ULexCanvas* InParentCanvas);
+
+	static void CollectChildrenCanvas(ULexCanvas* Target, TArray<ULexCanvas*>& OutAllChildrenCanvas, bool IncludeTarget = true);
 
 	DECLARE_EVENT_ThreeParams(ULexCanvas, FRenderModeChangedEvent, ULexCanvas*, ELexRenderMode/*Old*/, ELexRenderMode/*New*/);
 	DECLARE_EVENT_OneParam(ULexCanvas, FRenderTargetChangedEvent, UTextureRenderTarget2D*);
@@ -759,7 +757,7 @@ private:
 	void OnWidgetPropertyDataTextureChanged(UTexture* NewTexture);
 	void CheckWidgetPropertyData();
 public:
-	void PushAsyncFunction_TransformVertices(const TFunction<void()>& InFunction);
+	void PushAsyncFunction_TransformVertices(TFunction<void()> InFunction);
 	/** Called by LexWidget to delete clip data */
 	void RemoveClipData(const TSharedPtr<FLexUIClipData>& InClipData);
 	UTexture* GetClipDataTexture()const;

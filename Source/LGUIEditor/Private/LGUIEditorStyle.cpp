@@ -28,9 +28,15 @@ FName FLGUIEditorStyle::GetStyleSetName()
 	return StyleSetName;
 }
 
+FString UMG_Brush_RootToContentDir(const FString& RelativePath, const TCHAR* Extension)
+{
+	return (FPaths::EngineContentDir() / TEXT("Editor/Slate/UMG") / RelativePath) + Extension;
+}
+
 #define IMAGE_BRUSH( RelativePath, ... ) FSlateImageBrush( Style->RootToContentDir( RelativePath, TEXT(".png") ), __VA_ARGS__ )
 #define BOX_BRUSH( RelativePath, ... ) FSlateBoxBrush( Style->RootToContentDir( RelativePath, TEXT(".png") ), __VA_ARGS__ )
 #define BORDER_BRUSH( RelativePath, ... ) FSlateBorderBrush( Style->RootToContentDir( RelativePath, TEXT(".png") ), __VA_ARGS__ )
+#define UMG_ICON( RelativePath, ... ) FSlateVectorImageBrush( UMG_Brush_RootToContentDir( RelativePath, TEXT(".svg")), __VA_ARGS__ )
 #define TTF_FONT( RelativePath, ... ) FSlateFontInfo( Style->RootToContentDir( RelativePath, TEXT(".ttf") ), __VA_ARGS__ )
 #define OTF_FONT( RelativePath, ... ) FSlateFontInfo( Style->RootToContentDir( RelativePath, TEXT(".otf") ), __VA_ARGS__ )
 
@@ -41,7 +47,7 @@ const FVector2D Icon40x40(40.0f, 40.0f);
 TSharedRef< FSlateStyleSet > FLGUIEditorStyle::Create()
 {
 	TSharedRef< FSlateStyleSet > Style = MakeShareable(new FSlateStyleSet("LGUIEditorStyle"));
-	Style->SetContentRoot(IPluginManager::Get().FindPlugin("LGUI")->GetBaseDir() / TEXT("Resources/Icons"));;
+	Style->SetContentRoot(IPluginManager::Get().FindPlugin("LGUI")->GetBaseDir() / TEXT("Resources/Icons"));
 
 	Style->Set("ClassThumbnail.LexWidgetActor", new IMAGE_BRUSH(TEXT("LexWidget_40x"), Icon40x40));
 
@@ -61,12 +67,11 @@ TSharedRef< FSlateStyleSet > FLGUIEditorStyle::Create()
 	Style->Set("ClassThumbnail.UITextureBase", new IMAGE_BRUSH(TEXT("UITexture_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.LexVisualPostProcess", new IMAGE_BRUSH(TEXT("UIPostProcess_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.LexUIBehaviour", new IMAGE_BRUSH(TEXT("LexUIBehaviour_40x"), Icon40x40));
-	Style->Set("ClassThumbnail.LexUIBehaviour", new IMAGE_BRUSH(TEXT("LexUIBehaviour_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.LexRectBlock", new IMAGE_BRUSH(TEXT("LexRectBlock_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.UIWidget", new IMAGE_BRUSH(TEXT("UIWidget_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.UIRenderTarget", new IMAGE_BRUSH(TEXT("UIRenderTarget_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.UICustomMesh", new IMAGE_BRUSH(TEXT("UICustomMesh_40x"), Icon40x40));
-	Style->Set("ClassThumbnail.LGUICustomMesh", new IMAGE_BRUSH(TEXT("UICustomMesh_40x"), Icon40x40));
+	Style->Set("ClassThumbnail.LexUICustomMesh", new IMAGE_BRUSH(TEXT("UICustomMesh_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.LexUIFontData_BaseObject", new IMAGE_BRUSH(TEXT("Font_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.LexUIFontEmojiData", new IMAGE_BRUSH(TEXT("FontEmoji_40x"), Icon40x40));
 
@@ -85,7 +90,6 @@ TSharedRef< FSlateStyleSet > FLGUIEditorStyle::Create()
 	Style->Set("ClassIcon.UITextureBase", new IMAGE_BRUSH(TEXT("UITexture_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexVisualPostProcess", new IMAGE_BRUSH(TEXT("UIPostProcess_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexUIBehaviour", new IMAGE_BRUSH(TEXT("LexUIBehaviour_16x"), Icon16x16));
-	Style->Set("ClassIcon.LexUIBehaviour", new IMAGE_BRUSH(TEXT("LexUIBehaviour_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexRectBlock", new IMAGE_BRUSH(TEXT("LexRectBlock_16x"), Icon16x16));
 	Style->Set("ClassIcon.UIWidget", new IMAGE_BRUSH(TEXT("UIWidget_16x"), Icon16x16));
 	Style->Set("ClassIcon.UIRenderTarget", new IMAGE_BRUSH(TEXT("UIRenderTarget_16x"), Icon16x16));
@@ -93,6 +97,13 @@ TSharedRef< FSlateStyleSet > FLGUIEditorStyle::Create()
 	Style->Set("ClassIcon.LexUICustomMesh", new IMAGE_BRUSH(TEXT("UICustomMesh_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexUIFontData_BaseObject", new IMAGE_BRUSH(TEXT("Font_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexUIFontEmojiData", new IMAGE_BRUSH(TEXT("FontEmoji_16x"), Icon16x16));
+	Style->Set("ClassIcon.UIButtonComponent", new UMG_ICON(TEXT("Button"), Icon16x16));
+	Style->Set("ClassIcon.UITextInputComponent", new UMG_ICON(TEXT("TextBox"), Icon16x16));
+	Style->Set("ClassIcon.UIToggleComponent", new UMG_ICON(TEXT("CheckBox"), Icon16x16));
+	Style->Set("ClassIcon.UISliderComponent", new UMG_ICON(TEXT("Slider"), Icon16x16));
+	Style->Set("ClassIcon.UIScrollbarComponent", new UMG_ICON(TEXT("ProgressBar"), Icon16x16));
+	Style->Set("ClassIcon.UIDropdownComponent", new UMG_ICON(TEXT("ComboBox"), Icon16x16));
+	Style->Set("ClassIcon.UIScrollViewComponent", new UMG_ICON(TEXT("ScrollBox"), Icon16x16));
 
 	Style->Set("ClassThumbnail.LexUIEventSystemActor", new IMAGE_BRUSH(TEXT("EventSystem_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.LexUIEventSystem", new IMAGE_BRUSH(TEXT("EventSystem_40x"), Icon40x40));

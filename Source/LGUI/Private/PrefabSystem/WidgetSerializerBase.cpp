@@ -67,9 +67,8 @@ namespace LexUIPrefabSystem
 #endif
 		if (Object->IsEditorOnly() && !bIsEditorOrRuntime)return false;
 		if (Object->IsAsset())return false;//skip asset, because asset is referenced directly
-		if (Object->GetWorld() != OwnerObject)return false;
 		if (Object->HasAnyFlags(EObjectFlags::RF_Transient))return false;//skip transient object
-		if (Object->IsA<ULexWidget>())return false;//skip actor, because actor is collected in WillSerializeActorArray
+		if (Object->IsA<ULexWidget>())return false;//skip Widget, because Widget is collected in WillSerializeWidgetArray
 		if (WillSerializeWidgetArray.Contains(Object))return false;//already contains it (double check)
 		if (!ObjectBelongsToThisPrefab(Object))return false;
 
@@ -214,14 +213,6 @@ namespace LexUIPrefabSystem
 	UClass* WidgetSerializerBase::FindClassFromListByIndex(int32 Id)
 	{
 		return ReferenceClassList.IsValidIndex(Id) ? ReferenceClassList.GetData()[Id] : nullptr;
-	}
-
-	const TSet<FName>& WidgetSerializerBase::GetSceneComponentExcludeProperties()
-	{
-		static TSet<FName> result = {
-			FName("AttachParent") //exclude AttachParent property, because we need to mannually do the attachment so that AttachChildren property is good
-		};
-		return result;
 	}
 
 	bool WidgetSerializerBase::CanUseUnversionedPropertySerialization()

@@ -72,6 +72,7 @@ public class LGUIEditor : ModuleRules
                 "EditorFramework",
                 "PlacementMode",
                 "ClassViewer",
+                "ToolWidgets",
             }
             );
 			

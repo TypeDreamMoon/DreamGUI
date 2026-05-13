@@ -188,7 +188,7 @@ void SLexWidgetHierarchyPickerViewItem::Construct(const FArguments& InArgs, cons
 						.ColorAndOpacity(FSlateColor::UseForeground())
 						.Image_Lambda([=, this]()
 						{
-							return FLGUIEditorModule::Get().GetVisualIconBrush(Widget.Get());
+							return FLGUIEditorModule::Get().GetInteractionIconBrush(Widget.Get());
 						})
 					]
 

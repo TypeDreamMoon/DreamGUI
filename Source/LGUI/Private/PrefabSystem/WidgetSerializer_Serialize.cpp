@@ -2,7 +2,6 @@
 
 #include "PrefabSystem/WidgetSerializer.h"
 #include "PrefabSystem/LexUIObjectReaderAndWriter.h"
-#include "PrefabSystem/LexUIPrefabManager.h"
 #include "LGUI.h"
 #include "Core/Components/LexWidget.h"
 #include "Misc/NetworkVersion.h"
@@ -56,9 +55,8 @@ namespace LexUIPrefabSystem
 			}
 		}
 		serializer.bIsEditorOrRuntime = InForEditorOrRuntimeUse;
-		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, bool InIsSceneComponent) {
-			auto ExcludeProperties = InIsSceneComponent ? serializer.GetSceneComponentExcludeProperties() : TSet<FName>();
-			LexUIPrefabSystem::FLexUIObjectWriter Writer(InOutBuffer, serializer, ExcludeProperties);
+		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer) {
+			LexUIPrefabSystem::FLexUIObjectWriter Writer(InOutBuffer, serializer, {});
 			Writer.DoSerialize(InObject);
 		};
 		serializer.WriterOrReaderFunctionForSubPrefabOverride = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, const TArray<FName>& InOverridePropertyNames) {
@@ -116,7 +114,7 @@ namespace LexUIPrefabSystem
 				WidgetSaveData.ObjectClass = FindOrAddClassFromList(Widget->GetClass());
 				WidgetSaveData.WidgetGuid = WidgetGuid;
 				WidgetSaveData.ObjectFlags = (uint32)Widget->GetFlags();
-				WriterOrReaderFunction(Widget, SavedObjectData.Add(WidgetGuid), false);
+				WriterOrReaderFunction(Widget, SavedObjectData.Add(WidgetGuid));
 				TArray<UObject*> DefaultSubObjects;
 				Widget->GetDefaultSubobjects(DefaultSubObjects);
 				for (auto DefaultSubObject : DefaultSubObjects)
@@ -126,6 +124,14 @@ namespace LexUIPrefabSystem
 					WidgetSaveData.DefaultSubObjectGuidArray.Add(MapObjectToGuid[DefaultSubObject]);
 					WidgetSaveData.DefaultSubObjectNameArray.Add(DefaultSubObject->GetFName());
 				}
+				
+				if (auto Parent = Widget->GetParent())
+				{
+					if (MapObjectToGuid.Contains(Parent))//check if parent component belongs to this prefab
+					{
+						MapWidgetToParent.Add(MapObjectToGuid[Widget], MapObjectToGuid[Parent]);
+					}
+				}
 			}
 			SavedWidgets.Add(WidgetSaveData);
 		}
@@ -134,9 +140,9 @@ namespace LexUIPrefabSystem
 	{
 		CollectWidgetRecursive(OriginRootWidget);
 		//serialize Widget
-		SerializeWidgetArray(OutData.MapSceneComponentToParent, OutData.SavedWidgets, OutData.SavedObjectData);
+		SerializeWidgetArray(OutData.MapWidgetToParent, OutData.SavedWidgets, OutData.SavedObjectData);
 		//serialize objects and components
-		SerializeObjectArray(OutData.SavedObjects, OutData.SavedObjectData, OutData.MapSceneComponentToParent);
+		SerializeObjectArray(OutData.SavedObjects, OutData.SavedObjectData);
 	}
 	bool WidgetSerializer::SerializeWidget(ULexWidget* OriginRootWidget, ULexUIPrefab* InPrefab)
 	{
@@ -242,7 +248,7 @@ namespace LexUIPrefabSystem
 		}
 	}
 
-	void WidgetSerializer::SerializeObjectArray(TMap<FGuid, FLexUIObjectSaveData>& ObjectSaveDataArray, TMap<FGuid, TArray<uint8>>& SavedObjectData, TMap<FGuid, FGuid>& MapSceneComponentToParent)
+	void WidgetSerializer::SerializeObjectArray(TMap<FGuid, FLexUIObjectSaveData>& ObjectSaveDataArray, TMap<FGuid, TArray<uint8>>& SavedObjectData)
 	{
 		for (int i = 0; i < WillSerializeObjectArray.Num(); i++)
 		{
@@ -253,18 +259,7 @@ namespace LexUIPrefabSystem
 			ObjectSaveDataItem.ObjectName = Object->GetFName();
 			ObjectSaveDataItem.ObjectFlags = (uint32)Object->GetFlags();
 			ObjectSaveDataItem.OuterObjectGuid = MapObjectToGuid[Object->GetOuter()];
-			auto SceneComp = Cast<USceneComponent>(Object);
-			if (SceneComp)
-			{
-				if (auto ParentComp = SceneComp->GetAttachParent())
-				{
-					if (MapObjectToGuid.Contains(ParentComp))//check if parent component belongs to this prefab
-					{
-						MapSceneComponentToParent.Add(MapObjectToGuid[Object], MapObjectToGuid[ParentComp]);
-					}
-				}
-			}
-			WriterOrReaderFunction(Object, SavedObjectData.Add(MapObjectToGuid[Object]), SceneComp != nullptr);
+			WriterOrReaderFunction(Object, SavedObjectData.Add(MapObjectToGuid[Object]));
 			TArray<UObject*> DefaultSubObjects;
 			Object->GetDefaultSubobjects(DefaultSubObjects);
 			for (auto DefaultSubObject : DefaultSubObjects)

@@ -5,7 +5,6 @@
 #include "LGUI.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexWidget.h"
-#include "PrefabSystem/LexUIPrefabManager.h"
 
 ULexUIBehaviour::ULexUIBehaviour()
 {
@@ -17,11 +16,12 @@ void ULexUIBehaviour::BeginPlay()
 {
 	ULexUIManagerWorldSubsystem::AddLexUIBehaviourForLifecycleEvent(this);
 }
-void ULexUIBehaviour::TickComponent(float DeltaTime)
-{
-}
 void ULexUIBehaviour::EndPlay()
 {
+	if (bIsEnableCalled)
+	{
+		Call_OnDisable();
+	}
 }
 void ULexUIBehaviour::OnRegister()
 {
@@ -70,6 +70,17 @@ void ULexUIBehaviour::BeginDestroy()
 	{
 		Widget->RemoveComponent(this);
 	}
+}
+
+UWorld* ULexUIBehaviour::GetWorld() const
+{
+	auto Widget = GetWidget();
+	if (!HasAnyFlags(RF_ClassDefaultObject) && ensureMsgf(Widget, TEXT("Widget: %s has a null OuterPrivate in AActor::GetWorld()"), *GetFullName())
+		&& !Widget->HasAnyFlags(RF_BeginDestroyed) && !Widget->IsUnreachable())
+	{
+		return Widget->GetWorld();
+	}
+	return nullptr;
 }
 
 void ULexUIBehaviour::SetCanExecuteUpdate(bool Value)
@@ -363,7 +374,8 @@ void ULexUIBehaviour::Call_OnInteractableChanged(bool Interactable)
 void ULexUIBehaviour::Call_OnTransformChanged()
 {
 #if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())//edit mode
+	if (!GetWorld())return;
+	if (!GetWorld()->IsGameWorld())//edit mode
 	{
 		OnTransformChanged();
 	}
@@ -389,6 +401,7 @@ void ULexUIBehaviour::Call_OnTransformChanged()
 void ULexUIBehaviour::Call_OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
 #if WITH_EDITOR
+	if (!GetWorld())return;
 	if (!this->GetWorld()->IsGameWorld())//edit mode
 	{
 		OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
@@ -416,6 +429,7 @@ void ULexUIBehaviour::Call_OnChildDimensionsChanged(ULexWidget* Child, bool Pivo
 	bool HeightChanged)
 {
 #if WITH_EDITOR
+	if (!GetWorld())return;
 	if (!this->GetWorld()->IsGameWorld())//edit mode
 	{
 		OnChildDimensionsChanged(Child, PivotChanged, WidthChanged, HeightChanged);
@@ -442,6 +456,7 @@ void ULexUIBehaviour::Call_OnChildDimensionsChanged(ULexWidget* Child, bool Pivo
 void ULexUIBehaviour::Call_OnAttachmentChanged()
 {
 #if WITH_EDITOR
+	if (!GetWorld())return;
 	if (!this->GetWorld()->IsGameWorld())//edit mode
 	{
 		OnAttachmentChanged();
@@ -468,6 +483,7 @@ void ULexUIBehaviour::Call_OnAttachmentChanged()
 void ULexUIBehaviour::Call_OnSiblingIndexChanged()
 {
 #if WITH_EDITOR
+	if (!GetWorld())return;
 	if (!this->GetWorld()->IsGameWorld())//edit mode
 	{
 		OnSiblingIndexChanged();
@@ -494,6 +510,7 @@ void ULexUIBehaviour::Call_OnSiblingIndexChanged()
 void ULexUIBehaviour::Call_OnWidgetActiveChanged(bool WidgetActive)
 {
 #if WITH_EDITOR
+	if (!GetWorld())return;
 	if (!this->GetWorld()->IsGameWorld())//edit mode
 	{
 		OnWidgetActiveChanged(WidgetActive);
@@ -509,7 +526,7 @@ void ULexUIBehaviour::Call_OnWidgetActiveChanged(bool WidgetActive)
 				if (!bIsEnableCalled)
 				{
 #if WITH_EDITOR
-					if (!this->GetWorld()->IsGameWorld())//edit mode
+					if (GetWorld() && !GetWorld()->IsGameWorld())//edit mode
 					{
 
 					}
@@ -525,7 +542,7 @@ void ULexUIBehaviour::Call_OnWidgetActiveChanged(bool WidgetActive)
 				if (bIsEnableCalled)
 				{
 #if WITH_EDITOR
-					if (!this->GetWorld()->IsGameWorld())//edit mode
+					if (GetWorld() && !this->GetWorld()->IsGameWorld())//edit mode
 					{
 
 					}
@@ -539,17 +556,14 @@ void ULexUIBehaviour::Call_OnWidgetActiveChanged(bool WidgetActive)
 		}
 		else//awake not called, should be the first time that get WidgetActive
 		{
-			if (auto PrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(this->GetWorld()))
+			if (!this->GetWidget()->HasBegunPlay())
 			{
-				if (!PrefabManager->IsPrefabSystemProcessingWidget(this->GetWidget()))//If processing by prefab system, that means not finish deserialize yet, then not allowed to call Awake
+				if (WidgetActive)
 				{
-					if (WidgetActive)
+					Call_Awake();
+					if (!bIsEnableCalled)
 					{
-						Call_Awake();
-						if (!bIsEnableCalled)
-						{
-							Call_OnEnable();
-						}
+						Call_OnEnable();
 					}
 				}
 			}
@@ -560,6 +574,7 @@ void ULexUIBehaviour::Call_OnWidgetActiveChanged(bool WidgetActive)
 void ULexUIBehaviour::Call_OnRaycastableChanged(bool Raycastable)
 {
 #if WITH_EDITOR
+	if (!GetWorld())return;
 	if (!this->GetWorld()->IsGameWorld())//edit mode
 	{
 		OnRaycastableChanged(Raycastable);

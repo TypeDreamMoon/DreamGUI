@@ -43,7 +43,6 @@ namespace LexUIPrefabSystem
 		TArray<UObject*> WillSerializeObjectArray;
 		bool ObjectBelongsToThisPrefab(UObject* InObject);
 
-		const TSet<FName>& GetSceneComponentExcludeProperties();
 		bool CollectObjectToSerialize(UObject* Object, FGuid& OutGuid);
 		//Check object and it's up outer to tell if it is trash
 		bool ObjectIsTrash(UObject* InObject);
@@ -58,7 +57,7 @@ namespace LexUIPrefabSystem
 		TArray<UObject*> ReferenceAssetList;
 		TArray<UClass*> ReferenceClassList;
 		TArray<FName> ReferenceNameList;
-		ULexUIPrefabWorldSubsystem* LGUIPrefabManager = nullptr;
+		ULexUIPrefabWorldSubsystem* PrefabManager = nullptr;
 
 		bool bOverrideVersions = false;
 		uint16 PrefabVersion = 0;

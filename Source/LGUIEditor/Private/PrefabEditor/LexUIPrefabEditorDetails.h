@@ -2,11 +2,11 @@
 
 #include "CoreMinimal.h"
 #include "Widgets/SCompoundWidget.h"
-#include "SSubobjectEditor.h"
 #pragma once
 
 class FLexUIPrefabEditor;
 class ULexWidget;
+class SLexWidgetComponentEditor;
 
 /**
  * 
@@ -25,10 +25,9 @@ public:
 
 	virtual ~SLexUIPrefabEditorDetails();
 private:
-	UObject* GetActorContextAsObject() const;
+	ULexWidget* GetSelectedWidgetContext() const;
 	void OnEditorSelectionChanged();
-	void OnSubObjectSelectionChanged(const TArray<FSubobjectEditorTreeNodePtrType>& SelectedNodes);
-	void OnSubObjectItemDoubleClicked(const FSubobjectEditorTreeNodePtrType ClickedNode);
+	void OnComponentSelectionChanged(const TArray<TWeakObjectPtr<class ULexUIBehaviour>>& SelectedComponents);
 
 	TWeakPtr<FLexUIPrefabEditor> PrefabEditorPtr;
 
@@ -39,8 +38,7 @@ private:
 	bool IsEditorAllowEditing()const;
 
 	TSharedPtr<class IDetailsView> DetailsView;
-	TSharedPtr<class SBox> ComponentsBox;
-	TSharedPtr<class SSubobjectEditor> SubobjectEditor;
+	TSharedPtr<class SLexWidgetComponentEditor> ComponentEditor;
 	TSharedPtr<class SLexUIPrefabOverrideDataViewer> PrefabOverrideDataViewer;
 	TWeakObjectPtr<ULexWidget> CachedActor;
 	bool bIsSelectFromLexUIEditor = false;

@@ -337,25 +337,7 @@ void SLexWidgetEditorHierarchyView::OnSelectionChanged(TWeakObjectPtr<ULexWidget
 void SLexWidgetEditorHierarchyView::OnGetChildren(TWeakObjectPtr<ULexWidget> InParent, TArray< TWeakObjectPtr<ULexWidget> >& OutChildren)
 {
 	auto& Children = InParent->GetChildren();
-#if 1
 	OutChildren.Append(Children);
-#else
-	auto RootOwner = InParent->GetRootWidget()->GetOwner();
-	for (auto Child: Children)
-	{
-		if (Child->GetOwner() == RootOwner)
-		{
-			OutChildren.Add(Child);
-		}
-		else
-		{
-			if (Child->GetOwner()->GetWidget() == Child)
-			{
-				OutChildren.Add(Child);
-			}
-		}
-	}
-#endif
 }
 void SLexWidgetEditorHierarchyView::GetWidgetFilterStrings(TWeakObjectPtr<ULexWidget> Item, TArray<FString>& OutStrings)
 {

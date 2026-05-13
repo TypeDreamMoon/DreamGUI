@@ -3,7 +3,6 @@
 #pragma once
 
 #include "Components/ActorComponent.h"
-#include "PrefabSystem/ILexUIPrefabInterface.h"
 #include "MovieSceneSequencePlayer.h"
 #include "LexUIComponentReference.h"
 #include "Core/LexUIBehaviour.h"

@@ -8,7 +8,7 @@
 #include "PrefabSystem/LexUIPrefabManager.h"
 #include "LTweenManager.h"
 #include "Core/LexUIClipData.h"
-#include "Core/Actor/LexWidgetPresenterComponent.h"
+#include "Core/Components/LexWidgetPresenterComponent.h"
 #include "Core/Components/LexLayout.h"
 #include "Core/Components/LexVisual.h"
 #include "Components/SceneComponent.h"
@@ -39,6 +39,11 @@ ULexWidget::ULexWidget()
 void ULexWidget::BeginPlay()
 {
 	bHasBegunPlay = true;
+
+	for (auto Component : Components)
+	{
+		Component->BeginPlay();
+	}
 	
 	CalculateWidgetActive_Recursive();
 	CalculateRaycastable_Recursive();
@@ -48,6 +53,10 @@ void ULexWidget::BeginPlay()
 	{
 		LayoutContainer->BeginPlay();
 	}
+	if (IsValid(LayoutSelf))
+	{
+		LayoutSelf->BeginPlay();
+	}
 	if (IsValid(Visual))
 	{
 		Visual->BeginPlay();
@@ -56,9 +65,20 @@ void ULexWidget::BeginPlay()
 
 void ULexWidget::EndPlay()
 {
+	bHasBegunPlay = false;
+
+	for (auto Component : Components)
+	{
+		Component->EndPlay();
+	}
+	
 	if (IsValid(LayoutContainer))
 	{
 		LayoutContainer->EndPlay();
+	}
+	if (IsValid(LayoutSelf))
+	{
+		LayoutSelf->EndPlay();
 	}
 	if (IsValid(Visual))
 	{
@@ -245,6 +265,31 @@ void ULexWidget::SetAsLastSibling()
 	}
 }
 
+FString ULexWidget::GetPathDisplayName() const
+{
+	auto OuterPathName = GetOuter()->GetPathName();
+	TStringBuilder<256> Result;
+	Result.Append(OuterPathName);
+	Result.AppendChar('/');
+	TArray<const ULexWidget*> WidgetChain;
+	auto TempParent = this;
+	while (TempParent != nullptr)
+	{
+		WidgetChain.Add(TempParent);
+		TempParent = TempParent->GetParent();
+	}
+	for (int i = WidgetChain.Num() - 1; i >= 0; i--)
+	{
+		auto Widget = WidgetChain[i];
+		Result.Append(Widget->GetDisplayName());
+		if (i != 0)
+		{
+			Result.AppendChar('/');
+		}
+	}
+	return Result.ToString();
+}
+
 ULexWidget* ULexWidget::FindChildByDisplayName(const FString& InName, bool IncludeChildren)const
 {
 	int indexOfFirstSlash;
@@ -404,32 +449,59 @@ void ULexWidget::PostLoad()
 void ULexWidget::BeginDestroy()
 {
 	Super::BeginDestroy();
-	this->SetParent(nullptr);
+	if (this->GetDisplayName() == TEXT("[RootAgent]"))
+	{
+		UE_LOG(LGUI, Warning, TEXT("ULexWidget::BeginDestroy()"));
+	}
+	struct LOCAL
+	{
+		static void UnregisterRecursive(ULexWidget* Widget)
+		{
+			if (Widget->bIsRegistered)
+			{
+				Widget->OnUnregister();
+			}
+			for (auto Child : Widget->GetChildren())
+			{
+				UnregisterRecursive(Child);
+			}
+		}
+		static void EndPlayRecursive(ULexWidget* Widget)
+		{
+			if (Widget->bHasBegunPlay)
+			{
+				Widget->EndPlay();
+			}
+			for (auto Child : Widget->GetChildren())
+			{
+				EndPlayRecursive(Child);
+			}
+		}
+	};
+	if (bIsRegistered)
+	{
+		LOCAL::UnregisterRecursive(this);
+		this->SetParent(nullptr);
+	}
+	if (bHasBegunPlay)
+	{
+		LOCAL::EndPlayRecursive(this);
+	}
 }
 
 void ULexWidget::DestroyWidget()
 {
-	for (int i = 0; i < Components.Num(); i++)
-	{
-		auto component = Components[i];
-		if (IsValid(component))
-		{
-			if (auto World = GetWorld())
-			{
-				if (World->IsGameWorld())
-				{
-					if (this->HasBegunPlay())
-					{
-						component->EndPlay();
-					}
-				}
-			}
-			component->OnUnregister();
-		}
-		Components.RemoveAt(i);
-		i--;
-	}
 	this->ConditionalBeginDestroy();
+}
+
+UWorld* ULexWidget::GetWorld() const
+{
+	auto OuterWidgetPresenter = GetTypedOuter<ULexWidgetPresenterComponent>();
+	if (OuterWidgetPresenter && !OuterWidgetPresenter->HasAnyFlags(RF_ClassDefaultObject))
+	{
+		return OuterWidgetPresenter->GetWorld();
+	}
+	return nullptr;
 }
 
 #if WITH_EDITOR
@@ -490,21 +562,11 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 				{
 					RenderCanvas->RegisterVisual(Visual);
 				}
-				if (auto World = GetWorld())
+				if (bHasBegunPlay)
 				{
-					if (World->IsGameWorld())
-					{
-						if (this->HasBegunPlay())
-						{
-							Visual->BeginPlay();
-						}
-						Visual->Call_OnRegister();
-					}
-					else
-					{
-						Visual->Call_OnRegister();
-					}
+					Visual->BeginPlay();
 				}
+				Visual->Call_OnRegister();
 			}
 			MarkDimensionChanged(false, true, true);//change Visual could cause LayoutSelf size change
 			MarkLayoutForRebuild(this);
@@ -513,17 +575,11 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		{
 			if (IsValid(LayoutContainer))
 			{
-				if (auto World = GetWorld())
+				if (bHasBegunPlay)
 				{
-					if (World->IsGameWorld())
-					{
-						if (this->HasBegunPlay())
-						{
-							LayoutContainer->BeginPlay();
-						}
-						LayoutContainer->Call_OnRegister();
-					}
+					LayoutContainer->BeginPlay();
 				}
+				LayoutContainer->Call_OnRegister();
 				LayoutContainer->UpdateLayout();
 			}
 			MarkDimensionChanged(false, true, true);//change LayoutContainer could cause LayoutSelf size change
@@ -533,17 +589,11 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		{
 			if (IsValid(LayoutSelf))
 			{
-				if (auto World = GetWorld())
+				if (bHasBegunPlay)
 				{
-					if (World->IsGameWorld())
-					{
-						if (this->HasBegunPlay())
-						{
-							LayoutSelf->BeginPlay();
-						}
-						LayoutSelf->Call_OnRegister();
-					}
+					LayoutSelf->BeginPlay();
 				}
+				LayoutSelf->Call_OnRegister();
 				LayoutSelf->UpdateLayout();
 			}
 		}
@@ -606,21 +656,11 @@ void ULexWidget::PreEditChange(FProperty* PropertyAboutToChange)
 				RenderCanvas->MarkVisualWillChange(Visual);
 				RenderCanvas->UnregisterVisual(Visual);
 			}
-			if (auto World = GetWorld())
+			if (bHasBegunPlay)
 			{
-				if (World->IsGameWorld())
-				{
-					if (this->HasBegunPlay())
-					{
-						Visual->EndPlay();
-					}
-					Visual->Call_OnUnregister();
-				}
-				else
-				{
-					Visual->Call_OnUnregister();
-				}
+				Visual->EndPlay();
 			}
+			Visual->Call_OnUnregister();
 			Visual->ConditionalBeginDestroy();
 		}
 	}
@@ -628,21 +668,11 @@ void ULexWidget::PreEditChange(FProperty* PropertyAboutToChange)
 	{
 		if (IsValid(LayoutContainer))
 		{
-			if (auto World = GetWorld())
+			if (bHasBegunPlay)
 			{
-				if (World->IsGameWorld())
-				{
-					if (this->HasBegunPlay())
-					{
-						LayoutContainer->EndPlay();
-					}
-					LayoutContainer->Call_OnUnregister();
-				}
-				else
-				{
-					LayoutContainer->Call_OnUnregister();
-				}
+				LayoutContainer->EndPlay();
 			}
+			LayoutContainer->Call_OnUnregister();
 			LayoutContainer->ConditionalBeginDestroy();
 		}
 	}
@@ -721,7 +751,7 @@ void ULexWidget::EnsureDataForRebuild()
 		/** force refresh render canvas, remove from old and add to new */
 		static void ForceRefreshRenderCanvasRecursive(ULexWidget* Widget)
 		{
-			auto NewRenderCanvas = Widget->GetComponentInParent<ULexCanvas>();
+			auto NewRenderCanvas = Widget->GetComponentInParent<ULexCanvas>(true);
 			Widget->SetRenderCanvas(NewRenderCanvas);
 
 			for (auto& uiChild : Widget->Children)
@@ -866,31 +896,79 @@ const FTransform& ULexWidget::GetWorldTransform()const
 
 void ULexWidget::SetWorldTransform(const FTransform& InWorldTransform)
 {
-	check(0);
-	// auto LocalTransform = GetLocalTransform();
-	// if (Parent.IsValid())
-	// {
-	// 	LocalTransform = InWorldTransform.Inverse() * Parent->GetObjectToWorldTransform();
-	// 	ObjectToWorldTransform = LocalTransform * Parent->GetObjectToWorldTransform();
-	// 	this->MarkTransformChanged();
-	// }
-	// else
-	// {
-	// 	if (auto WidgetPresenterComponent = GetWidgetPresenterComponent())
-	// 	{
-	// 		ObjectToWorldTransform = WidgetPresenterComponent->GetComponentTransform() * LocalTransform;			
-	// 	}
-	// 	else
-	// 	{
-	// 		ObjectToWorldTransform = LocalTransform;
-	// 	}
-	// }
+	if (Parent.IsValid())
+	{
+		auto WorldToParentTransform = Parent->GetWorldTransform().Inverse();
+		auto LocalTransform = WorldToParentTransform * InWorldTransform;
+		this->RelativeLocation = LocalTransform.GetLocation();
+		this->RelativeRotation = LocalTransform.GetRotation();
+		this->RelativeScale = LocalTransform.GetScale3D();
+
+		ObjectToWorldTransform = InWorldTransform;
+	}
+	else
+	{
+		auto LocalTransform = InWorldTransform;
+		this->RelativeLocation = LocalTransform.GetLocation();
+		this->RelativeRotation = LocalTransform.GetRotation();
+		this->RelativeScale = LocalTransform.GetScale3D();
+		
+		if (auto WidgetPresenterComponent = GetWidgetPresenterComponent())
+		{
+			ObjectToWorldTransform = WidgetPresenterComponent->GetComponentTransform() * LocalTransform;			
+		}
+		else
+		{
+			ObjectToWorldTransform = InWorldTransform;
+		}
+	}
+	this->MarkTransformChanged();
+}
+
+void ULexWidget::SetParentBeforeRegister(ULexWidget* InParent)
+{
+	check(!bIsRegistered)
+	Parent = InParent;
+	Parent->Children.Add(this);
+}
+
+void ULexWidget::ApplySiblingIndexBeforeRegister_Recursive()
+{
+	for (int i = 0; i < Children.Num(); i++)
+	{
+		auto& Child = Children[i];
+		Child->SiblingIndex = i;
+		Child->ApplySiblingIndexBeforeRegister_Recursive();
+	}
 }
 
 ULexUIBehaviour* ULexWidget::AddComponent(TSubclassOf<ULexUIBehaviour> ComponentClass)
 {
-	auto NewComponent = NewObject<ULexUIBehaviour>(this, ComponentClass);
+	if (!*ComponentClass)
+	{
+		return nullptr;
+	}
+
+	EObjectFlags NewComponentFlags = RF_NoFlags;
+	if (HasAnyFlags(RF_ClassDefaultObject | RF_ArchetypeObject))
+	{
+		// Components created while building class defaults must be archetype/default-subobjects.
+		// They also need to be public, otherwise Blueprint-generated templates can end up
+		// referencing parent CDO private archetype objects that SavePackage rejects.
+		NewComponentFlags |= (RF_Public | RF_DefaultSubObject | RF_ArchetypeObject);
+	}
+
+	const FName NewComponentName = MakeUniqueObjectName(this, ComponentClass, ComponentClass->GetFName());
+	auto NewComponent = NewObject<ULexUIBehaviour>(this, ComponentClass, NewComponentName, NewComponentFlags);
 	Components.Add(NewComponent);
+	if (bIsRegistered)
+	{
+		NewComponent->OnRegister();
+	}
+	if (bHasBegunPlay)
+	{
+		NewComponent->BeginPlay();
+	}
 	return NewComponent;
 }
 
@@ -899,16 +977,9 @@ void ULexWidget::RemoveComponent(ULexUIBehaviour* Component)
 	auto Index = Components.Find(Component);
 	if (Index < 0)return;
 	Components.RemoveAt(Index);
-
-	if (auto World = GetWorld())
+	if (bHasBegunPlay)
 	{
-		if (World->IsGameWorld())
-		{
-			if (this->HasBegunPlay())
-			{
-				Component->EndPlay();
-			}
-		}
+		Component->EndPlay();
 	}
 	Component->OnUnregister();
 }
@@ -919,7 +990,6 @@ void ULexWidget::UpdateObjectToWorldTransform()
 	if (Parent.IsValid())
 	{
 		ObjectToWorldTransform = LocalTransform * Parent->GetWorldTransform();
-		this->MarkTransformChanged();
 	}
 	else
 	{
@@ -932,6 +1002,7 @@ void ULexWidget::UpdateObjectToWorldTransform()
 			ObjectToWorldTransform = LocalTransform;
 		}
 	}
+	this->MarkTransformChanged();
 }
 void ULexWidget::CalculateObjectToWorldTransform(bool bPropagateToChildren)
 {
@@ -964,10 +1035,18 @@ void ULexWidget::SetParent(ULexWidget* InParent, bool InKeepWorldPosition, int I
 		if (InSiblingIndex == -1 || !InParent->Children.IsValidIndex(InSiblingIndex))
 		{
 			InParent->Children.Add(this);
+			this->SiblingIndex = InParent->Children.Num() - 1;
+			this->Call_SiblingIndexChanged();
 		}
 		else
 		{
 			InParent->Children.Insert(this, InSiblingIndex);
+			for (int i = InSiblingIndex; i < InParent->Children.Num(); i++)
+			{
+				auto Child = InParent->Children[i];
+				Child->SiblingIndex = i;
+			}
+			this->Call_SiblingIndexChanged();
 		}
 		this->Parent = InParent;
 		if (InKeepWorldPosition)
@@ -1102,27 +1181,6 @@ void ULexWidget::OnUpdateTransform()
 
 void ULexWidget::OnChildAttached(ULexWidget* ChildWidget)
 {
-	auto PrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(this->GetWorld());
-	if (PrefabManager && PrefabManager->IsPrefabSystemProcessingWidget(this))//load from prefab or duplicated by LGUI PrefabSystem, then not set hierarchy index
-	{
-		//if is load from prefab system, then we don't need to sort children, because children is already sorted when save prefab
-	}
-	else
-	{
-		//need sort children here, make it true so we can sort children if we need to
-		bNeedSortUIChildren = true;
-
-		if (ChildWidget->bIsRegistered)
-		{
-			ChildWidget->SiblingIndex = Children.Num() - 1;
-			ChildWidget->Call_SiblingIndexChanged();
-		}
-		else//not registered means is loading from level. then no need to set hierarchy index
-		{
-				
-		}
-	}
-
 	//make sure SiblingIndex all good
 	if (ChildWidget->SiblingIndex == INDEX_NONE)
 	{
@@ -1142,18 +1200,10 @@ void ULexWidget::OnChildAttached(ULexWidget* ChildWidget)
 
 void ULexWidget::OnAttachedToParent()
 {
-	auto PrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(this->GetWorld());
-	if (PrefabManager && PrefabManager->IsPrefabSystemProcessingWidget(this))//when load from prefab or duplicate by LGUI PrefabSystem, the ChildAttachmentChanged callback should execute til prefab serialization ready
+	if (this->bIsRegistered)//registered means not during prefab process
 	{
-
-	}
-	else
-	{
-		if (this->bIsRegistered)//not registered means is loading from level.
-		{
-			Call_TransformChanged();
-			this->CalculateAnchorFromTransform();//if not from PrefabSystem, then calculate anchors on transform, so when use AttachComponent, the KeepRelative or KeepWorld will work. If from PrefabSystem, then anchor will automatically do the job
-		}
+		Call_TransformChanged();
+		this->CalculateAnchorFromTransform();//if not from PrefabSystem, then calculate anchors on transform, so when use AttachComponent, the KeepRelative or KeepWorld will work. If from PrefabSystem, then anchor will automatically do the job
 	}
 
 	ULexCanvas* ParentCanvas = this->GetComponentInParent<ULexCanvas>();
@@ -1178,18 +1228,10 @@ void ULexWidget::OnChildDetached()
 void ULexWidget::OnDetachedFromParent()
 {
 	if (bIsAttaching)return;
-	auto PrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(this->GetWorld());
-	if (PrefabManager && PrefabManager->IsPrefabSystemProcessingWidget(this))//when load from prefab or duplicate by LGUI PrefabSystem, the ChildAttachmentChanged callback should execute til prefab serialization ready
+	if (this->bIsRegistered)//registered means not during prefab process
 	{
-		
-	}
-	else
-	{
-		if (this->bIsRegistered)//not registered means is loading from level.
-		{
-			Call_TransformChanged();
-			this->CalculateAnchorFromTransform();//if not from PrefabSystem, then calculate anchors on transform, so when use AttachComponent, the KeepRelative or KeepWorld will work. If from PrefabSystem, then anchor will automatically do the job
-		}
+		Call_TransformChanged();
+		this->CalculateAnchorFromTransform();//if not from PrefabSystem, then calculate anchors on transform, so when use AttachComponent, the KeepRelative or KeepWorld will work. If from PrefabSystem, then anchor will automatically do the job
 	}
 
 	OnHierarchyAttachmentChanged(nullptr, nullptr);
@@ -1199,6 +1241,7 @@ void ULexWidget::OnDetachedFromParent()
 
 void ULexWidget::OnRegister()
 {
+	bIsRegistered = true;
 	CheckRootWidget();
 
 	if (IsValid(LayoutContainer))
@@ -1231,8 +1274,8 @@ void ULexWidget::OnRegister()
 }
 void ULexWidget::OnUnregister()
 {
-	CheckRootWidget();
-
+	bIsRegistered = false;
+	
 	for (auto Component : Components)
 	{
 		Component->OnUnregister();
@@ -2928,29 +2971,17 @@ ULexVisual* ULexWidget::CreateNewVisual(TSubclassOf<ULexVisual> VisualClass)
 	}
 	if (IsValid(OldVisual))
 	{
-		if (auto World = GetWorld())
+		if (bHasBegunPlay)
 		{
-			if (World->IsGameWorld())
-			{
-				if (this->HasBegunPlay())
-				{
-					OldVisual->EndPlay();
-				}
-			}
+			OldVisual->EndPlay();
 		}
 		OldVisual->Call_OnUnregister();
 	}
 	
 	NewVisual->Call_OnRegister();
-	if (auto World = GetWorld())
+	if (bHasBegunPlay)
 	{
-		if (World->IsGameWorld())
-		{
-			if (this->HasBegunPlay())
-			{
-				NewVisual->BeginPlay();
-			}
-		}
+		NewVisual->BeginPlay();
 	}
 	Visual = NewVisual;
 	return NewVisual;
@@ -2963,15 +2994,9 @@ void ULexWidget::RemoveVisual()
 
 	if (IsValid(OldVisual))
 	{
-		if (auto World = GetWorld())
+		if (bHasBegunPlay)
 		{
-			if (World->IsGameWorld())
-			{
-				if (this->HasBegunPlay())
-				{
-					OldVisual->EndPlay();
-				}
-			}
+			OldVisual->EndPlay();
 		}
 		OldVisual->Call_OnUnregister();
 	}
@@ -2983,29 +3008,17 @@ ULexLayoutContainer* ULexWidget::CreateNewLayoutContainer(TSubclassOf<ULexLayout
 	auto NewLayout = NewObject<ULexLayoutContainer>(this, LayoutClass);
 	if (IsValid(OldLayout))
 	{
-		if (auto World = GetWorld())
+		if (bHasBegunPlay)
 		{
-			if (World->IsGameWorld())
-			{
-				if (this->HasBegunPlay())
-				{
-					OldLayout->EndPlay();
-				}
-			}
+			OldLayout->EndPlay();
 		}
 		OldLayout->Call_OnUnregister();
 	}
 	
 	NewLayout->Call_OnRegister();
-	if (auto World = GetWorld())
+	if (bHasBegunPlay)
 	{
-		if (World->IsGameWorld())
-		{
-			if (this->HasBegunPlay())
-			{
-				NewLayout->BeginPlay();
-			}
-		}
+		NewLayout->BeginPlay();
 	}
 	LayoutContainer = NewLayout;
 	LayoutContainer->UpdateLayout();
@@ -3020,15 +3033,9 @@ void ULexWidget::RemoveLayoutContainer()
 
 	if (IsValid(OldLayout))
 	{
-		if (auto World = GetWorld())
+		if (bHasBegunPlay)
 		{
-			if (World->IsGameWorld())
-			{
-				if (this->HasBegunPlay())
-				{
-					OldLayout->EndPlay();
-				}
-			}
+			OldLayout->EndPlay();
 		}
 		OldLayout->Call_OnUnregister();
 	}
@@ -3040,29 +3047,17 @@ ULexLayoutSelf* ULexWidget::CreateNewLayoutSelf(TSubclassOf<ULexLayoutSelf> Layo
 	auto NewLayout = NewObject<ULexLayoutSelf>(this, LayoutClass);
 	if (IsValid(OldLayout))
 	{
-		if (auto World = GetWorld())
+		if (bHasBegunPlay)
 		{
-			if (World->IsGameWorld())
-			{
-				if (this->HasBegunPlay())
-				{
-					OldLayout->EndPlay();
-				}
-			}
+			OldLayout->EndPlay();
 		}
 		OldLayout->Call_OnUnregister();
 	}
 	
 	NewLayout->Call_OnRegister();
-	if (auto World = GetWorld())
+	if (bHasBegunPlay)
 	{
-		if (World->IsGameWorld())
-		{
-			if (this->HasBegunPlay())
-			{
-				NewLayout->BeginPlay();
-			}
-		}
+		NewLayout->BeginPlay();
 	}
 	LayoutSelf = NewLayout;
 	LayoutSelf->UpdateLayout();
@@ -3076,15 +3071,9 @@ void ULexWidget::RemoveLayoutSelf()
 
 	if (IsValid(OldLayout))
 	{
-		if (auto World = GetWorld())
+		if (bHasBegunPlay)
 		{
-			if (World->IsGameWorld())
-			{
-				if (this->HasBegunPlay())
-				{
-					OldLayout->EndPlay();
-				}
-			}
+			OldLayout->EndPlay();
 		}
 		OldLayout->Call_OnUnregister();
 	}

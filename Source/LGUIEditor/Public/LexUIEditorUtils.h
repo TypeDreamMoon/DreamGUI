@@ -48,8 +48,8 @@ public:
 			auto Components = Widget->GetComponents(RequireComponentType);
 			if (Components.Num() == 0)
 			{
-				IDetailCategoryBuilder& lguiCategory = DetailBuilder->EditCategory(ErrorInfoCategory, FText::GetEmpty(), ECategoryPriority::Variable);
-				lguiCategory.AddCustomRow(LOCTEXT("RequireComponentRow", "RequireComponent"))
+				IDetailCategoryBuilder& Category = DetailBuilder->EditCategory(ErrorInfoCategory, FText::GetEmpty(), ECategoryPriority::Variable);
+				Category.AddCustomRow(LOCTEXT("RequireComponentRow", "RequireComponent"))
 					.WholeRowContent()
 					[
 						SNew(STextBlock)

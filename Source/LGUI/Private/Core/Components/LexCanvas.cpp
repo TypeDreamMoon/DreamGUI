@@ -6,7 +6,6 @@
 #include "Utils/LexUIUtils.h"
 #include "Core/LexUISettings.h"
 #include "Core/LexUIManager.h"
-#include "PrefabSystem/LexUIPrefabManager.h"
 #include "Core/LexUIRender/LexUIRenderer.h"
 #include "Core/LexUIMesh/LexUIMeshComponent.h"
 #include "Core/LexUIDrawCall.h"
@@ -25,7 +24,7 @@
 #include "Core/LexCanvasDrawCallProcessingRunnable.h"
 #include "Core/LexUIClipData.h"
 #include "Core/LexUIDataAsTexture.h"
-#include "Core/Actor/LexWidgetPresenterComponent.h"
+#include "Core/Components/LexWidgetPresenterComponent.h"
 
 
 #define LOCTEXT_NAMESPACE "LexCanvas"
@@ -39,18 +38,6 @@ ULexCanvas::ULexCanvas()
 void ULexCanvas::BeginPlay()
 {
 	Super::BeginPlay();
-	if (!ULexUIPrefabWorldSubsystem::GetInstance(this->GetWorld())->IsPrefabSystemProcessingWidget(this->GetWidget()))
-	{
-		Awake_Implementation();
-	}
-}
-void ULexCanvas::EndPlay()
-{
-	Super::EndPlay();
-}
-
-void ULexCanvas::Awake_Implementation()
-{
 	CheckRootCanvas();
 	CurrentRenderMode = this->GetActualRenderMode();
 	if (auto LexWidget = GetWidget())
@@ -80,6 +67,10 @@ void ULexCanvas::Awake_Implementation()
 		CustomScale->Init(this);
 	}
 }
+void ULexCanvas::EndPlay()
+{
+	Super::EndPlay();
+}
 
 TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> ULexCanvas::GetRenderTargetViewExtension()
 {
@@ -92,6 +83,8 @@ TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> ULexCanvas::GetRenderTarge
 
 void ULexCanvas::UpdateRootCanvas()
 {
+	if (!GetWorld())
+		return;
 	CheckRootCanvas();
 	if (this == RootCanvas)
 	{
@@ -280,9 +273,18 @@ void ULexCanvas::CheckRenderTargetUpdate()
 void ULexCanvas::OnRegister()
 {
 	Super::OnRegister();
+	if (DrawCallProcessingRunnable == nullptr)
+	{
+		DrawCallProcessingRunnable = MakeUnique<FLexCanvasDrawCallProcessingRunnable>();
+		DrawCallProcessingRunnable->Start();
+	}
+	if (TransformVerticesAsyncFunctionRunnable == nullptr)
+	{
+		TransformVerticesAsyncFunctionRunnable = MakeUnique<FLexCanvasAsyncFunctionRunnable>();
+		TransformVerticesAsyncFunctionRunnable->Start();
+	}
 	if (auto LexWidget = GetWidget())
 	{
-		ULexUIManagerWorldSubsystem::AddCanvas(this, CurrentRenderMode);
 		//tell UIItem
 		LexWidget->RegisterRenderCanvas(this);
 		LexWidget->GetAttachmentChangedEvent().AddUObject(this, &ULexCanvas::OnUIHierarchyAttachmentChanged);
@@ -314,13 +316,13 @@ void ULexCanvas::OnUnregister()
 	if (DrawCallProcessingRunnable.IsValid())
 	{
 		DrawCallProcessingRunnable->Stop();
+		DrawCallProcessingRunnable.Reset();
 	}
 	if (TransformVerticesAsyncFunctionRunnable.IsValid())
 	{
 		TransformVerticesAsyncFunctionRunnable->Stop();
+		TransformVerticesAsyncFunctionRunnable.Reset();
 	}
-    	
-	ULexUIManagerWorldSubsystem::RemoveCanvas(this, CurrentRenderMode);
 
 	ClipDataList.Empty();
 	
@@ -344,16 +346,6 @@ void ULexCanvas::OnUnregister()
 void ULexCanvas::PostInitProperties()
 {
 	Super::PostInitProperties();
-	if (DrawCallProcessingRunnable == nullptr)
-	{
-		DrawCallProcessingRunnable = MakeUnique<FLexCanvasDrawCallProcessingRunnable>();
-		DrawCallProcessingRunnable->Start();
-	}
-	if (TransformVerticesAsyncFunctionRunnable == nullptr)
-	{
-		TransformVerticesAsyncFunctionRunnable = MakeUnique<FLexCanvasAsyncFunctionRunnable>();
-		TransformVerticesAsyncFunctionRunnable->Start();
-	}
 }
 
 void ULexCanvas::ClearDrawCall()
@@ -469,6 +461,18 @@ void ULexCanvas::SetParentCanvas(ULexCanvas* InParentCanvas)
 	}
 }
 
+void ULexCanvas::CollectChildrenCanvas(ULexCanvas* Target, TArray<ULexCanvas*>& OutAllChildrenCanvas, bool IncludeTarget)
+{
+	if (IncludeTarget)
+	{
+		OutAllChildrenCanvas.Add(Target);
+	}
+	for (auto& Child : Target->GetChildrenCanvasArray())
+	{
+		CollectChildrenCanvas(Child.Get(), OutAllChildrenCanvas, true);
+	}
+}
+
 void ULexCanvas::CheckRenderMode(bool PropagateToChildrenCanvas)
 {
 	const auto OldRenderMode = CurrentRenderMode;
@@ -489,8 +493,6 @@ void ULexCanvas::CheckRenderMode(bool PropagateToChildrenCanvas)
 		}
 		//clear drawcall, delete mesh, because UE/LGUI render's mesh data not compatible
 		this->ClearDrawCall();
-
-		ULexUIManagerWorldSubsystem::CanvasRenderModeChange(this, OldRenderMode, CurrentRenderMode);
 		OnRenderModeChanged.Broadcast(this, OldRenderMode, CurrentRenderMode);
 	}
 
@@ -2354,9 +2356,9 @@ void ULexCanvas::CheckWidgetPropertyData()
 	}
 }
 
-void ULexCanvas::PushAsyncFunction_TransformVertices(const TFunction<void()>& InFunction)
+void ULexCanvas::PushAsyncFunction_TransformVertices(TFunction<void()> InFunction)
 {
-	TransformVerticesAsyncFunctionRunnable->PushFunction(InFunction);
+	TransformVerticesAsyncFunctionRunnable->PushFunction(MoveTemp(InFunction));
 }
 
 void ULexCanvas::RemoveClipData(const TSharedPtr<FLexUIClipData>& InClipData)
@@ -2462,7 +2464,7 @@ void ULexCanvas::CheckAndApplyViewportParameter()
 void ULexCanvas::RegisterCanvasScaler()
 {
 #if WITH_EDITOR
-	if (GetWorld() && !GetWorld()->IsGameWorld())
+	if (GetWorld() && !GetWorld()->IsGameWorld() && this->IsRootCanvas())
 	{
 		if (auto LexUIManagerObject = ULexUIManagerObject::GetInstance(true))
 		{
@@ -2651,6 +2653,19 @@ void ULexCanvas::OnEditorTick(float DeltaTime)
 {
 	if (ULexUIManagerWorldSubsystem::GetIsPlaying())//When hit play there is still a editor world and DrawViewportArea is called, which could cause frame dropdown, so skip it when playing
 		return;
+	if (!GetWorld())
+		return;
+	if (this->IsUnreachable())
+		return;
+	auto WidgetPresenter = this->GetWidgetPresenterComponent();
+	if (!WidgetPresenter)
+		return;
+	if (WidgetPresenter->IsUnreachable())
+		return;
+	if (WidgetPresenter->GetName().Contains(TEXT("SKEL_")) || WidgetPresenter->GetName().Contains(TEXT("TRASH_")))
+		return;
+	// if (this->GetWidget() != GetWidgetPresenterComponent()->GetRootWidget())
+	// 	return;
 	if (this->IsRootCanvas() && !this->bForceRenderToTarget)
 	{
 		if (this->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay

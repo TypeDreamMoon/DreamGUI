@@ -26,7 +26,7 @@ public:
 	TSharedPtr<class FUICommandList> PluginCommands;
 	TArray<TSharedPtr<class FAssetTypeActions_Base>> AssetTypeActionsArray;
 
-	const FSlateBrush* GetVisualIconBrush(ULexWidget* Widget);
+	const FSlateBrush* GetInteractionIconBrush(ULexWidget* Widget);
 private:
 
 	bool IsValidClassName(const FString& InName);
@@ -37,8 +37,6 @@ private:
 	void CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder, TFunction<ULexWidget*()> GetSelectedActorFunction);
 
 	TWeakObjectPtr<class ULexUIPrefabHelperObject> CurrentPrefabHelperObject;
-
-	TMap<UClass*, const FSlateBrush*> InteractableClassIconMap;
 private:
 	TSharedRef<SDockTab> HandleSpawnDynamicSpriteAtlasViewerTab(const FSpawnTabArgs& SpawnTabArgs);
 	TSharedRef<SDockTab> HandleSpawnLexUIPrefabSequenceTab(const FSpawnTabArgs& SpawnTabArgs);

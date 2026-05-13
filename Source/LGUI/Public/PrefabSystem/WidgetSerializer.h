@@ -168,7 +168,7 @@ namespace LexUIPrefabSystem
 		TArray<FLexUIWidgetSaveData> SavedWidgets;
 		TMap<FGuid, FLexUIObjectSaveData> SavedObjects;
 		/** Key as child, value as parent. */
-		TMap<FGuid, FGuid> MapSceneComponentToParent;
+		TMap<FGuid, FGuid> MapWidgetToParent;
 		/** Map guid to parameter data */
 		TMap<FGuid, TArray<uint8>> SavedObjectData;
 
@@ -176,7 +176,7 @@ namespace LexUIPrefabSystem
 		{
 			Ar << GameData.SavedWidgets;
 			Ar << GameData.SavedObjects;
-			Ar << GameData.MapSceneComponentToParent;
+			Ar << GameData.MapWidgetToParent;
 			Ar << GameData.SavedObjectData;
 			return Ar;
 		}
@@ -185,7 +185,7 @@ namespace LexUIPrefabSystem
 			FStructuredArchive::FRecord Record = Slot.EnterRecord();
 			Record << SA_VALUE(TEXT("SavedWidgets"), Data.SavedWidgets);
 			Record << SA_VALUE(TEXT("SavedObjects"), Data.SavedObjects);
-			Record << SA_VALUE(TEXT("MapSceneComponentToParent"), Data.MapSceneComponentToParent);
+			Record << SA_VALUE(TEXT("MapSceneComponentToParent"), Data.MapWidgetToParent);
 			Record << SA_VALUE(TEXT("SavedObjectReferences"), Data.SavedObjectData);
 		}
 	};
@@ -248,15 +248,16 @@ namespace LexUIPrefabSystem
 	private:
 		struct FComponentDataStruct
 		{
-			ULexWidget* Component = nullptr;
-			FGuid SceneComponentParentGuid;
+			ULexWidget* Widget = nullptr;
+			FGuid WidgetParentGuid;
 		};
+		TArray<FComponentDataStruct> ComponentsInThisPrefab;
 		//collection for all widgets, include sub-prefab
 		TArray<ULexWidget*> AllWidgets;
 
 		TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> SubPrefabMap;
 		TArray<ULexWidget*> SubPrefabWidgetArray;
-		TArray<FComponentDataStruct> SubPrefabRootComponents;
+		TArray<FComponentDataStruct> SubPrefabWidgetAttachmentArray;
 		//this collection will collect all widgets of this prefab, and root widget of sub prefab
 		TArray<ULexWidget*> TrySerializeWidgetArray;
 		//origin guid mean the object guid in it's origin prefab, not sub prefab
@@ -275,13 +276,13 @@ namespace LexUIPrefabSystem
 		//serialize widget
 		bool SerializeWidget(ULexWidget* RootWidget, ULexUIPrefab* InPrefab);
 		void SerializeWidgetArray(TMap<FGuid, FGuid>& MapWidgetToParent, TArray<FLexUIWidgetSaveData>& SavedWidgets, TMap<FGuid, TArray<uint8>>& SavedObjectData);
-		void SerializeObjectArray(TMap<FGuid, FLexUIObjectSaveData>& ObjectSaveDataArray, TMap<FGuid, TArray<uint8>>& SavedObjectData, TMap<FGuid, FGuid>& MapSceneComponentToParent);
+		void SerializeObjectArray(TMap<FGuid, FLexUIObjectSaveData>& ObjectSaveDataArray, TMap<FGuid, TArray<uint8>>& SavedObjectData);
 		void SerializeWidgetToData(ULexWidget* RootWidget, FLexUIPrefabSaveData& OutData);
 		//deserialize widget
 		ULexWidget* DeserializeWidget(ULexWidget* Parent, ULexUIPrefab* InPrefab, const TFunction<void()>& InCallbackBeforeDeserialize, bool ReplaceTransform = false, FVector InLocation = FVector::ZeroVector, FQuat InRotation = FQuat::Identity, FVector InScale = FVector::OneVector);
 		ULexWidget* DeserializeWidgetFromData(FLexUIPrefabSaveData& SaveData, ULexWidget* Parent, bool ReplaceTransform, FVector InLocation, FQuat InRotation, FVector InScale);
-		ULexWidget* GenerateWidgetArray(TArray<FLexUIWidgetSaveData>& SavedWidgets, TMap<FGuid, FLexUIObjectSaveData>& InSavedObjects, TMap<FGuid, FGuid>& MapSceneComponentToParent, FGuid ParentGuid);
-		void GenerateObjectArray(TMap<FGuid, FLexUIObjectSaveData>& SavedObjects, TMap<FGuid, FGuid>& MapSceneComponentToParent);
+		ULexWidget* GenerateWidgetArray(TArray<FLexUIWidgetSaveData>& SavedWidgets, TMap<FGuid, FLexUIObjectSaveData>& InSavedObjects, TMap<FGuid, FGuid>& MapWidgetToParent, FGuid ParentGuid);
+		void GenerateObjectArray(TMap<FGuid, FLexUIObjectSaveData>& SavedObjects, TMap<FGuid, FGuid>& MapWidgetToParent);
 
 		/** Mark of this deserialization session. If nested prefab, this is still the root prefab's value. */
 		FGuid DeserializationSessionId = FGuid();
@@ -311,9 +312,8 @@ namespace LexUIPrefabSystem
 		 * Writer and Reader for serialize or deserialize
 		 * @param	UObject*	Object to serialize/deserialize
 		 * @param	TArray<uint8>&	Data buffer
-		 * @param	bool	is SceneComponent
 		 */
-		TFunction<void(UObject*, TArray<uint8>&, bool)> WriterOrReaderFunction = nullptr;
+		TFunction<void(UObject*, TArray<uint8>&)> WriterOrReaderFunction = nullptr;
 		/**
 		 * Writer and Reader for serialize or deserialize
 		 * @param	UObject*	Object to serialize/deserialize

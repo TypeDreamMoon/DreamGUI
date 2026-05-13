@@ -11,7 +11,7 @@ class UUINavigationInputSelectionHandler;
 class ULexCanvas;
 class ULexUIPrefab;
 
-UCLASS()
+UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
 class LGUI_API ULexWidgetPresenterComponent : public USceneComponent
 {
 	GENERATED_BODY()
@@ -24,7 +24,10 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void OnRegister() override;
 	virtual void OnUnregister() override;
+	virtual void PostLoad() override;
+	virtual void OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport = ETeleportType::None) override;
 	void LoadPrefab();
+	void EnsureWidgetTreeReferences();
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	static bool bNeedCheckEventSystem;
@@ -39,9 +42,9 @@ public:
 #endif
 	
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=LGUI)
-	TObjectPtr<ULexCanvas> Canvas;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=LGUI)
+	UPROPERTY(VisibleAnywhere, Instanced, BlueprintReadOnly, Category=LGUI)
+	TObjectPtr<ULexCanvas> RootCanvas;
+	UPROPERTY(VisibleAnywhere, Instanced, BlueprintReadOnly, Category=LGUI)
 	TObjectPtr<ULexWidget> RootWidget;
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category=LGUI)
 	TObjectPtr<ULexUIPrefab> WidgetPrefab;
@@ -71,7 +74,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category=LGUI)
 	UUINavigationInputSelectionHandler* GetNavigationSelection();
 	UFUNCTION(BlueprintCallable, Category=LGUI)
-	ULexCanvas* GetCanvas()const{return Canvas;}
+	ULexCanvas* GetRootCanvas()const{return RootCanvas.Get();}
 	UFUNCTION(BlueprintCallable, Category=LGUI)
 	ULexWidget* GetRootWidget()const{return RootWidget;}
 };

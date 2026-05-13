@@ -6,17 +6,14 @@
 #include "DesktopPlatformModule.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/EngineTypes.h"
-#include "Kismet2/ComponentEditorUtils.h"
 #include "Widgets/SViewport.h"
 #include "Engine/Selection.h"
-#include "EngineUtils.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "LGUIEditorModule.h"
 #include "PrefabEditor/LexUIPrefabEditor.h"
 #include "Core/Components/LexLayout.h"
-#include "Core/Actor/LexWidgetPresenterComponent.h"
-#include "Utils/LexUIUtils.h"
+#include "Core/Components/LexWidgetPresenterComponent.h"
 
 #define LOCTEXT_NAMESPACE "LGUIEditorTools"
 

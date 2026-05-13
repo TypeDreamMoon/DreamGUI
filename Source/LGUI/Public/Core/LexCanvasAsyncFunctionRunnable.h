@@ -6,14 +6,24 @@ public:
 	void Start()
 	{
 		bIsRunning = true;
-		PreparedDrawCallDataQueueEvent = FPlatformProcess::GetSynchEventFromPool();
+		check(FunctionQueueEvent == nullptr);
+		FunctionQueueEvent = FPlatformProcess::GetSynchEventFromPool();
 		Thread.Reset(FRunnableThread::Create(this, TEXT("FLexCanvasDrawCallProcessingRunnable"), 0, TPri_Normal));
 	}
-	void PushFunction(const TFunction<void()>& InFunction)
+	void PushFunction(TFunction<void()> InFunction)
 	{
-		FunctionQueue.Enqueue(InFunction);
-		PreparedDrawCallDataQueueEvent->Trigger();
-		ItemCount++;
+		if (!bIsRunning || FunctionQueueEvent == nullptr)
+		{
+			return;
+		}
+
+		FunctionQueue.Enqueue(MoveTemp(InFunction));
+		FunctionQueueEvent->Trigger();
+		++ItemCount;
+	}
+	bool IsRunning()const
+	{
+		return bIsRunning;
 	}
 
 	int NumItems()const
@@ -30,12 +40,18 @@ public:
 	{
 		while (bIsRunning)
 		{
-			if (PreparedDrawCallDataQueueEvent->Wait())
+			auto QueueEvent = FunctionQueueEvent;
+			if (QueueEvent == nullptr)
+			{
+				break;
+			}
+
+			if (QueueEvent->Wait())
 			{
 				while (FunctionQueue.Dequeue(TempFunction))
 				{
 					TempFunction();
-					ItemCount--;
+					--ItemCount;
 				}
 			}
 		}
@@ -50,9 +66,21 @@ public:
 		}
 
 		bIsRunning = false;
-		PreparedDrawCallDataQueueEvent->Trigger();
-		FPlatformProcess::ReturnSynchEventToPool(PreparedDrawCallDataQueueEvent);
-		Thread->WaitForCompletion();
+		if (FunctionQueueEvent != nullptr)
+		{
+			FunctionQueueEvent->Trigger();
+		}
+		if (Thread.IsValid())
+		{
+			Thread->WaitForCompletion();
+			Thread.Reset();
+		}
+		if (FunctionQueueEvent != nullptr)
+		{
+			FPlatformProcess::ReturnSynchEventToPool(FunctionQueueEvent);
+			FunctionQueueEvent = nullptr;
+		}
+		ItemCount = 0;
 	}
 	virtual void Exit() override
 	{
@@ -64,7 +92,7 @@ private:
 	TFunction<void()> TempFunction = nullptr;
 	TQueue<TFunction<void()>, EQueueMode::Mpsc> FunctionQueue;
 	std::atomic<int> ItemCount = 0;
-	FEvent* PreparedDrawCallDataQueueEvent = nullptr;
+	FEvent* FunctionQueueEvent = nullptr;
 	
 	std::atomic<bool> bIsRunning = false;
 	TUniquePtr<FRunnableThread> Thread;

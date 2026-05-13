@@ -818,19 +818,19 @@ void FLexUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy*
 		static TArray<ULexWidget*> AllWidgetArray;
 		AllWidgetArray.Reset();
 		{
-			for (auto& CanvasItem : LexUIManager->GetCanvasArray(ELexRenderMode::ScreenSpaceOverlay))
+			for (auto& CanvasItem : LexUIManager->GetRootCanvasArray(ELexRenderMode::ScreenSpaceOverlay))
 			{
 				AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
 			}
-			for (auto& CanvasItem : LexUIManager->GetCanvasArray(ELexRenderMode::RenderTarget))
+			for (auto& CanvasItem : LexUIManager->GetRootCanvasArray(ELexRenderMode::RenderTarget))
 			{
 				AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
 			}
-			for (auto& CanvasItem : LexUIManager->GetCanvasArray(ELexRenderMode::WorldSpace))
+			for (auto& CanvasItem : LexUIManager->GetRootCanvasArray(ELexRenderMode::WorldSpace))
 			{
 				AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
 			}
-			for (auto& CanvasItem : LexUIManager->GetCanvasArray(ELexRenderMode::WorldSpace_LexUI))
+			for (auto& CanvasItem : LexUIManager->GetRootCanvasArray(ELexRenderMode::WorldSpace_LexUI))
 			{
 				AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
 			}

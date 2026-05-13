@@ -4,7 +4,6 @@
 
 #include "LTweener.h"
 #include "Core/LexUIAnchorData.h"
-#include "PrefabSystem/ILexUIPrefabInterface.h"
 #include "LexWidget.generated.h"
 
 class ULexWidgetSubObjectBehaviour;
@@ -87,6 +86,8 @@ public:
 	virtual void PostLoad()override;
 	virtual void BeginDestroy() override;
 	void DestroyWidget();
+
+	virtual UWorld* GetWorld() const override final;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual void PreEditChange(FProperty* PropertyAboutToChange) override;
@@ -124,8 +125,13 @@ public:
 	{
 		return GET_MEMBER_NAME_CHECKED(ULexWidget, RelativeScale);
 	}
+	static FName GetPropertyName_Components()
+	{
+		return GET_MEMBER_NAME_CHECKED(ULexWidget, Components);
+	}
 
 	bool HasBegunPlay()const{return bHasBegunPlay;}
+	bool HasRegistered()const{return bIsRegistered;}
 
 	static void CollectChildrenWidgets(ULexWidget* Target, TArray<ULexWidget*>& OutAllChildrenWidgets, bool IncludeTarget = true);
 
@@ -194,6 +200,10 @@ public:
 	const FTransform& GetWorldTransform()const;
 
 	void SetWorldTransform(const FTransform& InWorldTransform);
+	/** Only called by PrefabSystem to restore parent-children hierarchy */
+	void SetParentBeforeRegister(ULexWidget* InParent);
+	/** Only called by PrefabSystem to restore parent-children sibling index */
+	void ApplySiblingIndexBeforeRegister_Recursive();
 
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	ULexWidget* GetParent()const { return Parent.Get(); }
@@ -279,7 +289,7 @@ private:
 	virtual void OnRenderCanvasChanged(ULexCanvas* OldCanvas, ULexCanvas* NewCanvas);
 	void SetRenderCanvas(ULexCanvas* InNewCanvas);
 
-	UPROPERTY()
+	UPROPERTY(Instanced)
 	TArray<TObjectPtr<ULexUIBehaviour>> Components;
 public:
 	/** Called by LexCanvas, when a new LexCanvas is registered on self actor */
@@ -700,6 +710,8 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = LGUI, AdvancedDisplay)
 		FString DisplayName;
 public:
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	FString GetPathDisplayName()const;
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		const FString& GetDisplayName()const { return DisplayName; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)

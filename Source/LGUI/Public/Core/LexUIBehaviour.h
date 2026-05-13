@@ -13,7 +13,7 @@ class USceneComponent;
  * You should use Awake/Start instead of BeginPlay, Update instead of Tick.
  * Awake execute order in prefab: higher in hierarchy will execute earlier, so scripts on root actor will execute the first.
  */
-UCLASS(ClassGroup = (LGUI), Abstract, Blueprintable, DisplayName = "Lex UI Behaviour")
+UCLASS(ClassGroup = (LGUI), DefaultToInstanced, Abstract, Blueprintable, DisplayName = "Lex UI Behaviour")
 class LGUI_API ULexUIBehaviour : public UObject
 {
 	GENERATED_BODY()
@@ -22,7 +22,6 @@ public:
 	friend class ULexWidget;
 protected:
 	virtual void BeginPlay();
-	virtual void TickComponent(float DeltaTime);
 	virtual void EndPlay();
 
 	virtual void OnRegister();
@@ -31,6 +30,8 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
 #endif
 	virtual void BeginDestroy() override;
+
+	virtual UWorld* GetWorld() const override final;
 
 	enum class ECallbackFunctionType :int32
 	{

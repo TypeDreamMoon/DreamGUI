@@ -15,13 +15,12 @@
 #include "Editor.h"
 #include "LexWidgetEditorHierarchyView.h"
 #include "Core/LexUIManager.h"
-#include "Core/Actor/LexWidgetPresenterComponent.h"
+#include "Core/Components/LexWidgetPresenterComponent.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
 #include "Framework/Commands/GenericCommands.h"
 #include "PrefabSystem/LexUIPrefabInstanceScene.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
-#include "Utils/LexUIUtils.h"
 
 #define LOCTEXT_NAMESPACE "LexUIPrefabEditor"
 
@@ -454,7 +453,7 @@ void FLexUIPrefabEditor::SaveEditorState()
 	auto WidgetPresenter = GetPreviewScene()->GetWidgetPresenter();
 	auto RootAgentWidget = WidgetPresenter->GetRootWidget();
 	PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasSize = FIntPoint(RootAgentWidget->GetWidth(), RootAgentWidget->GetHeight());
-	auto RootCanvas = WidgetPresenter->GetCanvas();
+	auto RootCanvas = WidgetPresenter->GetRootCanvas();
 	PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasRenderMode = (uint8)RootCanvas->GetRenderMode();
 	PrefabBeingEdited->PrefabDataForPrefabEditor.ViewMode = ViewportPtr->GetViewportClient()->GetViewMode();
 

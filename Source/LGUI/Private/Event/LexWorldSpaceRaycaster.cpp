@@ -2,7 +2,7 @@
 
 #include "Event/LexWorldSpaceRaycaster.h"
 #include "LGUI.h"
-#include "Core/Actor/LexWidgetPresenterComponent.h"
+#include "Core/Components/LexWidgetPresenterComponent.h"
 
 ULexWorldSpaceRaycaster::ULexWorldSpaceRaycaster()
 {
@@ -20,7 +20,7 @@ void ULexWorldSpaceRaycaster::BeginPlay()
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d LexWidgetPresenterComponent is not valid! LexUIScreenSpaceRaycaster can only attach to a Actor which contains a ULexWidgetPresenterComponent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		}
-		auto Canvas = WidgetPresenter->GetCanvas();
+		auto Canvas = WidgetPresenter->GetRootCanvas();
 		if (!IsValid(Canvas) || !Canvas->IsRootCanvas())
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d Canvas is not valid! LexWorldSpaceRaycaster can only attach to actor which contains LexCanvas component!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);

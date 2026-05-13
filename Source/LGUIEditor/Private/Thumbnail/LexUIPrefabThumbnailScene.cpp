@@ -5,7 +5,7 @@
 #include "ThumbnailRendering/SceneThumbnailInfo.h"
 #include "Core/Components/LexCanvas.h"
 #include "LGUIEditorModule.h"
-#include "Core/Actor/LexWidgetPresenterComponent.h"
+#include "Core/Components/LexWidgetPresenterComponent.h"
 #include "Core/Components/LexWidget.h"
 #include "Interaction/UIRecyclableScrollViewComponent.h"
 #include "PrefabSystem/LexUIPrefab.h"
@@ -73,7 +73,7 @@ void FLexUIPrefabThumbnailScene::SpawnPreviewActor()
 			LexWidgetPresenterComponent->RegisterComponent();
 			WidgetPresenterActor->AddInstanceComponent(LexWidgetPresenterComponent);
 			{
-				auto Canvas = LexWidgetPresenterComponent->GetCanvas();
+				auto Canvas = LexWidgetPresenterComponent->GetRootCanvas();
 				auto RenderMode = (ELexRenderMode)CurrentPrefab->PrefabDataForPrefabEditor.CanvasRenderMode;
 				Canvas->SetRenderMode(RenderMode);
 				Canvas->bFixedSizeInEditMode = true;
@@ -210,7 +210,7 @@ void FLexUIPrefabThumbnailScene::SetPrefab(class ULexUIPrefab* Prefab)
 	CurrentPrefab->bThumbnailDirty = false;
 	if (IsValid(Prefab))
 	{
-		SpawnPreviewActor();
+		// SpawnPreviewActor();
 	}
 }
 USceneThumbnailInfo* FLexUIPrefabThumbnailScene::GetSceneThumbnailInfo(const float TargetDistance)const

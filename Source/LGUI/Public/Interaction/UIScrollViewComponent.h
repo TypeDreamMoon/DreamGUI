@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include "Components/ActorComponent.h"
-#include "Core/Components/LexSprite.h"
 #include "Event/LexDelegateDeclaration.h"
 #include "Event/LexUIEventDelegate.h"
 #include "Event/Interface/LexPointerDragInterface.h"

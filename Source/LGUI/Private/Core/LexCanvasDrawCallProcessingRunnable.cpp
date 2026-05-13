@@ -8,10 +8,12 @@ void FLexCanvasDrawCallProcessingRunnable::Start()
 {
 	check (!bIsRunning);
 	check (PreparedDrawCallDataQueue == nullptr);
+	check (PreparedDrawCallDataQueueEvent == nullptr);
 	PreparedDrawCallDataQueue = MakeShared<TQueue<FLexCanvasPreparedDrawCallData>>();
 	PreparedDrawCallDataQueueEvent = FPlatformProcess::GetSynchEventFromPool();
 	PendingRebuildDrawCallQueue = MakeShared<TQueue<FLexCanvasPendingDrawCallData>>();
 	bIsRunning = true;
+	bIsBatching = false;
 	Thread.Reset(FRunnableThread::Create(this, TEXT("FLexCanvasDrawCallProcessingRunnable"), 0, TPri_Normal));
 }
 
@@ -19,7 +21,13 @@ uint32 FLexCanvasDrawCallProcessingRunnable::Run()
 {
 	while (bIsRunning)
 	{
-		if (PreparedDrawCallDataQueueEvent->Wait())
+		auto QueueEvent = PreparedDrawCallDataQueueEvent;
+		if (QueueEvent == nullptr || !PreparedDrawCallDataQueue.IsValid() || !PendingRebuildDrawCallQueue.IsValid())
+		{
+			break;
+		}
+
+		if (QueueEvent->Wait())
 		{
 			if (!bIsRunning)break;
 			bIsBatching = true;
@@ -44,9 +52,23 @@ void FLexCanvasDrawCallProcessingRunnable::Stop()
 	}
 
 	bIsRunning = false;
-	PreparedDrawCallDataQueueEvent->Trigger();
-	FPlatformProcess::ReturnSynchEventToPool(PreparedDrawCallDataQueueEvent);
-	Thread->WaitForCompletion();
+	if (PreparedDrawCallDataQueueEvent != nullptr)
+	{
+		PreparedDrawCallDataQueueEvent->Trigger();
+	}
+	if (Thread.IsValid())
+	{
+		Thread->WaitForCompletion();
+		Thread.Reset();
+	}
+	if (PreparedDrawCallDataQueueEvent != nullptr)
+	{
+		FPlatformProcess::ReturnSynchEventToPool(PreparedDrawCallDataQueueEvent);
+		PreparedDrawCallDataQueueEvent = nullptr;
+	}
+	PreparedDrawCallDataQueue.Reset();
+	PendingRebuildDrawCallQueue.Reset();
+	bIsBatching = false;
 }
 void FLexCanvasDrawCallProcessingRunnable::Exit()
 {
@@ -55,12 +77,22 @@ void FLexCanvasDrawCallProcessingRunnable::Exit()
 
 void FLexCanvasDrawCallProcessingRunnable::PushPreparedDrawCallData(FLexCanvasPreparedDrawCallData InData)
 {
+	if (!bIsRunning || !PreparedDrawCallDataQueue.IsValid() || PreparedDrawCallDataQueueEvent == nullptr)
+	{
+		return;
+	}
+
 	PreparedDrawCallDataQueue->Enqueue(MoveTemp(InData));
 	PreparedDrawCallDataQueueEvent->Trigger();
 }
 
 bool FLexCanvasDrawCallProcessingRunnable::TryGetDrawCallData(FLexCanvasPendingDrawCallData& OutData)
 {
+	if (!PendingRebuildDrawCallQueue.IsValid())
+	{
+		return false;
+	}
+
 	if (!PendingRebuildDrawCallQueue->IsEmpty())
 	{
 		while (PendingRebuildDrawCallQueue->Dequeue(OutData))

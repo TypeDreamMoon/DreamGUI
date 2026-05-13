@@ -5,14 +5,9 @@
 #include "Engine/World.h"
 #include "PrefabSystem/LexUIPrefabManager.h"
 #include "LGUI.h"
-#include "Core/LexUIBehaviour.h"
 #include "Core/LexUISettings.h"
 #include "Core/Components/LexWidget.h"
 #include "Serialization/MemoryReader.h"
-#include "PrefabSystem/ILexUIPrefabInterface.h"
-#if WITH_EDITOR
-#include "Utils/LexUIUtils.h"
-#endif
 
 
 
@@ -53,9 +48,8 @@ namespace LexUIPrefabSystem
 		serializer.bIsEditorOrRuntime = false;
 #endif
 		serializer.bOverrideVersions = true;
-		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, bool InIsSceneComponent) {
-			auto ExcludeProperties = InIsSceneComponent ? serializer.GetSceneComponentExcludeProperties() : TSet<FName>();
-			LexUIPrefabSystem::FLexUIObjectReader Reader(InOutBuffer, serializer, ExcludeProperties);
+		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer) {
+			LexUIPrefabSystem::FLexUIObjectReader Reader(InOutBuffer, serializer, {});
 			Reader.DoSerialize(InObject);
 		};
 		serializer.WriterOrReaderFunctionForSubPrefabOverride = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, const TArray<FName>& InOverridePropertyNames) {
@@ -89,9 +83,8 @@ namespace LexUIPrefabSystem
 		serializer.bIsEditorOrRuntime = false;
 #endif
 		serializer.bOverrideVersions = true;
-		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, bool InIsSceneComponent) {
-			auto ExcludeProperties = InIsSceneComponent ? serializer.GetSceneComponentExcludeProperties() : TSet<FName>();
-			LexUIPrefabSystem::FLexUIObjectReader Reader(InOutBuffer, serializer, ExcludeProperties);
+		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer) {
+			LexUIPrefabSystem::FLexUIObjectReader Reader(InOutBuffer, serializer, {});
 			Reader.DoSerialize(InObject);
 		};
 		serializer.WriterOrReaderFunctionForSubPrefabOverride = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, const TArray<FName>& InOverridePropertyNames) {
@@ -130,9 +123,8 @@ namespace LexUIPrefabSystem
 		serializer.bIsEditorOrRuntime = false;
 #endif
 		serializer.bOverrideVersions = true;
-		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, bool InIsSceneComponent) {
-			auto ExcludeProperties = InIsSceneComponent ? serializer.GetSceneComponentExcludeProperties() : TSet<FName>();
-			LexUIPrefabSystem::FLexUIObjectReader Reader(InOutBuffer, serializer, ExcludeProperties);
+		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer) {
+			LexUIPrefabSystem::FLexUIObjectReader Reader(InOutBuffer, serializer, {});
 			Reader.DoSerialize(InObject);
 		};
 		serializer.WriterOrReaderFunctionForSubPrefabOverride = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, const TArray<FName>& InOverridePropertyNames) {
@@ -158,9 +150,8 @@ namespace LexUIPrefabSystem
 		serializer.MapGuidToObject = InMapGuidToObject;
 		serializer.DeserializationSessionId = InParentDeserializationSessionId;
 		serializer.bIsSubPrefab = true;
-		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, bool InIsSceneComponent) {
-			auto ExcludeProperties = InIsSceneComponent ? serializer.GetSceneComponentExcludeProperties() : TSet<FName>();
-			LexUIPrefabSystem::FLexUIObjectReader Reader(InOutBuffer, serializer, ExcludeProperties);
+		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer) {
+			LexUIPrefabSystem::FLexUIObjectReader Reader(InOutBuffer, serializer, {});
 			Reader.DoSerialize(InObject);
 		};
 		serializer.WriterOrReaderFunctionForSubPrefabOverride = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer, const TArray<FName>& InOverridePropertyNames) {
@@ -178,19 +169,19 @@ namespace LexUIPrefabSystem
 #if LGUIPREFAB_LOG_DETAIL_TIME
 		auto Time = FDateTime::Now();
 #endif
-		if (LGUIPrefabManager == nullptr)
+		if (PrefabManager == nullptr)
 		{
-			LGUIPrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(World);
+			PrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(World);
 		}
 		if (!bIsSubPrefab)
 		{
 			if (!DeserializationSessionId.IsValid())
 			{
 				DeserializationSessionId = FGuid::NewGuid();
-				LGUIPrefabManager->BeginPrefabSystemProcessingWidget(DeserializationSessionId);
+				PrefabManager->BeginPrefabSystemProcessingWidget(DeserializationSessionId);
 			}
 		}
-		auto CreatedRootWidget = GenerateWidgetArray(SaveData.SavedWidgets, SaveData.SavedObjects, SaveData.MapSceneComponentToParent, FGuid());
+		auto CreatedRootWidget = GenerateWidgetArray(SaveData.SavedWidgets, SaveData.SavedObjects, SaveData.MapWidgetToParent, FGuid());
 		if (CreatedRootWidget == nullptr)
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d No actor generated!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
@@ -198,11 +189,11 @@ namespace LexUIPrefabSystem
 			if (!bIsSubPrefab)
 			{
 				check(DeserializationSessionId.IsValid());
-				LGUIPrefabManager->EndPrefabSystemProcessingWidget(DeserializationSessionId);
+				PrefabManager->EndPrefabSystemProcessingWidget(DeserializationSessionId);
 			}
 			return nullptr;
 		}
-		GenerateObjectArray(SaveData.SavedObjects, SaveData.MapSceneComponentToParent);
+		GenerateObjectArray(SaveData.SavedObjects, SaveData.MapWidgetToParent);
 #if LGUIPREFAB_LOG_DETAIL_TIME
 		UE_LOG(LGUI, Log, TEXT("--GenerateObject take time: %fms"), (FDateTime::Now() - Time).GetTotalMilliseconds());
 		Time = FDateTime::Now();
@@ -212,7 +203,7 @@ namespace LexUIPrefabSystem
 		{
 			if (auto ObjectPtr = MapGuidToObject.Find(KeyValue.Key))
 			{
-				WriterOrReaderFunction(*ObjectPtr, KeyValue.Value, Cast<USceneComponent>(*ObjectPtr) != nullptr);
+				WriterOrReaderFunction(*ObjectPtr, KeyValue.Value);
 			}
 		}
 
@@ -227,17 +218,44 @@ namespace LexUIPrefabSystem
 		Time = FDateTime::Now();
 #endif
 
-		for (auto& CompData : SubPrefabRootComponents)
+		//component attachment
+		for (auto& CompData : ComponentsInThisPrefab)
 		{
-			auto SceneComp = CompData.Component;
-			if (auto ParentObjectPtr = MapGuidToObject.Find(CompData.SceneComponentParentGuid))
+			auto Widget = CompData.Widget;
+			ULexWidget* ParentWidget = nullptr;
+			if (CompData.WidgetParentGuid.IsValid())
 			{
-				if (auto ParentComp = Cast<ULexWidget>(*ParentObjectPtr))
+				if (auto ParentObjectPtr = MapGuidToObject.Find(CompData.WidgetParentGuid))
 				{
-					SceneComp->SetParent(ParentComp, false);
+					ParentWidget = Cast<ULexWidget>(*ParentObjectPtr);
 				}
 			}
+			if (!ParentWidget)
+			{
+				UE_LOG(LGUI, Error, TEXT("[%s].%d Missing parent for widget:%s at prefab:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Widget->GetPathDisplayName(), *PrefabAssetPath);
+				ParentWidget = CreatedRootWidget;
+			}
+			Widget->SetParentBeforeRegister(ParentWidget);
 		}
+		for (auto& CompData : SubPrefabWidgetAttachmentArray)
+		{
+			auto Widget = CompData.Widget;
+			ULexWidget* ParentWidget = nullptr;
+			if (CompData.WidgetParentGuid.IsValid())
+			{
+				if (auto ParentObjectPtr = MapGuidToObject.Find(CompData.WidgetParentGuid))
+				{
+					ParentWidget = Cast<ULexWidget>(*ParentObjectPtr);
+				}
+			}
+			if (!ParentWidget)
+			{
+				UE_LOG(LGUI, Error, TEXT("[%s].%d Missing parent for widget:%s at prefab:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Widget->GetPathDisplayName(), *PrefabAssetPath);
+				ParentWidget = CreatedRootWidget;
+			}
+			Widget->SetParentBeforeRegister(ParentWidget);
+		}
+		CreatedRootWidget->ApplySiblingIndexBeforeRegister_Recursive();
 
 		//attach root actor's parent
 		if (Parent)
@@ -284,19 +302,17 @@ namespace LexUIPrefabSystem
 			check(DeserializationSessionId.IsValid());
 			for (auto item : AllWidgets)
 			{
-				LGUIPrefabManager->RemoveWidgetForPrefabSystem(item);
+				PrefabManager->RemoveWidgetForPrefabSystem(item);
 			}
-			LGUIPrefabManager->EndPrefabSystemProcessingWidget(DeserializationSessionId);
+			PrefabManager->EndPrefabSystemProcessingWidget(DeserializationSessionId);
 
 			for (int i = 0; i < AllWidgets.Num(); i++)
 			{
 				auto& Widget = AllWidgets[i];
 				Widget->OnRegister();
 			}
-
 			if (World->IsGameWorld())
 			{
-				check(World->HasBegunPlay());
 				for (int i = 0; i < AllWidgets.Num(); i++)
 				{
 					auto& Widget = AllWidgets[i];
@@ -380,7 +396,7 @@ namespace LexUIPrefabSystem
 
 
 
-	void WidgetSerializer::GenerateObjectArray(TMap<FGuid, FLexUIObjectSaveData>& SavedObjects, TMap<FGuid, FGuid>& MapSceneComponentToParent)
+	void WidgetSerializer::GenerateObjectArray(TMap<FGuid, FLexUIObjectSaveData>& SavedObjects, TMap<FGuid, FGuid>& MapWidgetToParent)
 	{
 		auto CollectDefaultSubobjects = [&](UObject* Target, const FGuid& TargetGuid, FLexUICommonObjectSaveData& ObjectData) {
 			//collect default sub object
@@ -446,7 +462,7 @@ namespace LexUIPrefabSystem
 		}
 	}
 
-	ULexWidget* WidgetSerializer::GenerateWidgetArray(TArray<FLexUIWidgetSaveData>& SavedWidgets, TMap<FGuid, FLexUIObjectSaveData>& SavedObjects, TMap<FGuid, FGuid>& MapSceneComponentToParent, FGuid ParentGuid)
+	ULexWidget* WidgetSerializer::GenerateWidgetArray(TArray<FLexUIWidgetSaveData>& SavedWidgets, TMap<FGuid, FLexUIObjectSaveData>& SavedObjects, TMap<FGuid, FGuid>& MapWidgetToParent, FGuid ParentGuid)
 	{
 		ULexWidget* RootWidget = nullptr;//first actor is the RootWidget
 		for (int i = 0; i < SavedWidgets.Num(); i++)
@@ -576,7 +592,7 @@ namespace LexUIPrefabSystem
 						if (SubPrefabRootWidget != nullptr)
 						{
 							FComponentDataStruct CompData;
-							CompData.Component = SubPrefabRootWidget;
+							CompData.Widget = SubPrefabRootWidget;
 							FGuid SubPrefabRootCompGuid;
 							for (auto& KeyValue : MapGuidToObject)
 							{
@@ -586,10 +602,10 @@ namespace LexUIPrefabSystem
 									break;
 								}
 							}
-							if (auto ParentGuidPtr = MapSceneComponentToParent.Find(SubPrefabRootCompGuid))
+							if (auto ParentGuidPtr = MapWidgetToParent.Find(SubPrefabRootCompGuid))
 							{
-								CompData.SceneComponentParentGuid = *ParentGuidPtr;
-								SubPrefabRootComponents.Add(CompData);
+								CompData.WidgetParentGuid = *ParentGuidPtr;
+								SubPrefabWidgetAttachmentArray.Add(CompData);
 							}
 
 							SubPrefabMap.Add(SubPrefabRootWidget, SubPrefabData);
@@ -643,7 +659,15 @@ namespace LexUIPrefabSystem
 						CollectDefaultSubobjects(NewWidget);
 					}
 					//add actor before FinishSpawning, so it's good for component (or other default sub-object) to check if actor is processing by prefab system
-					LGUIPrefabManager->AddWidgetForPrefabSystem(NewWidget, DeserializationSessionId);
+					PrefabManager->AddWidgetForPrefabSystem(NewWidget, DeserializationSessionId);
+
+					FComponentDataStruct CompData;
+					CompData.Widget = NewWidget;
+					if (auto ParentGuidPtr = MapWidgetToParent.Find(InWidgetData.WidgetGuid))
+					{
+						CompData.WidgetParentGuid = *ParentGuidPtr;
+						ComponentsInThisPrefab.Add(CompData);
+					}
 
 					AllWidgets.Add(NewWidget);
 

@@ -1,11 +1,12 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "LexUIPrefabEditorDetails.h"
+#include "ClassViewerFilter.h"
+#include "ClassViewerModule.h"
 #include "Modules/ModuleManager.h"
-#include "ISCSEditorUICustomization.h"
-#include "GameFramework/Actor.h"
 #include "UnrealEdGlobals.h"
 #include "Editor/UnrealEdEngine.h"
+#include "Framework/Application/SlateApplication.h"
 #include "Misc/NotifyHook.h"
 #include "LexUIPrefabEditor.h"
 #include "DetailLayoutBuilder.h"
@@ -13,57 +14,389 @@
 #include "LexUIPrefabOverrideDataViewer.h"
 #include "PrefabSystem/LexUIPrefab.h"
 #include "LexUIEditorTools.h"
-#include "SSubobjectEditorModule.h"
-#include "SSubobjectInstanceEditor.h"
 #include "Core/LexUIBehaviour.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexWidget.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
+#include "ScopedTransaction.h"
+#include "SPositiveActionButton.h"
+#include "Framework/Commands/GenericCommands.h"
+#include "Styling/SlateIconFinder.h"
+#include "Utils/LexUIUtils.h"
+#include "Widgets/Input/SButton.h"
+#include "Widgets/Input/SComboButton.h"
+#include "Widgets/Layout/SBorder.h"
+#include "Widgets/Views/SListView.h"
+#include "Widgets/Views/STableRow.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditorDetailTab"
 
-class LexUISCSEditorUICustomization : public ISCSEditorUICustomization
+using FLexWidgetComponentItem = TWeakObjectPtr<ULexUIBehaviour>;
+
+class FLexWidgetComponentClassFilter : public IClassViewerFilter
 {
-	TWeakPtr<FLexUIPrefabEditor> PrefabEditor;
 public:
-	LexUISCSEditorUICustomization(TSharedPtr<FLexUIPrefabEditor> InPrefabEditor)
+	virtual bool IsClassAllowed(const FClassViewerInitializationOptions& InInitOptions, const UClass* InClass, TSharedRef<FClassViewerFilterFuncs> InFilterFuncs) override
 	{
-		PrefabEditor = InPrefabEditor;
+		return IsComponentClassAllowed(InClass);
 	}
-	virtual bool HideAddComponentButton(TArrayView<UObject*> Context) const override
+
+	virtual bool IsUnloadedClassAllowed(const FClassViewerInitializationOptions& InInitOptions, const TSharedRef<const IUnloadedBlueprintData> InUnloadedClassData, TSharedRef<FClassViewerFilterFuncs> InFilterFuncs) override
 	{
-		if (Context.Num() == 1)
+		return InUnloadedClassData->IsChildOf(ULexUIBehaviour::StaticClass())
+			&& !InUnloadedClassData->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists | CLASS_Hidden);
+	}
+
+private:
+	static bool IsComponentClassAllowed(const UClass* InClass)
+	{
+		return InClass != nullptr
+			&& InClass->IsChildOf(ULexUIBehaviour::StaticClass())
+			&& !InClass->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists | CLASS_Hidden | CLASS_Transient)
+			&& InClass->HasMetaData("BlueprintSpawnableComponent")
+				;
+	}
+};
+
+class SLexWidgetComponentEditor : public SCompoundWidget
+{
+public:
+	DECLARE_DELEGATE_RetVal(ULexWidget*, FOnGetWidgetContext);
+	DECLARE_DELEGATE_RetVal(bool, FOnCanEdit);
+	DECLARE_DELEGATE_OneParam(FOnComponentsSelectionChanged, const TArray<FLexWidgetComponentItem>&);
+
+	SLATE_BEGIN_ARGS(SLexWidgetComponentEditor)
+	{
+	}
+		SLATE_EVENT(FOnGetWidgetContext, GetWidgetContext)
+		SLATE_EVENT(FOnCanEdit, CanEdit)
+		SLATE_EVENT(FOnComponentsSelectionChanged, OnSelectionChanged)
+	SLATE_END_ARGS()
+
+	void Construct(const FArguments& InArgs)
+	{
+		CommandList = MakeShareable(new FUICommandList);
+		CommandList->MapAction(
+			FGenericCommands::Get().Delete,
+			FExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::HandleRemoveSelectedComponents),
+			FCanExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::CanRemoveSelectedComponents)
+		);
+		
+		GetWidgetContext = InArgs._GetWidgetContext;
+		CanEdit = InArgs._CanEdit;
+		OnSelectionChanged = InArgs._OnSelectionChanged;
+
+		ToolbarWidget =
+		SNew(SBox)
+		.Padding(FMargin(0, 0, 4, 0))
+		[
+			SNew(SPositiveActionButton)
+			.IsEnabled(this, &SLexWidgetComponentEditor::CanAddOrRemoveComponent)
+			.Icon(FAppStyle::Get().GetBrush("Icons.Plus"))
+			.Text(LOCTEXT("AddWidgetComponent", "Add Component"))
+			.ToolTipText(LOCTEXT("AddWidgetComponentTooltip", "Add a LexUI component to the selected widget"))
+			.OnGetMenuContent(this, &SLexWidgetComponentEditor::GenerateAddComponentMenu)
+		]
+		;
+
+		ChildSlot
+		[
+			SNew(SOverlay)
+			+ SOverlay::Slot()
+			[
+				SNew(SBorder)
+				.Padding(FMargin(2))
+				[
+					SAssignNew(ComponentListView, SListView<FLexWidgetComponentItem>)
+					.ListItemsSource(&ComponentItems)
+					.SelectionMode(ESelectionMode::Single)
+					.OnGenerateRow(this, &SLexWidgetComponentEditor::HandleGenerateRow)
+					.OnSelectionChanged(this, &SLexWidgetComponentEditor::HandleSelectionChanged)
+					.OnContextMenuOpening(this, &SLexWidgetComponentEditor::OnContextMenuOpening)
+				]
+			]
+			+ SOverlay::Slot()
+			.HAlign(HAlign_Center)
+			.VAlign(VAlign_Center)
+			[
+				SNew(STextBlock)
+				.Visibility(this, &SLexWidgetComponentEditor::GetEmptyStateVisibility)
+				.Text(this, &SLexWidgetComponentEditor::GetEmptyStateText)
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
+		];
+
+		RefreshComponents();
+	}
+
+	TSharedRef<SWidget> GetToolbarWidget() const
+	{
+		return ToolbarWidget.ToSharedRef();
+	}
+	void RefreshComponents()
+	{
+		ComponentItems.Reset();
+
+		if (const ULexWidget* Widget = GetCurrentWidget())
 		{
-			if (auto Widget = Cast<ULexWidget>(Context[0]))
+			for (ULexUIBehaviour* Component : Widget->GetAllComponents())
 			{
-				if (auto HelperObj = PrefabEditor.Pin()->GetPrefabHelperObject())
+				if (IsValid(Component))
 				{
-					if (HelperObj->IsWidgetBelongsToSubPrefab(Widget))
-					{
-						return true;
-					}
+					ComponentItems.Add(Component);
 				}
 			}
 		}
-		return false;
-	}
-	virtual bool HideBlueprintButtons(TArrayView<UObject*> Context) const override
-	{
-		if (Context.Num() == 1)
+
+		if (ComponentListView.IsValid())
 		{
-			if (auto Widget = Cast<ULexWidget>(Context[0]))
-			{
-				if (auto HelperObj = PrefabEditor.Pin()->GetPrefabHelperObject())
-				{
-					if (HelperObj->IsWidgetBelongsToSubPrefab(Widget))
-					{
-						return true;
-					}
-				}
-			}
+			ComponentListView->RequestListRefresh();
 		}
-		return false;
 	}
+
+	void ClearSelection()
+	{
+		if (ComponentListView.IsValid())
+		{
+			ComponentListView->ClearSelection();
+		}
+	}
+
+	void SelectComponent(ULexUIBehaviour* InComponent)
+	{
+		if (!ComponentListView.IsValid() || !IsValid(InComponent))
+		{
+			return;
+		}
+
+		const FLexWidgetComponentItem Item = InComponent;
+		ComponentListView->SetSelection(Item, ESelectInfo::Direct);
+		ComponentListView->RequestScrollIntoView(Item);
+	}
+
+private:
+	ULexWidget* GetCurrentWidget() const
+	{
+		return GetWidgetContext.IsBound() ? GetWidgetContext.Execute() : nullptr;
+	}
+
+	bool CanAddOrRemoveComponent() const
+	{
+		return IsValid(GetCurrentWidget()) && (!CanEdit.IsBound() || CanEdit.Execute());
+	}
+
+	bool CanRemoveSelectedComponents() const
+	{
+		if (!CanAddOrRemoveComponent() || !ComponentListView.IsValid())
+		{
+			return false;
+		}
+
+		TArray<FLexWidgetComponentItem> SelectedItems;
+		ComponentListView->GetSelectedItems(SelectedItems);
+		return SelectedItems.Num() > 0;
+	}
+
+	EVisibility GetEmptyStateVisibility() const
+	{
+		return ComponentItems.Num() == 0 ? EVisibility::Visible : EVisibility::Collapsed;
+	}
+
+	FText GetEmptyStateText() const
+	{
+		return IsValid(GetCurrentWidget())
+			? LOCTEXT("NoWidgetComponents", "No components on this widget")
+			: LOCTEXT("SelectWidgetForComponents", "Select a widget to edit components");
+	}
+
+	TSharedRef<ITableRow> HandleGenerateRow(FLexWidgetComponentItem InItem, const TSharedRef<STableViewBase>& OwnerTable)
+	{
+		return
+		SNew(STableRow<FLexWidgetComponentItem>, OwnerTable)
+		.Style(&FAppStyle::Get().GetWidgetStyle<FTableRowStyle>("SceneOutliner.TableViewRow"))
+		.Padding(FMargin(0, 4, 0, 4))
+		.ShowSelection(true)
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(2, 0)
+			[
+				SNew(SImage)
+				.ColorAndOpacity(FSlateColor::UseForeground())
+				.Image_Lambda([=, this]()
+				{
+					if (InItem.IsValid())
+					{
+						return FSlateIconFinder::FindIconBrushForClass(InItem->GetClass());
+					}
+					return (const FSlateBrush*)nullptr;
+				})
+			]
+			+SHorizontalBox::Slot()
+			[
+				SNew(STextBlock)
+				.Text(GetComponentText(InItem.Get()))
+				.ToolTipText(GetComponentTooltipText(InItem.Get()))
+			]
+		];
+	}
+
+	void HandleSelectionChanged(FLexWidgetComponentItem InItem, ESelectInfo::Type SelectInfo)
+	{
+		BroadcastSelectionChanged();
+	}
+
+	TSharedPtr<SWidget> OnContextMenuOpening()
+	{
+		FMenuBuilder MenuBuilder(true, nullptr);
+		MenuBuilder.PushCommandList(CommandList.ToSharedRef());
+		{
+			// MenuBuilder.AddMenuEntry(FGenericCommands::Get().Copy);
+			// MenuBuilder.AddMenuEntry(FGenericCommands::Get().Paste);
+			// MenuBuilder.AddMenuEntry(FGenericCommands::Get().Cut);
+			// MenuBuilder.AddMenuEntry(FGenericCommands::Get().Duplicate);
+			MenuBuilder.AddMenuEntry(FGenericCommands::Get().Delete);
+		}
+		MenuBuilder.PopCommandList();
+		return MenuBuilder.MakeWidget();
+	}
+
+	void BroadcastSelectionChanged()
+	{
+		if (!OnSelectionChanged.IsBound())
+		{
+			return;
+		}
+
+		TArray<FLexWidgetComponentItem> SelectedItems;
+		if (ComponentListView.IsValid())
+		{
+			ComponentListView->GetSelectedItems(SelectedItems);
+		}
+		OnSelectionChanged.Execute(SelectedItems);
+	}
+
+	TSharedRef<SWidget> GenerateAddComponentMenu()
+	{
+		FClassViewerInitializationOptions Options;
+		Options.Mode = EClassViewerMode::ClassPicker;
+		Options.DisplayMode = EClassViewerDisplayMode::TreeView;
+		Options.NameTypeToDisplay = EClassViewerNameTypeToDisplay::Dynamic;
+		Options.bShowObjectRootClass = false;
+		Options.bShowNoneOption = false;
+		Options.bExpandAllNodes = true;
+		Options.bShowUnloadedBlueprints = true;
+
+		Options.ClassFilters.Add(MakeShared<FLexWidgetComponentClassFilter>());
+
+		FClassViewerModule& ClassViewerModule = FModuleManager::LoadModuleChecked<FClassViewerModule>("ClassViewer");
+		return SNew(SBox)
+			.WidthOverride(320.0f)
+			.HeightOverride(400.0f)
+			[
+				ClassViewerModule.CreateClassViewer(Options, FOnClassPicked::CreateSP(this, &SLexWidgetComponentEditor::HandleComponentClassPicked))
+			];
+	}
+
+	void HandleComponentClassPicked(UClass* InClass)
+	{
+		FSlateApplication::Get().DismissAllMenus();
+
+		ULexWidget* Widget = GetCurrentWidget();
+		if (!CanAddOrRemoveComponent() || !IsValid(Widget) || InClass == nullptr)
+		{
+			return;
+		}
+
+		const FScopedTransaction Transaction(LOCTEXT("AddLexWidgetComponent_Transaction", "Add LexUI Component"));
+		if (UObject* WidgetOuter = Widget->GetOuter())
+		{
+			WidgetOuter->SetFlags(RF_Transactional);
+			WidgetOuter->Modify();
+		}
+		Widget->SetFlags(RF_Transactional);
+		Widget->Modify();
+
+		ULexUIBehaviour* NewComponent = Widget->AddComponent(InClass);
+		if (!IsValid(NewComponent))
+		{
+			return;
+		}
+
+		NewComponent->SetFlags(RF_Transactional);
+		NewComponent->Modify();
+		Widget->OnUnregister();
+		Widget->OnRegister();
+		FLexUIUtils::NotifyPropertyChanged(Widget, ULexWidget::GetPropertyName_Components());
+
+		RefreshComponents();
+		SelectComponent(NewComponent);
+	}
+
+	void HandleRemoveSelectedComponents()
+	{
+		ULexWidget* Widget = GetCurrentWidget();
+		if (!CanRemoveSelectedComponents() || !IsValid(Widget) || !ComponentListView.IsValid())
+		{
+			return;
+		}
+
+		TArray<FLexWidgetComponentItem> SelectedItems;
+		ComponentListView->GetSelectedItems(SelectedItems);
+
+		const FScopedTransaction Transaction(LOCTEXT("RemoveLexWidgetComponent_Transaction", "Remove LexUI Component"));
+		if (UObject* WidgetOuter = Widget->GetOuter())
+		{
+			WidgetOuter->SetFlags(RF_Transactional);
+			WidgetOuter->Modify();
+		}
+		Widget->SetFlags(RF_Transactional);
+		Widget->Modify();
+
+		for (const FLexWidgetComponentItem& Item : SelectedItems)
+		{
+			ULexUIBehaviour* Component = Item.Get();
+			if (!IsValid(Component) || Component->GetWidget() != Widget)
+			{
+				continue;
+			}
+
+			Component->SetFlags(RF_Transactional);
+			Component->Modify();
+			Widget->RemoveComponent(Component);
+		}
+
+		RefreshComponents();
+		ClearSelection();
+	}
+
+	static FText GetComponentText(const ULexUIBehaviour* InComponent)
+	{
+		if (!IsValid(InComponent))
+		{
+			return LOCTEXT("InvalidLexWidgetComponent", "Invalid Component");
+		}
+		return InComponent->GetClass()->GetDisplayNameText();
+	}
+	static FText GetComponentTooltipText(const ULexUIBehaviour* InComponent)
+	{
+		if (!IsValid(InComponent))
+		{
+			return LOCTEXT("InvalidLexWidgetComponent", "Invalid Component");
+		}
+
+		return FText::FromString(InComponent->GetName());
+	}
+
+	FOnGetWidgetContext GetWidgetContext;
+	FOnCanEdit CanEdit;
+	FOnComponentsSelectionChanged OnSelectionChanged;
+	TArray<FLexWidgetComponentItem> ComponentItems;
+	TSharedPtr<SWidget> ToolbarWidget;
+	TSharedPtr<SListView<FLexWidgetComponentItem>> ComponentListView;
+	TSharedPtr<FUICommandList> CommandList;
 };
 
 void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLexUIPrefabEditor> InPrefabEditor)
@@ -93,18 +426,10 @@ void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLe
 	TSharedRef<FLexWidgetDetailPropertyExtensionHandler> BindingHandler = MakeShareable(new FLexWidgetDetailPropertyExtensionHandler(PrefabEditorPtr));
 	DetailsView->SetExtensionHandler(BindingHandler);
 
-	FModuleManager::LoadModuleChecked<FSubobjectEditorModule>("SubobjectEditor");
-	SubobjectEditor = SNew(SSubobjectInstanceEditor)
-		.AllowEditing(this, &SLexUIPrefabEditorDetails::IsEditorAllowEditing)
-		.ObjectContext(this, &SLexUIPrefabEditorDetails::GetActorContextAsObject)
-		.OnSelectionUpdated(this, &SLexUIPrefabEditorDetails::OnSubObjectSelectionChanged)
-		.OnItemDoubleClicked(this, &SLexUIPrefabEditorDetails::OnSubObjectItemDoubleClicked);
-
-	
-	TSharedPtr<ISCSEditorUICustomization> Customization = MakeShared<LexUISCSEditorUICustomization>(InPrefabEditor);
-	SubobjectEditor->SetUICustomization(Customization);
-	auto ButtonBox = SubobjectEditor->GetToolButtonsBox().ToSharedRef();
-	DetailsView->SetNameAreaCustomContent(ButtonBox);
+	ComponentEditor = SNew(SLexWidgetComponentEditor)
+		.GetWidgetContext(this, &SLexUIPrefabEditorDetails::GetSelectedWidgetContext)
+		.CanEdit(this, &SLexUIPrefabEditorDetails::IsEditorAllowEditing)
+		.OnSelectionChanged(this, &SLexUIPrefabEditorDetails::OnComponentSelectionChanged);
 
 	ChildSlot
 		[
@@ -113,7 +438,7 @@ void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLe
 			.Padding(FMargin(2, 2))
 			.AutoHeight()
 			[
-				DetailsView->GetNameAreaWidget().ToSharedRef()
+				ComponentEditor->GetToolbarWidget()
 			]
 			+ SVerticalBox::Slot()
 			.Padding(FMargin(2, 2))
@@ -240,7 +565,13 @@ void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLe
 					.MinDesiredHeight(200)
 					.Padding(FMargin(0, 2))
 					[
-						SubobjectEditor.ToSharedRef()
+						SNew(SBorder)
+						.BorderImage(FAppStyle::Get().GetBrush("SCSEditor.Background"))
+						.Padding(4.f)
+						.AddMetaData<FTagMetaData>(FTagMetaData(TEXT("ComponentsPanel")))
+						[
+							ComponentEditor.ToSharedRef()
+						]
 					]
 				]
 				+ SSplitter::Slot()
@@ -288,8 +619,13 @@ bool SLexUIPrefabEditorDetails::IsEditorAllowEditing()const
 	return true;
 }
 
-UObject* SLexUIPrefabEditorDetails::GetActorContextAsObject() const
+ULexWidget* SLexUIPrefabEditorDetails::GetSelectedWidgetContext() const
 {
+	if (!PrefabEditorPtr.IsValid())
+	{
+		return nullptr;
+	}
+
 	auto SelectedWidgets = PrefabEditorPtr.Pin()->GetSelectedWidgets();
 	if (SelectedWidgets.Num() > 0 && SelectedWidgets[0].IsValid())
 	{
@@ -309,15 +645,16 @@ void SLexUIPrefabEditorDetails::OnEditorSelectionChanged()
 		{
 			if (Widget->GetWorld() != PrefabEditorPtr.Pin()->GetWorld())
 			{
+				bIsSelectFromLexUIEditor = false;
 				return;
 			}
 
 			CachedActor = Widget;
 			PrefabOverrideDataViewer->RefreshDataContent();
-			if (SubobjectEditor)
+			if (ComponentEditor)
 			{
-				SubobjectEditor->ClearSelection();
-				SubobjectEditor->UpdateTree();
+				ComponentEditor->RefreshComponents();
+				ComponentEditor->ClearSelection();
 			}
 		}
 
@@ -344,8 +681,11 @@ void SLexUIPrefabEditorDetails::OnEditorSelectionChanged()
 		{
 			CachedActor = nullptr;
 			PrefabOverrideDataViewer->RefreshDataContent();
-			SubobjectEditor->ClearSelection();
-			SubobjectEditor->UpdateTree();
+			if (ComponentEditor)
+			{
+				ComponentEditor->RefreshComponents();
+				ComponentEditor->ClearSelection();
+			}
 		}
 	}
 	else
@@ -357,61 +697,61 @@ void SLexUIPrefabEditorDetails::OnEditorSelectionChanged()
 		}
 		CachedActor = nullptr;
 		PrefabOverrideDataViewer->RefreshDataContent();
-		SubobjectEditor->ClearSelection();
-		SubobjectEditor->UpdateTree();
+		if (ComponentEditor)
+		{
+			ComponentEditor->RefreshComponents();
+			ComponentEditor->ClearSelection();
+		}
 	}
 	bIsSelectFromLexUIEditor = false;
 }
 
-void SLexUIPrefabEditorDetails::OnSubObjectSelectionChanged(const TArray<FSubobjectEditorTreeNodePtrType>& SelectedNodes)
+void SLexUIPrefabEditorDetails::OnComponentSelectionChanged(const TArray<TWeakObjectPtr<ULexUIBehaviour>>& SelectedComponents)
 {
 	bIsSelectFromDetails = true;
-	if (SelectedNodes.Num() > 0)
-	{
-		TArray<UObject*> SelectedObjects;
-		TArray<ULexUIBehaviour*> SelectedComponents;
-		for (auto& Node : SelectedNodes)
-		{
-			if (Node.IsValid())
-			{
-				UObject* Object = const_cast<UObject*>(Node->GetObject());
-				if (Object)
-				{
-					SelectedObjects.Add(Object);
-					if (auto Comp = Cast<ULexUIBehaviour>(Object))
-					{
-						SelectedComponents.Add(Comp);
-					}
-				}
-			}
-		}
 
-		if (SelectedObjects.Num() > 0 && DetailsView.IsValid())
+	TArray<UObject*> SelectedObjects;
+	TArray<ULexUIBehaviour*> ValidSelectedComponents;
+	for (const TWeakObjectPtr<ULexUIBehaviour>& SelectedComponent : SelectedComponents)
+	{
+		if (ULexUIBehaviour* Component = SelectedComponent.Get())
+		{
+			SelectedObjects.Add(Component);
+			ValidSelectedComponents.Add(Component);
+		}
+	}
+
+	if (DetailsView.IsValid())
+	{
+		if (SelectedObjects.Num() > 0)
 		{
 			DetailsView->SetObjects(SelectedObjects);
 		}
-		if (!bIsSelectFromLexUIEditor)
+		else if (PrefabEditorPtr.IsValid())
 		{
-			if (SelectedComponents.Num() > 0)
+			TArray<UObject*> SelectedWidgetObjects;
+			for (const TWeakObjectPtr<ULexWidget>& SelectedWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
 			{
-				ULexUIManagerWorldSubsystem::GetSelection(PrefabEditorPtr.Pin()->GetWorld())->SelectNone();
-				for (auto Comp : SelectedComponents)
+				if (SelectedWidget.IsValid() && SelectedWidget->GetWorld() == PrefabEditorPtr.Pin()->GetWorld())
 				{
-					ULexUIManagerWorldSubsystem::GetSelection(PrefabEditorPtr.Pin()->GetWorld())->SelectComponent(Comp);
+					SelectedWidgetObjects.Add(SelectedWidget.Get());
 				}
 			}
-			else
-			{
-				ULexUIManagerWorldSubsystem::GetSelection(PrefabEditorPtr.Pin()->GetWorld())->SelectNone();
-			}
+			DetailsView->SetObjects(SelectedWidgetObjects, true);
 		}
 	}
+
+	if (!bIsSelectFromLexUIEditor && PrefabEditorPtr.IsValid())
+	{
+		auto* Selection = ULexUIManagerWorldSubsystem::GetSelection(PrefabEditorPtr.Pin()->GetWorld());
+		Selection->ClearComponentSelection();
+		for (ULexUIBehaviour* Component : ValidSelectedComponents)
+		{
+			Selection->SelectComponent(Component);
+		}
+	}
+
 	bIsSelectFromDetails = false;
-}
-
-void SLexUIPrefabEditorDetails::OnSubObjectItemDoubleClicked(const FSubobjectEditorTreeNodePtrType ClickedNode)
-{
-
 }
 
 bool SLexUIPrefabEditorDetails::IsPropertyReadOnly(const FPropertyAndParent& InPropertyAndParent)

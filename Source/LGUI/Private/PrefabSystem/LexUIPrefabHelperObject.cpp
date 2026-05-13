@@ -1572,7 +1572,7 @@ bool ULexUIPrefabHelperObject::GetAnythingDirty()const
 {
 	return bAnythingDirty; 
 }
-void ULexUIPrefabHelperObject::SetAnythingDirty() 
+void ULexUIPrefabHelperObject::SetAnythingDirty()
 {
 	bAnythingDirty = true;
 	PrefabAsset->MarkPackageDirty();

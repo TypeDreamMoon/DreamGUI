@@ -82,6 +82,7 @@ public:
 	virtual bool IsEditorOnly() const override{return true;}
 	void SelectWidget(ULexWidget* Widget);
 	void SelectComponent(ULexUIBehaviour* Component);
+	void ClearComponentSelection();
 	void SelectNone();
 	bool IsSelected(ULexWidget* Widget)const;
 	TArray<TWeakObjectPtr<ULexWidget>> GetSelectedWidgets()const{return SelectedWidgetArray;}
@@ -134,14 +135,6 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 	TArray<TWeakObjectPtr<ULexWidgetPresenterComponent>> AllWidgetPresenterArray;
-	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<ULexCanvas>> ScreenSpaceCanvasArray;
-	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<ULexCanvas>> WorldSpaceUECanvasArray;
-	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<ULexCanvas>> WorldSpaceLexCanvasArray;
-	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<ULexCanvas>> RenderTargetSpaceLexUICanvasArray;
 
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<ULexBaseRaycaster>> AllRaycasterArray;
@@ -183,10 +176,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	static void UnregisterLexUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem);
 
-	static void AddCanvas(ULexCanvas* InCanvas, ELexRenderMode InCurrentRenderMode);
-	static void RemoveCanvas(ULexCanvas* InCanvas, ELexRenderMode InCurrentRenderMode);
-	static void CanvasRenderModeChange(ULexCanvas* InCanvas, ELexRenderMode InOldRenderMode, ELexRenderMode InNewRenderMode);
-	const TArray<TWeakObjectPtr<ULexCanvas>>& GetCanvasArray(ELexRenderMode RenderMode);
+	TArray<ULexCanvas*> GetRootCanvasArray(ELexRenderMode RenderMode)const;
 
 	static TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> GetViewExtension(UWorld* InWorld, bool InCreateIfNotExist);
 
@@ -243,8 +233,8 @@ private:
 	TMap<FGuid, FLexUIBehaviourArrayContainer> LexUIBehaviours_PrefabSystemProcessing;
 	void ProcessLexUILifecycleEvent(ULexUIBehaviour* InComp);
 public:
-	void BeginPrefabSystemProcessingActor(const FGuid& InSessionId);
-	void EndPrefabSystemProcessingActor(const FGuid& InSessionId);
+	void BeginPrefabSystemProcessing(const FGuid& InSessionId);
+	void EndPrefabSystemProcessing(const FGuid& InSessionId);
 	/**
 	 * Add a function that execute after prefab system serialization and before Awake called
 	 * @param	InPrefabWidget	Current prefab system processing actor

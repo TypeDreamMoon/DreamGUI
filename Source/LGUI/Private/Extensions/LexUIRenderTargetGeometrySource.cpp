@@ -21,7 +21,7 @@
 #include "RayTracingInstance.h"
 #include "RayTracingGeometry.h"
 #include "Core/LexUIManager.h"
-#include "Core/Actor/LexWidgetPresenterComponent.h"
+#include "Core/Components/LexWidgetPresenterComponent.h"
 #if WITH_EDITOR
 #include "PrefabSystem/LexUIPrefabManager.h"
 #endif
@@ -1029,7 +1029,7 @@ ULexCanvas* ULexUIRenderTargetGeometrySource::GetCanvas()const
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d TargetWidgetPresenter not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return nullptr;
 	}
-	auto Canvas = WidgetPresenter->GetCanvas();
+	auto Canvas = WidgetPresenter->GetRootCanvas();
 	if (Canvas == nullptr)
 	{
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d TargetCanvas not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);

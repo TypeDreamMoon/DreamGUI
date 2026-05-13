@@ -55,18 +55,8 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		{
 			if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(World))
 			{
-				auto& CanvasArray = LexUIManager->GetCanvasArray(ELexRenderMode::ScreenSpaceOverlay);
-				int ScreenSpaceRootCanvasCount = 0;
-				for (auto item : CanvasArray)
-				{
-					if (item.IsValid())
-					{
-						if (item->IsRootCanvas())
-						{
-							ScreenSpaceRootCanvasCount++;
-						}
-					}
-				}
+				auto CanvasArray = LexUIManager->GetRootCanvasArray(ELexRenderMode::ScreenSpaceOverlay);
+				int ScreenSpaceRootCanvasCount = CanvasArray.Num();
 				if (ScreenSpaceRootCanvasCount > 1)
 				{
 					auto errMsg = FText::Format(LOCTEXT("MultipleScreenSpaceLexCanvasError", "[{0}].{1} Detect multiple LexCanvas rendered with ScreenSpaceOverlay mode, this is not allowed! There should be only one ScreenSpace UI in a world!")
@@ -439,26 +429,31 @@ void FLexCanvasCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
 
 FText FLexCanvasCustomization::GetDrawcallInfo()const
 {
-	auto LGUIManager = ULexUIManagerWorldSubsystem::GetInstance(TargetScriptArray[0]->GetWorld());
-	if (TargetScriptArray.Num() > 0 && TargetScriptArray[0].IsValid() && LGUIManager)
+	auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(TargetScriptArray[0]->GetWorld());
+	if (TargetScriptArray.Num() > 0 && TargetScriptArray[0].IsValid() && LexUIManager)
 	{
-		auto& allCanvas = LGUIManager->GetCanvasArray(TargetScriptArray[0]->GetRenderMode());
-		int allDrawcallCount = 0;
-		for (auto& canvasItem : allCanvas)
+		auto RootCanvasArray = LexUIManager->GetRootCanvasArray(TargetScriptArray[0]->GetRenderMode());
+		TArray<ULexCanvas*> CanvasArray;
+		for (auto Canvas : RootCanvasArray)
+		{
+			ULexCanvas::CollectChildrenCanvas(Canvas, CanvasArray, true);
+		}
+		int AllDrawcallCount = 0;
+		for (auto& CanvasItem : CanvasArray)
 		{
 			if (TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::RenderTarget)
 			{
-				if (TargetScriptArray[0]->RenderTarget == canvasItem->RenderTarget && IsValid(canvasItem->RenderTarget))
+				if (TargetScriptArray[0]->RenderTarget == CanvasItem->RenderTarget && IsValid(CanvasItem->RenderTarget))
 				{
-					allDrawcallCount += canvasItem->GetDrawCallCount();
+					AllDrawcallCount += CanvasItem->GetDrawCallCount();
 				}
 			}
 			else
 			{
-				allDrawcallCount += canvasItem->GetDrawCallCount();
+				AllDrawcallCount += CanvasItem->GetDrawCallCount();
 			}
 		}
-		return FText::FromString(FString::Printf(TEXT("%d/%d"), TargetScriptArray[0]->GetDrawCallCount(), allDrawcallCount));
+		return FText::FromString(FString::Printf(TEXT("%d/%d"), TargetScriptArray[0]->GetDrawCallCount(), AllDrawcallCount));
 	}
 	return FText::FromString(FString::Printf(TEXT("0/0")));
 }
@@ -488,27 +483,31 @@ FText FLexCanvasCustomization::GetDrawcallInfoTooltip()const
 		break;
 	}
 
-	if (auto LGUIManager = ULexUIManagerWorldSubsystem::GetInstance(TargetScriptArray[0]->GetWorld()))
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(TargetScriptArray[0]->GetWorld()))
 	{
-		auto& allCanvas = LGUIManager->GetCanvasArray(TargetScriptArray[0]->GetActualRenderMode());
-		int allDrawcallCount = 0;
-		for (auto& canvasItem : allCanvas)
+		auto RootCanvasArray = LexUIManager->GetRootCanvasArray(TargetScriptArray[0]->GetRenderMode());
+		TArray<ULexCanvas*> CanvasArray;
+		for (auto Canvas : RootCanvasArray)
+		{
+			ULexCanvas::CollectChildrenCanvas(Canvas, CanvasArray, true);
+		}
+		int AllDrawcallCount = 0;
+		for (auto& CanvasItem : CanvasArray)
 		{
 			if (TargetScriptArray[0]->GetActualRenderMode() == ELexRenderMode::RenderTarget)
 			{
-				if (TargetScriptArray[0]->RenderTarget == canvasItem->RenderTarget && IsValid(canvasItem->RenderTarget))
+				if (TargetScriptArray[0]->RenderTarget == CanvasItem->RenderTarget && IsValid(CanvasItem->RenderTarget))
 				{
-					allDrawcallCount += canvasItem->GetDrawCallCount();
+					AllDrawcallCount += CanvasItem->GetDrawCallCount();
 				}
 			}
 			else
 			{
-				allDrawcallCount += canvasItem->GetDrawCallCount();
+				AllDrawcallCount += CanvasItem->GetDrawCallCount();
 			}
 		}
-		auto tooltipStr = FText::Format(LOCTEXT("DrawcallInfoTooltip", "This canvas's drawcall count:{0}, all canvas of {1} drawcall count:{2}")
-			, TargetScriptArray[0]->GetDrawCallCount(), FText::FromString(spaceText), allDrawcallCount);
-		return tooltipStr;
+		return FText::Format(LOCTEXT("DrawcallInfoTooltip", "This canvas's drawcall count:{0}, all canvas of {1} drawcall count:{2}")
+			, TargetScriptArray[0]->GetDrawCallCount(), FText::FromString(spaceText), AllDrawcallCount);
 	}
 	return FText::GetEmpty();
 }

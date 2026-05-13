@@ -1,6 +1,6 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/Actor/LexWidgetPresenterComponent.h"
+#include "Core/Components/LexWidgetPresenterComponent.h"
 
 #include "EngineUtils.h"
 #include "LGUI.h"
@@ -16,11 +16,12 @@
 
 ULexWidgetPresenterComponent::ULexWidgetPresenterComponent()
 {
+	bWantsOnUpdateTransform = true;
+	
 	RootWidget = CreateDefaultSubobject<ULexWidget>(FName("RootWidget"));
 	RootWidget->SetSizeDelta(FVector2D(1920, 1080));
 	RootWidget->SetDisplayName(TEXT("[RootAgent]"));
-	Canvas = RootWidget->AddComponent<ULexCanvas>();
-	Canvas->SetWidgetPresenterComponent(this);
+	EnsureWidgetTreeReferences();
 
 	NavigationSelectionPrefab = LoadObject<ULexUIPrefab>(NULL, TEXT("/LGUI/Prefabs/NavigationSelectionInputHandler"));
 }
@@ -29,27 +30,130 @@ void ULexWidgetPresenterComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	RootWidget->BeginPlay();
+	LoadPrefab();//load prefab when BeginPlay in game mode
 }
 
 void ULexWidgetPresenterComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 	RootWidget->EndPlay();
+	struct LOCAL
+	{
+		static void EndPlayRecursive(ULexWidget* Widget)
+		{
+			Widget->EndPlay();
+			for (auto Child : Widget->GetChildren())
+			{
+				EndPlayRecursive(Child);
+			}
+		}
+	};
+	if (LoadedWidget.IsValid())
+	{
+		LOCAL::EndPlayRecursive(LoadedWidget.Get());
+	}
 }
 
 void ULexWidgetPresenterComponent::OnRegister()
 {
 	Super::OnRegister();
+	EnsureWidgetTreeReferences();
 	ULexUIManagerWorldSubsystem::AddWidgetPresenter(this);
 	RootWidget->OnRegister();
-	LoadPrefab();
+#if WITH_EDITOR
+	if (auto World = GetWorld())
+	{
+		if (!World->IsGameWorld())
+		{
+			LoadPrefab();//load prefab when OnRegister in edit mode
+		}
+	}
+#endif
 }
 
 void ULexWidgetPresenterComponent::OnUnregister()
 {
 	Super::OnUnregister();
 	RootWidget->OnUnregister();
+	bool bIsEditMode = false;
+#if WITH_EDITOR
+	if (auto World = GetWorld())
+	{
+		if (!World->IsGameWorld())
+		{
+			bIsEditMode = true;
+		}
+	}
+#endif
+	if (bIsEditMode)
+	{
+		if (LoadedWidget.IsValid())
+		{
+			LoadedWidget->DestroyWidget();
+			LoadedWidget = nullptr;
+		}
+	}
+	else
+	{
+		struct LOCAL
+		{
+			static void UnregisterRecursive(ULexWidget* Widget)
+			{
+				Widget->OnUnregister();
+				for (auto Child : Widget->GetChildren())
+				{
+					UnregisterRecursive(Child);
+				}
+			}
+		};
+		if (LoadedWidget.IsValid())
+		{
+			LOCAL::UnregisterRecursive(LoadedWidget.Get());
+		}
+	}
 	ULexUIManagerWorldSubsystem::RemoveWidgetPresenter(this);
+}
+
+void ULexWidgetPresenterComponent::PostLoad()
+{
+	Super::PostLoad();
+	EnsureWidgetTreeReferences();
+}
+
+void ULexWidgetPresenterComponent::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
+{
+	Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
+	if (RootWidget)
+	{
+		RootWidget->CalculateObjectToWorldTransform(true);
+	}
+}
+
+void ULexWidgetPresenterComponent::EnsureWidgetTreeReferences()
+{
+	if (!IsValid(RootWidget))
+	{
+		return;
+	}
+
+	if (!IsValid(RootCanvas) || RootCanvas->GetWidget() != RootWidget)
+	{
+		RootCanvas = RootWidget->GetComponent<ULexCanvas>();
+		if (!IsValid(RootCanvas))
+		{
+			RootCanvas = RootWidget->AddComponent<ULexCanvas>();
+		}
+	}
+
+	if (IsValid(RootCanvas))
+	{
+		if (RootCanvas->HasAnyFlags(RF_ArchetypeObject | RF_DefaultSubObject) && !RootCanvas->HasAnyFlags(RF_Public))
+		{
+			RootCanvas->SetFlags(RF_Public);
+		}
+
+		RootCanvas->SetWidgetPresenterComponent(this);
+	}
 }
 
 void ULexWidgetPresenterComponent::LoadPrefab()
@@ -63,6 +167,16 @@ void ULexWidgetPresenterComponent::LoadPrefab()
 	{
 		LoadedWidget = WidgetPrefab->LoadPrefab(this->GetWorld(), this, RootWidget);
 #if WITH_EDITOR
+		TArray<ULexWidget*> AllLoadedWidgets;
+		ULexWidget::CollectChildrenWidgets(LoadedWidget.Get(), AllLoadedWidgets, true);
+		bool bIsGameWorld = this->GetWorld()->IsGameWorld();
+		if (!bIsGameWorld)
+		{
+			for (auto Widget : AllLoadedWidgets)
+			{
+				Widget->SetFlags(RF_Transient);//set transient in edt mode because we don't want to save these widgets in level, not set in game mode because no need to
+			}
+		}
 		OverallVersionMD5 = WidgetPrefab->GenerateOverallVersionMD5();//store version for auto update
 #endif
 	}
@@ -164,7 +278,7 @@ void ULexWidgetPresenterComponent::CheckNecessaryObjects()
 	{
 		bNeedCheckRaycasterSource = false;
 		//check if there is WorldSpaceRaycaster when this is WorldSpace UI
-		if (this->Canvas->GetRenderMode() == ELexRenderMode::WorldSpace || this->Canvas->GetRenderMode() == ELexRenderMode::WorldSpace_LexUI)
+		if (this->RootCanvas->GetRenderMode() == ELexRenderMode::WorldSpace || this->RootCanvas->GetRenderMode() == ELexRenderMode::WorldSpace_LexUI)
 		{
 			ULexWorldSpaceRaycasterSource* ExistWorldSpaceRaycasterSource = nullptr;
 			for (TActorIterator<AActor> ActorItr(this->GetWorld()); ActorItr; ++ActorItr)

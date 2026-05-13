@@ -3,7 +3,7 @@
 #include "PrefabSystem/LexUIPrefabInstanceScene.h"
 #include "PrefabSystem/LexUIPrefab.h"
 #include "Components/DirectionalLightComponent.h"
-#include "Core/Actor/LexWidgetPresenterComponent.h"
+#include "Core/Components/LexWidgetPresenterComponent.h"
 #include "Core/Components/LexWidget.h"
 #include "Engine/TextureCube.h"
 #include "Event/LexScreenSpaceRaycaster.h"
@@ -96,24 +96,14 @@ ULexWidget* FLexUIPrefabInstanceScene::GetParentForLoadPrefab(ULexUIPrefab* InPr
 	auto CanvasSize = Prefab->PrefabDataForPrefabEditor.CanvasSize;
 	//create Canvas for UI
 	auto WidgetPresenterActor = this->GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity);
-	auto RootComponent = WidgetPresenterActor->GetRootComponent();
-	if (!RootComponent)
-	{
-		RootComponent = NewObject<USceneComponent>(WidgetPresenterActor, USceneComponent::GetDefaultSceneRootVariableName(), RF_Transactional);
-		RootComponent->Mobility = EComponentMobility::Movable;
-		RootComponent->bVisualizeComponent = false;
-
-		WidgetPresenterActor->SetRootComponent(RootComponent);
-		RootComponent->RegisterComponent();
-		WidgetPresenterActor->AddInstanceComponent(RootComponent);
-	}
-	RootComponent->SetWorldLocationAndRotationNoPhysics(FVector::ZeroVector, FRotator(0, 0, 0));
 	auto LexWidgetPresenterComponent = NewObject<ULexWidgetPresenterComponent>(WidgetPresenterActor, TEXT("LexWidgetPresenter"));
+	LexWidgetPresenterComponent->SetWorldLocationAndRotationNoPhysics(FVector::ZeroVector, FRotator(0, 0, 0));
 	LexWidgetPresenterComponent->bIsSpawnFromPrefabFactory = true;
+	WidgetPresenterActor->SetRootComponent(LexWidgetPresenterComponent);
 	LexWidgetPresenterComponent->RegisterComponent();
 	WidgetPresenterActor->AddInstanceComponent(LexWidgetPresenterComponent);
 	{
-		auto Canvas = LexWidgetPresenterComponent->GetCanvas();
+		auto Canvas = LexWidgetPresenterComponent->GetRootCanvas();
 		auto RenderMode = (ELexRenderMode)Prefab->PrefabDataForPrefabEditor.CanvasRenderMode;
 		Canvas->SetRenderMode(RenderMode);
 		Canvas->bFixedSizeInEditMode = true;
@@ -129,7 +119,6 @@ ULexWidget* FLexUIPrefabInstanceScene::GetParentForLoadPrefab(ULexUIPrefab* InPr
 	//set properties
 	WidgetPresenterActor->SetLockLocation(true);
 	WidgetPresenterActor->SetActorLabel(*RootAgentActorName);
-	WidgetPresenterActor->GetRootComponent()->SetWorldLocationAndRotationNoPhysics(FVector::ZeroVector, FRotator(0, 0, 0));
 
 	return RootWidget;
 }

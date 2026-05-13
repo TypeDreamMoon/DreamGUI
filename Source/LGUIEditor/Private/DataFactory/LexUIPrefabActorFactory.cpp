@@ -2,10 +2,9 @@
 
 #include "DataFactory/LexUIPrefabActorFactory.h"
 #include "PrefabSystem/LexUIPrefab.h"
-#include "LexUIEditorTools.h"
 #include "AssetRegistry/AssetData.h"
 #include "Core/LexUIManager.h"
-#include "Core/Actor/LexWidgetPresenterComponent.h"
+#include "Core/Components/LexWidgetPresenterComponent.h"
 #include "Core/Components/LexWidget.h"
 #include "Event/LexScreenSpaceRaycaster.h"
 
@@ -46,9 +45,14 @@ AActor* ULexUIPrefabActorFactory::SpawnActor(UObject* InAsset, ULevel* InLevel, 
 	const FActorSpawnParameters& InSpawnParams)
 {
 	auto Actor = Super::SpawnActor(InAsset, InLevel, InTransform, InSpawnParams);
-	auto WidgetPresenterComponent = NewObject<ULexWidgetPresenterComponent>(Actor, ULexWidgetPresenterComponent::StaticClass());
-	WidgetPresenterComponent->RegisterComponent();
-	Actor->AddInstanceComponent(WidgetPresenterComponent);
+	auto WidgetPresenterComponent = Actor->FindComponentByClass<ULexWidgetPresenterComponent>();
+	if (!WidgetPresenterComponent)
+	{
+		WidgetPresenterComponent = NewObject<ULexWidgetPresenterComponent>(Actor, ULexWidgetPresenterComponent::StaticClass());
+		Actor->SetRootComponent(WidgetPresenterComponent);
+		WidgetPresenterComponent->RegisterComponent();
+		Actor->AddInstanceComponent(WidgetPresenterComponent);
+	}
 	WidgetPresenterComponent->bIsSpawnFromPrefabFactory = true;
 	return Actor;
 }
@@ -108,6 +112,10 @@ UClass* ULexUIPrefabActorFactory::GetDefaultActorClass(const FAssetData& AssetDa
 		}
 		
 		NewActorClass = LoadClass<AActor>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), *ClassName, *ClassName));
+		if (!NewActorClass)
+		{
+			NewActorClass = AActor::StaticClass();
+		}
 		return NewActorClass;
 	}
 	return nullptr;
