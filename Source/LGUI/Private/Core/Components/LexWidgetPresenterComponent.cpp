@@ -16,27 +16,22 @@
 
 ULexWidgetPresenterComponent::ULexWidgetPresenterComponent()
 {
-	bWantsOnUpdateTransform = true;
+	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bStartWithTickEnabled = false;
 	
-	RootWidget = CreateDefaultSubobject<ULexWidget>(FName("RootWidget"));
-	RootWidget->SetSizeDelta(FVector2D(1920, 1080));
-	RootWidget->SetDisplayName(TEXT("[RootAgent]"));
-	EnsureWidgetTreeReferences();
-
+	bWantsOnUpdateTransform = true;
 	NavigationSelectionPrefab = LoadObject<ULexUIPrefab>(NULL, TEXT("/LGUI/Prefabs/NavigationSelectionInputHandler"));
 }
 
 void ULexWidgetPresenterComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	RootWidget->BeginPlay();
 	LoadPrefab();//load prefab when BeginPlay in game mode
 }
 
 void ULexWidgetPresenterComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
-	RootWidget->EndPlay();
 	struct LOCAL
 	{
 		static void EndPlayRecursive(ULexWidget* Widget)
@@ -48,7 +43,7 @@ void ULexWidgetPresenterComponent::EndPlay(const EEndPlayReason::Type EndPlayRea
 			}
 		}
 	};
-	if (LoadedWidget.IsValid())
+	if (IsValid(LoadedWidget))
 	{
 		LOCAL::EndPlayRecursive(LoadedWidget.Get());
 	}
@@ -57,9 +52,7 @@ void ULexWidgetPresenterComponent::EndPlay(const EEndPlayReason::Type EndPlayRea
 void ULexWidgetPresenterComponent::OnRegister()
 {
 	Super::OnRegister();
-	EnsureWidgetTreeReferences();
 	ULexUIManagerWorldSubsystem::AddWidgetPresenter(this);
-	RootWidget->OnRegister();
 #if WITH_EDITOR
 	if (auto World = GetWorld())
 	{
@@ -74,7 +67,6 @@ void ULexWidgetPresenterComponent::OnRegister()
 void ULexWidgetPresenterComponent::OnUnregister()
 {
 	Super::OnUnregister();
-	RootWidget->OnUnregister();
 	bool bIsEditMode = false;
 #if WITH_EDITOR
 	if (auto World = GetWorld())
@@ -87,7 +79,7 @@ void ULexWidgetPresenterComponent::OnUnregister()
 #endif
 	if (bIsEditMode)
 	{
-		if (LoadedWidget.IsValid())
+		if (IsValid(LoadedWidget))
 		{
 			LoadedWidget->DestroyWidget();
 			LoadedWidget = nullptr;
@@ -106,7 +98,7 @@ void ULexWidgetPresenterComponent::OnUnregister()
 				}
 			}
 		};
-		if (LoadedWidget.IsValid())
+		if (IsValid(LoadedWidget))
 		{
 			LOCAL::UnregisterRecursive(LoadedWidget.Get());
 		}
@@ -117,55 +109,101 @@ void ULexWidgetPresenterComponent::OnUnregister()
 void ULexWidgetPresenterComponent::PostLoad()
 {
 	Super::PostLoad();
-	EnsureWidgetTreeReferences();
+}
+
+void ULexWidgetPresenterComponent::Serialize(FArchive& Ar)
+{
+	Super::Serialize(Ar);
+
+	if (Ar.HasAllPortFlags(PPF_DuplicateForPIE))
+	{
+		// PIE duplication should just work normally
+		Ar << CanvasTemplate;
+	}
+	else if (Ar.HasAllPortFlags(PPF_Duplicate))
+	{
+		if (GIsEditor && Ar.IsLoading() && !IsTemplate())
+		{
+			// If we're not a template then we do not want the duplicate so serialize manually and destroy the template that was created for us
+			Ar.Serialize(&CanvasTemplate, sizeof(UObject*));
+		}
+		else if (!GIsEditor && !Ar.IsLoading() && !GIsDuplicatingClassForReinstancing)
+		{
+			// Avoid the archiver in the duplicate writer case because we want to avoid the duplicate being created
+			Ar.Serialize(&CanvasTemplate, sizeof(UObject*));
+		}
+		else
+		{
+			// When we're loading outside of the editor we won't have created the duplicate, so its fine to just use the normal path
+			// When we're loading a template then we want the duplicate, so it is fine to use normal archiver
+			// When we're saving in the editor we'll create the duplicate, but on loading decide whether to take it or not
+			Ar << CanvasTemplate;
+		}
+	}
+#if WITH_EDITOR
+	// Since we sometimes serialize properties in instead of using duplication and we can end up pointing at the wrong template
+	if (!Ar.IsPersistent() && CanvasTemplate)
+	{
+		if (IsTemplate())
+		{
+			// If we are a template and are not pointing at a component we own we'll need to fix that
+			if (CanvasTemplate->GetOuter() != this)
+			{
+				const FString TemplateName = FString::Printf(TEXT("%s_%s_CAT"), *GetName(), *ULexCanvas::StaticClass()->GetName());
+				if (UObject* ExistingTemplate = StaticFindObject(nullptr, this, *TemplateName))
+				{
+					CanvasTemplate = CastChecked<ULexCanvas>(ExistingTemplate);
+				}
+				else
+				{
+					CanvasTemplate = CastChecked<ULexCanvas>(StaticDuplicateObject(CanvasTemplate, this, *TemplateName));
+				}
+			}
+		}
+		else
+		{
+			// Because the template may have fixed itself up, the tagged property delta serialized for 
+			// the instance may point at a trashed template, so always repoint us to the archetypes template
+			CanvasTemplate = CastChecked<ULexWidgetPresenterComponent>(GetArchetype())->CanvasTemplate;
+		}
+	}
+#endif
+}
+
+void ULexWidgetPresenterComponent::PostInitProperties()
+{
+	Super::PostInitProperties();
+	if (!CanvasTemplate)
+	{
+		CanvasTemplate = NewObject<ULexCanvas>(this, NAME_None, RF_ArchetypeObject | RF_Transactional | RF_Public);
+	}
 }
 
 void ULexWidgetPresenterComponent::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
 {
 	Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
-	if (RootWidget)
+	if (IsValid(LoadedWidget))
 	{
-		RootWidget->CalculateObjectToWorldTransform(true);
-	}
-}
-
-void ULexWidgetPresenterComponent::EnsureWidgetTreeReferences()
-{
-	if (!IsValid(RootWidget))
-	{
-		return;
-	}
-
-	if (!IsValid(RootCanvas) || RootCanvas->GetWidget() != RootWidget)
-	{
-		RootCanvas = RootWidget->GetComponent<ULexCanvas>();
-		if (!IsValid(RootCanvas))
-		{
-			RootCanvas = RootWidget->AddComponent<ULexCanvas>();
-		}
-	}
-
-	if (IsValid(RootCanvas))
-	{
-		if (RootCanvas->HasAnyFlags(RF_ArchetypeObject | RF_DefaultSubObject) && !RootCanvas->HasAnyFlags(RF_Public))
-		{
-			RootCanvas->SetFlags(RF_Public);
-		}
-
-		RootCanvas->SetWidgetPresenterComponent(this);
+		LoadedWidget->CalculateObjectToWorldTransform(true);
 	}
 }
 
 void ULexWidgetPresenterComponent::LoadPrefab()
 {
-	if (LoadedWidget.IsValid())
+	if (IsValid(LoadedWidget))
 	{
 		LoadedWidget->DestroyWidget();
 		LoadedWidget = nullptr;
 	}
 	if (IsValid(WidgetPrefab))
 	{
-		LoadedWidget = WidgetPrefab->LoadPrefab(this->GetWorld(), this, RootWidget);
+		LoadedWidget = WidgetPrefab->LoadPrefab(this->GetWorld(), this, nullptr);
+		if (auto Canvas = LoadedWidget->GetComponent<ULexCanvas>())
+		{
+			LoadedWidget->RemoveComponent(Canvas);
+		}
+		RootCanvas = LoadedWidget->AddComponentByTemplate<ULexCanvas>(CanvasTemplate);
+		LoadedWidget->CalculateObjectToWorldTransform(true);
 #if WITH_EDITOR
 		TArray<ULexWidget*> AllLoadedWidgets;
 		ULexWidget::CollectChildrenWidgets(LoadedWidget.Get(), AllLoadedWidgets, true);
@@ -203,8 +241,13 @@ void ULexWidgetPresenterComponent::LoadPrefab()
 void ULexWidgetPresenterComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
-	if (PropertyChangedEvent.Property != nullptr)
+	if (PropertyChangedEvent.MemberProperty != nullptr)
 	{
+		auto PropertyName = PropertyChangedEvent.GetMemberPropertyName();
+		if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexWidgetPresenterComponent, WidgetPrefab))
+		{
+			LoadPrefab();
+		}
 	}
 }
 
@@ -372,13 +415,23 @@ void ULexWidgetPresenterComponent::CheckPrefabVersion()
 	}
 	else
 	{
-		if (LoadedWidget.IsValid())
+		if (IsValid(LoadedWidget))
 		{
 			LoadedWidget->DestroyWidget();
 			LoadedWidget = nullptr;
 		}
 	}
 }
+
+void ULexWidgetPresenterComponent::CreateWidgetAndCanvasForEditor()
+{
+	RootWidgetForEditor = NewObject<ULexWidget>(this, FName("[RootAgent]"));
+	RootWidgetForEditor->SetSizeDelta(FVector2D(1920, 1080));
+	RootWidgetForEditor->SetDisplayName(TEXT("[RootAgent]"));
+	RootWidgetForEditor->OnRegister();
+	RootCanvasForEditor = RootWidgetForEditor->AddComponent<ULexCanvas>();
+}
+
 #endif
 
 void ULexWidgetPresenterComponent::SetPrefab(ULexUIPrefab* Value)
@@ -394,7 +447,7 @@ UUINavigationInputSelectionHandler* ULexWidgetPresenterComponent::GetNavigationS
 {
 	if (!NavigationSelection.IsValid())
 	{
-		if (auto Widget = NavigationSelectionPrefab->LoadPrefab(this->GetWorld(), this, this->RootWidget.Get()))
+		if (auto Widget = NavigationSelectionPrefab->LoadPrefab(this->GetWorld(), this, this->LoadedWidget.Get()))
 		{
 			NavigationSelection = Widget->GetComponent<UUINavigationInputSelectionHandler>();
 		}

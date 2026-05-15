@@ -29,6 +29,7 @@
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
+#include "Core/Components/LexWidgetPresenterComponent.h"
 #include "Core/LexUIMesh/LexUIGizmoMesh.h"
 #include "Core/LexUIRender/LexUIRenderer.h"
 #include "PrefabSystem/LexUIPrefabInstanceScene.h"
@@ -815,24 +816,12 @@ void FLexUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy*
 		auto LineStart = RayOrigin;
 		auto LineEnd = RayOrigin + RayDirection * LineTraceLength;
 		ULexWidget* ClickHitUI = nullptr;
-		static TArray<ULexWidget*> AllWidgetArray;
-		AllWidgetArray.Reset();
+		TArray<ULexWidget*> AllWidgetArray;
 		{
-			for (auto& CanvasItem : LexUIManager->GetRootCanvasArray(ELexRenderMode::ScreenSpaceOverlay))
+			for (auto& WidgetPresenter : LexUIManager->GetAllWidgetPresenterArray())
 			{
-				AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
-			}
-			for (auto& CanvasItem : LexUIManager->GetRootCanvasArray(ELexRenderMode::RenderTarget))
-			{
-				AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
-			}
-			for (auto& CanvasItem : LexUIManager->GetRootCanvasArray(ELexRenderMode::WorldSpace))
-			{
-				AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
-			}
-			for (auto& CanvasItem : LexUIManager->GetRootCanvasArray(ELexRenderMode::WorldSpace_LexUI))
-			{
-				AllWidgetArray.Append(CanvasItem->GetVisualWidgetArray());
+				auto RootWidget = WidgetPresenter->GetRootWidgetForEditor();
+				ULexWidget::CollectChildrenWidgets(RootWidget, AllWidgetArray);
 			}
 		}
 		if (ULexUIManagerWorldSubsystem::RaycastHitUI(this->GetWorld(), AllWidgetArray, LineStart, LineEnd, ClickHitUI, IndexOfClickSelectUI))

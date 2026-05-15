@@ -71,7 +71,7 @@ ULexWidget* FLexUIPrefabInstanceScene::GetParentForLoadPrefab(ULexUIPrefab* InPr
 {
 	if (WidgetPresenter != nullptr)
 	{
-		return WidgetPresenter->GetRootWidget();
+		return WidgetPresenter->GetRootWidgetForEditor();
 	}
 	if (!IsValid(InPrefab))return nullptr;
 	auto Prefab = InPrefab;
@@ -102,17 +102,18 @@ ULexWidget* FLexUIPrefabInstanceScene::GetParentForLoadPrefab(ULexUIPrefab* InPr
 	WidgetPresenterActor->SetRootComponent(LexWidgetPresenterComponent);
 	LexWidgetPresenterComponent->RegisterComponent();
 	WidgetPresenterActor->AddInstanceComponent(LexWidgetPresenterComponent);
+	LexWidgetPresenterComponent->CreateWidgetAndCanvasForEditor();
+
+	auto RootWidget = LexWidgetPresenterComponent->GetRootWidgetForEditor();
+	RootWidget->SetWidth(CanvasSize.X);
+	RootWidget->SetHeight(CanvasSize.Y);
+	RootWidget->SetSiblingIndex(0);
 	{
-		auto Canvas = LexWidgetPresenterComponent->GetRootCanvas();
+		auto Canvas = LexWidgetPresenterComponent->GetRootCanvasForEditor();
 		auto RenderMode = (ELexRenderMode)Prefab->PrefabDataForPrefabEditor.CanvasRenderMode;
 		Canvas->SetRenderMode(RenderMode);
 		Canvas->bFixedSizeInEditMode = true;
 	}
-	auto RootWidget = LexWidgetPresenterComponent->GetRootWidget();
-
-	RootWidget->SetWidth(CanvasSize.X);
-	RootWidget->SetHeight(CanvasSize.Y);
-	RootWidget->SetSiblingIndex(0);
 
 	WidgetPresenter = LexWidgetPresenterComponent;
 

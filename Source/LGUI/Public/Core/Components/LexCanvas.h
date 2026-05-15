@@ -251,10 +251,8 @@ public:
 	/** is this the root canvas in hierarchy */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	bool IsRootCanvas()const;
-	/** Only called by LexWidgetPresenterComponent */
-	void SetWidgetPresenterComponent(ULexWidgetPresenterComponent* InPresenter);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-	ULexWidgetPresenterComponent* GetWidgetPresenterComponent() const{return WidgetPresenterComponent.Get();}
+	ULexWidgetPresenterComponent* GetWidgetPresenterComponent() const;
 
 	bool IsRenderToScreenSpace()const;
 	bool IsRenderToRenderTarget()const;

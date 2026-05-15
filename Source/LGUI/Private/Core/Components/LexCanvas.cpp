@@ -332,7 +332,7 @@ void ULexCanvas::OnUnregister()
 		CheckRenderMode(true);
 	}
 
-	//tell UIItem
+	//tell Widget
 	if (auto LexWidget = GetWidget())
 	{
 		LexWidget->UnregisterRenderCanvas();
@@ -729,9 +729,13 @@ bool ULexCanvas::IsRootCanvas()const
 	return GetRootCanvas() == this;
 }
 
-void ULexCanvas::SetWidgetPresenterComponent(ULexWidgetPresenterComponent* InPresenter)
+ULexWidgetPresenterComponent* ULexCanvas::GetWidgetPresenterComponent() const
 {
-	WidgetPresenterComponent = InPresenter;
+	if (!WidgetPresenterComponent.IsValid())
+	{
+		WidgetPresenterComponent = GetTypedOuter<ULexWidgetPresenterComponent>();
+	}
+	return WidgetPresenterComponent.Get();
 }
 
 void ULexCanvas::MarkVisualWillChange(ULexVisual* InOldVisual)

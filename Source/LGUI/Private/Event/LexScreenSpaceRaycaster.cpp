@@ -22,7 +22,7 @@ void ULexScreenSpaceRaycaster::BeginPlay()
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d LexWidgetPresenterComponent is not valid! LexUIScreenSpaceRaycaster can only attach to a Actor which contains a ULexWidgetPresenterComponent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		}
-		auto Canvas = WidgetPresenter->GetRootCanvas();
+		auto Canvas = WidgetPresenter->GetLoadedCanvas();
 		if (!IsValid(Canvas) || Canvas->GetActualRenderMode() != ELexRenderMode::ScreenSpaceOverlay)
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d Canvas is not valid! LexUIScreenSpaceRaycaster can only attach to ScreenSpaceUI!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);

@@ -56,52 +56,29 @@ void FLexUIPrefabThumbnailScene::SpawnPreviewActor()
 			auto CanvasSize = CurrentPrefab->PrefabDataForPrefabEditor.CanvasSize;
 			//create Canvas for UI
 			auto WidgetPresenterActor = this->GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity);
-			auto RootComponent = WidgetPresenterActor->GetRootComponent();
-			if (!RootComponent)
+			auto WidgetPresenterComponent = WidgetPresenterActor->FindComponentByClass<ULexWidgetPresenterComponent>();
+			if (!WidgetPresenterComponent)
 			{
-				RootComponent = NewObject<USceneComponent>(WidgetPresenterActor, USceneComponent::GetDefaultSceneRootVariableName(), RF_Transactional);
-				RootComponent->Mobility = EComponentMobility::Movable;
-				RootComponent->bVisualizeComponent = false;
-
-				WidgetPresenterActor->SetRootComponent(RootComponent);
-				RootComponent->RegisterComponent();
-				WidgetPresenterActor->AddInstanceComponent(RootComponent);
+				WidgetPresenterComponent = NewObject<ULexWidgetPresenterComponent>(WidgetPresenterActor, ULexWidgetPresenterComponent::StaticClass());
+				WidgetPresenterActor->SetRootComponent(WidgetPresenterComponent);
+				WidgetPresenterComponent->RegisterComponent();
+				WidgetPresenterActor->AddInstanceComponent(WidgetPresenterComponent);
 			}
-			RootComponent->SetWorldLocationAndRotationNoPhysics(FVector::ZeroVector, FRotator(0, 0, 0));
-			auto LexWidgetPresenterComponent = NewObject<ULexWidgetPresenterComponent>(WidgetPresenterActor, TEXT("LexWidgetPresenter"));
-			LexWidgetPresenterComponent->bIsSpawnFromPrefabFactory = true;
-			LexWidgetPresenterComponent->RegisterComponent();
-			WidgetPresenterActor->AddInstanceComponent(LexWidgetPresenterComponent);
-			{
-				auto Canvas = LexWidgetPresenterComponent->GetRootCanvas();
-				auto RenderMode = (ELexRenderMode)CurrentPrefab->PrefabDataForPrefabEditor.CanvasRenderMode;
-				Canvas->SetRenderMode(RenderMode);
-				Canvas->bFixedSizeInEditMode = true;
-			}
-			auto RootWidget = LexWidgetPresenterComponent->GetRootWidget();
+			WidgetPresenterComponent->CreateWidgetAndCanvasForEditor();
+			auto Canvas = WidgetPresenterComponent->GetRootCanvasForEditor();
+			auto RenderMode = (ELexRenderMode)CurrentPrefab->PrefabDataForPrefabEditor.CanvasRenderMode;
+			Canvas->SetRenderMode(RenderMode);
+			Canvas->bFixedSizeInEditMode = true;
+			auto RootWidget = WidgetPresenterComponent->GetRootWidgetForEditor();
 
 			RootWidget->SetWidth(CanvasSize.X);
 			RootWidget->SetHeight(CanvasSize.Y);
 			RootWidget->SetSiblingIndex(0);
 
-			PresenterComponent = LexWidgetPresenterComponent;
+			PresenterComponent = WidgetPresenterComponent;
 		}
-		if (auto RootWidget = CurrentPrefab->LoadPrefabInEditor(GetWorld(), PresenterComponent.Get(), PresenterComponent->GetRootWidget()))
+		if (auto RootWidget = CurrentPrefab->LoadPrefabInEditor(GetWorld(), PresenterComponent.Get(), PresenterComponent->GetRootWidgetForEditor()))
 		{
-			auto RootCanvas = RootWidget->GetComponent<ULexCanvas>();
-			auto CanvasSize = CurrentPrefab->PrefabDataForPrefabEditor.CanvasSize;
-			auto AgentRootWidget = NewObject<ULexWidget>(RootWidget->GetOuter());
-			if (!RootCanvas)
-			{
-				RootCanvas = AgentRootWidget->AddComponent<ULexCanvas>();
-			}
-			RootWidget->SetParent(AgentRootWidget, false);
-			RootCanvas->MarkCanvasUpdate(true);
-			RootCanvas->SetRenderMode((ELexRenderMode)CurrentPrefab->PrefabDataForPrefabEditor.CanvasRenderMode);
-
-			AgentRootWidget->SetWidth(CanvasSize.X);
-			AgentRootWidget->SetHeight(CanvasSize.Y);
-
 			bool isFirstBounds = true;
 			GetBoundsRecursive(RootWidget, PreviewActorsBound, isFirstBounds);
 			if (isFirstBounds)
@@ -210,7 +187,7 @@ void FLexUIPrefabThumbnailScene::SetPrefab(class ULexUIPrefab* Prefab)
 	CurrentPrefab->bThumbnailDirty = false;
 	if (IsValid(Prefab))
 	{
-		// SpawnPreviewActor();
+		SpawnPreviewActor();
 	}
 }
 USceneThumbnailInfo* FLexUIPrefabThumbnailScene::GetSceneThumbnailInfo(const float TargetDistance)const

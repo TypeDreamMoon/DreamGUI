@@ -75,8 +75,8 @@ void ULexUIBehaviour::BeginDestroy()
 UWorld* ULexUIBehaviour::GetWorld() const
 {
 	auto Widget = GetWidget();
-	if (!HasAnyFlags(RF_ClassDefaultObject) && ensureMsgf(Widget, TEXT("Widget: %s has a null OuterPrivate in AActor::GetWorld()"), *GetFullName())
-		&& !Widget->HasAnyFlags(RF_BeginDestroyed) && !Widget->IsUnreachable())
+	if (!Widget)return nullptr;
+	if (!HasAnyFlags(RF_ClassDefaultObject) && !Widget->HasAnyFlags(RF_BeginDestroyed) && !Widget->IsUnreachable())
 	{
 		return Widget->GetWorld();
 	}

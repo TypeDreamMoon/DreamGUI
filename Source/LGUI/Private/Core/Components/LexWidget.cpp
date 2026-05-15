@@ -942,9 +942,13 @@ void ULexWidget::ApplySiblingIndexBeforeRegister_Recursive()
 	}
 }
 
-ULexUIBehaviour* ULexWidget::AddComponent(TSubclassOf<ULexUIBehaviour> ComponentClass)
+ULexUIBehaviour* ULexWidget::AddComponent(TSubclassOf<ULexUIBehaviour> ComponentClass, ULexUIBehaviour* ComponentTemplate)
 {
 	if (!*ComponentClass)
+	{
+		return nullptr;
+	}
+	if (ComponentTemplate && ComponentTemplate->GetClass() != *ComponentClass)
 	{
 		return nullptr;
 	}
@@ -959,7 +963,7 @@ ULexUIBehaviour* ULexWidget::AddComponent(TSubclassOf<ULexUIBehaviour> Component
 	}
 
 	const FName NewComponentName = MakeUniqueObjectName(this, ComponentClass, ComponentClass->GetFName());
-	auto NewComponent = NewObject<ULexUIBehaviour>(this, ComponentClass, NewComponentName, NewComponentFlags);
+	auto NewComponent = NewObject<ULexUIBehaviour>(this, ComponentClass, NewComponentName, NewComponentFlags, ComponentTemplate);
 	Components.Add(NewComponent);
 	if (bIsRegistered)
 	{
@@ -970,6 +974,16 @@ ULexUIBehaviour* ULexWidget::AddComponent(TSubclassOf<ULexUIBehaviour> Component
 		NewComponent->BeginPlay();
 	}
 	return NewComponent;
+}
+
+ULexUIBehaviour* ULexWidget::AddComponent(TSubclassOf<ULexUIBehaviour> ComponentClass)
+{
+	return AddComponent(ComponentClass, nullptr);
+}
+
+ULexUIBehaviour* ULexWidget::AddComponentByTemplate(ULexUIBehaviour* ComponentTemplate)
+{
+	return AddComponent(ComponentTemplate->GetClass(), ComponentTemplate);
 }
 
 void ULexWidget::RemoveComponent(ULexUIBehaviour* Component)

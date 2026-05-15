@@ -263,17 +263,26 @@ public:
 	}
 	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (ComponentClass = "/Sript/LGUI.LexUIBehaviour", DeterminesOutputType = "ComponentClass"))
 	ULexUIBehaviour* AddComponent(TSubclassOf<ULexUIBehaviour> ComponentClass);
+	ULexUIBehaviour* AddComponentByTemplate(ULexUIBehaviour* ComponentTemplate);
 	template<class T>
 	T* AddComponent()
 	{
 		static_assert(TPointerIsConvertibleFromTo<T, const ULexUIBehaviour>::Value, "'T' template parameter to GetComponent must be derived from ULexUIBehaviour");
 		return Cast<T>(AddComponent(T::StaticClass()));
 	}
+	template<class T>
+	T* AddComponentByTemplate(ULexUIBehaviour* ComponentTemplate)
+	{
+		static_assert(TPointerIsConvertibleFromTo<T, const ULexUIBehaviour>::Value, "'T' template parameter to GetComponent must be derived from ULexUIBehaviour");
+		return Cast<T>(AddComponent(T::StaticClass(), ComponentTemplate));
+	}
 	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (ComponentClass = "/Sript/LGUI.LexUIBehaviour"))
 	void RemoveComponent(ULexUIBehaviour* Component);
 	void UpdateObjectToWorldTransform();
 	void CalculateObjectToWorldTransform(bool bPropagateToChildren = true);
 private:
+	ULexUIBehaviour* AddComponent(TSubclassOf<ULexUIBehaviour> ComponentClass, ULexUIBehaviour* ComponentTemplate);
+	
 	mutable FTransform ObjectToWorldTransform;
 
 	virtual void OnUpdateTransform();

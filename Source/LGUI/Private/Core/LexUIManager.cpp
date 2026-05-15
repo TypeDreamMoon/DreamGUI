@@ -973,11 +973,25 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 	for (auto& WidgetPresenter : AllWidgetPresenterArray)
 	{
 		if (!WidgetPresenter.IsValid())continue;
-		auto Canvas = WidgetPresenter->GetRootCanvas();
-		if (Canvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
+		//for runtime
+		if (auto Canvas = WidgetPresenter->GetLoadedCanvas())
 		{
-			ScreenSpaceOverlayCanvasCount++;
+			if (Canvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
+			{
+				ScreenSpaceOverlayCanvasCount++;
+			}
 		}
+		else
+#if WITH_EDITOR
+			//for editor
+				if (auto EditorCanvas = WidgetPresenter->GetRootCanvasForEditor())
+				{
+					if (EditorCanvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
+					{
+						ScreenSpaceOverlayCanvasCount++;
+					}
+				}
+#endif		
 	}
 	if (ScreenSpaceOverlayCanvasCount > 1)
 	{
@@ -1002,11 +1016,25 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 			for (auto& WidgetPresenter : AllWidgetPresenterArray)
 			{
 				if (!WidgetPresenter.IsValid())continue;
-				auto Canvas = WidgetPresenter->GetRootCanvas();
-				if (Canvas->GetRenderMode() == RenderMode)
+				//for runtime
+				if (auto Canvas = WidgetPresenter->GetLoadedCanvas())
 				{
-					Canvas->UpdateRootCanvas();
+					if (Canvas->GetRenderMode() == RenderMode)
+					{
+						Canvas->UpdateRootCanvas();
+					}
 				}
+				else
+#if WITH_EDITOR
+					//for editor
+						if (auto EditorCanvas = WidgetPresenter->GetRootCanvasForEditor())
+						{
+							if (EditorCanvas->GetRenderMode() == RenderMode)
+							{
+								EditorCanvas->UpdateRootCanvas();
+							}
+						}
+#endif
 			}
 		};
 		UpdateCanvas(ELexRenderMode::ScreenSpaceOverlay);
@@ -1063,7 +1091,12 @@ void ULexUIManagerWorldSubsystem::DrawHelperGizmo()
 			auto bIsGameWorld = this->GetWorld()->IsGameWorld();
 			for (auto WidgetPresenter : AllWidgetPresenterArray)
 			{
-				LOCAL::ForEachWidget(this, WidgetPresenter->GetRootWidget(), bIsGameWorld);
+				//for runtime
+				LOCAL::ForEachWidget(this, WidgetPresenter->GetLoadedWidget(), bIsGameWorld);
+#if WITH_EDITOR
+				//for editor
+				LOCAL::ForEachWidget(this, WidgetPresenter->GetRootWidgetForEditor(), bIsGameWorld);
+#endif
 			}
 		}
 	}
@@ -1099,11 +1132,25 @@ void ULexUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 			for (auto& WidgetPresenter : AllWidgetPresenterArray)
 			{
 				if (!WidgetPresenter.IsValid())continue;
-				auto Canvas = WidgetPresenter->GetRootCanvas();
-				if (Canvas->GetRenderMode() == RenderMode)
+				//for runtime
+				if (auto Canvas = WidgetPresenter->GetLoadedCanvas())
 				{
-					Canvas->UpdateDrawCallBatchData();
+					if (Canvas->GetRenderMode() == RenderMode)
+					{
+						Canvas->UpdateDrawCallBatchData();
+					}
 				}
+#if WITH_EDITOR
+				else
+					//for editor
+					if (auto EditorCanvas = WidgetPresenter->GetRootCanvasForEditor())
+					{
+						if (EditorCanvas->GetRenderMode() == RenderMode)
+						{
+							EditorCanvas->UpdateDrawCallBatchData();
+						}
+					}
+#endif
 			}
 		};
 		UpdateCanvas(ELexRenderMode::ScreenSpaceOverlay);
@@ -1299,8 +1346,20 @@ void ULexUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 		auto Instance = InstanceItem;
 		for (auto& WidgetPresenter : Instance->AllWidgetPresenterArray)
 		{
-			WidgetPresenter->GetRootWidget()->EnsureDataForRebuild();
-			WidgetPresenter->GetRootWidget()->MarkCanvasUpdate(true);
+			if (auto Widget = WidgetPresenter->GetLoadedWidget())
+			{
+				Widget->EnsureDataForRebuild();
+				Widget->MarkCanvasUpdate(true);
+			}
+			else
+#if WITH_EDITOR
+				//for editor
+				if (auto EditorWidget = WidgetPresenter->GetRootWidgetForEditor())
+				{
+					EditorWidget->EnsureDataForRebuild();
+					EditorWidget->MarkCanvasUpdate(true);
+				}
+#endif
 		}
 	}
 }
@@ -1351,14 +1410,35 @@ TArray<ULexCanvas*> ULexUIManagerWorldSubsystem::GetRootCanvasArray(ELexRenderMo
 	for (auto& WidgetPresenter : AllWidgetPresenterArray)
 	{
 		if (!WidgetPresenter.IsValid())continue;
-		auto Canvas = WidgetPresenter->GetRootCanvas();
-		if (Canvas->GetRenderMode() == RenderMode)
+		if (auto Canvas = WidgetPresenter->GetLoadedCanvas())
 		{
-			CanvasArray.Add(Canvas);
+			if (Canvas->GetRenderMode() == RenderMode)
+			{
+				CanvasArray.Add(Canvas);
+			}
 		}
 	}
 	return CanvasArray;
 }
+
+#if WITH_EDITOR
+TArray<ULexCanvas*> ULexUIManagerWorldSubsystem::GetEditorRootCanvasArray(ELexRenderMode RenderMode) const
+{
+	TArray<ULexCanvas*> CanvasArray;
+	for (auto& WidgetPresenter : AllWidgetPresenterArray)
+	{
+		if (!WidgetPresenter.IsValid())continue;
+		if (auto Canvas = WidgetPresenter->GetRootCanvasForEditor())
+		{
+			if (Canvas->GetRenderMode() == RenderMode)
+			{
+				CanvasArray.Add(Canvas);
+			}
+		}
+	}
+	return CanvasArray;
+}
+#endif
 
 TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> ULexUIManagerWorldSubsystem::GetViewExtension(UWorld* InWorld, bool InCreateIfNotExist)
 {

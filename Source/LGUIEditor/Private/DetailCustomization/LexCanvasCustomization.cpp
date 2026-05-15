@@ -11,6 +11,7 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "IDetailGroup.h"
+#include "Core/Components/LexWidgetPresenterComponent.h"
 #include "Widgets/Input/SSlider.h"
 
 #define LOCTEXT_NAMESPACE "LexCanvasCustomization"
@@ -55,7 +56,16 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		{
 			if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(World))
 			{
-				auto CanvasArray = LexUIManager->GetRootCanvasArray(ELexRenderMode::ScreenSpaceOverlay);
+				TArray<ULexCanvas*> CanvasArray;
+				auto WidgetPresenter = TargetScriptArray[0]->GetWidgetPresenterComponent();
+				if (WidgetPresenter->GetRootWidgetForEditor())//contains WidgetForEditor, that means for edit mode
+				{
+					CanvasArray = LexUIManager->GetEditorRootCanvasArray(ELexRenderMode::ScreenSpaceOverlay);
+				}
+				else
+				{
+					CanvasArray = LexUIManager->GetRootCanvasArray(ELexRenderMode::ScreenSpaceOverlay);
+				}
 				int ScreenSpaceRootCanvasCount = CanvasArray.Num();
 				if (ScreenSpaceRootCanvasCount > 1)
 				{
@@ -432,7 +442,16 @@ FText FLexCanvasCustomization::GetDrawcallInfo()const
 	auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(TargetScriptArray[0]->GetWorld());
 	if (TargetScriptArray.Num() > 0 && TargetScriptArray[0].IsValid() && LexUIManager)
 	{
-		auto RootCanvasArray = LexUIManager->GetRootCanvasArray(TargetScriptArray[0]->GetRenderMode());
+		TArray<ULexCanvas*> RootCanvasArray;
+		auto WidgetPresenter = TargetScriptArray[0]->GetWidgetPresenterComponent();
+		if (WidgetPresenter->GetRootWidgetForEditor())//contains WidgetForEditor, that means for edit mode
+		{
+			RootCanvasArray = LexUIManager->GetEditorRootCanvasArray(TargetScriptArray[0]->GetRenderMode());
+		}
+		else
+		{
+			RootCanvasArray = LexUIManager->GetRootCanvasArray(TargetScriptArray[0]->GetRenderMode());
+		}
 		TArray<ULexCanvas*> CanvasArray;
 		for (auto Canvas : RootCanvasArray)
 		{
@@ -485,7 +504,16 @@ FText FLexCanvasCustomization::GetDrawcallInfoTooltip()const
 
 	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(TargetScriptArray[0]->GetWorld()))
 	{
-		auto RootCanvasArray = LexUIManager->GetRootCanvasArray(TargetScriptArray[0]->GetRenderMode());
+		TArray<ULexCanvas*> RootCanvasArray;
+		auto WidgetPresenter = TargetScriptArray[0]->GetWidgetPresenterComponent();
+		if (WidgetPresenter->GetRootWidgetForEditor())//contains WidgetForEditor, that means for edit mode
+		{
+			RootCanvasArray = LexUIManager->GetEditorRootCanvasArray(TargetScriptArray[0]->GetRenderMode());
+		}
+		else
+		{
+			RootCanvasArray = LexUIManager->GetRootCanvasArray(TargetScriptArray[0]->GetRenderMode());
+		}
 		TArray<ULexCanvas*> CanvasArray;
 		for (auto Canvas : RootCanvasArray)
 		{

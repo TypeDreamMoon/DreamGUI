@@ -25,9 +25,10 @@ protected:
 	virtual void OnRegister() override;
 	virtual void OnUnregister() override;
 	virtual void PostLoad() override;
+	virtual void Serialize(FArchive& Ar) override;
+	virtual void PostInitProperties() override;
 	virtual void OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport = ETeleportType::None) override;
 	void LoadPrefab();
-	void EnsureWidgetTreeReferences();
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	static bool bNeedCheckEventSystem;
@@ -42,27 +43,36 @@ public:
 #endif
 	
 protected:
-	UPROPERTY(VisibleAnywhere, Instanced, BlueprintReadOnly, Category=LGUI)
-	TObjectPtr<ULexCanvas> RootCanvas;
-	UPROPERTY(VisibleAnywhere, Instanced, BlueprintReadOnly, Category=LGUI)
-	TObjectPtr<ULexWidget> RootWidget;
-	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category=LGUI)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=LexWidgetPresenter)
 	TObjectPtr<ULexUIPrefab> WidgetPrefab;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=LGUI)
-	TWeakObjectPtr<ULexWidget> LoadedWidget;
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category=LexWidgetPresenter, meta=(ShowInnerProperties))
+	TObjectPtr<ULexCanvas> CanvasTemplate;
+	
+	UPROPERTY(VisibleInstanceOnly, Transient, BlueprintReadOnly, Category=LexWidgetPresenter)
+	TObjectPtr<ULexCanvas> RootCanvas;
+	UPROPERTY(VisibleInstanceOnly, Transient, BlueprintReadOnly, Category=LexWidgetPresenter)
+	TObjectPtr<ULexWidget> LoadedWidget;
 	/**
 	 * For navigation input, show a selection widget
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=LGUI)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=LexWidgetPresenter)
 	TObjectPtr<ULexUIPrefab> NavigationSelectionPrefab;
 
-	UPROPERTY(VisibleAnywhere, Transient, BlueprintReadOnly, Category=LGUI, AdvancedDisplay)
+	UPROPERTY(VisibleAnywhere, Transient, BlueprintReadOnly, Category=LexWidgetPresenter, AdvancedDisplay)
 	TWeakObjectPtr<UUINavigationInputSelectionHandler> NavigationSelection;
 
 #if WITH_EDITORONLY_DATA
 private:
 	UPROPERTY()
 	FString OverallVersionMD5;
+public:
+	UPROPERTY(Transient)
+	ULexCanvas* RootCanvasForEditor;
+	UPROPERTY(Transient)
+	ULexWidget* RootWidgetForEditor;
+	void CreateWidgetAndCanvasForEditor();
+	ULexCanvas* GetRootCanvasForEditor()const{return RootCanvasForEditor;}
+	ULexWidget* GetRootWidgetForEditor()const{return RootWidgetForEditor;}
 #endif
 public:
 	UFUNCTION(BlueprintCallable, Category=LGUI)
@@ -70,11 +80,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category=LGUI)
 	ULexUIPrefab* GetPrefab()const{return WidgetPrefab;}
 	UFUNCTION(BlueprintCallable, Category=LGUI)
-	ULexWidget* GetLoadedWidget()const{return LoadedWidget.Get();}
-	UFUNCTION(BlueprintCallable, Category=LGUI)
 	UUINavigationInputSelectionHandler* GetNavigationSelection();
 	UFUNCTION(BlueprintCallable, Category=LGUI)
-	ULexCanvas* GetRootCanvas()const{return RootCanvas.Get();}
+	ULexCanvas* GetLoadedCanvas()const{return RootCanvas.Get();}
 	UFUNCTION(BlueprintCallable, Category=LGUI)
-	ULexWidget* GetRootWidget()const{return RootWidget;}
+	ULexWidget* GetLoadedWidget()const{return LoadedWidget.Get();}
 };

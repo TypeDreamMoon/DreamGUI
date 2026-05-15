@@ -177,6 +177,10 @@ public:
 	static void UnregisterLexUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem);
 
 	TArray<ULexCanvas*> GetRootCanvasArray(ELexRenderMode RenderMode)const;
+	const TArray<TWeakObjectPtr<ULexWidgetPresenterComponent>>& GetAllWidgetPresenterArray()const{return AllWidgetPresenterArray;}
+#if WITH_EDITOR
+	TArray<ULexCanvas*> GetEditorRootCanvasArray(ELexRenderMode RenderMode)const;
+#endif
 
 	static TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> GetViewExtension(UWorld* InWorld, bool InCreateIfNotExist);
 

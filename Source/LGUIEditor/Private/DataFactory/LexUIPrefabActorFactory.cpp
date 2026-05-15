@@ -64,7 +64,7 @@ void ULexUIPrefabActorFactory::PostSpawnActor(UObject* Asset, AActor* InNewActor
 	auto Prefab = CastChecked<ULexUIPrefab>(Asset);
 
 	auto WidgetPresenterComponent = InNewActor->FindComponentByClass<ULexWidgetPresenterComponent>();
-	WidgetPresenterComponent->GetRootWidget()->SetSizeDelta(Prefab->PrefabDataForPrefabEditor.CanvasSize);
+	// WidgetPresenterComponent->GetLoadedWidget()->SetSizeDelta(Prefab->PrefabDataForPrefabEditor.CanvasSize);
 	WidgetPresenterComponent->SetPrefab(Prefab);
 
 	auto World = InNewActor->GetWorld();

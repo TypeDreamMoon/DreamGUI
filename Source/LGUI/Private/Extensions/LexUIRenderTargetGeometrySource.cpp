@@ -1029,7 +1029,7 @@ ULexCanvas* ULexUIRenderTargetGeometrySource::GetCanvas()const
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d TargetWidgetPresenter not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return nullptr;
 	}
-	auto Canvas = WidgetPresenter->GetRootCanvas();
+	auto Canvas = WidgetPresenter->GetLoadedCanvas();
 	if (Canvas == nullptr)
 	{
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d TargetCanvas not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
