@@ -3,10 +3,10 @@
 #pragma once
 
 #include "Components/ActorComponent.h"
-#include "UIScrollViewComponent.h"
-#include "UIScrollViewWithScrollbarComponent.generated.h"
+#include "UIScrollView.h"
+#include "UIScrollViewWithScrollbar.generated.h"
 
-class UUIScrollbarComponent;
+class UUIScrollbar;
 
 UENUM(BlueprintType, Category = LGUI)
 enum class ELexUIScrollViewScrollbarVisibility :uint8
@@ -19,12 +19,12 @@ enum class ELexUIScrollViewScrollbarVisibility :uint8
 
 //ScrollView with scrollbars
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIScrollViewWithScrollbarComponent : public UUIScrollViewComponent
+class LGUI_API UUIScrollViewWithScrollbar : public UUIScrollView
 {
 	GENERATED_BODY()
 
 public:
-	UUIScrollViewWithScrollbarComponent();
+	UUIScrollViewWithScrollbar();
 protected:
 	virtual void OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
 private:
@@ -33,11 +33,11 @@ private:
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollViewWithScrollbar")
 		TWeakObjectPtr<ULexWidget> Viewport;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollViewWithScrollbar")
-		TWeakObjectPtr<UUIScrollbarComponent> HorizontalScrollbar;
+		TWeakObjectPtr<UUIScrollbar> HorizontalScrollbar;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollViewWithScrollbar")
 		ELexUIScrollViewScrollbarVisibility HorizontalScrollbarVisibility = ELexUIScrollViewScrollbarVisibility::AutoHide;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollViewWithScrollbar")
-		TWeakObjectPtr<UUIScrollbarComponent> VerticalScrollbar;
+		TWeakObjectPtr<UUIScrollbar> VerticalScrollbar;
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollViewWithScrollbar")
 		ELexUIScrollViewScrollbarVisibility VerticalScrollbarVisibility = ELexUIScrollViewScrollbarVisibility::AutoHide;
 

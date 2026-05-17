@@ -7,7 +7,7 @@
 #include "LGUIEditorModule.h"
 #include "Core/Components/LexWidgetPresenterComponent.h"
 #include "Core/Components/LexWidget.h"
-#include "Interaction/UIRecyclableScrollViewComponent.h"
+#include "Interaction/UIRecyclableScrollView.h"
 #include "PrefabSystem/LexUIPrefab.h"
 
 
@@ -77,55 +77,56 @@ void FLexUIPrefabThumbnailScene::SpawnPreviewActor()
 
 			PresenterComponent = WidgetPresenterComponent;
 		}
-		if (auto RootWidget = CurrentPrefab->LoadPrefabInEditor(GetWorld(), PresenterComponent.Get(), PresenterComponent->GetRootWidgetForEditor()))
+		PresenterComponent->SetPrefab(CurrentPrefab.Get());
+		if (auto Canvas = PresenterComponent->GetLoadedCanvas())//for update draw-call immediately
 		{
-			bool isFirstBounds = true;
-			GetBoundsRecursive(RootWidget, PreviewActorsBound, isFirstBounds);
-			if (isFirstBounds)
+			Canvas->UpdateRootCanvas();
+			GetBoundsRecursive(PresenterComponent->GetLoadedWidget(), PreviewBounds);
+			if (PreviewBounds.SphereRadius < KINDA_SMALL_NUMBER)//if bounds is too small, set to 1x1 box
 			{
-				PreviewActorsBound = FBoxSphereBounds(EForceInit::ForceInitToZero);
-			}
-			if (PreviewActorsBound.SphereRadius < KINDA_SMALL_NUMBER)//if bounds is too small, set to 1x1 box
-			{
-				PreviewActorsBound = FBoxSphereBounds(FBox(FVector(-0.5f, -0.5f, -0.5f), FVector(0.5f, 0.5f, 0.5f)));
+				PreviewBounds = FBoxSphereBounds(FBox(FVector(-0.5f, -0.5f, -0.5f), FVector(0.5f, 0.5f, 0.5f)));
 			}
 		}
 	}
 }
-void FLexUIPrefabThumbnailScene::GetBoundsRecursive(ULexWidget* RootWidget, FBoxSphereBounds& OutBounds, bool& IsFirstPrimitive)const
+void FLexUIPrefabThumbnailScene::GetBoundsRecursive(ULexWidget* RootWidget, FBoxSphereBounds& OutBounds)const
 {
-	if (!IsValid(RootWidget))return;
-	FBoxSphereBounds Bounds;
-	bool bIsValidBounds = false;
-	if (RootWidget->GetWidgetActiveInHierarchy())
+	if (!IsValid(RootWidget))
 	{
-		if (auto Visual = RootWidget->GetVisual())
-		{
-			FVector Min, Max;
-			Visual->GetGeometryBounds3DInLocalSpace(Min, Max);
-			FBox Box = FBox(Min, Max);
-			Bounds = FBoxSphereBounds(Box);
-			Bounds = Bounds.TransformBy(RootWidget->GetWorldTransform());
-			bIsValidBounds = true;
-		}
+		OutBounds = FBoxSphereBounds(EForceInit::ForceInitToZero);
+		return;
 	}
-	if (bIsValidBounds)
+	struct LOCAL
 	{
-		if (IsFirstPrimitive)
+		static void GetBounds(ULexWidget* InWidget, bool bIsFirstBounds, FBox& OutBox)
 		{
-			OutBounds = Bounds;
-			IsFirstPrimitive = false;
+			if (auto Visual = InWidget->GetVisual())
+			{
+				FVector Min, Max;
+				Visual->GetGeometryBounds3DInLocalSpace(Min, Max);
+				FBox Box = FBox(Min, Max);
+				Box = Box.TransformBy(InWidget->GetWorldTransform());
+				if (bIsFirstBounds)
+				{
+					bIsFirstBounds = false;
+					OutBox = Box;
+				}
+				else
+				{
+					OutBox += Box;
+				}
+			}
+			for (auto Child : InWidget->GetChildren())
+			{
+				GetBounds(Child, bIsFirstBounds, OutBox);
+			}
 		}
-		else
-		{
-			OutBounds = OutBounds + Bounds;
-		}
-	}
-
-	for (auto& ChildWidget : RootWidget->GetChildren())
-	{
-		GetBoundsRecursive(ChildWidget, OutBounds, IsFirstPrimitive);
-	}
+	};
+	
+	bool bIsFirstBounds = true;
+	FBox BoxBounds;
+	LOCAL::GetBounds(RootWidget, bIsFirstBounds, BoxBounds);
+	OutBounds = BoxBounds;
 }
 void FLexUIPrefabThumbnailScene::ClearOldActors()
 {
@@ -145,7 +146,7 @@ bool FLexUIPrefabThumbnailScene::IsValidForVisualization()
 		if (CurrentPrefab->BinaryData.Num() == 0)
 			return false;
 	}
-	if (PreviewActorsBound.ContainsNaN())
+	if (PreviewBounds.ContainsNaN())
 	{
 		UE_LOG(LGUIEditor, Warning, TEXT("[%s].%d Prefab:'%s' bounds is invalid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(CurrentPrefab->GetPathName()));
 		return false;
@@ -156,14 +157,14 @@ void FLexUIPrefabThumbnailScene::GetViewMatrixParameters(const float InFOVDegree
 {
 	const float HalfFOVRadians = FMath::DegreesToRadians<float>(InFOVDegrees) * 0.5f;
 
-	const float PreviewSize = PreviewActorsBound.SphereRadius * 1.2f;
-	const float BoundsZOffset = GetBoundsZOffset(PreviewActorsBound);
+	const float PreviewSize = PreviewBounds.SphereRadius * 1.2f;
+	const float BoundsZOffset = GetBoundsZOffset(PreviewBounds);
 	const float TargetDistance = PreviewSize / FMath::Tan(HalfFOVRadians);
 
 	USceneThumbnailInfo* ThumbnailInfo = GetSceneThumbnailInfo(TargetDistance);
 	check(ThumbnailInfo);
 
-	OutOrigin = -1 * PreviewActorsBound.Origin;
+	OutOrigin = -1 * PreviewBounds.Origin;
 	OutOrbitPitch = ThumbnailInfo->OrbitPitch;
 	OutOrbitYaw = ThumbnailInfo->OrbitYaw;
 	OutOrbitZoom = TargetDistance + ThumbnailInfo->OrbitZoom;

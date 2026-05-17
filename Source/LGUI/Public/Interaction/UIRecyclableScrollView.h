@@ -4,9 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
-#include "UIScrollViewWithScrollbarComponent.h"
+#include "UIScrollViewWithScrollbar.h"
 #include "Layout/Margin.h"
-#include "UIRecyclableScrollViewComponent.generated.h"
+#include "UIRecyclableScrollView.generated.h"
 
 
 UINTERFACE(Blueprintable, MinimalAPI)
@@ -79,7 +79,7 @@ enum class EUIRecyclableScrollViewCellTemplateType :uint8
  * Assign your own DataSource object (IUIRecyclableScrollViewDataSource) and create recyclable scroll view on that data.
  */
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIRecyclableScrollViewComponent : public UUIScrollViewWithScrollbarComponent
+class LGUI_API UUIRecyclableScrollView : public UUIScrollViewWithScrollbar
 {
 	GENERATED_BODY()
 

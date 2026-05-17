@@ -7,6 +7,7 @@
 #include "LexUIPrefabEditor.h"
 #include "PropertyCustomizationHelpers.h"
 #include "LexWidgetHierarchyPickerView.h"
+#include "Core/LexUIBehaviour.h"
 #include "Core/Components/LexLayout.h"
 #include "Core/Components/LexVisual.h"
 #include "Core/Components/LexWidget.h"
@@ -35,11 +36,8 @@ void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow&
 	if (CastField<FClassProperty>(ObjectProperty) != nullptr)return;//skip class property
 	auto ObjectClass = ObjectProperty->PropertyClass;
 	if (!ObjectClass->IsChildOf(ULexWidget::StaticClass())
-		&& !ObjectClass->IsChildOf(ULexVisual::StaticClass())
-		&& !ObjectClass->IsChildOf(ULexLayoutContainer::StaticClass())
-		&& !ObjectClass->IsChildOf(ULexLayoutSelf::StaticClass())
-		&& !ObjectClass->IsChildOf(AActor::StaticClass())
-		&& !ObjectClass->IsChildOf(UActorComponent::StaticClass())
+		&& !ObjectClass->IsChildOf(ULexWidgetSubObjectBehaviour::StaticClass())
+		&& !ObjectClass->IsChildOf(ULexUIBehaviour::StaticClass())
 		)return;
 	if (ObjectProperty->HasAnyPropertyFlags(CPF_PersistentInstance))
 		return;
@@ -55,14 +53,14 @@ void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow&
 	{
 		if (Object == nullptr)return NoneObjectText;
 		if (!PrefabEditorPtr.IsValid())return NoneObjectText;
-		if (auto Actor = Cast<AActor>(Object))
+		if (auto Widget = Cast<ULexWidget>(Object))
 		{
-			return FText::FromString(Actor->GetActorLabel());
+			return FText::FromString(Widget->GetDisplayName());
 		}
 		else
 		{
-			auto OuterActor = Object->GetTypedOuter<AActor>();
-			return FText::FromString(Object->GetPathName(OuterActor));
+			auto OuterWidget = Object->GetTypedOuter<ULexWidget>();
+			return FText::FromString(Object->GetPathName(OuterWidget));
 		}
 	};
 	auto GetTooltipText = [=, this]()
@@ -80,8 +78,8 @@ void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow&
 			Widget = Object->GetTypedOuter<ULexWidget>();
 			PathStr = "." + Object->GetPathName(Widget);
 		}
-		auto RootAgentActor = PrefabEditorPtr.Pin()->GetRootAgentWidget();
-		while (Widget && Widget != RootAgentActor)
+		auto RootAgentWidget = PrefabEditorPtr.Pin()->GetRootAgentWidget();
+		while (Widget && Widget != RootAgentWidget)
 		{
 			PathStr = "/" + Widget->GetDisplayName() + PathStr;
 			Widget = Widget->GetParent();

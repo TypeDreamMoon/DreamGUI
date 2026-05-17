@@ -235,7 +235,14 @@ namespace LexUIPrefabSystem
 				UE_LOG(LGUI, Error, TEXT("[%s].%d Missing parent for widget:%s at prefab:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Widget->GetPathDisplayName(), *PrefabAssetPath);
 				ParentWidget = CreatedRootWidget;
 			}
-			Widget->SetParentBeforeRegister(ParentWidget);
+			if (Widget->HasRegistered())
+			{
+				Widget->SetParent(ParentWidget, false);
+			}
+			else
+			{
+				Widget->SetParentBeforeRegister(ParentWidget);
+			}
 		}
 		for (auto& CompData : SubPrefabWidgetAttachmentArray)
 		{
@@ -253,45 +260,14 @@ namespace LexUIPrefabSystem
 				UE_LOG(LGUI, Error, TEXT("[%s].%d Missing parent for widget:%s at prefab:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Widget->GetPathDisplayName(), *PrefabAssetPath);
 				ParentWidget = CreatedRootWidget;
 			}
-			Widget->SetParentBeforeRegister(ParentWidget);
-		}
-		CreatedRootWidget->ApplySiblingIndexBeforeRegister_Recursive();
-
-		//attach root actor's parent
-		if (Parent)
-		{
-			CreatedRootWidget->SetParent(Parent, false);
-		}
-		if (!bIsSubPrefab)//need to do this in root actor and it will propagate to children. If do this in subprefab and parent prefab override transform data on subprefab's actor, then transform goes wrong
-		{
-			CreatedRootWidget->CalculateObjectToWorldTransform(true);
-		}
-		if (ReplaceTransform)
-		{
-			CreatedRootWidget->SetRelativeLocationAndRotation(InLocation, InRotation);
-			CreatedRootWidget->SetRelativeScale(InScale);
-		}
-
-#if WITH_EDITOR
-		if (!bIsSubPrefab)
-		{
-			if (bIsEditorOrRuntime)
+			if (Widget->HasRegistered())
 			{
-				for (auto& Widget : AllWidgets)
-				{
-					Widget->CalculateTransformFromAnchor();
-				}
+				Widget->SetParent(ParentWidget, false);
 			}
-		}
-#endif
-
-		if (OnSubPrefabFinishDeserializeFunction != nullptr)
-		{
-			OnSubPrefabFinishDeserializeFunction(CreatedRootWidget, MapGuidToObject, MapObjectToOriginGuid, AllWidgets);
-		}
-		if (CallbackBeforeAwake != nullptr)
-		{
-			CallbackBeforeAwake(CreatedRootWidget);
+			else
+			{
+				Widget->SetParentBeforeRegister(ParentWidget);
+			}
 		}
 
 #if LGUIPREFAB_LOG_DETAIL_TIME
@@ -311,7 +287,45 @@ namespace LexUIPrefabSystem
 				auto& Widget = AllWidgets[i];
 				Widget->OnRegister();
 			}
-			if (World->IsGameWorld())
+
+			//attach root actor's parent
+			if (Parent)
+			{
+				CreatedRootWidget->SetParent(Parent, false);
+			}
+			if (!bIsSubPrefab)//need to do this in root actor and it will propagate to children. If do this in subprefab and parent prefab override transform data on subprefab's actor, then transform goes wrong
+			{
+				CreatedRootWidget->CalculateObjectToWorldTransform(true);
+			}
+			if (ReplaceTransform)
+			{
+				CreatedRootWidget->SetRelativeLocationAndRotation(InLocation, InRotation);
+				CreatedRootWidget->SetRelativeScale(InScale);
+			}
+
+#if WITH_EDITOR
+			if (!bIsSubPrefab)
+			{
+				if (bIsEditorOrRuntime)
+				{
+					for (auto& Widget : AllWidgets)
+					{
+						Widget->CalculateTransformFromAnchor();
+					}
+				}
+			}
+#endif
+
+			if (OnSubPrefabFinishDeserializeFunction != nullptr)
+			{
+				OnSubPrefabFinishDeserializeFunction(CreatedRootWidget, MapGuidToObject, MapObjectToOriginGuid, AllWidgets);
+			}
+			if (CallbackBeforeAwake != nullptr)
+			{
+				CallbackBeforeAwake(CreatedRootWidget);
+			}
+			
+			if (World->IsGameWorld() && World->HasBegunPlay())
 			{
 				for (int i = 0; i < AllWidgets.Num(); i++)
 				{

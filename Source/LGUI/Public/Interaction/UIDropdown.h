@@ -3,14 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Interaction/UISelectableComponent.h"
+#include "Interaction/UISelectable.h"
 #include "Event/Interface/LexPointerClickInterface.h"
-#include "LexUIComponentReference.h"
 #include "Event/LexUIEventDelegate.h"
 #include "Event/LexDelegateDeclaration.h"
-#include "UIDropdownComponent.generated.h"
+#include "UIDropdown.generated.h"
 
-class UUIToggleComponent;
+class UUIToggle;
 class ULexImage;
 class ULexWidgetContainer;
 class ULexWidget;
@@ -70,12 +69,12 @@ public:
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIDropdownValueChangedEvent, int32, Value);
 
 UCLASS( ClassGroup=(LGUI), Blueprintable, meta=(BlueprintSpawnableComponent) )
-class LGUI_API UUIDropdownComponent : public UUISelectableComponent, public ILexPointerClickInterface
+class LGUI_API UUIDropdown : public UUISelectable, public ILexPointerClickInterface
 {
 	GENERATED_BODY()
 
 public:	
-	UUIDropdownComponent();
+	UUIDropdown();
 
 protected:
 	virtual void Awake()override;
@@ -222,7 +221,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Dropdown")
 		TWeakObjectPtr<ULexImage> Image;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Dropdown")
-		TWeakObjectPtr<UUIToggleComponent> Toggle;
+		TWeakObjectPtr<UUIToggle> Toggle;
 
 private:
 	FSimpleDelegate OnSelectCPP;
@@ -263,5 +262,5 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Dropdown")
 	ULexImage* GetImage()const { return Image.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Dropdown")
-	UUIToggleComponent* GetToggle()const;
+	UUIToggle* GetToggle()const;
 };

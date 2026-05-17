@@ -35,6 +35,8 @@ FLexUIPrefabInstanceScene::FLexUIPrefabInstanceScene(ConstructionValues CVS) :FL
 	DirectionalLight->InvalidateLightingCache();
 	DirectionalLight->RecreateRenderState_Concurrent();
 
+	if (IsRunningCookCommandlet())
+		return;
 	// A background sky sphere
 	{
 		// Large scale to prevent sphere from clipping
@@ -64,6 +66,15 @@ FLexUIPrefabInstanceScene::FLexUIPrefabInstanceScene(ConstructionValues CVS) :FL
 		SkyComponent->SetMaterial(0, InstancedSkyMaterial);
 		AddComponent(SkyComponent, SphereTransform);
 		SkySphereComponent = SkyComponent;
+	}
+}
+
+FLexUIPrefabInstanceScene::~FLexUIPrefabInstanceScene()
+{
+	if (WidgetPresenter)
+	{
+		WidgetPresenter->DestroyComponent();
+		WidgetPresenter = nullptr;
 	}
 }
 

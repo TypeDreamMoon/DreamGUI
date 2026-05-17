@@ -10,7 +10,7 @@
 class ULexCanvas;
 class ULTweener;
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(ClassGroup=(LGUI), Blueprintable, meta=(BlueprintSpawnableComponent))
 class LGUI_API UUINavigationInputSelectionHandler : public ULexUIBehaviour
 {
 	GENERATED_BODY()

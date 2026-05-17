@@ -18,7 +18,7 @@ protected:
 	virtual void GetViewMatrixParameters(const float InFOVDegrees, FVector& OutOrigin, float& OutOrbitPitch, float& OutOrbitYaw, float& OutOrbitZoom)const override;
 	virtual USceneThumbnailInfo* GetSceneThumbnailInfo(const float TargetDistance)const;
 	void SpawnPreviewActor();
-	void GetBoundsRecursive(ULexWidget* RootWidget, FBoxSphereBounds& OutBounds, bool& IsFirstPrimitive)const;
+	void GetBoundsRecursive(ULexWidget* RootWidget, FBoxSphereBounds& OutBounds)const;
 private:
 	void ClearOldActors();
 private:
@@ -26,7 +26,7 @@ private:
 	TWeakObjectPtr<ULexWidgetPresenterComponent> PresenterComponent;
 	TWeakObjectPtr<ULexUIPrefab> CurrentPrefab;
 	FText CachedPrefabContent;
-	FBoxSphereBounds PreviewActorsBound;
+	FBoxSphereBounds PreviewBounds;
 };
 
 class FLexUIPrefabInstanceThumbnailScene

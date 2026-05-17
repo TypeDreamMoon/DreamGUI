@@ -3,10 +3,10 @@
 #pragma once
 
 #include "Event/Interface/LexPointerDragInterface.h"
-#include "UISelectableComponent.h"
+#include "UISelectable.h"
 #include "Event/LexUIEventDelegate.h"
 #include "Event/LexDelegateDeclaration.h"
-#include "UIScrollbarComponent.generated.h"
+#include "UIScrollbar.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIScrollbarValueChangedEvent, float, Value);
 
@@ -22,12 +22,12 @@ enum class EUIScrollbarDirectionType:uint8
 };
 
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIScrollbarComponent : public UUISelectableComponent, public ILexPointerDragInterface
+class LGUI_API UUIScrollbar : public UUISelectable, public ILexPointerDragInterface
 {
 	GENERATED_BODY()
 	
 public:	
-	UUIScrollbarComponent();
+	UUIScrollbar();
 
 	virtual void Awake() override;
 	virtual void Start() override;

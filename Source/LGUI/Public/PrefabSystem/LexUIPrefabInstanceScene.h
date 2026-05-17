@@ -17,6 +17,7 @@ class LGUI_API FLexUIPrefabInstanceScene : public FLexUIPrefabScene
 {
 public:
 	FLexUIPrefabInstanceScene(ConstructionValues CVS);
+	~FLexUIPrefabInstanceScene();
 	
 	static const FString RootAgentActorName;
 	ULexWidget* GetParentForLoadPrefab(ULexUIPrefab* InPrefab);

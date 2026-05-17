@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "Interaction/UISelectableComponent.h"
+#include "Interaction/UISelectable.h"
 #include "Components/InputComponent.h"
 #include "Event/LexUIEventDelegate.h"
 #include "Event/LexDelegateDeclaration.h"
@@ -12,7 +12,7 @@
 #include "GenericPlatform/ITextInputMethodSystem.h"
 #include "Core/Components/LexText.h"
 #include "Widgets/Layout/SBox.h"
-#include "UITextInputComponent.generated.h"
+#include "UITextInput.generated.h"
 
 
 class ULexSprite;
@@ -32,7 +32,7 @@ public:
 	 * @param InIndexOfInsertedChar	New inserted char index in InString.
 	 * @return true if the input string is good to use, false otherwise.
 	 */
-	virtual bool OnValidateInput(UUITextInputComponent* InTextInput, const FString& InString, int InIndexOfInsertedChar);
+	virtual bool OnValidateInput(UUITextInput* InTextInput, const FString& InString, int InIndexOfInsertedChar);
 protected:
 	/** use this to tell if the class is compiled from blueprint, only blueprint can execute ReceiveXXX. */
 	bool bCanExecuteBlueprintEvent = false;
@@ -44,7 +44,7 @@ protected:
 	 * @return true if the input string is good to use, false otherwise.
 	 */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnValidateInput"), Category = "LGUI")
-		bool ReceiveOnValidateInput(UUITextInputComponent* InTextInput, const FString& InString, int InIndexOfInsertedChar);
+		bool ReceiveOnValidateInput(UUITextInput* InTextInput, const FString& InString, int InIndexOfInsertedChar);
 };
 
 UENUM(BlueprintType, Category = LGUI)
@@ -89,7 +89,7 @@ enum class EUITextInputDisplayType :uint8
 };
 
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUITextInputComponent : public UUISelectableComponent, public ILexPointerClickInterface, public ILexPointerDragInterface
+class LGUI_API UUITextInput : public UUISelectable, public ILexPointerClickInterface, public ILexPointerDragInterface
 {
 	GENERATED_BODY()
 	
@@ -347,7 +347,7 @@ private:
 	class FVirtualKeyboardEntry :public IVirtualKeyboardEntry
 	{
 	public:
-		static TSharedRef<FVirtualKeyboardEntry> Create(UUITextInputComponent* Input);
+		static TSharedRef<FVirtualKeyboardEntry> Create(UUITextInput* Input);
 
 		virtual void SetTextFromVirtualKeyboard(const FText& InNewText, ETextEntryType TextEntryType) override;
 		virtual void SetSelectionFromVirtualKeyboard(int InSelStart, int SelEnd)override;
@@ -360,8 +360,8 @@ private:
 		virtual bool IsMultilineEntry() const override;
 
 	private:
-		FVirtualKeyboardEntry(UUITextInputComponent* InInput);
-		UUITextInputComponent* InputComp;
+		FVirtualKeyboardEntry(UUITextInput* InInput);
+		UUITextInput* InputComp;
 	};
 
 private:
@@ -369,7 +369,7 @@ private:
 	class FTextInputMethodContext:public ITextInputMethodContext
 	{
 	public:
-		static TSharedRef<FTextInputMethodContext> Create(UUITextInputComponent* Input);
+		static TSharedRef<FTextInputMethodContext> Create(UUITextInput* Input);
 		void Dispose();
 
 		virtual bool IsComposing() override
@@ -392,8 +392,8 @@ private:
 		virtual void EndComposition() override;
 
 	private:
-		FTextInputMethodContext(UUITextInputComponent* InInput);
-		UUITextInputComponent* InputComp;
+		FTextInputMethodContext(UUITextInput* InInput);
+		UUITextInput* InputComp;
 		FString OriginString;
 		bool bIsComposing = false;
 		TSharedPtr<SBox> CachedWindow;

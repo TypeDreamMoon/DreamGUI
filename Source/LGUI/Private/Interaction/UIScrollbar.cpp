@@ -1,24 +1,24 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Interaction/UIScrollbarComponent.h"
+#include "Interaction/UIScrollbar.h"
 #include "Core/Components/LexWidget.h"
 
-UUIScrollbarComponent::UUIScrollbarComponent()
+UUIScrollbar::UUIScrollbar()
 {
 }
 
-void UUIScrollbarComponent::Awake()
+void UUIScrollbar::Awake()
 {
     Super::Awake();
 }
 
-void UUIScrollbarComponent::Start()
+void UUIScrollbar::Start()
 {
     Super::Start();
     ApplyValueToUI();
 }
 
-bool UUIScrollbarComponent::CheckHandle()
+bool UUIScrollbar::CheckHandle()
 {
     if (Handle.IsValid() && HandleArea.IsValid())
         return true;
@@ -31,7 +31,7 @@ bool UUIScrollbarComponent::CheckHandle()
 }
 
 #if WITH_EDITOR
-void UUIScrollbarComponent::PostEditChangeProperty(FPropertyChangedEvent &PropertyChangedEvent)
+void UUIScrollbar::PostEditChangeProperty(FPropertyChangedEvent &PropertyChangedEvent)
 {
     Super::PostEditChangeProperty(PropertyChangedEvent);
     HandleArea = nullptr;//force re-check
@@ -39,7 +39,7 @@ void UUIScrollbarComponent::PostEditChangeProperty(FPropertyChangedEvent &Proper
 }
 #endif
 
-void UUIScrollbarComponent::OnWidgetActiveChanged(bool WidgetActive)
+void UUIScrollbar::OnWidgetActiveChanged(bool WidgetActive)
 {
     Super::OnWidgetActiveChanged(WidgetActive);
     if (WidgetActive)
@@ -47,13 +47,13 @@ void UUIScrollbarComponent::OnWidgetActiveChanged(bool WidgetActive)
         ApplyValueToUI();
     }
 }
-void UUIScrollbarComponent::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
+void UUIScrollbar::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
     Super::OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
     ApplyValueToUI();
 }
 
-void UUIScrollbarComponent::SetValue(float InValue, bool FireEvent)
+void UUIScrollbar::SetValue(float InValue, bool FireEvent)
 {
     if (Value != InValue)
     {
@@ -69,17 +69,17 @@ void UUIScrollbarComponent::SetValue(float InValue, bool FireEvent)
     }
 }
 
-void UUIScrollbarComponent::SetValue(float InValue)
+void UUIScrollbar::SetValue(float InValue)
 {
     SetValue(InValue, true);
 }
 
-void UUIScrollbarComponent::SetValueWithoutNotify(float InValue)
+void UUIScrollbar::SetValueWithoutNotify(float InValue)
 {
     SetValue(InValue, false);
 }
 
-void UUIScrollbarComponent::SetSize(float InSize)
+void UUIScrollbar::SetSize(float InSize)
 {
     if (Size != InSize)
     {
@@ -88,7 +88,7 @@ void UUIScrollbarComponent::SetSize(float InSize)
         ApplyValueToUI();
     }
 }
-void UUIScrollbarComponent::SetValueAndSize(float InValue, float InSize, bool FireEvent)
+void UUIScrollbar::SetValueAndSize(float InValue, float InSize, bool FireEvent)
 {
     bool somethingChanged = false;
     if (Value != InValue)
@@ -113,12 +113,12 @@ void UUIScrollbarComponent::SetValueAndSize(float InValue, float InSize, bool Fi
         }
     }
 }
-void UUIScrollbarComponent::SetNavigationChangeInterval(float InValue)
+void UUIScrollbar::SetNavigationChangeInterval(float InValue)
 {
     NavigationChangeInterval = InValue;
 }
 
-bool UUIScrollbarComponent::OnPointerDown_Implementation(ULexPointerEventData* EventData)
+bool UUIScrollbar::OnPointerDown_Implementation(ULexPointerEventData* EventData)
 {
     Super::OnPointerDown_Implementation(EventData);
     if (EventData->InputType == ELexUIPointerInputType::Pointer)
@@ -199,28 +199,28 @@ bool UUIScrollbarComponent::OnPointerDown_Implementation(ULexPointerEventData* E
     }
     return AllowEventBubbleUp;
 }
-bool UUIScrollbarComponent::OnPointerUp_Implementation(ULexPointerEventData *EventData)
+bool UUIScrollbar::OnPointerUp_Implementation(ULexPointerEventData *EventData)
 {
     Super::OnPointerUp_Implementation(EventData);
     return AllowEventBubbleUp;
 }
-bool UUIScrollbarComponent::OnPointerBeginDrag_Implementation(ULexPointerEventData *EventData)
+bool UUIScrollbar::OnPointerBeginDrag_Implementation(ULexPointerEventData *EventData)
 {
     PressValue = Value;
     CalculateInputValue(EventData);
     return AllowEventBubbleUp;
 }
-bool UUIScrollbarComponent::OnPointerDrag_Implementation(ULexPointerEventData *EventData)
+bool UUIScrollbar::OnPointerDrag_Implementation(ULexPointerEventData *EventData)
 {
     CalculateInputValue(EventData);
     return AllowEventBubbleUp;
 }
-bool UUIScrollbarComponent::OnPointerEndDrag_Implementation(ULexPointerEventData *EventData)
+bool UUIScrollbar::OnPointerEndDrag_Implementation(ULexPointerEventData *EventData)
 {
     CalculateInputValue(EventData);
     return AllowEventBubbleUp;
 }
-bool UUIScrollbarComponent::OnNavigate_Implementation(ELexUINavigationDirection direction, TScriptInterface<ILexNavigationInterface>& result)
+bool UUIScrollbar::OnNavigate_Implementation(ELexUINavigationDirection direction, TScriptInterface<ILexNavigationInterface>& result)
 {
     float valueIntervalMultiply = 0.0f;
     if (
@@ -247,7 +247,7 @@ bool UUIScrollbarComponent::OnNavigate_Implementation(ELexUINavigationDirection 
     }
 }
 
-void UUIScrollbarComponent::CalculateInputValue(ULexPointerEventData *EventData)
+void UUIScrollbar::CalculateInputValue(ULexPointerEventData *EventData)
 {
     if (CheckHandle())
     {
@@ -291,7 +291,7 @@ void UUIScrollbarComponent::CalculateInputValue(ULexPointerEventData *EventData)
         SetValue(value01, true);
     }
 }
-void UUIScrollbarComponent::ApplyValueToUI()
+void UUIScrollbar::ApplyValueToUI()
 {
     if (CheckHandle())
     {

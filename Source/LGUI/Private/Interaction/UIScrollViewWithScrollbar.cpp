@@ -1,34 +1,34 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Interaction/UIScrollViewWithScrollbarComponent.h"
+#include "Interaction/UIScrollViewWithScrollbar.h"
 
 #include "LTweenBPLibrary.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexWidget.h"
-#include "Interaction/UIScrollbarComponent.h"
+#include "Interaction/UIScrollbar.h"
 #include "PrefabSystem/LexUIPrefabManager.h"
 
 
-UUIScrollViewWithScrollbarComponent::UUIScrollViewWithScrollbarComponent()
+UUIScrollViewWithScrollbar::UUIScrollViewWithScrollbar()
 {
 	
 }
 
-void UUIScrollViewWithScrollbarComponent::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
+void UUIScrollViewWithScrollbar::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
 	Super::OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
 	CheckScrollbarParameter();//Check and register scrollbar event
 }
 
-bool UUIScrollViewWithScrollbarComponent::OnPointerDrag_Implementation(ULexPointerEventData* EventData)
+bool UUIScrollViewWithScrollbar::OnPointerDrag_Implementation(ULexPointerEventData* EventData)
 {
 	return Super::OnPointerDrag_Implementation(EventData);
 }
-bool UUIScrollViewWithScrollbarComponent::OnPointerScroll_Implementation(ULexPointerEventData* EventData)
+bool UUIScrollViewWithScrollbar::OnPointerScroll_Implementation(ULexPointerEventData* EventData)
 {
 	return Super::OnPointerScroll_Implementation(EventData);
 }
-void UUIScrollViewWithScrollbarComponent::UpdateProgress(bool InFireEvent)
+void UUIScrollViewWithScrollbar::UpdateProgress(bool InFireEvent)
 {
 	Super::UpdateProgress(InFireEvent);
 	if (CheckScrollbarParameter())
@@ -65,7 +65,7 @@ void UUIScrollViewWithScrollbarComponent::UpdateProgress(bool InFireEvent)
 		}
 	}
 }
-bool UUIScrollViewWithScrollbarComponent::CheckScrollbarParameter()
+bool UUIScrollViewWithScrollbar::CheckScrollbarParameter()
 {
 	bool bHorizontalValid = false;
 	bool bVerticalValid = false;
@@ -79,7 +79,7 @@ bool UUIScrollViewWithScrollbarComponent::CheckScrollbarParameter()
 		{
 			if (HorizontalScrollbar.IsValid())
 			{
-				HorizontalScrollbar->GetOnValueChangedEvent().AddUObject(this, &UUIScrollViewWithScrollbarComponent::OnHorizontalScrollbar);
+				HorizontalScrollbar->GetOnValueChangedEvent().AddUObject(this, &UUIScrollViewWithScrollbar::OnHorizontalScrollbar);
 				HorizontalScrollbarWidget = HorizontalScrollbar->GetWidget();
 				bHorizontalValid = true;
 			}
@@ -96,7 +96,7 @@ bool UUIScrollViewWithScrollbarComponent::CheckScrollbarParameter()
 		{
 			if (VerticalScrollbar.IsValid())
 			{
-				VerticalScrollbar->GetOnValueChangedEvent().AddUObject(this, &UUIScrollViewWithScrollbarComponent::OnVerticalScrollbar);
+				VerticalScrollbar->GetOnValueChangedEvent().AddUObject(this, &UUIScrollViewWithScrollbar::OnVerticalScrollbar);
 				VerticalScrollbarWidget = VerticalScrollbar->GetWidget();
 				bVerticalValid = true;
 			}
@@ -124,14 +124,14 @@ bool UUIScrollViewWithScrollbarComponent::CheckScrollbarParameter()
 
 	return false;
 }
-bool UUIScrollViewWithScrollbarComponent::CheckValidHit(ULexWidget* InHitComp)
+bool UUIScrollViewWithScrollbar::CheckValidHit(ULexWidget* InHitComp)
 {
 	bool bHitHorizontalScrollbar = HorizontalScrollbarWidget.IsValid() && (InHitComp->IsChildOf(HorizontalScrollbarWidget.Get()) || InHitComp == HorizontalScrollbarWidget);
 	bool bHitVerticalScrollbar = VerticalScrollbarWidget.IsValid() && (InHitComp->IsChildOf(VerticalScrollbarWidget.Get()) || InHitComp == VerticalScrollbarWidget);
 	return Super::CheckValidHit(InHitComp)
 		&& !bHitHorizontalScrollbar && !bHitVerticalScrollbar;//make sure hit component is not scrollbar
 }
-void UUIScrollViewWithScrollbarComponent::CalculateHorizontalRange()
+void UUIScrollViewWithScrollbar::CalculateHorizontalRange()
 {
 	Super::CalculateHorizontalRange();
 	if (CheckScrollbarParameter())
@@ -164,7 +164,7 @@ void UUIScrollViewWithScrollbarComponent::CalculateHorizontalRange()
 		}
 	}
 }
-void UUIScrollViewWithScrollbarComponent::CalculateVerticalRange()
+void UUIScrollViewWithScrollbar::CalculateVerticalRange()
 {
 	Super::CalculateVerticalRange();
 	if (CheckScrollbarParameter())
@@ -198,7 +198,7 @@ void UUIScrollViewWithScrollbarComponent::CalculateVerticalRange()
 	}
 }
 
-void UUIScrollViewWithScrollbarComponent::OnHorizontalScrollbar(float InScrollValue)
+void UUIScrollViewWithScrollbar::OnHorizontalScrollbar(float InScrollValue)
 {
 	if (!Content.IsValid())return;
 	bCanUpdateAfterDrag = false;
@@ -210,7 +210,7 @@ void UUIScrollViewWithScrollbarComponent::OnHorizontalScrollbar(float InScrollVa
 	Content->SetRelativeLocation(Position);
 	Super::UpdateProgress();//use parent's function, skip the set scrollbar code
 }
-void UUIScrollViewWithScrollbarComponent::OnVerticalScrollbar(float InScrollValue)
+void UUIScrollViewWithScrollbar::OnVerticalScrollbar(float InScrollValue)
 {
 	if (!Content.IsValid())return;
 	bCanUpdateAfterDrag = false;
@@ -222,7 +222,7 @@ void UUIScrollViewWithScrollbarComponent::OnVerticalScrollbar(float InScrollValu
 	Content->SetRelativeLocation(Position);
 	Super::UpdateProgress();//use parent's function, skip the set scrollbar code
 }
-void UUIScrollViewWithScrollbarComponent::SetHorizontalScrollbarVisibility(ELexUIScrollViewScrollbarVisibility value)
+void UUIScrollViewWithScrollbar::SetHorizontalScrollbarVisibility(ELexUIScrollViewScrollbarVisibility value)
 {
 	if (HorizontalScrollbarVisibility != value)
 	{
@@ -230,7 +230,7 @@ void UUIScrollViewWithScrollbarComponent::SetHorizontalScrollbarVisibility(ELexU
 		CalculateHorizontalRange();
 	}
 }
-void UUIScrollViewWithScrollbarComponent::SetVerticalScrollbarVisibility(ELexUIScrollViewScrollbarVisibility value)
+void UUIScrollViewWithScrollbar::SetVerticalScrollbarVisibility(ELexUIScrollViewScrollbarVisibility value)
 {
 	if (VerticalScrollbarVisibility != value)
 	{

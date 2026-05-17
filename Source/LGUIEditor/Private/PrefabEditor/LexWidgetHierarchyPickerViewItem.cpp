@@ -56,25 +56,23 @@ void SLexWidgetHierarchyPickerViewItem::Construct(const FArguments& InArgs, cons
 {
 	Model = InModel;
 
-	auto Widget = Model->Widget;
-
 	MenuBuilder = new FMenuBuilder(true, NULL, TSharedPtr<FExtender>(), false, &FCoreStyle::Get(), false);
-	auto WidgetActor = Model->Widget.Get();
-	MenuBuilder->BeginSection("ActorSection", LOCTEXT("ActorMenu", "Actor"));
+	auto Widget = Model->Widget;
+	MenuBuilder->BeginSection("WidgetSection", LOCTEXT("WidgetMenu", "Widget"));
 	{
-		if (WidgetActor->IsA(InObjectClass))
+		if (Widget->IsA(InObjectClass))
 		{
-			MenuBuilder->AddMenuEntry(FText::FromString(FString::Printf(TEXT("%s (%s)"), *WidgetActor->GetDisplayName(), *WidgetActor->GetClass()->GetName())), FText::GetEmpty(), FSlateIconFinder::FindIconForClass(WidgetActor->GetClass())
+			MenuBuilder->AddMenuEntry(FText::FromString(FString::Printf(TEXT("%s (%s)"), *Widget->GetDisplayName(), *Widget->GetClass()->GetName())), FText::GetEmpty(), FSlateIconFinder::FindIconForClass(Widget->GetClass())
 				, FUIAction(FExecuteAction::CreateLambda([=]()
 				{
-					InArgs._OnSelectObject.ExecuteIfBound(WidgetActor);
+					InArgs._OnSelectObject.ExecuteIfBound(Widget.Get());
 				})));
 		}
 		TArray<UObject*> SubObjects;
-		ForEachObjectWithOuter(WidgetActor, [&](UObject* SubObject)
+		ForEachObjectWithOuter(Widget.Get(), [&](UObject* SubObject)
 		{
 			if (SubObject->IsA(InObjectClass)
-				&& !SubObject->IsA<UActorComponent>()//Component is handled below
+				&& !SubObject->IsA<ULexUIBehaviour>()//Component is handled below
 				)
 			{
 				SubObjects.Add(SubObject);
@@ -83,7 +81,7 @@ void SLexWidgetHierarchyPickerViewItem::Construct(const FArguments& InArgs, cons
 		if (SubObjects.Num() > 0)
 		{
 			MenuBuilder->AddSubMenu(
-				FText::FromString(FString::Printf(TEXT("%s (%s)"), *WidgetActor->GetDisplayName(), *WidgetActor->GetClass()->GetName())),
+				FText::FromString(FString::Printf(TEXT("%s (%s)"), *Widget->GetDisplayName(), *Widget->GetClass()->GetName())),
 				FText::GetEmpty(), FNewMenuDelegate::CreateLambda([=](FMenuBuilder& SubMenuBuilder)
 				{
 					for (UObject* Object : SubObjects)
@@ -94,12 +92,12 @@ void SLexWidgetHierarchyPickerViewItem::Construct(const FArguments& InArgs, cons
 							InArgs._OnSelectObject.ExecuteIfBound(Object);
 						})));
 					}
-				}), false, FSlateIconFinder::FindIconForClass(WidgetActor->GetClass()));
+				}), false, FSlateIconFinder::FindIconForClass(Widget->GetClass()));
 		}
 	}
 	MenuBuilder->EndSection();
 	MenuBuilder->BeginSection("ComponentsSection", LOCTEXT("ComponentsMenu", "Components"));
-	auto Components = WidgetActor->GetAllComponents();
+	auto Components = Widget->GetAllComponents();
 	for (auto Component : Components)
 	{
 		if (Component->IsA(InObjectClass))

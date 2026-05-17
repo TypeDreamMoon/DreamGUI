@@ -1,29 +1,29 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Interaction/UIRecyclableScrollViewComponent.h"
+#include "Interaction/UIRecyclableScrollView.h"
 #include "LGUI.h"
 #include "LexUIBPLibrary.h"
 #include "LTweenManager.h"
 #include "Core/Components/LexWidget.h"
 
 
-void UUIRecyclableScrollViewComponent::Awake()
+void UUIRecyclableScrollView::Awake()
 {
     Super::Awake();
 }
 
-void UUIRecyclableScrollViewComponent::Start()
+void UUIRecyclableScrollView::Start()
 {
     Super::Start();
     InitializeOnDataSource();
 }
 
-void UUIRecyclableScrollViewComponent::Update(float DeltaTime)
+void UUIRecyclableScrollView::Update(float DeltaTime)
 {
     Super::Update(DeltaTime);
 }
 
-void UUIRecyclableScrollViewComponent::EndPlay()
+void UUIRecyclableScrollView::EndPlay()
 {
     if (OnScrollEventDelegateHandle.IsValid())
     {
@@ -33,29 +33,29 @@ void UUIRecyclableScrollViewComponent::EndPlay()
 }
 
 #if WITH_EDITOR
-void UUIRecyclableScrollViewComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void UUIRecyclableScrollView::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
     Super::PostEditChangeProperty(PropertyChangedEvent);
     if (auto Property = PropertyChangedEvent.MemberProperty)
     {
         auto PropertyName = Property->GetFName();
-        if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollViewComponent, Horizontal))
+        if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollView, Horizontal))
         {
             Vertical = !Horizontal;
         }
-        else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollViewComponent, Vertical))
+        else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollView, Vertical))
         {
             Horizontal = !Vertical;
         }
-        else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollViewComponent, OnlyOneDirection))
+        else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollView, OnlyOneDirection))
         {
             OnlyOneDirection = true;
         }
-        else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollViewComponent, bInfiniteLoop))
+        else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollView, bInfiniteLoop))
         {
             RestrictRectArea = !bInfiniteLoop;
         }
-        else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollViewComponent, Rows))
+        else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollView, Rows))
         {
             if (Horizontal)
             {
@@ -65,7 +65,7 @@ void UUIRecyclableScrollViewComponent::PostEditChangeProperty(FPropertyChangedEv
                 }
             }
         }
-        else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollViewComponent, Columns))
+        else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollView, Columns))
         {
             if (Vertical)
             {
@@ -77,24 +77,24 @@ void UUIRecyclableScrollViewComponent::PostEditChangeProperty(FPropertyChangedEv
         }
     }
 }
-bool UUIRecyclableScrollViewComponent::CanEditChange(const FProperty* InProperty)const
+bool UUIRecyclableScrollView::CanEditChange(const FProperty* InProperty)const
 {
     if (Super::CanEditChange(InProperty))
     {
         auto PropertyName = InProperty->GetFName();
-        if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollViewComponent, CellTemplate))
+        if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollView, CellTemplate))
         {
             return CellTemplateType == EUIRecyclableScrollViewCellTemplateType::Actor;
         }
-        else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollViewComponent, CellTemplatePrefab))
+        else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollView, CellTemplatePrefab))
         {
             return CellTemplateType == EUIRecyclableScrollViewCellTemplateType::Prefab;
         }
-        else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollViewComponent, OnlyOneDirection))
+        else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollView, OnlyOneDirection))
         {
             return false;
         }
-        else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollViewComponent, bInfiniteLoop))
+        else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollView, bInfiniteLoop))
         {
             if (Horizontal)
             {
@@ -105,7 +105,7 @@ bool UUIRecyclableScrollViewComponent::CanEditChange(const FProperty* InProperty
                 return Columns == 1;
             }
         }
-        else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollViewComponent, RestrictRectArea))
+        else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIRecyclableScrollView, RestrictRectArea))
         {
             return !bInfiniteLoop;
         }
@@ -115,7 +115,7 @@ bool UUIRecyclableScrollViewComponent::CanEditChange(const FProperty* InProperty
 }
 #endif
 
-void UUIRecyclableScrollViewComponent::GetUserFriendlyCacheCellList(TArray<FUIRecyclableScrollViewCellContainer>& OutResult)const
+void UUIRecyclableScrollView::GetUserFriendlyCacheCellList(TArray<FUIRecyclableScrollViewCellContainer>& OutResult)const
 {
     OutResult.SetNumUninitialized(CacheCellList.Num());
     int IndexInSource = MinCellIndexInCacheCellList;
@@ -130,7 +130,7 @@ void UUIRecyclableScrollViewComponent::GetUserFriendlyCacheCellList(TArray<FUIRe
     }
 }
 
-void UUIRecyclableScrollViewComponent::ClearAllCells()
+void UUIRecyclableScrollView::ClearAllCells()
 {
     for (auto& Item : CacheCellList)
     {
@@ -148,7 +148,7 @@ void UUIRecyclableScrollViewComponent::ClearAllCells()
     MinCellDataIndex = 0;
 }
 
-void UUIRecyclableScrollViewComponent::SetDataSource(TScriptInterface<IUIRecyclableScrollViewDataSource> InDataSource)
+void UUIRecyclableScrollView::SetDataSource(TScriptInterface<IUIRecyclableScrollViewDataSource> InDataSource)
 {
     auto InDataSourceObject = InDataSource.GetObject();
     if (!IsValid(InDataSourceObject))
@@ -163,7 +163,7 @@ void UUIRecyclableScrollViewComponent::SetDataSource(TScriptInterface<IUIRecycla
         InitializeOnDataSource();
     }
 }
-void UUIRecyclableScrollViewComponent::SetRows(int value)
+void UUIRecyclableScrollView::SetRows(int value)
 {
     value = FMath::Max(1, value);
     if (Rows != value)
@@ -175,7 +175,7 @@ void UUIRecyclableScrollViewComponent::SetRows(int value)
         }
     }
 }
-void UUIRecyclableScrollViewComponent::SetInfiniteLoop(bool value)
+void UUIRecyclableScrollView::SetInfiniteLoop(bool value)
 {
     if ((Horizontal && Rows != 1) || (Vertical && Columns != 1))
     {
@@ -188,7 +188,7 @@ void UUIRecyclableScrollViewComponent::SetInfiniteLoop(bool value)
         RestrictRectArea = false;
     }
 }
-void UUIRecyclableScrollViewComponent::SetColumns(int value)
+void UUIRecyclableScrollView::SetColumns(int value)
 {
     value = FMath::Max(1, value);
     if (Columns != value)
@@ -200,7 +200,7 @@ void UUIRecyclableScrollViewComponent::SetColumns(int value)
         }
     }
 }
-void UUIRecyclableScrollViewComponent::SetPadding(const FMargin& value)
+void UUIRecyclableScrollView::SetPadding(const FMargin& value)
 {
     if (Padding != value)
     {
@@ -208,7 +208,7 @@ void UUIRecyclableScrollViewComponent::SetPadding(const FMargin& value)
         InitializeOnDataSource();
     }
 }
-void UUIRecyclableScrollViewComponent::SetSpace(const FVector2D& value)
+void UUIRecyclableScrollView::SetSpace(const FVector2D& value)
 {
     if (Space != value)
     {
@@ -217,7 +217,7 @@ void UUIRecyclableScrollViewComponent::SetSpace(const FVector2D& value)
     }
 }
 
-bool UUIRecyclableScrollViewComponent::GetCellItemByDataIndex(int Index, FUIRecyclableScrollViewCellContainer& OutResult)const
+bool UUIRecyclableScrollView::GetCellItemByDataIndex(int Index, FUIRecyclableScrollViewCellContainer& OutResult)const
 {
     auto MaxCellIndexInData = FMath::Min(Index + CacheCellList.Num() - 1, DataItemCount - 1);
     auto ValidMinCellDataIndex = GetValidCellDataIndex(MinCellDataIndex);
@@ -251,7 +251,7 @@ bool UUIRecyclableScrollViewComponent::GetCellItemByDataIndex(int Index, FUIRecy
     }
 }
 
-void UUIRecyclableScrollViewComponent::ScrollToByDataIndex(int InDataIndex, bool InEaseAnimation, float InAnimationDuration)
+void UUIRecyclableScrollView::ScrollToByDataIndex(int InDataIndex, bool InEaseAnimation, float InAnimationDuration)
 {
     if (Horizontal == Vertical)return;
     if (CacheCellList.Num() == 0)return;
@@ -355,7 +355,7 @@ void UUIRecyclableScrollViewComponent::ScrollToByDataIndex(int InDataIndex, bool
     }
 }
 
-void UUIRecyclableScrollViewComponent::SetCellTemplate(ULexWidget* value)
+void UUIRecyclableScrollView::SetCellTemplate(ULexWidget* value)
 {
     if (CellTemplate != value)
     {
@@ -363,7 +363,7 @@ void UUIRecyclableScrollViewComponent::SetCellTemplate(ULexWidget* value)
     }
 }
 
-void UUIRecyclableScrollViewComponent::SetCellTemplatePrefab(ULexUIPrefab* value)
+void UUIRecyclableScrollView::SetCellTemplatePrefab(ULexUIPrefab* value)
 {
     if (CellTemplatePrefab != value)
     {
@@ -376,7 +376,7 @@ void UUIRecyclableScrollViewComponent::SetCellTemplatePrefab(ULexUIPrefab* value
     }
 }
 
-void UUIRecyclableScrollViewComponent::InitializeOnDataSource()
+void UUIRecyclableScrollView::InitializeOnDataSource()
 {
     if (!IsValid(DataSource))return;
     if (!CheckParameters())return;
@@ -597,10 +597,10 @@ void UUIRecyclableScrollViewComponent::InitializeOnDataSource()
     MinCellDataIndex = 0;
 
     PrevContentPosition = FVector2D(Content->GetRelativeLocation().Y, Content->GetRelativeLocation().Z);
-    OnScrollEventDelegateHandle = this->GetOnValueChangedEvent().AddUObject(this, &UUIRecyclableScrollViewComponent::OnScrollCallback);
+    OnScrollEventDelegateHandle = this->GetOnValueChangedEvent().AddUObject(this, &UUIRecyclableScrollView::OnScrollCallback);
     //this->SetScrollProgress(PrevProgress);
 }
-void UUIRecyclableScrollViewComponent::OnScrollCallback(FVector2D value)
+void UUIRecyclableScrollView::OnScrollCallback(FVector2D value)
 {
     if (Horizontal == Vertical)return;
     if (CacheCellList.Num() == 0)return;
@@ -789,13 +789,13 @@ void UUIRecyclableScrollViewComponent::OnScrollCallback(FVector2D value)
     PrevContentPosition = ContentPosition;
 }
 
-void UUIRecyclableScrollViewComponent::ApplyContentPositionWithProgress()
+void UUIRecyclableScrollView::ApplyContentPositionWithProgress()
 {
     Super::ApplyContentPositionWithProgress();
     OnScrollCallback(FVector2D::ZeroVector);
 }
 
-void UUIRecyclableScrollViewComponent::UpdateCellData()
+void UUIRecyclableScrollView::UpdateCellData()
 {
     if (!IsValid(DataSource))return;
 
@@ -816,7 +816,7 @@ void UUIRecyclableScrollViewComponent::UpdateCellData()
 }
 
 // Infinite loop could use out-of-range index, so use this to get a valid index
-int UUIRecyclableScrollViewComponent::GetValidCellDataIndex(int InMinCellDataIndex)const
+int UUIRecyclableScrollView::GetValidCellDataIndex(int InMinCellDataIndex)const
 {
     auto TempMinCellDataIndex = InMinCellDataIndex;
     while (TempMinCellDataIndex < 0)
@@ -830,7 +830,7 @@ int UUIRecyclableScrollViewComponent::GetValidCellDataIndex(int InMinCellDataInd
     return TempMinCellDataIndex;
 }
 
-void UUIRecyclableScrollViewComponent::IncreaseMinMaxCellIndexInCacheCellList(int Count)
+void UUIRecyclableScrollView::IncreaseMinMaxCellIndexInCacheCellList(int Count)
 {
     MinCellIndexInCacheCellList += Count;
     MaxCellIndexInCacheCellList += Count;
@@ -843,7 +843,7 @@ void UUIRecyclableScrollViewComponent::IncreaseMinMaxCellIndexInCacheCellList(in
         MaxCellIndexInCacheCellList = 0;
     }
 }
-void UUIRecyclableScrollViewComponent::DecreaseMinMaxCellIndexInCacheCellList(int Count)
+void UUIRecyclableScrollView::DecreaseMinMaxCellIndexInCacheCellList(int Count)
 {
     MinCellIndexInCacheCellList -= Count;
     MaxCellIndexInCacheCellList -= Count;

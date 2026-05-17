@@ -9,13 +9,12 @@
 #include "Event/Interface/LexPointerDragDropInterface.h"
 #include "Event/Interface/LexPointerScrollInterface.h"
 #include "Event/Interface/LexPointerSelectDeselectInterface.h"
-
-#include "Components/ActorComponent.h"
-#include "UIEventBlockerComponent.generated.h"
+#include "Core/LexUIBehaviour.h"
+#include "UIEventBlocker.generated.h"
 
 //use this component to stop LexPointerEvent bubble up
-UCLASS(HideCategories = (Collision, LOD, Physics, Cooking, Rendering, Activation, Actor, Input, Lighting, Mobile), ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIEventBlockerComponent : public UActorComponent
+UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
+class LGUI_API UUIEventBlocker : public ULexUIBehaviour
 	, public ILexPointerEnterExitInterface
 	, public ILexPointerDownUpInterface
 	, public ILexPointerClickInterface

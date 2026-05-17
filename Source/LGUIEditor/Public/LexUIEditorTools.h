@@ -22,7 +22,7 @@ public:
 	static FEditingPrefabChangedDelegate OnEditingPrefabChanged;
 	static FBeforeApplyPrefabDelegate OnBeforeApplyPrefab;
 	static TArray<ULexWidget*> GetRootWidgetListFromSelection(const TArray<ULexWidget*>& InSelectedWidgets);
-	static void CreateLexWidget(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString Name, UClass* VisualClass, TFunction<void(class ULexWidget*)> Callback);
+	static void CreateWidget(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString Name, UClass* VisualClass, TFunction<void(class ULexWidget*)> Callback);
 	static void CreateUIControls(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString InPrefabPath);
 	static void DuplicateWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction);
 	static void CopyWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction);
@@ -48,7 +48,7 @@ public:
 	static void OpenPrefabAsset(TFunction<ULexWidget*()> GetSelectedWidgetFunction);
 	static bool CanCheckPrefabOverrideParameter(TFunction<ULexWidget*()> GetSelectedWidgetFunction);
 	static bool CanCreateWidget(TFunction<ULexWidget*()> GetSelectedWidgetFunction);
-	static void CleanupPrefabsInWorld(UWorld* World);
+	static void CleanupPrefabs();
 	static bool IsWidgetCompatibleWithLexUIToolsMenu(ULexWidget* InWidget);
 
 	static TMap<FString, TWeakObjectPtr<ULexUIPrefab>> CopiedWidgetPrefabMap;//map ActorLabel to prefab

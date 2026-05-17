@@ -490,7 +490,7 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 								{
 									if (PrefabHelperObject->IsWidgetBelongsToMissingSubPrefab(Widget.Get()))
 									{
-										return LOCTEXT("PrefabMarkBrokenTip", "This actor was part of another prefab, but the prefab asset is missing!");
+										return LOCTEXT("PrefabMarkBrokenTip", "This widget was part of another prefab, but the prefab asset is missing!");
 									}
 								}
 							}
@@ -498,35 +498,6 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 						return LOCTEXT("PrefabMarkWhiteTip", "This widget belongs to another prefab.");
 					})
 				]
-				// +SOverlay::Slot()//prefab+
-				// [
-				// 	SNew(SBox)
-				// 	.WidthOverride(16)
-				// 	.HeightOverride(16)
-				// 	.Padding(FMargin(0))
-				// 	.HAlign(HAlign_Center)
-				// 	.VAlign(VAlign_Center)
-				// 	[
-				// 		SNew(SImage)
-				// 		.Image(FLGUIEditorStyle::Get().GetBrush("PrefabPlusMarkWhite"))
-				// 		.Visibility_Lambda([=, this]()
-				// 		{
-				// 			if (auto ParentActor = Widget->GetOwner()->GetAttachParentActor())
-				// 			{
-				// 				auto PrefabHelperObjectForParent = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(ParentActor);
-				// 				auto PrefabHelperObject = ULGUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisActor(Widget->GetOwner());
-				// 				if (PrefabHelperObject != nullptr && PrefabHelperObjectForParent != nullptr)
-				// 				{
-				// 					if (!PrefabHelperObject->IsActorBelongsToSubPrefab(Widget->GetOwner()) && PrefabHelperObjectForParent->IsActorBelongsToSubPrefab(ParentActor))
-				// 					{
-				// 						return EVisibility::Visible;
-				// 					}
-				// 				}
-				// 			}
-				// 			return EVisibility::Hidden;
-				// 		})
-				// 	]
-				// ]
 			]
 
 			// Visibility

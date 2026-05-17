@@ -1297,6 +1297,7 @@ void ULexCanvas::UpdateCanvasDrawCall()
 
 void ULexCanvas::UpdateDrawCallBatchData()
 {
+	if(!GetWidget()->HasRegistered())return;
 	//update children canvas
 	for (auto& item : ChildrenCanvasArray)
 	{

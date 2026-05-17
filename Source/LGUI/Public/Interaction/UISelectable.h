@@ -8,10 +8,10 @@
 #include "Event/Interface/LexNavigationInterface.h"
 #include "Core/LexUIBehaviour.h"
 #include "Core/LexUIImageBrush.h"
-#include "UISelectableComponent.generated.h"
+#include "UISelectable.generated.h"
 
 class UUINavigationInputSelectionHandler;
-class UUISelectableComponent;
+class UUISelectable;
 class ULexVisual;
 class ULTweener;
 
@@ -50,7 +50,7 @@ enum class EUISelectableNavigationMode:uint8
 
 
 UCLASS(ClassGroup = (LexUI), Abstract, Blueprintable)
-class LGUI_API UUITransitionComponent :public ULexUIBehaviour
+class LGUI_API UUITransition :public ULexUIBehaviour
 {
 	GENERATED_BODY()
 protected:
@@ -72,16 +72,16 @@ public:
 };
 
 UCLASS(ClassGroup = (LexUI), Abstract, Blueprintable)
-class LGUI_API UUISelectableTransition :public UUITransitionComponent
+class LGUI_API UUISelectableTransition :public UUITransition
 {
 	GENERATED_BODY()
 public:
 
 	UFUNCTION()
-	UUISelectableComponent* GetSelectableComponent()const;
+	UUISelectable* GetSelectableComponent()const;
 protected:
 	UPROPERTY(Transient, BlueprintReadOnly, Getter=GetSelectableComponent, Category = "LGUI-Transition", DisplayName=UISelectable)
-	mutable TObjectPtr<UUISelectableComponent> UISelectableComp;
+	mutable TObjectPtr<UUISelectable> UISelectableComp;
 
 	/** 
 	 * Called when UISelectableComponent's transition state = normal.
@@ -134,8 +134,8 @@ public:
 	virtual void OnDisabled(bool InImmediateSet);
 };
 
-UCLASS(HideCategories = (Collision, LOD, Physics, Cooking, Rendering, Activation, Actor, Input, Lighting, Mobile), ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUISelectableComponent : public ULexUIBehaviour
+UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
+class LGUI_API UUISelectable : public ULexUIBehaviour
 	, public ILexPointerEnterExitInterface
 	, public ILexPointerDownUpInterface
 	, public ILexPointerSelectDeselectInterface
@@ -143,7 +143,7 @@ class LGUI_API UUISelectableComponent : public ULexUIBehaviour
 {
 	GENERATED_BODY()
 public:
-	UUISelectableComponent();
+	UUISelectable();
 protected:
 
 #if WITH_EDITOR
@@ -215,27 +215,27 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
 		EUISelectableNavigationMode NavigationLeft = EUISelectableNavigationMode::Auto;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
-		TWeakObjectPtr<UUISelectableComponent> NavigationLeftSpecific;
+		TWeakObjectPtr<UUISelectable> NavigationLeftSpecific;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
 		EUISelectableNavigationMode NavigationRight = EUISelectableNavigationMode::Auto;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
-		TWeakObjectPtr<UUISelectableComponent> NavigationRightSpecific;
+		TWeakObjectPtr<UUISelectable> NavigationRightSpecific;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
 		EUISelectableNavigationMode NavigationUp = EUISelectableNavigationMode::Auto;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
-		TWeakObjectPtr<UUISelectableComponent> NavigationUpSpecific;
+		TWeakObjectPtr<UUISelectable> NavigationUpSpecific;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
 		EUISelectableNavigationMode NavigationDown = EUISelectableNavigationMode::Auto;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
-		TWeakObjectPtr<UUISelectableComponent> NavigationDownSpecific;
+		TWeakObjectPtr<UUISelectable> NavigationDownSpecific;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
 		EUISelectableNavigationMode NavigationNext = EUISelectableNavigationMode::Auto;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
-		TWeakObjectPtr<UUISelectableComponent> NavigationNextSpecific;
+		TWeakObjectPtr<UUISelectable> NavigationNextSpecific;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
 		EUISelectableNavigationMode NavigationPrev = EUISelectableNavigationMode::Auto;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable-Navigation")
-		TWeakObjectPtr<UUISelectableComponent> NavigationPrevSpecific;
+		TWeakObjectPtr<UUISelectable> NavigationPrevSpecific;
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
 		ULexVisual* GetTransitionTarget()const { return TransitionTarget.Get(); }
@@ -304,17 +304,17 @@ public:
 		EUISelectableNavigationMode GetNavigationNext()const { return NavigationNext; }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		UUISelectableComponent* GetNavigationLeftExplicit()const { return NavigationLeftSpecific.Get(); }
+		UUISelectable* GetNavigationLeftExplicit()const { return NavigationLeftSpecific.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		UUISelectableComponent* GetNavigationRightExplicit()const { return NavigationRightSpecific.Get(); }
+		UUISelectable* GetNavigationRightExplicit()const { return NavigationRightSpecific.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		UUISelectableComponent* GetNavigationUpExplicit()const { return NavigationUpSpecific.Get(); }
+		UUISelectable* GetNavigationUpExplicit()const { return NavigationUpSpecific.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		UUISelectableComponent* GetNavigationDownExplicit()const { return NavigationDownSpecific.Get(); }
+		UUISelectable* GetNavigationDownExplicit()const { return NavigationDownSpecific.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		UUISelectableComponent* GetNavigationPrevExplicit()const { return NavigationPrevSpecific.Get(); }
+		UUISelectable* GetNavigationPrevExplicit()const { return NavigationPrevSpecific.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		UUISelectableComponent* GetNavigationNextExplicit()const { return NavigationNextSpecific.Get(); }
+		UUISelectable* GetNavigationNextExplicit()const { return NavigationNextSpecific.Get(); }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
 		void SetCanNavigateHere(bool Value);
@@ -332,36 +332,36 @@ public:
 		void SetNavigationNext(EUISelectableNavigationMode Value);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		void SetNavigationLeftExplicit(UUISelectableComponent* Value);
+		void SetNavigationLeftExplicit(UUISelectable* Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		void SetNavigationRightExplicit(UUISelectableComponent* Value);
+		void SetNavigationRightExplicit(UUISelectable* Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		void SetNavigationUpExplicit(UUISelectableComponent* Value);
+		void SetNavigationUpExplicit(UUISelectable* Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		void SetNavigationDownExplicit(UUISelectableComponent* Value);
+		void SetNavigationDownExplicit(UUISelectable* Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		void SetNavigationPrevExplicit(UUISelectableComponent* Value);
+		void SetNavigationPrevExplicit(UUISelectable* Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable-Navigation")
-		void SetNavigationNextExplicit(UUISelectableComponent* Value);
+		void SetNavigationNextExplicit(UUISelectable* Value);
 
 	/**
 	 * Find UISelectable component on specific direction.
 	 */
-	virtual UUISelectableComponent* FindSelectable(FVector InDirection);
+	virtual UUISelectable* FindSelectable(FVector InDirection);
 	/**
 	 * Find UISelectable component inside InParent on specific direction.
 	 */
-	virtual UUISelectableComponent* FindSelectable(FVector InDirection, ULexWidget* InParent);
+	virtual UUISelectable* FindSelectable(FVector InDirection, ULexWidget* InParent);
 	/**
      * Default selectable is the most "Prev" one (left top most).
 	 */
-	static UUISelectableComponent* FindDefaultSelectable(UObject* WorldContextObject);
-	virtual UUISelectableComponent* FindSelectableOnLeft();
-	virtual UUISelectableComponent* FindSelectableOnRight();
-	virtual UUISelectableComponent* FindSelectableOnUp();
-	virtual UUISelectableComponent* FindSelectableOnDown();
-	virtual UUISelectableComponent* FindSelectableOnNext();
-	virtual UUISelectableComponent* FindSelectableOnPrev();
+	static UUISelectable* FindDefaultSelectable(UObject* WorldContextObject);
+	virtual UUISelectable* FindSelectableOnLeft();
+	virtual UUISelectable* FindSelectableOnRight();
+	virtual UUISelectable* FindSelectableOnUp();
+	virtual UUISelectable* FindSelectableOnDown();
+	virtual UUISelectable* FindSelectableOnNext();
+	virtual UUISelectable* FindSelectableOnPrev();
 #pragma endregion
 protected:
 	virtual bool OnPointerEnter_Implementation(ULexPointerEventData* EventData)override;

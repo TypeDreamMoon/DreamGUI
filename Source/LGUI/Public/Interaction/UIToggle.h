@@ -3,25 +3,25 @@
 #pragma once
 
 #include "Event/Interface/LexPointerClickInterface.h"
-#include "UISelectableComponent.h"
+#include "UISelectable.h"
 #include "Event/LexUIEventDelegate.h"
 #include "Event/LexDelegateDeclaration.h"
-#include "UIToggleComponent.generated.h"
+#include "UIToggle.generated.h"
 
 
-class UUIToggleComponent;
+class UUIToggle;
 
 UCLASS(ClassGroup = (LexUI), Abstract, Blueprintable)
-class LGUI_API UUIToggleTransition :public UUITransitionComponent
+class LGUI_API UUIToggleTransition :public UUITransition
 {
 	GENERATED_BODY()
 public:
 
 	UFUNCTION()
-	UUIToggleComponent* GetToggleComponent()const;
+	UUIToggle* GetToggleComponent()const;
 protected:
 	UPROPERTY(Transient, BlueprintReadOnly, Getter=GetToggleComponent, Category = "LGUI-Transition", DisplayName=UIToggle)
-	mutable TObjectPtr<UUIToggleComponent> UIToggleComp;
+	mutable TObjectPtr<UUIToggle> UIToggleComp;
 
 	/** 
 	 * Called when UISelectableComponent's transition state = normal.
@@ -52,12 +52,12 @@ public:
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIToggleValueChangedEvent, bool, Value);
 
-UCLASS(ClassGroup = LGUI, Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIToggleComponent : public UUISelectableComponent, public ILexPointerClickInterface
+UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
+class LGUI_API UUIToggle : public UUISelectable, public ILexPointerClickInterface
 {
 	GENERATED_BODY()
 
-	UUIToggleComponent();
+	UUIToggle();
 protected:
 	virtual void Awake() override;
 	virtual void Start() override;
@@ -98,7 +98,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "LGUI-Toggle")
 		bool bIsOn = true;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Toggle")
-	TWeakObjectPtr<class UUIToggleGroupComponent> ToggleGroup = nullptr;
+	TWeakObjectPtr<class UUIToggleGroup> ToggleGroup = nullptr;
 
 	FLexUIMulticastDelegateBool OnValueChangedCPP;
 	UPROPERTY(BlueprintAssignable, Category = "LGUI-Toggle", DisplayName="OnValueChanged")
@@ -113,9 +113,9 @@ public:
 	FLexUIMulticastDelegateBool& GetOnValueChangedEvent(){ return OnValueChangedCPP;}
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Toggle")
-	UUIToggleGroupComponent* GetToggleGroup()const { return ToggleGroup.Get(); }
+	UUIToggleGroup* GetToggleGroup()const { return ToggleGroup.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Toggle")
-	void SetToggleGroup(UUIToggleGroupComponent* InGroupComp);
+	void SetToggleGroup(UUIToggleGroup* InGroupComp);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Toggle")
 	bool GetValue()const { return bIsOn; }
 	/** Set IsChecked value and send callback event */

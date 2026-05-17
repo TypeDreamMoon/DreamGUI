@@ -9,18 +9,17 @@
 #include "Event/Interface/LexPointerDragDropInterface.h"
 #include "Event/Interface/LexPointerScrollInterface.h"
 #include "Event/Interface/LexPointerSelectDeselectInterface.h"
-
 #include "Event/LexUIEventDelegate.h"
 #include "Event/LexDelegateDeclaration.h"
-#include "Components/ActorComponent.h"
-#include "UIEventTriggerComponent.generated.h"
+#include "Core/LexUIBehaviour.h"
+#include "UIEventTrigger.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIEventTriggerPointerEvent, ULexPointerEventData*, Value);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIEventTriggerBaseEvent, ULexBaseEventData*, Value);
 
 //a helper component for quick register and setup LexPointerEvent
-UCLASS(HideCategories = (Collision, LOD, Physics, Cooking, Rendering, Activation, Actor, Input, Lighting, Mobile), ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIEventTriggerComponent : public UActorComponent
+UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
+class LGUI_API UUIEventTrigger : public ULexUIBehaviour
 	, public ILexPointerEnterExitInterface
 	, public ILexPointerDownUpInterface
 	, public ILexPointerClickInterface

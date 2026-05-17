@@ -1,18 +1,18 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Interaction/UIToggleComponent.h"
-#include "Interaction/UIToggleGroupComponent.h"
+#include "Interaction/UIToggle.h"
+#include "Interaction/UIToggleGroup.h"
 #include "LTweenManager.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexVisual.h"
 #include "Core/Components/LexImage.h"
 
 
-UUIToggleComponent* UUIToggleTransition::GetToggleComponent() const
+UUIToggle* UUIToggleTransition::GetToggleComponent() const
 {
 	if (!IsValid(UIToggleComp))
 	{
-		UIToggleComp = GetWidget()->GetComponent<UUIToggleComponent>();
+		UIToggleComp = GetWidget()->GetComponent<UUIToggle>();
 	}
 	return UIToggleComp;
 }
@@ -33,12 +33,12 @@ void UUIToggleTransition::ToggleOff(bool InImmediateSet)
 	}
 }
 
-UUIToggleComponent::UUIToggleComponent()
+UUIToggle::UUIToggle()
 {
 	OnColor = FColor(255, 255, 255, 255);
 	OffColor = FColor(255, 255, 255, 0);
 }
-void UUIToggleComponent::Awake()
+void UUIToggle::Awake()
 {
 	Super::Awake();
 	CheckTarget();
@@ -49,7 +49,7 @@ void UUIToggleComponent::Awake()
 	}
 }
 
-void UUIToggleComponent::Start()
+void UUIToggle::Start()
 {
 	Super::Start();
 	if (ToggleGroup.IsValid() && bIsOn)
@@ -59,7 +59,7 @@ void UUIToggleComponent::Start()
 	ApplyValueToUI(true);
 }
 
-void UUIToggleComponent::EndPlay()
+void UUIToggle::EndPlay()
 {
 	Super::EndPlay();
 	if (ToggleGroup.IsValid())
@@ -69,13 +69,13 @@ void UUIToggleComponent::EndPlay()
 }
 
 #if WITH_EDITOR
-void UUIToggleComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void UUIToggle::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (auto Property = PropertyChangedEvent.MemberProperty)
 	{
 		auto PropertyName = Property->GetFName();
-		if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIToggleComponent, bIsOn))
+		if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIToggle, bIsOn))
 		{
 			ApplyValueToUI(true);
 		}
@@ -83,13 +83,13 @@ void UUIToggleComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 }
 #endif
 
-bool UUIToggleComponent::CheckTarget()
+bool UUIToggle::CheckTarget()
 {
 	if (ToggleTransitionTarget.IsValid())return true;
 	return false;
 }
 
-void UUIToggleComponent::SetValue(bool Value, bool SendCallback)
+void UUIToggle::SetValue(bool Value, bool SendCallback)
 {
 	if (bIsOn != Value)
 	{
@@ -126,7 +126,7 @@ void UUIToggleComponent::SetValue(bool Value, bool SendCallback)
 		ApplyValueToUI(false);
 	}
 }
-void UUIToggleComponent::ApplyValueToUI(bool immediateSet)
+void UUIToggle::ApplyValueToUI(bool immediateSet)
 {
 	if (!CheckTarget())return;
 	if (ToggleTransitionType != EUISelectableTransitionType::Custom)
@@ -216,7 +216,7 @@ void UUIToggleComponent::ApplyValueToUI(bool immediateSet)
 	}
 }
 
-void UUIToggleComponent::SetToggleGroup(UUIToggleGroupComponent* InGroupComp)
+void UUIToggle::SetToggleGroup(UUIToggleGroup* InGroupComp)
 {
 	if (ToggleGroup != InGroupComp)
 	{
@@ -232,23 +232,23 @@ void UUIToggleComponent::SetToggleGroup(UUIToggleGroupComponent* InGroupComp)
 	}
 }
 
-void UUIToggleComponent::SetValue(bool Value)
+void UUIToggle::SetValue(bool Value)
 {
 	SetValue(Value, true);
 }
 
-void UUIToggleComponent::SetValueWithoutNotify(bool Value)
+void UUIToggle::SetValueWithoutNotify(bool Value)
 {
 	SetValue(Value, false);
 }
 
-bool UUIToggleComponent::OnPointerClick_Implementation(ULexPointerEventData* EventData)
+bool UUIToggle::OnPointerClick_Implementation(ULexPointerEventData* EventData)
 {
 	SetValue(!bIsOn);
 	return AllowEventBubbleUp;
 }
 
-int32 UUIToggleComponent::GetIndexInGroup()const
+int32 UUIToggle::GetIndexInGroup()const
 {
 	if (ToggleGroup.IsValid())
 	{

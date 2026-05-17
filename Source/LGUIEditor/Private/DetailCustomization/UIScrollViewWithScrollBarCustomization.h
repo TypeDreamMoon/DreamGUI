@@ -17,6 +17,6 @@ public:
 	/** IDetailCustomization interface */
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
 private:
-	TWeakObjectPtr<class UUIScrollViewWithScrollbarComponent> TargetScriptPtr;
+	TWeakObjectPtr<class UUIScrollViewWithScrollbar> TargetScriptPtr;
 	void ForceRefresh(IDetailLayoutBuilder* DetailBuilder);
 };

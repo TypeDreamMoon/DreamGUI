@@ -172,24 +172,23 @@ struct FLexUIHitResult
 {
 	GENERATED_BODY()
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
-	int32 FaceIndex;
+	int32 FaceIndex = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
-	float Time;
+	float Time = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
-	float Distance;
+	float Distance = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
-	FVector Location;
+	FVector Location = FVector::ZeroVector;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
-	FVector ImpactPoint;
+	FVector ImpactPoint = FVector::ZeroVector;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
-	FVector Normal;
+	FVector Normal = FVector::ForwardVector;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
-	FVector TraceStart;
+	FVector TraceStart = FVector::ZeroVector;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
-	FVector TraceEnd;
+	FVector TraceEnd = FVector::ZeroVector;
 
-	TWeakObjectPtr<ULexWidget> Component;
-
+	TWeakObjectPtr<ULexWidget> Component = nullptr;
 };
 struct FLexUIHitResultContainer
 {

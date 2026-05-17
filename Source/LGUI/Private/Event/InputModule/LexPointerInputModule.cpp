@@ -8,7 +8,7 @@
 #include "Event/LexBaseRaycaster.h"
 #include "Event/LexScreenSpaceRaycaster.h"
 #include "Event/Interface/LexNavigationInterface.h"
-#include "Interaction/UISelectableComponent.h"
+#include "Interaction/UISelectable.h"
 
 bool ULexPointerInputModule::LineTrace(ULexPointerEventData* InPointerEventData, FLexUIHitResultContainer& OutLexHitResult)
 {
@@ -513,7 +513,7 @@ bool ULexPointerInputModule::Navigate(ELexUINavigationDirection InDirection, ULe
 	
 	if (CurrentNavigateObject == nullptr)//not find valid selectable object, use default one
 	{
-		CurrentNavigateObject = UUISelectableComponent::FindDefaultSelectable(this);//@todo: don't reference UISelectableComponent directly
+		CurrentNavigateObject = UUISelectable::FindDefaultSelectable(this);//@todo: don't reference UISelectableComponent directly
 	}
 	else//find valid selectable, do navigation
 	{

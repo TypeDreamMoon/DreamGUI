@@ -2,12 +2,12 @@
 
 #include "DetailCustomization/UIScrollViewWithScrollBarCustomization.h"
 #include "LexUIEditorUtils.h"
-#include "Interaction/UIScrollViewWithScrollbarComponent.h"
+#include "Interaction/UIScrollViewWithScrollbar.h"
 
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
-#include "Interaction/UIScrollbarComponent.h"
+#include "Interaction/UIScrollbar.h"
 
 #define LOCTEXT_NAMESPACE "UIScrollViewWithScrollBarComponentDetails"
 FUIScrollViewWithScrollBarCustomization::FUIScrollViewWithScrollBarCustomization()
@@ -26,7 +26,7 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 {
 	TArray<TWeakObjectPtr<UObject>> targetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(targetObjects);
-	TargetScriptPtr = Cast<UUIScrollViewWithScrollbarComponent>(targetObjects[0].Get());
+	TargetScriptPtr = Cast<UUIScrollViewWithScrollbar>(targetObjects[0].Get());
 	if (TargetScriptPtr == nullptr)
 	{
 		UE_LOG(LGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
@@ -34,15 +34,15 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 	}
 	
 	IDetailCategoryBuilder& category = DetailBuilder.EditCategory("LGUI-ScrollViewWithScrollbar");
-	category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, Viewport));
+	category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, Viewport));
 	TArray<FName> needToHidePropertyName;
-	auto ViewportHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, Viewport));
+	auto ViewportHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, Viewport));
 	ViewportHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
 	ULexWidget* Viewport = nullptr;
 	ViewportHandle->GetValue(*(UObject**)&Viewport);
 
-	auto HorizontalScrollbarVisibilityHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, HorizontalScrollbarVisibility));
-	auto VerticalScrollbarVisibilityHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, VerticalScrollbarVisibility));
+	auto HorizontalScrollbarVisibilityHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, HorizontalScrollbarVisibility));
+	auto VerticalScrollbarVisibilityHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, VerticalScrollbarVisibility));
 	HorizontalScrollbarVisibilityHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
 	VerticalScrollbarVisibilityHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
 	uint8 HorizontalScrollbarVisibilityByte;
@@ -52,31 +52,31 @@ void FUIScrollViewWithScrollBarCustomization::CustomizeDetails(IDetailLayoutBuil
 	ELexUIScrollViewScrollbarVisibility HorizontalScrollbarVisibility = (ELexUIScrollViewScrollbarVisibility)HorizontalScrollbarVisibilityByte;
 	ELexUIScrollViewScrollbarVisibility VerticalScrollbarVisibility = (ELexUIScrollViewScrollbarVisibility)VerticalScrollbarVisibilityByte;
 
-	auto HorizontalScrollbarHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, HorizontalScrollbar));
+	auto HorizontalScrollbarHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, HorizontalScrollbar));
 	HorizontalScrollbarHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
-	UUIScrollbarComponent* HorizontalScrollbar = nullptr;
+	UUIScrollbar* HorizontalScrollbar = nullptr;
 	HorizontalScrollbarHandle->GetValue(*(UObject**)&HorizontalScrollbar);
 
-	auto VerticalScrollbarHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, VerticalScrollbar));
+	auto VerticalScrollbarHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, VerticalScrollbar));
 	VerticalScrollbarHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
-	UUIScrollbarComponent* VerticalScrollbar = nullptr;
+	UUIScrollbar* VerticalScrollbar = nullptr;
 	VerticalScrollbarHandle->GetValue(*(UObject**)&VerticalScrollbar);
 
-	category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, HorizontalScrollbarWidget));
-	IDetailPropertyRow& HorizontalScrollbarVisibilityProperty = category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, HorizontalScrollbarVisibility));
+	category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, HorizontalScrollbarWidget));
+	IDetailPropertyRow& HorizontalScrollbarVisibilityProperty = category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, HorizontalScrollbarVisibility));
 	HorizontalScrollbarVisibilityProperty.IsEnabled(IsValid(HorizontalScrollbar));
 
-	category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, VerticalScrollbarWidget));
-	IDetailPropertyRow& VerticalScrollbarVisibilityProperty = category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, VerticalScrollbarVisibility));
+	category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, VerticalScrollbarWidget));
+	IDetailPropertyRow& VerticalScrollbarVisibilityProperty = category.AddProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, VerticalScrollbarVisibility));
 	VerticalScrollbarVisibilityProperty.IsEnabled(IsValid(VerticalScrollbar));
 
-	auto KeepProgressHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, KeepProgress));
+	auto KeepProgressHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, KeepProgress));
 	KeepProgressHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIScrollViewWithScrollBarCustomization::ForceRefresh, &DetailBuilder));
 	bool KeepProgress;
 	KeepProgressHandle->GetValue(KeepProgress);
 	if (!KeepProgress)
 	{
-		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbarComponent, Progress));
+		needToHidePropertyName.Add(GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, Progress));
 	}
 
 	for (auto item : needToHidePropertyName)

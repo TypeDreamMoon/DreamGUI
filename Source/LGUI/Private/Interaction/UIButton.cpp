@@ -1,9 +1,9 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Interaction/UIButtonComponent.h"
+#include "Interaction/UIButton.h"
 #include "LGUI.h"
 
-bool UUIButtonComponent::OnPointerClick_Implementation(ULexPointerEventData* EventData)
+bool UUIButton::OnPointerClick_Implementation(ULexPointerEventData* EventData)
 {
 	OnClickCPP.Broadcast();
 	OnClickBP.Broadcast();

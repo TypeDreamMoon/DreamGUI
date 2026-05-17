@@ -7,7 +7,7 @@
 #include "Event/Interface/LexPointerDragInterface.h"
 #include "Event/Interface/LexPointerScrollInterface.h"
 #include "Core/LexUIBehaviour.h"
-#include "UIScrollViewComponent.generated.h"
+#include "UIScrollView.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIScrollViewValueChangedEvent, FVector2D, InVector2);
 
@@ -19,13 +19,13 @@ private:
 	virtual void Awake()override;
 	virtual void OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
 	virtual void OnChildDimensionsChanged(ULexWidget* Child, bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
-	friend class UUIScrollViewComponent;
+	friend class UUIScrollView;
 	UPROPERTY(Transient)
-		TWeakObjectPtr<class UUIScrollViewComponent> TargetComp;
+		TWeakObjectPtr<class UUIScrollView> TargetComp;
 };
 //ScrollView
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIScrollViewComponent : public ULexUIBehaviour, public ILexPointerDragInterface, public ILexPointerScrollInterface
+class LGUI_API UUIScrollView : public ULexUIBehaviour, public ILexPointerDragInterface, public ILexPointerScrollInterface
 {
 	GENERATED_BODY()
 	

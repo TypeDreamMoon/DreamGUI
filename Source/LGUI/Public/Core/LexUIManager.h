@@ -15,7 +15,7 @@ class ULexVisualBatchMesh;
 class ULexVisual;
 class ULexCanvas;
 class ULexBaseRaycaster;
-class UUISelectableComponent;
+class UUISelectable;
 class ULexUIBehaviour;
 class ULexBaseInputModule;
 
@@ -139,7 +139,7 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<ULexBaseRaycaster>> AllRaycasterArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<UUISelectableComponent>> AllSelectableArray;
+		TArray<TWeakObjectPtr<UUISelectable>> AllSelectableArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<UObject>> AllCultureChangedArray;
 
@@ -188,9 +188,9 @@ public:
 	static void AddRaycaster(ULexBaseRaycaster* InRaycaster);
 	static void RemoveRaycaster(ULexBaseRaycaster* InRaycaster);
 
-	const TArray<TWeakObjectPtr<UUISelectableComponent>>& GetAllSelectableArray() { return AllSelectableArray; }
-	static void AddSelectable(UUISelectableComponent* InSelectable);
-	static void RemoveSelectable(UUISelectableComponent* InSelectable);
+	const TArray<TWeakObjectPtr<UUISelectable>>& GetAllSelectableArray() { return AllSelectableArray; }
+	static void AddSelectable(UUISelectable* InSelectable);
+	static void RemoveSelectable(UUISelectable* InSelectable);
 
 	const TMap<int, TWeakObjectPtr<ULexEventSystem>>& GetMapUserIndexToEventSystem() { return MapUserIndexToEventSystem; }
 	ULexEventSystem* GetEventSystemByUserIndex(int UserIndex = 0);
@@ -213,7 +213,7 @@ public:
 	);
 	void DrawFrameOnWidget(ULexWidget* InItem, bool ScreenOrWorld = false);
 	void DrawNavigationArrow(UWorld* InWorld, const TArray<FVector>& InControlPoints, const FVector& InArrowPointA, const FVector& InArrowPointB, FColor const& InColor, void* Object, const FString& DebugName, bool ScreenOrWorld = false);
-	void DrawNavigationVisualizerOnUISelectable(UWorld* InWorld, UUISelectableComponent* InSelectable, bool IsScreenSpace = false);
+	void DrawNavigationVisualizerOnUISelectable(UWorld* InWorld, UUISelectable* InSelectable, bool IsScreenSpace = false);
 	FEditorViewportClient* GetEditorViewportClient();
 	static UMaterialInterface* GetDefaultGizmoMaterial();
 	

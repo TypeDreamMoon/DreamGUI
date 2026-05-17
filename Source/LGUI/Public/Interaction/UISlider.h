@@ -3,10 +3,10 @@
 #pragma once
 
 #include "Event/Interface/LexPointerDragInterface.h"
-#include "UISelectableComponent.h"
+#include "UISelectable.h"
 #include "Event/LexUIEventDelegate.h"
 #include "Event/LexDelegateDeclaration.h"
-#include "UISliderComponent.generated.h"
+#include "UISlider.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUISliderValueChangedEvent, float, Value);
 
@@ -22,7 +22,7 @@ enum class EUISliderDirectionType:uint8
 };
 
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUISliderComponent : public UUISelectableComponent, public ILexPointerDragInterface
+class LGUI_API UUISlider : public UUISelectable, public ILexPointerDragInterface
 {
 	GENERATED_BODY()
 	

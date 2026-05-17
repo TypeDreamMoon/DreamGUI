@@ -39,8 +39,8 @@ UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent,
 		}
 		HelperObject->SubPrefabMap.Add(HelperObject->LoadedRootWidget, SubPrefabData);
 		HelperObject->SavePrefab();
-		HelperObject->LoadedRootWidget = nullptr;
-		HelperObject->LoadedRootWidget->ConditionalBeginDestroy();
+		
+		HelperObject->LoadedRootWidget->DestroyWidget();
 		HelperObject->ConditionalBeginDestroy();
 		return NewAsset;
 	}

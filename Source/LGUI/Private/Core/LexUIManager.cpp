@@ -8,7 +8,7 @@
 #include "Core/Components/LexCanvas.h"
 #include "Event/LexBaseRaycaster.h"
 #include "Engine/World.h"
-#include "Interaction/UISelectableComponent.h"
+#include "Interaction/UISelectable.h"
 #include "Core/LexUISettings.h"
 #include "Core/Components/LexVisual.h"
 #include "Engine/Engine.h"
@@ -389,7 +389,7 @@ void ULexUIManagerWorldSubsystem::DrawNavigationArrow(UWorld* InWorld, const TAr
 	}
 }
 
-void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld* InWorld, UUISelectableComponent* InSelectable, bool IsScreenSpace)
+void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld* InWorld, UUISelectable* InSelectable, bool IsScreenSpace)
 {
 	auto SourceWidget = InSelectable->GetWidget();
 	if (!IsValid(SourceWidget))return;
@@ -981,16 +981,16 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 				ScreenSpaceOverlayCanvasCount++;
 			}
 		}
-		else
 #if WITH_EDITOR
+		else
 			//for editor
-				if (auto EditorCanvas = WidgetPresenter->GetRootCanvasForEditor())
+			if (auto EditorCanvas = WidgetPresenter->GetRootCanvasForEditor())
+			{
+				if (EditorCanvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
 				{
-					if (EditorCanvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
-					{
-						ScreenSpaceOverlayCanvasCount++;
-					}
+					ScreenSpaceOverlayCanvasCount++;
 				}
+			}
 #endif		
 	}
 	if (ScreenSpaceOverlayCanvasCount > 1)
@@ -1024,16 +1024,16 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 						Canvas->UpdateRootCanvas();
 					}
 				}
-				else
 #if WITH_EDITOR
+				else
 					//for editor
-						if (auto EditorCanvas = WidgetPresenter->GetRootCanvasForEditor())
+					if (auto EditorCanvas = WidgetPresenter->GetRootCanvasForEditor())
+					{
+						if (EditorCanvas->GetRenderMode() == RenderMode)
 						{
-							if (EditorCanvas->GetRenderMode() == RenderMode)
-							{
-								EditorCanvas->UpdateRootCanvas();
-							}
+							EditorCanvas->UpdateRootCanvas();
 						}
+					}
 #endif
 			}
 		};
@@ -1351,8 +1351,8 @@ void ULexUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 				Widget->EnsureDataForRebuild();
 				Widget->MarkCanvasUpdate(true);
 			}
-			else
 #if WITH_EDITOR
+			else
 				//for editor
 				if (auto EditorWidget = WidgetPresenter->GetRootWidgetForEditor())
 				{
@@ -1477,7 +1477,7 @@ void ULexUIManagerWorldSubsystem::RemoveRaycaster(ULexBaseRaycaster* InRaycaster
 	}
 }
 
-void ULexUIManagerWorldSubsystem::AddSelectable(UUISelectableComponent* InSelectable)
+void ULexUIManagerWorldSubsystem::AddSelectable(UUISelectable* InSelectable)
 {
 	if (auto Instance = GetInstance(InSelectable->GetWorld()))
 	{
@@ -1492,7 +1492,7 @@ void ULexUIManagerWorldSubsystem::AddSelectable(UUISelectableComponent* InSelect
 		AllSelectableArray.AddUnique(InSelectable);
 	}
 }
-void ULexUIManagerWorldSubsystem::RemoveSelectable(UUISelectableComponent* InSelectable)
+void ULexUIManagerWorldSubsystem::RemoveSelectable(UUISelectable* InSelectable)
 {
 	if (auto Instance = GetInstance(InSelectable->GetWorld()))
 	{

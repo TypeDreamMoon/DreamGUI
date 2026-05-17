@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Interaction/UISelectableComponent.h"
+#include "Interaction/UISelectable.h"
 #include "LGUI.h"
 #include "LTweenBPLibrary.h"
 #include "Core/Components/LexVisual.h"
@@ -14,7 +14,7 @@
 #include "Interaction/UINavigationInputSelectionHandler.h"
 
 
-void UUITransitionComponent::StopTransition() 
+void UUITransition::StopTransition() 
 { 
 	for (auto tweener : TweenerCollection)
 	{
@@ -22,11 +22,11 @@ void UUITransitionComponent::StopTransition()
 	}
 	TweenerCollection.Reset();
 }
-void UUITransitionComponent::CollectTweener(ULTweener* InItem)
+void UUITransition::CollectTweener(ULTweener* InItem)
 {
 	TweenerCollection.Add(InItem);
 }
-void UUITransitionComponent::CollectTweeners(const TSet<ULTweener*>& InItems)
+void UUITransition::CollectTweeners(const TSet<ULTweener*>& InItems)
 {
 	TweenerCollection.Reserve(TweenerCollection.Num() + InItems.Num());
 	for (auto item : InItems)
@@ -35,11 +35,11 @@ void UUITransitionComponent::CollectTweeners(const TSet<ULTweener*>& InItems)
 	}
 }
 
-UUISelectableComponent* UUISelectableTransition::GetSelectableComponent() const
+UUISelectable* UUISelectableTransition::GetSelectableComponent() const
 {
 	if (!IsValid(UISelectableComp))
 	{
-		UISelectableComp = GetWidget()->GetComponent<UUISelectableComponent>();
+		UISelectableComp = GetWidget()->GetComponent<UUISelectable>();
 	}
 	return UISelectableComp;
 }
@@ -73,7 +73,7 @@ void UUISelectableTransition::OnDisabled(bool InImmediateSet)
 	}
 }
 
-UUISelectableComponent::UUISelectableComponent()
+UUISelectable::UUISelectable()
 {
 	NormalColor = FColor(255, 255, 255, 255);
 	HoveredColor = FColor(200, 200, 200, 255);
@@ -81,32 +81,32 @@ UUISelectableComponent::UUISelectableComponent()
 	DisabledColor = FColor(150, 150, 150, 128);
 }
 
-void UUISelectableComponent::Awake()
+void UUISelectable::Awake()
 {
 	Super::Awake();
 	this->SetCanExecuteUpdate(false);
 }
 
-void UUISelectableComponent::EndPlay()
+void UUISelectable::EndPlay()
 {
 	Super::EndPlay();
 }
 
-void UUISelectableComponent::OnRegister()
+void UUISelectable::OnRegister()
 {
 	Super::OnRegister();
 	ULexUIManagerWorldSubsystem::AddSelectable(this);
 	CurrentSelectionState = GetSelectionState();
 	ApplyPointerSelectionState(true);
 }
-void UUISelectableComponent::OnUnregister()
+void UUISelectable::OnUnregister()
 {
 	Super::OnUnregister();
 	ULexUIManagerWorldSubsystem::RemoveSelectable(this);
 }
 
 #if WITH_EDITOR
-void UUISelectableComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void UUISelectable::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (PropertyChangedEvent.Property)
@@ -116,7 +116,7 @@ void UUISelectableComponent::PostEditChangeProperty(FPropertyChangedEvent& Prope
 }
 #endif
 
-void UUISelectableComponent::OnInteractableChanged(bool IsEnabled)
+void UUISelectable::OnInteractableChanged(bool IsEnabled)
 {
 	Super::OnInteractableChanged(IsEnabled);
 	CurrentSelectionState = GetSelectionState();
@@ -132,7 +132,7 @@ void UUISelectableComponent::OnInteractableChanged(bool IsEnabled)
 	}
 }
 
-void UUISelectableComponent::ApplyPointerSelectionState(bool ImmediateSet)
+void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 {
 	if (TransitionType != EUISelectableTransitionType::Custom)
 	{
@@ -321,7 +321,7 @@ void UUISelectableComponent::ApplyPointerSelectionState(bool ImmediateSet)
 	}
 }
 
-bool UUISelectableComponent::CheckNavigationSelectionState()
+bool UUISelectable::CheckNavigationSelectionState()
 {
 	if (!NavigationSelection.IsValid())
 	{
@@ -336,7 +336,7 @@ bool UUISelectableComponent::CheckNavigationSelectionState()
 	return NavigationSelection.IsValid();
 }
 
-bool UUISelectableComponent::OnPointerEnter_Implementation(ULexPointerEventData* EventData)
+bool UUISelectable::OnPointerEnter_Implementation(ULexPointerEventData* EventData)
 {
 	bIsPointerInsideThis = true;
 	CurrentSelectionState = GetSelectionState();
@@ -357,14 +357,14 @@ bool UUISelectableComponent::OnPointerEnter_Implementation(ULexPointerEventData*
 	}
 	return AllowEventBubbleUp;
 }
-bool UUISelectableComponent::OnPointerExit_Implementation(ULexPointerEventData* EventData)
+bool UUISelectable::OnPointerExit_Implementation(ULexPointerEventData* EventData)
 {
 	bIsPointerInsideThis = false;
 	CurrentSelectionState = GetSelectionState();
 	ApplyPointerSelectionState(false);
 	return AllowEventBubbleUp;
 }
-bool UUISelectableComponent::OnPointerDown_Implementation(ULexPointerEventData* EventData)
+bool UUISelectable::OnPointerDown_Implementation(ULexPointerEventData* EventData)
 {
 	bIsPointerDown = true;
 	CurrentSelectionState = GetSelectionState();
@@ -375,23 +375,23 @@ bool UUISelectableComponent::OnPointerDown_Implementation(ULexPointerEventData* 
 	}
 	return AllowEventBubbleUp;
 }
-bool UUISelectableComponent::OnPointerUp_Implementation(ULexPointerEventData* EventData)
+bool UUISelectable::OnPointerUp_Implementation(ULexPointerEventData* EventData)
 {
 	bIsPointerDown = false;
 	CurrentSelectionState = GetSelectionState();
 	ApplyPointerSelectionState(false);
 	return AllowEventBubbleUp;
 }
-bool UUISelectableComponent::OnPointerSelect_Implementation(ULexBaseEventData* EventData)
+bool UUISelectable::OnPointerSelect_Implementation(ULexBaseEventData* EventData)
 {
 	return AllowEventBubbleUp;
 }
-bool UUISelectableComponent::OnPointerDeselect_Implementation(ULexBaseEventData* EventData)
+bool UUISelectable::OnPointerDeselect_Implementation(ULexBaseEventData* EventData)
 {
 	return AllowEventBubbleUp;
 }
 
-EUISelectableSelectionState UUISelectableComponent::GetSelectionState()const
+EUISelectableSelectionState UUISelectable::GetSelectionState()const
 {
 	if (!IsInteractable())
 		return EUISelectableSelectionState::Disabled;
@@ -402,7 +402,7 @@ EUISelectableSelectionState UUISelectableComponent::GetSelectionState()const
 	return EUISelectableSelectionState::Normal;
 }
 
-void UUISelectableComponent::SetTransitionTarget(ULexVisual* Value)
+void UUISelectable::SetTransitionTarget(ULexVisual* Value)
 {
 	if (TransitionTarget != Value)
 	{
@@ -410,7 +410,7 @@ void UUISelectableComponent::SetTransitionTarget(ULexVisual* Value)
 		ApplyPointerSelectionState(false);
 	}
 }
-void UUISelectableComponent::SetNormalColor(FColor Value)
+void UUISelectable::SetNormalColor(FColor Value)
 {
 	NormalColor = Value;
 	if (CurrentSelectionState == EUISelectableSelectionState::Normal)
@@ -418,7 +418,7 @@ void UUISelectableComponent::SetNormalColor(FColor Value)
 		ApplyPointerSelectionState(false);
 	}
 }
-void UUISelectableComponent::SetHoveredColor(FColor Value)
+void UUISelectable::SetHoveredColor(FColor Value)
 {
 	HoveredColor = Value;
 	if (CurrentSelectionState == EUISelectableSelectionState::Hovered)
@@ -426,7 +426,7 @@ void UUISelectableComponent::SetHoveredColor(FColor Value)
 		ApplyPointerSelectionState(false);
 	}
 }
-void UUISelectableComponent::SetPressedColor(FColor Value)
+void UUISelectable::SetPressedColor(FColor Value)
 {
 	PressedColor = Value;
 	if (CurrentSelectionState == EUISelectableSelectionState::Pressed)
@@ -434,7 +434,7 @@ void UUISelectableComponent::SetPressedColor(FColor Value)
 		ApplyPointerSelectionState(false);
 	}
 }
-void UUISelectableComponent::SetDisabledColor(FColor Value)
+void UUISelectable::SetDisabledColor(FColor Value)
 {
 	DisabledColor = Value;
 	if (CurrentSelectionState == EUISelectableSelectionState::Disabled)
@@ -442,7 +442,7 @@ void UUISelectableComponent::SetDisabledColor(FColor Value)
 		ApplyPointerSelectionState(false);
 	}
 }
-void UUISelectableComponent::SetNormalImageBrush(const FLexUIImageBrush& Value)
+void UUISelectable::SetNormalImageBrush(const FLexUIImageBrush& Value)
 {
 	NormalImageBrush = Value;
 	if (CurrentSelectionState == EUISelectableSelectionState::Normal)
@@ -450,7 +450,7 @@ void UUISelectableComponent::SetNormalImageBrush(const FLexUIImageBrush& Value)
 		ApplyPointerSelectionState(false);
 	}
 }
-void UUISelectableComponent::SetHoveredImageBrush(const FLexUIImageBrush& Value)
+void UUISelectable::SetHoveredImageBrush(const FLexUIImageBrush& Value)
 {
 	HoveredImageBrush = Value;
 	if (CurrentSelectionState == EUISelectableSelectionState::Hovered)
@@ -458,7 +458,7 @@ void UUISelectableComponent::SetHoveredImageBrush(const FLexUIImageBrush& Value)
 		ApplyPointerSelectionState(false);
 	}
 }
-void UUISelectableComponent::SetPressedImageBrush(const FLexUIImageBrush& Value)
+void UUISelectable::SetPressedImageBrush(const FLexUIImageBrush& Value)
 {
 	PressedImageBrush = Value;
 	if (CurrentSelectionState == EUISelectableSelectionState::Pressed)
@@ -466,7 +466,7 @@ void UUISelectableComponent::SetPressedImageBrush(const FLexUIImageBrush& Value)
 		ApplyPointerSelectionState(false);
 	}
 }
-void UUISelectableComponent::SetDisabledImageBrush(const FLexUIImageBrush& Value)
+void UUISelectable::SetDisabledImageBrush(const FLexUIImageBrush& Value)
 {
 	DisabledImageBrush = Value;
 	if (CurrentSelectionState == EUISelectableSelectionState::Disabled)
@@ -474,7 +474,7 @@ void UUISelectableComponent::SetDisabledImageBrush(const FLexUIImageBrush& Value
 		ApplyPointerSelectionState(false);
 	}
 }
-void UUISelectableComponent::SetSelectionState(EUISelectableSelectionState NewState)
+void UUISelectable::SetSelectionState(EUISelectableSelectionState NewState)
 {
 	if (CurrentSelectionState != NewState)
 	{
@@ -482,7 +482,7 @@ void UUISelectableComponent::SetSelectionState(EUISelectableSelectionState NewSt
 		ApplyPointerSelectionState(false);
 	}
 }
-bool UUISelectableComponent::IsInteractable()const
+bool UUISelectable::IsInteractable()const
 {
 	if (auto Widget = GetWidget())
 	{
@@ -492,13 +492,13 @@ bool UUISelectableComponent::IsInteractable()const
 }
 
 #pragma region Navigation
-bool UUISelectableComponent::CanNavigateHere_Implementation() const
+bool UUISelectable::CanNavigateHere_Implementation() const
 {
 	return IsInteractable() && GetCanNavigateHere();
 }
-bool UUISelectableComponent::OnNavigate_Implementation(ELexUINavigationDirection direction, TScriptInterface<ILexNavigationInterface>& result)
+bool UUISelectable::OnNavigate_Implementation(ELexUINavigationDirection direction, TScriptInterface<ILexNavigationInterface>& result)
 {
-	UUISelectableComponent* Selectable = nullptr;
+	UUISelectable* Selectable = nullptr;
 	switch (direction)
 	{
 	default:
@@ -527,7 +527,7 @@ bool UUISelectableComponent::OnNavigate_Implementation(ELexUINavigationDirection
 	result = Selectable;
 	return true;
 }
-UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirection)
+UUISelectable* UUISelectable::FindSelectable(FVector InDirection)
 {
 	InDirection.Normalize();
 	if (auto Widget = GetWidget())
@@ -552,7 +552,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 	}
 }
 
-UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirection, ULexWidget* InParent)
+UUISelectable* UUISelectable::FindSelectable(FVector InDirection, ULexWidget* InParent)
 {
 	auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld());
 	if (LexUIManager == nullptr)return nullptr;
@@ -581,7 +581,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 	auto pos = this->GetWidget()->GetWorldTransform().TransformPosition(LocalPos);
 	auto thisWidget = this->GetWidget();
 	float maxScore = -MAX_flt;
-	UUISelectableComponent* bestPick = this;
+	UUISelectable* bestPick = this;
 	for (int i = 0; i < SelectableArray.Num(); ++i)
 	{
 		auto sel = SelectableArray[i];
@@ -657,14 +657,14 @@ UUISelectableComponent* UUISelectableComponent::FindSelectable(FVector InDirecti
 	}
 	return bestPick;
 }
-UUISelectableComponent* UUISelectableComponent::FindDefaultSelectable(UObject* WorldContextObject)
+UUISelectable* UUISelectable::FindDefaultSelectable(UObject* WorldContextObject)
 {
 	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(WorldContextObject->GetWorld()))
 	{
 		const auto& SelectableArray = LexUIManager->GetAllSelectableArray();
 		if (SelectableArray.Num() > 0)
 		{
-			UUISelectableComponent* Selectable = nullptr;
+			UUISelectable* Selectable = nullptr;
 			for (int i = 0; i < SelectableArray.Num(); i++)
 			{
 				auto SelectableItem = SelectableArray[i];
@@ -677,7 +677,7 @@ UUISelectableComponent* UUISelectableComponent::FindDefaultSelectable(UObject* W
 			if (Selectable)
 			{
 				//default selectable is the most "prev" one, so we need to find it
-				TSet<UUISelectableComponent*> FoundSelectables;
+				TSet<UUISelectable*> FoundSelectables;
 				while (true)
 				{
 					FoundSelectables.Add(Selectable);
@@ -714,7 +714,7 @@ UUISelectableComponent* UUISelectableComponent::FindDefaultSelectable(UObject* W
 	}
 	return nullptr;
 }
-UUISelectableComponent* UUISelectableComponent::FindSelectableOnLeft()
+UUISelectable* UUISelectable::FindSelectableOnLeft()
 {
 	if (NavigationLeft == EUISelectableNavigationMode::Explicit)
 	{
@@ -726,7 +726,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnLeft()
 	}
 	return nullptr;
 }
-UUISelectableComponent* UUISelectableComponent::FindSelectableOnRight()
+UUISelectable* UUISelectable::FindSelectableOnRight()
 {
 	if (NavigationRight == EUISelectableNavigationMode::Explicit)
 	{
@@ -738,7 +738,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnRight()
 	}
 	return nullptr;
 }
-UUISelectableComponent* UUISelectableComponent::FindSelectableOnUp()
+UUISelectable* UUISelectable::FindSelectableOnUp()
 {
 	if (NavigationUp == EUISelectableNavigationMode::Explicit)
 	{
@@ -750,7 +750,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnUp()
 	}
 	return nullptr;
 }
-UUISelectableComponent* UUISelectableComponent::FindSelectableOnDown()
+UUISelectable* UUISelectable::FindSelectableOnDown()
 {
 	if (NavigationDown == EUISelectableNavigationMode::Explicit)
 	{
@@ -762,7 +762,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnDown()
 	}
 	return nullptr;
 }
-UUISelectableComponent* UUISelectableComponent::FindSelectableOnNext()
+UUISelectable* UUISelectable::FindSelectableOnNext()
 {
 	if (NavigationNext == EUISelectableNavigationMode::Explicit)
 	{
@@ -779,7 +779,7 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnNext()
 	}
 	return nullptr;
 }
-UUISelectableComponent* UUISelectableComponent::FindSelectableOnPrev()
+UUISelectable* UUISelectable::FindSelectableOnPrev()
 {
 	if (NavigationPrev == EUISelectableNavigationMode::Explicit)
 	{
@@ -797,36 +797,36 @@ UUISelectableComponent* UUISelectableComponent::FindSelectableOnPrev()
 	return nullptr;
 }
 
-void UUISelectableComponent::SetCanNavigateHere(bool Value)
+void UUISelectable::SetCanNavigateHere(bool Value)
 {
 	bCanNavigateHere = Value;
 }
-void UUISelectableComponent::SetNavigationLeft(EUISelectableNavigationMode Value)
+void UUISelectable::SetNavigationLeft(EUISelectableNavigationMode Value)
 {
 	NavigationLeft = Value;
 }
-void UUISelectableComponent::SetNavigationRight(EUISelectableNavigationMode Value)
+void UUISelectable::SetNavigationRight(EUISelectableNavigationMode Value)
 {
 	NavigationRight = Value;
 }
-void UUISelectableComponent::SetNavigationUp(EUISelectableNavigationMode Value)
+void UUISelectable::SetNavigationUp(EUISelectableNavigationMode Value)
 {
 	NavigationUp = Value;
 }
-void UUISelectableComponent::SetNavigationDown(EUISelectableNavigationMode Value)
+void UUISelectable::SetNavigationDown(EUISelectableNavigationMode Value)
 {
 	NavigationDown = Value;
 }
-void UUISelectableComponent::SetNavigationPrev(EUISelectableNavigationMode Value)
+void UUISelectable::SetNavigationPrev(EUISelectableNavigationMode Value)
 {
 	NavigationPrev = Value;
 }
-void UUISelectableComponent::SetNavigationNext(EUISelectableNavigationMode Value)
+void UUISelectable::SetNavigationNext(EUISelectableNavigationMode Value)
 {
 	NavigationNext = Value;
 }
 
-void UUISelectableComponent::SetNavigationLeftExplicit(UUISelectableComponent* Value)
+void UUISelectable::SetNavigationLeftExplicit(UUISelectable* Value)
 {
 	if (IsValid(Value))
 	{
@@ -837,7 +837,7 @@ void UUISelectableComponent::SetNavigationLeftExplicit(UUISelectableComponent* V
 		UE_LOG(LGUI, Error, TEXT("[%s].%d Value is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	}
 }
-void UUISelectableComponent::SetNavigationRightExplicit(UUISelectableComponent* Value)
+void UUISelectable::SetNavigationRightExplicit(UUISelectable* Value)
 {
 	if (IsValid(Value))
 	{
@@ -848,7 +848,7 @@ void UUISelectableComponent::SetNavigationRightExplicit(UUISelectableComponent* 
 		UE_LOG(LGUI, Error, TEXT("[%s].%d Value is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	}
 }
-void UUISelectableComponent::SetNavigationUpExplicit(UUISelectableComponent* Value)
+void UUISelectable::SetNavigationUpExplicit(UUISelectable* Value)
 {
 	if (IsValid(Value))
 	{
@@ -859,7 +859,7 @@ void UUISelectableComponent::SetNavigationUpExplicit(UUISelectableComponent* Val
 		UE_LOG(LGUI, Error, TEXT("[%s].%d Value is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	}
 }
-void UUISelectableComponent::SetNavigationDownExplicit(UUISelectableComponent* Value)
+void UUISelectable::SetNavigationDownExplicit(UUISelectable* Value)
 {
 	if (IsValid(Value))
 	{
@@ -870,7 +870,7 @@ void UUISelectableComponent::SetNavigationDownExplicit(UUISelectableComponent* V
 		UE_LOG(LGUI, Error, TEXT("[%s].%d Value is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	}
 }
-void UUISelectableComponent::SetNavigationPrevExplicit(UUISelectableComponent* Value)
+void UUISelectable::SetNavigationPrevExplicit(UUISelectable* Value)
 {
 	if (IsValid(Value))
 	{
@@ -881,7 +881,7 @@ void UUISelectableComponent::SetNavigationPrevExplicit(UUISelectableComponent* V
 		UE_LOG(LGUI, Error, TEXT("[%s].%d Value is not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 	}
 }
-void UUISelectableComponent::SetNavigationNextExplicit(UUISelectableComponent* Value)
+void UUISelectable::SetNavigationNextExplicit(UUISelectable* Value)
 {
 	if (IsValid(Value))
 	{

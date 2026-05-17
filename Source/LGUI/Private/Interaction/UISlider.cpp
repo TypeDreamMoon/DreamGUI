@@ -1,20 +1,20 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Interaction/UISliderComponent.h"
+#include "Interaction/UISlider.h"
 #include "Core/Components/LexWidget.h"
 
-void UUISliderComponent::Awake()
+void UUISlider::Awake()
 {
     Super::Awake();
 }
 
-void UUISliderComponent::Start()
+void UUISlider::Start()
 {
     Super::Start();
     ApplyValueToUI();
 }
 
-bool UUISliderComponent::CheckFill()
+bool UUISlider::CheckFill()
 {
     if (Fill.IsValid() && FillArea.IsValid())
         return true;
@@ -25,7 +25,7 @@ bool UUISliderComponent::CheckFill()
         return true;
     return false;
 }
-bool UUISliderComponent::CheckHandle()
+bool UUISlider::CheckHandle()
 {
     if (Handle.IsValid() && HandleArea.IsValid())
         return true;
@@ -38,7 +38,7 @@ bool UUISliderComponent::CheckHandle()
 }
 
 #if WITH_EDITOR
-void UUISliderComponent::PostEditChangeProperty(FPropertyChangedEvent &PropertyChangedEvent)
+void UUISlider::PostEditChangeProperty(FPropertyChangedEvent &PropertyChangedEvent)
 {
     Super::PostEditChangeProperty(PropertyChangedEvent);
     if (WholeNumbers)
@@ -52,13 +52,13 @@ void UUISliderComponent::PostEditChangeProperty(FPropertyChangedEvent &PropertyC
 }
 #endif
 
-void UUISliderComponent::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
+void UUISlider::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
     Super::OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
     ApplyValueToUI();
 }
 
-void UUISliderComponent::SetValue(float InValue, bool FireEvent)
+void UUISlider::SetValue(float InValue, bool FireEvent)
 {
     InValue = FMath::Clamp(InValue, MinValue, MaxValue);
     if (Value != InValue)
@@ -74,17 +74,17 @@ void UUISliderComponent::SetValue(float InValue, bool FireEvent)
     }
 }
 
-void UUISliderComponent::SetValue(float InValue)
+void UUISlider::SetValue(float InValue)
 {
     SetValue(InValue, true);
 }
 
-void UUISliderComponent::SetValueWithoutNotify(float InValue)
+void UUISlider::SetValueWithoutNotify(float InValue)
 {
     SetValue(InValue, false);
 }
 
-void UUISliderComponent::SetMinValue(float InMinValue, bool KeepRelativeValue, bool FireEvent)
+void UUISlider::SetMinValue(float InMinValue, bool KeepRelativeValue, bool FireEvent)
 {
     if (MinValue != InMinValue)
     {
@@ -106,7 +106,7 @@ void UUISliderComponent::SetMinValue(float InMinValue, bool KeepRelativeValue, b
 		}
     }
 }
-void UUISliderComponent::SetMaxValue(float InMaxValue, bool KeepRelativeValue, bool FireEvent)
+void UUISlider::SetMaxValue(float InMaxValue, bool KeepRelativeValue, bool FireEvent)
 {
 	if (MaxValue != InMaxValue)
 	{
@@ -129,12 +129,12 @@ void UUISliderComponent::SetMaxValue(float InMaxValue, bool KeepRelativeValue, b
 	}
 }
 
-void UUISliderComponent::SetNavigationChangeInterval(float InValue)
+void UUISlider::SetNavigationChangeInterval(float InValue)
 {
     NavigationChangeInterval = InValue;
 }
 
-bool UUISliderComponent::OnPointerDown_Implementation(ULexPointerEventData *EventData)
+bool UUISlider::OnPointerDown_Implementation(ULexPointerEventData *EventData)
 {
     Super::OnPointerDown_Implementation(EventData);
     if (EventData->InputType == ELexUIPointerInputType::Pointer)
@@ -143,27 +143,27 @@ bool UUISliderComponent::OnPointerDown_Implementation(ULexPointerEventData *Even
     }
     return AllowEventBubbleUp;
 }
-bool UUISliderComponent::OnPointerUp_Implementation(ULexPointerEventData *EventData)
+bool UUISlider::OnPointerUp_Implementation(ULexPointerEventData *EventData)
 {
     Super::OnPointerUp_Implementation(EventData);
     return AllowEventBubbleUp;
 }
-bool UUISliderComponent::OnPointerBeginDrag_Implementation(ULexPointerEventData *EventData)
+bool UUISlider::OnPointerBeginDrag_Implementation(ULexPointerEventData *EventData)
 {
     CalculateInputValue(EventData);
     return AllowEventBubbleUp;
 }
-bool UUISliderComponent::OnPointerDrag_Implementation(ULexPointerEventData *EventData)
+bool UUISlider::OnPointerDrag_Implementation(ULexPointerEventData *EventData)
 {
     CalculateInputValue(EventData);
     return AllowEventBubbleUp;
 }
-bool UUISliderComponent::OnPointerEndDrag_Implementation(ULexPointerEventData *EventData)
+bool UUISlider::OnPointerEndDrag_Implementation(ULexPointerEventData *EventData)
 {
     CalculateInputValue(EventData);
     return AllowEventBubbleUp;
 }
-bool UUISliderComponent::OnNavigate_Implementation(ELexUINavigationDirection direction, TScriptInterface<ILexNavigationInterface>& result)
+bool UUISlider::OnNavigate_Implementation(ELexUINavigationDirection direction, TScriptInterface<ILexNavigationInterface>& result)
 {
     float valueIntervalMultiply = 0.0f;
     if (
@@ -196,7 +196,7 @@ bool UUISliderComponent::OnNavigate_Implementation(ELexUINavigationDirection dir
     }
 }
 
-void UUISliderComponent::CalculateInputValue(ULexPointerEventData *EventData)
+void UUISlider::CalculateInputValue(ULexPointerEventData *EventData)
 {
     ULexWidget *MainWidget = nullptr;
     ULexWidget *AreaWidget = nullptr;
@@ -255,7 +255,7 @@ void UUISliderComponent::CalculateInputValue(ULexPointerEventData *EventData)
         SetValue(value, true);
     }
 }
-void UUISliderComponent::ApplyValueToUI()
+void UUISlider::ApplyValueToUI()
 {
     float value01 = (Value - MinValue) / (MaxValue - MinValue);
     value01 = FMath::Clamp(value01, 0.0f, 1.0f);

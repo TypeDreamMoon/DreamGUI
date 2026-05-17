@@ -85,6 +85,8 @@ public:
 
 	virtual void PostLoad()override;
 	virtual void BeginDestroy() override;
+
+	UFUNCTION(BlueprintCallable, Category = "Widget")
 	void DestroyWidget();
 
 	virtual UWorld* GetWorld() const override final;
@@ -148,13 +150,13 @@ private:
 #pragma endregion
 private:
 	/** Local space position */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Transform", Getter, Setter, meta=(AllowPrivateAccess = true))
+	UPROPERTY(BlueprintReadOnly, Getter, Setter, meta=(AllowPrivateAccess = true))
 	FVector RelativeLocation = FVector::ZeroVector;
 	/** Local space rotation */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Transform", Getter, Setter, meta = (AllowPrivateAccess = true))
+	UPROPERTY(BlueprintReadOnly, Getter, Setter, meta = (AllowPrivateAccess = true))
 	FQuat RelativeRotation = FQuat::Identity;
 	/** Local space scale */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Transform", Getter, Setter, meta = (AllowPrivateAccess = true, AllowPreserveRatio))
+	UPROPERTY(BlueprintReadOnly, Getter, Setter, meta = (AllowPrivateAccess = true, AllowPreserveRatio))
 	FVector RelativeScale = FVector::OneVector;
 
 public:

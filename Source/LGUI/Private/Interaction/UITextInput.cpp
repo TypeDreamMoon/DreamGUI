@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Interaction/UITextInputComponent.h"
+#include "Interaction/UITextInput.h"
 #include "LGUI.h"
 #include "Core/Components/LexText.h"
 #include "InputCoreTypes.h"
@@ -22,7 +22,7 @@ ULexTextInputCustomValidation::ULexTextInputCustomValidation()
 {
 	bCanExecuteBlueprintEvent = GetClass()->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !GetClass()->HasAnyClassFlags(CLASS_Native);
 }
-bool ULexTextInputCustomValidation::OnValidateInput(UUITextInputComponent* InTextInput, const FString& InString, int InIndexOfInsertedChar)
+bool ULexTextInputCustomValidation::OnValidateInput(UUITextInput* InTextInput, const FString& InString, int InIndexOfInsertedChar)
 {
 	if (bCanExecuteBlueprintEvent)
 	{
@@ -31,7 +31,7 @@ bool ULexTextInputCustomValidation::OnValidateInput(UUITextInputComponent* InTex
 	return false;
 }
 
-void UUITextInputComponent::Awake()
+void UUITextInput::Awake()
 {
 	Super::Awake();
 	
@@ -45,7 +45,7 @@ void UUITextInputComponent::Awake()
 	}
 	this->SetCanExecuteUpdate(true);
 }
-void UUITextInputComponent::Update(float DeltaTime)
+void UUITextInput::Update(float DeltaTime)
 {
 	Super::Update(DeltaTime);
 	if (bInputActive)
@@ -63,7 +63,7 @@ void UUITextInputComponent::Update(float DeltaTime)
 	}
 }
 
-void UUITextInputComponent::EndPlay()
+void UUITextInput::EndPlay()
 {
 	Super::EndPlay();
 	DeactivateInput(true);
@@ -74,9 +74,9 @@ void UUITextInputComponent::EndPlay()
 }
 
 #if WITH_EDITOR
-bool UUITextInputComponent::CanEditChange(const FProperty* InProperty)const
+bool UUITextInput::CanEditChange(const FProperty* InProperty)const
 {
-	if (InProperty->GetFName() == GET_MEMBER_NAME_CHECKED(UUITextInputComponent, PasswordChar))
+	if (InProperty->GetFName() == GET_MEMBER_NAME_CHECKED(UUITextInput, PasswordChar))
 	{
 		if (InputType != EUITextInputType::Password
 			&& DisplayType != EUITextInputDisplayType::Password)
@@ -86,13 +86,13 @@ bool UUITextInputComponent::CanEditChange(const FProperty* InProperty)const
 	}
 	return Super::CanEditChange(InProperty);
 }
-void UUITextInputComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void UUITextInput::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (auto Property = PropertyChangedEvent.Property)
 	{
 		auto propertyName = Property->GetFName();
-		if (propertyName == GET_MEMBER_NAME_CHECKED(UUITextInputComponent, PasswordChar))
+		if (propertyName == GET_MEMBER_NAME_CHECKED(UUITextInput, PasswordChar))
 		{
 			if (PasswordChar.Len() > 1)
 			{
@@ -105,7 +105,7 @@ void UUITextInputComponent::PostEditChangeProperty(FPropertyChangedEvent& Proper
 				PasswordChar.AppendChar('*');
 			}
 		}
-		else if (propertyName == GET_MEMBER_NAME_CHECKED(UUITextInputComponent, MultiLineSubmitFunctionKeys))
+		else if (propertyName == GET_MEMBER_NAME_CHECKED(UUITextInput, MultiLineSubmitFunctionKeys))
 		{
 			for (int i = 0; i < MultiLineSubmitFunctionKeys.Num(); i++)
 			{
@@ -135,14 +135,14 @@ void UUITextInputComponent::PostEditChangeProperty(FPropertyChangedEvent& Proper
 	UpdatePlaceHolderComponent();
 }
 #endif
-bool UUITextInputComponent::CheckPlayerController()
+bool UUITextInput::CheckPlayerController()
 {
 	if (PlayerController != nullptr)return true;
 	PlayerController = this->GetWorld()->GetFirstPlayerController();
 	if (PlayerController != nullptr)return true;
 	return false;
 }
-void UUITextInputComponent::AnyKeyPressed(FKey Key)
+void UUITextInput::AnyKeyPressed(FKey Key)
 {
 	if (bInputActive == false)return;
 	if (!CheckPlayerController())return;
@@ -545,7 +545,7 @@ void UUITextInputComponent::AnyKeyPressed(FKey Key)
 	}
 }
 
-bool UUITextInputComponent::IsValidChar(TCHAR c)
+bool UUITextInput::IsValidChar(TCHAR c)
 {
 	auto StringContainsChar = [](TCHAR testChar, const FString& string, int stringLength)
 	{
@@ -695,7 +695,7 @@ bool UUITextInputComponent::IsValidChar(TCHAR c)
 	//	return true;
 	return true;
 }
-bool UUITextInputComponent::DeleteSelection(bool InFireEvent)
+bool UUITextInput::DeleteSelection(bool InFireEvent)
 {
 	if (bReadOnly)return false;
 	if (SelectionPropertyArray.Num() != 0)//delete selection frist
@@ -708,7 +708,7 @@ bool UUITextInputComponent::DeleteSelection(bool InFireEvent)
 	}
 	return false;
 }
-void UUITextInputComponent::InsertCharAtCaretPosition(TCHAR c)
+void UUITextInput::InsertCharAtCaretPosition(TCHAR c)
 {
 	if (bReadOnly)return;
 	TextVisual->SetText(FText::FromString(GetReplaceText()));
@@ -719,7 +719,7 @@ void UUITextInputComponent::InsertCharAtCaretPosition(TCHAR c)
 	CaretPositionIndex = TextVisual->GetCaretIndexByCharIndex(CharIndex) + 1;
 	PressCaretPositionIndex = CaretPositionIndex;
 }
-void UUITextInputComponent::InsertStringAtCaretPosition(const FString& value)
+void UUITextInput::InsertStringAtCaretPosition(const FString& value)
 {
 	if (bReadOnly)return;
 	TextVisual->SetText(FText::FromString(GetReplaceText()));
@@ -731,7 +731,7 @@ void UUITextInputComponent::InsertStringAtCaretPosition(const FString& value)
 	PressCaretPositionIndex = CaretPositionIndex;
 }
 
-void UUITextInputComponent::BackSpace()
+void UUITextInput::BackSpace()
 {
 	if (bReadOnly)return;
 	if (SelectionPropertyArray.Num() == 0)//no selection mask, use caret
@@ -764,7 +764,7 @@ void UUITextInputComponent::BackSpace()
 		PressCaretPositionIndex = CaretPositionIndex;
 	}
 }
-void UUITextInputComponent::ForwardSpace()
+void UUITextInput::ForwardSpace()
 {
 	if (bReadOnly)return;
 	if (SelectionPropertyArray.Num() == 0)//no selection mask, use caret
@@ -796,7 +796,7 @@ void UUITextInputComponent::ForwardSpace()
 		PressCaretPositionIndex = CaretPositionIndex;
 	}
 }
-void UUITextInputComponent::Copy()
+void UUITextInput::Copy()
 {
 	if (InputType == EUITextInputType::Password
 		|| DisplayType == EUITextInputDisplayType::Password
@@ -813,7 +813,7 @@ void UUITextInputComponent::Copy()
 		UpdateUITextComponent();
 	}
 }
-void UUITextInputComponent::Paste()
+void UUITextInput::Paste()
 {
 	if (bReadOnly)return;
 	FString pasteString;
@@ -850,7 +850,7 @@ void UUITextInputComponent::Paste()
 		UpdateAfterTextChange(true);
 	}
 }
-void UUITextInputComponent::Cut()
+void UUITextInput::Cut()
 {
 	if (bReadOnly)return;
 	if (InputType == EUITextInputType::Password
@@ -862,7 +862,7 @@ void UUITextInputComponent::Cut()
 		DeleteSelection(true);
 	}
 }
-void UUITextInputComponent::SelectAll()
+void UUITextInput::SelectAll()
 {
 	CaretPositionIndex = Text.Len() * 2;//just a large enough value to make sure it is the last caret
 	PressCaretPositionIndex = 0;
@@ -872,7 +872,7 @@ void UUITextInputComponent::SelectAll()
 	UpdateUITextComponent();
 }
 
-bool UUITextInputComponent::VerifyAndInsertStringAtCaretPosition(const FString& Value)
+bool UUITextInput::VerifyAndInsertStringAtCaretPosition(const FString& Value)
 {
 	if (bReadOnly)return false;
 	FString verifiedString;
@@ -892,7 +892,7 @@ bool UUITextInputComponent::VerifyAndInsertStringAtCaretPosition(const FString& 
 	}
 	return false;
 }
-bool UUITextInputComponent::VerifyAndInsertCharAtCaretPosition(TCHAR Value)
+bool UUITextInput::VerifyAndInsertCharAtCaretPosition(TCHAR Value)
 {
 	if (bReadOnly)return false;
 	if (IsValidChar(Value))
@@ -904,7 +904,7 @@ bool UUITextInputComponent::VerifyAndInsertCharAtCaretPosition(TCHAR Value)
 	return false;
 }
 
-void UUITextInputComponent::UpdateAfterTextChange(bool InFireEvent)
+void UUITextInput::UpdateAfterTextChange(bool InFireEvent)
 {
 	UpdateCaretPosition();
 	UpdateUITextComponent();
@@ -915,7 +915,7 @@ void UUITextInputComponent::UpdateAfterTextChange(bool InFireEvent)
 	}
 }
 
-FString UUITextInputComponent::GetReplaceText()const
+FString UUITextInput::GetReplaceText()const
 {
 	FString replaceText;
 	if (InputType == EUITextInputType::Password
@@ -936,7 +936,7 @@ FString UUITextInputComponent::GetReplaceText()const
 	return replaceText;
 }
 
-void UUITextInputComponent::MoveCaret(int32 moveType, bool withSelection)
+void UUITextInput::MoveCaret(int32 moveType, bool withSelection)
 {
 	auto uiText = TextVisual;
 	auto originText = uiText->GetText();
@@ -966,13 +966,13 @@ void UUITextInputComponent::MoveCaret(int32 moveType, bool withSelection)
 	}
 }
 
-void UUITextInputComponent::FireOnValueChangedEvent()
+void UUITextInput::FireOnValueChangedEvent()
 {
 	OnValueChangedCPP.Broadcast(Text);
 	OnValueChangedBP.Broadcast(Text);
 	OnValueChanged.FireEvent(Text);
 }
-void UUITextInputComponent::UpdateUITextComponent()
+void UUITextInput::UpdateUITextComponent()
 {
 	if (TextVisual.IsValid())
 	{
@@ -1068,7 +1068,7 @@ void UUITextInputComponent::UpdateUITextComponent()
 		}
 	}
 }
-void UUITextInputComponent::UpdatePlaceHolderComponent()
+void UUITextInput::UpdatePlaceHolderComponent()
 {
 	if (bInputActive || !Text.IsEmpty())
 	{
@@ -1086,7 +1086,7 @@ void UUITextInputComponent::UpdatePlaceHolderComponent()
 	}
 }
 
-void UUITextInputComponent::UpdateCaretPosition(bool InHideSelection)
+void UUITextInput::UpdateCaretPosition(bool InHideSelection)
 {
 	if (!bInputActive)
 	{
@@ -1107,7 +1107,7 @@ void UUITextInputComponent::UpdateCaretPosition(bool InHideSelection)
 		UpdateCaretPosition(caretPos, InHideSelection);
 	}
 }
-void UUITextInputComponent::UpdateCaretPosition(FVector2f InCaretPosition, bool InHideSelection)
+void UUITextInput::UpdateCaretPosition(FVector2f InCaretPosition, bool InHideSelection)
 {
 	if (!TextVisual.IsValid())return;
 	if (!CaretWidget.IsValid())
@@ -1132,7 +1132,7 @@ void UUITextInputComponent::UpdateCaretPosition(FVector2f InCaretPosition, bool 
 
 	if (InHideSelection) HideSelectionMask();//if use caret, then hide selection mask
 }
-void UUITextInputComponent::UpdateSelection()
+void UUITextInput::UpdateSelection()
 {
 	if (!TextVisual.IsValid())return;
 	int32 createdSelectionMaskCount = SelectionMaskObjectArray.Num();
@@ -1177,7 +1177,7 @@ void UUITextInputComponent::UpdateSelection()
 		}
 	}
 }
-void UUITextInputComponent::HideSelectionMask()
+void UUITextInput::HideSelectionMask()
 {
 	for (int i = 0; i < SelectionMaskObjectArray.Num(); i++)
 	{
@@ -1191,7 +1191,7 @@ void UUITextInputComponent::HideSelectionMask()
 	//TextInputMethodContext->SetSelectionRange(0, 0, ITextInputMethodContext::ECaretPosition::Beginning);
 }
 
-void UUITextInputComponent::OnWidgetActiveChanged(bool WidgetActive)
+void UUITextInput::OnWidgetActiveChanged(bool WidgetActive)
 {
 	Super::OnWidgetActiveChanged(WidgetActive);
 	if (WidgetActive)
@@ -1200,19 +1200,19 @@ void UUITextInputComponent::OnWidgetActiveChanged(bool WidgetActive)
 	}
 }
 
-void UUITextInputComponent::OnInteractableChanged(bool Interactable)
+void UUITextInput::OnInteractableChanged(bool Interactable)
 {
 	Super::OnInteractableChanged(Interactable);
 	DeactivateInput();
 }
 
-void UUITextInputComponent::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
+void UUITextInput::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
 	Super::OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
 	this->UpdateAfterTextChange(false);//if size change, need to recalculate text input area
 }
 
-bool UUITextInputComponent::OnPointerEnter_Implementation(ULexPointerEventData* EventData)
+bool UUITextInput::OnPointerEnter_Implementation(ULexPointerEventData* EventData)
 {
 	Super::OnPointerEnter_Implementation(EventData);
 	if (bAutoActivateInputWhenNavigateIn)
@@ -1228,7 +1228,7 @@ bool UUITextInputComponent::OnPointerEnter_Implementation(ULexPointerEventData* 
 	}
 	return AllowEventBubbleUp;
 }
-bool UUITextInputComponent::OnPointerExit_Implementation(ULexPointerEventData* EventData)
+bool UUITextInput::OnPointerExit_Implementation(ULexPointerEventData* EventData)
 {
 	Super::OnPointerExit_Implementation(EventData);
 	if (APlayerController* pc = this->GetWorld()->GetFirstPlayerController())
@@ -1237,19 +1237,19 @@ bool UUITextInputComponent::OnPointerExit_Implementation(ULexPointerEventData* E
 	}
 	return AllowEventBubbleUp;
 }
-bool UUITextInputComponent::OnPointerSelect_Implementation(ULexBaseEventData* EventData)
+bool UUITextInput::OnPointerSelect_Implementation(ULexBaseEventData* EventData)
 {
 	Super::OnPointerSelect_Implementation(EventData);
 	//ActivateInput(EventData);//handled at PointerClick
 	return AllowEventBubbleUp;
 }
-bool UUITextInputComponent::OnPointerDeselect_Implementation(ULexBaseEventData* EventData)
+bool UUITextInput::OnPointerDeselect_Implementation(ULexBaseEventData* EventData)
 {
 	Super::OnPointerDeselect_Implementation(EventData);
 	DeactivateInput();
 	return AllowEventBubbleUp;
 }
-bool UUITextInputComponent::OnPointerClick_Implementation(ULexPointerEventData* EventData)
+bool UUITextInput::OnPointerClick_Implementation(ULexPointerEventData* EventData)
 {
 	if (!bInputActive)//need active input
 	{
@@ -1257,7 +1257,7 @@ bool UUITextInputComponent::OnPointerClick_Implementation(ULexPointerEventData* 
 	}
 	return AllowEventBubbleUp;
 }
-bool UUITextInputComponent::OnPointerBeginDrag_Implementation(ULexPointerEventData* EventData)
+bool UUITextInput::OnPointerBeginDrag_Implementation(ULexPointerEventData* EventData)
 {
 	if (bInputActive)
 	{
@@ -1268,7 +1268,7 @@ bool UUITextInputComponent::OnPointerBeginDrag_Implementation(ULexPointerEventDa
 		return true;
 	}
 }
-bool UUITextInputComponent::OnPointerDrag_Implementation(ULexPointerEventData* EventData)
+bool UUITextInput::OnPointerDrag_Implementation(ULexPointerEventData* EventData)
 {
 	if (bInputActive)
 	{
@@ -1319,7 +1319,7 @@ bool UUITextInputComponent::OnPointerDrag_Implementation(ULexPointerEventData* E
 		return true;
 	}
 }
-bool UUITextInputComponent::OnPointerEndDrag_Implementation(ULexPointerEventData* EventData)
+bool UUITextInput::OnPointerEndDrag_Implementation(ULexPointerEventData* EventData)
 {
 	if (bInputActive)
 	{
@@ -1330,7 +1330,7 @@ bool UUITextInputComponent::OnPointerEndDrag_Implementation(ULexPointerEventData
 		return true;
 	}
 }
-bool UUITextInputComponent::OnPointerDown_Implementation(ULexPointerEventData* EventData)
+bool UUITextInput::OnPointerDown_Implementation(ULexPointerEventData* EventData)
 {
 	Super::OnPointerDown_Implementation(EventData);
 	if (bInputActive)//if already active, then put caret position at mouse position
@@ -1351,12 +1351,12 @@ bool UUITextInputComponent::OnPointerDown_Implementation(ULexPointerEventData* E
 
 	return AllowEventBubbleUp;
 }
-bool UUITextInputComponent::OnPointerUp_Implementation(ULexPointerEventData* EventData)
+bool UUITextInput::OnPointerUp_Implementation(ULexPointerEventData* EventData)
 {
 	Super::OnPointerUp_Implementation(EventData);
 	return AllowEventBubbleUp;
 }
-void UUITextInputComponent::ActivateInput(ULexPointerEventData* EventData)
+void UUITextInput::ActivateInput(ULexPointerEventData* EventData)
 {
 	if (TextVisual == nullptr)
 	{
@@ -1438,7 +1438,7 @@ void UUITextInputComponent::ActivateInput(ULexPointerEventData* EventData)
 	OnInputActivate.FireEvent(bInputActive);
 }
 
-void UUITextInputComponent::BindKeys()
+void UUITextInput::BindKeys()
 {
 	if (!InputComponentAgent.IsValid())
 	{
@@ -1565,18 +1565,18 @@ void UUITextInputComponent::BindKeys()
 	{
 		if (!IgnoreKeys.Contains(Key))
 		{
-			InputComp->BindKey(Key, EInputEvent::IE_Pressed, this, &UUITextInputComponent::AnyKeyPressed);
-			InputComp->BindKey(Key, EInputEvent::IE_Repeat, this, &UUITextInputComponent::AnyKeyPressed);
+			InputComp->BindKey(Key, EInputEvent::IE_Pressed, this, &UUITextInput::AnyKeyPressed);
+			InputComp->BindKey(Key, EInputEvent::IE_Repeat, this, &UUITextInput::AnyKeyPressed);
 		}
 	}
 }
-void UUITextInputComponent::UnbindKeys()
+void UUITextInput::UnbindKeys()
 {
 	if (!InputComponentAgent.IsValid())
 		return;
 	InputComponentAgent->Destroy();
 }
-void UUITextInputComponent::DeactivateInput(bool InFireEvent)
+void UUITextInput::DeactivateInput(bool InFireEvent)
 {
 	if (!bInputActive)return;
 	ITextInputMethodSystem* const TextInputMethodSystem = FSlateApplication::IsInitialized() ? FSlateApplication::Get().GetTextInputMethodSystem() : nullptr;
@@ -1617,7 +1617,7 @@ void UUITextInputComponent::DeactivateInput(bool InFireEvent)
 		OnInputActivate.FireEvent(bInputActive);
 	}
 }
-ULexText* UUITextInputComponent::GetTextComponent()const
+ULexText* UUITextInput::GetTextComponent()const
 {
 	if (TextVisual != nullptr)
 	{
@@ -1625,11 +1625,11 @@ ULexText* UUITextInputComponent::GetTextComponent()const
 	}
 	return nullptr;
 }
-const FString& UUITextInputComponent::GetText()const
+const FString& UUITextInput::GetText()const
 {
 	return Text;
 }
-void UUITextInputComponent::SetText(const FString& InText, bool InFireEvent)
+void UUITextInput::SetText(const FString& InText, bool InFireEvent)
 {
 	if (Text != InText)
 	{
@@ -1656,17 +1656,17 @@ void UUITextInputComponent::SetText(const FString& InText, bool InFireEvent)
 	}
 }
 
-void UUITextInputComponent::SetText(const FString& InText)
+void UUITextInput::SetText(const FString& InText)
 {
 	SetText(InText, true);
 }
 
-void UUITextInputComponent::SetTextWithoutNotify(const FString& InText)
+void UUITextInput::SetTextWithoutNotify(const FString& InText)
 {
 	SetText(InText, false);
 }
 
-void UUITextInputComponent::SetInputType(EUITextInputType Value)
+void UUITextInput::SetInputType(EUITextInputType Value)
 {
 	if (InputType != Value)
 	{
@@ -1675,7 +1675,7 @@ void UUITextInputComponent::SetInputType(EUITextInputType Value)
 		UpdateUITextComponent();
 	}
 }
-void UUITextInputComponent::SetCustomValidation(ULexTextInputCustomValidation* Value)
+void UUITextInput::SetCustomValidation(ULexTextInputCustomValidation* Value)
 {
 	if (CustomValidation != Value)
 	{
@@ -1687,7 +1687,7 @@ void UUITextInputComponent::SetCustomValidation(ULexTextInputCustomValidation* V
 		}
 	}
 }
-void UUITextInputComponent::SetDisplayType(EUITextInputDisplayType Value)
+void UUITextInput::SetDisplayType(EUITextInputDisplayType Value)
 {
 	if (DisplayType != Value)
 	{
@@ -1696,7 +1696,7 @@ void UUITextInputComponent::SetDisplayType(EUITextInputDisplayType Value)
 		UpdateUITextComponent();
 	}
 }
-void UUITextInputComponent::SetPasswordChar(const FString& Value)
+void UUITextInput::SetPasswordChar(const FString& Value)
 {
 	if (PasswordChar != Value)
 	{
@@ -1711,26 +1711,26 @@ void UUITextInputComponent::SetPasswordChar(const FString& Value)
 		}
 	}
 }
-void UUITextInputComponent::SetAllowMultiLine(bool Value)
+void UUITextInput::SetAllowMultiLine(bool Value)
 {
 	if (bAllowMultiLine != Value)
 	{
 		bAllowMultiLine = Value;
 	}
 }
-void UUITextInputComponent::SetMultiLineSubmitFunctionKeys(const TArray<FKey>& Value)
+void UUITextInput::SetMultiLineSubmitFunctionKeys(const TArray<FKey>& Value)
 {
 	MultiLineSubmitFunctionKeys = Value;
 }
-void UUITextInputComponent::SetPlaceHolder(ULexWidget* Value)
+void UUITextInput::SetPlaceHolder(ULexWidget* Value)
 {
 	PlaceHolder = Value;
 }
-void UUITextInputComponent::SetCaretBlinkRate(float Value)
+void UUITextInput::SetCaretBlinkRate(float Value)
 {
 	CaretBlinkRate = Value;
 }
-void UUITextInputComponent::SetCaretWidth(float Value)
+void UUITextInput::SetCaretWidth(float Value)
 {
 	if (CaretWidth != Value)
 	{
@@ -1741,7 +1741,7 @@ void UUITextInputComponent::SetCaretWidth(float Value)
 		}
 	}
 }
-void UUITextInputComponent::SetCaretColor(FColor Value)
+void UUITextInput::SetCaretColor(FColor Value)
 {
 	if (CaretColor != Value)
 	{
@@ -1752,7 +1752,7 @@ void UUITextInputComponent::SetCaretColor(FColor Value)
 		}
 	}
 }
-void UUITextInputComponent::SetSelectionColor(FColor Value)
+void UUITextInput::SetSelectionColor(FColor Value)
 {
 	if (SelectionColor != Value)
 	{
@@ -1769,40 +1769,40 @@ void UUITextInputComponent::SetSelectionColor(FColor Value)
 		}
 	}
 }
-void UUITextInputComponent::SetVirtualKeyboradOptions(FVirtualKeyboardOptions Value)
+void UUITextInput::SetVirtualKeyboradOptions(FVirtualKeyboardOptions Value)
 {
 	VirtualKeyboardOptions = Value;
 }
-void UUITextInputComponent::SetIgnoreKeys(const TArray<FKey>& Value)
+void UUITextInput::SetIgnoreKeys(const TArray<FKey>& Value)
 {
 	IgnoreKeys = Value;
 }
-void UUITextInputComponent::SetAutoActivateInputWhenNavigateIn(bool Value)
+void UUITextInput::SetAutoActivateInputWhenNavigateIn(bool Value)
 {
 	bAutoActivateInputWhenNavigateIn = Value;
 }
-void UUITextInputComponent::SetReadOnly(bool Value)
+void UUITextInput::SetReadOnly(bool Value)
 {
 	bReadOnly = Value;
 }
 
-TSharedRef<UUITextInputComponent::FVirtualKeyboardEntry> UUITextInputComponent::FVirtualKeyboardEntry::Create(UUITextInputComponent* Input)
+TSharedRef<UUITextInput::FVirtualKeyboardEntry> UUITextInput::FVirtualKeyboardEntry::Create(UUITextInput* Input)
 {
 	return MakeShareable(new FVirtualKeyboardEntry(Input));
 }
-UUITextInputComponent::FVirtualKeyboardEntry::FVirtualKeyboardEntry(UUITextInputComponent* InInput)
+UUITextInput::FVirtualKeyboardEntry::FVirtualKeyboardEntry(UUITextInput* InInput)
 {
 	InputComp = InInput;
 }
-void UUITextInputComponent::FVirtualKeyboardEntry::SetTextFromVirtualKeyboard(const FText& InNewText, ETextEntryType TextEntryType)
+void UUITextInput::FVirtualKeyboardEntry::SetTextFromVirtualKeyboard(const FText& InNewText, ETextEntryType TextEntryType)
 {
 	InputComp->SetText(InNewText.ToString());
 }
-void UUITextInputComponent::FVirtualKeyboardEntry::SetSelectionFromVirtualKeyboard(int InSelStart, int SelEnd)
+void UUITextInput::FVirtualKeyboardEntry::SetSelectionFromVirtualKeyboard(int InSelStart, int SelEnd)
 {
 	//@todo
 }
-bool UUITextInputComponent::FVirtualKeyboardEntry::GetSelection(int& OutSelStart, int& OutSelEnd)
+bool UUITextInput::FVirtualKeyboardEntry::GetSelection(int& OutSelStart, int& OutSelEnd)
 {
 	//check(IsInGameThread());
 
@@ -1814,11 +1814,11 @@ bool UUITextInputComponent::FVirtualKeyboardEntry::GetSelection(int& OutSelStart
 	//OutSelEnd = Selection.GetEnd().GetOffset();
 	return true;
 }
-FText UUITextInputComponent::FVirtualKeyboardEntry::GetText() const
+FText UUITextInput::FVirtualKeyboardEntry::GetText() const
 {
 	return FText::FromString(InputComp->GetText());
 }
-FText UUITextInputComponent::FVirtualKeyboardEntry::GetHintText() const
+FText UUITextInput::FVirtualKeyboardEntry::GetHintText() const
 {
 	if (InputComp->PlaceHolder.IsValid())
 	{
@@ -1829,7 +1829,7 @@ FText UUITextInputComponent::FVirtualKeyboardEntry::GetHintText() const
 	}
 	return FText::FromString(TEXT(""));
 }
-EKeyboardType UUITextInputComponent::FVirtualKeyboardEntry::GetVirtualKeyboardType() const
+EKeyboardType UUITextInput::FVirtualKeyboardEntry::GetVirtualKeyboardType() const
 {
 	if (InputComp->DisplayType == EUITextInputDisplayType::Password)
 	{
@@ -1849,22 +1849,22 @@ EKeyboardType UUITextInputComponent::FVirtualKeyboardEntry::GetVirtualKeyboardTy
 		break;
 	}
 }
-FVirtualKeyboardOptions UUITextInputComponent::FVirtualKeyboardEntry::GetVirtualKeyboardOptions() const
+FVirtualKeyboardOptions UUITextInput::FVirtualKeyboardEntry::GetVirtualKeyboardOptions() const
 {
 	return InputComp->VirtualKeyboardOptions;
 }
-bool UUITextInputComponent::FVirtualKeyboardEntry::IsMultilineEntry() const
+bool UUITextInput::FVirtualKeyboardEntry::IsMultilineEntry() const
 {
 	return InputComp->bAllowMultiLine;
 }
 
 
 #define LGUI_LOG_TextInputMethodContext 0
-TSharedRef<UUITextInputComponent::FTextInputMethodContext> UUITextInputComponent::FTextInputMethodContext::Create(UUITextInputComponent* Input)
+TSharedRef<UUITextInput::FTextInputMethodContext> UUITextInput::FTextInputMethodContext::Create(UUITextInput* Input)
 {
 	return MakeShareable(new FTextInputMethodContext(Input));
 }
-void UUITextInputComponent::FTextInputMethodContext::Dispose()
+void UUITextInput::FTextInputMethodContext::Dispose()
 {
 	if (CachedWindow.IsValid())
 	{
@@ -1877,25 +1877,25 @@ void UUITextInputComponent::FTextInputMethodContext::Dispose()
 		}
 	}
 }
-UUITextInputComponent::FTextInputMethodContext::FTextInputMethodContext(UUITextInputComponent* InInput)
+UUITextInput::FTextInputMethodContext::FTextInputMethodContext(UUITextInput* InInput)
 {
 	InputComp = InInput;
 }
-bool UUITextInputComponent::FTextInputMethodContext::IsReadOnly()
+bool UUITextInput::FTextInputMethodContext::IsReadOnly()
 {
 #if LGUI_LOG_TextInputMethodContext
 	//UE_LOG(LGUI, Log, TEXT("IsReadOnly"));
 #endif
 	return InputComp->GetReadOnly();
 }
-uint32 UUITextInputComponent::FTextInputMethodContext::GetTextLength()
+uint32 UUITextInput::FTextInputMethodContext::GetTextLength()
 {
 #if LGUI_LOG_TextInputMethodContext
 	UE_LOG(LGUI, Log, TEXT("GetTextLength, Text:%s, Length:%d"), *InputComp->Text, InputComp->Text.Len());
 #endif
 	return InputComp->Text.Len();
 }
-void UUITextInputComponent::FTextInputMethodContext::GetSelectionRange(uint32& BeginIndex, uint32& Length, ECaretPosition& OutCaretPosition)
+void UUITextInput::FTextInputMethodContext::GetSelectionRange(uint32& BeginIndex, uint32& Length, ECaretPosition& OutCaretPosition)
 {
 	Length = FMath::Abs(InputComp->CaretPositionIndex - InputComp->PressCaretPositionIndex);
 	OutCaretPosition = InputComp->PressCaretPositionIndex <= InputComp->CaretPositionIndex ? ECaretPosition::Ending : ECaretPosition::Beginning;
@@ -1912,7 +1912,7 @@ void UUITextInputComponent::FTextInputMethodContext::GetSelectionRange(uint32& B
 	UE_LOG(LogTemp, Log, TEXT("GetSelectionRange, BeginIndex:%d, Length:%d, InCaretPosition:%d, Text:%s"), BeginIndex, Length, (int32)OutCaretPosition, *InputComp->Text);
 #endif
 }
-void UUITextInputComponent::FTextInputMethodContext::SetSelectionRange(const uint32 BeginIndex, const uint32 Length, const ECaretPosition InCaretPosition)
+void UUITextInput::FTextInputMethodContext::SetSelectionRange(const uint32 BeginIndex, const uint32 Length, const ECaretPosition InCaretPosition)
 {
 	InputComp->PressCaretPositionIndex = BeginIndex;
 	if (Length > 0)
@@ -1942,14 +1942,14 @@ void UUITextInputComponent::FTextInputMethodContext::SetSelectionRange(const uin
 	UE_LOG(LGUI, Warning, TEXT("SetSelectionRange, BeginIndex:%d, Length:%d, InCaretPosition:%d, CaretPositionIndex:%d, PressCaretPositionIndex:%d"), BeginIndex, Length, (int32)InCaretPosition, InputComp->CaretPositionIndex, InputComp->PressCaretPositionIndex)
 #endif
 }
-void UUITextInputComponent::FTextInputMethodContext::GetTextInRange(const uint32 BeginIndex, const uint32 Length, FString& OutString)
+void UUITextInput::FTextInputMethodContext::GetTextInRange(const uint32 BeginIndex, const uint32 Length, FString& OutString)
 {
 	OutString = InputComp->Text.Mid(BeginIndex, Length);
 #if LGUI_LOG_TextInputMethodContext
 	UE_LOG(LogTemp, Log, TEXT("GetTextInRange, BeginIndex:%d, Length:%d, OutString:%s"), BeginIndex, Length, *(OutString));
 #endif
 }
-void UUITextInputComponent::FTextInputMethodContext::SetTextInRange(const uint32 BeginIndex, const uint32 Length, const FString& InString)
+void UUITextInput::FTextInputMethodContext::SetTextInRange(const uint32 BeginIndex, const uint32 Length, const FString& InString)
 {
 	InputComp->Text.RemoveAt(BeginIndex, Length);
 	int InsertCharCount = 0;
@@ -1968,14 +1968,14 @@ void UUITextInputComponent::FTextInputMethodContext::SetTextInRange(const uint32
 	UE_LOG(LGUI, Log, TEXT("SetTextInRange, BeginIndex:%d, Length:%d, InString:%s"), BeginIndex, Length, *(InString));
 #endif
 }
-int32 UUITextInputComponent::FTextInputMethodContext::GetCharacterIndexFromPoint(const FVector2D& Point)
+int32 UUITextInput::FTextInputMethodContext::GetCharacterIndexFromPoint(const FVector2D& Point)
 {
 #if LGUI_LOG_TextInputMethodContext
 	UE_LOG(LogTemp, Log, TEXT("GetCharacterIndexFromPoint:%s"), *(Point.ToString()));
 #endif
 	return 0;
 }
-bool UUITextInputComponent::FTextInputMethodContext::GetTextBounds(const uint32 BeginIndex, const uint32 Length, FVector2D& Position, FVector2D& Size)
+bool UUITextInput::FTextInputMethodContext::GetTextBounds(const uint32 BeginIndex, const uint32 Length, FVector2D& Position, FVector2D& Size)
 {
 	Position = FVector2D(0, 0);
 	Size = FVector2D(1000, 1000);
@@ -1984,7 +1984,7 @@ bool UUITextInputComponent::FTextInputMethodContext::GetTextBounds(const uint32 
 #endif
 	return false;
 }
-void UUITextInputComponent::FTextInputMethodContext::GetScreenBounds(FVector2D& Position, FVector2D& Size)
+void UUITextInput::FTextInputMethodContext::GetScreenBounds(FVector2D& Position, FVector2D& Size)
 {
 	Position = FVector2D(0, 0);
 	Size = FVector2D(1000, 1000);
@@ -1992,7 +1992,7 @@ void UUITextInputComponent::FTextInputMethodContext::GetScreenBounds(FVector2D& 
 	UE_LOG(LogTemp, Log, TEXT("GetScreenBounds, Position:%s, Size:%s"), *(Position.ToString()), *(Size.ToString()));
 #endif
 }
-TSharedPtr<FGenericWindow> UUITextInputComponent::FTextInputMethodContext::GetWindow()
+TSharedPtr<FGenericWindow> UUITextInput::FTextInputMethodContext::GetWindow()
 {
 	if (!CachedWindow.IsValid())
 	{
@@ -2005,7 +2005,7 @@ TSharedPtr<FGenericWindow> UUITextInputComponent::FTextInputMethodContext::GetWi
 #endif
 	return SlateWindow->GetNativeWindow();
 }
-void UUITextInputComponent::FTextInputMethodContext::BeginComposition()
+void UUITextInput::FTextInputMethodContext::BeginComposition()
 {
 	bIsComposing = true;
 	OriginString = InputComp->Text;
@@ -2013,13 +2013,13 @@ void UUITextInputComponent::FTextInputMethodContext::BeginComposition()
 	UE_LOG(LGUI, Log, TEXT("BeginComposition"));
 #endif
 }
-void UUITextInputComponent::FTextInputMethodContext::UpdateCompositionRange(const int32 InBeginIndex, const uint32 InLength)
+void UUITextInput::FTextInputMethodContext::UpdateCompositionRange(const int32 InBeginIndex, const uint32 InLength)
 {
 #if LGUI_LOG_TextInputMethodContext
 	UE_LOG(LogTemp, Log, TEXT("UpdateCompositionRange"));
 #endif
 }
-void UUITextInputComponent::FTextInputMethodContext::EndComposition()
+void UUITextInput::FTextInputMethodContext::EndComposition()
 {
 	bIsComposing = false;
 	if (OriginString != InputComp->Text)

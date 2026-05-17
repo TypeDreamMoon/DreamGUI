@@ -1,16 +1,16 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Interaction/UIToggleGroupComponent.h"
+#include "Interaction/UIToggleGroup.h"
 #include "LGUI.h"
 #include "Core/Components/LexWidget.h"
-#include "Interaction/UIToggleComponent.h"
+#include "Interaction/UIToggle.h"
 
 
-UUIToggleGroupComponent::UUIToggleGroupComponent()
+UUIToggleGroup::UUIToggleGroup()
 {
 	OnValueChanged = FLexUIEventDelegate(ELexUIEventDelegateParameterType::Int32);
 }
-void UUIToggleGroupComponent::AddToggleComponent(UUIToggleComponent* InComp)
+void UUIToggleGroup::AddToggleComponent(UUIToggle* InComp)
 {
 	int32 foundIndex = ToggleCollection.IndexOfByKey(InComp);
 	if (foundIndex != INDEX_NONE)
@@ -26,7 +26,7 @@ void UUIToggleGroupComponent::AddToggleComponent(UUIToggleComponent* InComp)
 	ToggleCollection.Add(InComp);
 	bNeedToSortToggleCollection = true;
 }
-void UUIToggleGroupComponent::RemoveToggleComponent(UUIToggleComponent* InComp)
+void UUIToggleGroup::RemoveToggleComponent(UUIToggle* InComp)
 {
 	int32 foundIndex = ToggleCollection.IndexOfByKey(InComp);
 	if (foundIndex == INDEX_NONE)
@@ -36,17 +36,17 @@ void UUIToggleGroupComponent::RemoveToggleComponent(UUIToggleComponent* InComp)
 	}
 	ToggleCollection.RemoveAt(foundIndex);
 }
-void UUIToggleGroupComponent::SortToggleCollection()
+void UUIToggleGroup::SortToggleCollection()
 {
 	if (bNeedToSortToggleCollection)
 	{
 		bNeedToSortToggleCollection = false;
-		ToggleCollection.Sort([](const TWeakObjectPtr<UUIToggleComponent>& A, const TWeakObjectPtr<UUIToggleComponent>& B) {
+		ToggleCollection.Sort([](const TWeakObjectPtr<UUIToggle>& A, const TWeakObjectPtr<UUIToggle>& B) {
 			return A->GetWidget()->GetFlattenHierarchyIndex() < B->GetWidget()->GetFlattenHierarchyIndex();
 			});
 	}
 }
-void UUIToggleGroupComponent::SetSelection(UUIToggleComponent* Target)
+void UUIToggleGroup::SetSelection(UUIToggle* Target)
 {
 	if (!IsValid(Target))
 	{
@@ -67,7 +67,7 @@ void UUIToggleGroupComponent::SetSelection(UUIToggleComponent* Target)
 		OnValueChanged.FireEvent(index);
 	}
 }
-void UUIToggleGroupComponent::ClearSelection()
+void UUIToggleGroup::ClearSelection()
 {
 	if (LastSelect.IsValid())
 	{
@@ -78,27 +78,27 @@ void UUIToggleGroupComponent::ClearSelection()
 		OnValueChanged.FireEvent(-1);
 	}
 }
-UUIToggleComponent* UUIToggleGroupComponent::GetSelectedItem()const
+UUIToggle* UUIToggleGroup::GetSelectedItem()const
 {
 	return LastSelect.Get();
 }
 
-int32 UUIToggleGroupComponent::GetToggleIndex(const UUIToggleComponent* InComp)const
+int32 UUIToggleGroup::GetToggleIndex(const UUIToggle* InComp)const
 {
 	if (IsValid(InComp))
 	{
-		(const_cast<UUIToggleGroupComponent*>(this))->SortToggleCollection();
+		(const_cast<UUIToggleGroup*>(this))->SortToggleCollection();
 		return ToggleCollection.IndexOfByKey(InComp);
 	}
 	return -1;
 }
-UUIToggleComponent* UUIToggleGroupComponent::GetToggleByIndex(int32 InIndex)const
+UUIToggle* UUIToggleGroup::GetToggleByIndex(int32 InIndex)const
 {
 	if (InIndex < 0 || InIndex >= ToggleCollection.Num())
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d Index:%d out of range:%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, InIndex, ToggleCollection.Num());
 		return nullptr;
 	}
-	(const_cast<UUIToggleGroupComponent*>(this))->SortToggleCollection();
+	(const_cast<UUIToggleGroup*>(this))->SortToggleCollection();
 	return ToggleCollection[InIndex].Get();
 }

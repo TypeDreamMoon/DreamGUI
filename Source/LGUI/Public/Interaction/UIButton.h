@@ -3,14 +3,14 @@
 #pragma once
 
 #include "Event/Interface/LexPointerClickInterface.h"
-#include "UISelectableComponent.h"
+#include "UISelectable.h"
 #include "Event/LexUIEventDelegate.h"
-#include "UIButtonComponent.generated.h"
+#include "UIButton.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUIButtonClickedEvent);
 
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API UUIButtonComponent : public UUISelectableComponent, public ILexPointerClickInterface
+class LGUI_API UUIButton : public UUISelectable, public ILexPointerClickInterface
 {
 	GENERATED_BODY()
 protected:

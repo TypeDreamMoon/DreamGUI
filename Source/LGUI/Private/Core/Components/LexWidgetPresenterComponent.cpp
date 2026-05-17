@@ -20,13 +20,19 @@ ULexWidgetPresenterComponent::ULexWidgetPresenterComponent()
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 	
 	bWantsOnUpdateTransform = true;
+
+	CanvasTemplate = CreateDefaultSubobject<ULexCanvas>(TEXT("CanvasTemplate"));
+	
 	NavigationSelectionPrefab = LoadObject<ULexUIPrefab>(NULL, TEXT("/LGUI/Prefabs/NavigationSelectionInputHandler"));
 }
 
 void ULexWidgetPresenterComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	LoadPrefab();//load prefab when BeginPlay in game mode
+	if (IsValid(LoadedWidget) && !LoadedWidget->HasBegunPlay())
+	{
+		LoadedWidget->BeginPlay();
+	}
 }
 
 void ULexWidgetPresenterComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -53,15 +59,7 @@ void ULexWidgetPresenterComponent::OnRegister()
 {
 	Super::OnRegister();
 	ULexUIManagerWorldSubsystem::AddWidgetPresenter(this);
-#if WITH_EDITOR
-	if (auto World = GetWorld())
-	{
-		if (!World->IsGameWorld())
-		{
-			LoadPrefab();//load prefab when OnRegister in edit mode
-		}
-	}
-#endif
+	LoadPrefab();//load prefab when OnRegister in edit mode
 }
 
 void ULexWidgetPresenterComponent::OnUnregister()
@@ -173,10 +171,6 @@ void ULexWidgetPresenterComponent::Serialize(FArchive& Ar)
 void ULexWidgetPresenterComponent::PostInitProperties()
 {
 	Super::PostInitProperties();
-	if (!CanvasTemplate)
-	{
-		CanvasTemplate = NewObject<ULexCanvas>(this, NAME_None, RF_ArchetypeObject | RF_Transactional | RF_Public);
-	}
 }
 
 void ULexWidgetPresenterComponent::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
@@ -207,12 +201,13 @@ void ULexWidgetPresenterComponent::LoadPrefab()
 #if WITH_EDITOR
 		TArray<ULexWidget*> AllLoadedWidgets;
 		ULexWidget::CollectChildrenWidgets(LoadedWidget.Get(), AllLoadedWidgets, true);
-		bool bIsGameWorld = this->GetWorld()->IsGameWorld();
-		if (!bIsGameWorld)
+		if (this->GetWorld()->WorldType == EWorldType::Editor)
 		{
 			for (auto Widget : AllLoadedWidgets)
 			{
-				Widget->SetFlags(RF_Transient);//set transient in edt mode because we don't want to save these widgets in level, not set in game mode because no need to
+				//set transient in edit mode because we don't want to save these widgets in level, not set in game mode because no need to
+				//skip EditorPreview mode because we need full transactional
+				Widget->SetFlags(RF_Transient);
 			}
 		}
 		OverallVersionMD5 = WidgetPrefab->GenerateOverallVersionMD5();//store version for auto update

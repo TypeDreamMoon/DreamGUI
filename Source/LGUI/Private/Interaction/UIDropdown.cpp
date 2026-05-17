@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Interaction/UIDropdownComponent.h"
+#include "Interaction/UIDropdown.h"
 #include "LGUI.h"
 #include "Core/Components/LexCanvas.h"
 #include "LexUIBPLibrary.h"
@@ -9,15 +9,15 @@
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexText.h"
 #include "Core/Components/LexVisualEmpty.h"
-#include "Interaction/UIButtonComponent.h"
+#include "Interaction/UIButton.h"
 
 
 
-UUIDropdownComponent::UUIDropdownComponent()
+UUIDropdown::UUIDropdown()
 {
 }
 
-void UUIDropdownComponent::Awake()
+void UUIDropdown::Awake()
 {
 	Super::Awake();
 	if (ListRoot.IsValid())
@@ -41,7 +41,7 @@ void UUIDropdownComponent::Awake()
 	}
 }
 #if WITH_EDITOR
-void UUIDropdownComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void UUIDropdown::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (Options.Num() > 0)
@@ -59,7 +59,7 @@ void UUIDropdownComponent::PostEditChangeProperty(FPropertyChangedEvent& Propert
 }
 #endif
 
-void UUIDropdownComponent::Show()
+void UUIDropdown::Show()
 {
 	if (!ListRoot.IsValid())
 	{
@@ -276,7 +276,7 @@ void UUIDropdownComponent::Show()
 
 	ListRoot->SetPivot(Pivot);
 }
-void UUIDropdownComponent::Hide()
+void UUIDropdown::Hide()
 {
 	if (!ListRoot.IsValid())
 	{
@@ -301,7 +301,7 @@ void UUIDropdownComponent::Hide()
 		BlockerWidget = nullptr;
 	}
 }
-void UUIDropdownComponent::CreateBlocker()
+void UUIDropdown::CreateBlocker()
 {
 	BlockerWidget = NewObject<ULexWidget>(this->GetWidget()->GetOuter());
 	BlockerWidget->SetDisplayName(TEXT("UIDropdown_Blocker"));
@@ -314,12 +314,12 @@ void UUIDropdownComponent::CreateBlocker()
 	BlockerCanvas->SetOverrideSorting(true);
 	BlockerCanvas->SetSortOrderToHighestOfHierarchy();
 	BlockerCanvas->SetTraceChannel(this->GetWidget()->GetRootCanvas()->GetTraceChannel());
-	auto BlockerButton = BlockerWidget->AddComponent<UUIButtonComponent>();
+	auto BlockerButton = BlockerWidget->AddComponent<UUIButton>();
 	BlockerButton->GetOnClickEvent().AddWeakLambda(this, [this] {
 		this->Hide();
 		});
 }
-void UUIDropdownComponent::CreateListItems()
+void UUIDropdown::CreateListItems()
 {
 	auto ItemTemplateWidget = ItemTemplate->GetWidget();
 	if (!IsValid(ItemTemplateWidget))
@@ -361,7 +361,7 @@ void UUIDropdownComponent::CreateListItems()
 		ListRoot->SetHeight(MaxHeight + HeightOffset);
 	}
 }
-FUIDropdownOptionData UUIDropdownComponent::GetOption(int index)const
+FUIDropdownOptionData UUIDropdown::GetOption(int index)const
 {
 	if (index >= Options.Num())
 	{
@@ -370,7 +370,7 @@ FUIDropdownOptionData UUIDropdownComponent::GetOption(int index)const
 	}
 	return Options[index];
 }
-FUIDropdownOptionData UUIDropdownComponent::GetCurrentOption()const
+FUIDropdownOptionData UUIDropdown::GetCurrentOption()const
 {
 	if (Value >= Options.Num())
 	{
@@ -379,7 +379,7 @@ FUIDropdownOptionData UUIDropdownComponent::GetCurrentOption()const
 	}
 	return Options[Value];
 }
-void UUIDropdownComponent::SetValue(int InValue, bool FireEvent)
+void UUIDropdown::SetValue(int InValue, bool FireEvent)
 {
 	if (Value != InValue)
 	{
@@ -394,44 +394,44 @@ void UUIDropdownComponent::SetValue(int InValue, bool FireEvent)
 	}
 }
 
-void UUIDropdownComponent::SetValue(int InValue)
+void UUIDropdown::SetValue(int InValue)
 {
 	SetValue(InValue, true);
 }
 
-void UUIDropdownComponent::SetValueWithoutNotify(int InValue)
+void UUIDropdown::SetValueWithoutNotify(int InValue)
 {
 	SetValue(InValue, false);
 }
 
-void UUIDropdownComponent::SetVerticalPosition(EUIDropdownVerticalPosition InValue)
+void UUIDropdown::SetVerticalPosition(EUIDropdownVerticalPosition InValue)
 {
 	if (VerticalPosition != InValue)
 	{
 		VerticalPosition = InValue;
 	}
 }
-void UUIDropdownComponent::SetHorizontalPosition(EUIDropdownHorizontalPosition InValue)
+void UUIDropdown::SetHorizontalPosition(EUIDropdownHorizontalPosition InValue)
 {
 	if (HorizontalPosition != InValue)
 	{
 		HorizontalPosition = InValue;
 	}
 }
-void UUIDropdownComponent::SetVerticalOverlap(bool newValue)
+void UUIDropdown::SetVerticalOverlap(bool newValue)
 {
 	if (VerticalOverlap != newValue)
 	{
 		VerticalOverlap = newValue;
 	}
 }
-void UUIDropdownComponent::SetOptions(const TArray<FUIDropdownOptionData>& InOptions)
+void UUIDropdown::SetOptions(const TArray<FUIDropdownOptionData>& InOptions)
 {
 	bNeedRecreate = true;
 	Options = InOptions;
 	ApplyValueToUI();
 }
-void UUIDropdownComponent::AddOptions(const TArray<FUIDropdownOptionData>& InOptions)
+void UUIDropdown::AddOptions(const TArray<FUIDropdownOptionData>& InOptions)
 {
 	bNeedRecreate = true;
 	Options.SetNumUninitialized(Options.Num() + InOptions.Num());
@@ -441,7 +441,7 @@ void UUIDropdownComponent::AddOptions(const TArray<FUIDropdownOptionData>& InOpt
 	}
 	ApplyValueToUI();
 }
-void UUIDropdownComponent::SetUseInteractionBlock(bool InValue)
+void UUIDropdown::SetUseInteractionBlock(bool InValue)
 {
 	if (bUseInteractionBlock != InValue)
 	{
@@ -457,12 +457,12 @@ void UUIDropdownComponent::SetUseInteractionBlock(bool InValue)
 	}
 }
 
-void UUIDropdownComponent::OnSelectItem(int Index)
+void UUIDropdown::OnSelectItem(int Index)
 {
 	SetValue(Index, true);
 	Hide();
 }
-void UUIDropdownComponent::ApplyValueToUI()
+void UUIDropdown::ApplyValueToUI()
 {
 	if (!Options.IsValidIndex(Value))return;
 
@@ -485,12 +485,12 @@ void UUIDropdownComponent::ApplyValueToUI()
 		}
 	}
 }
-bool UUIDropdownComponent::OnPointerClick_Implementation(ULexPointerEventData* EventData)
+bool UUIDropdown::OnPointerClick_Implementation(ULexPointerEventData* EventData)
 {
 	Show();
 	return AllowEventBubbleUp;
 }
-bool UUIDropdownComponent::OnPointerDeselect_Implementation(ULexBaseEventData* EventData)
+bool UUIDropdown::OnPointerDeselect_Implementation(ULexBaseEventData* EventData)
 {
 	if (IsValid(EventData->SelectedComponent))
 	{
@@ -502,15 +502,15 @@ bool UUIDropdownComponent::OnPointerDeselect_Implementation(ULexBaseEventData* E
 	return AllowEventBubbleUp;
 }
 
-void UUIDropdownComponent::SetItemCustomDataFunction(const FUIDropdownComponentDelegate_SetItemCustomData& InFunction)
+void UUIDropdown::SetItemCustomDataFunction(const FUIDropdownComponentDelegate_SetItemCustomData& InFunction)
 {
 	OnSetItemCustomDataFunction = InFunction;
 }
-void UUIDropdownComponent::SetItemCustomDataFunction(const TFunction<void(int, class UUIDropdownItemComponent*, ULexWidget*)>& InFunction)
+void UUIDropdown::SetItemCustomDataFunction(const TFunction<void(int, class UUIDropdownItemComponent*, ULexWidget*)>& InFunction)
 {
 	OnSetItemCustomDataFunction.BindLambda(InFunction);
 }
-void UUIDropdownComponent::SetItemCustomDataFunction(const FUIDropdownComponentDynamicDelegate_SetItemCustomData& InFunction)
+void UUIDropdown::SetItemCustomDataFunction(const FUIDropdownComponentDynamicDelegate_SetItemCustomData& InFunction)
 {
 	OnSetItemCustomDataFunction.BindLambda([InFunction](int InItemIndex, UUIDropdownItemComponent* InItemScript, ULexWidget* InItemWidget) {
 		if (InFunction.IsBound())
@@ -523,13 +523,13 @@ void UUIDropdownComponent::SetItemCustomDataFunction(const FUIDropdownComponentD
 		}
 		});
 }
-void UUIDropdownComponent::ClearItemCustomDataFunction()
+void UUIDropdown::ClearItemCustomDataFunction()
 {
 	OnSetItemCustomDataFunction = FUIDropdownComponentDelegate_SetItemCustomData();
 }
 
 
-#include "Interaction/UIToggleComponent.h"
+#include "Interaction/UIToggle.h"
 
 UUIDropdownItemComponent::UUIDropdownItemComponent()
 {
@@ -579,7 +579,7 @@ bool UUIDropdownItemComponent::OnPointerClick_Implementation(ULexPointerEventDat
 {
 	return false;
 }
-UUIToggleComponent* UUIDropdownItemComponent::GetToggle()const
+UUIToggle* UUIDropdownItemComponent::GetToggle()const
 {
 	return Toggle.Get();
 }

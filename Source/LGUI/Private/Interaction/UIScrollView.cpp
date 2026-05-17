@@ -1,6 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Interaction/UIScrollViewComponent.h"
+#include "Interaction/UIScrollView.h"
 #include "LTweenManager.h"
 #include "Core/Components/LexWidget.h"
 
@@ -39,7 +39,7 @@ void UUIScrollViewHelper::OnChildDimensionsChanged(ULexWidget *Child, bool Pivot
     }
 }
 
-void UUIScrollViewComponent::Awake()
+void UUIScrollView::Awake()
 {
     Super::Awake();
     bRangeCalculated = false;
@@ -47,7 +47,7 @@ void UUIScrollViewComponent::Awake()
     this->SetCanExecuteUpdate(true);
 }
 
-void UUIScrollViewComponent::Update(float DeltaTime)
+void UUIScrollView::Update(float DeltaTime)
 {
     Super::Update(DeltaTime);
     if (bCanUpdateAfterDrag)
@@ -55,14 +55,14 @@ void UUIScrollViewComponent::Update(float DeltaTime)
 }
 
 #if WITH_EDITOR
-void UUIScrollViewComponent::PostEditChangeProperty(FPropertyChangedEvent &PropertyChangedEvent)
+void UUIScrollView::PostEditChangeProperty(FPropertyChangedEvent &PropertyChangedEvent)
 {
     Super::PostEditChangeProperty(PropertyChangedEvent);
     bRangeCalculated = false;
     RecalculateRange();
     if (auto Property = PropertyChangedEvent.MemberProperty)
     {
-        if (Property->GetFName() == GET_MEMBER_NAME_CHECKED(UUIScrollViewComponent, Progress))
+        if (Property->GetFName() == GET_MEMBER_NAME_CHECKED(UUIScrollView, Progress))
         {
             ApplyContentPositionWithProgress();
         }
@@ -70,7 +70,7 @@ void UUIScrollViewComponent::PostEditChangeProperty(FPropertyChangedEvent &Prope
 }
 #endif
 
-void UUIScrollViewComponent::RecalculateRange()
+void UUIScrollView::RecalculateRange()
 {
     if (bRangeCalculated)return;
     if (CheckParameters())
@@ -116,7 +116,7 @@ void UUIScrollViewComponent::RecalculateRange()
     }
 }
 
-void UUIScrollViewComponent::OnWidgetActiveChanged(bool WidgetActive)
+void UUIScrollView::OnWidgetActiveChanged(bool WidgetActive)
 {
     Super::OnWidgetActiveChanged(WidgetActive);
     if (WidgetActive)
@@ -126,21 +126,21 @@ void UUIScrollViewComponent::OnWidgetActiveChanged(bool WidgetActive)
     }
 }
 
-void UUIScrollViewComponent::OnTransformChanged()
+void UUIScrollView::OnTransformChanged()
 {
     Super::OnTransformChanged();
     bRangeCalculated = false;
     RecalculateRange();
 }
 
-void UUIScrollViewComponent::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
+void UUIScrollView::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
     Super::OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
     bRangeCalculated = false;
     RecalculateRange();
 }
 
-bool UUIScrollViewComponent::CheckParameters()
+bool UUIScrollView::CheckParameters()
 {
     auto Widget = GetWidget();
     if (Content.IsValid() && ContentParent.IsValid() && Widget)
@@ -157,13 +157,13 @@ bool UUIScrollViewComponent::CheckParameters()
     return true;
 }
 
-bool UUIScrollViewComponent::CheckValidHit(ULexWidget *InHitComp)
+bool UUIScrollView::CheckValidHit(ULexWidget *InHitComp)
 {
     auto Widget = GetWidget();
     return (InHitComp->IsChildOf(Widget) || InHitComp == Widget); //make sure hit component is child of this or is this
 }
 
-bool UUIScrollViewComponent::OnPointerBeginDrag_Implementation(ULexPointerEventData *EventData)
+bool UUIScrollView::OnPointerBeginDrag_Implementation(ULexPointerEventData *EventData)
 {
     if (CheckParameters() && CheckValidHit(EventData->DragWidget))
     {
@@ -205,7 +205,7 @@ bool UUIScrollViewComponent::OnPointerBeginDrag_Implementation(ULexPointerEventD
     return AllowEventBubbleUp;
 }
 
-bool UUIScrollViewComponent::OnPointerDrag_Implementation(ULexPointerEventData *EventData)
+bool UUIScrollView::OnPointerDrag_Implementation(ULexPointerEventData *EventData)
 {
     if (!Content.IsValid())
         return AllowEventBubbleUp;
@@ -246,7 +246,7 @@ bool UUIScrollViewComponent::OnPointerDrag_Implementation(ULexPointerEventData *
     return AllowEventBubbleUp;
 }
 
-bool UUIScrollViewComponent::OnPointerEndDrag_Implementation(ULexPointerEventData *EventData)
+bool UUIScrollView::OnPointerEndDrag_Implementation(ULexPointerEventData *EventData)
 {
     auto Position = Content->GetRelativeLocation();
     auto CurrentPointerPosition = EventData->GetWorldPointInPlane();
@@ -263,7 +263,7 @@ bool UUIScrollViewComponent::OnPointerEndDrag_Implementation(ULexPointerEventDat
     }
     return AllowEventBubbleUp;
 }
-bool UUIScrollViewComponent::OnPointerScroll_Implementation(ULexPointerEventData *EventData)
+bool UUIScrollView::OnPointerScroll_Implementation(ULexPointerEventData *EventData)
 {
     if (CheckParameters() && CheckValidHit(EventData->EnterWidget))
     {
@@ -332,7 +332,7 @@ bool UUIScrollViewComponent::OnPointerScroll_Implementation(ULexPointerEventData
     return AllowEventBubbleUp;
 }
 
-void UUIScrollViewComponent::SetVelocity(const FVector2D& value)
+void UUIScrollView::SetVelocity(const FVector2D& value)
 {
     if (CheckParameters())
     {
@@ -341,7 +341,7 @@ void UUIScrollViewComponent::SetVelocity(const FVector2D& value)
     }
 }
 
-void UUIScrollViewComponent::SetDecelerateRate(float value)
+void UUIScrollView::SetDecelerateRate(float value)
 {
     if (DecelerateRate != value)
     {
@@ -350,7 +350,7 @@ void UUIScrollViewComponent::SetDecelerateRate(float value)
     }
 }
 
-void UUIScrollViewComponent::SetRestrictRectArea(bool value)
+void UUIScrollView::SetRestrictRectArea(bool value)
 {
     if (RestrictRectArea != value)
     {
@@ -362,7 +362,7 @@ void UUIScrollViewComponent::SetRestrictRectArea(bool value)
     }
 }
 
-void UUIScrollViewComponent::SetOutOfRangeDamper(float value)
+void UUIScrollView::SetOutOfRangeDamper(float value)
 {
     if (OutOfRangeDamper != value)
     {
@@ -371,7 +371,7 @@ void UUIScrollViewComponent::SetOutOfRangeDamper(float value)
     }
 }
 
-void UUIScrollViewComponent::SetScrollDelta(FVector2D value)
+void UUIScrollView::SetScrollDelta(FVector2D value)
 {
     if (CheckParameters())
     {
@@ -411,7 +411,7 @@ void UUIScrollViewComponent::SetScrollDelta(FVector2D value)
 		}
     }
 }
-void UUIScrollViewComponent::SetScrollValue(FVector2D value)
+void UUIScrollView::SetScrollValue(FVector2D value)
 {
     if (CheckParameters())
     {
@@ -437,7 +437,7 @@ void UUIScrollViewComponent::SetScrollValue(FVector2D value)
     }
 }
 
-void UUIScrollViewComponent::SetScrollProgress(FVector2D value)
+void UUIScrollView::SetScrollProgress(FVector2D value)
 {
     if (CheckParameters())
     {
@@ -467,7 +467,7 @@ void UUIScrollViewComponent::SetScrollProgress(FVector2D value)
     }
 }
 
-void UUIScrollViewComponent::ScrollTo(ULexWidget* InChild, bool InEaseAnimation, float InAnimationDuration)
+void UUIScrollView::ScrollTo(ULexWidget* InChild, bool InEaseAnimation, float InAnimationDuration)
 {
     if (!CheckParameters())return;
     auto CenterPos = InChild->GetLocalSpaceCenter();
@@ -498,7 +498,7 @@ void UUIScrollViewComponent::ScrollTo(ULexWidget* InChild, bool InEaseAnimation,
 }
 
 #define POSITION_THRESHOLD 0.001f
-void UUIScrollViewComponent::UpdateAfterDrag(float deltaTime)
+void UUIScrollView::UpdateAfterDrag(float deltaTime)
 {
     auto Position = Content->GetRelativeLocation();
     if (FMath::Abs(Velocity.X) > KINDA_SMALL_NUMBER || FMath::Abs(Velocity.Y) > KINDA_SMALL_NUMBER//speed larger than threshold
@@ -643,7 +643,7 @@ void UUIScrollViewComponent::UpdateAfterDrag(float deltaTime)
     }
 }
 
-void UUIScrollViewComponent::ApplyContentPositionWithProgress()
+void UUIScrollView::ApplyContentPositionWithProgress()
 {
     if (CheckParameters())
     {
@@ -670,7 +670,7 @@ void UUIScrollViewComponent::ApplyContentPositionWithProgress()
 }
 
 
-void UUIScrollViewComponent::UpdateProgress(bool InFireEvent)
+void UUIScrollView::UpdateProgress(bool InFireEvent)
 {
     if (!Content.IsValid())
         return;
@@ -697,7 +697,7 @@ void UUIScrollViewComponent::UpdateProgress(bool InFireEvent)
     }
 }
 
-void UUIScrollViewComponent::CalculateHorizontalRange()
+void UUIScrollView::CalculateHorizontalRange()
 {
     if (ContentParent->GetWidth() > Content->GetWidth())//content size smaller than parent
     {
@@ -733,7 +733,7 @@ void UUIScrollViewComponent::CalculateHorizontalRange()
         HorizontalRange.Y += -ContentParent->GetPivot().X * ContentParent->GetWidth();
     }
 }
-void UUIScrollViewComponent::CalculateVerticalRange()
+void UUIScrollView::CalculateVerticalRange()
 {
     if (ContentParent->GetHeight() > Content->GetHeight())//content size smaller than parent
     {
@@ -769,7 +769,7 @@ void UUIScrollViewComponent::CalculateVerticalRange()
         VerticalRange.Y += -ContentParent->GetPivot().Y * ContentParent->GetHeight();
     }
 }
-void UUIScrollViewComponent::RectRangeChanged()
+void UUIScrollView::RectRangeChanged()
 {
     if (Horizontal)
         CalculateHorizontalRange();
@@ -777,7 +777,7 @@ void UUIScrollViewComponent::RectRangeChanged()
         CalculateVerticalRange();
 }
 
-void UUIScrollViewComponent::SetHorizontal(bool value)
+void UUIScrollView::SetHorizontal(bool value)
 {
     if (Horizontal != value)
     {
@@ -786,7 +786,7 @@ void UUIScrollViewComponent::SetHorizontal(bool value)
         RecalculateRange();
     }
 }
-void UUIScrollViewComponent::SetVertical(bool value)
+void UUIScrollView::SetVertical(bool value)
 {
 	if (Vertical != value)
 	{
@@ -795,21 +795,21 @@ void UUIScrollViewComponent::SetVertical(bool value)
         RecalculateRange();
 	}
 }
-void UUIScrollViewComponent::SetOnlyOneDirection(bool value)
+void UUIScrollView::SetOnlyOneDirection(bool value)
 {
 	if (OnlyOneDirection != value)
 	{
         OnlyOneDirection = value;
 	}
 }
-void UUIScrollViewComponent::SetScrollSensitivity(float value)
+void UUIScrollView::SetScrollSensitivity(float value)
 {
     if (ScrollSensitivity != value)
     {
         ScrollSensitivity = value;
     }
 }
-void UUIScrollViewComponent::SetCanScrollInSmallSize(bool value)
+void UUIScrollView::SetCanScrollInSmallSize(bool value)
 {
     if (CanScrollInSmallSize != value)
     {

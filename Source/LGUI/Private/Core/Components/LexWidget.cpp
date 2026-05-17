@@ -5,7 +5,6 @@
 #include "Core/Components/LexCanvas.h"
 #include "Core/LexUISettings.h"
 #include "Core/LexUIManager.h"
-#include "PrefabSystem/LexUIPrefabManager.h"
 #include "LTweenManager.h"
 #include "Core/LexUIClipData.h"
 #include "Core/Components/LexWidgetPresenterComponent.h"
@@ -44,10 +43,6 @@ void ULexWidget::BeginPlay()
 	{
 		Component->BeginPlay();
 	}
-	
-	CalculateWidgetActive_Recursive();
-	CalculateRaycastable_Recursive();
-	CalculateInteractable_Recursive();
 	
 	if (IsValid(LayoutContainer))
 	{
@@ -700,24 +695,44 @@ bool ULexWidget::CanEditChange(const FEditPropertyChain& PropertyChain) const
 void ULexWidget::PostEditUndo()
 {
 	Super::PostEditUndo();
-	ULexUIManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)]()
+	if (Parent.IsValid())
 	{
-		if (!WeakThis.IsValid())return;
-		if (!WeakThis->Parent.IsValid())return;
 		//restore SiblingIndex
-		WeakThis->Parent->Children.Remove(WeakThis.Get());
-		WeakThis->Parent->Children.Insert(WeakThis.Get(), WeakThis->SiblingIndex);
-		for (int i = 0; i < WeakThis->Parent->Children.Num(); i++)
+		Parent->Children.Remove(this);
+		Parent->Children.Insert(this, SiblingIndex);
+		for (int i = 0; i < Parent->Children.Num(); i++)
 		{
-			auto& UIChild = WeakThis->Parent->Children[i];
+			auto& UIChild = Parent->Children[i];
 			if (UIChild->SiblingIndex != i)
 			{
 				UIChild->SiblingIndex = i;
 			}
 		}
-		ULexUIManagerWorldSubsystem::RefreshAllUI(WeakThis->GetWorld());
-		ULexUIManagerWorldSubsystem::GetInstance(WeakThis->GetWorld())->EventOnOutlineChanged.Broadcast();
-	}, 1);
+	}
+	// Re-register if unregistered (e.g., undo of a delete operation via DeleteForUndo).
+	// bIsRegistered is not a UPROPERTY so it is not saved/restored by the undo system;
+	// after soft-delete it remains false, so we need to call OnRegister() explicitly.
+	if (!bIsRegistered)
+	{
+		struct LOCAL
+		{
+			static void RegisterRecursive(ULexWidget* Widget)
+			{
+				if (!Widget->bIsRegistered)
+				{
+					Widget->OnRegister();
+				}
+				for (auto& Child : Widget->Children)
+				{
+					if (IsValid(Child))
+					{
+						RegisterRecursive(Child);
+					}
+				}
+			}
+		};
+		LOCAL::RegisterRecursive(this);
+	}
 }
 
 void ULexWidget::EnsureDataForRebuild()
@@ -927,7 +942,7 @@ void ULexWidget::SetWorldTransform(const FTransform& InWorldTransform)
 
 void ULexWidget::SetParentBeforeRegister(ULexWidget* InParent)
 {
-	check(!bIsRegistered)
+	check(!bIsRegistered);
 	Parent = InParent;
 	Parent->Children.Add(this);
 }
@@ -1137,7 +1152,7 @@ ULexUIBehaviour* ULexWidget::GetComponent(TSubclassOf<ULexUIBehaviour> Component
 {
 	for (auto& Comp : Components)
 	{
-		if (Comp->IsA(ComponentClass))
+		if (Comp && Comp->IsA(ComponentClass))
 		{
 			return Comp;
 		}
@@ -1271,19 +1286,19 @@ void ULexWidget::OnRegister()
 		Visual->Call_OnRegister();
 	}
 
+	Components.Remove(nullptr);//clear null component
 	for (auto Component : Components)
 	{
-		Component->OnRegister();
+		if (IsValid(Component))
+		{
+			Component->OnRegister();
+		}
 	}
 
 	if (this == RootWidget)
-	{
+	{		
 		//force size recalculate. solve condition: LexUITools->BasicSetup->CreateWorldSpaceUI, but size is 100x100
 		this->MarkAnchorDataChanged(true, true, true, true);
-	
-		CalculateWidgetActive_Recursive();
-		CalculateRaycastable_Recursive();
-		CalculateInteractable_Recursive();
 	}
 }
 void ULexWidget::OnUnregister()
@@ -2307,6 +2322,7 @@ void ULexWidget::OnHierarchyAttachmentChanged(ULexCanvas* ParentRenderCanvas, UL
 
 	CalculateWidgetActive_Recursive();
 	CalculateRaycastable_Recursive();
+	CalculateInteractable_Recursive();
 
 	//if (this->IsRegistered())//not register means could be load from level
 	{
@@ -2349,7 +2365,7 @@ void ULexWidget::CheckRootWidget(ULexWidget* RootWidgetInParent)
 		while (TopWidget != nullptr)
 		{
 			TempRootWidget = TopWidget;
-			TopWidget = Cast<ULexWidget>(TopWidget->GetParent());
+			TopWidget = TopWidget->GetParent();
 		}
 		RootWidgetInParent = TempRootWidget;
 	}
