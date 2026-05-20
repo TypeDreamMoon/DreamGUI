@@ -229,22 +229,22 @@ struct LGUI_API FLexUIEventDelegate_String : public FLexUIEventDelegate
 	MAKE_EVENTDELEGATE_PRESETPARAM(String, FString);
 };
 
-MAKE_EVENTDELEGATE_PRESETPARAM_DELEGATE(Object, UObject*);
-DECLARE_DYNAMIC_DELEGATE_OneParam(FLexUIEventDelegate_Object_DynamicDelegate, UObject*, value);
+MAKE_EVENTDELEGATE_PRESETPARAM_DELEGATE(Asset, UObject*);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FLexUIEventDelegate_Asset_DynamicDelegate, UObject*, value);
 USTRUCT(BlueprintType)
-struct LGUI_API FLexUIEventDelegate_Object : public FLexUIEventDelegate
+struct LGUI_API FLexUIEventDelegate_Asset : public FLexUIEventDelegate
 {
 	GENERATED_BODY()
-	MAKE_EVENTDELEGATE_PRESETPARAM(Object, UObject*);
+	MAKE_EVENTDELEGATE_PRESETPARAM(Asset, UObject*);
 };
 
-MAKE_EVENTDELEGATE_PRESETPARAM_DELEGATE(Actor, AActor*);
-DECLARE_DYNAMIC_DELEGATE_OneParam(FLexUIEventDelegate_Actor_DynamicDelegate, AActor*, value);
+MAKE_EVENTDELEGATE_PRESETPARAM_DELEGATE(LexWidget, ULexWidget*);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FLexUIEventDelegate_LexWidget_DynamicDelegate, ULexWidget*, value);
 USTRUCT(BlueprintType)
-struct LGUI_API FLexUIEventDelegate_Actor : public FLexUIEventDelegate
+struct LGUI_API FLexUIEventDelegate_LexWidget : public FLexUIEventDelegate
 {
 	GENERATED_BODY()
-	MAKE_EVENTDELEGATE_PRESETPARAM(Actor, AActor*);
+	MAKE_EVENTDELEGATE_PRESETPARAM(LexWidget, ULexWidget*);
 };
 
 MAKE_EVENTDELEGATE_PRESETPARAM_DELEGATE(PointerEvent, ULexPointerEventData*);

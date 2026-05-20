@@ -5,6 +5,8 @@
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "LexUIPrefabEditor.h"
 #include "PropertyCustomizationHelpers.h"
+#include "Core/LexUIBehaviour.h"
+#include "Core/LexUIManager.h"
 #include "Core/Components/LexWidget.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabOverrideDataViewer"
@@ -68,25 +70,25 @@ void SLexUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLexUIPrefabOverr
 		auto& DataItem = ObjectOverrideParameterArray[i];
 		if (!DataItem.Object.IsValid())continue;
 		FString DisplayName;
-		AActor* Actor = Cast<AActor>(DataItem.Object.Get());
-		UActorComponent* Component = Cast<UActorComponent>(DataItem.Object.Get());
-		if (Actor)
+		auto Widget = Cast<ULexWidget>(DataItem.Object.Get());
+		auto Component = Cast<ULexUIBehaviour>(DataItem.Object.Get());
+		if (Widget)
 		{
-			DisplayName = Actor->GetActorLabel();
+			DisplayName = Widget->GetDisplayName();
 		}
 		else if (Component)
 		{
-			Actor = Component->GetOwner();
-			DisplayName = Actor->GetActorLabel() + TEXT(".") + Component->GetName();
+			Widget = Component->GetWidget();
+			DisplayName = Widget->GetDisplayName() + TEXT(".") + Component->GetName();
 		}
 		else
 		{
 			DisplayName = DataItem.Object->GetName();
 			for (UObject* NextOuter = DataItem.Object->GetOuter(); NextOuter != NULL; NextOuter = NextOuter->GetOuter())
 			{
-				if (NextOuter->IsA(AActor::StaticClass()))
+				if (NextOuter->IsA(ULexWidget::StaticClass()))
 				{
-					DisplayName = ((AActor*)NextOuter)->GetActorLabel() + "." + DisplayName;
+					DisplayName = ((ULexWidget*)NextOuter)->GetDisplayName() + "." + DisplayName;
 					break;
 				}
 				else
@@ -110,16 +112,16 @@ void SLexUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLexUIPrefabOverr
 				.Padding(FMargin(4, 2))
 				.HAlign(EHorizontalAlignment::HAlign_Left)
 				.VAlign(EVerticalAlignment::VAlign_Center)
-				[
+				[ 
 					SNew(SButton)
 					.Text(FText::FromString(DisplayName))
-					.ToolTipText(LOCTEXT("ObjectButtonTooltipText", "Actor.Component, click to select target"))
+					.ToolTipText(LOCTEXT("ObjectButtonTooltipText", "Widget.Component, click to select target"))
 					.ButtonStyle(FAppStyle::Get(), "PropertyEditor.AssetComboStyle" )
 					.ForegroundColor(FAppStyle::GetColor("PropertyEditor.AssetName.ColorAndOpacity"))
 					.OnClicked_Lambda([=](){
-						GEditor->SelectNone(true, true);
-						GEditor->SelectActor(Actor, true, true);
-						if(Component)GEditor->SelectComponent(Component, true, true);
+						ULexUISelection::GetInstance()->SelectNone();
+						ULexUISelection::GetInstance()->SelectWidget(Widget);
+						if(Component)ULexUISelection::GetInstance()->SelectComponent(Component);
 						return FReply::Handled();
 					})
 				]
@@ -266,7 +268,7 @@ void SLexUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLexUIPrefabOverr
 				[
 					SNew(SButton)
 					.Text(LOCTEXT("ApplyAll", "Apply All"))
-					.ToolTipText(LOCTEXT("ApplyAll_Tooltip", "Apply all overrides to source prefab, except root actor's transform"))
+					.ToolTipText(LOCTEXT("ApplyAll_Tooltip", "Apply all overrides to source prefab, except root widget's transform"))
 					.OnClicked_Lambda([=, this](){
 						PrefabHelperObject->ApplyAllOverrideToPrefab(RootObject);
 						AfterApplyPrefab.ExecuteIfBound(PrefabHelperObject->GetPrefabAssetBySubPrefabObject(RootObject));

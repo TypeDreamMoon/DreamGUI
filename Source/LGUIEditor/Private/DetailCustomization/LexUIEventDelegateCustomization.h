@@ -5,6 +5,7 @@
 #pragma once
 
 
+class ULexUIBehaviour;
 class FLexUIPrefabEditor;
 /**
  * 
@@ -28,7 +29,7 @@ private:
 	FText GetEventTitleName()const;
 	FText GetEventItemFunctionName(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const;
 	UObject* GetEventItemTargetObject(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const;
-	AActor* GetEventItemHelperActor(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const;
+	ULexWidget* GetEventItemHelperWidget(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const;
 	FText GetComponentDisplayName(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const;
 	EVisibility GetNativeParameterWidgetVisibility(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const;
 	EVisibility GetDrawFunctionParameterWidgetVisibility(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const;
@@ -75,13 +76,13 @@ private:
 		return result;
 	}
 	TWeakPtr<FLexUIPrefabEditor> PrefabEditor;
-	TSharedPtr<SComboButton> ActorPickerComboButton;
-	TSharedRef<SWidget> DrawActorSelectorWidgetForPrefabEditor(int32 itemIndex);
+	TSharedPtr<SComboButton> WidgetPickerComboButton;
+	TSharedRef<SWidget> DrawLexWidgetSelectorForPrefabEditor(int32 itemIndex);
 	TSharedRef<SWidget> MakeComponentSelectorMenu(int32 itemIndex);
 	TSharedRef<SWidget> MakeFunctionSelectorMenu(int32 itemIndex);
-	void OnActorParameterChange(TSharedRef<IPropertyHandle> ItemPropertyHandle);
-	void OnSelectComponent(UActorComponent* Comp, TSharedRef<IPropertyHandle> ItemPropertyHandle);
-	void OnSelectActorSelf(TSharedRef<IPropertyHandle> ItemPropertyHandle);
+	void OnHelperWidgetParameterChanged(TSharedRef<IPropertyHandle> ItemPropertyHandle);
+	void OnSelectComponent(ULexUIBehaviour* Comp, TSharedRef<IPropertyHandle> ItemPropertyHandle);
+	void OnSelectWidgetSelf(TSharedRef<IPropertyHandle> ItemPropertyHandle);
 	void OnSelectFunction(FName FuncName, ELexUIEventDelegateParameterType ParamType, bool UseNativeParameter, TSharedRef<IPropertyHandle> ItemPropertyHandle);
 	bool IsComponentSelectorMenuEnabled(TSharedRef<IPropertyHandle> ItemPropertyHandle)const;
 	bool IsFunctionSelectorMenuEnabled(TSharedRef<IPropertyHandle> ItemPropertyHandle)const;
@@ -96,7 +97,7 @@ private:
 	//function's parameter editor
 	TSharedRef<SWidget> DrawFunctionReferenceParameter(TSharedRef<IPropertyHandle> InDataContainerHandle, ELexUIEventDelegateParameterType FunctionParameterType, UFunction* InFunction);
 
-	void ObjectValueChange(const FAssetData& InObj, TSharedPtr<IPropertyHandle> BufferHandle, TSharedPtr<IPropertyHandle> ObjectReferenceHandle, bool ObjectOrActor);
+	void ObjectValueChange(const FAssetData& InObj, TSharedPtr<IPropertyHandle> BufferHandle, TSharedPtr<IPropertyHandle> ObjectReferenceHandle, bool ObjectOrWidget);
 	const UClass* GetClassValue(TSharedPtr<IPropertyHandle> ClassReferenceHandle)const;
 	void ClassValueChange(const UClass* InClass, TSharedPtr<IPropertyHandle> ClassReferenceHandle);
 	void EnumValueChange(int32 InValue, ESelectInfo::Type SelectionType, TSharedPtr<IPropertyHandle> ValueHandle, TSharedPtr<IPropertyHandle> BufferHandle);

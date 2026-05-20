@@ -58,7 +58,7 @@ FLexUIPrefabEditor::~FLexUIPrefabEditor()
 	PrefabEditorInstanceCollection.Remove(this);
 
  	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->EventOnOutlineChanged.RemoveAll(this);
-	ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->OnSelectionChanged.RemoveAll(this);
+	ULexUISelection::GetInstance()->OnSelectionChanged.RemoveAll(this);
 
 	GEditor->UnregisterForUndo(this);
 }
@@ -207,12 +207,12 @@ FBoxSphereBounds FLexUIPrefabEditor::GetAllObjectsBounds()
 	return Bounds;
 }
 
-bool FLexUIPrefabEditor::ActorBelongsToSubPrefab(ULexWidget* InWidget)
+bool FLexUIPrefabEditor::WidgetBelongsToSubPrefab(ULexWidget* InWidget)
 {
 	return GetPrefabHelperObject()->IsWidgetBelongsToSubPrefab(InWidget);
 }
 
-bool FLexUIPrefabEditor::ActorIsSubPrefabRoot(ULexWidget* InSubPrefabRootWidget)
+bool FLexUIPrefabEditor::WidgetIsSubPrefabRoot(ULexWidget* InSubPrefabRootWidget)
 {
 	return GetPrefabHelperObject()->SubPrefabMap.Contains(InSubPrefabRootWidget);
 }
@@ -251,7 +251,7 @@ bool FLexUIPrefabEditor::GetAnythingDirty()const
 
 void FLexUIPrefabEditor::SyncSelection()
 {
-	SelectedWidgets = ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->GetSelectedWidgets();
+	SelectedWidgets = ULexUISelection::GetInstance()->GetSelectedWidgets();
 	OnSelectedWidgetsChanged.Broadcast();
 	OutlinerPtr->RequestRefresh();
 }
@@ -297,14 +297,14 @@ void FLexUIPrefabEditor::PostUndo(bool bSuccess)
 {
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->EventOnOutlineChanged.Broadcast();
-	SelectedWidgets = ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->GetSelectedWidgets();
+	SelectedWidgets = ULexUISelection::GetInstance()->GetSelectedWidgets();
 	OnSelectedWidgetsChanged.Broadcast();
 	OutlinerPtr->RequestRefresh();
 }
 void FLexUIPrefabEditor::PostRedo(bool bSuccess)
 {
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
-	SelectedWidgets = ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->GetSelectedWidgets();
+	SelectedWidgets = ULexUISelection::GetInstance()->GetSelectedWidgets();
 	OnSelectedWidgetsChanged.Broadcast();
 	OutlinerPtr->RequestRefresh();
 }
@@ -339,7 +339,7 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 	{
 		OutlinerPtr->RequestRefresh();
 	});
-	ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->OnSelectionChanged.AddSPLambda(this, [=, this]
+	ULexUISelection::GetInstance()->OnSelectionChanged.AddSPLambda(this, [=, this]
 	{
 		SyncSelection();
 	});
@@ -496,7 +496,7 @@ void FLexUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bA
 	if (bIsSelecting)return;
 	bIsSelecting = true;
 	const FScopedTransaction Transaction(LOCTEXT("SelectionChanged_Transaction", "Select Widgets"));
-	ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->Modify();
+	ULexUISelection::GetInstance()->Modify();
 	
 	TSet<ULexWidget*> TempSelection;
 	for (auto& Widget : Widgets)
@@ -514,7 +514,7 @@ void FLexUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bA
 		SelectedWidgets.Empty();
 		if (bNotifyGEditor)
 		{
-			ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->SelectNone();
+			ULexUISelection::GetInstance()->SelectNone();
 		}
 	}
 
@@ -530,7 +530,7 @@ void FLexUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bA
 		}
 		if (bNotifyGEditor)
 		{
-			ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->SelectWidget(Widget);
+			ULexUISelection::GetInstance()->SelectWidget(Widget);
 		}
 	}
 	
@@ -902,8 +902,9 @@ FReply FLexUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent&
 				{
 					TMap<FGuid, TObjectPtr<UObject>> SubPrefabMapGuidToObject;
 					TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> SubSubPrefabMap;
-					auto LoadedSubPrefabRootActor = PrefabAsset->LoadPrefabWithExistingObjects(GetPreviewScene()->GetWorld()
-						, GetPreviewScene()->GetWorld()
+					auto LoadedSubPrefabRootActor = PrefabAsset->LoadPrefabWithExistingObjects(
+						GetPreviewScene()->GetWorld()
+						, CurrentSelectedWidget->GetOuter()
 						, CurrentSelectedWidget.Get()
 						, SubPrefabMapGuidToObject, SubSubPrefabMap
 					);
@@ -925,10 +926,10 @@ FReply FLexUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent&
 			}
 			if (CreatedWidgetArray.Num() > 0)
 			{
-				ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->SelectNone();
+				ULexUISelection::GetInstance()->SelectNone();
 				for (auto& Widget : CreatedWidgetArray)
 				{
-					ULexUIManagerWorldSubsystem::GetSelection(GetWorld())->SelectWidget(Widget);
+					ULexUISelection::GetInstance()->SelectWidget(Widget);
 				}
 			}
 			GEditor->EndTransaction();

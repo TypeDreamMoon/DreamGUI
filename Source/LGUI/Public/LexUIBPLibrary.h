@@ -252,18 +252,18 @@ public:
 		static void LexUIEventDelegate_String_Unregister(const FLexUIEventDelegate_String& InEvent, const FLexUIDelegateHandleWrapper& InDelegateHandle);
 
 	UFUNCTION(BlueprintCallable, Category = LGUI, meta = (DisplayName = "Execute"))
-		static void LexUIEventDelegate_Object_Execute(const FLexUIEventDelegate_Object& InEvent, UObject* InParameter) { InEvent(InParameter); }
+		static void LexUIEventDelegate_Object_Execute(const FLexUIEventDelegate_Asset& InEvent, UObject* InParameter) { InEvent(InParameter); }
 	UFUNCTION(BlueprintCallable, Category = LGUI, meta = (DisplayName = "Register"))
-		static FLexUIDelegateHandleWrapper LexUIEventDelegate_Object_Register(const FLexUIEventDelegate_Object& InEvent, FLexUIEventDelegate_Object_DynamicDelegate InDelegate);
+		static FLexUIDelegateHandleWrapper LexUIEventDelegate_Asset_Register(const FLexUIEventDelegate_Asset& InEvent, FLexUIEventDelegate_Asset_DynamicDelegate InDelegate);
 	UFUNCTION(BlueprintCallable, Category = LGUI, meta = (DisplayName = "Unregister"))
-		static void LexUIEventDelegate_Object_Unregister(const FLexUIEventDelegate_Object& InEvent, const FLexUIDelegateHandleWrapper& InDelegateHandle);
+		static void LexUIEventDelegate_Asset_Unregister(const FLexUIEventDelegate_Asset& InEvent, const FLexUIDelegateHandleWrapper& InDelegateHandle);
 
 	UFUNCTION(BlueprintCallable, Category = LGUI, meta = (DisplayName = "Execute"))
-		static void LexUIEventDelegate_Actor_Execute(const FLexUIEventDelegate_Actor& InEvent, AActor* InParameter) { InEvent(InParameter); }
+		static void LexUIEventDelegate_LexWidget_Execute(const FLexUIEventDelegate_LexWidget& InEvent, ULexWidget* InParameter) { InEvent(InParameter); }
 	UFUNCTION(BlueprintCallable, Category = LGUI, meta = (DisplayName = "Register"))
-		static FLexUIDelegateHandleWrapper LexUIEventDelegate_Actor_Register(const FLexUIEventDelegate_Actor& InEvent, FLexUIEventDelegate_Actor_DynamicDelegate InDelegate);
+		static FLexUIDelegateHandleWrapper LexUIEventDelegate_LexWidget_Register(const FLexUIEventDelegate_LexWidget& InEvent, FLexUIEventDelegate_LexWidget_DynamicDelegate InDelegate);
 	UFUNCTION(BlueprintCallable, Category = LGUI, meta = (DisplayName = "Unregister"))
-		static void LexUIEventDelegate_Actor_Unregister(const FLexUIEventDelegate_Actor& InEvent, const FLexUIDelegateHandleWrapper& InDelegateHandle);
+		static void LexUIEventDelegate_LexWidget_Unregister(const FLexUIEventDelegate_LexWidget& InEvent, const FLexUIDelegateHandleWrapper& InDelegateHandle);
 
 	UFUNCTION(BlueprintCallable, Category = LGUI, meta = (DisplayName = "Execute"))
 		static void LexUIEventDelegate_PointerEvent_Execute(const FLexUIEventDelegate_PointerEvent& InEvent, ULexPointerEventData* InParameter) { InEvent(InParameter); }

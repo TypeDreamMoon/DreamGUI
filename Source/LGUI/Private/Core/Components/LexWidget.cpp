@@ -943,8 +943,15 @@ void ULexWidget::SetWorldTransform(const FTransform& InWorldTransform)
 void ULexWidget::SetParentBeforeRegister(ULexWidget* InParent)
 {
 	check(!bIsRegistered);
-	Parent = InParent;
-	Parent->Children.Add(this);
+	if (Parent != InParent)
+	{
+		if (Parent.IsValid())
+		{
+			Parent->Children.Remove(this);
+		}
+		Parent = InParent;
+		Parent->Children.Add(this);
+	}
 }
 
 void ULexWidget::ApplySiblingIndexBeforeRegister_Recursive()

@@ -2,6 +2,8 @@
 
 #include "Event/LexUIEventDelegate.h"
 #include "LGUI.h"
+#include "Core/LexUIBehaviour.h"
+#include "Core/Components/LexWidget.h"
 #include "Serialization/MemoryReader.h"
 #if WITH_EDITOR
 #include "Utils/LexUIUtils.h"
@@ -157,21 +159,21 @@ bool ULexUIEventDelegateParameterHelper::IsPropertyCompatible(const FProperty* I
 		}
 		else if (auto objectProperty = CastField<FObjectProperty>(InFunctionProperty))//if object property
 		{
-			if (objectProperty->PropertyClass->IsChildOf(AActor::StaticClass()))//if is Actor
+			if (objectProperty->PropertyClass->IsChildOf(ULexWidget::StaticClass()))//if is LexWidget
 			{
-				OutParameterType = ELexUIEventDelegateParameterType::Actor;
+				OutParameterType = ELexUIEventDelegateParameterType::LexWidget;
 			}
 			else if (objectProperty->PropertyClass->IsChildOf(ULexPointerEventData::StaticClass()))
 			{
 				OutParameterType = ELexUIEventDelegateParameterType::PointerEvent;
 			}
-			else if (objectProperty->PropertyClass->IsChildOf(UActorComponent::StaticClass()))
+			else if (objectProperty->PropertyClass->IsChildOf(ULexUIBehaviour::StaticClass()))
 			{
 				return false;
 			}
 			else
 			{
-				OutParameterType = ELexUIEventDelegateParameterType::Object;
+				OutParameterType = ELexUIEventDelegateParameterType::Asset;
 			}
 			return true;
 		}
@@ -325,7 +327,7 @@ FString ULexUIEventDelegateParameterHelper::ParameterTypeToName(ELexUIEventDeleg
 		ParamTypeString = "String";
 		break;
 
-	case ELexUIEventDelegateParameterType::Object:
+	case ELexUIEventDelegateParameterType::Asset:
 	{
 		TFieldIterator<FProperty> ParamIterator(InFunction);
 		if (auto firstProperty = CastField<FObjectProperty>(*ParamIterator))
@@ -345,23 +347,23 @@ FString ULexUIEventDelegateParameterHelper::ParameterTypeToName(ELexUIEventDeleg
 		}
 	}
 		break;
-	case ELexUIEventDelegateParameterType::Actor:
+	case ELexUIEventDelegateParameterType::LexWidget:
 	{
 		TFieldIterator<FProperty> ParamIterator(InFunction);
 		if (auto firstProperty = CastField<FObjectProperty>(*ParamIterator))
 		{
-			if (firstProperty->PropertyClass != AActor::StaticClass())
+			if (firstProperty->PropertyClass != ULexWidget::StaticClass())
 			{
-				ParamTypeString = firstProperty->PropertyClass->GetName() + "(Actor)";
+				ParamTypeString = firstProperty->PropertyClass->GetName() + "(LexWidget)";
 			}
 			else
 			{
-				ParamTypeString = "Actor";
+				ParamTypeString = "ULexWidget";
 			}
 		}
 		else
 		{
-			ParamTypeString = "Actor";
+			ParamTypeString = "ULexWidget";
 		}
 	}
 		break;
@@ -526,18 +528,17 @@ bool FLexUIEventDelegateData::CheckTargetObject()
 	}
 	else
 	{
-		if (IsValid(HelperActor))
+		if (IsValid(HelperWidget))
 		{
 			if (IsValid(HelperClass))
 			{
-				if (HelperClass == AActor::StaticClass())
+				if (HelperClass == ULexWidget::StaticClass())
 				{
-					TargetObject = HelperActor;
+					TargetObject = HelperWidget;
 				}
 				else
 				{
-					TArray<UActorComponent*> Components;
-					HelperActor->GetComponents(HelperClass, Components);
+					auto Components = HelperWidget->GetComponents(HelperClass);
 					if (Components.Num() == 1)
 					{
 						TargetObject = Components[0];
@@ -554,13 +555,8 @@ bool FLexUIEventDelegateData::CheckTargetObject()
 									return true;
 								}
 							}
-							FString ActorName =
-#if WITH_EDITOR
-								HelperActor->GetActorLabel();
-#else
-								HelperActor->GetPathName();
-#endif
-							UE_LOG(LGUI, Error, TEXT("[%s].%d Can't find component of name '%s' on actor '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *HelperComponentName.ToString(), *ActorName);
+							FString WidgetName = HelperWidget->GetDisplayName();
+							UE_LOG(LGUI, Error, TEXT("[%s].%d Can't find component of name '%s' on widget '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *HelperComponentName.ToString(), *WidgetName);
 						}
 					}
 				}
@@ -633,8 +629,8 @@ void FLexUIEventDelegateData::ExecuteTargetFunction(UObject* Target, UFunction* 
 		Target->ProcessEvent(Func, &TempText);
 	}
 	break;
-	case ELexUIEventDelegateParameterType::Object:
-	case ELexUIEventDelegateParameterType::Actor:
+	case ELexUIEventDelegateParameterType::Asset:
+	case ELexUIEventDelegateParameterType::LexWidget:
 	case ELexUIEventDelegateParameterType::Class:
 	{
 		Target->ProcessEvent(Func, &ReferenceObject);
@@ -862,20 +858,20 @@ void FLexUIEventDelegate::FireEvent(const FString& InParam)const
 void FLexUIEventDelegate::FireEvent(UObject* InParam)const
 {
 	if (EventList.Num() == 0)return;
-	if (SupportParameterType == ELexUIEventDelegateParameterType::Object)
+	if (SupportParameterType == ELexUIEventDelegateParameterType::Asset)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELexUIEventDelegateParameterType::Object);
+	else LogParameterError(ELexUIEventDelegateParameterType::Asset);
 }
-void FLexUIEventDelegate::FireEvent(AActor* InParam)const
+void FLexUIEventDelegate::FireEvent(ULexWidget* InParam)const
 {
 	if (EventList.Num() == 0)return;
-	if (SupportParameterType == ELexUIEventDelegateParameterType::Actor)
+	if (SupportParameterType == ELexUIEventDelegateParameterType::LexWidget)
 	{
 		FireEvent(&InParam);
 	}
-	else LogParameterError(ELexUIEventDelegateParameterType::Actor);
+	else LogParameterError(ELexUIEventDelegateParameterType::LexWidget);
 }
 void FLexUIEventDelegate::FireEvent(ULexPointerEventData* InParam)const
 {

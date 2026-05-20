@@ -203,8 +203,8 @@ void FLGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_LinearColor::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Quaternion::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_String::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Object::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
-		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Actor::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Asset::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
+		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_LexWidget::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_PointerEvent::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Class::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
 		PropertyModule.RegisterCustomPropertyTypeLayout(FLexUIEventDelegate_Rotator::StaticStruct()->GetFName(), FOnGetPropertyTypeCustomizationInstance::CreateStatic(&LexUIEventDelegatePresetParamCustomization::MakeInstance));
@@ -409,8 +409,8 @@ void FLGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_LinearColor::StaticStruct()->GetFName());
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Quaternion::StaticStruct()->GetFName());
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_String::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Object::StaticStruct()->GetFName());
-		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Actor::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Asset::StaticStruct()->GetFName());
+		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_LexWidget::StaticStruct()->GetFName());
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_PointerEvent::StaticStruct()->GetFName());
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Class::StaticStruct()->GetFName());
 		PropertyModule.UnregisterCustomPropertyTypeLayout(FLexUIEventDelegate_Rotator::StaticStruct()->GetFName());

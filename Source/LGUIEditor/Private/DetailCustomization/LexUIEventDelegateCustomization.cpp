@@ -23,7 +23,7 @@
 
 #define LOCTEXT_NAMESPACE "LexUIEventDelegateCustomization"
 
-#define LexUIEventActorSelfName "(ActorSelf)"
+#define LexUIEventWidgetSelfName "(WidgetSelf)"
 
 TArray<FString> FLexUIEventDelegateCustomization::CopySourceData;
 
@@ -72,31 +72,6 @@ void FLexUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyHan
 			AddNativeParameterTypeProperty(ChildBuilder);
 		}
 		return;
-	}
-	if (auto Component = Cast<UActorComponent>(OutObject))
-	{
-		if (Component->GetOwner() && Component->GetOwner()->BlueprintCreatedComponents.Contains(Component))
-		{
-			auto TipText = LOCTEXT("NotSupportActorBlueprintComponent_Content", "(Not support ActorBlueprint's component)");
-			ChildBuilder.AddCustomRow(LOCTEXT("NotSupportActorBlueprintComponent_Row", "NotSupportActorBlueprintComponent"))
-				.NameContent()
-				[
-					SNew(STextBlock)
-					.Text(this, &FLexUIEventDelegateCustomization::GetEventTitleName)
-					.ToolTipText(PropertyHandle->GetToolTipText())
-				]
-				.ValueContent()
-				[
-					SNew(STextBlock)
-					.Text(TipText)
-					.ToolTipText(TipText)
-					.Font(IDetailLayoutBuilder::GetDetailFont())
-					.ColorAndOpacity(FLinearColor(FColor::Red))
-					.AutoWrapText(true)
-				]
-				;
-			return;
-		}
 	}
 
 	// copy all EventDelegate I'm accessing right now
@@ -283,16 +258,16 @@ FText FLexUIEventDelegateCustomization::GetComponentDisplayName(TSharedRef<IProp
 {
 	FString ComponentDisplayName;
 	auto TargetObject = GetEventItemTargetObject(EventItemPropertyHandle);
-	auto HelperActor = GetEventItemHelperActor(EventItemPropertyHandle);
+	auto HelperWidget = GetEventItemHelperWidget(EventItemPropertyHandle);
 	if (TargetObject)
 	{
-		if (TargetObject == HelperActor)
+		if (TargetObject == HelperWidget)
 		{
-			ComponentDisplayName = LexUIEventActorSelfName;
+			ComponentDisplayName = LexUIEventWidgetSelfName;
 		}
 		else
 		{
-			if (auto Comp = Cast<UActorComponent>(TargetObject))
+			if (auto Comp = Cast<ULexUIBehaviour>(TargetObject))
 			{
 				ComponentDisplayName = TargetObject->GetName();
 			}
@@ -402,18 +377,13 @@ EVisibility FLexUIEventDelegateCustomization::GetNotValidParameterWidgetVisibili
 	}
 }
 
-AActor* FLexUIEventDelegateCustomization::GetEventItemHelperActor(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const
+ULexWidget* FLexUIEventDelegateCustomization::GetEventItemHelperWidget(TSharedRef<IPropertyHandle> EventItemPropertyHandle)const
 {
-	//HelperActor
-	auto HelperActorHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperActor));
-	AActor* HelperActor = nullptr;
-	UObject* HelperActorObject = nullptr;
-	HelperActorHandle->GetValue(HelperActorObject);
-	if (HelperActorObject != nullptr)
-	{
-		HelperActor = Cast<AActor>(HelperActorObject);
-	}
-	return HelperActor;
+	//HelperWidget
+	auto HelperWidgetHandle = EventItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperWidget));
+	ULexWidget* HelperWidget = nullptr;
+	HelperWidgetHandle->GetValue(*(UObject**)&HelperWidget);
+	return HelperWidget;
 }
 
 void FLexUIEventDelegateCustomization::UpdateEventsLayout()
@@ -428,11 +398,11 @@ void FLexUIEventDelegateCustomization::UpdateEventsLayout()
 	for (int32 EventItemIndex = 0; EventItemIndex < (int32)arrayCount; EventItemIndex++)
 	{
 		auto ItemPropertyHandle = EventListHandle->GetElement(EventItemIndex);
-		//HelperActor
-		auto HelperActorHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperActor));
-		UObject* HelperActorObject = nullptr;
-		HelperActorHandle->GetValue(HelperActorObject);
-		AActor* HelperActor = Cast<AActor>(HelperActorObject);
+		//HelperWidget
+		auto HelperWidgetHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperWidget));
+		UObject* HelperWidgetObject = nullptr;
+		HelperWidgetHandle->GetValue(HelperWidgetObject);
+		auto HelperWidget = Cast<ULexWidget>(HelperWidgetObject);
 
 		//TargetObject
 		auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, TargetObject));
@@ -445,17 +415,16 @@ void FLexUIEventDelegateCustomization::UpdateEventsLayout()
 		if (ClassObject != nullptr)
 		{
 			UClass* ClassValue = Cast<UClass>(ClassObject);
-			if (ClassValue == AActor::StaticClass())
+			if (ClassValue == ULexWidget::StaticClass())
 			{
-				TargetObjectHandle->SetValue(HelperActor);
+				TargetObjectHandle->SetValue(HelperWidget);
 			}
-			else if (ClassValue->IsChildOf(UActorComponent::StaticClass()))
+			else if (ClassValue->IsChildOf(ULexUIBehaviour::StaticClass()))
 			{
-				if (HelperActor != nullptr)
+				if (HelperWidget != nullptr)
 				{
-					UActorComponent* FoundHelperComp = nullptr;
-					TArray<UActorComponent*> CompArray;
-					HelperActor->GetComponents(ClassValue, CompArray);
+					ULexUIBehaviour* FoundHelperComp = nullptr;
+					auto CompArray = HelperWidget->GetComponents(ClassValue);
 					if (CompArray.Num() == 1)
 					{
 						FoundHelperComp = CompArray[0];
@@ -499,7 +468,7 @@ void FLexUIEventDelegateCustomization::UpdateEventsLayout()
 			}
 		}
 
-		HelperActorHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::OnActorParameterChange, ItemPropertyHandle));
+		HelperWidgetHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::OnHelperWidgetParameterChanged, ItemPropertyHandle));
 			
 		//function
 		auto FunctionNameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, FunctionName));
@@ -755,15 +724,15 @@ void FLexUIEventDelegateCustomization::UpdateEventsLayout()
 									SNew(SHorizontalBox)
 									+SHorizontalBox::Slot()
 									[
-										//HelperActor
+										//HelperWidget
 										SNew(SBox)
 										.Padding(FMargin(0, 0, 6, 0))
 										[
 											PrefabEditor.IsValid()
 											?
-											DrawActorSelectorWidgetForPrefabEditor(EventItemIndex)
+											DrawLexWidgetSelectorForPrefabEditor(EventItemIndex)
 											:
-											HelperActorHandle->CreatePropertyValueWidget()
+											HelperWidgetHandle->CreatePropertyValueWidget()
 										]
 									]
 									+SHorizontalBox::Slot()
@@ -843,12 +812,12 @@ void FLexUIEventDelegateCustomization::UpdateEventsLayout()
 	EventsWidget->SetContent(EventsVerticalLayout);
 }
 
-void FLexUIEventDelegateCustomization::OnActorParameterChange(TSharedRef<IPropertyHandle> ItemPropertyHandle)
+void FLexUIEventDelegateCustomization::OnHelperWidgetParameterChanged(TSharedRef<IPropertyHandle> ItemPropertyHandle)
 {
-	UObject* HelperActorObject = nullptr;
-	auto HelperActorHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperActor));
-	HelperActorHandle->GetValue(HelperActorObject);
-	AActor* HelperActor = Cast<AActor>(HelperActorObject);
+	UObject* HelperWidgetObject = nullptr;
+	auto HelperWidgetHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperWidget));
+	HelperWidgetHandle->GetValue(HelperWidgetObject);
+	auto HelperWidget = Cast<ULexWidget>(HelperWidgetObject);
 
 	auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, TargetObject));
 	UObject* TargetObject = nullptr;
@@ -860,17 +829,16 @@ void FLexUIEventDelegateCustomization::OnActorParameterChange(TSharedRef<IProper
 	if (ClassObject != nullptr)
 	{
 		UClass* ClassValue = Cast<UClass>(ClassObject);
-		if (ClassValue == AActor::StaticClass())
+		if (ClassValue == ULexWidget::StaticClass())
 		{
-			TargetObjectHandle->SetValue(HelperActor);
+			TargetObjectHandle->SetValue(HelperWidget);
 		}
-		else if (ClassValue->IsChildOf(UActorComponent::StaticClass()))
+		else if (ClassValue->IsChildOf(ULexUIBehaviour::StaticClass()))
 		{
-			if (HelperActor != nullptr)
+			if (HelperWidget != nullptr)
 			{
-				UActorComponent* FoundHelperComp = nullptr;
-				TArray<UActorComponent*> CompArray;
-				HelperActor->GetComponents(ClassValue, CompArray);
+				ULexUIBehaviour* FoundHelperComp = nullptr;
+				auto CompArray = HelperWidget->GetComponents(ClassValue);
 				if (CompArray.Num() == 1)
 				{
 					FoundHelperComp = CompArray[0];
@@ -917,7 +885,7 @@ void FLexUIEventDelegateCustomization::OnActorParameterChange(TSharedRef<IProper
 	UpdateEventsLayout();
 }
 
-void FLexUIEventDelegateCustomization::OnSelectComponent(UActorComponent* Comp, TSharedRef<IPropertyHandle> ItemPropertyHandle)
+void FLexUIEventDelegateCustomization::OnSelectComponent(ULexUIBehaviour* Comp, TSharedRef<IPropertyHandle> ItemPropertyHandle)
 {
 	auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, TargetObject));
 	TargetObjectHandle->SetValue(Comp);
@@ -930,17 +898,17 @@ void FLexUIEventDelegateCustomization::OnSelectComponent(UActorComponent* Comp, 
 
 	UpdateEventsLayout();
 }
-void FLexUIEventDelegateCustomization::OnSelectActorSelf(TSharedRef<IPropertyHandle> ItemPropertyHandle)
+void FLexUIEventDelegateCustomization::OnSelectWidgetSelf(TSharedRef<IPropertyHandle> ItemPropertyHandle)
 {
-	auto HelperActorHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperActor));
-	UObject* HelperActorObject = nullptr;
-	HelperActorHandle->GetValue(HelperActorObject);
+	auto HelperWidgetHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperWidget));
+	UObject* HelperWidgetObject = nullptr;
+	HelperWidgetHandle->GetValue(HelperWidgetObject);
 
 	auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, TargetObject));
-	TargetObjectHandle->SetValue(HelperActorObject);
+	TargetObjectHandle->SetValue(HelperWidgetObject);
 
 	auto HelperClassHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperClass));
-	HelperClassHandle->SetValue(AActor::StaticClass());
+	HelperClassHandle->SetValue(ULexWidget::StaticClass());
 
 	auto HelperComponentNameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperComponentName));
 	HelperComponentNameHandle->SetValue(NAME_None);
@@ -985,26 +953,26 @@ ELexUIEventDelegateParameterType FLexUIEventDelegateCustomization::GetEventDataP
 	return functionParameterType;
 }
 
-TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawActorSelectorWidgetForPrefabEditor(int32 itemIndex)
+TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawLexWidgetSelectorForPrefabEditor(int32 itemIndex)
 {
 	auto EventListHandle = GetEventListHandle();
 	auto ItemPropertyHandle = EventListHandle->GetElement(itemIndex);
-	auto HelperActorHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperActor));
+	auto HelperWidgetHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperWidget));
 	UObject* Object = nullptr;
-	if (HelperActorHandle->GetValue(Object) != FPropertyAccess::Success)return SNullWidget::NullWidget;
+	if (HelperWidgetHandle->GetValue(Object) != FPropertyAccess::Success)return SNullWidget::NullWidget;
 	auto NoneObjectText = LOCTEXT("None", "None");
 	auto GetText = [=, this]()
 	{
 		if (Object == nullptr)return NoneObjectText;
 		if (!PrefabEditor.IsValid())return NoneObjectText;
-		if (auto Actor = Cast<AActor>(Object))
+		if (auto Widget = Cast<ULexWidget>(Object))
 		{
-			return FText::FromString(Actor->GetActorLabel());
+			return FText::FromString(Widget->GetDisplayName());
 		}
 		else
 		{
-			auto OuterActor = Object->GetTypedOuter<AActor>();
-			return FText::FromString(Object->GetPathName(OuterActor));
+			auto OuterWidget = Object->GetTypedOuter<ULexWidget>();
+			return FText::FromString(Object->GetPathName(OuterWidget));
 		}
 	};
 	auto GetTooltipText = [=, this]()
@@ -1022,8 +990,8 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawActorSelectorWidgetFor
 			Widget = Object->GetTypedOuter<ULexWidget>();
 			PathStr = "." + Object->GetPathName(Widget);
 		}
-		auto RootAgentActor = PrefabEditor.Pin()->GetRootAgentWidget();
-		while (Widget && Widget != RootAgentActor)
+		auto RootAgentWidget = PrefabEditor.Pin()->GetRootAgentWidget();
+		while (Widget && Widget != RootAgentWidget)
 		{
 			PathStr = "/" + Widget->GetDisplayName() + PathStr;
 			Widget = Widget->GetParent();
@@ -1034,7 +1002,7 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawActorSelectorWidgetFor
 		SNew(SBox)
 		.IsEnabled_Lambda([=]()
 		{
-			return HelperActorHandle->IsEditable();
+			return HelperWidgetHandle->IsEditable();
 		})
 		.WidthOverride(5000)
 		[
@@ -1042,7 +1010,7 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawActorSelectorWidgetFor
 			.MinDesiredWidth(125)
 			.Padding(0, 0)
 			[
-				SAssignNew(ActorPickerComboButton, SComboButton)
+				SAssignNew(WidgetPickerComboButton, SComboButton)
 				.HasDownArrow(true)
 				.ToolTipText_Lambda(GetTooltipText)
 				.ButtonContent()
@@ -1056,12 +1024,12 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawActorSelectorWidgetFor
 					SNew(SBox)
 					.Padding(4, 0)
 					[
-						SNew(SLexWidgetHierarchyPickerView, PrefabEditor.Pin(), AActor::StaticClass())
+						SNew(SLexWidgetHierarchyPickerView, PrefabEditor.Pin(), ULexWidget::StaticClass())
 						.OnSelectItem_Lambda([=, this](UObject* InItem)
 						{
 							// InPropertyHandle->SetValue(InItem);
-							HelperActorHandle->SetValueFromFormattedString(InItem->GetPathName());
-							ActorPickerComboButton->SetIsOpen(false);
+							HelperWidgetHandle->SetValueFromFormattedString(InItem->GetPathName());
+							WidgetPickerComboButton->SetIsOpen(false);
 						})
 					]
 				]
@@ -1074,24 +1042,24 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::MakeComponentSelectorMenu(
 {
 	auto EventListHandle = GetEventListHandle();
 	auto ItemPropertyHandle = EventListHandle->GetElement(itemIndex);
-	auto HelperActorHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperActor));
-	UObject* HelperActorObject = nullptr;
-	HelperActorHandle->GetValue(HelperActorObject);
-	if (HelperActorObject == nullptr)
+	auto HelperWidgetHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperWidget));
+	UObject* HelperWidgetObject = nullptr;
+	HelperWidgetHandle->GetValue(HelperWidgetObject);
+	if (HelperWidgetObject == nullptr)
 	{
 		return SNew(SBox);
 	}
 
 	FMenuBuilder MenuBuilder(true, MakeShareable(new FUICommandList));
 
-	auto HelperActor = (AActor*)HelperActorObject;
+	auto HelperWidget = Cast<ULexWidget>(HelperWidgetObject);
 	MenuBuilder.AddMenuEntry(
-		FUIAction(FExecuteAction::CreateRaw(this, &FLexUIEventDelegateCustomization::OnSelectActorSelf, ItemPropertyHandle)),
+		FUIAction(FExecuteAction::CreateRaw(this, &FLexUIEventDelegateCustomization::OnSelectWidgetSelf, ItemPropertyHandle)),
 		SNew(SHorizontalBox)
 		+ SHorizontalBox::Slot()
 		[
 			SNew(STextBlock)
-			.Text(FText::FromString(LexUIEventActorSelfName))
+			.Text(FText::FromString(LexUIEventWidgetSelfName))
 			.Font(IDetailLayoutBuilder::GetDetailFont())
 		]
 		//+SHorizontalBox::Slot()
@@ -1102,7 +1070,7 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::MakeComponentSelectorMenu(
 		//	.Font(IDetailLayoutBuilder::GetDetailFont())
 		//]
 	);
-	auto Components = HelperActor->GetComponents();
+	auto Components = HelperWidget->GetAllComponents();
 	for (auto Comp : Components)
 	{
 		if(Comp->HasAnyFlags(EObjectFlags::RF_Transient))continue;
@@ -1185,22 +1153,22 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::MakeFunctionSelectorMenu(i
 
 bool FLexUIEventDelegateCustomization::IsComponentSelectorMenuEnabled(TSharedRef<IPropertyHandle> ItemPropertyHandle)const
 {
-	auto HelperActorHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperActor));
-	UObject* HelperActorObject = nullptr;
-	HelperActorHandle->GetValue(HelperActorObject);
-	return IsValid(HelperActorObject);
+	auto HelperWidgetHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperWidget));
+	UObject* HelperWidgetObject = nullptr;
+	HelperWidgetHandle->GetValue(HelperWidgetObject);
+	return IsValid(HelperWidgetObject);
 }
 bool FLexUIEventDelegateCustomization::IsFunctionSelectorMenuEnabled(TSharedRef<IPropertyHandle> ItemPropertyHandle)const
 {
-	auto HelperActorHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperActor));
-	UObject* HelperActorObject = nullptr;
-	HelperActorHandle->GetValue(HelperActorObject);
+	auto HelperWidgetHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperWidget));
+	UObject* HelperWidgetObject = nullptr;
+	HelperWidgetHandle->GetValue(HelperWidgetObject);
 
 	auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, TargetObject));
 	UObject* TargetObject = nullptr;
 	TargetObjectHandle->GetValue(TargetObject);
 
-	return IsValid(HelperActorObject) && IsValid(TargetObject);
+	return IsValid(HelperWidgetObject) && IsValid(TargetObject);
 }
 void FLexUIEventDelegateCustomization::OnClickListAdd()
 {
@@ -1711,8 +1679,8 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawFunctionParameter(TSha
 				];
 		}
 		break;
-		case ELexUIEventDelegateParameterType::Object:
-		case ELexUIEventDelegateParameterType::Actor:
+		case ELexUIEventDelegateParameterType::Asset:
+		case ELexUIEventDelegateParameterType::LexWidget:
 		case ELexUIEventDelegateParameterType::Class:
 		{
 			return
@@ -1774,7 +1742,7 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawFunctionReferenceParam
 	TSharedPtr<SWidget> ParameterContent;
 	switch (FunctionParameterType)
 	{
-	case ELexUIEventDelegateParameterType::Object:
+	case ELexUIEventDelegateParameterType::Asset:
 	{
 		ClearValueBuffer(InDataContainerHandle);
 		return SNew(SObjectPropertyEntryBox)
@@ -1782,11 +1750,11 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawFunctionReferenceParam
 			.AllowedClass(ULexUIEventDelegateParameterHelper::GetObjectParameterClass(InFunction))
 			.PropertyHandle(InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, ReferenceObject)))
 			.AllowClear(true)
-			.ToolTipText(LOCTEXT("UObjectTips", "UObject only referece asset, dont use for HelperActor"))
+			.ToolTipText(LOCTEXT("UObjectTips", "UObject only reference asset, dont use for HelperWidget"))
 			.OnObjectChanged(this, &FLexUIEventDelegateCustomization::ObjectValueChange, ParamBufferHandle, InDataContainerHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, ReferenceObject)), true);
 	}
 	break;
-	case ELexUIEventDelegateParameterType::Actor:
+	case ELexUIEventDelegateParameterType::LexWidget:
 	{
 		ClearValueBuffer(InDataContainerHandle);
 		return SNew(SObjectPropertyEntryBox)
@@ -1820,16 +1788,16 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawFunctionReferenceParam
 		.Text(LOCTEXT("(Not handled)", "(Not handled)"));
 }
 
-void FLexUIEventDelegateCustomization::ObjectValueChange(const FAssetData& InObj, TSharedPtr<IPropertyHandle> BufferHandle, TSharedPtr<IPropertyHandle> ObjectReferenceHandle, bool ObjectOrActor)
+void FLexUIEventDelegateCustomization::ObjectValueChange(const FAssetData& InObj, TSharedPtr<IPropertyHandle> BufferHandle, TSharedPtr<IPropertyHandle> ObjectReferenceHandle, bool ObjectOrWidget)
 {
-	if (ObjectOrActor)
+	if (ObjectOrWidget)
 	{
-		//ObjectReference is not for HelperActor reference
-		if (InObj.IsValid() && InObj.GetClass()->IsChildOf(AActor::StaticClass()))
+		//ObjectReference is not for HelperWidget reference
+		if (InObj.IsValid() && InObj.GetClass()->IsChildOf(ULexWidget::StaticClass()))
 		{
-			UE_LOG(LGUIEditor, Error, TEXT("Please use Actor type for reference Actor, UObject is for asset object reference"));
-			AActor* NullActor = nullptr;
-			ObjectReferenceHandle->SetValue(NullActor);
+			UE_LOG(LGUIEditor, Error, TEXT("Please use LexWidget type for reference LexWidget, UObject is for asset object reference"));
+			ULexWidget* NullWidget = nullptr;
+			ObjectReferenceHandle->SetValue(NullWidget);
 		}
 		else
 		{

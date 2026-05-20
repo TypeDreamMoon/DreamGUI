@@ -287,44 +287,47 @@ namespace LexUIPrefabSystem
 				auto& Widget = AllWidgets[i];
 				Widget->OnRegister();
 			}
+		}
 
-			//attach root actor's parent
-			if (Parent)
-			{
-				CreatedRootWidget->SetParent(Parent, false);
-			}
-			if (!bIsSubPrefab)//need to do this in root actor and it will propagate to children. If do this in subprefab and parent prefab override transform data on subprefab's actor, then transform goes wrong
-			{
-				CreatedRootWidget->CalculateObjectToWorldTransform(true);
-			}
-			if (ReplaceTransform)
-			{
-				CreatedRootWidget->SetRelativeLocationAndRotation(InLocation, InRotation);
-				CreatedRootWidget->SetRelativeScale(InScale);
-			}
+		//attach root actor's parent
+		if (Parent)
+		{
+			CreatedRootWidget->SetParent(Parent, false);
+		}
+		if (!bIsSubPrefab)//need to do this in root actor and it will propagate to children. If do this in subprefab and parent prefab override transform data on subprefab's actor, then transform goes wrong
+		{
+			CreatedRootWidget->CalculateObjectToWorldTransform(true);
+		}
+		if (ReplaceTransform)
+		{
+			CreatedRootWidget->SetRelativeLocationAndRotation(InLocation, InRotation);
+			CreatedRootWidget->SetRelativeScale(InScale);
+		}
 
 #if WITH_EDITOR
-			if (!bIsSubPrefab)
+		if (!bIsSubPrefab)
+		{
+			if (bIsEditorOrRuntime)
 			{
-				if (bIsEditorOrRuntime)
+				for (auto& Widget : AllWidgets)
 				{
-					for (auto& Widget : AllWidgets)
-					{
-						Widget->CalculateTransformFromAnchor();
-					}
+					Widget->CalculateTransformFromAnchor();
 				}
 			}
+		}
 #endif
 
-			if (OnSubPrefabFinishDeserializeFunction != nullptr)
-			{
-				OnSubPrefabFinishDeserializeFunction(CreatedRootWidget, MapGuidToObject, MapObjectToOriginGuid, AllWidgets);
-			}
-			if (CallbackBeforeAwake != nullptr)
-			{
-				CallbackBeforeAwake(CreatedRootWidget);
-			}
-			
+		if (OnSubPrefabFinishDeserializeFunction != nullptr)
+		{
+			OnSubPrefabFinishDeserializeFunction(CreatedRootWidget, MapGuidToObject, MapObjectToOriginGuid, AllWidgets);
+		}
+		if (CallbackBeforeAwake != nullptr)
+		{
+			CallbackBeforeAwake(CreatedRootWidget);
+		}
+
+		if (!bIsSubPrefab)
+		{
 			if (World->IsGameWorld() && World->HasBegunPlay())
 			{
 				for (int i = 0; i < AllWidgets.Num(); i++)

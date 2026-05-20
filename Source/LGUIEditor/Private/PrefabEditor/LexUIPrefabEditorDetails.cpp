@@ -17,7 +17,6 @@
 #include "Core/LexUIBehaviour.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexWidget.h"
-#include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "ScopedTransaction.h"
 #include "SPositiveActionButton.h"
 #include "Framework/Commands/GenericCommands.h"
@@ -73,8 +72,9 @@ public:
 		SLATE_EVENT(FOnComponentsSelectionChanged, OnSelectionChanged)
 	SLATE_END_ARGS()
 
-	void Construct(const FArguments& InArgs)
+	void Construct(const FArguments& InArgs, TSharedPtr<FLexUIPrefabEditor> InPrefabEditor)
 	{
+		PrefabEditorPtr = InPrefabEditor;
 		CommandList = MakeShareable(new FUICommandList);
 		CommandList->MapAction(
 			FGenericCommands::Get().Delete,
@@ -88,7 +88,7 @@ public:
 
 		ToolbarWidget =
 		SNew(SBox)
-		.Padding(FMargin(0, 0, 4, 0))
+		.Padding(FMargin(4, 2, 4, 2))
 		[
 			SNew(SPositiveActionButton)
 			.IsEnabled(this, &SLexWidgetComponentEditor::CanAddOrRemoveComponent)
@@ -127,6 +127,32 @@ public:
 		];
 
 		RefreshComponents();
+	}
+
+	virtual bool SupportsKeyboardFocus() const override
+	{
+		return true;
+	}
+
+	virtual FReply OnFocusReceived(const FGeometry& MyGeometry, const FFocusEvent& InFocusEvent) override
+	{
+		if (ComponentListView.IsValid())
+		{
+			FSlateApplication::Get().SetKeyboardFocus(ComponentListView, EFocusCause::SetDirectly);
+			return FReply::Handled();
+		}
+
+		return SCompoundWidget::OnFocusReceived(MyGeometry, InFocusEvent);
+	}
+
+	virtual FReply OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent) override
+	{
+		if (CommandList.IsValid() && CommandList->ProcessCommandBindings(InKeyEvent))
+		{
+			return FReply::Handled();
+		}
+
+		return SCompoundWidget::OnKeyDown(MyGeometry, InKeyEvent);
 	}
 
 	TSharedRef<SWidget> GetToolbarWidget() const
@@ -245,6 +271,11 @@ private:
 
 	void HandleSelectionChanged(FLexWidgetComponentItem InItem, ESelectInfo::Type SelectInfo)
 	{
+		if (SelectInfo != ESelectInfo::Direct && ComponentListView.IsValid())
+		{
+			FSlateApplication::Get().SetKeyboardFocus(ComponentListView, EFocusCause::SetDirectly);
+		}
+
 		BroadcastSelectionChanged();
 	}
 
@@ -366,6 +397,7 @@ private:
 			Component->SetFlags(RF_Transactional);
 			Component->Modify();
 			Widget->RemoveComponent(Component);
+			FLexUIUtils::NotifyPropertyChanged(Widget, ULexWidget::GetPropertyName_Components());
 		}
 
 		RefreshComponents();
@@ -397,6 +429,7 @@ private:
 	TSharedPtr<SWidget> ToolbarWidget;
 	TSharedPtr<SListView<FLexWidgetComponentItem>> ComponentListView;
 	TSharedPtr<FUICommandList> CommandList;
+	TWeakPtr<FLexUIPrefabEditor> PrefabEditorPtr;
 };
 
 void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLexUIPrefabEditor> InPrefabEditor)
@@ -426,7 +459,7 @@ void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLe
 	TSharedRef<FLexWidgetDetailPropertyExtensionHandler> BindingHandler = MakeShareable(new FLexWidgetDetailPropertyExtensionHandler(PrefabEditorPtr));
 	DetailsView->SetExtensionHandler(BindingHandler);
 
-	ComponentEditor = SNew(SLexWidgetComponentEditor)
+	ComponentEditor = SNew(SLexWidgetComponentEditor, InPrefabEditor)
 		.GetWidgetContext(this, &SLexUIPrefabEditorDetails::GetSelectedWidgetContext)
 		.CanEdit(this, &SLexUIPrefabEditorDetails::IsEditorAllowEditing)
 		.OnSelectionChanged(this, &SLexUIPrefabEditorDetails::OnComponentSelectionChanged);
@@ -469,7 +502,7 @@ void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLe
 					[
 						SNew(SButton)
 						.OnClicked_Lambda([=, this]() {
-							PrefabEditorPtr.Pin()->OpenSubPrefab(CachedActor.Get());
+							PrefabEditorPtr.Pin()->OpenSubPrefab(CachedWidget.Get());
 							return FReply::Handled();
 						})
 						[
@@ -489,7 +522,7 @@ void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLe
 					[
 						SNew(SButton)
 						.OnClicked_Lambda([=, this]() {
-							PrefabEditorPtr.Pin()->SelectSubPrefab(CachedActor.Get());
+							PrefabEditorPtr.Pin()->SelectSubPrefab(CachedWidget.Get());
 							return FReply::Handled();
 						})
 						[
@@ -535,7 +568,7 @@ void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLe
 										[
 											SAssignNew(PrefabOverrideDataViewer, SLexUIPrefabOverrideDataViewer, [=, this]()
 											{
-												return CachedActor.Get();
+												return CachedWidget.Get();
 											})
 											.AfterRevertPrefab_Lambda([=, this](ULexUIPrefab* PrefabAsset) {
 												})
@@ -593,9 +626,9 @@ SLexUIPrefabEditorDetails::~SLexUIPrefabEditorDetails()
 
 bool SLexUIPrefabEditorDetails::IsPrefabButtonEnable()const
 {
-	if (PrefabEditorPtr.IsValid() && CachedActor.IsValid())
+	if (PrefabEditorPtr.IsValid() && CachedWidget.IsValid())
 	{
-		return PrefabEditorPtr.Pin()->ActorIsSubPrefabRoot(CachedActor.Get());
+		return PrefabEditorPtr.Pin()->WidgetIsSubPrefabRoot(CachedWidget.Get());
 	}
 	return false;
 }
@@ -612,9 +645,9 @@ EVisibility SLexUIPrefabEditorDetails::GetPrefabButtonVisibility()const
 
 bool SLexUIPrefabEditorDetails::IsEditorAllowEditing()const
 {
-	if (PrefabEditorPtr.IsValid() && CachedActor.IsValid())
+	if (PrefabEditorPtr.IsValid() && CachedWidget.IsValid())
 	{
-		return !PrefabEditorPtr.Pin()->ActorBelongsToSubPrefab(CachedActor.Get());
+		return !PrefabEditorPtr.Pin()->WidgetBelongsToSubPrefab(CachedWidget.Get());
 	}
 	return true;
 }
@@ -641,15 +674,16 @@ void SLexUIPrefabEditorDetails::OnEditorSelectionChanged()
 	auto SelectedWidgets = PrefabEditorPtr.Pin()->GetSelectedWidgets();
 	if (SelectedWidgets.Num() > 0)
 	{
+		auto RootWidget = PrefabEditorPtr.Pin()->GetRootAgentWidget();
 		if (auto Widget = SelectedWidgets[0].Get())
 		{
-			if (Widget->GetWorld() != PrefabEditorPtr.Pin()->GetWorld())
+			if (!(Widget->IsChildOf(RootWidget) || Widget == RootWidget))
 			{
 				bIsSelectFromLexUIEditor = false;
 				return;
 			}
 
-			CachedActor = Widget;
+			CachedWidget = Widget;
 			PrefabOverrideDataViewer->RefreshDataContent();
 			if (ComponentEditor)
 			{
@@ -661,15 +695,15 @@ void SLexUIPrefabEditorDetails::OnEditorSelectionChanged()
 		TArray<UObject*> SelectedObjectList;
 		for (int32 i = 0; i < SelectedWidgets.Num(); i++)
 		{
-			auto SelectedObject = SelectedWidgets[i];
-			if (SelectedObject.IsValid())
+			auto Widget = SelectedWidgets[i];
+			if (Widget.IsValid())
 			{
-				if (SelectedObject->GetWorld() != PrefabEditorPtr.Pin()->GetWorld())
+				if (!(Widget->IsChildOf(RootWidget) || Widget.Get() == RootWidget))
 				{
 					continue;
 				}
 
-				SelectedObjectList.Add(SelectedObject.Get());
+				SelectedObjectList.Add(Widget.Get());
 			}
 		}
 
@@ -679,7 +713,7 @@ void SLexUIPrefabEditorDetails::OnEditorSelectionChanged()
 		}
 		if (SelectedObjectList.Num() == 0)
 		{
-			CachedActor = nullptr;
+			CachedWidget = nullptr;
 			PrefabOverrideDataViewer->RefreshDataContent();
 			if (ComponentEditor)
 			{
@@ -695,7 +729,7 @@ void SLexUIPrefabEditorDetails::OnEditorSelectionChanged()
 		{
 			DetailsView->SetObjects(SelectedObjectList, true);
 		}
-		CachedActor = nullptr;
+		CachedWidget = nullptr;
 		PrefabOverrideDataViewer->RefreshDataContent();
 		if (ComponentEditor)
 		{
@@ -709,6 +743,9 @@ void SLexUIPrefabEditorDetails::OnEditorSelectionChanged()
 void SLexUIPrefabEditorDetails::OnComponentSelectionChanged(const TArray<TWeakObjectPtr<ULexUIBehaviour>>& SelectedComponents)
 {
 	bIsSelectFromDetails = true;
+
+	const FScopedTransaction Transaction(LOCTEXT("SelectionChanged_Transaction", "Select Component"));
+	ULexUISelection::GetInstance()->Modify();
 
 	TArray<UObject*> SelectedObjects;
 	TArray<ULexUIBehaviour*> ValidSelectedComponents;
@@ -730,11 +767,12 @@ void SLexUIPrefabEditorDetails::OnComponentSelectionChanged(const TArray<TWeakOb
 		else if (PrefabEditorPtr.IsValid())
 		{
 			TArray<UObject*> SelectedWidgetObjects;
-			for (const TWeakObjectPtr<ULexWidget>& SelectedWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
+			auto RootWidget = PrefabEditorPtr.Pin()->GetRootAgentWidget();
+			for (const TWeakObjectPtr<ULexWidget>& Widget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
 			{
-				if (SelectedWidget.IsValid() && SelectedWidget->GetWorld() == PrefabEditorPtr.Pin()->GetWorld())
+				if (Widget.IsValid() && (Widget->IsChildOf(RootWidget) || Widget.Get() == RootWidget))
 				{
-					SelectedWidgetObjects.Add(SelectedWidget.Get());
+					SelectedWidgetObjects.Add(Widget.Get());
 				}
 			}
 			DetailsView->SetObjects(SelectedWidgetObjects, true);
@@ -743,7 +781,7 @@ void SLexUIPrefabEditorDetails::OnComponentSelectionChanged(const TArray<TWeakOb
 
 	if (!bIsSelectFromLexUIEditor && PrefabEditorPtr.IsValid())
 	{
-		auto* Selection = ULexUIManagerWorldSubsystem::GetSelection(PrefabEditorPtr.Pin()->GetWorld());
+		auto* Selection = ULexUISelection::GetInstance();
 		Selection->ClearComponentSelection();
 		for (ULexUIBehaviour* Component : ValidSelectedComponents)
 		{

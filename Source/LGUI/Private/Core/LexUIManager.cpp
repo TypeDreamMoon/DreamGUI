@@ -137,7 +137,7 @@ ULexUIManagerObject* ULexUIManagerObject::GetInstance(bool CreateIfNotValid)
 }
 bool ULexUIManagerObject::IsSelected(ULexWidget* InObject)
 {
-	if (auto Selection = ULexUIManagerWorldSubsystem::GetSelection(InObject->GetWorld()))
+	if (auto Selection = ULexUISelection::GetInstance())
 	{
 		return Selection->IsSelected(InObject);
 	}
@@ -230,6 +230,19 @@ void ULexUIManagerObject::OnPackageReloaded(EPackageReloadPhase Phase, FPackageR
 	}
 }
 
+
+ULexUISelection* ULexUISelection::GetInstance()
+{
+	if (Instance == nullptr)
+	{
+		Instance = NewObject<ULexUISelection>();
+		Instance->SetFlags(RF_Transactional);
+		Instance->AddToRoot();
+	}
+	return Instance;
+}
+
+ULexUISelection* ULexUISelection::Instance = nullptr;
 void ULexUISelection::SelectWidget(ULexWidget* Widget)
 {
 	SelectedWidgetArray.Add(Widget);
@@ -811,7 +824,6 @@ void ULexUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 	FCoreDelegates::OnEndFrame.AddUObject(this, &ULexUIManagerWorldSubsystem::OnEndOfFrame);
 	FCoreDelegates::OnEnginePreExit.AddUObject(this, &ULexUIManagerWorldSubsystem::OnEnginePreExit);
 	ULexUIManagerObject::GetInstance(true);//make sure it is created
-	Selection = NewObject<ULexUISelection>(this, NAME_None, RF_Transactional);
 #endif
 	//localization
 	OnCultureChangedDelegateHandle = FInternationalization::Get().OnCultureChanged().AddUObject(this, &ULexUIManagerWorldSubsystem::OnCultureChanged);
@@ -1364,14 +1376,6 @@ void ULexUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 	}
 }
 
-ULexUISelection* ULexUIManagerWorldSubsystem::GetSelection(UWorld* InWorld)
-{
-	if (auto Instance = GetInstance(InWorld))
-	{
-		return Instance->Selection;
-	}
-	return nullptr;
-}
 #endif
 
 void ULexUIManagerWorldSubsystem::AddWidgetPresenter(ULexWidgetPresenterComponent* InWidgetPresenter)

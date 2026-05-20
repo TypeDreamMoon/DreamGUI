@@ -98,7 +98,7 @@ void FLexUIPrefabThumbnailScene::GetBoundsRecursive(ULexWidget* RootWidget, FBox
 	}
 	struct LOCAL
 	{
-		static void GetBounds(ULexWidget* InWidget, bool bIsFirstBounds, FBox& OutBox)
+		static void GetBounds(ULexWidget* InWidget, bool& bIsFirstBounds, FBox& OutBox)
 		{
 			if (auto Visual = InWidget->GetVisual())
 			{

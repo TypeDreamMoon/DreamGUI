@@ -79,6 +79,7 @@ class LGUI_API ULexUISelection : public UObject
 	GENERATED_BODY()
 
 public:
+	static ULexUISelection* GetInstance();
 	virtual bool IsEditorOnly() const override{return true;}
 	void SelectWidget(ULexWidget* Widget);
 	void SelectComponent(ULexUIBehaviour* Component);
@@ -88,6 +89,7 @@ public:
 	TArray<TWeakObjectPtr<ULexWidget>> GetSelectedWidgets()const{return SelectedWidgetArray;}
 	FSimpleMulticastDelegate OnSelectionChanged;
 private:
+	static ULexUISelection* Instance;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 	TArray<TWeakObjectPtr<ULexWidget>> SelectedWidgetArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
@@ -128,10 +130,6 @@ private:
 	FTSTicker::FDelegateHandle EditorTickDelegateHandle;
 	static bool bIsPlaying;
 #endif
-#if WITH_EDITORONLY_DATA
-	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	TObjectPtr<ULexUISelection> Selection;
-#endif
 
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 	TArray<TWeakObjectPtr<ULexWidgetPresenterComponent>> AllWidgetPresenterArray;
@@ -165,7 +163,6 @@ private:
 public:
 #if WITH_EDITOR
 	static void RefreshAllUI(UWorld* InWorld = nullptr);
-	static ULexUISelection* GetSelection(UWorld* InWorld);
 	FSimpleMulticastDelegate EventOnOutlineChanged;
 #endif
 	static void AddWidgetPresenter(ULexWidgetPresenterComponent* InWidgetPresenter);

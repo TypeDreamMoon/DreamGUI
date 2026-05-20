@@ -40,7 +40,7 @@ private:
 	TSharedPtr<class IDetailsView> DetailsView;
 	TSharedPtr<class SLexWidgetComponentEditor> ComponentEditor;
 	TSharedPtr<class SLexUIPrefabOverrideDataViewer> PrefabOverrideDataViewer;
-	TWeakObjectPtr<ULexWidget> CachedActor;
+	TWeakObjectPtr<ULexWidget> CachedWidget;
 	bool bIsSelectFromLexUIEditor = false;
 	bool bIsSelectFromDetails = false;
 };

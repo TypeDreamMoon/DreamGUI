@@ -83,8 +83,8 @@ public:
 
 	bool GetSelectedObjectsBounds(FBoxSphereBounds& OutResult);
 	FBoxSphereBounds GetAllObjectsBounds();
-	bool ActorBelongsToSubPrefab(ULexWidget* InSubPrefabActor);
-	bool ActorIsSubPrefabRoot(ULexWidget* InSubPrefabRootWidget);
+	bool WidgetBelongsToSubPrefab(ULexWidget* InSubPrefabActor);
+	bool WidgetIsSubPrefabRoot(ULexWidget* InSubPrefabRootWidget);
 	FLexUISubPrefabData GetSubPrefabDataForActor(ULexWidget* InSubPrefabWidget);
 	void GetInitialViewSetting(FVector& OutLocation, FRotator& OutRotation, FVector& OutOrbitLocation, ELevelViewportType& OutViewType);
 

@@ -31,10 +31,10 @@ enum class ELexUIEventDelegateParameterType :uint8
 	Quaternion,
 	String,
 	/** for asset reference */
-	Object,
-	/** for actor reference in level */
-	Actor,
-	/** for LGUIPointerEventData */
+	Asset,
+	/** for LexWidget reference */
+	LexWidget,
+	/** for LexPointerEventData */
 	PointerEvent	UMETA(DisplayName = "LexPointerEventData"),
 	/** Class for UClass reference */
 	Class,
@@ -94,13 +94,13 @@ private:
 	UPROPERTY(EditAnywhere, Transient, Category = "LGUI")FText TextValue;
 #endif
 
-	/** Editor helper actor, for direct reference actor */
+	/** target widget */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		TObjectPtr<AActor> HelperActor = nullptr;
-	/** Editor helper, target object class. If class is actor then TargetObject is HelperActor, if class is ActorComponent then TargetObject is the component. */
+		TObjectPtr<ULexWidget> HelperWidget = nullptr;
+	/** target object class. If class is LexWidget then TargetObject is HelperWidget, if class is LexUIBehaviour then TargetObject is the component. */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TObjectPtr<UClass> HelperClass = nullptr;
-	/** Editor helper, if TargetObject is actor component and HelperActor have multiple components, then select by component name. */
+	/** if TargetObject is widget component and HelperWidget have multiple components, then select by component name. */
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		FName HelperComponentName;
 
@@ -116,7 +116,7 @@ private:
 	/** data buffer stores function's parameter */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		TArray<uint8> ParamBuffer;
-	/** Object reference, can reference actor/class/asset */
+	/** Object reference, can reference widget/class/asset */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		TObjectPtr<UObject> ReferenceObject = nullptr;
 
@@ -187,7 +187,7 @@ public:
 	void FireEvent(FQuat InParam)const; 
 	void FireEvent(const FString& InParam)const;
 	void FireEvent(UObject* InParam)const;
-	void FireEvent(AActor* InParam)const;
+	void FireEvent(ULexWidget* InParam)const;
 	void FireEvent(ULexPointerEventData* InParam)const;
 	void FireEvent(UClass* InParam)const;
 	void FireEvent(FRotator InParam)const;

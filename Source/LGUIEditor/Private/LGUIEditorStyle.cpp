@@ -97,13 +97,13 @@ TSharedRef< FSlateStyleSet > FLGUIEditorStyle::Create()
 	Style->Set("ClassIcon.LexUICustomMesh", new IMAGE_BRUSH(TEXT("UICustomMesh_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexUIFontData_BaseObject", new IMAGE_BRUSH(TEXT("Font_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexUIFontEmojiData", new IMAGE_BRUSH(TEXT("FontEmoji_16x"), Icon16x16));
-	Style->Set("ClassIcon.UIButtonComponent", new UMG_ICON(TEXT("Button"), Icon16x16));
-	Style->Set("ClassIcon.UITextInputComponent", new UMG_ICON(TEXT("TextBox"), Icon16x16));
-	Style->Set("ClassIcon.UIToggleComponent", new UMG_ICON(TEXT("CheckBox"), Icon16x16));
-	Style->Set("ClassIcon.UISliderComponent", new UMG_ICON(TEXT("Slider"), Icon16x16));
-	Style->Set("ClassIcon.UIScrollbarComponent", new UMG_ICON(TEXT("ProgressBar"), Icon16x16));
-	Style->Set("ClassIcon.UIDropdownComponent", new UMG_ICON(TEXT("ComboBox"), Icon16x16));
-	Style->Set("ClassIcon.UIScrollViewComponent", new UMG_ICON(TEXT("ScrollBox"), Icon16x16));
+	Style->Set("ClassIcon.UIButton", new UMG_ICON(TEXT("Button"), Icon16x16));
+	Style->Set("ClassIcon.UITextInput", new UMG_ICON(TEXT("TextBox"), Icon16x16));
+	Style->Set("ClassIcon.UIToggle", new UMG_ICON(TEXT("CheckBox"), Icon16x16));
+	Style->Set("ClassIcon.UISlider", new UMG_ICON(TEXT("Slider"), Icon16x16));
+	Style->Set("ClassIcon.UIScrollbar", new UMG_ICON(TEXT("ProgressBar"), Icon16x16));
+	Style->Set("ClassIcon.UIDropdown", new UMG_ICON(TEXT("ComboBox"), Icon16x16));
+	Style->Set("ClassIcon.UIScrollView", new UMG_ICON(TEXT("ScrollBox"), Icon16x16));
 
 	Style->Set("ClassThumbnail.LexUIEventSystemActor", new IMAGE_BRUSH(TEXT("EventSystem_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.LexUIEventSystem", new IMAGE_BRUSH(TEXT("EventSystem_40x"), Icon40x40));
