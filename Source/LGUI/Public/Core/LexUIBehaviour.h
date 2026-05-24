@@ -75,7 +75,7 @@ protected:
 	 * Awake execute order in prefab: higher in hierarchy will execute earlier, so scripts on root actor will execute the first.
 	 */
 	virtual void Awake();
-	/** Executed after Awake when WidgetActiveInHierarchy is true, or when WidgetActiveInHierarchy become true. */
+	/** Executed after Awake if WidgetActiveInHierarchy is true, or when WidgetActiveInHierarchy become true. */
 	virtual void OnEnable();
 	/** Start is called before the first frame update. */
 	virtual void Start();

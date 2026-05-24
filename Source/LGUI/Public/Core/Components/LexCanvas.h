@@ -217,7 +217,7 @@ private:
 	TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> GetRenderTargetViewExtension();
 public:
 	/** mark canvas layout dirty */
-	void MarkTransformOrDimentionChanged();
+	void MarkTransformOrDimensionChanged();
 	/**
 	 * Mark update this Canvas. Canvas don't need to update every frame, only update when need to.
 	 * Some rules if update could trigger draw-call's rebuild:
@@ -657,7 +657,7 @@ public:
 	void AddLexWidget(ULexWidget* InWidget);
 	void RemoveLexWidget(ULexWidget* InWidget);
 	/** return all LexWidget that belongs to this canvas. */
-	const TArray<ULexWidget*>& GetVisualWidgetArray()const { return VisualWidgetList; }
+	const TArray<ULexVisual*>& GetVisualArray()const { return VisualList; }
 	const TArray<ULexWidget*>& GetWidgetArray()const { return WidgetList; }
 
 	ULexUIMeshComponent* GetUIMesh()const { CheckUIMesh(); return UIMesh.Get(); }
@@ -735,7 +735,7 @@ private:
 	TUniquePtr<FLexCanvasDrawCallProcessingRunnable> DrawCallProcessingRunnable;
 	TUniquePtr<FLexCanvasAsyncFunctionRunnable> TransformVerticesAsyncFunctionRunnable;
 	UPROPERTY(Transient)
-	TArray<TObjectPtr<ULexWidget>> VisualWidgetList;//Use LexWidget instead of LexVisual, because we need LexWidget to get sub-canvas.
+	TArray<TObjectPtr<ULexVisual>> VisualList;//Use LexWidget instead of LexVisual, because we need LexWidget to get sub-canvas.
 	bool bNeedToGenerateWidgetList = true;
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<ULexWidget>> WidgetList;//All LexWidget that belongs to this canvas

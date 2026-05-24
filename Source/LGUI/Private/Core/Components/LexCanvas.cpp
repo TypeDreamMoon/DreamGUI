@@ -745,14 +745,14 @@ void ULexCanvas::MarkVisualWillChange(ULexVisual* InOldVisual)
 
 void ULexCanvas::RegisterVisual(ULexVisual* InVisual)
 {
-	VisualWidgetList.AddUnique(InVisual->GetWidget());
+	VisualList.AddUnique(InVisual);
 	CheckWidgetPropertyData();
 	InVisual->SetWidgetPropertyDataStartPosition(WidgetPropertyDataAsTexture->RegisterBuffer());
 }
 
 void ULexCanvas::UnregisterVisual(ULexVisual* InVisual)
 {
-	VisualWidgetList.Remove(InVisual->GetWidget());
+	VisualList.Remove(InVisual);
 	auto WidgetPropertyDataStartPosition = InVisual->GetWidgetPropertyDataStartPosition();
 	if (WidgetPropertyDataStartPosition > INDEX_NONE)
 	{
@@ -815,7 +815,7 @@ void ULexCanvas::SetOverrideProjectionMatrix(bool Override, FMatrix Value)
 	OverrideProjectionMatrix = Value;
 }
 
-void ULexCanvas::MarkTransformOrDimentionChanged()
+void ULexCanvas::MarkTransformOrDimensionChanged()
 {
 	bIsViewProjectionMatrixDirty = true;
 }
@@ -2669,8 +2669,7 @@ void ULexCanvas::OnEditorTick(float DeltaTime)
 		return;
 	if (WidgetPresenter->GetName().Contains(TEXT("SKEL_")) || WidgetPresenter->GetName().Contains(TEXT("TRASH_")))
 		return;
-	// if (this->GetWidget() != GetWidgetPresenterComponent()->GetRootWidget())
-	// 	return;
+
 	if (this->IsRootCanvas() && !this->bForceRenderToTarget)
 	{
 		if (this->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay
@@ -2680,7 +2679,13 @@ void ULexCanvas::OnEditorTick(float DeltaTime)
 			DrawViewportArea();
 			if (ULexUIManagerObject::IsSelected(this->GetWidget()))
 			{
-				DrawVirtualCamera();
+				if (auto ViewportClient = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld())->GetEditorViewportClient())
+				{
+					if (!ViewportClient->IsOrtho())
+					{
+						DrawVirtualCamera();
+					}
+				}
 			}
 				
 			if (!GetWorld()->IsGameWorld())

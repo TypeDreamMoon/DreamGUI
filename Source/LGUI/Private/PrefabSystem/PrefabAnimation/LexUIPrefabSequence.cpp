@@ -2,14 +2,12 @@
 
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequence.h"
 #include "MovieScene.h"
-#include "MovieSceneCommonHelpers.h"
 #include "Core/Components/LexWidget.h"
 #include "Modules/ModuleManager.h"
 #include "Engine/BlueprintGeneratedClass.h"
 #include "Engine/Blueprint.h"
 #include "GameFramework/Actor.h"
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequenceComponent.h"
-#include "Engine/LevelScriptActor.h"
 #include "Tracks/MovieSceneAudioTrack.h"
 #include "Tracks/MovieSceneEventTrack.h"
 #include "Tracks/MovieSceneMaterialParameterCollectionTrack.h"
@@ -168,13 +166,6 @@ void ULexUIPrefabSequence::UnbindPossessableObjects(const FGuid& ObjectId)
 
 UObject* ULexUIPrefabSequence::CreateDirectorInstance(TSharedRef<const FSharedPlaybackState> SharedPlaybackState, FMovieSceneSequenceID SequenceID)
 {
-	if (auto ContextWidget = CastChecked<ULexWidget>(SharedPlaybackState->GetPlaybackContext()))
-	{
-		if (auto Comp = ContextWidget->GetComponent<ULexUIPrefabSequenceComponent>())
-		{
-			return Comp->GetSequenceBlueprintInstance();
-		}
-	}
 	return nullptr;
 }
 

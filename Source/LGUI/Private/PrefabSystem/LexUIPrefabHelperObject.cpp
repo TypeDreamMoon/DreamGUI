@@ -191,9 +191,9 @@ void ULexUIPrefabHelperObject::RemoveAllMemberPropertyFromSubPrefab(ULexWidget* 
 				{
 					if (!InIncludeRootTransform)
 					{
-						FilterNameSet.Add(ULexWidget::GetPropertyName_Location());
-						FilterNameSet.Add(ULexWidget::GetPropertyName_Rotation());
-						FilterNameSet.Add(ULexWidget::GetPropertyName_Scale());
+						FilterNameSet.Add(ULexWidget::GetPropertyName_RelativeLocation());
+						FilterNameSet.Add(ULexWidget::GetPropertyName_RelativeRotation());
+						FilterNameSet.Add(ULexWidget::GetPropertyName_RelativeScale());
 					}
 				}
 
@@ -556,9 +556,9 @@ void ULexUIPrefabHelperObject::TryCollectPropertyToOverride(UObject* InObject, F
 			}
 
 			if (PropertyWidgetInSubPrefab != nullptr//if drag in level editor, then property change event will notify actor, so we need to collect property on actor's root component
-				&& (PropertyName == ULexWidget::GetPropertyName_Location()
-					|| PropertyName == ULexWidget::GetPropertyName_Rotation()
-					|| PropertyName == ULexWidget::GetPropertyName_Scale()
+				&& (PropertyName == ULexWidget::GetPropertyName_RelativeLocation()
+					|| PropertyName == ULexWidget::GetPropertyName_RelativeRotation()
+					|| PropertyName == ULexWidget::GetPropertyName_RelativeScale()
 					)
 				)
 			{
@@ -594,13 +594,13 @@ void ULexUIPrefabHelperObject::TryCollectPropertyToOverride(UObject* InObject, F
 				AddMemberPropertyToSubPrefab(PropertyWidgetInSubPrefab, InObject, PropertyName);
 				if (auto Widget = Cast<ULexWidget>(InObject))
 				{
-					if (PropertyName == ULexWidget::GetPropertyName_Location())//if UI's relative location change, then record anchor data too
+					if (PropertyName == ULexWidget::GetPropertyName_RelativeLocation())//if UI's relative location change, then record anchor data too
 					{
 						this->AddMemberPropertyToSubPrefab(Widget, InObject, ULexWidget::GetPropertyName_AnchorData());
 					}
 					else if (PropertyName == ULexWidget::GetPropertyName_AnchorData())//if UI's anchor data change, then record relative location too
 					{
-						this->AddMemberPropertyToSubPrefab(Widget, InObject, ULexWidget::GetPropertyName_Location());
+						this->AddMemberPropertyToSubPrefab(Widget, InObject, ULexWidget::GetPropertyName_RelativeLocation());
 					}
 				}
 				//refresh override parameter
@@ -667,7 +667,7 @@ void ULexUIPrefabHelperObject::CopyRootObjectParentAnchorData(UObject* InObject,
 				if (InObjectParent != nullptr && OriginObjectParent != nullptr)
 				{
 					//copy relative location
-					auto RelativeLocationProperty = FindFProperty<FProperty>(InObjectParent->GetClass(), ULexWidget::GetPropertyName_Location());
+					auto RelativeLocationProperty = FindFProperty<FProperty>(InObjectParent->GetClass(), ULexWidget::GetPropertyName_RelativeLocation());
 					RelativeLocationProperty->CopyCompleteValue_InContainer(OriginObjectParent, InObjectParent);
 					FLexUIUtils::NotifyPropertyChanged(OriginObjectParent, RelativeLocationProperty);
 					//copy anchor data
@@ -856,7 +856,6 @@ void ULexUIPrefabHelperObject::RevertPrefabOverride(UObject* InObject, const TAr
 	{
 		for (auto PropertyName : InPropertyNames)
 		{
-			PropertyName = ReplaceObjectPropertyForApplyOrRevert(InObject, PropertyName);
 			if (auto Property = FindFProperty<FProperty>(ObjectInPrefab->GetClass(), PropertyName))
 			{
 				//notify
@@ -868,64 +867,25 @@ void ULexUIPrefabHelperObject::RevertPrefabOverride(UObject* InObject, const TAr
 				RemoveMemberPropertyFromSubPrefab(Widget, InObject, PropertyName);
 				//notify
 				FLexUIUtils::NotifyPropertyChanged(InObject, Property);
-
 				SetAnythingDirty();
+
+				auto RelatedPropertyName = GetExtraRelatedPropertyForApplyOrRevert(InObject, PropertyName);
+				if (RelatedPropertyName != NAME_None)
+				{
+					if (auto RelatedProperty = FindFProperty<FProperty>(ObjectInPrefab->GetClass(), RelatedPropertyName))
+					{
+						//set to default value
+						RevertPrefabPropertyValue(InObject, RelatedProperty, InObject, ObjectInPrefab, SubPrefabData);
+						AfterObjectPropertyApplyOrRevert(InObject, RelatedPropertyName);
+						//delete item
+						RemoveMemberPropertyFromSubPrefab(Widget, InObject, RelatedPropertyName);
+					}
+				}
 			}
 		}
 	}
 	bCanCollectProperty = true;
 	GEditor->EndTransaction();
-	ULexUIManagerWorldSubsystem::RefreshAllUI();
-	//when apply or revert parameters in level editor, means we accept sub-prefab's current version, so we mark the version to newest, and we won't get 'update warning'.
-	RefreshSubPrefabVersion(GetSubPrefabRootWidget(Widget));
-}
-void ULexUIPrefabHelperObject::RevertPrefabOverride(UObject* InObject, FName InPropertyName)
-{
-	auto Widget = Cast<ULexWidget>(InObject);
-	if (!Widget)
-	{
-		Widget = InObject->GetTypedOuter<ULexWidget>();
-	}
-	auto SubPrefabData = GetSubPrefabData(Widget);
-	auto SubPrefabAsset = SubPrefabData.PrefabAsset;
-	auto SubPrefabHelperObject = SubPrefabAsset->GetPrefabHelperObject();
-	FGuid ObjectGuid;
-	for (auto& KeyValue : MapGuidToObject)
-	{
-		if (KeyValue.Value == InObject)
-		{
-			ObjectGuid = KeyValue.Key;
-			break;
-		}
-	}
-	FGuid ObjectGuidInSubPrefab = SubPrefabData.MapObjectGuidFromParentPrefabToSubPrefab[ObjectGuid];
-	auto ObjectInPrefab = SubPrefabHelperObject->MapGuidToObject[ObjectGuidInSubPrefab];
-	CopyRootObjectParentAnchorData(InObject, ObjectInPrefab);
-
-	bCanCollectProperty = false;
-	{
-		GEditor->BeginTransaction(FText::Format(LOCTEXT("RevertPrefabOnObjectProperty", "Revert Prefab Override: {0}.{1}"), FText::FromString(InObject->GetName()), FText::FromName(InPropertyName)));
-		InObject->Modify();
-		this->Modify();
-
-		InPropertyName = ReplaceObjectPropertyForApplyOrRevert(InObject, InPropertyName);
-		if (auto Property = FindFProperty<FProperty>(ObjectInPrefab->GetClass(), InPropertyName))
-		{
-			//notify
-			FLexUIUtils::NotifyPropertyPreChange(InObject, Property);//need to do PreChange here, so that actor's PostContructionScript can work
-			//set to default value
-			RevertPrefabPropertyValue(InObject, Property, InObject, ObjectInPrefab, SubPrefabData);
-			AfterObjectPropertyApplyOrRevert(InObject, InPropertyName);
-			//delete item
-			RemoveMemberPropertyFromSubPrefab(Widget, InObject, InPropertyName);
-			//notify
-			FLexUIUtils::NotifyPropertyChanged(InObject, Property);
-			SetAnythingDirty();
-		}
-
-		GEditor->EndTransaction();
-	}
-	bCanCollectProperty = true;
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	//when apply or revert parameters in level editor, means we accept sub-prefab's current version, so we mark the version to newest, and we won't get 'update warning'.
 	RefreshSubPrefabVersion(GetSubPrefabRootWidget(Widget));
@@ -977,7 +937,6 @@ void ULexUIPrefabHelperObject::RevertAllPrefabOverride(UObject* InObject)
 			TSet<FName> NamesToClear;
 			for (auto PropertyName : DataItem.MemberPropertyNames)
 			{
-				PropertyName = ReplaceObjectPropertyForApplyOrRevert(InObject, PropertyName);
 				if (FilterNameSet.Contains(PropertyName))continue;
 				NamesToClear.Add(PropertyName);
 				if (auto Property = FindFProperty<FProperty>(ObjectInPrefab->GetClass(), PropertyName))
@@ -989,6 +948,20 @@ void ULexUIPrefabHelperObject::RevertAllPrefabOverride(UObject* InObject)
 					AfterObjectPropertyApplyOrRevert(InObject, PropertyName);
 					//notify
 					FLexUIUtils::NotifyPropertyChanged(SourceObject, Property);
+
+					auto RelatedPropertyName = GetExtraRelatedPropertyForApplyOrRevert(InObject, PropertyName);
+					if (RelatedPropertyName != NAME_None)
+					{
+						NamesToClear.Add(RelatedPropertyName);
+						if (auto RelatedProperty = FindFProperty<FProperty>(ObjectInPrefab->GetClass(), RelatedPropertyName))
+						{
+							//set to default value
+							RevertPrefabPropertyValue(InObject, RelatedProperty, SourceObject, ObjectInPrefab, SubPrefabData);
+							AfterObjectPropertyApplyOrRevert(InObject, RelatedPropertyName);
+							//delete item
+							RemoveMemberPropertyFromSubPrefab(Widget, SourceObject, RelatedPropertyName);
+						}
+					}
 				}
 			}
 			for (auto& PropertyName : NamesToClear)
@@ -1007,16 +980,16 @@ void ULexUIPrefabHelperObject::RevertAllPrefabOverride(UObject* InObject)
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 }
 
-FName ULexUIPrefabHelperObject::ReplaceObjectPropertyForApplyOrRevert(UObject* InObject, FName InPropertyName)
+FName ULexUIPrefabHelperObject::GetExtraRelatedPropertyForApplyOrRevert(UObject* InObject, FName InPropertyName)
 {
 	if (InObject->IsA<ULexWidget>())
 	{
-		if (InPropertyName == ULexWidget::GetPropertyName_Location())
+		if (InPropertyName == ULexWidget::GetPropertyName_RelativeLocation())
 		{
 			InPropertyName = ULexWidget::GetPropertyName_AnchorData();
 		}
 	}
-	return InPropertyName;
+	return NAME_None;
 }
 void ULexUIPrefabHelperObject::AfterObjectPropertyApplyOrRevert(UObject* InObject, FName InPropertyName)
 {
@@ -1025,7 +998,7 @@ void ULexUIPrefabHelperObject::AfterObjectPropertyApplyOrRevert(UObject* InObjec
 		if (InPropertyName == ULexWidget::GetPropertyName_AnchorData())
 		{
 			Widget->CalculateTransformFromAnchor();//calculate transform here, because when NotifyPropertyChanged the PostActorConstruction->MoveComponent will call then anchor will calculate from transform value which is wrong
-			this->RemoveMemberPropertyFromSubPrefab(Widget, InObject, ULexWidget::GetPropertyName_Location());//remove RelativeLocation override because Widget use AnchorData to calculate RelativeLocation
+			this->RemoveMemberPropertyFromSubPrefab(Widget, InObject, ULexWidget::GetPropertyName_RelativeLocation());//remove RelativeLocation override because Widget use AnchorData to calculate RelativeLocation
 		}
 	}
 }
@@ -1212,7 +1185,6 @@ void ULexUIPrefabHelperObject::ApplyPrefabOverride(UObject* InObject, const TArr
 	{
 		for (auto PropertyName : InPropertyNames)
 		{
-			PropertyName = ReplaceObjectPropertyForApplyOrRevert(InObject, PropertyName);
 			if (auto Property = FindFProperty<FProperty>(ObjectInPrefab->GetClass(), PropertyName))
 			{
 				//set to default value
@@ -1224,6 +1196,19 @@ void ULexUIPrefabHelperObject::ApplyPrefabOverride(UObject* InObject, const TArr
 				FLexUIUtils::NotifyPropertyChanged(ObjectInPrefab, Property);
 
 				SetAnythingDirty();
+				
+				auto RelatedPropertyName = GetExtraRelatedPropertyForApplyOrRevert(InObject, PropertyName);
+				if (RelatedPropertyName != NAME_None)
+				{
+					if (auto RelatedProperty = FindFProperty<FProperty>(ObjectInPrefab->GetClass(), RelatedPropertyName))
+					{
+						//set to default value
+						ApplyPrefabPropertyValue(ObjectInPrefab, RelatedProperty, InObject, ObjectInPrefab, SubPrefabData);
+						AfterObjectPropertyApplyOrRevert(InObject, RelatedPropertyName);
+						//delete item
+						RemoveMemberPropertyFromSubPrefab(Widget, InObject, RelatedPropertyName);
+					}
+				}
 			}
 		}
 		//save origin prefab
@@ -1238,68 +1223,6 @@ void ULexUIPrefabHelperObject::ApplyPrefabOverride(UObject* InObject, const TArr
 	}
 	bCanCollectProperty = true;
 	GEditor->EndTransaction();
-	ULexUIManagerWorldSubsystem::RefreshAllUI();
-	//when apply or revert parameters in level editor, means we accept sub-prefab's current version, so we mark the version to newest, and we won't get 'update warning'.
-	RefreshSubPrefabVersion(GetSubPrefabRootWidget(Widget));
-}
-void ULexUIPrefabHelperObject::ApplyPrefabOverride(UObject* InObject, FName InPropertyName)
-{
-	auto Widget = Cast<ULexWidget>(InObject);
-	if (!Widget)
-	{
-		Widget = InObject->GetTypedOuter<ULexWidget>();
-	}
-	auto SubPrefabData = GetSubPrefabData(Widget);
-	auto SubPrefabAsset = SubPrefabData.PrefabAsset;
-	auto SubPrefabHelperObject = SubPrefabAsset->GetPrefabHelperObject();
-	FGuid ObjectGuid;
-	for (auto& KeyValue : MapGuidToObject)
-	{
-		if (KeyValue.Value == InObject)
-		{
-			ObjectGuid = KeyValue.Key;
-			break;
-		}
-	}
-	//object not exist
-	if (!ObjectGuid.IsValid())
-	{
-		return;
-	}
-	FGuid ObjectGuidInSubPrefab = SubPrefabData.MapObjectGuidFromParentPrefabToSubPrefab[ObjectGuid];
-	auto ObjectInPrefab = SubPrefabHelperObject->MapGuidToObject[ObjectGuidInSubPrefab];
-
-	bCanCollectProperty = false;
-	{
-		GEditor->BeginTransaction(FText::Format(LOCTEXT("ApplyPrefabOnObjectProperty", "Apply Prefab Override: {0}.{1}"), FText::FromString(InObject->GetName()), FText::FromName(InPropertyName)));
-		InObject->Modify();
-		this->Modify();
-
-		InPropertyName = ReplaceObjectPropertyForApplyOrRevert(InObject, InPropertyName);
-		if (auto Property = FindFProperty<FProperty>(ObjectInPrefab->GetClass(), InPropertyName))
-		{
-			//set to default value
-			ApplyPrefabPropertyValue(ObjectInPrefab, Property, InObject, ObjectInPrefab, SubPrefabData);
-			AfterObjectPropertyApplyOrRevert(InObject, InPropertyName);
-			//delete item
-			RemoveMemberPropertyFromSubPrefab(Widget, InObject, InPropertyName);
-			//notify
-			FLexUIUtils::NotifyPropertyChanged(ObjectInPrefab, Property);
-			SetAnythingDirty();
-		}
-		//save origin prefab
-		if (bAnythingDirty)
-		{
-			//mark on sub prefab, because the object could belongs to subprefab's subprefab.
-			SubPrefabAsset->GetPrefabHelperObject()->MarkOverrideParameterFromParentPrefab(ObjectInPrefab, InPropertyName);
-
-			SubPrefabAsset->Modify();
-			SubPrefabAsset->GetPrefabHelperObject()->SavePrefab();
-		}
-
-		GEditor->EndTransaction();
-	}
-	bCanCollectProperty = true;
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	//when apply or revert parameters in level editor, means we accept sub-prefab's current version, so we mark the version to newest, and we won't get 'update warning'.
 	RefreshSubPrefabVersion(GetSubPrefabRootWidget(Widget));
@@ -1353,16 +1276,15 @@ void ULexUIPrefabHelperObject::ApplyAllOverrideToPrefab(UObject* InObject)
 			TSet<FName> FilterNameSet;
 			if (SourceObject == SubPrefabRootWidget)//if is root widget of prefab, then skip it's transform
 			{
-				FilterNameSet.Add(ULexWidget::GetPropertyName_Location());
-				FilterNameSet.Add(ULexWidget::GetPropertyName_Rotation());
-				FilterNameSet.Add(ULexWidget::GetPropertyName_Scale());
+				FilterNameSet.Add(ULexWidget::GetPropertyName_RelativeLocation());
+				FilterNameSet.Add(ULexWidget::GetPropertyName_RelativeRotation());
+				FilterNameSet.Add(ULexWidget::GetPropertyName_RelativeScale());
 			}
 			if (auto ObjectInPrefab = FindOriginObjectInSourcePrefab(SourceObject))
 			{
 				TSet<FName> NamesToClear;
 				for (auto PropertyName : DataItem.MemberPropertyNames)
 				{
-					PropertyName = ReplaceObjectPropertyForApplyOrRevert(InObject, PropertyName);
 					if (FilterNameSet.Contains(PropertyName))continue;
 					NamesToClear.Add(PropertyName);
 					if (auto Property = FindFProperty<FProperty>(ObjectInPrefab->GetClass(), PropertyName))
@@ -1372,6 +1294,17 @@ void ULexUIPrefabHelperObject::ApplyAllOverrideToPrefab(UObject* InObject)
 						AfterObjectPropertyApplyOrRevert(InObject, PropertyName);
 						//notify
 						FLexUIUtils::NotifyPropertyChanged(ObjectInPrefab, Property);
+
+						auto RelatedPropertyName = GetExtraRelatedPropertyForApplyOrRevert(InObject, PropertyName);
+						if (RelatedPropertyName != NAME_None)
+						{
+							NamesToClear.Add(RelatedPropertyName);
+							if (auto RelatedProperty = FindFProperty<FProperty>(ObjectInPrefab->GetClass(), RelatedPropertyName))
+							{
+								ApplyPrefabPropertyValue(ObjectInPrefab, RelatedProperty, SourceObject, ObjectInPrefab, SubPrefabData);
+								AfterObjectPropertyApplyOrRevert(InObject, RelatedPropertyName);
+							}
+						}
 					}
 				}
 				//mark on sub prefab, because the object could belongs to subprefab's subprefab.

@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "Event/InputModule/LexBaseInputModule.h"
 #include "Event/LexPointerEventData.h"
-#include "Engine/HitResult.h"
 #include "LexPointerInputModule.generated.h"
 
 class ULexBaseRaycaster;

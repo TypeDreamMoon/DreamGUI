@@ -31,7 +31,18 @@ void ULexWidgetPresenterComponent::BeginPlay()
 	Super::BeginPlay();
 	if (IsValid(LoadedWidget) && !LoadedWidget->HasBegunPlay())
 	{
-		LoadedWidget->BeginPlay();
+		struct LOCAL
+		{
+			static void BeginPlayRecursive(ULexWidget* Widget)
+			{
+				Widget->BeginPlay();
+				for (auto Child : Widget->GetChildren())
+				{
+					BeginPlayRecursive(Child);
+				}
+			}
+		};
+		LOCAL::BeginPlayRecursive(LoadedWidget.Get());
 	}
 }
 

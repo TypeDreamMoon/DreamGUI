@@ -577,7 +577,7 @@ TSharedRef<SWidget> FLGUIEditorModule::MakeEditorToolsMenu(TFunction<ULexWidget*
 									.AfterRevertPrefab_Lambda([=, this](ULexUIPrefab* PrefabAsset) {
 										})
 									.AfterApplyPrefab_Lambda([=, this](ULexUIPrefab* PrefabAsset) {
-										FLexUIEditorTools::RefreshLevelLoadedPrefab();
+										FLexUIEditorTools::RefreshLoadedPrefab();
 										FLexUIEditorTools::RefreshOnSubPrefabChange(PrefabAsset);
 										FLexUIEditorTools::RefreshOpenedPrefabEditor(PrefabAsset);
 										})

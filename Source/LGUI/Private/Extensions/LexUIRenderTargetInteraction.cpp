@@ -105,7 +105,7 @@ bool ULexUIRenderTargetInteraction::LineTrace(FLexUIHitResultContainer& OutHitRe
 			LexHitResult.RayEnd = RayEnd;
 			for (auto& HitItem : HitResultArray)
 			{
-				LexHitResult.HoverArray.Add(HitItem.Component.Get());
+				LexHitResult.HoverArray.Add(HitItem.Widget.Get());
 			}
 			OutHitResult = LexHitResult;
 		}

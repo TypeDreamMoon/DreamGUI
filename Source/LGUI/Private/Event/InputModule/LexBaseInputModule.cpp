@@ -1,7 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Event/InputModule/LexBaseInputModule.h"
-#include "Engine/World.h"
 #include "Event/LexEventSystem.h"
 
 ULexBaseInputModule::ULexBaseInputModule()

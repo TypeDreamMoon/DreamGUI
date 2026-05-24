@@ -68,6 +68,14 @@ void ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, ULex
 					CollectCanvas(Child.Get(), OutCanvasArray);
 				}
 			}
+			static void CollectVisualWidget(ULexCanvas* InCanvas, TArray<ULexVisual*>& OutVisualArray)
+			{
+				OutVisualArray.Append(InCanvas->GetVisualArray());
+				for (auto& Child : InCanvas->GetChildrenCanvasArray())
+				{
+					CollectVisualWidget(Child.Get(), OutVisualArray);
+				}
+			}
 			static void ForeachCanvas(ULexCanvas* InCanvas, TFunctionRef<void(ULexCanvas*)> InFunction)
 			{
 				InFunction(InCanvas);
@@ -88,66 +96,59 @@ void ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, ULex
 				}
 			}
 		};
-#if 1// use ParallelFor to speed up the hit process, should be ok because it blocks game thread and we use thread lock
-		TArray<ULexCanvas*> CanvasArray;
-		LOCAL::CollectCanvas(InRootCanvas, CanvasArray);
+#if 0// use ParallelFor to speed up the hit process, should be ok because it blocks game thread and we use thread lock
+		TArray<ULexVisual*> VisualArray;
+		LOCAL::CollectVisualWidget(InRootCanvas, VisualArray);
 		FCriticalSection Mutex;
-		ParallelFor(CanvasArray.Num(), [&CanvasArray, &Mutex, &OutHitResultArray, OutRayOrigin, OutRayEnd](int32 Index)
+		ParallelFor(VisualArray.Num(), [&VisualArray, &Mutex, &OutHitResultArray, OutRayOrigin, OutRayEnd](int32 Index)
 		{
-			auto& VisualWidgetArray = CanvasArray[Index]->GetVisualWidgetArray();
-			for (auto& VisualWidget : VisualWidgetArray)
+			auto& Visual = VisualArray[Index];
+			auto Widget = Visual->GetWidget();
+			FLexUIHitResult ThisHit;
+			ThisHit.FaceIndex = INDEX_NONE;
+			if (
+				Widget->GetRaycastableInHierarchy()
+				&& Widget->GetWidgetActiveInHierarchy()
+				&& Visual->GetRaycastTarget()
+				&& Visual->LineTraceUI(ThisHit, OutRayOrigin, OutRayEnd)
+				)
 			{
-				if (!IsValid(VisualWidget))continue;
-
-				FLexUIHitResult ThisHit;
-				ThisHit.FaceIndex = INDEX_NONE;
-				if (
-					VisualWidget->GetRaycastableInHierarchy()
-					&& VisualWidget->GetWidgetActiveInHierarchy()
-					&& VisualWidget->GetVisual()
-					&& VisualWidget->GetVisual()->GetRaycastTarget()
-					&& VisualWidget->GetVisual()->LineTraceUI(ThisHit, OutRayOrigin, OutRayEnd)
-					)
+				if (Widget->IsPointVisibleOnClip(ThisHit.Location))
 				{
-					if (VisualWidget->IsPointVisibleOnClip(ThisHit.Location))
-					{
-						Mutex.Lock();
-						OutHitResultArray.Add(ThisHit);
-						Mutex.Unlock();
-					}
+					Mutex.Lock();
+					OutHitResultArray.Add(ThisHit);
+					Mutex.Unlock();
 				}
 			}
 		});
-#elif
+#else
 		auto TraceFunction = [&](ULexCanvas* InCanvas)
 		{
-			auto& VisualWidgetArray = InCanvas->GetVisualWidgetArray();
-			for (auto& VisualWidget : VisualWidgetArray)
+			auto& VisualArray = InCanvas->GetVisualArray();
+			for (auto& Visual : VisualArray)
 			{
-				if (!IsValid(VisualWidget))continue;
-
+				auto Widget = Visual->GetWidget();
 				FLexUIHitResult ThisHit;
 				ThisHit.FaceIndex = INDEX_NONE;
 				if (
-					VisualWidget->GetRaycastableInHierarchy()
-					&& VisualWidget->GetWidgetActiveInHierarchy()
-					&& VisualWidget->GetVisual()
-					&& VisualWidget->GetVisual()->GetRaycastTarget()
-					&& VisualWidget->GetVisual()->LineTraceUI(ThisHit, OutRayOrigin, OutRayEnd)
+					Widget->GetRaycastableInHierarchy()
+					&& Widget->GetWidgetActiveInHierarchy()
+					&& Visual->GetRaycastTarget()
+					&& Visual->LineTraceUI(ThisHit, OutRayOrigin, OutRayEnd)
 					)
 				{
-					if (VisualWidget->IsPointVisibleOnClip(ThisHit.Location))
+					if (Widget->IsPointVisibleOnClip(ThisHit.Location))
 					{
 						OutHitResultArray.Add(ThisHit);
 					}
 				}
 			}
 		};
-		if (InOptionalTraceChannel.IsSet())
-		{
-			LOCAL::ForeachCanvas(InRootCanvas, InOptionalTraceChannel.GetValue(), TraceFunction);
-		}
-		else
+		// if (InOptionalTraceChannel.IsSet())
+		// {
+		// 	LOCAL::ForeachCanvas(InRootCanvas, InOptionalTraceChannel.GetValue(), TraceFunction);
+		// }
+		// else
 		{
 			LOCAL::ForeachCanvas(InRootCanvas, TraceFunction);
 		}
@@ -157,8 +158,8 @@ void ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, ULex
 		{
 			OutHitResultArray.Sort([](const FLexUIHitResult& A, const FLexUIHitResult& B)
 			{
-				auto AWidget = (ULexWidget*)(A.Component.Get());
-				auto BWidget = (ULexWidget*)(B.Component.Get());
+				auto AWidget = A.Widget.Get();
+				auto BWidget = B.Widget.Get();
 				if (AWidget != nullptr && BWidget != nullptr)
 				{
 					auto ACanvasSortOrder = AWidget->GetRenderCanvas()->GetActualSortOrder();

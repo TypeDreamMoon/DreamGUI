@@ -34,7 +34,7 @@ void ULexStandaloneInputModule::ProcessInput()
 			FLexUIHitResult HitResult;
 			ProcessPointerEvent(EventSystem.Get(), EventData, bLineTraceHitSomething, LexHitResult, bResultHitSomething, HitResult);
 
-			auto TempHitComp = HitResult.Component.Get();
+			auto TempHitComp = HitResult.Widget.Get();
 			EventSystem->RaiseHitEvent(bResultHitSomething, HitResult, TempHitComp);
 		}
 		StandaloneInputDataArray.Reset();
@@ -55,7 +55,7 @@ void ULexStandaloneInputModule::ProcessInput()
 					FLexUIHitResult HitResult;
 					ProcessPointerEvent(EventSystem.Get(), EventData, bLineTraceHitSomething, LexHitResult, bResultHitSomething, HitResult);
 
-					auto TempHitComp = HitResult.Component.Get();
+					auto TempHitComp = HitResult.Widget.Get();
 					EventSystem->RaiseHitEvent(bResultHitSomething, HitResult, TempHitComp);
 				}
 				break;

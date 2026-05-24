@@ -274,7 +274,7 @@ bool ULexVisual::LineTraceUIRect(FLexUIHitResult& OutHit, const FVector& Start, 
 		{
 			OutHit.TraceStart = Start;
 			OutHit.TraceEnd = End;
-			OutHit.Component = Widget;
+			OutHit.Widget = Widget;
 			OutHit.Location = Widget->GetWorldTransform().TransformPosition(Result);
 			OutHit.Normal = Widget->GetWorldTransform().TransformVector(FVector(1, 0, 0));
 			OutHit.Normal.Normalize();
@@ -312,7 +312,7 @@ bool ULexVisual::LineTraceUIGeometry(FLexUIGeometry* InGeo, FLexUIHitResult& Out
 			{
 				OutHit.TraceStart = Start;
 				OutHit.TraceEnd = End;
-				OutHit.Component = Widget;//actually this convert is incorrect, but I need this pointer
+				OutHit.Widget = Widget;//actually this convert is incorrect, but I need this pointer
 				OutHit.Location = Widget->GetWorldTransform().TransformPosition(HitPoint);
 				OutHit.Normal = Widget->GetWorldTransform().TransformVector(HitNormal);
 				OutHit.Normal.Normalize();
@@ -345,7 +345,7 @@ bool ULexVisual::LineTraceUICustom(FLexUIHitResult& OutHit, const FVector& Start
 		{
 			OutHit.TraceStart = Start;
 			OutHit.TraceEnd = End;
-			OutHit.Component = Widget;//actually this convert is incorrect, but I need this pointer
+			OutHit.Widget = Widget;//actually this convert is incorrect, but I need this pointer
 			OutHit.Location = Widget->GetWorldTransform().TransformPosition(HitPoint);
 			OutHit.Normal = Widget->GetWorldTransform().TransformVector(HitNormal);
 			OutHit.Normal.Normalize();

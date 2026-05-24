@@ -95,10 +95,8 @@ bool FLexCanvasDrawCallProcessingRunnable::TryGetDrawCallData(FLexCanvasPendingD
 
 	if (!PendingRebuildDrawCallQueue->IsEmpty())
 	{
-		while (PendingRebuildDrawCallQueue->Dequeue(OutData))
-		{
-			return true;
-		}
+		while (PendingRebuildDrawCallQueue->Dequeue(OutData)){}//only use the newest one
+		return true;
 	}
 	return false;
 }

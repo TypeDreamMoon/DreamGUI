@@ -8,7 +8,6 @@
 
 ULexUIPrefabSequenceComponent::ULexUIPrefabSequenceComponent()
 {
-	SequenceEventHandler = FLexUIComponentReference(UActorComponent::StaticClass());
 }
 
 void ULexUIPrefabSequenceComponent::BeginPlay()
@@ -73,17 +72,6 @@ void ULexUIPrefabSequenceComponent::FixEditorHelpers()
 	// }
 }
 
-UBlueprint* ULexUIPrefabSequenceComponent::GetSequenceBlueprint()const
-{
-	if (auto Comp = SequenceEventHandler.GetComponent())
-	{
-		if (auto GeneratedClass = Cast<UBlueprintGeneratedClass>(Comp->GetClass()))
-		{
-			return Cast<UBlueprint>(GeneratedClass->ClassGeneratedBy);
-		}
-	}
-	return nullptr;
-}
 #endif
 
 ULexUIPrefabSequence* ULexUIPrefabSequenceComponent::GetSequenceByDisplayName(const FString& InName) const

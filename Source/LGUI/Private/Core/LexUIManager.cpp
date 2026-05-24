@@ -776,8 +776,8 @@ bool ULexUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULe
 	{
 		HitResultArray.Sort([](const FLexUIHitResult& A, const FLexUIHitResult& B)
 			{
-				auto AWidget = (ULexWidget*)(A.Component.Get());
-				auto BWidget = (ULexWidget*)(B.Component.Get());
+				auto AWidget = (ULexWidget*)(A.Widget.Get());
+				auto BWidget = (ULexWidget*)(B.Widget.Get());
 				if (AWidget->GetRenderCanvas()->GetActualSortOrder() == BWidget->GetRenderCanvas()->GetActualSortOrder())//if Canvas's sort order is equal then sort on item's depth
 				{
 					return AWidget->GetFlattenHierarchyIndex() > BWidget->GetFlattenHierarchyIndex();
@@ -792,7 +792,7 @@ bool ULexUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULe
 		{
 			InOutTargetIndexInHitArray = 0;
 		}
-		auto HitWidget = (ULexWidget*)(HitResultArray[InOutTargetIndexInHitArray].Component.Get());//target need to select
+		auto HitWidget = (ULexWidget*)(HitResultArray[InOutTargetIndexInHitArray].Widget.Get());//target need to select
 		ResultSelectTarget = HitWidget;
 		return true;
 	}
@@ -1556,10 +1556,13 @@ void ULexUIManagerWorldSubsystem::ProcessLexUILifecycleEvent(ULexUIBehaviour* In
 			if (!InComp->bIsAwakeCalled)
 			{
 				InComp->Call_Awake();
-#if !UE_BUILD_SHIPPING
-				check(!LexUIBehavioursForStart.Contains(InComp));
-#endif
-				LexUIBehavioursForStart.Add(InComp);
+			}
+			if (InComp->GetWidget()->GetWidgetActiveInHierarchy())
+			{
+				if (!InComp->bIsEnableCalled)
+				{
+					InComp->Call_OnEnable();
+				}
 			}
 		}
 	}

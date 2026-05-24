@@ -62,9 +62,7 @@ public:
 	virtual void PostLoad()override;
 
 	void FixEditorHelpers();
-	UBlueprint* GetSequenceBlueprint()const;
 #endif
-	UObject* GetSequenceBlueprintInstance()const { return SequenceEventHandler.GetComponent(); }
 protected:
 
 	UPROPERTY(EditAnywhere, Category="Playback", meta=(ShowOnlyInnerProperties))
@@ -74,12 +72,6 @@ protected:
 		TArray<TObjectPtr<ULexUIPrefabSequence>> SequenceArray;
 	UPROPERTY(EditAnywhere, Category = Playback)
 		int32 CurrentSequenceIndex = 0;
-	/**
-	 * Use a Blueprint component to handle callback for event track.
-	 * Not working: Add event in prefab the event can work no problem, but if close editor and open again, the event not fire at all.
-	 */
-	UPROPERTY(/*EditAnywhere, Category = Playback*/)
-		FLexUIComponentReference SequenceEventHandler;
 
 	UPROPERTY(transient)
 		TObjectPtr<ULexUIPrefabSequencePlayer> SequencePlayer;

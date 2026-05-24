@@ -545,7 +545,7 @@ bool ULexRectBlock::LineTraceUIRect(FLexUIHitResult& OutHit, const FVector& Star
 		{
 			OutHit.TraceStart = Start;
 			OutHit.TraceEnd = End;
-			OutHit.Component = Widget;
+			OutHit.Widget = Widget;
 			OutHit.Location = Widget->GetWorldTransform().TransformPosition(result);
 			OutHit.Normal = Widget->GetWorldTransform().TransformVector(FVector(1, 0, 0));
 			OutHit.Normal.Normalize();

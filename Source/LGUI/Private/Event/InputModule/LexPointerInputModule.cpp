@@ -42,7 +42,7 @@ bool ULexPointerInputModule::LineTrace(ULexPointerEventData* InPointerEventData,
 				LexHitResult.RayEnd = RayEnd;
 				for (auto& HitItem : HitResultArray)
 				{
-					LexHitResult.HoverArray.Add(HitItem.Component.Get());
+					LexHitResult.HoverArray.Add(HitItem.Widget.Get());
 				}
 				MultiHitResult.Add(LexHitResult);
 			}
@@ -290,7 +290,7 @@ void ULexPointerInputModule::ProcessPointerEvent(ULexEventSystem* eventSystem, U
 
 	if (bLineTraceHitSomething)
 	{
-		auto nowHitComponent = OutHitResult.Component.Get();
+		auto nowHitComponent = OutHitResult.Widget.Get();
 		//fire event
 		EventData->WorldPoint = OutHitResult.Location;
 		EventData->WorldNormal = OutHitResult.Normal;
@@ -528,9 +528,9 @@ bool ULexPointerInputModule::Navigate(ELexUINavigationDirection InDirection, ULe
 	}
 	if (CurrentNavigateObject != nullptr)
 	{
-		OutLexUIHitResult.HitResult.Component = CurrentNavigateObject->GetWidget();//this convert is incorrect, but I need this pointer
-		OutLexUIHitResult.HitResult.Location = OutLexUIHitResult.HitResult.Component->GetWorldLocation();
-		OutLexUIHitResult.HitResult.Normal = OutLexUIHitResult.HitResult.Component->GetWorldTransform().TransformVector(FVector(0, 0, 1));
+		OutLexUIHitResult.HitResult.Widget = CurrentNavigateObject->GetWidget();//this convert is incorrect, but I need this pointer
+		OutLexUIHitResult.HitResult.Location = OutLexUIHitResult.HitResult.Widget->GetWorldLocation();
+		OutLexUIHitResult.HitResult.Normal = OutLexUIHitResult.HitResult.Widget->GetWorldTransform().TransformVector(FVector(0, 0, 1));
 		OutLexUIHitResult.HitResult.Normal.Normalize();
 		OutLexUIHitResult.EventFireType = EventSystem->GetEventFireTypeForNavigation();
 		OutLexUIHitResult.Raycaster = nullptr;
@@ -571,10 +571,10 @@ void ULexPointerInputModule::ProcessInputForNavigation(ULexPointerEventData* Eve
 		ProcessPointerEvent(EventSystem.Get(), EventData, bSelectValid, LexUIHitResult, bResultHitSomething, HitResult);
 		if (bResultHitSomething)
 		{
-			EventSystem->SetSelectWidget(HitResult.Component.Get(), EventData, EventSystem->GetEventFireTypeForNavigation());
+			EventSystem->SetSelectWidget(HitResult.Widget.Get(), EventData, EventSystem->GetEventFireTypeForNavigation());
 		}
 
-		auto TempHitComp = HitResult.Component.Get();
+		auto TempHitComp = HitResult.Widget.Get();
 		EventSystem->RaiseHitEvent(bResultHitSomething, HitResult, TempHitComp);
 	}
 }

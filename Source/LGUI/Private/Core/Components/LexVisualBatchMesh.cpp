@@ -337,7 +337,7 @@ bool ULexVisualBatchMesh::LineTraceVisiblePixel(float InAlphaThreshold, FLexUIHi
 			{
 				OutHit.TraceStart = Start;
 				OutHit.TraceEnd = End;
-				OutHit.Component = Widget;
+				OutHit.Widget = Widget;
 				OutHit.Location = Widget->GetWorldTransform().TransformPosition(OutHitPoint);
 				OutHit.Normal = Widget->GetWorldTransform().TransformVector(OutHitNormal);
 				OutHit.Normal.Normalize();

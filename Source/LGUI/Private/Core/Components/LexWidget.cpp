@@ -34,9 +34,10 @@ ULexWidget::ULexWidget()
 	bClipDirty = true;
 	bNeedRecreateClip = true;
 }
- 
+
 void ULexWidget::BeginPlay()
 {
+	check(!bHasBegunPlay);
 	bHasBegunPlay = true;
 
 	for (auto Component : Components)
@@ -444,10 +445,6 @@ void ULexWidget::PostLoad()
 void ULexWidget::BeginDestroy()
 {
 	Super::BeginDestroy();
-	if (this->GetDisplayName() == TEXT("[RootAgent]"))
-	{
-		UE_LOG(LGUI, Warning, TEXT("ULexWidget::BeginDestroy()"));
-	}
 	struct LOCAL
 	{
 		static void UnregisterRecursive(ULexWidget* Widget)
@@ -1142,7 +1139,7 @@ bool ULexWidget::IsChildOf(const ULexWidget* InTarget)const
 }
 #pragma endregion Transform
 
-TArray<ULexUIBehaviour*> ULexWidget::GetComponents(TSubclassOf<ULexUIBehaviour> ComponentClass)
+TArray<ULexUIBehaviour*> ULexWidget::GetComponents(TSubclassOf<ULexUIBehaviour> ComponentClass)const
 {
 	TArray<ULexUIBehaviour*> ResultArray;
 	for (auto& Comp : Components)
@@ -1155,7 +1152,7 @@ TArray<ULexUIBehaviour*> ULexWidget::GetComponents(TSubclassOf<ULexUIBehaviour> 
 	return ResultArray;
 }
 
-ULexUIBehaviour* ULexWidget::GetComponent(TSubclassOf<ULexUIBehaviour> ComponentClass)
+ULexUIBehaviour* ULexWidget::GetComponent(TSubclassOf<ULexUIBehaviour> ComponentClass)const
 {
 	for (auto& Comp : Components)
 	{
@@ -1167,7 +1164,7 @@ ULexUIBehaviour* ULexWidget::GetComponent(TSubclassOf<ULexUIBehaviour> Component
 	return nullptr;
 }
 
-ULexUIBehaviour* ULexWidget::GetComponentByInterface(UClass* InterfaceClass)
+ULexUIBehaviour* ULexWidget::GetComponentByInterface(UClass* InterfaceClass)const
 {
 	for (auto& Component : GetAllComponents())
 	{
@@ -2583,7 +2580,7 @@ void ULexWidget::MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged, 
 		this->RenderCanvas->MarkCanvasUpdate(InPivotChanged || InWidthChanged || InHeightChanged);//mark canvas to update
 		if (this->IsCanvasWidget())
 		{
-			this->RenderCanvas->MarkTransformOrDimentionChanged();
+			this->RenderCanvas->MarkTransformOrDimensionChanged();
 		}
 	}
 
@@ -2603,7 +2600,7 @@ void ULexWidget::MarkTransformChanged()
 		{
 			//This is mainly to mark LGUICanvas's bIsViewProjectionMatrixDirty to true.
 			//For the condition LGUI_Tutorials/Tutorials/UIRenderTarget, when move LGUIRenderTarget at runtime, the LGUICanvas's RenderTarget's matrix not update, result in wrong interaction.
-			this->RenderCanvas->MarkTransformOrDimentionChanged();
+			this->RenderCanvas->MarkTransformOrDimensionChanged();
 		}
 	}
 
@@ -3117,6 +3114,286 @@ void ULexWidget::RemoveLayoutSelf()
 }
 
 #pragma region TweenAnimation
+
+
+#pragma region PositionXYZ
+ULTweener* ULexWidget::LocalPositionXTo(double endValue, float duration, float delay, ELTweenEase ease)
+{
+	auto Tweener = ULTweenManager::To(this, FLTweenDoubleGetterFunction::CreateWeakLambda(this, [this]
+	{
+		return this->GetRelativeLocation().X;
+	}), FLTweenDoubleSetterFunction::CreateWeakLambda(this, [this](auto value) {
+		auto location = this->GetRelativeLocation();
+		location.X = value;
+		this->SetRelativeLocation(location);
+	}), endValue, duration);
+	if (Tweener)
+	{
+		Tweener->SetDelay(delay)->SetEase(ease);
+		ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+ULTweener* ULexWidget::LocalPositionYTo(double endValue, float duration, float delay, ELTweenEase ease)
+{
+	auto Tweener = ULTweenManager::To(this, FLTweenDoubleGetterFunction::CreateWeakLambda(this, [this]
+	{
+		return this->GetRelativeLocation().Y;
+	}), FLTweenDoubleSetterFunction::CreateWeakLambda(this, [this](auto value) {
+		auto location = this->GetRelativeLocation();
+		location.Y = value;
+		this->SetRelativeLocation(location);
+	}), endValue, duration);
+	if (Tweener)
+	{
+		Tweener->SetDelay(delay)->SetEase(ease);
+		ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+ULTweener* ULexWidget::LocalPositionZTo(double endValue, float duration, float delay, ELTweenEase ease)
+{
+	auto Tweener = ULTweenManager::To(this, FLTweenDoubleGetterFunction::CreateWeakLambda(this, [this] 
+	{
+		return this->GetRelativeLocation().Z;
+	}), FLTweenDoubleSetterFunction::CreateWeakLambda(this, [this](auto value) {
+		auto location = this->GetRelativeLocation();
+		location.Z = value;
+		this->SetRelativeLocation(location);
+	}), endValue, duration);
+	if (Tweener)
+	{
+		Tweener->SetDelay(delay)->SetEase(ease);
+		ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+
+
+
+ULTweener* ULexWidget::WorldPositionXTo(double endValue, float duration, float delay, ELTweenEase ease)
+{
+	auto Tweener = ULTweenManager::To(this, FLTweenDoubleGetterFunction::CreateWeakLambda(this, [this] 
+	{
+		return this->GetWorldLocation().X;
+	}), FLTweenDoubleSetterFunction::CreateWeakLambda(this, [this](auto value) {
+		auto location = this->GetWorldLocation();
+		location.X = value;
+		this->SetWorldLocation(location);
+	}), endValue, duration);
+	if (Tweener)
+	{
+		Tweener->SetDelay(delay)->SetEase(ease);
+		ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+ULTweener* ULexWidget::WorldPositionYTo(double endValue, float duration, float delay, ELTweenEase ease)
+{
+	auto Tweener = ULTweenManager::To(this, FLTweenDoubleGetterFunction::CreateWeakLambda(this, [this]
+	{
+		return this->GetWorldLocation().Y;
+	}), FLTweenDoubleSetterFunction::CreateWeakLambda(this, [this](auto value) {
+		auto location = this->GetWorldLocation();
+		location.Y = value;
+		this->SetWorldLocation(location);
+	}), endValue, duration);
+	if (Tweener)
+	{
+		Tweener->SetDelay(delay)->SetEase(ease);
+		ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+ULTweener* ULexWidget::WorldPositionZTo(double endValue, float duration, float delay, ELTweenEase ease)
+{
+	auto Tweener = ULTweenManager::To(this, FLTweenDoubleGetterFunction::CreateWeakLambda(this, [this]
+	{
+		return this->GetWorldLocation().Z;
+	}), FLTweenDoubleSetterFunction::CreateWeakLambda(this, [this](auto value) {
+		auto location = this->GetWorldLocation();
+		location.Z = value;
+		this->SetWorldLocation(location);
+	}), endValue, duration);
+	if (Tweener)
+	{
+		Tweener->SetDelay(delay)->SetEase(ease);
+		ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+#pragma endregion PositionXYZ
+
+
+
+
+#pragma region Position
+ULTweener* ULexWidget::LocalPositionTo(FVector endValue, float duration, float delay, ELTweenEase ease)
+{
+	auto Tweener = ULTweenManager::To(this
+	, FLTweenVectorGetterFunction::CreateWeakLambda(this, [this]
+	{
+		return this->GetRelativeLocation();
+	})
+	, FLTweenVectorSetterFunction::CreateWeakLambda(this, [this](FVector value)
+	{
+		this->SetRelativeLocation(value);
+	})
+	, endValue, duration);
+	if (Tweener)
+	{
+		Tweener->SetDelay(delay)->SetEase(ease);
+		ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+ULTweener* ULexWidget::WorldPositionTo(FVector endValue, float duration, float delay, ELTweenEase ease)
+{
+	auto Tweener = ULTweenManager::To(this
+	, FLTweenVectorGetterFunction::CreateUObject(this, &ULexWidget::GetWorldLocation)
+	, FLTweenVectorSetterFunction::CreateWeakLambda(this, [this](FVector value)
+	{
+		return this->SetWorldLocation(value);
+	})
+	, endValue, duration);
+	if (Tweener)
+	{
+		Tweener->SetDelay(delay)->SetEase(ease);
+		ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+#pragma endregion Position
+
+
+
+ULTweener* ULexWidget::LocalScaleTo(FVector endValue, float duration, float delay, ELTweenEase ease)
+{
+	auto Tweener = ULTweenManager::To(this
+	, FLTweenVectorGetterFunction::CreateWeakLambda(this, [this]
+	{
+		return this->GetRelativeScale();
+	})
+	, FLTweenVectorSetterFunction::CreateWeakLambda(this, [this](FVector value)
+	{
+		this->SetRelativeScale(value);
+	})
+	, endValue, duration);
+	if (Tweener)
+	{
+		Tweener->SetDelay(delay)->SetEase(ease);
+		ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+
+ULTweener* ULexWidget::LocalUniformScaleTo(float endValue, float duration, float delay,	ELTweenEase ease)
+{
+	auto Tweener = ULTweenManager::To(this
+	, FLTweenFloatGetterFunction::CreateWeakLambda(this, [this]
+	{
+		return this->GetRelativeScale().X;
+	})
+	, FLTweenFloatSetterFunction::CreateWeakLambda(this, [this](float value)
+	{
+		this->SetRelativeScale(FVector(value));
+	})
+	, endValue, duration);
+	if (Tweener)
+	{
+		Tweener->SetDelay(delay)->SetEase(ease);
+		ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+
+
+#pragma region Rotation
+ULTweener* ULexWidget::LocalRotationQuaternionTo(const FQuat& endValue, float duration, float delay, ELTweenEase ease)
+{
+	auto Tweener = ULTweenManager::To(this
+	, FLTweenQuaternionGetterFunction::CreateWeakLambda(this, [this]
+	{
+		return this->GetRelativeRotation();
+	}), FLTweenQuaternionSetterFunction::CreateUObject(this, &ULexWidget::SetRelativeRotation)
+	, endValue, duration);
+	if (Tweener)
+	{
+		Tweener->SetDelay(delay)->SetEase(ease);
+		ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+ULTweener* ULexWidget::LocalRotatorTo(FRotator endValue, bool shortestPath, float duration, float delay, ELTweenEase ease)
+{
+	if (shortestPath)
+	{
+		return LocalRotationQuaternionTo(endValue.Quaternion(), duration, delay, ease);
+	}
+	else
+	{
+		auto Tweener = ULTweenManager::To(this
+		, FLTweenRotatorGetterFunction::CreateWeakLambda(this, [this]
+		{
+			return this->GetRelativeRotation().Rotator();
+		})
+		, FLTweenRotatorSetterFunction::CreateWeakLambda(this, [this] (FRotator value)
+		{
+			this->SetRelativeRotation(value.Quaternion());
+		}), endValue, duration);
+		if (Tweener)
+		{
+			Tweener->SetDelay(delay)->SetEase(ease);
+			ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+		}
+		return Tweener;
+	}
+}
+
+
+
+ULTweener* ULexWidget::WorldRotationQuaternionTo(const FQuat& endValue, float duration, float delay, ELTweenEase ease)
+{
+	auto Tweener = ULTweenManager::To(this, FLTweenQuaternionGetterFunction::CreateWeakLambda(this, [this]
+	{
+		return this->GetWorldRotation();
+	}), FLTweenQuaternionSetterFunction::CreateUObject(this, &ULexWidget::SetWorldRotation)
+	, endValue, duration);
+	if (Tweener)
+	{
+		Tweener->SetDelay(delay)->SetEase(ease);
+		ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+	}
+	return Tweener;
+}
+ULTweener* ULexWidget::WorldRotatorTo(FRotator endValue, bool shortestPath, float duration, float delay, ELTweenEase ease)
+{
+	if (shortestPath)
+	{
+		return WorldRotationQuaternionTo(endValue.Quaternion(), duration, delay, ease);
+	}
+	else
+	{
+		auto Tweener = ULTweenManager::To(this
+		, FLTweenRotatorGetterFunction::CreateWeakLambda(this, [this]
+		{
+			return this->GetWorldRotation().Rotator();
+		})
+		, FLTweenRotatorSetterFunction::CreateWeakLambda(this, [this](FRotator value)
+		{
+			this->SetWorldRotation(value.Quaternion());
+		}), endValue, duration);
+		if (Tweener)
+		{
+			Tweener->SetDelay(delay)->SetEase(ease);
+			ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(this, Tweener);
+		}
+		return Tweener;
+	}
+}
+
+#pragma endregion Rotation
+
 
 ULTweener* ULexWidget::RenderOpacityTo(float endValue, float duration, float delay, ELTweenEase ease)
 {

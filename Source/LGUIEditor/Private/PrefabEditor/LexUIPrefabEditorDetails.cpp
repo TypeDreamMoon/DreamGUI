@@ -22,6 +22,7 @@
 #include "Framework/Commands/GenericCommands.h"
 #include "Styling/SlateIconFinder.h"
 #include "Utils/LexUIUtils.h"
+#include "SourceCodeNavigation.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SComboButton.h"
 #include "Widgets/Layout/SBorder.h"
@@ -282,6 +283,8 @@ private:
 	TSharedPtr<SWidget> OnContextMenuOpening()
 	{
 		FMenuBuilder MenuBuilder(true, nullptr);
+		
+		MenuBuilder.BeginSection(NAME_None, LOCTEXT("EditComponent", "EDIT"));
 		MenuBuilder.PushCommandList(CommandList.ToSharedRef());
 		{
 			// MenuBuilder.AddMenuEntry(FGenericCommands::Get().Copy);
@@ -291,6 +294,45 @@ private:
 			MenuBuilder.AddMenuEntry(FGenericCommands::Get().Delete);
 		}
 		MenuBuilder.PopCommandList();
+		MenuBuilder.EndSection();
+
+		MenuBuilder.BeginSection(NAME_None, LOCTEXT("ComponentAsset", "ASSET"));
+		{
+			TArray<FLexWidgetComponentItem> SelectedItems;
+			if (ComponentListView.IsValid())
+			{
+				ComponentListView->GetSelectedItems(SelectedItems);
+			}
+			ULexUIBehaviour* SelectedComp = (SelectedItems.Num() > 0 && SelectedItems[0].IsValid()) ? SelectedItems[0].Get() : nullptr;
+			UClass* ComponentClass = IsValid(SelectedComp) ? SelectedComp->GetClass() : nullptr;
+			bool bHasSelection = ComponentClass != nullptr;
+
+			FText EditLabel = bHasSelection
+				? FText::Format(LOCTEXT("EditComponentClass_Label", "Edit {0}"), FText::FromString(ComponentClass->GetName()))
+				: LOCTEXT("EditComponentClass_LabelNoSel", "Edit");
+
+			MenuBuilder.AddMenuEntry(
+				EditLabel,
+				LOCTEXT("EditComponentClass_Tooltip", "Open Blueprint editor or C++ source for this component class"),
+				FSlateIcon(),
+				FUIAction(
+					FExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::HandleEditComponentClass),
+					FCanExecuteAction::CreateLambda([bHasSelection]() { return bHasSelection; })
+				)
+			);
+
+			MenuBuilder.AddMenuEntry(
+				LOCTEXT("FindInContentBrowser_Label", "Find Class in Content Browser"),
+				LOCTEXT("FindInContentBrowser_Tooltip", "Locate the Blueprint class in the Content Browser"),
+				FSlateIcon(),
+				FUIAction(
+					FExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::HandleFindClassInContentBrowser),
+					FCanExecuteAction::CreateSP(this, &SLexWidgetComponentEditor::CanFindClassInContentBrowser)
+				)
+			);
+		}
+		MenuBuilder.EndSection();
+		
 		return MenuBuilder.MakeWidget();
 	}
 
@@ -364,6 +406,63 @@ private:
 
 		RefreshComponents();
 		SelectComponent(NewComponent);
+	}
+
+	void HandleEditComponentClass()
+	{
+		TArray<FLexWidgetComponentItem> SelectedItems;
+		if (ComponentListView.IsValid())
+		{
+			ComponentListView->GetSelectedItems(SelectedItems);
+		}
+		if (SelectedItems.Num() == 0 || !SelectedItems[0].IsValid())
+		{
+			return;
+		}
+		UClass* ComponentClass = SelectedItems[0]->GetClass();
+		if (UBlueprint* Blueprint = Cast<UBlueprint>(ComponentClass->ClassGeneratedBy))
+		{
+			GEditor->EditObject(Blueprint);
+		}
+		else
+		{
+			FSourceCodeNavigation::NavigateToClass(ComponentClass);
+		}
+	}
+
+	void HandleFindClassInContentBrowser()
+	{
+		TArray<FLexWidgetComponentItem> SelectedItems;
+		if (ComponentListView.IsValid())
+		{
+			ComponentListView->GetSelectedItems(SelectedItems);
+		}
+		if (SelectedItems.Num() == 0 || !SelectedItems[0].IsValid())
+		{
+			return;
+		}
+		UClass* ComponentClass = SelectedItems[0]->GetClass();
+		if (UBlueprint* Blueprint = Cast<UBlueprint>(ComponentClass->ClassGeneratedBy))
+		{
+			TArray<UObject*> Objects;
+			Objects.Add(Blueprint);
+			GEditor->SyncBrowserToObjects(Objects);
+		}
+	}
+
+	bool CanFindClassInContentBrowser() const
+	{
+		TArray<FLexWidgetComponentItem> SelectedItems;
+		if (ComponentListView.IsValid())
+		{
+			ComponentListView->GetSelectedItems(SelectedItems);
+		}
+		if (SelectedItems.Num() == 0 || !SelectedItems[0].IsValid())
+		{
+			return false;
+		}
+		UClass* ComponentClass = SelectedItems[0]->GetClass();
+		return Cast<UBlueprint>(ComponentClass->ClassGeneratedBy) != nullptr;
 	}
 
 	void HandleRemoveSelectedComponents()
@@ -573,7 +672,7 @@ void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, TSharedPtr<FLe
 											.AfterRevertPrefab_Lambda([=, this](ULexUIPrefab* PrefabAsset) {
 												})
 											.AfterApplyPrefab_Lambda([=, this](ULexUIPrefab* PrefabAsset){
-												FLexUIEditorTools::RefreshLevelLoadedPrefab();
+												FLexUIEditorTools::RefreshLoadedPrefab();
 												FLexUIEditorTools::RefreshOnSubPrefabChange(PrefabAsset);
 												FLexUIEditorTools::RefreshOpenedPrefabEditor(PrefabAsset);
 												})

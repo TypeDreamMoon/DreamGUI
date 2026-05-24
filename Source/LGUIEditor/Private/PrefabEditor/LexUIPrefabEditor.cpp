@@ -429,7 +429,7 @@ void FLexUIPrefabEditor::SaveAsset_Execute()
 	
 	FLexUIEditorTools::OnBeforeApplyPrefab.Broadcast(GetPrefabHelperObject());
 
-	FLexUIEditorTools::RefreshLevelLoadedPrefab();
+	FLexUIEditorTools::RefreshLoadedPrefab();
 	FLexUIEditorTools::RefreshOnSubPrefabChange(GetPrefabHelperObject()->PrefabAsset);
 }
 

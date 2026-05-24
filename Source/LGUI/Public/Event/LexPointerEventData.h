@@ -188,7 +188,7 @@ struct FLexUIHitResult
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
 	FVector TraceEnd = FVector::ZeroVector;
 
-	TWeakObjectPtr<ULexWidget> Component = nullptr;
+	TWeakObjectPtr<ULexWidget> Widget = nullptr;
 };
 struct FLexUIHitResultContainer
 {

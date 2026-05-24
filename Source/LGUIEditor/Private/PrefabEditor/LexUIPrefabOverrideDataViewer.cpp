@@ -56,7 +56,9 @@ void SLexUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLexUIPrefabOverr
 		for (int i = 0; i < ObjectOverrideParameterArray.Num(); i++)
 		{
 			auto& Item = ObjectOverrideParameterArray[i];
-			if (!Item.Object->IsInOuter(InReferenceWidget))
+			if (!Item.Object->IsInOuter(InReferenceWidget)
+				&& Item.Object != InReferenceWidget
+				)
 			{
 				ObjectOverrideParameterArray.RemoveAt(i);
 				i--;
@@ -195,7 +197,7 @@ void SLexUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLexUIPrefabOverr
 				[
 					PropertyCustomizationHelpers::MakeResetButton(
 						FSimpleDelegate::CreateLambda([=, this]() {
-							PrefabHelperObject->RevertPrefabOverride(DataItem.Object.Get(), PropertyName);
+							PrefabHelperObject->RevertPrefabOverride(DataItem.Object.Get(), {PropertyName});
 							RefreshDataContent();
 							AfterRevertPrefab.ExecuteIfBound(PrefabHelperObject->GetPrefabAssetBySubPrefabObject(DataItem.Object.Get()));
 						})
@@ -216,7 +218,7 @@ void SLexUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLexUIPrefabOverr
 				[
 					PropertyCustomizationHelpers::MakeUseSelectedButton(
 						FSimpleDelegate::CreateLambda([=, this]() {
-							PrefabHelperObject->ApplyPrefabOverride(DataItem.Object.Get(), PropertyName);
+							PrefabHelperObject->ApplyPrefabOverride(DataItem.Object.Get(), {PropertyName});
 							RefreshDataContent();
 							AfterApplyPrefab.ExecuteIfBound(PrefabHelperObject->GetPrefabAssetBySubPrefabObject(DataItem.Object.Get()));
 						})

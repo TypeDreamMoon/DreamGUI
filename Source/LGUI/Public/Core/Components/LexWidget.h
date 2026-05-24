@@ -60,7 +60,7 @@ enum class ELexWidgetInteractableType : uint8
 /**
  * Base class for almost all UI related things.
  */
-UCLASS(ClassGroup = (LGUI), NotBlueprintable)
+UCLASS(ClassGroup = (LGUI), BlueprintType, Blueprintable)
 class LGUI_API ULexWidget : public UObject
 {
 	GENERATED_BODY()
@@ -115,15 +115,15 @@ public:
 	{
 		return GET_MEMBER_NAME_CHECKED(ULexWidget, DisplayName);
 	}
-	static FName GetPropertyName_Location()
+	static FName GetPropertyName_RelativeLocation()
 	{
 		return GET_MEMBER_NAME_CHECKED(ULexWidget, RelativeLocation);
 	}
-	static FName GetPropertyName_Rotation()
+	static FName GetPropertyName_RelativeRotation()
 	{
 		return GET_MEMBER_NAME_CHECKED(ULexWidget, RelativeRotation);
 	}
-	static FName GetPropertyName_Scale()
+	static FName GetPropertyName_RelativeScale()
 	{
 		return GET_MEMBER_NAME_CHECKED(ULexWidget, RelativeScale);
 	}
@@ -230,28 +230,28 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	const TArray<ULexUIBehaviour*>& GetAllComponents()const{return Components;}
 	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (ComponentClass = "/Script/LGUI.LexUIBehaviour", DeterminesOutputType = "ComponentClass"))
-	TArray<ULexUIBehaviour*> GetComponents(TSubclassOf<ULexUIBehaviour> ComponentClass);
+	TArray<ULexUIBehaviour*> GetComponents(TSubclassOf<ULexUIBehaviour> ComponentClass)const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (ComponentClass = "/Script/LGUI.LexUIBehaviour", DeterminesOutputType = "ComponentClass"))
-	ULexUIBehaviour* GetComponent(TSubclassOf<ULexUIBehaviour> ComponentClass);
+	ULexUIBehaviour* GetComponent(TSubclassOf<ULexUIBehaviour> ComponentClass)const;
 	template<class T>
-	T* GetComponent()
+	T* GetComponent()const
 	{
 		static_assert(TPointerIsConvertibleFromTo<T, const ULexUIBehaviour>::Value, "'T' template parameter to GetComponent must be derived from ULexUIBehaviour");
 		return Cast<T>(GetComponent(T::StaticClass()));
 	}
 	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (DeterminesOutputType = "InterfaceClass"))
-	ULexUIBehaviour* GetComponentByInterface(UClass* InterfaceClass);
+	ULexUIBehaviour* GetComponentByInterface(UClass* InterfaceClass)const;
 	// template<class T UE_REQUIRES(TIsIInterface<T>::Value)>
 	// T* GetComponentByInterface() const
 	// {
 	// 	return Cast<T>(GetComponentByInterface(T::UClassType::StaticClass()));
 	// }
 	template<class T>
-	T* GetComponentInParent(bool bIncludeSelf = false)
+	T* GetComponentInParent(bool bIncludeSelf = false)const
 	{
 		static_assert(TPointerIsConvertibleFromTo<T, const ULexUIBehaviour>::Value, "'T' template parameter to GetComponentInParent must be derived from ULexUIBehaviour");
 		T* ResultComp = nullptr;
-		ULexWidget* ParentWidget = bIncludeSelf ? this : this->GetParent();
+		auto ParentWidget = bIncludeSelf ? this : this->GetParent();
 		while (IsValid(ParentWidget))
 		{
 			ResultComp = ParentWidget->GetComponent<T>();
@@ -806,6 +806,40 @@ private:
 	void CalculateRaycastable_Recursive();
 public:
 #pragma region TweenAnimation
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "Local Position X To"), Category = "LTween")
+	ULTweener* LocalPositionXTo(double endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "Local Position Y To"), Category = "LTween")
+	ULTweener* LocalPositionYTo(double endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "Local Position Z To"), Category = "LTween")
+	ULTweener* LocalPositionZTo(double endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
+
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "World Position X To"), Category = "LTween")
+	ULTweener* WorldPositionXTo(double endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "World Position Y To"), Category = "LTween")
+	ULTweener* WorldPositionYTo(double endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", DisplayName = "World Position Z To"), Category = "LTween")
+	ULTweener* WorldPositionZTo(double endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
+
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTween")
+	ULTweener* LocalPositionTo(FVector endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTween")
+	ULTweener* WorldPositionTo(FVector endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
+
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = LTween)
+	ULTweener* LocalScaleTo(FVector endValue = FVector(1.0f, 1.0f, 1.0f), float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = LTween)
+	ULTweener* LocalUniformScaleTo(float endValue = 1.0f, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
+
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", ToolTip = "Rotate absolute quaternion rotation value"), Category = "LTween")
+	ULTweener* LocalRotationQuaternionTo(const FQuat& endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", ToolTip = "Rotate absolute rotator value"), Category = "LTween")
+	ULTweener* LocalRotatorTo(FRotator endValue, bool shortestPath, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
+
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", ToolTip = "Rotate absolute quaternion rotation value"), Category = "LTween")
+	ULTweener* WorldRotationQuaternionTo(const FQuat& endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease", ToolTip = "Rotate absolute rotator value"), Category = "LTween")
+	ULTweener* WorldRotatorTo(FRotator endValue, bool shortestPath, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
+	
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")
 	ULTweener* RenderOpacityTo(float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")
