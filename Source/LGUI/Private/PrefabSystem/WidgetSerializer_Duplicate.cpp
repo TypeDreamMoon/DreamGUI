@@ -105,7 +105,6 @@ namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 		serializer.SubPrefabWidgetAttachmentArray.Reset();
 		serializer.AllWidgets.Reset();
 		serializer.SubPrefabOverrideParameters.Reset();
-		serializer.DeserializationSessionId = FGuid();
 		serializer.bIsSubPrefab = false;
 		serializer.SubPrefabObjectOverrideData.Reset();
 

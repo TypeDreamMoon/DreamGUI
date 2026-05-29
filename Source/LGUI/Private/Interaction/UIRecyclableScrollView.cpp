@@ -23,13 +23,13 @@ void UUIRecyclableScrollView::Update(float DeltaTime)
     Super::Update(DeltaTime);
 }
 
-void UUIRecyclableScrollView::EndPlay()
+void UUIRecyclableScrollView::OnDestroy()
 {
     if (OnScrollEventDelegateHandle.IsValid())
     {
         this->GetOnValueChangedEvent().Remove(OnScrollEventDelegateHandle);
     }
-    Super::EndPlay();
+    Super::OnDestroy();
 }
 
 #if WITH_EDITOR

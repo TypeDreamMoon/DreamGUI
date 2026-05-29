@@ -85,19 +85,16 @@ ULexVisual::ULexVisual(const FObjectInitializer& ObjectInitializer) :Super(Objec
 	bWidgetPropertyDataFontMarkDirty = true;
 }
 
-void ULexVisual::BeginPlay()
+void ULexVisual::OnRegister()
 {
+	Super::OnRegister();
 	bColorChanged = true;
 	bTransformChanged = true;
 }
 
-void ULexVisual::BeginDestroy()
+void ULexVisual::OnUnregister()
 {
-	Super::BeginDestroy();
-	if (auto Widget = GetWidget())
-	{
-		Widget->RemoveVisual();
-	}
+	Super::OnUnregister();
 }
 
 void ULexVisual::PostReinitProperties()

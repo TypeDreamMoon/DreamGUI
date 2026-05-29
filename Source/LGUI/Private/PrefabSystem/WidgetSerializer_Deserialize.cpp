@@ -3,8 +3,8 @@
 #include "PrefabSystem/WidgetSerializer.h"
 #include "PrefabSystem/LexUIObjectReaderAndWriter.h"
 #include "Engine/World.h"
-#include "PrefabSystem/LexUIPrefabManager.h"
 #include "LGUI.h"
+#include "Core/LexUIBehaviour.h"
 #include "Core/LexUISettings.h"
 #include "Core/Components/LexWidget.h"
 #include "Serialization/MemoryReader.h"
@@ -134,7 +134,6 @@ namespace LexUIPrefabSystem
 	}
 	ULexWidget* WidgetSerializer::LoadSubPrefab(UWorld* InWorld,
 		UObject* InOwnerObject, ULexUIPrefab* InPrefab, ULexWidget* Parent
-		, const FGuid& InParentDeserializationSessionId
 		, TMap<FGuid, TObjectPtr<UObject>>& InMapGuidToObject
 		, const TFunction<void(ULexWidget*, const TMap<FGuid, TObjectPtr<UObject>>&, const TMap<TObjectPtr<UObject>, FGuid>&, const TArray<ULexWidget*>&)>& InOnSubPrefabFinishDeserializeFunction
 	)
@@ -147,7 +146,6 @@ namespace LexUIPrefabSystem
 #endif
 		serializer.bOverrideVersions = true;
 		serializer.MapGuidToObject = InMapGuidToObject;
-		serializer.DeserializationSessionId = InParentDeserializationSessionId;
 		serializer.bIsSubPrefab = true;
 		serializer.WriterOrReaderFunction = [&serializer](UObject* InObject, TArray<uint8>& InOutBuffer) {
 			LexUIPrefabSystem::FLexUIObjectReader Reader(InOutBuffer, serializer, {});
@@ -168,28 +166,10 @@ namespace LexUIPrefabSystem
 #if LGUIPREFAB_LOG_DETAIL_TIME
 		auto Time = FDateTime::Now();
 #endif
-		if (PrefabManager == nullptr)
-		{
-			PrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(World);
-		}
-		if (!bIsSubPrefab)
-		{
-			if (!DeserializationSessionId.IsValid())
-			{
-				DeserializationSessionId = FGuid::NewGuid();
-				PrefabManager->BeginPrefabSystemProcessingWidget(DeserializationSessionId);
-			}
-		}
 		auto CreatedRootWidget = GenerateWidgetArray(SaveData.SavedWidgets, SaveData.SavedObjects, SaveData.MapWidgetToParent, FGuid());
 		if (CreatedRootWidget == nullptr)
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d No actor generated!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-
-			if (!bIsSubPrefab)
-			{
-				check(DeserializationSessionId.IsValid());
-				PrefabManager->EndPrefabSystemProcessingWidget(DeserializationSessionId);
-			}
 			return nullptr;
 		}
 		GenerateObjectArray(SaveData.SavedObjects, SaveData.MapWidgetToParent);
@@ -279,13 +259,6 @@ namespace LexUIPrefabSystem
 #endif
 		if (!bIsSubPrefab)
 		{
-			check(DeserializationSessionId.IsValid());
-			for (auto item : AllWidgets)
-			{
-				PrefabManager->RemoveWidgetForPrefabSystem(item);
-			}
-			PrefabManager->EndPrefabSystemProcessingWidget(DeserializationSessionId);
-
 			for (int i = 0; i < AllWidgets.Num(); i++)
 			{
 				auto& Widget = AllWidgets[i];
@@ -440,7 +413,18 @@ namespace LexUIPrefabSystem
 						{
 							if (auto Obj = Cast<UObject>(ExitObject))
 							{
-								Obj->ConditionalBeginDestroy();
+								if (auto Widget = Cast<ULexWidget>(Obj))
+								{
+									Widget->DestroyWidget();
+								}
+								else if (auto WidgetComponent = Cast<ULexUIBehaviour>(Obj))
+								{
+									WidgetComponent->DestroyComponent();
+								}
+								else
+								{
+									Obj->ConditionalBeginDestroy();
+								}
 								Obj->Rename(nullptr, GetTransientPackage());
 							}
 							UE_LOG(LGUI, Warning, TEXT("[%s].%d Object '%s' already exist on outer '%s', will destroy and rename exiting one. Prefab: '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(ObjectData.ObjectName.ToString()), *(OuterObjectPtr->GetPathName()), *PrefabAssetPath);
@@ -583,7 +567,7 @@ namespace LexUIPrefabSystem
 								MapObjectToOriginGuid.Append(InMapObjectToOriginGuid);
 								};
 
-							SubPrefabRootWidget = WidgetSerializer::LoadSubPrefab(this->World, this->OwnerObject, SubPrefabAsset, nullptr, DeserializationSessionId, SubMapGuidToObject
+							SubPrefabRootWidget = WidgetSerializer::LoadSubPrefab(this->World, this->OwnerObject, SubPrefabAsset, nullptr, SubMapGuidToObject
 								, NewOnSubPrefabFinishDeserializeFunction
 							);
 						}
@@ -657,8 +641,6 @@ namespace LexUIPrefabSystem
 						MapObjectToOriginGuid.Add(NewWidget, InWidgetData.WidgetGuid);
 						CollectDefaultSubobjects(NewWidget);
 					}
-					//add actor before FinishSpawning, so it's good for component (or other default sub-object) to check if actor is processing by prefab system
-					PrefabManager->AddWidgetForPrefabSystem(NewWidget, DeserializationSessionId);
 
 					FComponentDataStruct CompData;
 					CompData.Widget = NewWidget;

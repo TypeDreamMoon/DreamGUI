@@ -16,16 +16,12 @@ void ULexUIBehaviour::BeginPlay()
 {
 	auto Widget = this->GetWidget();
 	check(Widget);
-	if (!this->bIsAwakeCalled)
-	{
-		this->Call_Awake();
-	}
+	check (!this->bIsAwakeCalled);
+	this->Call_Awake();
 	if (Widget->GetWidgetActiveInHierarchy())
 	{
-		if (!this->bIsEnableCalled)
-		{
-			this->Call_OnEnable();
-		}
+		check (!this->bIsEnableCalled);
+		this->Call_OnEnable();
 	}
 }
 void ULexUIBehaviour::EndPlay()
@@ -33,6 +29,10 @@ void ULexUIBehaviour::EndPlay()
 	if (bIsEnableCalled)
 	{
 		Call_OnDisable();
+	}
+	if (bIsAwakeCalled)
+	{
+		Call_OnDestroy();
 	}
 }
 void ULexUIBehaviour::OnRegister()
@@ -75,24 +75,11 @@ void ULexUIBehaviour::PostEditChangeProperty(FPropertyChangedEvent& PropertyChan
 }
 #endif
 
-void ULexUIBehaviour::BeginDestroy()
-{
-	Super::BeginDestroy();
-	if (auto Widget = GetWidget())
-	{
-		Widget->RemoveComponent(this);
-	}
-}
-
 UWorld* ULexUIBehaviour::GetWorld() const
 {
 	auto Widget = GetWidget();
 	if (!Widget)return nullptr;
-	if (!HasAnyFlags(RF_ClassDefaultObject) && !Widget->HasAnyFlags(RF_BeginDestroyed) && !Widget->IsUnreachable())
-	{
-		return Widget->GetWorld();
-	}
-	return nullptr;
+	return Widget->GetWorld();
 }
 
 void ULexUIBehaviour::SetCanExecuteUpdate(bool Value)
@@ -126,6 +113,14 @@ void ULexUIBehaviour::OnDisable()
 	if (bCanExecuteBlueprintEvent)
 	{
 		ReceiveOnDisable();
+	}
+}
+
+void ULexUIBehaviour::OnDestroy()
+{
+	if (bCanExecuteBlueprintEvent)
+	{
+		ReceiveOnDestroy();
 	}
 }
 
@@ -218,7 +213,6 @@ void ULexUIBehaviour::Call_OnEnable()
 
 void ULexUIBehaviour::Call_OnDisable()
 {
-	if (!this->GetWorld())return;
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())//edit mode
 	{
@@ -249,6 +243,28 @@ void ULexUIBehaviour::Call_OnDisable()
 			ULexUIManagerWorldSubsystem::RemoveLexUIBehavioursFromUpdate(this);
 		}
 	}
+}
+
+void ULexUIBehaviour::Call_OnDestroy()
+{
+#if WITH_EDITOR
+	if (!this->GetWorld()->IsGameWorld())//edit mode
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Should never reach this point!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
+		return;
+	}
+#endif
+#if !UE_BUILD_SHIPPING
+	if (!bIsAwakeCalled)
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Awake already executed!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
+		return;
+	}
+#endif
+	bIsAwakeCalled = false;
+	OnDestroy();
 }
 
 void ULexUIBehaviour::Call_Start()
@@ -284,7 +300,7 @@ ULexWidget* ULexUIBehaviour::GetWidget() const
 
 void ULexUIBehaviour::DestroyComponent()
 {
-	this->ConditionalBeginDestroy();
+	GetWidget()->RemoveComponent(this);
 }
 
 void ULexUIBehaviour::OnInteractableChanged(bool Interactable) 
@@ -333,14 +349,6 @@ void ULexUIBehaviour::OnSiblingIndexChanged()
 	if (bCanExecuteBlueprintEvent)
 	{
 		ReceiveOnSiblingIndexChanged();
-	}
-}
-
-void ULexUIBehaviour::OnWidgetActiveChanged(bool WidgetActive)
-{
-	if (bCanExecuteBlueprintEvent)
-	{
-		ReceiveOnWidgetActiveChanged(WidgetActive);
 	}
 }
 
@@ -518,60 +526,53 @@ void ULexUIBehaviour::Call_OnWidgetActiveChanged(bool WidgetActive)
 {
 #if WITH_EDITOR
 	if (!GetWorld())return;
-	if (!this->GetWorld()->IsGameWorld())//edit mode
-	{
-		OnWidgetActiveChanged(WidgetActive);
-	}
-	else
+	if (!this->GetWorld()->IsGameWorld())return;//edit mode
 #endif
+	if (bIsAwakeCalled)
 	{
-		if (bIsAwakeCalled)
+		if (WidgetActive)
 		{
-			OnWidgetActiveChanged(WidgetActive);
-			if (WidgetActive)
+			if (!bIsEnableCalled)
 			{
-				if (!bIsEnableCalled)
-				{
 #if WITH_EDITOR
-					if (GetWorld() && !GetWorld()->IsGameWorld())//edit mode
-					{
+				if (GetWorld() && !GetWorld()->IsGameWorld())//edit mode
+				{
 
-					}
-					else
-#endif
-					{
-						Call_OnEnable();
-					}
 				}
-			}
-			else
-			{
-				if (bIsEnableCalled)
-				{
-#if WITH_EDITOR
-					if (GetWorld() && !this->GetWorld()->IsGameWorld())//edit mode
-					{
-
-					}
-					else
+				else
 #endif
-					{
-						Call_OnDisable();
-					}
+				{
+					Call_OnEnable();
 				}
 			}
 		}
-		else//awake not called, should be the first time that get WidgetActive
+		else
 		{
-			if (!this->GetWidget()->HasBegunPlay())
+			if (bIsEnableCalled)
 			{
-				if (WidgetActive)
+#if WITH_EDITOR
+				if (GetWorld() && !this->GetWorld()->IsGameWorld())//edit mode
 				{
-					Call_Awake();
-					if (!bIsEnableCalled)
-					{
-						Call_OnEnable();
-					}
+
+				}
+				else
+#endif
+				{
+					Call_OnDisable();
+				}
+			}
+		}
+	}
+	else//awake not called, should be the first time that get WidgetActive
+	{
+		if (!this->GetWidget()->HasBegunPlay())
+		{
+			if (WidgetActive)
+			{
+				Call_Awake();
+				if (!bIsEnableCalled)
+				{
+					Call_OnEnable();
 				}
 			}
 		}

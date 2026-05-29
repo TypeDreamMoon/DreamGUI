@@ -1,7 +1,6 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #pragma once
-#include "Components/ActorComponent.h"
 #include "Core/LexUIBehaviour.h"
 #include "LexImageSequencePlayer.generated.h"
 
@@ -30,8 +29,8 @@ protected:
 		bool bAffectByTimeDilation = false;
 	bool bIsPlaying = false;
 
-	virtual void BeginPlay()override;
-	virtual void EndPlay()override;
+	virtual void Awake()override;
+	virtual void OnDestroy()override;
 	virtual void OnRegister()override;
 	virtual void OnUnregister()override;
 #if WITH_EDITOR

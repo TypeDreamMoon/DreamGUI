@@ -61,7 +61,7 @@ class LGUI_API UUIToggle : public UUISelectable, public ILexPointerClickInterfac
 protected:
 	virtual void Awake() override;
 	virtual void Start() override;
-	virtual void EndPlay() override;
+	virtual void OnDestroy() override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif

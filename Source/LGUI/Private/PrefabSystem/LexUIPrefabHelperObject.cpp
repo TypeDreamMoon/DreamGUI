@@ -440,10 +440,21 @@ bool ULexUIPrefabHelperObject::RefreshOnSubPrefabDirty(ULexUIPrefab* InSubPrefab
 			}
 
 			//delete extra objects
-			for (auto& Item : ExtraObjectsToDelete)
+			for (auto& Obj : ExtraObjectsToDelete)
 			{
-				if (!IsValid(Item))continue;
-				Item->ConditionalBeginDestroy();
+				if (!IsValid(Obj))continue;
+				if (auto Widget = Cast<ULexWidget>(Obj))
+				{
+					Widget->DestroyWidget();
+				}
+				else if (auto WidgetComponent = Cast<ULexUIBehaviour>(Obj))
+				{
+					WidgetComponent->DestroyComponent();
+				}
+				else
+				{
+					Obj->ConditionalBeginDestroy();
+				}
 			}
 
 			//no need to clear invalid objects, because when SavePrefab it will do the clear work. But if we are in level editor, then there is no SavePrefab, so clear invalid objects is required: ClearInvalidObjectAndGuid()

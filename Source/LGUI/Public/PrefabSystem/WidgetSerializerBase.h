@@ -57,7 +57,6 @@ namespace LexUIPrefabSystem
 		TArray<UObject*> ReferenceAssetList;
 		TArray<UClass*> ReferenceClassList;
 		TArray<FName> ReferenceNameList;
-		ULexUIPrefabWorldSubsystem* PrefabManager = nullptr;
 
 		bool bOverrideVersions = false;
 		uint16 PrefabVersion = 0;

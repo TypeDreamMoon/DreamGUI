@@ -240,7 +240,6 @@ namespace LexUIPrefabSystem
 
 		static ULexWidget* LoadSubPrefab(UWorld* InWorld,
 			UObject* InOwnerObject, ULexUIPrefab* InPrefab, ULexWidget* Parent
-			, const FGuid& InParentDeserializationSessionId
 			, TMap<FGuid, TObjectPtr<UObject>>& InMapGuidToObject
 			, const TFunction<void(ULexWidget*, const TMap<FGuid, TObjectPtr<UObject>>&, const TMap<TObjectPtr<UObject>, FGuid>&, const TArray<ULexWidget*>&)>& InOnSubPrefabFinishDeserializeFunction
 		);
@@ -284,8 +283,6 @@ namespace LexUIPrefabSystem
 		ULexWidget* GenerateWidgetArray(TArray<FLexUIWidgetSaveData>& SavedWidgets, TMap<FGuid, FLexUIObjectSaveData>& InSavedObjects, TMap<FGuid, FGuid>& MapWidgetToParent, FGuid ParentGuid);
 		void GenerateObjectArray(TMap<FGuid, FLexUIObjectSaveData>& SavedObjects, TMap<FGuid, FGuid>& MapWidgetToParent);
 
-		/** Mark of this deserialization session. If nested prefab, this is still the root prefab's value. */
-		FGuid DeserializationSessionId = FGuid();
 		bool bIsSubPrefab = false;
 		/** A temporary string for log if loading or saving prefab (not duplicate). */
 		FString PrefabAssetPath;

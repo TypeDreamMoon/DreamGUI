@@ -51,8 +51,8 @@ public:
 	bool DeleteAnimationByIndex(int32 InIndex);
 	ULexUIPrefabSequence* DuplicateAnimationByIndex(int32 InIndex);
 	
-	virtual void BeginPlay()override;
-	virtual void EndPlay() override;
+	virtual void Awake()override;
+	virtual void OnDestroy() override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual void PreDuplicate(FObjectDuplicationParameters& DupParams)override;

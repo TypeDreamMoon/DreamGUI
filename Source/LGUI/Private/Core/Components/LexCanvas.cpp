@@ -34,9 +34,11 @@ ULexCanvas::ULexCanvas()
 	DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/LexUI_ImageAndFont"));
 }
 
-void ULexCanvas::BeginPlay()
+void ULexCanvas::Awake()
 {
-	Super::BeginPlay();
+	Super::Awake();
+	this->SetCanExecuteUpdate(false);
+
 	CheckRootCanvas();
 	CurrentRenderMode = this->GetActualRenderMode();
 	if (auto LexWidget = GetWidget())
@@ -65,12 +67,6 @@ void ULexCanvas::BeginPlay()
 	{
 		CustomScale->Init(this);
 	}
-}
-
-void ULexCanvas::Awake()
-{
-	Super::Awake();
-	this->SetCanExecuteUpdate(false);
 }
 
 TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> ULexCanvas::GetRenderTargetViewExtension()

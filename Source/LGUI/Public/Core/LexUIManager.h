@@ -133,7 +133,7 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 	TArray<TWeakObjectPtr<ULexCanvas>> AllCanvasArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	TArray<TWeakObjectPtr<ULexWidget>> AllWidgetArray;
+	TArray<TObjectPtr<ULexWidget>> AllWidgetArray;
 
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<ULexBaseRaycaster>> AllRaycasterArray;

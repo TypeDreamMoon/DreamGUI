@@ -36,7 +36,7 @@ protected:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
-	virtual void OnWidgetActiveChanged(bool WidgetActive) override;
+	virtual void OnEnable() override;
 	virtual void OnTransformChanged() override;
 	virtual void OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
 	virtual void RecalculateRange();

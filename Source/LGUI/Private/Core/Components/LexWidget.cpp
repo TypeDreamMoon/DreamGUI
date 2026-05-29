@@ -443,7 +443,16 @@ void ULexWidget::PostLoad()
 
 void ULexWidget::BeginDestroy()
 {
+	if (bHasBegunPlay)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red
+			, FString::Printf(TEXT("ULexWidget %s is not properly destroyed! Please use DestroyWidget() to delete a LexWidget!"), *GetPathDisplayName()));
+	}
 	Super::BeginDestroy();
+}
+
+void ULexWidget::DestroyWidget()
+{
 	struct LOCAL
 	{
 		static void UnregisterRecursive(ULexWidget* Widget)
@@ -478,11 +487,6 @@ void ULexWidget::BeginDestroy()
 	{
 		LOCAL::EndPlayRecursive(this);
 	}
-}
-
-void ULexWidget::DestroyWidget()
-{
-	this->ConditionalBeginDestroy();
 }
 
 UWorld* ULexWidget::GetWorld() const
@@ -1228,8 +1232,11 @@ void ULexWidget::OnChildAttached(ULexWidget* ChildWidget)
 
 void ULexWidget::OnAttachedToParent()
 {
-	Call_TransformChanged();
-	this->CalculateAnchorFromTransform();
+	if (this->bIsRegistered)//registered means not during prefab process
+	{
+		Call_TransformChanged();
+		CalculateAnchorFromTransform();//if not from PrefabSystem, then calculate anchors on transform, so when use AttachComponent, the KeepRelative or KeepWorld will work. If from PrefabSystem, then anchor will automatically do the job
+	}
 
 	ULexCanvas* ParentCanvas = this->GetComponentInParent<ULexCanvas>();
 	OnHierarchyAttachmentChanged(ParentCanvas, Parent->RootWidget.Get());
@@ -1253,8 +1260,11 @@ void ULexWidget::OnChildDetached()
 void ULexWidget::OnDetachedFromParent()
 {
 	if (bIsAttaching)return;
-	Call_TransformChanged();
-	this->CalculateAnchorFromTransform();
+	if (this->bIsRegistered)//registered means not during prefab process
+	{
+		Call_TransformChanged();
+		CalculateAnchorFromTransform();//if not from PrefabSystem, then calculate anchors on transform, so when use AttachComponent, the KeepRelative or KeepWorld will work. If from PrefabSystem, then anchor will automatically do the job
+	}
 
 	OnHierarchyAttachmentChanged(nullptr, nullptr);
 	MarkLayoutDirty();
@@ -1309,6 +1319,11 @@ void ULexWidget::OnUnregister()
 	if (IsValid(Visual))
 	{
 		Visual->Call_OnUnregister();
+		if (RenderCanvas.IsValid())
+		{
+			RenderCanvas->MarkVisualWillChange(Visual);
+			RenderCanvas->UnregisterVisual(Visual);
+		}
 	}
 	ULexUIManagerWorldSubsystem::RemoveWidget(this);
 }
@@ -3020,6 +3035,11 @@ void ULexWidget::RemoveVisual()
 			OldVisual->EndPlay();
 		}
 		OldVisual->Call_OnUnregister();
+		if (RenderCanvas.IsValid())
+		{
+			RenderCanvas->MarkVisualWillChange(OldVisual);
+			RenderCanvas->UnregisterVisual(OldVisual);
+		}
 	}
 }
 

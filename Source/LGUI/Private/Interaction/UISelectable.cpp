@@ -87,11 +87,6 @@ void UUISelectable::Awake()
 	this->SetCanExecuteUpdate(false);
 }
 
-void UUISelectable::EndPlay()
-{
-	Super::EndPlay();
-}
-
 void UUISelectable::OnRegister()
 {
 	Super::OnRegister();

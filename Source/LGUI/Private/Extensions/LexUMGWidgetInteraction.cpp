@@ -125,9 +125,9 @@ void ULexUMGWidgetInteraction::Awake()
 	this->SetCanExecuteUpdate(false);//disable update by default
 }
 
-void ULexUMGWidgetInteraction::EndPlay()
+void ULexUMGWidgetInteraction::OnDestroy()
 {
-	Super::EndPlay();
+	Super::OnDestroy();
 
 	if (FSlateApplication::IsInitialized())
 	{

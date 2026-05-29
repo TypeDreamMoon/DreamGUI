@@ -87,7 +87,7 @@ protected:
 	virtual void Awake() override;
 	virtual void Start() override;
 	virtual void Update(float DeltaTime) override;
-	virtual void EndPlay() override;
+	virtual void OnDestroy() override;
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;

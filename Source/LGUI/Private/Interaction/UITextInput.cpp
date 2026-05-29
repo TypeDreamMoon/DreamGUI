@@ -63,9 +63,9 @@ void UUITextInput::Update(float DeltaTime)
 	}
 }
 
-void UUITextInput::EndPlay()
+void UUITextInput::OnDestroy()
 {
-	Super::EndPlay();
+	Super::OnDestroy();
 	DeactivateInput(true);
 	if (TextInputMethodContext.IsValid())
 	{
@@ -1191,13 +1191,10 @@ void UUITextInput::HideSelectionMask()
 	//TextInputMethodContext->SetSelectionRange(0, 0, ITextInputMethodContext::ECaretPosition::Beginning);
 }
 
-void UUITextInput::OnWidgetActiveChanged(bool WidgetActive)
+void UUITextInput::OnEnable()
 {
-	Super::OnWidgetActiveChanged(WidgetActive);
-	if (WidgetActive)
-	{
-		DeactivateInput();
-	}
+	Super::OnEnable();
+	DeactivateInput();
 }
 
 void UUITextInput::OnInteractableChanged(bool Interactable)

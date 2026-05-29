@@ -59,9 +59,9 @@ void UUIToggle::Start()
 	ApplyValueToUI(true);
 }
 
-void UUIToggle::EndPlay()
+void UUIToggle::OnDestroy()
 {
-	Super::EndPlay();
+	Super::OnDestroy();
 	if (ToggleGroup.IsValid())
 	{
 		ToggleGroup->RemoveToggleComponent(this);

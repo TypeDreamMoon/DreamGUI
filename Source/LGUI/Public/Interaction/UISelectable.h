@@ -152,7 +152,6 @@ protected:
 
 protected:
 	virtual void Awake() override;
-	virtual void EndPlay() override;
 
 	virtual void OnRegister()override;
 	virtual void OnUnregister()override;

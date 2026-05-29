@@ -2,11 +2,8 @@
 
 #include "Interaction/UIScrollViewWithScrollbar.h"
 
-#include "LTweenBPLibrary.h"
-#include "Core/LexUIManager.h"
 #include "Core/Components/LexWidget.h"
 #include "Interaction/UIScrollbar.h"
-#include "PrefabSystem/LexUIPrefabManager.h"
 
 
 UUIScrollViewWithScrollbar::UUIScrollViewWithScrollbar()

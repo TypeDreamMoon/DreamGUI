@@ -20,16 +20,16 @@ class LGUI_API ULexUIBehaviour : public UObject
 public:
 	ULexUIBehaviour();
 	friend class ULexWidget;
-protected:
-	virtual void BeginPlay();
-	virtual void EndPlay();
+private:
+	void BeginPlay();
+	void EndPlay();
 
+protected:
 	virtual void OnRegister();
 	virtual void OnUnregister();
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
 #endif
-	virtual void BeginDestroy() override;
 
 	virtual UWorld* GetWorld() const override final;
 
@@ -63,27 +63,27 @@ private:
 	void Call_OnEnable();
 	void Call_Start();
 	void Call_OnDisable();
+	void Call_OnDestroy();
 	UPROPERTY(Transient, Getter=GetWidget, DisplayName=Widget, BlueprintReadOnly, Category=LexUIBehaviour, meta=(AllowPrivateAccess=true))
 	mutable TObjectPtr<ULexWidget> CacheWidget = nullptr;
 protected:
 
 	/**
-	 * This function is always called before any Start functions and also after a prefab is loaded.
-	 * This is a good replacement for BeginPlay in LexUI's Prefab workflow. Because Awake will execute after all prefab serialization and object reference is done.
-	 * NOTE!!! If RootComponent is LexWidget: if LexWidget is not "ActiveInHierarchy" during start up, then Awake is not called until "ActiveInHierarchy" becomes true.
-	 * Awake execute order in prefab: higher in hierarchy will execute earlier, so scripts on root actor will execute the first.
+	 * Awake is called when widget is created, just like BeginPlay.
+	 * Awake execute order in prefab: higher in hierarchy will execute earlier, so scripts on root widget will execute the first.
 	 */
 	virtual void Awake();
-	/** Executed after Awake if WidgetActiveInHierarchy is true, or when WidgetActiveInHierarchy become true. */
+	/** OnEnable is called after Awake if WidgetActiveInHierarchy is true, or when WidgetActiveInHierarchy become true. */
 	virtual void OnEnable();
-	/** Start is called before the first frame update. */
+	/** Start is called before the first Update. */
 	virtual void Start();
 	/** Update is called once per frame. */
 	virtual void Update(float DeltaTime);
-	/** Executed when WidgetActiveInHierarchy become false. */
+	/** OnDisable is called when WidgetActiveInHierarchy become false, or before OnDestroy. */
 	virtual void OnDisable();
+	/** OnDestroy is called when Widget destroy */
+	virtual void OnDestroy();
 
-	virtual void OnWidgetActiveChanged(bool WidgetActive);
 	virtual void OnTransformChanged();
 	/** Called when RootUIComp->AnchorData is changed or scale is changed. */
 	virtual void OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged);
@@ -106,9 +106,7 @@ protected:
 
 	/**
 	 * This function is always called before any Start functions and also after a prefab is loaded.
-	 * This is a good replacement for BeginPlay in LGUI's Prefab workflow. Because Awake will execute after all prefab serialization and object reference is done.
-	 * NOTE!!! If RootComponent is UIItem: if UIItem is inactive during start up, then Awake is not called until it is made active.
-	 * Awake execute order in prefab: higher in hierarchy will execute earlier, so scripts on root actor will execute the first.
+	 * Awake execute order in prefab: higher in hierarchy will execute earlier, so scripts on root widget will execute the first.
 	 */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Awake"), Category = "LexUIBehaviour")void ReceiveAwake();
 	/** Executed after Awake when WidgetActiveInHierarchy is true, or when WidgetActiveInHierarchy become true. */
@@ -117,10 +115,11 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Start"), Category = "LexUIBehaviour")void ReceiveStart();
 	/** Update is called once per frame. */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Update"), Category = "LexUIBehaviour")void ReceiveUpdate(float DeltaTime);
-	/** Executed when WidgetActiveInHierarchy become false. */
-	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnDisable"), Category = "LGUILifeCycleBehaviour")void ReceiveOnDisable();
+	/** OnDisable is called when WidgetActiveInHierarchy become false, or before OnDestroy. */
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnDisable"), Category = "LexUIBehaviour")void ReceiveOnDisable();
+	/** OnDestroy is called when Widget destroy */
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnDestroy"), Category = "LexUIBehaviour")void ReceiveOnDestroy();
 
-	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnWidgetActiveChanged"), Category = "LexUIBehaviour") void ReceiveOnWidgetActiveChanged(bool WidgetActive);
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnTransformChanged"), Category = "LexUIBehaviour") void ReceiveOnTransformChanged();
 	/** Called when RootUIComp->AnchorData is changed  or scale is changed. */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnDimensionsChanged"), Category = "LexUIBehaviour") void ReceiveOnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged);

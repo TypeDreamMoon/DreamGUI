@@ -116,14 +116,11 @@ void UUIScrollView::RecalculateRange()
     }
 }
 
-void UUIScrollView::OnWidgetActiveChanged(bool WidgetActive)
+void UUIScrollView::OnEnable()
 {
-    Super::OnWidgetActiveChanged(WidgetActive);
-    if (WidgetActive)
-    {
-        bRangeCalculated = false;
-        RecalculateRange();
-    }
+    Super::OnEnable();
+    bRangeCalculated = false;
+    RecalculateRange();
 }
 
 void UUIScrollView::OnTransformChanged()

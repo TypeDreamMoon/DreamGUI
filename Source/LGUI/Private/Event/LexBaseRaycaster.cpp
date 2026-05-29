@@ -125,6 +125,7 @@ void ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, ULex
 		auto TraceFunction = [&](ULexCanvas* InCanvas)
 		{
 			auto& VisualArray = InCanvas->GetVisualArray();
+			UE_LOG(LogTemp, Error, TEXT("Raycast VisualArrayCount:%d"), VisualArray.Num());
 			for (auto& Visual : VisualArray)
 			{
 				auto Widget = Visual->GetWidget();

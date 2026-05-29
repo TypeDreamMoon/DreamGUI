@@ -95,8 +95,8 @@ class LGUI_API ULexVisual : public ULexWidgetSubObjectBehaviour
 
 public:	
 	ULexVisual(const FObjectInitializer& ObjectInitializer);
-	virtual void BeginPlay()override;
-	virtual void BeginDestroy() override;
+	virtual void OnRegister() override;
+	virtual void OnUnregister() override;
 protected:
 	friend class FLexVisualCustomization;
 	friend class ULexWidget;

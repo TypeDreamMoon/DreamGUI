@@ -4,23 +4,22 @@
 #include "LTweenBPLibrary.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexTexture.h"
-#include "PrefabSystem/LexUIPrefabManager.h"
 
 ULexImageSequencePlayer::ULexImageSequencePlayer()
 {
 }
-void ULexImageSequencePlayer::BeginPlay()
+void ULexImageSequencePlayer::Awake()
 {
-	Super::BeginPlay();	
+	Super::Awake();	
 	if (bPlayOnStart)
 	{
 		Play();
 	}
 }
 
-void ULexImageSequencePlayer::EndPlay()
+void ULexImageSequencePlayer::OnDestroy()
 {
-	Super::EndPlay();
+	Super::OnDestroy();
 	Stop();
 }
 

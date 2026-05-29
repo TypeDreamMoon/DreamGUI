@@ -4,15 +4,14 @@
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequence.h"
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequencePlayer.h"
 #include "LGUI.h"
-#include "PrefabSystem/LexUIPrefabManager.h"
 
 ULexUIPrefabSequenceComponent::ULexUIPrefabSequenceComponent()
 {
 }
 
-void ULexUIPrefabSequenceComponent::BeginPlay()
+void ULexUIPrefabSequenceComponent::Awake()
 {
-	Super::BeginPlay();
+	Super::Awake();
 	InitSequencePlayer();
 
 	if (PlaybackSettings.bAutoPlay)
@@ -21,9 +20,9 @@ void ULexUIPrefabSequenceComponent::BeginPlay()
 	}
 }
 
-void ULexUIPrefabSequenceComponent::EndPlay()
+void ULexUIPrefabSequenceComponent::OnDestroy()
 {
-	Super::EndPlay();
+	Super::OnDestroy();
 
 	if (SequencePlayer)
 	{

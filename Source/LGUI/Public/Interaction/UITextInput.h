@@ -96,7 +96,7 @@ class LGUI_API UUITextInput : public UUISelectable, public ILexPointerClickInter
 protected:	
 	virtual void Awake() override;
 	virtual void Update(float DeltaTime) override;
-	virtual void EndPlay() override;
+	virtual void OnDestroy() override;
 #if WITH_EDITOR
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -327,7 +327,7 @@ private:
 
 	int PressCaretPositionIndex = 0, PressCaretPositionLineIndex = 0;
 protected:
-	virtual void OnWidgetActiveChanged(bool WidgetActive) override;
+	virtual void OnEnable() override;
 	virtual void OnInteractableChanged(bool Interactable) override;
 	virtual void OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
 

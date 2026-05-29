@@ -191,7 +191,6 @@ class LGUI_API ULexCanvas : public ULexUIBehaviour
 public:	
 	ULexCanvas();
 protected:
-	virtual void BeginPlay() override;
 	virtual void Awake() override;
 #if WITH_EDITOR
 public:
