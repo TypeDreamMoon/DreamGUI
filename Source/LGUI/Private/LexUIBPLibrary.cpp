@@ -3,7 +3,6 @@
 #include "LexUIBPLibrary.h"
 
 #include "LexUIDelegateHandleWrapper.h"
-#include "Utils/LexUIUtils.h"
 #include "Framework/Application/SlateApplication.h"
 #include "LGUI.h"
 #include "Core/Components/LexWidget.h"

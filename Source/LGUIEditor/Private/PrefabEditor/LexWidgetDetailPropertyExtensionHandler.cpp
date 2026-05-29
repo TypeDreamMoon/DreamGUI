@@ -8,9 +8,8 @@
 #include "PropertyCustomizationHelpers.h"
 #include "LexWidgetHierarchyPickerView.h"
 #include "Core/LexUIBehaviour.h"
-#include "Core/Components/LexLayout.h"
-#include "Core/Components/LexVisual.h"
 #include "Core/Components/LexWidget.h"
+#include "Core/Components/LexWidgetSubObjectBehaviour.h"
 
 #define LOCTEXT_NAMESPACE "LexWidgetDetailPropertyExtensionHandler"
 
@@ -60,7 +59,7 @@ void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow&
 		else
 		{
 			auto OuterWidget = Object->GetTypedOuter<ULexWidget>();
-			return FText::FromString(Object->GetPathName(OuterWidget));
+			return FText::FromString(OuterWidget->GetDisplayName());
 		}
 	};
 	auto GetTooltipText = [=, this]()

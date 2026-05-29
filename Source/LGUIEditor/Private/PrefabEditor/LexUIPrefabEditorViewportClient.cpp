@@ -818,9 +818,10 @@ void FLexUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy*
 		ULexWidget* ClickHitUI = nullptr;
 		TArray<ULexWidget*> AllWidgetArray;
 		{
-			for (auto& WidgetPresenter : LexUIManager->GetAllWidgetPresenterArray())
+			for (auto& Canvas : LexUIManager->GetAllCanvasArray())
 			{
-				auto RootWidget = WidgetPresenter->GetRootWidgetForEditor();
+				if (!Canvas->IsRootCanvas())continue;;
+				auto RootWidget = Canvas->GetWidget();
 				ULexWidget::CollectChildrenWidgets(RootWidget, AllWidgetArray);
 			}
 		}

@@ -5,9 +5,7 @@
 #include "ThumbnailRendering/SceneThumbnailInfo.h"
 #include "Core/Components/LexCanvas.h"
 #include "LGUIEditorModule.h"
-#include "Core/Components/LexWidgetPresenterComponent.h"
 #include "Core/Components/LexWidget.h"
-#include "Interaction/UIRecyclableScrollView.h"
 #include "PrefabSystem/LexUIPrefab.h"
 
 
@@ -49,44 +47,29 @@ FLexUIPrefabThumbnailScene::FLexUIPrefabThumbnailScene()
 }
 void FLexUIPrefabThumbnailScene::SpawnPreviewActor()
 {
-	if (CurrentPrefab.IsValid())
+	if (!CurrentPrefab.IsValid())return;
+	if (RootAgentWidget.IsValid())return;
+	auto CanvasSize = CurrentPrefab->PrefabDataForPrefabEditor.CanvasSize;
+
+	//create Canvas for UI
+	auto RootWidget = NewObject<ULexWidget>(this->GetWorld(), FName("[RootAgent]"));
+	RootWidget->SetSizeDelta(CanvasSize);
+	RootWidget->SetDisplayName(TEXT("[RootAgent]"));
+	RootWidget->OnRegister();
+	RootAgentWidget = RootWidget;
+
+	CurrentPrefab->LoadPrefab(this->GetWorld(), RootWidget);
+	auto Canvas = RootWidget->AddComponent<ULexCanvas>();
+	
+	auto RenderMode = (ELexRenderMode)CurrentPrefab->PrefabDataForPrefabEditor.CanvasRenderMode;
+	Canvas->SetRenderMode(RenderMode);
+	Canvas->bFixedSizeInEditMode = true;
+
+	Canvas->UpdateRootCanvas();//for update draw-call immediately
+	GetBoundsRecursive(RootWidget, PreviewBounds);
+	if (PreviewBounds.SphereRadius < KINDA_SMALL_NUMBER)//if bounds is too small, set to 1x1 box
 	{
-		if (!PresenterComponent.IsValid())
-		{
-			auto CanvasSize = CurrentPrefab->PrefabDataForPrefabEditor.CanvasSize;
-			//create Canvas for UI
-			auto WidgetPresenterActor = this->GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity);
-			auto WidgetPresenterComponent = WidgetPresenterActor->FindComponentByClass<ULexWidgetPresenterComponent>();
-			if (!WidgetPresenterComponent)
-			{
-				WidgetPresenterComponent = NewObject<ULexWidgetPresenterComponent>(WidgetPresenterActor, ULexWidgetPresenterComponent::StaticClass());
-				WidgetPresenterActor->SetRootComponent(WidgetPresenterComponent);
-				WidgetPresenterComponent->RegisterComponent();
-				WidgetPresenterActor->AddInstanceComponent(WidgetPresenterComponent);
-			}
-			WidgetPresenterComponent->CreateWidgetAndCanvasForEditor();
-			auto Canvas = WidgetPresenterComponent->GetRootCanvasForEditor();
-			auto RenderMode = (ELexRenderMode)CurrentPrefab->PrefabDataForPrefabEditor.CanvasRenderMode;
-			Canvas->SetRenderMode(RenderMode);
-			Canvas->bFixedSizeInEditMode = true;
-			auto RootWidget = WidgetPresenterComponent->GetRootWidgetForEditor();
-
-			RootWidget->SetWidth(CanvasSize.X);
-			RootWidget->SetHeight(CanvasSize.Y);
-			RootWidget->SetSiblingIndex(0);
-
-			PresenterComponent = WidgetPresenterComponent;
-		}
-		PresenterComponent->SetPrefab(CurrentPrefab.Get());
-		if (auto Canvas = PresenterComponent->GetLoadedCanvas())//for update draw-call immediately
-		{
-			Canvas->UpdateRootCanvas();
-			GetBoundsRecursive(PresenterComponent->GetLoadedWidget(), PreviewBounds);
-			if (PreviewBounds.SphereRadius < KINDA_SMALL_NUMBER)//if bounds is too small, set to 1x1 box
-			{
-				PreviewBounds = FBoxSphereBounds(FBox(FVector(-0.5f, -0.5f, -0.5f), FVector(0.5f, 0.5f, 0.5f)));
-			}
-		}
+		PreviewBounds = FBoxSphereBounds(FBox(FVector(-0.5f, -0.5f, -0.5f), FVector(0.5f, 0.5f, 0.5f)));
 	}
 }
 void FLexUIPrefabThumbnailScene::GetBoundsRecursive(ULexWidget* RootWidget, FBoxSphereBounds& OutBounds)const
@@ -128,15 +111,12 @@ void FLexUIPrefabThumbnailScene::GetBoundsRecursive(ULexWidget* RootWidget, FBox
 	LOCAL::GetBounds(RootWidget, bIsFirstBounds, BoxBounds);
 	OutBounds = BoxBounds;
 }
-void FLexUIPrefabThumbnailScene::ClearOldActors()
+void FLexUIPrefabThumbnailScene::ClearOldWidgets()
 {
-	auto Level = GetWorld()->GetCurrentLevel();
-	for (int i = NumStartingActors; i < Level->Actors.Num(); i++)
+	if (RootAgentWidget.IsValid())
 	{
-		if (Level->Actors[i])
-		{
-			Level->Actors[i]->Destroy();
-		}
+		RootAgentWidget->DestroyWidget();
+		RootAgentWidget.Reset();
 	}
 }
 bool FLexUIPrefabThumbnailScene::IsValidForVisualization()
@@ -174,7 +154,7 @@ void FLexUIPrefabThumbnailScene::SetPrefab(class ULexUIPrefab* Prefab)
 	if (!CurrentPrefab.IsValid())
 	{
 		CurrentPrefab = nullptr;
-		ClearOldActors();
+		ClearOldWidgets();
 	}
 	if (CurrentPrefab.IsValid() && IsValid(Prefab))
 	{
@@ -182,7 +162,7 @@ void FLexUIPrefabThumbnailScene::SetPrefab(class ULexUIPrefab* Prefab)
 		{
 			return;
 		}
-		ClearOldActors();
+		ClearOldWidgets();
 	}
 	CurrentPrefab = Prefab;
 	CurrentPrefab->bThumbnailDirty = false;

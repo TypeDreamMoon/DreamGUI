@@ -7,7 +7,6 @@
 #include "Core/LexUIManager.h"
 #include "LTweenManager.h"
 #include "Core/LexUIClipData.h"
-#include "Core/Components/LexWidgetPresenterComponent.h"
 #include "Core/Components/LexLayout.h"
 #include "Core/Components/LexVisual.h"
 #include "Components/SceneComponent.h"
@@ -488,12 +487,8 @@ void ULexWidget::DestroyWidget()
 
 UWorld* ULexWidget::GetWorld() const
 {
-	auto OuterWidgetPresenter = GetTypedOuter<ULexWidgetPresenterComponent>();
-	if (OuterWidgetPresenter && !OuterWidgetPresenter->HasAnyFlags(RF_ClassDefaultObject))
-	{
-		return OuterWidgetPresenter->GetWorld();
-	}
-	return nullptr;
+	auto OuterWorld = GetTypedOuter<UWorld>();
+	return OuterWorld;
 }
 
 #if WITH_EDITOR
@@ -883,7 +878,7 @@ void ULexWidget::SetWorldLocationAndRotation(const FVector& InLocation, const FQ
 	}
 	else
 	{
-		if (auto WidgetPresenterComponent = GetWidgetPresenterComponent())
+		if (auto WidgetPresenterComponent = GetAttachedRootSceneComponent())
 		{
 			auto WorldToParentTransform = WidgetPresenterComponent->GetComponentTransform().Inverse();
 			auto NewPosition = WorldToParentTransform.TransformPosition(InLocation);
@@ -925,7 +920,7 @@ void ULexWidget::SetWorldTransform(const FTransform& InWorldTransform)
 		this->RelativeRotation = LocalTransform.GetRotation();
 		this->RelativeScale = LocalTransform.GetScale3D();
 		
-		if (auto WidgetPresenterComponent = GetWidgetPresenterComponent())
+		if (auto WidgetPresenterComponent = GetAttachedRootSceneComponent())
 		{
 			ObjectToWorldTransform = WidgetPresenterComponent->GetComponentTransform() * LocalTransform;			
 		}
@@ -1026,7 +1021,7 @@ void ULexWidget::UpdateObjectToWorldTransform()
 	}
 	else
 	{
-		if (auto WidgetPresenterComponent = GetWidgetPresenterComponent())
+		if (auto WidgetPresenterComponent = GetAttachedRootSceneComponent())
 		{
 			ObjectToWorldTransform = WidgetPresenterComponent->GetComponentTransform() * LocalTransform;			
 		}
@@ -1233,11 +1228,8 @@ void ULexWidget::OnChildAttached(ULexWidget* ChildWidget)
 
 void ULexWidget::OnAttachedToParent()
 {
-	if (this->bIsRegistered)//registered means not during prefab process
-	{
-		Call_TransformChanged();
-		this->CalculateAnchorFromTransform();//if not from PrefabSystem, then calculate anchors on transform, so when use AttachComponent, the KeepRelative or KeepWorld will work. If from PrefabSystem, then anchor will automatically do the job
-	}
+	Call_TransformChanged();
+	this->CalculateAnchorFromTransform();
 
 	ULexCanvas* ParentCanvas = this->GetComponentInParent<ULexCanvas>();
 	OnHierarchyAttachmentChanged(ParentCanvas, Parent->RootWidget.Get());
@@ -1261,11 +1253,8 @@ void ULexWidget::OnChildDetached()
 void ULexWidget::OnDetachedFromParent()
 {
 	if (bIsAttaching)return;
-	if (this->bIsRegistered)//registered means not during prefab process
-	{
-		Call_TransformChanged();
-		this->CalculateAnchorFromTransform();//if not from PrefabSystem, then calculate anchors on transform, so when use AttachComponent, the KeepRelative or KeepWorld will work. If from PrefabSystem, then anchor will automatically do the job
-	}
+	Call_TransformChanged();
+	this->CalculateAnchorFromTransform();
 
 	OnHierarchyAttachmentChanged(nullptr, nullptr);
 	MarkLayoutDirty();
@@ -1275,6 +1264,7 @@ void ULexWidget::OnDetachedFromParent()
 void ULexWidget::OnRegister()
 {
 	bIsRegistered = true;
+	ULexUIManagerWorldSubsystem::AddWidget(this);
 	CheckRootWidget();
 
 	if (IsValid(LayoutContainer))
@@ -1298,12 +1288,6 @@ void ULexWidget::OnRegister()
 			Component->OnRegister();
 		}
 	}
-
-	if (this == RootWidget)
-	{		
-		//force size recalculate. solve condition: LexUITools->BasicSetup->CreateWorldSpaceUI, but size is 100x100
-		this->MarkAnchorDataChanged(true, true, true, true);
-	}
 }
 void ULexWidget::OnUnregister()
 {
@@ -1326,6 +1310,7 @@ void ULexWidget::OnUnregister()
 	{
 		Visual->Call_OnUnregister();
 	}
+	ULexUIManagerWorldSubsystem::RemoveWidget(this);
 }
 
 void ULexWidget::EnsureUIChildrenValid()
@@ -2337,7 +2322,7 @@ void ULexWidget::OnHierarchyAttachmentChanged(ULexCanvas* ParentRenderCanvas, UL
 		bCacheAnchorOffsetBottomDirty = true;
 		bCacheAnchorOffsetTopDirty = true;
 		
-		MarkAnchorDataChanged(false, true, true, false);
+		MarkAnchorDataChanged(false, true, true, false, false);
 		MarkLayoutDirty();
 	}
 
@@ -2509,11 +2494,11 @@ ULexCanvas* ULexWidget::GetRootCanvas()const
 	return nullptr;
 }
 
-ULexWidgetPresenterComponent* ULexWidget::GetWidgetPresenterComponent() const
+USceneComponent* ULexWidget::GetAttachedRootSceneComponent() const
 {
 	if (auto RootCanvas = GetRootCanvas())
 	{
-		return RootCanvas->GetWidgetPresenterComponent();
+		return RootCanvas->GetAttachedRootSceneComponent();
 	}
 	return nullptr;
 }
@@ -2607,7 +2592,7 @@ void ULexWidget::MarkTransformChanged()
 	Call_TransformChanged();
 }
 
-void ULexWidget::MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged, bool InDiscardCache)
+void ULexWidget::MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged, bool InDiscardCache, bool InPropagateToChildren)
 {
 	CalculateTransformFromAnchor();
 
@@ -2630,6 +2615,7 @@ void ULexWidget::MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged,
 	if (IsValid(LayoutContainer) || IsValid(LayoutSelf))
 	{
 		this->bLayoutDirty = true;
+		if (!InPropagateToChildren)return;
 		for (auto& Child : GetChildren())
 		{
 			if (!IsValid(Child))continue;
@@ -2638,6 +2624,7 @@ void ULexWidget::MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged,
 	}
 	else
 	{
+		if (!InPropagateToChildren)return;
 		for (auto& Child : GetChildren())
 		{
 			if (!IsValid(Child))continue;

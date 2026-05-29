@@ -24,7 +24,6 @@
 #include "Core/LexCanvasDrawCallProcessingRunnable.h"
 #include "Core/LexUIClipData.h"
 #include "Core/LexUIDataAsTexture.h"
-#include "Core/Components/LexWidgetPresenterComponent.h"
 
 
 #define LOCTEXT_NAMESPACE "LexCanvas"
@@ -67,9 +66,11 @@ void ULexCanvas::BeginPlay()
 		CustomScale->Init(this);
 	}
 }
-void ULexCanvas::EndPlay()
+
+void ULexCanvas::Awake()
 {
-	Super::EndPlay();
+	Super::Awake();
+	this->SetCanExecuteUpdate(false);
 }
 
 TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> ULexCanvas::GetRenderTargetViewExtension()
@@ -273,6 +274,7 @@ void ULexCanvas::CheckRenderTargetUpdate()
 void ULexCanvas::OnRegister()
 {
 	Super::OnRegister();
+	ULexUIManagerWorldSubsystem::AddCanvas(this);
 	if (DrawCallProcessingRunnable == nullptr)
 	{
 		DrawCallProcessingRunnable = MakeUnique<FLexCanvasDrawCallProcessingRunnable>();
@@ -285,7 +287,6 @@ void ULexCanvas::OnRegister()
 	}
 	if (auto LexWidget = GetWidget())
 	{
-		//tell UIItem
 		LexWidget->RegisterRenderCanvas(this);
 		LexWidget->GetAttachmentChangedEvent().AddUObject(this, &ULexCanvas::OnUIHierarchyAttachmentChanged);
 		LexWidget->GetWidgetActiveChangedEvent().AddUObject(this, &ULexCanvas::OnWidgetActiveChanged);
@@ -306,7 +307,7 @@ void ULexCanvas::OnRegister()
 void ULexCanvas::OnUnregister()
 {
 	Super::OnUnregister();
-	
+	ULexUIManagerWorldSubsystem::RemoveCanvas(this);
 	ClearDrawCall();
 	if (UIMesh.IsValid())
 	{
@@ -729,13 +730,14 @@ bool ULexCanvas::IsRootCanvas()const
 	return GetRootCanvas() == this;
 }
 
-ULexWidgetPresenterComponent* ULexCanvas::GetWidgetPresenterComponent() const
+USceneComponent* ULexCanvas::GetAttachedRootSceneComponent() const
 {
-	if (!WidgetPresenterComponent.IsValid())
-	{
-		WidgetPresenterComponent = GetTypedOuter<ULexWidgetPresenterComponent>();
-	}
-	return WidgetPresenterComponent.Get();
+	return AttachedRootSceneComponent.Get();
+}
+
+void ULexCanvas::AttachToSceneComponent(USceneComponent* InSceneComp) const
+{
+	AttachedRootSceneComponent = InSceneComp;
 }
 
 void ULexCanvas::MarkVisualWillChange(ULexVisual* InOldVisual)
@@ -1305,6 +1307,8 @@ void ULexCanvas::UpdateDrawCallBatchData()
 		if (item->bForceRenderToTarget)continue;
 		item->UpdateDrawCallBatchData();
 	}
+
+	if (!UIMesh.IsValid())return;
 	
 	while (DrawCallProcessingRunnable->IsBatching())
 	{
@@ -1356,7 +1360,7 @@ DECLARE_CYCLE_STAT(TEXT("Canvas UpdateDrawCallMesh"), STAT_UpdateDrawCallMesh, S
 void ULexCanvas::UpdateDrawCallMesh()
 {
 	SCOPE_CYCLE_COUNTER(STAT_UpdateDrawCallMesh);
-	
+	if (!UIMesh.IsValid())return;
 	UIMesh->PoolAllRenderSection();
 	bool bNeedToUpdateBounds = false;
 	for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
@@ -1437,13 +1441,16 @@ void ULexCanvas::CheckUIMesh()const
 		if (MeshType == nullptr)MeshType = ULexUIMeshComponent::StaticClass();
 		auto LexWidget = GetWidget();
 		auto ObjectName = MakeUniqueObjectName(LexWidget, MeshType, FName(*this->GetWidget()->GetDisplayName()));
-		auto OuterActor = LexWidget->GetTypedOuter<AActor>();
-		UIMesh = NewObject<ULexUIMeshComponent>(OuterActor, MeshType, ObjectName, RF_Transient);
-		UIMesh->RegisterComponent();
-		UIMesh->AttachToComponent(this->GetWidgetPresenterComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+		UIMesh = NewObject<ULexUIMeshComponent>(LexWidget, MeshType, ObjectName, RF_Transient);
+		UIMesh->RegisterComponentWithWorld(this->GetWorld());
+		UIMesh->AttachToComponent(this->GetAttachedRootSceneComponent(), FAttachmentTransformRules::KeepRelativeTransform);
 		UIMesh->SetRelativeTransform(FTransform::Identity);
 		UIMesh->Init(const_cast<ULexCanvas*>(this));
 		bUIMeshNeedToSetInitialParameters = true;
+	}
+	if (UIMesh.IsValid())
+	{
+		UIMesh->SetComponentToWorld(GetWidget()->GetWorldTransform());
 	}
 
 	if (bUIMeshNeedToSetInitialParameters)
@@ -2662,7 +2669,7 @@ void ULexCanvas::OnEditorTick(float DeltaTime)
 		return;
 	if (this->IsUnreachable())
 		return;
-	auto WidgetPresenter = this->GetWidgetPresenterComponent();
+	auto WidgetPresenter = this->GetAttachedRootSceneComponent();
 	if (!WidgetPresenter)
 		return;
 	if (WidgetPresenter->IsUnreachable())

@@ -18,11 +18,9 @@
 #include "Core/Components/LexWidgetPresenterComponent.h"
 #include "Core/LexUIMesh/LexUIGizmoMesh.h"
 #include "Event/LexEventSystem.h"
-#include "PrefabSystem/LexUIPrefabManager.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #if WITH_EDITOR
 #include "Editor.h"
-#include "Selection.h"
 #include "EditorViewportClient.h"
 #include "Core/LexUISpriteData.h"
 #endif
@@ -603,6 +601,37 @@ void ULexUIManagerWorldSubsystem::OnEnginePreExit()
 	}
 }
 
+void ULexUIManagerWorldSubsystem::OnWorldBeginPlay(UWorld& InWorld)
+{
+	Super::OnWorldBeginPlay(InWorld);
+	//normally BeginPlay is already called when LoadPrefab, but if World has not BeginPlay then this will work
+	for (int i = 0; i < AllWidgetArray.Num(); i++)
+	{
+		auto& Widget = AllWidgetArray[i];
+		if (!Widget->HasBegunPlay())
+		{
+			Widget->BeginPlay();
+		}
+	}
+}
+
+void ULexUIManagerWorldSubsystem::OnWorldEndPlay(UWorld& InWorld)
+{
+	Super::OnWorldEndPlay(InWorld);
+	for (int i = 0; i < AllWidgetArray.Num(); i++)
+	{
+		auto& Widget = AllWidgetArray[i];
+		if (Widget->HasRegistered())
+		{
+			Widget->OnUnregister();
+		}
+		if (Widget->HasBegunPlay())
+		{
+			Widget->EndPlay();
+		}
+	}
+}
+
 void ULexUIManagerWorldSubsystem::DrawDebugRect(UWorld* InWorld, const FVector& Center, const FMatrix& LocalToWorld, FVector2D const& Rect, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld)
 {
 	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, true);
@@ -831,10 +860,6 @@ void ULexUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 void ULexUIManagerWorldSubsystem::PostInitialize()
 {
 	Super::PostInitialize();
-	auto PrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(this->GetWorld());
-	check(PrefabManager);
-	PrefabManager->OnBeginDeserializeSession.AddUObject(this, &ULexUIManagerWorldSubsystem::BeginPrefabSystemProcessing);
-	PrefabManager->OnEndDeserializeSession.AddUObject(this, &ULexUIManagerWorldSubsystem::EndPrefabSystemProcessing);
 	FWorldDelegates::OnWorldPreSendAllEndOfFrameUpdates.AddUObject(this, &ULexUIManagerWorldSubsystem::OnWorldPreSendAllEndOfFrameUpdates);
 }
 void ULexUIManagerWorldSubsystem::Deinitialize()
@@ -982,28 +1007,14 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 
 #if WITH_EDITOR
 	int ScreenSpaceOverlayCanvasCount = 0;
-	for (auto& WidgetPresenter : AllWidgetPresenterArray)
+	for (auto& Canvas : AllCanvasArray)
 	{
-		if (!WidgetPresenter.IsValid())continue;
-		//for runtime
-		if (auto Canvas = WidgetPresenter->GetLoadedCanvas())
+		if (!Canvas.IsValid())continue;
+		if (!Canvas->IsRootCanvas())continue;
+		if (Canvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
 		{
-			if (Canvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
-			{
-				ScreenSpaceOverlayCanvasCount++;
-			}
+			ScreenSpaceOverlayCanvasCount++;
 		}
-#if WITH_EDITOR
-		else
-			//for editor
-			if (auto EditorCanvas = WidgetPresenter->GetRootCanvasForEditor())
-			{
-				if (EditorCanvas->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
-				{
-					ScreenSpaceOverlayCanvasCount++;
-				}
-			}
-#endif		
 	}
 	if (ScreenSpaceOverlayCanvasCount > 1)
 	{
@@ -1025,28 +1036,12 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 	//update draw-call
 	{
 		auto UpdateCanvas = [this](ELexRenderMode RenderMode) {
-			for (auto& WidgetPresenter : AllWidgetPresenterArray)
+			for (auto& Canvas : AllCanvasArray)
 			{
-				if (!WidgetPresenter.IsValid())continue;
-				//for runtime
-				if (auto Canvas = WidgetPresenter->GetLoadedCanvas())
-				{
-					if (Canvas->GetRenderMode() == RenderMode)
-					{
-						Canvas->UpdateRootCanvas();
-					}
-				}
-#if WITH_EDITOR
-				else
-					//for editor
-					if (auto EditorCanvas = WidgetPresenter->GetRootCanvasForEditor())
-					{
-						if (EditorCanvas->GetRenderMode() == RenderMode)
-						{
-							EditorCanvas->UpdateRootCanvas();
-						}
-					}
-#endif
+				if (!Canvas.IsValid())continue;
+				if (!Canvas->IsRootCanvas())continue;
+				if (Canvas->GetActualRenderMode() != RenderMode)continue;
+				Canvas->UpdateRootCanvas();
 			}
 		};
 		UpdateCanvas(ELexRenderMode::ScreenSpaceOverlay);
@@ -1089,8 +1084,10 @@ void ULexUIManagerWorldSubsystem::DrawHelperGizmo()
 					bool bIsScreenSpace = false;
 					if (bIsGameWorld)
 					{
-						auto RenderCanvas = Widget->GetRenderCanvas();
-						bIsScreenSpace = RenderCanvas->IsRenderToScreenSpace() || RenderCanvas->IsRenderToRenderTarget();
+						if (auto RenderCanvas = Widget->GetRenderCanvas())
+						{
+							bIsScreenSpace = RenderCanvas->IsRenderToScreenSpace() || RenderCanvas->IsRenderToRenderTarget();
+						}
 					}
 					LexUIManager->DrawFrameOnWidget(Widget, bIsScreenSpace);
 
@@ -1101,14 +1098,11 @@ void ULexUIManagerWorldSubsystem::DrawHelperGizmo()
 				}
 			};
 			auto bIsGameWorld = this->GetWorld()->IsGameWorld();
-			for (auto WidgetPresenter : AllWidgetPresenterArray)
+			for (auto& Canvas : AllCanvasArray)
 			{
-				//for runtime
-				LOCAL::ForEachWidget(this, WidgetPresenter->GetLoadedWidget(), bIsGameWorld);
-#if WITH_EDITOR
-				//for editor
-				LOCAL::ForEachWidget(this, WidgetPresenter->GetRootWidgetForEditor(), bIsGameWorld);
-#endif
+				if (!Canvas.IsValid())continue;
+				if (!Canvas->IsRootCanvas())continue;
+				LOCAL::ForEachWidget(this, Canvas->GetWidget(), bIsGameWorld);
 			}
 		}
 	}
@@ -1141,65 +1135,18 @@ void ULexUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 	//update draw-call
 	{
 		auto UpdateCanvas = [this](ELexRenderMode RenderMode) {
-			for (auto& WidgetPresenter : AllWidgetPresenterArray)
+			for (auto& Canvas : AllCanvasArray)
 			{
-				if (!WidgetPresenter.IsValid())continue;
-				//for runtime
-				if (auto Canvas = WidgetPresenter->GetLoadedCanvas())
-				{
-					if (Canvas->GetRenderMode() == RenderMode)
-					{
-						Canvas->UpdateDrawCallBatchData();
-					}
-				}
-#if WITH_EDITOR
-				else
-					//for editor
-					if (auto EditorCanvas = WidgetPresenter->GetRootCanvasForEditor())
-					{
-						if (EditorCanvas->GetRenderMode() == RenderMode)
-						{
-							EditorCanvas->UpdateDrawCallBatchData();
-						}
-					}
-#endif
+				if (!Canvas.IsValid())continue;
+				if (!Canvas->IsRootCanvas())continue;
+				if (Canvas->GetRenderMode() != RenderMode)continue;
+				Canvas->UpdateDrawCallBatchData();
 			}
 		};
 		UpdateCanvas(ELexRenderMode::ScreenSpaceOverlay);
 		UpdateCanvas(ELexRenderMode::WorldSpace);
 		UpdateCanvas(ELexRenderMode::WorldSpace_LexUI);
 		UpdateCanvas(ELexRenderMode::RenderTarget);
-	}
-}
-
-void ULexUIManagerWorldSubsystem::AddLexUIBehaviourForLifecycleEvent(ULexUIBehaviour* InComp)
-{
-	if (IsValid(InComp))
-	{
-		if (auto Instance = GetInstance(InComp->GetWorld()))
-		{
-			auto SessionId = ULexUIPrefabWorldSubsystem::GetInstance(InComp->GetWorld())->GetPrefabSystemSessionIdForWidget(InComp->GetWidget());
-			if (SessionId.IsValid())//processing by prefab system, collect for further operation
-			{
-				if (auto ArrayPtr = Instance->LexUIBehaviours_PrefabSystemProcessing.Find(SessionId))
-				{
-					auto& CompArray = ArrayPtr->LexUIBehaviourArray;
-#if !UE_BUILD_SHIPPING
-					if (CompArray.Contains(InComp))
-					{
-						UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-						FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
-						return;
-					}
-#endif
-					CompArray.Add(InComp);
-				}
-			}
-			else//not processed by prefab system, just do immediately
-			{
-				Instance->ProcessLexUILifecycleEvent(InComp);
-			}
-		}
 	}
 }
 
@@ -1343,6 +1290,20 @@ void ULexUIManagerWorldSubsystem::UnregisterLexUICultureChangedEvent(TScriptInte
 	}
 }
 
+TArray<ULexCanvas*> ULexUIManagerWorldSubsystem::GetCanvasArrayByRenderMode(ELexRenderMode RenderMode) const
+{
+	TArray<ULexCanvas*> CanvasArray;
+	for (auto& Canvas : AllCanvasArray)
+	{
+		if (!Canvas.IsValid())continue;
+		if (Canvas->GetActualRenderMode() == RenderMode)
+		{
+			CanvasArray.Add(Canvas.Get());
+		}
+	}
+	return CanvasArray;
+}
+
 #if WITH_EDITOR
 void ULexUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 {
@@ -1356,93 +1317,80 @@ void ULexUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 			}
 		}
 		auto Instance = InstanceItem;
-		for (auto& WidgetPresenter : Instance->AllWidgetPresenterArray)
+		for (auto& Canvas : Instance->AllCanvasArray)
 		{
-			if (auto Widget = WidgetPresenter->GetLoadedWidget())
+			if (!Canvas.IsValid())continue;
+			if (!Canvas->IsRootCanvas())continue;
+			if (auto Widget = Canvas->GetWidget())
 			{
 				Widget->EnsureDataForRebuild();
 				Widget->MarkCanvasUpdate(true);
 			}
-#if WITH_EDITOR
-			else
-				//for editor
-				if (auto EditorWidget = WidgetPresenter->GetRootWidgetForEditor())
-				{
-					EditorWidget->EnsureDataForRebuild();
-					EditorWidget->MarkCanvasUpdate(true);
-				}
-#endif
 		}
 	}
 }
 
 #endif
 
-void ULexUIManagerWorldSubsystem::AddWidgetPresenter(ULexWidgetPresenterComponent* InWidgetPresenter)
+void ULexUIManagerWorldSubsystem::AddCanvas(ULexCanvas* InCanvas)
 {
-	if (auto Instance = GetInstance(InWidgetPresenter->GetWorld()))
+	if (auto Instance = GetInstance(InCanvas->GetWorld()))
 	{
 #if !UE_BUILD_SHIPPING
-		if (Instance->AllWidgetPresenterArray.Contains(InWidgetPresenter))
+		if (Instance->AllCanvasArray.Contains(InCanvas))
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
 		}
 #endif
-		Instance->AllWidgetPresenterArray.AddUnique(InWidgetPresenter);
+		Instance->AllCanvasArray.AddUnique(InCanvas);
 	}
 }
 
-void ULexUIManagerWorldSubsystem::RemoveWidgetPresenter(ULexWidgetPresenterComponent* InWidgetPresenter)
+void ULexUIManagerWorldSubsystem::RemoveCanvas(ULexCanvas* InCanvas)
 {
-	if (auto Instance = GetInstance(InWidgetPresenter->GetWorld()))
+	if (auto Instance = GetInstance(InCanvas->GetWorld()))
 	{
 #if !UE_BUILD_SHIPPING
-		if (!Instance->AllWidgetPresenterArray.Contains(InWidgetPresenter))
+		if (!Instance->AllCanvasArray.Contains(InCanvas))
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
 		}
 #endif
-		Instance->AllWidgetPresenterArray.RemoveSingle(InWidgetPresenter);
+		Instance->AllCanvasArray.RemoveSingle(InCanvas);
 	}
 }
 
-TArray<ULexCanvas*> ULexUIManagerWorldSubsystem::GetRootCanvasArray(ELexRenderMode RenderMode)const
+void ULexUIManagerWorldSubsystem::AddWidget(ULexWidget* InWidget)
 {
-	TArray<ULexCanvas*> CanvasArray;
-	for (auto& WidgetPresenter : AllWidgetPresenterArray)
+	if (auto Instance = GetInstance(InWidget->GetWorld()))
 	{
-		if (!WidgetPresenter.IsValid())continue;
-		if (auto Canvas = WidgetPresenter->GetLoadedCanvas())
+#if !UE_BUILD_SHIPPING
+		if (Instance->AllWidgetArray.Contains(InWidget))
 		{
-			if (Canvas->GetRenderMode() == RenderMode)
-			{
-				CanvasArray.Add(Canvas);
-			}
+			UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+			FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
 		}
-	}
-	return CanvasArray;
-}
-
-#if WITH_EDITOR
-TArray<ULexCanvas*> ULexUIManagerWorldSubsystem::GetEditorRootCanvasArray(ELexRenderMode RenderMode) const
-{
-	TArray<ULexCanvas*> CanvasArray;
-	for (auto& WidgetPresenter : AllWidgetPresenterArray)
-	{
-		if (!WidgetPresenter.IsValid())continue;
-		if (auto Canvas = WidgetPresenter->GetRootCanvasForEditor())
-		{
-			if (Canvas->GetRenderMode() == RenderMode)
-			{
-				CanvasArray.Add(Canvas);
-			}
-		}
-	}
-	return CanvasArray;
-}
 #endif
+		Instance->AllWidgetArray.AddUnique(InWidget);
+	}
+}
+
+void ULexUIManagerWorldSubsystem::RemoveWidget(ULexWidget* InWidget)
+{
+	if (auto Instance = GetInstance(InWidget->GetWorld()))
+	{
+#if !UE_BUILD_SHIPPING
+		if (!Instance->AllWidgetArray.Contains(InWidget))
+		{
+			UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+			FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
+		}
+#endif
+		Instance->AllWidgetArray.RemoveSingle(InWidget);
+	}
+}
 
 TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> ULexUIManagerWorldSubsystem::GetViewExtension(UWorld* InWorld, bool InCreateIfNotExist)
 {
@@ -1545,71 +1493,6 @@ void ULexUIManagerWorldSubsystem::AddEventSystem(ULexEventSystem* InEventSystem)
 void ULexUIManagerWorldSubsystem::RemoveEventSystem(ULexEventSystem* InEventSystem)
 {
 	MapUserIndexToEventSystem.Remove(InEventSystem->GetUserIndex());
-}
-
-void ULexUIManagerWorldSubsystem::ProcessLexUILifecycleEvent(ULexUIBehaviour* InComp)
-{
-	if (InComp)
-	{
-		if (InComp->IsAllowToCallAwake())
-		{
-			if (!InComp->bIsAwakeCalled)
-			{
-				InComp->Call_Awake();
-			}
-			if (InComp->GetWidget()->GetWidgetActiveInHierarchy())
-			{
-				if (!InComp->bIsEnableCalled)
-				{
-					InComp->Call_OnEnable();
-				}
-			}
-		}
-	}
-}
-void ULexUIManagerWorldSubsystem::BeginPrefabSystemProcessing(const FGuid& InSessionId)
-{
-	FLexUIBehaviourArrayContainer Container;
-	LexUIBehaviours_PrefabSystemProcessing.Add(InSessionId, Container);
-}
-void ULexUIManagerWorldSubsystem::EndPrefabSystemProcessing(const FGuid& InSessionId)
-{
-	if (auto ArrayPtr = LexUIBehaviours_PrefabSystemProcessing.Find(InSessionId))
-	{
-		auto& LateFunctions = ArrayPtr->Functions;
-		for (auto& Function : LateFunctions)
-		{
-			Function();
-		}
-
-		auto& LexUIBehaviourArray = ArrayPtr->LexUIBehaviourArray;
-		auto Count = LexUIBehaviourArray.Num();
-		for (int i = 0; i < Count; i++)
-		{
-			auto& Item = LexUIBehaviourArray[i];
-			if (Item.IsValid())
-			{
-				ProcessLexUILifecycleEvent(Item.Get());
-			}
-#if !UE_BUILD_SHIPPING
-			if (LexUIBehaviourArray.Num() != Count)
-			{
-				UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			}
-#endif
-		}
-
-		LexUIBehaviours_PrefabSystemProcessing.Remove(InSessionId);
-	}
-}
-void ULexUIManagerWorldSubsystem::AddFunctionForPrefabSystemExecutionBeforeAwake(ULexWidget* InPrefabWidget, const TFunction<void()>& InFunction)
-{
-	auto SessionId = ULexUIPrefabWorldSubsystem::GetInstance(InPrefabWidget->GetWorld())->GetPrefabSystemSessionIdForWidget(InPrefabWidget);
-	if (SessionId.IsValid())
-	{
-		auto& Container = LexUIBehaviours_PrefabSystemProcessing[SessionId];
-		Container.Functions.Add(InFunction);
-	}
 }
 
 #undef LOCTEXT_NAMESPACE

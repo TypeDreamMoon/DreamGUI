@@ -125,10 +125,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
 		TObjectPtr<ULexWidget> DragWidget = nullptr;
 
-	ELexUIEventFireType EnterComponentEventFireType = ELexUIEventFireType::TargetActorAndAllItsComponents;
-	ELexUIEventFireType PressComponentEventFireType = ELexUIEventFireType::TargetActorAndAllItsComponents;
-	ELexUIEventFireType DragComponentEventFireType = ELexUIEventFireType::TargetActorAndAllItsComponents;
-
 	bool bIsUpFiredAtCurrentFrame = false;//PointerUp event is called at current frame?
 	bool bIsExitFiredAtCurrentFrame = false;//PointerExit event is called at current frame?
 	bool bIsEndDragFiredAtCurrentFrame = false;//EndDrag event is called at current frame?
@@ -193,7 +189,6 @@ struct FLexUIHitResult
 struct FLexUIHitResultContainer
 {
 	FLexUIHitResult HitResult;
-	ELexUIEventFireType EventFireType = ELexUIEventFireType::TargetActorAndAllItsComponents;
 
 	FVector RayOrigin = FVector(0, 0, 0), RayDirection = FVector(1, 0, 0), RayEnd = FVector(1, 0, 0);
 

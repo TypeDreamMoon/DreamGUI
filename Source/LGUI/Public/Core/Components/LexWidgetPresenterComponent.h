@@ -65,14 +65,6 @@ protected:
 private:
 	UPROPERTY()
 	FString OverallVersionMD5;
-public:
-	UPROPERTY(Transient)
-	ULexCanvas* RootCanvasForEditor;
-	UPROPERTY(Transient)
-	ULexWidget* RootWidgetForEditor;
-	void CreateWidgetAndCanvasForEditor();
-	ULexCanvas* GetRootCanvasForEditor()const{return RootCanvasForEditor;}
-	ULexWidget* GetRootWidgetForEditor()const{return RootWidgetForEditor;}
 #endif
 public:
 	UFUNCTION(BlueprintCallable, Category=LGUI)

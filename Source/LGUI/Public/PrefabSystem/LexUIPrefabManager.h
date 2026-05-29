@@ -43,18 +43,4 @@ public:
 	void EndPrefabSystemProcessingWidget(const FGuid& InSessionId);
 	void AddWidgetForPrefabSystem(ULexWidget* InWidget, const FGuid& InSessionId);
 	void RemoveWidgetForPrefabSystem(ULexWidget* InWidget);
-	FGuid GetPrefabSystemSessionIdForWidget(ULexWidget* InWidget);
-
-	/**
-	 * Tell if PrefabSystem is deserializing the actor, can use this function in BeginPlay, if this return true then means properties are not ready yet, then you should use ILGUIPrefabInterface and implement Awake instead of BeginPlay.
-	 * PrefabSystem is deserializing actor during LoadPrefab or DuplicateActor.
-	 * (This static version function is for Blueprint easily use).
-	 */
-	UFUNCTION(BlueprintPure, BlueprintCallable, Category = "LGUI", meta=(WorldContext = "WorldContextObject"))
-		static bool IsLexUIPrefabSystemProcessingWidget(UObject* WorldContextObject, ULexWidget* InWidget);
-	/**
-	 * Tell if PrefabSystem is deserializing the actor, can use this function in BeginPlay, if this return true then means properties are not ready yet, then you should use ILGUIPrefabInterface and implement Awake instead of BeginPlay.
-	 * PrefabSystem is deserializing actor during LoadPrefab or DuplicateActor.
-	 */
-	bool IsPrefabSystemProcessingWidget(ULexWidget* InWidget);
 };

@@ -29,47 +29,16 @@ ULexWidgetPresenterComponent::ULexWidgetPresenterComponent()
 void ULexWidgetPresenterComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	if (IsValid(LoadedWidget) && !LoadedWidget->HasBegunPlay())
-	{
-		struct LOCAL
-		{
-			static void BeginPlayRecursive(ULexWidget* Widget)
-			{
-				Widget->BeginPlay();
-				for (auto Child : Widget->GetChildren())
-				{
-					BeginPlayRecursive(Child);
-				}
-			}
-		};
-		LOCAL::BeginPlayRecursive(LoadedWidget.Get());
-	}
 }
 
 void ULexWidgetPresenterComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
-	struct LOCAL
-	{
-		static void EndPlayRecursive(ULexWidget* Widget)
-		{
-			Widget->EndPlay();
-			for (auto Child : Widget->GetChildren())
-			{
-				EndPlayRecursive(Child);
-			}
-		}
-	};
-	if (IsValid(LoadedWidget))
-	{
-		LOCAL::EndPlayRecursive(LoadedWidget.Get());
-	}
 }
 
 void ULexWidgetPresenterComponent::OnRegister()
 {
 	Super::OnRegister();
-	ULexUIManagerWorldSubsystem::AddWidgetPresenter(this);
 	LoadPrefab();//load prefab when OnRegister in edit mode
 }
 
@@ -94,25 +63,6 @@ void ULexWidgetPresenterComponent::OnUnregister()
 			LoadedWidget = nullptr;
 		}
 	}
-	else
-	{
-		struct LOCAL
-		{
-			static void UnregisterRecursive(ULexWidget* Widget)
-			{
-				Widget->OnUnregister();
-				for (auto Child : Widget->GetChildren())
-				{
-					UnregisterRecursive(Child);
-				}
-			}
-		};
-		if (IsValid(LoadedWidget))
-		{
-			LOCAL::UnregisterRecursive(LoadedWidget.Get());
-		}
-	}
-	ULexUIManagerWorldSubsystem::RemoveWidgetPresenter(this);
 }
 
 void ULexWidgetPresenterComponent::PostLoad()
@@ -202,12 +152,13 @@ void ULexWidgetPresenterComponent::LoadPrefab()
 	}
 	if (IsValid(WidgetPrefab))
 	{
-		LoadedWidget = WidgetPrefab->LoadPrefab(this->GetWorld(), this, nullptr);
+		LoadedWidget = WidgetPrefab->LoadPrefab(this->GetWorld(), nullptr);
 		if (auto Canvas = LoadedWidget->GetComponent<ULexCanvas>())
 		{
 			LoadedWidget->RemoveComponent(Canvas);
 		}
 		RootCanvas = LoadedWidget->AddComponentByTemplate<ULexCanvas>(CanvasTemplate);
+		RootCanvas->AttachToSceneComponent(this);
 		LoadedWidget->CalculateObjectToWorldTransform(true);
 #if WITH_EDITOR
 		TArray<ULexWidget*> AllLoadedWidgets;
@@ -429,15 +380,6 @@ void ULexWidgetPresenterComponent::CheckPrefabVersion()
 	}
 }
 
-void ULexWidgetPresenterComponent::CreateWidgetAndCanvasForEditor()
-{
-	RootWidgetForEditor = NewObject<ULexWidget>(this, FName("[RootAgent]"));
-	RootWidgetForEditor->SetSizeDelta(FVector2D(1920, 1080));
-	RootWidgetForEditor->SetDisplayName(TEXT("[RootAgent]"));
-	RootWidgetForEditor->OnRegister();
-	RootCanvasForEditor = RootWidgetForEditor->AddComponent<ULexCanvas>();
-}
-
 #endif
 
 void ULexWidgetPresenterComponent::SetPrefab(ULexUIPrefab* Value)
@@ -453,7 +395,7 @@ UUINavigationInputSelectionHandler* ULexWidgetPresenterComponent::GetNavigationS
 {
 	if (!NavigationSelection.IsValid())
 	{
-		if (auto Widget = NavigationSelectionPrefab->LoadPrefab(this->GetWorld(), this, this->LoadedWidget.Get()))
+		if (auto Widget = NavigationSelectionPrefab->LoadPrefab(this->GetWorld(), this->LoadedWidget.Get()))
 		{
 			NavigationSelection = Widget->GetComponent<UUINavigationInputSelectionHandler>();
 		}

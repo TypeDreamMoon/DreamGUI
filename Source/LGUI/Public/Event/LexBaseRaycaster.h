@@ -37,8 +37,6 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, Category = LGUI)
 		int32 PointerID = INDEX_NONE;
-	UPROPERTY(EditAnywhere, Category = LGUI)
-		ELexUIEventFireType EventFireType = ELexUIEventFireType::TargetActorAndAllItsComponents;
 	
 	FVector CurrentRayOrigin = FVector::ZeroVector, CurrentRayDirection = FVector(1, 0, 0);
 	float CurrentRayLength = 0.0f;
@@ -58,8 +56,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	int32 GetPointerID()const { return PointerID; }
-	UFUNCTION(BlueprintCallable, Category = LGUI)
-	ELexUIEventFireType GetEventFireType()const { return EventFireType; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	virtual bool GetAffectByGamePause()const { return true; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)

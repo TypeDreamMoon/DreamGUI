@@ -14,7 +14,19 @@ ULexUIBehaviour::ULexUIBehaviour()
 
 void ULexUIBehaviour::BeginPlay()
 {
-	ULexUIManagerWorldSubsystem::AddLexUIBehaviourForLifecycleEvent(this);
+	auto Widget = this->GetWidget();
+	check(Widget);
+	if (!this->bIsAwakeCalled)
+	{
+		this->Call_Awake();
+	}
+	if (Widget->GetWidgetActiveInHierarchy())
+	{
+		if (!this->bIsEnableCalled)
+		{
+			this->Call_OnEnable();
+		}
+	}
 }
 void ULexUIBehaviour::EndPlay()
 {
@@ -100,15 +112,6 @@ void ULexUIBehaviour::SetCanExecuteUpdate(bool Value)
 			}
 		}
 	}
-}
-
-bool ULexUIBehaviour::IsAllowToCallAwake() const
-{
-	if (auto Widget = GetWidget())
-	{
-		return Widget->GetWidgetActiveInHierarchy();
-	}
-	return true;
 }
 
 void ULexUIBehaviour::OnEnable()
@@ -215,6 +218,7 @@ void ULexUIBehaviour::Call_OnEnable()
 
 void ULexUIBehaviour::Call_OnDisable()
 {
+	if (!this->GetWorld())return;
 #if WITH_EDITOR
 	if (!this->GetWorld()->IsGameWorld())//edit mode
 	{
@@ -240,7 +244,10 @@ void ULexUIBehaviour::Call_OnDisable()
 	}
 	else
 	{
-		ULexUIManagerWorldSubsystem::RemoveLexUIBehavioursFromUpdate(this);
+		if (bCanExecuteUpdate)
+		{
+			ULexUIManagerWorldSubsystem::RemoveLexUIBehavioursFromUpdate(this);
+		}
 	}
 }
 

@@ -4,7 +4,6 @@
 
 #include "ThumbnailHelpers.h"
 
-class ULexWidgetPresenterComponent;
 class ULexWidget;
 class ULexUIPrefab;
 
@@ -20,10 +19,10 @@ protected:
 	void SpawnPreviewActor();
 	void GetBoundsRecursive(ULexWidget* RootWidget, FBoxSphereBounds& OutBounds)const;
 private:
-	void ClearOldActors();
+	void ClearOldWidgets();
 private:
 	int32 NumStartingActors;
-	TWeakObjectPtr<ULexWidgetPresenterComponent> PresenterComponent;
+	TWeakObjectPtr<ULexWidget> RootAgentWidget;
 	TWeakObjectPtr<ULexUIPrefab> CurrentPrefab;
 	FText CachedPrefabContent;
 	FBoxSphereBounds PreviewBounds;

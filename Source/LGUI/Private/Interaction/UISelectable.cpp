@@ -327,9 +327,9 @@ bool UUISelectable::CheckNavigationSelectionState()
 	{
 		if (auto Widget = GetWidget())
 		{
-			if (auto WidgetRootActor = Widget->GetWidgetPresenterComponent())
+			if (auto WidgetRootActor = Widget->GetAttachedRootSceneComponent())
 			{
-				NavigationSelection = WidgetRootActor->GetNavigationSelection();
+				// NavigationSelection = WidgetRootActor->GetNavigationSelection();
 			}
 		}
 	}
@@ -371,7 +371,7 @@ bool UUISelectable::OnPointerDown_Implementation(ULexPointerEventData* EventData
 	ApplyPointerSelectionState(false);
 	if (auto eventSystemInstance = ULexEventSystem::GetLexEventSystemInstance(this, IsValid(EventData) ? EventData->UserIndex : 0))
 	{
-		eventSystemInstance->SetSelectWidget(GetWidget(), EventData, EventData->EnterComponentEventFireType);
+		eventSystemInstance->SetSelectWidget(GetWidget(), EventData);
 	}
 	return AllowEventBubbleUp;
 }

@@ -30,7 +30,6 @@ namespace LexUIPrefabSystem
 			return nullptr;
 		}
 
-		bool bIsEditorOrRuntime = true;
 #if !WITH_EDITOR
 		bIsEditorOrRuntime = false;
 #endif
@@ -269,6 +268,11 @@ namespace LexUIPrefabSystem
 				Widget->SetParentBeforeRegister(ParentWidget);
 			}
 		}
+		//attach root actor's parent
+		if (Parent)
+		{
+			CreatedRootWidget->SetParent(Parent, false);
+		}
 
 #if LGUIPREFAB_LOG_DETAIL_TIME
 		Time = FDateTime::Now();
@@ -288,34 +292,12 @@ namespace LexUIPrefabSystem
 				Widget->OnRegister();
 			}
 		}
-
-		//attach root actor's parent
-		if (Parent)
-		{
-			CreatedRootWidget->SetParent(Parent, false);
-		}
-		if (!bIsSubPrefab)//need to do this in root actor and it will propagate to children. If do this in subprefab and parent prefab override transform data on subprefab's actor, then transform goes wrong
-		{
-			CreatedRootWidget->CalculateObjectToWorldTransform(true);
-		}
+		
 		if (ReplaceTransform)
 		{
 			CreatedRootWidget->SetRelativeLocationAndRotation(InLocation, InRotation);
 			CreatedRootWidget->SetRelativeScale(InScale);
 		}
-
-#if WITH_EDITOR
-		if (!bIsSubPrefab)
-		{
-			if (bIsEditorOrRuntime)
-			{
-				for (auto& Widget : AllWidgets)
-				{
-					Widget->CalculateTransformFromAnchor();
-				}
-			}
-		}
-#endif
 
 		if (OnSubPrefabFinishDeserializeFunction != nullptr)
 		{

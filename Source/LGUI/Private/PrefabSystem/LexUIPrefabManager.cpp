@@ -39,33 +39,5 @@ void ULexUIPrefabWorldSubsystem::RemoveWidgetForPrefabSystem(ULexWidget* InWidge
 {
 	AllActors_PrefabSystemProcessing.Remove(InWidget);
 }
-FGuid ULexUIPrefabWorldSubsystem::GetPrefabSystemSessionIdForWidget(ULexWidget* InWidget)
-{
-	if (auto FoundPtr = AllActors_PrefabSystemProcessing.Find(InWidget))
-	{
-		return *FoundPtr;
-	}
-	return FGuid();
-}
-
-bool ULexUIPrefabWorldSubsystem::IsLexUIPrefabSystemProcessingWidget(UObject* WorldContextObject, ULexWidget* InWidget)
-{
-	if (auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull))
-	{
-		if (auto PrefabManager = ULexUIPrefabWorldSubsystem::GetInstance(World))
-		{
-			if (PrefabManager->IsPrefabSystemProcessingWidget(InWidget))
-			{
-				return true;
-			}
-		}
-	}
-	return false;
-}
-bool ULexUIPrefabWorldSubsystem::IsPrefabSystemProcessingWidget(ULexWidget* InWidget)
-{
-	return AllActors_PrefabSystemProcessing.Contains(InWidget);
-}
-
 
 #undef LOCTEXT_NAMESPACE

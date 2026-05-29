@@ -15,7 +15,6 @@
 #include "Editor.h"
 #include "LexWidgetEditorHierarchyView.h"
 #include "Core/LexUIManager.h"
-#include "Core/Components/LexWidgetPresenterComponent.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
 #include "Framework/Commands/GenericCommands.h"
@@ -103,7 +102,7 @@ bool FLexUIPrefabEditor::WidgetIsRootAgent(ULexWidget* InWidget)
 {
 	for (auto Instance : PrefabEditorInstanceCollection)
 	{
-		if (InWidget == Instance->GetPreviewScene()->GetWidgetPresenter()->GetRootWidgetForEditor())
+		if (InWidget == Instance->GetPreviewScene()->GetRootAgent())
 		{
 			return true;
 		}
@@ -384,7 +383,7 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 	InitAssetEditor(Mode, InitToolkitHost, PrefabEditorAppName, StandaloneDefaultLayout, true, true, PrefabBeingEdited);
 
 	// After opening a prefab, broadcast event to LexUIPrefabSequencerEditor
-	FLexUIEditorTools::OnEditingPrefabChanged.Broadcast(GetPreviewScene()->GetWidgetPresenter()->GetRootWidgetForEditor());
+	FLexUIEditorTools::OnEditingPrefabChanged.Broadcast(GetPreviewScene()->GetRootAgent());
 }
 
 void FLexUIPrefabEditor::GetInitialViewSetting(FVector& OutLocation, FRotator& OutRotation, FVector& OutOrbitLocation, ELevelViewportType& OutViewType)
@@ -414,7 +413,7 @@ void FLexUIPrefabEditor::GetInitialViewSetting(FVector& OutLocation, FRotator& O
 
 ULexWidget* FLexUIPrefabEditor::GetRootAgentWidget()
 {
-	return GetPreviewScene()->GetWidgetPresenter()->GetRootWidgetForEditor();
+	return GetPreviewScene()->GetRootAgent();
 }
 
 ULexWidget* FLexUIPrefabEditor::GetLoadedRootWidget()
@@ -451,10 +450,9 @@ void FLexUIPrefabEditor::SaveEditorState()
 	PrefabBeingEdited->PrefabDataForPrefabEditor.ViewRotation = ViewTransform.GetRotation();
 	PrefabBeingEdited->PrefabDataForPrefabEditor.ViewOrbitLocation = ViewTransform.GetLookAt();
 	PrefabBeingEdited->PrefabDataForPrefabEditor.ViewportType = ViewportPtr->GetViewportClient()->GetViewportType();
-	auto WidgetPresenter = GetPreviewScene()->GetWidgetPresenter();
-	auto RootAgentWidget = WidgetPresenter->GetRootWidgetForEditor();
+	auto RootAgentWidget = GetPreviewScene()->GetRootAgent();
 	PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasSize = FIntPoint(RootAgentWidget->GetWidth(), RootAgentWidget->GetHeight());
-	auto RootCanvas = WidgetPresenter->GetRootCanvasForEditor();
+	auto RootCanvas = RootAgentWidget->GetComponent<ULexCanvas>();
 	PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasRenderMode = (uint8)RootCanvas->GetRenderMode();
 	PrefabBeingEdited->PrefabDataForPrefabEditor.ViewMode = ViewportPtr->GetViewportClient()->GetViewMode();
 
@@ -882,7 +880,7 @@ FReply FLexUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent&
 					FMessageDialog::Open(EAppMsgType::Ok, MsgText);
 					return FReply::Unhandled();
 				}
-				if (CurrentSelectedWidget == GetPreviewScene()->GetWidgetPresenter()->GetRootWidgetForEditor())
+				if (CurrentSelectedWidget == GetPreviewScene()->GetRootAgent())
 				{
 					auto MsgText = FText::Format(LOCTEXT("Error_RootCannotBeParentNode", "{0} cannot be parent actor of child prefab, please choose another actor."), FText::FromString(FLexUIPrefabInstanceScene::RootAgentActorName));
 					FMessageDialog::Open(EAppMsgType::Ok, MsgText);

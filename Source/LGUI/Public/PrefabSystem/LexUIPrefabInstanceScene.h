@@ -3,11 +3,10 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "LexUIPrefabScene.h"
+#include "Core/Components/LexWidget.h"
 
 #if WITH_EDITOR
 
-class ULexWidgetPresenterComponent;
-class ULexWidget;
 class UStaticMeshComponent;
 class ULexUIPrefab;
 class AActor;
@@ -21,11 +20,10 @@ public:
 	
 	static const FString RootAgentActorName;
 	ULexWidget* GetParentForLoadPrefab(ULexUIPrefab* InPrefab);
-	ULexWidgetPresenterComponent* GetWidgetPresenter()const { return WidgetPresenter; }
 	void SetSkyCubeVisibility(bool bVisible);
+	ULexWidget* GetRootAgent()const { return RootAgentWidget.Get(); }
 private:
-
-	ULexWidgetPresenterComponent* WidgetPresenter = nullptr;
+	TStrongObjectPtr<ULexWidget> RootAgentWidget = nullptr;
 	UStaticMeshComponent* SkySphereComponent = nullptr;
 };
 #endif

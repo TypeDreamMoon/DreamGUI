@@ -98,7 +98,6 @@ bool ULexUIRenderTargetInteraction::LineTrace(FLexUIHitResultContainer& OutHitRe
 		{
 			FLexUIHitResultContainer LexHitResult;
 			LexHitResult.HitResult = HitResultArray[0];
-			LexHitResult.EventFireType = this->GetEventFireType();
 			LexHitResult.Raycaster = this;
 			LexHitResult.RayOrigin = OutRayOrigin;
 			LexHitResult.RayDirection = OutRayDirection;
@@ -165,7 +164,7 @@ bool ULexUIRenderTargetInteraction::OnPointerScroll_Implementation(ULexPointerEv
 		if (inAxisValue != FVector2D::ZeroVector || PointerEventData->ScrollAxisValue != inAxisValue)
 		{
 			PointerEventData->ScrollAxisValue = inAxisValue;
-			ULexEventSystem::ExecuteEvent_OnPointerScroll(PointerEventData->EnterWidget, PointerEventData, PointerEventData->EnterComponentEventFireType, true);
+			ULexEventSystem::ExecuteEvent_OnPointerScroll(PointerEventData->EnterWidget, PointerEventData, true);
 		}
 	}
 	return bAllowEventBubbleUp;

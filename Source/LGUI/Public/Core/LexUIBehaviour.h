@@ -67,7 +67,6 @@ private:
 	mutable TObjectPtr<ULexWidget> CacheWidget = nullptr;
 protected:
 
-	bool IsAllowToCallAwake()const;
 	/**
 	 * This function is always called before any Start functions and also after a prefab is loaded.
 	 * This is a good replacement for BeginPlay in LexUI's Prefab workflow. Because Awake will execute after all prefab serialization and object reference is done.

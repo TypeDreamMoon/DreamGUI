@@ -403,7 +403,7 @@ void UUIRecyclableScrollView::InitializeOnDataSource()
         if (!IsValid(CellTemplatePrefab))return;
         if (WorkingCellTemplateType != EUIRecyclableScrollViewCellTemplateType::Prefab || !WorkingCellTemplate.IsValid())//WorkingCellTemplate is already created by prefab
         {
-            auto CellTemplateInstance = CellTemplatePrefab->LoadPrefab(this->GetWorld(), this->GetOuter(), Content.Get());
+            auto CellTemplateInstance = CellTemplatePrefab->LoadPrefab(this->GetWorld(), Content.Get());
             WorkingCellTemplate = CellTemplateInstance;
         }
         if (!WorkingCellTemplate.IsValid())

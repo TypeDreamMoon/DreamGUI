@@ -21,7 +21,7 @@ protected:
 	
 	bool LineTrace(ULexPointerEventData* InPointerEventData, FLexUIHitResultContainer& OutLexHitResult);
 	TArray<FLexUIHitResultContainer> MultiHitResult;//temp array for hit result
-	static void ProcessPointerEnterExit(ULexEventSystem* eventSystem, ULexPointerEventData* pointerEventData, ULexWidget* oldObj, ULexWidget* newObj, ELexUIEventFireType enterFireType);
+	static void ProcessPointerEnterExit(ULexEventSystem* eventSystem, ULexPointerEventData* pointerEventData, ULexWidget* oldObj, ULexWidget* newObj);
 	/** find a common root actor of two actors. return nullptr if no common root */
 	static ULexWidget* FindCommonRoot(ULexWidget* A, ULexWidget* B);
 
@@ -29,8 +29,8 @@ protected:
 	void ProcessInputForNavigation();
 	void ProcessInputForNavigation(ULexPointerEventData* InPointerEventData);
 	void ClearEventByID(int pointerID);
-	static bool CanHandleInterface(ULexWidget* targetComp, UClass* targetInterfaceClass, ELexUIEventFireType eventFireType);
-	static ULexWidget* GetEventHandle(ULexWidget* targetComp, UClass* targetInterfaceClass, ELexUIEventFireType eventFireType);
+	static bool CanHandleInterface(ULexWidget* targetComp, UClass* targetInterfaceClass);
+	static ULexWidget* GetEventHandle(ULexWidget* targetComp, UClass* targetInterfaceClass);
 	static void DeselectIfSelectionChanged(ULexEventSystem* eventSystem, ULexWidget* currentPressed, ULexBaseEventData* EventData);
 public:
 	virtual void ClearEvent()override;

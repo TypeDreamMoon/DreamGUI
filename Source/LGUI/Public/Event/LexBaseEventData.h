@@ -7,18 +7,6 @@
 
 class ULexWidget;
 
-/** event execute type */
-UENUM(BlueprintType, Category = LGUI)
-enum class ELexUIEventFireType :uint8
-{
-	/** event will call on target actor and all components of the actor */
-	TargetActorAndAllItsComponents,
-	/** event will call on all components of target actor */
-	OnlyTargetComponent,
-	/** event will call only on target actor */
-	OnlyTargetActor,
-};
-
 UENUM(BlueprintType, Category = LGUI)
 enum class ELexUIPointerEventType :uint8
 {
@@ -61,8 +49,6 @@ public:
 	/** event type*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
 		ELexUIPointerEventType EventType = ELexUIPointerEventType::Click;
-
-	ELexUIEventFireType SelectedComponentEventFireType = ELexUIEventFireType::TargetActorAndAllItsComponents;
 
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "ToString (LexIEventData)", CompactNodeTitle = ".", BlueprintAutocast), Category = "LGUI") virtual FString ToString()const 
 	{

@@ -192,7 +192,7 @@ public:
 	ULexCanvas();
 protected:
 	virtual void BeginPlay() override;
-	virtual void EndPlay()override;
+	virtual void Awake() override;
 #if WITH_EDITOR
 public:
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
@@ -251,8 +251,11 @@ public:
 	/** is this the root canvas in hierarchy */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	bool IsRootCanvas()const;
+	/** return root SceneComponent if the root canvas is attached to a SceneComponent */
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-	ULexWidgetPresenterComponent* GetWidgetPresenterComponent() const;
+	USceneComponent* GetAttachedRootSceneComponent() const;
+	/** Only set on root canvas */
+	void AttachToSceneComponent(USceneComponent* InSceneComp) const;
 
 	bool IsRenderToScreenSpace()const;
 	bool IsRenderToRenderTarget()const;
@@ -742,7 +745,7 @@ private:
 	TSharedPtr<FLexUIDrawCall> DrawCallAsChildCanvas = nullptr;//DrawCall that represent this canvas when the canvas is render as child.
 
 	UPROPERTY(Transient)
-	mutable TWeakObjectPtr<ULexWidgetPresenterComponent> WidgetPresenterComponent = nullptr;
+	mutable TWeakObjectPtr<USceneComponent> AttachedRootSceneComponent = nullptr;
 	
 	//clip data is stored in root canvas
 	TArray<TSharedPtr<FLexUIClipData>> ClipDataList;

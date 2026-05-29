@@ -6,7 +6,6 @@
 #include "Tickable.h"
 #include "LexUIManager.generated.h"
 
-class ULexWidgetPresenterComponent;
 struct FLexUIHelperGizmoRenderParameter;
 struct FLexUIHelperGizmoVertex;
 class ULexEventSystem;
@@ -132,7 +131,9 @@ private:
 #endif
 
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-	TArray<TWeakObjectPtr<ULexWidgetPresenterComponent>> AllWidgetPresenterArray;
+	TArray<TWeakObjectPtr<ULexCanvas>> AllCanvasArray;
+	UPROPERTY(VisibleAnywhere, Category = "LGUI")
+	TArray<TWeakObjectPtr<ULexWidget>> AllWidgetArray;
 
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<ULexBaseRaycaster>> AllRaycasterArray;
@@ -165,19 +166,19 @@ public:
 	static void RefreshAllUI(UWorld* InWorld = nullptr);
 	FSimpleMulticastDelegate EventOnOutlineChanged;
 #endif
-	static void AddWidgetPresenter(ULexWidgetPresenterComponent* InWidgetPresenter);
-	static void RemoveWidgetPresenter(ULexWidgetPresenterComponent* InWidgetPresenter);
+	static void AddCanvas(ULexCanvas* InCanvas);
+	static void RemoveCanvas(ULexCanvas* InCanvas);
+
+	static void AddWidget(ULexWidget* InWidget);
+	static void RemoveWidget(ULexWidget* InWidget);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	static void RegisterLexUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	static void UnregisterLexUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem);
 
-	TArray<ULexCanvas*> GetRootCanvasArray(ELexRenderMode RenderMode)const;
-	const TArray<TWeakObjectPtr<ULexWidgetPresenterComponent>>& GetAllWidgetPresenterArray()const{return AllWidgetPresenterArray;}
-#if WITH_EDITOR
-	TArray<ULexCanvas*> GetEditorRootCanvasArray(ELexRenderMode RenderMode)const;
-#endif
+	TArray<ULexCanvas*> GetCanvasArrayByRenderMode(ELexRenderMode RenderMode)const;
+	const TArray<TWeakObjectPtr<ULexCanvas>>& GetAllCanvasArray()const{return AllCanvasArray;}
 
 	static TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> GetViewExtension(UWorld* InWorld, bool InCreateIfNotExist);
 
@@ -222,28 +223,11 @@ private:
 	FEditorViewportClient* CacheViewportClient = nullptr;
 	void OnEndOfFrame();
 	void OnEnginePreExit();
+	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
+	virtual void OnWorldEndPlay(UWorld& InWorld) override;
 #endif
-private:
-	struct FLexUIBehaviourArrayContainer
-	{
-		TArray<TWeakObjectPtr<ULexUIBehaviour>> LexUIBehaviourArray;
-		/** Functions that wait for prefab serialization complete then execute */
-		TArray<TFunction<void()>> Functions;
-	};
-	/** Map prefab-deserialize-section-id to LexUIBehaviour array */
-	TMap<FGuid, FLexUIBehaviourArrayContainer> LexUIBehaviours_PrefabSystemProcessing;
-	void ProcessLexUILifecycleEvent(ULexUIBehaviour* InComp);
 public:
-	void BeginPrefabSystemProcessing(const FGuid& InSessionId);
-	void EndPrefabSystemProcessing(const FGuid& InSessionId);
-	/**
-	 * Add a function that execute after prefab system serialization and before Awake called
-	 * @param	InPrefabWidget	Current prefab system processing actor
-	 * @param	InFunction		Function to call after prefab system serialization complete and before Awake called
-	 */
-	void AddFunctionForPrefabSystemExecutionBeforeAwake(ULexWidget* InPrefabWidget, const TFunction<void()>& InFunction);
 
-	static void AddLexUIBehaviourForLifecycleEvent(ULexUIBehaviour* InComp);
 	static void AddLexUIBehavioursForUpdate(ULexUIBehaviour* InComp);
 	static void RemoveLexUIBehavioursFromUpdate(ULexUIBehaviour* InComp);
 	static void AddLexUIBehavioursForStart(ULexUIBehaviour* InComp);

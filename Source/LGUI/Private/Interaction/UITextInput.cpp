@@ -1424,7 +1424,7 @@ void UUITextInput::ActivateInput(ULexPointerEventData* EventData)
 		{
 			if (IsValid(EventData))
 			{
-				EventSystem->SetSelectWidget(Widget, EventData, EventData->PressComponentEventFireType);
+				EventSystem->SetSelectWidget(Widget, EventData);
 			}
 			else
 			{

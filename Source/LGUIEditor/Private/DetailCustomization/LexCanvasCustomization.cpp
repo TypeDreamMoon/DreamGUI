@@ -56,17 +56,16 @@ void FLexCanvasCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		{
 			if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(World))
 			{
-				TArray<ULexCanvas*> CanvasArray;
-				auto WidgetPresenter = TargetScriptArray[0]->GetWidgetPresenterComponent();
-				if (WidgetPresenter->GetRootWidgetForEditor())//contains WidgetForEditor, that means for edit mode
+				auto CanvasArray = LexUIManager->GetCanvasArrayByRenderMode(ELexRenderMode::ScreenSpaceOverlay);
+				TArray<ULexCanvas*> RootCanvasArray;
+				for (auto& Canvas : CanvasArray)
 				{
-					CanvasArray = LexUIManager->GetEditorRootCanvasArray(ELexRenderMode::ScreenSpaceOverlay);
+					if (Canvas && Canvas->IsRootCanvas())
+					{
+						RootCanvasArray.Add(Canvas);
+					}
 				}
-				else
-				{
-					CanvasArray = LexUIManager->GetRootCanvasArray(ELexRenderMode::ScreenSpaceOverlay);
-				}
-				int ScreenSpaceRootCanvasCount = CanvasArray.Num();
+				int ScreenSpaceRootCanvasCount = RootCanvasArray.Num();
 				if (ScreenSpaceRootCanvasCount > 1)
 				{
 					auto errMsg = FText::Format(LOCTEXT("MultipleScreenSpaceLexCanvasError", "[{0}].{1} Detect multiple LexCanvas rendered with ScreenSpaceOverlay mode, this is not allowed! There should be only one ScreenSpace UI in a world!")
@@ -442,21 +441,7 @@ FText FLexCanvasCustomization::GetDrawcallInfo()const
 	auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(TargetScriptArray[0]->GetWorld());
 	if (TargetScriptArray.Num() > 0 && TargetScriptArray[0].IsValid() && LexUIManager)
 	{
-		TArray<ULexCanvas*> RootCanvasArray;
-		auto WidgetPresenter = TargetScriptArray[0]->GetWidgetPresenterComponent();
-		if (WidgetPresenter->GetRootWidgetForEditor())//contains WidgetForEditor, that means for edit mode
-		{
-			RootCanvasArray = LexUIManager->GetEditorRootCanvasArray(TargetScriptArray[0]->GetRenderMode());
-		}
-		else
-		{
-			RootCanvasArray = LexUIManager->GetRootCanvasArray(TargetScriptArray[0]->GetRenderMode());
-		}
-		TArray<ULexCanvas*> CanvasArray;
-		for (auto Canvas : RootCanvasArray)
-		{
-			ULexCanvas::CollectChildrenCanvas(Canvas, CanvasArray, true);
-		}
+		auto CanvasArray = LexUIManager->GetCanvasArrayByRenderMode(TargetScriptArray[0]->GetRenderMode());
 		int AllDrawcallCount = 0;
 		for (auto& CanvasItem : CanvasArray)
 		{
@@ -504,21 +489,7 @@ FText FLexCanvasCustomization::GetDrawcallInfoTooltip()const
 
 	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(TargetScriptArray[0]->GetWorld()))
 	{
-		TArray<ULexCanvas*> RootCanvasArray;
-		auto WidgetPresenter = TargetScriptArray[0]->GetWidgetPresenterComponent();
-		if (WidgetPresenter->GetRootWidgetForEditor())//contains WidgetForEditor, that means for edit mode
-		{
-			RootCanvasArray = LexUIManager->GetEditorRootCanvasArray(TargetScriptArray[0]->GetRenderMode());
-		}
-		else
-		{
-			RootCanvasArray = LexUIManager->GetRootCanvasArray(TargetScriptArray[0]->GetRenderMode());
-		}
-		TArray<ULexCanvas*> CanvasArray;
-		for (auto Canvas : RootCanvasArray)
-		{
-			ULexCanvas::CollectChildrenCanvas(Canvas, CanvasArray, true);
-		}
+		auto CanvasArray = LexUIManager->GetCanvasArrayByRenderMode(TargetScriptArray[0]->GetRenderMode());
 		int AllDrawcallCount = 0;
 		for (auto& CanvasItem : CanvasArray)
 		{

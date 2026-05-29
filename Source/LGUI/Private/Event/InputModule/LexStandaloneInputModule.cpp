@@ -78,7 +78,7 @@ void ULexStandaloneInputModule::InputScroll(const FVector2D& InAxisValue)
 		if (InAxisValue != FVector2D::ZeroVector || EventData->ScrollAxisValue != InAxisValue)
 		{
 			EventData->ScrollAxisValue = InAxisValue;
-			EventSystem->CallOnPointerScroll(EventData->EnterWidget, EventData, EventData->EnterComponentEventFireType);
+			EventSystem->CallOnPointerScroll(EventData->EnterWidget, EventData);
 		}
 	}
 }

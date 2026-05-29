@@ -35,7 +35,6 @@ bool ULexPointerInputModule::LineTrace(ULexPointerEventData* InPointerEventData,
 			{
 				FLexUIHitResultContainer LexHitResult;
 				LexHitResult.HitResult = HitResultArray[0];
-				LexHitResult.EventFireType = RaycasterItem->GetEventFireType();
 				LexHitResult.Raycaster = RaycasterItem.Get();
 				LexHitResult.RayOrigin = RayOrigin;
 				LexHitResult.RayDirection = RayDir;
@@ -91,7 +90,7 @@ bool ULexPointerInputModule::LineTrace(ULexPointerEventData* InPointerEventData,
 
 //@todo: these logs is just for editor testing, remove them when ready
 #define LOG_ENTER_EXIT 0
-void ULexPointerInputModule::ProcessPointerEnterExit(ULexEventSystem* eventSystem, ULexPointerEventData* EventData, ULexWidget* oldObj, ULexWidget* newObj, ELexUIEventFireType enterFireType)
+void ULexPointerInputModule::ProcessPointerEnterExit(ULexEventSystem* eventSystem, ULexPointerEventData* EventData, ULexWidget* oldObj, ULexWidget* newObj)
 {
 	if (oldObj == newObj)return;
 	if (IsValid(oldObj) && IsValid(newObj))
@@ -111,11 +110,11 @@ void ULexPointerInputModule::ProcessPointerEnterExit(ULexEventSystem* eventSyste
 			{
 				if (eventSystem == nullptr)
 				{
-					ULexEventSystem::ExecuteEvent_OnPointerExit(EventData->EnterWidgetStack[i], EventData, EventData->EnterComponentEventFireType, false);
+					ULexEventSystem::ExecuteEvent_OnPointerExit(EventData->EnterWidgetStack[i], EventData, false);
 				}
 				else
 				{
-					eventSystem->CallOnPointerExit(EventData->EnterWidgetStack[i], EventData, EventData->EnterComponentEventFireType);
+					eventSystem->CallOnPointerExit(EventData->EnterWidgetStack[i], EventData);
 				}
 			}
 #if LOG_ENTER_EXIT
@@ -130,7 +129,6 @@ void ULexPointerInputModule::ProcessPointerEnterExit(ULexEventSystem* eventSyste
 #endif
 		//enter new
 		EventData->EnterWidget = newObj;
-		EventData->EnterComponentEventFireType = enterFireType;
 		auto enterObjectActor = newObj;
 		if (commonRoot != enterObjectActor)
 		{
@@ -140,11 +138,11 @@ void ULexPointerInputModule::ProcessPointerEnterExit(ULexEventSystem* eventSyste
 			int insertIndex = EventData->EnterWidgetStack.Num();
 			if (eventSystem == nullptr)
 			{
-				ULexEventSystem::ExecuteEvent_OnPointerEnter(newObj, EventData, EventData->EnterComponentEventFireType, false);
+				ULexEventSystem::ExecuteEvent_OnPointerEnter(newObj, EventData, false);
 			}
 			else
 			{
-				eventSystem->CallOnPointerEnter(newObj, EventData, EventData->EnterComponentEventFireType);
+				eventSystem->CallOnPointerEnter(newObj, EventData);
 			}
 			EventData->HighlightWidgetForNavigation = newObj;
 			EventData->EnterWidgetStack.Add(newObj);
@@ -160,11 +158,11 @@ void ULexPointerInputModule::ProcessPointerEnterExit(ULexEventSystem* eventSyste
 				}
 				if (eventSystem == nullptr)
 				{
-					ULexEventSystem::ExecuteEvent_OnPointerEnter(enterObjectActor, EventData, EventData->EnterComponentEventFireType, false);
+					ULexEventSystem::ExecuteEvent_OnPointerEnter(enterObjectActor, EventData, false);
 				}
 				else
 				{
-					eventSystem->CallOnPointerEnter(enterObjectActor, EventData, EventData->EnterComponentEventFireType);
+					eventSystem->CallOnPointerEnter(enterObjectActor, EventData);
 				}
 				EventData->EnterWidgetStack.Insert(enterObjectActor, insertIndex);
 #if LOG_ENTER_EXIT
@@ -193,11 +191,11 @@ void ULexPointerInputModule::ProcessPointerEnterExit(ULexEventSystem* eventSyste
 					{
 						if (eventSystem == nullptr)
 						{
-							ULexEventSystem::ExecuteEvent_OnPointerExit(EventData->EnterWidgetStack[i], EventData, EventData->EnterComponentEventFireType, false);
+							ULexEventSystem::ExecuteEvent_OnPointerExit(EventData->EnterWidgetStack[i], EventData, false);
 						}
 						else
 						{
-							eventSystem->CallOnPointerExit(EventData->EnterWidgetStack[i], EventData, EventData->EnterComponentEventFireType);
+							eventSystem->CallOnPointerExit(EventData->EnterWidgetStack[i], EventData);
 						}
 					}
 #if LOG_ENTER_EXIT
@@ -221,18 +219,17 @@ void ULexPointerInputModule::ProcessPointerEnterExit(ULexEventSystem* eventSyste
 				auto enterObjectActor = newObj;
 				int insertIndex = EventData->EnterWidgetStack.Num();
 				EventData->EnterWidget = newObj;
-				EventData->EnterComponentEventFireType = enterFireType;
 #if LOG_ENTER_EXIT
 				UE_LOG(LGUI, Error, TEXT("-----begin enter 333"));
 				UE_LOG(LGUI, Error, TEXT("	%s"), *(enterObjectActor->GetActorLabel()));
 #endif
 				if (eventSystem == nullptr)
 				{
-					ULexEventSystem::ExecuteEvent_OnPointerEnter(newObj, EventData, EventData->EnterComponentEventFireType, false);
+					ULexEventSystem::ExecuteEvent_OnPointerEnter(newObj, EventData, false);
 				}
 				else
 				{
-					eventSystem->CallOnPointerEnter(newObj, EventData, EventData->EnterComponentEventFireType);
+					eventSystem->CallOnPointerEnter(newObj, EventData);
 				}
 				EventData->HighlightWidgetForNavigation = newObj;
 				EventData->EnterWidgetStack.Add(newObj);
@@ -244,11 +241,11 @@ void ULexPointerInputModule::ProcessPointerEnterExit(ULexEventSystem* eventSyste
 #endif
 					if (eventSystem == nullptr)
 					{
-						ULexEventSystem::ExecuteEvent_OnPointerEnter(enterObjectActor, EventData, EventData->EnterComponentEventFireType, false);
+						ULexEventSystem::ExecuteEvent_OnPointerEnter(enterObjectActor, EventData, false);
 					}
 					else
 					{
-						eventSystem->CallOnPointerEnter(enterObjectActor, EventData, EventData->EnterComponentEventFireType);
+						eventSystem->CallOnPointerEnter(enterObjectActor, EventData);
 					}
 					EventData->EnterWidgetStack.Insert(enterObjectActor, insertIndex);
 					enterObjectActor = enterObjectActor->GetParent();
@@ -296,14 +293,14 @@ void ULexPointerInputModule::ProcessPointerEvent(ULexEventSystem* eventSystem, U
 		EventData->WorldNormal = OutHitResult.Normal;
 		if (EventData->EnterWidget != nowHitComponent)//hit different object
 		{
-			ProcessPointerEnterExit(eventSystem, EventData, EventData->EnterWidget, nowHitComponent, LexHitResult.EventFireType);
+			ProcessPointerEnterExit(eventSystem, EventData, EventData->EnterWidget, nowHitComponent);
 		}
 	}
 	else
 	{
 		if (IsValid(EventData->EnterWidget) || EventData->EnterWidgetStack.Num() > 0)//prev object
 		{
-			ProcessPointerEnterExit(eventSystem, EventData, EventData->EnterWidget, nullptr, LexHitResult.EventFireType);
+			ProcessPointerEnterExit(eventSystem, EventData, EventData->EnterWidget, nullptr);
 		}
 	}
 
@@ -316,11 +313,11 @@ void ULexPointerInputModule::ProcessPointerEvent(ULexEventSystem* eventSystem, U
 			{
 				if (eventSystem == nullptr)
 				{
-					ULexEventSystem::ExecuteEvent_OnPointerDrag(EventData->DragWidget, EventData, EventData->DragComponentEventFireType, true);
+					ULexEventSystem::ExecuteEvent_OnPointerDrag(EventData->DragWidget, EventData, true);
 				}
 				else
 				{
-					eventSystem->CallOnPointerDrag(EventData->DragWidget, EventData, EventData->DragComponentEventFireType);
+					eventSystem->CallOnPointerDrag(EventData->DragWidget, EventData);
 				}
 
 				OutHitResult.Distance = EventData->PressDistance;
@@ -341,14 +338,13 @@ void ULexPointerInputModule::ProcessPointerEvent(ULexEventSystem* eventSystem, U
 					{
 						EventData->bIsDragging = true;
 						EventData->DragWidget = EventData->PressWidget;
-						EventData->DragComponentEventFireType = EventData->PressComponentEventFireType;
 						if (eventSystem == nullptr)
 						{
-							ULexEventSystem::ExecuteEvent_OnPointerBeginDrag(EventData->DragWidget, EventData, EventData->DragComponentEventFireType, true);
+							ULexEventSystem::ExecuteEvent_OnPointerBeginDrag(EventData->DragWidget, EventData, true);
 						}
 						else
 						{
-							eventSystem->CallOnPointerBeginDrag(EventData->DragWidget, EventData, EventData->DragComponentEventFireType);
+							eventSystem->CallOnPointerBeginDrag(EventData->DragWidget, EventData);
 						}
 					}
 				}
@@ -379,15 +375,14 @@ void ULexPointerInputModule::ProcessPointerEvent(ULexEventSystem* eventSystem, U
 					EventData->PressRaycaster = LexHitResult.Raycaster;
 					EventData->PressWorldToLocalTransform = EventData->EnterWidget->GetWorldTransform().Inverse();
 					EventData->PressWidget = EventData->EnterWidget;
-					EventData->PressComponentEventFireType = EventData->EnterComponentEventFireType;
 					DeselectIfSelectionChanged(eventSystem, EventData->PressWidget, EventData);
 					if (eventSystem == nullptr)
 					{
-						ULexEventSystem::ExecuteEvent_OnPointerDown(EventData->PressWidget, EventData, EventData->PressComponentEventFireType, true);
+						ULexEventSystem::ExecuteEvent_OnPointerDown(EventData->PressWidget, EventData, true);
 					}
 					else
 					{
-						eventSystem->CallOnPointerDown(EventData->PressWidget, EventData, EventData->PressComponentEventFireType);
+						eventSystem->CallOnPointerDown(EventData->PressWidget, EventData);
 					}
 				}
 			}
@@ -404,11 +399,11 @@ void ULexPointerInputModule::ProcessPointerEvent(ULexEventSystem* eventSystem, U
 						EventData->bIsUpFiredAtCurrentFrame = true;
 						if (eventSystem == nullptr)
 						{
-							ULexEventSystem::ExecuteEvent_OnPointerUp(EventData->PressWidget, EventData, EventData->PressComponentEventFireType, true);
+							ULexEventSystem::ExecuteEvent_OnPointerUp(EventData->PressWidget, EventData, true);
 						}
 						else
 						{
-							eventSystem->CallOnPointerUp(EventData->PressWidget, EventData, EventData->PressComponentEventFireType);
+							eventSystem->CallOnPointerUp(EventData->PressWidget, EventData);
 						}
 					}
 					EventData->PressWidget = nullptr;
@@ -420,11 +415,11 @@ void ULexPointerInputModule::ProcessPointerEvent(ULexEventSystem* eventSystem, U
 					{
 						if (eventSystem == nullptr)
 						{
-							ULexEventSystem::ExecuteEvent_OnPointerDragDrop(EventData->EnterWidget, EventData, EventData->EnterComponentEventFireType, true);
+							ULexEventSystem::ExecuteEvent_OnPointerDragDrop(EventData->EnterWidget, EventData, true);
 						}
 						else
 						{
-							eventSystem->CallOnPointerDragDrop(EventData->EnterWidget, EventData, EventData->EnterComponentEventFireType);
+							eventSystem->CallOnPointerDragDrop(EventData->EnterWidget, EventData);
 						}
 					}
 				}
@@ -436,11 +431,11 @@ void ULexPointerInputModule::ProcessPointerEvent(ULexEventSystem* eventSystem, U
 						EventData->bIsEndDragFiredAtCurrentFrame = true;
 						if (eventSystem == nullptr)
 						{
-							ULexEventSystem::ExecuteEvent_OnPointerEndDrag(EventData->DragWidget, EventData, EventData->DragComponentEventFireType, true);
+							ULexEventSystem::ExecuteEvent_OnPointerEndDrag(EventData->DragWidget, EventData, true);
 						}
 						else
 						{
-							eventSystem->CallOnPointerEndDrag(EventData->DragWidget, EventData, EventData->DragComponentEventFireType);
+							eventSystem->CallOnPointerEndDrag(EventData->DragWidget, EventData);
 						}
 					}
 					EventData->DragWidget = nullptr;
@@ -455,21 +450,21 @@ void ULexPointerInputModule::ProcessPointerEvent(ULexEventSystem* eventSystem, U
 						EventData->bIsUpFiredAtCurrentFrame = true;
 						if (eventSystem == nullptr)
 						{
-							ULexEventSystem::ExecuteEvent_OnPointerUp(EventData->PressWidget, EventData, EventData->PressComponentEventFireType, true);
+							ULexEventSystem::ExecuteEvent_OnPointerUp(EventData->PressWidget, EventData, true);
 						}
 						else
 						{
-							eventSystem->CallOnPointerUp(EventData->PressWidget, EventData, EventData->PressComponentEventFireType);
+							eventSystem->CallOnPointerUp(EventData->PressWidget, EventData);
 						}
 					}
 					EventData->ClickTime = EventData->GetWorld()->GetTimeSeconds();
 					if (eventSystem == nullptr)
 					{
-						ULexEventSystem::ExecuteEvent_OnPointerClick(EventData->PressWidget, EventData, EventData->PressComponentEventFireType, true);
+						ULexEventSystem::ExecuteEvent_OnPointerClick(EventData->PressWidget, EventData, true);
 					}
 					else
 					{
-						eventSystem->CallOnPointerClick(EventData->PressWidget, EventData, EventData->PressComponentEventFireType);
+						eventSystem->CallOnPointerClick(EventData->PressWidget, EventData);
 					}
 					EventData->PressWidget = nullptr;
 				}
@@ -532,7 +527,6 @@ bool ULexPointerInputModule::Navigate(ELexUINavigationDirection InDirection, ULe
 		OutLexUIHitResult.HitResult.Location = OutLexUIHitResult.HitResult.Widget->GetWorldLocation();
 		OutLexUIHitResult.HitResult.Normal = OutLexUIHitResult.HitResult.Widget->GetWorldTransform().TransformVector(FVector(0, 0, 1));
 		OutLexUIHitResult.HitResult.Normal.Normalize();
-		OutLexUIHitResult.EventFireType = EventSystem->GetEventFireTypeForNavigation();
 		OutLexUIHitResult.Raycaster = nullptr;
 		OutLexUIHitResult.HoverArray.Reset();
 
@@ -571,7 +565,7 @@ void ULexPointerInputModule::ProcessInputForNavigation(ULexPointerEventData* Eve
 		ProcessPointerEvent(EventSystem.Get(), EventData, bSelectValid, LexUIHitResult, bResultHitSomething, HitResult);
 		if (bResultHitSomething)
 		{
-			EventSystem->SetSelectWidget(HitResult.Widget.Get(), EventData, EventSystem->GetEventFireTypeForNavigation());
+			EventSystem->SetSelectWidget(HitResult.Widget.Get(), EventData);
 		}
 
 		auto TempHitComp = HitResult.Widget.Get();
@@ -594,7 +588,7 @@ void ULexPointerInputModule::ClearEventByID(int pointerID)
 				EventData->bIsEndDragFiredAtCurrentFrame = true;
 				if (IsValid(EventData->DragWidget))
 				{
-					EventSystem->CallOnPointerEndDrag(EventData->DragWidget, EventData, EventData->DragComponentEventFireType);
+					EventSystem->CallOnPointerEndDrag(EventData->DragWidget, EventData);
 					EventData->DragWidget = nullptr;
 				}
 			}
@@ -607,14 +601,14 @@ void ULexPointerInputModule::ClearEventByID(int pointerID)
 			{
 				auto oldPressComponent = EventData->PressWidget;
 				EventData->PressWidget = nullptr;
-				EventSystem->CallOnPointerUp(oldPressComponent, EventData, EventData->PressComponentEventFireType);
+				EventSystem->CallOnPointerUp(oldPressComponent, EventData);
 			}
 		}
 		if (!EventData->bIsExitFiredAtCurrentFrame)
 		{
 			if (IsValid(EventData->EnterWidget) || EventData->EnterWidgetStack.Num() > 0)
 			{
-				ProcessPointerEnterExit(EventSystem.Get(), EventData, EventData->EnterWidget, nullptr, EventData->EnterComponentEventFireType);
+				ProcessPointerEnterExit(EventSystem.Get(), EventData, EventData->EnterWidget, nullptr);
 			}
 			EventData->bIsExitFiredAtCurrentFrame = true;
 		}
@@ -627,59 +621,29 @@ void ULexPointerInputModule::ClearEventByID(int pointerID)
 		{
 			if (IsValid(EventData->EnterWidget) || EventData->EnterWidgetStack.Num() > 0)
 			{
-				ProcessPointerEnterExit(EventSystem.Get(), EventData, EventData->EnterWidget, nullptr, EventData->EnterComponentEventFireType);
+				ProcessPointerEnterExit(EventSystem.Get(), EventData, EventData->EnterWidget, nullptr);
 			}
 			EventData->bIsExitFiredAtCurrentFrame = true;
 		}
 	}
 }
 
-bool ULexPointerInputModule::CanHandleInterface(ULexWidget* targetComp, UClass* targetInterfaceClass, ELexUIEventFireType eventFireType)
+bool ULexPointerInputModule::CanHandleInterface(ULexWidget* targetComp, UClass* targetInterfaceClass)
 {
 	bool canSelectPressedComponent = false;
-	switch (eventFireType)
+	auto components = targetComp->GetAllComponents();
+	for (auto item : components)
 	{
-	case ELexUIEventFireType::OnlyTargetActor:
-	{
-		if (targetComp->GetClass()->ImplementsInterface(targetInterfaceClass))
+		if (item->GetClass()->ImplementsInterface(targetInterfaceClass))
 		{
 			canSelectPressedComponent = true;
+			break;
 		}
-	}
-	break;
-	case ELexUIEventFireType::OnlyTargetComponent:
-	{
-		if (targetComp->GetClass()->ImplementsInterface(targetInterfaceClass))
-		{
-			canSelectPressedComponent = true;
-		}
-	}
-	break;
-	case ELexUIEventFireType::TargetActorAndAllItsComponents:
-	{
-		if (targetComp->GetClass()->ImplementsInterface(targetInterfaceClass))
-		{
-			canSelectPressedComponent = true;
-		}
-		if (!canSelectPressedComponent)
-		{
-			auto components = targetComp->GetAllComponents();
-			for (auto item : components)
-			{
-				if (item->GetClass()->ImplementsInterface(targetInterfaceClass))
-				{
-					canSelectPressedComponent = true;
-					break;
-				}
-			}
-		}
-	}
-	break;
 	}
 	return canSelectPressedComponent;
 }
 
-ULexWidget* ULexPointerInputModule::GetEventHandle(ULexWidget* targetComp, UClass* targetInterfaceClass, ELexUIEventFireType eventFireType)
+ULexWidget* ULexPointerInputModule::GetEventHandle(ULexWidget* targetComp, UClass* targetInterfaceClass)
 {
 	if (!IsValid(targetComp))
 	{
@@ -689,7 +653,7 @@ ULexWidget* ULexPointerInputModule::GetEventHandle(ULexWidget* targetComp, UClas
 	ULexWidget* rootComp = targetComp;
 	while (rootComp != nullptr)
 	{
-		if (CanHandleInterface(rootComp, targetInterfaceClass, eventFireType))
+		if (CanHandleInterface(rootComp, targetInterfaceClass))
 		{
 			return rootComp;
 		}
@@ -699,10 +663,10 @@ ULexWidget* ULexPointerInputModule::GetEventHandle(ULexWidget* targetComp, UClas
 }
 void ULexPointerInputModule::DeselectIfSelectionChanged(ULexEventSystem* eventSystem, ULexWidget* currentPressed, ULexBaseEventData* EventData)
 {
-	auto selectHandleComp = GetEventHandle(currentPressed, ULexPointerSelectDeselectInterface::StaticClass(), EventData->SelectedComponentEventFireType);
+	auto selectHandleComp = GetEventHandle(currentPressed, ULexPointerSelectDeselectInterface::StaticClass());
 	if (selectHandleComp != EventData->SelectedComponent)
 	{
-		ULexEventSystem::SetSelectWidget(eventSystem, nullptr, EventData, EventData->SelectedComponentEventFireType);
+		ULexEventSystem::SetSelectWidget(eventSystem, nullptr, EventData);
 	}
 }
 

@@ -473,7 +473,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	ULexCanvas* GetRootCanvas()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	ULexWidgetPresenterComponent* GetWidgetPresenterComponent()const;
+	USceneComponent* GetAttachedRootSceneComponent()const;
 
 	/** mark all dirty for UI element to update, include all children */
 	void MarkAllDirtyRecursive();
@@ -486,7 +486,7 @@ public:
 	
 	void MarkTransformChanged();
 	void MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged);
-	void MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged, bool InDiscardCache = true);
+	void MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged, bool InDiscardCache = true, bool InPropagateToChildren = true);
 	virtual void MarkCanvasUpdate(bool bRebuildDrawCall)const;
 
 private:
@@ -766,6 +766,7 @@ public:
 	/** return root Widget in hierarchy, could be null if not initialized yet. */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		ULexWidget* GetRootWidgetInHierarchy()const { return RootWidget.Get(); }
+	bool IsRootWidgetInHierarchy()const{return RootWidget.Get() == this;}
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	static void MarkLayoutForRebuild(const ULexWidget* InWidget);

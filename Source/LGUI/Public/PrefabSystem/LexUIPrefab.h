@@ -247,7 +247,7 @@ public:
 	 * @param SetRelativeTransformToIdentity Set created root actor's transform to zero after load.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "InCallbackBeforeAwake,SetRelativeTransformToIdentity", UnsafeDuringActorConstruction = "true", WorldContext = "WorldContextObject", AutoCreateRefTerm = "InCallbackBeforeAwake"), Category = LGUI)
-		ULexWidget* LoadPrefab(UObject* WorldContextObject, UObject* InOuter, ULexWidget* InParent, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake, bool SetRelativeTransformToIdentity = false);
+		ULexWidget* LoadPrefab(UObject* WorldContextObject, ULexWidget* InParent, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake, bool SetRelativeTransformToIdentity = false);
 	/**
 	 * LoadPrefab to create actor.
 	 * Awake function in LexUIBehaviour and LexUIPrefabInterface will be called right after LoadPrefab is done.
@@ -257,8 +257,8 @@ public:
 	 * @param Scale Set created root actor's scale after load.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "InCallbackBeforeAwake", UnsafeDuringActorConstruction = "true", WorldContext = "WorldContextObject", AutoCreateRefTerm = "InCallbackBeforeAwake"), Category = LGUI)
-		ULexWidget* LoadPrefabWithTransform(UObject* WorldContextObject, UObject* InOuter, ULexWidget* InParent, FVector Location, FRotator Rotation, FVector Scale, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake);
-	ULexWidget* LoadPrefabWithTransform(UObject* WorldContextObject, UObject* InOuter, ULexWidget* InParent, FVector Location, FQuat Rotation, FVector Scale, const TFunction<void(ULexWidget*)>& InCallbackBeforeAwake);
+		ULexWidget* LoadPrefabWithTransform(UObject* WorldContextObject, ULexWidget* InParent, FVector Location, FRotator Rotation, FVector Scale, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake);
+	ULexWidget* LoadPrefabWithTransform(UObject* WorldContextObject, ULexWidget* InParent, FVector Location, FQuat Rotation, FVector Scale, const TFunction<void(ULexWidget*)>& InCallbackBeforeAwake);
 	/**
 	 * LoadPrefab to create actor.
 	 * Awake function in LexUIBehaviour and LexUIPrefabInterface will be called right after LoadPrefab is done.
@@ -267,7 +267,7 @@ public:
 	 * @param InReplaceClassMap Replace source class to dest before load the prefab.
 	 */
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "InCallbackBeforeAwake", UnsafeDuringActorConstruction = "true", WorldContext = "WorldContextObject", AutoCreateRefTerm = "InCallbackBeforeAwake"), Category = LGUI)
-		ULexWidget* LoadPrefabWithReplacement(UObject* WorldContextObject, UObject* InOuter, ULexWidget* InParent, const TMap<UObject*, UObject*>& InReplaceAssetMap, const TMap<UClass*, UClass*>& InReplaceClassMap, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake);
+		ULexWidget* LoadPrefabWithReplacement(UObject* WorldContextObject, ULexWidget* InParent, const TMap<UObject*, UObject*>& InReplaceAssetMap, const TMap<UClass*, UClass*>& InReplaceClassMap, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake);
 	/**
 	 * LoadPrefab to create actor.
 	 * Awake function in LexUIBehaviour and LexUIPrefabInterface will be called right after LoadPrefab is done.
@@ -275,7 +275,7 @@ public:
 	 * @param InCallbackBeforeAwake This callback function will execute before Awake event, parameter "Actor" is the loaded root actor.
 	 * @param SetRelativeTransformToIdentity Set created root actor's transform to zero after load.
 	 */
-	ULexWidget* LoadPrefab(UWorld* InWorld, UObject* InOuter, ULexWidget* InParent, bool SetRelativeTransformToIdentity = false, const TFunction<void(ULexWidget*)>& InCallbackBeforeAwake = nullptr);
+	ULexWidget* LoadPrefab(UWorld* InWorld, ULexWidget* InParent, bool SetRelativeTransformToIdentity = false, const TFunction<void(ULexWidget*)>& InCallbackBeforeAwake = nullptr);
 	/**
 	 * LoadPrefab and keep reference of source objects.
 	 */
@@ -290,7 +290,6 @@ public:
 #endif
 private:
 #if WITH_EDITOR
-	TWeakObjectPtr<AActor> TempAgentActor;//actor for agent objects in preview world
 	void SetRootWidgetNameFromPrefab();
 public:
 	FLexUIPrefabInstanceScene* GetPrefabInstanceScene();
