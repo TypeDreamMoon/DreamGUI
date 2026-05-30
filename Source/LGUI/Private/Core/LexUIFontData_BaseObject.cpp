@@ -37,11 +37,11 @@ void ULexUIFontData_BaseObject::PostInitProperties()
 
 void ULexUIFontData_BaseObject::BeginDestroy()
 {
-	UObject::BeginDestroy();
 	if (IsValid(EmojiData))
 	{
 		EmojiData->OnDataChange.RemoveAll(this);
 	}
+	UObject::BeginDestroy();
 }
 
 #if WITH_EDITOR

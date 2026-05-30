@@ -37,7 +37,7 @@ public:
 	void ClearSelection();
 	void GetExpandWidgets(TSet<TWeakObjectPtr<ULexWidget>>& OutExpandWidgets);
 
-	TWeakObjectPtr<ULexWidget> DragingItem;
+	TWeakObjectPtr<ULexWidget> DraggingItem;
 private:
 	/** Rebuilds the tree structure based on the current filter options */
 	void RefreshTree();
@@ -90,10 +90,10 @@ protected:
 	TMap<ULexWidget*, bool> ExpansionMap;
 
 	/** Has a full refresh of the tree been requested?  This happens when the user is filtering the tree */
-	bool bRefreshRequested;
+	bool bRefreshRequested = true;
 	/** Is the tree in such a changed state that the whole widget needs rebuilding? */
-	bool bRebuildTreeRequested;
+	bool bRebuildTreeRequested = true;
 	/** Flag to ignore selections while the hierarchy view is updating the selection. */
-	bool bIsUpdatingSelection;
+	bool bIsUpdatingSelection = false;
 };
 

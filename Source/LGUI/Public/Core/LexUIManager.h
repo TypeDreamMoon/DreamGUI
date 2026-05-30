@@ -108,6 +108,9 @@ public:
 	virtual void PostInitialize()override;
 	virtual void Deinitialize()override;
 
+	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
+	virtual void OnWorldEndPlay(UWorld& InWorld) override;
+
 	virtual TStatId GetStatId() const override;
 	virtual bool IsTickableInEditor()const override{ return false; }//use Ticker in editor, because Ticker can also tick when drag vector2/3 value while normal tick can't
 	virtual void Tick(float DeltaTime)override;
@@ -179,6 +182,7 @@ public:
 
 	TArray<ULexCanvas*> GetCanvasArrayByRenderMode(ELexRenderMode RenderMode)const;
 	const TArray<TWeakObjectPtr<ULexCanvas>>& GetAllCanvasArray()const{return AllCanvasArray;}
+	const TArray<TObjectPtr<ULexWidget>>& GetAllWidgetArray()const{return AllWidgetArray;}
 
 	static TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> GetViewExtension(UWorld* InWorld, bool InCreateIfNotExist);
 
@@ -223,8 +227,6 @@ private:
 	FEditorViewportClient* CacheViewportClient = nullptr;
 	void OnEndOfFrame();
 	void OnEnginePreExit();
-	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
-	virtual void OnWorldEndPlay(UWorld& InWorld) override;
 #endif
 public:
 

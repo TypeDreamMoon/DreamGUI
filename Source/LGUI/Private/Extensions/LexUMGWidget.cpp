@@ -233,9 +233,8 @@ void ULexUMGWidget::OnUnregister()
 
 void ULexUMGWidget::BeginDestroy()
 {
-	Super::BeginDestroy();
-
 	ReleaseResources();
+	Super::BeginDestroy();
 }
 
 void ULexUMGWidget::ReleaseResources()

@@ -29,12 +29,12 @@ void ULexVisualPostProcess::BeginPlay()
 
 void ULexVisualPostProcess::BeginDestroy()
 {
-	Super::BeginDestroy();
 	ENQUEUE_RENDER_COMMAND(FLexPostProcess_ReleaseRenderProxy)
 			([RenderProxyPtr = RenderProxy](FRHICommandListImmediate& RHICmdList)
 				{
 					delete RenderProxyPtr;
 				});
+	Super::BeginDestroy();
 }
 
 void ULexVisualPostProcess::OnUnregister()

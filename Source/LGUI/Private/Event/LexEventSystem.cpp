@@ -82,11 +82,11 @@ void ULexEventSystem::EndPlay(const EEndPlayReason::Type EndPlayReason)
 }
 void ULexEventSystem::BeginDestroy()
 {
-	Super::BeginDestroy();
 	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
 	{
 		LexUIManager->RemoveEventSystem(this);
 	}
+	Super::BeginDestroy();
 }
 
 void ULexEventSystem::SetInputModule(ULexBaseInputModule* InputModule)

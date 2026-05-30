@@ -13,7 +13,7 @@ class USceneComponent;
  * You should use Awake/Start instead of BeginPlay, Update instead of Tick.
  * Awake execute order in prefab: higher in hierarchy will execute earlier, so scripts on root actor will execute the first.
  */
-UCLASS(ClassGroup = (LGUI), DefaultToInstanced, Abstract, Blueprintable, DisplayName = "Lex UI Behaviour")
+UCLASS(ClassGroup = (LGUI), Abstract, Blueprintable, DisplayName = "Lex UI Behaviour")
 class LGUI_API ULexUIBehaviour : public UObject
 {
 	GENERATED_BODY()

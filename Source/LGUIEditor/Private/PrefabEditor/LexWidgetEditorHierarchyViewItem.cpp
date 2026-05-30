@@ -609,7 +609,7 @@ TOptional<EItemDropZone> SLexWidgetEditorHierarchyViewItem::HandleCanAcceptDrop(
 	}
 	
 	const bool bIsDrop = false;
-	if (SupportDrop(HierarchyView.Pin()->DragingItem.Get(), Widget.Get(), DropZone))
+	if (SupportDrop(HierarchyView.Pin()->DraggingItem.Get(), Widget.Get(), DropZone))
 	{
 		auto Zone = ProcessHierarchyDragDrop(DragDropEvent, DropZone, bIsDrop, Manager.Pin(), Widget.Get());
 		//UE_LOG(LogTemp, Error, TEXT("HandleCanAcceptDrop, %s, zone:%s"), *Model->GetName(), *LOCAL_SLexWidgetDesignerHierarchyViewViewItem::PrintZone(Zone));
@@ -620,7 +620,7 @@ TOptional<EItemDropZone> SLexWidgetEditorHierarchyViewItem::HandleCanAcceptDrop(
 FReply SLexWidgetEditorHierarchyViewItem::HandleAcceptDrop(FDragDropEvent const& DragDropEvent, EItemDropZone DropZone, TWeakObjectPtr<ULexWidget> TargetItem)
 {
 	const bool bIsDrop = true;
-	if (SupportDrop(HierarchyView.Pin()->DragingItem.Get(), Widget.Get(), DropZone))
+	if (SupportDrop(HierarchyView.Pin()->DraggingItem.Get(), Widget.Get(), DropZone))
 	{
 		TOptional<EItemDropZone> Zone = ProcessHierarchyDragDrop(DragDropEvent, DropZone, bIsDrop, Manager.Pin(), Widget.Get());
 		//UE_LOG(LogTemp, Error, TEXT("HandleAcceptDrop, %s, zone:%s"), *Model->GetName(), *LOCAL_SLexWidgetDesignerHierarchyViewViewItem::PrintZone(Zone));
@@ -637,7 +637,7 @@ FReply SLexWidgetEditorHierarchyViewItem::HandleAcceptDrop(FDragDropEvent const&
 FReply SLexWidgetEditorHierarchyViewItem::HandleDragDetected(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
 	//UE_LOG(LogTemp, Error, TEXT("HandleDragDetected, %s"), *Model->GetName());
-	HierarchyView.Pin()->DragingItem = Widget;
+	HierarchyView.Pin()->DraggingItem = Widget;
 	TArray<ULexWidget*> DraggedItems;
 
 	// Dragging multiple items?

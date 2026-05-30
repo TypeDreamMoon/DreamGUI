@@ -60,14 +60,6 @@ void ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, ULex
 		
 		struct LOCAL
 		{
-			static void CollectCanvas(ULexCanvas* InCanvas, TArray<ULexCanvas*>& OutCanvasArray)
-			{
-				OutCanvasArray.Add(InCanvas);
-				for (auto& Child : InCanvas->GetChildrenCanvasArray())
-				{
-					CollectCanvas(Child.Get(), OutCanvasArray);
-				}
-			}
 			static void CollectVisualWidget(ULexCanvas* InCanvas, TArray<ULexVisual*>& OutVisualArray)
 			{
 				OutVisualArray.Append(InCanvas->GetVisualArray());
@@ -82,17 +74,6 @@ void ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, ULex
 				for (auto& Child : InCanvas->GetChildrenCanvasArray())
 				{
 					ForeachCanvas(Child.Get(), InFunction);
-				}
-			}
-			static void ForeachCanvas(ULexCanvas* InCanvas, ETraceTypeQuery InTraceChannel, TFunctionRef<void(ULexCanvas*)> InFunction)
-			{
-				if (InTraceChannel == InCanvas->GetTraceChannel())
-				{
-					InFunction(InCanvas);
-				}
-				for (auto& Child : InCanvas->GetChildrenCanvasArray())
-				{
-					ForeachCanvas(Child.Get(), InTraceChannel, InFunction);
 				}
 			}
 		};
@@ -145,14 +126,7 @@ void ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, ULex
 				}
 			}
 		};
-		// if (InOptionalTraceChannel.IsSet())
-		// {
-		// 	LOCAL::ForeachCanvas(InRootCanvas, InOptionalTraceChannel.GetValue(), TraceFunction);
-		// }
-		// else
-		{
-			LOCAL::ForeachCanvas(InRootCanvas, TraceFunction);
-		}
+		LOCAL::ForeachCanvas(InRootCanvas, TraceFunction);
 #endif
 		
 		if (OutHitResultArray.Num() > 0)

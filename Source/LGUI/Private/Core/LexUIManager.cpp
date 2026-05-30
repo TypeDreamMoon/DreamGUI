@@ -601,37 +601,6 @@ void ULexUIManagerWorldSubsystem::OnEnginePreExit()
 	}
 }
 
-void ULexUIManagerWorldSubsystem::OnWorldBeginPlay(UWorld& InWorld)
-{
-	Super::OnWorldBeginPlay(InWorld);
-	//normally BeginPlay is already called when LoadPrefab, but if World has not BeginPlay then this will work
-	for (int i = 0; i < AllWidgetArray.Num(); i++)
-	{
-		auto& Widget = AllWidgetArray[i];
-		if (!Widget->HasBegunPlay())
-		{
-			Widget->BeginPlay();
-		}
-	}
-}
-
-void ULexUIManagerWorldSubsystem::OnWorldEndPlay(UWorld& InWorld)
-{
-	Super::OnWorldEndPlay(InWorld);
-	for (int i = 0; i < AllWidgetArray.Num(); i++)
-	{
-		auto& Widget = AllWidgetArray[i];
-		if (Widget->HasRegistered())
-		{
-			Widget->OnUnregister();
-		}
-		if (Widget->HasBegunPlay())
-		{
-			Widget->EndPlay();
-		}
-	}
-}
-
 void ULexUIManagerWorldSubsystem::DrawDebugRect(UWorld* InWorld, const FVector& Center, const FMatrix& LocalToWorld, FVector2D const& Rect, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld)
 {
 	auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(InWorld, true);
@@ -864,8 +833,21 @@ void ULexUIManagerWorldSubsystem::PostInitialize()
 }
 void ULexUIManagerWorldSubsystem::Deinitialize()
 {
-	Super::Deinitialize();
 #if WITH_EDITOR
+	if (!this->GetWorld()->IsGameWorld())//edit mode should deinit here
+	{
+		auto CopiedWidgetArray = AllWidgetArray;//use a copied array, because when Widget.OnUnregister the AllWidgetArray will change
+		for (int i = 0; i < CopiedWidgetArray.Num(); i++)
+		{
+			auto& Widget = CopiedWidgetArray[i];
+			if (Widget->HasRegistered())
+			{
+				Widget->OnUnregister();
+			}
+			check(!Widget->HasBegunPlay());//edit mode should never begin play
+		}
+	}
+	
 	InstanceArray.Remove(this);
 	if (EditorTickDelegateHandle.IsValid())
 	{
@@ -886,6 +868,7 @@ void ULexUIManagerWorldSubsystem::Deinitialize()
 		FInternationalization::Get().OnCultureChanged().Remove(OnCultureChangedDelegateHandle);
 	}
 	FWorldDelegates::OnWorldPreSendAllEndOfFrameUpdates.RemoveAll(this);
+	Super::Deinitialize();
 }
 TStatId ULexUIManagerWorldSubsystem::GetStatId() const
 {
@@ -905,6 +888,43 @@ void ULexUIManagerWorldSubsystem::OnCultureChanged()
 ULexUIManagerWorldSubsystem* ULexUIManagerWorldSubsystem::GetInstance(UWorld* InWorld)
 {
 	return IsValid(InWorld) ? InWorld->GetSubsystem<ULexUIManagerWorldSubsystem>() : nullptr;
+}
+
+void ULexUIManagerWorldSubsystem::OnWorldBeginPlay(UWorld& InWorld)
+{
+	Super::OnWorldBeginPlay(InWorld);
+	//normally BeginPlay is already called when LoadPrefab, but if World has not BeginPlay then this will work
+	for (int i = 0; i < AllWidgetArray.Num(); i++)
+	{
+		auto& Widget = AllWidgetArray[i];
+		if (!Widget->HasBegunPlay())
+		{
+			Widget->BeginPlay();
+		}
+	}
+}
+
+void ULexUIManagerWorldSubsystem::OnWorldEndPlay(UWorld& InWorld)
+{
+#if WITH_EDITOR
+	if (this->GetWorld()->IsGameWorld())//game mode should deinit when EndPlay
+#endif
+	{
+		auto CopiedWidgetArray = AllWidgetArray;//use a copied array, because when Widget.OnUnregister the AllWidgetArray will change
+		for (int i = 0; i < CopiedWidgetArray.Num(); i++)
+		{
+			auto& Widget = CopiedWidgetArray[i];
+			if (Widget->HasRegistered())
+			{
+				Widget->OnUnregister();
+			}
+			if (Widget->HasBegunPlay())
+			{
+				Widget->EndPlay();
+			}
+		}
+	}
+	Super::OnWorldEndPlay(InWorld);
 }
 
 #if WITH_EDITOR

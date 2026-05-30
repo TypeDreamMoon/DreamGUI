@@ -174,16 +174,8 @@ void ULexImage::PostInitProperties()
 
 void ULexImage::BeginDestroy()
 {
+	check(!bHasAddToSprite);
 	Super::BeginDestroy();
-	
-	if (bHasAddToSprite)
-	{
-		if (auto LexSprite = Cast<ULexUISpriteData_BaseObject>(Brush.GetResourceObject()))
-		{
-			LexSprite->RemoveUISprite(this);
-			bHasAddToSprite = false;
-		}
-	}
 }
 
 void ULexImage::OnRegister()

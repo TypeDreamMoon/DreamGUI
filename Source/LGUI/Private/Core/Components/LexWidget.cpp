@@ -443,10 +443,11 @@ void ULexWidget::PostLoad()
 
 void ULexWidget::BeginDestroy()
 {
-	if (bHasBegunPlay)
+	if (bHasBegunPlay || bIsRegistered)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red
 			, FString::Printf(TEXT("ULexWidget %s is not properly destroyed! Please use DestroyWidget() to delete a LexWidget!"), *GetPathDisplayName()));
+		check(0);
 	}
 	Super::BeginDestroy();
 }
@@ -652,7 +653,6 @@ void ULexWidget::PreEditChange(FProperty* PropertyAboutToChange)
 				Visual->EndPlay();
 			}
 			Visual->Call_OnUnregister();
-			Visual->ConditionalBeginDestroy();
 		}
 	}
 	else if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutContainer))
@@ -664,14 +664,17 @@ void ULexWidget::PreEditChange(FProperty* PropertyAboutToChange)
 				LayoutContainer->EndPlay();
 			}
 			LayoutContainer->Call_OnUnregister();
-			LayoutContainer->ConditionalBeginDestroy();
 		}
 	}
 	else if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutSelf))
 	{
 		if (IsValid(LayoutSelf))
 		{
-			LayoutSelf->ConditionalBeginDestroy();
+			if (bHasBegunPlay)
+			{
+				LayoutSelf->EndPlay();
+			}
+			LayoutSelf->Call_OnUnregister();
 		}
 	}
 }

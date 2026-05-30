@@ -1305,10 +1305,13 @@ void ULexCanvas::UpdateDrawCallBatchData()
 	}
 
 	if (!UIMesh.IsValid())return;
-	
-	while (DrawCallProcessingRunnable->IsBatching())
+
+	if (!bAllowDropFrame)
 	{
-		FPlatformProcess::Sleep(0.001f);
+		while (DrawCallProcessingRunnable->IsBatching())
+		{
+			FPlatformProcess::Sleep(0.001f);
+		}
 	}
 
 	if (DrawCallProcessingRunnable->TryGetDrawCallData(CurrentDrawCallData))

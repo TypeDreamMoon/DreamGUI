@@ -359,6 +359,12 @@ protected:
 	TEnumAsByte<ETraceTypeQuery> TraceChannel = TraceTypeQuery1;
 
 	/**
+	 * Allow drop canvas frame when canvas draw-call take too much time. This may cause some delay for UI response, but can improve performance.
+	 */
+	UPROPERTY(EditAnywhere, Category = "LGUI", AdvancedDisplay)
+	bool bAllowDropFrame = false;
+
+	/**
 	 * LexCanvas create mesh for render UI elements, this property can give us opportunity to use custom type of mesh for render.
 	 * You can set "OwnerNoSee" "CastShadow" properties for your mesh.
 	 * @todo: override this property from parent canvas?

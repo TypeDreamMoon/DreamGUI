@@ -48,10 +48,10 @@ protected:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category=LexWidgetPresenter, meta=(ShowInnerProperties))
 	TObjectPtr<ULexCanvas> CanvasTemplate;
 	
-	UPROPERTY(VisibleInstanceOnly, Transient, BlueprintReadOnly, Category=LexWidgetPresenter)
-	TObjectPtr<ULexCanvas> RootCanvas;
-	UPROPERTY(VisibleInstanceOnly, Transient, BlueprintReadOnly, Category=LexWidgetPresenter)
-	TObjectPtr<ULexWidget> LoadedWidget;
+	UPROPERTY(Transient)
+	TWeakObjectPtr<ULexCanvas> RootCanvas;
+	UPROPERTY(Transient)
+	TWeakObjectPtr<ULexWidget> LoadedWidget;
 	/**
 	 * For navigation input, show a selection widget
 	 */

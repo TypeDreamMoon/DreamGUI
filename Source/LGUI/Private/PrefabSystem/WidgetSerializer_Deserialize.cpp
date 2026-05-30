@@ -29,10 +29,7 @@ namespace LexUIPrefabSystem
 			UE_LOG(LGUI, Error, TEXT("[%s].%d InPrefab is null!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			return nullptr;
 		}
-
-#if !WITH_EDITOR
-		bIsEditorOrRuntime = false;
-#endif
+		
 		WidgetSerializer serializer;
 		serializer.World = InWorld;
 		serializer.OwnerObject = InOuter;

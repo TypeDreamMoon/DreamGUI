@@ -327,23 +327,23 @@ void ULexUIFontData_FreeTypeRender::PostLoad()
 
 void ULexUIFontData_FreeTypeRender::BeginDestroy()
 {
+	if (bCultureFont)
+	{
+		if (OnCultureChangedDelegateHandle.IsValid())
+		{
+			FInternationalization::Get().OnCultureChanged().Remove(OnCultureChangedDelegateHandle);
+		}
+
+		if (IsValid(IntermediateTexture))
+		{
+			IntermediateTexture->RemoveFromRoot();
+		}
+		if (IsValid(Texture))
+		{
+			Texture->RemoveFromRoot();
+		}
+	}
 	Super::BeginDestroy();
-	if (!bCultureFont)
-		return;
-
-	if (OnCultureChangedDelegateHandle.IsValid())
-	{
-		FInternationalization::Get().OnCultureChanged().Remove(OnCultureChangedDelegateHandle);
-	}
-
-	if (IsValid(IntermediateTexture))
-	{
-		IntermediateTexture->RemoveFromRoot();
-	}
-	if (IsValid(Texture))
-	{
-		Texture->RemoveFromRoot();
-	}
 }
 
 void ULexUIFontData_FreeTypeRender::InitFont()

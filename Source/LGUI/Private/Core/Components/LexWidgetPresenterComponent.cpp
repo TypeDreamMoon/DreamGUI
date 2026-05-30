@@ -44,9 +44,7 @@ void ULexWidgetPresenterComponent::OnRegister()
 
 void ULexWidgetPresenterComponent::OnUnregister()
 {
-	Super::OnUnregister();
 	bool bIsEditMode = false;
-#if WITH_EDITOR
 	if (auto World = GetWorld())
 	{
 		if (!World->IsGameWorld())
@@ -54,15 +52,15 @@ void ULexWidgetPresenterComponent::OnUnregister()
 			bIsEditMode = true;
 		}
 	}
-#endif
 	if (bIsEditMode)
 	{
-		if (IsValid(LoadedWidget))
+		if (LoadedWidget.IsValid())
 		{
 			LoadedWidget->DestroyWidget();
 			LoadedWidget = nullptr;
 		}
 	}
+	Super::OnUnregister();
 }
 
 void ULexWidgetPresenterComponent::PostLoad()
@@ -137,7 +135,7 @@ void ULexWidgetPresenterComponent::PostInitProperties()
 void ULexWidgetPresenterComponent::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
 {
 	Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
-	if (IsValid(LoadedWidget))
+	if (LoadedWidget.IsValid())
 	{
 		LoadedWidget->CalculateObjectToWorldTransform(true);
 	}
@@ -145,35 +143,45 @@ void ULexWidgetPresenterComponent::OnUpdateTransform(EUpdateTransformFlags Updat
 
 void ULexWidgetPresenterComponent::LoadPrefab()
 {
-	if (IsValid(LoadedWidget))
+	if (LoadedWidget.IsValid())
 	{
 		LoadedWidget->DestroyWidget();
 		LoadedWidget = nullptr;
 	}
+#if WITH_EDITOR
+	if (this->GetName().Contains(TEXT("SKEL_")) || this->GetName().Contains(TEXT("TRASH_")))
+	{
+		UE_LOG(LGUI, Warning, TEXT("Skip LoadPrefab for %s because it's a temp object for blueprint compiling!"), *this->GetName());
+		return;
+	}
+#endif
 	if (IsValid(WidgetPrefab))
 	{
-		LoadedWidget = WidgetPrefab->LoadPrefab(this->GetWorld(), nullptr);
-		if (auto Canvas = LoadedWidget->GetComponent<ULexCanvas>())
+		if (auto World = GetWorld())
 		{
-			LoadedWidget->RemoveComponent(Canvas);
-		}
-		RootCanvas = LoadedWidget->AddComponentByTemplate<ULexCanvas>(CanvasTemplate);
-		RootCanvas->AttachToSceneComponent(this);
-		LoadedWidget->CalculateObjectToWorldTransform(true);
-#if WITH_EDITOR
-		TArray<ULexWidget*> AllLoadedWidgets;
-		ULexWidget::CollectChildrenWidgets(LoadedWidget.Get(), AllLoadedWidgets, true);
-		if (this->GetWorld()->WorldType == EWorldType::Editor)
-		{
-			for (auto Widget : AllLoadedWidgets)
+			LoadedWidget = WidgetPrefab->LoadPrefab(World, nullptr);
+			if (auto Canvas = LoadedWidget->GetComponent<ULexCanvas>())
 			{
-				//set transient in edit mode because we don't want to save these widgets in level, not set in game mode because no need to
-				//skip EditorPreview mode because we need full transactional
-				Widget->SetFlags(RF_Transient);
+				LoadedWidget->RemoveComponent(Canvas);
 			}
-		}
-		OverallVersionMD5 = WidgetPrefab->GenerateOverallVersionMD5();//store version for auto update
+			RootCanvas = LoadedWidget->AddComponentByTemplate<ULexCanvas>(CanvasTemplate);
+			RootCanvas->AttachToSceneComponent(this);
+			LoadedWidget->CalculateObjectToWorldTransform(true);
+#if WITH_EDITOR
+			TArray<ULexWidget*> AllLoadedWidgets;
+			ULexWidget::CollectChildrenWidgets(LoadedWidget.Get(), AllLoadedWidgets, true);
+			if (World->WorldType == EWorldType::Editor)
+			{
+				for (auto Widget : AllLoadedWidgets)
+				{
+					//set transient in edit mode because we don't want to save these widgets in level, not set in game mode because no need to
+					//skip EditorPreview mode because we need full transactional
+					Widget->SetFlags(RF_Transient);
+				}
+			}
+			OverallVersionMD5 = WidgetPrefab->GenerateOverallVersionMD5();//store version for auto update
 #endif
+		}
 	}
 #if WITH_EDITOR
 	if (!bIsSpawnFromPrefabFactory)//if spawn from prefab-factory then the "CheckNecessaryObjects" is handled from there
@@ -277,6 +285,11 @@ void ULexWidgetPresenterComponent::CheckNecessaryObjects()
 	if (bNeedCheckRaycasterSource)
 	{
 		bNeedCheckRaycasterSource = false;
+		if (!RootCanvas.IsValid())
+		{
+			UE_LOG(LGUI, Warning, TEXT("[%s].%d RootCanvas is null, skip check WorldSpaceRaycasterSource!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+			return;
+		}
 		//check if there is WorldSpaceRaycaster when this is WorldSpace UI
 		if (this->RootCanvas->GetRenderMode() == ELexRenderMode::WorldSpace || this->RootCanvas->GetRenderMode() == ELexRenderMode::WorldSpace_LexUI)
 		{
@@ -372,7 +385,7 @@ void ULexWidgetPresenterComponent::CheckPrefabVersion()
 	}
 	else
 	{
-		if (IsValid(LoadedWidget))
+		if (LoadedWidget.IsValid())
 		{
 			LoadedWidget->DestroyWidget();
 			LoadedWidget = nullptr;
