@@ -57,7 +57,7 @@ FLexUIPrefabEditor::~FLexUIPrefabEditor()
 	PrefabEditorInstanceCollection.Remove(this);
 
  	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->EventOnOutlineChanged.RemoveAll(this);
-	ULexUISelection::GetInstance()->OnSelectionChanged.RemoveAll(this);
+	ULexUISelection::GetInstance(GetWorld())->OnSelectionChanged.RemoveAll(this);
 
 	GEditor->UnregisterForUndo(this);
 }
@@ -250,7 +250,7 @@ bool FLexUIPrefabEditor::GetAnythingDirty()const
 
 void FLexUIPrefabEditor::SyncSelection()
 {
-	SelectedWidgets = ULexUISelection::GetInstance()->GetSelectedWidgets();
+	SelectedWidgets = ULexUISelection::GetInstance(GetWorld())->GetSelectedWidgets();
 	OnSelectedWidgetsChanged.Broadcast();
 	OutlinerPtr->RequestRefresh();
 }
@@ -296,14 +296,14 @@ void FLexUIPrefabEditor::PostUndo(bool bSuccess)
 {
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->EventOnOutlineChanged.Broadcast();
-	SelectedWidgets = ULexUISelection::GetInstance()->GetSelectedWidgets();
+	SelectedWidgets = ULexUISelection::GetInstance(GetWorld())->GetSelectedWidgets();
 	OnSelectedWidgetsChanged.Broadcast();
 	OutlinerPtr->RequestRefresh();
 }
 void FLexUIPrefabEditor::PostRedo(bool bSuccess)
 {
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
-	SelectedWidgets = ULexUISelection::GetInstance()->GetSelectedWidgets();
+	SelectedWidgets = ULexUISelection::GetInstance(GetWorld())->GetSelectedWidgets();
 	OnSelectedWidgetsChanged.Broadcast();
 	OutlinerPtr->RequestRefresh();
 }
@@ -330,7 +330,7 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 
 	ViewportPtr = SNew(SLexUIPrefabEditorViewport, PrefabEditorPtr, PrefabBeingEdited->PrefabDataForPrefabEditor.ViewMode);
 	
-	DetailsPtr = SNew(SLexUIPrefabEditorDetails, PrefabEditorPtr);
+	DetailsPtr = SNew(SLexUIPrefabEditorDetails, GetWorld());
 
 	PrefabRawDataViewer = SNew(SLexUIPrefabRawDataViewer, PrefabEditorPtr, PrefabBeingEdited);
 	
@@ -338,12 +338,12 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 	{
 		OutlinerPtr->RequestRefresh();
 	});
-	ULexUISelection::GetInstance()->OnSelectionChanged.AddSPLambda(this, [=, this]
+	ULexUISelection::GetInstance(GetWorld())->OnSelectionChanged.AddSPLambda(this, [=, this]
 	{
 		SyncSelection();
 	});
 	
-	OutlinerPtr = SNew(SLexWidgetEditorHierarchyView, PrefabEditorPtr);
+	OutlinerPtr = SNew(SLexWidgetEditorHierarchyView, GetWorld());
 
 	BindCommands();
 	ExtendToolbar();
@@ -494,7 +494,7 @@ void FLexUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bA
 	if (bIsSelecting)return;
 	bIsSelecting = true;
 	const FScopedTransaction Transaction(LOCTEXT("SelectionChanged_Transaction", "Select Widgets"));
-	ULexUISelection::GetInstance()->Modify();
+	ULexUISelection::GetInstance(GetWorld())->Modify();
 	
 	TSet<ULexWidget*> TempSelection;
 	for (auto& Widget : Widgets)
@@ -505,14 +505,12 @@ void FLexUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bA
 		}
 	}
 
-	OnSelectedWidgetsChanging.Broadcast();
-
 	if (!bAppendOrToggle)
 	{
 		SelectedWidgets.Empty();
 		if (bNotifyGEditor)
 		{
-			ULexUISelection::GetInstance()->SelectNone();
+			ULexUISelection::GetInstance(GetWorld())->SelectNone();
 		}
 	}
 
@@ -528,7 +526,7 @@ void FLexUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bA
 		}
 		if (bNotifyGEditor)
 		{
-			ULexUISelection::GetInstance()->SelectWidget(Widget);
+			ULexUISelection::GetInstance(GetWorld())->SelectWidget(Widget);
 		}
 	}
 	
@@ -924,10 +922,10 @@ FReply FLexUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent&
 			}
 			if (CreatedWidgetArray.Num() > 0)
 			{
-				ULexUISelection::GetInstance()->SelectNone();
+				ULexUISelection::GetInstance(GetWorld())->SelectNone();
 				for (auto& Widget : CreatedWidgetArray)
 				{
-					ULexUISelection::GetInstance()->SelectWidget(Widget);
+					ULexUISelection::GetInstance(GetWorld())->SelectWidget(Widget);
 				}
 			}
 			GEditor->EndTransaction();

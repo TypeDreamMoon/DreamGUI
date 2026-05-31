@@ -133,14 +133,6 @@ ULexUIManagerObject* ULexUIManagerObject::GetInstance(bool CreateIfNotValid)
 	}
 	return Instance;
 }
-bool ULexUIManagerObject::IsSelected(ULexWidget* InObject)
-{
-	if (auto Selection = ULexUISelection::GetInstance())
-	{
-		return Selection->IsSelected(InObject);
-	}
-	return false;
-}
 bool ULexUIManagerObject::InitCheck()
 {
 	if (Instance == nullptr)
@@ -229,18 +221,15 @@ void ULexUIManagerObject::OnPackageReloaded(EPackageReloadPhase Phase, FPackageR
 }
 
 
-ULexUISelection* ULexUISelection::GetInstance()
+ULexUISelection* ULexUISelection::GetInstance(UWorld* InWorld)
 {
-	if (Instance == nullptr)
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(InWorld))
 	{
-		Instance = NewObject<ULexUISelection>();
-		Instance->SetFlags(RF_Transactional);
-		Instance->AddToRoot();
+		return LexUIManager->GetSelection();
 	}
-	return Instance;
+	return nullptr;
 }
 
-ULexUISelection* ULexUISelection::Instance = nullptr;
 void ULexUISelection::SelectWidget(ULexWidget* Widget)
 {
 	SelectedWidgetArray.Add(Widget);
@@ -272,7 +261,7 @@ bool ULexUISelection::IsSelected(ULexWidget* Widget)const
 
 void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool ScreenOrWorld)
 {
-	if (ULexUIManagerObject::IsSelected(Widget))//select self
+	if (GetSelection()->IsSelected(Widget))//select self
 	{
 		auto RectDrawColor = FColor(160, 160, 160, 255);//gray means normal object
 		auto DrawWidget = [=](ULexWidget* InWidget, const FColor& Color)
@@ -404,7 +393,7 @@ void ULexUIManagerWorldSubsystem::DrawNavigationVisualizerOnUISelectable(UWorld*
 {
 	auto SourceWidget = InSelectable->GetWidget();
 	if (!IsValid(SourceWidget))return;
-	const FColor Color = ULexUIManagerObject::IsSelected(SourceWidget) ? FColor(255, 255, 0, 255) : FColor(140, 140, 0, 255);
+	const FColor Color = GetSelection()->IsSelected(SourceWidget) ? FColor(255, 255, 0, 255) : FColor(140, 140, 0, 255);
 	constexpr float Offset = 2;
 	constexpr float ArrowSize = 5;
 	
@@ -594,11 +583,11 @@ void ULexUIManagerWorldSubsystem::OnEndOfFrame()
 
 void ULexUIManagerWorldSubsystem::OnEnginePreExit()
 {
-	for (TObjectIterator<ULexUIPrefab> Itr; Itr; ++Itr)
-	{
-		auto Prefab = *Itr;
-		Prefab->ClearPrefabInstanceScene();
-	}
+	// for (TObjectIterator<ULexUIPrefab> Itr; Itr; ++Itr)
+	// {
+	// 	auto Prefab = *Itr;
+	// 	Prefab->ClearPrefabInstanceScene();
+	// }
 }
 
 void ULexUIManagerWorldSubsystem::DrawDebugRect(UWorld* InWorld, const FVector& Center, const FMatrix& LocalToWorld, FVector2D const& Rect, FColor const& Color, void* Object, const FString& DebugName, bool ScreenOrWorld)
@@ -858,6 +847,7 @@ void ULexUIManagerWorldSubsystem::Deinitialize()
 	{
 		bIsPlaying = false;
 	}
+	OnDeinitialize.Broadcast();
 #endif
 	if (MainViewportViewExtension.IsValid())
 	{
@@ -889,6 +879,23 @@ ULexUIManagerWorldSubsystem* ULexUIManagerWorldSubsystem::GetInstance(UWorld* In
 {
 	return IsValid(InWorld) ? InWorld->GetSubsystem<ULexUIManagerWorldSubsystem>() : nullptr;
 }
+
+#if WITH_EDITOR
+ULexUISelection* ULexUIManagerWorldSubsystem::GetSelection() const
+{
+	if (!IsValid(Selection))
+	{
+		Selection = NewObject<ULexUISelection>();
+		Selection->SetFlags(RF_Transactional);
+	}
+	return Selection;
+}
+
+void ULexUIManagerWorldSubsystem::MarkLexUIWidgetOutlinerChanged()
+{
+	bLexUIWidgetOutlinerChanged = true;
+}
+#endif
 
 void ULexUIManagerWorldSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
@@ -1051,6 +1058,11 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 	else
 	{
 		PrevScreenSpaceOverlayCanvasCount = 0;
+	}
+	if (bLexUIWidgetOutlinerChanged)
+	{
+		bLexUIWidgetOutlinerChanged = false;
+		OnLexUIWidgetOutlinerChanged.Broadcast();
 	}
 #endif
 	//update draw-call
@@ -1384,32 +1396,26 @@ void ULexUIManagerWorldSubsystem::RemoveCanvas(ULexCanvas* InCanvas)
 
 void ULexUIManagerWorldSubsystem::AddWidget(ULexWidget* InWidget)
 {
-	if (auto Instance = GetInstance(InWidget->GetWorld()))
-	{
 #if !UE_BUILD_SHIPPING
-		if (Instance->AllWidgetArray.Contains(InWidget))
-		{
-			UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
-		}
-#endif
-		Instance->AllWidgetArray.AddUnique(InWidget);
+	if (AllWidgetArray.Contains(InWidget))
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
 	}
+#endif
+	AllWidgetArray.AddUnique(InWidget);
 }
 
 void ULexUIManagerWorldSubsystem::RemoveWidget(ULexWidget* InWidget)
 {
-	if (auto Instance = GetInstance(InWidget->GetWorld()))
-	{
 #if !UE_BUILD_SHIPPING
-		if (!Instance->AllWidgetArray.Contains(InWidget))
-		{
-			UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
-		}
-#endif
-		Instance->AllWidgetArray.RemoveSingle(InWidget);
+	if (!AllWidgetArray.Contains(InWidget))
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
 	}
+#endif
+	AllWidgetArray.RemoveSingle(InWidget);
 }
 
 TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> ULexUIManagerWorldSubsystem::GetViewExtension(UWorld* InWorld, bool InCreateIfNotExist)

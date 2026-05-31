@@ -30,18 +30,6 @@ public:
 
 	virtual void OnDrop(bool bDropWasHandled, const FPointerEvent& MouseEvent) override;
 
-	bool HasOriginatedFrom(const TSharedPtr<FLexUIPrefabEditor>& Manager)
-	{
-		for (const FItem& Item : DraggedWidgets)
-		{
-			if (!Item.Widget->IsChildOf(Manager->GetLoadedRootWidget()))
-			{
-				return false;
-			}
-		}
-		return true;
-	}
-
 	struct FItem
 	{
 		/** The widget being dragged and dropped */
@@ -57,10 +45,10 @@ public:
 	FScopedTransaction* Transaction;
 
 	/** Constructs a new drag/drop operation */
-	static TSharedRef<FHierarchyLexWidgetDragDropOp> New(TSharedPtr<FLexUIPrefabEditor> Editor, const TArray<ULexWidget*>& InWidgets);
+	static TSharedRef<FHierarchyLexWidgetDragDropOp> New(const TArray<ULexWidget*>& InWidgets);
 };
 
-TSharedRef<FHierarchyLexWidgetDragDropOp> FHierarchyLexWidgetDragDropOp::New(TSharedPtr<FLexUIPrefabEditor> Editor, const TArray<ULexWidget*>& InWidgets)
+TSharedRef<FHierarchyLexWidgetDragDropOp> FHierarchyLexWidgetDragDropOp::New(const TArray<ULexWidget*>& InWidgets)
 {
 	check(InWidgets.Num() > 0);
 
@@ -119,21 +107,6 @@ void FHierarchyLexWidgetDragDropOp::OnDrop(bool bDropWasHandled, const FPointerE
 TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone, bool bIsDrop, TSharedPtr<FLexUIPrefabEditor> Manager, ULexWidget* TargetItem, TOptional<int32> Index = TOptional<int32>())
 {
 	auto TargetTemplate = TargetItem;
-
-	//if (TSharedPtr<FHierarchyLexWidgetDragDropOp> HierarchyDragDropOp = DragDropEvent.GetOperationAs<FHierarchyLexWidgetDragDropOp>())
-	//{
-	//	if (!HierarchyDragDropOp->HasOriginatedFrom(Manager))
-	//	{
-	//		return TOptional<EItemDropZone>();
-	//	}
-	//}
-
-	// We do not support to dragging a Widget from the Viewport to the Hierarchy panel
-	//if (TSharedPtr<FSelectedWidgetDragDropOp> SelectedWidgetDragDropOp = DragDropEvent.GetOperationAs<FSelectedWidgetDragDropOp>())
-	//{
-	//	return TOptional<EItemDropZone>();
-	//}
-
 	if (TargetTemplate && (DropZone == EItemDropZone::AboveItem || DropZone == EItemDropZone::BelowItem))
 	{
 		if (auto TargetParentTemplate = TargetTemplate->GetParent())
@@ -164,7 +137,7 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 	{
 		if (bIsDrop)
 		{
-			if (DragDropOp->IsOfType<FAssetDragDropOp>())
+			if (DragDropOp->IsOfType<FAssetDragDropOp>() && Manager.IsValid())
 			{
 				Manager->TryHandleAssetDragDropOperation(DragDropEvent, TargetItem);
 			}
@@ -259,6 +232,7 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 	MouseExit = InArgs._MouseExit;
 	HierarchyView = InHierarchyView;
 	Manager = InManager;
+	auto PrefabHelperObject = InManager.IsValid() ? InManager->GetPrefabHelperObject() : nullptr;
 
 	STableRow::Construct(
 		STableRow::FArguments()
@@ -412,23 +386,20 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 					SNew(SImage)
 					.Image_Lambda([=, this]()
 					{
-						if (Manager.IsValid() && Widget.IsValid())
+						if (PrefabHelperObject)
 						{
-							if (auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject())
+							if (!PrefabHelperObject->IsWidgetBelongsToSubPrefab(Widget.Get()))//is sub prefab
 							{
-								if (!PrefabHelperObject->IsWidgetBelongsToSubPrefab(Widget.Get()))//is sub prefab
+								if (PrefabHelperObject->IsWidgetBelongsToMissingSubPrefab(Widget.Get()))
 								{
-									if (PrefabHelperObject->IsWidgetBelongsToMissingSubPrefab(Widget.Get()))
-									{
-										return FLGUIEditorStyle::Get().GetBrush("PrefabMarkBroken");
-									}
+									return FLGUIEditorStyle::Get().GetBrush("PrefabMarkBroken");
 								}
-								else
+							}
+							else
+							{
+								if (PrefabHelperObject->GetSubPrefabAsset(Widget.Get())->GetIsPrefabVariant())
 								{
-									if (PrefabHelperObject->GetSubPrefabAsset(Widget.Get())->GetIsPrefabVariant())
-									{
-										return FLGUIEditorStyle::Get().GetBrush("PrefabVariantMarkWhite");
-									}
+									return FLGUIEditorStyle::Get().GetBrush("PrefabVariantMarkWhite");
 								}
 							}
 						}
@@ -436,20 +407,17 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 					})
 					.ColorAndOpacity_Lambda([=, this]()
 					{
-						if (Manager.IsValid() && Widget.IsValid())
+						if (PrefabHelperObject)
 						{
-							if (auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject())
+							if (PrefabHelperObject->IsWidgetBelongsToSubPrefab(Widget.Get()))//is sub prefab
 							{
-								if (PrefabHelperObject->IsWidgetBelongsToSubPrefab(Widget.Get()))//is sub prefab
+								return FSlateColor(PrefabHelperObject->GetSubPrefabData(Widget.Get()).EditorIdentifyColor);
+							}
+							else
+							{
+								if (PrefabHelperObject->IsWidgetBelongsToMissingSubPrefab(Widget.Get()))
 								{
-									return FSlateColor(PrefabHelperObject->GetSubPrefabData(Widget.Get()).EditorIdentifyColor);
-								}
-								else
-								{
-									if (PrefabHelperObject->IsWidgetBelongsToMissingSubPrefab(Widget.Get()))
-									{
-										return FSlateColor(FColor::White);
-									}
+									return FSlateColor(FColor::White);
 								}
 							}
 						}
@@ -457,24 +425,21 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 					})
 					.Visibility_Lambda([=, this]()
 					{
-						if (Manager.IsValid() && Widget.IsValid())
+						if (PrefabHelperObject)
 						{
-							if (auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject())
+							if (PrefabHelperObject->IsWidgetBelongsToSubPrefab(Widget.Get()))//is sub prefab
 							{
-								if (PrefabHelperObject->IsWidgetBelongsToSubPrefab(Widget.Get()))//is sub prefab
+								return EVisibility::Visible;
+							}
+							else
+							{
+								if (PrefabHelperObject->IsWidgetBelongsToMissingSubPrefab(Widget.Get()))
 								{
 									return EVisibility::Visible;
 								}
 								else
 								{
-									if (PrefabHelperObject->IsWidgetBelongsToMissingSubPrefab(Widget.Get()))
-									{
-										return EVisibility::Visible;
-									}
-									else
-									{
-										return EVisibility::Hidden;
-									}
+									return EVisibility::Hidden;
 								}
 							}
 						}
@@ -482,16 +447,13 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 					})
 					.ToolTipText_Lambda([=, this]()
 					{
-						if (Manager.IsValid() && Widget.IsValid())
+						if (PrefabHelperObject)
 						{
-							if (auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject())
+							if (!PrefabHelperObject->IsWidgetBelongsToSubPrefab(Widget.Get()))//is sub prefab
 							{
-								if (!PrefabHelperObject->IsWidgetBelongsToSubPrefab(Widget.Get()))//is sub prefab
+								if (PrefabHelperObject->IsWidgetBelongsToMissingSubPrefab(Widget.Get()))
 								{
-									if (PrefabHelperObject->IsWidgetBelongsToMissingSubPrefab(Widget.Get()))
-									{
-										return LOCTEXT("PrefabMarkBrokenTip", "This widget was part of another prefab, but the prefab asset is missing!");
-									}
+									return LOCTEXT("PrefabMarkBrokenTip", "This widget was part of another prefab, but the prefab asset is missing!");
 								}
 							}
 						}
@@ -513,17 +475,6 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 				.ToolTipText(LOCTEXT("WidgetVisibilityButtonToolTip", "Toggle Widget's Editor Visibility"))
 				.HAlign(HAlign_Center)
 				.VAlign(VAlign_Center)
-				.Visibility_Lambda([=, this]()
-				{
-					if (Manager.IsValid() && Widget.IsValid())
-					{
-						if (Widget == Manager.Pin()->GetRootAgentWidget())
-						{
-							return EVisibility::Hidden;
-						}
-					}
-					return EVisibility::Visible;
-				})
 				[
 					SNew(STextBlock)
 					.Font(FAppStyle::Get().GetFontStyle("FontAwesome.10"))
@@ -554,29 +505,6 @@ bool SLexWidgetEditorHierarchyViewItem::CanRename()
 	return true;
 }
 
-struct LOCAL_SLexWidgetHierarchyViewViewItem
-{
-	static FString PrintZone(TOptional<EItemDropZone> Zone)
-	{
-		if (Zone.IsSet())
-		{
-			switch (Zone.GetValue())
-			{
-			default:
-			case EItemDropZone::BelowItem:
-				return TEXT("BelowItem");
-			case EItemDropZone::AboveItem:
-				return TEXT("AboveItem");
-			case EItemDropZone::OntoItem:
-				return TEXT("OntoItem");
-			}
-		}
-		else
-		{
-			return TEXT("(NotSet)");
-		}
-	}
-};
 TOptional<EItemDropZone> SLexWidgetEditorHierarchyViewItem::HandleCanAcceptDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone, TWeakObjectPtr<ULexWidget> TargetItem)
 {
 	TSharedPtr<FDragDropOperation> DragDropOp = DragDropEvent.GetOperation();
@@ -661,10 +589,10 @@ FReply SLexWidgetEditorHierarchyViewItem::HandleDragDetected(const FGeometry& My
 	if (DraggedItems.Num() > 0)
 	{
 		bool bAllCanDrag = true;
-		auto PrefabHelper = Manager.Pin()->GetPrefabHelperObject();
+		auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(Widget.Get());
 		for (auto Item : DraggedItems)
 		{
-			if (PrefabHelper->IsWidgetBelongsToSubPrefab(Item) && !PrefabHelper->IsSubPrefabRootWidget(Item))
+			if (PrefabHelperObject->IsWidgetBelongsToSubPrefab(Item) && !PrefabHelperObject->IsSubPrefabRootWidget(Item))
 			{
 				bAllCanDrag = false;
 				break;;
@@ -672,7 +600,7 @@ FReply SLexWidgetEditorHierarchyViewItem::HandleDragDetected(const FGeometry& My
 		}
 		if (bAllCanDrag)
 		{
-			return FReply::Handled().BeginDragDrop(FHierarchyLexWidgetDragDropOp::New(Manager.Pin(), DraggedItems));
+			return FReply::Handled().BeginDragDrop(FHierarchyLexWidgetDragDropOp::New(DraggedItems));
 		}
 	}
 
@@ -702,7 +630,7 @@ FSlateColor SLexWidgetEditorHierarchyViewItem::GetNameTextColorAndOpacity() cons
 {
 	if (Widget.IsValid())
 	{
-		if (auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject())
+		if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(Widget.Get()))
 		{
 			if (PrefabHelperObject->IsWidgetBelongsToSubPrefab(Widget.Get()))//is sub prefab
 			{
@@ -796,7 +724,7 @@ FText SLexWidgetEditorHierarchyViewItem::GetVisibilityBrushForWidget() const
 
 bool SLexWidgetEditorHierarchyViewItem::SupportDrop(ULexWidget* Dragging, ULexWidget* Current, EItemDropZone DropZone)
 {
-	if (Current == Manager.Pin()->GetLoadedRootWidget())
+	if (Current == Current->GetRootWidgetInHierarchy())
 	{
 		if (DropZone == EItemDropZone::OntoItem)
 		{

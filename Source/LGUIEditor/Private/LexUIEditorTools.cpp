@@ -150,7 +150,7 @@ void FLexUIEditorTools::CreateWidget(TFunction<ULexWidget*()> GetSelectedWidgetF
 	if (SelectedWidget == nullptr)return;
 	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return;
 	const FScopedTransaction Transaction(LOCTEXT("CreateChildWidget_Transaction", "LexUI Child Widget"));
-	ULexUISelection::GetInstance()->Modify();
+	ULexUISelection::GetInstance(SelectedWidget->GetWorld())->Modify();
 	auto NewWidget = NewObject<ULexWidget>(SelectedWidget->GetOuter(), ULexWidget::StaticClass(), NAME_None, RF_Public | RF_Transactional);
 	if (IsValid(NewWidget))
 	{
@@ -159,7 +159,7 @@ void FLexUIEditorTools::CreateWidget(TFunction<ULexWidget*()> GetSelectedWidgetF
 		if (SelectedWidget != nullptr)
 		{
 			NewWidget->SetParent(SelectedWidget, false);
-			ULexUISelection::GetInstance()->SelectNone();
+			ULexUISelection::GetInstance(SelectedWidget->GetWorld())->SelectNone();
 		} 
 		if (VisualClass)
 		{
@@ -169,7 +169,7 @@ void FLexUIEditorTools::CreateWidget(TFunction<ULexWidget*()> GetSelectedWidgetF
 		{
 			Callback(NewWidget);
 		}
-		ULexUISelection::GetInstance()->SelectWidget(NewWidget);
+		ULexUISelection::GetInstance(SelectedWidget->GetWorld())->SelectWidget(NewWidget);
 	}
 }
 
@@ -179,7 +179,7 @@ void FLexUIEditorTools::CreateUIControls(TFunction<ULexWidget*()> GetSelectedWid
 	if (SelectedWidget == nullptr)return;
 	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return;
 	const FScopedTransaction Transaction(LOCTEXT("CreateUIControl_Transaction", "LexUI Create UI Control"));
-	ULexUISelection::GetInstance()->Modify();
+	ULexUISelection::GetInstance(SelectedWidget->GetWorld())->Modify();
 	if (auto Prefab = LoadObject<ULexUIPrefab>(NULL, *InPrefabPath))
 	{
 		auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget);
@@ -191,8 +191,8 @@ void FLexUIEditorTools::CreateUIControls(TFunction<ULexWidget*()> GetSelectedWid
 		auto Widget = Prefab->LoadPrefabInEditor(SelectedWidget->GetWorld()
 			, SelectedWidget->GetOuter()
 			, SelectedWidget);
-		ULexUISelection::GetInstance()->SelectNone();
-		ULexUISelection::GetInstance()->SelectWidget(Widget);
+		ULexUISelection::GetInstance(SelectedWidget->GetWorld())->SelectNone();
+		ULexUISelection::GetInstance(SelectedWidget->GetWorld())->SelectWidget(Widget);
 	}
 	else
 	{
@@ -210,17 +210,18 @@ void FLexUIEditorTools::DuplicateWidgets(TFunction<TArray<ULexWidget*>()> GetSel
 	}
 	auto RootWidgetList = FLexUIEditorTools::GetRootWidgetListFromSelection(SelectedWidgets);
 	const FScopedTransaction Transaction(LOCTEXT("DuplicateWidget_Transaction", "LexUI Duplicate Widgets"));
-	ULexUISelection::GetInstance()->Modify();
-	ULexUISelection::GetInstance()->SelectNone();
+	auto World = SelectedWidgets[0]->GetWorld();
+	ULexUISelection::GetInstance(World)->Modify();
+	ULexUISelection::GetInstance(World)->SelectNone();
 	for (auto Widget : RootWidgetList)
 	{
 		Widget->GetOuter()->Modify();
 		auto CopiedWidgetName = FLexUIEditorToolsHelperFunctionHolder::GetCopiedWidgetLabel(Widget->GetParent(), Widget->GetDisplayName(), Widget->GetWorld());
-		ULexWidget* CopiedWidget;
-		ULexWidget* Parent = nullptr;
-		if (Widget->GetParent())
+		ULexWidget* CopiedWidget = nullptr;
+		auto Parent = Widget->GetParent();
+		if (Parent)
 		{
-			Parent = Widget->GetParent();
+			Parent->Modify();
 		}
 		TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> DuplicatedSubPrefabMap;
 		TMap<FGuid, TObjectPtr<UObject>> OutMapGuidToObject;
@@ -289,7 +290,7 @@ void FLexUIEditorTools::DuplicateWidgets(TFunction<TArray<ULexWidget*>()> GetSel
 			CopiedWidget = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::DuplicateWidgetForEditor(Widget->GetWorld(), Widget, Parent, {}, InMapObjectToGuid, DuplicatedSubPrefabMap, OutMapGuidToObject);
 		}
 		CopiedWidget->SetDisplayName(CopiedWidgetName);
-		ULexUISelection::GetInstance()->SelectWidget(CopiedWidget);
+		ULexUISelection::GetInstance(World)->SelectWidget(CopiedWidget);
 	}
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 }
@@ -383,21 +384,19 @@ void FLexUIEditorTools::CopyWidgets(TFunction<TArray<ULexWidget*>()> GetSelected
 void FLexUIEditorTools::PasteWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction)
 {
 	auto SelectedWidgets = GetSelectedWidgetArrayFunction();
-	ULexWidget* ParentWidget = nullptr;
-	if (SelectedWidgets.Num() > 0)
+	if (SelectedWidgets.Num() == 0)
 	{
-		ParentWidget = SelectedWidgets[0];
+		UE_LOG(LGUIEditor, Error, TEXT("NothingSelected"));
+		return;
 	}
-	ULexUIPrefabHelperObject* PrefabHelperObject = nullptr;
-	if (ParentWidget)
-	{
-		PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(ParentWidget);
-	}
+	auto ParentWidget = SelectedWidgets[0];
+	auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(ParentWidget);
 	if (PrefabHelperObject == nullptr)return;
 
 	const FScopedTransaction Transaction(LOCTEXT("PasteWidget_Transaction", "LexUI Paste Widgets"));
-	ULexUISelection::GetInstance()->Modify();
-	ULexUISelection::GetInstance()->SelectNone();
+	auto World = ParentWidget->GetWorld();
+	ULexUISelection::GetInstance(World)->Modify();
+	ULexUISelection::GetInstance(World)->SelectNone();
 	for (auto KeyValuePair : CopiedWidgetPrefabMap)
 	{
 		if (KeyValuePair.Value.IsValid())
@@ -416,7 +415,7 @@ void FLexUIEditorTools::PasteWidgets(TFunction<TArray<ULexWidget*>()> GetSelecte
 				PrefabHelperObject->MakePrefabAsSubPrefab(KeyValue.Value.PrefabAsset, KeyValue.Key, SubMapGuidToObject, KeyValue.Value.ObjectOverrideParameterArray);
 			}
 			CopiedWidget->SetDisplayName(CopiedWidgetName);
-			ULexUISelection::GetInstance()->SelectWidget(CopiedWidget);
+			ULexUISelection::GetInstance(World)->SelectWidget(CopiedWidget);
 		}
 		else
 		{

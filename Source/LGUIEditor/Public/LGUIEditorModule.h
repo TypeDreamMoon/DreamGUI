@@ -15,6 +15,7 @@ public:
 
 	static const FName LexUIDynamicSpriteAtlasViewerTabName;
 	static const FName LexUIPrefabSequenceTabName;
+	static const FName LexUIWidgetInspectorTabName;
 
 	/** IModuleInterface implementation */
 	virtual void StartupModule() override;
@@ -40,6 +41,7 @@ private:
 private:
 	TSharedRef<SDockTab> HandleSpawnDynamicSpriteAtlasViewerTab(const FSpawnTabArgs& SpawnTabArgs);
 	TSharedRef<SDockTab> HandleSpawnLexUIPrefabSequenceTab(const FSpawnTabArgs& SpawnTabArgs);
+	TSharedRef<SDockTab> HandleSpawnLexUIInspectorTab(const FSpawnTabArgs& SpawnTabArgs);
 	
 	FDelegateHandle SequenceEditorHandle;
 	FDelegateHandle OnInitializeSequenceHandle;

@@ -24,8 +24,6 @@ class FLexUIPrefabEditor : public FAssetEditorToolkit
 	, public FGCObject, public FEditorUndoClient
 {
 public:
-	DECLARE_MULTICAST_DELEGATE(FOnSelectedWidgetsChanged)
-	DECLARE_MULTICAST_DELEGATE(FOnWidgetPreviewUpdated)
 	
 	FLexUIPrefabEditor();
 	virtual ~FLexUIPrefabEditor()override;
@@ -96,10 +94,8 @@ public:
 	ULexWidget* GetRootAgentWidget();
 	ULexWidget* GetLoadedRootWidget();
 
-	/** Fires whenever the selected set of widgets changing */
-	FOnSelectedWidgetsChanged OnSelectedWidgetsChanging;
 	/** Fires whenever the selected set of widgets changes */
-	FOnSelectedWidgetsChanged OnSelectedWidgetsChanged;
+	FSimpleMulticastDelegate OnSelectedWidgetsChanged;
 private:
 	TObjectPtr<ULexUIPrefab> PrefabBeingEdited = nullptr;
 	static TArray<FLexUIPrefabEditor*> PrefabEditorInstanceCollection;

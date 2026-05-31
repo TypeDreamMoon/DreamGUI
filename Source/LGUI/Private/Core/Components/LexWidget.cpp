@@ -1245,6 +1245,12 @@ void ULexWidget::OnAttachedToParent()
 	OnHierarchyAttachmentChanged(ParentCanvas, Parent->RootWidget.Get());
 	MarkLayoutDirty();
 	MarkClipDirty(true);
+#if WITH_EDITOR
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
+	{
+		LexUIManager->MarkLexUIWidgetOutlinerChanged();
+	}
+#endif
 }
 
 void ULexWidget::OnChildDetached()
@@ -1272,12 +1278,24 @@ void ULexWidget::OnDetachedFromParent()
 	OnHierarchyAttachmentChanged(nullptr, nullptr);
 	MarkLayoutDirty();
 	MarkClipDirty(true);
+#if WITH_EDITOR
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
+	{
+		LexUIManager->MarkLexUIWidgetOutlinerChanged();
+	}
+#endif
 }
 
 void ULexWidget::OnRegister()
 {
 	bIsRegistered = true;
-	ULexUIManagerWorldSubsystem::AddWidget(this);
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
+	{
+		LexUIManager->AddWidget(this);
+#if WITH_EDITOR
+		LexUIManager->MarkLexUIWidgetOutlinerChanged();
+#endif
+	}
 	CheckRootWidget();
 
 	if (IsValid(LayoutContainer))
@@ -1328,7 +1346,13 @@ void ULexWidget::OnUnregister()
 			RenderCanvas->UnregisterVisual(Visual);
 		}
 	}
-	ULexUIManagerWorldSubsystem::RemoveWidget(this);
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
+	{
+		LexUIManager->RemoveWidget(this);
+#if WITH_EDITOR
+		LexUIManager->MarkLexUIWidgetOutlinerChanged();
+#endif
+	}
 }
 
 void ULexWidget::EnsureUIChildrenValid()

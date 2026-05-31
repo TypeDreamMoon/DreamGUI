@@ -6,7 +6,6 @@
 
 
 class ULexUIBehaviour;
-class FLexUIPrefabEditor;
 /**
  * 
  */
@@ -75,7 +74,7 @@ private:
 		}
 		return result;
 	}
-	TWeakPtr<FLexUIPrefabEditor> PrefabEditor;
+	TWeakObjectPtr<UWorld> World;
 	TSharedPtr<SComboButton> WidgetPickerComboButton;
 	TSharedRef<SWidget> DrawLexWidgetSelectorForPrefabEditor(int32 itemIndex);
 	TSharedRef<SWidget> MakeComponentSelectorMenu(int32 itemIndex);

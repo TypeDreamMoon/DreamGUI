@@ -387,7 +387,7 @@ void ULexUIPrefab::PreSave(FObjectPreSaveContext SaveContext)
 
 #endif
 
-ULexWidget* ULexUIPrefab::LoadPrefab(UWorld* InWorld, ULexWidget* InParent, bool SetRelativeTransformToIdentity, const TFunction<void(ULexWidget*)>& InCallbackBeforeAwake)
+ULexWidget* ULexUIPrefab::LoadPrefab(UWorld* InWorld, ULexWidget* InParent, const TFunction<void(ULexWidget*)>& InCallbackBeforeAwake, bool SetRelativeTransformToIdentity)
 {
 	ULexWidget* LoadedRootWidget = nullptr;
 	if (InWorld)
@@ -409,9 +409,9 @@ ULexWidget* ULexUIPrefab::LoadPrefab(UObject* WorldContextObject, ULexWidget* In
 {
 	if (auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull))
 	{
-		return LoadPrefab(World, InParent, SetRelativeTransformToIdentity, [&InCallbackBeforeAwake](ULexWidget* RootWidget) {
+		return LoadPrefab(World, InParent, [&InCallbackBeforeAwake](ULexWidget* RootWidget) {
 			InCallbackBeforeAwake.ExecuteIfBound(RootWidget);
-			});
+			}, SetRelativeTransformToIdentity);
 	}
 	return nullptr;
 }

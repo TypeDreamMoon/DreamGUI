@@ -20,7 +20,7 @@ public:
 	{}
 	SLATE_END_ARGS()
 
-	void Construct(const FArguments& InArgs, TSharedPtr<FLexUIPrefabEditor> InManager);
+	void Construct(const FArguments& InArgs, UWorld* InWorld);
 	virtual ~SLexWidgetEditorHierarchyView()override;
 
 	// Begin SWidget
@@ -74,6 +74,7 @@ protected:
 	bool CanRename() const;
 	void BeginRename();
 
+	TWeakObjectPtr<UWorld> World;
 	TWeakPtr<FLexUIPrefabEditor> Manager;
 	TSharedPtr<FUICommandList> CommandList;
 	TSharedPtr< TreeFilterHandler< TWeakObjectPtr<ULexWidget> > > FilterHandler;

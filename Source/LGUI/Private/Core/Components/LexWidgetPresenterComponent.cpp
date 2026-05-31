@@ -159,13 +159,15 @@ void ULexWidgetPresenterComponent::LoadPrefab()
 	{
 		if (auto World = GetWorld())
 		{
-			LoadedWidget = WidgetPrefab->LoadPrefab(World, nullptr);
-			if (auto Canvas = LoadedWidget->GetComponent<ULexCanvas>())
+			LoadedWidget = WidgetPrefab->LoadPrefab(World, nullptr, [this](ULexWidget* RootWidget)
 			{
-				LoadedWidget->RemoveComponent(Canvas);
-			}
-			RootCanvas = LoadedWidget->AddComponentByTemplate<ULexCanvas>(CanvasTemplate);
-			RootCanvas->AttachToSceneComponent(this);
+				if (auto Canvas = RootWidget->GetComponent<ULexCanvas>())
+				{
+					RootWidget->RemoveComponent(Canvas);
+				}
+				RootCanvas = RootWidget->AddComponentByTemplate<ULexCanvas>(CanvasTemplate);
+				RootCanvas->AttachToSceneComponent(this);
+			});
 			LoadedWidget->CalculateObjectToWorldTransform(true);
 #if WITH_EDITOR
 			TArray<ULexWidget*> AllLoadedWidgets;

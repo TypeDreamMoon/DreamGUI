@@ -21,7 +21,7 @@ public:
     SLATE_END_ARGS()
 
     /** Widget constructor */
-    void Construct(const FArguments& Args, TSharedPtr<FLexUIPrefabEditor> InPrefabEditor);
+    void Construct(const FArguments& Args, UWorld* InWorld);
 
 	virtual ~SLexUIPrefabEditorDetails();
 private:
@@ -30,6 +30,7 @@ private:
 	void OnComponentSelectionChanged(const TArray<TWeakObjectPtr<class ULexUIBehaviour>>& SelectedComponents);
 
 	TWeakPtr<FLexUIPrefabEditor> PrefabEditorPtr;
+	TWeakObjectPtr<UWorld> World;
 
 	bool IsPropertyReadOnly(const FPropertyAndParent& InPropertyAndParent);
 	bool IsPrefabButtonEnable()const;

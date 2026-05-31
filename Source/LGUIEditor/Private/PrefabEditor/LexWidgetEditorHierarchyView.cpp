@@ -16,9 +16,10 @@
 
 UE_DISABLE_OPTIMIZATION
 
-void SLexWidgetEditorHierarchyView::Construct(const FArguments& InArgs, TSharedPtr<FLexUIPrefabEditor> InManager)
+void SLexWidgetEditorHierarchyView::Construct(const FArguments& InArgs, UWorld* InWorld)
 {
-	Manager = InManager;
+	World = InWorld;
+	Manager = FLexUIPrefabEditor::GetEditorByWorld(World.Get());
 	bRebuildTreeRequested = false;
 	bIsUpdatingSelection = false;
 
@@ -64,35 +65,38 @@ void SLexWidgetEditorHierarchyView::Construct(const FArguments& InArgs, TSharedP
 	RebuildTreeView();
 
 	bRefreshRequested = true;
-	
-	InManager->OnSelectedWidgetsChanged.AddRaw(this, &SLexWidgetEditorHierarchyView::OnEditorSelectionChanged);
 
-	auto PrefabHelperObject = InManager->GetPrefabHelperObject();
-	auto UnexpandWidgetGuidSet = InManager->GetPrefabBeingEdited()->PrefabDataForPrefabEditor.UnexpandedWidgetSet;
-	TSet<ULexWidget*> UnexpendWidgetSet;
-	for (auto& ItemActorGuid : UnexpandWidgetGuidSet)
+	if (Manager.IsValid())
 	{
-		if (auto ObjectPtr = PrefabHelperObject->MapGuidToObject.Find(ItemActorGuid))
+		Manager.Pin()->OnSelectedWidgetsChanged.AddRaw(this, &SLexWidgetEditorHierarchyView::OnEditorSelectionChanged);
+
+		auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject();
+		auto UnexpandWidgetGuidSet = Manager.Pin()->GetPrefabBeingEdited()->PrefabDataForPrefabEditor.UnexpandedWidgetSet;
+		TSet<ULexWidget*> UnexpendWidgetSet;
+		for (auto& ItemActorGuid : UnexpandWidgetGuidSet)
 		{
-			if (auto Widget = Cast<ULexWidget>(*ObjectPtr))
+			if (auto ObjectPtr = PrefabHelperObject->MapGuidToObject.Find(ItemActorGuid))
 			{
-				UnexpendWidgetSet.Add(Widget);
+				if (auto Widget = Cast<ULexWidget>(*ObjectPtr))
+				{
+					UnexpendWidgetSet.Add(Widget);
+				}
 			}
 		}
+
+		ULexUIManagerObject::AddOneShotTickFunction([=, this]()
+		{
+			TSet<TWeakObjectPtr<ULexWidget>> VisitingItems;
+			WidgetTreeView->GetExpandedItems(VisitingItems);
+			for (auto& Item : VisitingItems)
+			{
+				if (UnexpendWidgetSet.Contains(Item.Get()))
+				{
+					WidgetTreeView->SetItemExpansion(Item, false);
+				}
+			}
+		},1);
 	}
-
-	ULexUIManagerObject::AddOneShotTickFunction([=, this]()
-	{
-		TSet<TWeakObjectPtr<ULexWidget>> VisitingItems;
-		WidgetTreeView->GetExpandedItems(VisitingItems);
-		for (auto& Item : VisitingItems)
-		{
-			if (UnexpendWidgetSet.Contains(Item.Get()))
-			{
-				WidgetTreeView->SetItemExpansion(Item, false);
-			}
-		}
-	},1);
 }
 SLexWidgetEditorHierarchyView::~SLexWidgetEditorHierarchyView()
 {
@@ -218,9 +222,15 @@ void SLexWidgetEditorHierarchyView::RefreshImmediately()
 void SLexWidgetEditorHierarchyView::RefreshTree()
 {
 	RootWidgets.Empty();
-	if (auto RootItem = Manager.Pin()->GetRootAgentWidget())
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(World.Get()))
 	{
-		RootWidgets.Add(RootItem);
+		for (auto& Widget : LexUIManager->GetAllWidgetArray())
+		{
+			if (Widget->IsRootWidgetInHierarchy())
+			{
+				RootWidgets.Add(Widget);
+			}
+		}
 	}
 
 	FilterHandler->RefreshAndFilterTree();
@@ -264,7 +274,8 @@ void SLexWidgetEditorHierarchyView::OnEditorSelectionChanged()
 	{
 		WidgetTreeView->ClearSelection();
 
-		auto SelectedWidgets = Manager.Pin()->GetSelectedWidgets();
+		auto Selection = ULexUISelection::GetInstance(World.Get());
+		auto SelectedWidgets = Selection->GetSelectedWidgets();
 		if (SelectedWidgets.Num() == 0)
 		{
 			ClearSelection();
@@ -329,13 +340,30 @@ void SLexWidgetEditorHierarchyView::OnSelectionChanged(TWeakObjectPtr<ULexWidget
 		{
 			NewSelectedItems.Add(Item.Get());
 		}
-		Manager.Pin()->SelectWidgets(NewSelectedItems, false);
+		if (Manager.IsValid())
+		{
+			Manager.Pin()->SelectWidgets(NewSelectedItems, false);
+		}
+		else
+		{
+			if (auto Selection = ULexUISelection::GetInstance(World.Get()))
+			{
+				const FScopedTransaction Transaction(LOCTEXT("SelectionChanged_Transaction", "Select Widgets"));
+				Selection->Modify();
+				Selection->SelectNone();
+				for ( const auto& Widget : NewSelectedItems )
+				{
+					Selection->SelectWidget(Widget);
+				}
+			}
+		}
 
 		bIsUpdatingSelection = false;
 	}
 }
 void SLexWidgetEditorHierarchyView::OnGetChildren(TWeakObjectPtr<ULexWidget> InParent, TArray< TWeakObjectPtr<ULexWidget> >& OutChildren)
 {
+	if (!InParent.IsValid())return;
 	auto& Children = InParent->GetChildren();
 	OutChildren.Append(Children);
 }
@@ -369,6 +397,10 @@ void SLexWidgetEditorHierarchyView::OnExpansionChanged(TWeakObjectPtr<ULexWidget
 }
 TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 {
+	if (!Manager.IsValid())
+	{
+		return nullptr;
+	}
 	TFunction<ULexWidget*()> GetSelectedWidgetFunction = [this]()
 	{
 		if (Manager.IsValid())

@@ -87,12 +87,14 @@
 #include "Core/Components/LexTexture.h"
 #include "Core/Components/LexTextureBase.h"
 #include "Core/Components/LexVisualPostProcess.h"
+#include "Core/Components/LexWidgetPresenterComponent.h"
 #include "DetailCustomization/LexImageBrushStructCustomization.h"
 #include "DetailCustomization/LexLayoutContainerCustomization.h"
 #include "DetailCustomization/LexLayoutSelfFlexBoxCustomization.h"
 #include "DetailCustomization/LexLayoutContainerFlexBoxCustomization.h"
 #include "DetailCustomization/LexUIEventDelegatePresetParamCustomization.h"
 #include "DetailCustomization/LexUIFontEmojiDataCustomization.h"
+#include "DetailCustomization/LexWidgetPresenterCustomization.h"
 #include "Event/LexUIEventDelegate_PresetParameter.h"
 #include "Event/LexWorldSpaceRaycasterBase.h"
 #include "Extensions/LexPolygon.h"
@@ -117,9 +119,11 @@
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequenceComponent.h"
 #include "PrefabSystem/LexUIPrefab.h"
 #include "Styling/SlateIconFinder.h"
+#include "Window/LexUIWidgetInspector.h"
 
 const FName FLGUIEditorModule::LexUIDynamicSpriteAtlasViewerTabName(TEXT("LexUIDynamicSpriteAtlasViewerName"));
 const FName FLGUIEditorModule::LexUIPrefabSequenceTabName(TEXT("LexUIPrefabSequenceTabName"));
+const FName FLGUIEditorModule::LexUIWidgetInspectorTabName(TEXT("LexUIWidgetInspectorTabName"));
 
 #define LOCTEXT_NAMESPACE "FLGUIEditorModule"
 DEFINE_LOG_CATEGORY(LGUIEditor);
@@ -147,8 +151,13 @@ void FLGUIEditorModule::StartupModule()
 		FGlobalTabmanager::Get()->RegisterNomadTabSpawner(LexUIDynamicSpriteAtlasViewerTabName, FOnSpawnTab::CreateRaw(this, &FLGUIEditorModule::HandleSpawnDynamicSpriteAtlasViewerTab))
 			.SetDisplayName(LOCTEXT("LexUIDynamicSpriteAtlasTextureViewerName", "LexUI Dynamic-Sprite-Atlas Texture Viewer"))
 			.SetMenuType(ETabSpawnerMenuType::Hidden);
+		//sequencer
 		FGlobalTabmanager::Get()->RegisterNomadTabSpawner(LexUIPrefabSequenceTabName, FOnSpawnTab::CreateRaw(this, &FLGUIEditorModule::HandleSpawnLexUIPrefabSequenceTab))
 			.SetDisplayName(LOCTEXT("LexUIPrefabSequenceTabName", "LexUI Prefab Sequence"))
+			.SetMenuType(ETabSpawnerMenuType::Hidden);
+		//world widget inspector
+		FGlobalTabmanager::Get()->RegisterNomadTabSpawner(LexUIWidgetInspectorTabName, FOnSpawnTab::CreateRaw(this, &FLGUIEditorModule::HandleSpawnLexUIInspectorTab))
+			.SetDisplayName(LOCTEXT("LexUIInspectorTabName", "LexUI Inspector"))
 			.SetMenuType(ETabSpawnerMenuType::Hidden);
 	}
 	//register custom editor
@@ -220,6 +229,8 @@ void FLGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomClassLayout(ULexLayoutContainer::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutContainerCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULexLayoutContainerFlexBox::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutContainerFlexBoxCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULexLayoutSelfFlexBox::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutSelfFlexBoxCustomization::MakeInstance));
+		
+		PropertyModule.RegisterCustomClassLayout(ULexWidgetPresenterComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexWidgetPresenterCustomization::MakeInstance));
 	}
 	//register asset
 	{
@@ -356,6 +367,7 @@ void FLGUIEditorModule::ShutdownModule()
 	{
 		FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(LexUIDynamicSpriteAtlasViewerTabName);
 		FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(LexUIPrefabSequenceTabName);
+		FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(LexUIWidgetInspectorTabName);
 	}
 	//unregister custom editor
 	if (UObjectInitialized() && FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
@@ -425,6 +437,8 @@ void FLGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(ULexLayoutContainer::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(ULexLayoutContainerFlexBox::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(ULexLayoutSelfFlexBox::StaticClass()->GetFName());
+		
+		PropertyModule.UnregisterCustomClassLayout(ULexWidgetPresenterComponent::StaticClass()->GetFName());
 	}
 	//unregister asset
 	{
@@ -492,6 +506,14 @@ TSharedRef<SDockTab> FLGUIEditorModule::HandleSpawnLexUIPrefabSequenceTab(const 
 {
 	auto ResultTab = SNew(SDockTab).TabRole(ETabRole::NomadTab);
 	auto TabContentWidget = SNew(SLexUIPrefabSequenceEditor);
+	ResultTab->SetContent(TabContentWidget);
+	return ResultTab;
+}
+
+TSharedRef<SDockTab> FLGUIEditorModule::HandleSpawnLexUIInspectorTab(const FSpawnTabArgs& SpawnTabArgs)
+{
+	auto ResultTab = SNew(SDockTab).TabRole(ETabRole::NomadTab);
+	auto TabContentWidget = SNew(SLexUIWidgetInspector, ResultTab);
 	ResultTab->SetContent(TabContentWidget);
 	return ResultTab;
 }

@@ -121,9 +121,9 @@ void SLexUIPrefabOverrideDataViewer::RefreshDataContent(TArray<FLexUIPrefabOverr
 					.ButtonStyle(FAppStyle::Get(), "PropertyEditor.AssetComboStyle" )
 					.ForegroundColor(FAppStyle::GetColor("PropertyEditor.AssetName.ColorAndOpacity"))
 					.OnClicked_Lambda([=](){
-						ULexUISelection::GetInstance()->SelectNone();
-						ULexUISelection::GetInstance()->SelectWidget(Widget);
-						if(Component)ULexUISelection::GetInstance()->SelectComponent(Component);
+						ULexUISelection::GetInstance(Widget->GetWorld())->SelectNone();
+						ULexUISelection::GetInstance(Widget->GetWorld())->SelectWidget(Widget);
+						if(Component)ULexUISelection::GetInstance(Widget->GetWorld())->SelectComponent(Component);
 						return FReply::Handled();
 					})
 				]

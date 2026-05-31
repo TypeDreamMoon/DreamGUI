@@ -17,7 +17,6 @@
 #include "Serialization/BufferArchive.h"
 #include "LexUIEditableTextPropertyHandle.h"
 #include "LGUIEditorModule.h"
-#include "PrefabEditor/LexUIPrefabEditor.h"
 #include "PrefabEditor/LexWidgetHierarchyPickerView.h"
 #include "Widgets/Input/NumericUnitTypeInterface.inl"
 
@@ -91,7 +90,7 @@ void FLexUIEventDelegateCustomization::CustomizeChildren(TSharedRef<IPropertyHan
 		}
 	}
 
-	PrefabEditor = FLexUIPrefabEditor::GetEditorByWorld(OutObject->GetWorld());
+	World = OutObject->GetWorld();
 
 	auto EventListHandle = GetEventListHandle();
 	auto RefreshDelegate = FSimpleDelegate::CreateSP(this, &FLexUIEventDelegateCustomization::UpdateEventsLayout);
@@ -728,11 +727,7 @@ void FLexUIEventDelegateCustomization::UpdateEventsLayout()
 										SNew(SBox)
 										.Padding(FMargin(0, 0, 6, 0))
 										[
-											PrefabEditor.IsValid()
-											?
 											DrawLexWidgetSelectorForPrefabEditor(EventItemIndex)
-											:
-											HelperWidgetHandle->CreatePropertyValueWidget()
 										]
 									]
 									+SHorizontalBox::Slot()
@@ -964,7 +959,6 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawLexWidgetSelectorForPr
 	auto GetText = [=, this]()
 	{
 		if (Object == nullptr)return NoneObjectText;
-		if (!PrefabEditor.IsValid())return NoneObjectText;
 		if (auto Widget = Cast<ULexWidget>(Object))
 		{
 			return FText::FromString(Widget->GetDisplayName());
@@ -978,7 +972,6 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawLexWidgetSelectorForPr
 	auto GetTooltipText = [=, this]()
 	{
 		if (Object == nullptr)return NoneObjectText;
-		if (!PrefabEditor.IsValid())return NoneObjectText;
 		ULexWidget* Widget = nullptr;
 		FString PathStr;
 		if (auto CastWidget = Cast<ULexWidget>(Object))
@@ -990,8 +983,7 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawLexWidgetSelectorForPr
 			Widget = Object->GetTypedOuter<ULexWidget>();
 			PathStr = "." + Object->GetPathName(Widget);
 		}
-		auto RootAgentWidget = PrefabEditor.Pin()->GetRootAgentWidget();
-		while (Widget && Widget != RootAgentWidget)
+		while (Widget && !Widget->IsRootWidgetInHierarchy())
 		{
 			PathStr = "/" + Widget->GetDisplayName() + PathStr;
 			Widget = Widget->GetParent();
@@ -1024,7 +1016,7 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawLexWidgetSelectorForPr
 					SNew(SBox)
 					.Padding(4, 0)
 					[
-						SNew(SLexWidgetHierarchyPickerView, PrefabEditor.Pin(), ULexWidget::StaticClass())
+						SNew(SLexWidgetHierarchyPickerView, World.Get(), ULexWidget::StaticClass())
 						.OnSelectItem_Lambda([=, this](UObject* InItem)
 						{
 							// InPropertyHandle->SetValue(InItem);

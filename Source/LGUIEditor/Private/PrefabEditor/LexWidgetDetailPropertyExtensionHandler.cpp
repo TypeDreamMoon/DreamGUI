@@ -4,7 +4,6 @@
 
 #include "DetailLayoutBuilder.h"
 #include "IPropertyUtilities.h"
-#include "LexUIPrefabEditor.h"
 #include "PropertyCustomizationHelpers.h"
 #include "LexWidgetHierarchyPickerView.h"
 #include "Core/LexUIBehaviour.h"
@@ -13,9 +12,9 @@
 
 #define LOCTEXT_NAMESPACE "LexWidgetDetailPropertyExtensionHandler"
 
-FLexWidgetDetailPropertyExtensionHandler::FLexWidgetDetailPropertyExtensionHandler(TWeakPtr<FLexUIPrefabEditor> InPrefabEditor)
+FLexWidgetDetailPropertyExtensionHandler::FLexWidgetDetailPropertyExtensionHandler(UWorld* InWorld)
 {
-	PrefabEditorPtr = InPrefabEditor;
+	World = InWorld;
 }
 
 bool FLexWidgetDetailPropertyExtensionHandler::IsPropertyExtendable(const UClass* ObjectClass, const IPropertyHandle& PropertyHandle) const
@@ -51,7 +50,6 @@ void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow&
 	auto GetText = [=, this]()
 	{
 		if (Object == nullptr)return NoneObjectText;
-		if (!PrefabEditorPtr.IsValid())return NoneObjectText;
 		if (auto Widget = Cast<ULexWidget>(Object))
 		{
 			return FText::FromString(Widget->GetDisplayName());
@@ -65,7 +63,6 @@ void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow&
 	auto GetTooltipText = [=, this]()
 	{
 		if (Object == nullptr)return NoneObjectText;
-		if (!PrefabEditorPtr.IsValid())return NoneObjectText;
 		ULexWidget* Widget = nullptr;
 		FString PathStr;
 		if (auto CastWidget = Cast<ULexWidget>(Object))
@@ -77,8 +74,7 @@ void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow&
 			Widget = Object->GetTypedOuter<ULexWidget>();
 			PathStr = "." + Object->GetPathName(Widget);
 		}
-		auto RootAgentWidget = PrefabEditorPtr.Pin()->GetRootAgentWidget();
-		while (Widget && Widget != RootAgentWidget)
+		while (Widget && !Widget->IsRootWidgetInHierarchy())
 		{
 			PathStr = "/" + Widget->GetDisplayName() + PathStr;
 			Widget = Widget->GetParent();
@@ -112,7 +108,7 @@ void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow&
 					SNew(SBox)
 					.Padding(4, 4)
 					[
-						SNew(SLexWidgetHierarchyPickerView, PrefabEditorPtr.Pin(), ObjectClass)
+						SNew(SLexWidgetHierarchyPickerView, World.Get(), ObjectClass)
 						.OnSelectItem_Lambda([=, this](UObject* InItem)
 						{
 							// InPropertyHandle->SetValue(InItem);

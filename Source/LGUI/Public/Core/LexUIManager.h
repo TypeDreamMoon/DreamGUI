@@ -52,7 +52,6 @@ public:
 #endif
 #if WITH_EDITOR
 	static bool GetIsBlueprintCompiling(){return bIsBlueprintCompiling;}
-	static bool IsSelected(ULexWidget* InObject);
 private:
 	static bool InitCheck();
 public:
@@ -78,7 +77,7 @@ class LGUI_API ULexUISelection : public UObject
 	GENERATED_BODY()
 
 public:
-	static ULexUISelection* GetInstance();
+	static ULexUISelection* GetInstance(UWorld* InWorld);
 	virtual bool IsEditorOnly() const override{return true;}
 	void SelectWidget(ULexWidget* Widget);
 	void SelectComponent(ULexUIBehaviour* Component);
@@ -88,7 +87,6 @@ public:
 	TArray<TWeakObjectPtr<ULexWidget>> GetSelectedWidgets()const{return SelectedWidgetArray;}
 	FSimpleMulticastDelegate OnSelectionChanged;
 private:
-	static ULexUISelection* Instance;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 	TArray<TWeakObjectPtr<ULexWidget>> SelectedWidgetArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
@@ -125,7 +123,14 @@ public:
 	static ULexUIManagerWorldSubsystem* GetInstance(UWorld* InWorld);
 #if WITH_EDITOR
 	static bool GetIsPlaying() { return bIsPlaying; }
+	ULexUISelection* GetSelection()const;
+	FSimpleMulticastDelegate OnDeinitialize;
+	FSimpleMulticastDelegate OnLexUIWidgetOutlinerChanged;
+	void MarkLexUIWidgetOutlinerChanged();
+private:
+	bool bLexUIWidgetOutlinerChanged = true;
 #endif
+	
 private:
 #if WITH_EDITOR
 	static TArray<ULexUIManagerWorldSubsystem*> InstanceArray;
@@ -133,6 +138,11 @@ private:
 	static bool bIsPlaying;
 #endif
 
+#if WITH_EDITORONLY_DATA
+	UPROPERTY(VisibleAnywhere, Category = "LGUI")
+	mutable TObjectPtr<ULexUISelection> Selection;
+#endif
+	
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 	TArray<TWeakObjectPtr<ULexCanvas>> AllCanvasArray;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
@@ -172,8 +182,8 @@ public:
 	static void AddCanvas(ULexCanvas* InCanvas);
 	static void RemoveCanvas(ULexCanvas* InCanvas);
 
-	static void AddWidget(ULexWidget* InWidget);
-	static void RemoveWidget(ULexWidget* InWidget);
+	void AddWidget(ULexWidget* InWidget);
+	void RemoveWidget(ULexWidget* InWidget);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	static void RegisterLexUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem);

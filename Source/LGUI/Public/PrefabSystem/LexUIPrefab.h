@@ -272,10 +272,10 @@ public:
 	 * LoadPrefab to create actor.
 	 * Awake function in LexUIBehaviour and LexUIPrefabInterface will be called right after LoadPrefab is done.
 	 * @param InParent Parent scene component that the created root actor will be attached to. Can be null so the created root actor will not attach to anyone.
-	 * @param InCallbackBeforeAwake This callback function will execute before Awake event, parameter "Actor" is the loaded root actor.
 	 * @param SetRelativeTransformToIdentity Set created root actor's transform to zero after load.
+	 * @param InCallbackBeforeAwake This callback function will execute before Awake event, parameter "Actor" is the loaded root actor.
 	 */
-	ULexWidget* LoadPrefab(UWorld* InWorld, ULexWidget* InParent, bool SetRelativeTransformToIdentity = false, const TFunction<void(ULexWidget*)>& InCallbackBeforeAwake = nullptr);
+	ULexWidget* LoadPrefab(UWorld* InWorld, ULexWidget* InParent, const TFunction<void(ULexWidget*)>& InCallbackBeforeAwake = nullptr, bool SetRelativeTransformToIdentity = false);
 	/**
 	 * LoadPrefab and keep reference of source objects.
 	 */

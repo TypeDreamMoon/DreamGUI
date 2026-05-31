@@ -2662,7 +2662,7 @@ void ULexCanvas::OnViewportParameterChanged()
 #if WITH_EDITOR
 void ULexCanvas::OnEditorTick(float DeltaTime)
 {
-	if (ULexUIManagerWorldSubsystem::GetIsPlaying())//When hit play there is still a editor world and DrawViewportArea is called, which could cause frame dropdown, so skip it when playing
+	if (ULexUIManagerWorldSubsystem::GetIsPlaying())//When hit play there is still an editor world and DrawViewportArea is called, which could cause frame dropdown, so skip it when playing
 		return;
 	if (!GetWorld())
 		return;
@@ -2683,7 +2683,7 @@ void ULexCanvas::OnEditorTick(float DeltaTime)
 			)
 		{
 			DrawViewportArea();
-			if (ULexUIManagerObject::IsSelected(this->GetWidget()))
+			if (ULexUISelection::GetInstance(this->GetWorld())->IsSelected(this->GetWidget()))
 			{
 				if (auto ViewportClient = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld())->GetEditorViewportClient())
 				{

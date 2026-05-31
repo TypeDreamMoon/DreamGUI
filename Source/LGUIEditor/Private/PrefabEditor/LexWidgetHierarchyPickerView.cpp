@@ -1,18 +1,17 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "LexWidgetHierarchyPickerView.h"
-#include "LexUIPrefabEditor.h"
 #include "LexWidgetHierarchyPickerViewItem.h"
+#include "Core/LexUIManager.h"
 #include "Widgets/Layout/SScrollBorder.h"
 #include "Widgets/Input/SSearchBox.h"
-#include "Core/Components/LexRectBlock.h"
 #include "Core/Components/LexWidget.h"
 
 #define LOCTEXT_NAMESPACE "LexWidgetHierarchyPickerView"
 
-void SLexWidgetHierarchyPickerView::Construct(const FArguments& InArgs, TSharedPtr<FLexUIPrefabEditor> InManager, UClass* InObjectClass)
+void SLexWidgetHierarchyPickerView::Construct(const FArguments& InArgs, UWorld* InPrefabWorld, UClass* InObjectClass)
 {
-	Manager = InManager;
+	PrefabWorld = InPrefabWorld;
 	OnSelectItem = InArgs._OnSelectItem;
 	ObjectClass = InObjectClass;
 
@@ -72,9 +71,15 @@ void SLexWidgetHierarchyPickerView::RefreshImmediately()
 void SLexWidgetHierarchyPickerView::RefreshTree()
 {
 	RootWidgets.Empty();
-	if (auto RootItem = Cast<ULexWidget>(Manager.Pin()->GetLoadedRootWidget()))
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(PrefabWorld.Get()))
 	{
-		RootWidgets.Add(MakeShared<FLexWidgetHierarchyPickerView_DataItem>(Manager.Pin()->GetLoadedRootWidget()->GetDisplayName(), RootItem));
+		for (auto& Widget : LexUIManager->GetAllWidgetArray())
+		{
+			if (Widget->IsRootWidgetInHierarchy())
+			{
+				RootWidgets.Add(MakeShared<FLexWidgetHierarchyPickerView_DataItem>(Widget->GetDisplayName(), Widget));
+			}
+		}
 	}
 
 	struct LOCAL
