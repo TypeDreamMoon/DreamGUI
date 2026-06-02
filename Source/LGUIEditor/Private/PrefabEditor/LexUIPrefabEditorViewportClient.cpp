@@ -43,6 +43,7 @@ class FLexUITransformWidget
 {
 private:		
 	int PressMouseX = 0, PressMouseY = 0; FVector PressAxisHitPoint = FVector::Zero();
+	FVector PressAxisVector = FVector::ZeroVector;
 	FTransform ThisTransformWhenPress = FTransform::Identity;
 	FTransform ThisTransform = FTransform::Identity;
 	FTransform RenderTransform = FTransform::Identity;
@@ -55,21 +56,35 @@ private:
 	TSharedPtr<FLexUIGizmoMesh> MovePlaneYZ;
 	TSharedPtr<FLexUIGizmoMesh> MovePlaneZX;
 	TSharedPtr<FLexUIGizmoMesh> MovePlaneXY;
+	TSharedPtr<FLexUIGizmoMesh> RotateAxisX;
+	TSharedPtr<FLexUIGizmoMesh> RotateAxisY;
+	TSharedPtr<FLexUIGizmoMesh> RotateAxisZ;
 	TWeakObjectPtr<UMaterialInterface> GizmoMaterial;
 	FVector MovePlaneYZCenter;
 	FVector MovePlaneZXCenter;
 	FVector MovePlaneXYCenter;
 	const float AxisLength = 100.0f;
 	const float AxisPlaneSize = 30.0f;
+	const float RotateAxisRadius = 100.0f;
 	FColor ColorAxisX = FColor::Red, ColorAxisY = FColor::Green, ColorAxisZ = FColor::Blue;
 	FColor HighlightColor = FColor::Yellow;
 	FString DebugName;
 	bool bCanTick = false;
-	enum class EAxisType
+	enum class EMoveAxisType
 	{
 		None, X, Y, Z, YZ, ZX, XY, 
 	};
-	EAxisType AxisType = EAxisType::None;
+	EMoveAxisType MoveAxisType = EMoveAxisType::None;
+	enum class ERotateAxisType
+	{
+		None, X, Y, Z,
+	};
+	ERotateAxisType RotateAxisType = ERotateAxisType::None;
+	enum class ETransformType
+	{
+		None, Move, Rotate,
+	};
+	ETransformType TransformType = ETransformType::Move;
 	bool bIsMousePressedAtThisFrame = false;
 	bool bIsMouseReleasedAtThisFrame = false;
 	bool bIsDragging = false;
@@ -114,55 +129,106 @@ private:
 				FSceneView::DeprojectScreenToWorld(FVector2D(MouseX, MouseY), SceneView->UnscaledViewRect, SceneView->ViewMatrices.GetInvViewProjectionMatrix(), RayOrigin, RayDirection);
 
 				auto Center = ThisTransform.GetTranslation();
-				FVector A = FVector::Zero(), B = FVector(BIG_NUMBER);
 				constexpr float Far = 1e6f;
 				auto LineStartOfMouse = RayOrigin - RayDirection * Far;
 				auto LineEndOfMouse = RayOrigin + RayDirection * Far;
-				FVector Diff = FVector::ZeroVector;
-				switch (AxisType)
+				if (TransformType == ETransformType::Move)
 				{
-				case EAxisType::YZ:
+					FVector A = FVector::Zero(), B = FVector(BIG_NUMBER);
+					FVector Diff = FVector::ZeroVector;
+					switch (MoveAxisType)
 					{
-						auto HitPoint = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, ThisTransform.GetUnitAxis(EAxis::X));
-						Diff = HitPoint - PressAxisHitPoint;
+					case EMoveAxisType::YZ:
+						{
+							auto HitPoint = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, ThisTransform.GetUnitAxis(EAxis::X));
+							Diff = HitPoint - PressAxisHitPoint;
+						}
+						break;
+					case EMoveAxisType::ZX:
+						{
+							auto HitPoint = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, ThisTransform.GetUnitAxis(EAxis::Y));
+							Diff = HitPoint - PressAxisHitPoint;
+						}
+						break;
+					case EMoveAxisType::XY:
+						{
+							auto HitPoint = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, ThisTransform.GetUnitAxis(EAxis::Z));
+							Diff = HitPoint - PressAxisHitPoint;
+						}
+						break;
+					case EMoveAxisType::X:
+						{
+							FMath::SegmentDistToSegment(LineStartOfMouse, LineEndOfMouse, ThisTransform.TransformPosition(FVector(-Far, 0, 0)), ThisTransform.TransformPosition(FVector(Far, 0, 0)), A, B);
+							Diff = B - PressAxisHitPoint;
+						}
+						break;
+					case EMoveAxisType::Y:
+						{
+							FMath::SegmentDistToSegment(LineStartOfMouse, LineEndOfMouse, ThisTransform.TransformPosition(FVector(0, -Far, 0)), ThisTransform.TransformPosition(FVector(0, Far, 0)), A, B);
+							Diff = B - PressAxisHitPoint;
+						}
+						break;
+					case EMoveAxisType::Z:
+						{
+							FMath::SegmentDistToSegment(LineStartOfMouse, LineEndOfMouse, ThisTransform.TransformPosition(FVector(0, 0, -Far)), ThisTransform.TransformPosition(FVector(0, 0, Far)), A, B);
+							Diff = B - PressAxisHitPoint;
+						}
+						break;
 					}
-					break;
-				case EAxisType::ZX:
+					ThisTransform.SetTranslation(ThisTransformWhenPress.GetTranslation() + Diff);
+					FLexUIUtils::ChangePropertyWithNotify(SelectedWidget.Get(), USceneComponent::GetRelativeLocationPropertyName(), [=, this]
 					{
-						auto HitPoint = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, ThisTransform.GetUnitAxis(EAxis::Y));
-						Diff = HitPoint - PressAxisHitPoint;
-					}
-					break;
-				case EAxisType::XY:
-					{
-						auto HitPoint = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, ThisTransform.GetUnitAxis(EAxis::Z));
-						Diff = HitPoint - PressAxisHitPoint;
-					}
-					break;
-				case EAxisType::X:
-					{
-						FMath::SegmentDistToSegment(LineStartOfMouse, LineEndOfMouse, ThisTransform.TransformPosition(FVector(-Far, 0, 0)), ThisTransform.TransformPosition(FVector(Far, 0, 0)), A, B);
-						Diff = B - PressAxisHitPoint;
-					}
-					break;
-				case EAxisType::Y:
-					{
-						FMath::SegmentDistToSegment(LineStartOfMouse, LineEndOfMouse, ThisTransform.TransformPosition(FVector(0, -Far, 0)), ThisTransform.TransformPosition(FVector(0, Far, 0)), A, B);
-						Diff = B - PressAxisHitPoint;
-					}
-					break;
-				case EAxisType::Z:
-					{
-						FMath::SegmentDistToSegment(LineStartOfMouse, LineEndOfMouse, ThisTransform.TransformPosition(FVector(0, 0, -Far)), ThisTransform.TransformPosition(FVector(0, 0, Far)), A, B);
-						Diff = B - PressAxisHitPoint;
-					}
-					break;
+						SelectedWidget->SetWorldLocation(ThisTransform.GetLocation());
+					});
 				}
-				ThisTransform.SetTranslation(ThisTransformWhenPress.GetTranslation() + Diff);
-				FLexUIUtils::ChangePropertyWithNotify(SelectedWidget.Get(), USceneComponent::GetRelativeLocationPropertyName(), [=, this]
+				else if (TransformType == ETransformType::Rotate)
 				{
-					SelectedWidget->SetWorldTransform(ThisTransform);
-				});
+					FRotator Diff = FRotator();
+					switch (RotateAxisType)
+					{
+					case ERotateAxisType::X:
+						{
+							auto LinePlaneIntersectPointX = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, RenderTransform.GetUnitAxis(EAxis::X));
+							auto AxisVector = (LinePlaneIntersectPointX - Center).GetSafeNormal();
+							auto DotValue = FVector::DotProduct(PressAxisVector, AxisVector);
+							auto AngleInDegree = FMath::RadiansToDegrees(FMath::Acos(DotValue));
+							auto CrossVector = FVector::CrossProduct(PressAxisVector, AxisVector).GetSafeNormal();
+							auto AngleSign = -FMath::Sign(FVector::DotProduct(CrossVector, FVector(1, 0, 0)));
+							AngleInDegree *= AngleSign;
+							Diff.Roll = AngleInDegree;
+						}
+						break;
+					case ERotateAxisType::Y:
+						{
+							auto LinePlaneIntersectPointX = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, RenderTransform.GetUnitAxis(EAxis::Y));
+							auto AxisVector = (LinePlaneIntersectPointX - Center).GetSafeNormal();
+							auto DotValue = FVector::DotProduct(PressAxisVector, AxisVector);
+							auto AngleInDegree = FMath::RadiansToDegrees(FMath::Acos(DotValue));
+							auto CrossVector = FVector::CrossProduct(PressAxisVector, AxisVector).GetSafeNormal();
+							auto AngleSign = -FMath::Sign(FVector::DotProduct(CrossVector, FVector(0, 1, 0)));
+							AngleInDegree *= AngleSign;
+							Diff.Pitch = AngleInDegree;
+						}
+						break;
+					case ERotateAxisType::Z:
+						{
+							auto LinePlaneIntersectPointX = FMath::LinePlaneIntersection(LineStartOfMouse, LineEndOfMouse, Center, RenderTransform.GetUnitAxis(EAxis::Z));
+							auto AxisVector = (LinePlaneIntersectPointX - Center).GetSafeNormal();
+							auto DotValue = FVector::DotProduct(PressAxisVector, AxisVector);
+							auto AngleInDegree = FMath::RadiansToDegrees(FMath::Acos(DotValue));
+							auto CrossVector = FVector::CrossProduct(PressAxisVector, AxisVector).GetSafeNormal();
+							auto AngleSign = FMath::Sign(FVector::DotProduct(CrossVector, FVector(0, 0, 1)));
+							AngleInDegree *= AngleSign;
+							Diff.Yaw = AngleInDegree;
+						}
+						break;
+					}
+					ThisTransform.SetRotation(ThisTransformWhenPress.GetRotation() * Diff.Quaternion());
+					FLexUIUtils::ChangePropertyWithNotify(SelectedWidget.Get(), USceneComponent::GetRelativeRotationPropertyName(), [=, this]
+					{
+						SelectedWidget->SetWorldRotation(ThisTransform.GetRotation());
+					});
+				}
 			}
 		}
 		else
@@ -181,8 +247,12 @@ private:
 				MovePlaneYZ->SetColor(ColorAxisX.WithAlpha(PlaneAlpha));
 				MovePlaneZX->SetColor(ColorAxisY.WithAlpha(PlaneAlpha));
 				MovePlaneXY->SetColor(ColorAxisZ.WithAlpha(PlaneAlpha));
+				RotateAxisX->SetColor(ColorAxisX.WithAlpha(AxisAlpha));
+				RotateAxisY->SetColor(ColorAxisY.WithAlpha(AxisAlpha));
+				RotateAxisZ->SetColor(ColorAxisZ.WithAlpha(AxisAlpha));
 			}
-			AxisType = EAxisType::None;
+			MoveAxisType = EMoveAxisType::None;
+			RotateAxisType = ERotateAxisType::None;
 			
 			constexpr float Far = 100000000;
 			FVector RayOrigin, RayDirection;
@@ -190,95 +260,145 @@ private:
 			FVector LineEnd = RayOrigin + RayDirection * Far;
 
 			auto Center = ThisTransform.GetTranslation();
-			//yz plane
+			if (TransformType == ETransformType::Move)
 			{
-				auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::X));
-				auto IntersectPointLocalSpace = RenderTransform.InverseTransformPosition(IntersectPoint);
-				bool bIsHit = IntersectPointLocalSpace.Y > 0 && IntersectPointLocalSpace.Y < AxisPlaneSize && IntersectPointLocalSpace.Z > 0 && IntersectPointLocalSpace.Z < AxisPlaneSize;
-				MovePlaneYZ->SetColor((bIsHit ? HighlightColor : ColorAxisX).WithAlpha(PlaneAlpha));
-				if (bIsHit)
+				//yz plane
 				{
-					AxisType = EAxisType::YZ;
-					if (bIsMousePressedAtThisFrame)
+					auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::X));
+					auto IntersectPointLocalSpace = RenderTransform.InverseTransformPosition(IntersectPoint);
+					bool bIsHit = IntersectPointLocalSpace.Y > 0 && IntersectPointLocalSpace.Y < AxisPlaneSize && IntersectPointLocalSpace.Z > 0 && IntersectPointLocalSpace.Z < AxisPlaneSize;
+					MovePlaneYZ->SetColor((bIsHit ? HighlightColor : ColorAxisX).WithAlpha(PlaneAlpha));
+					if (bIsHit)
 					{
-						PressAxisHitPoint = IntersectPoint;
+						MoveAxisType = EMoveAxisType::YZ;
+						if (bIsMousePressedAtThisFrame)
+						{
+							PressAxisHitPoint = IntersectPoint;
+						}
+						return;
 					}
-					return;
 				}
-			}
-			//zx plane
-			{
-				auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::Y));
-				auto IntersectPointLocalSpace = RenderTransform.InverseTransformPosition(IntersectPoint);
-				bool bIsHit = IntersectPointLocalSpace.Z > 0 && IntersectPointLocalSpace.Z < AxisPlaneSize && IntersectPointLocalSpace.X > 0 && IntersectPointLocalSpace.X < AxisPlaneSize;
-				MovePlaneZX->SetColor((bIsHit ? HighlightColor : ColorAxisY).WithAlpha(PlaneAlpha));
-				if (bIsHit)
+				//zx plane
 				{
-					AxisType = EAxisType::ZX;
-					if (bIsMousePressedAtThisFrame)
+					auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::Y));
+					auto IntersectPointLocalSpace = RenderTransform.InverseTransformPosition(IntersectPoint);
+					bool bIsHit = IntersectPointLocalSpace.Z > 0 && IntersectPointLocalSpace.Z < AxisPlaneSize && IntersectPointLocalSpace.X > 0 && IntersectPointLocalSpace.X < AxisPlaneSize;
+					MovePlaneZX->SetColor((bIsHit ? HighlightColor : ColorAxisY).WithAlpha(PlaneAlpha));
+					if (bIsHit)
 					{
-						PressAxisHitPoint = IntersectPoint;
+						MoveAxisType = EMoveAxisType::ZX;
+						if (bIsMousePressedAtThisFrame)
+						{
+							PressAxisHitPoint = IntersectPoint;
+						}
+						return;
 					}
-					return;
 				}
-			}
-			//xy plane
-			{
-				auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::Z));
-				auto IntersectPointLocalSpace = RenderTransform.InverseTransformPosition(IntersectPoint);
-				bool bIsHit = IntersectPointLocalSpace.X > 0 && IntersectPointLocalSpace.X < AxisPlaneSize && IntersectPointLocalSpace.Y > 0 && IntersectPointLocalSpace.Y < AxisPlaneSize;
-				MovePlaneXY->SetColor((bIsHit ? HighlightColor : ColorAxisZ).WithAlpha(PlaneAlpha));
-				if (bIsHit)
+				//xy plane
 				{
-					AxisType = EAxisType::XY;
-					if (bIsMousePressedAtThisFrame)
+					auto IntersectPoint = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::Z));
+					auto IntersectPointLocalSpace = RenderTransform.InverseTransformPosition(IntersectPoint);
+					bool bIsHit = IntersectPointLocalSpace.X > 0 && IntersectPointLocalSpace.X < AxisPlaneSize && IntersectPointLocalSpace.Y > 0 && IntersectPointLocalSpace.Y < AxisPlaneSize;
+					MovePlaneXY->SetColor((bIsHit ? HighlightColor : ColorAxisZ).WithAlpha(PlaneAlpha));
+					if (bIsHit)
 					{
-						PressAxisHitPoint = IntersectPoint;
+						MoveAxisType = EMoveAxisType::XY;
+						if (bIsMousePressedAtThisFrame)
+						{
+							PressAxisHitPoint = IntersectPoint;
+						}
+						return;
 					}
-					return;
 				}
-			}
 			
-			FVector A = FVector::Zero(), B = FVector(BIG_NUMBER);
+				FVector A = FVector::Zero(), DistanceXHitPoint = FVector(BIG_NUMBER), DistanceYHitPoint = FVector(BIG_NUMBER), DistanceZHitPoint = FVector(BIG_NUMBER);
 
-			const float HitThreshold = 10.0f * RenderScale;
-			FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, RenderTransform.TransformPosition(FVector(AxisLength, 0, 0)), A, B);
-			auto DistanceToX = FVector::Dist(A, B);
-			MoveAxisX->SetColor((DistanceToX < HitThreshold ? HighlightColor : ColorAxisX).WithAlpha(AxisAlpha));
-			if (DistanceToX < HitThreshold)
-			{
-				AxisType = EAxisType::X;
-				if (bIsMousePressedAtThisFrame)
+				const float HitThreshold = 10.0f * RenderScale;
+				FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, RenderTransform.TransformPosition(FVector(AxisLength, 0, 0)), A, DistanceXHitPoint);
+				auto DistanceToX = FVector::Dist(A, DistanceXHitPoint);
+
+				FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, RenderTransform.TransformPosition(FVector(0, AxisLength, 0)), A, DistanceYHitPoint);
+				auto DistanceToY = FVector::Dist(A, DistanceYHitPoint);
+
+				FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, RenderTransform.TransformPosition(FVector(0, 0, AxisLength)), A, DistanceZHitPoint);
+				auto DistanceToZ = FVector::Dist(A, DistanceZHitPoint);
+
+				if (DistanceToX < DistanceToY && DistanceToX < DistanceToZ && DistanceToX < HitThreshold)
 				{
-					PressAxisHitPoint = B;
+					MoveAxisType = EMoveAxisType::X;
+					MoveAxisX->SetColor(HighlightColor.WithAlpha(AxisAlpha));
+					if (bIsMousePressedAtThisFrame)
+					{
+						PressAxisHitPoint = DistanceXHitPoint;
+					}
 				}
-				return;
+
+				if (DistanceToY < DistanceToX && DistanceToY < DistanceToZ && DistanceToY < HitThreshold)
+				{
+					MoveAxisType = EMoveAxisType::Y;
+					MoveAxisY->SetColor(HighlightColor.WithAlpha(AxisAlpha));
+					if (bIsMousePressedAtThisFrame)
+					{
+						PressAxisHitPoint = DistanceYHitPoint;
+					}
+				}
+
+				if (DistanceToZ < DistanceToX && DistanceToZ < DistanceToY && DistanceToZ < HitThreshold)
+				{
+					MoveAxisType = EMoveAxisType::Z;
+					MoveAxisZ->SetColor(HighlightColor.WithAlpha(AxisAlpha));
+					if (bIsMousePressedAtThisFrame)
+					{
+						PressAxisHitPoint = DistanceZHitPoint;
+					}
+				}
 			}
-
-			FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, RenderTransform.TransformPosition(FVector(0, AxisLength, 0)), A, B);
-			auto DistanceToY = FVector::Dist(A, B);
-			MoveAxisY->SetColor((DistanceToY < HitThreshold ? HighlightColor : ColorAxisY).WithAlpha(AxisAlpha));
-			if (DistanceToY < HitThreshold)
+			else if (TransformType == ETransformType::Rotate)
 			{
-				AxisType = EAxisType::Y;
-				if (bIsMousePressedAtThisFrame)
-				{
-					PressAxisHitPoint = B;
-				}
-				return;
-			}
+				const float HitThreshold = 10.0f * RenderScale;
+				FVector A = FVector::Zero(), B = FVector(BIG_NUMBER);
 
-			FMath::SegmentDistToSegment(RayOrigin, LineEnd, Center, RenderTransform.TransformPosition(FVector(0, 0, AxisLength)), A, B);
-			auto DistanceToZ = FVector::Dist(A, B);
-			MoveAxisZ->SetColor((DistanceToZ < HitThreshold ? HighlightColor : ColorAxisZ).WithAlpha(AxisAlpha));
-			if (DistanceToZ < HitThreshold)
-			{
-				AxisType = EAxisType::Z;
-				if (bIsMousePressedAtThisFrame)
+				auto LinePlaneIntersectPointX = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::X));
+				auto DistToCenter = FVector::Dist(LinePlaneIntersectPointX, Center);
+				auto DistanceToX = FMath::Abs(DistToCenter - RotateAxisRadius * RenderScale);
+
+				auto LinePlaneIntersectPointY = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::Y));
+				DistToCenter = FVector::Dist(LinePlaneIntersectPointY, Center);
+				auto DistanceToY = FMath::Abs(DistToCenter - RotateAxisRadius * RenderScale);
+
+				auto LinePlaneIntersectPointZ = FMath::LinePlaneIntersection(RayOrigin, LineEnd, Center, RenderTransform.GetUnitAxis(EAxis::Z));
+				DistToCenter = FVector::Dist(LinePlaneIntersectPointZ, Center);
+				auto DistanceToZ = FMath::Abs(DistToCenter - RotateAxisRadius * RenderScale);
+
+				if (DistanceToX < DistanceToY && DistanceToX < DistanceToZ && DistanceToX < HitThreshold)
 				{
-					PressAxisHitPoint = B;
+					RotateAxisType = ERotateAxisType::X;
+					RotateAxisX->SetColor(HighlightColor.WithAlpha(AxisAlpha));
+					if (bIsMousePressedAtThisFrame)
+					{
+						PressAxisVector = (LinePlaneIntersectPointX - Center).GetSafeNormal();
+					}
 				}
-				return;
+
+				if (DistanceToY < DistanceToX && DistanceToY < DistanceToZ && DistanceToY < HitThreshold)
+				{
+					RotateAxisType = ERotateAxisType::Y;
+					RotateAxisY->SetColor(HighlightColor.WithAlpha(AxisAlpha));
+					if (bIsMousePressedAtThisFrame)
+					{
+						PressAxisVector = (LinePlaneIntersectPointY - Center).GetSafeNormal();
+					}
+				}
+
+				if (DistanceToZ < DistanceToX && DistanceToZ < DistanceToY && DistanceToZ < HitThreshold)
+				{
+					RotateAxisType = ERotateAxisType::Z;
+					RotateAxisZ->SetColor(HighlightColor.WithAlpha(AxisAlpha));
+					if (bIsMousePressedAtThisFrame)
+					{
+						PressAxisVector = (LinePlaneIntersectPointZ - Center).GetSafeNormal();
+					}
+				}
 			}
 		}
 	}
@@ -364,6 +484,42 @@ public:
 			MovePlaneXY = MakeShared<FLexUIGizmoMesh>(VertexArray, SrcMeshIndexArray, ELexUIGizmoMeshPrimitiveType::Triangle);
 			MovePlaneXY->UpdateLocalBounds();
 		}
+
+		auto RotateAxisMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/LGUI/EditorGizmo/RotateAxis"));
+		FLexUIUtils::StaticMeshToLexUIMeshRenderData(RotateAxisMesh, SrcMeshVertexArray, SrcMeshIndexArray);
+		{
+			auto VertexArray = SrcMeshVertexArray;
+			FRotator3f AxisRot = FRotator3f(90, 0, 0);
+			for (auto& Vertex : VertexArray)
+			{
+				Vertex.Position = AxisRot.RotateVector(Vertex.Position);
+				Vertex.Color = ColorAxisX;
+			}
+			RotateAxisX = MakeShared<FLexUIGizmoMesh>(VertexArray, SrcMeshIndexArray, ELexUIGizmoMeshPrimitiveType::Triangle);
+			RotateAxisX->UpdateLocalBounds();
+		}
+		{
+			auto VertexArray = SrcMeshVertexArray;
+			FRotator3f AxisRot = FRotator3f(0, 0, 90);
+			for (auto& Vertex : VertexArray)
+			{
+				Vertex.Position = AxisRot.RotateVector(Vertex.Position);
+				Vertex.Color = ColorAxisY;
+			}
+			RotateAxisY = MakeShared<FLexUIGizmoMesh>(VertexArray, SrcMeshIndexArray, ELexUIGizmoMeshPrimitiveType::Triangle);
+			RotateAxisY->UpdateLocalBounds();
+		}
+		{
+			auto VertexArray = SrcMeshVertexArray;
+			FRotator3f AxisRot = FRotator3f(0, 0, 0);
+			for (auto& Vertex : VertexArray)
+			{
+				Vertex.Position = AxisRot.RotateVector(Vertex.Position);
+				Vertex.Color = ColorAxisY;
+			}
+			RotateAxisZ = MakeShared<FLexUIGizmoMesh>(VertexArray, SrcMeshIndexArray, ELexUIGizmoMeshPrimitiveType::Triangle);
+			RotateAxisZ->UpdateLocalBounds();
+		}
 		
 		ViewportClient = InViewportClient;
 		ViewFamily = MakeUnique<FSceneViewFamilyContext>(FSceneViewFamily::ConstructionValues(
@@ -371,6 +527,24 @@ public:
 			InViewportClient->GetScene(),
 			InViewportClient->EngineShowFlags)
 			.SetRealtimeUpdate( true ) );
+
+		if (!GizmoMaterial.IsValid())
+		{
+			GizmoMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/LGUI/EditorGizmo/GizmoMaterial"));
+		}
+		if (GizmoMaterial.IsValid())
+		{
+			MoveAxisX->Material
+			= MoveAxisY->Material
+			= MoveAxisZ->Material
+			= MovePlaneYZ->Material
+			= MovePlaneZX->Material
+			= MovePlaneXY->Material
+			= RotateAxisX->Material
+			= RotateAxisY->Material
+			= RotateAxisZ->Material
+			= TStrongObjectPtr(GizmoMaterial.Get());
+		}
 
 		bCanTick = true;
 	}
@@ -384,49 +558,47 @@ public:
 
 		auto ViewExtension = ULexUIManagerWorldSubsystem::GetViewExtension(World.Get(), true);
 		if (!ViewExtension)return;
-		if (!GizmoMaterial.IsValid())
-		{
-			GizmoMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/LGUI/EditorGizmo/GizmoMaterial"));
-		}
-		if (GizmoMaterial.IsValid())
-		{
-			MoveAxisX->Material
-			= MoveAxisY->Material
-			= MoveAxisZ->Material
-			= MovePlaneYZ->Material
-			= MovePlaneZX->Material
-			= MovePlaneXY->Material
-			= TStrongObjectPtr(GizmoMaterial.Get());
-		}
 		
 		auto LocalToWorld = RenderTransform.ToMatrixWithScale();
-		auto ViewLocation = ViewportClient->GetViewLocation();
-		struct FMovePlaneInfo
+		if (TransformType == ETransformType::Move)
 		{
-			double DistanceToCamera;
-			TSharedPtr<FLexUIGizmoMesh> RenderData;
-		};
-		TArray<FMovePlaneInfo> MovePlanes;
-		MovePlanes.Add({ FVector::DistSquared(ViewLocation, RenderTransform.TransformPosition(MovePlaneYZCenter)), MovePlaneYZ});
-		MovePlanes.Add({ FVector::DistSquared(ViewLocation, RenderTransform.TransformPosition(MovePlaneZXCenter)), MovePlaneZX});
-		MovePlanes.Add({ FVector::DistSquared(ViewLocation, RenderTransform.TransformPosition(MovePlaneXYCenter)), MovePlaneXY});
-		//simple sort on distance
-		MovePlanes.Sort([](const FMovePlaneInfo& A, const FMovePlaneInfo& B)
-		{			
-			return A.DistanceToCamera > B.DistanceToCamera;
-		});
-		for (auto& MovePlane : MovePlanes)
-		{
-			MovePlane.RenderData->LocalToWorldMatrix = LocalToWorld;
-			MovePlane.RenderData->Render(ViewExtension, false);
-		}
+			auto ViewLocation = ViewportClient->GetViewLocation();
+			struct FMovePlaneInfo
+			{
+				double DistanceToCamera;
+				TSharedPtr<FLexUIGizmoMesh> RenderData;
+			};
+			TArray<FMovePlaneInfo> MovePlanes;
+			MovePlanes.Add({ FVector::DistSquared(ViewLocation, RenderTransform.TransformPosition(MovePlaneYZCenter)), MovePlaneYZ});
+			MovePlanes.Add({ FVector::DistSquared(ViewLocation, RenderTransform.TransformPosition(MovePlaneZXCenter)), MovePlaneZX});
+			MovePlanes.Add({ FVector::DistSquared(ViewLocation, RenderTransform.TransformPosition(MovePlaneXYCenter)), MovePlaneXY});
+			//simple sort on distance
+			MovePlanes.Sort([](const FMovePlaneInfo& A, const FMovePlaneInfo& B)
+			{			
+				return A.DistanceToCamera > B.DistanceToCamera;
+			});
+			for (auto& MovePlane : MovePlanes)
+			{
+				MovePlane.RenderData->LocalToWorldMatrix = LocalToWorld;
+				MovePlane.RenderData->Render(ViewExtension, false);
+			}
 
-		MoveAxisX->LocalToWorldMatrix = LocalToWorld;
-		MoveAxisX->Render(ViewExtension, false);
-		MoveAxisY->LocalToWorldMatrix = LocalToWorld;
-		MoveAxisY->Render(ViewExtension, false);
-		MoveAxisZ->LocalToWorldMatrix = LocalToWorld;
-		MoveAxisZ->Render(ViewExtension, false);
+			MoveAxisX->LocalToWorldMatrix = LocalToWorld;
+			MoveAxisX->Render(ViewExtension, false);
+			MoveAxisY->LocalToWorldMatrix = LocalToWorld;
+			MoveAxisY->Render(ViewExtension, false);
+			MoveAxisZ->LocalToWorldMatrix = LocalToWorld;
+			MoveAxisZ->Render(ViewExtension, false);
+		}
+		else if (TransformType == ETransformType::Rotate)
+		{
+			RotateAxisX->LocalToWorldMatrix = LocalToWorld;
+			RotateAxisX->Render(ViewExtension, false);
+			RotateAxisY->LocalToWorldMatrix = LocalToWorld;
+			RotateAxisY->Render(ViewExtension, false);
+			RotateAxisZ->LocalToWorldMatrix = LocalToWorld;
+			RotateAxisZ->Render(ViewExtension, false);
+		}
 	}
 	bool IsDragging()const{return bIsDragging;}
 	bool HandleInputKey(const FInputKeyEventArgs& EventArgs)
@@ -438,7 +610,7 @@ public:
 				bIsMousePressedAtThisFrame = true;
 				UpdateAxis();
 				bIsMousePressedAtThisFrame = false;
-				if (AxisType != EAxisType::None)
+				if (MoveAxisType != EMoveAxisType::None || RotateAxisType != ERotateAxisType::None)
 				{
 					bIsDragging = true;
 					PressMouseX = EventArgs.Viewport->GetMouseX();
@@ -452,13 +624,30 @@ public:
 			else if (EventArgs.Event == IE_Released)
 			{
 				bIsMouseReleasedAtThisFrame = true;
-				AxisType = EAxisType::None;
+				MoveAxisType = EMoveAxisType::None;
+				RotateAxisType = ERotateAxisType::None;
 				if (bIsDragging)
 				{
 					bIsDragging = false;
 					Transaction.Reset();
 					return true;
 				}
+			}
+		}
+		else if (EventArgs.Key == EKeys::W)
+		{
+			if (EventArgs.Event == IE_Pressed)
+			{
+				TransformType = ETransformType::Move;
+				return true;
+			}
+		}
+		else if (EventArgs.Key == EKeys::E)
+		{
+			if (EventArgs.Event == IE_Pressed)
+			{
+				TransformType = ETransformType::Rotate;
+				return true;
 			}
 		}
 		return false;
