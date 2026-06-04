@@ -18,9 +18,12 @@ public:
 
 	void Construct(const FArguments& InArgs, TSharedPtr<SDockTab> InOwnerTab);
 
-	static TWeakObjectPtr<UWorld> CurrentSelectedWorld;
-	TWeakObjectPtr<UWorld> World;
+	UWorld* GetWorld()const { return World.Get(); }
+	void AssignWorld(UWorld* InWorld);
 private:
+	TWeakObjectPtr<UWorld> World;
+	TSharedPtr<SBox> ContentBox;
 	void CloseTabCallback(TSharedRef<SDockTab> TabClosed);
 	TSharedPtr<SLexWidgetEditorHierarchyView> HierarchyView;
+	void RefreshContent();
 };

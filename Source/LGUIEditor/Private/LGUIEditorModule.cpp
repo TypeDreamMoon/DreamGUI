@@ -122,7 +122,6 @@
 #include "Window/LexUIWidgetInspector.h"
 
 const FName FLGUIEditorModule::LexUIDynamicSpriteAtlasViewerTabName(TEXT("LexUIDynamicSpriteAtlasViewerName"));
-const FName FLGUIEditorModule::LexUIPrefabSequenceTabName(TEXT("LexUIPrefabSequenceTabName"));
 const FName FLGUIEditorModule::LexUIWidgetInspectorTabName(TEXT("LexUIWidgetInspectorTabName"));
 
 #define LOCTEXT_NAMESPACE "FLGUIEditorModule"
@@ -150,10 +149,6 @@ void FLGUIEditorModule::StartupModule()
 		//atlas texture viewer
 		FGlobalTabmanager::Get()->RegisterNomadTabSpawner(LexUIDynamicSpriteAtlasViewerTabName, FOnSpawnTab::CreateRaw(this, &FLGUIEditorModule::HandleSpawnDynamicSpriteAtlasViewerTab))
 			.SetDisplayName(LOCTEXT("LexUIDynamicSpriteAtlasTextureViewerName", "LexUI Dynamic-Sprite-Atlas Texture Viewer"))
-			.SetMenuType(ETabSpawnerMenuType::Hidden);
-		//sequencer
-		FGlobalTabmanager::Get()->RegisterNomadTabSpawner(LexUIPrefabSequenceTabName, FOnSpawnTab::CreateRaw(this, &FLGUIEditorModule::HandleSpawnLexUIPrefabSequenceTab))
-			.SetDisplayName(LOCTEXT("LexUIPrefabSequenceTabName", "LexUI Prefab Sequence"))
 			.SetMenuType(ETabSpawnerMenuType::Hidden);
 		//world widget inspector
 		FGlobalTabmanager::Get()->RegisterNomadTabSpawner(LexUIWidgetInspectorTabName, FOnSpawnTab::CreateRaw(this, &FLGUIEditorModule::HandleSpawnLexUIInspectorTab))
@@ -366,7 +361,6 @@ void FLGUIEditorModule::ShutdownModule()
 	//unregister window
 	{
 		FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(LexUIDynamicSpriteAtlasViewerTabName);
-		FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(LexUIPrefabSequenceTabName);
 		FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(LexUIWidgetInspectorTabName);
 	}
 	//unregister custom editor
@@ -498,14 +492,6 @@ TSharedRef<SDockTab> FLGUIEditorModule::HandleSpawnDynamicSpriteAtlasViewerTab(c
 {
 	auto ResultTab = SNew(SDockTab).TabRole(ETabRole::NomadTab);
 	auto TabContentWidget = SNew(SLexUIDynamicSpriteAtlasViewer, ResultTab);
-	ResultTab->SetContent(TabContentWidget);
-	return ResultTab;
-}
-
-TSharedRef<SDockTab> FLGUIEditorModule::HandleSpawnLexUIPrefabSequenceTab(const FSpawnTabArgs& SpawnTabArgs)
-{
-	auto ResultTab = SNew(SDockTab).TabRole(ETabRole::NomadTab);
-	auto TabContentWidget = SNew(SLexUIPrefabSequenceEditor);
 	ResultTab->SetContent(TabContentWidget);
 	return ResultTab;
 }

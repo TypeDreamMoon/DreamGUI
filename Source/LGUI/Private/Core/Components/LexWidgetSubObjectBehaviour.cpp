@@ -36,3 +36,8 @@ ULexWidget* ULexWidgetSubObjectBehaviour::GetWidget() const
 	return OwnerWidget;
 }
 
+FString ULexWidgetSubObjectBehaviour::GetPathDisplayName() const
+{
+	return GetWidget()->GetPathDisplayName() / this->GetName();
+}
+

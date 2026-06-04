@@ -4,14 +4,12 @@
 
 #include "Core/Components/LexWidget.h"
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequenceComponent.h"
-#include "Engine/BlueprintGeneratedClass.h"
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequence.h"
 
 
 UObject* ULexUIPrefabSequencePlayer::GetPlaybackContext() const
 {
-	auto PrefabSequence = CastChecked<ULexUIPrefabSequence>(Sequence);
-	if (PrefabSequence)
+	if (auto PrefabSequence = CastChecked<ULexUIPrefabSequence>(Sequence))
 	{
 		auto Component = PrefabSequence->GetTypedOuter<ULexUIPrefabSequenceComponent>();
 		return Component->GetWidget();

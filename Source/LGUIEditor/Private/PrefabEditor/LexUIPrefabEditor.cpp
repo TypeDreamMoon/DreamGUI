@@ -14,12 +14,14 @@
 #include "ToolMenus.h"
 #include "Editor.h"
 #include "LexWidgetEditorHierarchyView.h"
+#include "UMGStyle.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
 #include "Framework/Commands/GenericCommands.h"
 #include "PrefabSystem/LexUIPrefabInstanceScene.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
+#include "PrefabAnimation/LexUIPrefabSequenceEditor.h"
 
 #define LOCTEXT_NAMESPACE "LexUIPrefabEditor"
 
@@ -33,12 +35,14 @@ struct FLexUIPrefabEditorTabs
 	static const FName DetailsID;
 	static const FName ViewportID;
 	static const FName OutlinerID;
+	static const FName SequencerID;
 	static const FName PrefabRawDataViewerID;
 };
 
 const FName FLexUIPrefabEditorTabs::DetailsID(TEXT("Details"));
 const FName FLexUIPrefabEditorTabs::ViewportID(TEXT("Viewport"));
 const FName FLexUIPrefabEditorTabs::OutlinerID(TEXT("Outliner"));
+const FName FLexUIPrefabEditorTabs::SequencerID(TEXT("Sequencer"));
 const FName FLexUIPrefabEditorTabs::PrefabRawDataViewerID(TEXT("PrefabRawDataViewer"));
 
 FName GetPrefabWorldName()
@@ -277,6 +281,11 @@ void FLexUIPrefabEditor::RegisterTabSpawners(const TSharedRef<FTabManager>& InTa
 		.SetGroup(WorkspaceMenuCategoryRef)
 		.SetIcon(FSlateIcon(FAppStyle::GetAppStyleSetName(), "LevelEditor.Tabs.Outliner"));
 
+	InTabManager->RegisterTabSpawner(FLexUIPrefabEditorTabs::SequencerID, FOnSpawnTab::CreateSP(this, &FLexUIPrefabEditor::SpawnTab_Sequencer))
+		.SetDisplayName(LOCTEXT("SequencerTabLabel", "Sequencer"))
+		.SetGroup(WorkspaceMenuCategoryRef)
+		.SetIcon(FSlateIcon(FUMGStyle::GetStyleSetName(), "Animations.TabIcon"));
+
 	InTabManager->RegisterTabSpawner(FLexUIPrefabEditorTabs::PrefabRawDataViewerID, FOnSpawnTab::CreateSP(this, &FLexUIPrefabEditor::SpawnTab_PrefabRawDataViewer))
 		.SetDisplayName(LOCTEXT("PrefabRawDataViewerTabLabel", "PrefabRawDataViewer"))
 		.SetGroup(WorkspaceMenuCategoryRef)
@@ -289,6 +298,7 @@ void FLexUIPrefabEditor::UnregisterTabSpawners(const TSharedRef<FTabManager>& In
 	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::ViewportID);
 	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::DetailsID);
 	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::OutlinerID);
+	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::SequencerID);
 	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::PrefabRawDataViewerID);
 }
 
@@ -345,6 +355,8 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 	
 	OutlinerPtr = SNew(SLexWidgetEditorHierarchyView, GetWorld());
 
+	SequencerPtr = SNew(SLexUIPrefabSequenceEditor);
+	
 	BindCommands();
 	ExtendToolbar();
 
@@ -357,25 +369,38 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 			->Split
 			(
 				FTabManager::NewSplitter()
-				->SetOrientation(Orient_Horizontal)
-				->SetSizeCoefficient(0.9f)
+				->SetOrientation(Orient_Vertical)
+				->SetSizeCoefficient(0.85f)
 				->Split
 				(
-					FTabManager::NewStack()
-					->SetSizeCoefficient(0.2f)
-					->AddTab(FLexUIPrefabEditorTabs::OutlinerID, ETabState::OpenedTab)
+					FTabManager::NewSplitter()
+					->SetOrientation(Orient_Horizontal)
+					->SetSizeCoefficient(0.9f)
+					->Split
+					(
+						FTabManager::NewStack()
+						->SetSizeCoefficient(0.2f)
+						->AddTab(FLexUIPrefabEditorTabs::OutlinerID, ETabState::OpenedTab)
+					)
+					->Split
+					(
+						FTabManager::NewStack()
+						->SetSizeCoefficient(0.6f)
+						->AddTab(FLexUIPrefabEditorTabs::ViewportID, ETabState::OpenedTab)
+					)
+					->Split
+					(
+						FTabManager::NewStack()
+						->SetSizeCoefficient(0.2f)
+						->AddTab(FLexUIPrefabEditorTabs::DetailsID, ETabState::OpenedTab)
+					)
 				)
 				->Split
 				(
 					FTabManager::NewStack()
-					->SetSizeCoefficient(0.6f)
-					->AddTab(FLexUIPrefabEditorTabs::ViewportID, ETabState::OpenedTab)
-				)
-				->Split
-				(
-					FTabManager::NewStack()
-					->SetSizeCoefficient(0.2f)
-					->AddTab(FLexUIPrefabEditorTabs::DetailsID, ETabState::OpenedTab)
+					->SetSizeCoefficient(0.3f)
+					->SetForegroundTab(FLexUIPrefabEditorTabs::SequencerID)
+					->AddTab(FLexUIPrefabEditorTabs::SequencerID, ETabState::ClosedTab)
 				)
 			)
 		);
@@ -419,6 +444,11 @@ ULexWidget* FLexUIPrefabEditor::GetRootAgentWidget()
 ULexWidget* FLexUIPrefabEditor::GetLoadedRootWidget()
 {
 	return GetPrefabHelperObject()->LoadedRootWidget;
+}
+
+FName FLexUIPrefabEditor::GetSequencerTabID()
+{
+	return FLexUIPrefabEditorTabs::SequencerID;
 }
 
 void FLexUIPrefabEditor::SaveAsset_Execute()
@@ -693,7 +723,6 @@ TSharedRef<SDockTab> FLexUIPrefabEditor::SpawnTab_Viewport(const FSpawnTabArgs& 
 }
 TSharedRef<SDockTab> FLexUIPrefabEditor::SpawnTab_Details(const FSpawnTabArgs& Args)
 {
-	// Spawn the tab
 	return SNew(SDockTab)
 		.Label(LOCTEXT("DetailsTab_Title", "Details"))
 		[
@@ -702,11 +731,19 @@ TSharedRef<SDockTab> FLexUIPrefabEditor::SpawnTab_Details(const FSpawnTabArgs& A
 }
 TSharedRef<SDockTab> FLexUIPrefabEditor::SpawnTab_Outliner(const FSpawnTabArgs& Args)
 {
-	// Spawn the tab
 	return SNew(SDockTab)
 		.Label(LOCTEXT("OutlinerTab_Title", "Outliner"))
 		[
 			OutlinerPtr.ToSharedRef()
+		];
+}
+
+TSharedRef<SDockTab> FLexUIPrefabEditor::SpawnTab_Sequencer(const FSpawnTabArgs& Args)
+{
+	return SNew(SDockTab)
+		.Label(LOCTEXT("SequencerTab_Title", "Sequencer"))
+		[
+			SequencerPtr.ToSharedRef()
 		];
 }
 

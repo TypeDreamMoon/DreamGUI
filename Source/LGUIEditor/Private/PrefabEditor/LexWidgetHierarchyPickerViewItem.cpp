@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "LexWidgetHierarchyPickerViewItem.h"
 #include "Styling/CoreStyle.h"

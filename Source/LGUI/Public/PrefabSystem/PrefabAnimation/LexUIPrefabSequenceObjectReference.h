@@ -6,7 +6,6 @@
 #include "LexUIPrefabSequenceObjectReference.generated.h"
 
 class ULexWidget;
-class UActorComponent;
 
 /**
  * An external reference to a level sequence object, resolvable through an arbitrary context.
@@ -19,16 +18,16 @@ struct LGUI_API FLexUIPrefabSequenceObjectReference
 public:
 
 #if WITH_EDITOR
-	static FString GetActorPathRelativeToContextActor(ULexWidget* InContextActor, ULexWidget* InActor);
-	static ULexWidget* GetActorFromContextActorByRelativePath(ULexWidget* InContextActor, const FString& InPath);
-	bool FixObjectReferenceFromEditorHelpers(ULexWidget* InContextActor);
+	static FString GetWidgetPathRelativeToContextWidget(ULexWidget* InContextWidget, ULexWidget* InWidget);
+	static ULexWidget* GetWidgetFromContextWidgetByRelativePath(ULexWidget* InContextWidget, const FString& InPath);
+	bool FixObjectReferenceFromEditorHelpers(ULexWidget* InContextWidget);
 	bool CanFixObjectReferenceFromEditorHelpers()const;
-	bool IsObjectReferenceGood(ULexWidget* InContextActor)const;
-	bool IsEditorHelpersGood(ULexWidget* InContextActor)const;
+	bool IsObjectReferenceGood(ULexWidget* InContextWidget)const;
+	bool IsEditorHelpersGood(ULexWidget* InContextWidget)const;
 #endif
-	static bool CreateForObject(ULexWidget* InContextActor, UObject* InObject, FLexUIPrefabSequenceObjectReference& OutResult);
+	static bool CreateForObject(ULexWidget* InContextWidget, UObject* InObject, FLexUIPrefabSequenceObjectReference& OutResult);
 
-	bool InitHelpers(ULexWidget* InContextActor);
+	bool InitHelpers(ULexWidget* InContextWidget);
 	bool CheckTargetObject()const;
 	/**
 	 * Check whether this object reference is valid or not
@@ -39,7 +38,7 @@ public:
 	}
 
 	/**
-	 * Resolve this reference from the specified source actor
+	 * Resolve this reference from the specified source object
 	 *
 	 * @return The object
 	 */
@@ -58,22 +57,19 @@ private:
 	UPROPERTY(Transient)
 	mutable TObjectPtr<UObject> Object = nullptr;
 
-	/** for direct reference actor. */
+	/** for direct reference widget. */
 	UPROPERTY()
-		TObjectPtr<ULexWidget> HelperActor = nullptr;
-	/** object path relative to owner actor
-	 * if path is empty then means actor self
+		TObjectPtr<ULexWidget> HelperWidget = nullptr;
+	/** object path relative to owner widget
+	 * if path is empty then means widget self
 	 */
 	UPROPERTY()
-	FString ObjectPathRelativeToActor;
+	FString ObjectPathRelativeToWidget;
 
 #if WITH_EDITORONLY_DATA
-	/** HelperActor's actor label/ */
+	/** HelperWidget's path relative to context widget, split by '/'. If only '/' means it is the context widget itself. could use this to replace reference object in editor/ */
 	UPROPERTY()
-		FString HelperActorLabel;
-	/** HelperActor's path relative to context actor, split by '/'. If only '/' means it is the context actor. could use this to replace reference object in editor/ */
-	UPROPERTY()
-		FString HelperActorPath;
+		FString HelperWidgetPath;
 #endif
 };
 
@@ -121,12 +117,12 @@ struct FLexUIPrefabSequenceObjectReferenceMap
 	void ResolveBinding(const FGuid& ObjectId, TArray<UObject*, TInlineAllocator<1>>& OutObjects) const;
 
 #if WITH_EDITOR
-	bool IsObjectReferencesGood(ULexWidget* InContextActor)const;
-	bool IsEditorHelpersGood(ULexWidget* InContextActor)const;
+	bool IsObjectReferencesGood(ULexWidget* InContextWidget)const;
+	bool IsEditorHelpersGood(ULexWidget* InContextWidget)const;
 	//return true if anything changed
-	bool FixObjectReferences(ULexWidget* InContextActor);
+	bool FixObjectReferences(ULexWidget* InContextWidget);
 	//return true if anything changed
-	bool FixEditorHelpers(ULexWidget* InContextActor);
+	bool FixEditorHelpers(ULexWidget* InContextWidget);
 #endif
 private:
 	

@@ -298,6 +298,11 @@ ULexWidget* ULexUIBehaviour::GetWidget() const
 	return CacheWidget.Get();
 }
 
+FString ULexUIBehaviour::GetPathDisplayName() const
+{
+	return GetWidget()->GetPathDisplayName() / this->GetName();
+}
+
 void ULexUIBehaviour::DestroyComponent()
 {
 	GetWidget()->RemoveComponent(this);

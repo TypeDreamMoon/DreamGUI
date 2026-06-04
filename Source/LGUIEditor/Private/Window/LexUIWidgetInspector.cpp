@@ -10,12 +10,9 @@
 
 #define LOCTEXT_NAMESPACE "LexUIWidgetInspector"
 
-TWeakObjectPtr<UWorld> SLexUIWidgetInspector::CurrentSelectedWorld = nullptr;
-
 void SLexUIWidgetInspector::Construct(const FArguments& Args, TSharedPtr<SDockTab> InOwnerTab)
 {
 	InOwnerTab->SetOnTabClosed(SDockTab::FOnTabClosedCallback::CreateSP(this, &SLexUIWidgetInspector::CloseTabCallback));
-	World = CurrentSelectedWorld;
 	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(World.Get()))
 	{
 		LexUIManager->OnDeinitialize.AddSPLambda(this, [this, InOwnerTab]()
@@ -30,38 +27,16 @@ void SLexUIWidgetInspector::Construct(const FArguments& Args, TSharedPtr<SDockTa
 			}
 		});
 	}
-	if (CurrentSelectedWorld == nullptr)
-	{
-		ChildSlot
-		[
-			SNew(SVerticalBox)
-			+ SVerticalBox::Slot()
-			.AutoHeight()
-			[
-				SNew(STextBlock)
-				.AutoWrapText(true)
-				.Text(LOCTEXT("NoValidWorld", "Not valid world!"))
-				.Font(IDetailLayoutBuilder::GetDetailFont())
-			]
-		];
-		InOwnerTab->RequestCloseTab();
-	}
-	else
-	{
-		ChildSlot
-		[
-			SNew(SSplitter)
-			.Orientation(EOrientation::Orient_Horizontal)
-			+ SSplitter::Slot()
-			[
-				SAssignNew(HierarchyView, SLexWidgetEditorHierarchyView, CurrentSelectedWorld.Get())
-			]
-			+ SSplitter::Slot()
-			[
-				SNew(SLexUIPrefabEditorDetails, CurrentSelectedWorld.Get())
-			]
-		];
-	}
+	ChildSlot
+	[
+		SAssignNew(ContentBox, SBox)
+	];
+}
+
+void SLexUIWidgetInspector::AssignWorld(UWorld* InWorld)
+{
+	World = InWorld;
+	RefreshContent();
 }
 
 void SLexUIWidgetInspector::CloseTabCallback(TSharedRef<SDockTab> TabClosed)
@@ -69,6 +44,38 @@ void SLexUIWidgetInspector::CloseTabCallback(TSharedRef<SDockTab> TabClosed)
 	if (auto Selection = ULexUISelection::GetInstance(World.Get()))
 	{
 		Selection->SelectNone();
+	}
+}
+void SLexUIWidgetInspector::RefreshContent()
+{
+	if (World.IsValid())
+	{
+		ContentBox->SetContent(
+			SNew(SSplitter)
+			.Orientation(EOrientation::Orient_Horizontal)
+			+ SSplitter::Slot()
+			[
+				SAssignNew(HierarchyView, SLexWidgetEditorHierarchyView, World.Get())
+			]
+			+ SSplitter::Slot()
+			[
+				SNew(SLexUIPrefabEditorDetails, World.Get())
+			]
+			);
+	}
+	else
+	{
+		ContentBox->SetContent(
+			SNew(SBox)
+			.VAlign(VAlign_Center)
+			.HAlign(HAlign_Center)
+			[
+				SNew(STextBlock)
+				.AutoWrapText(true)
+				.Text(LOCTEXT("NoValidWorld", "Not valid world!"))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
+			);
 	}
 }
 #undef LOCTEXT_NAMESPACE

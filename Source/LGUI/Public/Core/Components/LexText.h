@@ -239,9 +239,9 @@ public:
 		void SetRichTextImageData(ULexUIRichTextImageData_BaseObject* Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetRichTextCustomStyleData(ULexUIRichTextCustomStyleData* Value);
-	UFUNCTION(BlueprintCallable, Category = "LexUI")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
     	void SetOverrideMaterial(UMaterialInterface* Value);
-	UFUNCTION(BlueprintCallable, Category = "LexUI")
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetExpandMeshSize(float Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetDynamicPixelsPerUnit(float Value);

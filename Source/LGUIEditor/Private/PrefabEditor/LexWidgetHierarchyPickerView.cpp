@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "LexWidgetHierarchyPickerView.h"
 #include "LexWidgetHierarchyPickerViewItem.h"
@@ -9,11 +9,12 @@
 
 #define LOCTEXT_NAMESPACE "LexWidgetHierarchyPickerView"
 
-void SLexWidgetHierarchyPickerView::Construct(const FArguments& InArgs, UWorld* InPrefabWorld, UClass* InObjectClass)
+void SLexWidgetHierarchyPickerView::Construct(const FArguments& InArgs, UWorld* InPrefabWorld, UClass* InObjectClass, ULexWidget* InRootWidget)
 {
 	PrefabWorld = InPrefabWorld;
 	OnSelectItem = InArgs._OnSelectItem;
 	ObjectClass = InObjectClass;
+	SpecificRootWidget = InRootWidget;
 
 	SearchBoxWidgetFilter = MakeShareable(new WidgetTextFilter(WidgetTextFilter::FItemToStringArray::CreateSP(this, &SLexWidgetHierarchyPickerView::GetWidgetFilterStrings)));
 
@@ -71,13 +72,20 @@ void SLexWidgetHierarchyPickerView::RefreshImmediately()
 void SLexWidgetHierarchyPickerView::RefreshTree()
 {
 	RootWidgets.Empty();
-	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(PrefabWorld.Get()))
+	if (SpecificRootWidget)
 	{
-		for (auto& Widget : LexUIManager->GetAllWidgetArray())
+		RootWidgets.Add(MakeShared<FLexWidgetHierarchyPickerView_DataItem>(SpecificRootWidget->GetDisplayName(), SpecificRootWidget));
+	}
+	else
+	{
+		if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(PrefabWorld.Get()))
 		{
-			if (Widget->IsRootWidgetInHierarchy())
+			for (auto& Widget : LexUIManager->GetAllWidgetArray())
 			{
-				RootWidgets.Add(MakeShared<FLexWidgetHierarchyPickerView_DataItem>(Widget->GetDisplayName(), Widget));
+				if (Widget->IsRootWidgetInHierarchy())
+				{
+					RootWidgets.Add(MakeShared<FLexWidgetHierarchyPickerView_DataItem>(Widget->GetDisplayName(), Widget));
+				}
 			}
 		}
 	}

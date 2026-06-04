@@ -41,11 +41,15 @@ protected:
 	friend class SLexUISpriteBorderEditor;
 	friend class FLexSpriteBaseCustomization;
 	
-	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (DisplayThumbnail = "false"))
-		TObjectPtr<ULexUISpriteData_BaseObject> Sprite = nullptr;
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (DisplayThumbnail = "true"))
+	TObjectPtr<ULexUISpriteData_BaseObject> Sprite = nullptr;
+	/** Use a custom material to render this sprite */
+	UPROPERTY(EditAnywhere, Category = "LexUI")
+	UMaterialInterface* OverrideMaterial = nullptr;
 
 	virtual void OnBeforeCreateOrUpdateGeometry()override;
 	virtual UTexture* GetTextureToCreateGeometry()override;
+	virtual UMaterialInterface* GetMaterialToCreateGeometry() override;
 
 	virtual bool ReadPixelFromMainTexture(const FVector2D& InUV, FColor& OutPixel)const override;
 
@@ -54,6 +58,7 @@ protected:
 public:
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI") ULexUISpriteData_BaseObject* GetSprite()const { return Sprite; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") UMaterialInterface* GetOverrideMaterial()const{return OverrideMaterial;}
 #pragma region LexUISpriteRenderInterface
 	virtual ULexUISpriteData_BaseObject* SpriteRenderGetSprite_Implementation()const override{ return Sprite; }
 	virtual void ApplyAtlasTextureChange_Implementation()override;
@@ -63,4 +68,6 @@ public:
 		void SetSprite(ULexUISpriteData_BaseObject* Value, bool bSetSize = true);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetSizeFromSpriteData();
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetOverrideMaterial(UMaterialInterface* Value);
 };

@@ -34,10 +34,10 @@ protected:
 		FColor Color2 = FColor::White;
 
 	//only use for FourCorner
-	UPROPERTY(EditAnywhere, Category = "LGUI")
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta=(EditCondition="DirectionType==ELexMeshModifierGradientColorDirection::FourCorner"))
 		FColor Color3 = FColor::Black;
 	//only use for FourCorner
-	UPROPERTY(EditAnywhere, Category = "LGUI")
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta=(EditCondition="DirectionType==ELexMeshModifierGradientColorDirection::FourCorner"))
 		FColor Color4 = FColor::White;
 	FORCEINLINE void ApplyColorAndAlpha(FColor& InOutColor, FColor InTintColor);
 public:

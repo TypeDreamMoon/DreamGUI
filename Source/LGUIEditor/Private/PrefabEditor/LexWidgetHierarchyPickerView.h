@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #pragma once
 
@@ -47,7 +47,7 @@ public:
 		SLATE_EVENT(FOnSelectItem, OnSelectItem)
 	SLATE_END_ARGS()
 
-	void Construct(const FArguments& InArgs, UWorld* InPrefabWorld, UClass* InObjectClass);
+	void Construct(const FArguments& InArgs, UWorld* InPrefabWorld, UClass* InObjectClass, ULexWidget* InRootWidget = nullptr);
 	virtual ~SLexWidgetHierarchyPickerView();
 
 	// Begin SWidget
@@ -84,5 +84,6 @@ protected:
 	bool bRefreshRequested = true;
 	FOnSelectItem OnSelectItem;
 	UClass* ObjectClass = nullptr;
+	ULexWidget* SpecificRootWidget = nullptr;
 };
 

@@ -40,35 +40,62 @@ void FLexWidgetPresenterCustomization::CustomizeDetails(IDetailLayoutBuilder& De
 		UE_LOG(LGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
+	auto TargetWorld = TargetScriptArray[0]->GetWorld();
 
 	IDetailCategoryBuilder& Category = DetailBuilder.EditCategory("LexWidgetPresenter");
 
-	Category.AddCustomRow(LOCTEXT("AdditionalButton", "AdditionalButton"))
-	.WholeRowContent()
-	[
-		SNew(SButton)
-		.HAlign(HAlign_Center)
-		.VAlign(VAlign_Center)
-		.Visibility_Lambda([=, this]()
-		{
-			if (TargetScriptArray.Num() > 0 && TargetScriptArray[0] != nullptr && TargetScriptArray[0]->GetWorld() != nullptr)
-			{
-				return EVisibility::Visible;
-			}
-			return EVisibility::Collapsed;
-		})
-		.OnClicked_Lambda([=, this]()
-		{
-			SLexUIWidgetInspector::CurrentSelectedWorld = TargetScriptArray[0]->GetWorld();
-			FGlobalTabmanager::Get()->TryInvokeTab(FLGUIEditorModule::LexUIWidgetInspectorTabName);
-			return FReply::Handled();
-		})
+	TSharedPtr<FTabManager> HostTabManager = nullptr;
+	if (auto DetailsView = DetailBuilder.GetDetailsViewSharedPtr())
+	{
+		HostTabManager = DetailsView->GetHostTabManager();
+	}
+	if (!HostTabManager.IsValid())
+	{
+		HostTabManager = FGlobalTabmanager::Get();
+	}
+
+	bool bIsExternalTabAlreadyOpened = false;
+
+	TSharedPtr<SDockTab> ExistingTab = HostTabManager->FindExistingLiveTab(FLGUIEditorModule:: LexUIWidgetInspectorTabName);
+	if (ExistingTab.IsValid())
+	{
+		auto WidgetInspector = StaticCastSharedRef<SLexUIWidgetInspector>(ExistingTab->GetContent());
+		bIsExternalTabAlreadyOpened = TargetWorld != nullptr && WidgetInspector->GetWorld() == TargetWorld;
+	}
+	Category.AddCustomRow(FText())
+		.NameContent()
 		[
 			SNew(STextBlock)
-			.Text(LOCTEXT("OpenWidgetInspector", "Open Widget Inspector"))
-			.Font(IDetailLayoutBuilder::GetDetailFont())
+			.Text(LOCTEXT("WidgetInspector", "WidgetInspector"))
+			.Font(DetailBuilder.GetDetailFont())
 		]
-	];
+		.ValueContent()
+		[
+			SNew(SButton)
+			.HAlign(HAlign_Center)
+			.VAlign(VAlign_Center)
+			.Visibility_Lambda([=, this]()
+			{
+				if (TargetScriptArray.Num() > 0 && TargetScriptArray[0] != nullptr && TargetScriptArray[0]->GetWorld() != nullptr)
+				{
+					return EVisibility::Visible;
+				}
+				return EVisibility::Collapsed;
+			})
+			.OnClicked_Lambda([=, this]()
+			{
+				if (auto Tab = FGlobalTabmanager::Get()->TryInvokeTab(FLGUIEditorModule::LexUIWidgetInspectorTabName))
+				{
+					StaticCastSharedRef<SLexUIWidgetInspector>(Tab->GetContent())->AssignWorld(TargetScriptArray[0]->GetWorld());
+				}
+				return FReply::Handled();
+			})
+			[
+				SNew(STextBlock)
+				.Text(bIsExternalTabAlreadyOpened ? LOCTEXT("OpenWidgetInspector", "Focus Tab") : LOCTEXT("OpenWidgetInspector", "Open in Tab"))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
+		];
 }
 void FLexWidgetPresenterCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
 {

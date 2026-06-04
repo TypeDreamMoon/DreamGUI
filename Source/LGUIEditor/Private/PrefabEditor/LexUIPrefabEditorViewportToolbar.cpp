@@ -3,7 +3,7 @@
 #include "LexUIPrefabEditorViewportToolbar.h"
 #include "LexUIPrefabEditorViewport.h"
 
-#define LOCTEXT_NAMESPACE "SLGUIPrefabEditorViewportToolbar"
+#define LOCTEXT_NAMESPACE "SLexUIPrefabEditorViewportToolbar"
 
 ///////////////////////////////////////////////////////////
 // SSpriteEditorViewportToolbar

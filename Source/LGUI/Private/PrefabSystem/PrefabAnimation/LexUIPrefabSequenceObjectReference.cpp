@@ -10,17 +10,17 @@
 
 
 #if WITH_EDITOR
-FString FLexUIPrefabSequenceObjectReference::GetActorPathRelativeToContextActor(ULexWidget* InContextActor, ULexWidget* InActor)
+FString FLexUIPrefabSequenceObjectReference::GetWidgetPathRelativeToContextWidget(ULexWidget* InContextWidget, ULexWidget* InWidget)
 {
-	if (InActor == InContextActor)
+	if (InWidget == InContextWidget)
 	{
 		return TEXT("/");
 	}
-	else if (InActor->IsChildOf(InContextActor))
+	else if (InWidget->IsChildOf(InContextWidget))
 	{
-		FString Result = InActor->GetDisplayName();
-		auto Parent = InActor->GetParent();
-		while (Parent != nullptr && Parent != InContextActor)
+		FString Result = InWidget->GetDisplayName();
+		auto Parent = InWidget->GetParent();
+		while (Parent != nullptr && Parent != InContextWidget)
 		{
 			Result = Parent->GetDisplayName() + "/" + Result;
 			Parent = Parent->GetParent();
@@ -29,11 +29,11 @@ FString FLexUIPrefabSequenceObjectReference::GetActorPathRelativeToContextActor(
 	}
 	return TEXT("");
 }
-ULexWidget* FLexUIPrefabSequenceObjectReference::GetActorFromContextActorByRelativePath(ULexWidget* InContextActor, const FString& InPath)
+ULexWidget* FLexUIPrefabSequenceObjectReference::GetWidgetFromContextWidgetByRelativePath(ULexWidget* InContextWidget, const FString& InPath)
 {
 	if (InPath == TEXT("/"))
 	{
-		return InContextActor;
+		return InContextWidget;
 	}
 	else
 	{
@@ -43,7 +43,6 @@ ULexWidget* FLexUIPrefabSequenceObjectReference::GetActorFromContextActorByRelat
 			{
 				FString SourceString = InPath;
 				FString Left, Right;
-				TArray<AActor*> ChildrenActors;
 				while (SourceString.Split(TEXT("/"), &Left, &Right, ESearchCase::CaseSensitive))
 				{
 					SplitedArray.Add(Left);
@@ -57,27 +56,27 @@ ULexWidget* FLexUIPrefabSequenceObjectReference::GetActorFromContextActorByRelat
 			}
 		}
 
-		auto ParentActor = InContextActor;
+		auto Parent = InContextWidget;
 		for (int i = 0; i < SplitedArray.Num(); i++)
 		{
 			auto& PathItem = SplitedArray[i];
-			auto Children = ParentActor->GetChildren();
-			ULexWidget* FoundChildActor = nullptr;
-			for (auto& ChildActor : Children)
+			auto Children = Parent->GetChildren();
+			ULexWidget* FoundChild = nullptr;
+			for (auto& Child : Children)
 			{
-				if (PathItem == ChildActor->GetDisplayName())
+				if (PathItem == Child->GetDisplayName())
 				{
-					FoundChildActor = ChildActor;
+					FoundChild = Child;
 					break;
 				}
 			}
-			if (FoundChildActor != nullptr)
+			if (FoundChild != nullptr)
 			{
 				if (i + 1 == SplitedArray.Num())
 				{
-					return FoundChildActor;
+					return FoundChild;
 				}
-				ParentActor = FoundChildActor;
+				Parent = FoundChild;
 			}
 			else
 			{
@@ -87,20 +86,19 @@ ULexWidget* FLexUIPrefabSequenceObjectReference::GetActorFromContextActorByRelat
 	}
 	return nullptr;
 }
-bool FLexUIPrefabSequenceObjectReference::FixObjectReferenceFromEditorHelpers(ULexWidget* InContextActor)
+bool FLexUIPrefabSequenceObjectReference::FixObjectReferenceFromEditorHelpers(ULexWidget* InContextWidget)
 {
-	if (auto FoundHelperActor = GetActorFromContextActorByRelativePath(InContextActor, this->HelperActorPath))
+	if (auto FoundHelper = GetWidgetFromContextWidgetByRelativePath(InContextWidget, this->HelperWidgetPath))
 	{
-		HelperActor = FoundHelperActor;
-		HelperActorLabel = HelperActor->GetDisplayName();
-		if (ObjectPathRelativeToActor.IsEmpty())
+		HelperWidget = FoundHelper;
+		if (ObjectPathRelativeToWidget.IsEmpty())
 		{
-			Object = HelperActor;
+			Object = HelperWidget;
 			return true;
 		}
 		else 
 		{
-			FSoftObjectPath ObjectPath(FString::Printf(TEXT("%s.%s"), *HelperActor->GetPathName(), *this->ObjectPathRelativeToActor));
+			FSoftObjectPath ObjectPath(FString::Printf(TEXT("%s.%s"), *HelperWidget->GetPathName(), *this->ObjectPathRelativeToWidget));
 			Object = ObjectPath.ResolveObject();
 			return IsValid(Object);
 		}
@@ -109,60 +107,58 @@ bool FLexUIPrefabSequenceObjectReference::FixObjectReferenceFromEditorHelpers(UL
 }
 bool FLexUIPrefabSequenceObjectReference::CanFixObjectReferenceFromEditorHelpers()const
 {
-	return !HelperActorPath.IsEmpty();
+	return !HelperWidgetPath.IsEmpty();
 }
-bool FLexUIPrefabSequenceObjectReference::IsObjectReferenceGood(ULexWidget* InContextActor)const
+bool FLexUIPrefabSequenceObjectReference::IsObjectReferenceGood(ULexWidget* InContextWidget)const
 {
 	CheckTargetObject();
-	auto Actor = Cast<ULexWidget>(Object);
-	if (Actor == nullptr)
+	auto Widget = Cast<ULexWidget>(Object);
+	if (Widget == nullptr)
 	{
-		Actor = Object->GetTypedOuter<ULexWidget>();
+		Widget = Object->GetTypedOuter<ULexWidget>();
 	}
 
-	if (Actor != nullptr)
+	if (Widget != nullptr)
 	{
-		return (Actor == InContextActor || Actor->IsChildOf(InContextActor))//only allow actor self or child actor
+		return (Widget == InContextWidget || Widget->IsChildOf(InContextWidget))//only allow widget self or child widget
 			;
 	}
 	return false;
 }
-bool FLexUIPrefabSequenceObjectReference::IsEditorHelpersGood(ULexWidget* InContextActor)const
+bool FLexUIPrefabSequenceObjectReference::IsEditorHelpersGood(ULexWidget* InContextWidget)const
 {
-	return IsValid(HelperActor)
-		&& HelperActorPath == GetActorPathRelativeToContextActor(InContextActor, HelperActor)
+	return IsValid(HelperWidget)
+		&& HelperWidgetPath == GetWidgetPathRelativeToContextWidget(InContextWidget, HelperWidget)
 		;
 }
 #endif
 
-bool FLexUIPrefabSequenceObjectReference::InitHelpers(ULexWidget* InContextActor)
+bool FLexUIPrefabSequenceObjectReference::InitHelpers(ULexWidget* InContextWidget)
 {
-	if (auto Actor = Cast<ULexWidget>(Object))
+	if (auto Widget = Cast<ULexWidget>(Object))
 	{
-		this->HelperActor = Actor;
-		this->ObjectPathRelativeToActor = "";
+		this->HelperWidget = Widget;
+		this->ObjectPathRelativeToWidget = "";
 #if WITH_EDITOR
-		this->HelperActorLabel = Actor->GetDisplayName();
-		this->HelperActorPath = GetActorPathRelativeToContextActor(InContextActor, Actor);
+		this->HelperWidgetPath = GetWidgetPathRelativeToContextWidget(InContextWidget, Widget);
 #endif
 		return true;
 	}
 	else
 	{
-		Actor = Object->GetTypedOuter<ULexWidget>();
-		this->HelperActor = Actor;
-		this->ObjectPathRelativeToActor = Object->GetPathName(Actor);
+		Widget = Object->GetTypedOuter<ULexWidget>();
+		this->HelperWidget = Widget;
+		this->ObjectPathRelativeToWidget = Object->GetPathName(Widget);
 #if WITH_EDITOR
-		this->HelperActorLabel = Actor->GetDisplayName();
-		this->HelperActorPath = GetActorPathRelativeToContextActor(InContextActor, Actor);
+		this->HelperWidgetPath = GetWidgetPathRelativeToContextWidget(InContextWidget, Widget);
 #endif
 		return true;
 	}
 }
-bool FLexUIPrefabSequenceObjectReference::CreateForObject(ULexWidget* InContextActor, UObject* InObject, FLexUIPrefabSequenceObjectReference& OutResult)
+bool FLexUIPrefabSequenceObjectReference::CreateForObject(ULexWidget* InContextWidget, UObject* InObject, FLexUIPrefabSequenceObjectReference& OutResult)
 {
 	OutResult.Object = InObject;
-	return OutResult.InitHelpers(InContextActor);
+	return OutResult.InitHelpers(InContextWidget);
 }
 
 bool FLexUIPrefabSequenceObjectReference::CheckTargetObject()const
@@ -173,16 +169,16 @@ bool FLexUIPrefabSequenceObjectReference::CheckTargetObject()const
 	}
 	else
 	{
-		if (IsValid(HelperActor))
+		if (IsValid(HelperWidget))
 		{
-			if (this->ObjectPathRelativeToActor.IsEmpty())
+			if (this->ObjectPathRelativeToWidget.IsEmpty())
 			{
-				Object = HelperActor;
+				Object = HelperWidget;
 				return true;
 			}
 			else
 			{
-				FSoftObjectPath ObjectPath(FString::Printf(TEXT("%s.%s"), *HelperActor->GetPathName(), *this->ObjectPathRelativeToActor));
+				FSoftObjectPath ObjectPath(FString::Printf(TEXT("%s.%s"), *HelperWidget->GetPathName(), *this->ObjectPathRelativeToWidget));
 				Object = ObjectPath.ResolveObject();
 				return IsValid(Object);
 			}
@@ -244,13 +240,13 @@ void FLexUIPrefabSequenceObjectReferenceMap::ResolveBinding(const FGuid& ObjectI
 }
 
 #if WITH_EDITOR
-bool FLexUIPrefabSequenceObjectReferenceMap::IsObjectReferencesGood(ULexWidget* InContextActor)const
+bool FLexUIPrefabSequenceObjectReferenceMap::IsObjectReferencesGood(ULexWidget* InContextWidget)const
 {
 	for (auto& Reference : References)
 	{
 		for (auto& RefItem : Reference.Array)
 		{
-			if (!RefItem.IsObjectReferenceGood(InContextActor))
+			if (!RefItem.IsObjectReferenceGood(InContextWidget))
 			{
 				return false;
 			}
@@ -258,13 +254,13 @@ bool FLexUIPrefabSequenceObjectReferenceMap::IsObjectReferencesGood(ULexWidget* 
 	}
 	return true;
 }
-bool FLexUIPrefabSequenceObjectReferenceMap::IsEditorHelpersGood(ULexWidget* InContextActor)const
+bool FLexUIPrefabSequenceObjectReferenceMap::IsEditorHelpersGood(ULexWidget* InContextWidget)const
 {
 	for (auto& Reference : References)
 	{
 		for (auto& RefItem : Reference.Array)
 		{
-			if (!RefItem.IsEditorHelpersGood(InContextActor))
+			if (!RefItem.IsEditorHelpersGood(InContextWidget))
 			{
 				return false;
 			}
@@ -272,16 +268,16 @@ bool FLexUIPrefabSequenceObjectReferenceMap::IsEditorHelpersGood(ULexWidget* InC
 	}
 	return true;
 }
-bool FLexUIPrefabSequenceObjectReferenceMap::FixObjectReferences(ULexWidget* InContextActor)
+bool FLexUIPrefabSequenceObjectReferenceMap::FixObjectReferences(ULexWidget* InContextWidget)
 {
 	bool anythingChanged = false;
 	for (auto& Reference : References)
 	{
 		for (auto& RefItem : Reference.Array)
 		{
-			if (!RefItem.IsObjectReferenceGood(InContextActor) && RefItem.CanFixObjectReferenceFromEditorHelpers())
+			if (!RefItem.IsObjectReferenceGood(InContextWidget) && RefItem.CanFixObjectReferenceFromEditorHelpers())
 			{
-				if (RefItem.FixObjectReferenceFromEditorHelpers(InContextActor))
+				if (RefItem.FixObjectReferenceFromEditorHelpers(InContextWidget))
 				{
 					anythingChanged = true;
 				}
@@ -290,16 +286,16 @@ bool FLexUIPrefabSequenceObjectReferenceMap::FixObjectReferences(ULexWidget* InC
 	}
 	return anythingChanged;
 }
-bool FLexUIPrefabSequenceObjectReferenceMap::FixEditorHelpers(ULexWidget* InContextActor)
+bool FLexUIPrefabSequenceObjectReferenceMap::FixEditorHelpers(ULexWidget* InContextWidget)
 {
 	bool anythingChanged = false;
 	for (auto& Reference : References)
 	{
 		for (auto& RefItem : Reference.Array)
 		{
-			if (RefItem.IsObjectReferenceGood(InContextActor) && !RefItem.IsEditorHelpersGood(InContextActor))
+			if (RefItem.IsObjectReferenceGood(InContextWidget) && !RefItem.IsEditorHelpersGood(InContextWidget))
 			{
-				if (RefItem.InitHelpers(InContextActor))
+				if (RefItem.InitHelpers(InContextWidget))
 				{
 					anythingChanged = true;
 				}

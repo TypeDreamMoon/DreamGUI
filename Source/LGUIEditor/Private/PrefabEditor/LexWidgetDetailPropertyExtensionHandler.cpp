@@ -111,7 +111,6 @@ void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow&
 						SNew(SLexWidgetHierarchyPickerView, World.Get(), ObjectClass)
 						.OnSelectItem_Lambda([=, this](UObject* InItem)
 						{
-							// InPropertyHandle->SetValue(InItem);
 							InPropertyHandle->SetValueFromFormattedString(InItem->GetPathName());
 							PickerButton->SetIsOpen(false);
 						})

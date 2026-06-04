@@ -1,9 +1,8 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #pragma once
 
 #include "EntitySystem/MovieSceneEntityIDs.h"
-#include "EntitySystem/MovieScenePropertySystemTypes.h"
 
 class LGUI_API FLexUIMaterialHandle
 {

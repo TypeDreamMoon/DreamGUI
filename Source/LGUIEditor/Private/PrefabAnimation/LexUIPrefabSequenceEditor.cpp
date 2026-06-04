@@ -4,34 +4,24 @@
 
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequence.h"
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequenceComponent.h"
-#include "EditorStyleSet.h"
-#include "GameFramework/Actor.h"
-#include "IDetailsView.h"
-#include "DetailLayoutBuilder.h"
-#include "DetailCategoryBuilder.h"
-#include "DetailWidgetRow.h"
-#include "Widgets/Docking/SDockTab.h"
-#include "SSCSEditor.h"
-#include "BlueprintEditorTabs.h"
 #include "ScopedTransaction.h"
-#include "ISequencerModule.h"
 #include "Editor.h"
 #include "LexUIPrefabSequenceEditorWidget.h"
-#include "IPropertyUtilities.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Views/SListView.h"
 #include "Widgets/Layout/SScrollBorder.h"
 #include "Widgets/Input/SSearchBox.h"
-#include "LGUIEditorModule.h"
 #include "Framework/Commands/GenericCommands.h"
 #include "Widgets/Text/SInlineEditableTextBlock.h"
 #include "Misc/TextFilter.h"
 #include "PropertyCustomizationHelpers.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "LexUIEditorTools.h"
+#include "SPositiveActionButton.h"
+#include "Core/LexUIManager.h"
 #include "Core/Components/LexWidget.h"
 
-#define LOCTEXT_NAMESPACE "SLGUIPrefabSequenceEditor"
+#define LOCTEXT_NAMESPACE "SLexUIPrefabSequenceEditor"
 
 
 struct FWidgetAnimationListItem
@@ -202,6 +192,7 @@ void SLexUIPrefabSequenceEditor::Construct(const FArguments& InArgs)
 							SNew(SHorizontalBox)
 							+SHorizontalBox::Slot()
 							.AutoWidth()
+							.VAlign(EVerticalAlignment::VAlign_Center)
 							[
 								SNew(SButton)
 								.Text_Lambda([=, this](){
@@ -209,13 +200,20 @@ void SLexUIPrefabSequenceEditor::Construct(const FArguments& InArgs)
 									{
 										if (auto Widget = WeakSequenceComponent->GetWidget())
 										{
-											auto DisplayText = Widget->GetDisplayName() + TEXT(".") + WeakSequenceComponent->GetName();
-											return FText::FromString(DisplayText);
+											return FText::FromString(Widget->GetDisplayName());
 										}
 									}
 									return LOCTEXT("NullSequenceComponent", "Null (LexUIPrefabSequence)");
 								})
-								.ToolTipText(LOCTEXT("ObjectButtonTooltipText", "Actor.Component, click to select target"))
+								.ToolTipText_Lambda([=, this]()
+								{
+									if (WeakSequenceComponent.IsValid())
+									{
+										return FText::Format(LOCTEXT("ObjectButtonTooltipText", "{0}.{1}, click to select target")
+										, FText::FromString(WeakSequenceComponent->GetWidget()->GetPathDisplayName()), FText::FromString(WeakSequenceComponent->GetName()));
+									}
+									return LOCTEXT("NullSequenceComponent", "Null (LexUIPrefabSequence)");
+								})
 								.IsEnabled_Lambda([=, this](){
 									return WeakSequenceComponent.IsValid();
 								})
@@ -224,9 +222,12 @@ void SLexUIPrefabSequenceEditor::Construct(const FArguments& InArgs)
 								.OnClicked_Lambda([=, this](){
 									if (WeakSequenceComponent.IsValid())
 									{
-										// GEditor->SelectNone(true, true);
-										// GEditor->SelectActor(WeakSequenceComponent, true, true);
-										// GEditor->SelectComponent(WeakSequenceComponent.Get(), true, true);
+										if (auto Selection = ULexUISelection::GetInstance(WeakSequenceComponent->GetWorld()))
+										{
+											Selection->SelectNone();
+											Selection->SelectWidget(WeakSequenceComponent->GetWidget());
+											Selection->SelectComponent(WeakSequenceComponent.Get());
+										}
 									}
 									return FReply::Handled();
 								})
@@ -237,9 +238,9 @@ void SLexUIPrefabSequenceEditor::Construct(const FArguments& InArgs)
 							[
 								PropertyCustomizationHelpers::MakeResetButton(
 									FSimpleDelegate::CreateLambda([=, this]() {
-										AssignLGUIPrefabSequenceComponent(nullptr);
+										AssignLexUIPrefabSequenceComponent(nullptr);
 										})
-									, LOCTEXT("ClearSequenceComponent", "Click to clear current selected LGUISequenceComponent, so we will not edit it here.")
+									, LOCTEXT("ClearSequenceComponent", "Click to clear current selected LexUISequenceComponent, so we will not edit it here.")
 											)
 							]
 						]
@@ -253,9 +254,10 @@ void SLexUIPrefabSequenceEditor::Construct(const FArguments& InArgs)
 							.VAlign( VAlign_Center )
 							.AutoWidth()
 							[
-								SNew(SButton)
+								SNew(SPositiveActionButton)
+								.Icon(FAppStyle::Get().GetBrush("Icons.Plus"))
+								.Text(LOCTEXT("NewAnimationButtonText", "Add Animation"))
 								.OnClicked(this, &SLexUIPrefabSequenceEditor::OnNewAnimationClicked)
-								.Text(LOCTEXT("NewAnimationButtonText", "+ Animation"))
 							]
 							+ SHorizontalBox::Slot()
 							.Padding(2.0f, 0.0f)
@@ -280,7 +282,7 @@ void SLexUIPrefabSequenceEditor::Construct(const FArguments& InArgs)
 			+SSplitter::Slot()
 			.Value(0.8f)
 			[
-				SAssignNew(PrefabSequenceEditor, SLexUIPrefabSequenceEditorWidget, nullptr)
+				SAssignNew(PrefabSequenceEditor, SLexUIPrefabSequenceEditorWidget)
 			]
 		];
 
@@ -288,18 +290,18 @@ void SLexUIPrefabSequenceEditor::Construct(const FArguments& InArgs)
 
 	OnObjectsReplacedHandle = FCoreUObjectDelegates::OnObjectsReplaced.AddSP(this, &SLexUIPrefabSequenceEditor::OnObjectsReplaced);
 
-	PrefabSequenceEditor->AssignSequence(GetLGUIPrefabSequence());
+	PrefabSequenceEditor->AssignSequence(GetPrefabSequence());
 	EditingPrefabChangedHandle = FLexUIEditorTools::OnEditingPrefabChanged.AddRaw(this, &SLexUIPrefabSequenceEditor::OnEditingPrefabChanged);
 	OnBeforeApplyPrefabHandle = FLexUIEditorTools::OnBeforeApplyPrefab.AddRaw(this, &SLexUIPrefabSequenceEditor::OnBeforeApplyPrefab);
 }
 
-void SLexUIPrefabSequenceEditor::AssignLGUIPrefabSequenceComponent(TWeakObjectPtr<ULexUIPrefabSequenceComponent> InSequenceComponent)
+void SLexUIPrefabSequenceEditor::AssignLexUIPrefabSequenceComponent(TWeakObjectPtr<ULexUIPrefabSequenceComponent> InSequenceComponent)
 {
 	WeakSequenceComponent = InSequenceComponent;
 	RefreshAnimationList();
 }
 
-ULexUIPrefabSequence* SLexUIPrefabSequenceEditor::GetLGUIPrefabSequence() const
+ULexUIPrefabSequence* SLexUIPrefabSequenceEditor::GetPrefabSequence() const
 {
 	if (CurrentSelectedAnimationIndex != INDEX_NONE)
 	{
@@ -317,7 +319,7 @@ void SLexUIPrefabSequenceEditor::OnObjectsReplaced(const TMap<UObject*, UObject*
 	if (NewSequenceComponent)
 	{
 		WeakSequenceComponent = NewSequenceComponent;
-		PrefabSequenceEditor->AssignSequence(GetLGUIPrefabSequence());
+		PrefabSequenceEditor->AssignSequence(GetPrefabSequence());
 	}
 }
 
@@ -341,7 +343,7 @@ void SLexUIPrefabSequenceEditor::OnAnimationListViewSelectionChanged(TSharedPtr<
 			}
 		}
 	}
-	PrefabSequenceEditor->AssignSequence(GetLGUIPrefabSequence());
+	PrefabSequenceEditor->AssignSequence(GetPrefabSequence());
 }
 
 void SLexUIPrefabSequenceEditor::RefreshAnimationList()
@@ -396,10 +398,15 @@ void SLexUIPrefabSequenceEditor::OnEditingPrefabChanged(ULexWidget* RootWidget)
 			auto PrefabSequencerComponent = ChildWidget->GetComponent<ULexUIPrefabSequenceComponent>();
 			if (PrefabSequencerComponent)
 			{
-				AssignLGUIPrefabSequenceComponent(PrefabSequencerComponent);
+				AssignLexUIPrefabSequenceComponent(PrefabSequencerComponent);
 			}
 		}
 	}
+}
+
+TSharedPtr<ISequencer> SLexUIPrefabSequenceEditor::GetSequencer() const
+{
+	return PrefabSequenceEditor.IsValid() ? PrefabSequenceEditor->GetSequencer() : nullptr;
 }
 
 void SLexUIPrefabSequenceEditor::OnAnimationListViewSearchChanged(const FText& InSearchText)
@@ -472,7 +479,8 @@ TSharedPtr<SWidget> SLexUIPrefabSequenceEditor::OnContextMenuOpening()const
 					MenuBuilder.AddMenuSeparator();
 					MenuBuilder.AddMenuEntry(
 						LOCTEXT("TryFixObjectReference", "Try fix object reference"),
-						LOCTEXT("TryFixObjectReference_Tooltip", "LGUI can search target object by actor's path relative to ContextActor (Owner actor of LGUIPrefabSequenceComponent), so if ActorLabel and Actor's hierarchy is same as before, it is possible to fix the bad tracks."),
+						LOCTEXT("TryFixObjectReference_Tooltip", "LexUI can search target object by Widget's path relative to ContextObject (Owner Widget of LexUIPrefabSequenceComponent), "
+											   "so if Widget's DisplayName and Widget's hierarchy is same as before, it is possible to fix the bad tracks."),
 						FSlateIcon(),
 						FUIAction(FExecuteAction::CreateLambda([=, this]() {
 							SelectedItem->Animation->FixObjectReferences(WeakSequenceComponent->GetWidget());
@@ -524,7 +532,7 @@ void SLexUIPrefabSequenceEditor::OnDuplicateAnimation()
 {
 	if (WeakSequenceComponent.IsValid())
 	{
-		GEditor->BeginTransaction(LOCTEXT("DuplicateAnimation_Transaction", "LGUISequence Duplicate Animation"));
+		GEditor->BeginTransaction(LOCTEXT("DuplicateAnimation_Transaction", "LexUISequence Duplicate Animation"));
 		WeakSequenceComponent->Modify();
 		auto Sequence = WeakSequenceComponent->DuplicateAnimationByIndex(CurrentSelectedAnimationIndex);
 		GEditor->EndTransaction();
@@ -542,7 +550,7 @@ void SLexUIPrefabSequenceEditor::OnDeleteAnimation()
 {
 	if (WeakSequenceComponent.IsValid())
 	{
-		GEditor->BeginTransaction(LOCTEXT("DeleteAnimation_Transaction", "LGUISequence Delete Animation"));
+		GEditor->BeginTransaction(LOCTEXT("DeleteAnimation_Transaction", "LexUISequence Delete Animation"));
 		WeakSequenceComponent->Modify();
 		bool bDeleted = WeakSequenceComponent->DeleteAnimationByIndex(CurrentSelectedAnimationIndex);
 		GEditor->EndTransaction();

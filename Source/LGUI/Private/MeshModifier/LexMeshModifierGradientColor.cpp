@@ -50,8 +50,8 @@ void ULexMeshModifierGradientColor::ModifyUIGeometry(
 	{
 		for (int i = 0; i < vertexCount;)
 		{
-			ApplyColorAndAlpha(vertices[i++].Color, Color1);
-			ApplyColorAndAlpha(vertices[i++].Color, Color1);
+			ApplyColorAndAlpha(vertices[i++].Color, Color2);
+			ApplyColorAndAlpha(vertices[i++].Color, Color2);
 			ApplyColorAndAlpha(vertices[i++].Color, Color1);
 			ApplyColorAndAlpha(vertices[i++].Color, Color1);
 		}

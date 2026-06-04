@@ -3,10 +3,6 @@
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequence.h"
 #include "MovieScene.h"
 #include "Core/Components/LexWidget.h"
-#include "Modules/ModuleManager.h"
-#include "Engine/BlueprintGeneratedClass.h"
-#include "Engine/Blueprint.h"
-#include "GameFramework/Actor.h"
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequenceComponent.h"
 #include "Tracks/MovieSceneAudioTrack.h"
 #include "Tracks/MovieSceneEventTrack.h"
@@ -52,24 +48,16 @@ ULexUIPrefabSequence::ULexUIPrefabSequence(const FObjectInitializer& ObjectIniti
 bool ULexUIPrefabSequence::IsEditable() const
 {
 	return true;
-	//UObject* Template = GetArchetype();
-
-	//if (Template == GetDefault<ULGUIPrefabSequence>())
-	//{
-	//	return false;
-	//}
-
-	//return !Template || Template->GetTypedOuter<ULGUIPrefabSequenceComponent>() == GetDefault<ULGUIPrefabSequenceComponent>();
 }
 
 void ULexUIPrefabSequence::PostInitProperties()
 {
 #if WITH_EDITOR && WITH_EDITORONLY_DATA
 
-	// We do not run the default initialization for actor sequences that are CDOs, or that are going to be loaded (since they will have already been initialized in that case)
+	// We do not run the default initialization for widget sequences that are CDOs, or that are going to be loaded (since they will have already been initialized in that case)
 	EObjectFlags ExcludeFlags = RF_ClassDefaultObject | RF_NeedLoad | RF_NeedPostLoad | RF_NeedPostLoadSubobjects | RF_WasLoaded;
 
-	UActorComponent* OwnerComponent = Cast<UActorComponent>(GetOuter());
+	auto OwnerComponent = Cast<ULexUIBehaviour>(GetOuter());
 	if (!bHasBeenInitialized && !HasAnyFlags(ExcludeFlags) && OwnerComponent && !OwnerComponent->HasAnyFlags(ExcludeFlags))
 	{
 		const bool bFrameLocked = CVarDefaultEvaluationType.GetValueOnGameThread() != 0;
@@ -95,14 +83,13 @@ void ULexUIPrefabSequence::PostInitProperties()
 void ULexUIPrefabSequence::BindPossessableObject(const FGuid& ObjectId, UObject& PossessedObject, UObject* Context)
 {
 	FLexUIPrefabSequenceObjectReference ObjectRef;
-	auto ActorContext = CastChecked<ULexWidget>(Context);
-	auto* Actor = Cast<ULexWidget>(&PossessedObject);
-	if (Actor == nullptr)
+	auto Widget = Cast<ULexWidget>(&PossessedObject);
+	if (Widget == nullptr)
 	{
-		Actor = PossessedObject.GetTypedOuter<ULexWidget>();
+		Widget = PossessedObject.GetTypedOuter<ULexWidget>();
 	}
-	check(Actor != nullptr);
-	if (FLexUIPrefabSequenceObjectReference::CreateForObject(Actor, &PossessedObject, ObjectRef))
+	check(Widget != nullptr);
+	if (FLexUIPrefabSequenceObjectReference::CreateForObject(Widget, &PossessedObject, ObjectRef))
 	{
 		ObjectReferences.CreateBinding(ObjectId, ObjectRef);
 	}
@@ -115,31 +102,26 @@ bool ULexUIPrefabSequence::CanPossessObject(UObject& Object, UObject* InPlayback
 		return false;
 	}
 
-	AActor* ActorContext = CastChecked<AActor>(InPlaybackContext);
-	AActor* Actor = Cast<AActor>(&Object);
-	if (Actor == nullptr)
+	auto ContextWidget = CastChecked<ULexWidget>(InPlaybackContext);
+	auto Widget = Cast<ULexWidget>(&Object);
+	if (Widget == nullptr)
 	{
-		if (auto Component = Cast<UActorComponent>(&Object))
-		{
-			Actor = Component->GetOwner();
-		}
-		if (Actor == nullptr)
-		{
-			Actor = Object.GetTypedOuter<AActor>();
-		}
+		Widget = Object.GetTypedOuter<ULexWidget>();
 	}
 
-	if (Actor != nullptr)
+	if (Widget != nullptr)
 	{
-		return Actor->GetLevel() == ActorContext->GetLevel()
-			&& (Actor == ActorContext || Actor->IsAttachedTo(ActorContext))//only allow actor self or child actor
+		return Widget->GetWorld() == ContextWidget->GetWorld()
+			&& (Widget == ContextWidget || Widget->IsChildOf(ContextWidget))//only allow widget self or child widget
 			;
 	}
 
 	return false;
 }
 
-void ULexUIPrefabSequence::LocateBoundObjects(const FGuid& ObjectId, UObject* Context, TArray<UObject*, TInlineAllocator<1>>& OutObjects) const
+void ULexUIPrefabSequence::LocateBoundObjects(const FGuid& ObjectId,
+	const UE::UniversalObjectLocator::FResolveParams& ResolveParams,
+	TSharedPtr<const FSharedPlaybackState> SharedPlaybackState, TArray<UObject*, TInlineAllocator<1>>& OutObjects) const
 {
 	ObjectReferences.ResolveBinding(ObjectId, OutObjects);
 }
@@ -151,12 +133,7 @@ UMovieScene* ULexUIPrefabSequence::GetMovieScene() const
 
 UObject* ULexUIPrefabSequence::GetParentObject(UObject* Object) const
 {
-	if (UActorComponent* Component = Cast<UActorComponent>(Object))
-	{
-		return Component->GetOwner();
-	}
-
-	return nullptr;
+	return Object->GetTypedOuter<ULexWidget>();
 }
 
 void ULexUIPrefabSequence::UnbindPossessableObjects(const FGuid& ObjectId)
@@ -174,7 +151,7 @@ UObject* ULexUIPrefabSequence::CreateDirectorInstance(TSharedRef<const FSharedPl
 ETrackSupport ULexUIPrefabSequence::IsTrackSupportedImpl(TSubclassOf<class UMovieSceneTrack> InTrackClass) const
 {
 	if (InTrackClass == UMovieSceneAudioTrack::StaticClass() ||
-		InTrackClass == UMovieSceneEventTrack::StaticClass() ||
+		// InTrackClass == UMovieSceneEventTrack::StaticClass() ||
 		InTrackClass == UMovieSceneMaterialParameterCollectionTrack::StaticClass())
 	{
 		return ETrackSupport::Supported;
@@ -183,24 +160,24 @@ ETrackSupport ULexUIPrefabSequence::IsTrackSupportedImpl(TSubclassOf<class UMovi
 	return Super::IsTrackSupportedImpl(InTrackClass);
 }
 
-bool ULexUIPrefabSequence::IsObjectReferencesGood(ULexWidget* InContextActor)const
+bool ULexUIPrefabSequence::IsObjectReferencesGood(ULexWidget* InContextWidget)const
 {
-	return ObjectReferences.IsObjectReferencesGood(InContextActor);
+	return ObjectReferences.IsObjectReferencesGood(InContextWidget);
 }
-bool ULexUIPrefabSequence::IsEditorHelpersGood(ULexWidget* InContextActor)const
+bool ULexUIPrefabSequence::IsEditorHelpersGood(ULexWidget* InContextWidget)const
 {
-	return ObjectReferences.IsEditorHelpersGood(InContextActor);
+	return ObjectReferences.IsEditorHelpersGood(InContextWidget);
 }
-void ULexUIPrefabSequence::FixObjectReferences(ULexWidget* InContextActor)
+void ULexUIPrefabSequence::FixObjectReferences(ULexWidget* InContextWidget)
 {
-	if (ObjectReferences.FixObjectReferences(InContextActor))
+	if (ObjectReferences.FixObjectReferences(InContextWidget))
 	{
 		this->Modify();
 	}
 }
-void ULexUIPrefabSequence::FixEditorHelpers(ULexWidget* InContextActor)
+void ULexUIPrefabSequence::FixEditorHelpers(ULexWidget* InContextWidget)
 {
-	if (ObjectReferences.FixEditorHelpers(InContextActor))
+	if (ObjectReferences.FixEditorHelpers(InContextWidget))
 	{
 		this->Modify();
 	}

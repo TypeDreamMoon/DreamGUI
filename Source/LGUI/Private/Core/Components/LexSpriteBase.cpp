@@ -90,6 +90,15 @@ void ULexSpriteBase::SetSizeFromSpriteData()
 	}
 }
 
+void ULexSpriteBase::SetOverrideMaterial(UMaterialInterface* Value)
+{
+	if (OverrideMaterial != Value)
+	{
+		OverrideMaterial = Value;
+		MarkMaterialDirty();
+	}
+}
+
 void ULexSpriteBase::OnRegister()
 {
 	Super::OnRegister();
@@ -179,6 +188,11 @@ UTexture* ULexSpriteBase::GetTextureToCreateGeometry()
 		return Sprite->GetAtlasTexture();
 	}
 	return nullptr;
+}
+
+UMaterialInterface* ULexSpriteBase::GetMaterialToCreateGeometry()
+{
+	return OverrideMaterial;
 }
 
 bool ULexSpriteBase::ReadPixelFromMainTexture(const FVector2D& InUV, FColor& OutPixel)const

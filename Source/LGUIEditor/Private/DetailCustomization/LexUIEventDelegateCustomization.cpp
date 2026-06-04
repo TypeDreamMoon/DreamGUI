@@ -1019,7 +1019,6 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::DrawLexWidgetSelectorForPr
 						SNew(SLexWidgetHierarchyPickerView, World.Get(), ULexWidget::StaticClass())
 						.OnSelectItem_Lambda([=, this](UObject* InItem)
 						{
-							// InPropertyHandle->SetValue(InItem);
 							HelperWidgetHandle->SetValueFromFormattedString(InItem->GetPathName());
 							WidgetPickerComboButton->SetIsOpen(false);
 						})

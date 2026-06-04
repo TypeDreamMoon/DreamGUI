@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #pragma once
 
@@ -8,11 +8,6 @@
 #include "Sections/MovieSceneParameterSection.h"
 #include "Tracks/MovieSceneMaterialTrack.h"
 #include "MovieSceneLexUIMaterialTrack.generated.h"
-
-class UMovieSceneEntitySystemLinker;
-class UMovieSceneSection;
-struct FMovieSceneEntityComponentFieldBuilder;
-struct FMovieSceneEvaluationFieldEntityMetaData;
 
 /**
  * A material track which is specialized for LGUI's LexVisualBatchMesh's CustomUIMaterial.

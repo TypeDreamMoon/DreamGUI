@@ -1,17 +1,12 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Misc/Guid.h"
-#include "Templates/SubclassOf.h"
 #include "ISequencer.h"
 #include "MovieSceneTrack.h"
 #include "ISequencerTrackEditor.h"
 #include "TrackEditors/MaterialTrackEditor.h"
-
-class UMaterialInterface;
-class UMovieSceneMaterialTrack;
 
 /**
  * A specialized material track editor for LGUI custom materials

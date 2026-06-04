@@ -2,24 +2,19 @@
 
 #include "LexUIPrefabSequenceComponentCustomization.h"
 
-#include "PrefabSystem/PrefabAnimation/LexUIPrefabSequence.h"
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequenceComponent.h"
-#include "EditorStyleSet.h"
 #include "GameFramework/Actor.h"
 #include "IDetailsView.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailWidgetRow.h"
 #include "Widgets/Docking/SDockTab.h"
-#include "SSCSEditor.h"
-#include "BlueprintEditorTabs.h"
 #include "ScopedTransaction.h"
-#include "ISequencerModule.h"
 #include "Editor.h"
 #include "IPropertyUtilities.h"
 #include "Widgets/Input/SButton.h"
-#include "LGUIEditorModule.h"
 #include "LexUIPrefabSequenceEditor.h"
+#include "PrefabEditor/LexUIPrefabEditor.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabSequenceComponentCustomization"
 
@@ -46,8 +41,17 @@ void FLexUIPrefabSequenceComponentCustomization::CustomizeDetails(IDetailLayoutB
 		return;
 	}
 
-	auto DetailsView = DetailBuilder.GetDetailsViewSharedPtr();
-	TSharedPtr<FTabManager> HostTabManager = FGlobalTabmanager::Get();
+	auto World = WeakSequenceComponent->GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	auto PrefabEditor = FLexUIPrefabEditor::GetEditorByWorld(World);
+	if (!PrefabEditor.IsValid())
+	{
+		return;
+	}
 
 	DetailBuilder.HideProperty("Sequence");
 
@@ -55,7 +59,8 @@ void FLexUIPrefabSequenceComponentCustomization::CustomizeDetails(IDetailLayoutB
 
 	bool bIsExternalTabAlreadyOpened = false;
 
-	TSharedPtr<SDockTab> ExistingTab = HostTabManager->FindExistingLiveTab(FLGUIEditorModule::LexUIPrefabSequenceTabName);
+	auto HostTabManager = PrefabEditor.Pin()->GetTabManager();
+	TSharedPtr<SDockTab> ExistingTab = HostTabManager->FindExistingLiveTab(FLexUIPrefabEditor::GetSequencerTabID());
 	if (ExistingTab.IsValid())
 	{
 		auto SequencerWidget = StaticCastSharedRef<SLexUIPrefabSequenceEditor>(ExistingTab->GetContent());
@@ -71,7 +76,30 @@ void FLexUIPrefabSequenceComponentCustomization::CustomizeDetails(IDetailLayoutB
 		.ValueContent()
 		[
 			SNew(SButton)
-			.OnClicked(this, &FLexUIPrefabSequenceComponentCustomization::InvokeSequencer)
+			.OnClicked_Lambda([=, this]()
+			{
+				if (TSharedPtr<SDockTab> Tab = HostTabManager->TryInvokeTab(FLexUIPrefabEditor::GetSequencerTabID()))
+				{
+					// Set up a delegate that forces a refresh of this panel when the tab is closed to ensure we see the inline widget
+					TWeakPtr<IPropertyUtilities> WeakUtilities = PropertyUtilities;
+					auto OnClosed = [WeakUtilities](TSharedRef<SDockTab>)
+					{
+						TSharedPtr<IPropertyUtilities> PinnedPropertyUtilities = WeakUtilities.Pin();
+						if (PinnedPropertyUtilities.IsValid())
+						{
+							PinnedPropertyUtilities->EnqueueDeferredAction(FSimpleDelegate::CreateSP(PinnedPropertyUtilities.ToSharedRef(), &IPropertyUtilities::ForceRefresh));
+						}
+					};
+	
+					Tab->SetOnTabClosed(SDockTab::FOnTabClosedCallback::CreateLambda(OnClosed));
+	
+					StaticCastSharedRef<SLexUIPrefabSequenceEditor>(Tab->GetContent())->AssignLexUIPrefabSequenceComponent(WeakSequenceComponent);
+				}
+
+				PropertyUtilities->ForceRefresh();
+
+				return FReply::Handled();
+			})
 			[
 				SNew(STextBlock)
 				.Text(bIsExternalTabAlreadyOpened ? LOCTEXT("FocusSequenceTabButtonText", "Focus Tab") : LOCTEXT("OpenSequenceTabButtonText", "Open in Tab"))
@@ -79,36 +107,6 @@ void FLexUIPrefabSequenceComponentCustomization::CustomizeDetails(IDetailLayoutB
 			]
 		];
 
-}
-
-FReply FLexUIPrefabSequenceComponentCustomization::InvokeSequencer()
-{
-	if (TSharedPtr<SDockTab> Tab = FGlobalTabmanager::Get()->TryInvokeTab(FLGUIEditorModule::LexUIPrefabSequenceTabName))
-	{
-		{
-			// Set up a delegate that forces a refresh of this panel when the tab is closed to ensure we see the inline widget
-			TWeakPtr<IPropertyUtilities> WeakUtilities = PropertyUtilities;
-			auto OnClosed = [WeakUtilities](TSharedRef<SDockTab>)
-			{
-				TSharedPtr<IPropertyUtilities> PinnedPropertyUtilities = WeakUtilities.Pin();
-				if (PinnedPropertyUtilities.IsValid())
-				{
-					PinnedPropertyUtilities->EnqueueDeferredAction(FSimpleDelegate::CreateSP(PinnedPropertyUtilities.ToSharedRef(), &IPropertyUtilities::ForceRefresh));
-				}
-			};
-
-			Tab->SetOnTabClosed(SDockTab::FOnTabClosedCallback::CreateLambda(OnClosed));
-		}
-
-		StaticCastSharedRef<SLexUIPrefabSequenceEditor>(Tab->GetContent())->AssignLGUIPrefabSequenceComponent(WeakSequenceComponent);
-	}
-
-
-	//FGlobalTabmanager::Get()->TryInvokeTab(FLGUIEditorModule::LGUIPrefabSequenceTabName);
-
-	PropertyUtilities->ForceRefresh();
-
-	return FReply::Handled();
 }
 
 #undef LOCTEXT_NAMESPACE

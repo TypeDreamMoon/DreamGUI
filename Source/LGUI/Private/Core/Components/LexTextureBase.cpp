@@ -53,6 +53,11 @@ UTexture* ULexTextureBase::GetTextureToCreateGeometry()
 	return Texture;
 }
 
+UMaterialInterface* ULexTextureBase::GetMaterialToCreateGeometry()
+{
+	return OverrideMaterial;
+}
+
 bool ULexTextureBase::ReadPixelFromMainTexture(const FVector2D& InUV, FColor& OutPixel)const
 {
 	if (IsValid(Texture))
@@ -99,6 +104,14 @@ void ULexTextureBase::SetSizeFromTexture()
 	else
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d Texture is null!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+	}
+}
+void ULexTextureBase::SetOverrideMaterial(UMaterialInterface* Value)
+{
+	if (OverrideMaterial != Value)
+	{
+		OverrideMaterial = Value;
+		MarkMaterialDirty();
 	}
 }
 

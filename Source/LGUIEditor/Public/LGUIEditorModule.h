@@ -14,7 +14,6 @@ class FLGUIEditorModule : public IModuleInterface, public FGCObject
 public:
 
 	static const FName LexUIDynamicSpriteAtlasViewerTabName;
-	static const FName LexUIPrefabSequenceTabName;
 	static const FName LexUIWidgetInspectorTabName;
 
 	/** IModuleInterface implementation */
@@ -40,12 +39,10 @@ private:
 	TWeakObjectPtr<class ULexUIPrefabHelperObject> CurrentPrefabHelperObject;
 private:
 	TSharedRef<SDockTab> HandleSpawnDynamicSpriteAtlasViewerTab(const FSpawnTabArgs& SpawnTabArgs);
-	TSharedRef<SDockTab> HandleSpawnLexUIPrefabSequenceTab(const FSpawnTabArgs& SpawnTabArgs);
 	TSharedRef<SDockTab> HandleSpawnLexUIInspectorTab(const FSpawnTabArgs& SpawnTabArgs);
 	
 	FDelegateHandle SequenceEditorHandle;
 	FDelegateHandle OnInitializeSequenceHandle;
-	FName LexUIPrefabSequenceComponentName;
 	static void OnInitializeSequence(class ULexUIPrefabSequence* Sequence);
 	FDelegateHandle LexUIMaterialTrackEditorCreateTrackEditorHandle;
 	TObjectPtr<class USequencerSettings> LexUIPrefabSequencerSettings = nullptr;

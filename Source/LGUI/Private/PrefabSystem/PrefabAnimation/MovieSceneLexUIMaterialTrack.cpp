@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "PrefabSystem/PrefabAnimation/MovieSceneLexUIMaterialTrack.h"
 #include "PrefabSystem/PrefabAnimation/MovieSceneLexUIComponentTypes.h"

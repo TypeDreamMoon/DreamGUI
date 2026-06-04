@@ -20,6 +20,7 @@ class LGUI_API ULexUIBehaviour : public UObject
 public:
 	ULexUIBehaviour();
 	friend class ULexWidget;
+	virtual UWorld* GetWorld() const override final;
 private:
 	void BeginPlay();
 	void EndPlay();
@@ -30,9 +31,7 @@ protected:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
 #endif
-
-	virtual UWorld* GetWorld() const override final;
-
+	
 	enum class ECallbackFunctionType :int32
 	{
 		OnWidgetActiveChanged,
@@ -139,6 +138,8 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "LexUIBehaviour")
 	ULexWidget* GetWidget() const;
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	FString GetPathDisplayName()const;
 	
 	UFUNCTION(BlueprintCallable, Category = "LexUIBehaviour")
 	void DestroyComponent();

@@ -85,6 +85,7 @@ public:
 	void SelectNone();
 	bool IsSelected(ULexWidget* Widget)const;
 	TArray<TWeakObjectPtr<ULexWidget>> GetSelectedWidgets()const{return SelectedWidgetArray;}
+	TArray<TWeakObjectPtr<ULexUIBehaviour>> GetSelectedComponents()const{return SelectedComponentArray;}
 	FSimpleMulticastDelegate OnSelectionChanged;
 private:
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")

@@ -969,7 +969,7 @@ bool FLexUIPrefabEditorViewportClient::InputKey(const FInputKeyEventArgs& EventA
 	bool bHandled = false;
 	if (TransformWidget.IsValid())
 	{
-		TransformWidget->HandleInputKey(EventArgs);
+		bHandled = TransformWidget->HandleInputKey(EventArgs);
 	}
 	if (!bHandled)
 	{

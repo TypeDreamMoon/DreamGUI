@@ -2,14 +2,11 @@
 
 #pragma once
 
-#include "WorkflowOrientedApp/WorkflowUObjectDocuments.h"
+#include "ISequencer.h"
 
 
-class FBlueprintEditor;
-class SLGUIPrefabSequenceEditorWidgetImpl;
+class SLexUIPrefabSequenceEditorWidgetImpl;
 class ULexUIPrefabSequence;
-class ULexUIPrefabSequenceComponent;
-
 
 class SLexUIPrefabSequenceEditorWidget
 	: public SCompoundWidget
@@ -19,13 +16,14 @@ public:
 	SLATE_BEGIN_ARGS(SLexUIPrefabSequenceEditorWidget){}
 	SLATE_END_ARGS();
 
-	void Construct(const FArguments&, TWeakPtr<FBlueprintEditor> InBlueprintEditor);
-	void AssignSequence(ULexUIPrefabSequence* NewLGUIPrefabSequence);
+	void Construct(const FArguments&);
+	void AssignSequence(ULexUIPrefabSequence* NewLexUIPrefabSequence);
 	ULexUIPrefabSequence* GetSequence() const;
 	FText GetDisplayLabel() const;
+	TSharedPtr<ISequencer> GetSequencer() const;
 
 private:
 
-	TWeakPtr<SLGUIPrefabSequenceEditorWidgetImpl> Impl;
+	TWeakPtr<SLexUIPrefabSequenceEditorWidgetImpl> Impl;
 };
 

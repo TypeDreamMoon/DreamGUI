@@ -8,36 +8,31 @@
 #include "LevelEditorSequencerIntegration.h"
 #include "SSCSEditor.h"
 #include "EditorUndoClient.h"
-#include "Widgets/Images/SImage.h"
 #include "Editor.h"
 #include "ScopedTransaction.h"
 #include "Widgets/Docking/SDockTab.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
-#include "Framework/Application/SlateApplication.h"
 #include "Utils/LexUIUtils.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequenceComponent.h"
 #include "LevelEditor.h"
+#include "Core/LexUIManager.h"
 #include "Core/Components/LexImage.h"
 #include "Core/Components/LexLayout.h"
 #include "Core/Components/LexText.h"
-
-#define LOCTEXT_NAMESPACE "LGUIPrefabSequenceEditorWidget"
-
-DECLARE_DELEGATE_OneParam(FPrefabAnimationOnComponentSelected, TSharedPtr<FSCSEditorTreeNode>);
-DECLARE_DELEGATE_RetVal_OneParam(bool, FPrefabAnimationIsComponentValid, UActorComponent*);
-
-
+#include "PrefabEditor/LexWidgetHierarchyPickerView.h"
 #include "Core/Components/LexVisualBatchMesh.h"
 #include "PrefabSystem/PrefabAnimation/MovieSceneLexUIMaterialTrack.h"
 
-class SLGUIPrefabSequenceEditorWidgetImpl : public SCompoundWidget, public FEditorUndoClient
+#define LOCTEXT_NAMESPACE "LexUIPrefabSequenceEditorWidget"
+
+class SLexUIPrefabSequenceEditorWidgetImpl : public SCompoundWidget, public FEditorUndoClient
 {
 public:
 
 	bool bUpdatingSequencerSelection = false;
 
-	SLATE_BEGIN_ARGS(SLGUIPrefabSequenceEditorWidgetImpl){}
+	SLATE_BEGIN_ARGS(SLexUIPrefabSequenceEditorWidgetImpl){}
 	SLATE_END_ARGS();
 
 	void Close()
@@ -53,7 +48,7 @@ public:
 		GEditor->UnregisterForUndo(this);
 	}
 
-	~SLGUIPrefabSequenceEditorWidgetImpl()
+	~SLexUIPrefabSequenceEditorWidgetImpl()
 	{
 		Close();
 
@@ -77,7 +72,7 @@ public:
 		return Tab;
 	}
 
-	void Construct(const FArguments&, TWeakPtr<FBlueprintEditor> InBlueprintEditor)
+	void Construct(const FArguments&)
 	{
 		NoAnimationTextBlock =
 			SNew(STextBlock)
@@ -107,7 +102,7 @@ public:
 		ISequencerModule& SequencerModule = FModuleManager::Get().LoadModuleChecked<ISequencerModule>("Sequencer");
 		{
 			int32 NewIndex = SequencerModule.GetAddTrackMenuExtensibilityManager()->GetExtenderDelegates().Add(
-				FAssetEditorExtender::CreateRaw(this, &SLGUIPrefabSequenceEditorWidgetImpl::GetAddTrackSequencerExtender));
+				FAssetEditorExtender::CreateRaw(this, &SLexUIPrefabSequenceEditorWidgetImpl::GetAddTrackSequencerExtender));
 			SequencerAddTrackExtenderHandle = SequencerModule.GetAddTrackMenuExtensibilityManager()->GetExtenderDelegates()[NewIndex].GetHandle();
 		}
 	}
@@ -115,7 +110,7 @@ public:
 
 	virtual void PostUndo(bool bSuccess) override
 	{
-		if (!GetLGUIPrefabSequence())
+		if (!GetPrefabSequence())
 		{
 			Close();
 		}
@@ -127,17 +122,21 @@ public:
 		return Sequence ? Sequence->GetDisplayName() : LOCTEXT("DefaultSequencerLabel", "Sequencer");
 	}
 
-	ULexUIPrefabSequence* GetLGUIPrefabSequence() const
+	TSharedPtr<ISequencer> GetSequencer() const
+	{
+		return Sequencer;
+	}
+
+	ULexUIPrefabSequence* GetPrefabSequence() const
 	{
 		return WeakSequence.Get();
 	}
 
 	UObject* GetPlaybackContext() const
 	{
-		ULexUIPrefabSequence* LocalLGUIPrefabSequence = GetLGUIPrefabSequence();
-		if (LocalLGUIPrefabSequence)
+		if (auto LocalPrefabSequence = GetPrefabSequence())
 		{
-			auto Component = LocalLGUIPrefabSequence->GetTypedOuter<ULexUIPrefabSequenceComponent>();
+			auto Component = LocalPrefabSequence->GetTypedOuter<ULexUIPrefabSequenceComponent>();
 			return Component->GetWidget();
 		}
 		
@@ -166,7 +165,7 @@ public:
 		return NullSequence;
 	}
 
-	void SetLGUIPrefabSequence(ULexUIPrefabSequence* NewSequence)
+	void SetLexUIPrefabSequence(ULexUIPrefabSequence* NewSequence)
 	{
 		if (ULexUIPrefabSequence* OldSequence = WeakSequence.Get())
 		{
@@ -180,7 +179,7 @@ public:
 
 		if (NewSequence)
 		{
-			OnSequenceChangedHandle = NewSequence->OnSignatureChanged().AddSP(this, &SLGUIPrefabSequenceEditorWidgetImpl::OnSequenceChanged);
+			OnSequenceChangedHandle = NewSequence->OnSignatureChanged().AddSP(this, &SLexUIPrefabSequenceEditorWidgetImpl::OnSequenceChanged);
 		}
 
 		if (NewSequence == nullptr)
@@ -225,20 +224,20 @@ public:
 			TWeakObjectPtr<ULexUIPrefabSequence> LocalWeakSequence = NewSequence;
 
 			SequencerInitParams.RootSequence = NewSequence ? NewSequence : GetNullSequence();
-			SequencerInitParams.EventContexts = TAttribute<TArray<UObject*>>(this, &SLGUIPrefabSequenceEditorWidgetImpl::GetEventContexts);
-			SequencerInitParams.PlaybackContext = TAttribute<UObject*>(this, &SLGUIPrefabSequenceEditorWidgetImpl::GetPlaybackContext);
+			SequencerInitParams.EventContexts = TAttribute<TArray<UObject*>>(this, &SLexUIPrefabSequenceEditorWidgetImpl::GetEventContexts);
+			SequencerInitParams.PlaybackContext = TAttribute<UObject*>(this, &SLexUIPrefabSequenceEditorWidgetImpl::GetPlaybackContext);
 
 			TSharedRef<FExtender> AddMenuExtender = MakeShareable(new FExtender);
 
 			AddMenuExtender->AddMenuExtension("AddTracks", EExtensionHook::Before, nullptr,
-				FMenuExtensionDelegate::CreateRaw(this, &SLGUIPrefabSequenceEditorWidgetImpl::AddPossessMenuExtensions)
+				FMenuExtensionDelegate::CreateRaw(this, &SLexUIPrefabSequenceEditorWidgetImpl::AddPossessMenuExtensions)
 			);
 
 			SequencerInitParams.ViewParams.bReadOnly = !NewSequence->IsEditable();
 			SequencerInitParams.ViewParams.AddMenuExtender = AddMenuExtender;
 			SequencerInitParams.ViewParams.UniqueName = "EmbeddedLexUIPrefabSequenceEditor";
 			SequencerInitParams.ViewParams.ScrubberStyle = ESequencerScrubberStyle::FrameBlock;
-			SequencerInitParams.ViewParams.OnReceivedFocus.BindRaw(this, &SLGUIPrefabSequenceEditorWidgetImpl::OnSequencerReceivedFocus);
+			SequencerInitParams.ViewParams.OnReceivedFocus.BindRaw(this, &SLexUIPrefabSequenceEditorWidgetImpl::OnSequencerReceivedFocus);
 			SequencerInitParams.bEditWithinLevelEditor = false;
 			SequencerInitParams.ToolkitHost = ToolkitHost;
 			SequencerInitParams.HostCapabilities.bSupportsCurveEditor = true;
@@ -246,7 +245,7 @@ public:
 
 		Sequencer = FModuleManager::LoadModuleChecked<ISequencerModule>("Sequencer").CreateSequencer(SequencerInitParams);
 		Content->SetContent(Sequencer->GetSequencerWidget());
-		Sequencer->GetSelectionChangedObjectGuids().AddSP(this, &SLGUIPrefabSequenceEditorWidgetImpl::SyncSelectedWidgetsWithSequencerSelection);
+		Sequencer->GetSelectionChangedObjectGuids().AddSP(this, &SLexUIPrefabSequenceEditorWidgetImpl::SyncSelectedWidgetsWithSequencerSelection);
 		Sequencer->OnMovieSceneBindingsChanged().AddLambda([=, this]() {
 			if (!WeakSequence.IsValid())return;
 			auto MovieScene = WeakSequence->GetMovieScene();
@@ -257,16 +256,9 @@ public:
 				auto ObjectArray = Sequencer->FindObjectsInCurrentSequence(BindingItem.GetObjectGuid());
 				if (ObjectArray.Num() > 0)
 				{
-					if (auto Actor = Cast<AActor>(ObjectArray[0]))
+					if (auto Widget = Cast<ULexWidget>(ObjectArray[0]))
 					{
-						MovieScene->SetObjectDisplayName(BindingItem.GetObjectGuid(), FText::FromString(Actor->GetActorLabel()));
-					}
-					else if (auto Comp = Cast<UActorComponent>(ObjectArray[0]))
-					{
-						if (auto CompActor = Comp->GetOwner())
-						{
-							MovieScene->SetObjectDisplayName(BindingItem.GetObjectGuid(), FText::FromString(CompActor->GetActorLabel()));
-						}
+						MovieScene->SetObjectDisplayName(BindingItem.GetObjectGuid(), FText::FromString(Widget->GetDisplayName()));
 					}
 				}
 			}
@@ -274,7 +266,7 @@ public:
 
 		FLevelEditorSequencerIntegrationOptions Options;
 		Options.bRequiresLevelEvents = false;
-		Options.bRequiresActorEvents = true;
+		Options.bRequiresActorEvents = false;
 		Options.bForceRefreshDetails = false;
 
 		FLevelEditorSequencerIntegration::Get().AddSequencer(Sequencer.ToSharedRef(), Options);
@@ -288,38 +280,48 @@ public:
 			return;
 		}
 
-		//UE_LOG(LGUI, Log, TEXT("SyncSelectedWidgetsWithSequencerSelection, ObjectGuids.Num()=%d"), ObjectGuids.Num());
-
 		TGuardValue<bool> Guard(bUpdatingSequencerSelection, true);
 
 		UMovieSceneSequence* AnimationSequence = Sequencer->GetFocusedMovieSceneSequence();
 		UObject* BindingContext = WeakSequence.Get();
-		TSet<ULexWidget*> SequencerSelectedWidgets;
+		ULexWidget* SequencerSelectedWidget = nullptr;
+		ULexUIBehaviour* SequencerSelectedComponent = nullptr;
 		for (FGuid Guid : ObjectGuids)
 		{
 			TArray<UObject*, TInlineAllocator<1>> BoundObjects;
 			AnimationSequence->LocateBoundObjects(Guid, BindingContext, MovieSceneHelpers::CreateTransientSharedPlaybackState(BindingContext->GetWorld(), Cast<UMovieSceneSequence>(BindingContext)), BoundObjects);
 			if (BoundObjects.Num() == 0)
-			{
 				continue;
-			}
-			else
+
+			if (auto BoundWidget = Cast<ULexWidget>(BoundObjects[0]))
 			{
-				ULexWidget* BoundWidget = Cast<ULexWidget>(BoundObjects[0]);
-				if (BoundWidget)
-				{
-					SequencerSelectedWidgets.Add(BoundWidget);
-				}
+				SequencerSelectedWidget = BoundWidget;
+			}
+			else if (auto BoundComponent = Cast<ULexUIBehaviour>(BoundObjects[0]))
+			{
+				SequencerSelectedComponent = BoundComponent;
 			}
 		}
-
-		if (SequencerSelectedWidgets.Num() != 0)
+		if (SequencerSelectedComponent && !SequencerSelectedWidget)
 		{
-			ULexWidget* SelectedActor = *SequencerSelectedWidgets.begin();
+			SequencerSelectedWidget = SequencerSelectedComponent->GetWidget();
+		}
 
+		if (auto Widget = WeakSequence->GetTypedOuter<ULexWidget>())
+		{
 			// Sync Selection
-			// GEditor->SelectNone(false, true, false);
-			// GEditor->SelectActor(SelectedActor, true, true, true);
+			if (auto Selection = ULexUISelection::GetInstance(Widget->GetWorld()))
+			{
+				Selection->SelectNone();
+				if (SequencerSelectedWidget)
+				{
+					Selection->SelectWidget(SequencerSelectedWidget);
+				}
+				if (SequencerSelectedComponent)
+				{
+					Selection->SelectComponent(SequencerSelectedComponent);
+				}
+			}
 		}
 	}
 
@@ -331,29 +333,6 @@ public:
 		{
 			FLevelEditorSequencerIntegration::Get().OnSequencerReceivedFocus(Sequencer.ToSharedRef());
 		}
-	}
-
-	void OnSelectionUpdated(TSharedPtr<FSCSEditorTreeNode> SelectedNode)
-	{
-		if (SelectedNode->GetNodeType() != FSCSEditorTreeNode::ComponentNode)
-		{
-			return;
-		}
-
-		UActorComponent* EditingComponent = nullptr;
-
-		if (AActor* Actor = GetSelectedActor())
-		{
-			EditingComponent = SelectedNode->FindComponentInstanceInActor(Actor);
-		}
-
-		if (EditingComponent)
-		{
-			const FScopedTransaction Transaction(LOCTEXT("AddComponentToSequencer", "Add component to Sequencer"));
-			Sequencer->GetHandleToObject(EditingComponent, true);
-		}
-
-		FSlateApplication::Get().DismissAllMenus();
 	}
 
 	void AddPossessMenuExtensions(FMenuBuilder& MenuBuilder)
@@ -375,185 +354,39 @@ public:
 			}
 		}
 
-		//actor menu
-		{
-			TArray<AActor*> ValidActorArray;
-			if (auto Actor = WeakSequence->GetTypedOuter<AActor>())
-			{
-				TArray<AActor*> AllChildrenActors;
-				FLexUIUtils::CollectChildrenActors(Actor, AllChildrenActors);
-				for (auto ActorItem : AllChildrenActors)
-				{
-					if (!AllBoundObjects.Contains(ActorItem))
-					{
-						ValidActorArray.Add(ActorItem);
-					}
-				}
-			}
-
-			MenuBuilder.AddSubMenu(
-				LOCTEXT("AddActor_Label", "Actor"),
-				LOCTEXT("AddActor_Tooltip", "Add a binding to one of actor and allow it to be animated by Sequencer"),
-				FNewMenuDelegate::CreateRaw(this, &SLGUIPrefabSequenceEditorWidgetImpl::AddPossessActorMenuExtensions, ValidActorArray),
-				false, FSlateIcon()
-						);
-		}
-		//component menu
-		if (auto Actor = GetSelectedActor())
-		{
-			TArray<UActorComponent*> AllCompArray;
-			Actor->GetComponents(AllCompArray);
-			TArray<UActorComponent*> ValidCompArray;
-			for (auto Comp : AllCompArray)
-			{
-				if (Comp->HasAnyFlags(EObjectFlags::RF_Transient))continue;
-				if (!AllBoundObjects.Contains(Comp))//already bounded
-				{
-					ValidCompArray.Add(Comp);
-				}
-			}
-
-			MenuBuilder.AddSubMenu(
-				LOCTEXT("AddComponent_Label", "Component"),
-				LOCTEXT("AddComponent_ToolTip", "Add a binding to one of this actor's components and allow it to be animated by Sequencer"),
-				FNewMenuDelegate::CreateRaw(this, &SLGUIPrefabSequenceEditorWidgetImpl::AddPossessComponentMenuExtensions, ValidCompArray),
-				false,
-				FSlateIcon()
-			);
-		}
 		//widget menu
-		if (auto Widget = GetSelectedWidget())
 		{
 			MenuBuilder.AddSubMenu(
-				LOCTEXT("AddWidget_Label", "LexWidget"),
-				LOCTEXT("AddWidget_ToolTip", "Add a binding to LexWidget and it's components and allow it to be animated by Sequencer"),
-				FNewMenuDelegate::CreateRaw(this, &SLGUIPrefabSequenceEditorWidgetImpl::AddPossessWidgetMenuExtensions, Widget),
+				LOCTEXT("AddWidget_Label", "Add Widget Track"),
+				LOCTEXT("AddWidget_Tooltip", "Add a binding to one of widget and allow it to be animated by Sequencer"),
+				FNewMenuDelegate::CreateSPLambda(this, [this](FMenuBuilder& SubMenuBuilder)
+				{
+					SubMenuBuilder.BeginSection("ChooseWidgetSection", LOCTEXT("ChooseWidget", "Choose Widget:"));
+					auto Widget = WeakSequence->GetTypedOuter<ULexWidget>();
+					SubMenuBuilder.AddWidget(
+						SNew(SBox)
+						.Padding(4, 0)
+						[
+							SNew(SLexWidgetHierarchyPickerView, Widget->GetWorld(), ULexWidget::StaticClass(), Widget)
+							.OnSelectItem_Lambda([=, this](UObject* InItem)
+							{
+								const FScopedTransaction Transaction(LOCTEXT("AddWidgetToSequencer", "Add Widget to Sequencer"));
+								Sequencer->GetHandleToObject(InItem, true);
+							})
+						]
+						, FText::GetEmpty()
+						, true
+					);
+					SubMenuBuilder.EndSection();
+				}),
 				false,
 				FSlateIcon()
 			);
 		}
-	}
-	void AddPossessActorMenuExtensions(FMenuBuilder& MenuBuilder, TArray<AActor*> InActorArray)
-	{
-		for (auto Actor : InActorArray)
-		{
-			if (IsValid(Actor))
-			{
-				MenuBuilder.AddMenuEntry(
-					FText::Format(LOCTEXT("ActorLabelFormat", "{0} ({1})"), FText::FromString(Actor->GetActorLabel()), FText::FromString(Actor->GetClass()->GetName())),
-					FText::FromString(Actor->GetName()), FSlateIcon(),
-					FUIAction(FExecuteAction::CreateLambda([=, this]() {
-						const FScopedTransaction Transaction(LOCTEXT("AddActorToSequencer", "Add actor to Sequencer"));
-						Sequencer->GetHandleToObject(Actor, true);
-						}))
-				);
-			}
-		}
-	}
-	void AddPossessComponentMenuExtensions(FMenuBuilder& MenuBuilder, TArray<UActorComponent*> InCompArray)
-	{
-		for (auto Comp : InCompArray)
-		{
-			if (IsValid(Comp))
-			{
-				MenuBuilder.AddMenuEntry(
-					FText::Format(LOCTEXT("ComponentLabelFormat", "{0} ({1})"), FText::FromString(Comp->GetName()), FText::FromString(Comp->GetClass()->GetName())),
-					FText::FromString(Comp->GetPathName()), FSlateIcon(),
-					FUIAction(FExecuteAction::CreateLambda([=, this]() {
-						const FScopedTransaction Transaction(LOCTEXT("AddComponentToSequencer", "Add component to Sequencer"));
-						Sequencer->GetHandleToObject(Comp, true);
-						}))
-				);
-			}
-		}
-	}
-	void AddPossessWidgetMenuExtensions(FMenuBuilder& MenuBuilder, ULexWidget* InWidget)
-	{
-		if (!IsValid(InWidget))return;
-		if (auto Visual = InWidget->GetVisual())
-		{
-			MenuBuilder.AddMenuEntry(
-				FText::Format(LOCTEXT("WidgetVisualLabelFormat", "{0} ({1})"), FText::FromString(Visual->GetName()), FText::FromString(Visual->GetClass()->GetName())),
-				FText::FromString(Visual->GetPathName()), FSlateIcon(),
-				FUIAction(FExecuteAction::CreateLambda([=, this]() {
-					const FScopedTransaction Transaction(LOCTEXT("AddVisualToSequencer", "Add visual to Sequencer"));
-					Sequencer->GetHandleToObject(Visual, true);
-					}))
-			);
-		}
-		if (auto LayoutContainer = InWidget->GetLayoutContainer())
-		{
-			MenuBuilder.AddMenuEntry(
-				FText::Format(LOCTEXT("WidgetLayoutContainerLabelFormat", "{0} ({1})"), FText::FromString(LayoutContainer->GetName()), FText::FromString(LayoutContainer->GetClass()->GetName())),
-				FText::FromString(LayoutContainer->GetPathName()), FSlateIcon(),
-				FUIAction(FExecuteAction::CreateLambda([=, this]() {
-					const FScopedTransaction Transaction(LOCTEXT("AddLayoutContainerToSequencer", "Add LayoutContainer to Sequencer"));
-					Sequencer->GetHandleToObject(LayoutContainer, true);
-					}))
-			);
-		}
-		if (auto LayoutSelf = InWidget->GetLayoutSelf())
-		{
-			MenuBuilder.AddMenuEntry(
-				FText::Format(LOCTEXT("WidgetLayoutSelfLabelFormat", "{0} ({1})"), FText::FromString(LayoutSelf->GetName()), FText::FromString(LayoutSelf->GetClass()->GetName())),
-				FText::FromString(LayoutSelf->GetPathName()), FSlateIcon(),
-				FUIAction(FExecuteAction::CreateLambda([=, this]() {
-					const FScopedTransaction Transaction(LOCTEXT("AddLayoutSelfToSequencer", "Add LayoutSelf to Sequencer"));
-					Sequencer->GetHandleToObject(LayoutSelf, true);
-					}))
-			);
-		}
-	}
-
-	AActor* GetSelectedActor()const
-	{
-		TArray<AActor*> SelectedActorArray;
-		if (WeakSequence.IsValid())
-		{
-			TArray<FGuid> SelectedObjects;
-			Sequencer->GetSelectedObjects(SelectedObjects);
-			for (auto GuidItem : SelectedObjects)
-			{
-				TArray<UObject*, TInlineAllocator<1>> BoundObjects;
-				WeakSequence->LocateBoundObjects(GuidItem, nullptr, BoundObjects);
-				for (auto Obj : BoundObjects)
-				{
-					if (auto Actor = Cast<AActor>(Obj))
-					{
-						SelectedActorArray.Add(Actor);
-					}
-				}
-			}
-		}
-		return SelectedActorArray.Num() == 1 ? SelectedActorArray[0] : nullptr;
-	}
-
-	ULexWidget* GetSelectedWidget()const
-	{
-		TArray<ULexWidget*> SelectedWidgetArray;
-		if (WeakSequence.IsValid())
-		{
-			TArray<FGuid> SelectedObjects;
-			Sequencer->GetSelectedObjects(SelectedObjects);
-			for (auto GuidItem : SelectedObjects)
-			{
-				TArray<UObject*, TInlineAllocator<1>> BoundObjects;
-				WeakSequence->LocateBoundObjects(GuidItem, nullptr, BoundObjects);
-				for (auto Obj : BoundObjects)
-				{
-					if (auto Widget = Cast<ULexWidget>(Obj))
-					{
-						SelectedWidgetArray.Add(Widget);
-					}
-				}
-			}
-		}
-		return SelectedWidgetArray.Num() == 1 ? SelectedWidgetArray[0] : nullptr;
 	}
 
 	void OnSequenceChanged()
 	{
-		ULexUIPrefabSequence* LGUIPrefabSequence = WeakSequence.Get();
 		auto Widget = WeakSequence.IsValid() ? WeakSequence->GetTypedOuter<ULexWidget>() : nullptr;
 		if (Widget)
 		{
@@ -571,53 +404,111 @@ private:
 			SequencerMenuExtensionPoints::AddTrackMenu_PropertiesSection,
 			EExtensionHook::Before,
 			CommandList,
-			FMenuExtensionDelegate::CreateRaw(this, &SLGUIPrefabSequenceEditorWidgetImpl::ExtendSequencerAddTrackMenu, ContextSensitiveObjects));
+			FMenuExtensionDelegate::CreateRaw(this, &SLexUIPrefabSequenceEditorWidgetImpl::ExtendSequencerAddTrackMenu, ContextSensitiveObjects));
 		return AddTrackMenuExtender;
 	}
 
 	void ExtendSequencerAddTrackMenu(FMenuBuilder& AddTrackMenuBuilder, const TArray<UObject*> ContextObjects)
 	{
-		if (ContextObjects.Num() == 1)
+		if (ContextObjects.Num() != 1)return;
+
+		if (auto Widget = Cast<ULexWidget>(ContextObjects[0]))
 		{
-			if (auto Image = Cast<ULexImage>(ContextObjects[0]))
+			//component
+			AddTrackMenuBuilder.BeginSection("Components", LOCTEXT("ComponentsSection", "Components"));
+			for (auto Component : Widget->GetAllComponents())
 			{
-				if (Image != nullptr && Cast<UMaterialInterface>(Image->GetBrush().GetResourceObject()) != nullptr)
+				if (Component)
 				{
-					if (auto BrushStructProperty = FindFProperty<FStructProperty>(Image->GetClass(), ULexImage::GetPropertyName_Brush()))
+					AddTrackMenuBuilder.AddMenuEntry(
+						FText::Format(LOCTEXT("ComponentLabelFormat", "{0} ({1})"), FText::FromString(Component->GetName()), FText::FromString(Component->GetClass()->GetName())),
+						FText::FromString(Component->GetPathDisplayName()), FSlateIcon(),
+						FUIAction(FExecuteAction::CreateLambda([=, this]() {
+							const FScopedTransaction Transaction(LOCTEXT("AddComponentToSequencer", "Add component to Sequencer"));
+							Sequencer->GetHandleToObject(Component, true);
+							}))
+					);
+				}
+			}
+			AddTrackMenuBuilder.EndSection();
+
+			//sub objects
+			AddTrackMenuBuilder.BeginSection("SubObjects", LOCTEXT("SubObjectsSection", "SubObjects"));
+			{
+				if (auto Visual = Widget->GetVisual())
+				{
+					AddTrackMenuBuilder.AddMenuEntry(
+						FText::Format(LOCTEXT("WidgetVisualLabelFormat", "{0} ({1})"), FText::FromString(Visual->GetName()), FText::FromString(Visual->GetClass()->GetName())),
+						FText::FromString(Visual->GetPathDisplayName()), FSlateIcon(),
+						FUIAction(FExecuteAction::CreateLambda([=, this]() {
+							const FScopedTransaction Transaction(LOCTEXT("AddVisualToSequencer", "Add visual to Sequencer"));
+							Sequencer->GetHandleToObject(Visual, true);
+							}))
+					);
+				}
+				if (auto LayoutContainer = Widget->GetLayoutContainer())
+				{
+					AddTrackMenuBuilder.AddMenuEntry(
+						FText::Format(LOCTEXT("WidgetLayoutContainerLabelFormat", "{0} ({1})"), FText::FromString(LayoutContainer->GetName()), FText::FromString(LayoutContainer->GetClass()->GetName())),
+						FText::FromString(LayoutContainer->GetPathDisplayName()), FSlateIcon(),
+						FUIAction(FExecuteAction::CreateLambda([=, this]() {
+							const FScopedTransaction Transaction(LOCTEXT("AddLayoutContainerToSequencer", "Add LayoutContainer to Sequencer"));
+							Sequencer->GetHandleToObject(LayoutContainer, true);
+							}))
+					);
+				}
+				if (auto LayoutSelf = Widget->GetLayoutSelf())
+				{
+					AddTrackMenuBuilder.AddMenuEntry(
+						FText::Format(LOCTEXT("WidgetLayoutSelfLabelFormat", "{0} ({1})"), FText::FromString(LayoutSelf->GetName()), FText::FromString(LayoutSelf->GetClass()->GetName())),
+						FText::FromString(LayoutSelf->GetPathDisplayName()), FSlateIcon(),
+						FUIAction(FExecuteAction::CreateLambda([=, this]() {
+							const FScopedTransaction Transaction(LOCTEXT("AddLayoutSelfToSequencer", "Add LayoutSelf to Sequencer"));
+							Sequencer->GetHandleToObject(LayoutSelf, true);
+							}))
+					);
+				}
+			}
+			AddTrackMenuBuilder.EndSection();
+		}
+		
+		if (auto Image = Cast<ULexImage>(ContextObjects[0]))
+		{
+			if (Image != nullptr && Cast<UMaterialInterface>(Image->GetBrush().GetResourceObject()) != nullptr)
+			{
+				if (auto BrushStructProperty = FindFProperty<FStructProperty>(Image->GetClass(), ULexImage::GetPropertyName_Brush()))
+				{
+					if (auto ResourceObjectProperty = FindFProperty<FProperty>(Image->GetClass(), FLexUIImageBrush::GetPropertyName_ResourceObject()))
 					{
-						auto BrushStructValuePtr = BrushStructProperty->ContainerPtrToValuePtr<void>(Image);
-						if (auto ResourceObjectProperty = FindFProperty<FProperty>(Image->GetClass(), FLexUIImageBrush::GetPropertyName_ResourceObject()))
+						AddTrackMenuBuilder.BeginSection("Materials", LOCTEXT("MaterialsSection", "Materials"));
 						{
-							AddTrackMenuBuilder.BeginSection("Materials", LOCTEXT("MaterialsSection", "Materials"));
-							{
-								FText DisplayNameText = ResourceObjectProperty->GetDisplayNameText();
-								FUIAction AddMaterialAction(FExecuteAction::CreateRaw(this, &SLGUIPrefabSequenceEditorWidgetImpl::AddMaterialTrack, (UObject*)Image, ResourceObjectProperty, DisplayNameText));
-								FText AddMaterialLabel = DisplayNameText;
-								FText AddMaterialToolTip = FText::Format(LOCTEXT("ImageBrushMaterialToolTipFormat", "Add a material track for the {0} property."), DisplayNameText);
-								AddTrackMenuBuilder.AddMenuEntry(AddMaterialLabel, AddMaterialToolTip, FSlateIcon(), AddMaterialAction);
-							}
-							AddTrackMenuBuilder.EndSection();
+							FText DisplayNameText = ResourceObjectProperty->GetDisplayNameText();
+							FUIAction AddMaterialAction(FExecuteAction::CreateRaw(this, &SLexUIPrefabSequenceEditorWidgetImpl::AddMaterialTrack, (UObject*)Image, ResourceObjectProperty, DisplayNameText));
+							FText AddMaterialLabel = DisplayNameText;
+							FText AddMaterialToolTip = FText::Format(LOCTEXT("ImageBrushMaterialToolTipFormat", "Add a material track for the {0} property."), DisplayNameText);
+							AddTrackMenuBuilder.AddMenuEntry(AddMaterialLabel, AddMaterialToolTip, FSlateIcon(), AddMaterialAction);
 						}
+						AddTrackMenuBuilder.EndSection();
 					}
 				}
 			}
-			else if (auto Text = Cast<ULexText>(ContextObjects[0]))
+		}
+		else if (auto Text = Cast<ULexText>(ContextObjects[0]))
+		{
+			if (Text != nullptr && Text->GetOverrideMaterial() != nullptr)
 			{
-				if (Text != nullptr && Text->GetOverrideMaterial() != nullptr)
 				{
+					if (auto MaterialProperty = FindFProperty<FProperty>(Text->GetClass(), ULexText::GetPropertyName_OverrideMaterial()))
 					{
-						if (auto MaterialProperty = FindFProperty<FProperty>(Text->GetClass(), ULexText::GetPropertyName_OverrideMaterial()))
+						AddTrackMenuBuilder.BeginSection("Materials", LOCTEXT("MaterialsSection", "Materials"));
 						{
-							AddTrackMenuBuilder.BeginSection("Materials", LOCTEXT("MaterialsSection", "Materials"));
-							{
-								FText DisplayNameText = MaterialProperty->GetDisplayNameText();
-								FUIAction AddMaterialAction(FExecuteAction::CreateRaw(this, &SLGUIPrefabSequenceEditorWidgetImpl::AddMaterialTrack, (UObject*)Image, MaterialProperty, DisplayNameText));
-								FText AddMaterialLabel = DisplayNameText;
-								FText AddMaterialToolTip = FText::Format(LOCTEXT("TextMaterialToolTipFormat", "Add a material track for the {0} property."), DisplayNameText);
-								AddTrackMenuBuilder.AddMenuEntry(AddMaterialLabel, AddMaterialToolTip, FSlateIcon(), AddMaterialAction);
-							}
-							AddTrackMenuBuilder.EndSection();
+							FText DisplayNameText = MaterialProperty->GetDisplayNameText();
+							FUIAction AddMaterialAction(FExecuteAction::CreateRaw(this, &SLexUIPrefabSequenceEditorWidgetImpl::AddMaterialTrack, (UObject*)Image, MaterialProperty, DisplayNameText));
+							FText AddMaterialLabel = DisplayNameText;
+							FText AddMaterialToolTip = FText::Format(LOCTEXT("TextMaterialToolTipFormat", "Add a material track for the {0} property."), DisplayNameText);
+							AddTrackMenuBuilder.AddMenuEntry(AddMaterialLabel, AddMaterialToolTip, FSlateIcon(), AddMaterialAction);
 						}
+						AddTrackMenuBuilder.EndSection();
 					}
 				}
 			}
@@ -668,11 +559,11 @@ private:
 	FDelegateHandle SequencerAddTrackExtenderHandle;
 };
 
-void SLexUIPrefabSequenceEditorWidget::Construct(const FArguments&, TWeakPtr<FBlueprintEditor> InBlueprintEditor)
+void SLexUIPrefabSequenceEditorWidget::Construct(const FArguments&)
 {
 	ChildSlot
 	[
-		SAssignNew(Impl, SLGUIPrefabSequenceEditorWidgetImpl, InBlueprintEditor)
+		SAssignNew(Impl, SLexUIPrefabSequenceEditorWidgetImpl)
 	];
 }
 
@@ -681,14 +572,19 @@ FText SLexUIPrefabSequenceEditorWidget::GetDisplayLabel() const
 	return Impl.Pin()->GetDisplayLabel();
 }
 
-void SLexUIPrefabSequenceEditorWidget::AssignSequence(ULexUIPrefabSequence* NewLGUIPrefabSequence)
+TSharedPtr<ISequencer> SLexUIPrefabSequenceEditorWidget::GetSequencer() const
 {
-	Impl.Pin()->SetLGUIPrefabSequence(NewLGUIPrefabSequence);
+	return Impl.Pin()->GetSequencer();
+}
+
+void SLexUIPrefabSequenceEditorWidget::AssignSequence(ULexUIPrefabSequence* NewLexUIPrefabSequence)
+{
+	Impl.Pin()->SetLexUIPrefabSequence(NewLexUIPrefabSequence);
 }
 
 ULexUIPrefabSequence* SLexUIPrefabSequenceEditorWidget::GetSequence() const
 {
-	return Impl.Pin()->GetLGUIPrefabSequence();
+	return Impl.Pin()->GetPrefabSequence();
 }
 
 #undef LOCTEXT_NAMESPACE

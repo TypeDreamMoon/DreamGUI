@@ -3,13 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "IDetailCustomization.h"
-#include "Widgets/Layout/SBox.h"
 #include "Input/Reply.h"
-#include "UObject/WeakObjectPtr.h"
 #include "Framework/Docking/TabManager.h"
 #include "Widgets/SCompoundWidget.h"
 
+class ISequencer;
 class ULexWidget;
 class ULexUIPrefabSequenceComponent;
 class ULexUIPrefabSequence;
@@ -26,11 +24,12 @@ public:
 	SLATE_END_ARGS();
 	void Construct(const FArguments& InArgs);
 
-	void AssignLGUIPrefabSequenceComponent(TWeakObjectPtr<ULexUIPrefabSequenceComponent> InSequenceComponent);
-	ULexUIPrefabSequence* GetLGUIPrefabSequence() const;
+	void AssignLexUIPrefabSequenceComponent(TWeakObjectPtr<ULexUIPrefabSequenceComponent> InSequenceComponent);
+	ULexUIPrefabSequence* GetPrefabSequence() const;
 	ULexUIPrefabSequenceComponent* GetSequenceComponent()const { return WeakSequenceComponent.Get(); }
 	void RefreshAnimationList();
 	void OnEditingPrefabChanged(ULexWidget* RootWidget);
+	TSharedPtr<ISequencer> GetSequencer() const;
 private:
 	TWeakObjectPtr<ULexUIPrefabSequenceComponent> WeakSequenceComponent;
 	FDelegateHandle OnObjectsReplacedHandle;
@@ -47,7 +46,7 @@ private:
 	void OnAnimationListViewSelectionChanged(TSharedPtr<FWidgetAnimationListItem> InListItem, ESelectInfo::Type InSelectInfo);
 	void OnItemScrolledIntoView(TSharedPtr<FWidgetAnimationListItem> InListItem, const TSharedPtr<ITableRow>& InWidget) const;
 	FReply OnNewAnimationClicked();
-	TSharedPtr<class SSearchBox> SearchBoxPtr;
+	TSharedPtr<SSearchBox> SearchBoxPtr;
 	void OnAnimationListViewSearchChanged(const FText& InSearchText);
 	TSharedPtr<SWidget> OnContextMenuOpening()const;
 	TSharedPtr<FUICommandList> CommandList;

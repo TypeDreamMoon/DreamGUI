@@ -23,6 +23,7 @@
 #include "Styling/SlateIconFinder.h"
 #include "Utils/LexUIUtils.h"
 #include "SourceCodeNavigation.h"
+#include "PrefabAnimation/LexUIDetailKeyframeHandler.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SComboButton.h"
 #include "Widgets/Layout/SBorder.h"
@@ -553,6 +554,12 @@ void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, UWorld* InWorl
     DetailsView = PropPlugin.CreateDetailView(DetailsViewArgs);
     DetailsView->SetIsPropertyReadOnlyDelegate(FIsPropertyReadOnly::CreateSP(this, &SLexUIPrefabEditorDetails::IsPropertyReadOnly));
 
+	if (PrefabEditorPtr.IsValid())
+	{
+		TSharedRef<FLexUIDetailKeyframeHandler> KeyframeHandler = MakeShareable(new FLexUIDetailKeyframeHandler(PrefabEditorPtr.Pin()));
+		DetailsView->SetKeyframeHandler(KeyframeHandler);
+	}
+
 	TSharedRef<FLexWidgetDetailPropertyExtensionHandler> BindingHandler = MakeShareable(new FLexWidgetDetailPropertyExtensionHandler(World.Get()));
 	DetailsView->SetExtensionHandler(BindingHandler);
 
@@ -778,6 +785,7 @@ void SLexUIPrefabEditorDetails::OnEditorSelectionChanged()
 	bIsSelectFromLexUIEditor = true;
 	auto Selection = ULexUISelection::GetInstance(World.Get());
 	auto SelectedWidgets = Selection->GetSelectedWidgets();
+	auto SelectedComponents = Selection->GetSelectedComponents();
 	if (SelectedWidgets.Num() > 0)
 	{
 		if (auto Widget = SelectedWidgets[0].Get())
@@ -824,6 +832,16 @@ void SLexUIPrefabEditorDetails::OnEditorSelectionChanged()
 			{
 				ComponentEditor->RefreshComponents();
 				ComponentEditor->ClearSelection();
+			}
+		}
+		else
+		{
+			if (SelectedComponents.Num() > 0)
+			{
+				if (ComponentEditor)
+				{
+					ComponentEditor->SelectComponent(SelectedComponents[0].Get());
+				}
 			}
 		}
 	}

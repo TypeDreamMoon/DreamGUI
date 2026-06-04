@@ -21,7 +21,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	ULexWidget* GetWidget()const;
-	ULexWidget* GetOwner()const{return GetWidget();}
+	UFUNCTION(BlueprintCallable, Category = LGUI)
+	FString GetPathDisplayName() const;
 protected:
 	virtual void OnRegister(){};
 	virtual void OnUnregister(){};

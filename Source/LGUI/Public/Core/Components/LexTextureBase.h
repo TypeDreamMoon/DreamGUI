@@ -25,16 +25,23 @@ protected:
 	virtual void BeginPlay()override;
 	friend class FLexTextureBaseCustomization;
 	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (DisplayThumbnail = "false"))
-		TObjectPtr<UTexture> Texture = nullptr;
+	TObjectPtr<UTexture> Texture = nullptr;
+	/** Use a custom material to render this texture */
+	UPROPERTY(EditAnywhere, Category = "LexUI")
+	UMaterialInterface* OverrideMaterial = nullptr;
 
 	virtual UTexture* GetTextureToCreateGeometry()override;
+	virtual UMaterialInterface* GetMaterialToCreateGeometry() override;
 
 	virtual bool ReadPixelFromMainTexture(const FVector2D& InUV, FColor& OutPixel)const override;
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI") UTexture* GetTexture()const { return Texture; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI") UMaterialInterface* GetOverrideMaterial()const{return OverrideMaterial;}
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		virtual void SetTexture(UTexture* Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetSizeFromTexture();
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetOverrideMaterial(UMaterialInterface* Value);
 };

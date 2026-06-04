@@ -7,6 +7,7 @@
 #include "PrefabSystem/LexUIPrefab.h"
 #pragma once
 
+class SLexUIPrefabSequenceEditor;
 class SLexWidgetEditorHierarchyView;
 class ULexWidget;
 class ULexUIPrefab;
@@ -94,6 +95,9 @@ public:
 	ULexWidget* GetRootAgentWidget();
 	ULexWidget* GetLoadedRootWidget();
 
+	TSharedPtr<SLexUIPrefabSequenceEditor> GetSequencerEditor()const{return SequencerPtr;}
+	static FName GetSequencerTabID();
+
 	/** Fires whenever the selected set of widgets changes */
 	FSimpleMulticastDelegate OnSelectedWidgetsChanged;
 private:
@@ -103,6 +107,7 @@ private:
 	TSharedPtr<SLexUIPrefabEditorViewport> ViewportPtr;
 	TSharedPtr<SLexUIPrefabEditorDetails> DetailsPtr;
 	TSharedPtr<SLexWidgetEditorHierarchyView> OutlinerPtr;
+	TSharedPtr<SLexUIPrefabSequenceEditor> SequencerPtr;
 	TSharedPtr<SLexUIPrefabRawDataViewer> PrefabRawDataViewer;
 
 	TArray<TWeakObjectPtr<ULexWidget>> SelectedWidgets;
@@ -122,6 +127,7 @@ private:
 	TSharedRef<SDockTab> SpawnTab_Viewport(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_Details(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_Outliner(const FSpawnTabArgs& Args);
+	TSharedRef<SDockTab> SpawnTab_Sequencer(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_PrefabRawDataViewer(const FSpawnTabArgs& Args);
 
 	bool IsFilteredActor(const AActor* Actor);
