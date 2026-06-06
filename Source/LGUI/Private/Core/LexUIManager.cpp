@@ -294,7 +294,7 @@ void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool Scr
 		{
 			for (auto& SiblingWidget : Parent->GetChildren())
 			{
-				if (IsValid(SiblingWidget) && SiblingWidget != Widget)
+				if (IsValid(SiblingWidget) && SiblingWidget->GetWidgetActiveInHierarchy() && SiblingWidget != Widget)
 				{
 					DrawWidget(SiblingWidget, RectDrawColor);
 				}

@@ -209,7 +209,7 @@ namespace LexUIPrefabSystem
 
 		InPrefab->EngineMajorVersion = ENGINE_MAJOR_VERSION;
 		InPrefab->EngineMinorVersion = ENGINE_MINOR_VERSION;
-		InPrefab->PrefabVersion = LGUI_CURRENT_PREFAB_VERSION;
+		InPrefab->PrefabVersion = LEXUI_CURRENT_PREFAB_VERSION;
 
 		auto TimeSpan = FDateTime::Now() - StartTime;
 		UE_LOG(LGUI, Log, TEXT("Take %fs saving prefab: %s"), TimeSpan.GetTotalSeconds(), *InPrefab->GetName());

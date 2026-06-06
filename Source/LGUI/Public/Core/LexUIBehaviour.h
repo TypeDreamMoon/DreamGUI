@@ -10,7 +10,6 @@ class USceneComponent;
 
 /**
  * Base class for LexUI's life cycle behaviour related component.
- * You should use Awake/Start instead of BeginPlay, Update instead of Tick.
  * Awake execute order in prefab: higher in hierarchy will execute earlier, so scripts on root actor will execute the first.
  */
 UCLASS(ClassGroup = (LGUI), Abstract, Blueprintable, DisplayName = "Lex UI Behaviour")

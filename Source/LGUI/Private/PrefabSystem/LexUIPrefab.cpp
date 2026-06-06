@@ -4,7 +4,7 @@
 #include "LGUI.h"
 #include "Core/Components/LexWidget.h"
 
-#include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
+#include LEXUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "Utils/LexUIUtils.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "Engine/Engine.h"
@@ -163,12 +163,17 @@ void ULexUIPrefab::SetRootWidgetNameFromPrefab()
 
 FLexUIPrefabInstanceScene* ULexUIPrefab::GetPrefabInstanceScene()
 {
-	if (!PrefabInstanceScene)PrefabInstanceScene = MakeUnique<FLexUIPrefabInstanceScene>(
-				FLexUIPrefabInstanceScene::ConstructionValues()
-				.AllowAudioPlayback(true)
-				.ShouldSimulatePhysics(false)
-				.SetEditor(true)
-				);
+	if (!PrefabInstanceScene)
+	{
+		auto CSV = FLexUIPrefabInstanceScene::ConstructionValues();
+		CSV.Name = MakeUniqueObjectName(GetTransientPackage(), UWorld::StaticClass(), FName(*FString::Printf(TEXT("PrefabInstanceScene_%s"), *GetName())));
+		PrefabInstanceScene = MakeUnique<FLexUIPrefabInstanceScene>(
+				   FLexUIPrefabInstanceScene::ConstructionValues()
+				   .AllowAudioPlayback(true)
+				   .ShouldSimulatePhysics(false)
+				   .SetEditor(true)
+				   );
+	}
 	return PrefabInstanceScene.Get();
 }
 
@@ -182,7 +187,7 @@ void ULexUIPrefab::ClearPrefabInstanceScene()
 
 void ULexUIPrefab::EnsureInstanceObjects()
 {
-	if (PrefabVersion >= (uint16)ELexUIPrefabVersion::BuildinFArchive)
+	if (PrefabVersion >= (uint16)ELexUIPrefabVersion::BuiltinFArchive)
 	{
 		if (!IsValid(PrefabHelperObject))
 		{
@@ -281,7 +286,7 @@ void ULexUIPrefab::BeginCacheForCookedPlatformData(const ITargetPlatform* Target
 }
 void ULexUIPrefab::WillNeverCacheCookedPlatformDataAgain()
 {
-	if (PrefabVersion >= (uint16)ELexUIPrefabVersion::BuildinFArchive)
+	if (PrefabVersion >= (uint16)ELexUIPrefabVersion::BuiltinFArchive)
 	{
 		BinaryDataForBuild.Empty();
 		ReferenceAssetListForBuild.Empty();
@@ -291,7 +296,7 @@ void ULexUIPrefab::WillNeverCacheCookedPlatformDataAgain()
 }
 void ULexUIPrefab::ClearCachedCookedPlatformData(const ITargetPlatform* TargetPlatform)
 {
-	if (PrefabVersion >= (uint16)ELexUIPrefabVersion::BuildinFArchive)
+	if (PrefabVersion >= (uint16)ELexUIPrefabVersion::BuiltinFArchive)
 	{
 		BinaryDataForBuild.Empty();
 		ReferenceAssetListForBuild.Empty();
@@ -355,6 +360,11 @@ void ULexUIPrefab::BeginDestroy()
 #if WITH_EDITOR
 	if (IsValid(PrefabHelperObject))
 	{
+		if (IsValid(PrefabHelperObject->LoadedRootWidget))
+		{
+			PrefabHelperObject->LoadedRootWidget->DestroyWidget();
+			PrefabHelperObject->LoadedRootWidget = nullptr;
+		}
 		PrefabHelperObject->ConditionalBeginDestroy();
 	}
 	if (PrefabInstanceScene.IsValid())
@@ -397,7 +407,7 @@ ULexWidget* ULexUIPrefab::LoadPrefab(UWorld* InWorld, ULexWidget* InParent, cons
 		default:
 		case ELexUIPrefabVersion::NewObjectOnNestedPrefab:
 		{
-			LoadedRootWidget = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefab(InWorld, InWorld, this, InParent, SetRelativeTransformToIdentity, InCallbackBeforeAwake);
+			LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefab(InWorld, InWorld, this, InParent, SetRelativeTransformToIdentity, InCallbackBeforeAwake);
 		}
 		break;
 		}
@@ -428,7 +438,7 @@ ULexWidget* ULexUIPrefab::LoadPrefabWithTransform(UObject* WorldContextObject, U
 		default:
 		case ELexUIPrefabVersion::NewObjectOnNestedPrefab:
 		{
-			LoadedRootWidget = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefab(World, World, this, InParent, Location, Rotation.Quaternion(), Scale, CallbackBeforeAwake);
+			LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefab(World, World, this, InParent, Location, Rotation.Quaternion(), Scale, CallbackBeforeAwake);
 		}
 		break;
 		}
@@ -484,7 +494,7 @@ ULexWidget* ULexUIPrefab::LoadPrefabWithReplacement(UObject* WorldContextObject,
 		default:
 		case ELexUIPrefabVersion::NewObjectOnNestedPrefab:
 		{
-			LoadedRootWidget = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefab(World, World, this, InParent, false, CallbackBeforeAwake);
+			LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefab(World, World, this, InParent, false, CallbackBeforeAwake);
 		}
 		break;
 		}
@@ -527,7 +537,7 @@ ULexWidget* ULexUIPrefab::LoadPrefabWithTransform(UObject* WorldContextObject, U
 		default:
 		case ELexUIPrefabVersion::NewObjectOnNestedPrefab:
 		{
-			LoadedRootWidget = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefab(World, World, this, InParent, Location, Rotation, Scale, InCallbackBeforeAwake);
+			LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefab(World, World, this, InParent, Location, Rotation, Scale, InCallbackBeforeAwake);
 		}
 		break;
 		}
@@ -546,7 +556,7 @@ ULexWidget* ULexUIPrefab::LoadPrefabWithExistingObjects(UWorld* InWorld, UObject
 	default:
 	case ELexUIPrefabVersion::NewObjectOnNestedPrefab:
 	{
-		LoadedRootWidget = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefabWithExistingObjects(InWorld, InOuter, this, InParent
+		LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefabWithExistingObjects(InWorld, InOuter, this, InParent
 			, InOutMapGuidToObject, OutSubPrefabMap
 		);
 	}
@@ -632,7 +642,7 @@ bool ULexUIPrefab::SavePrefab(ULexWidget* RootWidget
 	, bool InForEditorOrRuntimeUse
 )
 {
-	return LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::SavePrefab(RootWidget, this
+	return LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::SavePrefab(RootWidget, this
 		, InOutMapObjectToGuid, InSubPrefabMap
 		, InForEditorOrRuntimeUse
 	);
@@ -664,7 +674,7 @@ ULexWidget* ULexUIPrefab::LoadPrefabInEditor(UWorld* InWorld, UObject* InOuter, 
 	{
 		TMap<FGuid, TObjectPtr<UObject>> MapGuidToObject;
 		TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> SubPrefabMap;
-		LoadedRootWidget = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefabWithExistingObjects(InWorld, InOuter, this
+		LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefabWithExistingObjects(InWorld, InOuter, this
 			, InParent, MapGuidToObject, SubPrefabMap
 		);
 	}
@@ -681,7 +691,7 @@ ULexWidget* ULexUIPrefab::LoadPrefabInEditor(UWorld* InWorld, UObject* InOuter, 
 	default:
 	case ELexUIPrefabVersion::NewObjectOnNestedPrefab:
 	{
-		LoadedRootWidget = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefabWithExistingObjects(InWorld, InOuter, this
+		LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefabWithExistingObjects(InWorld, InOuter, this
 			, InParent, OutMapGuidToObject, OutSubPrefabMap
 		);
 	}

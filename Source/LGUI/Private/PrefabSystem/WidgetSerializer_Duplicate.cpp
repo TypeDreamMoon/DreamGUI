@@ -9,7 +9,7 @@
 #include "Core/LexUISettings.h"
 #include "Core/Components/LexWidget.h"
 
-namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
+namespace LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 {
 	ULexWidget* WidgetSerializer::DuplicateWidget(UWorld* InWorld, UObject* InOwnerObject, ULexWidget* OriginRootWidget, ULexWidget* Parent)
 	{

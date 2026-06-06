@@ -96,7 +96,9 @@ public:
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
 	virtual bool CanEditChange(const FEditPropertyChain& PropertyChain) const override;
 	virtual void PostEditUndo()override;
-	
+	virtual void PostRename(UObject* OldOuter, const FName OldName) override;
+
+	void EnsureChildrenAfterTransaction();
 	void EnsureDataForRebuild();
 #endif
 	static FName GetPropertyName_AnchorData()
@@ -280,6 +282,8 @@ public:
 	}
 	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (ComponentClass = "/Sript/LGUI.LexUIBehaviour"))
 	void RemoveComponent(ULexUIBehaviour* Component);
+	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (ComponentClass = "/Sript/LGUI.LexUIBehaviour"))
+	void MoveComponentToIndex(ULexUIBehaviour* Component, int32 NewIndex);
 	void UpdateObjectToWorldTransform();
 	void CalculateObjectToWorldTransform(bool bPropagateToChildren = true);
 private:

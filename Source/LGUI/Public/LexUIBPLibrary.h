@@ -5,21 +5,15 @@
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "LexUIComponentReference.h"
+#include "LexUIDelegateHandleWrapper.h"
 #include "Event/LexUIEventDelegate.h"
 #include "Event/LexUIEventDelegate_PresetParameter.h"
 #include "Core/LexUISpriteData_BaseObject.h"
 #include "PrefabSystem/LexUIPrefab.h"
-#include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
+#include LEXUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "LexUIBPLibrary.generated.h"
 
-class ULexCanvas;
-class ULexWidgetContainer;
-class ULexWidget;
-class ULexVisual;
-class UUISector;
-class ULexUIPrefab;
-
-namespace LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
+namespace LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE
 {
 	struct FDuplicateWidgetDataContainer;
 }
@@ -30,7 +24,7 @@ struct FLexUIDuplicateDataContainer
 	GENERATED_BODY()
 public:
 	bool bIsValid = false;
-	LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::FDuplicateWidgetDataContainer DuplicateData;
+	LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::FDuplicateWidgetDataContainer DuplicateData;
 };
 
 UCLASS()
@@ -301,19 +295,19 @@ public:
 		static void LexUIEventDelegate_Name_Unregister(const FLexUIEventDelegate_Name& InEvent, const FLexUIDelegateHandleWrapper& InDelegateHandle);
 #pragma endregion EventDelegate
 
-	/** InComponentType must be the same as InLGUIComponentReference's component type */
+	/** InComponentType must be the same as InLexUIComponentReference's component type */
 	UFUNCTION(BlueprintPure, Category = LGUI, meta = (DisplayName = "Get Component", CompactNodeTitle = "Component", BlueprintAutocast, DeterminesOutputType = "InComponentType"))
-		static UActorComponent* LGUICompRef_GetComponent(const FLexUIComponentReference& InLGUIComponentReference, TSubclassOf<UActorComponent> InComponentType);
+		static UActorComponent* LexUICompRef_GetComponent(const FLexUIComponentReference& InLexUIComponentReference, TSubclassOf<UActorComponent> InComponentType);
 	UFUNCTION(BlueprintPure, Category = LGUI, meta = (DisplayName = "Get Actor", CompactNodeTitle = "Actor", BlueprintAutocast))
-		static AActor* LGUICompRef_GetActor(const FLexUIComponentReference& InLGUIComponentReference);
+		static AActor* LexUICompRef_GetActor(const FLexUIComponentReference& InLexUIComponentReference);
 
 	UFUNCTION(BlueprintPure, Category = LGUI, meta = (DisplayName = "Get", CompactNodeTitle = ".", BlueprintInternalUseOnly = "true"))
-		static void K2_LGUICompRef_GetComponent(const FLexUIComponentReference& InLGUICompRef, UActorComponent*& OutResult);
+		static void K2_LexUICompRef_GetComponent(const FLexUIComponentReference& InLexUICompRef, UActorComponent*& OutResult);
 
 #pragma region LTween
 
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-		static void LGUIExecuteControllerInputAxis(FKey inputKey, float value);
+		static void LexUIExecuteControllerInputAxis(FKey inputKey, float value);
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		static void LGUIExecuteControllerInputAction(FKey inputKey, bool pressOrRelease);
 

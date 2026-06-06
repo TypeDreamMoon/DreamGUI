@@ -727,7 +727,7 @@ private:
 	FMatrix OverrideProjectionMatrix = FMatrix::Identity;
 
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
-	mutable TWeakObjectPtr<ULexUIMeshComponent> UIMesh;//current using UIMesh.
+	mutable TObjectPtr<ULexUIMeshComponent> UIMesh;//current using UIMesh.
 	//DefaultMaterial created MaterialInstanceDynamic pool 
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
 	TArray<TObjectPtr<UMaterialInstanceDynamic>> PooledDefaultMaterialList;

@@ -305,7 +305,7 @@ void ULexCanvas::OnUnregister()
 	Super::OnUnregister();
 	ULexUIManagerWorldSubsystem::RemoveCanvas(this);
 	ClearDrawCall();
-	if (UIMesh.IsValid())
+	if (IsValid(UIMesh))
 	{
 		UIMesh->DestroyComponent();
 		UIMesh = nullptr;
@@ -347,7 +347,7 @@ void ULexCanvas::PostInitProperties()
 
 void ULexCanvas::ClearDrawCall()
 {
-	if (UIMesh.IsValid())
+	if (IsValid(UIMesh))
 	{
 		UIMesh->ClearRenderData();
 		bUIMeshNeedToSetInitialParameters = true;
@@ -824,7 +824,7 @@ void ULexCanvas::SetDefaultMeshType(TSubclassOf<ULexUIMeshComponent> InValue)
 	{
 		DefaultMeshType = InValue;
 		//clear mesh
-		if (UIMesh.IsValid())
+		if (IsValid(UIMesh))
 		{
 			UIMesh->DestroyComponent();
 			UIMesh = nullptr;
@@ -1304,7 +1304,7 @@ void ULexCanvas::UpdateDrawCallBatchData()
 		item->UpdateDrawCallBatchData();
 	}
 
-	if (!UIMesh.IsValid())return;
+	if (!IsValid(UIMesh))return;
 
 	if (!bAllowDropFrame)
 	{
@@ -1349,7 +1349,7 @@ void ULexCanvas::UpdateDrawCallBatchData()
 			}
 		}
 	}
-	if (UIMesh.IsValid())
+	if (IsValid(UIMesh))
 	{
 		UIMesh->FlushRenderCommand();
 	}
@@ -1359,7 +1359,7 @@ DECLARE_CYCLE_STAT(TEXT("Canvas UpdateDrawCallMesh"), STAT_UpdateDrawCallMesh, S
 void ULexCanvas::UpdateDrawCallMesh()
 {
 	SCOPE_CYCLE_COUNTER(STAT_UpdateDrawCallMesh);
-	if (!UIMesh.IsValid())return;
+	if (!IsValid(UIMesh))return;
 	UIMesh->PoolAllRenderSection();
 	bool bNeedToUpdateBounds = false;
 	for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
@@ -1434,7 +1434,7 @@ void ULexCanvas::UpdateDrawCallMesh()
 
 void ULexCanvas::CheckUIMesh()const
 {
-	if (!UIMesh.IsValid())
+	if (!IsValid(UIMesh))
 	{
 		auto MeshType = DefaultMeshType.Get();
 		if (MeshType == nullptr)MeshType = ULexUIMeshComponent::StaticClass();
@@ -1447,7 +1447,7 @@ void ULexCanvas::CheckUIMesh()const
 		UIMesh->Init(const_cast<ULexCanvas*>(this));
 		bUIMeshNeedToSetInitialParameters = true;
 	}
-	if (UIMesh.IsValid())
+	if (IsValid(UIMesh))
 	{
 		UIMesh->SetComponentToWorld(GetWidget()->GetWorldTransform());
 	}
@@ -2668,13 +2668,11 @@ void ULexCanvas::OnEditorTick(float DeltaTime)
 		return;
 	if (this->IsUnreachable())
 		return;
-	auto WidgetPresenter = this->GetAttachedRootSceneComponent();
-	if (!WidgetPresenter)
-		return;
-	if (WidgetPresenter->IsUnreachable())
-		return;
-	if (WidgetPresenter->GetName().Contains(TEXT("SKEL_")) || WidgetPresenter->GetName().Contains(TEXT("TRASH_")))
-		return;
+	if (auto WidgetPresenter = this->GetAttachedRootSceneComponent())
+	{
+		if (WidgetPresenter->GetName().Contains(TEXT("SKEL_")) || WidgetPresenter->GetName().Contains(TEXT("TRASH_")))
+			return;
+	}
 
 	if (this->IsRootCanvas() && !this->bForceRenderToTarget)
 	{

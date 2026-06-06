@@ -24,6 +24,11 @@
 #include "Utils/LexUIUtils.h"
 #include "SourceCodeNavigation.h"
 #include "PrefabAnimation/LexUIDetailKeyframeHandler.h"
+#include "AssetSelection.h"
+#include "AssetRegistry/AssetData.h"
+#include "DragAndDrop/AssetDragDropOp.h"
+#include "DragAndDrop/DecoratedDragDropOp.h"
+#include "Engine/Blueprint.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SComboButton.h"
 #include "Widgets/Layout/SBorder.h"
@@ -33,6 +38,24 @@
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditorDetailTab"
 
 using FLexWidgetComponentItem = TWeakObjectPtr<ULexUIBehaviour>;
+
+class FLexWidgetComponentDragDropOp : public FDecoratedDragDropOp
+{
+public:
+	DRAG_DROP_OPERATOR_TYPE(FLexWidgetComponentDragDropOp, FDecoratedDragDropOp)
+
+	static TSharedRef<FLexWidgetComponentDragDropOp> New(const FLexWidgetComponentItem& InDraggedItem)
+	{
+		TSharedRef<FLexWidgetComponentDragDropOp> Operation = MakeShared<FLexWidgetComponentDragDropOp>();
+		Operation->DraggedItem = InDraggedItem;
+		Operation->SetToolTip(LOCTEXT("ReorderComponent", "Reorder component"), nullptr);
+		Operation->SetupDefaults();
+		Operation->Construct();
+		return Operation;
+	}
+
+	FLexWidgetComponentItem DraggedItem;
+};
 
 class FLexWidgetComponentClassFilter : public IClassViewerFilter
 {
@@ -48,14 +71,17 @@ public:
 			&& !InUnloadedClassData->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists | CLASS_Hidden);
 	}
 
-private:
 	static bool IsComponentClassAllowed(const UClass* InClass)
 	{
-		return InClass != nullptr
-			&& InClass->IsChildOf(ULexUIBehaviour::StaticClass())
-			&& !InClass->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists | CLASS_Hidden | CLASS_Transient)
-			&& InClass->HasMetaData("BlueprintSpawnableComponent")
-				;
+		if (InClass == nullptr)return false;
+		if (!InClass->IsChildOf(ULexUIBehaviour::StaticClass()))return false;
+		if (InClass->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists | CLASS_Hidden | CLASS_Transient))return false;
+		if (InClass->HasAnyClassFlags(CLASS_CompiledFromBlueprint) || !InClass->HasAnyClassFlags(CLASS_Native))//blueprint class
+		{
+			return true;
+		}
+		if (!InClass->HasMetaData("BlueprintSpawnableComponent"))return false;
+		return true;
 	}
 };
 
@@ -156,6 +182,37 @@ public:
 		return SCompoundWidget::OnKeyDown(MyGeometry, InKeyEvent);
 	}
 
+	virtual void OnDragEnter(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent) override
+	{
+		SCompoundWidget::OnDragEnter(MyGeometry, DragDropEvent);
+	}
+
+	virtual FReply OnDragOver(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent) override
+	{
+		if (CanHandleAssetDrop(DragDropEvent))
+		{
+			if (TSharedPtr<FAssetDragDropOp> AssetDragOp = DragDropEvent.GetOperationAs<FAssetDragDropOp>())
+			{
+				AssetDragOp->SetToolTip(LOCTEXT("DropToAddComponent", "Drop to add component"), AssetDragOp->CurrentIconBrush);
+			}
+			return FReply::Handled();
+		}
+		if (TSharedPtr<FAssetDragDropOp> AssetDragOp = DragDropEvent.GetOperationAs<FAssetDragDropOp>())
+		{
+			AssetDragOp->ResetToDefaultToolTip();
+		}
+		return SCompoundWidget::OnDragOver(MyGeometry, DragDropEvent);
+	}
+
+	virtual FReply OnDrop(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent) override
+	{
+		if (HandleAddComponentsFromAssetDrop(DragDropEvent))
+		{
+			return FReply::Handled();
+		}
+		return SCompoundWidget::OnDrop(MyGeometry, DragDropEvent);
+	}
+
 	TSharedRef<SWidget> GetToolbarWidget() const
 	{
 		return ToolbarWidget.ToSharedRef();
@@ -224,6 +281,204 @@ private:
 		return SelectedItems.Num() > 0;
 	}
 
+	FReply HandleDragDetected(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent, FLexWidgetComponentItem InItem)
+	{
+		if (!InItem.IsValid() || !CanAddOrRemoveComponent())
+		{
+			return FReply::Unhandled();
+		}
+
+		return FReply::Handled().BeginDragDrop(FLexWidgetComponentDragDropOp::New(InItem));
+	}
+
+	TOptional<EItemDropZone> HandleCanAcceptDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone, FLexWidgetComponentItem TargetItem) const
+	{
+		if (!CanAddOrRemoveComponent() || !TargetItem.IsValid())
+		{
+			return TOptional<EItemDropZone>();
+		}
+
+		if (TSharedPtr<FLexWidgetComponentDragDropOp> DragOp = DragDropEvent.GetOperationAs<FLexWidgetComponentDragDropOp>())
+		{
+			if (!DragOp->DraggedItem.IsValid() || DragOp->DraggedItem == TargetItem)
+			{
+				return TOptional<EItemDropZone>();
+			}
+			return DropZone;
+		}
+
+		return TOptional<EItemDropZone>();
+	}
+
+	FReply HandleAcceptDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone, FLexWidgetComponentItem TargetItem)
+	{
+		ULexWidget* Widget = GetCurrentWidget();
+		if (!CanAddOrRemoveComponent() || !IsValid(Widget) || !TargetItem.IsValid())
+		{
+			return FReply::Unhandled();
+		}
+
+		TSharedPtr<FLexWidgetComponentDragDropOp> DragOp = DragDropEvent.GetOperationAs<FLexWidgetComponentDragDropOp>();
+		if (!DragOp.IsValid() || !DragOp->DraggedItem.IsValid() || DragOp->DraggedItem == TargetItem)
+		{
+			return FReply::Unhandled();
+		}
+
+		const int32 TargetIndex = ComponentItems.IndexOfByKey(TargetItem);
+		if (TargetIndex == INDEX_NONE)
+		{
+			return FReply::Unhandled();
+		}
+
+		const int32 DesiredIndex = (DropZone == EItemDropZone::BelowItem) ? (TargetIndex + 1) : TargetIndex;
+		if (MoveComponentToIndex(DragOp->DraggedItem.Get(), DesiredIndex))
+		{
+			return FReply::Handled();
+		}
+
+		return FReply::Unhandled();
+	}
+
+	bool CanHandleAssetDrop(const FDragDropEvent& DragDropEvent) const
+	{
+		if (!CanAddOrRemoveComponent())
+		{
+			return false;
+		}
+
+		TSharedPtr<FDragDropOperation> Operation = DragDropEvent.GetOperation();
+		return Operation.IsValid() && Operation->IsOfType<FAssetDragDropOp>();
+	}
+
+	bool HandleAddComponentsFromAssetDrop(const FDragDropEvent& DragDropEvent)
+	{
+		if (!CanHandleAssetDrop(DragDropEvent))
+		{
+			return false;
+		}
+
+		ULexWidget* Widget = GetCurrentWidget();
+		if (!IsValid(Widget))
+		{
+			return false;
+		}
+
+		TArray<FAssetData> DroppedAssetData = AssetUtil::ExtractAssetDataFromDrag(DragDropEvent.GetOperation());
+		if (DroppedAssetData.Num() == 0)
+		{
+			return false;
+		}
+
+		TArray<UClass*> ComponentClassesToAdd;
+		for (const FAssetData& AssetData : DroppedAssetData)
+		{
+			if (UClass* ComponentClass = ResolveComponentClassFromAsset(AssetData))
+			{
+				ComponentClassesToAdd.Add(ComponentClass);
+			}
+		}
+
+		if (ComponentClassesToAdd.Num() == 0)
+		{
+			return false;
+		}
+
+		const FScopedTransaction Transaction(LOCTEXT("AddLexWidgetComponentByDragDrop_Transaction", "Add LexUI Component"));
+		if (UObject* WidgetOuter = Widget->GetOuter())
+		{
+			WidgetOuter->SetFlags(RF_Transactional);
+			WidgetOuter->Modify();
+		}
+		Widget->SetFlags(RF_Transactional);
+		Widget->Modify();
+
+		ULexUIBehaviour* LastAddedComponent = nullptr;
+		for (UClass* ComponentClass : ComponentClassesToAdd)
+		{
+			ULexUIBehaviour* NewComponent = Widget->AddComponent(ComponentClass);
+			if (!IsValid(NewComponent))
+			{
+				continue;
+			}
+
+			NewComponent->SetFlags(RF_Transactional);
+			NewComponent->Modify();
+			LastAddedComponent = NewComponent;
+		}
+
+		if (!IsValid(LastAddedComponent))
+		{
+			return false;
+		}
+
+		Widget->OnUnregister();
+		Widget->OnRegister();
+		FLexUIUtils::NotifyPropertyChanged(Widget, ULexWidget::GetPropertyName_Components());
+
+		RefreshComponents();
+		SelectComponent(LastAddedComponent);
+		return true;
+	}
+
+	UClass* ResolveComponentClassFromAsset(const FAssetData& AssetData) const
+	{
+		UObject* Asset = AssetData.GetAsset();
+		if (!IsValid(Asset))
+		{
+			return nullptr;
+		}
+
+		if (UBlueprint* Blueprint = Cast<UBlueprint>(Asset))
+		{
+			UClass* GeneratedClass = Blueprint->GeneratedClass;
+			return FLexWidgetComponentClassFilter::IsComponentClassAllowed(GeneratedClass) ? GeneratedClass : nullptr;
+		}
+
+		if (UClass* ComponentClass = Cast<UClass>(Asset))
+		{
+			return FLexWidgetComponentClassFilter::IsComponentClassAllowed(ComponentClass) ? ComponentClass : nullptr;
+		}
+
+		return nullptr;
+	}
+
+	bool MoveComponentToIndex(ULexUIBehaviour* Component, int32 NewIndex)
+	{
+		ULexWidget* Widget = GetCurrentWidget();
+		if (!CanAddOrRemoveComponent() || !IsValid(Widget) || !IsValid(Component) || Component->GetWidget() != Widget)
+		{
+			return false;
+		}
+
+		const int32 CurrentIndex = ComponentItems.IndexOfByKey(Component);
+		if (CurrentIndex == INDEX_NONE)
+		{
+			return false;
+		}
+
+		const int32 ClampedIndex = FMath::Clamp(NewIndex, 0, ComponentItems.Num());
+		if (CurrentIndex == ClampedIndex || (CurrentIndex == ComponentItems.Num() - 1 && ClampedIndex == ComponentItems.Num()))
+		{
+			return false;
+		}
+
+		const FScopedTransaction Transaction(LOCTEXT("ReorderLexWidgetComponent_Transaction", "Reorder LexUI Component"));
+		if (UObject* WidgetOuter = Widget->GetOuter())
+		{
+			WidgetOuter->SetFlags(RF_Transactional);
+			WidgetOuter->Modify();
+		}
+		Widget->SetFlags(RF_Transactional);
+		Widget->Modify();
+
+		Widget->MoveComponentToIndex(Component, ClampedIndex);
+		FLexUIUtils::NotifyPropertyChanged(Widget, ULexWidget::GetPropertyName_Components());
+
+		RefreshComponents();
+		SelectComponent(Component);
+		return true;
+	}
+
 	EVisibility GetEmptyStateVisibility() const
 	{
 		return ComponentItems.Num() == 0 ? EVisibility::Visible : EVisibility::Collapsed;
@@ -243,6 +498,9 @@ private:
 		.Style(&FAppStyle::Get().GetWidgetStyle<FTableRowStyle>("SceneOutliner.TableViewRow"))
 		.Padding(FMargin(0, 4, 0, 4))
 		.ShowSelection(true)
+		.OnDragDetected(this, &SLexWidgetComponentEditor::HandleDragDetected, InItem)
+		.OnCanAcceptDrop(this, &SLexWidgetComponentEditor::HandleCanAcceptDrop)
+		.OnAcceptDrop(this, &SLexWidgetComponentEditor::HandleAcceptDrop)
 		[
 			SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot()

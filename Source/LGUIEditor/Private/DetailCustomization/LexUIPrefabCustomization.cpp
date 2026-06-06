@@ -150,7 +150,7 @@ FText FLexUIPrefabCustomization::GetPrefabVersionText()const
 {
 	if (TargetScriptPtr.IsValid())
 	{
-		if (TargetScriptPtr->PrefabVersion == LGUI_CURRENT_PREFAB_VERSION)
+		if (TargetScriptPtr->PrefabVersion == LEXUI_CURRENT_PREFAB_VERSION)
 		{
 			return FText::FromString(FString::Printf(TEXT("%d"), TargetScriptPtr->PrefabVersion));
 		}
@@ -204,7 +204,7 @@ FSlateColor FLexUIPrefabCustomization::GetPrefabVersionTextColorAndOpacity()cons
 {
 	if (TargetScriptPtr.IsValid())
 	{
-		if (TargetScriptPtr->PrefabVersion == LGUI_CURRENT_PREFAB_VERSION)
+		if (TargetScriptPtr->PrefabVersion == LEXUI_CURRENT_PREFAB_VERSION)
 		{
 			return FSlateColor::UseForeground();
 		}
@@ -222,7 +222,7 @@ EVisibility FLexUIPrefabCustomization::ShouldShowFixPrefabVersionButton()const
 {
 	if (TargetScriptPtr.IsValid())
 	{
-		if (TargetScriptPtr->PrefabVersion == LGUI_CURRENT_PREFAB_VERSION)
+		if (TargetScriptPtr->PrefabVersion == LEXUI_CURRENT_PREFAB_VERSION)
 		{
 			return EVisibility::Hidden;
 		}

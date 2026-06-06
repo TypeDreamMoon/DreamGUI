@@ -18,7 +18,6 @@ TSharedRef<IDetailCustomization> FUISelectableCustomization::MakeInstance()
 }
 FUISelectableCustomization::~FUISelectableCustomization()
 {
-	//SLGUISpriteSelector::CloseTab();
 }
 void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
@@ -45,7 +44,6 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 
 	ULexVisual* TransitionTarget_Visual = nullptr;
 	TransitionTarget_PH->GetValue(*(UObject**)&TransitionTarget_Visual);
-	auto TransitionTarget_Image = Cast<ULexImage>(TransitionTarget_Visual);
 
 	UUISelectableTransition* TargetTweenComp = nullptr;
 	auto CustomTransition_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUISelectable, CustomTransition));
@@ -76,19 +74,6 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 	else if (TransitionType == (uint8)(EUISelectableTransitionType::Color))
 	{
 		TransitionGroup.AddPropertyRow(TransitionTarget_PH);
-		if (!TransitionTarget_Visual)
-		{
-			TransitionGroup.AddWidgetRow()
-				.ValueContent()
-				.MinDesiredWidth(500)
-				[
-					SNew(STextBlock)
-					.AutoWrapText(true)
-					.Text(LOCTEXT("TransitionActor_Color_Tip", "If use Color transition, Target must be a LexVisual"))
-					.ColorAndOpacity(FLinearColor(FColor::Red))
-					.Font(IDetailLayoutBuilder::GetDetailFont())
-				];
-		}
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, NormalImageBrush));
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, HoveredImageBrush));
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUISelectable, PressedImageBrush));
@@ -105,7 +90,7 @@ void FUISelectableCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 	else if (TransitionType == (uint8)(EUISelectableTransitionType::ImageBrush))
 	{
 		TransitionGroup.AddPropertyRow(TransitionTarget_PH);
-		if (!TransitionTarget_Image)
+		if (TransitionTarget_Visual && !TransitionTarget_Visual->IsA<ULexImage>())
 		{
 			TransitionGroup.AddWidgetRow()
 				.ValueContent()

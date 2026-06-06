@@ -252,6 +252,38 @@ bool FLexUIPrefabEditor::GetAnythingDirty()const
 	return GetPrefabHelperObject()->GetAnythingDirty();
 }
 
+namespace
+{
+	void SyncWidgetRegisterStateAfterTransaction(FLexUIPrefabEditor* InEditor)
+	{
+		InEditor->GetPreviewScene()->GetRootAgent()->EnsureChildrenAfterTransaction();
+		TArray<ULexWidget*> ReachableWidgets;
+		ULexWidget::CollectChildrenWidgets(InEditor->GetPreviewScene()->GetRootAgent(), ReachableWidgets);
+
+		TSet<ULexWidget*> AllWidgets;
+		ForEachObjectOfClass(ULexWidget::StaticClass(), [&](UObject* Object)
+		{
+			if (auto Widget = Cast<ULexWidget>(Object))
+			{
+				if (Widget->GetOuter() == InEditor->GetWorld())
+				{
+					AllWidgets.Add(Widget);
+				}
+			}
+		});
+		for (auto Widget : AllWidgets)
+		{
+			if (!ReachableWidgets.Contains(Widget))
+			{
+				if (Widget->HasRegistered())
+				{
+					Widget->OnUnregister();
+				}
+			}
+		}
+	}
+}
+
 void FLexUIPrefabEditor::SyncSelection()
 {
 	SelectedWidgets = ULexUISelection::GetInstance(GetWorld())->GetSelectedWidgets();
@@ -304,6 +336,7 @@ void FLexUIPrefabEditor::UnregisterTabSpawners(const TSharedRef<FTabManager>& In
 
 void FLexUIPrefabEditor::PostUndo(bool bSuccess)
 {
+	SyncWidgetRegisterStateAfterTransaction(this);
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->EventOnOutlineChanged.Broadcast();
 	SelectedWidgets = ULexUISelection::GetInstance(GetWorld())->GetSelectedWidgets();
@@ -312,6 +345,7 @@ void FLexUIPrefabEditor::PostUndo(bool bSuccess)
 }
 void FLexUIPrefabEditor::PostRedo(bool bSuccess)
 {
+	SyncWidgetRegisterStateAfterTransaction(this);
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	SelectedWidgets = ULexUISelection::GetInstance(GetWorld())->GetSelectedWidgets();
 	OnSelectedWidgetsChanged.Broadcast();

@@ -445,8 +445,12 @@ void ULexWidget::BeginDestroy()
 {
 	if (bHasBegunPlay || bIsRegistered)
 	{
+		auto WorldName = this->GetWorld() ? this->GetWorld()->GetName() : TEXT("null");
+		auto Manager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld());
+		auto ManagerName = Manager ? Manager->GetName() : TEXT("null");
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red
-			, FString::Printf(TEXT("ULexWidget %s is not properly destroyed! Please use DestroyWidget() to delete a LexWidget!"), *GetPathDisplayName()));
+			, FString::Printf(TEXT("ULexWidget %s is not properly destroyed! Please use DestroyWidget() to delete a LexWidget! World:%s, Manager:%s")
+				, *GetPathDisplayName(), *WorldName, *ManagerName));
 		check(0);
 	}
 	Super::BeginDestroy();
@@ -734,6 +738,34 @@ void ULexWidget::PostEditUndo()
 	}
 }
 
+void ULexWidget::PostRename(UObject* OldOuter, const FName OldName)
+{
+	Super::PostRename(OldOuter, OldName);
+}
+
+void ULexWidget::EnsureChildrenAfterTransaction()
+{
+	struct LOCAL
+	{
+		static void CheckIt(ULexWidget* Widget)
+		{
+			for (int i = 0;i < Widget->Children.Num(); i++)
+			{
+				auto Child = Widget->Children[i];
+				if (!IsValid(Child))
+				{
+					Widget->Children.RemoveAt(i);
+					i--;
+					continue;
+				}
+				Child->SiblingIndex = i;
+				CheckIt(Child);
+			}
+		}
+	};
+	LOCAL::CheckIt(this);
+}
+
 void ULexWidget::EnsureDataForRebuild()
 {
 	check(this == RootWidget);
@@ -1017,6 +1049,25 @@ void ULexWidget::RemoveComponent(ULexUIBehaviour* Component)
 		Component->EndPlay();
 	}
 	Component->OnUnregister();
+}
+
+void ULexWidget::MoveComponentToIndex(ULexUIBehaviour* Component, int32 NewIndex)
+{
+	const int32 SourceIndex = Components.Find(Component);
+	if (SourceIndex < 0)
+	{
+		return;
+	}
+
+	const int32 TargetIndex = FMath::Clamp(NewIndex, 0, Components.Num() - 1);
+	if (SourceIndex == TargetIndex)
+	{
+		return;
+	}
+
+	ULexUIBehaviour* MovingComponent = Components[SourceIndex];
+	Components.RemoveAt(SourceIndex);
+	Components.Insert(MovingComponent, FMath::Clamp(TargetIndex, 0, Components.Num()));
 }
 
 void ULexWidget::UpdateObjectToWorldTransform()

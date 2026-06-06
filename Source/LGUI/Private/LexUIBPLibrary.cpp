@@ -9,19 +9,19 @@
 #include "Event/LexScreenSpaceRaycaster.h"
 #include "PrefabSystem/LexUIPrefab.h"
 
-#include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
+#include LEXUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 
 ULexWidget* ULexUIBPLibrary::DuplicateWidget(UObject* WorldContextObject, ULexWidget* Target, ULexWidget* Parent)
 {
 	if (auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull))
 	{
-		return LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::DuplicateWidget(World, Parent->GetOuter(), Target, Parent);
+		return LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::DuplicateWidget(World, Parent->GetOuter(), Target, Parent);
 	}
 	return nullptr;
 }
 void ULexUIBPLibrary::PrepareDuplicateData(ULexWidget* Target, FLexUIDuplicateDataContainer& DataContainer)
 {
-	DataContainer.bIsValid = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::PrepareDataForDuplicate(Target, DataContainer.DuplicateData);
+	DataContainer.bIsValid = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::PrepareDataForDuplicate(Target, DataContainer.DuplicateData);
 }
 ULexWidget* ULexUIBPLibrary::DuplicateWidgetWithPreparedData(UObject* WorldContextObject, FLexUIDuplicateDataContainer& Data, ULexWidget* Parent)
 {
@@ -29,7 +29,7 @@ ULexWidget* ULexUIBPLibrary::DuplicateWidgetWithPreparedData(UObject* WorldConte
 	{
 		if (auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull))
 		{
-			return LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::DuplicateWidgetWithPreparedData(World, Parent->GetOuter(), Data.DuplicateData, Parent);
+			return LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::DuplicateWidgetWithPreparedData(World, Parent->GetOuter(), Data.DuplicateData, Parent);
 		}
 	}
 	return nullptr;
@@ -172,12 +172,12 @@ UActorComponent* ULexUIBPLibrary::GetComponentInChildren(AActor* InActor, TSubcl
 	return result;
 }
 
-UActorComponent* ULexUIBPLibrary::LGUICompRef_GetComponent(const FLexUIComponentReference& InLGUIComponentReference, TSubclassOf<UActorComponent> InComponentType)
+UActorComponent* ULexUIBPLibrary::LexUICompRef_GetComponent(const FLexUIComponentReference& InLexUIComponentReference, TSubclassOf<UActorComponent> InComponentType)
 {
-	auto comp = InLGUIComponentReference.GetComponent();
+	auto comp = InLexUIComponentReference.GetComponent();
 	if (comp == nullptr)
 	{
-		UE_LOG(LGUI, Error, TEXT("[ULGUIBPLibrary::GetComponent]Target actor:%s dont have this kind of component:%s"), *(InLGUIComponentReference.GetActor()->GetPathName()), *(InComponentType->GetPathName()));
+		UE_LOG(LGUI, Error, TEXT("[ULGUIBPLibrary::GetComponent]Target actor:%s dont have this kind of component:%s"), *(InLexUIComponentReference.GetActor()->GetPathName()), *(InComponentType->GetPathName()));
 		return nullptr;
 	}
 	if (comp->GetClass() != InComponentType)
@@ -188,20 +188,20 @@ UActorComponent* ULexUIBPLibrary::LGUICompRef_GetComponent(const FLexUIComponent
 	return comp;
 }
 
-AActor* ULexUIBPLibrary::LGUICompRef_GetActor(const FLexUIComponentReference& InLGUIComponentReference)
+AActor* ULexUIBPLibrary::LexUICompRef_GetActor(const FLexUIComponentReference& InLexUIComponentReference)
 {
-	return InLGUIComponentReference.GetActor();
+	return InLexUIComponentReference.GetActor();
 }
 
-void ULexUIBPLibrary::K2_LGUICompRef_GetComponent(const FLexUIComponentReference& InLGUICompRef, UActorComponent*& OutResult)
+void ULexUIBPLibrary::K2_LexUICompRef_GetComponent(const FLexUIComponentReference& InLexUICompRef, UActorComponent*& OutResult)
 {
-	OutResult = InLGUICompRef.GetComponent();
+	OutResult = InLexUICompRef.GetComponent();
 }
 
 
 #pragma region LTween
 
-void ULexUIBPLibrary::LGUIExecuteControllerInputAxis(FKey inputKey, float value)
+void ULexUIBPLibrary::LexUIExecuteControllerInputAxis(FKey inputKey, float value)
 {
 	if (inputKey.IsValid())
 	{

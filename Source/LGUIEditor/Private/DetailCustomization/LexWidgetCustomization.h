@@ -38,9 +38,9 @@ private:
 	EVisibility GetDisplayNameWarningVisibility()const;
 	FReply OnClickFixDisplayNameButton(bool singleOrAll, TSharedRef<IPropertyHandle> DisplayNameHandle);
 
-	TArray<FMargin> AnchorAsMarginArray;
-	void OnPrePivotChange();
-	void OnPivotChanged();
+	FMargin AnchorOffset = FMargin(0);
+	void OnPrePivotChange(TSharedPtr<IPropertyHandle> PivotPH);
+	void OnPivotChanged(TSharedPtr<IPropertyHandle> PivotPH);
 
 	TOptional<float> GetAnchorValue(TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)const;
 	TOptional<float> GetMinMaxSliderValue(TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex, bool MinOrMax)const;

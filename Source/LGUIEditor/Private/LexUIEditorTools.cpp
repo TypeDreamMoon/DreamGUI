@@ -9,7 +9,7 @@
 #include "Widgets/SViewport.h"
 #include "Engine/Selection.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
-#include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
+#include LEXUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 #include "LGUIEditorModule.h"
 #include "PrefabEditor/LexUIPrefabEditor.h"
 #include "Core/Components/LexLayout.h"
@@ -159,6 +159,7 @@ void FLexUIEditorTools::CreateWidget(TFunction<ULexWidget*()> GetSelectedWidgetF
 		if (SelectedWidget != nullptr)
 		{
 			NewWidget->SetParent(SelectedWidget, false);
+			NewWidget->SetAnchoredPosition(FVector2D::ZeroVector);
 			ULexUISelection::GetInstance(SelectedWidget->GetWorld())->SelectNone();
 		} 
 		if (VisualClass)
@@ -273,7 +274,7 @@ void FLexUIEditorTools::DuplicateWidgets(TFunction<TArray<ULexWidget*>()> GetSel
 					}
 				}
 			}
-			CopiedWidget = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::DuplicateWidgetForEditor(Widget->GetWorld(), Widget, Parent, PrefabHelperObject->SubPrefabMap, InMapObjectToGuid, DuplicatedSubPrefabMap, OutMapGuidToObject);
+			CopiedWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::DuplicateWidgetForEditor(Widget->GetWorld(), Widget, Parent, PrefabHelperObject->SubPrefabMap, InMapObjectToGuid, DuplicatedSubPrefabMap, OutMapGuidToObject);
 			CopiedWidget->SetAsLastSibling();
 			for (auto& KeyValue : DuplicatedSubPrefabMap)
 			{
@@ -287,7 +288,7 @@ void FLexUIEditorTools::DuplicateWidgets(TFunction<TArray<ULexWidget*>()> GetSel
 		}
 		else 
 		{
-			CopiedWidget = LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::DuplicateWidgetForEditor(Widget->GetWorld(), Widget, Parent, {}, InMapObjectToGuid, DuplicatedSubPrefabMap, OutMapGuidToObject);
+			CopiedWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::DuplicateWidgetForEditor(Widget->GetWorld(), Widget, Parent, {}, InMapObjectToGuid, DuplicatedSubPrefabMap, OutMapGuidToObject);
 		}
 		CopiedWidget->SetDisplayName(CopiedWidgetName);
 		ULexUISelection::GetInstance(World)->SelectWidget(CopiedWidget);
@@ -415,6 +416,7 @@ void FLexUIEditorTools::PasteWidgets(TFunction<TArray<ULexWidget*>()> GetSelecte
 				PrefabHelperObject->MakePrefabAsSubPrefab(KeyValue.Value.PrefabAsset, KeyValue.Key, SubMapGuidToObject, KeyValue.Value.ObjectOverrideParameterArray);
 			}
 			CopiedWidget->SetDisplayName(CopiedWidgetName);
+			PrefabHelperObject->SetAnythingDirty();
 			ULexUISelection::GetInstance(World)->SelectWidget(CopiedWidget);
 		}
 		else

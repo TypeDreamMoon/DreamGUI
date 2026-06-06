@@ -14,6 +14,7 @@
 #include "Editor.h"
 #include "LGUIEditorModule.h"
 #include "LGUIEditorStyle.h"
+#include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexVisual.h"
 #include "DragAndDrop/AssetDragDropOp.h"
@@ -508,77 +509,84 @@ bool SLexWidgetEditorHierarchyViewItem::CanRename()
 TOptional<EItemDropZone> SLexWidgetEditorHierarchyViewItem::HandleCanAcceptDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone, TWeakObjectPtr<ULexWidget> TargetItem)
 {
 	TSharedPtr<FDragDropOperation> DragDropOp = DragDropEvent.GetOperation();
-	if (DragDropOp.IsValid() && !DragDropOp->IsOfType<FHierarchyLexWidgetDragDropOp>())
+	if (DragDropOp.IsValid() && DragDropOp->IsOfType<FAssetDragDropOp>())
 	{
-		if (DragDropOp->IsOfType<FAssetDragDropOp>())
+		auto AssetDragDropOp = StaticCastSharedPtr<FAssetDragDropOp>(DragDropOp);
+		if (AssetDragDropOp->GetAssets().Num() > 0)
 		{
-			auto AssetDragDropOp = StaticCastSharedPtr<FAssetDragDropOp>(DragDropOp);
-			if (AssetDragDropOp->GetAssets().Num() > 0)
+			auto EditingPrefab = Manager.Pin()->GetPrefabBeingEdited();
+			TOptional<EItemDropZone> ValidDropZone;
+			for (auto AssetData : AssetDragDropOp->GetAssets())
 			{
-#if 0
-				const auto& AssetData = AssetDragDropOp->GetAssets()[0];
 				if (AssetData.AssetClassPath == ULexUIPrefab::StaticClass()->GetClassPathName())
 				{
-					
-				}
-				FString ClassName = AssetData.GetObjectPathString() + "_C";
-				UClass* AssetClass = LoadClass<ULexWidgetScript>(nullptr, *ClassName);
-				if (AssetClass != nullptr && AssetClass->IsChildOf<ULexWidgetScript>())
-				{
-					auto WidgetScript = Widget->GetOwner();
-					if (AssetClass == WidgetScript->GetClass())//drag self to self is not allowed
+					if (AssetData.GetAsset()->GetPathName() == EditingPrefab->GetPathName())
 					{
+						AssetDragDropOp->CurrentIconBrush = FAppStyle::GetBrush(TEXT("Graph.ConnectorFeedback.Error"));
+						AssetDragDropOp->CurrentHoverText = LOCTEXT("CantDropPrefabToItself", "Can't drop prefab to itself.");
 						return TOptional<EItemDropZone>();
 					}
+					ValidDropZone = EItemDropZone::OntoItem;
 				}
-#endif
 			}
+			return ValidDropZone;
 		}
 	}
-	
-	const bool bIsDrop = false;
-	if (SupportDrop(HierarchyView.Pin()->DraggingItem.Get(), Widget.Get(), DropZone))
+
+	if (DragDropOp.IsValid() && DragDropOp->IsOfType<FHierarchyLexWidgetDragDropOp>())
 	{
-		auto Zone = ProcessHierarchyDragDrop(DragDropEvent, DropZone, bIsDrop, Manager.Pin(), Widget.Get());
-		//UE_LOG(LogTemp, Error, TEXT("HandleCanAcceptDrop, %s, zone:%s"), *Model->GetName(), *LOCAL_SLexWidgetDesignerHierarchyViewViewItem::PrintZone(Zone));
-		return Zone;
+		const bool bIsDrop = false;
+		auto HierarchyDragDropOp = StaticCastSharedPtr<FHierarchyLexWidgetDragDropOp>(DragDropOp);
+		if (HierarchyDragDropOp->DraggedWidgets.Num() > 0)
+		{
+			TOptional<EItemDropZone> ValidDropZone;
+			for (auto DraggedWidget : HierarchyDragDropOp->DraggedWidgets)
+			{
+				if (SupportDrop(DraggedWidget.Widget, Widget.Get(), DropZone))
+				{
+					auto Zone = ProcessHierarchyDragDrop(DragDropEvent, DropZone, bIsDrop, Manager.Pin(), Widget.Get());
+					if (ValidDropZone.IsSet())
+					{
+						if (Zone.GetValue() != ValidDropZone.GetValue())
+						{
+							return TOptional<EItemDropZone>();
+						}
+					}
+					else
+						ValidDropZone = Zone;
+				}
+			}
+			return ValidDropZone;
+		}
 	}
 	return TOptional<EItemDropZone>();
 }
 FReply SLexWidgetEditorHierarchyViewItem::HandleAcceptDrop(FDragDropEvent const& DragDropEvent, EItemDropZone DropZone, TWeakObjectPtr<ULexWidget> TargetItem)
 {
 	const bool bIsDrop = true;
-	if (SupportDrop(HierarchyView.Pin()->DraggingItem.Get(), Widget.Get(), DropZone))
+	TOptional<EItemDropZone> Zone = ProcessHierarchyDragDrop(DragDropEvent, DropZone, bIsDrop, Manager.Pin(), Widget.Get());
+	if (Zone.IsSet())
 	{
-		TOptional<EItemDropZone> Zone = ProcessHierarchyDragDrop(DragDropEvent, DropZone, bIsDrop, Manager.Pin(), Widget.Get());
-		//UE_LOG(LogTemp, Error, TEXT("HandleAcceptDrop, %s, zone:%s"), *Model->GetName(), *LOCAL_SLexWidgetDesignerHierarchyViewViewItem::PrintZone(Zone));
-		if (Zone.IsSet())
-		{
-			HierarchyView.Pin()->RequestRefresh();
-			return FReply::Handled();
-		}
-		else
-			return FReply::Unhandled();
+		HierarchyView.Pin()->RequestRefresh();
+		return FReply::Handled();
 	}
-	return FReply::Unhandled();
+	else
+		return FReply::Unhandled();
 }
 FReply SLexWidgetEditorHierarchyViewItem::HandleDragDetected(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
-	//UE_LOG(LogTemp, Error, TEXT("HandleDragDetected, %s"), *Model->GetName());
-	HierarchyView.Pin()->DraggingItem = Widget;
 	TArray<ULexWidget*> DraggedItems;
 
 	// Dragging multiple items?
-	//if (bIsSelected)
+	if (auto Selection = ULexUISelection::GetInstance(Widget->GetWorld()))
 	{
-		// const auto& SelectedWidgets = Manager.Pin()->GetSelectedWidgets();
-		// if (SelectedWidgets.Num() > 1)
-		// {
-		// 	for (const auto& SelectedWidget : SelectedWidgets)
-		// 	{
-		// 		DraggedItems.Add(SelectedWidget.Get());
-		// 	}
-		// }
+		if (Selection->GetSelectedWidgets().Num() > 1 && Selection->GetSelectedWidgets().Contains(Widget.Get()))
+		{
+			for (auto Selected : Selection->GetSelectedWidgets())
+			{
+				DraggedItems.Add(Selected.Get());
+			}
+		}
 	}
 
 	if (DraggedItems.Num() == 0)

@@ -55,9 +55,4 @@ void SLexUIPrefabEditorViewport::OnFloatingButtonClicked()
 
 }
 
-FReply SLexUIPrefabEditorViewport::OnDrop(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent)
-{
-	return PrefabEditorPtr.Pin()->TryHandleAssetDragDropOperation(DragDropEvent);
-}
-
 #undef LOCTEXT_NAMESPACE

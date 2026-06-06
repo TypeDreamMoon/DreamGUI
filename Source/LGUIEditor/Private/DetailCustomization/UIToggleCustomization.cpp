@@ -39,7 +39,6 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 	ToggleTransitionTarget_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateSP(this, &FUIToggleCustomization::ForceRefresh, &DetailBuilder));
 	ULexVisual* ToggleTransitionTarget_Visual = nullptr;
 	ToggleTransitionTarget_PH->GetValue(*(UObject**)&ToggleTransitionTarget_Visual);
-	auto ToggleTransitionTarget_Image = Cast<ULexImage>(ToggleTransitionTarget_Visual);
 
 	UUISelectableTransition* CustomTransition = nullptr;
 	auto CustomTransition_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(UUIToggle, CustomToggleTransition));
@@ -63,7 +62,7 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 	else if (TransitionType == (uint8)(EUISelectableTransitionType::ImageBrush))
 	{
 		TransitionGroup.AddPropertyRow(ToggleTransitionTarget_PH);
-		if (!ToggleTransitionTarget_Image)
+		if (ToggleTransitionTarget_Visual && !ToggleTransitionTarget_Visual->IsA<ULexImage>())
 		{
 			TransitionGroup.AddWidgetRow()
 				.ValueContent()
@@ -86,19 +85,6 @@ void FUIToggleCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilde
 	else if (TransitionType == (uint8)(EUISelectableTransitionType::Color))
 	{
 		TransitionGroup.AddPropertyRow(ToggleTransitionTarget_PH);
-		if (!ToggleTransitionTarget_Visual)
-		{
-			TransitionGroup.AddWidgetRow()
-				.ValueContent()
-				.MinDesiredWidth(500)
-				[
-					SNew(STextBlock)
-					.AutoWrapText(true)
-					.Text(LOCTEXT("TransitionTarget_Color_Tip", "If use Color transition, Target must be LexVisual"))
-					.ColorAndOpacity(FLinearColor(FColor::Red))
-					.Font(IDetailLayoutBuilder::GetDetailFont())
-				];
-		}
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, OffImageBrush));
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, OnImageBrush));
 		NeedToHidePropertyNamesForTransition.Add(GET_MEMBER_NAME_CHECKED(UUIToggle, CustomToggleTransition));

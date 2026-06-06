@@ -70,6 +70,11 @@ FLexUIPrefabInstanceScene::FLexUIPrefabInstanceScene(ConstructionValues CVS) :FL
 
 FLexUIPrefabInstanceScene::~FLexUIPrefabInstanceScene()
 {
+	if (RootAgentWidget != nullptr)
+	{
+		RootAgentWidget->DestroyWidget();
+		RootAgentWidget.Reset();
+	}
 }
 
 ULexWidget* FLexUIPrefabInstanceScene::GetParentForLoadPrefab(ULexUIPrefab* InPrefab)

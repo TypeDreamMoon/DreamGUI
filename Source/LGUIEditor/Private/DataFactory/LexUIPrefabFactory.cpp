@@ -22,12 +22,13 @@ UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent,
 	{
 		ULexUIPrefab* NewAsset = NewObject<ULexUIPrefab>(InParent, Class, Name, Flags | RF_Transactional);
 		NewAsset->bIsPrefabVariant = true;
-		ULexUIPrefabHelperObject* HelperObject = NewObject<ULexUIPrefabHelperObject>(GetTransientPackage());
+		auto HelperObject = NewAsset->GetPrefabHelperObject();
 		HelperObject->PrefabAsset = NewAsset;
 		TMap<FGuid, TObjectPtr<UObject>> MapGuidToObject;
 		TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> SubPrefabMap;
-		auto World = SourcePrefab->GetPrefabInstanceScene()->GetWorld();
-		HelperObject->LoadedRootWidget = SourcePrefab->LoadPrefabWithExistingObjects(World, World, nullptr, MapGuidToObject, SubPrefabMap);
+		auto PrefabScene = NewAsset->GetPrefabInstanceScene();
+		auto World = PrefabScene->GetWorld();
+		HelperObject->LoadedRootWidget = SourcePrefab->LoadPrefabWithExistingObjects(World, World, PrefabScene->GetParentForLoadPrefab(NewAsset), MapGuidToObject, SubPrefabMap);
 		FLexUISubPrefabData SubPrefabData;
 		SubPrefabData.PrefabAsset = SourcePrefab;
 		SubPrefabData.MapGuidToObject = MapGuidToObject;
@@ -39,23 +40,21 @@ UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent,
 		}
 		HelperObject->SubPrefabMap.Add(HelperObject->LoadedRootWidget, SubPrefabData);
 		HelperObject->SavePrefab();
-		
-		HelperObject->LoadedRootWidget->DestroyWidget();
-		HelperObject->ConditionalBeginDestroy();
 		return NewAsset;
 	}
 	else
 	{
 		ULexUIPrefab* NewAsset = NewObject<ULexUIPrefab>(InParent, Class, Name, Flags | RF_Transactional);
 		NewAsset->bIsPrefabVariant = false;
-		ULexUIPrefabHelperObject* HelperObject = NewObject<ULexUIPrefabHelperObject>(GetTransientPackage());
+		NewAsset->PrefabVersion = LEXUI_CURRENT_PREFAB_VERSION;
+		auto HelperObject = NewAsset->GetPrefabHelperObject();
 		HelperObject->PrefabAsset = NewAsset;
-		HelperObject->LoadedRootWidget = NewObject<ULexWidget>();
+		auto PrefabScene = NewAsset->GetPrefabInstanceScene();
+		auto World = PrefabScene->GetWorld();
+		HelperObject->LoadedRootWidget = NewObject<ULexWidget>(World);
+		HelperObject->LoadedRootWidget->SetParent(PrefabScene->GetParentForLoadPrefab(NewAsset));
 		HelperObject->LoadedRootWidget->SetDisplayName(NewAsset->GetName());
 		HelperObject->SavePrefab();
-		
-		HelperObject->LoadedRootWidget->DestroyWidget();
-		HelperObject->ConditionalBeginDestroy();
 		return NewAsset;
 	}
 }

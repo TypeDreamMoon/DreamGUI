@@ -27,7 +27,7 @@ uint32 FLexCanvasDrawCallProcessingRunnable::Run()
 			break;
 		}
 
-		if (QueueEvent->Wait())
+		if (QueueEvent->Wait(500))
 		{
 			if (!bIsRunning)break;
 			bIsBatching = true;

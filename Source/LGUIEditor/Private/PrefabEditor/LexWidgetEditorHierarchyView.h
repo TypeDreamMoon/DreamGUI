@@ -37,7 +37,6 @@ public:
 	void ClearSelection();
 	void GetExpandWidgets(TSet<TWeakObjectPtr<ULexWidget>>& OutExpandWidgets);
 
-	TWeakObjectPtr<ULexWidget> DraggingItem;
 private:
 	/** Rebuilds the tree structure based on the current filter options */
 	void RefreshTree();

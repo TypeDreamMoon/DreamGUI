@@ -7,8 +7,8 @@
 #include "LexUIPrefabInstanceScene.h"
 #include "LexUIPrefab.generated.h"
 
-#define LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE "PrefabSystem/WidgetSerializer.h"
-#define LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE LexUIPrefabSystem
+#define LEXUIPREFAB_SERIALIZER_NEWEST_INCLUDE "PrefabSystem/WidgetSerializer.h"
+#define LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE LexUIPrefabSystem
 
 class ULexWidget;
 
@@ -24,7 +24,7 @@ enum class ELexUIPrefabVersion : uint16
 	 *							 4. Support object flags.
 	 *							 5. Support all object serialization and reference, include default sub object and component.
 	 */
-	BuildinFArchive = 3,
+	BuiltinFArchive = 3,
 	/** Support nested default sub object. */
 	NestedDefaultSubObject = 4,
 	/** Support UObject name. */
@@ -54,7 +54,7 @@ enum class ELexUIPrefabVersion : uint16
 /**
  * Current prefab system version
  */
-#define LGUI_CURRENT_PREFAB_VERSION (uint16)ELexUIPrefabVersion::NEWEST
+#define LEXUI_CURRENT_PREFAB_VERSION (uint16)ELexUIPrefabVersion::NEWEST
 
 class ULexUIPrefab;
 class ULexUIPrefabHelperObject;

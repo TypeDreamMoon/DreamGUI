@@ -15,7 +15,7 @@ void ULexImage::PreEditChange(FProperty* PropertyAboutToChange)
 	Super::PreEditChange(PropertyAboutToChange);
 
 	const FName PropertyName = PropertyAboutToChange->GetFName();
-	if (PropertyName == FName("ResourceObject"))
+	if (PropertyName == FLexUIImageBrush::GetPropertyName_ResourceObject())
 	{
 		if (bHasAddToSprite)
 		{
@@ -34,9 +34,12 @@ void ULexImage::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyCha
 
 	static const FName BrushName = GET_MEMBER_NAME_CHECKED(ULexImage, Brush);
 
-	if (MemberName == BrushName)
+	if (MemberName == BrushName || PropertyName == FLexUIImageBrush::GetPropertyName_ResourceObject())
 	{
-		
+		if (auto Widget = GetWidget())
+		{
+			ULexWidget::MarkLayoutForRebuild(Widget);
+		}
 	}
 }
 #endif
@@ -221,6 +224,7 @@ void ULexImage::SetBrush(const FLexUIImageBrush& Value)
 	MarkTextureDirty();
 	MarkMaterialDirty();
 	Brush = Value;
+	ULexWidget::MarkLayoutForRebuild(GetWidget());
 }
 
 void ULexImage::SetBrush_LexUISprite(ULexUISpriteData_BaseObject* Value)
@@ -247,6 +251,7 @@ void ULexImage::SetBrush_LexUISprite(ULexUISpriteData_BaseObject* Value)
 		}
 		MarkVertexUVDirty();
 		Brush.SetResourceObject(Value);
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 		return;
 	}
 	if (OldLexSprite != nullptr)
@@ -270,6 +275,7 @@ void ULexImage::SetBrush_LexUISprite(ULexUISpriteData_BaseObject* Value)
 		MarkMaterialDirty();
 	}
 	Brush.SetResourceObject(Value);
+	ULexWidget::MarkLayoutForRebuild(GetWidget());
 }
 
 void ULexImage::SetBrush_SlateSprite(TScriptInterface<ISlateTextureAtlasInterface> Value)
@@ -295,6 +301,7 @@ void ULexImage::SetBrush_SlateSprite(TScriptInterface<ISlateTextureAtlasInterfac
 		}
 		MarkVertexUVDirty();
 		Brush.SetResourceObject(Value.GetObject());
+		ULexWidget::MarkLayoutForRebuild(GetWidget());
 		return;
 	}
 
@@ -305,6 +312,7 @@ void ULexImage::SetBrush_SlateSprite(TScriptInterface<ISlateTextureAtlasInterfac
 		MarkMaterialDirty();
 	}
 	Brush.SetResourceObject(Value.GetObject());
+	ULexWidget::MarkLayoutForRebuild(GetWidget());
 }
 
 void ULexImage::SetBrush_Texture(UTexture* Value)
@@ -326,6 +334,7 @@ void ULexImage::SetBrush_Texture(UTexture* Value)
 		MarkMaterialDirty();
 	}
 	Brush.SetResourceObject(Value);
+	ULexWidget::MarkLayoutForRebuild(GetWidget());
 }
 void ULexImage::SetBrush_Material(UTexture* Value)
 {
@@ -343,6 +352,7 @@ void ULexImage::SetBrush_Material(UTexture* Value)
 	MarkTextureDirty();
 	MarkMaterialDirty();
 	Brush.SetResourceObject(Value);
+	ULexWidget::MarkLayoutForRebuild(GetWidget());
 }
 
 void ULexImage::SetBrushTintColor(FColor Value)

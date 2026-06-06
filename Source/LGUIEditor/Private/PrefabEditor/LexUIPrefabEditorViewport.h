@@ -33,10 +33,6 @@ public:
 	virtual void OnFloatingButtonClicked() override;
 	// End of ICommonEditorViewportToolbarInfoProvider interface
 
-	// SWidget interface
-	virtual FReply OnDrop(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent) override;
-	// End of SWidget interface
-
 private:
 	// Pointer back to owning sprite editor instance (the keeper of state)
 	TWeakPtr<FLexUIPrefabEditor> PrefabEditorPtr;

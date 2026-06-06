@@ -49,7 +49,7 @@ enum class EUISelectableNavigationMode:uint8
 };
 
 
-UCLASS(ClassGroup = (LexUI), Abstract, Blueprintable)
+UCLASS(ClassGroup = (LexUI), Abstract, Blueprintable, meta=(BlueprintSpawnableComponent))
 class LGUI_API UUITransition :public ULexUIBehaviour
 {
 	GENERATED_BODY()

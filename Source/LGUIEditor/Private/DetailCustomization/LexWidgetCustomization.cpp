@@ -829,16 +829,16 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	auto& PivotPropertyRow = TransformCategory.AddProperty(Pivot_PH);
 	PivotPropertyRow.IsEnabled(this->IsAnchorEditable());
 	Pivot_PH->SetOnPropertyValuePreChange(FSimpleDelegate::CreateLambda([=, this] {
-		this->OnPrePivotChange();
+		this->OnPrePivotChange(Pivot_PH);
 		}));
 	Pivot_PH->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
-		this->OnPivotChanged();
+		this->OnPivotChanged(Pivot_PH);
 		}));
 	Pivot_PH->SetOnChildPropertyValuePreChange(FSimpleDelegate::CreateLambda([=, this] {
-		this->OnPrePivotChange();
+		this->OnPrePivotChange(Pivot_PH);
 		}));
 	Pivot_PH->SetOnChildPropertyValueChanged(FSimpleDelegate::CreateLambda([=, this] {
-		this->OnPivotChanged();
+		this->OnPivotChanged(Pivot_PH);
 		}));
 
 	//location rotation scale
@@ -1013,14 +1013,19 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	}
 }
 
-void FLexWidgetCustomization::OnPrePivotChange()
+void FLexWidgetCustomization::OnPrePivotChange(TSharedPtr<IPropertyHandle> PivotPH)
 {
-	
+	AnchorOffset.Left = TargetScriptArray[0]->GetAnchorOffsetLeft();
+	AnchorOffset.Top = TargetScriptArray[0]->GetAnchorOffsetTop();
+	AnchorOffset.Right = TargetScriptArray[0]->GetAnchorOffsetRight();
+	AnchorOffset.Bottom = TargetScriptArray[0]->GetAnchorOffsetBottom();
 }
-void FLexWidgetCustomization::OnPivotChanged()
+void FLexWidgetCustomization::OnPivotChanged(TSharedPtr<IPropertyHandle> PivotPH)
 {
-	GUnrealEd->UpdatePivotLocationForSelection();
-	GUnrealEd->SetPivotMovedIndependently(false);
+	TargetScriptArray[0]->SetAnchorOffsetLeft(AnchorOffset.Left);
+	TargetScriptArray[0]->SetAnchorOffsetTop(AnchorOffset.Top);
+	TargetScriptArray[0]->SetAnchorOffsetRight(AnchorOffset.Right);
+	TargetScriptArray[0]->SetAnchorOffsetBottom(AnchorOffset.Bottom);
 }
 
 EVisibility FLexWidgetCustomization::GetDisplayNameWarningVisibility()const

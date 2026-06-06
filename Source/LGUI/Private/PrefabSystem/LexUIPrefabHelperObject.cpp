@@ -10,7 +10,7 @@
 #include "Utils/LexUIUtils.h"
 #include "PrefabSystem/LexUIObjectReaderAndWriter.h"
 
-#include LGUIPREFAB_SERIALIZER_NEWEST_INCLUDE
+#include LEXUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabManager"
 
@@ -31,12 +31,15 @@ void ULexUIPrefabHelperObject::Init(ULexUIPrefab* InPrefab, FLexUIPrefabInstance
 {
 	PrefabAsset = InPrefab;
 	PrefabInstanceWorld = InPrefabInstanceScene->GetWorld();
-	auto Parent = InPrefabInstanceScene->GetParentForLoadPrefab(PrefabAsset);
-	LoadedRootWidget = PrefabAsset->LoadPrefabWithExistingObjects(PrefabInstanceWorld.Get()
-		, Parent->GetOuter()
-		, Parent
-		, MapGuidToObject, SubPrefabMap
-	);
+	if (!IsValid(LoadedRootWidget))
+	{
+		auto Parent = InPrefabInstanceScene->GetParentForLoadPrefab(PrefabAsset);
+		LoadedRootWidget = PrefabAsset->LoadPrefabWithExistingObjects(PrefabInstanceWorld.Get()
+			, Parent->GetOuter()
+			, Parent
+			, MapGuidToObject, SubPrefabMap
+		);
+	}
 	if (LoadedRootWidget == nullptr)return;
 	
 	FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(this, &ULexUIPrefabHelperObject::OnObjectPropertyChanged);
@@ -363,7 +366,7 @@ bool ULexUIPrefabHelperObject::RefreshOnSubPrefabDirty(ULexUIPrefab* InSubPrefab
 			)
 		{
 			//store override parameter to data
-			LGUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer serializer;
+			LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer serializer;
 			serializer.bOverrideVersions = false;
 			auto OverrideData = serializer.SaveOverrideParameterToData(SubPrefabData.ObjectOverrideParameterArray);
 
