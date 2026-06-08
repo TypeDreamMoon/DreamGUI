@@ -744,8 +744,8 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 
 										auto DoRender = [&](bool bWireframe)
 										{
-											auto Material = (bWireframe ? WireframeMaterialInstance : Mesh.MaterialRenderProxy)
-											->GetMaterialNoFallback(RenderView->GetFeatureLevel());//why not use "GetIncompleteMaterialWithFallback" here? because fallback material can't render with LexUIRenderer
+											auto MaterialRenderProxy = (bWireframe ? WireframeMaterialInstance : Mesh.MaterialRenderProxy);
+											auto Material = MaterialRenderProxy->GetMaterialNoFallback(RenderView->GetFeatureLevel());//why not use "GetIncompleteMaterialWithFallback" here? because fallback material can't render with LexUIRenderer
 											if (!Material)return;
 											
 											if (DepthFade <= 0)
@@ -771,13 +771,10 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 													GraphicsPSOInit.NumSamples = NumSamples;
 													SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 
-													if (!bWireframe)
-													{
-														VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
-														PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
-														PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepth, SceneDepthTexST, PassParameters->SceneDepthTex->GetRHI());
-														PixelShader->SetGammaValue(RHICmdList, GammaValue);
-													}
+													VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
+													PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
+													PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepth, SceneDepthTexST, PassParameters->SceneDepthTex->GetRHI());
+													PixelShader->SetGammaValue(RHICmdList, GammaValue);
 
 													RHICmdList.SetStreamSource(0, MeshBatchContainer.VertexBufferRHI, 0);
 													RHICmdList.DrawIndexedPrimitive(Mesh.Elements[0].IndexBuffer->IndexBufferRHI, 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.GetNumPrimitives(), 1);
@@ -806,14 +803,11 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 													GraphicsPSOInit.NumSamples = NumSamples;
 													SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 
-													if (!bWireframe)
-													{
-														VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
-														PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
-														PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepth, SceneDepthTexST, PassParameters->SceneDepthTex->GetRHI());
-														PixelShader->SetDepthFadeParameter(RHICmdList, DepthFade);
-														PixelShader->SetGammaValue(RHICmdList, GammaValue);
-													}
+													VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
+													PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
+													PixelShader->SetDepthBlendParameter(RHICmdList, BlendDepth, SceneDepthTexST, PassParameters->SceneDepthTex->GetRHI());
+													PixelShader->SetDepthFadeParameter(RHICmdList, DepthFade);
+													PixelShader->SetGammaValue(RHICmdList, GammaValue);
 
 													RHICmdList.SetStreamSource(0, MeshBatchContainer.VertexBufferRHI, 0);
 													RHICmdList.DrawIndexedPrimitive(Mesh.Elements[0].IndexBuffer->IndexBufferRHI, 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.GetNumPrimitives(), 1);
@@ -1027,8 +1021,8 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 
 							auto DoRender = [&](bool bWireframe)
 							{
-								auto Material = (bWireframe ? WireframeMaterialInstance : Mesh.MaterialRenderProxy)
-								->GetMaterialNoFallback(RenderView->GetFeatureLevel());//why not use "GetIncompleteMaterialWithFallback" here? because fallback material cann't render with LexUIRenderer
+								auto MaterialRenderProxy = (bWireframe ? WireframeMaterialInstance : Mesh.MaterialRenderProxy);
+								auto Material = MaterialRenderProxy->GetMaterialNoFallback(RenderView->GetFeatureLevel());//why not use "GetIncompleteMaterialWithFallback" here? because fallback material cann't render with LexUIRenderer
 								if (!Material)return;
 								
 								FMaterialShaderTypes ShaderTypes;
@@ -1053,12 +1047,9 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 									GraphicsPSOInit.NumSamples = NumSamples;
 									SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 
-									if (!bWireframe)
-									{
-										VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
-										PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, Mesh.MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
-										PixelShader->SetGammaValue(RHICmdList, GammaValue);
-									}
+									VertexShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
+									PixelShader->SetMaterialShaderParameters(RHICmdList, *RenderView, MaterialRenderProxy, Material, Mesh.Elements[0].PrimitiveUniformBufferResource);
+									PixelShader->SetGammaValue(RHICmdList, GammaValue);
 
 									RHICmdList.SetStreamSource(0, MeshBatchContainer.VertexBufferRHI, 0);
 									RHICmdList.DrawIndexedPrimitive(Mesh.Elements[0].IndexBuffer->IndexBufferRHI, 0, 0, MeshBatchContainer.NumVerts, 0, Mesh.Elements[0].NumPrimitives, Mesh.Elements[0].NumInstances);

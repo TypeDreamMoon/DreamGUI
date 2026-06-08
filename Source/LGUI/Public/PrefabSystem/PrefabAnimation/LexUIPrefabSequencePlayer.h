@@ -8,7 +8,7 @@
 /**
  * ULexUIPrefabSequencePlayer is used to actually "play" an actor sequence asset at runtime.
  */
-UCLASS(BlueprintType)
+UCLASS(BlueprintType, DisplayName="LexUI Prefab Sequence Player")
 class LGUI_API ULexUIPrefabSequencePlayer
 	: public UMovieSceneSequencePlayer
 {

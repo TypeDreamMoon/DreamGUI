@@ -153,7 +153,7 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FLexUIPrefab_LoadPrefabCallback, ULexWidget*, 
  * Similar to Unity3D's Prefab. Store actor and it's hierarchy then serialize to asset, deserialize and restore when needed.
  * If you don't want to package the prefab for runtime (only use in editor), you can put the prefab in a folder named "EditorOnly".
  */
-UCLASS(ClassGroup = (LGUI), BlueprintType)
+UCLASS(ClassGroup = (LGUI), BlueprintType, DisplayName="LexUI Prefab")
 class LGUI_API ULexUIPrefab : public UObject
 {
 	GENERATED_BODY()

@@ -21,6 +21,8 @@ void ULexUIBehaviour::BeginPlay()
 	if (Widget->GetWidgetActiveInHierarchy())
 	{
 		check (!this->bIsEnableCalled);
+		if (bStartWithTickEnabled)
+			bCanExecuteTick = true;
 		this->Call_OnEnable();
 	}
 }
@@ -82,20 +84,20 @@ UWorld* ULexUIBehaviour::GetWorld() const
 	return Widget->GetWorld();
 }
 
-void ULexUIBehaviour::SetCanExecuteUpdate(bool Value)
+void ULexUIBehaviour::SetCanExecuteTick(bool Value)
 {
-	if (bCanExecuteUpdate != Value)
+	if (bCanExecuteTick != Value)
 	{
-		bCanExecuteUpdate = Value;
+		bCanExecuteTick = Value;
 		if (bIsStartCalled)
 		{
-			if (bCanExecuteUpdate)
+			if (bCanExecuteTick)
 			{
-				ULexUIManagerWorldSubsystem::AddLexUIBehavioursForUpdate(this);
+				ULexUIManagerWorldSubsystem::AddLexUIBehavioursForTick(this);
 			}
 			else
 			{
-				ULexUIManagerWorldSubsystem::RemoveLexUIBehavioursFromUpdate(this);
+				ULexUIManagerWorldSubsystem::RemoveLexUIBehavioursFromTick(this);
 			}
 		}
 	}
@@ -138,11 +140,11 @@ void ULexUIBehaviour::Start()
 		ReceiveStart();
 	}
 }
-void ULexUIBehaviour::Update(float DeltaTime)
+void ULexUIBehaviour::Tick(float DeltaTime)
 {
 	if (bCanExecuteBlueprintEvent)
 	{
-		ReceiveUpdate(DeltaTime);
+		ReceiveTick(DeltaTime);
 	}
 }
 
@@ -204,9 +206,9 @@ void ULexUIBehaviour::Call_OnEnable()
 	}
 	else
 	{
-		if (bCanExecuteUpdate)
+		if (bCanExecuteTick)
 		{
-			ULexUIManagerWorldSubsystem::AddLexUIBehavioursForUpdate(this);
+			ULexUIManagerWorldSubsystem::AddLexUIBehavioursForTick(this);
 		}
 	}
 }
@@ -238,9 +240,9 @@ void ULexUIBehaviour::Call_OnDisable()
 	}
 	else
 	{
-		if (bCanExecuteUpdate)
+		if (bCanExecuteTick)
 		{
-			ULexUIManagerWorldSubsystem::RemoveLexUIBehavioursFromUpdate(this);
+			ULexUIManagerWorldSubsystem::RemoveLexUIBehavioursFromTick(this);
 		}
 	}
 }

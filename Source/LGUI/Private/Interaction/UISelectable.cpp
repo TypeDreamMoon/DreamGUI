@@ -84,7 +84,7 @@ UUISelectable::UUISelectable()
 void UUISelectable::Awake()
 {
 	Super::Awake();
-	this->SetCanExecuteUpdate(false);
+	this->SetCanExecuteTick(false);
 }
 
 void UUISelectable::OnRegister()

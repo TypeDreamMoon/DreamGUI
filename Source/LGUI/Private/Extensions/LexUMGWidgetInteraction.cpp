@@ -27,7 +27,7 @@ bool ULexUMGWidgetInteraction::OnPointerEnter_Implementation(ULexPointerEventDat
 		if (Interactions.CurrentInteraction == nullptr)
 		{
 			Interactions.CurrentInteraction = this;
-			this->SetCanExecuteUpdate(true);//hover in, enable update
+			this->SetCanExecuteTick(true);//hover in, enable update
 		}
 	}
 	return bAllowEventBubbleUp;
@@ -43,7 +43,7 @@ bool ULexUMGWidgetInteraction::OnPointerExit_Implementation(ULexPointerEventData
 		{
 			SimulatePointerMovement();//pointer exit;
 			Interactions.CurrentInteraction = nullptr;
-			this->SetCanExecuteUpdate(false);//hover out, disable update
+			this->SetCanExecuteTick(false);//hover out, disable update
 		}
 	}
 	return bAllowEventBubbleUp;
@@ -122,7 +122,7 @@ void ULexUMGWidgetInteraction::Awake()
 		}
 	}
 	WidgetComponent = Cast<ULexUMGWidget>(GetWidget()->GetVisual());
-	this->SetCanExecuteUpdate(false);//disable update by default
+	this->SetCanExecuteTick(false);//disable update by default
 }
 
 void ULexUMGWidgetInteraction::OnDestroy()
@@ -151,9 +151,9 @@ void ULexUMGWidgetInteraction::OnDestroy()
 	}
 }
 
-void ULexUMGWidgetInteraction::Update(float DeltaTime)
+void ULexUMGWidgetInteraction::Tick(float DeltaTime)
 {
-	Super::Update(DeltaTime);
+	Super::Tick(DeltaTime);
 	
 	SimulatePointerMovement();
 }

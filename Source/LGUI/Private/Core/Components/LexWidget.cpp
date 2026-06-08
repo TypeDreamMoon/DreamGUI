@@ -445,13 +445,23 @@ void ULexWidget::BeginDestroy()
 {
 	if (bHasBegunPlay || bIsRegistered)
 	{
+		check(0);
 		auto WorldName = this->GetWorld() ? this->GetWorld()->GetName() : TEXT("null");
 		auto Manager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld());
 		auto ManagerName = Manager ? Manager->GetName() : TEXT("null");
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red
-			, FString::Printf(TEXT("ULexWidget %s is not properly destroyed! Please use DestroyWidget() to delete a LexWidget! World:%s, Manager:%s")
-				, *GetPathDisplayName(), *WorldName, *ManagerName));
-		check(0);
+
+		UE_LOG(LGUI, Error, TEXT("ULexWidget %s is not properly destroyed! Missing DestroyWidget call. World:%s, Manager:%s. Auto cleanup in BeginDestroy."),
+			*GetPathDisplayName(), *WorldName, *ManagerName);
+
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red
+				, FString::Printf(TEXT("ULexWidget %s is not properly destroyed! Missing DestroyWidget call, auto cleaned up in BeginDestroy. World:%s, Manager:%s")
+					, *GetPathDisplayName(), *WorldName, *ManagerName));
+		}
+
+		// Fallback for cases where caller forgot DestroyWidget().
+		DestroyWidget();
 	}
 	Super::BeginDestroy();
 }
@@ -1294,6 +1304,11 @@ void ULexWidget::OnAttachedToParent()
 
 	ULexCanvas* ParentCanvas = this->GetComponentInParent<ULexCanvas>();
 	OnHierarchyAttachmentChanged(ParentCanvas, Parent->RootWidget.Get());
+
+	CalculateWidgetActive_Recursive();
+	CalculateRaycastable_Recursive();
+	CalculateInteractable_Recursive();
+	
 	MarkLayoutDirty();
 	MarkClipDirty(true);
 #if WITH_EDITOR
@@ -1327,6 +1342,11 @@ void ULexWidget::OnDetachedFromParent()
 	}
 
 	OnHierarchyAttachmentChanged(nullptr, nullptr);
+
+	CalculateWidgetActive_Recursive();
+	CalculateRaycastable_Recursive();
+	CalculateInteractable_Recursive();
+	
 	MarkLayoutDirty();
 	MarkClipDirty(true);
 #if WITH_EDITOR
@@ -1348,6 +1368,13 @@ void ULexWidget::OnRegister()
 #endif
 	}
 	CheckRootWidget();
+
+	if (this->IsRootWidgetInHierarchy())
+	{
+		CalculateWidgetActive_Recursive();
+		CalculateRaycastable_Recursive();
+		CalculateInteractable_Recursive();
+	}
 
 	if (IsValid(LayoutContainer))
 	{
@@ -2402,10 +2429,6 @@ void ULexWidget::OnHierarchyAttachmentChanged(ULexCanvas* ParentRenderCanvas, UL
 	//flatten hierarchy index
 	MarkFlattenHierarchyIndexDirty();
 
-	CalculateWidgetActive_Recursive();
-	CalculateRaycastable_Recursive();
-	CalculateInteractable_Recursive();
-
 	//if (this->IsRegistered())//not register means could be load from level
 	{
 		bCacheWidthDirty = true;
@@ -2484,11 +2507,10 @@ void ULexWidget::CalculateWidgetActive_Recursive()
 						Parent->bLayoutDirty = true;
 					}
 				}
-			
-				for (auto& Child : Widget->GetChildren())
-				{
-					CalculateWidgetActive(Child);
-				}
+			}
+			for (auto& Child : Widget->GetChildren())
+			{
+				CalculateWidgetActive(Child);
 			}
 		}
 	};
@@ -2521,10 +2543,10 @@ void ULexWidget::CalculateInteractable_Recursive()
 			{
 				Widget->bCacheInteractableInHierarchy = bResultInteractable;
 				Widget->Call_InteractableChanged();
-				for (auto& Child : Widget->GetChildren())
-				{
-					CalculateInteractable(Child);
-				}
+			}
+			for (auto& Child : Widget->GetChildren())
+			{
+				CalculateInteractable(Child);
 			}
 		}
 	};
@@ -2557,10 +2579,10 @@ void ULexWidget::CalculateRaycastable_Recursive()
 			{
 				Widget->bCacheRaycastableInHierarchy = bResult;
 				Widget->Call_RaycastableChanged();
-				for (auto& Child : Widget->GetChildren())
-				{
-					CalculateRaycastable(Child);
-				}
+			}
+			for (auto& Child : Widget->GetChildren())
+			{
+				CalculateRaycastable(Child);
 			}
 		}
 	};

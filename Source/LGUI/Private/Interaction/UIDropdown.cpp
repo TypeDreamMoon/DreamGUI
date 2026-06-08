@@ -538,7 +538,7 @@ UUIDropdownItemComponent::UUIDropdownItemComponent()
 void UUIDropdownItemComponent::Awake()
 {
 	Super::Awake();
-	this->SetCanExecuteUpdate(false);
+	this->SetCanExecuteTick(false);
 }
 
 void UUIDropdownItemComponent::Init(int32 Index, const FUIDropdownOptionData& Data, const TFunction<void()>& OnSelect)

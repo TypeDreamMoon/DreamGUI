@@ -95,7 +95,7 @@ class LGUI_API UUITextInput : public UUISelectable, public ILexPointerClickInter
 	
 protected:	
 	virtual void Awake() override;
-	virtual void Update(float DeltaTime) override;
+	virtual void Tick(float DeltaTime) override;
 	virtual void OnDestroy() override;
 #if WITH_EDITOR
 	virtual bool CanEditChange(const FProperty* InProperty) const override;

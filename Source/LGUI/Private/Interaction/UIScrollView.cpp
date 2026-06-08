@@ -7,7 +7,7 @@
 void UUIScrollViewHelper::Awake()
 {
     Super::Awake();
-    this->SetCanExecuteUpdate(false);
+    this->SetCanExecuteTick(false);
 }
 void UUIScrollViewHelper::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
@@ -44,12 +44,12 @@ void UUIScrollView::Awake()
     Super::Awake();
     bRangeCalculated = false;
     RecalculateRange();
-    this->SetCanExecuteUpdate(true);
+    this->SetCanExecuteTick(true);
 }
 
-void UUIScrollView::Update(float DeltaTime)
+void UUIScrollView::Tick(float DeltaTime)
 {
-    Super::Update(DeltaTime);
+    Super::Tick(DeltaTime);
     if (bCanUpdateAfterDrag)
         UpdateAfterDrag(DeltaTime);
 }

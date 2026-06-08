@@ -31,7 +31,7 @@ class LGUI_API UUIScrollView : public ULexUIBehaviour, public ILexPointerDragInt
 	
 protected:
 	virtual void Awake() override;
-	virtual void Update(float DeltaTime) override;
+	virtual void Tick(float DeltaTime) override;
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;

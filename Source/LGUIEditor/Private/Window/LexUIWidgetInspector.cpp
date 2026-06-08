@@ -36,6 +36,14 @@ void SLexUIWidgetInspector::Construct(const FArguments& Args, TSharedPtr<SDockTa
 void SLexUIWidgetInspector::AssignWorld(UWorld* InWorld)
 {
 	World = InWorld;
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(World.Get()))
+	{
+		LexUIManager->OnEndPlay.AddSPLambda(this, [this]()
+		{
+			World = nullptr;
+			RefreshContent();
+		});
+	}
 	RefreshContent();
 }
 

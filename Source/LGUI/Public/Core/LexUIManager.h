@@ -126,6 +126,7 @@ public:
 	static bool GetIsPlaying() { return bIsPlaying; }
 	ULexUISelection* GetSelection()const;
 	FSimpleMulticastDelegate OnDeinitialize;
+	FSimpleMulticastDelegate OnEndPlay;
 	FSimpleMulticastDelegate OnLexUIWidgetOutlinerChanged;
 	void MarkLexUIWidgetOutlinerChanged();
 private:
@@ -160,13 +161,13 @@ private:
 	TMap<int, TWeakObjectPtr<ULexEventSystem>> MapUserIndexToEventSystem;
 
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
-		TArray<TWeakObjectPtr<ULexUIBehaviour>> LexUIBehavioursForUpdate;
+		TArray<TWeakObjectPtr<ULexUIBehaviour>> LexUIBehavioursForTick;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<ULexUIBehaviour>> LexUIBehavioursForStart;
 	bool bIsExecutingStart = false;
-	bool bIsExecutingUpdate = false;
-	int32 CurrentExecutingUpdateIndex = -1;
-	UPROPERTY(Transient) TArray<ULexUIBehaviour*> LexUIBehavioursNeedToRemoveFromUpdate;
+	bool bIsExecutingTick = false;
+	int32 CurrentExecutingTickIndex = -1;
+	UPROPERTY(Transient) TArray<ULexUIBehaviour*> LexUIBehavioursNeedToRemoveFromTick;
 #if WITH_EDITORONLY_DATA
 	int32 PrevScreenSpaceOverlayCanvasCount = 1;
 #endif
@@ -241,8 +242,8 @@ private:
 #endif
 public:
 
-	static void AddLexUIBehavioursForUpdate(ULexUIBehaviour* InComp);
-	static void RemoveLexUIBehavioursFromUpdate(ULexUIBehaviour* InComp);
+	static void AddLexUIBehavioursForTick(ULexUIBehaviour* InComp);
+	static void RemoveLexUIBehavioursFromTick(ULexUIBehaviour* InComp);
 	static void AddLexUIBehavioursForStart(ULexUIBehaviour* InComp);
 	static void RemoveLexUIBehavioursFromStart(ULexUIBehaviour* InComp);
 };

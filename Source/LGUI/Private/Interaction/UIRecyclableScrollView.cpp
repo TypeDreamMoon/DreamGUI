@@ -18,9 +18,9 @@ void UUIRecyclableScrollView::Start()
     InitializeOnDataSource();
 }
 
-void UUIRecyclableScrollView::Update(float DeltaTime)
+void UUIRecyclableScrollView::Tick(float DeltaTime)
 {
-    Super::Update(DeltaTime);
+    Super::Tick(DeltaTime);
 }
 
 void UUIRecyclableScrollView::OnDestroy()

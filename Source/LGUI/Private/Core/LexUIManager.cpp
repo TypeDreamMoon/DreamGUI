@@ -284,7 +284,8 @@ void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool Scr
 		//child
 		for (auto& Child : Widget->GetChildren())
 		{
-			if (IsValid(Child))
+			if (IsValid(Child)
+				&& Child->GetWidgetActiveInHierarchy())
 			{
 				DrawWidget(Child, RectDrawColor);
 			}
@@ -294,7 +295,9 @@ void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool Scr
 		{
 			for (auto& SiblingWidget : Parent->GetChildren())
 			{
-				if (IsValid(SiblingWidget) && SiblingWidget->GetWidgetActiveInHierarchy() && SiblingWidget != Widget)
+				if (IsValid(SiblingWidget)
+					&& SiblingWidget->GetWidgetActiveInHierarchy()
+					&& SiblingWidget != Widget)
 				{
 					DrawWidget(SiblingWidget, RectDrawColor);
 				}
@@ -914,6 +917,7 @@ void ULexUIManagerWorldSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 void ULexUIManagerWorldSubsystem::OnWorldEndPlay(UWorld& InWorld)
 {
 #if WITH_EDITOR
+	OnEndPlay.Broadcast();
 	if (this->GetWorld()->IsGameWorld())//game mode should deinit when EndPlay
 #endif
 	{
@@ -939,7 +943,7 @@ TArray<ULexUIManagerWorldSubsystem*> ULexUIManagerWorldSubsystem::InstanceArray;
 bool ULexUIManagerWorldSubsystem::bIsPlaying = false;
 #endif
 
-DECLARE_CYCLE_STAT(TEXT("LexUIBehaviour Update"), STAT_LexUIBehaviourUpdate, STATGROUP_LGUI);
+DECLARE_CYCLE_STAT(TEXT("LexUIBehaviour Tick"), STAT_LexUIBehaviourTick, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("LexUIBehaviour Start"), STAT_LexUIBehaviourStart, STATGROUP_LGUI);
 
 void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
@@ -974,9 +978,9 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 				if (item.IsValid())
 				{
 					item->Call_Start();
-					if (item->bCanExecuteUpdate)
+					if (item->bCanExecuteTick)
 					{
-						LexUIBehavioursForUpdate.AddUnique(item);
+						LexUIBehavioursForTick.AddUnique(item);
 					}
 				}
 			}
@@ -985,16 +989,16 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 		}
 	}
 
-	//LexUIBehaviour update
+	//LexUIBehaviour tick
 	{
-		bIsExecutingUpdate = true;
+		bIsExecutingTick = true;
 		auto bIsGamePaused = GetWorld()->IsPaused();
 		auto Settings = GetDefault<ULexUISettings>();
-		SCOPE_CYCLE_COUNTER(STAT_LexUIBehaviourUpdate);
-		for (int i = 0; i < LexUIBehavioursForUpdate.Num(); i++)
+		SCOPE_CYCLE_COUNTER(STAT_LexUIBehaviourTick);
+		for (int i = 0; i < LexUIBehavioursForTick.Num(); i++)
 		{
-			CurrentExecutingUpdateIndex = i;
-			auto Behaviour = LexUIBehavioursForUpdate[i];
+			CurrentExecutingTickIndex = i;
+			auto Behaviour = LexUIBehavioursForTick[i];
 			if (auto Widget = Behaviour->GetWidget())
 			{
 				bool bAffectByGamePause;
@@ -1008,27 +1012,27 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 				}
 				if (!bIsGamePaused || (bIsGamePaused && !bAffectByGamePause))
 				{
-					Behaviour->Update(DeltaTime);
+					Behaviour->Tick(DeltaTime);
 				}
 			}
 			else
 			{
 				if (!bIsGamePaused || (bIsGamePaused && Behaviour->bTickEvenWhenPaused))
 				{
-					Behaviour->Update(DeltaTime);
+					Behaviour->Tick(DeltaTime);
 				}
 			}
 		}
-		bIsExecutingUpdate = false;
-		CurrentExecutingUpdateIndex = -1;
+		bIsExecutingTick = false;
+		CurrentExecutingTickIndex = -1;
 		//remove these padding things
-		if (LexUIBehavioursNeedToRemoveFromUpdate.Num() > 0)
+		if (LexUIBehavioursNeedToRemoveFromTick.Num() > 0)
 		{
-			for (auto& item : LexUIBehavioursNeedToRemoveFromUpdate)
+			for (auto& item : LexUIBehavioursNeedToRemoveFromTick)
 			{
-				LexUIBehavioursForUpdate.Remove(item);
+				LexUIBehavioursForTick.Remove(item);
 			}
-			LexUIBehavioursNeedToRemoveFromUpdate.Reset();
+			LexUIBehavioursNeedToRemoveFromTick.Reset();
 		}
 	}
 
@@ -1182,46 +1186,46 @@ void ULexUIManagerWorldSubsystem::SubmitCanvasDrawCall()
 	}
 }
 
-void ULexUIManagerWorldSubsystem::AddLexUIBehavioursForUpdate(ULexUIBehaviour* InComp)
+void ULexUIManagerWorldSubsystem::AddLexUIBehavioursForTick(ULexUIBehaviour* InComp)
 {
 	if (IsValid(InComp))
 	{
 		if (auto Instance = GetInstance(InComp->GetWorld()))
 		{
 			int32 index = INDEX_NONE;
-			if (!Instance->LexUIBehavioursForUpdate.Find(InComp, index))
+			if (!Instance->LexUIBehavioursForTick.Find(InComp, index))
 			{
-				Instance->LexUIBehavioursForUpdate.Add(InComp);
+				Instance->LexUIBehavioursForTick.Add(InComp);
 				return;
 			}
 			UE_LOG(LGUI, Warning, TEXT("[%s].%d Already exist, comp:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(InComp->GetPathName()));
 		}
 	}
 }
-void ULexUIManagerWorldSubsystem::RemoveLexUIBehavioursFromUpdate(ULexUIBehaviour* InComp)
+void ULexUIManagerWorldSubsystem::RemoveLexUIBehavioursFromTick(ULexUIBehaviour* InComp)
 {
 	if (IsValid(InComp))
 	{
 		if (auto Instance = GetInstance(InComp->GetWorld()))
 		{
-			auto& updateArray = Instance->LexUIBehavioursForUpdate;
-			int32 index = INDEX_NONE;
-			if (updateArray.Find(InComp, index))
+			auto& TickArray = Instance->LexUIBehavioursForTick;
+			int32 Index = INDEX_NONE;
+			if (TickArray.Find(InComp, Index))
 			{
-				if (Instance->bIsExecutingUpdate)
+				if (Instance->bIsExecutingTick)
 				{
-					if (index > Instance->CurrentExecutingUpdateIndex)//not execute it yet, safe to remove
+					if (Index > Instance->CurrentExecutingTickIndex)//not execute it yet, safe to remove
 					{
-						updateArray.RemoveAt(index);
+						TickArray.RemoveAt(Index);
 					}
 					else//already execute or current execute it, not safe to remove. should remove it after execute process complete
 					{
-						Instance->LexUIBehavioursNeedToRemoveFromUpdate.Add(InComp);
+						Instance->LexUIBehavioursNeedToRemoveFromTick.Add(InComp);
 					}
 				}
-				else//not executing update, safe to remove
+				else//not executing tick, safe to remove
 				{
-					updateArray.RemoveAt(index);
+					TickArray.RemoveAt(Index);
 				}
 			}
 			else
@@ -1231,11 +1235,11 @@ void ULexUIManagerWorldSubsystem::RemoveLexUIBehavioursFromUpdate(ULexUIBehaviou
 
 			//cleanup array
 			int InvalidCount = 0;
-			for (int i = updateArray.Num() - 1; i >= 0; i--)
+			for (int i = TickArray.Num() - 1; i >= 0; i--)
 			{
-				if (!updateArray[i].IsValid())
+				if (!TickArray[i].IsValid())
 				{
-					updateArray.RemoveAt(i);
+					TickArray.RemoveAt(i);
 					InvalidCount++;
 				}
 			}

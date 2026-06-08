@@ -63,7 +63,7 @@ public:
 	// Begin ActorComponent interface
 	virtual void Awake() override;
 	virtual void OnDestroy() override;
-	virtual void Update(float DeltaTime) override;
+	virtual void Tick(float DeltaTime) override;
 	// End UActorComponent
 
 	/**

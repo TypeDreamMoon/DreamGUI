@@ -899,48 +899,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		
 	//displayName
 	auto DisplayName_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, DisplayName));
-	DetailBuilder.HideProperty(DisplayName_PH);
-	LGUICategory.AddCustomRow(LOCTEXT("DisplayName", "Display Name"), true)
-		.NameContent()
-		[
-			DisplayName_PH->CreatePropertyNameWidget()
-		]
-		.ValueContent()
-		.MinDesiredWidth(500)
-		[
-			SNew(SHorizontalBox)
-			+ SHorizontalBox::Slot()
-			.AutoWidth()
-			.VAlign(VAlign_Center)
-			[
-				SNew(SBox)
-				.VAlign(VAlign_Center)
-				[
-					DisplayName_PH->CreatePropertyValueWidget(true)
-				]
-			]
-			+SHorizontalBox::Slot()
-			.AutoWidth()
-			[
-				SNew(SButton)
-				.Text(LOCTEXT("FixDisplayName", "Fix it"))
-				.OnClicked(this, &FLexWidgetCustomization::OnClickFixDisplayNameButton, true, DisplayName_PH)
-				.HAlign(EHorizontalAlignment::HAlign_Center)
-				.Visibility(this, &FLexWidgetCustomization::GetDisplayNameWarningVisibility)
-				.ToolTipText(LOCTEXT("FixDisplayName_Tooltip", "DisplayName not equal to ActorLabel."))
-			]
-			+SHorizontalBox::Slot()
-			.AutoWidth()
-			[
-				SNew(SButton)
-				.Text(LOCTEXT("FixDisplayNameOnHierarchy", "Fix all hierarchy"))
-				.OnClicked(this, &FLexWidgetCustomization::OnClickFixDisplayNameButton, false, DisplayName_PH)
-				.HAlign(EHorizontalAlignment::HAlign_Center)
-				.Visibility(this, &FLexWidgetCustomization::GetDisplayNameWarningVisibility)
-				.ToolTipText(LOCTEXT("FixDisplayNameOnHierarchy_Tooltip", "DisplayName not equal to ActorLabel."))
-			]
-		]
-		;
+	LGUICategory.AddProperty(DisplayName_PH);
 
 	//Layout
 	{
@@ -1028,25 +987,6 @@ void FLexWidgetCustomization::OnPivotChanged(TSharedPtr<IPropertyHandle> PivotPH
 	TargetScriptArray[0]->SetAnchorOffsetBottom(AnchorOffset.Bottom);
 }
 
-EVisibility FLexWidgetCustomization::GetDisplayNameWarningVisibility()const
-{
-	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return EVisibility::Hidden;
-
-	auto actorLabel = TargetScriptArray[0]->GetDisplayName();
-	if (actorLabel.StartsWith("//"))
-	{
-		actorLabel = actorLabel.Right(actorLabel.Len() - 2);
-	}
-	if (TargetScriptArray[0]->GetDisplayName() == actorLabel)
-	{
-		return EVisibility::Hidden;
-	}
-	else
-	{
-		return EVisibility::Visible;
-	}
-}
-
 FReply FLexWidgetCustomization::OnClickIncreaseOrDecreaseSiblingIndex(bool IncreaseOrDecrease, TSharedRef<IPropertyHandle> HierarchyIndexHandle)
 {
 	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return FReply::Handled();
@@ -1091,58 +1031,6 @@ EVisibility FLexWidgetCustomization::GetAnchorPresetButtonVisibility()const
 		return TargetScriptArray[0]->GetParent() != nullptr ? EVisibility::Visible : EVisibility::Hidden;
 	}
 	return EVisibility::Hidden;
-}
-
-FReply FLexWidgetCustomization::OnClickFixDisplayNameButton(bool singleOrAll, TSharedRef<IPropertyHandle> DisplayNameHandle)
-{
-	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())return FReply::Handled();
-
-	TArray<TWeakObjectPtr<ULexWidget>> Widgets;
-	if (singleOrAll)
-	{
-		Widgets = TargetScriptArray;
-	}
-	else
-	{
-		TArray<ULexWidget*> SelectedWidgets;
-		for (auto& UIItem : TargetScriptArray)
-		{
-			if (!SelectedWidgets.Contains(UIItem))
-			{
-				SelectedWidgets.Add(UIItem.Get());
-			}
-		}
-		auto SelectedRootWidgets = FLexUIEditorTools::GetRootWidgetListFromSelection(SelectedWidgets);
-		for (auto& RootWidget : SelectedRootWidgets)
-		{
-			TArray<ULexWidget*> ChildrenWidgets;
-			ULexWidget::CollectChildrenWidgets(RootWidget, ChildrenWidgets, true);
-			for (auto& ChildWidget : ChildrenWidgets)
-			{
-				Widgets.Add(ChildWidget);
-			}
-		}
-	}
-
-	GEditor->BeginTransaction(LOCTEXT("FixDisplayName_Transaction", "Fix DisplayName"));
-	for (auto& Widget : Widgets)
-	{
-		Widget->Modify();
-	}
-
-	for (auto& Widget : TargetScriptArray)
-	{
-		FString DisplayName;
-		auto WidgetName = Widget->GetDisplayName();
-		DisplayName = WidgetName;
-
-		DisplayNameHandle->SetValue(DisplayName);
-
-		FLexUIUtils::NotifyPropertyChanged(Widget.Get(), GET_MEMBER_NAME_CHECKED(ULexWidget, DisplayName));
-	}
-	GEditor->EndTransaction();
-
-	return FReply::Handled();
 }
 
 bool FLexWidgetCustomization::OnCanCopyAnchor()const

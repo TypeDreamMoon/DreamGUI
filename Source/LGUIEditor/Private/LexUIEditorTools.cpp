@@ -453,22 +453,8 @@ void FLexUIEditorTools::DeleteWidgets(TFunction<TArray<ULexWidget*>()> GetSelect
 				PrefabHelperObject->RemoveSubPrefabByAnyWidgetOfSubPrefab(ChildWidget);
 			}
 		}
-		struct LOCAL
-		{
-			static void UnregisterRecursive(ULexWidget* Widget)
-			{
-				if (Widget->HasRegistered())
-				{
-					Widget->OnUnregister();
-				}
-				for (auto Child : Widget->GetChildren())
-				{
-					UnregisterRecursive(Child);
-				}
-			}
-		};
-		LOCAL::UnregisterRecursive(Widget);
 		Widget->SetParent(nullptr);
+		Widget->DestroyWidget();
 		Widget->MarkPackageDirty();
 	}
 	CleanupPrefabs();

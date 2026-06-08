@@ -10,9 +10,9 @@ class USceneComponent;
 
 /**
  * Base class for LexUI's life cycle behaviour related component.
- * Awake execute order in prefab: higher in hierarchy will execute earlier, so scripts on root actor will execute the first.
+ * Awake execute order in prefab: higher in hierarchy will execute earlier, so scripts on root widget will execute the first.
  */
-UCLASS(ClassGroup = (LGUI), Abstract, Blueprintable, DisplayName = "Lex UI Behaviour")
+UCLASS(ClassGroup = (LGUI), DefaultToInstanced, Abstract, Blueprintable, DisplayName = "LexUI Behaviour")
 class LGUI_API ULexUIBehaviour : public UObject
 {
 	GENERATED_BODY()
@@ -49,10 +49,12 @@ protected:
 	uint8 bIsAwakeCalled : 1 = false;
 	uint8 bIsStartCalled : 1 = false;
 	uint8 bIsEnableCalled : 1 = false;
-	uint8 bCanExecuteUpdate : 1 = true;
+	uint8 bCanExecuteTick : 1 = true;
 	/** use this to tell if the class is compiled from blueprint, only blueprint can execute ReceiveXXX. */
 	uint8 bCanExecuteBlueprintEvent : 1;
 
+	UPROPERTY(EditAnywhere, Category=LexUIBehaviour)
+	uint8 bStartWithTickEnabled : 1 = true;
 	UPROPERTY(EditAnywhere, Category=LexUIBehaviour)
 	uint8 bTickEvenWhenPaused : 1 = false;
 private:
@@ -73,10 +75,10 @@ protected:
 	virtual void Awake();
 	/** OnEnable is called after Awake if WidgetActiveInHierarchy is true, or when WidgetActiveInHierarchy become true. */
 	virtual void OnEnable();
-	/** Start is called before the first Update. */
+	/** Start is called before the first Tick. */
 	virtual void Start();
-	/** Update is called once per frame. */
-	virtual void Update(float DeltaTime);
+	/** Tick is called once per frame. */
+	virtual void Tick(float DeltaTime);
 	/** OnDisable is called when WidgetActiveInHierarchy become false, or before OnDestroy. */
 	virtual void OnDisable();
 	/** OnDestroy is called when Widget destroy */
@@ -109,23 +111,23 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Awake"), Category = "LexUIBehaviour")void ReceiveAwake();
 	/** Executed after Awake when WidgetActiveInHierarchy is true, or when WidgetActiveInHierarchy become true. */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnEnable"), Category = "LexUIBehaviour")void ReceiveOnEnable();
-	/** Start is called before the first frame update. */
+	/** Start is called before the first Tick. */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Start"), Category = "LexUIBehaviour")void ReceiveStart();
-	/** Update is called once per frame. */
-	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Update"), Category = "LexUIBehaviour")void ReceiveUpdate(float DeltaTime);
+	/** Tick is called once per frame. */
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Tick"), Category = "LexUIBehaviour")void ReceiveTick(float DeltaTime);
 	/** OnDisable is called when WidgetActiveInHierarchy become false, or before OnDestroy. */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnDisable"), Category = "LexUIBehaviour")void ReceiveOnDisable();
 	/** OnDestroy is called when Widget destroy */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnDestroy"), Category = "LexUIBehaviour")void ReceiveOnDestroy();
 
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnTransformChanged"), Category = "LexUIBehaviour") void ReceiveOnTransformChanged();
-	/** Called when RootUIComp->AnchorData is changed  or scale is changed. */
+	/** Called when Widget->AnchorData is changed. */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnDimensionsChanged"), Category = "LexUIBehaviour") void ReceiveOnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged);
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnChildDimensionsChanged"), Category = "LexUIBehaviour") void ReceiveOnChildDimensionsChanged(ULexWidget* Child, bool PivotChanged, bool WidthChanged, bool HeightChanged);
-	/** Called when RootUIComp attach to a new parent */
+	/** Called when Widget attach to a new parent */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnAttachmentChanged"), Category = "LexUIBehaviour") void ReceiveOnAttachmentChanged();
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnSiblingIndexChanged"), Category = "LexUIBehaviour") void ReceiveOnSiblingIndexChanged();
-	/** Called when RootUIComp IsActiveInHierarchy state is changed */
+	/** Called when Widget IsActiveInHierarchy state is changed */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnInteractableChanged"), Category = "LexUIBehaviour") void ReceiveOnInteractableChanged(bool Interactable);
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnRaycastableChanged"), Category = "LexUIBehaviour") void ReceiveOnRaycastableChanged(bool Raycastable);
 public:
@@ -133,7 +135,7 @@ public:
 	 * Set if this component can execute "Update" event or not. "CanExecuteUpdate" is true by default.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LexUIBehaviour")
-	void SetCanExecuteUpdate(bool Value);
+	void SetCanExecuteTick(bool Value);
 	
 	UFUNCTION(BlueprintCallable, Category = "LexUIBehaviour")
 	ULexWidget* GetWidget() const;

@@ -174,6 +174,7 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 
 			if (bIsDrop)
 			{
+				Manager->GetPrefabHelperObject()->SetAnythingDirty();
 				NewParent->SetFlags(RF_Transactional);
 				NewParent->Modify();
 

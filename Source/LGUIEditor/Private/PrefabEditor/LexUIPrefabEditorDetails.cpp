@@ -29,6 +29,7 @@
 #include "DragAndDrop/AssetDragDropOp.h"
 #include "DragAndDrop/DecoratedDragDropOp.h"
 #include "Engine/Blueprint.h"
+#include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SComboButton.h"
 #include "Widgets/Layout/SBorder.h"
@@ -391,6 +392,11 @@ private:
 		}
 		Widget->SetFlags(RF_Transactional);
 		Widget->Modify();
+		auto PrefabEditor = FLexUIPrefabEditor::GetEditorByWorld(Widget->GetWorld());
+		if (PrefabEditor.IsValid())
+		{
+			PrefabEditor.Pin()->GetPrefabHelperObject()->SetAnythingDirty();
+		}
 
 		ULexUIBehaviour* LastAddedComponent = nullptr;
 		for (UClass* ComponentClass : ComponentClassesToAdd)
@@ -470,6 +476,11 @@ private:
 		}
 		Widget->SetFlags(RF_Transactional);
 		Widget->Modify();
+		auto PrefabEditor = FLexUIPrefabEditor::GetEditorByWorld(Widget->GetWorld());
+		if (PrefabEditor.IsValid())
+		{
+			PrefabEditor.Pin()->GetPrefabHelperObject()->SetAnythingDirty();
+		}
 
 		Widget->MoveComponentToIndex(Component, ClampedIndex);
 		FLexUIUtils::NotifyPropertyChanged(Widget, ULexWidget::GetPropertyName_Components());

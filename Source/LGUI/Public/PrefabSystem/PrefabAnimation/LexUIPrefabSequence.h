@@ -10,7 +10,7 @@
 /**
  * Movie scene animation embedded within LGUI prefab.
  */
-UCLASS(BlueprintType, DefaultToInstanced)
+UCLASS(BlueprintType, DefaultToInstanced, DisplayName="LexUI Prefab Sequence")
 class LGUI_API ULexUIPrefabSequence
 	: public UMovieSceneSequence
 {

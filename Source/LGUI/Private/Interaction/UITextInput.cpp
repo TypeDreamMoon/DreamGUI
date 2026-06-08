@@ -43,11 +43,11 @@ void UUITextInput::Awake()
 	{
 		TextInputMethodContext = FTextInputMethodContext::Create(this);
 	}
-	this->SetCanExecuteUpdate(true);
+	this->SetCanExecuteTick(true);
 }
-void UUITextInput::Update(float DeltaTime)
+void UUITextInput::Tick(float DeltaTime)
 {
-	Super::Update(DeltaTime);
+	Super::Tick(DeltaTime);
 	if (bInputActive)
 	{
 		//blink caret

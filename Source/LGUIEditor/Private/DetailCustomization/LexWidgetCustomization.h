@@ -35,9 +35,6 @@ private:
 	FReply OnClickIncreaseOrDecreaseSiblingIndex(bool IncreaseOrDecrease, TSharedRef<IPropertyHandle> HierarchyIndexHandle);
 	EVisibility GetAnchorPresetButtonVisibility()const;
 
-	EVisibility GetDisplayNameWarningVisibility()const;
-	FReply OnClickFixDisplayNameButton(bool singleOrAll, TSharedRef<IPropertyHandle> DisplayNameHandle);
-
 	FMargin AnchorOffset = FMargin(0);
 	void OnPrePivotChange(TSharedPtr<IPropertyHandle> PivotPH);
 	void OnPivotChanged(TSharedPtr<IPropertyHandle> PivotPH);

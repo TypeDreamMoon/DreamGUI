@@ -62,6 +62,7 @@ FLexUIPrefabEditor::~FLexUIPrefabEditor()
 
  	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->EventOnOutlineChanged.RemoveAll(this);
 	ULexUISelection::GetInstance(GetWorld())->OnSelectionChanged.RemoveAll(this);
+	ULexUISelection::GetInstance(GetWorld())->SelectNone();
 
 	GEditor->UnregisterForUndo(this);
 }
@@ -265,7 +266,7 @@ namespace
 		{
 			if (auto Widget = Cast<ULexWidget>(Object))
 			{
-				if (Widget->GetOuter() == InEditor->GetWorld())
+				if (Widget->GetWorld() == InEditor->GetWorld())
 				{
 					AllWidgets.Add(Widget);
 				}

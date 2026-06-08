@@ -42,7 +42,7 @@ void FLexWidgetPresenterCustomization::CustomizeDetails(IDetailLayoutBuilder& De
 	}
 	auto TargetWorld = TargetScriptArray[0]->GetWorld();
 
-	IDetailCategoryBuilder& Category = DetailBuilder.EditCategory("LexWidgetPresenter");
+	auto& Category = DetailBuilder.EditCategory("LexWidgetPresenter");
 
 	TSharedPtr<FTabManager> HostTabManager = nullptr;
 	if (auto DetailsView = DetailBuilder.GetDetailsViewSharedPtr())
@@ -96,6 +96,18 @@ void FLexWidgetPresenterCustomization::CustomizeDetails(IDetailLayoutBuilder& De
 				.Font(IDetailLayoutBuilder::GetDetailFont())
 			]
 		];
+
+	//canvas template
+	{
+		auto CanvasTemplate_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidgetPresenterComponent, CanvasTemplate));
+		UObject* CanvasTemplate = nullptr;
+		CanvasTemplate_PH->GetValue(CanvasTemplate);
+		auto& CanvasTemplateCategory = DetailBuilder.EditCategory("CanvasTemplate");
+		auto CanvasTemplateRow = CanvasTemplateCategory.AddExternalObjects({ CanvasTemplate }, EPropertyLocation::Default
+			, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(true));
+		CanvasTemplateRow->ShouldAutoExpand(true);
+		DetailBuilder.HideProperty(CanvasTemplate_PH);
+	}
 }
 void FLexWidgetPresenterCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
 {

@@ -18,7 +18,7 @@ class LGUI_API ULexWidgetPresenterComponent : public USceneComponent
 
 public:
 	ULexWidgetPresenterComponent();
-
+	friend class FLexWidgetPresenterCustomization;
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -45,7 +45,7 @@ public:
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=LexWidgetPresenter)
 	TObjectPtr<ULexUIPrefab> WidgetPrefab;
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category=LexWidgetPresenter, meta=(ShowInnerProperties))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=LexWidgetPresenter)
 	TObjectPtr<ULexCanvas> CanvasTemplate;
 	
 	UPROPERTY(Transient)

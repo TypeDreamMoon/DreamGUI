@@ -37,7 +37,7 @@ ULexCanvas::ULexCanvas()
 void ULexCanvas::Awake()
 {
 	Super::Awake();
-	this->SetCanExecuteUpdate(false);
+	this->SetCanExecuteTick(false);
 
 	CheckRootCanvas();
 	CurrentRenderMode = this->GetActualRenderMode();
@@ -1230,6 +1230,15 @@ void ULexCanvas::UpdateCanvasDrawCall()
 		//update layout from tail to head
 		{
 			SCOPE_CYCLE_COUNTER(STAT_UpdateLayout)
+			for (int i = WidgetList.Num() - 1; i >= 0; i--)
+			{
+				auto& Widget = WidgetList[i];
+				if (Widget->GetWidgetActiveInHierarchy() && Widget->GetRenderCanvas() == this)
+				{
+					Widget->UpdateLayout();
+				}
+			}
+			//two loop update should cover all layout calculation. todo: optimize this
 			for (int i = WidgetList.Num() - 1; i >= 0; i--)
 			{
 				auto& Widget = WidgetList[i];

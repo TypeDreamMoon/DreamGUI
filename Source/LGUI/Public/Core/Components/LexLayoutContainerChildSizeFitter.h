@@ -10,7 +10,7 @@ class ULexWidget;
 
 /**
  * Provide layout info that fit child widget (the first child which NOT IgnoreLayout).
- * This will not set Widget's size directly, it only provides layout info like Width & Heigth
+ * This will not set Widget's size directly, it only provides layout info like Width & Height
  */
 UCLASS(BlueprintType, DisplayName="LayoutContainer-ChildSizeFitter")
 class LGUI_API ULexLayoutContainerChildSizeFitter : public ULexLayoutContainer

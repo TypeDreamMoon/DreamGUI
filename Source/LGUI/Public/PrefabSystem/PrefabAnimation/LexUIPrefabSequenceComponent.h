@@ -4,7 +4,6 @@
 
 #include "Components/ActorComponent.h"
 #include "MovieSceneSequencePlayer.h"
-#include "LexUIComponentReference.h"
 #include "Core/LexUIBehaviour.h"
 #include "LexUIPrefabSequenceComponent.generated.h"
 
@@ -15,7 +14,7 @@ class ULexUIPrefabSequencePlayer;
 /**
  * Movie scene animation embedded within LexUIPrefab.
  */
-UCLASS(Blueprintable, ClassGroup=LGUI, hidecategories=(Collision, Cooking, Activation), meta=(BlueprintSpawnableComponent))
+UCLASS(Blueprintable, ClassGroup=LGUI, meta=(BlueprintSpawnableComponent), DisplayName="LexUI Prefab Sequence Component")
 class LGUI_API ULexUIPrefabSequenceComponent
 	: public ULexUIBehaviour
 {
