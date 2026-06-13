@@ -29,13 +29,13 @@ private:
 public:
 	virtual void OnTransformChanged() override;
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
-	virtual void UpdateLayout() override{CalculateSize();}
+	virtual void UpdateLayout(ELexLayoutUpdateType UpdateType) override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual void PostInitProperties() override;
 #endif
 	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* Widget)const override;
-	virtual void GetLayoutProperties(FVector2f& OutMin, FVector2f& OutMax, FVector2f& OutPreferred) override;
+	virtual void GetLayoutProperties(FVector2f& OutPreferred) override;
 	
 	UFUNCTION(BlueprintCallable, Category = "Layout")
 	bool GetFitWidth()const{return bFitWidth;}

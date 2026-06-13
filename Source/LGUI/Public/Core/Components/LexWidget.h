@@ -6,6 +6,7 @@
 #include "Core/LexUIAnchorData.h"
 #include "LexWidget.generated.h"
 
+enum class ELexLayoutUpdateType : uint8;
 class ULexWidgetSubObjectBehaviour;
 class ULexUIBehaviour;
 class ULexWidgetPresenterComponent;
@@ -313,13 +314,13 @@ public:
 	void UnregisterRenderCanvas();
 
 	/** Called by LexCanvas to update layout */
-	void UpdateLayout()const;
+	void UpdateLayout(ELexLayoutUpdateType UpdateType);
 	/** Called by LexCanvas */
 	void UpdateClip(ULexUIDataAsTexture* ClipDataTexture, TArray<TSharedPtr<FLexUIClipData>>& ClipDataList);
 	/** Called by LexCanvas */
 	void UpdateVisual()const;
 	
-	void ForceUpdateLayout()const;
+	void ForceUpdateLayout();
 protected:
 	void RenewRenderCanvasRecursive(ULexCanvas* InParentRenderCanvas);
 
@@ -553,6 +554,23 @@ protected:
 	TObjectPtr<ULexLayoutContainer> LayoutContainer = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Instanced, Category = "LayoutSelf", Getter, meta = (AllowPrivateAccess = true))
 	TObjectPtr<ULexLayoutSelf> LayoutSelf = nullptr;
+	//preferred size is flex-base size, affect by min/max, not affect by grow/shrink/stretch
+	TOptional<float> LayoutPreferredWidth;
+	TOptional<float> LayoutPreferredHeight;
+	//stretched size is based on preferred size, affect by grow/shrink/stretch
+	TOptional<float> LayoutStretchedWidth;
+	TOptional<float> LayoutStretchedHeight;
+public:
+	bool GetLayoutPreferredWidth(float& OutValue)const;
+	bool GetLayoutPreferredHeight(float& OutValue)const;
+	bool GetLayoutStretchedWidth(float& OutValue)const;
+	bool GetLayoutStretchedHeight(float& OutValue)const;
+
+	bool GetLayoutFinalWidth(float& OutValue);
+	bool GetLayoutFinalHeight(float& OutValue);
+
+	void SetLayoutFinalWidth(float Value);
+	void SetLayoutFinalHeight(float Value);
 	
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
@@ -775,7 +793,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	static void MarkLayoutForRebuild(const ULexWidget* InWidget);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	static void ForceRebuildLayoutImmediately(const ULexWidget* InWidget);
+	static void ForceRebuildLayoutImmediately(ULexWidget* InWidget);
 
 private:
 	friend class FLexWidgetCustomization;

@@ -251,6 +251,10 @@ void ULexVisual::SetWidgetPropertyDataStartPosition(int InPosition)
 	{
 		WidgetPropertyDataStartPosition = InPosition;
 		bWidgetPropertyDataStartPositionChanged = true;
+
+		//these data store inside DataTexture and use WidgetPropertyDataStartPosition as coordinate, so mark these dirty to fill data
+		bWidgetPropertyDataFontMarkDirty = true;
+		bClipDataPositionChanged = true;
 	}
 }
 

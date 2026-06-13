@@ -23,6 +23,7 @@ public:
 private:
 	TWeakObjectPtr<UWorld> World;
 	TSharedPtr<SBox> ContentBox;
+	TWeakPtr<SDockTab> OwnerTab;
 	void CloseTabCallback(TSharedRef<SDockTab> TabClosed);
 	TSharedPtr<SLexWidgetEditorHierarchyView> HierarchyView;
 	void RefreshContent();

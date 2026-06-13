@@ -61,6 +61,7 @@ FLexUIPrefabEditor::~FLexUIPrefabEditor()
 	PrefabEditorInstanceCollection.Remove(this);
 
  	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->EventOnOutlineChanged.RemoveAll(this);
+	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->bShouldTickInEditor = false;
 	ULexUISelection::GetInstance(GetWorld())->OnSelectionChanged.RemoveAll(this);
 	ULexUISelection::GetInstance(GetWorld())->SelectNone();
 
@@ -383,6 +384,7 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 	{
 		OutlinerPtr->RequestRefresh();
 	});
+	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->bShouldTickInEditor = true;
 	ULexUISelection::GetInstance(GetWorld())->OnSelectionChanged.AddSPLambda(this, [=, this]
 	{
 		SyncSelection();

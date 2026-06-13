@@ -123,7 +123,7 @@ public:
 
 	static ULexUIManagerWorldSubsystem* GetInstance(UWorld* InWorld);
 #if WITH_EDITOR
-	static bool GetIsPlaying() { return bIsPlaying; }
+	bool bShouldTickInEditor = false;
 	ULexUISelection* GetSelection()const;
 	FSimpleMulticastDelegate OnDeinitialize;
 	FSimpleMulticastDelegate OnEndPlay;
@@ -137,7 +137,6 @@ private:
 #if WITH_EDITOR
 	static TArray<ULexUIManagerWorldSubsystem*> InstanceArray;
 	FTSTicker::FDelegateHandle EditorTickDelegateHandle;
-	static bool bIsPlaying;
 #endif
 
 #if WITH_EDITORONLY_DATA

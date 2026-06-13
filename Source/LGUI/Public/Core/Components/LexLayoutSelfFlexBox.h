@@ -22,8 +22,8 @@ enum class ELexLayoutSizeType : uint8
 	/** Fixed pixel value */
 	Fixed,
 	/**
-	 * Percentage relative it's parent size.
-	 * If no parent then fallback to Fixed.
+	 * Percentage relative it's parent size. If parent size is auto and fit to children, then this size will get 0
+	 * If no parent then fallback to 0.
 	 */
 	Percent,
 };
@@ -76,17 +76,12 @@ struct FLexLayoutSize
 		return this->Type != Other.Type || this->FixedValue != Other.FixedValue || this->PercentValue != Other.PercentValue;
 	}
 
-	float CalculateSize(ULexWidget* Widget, bool IsVertical)const;
+	TOptional<float> Calculate(ULexWidget* Widget, ELexLayoutUpdateType UpdateType, bool IsVertical)const;
 };
 
 UENUM(BlueprintType)
 enum class ELexLayoutMinMaxSizeType : uint8
 {
-	/**
-	 * Will get value from LayoutContainer, if no LayoutContainer exits, then fallback to Not-Enabled.
-	 */
-	Auto,
-	
 	/** Fixed pixel value */
 	Fixed,
 	/**
@@ -140,7 +135,7 @@ struct FLexLayoutMinMaxSize
 		return this->Type != Other.Type || this->FixedValue != Other.FixedValue || this->PercentValue != Other.PercentValue;
 	}
 
-	float CalculateSize(ULexWidget* Widget, bool IsVertical, bool IsMinOrMax)const;
+	float Calculate(ULexWidget* Widget, ELexLayoutUpdateType UpdateType, bool IsVertical, bool IsMinOrMax)const;
 };
 
 /**
@@ -168,34 +163,45 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true))
 	FLexLayoutMinMaxSize MaxHeight;
 
+	/** Expands outwards */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", meta = (AllowPrivateAccess = true, UIMin=0))
+	FMargin Margin;
+
 	/**
 	 * Grow size when FlexBoxContainer's primary-axis can provide extra space, not working with secondary axis.
 	 * Only valid when PreferredWidth/Height is enabled.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true, UIMin=0))
 	float Grow = 0;
 	/**
 	 * Shrink size when FlexBoxContainer's primary-axis can't provide enough space, not working with secondary axis.
 	 * Only valid when PreferredWidth/Height is enabled.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true, UIMin=0))
 	float Shrink = 0;
 
 	bool bIsCalculatingSize = false;
-	FVector2f CalculatedPreferred;
-	FVector2f CalculatedMin;
-	FVector2f CalculatedMax;
-	void CalculateSize();
+	float CalculatingMinWidth = 0;
+	float CalculatingMinHeight = 0;
+	float CalculatingMaxWidth = 0;
+	float CalculatingMaxHeight = 0;
+	TOptional<float> StretchedWidth;//grow or shrink or stretch size
+	TOptional<float> StretchedHeight;//grow or shrink or stretch size
 public:
 	virtual void OnTransformChanged() override;
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
-	virtual void UpdateLayout() override{CalculateSize();}
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual void PostInitProperties() override;
 #endif
 	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* Widget)const override;
-	virtual void GetLayoutProperties(FVector2f& OutMin, FVector2f& OutMax, FVector2f& OutPreferred) override;
+	virtual void GetLayoutProperties(FVector2f& OutPreferred) override;
+	void GetLayoutMinMax(FVector2f& OutMin, FVector2f& OutMax);
+	virtual ELexLayoutSelfSizeFitType GetWidthFitType() const override;
+	virtual ELexLayoutSelfSizeFitType GetHeightFitType() const override;
+	virtual void CalculateSize(ELexLayoutUpdateType UpdateType
+		, TOptional<float>& OutPreferredWidth, TOptional<float>& OutPreferredHeight
+		, TOptional<float>& OutStretchedWidth, TOptional<float>& OutStretchedHeight) override;
 	
 	float GetGrowForLayoutContainer(int Axis)const;
 	float GetShrinkForLayoutContainer(int Axis)const;

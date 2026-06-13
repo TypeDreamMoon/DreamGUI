@@ -12,10 +12,11 @@
 
 void SLexUIWidgetInspector::Construct(const FArguments& Args, TSharedPtr<SDockTab> InOwnerTab)
 {
+	OwnerTab = InOwnerTab;
 	InOwnerTab->SetOnTabClosed(SDockTab::FOnTabClosedCallback::CreateSP(this, &SLexUIWidgetInspector::CloseTabCallback));
 	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(World.Get()))
 	{
-		LexUIManager->OnDeinitialize.AddSPLambda(this, [this, InOwnerTab]()
+		LexUIManager->OnEndPlay.AddSPLambda(this, [this, InOwnerTab]()
 		{
 			InOwnerTab->RequestCloseTab();
 		});
@@ -84,6 +85,7 @@ void SLexUIWidgetInspector::RefreshContent()
 				.Font(IDetailLayoutBuilder::GetDetailFont())
 			]
 			);
+		OwnerTab.Pin()->RequestCloseTab();
 	}
 }
 #undef LOCTEXT_NAMESPACE

@@ -216,6 +216,7 @@ public:
 								.AllowSpin(true)
 								.MinSliderValue(0)
 								.MaxSliderValue(100)
+								.Font(IDetailLayoutBuilder::GetDetailFont())
 								.OnValueChanged_Lambda([=](float Value)
 								{
 									Percent_PH->SetValue(Value * 0.01f);

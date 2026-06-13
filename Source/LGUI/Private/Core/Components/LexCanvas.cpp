@@ -24,6 +24,7 @@
 #include "Core/LexCanvasDrawCallProcessingRunnable.h"
 #include "Core/LexUIClipData.h"
 #include "Core/LexUIDataAsTexture.h"
+#include "Core/Components/LexLayout.h"
 
 
 #define LOCTEXT_NAMESPACE "LexCanvas"
@@ -1227,24 +1228,23 @@ void ULexCanvas::UpdateCanvasDrawCall()
 			WidgetList.Reset();
 			LOCAL::CollectRenderWidget(GetWidget(), this, WidgetList);
 		}
-		//update layout from tail to head
+		//update layout
 		{
 			SCOPE_CYCLE_COUNTER(STAT_UpdateLayout)
-			for (int i = WidgetList.Num() - 1; i >= 0; i--)
+			for (int i = 0; i < WidgetList.Num(); i++)
 			{
 				auto& Widget = WidgetList[i];
 				if (Widget->GetWidgetActiveInHierarchy() && Widget->GetRenderCanvas() == this)
 				{
-					Widget->UpdateLayout();
+					Widget->UpdateLayout(ELexLayoutUpdateType::FirstPass_RootToLeaf);
 				}
 			}
-			//two loop update should cover all layout calculation. todo: optimize this
 			for (int i = WidgetList.Num() - 1; i >= 0; i--)
 			{
 				auto& Widget = WidgetList[i];
 				if (Widget->GetWidgetActiveInHierarchy() && Widget->GetRenderCanvas() == this)
 				{
-					Widget->UpdateLayout();
+					Widget->UpdateLayout(ELexLayoutUpdateType::SecondPass_LeafToRoot);
 				}
 			}
 		}
@@ -2671,9 +2671,9 @@ void ULexCanvas::OnViewportParameterChanged()
 #if WITH_EDITOR
 void ULexCanvas::OnEditorTick(float DeltaTime)
 {
-	if (ULexUIManagerWorldSubsystem::GetIsPlaying())//When hit play there is still an editor world and DrawViewportArea is called, which could cause frame dropdown, so skip it when playing
-		return;
 	if (!GetWorld())
+		return;
+	if (GetWorld()->IsGameWorld())//When hit play there is still an editor world and DrawViewportArea is called, which could cause frame dropdown, so skip it when playing
 		return;
 	if (this->IsUnreachable())
 		return;

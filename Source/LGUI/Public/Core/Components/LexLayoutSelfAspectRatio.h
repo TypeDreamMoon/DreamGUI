@@ -53,13 +53,15 @@ private:
 public:
 	virtual void OnTransformChanged() override;
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
-	virtual void UpdateLayout() override{CalculateSize();}
+	virtual void CalculateSize(ELexLayoutUpdateType UpdateType
+	, TOptional<float>& OutPreferredWidth, TOptional<float>& OutPreferredHeight
+	, TOptional<float>& OutStretchedWidth, TOptional<float>& OutStretchedHeight) override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual void PostInitProperties() override;
 #endif
 	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* Widget)const override;
-	virtual void GetLayoutProperties(FVector2f& OutMin, FVector2f& OutMax, FVector2f& OutPreferred) override;
+	virtual void GetLayoutProperties(FVector2f& OutPreferred) override;
 	
 	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
 	ELexLayoutAspectRatioType GetAspectRatioType()const{return AspectRatioType;}

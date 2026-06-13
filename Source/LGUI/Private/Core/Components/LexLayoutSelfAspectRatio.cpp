@@ -107,6 +107,16 @@ void ULexLayoutSelfAspectRatio::OnDimensionChanged(bool InPivotChange, bool InWi
     CalculateSize();
 }
 
+void ULexLayoutSelfAspectRatio::CalculateSize(ELexLayoutUpdateType UpdateType
+	, TOptional<float>& OutPreferredWidth, TOptional<float>& OutPreferredHeight
+	, TOptional<float>& OutStretchedWidth, TOptional<float>& OutStretchedHeight)
+{
+	if (UpdateType == ELexLayoutUpdateType::FirstPass_RootToLeaf)
+	{
+		CalculateSize();
+	}
+}
+
 #if WITH_EDITOR
 void ULexLayoutSelfAspectRatio::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
 {
@@ -146,12 +156,8 @@ FLexLayoutControlAnchorData ULexLayoutSelfAspectRatio::GetLayoutControlAnchor(co
     return Result;
 }
 
-void ULexLayoutSelfAspectRatio::GetLayoutProperties(FVector2f& OutMin, FVector2f& OutMax, FVector2f& OutPreferred)
+void ULexLayoutSelfAspectRatio::GetLayoutProperties(FVector2f& OutPreferred)
 {
-    OutMin.X = CalculatedPreferred.X;
-    OutMin.Y = CalculatedPreferred.Y;
-    OutMax.X = CalculatedPreferred.X;
-    OutMax.Y = CalculatedPreferred.Y;
     OutPreferred.X = CalculatedPreferred.X;
     OutPreferred.Y = CalculatedPreferred.Y;
 }

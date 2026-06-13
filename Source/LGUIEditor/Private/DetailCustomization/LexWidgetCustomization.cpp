@@ -906,7 +906,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		auto Layout_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutContainer));
 		UObject* Layout = nullptr;
 		Layout_PH->GetValue(Layout);
-		auto& LayoutCategory = DetailBuilder.EditCategory("Layout");
+		auto& LayoutCategory = DetailBuilder.EditCategory("LayoutContainer");
 		LayoutCategory.HeaderContent(SNew(SLexWidgetSubObjectWidget, Layout_PH, !bIsSubPrefab));
 		LayoutCategory.SetIsEmpty(!IsValid(Layout));
 		LayoutCategory.AddCustomRow(LOCTEXT("LayoutPlaceholder", "Placeholder"))

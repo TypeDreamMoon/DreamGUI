@@ -726,7 +726,7 @@ private:
 	float OverrideFovAngle = 0;
 	FMatrix OverrideProjectionMatrix = FMatrix::Identity;
 
-	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)
+	UPROPERTY(Transient)
 	mutable TObjectPtr<ULexUIMeshComponent> UIMesh;//current using UIMesh.
 	//DefaultMaterial created MaterialInstanceDynamic pool 
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI", AdvancedDisplay)

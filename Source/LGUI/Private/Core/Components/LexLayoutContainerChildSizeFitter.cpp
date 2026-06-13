@@ -46,6 +46,14 @@ void ULexLayoutContainerChildSizeFitter::OnDimensionChanged(bool InPivotChange, 
 {
 }
 
+void ULexLayoutContainerChildSizeFitter::UpdateLayout(ELexLayoutUpdateType UpdateType)
+{
+	if (UpdateType == ELexLayoutUpdateType::FirstPass_RootToLeaf)
+	{
+		CalculateSize();
+	}
+}
+
 #if WITH_EDITOR
 void ULexLayoutContainerChildSizeFitter::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
 {
@@ -63,12 +71,8 @@ FLexLayoutControlAnchorData ULexLayoutContainerChildSizeFitter::GetLayoutControl
     return FLexLayoutControlAnchorData();
 }
 
-void ULexLayoutContainerChildSizeFitter::GetLayoutProperties(FVector2f& OutMin, FVector2f& OutMax, FVector2f& OutPreferred)
+void ULexLayoutContainerChildSizeFitter::GetLayoutProperties(FVector2f& OutPreferred)
 {
-    OutMin.X = CalculatedPreferred.X;
-    OutMin.Y = CalculatedPreferred.Y;
-    OutMax.X = CalculatedPreferred.X;
-    OutMax.Y = CalculatedPreferred.Y;
     OutPreferred.X = CalculatedPreferred.X;
     OutPreferred.Y = CalculatedPreferred.Y;
 }

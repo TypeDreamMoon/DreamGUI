@@ -807,9 +807,13 @@ void ULexUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 			return false;
 			});
 	}
-	if (this->GetWorld()->IsGameWorld())
+	if (this->GetWorld()->IsGameWorld() || this->GetWorld()->WorldType == EWorldType::Editor)
 	{
-		bIsPlaying = true;
+		bShouldTickInEditor = true;
+	}
+	else
+	{
+		bShouldTickInEditor = false;
 	}
 	FCoreDelegates::OnEndFrame.AddUObject(this, &ULexUIManagerWorldSubsystem::OnEndOfFrame);
 	FCoreDelegates::OnEnginePreExit.AddUObject(this, &ULexUIManagerWorldSubsystem::OnEnginePreExit);
@@ -845,10 +849,6 @@ void ULexUIManagerWorldSubsystem::Deinitialize()
 	{
 		FTSTicker::GetCoreTicker().RemoveTicker(EditorTickDelegateHandle);
 		EditorTickDelegateHandle.Reset();
-	}
-	if (this->GetWorld()->IsGameWorld())
-	{
-		bIsPlaying = false;
 	}
 	OnDeinitialize.Broadcast();
 #endif
@@ -940,7 +940,6 @@ void ULexUIManagerWorldSubsystem::OnWorldEndPlay(UWorld& InWorld)
 
 #if WITH_EDITOR
 TArray<ULexUIManagerWorldSubsystem*> ULexUIManagerWorldSubsystem::InstanceArray;
-bool ULexUIManagerWorldSubsystem::bIsPlaying = false;
 #endif
 
 DECLARE_CYCLE_STAT(TEXT("LexUIBehaviour Tick"), STAT_LexUIBehaviourTick, STATGROUP_LGUI);
@@ -949,7 +948,12 @@ DECLARE_CYCLE_STAT(TEXT("LexUIBehaviour Start"), STAT_LexUIBehaviourStart, STATG
 void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	this->TickLexUI(DeltaTime);
+#if WITH_EDITOR
+	if (bShouldTickInEditor)
+#endif
+	{
+		this->TickLexUI(DeltaTime);
+	}
 }
 
 void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)

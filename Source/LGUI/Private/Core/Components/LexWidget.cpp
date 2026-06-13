@@ -586,7 +586,8 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 					LayoutContainer->BeginPlay();
 				}
 				LayoutContainer->Call_OnRegister();
-				LayoutContainer->UpdateLayout();
+				LayoutContainer->UpdateLayout(ELexLayoutUpdateType::FirstPass_RootToLeaf);
+				LayoutContainer->UpdateLayout(ELexLayoutUpdateType::SecondPass_LeafToRoot);
 			}
 			MarkDimensionChanged(false, true, true);//change LayoutContainer could cause LayoutSelf size change
 			MarkLayoutForRebuild(this);
@@ -600,7 +601,10 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 					LayoutSelf->BeginPlay();
 				}
 				LayoutSelf->Call_OnRegister();
-				LayoutSelf->UpdateLayout();
+				
+				bLayoutDirty = true;
+				UpdateLayout(ELexLayoutUpdateType::FirstPass_RootToLeaf);
+				UpdateLayout(ELexLayoutUpdateType::SecondPass_LeafToRoot);
 			}
 		}
 		if (MemberName == AnchorDataName)
@@ -825,6 +829,7 @@ void ULexWidget::EnsureDataForRebuild()
 	LOCAL::ForceRefreshRenderCanvasRecursive(this);
 	CalculateWidgetActive_Recursive();
 	CalculateRaycastable_Recursive();
+	CalculateInteractable_Recursive();
 	CalculateObjectToWorldTransform();
 }
 
@@ -2277,17 +2282,136 @@ void ULexWidget::UnregisterRenderCanvas()
 	}
 }
 
-void ULexWidget::UpdateLayout()const
+void ULexWidget::UpdateLayout(ELexLayoutUpdateType UpdateType)
 {
 	if (!bLayoutDirty)return;
-	bLayoutDirty = false;
-	if (IsValid(LayoutContainer))
+
+	if (UpdateType == ELexLayoutUpdateType::FirstPass_RootToLeaf)
 	{
-		LayoutContainer->UpdateLayout();
+		LayoutPreferredWidth.Reset();
+		LayoutPreferredHeight.Reset();
+		LayoutStretchedWidth.Reset();
+		LayoutStretchedHeight.Reset();
+
+		if (IsValid(LayoutContainer))
+		{
+			LayoutContainer->UpdateLayout(UpdateType);
+		}
+		if (IsValid(LayoutSelf))
+		{
+			LayoutSelf->CalculateSize(UpdateType, LayoutPreferredWidth, LayoutPreferredHeight, LayoutStretchedWidth, LayoutStretchedHeight);
+		}
+		else
+		{
+			LayoutPreferredWidth = this->GetWidth();
+			LayoutPreferredHeight = this->GetHeight();
+			LayoutStretchedWidth = 0;
+			LayoutStretchedHeight = 0;
+		}
 	}
-	if (IsValid(LayoutSelf))
+	if (UpdateType == ELexLayoutUpdateType::SecondPass_LeafToRoot)
 	{
-		LayoutSelf->UpdateLayout();
+		bLayoutDirty = false;
+
+		if (IsValid(LayoutContainer))
+		{
+			LayoutContainer->UpdateLayout(UpdateType);
+		}
+		if (IsValid(LayoutSelf))
+		{
+			LayoutSelf->CalculateSize(UpdateType, LayoutPreferredWidth, LayoutPreferredHeight, LayoutStretchedWidth, LayoutStretchedHeight);
+		}
+		else
+		{
+			LayoutPreferredWidth = this->GetWidth();
+			LayoutPreferredHeight = this->GetHeight();
+			LayoutStretchedWidth = 0;
+			LayoutStretchedHeight = 0;
+		}
+	}
+}
+
+bool ULexWidget::GetLayoutPreferredWidth(float& OutValue) const
+{
+	if (LayoutPreferredWidth.IsSet())
+	{
+		OutValue = LayoutPreferredWidth.GetValue();
+		return true;
+	}
+	return false;
+}
+
+bool ULexWidget::GetLayoutPreferredHeight(float& OutValue) const
+{
+	if (LayoutPreferredHeight.IsSet())
+	{
+		OutValue = LayoutPreferredHeight.GetValue();
+		return true;
+	}
+	return false;
+}
+
+bool ULexWidget::GetLayoutStretchedWidth(float& OutValue) const
+{
+	if (LayoutStretchedWidth.IsSet())
+	{
+		OutValue = LayoutStretchedWidth.GetValue();
+		return true;
+	}
+	return false;
+}
+
+bool ULexWidget::GetLayoutStretchedHeight(float& OutValue) const
+{
+	if (LayoutStretchedHeight.IsSet())
+	{
+		OutValue = LayoutStretchedHeight.GetValue();
+		return true;
+	}
+	return false;
+}
+
+bool ULexWidget::GetLayoutFinalWidth(float& OutValue)
+{
+	if (LayoutPreferredWidth.IsSet() && LayoutStretchedWidth.IsSet())
+	{
+		OutValue = LayoutPreferredWidth.GetValue() + LayoutStretchedWidth.GetValue();
+		return true;
+	}
+	return false;
+}
+
+bool ULexWidget::GetLayoutFinalHeight(float& OutValue)
+{
+	if (LayoutPreferredHeight.IsSet() && LayoutStretchedHeight.IsSet())
+	{
+		OutValue = LayoutPreferredHeight.GetValue() + LayoutStretchedHeight.GetValue();
+		return true;
+	}
+	return false;
+}
+
+void ULexWidget::SetLayoutFinalWidth(float Value)
+{
+	if (LayoutPreferredWidth.IsSet())
+	{
+		LayoutStretchedWidth = Value - LayoutPreferredWidth.GetValue();
+	}
+	else
+	{
+		UE_LOG(LGUI, Error, TEXT(""));
+	}
+}
+
+void ULexWidget::SetLayoutFinalHeight(float Value)
+{
+	if (LayoutPreferredHeight.IsSet())
+	{
+		LayoutStretchedHeight = Value - LayoutPreferredHeight.GetValue();
+	}
+	else
+	{
+		UE_LOG(LGUI, Error, TEXT(""));
 	}
 }
 
@@ -2361,15 +2485,18 @@ void ULexWidget::UpdateVisual() const
 	}
 }
 
-void ULexWidget::ForceUpdateLayout() const
+void ULexWidget::ForceUpdateLayout()
 {
 	if (IsValid(LayoutContainer))
 	{
-		LayoutContainer->UpdateLayout();
+		LayoutContainer->UpdateLayout(ELexLayoutUpdateType::FirstPass_RootToLeaf);
+		LayoutContainer->UpdateLayout(ELexLayoutUpdateType::SecondPass_LeafToRoot);
 	}
 	if (IsValid(LayoutSelf))
 	{
-		LayoutSelf->UpdateLayout();
+		bLayoutDirty = true;
+		UpdateLayout(ELexLayoutUpdateType::FirstPass_RootToLeaf);
+		UpdateLayout(ELexLayoutUpdateType::SecondPass_LeafToRoot);
 	}
 }
 
@@ -2855,38 +2982,34 @@ void ULexWidget::MarkLayoutForRebuild(const ULexWidget* InWidget)
 	while (TargetWidget)
 	{
 		TargetWidget->bLayoutDirty = true;
-		TargetWidget->MarkCanvasUpdate(true);
+		TargetWidget->MarkCanvasUpdate(false);
 		if (auto ParentWidget = TargetWidget->GetParent())
 		{
-			if (auto ParentLayout = ParentWidget->GetLayoutContainer())
+			if (ParentWidget->GetLayoutContainer() || ParentWidget->GetLayoutSelf())
 			{
-				auto ControlChildAnchor = ParentLayout->GetLayoutControlAnchor(TargetWidget);
-				auto ControlSelfAnchor = ParentLayout->GetLayoutControlAnchor(ParentWidget);
-				if (ControlChildAnchor.AnyControl() && ControlSelfAnchor.AnyControl())//parent layout can control itself and children, then move up 
-				{
-					TargetWidget = ParentWidget;
-					continue;
-				}
-				if (ControlChildAnchor.AnyControl())//parent layout only control children, then stop here
-				{
-					ParentWidget->bLayoutDirty = true;;
-					ParentWidget->MarkCanvasUpdate(true);
-					break;
-				}
+				TargetWidget = ParentWidget;
+				continue;
+			}
+			else
+			{
+				ParentWidget->bLayoutDirty = true;
+				ParentWidget->MarkCanvasUpdate(false);
+				break;
 			}
 		}
 		break;
 	}
 }
 
-void ULexWidget::ForceRebuildLayoutImmediately(const ULexWidget* InWidget)
+void ULexWidget::ForceRebuildLayoutImmediately(ULexWidget* InWidget)
 {
 	struct LOCAL
 	{
-		static void RebuildLayout(const ULexWidget* InWidget)
+		static void RebuildLayout(ULexWidget* InWidget)
 		{
 			InWidget->bLayoutDirty = true;
-			InWidget->UpdateLayout();
+			InWidget->UpdateLayout(ELexLayoutUpdateType::FirstPass_RootToLeaf);
+			InWidget->UpdateLayout(ELexLayoutUpdateType::SecondPass_LeafToRoot);
 			for (auto Child : InWidget->GetChildren())
 			{
 				RebuildLayout(Child);
@@ -3162,7 +3285,7 @@ ULexLayoutContainer* ULexWidget::CreateNewLayoutContainer(TSubclassOf<ULexLayout
 		NewLayout->BeginPlay();
 	}
 	LayoutContainer = NewLayout;
-	LayoutContainer->UpdateLayout();
+	MarkLayoutDirty();
 	MarkDimensionChanged(false, true, true);//change LayoutContainer could cause LayoutSelf size change
 	return NewLayout;
 }
@@ -3201,7 +3324,7 @@ ULexLayoutSelf* ULexWidget::CreateNewLayoutSelf(TSubclassOf<ULexLayoutSelf> Layo
 		NewLayout->BeginPlay();
 	}
 	LayoutSelf = NewLayout;
-	LayoutSelf->UpdateLayout();
+	MarkLayoutDirty();
 	return NewLayout;
 }
 
