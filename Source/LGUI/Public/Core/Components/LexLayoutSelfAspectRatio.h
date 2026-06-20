@@ -49,19 +49,16 @@ private:
 
 	bool bIsCalculatingSize = false;
 	FVector2f CalculatedPreferred;
-	void CalculateSize();
 public:
 	virtual void OnTransformChanged() override;
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
-	virtual void CalculateSize(ELexLayoutUpdateType UpdateType
-	, TOptional<float>& OutPreferredWidth, TOptional<float>& OutPreferredHeight
-	, TOptional<float>& OutStretchedWidth, TOptional<float>& OutStretchedHeight) override;
+	virtual void CalculateSize() override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual void PostInitProperties() override;
 #endif
 	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* Widget)const override;
-	virtual void GetLayoutProperties(FVector2f& OutPreferred) override;
+	virtual FVector2f GetLayoutPreferredSize() override;
 	
 	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
 	ELexLayoutAspectRatioType GetAspectRatioType()const{return AspectRatioType;}

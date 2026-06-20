@@ -88,7 +88,7 @@ public:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* TargetWidget)const override;
-	virtual void UpdateLayout(ELexLayoutUpdateType UpdateType)override;
+	virtual void UpdateLayout()override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	FMargin GetPadding()const { return Padding; }

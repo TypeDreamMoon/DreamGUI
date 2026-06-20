@@ -7,82 +7,60 @@
 
 DECLARE_CYCLE_STAT(TEXT("LexLayoutContainer FlexBox"), STAT_LexLayoutContainerFlexBox, STATGROUP_LGUI);
 
-void ULexLayoutContainerFlexBox::UpdateLayout(ELexLayoutUpdateType UpdateType)
+void ULexLayoutContainerFlexBox::UpdateLayout()
 {
     SCOPE_CYCLE_COUNTER(STAT_LexLayoutContainerFlexBox);
-    if (bIsAnimationPlaying)
-    {
-        bShouldRebuildLayoutAfterAnimation = true;
-        return;
-    }
     
-    if (UpdateType == ELexLayoutUpdateType::FirstPass_RootToLeaf)
-    {
-        auto Widget = GetWidget();
-        if (!Widget)return;
+    auto Widget = GetWidget();
+    if (!Widget)return;
     
-        Children.Empty();
-        for (auto& ChildWidget : Widget->GetChildren())
-        {
-            if (!ChildWidget->GetWidgetActiveInHierarchy())continue;
-            if (auto ChildLayoutSelf = ChildWidget->GetLayoutSelf())
-            {
-                if (ChildLayoutSelf->GetIgnoreLayoutContainer())continue;
-            }
-            Children.Add(ChildWidget);
+    CalculateLayout(true);
 
-            auto AnchorMin = ChildWidget->GetAnchorMin();
-            auto AnchorMax = ChildWidget->GetAnchorMax();
-            if (AnchorMin.X != AnchorMax.X)//custom anchor not support
-            {
-                ChildWidget->SetHorizontalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
-            }
-            if (AnchorMin.Y != AnchorMax.Y)
-            {
-                ChildWidget->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
-            }
-        }
-        
-        CalculateLayout(false);
-    }
-    else if (UpdateType == ELexLayoutUpdateType::SecondPass_LeafToRoot)
+    for (auto& LayoutResult : CalculatedLayoutResultArray)
     {
-        CalculateLayout(true);
+        LayoutResult.Widget->SetAnchoredPosition(LayoutResult.AnchoredPos);
         
-        BeginSetupAnimations();
-
-        ELexLayoutAnimationType TempAnimationType = AnimationType;
-#if WITH_EDITOR
-        if (!this->GetWorld()->IsGameWorld())
+        if (LayoutResult.LayoutSelf)
         {
-            TempAnimationType = ELexLayoutAnimationType::Immediately;
+            LayoutResult.LayoutSelf->SetSizeByLayoutContainer(LayoutResult.Size, LayoutResult.PrimaryAxis);
         }
-#endif
-        for (auto& LayoutResult : CalculatedLayoutResultArray)
+        else
         {
-            ApplyAnchoredPositionWithAnimation(TempAnimationType, LayoutResult.AnchoredPos, LayoutResult.Widget);
-            
-            if (LayoutResult.LayoutSelf)
-            {
-                LayoutResult.LayoutSelf->SetSizeByLayoutContainer(LayoutResult.Size, LayoutResult.PrimaryAxis);
-            }
-            else
-            {
-                ApplySizeDeltaWithAnimation(TempAnimationType, FVector2D(LayoutResult.Size), LayoutResult.Widget);
-            }
+            LayoutResult.Widget->SetSizeDelta(FVector2D(LayoutResult.Size));
         }
+    }
+}
 
-        if (TempAnimationType == ELexLayoutAnimationType::EaseAnimation)
+void ULexLayoutContainerFlexBox::RefreshChildren()
+{
+    auto Widget = GetWidget();
+    Children.Empty();
+    for (auto& ChildWidget : Widget->GetChildren())
+    {
+        if (!ChildWidget->GetWidgetActiveInHierarchy())continue;
+        if (auto ChildLayoutSelf = ChildWidget->GetLayoutSelf())
         {
-            EndSetupAnimations();
+            if (ChildLayoutSelf->GetIgnoreLayoutContainer())continue;
+        }
+        Children.Add(ChildWidget);
+
+        auto AnchorMin = ChildWidget->GetAnchorMin();
+        auto AnchorMax = ChildWidget->GetAnchorMax();
+        if (AnchorMin.X != AnchorMax.X)//custom anchor not support
+        {
+            ChildWidget->SetHorizontalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
+        }
+        if (AnchorMin.Y != AnchorMax.Y)
+        {
+            ChildWidget->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
         }
     }
 }
 
 void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
 {
-    auto Widget = GetWidget();
-    if (!Widget)return;
+    RefreshChildren();
+    
     CalculatedLayoutResultArray.Reset();
 
     bool bIsVertical = Direction == ELexLayoutFlexBoxDirectionType::Vertical || Direction == ELexLayoutFlexBoxDirectionType::VerticalReverse;
@@ -103,7 +81,7 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
             FChildSizes Value;
             if (auto ChildLayoutSelf = Cast<ULexLayoutSelfFlexBox>(ChildWidget->GetLayoutSelf()))
             {
-                ChildLayoutSelf->GetLayoutProperties(Value.Preferred);
+                Value.Preferred = ChildLayoutSelf->GetLayoutPreferredSize();
                 ChildLayoutSelf->GetLayoutMinMax(Value.Min, Value.Max);
                 if (PrimaryAxis == 0)
                 {
@@ -116,17 +94,9 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
                     Value.Shrink = FVector2f(0, ChildLayoutSelf->GetShrinkForLayoutContainer(1));
                 }
             }
-            else
+            else// child don't have LayoutSelf, then it's size will not be controlled by layout, then just use size delta
             {
-                if (!ChildWidget->GetLayoutPreferredWidth(Value.Preferred.X))
-                {
-                    UE_LOG(LGUI, Error, TEXT("NotSet"));
-                }
-                if (!ChildWidget->GetLayoutPreferredHeight(Value.Preferred.Y))
-                {
-                    UE_LOG(LGUI, Error, TEXT("NotSet"));
-                }
-                Value.Min = Value.Max = Value.Preferred;
+                Value.Min = Value.Max = Value.Preferred = FVector2f(ChildWidget->GetSizeDelta());
                 Value.Grow = Value.Shrink = FVector2f(0, 0);
             }
             ChildSizePtr = &MapWidgetToChildSizes.Add(ChildWidget, Value);
@@ -185,9 +155,6 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
             }
         }
         //now the AreaSize is the final size
-        ChildWidget->SetLayoutFinalWidth(AreaSize[0]);
-        ChildWidget->SetLayoutFinalHeight(AreaSize[1]);
-        
         FCalculatedLayoutResult CalculatedLayout;
         CalculatedLayout.Widget = ChildWidget;
         CalculatedLayout.AnchoredPos = FVector2D(AnchoredPositionX, AnchoredPositionY);
@@ -206,14 +173,15 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
     TotalPreferredSize = FVector2f(0, 0);
     
     auto Gap = FVector2f(WidthGap, HeightGap);
-    FVector2f ContainerSize = FVector2f(Widget->GetWidth(), Widget->GetHeight());
-    if (!Widget->GetLayoutFinalWidth(ContainerSize.X))
+    FVector2f ContainerSize;
+    auto Widget = GetWidget();
+    if (auto LayoutSelf = Widget->GetLayoutSelf())
     {
-        UE_LOG(LGUI, Error, TEXT("NotSet"));
+        ContainerSize = LayoutSelf->GetLayoutFinalSize();
     }
-    if (!Widget->GetLayoutFinalHeight(ContainerSize.Y))
+    else
     {
-        UE_LOG(LGUI, Error, TEXT("NotSet"));
+        ContainerSize = FVector2f(Widget->GetWidth(), Widget->GetHeight());
     }
     ThisWidgetSize = ContainerSize;
     ContainerSize.Y -= Padding.Top + Padding.Bottom;
@@ -525,21 +493,14 @@ void ULexLayoutContainerFlexBox::PostEditChangeProperty(struct FPropertyChangedE
 }
 #endif
 
-void ULexLayoutContainerFlexBox::GetLayoutProperties(FVector2f& OutPreferred)
+FVector2f ULexLayoutContainerFlexBox::GetLayoutPreferredSize()
 {
-    OutPreferred = TotalPreferredSize;
-}
-
-int ULexLayoutContainerFlexBox::GetPrimaryAxis() const
-{
-    bool bIsVertical = Direction == ELexLayoutFlexBoxDirectionType::Vertical || Direction == ELexLayoutFlexBoxDirectionType::VerticalReverse;
-    return bIsVertical ? 1 : 0;
-}
-
-int ULexLayoutContainerFlexBox::GetCrossAxis() const
-{
-    bool bIsVertical = Direction == ELexLayoutFlexBoxDirectionType::Vertical || Direction == ELexLayoutFlexBoxDirectionType::VerticalReverse;
-    return bIsVertical ? 0 : 1;
+    if (bNeedPreCalculate)
+    {
+        bNeedPreCalculate = false;
+        CalculateLayout(false);
+    }
+    return this->TotalPreferredSize;
 }
 
 void ULexLayoutContainerFlexBox::SetDirection(ELexLayoutFlexBoxDirectionType Value)

@@ -1236,15 +1236,7 @@ void ULexCanvas::UpdateCanvasDrawCall()
 				auto& Widget = WidgetList[i];
 				if (Widget->GetWidgetActiveInHierarchy() && Widget->GetRenderCanvas() == this)
 				{
-					Widget->UpdateLayout(ELexLayoutUpdateType::FirstPass_RootToLeaf);
-				}
-			}
-			for (int i = WidgetList.Num() - 1; i >= 0; i--)
-			{
-				auto& Widget = WidgetList[i];
-				if (Widget->GetWidgetActiveInHierarchy() && Widget->GetRenderCanvas() == this)
-				{
-					Widget->UpdateLayout(ELexLayoutUpdateType::SecondPass_LeafToRoot);
+					Widget->UpdateLayout();
 				}
 			}
 		}

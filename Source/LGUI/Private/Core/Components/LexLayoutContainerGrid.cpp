@@ -56,7 +56,7 @@ void ULexLayoutContainerGrid::SetSpacing(const FVector2D& Value)
 	}
 }
 
-void ULexLayoutContainerGrid::UpdateLayout(ELexLayoutUpdateType UpdateType)
+void ULexLayoutContainerGrid::UpdateLayout()
 {
 	SCOPE_CYCLE_COUNTER(STAT_LexLayoutContainerGrid);
 	auto Widget = GetWidget();

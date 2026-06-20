@@ -6,7 +6,6 @@
 #include "Core/LexUIAnchorData.h"
 #include "LexWidget.generated.h"
 
-enum class ELexLayoutUpdateType : uint8;
 class ULexWidgetSubObjectBehaviour;
 class ULexUIBehaviour;
 class ULexWidgetPresenterComponent;
@@ -314,7 +313,7 @@ public:
 	void UnregisterRenderCanvas();
 
 	/** Called by LexCanvas to update layout */
-	void UpdateLayout(ELexLayoutUpdateType UpdateType);
+	void UpdateLayout();
 	/** Called by LexCanvas */
 	void UpdateClip(ULexUIDataAsTexture* ClipDataTexture, TArray<TSharedPtr<FLexUIClipData>>& ClipDataList);
 	/** Called by LexCanvas */
@@ -554,24 +553,7 @@ protected:
 	TObjectPtr<ULexLayoutContainer> LayoutContainer = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Instanced, Category = "LayoutSelf", Getter, meta = (AllowPrivateAccess = true))
 	TObjectPtr<ULexLayoutSelf> LayoutSelf = nullptr;
-	//preferred size is flex-base size, affect by min/max, not affect by grow/shrink/stretch
-	TOptional<float> LayoutPreferredWidth;
-	TOptional<float> LayoutPreferredHeight;
-	//stretched size is based on preferred size, affect by grow/shrink/stretch
-	TOptional<float> LayoutStretchedWidth;
-	TOptional<float> LayoutStretchedHeight;
-public:
-	bool GetLayoutPreferredWidth(float& OutValue)const;
-	bool GetLayoutPreferredHeight(float& OutValue)const;
-	bool GetLayoutStretchedWidth(float& OutValue)const;
-	bool GetLayoutStretchedHeight(float& OutValue)const;
 
-	bool GetLayoutFinalWidth(float& OutValue);
-	bool GetLayoutFinalHeight(float& OutValue);
-
-	void SetLayoutFinalWidth(float Value);
-	void SetLayoutFinalHeight(float Value);
-	
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	ELexWidgetClipping GetClipping()const { return Clipping; }
@@ -791,7 +773,7 @@ public:
 	bool IsRootWidgetInHierarchy()const{return RootWidget.Get() == this;}
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	static void MarkLayoutForRebuild(const ULexWidget* InWidget);
+	static void MarkLayoutForRebuild(ULexWidget* InWidget);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	static void ForceRebuildLayoutImmediately(ULexWidget* InWidget);
 
@@ -804,7 +786,7 @@ private:
 	/** is this widget contains LexCanvas component */
 	mutable uint32 bIsCanvasWidget:1;
 	
-	mutable uint32 bLayoutDirty : 1 = true;
+	uint32 bLayoutDirty : 1 = true;
 	mutable uint32 bClipDirty : 1 = true;
 	mutable uint32 bNeedRecreateClip : 1 = true;
 	
@@ -819,7 +801,7 @@ private:
 	mutable uint32 bFlattenHierarchyIndexDirty : 1;
 	
 	void MarkClipDirty(bool InClipTypeChanged)const;
-	void MarkLayoutDirty()const;
+	FORCEINLINE void MarkLayoutDirty();
 	
 	/** find root UIItem of hierarchy */
 	void CheckRootWidget(ULexWidget* RootWidgetInParent = nullptr);
@@ -868,7 +850,15 @@ public:
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")
 	ULTweener* SizeDeltaTo(const FVector2D& endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
 	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")
+	ULTweener* WidthTo(float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")
+	ULTweener* HeightTo(float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")
 	ULTweener* AnchoredPositionTo(const FVector2D& endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")
+	ULTweener* HorizontalAnchoredPositionTo(float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "delay,ease"), Category = "LTweenLGUI")
+	ULTweener* VerticalAnchoredPositionTo(float endValue, float duration = 0.5f, float delay = 0.0f, ELTweenEase ease = ELTweenEase::OutCubic);
 
 	UFUNCTION(BlueprintCallable, Category = "LTweenLGUI")
 	static void SetWidgetTweenerAffectByGamePauseAndTimeDilation(ULexWidget* Widget, ULTweener* Tweener);

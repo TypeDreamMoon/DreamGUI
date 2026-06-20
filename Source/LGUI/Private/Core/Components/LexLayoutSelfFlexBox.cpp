@@ -5,7 +5,7 @@
 #include "Core/Components/LexLayoutContainerFlexBox.h"
 #include "Core/Components/LexVisual.h"
 
-TOptional<float> FLexLayoutSize::Calculate(ULexWidget* Widget, ELexLayoutUpdateType UpdateType, bool IsVertical) const
+float FLexLayoutSize::Calculate(ULexWidget* Widget, bool IsVertical) const
 {
     if (bEnable)
     {
@@ -14,8 +14,7 @@ TOptional<float> FLexLayoutSize::Calculate(ULexWidget* Widget, ELexLayoutUpdateT
         case ELexLayoutSizeType::Auto:
             if (auto Layout = Widget->GetLayoutContainer())
             {
-                FVector2f LayoutPreferredSize;
-                Layout->GetLayoutProperties(LayoutPreferredSize);
+                auto LayoutPreferredSize = Layout->GetLayoutPreferredSize();
                 return IsVertical ? LayoutPreferredSize.Y : LayoutPreferredSize.X;
             }
             if (auto Visual = Widget->GetVisual())
@@ -30,26 +29,26 @@ TOptional<float> FLexLayoutSize::Calculate(ULexWidget* Widget, ELexLayoutUpdateT
             {
                 if (IsVertical)
                 {
-                    float FinalSize;
-                    if (ParentWidget->GetLayoutFinalHeight(FinalSize))
+                    if (auto LayoutSelf = ParentWidget->GetLayoutSelf())
                     {
-                        return PercentValue * FinalSize;
+                        auto FinalSize = LayoutSelf->GetLayoutFinalSize();
+                        return PercentValue * FinalSize.Y;
                     }
                     else
                     {
-                        return 0;
+                        return PercentValue * ParentWidget->GetHeight();
                     }
                 }
                 else
                 {
-                    float FinalSize;
-                    if (ParentWidget->GetLayoutFinalWidth(FinalSize))
+                    if (auto LayoutSelf = ParentWidget->GetLayoutSelf())
                     {
-                        return PercentValue * FinalSize;
+                        auto FinalSize = LayoutSelf->GetLayoutFinalSize();
+                        return PercentValue * FinalSize.X;
                     }
                     else
                     {
-                        return 0;
+                        return PercentValue * ParentWidget->GetWidth();
                     }
                 }
             }
@@ -59,7 +58,7 @@ TOptional<float> FLexLayoutSize::Calculate(ULexWidget* Widget, ELexLayoutUpdateT
     return IsVertical ? Widget->GetHeight() : Widget->GetWidth();
 }
 
-float FLexLayoutMinMaxSize::Calculate(ULexWidget* Widget, ELexLayoutUpdateType UpdateType, bool IsVertical,
+float FLexLayoutMinMaxSize::Calculate(ULexWidget* Widget, bool IsVertical,
     bool IsMinOrMax) const
 {
     float CalculatedValue = IsMinOrMax ? -UE_MAX_FLT : UE_MAX_FLT;
@@ -71,41 +70,37 @@ float FLexLayoutMinMaxSize::Calculate(ULexWidget* Widget, ELexLayoutUpdateType U
             CalculatedValue = FixedValue;
             break;
         case ELexLayoutMinMaxSizeType::Percent:
-            if (UpdateType == ELexLayoutUpdateType::FirstPass_RootToLeaf)
+            if (auto ParentWidget = Widget->GetParent())
             {
-                if (auto ParentWidget = Widget->GetParent())
+                if (IsVertical)
                 {
-                    if (IsVertical)
+                    if (auto LayoutSelf = ParentWidget->GetLayoutSelf())
                     {
-                        float FinalSize;
-                        if (ParentWidget->GetLayoutFinalHeight(FinalSize))
-                        {
-                            return PercentValue * FinalSize;
-                        }
-                        else
-                        {
-                            return 0;
-                        }
+                        auto FinalSize = LayoutSelf->GetLayoutFinalSize();
+                        return PercentValue * FinalSize.Y;
                     }
                     else
                     {
-                        float FinalSize;
-                        if (ParentWidget->GetLayoutFinalWidth(FinalSize))
-                        {
-                            return PercentValue * FinalSize;
-                        }
-                        else
-                        {
-                            return CalculatedValue;
-                        }
+                        return 0;
                     }
                 }
                 else
                 {
-                    return CalculatedValue;
+                    if (auto LayoutSelf = ParentWidget->GetLayoutSelf())
+                    {
+                        auto FinalSize = LayoutSelf->GetLayoutFinalSize();
+                        return PercentValue * FinalSize.X;
+                    }
+                    else
+                    {
+                        return CalculatedValue;
+                    }
                 }
             }
-            break;
+            else
+            {
+                return CalculatedValue;
+            }
         }
     }
     return CalculatedValue;
@@ -157,216 +152,98 @@ FLexLayoutControlAnchorData ULexLayoutSelfFlexBox::GetLayoutControlAnchor(const 
     return Result;
 }
 
-void ULexLayoutSelfFlexBox::GetLayoutProperties(FVector2f& OutPreferred)
+FVector2f ULexLayoutSelfFlexBox::GetLayoutPreferredSize()
 {
-    auto Widget = GetWidget();
-    if (!Widget->GetLayoutPreferredWidth(OutPreferred.X))
+    CalculateSize();
+    return FVector2f(CalculatedPreferredWidth, CalculatedPreferredHeight);
+}
+
+FVector2f ULexLayoutSelfFlexBox::GetLayoutFinalSize()
+{
+    if (auto ParentWidget = GetWidget()->GetParent())
     {
-        UE_LOG(LGUI, Error, TEXT(""));
+        if (auto LayoutContainer = ParentWidget->GetLayoutContainer())
+        {
+            //since we calculate form root to leaf, final size should already be set by parent LayoutContainer
+            return FVector2f(CalculatedFinalWidth, CalculatedFinalHeight);
+        }
     }
-    if (!Widget->GetLayoutPreferredHeight(OutPreferred.Y))
-    {
-        UE_LOG(LGUI, Error, TEXT(""));
-    }
+    return FVector2f(CalculatedPreferredWidth, CalculatedPreferredHeight);
 }
 
 void ULexLayoutSelfFlexBox::GetLayoutMinMax(FVector2f& OutMin, FVector2f& OutMax)
 {
-    OutMin.X = CalculatingMinWidth;
-    OutMin.Y = CalculatingMinHeight;
-    OutMax.X = CalculatingMaxWidth;
-    OutMax.Y = CalculatingMaxHeight;
+    OutMin.X = CalculatedMinWidth;
+    OutMin.Y = CalculatedMinHeight;
+    OutMax.X = CalculatedMaxWidth;
+    OutMax.Y = CalculatedMaxHeight;
 }
 
-ELexLayoutSelfSizeFitType ULexLayoutSelfFlexBox::GetWidthFitType() const
-{
-    if (PreferredWidth.bEnable)
-    {
-        switch (PreferredWidth.Type)
-        {
-        case ELexLayoutSizeType::Auto:
-            {
-                if (auto LayoutContainer = GetWidget()->GetLayoutContainer())
-                {
-                    return ELexLayoutSelfSizeFitType::FitChildren;
-                }
-            }
-        case ELexLayoutSizeType::Percent:
-            return ELexLayoutSelfSizeFitType::FitParent;
-        }
-    }
-    return ELexLayoutSelfSizeFitType::None;
-}
-
-ELexLayoutSelfSizeFitType ULexLayoutSelfFlexBox::GetHeightFitType() const
-{
-    if (PreferredHeight.bEnable)
-    {
-        switch (PreferredHeight.Type)
-        {
-        case ELexLayoutSizeType::Auto:
-            {
-                if (auto LayoutContainer = GetWidget()->GetLayoutContainer())
-                {
-                    return ELexLayoutSelfSizeFitType::FitChildren;
-                }
-            }
-        case ELexLayoutSizeType::Percent:
-            return ELexLayoutSelfSizeFitType::FitParent;
-        }
-    }
-    return ELexLayoutSelfSizeFitType::None;
-}
-
-void ULexLayoutSelfFlexBox::CalculateSize(ELexLayoutUpdateType UpdateType
-    , TOptional<float>& OutPreferredWidth, TOptional<float>& OutPreferredHeight
-    , TOptional<float>& OutStretchedWidth, TOptional<float>& OutStretchedHeight)
+void ULexLayoutSelfFlexBox::CalculateSize()
 {
     SCOPE_CYCLE_COUNTER(STAT_LexLayoutFlexBoxSelf);
     auto Widget = GetWidget();
     if (!Widget)return;
-
-    if (bIsAnimationPlaying)
-    {
-        bShouldRebuildLayoutAfterAnimation = true;
-        return;
-    }
     
     bIsCalculatingSize = true;
     {
-        if (!OutPreferredWidth.IsSet())
-        {
-            OutPreferredWidth = PreferredWidth.Calculate(Widget, UpdateType, false);
-        }
+        CalculatedPreferredWidth = PreferredWidth.Calculate(Widget, false);
         if (PreferredWidth.bEnable)
         {
-            CalculatingMinWidth = MinWidth.Calculate(Widget, UpdateType, false, true);
+            CalculatedMinWidth = MinWidth.Calculate(Widget, false, true);
         }
         else//if not enable width control then we also don't use minWidth, because layoutContainer could use minWidth to calculate and set the wrong width
         {
-            CalculatingMinWidth = -UE_MAX_FLT;
+            CalculatedMinWidth = -UE_MAX_FLT;
         }
-        if (!OutPreferredHeight.IsSet())
-        {
-            OutPreferredHeight = PreferredHeight.Calculate(Widget, UpdateType, true);
-        }
+        CalculatedPreferredHeight = PreferredHeight.Calculate(Widget, true);
         if (PreferredHeight.bEnable)
         {
-            CalculatingMinHeight = MinHeight.Calculate(Widget, UpdateType, true, true);
+            CalculatedMinHeight = MinHeight.Calculate(Widget, true, true);
         }
         else//if not enable height control then we also don't use minHeight, because layoutContainer could use minHeight to calculate and set the wrong height
         {
-            CalculatingMinHeight = -UE_MAX_FLT;
+            CalculatedMinHeight = -UE_MAX_FLT;
         }
-        CalculatingMaxWidth = MaxWidth.Calculate(Widget, UpdateType, false, false);
-        if (CalculatingMaxWidth < CalculatingMinWidth)
+        CalculatedMaxWidth = MaxWidth.Calculate(Widget, false, false);
+        if (CalculatedMaxWidth < CalculatedMinWidth)
         {
-            CalculatingMaxWidth = UE_MAX_FLT;
+            CalculatedMaxWidth = UE_MAX_FLT;
         }
-        CalculatingMaxHeight = MaxHeight.Calculate(Widget, UpdateType, true, false);
-        if (CalculatingMaxHeight < CalculatingMinHeight)
+        CalculatedMaxHeight = MaxHeight.Calculate(Widget, true, false);
+        if (CalculatedMaxHeight < CalculatedMinHeight)
         {
-            CalculatingMaxHeight = UE_MAX_FLT;
+            CalculatedMaxHeight = UE_MAX_FLT;
         }
         //clamp value
-        if (OutPreferredWidth.IsSet())
-        {
-            OutPreferredWidth = FMath::Clamp(OutPreferredWidth.GetValue(), CalculatingMinWidth, CalculatingMaxWidth);
-        }
-        if (OutPreferredHeight.IsSet())
-        {
-            OutPreferredHeight = FMath::Clamp(OutPreferredHeight.GetValue(), CalculatingMinHeight, CalculatingMaxHeight);
-        }
-        //stretched size
-        bool bShouldSetStretchedWidth = true, bShouldSetStretchedHeight = true;
-        if (auto ParentWidget = Widget->GetParent())
-        {
-            if (auto ParentFlexBoxContainer = Cast<ULexLayoutContainerFlexBox>(ParentWidget->GetLayoutContainer()))
-            {
-                bool ContainsPrimaryStretchedSize = GetGrowForLayoutContainer(ParentFlexBoxContainer->GetPrimaryAxis()) > 0
-                || GetShrinkForLayoutContainer(ParentFlexBoxContainer->GetPrimaryAxis()) > 0;
-                bool ContainsSecondaryStretchedSize = ParentFlexBoxContainer->GetSecondaryAlignment() == ELexLayoutFlexBoxSecondaryAxisAlignment::Stretch
-                && ParentFlexBoxContainer->GetSecondaryLineAlignment() == ELexLayoutFlexBoxSecondaryAxisLineAlignment::Stretch;
-                if (ParentFlexBoxContainer->GetPrimaryAxis() == 0)
-                {
-                    bShouldSetStretchedWidth = !ContainsPrimaryStretchedSize;
-                    bShouldSetStretchedHeight = !ContainsSecondaryStretchedSize;
-                }
-                else
-                {
-                    bShouldSetStretchedHeight = !ContainsPrimaryStretchedSize;
-                    bShouldSetStretchedWidth = !ContainsSecondaryStretchedSize;
-                }
-            }
-        }
-        if (bShouldSetStretchedWidth)
-        {
-            OutStretchedWidth = 0;
-        }
-        if (bShouldSetStretchedHeight)
-        {
-            OutStretchedHeight = 0;
-        }
+        CalculatedPreferredWidth = FMath::Clamp(CalculatedPreferredWidth, CalculatedMinWidth, CalculatedMaxWidth);
+        CalculatedPreferredHeight = FMath::Clamp(CalculatedPreferredHeight, CalculatedMinHeight, CalculatedMaxHeight);
     }
-    if (UpdateType == ELexLayoutUpdateType::SecondPass_LeafToRoot)
+
+    bool bShouldSetPreferredSize = true;
+    if (auto ParentWidget = Widget->GetParent())
     {
-        if (!OutPreferredWidth.IsSet())
+        //if parent widget have FlexBoxContainer, then widget size should be set by it, because Grow/Shrink/Stretch is calculated by FlexBoxContainer
+        if (auto ParentFlexBoxContainer = Cast<ULexLayoutContainerFlexBox>(ParentWidget->GetLayoutContainer()))
         {
-            auto LayoutContainer = Widget->GetLayoutContainer();
-            check(LayoutContainer);
-            FVector2f LayoutContainerPreferredSize;
-            LayoutContainer->GetLayoutProperties(LayoutContainerPreferredSize);
-            OutPreferredWidth = LayoutContainerPreferredSize.X;
-        }
-        if (!OutPreferredHeight.IsSet())
-        {
-            auto LayoutContainer = Widget->GetLayoutContainer();
-            check(LayoutContainer);
-            FVector2f LayoutContainerPreferredSize;
-            LayoutContainer->GetLayoutProperties(LayoutContainerPreferredSize);
-            OutPreferredHeight = LayoutContainerPreferredSize.Y;
-        }
-
-        bool bShouldSetPreferredSize = true;
-        if (auto ParentWidget = Widget->GetParent())
-        {
-            //if parent widget have FlexBoxContainer, then widget size should be set by it, because Grow/Shrink/Stretch is calculated by FlexBoxContainer
-            if (auto ParentFlexBoxContainer = Cast<ULexLayoutContainerFlexBox>(ParentWidget->GetLayoutContainer()))
-            {
-                bShouldSetPreferredSize = false;
-            }
-        }
-        if (bShouldSetPreferredSize)
-        {
-            auto AnchorMin = Widget->GetAnchorMin();
-            auto AnchorMax = Widget->GetAnchorMax();
-            if (AnchorMin.X != AnchorMax.X)//custom anchor not support
-            {
-                Widget->SetHorizontalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
-            }
-            if (AnchorMin.Y != AnchorMax.Y)
-            {
-                Widget->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
-            }
-            Widget->SetSizeDelta(FVector2D(OutPreferredWidth.GetValue(), OutPreferredHeight.GetValue()));
-
-            BeginSetupAnimations();
-
-            ELexLayoutAnimationType TempAnimationType = AnimationType;
-#if WITH_EDITOR
-            if (!this->GetWorld()->IsGameWorld())
-            {
-                TempAnimationType = ELexLayoutAnimationType::Immediately;
-            }
-#endif
-            ApplySizeDeltaWithAnimation(TempAnimationType, FVector2D(OutPreferredWidth.GetValue(), OutPreferredHeight.GetValue()), Widget);
-
-            if (TempAnimationType == ELexLayoutAnimationType::EaseAnimation)
-            {
-                EndSetupAnimations();
-            }
+            bShouldSetPreferredSize = false;
         }
     }
+    if (bShouldSetPreferredSize)
+    {
+        auto AnchorMin = Widget->GetAnchorMin();
+        auto AnchorMax = Widget->GetAnchorMax();
+        if (AnchorMin.X != AnchorMax.X)//custom anchor not support
+        {
+            Widget->SetHorizontalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
+        }
+        if (AnchorMin.Y != AnchorMax.Y)
+        {
+            Widget->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
+        }
+        Widget->SetSizeDelta(FVector2D(CalculatedPreferredWidth, CalculatedPreferredHeight));
+    }
+    
     bIsCalculatingSize = false;
 }
 
@@ -431,41 +308,19 @@ void ULexLayoutSelfFlexBox::SetSizeByLayoutContainer(FVector2f Value, int Primar
     {
         if (PreferredHeight.Type != ELexLayoutSizeType::Auto)
         {
-            if (!Widget->GetLayoutPreferredHeight(Value.Y))
-            {
-                UE_LOG(LGUI, Error, TEXT("NotSet"));
-            }
+            Value.Y = Widget->GetHeight();
         }
     }
     else
     {
         if (PreferredWidth.Type != ELexLayoutSizeType::Auto)
         {
-            if (!Widget->GetLayoutPreferredWidth(Value.X))
-            {
-                UE_LOG(LGUI, Error, TEXT("NotSet"));
-            } 
+            Value.X = Widget->GetWidth();
         }
     }
-    Widget->SetLayoutFinalWidth(Value.X);
-    Widget->SetLayoutFinalHeight(Value.Y);
+    this->CalculatedFinalWidth = Value.X;
+    this->CalculatedFinalHeight = Value.Y;
 
-    BeginSetupAnimations();
-
-    ELexLayoutAnimationType TempAnimationType = AnimationType;
-#if WITH_EDITOR
-    if (!this->GetWorld()->IsGameWorld())
-    {
-        TempAnimationType = ELexLayoutAnimationType::Immediately;
-    }
-#endif
-    
-    ApplySizeDeltaWithAnimation(TempAnimationType, FVector2D(Value), Widget);
-
-    if (TempAnimationType == ELexLayoutAnimationType::EaseAnimation)
-    {
-        EndSetupAnimations();
-    }
 #if WITH_EDITOR
     if (PreferredWidth.Type == ELexLayoutSizeType::Auto)
     {
@@ -483,7 +338,7 @@ void ULexLayoutSelfFlexBox::SetMinWidth(const FLexLayoutMinMaxSize& Value)
     if (MinWidth != Value)
     {
         MinWidth = Value;
-        // CalculateSize();
+        ULexWidget::MarkLayoutForRebuild(GetWidget());
     }
 }
 
@@ -492,7 +347,7 @@ void ULexLayoutSelfFlexBox::SetMinHeight(const FLexLayoutMinMaxSize& Value)
     if (MinHeight != Value)
     {
         MinHeight = Value;
-        // CalculateSize();
+        ULexWidget::MarkLayoutForRebuild(GetWidget());
     }
 }
 
@@ -501,7 +356,7 @@ void ULexLayoutSelfFlexBox::SetMaxWidth(const FLexLayoutMinMaxSize& Value)
     if (MaxWidth != Value)
     {
         MaxWidth = Value;
-        // CalculateSize();
+        ULexWidget::MarkLayoutForRebuild(GetWidget());
     }
 }
 
@@ -510,7 +365,7 @@ void ULexLayoutSelfFlexBox::SetMaxHeight(const FLexLayoutMinMaxSize& Value)
     if (MaxHeight != Value)
     {
         MaxHeight = Value;
-        // CalculateSize();
+        ULexWidget::MarkLayoutForRebuild(GetWidget());
     }
 }
 
@@ -519,7 +374,7 @@ void ULexLayoutSelfFlexBox::SetPreferredWidth(const FLexLayoutSize& Value)
     if (PreferredWidth != Value)
     {
         PreferredWidth = Value;
-        // CalculateSize();
+        ULexWidget::MarkLayoutForRebuild(GetWidget());
     }
 }
 
@@ -528,7 +383,7 @@ void ULexLayoutSelfFlexBox::SetPreferredHeight(const FLexLayoutSize& Value)
     if (PreferredHeight != Value)
     {
         PreferredHeight = Value;
-        // CalculateSize();
+        ULexWidget::MarkLayoutForRebuild(GetWidget());
     }
 }
 

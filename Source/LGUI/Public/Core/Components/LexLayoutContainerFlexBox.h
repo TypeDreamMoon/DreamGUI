@@ -107,7 +107,8 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LayoutContainer", meta = (AllowPrivateAccess = true, UIMin=0))
 	FMargin Padding;
 	
-	virtual void UpdateLayout(ELexLayoutUpdateType UpdateType) override;
+	virtual void UpdateLayout() override;
+	void RefreshChildren();
 	void CalculateLayout(bool bApplyLayoutToChildren);
 
 	struct FLineData
@@ -146,10 +147,7 @@ public:
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 
-	virtual void GetLayoutProperties(FVector2f& OutPreferred) override;
-
-	int GetPrimaryAxis()const;
-	int GetCrossAxis()const;
+	virtual FVector2f GetLayoutPreferredSize() override;
 
 	UFUNCTION(BlueprintCallable, Category = "LayoutContainer")
 	ELexLayoutFlexBoxDirectionType GetDirection()const{return Direction;}

@@ -76,7 +76,7 @@ struct FLexLayoutSize
 		return this->Type != Other.Type || this->FixedValue != Other.FixedValue || this->PercentValue != Other.PercentValue;
 	}
 
-	TOptional<float> Calculate(ULexWidget* Widget, ELexLayoutUpdateType UpdateType, bool IsVertical)const;
+	float Calculate(ULexWidget* Widget, bool IsVertical)const;
 };
 
 UENUM(BlueprintType)
@@ -135,7 +135,7 @@ struct FLexLayoutMinMaxSize
 		return this->Type != Other.Type || this->FixedValue != Other.FixedValue || this->PercentValue != Other.PercentValue;
 	}
 
-	float Calculate(ULexWidget* Widget, ELexLayoutUpdateType UpdateType, bool IsVertical, bool IsMinOrMax)const;
+	float Calculate(ULexWidget* Widget, bool IsVertical, bool IsMinOrMax)const;
 };
 
 /**
@@ -181,12 +181,15 @@ private:
 	float Shrink = 0;
 
 	bool bIsCalculatingSize = false;
-	float CalculatingMinWidth = 0;
-	float CalculatingMinHeight = 0;
-	float CalculatingMaxWidth = 0;
-	float CalculatingMaxHeight = 0;
-	TOptional<float> StretchedWidth;//grow or shrink or stretch size
-	TOptional<float> StretchedHeight;//grow or shrink or stretch size
+	
+	float CalculatedMinWidth = 0;
+	float CalculatedMinHeight = 0;
+	float CalculatedMaxWidth = 0;
+	float CalculatedMaxHeight = 0;
+	float CalculatedPreferredWidth = 0;
+	float CalculatedPreferredHeight = 0;
+	float CalculatedFinalWidth = 0;
+	float CalculatedFinalHeight = 0;
 public:
 	virtual void OnTransformChanged() override;
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
@@ -195,13 +198,10 @@ public:
 	virtual void PostInitProperties() override;
 #endif
 	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* Widget)const override;
-	virtual void GetLayoutProperties(FVector2f& OutPreferred) override;
+	virtual FVector2f GetLayoutPreferredSize() override;
+	virtual FVector2f GetLayoutFinalSize() override;
 	void GetLayoutMinMax(FVector2f& OutMin, FVector2f& OutMax);
-	virtual ELexLayoutSelfSizeFitType GetWidthFitType() const override;
-	virtual ELexLayoutSelfSizeFitType GetHeightFitType() const override;
-	virtual void CalculateSize(ELexLayoutUpdateType UpdateType
-		, TOptional<float>& OutPreferredWidth, TOptional<float>& OutPreferredHeight
-		, TOptional<float>& OutStretchedWidth, TOptional<float>& OutStretchedHeight) override;
+	virtual void CalculateSize() override;
 	
 	float GetGrowForLayoutContainer(int Axis)const;
 	float GetShrinkForLayoutContainer(int Axis)const;
