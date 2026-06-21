@@ -102,7 +102,7 @@ struct FLexLayoutMinMaxSize
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI", meta = (EditCondition = "Type == ELexLayoutMinMaxSizeType::Fixed", UIMin=0))
 	float FixedValue = 100;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI", meta = (EditCondition = "Type == ELexLayoutMinMaxSizeType::Percent", UIMin=0, UIMax=100))
-	float PercentValue = 50;
+	float PercentValue = 0.5f;
 
 	FLexLayoutMinMaxSize(){}
 	FLexLayoutMinMaxSize(ELexLayoutMinMaxSizeType Type, float Value)
@@ -191,6 +191,13 @@ private:
 	float CalculatedFinalWidth = 0;
 	float CalculatedFinalHeight = 0;
 public:
+	static FName GetPropertyName_PreferredWidth();
+	static FName GetPropertyName_PreferredHeight();
+	static FName GetPropertyName_MinWidth();
+	static FName GetPropertyName_MinHeight();
+	static FName GetPropertyName_MaxWidth();
+	static FName GetPropertyName_MaxHeight();
+	
 	virtual void OnTransformChanged() override;
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
 #if WITH_EDITOR

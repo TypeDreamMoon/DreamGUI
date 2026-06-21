@@ -120,6 +120,31 @@ float FLexLayoutMinMaxSize::Calculate(ULexWidget* Widget, bool IsVertical,
 
 DECLARE_CYCLE_STAT(TEXT("LexLayout FlexBoxSelf"), STAT_LexLayoutFlexBoxSelf, STATGROUP_LGUI);
 
+FName ULexLayoutSelfFlexBox::GetPropertyName_PreferredWidth()
+{
+    return GET_MEMBER_NAME_CHECKED(ULexLayoutSelfFlexBox, PreferredWidth);
+}
+FName ULexLayoutSelfFlexBox::GetPropertyName_PreferredHeight()
+{
+    return GET_MEMBER_NAME_CHECKED(ULexLayoutSelfFlexBox, PreferredHeight);
+}
+FName ULexLayoutSelfFlexBox::GetPropertyName_MinWidth()
+{
+    return GET_MEMBER_NAME_CHECKED(ULexLayoutSelfFlexBox, MinWidth);
+}
+FName ULexLayoutSelfFlexBox::GetPropertyName_MinHeight()
+{
+    return GET_MEMBER_NAME_CHECKED(ULexLayoutSelfFlexBox, MinHeight);
+}
+FName ULexLayoutSelfFlexBox::GetPropertyName_MaxWidth()
+{
+    return GET_MEMBER_NAME_CHECKED(ULexLayoutSelfFlexBox, MaxWidth);
+}
+FName ULexLayoutSelfFlexBox::GetPropertyName_MaxHeight()
+{
+    return GET_MEMBER_NAME_CHECKED(ULexLayoutSelfFlexBox, MaxHeight);
+}
+
 void ULexLayoutSelfFlexBox::OnTransformChanged()
 {
 }

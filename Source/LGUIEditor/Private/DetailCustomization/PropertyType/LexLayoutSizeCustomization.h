@@ -2,8 +2,11 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
 #include "Core/Components/LexLayoutSelfFlexBox.h"
+#include "Core/Components/LexLayoutContainerFlexBox.h"
 #include "Widgets/Input/SNumericEntryBox.h"
 #include "Widgets/Input/SSegmentedControl.h"
+#include "Widgets/Images/SImage.h"
+#include "EditorStyleSet.h"
 
 #define LOCTEXT_NAMESPACE "LexLayoutSizeCustomization"
 
@@ -30,6 +33,52 @@ public:
 		auto PixelValue_PH = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexLayoutSize, FixedValue));
 		auto Percent_PH = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexLayoutSize, PercentValue));
 		auto TypeEnumProperty = CastField<FEnumProperty>(Type_PH->GetProperty());
+
+		// Determine if we should show the warning icon for parent-size-affected-by-children situation
+		auto ShowWarning_Lambda = [OuterObjects, Type_PH, PropertyHandle]() -> EVisibility
+		{
+			// Check if current property's Type is Percent
+			uint8 TypeValue = 0;
+			if (Type_PH->GetValue(TypeValue) != FPropertyAccess::Success || (ELexLayoutSizeType)TypeValue != ELexLayoutSizeType::Percent)
+			{
+				return EVisibility::Collapsed;
+			}
+
+			auto ChildSelfFlexBox = Cast<ULexLayoutSelfFlexBox>(OuterObjects[0]);
+			if (!ChildSelfFlexBox) return EVisibility::Collapsed;
+
+			auto ChildWidget = ChildSelfFlexBox->GetWidget();
+			if (!ChildWidget) return EVisibility::Collapsed;
+
+			auto ParentWidget = ChildWidget->GetParent();
+			if (!ParentWidget) return EVisibility::Collapsed;
+
+			// Parent must have LexLayoutContainerFlexBox
+			auto ParentLayoutContainer = Cast<ULexLayoutContainerFlexBox>(ParentWidget->GetLayoutContainer());
+			if (!ParentLayoutContainer) return EVisibility::Collapsed;
+
+			// Parent must have LexLayoutSelfFlexBox
+			auto ParentLayoutSelf = Cast<ULexLayoutSelfFlexBox>(ParentWidget->GetLayoutSelf());
+			if (!ParentLayoutSelf) return EVisibility::Collapsed;
+
+			// Check if parent's corresponding Preferred is Auto
+			FName PropName = PropertyHandle->GetProperty()->GetFName();
+			if (PropName == ULexLayoutSelfFlexBox::GetPropertyName_PreferredWidth())
+			{
+				if (ParentLayoutSelf->GetPreferredWidth().Type != ELexLayoutSizeType::Auto) return EVisibility::Collapsed;
+			}
+			else if (PropName == ULexLayoutSelfFlexBox::GetPropertyName_PreferredHeight())
+			{
+				if (ParentLayoutSelf->GetPreferredHeight().Type != ELexLayoutSizeType::Auto) return EVisibility::Collapsed;
+			}
+			else
+			{
+				return EVisibility::Collapsed;
+			}
+
+			return EVisibility::Visible;
+		};
+
 		HeaderRow
 		.NameContent()
 		[
@@ -38,11 +87,24 @@ public:
 			[
 				SNew(SHorizontalBox)
 				+SHorizontalBox::Slot()
-				.FillWidth(1.0f)
+				.AutoWidth()
 				.VAlign(VAlign_Center)
 				[
 					PropertyHandle->CreatePropertyNameWidget()
 				]
+				+SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				.Padding(3, 0, 0, 0)
+				[
+					SNew(SImage)
+					.Image(FAppStyle::Get().GetBrush("Icons.Warning"))
+					.ColorAndOpacity(FLinearColor(1.0f, 0.6f, 0.0f))
+					.ToolTipText(LOCTEXT("ParentSizeAffectedByChildren", "Parent size also affected by children, "))
+					.Visibility_Lambda(ShowWarning_Lambda)
+				]
+				+SHorizontalBox::Slot()
+				.FillWidth(1.0f)
 				+SHorizontalBox::Slot()
 				.AutoWidth()
 				.VAlign(VAlign_Center)
