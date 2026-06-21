@@ -111,6 +111,8 @@ private:
 	void RefreshChildren();
 	void CalculateLayout(bool bApplyLayoutToChildren);
 
+	bool bNeedPreCalculate = true;
+
 	struct FLineData
 	{
 		FLineData()
@@ -164,7 +166,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LayoutContainer")
 	float GetHeightGap()const{return HeightGap;}
 	UFUNCTION(BlueprintCallable, Category = "LayoutContainer")
-	FMargin GetPadding()const{return Padding;}
+	const FMargin& GetPadding()const{return Padding;}
 	
 	UFUNCTION(BlueprintCallable, Category = "LayoutContainer")
 	void SetDirection(ELexLayoutFlexBoxDirectionType Value);
@@ -181,5 +183,5 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LayoutContainer")
 	void SetHeightGap(float Value);
 	UFUNCTION(BlueprintCallable, Category = "LayoutContainer")
-	void SetPadding(FMargin Value);
+	void SetPadding(const FMargin& Value);
 };

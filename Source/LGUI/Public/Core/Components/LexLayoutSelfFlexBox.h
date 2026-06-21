@@ -163,7 +163,7 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true))
 	FLexLayoutMinMaxSize MaxHeight;
 
-	/** Expands outwards */
+	/** Expands outwards. Only valid when parent have FlexBoxContainer */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", meta = (AllowPrivateAccess = true, UIMin=0))
 	FMargin Margin;
 
@@ -195,6 +195,7 @@ public:
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
+	virtual bool CanEditChange(const FProperty* InProperty) const override;
 	virtual void PostInitProperties() override;
 #endif
 	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* Widget)const override;
@@ -225,6 +226,9 @@ public:
 	const FLexLayoutMinMaxSize& GetMaxHeight()const{return MaxHeight;}
 	
 	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	const FMargin& GetMargin()const{return Margin;}
+	
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
 	float GetGrow()const{return Grow;}
 	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
 	float GetShrink()const{return Shrink;}
@@ -244,6 +248,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
 	void SetMaxHeight(const FLexLayoutMinMaxSize& Value);
 
+	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
+	void SetMargin(const FMargin& Value);
+	
 	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")
 	void SetGrow(float Value);
 	UFUNCTION(BlueprintCallable, Category = "LayoutSelf")

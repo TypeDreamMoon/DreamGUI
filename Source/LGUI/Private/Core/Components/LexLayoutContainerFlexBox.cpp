@@ -16,6 +16,7 @@ void ULexLayoutContainerFlexBox::UpdateLayout()
     
     CalculateLayout(true);
 
+    //apply result
     for (auto& LayoutResult : CalculatedLayoutResultArray)
     {
         LayoutResult.Widget->SetAnchoredPosition(LayoutResult.AnchoredPos);
@@ -29,6 +30,9 @@ void ULexLayoutContainerFlexBox::UpdateLayout()
             LayoutResult.Widget->SetSizeDelta(FVector2D(LayoutResult.Size));
         }
     }
+    CalculatedLayoutResultArray.Reset();
+
+    bNeedPreCalculate = true;//mark it for next time
 }
 
 void ULexLayoutContainerFlexBox::RefreshChildren()
@@ -59,7 +63,10 @@ void ULexLayoutContainerFlexBox::RefreshChildren()
 
 void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
 {
-    RefreshChildren();
+    if (bNeedPreCalculate)
+    {
+        RefreshChildren();
+    }
     
     CalculatedLayoutResultArray.Reset();
 
@@ -153,6 +160,12 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
             {
                 AreaSize[SecondaryAxis] = SecondaryPreferred;//not stretch mean we will not change it's secondary-axis size, so restore it
             }
+            //calculate margin depend on final size
+            auto& Margin = ChildLayoutSelf->GetMargin();
+            AreaSize[0] -= Margin.Left + Margin.Right;
+            AreaSize[1] -= Margin.Top + Margin.Bottom;
+            AnchoredPositionX += FMath::Lerp(Margin.Left, -Margin.Right, ChildWidget->GetPivot()[0]);
+            AnchoredPositionY += FMath::Lerp(Margin.Bottom, -Margin.Top, ChildWidget->GetPivot()[1]);
         }
         //now the AreaSize is the final size
         FCalculatedLayoutResult CalculatedLayout;
@@ -317,38 +330,10 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
         }
         float PrimaryGrowMultiplier = 0;
         float PrimarySurplusSpace = ContainerSize[PrimaryAxis] - LineData.TotalPreferred[PrimaryAxis];
-        float PrimarySpaceGap = 0;//Space between two items beside gap value
-        if (PrimarySurplusSpace > 0)
+        
+        if (LineData.TotalGrow[PrimaryAxis] > 0)
         {
-            if (LineData.TotalGrow[PrimaryAxis] == 0)
-            {
-                switch (PrimaryAlignment)
-                {
-                case ELexLayoutFlexBoxPrimaryAxisAlignment::Start:break;
-                case ELexLayoutFlexBoxPrimaryAxisAlignment::Center:
-                    PosOffset[PrimaryAxis] += (bReverse ? -PrimarySurplusSpace : PrimarySurplusSpace) * 0.5f;
-                    break;
-                case ELexLayoutFlexBoxPrimaryAxisAlignment::End:
-                    PosOffset[PrimaryAxis] += (bReverse ? -PrimarySurplusSpace : PrimarySurplusSpace);
-                    break;
-                case ELexLayoutFlexBoxPrimaryAxisAlignment::SpaceBetween:
-                    //no offset needed
-                    PrimarySpaceGap = PrimarySurplusSpace / (LineData.Children.Num() - 1);
-                    break;
-                case ELexLayoutFlexBoxPrimaryAxisAlignment::SpaceAround:
-                    //half space offset
-                    PrimarySpaceGap = PrimarySurplusSpace / LineData.Children.Num();
-                    PosOffset[PrimaryAxis] += (bReverse ? -PrimarySpaceGap : PrimarySpaceGap) * 0.5f;
-                    break;
-                case ELexLayoutFlexBoxPrimaryAxisAlignment::SpaceEvenly:
-                    //space offset
-                    PrimarySpaceGap = PrimarySurplusSpace / (LineData.Children.Num() + 1);
-                    PosOffset[PrimaryAxis] += (bReverse ? -PrimarySpaceGap : PrimarySpaceGap);
-                    break;
-                }
-            }
-            else if (LineData.TotalGrow[PrimaryAxis] > 0)
-                PrimaryGrowMultiplier = PrimarySurplusSpace / LineData.TotalGrow[PrimaryAxis];
+            PrimaryGrowMultiplier = PrimarySurplusSpace / LineData.TotalGrow[PrimaryAxis];
         }
 
         float PrimaryShrinkMultiplier = 0;
@@ -361,7 +346,79 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
             }
         }
 
-        TArray<ULexWidget*> CalculatedChildren;
+        //calculate alignment
+        float PrimarySpaceGap = 0;//Space between two items beside gap value
+        {
+            float ActualSurplusSpace = 0;
+            if (PrimarySurplusSpace > 0)//have extra spaces, may grow, can align
+            {
+                if (LineData.TotalGrow[PrimaryAxis] == 0)//no grow
+                {
+                    ActualSurplusSpace = PrimarySurplusSpace;
+                }
+                else
+                {
+                    //max value could limit grow size
+                    ActualSurplusSpace = PrimarySurplusSpace - (LineData.TotalMax[PrimaryAxis] - LineData.TotalPreferred[PrimaryAxis]);
+                }
+            }
+            float ActualDeficitSpace = 0;
+            if (PrimaryDeficitSpace > 0)//have deficit spaces, may shrink, can align
+            {
+                if (LineData.TotalShrink[PrimaryAxis] == 0)//no shrink
+                {
+                    ActualDeficitSpace = PrimaryDeficitSpace;
+                }
+                else
+                {
+                    //min value could limit shrink size
+                    ActualDeficitSpace = PrimaryDeficitSpace - (LineData.TotalPreferred[PrimaryAxis] - LineData.TotalMin[PrimaryAxis]);
+                }
+            }
+
+            if (ActualSurplusSpace > 0)
+            {
+                switch (PrimaryAlignment)
+                {
+                case ELexLayoutFlexBoxPrimaryAxisAlignment::Start:break;
+                case ELexLayoutFlexBoxPrimaryAxisAlignment::Center:
+                    PosOffset[PrimaryAxis] += (bReverse ? -ActualSurplusSpace : ActualSurplusSpace) * 0.5f;
+                    break;
+                case ELexLayoutFlexBoxPrimaryAxisAlignment::End:
+                    PosOffset[PrimaryAxis] += (bReverse ? -ActualSurplusSpace : ActualSurplusSpace);
+                    break;
+                case ELexLayoutFlexBoxPrimaryAxisAlignment::SpaceBetween:
+                    //no offset needed
+                    PrimarySpaceGap = ActualSurplusSpace / (LineData.Children.Num() - 1);
+                    break;
+                case ELexLayoutFlexBoxPrimaryAxisAlignment::SpaceAround:
+                    //half space offset
+                    PrimarySpaceGap = ActualSurplusSpace / LineData.Children.Num();
+                    PosOffset[PrimaryAxis] += (bReverse ? -PrimarySpaceGap : PrimarySpaceGap) * 0.5f;
+                    break;
+                case ELexLayoutFlexBoxPrimaryAxisAlignment::SpaceEvenly:
+                    //space offset
+                    PrimarySpaceGap = ActualSurplusSpace / (LineData.Children.Num() + 1);
+                    PosOffset[PrimaryAxis] += (bReverse ? -PrimarySpaceGap : PrimarySpaceGap);
+                    break;
+                }
+            }
+            if (ActualDeficitSpace > 0)
+            {
+                switch (PrimaryAlignment)
+                {
+                case ELexLayoutFlexBoxPrimaryAxisAlignment::Start:
+                    break;
+                case ELexLayoutFlexBoxPrimaryAxisAlignment::Center:
+                    PosOffset[PrimaryAxis] += (bReverse ? ActualDeficitSpace : -ActualDeficitSpace) * 0.5f;
+                    break;
+                case ELexLayoutFlexBoxPrimaryAxisAlignment::End:
+                    PosOffset[PrimaryAxis] += (bReverse ? ActualDeficitSpace : -ActualDeficitSpace);
+                    break;
+                }
+            }
+        }
+
         auto CurrentLinePosOffset = PosOffset;
         float SecondaryAxisLineSize = LineData.TotalPreferred[SecondaryAxis];
         SecondaryAxisLineSize += SecondaryStretchedExtraSize;
@@ -369,14 +426,9 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
         for (int ChildIndex = 0; ChildIndex < LineData.Children.Num(); ChildIndex++)
         {
             auto& Child = LineData.Children[ChildIndex];
-            bool ShouldRecalculate = false;
             FVector2f AreaSize(0,0);
             auto ChildSizes = GetChildSizes(Child);
-            if (CalculatedChildren.Contains(Child))
-            {
-                AreaSize[PrimaryAxis] = PrimaryAxis == 0 ? Child->GetWidth() : Child->GetHeight();
-            }
-            else//calculate primary size
+            //calculate primary size
             {
                 float PrimarySize = ChildSizes->Preferred[PrimaryAxis];
                 //handle shrink
@@ -388,15 +440,12 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
                     {
                         PrimarySize = ChildSizes->Min[PrimaryAxis];
                         //prepare data for next loop
-                        CalculatedChildren.Add(Child);
                         LineData.TotalShrink[PrimaryAxis] -= ChildSizes->Shrink[PrimaryAxis];
                         PrimaryDeficitSpace -= MaxShrinkSize;
                         if (LineData.TotalShrink[PrimaryAxis] > 0)
                         {
                             PrimaryShrinkMultiplier = PrimaryDeficitSpace / LineData.TotalShrink[PrimaryAxis];
                         }
-                        //to next calculation
-                        ShouldRecalculate = true;
                     }
                     else
                     {
@@ -404,7 +453,7 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
                     }
                 }
                 //handle grow
-                if (PrimaryGrowMultiplier)
+                if (PrimaryGrowMultiplier > 0)
                 {
                     float GrowSize = ChildSizes->Grow[PrimaryAxis] * PrimaryGrowMultiplier;
                     float MaxGrowSize = ChildSizes->Max[PrimaryAxis] - ChildSizes->Preferred[PrimaryAxis];
@@ -412,15 +461,12 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
                     {
                         PrimarySize = ChildSizes->Max[PrimaryAxis];
                         //prepare data for next loop
-                        CalculatedChildren.Add(Child);
                         LineData.TotalGrow[PrimaryAxis] -= ChildSizes->Grow[PrimaryAxis];
                         PrimarySurplusSpace -= MaxGrowSize;
                         if (LineData.TotalGrow[PrimaryAxis] > 0)
                         {
                             PrimaryGrowMultiplier = PrimarySurplusSpace / LineData.TotalGrow[PrimaryAxis];
                         }
-                        //to next calculation
-                        ShouldRecalculate = true;
                     }
                     else
                     {
@@ -435,26 +481,15 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
                 AreaSize[SecondaryAxis] = SecondaryAxisLineSize;
                 SecondaryPreferredSize = ChildSizes->Preferred[SecondaryAxis];
             }
-
-            if (ShouldRecalculate)
+            
+            SetChildPositionAndSize(Child, CurrentLinePosOffset, AreaSize, PrimaryAxis, SecondaryAxis, SecondaryPreferredSize, bReverseHorizontal, bReverseVertical);
+            if (bReverse)
             {
-                //reset it because we are going to recalculate
-                CurrentLinePosOffset = PosOffset;
-                //make loop restart
-                ChildIndex = -1;
-                CalculatedLayoutResultArray.Reset();
+                CurrentLinePosOffset[PrimaryAxis] -= AreaSize[PrimaryAxis] + Gap[PrimaryAxis] + PrimarySpaceGap;
             }
             else
             {
-                SetChildPositionAndSize(Child, CurrentLinePosOffset, AreaSize, PrimaryAxis, SecondaryAxis, SecondaryPreferredSize, bReverseHorizontal, bReverseVertical);
-                if (bReverse)
-                {
-                    CurrentLinePosOffset[PrimaryAxis] -= AreaSize[PrimaryAxis] + Gap[PrimaryAxis] + PrimarySpaceGap;
-                }
-                else
-                {
-                    CurrentLinePosOffset[PrimaryAxis] += AreaSize[PrimaryAxis] + Gap[PrimaryAxis] + PrimarySpaceGap;
-                }
+                CurrentLinePosOffset[PrimaryAxis] += AreaSize[PrimaryAxis] + Gap[PrimaryAxis] + PrimarySpaceGap;
             }
         }
         PosOffset[PrimaryAxis] = CurrentLinePosOffset[PrimaryAxis];
@@ -497,8 +532,8 @@ FVector2f ULexLayoutContainerFlexBox::GetLayoutPreferredSize()
 {
     if (bNeedPreCalculate)
     {
-        bNeedPreCalculate = false;
         CalculateLayout(false);
+        bNeedPreCalculate = false;
     }
     return this->TotalPreferredSize;
 }
@@ -566,7 +601,7 @@ void ULexLayoutContainerFlexBox::SetHeightGap(float Value)
     }
 }
 
-void ULexLayoutContainerFlexBox::SetPadding(FMargin Value)
+void ULexLayoutContainerFlexBox::SetPadding(const FMargin& Value)
 {
     if (Padding != Value)
     {

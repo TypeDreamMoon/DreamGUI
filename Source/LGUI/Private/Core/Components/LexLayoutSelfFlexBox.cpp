@@ -29,27 +29,39 @@ float FLexLayoutSize::Calculate(ULexWidget* Widget, bool IsVertical) const
             {
                 if (IsVertical)
                 {
-                    if (auto LayoutSelf = ParentWidget->GetLayoutSelf())
+                    float FinalSize = 0;
+                    if (auto ParentLayoutSelf = ParentWidget->GetLayoutSelf())
                     {
-                        auto FinalSize = LayoutSelf->GetLayoutFinalSize();
-                        return PercentValue * FinalSize.Y;
+                        FinalSize = ParentLayoutSelf->GetLayoutFinalSize().Y;
                     }
                     else
                     {
-                        return PercentValue * ParentWidget->GetHeight();
+                        FinalSize = ParentWidget->GetHeight();
                     }
+                    if (auto ParentLayoutContainer = Cast<ULexLayoutContainerFlexBox>(ParentWidget->GetLayoutContainer()))
+                    {
+                        auto& Padding = ParentLayoutContainer->GetPadding();
+                        FinalSize -= Padding.Bottom + Padding.Top;
+                    }
+                    return PercentValue * FinalSize;
                 }
                 else
                 {
-                    if (auto LayoutSelf = ParentWidget->GetLayoutSelf())
+                    float FinalSize = 0;
+                    if (auto ParentLayoutSelf = ParentWidget->GetLayoutSelf())
                     {
-                        auto FinalSize = LayoutSelf->GetLayoutFinalSize();
-                        return PercentValue * FinalSize.X;
+                        FinalSize = ParentLayoutSelf->GetLayoutFinalSize().X;
                     }
                     else
                     {
-                        return PercentValue * ParentWidget->GetWidth();
+                        FinalSize = ParentWidget->GetWidth();
                     }
+                    if (auto ParentLayoutContainer = Cast<ULexLayoutContainerFlexBox>(ParentWidget->GetLayoutContainer()))
+                    {
+                        auto& Padding = ParentLayoutContainer->GetPadding();
+                        FinalSize -= Padding.Left + Padding.Right;
+                    }
+                    return PercentValue * FinalSize;
                 }
             }
             return 0;//no valid parent, just return 0
@@ -126,6 +138,29 @@ void ULexLayoutSelfFlexBox::PostEditChangeProperty(struct FPropertyChangedEvent&
     Grow = FMath::Max(Grow, 0);
     Shrink = FMath::Max(Shrink, 0);
     // CalculateSize();
+}
+
+bool ULexLayoutSelfFlexBox::CanEditChange(const FProperty* InProperty) const
+{
+    bool bCanEditChange = Super::CanEditChange(InProperty);
+    if (InProperty->GetFName() == GET_MEMBER_NAME_CHECKED(ULexLayoutSelfFlexBox, Margin))
+    {
+        if (auto Widget = GetWidget())
+        {
+            if (auto ParentWidget = Widget->GetParent())
+            {
+                if (auto LayoutContainer = Cast<ULexLayoutContainerFlexBox>(ParentWidget->GetLayoutContainer()))
+                {
+                    bCanEditChange = true;
+                }
+                else
+                {
+                    bCanEditChange = false;
+                }
+            }
+        }
+    }
+    return bCanEditChange;
 }
 
 void ULexLayoutSelfFlexBox::PostInitProperties()
@@ -302,24 +337,10 @@ void ULexLayoutSelfFlexBox::SetSizeByLayoutContainer(FVector2f Value, int Primar
 {
     auto Widget = GetWidget();
     if (!Widget)return;
-    //if primary-axis is horizontal then width is allowed to set when PreferredWidth enabled,
-    //yet height can only set when PreferredHeight enabled and type is Auto
-    if (PrimaryAxis == 0)
-    {
-        if (PreferredHeight.Type != ELexLayoutSizeType::Auto)
-        {
-            Value.Y = Widget->GetHeight();
-        }
-    }
-    else
-    {
-        if (PreferredWidth.Type != ELexLayoutSizeType::Auto)
-        {
-            Value.X = Widget->GetWidth();
-        }
-    }
+
     this->CalculatedFinalWidth = Value.X;
     this->CalculatedFinalHeight = Value.Y;
+    Widget->SetSizeDelta(FVector2D(Value));
 
 #if WITH_EDITOR
     if (PreferredWidth.Type == ELexLayoutSizeType::Auto)
@@ -365,6 +386,15 @@ void ULexLayoutSelfFlexBox::SetMaxHeight(const FLexLayoutMinMaxSize& Value)
     if (MaxHeight != Value)
     {
         MaxHeight = Value;
+        ULexWidget::MarkLayoutForRebuild(GetWidget());
+    }
+}
+
+void ULexLayoutSelfFlexBox::SetMargin(const FMargin& Value)
+{
+    if (Margin != Value)
+    {
+        Margin = Value;
         ULexWidget::MarkLayoutForRebuild(GetWidget());
     }
 }
