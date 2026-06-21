@@ -7,7 +7,7 @@
 #include "Widgets/SWidget.h"
 #include "SCommonEditorViewportToolbarBase.h"
 
-// In-viewport toolbar AnchorData used in the sprite editor
+// In-viewport toolbar used in the LexUI prefab editor
 class SLexUIPrefabEditorViewportToolbar : public SCommonEditorViewportToolbarBase
 {
 public:
@@ -20,4 +20,11 @@ public:
 	virtual TSharedRef<SWidget> GenerateShowMenu() const override;
 	// End of SCommonEditorViewportToolbarBase
 
+protected:
+	// We override Construct (the base version is non-virtual and registers a globally-shared
+	// tool menu), so we keep our own info-provider handle instead of relying on the base's.
+	ICommonEditorViewportToolbarInfoProvider& GetInfoProvider() const;
+
+private:
+	TWeakPtr<class ICommonEditorViewportToolbarInfoProvider> InfoProviderWeakPtr;
 };
