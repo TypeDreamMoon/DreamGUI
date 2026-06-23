@@ -586,7 +586,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 					LayoutContainer->BeginPlay();
 				}
 				LayoutContainer->Call_OnRegister();
-				LayoutContainer->UpdateLayout();
+				LayoutContainer->CalculateLayout();
 			}
 			MarkDimensionChanged(false, true, true);//change LayoutContainer could cause LayoutSelf size change
 			MarkLayoutForRebuild(this);
@@ -2291,7 +2291,7 @@ void ULexWidget::UpdateLayout()
 	}
 	if (IsValid(LayoutContainer))
 	{
-		LayoutContainer->UpdateLayout();
+		LayoutContainer->CalculateLayout();
 	}
 }
 
@@ -2367,15 +2367,8 @@ void ULexWidget::UpdateVisual() const
 
 void ULexWidget::ForceUpdateLayout()
 {
-	if (IsValid(LayoutContainer))
-	{
-		LayoutContainer->UpdateLayout();
-	}
-	if (IsValid(LayoutSelf))
-	{
-		MarkLayoutDirty();
-		UpdateLayout();
-	}
+	MarkLayoutDirty();
+	UpdateLayout();
 }
 
 void ULexWidget::SetRenderCanvas(ULexCanvas* InNewCanvas)
@@ -2504,14 +2497,8 @@ void ULexWidget::CalculateWidgetActive_Recursive()
 				Widget->Call_WidgetActiveChanged();
 				//canvas update
 				Widget->MarkCanvasUpdate(true);
-				//tell parent layout
-				if (auto Parent = Widget->GetParent())
-				{
-					if (auto LayoutContainer = Parent->GetLayoutContainer())
-					{
-						Parent->MarkLayoutDirty();
-					}
-				}
+				//tell layout
+				MarkLayoutForRebuild(Widget);
 			}
 			for (auto& Child : Widget->GetChildren())
 			{
@@ -2860,7 +2847,6 @@ void ULexWidget::MarkLayoutForRebuild(ULexWidget* InWidget)
 	while (TargetWidget)
 	{
 		TargetWidget->MarkLayoutDirty();
-		TargetWidget->MarkCanvasUpdate(false);
 		if (auto ParentWidget = TargetWidget->GetParent())
 		{
 			if (auto LayoutContainer = ParentWidget->GetLayoutContainer())
@@ -2873,12 +2859,6 @@ void ULexWidget::MarkLayoutForRebuild(ULexWidget* InWidget)
 				TargetWidget = ParentWidget;
 				continue;
 			}
-			else
-			{
-				ParentWidget->MarkLayoutDirty();
-				ParentWidget->MarkCanvasUpdate(false);
-				break;
-			}
 		}
 		break;
 	}
@@ -2890,7 +2870,6 @@ void ULexWidget::ForceRebuildLayoutImmediately(ULexWidget* InWidget)
 	{
 		static void RebuildLayout(ULexWidget* InWidget)
 		{
-			InWidget->MarkLayoutDirty();
 			InWidget->UpdateLayout();
 			for (auto Child : InWidget->GetChildren())
 			{
@@ -2904,6 +2883,10 @@ void ULexWidget::ForceRebuildLayoutImmediately(ULexWidget* InWidget)
 void ULexWidget::MarkLayoutDirty()
 {
 	bLayoutDirty = true;
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(GetWorld()))
+	{
+		LexUIManager->AddLayoutDirtyWidget(this);
+	}
 }
 
 void ULexWidget::MarkClipDirty(bool InClipTypeChanged) const

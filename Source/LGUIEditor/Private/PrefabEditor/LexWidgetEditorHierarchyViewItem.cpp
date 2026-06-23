@@ -598,13 +598,15 @@ FReply SLexWidgetEditorHierarchyViewItem::HandleDragDetected(const FGeometry& My
 	if (DraggedItems.Num() > 0)
 	{
 		bool bAllCanDrag = true;
-		auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(Widget.Get());
-		for (auto Item : DraggedItems)
+		if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(Widget.Get()))
 		{
-			if (PrefabHelperObject->IsWidgetBelongsToSubPrefab(Item) && !PrefabHelperObject->IsSubPrefabRootWidget(Item))
+			for (auto Item : DraggedItems)
 			{
-				bAllCanDrag = false;
-				break;;
+				if (PrefabHelperObject->IsWidgetBelongsToSubPrefab(Item) && !PrefabHelperObject->IsSubPrefabRootWidget(Item))
+				{
+					bAllCanDrag = false;
+					break;
+				}
 			}
 		}
 		if (bAllCanDrag)

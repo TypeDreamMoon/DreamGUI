@@ -29,7 +29,7 @@ private:
 public:
 	virtual void OnTransformChanged() override;
 	virtual void OnDimensionChanged(bool InPivotChange, bool InWidthChange, bool InHeightChange) override;
-	virtual void UpdateLayout() override;
+	virtual void CalculateLayout() override;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual void PostInitProperties() override;

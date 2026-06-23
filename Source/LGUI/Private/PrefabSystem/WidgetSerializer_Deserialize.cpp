@@ -5,6 +5,7 @@
 #include "Engine/World.h"
 #include "LGUI.h"
 #include "Core/LexUIBehaviour.h"
+#include "Core/LexUIManager.h"
 #include "Core/LexUISettings.h"
 #include "Core/Components/LexWidget.h"
 #include "Serialization/MemoryReader.h"
@@ -280,12 +281,16 @@ namespace LexUIPrefabSystem
 
 		if (!bIsSubPrefab)
 		{
-			if (World->IsGameWorld() && World->HasBegunPlay())
+			if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(World))
 			{
-				for (int i = 0; i < AllWidgets.Num(); i++)
+				//originally I use World->HasBegunPlay to tell if the world has begun play but it not work well, the World->HasBegunPlay return false even i do LoadPrefab in BeginPlay
+				if (LexUIManager->HasBegunPlay())
 				{
-					auto& Widget = AllWidgets[i];
-					Widget->BeginPlay();
+					for (int i = 0; i < AllWidgets.Num(); i++)
+					{
+						auto& Widget = AllWidgets[i];
+						Widget->BeginPlay();
+					}
 				}
 			}
 		}

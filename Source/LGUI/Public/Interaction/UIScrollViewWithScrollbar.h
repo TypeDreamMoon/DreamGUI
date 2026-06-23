@@ -25,6 +25,11 @@ class LGUI_API UUIScrollViewWithScrollbar : public UUIScrollView
 
 public:
 	UUIScrollViewWithScrollbar();
+
+#if WITH_EDITOR
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
+	
 protected:
 	virtual void OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)override;
 private:

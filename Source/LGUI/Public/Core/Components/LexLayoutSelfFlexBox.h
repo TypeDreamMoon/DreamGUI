@@ -13,10 +13,9 @@ enum class ELexLayoutSizeType : uint8
 {
 	/**
 	 * Auto get size value with these roles:
-	 * 1. If parent widget have FlexBoxLayoutContainer and self enable Grow or Shrink, then size may set by FlexBoxLayoutContainer.
-	 * 2. If not 1, then get value from this widget's LayoutContainer.
-	 * 3. If not 2, then get value from this widget's Visual.
-	 * 4. If not 3, then fallback to Fixed.
+	 * 1. Get value from this widget's LayoutContainer.
+	 * 2. If not 1, then get value from this widget's Visual.
+	 * 3. If not 2, then fallback to Fixed.
 	 */
 	Auto,
 	/** Fixed pixel value */

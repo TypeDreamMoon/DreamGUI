@@ -271,7 +271,10 @@ void ULexCanvas::CheckRenderTargetUpdate()
 void ULexCanvas::OnRegister()
 {
 	Super::OnRegister();
-	ULexUIManagerWorldSubsystem::AddCanvas(this);
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(GetWorld()))
+	{
+		LexUIManager->AddCanvas(this);
+	}
 	if (DrawCallProcessingRunnable == nullptr)
 	{
 		DrawCallProcessingRunnable = MakeUnique<FLexCanvasDrawCallProcessingRunnable>();
@@ -304,7 +307,10 @@ void ULexCanvas::OnRegister()
 void ULexCanvas::OnUnregister()
 {
 	Super::OnUnregister();
-	ULexUIManagerWorldSubsystem::RemoveCanvas(this);
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(GetWorld()))
+	{
+		LexUIManager->RemoveCanvas(this);
+	}
 	ClearDrawCall();
 	if (IsValid(UIMesh))
 	{
@@ -1168,7 +1174,6 @@ void ULexCanvas::BatchDrawCallAsync(const FVector2D& InCanvasLeftBottom, const F
 
 DECLARE_CYCLE_STAT(TEXT("Canvas UpdateDrawCall"), STAT_UpdateDrawCall, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("Canvas CopyBatchMeshGeometry&UpdateMeshSection"), STAT_CopyBatchMeshGeometry, STATGROUP_LGUI);
-DECLARE_CYCLE_STAT(TEXT("Canvas UpdateLayout"), STAT_UpdateLayout, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("Canvas UpdateClipAndGeometry"), STAT_UpdateClipAndGeometry, STATGROUP_LGUI);
 void ULexCanvas::UpdateCanvasDrawCall()
 {
@@ -1228,18 +1233,7 @@ void ULexCanvas::UpdateCanvasDrawCall()
 			WidgetList.Reset();
 			LOCAL::CollectRenderWidget(GetWidget(), this, WidgetList);
 		}
-		//update layout
-		{
-			SCOPE_CYCLE_COUNTER(STAT_UpdateLayout)
-			for (int i = 0; i < WidgetList.Num(); i++)
-			{
-				auto& Widget = WidgetList[i];
-				if (Widget->GetWidgetActiveInHierarchy() && Widget->GetRenderCanvas() == this)
-				{
-					Widget->UpdateLayout();
-				}
-			}
-		}
+
 		CheckWidgetPropertyData();
 		WidgetPropertyDataAsTexture->PrepareForBatchUpdate();
 		//update clip and geometry from head to tail

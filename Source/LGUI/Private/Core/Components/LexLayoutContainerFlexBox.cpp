@@ -7,10 +7,9 @@
 
 DECLARE_CYCLE_STAT(TEXT("LexLayoutContainer FlexBox"), STAT_LexLayoutContainerFlexBox, STATGROUP_LGUI);
 
-void ULexLayoutContainerFlexBox::UpdateLayout()
+void ULexLayoutContainerFlexBox::CalculateLayout()
 {
     SCOPE_CYCLE_COUNTER(STAT_LexLayoutContainerFlexBox);
-    
     auto Widget = GetWidget();
     if (!Widget)return;
     

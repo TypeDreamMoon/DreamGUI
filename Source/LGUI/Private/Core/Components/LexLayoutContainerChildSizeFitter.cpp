@@ -46,7 +46,7 @@ void ULexLayoutContainerChildSizeFitter::OnDimensionChanged(bool InPivotChange, 
 {
 }
 
-void ULexLayoutContainerChildSizeFitter::UpdateLayout()
+void ULexLayoutContainerChildSizeFitter::CalculateLayout()
 {
 	CalculateSize();
 }

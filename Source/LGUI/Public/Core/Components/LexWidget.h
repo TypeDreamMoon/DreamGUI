@@ -243,11 +243,6 @@ public:
 	}
 	UFUNCTION(BlueprintCallable, Category = "LGUI", meta = (DeterminesOutputType = "InterfaceClass"))
 	ULexUIBehaviour* GetComponentByInterface(UClass* InterfaceClass)const;
-	// template<class T UE_REQUIRES(TIsIInterface<T>::Value)>
-	// T* GetComponentByInterface() const
-	// {
-	// 	return Cast<T>(GetComponentByInterface(T::UClassType::StaticClass()));
-	// }
 	template<class T>
 	T* GetComponentInParent(bool bIncludeSelf = false)const
 	{
@@ -801,7 +796,7 @@ private:
 	mutable uint32 bFlattenHierarchyIndexDirty : 1;
 	
 	void MarkClipDirty(bool InClipTypeChanged)const;
-	FORCEINLINE void MarkLayoutDirty();
+	void MarkLayoutDirty();
 	
 	/** find root UIItem of hierarchy */
 	void CheckRootWidget(ULexWidget* RootWidgetInParent = nullptr);

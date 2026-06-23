@@ -29,6 +29,10 @@ ULexWidgetPresenterComponent::ULexWidgetPresenterComponent()
 void ULexWidgetPresenterComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	if (GetWorld()->IsGameWorld())
+	{
+		LoadPrefab();//load prefab when BeginPlay in game mode
+	}
 }
 
 void ULexWidgetPresenterComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -39,7 +43,10 @@ void ULexWidgetPresenterComponent::EndPlay(const EEndPlayReason::Type EndPlayRea
 void ULexWidgetPresenterComponent::OnRegister()
 {
 	Super::OnRegister();
-	LoadPrefab();//load prefab when OnRegister in edit mode
+	if (!GetWorld()->IsGameWorld())
+	{
+		LoadPrefab();//load prefab when OnRegister in edit mode
+	}
 }
 
 void ULexWidgetPresenterComponent::OnUnregister()

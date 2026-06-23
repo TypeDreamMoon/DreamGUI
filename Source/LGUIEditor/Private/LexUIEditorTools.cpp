@@ -154,6 +154,11 @@ void FLexUIEditorTools::CreateWidget(TFunction<ULexWidget*()> GetSelectedWidgetF
 	auto NewWidget = NewObject<ULexWidget>(SelectedWidget->GetOuter(), ULexWidget::StaticClass(), NAME_None, RF_Public | RF_Transactional);
 	if (IsValid(NewWidget))
 	{
+		if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
+		{
+			PrefabHelperObject->Modify();
+			PrefabHelperObject->SetAnythingDirty();
+		}
 		NewWidget->SetDisplayName(Name);
 		NewWidget->OnRegister();
 		if (SelectedWidget != nullptr)
@@ -183,8 +188,7 @@ void FLexUIEditorTools::CreateUIControls(TFunction<ULexWidget*()> GetSelectedWid
 	ULexUISelection::GetInstance(SelectedWidget->GetWorld())->Modify();
 	if (auto Prefab = LoadObject<ULexUIPrefab>(NULL, *InPrefabPath))
 	{
-		auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget);
-		if (PrefabHelperObject != nullptr)
+		if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
 		{
 			PrefabHelperObject->Modify();
 			PrefabHelperObject->SetAnythingDirty();
@@ -441,8 +445,7 @@ void FLexUIEditorTools::DeleteWidgets(TFunction<TArray<ULexWidget*>()> GetSelect
 			Parent->SetFlags(RF_Public | RF_Transactional);
 			Parent->Modify();
 		}
-		auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(Widget);
-		if (PrefabHelperObject != nullptr)
+		if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(Widget))
 		{
 			PrefabHelperObject->Modify();
 			PrefabHelperObject->SetAnythingDirty();
@@ -809,8 +812,7 @@ void FLexUIEditorTools::UnpackPrefab(TFunction<ULexWidget*()> GetSelectedWidgetF
 	if (SelectedWidget == nullptr)return;
 	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return;
 	const FScopedTransaction Transaction(LOCTEXT("UnpackPrefab_Transaction", "LexUI UnpackPrefab"));
-	auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget);
-	if (PrefabHelperObject != nullptr)
+	if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
 	{
 		SelectedWidget->GetWorld()->Modify();
 		check(PrefabHelperObject->SubPrefabMap.Contains(SelectedWidget) || PrefabHelperObject->MissingPrefab.Contains(SelectedWidget));//should already filtered by menu
@@ -825,8 +827,7 @@ void FLexUIEditorTools::SelectPrefabAsset(TFunction<ULexWidget*()> GetSelectedWi
 	auto SelectedWidget = GetSelectedWidgetFunction();
 	if (SelectedWidget == nullptr)return;
 	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return;
-	auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget);
-	if (PrefabHelperObject != nullptr)
+	if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
 	{
 		check(PrefabHelperObject->SubPrefabMap.Contains(SelectedWidget));//should have being checked in Browse button
 		auto PrefabAsset = PrefabHelperObject->GetSubPrefabAsset(SelectedWidget);
@@ -862,8 +863,7 @@ void FLexUIEditorTools::OpenPrefabAsset(TFunction<ULexWidget*()> GetSelectedWidg
 	auto SelectedWidget = GetSelectedWidgetFunction();
 	if (SelectedWidget == nullptr)return;
 	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return;
-	auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget);
-	if (PrefabHelperObject != nullptr)
+	if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
 	{
 		check(PrefabHelperObject->SubPrefabMap.Contains(SelectedWidget));//should have being check in menu
 		auto PrefabAsset = PrefabHelperObject->GetSubPrefabAsset(SelectedWidget);

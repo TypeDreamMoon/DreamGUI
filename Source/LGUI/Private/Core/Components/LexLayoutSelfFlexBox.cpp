@@ -12,9 +12,9 @@ float FLexLayoutSize::Calculate(ULexWidget* Widget, bool IsVertical) const
         switch (Type)
         {
         case ELexLayoutSizeType::Auto:
-            if (auto Layout = Widget->GetLayoutContainer())
+            if (auto LayoutContainer = Widget->GetLayoutContainer())
             {
-                auto LayoutPreferredSize = Layout->GetLayoutPreferredSize();
+                auto LayoutPreferredSize = LayoutContainer->GetLayoutPreferredSize();
                 return IsVertical ? LayoutPreferredSize.Y : LayoutPreferredSize.X;
             }
             if (auto Visual = Widget->GetVisual())

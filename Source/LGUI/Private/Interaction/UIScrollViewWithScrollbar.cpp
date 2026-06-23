@@ -11,6 +11,13 @@ UUIScrollViewWithScrollbar::UUIScrollViewWithScrollbar()
 	
 }
 
+#if WITH_EDITOR
+void UUIScrollViewWithScrollbar::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+}
+#endif
+
 void UUIScrollViewWithScrollbar::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
 	Super::OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
@@ -135,25 +142,32 @@ void UUIScrollViewWithScrollbar::CalculateHorizontalRange()
 	{
 		auto ParentWidth = ContentParent->GetWidth();
 		auto ContentWidth = Content->GetWidth();
+		bool ShouldScrollbarActive = true;
 		if (ParentWidth >= ContentWidth)
 		{
-			if (HorizontalScrollbarVisibility != ELexUIScrollViewScrollbarVisibility::Permanent)
+			if (HorizontalScrollbarVisibility == ELexUIScrollViewScrollbarVisibility::Permanent)
 			{
-				if (HorizontalScrollbarWidget.IsValid())
-				{
-					HorizontalScrollbarWidget->SetWidgetActive(false);
-				}
+				ShouldScrollbarActive = true;
+			}
+			else
+			{
+				ShouldScrollbarActive = false;
 			}
 		}
 		else
 		{
-			if (HorizontalScrollbarVisibility != ELexUIScrollViewScrollbarVisibility::Permanent)
+			if (HorizontalScrollbarVisibility == ELexUIScrollViewScrollbarVisibility::Permanent)
 			{
-				if (HorizontalScrollbarWidget.IsValid())
-				{
-					HorizontalScrollbarWidget->SetWidgetActive(true);
-				}
+				ShouldScrollbarActive = true;
 			}
+			else
+			{
+				ShouldScrollbarActive = true;
+			}
+		}
+		if (HorizontalScrollbarWidget.IsValid())
+		{
+			HorizontalScrollbarWidget->SetWidgetActive(ShouldScrollbarActive);
 		}
 		if (HorizontalScrollbar.IsValid())
 		{
@@ -168,25 +182,32 @@ void UUIScrollViewWithScrollbar::CalculateVerticalRange()
 	{
 		auto ParentHeight = ContentParent->GetHeight();
 		auto ContentHeight = Content->GetHeight();
+		bool ShouldScrollbarActive = true;
 		if (ParentHeight >= ContentHeight)
 		{
-			if (VerticalScrollbarVisibility != ELexUIScrollViewScrollbarVisibility::Permanent)
+			if (VerticalScrollbarVisibility == ELexUIScrollViewScrollbarVisibility::Permanent)
 			{
-				if (VerticalScrollbarWidget.IsValid())
-				{
-					VerticalScrollbarWidget->SetWidgetActive(false);
-				}
+				ShouldScrollbarActive = true;
+			}
+			else
+			{
+				ShouldScrollbarActive = false;
 			}
 		}
 		else
 		{
-			if (VerticalScrollbarVisibility != ELexUIScrollViewScrollbarVisibility::Permanent)
+			if (VerticalScrollbarVisibility == ELexUIScrollViewScrollbarVisibility::Permanent)
 			{
-				if (VerticalScrollbarWidget.IsValid())
-				{
-					VerticalScrollbarWidget->SetWidgetActive(true);
-				}
+				ShouldScrollbarActive = true;
 			}
+			else
+			{
+				ShouldScrollbarActive = true;
+			}
+		}
+		if (VerticalScrollbarWidget.IsValid())
+		{
+			VerticalScrollbarWidget->SetWidgetActive(ShouldScrollbarActive);
 		}
 		if (VerticalScrollbar.IsValid())
 		{

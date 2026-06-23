@@ -944,6 +944,7 @@ TArray<ULexUIManagerWorldSubsystem*> ULexUIManagerWorldSubsystem::InstanceArray;
 
 DECLARE_CYCLE_STAT(TEXT("LexUIBehaviour Tick"), STAT_LexUIBehaviourTick, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("LexUIBehaviour Start"), STAT_LexUIBehaviourStart, STATGROUP_LGUI);
+DECLARE_CYCLE_STAT(TEXT("UpdateLayout"), STAT_UpdateLayout, STATGROUP_LGUI);
 
 void ULexUIManagerWorldSubsystem::Tick(float DeltaTime)
 {
@@ -1038,6 +1039,21 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 			}
 			LexUIBehavioursNeedToRemoveFromTick.Reset();
 		}
+	}
+
+	//update layout
+	{
+		SCOPE_CYCLE_COUNTER(STAT_UpdateLayout);
+		//since widget is added from tail to head, so we iterate from tail to head to make sure parent widget is updated before child widget
+		for (int i = LayoutDirtyWidgetArray.Num() - 1; i >= 0; i--)
+		{
+			auto& Widget = LayoutDirtyWidgetArray[i];
+			if (Widget.IsValid() && Widget->GetWidgetActiveInHierarchy())
+			{
+				Widget->UpdateLayout();
+			}
+		}
+		LayoutDirtyWidgetArray.Reset();
 	}
 
 #if WITH_EDITOR
@@ -1374,32 +1390,26 @@ void ULexUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 
 void ULexUIManagerWorldSubsystem::AddCanvas(ULexCanvas* InCanvas)
 {
-	if (auto Instance = GetInstance(InCanvas->GetWorld()))
-	{
 #if !UE_BUILD_SHIPPING
-		if (Instance->AllCanvasArray.Contains(InCanvas))
-		{
-			UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
-		}
-#endif
-		Instance->AllCanvasArray.AddUnique(InCanvas);
+	if (this->AllCanvasArray.Contains(InCanvas))
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
 	}
+#endif
+	this->AllCanvasArray.AddUnique(InCanvas);
 }
 
 void ULexUIManagerWorldSubsystem::RemoveCanvas(ULexCanvas* InCanvas)
 {
-	if (auto Instance = GetInstance(InCanvas->GetWorld()))
-	{
 #if !UE_BUILD_SHIPPING
-		if (!Instance->AllCanvasArray.Contains(InCanvas))
-		{
-			UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-			FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
-		}
-#endif
-		Instance->AllCanvasArray.RemoveSingle(InCanvas);
+	if (!this->AllCanvasArray.Contains(InCanvas))
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		FDebug::DumpStackTraceToLog(ELogVerbosity::Warning);
 	}
+#endif
+	this->AllCanvasArray.RemoveSingle(InCanvas);
 }
 
 void ULexUIManagerWorldSubsystem::AddWidget(ULexWidget* InWidget)
@@ -1424,6 +1434,16 @@ void ULexUIManagerWorldSubsystem::RemoveWidget(ULexWidget* InWidget)
 	}
 #endif
 	AllWidgetArray.RemoveSingle(InWidget);
+}
+
+void ULexUIManagerWorldSubsystem::AddLayoutDirtyWidget(ULexWidget* InWidget)
+{
+	LayoutDirtyWidgetArray.AddUnique(InWidget);
+}
+
+void ULexUIManagerWorldSubsystem::RemoveLayoutDirtyWidget(ULexWidget* InWidget)
+{
+	LayoutDirtyWidgetArray.Remove(InWidget);
 }
 
 TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> ULexUIManagerWorldSubsystem::GetViewExtension(UWorld* InWorld, bool InCreateIfNotExist)

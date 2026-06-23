@@ -91,8 +91,6 @@ void UUISelectable::OnRegister()
 {
 	Super::OnRegister();
 	ULexUIManagerWorldSubsystem::AddSelectable(this);
-	CurrentSelectionState = GetSelectionState();
-	ApplyPointerSelectionState(true);
 }
 void UUISelectable::OnUnregister()
 {

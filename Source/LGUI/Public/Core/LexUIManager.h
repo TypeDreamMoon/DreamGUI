@@ -120,6 +120,7 @@ public:
 #endif
 	void SubmitCanvasDrawCall();
 	virtual bool IsTickableWhenPaused() const override;
+	bool HasBegunPlay()const{return bHasCalledBeginPlay;}
 
 	static ULexUIManagerWorldSubsystem* GetInstance(UWorld* InWorld);
 #if WITH_EDITOR
@@ -163,6 +164,10 @@ private:
 		TArray<TWeakObjectPtr<ULexUIBehaviour>> LexUIBehavioursForTick;
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 		TArray<TWeakObjectPtr<ULexUIBehaviour>> LexUIBehavioursForStart;
+
+	UPROPERTY(VisibleAnywhere, Category = "LGUI")
+	TArray<TWeakObjectPtr<ULexWidget>> LayoutDirtyWidgetArray;
+	
 	bool bIsExecutingStart = false;
 	bool bIsExecutingTick = false;
 	int32 CurrentExecutingTickIndex = -1;
@@ -180,20 +185,23 @@ public:
 	static void RefreshAllUI(UWorld* InWorld = nullptr);
 	FSimpleMulticastDelegate EventOnOutlineChanged;
 #endif
-	static void AddCanvas(ULexCanvas* InCanvas);
-	static void RemoveCanvas(ULexCanvas* InCanvas);
+	
+	const TArray<TWeakObjectPtr<ULexCanvas>>& GetAllCanvasArray()const{return AllCanvasArray;}
+	void AddCanvas(ULexCanvas* InCanvas);
+	void RemoveCanvas(ULexCanvas* InCanvas);
+	TArray<ULexCanvas*> GetCanvasArrayByRenderMode(ELexRenderMode RenderMode)const;
 
+	const TArray<TObjectPtr<ULexWidget>>& GetAllWidgetArray()const{return AllWidgetArray;}
 	void AddWidget(ULexWidget* InWidget);
 	void RemoveWidget(ULexWidget* InWidget);
+
+	void AddLayoutDirtyWidget(ULexWidget* InWidget);
+	void RemoveLayoutDirtyWidget(ULexWidget* InWidget);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	static void RegisterLexUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	static void UnregisterLexUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem);
-
-	TArray<ULexCanvas*> GetCanvasArrayByRenderMode(ELexRenderMode RenderMode)const;
-	const TArray<TWeakObjectPtr<ULexCanvas>>& GetAllCanvasArray()const{return AllCanvasArray;}
-	const TArray<TObjectPtr<ULexWidget>>& GetAllWidgetArray()const{return AllWidgetArray;}
 
 	static TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> GetViewExtension(UWorld* InWorld, bool InCreateIfNotExist);
 
