@@ -56,7 +56,7 @@ void UUIToggle::Start()
 	{
 		ToggleGroup->SetSelection(this);//if default is selected, set to group
 	}
-	ApplyValueToUI(true);
+	ApplyValueToVisual(true);
 }
 
 void UUIToggle::OnDestroy()
@@ -77,7 +77,7 @@ void UUIToggle::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 		auto PropertyName = Property->GetFName();
 		if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIToggle, bIsOn))
 		{
-			ApplyValueToUI(true);
+			ApplyValueToVisual(true);
 		}
 	}
 }
@@ -123,10 +123,10 @@ void UUIToggle::SetValue(bool Value, bool SendCallback)
 			OnValueChanged.FireEvent(bIsOn);
 		}
 
-		ApplyValueToUI(false);
+		ApplyValueToVisual(false);
 	}
 }
-void UUIToggle::ApplyValueToUI(bool immediateSet)
+void UUIToggle::ApplyValueToVisual(bool immediateSet)
 {
 	if (!CheckTarget())return;
 	if (ToggleTransitionType != EUISelectableTransitionType::Custom)

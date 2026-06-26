@@ -29,7 +29,6 @@ ULexWidget::ULexWidget()
 	bCacheAnchorOffsetLeftDirty = true;
 	bCacheAnchorOffsetRightDirty = true;
 
-	bLayoutDirty = true;
 	bClipDirty = true;
 	bNeedRecreateClip = true;
 }
@@ -260,9 +259,9 @@ void ULexWidget::SetAsLastSibling()
 	}
 }
 
-FString ULexWidget::GetPathDisplayName() const
+FString ULexWidget::GetPathDisplayName(const UObject* StopOuter) const
 {
-	auto OuterPathName = GetOuter()->GetPathName();
+	auto OuterPathName = GetOuter()->GetPathName(StopOuter);
 	TStringBuilder<256> Result;
 	Result.Append(OuterPathName);
 	Result.AppendChar('/');
@@ -404,7 +403,6 @@ void ULexWidget::MarkAllDirtyRecursive()
 void ULexWidget::MarkAllDirty()
 {
 	bFlattenHierarchyIndexDirty = true;
-	bLayoutDirty = true;
 	bClipDirty = true;
 
 	bCacheWidthDirty = true;
@@ -446,12 +444,13 @@ void ULexWidget::BeginDestroy()
 	if (bHasBegunPlay || bIsRegistered)
 	{
 		check(0);
-		auto WorldName = this->GetWorld() ? this->GetWorld()->GetName() : TEXT("null");
-		auto Manager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld());
+		auto World = this->GetWorld();
+		auto WorldName = World ? World->GetName() : TEXT("null");
+		auto Manager = ULexUIManagerWorldSubsystem::GetInstance(World);
 		auto ManagerName = Manager ? Manager->GetName() : TEXT("null");
 
-		UE_LOG(LGUI, Error, TEXT("ULexWidget %s is not properly destroyed! Missing DestroyWidget call. World:%s, Manager:%s. Auto cleanup in BeginDestroy."),
-			*GetPathDisplayName(), *WorldName, *ManagerName);
+		UE_LOG(LGUI, Error, TEXT("ULexWidget %s is not properly destroyed! Missing DestroyWidget call. World:%s, WorldType:%d, Manager:%s. Auto cleanup in BeginDestroy."),
+			*GetPathDisplayName(), *WorldName, World ? World->WorldType : -1, *ManagerName);
 
 		if (GEngine)
 		{
@@ -540,7 +539,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		)
 		{
 			this->MarkAnchorDataChanged(true, true, true);
-			MarkLayoutForRebuild(this);
+			this->MarkLayoutForRebuild(this);
 			this->MarkClipDirty(false);
 		}
 		else if (MemberName == ClippingName)
@@ -601,7 +600,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 				}
 				LayoutSelf->Call_OnRegister();
 				
-				MarkLayoutDirty();
+				MarkWidgetLayoutDirty();
 				UpdateLayout();
 			}
 		}
@@ -1633,7 +1632,10 @@ void ULexWidget::SetPivot(FVector2D Value)
 		bCacheAnchorOffsetBottomDirty = true;
 		bCacheAnchorOffsetTopDirty = true;
 		MarkAnchorDataChanged(true, false, false, false);
-		MarkLayoutForRebuild(this);
+		if (Parent.IsValid() && Parent->GetLayoutContainer())//only position change, if parent contains LayoutContainer then we should rebuild layout, otherwise not
+		{
+			MarkLayoutForRebuild(this);
+		}
 	}
 }
 
@@ -1651,25 +1653,19 @@ void ULexWidget::SetAnchorMin(FVector2D Value)
 			//SetAnchorLeft
 			{
 				auto CurrentRight = this->GetAnchorOffsetRight();
-				CacheWidth = this->Parent->GetWidth() * (this->AnchorData.AnchorMax.X - this->AnchorData.AnchorMin.X) - CurrentRight - CurrentLeft;
+				CacheWidth = -CurrentRight - CurrentLeft;
 				//SetWidth
-				{
-					auto CalculatedSizeDeltaX = CacheWidth - (Parent->GetWidth() * (AnchorData.AnchorMax.X - AnchorData.AnchorMin.X));
-					AnchorData.SizeDelta.X = CalculatedSizeDeltaX;
-				}
-				this->AnchorData.AnchoredPosition.X = FMath::Lerp(CurrentLeft, -CurrentRight, this->AnchorData.Pivot.X);
+				AnchorData.SizeDelta.X = CacheWidth;
+				this->AnchorData.AnchoredPosition.X = CurrentLeft + CacheWidth * this->AnchorData.Pivot.X;
 			}
 
 			//SetAnchorBottom
 			{
 				auto CurrentTop = this->GetAnchorOffsetTop();
-				CacheHeight = this->Parent->GetHeight() * (this->AnchorData.AnchorMax.Y - this->AnchorData.AnchorMin.Y) - CurrentTop - CurrentBottom;
+				CacheHeight = -CurrentTop - CurrentBottom;
 				//SetHeight
-				{
-					auto CalculatedSizeDeltaY = CacheHeight - (Parent->GetHeight() * (AnchorData.AnchorMax.Y - AnchorData.AnchorMin.Y));
-					AnchorData.SizeDelta.Y = CalculatedSizeDeltaY;
-				}
-				this->AnchorData.AnchoredPosition.Y = FMath::Lerp(CurrentBottom, -CurrentTop, this->AnchorData.Pivot.Y);
+				AnchorData.SizeDelta.Y = CacheHeight;
+				this->AnchorData.AnchoredPosition.Y = CurrentBottom + CacheHeight * this->AnchorData.Pivot.Y;
 			}
 
 			MarkAnchorDataChanged(false, true, true, false);
@@ -1695,24 +1691,18 @@ void ULexWidget::SetAnchorMax(FVector2D Value)
 			//SetAnchorRight
 			{
 				auto CurrentLeft = this->GetAnchorOffsetLeft();
-				CacheWidth = this->Parent->GetWidth() * (this->AnchorData.AnchorMax.X - this->AnchorData.AnchorMin.X) - CurrentRight - CurrentLeft;
+				CacheWidth = -CurrentRight - CurrentLeft;
 				//SetWidth
-				{
-					auto CalculatedSizeDeltaX = CacheWidth - (Parent->GetWidth() * (AnchorData.AnchorMax.X - AnchorData.AnchorMin.X));
-					AnchorData.SizeDelta.X = CalculatedSizeDeltaX;
-				}
-				this->AnchorData.AnchoredPosition.X = FMath::Lerp(CurrentLeft, -CurrentRight, this->AnchorData.Pivot.X);
+				AnchorData.SizeDelta.X = CacheWidth;
+				this->AnchorData.AnchoredPosition.X = CurrentLeft + CacheWidth * this->AnchorData.Pivot.X;
 			}
 			//SetAnchorTop
 			{
 				auto CurrentBottom = this->GetAnchorOffsetBottom();
-				CacheHeight = this->Parent->GetHeight() * (this->AnchorData.AnchorMax.Y - this->AnchorData.AnchorMin.Y) - CurrentTop - CurrentBottom;
+				CacheHeight = -CurrentTop - CurrentBottom;
 				//SetHeight
-				{
-					auto CalculatedSizeDeltaY = CacheHeight - (Parent->GetHeight() * (AnchorData.AnchorMax.Y - AnchorData.AnchorMin.Y));
-					AnchorData.SizeDelta.Y = CalculatedSizeDeltaY;
-				}
-				this->AnchorData.AnchoredPosition.Y = FMath::Lerp(CurrentBottom, -CurrentTop, this->AnchorData.Pivot.Y);
+				AnchorData.SizeDelta.Y = CacheHeight;
+				this->AnchorData.AnchoredPosition.Y = CurrentBottom + CacheHeight * this->AnchorData.Pivot.Y;
 			}
 
 			MarkAnchorDataChanged(false, true, true, false);
@@ -1722,6 +1712,44 @@ void ULexWidget::SetAnchorMax(FVector2D Value)
 	else
 	{
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if LexWidget have parent! %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName());
+	}
+}
+
+void ULexWidget::SetAnchorOffset(FMargin Value)
+{
+	if (this->Parent.IsValid())
+	{
+		bool bWidthChange = CacheAnchorOffsetLeft != Value.Left || CacheAnchorOffsetRight != Value.Right;
+		bool bHeightChange = CacheAnchorOffsetBottom != Value.Bottom || CacheAnchorOffsetTop != Value.Top;
+		if (bCacheAnchorOffsetLeftDirty || bCacheAnchorOffsetRightDirty || bWidthChange || bHeightChange)
+		{
+			bCacheAnchorOffsetLeftDirty = false;
+			bCacheAnchorOffsetRightDirty = false;
+			bCacheAnchorOffsetBottomDirty = false;
+			bCacheAnchorOffsetTopDirty = false;
+			CacheAnchorOffsetLeft = Value.Left;
+			CacheAnchorOffsetRight = Value.Right;
+			CacheAnchorOffsetBottom = Value.Bottom;
+			CacheAnchorOffsetTop = Value.Top;
+			
+			CacheWidth = -Value.Right - Value.Left;
+			//SetWidth
+			AnchorData.SizeDelta.X = CacheWidth;
+			AnchorData.AnchoredPosition.X = Value.Left + CacheWidth * AnchorData.Pivot.X;
+
+			CacheHeight = -Value.Top - Value.Bottom;
+			//SetHeight
+			AnchorData.SizeDelta.Y = CacheHeight;
+			AnchorData.AnchoredPosition.Y = Value.Bottom + CacheHeight * AnchorData.Pivot.Y;
+			
+			MarkAnchorDataChanged(false, bWidthChange, bHeightChange, false);
+			MarkLayoutForRebuild(this);
+		}
+		bCacheAnchorOffsetLeftDirty = false;
+	}
+	else
+	{
+		UE_LOG(LGUI, Warning, TEXT("[%s].%d This function only valid if LexWidget have parent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__)
 	}
 }
 
@@ -1854,7 +1882,10 @@ void ULexWidget::SetAnchoredPosition(FVector2D Value)
 		bCacheAnchorOffsetLeftDirty = true;
 		bCacheAnchorOffsetRightDirty = true;
 		MarkAnchorDataChanged(false, false, false, false);
-		MarkLayoutForRebuild(this);
+		if (Parent.IsValid() && Parent->GetLayoutContainer())//only position change, if parent contains LayoutContainer then we should rebuild layout, otherwise not
+		{
+			MarkLayoutForRebuild(this);
+		}
 	}
 }
 
@@ -1866,7 +1897,10 @@ void ULexWidget::SetHorizontalAnchoredPosition(float Value)
 		bCacheAnchorOffsetLeftDirty = true;
 		bCacheAnchorOffsetRightDirty = true;
 		MarkAnchorDataChanged(false, false, false, false);
-		MarkLayoutForRebuild(this);
+		if (Parent.IsValid() && Parent->GetLayoutContainer())//only position change, if parent contains LayoutContainer then we should rebuild layout, otherwise not
+		{
+			MarkLayoutForRebuild(this);
+		}
 	}
 }
 void ULexWidget::SetVerticalAnchoredPosition(float Value)
@@ -1877,7 +1911,10 @@ void ULexWidget::SetVerticalAnchoredPosition(float Value)
 		bCacheAnchorOffsetBottomDirty = true;
 		bCacheAnchorOffsetTopDirty = true;
 		MarkAnchorDataChanged(false, false, false, false);
-		MarkLayoutForRebuild(this);
+		if (Parent.IsValid() && Parent->GetLayoutContainer())//only position change, if parent contains LayoutContainer then we should rebuild layout, otherwise not
+		{
+			MarkLayoutForRebuild(this);
+		}
 	}
 }
 
@@ -1904,13 +1941,7 @@ float ULexWidget::GetAnchorOffsetLeft()const
 		bCacheAnchorOffsetLeftDirty = false;
 		if (this->Parent.IsValid())
 		{
-			CacheAnchorOffsetLeft =
-				this->GetLocalSpaceLeft()//local space left
-				+ this->GetRelativeLocation().Y//convert to parent space
-				-
-				(this->Parent->GetLocalSpaceLeft()//parent space left
-					+ this->Parent->GetWidth() * this->AnchorData.AnchorMin.X)//to parent anchor min point
-				;
+			CacheAnchorOffsetLeft = this->AnchorData.AnchoredPosition.X - this->AnchorData.SizeDelta.X * this->AnchorData.Pivot.X;
 		}
 		else
 		{
@@ -1926,15 +1957,7 @@ float ULexWidget::GetAnchorOffsetTop()const
 		bCacheAnchorOffsetTopDirty = false;
 		if (this->Parent.IsValid())
 		{
-			CacheAnchorOffsetTop =
-				-(
-					this->GetLocalSpaceTop()
-					+ this->GetRelativeLocation().Z
-					-
-					(this->Parent->GetLocalSpaceTop()
-						- this->Parent->GetHeight() * (1.0f - this->AnchorData.AnchorMax.Y))
-					)
-				;
+			CacheAnchorOffsetTop = this->AnchorData.AnchoredPosition.Y + this->AnchorData.SizeDelta.Y * (1.0f - this->AnchorData.Pivot.Y);
 		}
 		else
 		{
@@ -1950,15 +1973,7 @@ float ULexWidget::GetAnchorOffsetRight()const
 		bCacheAnchorOffsetRightDirty = false;
 		if (this->Parent.IsValid())
 		{
-			CacheAnchorOffsetRight =
-				-(
-					this->GetLocalSpaceRight()
-					+ this->GetRelativeLocation().Y
-					-
-					(this->Parent->GetLocalSpaceRight()
-						- this->Parent->GetWidth() * (1.0f - this->AnchorData.AnchorMax.X))
-					)
-				;
+			CacheAnchorOffsetRight = this->AnchorData.AnchoredPosition.X + this->AnchorData.SizeDelta.X * (1.0f - this->AnchorData.Pivot.X);
 		}
 		else
 		{
@@ -1974,13 +1989,7 @@ float ULexWidget::GetAnchorOffsetBottom()const
 		bCacheAnchorOffsetBottomDirty = false;
 		if (this->Parent.IsValid())
 		{
-			CacheAnchorOffsetBottom =
-				this->GetLocalSpaceBottom()
-				+ this->GetRelativeLocation().Z
-				-
-				(this->Parent->GetLocalSpaceBottom()
-					+ this->Parent->GetHeight() * this->AnchorData.AnchorMin.Y)
-				;
+			CacheAnchorOffsetBottom = this->AnchorData.AnchoredPosition.Y - this->AnchorData.SizeDelta.Y * this->AnchorData.Pivot.Y;
 		}
 		else
 		{
@@ -1988,6 +1997,16 @@ float ULexWidget::GetAnchorOffsetBottom()const
 		}
 	}
 	return CacheAnchorOffsetBottom;
+}
+
+FMargin ULexWidget::GetAnchorOffset() const
+{
+	return FMargin(
+		this->GetAnchorOffsetLeft(),
+		this->GetAnchorOffsetTop(),
+		this->GetAnchorOffsetRight(),
+		this->GetAnchorOffsetBottom()
+	);
 }
 
 void ULexWidget::SetAnchorOffsetLeft(float Value)
@@ -2282,9 +2301,6 @@ void ULexWidget::UnregisterRenderCanvas()
 
 void ULexWidget::UpdateLayout()
 {
-	if (!bLayoutDirty)return;
-	bLayoutDirty = false;
-
 	if (IsValid(LayoutSelf))
 	{
 		LayoutSelf->CalculateSize();
@@ -2367,7 +2383,7 @@ void ULexWidget::UpdateVisual() const
 
 void ULexWidget::ForceUpdateLayout()
 {
-	MarkLayoutDirty();
+	MarkWidgetLayoutDirty();
 	UpdateLayout();
 }
 
@@ -2427,7 +2443,6 @@ void ULexWidget::OnHierarchyAttachmentChanged(ULexCanvas* ParentRenderCanvas, UL
 	//flatten hierarchy index
 	MarkFlattenHierarchyIndexDirty();
 
-	//if (this->IsRegistered())//not register means could be load from level
 	{
 		bCacheWidthDirty = true;
 		bCacheHeightDirty = true;
@@ -2719,32 +2734,28 @@ void ULexWidget::MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged,
 		bCacheAnchorOffsetTopDirty = true;
 	}
 	MarkDimensionChanged(InPivotChanged, InWidthChanged, InHeightChanged);
-	if (IsValid(LayoutContainer) || IsValid(LayoutSelf))
+
+	if (!InPropagateToChildren)return;
+	for (auto& Child : GetChildren())
 	{
-		this->MarkLayoutDirty();
-		if (!InPropagateToChildren)return;
-		for (auto& Child : GetChildren())
+		if (!IsValid(Child))continue;
+		bool ChildWidthChange = false, ChildHeightChange = false;
+		if (InWidthChanged && Child->AnchorData.IsHorizontalStretched())
 		{
-			if (!IsValid(Child))continue;
-			Child->MarkAnchorDataChanged(InPivotChanged, InWidthChanged, InHeightChanged);
+			ChildWidthChange = true;
 		}
-	}
-	else
-	{
-		if (!InPropagateToChildren)return;
-		for (auto& Child : GetChildren())
+		if (InHeightChanged && Child->AnchorData.IsVerticalStretched())
 		{
-			if (!IsValid(Child))continue;
-			bool ChildWidthChange = false, ChildHeightChange = false;
-			if (InWidthChanged && Child->AnchorData.IsHorizontalStretched())
-			{
-				ChildWidthChange = true;
-			}
-			if (InHeightChanged && Child->AnchorData.IsVerticalStretched())
-			{
-				ChildHeightChange = true;
-			}
-			Child->MarkAnchorDataChanged(false, ChildWidthChange, ChildHeightChange);
+			ChildHeightChange = true;
+		}
+		Child->MarkAnchorDataChanged(false, ChildWidthChange, ChildHeightChange);
+
+		//check if child need layout rebuild, the widget self is already marked outside of this function
+		if (ChildWidthChange || ChildHeightChange//parent size change may cause child layout change
+			|| ((InWidthChanged || InHeightChanged) && this->GetLayoutContainer() && Child->GetLayoutSelf())//parent size changed and parent can affect child layout, need calculate child layout
+			)
+		{
+			MarkLayoutForRebuild(Child);
 		}
 	}
 }
@@ -2846,15 +2857,18 @@ void ULexWidget::MarkLayoutForRebuild(ULexWidget* InWidget)
 	//move up, find if parent widget affect by layout then mark dirty
 	while (TargetWidget)
 	{
-		TargetWidget->MarkLayoutDirty();
+		if (auto LayoutContainer = TargetWidget->GetLayoutContainer())
+		{
+			LayoutContainer->MarkLayoutDirty();
+		}
+		if (auto LayoutSelf = TargetWidget->GetLayoutSelf())
+		{
+			LayoutSelf->MarkLayoutDirty();
+		}
+		
 		if (auto ParentWidget = TargetWidget->GetParent())
 		{
-			if (auto LayoutContainer = ParentWidget->GetLayoutContainer())
-			{
-				TargetWidget = ParentWidget;
-				continue;
-			}
-			if (auto LayoutSelf = ParentWidget->GetLayoutSelf())
+			if (auto LayoutContainer = ParentWidget->GetLayoutContainer())//parent contains LayoutContainer, need calculate layout
 			{
 				TargetWidget = ParentWidget;
 				continue;
@@ -2862,6 +2876,7 @@ void ULexWidget::MarkLayoutForRebuild(ULexWidget* InWidget)
 		}
 		break;
 	}
+	TargetWidget->MarkWidgetLayoutDirty();
 }
 
 void ULexWidget::ForceRebuildLayoutImmediately(ULexWidget* InWidget)
@@ -2880,9 +2895,8 @@ void ULexWidget::ForceRebuildLayoutImmediately(ULexWidget* InWidget)
 	LOCAL::RebuildLayout(InWidget);
 }
 
-void ULexWidget::MarkLayoutDirty()
+void ULexWidget::MarkWidgetLayoutDirty()
 {
-	bLayoutDirty = true;
 	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(GetWorld()))
 	{
 		LexUIManager->AddLayoutDirtyWidget(this);

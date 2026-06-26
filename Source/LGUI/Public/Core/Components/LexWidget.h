@@ -307,7 +307,7 @@ public:
 	/** Called by LexCanvas, when LexCanvas is unregistered on self actor */
 	void UnregisterRenderCanvas();
 
-	/** Called by LexCanvas to update layout */
+	/** Update layout */
 	void UpdateLayout();
 	/** Called by LexCanvas */
 	void UpdateClip(ULexUIDataAsTexture* ClipDataTexture, TArray<TSharedPtr<FLexUIClipData>>& ClipDataList);
@@ -404,6 +404,8 @@ public:
 		float GetAnchorOffsetRight()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
 		float GetAnchorOffsetBottom()const;
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+	FMargin GetAnchorOffset()const;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
 		void SetAnchorData(const FLexUIAnchorData& Value);
@@ -414,6 +416,8 @@ public:
 		void SetAnchorMin(FVector2D Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
 		void SetAnchorMax(FVector2D Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
+	void SetAnchorOffset(FMargin Value);
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-AnchorData")
 		void SetHorizontalAndVerticalAnchorMinMax(FVector2D MinValue, FVector2D MaxValue, bool bKeepSize, bool bKeepRelativeLocation);
@@ -721,7 +725,7 @@ private:
 		FString DisplayName;
 public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-	FString GetPathDisplayName()const;
+	FString GetPathDisplayName(const UObject* StopOuter = nullptr)const;
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		const FString& GetDisplayName()const { return DisplayName; }
 	UFUNCTION(BlueprintCallable, Category = LGUI)
@@ -781,7 +785,6 @@ private:
 	/** is this widget contains LexCanvas component */
 	mutable uint32 bIsCanvasWidget:1;
 	
-	uint32 bLayoutDirty : 1 = true;
 	mutable uint32 bClipDirty : 1 = true;
 	mutable uint32 bNeedRecreateClip : 1 = true;
 	
@@ -796,7 +799,7 @@ private:
 	mutable uint32 bFlattenHierarchyIndexDirty : 1;
 	
 	void MarkClipDirty(bool InClipTypeChanged)const;
-	void MarkLayoutDirty();
+	void MarkWidgetLayoutDirty();
 	
 	/** find root UIItem of hierarchy */
 	void CheckRootWidget(ULexWidget* RootWidgetInParent = nullptr);

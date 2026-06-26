@@ -11,7 +11,7 @@ void UUISlider::Awake()
 void UUISlider::Start()
 {
     Super::Start();
-    ApplyValueToUI();
+    ApplyValueToVisual();
 }
 
 bool UUISlider::CheckFill()
@@ -48,14 +48,14 @@ void UUISlider::PostEditChangeProperty(FPropertyChangedEvent &PropertyChangedEve
     Value = FMath::Clamp(Value, MinValue, MaxValue);
     HandleArea = nullptr;//force re-check
     FillArea = nullptr;//force re-check
-    ApplyValueToUI();
+    ApplyValueToVisual();
 }
 #endif
 
 void UUISlider::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
     Super::OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
-    ApplyValueToUI();
+    ApplyValueToVisual();
 }
 
 void UUISlider::SetValue(float InValue, bool FireEvent)
@@ -64,7 +64,7 @@ void UUISlider::SetValue(float InValue, bool FireEvent)
     if (Value != InValue)
     {
         Value = InValue;
-        ApplyValueToUI();
+        ApplyValueToVisual();
         if (FireEvent)
         {
             OnValueChangedCPP.Broadcast(Value);
@@ -98,7 +98,7 @@ void UUISlider::SetMinValue(float InMinValue, bool KeepRelativeValue, bool FireE
         {
             Value = FMath::Clamp(Value, MinValue, MaxValue);
         }
-        ApplyValueToUI();
+        ApplyValueToVisual();
 		if (FireEvent)
 		{
 			OnValueChangedCPP.Broadcast(Value);
@@ -120,7 +120,7 @@ void UUISlider::SetMaxValue(float InMaxValue, bool KeepRelativeValue, bool FireE
 		{
 			Value = FMath::Clamp(Value, MinValue, MaxValue);
 		}
-		ApplyValueToUI();
+		ApplyValueToVisual();
 		if (FireEvent)
 		{
 			OnValueChangedCPP.Broadcast(Value);
@@ -255,7 +255,7 @@ void UUISlider::CalculateInputValue(ULexPointerEventData *EventData)
         SetValue(value, true);
     }
 }
-void UUISlider::ApplyValueToUI()
+void UUISlider::ApplyValueToVisual()
 {
     float value01 = (Value - MinValue) / (MaxValue - MinValue);
     value01 = FMath::Clamp(value01, 0.0f, 1.0f);

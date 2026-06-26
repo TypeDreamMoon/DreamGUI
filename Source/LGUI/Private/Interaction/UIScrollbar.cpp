@@ -1,6 +1,8 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "Interaction/UIScrollbar.h"
+
+#include "LGUI.h"
 #include "Core/Components/LexWidget.h"
 
 UUIScrollbar::UUIScrollbar()
@@ -15,7 +17,7 @@ void UUIScrollbar::Awake()
 void UUIScrollbar::Start()
 {
     Super::Start();
-    ApplyValueToUI();
+    ApplyValueToVisual();
 }
 
 bool UUIScrollbar::CheckHandle()
@@ -35,19 +37,19 @@ void UUIScrollbar::PostEditChangeProperty(FPropertyChangedEvent &PropertyChanged
 {
     Super::PostEditChangeProperty(PropertyChangedEvent);
     HandleArea = nullptr;//force re-check
-    ApplyValueToUI();
+    ApplyValueToVisual();
 }
 #endif
 
 void UUIScrollbar::OnEnable()
 {
     Super::OnEnable();
-    ApplyValueToUI();
+    ApplyValueToVisual();
 }
 void UUIScrollbar::OnDimensionsChanged(bool PivotChanged, bool WidthChanged, bool HeightChanged)
 {
     Super::OnDimensionsChanged(PivotChanged, WidthChanged, HeightChanged);
-    ApplyValueToUI();
+    ApplyValueToVisual();
 }
 
 void UUIScrollbar::SetValue(float InValue, bool FireEvent)
@@ -56,7 +58,7 @@ void UUIScrollbar::SetValue(float InValue, bool FireEvent)
     {
         InValue = FMath::Clamp(InValue, 0.0f, 1.0f);
         Value = InValue;
-        ApplyValueToUI();
+        ApplyValueToVisual();
         if (FireEvent)
         {
             OnValueChangedCPP.Broadcast(Value);
@@ -82,7 +84,7 @@ void UUIScrollbar::SetSize(float InSize)
     {
         InSize = FMath::Clamp(InSize, 0.0f, 1.0f);
         Size = InSize;
-        ApplyValueToUI();
+        ApplyValueToVisual();
     }
 }
 void UUIScrollbar::SetValueAndSize(float InValue, float InSize, bool FireEvent)
@@ -102,7 +104,7 @@ void UUIScrollbar::SetValueAndSize(float InValue, float InSize, bool FireEvent)
     }
     if (somethingChanged)
     {
-        ApplyValueToUI();
+        ApplyValueToVisual();
         if (FireEvent)
         {
             OnValueChangedCPP.Broadcast(Value);
@@ -288,7 +290,7 @@ void UUIScrollbar::CalculateInputValue(ULexPointerEventData *EventData)
         SetValue(value01, true);
     }
 }
-void UUIScrollbar::ApplyValueToUI()
+void UUIScrollbar::ApplyValueToVisual()
 {
     if (CheckHandle())
     {

@@ -22,7 +22,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	ULexWidget* GetWidget()const;
 	UFUNCTION(BlueprintCallable, Category = LGUI)
-	FString GetPathDisplayName() const;
+	FString GetPathDisplayName(const UObject* StopOuter = nullptr) const;
 protected:
 	virtual void OnRegister(){};
 	virtual void OnUnregister(){};

@@ -1042,18 +1042,41 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 	}
 
 	//update layout
+	if (LayoutDirtyWidgetArray.Num() > 0)
 	{
 		SCOPE_CYCLE_COUNTER(STAT_UpdateLayout);
-		//since widget is added from tail to head, so we iterate from tail to head to make sure parent widget is updated before child widget
-		for (int i = LayoutDirtyWidgetArray.Num() - 1; i >= 0; i--)
+		struct LOCAL
 		{
-			auto& Widget = LayoutDirtyWidgetArray[i];
-			if (Widget.IsValid() && Widget->GetWidgetActiveInHierarchy())
+			static void UpdateLayoutRecursively(ULexWidget* Widget)
 			{
+				if (!IsValid(Widget))return;
+				if (!Widget->GetWidgetActiveInHierarchy())return;
 				Widget->UpdateLayout();
+				if (Widget->GetLayoutContainer())
+				{
+					for (auto& Child : Widget->GetChildren())
+					{
+						UpdateLayoutRecursively(Child);
+					}
+				}
+			}
+		};
+		auto CopiedLayoutDirtyWidgetArray = LayoutDirtyWidgetArray;
+		LayoutDirtyWidgetArray.Reset();
+#if WITH_EDITOR
+		UE_LOG(LGUI, Log, TEXT("---Begin layout frame:%d, World:%s---"), GFrameNumber, *GetWorld()->GetPathName());
+#endif
+		for (int i = CopiedLayoutDirtyWidgetArray.Num() - 1; i >= 0; i--)
+		{
+			auto& Widget = CopiedLayoutDirtyWidgetArray[i];
+			if (Widget.IsValid())
+			{
+				LOCAL::UpdateLayoutRecursively(Widget.Get());
 			}
 		}
-		LayoutDirtyWidgetArray.Reset();
+#if WITH_EDITOR
+		LayoutCalculationCounterMap.Reset();
+#endif
 	}
 
 #if WITH_EDITOR
@@ -1441,10 +1464,25 @@ void ULexUIManagerWorldSubsystem::AddLayoutDirtyWidget(ULexWidget* InWidget)
 	LayoutDirtyWidgetArray.AddUnique(InWidget);
 }
 
-void ULexUIManagerWorldSubsystem::RemoveLayoutDirtyWidget(ULexWidget* InWidget)
+#if WITH_EDITOR
+int ULexUIManagerWorldSubsystem::IncreateLayoutCalculationCounter(const FString& InPathName)
 {
-	LayoutDirtyWidgetArray.Remove(InWidget);
+	if (auto CounterPtr = LayoutCalculationCounterMap.Find(InPathName))
+	{
+		(*CounterPtr)++;
+		if (*CounterPtr >= 2)
+		{
+			UE_LOG(LGUI, Warning, TEXT("Widget %s has been calculated layout %d times in a frame"), *InPathName, *CounterPtr);
+		}
+		return *CounterPtr;
+	}
+	else
+	{
+		LayoutCalculationCounterMap.Add(InPathName, 1);
+		return 1;
+	}
 }
+#endif
 
 TSharedPtr<class FLexUIRenderer, ESPMode::ThreadSafe> ULexUIManagerWorldSubsystem::GetViewExtension(UWorld* InWorld, bool InCreateIfNotExist)
 {

@@ -174,6 +174,7 @@ private:
 	UPROPERTY(Transient) TArray<ULexUIBehaviour*> LexUIBehavioursNeedToRemoveFromTick;
 #if WITH_EDITORONLY_DATA
 	int32 PrevScreenSpaceOverlayCanvasCount = 1;
+	TMap<FString, int> LayoutCalculationCounterMap;
 #endif
 	void OnCultureChanged();
 	bool bShouldUpdateOnCultureChanged = false;
@@ -196,7 +197,9 @@ public:
 	void RemoveWidget(ULexWidget* InWidget);
 
 	void AddLayoutDirtyWidget(ULexWidget* InWidget);
-	void RemoveLayoutDirtyWidget(ULexWidget* InWidget);
+#if WITH_EDITOR
+	int IncreateLayoutCalculationCounter(const FString& InPathName);
+#endif
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	static void RegisterLexUICultureChangedEvent(TScriptInterface<ILexUICultureChangedInterface> InItem);

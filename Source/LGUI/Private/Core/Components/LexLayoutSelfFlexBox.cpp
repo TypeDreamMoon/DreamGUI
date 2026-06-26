@@ -2,6 +2,7 @@
 
 #include "Core/Components/LexLayoutSelfFlexBox.h"
 #include "LGUI.h"
+#include "Core/LexUIManager.h"
 #include "Core/Components/LexLayoutContainerFlexBox.h"
 #include "Core/Components/LexVisual.h"
 
@@ -117,8 +118,6 @@ float FLexLayoutMinMaxSize::Calculate(ULexWidget* Widget, bool IsVertical,
     }
     return CalculatedValue;
 }
-
-DECLARE_CYCLE_STAT(TEXT("LexLayout FlexBoxSelf"), STAT_LexLayoutFlexBoxSelf, STATGROUP_LGUI);
 
 FName ULexLayoutSelfFlexBox::GetPropertyName_PreferredWidth()
 {
@@ -241,7 +240,15 @@ void ULexLayoutSelfFlexBox::GetLayoutMinMax(FVector2f& OutMin, FVector2f& OutMax
 
 void ULexLayoutSelfFlexBox::CalculateSize()
 {
-    SCOPE_CYCLE_COUNTER(STAT_LexLayoutFlexBoxSelf);
+    if (LayoutCalculateCount >= MaxLayoutCalculateCount)return;
+    LayoutCalculateCount++;
+#if WITH_EDITOR
+    if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(GetWorld()))
+    {
+        LexUIManager->IncreateLayoutCalculationCounter(FString::Printf(TEXT("%s_%d"), *this->GetPathDisplayName(GetWorld()), this));
+    }
+#endif
+    
     auto Widget = GetWidget();
     if (!Widget)return;
     

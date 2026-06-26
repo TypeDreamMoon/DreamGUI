@@ -390,7 +390,7 @@ void UUIDropdown::SetValue(int InValue, bool FireEvent)
 			OnValueChangedBP.Broadcast(Value);
 			OnValueChanged.FireEvent(Value);
 		}
-		ApplyValueToUI();
+		ApplyValueToVisual();
 	}
 }
 
@@ -429,7 +429,7 @@ void UUIDropdown::SetOptions(const TArray<FUIDropdownOptionData>& InOptions)
 {
 	bNeedRecreate = true;
 	Options = InOptions;
-	ApplyValueToUI();
+	ApplyValueToVisual();
 }
 void UUIDropdown::AddOptions(const TArray<FUIDropdownOptionData>& InOptions)
 {
@@ -439,7 +439,7 @@ void UUIDropdown::AddOptions(const TArray<FUIDropdownOptionData>& InOptions)
 	{
 		Options.Add(InOptions[i]);
 	}
-	ApplyValueToUI();
+	ApplyValueToVisual();
 }
 void UUIDropdown::SetUseInteractionBlock(bool InValue)
 {
@@ -462,7 +462,7 @@ void UUIDropdown::OnSelectItem(int Index)
 	SetValue(Index, true);
 	Hide();
 }
-void UUIDropdown::ApplyValueToUI()
+void UUIDropdown::ApplyValueToVisual()
 {
 	if (!Options.IsValidIndex(Value))return;
 

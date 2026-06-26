@@ -106,12 +106,14 @@ private:
 	/** Expands inwards */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LayoutContainer", meta = (AllowPrivateAccess = true, UIMin=0))
 	FMargin Padding;
-	
+
+	virtual void MarkLayoutDirty() override;
 	virtual void CalculateLayout() override;
 	void RefreshChildren();
 	void CalculateLayout(bool bApplyLayoutToChildren);
+	void CalculatePreferredSize();
 
-	bool bNeedPreCalculate = true;
+	bool bChildrenListDirty = true;
 
 	struct FLineData
 	{

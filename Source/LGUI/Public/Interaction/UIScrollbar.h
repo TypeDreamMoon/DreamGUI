@@ -96,12 +96,6 @@ public:
 private:
 	bool CheckHandle();
 	void CalculateInputValue(ULexPointerEventData* EventData);
-	void ApplyValueToUI();
+	void ApplyValueToVisual();
 	void SetValue(float InValue, bool FireEvent);
-
-#if WITH_EDITOR
-public:
-	/** This function is only for update from LGUI2 to LGUI3 */
-	void ForUpgrade2to3_ApplyValueToUI() { ApplyValueToUI(); }
-#endif
 };

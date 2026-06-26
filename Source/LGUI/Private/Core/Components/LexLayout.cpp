@@ -29,6 +29,11 @@ void ULexLayout::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 
+void ULexLayout::MarkLayoutDirty()
+{
+	LayoutCalculateCount = 0;
+}
+
 void ULexLayoutContainer::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	UObject::PostEditChangeProperty(PropertyChangedEvent);

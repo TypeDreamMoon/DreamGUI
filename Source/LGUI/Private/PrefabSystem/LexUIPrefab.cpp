@@ -8,7 +8,6 @@
 #include "Utils/LexUIUtils.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "Engine/Engine.h"
-#include "PrefabSystem/WidgetSerializer.h"
 #include "UObject/ObjectSaveContext.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefab"

@@ -4,12 +4,23 @@
 #include "Core/Components/LexLayoutSelfFlexBox.h"
 #include "Core/Components/LexWidget.h"
 #include "LGUI.h"
+#include "Core/LexUIManager.h"
 
 DECLARE_CYCLE_STAT(TEXT("LexLayoutContainer FlexBox"), STAT_LexLayoutContainerFlexBox, STATGROUP_LGUI);
+
+void ULexLayoutContainerFlexBox::MarkLayoutDirty()
+{
+    Super::MarkLayoutDirty();
+    bChildrenListDirty = true;
+}
 
 void ULexLayoutContainerFlexBox::CalculateLayout()
 {
     SCOPE_CYCLE_COUNTER(STAT_LexLayoutContainerFlexBox);
+    
+    if (LayoutCalculateCount >= MaxLayoutCalculateCount)return;
+    LayoutCalculateCount++;
+    
     auto Widget = GetWidget();
     if (!Widget)return;
     
@@ -24,14 +35,12 @@ void ULexLayoutContainerFlexBox::CalculateLayout()
         {
             LayoutResult.LayoutSelf->SetSizeByLayoutContainer(LayoutResult.Size, LayoutResult.PrimaryAxis);
         }
-        else
-        {
-            LayoutResult.Widget->SetSizeDelta(FVector2D(LayoutResult.Size));
-        }
+        // else
+        // {
+        //     LayoutResult.Widget->SetSizeDelta(FVector2D(LayoutResult.Size));
+        // }
     }
     CalculatedLayoutResultArray.Reset();
-
-    bNeedPreCalculate = true;//mark it for next time
 }
 
 void ULexLayoutContainerFlexBox::RefreshChildren()
@@ -62,8 +71,16 @@ void ULexLayoutContainerFlexBox::RefreshChildren()
 
 void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
 {
-    if (bNeedPreCalculate)
+#if WITH_EDITOR
+    if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(GetWorld()))
     {
+        LexUIManager->IncreateLayoutCalculationCounter(FString::Printf(TEXT("%s_%d"), *this->GetPathDisplayName(GetWorld()), this));
+    }
+#endif
+    
+    if (bChildrenListDirty)
+    {
+        bChildrenListDirty = false;
         RefreshChildren();
     }
     
@@ -496,6 +513,46 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
     }
 }
 
+void ULexLayoutContainerFlexBox::CalculatePreferredSize()
+{
+    if (bChildrenListDirty)
+    {
+        bChildrenListDirty = false;
+        RefreshChildren();
+    }
+    
+    auto GetChildPreferredSize = [&](ULexWidget* ChildWidget)
+    {
+        if (auto ChildLayoutSelf = Cast<ULexLayoutSelfFlexBox>(ChildWidget->GetLayoutSelf()))
+        {
+            return ChildLayoutSelf->GetLayoutPreferredSize();
+        }
+        else
+        {
+            return FVector2f(ChildWidget->GetSizeDelta());
+        }
+    };
+
+    TotalPreferredSize = FVector2f(0,0);
+    bool bIsVertical = Direction == ELexLayoutFlexBoxDirectionType::Vertical || Direction == ELexLayoutFlexBoxDirectionType::VerticalReverse;
+    int PrimaryAxis = bIsVertical ? 1 : 0;
+    int SecondaryAxis = bIsVertical ? 0 : 1;
+    auto Gap = FVector2f(WidthGap, HeightGap);
+    auto ChildrenCount = Children.Num();
+    for (int i = 0; i < ChildrenCount; i++)
+    {
+        auto Child = Children[i];
+        auto ChildSize = GetChildPreferredSize(Child);
+        TotalPreferredSize[PrimaryAxis] += ChildSize[PrimaryAxis];
+        TotalPreferredSize[PrimaryAxis] += Gap[PrimaryAxis];
+        TotalPreferredSize[SecondaryAxis] = FMath::Max(ChildSize[SecondaryAxis], TotalPreferredSize[SecondaryAxis]);
+    }
+    if (ChildrenCount > 0)
+    {
+        TotalPreferredSize[PrimaryAxis] -= Gap[PrimaryAxis];
+    }
+}
+
 FLexLayoutControlAnchorData ULexLayoutContainerFlexBox::GetLayoutControlAnchor(const ULexWidget* TargetWidget)const
 {
     FLexLayoutControlAnchorData Result;
@@ -529,11 +586,7 @@ void ULexLayoutContainerFlexBox::PostEditChangeProperty(struct FPropertyChangedE
 
 FVector2f ULexLayoutContainerFlexBox::GetLayoutPreferredSize()
 {
-    if (bNeedPreCalculate)
-    {
-        CalculateLayout(false);
-        bNeedPreCalculate = false;
-    }
+    CalculatePreferredSize();
     return this->TotalPreferredSize;
 }
 
