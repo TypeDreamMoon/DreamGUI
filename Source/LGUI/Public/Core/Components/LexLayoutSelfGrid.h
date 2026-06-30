@@ -9,7 +9,7 @@
 /**
  * Provide item properties for GridContainer,
  */
-UCLASS( ClassGroup=(LGUI), DisplayName="LayoutSelf-Grid")
+UCLASS( ClassGroup=(LGUI), DisplayName="LayoutSelf-Grid", Experimental)
 class LGUI_API ULexLayoutSelfGrid : public ULexLayoutSelf
 {
 	GENERATED_BODY()

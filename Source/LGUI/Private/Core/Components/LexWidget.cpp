@@ -492,15 +492,9 @@ void ULexWidget::DestroyWidget()
 			}
 		}
 	};
-	if (bIsRegistered)
-	{
-		LOCAL::UnregisterRecursive(this);
-		this->SetParent(nullptr);
-	}
-	if (bHasBegunPlay)
-	{
-		LOCAL::EndPlayRecursive(this);
-	}
+	LOCAL::UnregisterRecursive(this);
+	this->SetParent(nullptr);
+	LOCAL::EndPlayRecursive(this);
 }
 
 UWorld* ULexWidget::GetWorld() const

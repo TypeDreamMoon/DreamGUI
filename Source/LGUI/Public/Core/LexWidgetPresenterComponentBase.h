@@ -3,8 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
-#include "LexWidgetPresenterComponent.generated.h"
+#include "LexWidgetPresenterComponentBase.generated.h"
 
 class ULexWidget;
 class UUINavigationInputSelectionHandler;
@@ -12,13 +11,13 @@ class ULexCanvas;
 class ULexUIPrefab;
 
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
-class LGUI_API ULexWidgetPresenterComponent : public USceneComponent
+class LGUI_API ULexWidgetPresenterComponentBase : public USceneComponent
 {
 	GENERATED_BODY()
 
 public:
-	ULexWidgetPresenterComponent();
-	friend class FLexWidgetPresenterCustomization;
+	ULexWidgetPresenterComponentBase();
+	friend class FLexWidgetPresenterBaseCustomization;
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -28,7 +27,7 @@ protected:
 	virtual void Serialize(FArchive& Ar) override;
 	virtual void PostInitProperties() override;
 	virtual void OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport = ETeleportType::None) override;
-	void LoadPrefab();
+	virtual void LoadWidget()PURE_VIRTUAL(ULexWidgetPresenterComponentBase::LoadWidget, );
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	static bool bNeedCheckEventSystem;
@@ -36,15 +35,13 @@ protected:
 	static bool bNeedCheckRaycasterSource;
 	static bool bNeverCheckRaycasterSource;
 public:
-	bool bIsSpawnFromPrefabFactory = false;
 	void CheckNecessaryObjects();
 	static void MarkNeedCheckNecessaryObjects();
-	void CheckPrefabVersion();
+	
+	void ReloadWidget();
 #endif
 	
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=LexWidgetPresenter)
-	TObjectPtr<ULexUIPrefab> WidgetPrefab;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=LexWidgetPresenter)
 	TObjectPtr<ULexCanvas> CanvasTemplate;
 	
@@ -61,16 +58,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, Transient, BlueprintReadOnly, Category=LexWidgetPresenter, AdvancedDisplay)
 	TWeakObjectPtr<UUINavigationInputSelectionHandler> NavigationSelection;
 
-#if WITH_EDITORONLY_DATA
-private:
-	UPROPERTY()
-	FString OverallVersionMD5;
-#endif
 public:
-	UFUNCTION(BlueprintCallable, Category=LGUI)
-	void SetPrefab(ULexUIPrefab* Value);
-	UFUNCTION(BlueprintCallable, Category=LGUI)
-	ULexUIPrefab* GetPrefab()const{return WidgetPrefab;}
 	UFUNCTION(BlueprintCallable, Category=LGUI)
 	UUINavigationInputSelectionHandler* GetNavigationSelection();
 	UFUNCTION(BlueprintCallable, Category=LGUI)

@@ -11,7 +11,6 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "IDetailGroup.h"
-#include "Core/Components/LexWidgetPresenterComponent.h"
 #include "Widgets/Input/SSlider.h"
 
 #define LOCTEXT_NAMESPACE "LexCanvasCustomization"

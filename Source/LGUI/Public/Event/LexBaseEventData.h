@@ -28,7 +28,7 @@ UENUM(BlueprintType, Category = LGUI)
 enum class ELexUIMouseButtonType :uint8
 {
 	Left,Middle,Right,
-	/** UserDefinedX is for custom defined input buttun type */
+	/** UserDefinedX is for custom defined input button type */
 	UserDefined1,
 	UserDefined2,
 	UserDefined3,
@@ -50,7 +50,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
 		ELexUIPointerEventType EventType = ELexUIPointerEventType::Click;
 
-	UFUNCTION(BlueprintPure, meta = (DisplayName = "ToString (LexIEventData)", CompactNodeTitle = ".", BlueprintAutocast), Category = "LGUI") virtual FString ToString()const 
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "ToString (LexIEventData)", CompactNodeTitle = ".", BlueprintAutocast), Category = "LGUI")
+	virtual FString ToString()const 
 	{
 		return TEXT("");
 	};

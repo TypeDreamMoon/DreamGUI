@@ -37,6 +37,7 @@ protected:
 	virtual void EndPlay()override;
 	virtual void OnRegister()override;
 	virtual void OnUnregister()override;
+	virtual void BeginDestroy() override;
 protected:
 	friend class SLexUISpriteBorderEditor;
 	friend class FLexSpriteBaseCustomization;

@@ -67,6 +67,7 @@ TSharedRef< FSlateStyleSet > FLGUIEditorStyle::Create()
 	Style->Set("ClassThumbnail.UITextureBase", new IMAGE_BRUSH(TEXT("UITexture_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.LexVisualPostProcess", new IMAGE_BRUSH(TEXT("UIPostProcess_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.LexUIBehaviour", new IMAGE_BRUSH(TEXT("LexUIBehaviour_40x"), Icon40x40));
+	Style->Set("ClassThumbnail.LexUIMLBehaviour", new IMAGE_BRUSH(TEXT("Xaml_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.LexRectBlock", new IMAGE_BRUSH(TEXT("LexRectBlock_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.UIWidget", new IMAGE_BRUSH(TEXT("UIWidget_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.UIRenderTarget", new IMAGE_BRUSH(TEXT("UIRenderTarget_40x"), Icon40x40));
@@ -90,6 +91,7 @@ TSharedRef< FSlateStyleSet > FLGUIEditorStyle::Create()
 	Style->Set("ClassIcon.UITextureBase", new IMAGE_BRUSH(TEXT("UITexture_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexVisualPostProcess", new IMAGE_BRUSH(TEXT("UIPostProcess_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexUIBehaviour", new IMAGE_BRUSH(TEXT("LexUIBehaviour_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexUIMLBehaviour", new IMAGE_BRUSH(TEXT("Xaml_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexRectBlock", new IMAGE_BRUSH(TEXT("LexRectBlock_16x"), Icon16x16));
 	Style->Set("ClassIcon.UIWidget", new IMAGE_BRUSH(TEXT("UIWidget_16x"), Icon16x16));
 	Style->Set("ClassIcon.UIRenderTarget", new IMAGE_BRUSH(TEXT("UIRenderTarget_16x"), Icon16x16));

@@ -21,7 +21,7 @@
 #include "RayTracingInstance.h"
 #include "RayTracingGeometry.h"
 #include "Core/LexUIManager.h"
-#include "Core/Components/LexWidgetPresenterComponent.h"
+#include "Core/LexWidgetPresenterComponentBase.h"
 
 #define LOCTEXT_NAMESPACE "LGUIRenderTargetGeometrySource"
 
@@ -435,7 +435,7 @@ ULexUIRenderTargetGeometrySource::ULexUIRenderTargetGeometrySource()
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 
-	TargetWidgetPresenter = FLexUIComponentReference(ULexWidgetPresenterComponent::StaticClass());
+	TargetWidgetPresenter = FLexUIComponentReference(ULexWidgetPresenterComponentBase::StaticClass());
 }
 
 void ULexUIRenderTargetGeometrySource::BeginPlay()
@@ -1020,7 +1020,7 @@ ULexCanvas* ULexUIRenderTargetGeometrySource::GetCanvas()const
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d TargetWidgetPresenter not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return nullptr;
 	}
-	auto WidgetPresenter = TargetWidgetPresenter.GetComponent<ULexWidgetPresenterComponent>();
+	auto WidgetPresenter = TargetWidgetPresenter.GetComponent<ULexWidgetPresenterComponentBase>();
 	if (WidgetPresenter == nullptr)
 	{
 		UE_LOG(LGUI, Warning, TEXT("[%s].%d TargetWidgetPresenter not valid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);

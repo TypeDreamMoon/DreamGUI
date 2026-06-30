@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/ActorComponent.h"
 #include "PrefabSystem/WidgetSerializerBase.h"
 #include "LexUIPrefab.h"
 #include "Serialization/BufferArchive.h"

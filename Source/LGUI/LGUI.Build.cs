@@ -70,6 +70,7 @@ public class LGUI : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
+				"XmlParser",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

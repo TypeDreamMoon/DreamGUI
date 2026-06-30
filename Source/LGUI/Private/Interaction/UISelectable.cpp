@@ -8,7 +8,6 @@
 #include "LTweenManager.h"
 #include "Core/Components/LexCanvas.h"
 #include "Event/LexEventSystem.h"
-#include "Core/Components/LexWidgetPresenterComponent.h"
 #include "Core/Components/LexImage.h"
 #include "Core/Components/LexWidget.h"
 #include "Interaction/UINavigationInputSelectionHandler.h"

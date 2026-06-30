@@ -5,7 +5,6 @@
 #include "Misc/MessageDialog.h"
 #include "DesktopPlatformModule.h"
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "Engine/EngineTypes.h"
 #include "Widgets/SViewport.h"
 #include "Engine/Selection.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
@@ -13,7 +12,7 @@
 #include "LGUIEditorModule.h"
 #include "PrefabEditor/LexUIPrefabEditor.h"
 #include "Core/Components/LexLayout.h"
-#include "Core/Components/LexWidgetPresenterComponent.h"
+#include "PrefabSystem/LexUIPrefabPresenterComponent.h"
 
 #define LOCTEXT_NAMESPACE "LGUIEditorTools"
 
@@ -677,7 +676,7 @@ void FLexUIEditorTools::RefreshLoadedPrefab()
 	{
 		Itr->CheckPrefabVersion();
 	}
-	for (TObjectIterator<ULexWidgetPresenterComponent> Itr; Itr; ++Itr)
+	for (TObjectIterator<ULexUIPrefabPresenterComponent> Itr; Itr; ++Itr)
 	{
 		if (Itr->GetWorld())
 		{

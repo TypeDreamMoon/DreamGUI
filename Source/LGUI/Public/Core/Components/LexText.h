@@ -31,6 +31,7 @@ protected:
 	virtual void EndPlay()override;
 	virtual void OnRegister()override;
 	virtual void OnUnregister()override;
+	virtual void BeginDestroy() override;
 	virtual void OnTransformChanged(bool InPositionChanged, bool InScaleChanged)override;
 public:
 #if WITH_EDITOR

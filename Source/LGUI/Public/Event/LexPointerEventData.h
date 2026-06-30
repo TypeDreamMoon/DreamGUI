@@ -44,10 +44,10 @@ public:
 	/** id of the pointer (touch id) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
 		int PointerID = 0;
-	/** current pointer position (mouse position or touch point position in screen space. X&Y for mouse position) */
+	/** current pointer position (mouse position or touchpoint position in screen space. X&Y for mouse position) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
 		FVector PointerPosition = FVector::ZeroVector;
-	/** pointer position when press (mouse position or touch point position in screen space. X&Y for mouse position) */
+	/** pointer position when press (mouse position or touchpoint position in screen space. X&Y for mouse position) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI")
 		FVector PressPointerPosition = FVector::ZeroVector;
 

@@ -39,6 +39,7 @@ protected:
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 	bool bHasAddToSprite = false;
+	void UnregisterFromSprite();
 public:
 #pragma region ILexUISpriteRenderInterface
 	virtual ULexUISpriteData_BaseObject* SpriteRenderGetSprite_Implementation()const override;

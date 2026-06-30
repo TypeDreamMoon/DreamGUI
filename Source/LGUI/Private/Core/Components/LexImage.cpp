@@ -17,12 +17,7 @@ void ULexImage::PreEditChange(FProperty* PropertyAboutToChange)
 	const FName PropertyName = PropertyAboutToChange->GetFName();
 	if (PropertyName == FLexUIImageBrush::GetPropertyName_ResourceObject())
 	{
-		if (bHasAddToSprite)
-		{
-			auto OldLexSprite = Cast<ULexUISpriteData_BaseObject>(Brush.GetResourceObject());
-			OldLexSprite->RemoveUISprite(this);
-			bHasAddToSprite = false;
-		}
+		UnregisterFromSprite();
 	}
 }
 void ULexImage::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
@@ -43,6 +38,18 @@ void ULexImage::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyCha
 	}
 }
 #endif
+
+void ULexImage::UnregisterFromSprite()
+{
+	if (bHasAddToSprite)
+	{
+		if (auto LexSprite = Cast<ULexUISpriteData_BaseObject>(Brush.GetResourceObject()))
+		{
+			LexSprite->RemoveUISprite(this);
+			bHasAddToSprite = false;
+		}
+	}
+}
 
 ULexUISpriteData_BaseObject* ULexImage::SpriteRenderGetSprite_Implementation() const
 {
@@ -177,8 +184,9 @@ void ULexImage::PostInitProperties()
 
 void ULexImage::BeginDestroy()
 {
-	check(!bHasAddToSprite);
 	Super::BeginDestroy();
+	//unregister from sprite
+	UnregisterFromSprite();
 }
 
 void ULexImage::OnRegister()
@@ -197,28 +205,12 @@ void ULexImage::OnRegister()
 void ULexImage::OnUnregister()
 {
 	Super::OnUnregister();
-	if (bHasAddToSprite)
-	{
-		if (auto LexSprite = Cast<ULexUISpriteData_BaseObject>(Brush.GetResourceObject()))
-		{
-			LexSprite->RemoveUISprite(this);
-			bHasAddToSprite = false;
-		}
-	}
+	UnregisterFromSprite();
 }
 
 void ULexImage::SetBrush(const FLexUIImageBrush& Value)
 {
-	auto OldLexSprite = Cast<ULexUISpriteData_BaseObject>(Brush.GetResourceObject());
-	if (OldLexSprite != nullptr)
-	{
-		//remove from old
-		if (bHasAddToSprite)
-		{
-			OldLexSprite->RemoveUISprite(this);
-			bHasAddToSprite = false;
-		}
-	}
+	UnregisterFromSprite();
 	
 	MarkVerticesDirty(true, true, true, Brush.TintColor != Value.TintColor);
 	MarkTextureDirty();
@@ -281,15 +273,7 @@ void ULexImage::SetBrush_LexUISprite(ULexUISpriteData_BaseObject* Value)
 void ULexImage::SetBrush_SlateSprite(TScriptInterface<ISlateTextureAtlasInterface> Value)
 {
 	//remove from old sprite
-	if (bHasAddToSprite)
-	{
-		auto OldLexSprite = Cast<ULexUISpriteData_BaseObject>(Brush.GetResourceObject());
-		if (OldLexSprite != nullptr)
-		{
-			OldLexSprite->RemoveUISprite(this);
-			bHasAddToSprite = false;
-		}
-	}
+	UnregisterFromSprite();
 	
 	auto OldSlateSprite = Cast<ISlateTextureAtlasInterface>(Brush.GetResourceObject());
 	auto NewSlateSprite = Value;
@@ -318,15 +302,8 @@ void ULexImage::SetBrush_SlateSprite(TScriptInterface<ISlateTextureAtlasInterfac
 void ULexImage::SetBrush_Texture(UTexture* Value)
 {
 	//remove from old sprite
-	if (bHasAddToSprite)
-	{
-		auto OldLexSprite = Cast<ULexUISpriteData_BaseObject>(Brush.GetResourceObject());
-		if (OldLexSprite != nullptr)
-		{
-			OldLexSprite->RemoveUISprite(this);
-			bHasAddToSprite = false;
-		}
-	}
+	UnregisterFromSprite();
+	
 	MarkVerticesDirty(true, true, true, false);
 	MarkTextureDirty();
 	if (Cast<UMaterialInterface>(Brush.GetResourceObject()) != nullptr)//if old brush is material then mark material dirty
@@ -339,15 +316,8 @@ void ULexImage::SetBrush_Texture(UTexture* Value)
 void ULexImage::SetBrush_Material(UTexture* Value)
 {
 	//remove from old sprite
-	if (bHasAddToSprite)
-	{
-		auto OldLexSprite = Cast<ULexUISpriteData_BaseObject>(Brush.GetResourceObject());
-		if (OldLexSprite != nullptr)
-		{
-			OldLexSprite->RemoveUISprite(this);
-			bHasAddToSprite = false;
-		}
-	}
+	UnregisterFromSprite();
+	
 	MarkVerticesDirty(true, true, true, false);
 	MarkTextureDirty();
 	MarkMaterialDirty();

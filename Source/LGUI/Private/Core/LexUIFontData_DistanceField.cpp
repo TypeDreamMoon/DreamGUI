@@ -429,7 +429,7 @@ void ULexUIFontData_DistanceField::PushCharData(
 
 			//bold and text-scale
 			{
-				auto tempBoldSize = richTextProperty.Bold ? BoldRatio * 0.5f : 0.0f;
+				auto tempBoldSize = richTextProperty.Bold ? BoldRatio : 0.0f;
 				vertices[verticesStartIndex].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
 				vertices[verticesStartIndex + 1].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
 				vertices[verticesStartIndex + 2].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);

@@ -29,7 +29,6 @@
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
-#include "Core/Components/LexWidgetPresenterComponent.h"
 #include "Core/LexUIMesh/LexUIGizmoMesh.h"
 #include "Core/LexUIRender/LexUIRenderer.h"
 #include "PrefabSystem/LexUIPrefabInstanceScene.h"

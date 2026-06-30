@@ -27,6 +27,7 @@
 #include "AssetTypeActions/AssetTypeActions_LexUIStaticSpriteAtlasData.h"
 #include "AssetTypeActions/AssetTypeActions_LexUIFontData_Bitmap.h"
 #include "AssetTypeActions/AssetTypeActions_LexUIPrefab.h"
+#include "AssetTypeActions/AssetTypeActions_LexUIMLResource.h"
 #include "AssetTypeActions/AssetTypeActions_LexUIStaticMeshCache.h"
 #include "AssetTypeActions/AssetTypeActions_LexUIRichTextCustomStyleData.h"
 #include "AssetTypeActions/AssetTypeActions_LexUIRichTextImageData.h"
@@ -64,9 +65,7 @@
 #include "SequencerSettings.h"
 #include "ISequencerModule.h"
 #include "LexUIComponentReference.h"
-#include "PrefabAnimation/LexUIPrefabSequenceEditor.h"
 #include "MovieSceneToolsProjectSettings.h"
-#include "UMGStyle.h"
 #include "PrefabAnimation/LexUIMaterialTrackEditor.h"
 #include "PrefabAnimation/LexUIPrefabSequencerSettings.h"
 
@@ -87,20 +86,19 @@
 #include "Core/Components/LexTexture.h"
 #include "Core/Components/LexTextureBase.h"
 #include "Core/Components/LexVisualPostProcess.h"
-#include "Core/Components/LexWidgetPresenterComponent.h"
+#include "Core/LexWidgetPresenterComponentBase.h"
 #include "DetailCustomization/LexImageBrushStructCustomization.h"
 #include "DetailCustomization/LexLayoutContainerCustomization.h"
 #include "DetailCustomization/LexLayoutSelfFlexBoxCustomization.h"
 #include "DetailCustomization/LexLayoutContainerFlexBoxCustomization.h"
 #include "DetailCustomization/LexUIEventDelegatePresetParamCustomization.h"
 #include "DetailCustomization/LexUIFontEmojiDataCustomization.h"
-#include "DetailCustomization/LexWidgetPresenterCustomization.h"
+#include "DetailCustomization/LexWidgetPresenterBaseCustomization.h"
 #include "Event/LexUIEventDelegate_PresetParameter.h"
 #include "Event/LexWorldSpaceRaycasterBase.h"
 #include "Extensions/LexPolygon.h"
 #include "Extensions/LexPolygonLine.h"
 #include "Extensions/LexRing.h"
-#include "Extensions/LexStaticMesh.h"
 #include "Extensions/UISpriteSequencePlayer.h"
 #include "Extensions/UISpriteSheetTexturePlayer.h"
 #include "Extensions/2DLineRenderer/Lex2DLineChildrenAsPoints.h"
@@ -225,7 +223,7 @@ void FLGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomClassLayout(ULexLayoutContainerFlexBox::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutContainerFlexBoxCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULexLayoutSelfFlexBox::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexLayoutSelfFlexBoxCustomization::MakeInstance));
 		
-		PropertyModule.RegisterCustomClassLayout(ULexWidgetPresenterComponent::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexWidgetPresenterCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexWidgetPresenterComponentBase::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexWidgetPresenterBaseCustomization::MakeInstance));
 	}
 	//register asset
 	{
@@ -246,6 +244,7 @@ void FLGUIEditorModule::StartupModule()
 		TSharedPtr<FAssetTypeActions_Base> RichTextImageDataAction = MakeShareable(new FAssetTypeActions_LexUIRichTextImageData(LexUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> FontEmojiDataAction = MakeShareable(new FAssetTypeActions_LexUIFontEmojiData(LexUIAssetCategoryBit));
 		TSharedPtr<FAssetTypeActions_Base> DistanceFieldFontDataTypeAction = MakeShareable(new FAssetTypeActions_LexUIFontData_DistanceField(LexUIAssetCategoryBit));
+		TSharedPtr<FAssetTypeActions_Base> UIMLResourceAction = MakeShareable(new FAssetTypeActions_LexUIMLResource(LexUIAssetCategoryBit));
 		AssetTools.RegisterAssetTypeActions(SpriteDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(StaticSpriteAtlasDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(BitmapFontDataAction.ToSharedRef());
@@ -255,6 +254,7 @@ void FLGUIEditorModule::StartupModule()
 		AssetTools.RegisterAssetTypeActions(RichTextImageDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(FontEmojiDataAction.ToSharedRef());
 		AssetTools.RegisterAssetTypeActions(DistanceFieldFontDataTypeAction.ToSharedRef());
+		AssetTools.RegisterAssetTypeActions(UIMLResourceAction.ToSharedRef());
 		AssetTypeActionsArray.Add(SpriteDataAction);
 		AssetTypeActionsArray.Add(StaticSpriteAtlasDataAction);
 		AssetTypeActionsArray.Add(BitmapFontDataAction);
@@ -264,6 +264,7 @@ void FLGUIEditorModule::StartupModule()
 		AssetTypeActionsArray.Add(RichTextImageDataAction);
 		AssetTypeActionsArray.Add(FontEmojiDataAction);
 		AssetTypeActionsArray.Add(DistanceFieldFontDataTypeAction);
+		AssetTypeActionsArray.Add(UIMLResourceAction);
 	}
 	//register Thumbnail
 	{
@@ -432,7 +433,7 @@ void FLGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(ULexLayoutContainerFlexBox::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(ULexLayoutSelfFlexBox::StaticClass()->GetFName());
 		
-		PropertyModule.UnregisterCustomClassLayout(ULexWidgetPresenterComponent::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexWidgetPresenterComponentBase::StaticClass()->GetFName());
 	}
 	//unregister asset
 	{

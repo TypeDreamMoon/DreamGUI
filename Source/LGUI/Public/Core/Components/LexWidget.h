@@ -8,7 +8,6 @@
 
 class ULexWidgetSubObjectBehaviour;
 class ULexUIBehaviour;
-class ULexWidgetPresenterComponent;
 class ULexVisual;
 class ULexLayoutSelf;
 class ULexLayoutContainer;
@@ -684,7 +683,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = LGUI, AdvancedDisplay)
 		int32 SiblingIndex = INDEX_NONE;
 	/**
-	 * Flatten depth/hierarchyIndex, relative to root LexWidget. Used by render and event
+	 * Flatten depth/hierarchyIndex, relative to root LexWidget. -1 means not set yet.
 	 * RootWidget - 0
 	 *	 Widget - 1
 	 *	 Widget - 2
@@ -694,7 +693,7 @@ protected:
 	 *	 Widget - 6
 	 */
 	UPROPERTY(Transient, VisibleAnywhere, Category = LGUI, AdvancedDisplay)
-	mutable int32 FlattenHierarchyIndex = 0;
+	mutable int32 FlattenHierarchyIndex = -1;
 	void MarkFlattenHierarchyIndexDirty();
 private:
 	/** Only for RootUIItem */

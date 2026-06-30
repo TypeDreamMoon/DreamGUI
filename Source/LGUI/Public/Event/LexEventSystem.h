@@ -22,7 +22,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FLexUIBaseEventDataDynamicDelegate, 
 /**
  * This is the place for manage LexUI's input/raycast/event.
  * InputTrigger and InputScroll need manually setup in InputModule.
- * About event bubble: if all interface of target component and actor return true, then event will bubble up. if no interface found on target, then event will bubble up
+ * About event bubble: if all interface of target component return true, then event will bubble up. if no interface found on target, then event will bubble up
  */
 UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent), HideCategories = (Sockets, Physics, Collision, Activation, Cooking, Rendering, Actor, Input, Lighting, Mobile, Navigation))
 class LGUI_API ULexEventSystem : public UActorComponent

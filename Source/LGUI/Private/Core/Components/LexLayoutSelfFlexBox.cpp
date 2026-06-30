@@ -454,7 +454,10 @@ void ULexLayoutSelfFlexBox::SetGrow(float Value)
     if (Grow != Value)
     {
         Grow = FMath::Max(0, Value);
-        ULexWidget::MarkLayoutForRebuild(GetWidget()->GetParent());
+        if (auto Parent = GetWidget()->GetParent())
+        {
+            ULexWidget::MarkLayoutForRebuild(Parent);
+        }
     }
 }
 
@@ -463,7 +466,10 @@ void ULexLayoutSelfFlexBox::SetShrink(float Value)
     if (Shrink != Value)
     {
         Shrink = FMath::Max(0, Value);
-        ULexWidget::MarkLayoutForRebuild(GetWidget()->GetParent());
+        if (auto Parent = GetWidget()->GetParent())
+        {
+            ULexWidget::MarkLayoutForRebuild(Parent);
+        }
     }
 }
 

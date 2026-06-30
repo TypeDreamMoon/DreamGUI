@@ -184,6 +184,12 @@ void ULexText::OnUnregister()
 	}
 }
 
+void ULexText::BeginDestroy()
+{
+	Super::BeginDestroy();
+	UnregisterFont();
+}
+
 void ULexText::OnTransformChanged(bool InPositionChanged, bool InScaleChanged)
 {
 	Super::OnTransformChanged(InPositionChanged, InScaleChanged);

@@ -15,10 +15,10 @@
 #include "Core/LexUIRender/LexUIRenderer.h"
 #include "Core/ILexUICultureChangedInterface.h"
 #include "Core/LexUIBehaviour.h"
-#include "Core/Components/LexWidgetPresenterComponent.h"
 #include "Core/LexUIMesh/LexUIGizmoMesh.h"
 #include "Event/LexEventSystem.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
+#include "PrefabSystem/LexUIPrefabPresenterComponent.h"
 #if WITH_EDITOR
 #include "Editor.h"
 #include "EditorViewportClient.h"
@@ -196,7 +196,7 @@ void ULexUIManagerObject::OnAssetReimport(UObject* Asset)
 		}
 		else if (Asset->IsA<ULexUIPrefab>())
 		{
-			for (TObjectIterator<ULexWidgetPresenterComponent> Itr; Itr; ++Itr)
+			for (TObjectIterator<ULexUIPrefabPresenterComponent> Itr; Itr; ++Itr)
 			{
 				if (Itr->GetWorld())
 				{

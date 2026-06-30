@@ -11,7 +11,6 @@
 #include "Math/TransformCalculus2D.h"
 #include "LexCanvas.generated.h"
 
-class ULexWidgetPresenterComponent;
 class FLexUIClipData;
 class ULexUIDataAsTexture;
 

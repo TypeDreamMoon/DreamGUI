@@ -3,10 +3,8 @@
 #include "Core/Components/LexSpriteBase.h"
 #include "LGUI.h"
 #include "Core/LexUIGeometry.h"
-#include "Core/Components/LexCanvas.h"
 #include "Core/LexUISpriteData.h"
 #include "Core/LexUISpriteData_BaseObject.h"
-#include "Core/LexUIDrawCall.h"
 #include "Core/Components/LexWidget.h"
 
 ULexSpriteBase::ULexSpriteBase(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
@@ -133,6 +131,20 @@ void ULexSpriteBase::OnUnregister()
 	}
 #endif
 }
+
+void ULexSpriteBase::BeginDestroy()
+{
+	Super::BeginDestroy();
+	if (bHasAddToSprite)
+	{
+		if (IsValid(Sprite))
+		{
+			Sprite->RemoveUISprite(this);
+			bHasAddToSprite = false;
+		}
+	}
+}
+
 #if WITH_EDITOR
 void ULexSpriteBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {

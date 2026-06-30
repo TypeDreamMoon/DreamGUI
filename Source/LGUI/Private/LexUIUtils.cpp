@@ -6,7 +6,6 @@
 #include "Engine/Texture2D.h"
 #include "LGUI.h"
 #include "Core/LexUIMeshVertex.h"
-#include "LGUIEditor/Public/LGUIEditorModule.h"
 #if WITH_EDITOR
 #include "Editor.h"
 #include "Framework/Notifications/NotificationManager.h"
@@ -14,71 +13,8 @@
 #endif
 
 
-
 #define LOCTEXT_NAMESPACE "LexUIUtils"
 
-void FLexUIUtils::DestroyActorWithHierarchy(AActor* Target, bool WithHierarchy)
-{
-	if (!Target->IsValidLowLevelFast())
-	{
-		UE_LOG(LGUI, Error, TEXT("[%s].%d Try to delete invalid actor"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-		return;
-	}
-	if (WithHierarchy)
-	{
-		TArray<AActor*> AllChildrenActors;
-		CollectChildrenActors(Target, AllChildrenActors);//collect all actor
-		for (auto item : AllChildrenActors)
-		{
-#if WITH_EDITOR
-			if (auto world = item->GetWorld())
-			{
-				if (world->WorldType == EWorldType::Editor || world->WorldType == EWorldType::EditorPreview)
-				{
-					world->EditorDestroyActor(item, true);
-				}
-				else
-				{
-					item->Destroy();
-				}
-			}
-#else
-			item->Destroy();
-#endif
-		}
-	}
-	else
-	{
-#if WITH_EDITOR
-		if (auto world = Target->GetWorld())
-		{
-			if (world->WorldType == EWorldType::Editor || world->WorldType == EWorldType::EditorPreview)
-			{
-				world->EditorDestroyActor(Target, true);
-			}
-			else
-			{
-				Target->Destroy();
-			}
-		}
-#else
-		Target->Destroy();
-#endif
-	}
-}
-void FLexUIUtils::CollectChildrenActors(AActor* Target, TArray<AActor*>& AllChildrenActors, bool IncludeTarget)
-{
-	if (IncludeTarget)
-	{
-		AllChildrenActors.Add(Target);
-	}
-	TArray<AActor*> actorList;
-	Target->GetAttachedActors(actorList);
-	for (auto item : actorList)
-	{
-		CollectChildrenActors(item, AllChildrenActors, true);
-	}
-}
 UTexture2D* FLexUIUtils::CreateTexture(int32 InSize, FColor InDefaultColor, UObject* InOuter, FName InDefaultName)
 {
 	auto ResultTexture = NewObject<UTexture2D>(

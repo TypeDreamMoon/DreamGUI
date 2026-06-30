@@ -1,0 +1,46 @@
+// Copyright 2019-Present LexLiu. All Rights Reserved.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Core/LexWidgetPresenterComponentBase.h"
+#include "LexUIPrefabPresenterComponent.generated.h"
+
+class ULexWidget;
+class UUINavigationInputSelectionHandler;
+class ULexCanvas;
+class ULexUIPrefab;
+
+UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
+class LGUI_API ULexUIPrefabPresenterComponent : public ULexWidgetPresenterComponentBase
+{
+	GENERATED_BODY()
+
+public:
+	ULexUIPrefabPresenterComponent();
+protected:
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void LoadWidget() override;
+#if WITH_EDITOR
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+public:
+	bool bIsSpawnFromFactory = false;
+	void CheckPrefabVersion();
+#endif
+	
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=LexWidgetPresenter)
+	TObjectPtr<ULexUIPrefab> WidgetPrefab;
+	
+#if WITH_EDITORONLY_DATA
+private:
+	UPROPERTY()
+	FString OverallVersionMD5;
+#endif
+public:
+	UFUNCTION(BlueprintCallable, Category=LGUI)
+	void SetPrefab(ULexUIPrefab* Value);
+	UFUNCTION(BlueprintCallable, Category=LGUI)
+	ULexUIPrefab* GetPrefab()const{return WidgetPrefab;}
+};

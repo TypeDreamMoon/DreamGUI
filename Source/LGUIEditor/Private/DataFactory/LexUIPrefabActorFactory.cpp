@@ -4,9 +4,8 @@
 #include "PrefabSystem/LexUIPrefab.h"
 #include "AssetRegistry/AssetData.h"
 #include "Core/LexUIManager.h"
-#include "Core/Components/LexWidgetPresenterComponent.h"
-#include "Core/Components/LexWidget.h"
 #include "Event/LexScreenSpaceRaycaster.h"
+#include "PrefabSystem/LexUIPrefabPresenterComponent.h"
 
 
 #define LOCTEXT_NAMESPACE "LexUIPrefabActorFactory"
@@ -31,7 +30,7 @@ bool ULexUIPrefabActorFactory::CanCreateActorFrom(const FAssetData& AssetData, F
 
 bool ULexUIPrefabActorFactory::PreSpawnActor(UObject* Asset, FTransform& InOutLocation)
 {
-	ULexWidgetPresenterComponent::MarkNeedCheckNecessaryObjects();
+	ULexUIPrefabPresenterComponent::MarkNeedCheckNecessaryObjects();
 	auto Prefab = CastChecked<ULexUIPrefab>(Asset);
 
 	if (Prefab == NULL)
@@ -45,15 +44,15 @@ AActor* ULexUIPrefabActorFactory::SpawnActor(UObject* InAsset, ULevel* InLevel, 
 	const FActorSpawnParameters& InSpawnParams)
 {
 	auto Actor = Super::SpawnActor(InAsset, InLevel, InTransform, InSpawnParams);
-	auto WidgetPresenterComponent = Actor->FindComponentByClass<ULexWidgetPresenterComponent>();
+	auto WidgetPresenterComponent = Actor->FindComponentByClass<ULexUIPrefabPresenterComponent>();
 	if (!WidgetPresenterComponent)
 	{
-		WidgetPresenterComponent = NewObject<ULexWidgetPresenterComponent>(Actor, ULexWidgetPresenterComponent::StaticClass());
+		WidgetPresenterComponent = NewObject<ULexUIPrefabPresenterComponent>(Actor, ULexUIPrefabPresenterComponent::StaticClass());
 		Actor->SetRootComponent(WidgetPresenterComponent);
 		WidgetPresenterComponent->RegisterComponent();
 		Actor->AddInstanceComponent(WidgetPresenterComponent);
 	}
-	WidgetPresenterComponent->bIsSpawnFromPrefabFactory = true;
+	WidgetPresenterComponent->bIsSpawnFromFactory = true;
 	return Actor;
 }
 
@@ -63,7 +62,7 @@ void ULexUIPrefabActorFactory::PostSpawnActor(UObject* Asset, AActor* InNewActor
 
 	auto Prefab = CastChecked<ULexUIPrefab>(Asset);
 
-	auto WidgetPresenterComponent = InNewActor->FindComponentByClass<ULexWidgetPresenterComponent>();
+	auto WidgetPresenterComponent = InNewActor->FindComponentByClass<ULexUIPrefabPresenterComponent>();
 	// WidgetPresenterComponent->GetLoadedWidget()->SetSizeDelta(Prefab->PrefabDataForPrefabEditor.CanvasSize);
 	WidgetPresenterComponent->SetPrefab(Prefab);
 
@@ -88,7 +87,7 @@ void ULexUIPrefabActorFactory::PostPlaceAsset(TArrayView<const FTypedElementHand
 
 UObject* ULexUIPrefabActorFactory::GetAssetFromActorInstance(AActor* ActorInstance)
 {
-	auto WidgetPresenterComponent = ActorInstance->FindComponentByClass<ULexWidgetPresenterComponent>();
+	auto WidgetPresenterComponent = ActorInstance->FindComponentByClass<ULexUIPrefabPresenterComponent>();
 	check(WidgetPresenterComponent);
 	return WidgetPresenterComponent->GetPrefab();
 }

@@ -1,20 +1,18 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "Core/Components/LexWidgetPresenterComponent.h"
+#include "Core/LexWidgetPresenterComponentBase.h"
 
 #include "EngineUtils.h"
 #include "LGUI.h"
-#include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
-#include "Core/Components/LexWidget.h"
 #include "Event/LexEventSystem.h"
 #include "Event/LexWorldSpaceRaycasterBase.h"
 #include "Interaction/UINavigationInputSelectionHandler.h"
 #include "PrefabSystem/LexUIPrefab.h"
 
-#define LOCTEXT_NAMESPACE "LexWidgetRootActor"
+#define LOCTEXT_NAMESPACE "LexWidgetPresenterComponentBase"
 
-ULexWidgetPresenterComponent::ULexWidgetPresenterComponent()
+ULexWidgetPresenterComponentBase::ULexWidgetPresenterComponentBase()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
@@ -26,30 +24,30 @@ ULexWidgetPresenterComponent::ULexWidgetPresenterComponent()
 	NavigationSelectionPrefab = LoadObject<ULexUIPrefab>(NULL, TEXT("/LGUI/Prefabs/NavigationSelectionInputHandler"));
 }
 
-void ULexWidgetPresenterComponent::BeginPlay()
+void ULexWidgetPresenterComponentBase::BeginPlay()
 {
 	Super::BeginPlay();
 	if (GetWorld()->IsGameWorld())
 	{
-		LoadPrefab();//load prefab when BeginPlay in game mode
+		LoadWidget();//load when BeginPlay in game mode
 	}
 }
 
-void ULexWidgetPresenterComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void ULexWidgetPresenterComponentBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 }
 
-void ULexWidgetPresenterComponent::OnRegister()
+void ULexWidgetPresenterComponentBase::OnRegister()
 {
 	Super::OnRegister();
 	if (!GetWorld()->IsGameWorld())
 	{
-		LoadPrefab();//load prefab when OnRegister in edit mode
+		LoadWidget();//load when OnRegister in edit mode
 	}
 }
 
-void ULexWidgetPresenterComponent::OnUnregister()
+void ULexWidgetPresenterComponentBase::OnUnregister()
 {
 	bool bIsEditMode = false;
 	if (auto World = GetWorld())
@@ -70,12 +68,12 @@ void ULexWidgetPresenterComponent::OnUnregister()
 	Super::OnUnregister();
 }
 
-void ULexWidgetPresenterComponent::PostLoad()
+void ULexWidgetPresenterComponentBase::PostLoad()
 {
 	Super::PostLoad();
 }
 
-void ULexWidgetPresenterComponent::Serialize(FArchive& Ar)
+void ULexWidgetPresenterComponentBase::Serialize(FArchive& Ar)
 {
 	Super::Serialize(Ar);
 
@@ -128,18 +126,18 @@ void ULexWidgetPresenterComponent::Serialize(FArchive& Ar)
 		{
 			// Because the template may have fixed itself up, the tagged property delta serialized for 
 			// the instance may point at a trashed template, so always repoint us to the archetypes template
-			CanvasTemplate = CastChecked<ULexWidgetPresenterComponent>(GetArchetype())->CanvasTemplate;
+			CanvasTemplate = CastChecked<ULexWidgetPresenterComponentBase>(GetArchetype())->CanvasTemplate;
 		}
 	}
 #endif
 }
 
-void ULexWidgetPresenterComponent::PostInitProperties()
+void ULexWidgetPresenterComponentBase::PostInitProperties()
 {
 	Super::PostInitProperties();
 }
 
-void ULexWidgetPresenterComponent::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
+void ULexWidgetPresenterComponentBase::OnUpdateTransform(EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
 {
 	Super::OnUpdateTransform(UpdateTransformFlags, Teleport);
 	if (LoadedWidget.IsValid())
@@ -148,89 +146,22 @@ void ULexWidgetPresenterComponent::OnUpdateTransform(EUpdateTransformFlags Updat
 	}
 }
 
-void ULexWidgetPresenterComponent::LoadPrefab()
-{
-	if (LoadedWidget.IsValid())
-	{
-		LoadedWidget->DestroyWidget();
-		LoadedWidget = nullptr;
-	}
 #if WITH_EDITOR
-	if (this->GetName().Contains(TEXT("SKEL_")) || this->GetName().Contains(TEXT("TRASH_")))
-	{
-		UE_LOG(LGUI, Warning, TEXT("Skip LoadPrefab for %s because it's a temp object for blueprint compiling!"), *this->GetName());
-		return;
-	}
-#endif
-	if (IsValid(WidgetPrefab))
-	{
-		if (auto World = GetWorld())
-		{
-			LoadedWidget = WidgetPrefab->LoadPrefab(World, nullptr, [this](ULexWidget* RootWidget)
-			{
-				if (auto Canvas = RootWidget->GetComponent<ULexCanvas>())
-				{
-					RootWidget->RemoveComponent(Canvas);
-				}
-				RootCanvas = RootWidget->AddComponentByTemplate<ULexCanvas>(CanvasTemplate);
-				RootCanvas->AttachToSceneComponent(this);
-			});
-			LoadedWidget->CalculateObjectToWorldTransform(true);
-#if WITH_EDITOR
-			TArray<ULexWidget*> AllLoadedWidgets;
-			ULexWidget::CollectChildrenWidgets(LoadedWidget.Get(), AllLoadedWidgets, true);
-			if (World->WorldType == EWorldType::Editor)
-			{
-				for (auto Widget : AllLoadedWidgets)
-				{
-					//set transient in edit mode because we don't want to save these widgets in level, not set in game mode because no need to
-					//skip EditorPreview mode because we need full transactional
-					Widget->SetFlags(RF_Transient);
-				}
-			}
-			OverallVersionMD5 = WidgetPrefab->GenerateOverallVersionMD5();//store version for auto update
-#endif
-		}
-	}
-#if WITH_EDITOR
-	if (!bIsSpawnFromPrefabFactory)//if spawn from prefab-factory then the "CheckNecessaryObjects" is handled from there
-	{
-		auto World = GetWorld();
-		if (World && World->WorldType != EWorldType::EditorPreview && !World->IsGameWorld())//Edit mode and not BlueprintEditorPreview
-		{
-			ULexUIManagerObject::AddOneShotTickFunction([WeakThis = MakeWeakObjectPtr(this)]()
-			{
-				if (WeakThis.IsValid())
-				{
-					WeakThis->CheckNecessaryObjects();
-					MarkNeedCheckNecessaryObjects();
-				}
-			}, 1);
-		}
-	}
-#endif
-}
-
-#if WITH_EDITOR
-void ULexWidgetPresenterComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void ULexWidgetPresenterComponentBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	if (PropertyChangedEvent.MemberProperty != nullptr)
 	{
 		auto PropertyName = PropertyChangedEvent.GetMemberPropertyName();
-		if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexWidgetPresenterComponent, WidgetPrefab))
-		{
-			LoadPrefab();
-		}
 	}
 }
 
 #include "Dialog/SCustomDialog.h"
-bool ULexWidgetPresenterComponent::bNeedCheckEventSystem = true;
-bool ULexWidgetPresenterComponent::bNeverCheckEventSystem = false;
-bool ULexWidgetPresenterComponent::bNeedCheckRaycasterSource = true;
-bool ULexWidgetPresenterComponent::bNeverCheckRaycasterSource = false;
-void ULexWidgetPresenterComponent::CheckNecessaryObjects()
+bool ULexWidgetPresenterComponentBase::bNeedCheckEventSystem = true;
+bool ULexWidgetPresenterComponentBase::bNeverCheckEventSystem = false;
+bool ULexWidgetPresenterComponentBase::bNeedCheckRaycasterSource = true;
+bool ULexWidgetPresenterComponentBase::bNeverCheckRaycasterSource = false;
+void ULexWidgetPresenterComponentBase::CheckNecessaryObjects()
 {
 	if (bNeedCheckEventSystem)
 	{
@@ -265,12 +196,13 @@ void ULexWidgetPresenterComponent::CheckNecessaryObjects()
 				.Buttons({
 					SCustomDialog::FButton(
 						LOCTEXT("DialogBtnYes", "Yes"),
-						FSimpleDelegate::CreateLambda([=, this]()
+						FSimpleDelegate::CreateLambda([=, WeakThis = MakeWeakObjectPtr(this)]()
 						{
+							if (!WeakThis.IsValid())return;
 							auto ClassName = TEXT("LexEventSystemActor_EnhancedInput");
 							if (auto ActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
 							{
-								auto Actor = this->GetWorld()->SpawnActor<AActor>(ActorClass);
+								auto Actor = WeakThis->GetWorld()->SpawnActor<AActor>(ActorClass);
 								Actor->SetActorLabel(ClassName);
 							}
 							else
@@ -331,12 +263,13 @@ void ULexWidgetPresenterComponent::CheckNecessaryObjects()
 				.Buttons({
 					SCustomDialog::FButton(
 						LOCTEXT("DialogBtnYes", "Yes"),
-						FSimpleDelegate::CreateLambda([=, &ExistWorldSpaceRaycasterSource, this]()
+						FSimpleDelegate::CreateLambda([=, &ExistWorldSpaceRaycasterSource, WeakThis = MakeWeakObjectPtr(this)]()
 						{
+							if (!WeakThis.IsValid())return;
 							auto ClassName = TEXT("LexWorldSpaceRaycasterSource_Mouse");
 							if (auto ActorClass = LoadObject<UClass>(NULL, *FString::Printf(TEXT("/LGUI/Blueprints/%s.%s_C"), ClassName, ClassName)))
 							{
-								auto Actor = this->GetWorld()->SpawnActor<AActor>(ActorClass);
+								auto Actor = WeakThis->GetWorld()->SpawnActor<AActor>(ActorClass);
 								Actor->SetActorLabel(ClassName);
 								ExistWorldSpaceRaycasterSource = Actor->FindComponentByClass<ULexWorldSpaceRaycasterSource>();
 							}
@@ -371,7 +304,7 @@ void ULexWidgetPresenterComponent::CheckNecessaryObjects()
 	}
 }
 
-void ULexWidgetPresenterComponent::MarkNeedCheckNecessaryObjects()
+void ULexWidgetPresenterComponentBase::MarkNeedCheckNecessaryObjects()
 {
 	if (!bNeverCheckEventSystem)
 	{
@@ -382,38 +315,9 @@ void ULexWidgetPresenterComponent::MarkNeedCheckNecessaryObjects()
 		bNeedCheckRaycasterSource = true;
 	}
 }
-
-void ULexWidgetPresenterComponent::CheckPrefabVersion()
-{
-	if (IsValid(WidgetPrefab))
-	{
-		if (OverallVersionMD5 != WidgetPrefab->GenerateOverallVersionMD5())
-		{
-			LoadPrefab();
-		}
-	}
-	else
-	{
-		if (LoadedWidget.IsValid())
-		{
-			LoadedWidget->DestroyWidget();
-			LoadedWidget = nullptr;
-		}
-	}
-}
-
 #endif
 
-void ULexWidgetPresenterComponent::SetPrefab(ULexUIPrefab* Value)
-{
-	if (WidgetPrefab != Value)
-	{
-		WidgetPrefab = Value;
-		LoadPrefab();
-	}
-}
-
-UUINavigationInputSelectionHandler* ULexWidgetPresenterComponent::GetNavigationSelection()
+UUINavigationInputSelectionHandler* ULexWidgetPresenterComponentBase::GetNavigationSelection()
 {
 	if (!NavigationSelection.IsValid())
 	{
@@ -424,5 +328,13 @@ UUINavigationInputSelectionHandler* ULexWidgetPresenterComponent::GetNavigationS
 	}
 	return NavigationSelection.Get();
 }
+
+#if WITH_EDITOR
+
+void ULexWidgetPresenterComponentBase::ReloadWidget()
+{
+	LoadWidget();
+}
+#endif
 
 #undef LOCTEXT_NAMESPACE

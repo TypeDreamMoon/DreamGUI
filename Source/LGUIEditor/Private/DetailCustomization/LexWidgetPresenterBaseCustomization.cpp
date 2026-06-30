@@ -1,36 +1,37 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
-#include "DetailCustomization/LexWidgetPresenterCustomization.h"
+#include "DetailCustomization/LexWidgetPresenterBaseCustomization.h"
 
 #include "DetailCategoryBuilder.h"
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailWidgetRow.h"
-#include "Core/Components/LexWidgetPresenterComponent.h"
+#include "Widgets/Input/SButton.h"
+#include "Core/LexWidgetPresenterComponentBase.h"
 #include "Window/LexUIWidgetInspector.h"
 
-#define LOCTEXT_NAMESPACE "LexWidgetPresenterCustomization"
-FLexWidgetPresenterCustomization::FLexWidgetPresenterCustomization()
+#define LOCTEXT_NAMESPACE "LexWidgetPresenterBaseCustomization"
+FLexWidgetPresenterBaseCustomization::FLexWidgetPresenterBaseCustomization()
 {
 }
 
-FLexWidgetPresenterCustomization::~FLexWidgetPresenterCustomization()
+FLexWidgetPresenterBaseCustomization::~FLexWidgetPresenterBaseCustomization()
 {
 	
 }
 
-TSharedRef<IDetailCustomization> FLexWidgetPresenterCustomization::MakeInstance()
+TSharedRef<IDetailCustomization> FLexWidgetPresenterBaseCustomization::MakeInstance()
 {
-	return MakeShareable(new FLexWidgetPresenterCustomization);
+	return MakeShareable(new FLexWidgetPresenterBaseCustomization);
 }
-void FLexWidgetPresenterCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
+void FLexWidgetPresenterBaseCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
 {
 	TArray<TWeakObjectPtr<UObject>> TargetObjects;
 	DetailBuilder.GetObjectsBeingCustomized(TargetObjects);
 	TargetScriptArray.Empty();
 	for (auto Item : TargetObjects)
 	{
-		if (auto ValidItem = Cast<ULexWidgetPresenterComponent>(Item.Get()))
+		if (auto ValidItem = Cast<ULexWidgetPresenterComponentBase>(Item.Get()))
 		{
 			TargetScriptArray.Add(ValidItem);
 		}
@@ -43,6 +44,37 @@ void FLexWidgetPresenterCustomization::CustomizeDetails(IDetailLayoutBuilder& De
 	auto TargetWorld = TargetScriptArray[0]->GetWorld();
 
 	auto& Category = DetailBuilder.EditCategory("LexWidgetPresenter");
+
+	// ReloadWidget button
+	Category.AddCustomRow(LOCTEXT("ReloadWidget", "ReloadWidget"))
+		.NameContent()
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("ReloadWidget", "ReloadWidget"))
+			.Font(DetailBuilder.GetDetailFont())
+		]
+		.ValueContent()
+		[
+			SNew(SButton)
+			.HAlign(HAlign_Center)
+			.VAlign(VAlign_Center)
+			.OnClicked_Lambda([=, this]()
+			{
+				for (auto& Target : TargetScriptArray)
+				{
+					if (Target.IsValid())
+					{
+						Target->ReloadWidget();
+					}
+				}
+				return FReply::Handled();
+			})
+			[
+				SNew(STextBlock)
+				.Text(LOCTEXT("ReloadWidgetBtn", "Reload"))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
+		];
 
 	TSharedPtr<FTabManager> HostTabManager = nullptr;
 	if (auto DetailsView = DetailBuilder.GetDetailsViewSharedPtr())
@@ -99,7 +131,7 @@ void FLexWidgetPresenterCustomization::CustomizeDetails(IDetailLayoutBuilder& De
 
 	//canvas template
 	{
-		auto CanvasTemplate_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidgetPresenterComponent, CanvasTemplate));
+		auto CanvasTemplate_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidgetPresenterComponentBase, CanvasTemplate));
 		UObject* CanvasTemplate = nullptr;
 		CanvasTemplate_PH->GetValue(CanvasTemplate);
 		auto& CanvasTemplateCategory = DetailBuilder.EditCategory("CanvasTemplate");
@@ -109,7 +141,7 @@ void FLexWidgetPresenterCustomization::CustomizeDetails(IDetailLayoutBuilder& De
 		DetailBuilder.HideProperty(CanvasTemplate_PH);
 	}
 }
-void FLexWidgetPresenterCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
+void FLexWidgetPresenterBaseCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
 {
 	if (DetailBuilder)
 	{

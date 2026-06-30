@@ -6,16 +6,16 @@
 /**
  * 
  */
-class FLexWidgetPresenterCustomization : public IDetailCustomization
+class FLexWidgetPresenterBaseCustomization : public IDetailCustomization
 {
 public:
-	FLexWidgetPresenterCustomization();
-	~FLexWidgetPresenterCustomization();
+	FLexWidgetPresenterBaseCustomization();
+	~FLexWidgetPresenterBaseCustomization();
 
 	static TSharedRef<IDetailCustomization> MakeInstance();
 	/** IDetailCustomization interface */
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
 private:
-	TArray<TWeakObjectPtr<class ULexWidgetPresenterComponent>> TargetScriptArray;
+	TArray<TWeakObjectPtr<class ULexWidgetPresenterComponentBase>> TargetScriptArray;
 	void ForceRefresh(IDetailLayoutBuilder* DetailBuilder);
 };
