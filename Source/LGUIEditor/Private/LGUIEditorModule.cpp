@@ -8,10 +8,7 @@
 
 #include "AssetToolsModule.h"
 #include "DetailLayoutBuilder.h"
-#include "SceneView.h"
 #include "Kismet2/KismetEditorUtilities.h"
-
-#include "Engine/CollisionProfile.h"
 
 #include "LGUIEditorStyle.h"
 #include "LexUIEditorCommands.h"
