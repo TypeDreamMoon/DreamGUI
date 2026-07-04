@@ -404,6 +404,7 @@ ULexWidget* ULexUIPrefab::LoadPrefab(UWorld* InWorld, ULexWidget* InParent, cons
 		switch ((ELexUIPrefabVersion)PrefabVersion)
 		{
 		default:
+		case ELexUIPrefabVersion::FTextAsReference:
 		case ELexUIPrefabVersion::NewObjectOnNestedPrefab:
 		{
 			LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefab(InWorld, InWorld, this, InParent, SetRelativeTransformToIdentity, InCallbackBeforeAwake);
@@ -435,6 +436,7 @@ ULexWidget* ULexUIPrefab::LoadPrefabWithTransform(UObject* WorldContextObject, U
 		switch ((ELexUIPrefabVersion)PrefabVersion)
 		{
 		default:
+		case ELexUIPrefabVersion::FTextAsReference:
 		case ELexUIPrefabVersion::NewObjectOnNestedPrefab:
 		{
 			LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefab(World, World, this, InParent, Location, Rotation.Quaternion(), Scale, CallbackBeforeAwake);
@@ -491,6 +493,7 @@ ULexWidget* ULexUIPrefab::LoadPrefabWithReplacement(UObject* WorldContextObject,
 		switch ((ELexUIPrefabVersion)PrefabVersion)
 		{
 		default:
+		case ELexUIPrefabVersion::FTextAsReference:
 		case ELexUIPrefabVersion::NewObjectOnNestedPrefab:
 		{
 			LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefab(World, World, this, InParent, false, CallbackBeforeAwake);
@@ -534,6 +537,7 @@ ULexWidget* ULexUIPrefab::LoadPrefabWithTransform(UObject* WorldContextObject, U
 		switch ((ELexUIPrefabVersion)PrefabVersion)
 		{
 		default:
+		case ELexUIPrefabVersion::FTextAsReference:
 		case ELexUIPrefabVersion::NewObjectOnNestedPrefab:
 		{
 			LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefab(World, World, this, InParent, Location, Rotation, Scale, InCallbackBeforeAwake);
@@ -553,6 +557,7 @@ ULexWidget* ULexUIPrefab::LoadPrefabWithExistingObjects(UWorld* InWorld, UObject
 	switch ((ELexUIPrefabVersion)PrefabVersion)
 	{
 	default:
+	case ELexUIPrefabVersion::FTextAsReference:
 	case ELexUIPrefabVersion::NewObjectOnNestedPrefab:
 	{
 		LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefabWithExistingObjects(InWorld, InOuter, this, InParent
@@ -594,6 +599,7 @@ void ULexUIPrefab::CopyDataTo(ULexUIPrefab* TargetPrefab)
 	TargetPrefab->ReferenceAssetList = this->ReferenceAssetList;
 	TargetPrefab->ReferenceClassList = this->ReferenceClassList;
 	TargetPrefab->ReferenceNameList = this->ReferenceNameList;
+	TargetPrefab->ReferenceTextList = this->ReferenceTextList;
 	TargetPrefab->BinaryData = this->BinaryData;
 	TargetPrefab->PrefabVersion = this->PrefabVersion;
 	TargetPrefab->EngineMajorVersion = this->EngineMajorVersion;
@@ -669,6 +675,7 @@ ULexWidget* ULexUIPrefab::LoadPrefabInEditor(UWorld* InWorld, UObject* InOuter, 
 	switch ((ELexUIPrefabVersion)PrefabVersion)
 	{
 	default:
+	case ELexUIPrefabVersion::FTextAsReference:
 	case ELexUIPrefabVersion::NewObjectOnNestedPrefab:
 	{
 		TMap<FGuid, TObjectPtr<UObject>> MapGuidToObject;
@@ -688,6 +695,7 @@ ULexWidget* ULexUIPrefab::LoadPrefabInEditor(UWorld* InWorld, UObject* InOuter, 
 	switch ((ELexUIPrefabVersion)PrefabVersion)
 	{
 	default:
+	case ELexUIPrefabVersion::FTextAsReference:
 	case ELexUIPrefabVersion::NewObjectOnNestedPrefab:
 	{
 		LoadedRootWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::LoadPrefabWithExistingObjects(InWorld, InOuter, this

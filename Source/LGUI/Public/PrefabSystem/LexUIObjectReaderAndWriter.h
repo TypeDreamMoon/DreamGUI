@@ -47,7 +47,8 @@ namespace LexUIPrefabSystem
 		virtual void DoSerialize(UObject* Object);
 
 		virtual bool ShouldSkipProperty(const FProperty* InProperty) const override;
-		virtual FArchive& operator<<(class FName& N) override;
+		virtual FArchive& operator<<(FName& N) override;
+		virtual FArchive& operator<<(FText& Value) override;
 		virtual FArchive& operator<<(UObject*& Res) override;
 		virtual FArchive& operator<<(FObjectPtr& Value) override;
 		virtual FArchive& operator<<(FWeakObjectPtr& Value) override;
@@ -67,7 +68,8 @@ namespace LexUIPrefabSystem
 		virtual void DoSerialize(UObject* Object);
 
 		virtual bool ShouldSkipProperty(const FProperty* InProperty) const override;
-		virtual FArchive& operator<<(class FName& N) override;
+		virtual FArchive& operator<<(FName& N) override;
+		virtual FArchive& operator<<(FText& Value) override;
 		virtual FArchive& operator<<(UObject*& Res) override;
 		virtual FArchive& operator<<(FObjectPtr& Value) override;
 		virtual FArchive& operator<<(FWeakObjectPtr& Value) override;

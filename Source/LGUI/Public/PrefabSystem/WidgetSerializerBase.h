@@ -50,13 +50,16 @@ namespace LexUIPrefabSystem
 		int32 FindOrAddAssetIdFromList(UObject* AssetObject);
 		int32 FindOrAddClassFromList(UClass* Class);
 		int32 FindOrAddNameFromList(const FName& Name);
+		int32 FindOrAddTextFromList(const FText& Text);
 		//find object by id
 		UObject* FindAssetFromListByIndex(int32 Id);
 		UClass* FindClassFromListByIndex(int32 Id);
 		FName FindNameFromListByIndex(int32 Id);
+		FText FindTextFromListByIndex(int32 Id);
 		TArray<UObject*> ReferenceAssetList;
 		TArray<UClass*> ReferenceClassList;
 		TArray<FName> ReferenceNameList;
+		TArray<FText> ReferenceTextList;
 
 		bool bOverrideVersions = false;
 		uint16 PrefabVersion = 0;

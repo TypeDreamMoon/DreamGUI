@@ -45,13 +45,30 @@ namespace LexUIPrefabSystem
 
 		return false;
 	}
-	FArchive& FLexUIObjectWriter::operator<<(class FName& N)
+	FArchive& FLexUIObjectWriter::operator<<(FName& N)
 	{
 		auto id = Serializer.FindOrAddNameFromList(N);
 		*this << id;
 
 		return *this;
 	}
+
+	FArchive& FLexUIObjectWriter::operator<<(FText& Value)
+	{
+#if WITH_EDITOR
+		if (Serializer.PrefabVersion < (uint16)ELexUIPrefabVersion::FTextAsReference)
+		{
+			return FArchive::operator<<(Value);
+		}
+		else
+#endif
+		{
+			auto id = Serializer.FindOrAddTextFromList(Value);
+			*this << id;
+			return *this;
+		}
+	}
+
 	bool FLexUIObjectWriter::SerializeObject(UObject* Object)
 	{
 		if (Object->IsAsset())
@@ -213,7 +230,7 @@ namespace LexUIPrefabSystem
 
 		return false;
 	}
-	FArchive& FLexUIObjectReader::operator<<(class FName& N)
+	FArchive& FLexUIObjectReader::operator<<(FName& N)
 	{
 		int32 id = -1;
 		*this << id;
@@ -221,6 +238,25 @@ namespace LexUIPrefabSystem
 
 		return *this;
 	}
+
+	FArchive& FLexUIObjectReader::operator<<(FText& Value)
+	{
+#if WITH_EDITOR
+		if (Serializer.PrefabVersion < (uint16)ELexUIPrefabVersion::FTextAsReference)
+		{
+			return FArchive::operator<<(Value);
+		}
+		else
+#endif
+		{
+			int32 id = -1;
+			*this << id;
+			Value = Serializer.FindTextFromListByIndex(id);
+			
+			return *this;
+		}
+	}
+
 	bool FLexUIObjectReader::SerializeObject(UObject*& Object, bool CanSerializeClass)
 	{
 		uint8 typeUint8 = 0;
