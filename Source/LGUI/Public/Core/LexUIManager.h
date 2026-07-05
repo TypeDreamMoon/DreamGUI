@@ -106,6 +106,7 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection)override;
 	virtual void PostInitialize()override;
 	virtual void Deinitialize()override;
+	virtual void BeginDestroy() override;
 
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 	virtual void OnWorldEndPlay(UWorld& InWorld) override;

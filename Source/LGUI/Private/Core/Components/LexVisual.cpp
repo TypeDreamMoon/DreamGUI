@@ -420,7 +420,12 @@ void ULexVisual::FillWidgetPropertyDataForMaterial(bool bNeedSize, bool bNeedCen
 {
 	SCOPE_CYCLE_COUNTER(STAT_FillWidgetPropertyData);
 	auto StartPosition = this->WidgetPropertyDataStartPosition;
-	check(StartPosition > INDEX_NONE);
+	if (StartPosition == INDEX_NONE)
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d WidgetPropertyDataStartPosition is invalid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		check(0);
+		return;
+	}
 	auto Widget = this->GetWidget();
 	if (!Widget)return;
 	auto Canvas = Widget->GetRenderCanvas();
@@ -458,7 +463,12 @@ void ULexVisual::FillWidgetPropertyDataForMaterial(bool bNeedSize, bool bNeedCen
 void ULexVisual::FillWidgetPropertyDataForMaterial_ClipDataCoordinate(ULexUIDataAsTexture* DataAsTexture)const
 {
 	auto StartPosition = this->WidgetPropertyDataStartPosition;
-	check(StartPosition > INDEX_NONE);
+	if (StartPosition == INDEX_NONE)
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d WidgetPropertyDataStartPosition is invalid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		check(0);
+		return;
+	}
 	TArray<uint8> BlockBuffer;
 	BlockBuffer.SetNumUninitialized(4);
 
@@ -470,7 +480,12 @@ void ULexVisual::FillWidgetPropertyDataForMaterial_ClipDataCoordinate(ULexUIData
 void ULexVisual::FillWidgetPropertyDataForMaterial_InitialMark(ULexUIDataAsTexture* DataAsTexture, uint8 FontMark) const
 {
 	auto StartPosition = this->WidgetPropertyDataStartPosition;
-	check(StartPosition > INDEX_NONE);
+	if (StartPosition == INDEX_NONE)
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d WidgetPropertyDataStartPosition is invalid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		check(0);
+		return;
+	}
 	
 	TArray<uint8> BlockBuffer;
 	BlockBuffer.SetNumUninitialized(4);

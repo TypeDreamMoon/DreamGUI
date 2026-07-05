@@ -210,6 +210,7 @@ public:
 	static int WidgetPropertyDataLength;
 
 	void SetWidgetPropertyDataStartPosition(int InPosition);
+	bool IsRegisteredToCanvas()const{return WidgetPropertyDataStartPosition != INDEX_NONE;}
 	int GetWidgetPropertyDataStartPosition()const{return WidgetPropertyDataStartPosition;}
 protected:
 	uint8 bColorChanged : 1;

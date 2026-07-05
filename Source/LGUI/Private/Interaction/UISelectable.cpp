@@ -13,6 +13,11 @@
 #include "Interaction/UINavigationInputSelectionHandler.h"
 
 
+UUITransition::UUITransition()
+{
+	bStartWithTickEnabled = false;
+}
+
 void UUITransition::StopTransition() 
 { 
 	for (auto tweener : TweenerCollection)
@@ -152,14 +157,9 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 				break;
 			case EUISelectableTransitionType::Custom:
 				{
-#if WITH_EDITOR
-					if (this->GetWorld() && this->GetWorld()->IsGameWorld())
-#endif
+					if (CustomTransition.IsValid())
 					{
-						if (CustomTransition.IsValid())
-						{
-							CustomTransition->OnNormal(ImmediateSet);
-						}
+						CustomTransition->OnNormal(ImmediateSet);
 					}
 				}
 				break;
@@ -183,14 +183,9 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 				break;
 			case EUISelectableTransitionType::Custom:
 				{
-#if WITH_EDITOR
-					if (this->GetWorld() && this->GetWorld()->IsGameWorld())
-#endif
+					if (CustomTransition.IsValid())
 					{
-						if (CustomTransition.IsValid())
-						{
-							CustomTransition->OnHovered(ImmediateSet);
-						}
+						CustomTransition->OnHovered(ImmediateSet);
 					}
 				}
 				break;
@@ -214,14 +209,9 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 				break;
 			case EUISelectableTransitionType::Custom:
 				{
-#if WITH_EDITOR
-					if (this->GetWorld() && this->GetWorld()->IsGameWorld())
-#endif
+					if (CustomTransition.IsValid())
 					{
-						if (CustomTransition.IsValid())
-						{
-							CustomTransition->OnPressed(ImmediateSet);
-						}
+						CustomTransition->OnPressed(ImmediateSet);
 					}
 				}
 				break;
@@ -245,14 +235,9 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 				break;
 			case EUISelectableTransitionType::Custom:
 				{
-#if WITH_EDITOR
-					if (this->GetWorld() && this->GetWorld()->IsGameWorld())
-#endif
+					if (CustomTransition.IsValid())
 					{
-						if (CustomTransition.IsValid())
-						{
-							CustomTransition->OnDisabled(ImmediateSet);
-						}
+						CustomTransition->OnDisabled(ImmediateSet);
 					}
 				}
 				break;

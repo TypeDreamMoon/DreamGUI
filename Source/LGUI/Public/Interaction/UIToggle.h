@@ -73,7 +73,6 @@ protected:
 	EUISelectableTransitionType ToggleTransitionType = EUISelectableTransitionType::Color;
 	UPROPERTY(EditAnywhere, Category="LGUI-Toggle", meta = (EditCondition = "ToggleTransitionType==EUISelectableTransitionType::Custom"))
 	TWeakObjectPtr<UUIToggleTransition> CustomToggleTransition = nullptr;
-	bool CheckTarget();
 #pragma region Transition
 	UPROPERTY(Transient) TObjectPtr<class ULTweener> ToggleTransitionTweener = nullptr;
 
@@ -99,6 +98,9 @@ protected:
 		bool bIsOn = true;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Toggle")
 	TWeakObjectPtr<class UUIToggleGroup> ToggleGroup = nullptr;
+	/** When Awake, if ToggleGroup is not set, enable this will find toggle group in parent component and up hierarchy. */
+	UPROPERTY(EditAnywhere, Category = "LGUI-Toggle")
+	bool bAutoFindToggleGroupInParent = false;
 
 	FLexUIMulticastDelegateBool OnValueChangedCPP;
 	UPROPERTY(BlueprintAssignable, Category = "LGUI-Toggle", DisplayName="OnValueChanged")

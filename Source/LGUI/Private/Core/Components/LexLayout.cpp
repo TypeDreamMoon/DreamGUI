@@ -23,6 +23,15 @@ void ULexLayoutContainer::PostReinitProperties()
 #endif
 }
 
+void ULexLayoutContainer::OnRegister()
+{
+	Super::OnRegister();
+	if (auto Widget = GetWidget())
+	{
+		ULexWidget::MarkLayoutForRebuild(Widget);
+	}
+}
+
 #if WITH_EDITOR
 void ULexLayout::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {

@@ -105,13 +105,13 @@ enum class ELTweenEase :uint8
 	InBounce,
 	OutBounce,
 	InOutBounce,
-	/** Use CurveFloat to animate, only range 0-1 is valid. If use this you must assign curveFloat, or fallback to Linear. */
+	/**
+	 * Use CurveFloat to animate, only range 0-1 is valid.
+	 * Call SetCurveFloat or SetRuntimeCurveFloat to set the curve.
+	 * Fallback to Linear if curve is not set or invalid.
+	 */
 	CurveFloat,
 };
-
-#ifndef LTweenEase
-#define LTweenEase UE_DEPRECATED_MACRO(5.0, "LTweenEase has been renamed to ELTweenEase") ELTweenEase
-#endif
 
 /**
  * Loop type
@@ -128,10 +128,6 @@ enum class ELTweenLoop :uint8
 	/** Continuously increments the tween at the end of each loop cycle (A to B, B to B+(A-B), and so on). */
 	Incremental,
 };
-
-#ifndef LTweenLoop
-#define LTweenLoop UE_DEPRECATED_MACRO(5.0, "LTweenLoop has been renamed to ELTweenLoop") ELTweenLoop
-#endif
 
 class UCurveFloat;
 
@@ -152,8 +148,6 @@ protected:
 	float delay = 0.0f;
 	/** total elapse time, include delay */
 	float elapseTime = 0.0f;
-	/** use CurveFloat as animation function,horizontal is time (0-1),vertical is value (0-1) */
-	TWeakObjectPtr<UCurveFloat> curveFloat = nullptr;
 	/** loop type */
 	ELTweenLoop loopType = ELTweenLoop::Once;
 	/** max loop count when loop type is Restart/Yoyo/Incremental */
@@ -196,22 +190,13 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LTween")
 		ULTweener* SetEase(ELTweenEase easetype);
-	/** set ease to CurveFloat and use CurveFloat as animation function, horizontal is time (0-1),vertical is value (0-1) */
-	UE_DEPRECATED(4.23, "SetEaseCurve is not valid anymore, use SetEase and SetCurveFloat instead.")
-	UFUNCTION(BlueprintCallable, Category = "LTween", meta = (DeprecatedFunction, DeprecationMessage = "SetEaseCurve is not valid anymore, use SetEase and SetCurveFloat instead."))
-		ULTweener* SetEaseCurve(UCurveFloat* newCurve);
 	/**
 	 * Set delay time before start animation.
 	 * Has no effect if the Tween has already started.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LTween")
 		virtual ULTweener* SetDelay(float newDelay);
-	UE_DEPRECATED(4.23, "SetLoopType not valid anymore, use SetLoop instead.")
-	UFUNCTION(BlueprintCallable, Category = "LTween", meta = (DeprecatedFunction, DeprecationMessage = "SetLoopType not valid anymore, use SetLoop instead."))
-		virtual ULTweener* SetLoopType(ELTweenLoop newLoopType)
-	{
-		return SetLoop(newLoopType, -1);
-	}
+
 	/**
 	 * Set loop of tween.
 	 * Has no effect if the Tween has already started.
@@ -220,9 +205,6 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LTween")
 		virtual ULTweener* SetLoop(ELTweenLoop newLoopType, int32 newLoopCount = 1);
-	UE_DEPRECATED(4.23, "GetLoopCount not valid anymore, use GetLoopCycleCount instead.")
-	UFUNCTION(BlueprintCallable, Category = "LTween", meta = (DeprecatedFunction, DeprecationMessage = "GetLoopCount not valid anymore, use GetLoopCycleCount instead."))
-		int32 GetLoopCount() { return loopCycleCount; }
 	/** curently completed loop cycle count */
 	UFUNCTION(BlueprintCallable, Category = "LTween")
 		int32 GetLoopCycleCount()const { return loopCycleCount; }
@@ -352,11 +334,17 @@ public:
 		return this;
 	}
 	/**
-	 * Set CurveFloat as animation curve. Make sure ease type is CurveFloat. (Call SetEase function to set ease type)
+	 * Set CurveFloat as animation curve.
 	 * Has no effect if the Tween has already started.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LTween")
 		ULTweener* SetCurveFloat(UCurveFloat* newCurveFloat);
+	/**
+	 * Set RuntimeFloatCurve as animation curve.
+	 * Has no effect if the Tween has already started.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "LTween")
+	ULTweener* SetRuntimeFloatCurve(const FRuntimeFloatCurve& Value);
 	/**
 	 * @return false: the tween is complete and need to be killed. true: the tween is still processing.
 	 */
@@ -688,7 +676,5 @@ public:
 		if (t < d * 0.5f) return InBounce(c, 0, t * 2, d) * .5f + b;
 		else return OutBounce(c, 0, t * 2 - d, d) * .5f + c * .5f + b;
 	}
-	/** Tween use CurveFloat, in range of 0-1. if curveFloat is null, fallback to Linear */
-	float CurveFloat(float c, float b, float t, float d);
 #pragma endregion
 };

@@ -53,6 +53,8 @@ UCLASS(ClassGroup = (LexUI), Abstract, Blueprintable, meta=(BlueprintSpawnableCo
 class LGUI_API UUITransition :public ULexUIBehaviour
 {
 	GENERATED_BODY()
+public:
+	UUITransition();
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "LGUI-Transition")
 		TArray<TObjectPtr<ULTweener>> TweenerCollection;

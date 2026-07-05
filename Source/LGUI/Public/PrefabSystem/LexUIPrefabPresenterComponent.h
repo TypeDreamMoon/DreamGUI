@@ -11,7 +11,7 @@ class UUINavigationInputSelectionHandler;
 class ULexCanvas;
 class ULexUIPrefab;
 
-UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent))
+UCLASS(ClassGroup = (LGUI), Blueprintable, meta = (BlueprintSpawnableComponent), DisplayName="LexUI Prefab Presenter Component")
 class LGUI_API ULexUIPrefabPresenterComponent : public ULexWidgetPresenterComponentBase
 {
 	GENERATED_BODY()

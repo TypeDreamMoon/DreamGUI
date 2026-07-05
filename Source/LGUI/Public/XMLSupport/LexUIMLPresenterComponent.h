@@ -10,7 +10,7 @@
 class ULexUIMLBehaviour;
 class ULexUIMLResource;
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent), DisplayName="LexUI XAML Presenter Component")
 class LGUI_API ULexUIMLPresenterComponent : public ULexWidgetPresenterComponentBase
 {
 	GENERATED_BODY()

@@ -24,11 +24,10 @@ bool FLexWidgetDetailPropertyExtensionHandler::IsPropertyExtendable(const UClass
 
 void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow& InWidgetRow, const IDetailLayoutBuilder& InDetailBuilder, const UClass* InObjectClass,	TSharedPtr<IPropertyHandle> InPropertyHandle)
 {
-	TArray<TWeakObjectPtr<UObject>> TargetObjects;
-	InDetailBuilder.GetObjectsBeingCustomized(TargetObjects);
-	if (TargetObjects.Num() != 1)return;
-	auto TargetObject = TargetObjects[0];
-	if (!TargetObject.IsValid())return;
+	TArray<TWeakObjectPtr<UObject>> ObjectsBeingCustomized;
+	InDetailBuilder.GetObjectsBeingCustomized(ObjectsBeingCustomized);
+	if (ObjectsBeingCustomized.Num() != 1)return;
+	if (!ObjectsBeingCustomized[0].IsValid())return;
 	auto ObjectProperty = CastField<FObjectPropertyBase>(InPropertyHandle->GetProperty());
 	if (!ObjectProperty)return;
 	if (CastField<FClassProperty>(ObjectProperty) != nullptr)return;//skip class property
@@ -41,6 +40,7 @@ void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow&
 		return;
 	UObject* Object = nullptr;
 	if (InPropertyHandle->GetValue(Object) != FPropertyAccess::Success)return;
+	auto WeakObject = MakeWeakObjectPtr(Object);
 	InPropertyHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([&InDetailBuilder]()
 	{
 		InDetailBuilder.GetPropertyUtilities()->RequestForceRefresh();
@@ -49,30 +49,34 @@ void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow&
 	auto NoneObjectText = LOCTEXT("None", "None");
 	auto GetText = [=, this]()
 	{
-		if (Object == nullptr)return NoneObjectText;
-		if (auto Widget = Cast<ULexWidget>(Object))
+		if (!WeakObject.IsValid())return NoneObjectText;
+		if (auto Widget = Cast<ULexWidget>(WeakObject.Get()))
 		{
 			return FText::FromString(Widget->GetDisplayName());
 		}
 		else
 		{
-			auto OuterWidget = Object->GetTypedOuter<ULexWidget>();
-			return FText::FromString(OuterWidget->GetDisplayName());
+			if (auto OuterWidget = WeakObject->GetTypedOuter<ULexWidget>())
+			{
+				return FText::FromString(OuterWidget->GetDisplayName());
+			}
+			return NoneObjectText;
 		}
 	};
 	auto GetTooltipText = [=, this]()
 	{
-		if (Object == nullptr)return NoneObjectText;
+		if (!WeakObject.IsValid())return NoneObjectText;
 		ULexWidget* Widget = nullptr;
 		FString PathStr;
-		if (auto CastWidget = Cast<ULexWidget>(Object))
+		if (auto CastWidget = Cast<ULexWidget>(WeakObject.Get()))
 		{
 			Widget = CastWidget;
 		}
 		else
 		{
-			Widget = Object->GetTypedOuter<ULexWidget>();
-			PathStr = "." + Object->GetPathName(Widget);
+			Widget = WeakObject->GetTypedOuter<ULexWidget>();
+			if (!Widget)return NoneObjectText;
+			PathStr = "." + WeakObject->GetPathName(Widget);
 		}
 		while (Widget && !Widget->IsRootWidgetInHierarchy())
 		{

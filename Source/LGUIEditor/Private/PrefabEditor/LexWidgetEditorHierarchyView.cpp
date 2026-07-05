@@ -275,7 +275,7 @@ void SLexWidgetEditorHierarchyView::OnEditorSelectionChanged()
 		WidgetTreeView->ClearSelection();
 
 		auto Selection = ULexUISelection::GetInstance(World.Get());
-		auto SelectedWidgets = Selection->GetSelectedWidgets();
+		auto SelectedWidgets = Selection ? Selection->GetSelectedWidgets() : TArray<TWeakObjectPtr<ULexWidget>>();
 		if (SelectedWidgets.Num() == 0)
 		{
 			ClearSelection();

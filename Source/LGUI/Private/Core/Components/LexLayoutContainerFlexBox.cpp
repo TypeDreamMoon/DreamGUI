@@ -551,6 +551,8 @@ void ULexLayoutContainerFlexBox::CalculatePreferredSize()
     {
         TotalPreferredSize[PrimaryAxis] -= Gap[PrimaryAxis];
     }
+    TotalPreferredSize[PrimaryAxis] += (PrimaryAxis == 0 ? Padding.Left + Padding.Right : Padding.Top + Padding.Bottom);
+    TotalPreferredSize[SecondaryAxis] += (SecondaryAxis == 0 ? Padding.Left + Padding.Right : Padding.Top + Padding.Bottom);
 }
 
 FLexLayoutControlAnchorData ULexLayoutContainerFlexBox::GetLayoutControlAnchor(const ULexWidget* TargetWidget)const

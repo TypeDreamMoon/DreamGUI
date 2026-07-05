@@ -807,7 +807,7 @@ void ULexUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 			return false;
 			});
 	}
-	if (this->GetWorld()->IsGameWorld() || this->GetWorld()->WorldType == EWorldType::Editor)
+	if (this->GetWorld()->IsGameWorld() || this->GetWorld()->WorldType == EWorldType::Editor)//game world or editor world, skip editor preview world
 	{
 		bShouldTickInEditor = true;
 	}
@@ -830,20 +830,6 @@ void ULexUIManagerWorldSubsystem::PostInitialize()
 void ULexUIManagerWorldSubsystem::Deinitialize()
 {
 #if WITH_EDITOR
-	if (!this->GetWorld()->IsGameWorld())//edit mode should deinit here
-	{
-		auto CopiedWidgetArray = AllWidgetArray;//use a copied array, because when Widget.OnUnregister the AllWidgetArray will change
-		for (int i = 0; i < CopiedWidgetArray.Num(); i++)
-		{
-			auto& Widget = CopiedWidgetArray[i];
-			if (Widget->HasRegistered())
-			{
-				Widget->OnUnregister();
-			}
-			check(!Widget->HasBegunPlay());//edit mode should never begin play
-		}
-	}
-	
 	InstanceArray.Remove(this);
 	if (EditorTickDelegateHandle.IsValid())
 	{
@@ -863,6 +849,24 @@ void ULexUIManagerWorldSubsystem::Deinitialize()
 	FWorldDelegates::OnWorldPreSendAllEndOfFrameUpdates.RemoveAll(this);
 	Super::Deinitialize();
 }
+
+void ULexUIManagerWorldSubsystem::BeginDestroy()
+{
+#if WITH_EDITOR
+	auto CopiedWidgetArray = AllWidgetArray;//use a copied array, because when Widget.OnUnregister the AllWidgetArray will change
+	for (int i = 0; i < CopiedWidgetArray.Num(); i++)
+	{
+		auto& Widget = CopiedWidgetArray[i];
+		if (Widget->HasRegistered())
+		{
+			Widget->OnUnregister();
+		}
+		check(!Widget->HasBegunPlay());//edit mode should never begin play
+	}
+#endif
+	Super::BeginDestroy();
+}
+
 TStatId ULexUIManagerWorldSubsystem::GetStatId() const
 {
 	//return GetStatID();

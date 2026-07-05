@@ -99,7 +99,10 @@ UClass* ULexUIMLActorFactory::GetDefaultActorClass(const FAssetData& AssetData)
 	auto Asset = AssetData.GetAsset();
 	if (!Asset)return nullptr;
 	auto Blueprint = Cast<UBlueprint>(Asset);
+	if (!Blueprint)return nullptr;
 	auto LexUIMLClass = Cast<UClass>(Blueprint->GeneratedClass);
+	if (!LexUIMLClass)return nullptr;
+	if (!LexUIMLClass->IsChildOf(ULexUIMLBehaviour::StaticClass()))return nullptr;
 	auto LexUIML = GetDefault<ULexUIMLBehaviour>(LexUIMLClass);
 	if (LexUIML)
 	{

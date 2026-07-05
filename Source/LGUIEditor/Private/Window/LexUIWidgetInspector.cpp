@@ -44,6 +44,13 @@ void SLexUIWidgetInspector::AssignWorld(UWorld* InWorld)
 			World = nullptr;
 			RefreshContent();
 		});
+		LexUIManager->OnLexUIWidgetOutlinerChanged.AddSPLambda(this, [this]()
+		{
+			if (HierarchyView.IsValid())
+			{
+				HierarchyView->RequestRefresh();
+			}
+		});
 	}
 	RefreshContent();
 }

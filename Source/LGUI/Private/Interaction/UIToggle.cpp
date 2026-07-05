@@ -41,8 +41,14 @@ UUIToggle::UUIToggle()
 void UUIToggle::Awake()
 {
 	Super::Awake();
-	CheckTarget();
 	//check toggle group
+	if (!ToggleGroup.IsValid())
+	{
+		if (bAutoFindToggleGroupInParent)
+		{
+			ToggleGroup = GetWidget()->GetComponentInParent<UUIToggleGroup>();
+		}
+	}
 	if (ToggleGroup.IsValid())
 	{
 		ToggleGroup->AddToggleComponent(this);
@@ -83,12 +89,6 @@ void UUIToggle::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEve
 }
 #endif
 
-bool UUIToggle::CheckTarget()
-{
-	if (ToggleTransitionTarget.IsValid())return true;
-	return false;
-}
-
 void UUIToggle::SetValue(bool Value, bool SendCallback)
 {
 	if (bIsOn != Value)
@@ -128,7 +128,6 @@ void UUIToggle::SetValue(bool Value, bool SendCallback)
 }
 void UUIToggle::ApplyValueToVisual(bool immediateSet)
 {
-	if (!CheckTarget())return;
 	if (ToggleTransitionType != EUISelectableTransitionType::Custom)
 	{
 		if (!ToggleTransitionTarget.IsValid())return;
@@ -146,20 +145,15 @@ void UUIToggle::ApplyValueToVisual(bool immediateSet)
 	}
 	else if (ToggleTransitionType == EUISelectableTransitionType::Custom)
 	{
-#if WITH_EDITOR
-		if (this->GetWorld() && this->GetWorld()->IsGameWorld())
-#endif
+		if (CustomToggleTransition.IsValid())
 		{
-			if (CustomToggleTransition.IsValid())
+			if (bIsOn)
 			{
-				if (bIsOn)
-				{
-					CustomToggleTransition->ToggleOn(immediateSet);
-				}
-				else
-				{
-					CustomToggleTransition->ToggleOff(immediateSet);
-				}
+				CustomToggleTransition->ToggleOn(immediateSet);
+			}
+			else
+			{
+				CustomToggleTransition->ToggleOff(immediateSet);
 			}
 		}
 	}

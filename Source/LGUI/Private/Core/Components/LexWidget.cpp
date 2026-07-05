@@ -443,7 +443,6 @@ void ULexWidget::BeginDestroy()
 {
 	if (bHasBegunPlay || bIsRegistered)
 	{
-		check(0);
 		auto World = this->GetWorld();
 		auto WorldName = World ? World->GetName() : TEXT("null");
 		auto Manager = ULexUIManagerWorldSubsystem::GetInstance(World);
@@ -1012,7 +1011,7 @@ ULexUIBehaviour* ULexWidget::AddComponent(TSubclassOf<ULexUIBehaviour> Component
 		return nullptr;
 	}
 
-	EObjectFlags NewComponentFlags = RF_NoFlags;
+	EObjectFlags NewComponentFlags = RF_Public | RF_Transactional;
 	if (HasAnyFlags(RF_ClassDefaultObject | RF_ArchetypeObject))
 	{
 		// Components created while building class defaults must be archetype/default-subobjects.
@@ -1305,7 +1304,7 @@ void ULexWidget::OnAttachedToParent()
 	CalculateRaycastable_Recursive();
 	CalculateInteractable_Recursive();
 	
-	MarkLayoutForRebuild(this);
+	// MarkLayoutForRebuild(this);//why comment this? because it already called in OnHierarchyAttachmentChanged
 	MarkClipDirty(true);
 #if WITH_EDITOR
 	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
@@ -1326,6 +1325,7 @@ void ULexWidget::OnChildDetached()
 			UIChild->Call_SiblingIndexChanged();
 		}
 	}
+	MarkLayoutForRebuild(this);//child removed, so need to rebuild layout
 }
 
 void ULexWidget::OnDetachedFromParent()
@@ -1342,8 +1342,8 @@ void ULexWidget::OnDetachedFromParent()
 	CalculateWidgetActive_Recursive();
 	CalculateRaycastable_Recursive();
 	CalculateInteractable_Recursive();
-	
-	MarkLayoutForRebuild(this);
+
+	// MarkLayoutForRebuild(this);//why comment this? because it already called in OnHierarchyAttachmentChanged
 	MarkClipDirty(true);
 #if WITH_EDITOR
 	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
@@ -1951,7 +1951,7 @@ float ULexWidget::GetAnchorOffsetTop()const
 		bCacheAnchorOffsetTopDirty = false;
 		if (this->Parent.IsValid())
 		{
-			CacheAnchorOffsetTop = this->AnchorData.AnchoredPosition.Y + this->AnchorData.SizeDelta.Y * (1.0f - this->AnchorData.Pivot.Y);
+			CacheAnchorOffsetTop = -(this->AnchorData.AnchoredPosition.Y + this->AnchorData.SizeDelta.Y * (1.0f - this->AnchorData.Pivot.Y));
 		}
 		else
 		{
@@ -1967,7 +1967,7 @@ float ULexWidget::GetAnchorOffsetRight()const
 		bCacheAnchorOffsetRightDirty = false;
 		if (this->Parent.IsValid())
 		{
-			CacheAnchorOffsetRight = this->AnchorData.AnchoredPosition.X + this->AnchorData.SizeDelta.X * (1.0f - this->AnchorData.Pivot.X);
+			CacheAnchorOffsetRight = -(this->AnchorData.AnchoredPosition.X + this->AnchorData.SizeDelta.X * (1.0f - this->AnchorData.Pivot.X));
 		}
 		else
 		{
@@ -2746,7 +2746,7 @@ void ULexWidget::MarkAnchorDataChanged(bool InPivotChanged, bool InWidthChanged,
 
 		//check if child need layout rebuild, the widget self is already marked outside of this function
 		if (ChildWidthChange || ChildHeightChange//parent size change may cause child layout change
-			|| ((InWidthChanged || InHeightChanged) && this->GetLayoutContainer() && Child->GetLayoutSelf())//parent size changed and parent can affect child layout, need calculate child layout
+			|| ((InWidthChanged || InHeightChanged) && Child->GetLayoutSelf())//parent size changed and parent can affect child layout, need calculate child layout
 			)
 		{
 			MarkLayoutForRebuild(Child);
@@ -3088,7 +3088,7 @@ void ULexWidget::SetRestrictNavigationArea(bool Value)
 ULexVisual* ULexWidget::CreateNewVisual(TSubclassOf<ULexVisual> VisualClass)
 {
 	auto OldVisual = Visual;
-	auto NewVisual = NewObject<ULexVisual>(this, VisualClass);
+	auto NewVisual = NewObject<ULexVisual>(this, VisualClass, NAME_None, RF_Public | RF_Transactional);
 	if (RenderCanvas.IsValid())
 	{
 		if (IsValid(OldVisual))
@@ -3142,7 +3142,7 @@ void ULexWidget::RemoveVisual()
 ULexLayoutContainer* ULexWidget::CreateNewLayoutContainer(TSubclassOf<ULexLayoutContainer> LayoutClass)
 {
 	auto OldLayout = LayoutContainer;
-	auto NewLayout = NewObject<ULexLayoutContainer>(this, LayoutClass);
+	auto NewLayout = NewObject<ULexLayoutContainer>(this, LayoutClass, NAME_None, RF_Public | RF_Transactional);
 	if (IsValid(OldLayout))
 	{
 		if (bHasBegunPlay)
@@ -3181,7 +3181,7 @@ void ULexWidget::RemoveLayoutContainer()
 ULexLayoutSelf* ULexWidget::CreateNewLayoutSelf(TSubclassOf<ULexLayoutSelf> LayoutClass)
 {
 	auto OldLayout = LayoutSelf;
-	auto NewLayout = NewObject<ULexLayoutSelf>(this, LayoutClass);
+	auto NewLayout = NewObject<ULexLayoutSelf>(this, LayoutClass, NAME_None, RF_Public | RF_Transactional);
 	if (IsValid(OldLayout))
 	{
 		if (bHasBegunPlay)

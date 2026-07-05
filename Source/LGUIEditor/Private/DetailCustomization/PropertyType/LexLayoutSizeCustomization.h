@@ -65,10 +65,12 @@ public:
 			FName PropName = PropertyHandle->GetProperty()->GetFName();
 			if (PropName == ULexLayoutSelfFlexBox::GetPropertyName_PreferredWidth())
 			{
+				if (ParentLayoutSelf->GetPreferredWidth().bEnable == false) return EVisibility::Collapsed;
 				if (ParentLayoutSelf->GetPreferredWidth().Type != ELexLayoutSizeType::Auto) return EVisibility::Collapsed;
 			}
 			else if (PropName == ULexLayoutSelfFlexBox::GetPropertyName_PreferredHeight())
 			{
+				if (ParentLayoutSelf->GetPreferredHeight().bEnable == false) return EVisibility::Collapsed;
 				if (ParentLayoutSelf->GetPreferredHeight().Type != ELexLayoutSizeType::Auto) return EVisibility::Collapsed;
 			}
 			else

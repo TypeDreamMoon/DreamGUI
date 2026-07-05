@@ -1085,6 +1085,10 @@ void SLexUIPrefabEditorDetails::OnEditorSelectionChanged()
 					continue;
 				}
 
+				Widget->SetFlags(RF_Transactional);
+				ForEachObjectWithOuter(Widget.Get(), [=](UObject* Object) {
+					Object->SetFlags(RF_Transactional);
+				});
 				SelectedObjectList.Add(Widget.Get());
 			}
 		}
@@ -1145,6 +1149,10 @@ void SLexUIPrefabEditorDetails::OnComponentSelectionChanged(const TArray<TWeakOb
 	{
 		if (ULexUIBehaviour* Component = SelectedComponent.Get())
 		{
+			Component->SetFlags(RF_Transactional);
+			ForEachObjectWithOuter(Component, [=](UObject* Object) {
+				Object->SetFlags(RF_Transactional);
+			});
 			SelectedObjects.Add(Component);
 			ValidSelectedComponents.Add(Component);
 		}

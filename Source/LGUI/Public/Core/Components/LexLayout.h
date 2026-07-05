@@ -89,6 +89,8 @@ public:
 
 	virtual void PostReinitProperties()override;
 
+	virtual void OnRegister() override;
+
 	//called by LexWidget during layout processing
 	virtual void CalculateLayout(){}
 };
