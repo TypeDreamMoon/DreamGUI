@@ -33,6 +33,7 @@ ULexCanvas::ULexCanvas()
 {
 	DefaultMeshType = ULexUIMeshComponent::StaticClass();
 	DefaultMaterial = LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/LexUI_ImageAndFont"));
+	bStartWithTickEnabled = false;
 }
 
 void ULexCanvas::Awake()
@@ -297,7 +298,7 @@ void ULexCanvas::OnRegister()
 	if (!IsValid(ClipDataAsTexture))
 	{
 		ClipDataAsTexture = NewObject<ULexUIDataAsTexture>(this, ULexUIDataAsTexture::StaticClass(), NAME_None, RF_Transient);
-		ClipDataAsTexture->Init(FLexUIClipData::BlockSizeInBytes, ELexUIDataAsTexturePixelFormat::R32G32B32A32, 512);
+		ClipDataAsTexture->Init(FLexUIClipData::BlockSizeInBytes, ELexUIDataAsTexturePixelFormat::R32G32B32A32, 128);
 		ClipDataAsTexture->OnDataTextureChange.AddUObject(this, &ULexCanvas::OnClipDataTextureChanged);
 		ClipDataAsTexture->RegisterBuffer();//register a zero position as a placeholder for not clipping type.
 	}
@@ -1658,6 +1659,10 @@ void ULexCanvas::UpdateDrawCallMaterial()
 							{
 								auto RenderMatDynamic = MaterialArray[DynamicMaterialContainerPtr->CurrentIndex];
 								RenderMat = RenderMatDynamic;
+								if (bWidgetPropertyDataAsTextureChanged || RootCanvas->bClipDataAsTextureChanged)
+								{
+									SetParameterForNewlyCreatedMaterial(RenderMatDynamic);//update texture to material
+								}
 								DynamicMaterialContainerPtr->CurrentIndex++;
 								for (auto& BatchMeshVisual : DrawCallItem.BatchMeshVisualArray)
 								{
@@ -1683,6 +1688,10 @@ void ULexCanvas::UpdateDrawCallMaterial()
 							return RenderMatDynamic;
 						}
 						auto RenderMatDynamic = PooledDefaultMaterialList[UsingMaterialStartIndex];
+						if (bWidgetPropertyDataAsTextureChanged || RootCanvas->bClipDataAsTextureChanged)
+						{
+							SetParameterForNewlyCreatedMaterial(RenderMatDynamic);//update texture to material
+						}
 						UsingMaterialStartIndex--;
 						return RenderMatDynamic.Get();
 					};
@@ -1727,6 +1736,11 @@ void ULexCanvas::UpdateDrawCallMaterial()
 	}
 
 	bNeedToSetClipDataTextureMaterialParameter = false;
+	bWidgetPropertyDataAsTextureChanged = false;
+	if (RootCanvas == this)
+	{
+		RootCanvas->bClipDataAsTextureChanged = false;
+	}
 }
 
 void ULexCanvas::MarkNeedVerifyMaterials()
@@ -2344,12 +2358,15 @@ int32 ULexCanvas::GetDrawCallCount()const
 
 void ULexCanvas::OnClipDataTextureChanged(UTexture* NewTexture)
 {
+	check(this == RootCanvas);//only root canvas use ClipDataTexture
 	MarkCanvasUpdate(true);
+	bClipDataAsTextureChanged = true;
 }
 
 void ULexCanvas::OnWidgetPropertyDataTextureChanged(UTexture* NewTexture)
 {
 	MarkCanvasUpdate(true);
+	bWidgetPropertyDataAsTextureChanged = true;
 }
 
 void ULexCanvas::CheckWidgetPropertyData()

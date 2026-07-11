@@ -99,7 +99,7 @@ public:
 	static FName GetSequencerTabID();
 
 	/** Fires whenever the selected set of widgets changes */
-	FSimpleMulticastDelegate OnSelectedWidgetsChanged;
+	FSimpleMulticastDelegate OnSelectionChanged;
 private:
 	TObjectPtr<ULexUIPrefab> PrefabBeingEdited = nullptr;
 	static TArray<FLexUIPrefabEditor*> PrefabEditorInstanceCollection;

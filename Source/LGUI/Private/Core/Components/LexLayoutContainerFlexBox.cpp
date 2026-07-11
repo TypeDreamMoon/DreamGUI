@@ -11,18 +11,23 @@ DECLARE_CYCLE_STAT(TEXT("LexLayoutContainer FlexBox"), STAT_LexLayoutContainerFl
 void ULexLayoutContainerFlexBox::MarkLayoutDirty()
 {
     Super::MarkLayoutDirty();
-    bChildrenListDirty = true;
+
+    if (auto Widget = GetWidget())
+    {
+        auto ParentWidget = Widget->GetParent();
+        if (Widget->GetDisplayName() == "ClickMode" && ParentWidget && ParentWidget->GetDisplayName() == "Button_Page_Prefab")
+        {
+            UE_LOG(LGUI, Warning, TEXT("LayoutContainer MarkLayoutDirty"))
+        }
+    }
 }
 
 void ULexLayoutContainerFlexBox::CalculateLayout()
 {
     SCOPE_CYCLE_COUNTER(STAT_LexLayoutContainerFlexBox);
-    
-    if (LayoutCalculateCount >= MaxLayoutCalculateCount)return;
-    LayoutCalculateCount++;
-    
-    auto Widget = GetWidget();
-    if (!Widget)return;
+
+    if (!bIsLayoutDirty)return;
+    bIsLayoutDirty = false;
     
     CalculateLayout(true);
 
@@ -35,10 +40,6 @@ void ULexLayoutContainerFlexBox::CalculateLayout()
         {
             LayoutResult.LayoutSelf->SetSizeByLayoutContainer(LayoutResult.Size, LayoutResult.PrimaryAxis);
         }
-        // else
-        // {
-        //     LayoutResult.Widget->SetSizeDelta(FVector2D(LayoutResult.Size));
-        // }
     }
     CalculatedLayoutResultArray.Reset();
 }
@@ -78,11 +79,7 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
     }
 #endif
     
-    if (bChildrenListDirty)
-    {
-        bChildrenListDirty = false;
-        RefreshChildren();
-    }
+    RefreshChildren();
     
     CalculatedLayoutResultArray.Reset();
 
@@ -515,11 +512,7 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
 
 void ULexLayoutContainerFlexBox::CalculatePreferredSize()
 {
-    if (bChildrenListDirty)
-    {
-        bChildrenListDirty = false;
-        RefreshChildren();
-    }
+    RefreshChildren();
     
     auto GetChildPreferredSize = [&](ULexWidget* ChildWidget)
     {

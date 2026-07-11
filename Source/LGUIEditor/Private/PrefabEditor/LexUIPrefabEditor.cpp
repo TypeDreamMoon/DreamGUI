@@ -289,7 +289,7 @@ namespace
 void FLexUIPrefabEditor::SyncSelection()
 {
 	SelectedWidgets = ULexUISelection::GetInstance(GetWorld())->GetSelectedWidgets();
-	OnSelectedWidgetsChanged.Broadcast();
+	OnSelectionChanged.Broadcast();
 	OutlinerPtr->RequestRefresh();
 }
 
@@ -342,7 +342,7 @@ void FLexUIPrefabEditor::PostUndo(bool bSuccess)
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->EventOnOutlineChanged.Broadcast();
 	SelectedWidgets = ULexUISelection::GetInstance(GetWorld())->GetSelectedWidgets();
-	OnSelectedWidgetsChanged.Broadcast();
+	OnSelectionChanged.Broadcast();
 	OutlinerPtr->RequestRefresh();
 }
 void FLexUIPrefabEditor::PostRedo(bool bSuccess)
@@ -350,7 +350,7 @@ void FLexUIPrefabEditor::PostRedo(bool bSuccess)
 	SyncWidgetRegisterStateAfterTransaction(this);
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	SelectedWidgets = ULexUISelection::GetInstance(GetWorld())->GetSelectedWidgets();
-	OnSelectedWidgetsChanged.Broadcast();
+	OnSelectionChanged.Broadcast();
 	OutlinerPtr->RequestRefresh();
 }
 
@@ -597,7 +597,7 @@ void FLexUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bA
 		}
 	}
 	
-	OnSelectedWidgetsChanged.Broadcast();
+	OnSelectionChanged.Broadcast();
 	bIsSelecting = false;
 }
 

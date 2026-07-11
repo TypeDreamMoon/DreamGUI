@@ -20,7 +20,6 @@
 #include "XMLSupport/LexUIMLBehaviour.h"
 #include "Core/Components/LexLayoutContainerFlexBox.h"
 #include "Core/Components/LexLayoutContainerGrid.h"
-#include "Core/Components/LexLayoutContainerChildSizeFitter.h"
 #include "Core/Components/LexLayoutSelfFlexBox.h"
 #include "Core/Components/LexLayoutSelfGrid.h"
 #include "Core/Components/LexLayoutSelfAspectRatio.h"
@@ -225,7 +224,6 @@ static UClass* ResolveLayoutContainerClass(const FString& Name)
 {
 	if (Name == TEXT("FlexBox"))        return ULexLayoutContainerFlexBox::StaticClass();
 	if (Name == TEXT("Grid"))           return ULexLayoutContainerGrid::StaticClass();
-	if (Name == TEXT("ChildSizeFitter"))return ULexLayoutContainerChildSizeFitter::StaticClass();
 	return nullptr;
 }
 

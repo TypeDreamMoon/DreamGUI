@@ -27,6 +27,7 @@ public:
 	UUIScrollViewWithScrollbar();
 
 #if WITH_EDITOR
+	virtual void PreEditChange(FProperty* PropertyAboutToChange) override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 	
@@ -57,17 +58,19 @@ private:
 	bool CheckScrollbarParameter();
 	void OnHorizontalScrollbar(float InScrollValue);
 	void OnVerticalScrollbar(float InScrollValue);
+	FDelegateHandle HorizontalScrollbarDelegateHandle;
+	FDelegateHandle VerticalScrollbarDelegateHandle;
 
 public:
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")
 		ULexWidget* GetViewport()const { return Viewport.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")
-		ULexWidget* GetHorizontalScrollbar()const { return HorizontalScrollbarWidget.Get(); }
+		UUIScrollbar* GetHorizontalScrollbar()const { return HorizontalScrollbar.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")
 		ELexUIScrollViewScrollbarVisibility GetHorizontalScrollbarVisibility()const { return HorizontalScrollbarVisibility; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")
-		ULexWidget* GetVerticalScrollbar()const { return VerticalScrollbarWidget.Get(); }
+		UUIScrollbar* GetVerticalScrollbar()const { return VerticalScrollbar.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollViewWithScrollbar")
 		ELexUIScrollViewScrollbarVisibility GetVerticalScrollbarVisibility()const { return VerticalScrollbarVisibility; }
 

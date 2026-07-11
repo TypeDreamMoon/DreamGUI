@@ -151,8 +151,10 @@ void ULexLayoutSelfFlexBox::OnTransformChanged()
 void ULexLayoutSelfFlexBox::OnDimensionChanged(bool InPivotChange, bool InWidthChange,
     bool InHeightChange)
 {
-    // if (bIsCalculatingSize)return;
-    // CalculateSize();
+    if (InWidthChange || InHeightChange)
+    {
+        bIsSizeDirty = true;
+    }
 }
 
 #if WITH_EDITOR
@@ -240,17 +242,27 @@ void ULexLayoutSelfFlexBox::GetLayoutMinMax(FVector2f& OutMin, FVector2f& OutMax
 
 void ULexLayoutSelfFlexBox::CalculateSize()
 {
-    if (LayoutCalculateCount >= MaxLayoutCalculateCount)return;
-    LayoutCalculateCount++;
-#if WITH_EDITOR
-    if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(GetWorld()))
-    {
-        LexUIManager->IncreateLayoutCalculationCounter(FString::Printf(TEXT("%s_%d"), *this->GetPathDisplayName(GetWorld()), this));
-    }
-#endif
-    
+    if (!bIsLayoutDirty)return;
+    bIsLayoutDirty = false;
+
     auto Widget = GetWidget();
     if (!Widget)return;
+    
+#if WITH_EDITOR
+    if (Widget->GetDisplayName() == "ClickMode" && Widget->GetParent() && Widget->GetParent()->GetDisplayName() == "Button_Page_Prefab")
+    {
+        if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(GetWorld()))
+        {
+            LexUIManager->IncreateLayoutCalculationCounter(FString::Printf(TEXT("%s_%d"), *this->GetPathDisplayName(GetWorld()), this));
+        }
+    }
+#endif
+
+    auto PrevSize = FVector2f(CalculatedPreferredWidth, CalculatedPreferredHeight);
+    if (Widget->GetDisplayName() == "ClickMode" && Widget->GetParent() && Widget->GetParent()->GetDisplayName() == "Button_Page_Prefab")
+    {
+        UE_LOG(LGUI, Warning, TEXT(""))
+    }
     
     bIsCalculatingSize = true;
     {
@@ -312,6 +324,28 @@ void ULexLayoutSelfFlexBox::CalculateSize()
     }
     
     bIsCalculatingSize = false;
+
+    if (CalculatedPreferredWidth != PrevSize.X || CalculatedPreferredHeight != PrevSize.Y)
+    {
+        auto ParentWidget = Widget->GetParent();
+        if (Widget->GetDisplayName() == "ClickMode" && ParentWidget && ParentWidget->GetDisplayName() == "Button_Page_Prefab")
+        {
+            UE_LOG(LGUI, Warning, TEXT(""))
+        }
+    }
+}
+
+void ULexLayoutSelfFlexBox::MarkLayoutDirty()
+{
+    Super::MarkLayoutDirty();
+    if (auto Widget = GetWidget())
+    {
+        auto ParentWidget = Widget->GetParent();
+        if (Widget->GetDisplayName() == "ClickMode" && ParentWidget && ParentWidget->GetDisplayName() == "Button_Page_Prefab")
+        {
+            UE_LOG(LGUI, Warning, TEXT("LayoutSelf MarkLayoutDirty"))
+        }
+    }
 }
 
 float ULexLayoutSelfFlexBox::GetGrowForLayoutContainer(int Axis) const

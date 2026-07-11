@@ -69,10 +69,8 @@ public:
 
 	virtual FVector2f GetLayoutPreferredSize()PURE_VIRTUAL(ULexLayout::GetLayoutProperties, return FVector2f::ZeroVector;);
 	virtual void MarkLayoutDirty();
-	bool IsCalculatingLayout()const{return LayoutCalculateCount > 0;}
-	constexpr static int32 MaxLayoutCalculateCount = 2;
 protected:
-	int LayoutCalculateCount = 0;
+	bool bIsLayoutDirty = false;
 };
 
 /**

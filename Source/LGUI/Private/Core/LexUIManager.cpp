@@ -746,9 +746,7 @@ bool ULexUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULe
 				{
 					FLexUIHitResult HitInfo;
 					auto OriginRaycastType = Visual->GetRaycastType();
-					auto OriginVisibility = Widget->GetRaycastable();
 					Visual->SetRaycastType(ELexVisualRaycastType::Mesh);//in editor selection, make the ray hit actural triangle
-					Widget->SetRaycastable(ELexWidgetRaycastableType::Enabled);
 					if (Visual->LineTraceUI(HitInfo, LineStart, LineEnd))
 					{
 						if (Widget->IsPointVisibleOnClip(HitInfo.Location))
@@ -757,7 +755,6 @@ bool ULexUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULe
 						}
 					}
 					Visual->SetRaycastType(OriginRaycastType);
-					Widget->SetRaycastable(OriginVisibility);
 				}
 			}
 		}
@@ -1048,38 +1045,50 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 	//update layout
 	if (LayoutDirtyWidgetArray.Num() > 0)
 	{
-		SCOPE_CYCLE_COUNTER(STAT_UpdateLayout);
-		struct LOCAL
-		{
-			static void UpdateLayoutRecursively(ULexWidget* Widget)
-			{
-				if (!IsValid(Widget))return;
-				if (!Widget->GetWidgetActiveInHierarchy())return;
-				Widget->UpdateLayout();
-				if (Widget->GetLayoutContainer())
-				{
-					for (auto& Child : Widget->GetChildren())
-					{
-						UpdateLayoutRecursively(Child);
-					}
-				}
-			}
-		};
-		auto CopiedLayoutDirtyWidgetArray = LayoutDirtyWidgetArray;
-		LayoutDirtyWidgetArray.Reset();
 #if WITH_EDITOR
+		int LayoutCalcCount = 0;
 		UE_LOG(LGUI, Log, TEXT("---Begin layout frame:%d, World:%s---"), GFrameNumber, *GetWorld()->GetPathName());
 #endif
-		for (int i = CopiedLayoutDirtyWidgetArray.Num() - 1; i >= 0; i--)
+		while (LayoutDirtyWidgetArray.Num() > 0)
 		{
-			auto& Widget = CopiedLayoutDirtyWidgetArray[i];
-			if (Widget.IsValid())
+			SCOPE_CYCLE_COUNTER(STAT_UpdateLayout);
+			LayoutCalcCount++;
+			struct LOCAL
 			{
+				static void UpdateLayoutRecursively(ULexWidget* Widget)
+				{
+					if (!IsValid(Widget))return;
+					if (!Widget->GetWidgetActiveInHierarchy())return;
+					if (!Widget->HasRegistered())return;//if not registered, means it could about to remove
+					Widget->UpdateLayout();
+					if (Widget->GetLayoutContainer())
+					{
+						for (auto& Child : Widget->GetChildren())
+						{
+							UpdateLayoutRecursively(Child);
+						}
+					}
+				}
+			};
+			auto CopiedLayoutDirtyWidgetArray = LayoutDirtyWidgetArray;
+			LayoutDirtyWidgetArray.Reset();
+
+			for (int i = CopiedLayoutDirtyWidgetArray.Num() - 1; i >= 0; i--)
+			{
+				auto& Widget = CopiedLayoutDirtyWidgetArray[i];
 				LOCAL::UpdateLayoutRecursively(Widget.Get());
 			}
 		}
 #if WITH_EDITOR
+		for (auto& CalcCountKeyValue : LayoutCalculationCounterMap)
+		{
+			if (CalcCountKeyValue.Value >= 2)
+			{
+				//UE_LOG(LGUI, Warning, TEXT("Widget %s has been calculated layout %d times in a frame"), *CalcCountKeyValue.Key, CalcCountKeyValue.Value);
+			}
+		}
 		LayoutCalculationCounterMap.Reset();
+		UE_LOG(LGUI, Log, TEXT("---end layout frame:%d, count:%d"), GFrameNumber, LayoutCalcCount);
 #endif
 	}
 
@@ -1198,7 +1207,7 @@ void ULexUIManagerWorldSubsystem::DrawHelperGizmo()
 			if (!IsValid(Selectable->GetWorld()))continue;
 			if (!IsValid(Selectable->GetWidget()))continue;
 			if (!IsValid(Selectable->GetWidget()->GetRenderCanvas()))continue;
-			if (!Selectable->GetWidget()->GetRaycastableInHierarchy())continue;
+			if (!Selectable->GetWidget()->GetInteractableInHierarchy())continue;
 
 			bool bIsScreenSpace = false;
 			if (Selectable->GetWorld()->IsGameWorld())

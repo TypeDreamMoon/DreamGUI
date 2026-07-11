@@ -21,8 +21,7 @@ void ULexUIBehaviour::BeginPlay()
 	if (Widget->GetWidgetActiveInHierarchy())
 	{
 		check (!this->bIsEnableCalled);
-		if (bStartWithTickEnabled)
-			bCanExecuteTick = true;
+		bCanExecuteTick = bStartWithTickEnabled;
 		this->Call_OnEnable();
 	}
 }

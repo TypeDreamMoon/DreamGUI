@@ -180,6 +180,7 @@ private:
 	float Shrink = 0;
 
 	bool bIsCalculatingSize = false;
+	bool bIsSizeDirty = false;
 	
 	float CalculatedMinWidth = 0;
 	float CalculatedMinHeight = 0;
@@ -209,6 +210,7 @@ public:
 	virtual FVector2f GetLayoutFinalSize() override;
 	void GetLayoutMinMax(FVector2f& OutMin, FVector2f& OutMax);
 	virtual void CalculateSize() override;
+	virtual void MarkLayoutDirty() override;
 	
 	float GetGrowForLayoutContainer(int Axis)const;
 	float GetShrinkForLayoutContainer(int Axis)const;

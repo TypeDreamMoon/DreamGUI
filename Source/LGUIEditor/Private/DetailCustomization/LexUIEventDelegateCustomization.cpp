@@ -3,6 +3,7 @@
 #include "DetailCustomization/LexUIEventDelegateCustomization.h"
 #include "LGUIEditorStyle.h"
 #include "IDetailChildrenBuilder.h"
+#include "IDetailGroup.h"
 #include "IPropertyTypeCustomization.h"
 #include "PropertyCustomizationHelpers.h"
 #include "LexUIEditorUtils.h"
@@ -17,6 +18,9 @@
 #include "Serialization/BufferArchive.h"
 #include "LexUIEditableTextPropertyHandle.h"
 #include "LGUIEditorModule.h"
+#include "Core/Components/LexLayout.h"
+#include "Core/Components/LexVisual.h"
+#include "Core/Components/LexWidgetSubObjectBehaviour.h"
 #include "PrefabEditor/LexWidgetHierarchyPickerView.h"
 #include "Widgets/Input/NumericUnitTypeInterface.inl"
 
@@ -266,7 +270,7 @@ FText FLexUIEventDelegateCustomization::GetComponentDisplayName(TSharedRef<IProp
 		}
 		else
 		{
-			if (auto Comp = Cast<ULexUIBehaviour>(TargetObject))
+			if (Cast<ULexUIBehaviour>(TargetObject) != nullptr || Cast<ULexWidgetSubObjectBehaviour>(TargetObject) != nullptr)
 			{
 				ComponentDisplayName = TargetObject->GetName();
 			}
@@ -418,36 +422,52 @@ void FLexUIEventDelegateCustomization::UpdateEventsLayout()
 			{
 				TargetObjectHandle->SetValue(HelperWidget);
 			}
-			else if (ClassValue->IsChildOf(ULexUIBehaviour::StaticClass()))
+			else if (ClassValue->IsChildOf(ULexUIBehaviour::StaticClass()) || ClassValue->IsChildOf(ULexWidgetSubObjectBehaviour::StaticClass()))
 			{
 				if (HelperWidget != nullptr)
 				{
-					ULexUIBehaviour* FoundHelperComp = nullptr;
-					auto CompArray = HelperWidget->GetComponents(ClassValue);
-					if (CompArray.Num() == 1)
+					UObject* FoundTargetObject = nullptr;
+					if (ClassValue->IsChildOf(ULexUIBehaviour::StaticClass()))
 					{
-						FoundHelperComp = CompArray[0];
-					}
-					else if (CompArray.Num() > 1)
-					{
-						FName HelperComponentName = NAME_None;
-						auto HelperComponentNameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperComponentName));
-						HelperComponentNameHandle->GetValue(HelperComponentName);
-						if (!HelperComponentName.IsNone())
+						auto CompArray = HelperWidget->GetComponents(ClassValue);
+						if (CompArray.Num() == 1)
 						{
-							for (auto& Comp : CompArray)
+							FoundTargetObject = CompArray[0];
+						}
+						else if (CompArray.Num() > 1)
+						{
+							FName HelperComponentName = NAME_None;
+							auto HelperComponentNameHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperComponentName));
+							HelperComponentNameHandle->GetValue(HelperComponentName);
+							if (!HelperComponentName.IsNone())
 							{
-								if (Comp->GetFName() == HelperComponentName)
+								for (auto& Comp : CompArray)
 								{
-									FoundHelperComp = Comp;
-									break;
+									if (Comp->GetFName() == HelperComponentName)
+									{
+										FoundTargetObject = Comp;
+										break;
+									}
 								}
 							}
 						}
 					}
-					if (FoundHelperComp != TargetObject)
+					else if (ClassValue->IsChildOf(ULexVisual::StaticClass()))
 					{
-						TargetObjectHandle->SetValue(FoundHelperComp);
+						FoundTargetObject = HelperWidget->GetVisual();
+					}
+					else if (ClassValue->IsChildOf(ULexLayoutContainer::StaticClass()))
+					{
+						FoundTargetObject = HelperWidget->GetLayoutContainer();
+					}
+					else if (ClassValue->IsChildOf(ULexLayoutSelf::StaticClass()))
+					{
+						FoundTargetObject = HelperWidget->GetLayoutSelf();
+					}
+					if (FoundTargetObject != TargetObject)
+					{
+						TargetObjectHandle->SetValue(FoundTargetObject);
+						TargetObject = FoundTargetObject;
 					}
 				}
 				else
@@ -880,6 +900,17 @@ void FLexUIEventDelegateCustomization::OnHelperWidgetParameterChanged(TSharedRef
 	UpdateEventsLayout();
 }
 
+void FLexUIEventDelegateCustomization::OnSelectWidgetSubObject(ULexWidgetSubObjectBehaviour* SubObj, TSharedRef<IPropertyHandle> ItemPropertyHandle)
+{
+	auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, TargetObject));
+	TargetObjectHandle->SetValue(SubObj);
+
+	auto HelperClassHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, HelperClass));
+	HelperClassHandle->SetValue(SubObj->GetClass());
+
+	UpdateEventsLayout();
+}
+
 void FLexUIEventDelegateCustomization::OnSelectComponent(ULexUIBehaviour* Comp, TSharedRef<IPropertyHandle> ItemPropertyHandle)
 {
 	auto TargetObjectHandle = ItemPropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegateData, TargetObject));
@@ -936,8 +967,9 @@ ELexUIEventDelegateParameterType FLexUIEventDelegateCustomization::GetNativePara
 }
 void FLexUIEventDelegateCustomization::AddNativeParameterTypeProperty(IDetailChildrenBuilder& ChildBuilder)
 {
+	auto& Group = ChildBuilder.AddGroup(FName(TEXT("NativeParameterType")), PropertyHandle->GetPropertyDisplayName());
 	auto NativeParameterTypeHandle = PropertyHandle->GetChildHandle(GET_MEMBER_NAME_CHECKED(FLexUIEventDelegate, SupportParameterType));
-	ChildBuilder.AddProperty(NativeParameterTypeHandle.ToSharedRef());
+	Group.AddPropertyRow(NativeParameterTypeHandle.ToSharedRef());
 }
 ELexUIEventDelegateParameterType FLexUIEventDelegateCustomization::GetEventDataParameterType(TSharedRef<IPropertyHandle> EventDataItemHandle)const
 {
@@ -1053,14 +1085,46 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::MakeComponentSelectorMenu(
 			.Text(FText::FromString(LexUIEventWidgetSelfName))
 			.Font(IDetailLayoutBuilder::GetDetailFont())
 		]
-		//+SHorizontalBox::Slot()
-		//.HAlign(EHorizontalAlignment::HAlign_Right)
-		//[
-		//	SNew(STextBlock)
-		//	.Text(FText::FromString(HelperActor->GetClass()->GetName()))
-		//	.Font(IDetailLayoutBuilder::GetDetailFont())
-		//]
 	);
+	if (auto Visual = HelperWidget->GetVisual())
+	{
+		MenuBuilder.AddMenuEntry(
+			FUIAction(FExecuteAction::CreateRaw(this, &FLexUIEventDelegateCustomization::OnSelectWidgetSubObject, Cast<ULexWidgetSubObjectBehaviour>(Visual), ItemPropertyHandle)),
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			[
+				SNew(STextBlock)
+				.Text(FText::FromString(Visual->GetClass()->GetName()))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
+		);
+	}
+	if (auto LayoutContainer = HelperWidget->GetLayoutContainer())
+	{
+		MenuBuilder.AddMenuEntry(
+			FUIAction(FExecuteAction::CreateRaw(this, &FLexUIEventDelegateCustomization::OnSelectWidgetSubObject, Cast<ULexWidgetSubObjectBehaviour>(LayoutContainer), ItemPropertyHandle)),
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			[
+				SNew(STextBlock)
+				.Text(FText::FromString(LayoutContainer->GetClass()->GetName()))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
+		);
+	}
+	if (auto LayoutSelf = HelperWidget->GetLayoutSelf())
+	{
+		MenuBuilder.AddMenuEntry(
+			FUIAction(FExecuteAction::CreateRaw(this, &FLexUIEventDelegateCustomization::OnSelectWidgetSubObject, Cast<ULexWidgetSubObjectBehaviour>(LayoutSelf), ItemPropertyHandle)),
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			[
+				SNew(STextBlock)
+				.Text(FText::FromString(LayoutSelf->GetClass()->GetName()))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
+		);
+	}
 	auto Components = HelperWidget->GetAllComponents();
 	for (auto Comp : Components)
 	{
@@ -1077,13 +1141,6 @@ TSharedRef<SWidget> FLexUIEventDelegateCustomization::MakeComponentSelectorMenu(
 				.Text(FText::FromString(CompName.ToString()))
 				.Font(IDetailLayoutBuilder::GetDetailFont())
 			]
-			//+ SHorizontalBox::Slot()
-			//.HAlign(EHorizontalAlignment::HAlign_Right)
-			//[
-			//	SNew(STextBlock)
-			//	.Text(FText::FromString(CompTypeName))
-			//	.Font(IDetailLayoutBuilder::GetDetailFont())
-			//]
 		);
 	}
 	return MenuBuilder.MakeWidget();

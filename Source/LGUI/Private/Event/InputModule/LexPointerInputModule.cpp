@@ -33,6 +33,10 @@ bool ULexPointerInputModule::LineTrace(ULexPointerEventData* InPointerEventData,
 			RaycasterItem->Raycast(InPointerEventData, RayOrigin, RayDir, RayEnd, HitResultArray);
 			if (HitResultArray.Num() > 0)
 			{
+				if (!HitResultArray[0].Widget->GetInteractableInHierarchy())
+				{
+					return false;
+				}
 				FLexUIHitResultContainer LexHitResult;
 				LexHitResult.HitResult = HitResultArray[0];
 				LexHitResult.Raycaster = RaycasterItem.Get();

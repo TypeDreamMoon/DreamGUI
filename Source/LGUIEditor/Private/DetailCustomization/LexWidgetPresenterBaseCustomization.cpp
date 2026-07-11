@@ -138,6 +138,10 @@ void FLexWidgetPresenterBaseCustomization::CustomizeDetails(IDetailLayoutBuilder
 		auto CanvasTemplateRow = CanvasTemplateCategory.AddExternalObjects({ CanvasTemplate }, EPropertyLocation::Default
 			, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(true));
 		CanvasTemplateRow->ShouldAutoExpand(true);
+		CanvasTemplateRow->Visibility(TAttribute<EVisibility>::CreateSPLambda(this, [=]()
+		{
+			return TargetWorld->IsGameWorld() ? EVisibility::Collapsed : EVisibility::Visible;
+		}));
 		DetailBuilder.HideProperty(CanvasTemplate_PH);
 	}
 }

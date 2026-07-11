@@ -164,7 +164,6 @@ void ULexUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChanged
 					{
 						WeakThis->MarkNotInitialized();
 						WeakThis->InitCheck();
-						WeakThis->MarkPackageDirty();
 						WeakThis->bIsAddedToDelayedCall = false;
 					}
 					}, 0);

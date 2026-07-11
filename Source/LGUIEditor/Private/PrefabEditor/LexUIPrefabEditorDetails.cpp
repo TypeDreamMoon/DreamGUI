@@ -803,7 +803,16 @@ void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, UWorld* InWorl
 {
 	World = InWorld;
 	PrefabEditorPtr = FLexUIPrefabEditor::GetEditorByWorld(World.Get());
-	ULexUISelection::GetInstance(World.Get())->OnSelectionChanged.AddRaw(this, &SLexUIPrefabEditorDetails::OnEditorSelectionChanged);
+	if (PrefabEditorPtr.IsValid())
+	{
+		//if open in PrefabEditor then sync selection by PrefabEditor
+		PrefabEditorPtr.Pin()->OnSelectionChanged.AddRaw(this, &SLexUIPrefabEditorDetails::OnEditorSelectionChanged);
+	}
+	else
+	{
+		//if open in WidgetInspector then sync selection by LexUISelection
+		ULexUISelection::GetInstance(World.Get())->OnSelectionChanged.AddRaw(this, &SLexUIPrefabEditorDetails::OnEditorSelectionChanged);
+	}
 
     FPropertyEditorModule& PropPlugin = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
     FDetailsViewArgs DetailsViewArgs;
@@ -1050,7 +1059,7 @@ ULexWidget* SLexUIPrefabEditorDetails::GetSelectedWidgetContext() const
 
 void SLexUIPrefabEditorDetails::OnEditorSelectionChanged()
 {
-	if (bIsSelectFromDetails)return;
+	if (bIsSelectFromComponentList)return;
 	bIsSelectFromLexUIEditor = true;
 	auto Selection = ULexUISelection::GetInstance(World.Get());
 	auto SelectedWidgets = Selection->GetSelectedWidgets();
@@ -1138,9 +1147,12 @@ void SLexUIPrefabEditorDetails::OnEditorSelectionChanged()
 
 void SLexUIPrefabEditorDetails::OnComponentSelectionChanged(const TArray<TWeakObjectPtr<ULexUIBehaviour>>& SelectedComponents)
 {
-	bIsSelectFromDetails = true;
+	bIsSelectFromComponentList = true;
 
-	const FScopedTransaction Transaction(LOCTEXT("SelectionChanged_Transaction", "Select Component"));
+	if (!GIsTransacting)
+	{
+		GEditor->BeginTransaction(LOCTEXT("SelectionChanged_Transaction", "Select Component"));
+	}
 	ULexUISelection::GetInstance(World.Get())->Modify();
 
 	TArray<UObject*> SelectedObjects;
@@ -1188,8 +1200,12 @@ void SLexUIPrefabEditorDetails::OnComponentSelectionChanged(const TArray<TWeakOb
 			Selection->SelectComponent(Component);
 		}
 	}
+	if (!GIsTransacting)
+	{
+		GEditor->EndTransaction();
+	}
 
-	bIsSelectFromDetails = false;
+	bIsSelectFromComponentList = false;
 }
 
 bool SLexUIPrefabEditorDetails::IsPropertyReadOnly(const FPropertyAndParent& InPropertyAndParent)

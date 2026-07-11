@@ -465,8 +465,8 @@ void ULexVisual::FillWidgetPropertyDataForMaterial_ClipDataCoordinate(ULexUIData
 	auto StartPosition = this->WidgetPropertyDataStartPosition;
 	if (StartPosition == INDEX_NONE)
 	{
+		//sometimes this happen when I drag blueprint component to widget
 		UE_LOG(LGUI, Error, TEXT("[%s].%d WidgetPropertyDataStartPosition is invalid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-		check(0);
 		return;
 	}
 	TArray<uint8> BlockBuffer;
@@ -482,8 +482,8 @@ void ULexVisual::FillWidgetPropertyDataForMaterial_InitialMark(ULexUIDataAsTextu
 	auto StartPosition = this->WidgetPropertyDataStartPosition;
 	if (StartPosition == INDEX_NONE)
 	{
+		//sometimes this happen when I drag blueprint component to widget
 		UE_LOG(LGUI, Error, TEXT("[%s].%d WidgetPropertyDataStartPosition is invalid!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
-		check(0);
 		return;
 	}
 	

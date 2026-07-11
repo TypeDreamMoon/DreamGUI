@@ -46,7 +46,7 @@ public:
 				break;
 			}
 
-			if (QueueEvent->Wait())
+			if (QueueEvent->Wait(500))
 			{
 				while (FunctionQueue.Dequeue(TempFunction))
 				{

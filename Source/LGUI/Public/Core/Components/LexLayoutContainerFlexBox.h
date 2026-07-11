@@ -113,8 +113,6 @@ private:
 	void CalculateLayout(bool bApplyLayoutToChildren);
 	void CalculatePreferredSize();
 
-	bool bChildrenListDirty = true;
-
 	struct FLineData
 	{
 		FLineData()

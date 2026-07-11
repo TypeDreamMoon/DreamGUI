@@ -68,7 +68,7 @@ void SLexWidgetEditorHierarchyView::Construct(const FArguments& InArgs, UWorld* 
 
 	if (Manager.IsValid())
 	{
-		Manager.Pin()->OnSelectedWidgetsChanged.AddRaw(this, &SLexWidgetEditorHierarchyView::OnEditorSelectionChanged);
+		Manager.Pin()->OnSelectionChanged.AddRaw(this, &SLexWidgetEditorHierarchyView::OnEditorSelectionChanged);
 
 		auto PrefabHelperObject = Manager.Pin()->GetPrefabHelperObject();
 		auto UnexpandWidgetGuidSet = Manager.Pin()->GetPrefabBeingEdited()->PrefabDataForPrefabEditor.UnexpandedWidgetSet;
@@ -102,7 +102,7 @@ SLexWidgetEditorHierarchyView::~SLexWidgetEditorHierarchyView()
 {
 	if (Manager.IsValid())
 	{
-		Manager.Pin()->OnSelectedWidgetsChanged.RemoveAll(this);
+		Manager.Pin()->OnSelectionChanged.RemoveAll(this);
 	}
 
 	FCoreUObjectDelegates::OnObjectsReplaced.RemoveAll(this);

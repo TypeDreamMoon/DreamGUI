@@ -88,7 +88,6 @@ UUISelectable::UUISelectable()
 void UUISelectable::Awake()
 {
 	Super::Awake();
-	this->SetCanExecuteTick(false);
 }
 
 void UUISelectable::OnRegister()
@@ -577,7 +576,7 @@ UUISelectable* UUISelectable::FindSelectable(FVector InDirection, ULexWidget* In
 
 		//if is UI node, not allow inactive one
 		auto selWidget = sel->GetWidget();
-		if (selWidget && !sel->GetWidget()->GetRaycastableInHierarchy())
+		if (selWidget && !sel->GetWidget()->GetInteractableInHierarchy())
 		{
 			continue;
 		}

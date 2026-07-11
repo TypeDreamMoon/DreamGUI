@@ -591,8 +591,22 @@ namespace LexUIPrefabSystem
 							}
 							if (auto ParentGuidPtr = MapWidgetToParent.Find(SubPrefabRootCompGuid))
 							{
-								CompData.WidgetParentGuid = *ParentGuidPtr;
-								SubPrefabWidgetAttachmentArray.Add(CompData);
+								if (auto ParentWidgetPtr = MapGuidToObject.Find(*ParentGuidPtr))
+								{
+									if (SubPrefabRootWidget->HasRegistered())
+									{
+										SubPrefabRootWidget->SetParent(Cast<ULexWidget>(*ParentWidgetPtr), false);
+									}
+									else
+									{
+										SubPrefabRootWidget->SetParentBeforeRegister(Cast<ULexWidget>(*ParentWidgetPtr));
+									}
+								}
+								else//not found, maybe not created yet? collect data for later set
+								{
+									CompData.WidgetParentGuid = *ParentGuidPtr;
+									SubPrefabWidgetAttachmentArray.Add(CompData);
+								}
 							}
 
 							SubPrefabMap.Add(SubPrefabRootWidget, SubPrefabData);

@@ -5,6 +5,7 @@
 #pragma once
 
 
+class ULexWidgetSubObjectBehaviour;
 class ULexUIBehaviour;
 /**
  * 
@@ -80,6 +81,7 @@ private:
 	TSharedRef<SWidget> MakeComponentSelectorMenu(int32 itemIndex);
 	TSharedRef<SWidget> MakeFunctionSelectorMenu(int32 itemIndex);
 	void OnHelperWidgetParameterChanged(TSharedRef<IPropertyHandle> ItemPropertyHandle);
+	void OnSelectWidgetSubObject(ULexWidgetSubObjectBehaviour* SubObj, TSharedRef<IPropertyHandle> ItemPropertyHandle);
 	void OnSelectComponent(ULexUIBehaviour* Comp, TSharedRef<IPropertyHandle> ItemPropertyHandle);
 	void OnSelectWidgetSelf(TSharedRef<IPropertyHandle> ItemPropertyHandle);
 	void OnSelectFunction(FName FuncName, ELexUIEventDelegateParameterType ParamType, bool UseNativeParameter, TSharedRef<IPropertyHandle> ItemPropertyHandle);

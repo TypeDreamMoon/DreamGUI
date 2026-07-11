@@ -12,9 +12,45 @@ UUIScrollViewWithScrollbar::UUIScrollViewWithScrollbar()
 }
 
 #if WITH_EDITOR
+void UUIScrollViewWithScrollbar::PreEditChange(FProperty* PropertyAboutToChange)
+{
+	Super::PreEditChange(PropertyAboutToChange);
+	if (PropertyAboutToChange)
+	{
+		auto PropertyName = PropertyAboutToChange->GetName();
+		if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, HorizontalScrollbar))
+		{
+			if (HorizontalScrollbar.IsValid() && HorizontalScrollbarDelegateHandle.IsValid())
+			{
+				HorizontalScrollbar->GetOnValueChangedEvent().Remove(HorizontalScrollbarDelegateHandle);
+				HorizontalScrollbarDelegateHandle.Reset();
+			}
+		}
+		else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, VerticalScrollbar))
+		{
+			if (VerticalScrollbar.IsValid() && VerticalScrollbarDelegateHandle.IsValid())
+			{
+				VerticalScrollbar->GetOnValueChangedEvent().Remove(VerticalScrollbarDelegateHandle);
+				VerticalScrollbarDelegateHandle.Reset();
+			}
+		}
+	}
+}
 void UUIScrollViewWithScrollbar::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
+	if (PropertyChangedEvent.Property)
+	{
+		auto PropertyName = PropertyChangedEvent.Property->GetName();
+		if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, HorizontalScrollbar))
+		{
+			HorizontalScrollbarWidget.Reset();
+		}
+		else if (PropertyName == GET_MEMBER_NAME_CHECKED(UUIScrollViewWithScrollbar, VerticalScrollbar))
+		{
+			VerticalScrollbarWidget.Reset();
+		}
+	}
 }
 #endif
 
@@ -83,7 +119,12 @@ bool UUIScrollViewWithScrollbar::CheckScrollbarParameter()
 		{
 			if (HorizontalScrollbar.IsValid())
 			{
-				HorizontalScrollbar->GetOnValueChangedEvent().AddUObject(this, &UUIScrollViewWithScrollbar::OnHorizontalScrollbar);
+#if WITH_EDITOR
+				if (GetWorld() && GetWorld()->IsGameWorld())//register event only in game mode
+#endif
+				{
+					HorizontalScrollbarDelegateHandle = HorizontalScrollbar->GetOnValueChangedEvent().AddUObject(this, &UUIScrollViewWithScrollbar::OnHorizontalScrollbar);
+				}
 				HorizontalScrollbarWidget = HorizontalScrollbar->GetWidget();
 				bHorizontalValid = true;
 			}
@@ -100,7 +141,12 @@ bool UUIScrollViewWithScrollbar::CheckScrollbarParameter()
 		{
 			if (VerticalScrollbar.IsValid())
 			{
-				VerticalScrollbar->GetOnValueChangedEvent().AddUObject(this, &UUIScrollViewWithScrollbar::OnVerticalScrollbar);
+#if WITH_EDITOR
+				if (GetWorld() && GetWorld()->IsGameWorld())//register event only in game mode
+#endif
+				{
+					VerticalScrollbarDelegateHandle = VerticalScrollbar->GetOnValueChangedEvent().AddUObject(this, &UUIScrollViewWithScrollbar::OnVerticalScrollbar);
+				}
 				VerticalScrollbarWidget = VerticalScrollbar->GetWidget();
 				bVerticalValid = true;
 			}

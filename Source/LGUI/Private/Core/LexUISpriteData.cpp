@@ -178,6 +178,14 @@ void ULexUISpriteData::PostEditChangeProperty(struct FPropertyChangedEvent& Prop
 			}
 			this->ReloadTexture();
 		}
+		else if (PropertyName == GET_MEMBER_NAME_CHECKED(ULexUISpriteData, PackingType))
+		{
+			if (PackingType == ELexUISpritePackingType::Static && PackingAtlas)
+			{
+				PackingAtlas->MarkAtlasPackDirty();
+			}
+			this->ReloadTexture();
+		}
 
 		ULexUIManagerWorldSubsystem::RefreshAllUI();
 	}

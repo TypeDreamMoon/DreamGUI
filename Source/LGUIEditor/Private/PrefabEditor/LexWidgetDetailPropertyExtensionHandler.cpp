@@ -75,8 +75,15 @@ void FLexWidgetDetailPropertyExtensionHandler::ExtendWidgetRow(FDetailWidgetRow&
 		else
 		{
 			Widget = WeakObject->GetTypedOuter<ULexWidget>();
-			if (!Widget)return NoneObjectText;
-			PathStr = "." + WeakObject->GetPathName(Widget);
+			if (!IsValid(Widget))return NoneObjectText;
+			if (!Widget->HasRegistered() && !Widget->GetParent() && !Widget->GetRenderCanvas())//could be destroyed in editor
+			{
+				PathStr = "None." + WeakObject->GetPathName(Widget);
+			}
+			else
+			{
+				PathStr = "." + WeakObject->GetPathName(Widget);
+			}
 		}
 		while (Widget && !Widget->IsRootWidgetInHierarchy())
 		{

@@ -43,5 +43,5 @@ private:
 	TSharedPtr<class SLexUIPrefabOverrideDataViewer> PrefabOverrideDataViewer;
 	TWeakObjectPtr<ULexWidget> CachedWidget;
 	bool bIsSelectFromLexUIEditor = false;
-	bool bIsSelectFromDetails = false;
+	bool bIsSelectFromComponentList = false;
 };

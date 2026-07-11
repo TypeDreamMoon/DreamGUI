@@ -697,6 +697,9 @@ private:
 	uint32 bHasSetInitialStateForLexWorldSpaceRenderer : 1 = false;//is LGUI world space renderer's initial state set
 	uint32 bNeedToVerifyMaterials : 1 = true;
 	mutable uint32 bNeedToSetClipDataTextureMaterialParameter : 1 = true;
+	uint32 bNeedToGenerateWidgetList : 1 = true;
+	uint32 bWidgetPropertyDataAsTextureChanged : 1 = true;
+	uint32 bClipDataAsTextureChanged : 1 = true;
 
 	uint32 bPrevIsVisible : 1 = true;//is LexWidget active in prev frame?
 
@@ -743,7 +746,6 @@ private:
 	TUniquePtr<FLexCanvasAsyncFunctionRunnable> TransformVerticesAsyncFunctionRunnable;
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<ULexVisual>> VisualList;//Use LexWidget instead of LexVisual, because we need LexWidget to get sub-canvas.
-	bool bNeedToGenerateWidgetList = true;
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<ULexWidget>> WidgetList;//All LexWidget that belongs to this canvas
 	TSharedPtr<FLexUIDrawCall> DrawCallAsChildCanvas = nullptr;//DrawCall that represent this canvas when the canvas is render as child.

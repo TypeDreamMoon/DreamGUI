@@ -699,7 +699,7 @@ FLexUIPrefabEditorViewportClient::FLexUIPrefabEditorViewportClient(TWeakPtr<FLex
 	SetLookAtLocation(InitialViewOrbitLocation);
 	GetPrefabBeingEdited()->GetPrefabInstanceScene()->SetSkyCubeVisibility(IsPerspective());
 
-	OnSelectionChangedDelegateHandle = PrefabEditorPtr.Pin()->OnSelectedWidgetsChanged.AddLambda([=, this]()
+	OnSelectionChangedDelegateHandle = PrefabEditorPtr.Pin()->OnSelectionChanged.AddLambda([=, this]()
 	{
 		auto SelectedWidgets = PrefabEditorPtr.Pin()->GetSelectedWidgets();
 		if (SelectedWidgets.Num() == 1)
@@ -717,7 +717,7 @@ FLexUIPrefabEditorViewportClient::~FLexUIPrefabEditorViewportClient()
 {
 	if (PrefabEditorPtr.IsValid())
 	{
-		PrefabEditorPtr.Pin()->OnSelectedWidgetsChanged.Remove(OnSelectionChangedDelegateHandle);
+		PrefabEditorPtr.Pin()->OnSelectionChanged.Remove(OnSelectionChangedDelegateHandle);
 	}
 }
 

@@ -3,6 +3,8 @@
 #include "Event/LexUIEventDelegate.h"
 #include "LGUI.h"
 #include "Core/LexUIBehaviour.h"
+#include "Core/Components/LexLayout.h"
+#include "Core/Components/LexVisual.h"
 #include "Core/Components/LexWidget.h"
 #include "Serialization/MemoryReader.h"
 #if WITH_EDITOR
@@ -538,25 +540,40 @@ bool FLexUIEventDelegateData::CheckTargetObject()
 				}
 				else
 				{
-					auto Components = HelperWidget->GetComponents(HelperClass);
-					if (Components.Num() == 1)
+					if (HelperClass->IsChildOf(ULexVisual::StaticClass()))
 					{
-						TargetObject = Components[0];
+						TargetObject = HelperWidget->GetVisual();
 					}
-					else if (Components.Num() > 1)
+					else if (HelperClass->IsChildOf(ULexLayoutContainer::StaticClass()))
 					{
-						if (!HelperComponentName.IsNone())
+						TargetObject = HelperWidget->GetLayoutContainer();
+					}
+					else if (HelperClass->IsChildOf(ULexLayoutSelf::StaticClass()))
+					{
+						TargetObject = HelperWidget->GetLayoutSelf();
+					}
+					else
+					{
+						auto Components = HelperWidget->GetComponents(HelperClass);
+						if (Components.Num() == 1)
 						{
-							for (auto& Comp : Components)
+							TargetObject = Components[0];
+						}
+						else if (Components.Num() > 1)
+						{
+							if (!HelperComponentName.IsNone())
 							{
-								if (Comp->GetFName() == HelperComponentName)
+								for (auto& Comp : Components)
 								{
-									TargetObject = Comp;
-									return true;
+									if (Comp->GetFName() == HelperComponentName)
+									{
+										TargetObject = Comp;
+										return true;
+									}
 								}
+								FString WidgetName = HelperWidget->GetDisplayName();
+								UE_LOG(LGUI, Error, TEXT("[%s].%d Can't find component of name '%s' on widget '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *HelperComponentName.ToString(), *WidgetName);
 							}
-							FString WidgetName = HelperWidget->GetDisplayName();
-							UE_LOG(LGUI, Error, TEXT("[%s].%d Can't find component of name '%s' on widget '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *HelperComponentName.ToString(), *WidgetName);
 						}
 					}
 				}

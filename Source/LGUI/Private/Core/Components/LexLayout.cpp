@@ -40,7 +40,7 @@ void ULexLayout::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 
 void ULexLayout::MarkLayoutDirty()
 {
-	LayoutCalculateCount = 0;
+	bIsLayoutDirty = true;
 }
 
 void ULexLayoutContainer::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
