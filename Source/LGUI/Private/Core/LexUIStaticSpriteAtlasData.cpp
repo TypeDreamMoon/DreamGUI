@@ -171,25 +171,25 @@ void ULexUIStaticSpriteAtlasData::PostEditChangeProperty(struct FPropertyChanged
 		}
 	}
 }
+
+bool ULexUIStaticSpriteAtlasData::ContainsSpriteData(ULexUISpriteData* InSpriteData)const
+{
+	return SpriteDataArray.Contains(InSpriteData);
+}
+
 void ULexUIStaticSpriteAtlasData::AddSpriteData(ULexUISpriteData* InSpriteData)
 {
-	if (!SpriteDataArray.Contains(InSpriteData))
-	{
-		SpriteDataArray.Add(InSpriteData);
-		CheckSprite();
-		MarkPackageDirty();
-		MarkNotInitialized();
-	}
+	SpriteDataArray.Add(InSpriteData);
+	CheckSprite();
+	MarkPackageDirty();
+	MarkNotInitialized();
 }
 void ULexUIStaticSpriteAtlasData::RemoveSpriteData(ULexUISpriteData* InSpriteData)
 {
-	if (SpriteDataArray.Contains(InSpriteData))
-	{
-		SpriteDataArray.Remove(InSpriteData);
-		CheckSprite();
-		MarkPackageDirty();
-		MarkNotInitialized();
-	}
+	SpriteDataArray.Remove(InSpriteData);
+	CheckSprite();
+	MarkPackageDirty();
+	MarkNotInitialized();
 }
 void ULexUIStaticSpriteAtlasData::AddRenderSprite(TScriptInterface<ILexUISpriteRenderInterface> InSprite)
 {

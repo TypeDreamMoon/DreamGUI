@@ -72,6 +72,7 @@ public:
 	virtual void PostInitProperties() override;
 	virtual void PreEditChange(FProperty* PropertyAboutToChange)override;
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)override;
+	bool ContainsSpriteData(ULexUISpriteData* InSpriteData)const;
 	void AddSpriteData(ULexUISpriteData* InSpriteData);
 	void RemoveSpriteData(ULexUISpriteData* InSpriteData);
 	void AddRenderSprite(TScriptInterface<ILexUISpriteRenderInterface> InSprite);

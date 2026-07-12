@@ -169,8 +169,11 @@ void ULexUISpriteData::PostEditChangeProperty(struct FPropertyChangedEvent& Prop
 		{
 			if (IsValid(PackingAtlas))
 			{
-				PackingAtlas->AddSpriteData(this);
-				PackingAtlas->MarkAtlasPackDirty();
+				if (!PackingAtlas->ContainsSpriteData(this))
+				{
+					PackingAtlas->AddSpriteData(this);
+					PackingAtlas->MarkAtlasPackDirty();
+				}
 			}
 			if (auto DynamicSpriteAtlasData = ULexUIDynamicSpriteAtlasManager::Find(PackingTag))
 			{
@@ -301,6 +304,13 @@ void ULexUISpriteData::InitSpriteData()
 		{
 			if (IsValid(PackingAtlas))
 			{
+#if WITH_EDITOR
+				if (!PackingAtlas->ContainsSpriteData(this))
+				{
+					PackingAtlas->AddSpriteData(this);
+					PackingAtlas->MarkAtlasPackDirty();
+				}
+#endif
 				AtlasTexture = PackingAtlas->GetAtlasTexture(AtlasTextureIndex);
 				if (AtlasTexture)
 				{
