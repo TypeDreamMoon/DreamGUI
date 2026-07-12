@@ -275,7 +275,7 @@ void ULexText::OnUpdateGeometry(FLexUIGeometry& InGeo, bool InTriangleChanged, b
 
 uint8 ULexText::GetFontMark_WidgetPropertyDataForMaterial()
 {
-	return this->Font->GetFontTextureMark();
+	return static_cast<uint8>(this->Font->GetFontTextureMark());
 }
 
 void ULexText::OnCultureChanged_Implementation()

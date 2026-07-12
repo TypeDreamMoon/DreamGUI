@@ -39,6 +39,8 @@ enum class ELexUIDynamicFontLineHeightType :uint8
 	FontSizeAsLineHeight,
 };
 
+#define ONE_DIVIDE_64 0.015625f //(1.0f / 64.0f)
+
 /**
  * Font asset for UIText to render
  */
@@ -117,11 +119,11 @@ public:
 	virtual void InitFont()override;
 	virtual UMaterialInterface* GetFontMaterial()override { return nullptr; }
 	virtual UTexture2DArray* GetFontTexture()override;
-	virtual FLexUICharData GetCharData(const uint32& CharCode, const float& CharSize)override;
+	virtual FLexUICharData GetCharData(uint32 CharCode, float CharSize, bool IsBold)override;
 	virtual bool HasKerning()override { return bHasKerning; }
-	virtual float GetKerning(const uint32& LeftCharCode, const uint32& RightCharCode, const float& CharSize)override;
-	virtual float GetLineHeight(const float& FontSize)override;
-	virtual float GetVerticalOffset(const float& FontSize)override;
+	virtual float GetKerning(uint32 LeftCharCode, uint32 RightCharCode, float CharSize)override;
+	virtual float GetLineHeight(float FontSize)override;
+	virtual float GetVerticalOffset(float FontSize)override;
 	virtual float GetFontSizeLimit()override { return 200.0f; }//limit font size to 200. too large font size will result in extreme large texture
 
 	virtual void AddUIText(ULexText* InText)override;
@@ -154,7 +156,7 @@ protected:
 	FT_FaceRec_* Face = nullptr;
 	void InitFreeType();
 	void DeinitFreeType();
-	FT_GlyphSlotRec_* RenderGlyphOnFreeType(const uint32& charCode, const float& charSize);
+	FT_GlyphSlotRec_* RenderGlyphOnFreeType(uint32 CharCode, float CharSize, float BoldSize);
 
 #if WITH_EDITOR
 	TArray<FString> CacheSubFaces(FT_LibraryRec_* InFTLibrary, const TArray<uint8>& InMemory);
@@ -186,9 +188,9 @@ protected:
 	virtual UTexture2D* CreateIntermediateTexture(int InTextureSize)PURE_VIRTUAL(ULexUIFontData_FreeTypeRender::CreateIntermediateTexture, return nullptr;);
 	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize);
 
-	virtual bool GetCharDataFromCache(const uint32& CharCode, const float& CharSize, FLexUICharData& OutResult) { return false; };
-	virtual void AddCharDataToCache(const uint32& CharCode, const float& CharSize, FLexUICharData& CharData) {};
-	virtual bool RenderGlyph(const uint32& CharCode, const float& CharSize, FGlyphBitmap& OutResult) { return false; };
+	virtual bool GetCharDataFromCache(uint32 CharCode, float CharSize, bool IsBold, FLexUICharData& OutResult) { return false; };
+	virtual void AddCharDataToCache(uint32 CharCode, float CharSize, bool IsBold, FLexUICharData& CharData) {};
+	virtual bool RenderGlyph(uint32 CharCode, float CharSize, bool IsBold, FGlyphBitmap& OutResult) { return false; };
 	virtual void ClearCharDataCache() {};
 public:
 #if WITH_EDITOR

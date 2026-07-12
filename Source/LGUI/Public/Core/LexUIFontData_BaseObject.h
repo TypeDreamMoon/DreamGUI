@@ -46,6 +46,11 @@ struct FLexUICharData
 	}
 };
 
+enum class ELexUIFontTextureMark : uint8
+{
+	None = 0, Bitmap = 1, DistanceField = 2,
+};
+
 class UTexture2D;
 class ULexText;
 class ULexUIFontEmojiData;
@@ -62,24 +67,24 @@ public:
 
 	virtual UMaterialInterface* GetFontMaterial()PURE_VIRTUAL(ULexUIFontData_BaseObject::GetFontMaterial, return nullptr;);
 	virtual UTexture2DArray* GetFontTexture()PURE_VIRTUAL(ULexUIFontData_BaseObject::GetFontTexture, return nullptr;);
-	virtual FLexUICharData GetCharData(const uint32& CharCode, const float& CharSize) PURE_VIRTUAL(ULexUIFontData::GetCharData, return FLexUICharData(););
+	virtual FLexUICharData GetCharData(uint32 CharCode, float CharSize, bool IsBold) PURE_VIRTUAL(ULexUIFontData::GetCharData, return FLexUICharData(););
 	virtual bool HasKerning() { return false; }
-	virtual float GetKerning(const uint32& LeftCharIndex, const uint32& RightCharIndex, const float& CharSize) { return 0; }
-	virtual float GetLineHeight(const float& FontSize) { return FontSize; }
-	virtual float GetVerticalOffset(const float& FontSize) { return 0; }
+	virtual float GetKerning(uint32 LeftCharIndex, uint32 RightCharIndex, float CharSize) { return 0; }
+	virtual float GetLineHeight(float FontSize) { return FontSize; }
+	virtual float GetVerticalOffset(float FontSize) { return 0; }
 	virtual float GetFontSizeLimit() { return MAX_FLT; }
 	virtual bool GetRequireNormalAndTangent() { return false; }
 	virtual bool GetShouldAffectByPixelPerfect() { return true; }
 	virtual bool GetNeedObjectScale() { return false; }
 	virtual bool GetSupportDynamicPixelsPerUnit() { return false; }
-	virtual uint8 GetFontTextureMark() { return 0; }
+	virtual ELexUIFontTextureMark GetFontTextureMark() { return ELexUIFontTextureMark::None; }
 	virtual float GetBoldRatio() { return 0; }
 
 	/** this is called every time before create a string of char geometry */
 	virtual void PrepareForPushCharData(ULexText* InText) {};
 	/** create char geometry and push to vertices & triangleIndices array */
 	virtual void PushCharData(
-		uint32 charCode, const FVector2f& lineOffset, const FVector2f& fontSpace, const FLexUICharData& charData,
+		uint32 charCode, FVector2f lineOffset, FVector2f fontSpace, const FLexUICharData& charData,
 		const LexUIRichTextParser::FRichTextParseResult& richTextProperty,
 		int verticesStartIndex, int indicesStartIndex,
 		int& outAdditionalVerticesCount, int& outAdditionalIndicesCount,

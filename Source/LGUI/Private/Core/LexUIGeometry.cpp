@@ -2264,8 +2264,8 @@ void UIGeometry_AlignUITextLineVertexForRichText(ELexUITextParagraphHorizontalAl
 #include "Core/LexUIRichTextCustomStyleData.h"
 void FLexUIGeometry::UpdateUIText(const FString& Content
 	, TArray<FLexUIText_TextProcessingElement>& TextProcessingArray
-	, float width, float height, const FVector2f& pivot
-	, FColor color, uint8 RenderOpacityForRichText, const FVector2f& fontSpace, FLexUIGeometry* uiGeo, float fontSize
+	, float width, float height, FVector2f pivot
+	, FColor color, uint8 RenderOpacityForRichText, FVector2f fontSpace, FLexUIGeometry* uiGeo, float fontSize
 	, ELexUITextParagraphHorizontalAlign paragraphHAlign, ELexUITextParagraphVerticalAlign paragraphVAlign, ELexUITextOverflowType overflowType
 	, ETextWrappingPolicy wrappingPolicy, bool bUseKerning
 	, ELexUITextFontStyle fontStyle, FVector2f& textPreferredSize, bool& outTruncated
@@ -2518,26 +2518,10 @@ void FLexUIGeometry::UpdateUIText(const FString& Content
 			return false;
 		}
 	};
-	auto ModifyCharXAdvanceByBoldStyle = [&](FLexUICharData& CharData, const FRichTextParseResult& RichTextResult)
+
+	auto GetCharGeo = [&](uint32 prevCharCode, const FLexUIText_TextProcessingElement& charElement, float inFontSize, bool inBold)
 	{
-		if (bRichText)
-		{
-			if (RichTextResult.Bold)
-			{
-				CharData.XAdvance *= 1 + boldRatio;
-			}
-		}
-		else
-		{
-			if (bUseBold)
-			{
-				CharData.XAdvance *= 1 + boldRatio;
-			}
-		}
-	};
-	auto GetCharGeo = [&](uint32 prevCharCode, const FLexUIText_TextProcessingElement& charElement, float inFontSize, const FRichTextParseResult& RichTextResult)
-	{
-		auto charData = font->GetCharData(charElement.Unicode, inFontSize);
+		auto charData = font->GetCharData(charElement.Unicode, inFontSize, inBold);
 		float calculatedCharFixedOffset = bRichText ? font->GetVerticalOffset(inFontSize) : verticalOffset;
 
 		auto overrideCharData = charData;
@@ -2557,12 +2541,11 @@ void FLexUIGeometry::UpdateUIText(const FString& Content
 				}
 				else
 				{
-					overrideCharData = font->GetCharData(charElement.Unicode, inFontSize);
+					overrideCharData = font->GetCharData(charElement.Unicode, inFontSize, inBold);
 
 					overrideCharData.Width = overrideCharData.Width * oneDivideRootCanvasScale;
 					overrideCharData.Height = overrideCharData.Height * oneDivideRootCanvasScale;
 					overrideCharData.XAdvance = overrideCharData.XAdvance * oneDivideRootCanvasScale;
-					ModifyCharXAdvanceByBoldStyle(overrideCharData, RichTextResult);
 				}
 				overrideCharData.XOffset = overrideCharData.XOffset * oneDivideRootCanvasScale;
 				overrideCharData.YOffset = overrideCharData.YOffset * oneDivideRootCanvasScale + calculatedCharFixedOffset;
@@ -2581,12 +2564,11 @@ void FLexUIGeometry::UpdateUIText(const FString& Content
 				}
 				else
 				{
-					overrideCharData = font->GetCharData(charElement.Unicode, inFontSize);
+					overrideCharData = font->GetCharData(charElement.Unicode, inFontSize, inBold);
 
 					overrideCharData.Width = overrideCharData.Width * oneDivideDynamicPixelsPerUnit;
 					overrideCharData.Height = overrideCharData.Height * oneDivideDynamicPixelsPerUnit;
 					overrideCharData.XAdvance = overrideCharData.XAdvance * oneDivideDynamicPixelsPerUnit;
-					ModifyCharXAdvanceByBoldStyle(overrideCharData, RichTextResult);
 				}
 				overrideCharData.XOffset = overrideCharData.XOffset * oneDivideDynamicPixelsPerUnit;
 				overrideCharData.YOffset = overrideCharData.YOffset * oneDivideDynamicPixelsPerUnit + calculatedCharFixedOffset;
@@ -2605,12 +2587,11 @@ void FLexUIGeometry::UpdateUIText(const FString& Content
 				}
 				else
 				{
-					overrideCharData = font->GetCharData(charElement.Unicode, inFontSize);
+					overrideCharData = font->GetCharData(charElement.Unicode, inFontSize, inBold);
 
 					overrideCharData.Width = overrideCharData.Width * oneDivideRootCanvasScale;
 					overrideCharData.Height = overrideCharData.Height * oneDivideRootCanvasScale;
 					overrideCharData.XAdvance = overrideCharData.XAdvance * oneDivideRootCanvasScale;
-					ModifyCharXAdvanceByBoldStyle(overrideCharData, RichTextResult);
 				}
 				overrideCharData.XOffset = overrideCharData.XOffset * oneDivideRootCanvasScale;
 				overrideCharData.YOffset = overrideCharData.YOffset * oneDivideRootCanvasScale + calculatedCharFixedOffset;
@@ -2625,10 +2606,6 @@ void FLexUIGeometry::UpdateUIText(const FString& Content
 			else if (charElement.Type == ELexUIText_CodeType::Emoji)
 			{
 				GetEmojiCharData(overrideCharData, inFontSize, charElement.Unicode);
-			}
-			else
-			{
-				ModifyCharXAdvanceByBoldStyle(overrideCharData, RichTextResult);
 			}
 			overrideCharData.YOffset += calculatedCharFixedOffset;
 		}
@@ -2658,12 +2635,10 @@ void FLexUIGeometry::UpdateUIText(const FString& Content
 		}
 		else
 		{
-			auto overrideFontSize = bRichText ? richTextResult.Size : fontSize;
-			auto charData = font->GetCharData(charElement.Unicode, overrideFontSize);
-			ModifyCharXAdvanceByBoldStyle(charData, richTextResult);
+			auto charData = font->GetCharData(charElement.Unicode, richTextResult.Size, richTextResult.Bold);
 			if (useKerning && prevCharCode != charElement.Unicode)
 			{
-				auto KerningValue = font->GetKerning(prevCharCode, charElement.Unicode, overrideFontSize);
+				auto KerningValue = font->GetKerning(prevCharCode, charElement.Unicode, richTextResult.Size);
 				return charData.XAdvance + KerningValue;
 			}
 			else
@@ -2773,7 +2748,8 @@ void FLexUIGeometry::UpdateUIText(const FString& Content
 			{
 				if (newLineMode == NewLineMode::Overflow)
 				{
-					auto TempCharGeo = GetCharGeo(charIndex == 0 ? charCode : prevCharCode, charElement, bRichText ? richTextParseResult.Size : fontSize, richTextParseResult);
+					auto TempCharGeo = GetCharGeo(charIndex == 0 ? charCode : prevCharCode, charElement
+						, richTextParseResult.Size, richTextParseResult.Bold);
 					currentPreferredWidth += TempCharGeo.XAdvance;//newline is caused by space, so the space size should add to preferredWidth, because preferredWidth should ignore auto wrapping
 					newLineMode = NewLineMode::None;
 				}
@@ -2785,7 +2761,8 @@ void FLexUIGeometry::UpdateUIText(const FString& Content
 			}
 		}
 		
-		auto charGeo = GetCharGeo(charIndex == 0 ? charCode : prevCharCode, charElement, bRichText ? richTextParseResult.Size : fontSize, richTextParseResult);
+		auto charGeo = GetCharGeo(charIndex == 0 ? charCode : prevCharCode, charElement
+			, richTextParseResult.Size, richTextParseResult.Bold);
 		//caret property
 		caretPosition.X = currentLineOffset.X - halfFontSpaceX;
 		caretPosition.Y = currentLineOffset.Y;
@@ -2811,7 +2788,8 @@ void FLexUIGeometry::UpdateUIText(const FString& Content
 					needToRemoveLastFontSpace = false;
 					auto charElementOfForwardChar = TextProcessingArray[forwardCharIndex];
 					auto charCodeOfForwardChar = charElementOfForwardChar.Unicode;
-					if (IsSpace(charCodeOfForwardChar, richTextParseResult))//space
+					auto richTextParseResultOfForwardChar = bRichText ? richTextPropertyArray[forwardCharIndex] : richTextParseResult;
+					if (IsSpace(charCodeOfForwardChar, richTextParseResultOfForwardChar))//space
 					{
 						break;
 					}
@@ -2819,7 +2797,7 @@ void FLexUIGeometry::UpdateUIText(const FString& Content
 					{
 						break;
 					}
-					spaceNeeded += GetCharGeoXAdv(prevCharCodeOfForwardChar, charElementOfForwardChar, richTextParseResult);
+					spaceNeeded += GetCharGeoXAdv(prevCharCodeOfForwardChar, charElementOfForwardChar, richTextParseResultOfForwardChar);
 					spaceNeeded += fontSpace.X;
 					needToRemoveLastFontSpace = true;
 					forwardVisibleCharIndex++;
@@ -2945,14 +2923,16 @@ void FLexUIGeometry::UpdateUIText(const FString& Content
 			case ELexUITextOverflowType::VerticalOverflow:
 			{
 				if (charIndex + 1 == contentLength)continue;//last char
-				int nextCharXAdv = GetCharGeoXAdv(TextProcessingArray[charIndex].Unicode, TextProcessingArray[charIndex + 1], bRichText ? richTextPropertyArray[charIndex + 1] : richTextParseResult);
+				int nextCharXAdv = GetCharGeoXAdv(TextProcessingArray[charIndex].Unicode, TextProcessingArray[charIndex + 1]
+					, bRichText ? richTextPropertyArray[charIndex + 1] : richTextParseResult);
 
 				if (charIndex + 2 < contentLength//check size
 					&& FChar::IsPunct(TextProcessingArray[charIndex + 2].Unicode)//newline with punctuation
 					&& charIndex + 2 != contentLength - 1//not last char
 					)
 				{
-					nextCharXAdv += GetCharGeoXAdv(TextProcessingArray[charIndex+1].Unicode, TextProcessingArray[charIndex+2], bRichText ? richTextPropertyArray[charIndex+2] : richTextParseResult);
+					nextCharXAdv += GetCharGeoXAdv(TextProcessingArray[charIndex+1].Unicode, TextProcessingArray[charIndex+2]
+						, bRichText ? richTextPropertyArray[charIndex+2] : richTextParseResult);
 					if (currentLineOffset.X + nextCharXAdv > width + UE_KINDA_SMALL_NUMBER)//if next char cannot fit this line, then add new line
 					{
 						auto nextChar = TextProcessingArray[charIndex + 1].Unicode;
@@ -2991,10 +2971,12 @@ void FLexUIGeometry::UpdateUIText(const FString& Content
 				if (charIndex + 1 == contentLength)continue;//last char
 				if (hasClampContent)continue;
 
-				int nextCharXAdv = GetCharGeoXAdv(TextProcessingArray[charIndex].Unicode, TextProcessingArray[charIndex + 1], bRichText ? richTextPropertyArray[charIndex + 1] : richTextParseResult);
+				int nextCharXAdv = GetCharGeoXAdv(TextProcessingArray[charIndex].Unicode, TextProcessingArray[charIndex + 1]
+					, bRichText ? richTextPropertyArray[charIndex + 1] : richTextParseResult);
 				if (currentLineOffset.X + nextCharXAdv > width)//horizontal cannot fit next char
 				{
 					hasClampContent = true;
+					outTruncated = true;
 					currentLineWidth_ForClampContent = currentLineWidth;
 					shouldSetParagraphHeightForClampContent = true;//paragraphHeight is set after NewLine, so we mark it and get clamp_ParagraphHeight later
 					if (overflowType == ELexUITextOverflowType::Ellipsis)
@@ -3002,7 +2984,7 @@ void FLexUIGeometry::UpdateUIText(const FString& Content
 						//move back and replace chars by ...
 						uint32 charCodeOfDots = 0x2026;//'…'
 						auto charElementOfDots = FLexUIText_TextProcessingElement{charCodeOfDots, charIndex, 1, ELexUIText_CodeType::Text};
-						auto charGeoOfDots = GetCharGeo(charCodeOfDots, charElementOfDots, fontSize, richTextParseResult);
+						auto charGeoOfDots = GetCharGeo(charCodeOfDots, charElementOfDots, fontSize, false);
 						if (currentLineOffset.X < charGeoOfDots.XAdvance)//remove all if it can't fit the char-of-dots
 						{
 							originVertices.Reset();

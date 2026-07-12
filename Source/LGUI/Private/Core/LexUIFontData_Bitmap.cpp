@@ -12,16 +12,16 @@
 
 
 void ULexUIFontData_Bitmap::PushCharData(
-	uint32 charCode, const FVector2f& inLineOffset, const FVector2f& fontSpace, const FLexUICharData& charData,
+	uint32 charCode, FVector2f inLineOffset, FVector2f fontSpace, const FLexUICharData& charData,
 	const LexUIRichTextParser::FRichTextParseResult& richTextProperty,
 	int verticesStartIndex, int indicesStartIndex,
 	int& outAdditionalVerticesCount, int& outAdditionalIndicesCount,
 	TArray<FLexUIOriginVertexData>& originVertices, TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndex>& triangleIndices
 )
 {
-	auto GetUnderlineOrStrikethroughCharGeo = [&](uint32 charCode, float overrideFontSize)
+	auto GetUnderlineOrStrikethroughCharGeo = [&](uint32 charCode, float overrideFontSize, bool bold)
 	{
-		auto charData = this->GetCharData(charCode, overrideFontSize);
+		auto charData = this->GetCharData(charCode, overrideFontSize, bold);
 		charData.YOffset += this->GetVerticalOffset(overrideFontSize);
 
 		float uvX = (charData.MaxUV.X - charData.MinUV.X) * 0.5f + charData.MinUV.X;
@@ -39,18 +39,13 @@ void ULexUIFontData_Bitmap::PushCharData(
 	{
 		outAdditionalVerticesCount += 4;
 		outAdditionalIndicesCount += 6;
-		underlineCharGeo = GetUnderlineOrStrikethroughCharGeo('_', richTextProperty.Size);
+		underlineCharGeo = GetUnderlineOrStrikethroughCharGeo('_', richTextProperty.Size, richTextProperty.Bold);
 	}
 	if (richTextProperty.Strikethrough)
 	{
 		outAdditionalVerticesCount += 4;
 		outAdditionalIndicesCount += 6;
-		strikethroughCharGeo = GetUnderlineOrStrikethroughCharGeo('-', richTextProperty.Size);
-	}
-	if (richTextProperty.Bold)
-	{
-		outAdditionalVerticesCount += 12;
-		outAdditionalIndicesCount += 18;
+		strikethroughCharGeo = GetUnderlineOrStrikethroughCharGeo('-', richTextProperty.Size, richTextProperty.Bold);
 	}
 	int32 newVerticesCount = verticesStartIndex + outAdditionalVerticesCount;
 	FLexUIGeometry::LexUIGeometrySetArrayNum(originVertices, newVerticesCount);
@@ -77,51 +72,7 @@ void ULexUIFontData_Bitmap::PushCharData(
 		float x, y;
 
 		int addVertCount = 0;
-		if (richTextProperty.Bold)
-		{
-			x = offsetX;
-			y = offsetY - charData.Height;
-			auto vert0 = FVector3f(0, x, y);
-			x = charData.Width + offsetX;
-			auto vert1 = FVector3f(0, x, y);
-			x = offsetX;
-			y = offsetY;
-			auto vert2 = FVector3f(0, x, y);
-			x = charData.Width + offsetX;
-			auto vert3 = FVector3f(0, x, y);
-			if (richTextProperty.Italic)
-			{
-				auto vert01ItalicOffset = (charData.Height - charData.YOffset) * ItalicSlop;
-				vert0.Y -= vert01ItalicOffset;
-				vert1.Y -= vert01ItalicOffset;
-				auto vert23ItalicOffset = charData.YOffset * ItalicSlop;
-				vert2.Y += vert23ItalicOffset;
-				vert3.Y += vert23ItalicOffset;
-			}
-			//bold left
-			originVertices[verticesStartIndex].Position = vert0 + FVector3f(0, -BoldSize, 0);
-			originVertices[verticesStartIndex + 1].Position = vert1 + FVector3f(0, -BoldSize, 0);
-			originVertices[verticesStartIndex + 2].Position = vert2 + FVector3f(0, -BoldSize, 0);
-			originVertices[verticesStartIndex + 3].Position = vert3 + FVector3f(0, -BoldSize, 0);
-			//bold right
-			originVertices[verticesStartIndex + 4].Position = vert0 + FVector3f(0, BoldSize, 0);
-			originVertices[verticesStartIndex + 5].Position = vert1 + FVector3f(0, BoldSize, 0);
-			originVertices[verticesStartIndex + 6].Position = vert2 + FVector3f(0, BoldSize, 0);
-			originVertices[verticesStartIndex + 7].Position = vert3 + FVector3f(0, BoldSize, 0);
-			//bold top
-			originVertices[verticesStartIndex + 8].Position = vert0 + FVector3f(0, 0, BoldSize);
-			originVertices[verticesStartIndex + 9].Position = vert1 + FVector3f(0, 0, BoldSize);
-			originVertices[verticesStartIndex + 10].Position = vert2 + FVector3f(0, 0, BoldSize);
-			originVertices[verticesStartIndex + 11].Position = vert3 + FVector3f(0, 0, BoldSize);
-			//bold bottom
-			originVertices[verticesStartIndex + 12].Position = vert0 + FVector3f(0, 0, -BoldSize);
-			originVertices[verticesStartIndex + 13].Position = vert1 + FVector3f(0, 0, -BoldSize);
-			originVertices[verticesStartIndex + 14].Position = vert2 + FVector3f(0, 0, -BoldSize);
-			originVertices[verticesStartIndex + 15].Position = vert3 + FVector3f(0, 0, -BoldSize);
-
-			addVertCount = 16;
-		}
-		else
+		//base
 		{
 			x = offsetX;
 			y = offsetY - charData.Height;
@@ -188,32 +139,7 @@ void ULexUIFontData_Bitmap::PushCharData(
 	//uv
 	{
 		int addVertCount = 0;
-		if (richTextProperty.Bold)
-		{
-			//bold left
-			vertices[verticesStartIndex].TextureCoordinate[0] = charData.GetUV0();
-			vertices[verticesStartIndex + 1].TextureCoordinate[0] = charData.GetUV1();
-			vertices[verticesStartIndex + 2].TextureCoordinate[0] = charData.GetUV2();
-			vertices[verticesStartIndex + 3].TextureCoordinate[0] = charData.GetUV3();
-			//bold right
-			vertices[verticesStartIndex + 4].TextureCoordinate[0] = charData.GetUV0();
-			vertices[verticesStartIndex + 5].TextureCoordinate[0] = charData.GetUV1();
-			vertices[verticesStartIndex + 6].TextureCoordinate[0] = charData.GetUV2();
-			vertices[verticesStartIndex + 7].TextureCoordinate[0] = charData.GetUV3();
-			//bold top
-			vertices[verticesStartIndex + 8].TextureCoordinate[0] = charData.GetUV0();
-			vertices[verticesStartIndex + 9].TextureCoordinate[0] = charData.GetUV1();
-			vertices[verticesStartIndex + 10].TextureCoordinate[0] = charData.GetUV2();
-			vertices[verticesStartIndex + 11].TextureCoordinate[0] = charData.GetUV3();
-			//bold bottom
-			vertices[verticesStartIndex + 12].TextureCoordinate[0] = charData.GetUV0();
-			vertices[verticesStartIndex + 13].TextureCoordinate[0] = charData.GetUV1();
-			vertices[verticesStartIndex + 14].TextureCoordinate[0] = charData.GetUV2();
-			vertices[verticesStartIndex + 15].TextureCoordinate[0] = charData.GetUV3();
-
-			addVertCount = 16;
-		}
-		else
+		//base
 		{
 			vertices[verticesStartIndex].TextureCoordinate[0] = charData.GetUV0();
 			vertices[verticesStartIndex + 1].TextureCoordinate[0] = charData.GetUV1();
@@ -244,32 +170,7 @@ void ULexUIFontData_Bitmap::PushCharData(
 	//color
 	{
 		int addVertCount = 0;
-		if (richTextProperty.Bold)
-		{
-			//bold left
-			vertices[verticesStartIndex].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + 1].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + 2].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + 3].Color = richTextProperty.Color;
-			//bold right
-			vertices[verticesStartIndex + 4].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + 5].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + 6].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + 7].Color = richTextProperty.Color;
-			//bold top
-			vertices[verticesStartIndex + 8].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + 9].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + 10].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + 11].Color = richTextProperty.Color;
-			//bold bottom
-			vertices[verticesStartIndex + 12].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + 13].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + 14].Color = richTextProperty.Color;
-			vertices[verticesStartIndex + 15].Color = richTextProperty.Color;
-
-			addVertCount = 16;
-		}
-		else
+		//base
 		{
 			vertices[verticesStartIndex].Color = richTextProperty.Color;
 			vertices[verticesStartIndex + 1].Color = richTextProperty.Color;
@@ -301,41 +202,8 @@ void ULexUIFontData_Bitmap::PushCharData(
 	{
 		int addVertCount = 0;
 		int addIndCount = 0;
-		if (richTextProperty.Bold)
-		{
-			//bold left
-			triangleIndices[indicesStartIndex] = verticesStartIndex;
-			triangleIndices[indicesStartIndex + 1] = verticesStartIndex + 3;
-			triangleIndices[indicesStartIndex + 2] = verticesStartIndex + 2;
-			triangleIndices[indicesStartIndex + 3] = verticesStartIndex;
-			triangleIndices[indicesStartIndex + 4] = verticesStartIndex + 1;
-			triangleIndices[indicesStartIndex + 5] = verticesStartIndex + 3;
-			//bold right
-			triangleIndices[indicesStartIndex + 6] = verticesStartIndex + 4;
-			triangleIndices[indicesStartIndex + 7] = verticesStartIndex + 7;
-			triangleIndices[indicesStartIndex + 8] = verticesStartIndex + 6;
-			triangleIndices[indicesStartIndex + 9] = verticesStartIndex + 4;
-			triangleIndices[indicesStartIndex + 10] = verticesStartIndex + 5;
-			triangleIndices[indicesStartIndex + 11] = verticesStartIndex + 7;
-			//bold top
-			triangleIndices[indicesStartIndex + 12] = verticesStartIndex + 8;
-			triangleIndices[indicesStartIndex + 13] = verticesStartIndex + 11;
-			triangleIndices[indicesStartIndex + 14] = verticesStartIndex + 10;
-			triangleIndices[indicesStartIndex + 15] = verticesStartIndex + 8;
-			triangleIndices[indicesStartIndex + 16] = verticesStartIndex + 9;
-			triangleIndices[indicesStartIndex + 17] = verticesStartIndex + 11;
-			//bold bottom
-			triangleIndices[indicesStartIndex + 18] = verticesStartIndex + 12;
-			triangleIndices[indicesStartIndex + 19] = verticesStartIndex + 15;
-			triangleIndices[indicesStartIndex + 20] = verticesStartIndex + 14;
-			triangleIndices[indicesStartIndex + 21] = verticesStartIndex + 12;
-			triangleIndices[indicesStartIndex + 22] = verticesStartIndex + 13;
-			triangleIndices[indicesStartIndex + 23] = verticesStartIndex + 15;
 
-			addVertCount = 16;
-			addIndCount = 24;
-		}
-		else
+		//base
 		{
 			triangleIndices[indicesStartIndex] = verticesStartIndex;
 			triangleIndices[indicesStartIndex + 1] = verticesStartIndex + 3;
@@ -347,6 +215,7 @@ void ULexUIFontData_Bitmap::PushCharData(
 			addVertCount = 4;
 			addIndCount = 6;
 		}
+		
 		if (richTextProperty.Underline)
 		{
 			triangleIndices[indicesStartIndex + addIndCount] = verticesStartIndex + addVertCount;
@@ -375,9 +244,9 @@ void ULexUIFontData_Bitmap::PushCharData(
 }
 
 
-bool ULexUIFontData_Bitmap::GetCharDataFromCache(const uint32& charCode, const float& charSize, FLexUICharData& OutResult)
+bool ULexUIFontData_Bitmap::GetCharDataFromCache(uint32 CharCode, float CharSize, bool IsBold, FLexUICharData& OutResult)
 {
-	auto fontKey = FLexUIFontKeyData(charCode, charSize);
+	auto fontKey = FLexUIBitmapCharKey(CharCode, CharSize, IsBold);
 	if (auto charData = CharDataMap.Find(fontKey))
 	{
 		OutResult = *charData;
@@ -385,17 +254,15 @@ bool ULexUIFontData_Bitmap::GetCharDataFromCache(const uint32& charCode, const f
 	}
 	return false;
 }
-void ULexUIFontData_Bitmap::AddCharDataToCache(const uint32& charCode, const float& charSize, FLexUICharData& charData)
+void ULexUIFontData_Bitmap::AddCharDataToCache(uint32 CharCode, float CharSize, bool IsBold, FLexUICharData& CharData)
 {
-	CharDataMap.Add(FLexUIFontKeyData(charCode, charSize), charData);
+	CharDataMap.Add(FLexUIBitmapCharKey(CharCode, CharSize, IsBold), CharData);
 }
 
-bool ULexUIFontData_Bitmap::RenderGlyph(const uint32& charCode, const float& charSize, FGlyphBitmap& OutResult)
+bool ULexUIFontData_Bitmap::RenderGlyph(uint32 CharCode, float CharSize, bool IsBold, FGlyphBitmap& OutResult)
 {
 #if WITH_FREETYPE
-	//InSlot->bitmap_left equals (InSlot->metrics.horiBearingX >> 6), InSlot->bitmap_top equals (InSlot->metrics.horiBearingY >> 6)
-
-	auto slot = RenderGlyphOnFreeType(charCode, charSize);
+	auto slot = RenderGlyphOnFreeType(CharCode, CharSize, IsBold ? CharSize * BoldRatio : 0);
 	if (slot == nullptr)
 	{
 		return false;
@@ -404,7 +271,7 @@ bool ULexUIFontData_Bitmap::RenderGlyph(const uint32& charCode, const float& cha
 	OutResult.height = slot->bitmap.rows;
 	OutResult.hOffset = slot->bitmap_left;
 	OutResult.vOffset = slot->bitmap_top;
-	OutResult.hAdvance = slot->metrics.horiAdvance / 64.0f;
+	OutResult.hAdvance = slot->metrics.horiAdvance * ONE_DIVIDE_64;
 	OutResult.pixelSize = 4;
 	//pixel color
 	int pixelCount = OutResult.width * OutResult.height;
@@ -476,18 +343,19 @@ UTexture2D* ULexUIFontData_Bitmap::CreateIntermediateTexture(int InTextureSize)
 		FName(*FString::Printf(TEXT("LexUIFontData_Bitmap_Intermediate_%d"), TextureNameSuffix++)),
 		RF_Transient
 	);
+	auto PixelFormat = PF_B8G8R8A8;
 	auto PlatformData = new FTexturePlatformData();
 	PlatformData->SizeX = InTextureSize;
 	PlatformData->SizeY = InTextureSize;
-	PlatformData->PixelFormat = PF_R8;
+	PlatformData->PixelFormat = PixelFormat;
 	// Allocate first mipmap.
-	int32 NumBlocksX = InTextureSize / GPixelFormats[PF_R8].BlockSizeX;
-	int32 NumBlocksY = InTextureSize / GPixelFormats[PF_R8].BlockSizeY;
+	int32 NumBlocksX = InTextureSize / GPixelFormats[PixelFormat].BlockSizeX;
+	int32 NumBlocksY = InTextureSize / GPixelFormats[PixelFormat].BlockSizeY;
 	FTexture2DMipMap* Mip = new FTexture2DMipMap();
 	PlatformData->Mips.Add(Mip);
 	Mip->SizeX = InTextureSize;
 	Mip->SizeY = InTextureSize;
-	int DataSize = NumBlocksX * NumBlocksY * GPixelFormats[PF_R8].BlockBytes;
+	int DataSize = NumBlocksX * NumBlocksY * GPixelFormats[PixelFormat].BlockBytes;
 	Mip->BulkData.Lock(LOCK_READ_WRITE);
 	void* DataPtr = Mip->BulkData.Realloc(DataSize);
 	FMemory::Memzero(DataPtr, DataSize);

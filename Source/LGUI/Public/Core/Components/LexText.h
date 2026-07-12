@@ -16,7 +16,7 @@ class ULexUIRichTextCustomStyleData;
  * UV channels-
  *		UV0: FontTexture coordinate
  *		UV1: Default LexCanvas use, check LexCanvas
- *		UV2: X- bold size of DistanceField font, Y- font-size * object-scale
+ *		UV2: X- font-size * object-scale, Y- not used
  */
 UCLASS(ClassGroup = (LGUI), Blueprintable)
 class LGUI_API ULexText : public ULexVisualBatchMesh, public ILexUICultureChangedInterface

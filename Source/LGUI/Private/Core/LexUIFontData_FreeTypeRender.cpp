@@ -15,6 +15,7 @@
 #if WITH_FREETYPE
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include FT_OUTLINE_H
 #endif
 
 void ULexUIFontData_FreeTypeRender::UpdateFontOnCultureChanged()
@@ -255,7 +256,7 @@ void ULexUIFontData_FreeTypeRender::DeinitFreeType()
 #endif
 
 #if WITH_FREETYPE
-FT_GlyphSlot ULexUIFontData_FreeTypeRender::RenderGlyphOnFreeType(const uint32& charCode, const float& charSize)
+FT_GlyphSlot ULexUIFontData_FreeTypeRender::RenderGlyphOnFreeType(uint32 CharCode, float CharSize, float BoldSize)
 {
 	InitFreeType();
 	if (bAlreadyInitialized == false)
@@ -264,31 +265,31 @@ FT_GlyphSlot ULexUIFontData_FreeTypeRender::RenderGlyphOnFreeType(const uint32& 
 		return nullptr;
 	}
 
-	auto error = FT_Set_Pixel_Sizes(Face, 0, charSize);
+	auto error = FT_Set_Pixel_Sizes(Face, 0, CharSize);
 	if (error)
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d Font '%s' FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), ANSI_TO_TCHAR(GetErrorMessage(error)));
 		return nullptr;
 	}
 	FT_GlyphSlot slot = Face->glyph;
-	error = FT_Load_Glyph(Face, FT_Get_Char_Index(Face, charCode), FT_LOAD_DEFAULT);
+	error = FT_Load_Glyph(Face, FT_Get_Char_Index(Face, CharCode), FT_LOAD_DEFAULT);
 	if (slot->glyph_index == 0//missing char in this font
 		&& slot->metrics.width == 0 && slot->metrics.height == 0//some chars (/r, /n, space) only have width and height, no pixels
 		)
 	{
 		if (FallbackFontArray.Num() > 0)
 		{
-			UE_LOG(LGUI, Log, TEXT("[%s].%d Font '%s' Can't find glyph (code:%d), will search in fallbacks"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), (int)charCode);
+			UE_LOG(LGUI, Log, TEXT("[%s].%d Font '%s' Can't find glyph (code:%d), will search in fallbacks"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), (int)CharCode);
 			for (int i = 0; i < FallbackFontArray.Num(); i++)
 			{
 				if (FallbackFontArray[i] == nullptr)continue;
-				if (auto fallbackSlot = FallbackFontArray[i]->RenderGlyphOnFreeType(charCode, charSize))
+				if (auto fallbackSlot = FallbackFontArray[i]->RenderGlyphOnFreeType(CharCode, CharSize, BoldSize))
 				{
 					return fallbackSlot;
 				}
 			}
 		}
-		UE_LOG(LGUI, Error, TEXT("[%s].%d Font '%s' Can't find glyph (code:%d) in fallbacks too"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), (int)charCode);
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Font '%s' Can't find glyph (code:%d) in fallbacks too"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), (int)CharCode);
 		return nullptr;
 	}
 	if (error)
@@ -296,11 +297,23 @@ FT_GlyphSlot ULexUIFontData_FreeTypeRender::RenderGlyphOnFreeType(const uint32& 
 		UE_LOG(LGUI, Error, TEXT("[%s].%d Font '%s' FT_Load_Glyph error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), ANSI_TO_TCHAR(GetErrorMessage(error)));
 		return nullptr;
 	}
+	if (BoldSize > 0)
+	{
+		error = FT_Outline_Embolden(&slot->outline, static_cast<FT_Pos>(BoldSize * 64.0f));
+		if (error)
+		{
+			UE_LOG(LGUI, Warning, TEXT("[%s].%d Font '%s' FT_Outline_Embolden error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), ANSI_TO_TCHAR(GetErrorMessage(error)));
+		}
+	}
 	error = FT_Render_Glyph(Face->glyph, FT_Render_Mode::FT_RENDER_MODE_NORMAL);
 	if (error)
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d Font '%s' FT_Render_Glyph error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *this->GetPathName(), ANSI_TO_TCHAR(GetErrorMessage(error)));
 		return nullptr;
+	}
+	if (BoldSize > 0)
+	{
+		slot->metrics.horiAdvance += BoldSize * 64.0f;
 	}
 	return slot;
 }
@@ -353,7 +366,7 @@ void ULexUIFontData_FreeTypeRender::InitFont()
 #endif
 }
 
-float ULexUIFontData_FreeTypeRender::GetKerning(const uint32& LeftCharCode, const uint32& RightCharCode, const float& CharSize)
+float ULexUIFontData_FreeTypeRender::GetKerning(uint32 LeftCharCode, uint32 RightCharCode, float CharSize)
 {
 #if WITH_FREETYPE
 	if (Face == nullptr)return 0;
@@ -371,12 +384,12 @@ float ULexUIFontData_FreeTypeRender::GetKerning(const uint32& LeftCharCode, cons
 		UE_LOG(LGUI, Error, TEXT("[%s].%d FT_Get_Kerning error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
 		return 0;
 	}
-	return kerning.x / 64.0f;
+	return kerning.x * ONE_DIVIDE_64;
 #else
 	return 0;
 #endif
 }
-float ULexUIFontData_FreeTypeRender::GetLineHeight(const float& FontSize)
+float ULexUIFontData_FreeTypeRender::GetLineHeight(float FontSize)
 {
 #if WITH_FREETYPE
 	if (Face == nullptr)return FontSize;
@@ -386,12 +399,12 @@ float ULexUIFontData_FreeTypeRender::GetLineHeight(const float& FontSize)
 		UE_LOG(LGUI, Error, TEXT("[%s].%d FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
 		return FontSize;
 	}
-	return LineHeightType == ELexUIDynamicFontLineHeightType::FromFontFace ? (Face->size->metrics.height / 64.0f) : FontSize;
+	return LineHeightType == ELexUIDynamicFontLineHeightType::FromFontFace ? (Face->size->metrics.height * ONE_DIVIDE_64) : FontSize;
 #else
 	return fontSize;
 #endif
 }
-float ULexUIFontData_FreeTypeRender::GetVerticalOffset(const float& FontSize)
+float ULexUIFontData_FreeTypeRender::GetVerticalOffset(float FontSize)
 {
 #if WITH_FREETYPE
 	if (Face == nullptr)return FontSize;
@@ -401,7 +414,7 @@ float ULexUIFontData_FreeTypeRender::GetVerticalOffset(const float& FontSize)
 		UE_LOG(LGUI, Error, TEXT("[%s].%d FT_Set_Pixel_Sizes error:%s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ANSI_TO_TCHAR(GetErrorMessage(error)));
 		return 0;
 	}
-	return -((Face->size->metrics.ascender + Face->size->metrics.descender) / 64.0f) * 0.5f;
+	return -((Face->size->metrics.ascender + Face->size->metrics.descender) * ONE_DIVIDE_64) * 0.5f;
 #else
 	return fontSize;
 #endif
@@ -426,14 +439,14 @@ void ULexUIFontData_FreeTypeRender::SetEngineFont(UFontFace* Value)
 	EngineFont = Value;
 }
 
-FLexUICharData ULexUIFontData_FreeTypeRender::GetCharData(const uint32& CharCode, const float& CharSize)
+FLexUICharData ULexUIFontData_FreeTypeRender::GetCharData(uint32 CharCode, float CharSize, bool IsBold)
 {
 	auto Result = FLexUICharData();
 	if (CharSize <= 0.0f)return Result;
-	if (!GetCharDataFromCache(CharCode, CharSize, Result))//if charData not cached, then create it and add to cache
+	if (!GetCharDataFromCache(CharCode, CharSize, IsBold, Result))//if charData not cached, then create it and add to cache
 	{
 		FGlyphBitmap glyphBitmap;
-		if (!RenderGlyph(CharCode, CharSize, glyphBitmap))//no valid glyph
+		if (!RenderGlyph(CharCode, CharSize, IsBold, glyphBitmap))//no valid glyph
 		{
 			return Result;//@todo: use an error char to display
 		}
@@ -466,8 +479,8 @@ FLexUICharData ULexUIFontData_FreeTypeRender::GetCharData(const uint32& CharCode
 			goto PACK_AND_INSERT;
 		}
 
-		AddCharDataToCache(CharCode, CharSize, uiCharData);
-		GetCharDataFromCache(CharCode, CharSize, Result);
+		AddCharDataToCache(CharCode, CharSize, IsBold, uiCharData);
+		GetCharDataFromCache(CharCode, CharSize, IsBold, Result);
 	}
 	return Result;
 }

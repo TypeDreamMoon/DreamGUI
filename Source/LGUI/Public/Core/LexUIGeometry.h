@@ -228,8 +228,8 @@ public:
 public:
 	static void UpdateUIText(const FString& Content
 		, TArray<FLexUIText_TextProcessingElement>& TextProcessingArray
-		, float width, float height, const FVector2f& pivot
-		, FColor color, uint8 RenderOpacityForRichText, const FVector2f& fontSpace, FLexUIGeometry* uiGeo, float fontSize
+		, float width, float height, FVector2f pivot
+		, FColor color, uint8 RenderOpacityForRichText, FVector2f fontSpace, FLexUIGeometry* uiGeo, float fontSize
 		, ELexUITextParagraphHorizontalAlign paragraphHAlign, ELexUITextParagraphVerticalAlign paragraphVAlign, ELexUITextOverflowType overflowType
 		, ETextWrappingPolicy wrappingPolicy, bool bUseKerning
 		, ELexUITextFontStyle fontStyle, FVector2f& textPreferredSize, bool& outTruncated

@@ -7,24 +7,26 @@
 #include "Core/LexUIFontData_FreeTypeRender.h"
 #include "LexUIFontData_Bitmap.generated.h"
 
-struct FLexUIFontKeyData
+struct FLexUIBitmapCharKey
 {
 public:
-	FLexUIFontKeyData() {}
-	FLexUIFontKeyData(const uint32& inCharCode, const uint16& inCharSize)
+	FLexUIBitmapCharKey() {}
+	FLexUIBitmapCharKey(uint32 InCharCode, uint16 InCharSize, bool InIsBold)
 	{
-		this->charCode = inCharCode;
-		this->charSize = inCharSize;
+		this->CharCode = InCharCode;
+		this->CharSize = InCharSize;
+		this->bBold = InIsBold;
 	}
-	uint32 charCode = 0;
-	uint16 charSize = 0;
-	bool operator==(const FLexUIFontKeyData& other)const
+	uint32 CharCode = 0;
+	uint16 CharSize = 0;
+	bool bBold = false;
+	bool operator==(const FLexUIBitmapCharKey& other)const
 	{
-		return this->charCode == other.charCode && this->charSize == other.charSize;
+		return this->CharCode == other.CharCode && this->CharSize == other.CharSize && this->bBold == other.bBold;
 	}
-	friend FORCEINLINE uint32 GetTypeHash(const FLexUIFontKeyData& other)
+	friend FORCEINLINE uint32 GetTypeHash(const FLexUIBitmapCharKey& other)
 	{
-		return HashCombine(GetTypeHash(other.charCode), GetTypeHash(other.charSize));
+		return HashCombine(GetTypeHash(other.CharCode), GetTypeHash(other.CharSize), GetTypeHash(other.bBold));
 	}
 };
 
@@ -42,11 +44,11 @@ protected:
 		float ItalicAngle = 15.0f;
 	/** bold size radio for bold style, large number create more bold effect */
 	UPROPERTY(EditAnywhere, Category = "LGUI")
-		float BoldRatio = 0.015f;
+		float BoldRatio = 0.06f;
 public:
 	//Begin ULexUIFontData_FreeTypeRender interface
 	virtual void PushCharData(
-		uint32 charCode, const FVector2f& lineOffset, const FVector2f& fontSpace, const FLexUICharData& charData,
+		uint32 charCode, FVector2f lineOffset, FVector2f fontSpace, const FLexUICharData& charData,
 		const LexUIRichTextParser::FRichTextParseResult& richTextProperty,
 		int verticesStartIndex, int indicesStartIndex,
 		int& outAdditionalVerticesCount, int& outAdditionalIndicesCount,
@@ -56,18 +58,18 @@ public:
 	//End ULexUIFontData_FreeTypeRender interface
 protected:
 	float BoldSize; float ItalicSlop;
-	TMap<FLexUIFontKeyData, FLexUICharData> CharDataMap;
+	TMap<FLexUIBitmapCharKey, FLexUICharData> CharDataMap;
 	virtual UTexture2DArray* CreateFontTexture(int InTextureSize, int InSliceCount)override;
 	virtual UTexture2D* CreateIntermediateTexture(int InTextureSize) override;
 	virtual void ApplyPackingAtlasTextureExpand(UTexture2D* newTexture, int newTextureSize)override;
 
-	virtual bool GetCharDataFromCache(const uint32& charCode, const float& charSize, FLexUICharData& OutResult)override;
-	virtual void AddCharDataToCache(const uint32& charCode, const float& charSize, FLexUICharData& charData)override;
-	virtual bool RenderGlyph(const uint32& charCode, const float& charSize, FGlyphBitmap& OutResult)override;
+	virtual bool GetCharDataFromCache(uint32 CharCode, float CharSize, bool IsBold, FLexUICharData& OutResult)override;
+	virtual void AddCharDataToCache(uint32 CharCode, float CharSize, bool IsBold, FLexUICharData& CharData)override;
+	virtual bool RenderGlyph(uint32 CharCode, float CharSize, bool IsBold, FGlyphBitmap& OutResult)override;
 	virtual void ClearCharDataCache()override;
 
 	virtual bool GetSupportDynamicPixelsPerUnit()override { return true; }
-	virtual uint8 GetFontTextureMark() override{ return 1; }
+	virtual ELexUIFontTextureMark GetFontTextureMark() override{ return ELexUIFontTextureMark::Bitmap; }
 public:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;

@@ -26,9 +26,10 @@ ULexUIFontData_DistanceField::ULexUIFontData_DistanceField()
 	PresetMaterials.Add(LoadObject<UMaterialInterface>(NULL, TEXT("/LGUI/Materials/TextEffects/MI_OutlineOnly")));
 }
 
-bool ULexUIFontData_DistanceField::GetCharDataFromCache(const uint32& CharCode, const float& CharSize, FLexUICharData& OutResult)
+bool ULexUIFontData_DistanceField::GetCharDataFromCache(uint32 CharCode, float CharSize, bool IsBold, FLexUICharData& OutResult)
 {
-	if (auto charData = CharDataMap.Find(CharCode))
+	auto CharKey = FLexUIDistanceFieldCharKey(CharCode, IsBold);
+	if (auto charData = CharDataMap.Find(CharKey))
 	{
 		OutResult = FLexUICharData(*charData);
 		float vertexOffset;
@@ -60,26 +61,15 @@ bool ULexUIFontData_DistanceField::GetCharDataFromCache(const uint32& CharCode, 
 	}
 	return false;
 }
-void ULexUIFontData_DistanceField::AddCharDataToCache(const uint32& CharCode, const float& CharSize, FLexUICharData& CharData)
+void ULexUIFontData_DistanceField::AddCharDataToCache(uint32 CharCode, float CharSize, bool IsBold, FLexUICharData& CharData)
 {
-	// shrink mesh to reduce empty area of SDFRadius
-	// float vertexOffset = SDFRadius - SampleFontSize * 0.02f;//slightly expand it in-case too sharp edge
-	// CharData.Width -= vertexOffset + vertexOffset;
-	// CharData.Height -= vertexOffset + vertexOffset;
-	// CharData.XOffset += vertexOffset;
-	// CharData.YOffset -= vertexOffset;
-	// float uvOffset = vertexOffset * OneDivideTextureSize;
-	// CharData.MinUV.X += uvOffset;
-	// CharData.MaxUV.Y -= uvOffset;
-	// CharData.MaxUV.X -= uvOffset;
-	// CharData.MinUV.Y += uvOffset;
-	CharDataMap.Add(CharCode, CharData);
+	CharDataMap.Add(FLexUIDistanceFieldCharKey(CharCode, IsBold), CharData);
 }
 
-bool ULexUIFontData_DistanceField::RenderGlyph(const uint32& CharCode, const float& CharSize, FGlyphBitmap& OutResult)
+bool ULexUIFontData_DistanceField::RenderGlyph(uint32 CharCode, float CharSize, bool IsBold, FGlyphBitmap& OutResult)
 {
 #if WITH_FREETYPE
-	auto slot = RenderGlyphOnFreeType(CharCode, SampleFontSize);
+	auto slot = RenderGlyphOnFreeType(CharCode, SampleFontSize, IsBold ? SampleFontSize * BoldRatio : 0);
 	if (slot == nullptr)
 	{
 		return false;
@@ -109,7 +99,7 @@ bool ULexUIFontData_DistanceField::RenderGlyph(const uint32& CharCode, const flo
 	OutResult.height = glyphHeight;
 	OutResult.hOffset = slot->bitmap_left - SDFRadius;
 	OutResult.vOffset = slot->bitmap_top + SDFRadius;
-	OutResult.hAdvance = slot->metrics.horiAdvance / 64.0f;
+	OutResult.hAdvance = slot->metrics.horiAdvance * ONE_DIVIDE_64;
 	OutResult.buffer = MoveTemp(sdfResult);
 	OutResult.pixelSize = 1;
 	return true;
@@ -228,7 +218,7 @@ bool ULexUIFontData_DistanceField::GetRequireNormalAndTangent()
 	return true;//for tilt look
 }
 
-float ULexUIFontData_DistanceField::GetKerning(const uint32& leftCharIndex, const uint32& rightCharIndex, const float& charSize)
+float ULexUIFontData_DistanceField::GetKerning(uint32 leftCharIndex, uint32 rightCharIndex, float charSize)
 {
 	auto KerningPair = FLexUIDistanceFieldFontKerningPair(leftCharIndex, rightCharIndex);
 	if (auto KerningValuePtr = KerningPairsMap.Find(KerningPair))
@@ -242,7 +232,7 @@ float ULexUIFontData_DistanceField::GetKerning(const uint32& leftCharIndex, cons
 		return KerningValue * charSize * OneDivideFontSize;
 	}
 }
-float ULexUIFontData_DistanceField::GetLineHeight(const float& fontSize)
+float ULexUIFontData_DistanceField::GetLineHeight(float fontSize)
 {
 	if (LineHeight == -1)
 	{
@@ -250,7 +240,7 @@ float ULexUIFontData_DistanceField::GetLineHeight(const float& fontSize)
 	}
 	return LineHeight * fontSize * OneDivideFontSize;
 }
-float ULexUIFontData_DistanceField::GetVerticalOffset(const float& fontSize)
+float ULexUIFontData_DistanceField::GetVerticalOffset(float fontSize)
 {
 	if (VerticalOffset == -1)
 	{
@@ -264,16 +254,16 @@ UMaterialInterface* ULexUIFontData_DistanceField::GetFontMaterial()
 }
 
 void ULexUIFontData_DistanceField::PushCharData(
-	uint32 charCode, const FVector2f& inLineOffset, const FVector2f& fontSpace, const FLexUICharData& charData,
+	uint32 charCode, FVector2f inLineOffset, FVector2f fontSpace, const FLexUICharData& charData,
 	const LexUIRichTextParser::FRichTextParseResult& richTextProperty,
 	int verticesStartIndex, int indicesStartIndex,
 	int& outAdditionalVerticesCount, int& outAdditionalIndicesCount,
 	TArray<FLexUIOriginVertexData>& originVertices, TArray<FLexUIMeshVertex>& vertices, TArray<FLexUIMeshIndex>& triangleIndices
 )
 {
-	auto GetUnderlineOrStrikethroughCharGeo = [&](uint32 charCode, float overrideFontSize)
+	auto GetUnderlineOrStrikethroughCharGeo = [&](uint32 charCode, float overrideFontSize, bool bold)
 	{
-		auto charData = this->GetCharData(charCode, overrideFontSize);
+		auto charData = this->GetCharData(charCode, overrideFontSize, bold);
 		charData.YOffset += this->GetVerticalOffset(overrideFontSize);
 
 		float uvX = (charData.MaxUV.X - charData.MinUV.X) * 0.5f + charData.MinUV.X;
@@ -291,13 +281,13 @@ void ULexUIFontData_DistanceField::PushCharData(
 	{
 		outAdditionalVerticesCount += 4;
 		outAdditionalIndicesCount += 6;
-		underlineCharGeo = GetUnderlineOrStrikethroughCharGeo('_', richTextProperty.Size);
+		underlineCharGeo = GetUnderlineOrStrikethroughCharGeo('_', richTextProperty.Size, richTextProperty.Bold);
 	}
 	if (richTextProperty.Strikethrough)
 	{
 		outAdditionalVerticesCount += 4;
 		outAdditionalIndicesCount += 6;
-		strikethroughCharGeo = GetUnderlineOrStrikethroughCharGeo('-', richTextProperty.Size);
+		strikethroughCharGeo = GetUnderlineOrStrikethroughCharGeo('-', richTextProperty.Size, richTextProperty.Bold);
 	}
 	int32 newVerticesCount = verticesStartIndex + outAdditionalVerticesCount;
 	FLexUIGeometry::LexUIGeometrySetArrayNum(originVertices, newVerticesCount, false);
@@ -316,36 +306,17 @@ void ULexUIFontData_DistanceField::PushCharData(
 		lineOffset.Y -= richTextProperty.Size * 0.5f;
 	}
 	
-	float boldUVExtendWidth = 0;
-	float boldUVExtendHeight = 0;
 	//position
 	{
 		float offsetX = lineOffset.X + charData.XOffset;
 		float offsetY = lineOffset.Y + charData.YOffset;
 		float charAdvanceWidth = charData.XAdvance + fontSpace.X;
-		if (richTextProperty.Bold)
-		{
-			charAdvanceWidth += charAdvanceWidth * BoldRatio;
-		}
 		float x, y;
 
 		int addVertCount = 0;
 		{
 			float charWidth = charData.Width;
 			float charHeight = charData.Height;
-			if (richTextProperty.Bold)
-			{
-				float boldExtendWidth = charWidth * BoldRatio;
-				float boldExtendHeight = charHeight * BoldRatio;
-				charWidth += boldExtendWidth * 2;
-				charHeight += boldExtendHeight * 2;
-				offsetX -= boldExtendWidth;
-				offsetY += boldExtendHeight;
-
-				auto uvRange = charData.GetUVRange();
-				boldUVExtendWidth = boldExtendWidth / charData.Width * uvRange.X;
-				boldUVExtendHeight = boldExtendHeight / charData.Height * uvRange.Y;
-			}
 			x = offsetX;
 			y = offsetY - charHeight;
 			auto& vert0 = originVertices[verticesStartIndex].Position;
@@ -412,14 +383,6 @@ void ULexUIFontData_DistanceField::PushCharData(
 		int addVertCount = 0;
 		auto tempFontScale = richTextProperty.Size * ObjectScale;
 		{
-			if (richTextProperty.Bold)
-			{
-				vertices[verticesStartIndex].TextureCoordinate[0] = charData.GetUV0() + FVector2f(-boldUVExtendWidth, -boldUVExtendHeight);
-				vertices[verticesStartIndex + 1].TextureCoordinate[0] = charData.GetUV1() + FVector2f(boldUVExtendWidth, -boldUVExtendHeight);
-				vertices[verticesStartIndex + 2].TextureCoordinate[0] = charData.GetUV2() + FVector2f(-boldUVExtendWidth, boldUVExtendHeight);
-				vertices[verticesStartIndex + 3].TextureCoordinate[0] = charData.GetUV3() + FVector2f(boldUVExtendWidth, boldUVExtendHeight);
-			}
-			else
 			{
 				vertices[verticesStartIndex].TextureCoordinate[0] = charData.GetUV0();
 				vertices[verticesStartIndex + 1].TextureCoordinate[0] = charData.GetUV1();
@@ -427,13 +390,12 @@ void ULexUIFontData_DistanceField::PushCharData(
 				vertices[verticesStartIndex + 3].TextureCoordinate[0] = charData.GetUV3();
 			}
 
-			//bold and text-scale
+			//text-scale
 			{
-				auto tempBoldSize = richTextProperty.Bold ? BoldRatio * 0.5f : 0.0f;
-				vertices[verticesStartIndex].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
-				vertices[verticesStartIndex + 1].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
-				vertices[verticesStartIndex + 2].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
-				vertices[verticesStartIndex + 3].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
+				vertices[verticesStartIndex].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
+				vertices[verticesStartIndex + 1].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
+				vertices[verticesStartIndex + 2].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
+				vertices[verticesStartIndex + 3].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
 			}
 			//slice of texture array
 			{
@@ -452,13 +414,12 @@ void ULexUIFontData_DistanceField::PushCharData(
 			vertices[verticesStartIndex + addVertCount + 2].TextureCoordinate[0] = underlineCharGeo.GetUV2();
 			vertices[verticesStartIndex + addVertCount + 3].TextureCoordinate[0] = underlineCharGeo.GetUV3();
 
-			//bold and scale, bold is not needed for underline and strikethrough, but scale is needed
+			//font scale
 			{
-				auto tempBoldSize = 0.0f;
-				vertices[verticesStartIndex + addVertCount].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
-				vertices[verticesStartIndex + addVertCount + 1].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
-				vertices[verticesStartIndex + addVertCount + 2].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
-				vertices[verticesStartIndex + addVertCount + 3].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
+				vertices[verticesStartIndex + addVertCount].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
+				vertices[verticesStartIndex + addVertCount + 1].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
+				vertices[verticesStartIndex + addVertCount + 2].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
+				vertices[verticesStartIndex + addVertCount + 3].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
 			}
 			//slice of texture array
 			{
@@ -477,13 +438,12 @@ void ULexUIFontData_DistanceField::PushCharData(
 			vertices[verticesStartIndex + addVertCount + 2].TextureCoordinate[0] = strikethroughCharGeo.GetUV2();
 			vertices[verticesStartIndex + addVertCount + 3].TextureCoordinate[0] = strikethroughCharGeo.GetUV3();
 
-			//bold and scale, bold is not needed for underline and strikethrough, but scale is needed
+			//font scale
 			{
-				auto tempBoldSize = 0.0f;
-				vertices[verticesStartIndex + addVertCount].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
-				vertices[verticesStartIndex + addVertCount + 1].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
-				vertices[verticesStartIndex + addVertCount + 2].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
-				vertices[verticesStartIndex + addVertCount + 3].TextureCoordinate[2] = FVector2f(tempBoldSize, tempFontScale);
+				vertices[verticesStartIndex + addVertCount].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
+				vertices[verticesStartIndex + addVertCount + 1].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
+				vertices[verticesStartIndex + addVertCount + 2].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
+				vertices[verticesStartIndex + addVertCount + 3].TextureCoordinate[2] = FVector2f(tempFontScale, 0);
 			}
 			//slice of texture array
 			{
