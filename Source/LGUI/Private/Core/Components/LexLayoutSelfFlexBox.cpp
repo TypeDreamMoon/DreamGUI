@@ -130,19 +130,6 @@ FName ULexLayoutSelfFlexBox::GetPropertyName_MaxHeight()
     return GET_MEMBER_NAME_CHECKED(ULexLayoutSelfFlexBox, MaxHeight);
 }
 
-void ULexLayoutSelfFlexBox::OnTransformChanged()
-{
-}
-
-void ULexLayoutSelfFlexBox::OnDimensionChanged(bool InPivotChange, bool InWidthChange,
-    bool InHeightChange)
-{
-    if (InWidthChange || InHeightChange)
-    {
-        bIsSizeDirty = true;
-    }
-}
-
 #if WITH_EDITOR
 void ULexLayoutSelfFlexBox::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
 {
@@ -274,10 +261,7 @@ void ULexLayoutSelfFlexBox::CalculateSize()
 
     auto Widget = GetWidget();
     if (!Widget)return;
-    
-	auto PrevSize = FVector2f(CalculatedPreferredWidth, CalculatedPreferredHeight);
-    
-    bIsCalculatingSize = true;
+
     {
         CalculatedPreferredWidth = PreferredWidth.Calculate(Widget, false);
         if (PreferredWidth.bEnable)
@@ -336,15 +320,6 @@ void ULexLayoutSelfFlexBox::CalculateSize()
         }
         Widget->SetSizeDelta(FVector2D(CalculatedPreferredWidth, CalculatedPreferredHeight));
     }
-    
-    bIsCalculatingSize = false;
-
-	(void)PrevSize;
-}
-
-void ULexLayoutSelfFlexBox::MarkLayoutDirty()
-{
-	Super::MarkLayoutDirty();
 }
 
 float ULexLayoutSelfFlexBox::GetGrowForLayoutContainer(int Axis) const

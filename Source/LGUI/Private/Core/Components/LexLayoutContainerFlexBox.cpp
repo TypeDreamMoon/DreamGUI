@@ -48,11 +48,6 @@ namespace LexFlexBoxLocal
 	}
 }
 
-void ULexLayoutContainerFlexBox::MarkLayoutDirty()
-{
-    Super::MarkLayoutDirty();
-}
-
 void ULexLayoutContainerFlexBox::CalculateLayout()
 {
     SCOPE_CYCLE_COUNTER(STAT_LexLayoutContainerFlexBox);

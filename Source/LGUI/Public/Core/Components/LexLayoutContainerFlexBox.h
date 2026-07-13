@@ -107,7 +107,6 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetPadding, Category = "LayoutContainer", meta = (AllowPrivateAccess = true, ClampMin="0.0"))
 	FMargin Padding;
 
-	virtual void MarkLayoutDirty() override;
 	virtual void CalculateLayout() override;
 	void RefreshChildren();
 	void CalculateLayout(bool bApplyLayoutToChildren);

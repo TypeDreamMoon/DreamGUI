@@ -1038,7 +1038,10 @@ void ULexWidget::SetRelativeLocation(const FVector& Value)
 		if (bCanSetAnchorFromTransform)
 		{
 			CalculateAnchorFromTransform();
-			MarkLayoutForRebuild(this);
+			if (Parent.IsValid() && Parent->GetLayoutContainer())//only position change, if parent contains LayoutContainer then we should rebuild layout, otherwise not
+			{
+				MarkLayoutForRebuild(this);
+			}
 		}
 	}
 }
@@ -1095,7 +1098,10 @@ void ULexWidget::SetRelativeLocationAndRotation(const FVector& InLocation, const
 		if (bCanSetAnchorFromTransform)
 		{
 			CalculateAnchorFromTransform();
-			MarkLayoutForRebuild(this);
+			if (Parent.IsValid() && Parent->GetLayoutContainer())//only position change, if parent contains LayoutContainer then we should rebuild layout, otherwise not
+			{
+				MarkLayoutForRebuild(this);
+			}
 		}
 	}
 }
@@ -1682,12 +1688,13 @@ void ULexWidget::OnAttachedToParent()
 	
 	// MarkLayoutForRebuild(this);//why comment this? because it already called in OnHierarchyAttachmentChanged
 	MarkClipDirty(true);
-#if WITH_EDITOR
 	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
 	{
+#if WITH_EDITOR
 		LexUIManager->MarkLexUIWidgetOutlinerChanged();
-	}
 #endif
+		LexUIManager->MarkRebuildAllLayoutTree();
+	}
 }
 
 void ULexWidget::OnChildDetached(ULexWidget* ChildWidget)
@@ -1723,12 +1730,13 @@ void ULexWidget::OnDetachedFromParent()
 
 	// MarkLayoutForRebuild(this);//why comment this? because it already called in OnHierarchyAttachmentChanged
 	MarkClipDirty(true);
-#if WITH_EDITOR
 	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
 	{
+#if WITH_EDITOR
 		LexUIManager->MarkLexUIWidgetOutlinerChanged();
-	}
 #endif
+		LexUIManager->MarkRebuildAllLayoutTree();
+	}
 }
 
 void ULexWidget::OnRegister()
@@ -3333,31 +3341,16 @@ void ULexWidget::MarkLayoutForRebuild(ULexWidget* InWidget)
 	}
 }
 
-void ULexWidget::ForceRebuildLayoutImmediately(ULexWidget* InWidget)
+void ULexWidget::RebuildLayoutImmediately(ULexWidget* InWidget)
 {
 	if (!IsValid(InWidget))
 	{
 		return;
 	}
-
-	struct LOCAL
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(InWidget->GetWorld()))
 	{
-		static void RebuildLayout(ULexWidget* Widget, TSet<const ULexWidget*>& VisitedWidgets)
-		{
-			if (!IsValid(Widget) || VisitedWidgets.Contains(Widget))
-			{
-				return;
-			}
-			VisitedWidgets.Add(Widget);
-			Widget->UpdateLayout();
-			for (ULexWidget* Child : Widget->GetChildren())
-			{
-				RebuildLayout(Child, VisitedWidgets);
-			}
-		}
-	};
-	TSet<const ULexWidget*> VisitedWidgets;
-	LOCAL::RebuildLayout(InWidget, VisitedWidgets);
+		LexUIManager->RebuildLayoutImmediately(InWidget);
+	}
 }
 
 void ULexWidget::MarkWidgetLayoutDirty()
@@ -3811,6 +3804,10 @@ ULexLayoutContainer* ULexWidget::CreateNewLayoutContainer(TSubclassOf<ULexLayout
 	}
 	MarkLayoutForRebuild(this);
 	MarkDimensionChanged(false, true, true);//change LayoutContainer could cause LayoutSelf size change
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(GetWorld()))
+	{
+		LexUIManager->MarkRebuildAllLayoutTree();
+	}
 	return NewLayout;
 }
 
@@ -3829,6 +3826,10 @@ void ULexWidget::RemoveLayoutContainer()
 	}
 	MarkLayoutForRebuild(this);
 	MarkDimensionChanged(false, true, true);
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(GetWorld()))
+	{
+		LexUIManager->MarkRebuildAllLayoutTree();
+	}
 }
 
 ULexLayoutSelf* ULexWidget::CreateNewLayoutSelf(TSubclassOf<ULexLayoutSelf> LayoutClass)
@@ -3862,6 +3863,10 @@ ULexLayoutSelf* ULexWidget::CreateNewLayoutSelf(TSubclassOf<ULexLayoutSelf> Layo
 	}
 	LayoutSelf = NewLayout;
 	MarkLayoutForRebuild(this);
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(GetWorld()))
+	{
+		LexUIManager->MarkRebuildAllLayoutTree();
+	}
 	return NewLayout;
 }
 
@@ -3879,6 +3884,10 @@ void ULexWidget::RemoveLayoutSelf()
 		OldLayout->Call_OnUnregister();
 	}
 	MarkLayoutForRebuild(this);
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(GetWorld()))
+	{
+		LexUIManager->MarkRebuildAllLayoutTree();
+	}
 }
 
 ULexPanelSlot* ULexWidget::CreateNewPanelSlot(TSubclassOf<ULexPanelSlot> SlotClass)
