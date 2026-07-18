@@ -656,12 +656,17 @@ public:
 
 FLexUIPrefabEditorViewportClient::FLexUIPrefabEditorViewportClient(TWeakPtr<FLexUIPrefabEditor> InPrefabEditorPtr
 	, const TSharedRef<SLexUIPrefabEditorViewport>& InEditorViewportPtr)
-	: FEditorViewportClient(&GLevelEditorModeTools(), nullptr, StaticCastSharedRef<SEditorViewport>(InEditorViewportPtr))
+	// UE5.8: pass nullptr (NOT &GLevelEditorModeTools()) so the base creates a PRIVATE
+	// FAssetEditorModeManager for this viewport. Sharing the global level-editor mode tools
+	// routes InputKey/ProcessClick through the 5.8 Interactive Tools Framework's global
+	// InputRouter, which is not valid in a custom asset-editor viewport -> null-deref crash
+	// in FEditorViewportClient::InputKey (EditorInteractiveToolsFramework). Same root cause
+	// and fix as the LGUI3 Anchor Tool issue.
+	: FEditorViewportClient(nullptr, nullptr, StaticCastSharedRef<SEditorViewport>(InEditorViewportPtr))
 	, TrackingTransaction()
 	, CachedElementsToManipulate(UTypedElementRegistry::GetInstance()->CreateElementList())
 {
 	PrefabEditorPtr = InPrefabEditorPtr;
-	// The level editor fully supports mode tools and isn't doing any incompatible stuff with the Widget
 	ModeTools->SetWidgetMode(UE::Widget::WM_Translate);
 	Widget->SetUsesEditorModeTools(ModeTools.Get());
 	bShowWidget = false;
