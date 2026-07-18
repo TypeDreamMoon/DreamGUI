@@ -948,6 +948,38 @@ bool FLexUIEventDelegate::CheckFunctionParameter()const
 	}
 	return true;
 }
+bool FLexUIEventDelegate::HasFunctionBinding(ULexUIBehaviour* InTargetComponent, FName InFunctionName)const
+{
+	for (auto& item : EventList)
+	{
+		if (item.TargetObject == InTargetComponent && item.FunctionName == InFunctionName)return true;
+	}
+	return false;
+}
+FName FLexUIEventDelegate::FindFunctionBoundToComponent(ULexUIBehaviour* InTargetComponent)const
+{
+	for (auto& item : EventList)
+	{
+		if (item.TargetObject == InTargetComponent && !item.FunctionName.IsNone())return item.FunctionName;
+	}
+	return NAME_None;
+}
+void FLexUIEventDelegate::AddFunctionBinding(ULexWidget* InHelperWidget, ULexUIBehaviour* InTargetComponent, FName InFunctionName, ELexUIEventDelegateParameterType InParamType, bool bInUseNativeParameter)
+{
+	if (InTargetComponent == nullptr)return;
+	// FLexUIEventDelegate is a friend of FLexUIEventDelegateData, so the helper fields the
+	// event customization normally fills can be set directly -- same result as picking the
+	// component + function in the details panel by hand
+	FLexUIEventDelegateData Data;
+	Data.HelperWidget = InHelperWidget;
+	Data.HelperClass = InTargetComponent->GetClass();
+	Data.HelperComponentName = InTargetComponent->GetFName();
+	Data.TargetObject = InTargetComponent;
+	Data.FunctionName = InFunctionName;
+	Data.ParamType = InParamType;
+	Data.bUseNativeParameter = bInUseNativeParameter;
+	EventList.Add(Data);
+}
 #endif
 
 #undef LOCTEXT_NAMESPACE

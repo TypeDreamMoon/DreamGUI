@@ -9,6 +9,7 @@
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexVisual.h"
 #include "Core/LexUIBehaviour.h"
+#include "LexUIPrefabBehaviourUtils.h"
 #include "Styling/SlateIconFinder.h"
 #include "Widgets/Layout/SScrollBorder.h"
 #include "Widgets/Input/SSearchBox.h"
@@ -492,6 +493,29 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 								}
 								SubMenu.AddSeparator();
 								AddEntry(W, FText::Format(LOCTEXT("PromoteAsWidget", "As Widget ({0})"), W->GetClass()->GetDisplayNameText()));
+							}));
+
+						MenuBuilder.AddSubMenu(
+							LOCTEXT("AddEventSubMenu", "Add Event Handler"),
+							LOCTEXT("AddEventSubMenuTooltip", "Generate a handler on this prefab's behaviour blueprint (created on demand) and wire the selected element's event to it, then jump to it -- UMG's event \"+\"."),
+							FNewMenuDelegate::CreateLambda([WeakEditor = Manager, WeakWidget = TWeakObjectPtr<ULexWidget>(SelectedWidget)](FMenuBuilder& SubMenu)
+							{
+								ULexWidget* W = WeakWidget.Get();
+								if (W == nullptr)return;
+								TArray<LexUIPrefabBehaviourUtils::FDiscoveredEvent> Events;
+								LexUIPrefabBehaviourUtils::DiscoverEvents(W, Events);
+								for (const auto& Event : Events)
+								{
+									if (Event.Component == nullptr)continue;
+									SubMenu.AddMenuEntry(
+										FText::Format(LOCTEXT("AddEventEntry", "{0} ({1})"), FText::FromString(Event.DisplayName), FText::FromString(Event.Component->GetClass()->GetName())),
+										FText::Format(LOCTEXT("AddEventEntryTooltip", "Create a handler for {0} and bind it."), FText::FromString(Event.DisplayName)),
+										FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Plus"),
+										FUIAction(FExecuteAction::CreateLambda([WeakEditor, Event]()
+										{
+											if (auto E = WeakEditor.Pin())E->AddEventHandler(Event);
+										})));
+								}
 							}));
 					}
 					MenuBuilder.EndSection();

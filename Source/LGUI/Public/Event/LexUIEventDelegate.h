@@ -5,6 +5,8 @@
 #include "LexPointerEventData.h"
 #include "LexUIEventDelegate.generated.h"
 
+class ULexUIBehaviour;
+
 
 UENUM()
 enum class ELexUIEventDelegateParameterType :uint8
@@ -200,5 +202,18 @@ public:
 	 * @return	true- is compatible, false- not
 	 */
 	bool CheckFunctionParameter()const;
+
+	/** This event's native parameter type (the value it fires with). */
+	ELexUIEventDelegateParameterType GetSupportParameterType()const { return SupportParameterType; }
+	/**
+	 * Editor: append a binding calling InTargetComponent's InFunctionName, wiring the helper
+	 * fields so it survives serialization and shows in the customization -- the programmatic
+	 * counterpart of picking a function in the details panel, for the prefab editor's Event "+".
+	 */
+	void AddFunctionBinding(ULexWidget* InHelperWidget, ULexUIBehaviour* InTargetComponent, FName InFunctionName, ELexUIEventDelegateParameterType InParamType, bool bInUseNativeParameter);
+	/** True when any binding already targets InTargetComponent's InFunctionName. */
+	bool HasFunctionBinding(ULexUIBehaviour* InTargetComponent, FName InFunctionName)const;
+	/** Function name of the first binding targeting InTargetComponent, or NAME_None (for "reuse the existing handler"). */
+	FName FindFunctionBoundToComponent(ULexUIBehaviour* InTargetComponent)const;
 #endif
 };

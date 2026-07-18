@@ -17,6 +17,7 @@ class SLexUIPrefabRawDataViewer;
 class AActor;
 class ULexUIPrefabHelperObject;
 struct FLexUISubPrefabData;
+namespace LexUIPrefabBehaviourUtils { struct FDiscoveredEvent; }
 
 /**
  * 
@@ -136,6 +137,13 @@ public:
 	 * the prefab (GUID-remapped), so it survives renames and needs no runtime lookup.
 	 */
 	void PromoteToBehaviourVariable(UObject* InTarget);
+	/**
+	 * UMG "Event +" counterpart: generate a signature-matching handler on the companion
+	 * behaviour blueprint (created on demand), wire the given event to it, and open the
+	 * blueprint at the new function. InEvent is one FLexUIEventDelegate discovered on a
+	 * selected widget's behaviour (see LexUIPrefabBehaviourUtils::DiscoverEvents).
+	 */
+	void AddEventHandler(const LexUIPrefabBehaviourUtils::FDiscoveredEvent& InEvent);
 	void SaveEditorState();
 private:
 	/** Companion behaviour blueprint for this prefab, created + attached to the root widget on demand. Null on failure. */

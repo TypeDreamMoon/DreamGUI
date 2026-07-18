@@ -19,6 +19,8 @@
 #include "Subsystems/AssetEditorSubsystem.h"
 #include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
+#include "Kismet2/KismetEditorUtilities.h"
+#include "EdGraph/EdGraph.h"
 #include "UMGStyle.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
@@ -586,6 +588,45 @@ void FLexUIPrefabEditor::PromoteToBehaviourVariable(UObject* InTarget)
 		Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
 	}
 	FSlateNotificationManager::Get().AddNotification(Info);
+}
+
+void FLexUIPrefabEditor::AddEventHandler(const LexUIPrefabBehaviourUtils::FDiscoveredEvent& InEvent)
+{
+	UBlueprint* Blueprint = GetOrCreateBehaviourBlueprint();
+	if (Blueprint == nullptr)return;
+	ULexWidget* RootWidget = GetLoadedRootWidget();
+
+	FText Message;
+	const FName HandlerName = LexUIPrefabBehaviourUtils::AddEventHandler(Blueprint, RootWidget, InEvent, Message);
+	const bool bSuccess = !HandlerName.IsNone();
+	if (bSuccess)
+	{
+		if (auto Helper = GetPrefabHelperObject())
+		{
+			Helper->Modify();
+			Helper->SetAnythingDirty();
+		}
+	}
+	FNotificationInfo Info(Message);
+	Info.ExpireDuration = 5.0f;
+	if (!bSuccess)
+	{
+		Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
+	}
+	FSlateNotificationManager::Get().AddNotification(Info);
+
+	if (bSuccess)
+	{
+		// open the blueprint at the generated function graph, UMG "+" style
+		if (UEdGraph* FuncGraph = FindObject<UEdGraph>(Blueprint, *HandlerName.ToString()))
+		{
+			FKismetEditorUtilities::BringKismetToFocusAttentionOnObject(FuncGraph, false);
+		}
+		else
+		{
+			GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(Blueprint);
+		}
+	}
 }
 
 void FLexUIPrefabEditor::SaveEditorState()

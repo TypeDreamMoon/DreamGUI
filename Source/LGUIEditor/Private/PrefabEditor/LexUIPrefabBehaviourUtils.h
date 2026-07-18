@@ -50,4 +50,22 @@ namespace LexUIPrefabBehaviourUtils
 	 * @return true on success; OutMessage carries the failure reason or a rebound notice.
 	 */
 	bool PromoteToVariable(UBlueprint* InBlueprint, ULexWidget* InRootWidget, UObject* InTarget, const FString& InVariableName, FText& OutMessage);
+
+	/** One FLexUIEventDelegate property found on a behaviour -- an event that can get a handler. */
+	struct FDiscoveredEvent
+	{
+		ULexUIBehaviour* Component = nullptr;
+		class FStructProperty* EventProperty = nullptr;
+		FString DisplayName;//e.g. "OnClick"
+	};
+	/** Every FLexUIEventDelegate UPROPERTY across InWidget's behaviours (UIButton.OnClick, UIToggle.OnValueChanged, ...). */
+	void DiscoverEvents(ULexWidget* InWidget, TArray<FDiscoveredEvent>& OutEvents);
+	/**
+	 * UMG "Event +" counterpart: generate a handler function on the behaviour blueprint whose
+	 * signature matches the event's native parameter, compile, then wire InEvent's
+	 * FLexUIEventDelegate to call it on the companion instance. When the parameter type can't
+	 * be mapped to a pin the handler is parameterless (the binding still fires, without the value).
+	 * @return the generated function name (NAME_None on failure); OutMessage carries the reason.
+	 */
+	FName AddEventHandler(UBlueprint* InBlueprint, ULexWidget* InRootWidget, const FDiscoveredEvent& InEvent, FText& OutMessage);
 }

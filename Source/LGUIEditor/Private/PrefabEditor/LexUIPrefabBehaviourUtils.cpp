@@ -6,12 +6,15 @@
 #include "Core/Components/LexWidget.h"
 
 #include "Core/Components/LexVisual.h"
+#include "Event/LexUIEventDelegate.h"
+#include "Event/LexPointerEventData.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
 #include "EdGraphSchema_K2.h"
+#include "K2Node_FunctionEntry.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/PackageName.h"
@@ -241,6 +244,146 @@ bool PromoteToVariable(UBlueprint* InBlueprint, ULexWidget* InRootWidget, UObjec
 			, FText::FromString(InBlueprint->GetName()), FText::FromName(VarName), FText::FromString(InTarget->GetName()));
 	}
 	return true;
+}
+
+void DiscoverEvents(ULexWidget* InWidget, TArray<FDiscoveredEvent>& OutEvents)
+{
+	OutEvents.Reset();
+	if (InWidget == nullptr)return;
+	static const FName EventDelegateStructName = FLexUIEventDelegate::StaticStruct()->GetFName();
+	for (ULexUIBehaviour* Comp : InWidget->GetAllComponents())
+	{
+		if (Comp == nullptr)continue;
+		for (TFieldIterator<FStructProperty> PropertyIt(Comp->GetClass()); PropertyIt; ++PropertyIt)
+		{
+			FStructProperty* StructProperty = *PropertyIt;
+			if (StructProperty->Struct != nullptr && StructProperty->Struct->GetFName() == EventDelegateStructName)
+			{
+				FDiscoveredEvent Event;
+				Event.Component = Comp;
+				Event.EventProperty = StructProperty;
+				Event.DisplayName = StructProperty->GetName();
+				OutEvents.Add(Event);
+			}
+		}
+	}
+}
+
+namespace
+{
+	/** Blueprint pin type for a handler parameter matching the event's native parameter. False = generate parameterless. */
+	bool MakePinTypeForEventParam(ELexUIEventDelegateParameterType InType, FEdGraphPinType& OutPinType)
+	{
+		OutPinType = FEdGraphPinType();
+		switch (InType)
+		{
+		case ELexUIEventDelegateParameterType::Bool:   OutPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean; return true;
+		case ELexUIEventDelegateParameterType::Float:  OutPinType.PinCategory = UEdGraphSchema_K2::PC_Real; OutPinType.PinSubCategory = UEdGraphSchema_K2::PC_Float; return true;
+		case ELexUIEventDelegateParameterType::Double: OutPinType.PinCategory = UEdGraphSchema_K2::PC_Real; OutPinType.PinSubCategory = UEdGraphSchema_K2::PC_Double; return true;
+		case ELexUIEventDelegateParameterType::Int32:  OutPinType.PinCategory = UEdGraphSchema_K2::PC_Int; return true;
+		case ELexUIEventDelegateParameterType::Int64:  OutPinType.PinCategory = UEdGraphSchema_K2::PC_Int64; return true;
+		case ELexUIEventDelegateParameterType::UInt8:  OutPinType.PinCategory = UEdGraphSchema_K2::PC_Byte; return true;
+		case ELexUIEventDelegateParameterType::String: OutPinType.PinCategory = UEdGraphSchema_K2::PC_String; return true;
+		case ELexUIEventDelegateParameterType::Name:   OutPinType.PinCategory = UEdGraphSchema_K2::PC_Name; return true;
+		case ELexUIEventDelegateParameterType::Text:   OutPinType.PinCategory = UEdGraphSchema_K2::PC_Text; return true;
+		case ELexUIEventDelegateParameterType::Vector2:    OutPinType.PinCategory = UEdGraphSchema_K2::PC_Struct; OutPinType.PinSubCategoryObject = TBaseStructure<FVector2D>::Get(); return true;
+		case ELexUIEventDelegateParameterType::Vector3:    OutPinType.PinCategory = UEdGraphSchema_K2::PC_Struct; OutPinType.PinSubCategoryObject = TBaseStructure<FVector>::Get(); return true;
+		case ELexUIEventDelegateParameterType::Vector4:    OutPinType.PinCategory = UEdGraphSchema_K2::PC_Struct; OutPinType.PinSubCategoryObject = TBaseStructure<FVector4>::Get(); return true;
+		case ELexUIEventDelegateParameterType::Color:      OutPinType.PinCategory = UEdGraphSchema_K2::PC_Struct; OutPinType.PinSubCategoryObject = TBaseStructure<FColor>::Get(); return true;
+		case ELexUIEventDelegateParameterType::LinearColor:OutPinType.PinCategory = UEdGraphSchema_K2::PC_Struct; OutPinType.PinSubCategoryObject = TBaseStructure<FLinearColor>::Get(); return true;
+		case ELexUIEventDelegateParameterType::Quaternion: OutPinType.PinCategory = UEdGraphSchema_K2::PC_Struct; OutPinType.PinSubCategoryObject = TBaseStructure<FQuat>::Get(); return true;
+		case ELexUIEventDelegateParameterType::Rotator:    OutPinType.PinCategory = UEdGraphSchema_K2::PC_Struct; OutPinType.PinSubCategoryObject = TBaseStructure<FRotator>::Get(); return true;
+		case ELexUIEventDelegateParameterType::Asset:  OutPinType.PinCategory = UEdGraphSchema_K2::PC_Object; OutPinType.PinSubCategoryObject = UObject::StaticClass(); return true;
+		case ELexUIEventDelegateParameterType::LexWidget: OutPinType.PinCategory = UEdGraphSchema_K2::PC_Object; OutPinType.PinSubCategoryObject = ULexWidget::StaticClass(); return true;
+		case ELexUIEventDelegateParameterType::Class:  OutPinType.PinCategory = UEdGraphSchema_K2::PC_Class; OutPinType.PinSubCategoryObject = UObject::StaticClass(); return true;
+		case ELexUIEventDelegateParameterType::PointerEvent: OutPinType.PinCategory = UEdGraphSchema_K2::PC_Object; OutPinType.PinSubCategoryObject = ULexPointerEventData::StaticClass(); return true;
+		default: return false;//Empty / None / unmapped -> parameterless handler
+		}
+	}
+}
+
+FName AddEventHandler(UBlueprint* InBlueprint, ULexWidget* InRootWidget, const FDiscoveredEvent& InEvent, FText& OutMessage)
+{
+	if (InBlueprint == nullptr || InRootWidget == nullptr || InEvent.Component == nullptr || InEvent.EventProperty == nullptr)
+	{
+		OutMessage = LOCTEXT("AddEventError_InvalidInput", "Invalid input.");
+		return NAME_None;
+	}
+
+	// reuse: if this event already has a handler on the companion, jump to it instead of
+	// minting an orphan function on every click
+	auto LiveEvent = InEvent.EventProperty->ContainerPtrToValuePtr<FLexUIEventDelegate>(InEvent.Component);
+	ULexUIBehaviour* Companion = nullptr;
+	for (ULexUIBehaviour* Comp : InRootWidget->GetAllComponents())
+	{
+		if (Comp != nullptr && Comp->GetClass()->ClassGeneratedBy == InBlueprint) { Companion = Comp; break; }
+	}
+	if (Companion != nullptr)
+	{
+		const FName Existing = LiveEvent->FindFunctionBoundToComponent(Companion);
+		if (!Existing.IsNone())
+		{
+			OutMessage = FText::Format(LOCTEXT("AddEventReuse", "{0}.{1} is already handled by {2}.{3}")
+				, FText::FromString(InEvent.Component->GetName()), FText::FromString(InEvent.DisplayName)
+				, FText::FromString(InBlueprint->GetName()), FText::FromName(Existing));
+			return Existing;
+		}
+	}
+
+	// event's native parameter type from the CDO (SupportParameterType is set in the constructor)
+	auto CDO = InEvent.Component->GetClass()->GetDefaultObject();
+	auto DefaultEvent = InEvent.EventProperty->ContainerPtrToValuePtr<FLexUIEventDelegate>(CDO);
+	const ELexUIEventDelegateParameterType ParamType = DefaultEvent->GetSupportParameterType();
+
+	// handler name: On<Event>_<WidgetName>, deduped
+	FString BaseName = FString::Printf(TEXT("%s_%s"), *InEvent.DisplayName, *MakeVariableNameForTarget(InEvent.Component->GetWidget()));
+	const FName HandlerName = FBlueprintEditorUtils::FindUniqueKismetName(InBlueprint, BaseName);
+
+	UEdGraph* FuncGraph = FBlueprintEditorUtils::CreateNewGraph(InBlueprint, HandlerName, UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
+	FBlueprintEditorUtils::AddFunctionGraph<UClass>(InBlueprint, FuncGraph, /*bIsUserCreated*/true, /*SignatureFromClass*/(UClass*)nullptr);
+
+	FEdGraphPinType ParamPinType;
+	bool bUseNativeParameter = MakePinTypeForEventParam(ParamType, ParamPinType);
+	if (bUseNativeParameter)
+	{
+		TArray<UK2Node_FunctionEntry*> EntryNodes;
+		FuncGraph->GetNodesOfClass(EntryNodes);
+		if (EntryNodes.Num() > 0)
+		{
+			EntryNodes[0]->CreateUserDefinedPin(TEXT("Value"), ParamPinType, EGPD_Output);
+			FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(InBlueprint);
+		}
+		else { bUseNativeParameter = false; }
+	}
+
+	FKismetEditorUtilities::CompileBlueprint(InBlueprint);
+	if (InBlueprint->Status == BS_Error)
+	{
+		OutMessage = FText::Format(LOCTEXT("AddEventError_CompileFailed", "{0} failed to compile; fix its errors and add the handler again."), FText::FromString(InBlueprint->GetName()));
+		return NAME_None;
+	}
+
+	// re-find the companion (compile reinstanced it)
+	ULexUIBehaviour* BehaviourComp = nullptr;
+	for (ULexUIBehaviour* Comp : InRootWidget->GetAllComponents())
+	{
+		if (Comp != nullptr && Comp->GetClass()->ClassGeneratedBy == InBlueprint) { BehaviourComp = Comp; break; }
+	}
+	if (BehaviourComp == nullptr)
+	{
+		OutMessage = FText::Format(LOCTEXT("AddEventError_NoInstance", "No {0} instance found on the prefab root widget."), FText::FromString(InBlueprint->GetName()));
+		return NAME_None;
+	}
+
+	InEvent.Component->Modify();
+	// parameterless fallback stores ParamType=Empty so IsStillSupported accepts it at runtime
+	const ELexUIEventDelegateParameterType BindingParamType = bUseNativeParameter ? ParamType : ELexUIEventDelegateParameterType::Empty;
+	LiveEvent->AddFunctionBinding(InRootWidget, BehaviourComp, HandlerName, BindingParamType, bUseNativeParameter);
+
+	OutMessage = FText::Format(LOCTEXT("AddEventSuccess", "{0}.{1} -> {2}.{3}")
+		, FText::FromString(InEvent.Component->GetName()), FText::FromString(InEvent.DisplayName)
+		, FText::FromString(InBlueprint->GetName()), FText::FromName(HandlerName));
+	return HandlerName;
 }
 
 }//namespace LexUIPrefabBehaviourUtils
