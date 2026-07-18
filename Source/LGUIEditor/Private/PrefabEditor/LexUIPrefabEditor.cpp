@@ -861,6 +861,7 @@ void FLexUIPrefabEditor::WrapSelectedWidgets(ELexUIWrapType WrapType)
 	default:                            WrapperName = TEXT("Widget"); break;
 	}
 	ULexWidget* Wrapper = NewObject<ULexWidget>(CommonParent->GetOuter(), ULexWidget::StaticClass(), NAME_None, RF_Public | RF_Transactional);
+	Wrapper->Modify();//enroll the new widget in the transaction so undo/redo restores it (and re-registers it), like DeleteWidgets
 	Wrapper->SetDisplayName(WrapperName);
 	Wrapper->OnRegister();
 	Wrapper->SetParent(CommonParent, false, MinSiblingIndex);
@@ -880,8 +881,16 @@ void FLexUIPrefabEditor::WrapSelectedWidgets(ELexUIWrapType WrapType)
 	// A layout container (added next) then arranges them.
 	for (ULexWidget* W : Widgets)
 	{
+		// keepWorld preserves the pivot transform but NOT the anchor-driven size: a stretch-anchored
+		// child (AnchorMin != AnchorMax) resolves its width/height against the parent, so moving it
+		// under the differently-sized wrapper would resize it. Snapshot the rendered extent and
+		// restore it after reparenting (a no-op for fixed-anchor children, whose size is parent-independent).
+		const float OldWidth = W->GetWidth();
+		const float OldHeight = W->GetHeight();
 		W->Modify();
 		W->SetParent(Wrapper, true);
+		W->SetWidth(OldWidth);
+		W->SetHeight(OldHeight);
 	}
 
 	switch (WrapType)
