@@ -693,6 +693,17 @@ namespace
 			}
 			OutWidgets.Add(W);
 		}
+		// A layout container drives its children's positions and rebuilds on any SetAnchoredPosition
+		// (LexWidget.cpp), so an align/distribute would be silently overwritten -- refuse instead.
+		if (bParentSet && CommonParent != nullptr && CommonParent->GetLayoutContainer() != nullptr)
+		{
+			FNotificationInfo Info(NSLOCTEXT("LexUIPrefabEditor", "AlignLayoutParent", "The shared parent has a layout container that positions its children -- align/distribute would be overridden by the layout."));
+			Info.ExpireDuration = 5.0f;
+			Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
+			FSlateNotificationManager::Get().AddNotification(Info);
+			OutWidgets.Reset();
+			return false;
+		}
 		return OutWidgets.Num() >= InMinCount;
 	}
 }
@@ -744,6 +755,8 @@ void FLexUIPrefabEditor::AlignSelectedWidgets(ELexUIWidgetAlignType AlignType)
 		Helper->Modify();
 		Helper->SetAnythingDirty();
 	}
+	//menu action (not a drag): repaint now so it shows even when the preview realtime is off
+	if (ViewportPtr.IsValid() && ViewportPtr->GetViewportClient().IsValid()) ViewportPtr->GetViewportClient()->Invalidate();
 }
 
 void FLexUIPrefabEditor::DistributeSelectedWidgets(bool bHorizontal)
@@ -787,6 +800,8 @@ void FLexUIPrefabEditor::DistributeSelectedWidgets(bool bHorizontal)
 		Helper->Modify();
 		Helper->SetAnythingDirty();
 	}
+	//menu action (not a drag): repaint now so it shows even when the preview realtime is off
+	if (ViewportPtr.IsValid() && ViewportPtr->GetViewportClient().IsValid()) ViewportPtr->GetViewportClient()->Invalidate();
 }
 
 void FLexUIPrefabEditor::SaveEditorState()
@@ -834,7 +849,7 @@ void FLexUIPrefabEditor::OnApply()
 	if (ULexWidget* RootWidget = GetLoadedRootWidget())
 	{
 		TArray<FString> BoundDetails, Problems;
-		LexUIPrefabBehaviourUtils::AutoBindAndValidate(RootWidget, BoundDetails, Problems);
+		LexUIPrefabBehaviourUtils::AutoBindAndValidate(RootWidget, GetPrefabBeingEdited(), BoundDetails, Problems);
 		if (BoundDetails.Num() > 0)
 		{
 			if (auto Helper = GetPrefabHelperObject())

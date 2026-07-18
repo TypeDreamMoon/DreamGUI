@@ -397,7 +397,7 @@ static ULexWidget* OwnerWidgetOfBoundValue(UObject* InValue)
 	return nullptr;
 }
 
-void AutoBindAndValidate(ULexWidget* InRootWidget, TArray<FString>& OutBoundDetails, TArray<FString>& OutProblems)
+void AutoBindAndValidate(ULexWidget* InRootWidget, ULexUIPrefab* InPrefab, TArray<FString>& OutBoundDetails, TArray<FString>& OutProblems)
 {
 	OutBoundDetails.Reset();
 	OutProblems.Reset();
@@ -425,18 +425,23 @@ void AutoBindAndValidate(ULexWidget* InRootWidget, TArray<FString>& OutBoundDeta
 	}
 	const TSet<ULexWidget*> SubtreeSet(Subtree);
 
-	// Companion logic lives on the root widget's behaviours; only blueprint-declared object
-	// properties are candidates (native fields on ULexWidget/UUIButton/etc. are not ours to bind).
-	for (ULexUIBehaviour* Component : InRootWidget->GetAllComponents())
+	// Only the prefab's OWN companion behaviour takes part in BindWidget. A designer may also
+	// attach reusable behaviours to the root (exactly why FindBehaviourComponent matches by
+	// BP_<PrefabName>); their Instance-Editable variables stay under the designer's control and
+	// must not be silently rebound to same-named descendants on every save.
+	ULexUIBehaviour* Companion = FindBehaviourComponent(InRootWidget, InPrefab);
+	if (Companion != nullptr)
 	{
-		if (Component == nullptr) continue;
-		UClass* ComponentClass = Component->GetClass();
-		if (ComponentClass->ClassGeneratedBy == nullptr) continue;//blueprint behaviours only
+		UClass* ComponentClass = Companion->GetClass();
 
-		for (TFieldIterator<FObjectPropertyBase> It(ComponentClass); It; ++It)
+		// Hard object references only. FObjectProperty excludes weak/soft/lazy refs, which LexUI
+		// does not serialize as hard references -- auto-binding one would report success yet come
+		// back null after save/load, the very failure this pass exists to catch. Native inherited
+		// properties are excluded too (GetOwnerClass is the declaring class); only companion-
+		// blueprint-declared variables qualify.
+		for (TFieldIterator<FObjectProperty> It(ComponentClass); It; ++It)
 		{
-			FObjectPropertyBase* Prop = *It;
-			// Skip native properties -- only variables declared on the companion blueprint itself.
+			FObjectProperty* Prop = *It;
 			if (Cast<UBlueprintGeneratedClass>(Prop->GetOwnerClass()) == nullptr) continue;
 			UClass* TargetClass = Prop->PropertyClass;
 			if (TargetClass == nullptr) continue;
@@ -450,7 +455,7 @@ void AutoBindAndValidate(ULexWidget* InRootWidget, TArray<FString>& OutBoundDeta
 			// LexUI's prefab writer drops CPF_DisableEditOnInstance -- a non-Instance-Editable
 			// reference silently comes back null after save/load, so never rely on one.
 			const bool bSavable = (Prop->PropertyFlags & CPF_DisableEditOnInstance) == 0;
-			UObject* Value = Prop->GetObjectPropertyValue_InContainer(Component);
+			UObject* Value = Prop->GetObjectPropertyValue_InContainer(Companion);
 
 			if (Value != nullptr)
 			{
@@ -508,8 +513,8 @@ void AutoBindAndValidate(ULexWidget* InRootWidget, TArray<FString>& OutBoundDeta
 				continue;
 			}
 
-			Component->Modify();
-			Prop->SetObjectPropertyValue_InContainer(Component, NewValue);
+			Companion->Modify();
+			Prop->SetObjectPropertyValue_InContainer(Companion, NewValue);
 			OutBoundDetails.Add(FString::Printf(TEXT("%s -> %s (%s)"), *VarName, *MakeVariableNameForTarget(MatchWidget), *BoundKind));
 		}
 	}

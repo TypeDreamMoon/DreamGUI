@@ -70,14 +70,16 @@ namespace LexUIPrefabBehaviourUtils
 	FName AddEventHandler(UBlueprint* InBlueprint, ULexWidget* InRootWidget, const FDiscoveredEvent& InEvent, FText& OutMessage);
 
 	/**
-	 * Editor-time BindWidget: for every Instance-Editable blueprint-declared null object
-	 * property on the root widget's companion behaviours, find the descendant widget whose
-	 * (sanitized) display name equals the property name and bind it (widget property -> the
-	 * widget, visual property -> its Visual, behaviour property -> a matching behaviour).
-	 * Ambiguous names are reported not guessed; existing bindings are checked for dangling
-	 * targets and for not-Instance-Editable properties (which LexUI's writer would drop).
+	 * Editor-time BindWidget: for every Instance-Editable, hard-object, blueprint-declared null
+	 * property on the prefab's OWN companion behaviour (resolved by BP_<PrefabName>, so reusable
+	 * behaviours a designer attached to the root are left alone), find the descendant widget whose
+	 * (sanitized) display name equals the property name and bind it (widget property -> the widget,
+	 * visual property -> its Visual, behaviour property -> a matching behaviour). Weak/soft/lazy
+	 * refs are ignored (they don't serialize as hard references). Ambiguous names are reported not
+	 * guessed; existing bindings are checked for dangling targets and for not-Instance-Editable
+	 * properties (which LexUI's writer would drop).
 	 * @param OutBoundDetails  "Variable -> Widget" per auto-bound property.
 	 * @param OutProblems      Dangling / ambiguous / not-savable descriptions.
 	 */
-	void AutoBindAndValidate(ULexWidget* InRootWidget, TArray<FString>& OutBoundDetails, TArray<FString>& OutProblems);
+	void AutoBindAndValidate(ULexWidget* InRootWidget, ULexUIPrefab* InPrefab, TArray<FString>& OutBoundDetails, TArray<FString>& OutProblems);
 }
