@@ -18,6 +18,7 @@
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexVisual.h"
 #include "DragAndDrop/AssetDragDropOp.h"
+#include "SLexUIPrefabPalette.h"//FLexUIPaletteDragDropOp
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 
 #define LOCTEXT_NAMESPACE "LexWidgetEditorHierarchyViewItem"
@@ -141,6 +142,11 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 			if (DragDropOp->IsOfType<FAssetDragDropOp>() && Manager.IsValid())
 			{
 				Manager->TryHandleAssetDragDropOperation(DragDropEvent, TargetItem);
+			}
+			// Palette element dropped onto an Outliner row -> create it under the target widget
+			else if (auto PaletteOp = DragDropEvent.GetOperationAs<FLexUIPaletteDragDropOp>())
+			{
+				PaletteOp->CreateUnder(TargetItem);
 			}
 		}
 		return EItemDropZone::OntoItem;

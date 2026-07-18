@@ -211,10 +211,11 @@ TSharedRef<ITableRow> SLexUIPrefabPalette::OnGenerateRow(FItemPtr InItem, const 
 	UClass* IconClass = InItem->VisualClass.IsValid() ? InItem->VisualClass.Get() : ULexWidget::StaticClass();
 	const FText Tooltip = InItem->Kind == EItemKind::Prefab
 		? FText::Format(LOCTEXT("PrefabRowTooltip", "{0}\nDouble-click to add under the selected widget."), FText::FromString(InItem->PrefabPath))
-		: FText::Format(LOCTEXT("BasicRowTooltip", "{0}\nDouble-click to add under the selected widget."), FText::FromString(InItem->DisplayName));
+		: FText::Format(LOCTEXT("BasicRowTooltip", "{0}\nDouble-click, or drag onto an Outliner widget, to add it under that widget."), FText::FromString(InItem->DisplayName));
 	return SNew(STableRow<FItemPtr>, OwnerTable)
 		.Padding(FMargin(2, 2))
 		.ToolTipText(Tooltip)
+		.OnDragDetected(FOnDragDetected::CreateSP(this, &SLexUIPrefabPalette::OnItemDragDetected, InItem))
 		[
 			SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot()
@@ -252,32 +253,63 @@ void SLexUIPrefabPalette::OnItemDoubleClick(FItemPtr InItem)
 	CreateItem(InItem);
 }
 
+namespace SLexUIPrefabPaletteLocal
+{
+	// shared create path: the create primitives take a "get parent" function, so double-click
+	// (parent = selection) and drop (parent = drop-target widget) reuse the same logic
+	void CreateElement(bool bIsBasicWidget, UClass* VisualClass, bool bSetDefaultSprite,
+		const FString& PrefabPath, const FString& DisplayName, TFunction<ULexWidget*()> GetParent)
+	{
+		if (bIsBasicWidget)
+		{
+			TFunction<void(ULexWidget*)> Callback = nullptr;
+			if (bSetDefaultSprite)
+			{
+				Callback = [](ULexWidget* InWidget)
+				{
+					if (auto Image = Cast<ULexImage>(InWidget->GetVisual()))
+					{
+						Image->SetBrush_LexUISprite(ULexUISpriteData::GetDefaultFrameRect());
+					}
+				};
+			}
+			FLexUIEditorTools::CreateWidget(GetParent, DisplayName, VisualClass, Callback);
+		}
+		else
+		{
+			FLexUIEditorTools::CreateUIControls(GetParent, PrefabPath);
+		}
+	}
+}
+
+void FLexUIPaletteDragDropOp::CreateUnder(ULexWidget* InParentWidget)const
+{
+	if (InParentWidget == nullptr)return;
+	SLexUIPrefabPaletteLocal::CreateElement(bIsBasicWidget, VisualClass.Get(), bSetDefaultSprite,
+		PrefabPath, DisplayName, [InParentWidget]() -> ULexWidget* { return InParentWidget; });
+}
+
 void SLexUIPrefabPalette::CreateItem(FItemPtr InItem)
 {
-	if (!InItem.IsValid())return;
-	// reuse the exact primitives the "Create UI Element" menu uses; they no-op (and warn)
-	// when nothing suitable is selected, so no parent-null handling needed here
-	auto GetSelected = [this]() -> ULexWidget* { return GetSelectedWidget(); };
+	if (!InItem.IsValid() || InItem->Kind == EItemKind::Category)return;
+	// the create primitives no-op (and warn) when nothing suitable is selected
+	SLexUIPrefabPaletteLocal::CreateElement(InItem->Kind == EItemKind::BasicWidget, InItem->VisualClass.Get(),
+		InItem->bSetDefaultSprite, InItem->PrefabPath, InItem->DisplayName,
+		[this]() -> ULexWidget* { return GetSelectedWidget(); });
+}
 
-	if (InItem->Kind == EItemKind::BasicWidget)
-	{
-		TFunction<void(ULexWidget*)> Callback = nullptr;
-		if (InItem->bSetDefaultSprite)
-		{
-			Callback = [](ULexWidget* InWidget)
-			{
-				if (auto Image = Cast<ULexImage>(InWidget->GetVisual()))
-				{
-					Image->SetBrush_LexUISprite(ULexUISpriteData::GetDefaultFrameRect());
-				}
-			};
-		}
-		FLexUIEditorTools::CreateWidget(GetSelected, InItem->DisplayName, InItem->VisualClass.Get(), Callback);
-	}
-	else if (InItem->Kind == EItemKind::Prefab)
-	{
-		FLexUIEditorTools::CreateUIControls(GetSelected, InItem->PrefabPath);
-	}
+FReply SLexUIPrefabPalette::OnItemDragDetected(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent, FItemPtr InItem)
+{
+	if (!InItem.IsValid() || InItem->Kind == EItemKind::Category)return FReply::Unhandled();
+	auto Op = MakeShared<FLexUIPaletteDragDropOp>();
+	Op->bIsBasicWidget = (InItem->Kind == EItemKind::BasicWidget);
+	Op->VisualClass = InItem->VisualClass;
+	Op->bSetDefaultSprite = InItem->bSetDefaultSprite;
+	Op->PrefabPath = InItem->PrefabPath;
+	Op->DisplayName = InItem->DisplayName;
+	Op->Construct();
+	Op->SetToolTip(FText::FromString(InItem->DisplayName), nullptr);
+	return FReply::Handled().BeginDragDrop(Op);
 }
 
 void SLexUIPrefabPalette::OnSearchTextChanged(const FText& InText)

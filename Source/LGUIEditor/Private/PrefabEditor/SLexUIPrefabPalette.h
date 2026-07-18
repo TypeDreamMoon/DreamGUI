@@ -5,11 +5,33 @@
 #include "CoreMinimal.h"
 #include "AssetRegistry/AssetData.h"
 #include "Misc/TextFilterExpressionEvaluator.h"
+#include "DragAndDrop/DecoratedDragDropOp.h"
 #include "Widgets/SCompoundWidget.h"
 #include "Widgets/Views/STreeView.h"
 
 class FLexUIPrefabEditor;
 class ULexWidget;
+
+/**
+ * Drag payload for a Palette element. Carries the same data the Palette uses to create an
+ * element (basic ULexWidget + Visual, or a prefab by path); the hierarchy view's drop
+ * handler calls CreateUnder(dropTargetWidget) to place it. Lets the Palette drop onto an
+ * Outliner row, UMG-designer style, reusing FLexUIEditorTools::CreateWidget / CreateUIControls.
+ */
+class FLexUIPaletteDragDropOp : public FDecoratedDragDropOp
+{
+public:
+	DRAG_DROP_OPERATOR_TYPE(FLexUIPaletteDragDropOp, FDecoratedDragDropOp)
+
+	bool bIsBasicWidget = false;// true: ULexWidget + VisualClass; false: instantiate PrefabPath
+	TWeakObjectPtr<UClass> VisualClass;
+	bool bSetDefaultSprite = false;
+	FString PrefabPath;
+	FString DisplayName;
+
+	/** Create this element under InParentWidget (no-op if null / incompatible, like the menu). */
+	void CreateUnder(ULexWidget* InParentWidget)const;
+};
 
 /**
  * "Palette" tab for the LexUI Prefab Editor, modeled on UMG's Palette (and the LGUI3 palette
@@ -59,6 +81,7 @@ private:
 	TSharedRef<class ITableRow> OnGenerateRow(FItemPtr InItem, const TSharedRef<class STableViewBase>& OwnerTable);
 	void OnGetChildren(FItemPtr InItem, TArray<FItemPtr>& OutChildren);
 	void OnItemDoubleClick(FItemPtr InItem);
+	FReply OnItemDragDetected(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent, FItemPtr InItem);
 	void OnSearchTextChanged(const FText& InText);
 
 	/** Create InItem's element under the editor's selected widget (no-op if nothing selected). */
