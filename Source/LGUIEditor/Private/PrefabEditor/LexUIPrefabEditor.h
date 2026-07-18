@@ -19,8 +19,19 @@ class ULexUIPrefabHelperObject;
 struct FLexUISubPrefabData;
 namespace LexUIPrefabBehaviourUtils { struct FDiscoveredEvent; }
 
+/** UMG-toolbar-style alignment target for a multi-widget selection (LGUI UI plane is YZ: horizontal=Y, vertical=Z). */
+enum class ELexUIWidgetAlignType : uint8
+{
+	LeftEdge,
+	HorizontalCenter,
+	RightEdge,
+	TopEdge,
+	VerticalCenter,
+	BottomEdge,
+};
+
 /**
- * 
+ *
  */
 class FLexUIPrefabEditor : public FAssetEditorToolkit
 	, public FGCObject, public FEditorUndoClient
@@ -144,6 +155,18 @@ public:
 	 * selected widget's behaviour (see LexUIPrefabBehaviourUtils::DiscoverEvents).
 	 */
 	void AddEventHandler(const LexUIPrefabBehaviourUtils::FDiscoveredEvent& InEvent);
+	/**
+	 * UMG-toolbar-style align: move every selected sibling widget so the chosen edge/center
+	 * lines up with the selection's overall bound. Operates in the shared parent's frame;
+	 * requires 2+ selected widgets that share a parent (cross-parent selections are refused).
+	 */
+	void AlignSelectedWidgets(ELexUIWidgetAlignType AlignType);
+	/**
+	 * UMG-toolbar-style distribute: keep the two outermost selected siblings fixed and space
+	 * the rest so the gaps between adjacent widgets are equal, along the horizontal (bHorizontal)
+	 * or vertical axis. Requires 3+ selected widgets that share a parent.
+	 */
+	void DistributeSelectedWidgets(bool bHorizontal);
 	void SaveEditorState();
 private:
 	/** Companion behaviour blueprint for this prefab, created + attached to the root widget on demand. Null on failure. */

@@ -544,6 +544,53 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 					MenuBuilder.EndSection();
 				}
 			}
+
+			// UMG-toolbar-style Align / Distribute for a multi-widget selection
+			if (auto Editor = Manager.Pin())
+			{
+				if (Editor->GetSelectedWidgets().Num() >= 2)
+				{
+					MenuBuilder.BeginSection("AlignDistribute", LOCTEXT("AlignDistribute", "Align"));
+					{
+						MenuBuilder.AddSubMenu(
+							LOCTEXT("AlignSubMenu", "Align"),
+							LOCTEXT("AlignSubMenuTooltip", "Line the selected sibling widgets up along an edge or center (they must share a parent)."),
+							FNewMenuDelegate::CreateLambda([WeakEditor = Manager](FMenuBuilder& SubMenu)
+							{
+								auto AddAlign = [&SubMenu, WeakEditor](const FText& Label, ELexUIWidgetAlignType Type)
+								{
+									SubMenu.AddMenuEntry(Label, FText::GetEmpty(), FSlateIcon(),
+										FUIAction(FExecuteAction::CreateLambda([WeakEditor, Type]()
+										{
+											if (auto E = WeakEditor.Pin())E->AlignSelectedWidgets(Type);
+										})));
+								};
+								AddAlign(LOCTEXT("AlignLeft", "Left Edges"), ELexUIWidgetAlignType::LeftEdge);
+								AddAlign(LOCTEXT("AlignCenterH", "Horizontal Centers"), ELexUIWidgetAlignType::HorizontalCenter);
+								AddAlign(LOCTEXT("AlignRight", "Right Edges"), ELexUIWidgetAlignType::RightEdge);
+								SubMenu.AddSeparator();
+								AddAlign(LOCTEXT("AlignTop", "Top Edges"), ELexUIWidgetAlignType::TopEdge);
+								AddAlign(LOCTEXT("AlignCenterV", "Vertical Centers"), ELexUIWidgetAlignType::VerticalCenter);
+								AddAlign(LOCTEXT("AlignBottom", "Bottom Edges"), ELexUIWidgetAlignType::BottomEdge);
+							}));
+
+						if (Editor->GetSelectedWidgets().Num() >= 3)
+						{
+							MenuBuilder.AddSubMenu(
+								LOCTEXT("DistributeSubMenu", "Distribute"),
+								LOCTEXT("DistributeSubMenuTooltip", "Even out the gaps between the selected sibling widgets (keeps the two outermost fixed)."),
+								FNewMenuDelegate::CreateLambda([WeakEditor = Manager](FMenuBuilder& SubMenu)
+								{
+									SubMenu.AddMenuEntry(LOCTEXT("DistributeH", "Horizontally"), FText::GetEmpty(), FSlateIcon(),
+										FUIAction(FExecuteAction::CreateLambda([WeakEditor]() { if (auto E = WeakEditor.Pin())E->DistributeSelectedWidgets(true); })));
+									SubMenu.AddMenuEntry(LOCTEXT("DistributeV", "Vertically"), FText::GetEmpty(), FSlateIcon(),
+										FUIAction(FExecuteAction::CreateLambda([WeakEditor]() { if (auto E = WeakEditor.Pin())E->DistributeSelectedWidgets(false); })));
+								}));
+						}
+					}
+					MenuBuilder.EndSection();
+				}
+			}
 	});
 }
 

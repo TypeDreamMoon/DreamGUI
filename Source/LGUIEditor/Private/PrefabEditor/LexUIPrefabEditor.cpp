@@ -629,6 +629,166 @@ void FLexUIPrefabEditor::AddEventHandler(const LexUIPrefabBehaviourUtils::FDisco
 	}
 }
 
+namespace
+{
+	// A widget's axis-aligned bounds in ITS PARENT's frame. LGUI's UI plane is YZ
+	// (RelativeLocation.Y = horizontal, .Z = vertical, .X = the plane normal), confirmed by
+	// ULexWidget::CalculateAnchorFromTransform. Local-space edges are pushed through the
+	// widget's local transform so per-widget scale/rotation is accounted for (AABB via min/max).
+	struct FParentSpaceRect
+	{
+		double Left = 0, Right = 0, Bottom = 0, Top = 0;
+		double CenterH() const { return (Left + Right) * 0.5; }
+		double CenterV() const { return (Bottom + Top) * 0.5; }
+	};
+	FParentSpaceRect GetParentSpaceRect(ULexWidget* W)
+	{
+		const FTransform LocalTM = W->GetLocalTransform();
+		const double LocalLeft = W->GetLocalSpaceLeft();
+		const double LocalRight = W->GetLocalSpaceRight();
+		const double LocalBottom = W->GetLocalSpaceBottom();
+		const double LocalTop = W->GetLocalSpaceTop();
+		//local (normal, horizontal, vertical) = (X, Y, Z)
+		const FVector Corners[4] =
+		{
+			LocalTM.TransformPosition(FVector(0, LocalLeft,  LocalBottom)),
+			LocalTM.TransformPosition(FVector(0, LocalRight, LocalBottom)),
+			LocalTM.TransformPosition(FVector(0, LocalLeft,  LocalTop)),
+			LocalTM.TransformPosition(FVector(0, LocalRight, LocalTop)),
+		};
+		FParentSpaceRect R;
+		R.Left = R.Right = Corners[0].Y;
+		R.Bottom = R.Top = Corners[0].Z;
+		for (const FVector& C : Corners)
+		{
+			R.Left = FMath::Min(R.Left, C.Y);
+			R.Right = FMath::Max(R.Right, C.Y);
+			R.Bottom = FMath::Min(R.Bottom, C.Z);
+			R.Top = FMath::Max(R.Top, C.Z);
+		}
+		return R;
+	}
+	// Selected widgets that share a parent, ready to align/distribute. Returns false (and warns)
+	// on cross-parent selections; parentless widgets (e.g. the prefab root) are dropped.
+	bool GatherAlignableSiblings(const TArray<TWeakObjectPtr<ULexWidget>>& InSelection, int32 InMinCount, TArray<ULexWidget*>& OutWidgets)
+	{
+		OutWidgets.Reset();
+		ULexWidget* CommonParent = nullptr;
+		bool bParentSet = false;
+		for (const TWeakObjectPtr<ULexWidget>& Weak : InSelection)
+		{
+			ULexWidget* W = Weak.Get();
+			if (W == nullptr) continue;
+			ULexWidget* Parent = W->GetParent();
+			if (Parent == nullptr) continue;//root / detached: nothing to align against
+			if (!bParentSet) { CommonParent = Parent; bParentSet = true; }
+			else if (Parent != CommonParent)
+			{
+				FNotificationInfo Info(NSLOCTEXT("LexUIPrefabEditor", "AlignCrossParent", "Align/Distribute needs the selected widgets to share a parent."));
+				Info.ExpireDuration = 4.0f;
+				Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
+				FSlateNotificationManager::Get().AddNotification(Info);
+				OutWidgets.Reset();
+				return false;
+			}
+			OutWidgets.Add(W);
+		}
+		return OutWidgets.Num() >= InMinCount;
+	}
+}
+
+void FLexUIPrefabEditor::AlignSelectedWidgets(ELexUIWidgetAlignType AlignType)
+{
+	TArray<ULexWidget*> Widgets;
+	if (!GatherAlignableSiblings(GetSelectedWidgets(), 2, Widgets)) return;
+
+	// Selection bound in the shared parent's frame.
+	TArray<FParentSpaceRect> Rects;
+	Rects.Reserve(Widgets.Num());
+	double GroupLeft = TNumericLimits<double>::Max(), GroupRight = TNumericLimits<double>::Lowest();
+	double GroupBottom = TNumericLimits<double>::Max(), GroupTop = TNumericLimits<double>::Lowest();
+	for (ULexWidget* W : Widgets)
+	{
+		const FParentSpaceRect R = GetParentSpaceRect(W);
+		Rects.Add(R);
+		GroupLeft = FMath::Min(GroupLeft, R.Left);
+		GroupRight = FMath::Max(GroupRight, R.Right);
+		GroupBottom = FMath::Min(GroupBottom, R.Bottom);
+		GroupTop = FMath::Max(GroupTop, R.Top);
+	}
+	const double GroupCenterH = (GroupLeft + GroupRight) * 0.5;
+	const double GroupCenterV = (GroupBottom + GroupTop) * 0.5;
+
+	const FScopedTransaction Transaction(NSLOCTEXT("LexUIPrefabEditor", "AlignWidgets", "Align Widgets"));
+	for (int32 i = 0; i < Widgets.Num(); i++)
+	{
+		ULexWidget* W = Widgets[i];
+		const FParentSpaceRect& R = Rects[i];
+		//parent-frame delta applies straight to anchoredPosition (X=horizontal, Y=vertical), same as the arrow-key nudge
+		FVector2D AnchoredPos = W->GetAnchoredPosition();
+		switch (AlignType)
+		{
+		case ELexUIWidgetAlignType::LeftEdge:         AnchoredPos.X += GroupLeft - R.Left; break;
+		case ELexUIWidgetAlignType::RightEdge:        AnchoredPos.X += GroupRight - R.Right; break;
+		case ELexUIWidgetAlignType::HorizontalCenter: AnchoredPos.X += GroupCenterH - R.CenterH(); break;
+		case ELexUIWidgetAlignType::TopEdge:          AnchoredPos.Y += GroupTop - R.Top; break;
+		case ELexUIWidgetAlignType::BottomEdge:       AnchoredPos.Y += GroupBottom - R.Bottom; break;
+		case ELexUIWidgetAlignType::VerticalCenter:   AnchoredPos.Y += GroupCenterV - R.CenterV(); break;
+		}
+		W->Modify();
+		W->SetAnchoredPosition(AnchoredPos);
+	}
+
+	if (auto Helper = GetPrefabHelperObject())
+	{
+		Helper->Modify();
+		Helper->SetAnythingDirty();
+	}
+}
+
+void FLexUIPrefabEditor::DistributeSelectedWidgets(bool bHorizontal)
+{
+	TArray<ULexWidget*> Widgets;
+	if (!GatherAlignableSiblings(GetSelectedWidgets(), 3, Widgets)) return;
+
+	// Pair each widget with its parent-frame rect and sort along the distribute axis by low edge.
+	struct FEntry { ULexWidget* Widget; FParentSpaceRect Rect; };
+	TArray<FEntry> Entries;
+	Entries.Reserve(Widgets.Num());
+	for (ULexWidget* W : Widgets) { Entries.Add({ W, GetParentSpaceRect(W) }); }
+	auto LowEdge = [bHorizontal](const FParentSpaceRect& R) { return bHorizontal ? R.Left : R.Bottom; };
+	auto HighEdge = [bHorizontal](const FParentSpaceRect& R) { return bHorizontal ? R.Right : R.Top; };
+	Entries.Sort([&](const FEntry& A, const FEntry& B) { return LowEdge(A.Rect) < LowEdge(B.Rect); });
+
+	// Equal-gap distribution: the two outermost widgets stay put; the rest are spaced so every
+	// adjacent gap is identical. gap = (span - sum of sizes) / (count - 1).
+	const double SpanLow = LowEdge(Entries[0].Rect);
+	const double SpanHigh = HighEdge(Entries.Last().Rect);
+	double SizeSum = 0;
+	for (const FEntry& E : Entries) { SizeSum += HighEdge(E.Rect) - LowEdge(E.Rect); }
+	const double Gap = (SpanHigh - SpanLow - SizeSum) / (Entries.Num() - 1);
+
+	const FScopedTransaction Transaction(NSLOCTEXT("LexUIPrefabEditor", "DistributeWidgets", "Distribute Widgets"));
+	double Cursor = HighEdge(Entries[0].Rect);//trailing edge of the fixed first widget
+	for (int32 i = 1; i < Entries.Num() - 1; i++)
+	{
+		const double TargetLow = Cursor + Gap;
+		const double Delta = TargetLow - LowEdge(Entries[i].Rect);
+		ULexWidget* W = Entries[i].Widget;
+		FVector2D AnchoredPos = W->GetAnchoredPosition();
+		if (bHorizontal) AnchoredPos.X += Delta; else AnchoredPos.Y += Delta;
+		W->Modify();
+		W->SetAnchoredPosition(AnchoredPos);
+		Cursor = TargetLow + (HighEdge(Entries[i].Rect) - LowEdge(Entries[i].Rect));
+	}
+
+	if (auto Helper = GetPrefabHelperObject())
+	{
+		Helper->Modify();
+		Helper->SetAnythingDirty();
+	}
+}
+
 void FLexUIPrefabEditor::SaveEditorState()
 {
 	//save view location and rotation
