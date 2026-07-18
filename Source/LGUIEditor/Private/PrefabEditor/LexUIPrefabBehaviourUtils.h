@@ -37,4 +37,17 @@ namespace LexUIPrefabBehaviourUtils
 	 * instead of minting a numbered duplicate. Returns null on failure.
 	 */
 	UBlueprint* CreateBehaviourBlueprint(ULexUIPrefab* InPrefab, ULexWidget* InRootWidget);
+
+	/** Variable-name suggestion from a promote target: the widget's display name (or its owner widget's), sanitized to an identifier. */
+	FString MakeVariableNameForTarget(UObject* InTarget);
+	/**
+	 * UMG "Is Variable" counterpart: add (or reuse, when type-compatible) an Instance-Editable
+	 * member variable on the behaviour blueprint typed to InTarget's class, compile, then bind
+	 * the behaviour instance's property to InTarget (a widget / visual / behaviour inside this
+	 * prefab). The reference is serialized with the prefab (GUID-remapped), so it survives
+	 * renames and needs no runtime lookup. Instance-Editable is required: LexUI's writer skips
+	 * CPF_DisableEditOnInstance, so a default blueprint variable would come back null.
+	 * @return true on success; OutMessage carries the failure reason or a rebound notice.
+	 */
+	bool PromoteToVariable(UBlueprint* InBlueprint, ULexWidget* InRootWidget, UObject* InTarget, const FString& InVariableName, FText& OutMessage);
 }

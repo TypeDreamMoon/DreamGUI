@@ -123,13 +123,24 @@ private:
 
 	void OnOpenRawDataViewerPanel();
 	void OnOpenPrefabHelperObjectDetailsPanel();
+public:
 	/**
 	 * UMG-WidgetBlueprint-style logic host: open the prefab's companion behaviour blueprint
 	 * (a ULexUIBehaviour script on the root widget), creating & attaching "BP_<PrefabName>"
 	 * next to the prefab asset if there is none yet.
 	 */
 	void CreateOrOpenBehaviourBlueprint();
+	/**
+	 * UMG "Is Variable" counterpart: add a member variable to the companion behaviour blueprint
+	 * (created on demand) typed to InTarget's class, and bind it to InTarget. Serialized with
+	 * the prefab (GUID-remapped), so it survives renames and needs no runtime lookup.
+	 */
+	void PromoteToBehaviourVariable(UObject* InTarget);
 	void SaveEditorState();
+private:
+	/** Companion behaviour blueprint for this prefab, created + attached to the root widget on demand. Null on failure. */
+	class UBlueprint* GetOrCreateBehaviourBlueprint();
+public:
 
 	TSharedRef<SDockTab> SpawnTab_Viewport(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_Details(const FSpawnTabArgs& Args);

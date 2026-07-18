@@ -525,10 +525,10 @@ void FLexUIPrefabEditor::OnOpenPrefabHelperObjectDetailsPanel()
 	AssetEditorSubsystem->OpenEditorForAsset(GetPrefabHelperObject());
 }
 
-void FLexUIPrefabEditor::CreateOrOpenBehaviourBlueprint()
+UBlueprint* FLexUIPrefabEditor::GetOrCreateBehaviourBlueprint()
 {
 	ULexWidget* RootWidget = GetLoadedRootWidget();
-	if (RootWidget == nullptr || PrefabBeingEdited == nullptr)return;
+	if (RootWidget == nullptr || PrefabBeingEdited == nullptr)return nullptr;
 
 	UBlueprint* Blueprint = LexUIPrefabBehaviourUtils::FindBehaviourBlueprint(RootWidget, PrefabBeingEdited);
 	if (Blueprint == nullptr)
@@ -537,7 +537,7 @@ void FLexUIPrefabEditor::CreateOrOpenBehaviourBlueprint()
 		if (Blueprint == nullptr)
 		{
 			FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_CreateBehaviourBlueprint", "Failed to create the behaviour blueprint."));
-			return;
+			return nullptr;
 		}
 		// the attached script is part of the prefab now
 		if (auto Helper = GetPrefabHelperObject())
@@ -550,7 +550,42 @@ void FLexUIPrefabEditor::CreateOrOpenBehaviourBlueprint()
 		Info.ExpireDuration = 5.0f;
 		FSlateNotificationManager::Get().AddNotification(Info);
 	}
-	GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(Blueprint);
+	return Blueprint;
+}
+
+void FLexUIPrefabEditor::CreateOrOpenBehaviourBlueprint()
+{
+	if (UBlueprint* Blueprint = GetOrCreateBehaviourBlueprint())
+	{
+		GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(Blueprint);
+	}
+}
+
+void FLexUIPrefabEditor::PromoteToBehaviourVariable(UObject* InTarget)
+{
+	if (InTarget == nullptr)return;
+	UBlueprint* Blueprint = GetOrCreateBehaviourBlueprint();
+	if (Blueprint == nullptr)return;
+	ULexWidget* RootWidget = GetLoadedRootWidget();
+
+	const FString VariableName = LexUIPrefabBehaviourUtils::MakeVariableNameForTarget(InTarget);
+	FText Message;
+	const bool bSuccess = LexUIPrefabBehaviourUtils::PromoteToVariable(Blueprint, RootWidget, InTarget, VariableName, Message);
+	if (bSuccess)
+	{
+		if (auto Helper = GetPrefabHelperObject())
+		{
+			Helper->Modify();
+			Helper->SetAnythingDirty();
+		}
+	}
+	FNotificationInfo Info(Message);
+	Info.ExpireDuration = 5.0f;
+	if (!bSuccess)
+	{
+		Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
+	}
+	FSlateNotificationManager::Get().AddNotification(Info);
 }
 
 void FLexUIPrefabEditor::SaveEditorState()

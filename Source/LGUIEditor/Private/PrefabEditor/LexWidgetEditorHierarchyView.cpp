@@ -6,6 +6,10 @@
 #include "LexUIPrefabEditor.h"
 #include "LexWidgetEditorHierarchyViewItem.h"
 #include "Core/LexUIManager.h"
+#include "Core/Components/LexWidget.h"
+#include "Core/Components/LexVisual.h"
+#include "Core/LexUIBehaviour.h"
+#include "Styling/SlateIconFinder.h"
 #include "Widgets/Layout/SScrollBorder.h"
 #include "Widgets/Input/SSearchBox.h"
 #include "Framework/Commands/GenericCommands.h"
@@ -448,6 +452,51 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 			MenuBuilder.PopCommandList();
 		}
 		MenuBuilder.EndSection();
+
+			// UMG "Is Variable" counterpart: bind the selected element to a typed variable on
+			// the prefab's companion behaviour blueprint (created on demand)
+			if (auto Editor = Manager.Pin())
+			{
+				ULexWidget* SelectedWidget = GetSelectedWidgetFunction();
+				if (SelectedWidget != nullptr && SelectedWidget != Editor->GetLoadedRootWidget())
+				{
+					MenuBuilder.BeginSection("Behaviour", LOCTEXT("Behaviour", "Behaviour"));
+					{
+						MenuBuilder.AddSubMenu(
+							LOCTEXT("PromoteSubMenu", "Promote to Behaviour Variable"),
+							LOCTEXT("PromoteSubMenuTooltip", "Add a variable to this prefab's behaviour blueprint (created on demand) and bind it to the selected element. Saved with the prefab; no runtime lookup needed."),
+							FNewMenuDelegate::CreateLambda([WeakEditor = Manager, WeakWidget = TWeakObjectPtr<ULexWidget>(SelectedWidget)](FMenuBuilder& SubMenu)
+							{
+								auto AddEntry = [&SubMenu, WeakEditor](UObject* Target, const FText& Label)
+								{
+									SubMenu.AddMenuEntry(Label, FText::FromString(Target->GetClass()->GetPathName()),
+										FSlateIconFinder::FindIconForClass(Target->GetClass()),
+										FUIAction(FExecuteAction::CreateLambda([WeakEditor, WeakTarget = TWeakObjectPtr<UObject>(Target)]()
+										{
+											auto E = WeakEditor.Pin();
+											if (E.IsValid() && WeakTarget.IsValid())E->PromoteToBehaviourVariable(WeakTarget.Get());
+										})));
+								};
+								ULexWidget* W = WeakWidget.Get();
+								if (W == nullptr)return;
+								// behaviours carry the useful APIs (Button.OnClick / ...), then the visual, then the widget
+								for (ULexUIBehaviour* Comp : W->GetAllComponents())
+								{
+									if (Comp == nullptr)continue;
+									AddEntry(Comp, FText::Format(LOCTEXT("PromoteAsBehaviour", "As {0} ({1})"),
+										Comp->GetClass()->GetDisplayNameText(), FText::FromString(Comp->GetName())));
+								}
+								if (auto Visual = W->GetVisual())
+								{
+									AddEntry(Visual, FText::Format(LOCTEXT("PromoteAsVisual", "As {0} (Visual)"), Visual->GetClass()->GetDisplayNameText()));
+								}
+								SubMenu.AddSeparator();
+								AddEntry(W, FText::Format(LOCTEXT("PromoteAsWidget", "As Widget ({0})"), W->GetClass()->GetDisplayNameText()));
+							}));
+					}
+					MenuBuilder.EndSection();
+				}
+			}
 	});
 }
 
