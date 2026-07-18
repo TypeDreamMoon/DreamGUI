@@ -25,6 +25,8 @@
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
+#include "Core/Components/LexLayoutContainerFlexBox.h"
+#include "Core/Components/LexLayoutContainerGrid.h"
 #include "Framework/Commands/GenericCommands.h"
 #include "PrefabSystem/LexUIPrefabInstanceScene.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
@@ -668,11 +670,15 @@ namespace
 		}
 		return R;
 	}
-	// Selected widgets that share a parent, ready to align/distribute. Returns false (and warns)
-	// on cross-parent selections; parentless widgets (e.g. the prefab root) are dropped.
-	bool GatherAlignableSiblings(const TArray<TWeakObjectPtr<ULexWidget>>& InSelection, int32 InMinCount, TArray<ULexWidget*>& OutWidgets)
+	// Selected widgets that share a parent. Returns false (and warns) on cross-parent selections;
+	// parentless widgets (e.g. the prefab root) are dropped. When bRefuseLayoutParent, a shared
+	// parent that owns a layout container is refused too: it drives its children's positions and
+	// rebuilds on any SetAnchoredPosition, so an align/distribute would be silently overwritten
+	// (wrapping is fine there, so that caller passes false). OutParent gets the shared parent.
+	bool GatherSharedParentSelection(const TArray<TWeakObjectPtr<ULexWidget>>& InSelection, int32 InMinCount, bool bRefuseLayoutParent, TArray<ULexWidget*>& OutWidgets, ULexWidget*& OutParent)
 	{
 		OutWidgets.Reset();
+		OutParent = nullptr;
 		ULexWidget* CommonParent = nullptr;
 		bool bParentSet = false;
 		for (const TWeakObjectPtr<ULexWidget>& Weak : InSelection)
@@ -680,11 +686,11 @@ namespace
 			ULexWidget* W = Weak.Get();
 			if (W == nullptr) continue;
 			ULexWidget* Parent = W->GetParent();
-			if (Parent == nullptr) continue;//root / detached: nothing to align against
+			if (Parent == nullptr) continue;//root / detached: has no sibling frame
 			if (!bParentSet) { CommonParent = Parent; bParentSet = true; }
 			else if (Parent != CommonParent)
 			{
-				FNotificationInfo Info(NSLOCTEXT("LexUIPrefabEditor", "AlignCrossParent", "Align/Distribute needs the selected widgets to share a parent."));
+				FNotificationInfo Info(NSLOCTEXT("LexUIPrefabEditor", "SharedParentRequired", "This action needs the selected widgets to share a parent."));
 				Info.ExpireDuration = 4.0f;
 				Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
 				FSlateNotificationManager::Get().AddNotification(Info);
@@ -693,9 +699,7 @@ namespace
 			}
 			OutWidgets.Add(W);
 		}
-		// A layout container drives its children's positions and rebuilds on any SetAnchoredPosition
-		// (LexWidget.cpp), so an align/distribute would be silently overwritten -- refuse instead.
-		if (bParentSet && CommonParent != nullptr && CommonParent->GetLayoutContainer() != nullptr)
+		if (bRefuseLayoutParent && bParentSet && CommonParent != nullptr && CommonParent->GetLayoutContainer() != nullptr)
 		{
 			FNotificationInfo Info(NSLOCTEXT("LexUIPrefabEditor", "AlignLayoutParent", "The shared parent has a layout container that positions its children -- align/distribute would be overridden by the layout."));
 			Info.ExpireDuration = 5.0f;
@@ -704,6 +708,7 @@ namespace
 			OutWidgets.Reset();
 			return false;
 		}
+		OutParent = CommonParent;
 		return OutWidgets.Num() >= InMinCount;
 	}
 }
@@ -711,7 +716,8 @@ namespace
 void FLexUIPrefabEditor::AlignSelectedWidgets(ELexUIWidgetAlignType AlignType)
 {
 	TArray<ULexWidget*> Widgets;
-	if (!GatherAlignableSiblings(GetSelectedWidgets(), 2, Widgets)) return;
+	ULexWidget* CommonParent = nullptr;
+	if (!GatherSharedParentSelection(GetSelectedWidgets(), 2, /*bRefuseLayoutParent*/true, Widgets, CommonParent)) return;
 
 	// Selection bound in the shared parent's frame.
 	TArray<FParentSpaceRect> Rects;
@@ -762,7 +768,8 @@ void FLexUIPrefabEditor::AlignSelectedWidgets(ELexUIWidgetAlignType AlignType)
 void FLexUIPrefabEditor::DistributeSelectedWidgets(bool bHorizontal)
 {
 	TArray<ULexWidget*> Widgets;
-	if (!GatherAlignableSiblings(GetSelectedWidgets(), 3, Widgets)) return;
+	ULexWidget* CommonParent = nullptr;
+	if (!GatherSharedParentSelection(GetSelectedWidgets(), 3, /*bRefuseLayoutParent*/true, Widgets, CommonParent)) return;
 
 	// Pair each widget with its parent-frame rect and sort along the distribute axis by low edge.
 	struct FEntry { ULexWidget* Widget; FParentSpaceRect Rect; };
@@ -801,6 +808,99 @@ void FLexUIPrefabEditor::DistributeSelectedWidgets(bool bHorizontal)
 		Helper->SetAnythingDirty();
 	}
 	//menu action (not a drag): repaint now so it shows even when the preview realtime is off
+	if (ViewportPtr.IsValid() && ViewportPtr->GetViewportClient().IsValid()) ViewportPtr->GetViewportClient()->Invalidate();
+}
+
+void FLexUIPrefabEditor::WrapSelectedWidgets(ELexUIWrapType WrapType)
+{
+	TArray<ULexWidget*> Widgets;
+	ULexWidget* CommonParent = nullptr;
+	// wrapping is fine under a layout parent (the wrapper just becomes a layout child), so don't refuse it
+	if (!GatherSharedParentSelection(GetSelectedWidgets(), 1, /*bRefuseLayoutParent*/false, Widgets, CommonParent)) return;
+	if (CommonParent == nullptr) return;
+
+	// Selection bound in the shared parent's frame, and the lowest sibling slot to drop the wrapper into.
+	double GroupLeft = TNumericLimits<double>::Max(), GroupRight = TNumericLimits<double>::Lowest();
+	double GroupBottom = TNumericLimits<double>::Max(), GroupTop = TNumericLimits<double>::Lowest();
+	for (ULexWidget* W : Widgets)
+	{
+		const FParentSpaceRect R = GetParentSpaceRect(W);
+		GroupLeft = FMath::Min(GroupLeft, R.Left);
+		GroupRight = FMath::Max(GroupRight, R.Right);
+		GroupBottom = FMath::Min(GroupBottom, R.Bottom);
+		GroupTop = FMath::Max(GroupTop, R.Top);
+	}
+	const double GroupCenterH = (GroupLeft + GroupRight) * 0.5;
+	const double GroupCenterV = (GroupBottom + GroupTop) * 0.5;
+	int32 MinSiblingIndex = TNumericLimits<int32>::Max();
+	{
+		const TArray<ULexWidget*>& Siblings = CommonParent->GetChildren();
+		for (ULexWidget* W : Widgets)
+		{
+			const int32 Idx = Siblings.IndexOfByKey(W);
+			if (Idx != INDEX_NONE) MinSiblingIndex = FMath::Min(MinSiblingIndex, Idx);
+		}
+	}
+	if (MinSiblingIndex == TNumericLimits<int32>::Max()) MinSiblingIndex = -1;
+
+	const FScopedTransaction Transaction(NSLOCTEXT("LexUIPrefabEditor", "WrapWidgets", "Wrap Widgets"));
+	if (auto Helper = GetPrefabHelperObject())
+	{
+		Helper->Modify();
+		Helper->SetAnythingDirty();
+	}
+	CommonParent->Modify();
+
+	// New container, inserted where the selection was, sized to enclose it.
+	FString WrapperName;
+	switch (WrapType)
+	{
+	case ELexUIWrapType::HorizontalBox: WrapperName = TEXT("HorizontalBox"); break;
+	case ELexUIWrapType::VerticalBox:   WrapperName = TEXT("VerticalBox"); break;
+	case ELexUIWrapType::Grid:          WrapperName = TEXT("Grid"); break;
+	default:                            WrapperName = TEXT("Widget"); break;
+	}
+	ULexWidget* Wrapper = NewObject<ULexWidget>(CommonParent->GetOuter(), ULexWidget::StaticClass(), NAME_None, RF_Public | RF_Transactional);
+	Wrapper->SetDisplayName(WrapperName);
+	Wrapper->OnRegister();
+	Wrapper->SetParent(CommonParent, false, MinSiblingIndex);
+	Wrapper->SetPivot(FVector2D(0.5f, 0.5f));
+	Wrapper->SetWidth(GroupRight - GroupLeft);
+	Wrapper->SetHeight(GroupTop - GroupBottom);
+	// move the wrapper's parent-frame center onto the selection center (same proven basis as align)
+	{
+		const FParentSpaceRect WrapperRect = GetParentSpaceRect(Wrapper);
+		FVector2D AnchoredPos = Wrapper->GetAnchoredPosition();
+		AnchoredPos.X += GroupCenterH - WrapperRect.CenterH();
+		AnchoredPos.Y += GroupCenterV - WrapperRect.CenterV();
+		Wrapper->SetAnchoredPosition(AnchoredPos);
+	}
+
+	// Reparent the selection under the wrapper, keeping world position so nothing visually jumps.
+	// A layout container (added next) then arranges them.
+	for (ULexWidget* W : Widgets)
+	{
+		W->Modify();
+		W->SetParent(Wrapper, true);
+	}
+
+	switch (WrapType)
+	{
+	case ELexUIWrapType::HorizontalBox:
+		if (auto FlexBox = Wrapper->CreateNewLayoutContainer<ULexLayoutContainerFlexBox>()) FlexBox->SetDirection(ELexLayoutFlexBoxDirectionType::Horizontal);
+		break;
+	case ELexUIWrapType::VerticalBox:
+		if (auto FlexBox = Wrapper->CreateNewLayoutContainer<ULexLayoutContainerFlexBox>()) FlexBox->SetDirection(ELexLayoutFlexBoxDirectionType::Vertical);
+		break;
+	case ELexUIWrapType::Grid:
+		Wrapper->CreateNewLayoutContainer<ULexLayoutContainerGrid>();
+		break;
+	default:
+		break;//plain widget container
+	}
+
+	SelectWidgets(TSet<ULexWidget*>{ Wrapper }, false);
+
 	if (ViewportPtr.IsValid() && ViewportPtr->GetViewportClient().IsValid()) ViewportPtr->GetViewportClient()->Invalidate();
 }
 

@@ -30,6 +30,15 @@ enum class ELexUIWidgetAlignType : uint8
 	BottomEdge,
 };
 
+/** UMG "Wrap With" container choices: a plain widget, a horizontal/vertical FlexBox, or a Grid. */
+enum class ELexUIWrapType : uint8
+{
+	Widget,
+	HorizontalBox,
+	VerticalBox,
+	Grid,
+};
+
 /**
  *
  */
@@ -167,6 +176,12 @@ public:
 	 * or vertical axis. Requires 3+ selected widgets that share a parent.
 	 */
 	void DistributeSelectedWidgets(bool bHorizontal);
+	/**
+	 * UMG "Wrap With": group the selected sibling widgets under a newly created container widget
+	 * inserted at their position, sized to enclose them. Children keep their world position (a
+	 * FlexBox/Grid container then arranges them). Needs 1+ selected widgets that share a parent.
+	 */
+	void WrapSelectedWidgets(ELexUIWrapType WrapType);
 	void SaveEditorState();
 private:
 	/** Companion behaviour blueprint for this prefab, created + attached to the root widget on demand. Null on failure. */

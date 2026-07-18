@@ -545,6 +545,37 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 				}
 			}
 
+			// UMG "Wrap With": group the selection under a new container widget
+			if (auto Editor = Manager.Pin())
+			{
+				if (Editor->GetSelectedWidgets().Num() >= 1)
+				{
+					MenuBuilder.BeginSection("Wrap", LOCTEXT("Wrap", "Wrap"));
+					{
+						MenuBuilder.AddSubMenu(
+							LOCTEXT("WrapWithSubMenu", "Wrap With..."),
+							LOCTEXT("WrapWithSubMenuTooltip", "Group the selected widgets under a new container widget inserted at their position; they keep their layout. A Horizontal/Vertical Box or Grid then arranges them."),
+							FNewMenuDelegate::CreateLambda([WeakEditor = Manager](FMenuBuilder& SubMenu)
+							{
+								auto AddWrap = [&SubMenu, WeakEditor](const FText& Label, ELexUIWrapType Type)
+								{
+									SubMenu.AddMenuEntry(Label, FText::GetEmpty(), FSlateIcon(),
+										FUIAction(FExecuteAction::CreateLambda([WeakEditor, Type]()
+										{
+											if (auto E = WeakEditor.Pin())E->WrapSelectedWidgets(Type);
+										})));
+								};
+								AddWrap(LOCTEXT("WrapWidget", "Widget"), ELexUIWrapType::Widget);
+								SubMenu.AddSeparator();
+								AddWrap(LOCTEXT("WrapHBox", "Horizontal Box"), ELexUIWrapType::HorizontalBox);
+								AddWrap(LOCTEXT("WrapVBox", "Vertical Box"), ELexUIWrapType::VerticalBox);
+								AddWrap(LOCTEXT("WrapGrid", "Grid"), ELexUIWrapType::Grid);
+							}));
+					}
+					MenuBuilder.EndSection();
+				}
+			}
+
 			// UMG-toolbar-style Align / Distribute for a multi-widget selection
 			if (auto Editor = Manager.Pin())
 			{
