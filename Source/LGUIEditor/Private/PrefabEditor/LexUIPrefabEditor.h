@@ -123,6 +123,12 @@ private:
 
 	void OnOpenRawDataViewerPanel();
 	void OnOpenPrefabHelperObjectDetailsPanel();
+	/**
+	 * UMG-WidgetBlueprint-style logic host: open the prefab's companion behaviour blueprint
+	 * (a ULexUIBehaviour script on the root widget), creating & attaching "BP_<PrefabName>"
+	 * next to the prefab asset if there is none yet.
+	 */
+	void CreateOrOpenBehaviourBlueprint();
 	void SaveEditorState();
 
 	TSharedRef<SDockTab> SpawnTab_Viewport(const FSpawnTabArgs& Args);

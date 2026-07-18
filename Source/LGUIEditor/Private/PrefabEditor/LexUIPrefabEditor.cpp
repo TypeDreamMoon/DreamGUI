@@ -15,6 +15,10 @@
 #include "Editor.h"
 #include "LexWidgetEditorHierarchyView.h"
 #include "SLexUIPrefabPalette.h"
+#include "LexUIPrefabBehaviourUtils.h"
+#include "Subsystems/AssetEditorSubsystem.h"
+#include "Framework/Notifications/NotificationManager.h"
+#include "Widgets/Notifications/SNotificationList.h"
 #include "UMGStyle.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
@@ -521,6 +525,34 @@ void FLexUIPrefabEditor::OnOpenPrefabHelperObjectDetailsPanel()
 	AssetEditorSubsystem->OpenEditorForAsset(GetPrefabHelperObject());
 }
 
+void FLexUIPrefabEditor::CreateOrOpenBehaviourBlueprint()
+{
+	ULexWidget* RootWidget = GetLoadedRootWidget();
+	if (RootWidget == nullptr || PrefabBeingEdited == nullptr)return;
+
+	UBlueprint* Blueprint = LexUIPrefabBehaviourUtils::FindBehaviourBlueprint(RootWidget, PrefabBeingEdited);
+	if (Blueprint == nullptr)
+	{
+		Blueprint = LexUIPrefabBehaviourUtils::CreateBehaviourBlueprint(PrefabBeingEdited, RootWidget);
+		if (Blueprint == nullptr)
+		{
+			FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_CreateBehaviourBlueprint", "Failed to create the behaviour blueprint."));
+			return;
+		}
+		// the attached script is part of the prefab now
+		if (auto Helper = GetPrefabHelperObject())
+		{
+			Helper->Modify();
+			Helper->SetAnythingDirty();
+		}
+		FNotificationInfo Info(FText::Format(LOCTEXT("BehaviourBlueprintCreated", "Created {0} and attached it to the prefab root widget.")
+			, FText::FromString(Blueprint->GetName())));
+		Info.ExpireDuration = 5.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+	}
+	GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(Blueprint);
+}
+
 void FLexUIPrefabEditor::SaveEditorState()
 {
 	//save view location and rotation
@@ -644,6 +676,12 @@ void FLexUIPrefabEditor::BindCommands()
 		FCanExecuteAction(),
 		FIsActionChecked()
 	);
+	ToolkitCommands->MapAction(
+		PrefabEditorCommands.OpenBehaviourBlueprint,
+		FExecuteAction::CreateSP(this, &FLexUIPrefabEditor::CreateOrOpenBehaviourBlueprint),
+		FCanExecuteAction(),
+		FIsActionChecked()
+	);
 
 	TFunction<ULexWidget*()> GetSelectedWidget = [this]()
 	{
@@ -742,8 +780,13 @@ void FLexUIPrefabEditor::ExtendToolbar()
 			, TAttribute<FText>(this, &FLexUIPrefabEditor::GetApplyButtonStatusTooltip)
 			, TAttribute<FSlateIcon>(this, &FLexUIPrefabEditor::GetApplyButtonStatusImage));
 		
+		auto BehaviourButton = FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().OpenBehaviourBlueprint
+			, TAttribute<FText>(), TAttribute<FText>()
+			, FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Blueprints"));
+
 		FToolMenuSection& Section = ToolBar->AddSection("LexUIPrefabCommands", TAttribute<FText>(), InsertAfterAssetSection);
 		Section.AddEntry(ApplyButtonMenuEntry);
+		Section.AddEntry(BehaviourButton);
 		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().RawDataViewer));
 		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().OpenPrefabHelperObject));
 	}
