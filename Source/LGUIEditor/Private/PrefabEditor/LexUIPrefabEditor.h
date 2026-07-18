@@ -107,6 +107,7 @@ private:
 	TSharedPtr<SLexUIPrefabEditorViewport> ViewportPtr;
 	TSharedPtr<SLexUIPrefabEditorDetails> DetailsPtr;
 	TSharedPtr<SLexWidgetEditorHierarchyView> OutlinerPtr;
+	TSharedPtr<class SLexUIPrefabPalette> PalettePtr;
 	TSharedPtr<SLexUIPrefabSequenceEditor> SequencerPtr;
 	TSharedPtr<SLexUIPrefabRawDataViewer> PrefabRawDataViewer;
 
@@ -127,6 +128,7 @@ private:
 	TSharedRef<SDockTab> SpawnTab_Viewport(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_Details(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_Outliner(const FSpawnTabArgs& Args);
+	TSharedRef<SDockTab> SpawnTab_Palette(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_Sequencer(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_PrefabRawDataViewer(const FSpawnTabArgs& Args);
 
