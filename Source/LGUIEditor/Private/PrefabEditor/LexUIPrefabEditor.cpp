@@ -668,6 +668,35 @@ void FLexUIPrefabEditor::SaveEditorState()
 
 void FLexUIPrefabEditor::OnApply()
 {
+	// UMG BindWidget-style pass, run just before the prefab is written: auto-wire any null
+	// Instance-Editable companion variable to the same-named descendant, and warn about
+	// bindings the serializer would silently drop (dangling / not Instance-Editable / ambiguous).
+	if (ULexWidget* RootWidget = GetLoadedRootWidget())
+	{
+		TArray<FString> BoundDetails, Problems;
+		LexUIPrefabBehaviourUtils::AutoBindAndValidate(RootWidget, BoundDetails, Problems);
+		if (BoundDetails.Num() > 0)
+		{
+			if (auto Helper = GetPrefabHelperObject())
+			{
+				Helper->Modify();
+				Helper->SetAnythingDirty();
+			}
+			FNotificationInfo Info(FText::Format(LOCTEXT("AutoBindOnApply", "Auto-bound {0} variable(s):\n{1}")
+				, FText::AsNumber(BoundDetails.Num()), FText::FromString(FString::Join(BoundDetails, TEXT("\n")))));
+			Info.ExpireDuration = 5.0f;
+			FSlateNotificationManager::Get().AddNotification(Info);
+		}
+		if (Problems.Num() > 0)
+		{
+			FNotificationInfo Info(FText::Format(LOCTEXT("AutoBindProblemsOnApply", "Companion binding issues:\n{0}")
+				, FText::FromString(FString::Join(Problems, TEXT("\n")))));
+			Info.ExpireDuration = 8.0f;
+			Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
+			FSlateNotificationManager::Get().AddNotification(Info);
+		}
+	}
+
 	GetPrefabHelperObject()->SavePrefab();
 }
 

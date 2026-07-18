@@ -386,6 +386,135 @@ FName AddEventHandler(UBlueprint* InBlueprint, ULexWidget* InRootWidget, const F
 	return HandlerName;
 }
 
+// The descendant widget a bound value belongs to (for the "still in this prefab" check):
+// a widget is itself, a behaviour/visual reports the widget it lives on.
+static ULexWidget* OwnerWidgetOfBoundValue(UObject* InValue)
+{
+	if (InValue == nullptr) return nullptr;
+	if (auto Widget = Cast<ULexWidget>(InValue)) return Widget;
+	if (auto Behaviour = Cast<ULexUIBehaviour>(InValue)) return Behaviour->GetWidget();
+	if (auto Visual = Cast<ULexVisual>(InValue)) return Visual->GetTypedOuter<ULexWidget>();
+	return nullptr;
+}
+
+void AutoBindAndValidate(ULexWidget* InRootWidget, TArray<FString>& OutBoundDetails, TArray<FString>& OutProblems)
+{
+	OutBoundDetails.Reset();
+	OutProblems.Reset();
+	if (InRootWidget == nullptr) return;
+
+	// Flatten the subtree and index widgets by their sanitized display name (the same key
+	// PromoteToVariable / MakeVariableNameForTarget mint variables from). Names collect into
+	// arrays so duplicates surface as ambiguity instead of an arbitrary silent pick.
+	TArray<ULexWidget*> Subtree;
+	TMap<FString, TArray<ULexWidget*>> NameToWidgets;
+	{
+		TArray<ULexWidget*> Stack;
+		Stack.Add(InRootWidget);
+		while (Stack.Num() > 0)
+		{
+			ULexWidget* Widget = Stack.Pop();
+			if (Widget == nullptr) continue;
+			Subtree.Add(Widget);
+			NameToWidgets.FindOrAdd(MakeVariableNameForTarget(Widget)).Add(Widget);
+			for (ULexWidget* Child : Widget->GetChildren())
+			{
+				Stack.Add(Child);
+			}
+		}
+	}
+	const TSet<ULexWidget*> SubtreeSet(Subtree);
+
+	// Companion logic lives on the root widget's behaviours; only blueprint-declared object
+	// properties are candidates (native fields on ULexWidget/UUIButton/etc. are not ours to bind).
+	for (ULexUIBehaviour* Component : InRootWidget->GetAllComponents())
+	{
+		if (Component == nullptr) continue;
+		UClass* ComponentClass = Component->GetClass();
+		if (ComponentClass->ClassGeneratedBy == nullptr) continue;//blueprint behaviours only
+
+		for (TFieldIterator<FObjectPropertyBase> It(ComponentClass); It; ++It)
+		{
+			FObjectPropertyBase* Prop = *It;
+			// Skip native properties -- only variables declared on the companion blueprint itself.
+			if (Cast<UBlueprintGeneratedClass>(Prop->GetOwnerClass()) == nullptr) continue;
+			UClass* TargetClass = Prop->PropertyClass;
+			if (TargetClass == nullptr) continue;
+			const bool bBindable =
+				TargetClass->IsChildOf(ULexWidget::StaticClass())
+				|| TargetClass->IsChildOf(ULexVisual::StaticClass())
+				|| TargetClass->IsChildOf(ULexUIBehaviour::StaticClass());
+			if (!bBindable) continue;
+
+			const FString VarName = Prop->GetName();
+			// LexUI's prefab writer drops CPF_DisableEditOnInstance -- a non-Instance-Editable
+			// reference silently comes back null after save/load, so never rely on one.
+			const bool bSavable = (Prop->PropertyFlags & CPF_DisableEditOnInstance) == 0;
+			UObject* Value = Prop->GetObjectPropertyValue_InContainer(Component);
+
+			if (Value != nullptr)
+			{
+				// Validate an existing binding: still inside this prefab, and actually savable.
+				ULexWidget* OwnerWidget = OwnerWidgetOfBoundValue(Value);
+				if (!IsValid(Value) || OwnerWidget == nullptr || !SubtreeSet.Contains(OwnerWidget))
+				{
+					OutProblems.Add(FString::Printf(TEXT("'%s' points to '%s', which is not in this prefab -- the reference will not save.")
+						, *VarName, *GetNameSafe(Value)));
+				}
+				else if (!bSavable)
+				{
+					OutProblems.Add(FString::Printf(TEXT("'%s' is bound but not Instance Editable -- it will come back empty after save. Promote via the menu to fix.")
+						, *VarName));
+				}
+				continue;
+			}
+
+			if (!bSavable) continue;//can't persist a bind here; leave it to Promote to fix the flag
+
+			// Null + savable + name matches a descendant -> UMG BindWidget: wire it up.
+			TArray<ULexWidget*>* Matches = NameToWidgets.Find(VarName);
+			if (Matches == nullptr || Matches->Num() == 0) continue;
+			if (Matches->Num() > 1)
+			{
+				OutProblems.Add(FString::Printf(TEXT("'%s' matches %d widgets by name -- rename to disambiguate, or bind it by hand.")
+					, *VarName, Matches->Num()));
+				continue;
+			}
+
+			ULexWidget* MatchWidget = (*Matches)[0];
+			UObject* NewValue = nullptr;
+			FString BoundKind;
+			if (TargetClass->IsChildOf(ULexWidget::StaticClass()))
+			{
+				if (MatchWidget->IsA(TargetClass)) { NewValue = MatchWidget; BoundKind = TEXT("widget"); }
+			}
+			else if (TargetClass->IsChildOf(ULexVisual::StaticClass()))
+			{
+				ULexVisual* Visual = MatchWidget->GetVisual();
+				if (Visual && Visual->IsA(TargetClass)) { NewValue = Visual; BoundKind = TEXT("visual"); }
+			}
+			else //ULexUIBehaviour
+			{
+				ULexUIBehaviour* Behaviour = MatchWidget->GetComponent(TargetClass);
+				if (Behaviour) { NewValue = Behaviour; BoundKind = TEXT("behaviour"); }
+			}
+
+			if (NewValue == nullptr)
+			{
+				OutProblems.Add(FString::Printf(TEXT("'%s' matches widget '%s' by name, but its %s is not a '%s'.")
+					, *VarName, *MakeVariableNameForTarget(MatchWidget)
+					, TargetClass->IsChildOf(ULexVisual::StaticClass()) ? TEXT("visual") : TEXT("component")
+					, *TargetClass->GetName()));
+				continue;
+			}
+
+			Component->Modify();
+			Prop->SetObjectPropertyValue_InContainer(Component, NewValue);
+			OutBoundDetails.Add(FString::Printf(TEXT("%s -> %s (%s)"), *VarName, *MakeVariableNameForTarget(MatchWidget), *BoundKind));
+		}
+	}
+}
+
 }//namespace LexUIPrefabBehaviourUtils
 
 #undef LOCTEXT_NAMESPACE
