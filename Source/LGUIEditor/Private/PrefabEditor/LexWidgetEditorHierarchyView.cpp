@@ -10,6 +10,7 @@
 #include "Core/Components/LexVisual.h"
 #include "Core/LexUIBehaviour.h"
 #include "LexUIPrefabBehaviourUtils.h"
+#include "SLexUIPrefabPalette.h"//FLexUIPaletteDragDropOp
 #include "Styling/SlateIconFinder.h"
 #include "Widgets/Layout/SScrollBorder.h"
 #include "Widgets/Input/SSearchBox.h"
@@ -148,6 +149,28 @@ FReply SLexWidgetEditorHierarchyView::OnKeyDown(const FGeometry& MyGeometry, con
 	if (CommandList->ProcessCommandBindings(InKeyEvent))
 	{
 		return FReply::Handled();
+	}
+	return FReply::Unhandled();
+}
+FReply SLexWidgetEditorHierarchyView::OnDragOver(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent)
+{
+	// only reached when no tree row handled the drop (i.e. the empty area below the items)
+	if (DragDropEvent.GetOperationAs<FLexUIPaletteDragDropOp>().IsValid())
+	{
+		return FReply::Handled();
+	}
+	return FReply::Unhandled();
+}
+FReply SLexWidgetEditorHierarchyView::OnDrop(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent)
+{
+	// drop in the empty area -> create under the prefab root widget (UMG-style "add to root")
+	if (auto PaletteOp = DragDropEvent.GetOperationAs<FLexUIPaletteDragDropOp>())
+	{
+		if (auto Editor = Manager.Pin())
+		{
+			PaletteOp->CreateUnder(Editor->GetLoadedRootWidget());
+			return FReply::Handled();
+		}
 	}
 	return FReply::Unhandled();
 }
