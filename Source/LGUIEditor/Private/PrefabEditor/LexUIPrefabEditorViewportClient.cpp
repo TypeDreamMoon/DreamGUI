@@ -36,7 +36,8 @@
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditorViewportClient"
 
-IMPLEMENT_HIT_PROXY(HLevelSocketProxy, HHitProxy);
+// UE5.8: HLevelSocketProxy is now declared AND implemented/exported by the engine
+// (ViewportSelectionUtilities.h), so re-implementing it here is a duplicate (C4273).
 
 class FLexUITransformWidget
 {

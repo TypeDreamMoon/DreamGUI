@@ -8,6 +8,7 @@
 #include "SceneView.h"
 #include "PipelineStateCache.h"
 #include "SceneRendering.h"
+#include "RenderTargetPool.h"//UE5.8: GRenderTargetPool no longer transitively included
 #include "Core/LexUIRender/ILexUIRendererPrimitive.h"
 #include "Core/Components/LexCanvas.h"
 #include "MeshPassProcessor.inl"

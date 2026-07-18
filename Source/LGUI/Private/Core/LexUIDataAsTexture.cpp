@@ -119,7 +119,7 @@ bool ULexUIDataAsTexture::ExpandTexture()
 					((FTexture2DDynamicResource*)NewTexture->GetResource())->GetTexture2DRHI(),
 					CopyInfo
 				);
-				RHICmdList.FlushResources();//Flush resource, or the texture will not show correct result
+				RHIFlushResources();//UE5.8: FRHICommandListImmediate::FlushResources removed; global RHIFlushResources replaces it
 			});
 	}
 	// set start position to bottom
