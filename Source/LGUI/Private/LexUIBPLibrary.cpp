@@ -6,10 +6,65 @@
 #include "Framework/Application/SlateApplication.h"
 #include "LGUI.h"
 #include "Core/Components/LexWidget.h"
+#include "Core/LexScreenUISubsystem.h"
 #include "Event/LexScreenSpaceRaycaster.h"
 #include "PrefabSystem/LexUIPrefab.h"
 
 #include LEXUIPREFAB_SERIALIZER_NEWEST_INCLUDE
+
+ULexWidget* ULexUIBPLibrary::GetOrCreateScreenSpaceUIRoot(UObject* WorldContextObject)
+{
+	if (ULexScreenUISubsystem* ScreenUI = ULexScreenUISubsystem::GetLexScreenUISubsystem(WorldContextObject))
+	{
+		return ScreenUI->GetOrCreateScreenRoot();
+	}
+	return nullptr;
+}
+
+ULexWidget* ULexUIBPLibrary::LoadPrefabToScreen(UObject* WorldContextObject, ULexUIPrefab* InPrefab, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake, int32 SortOrder)
+{
+	if (!IsValid(InPrefab))
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d InPrefab is not valid."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		return nullptr;
+	}
+
+	ULexScreenUISubsystem* ScreenUI = ULexScreenUISubsystem::GetLexScreenUISubsystem(WorldContextObject);
+	ULexWidget* ScreenRoot = ScreenUI ? ScreenUI->GetOrCreateScreenRoot() : nullptr;
+	if (!ScreenRoot)
+	{
+		return nullptr;
+	}
+
+	ULexWidget* Page = InPrefab->LoadPrefab(WorldContextObject, ScreenRoot, InCallbackBeforeAwake, true);
+	if (Page)
+	{
+		ScreenUI->AddToViewport(Page, SortOrder);
+	}
+	return Page;
+}
+
+ULexWidget* ULexUIBPLibrary::AddPrefabToViewport(UObject* WorldContextObject, ULexUIPrefab* InPrefab, int32 SortOrder)
+{
+	return LoadPrefabToScreen(WorldContextObject, InPrefab, FLexUIPrefab_LoadPrefabCallback(), SortOrder);
+}
+
+void ULexUIBPLibrary::RemoveFromViewport(UObject* WorldContextObject, ULexWidget* InRoot)
+{
+	if (ULexScreenUISubsystem* ScreenUI = ULexScreenUISubsystem::GetLexScreenUISubsystem(WorldContextObject))
+	{
+		ScreenUI->RemoveFromViewport(InRoot);
+	}
+}
+
+bool ULexUIBPLibrary::IsInViewport(UObject* WorldContextObject, ULexWidget* InRoot)
+{
+	if (const ULexScreenUISubsystem* ScreenUI = ULexScreenUISubsystem::GetLexScreenUISubsystem(WorldContextObject))
+	{
+		return ScreenUI->IsInViewport(InRoot);
+	}
+	return false;
+}
 
 ULexWidget* ULexUIBPLibrary::DuplicateWidget(UObject* WorldContextObject, ULexWidget* Target, ULexWidget* Parent)
 {

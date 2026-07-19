@@ -33,6 +33,25 @@ class LGUI_API ULexUIBPLibrary : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
+	/** Return the world's shared ScreenSpaceOverlay root, creating it on demand. */
+	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject"), Category = "LGUI|Screen")
+	static ULexWidget* GetOrCreateScreenSpaceUIRoot(UObject* WorldContextObject);
+
+	/** Load a prefab under the shared screen root and track it as a viewport page. */
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "InCallbackBeforeAwake,SortOrder", UnsafeDuringActorConstruction = "true", WorldContext = "WorldContextObject", AutoCreateRefTerm = "InCallbackBeforeAwake"), Category = "LGUI|Screen")
+	static ULexWidget* LoadPrefabToScreen(UObject* WorldContextObject, ULexUIPrefab* InPrefab, const FLexUIPrefab_LoadPrefabCallback& InCallbackBeforeAwake, int32 SortOrder = 0);
+
+	/** UMG-style CreateWidget + AddToViewport convenience node for a LexUI prefab. */
+	UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "SortOrder", UnsafeDuringActorConstruction = "true", WorldContext = "WorldContextObject"), Category = "LGUI|Screen")
+	static ULexWidget* AddPrefabToViewport(UObject* WorldContextObject, ULexUIPrefab* InPrefab, int32 SortOrder = 0);
+
+	/** Destroy a tracked viewport page and remove it from the screen registry. */
+	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject"), Category = "LGUI|Screen")
+	static void RemoveFromViewport(UObject* WorldContextObject, ULexWidget* InRoot);
+
+	UFUNCTION(BlueprintPure, meta = (WorldContext = "WorldContextObject"), Category = "LGUI|Screen")
+	static bool IsInViewport(UObject* WorldContextObject, ULexWidget* InRoot);
+
 	/**
 	 * Duplicate actor and all it's children actors
 	 * If duplicate same actor for multiple times, then use PrepareDuplicateData node to get data, and pass the data to DuplicateActorWithPreparedData.

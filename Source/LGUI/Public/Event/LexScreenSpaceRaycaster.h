@@ -21,6 +21,13 @@ class LGUI_API ULexScreenSpaceRaycaster : public ULexBaseRaycaster
 public:	
 	ULexScreenSpaceRaycaster();
 	virtual void BeginPlay()override;
+
+	/** Bind the screen-space root used for projection and hit testing. */
+	UFUNCTION(BlueprintCallable, Category = "LGUI|Screen")
+	void SetRootCanvas(ULexCanvas* InRootCanvas);
+
+	UFUNCTION(BlueprintPure, Category = "LGUI|Screen")
+	ULexCanvas* GetRootCanvas() const { return RootCanvas.Get(); }
 protected:
 	/** ray length for line trace hit */
 	UPROPERTY(EditAnywhere, Category = LGUI)

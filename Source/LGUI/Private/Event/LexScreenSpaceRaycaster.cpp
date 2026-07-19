@@ -10,14 +10,23 @@
 
 ULexScreenSpaceRaycaster::ULexScreenSpaceRaycaster()
 {
+	DragThresholdSquare = DragThreshold * DragThreshold;
 }
 
 void ULexScreenSpaceRaycaster::BeginPlay()
 {
 	Super::BeginPlay();
+	DragThresholdSquare = DragThreshold * DragThreshold;
+	if (RootCanvas.IsValid()
+		&& (!RootCanvas->IsRootCanvas() || RootCanvas->GetActualRenderMode() != ELexRenderMode::ScreenSpaceOverlay))
+	{
+		UE_LOG(LGUI, Error, TEXT("[%s].%d Assigned RootCanvas is not a ScreenSpaceOverlay root canvas."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		RootCanvas = nullptr;
+	}
 	if (!RootCanvas.IsValid())
 	{
-		auto WidgetPresenter = GetOwner()->FindComponentByClass<ULexWidgetPresenterComponentBase>();
+		const AActor* Owner = GetOwner();
+		auto WidgetPresenter = Owner ? Owner->FindComponentByClass<ULexWidgetPresenterComponentBase>() : nullptr;
 		if (!WidgetPresenter)
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d LexWidgetPresenterComponent is not valid! LexUIScreenSpaceRaycaster can only attach to a Actor which contains a ULexWidgetPresenterComponent!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
@@ -31,6 +40,11 @@ void ULexScreenSpaceRaycaster::BeginPlay()
 		}
 		RootCanvas = Canvas;
 	}
+}
+
+void ULexScreenSpaceRaycaster::SetRootCanvas(ULexCanvas* InRootCanvas)
+{
+	RootCanvas = InRootCanvas;
 }
 
 bool ULexScreenSpaceRaycaster::GetAffectByGamePause()const
