@@ -8,6 +8,7 @@
 #include "DragAndDrop/DecoratedDragDropOp.h"
 #include "Widgets/SCompoundWidget.h"
 #include "Widgets/Views/STreeView.h"
+#include "LexUIControlRegistry.h"
 
 class FLexUIPrefabEditor;
 class ULexWidget;
@@ -26,11 +27,12 @@ public:
 	bool bIsBasicWidget = false;// true: ULexWidget + VisualClass; false: instantiate PrefabPath
 	TWeakObjectPtr<UClass> VisualClass;
 	bool bSetDefaultSprite = false;
+	TSharedPtr<FLexUIControlDescriptor> NativeDescriptor;
 	FString PrefabPath;
 	FString DisplayName;
 
 	/** Create this element under InParentWidget (no-op if null / incompatible, like the menu). */
-	void CreateUnder(ULexWidget* InParentWidget)const;
+	ULexWidget* CreateUnder(ULexWidget* InParentWidget, TFunction<void(ULexWidget*)> AfterCreate = nullptr)const;
 };
 
 /**
@@ -48,6 +50,7 @@ public:
 	SLATE_BEGIN_ARGS(SLexUIPrefabPalette) {}
 	SLATE_END_ARGS()
 
+	virtual ~SLexUIPrefabPalette() override;
 	void Construct(const FArguments& InArgs, TSharedPtr<FLexUIPrefabEditor> InPrefabEditor);
 
 private:
@@ -57,6 +60,7 @@ private:
 		Category,   // header
 		BasicWidget,// ULexWidget + optional Visual class (VisualClass, may be null)
 		Prefab,     // instantiate a prefab by path (built-in control OR project asset)
+		Native,     // registry recipe (layout/behaviour/optional factory)
 	};
 
 	struct FPaletteItem
@@ -69,6 +73,9 @@ private:
 		// Prefab:
 		FString PrefabPath;
 		FAssetData PrefabAsset;// valid only for project prefabs (thumbnail/browse)
+		TSharedPtr<FLexUIControlDescriptor> NativeDescriptor;
+		bool bValid = true;
+		FText ValidationError;
 		TArray<TSharedPtr<FPaletteItem>> Children;
 	};
 	typedef TSharedPtr<FPaletteItem> FItemPtr;
@@ -93,4 +100,5 @@ private:
 	TSharedPtr<STreeView<FItemPtr>> TreeView;
 	TArray<FItemPtr> RootItems;
 	FTextFilterExpressionEvaluator SearchFilter{ ETextFilterExpressionEvaluatorMode::BasicString };
+	FDelegateHandle RegistryChangedHandle;
 };

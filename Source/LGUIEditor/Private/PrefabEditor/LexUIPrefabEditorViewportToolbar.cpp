@@ -2,6 +2,7 @@
 
 #include "LexUIPrefabEditorViewportToolbar.h"
 #include "LexUIPrefabEditorViewport.h"
+#include "LexUIPrefabEditor.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "Styling/AppStyle.h"
 #include "ToolMenus.h"
@@ -9,6 +10,12 @@
 #include "ToolMenuEntry.h"
 #include "ToolMenuSection.h"
 #include "Widgets/Layout/SBorder.h"
+#include "Widgets/Layout/SBox.h"
+#include "Widgets/Input/SCheckBox.h"
+#include "Widgets/Input/SComboButton.h"
+#include "Widgets/Images/SImage.h"
+#include "Widgets/SNullWidget.h"
+#include "Widgets/Text/STextBlock.h"
 #include "EditorViewportCommands.h"
 #include "EditorViewportClient.h"
 #include "ViewportToolbar/UnrealEdViewportToolbar.h"
@@ -113,6 +120,8 @@ void SLexUIPrefabEditorViewportToolbar::Construct(const FArguments& InArgs, TSha
 	// Since that menu is shared across editors we cannot trim it without affecting everyone, so
 	// here we build a dedicated toolbar that only exposes the Camera and View Modes buttons.
 	TSharedRef<SEditorViewport> ViewportRef = GetInfoProvider().GetViewportWidget();
+	TSharedRef<SLexUIPrefabEditorViewport> LexViewport = StaticCastSharedRef<SLexUIPrefabEditorViewport>(ViewportRef);
+	TWeakPtr<FLexUIPrefabEditor> WeakEditor = LexViewport->GetPrefabEditor();
 
 	static const FName LexUIViewportToolbarName = TEXT("LexUIPrefabEditor.ViewportToolbar");
 	if (!UToolMenus::Get()->IsMenuRegistered(LexUIViewportToolbarName))
@@ -149,7 +158,96 @@ void SLexUIPrefabEditorViewportToolbar::Construct(const FArguments& InArgs, TSha
 		.BorderImage(FAppStyle::GetBrush(TEXT("EditorViewportToolBar.Background")))
 		.Cursor(EMouseCursor::Default)
 		[
-			ToolMenuWidget
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			[
+				SNew(SCheckBox)
+				.Style(FAppStyle::Get(), "ToggleButtonCheckbox")
+				.ToolTipText(LOCTEXT("DesignerSnapTooltip", "Snap 2D designer movement and resize operations to the selected grid size."))
+				.IsChecked_Lambda([WeakEditor]()
+				{
+					if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())return Editor->IsDesignerGridSnapEnabled() ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+					return ECheckBoxState::Unchecked;
+				})
+				.OnCheckStateChanged_Lambda([WeakEditor](ECheckBoxState)
+				{
+					if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())Editor->ToggleDesignerGridSnap();
+				})
+				[
+					SNew(SBox).WidthOverride(22).HeightOverride(22).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					[
+						SNew(SImage).Image(FAppStyle::GetBrush("Icons.Snap"))
+					]
+				]
+			]
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			[
+				SNew(SComboButton)
+				.HasDownArrow(true)
+				.ToolTipText(LOCTEXT("DesignerGridSizeTooltip", "2D designer grid size."))
+				.OnGetMenuContent_Lambda([WeakEditor]() -> TSharedRef<SWidget>
+				{
+					FMenuBuilder MenuBuilder(true, nullptr);
+					for (float GridSize : { 1.0f, 5.0f, 10.0f, 25.0f, 50.0f, 100.0f })
+					{
+						MenuBuilder.AddMenuEntry(FText::AsNumber(GridSize), FText::GetEmpty(), FSlateIcon(),
+							FUIAction(FExecuteAction::CreateLambda([WeakEditor, GridSize]()
+							{
+								if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())Editor->SetDesignerGridSize(GridSize);
+							}), FCanExecuteAction(), FIsActionChecked::CreateLambda([WeakEditor, GridSize]()
+							{
+								if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())return FMath::IsNearlyEqual(Editor->GetDesignerGridSize(), GridSize);
+								return false;
+							})), NAME_None, EUserInterfaceActionType::RadioButton);
+					}
+					return MenuBuilder.MakeWidget();
+				})
+				.ButtonContent()
+				[
+					SNew(STextBlock).Text_Lambda([WeakEditor]()
+					{
+						if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())return FText::AsNumber(Editor->GetDesignerGridSize());
+						return FText::GetEmpty();
+					})
+				]
+			]
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			[
+				SNew(SCheckBox)
+				.Style(FAppStyle::Get(), "ToggleButtonCheckbox")
+				.ToolTipText(LOCTEXT("DesignerGuidesTooltip", "Show 2D designer snapping guides while manipulating widgets."))
+				.IsChecked_Lambda([WeakEditor]()
+				{
+					if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())return Editor->GetShowDesignerGuides() ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+					return ECheckBoxState::Unchecked;
+				})
+				.OnCheckStateChanged_Lambda([WeakEditor](ECheckBoxState)
+				{
+					if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())Editor->ToggleDesignerGuides();
+				})
+				[
+					SNew(SBox).WidthOverride(22).HeightOverride(22).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					[
+						SNew(SImage).Image(FAppStyle::GetBrush("ViewportToolbar.SetShowGrid"))
+					]
+				]
+			]
+			+ SHorizontalBox::Slot()
+			.FillWidth(1.0f)
+			[
+				SNullWidget::NullWidget
+			]
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			[
+				ToolMenuWidget
+			]
 		]
 	];
 

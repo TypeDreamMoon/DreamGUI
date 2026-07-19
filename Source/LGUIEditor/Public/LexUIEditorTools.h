@@ -24,6 +24,10 @@ public:
 	static TArray<ULexWidget*> GetRootWidgetListFromSelection(const TArray<ULexWidget*>& InSelectedWidgets);
 	static void CreateWidget(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString Name, UClass* VisualClass, TFunction<void(class ULexWidget*)> Callback);
 	static void CreateUIControls(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString InPrefabPath);
+	static ULexWidget* CreateWidgetAndReturn(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString Name, UClass* VisualClass, TFunction<void(class ULexWidget*)> Callback);
+	static ULexWidget* CreateUIControlsAndReturn(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString InPrefabPath, TFunction<void(class ULexWidget*)> Callback = nullptr);
+	static void CreateRegisteredControl(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FName ControlName);
+	static ULexWidget* CreateRegisteredControlAndReturn(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FName ControlName, TFunction<void(class ULexWidget*)> Callback = nullptr);
 	static void DuplicateWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction);
 	static void CopyWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction);
 	static void PasteWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetFunction);

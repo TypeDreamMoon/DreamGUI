@@ -1149,12 +1149,6 @@ void SLexUIPrefabEditorDetails::OnComponentSelectionChanged(const TArray<TWeakOb
 {
 	bIsSelectFromComponentList = true;
 
-	if (!GIsTransacting)
-	{
-		GEditor->BeginTransaction(LOCTEXT("SelectionChanged_Transaction", "Select Component"));
-	}
-	ULexUISelection::GetInstance(World.Get())->Modify();
-
 	TArray<UObject*> SelectedObjects;
 	TArray<ULexUIBehaviour*> ValidSelectedComponents;
 	for (const TWeakObjectPtr<ULexUIBehaviour>& SelectedComponent : SelectedComponents)
@@ -1200,11 +1194,6 @@ void SLexUIPrefabEditorDetails::OnComponentSelectionChanged(const TArray<TWeakOb
 			Selection->SelectComponent(Component);
 		}
 	}
-	if (!GIsTransacting)
-	{
-		GEditor->EndTransaction();
-	}
-
 	bIsSelectFromComponentList = false;
 }
 

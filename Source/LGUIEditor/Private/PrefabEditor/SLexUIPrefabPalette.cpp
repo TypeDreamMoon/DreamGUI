@@ -8,6 +8,7 @@
 #include "Core/Components/LexImage.h"
 #include "Core/Components/LexRectBlock.h"
 #include "Core/LexUISpriteData.h"
+#include "Core/Components/LexLayout.h"
 #include "PrefabSystem/LexUIPrefab.h"
 
 #include "AssetRegistry/IAssetRegistry.h"
@@ -21,23 +22,18 @@
 
 #define LOCTEXT_NAMESPACE "LexUIPrefabPalette"
 
-namespace SLexUIPrefabPaletteLocal
+SLexUIPrefabPalette::~SLexUIPrefabPalette()
 {
-	// built-in control prefabs, same list as the "Create UI Element" context menu
-	static const TCHAR* ControlNames[] =
+	if (RegistryChangedHandle.IsValid())
 	{
-		TEXT("Button"), TEXT("Toggle"), TEXT("ToggleGroup"),
-		TEXT("HorizontalSlider"), TEXT("VerticalSlider"),
-		TEXT("HorizontalScrollbar"), TEXT("VerticalScrollbar"),
-		TEXT("Dropdown"), TEXT("TextInput"), TEXT("TextInputMultiline"),
-		TEXT("HorizontalScrollView"), TEXT("VerticalScrollView"),
-		TEXT("HorizontalRecyclableScrollView"), TEXT("VerticalRecyclableScrollView"),
-	};
+		FLexUIControlRegistry::Get().OnChanged().Remove(RegistryChangedHandle);
+	}
 }
 
 void SLexUIPrefabPalette::Construct(const FArguments& InArgs, TSharedPtr<FLexUIPrefabEditor> InPrefabEditor)
 {
 	PrefabEditorPtr = InPrefabEditor;
+	RegistryChangedHandle = FLexUIControlRegistry::Get().OnChanged().AddSP(SharedThis(this), &SLexUIPrefabPalette::RebuildList);
 
 	ChildSlot
 	[
@@ -101,18 +97,30 @@ void SLexUIPrefabPalette::CollectBasics(TArray<FItemPtr>& Out)
 
 void SLexUIPrefabPalette::CollectControls(TArray<FItemPtr>& Out)
 {
-	auto Header = MakeShared<FPaletteItem>();
-	Header->Kind = EItemKind::Category;
-	Header->DisplayName = TEXT("Controls");
-	for (const TCHAR* Name : SLexUIPrefabPaletteLocal::ControlNames)
+	TMap<FName, FItemPtr> CategoryMap;
+	TArray<FName> CategoryOrder;
+	for (const FLexUIControlDescriptor& Descriptor : FLexUIControlRegistry::Get().GetDescriptors())
 	{
+		FItemPtr& Header = CategoryMap.FindOrAdd(Descriptor.Category);
+		if (!Header.IsValid())
+		{
+			Header = MakeShared<FPaletteItem>();
+			Header->Kind = EItemKind::Category;
+			Header->DisplayName = Descriptor.Category.ToString();
+			CategoryOrder.Add(Descriptor.Category);
+		}
 		auto Item = MakeShared<FPaletteItem>();
-		Item->Kind = EItemKind::Prefab;
-		Item->DisplayName = Name;
-		Item->PrefabPath = FLexUIEditorTools::LexUIPresetPrefabPath + Name;
+		Item->Kind = Descriptor.CreationKind == ELexUIControlCreationKind::Prefab ? EItemKind::Prefab : EItemKind::Native;
+		Item->DisplayName = Descriptor.DisplayName.ToString();
+		Item->PrefabPath = Descriptor.PrefabPath;
+		Item->NativeDescriptor = MakeShared<FLexUIControlDescriptor>(Descriptor);
+		Item->bValid = FLexUIControlRegistry::Get().Validate(Descriptor, Item->ValidationError);
 		Header->Children.Add(Item);
 	}
-	Out.Add(Header);
+	for (FName Category : CategoryOrder)
+	{
+		Out.Add(CategoryMap.FindChecked(Category));
+	}
 }
 
 void SLexUIPrefabPalette::CollectPrefabs(TArray<FItemPtr>& Out)
@@ -209,10 +217,13 @@ TSharedRef<ITableRow> SLexUIPrefabPalette::OnGenerateRow(FItemPtr InItem, const 
 
 	// element row: icon (visual class or a generic UI icon) + name
 	UClass* IconClass = InItem->VisualClass.IsValid() ? InItem->VisualClass.Get() : ULexWidget::StaticClass();
-	const FText Tooltip = InItem->Kind == EItemKind::Prefab
+	const FText Tooltip = !InItem->bValid
+		? InItem->ValidationError
+		: InItem->Kind == EItemKind::Prefab
 		? FText::Format(LOCTEXT("PrefabRowTooltip", "{0}\nDouble-click to add under the selected widget."), FText::FromString(InItem->PrefabPath))
 		: FText::Format(LOCTEXT("BasicRowTooltip", "{0}\nDouble-click, or drag onto an Outliner widget, to add it under that widget."), FText::FromString(InItem->DisplayName));
 	return SNew(STableRow<FItemPtr>, OwnerTable)
+		.IsEnabled(InItem->bValid)
 		.Padding(FMargin(2, 2))
 		.ToolTipText(Tooltip)
 		.OnDragDetected(FOnDragDetected::CreateSP(this, &SLexUIPrefabPalette::OnItemDragDetected, InItem))
@@ -244,7 +255,7 @@ void SLexUIPrefabPalette::OnGetChildren(FItemPtr InItem, TArray<FItemPtr>& OutCh
 
 void SLexUIPrefabPalette::OnItemDoubleClick(FItemPtr InItem)
 {
-	if (!InItem.IsValid())return;
+	if (!InItem.IsValid() || !InItem->bValid)return;
 	if (InItem->Kind == EItemKind::Category)
 	{
 		if (TreeView.IsValid())TreeView->SetItemExpansion(InItem, !TreeView->IsItemExpanded(InItem));
@@ -257,36 +268,39 @@ namespace SLexUIPrefabPaletteLocal
 {
 	// shared create path: the create primitives take a "get parent" function, so double-click
 	// (parent = selection) and drop (parent = drop-target widget) reuse the same logic
-	void CreateElement(bool bIsBasicWidget, UClass* VisualClass, bool bSetDefaultSprite,
-		const FString& PrefabPath, const FString& DisplayName, TFunction<ULexWidget*()> GetParent)
+	ULexWidget* CreateElement(bool bIsBasicWidget, UClass* VisualClass, bool bSetDefaultSprite,
+		const TSharedPtr<FLexUIControlDescriptor>& NativeDescriptor, const FString& PrefabPath,
+		const FString& DisplayName, TFunction<ULexWidget*()> GetParent,
+		TFunction<void(ULexWidget*)> AfterCreate = nullptr)
 	{
 		if (bIsBasicWidget)
 		{
-			TFunction<void(ULexWidget*)> Callback = nullptr;
-			if (bSetDefaultSprite)
+			TFunction<void(ULexWidget*)> Callback = [bSetDefaultSprite, AfterCreate](ULexWidget* InWidget)
 			{
-				Callback = [](ULexWidget* InWidget)
+				if (bSetDefaultSprite)
 				{
 					if (auto Image = Cast<ULexImage>(InWidget->GetVisual()))
 					{
 						Image->SetBrush_LexUISprite(ULexUISpriteData::GetDefaultFrameRect());
 					}
-				};
-			}
-			FLexUIEditorTools::CreateWidget(GetParent, DisplayName, VisualClass, Callback);
+				}
+				if (AfterCreate)AfterCreate(InWidget);
+			};
+			return FLexUIEditorTools::CreateWidgetAndReturn(GetParent, DisplayName, VisualClass, Callback);
 		}
-		else
+		if (NativeDescriptor.IsValid())
 		{
-			FLexUIEditorTools::CreateUIControls(GetParent, PrefabPath);
+			return FLexUIEditorTools::CreateRegisteredControlAndReturn(GetParent, NativeDescriptor->Name, AfterCreate);
 		}
+		return FLexUIEditorTools::CreateUIControlsAndReturn(GetParent, PrefabPath, AfterCreate);
 	}
 }
 
-void FLexUIPaletteDragDropOp::CreateUnder(ULexWidget* InParentWidget)const
+ULexWidget* FLexUIPaletteDragDropOp::CreateUnder(ULexWidget* InParentWidget, TFunction<void(ULexWidget*)> AfterCreate)const
 {
-	if (InParentWidget == nullptr)return;
-	SLexUIPrefabPaletteLocal::CreateElement(bIsBasicWidget, VisualClass.Get(), bSetDefaultSprite,
-		PrefabPath, DisplayName, [InParentWidget]() -> ULexWidget* { return InParentWidget; });
+	if (InParentWidget == nullptr)return nullptr;
+	return SLexUIPrefabPaletteLocal::CreateElement(bIsBasicWidget, VisualClass.Get(), bSetDefaultSprite,
+		NativeDescriptor, PrefabPath, DisplayName, [InParentWidget]() -> ULexWidget* { return InParentWidget; }, AfterCreate);
 }
 
 void SLexUIPrefabPalette::CreateItem(FItemPtr InItem)
@@ -294,17 +308,18 @@ void SLexUIPrefabPalette::CreateItem(FItemPtr InItem)
 	if (!InItem.IsValid() || InItem->Kind == EItemKind::Category)return;
 	// the create primitives no-op (and warn) when nothing suitable is selected
 	SLexUIPrefabPaletteLocal::CreateElement(InItem->Kind == EItemKind::BasicWidget, InItem->VisualClass.Get(),
-		InItem->bSetDefaultSprite, InItem->PrefabPath, InItem->DisplayName,
+		InItem->bSetDefaultSprite, InItem->NativeDescriptor, InItem->PrefabPath, InItem->DisplayName,
 		[this]() -> ULexWidget* { return GetSelectedWidget(); });
 }
 
 FReply SLexUIPrefabPalette::OnItemDragDetected(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent, FItemPtr InItem)
 {
-	if (!InItem.IsValid() || InItem->Kind == EItemKind::Category)return FReply::Unhandled();
+	if (!InItem.IsValid() || !InItem->bValid || InItem->Kind == EItemKind::Category)return FReply::Unhandled();
 	auto Op = MakeShared<FLexUIPaletteDragDropOp>();
 	Op->bIsBasicWidget = (InItem->Kind == EItemKind::BasicWidget);
 	Op->VisualClass = InItem->VisualClass;
 	Op->bSetDefaultSprite = InItem->bSetDefaultSprite;
+	Op->NativeDescriptor = InItem->NativeDescriptor;
 	Op->PrefabPath = InItem->PrefabPath;
 	Op->DisplayName = InItem->DisplayName;
 	Op->Construct();

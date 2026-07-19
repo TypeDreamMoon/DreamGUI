@@ -4,6 +4,9 @@
 #include "LexUIPrefabEditorViewportClient.h"
 #include "LexUIPrefabEditor.h"
 #include "LexUIPrefabEditorViewportToolbar.h"
+#include "SLexUIPrefabPalette.h"
+#include "Core/LexUIManager.h"
+#include "Framework/Application/SlateApplication.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditorViewport"
 
@@ -39,6 +42,96 @@ EVisibility SLexUIPrefabEditorViewport::GetTransformToolbarVisibility() const
 void SLexUIPrefabEditorViewport::OnFocusViewportToSelection()
 {
 	EditorViewportClient->FocusViewportToTargets();
+}
+
+FReply SLexUIPrefabEditorViewport::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+	if (MouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
+	{
+		RightMouseDownPosition = MouseEvent.GetScreenSpacePosition();
+	}
+	return SEditorViewport::OnMouseButtonDown(MyGeometry, MouseEvent);
+}
+
+FReply SLexUIPrefabEditorViewport::OnMouseButtonUp(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+	FReply Reply = SEditorViewport::OnMouseButtonUp(MyGeometry, MouseEvent);
+	if (MouseEvent.GetEffectingButton() == EKeys::RightMouseButton
+		&& FVector2D::Distance(RightMouseDownPosition, MouseEvent.GetScreenSpacePosition()) <= 4.0f)
+	{
+		if (TSharedPtr<FLexUIPrefabEditor> Editor = PrefabEditorPtr.Pin())
+		{
+			if (TSharedPtr<SWidget> MenuContent = Editor->BuildWidgetContextMenu())
+			{
+				FSlateApplication::Get().PushMenu(AsShared(), FWidgetPath(), MenuContent.ToSharedRef(),
+					MouseEvent.GetScreenSpacePosition(), FPopupTransitionEffect(FPopupTransitionEffect::ContextMenu));
+				return FReply::Handled();
+			}
+		}
+	}
+	return Reply;
+}
+
+namespace LexUIPrefabViewportLocal
+{
+	static FIntPoint ToViewportPixel(const FGeometry& Geometry, const FVector2D& ScreenPosition, FViewport* Viewport)
+	{
+		if (!Viewport)return FIntPoint::ZeroValue;
+		const FVector2D LocalPosition = Geometry.AbsoluteToLocal(ScreenPosition);
+		const FVector2D LocalSize = Geometry.GetLocalSize();
+		const FIntPoint ViewportSize = Viewport->GetSizeXY();
+		return FIntPoint(
+			FMath::RoundToInt(LocalSize.X > 0 ? LocalPosition.X * ViewportSize.X / LocalSize.X : 0),
+			FMath::RoundToInt(LocalSize.Y > 0 ? LocalPosition.Y * ViewportSize.Y / LocalSize.Y : 0));
+	}
+}
+
+FReply SLexUIPrefabEditorViewport::OnDragOver(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent)
+{
+	if (DragDropEvent.GetOperationAs<FLexUIPaletteDragDropOp>().IsValid() && EditorViewportClient.IsValid())
+	{
+		const FIntPoint Pixel = LexUIPrefabViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
+		ULexWidget* Target = EditorViewportClient->GetWidgetUnderCursor(Pixel.X, Pixel.Y);
+		if (!Target)
+		{
+			if (TSharedPtr<FLexUIPrefabEditor> Editor = PrefabEditorPtr.Pin())Target = Editor->GetLoadedRootWidget();
+		}
+		EditorViewportClient->SetPaletteDropPreview(Target);
+		return Target ? FReply::Handled() : FReply::Unhandled();
+	}
+	return SEditorViewport::OnDragOver(MyGeometry, DragDropEvent);
+}
+
+FReply SLexUIPrefabEditorViewport::OnDrop(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent)
+{
+	if (TSharedPtr<FLexUIPaletteDragDropOp> PaletteOp = DragDropEvent.GetOperationAs<FLexUIPaletteDragDropOp>())
+	{
+		TSharedPtr<FLexUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+		if (!Editor.IsValid() || !EditorViewportClient.IsValid())return FReply::Unhandled();
+		const FIntPoint Pixel = LexUIPrefabViewportLocal::ToViewportPixel(MyGeometry, DragDropEvent.GetScreenSpacePosition(), EditorViewportClient->Viewport);
+		ULexWidget* Parent = EditorViewportClient->GetWidgetUnderCursor(Pixel.X, Pixel.Y);
+		if (!Parent)Parent = Editor->GetLoadedRootWidget();
+		FVector DropWorldPosition = FVector::ZeroVector;
+		const bool bHasPosition = EditorViewportClient->GetDropWorldPosition(Pixel.X, Pixel.Y, Parent, DropWorldPosition);
+		ULexWidget* Created = PaletteOp->CreateUnder(Parent, [bHasPosition, DropWorldPosition](ULexWidget* Widget)
+		{
+			if (Widget && bHasPosition)Widget->SetWorldLocation(DropWorldPosition);
+		});
+		EditorViewportClient->ClearPaletteDropPreview();
+		if (Created)
+		{
+			ULexUIManagerWorldSubsystem::GetInstance(Editor->GetWorld())->EventOnOutlineChanged.Broadcast();
+			EditorViewportClient->Invalidate();
+			return FReply::Handled();
+		}
+	}
+	return SEditorViewport::OnDrop(MyGeometry, DragDropEvent);
+}
+
+void SLexUIPrefabEditorViewport::OnDragLeave(const FDragDropEvent& DragDropEvent)
+{
+	if (EditorViewportClient.IsValid())EditorViewportClient->ClearPaletteDropPreview();
+	SEditorViewport::OnDragLeave(DragDropEvent);
 }
 
 TSharedRef<SEditorViewport> SLexUIPrefabEditorViewport::GetViewportWidget()

@@ -16,6 +16,9 @@
 #include "DetailCategoryBuilder.h"
 #include "UnrealEdGlobals.h"
 #include "Core/Components/LexCanvas.h"
+#include "Core/Components/LexPanelLayouts.h"
+#include "Core/Components/LexPanelSlot.h"
+#include "DetailCustomization/LexPanelSlotCustomization.h"
 #include "Editor/UnrealEdEngine.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "Utils/LexUIUtils.h"
@@ -945,6 +948,40 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		LayoutSelfCategory.AddExternalObjects({ LayoutSelf }, EPropertyLocation::Default
 			, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
 		DetailBuilder.HideProperty(LayoutSelf_PH);
+	}
+
+	// Parent-owned slot, presented as a UMG-style Slot category without an object picker.
+	{
+		auto PanelSlot_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, PanelSlot));
+		UObject* PanelSlotObject = nullptr;
+		PanelSlot_PH->GetValue(PanelSlotObject);
+		ULexLayoutContainer* ParentLayout = TargetScriptArray[0]->GetParent() ? TargetScriptArray[0]->GetParent()->GetLayoutContainer() : nullptr;
+		const bool bHasPanelSlot = IsValid(PanelSlotObject) && ParentLayout && ParentLayout->IsA<ULexPanelLayoutBase>();
+		FText SlotType = LOCTEXT("PanelSlotType", "Panel Slot");
+		if (ParentLayout)
+		{
+			if (ParentLayout->IsA<ULexLayoutContainerCanvasPanel>()) SlotType = LOCTEXT("CanvasSlotType", "Canvas Panel Slot");
+			else if (ParentLayout->IsA<ULexLayoutContainerOverlay>()) SlotType = LOCTEXT("OverlaySlotType", "Overlay Slot");
+			else if (ParentLayout->IsA<ULexLayoutContainerHorizontalBox>()) SlotType = LOCTEXT("HorizontalSlotType", "Horizontal Box Slot");
+			else if (ParentLayout->IsA<ULexLayoutContainerVerticalBox>()) SlotType = LOCTEXT("VerticalSlotType", "Vertical Box Slot");
+			else if (ParentLayout->IsA<ULexLayoutContainerStackBox>()) SlotType = LOCTEXT("StackSlotType", "Stack Box Slot");
+			else if (ParentLayout->IsA<ULexLayoutContainerWrapBox>()) SlotType = LOCTEXT("WrapSlotType", "Wrap Box Slot");
+			else if (ParentLayout->IsA<ULexLayoutContainerGridPanel>()) SlotType = LOCTEXT("GridSlotType", "Grid Panel Slot");
+			else if (ParentLayout->IsA<ULexLayoutContainerUniformGridPanel>()) SlotType = LOCTEXT("UniformGridSlotType", "Uniform Grid Slot");
+			else if (ParentLayout->IsA<ULexLayoutContainerSafeZone>()) SlotType = LOCTEXT("SafeZoneSlotType", "Safe Zone Slot");
+			else if (ParentLayout->IsA<ULexLayoutContainerScaleBox>()) SlotType = LOCTEXT("ScaleBoxSlotType", "Scale Box Slot");
+			else if (ParentLayout->IsA<ULexLayoutContainerSizeBox>()) SlotType = LOCTEXT("SizeBoxSlotType", "Size Box Slot");
+		}
+		auto& PanelSlotCategory = DetailBuilder.EditCategory(
+			TEXT("PanelSlot"),
+			FText::Format(LOCTEXT("SlotCategoryFormat", "Slot ({0})"), SlotType),
+			ECategoryPriority::Important);
+		PanelSlotCategory.SetIsEmpty(!bHasPanelSlot);
+		if (bHasPanelSlot)
+		{
+			FLexPanelSlotCustomization::AddSlotProperties(PanelSlotCategory, { PanelSlotObject }, ParentLayout);
+		}
+		DetailBuilder.HideProperty(PanelSlot_PH);
 	}
 
 	//visual

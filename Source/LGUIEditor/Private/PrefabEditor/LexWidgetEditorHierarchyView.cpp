@@ -376,8 +376,6 @@ void SLexWidgetEditorHierarchyView::OnSelectionChanged(TWeakObjectPtr<ULexWidget
 		{
 			if (auto Selection = ULexUISelection::GetInstance(World.Get()))
 			{
-				const FScopedTransaction Transaction(LOCTEXT("SelectionChanged_Transaction", "Select Widgets"));
-				Selection->Modify();
 				Selection->SelectNone();
 				for ( const auto& Widget : NewSelectedItems )
 				{
@@ -623,6 +621,11 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 				}
 			}
 	});
+}
+
+TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::BuildContextMenu()
+{
+	return OnContextMenuOpening();
 }
 
 void SLexWidgetEditorHierarchyView::GetExpandWidgets(TSet<TWeakObjectPtr<ULexWidget>>& OutExpandWidgets)

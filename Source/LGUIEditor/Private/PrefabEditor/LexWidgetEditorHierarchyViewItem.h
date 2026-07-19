@@ -44,6 +44,9 @@ private:
 	void OnNameTextCommited(const FText& InText, ETextCommit::Type CommitInfo);
 	FReply OnToggleVisibility();
 	FText GetVisibilityBrushForWidget() const;
+	FReply OnToggleLockedInDesigner();
+	FText GetLockBrushForWidget() const;
+	FSlateColor GetLockIconColorAndOpacity() const;
 
 	bool SupportDrop(ULexWidget* Dragging, ULexWidget* Current, EItemDropZone DropZone);
 

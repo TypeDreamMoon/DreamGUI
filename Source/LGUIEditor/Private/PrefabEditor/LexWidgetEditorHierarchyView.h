@@ -39,6 +39,7 @@ public:
 	void SetSelectionsByNodeObjects(const TArray<TWeakObjectPtr<ULexWidget>>& ElementArray);
 	void ClearSelection();
 	void GetExpandWidgets(TSet<TWeakObjectPtr<ULexWidget>>& OutExpandWidgets);
+	TSharedPtr<SWidget> BuildContextMenu();
 
 private:
 	/** Rebuilds the tree structure based on the current filter options */

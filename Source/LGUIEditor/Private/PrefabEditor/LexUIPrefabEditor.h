@@ -84,6 +84,18 @@ public:
 
 	void SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bAppendOrToggle, bool bNotifyGEditor = true);
 	const TArray<TWeakObjectPtr<ULexWidget>>& GetSelectedWidgets(){return SelectedWidgets;}
+	bool IsWidgetHiddenInDesigner(const ULexWidget* Widget) const;
+	void SetWidgetHiddenInDesigner(ULexWidget* Widget, bool bHidden);
+	bool IsWidgetLockedInDesigner(const ULexWidget* Widget) const;
+	void SetWidgetLockedInDesigner(ULexWidget* Widget, bool bLocked, bool bRecursive = true);
+	bool IsDesignerGridSnapEnabled() const;
+	void ToggleDesignerGridSnap();
+	float GetDesignerGridSize() const;
+	void SetDesignerGridSize(float GridSize);
+	bool GetShowDesignerGuides() const;
+	void ToggleDesignerGuides();
+	float SnapDesignerValue(float Value) const;
+	TSharedPtr<SWidget> BuildWidgetContextMenu();
 
 	void InitPrefabEditor(const EToolkitMode::Type Mode, const TSharedPtr< class IToolkitHost >& InitToolkitHost, ULexUIPrefab* InPrefab);
 
@@ -184,6 +196,9 @@ public:
 	void WrapSelectedWidgets(ELexUIWrapType WrapType);
 	void SaveEditorState();
 private:
+	FGuid FindOrAddWidgetGuid(ULexWidget* Widget);
+	FGuid FindWidgetGuid(const ULexWidget* Widget) const;
+	void ApplyDesignerState();
 	/** Companion behaviour blueprint for this prefab, created + attached to the root widget on demand. Null on failure. */
 	class UBlueprint* GetOrCreateBehaviourBlueprint();
 public:

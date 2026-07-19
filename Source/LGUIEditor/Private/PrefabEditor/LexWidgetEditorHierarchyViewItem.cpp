@@ -20,6 +20,7 @@
 #include "DragAndDrop/AssetDragDropOp.h"
 #include "SLexUIPrefabPalette.h"//FLexUIPaletteDragDropOp
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
+#include "Framework/Application/SlateApplication.h"
 
 #define LOCTEXT_NAMESPACE "LexWidgetEditorHierarchyViewItem"
 
@@ -470,7 +471,28 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 				]
 			]
 
-			// Visibility
+			// Designer lock
+			+SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			[
+				SNew(SButton)
+				.ContentPadding(FMargin(3, 1))
+				.ButtonStyle(FAppStyle::Get(), "HoverHintOnly")
+				.ForegroundColor(FCoreStyle::Get().GetSlateColor("Foreground"))
+				.OnClicked(this, &SLexWidgetEditorHierarchyViewItem::OnToggleLockedInDesigner)
+				.ToolTipText(LOCTEXT("WidgetLockedButtonToolTip", "Lock or unlock this widget and its children in the designer. Hold Shift to affect only this widget."))
+				.HAlign(HAlign_Center)
+				.VAlign(VAlign_Center)
+				[
+					SNew(STextBlock)
+					.Font(FAppStyle::Get().GetFontStyle("FontAwesome.10"))
+					.Text(this, &SLexWidgetEditorHierarchyViewItem::GetLockBrushForWidget)
+					.ColorAndOpacity(this, &SLexWidgetEditorHierarchyViewItem::GetLockIconColorAndOpacity)
+				]
+			]
+
+			// Designer visibility
 			+SHorizontalBox::Slot()
 			.AutoWidth()
 			.VAlign(VAlign_Center)
@@ -515,6 +537,7 @@ bool SLexWidgetEditorHierarchyViewItem::CanRename()
 
 TOptional<EItemDropZone> SLexWidgetEditorHierarchyViewItem::HandleCanAcceptDrop(const FDragDropEvent& DragDropEvent, EItemDropZone DropZone, TWeakObjectPtr<ULexWidget> TargetItem)
 {
+	if (Manager.IsValid() && Manager.Pin()->IsWidgetLockedInDesigner(Widget.Get()))return TOptional<EItemDropZone>();
 	TSharedPtr<FDragDropOperation> DragDropOp = DragDropEvent.GetOperation();
 	if (DragDropOp.IsValid() && DragDropOp->IsOfType<FAssetDragDropOp>())
 	{
@@ -538,6 +561,10 @@ TOptional<EItemDropZone> SLexWidgetEditorHierarchyViewItem::HandleCanAcceptDrop(
 			}
 			return ValidDropZone;
 		}
+	}
+	if (DragDropEvent.GetOperationAs<FLexUIPaletteDragDropOp>().IsValid())
+	{
+		return EItemDropZone::OntoItem;
 	}
 
 	if (DragDropOp.IsValid() && DragDropOp->IsOfType<FHierarchyLexWidgetDragDropOp>())
@@ -582,6 +609,7 @@ FReply SLexWidgetEditorHierarchyViewItem::HandleAcceptDrop(FDragDropEvent const&
 }
 FReply SLexWidgetEditorHierarchyViewItem::HandleDragDetected(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
+	if (Manager.IsValid() && Manager.Pin()->IsWidgetLockedInDesigner(Widget.Get()))return FReply::Handled();
 	TArray<ULexWidget*> DraggedItems;
 
 	// Dragging multiple items?
@@ -591,7 +619,10 @@ FReply SLexWidgetEditorHierarchyViewItem::HandleDragDetected(const FGeometry& My
 		{
 			for (auto Selected : Selection->GetSelectedWidgets())
 			{
-				DraggedItems.Add(Selected.Get());
+				if (Selected.IsValid() && (!Manager.IsValid() || !Manager.Pin()->IsWidgetLockedInDesigner(Selected.Get())))
+				{
+					DraggedItems.Add(Selected.Get());
+				}
 			}
 		}
 	}
@@ -700,6 +731,34 @@ void SLexWidgetEditorHierarchyViewItem::OnEndNameTextEdit()
 }
 bool SLexWidgetEditorHierarchyViewItem::OnVerifyNameTextChanged(const FText& InText, FText& OutErrorMessage)
 {
+	const FString ProposedName = InText.ToString().TrimStartAndEnd();
+	if (ProposedName.IsEmpty())
+	{
+		OutErrorMessage = LOCTEXT("EmptyWidgetName", "Widget name cannot be empty.");
+		return false;
+	}
+	if (!FName::IsValidXName(ProposedName, FString(INVALID_OBJECTNAME_CHARACTERS) + TEXT("/"), &OutErrorMessage))
+	{
+		return false;
+	}
+	if (Widget.IsValid())
+	{
+		ULexWidget* Root = Widget->GetRootWidgetInHierarchy();
+		TArray<ULexWidget*> Widgets;
+		if (Root)
+		{
+			Widgets.Add(Root);
+			ULexWidget::CollectChildrenWidgets(Root, Widgets);
+		}
+		for (ULexWidget* Other : Widgets)
+		{
+			if (Other && Other != Widget.Get() && Other->GetDisplayName().Equals(ProposedName, ESearchCase::IgnoreCase))
+			{
+				OutErrorMessage = LOCTEXT("DuplicateWidgetName", "Widget names must be unique within a prefab for reliable behaviour binding.");
+				return false;
+			}
+		}
+	}
 	return true;
 }
 void SLexWidgetEditorHierarchyViewItem::OnNameTextCommited(const FText& InText, ETextCommit::Type CommitInfo)
@@ -716,7 +775,7 @@ void SLexWidgetEditorHierarchyViewItem::OnNameTextCommited(const FText& InText, 
 	Widget->Modify();
 	FLexUIUtils::ChangePropertyWithNotify(Widget.Get(), ULexWidget::GetPropertyName_DisplayName(), [=, this]()
 	{
-		Widget->SetDisplayName(InText.ToString());
+		Widget->SetDisplayName(InText.ToString().TrimStartAndEnd());
 	});
 	GEditor->EndTransaction();
 
@@ -724,19 +783,37 @@ void SLexWidgetEditorHierarchyViewItem::OnNameTextCommited(const FText& InText, 
 }
 FReply SLexWidgetEditorHierarchyViewItem::OnToggleVisibility()
 {
-	GEditor->BeginTransaction(LOCTEXT("ToggleWidgetVisibility_Transaction", "Toggle Visibility"));
-	Widget->Modify();
-	FLexUIUtils::ChangePropertyWithNotify(Widget.Get(), ULexWidget::GetPropertyName_WidgetActive(), [=, this]()
+	if (Manager.IsValid() && Widget.IsValid())
 	{
-		Widget->SetWidgetActive(!Widget->GetWidgetActive());
-	});
-	GEditor->EndTransaction();
-
+		Manager.Pin()->SetWidgetHiddenInDesigner(Widget.Get(), !Manager.Pin()->IsWidgetHiddenInDesigner(Widget.Get()));
+	}
 	return FReply::Handled();
 }
 FText SLexWidgetEditorHierarchyViewItem::GetVisibilityBrushForWidget() const
 {
-	return Widget.IsValid() && Widget->GetWidgetActive() ? FEditorFontGlyphs::Eye : FEditorFontGlyphs::Eye_Slash;
+	return Manager.IsValid() && Widget.IsValid() && !Manager.Pin()->IsWidgetHiddenInDesigner(Widget.Get())
+		? FEditorFontGlyphs::Eye : FEditorFontGlyphs::Eye_Slash;
+}
+
+FReply SLexWidgetEditorHierarchyViewItem::OnToggleLockedInDesigner()
+{
+	if (Manager.IsValid() && Widget.IsValid())
+	{
+		const bool bRecursive = !FSlateApplication::Get().GetModifierKeys().IsShiftDown();
+		Manager.Pin()->SetWidgetLockedInDesigner(Widget.Get(), !Manager.Pin()->IsWidgetLockedInDesigner(Widget.Get()), bRecursive);
+	}
+	return FReply::Handled();
+}
+
+FText SLexWidgetEditorHierarchyViewItem::GetLockBrushForWidget() const
+{
+	return Manager.IsValid() && Widget.IsValid() && Manager.Pin()->IsWidgetLockedInDesigner(Widget.Get())
+		? FEditorFontGlyphs::Lock : FEditorFontGlyphs::Unlock;
+}
+
+FSlateColor SLexWidgetEditorHierarchyViewItem::GetLockIconColorAndOpacity() const
+{
+	return GetVisibilityIconColorAndOpacity();
 }
 
 bool SLexWidgetEditorHierarchyViewItem::SupportDrop(ULexWidget* Dragging, ULexWidget* Current, EItemDropZone DropZone)

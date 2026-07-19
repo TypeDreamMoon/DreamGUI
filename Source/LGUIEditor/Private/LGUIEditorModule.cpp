@@ -13,6 +13,7 @@
 #include "LGUIEditorStyle.h"
 #include "LexUIEditorCommands.h"
 #include "LexUIEditorTools.h"
+#include "LexUIControlRegistry.h"
 
 #include "Thumbnail/LexUIPrefabThumbnailRenderer.h"
 #include "Thumbnail/LexUISpriteThumbnailRenderer.h"
@@ -40,6 +41,7 @@
 #include "DetailCustomization/LexTextCustomization.h"
 #include "DetailCustomization/LexTextureBaseCustomization.h"
 #include "DetailCustomization/LexRectBlockCustomization.h"
+#include "DetailCustomization/LexPanelSlotCustomization.h"
 #include "DetailCustomization/LexUISpriteDataCustomization.h"
 #include "DetailCustomization/LexUIStaticSpriteAtlasDataCustomization.h"
 #include "DetailCustomization/LexUIFontData_FreeTypeRenderCustomization.h"
@@ -76,6 +78,7 @@
 #include "Core/Components/LexImage.h"
 #include "Core/Components/LexLayoutSelfFlexBox.h"
 #include "Core/Components/LexLayoutContainerFlexBox.h"
+#include "Core/Components/LexPanelSlot.h"
 #include "Core/Components/LexRectBlock.h"
 #include "Core/Components/LexSprite.h"
 #include "Core/Components/LexSpriteBase.h"
@@ -164,6 +167,7 @@ void FLGUIEditorModule::StartupModule()
 		PropertyModule.RegisterCustomClassLayout(ULexRectBlock::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexRectBlockCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULexTexture::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexTextureCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULexVisualPostProcess::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexVisualPostProcessCustomization::MakeInstance));
+		PropertyModule.RegisterCustomClassLayout(ULexPanelSlot::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexPanelSlotCustomization::MakeInstance));
 
 		PropertyModule.RegisterCustomClassLayout(ULexUISpriteData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexUISpriteDataCustomization::MakeInstance));
 		PropertyModule.RegisterCustomClassLayout(ULexUIStaticSpriteAtlasData::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FLexUIStaticSpriteAtlasDataCustomization::MakeInstance));
@@ -375,6 +379,7 @@ void FLGUIEditorModule::ShutdownModule()
 		PropertyModule.UnregisterCustomClassLayout(ULexTextureBase::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(ULexRectBlock::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(ULexVisualPostProcess::StaticClass()->GetFName());
+		PropertyModule.UnregisterCustomClassLayout(ULexPanelSlot::StaticClass()->GetFName());
 
 		PropertyModule.UnregisterCustomClassLayout(ULexUISpriteData::StaticClass()->GetFName());
 		PropertyModule.UnregisterCustomClassLayout(ULexUIStaticSpriteAtlasData::StaticClass()->GetFName());
@@ -654,17 +659,20 @@ void FLGUIEditorModule::CreateUIElementSubMenu(FMenuBuilder& MenuBuilder, TFunct
 				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateWidget, GetSelectedWidgetFunction, Name, InVisualClass, Callback))
 			);
 		}
-		static void CreateUIControlMenuEntry(FMenuBuilder& InBuilder, TFunction<ULexWidget*()> GetSelectedWidgetFunction, const FString& InControlName, FText InTooltip = FText())
+		static void CreateUIControlMenuEntry(FMenuBuilder& InBuilder, TFunction<ULexWidget*()> GetSelectedWidgetFunction, const FLexUIControlDescriptor& Descriptor)
 		{
-			if (InTooltip.IsEmpty())
-			{
-				InTooltip = FText::Format(LOCTEXT("CreateUIElementTitle", "Create {0}"), FText::FromString(InControlName));
-			}
+			FText ValidationError;
+			const bool bValid = FLexUIControlRegistry::Get().Validate(Descriptor, ValidationError);
+			const FText Tooltip = bValid
+				? FText::Format(LOCTEXT("CreateUIElementTitle", "Create {0}"), Descriptor.DisplayName)
+				: ValidationError;
 			InBuilder.AddMenuEntry(
-				FText::FromString(InControlName),
-				InTooltip,
+				Descriptor.DisplayName,
+				Tooltip,
 				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateUIControls, GetSelectedWidgetFunction, FLexUIEditorTools::LexUIPresetPrefabPath + InControlName))
+				FUIAction(
+					FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateRegisteredControl, GetSelectedWidgetFunction, Descriptor.Name),
+					FCanExecuteAction::CreateLambda([bValid]() { return bValid; }))
 			);
 		}
 	};
@@ -682,22 +690,29 @@ void FLGUIEditorModule::CreateUIElementSubMenu(FMenuBuilder& MenuBuilder, TFunct
 		});
 		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedWidgetFunction, "RectBlock", ULexRectBlock::StaticClass(), nullptr);
 
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("Button"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("Toggle"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("ToggleGroup"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("HorizontalSlider"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("VerticalSlider"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("HorizontalScrollbar"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("VerticalScrollbar"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("Dropdown"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("TextInput"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("TextInputMultiline"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("HorizontalScrollView"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("VerticalScrollView"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("HorizontalRecyclableScrollView"));
-		FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, TEXT("VerticalRecyclableScrollView"));
 	}
 	MenuBuilder.EndSection();
+
+	TArray<FName> AddedCategories;
+	for (const FLexUIControlDescriptor& Descriptor : FLexUIControlRegistry::Get().GetDescriptors())
+	{
+		if (!AddedCategories.Contains(Descriptor.Category))
+		{
+			AddedCategories.Add(Descriptor.Category);
+		}
+	}
+	for (FName Category : AddedCategories)
+	{
+		MenuBuilder.BeginSection(Category, FText::FromName(Category));
+		for (const FLexUIControlDescriptor& Descriptor : FLexUIControlRegistry::Get().GetDescriptors())
+		{
+			if (Descriptor.Category == Category)
+			{
+				FunctionContainer::CreateUIControlMenuEntry(MenuBuilder, GetSelectedWidgetFunction, Descriptor);
+			}
+		}
+		MenuBuilder.EndSection();
+	}
 }
 
 const FSlateBrush* FLGUIEditorModule::GetInteractionIconBrush(ULexWidget* Widget)

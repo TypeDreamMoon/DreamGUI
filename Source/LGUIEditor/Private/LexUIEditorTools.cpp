@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "LexUIEditorTools.h"
+#include "LexUIControlRegistry.h"
 #include "Core/LexUIManager.h"
 #include "Misc/MessageDialog.h"
 #include "DesktopPlatformModule.h"
@@ -145,9 +146,14 @@ TArray<ULexWidget*> FLexUIEditorTools::GetRootWidgetListFromSelection(const TArr
 
 void FLexUIEditorTools::CreateWidget(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString Name, UClass* VisualClass, TFunction<void(ULexWidget*)> Callback)
 {
+	CreateWidgetAndReturn(MoveTemp(GetSelectedWidgetFunction), MoveTemp(Name), VisualClass, MoveTemp(Callback));
+}
+
+ULexWidget* FLexUIEditorTools::CreateWidgetAndReturn(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString Name, UClass* VisualClass, TFunction<void(ULexWidget*)> Callback)
+{
 	auto SelectedWidget = GetSelectedWidgetFunction();
-	if (SelectedWidget == nullptr)return;
-	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return;
+	if (SelectedWidget == nullptr)return nullptr;
+	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return nullptr;
 	const FScopedTransaction Transaction(LOCTEXT("CreateChildWidget_Transaction", "LexUI Child Widget"));
 	ULexUISelection::GetInstance(SelectedWidget->GetWorld())->Modify();
 	auto NewWidget = NewObject<ULexWidget>(SelectedWidget->GetOuter(), ULexWidget::StaticClass(), NAME_None, RF_Public | RF_Transactional);
@@ -176,15 +182,22 @@ void FLexUIEditorTools::CreateWidget(TFunction<ULexWidget*()> GetSelectedWidgetF
 		}
 		ULexUISelection::GetInstance(SelectedWidget->GetWorld())->SelectWidget(NewWidget);
 	}
+	return NewWidget;
 }
 
 void FLexUIEditorTools::CreateUIControls(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString InPrefabPath)
 {
+	CreateUIControlsAndReturn(MoveTemp(GetSelectedWidgetFunction), MoveTemp(InPrefabPath));
+}
+
+ULexWidget* FLexUIEditorTools::CreateUIControlsAndReturn(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString InPrefabPath, TFunction<void(ULexWidget*)> Callback)
+{
 	auto SelectedWidget = GetSelectedWidgetFunction();
-	if (SelectedWidget == nullptr)return;
-	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return;
+	if (SelectedWidget == nullptr)return nullptr;
+	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return nullptr;
 	const FScopedTransaction Transaction(LOCTEXT("CreateUIControl_Transaction", "LexUI Create UI Control"));
 	ULexUISelection::GetInstance(SelectedWidget->GetWorld())->Modify();
+	ULexWidget* CreatedWidget = nullptr;
 	if (auto Prefab = LoadObject<ULexUIPrefab>(NULL, *InPrefabPath))
 	{
 		if (auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(SelectedWidget))
@@ -192,16 +205,72 @@ void FLexUIEditorTools::CreateUIControls(TFunction<ULexWidget*()> GetSelectedWid
 			PrefabHelperObject->Modify();
 			PrefabHelperObject->SetAnythingDirty();
 		}
-		auto Widget = Prefab->LoadPrefabInEditor(SelectedWidget->GetWorld()
+		CreatedWidget = Prefab->LoadPrefabInEditor(SelectedWidget->GetWorld()
 			, SelectedWidget->GetOuter()
 			, SelectedWidget);
+		if (Callback)Callback(CreatedWidget);
 		ULexUISelection::GetInstance(SelectedWidget->GetWorld())->SelectNone();
-		ULexUISelection::GetInstance(SelectedWidget->GetWorld())->SelectWidget(Widget);
+		ULexUISelection::GetInstance(SelectedWidget->GetWorld())->SelectWidget(CreatedWidget);
 	}
 	else
 	{
 		UE_LOG(LGUIEditor, Error, TEXT("[%s].%d Load control prefab error! Path:%s. Missing some content of LexUI plugin, reinstall this plugin may fix the issue."), ANSI_TO_TCHAR(__FUNCDNAME__), __LINE__, *InPrefabPath);
 	}
+	return CreatedWidget;
+}
+
+void FLexUIEditorTools::CreateRegisteredControl(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FName ControlName)
+{
+	CreateRegisteredControlAndReturn(MoveTemp(GetSelectedWidgetFunction), ControlName);
+}
+
+ULexWidget* FLexUIEditorTools::CreateRegisteredControlAndReturn(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FName ControlName, TFunction<void(ULexWidget*)> Callback)
+{
+	const FLexUIControlDescriptor* Descriptor = FLexUIControlRegistry::Get().GetDescriptors().FindByPredicate([ControlName](const FLexUIControlDescriptor& Item)
+	{
+		return Item.Name == ControlName;
+	});
+	if (!Descriptor)
+	{
+		UE_LOG(LGUIEditor, Error, TEXT("Unknown registered control: %s"), *ControlName.ToString());
+		return nullptr;
+	}
+	FText ValidationError;
+	if (!FLexUIControlRegistry::Get().Validate(*Descriptor, ValidationError))
+	{
+		UE_LOG(LGUIEditor, Error, TEXT("Cannot create control '%s': %s"), *ControlName.ToString(), *ValidationError.ToString());
+		return nullptr;
+	}
+	if (Descriptor->CreationKind == ELexUIControlCreationKind::Prefab)
+	{
+		return CreateUIControlsAndReturn(MoveTemp(GetSelectedWidgetFunction), Descriptor->PrefabPath, MoveTemp(Callback));
+	}
+
+	const FLexUIControlDescriptor Recipe = *Descriptor;
+	return CreateWidgetAndReturn(MoveTemp(GetSelectedWidgetFunction), Recipe.DisplayName.ToString(), Recipe.VisualClass.Get(),
+		[Recipe, Callback = MoveTemp(Callback)](ULexWidget* InWidget) mutable
+		{
+			if (Recipe.LayoutContainerClass.IsValid())
+			{
+				InWidget->CreateNewLayoutContainer(Recipe.LayoutContainerClass.Get());
+			}
+			if (Recipe.LayoutSelfClass.IsValid())
+			{
+				InWidget->CreateNewLayoutSelf(Recipe.LayoutSelfClass.Get());
+			}
+			if (Recipe.BehaviourClass.IsValid())
+			{
+				InWidget->AddComponent(Recipe.BehaviourClass.Get());
+			}
+			if (Recipe.NativeConfigure)
+			{
+				Recipe.NativeConfigure(InWidget);
+			}
+			if (Callback)
+			{
+				Callback(InWidget);
+			}
+		});
 }
 
 void FLexUIEditorTools::DuplicateWidgets(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction)

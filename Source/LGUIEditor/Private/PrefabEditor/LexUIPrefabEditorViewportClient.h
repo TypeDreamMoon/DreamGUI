@@ -9,6 +9,7 @@
 #include "LevelEditorViewport.h"
 
 class ULexVisual;
+class ULexWidget;
 class FLexUIPrefabEditor;
 class ULexUIPrefab;
 
@@ -89,6 +90,11 @@ public:
 	void TickWorld(float DeltaSeconds);
 
 	bool FocusViewportToTargets();
+	TSharedPtr<FLexUIPrefabEditor> GetPrefabEditor() const { return PrefabEditorPtr.Pin(); }
+	ULexWidget* GetWidgetUnderCursor(int32 PixelX, int32 PixelY, bool bRespectDesignerLock = true);
+	bool GetDropWorldPosition(int32 PixelX, int32 PixelY, ULexWidget* ParentWidget, FVector& OutWorldPosition);
+	void SetPaletteDropPreview(ULexWidget* Widget);
+	void ClearPaletteDropPreview();
 
 	// Begin override because PreviewScene is nullptr
 	virtual UWorld* GetWorld()const override;
@@ -98,9 +104,55 @@ public:
 	virtual bool Internal_InputAxis(FViewport* InViewport, FInputDeviceId DeviceID, FKey Key, float Delta, float DeltaTime, int32 NumSamples, bool bGamepad) override;
 	// End
 private:
+	enum class EDesignerHandle : uint8
+	{
+		None,
+		Move,
+		Left,
+		Right,
+		Top,
+		Bottom,
+		TopLeft,
+		TopRight,
+		BottomLeft,
+		BottomRight,
+		Pivot,
+	};
+	struct FDesignerWidgetSnapshot
+	{
+		TWeakObjectPtr<ULexWidget> Widget;
+		FVector2D AnchoredPosition = FVector2D::ZeroVector;
+		FVector2D Pivot = FVector2D(0.5f);
+		float Width = 0.0f;
+		float Height = 0.0f;
+		FTransform WorldTransform = FTransform::Identity;
+		FTransform PlaneTransform = FTransform::Identity;
+		FVector StartPlanePoint = FVector::ZeroVector;
+	};
+	bool HandleDesignerInputKey(const FInputKeyEventArgs& EventArgs);
+	void UpdateDesignerDrag();
+	void FinishDesignerDrag(bool bCancel);
+	void DrawDesignerOverlay(FViewport& InViewport, FSceneView& View, FCanvas& Canvas);
+	bool UpdateDesignerScreenGeometry(FSceneView& View);
+	EDesignerHandle HitTestDesignerHandle(const FVector2D& PixelPosition) const;
+	bool IntersectDesignerPlane(const FVector2D& PixelPosition, const FTransform& PlaneTransform, FVector& OutPoint) const;
+	void DrawWidgetScreenOutline(ULexWidget* InWidget, FSceneView& View, FCanvas& Canvas, const FLinearColor& Color, float Thickness = 1.0f) const;
+	TArray<FVector2D> DesignerScreenCorners;
+	TMap<EDesignerHandle, FVector2D> DesignerHandlePositions;
+	FBox2D DesignerScreenBounds = FBox2D(EForceInit::ForceInit);
+	EDesignerHandle ActiveDesignerHandle = EDesignerHandle::None;
+	bool bDesignerDragging = false;
+	bool bDesignerChanged = false;
+	FVector2D DesignerDragStartPixel = FVector2D::ZeroVector;
+	TArray<FDesignerWidgetSnapshot> DesignerSnapshots;
+	TUniquePtr<class FScopedTransaction> DesignerTransaction;
+	TOptional<float> DesignerGuideX;
+	TOptional<float> DesignerGuideY;
+
 	int PrevMouseX = 0, PrevMouseY = 0;
 	int IndexOfClickSelectUI = INDEX_NONE;
 	TUniquePtr<class FLexUITransformWidget> TransformWidget = nullptr;
+	TWeakObjectPtr<ULexWidget> PaletteDropPreviewWidget;
 	FDelegateHandle OnSelectionChangedDelegateHandle;
 
 	TWeakPtr<FLexUIPrefabEditor> PrefabEditorPtr;

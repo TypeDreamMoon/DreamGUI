@@ -8,6 +8,7 @@
 #include "Math/Vector.h"
 #include "AssetEditorModeManager.h"
 #include "EngineUtils.h"
+#include "Engine/Engine.h"
 #include "Engine/Selection.h"
 #include "SceneView.h"
 #include "Editor/UnrealEdEngine.h"
@@ -33,6 +34,10 @@
 #include "Core/LexUIRender/LexUIRenderer.h"
 #include "PrefabSystem/LexUIPrefabInstanceScene.h"
 #include "Utils/LexUIUtils.h"
+#include "PrefabSystem/LexUIPrefabHelperObject.h"
+#include "Engine/Canvas.h"
+#include "CanvasItem.h"
+#include "ScopedTransaction.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabEditorViewportClient"
 
@@ -708,7 +713,9 @@ FLexUIPrefabEditorViewportClient::FLexUIPrefabEditorViewportClient(TWeakPtr<FLex
 	OnSelectionChangedDelegateHandle = PrefabEditorPtr.Pin()->OnSelectionChanged.AddLambda([=, this]()
 	{
 		auto SelectedWidgets = PrefabEditorPtr.Pin()->GetSelectedWidgets();
-		if (SelectedWidgets.Num() == 1)
+		if (SelectedWidgets.Num() == 1 && SelectedWidgets[0].IsValid()
+			&& !PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(SelectedWidgets[0].Get())
+			&& !PrefabEditorPtr.Pin()->IsWidgetHiddenInDesigner(SelectedWidgets[0].Get()))
 		{
 			TransformWidget = MakeUnique<FLexUITransformWidget>(GetWorld(), SelectedWidgets[0].Get(), this);
 		}
@@ -928,6 +935,196 @@ void FLexUIPrefabEditorViewportClient::DrawCanvas(FViewport& InViewport, FSceneV
 	}
 
 	FEditorViewportClient::DrawCanvas(InViewport, View, Canvas);
+	DrawDesignerOverlay(InViewport, View, Canvas);
+}
+
+bool FLexUIPrefabEditorViewportClient::UpdateDesignerScreenGeometry(FSceneView& View)
+{
+	DesignerScreenCorners.Reset();
+	DesignerHandlePositions.Reset();
+	DesignerScreenBounds = FBox2D(EForceInit::ForceInit);
+	if (!IsOrtho() || !PrefabEditorPtr.IsValid())return false;
+	TArray<ULexWidget*> Selected;
+	for (const TWeakObjectPtr<ULexWidget>& WeakWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
+	{
+		if (ULexWidget* SelectedWidget = WeakWidget.Get())
+		{
+			if (!PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(SelectedWidget) && !PrefabEditorPtr.Pin()->IsWidgetHiddenInDesigner(SelectedWidget))Selected.Add(SelectedWidget);
+		}
+	}
+	if (Selected.IsEmpty())return false;
+
+	auto ProjectWidgetCorners = [&View](ULexWidget* InWidget, TArray<FVector2D>& OutCorners) -> bool
+	{
+		const float Left = -InWidget->GetPivot().X * InWidget->GetWidth();
+		const float Right = (1.0f - InWidget->GetPivot().X) * InWidget->GetWidth();
+		const float Bottom = -InWidget->GetPivot().Y * InWidget->GetHeight();
+		const float Top = (1.0f - InWidget->GetPivot().Y) * InWidget->GetHeight();
+		const FTransform& Transform = InWidget->GetWorldTransform();
+		for (const FVector& Local : { FVector(0, Left, Bottom), FVector(0, Right, Bottom), FVector(0, Right, Top), FVector(0, Left, Top) })
+		{
+			FVector2D Pixel;
+			if (!View.WorldToPixel(Transform.TransformPosition(Local), Pixel))return false;
+			OutCorners.Add(Pixel);
+		}
+		return true;
+	};
+
+	TArray<FVector2D> SingleCorners;
+	for (ULexWidget* SelectedWidget : Selected)
+	{
+		TArray<FVector2D> Corners;
+		if (!ProjectWidgetCorners(SelectedWidget, Corners))continue;
+		for (const FVector2D& Corner : Corners)DesignerScreenBounds += Corner;
+		if (Selected.Num() == 1)SingleCorners = MoveTemp(Corners);
+	}
+	if (!DesignerScreenBounds.bIsValid)return false;
+
+	if (Selected.Num() == 1 && SingleCorners.Num() == 4)
+	{
+		DesignerScreenCorners = SingleCorners;
+		ULexWidget* SelectedWidget = Selected[0];
+		const bool bLayoutControlled = SelectedWidget->GetParent() && SelectedWidget->GetParent()->GetLayoutContainer();
+		if (!bLayoutControlled)
+		{
+			DesignerHandlePositions.Add(EDesignerHandle::BottomLeft, SingleCorners[0]);
+			DesignerHandlePositions.Add(EDesignerHandle::BottomRight, SingleCorners[1]);
+			DesignerHandlePositions.Add(EDesignerHandle::TopRight, SingleCorners[2]);
+			DesignerHandlePositions.Add(EDesignerHandle::TopLeft, SingleCorners[3]);
+			DesignerHandlePositions.Add(EDesignerHandle::Bottom, (SingleCorners[0] + SingleCorners[1]) * 0.5f);
+			DesignerHandlePositions.Add(EDesignerHandle::Right, (SingleCorners[1] + SingleCorners[2]) * 0.5f);
+			DesignerHandlePositions.Add(EDesignerHandle::Top, (SingleCorners[2] + SingleCorners[3]) * 0.5f);
+			DesignerHandlePositions.Add(EDesignerHandle::Left, (SingleCorners[3] + SingleCorners[0]) * 0.5f);
+		}
+		FVector2D PivotPixel;
+		if (View.WorldToPixel(SelectedWidget->GetWorldTransform().GetLocation(), PivotPixel))DesignerHandlePositions.Add(EDesignerHandle::Pivot, PivotPixel);
+	}
+	else
+	{
+		DesignerScreenCorners = {
+			FVector2D(DesignerScreenBounds.Min.X, DesignerScreenBounds.Max.Y),
+			DesignerScreenBounds.Max,
+			FVector2D(DesignerScreenBounds.Max.X, DesignerScreenBounds.Min.Y),
+			DesignerScreenBounds.Min
+		};
+	}
+	return DesignerScreenCorners.Num() == 4;
+}
+
+FLexUIPrefabEditorViewportClient::EDesignerHandle FLexUIPrefabEditorViewportClient::HitTestDesignerHandle(const FVector2D& PixelPosition) const
+{
+	constexpr float HandleRadius = 9.0f;
+	if (const FVector2D* Pivot = DesignerHandlePositions.Find(EDesignerHandle::Pivot))
+	{
+		if (FVector2D::Distance(*Pivot, PixelPosition) <= HandleRadius)return EDesignerHandle::Pivot;
+	}
+	for (const auto& Pair : DesignerHandlePositions)
+	{
+		if (Pair.Key != EDesignerHandle::Pivot && FVector2D::Distance(Pair.Value, PixelPosition) <= HandleRadius)return Pair.Key;
+	}
+	if (DesignerScreenBounds.bIsValid
+		&& PixelPosition.X >= DesignerScreenBounds.Min.X && PixelPosition.X <= DesignerScreenBounds.Max.X
+		&& PixelPosition.Y >= DesignerScreenBounds.Min.Y && PixelPosition.Y <= DesignerScreenBounds.Max.Y)
+	{
+		return EDesignerHandle::Move;
+	}
+	return EDesignerHandle::None;
+}
+
+bool FLexUIPrefabEditorViewportClient::IntersectDesignerPlane(const FVector2D& PixelPosition, const FTransform& PlaneTransform, FVector& OutPoint) const
+{
+	if (!Viewport)return false;
+	FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(Viewport, GetScene(), EngineShowFlags));
+	FSceneView* View = const_cast<FLexUIPrefabEditorViewportClient*>(this)->CalcSceneView(&ViewFamily);
+	if (!View)return false;
+	FVector RayOrigin, RayDirection;
+	FSceneView::DeprojectScreenToWorld(PixelPosition, View->UnscaledViewRect,
+		View->ViewMatrices.GetClipToWorld(), RayOrigin, RayDirection);
+	OutPoint = FMath::LinePlaneIntersection(RayOrigin, RayOrigin + RayDirection * 100000000.0f,
+		PlaneTransform.GetLocation(), PlaneTransform.GetUnitAxis(EAxis::X));
+	return true;
+}
+
+void FLexUIPrefabEditorViewportClient::DrawWidgetScreenOutline(ULexWidget* InWidget, FSceneView& View, FCanvas& Canvas,
+	const FLinearColor& Color, float Thickness) const
+{
+	if (!InWidget)return;
+	const float Left = -InWidget->GetPivot().X * InWidget->GetWidth();
+	const float Right = (1.0f - InWidget->GetPivot().X) * InWidget->GetWidth();
+	const float Bottom = -InWidget->GetPivot().Y * InWidget->GetHeight();
+	const float Top = (1.0f - InWidget->GetPivot().Y) * InWidget->GetHeight();
+	const FTransform& Transform = InWidget->GetWorldTransform();
+	TArray<FVector2D> Corners;
+	for (const FVector& Local : { FVector(0, Left, Bottom), FVector(0, Right, Bottom), FVector(0, Right, Top), FVector(0, Left, Top) })
+	{
+		FVector2D Pixel;
+		if (!View.WorldToPixel(Transform.TransformPosition(Local), Pixel))return;
+		Corners.Add(Pixel / Canvas.GetDPIScale());
+	}
+	for (int32 Index = 0; Index < 4; ++Index)
+	{
+		FCanvasLineItem Line(Corners[Index], Corners[(Index + 1) % 4]);
+		Line.SetColor(Color);
+		Line.LineThickness = Thickness;
+		Canvas.DrawItem(Line);
+	}
+}
+
+void FLexUIPrefabEditorViewportClient::DrawDesignerOverlay(FViewport& InViewport, FSceneView& View, FCanvas& Canvas)
+{
+	if (!IsOrtho())return;
+	if (PaletteDropPreviewWidget.IsValid())
+	{
+		DrawWidgetScreenOutline(PaletteDropPreviewWidget.Get(), View, Canvas, FLinearColor(1.0f, 0.55f, 0.05f), 2.0f);
+	}
+	if (!UpdateDesignerScreenGeometry(View))return;
+	const float DpiScale = Canvas.GetDPIScale();
+	const FLinearColor OutlineColor(0.1f, 0.65f, 1.0f);
+	for (int32 Index = 0; Index < DesignerScreenCorners.Num(); ++Index)
+	{
+		FCanvasLineItem Line(DesignerScreenCorners[Index] / DpiScale, DesignerScreenCorners[(Index + 1) % DesignerScreenCorners.Num()] / DpiScale);
+		Line.SetColor(OutlineColor);
+		Line.LineThickness = 1.5f;
+		Canvas.DrawItem(Line);
+	}
+	for (const auto& Pair : DesignerHandlePositions)
+	{
+		const bool bPivot = Pair.Key == EDesignerHandle::Pivot;
+		const float Size = bPivot ? 7.0f : 8.0f;
+		FCanvasTileItem Tile(Pair.Value / DpiScale - FVector2D(Size * 0.5f), FVector2D(Size),
+			bPivot ? FLinearColor(1.0f, 0.7f, 0.05f) : FLinearColor(0.05f, 0.45f, 0.9f));
+		Tile.BlendMode = SE_BLEND_Translucent;
+		Canvas.DrawItem(Tile);
+	}
+	if (PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->GetSelectedWidgets().Num() == 1)
+	{
+		if (ULexWidget* SelectedWidget = PrefabEditorPtr.Pin()->GetSelectedWidgets()[0].Get())
+		{
+			FCanvasTextItem SizeText(DesignerScreenBounds.Min / DpiScale + FVector2D(0, -16),
+				FText::FromString(FString::Printf(TEXT("%.0f x %.0f"), SelectedWidget->GetWidth(), SelectedWidget->GetHeight())),
+				GEngine->GetSmallFont(), FLinearColor::White);
+			SizeText.EnableShadow(FLinearColor::Black);
+			Canvas.DrawItem(SizeText);
+		}
+	}
+	if (bDesignerDragging && PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->GetShowDesignerGuides())
+	{
+		const FVector2D ViewSize = FVector2D(InViewport.GetSizeXY()) / DpiScale;
+		if (DesignerGuideX.IsSet())
+		{
+			const float X = DesignerGuideX.GetValue() / DpiScale;
+			FCanvasLineItem Guide(FVector2D(X, 0), FVector2D(X, ViewSize.Y));
+			Guide.SetColor(FLinearColor(1.0f, 0.25f, 0.65f, 0.9f));
+			Canvas.DrawItem(Guide);
+		}
+		if (DesignerGuideY.IsSet())
+		{
+			const float Y = DesignerGuideY.GetValue() / DpiScale;
+			FCanvasLineItem Guide(FVector2D(0, Y), FVector2D(ViewSize.X, Y));
+			Guide.SetColor(FLinearColor(1.0f, 0.25f, 0.65f, 0.9f));
+			Canvas.DrawItem(Guide);
+		}
+	}
 }
 
 void FLexUIPrefabEditorViewportClient::ReceivedFocus(FViewport* InViewport)
@@ -951,6 +1148,7 @@ void FLexUIPrefabEditorViewportClient::ReceivedFocus(FViewport* InViewport)
 
 void FLexUIPrefabEditorViewportClient::LostFocus(FViewport* InViewport)
 {
+	if (bDesignerDragging)FinishDesignerDrag(true);
 	FEditorViewportClient::LostFocus(InViewport);
 
 	GEditor->SetPreviewMeshMode(false);
@@ -962,17 +1160,222 @@ void FLexUIPrefabEditorViewportClient::Tick(float DeltaSeconds)
 
 	TickWorld(DeltaSeconds);
 
-	if (TransformWidget.IsValid())
+	if (bDesignerDragging)UpdateDesignerDrag();
+	if (TransformWidget.IsValid() && IsPerspective())
 	{
 		TransformWidget->Tick();
 	}
 }
 
 
+bool FLexUIPrefabEditorViewportClient::HandleDesignerInputKey(const FInputKeyEventArgs& EventArgs)
+{
+	if (!IsOrtho() || !PrefabEditorPtr.IsValid())return false;
+	if (EventArgs.Key == EKeys::Escape && EventArgs.Event == IE_Pressed && bDesignerDragging)
+	{
+		FinishDesignerDrag(true);
+		return true;
+	}
+	if (EventArgs.Key != EKeys::LeftMouseButton)return false;
+	if (EventArgs.Event == IE_Released && bDesignerDragging)
+	{
+		FinishDesignerDrag(false);
+		return true;
+	}
+	if (EventArgs.Event != IE_Pressed || bDesignerDragging || !Viewport)return false;
+
+	FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(Viewport, GetScene(), EngineShowFlags));
+	FSceneView* View = CalcSceneView(&ViewFamily);
+	if (!View || !UpdateDesignerScreenGeometry(*View))return false;
+	const FVector2D MousePixel(EventArgs.Viewport->GetMouseX(), EventArgs.Viewport->GetMouseY());
+	const EDesignerHandle HitHandle = HitTestDesignerHandle(MousePixel);
+	if (HitHandle == EDesignerHandle::None)return false;
+
+	TArray<ULexWidget*> Widgets;
+	for (const TWeakObjectPtr<ULexWidget>& WeakWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
+	{
+		if (ULexWidget* SelectedWidget = WeakWidget.Get())
+		{
+			if (!PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(SelectedWidget))Widgets.Add(SelectedWidget);
+		}
+	}
+	if (Widgets.IsEmpty())return false;
+	if (HitHandle != EDesignerHandle::Move && Widgets.Num() != 1)return false;
+
+	DesignerSnapshots.Reset();
+	DesignerTransaction = MakeUnique<FScopedTransaction>(LOCTEXT("DesignerTransformWidgets", "Transform Widgets"));
+	if (ULexUIPrefabHelperObject* Helper = PrefabEditorPtr.Pin()->GetPrefabHelperObject())
+	{
+		Helper->Modify();
+	}
+	for (ULexWidget* SelectedWidget : Widgets)
+	{
+		SelectedWidget->Modify();
+		FDesignerWidgetSnapshot& Snapshot = DesignerSnapshots.AddDefaulted_GetRef();
+		Snapshot.Widget = SelectedWidget;
+		Snapshot.AnchoredPosition = SelectedWidget->GetAnchoredPosition();
+		Snapshot.Pivot = SelectedWidget->GetPivot();
+		Snapshot.Width = SelectedWidget->GetWidth();
+		Snapshot.Height = SelectedWidget->GetHeight();
+		Snapshot.WorldTransform = SelectedWidget->GetWorldTransform();
+		Snapshot.PlaneTransform = HitHandle == EDesignerHandle::Move && SelectedWidget->GetParent()
+			? SelectedWidget->GetParent()->GetWorldTransform() : SelectedWidget->GetWorldTransform();
+		IntersectDesignerPlane(MousePixel, Snapshot.PlaneTransform, Snapshot.StartPlanePoint);
+	}
+	ActiveDesignerHandle = HitHandle;
+	DesignerDragStartPixel = MousePixel;
+	bDesignerDragging = true;
+	bDesignerChanged = false;
+	DesignerGuideX.Reset();
+	DesignerGuideY.Reset();
+	return true;
+}
+
+void FLexUIPrefabEditorViewportClient::UpdateDesignerDrag()
+{
+	if (!bDesignerDragging || !Viewport || DesignerSnapshots.IsEmpty() || !PrefabEditorPtr.IsValid())return;
+	const FVector2D MousePixel(Viewport->GetMouseX(), Viewport->GetMouseY());
+	DesignerGuideX.Reset();
+	DesignerGuideY.Reset();
+
+	if (ActiveDesignerHandle == EDesignerHandle::Move)
+	{
+		FVector2D SnappedDelta = FVector2D::ZeroVector;
+		bool bHasSnappedDelta = false;
+		for (FDesignerWidgetSnapshot& Snapshot : DesignerSnapshots)
+		{
+			ULexWidget* SelectedWidget = Snapshot.Widget.Get();
+			if (!SelectedWidget)continue;
+			FVector CurrentPoint;
+			if (!IntersectDesignerPlane(MousePixel, Snapshot.PlaneTransform, CurrentPoint))continue;
+			const FVector StartLocal = Snapshot.PlaneTransform.InverseTransformPosition(Snapshot.StartPlanePoint);
+			const FVector CurrentLocal = Snapshot.PlaneTransform.InverseTransformPosition(CurrentPoint);
+			const FVector2D Delta(CurrentLocal.Y - StartLocal.Y, CurrentLocal.Z - StartLocal.Z);
+			if (!bHasSnappedDelta)
+			{
+				const FVector2D FirstPosition = Snapshot.AnchoredPosition + Delta;
+				SnappedDelta.X = PrefabEditorPtr.Pin()->SnapDesignerValue(FirstPosition.X) - Snapshot.AnchoredPosition.X;
+				SnappedDelta.Y = PrefabEditorPtr.Pin()->SnapDesignerValue(FirstPosition.Y) - Snapshot.AnchoredPosition.Y;
+				bHasSnappedDelta = true;
+			}
+			SelectedWidget->SetAnchoredPosition(Snapshot.AnchoredPosition + SnappedDelta);
+		}
+	}
+	else
+	{
+		FDesignerWidgetSnapshot& Snapshot = DesignerSnapshots[0];
+		ULexWidget* SelectedWidget = Snapshot.Widget.Get();
+		if (!SelectedWidget)return;
+		FVector CurrentPoint;
+		if (!IntersectDesignerPlane(MousePixel, Snapshot.WorldTransform, CurrentPoint))return;
+		const FVector LocalPoint = Snapshot.WorldTransform.InverseTransformPosition(CurrentPoint);
+		const float OriginalLeft = -Snapshot.Pivot.X * Snapshot.Width;
+		const float OriginalRight = (1.0f - Snapshot.Pivot.X) * Snapshot.Width;
+		const float OriginalBottom = -Snapshot.Pivot.Y * Snapshot.Height;
+		const float OriginalTop = (1.0f - Snapshot.Pivot.Y) * Snapshot.Height;
+
+		if (ActiveDesignerHandle == EDesignerHandle::Pivot)
+		{
+			const FVector2D NewPivot(
+				FMath::Clamp((LocalPoint.Y - OriginalLeft) / FMath::Max(1.0f, Snapshot.Width), 0.0f, 1.0f),
+				FMath::Clamp((LocalPoint.Z - OriginalBottom) / FMath::Max(1.0f, Snapshot.Height), 0.0f, 1.0f));
+			const FVector NewOriginLocal(0, OriginalLeft + NewPivot.X * Snapshot.Width, OriginalBottom + NewPivot.Y * Snapshot.Height);
+			SelectedWidget->SetPivot(NewPivot);
+			SelectedWidget->SetWorldLocation(Snapshot.WorldTransform.TransformPosition(NewOriginLocal));
+		}
+		else
+		{
+			const bool bChangeLeft = ActiveDesignerHandle == EDesignerHandle::Left || ActiveDesignerHandle == EDesignerHandle::TopLeft || ActiveDesignerHandle == EDesignerHandle::BottomLeft;
+			const bool bChangeRight = ActiveDesignerHandle == EDesignerHandle::Right || ActiveDesignerHandle == EDesignerHandle::TopRight || ActiveDesignerHandle == EDesignerHandle::BottomRight;
+			const bool bChangeTop = ActiveDesignerHandle == EDesignerHandle::Top || ActiveDesignerHandle == EDesignerHandle::TopLeft || ActiveDesignerHandle == EDesignerHandle::TopRight;
+			const bool bChangeBottom = ActiveDesignerHandle == EDesignerHandle::Bottom || ActiveDesignerHandle == EDesignerHandle::BottomLeft || ActiveDesignerHandle == EDesignerHandle::BottomRight;
+			float Left = OriginalLeft;
+			float Right = OriginalRight;
+			float Bottom = OriginalBottom;
+			float Top = OriginalTop;
+			if (bChangeLeft)Left = FMath::Min(PrefabEditorPtr.Pin()->SnapDesignerValue(LocalPoint.Y), Right - 1.0f);
+			if (bChangeRight)Right = FMath::Max(PrefabEditorPtr.Pin()->SnapDesignerValue(LocalPoint.Y), Left + 1.0f);
+			if (bChangeBottom)Bottom = FMath::Min(PrefabEditorPtr.Pin()->SnapDesignerValue(LocalPoint.Z), Top - 1.0f);
+			if (bChangeTop)Top = FMath::Max(PrefabEditorPtr.Pin()->SnapDesignerValue(LocalPoint.Z), Bottom + 1.0f);
+			const float NewWidth = Right - Left;
+			const float NewHeight = Top - Bottom;
+			const FVector NewOriginLocal(0, Left + Snapshot.Pivot.X * NewWidth, Bottom + Snapshot.Pivot.Y * NewHeight);
+			SelectedWidget->SetWidth(NewWidth);
+			SelectedWidget->SetHeight(NewHeight);
+			SelectedWidget->SetWorldLocation(Snapshot.WorldTransform.TransformPosition(NewOriginLocal));
+		}
+	}
+	bDesignerChanged = false;
+	for (const FDesignerWidgetSnapshot& Snapshot : DesignerSnapshots)
+	{
+		if (const ULexWidget* SelectedWidget = Snapshot.Widget.Get())
+		{
+			bDesignerChanged = !SelectedWidget->GetAnchoredPosition().Equals(Snapshot.AnchoredPosition)
+				|| !SelectedWidget->GetPivot().Equals(Snapshot.Pivot)
+				|| !FMath::IsNearlyEqual(SelectedWidget->GetWidth(), Snapshot.Width)
+				|| !FMath::IsNearlyEqual(SelectedWidget->GetHeight(), Snapshot.Height)
+				|| !SelectedWidget->GetWorldTransform().Equals(Snapshot.WorldTransform);
+			if (bDesignerChanged)break;
+		}
+	}
+
+	FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(Viewport, GetScene(), EngineShowFlags));
+	if (FSceneView* View = CalcSceneView(&ViewFamily))
+	{
+		ULexWidget* GuideWidget = DesignerSnapshots[0].Widget.Get();
+		FVector2D GuidePixel;
+		if (GuideWidget && View->WorldToPixel(GuideWidget->GetWorldTransform().GetLocation(), GuidePixel))
+		{
+			DesignerGuideX = GuidePixel.X;
+			DesignerGuideY = GuidePixel.Y;
+		}
+	}
+	Invalidate();
+}
+
+void FLexUIPrefabEditorViewportClient::FinishDesignerDrag(bool bCancel)
+{
+	if (!bDesignerDragging)return;
+	if (bCancel)
+	{
+		for (const FDesignerWidgetSnapshot& Snapshot : DesignerSnapshots)
+		{
+			if (ULexWidget* SelectedWidget = Snapshot.Widget.Get())
+			{
+				SelectedWidget->SetPivot(Snapshot.Pivot);
+				SelectedWidget->SetWidth(Snapshot.Width);
+				SelectedWidget->SetHeight(Snapshot.Height);
+				SelectedWidget->SetAnchoredPosition(Snapshot.AnchoredPosition);
+				SelectedWidget->SetWorldTransform(Snapshot.WorldTransform);
+			}
+		}
+	}
+	else if (bDesignerChanged && PrefabEditorPtr.IsValid())
+	{
+		if (ULexUIPrefabHelperObject* Helper = PrefabEditorPtr.Pin()->GetPrefabHelperObject())
+		{
+			Helper->SetAnythingDirty();
+		}
+	}
+	if (DesignerTransaction.IsValid() && (bCancel || !bDesignerChanged))DesignerTransaction->Cancel();
+	DesignerTransaction.Reset();
+	DesignerSnapshots.Reset();
+	ActiveDesignerHandle = EDesignerHandle::None;
+	bDesignerDragging = false;
+	bDesignerChanged = false;
+	DesignerGuideX.Reset();
+	DesignerGuideY.Reset();
+	Invalidate();
+}
+
 bool FLexUIPrefabEditorViewportClient::InputKey(const FInputKeyEventArgs& EventArgs)
 {
 	bool bHandled = false;
-	if (TransformWidget.IsValid())
+	if (IsOrtho())
+	{
+		bHandled = HandleDesignerInputKey(EventArgs);
+	}
+	if (!bHandled && TransformWidget.IsValid() && IsPerspective())
 	{
 		bHandled = TransformWidget->HandleInputKey(EventArgs);
 	}
@@ -982,9 +1385,9 @@ bool FLexUIPrefabEditorViewportClient::InputKey(const FInputKeyEventArgs& EventA
 	}
 	if (!bHandled)
 	{
-		bool Res = FEditorViewportClient::InputKey(EventArgs);
+		bHandled = FEditorViewportClient::InputKey(EventArgs);
 
-		if (EventArgs.Key == EKeys::F)
+		if (!bHandled && EventArgs.Key == EKeys::F)
 		{
 			if (EventArgs.Event == IE_Pressed)
 			{
@@ -1024,7 +1427,11 @@ void FLexUIPrefabEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy*
 			ClickHitWidget = ClickHitUI;
 		}
 	}
-	if (ClickHitWidget != nullptr)
+	if (ClickHitWidget != nullptr && PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(ClickHitWidget))
+	{
+		ClickHitWidget = nullptr;
+	}
+	if (ClickHitWidget != nullptr && (Click.GetKey() == EKeys::LeftMouseButton || Click.GetKey() == EKeys::RightMouseButton))
 	{
 		PrefabEditorPtr.Pin()->SelectWidgets({ClickHitWidget}, Click.IsControlDown());
 		return;
@@ -1329,6 +1736,13 @@ EAxisList::Type FLexUIPrefabEditorViewportClient::GetVertAxis() const
 }
 void FLexUIPrefabEditorViewportClient::NudgeSelectedObjects(const struct FInputEventState& InputState)
 {
+	if (!PrefabEditorPtr.IsValid())return;
+	const bool bHasMovableSelection = PrefabEditorPtr.Pin()->GetSelectedWidgets().ContainsByPredicate([this](const TWeakObjectPtr<ULexWidget>& SelectedWidget)
+	{
+		return SelectedWidget.IsValid() && !PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(SelectedWidget.Get());
+	});
+	if (!bHasMovableSelection)return;
+
 	FViewport* InViewport = InputState.GetViewport();
 	EInputEvent Event = InputState.GetInputEvent();
 	FKey Key = InputState.GetKey();
@@ -1339,9 +1753,17 @@ void FLexUIPrefabEditorViewportClient::NudgeSelectedObjects(const struct FInputE
 	if (Event == IE_Pressed)
 	{
 		GEditor->BeginTransaction(LOCTEXT("MoveWidget", "Move Widget"));
+		if (PrefabEditorPtr.IsValid())
+		{
+			if (ULexUIPrefabHelperObject* Helper = PrefabEditorPtr.Pin()->GetPrefabHelperObject())
+			{
+				Helper->Modify();
+				Helper->SetAnythingDirty();
+			}
+		}
 		for (auto LexWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
 		{
-			LexWidget->Modify();
+			if (LexWidget.IsValid() && !PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(LexWidget.Get()))LexWidget->Modify();
 		}
 	}
 	else if (Event == IE_Released)
@@ -1356,13 +1778,14 @@ void FLexUIPrefabEditorViewportClient::NudgeSelectedObjects(const struct FInputE
 		else if (Key == EKeys::Right) MouseDelta.X = 1;
 		else if (Key == EKeys::Up) MouseDelta.Y = 1;
 		else if (Key == EKeys::Down) MouseDelta.Y = -1;
-		if (GetDefault<ULevelEditorViewportSettings>()->bEnableActorSnap)
+		if (PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->IsDesignerGridSnapEnabled())
 		{
-			MouseDelta *= GEditor->GetGridSize();
+			MouseDelta *= PrefabEditorPtr.Pin()->GetDesignerGridSize();
 		}
 		
 		for (auto LexWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
 		{
+			if (!LexWidget.IsValid() || PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(LexWidget.Get()))continue;
 			auto AnchoredPos = LexWidget->GetAnchoredPosition();
 			AnchoredPos += MouseDelta;
 			LexWidget->SetAnchoredPosition(AnchoredPos);
@@ -1534,6 +1957,73 @@ bool FLexUIPrefabEditorViewportClient::FocusViewportToTargets()
 	FocusViewportOnBox(Bounds.GetBox());
 
 	return false;
+}
+
+ULexWidget* FLexUIPrefabEditorViewportClient::GetWidgetUnderCursor(int32 PixelX, int32 PixelY, bool bRespectDesignerLock)
+{
+	if (!Viewport || !GetWorld())return nullptr;
+	FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(Viewport, GetScene(), EngineShowFlags));
+	FSceneView* View = CalcSceneView(&ViewFamily);
+	if (!View)return nullptr;
+	FVector RayOrigin, RayDirection;
+	FSceneView::DeprojectScreenToWorld(FVector2D(PixelX, PixelY), View->UnscaledViewRect,
+		View->ViewMatrices.GetClipToWorld(), RayOrigin, RayDirection);
+	TArray<ULexWidget*> Widgets;
+	if (ULexUIManagerWorldSubsystem* Manager = ULexUIManagerWorldSubsystem::GetInstance(GetWorld()))
+	{
+		for (const TWeakObjectPtr<ULexCanvas>& WeakCanvas : Manager->GetAllCanvasArray())
+		{
+			ULexCanvas* Canvas = WeakCanvas.Get();
+			if (!Canvas || !Canvas->IsRootCanvas())continue;
+			ULexWidget* Root = Canvas->GetWidget();
+			if (!Root)continue;
+			Widgets.Add(Root);
+			ULexWidget::CollectChildrenWidgets(Root, Widgets);
+		}
+		ULexWidget* Result = nullptr;
+		int32 HitIndex = INDEX_NONE;
+		if (ULexUIManagerWorldSubsystem::RaycastHitUI(GetWorld(), Widgets, RayOrigin,
+			RayOrigin + RayDirection * 100000000.0f, Result, HitIndex))
+		{
+			if (bRespectDesignerLock && PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->IsWidgetLockedInDesigner(Result))return nullptr;
+			return Result;
+		}
+	}
+	return nullptr;
+}
+
+bool FLexUIPrefabEditorViewportClient::GetDropWorldPosition(int32 PixelX, int32 PixelY, ULexWidget* ParentWidget, FVector& OutWorldPosition)
+{
+	if (!Viewport || !ParentWidget)return false;
+	FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(Viewport, GetScene(), EngineShowFlags));
+	FSceneView* View = CalcSceneView(&ViewFamily);
+	if (!View)return false;
+	FVector RayOrigin, RayDirection;
+	FSceneView::DeprojectScreenToWorld(FVector2D(PixelX, PixelY), View->UnscaledViewRect,
+		View->ViewMatrices.GetClipToWorld(), RayOrigin, RayDirection);
+	const FTransform& ParentTransform = ParentWidget->GetWorldTransform();
+	const FVector Intersection = FMath::LinePlaneIntersection(RayOrigin, RayOrigin + RayDirection * 100000000.0f,
+		ParentTransform.GetLocation(), ParentTransform.GetUnitAxis(EAxis::X));
+	FVector LocalPosition = ParentTransform.InverseTransformPosition(Intersection);
+	if (PrefabEditorPtr.IsValid())
+	{
+		LocalPosition.Y = PrefabEditorPtr.Pin()->SnapDesignerValue(LocalPosition.Y);
+		LocalPosition.Z = PrefabEditorPtr.Pin()->SnapDesignerValue(LocalPosition.Z);
+	}
+	OutWorldPosition = ParentTransform.TransformPosition(LocalPosition);
+	return true;
+}
+
+void FLexUIPrefabEditorViewportClient::SetPaletteDropPreview(ULexWidget* InWidget)
+{
+	PaletteDropPreviewWidget = InWidget;
+	Invalidate();
+}
+
+void FLexUIPrefabEditorViewportClient::ClearPaletteDropPreview()
+{
+	PaletteDropPreviewWidget.Reset();
+	Invalidate();
 }
 
 

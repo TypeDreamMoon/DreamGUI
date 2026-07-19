@@ -31,6 +31,7 @@
 #include "PrefabSystem/LexUIPrefabInstanceScene.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "PrefabAnimation/LexUIPrefabSequenceEditor.h"
+#include "ScopedTransaction.h"
 
 #define LOCTEXT_NAMESPACE "LexUIPrefabEditor"
 
@@ -356,6 +357,7 @@ void FLexUIPrefabEditor::UnregisterTabSpawners(const TSharedRef<FTabManager>& In
 void FLexUIPrefabEditor::PostUndo(bool bSuccess)
 {
 	SyncWidgetRegisterStateAfterTransaction(this);
+	ApplyDesignerState();
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->EventOnOutlineChanged.Broadcast();
 	SelectedWidgets = ULexUISelection::GetInstance(GetWorld())->GetSelectedWidgets();
@@ -365,6 +367,7 @@ void FLexUIPrefabEditor::PostUndo(bool bSuccess)
 void FLexUIPrefabEditor::PostRedo(bool bSuccess)
 {
 	SyncWidgetRegisterStateAfterTransaction(this);
+	ApplyDesignerState();
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	SelectedWidgets = ULexUISelection::GetInstance(GetWorld())->GetSelectedWidgets();
 	OnSelectionChanged.Broadcast();
@@ -409,6 +412,7 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 	
 	OutlinerPtr = SNew(SLexWidgetEditorHierarchyView, GetWorld());
 	PalettePtr = SNew(SLexUIPrefabPalette, SharedThis(this));
+	ApplyDesignerState();
 
 	SequencerPtr = SNew(SLexUIPrefabSequenceEditor);
 	
@@ -993,8 +997,6 @@ void FLexUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bA
 {
 	if (bIsSelecting)return;
 	bIsSelecting = true;
-	const FScopedTransaction Transaction(LOCTEXT("SelectionChanged_Transaction", "Select Widgets"));
-	ULexUISelection::GetInstance(GetWorld())->Modify();
 	
 	TSet<ULexWidget*> TempSelection;
 	for (auto& Widget : Widgets)
@@ -1032,6 +1034,145 @@ void FLexUIPrefabEditor::SelectWidgets(const TSet<ULexWidget*>& Widgets, bool bA
 	
 	OnSelectionChanged.Broadcast();
 	bIsSelecting = false;
+}
+
+FGuid FLexUIPrefabEditor::FindWidgetGuid(const ULexWidget* Widget) const
+{
+	if (!Widget || !PrefabBeingEdited || !PrefabBeingEdited->GetPrefabHelperObject())return FGuid();
+	for (const auto& Pair : PrefabBeingEdited->GetPrefabHelperObject()->MapGuidToObject)
+	{
+		if (Pair.Value == Widget)return Pair.Key;
+	}
+	return FGuid();
+}
+
+FGuid FLexUIPrefabEditor::FindOrAddWidgetGuid(ULexWidget* Widget)
+{
+	if (!Widget)return FGuid();
+	if (const FGuid Existing = FindWidgetGuid(Widget); Existing.IsValid())return Existing;
+	if (ULexUIPrefabHelperObject* Helper = GetPrefabHelperObject())
+	{
+		Helper->Modify();
+		const FGuid NewGuid = FGuid::NewGuid();
+		Helper->MapGuidToObject.Add(NewGuid, Widget);
+		return NewGuid;
+	}
+	return FGuid();
+}
+
+void FLexUIPrefabEditor::ApplyDesignerState()
+{
+	if (!PrefabBeingEdited || !GetPrefabHelperObject())return;
+	const TSet<FGuid>& HiddenSet = PrefabBeingEdited->PrefabDataForPrefabEditor.HiddenWidgetSet;
+	for (const auto& Pair : GetPrefabHelperObject()->MapGuidToObject)
+	{
+		if (ULexWidget* Widget = Cast<ULexWidget>(Pair.Value))
+		{
+			Widget->SetHiddenInDesigner(HiddenSet.Contains(Pair.Key));
+		}
+	}
+}
+
+bool FLexUIPrefabEditor::IsWidgetHiddenInDesigner(const ULexWidget* Widget) const
+{
+	return Widget && Widget->GetHiddenInDesigner();
+}
+
+void FLexUIPrefabEditor::SetWidgetHiddenInDesigner(ULexWidget* Widget, bool bHidden)
+{
+	if (!Widget || !PrefabBeingEdited || IsWidgetHiddenInDesigner(Widget) == bHidden)return;
+	const FScopedTransaction Transaction(LOCTEXT("ToggleDesignerVisibility", "Toggle Designer Visibility"));
+	PrefabBeingEdited->Modify();
+	const FGuid Guid = FindOrAddWidgetGuid(Widget);
+	if (!Guid.IsValid())return;
+	if (bHidden)PrefabBeingEdited->PrefabDataForPrefabEditor.HiddenWidgetSet.Add(Guid);
+	else PrefabBeingEdited->PrefabDataForPrefabEditor.HiddenWidgetSet.Remove(Guid);
+	Widget->SetHiddenInDesigner(bHidden);
+	PrefabBeingEdited->MarkPackageDirty();
+	if (OutlinerPtr.IsValid())OutlinerPtr->RequestRefresh();
+	if (ViewportPtr.IsValid() && ViewportPtr->GetViewportClient().IsValid())ViewportPtr->GetViewportClient()->Invalidate();
+}
+
+bool FLexUIPrefabEditor::IsWidgetLockedInDesigner(const ULexWidget* Widget) const
+{
+	if (!PrefabBeingEdited)return false;
+	const FGuid Guid = FindWidgetGuid(Widget);
+	return Guid.IsValid() && PrefabBeingEdited->PrefabDataForPrefabEditor.LockedWidgetSet.Contains(Guid);
+}
+
+void FLexUIPrefabEditor::SetWidgetLockedInDesigner(ULexWidget* Widget, bool bLocked, bool bRecursive)
+{
+	if (!Widget || !PrefabBeingEdited)return;
+	TArray<ULexWidget*> Widgets{ Widget };
+	if (bRecursive)
+	{
+		TArray<ULexWidget*> Descendants;
+		ULexWidget::CollectChildrenWidgets(Widget, Descendants);
+		Widgets.Append(Descendants);
+	}
+	const FScopedTransaction Transaction(LOCTEXT("ToggleDesignerLock", "Toggle Designer Lock"));
+	PrefabBeingEdited->Modify();
+	for (ULexWidget* Item : Widgets)
+	{
+		const FGuid Guid = FindOrAddWidgetGuid(Item);
+		if (!Guid.IsValid())continue;
+		if (bLocked)PrefabBeingEdited->PrefabDataForPrefabEditor.LockedWidgetSet.Add(Guid);
+		else PrefabBeingEdited->PrefabDataForPrefabEditor.LockedWidgetSet.Remove(Guid);
+	}
+	PrefabBeingEdited->MarkPackageDirty();
+	OnSelectionChanged.Broadcast();
+	if (OutlinerPtr.IsValid())OutlinerPtr->RequestRefresh();
+	if (ViewportPtr.IsValid() && ViewportPtr->GetViewportClient().IsValid())ViewportPtr->GetViewportClient()->Invalidate();
+}
+
+bool FLexUIPrefabEditor::IsDesignerGridSnapEnabled() const
+{
+	return PrefabBeingEdited && PrefabBeingEdited->PrefabDataForPrefabEditor.bDesignerGridSnapEnabled;
+}
+
+void FLexUIPrefabEditor::ToggleDesignerGridSnap()
+{
+	if (!PrefabBeingEdited)return;
+	PrefabBeingEdited->Modify();
+	PrefabBeingEdited->PrefabDataForPrefabEditor.bDesignerGridSnapEnabled = !IsDesignerGridSnapEnabled();
+	PrefabBeingEdited->MarkPackageDirty();
+}
+
+float FLexUIPrefabEditor::GetDesignerGridSize() const
+{
+	return PrefabBeingEdited ? FMath::Max(1.0f, PrefabBeingEdited->PrefabDataForPrefabEditor.DesignerGridSize) : 10.0f;
+}
+
+void FLexUIPrefabEditor::SetDesignerGridSize(float GridSize)
+{
+	if (!PrefabBeingEdited)return;
+	PrefabBeingEdited->Modify();
+	PrefabBeingEdited->PrefabDataForPrefabEditor.DesignerGridSize = FMath::Max(1.0f, GridSize);
+	PrefabBeingEdited->MarkPackageDirty();
+}
+
+bool FLexUIPrefabEditor::GetShowDesignerGuides() const
+{
+	return PrefabBeingEdited && PrefabBeingEdited->PrefabDataForPrefabEditor.bShowDesignerGuides;
+}
+
+void FLexUIPrefabEditor::ToggleDesignerGuides()
+{
+	if (!PrefabBeingEdited)return;
+	PrefabBeingEdited->Modify();
+	PrefabBeingEdited->PrefabDataForPrefabEditor.bShowDesignerGuides = !GetShowDesignerGuides();
+	PrefabBeingEdited->MarkPackageDirty();
+}
+
+float FLexUIPrefabEditor::SnapDesignerValue(float Value) const
+{
+	if (!IsDesignerGridSnapEnabled())return Value;
+	return FMath::GridSnap(Value, GetDesignerGridSize());
+}
+
+TSharedPtr<SWidget> FLexUIPrefabEditor::BuildWidgetContextMenu()
+{
+	return OutlinerPtr.IsValid() ? OutlinerPtr->BuildContextMenu() : nullptr;
 }
 
 FLexUIPrefabInstanceScene* FLexUIPrefabEditor::GetPreviewScene()

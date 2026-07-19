@@ -29,6 +29,7 @@
 #include "Elements/Framework/TypedElementSelectionSet.h"
 #include "AssetSelection.h"
 #include "LexUIPrefabEditorViewportClient.h"
+#include "LexUIPrefabEditor.h"
 #include "LGUIEditorModule.h"
 
 #define LOCTEXT_NAMESPACE "ClickHandlers"
@@ -895,9 +896,10 @@ namespace LexUIPrefabViewportClickHandlers
 		{
 			if( !Click.IsControlDown() )
 			{
-				const FScopedTransaction Transaction( NSLOCTEXT("UnrealEd", "ClickingBackground", "Clicking Background") );
-				UE_LOG(LGUIEditor, Log,  TEXT("Clicking Background") );
-				GEditor->SelectNone( true, true );
+				if (TSharedPtr<FLexUIPrefabEditor> Editor = ViewportClient->GetPrefabEditor())
+				{
+					Editor->SelectWidgets({}, false);
+				}
 			}
 		}
 	}
