@@ -182,24 +182,68 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		return;
 	}
 
-	IDetailCategoryBuilder& LGUICategory = DetailBuilder.EditCategory("LGUI");
+	DetailBuilder.HideCategory("LGUI");
+	DetailBuilder.HideCategory("Interaction");
+	DetailBuilder.HideCategory("Accessibility");
 	DetailBuilder.HideCategory("TransformCommon");
-	IDetailCategoryBuilder& TransformCategory = DetailBuilder.EditCategory("LGUITransform", LOCTEXT("LGUI-Transform", "LGUI-Transform"), ECategoryPriority::Transform);
-
-	//base
-	// {
-	// 	auto uiActiveHandle = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, bIsUIActive));
-	// 	uiActiveHandle->SetOnPropertyValueChanged(FSimpleDelegate::CreateLambda([this] {
-	// 		ForceUpdateUI();
-	// 	}));
-	// }
+	IDetailCategoryBuilder& TransformCategory = DetailBuilder.EditCategory(
+		"LexLayout", LOCTEXT("LayoutCategory", "Layout"), ECategoryPriority::Important);
+	IDetailCategoryBuilder& BehaviorCategory = DetailBuilder.EditCategory(
+		"LexBehavior", LOCTEXT("BehaviorCategory", "Behavior"), ECategoryPriority::Important);
+	IDetailCategoryBuilder& AppearanceCategory = DetailBuilder.EditCategory(
+		"LexAppearance", LOCTEXT("AppearanceCategory", "Appearance"), ECategoryPriority::Default);
+	IDetailCategoryBuilder& AccessibilityCategory = DetailBuilder.EditCategory(
+		"LexAccessibility", LOCTEXT("AccessibilityCategory", "Accessibility"), ECategoryPriority::Default);
+	TransformCategory.SetSortOrder(-90);
+	BehaviorCategory.SetSortOrder(-80);
+	AppearanceCategory.SetSortOrder(-70);
+	AccessibilityCategory.SetSortOrder(-30);
+	AccessibilityCategory.InitiallyCollapsed(true);
 
 	DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData));
 
-	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, bWidgetActive));
-	LGUICategory.AddProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, RenderOpacity));
+	auto DisplayName_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, DisplayName));
+	auto WidgetActive_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, bWidgetActive));
+	auto Visibility_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, Visibility));
+	auto Interactable_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, Interactable));
+	auto Raycastable_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, Raycastable));
+	auto Focusable_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, bIsFocusable));
+	auto RestrictNavigation_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, bRestrictNavigationArea));
+	auto Cursor_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, Cursor));
+	auto ToolTip_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, ToolTipText));
+	auto RenderOpacity_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, RenderOpacity));
+	auto PixelSnapping_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, PixelSnapping));
+	auto AccessibleBehavior_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AccessibleBehavior));
+	auto AccessibleText_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AccessibleText));
+	auto AccessibleSummaryText_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AccessibleSummaryText));
+	for (const TSharedPtr<IPropertyHandle>& Property : {
+		DisplayName_PH, WidgetActive_PH, Visibility_PH, Interactable_PH, Raycastable_PH,
+		Focusable_PH, RestrictNavigation_PH, Cursor_PH, ToolTip_PH, RenderOpacity_PH,
+		PixelSnapping_PH, AccessibleBehavior_PH, AccessibleText_PH, AccessibleSummaryText_PH })
+	{
+		DetailBuilder.HideProperty(Property);
+	}
+
+	BehaviorCategory.AddProperty(WidgetActive_PH).DisplayName(LOCTEXT("WidgetActive", "Active"));
+	BehaviorCategory.AddProperty(Visibility_PH);
+	BehaviorCategory.AddProperty(Interactable_PH);
+	BehaviorCategory.AddProperty(Raycastable_PH);
+	BehaviorCategory.AddProperty(Focusable_PH).DisplayName(LOCTEXT("Focusable", "Is Focusable"));
+	BehaviorCategory.AddProperty(Cursor_PH);
+	BehaviorCategory.AddProperty(ToolTip_PH);
+	BehaviorCategory.AddProperty(RestrictNavigation_PH, EPropertyLocation::Advanced);
+	BehaviorCategory.AddProperty(DisplayName_PH, EPropertyLocation::Advanced);
+
+	AppearanceCategory.AddProperty(RenderOpacity_PH).DisplayName(LOCTEXT("RenderOpacity", "Opacity"));
+	AppearanceCategory.AddProperty(PixelSnapping_PH);
+	AccessibilityCategory.AddProperty(AccessibleBehavior_PH).DisplayName(LOCTEXT("AccessibleBehavior", "Behavior"));
+	AccessibilityCategory.AddProperty(AccessibleText_PH);
+	AccessibilityCategory.AddProperty(AccessibleSummaryText_PH);
+
 	auto Clipping_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, Clipping));
-	auto& ClippingGroup = LGUICategory.AddGroup(TEXT("ClippingGroup"), LOCTEXT("ClippingGroup", "Clipping"));
+	DetailBuilder.HideProperty(Clipping_PH);
+	auto& ClippingGroup = AppearanceCategory.AddGroup(
+		TEXT("ClippingGroup"), LOCTEXT("ClippingGroup", "Clipping"), false, false);
 	ClippingGroup.HeaderProperty(Clipping_PH);
 	{
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, bUniformSetClippingCornerRadius));
@@ -243,7 +287,6 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		.NameContent()
 		[
 			SNew(SBox)
-			.MinDesiredWidth(1000)
 			[
 				SNew(SHorizontalBox)
 				+SHorizontalBox::Slot()
@@ -283,7 +326,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			]
 		]
 		.ValueContent()
-		.MinDesiredWidth(500)
+		.MinDesiredWidth(180)
 		[
 			SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot()
@@ -409,7 +452,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		))
 		.PropertyHandleList({AnchorHandle})
 		.ValueContent()
-		.MinDesiredWidth(500)
+		.MinDesiredWidth(220)
 		[
 			SNew(SBox)
 			[
@@ -896,20 +939,19 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 				]
 			];
 		
-		LGUICategory.AddProperty(SiblingIndex_PH, EPropertyLocation::Advanced).IsEnabled(false);//not editable inside PrefabEditor, because we can drag-drop inside it
-		LGUICategory.AddProperty(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, FlattenHierarchyIndex)), EPropertyLocation::Advanced);
+		TransformCategory.AddProperty(SiblingIndex_PH, EPropertyLocation::Advanced).IsEnabled(false);//not editable inside PrefabEditor, because we can drag-drop inside it
+		TransformCategory.AddProperty(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, FlattenHierarchyIndex)), EPropertyLocation::Advanced);
 	}
-		
-	//displayName
-	auto DisplayName_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, DisplayName));
-	LGUICategory.AddProperty(DisplayName_PH);
 
 	//Layout
 	{
 		auto Layout_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutContainer));
+		DetailBuilder.HideProperty(Layout_PH);
 		UObject* Layout = nullptr;
 		Layout_PH->GetValue(Layout);
-		auto& LayoutCategory = DetailBuilder.EditCategory("LayoutContainer");
+		auto& LayoutCategory = DetailBuilder.EditCategory(
+			"LayoutContainer", LOCTEXT("PanelCategory", "Panel"), ECategoryPriority::Default);
+		LayoutCategory.SetSortOrder(-60);
 		LayoutCategory.HeaderContent(SNew(SLexWidgetSubObjectWidget, Layout_PH, !bIsSubPrefab));
 		LayoutCategory.SetIsEmpty(!IsValid(Layout));
 		LayoutCategory.AddCustomRow(LOCTEXT("LayoutPlaceholder", "Placeholder"))
@@ -924,15 +966,18 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			];
 		LayoutCategory.AddExternalObjects({ Layout }, EPropertyLocation::Default
 			, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
-		DetailBuilder.HideProperty(Layout_PH);
 	}
 
 	//LayoutSelf
 	{
 		auto LayoutSelf_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutSelf));
+		DetailBuilder.HideProperty(LayoutSelf_PH);
 		UObject* LayoutSelf = nullptr;
 		LayoutSelf_PH->GetValue(LayoutSelf);
-		auto& LayoutSelfCategory = DetailBuilder.EditCategory("LayoutSelf");
+		auto& LayoutSelfCategory = DetailBuilder.EditCategory(
+			"LayoutSelf", LOCTEXT("SelfLayoutCategory", "Self Layout"), ECategoryPriority::Default);
+		LayoutSelfCategory.SetSortOrder(-50);
+		LayoutSelfCategory.InitiallyCollapsed(!IsValid(LayoutSelf));
 		LayoutSelfCategory.HeaderContent(SNew(SLexWidgetSubObjectWidget, LayoutSelf_PH, !bIsSubPrefab));
 		LayoutSelfCategory.SetIsEmpty(!IsValid(LayoutSelf));
 		LayoutSelfCategory.AddCustomRow(LOCTEXT("LayoutPlaceholder", "Placeholder"))
@@ -947,49 +992,51 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			];
 		LayoutSelfCategory.AddExternalObjects({ LayoutSelf }, EPropertyLocation::Default
 			, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
-		DetailBuilder.HideProperty(LayoutSelf_PH);
 	}
 
 	// Parent-owned slot, presented as a UMG-style Slot category without an object picker.
 	{
 		auto PanelSlot_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, PanelSlot));
+		DetailBuilder.HideProperty(PanelSlot_PH);
 		UObject* PanelSlotObject = nullptr;
 		PanelSlot_PH->GetValue(PanelSlotObject);
 		ULexLayoutContainer* ParentLayout = TargetScriptArray[0]->GetParent() ? TargetScriptArray[0]->GetParent()->GetLayoutContainer() : nullptr;
 		const bool bHasPanelSlot = IsValid(PanelSlotObject) && ParentLayout && ParentLayout->IsA<ULexPanelLayoutBase>();
-		FText SlotType = LOCTEXT("PanelSlotType", "Panel Slot");
+		FText SlotType = LOCTEXT("PanelSlotType", "Panel");
 		if (ParentLayout)
 		{
-			if (ParentLayout->IsA<ULexLayoutContainerCanvasPanel>()) SlotType = LOCTEXT("CanvasSlotType", "Canvas Panel Slot");
-			else if (ParentLayout->IsA<ULexLayoutContainerOverlay>()) SlotType = LOCTEXT("OverlaySlotType", "Overlay Slot");
-			else if (ParentLayout->IsA<ULexLayoutContainerHorizontalBox>()) SlotType = LOCTEXT("HorizontalSlotType", "Horizontal Box Slot");
-			else if (ParentLayout->IsA<ULexLayoutContainerVerticalBox>()) SlotType = LOCTEXT("VerticalSlotType", "Vertical Box Slot");
-			else if (ParentLayout->IsA<ULexLayoutContainerStackBox>()) SlotType = LOCTEXT("StackSlotType", "Stack Box Slot");
-			else if (ParentLayout->IsA<ULexLayoutContainerWrapBox>()) SlotType = LOCTEXT("WrapSlotType", "Wrap Box Slot");
-			else if (ParentLayout->IsA<ULexLayoutContainerGridPanel>()) SlotType = LOCTEXT("GridSlotType", "Grid Panel Slot");
-			else if (ParentLayout->IsA<ULexLayoutContainerUniformGridPanel>()) SlotType = LOCTEXT("UniformGridSlotType", "Uniform Grid Slot");
-			else if (ParentLayout->IsA<ULexLayoutContainerSafeZone>()) SlotType = LOCTEXT("SafeZoneSlotType", "Safe Zone Slot");
-			else if (ParentLayout->IsA<ULexLayoutContainerScaleBox>()) SlotType = LOCTEXT("ScaleBoxSlotType", "Scale Box Slot");
-			else if (ParentLayout->IsA<ULexLayoutContainerSizeBox>()) SlotType = LOCTEXT("SizeBoxSlotType", "Size Box Slot");
+			if (ParentLayout->IsA<ULexLayoutContainerCanvasPanel>()) SlotType = LOCTEXT("CanvasSlotType", "Canvas Panel");
+			else if (ParentLayout->IsA<ULexLayoutContainerOverlay>()) SlotType = LOCTEXT("OverlaySlotType", "Overlay");
+			else if (ParentLayout->IsA<ULexLayoutContainerHorizontalBox>()) SlotType = LOCTEXT("HorizontalSlotType", "Horizontal Box");
+			else if (ParentLayout->IsA<ULexLayoutContainerVerticalBox>()) SlotType = LOCTEXT("VerticalSlotType", "Vertical Box");
+			else if (ParentLayout->IsA<ULexLayoutContainerStackBox>()) SlotType = LOCTEXT("StackSlotType", "Stack Box");
+			else if (ParentLayout->IsA<ULexLayoutContainerWrapBox>()) SlotType = LOCTEXT("WrapSlotType", "Wrap Box");
+			else if (ParentLayout->IsA<ULexLayoutContainerGridPanel>()) SlotType = LOCTEXT("GridSlotType", "Grid Panel");
+			else if (ParentLayout->IsA<ULexLayoutContainerUniformGridPanel>()) SlotType = LOCTEXT("UniformGridSlotType", "Uniform Grid");
+			else if (ParentLayout->IsA<ULexLayoutContainerSafeZone>()) SlotType = LOCTEXT("SafeZoneSlotType", "Safe Zone");
+			else if (ParentLayout->IsA<ULexLayoutContainerScaleBox>()) SlotType = LOCTEXT("ScaleBoxSlotType", "Scale Box");
+			else if (ParentLayout->IsA<ULexLayoutContainerSizeBox>()) SlotType = LOCTEXT("SizeBoxSlotType", "Size Box");
 		}
 		auto& PanelSlotCategory = DetailBuilder.EditCategory(
-			TEXT("PanelSlot"),
+			TEXT("LexSlot"),
 			FText::Format(LOCTEXT("SlotCategoryFormat", "Slot ({0})"), SlotType),
 			ECategoryPriority::Important);
+		PanelSlotCategory.SetSortOrder(-100);
 		PanelSlotCategory.SetIsEmpty(!bHasPanelSlot);
 		if (bHasPanelSlot)
 		{
 			FLexPanelSlotCustomization::AddSlotProperties(PanelSlotCategory, { PanelSlotObject }, ParentLayout);
 		}
-		DetailBuilder.HideProperty(PanelSlot_PH);
 	}
 
 	//visual
 	{
 		auto Visual_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, Visual));
+		DetailBuilder.HideProperty(Visual_PH);
 		UObject* Visual = nullptr;
 		Visual_PH->GetValue(Visual);
 		IDetailCategoryBuilder& VisualCategory = DetailBuilder.EditCategory("Visual");
+		VisualCategory.SetSortOrder(-40);
 		VisualCategory.HeaderContent(SNew(SLexWidgetSubObjectWidget, Visual_PH, !bIsSubPrefab));
 		VisualCategory.SetIsEmpty(Visual == nullptr);
 		VisualCategory.AddCustomRow(LOCTEXT("VisualPlaceholder", "Placeholder"))
@@ -1005,7 +1052,6 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			;
 		VisualCategory.AddExternalObjects({ Visual }, EPropertyLocation::Common
 			, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(false));
-		DetailBuilder.HideProperty(Visual_PH);
 	}
 }
 

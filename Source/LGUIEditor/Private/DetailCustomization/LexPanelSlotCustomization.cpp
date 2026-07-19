@@ -50,7 +50,7 @@ namespace LexPanelSlotCustomizationLocal
 		}
 		Row->CustomWidget()
 		.NameContent()[Handle->CreatePropertyNameWidget()]
-		.ValueContent().MaxDesiredWidth(0)
+		.ValueContent().MinDesiredWidth(150).MaxDesiredWidth(220)
 		[
 			SNew(SSegmentedControl<ELexPanelHorizontalAlignment>)
 			.Value_Lambda([Handle]()
@@ -87,7 +87,7 @@ namespace LexPanelSlotCustomizationLocal
 		}
 		Row->CustomWidget()
 		.NameContent()[Handle->CreatePropertyNameWidget()]
-		.ValueContent().MaxDesiredWidth(0)
+		.ValueContent().MinDesiredWidth(150).MaxDesiredWidth(220)
 		[
 			SNew(SSegmentedControl<ELexPanelVerticalAlignment>)
 			.Value_Lambda([Handle]()
@@ -124,7 +124,7 @@ namespace LexPanelSlotCustomizationLocal
 		}
 		Row->CustomWidget()
 		.NameContent()[Handle->CreatePropertyNameWidget()]
-		.ValueContent().MaxDesiredWidth(0)
+		.ValueContent().MinDesiredWidth(150).MaxDesiredWidth(220)
 		[
 			SNew(SSegmentedControl<ELexPanelSizeRule>)
 			.Value_Lambda([Handle]()
@@ -267,7 +267,7 @@ void FLexPanelSlotCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 		SlotCategory.AddProperty(PaddingHandle);
 		SlotCategory.AddCustomRow(HorizontalHandle->GetPropertyDisplayName())
 		.NameContent()[HorizontalHandle->CreatePropertyNameWidget()]
-		.ValueContent().MaxDesiredWidth(0)
+		.ValueContent().MinDesiredWidth(150).MaxDesiredWidth(220)
 		[
 			SNew(SSegmentedControl<ELexPanelHorizontalAlignment>)
 			.Value_Lambda([HorizontalHandle]()
@@ -292,7 +292,7 @@ void FLexPanelSlotCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 
 		SlotCategory.AddCustomRow(VerticalHandle->GetPropertyDisplayName())
 		.NameContent()[VerticalHandle->CreatePropertyNameWidget()]
-		.ValueContent().MaxDesiredWidth(0)
+		.ValueContent().MinDesiredWidth(150).MaxDesiredWidth(220)
 		[
 			SNew(SSegmentedControl<ELexPanelVerticalAlignment>)
 			.Value_Lambda([VerticalHandle]()
@@ -320,7 +320,7 @@ void FLexPanelSlotCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBu
 	{
 		SlotCategory.AddCustomRow(SizeRuleHandle->GetPropertyDisplayName())
 		.NameContent()[SizeRuleHandle->CreatePropertyNameWidget()]
-		.ValueContent().MaxDesiredWidth(0)
+		.ValueContent().MinDesiredWidth(150).MaxDesiredWidth(220)
 		[
 			SNew(SSegmentedControl<ELexPanelSizeRule>)
 			.Value_Lambda([SizeRuleHandle]()
