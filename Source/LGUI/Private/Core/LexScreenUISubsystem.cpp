@@ -5,7 +5,9 @@
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/LexUIManager.h"
+#include "Engine/AssetManager.h"
 #include "Engine/Engine.h"
+#include "Engine/StreamableManager.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Event/LexEventSystem.h"
@@ -41,6 +43,15 @@ void ULexScreenUISubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void ULexScreenUISubsystem::Deinitialize()
 {
+	for (TPair<FName, FPendingPageLoad>& Pair : PendingPageLoads)
+	{
+		if (Pair.Value.Handle.IsValid())
+		{
+			Pair.Value.Handle->CancelHandle();
+		}
+	}
+	PendingPageLoads.Reset();
+	PageDefinitions.Reset();
 	RemoveAllUI();
 
 	if (IsValid(InteractionHost))
@@ -216,7 +227,6 @@ void ULexScreenUISubsystem::ConfigurePage(ULexWidget* InRoot, int32 InSortOrder)
 	InRoot->SetAnchoredPosition(FVector2D::ZeroVector);
 	InRoot->SetSizeDelta(FVector2D::ZeroVector);
 	InRoot->SetWidgetActive(true);
-	InRoot->SetVisibility(ELexWidgetVisibility::Visible);
 
 	ULexCanvas* PageCanvas = InRoot->GetComponent<ULexCanvas>();
 	if (!PageCanvas)
@@ -290,6 +300,19 @@ ULexWidget* ULexScreenUISubsystem::LoadPrefabToScreen(ULexUIPrefab* InPrefab, in
 
 void ULexScreenUISubsystem::RegisterUI(FName InName, ULexWidget* InRoot, int32 InSortOrder)
 {
+	const FName PreviousTop = GetTopUI();
+	RegisterUIInternal(InName, InRoot, InSortOrder, ELexUIScreenPageCachePolicy::DestroyOnPop, nullptr, true);
+	RefreshStack(PreviousTop);
+}
+
+void ULexScreenUISubsystem::RegisterUIInternal(
+	FName InName,
+	ULexWidget* InRoot,
+	int32 InSortOrder,
+	ELexUIScreenPageCachePolicy InCachePolicy,
+	TSoftObjectPtr<ULexUIPrefab> InSourcePrefab,
+	bool bInitiallyVisible)
+{
 	if (InName.IsNone() || !IsUsablePage(InRoot) || InRoot == ScreenRoot)
 	{
 		return;
@@ -298,19 +321,40 @@ void ULexScreenUISubsystem::RegisterUI(FName InName, ULexWidget* InRoot, int32 I
 	const FName PreviousName = FindNameForWidget(InRoot);
 	if (!PreviousName.IsNone() && PreviousName != InName)
 	{
-		Entries.Remove(PreviousName);
 		Stack.Remove(PreviousName);
+		Entries.Remove(PreviousName);
+		OnPageRemoved.Broadcast(PreviousName, InRoot);
 	}
-	if (const FEntry* Existing = Entries.Find(InName))
+
+	if (FEntry* Existing = Entries.Find(InName))
 	{
-		if (ULexWidget* ExistingRoot = Existing->Root.Get(); ExistingRoot && ExistingRoot != InRoot)
+		if (Existing->Root.Get() == InRoot)
 		{
-			DestroyPage(ExistingRoot);
+			Existing->SortOrder = InSortOrder;
+			Existing->CachePolicy = InCachePolicy;
+			if (!InSourcePrefab.IsNull())
+			{
+				Existing->SourcePrefab = InSourcePrefab;
+			}
+			ConfigurePage(InRoot, InSortOrder);
+			SetPageActive(InName, bInitiallyVisible);
+			return;
 		}
+		Stack.Remove(InName);
+		RemoveEntry(InName, true);
 	}
 
 	ConfigurePage(InRoot, InSortOrder);
-	Entries.Add(InName, FEntry{ InRoot, InSortOrder });
+	FEntry Entry;
+	Entry.Root = InRoot;
+	Entry.SourcePrefab = InSourcePrefab;
+	Entry.SortOrder = InSortOrder;
+	Entry.CachePolicy = InCachePolicy;
+	Entry.State = ELexUIScreenPageState::Inactive;
+	Entries.Add(InName, MoveTemp(Entry));
+	InRoot->SetVisibility(ELexWidgetVisibility::Collapsed);
+	OnPageCreated.Broadcast(InName, InRoot);
+	SetPageActive(InName, bInitiallyVisible);
 }
 
 ULexWidget* ULexScreenUISubsystem::ShowPrefab(FName InName, ULexUIPrefab* InPrefab, int32 InSortOrder)
@@ -327,7 +371,9 @@ ULexWidget* ULexScreenUISubsystem::ShowPrefab(FName InName, ULexUIPrefab* InPref
 	ULexWidget* Page = InPrefab->LoadPrefab(GetWorld(), Root, nullptr, true);
 	if (Page)
 	{
-		RegisterUI(InName, Page, InSortOrder);
+		const FName PreviousTop = GetTopUI();
+		RegisterUIInternal(InName, Page, InSortOrder, ELexUIScreenPageCachePolicy::DestroyOnPop, InPrefab, true);
+		RefreshStack(PreviousTop);
 	}
 	return Page;
 }
@@ -360,9 +406,34 @@ bool ULexScreenUISubsystem::IsUIShowing(FName InName) const
 
 void ULexScreenUISubsystem::SetUIVisible(FName InName, bool bVisible)
 {
-	if (ULexWidget* Root = GetUI(InName))
+	SetPageActive(InName, bVisible);
+}
+
+void ULexScreenUISubsystem::SetPageActive(FName InName, bool bActive)
+{
+	FEntry* Entry = Entries.Find(InName);
+	ULexWidget* Root = Entry ? Entry->Root.Get() : nullptr;
+	if (!Entry || !IsUsablePage(Root))
 	{
-		Root->SetVisibility(bVisible ? ELexWidgetVisibility::Visible : ELexWidgetVisibility::Collapsed);
+		return;
+	}
+
+	const bool bWasShowing = IsUIShowing(InName);
+	const ELexUIScreenPageState NewState = bActive ? ELexUIScreenPageState::Active : ELexUIScreenPageState::Inactive;
+	Root->SetWidgetActive(true);
+	Root->SetVisibility(bActive ? ELexWidgetVisibility::Visible : ELexWidgetVisibility::Collapsed);
+	const bool bStateChanged = Entry->State != NewState || bWasShowing != bActive;
+	Entry->State = NewState;
+	if (bStateChanged)
+	{
+		if (bActive)
+		{
+			OnPageShown.Broadcast(InName, Root);
+		}
+		else
+		{
+			OnPageHidden.Broadcast(InName, Root);
+		}
 	}
 }
 
@@ -385,28 +456,59 @@ void ULexScreenUISubsystem::RemoveFromViewport(ULexWidget* InRoot)
 
 void ULexScreenUISubsystem::RemoveUI(FName InName)
 {
-	FEntry Entry;
-	if (Entries.RemoveAndCopyValue(InName, Entry))
-	{
-		DestroyPage(Entry.Root.Get());
-	}
+	const FName PreviousTop = GetTopUI();
 	Stack.Remove(InName);
+	RemoveEntry(InName, true);
+	RefreshStack(PreviousTop);
+}
+
+void ULexScreenUISubsystem::RemoveEntry(FName InName, bool bDestroyPage)
+{
+	FEntry Entry;
+	if (!Entries.RemoveAndCopyValue(InName, Entry))
+	{
+		return;
+	}
+
+	ULexWidget* Root = Entry.Root.Get();
+	const bool bWasShowing = IsUsablePage(Root)
+		&& Root->GetWidgetActive()
+		&& Root->GetVisibility() != ELexWidgetVisibility::Hidden
+		&& Root->GetVisibility() != ELexWidgetVisibility::Collapsed;
+	if (IsUsablePage(Root))
+	{
+		Root->SetWidgetActive(true);
+		Root->SetVisibility(ELexWidgetVisibility::Collapsed);
+	}
+	if (bWasShowing || Entry.State == ELexUIScreenPageState::Active)
+	{
+		OnPageHidden.Broadcast(InName, Root);
+	}
+	OnPageRemoved.Broadcast(InName, Root);
+	if (bDestroyPage)
+	{
+		DestroyPage(Root);
+	}
 }
 
 void ULexScreenUISubsystem::RemoveAllUI()
 {
-	TArray<TWeakObjectPtr<ULexWidget>> Roots;
-	Roots.Reserve(Entries.Num());
-	for (const TPair<FName, FEntry>& Pair : Entries)
+	TArray<FName> LoadingNames;
+	PendingPageLoads.GenerateKeyArray(LoadingNames);
+	for (FName Name : LoadingNames)
 	{
-		Roots.AddUnique(Pair.Value.Root);
+		CancelPageLoad(Name);
 	}
-	Entries.Reset();
+
+	TArray<FName> Names;
+	Entries.GenerateKeyArray(Names);
+	const FName PreviousTop = GetTopUI();
 	Stack.Reset();
-	for (const TWeakObjectPtr<ULexWidget>& Root : Roots)
+	for (FName Name : Names)
 	{
-		DestroyPage(Root.Get());
+		RemoveEntry(Name, true);
 	}
+	RefreshStack(PreviousTop);
 }
 
 TArray<FName> ULexScreenUISubsystem::GetAllUINames() const
@@ -419,44 +521,410 @@ TArray<FName> ULexScreenUISubsystem::GetAllUINames() const
 			Names.Add(Pair.Key);
 		}
 	}
+	Names.Sort([](FName A, FName B) { return A.ToString() < B.ToString(); });
 	return Names;
 }
 
-ULexWidget* ULexScreenUISubsystem::PushPrefab(FName InName, ULexUIPrefab* InPrefab)
+bool ULexScreenUISubsystem::RegisterPageAsset(
+	FName InName,
+	TSoftObjectPtr<ULexUIPrefab> InPrefab,
+	ELexUIScreenPageCachePolicy InCachePolicy)
 {
-	const int32 SortOrder = StackBaseSortOrder + Stack.Num() * StackSortOrderStep;
-	ULexWidget* Page = ShowPrefab(InName, InPrefab, SortOrder);
-	if (Page)
+	if (InName.IsNone() || InPrefab.IsNull())
 	{
-		Stack.Remove(InName);
-		Stack.Add(InName);
+		return false;
 	}
+
+	const FSoftObjectPath NewPrefabPath = InPrefab.ToSoftObjectPath();
+	bool bPrefabChanged = false;
+	if (const FPageDefinition* ExistingDefinition = PageDefinitions.Find(InName))
+	{
+		bPrefabChanged = ExistingDefinition->Prefab.ToSoftObjectPath() != NewPrefabPath;
+	}
+
+	PageDefinitions.Add(InName, FPageDefinition{ InPrefab, InCachePolicy });
+	if (bPrefabChanged)
+	{
+		CancelPageLoad(InName);
+		const FPageDefinition* CurrentDefinition = PageDefinitions.Find(InName);
+		if (!CurrentDefinition || CurrentDefinition->Prefab.ToSoftObjectPath() != NewPrefabPath)
+		{
+			return true;
+		}
+		if (const FEntry* ExistingEntry = Entries.Find(InName);
+			ExistingEntry && !ExistingEntry->SourcePrefab.IsNull()
+			&& ExistingEntry->SourcePrefab.ToSoftObjectPath() != NewPrefabPath)
+		{
+			RemoveUI(InName);
+		}
+	}
+	if (FEntry* Entry = Entries.Find(InName);
+		Entry && Entry->SourcePrefab.ToSoftObjectPath() == NewPrefabPath)
+	{
+		Entry->CachePolicy = InCachePolicy;
+	}
+	return true;
+}
+
+void ULexScreenUISubsystem::UnregisterPageAsset(FName InName, bool bRemoveLoadedPage)
+{
+	PageDefinitions.Remove(InName);
+	CancelPageLoad(InName);
+	if (bRemoveLoadedPage)
+	{
+		RemoveUI(InName);
+	}
+}
+
+TSoftObjectPtr<ULexUIPrefab> ULexScreenUISubsystem::GetPageAsset(FName InName) const
+{
+	if (const FPageDefinition* Definition = PageDefinitions.Find(InName))
+	{
+		return Definition->Prefab;
+	}
+	return {};
+}
+
+TArray<FName> ULexScreenUISubsystem::GetRegisteredPageNames() const
+{
+	TArray<FName> Names;
+	PageDefinitions.GenerateKeyArray(Names);
+	Names.Sort([](FName A, FName B) { return A.ToString() < B.ToString(); });
+	return Names;
+}
+
+void ULexScreenUISubsystem::ExecuteLoadCallbacks(
+	FName InName,
+	FPendingPageLoad& InPendingLoad,
+	ULexWidget* InPage,
+	bool bSuccess)
+
+{
+	for (const FLexUIScreenPageAsyncCallback& Callback : InPendingLoad.Callbacks)
+	{
+		Callback.ExecuteIfBound(InName, InPage, bSuccess);
+	}
+}
+
+void ULexScreenUISubsystem::CompletePageLoad(FName InName)
+{
+	FPendingPageLoad PendingLoad;
+	if (!PendingPageLoads.RemoveAndCopyValue(InName, PendingLoad))
+	{
+		return;
+	}
+
+	const FPageDefinition* Definition = PageDefinitions.Find(InName);
+	ULexUIPrefab* Prefab = Definition ? Definition->Prefab.Get() : nullptr;
+	ULexWidget* Page = Definition && IsValid(Prefab)
+		? PushPrefab(InName, Prefab, Definition->CachePolicy, PendingLoad.bHidePrevious)
+		: nullptr;
+	ExecuteLoadCallbacks(InName, PendingLoad, Page, Page != nullptr);
+}
+
+void ULexScreenUISubsystem::PushPageAsync(
+	FName InName,
+	const FLexUIScreenPageAsyncCallback& OnComplete,
+	bool bHidePrevious)
+{
+	const FPageDefinition* Definition = PageDefinitions.Find(InName);
+	if (InName.IsNone() || !Definition || Definition->Prefab.IsNull())
+	{
+		OnComplete.ExecuteIfBound(InName, nullptr, false);
+		return;
+	}
+
+	if (ULexWidget* ExistingPage = GetUI(InName))
+	{
+		const FEntry* ExistingEntry = Entries.Find(InName);
+		if (ExistingEntry
+			&& !ExistingEntry->SourcePrefab.IsNull()
+			&& ExistingEntry->SourcePrefab.ToSoftObjectPath() == Definition->Prefab.ToSoftObjectPath())
+		{
+			PushUI(InName, ExistingPage, Definition->CachePolicy, bHidePrevious);
+			OnComplete.ExecuteIfBound(InName, ExistingPage, true);
+			return;
+		}
+		RemoveUI(InName);
+		Definition = PageDefinitions.Find(InName);
+		if (!Definition || Definition->Prefab.IsNull())
+		{
+			OnComplete.ExecuteIfBound(InName, nullptr, false);
+			return;
+		}
+	}
+
+	if (FPendingPageLoad* ExistingLoad = PendingPageLoads.Find(InName))
+	{
+		ExistingLoad->bHidePrevious = bHidePrevious;
+		if (OnComplete.IsBound())
+		{
+			ExistingLoad->Callbacks.Add(OnComplete);
+		}
+		return;
+	}
+
+	if (ULexUIPrefab* LoadedPrefab = Definition->Prefab.Get())
+	{
+		ULexWidget* Page = PushPrefab(InName, LoadedPrefab, Definition->CachePolicy, bHidePrevious);
+		OnComplete.ExecuteIfBound(InName, Page, Page != nullptr);
+		return;
+	}
+
+	FPendingPageLoad& PendingLoad = PendingPageLoads.Add(InName);
+	PendingLoad.bHidePrevious = bHidePrevious;
+	if (OnComplete.IsBound())
+	{
+		PendingLoad.Callbacks.Add(OnComplete);
+	}
+
+	const TWeakObjectPtr<ULexScreenUISubsystem> WeakThis(this);
+	PendingLoad.Handle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+		Definition->Prefab.ToSoftObjectPath(),
+		[WeakThis, InName]()
+		{
+			if (ULexScreenUISubsystem* This = WeakThis.Get())
+			{
+				This->CompletePageLoad(InName);
+			}
+		},
+		FStreamableManager::DefaultAsyncLoadPriority,
+		false,
+		false,
+		FString::Printf(TEXT("LexUI Page %s"), *InName.ToString()));
+
+	if (!PendingLoad.Handle.IsValid())
+	{
+		FPendingPageLoad FailedLoad;
+		PendingPageLoads.RemoveAndCopyValue(InName, FailedLoad);
+		ExecuteLoadCallbacks(InName, FailedLoad, nullptr, false);
+	}
+}
+
+bool ULexScreenUISubsystem::CancelPageLoad(FName InName)
+{
+	FPendingPageLoad PendingLoad;
+	if (!PendingPageLoads.RemoveAndCopyValue(InName, PendingLoad))
+	{
+		return false;
+	}
+	if (PendingLoad.Handle.IsValid())
+	{
+		PendingLoad.Handle->CancelHandle();
+	}
+	ExecuteLoadCallbacks(InName, PendingLoad, nullptr, false);
+	return true;
+}
+
+ELexUIScreenPageState ULexScreenUISubsystem::GetPageState(FName InName) const
+{
+	if (PendingPageLoads.Contains(InName))
+	{
+		return ELexUIScreenPageState::Loading;
+	}
+	if (const FEntry* Entry = Entries.Find(InName); Entry && IsUsablePage(Entry->Root.Get()))
+	{
+		return IsUIShowing(InName) ? ELexUIScreenPageState::Active : ELexUIScreenPageState::Inactive;
+	}
+	return ELexUIScreenPageState::Unloaded;
+}
+
+ULexWidget* ULexScreenUISubsystem::PushPrefab(
+	FName InName,
+	ULexUIPrefab* InPrefab,
+	ELexUIScreenPageCachePolicy InCachePolicy,
+	bool bHidePrevious)
+{
+	if (InName.IsNone() || !IsValid(InPrefab))
+	{
+		return nullptr;
+	}
+
+	if (FEntry* ExistingEntry = Entries.Find(InName))
+	{
+		const TSoftObjectPtr<ULexUIPrefab> RequestedPrefab(InPrefab);
+		if (!ExistingEntry->SourcePrefab.IsNull()
+			&& ExistingEntry->SourcePrefab.ToSoftObjectPath() == RequestedPrefab.ToSoftObjectPath())
+		{
+			if (ULexWidget* ExistingPage = GetUI(InName))
+			{
+				PushUI(InName, ExistingPage, InCachePolicy, bHidePrevious);
+				return ExistingPage;
+			}
+		}
+		RemoveUI(InName);
+	}
+
+	ULexWidget* Root = GetOrCreateScreenRoot();
+	if (!Root)
+	{
+		return nullptr;
+	}
+	ULexWidget* Page = InPrefab->LoadPrefab(GetWorld(), Root, nullptr, true);
+	if (!Page)
+	{
+		return nullptr;
+	}
+
+	const FName PreviousTop = GetTopUI();
+	const int32 SortOrder = StackBaseSortOrder + Stack.Num() * StackSortOrderStep;
+	RegisterUIInternal(InName, Page, SortOrder, InCachePolicy, InPrefab, false);
+	Stack.Remove(InName);
+	Stack.Add(InName);
+	if (FEntry* Entry = Entries.Find(InName))
+	{
+		Entry->bHidePrevious = bHidePrevious;
+	}
+	RefreshStack(PreviousTop);
 	return Page;
 }
 
-void ULexScreenUISubsystem::PushUI(FName InName, ULexWidget* InRoot)
+void ULexScreenUISubsystem::PushUI(
+	FName InName,
+	ULexWidget* InRoot,
+	ELexUIScreenPageCachePolicy InCachePolicy,
+	bool bHidePrevious)
 {
 	if (InName.IsNone() || !IsUsablePage(InRoot))
 	{
 		return;
 	}
-	const int32 SortOrder = StackBaseSortOrder + Stack.Num() * StackSortOrderStep;
-	RegisterUI(InName, InRoot, SortOrder);
+
+	const FName PreviousTop = GetTopUI();
+	if (GetUI(InName) != InRoot)
+	{
+		const int32 SortOrder = StackBaseSortOrder + Stack.Num() * StackSortOrderStep;
+		RegisterUIInternal(InName, InRoot, SortOrder, InCachePolicy, nullptr, false);
+	}
+	FEntry* Entry = Entries.Find(InName);
+	if (!Entry)
+	{
+		return;
+	}
+	Entry->CachePolicy = InCachePolicy;
+	Entry->bHidePrevious = bHidePrevious;
 	Stack.Remove(InName);
 	Stack.Add(InName);
+	RefreshStack(PreviousTop);
+}
+
+void ULexScreenUISubsystem::RefreshStack(FName InPreviousTop)
+{
+	if (bRefreshingStack)
+	{
+		bStackRefreshRequested = true;
+		return;
+	}
+
+	bRefreshingStack = true;
+	do
+	{
+		bStackRefreshRequested = false;
+		for (int32 Index = Stack.Num() - 1; Index >= 0; --Index)
+		{
+			if (!GetUI(Stack[Index]))
+			{
+				Stack.RemoveAt(Index);
+			}
+		}
+
+		for (int32 Index = 0; Index < Stack.Num(); ++Index)
+		{
+			if (FEntry* Entry = Entries.Find(Stack[Index]))
+			{
+				Entry->SortOrder = StackBaseSortOrder + Index * StackSortOrderStep;
+				ConfigurePage(Entry->Root.Get(), Entry->SortOrder);
+			}
+		}
+
+		TArray<TPair<FName, bool>> VisibilityUpdates;
+		VisibilityUpdates.Reserve(Stack.Num());
+		bool bPreviousPagesCovered = false;
+		for (int32 Index = Stack.Num() - 1; Index >= 0; --Index)
+		{
+			const FName PageName = Stack[Index];
+			VisibilityUpdates.Emplace(PageName, !bPreviousPagesCovered);
+			if (const FEntry* Entry = Entries.Find(PageName); Entry && Entry->bHidePrevious)
+			{
+				bPreviousPagesCovered = true;
+			}
+		}
+
+		for (const TPair<FName, bool>& Update : VisibilityUpdates)
+		{
+			SetPageActive(Update.Key, Update.Value);
+			if (bStackRefreshRequested)
+			{
+				break;
+			}
+		}
+	}
+	while (bStackRefreshRequested);
+	bRefreshingStack = false;
+
+	const FName NewTop = GetTopUI();
+	if (InPreviousTop != NewTop)
+	{
+		OnStackChanged.Broadcast(InPreviousTop, NewTop);
+	}
 }
 
 void ULexScreenUISubsystem::PopUI()
 {
+	const FName PreviousTop = GetTopUI();
 	while (!Stack.IsEmpty())
 	{
 		const FName Top = Stack.Pop();
-		if (Entries.Contains(Top))
+		FEntry* Entry = Entries.Find(Top);
+		if (!Entry || !IsUsablePage(Entry->Root.Get()))
 		{
-			RemoveUI(Top);
-			return;
+			continue;
+		}
+
+		const ELexUIScreenPageCachePolicy CachePolicy = Entry->CachePolicy;
+		if (CachePolicy == ELexUIScreenPageCachePolicy::KeepAlive)
+		{
+			SetPageActive(Top, false);
+		}
+		else
+		{
+			RemoveEntry(Top, true);
+		}
+		break;
+	}
+	RefreshStack(PreviousTop);
+}
+
+bool ULexScreenUISubsystem::PopToUI(FName InName)
+{
+	if (!Stack.Contains(InName) || !GetUI(InName))
+	{
+		return false;
+	}
+	while (!Stack.IsEmpty() && Stack.Last() != InName)
+	{
+		PopUI();
+	}
+	return !Stack.IsEmpty() && Stack.Last() == InName;
+}
+
+void ULexScreenUISubsystem::ClearStack(bool bRemovePages)
+{
+	const FName PreviousTop = GetTopUI();
+	const TArray<FName> PreviousStack = Stack;
+	Stack.Reset();
+	for (FName PageName : PreviousStack)
+	{
+		if (bRemovePages)
+		{
+			RemoveEntry(PageName, true);
+		}
+		else
+		{
+			SetPageActive(PageName, false);
 		}
 	}
+	RefreshStack(PreviousTop);
 }
 
 FName ULexScreenUISubsystem::GetTopUI() const
