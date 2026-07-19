@@ -214,7 +214,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetFont(ULexUIFontData_BaseObject* Value);
-	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	UFUNCTION(BlueprintCallable, Category = "LGUI", Meta = (AutoCreateRefTerm = "Value"))
 		void SetText(const FText& Value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		void SetFontSize(float Value);
