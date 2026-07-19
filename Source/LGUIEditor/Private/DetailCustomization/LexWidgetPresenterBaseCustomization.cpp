@@ -41,7 +41,8 @@ void FLexWidgetPresenterBaseCustomization::CustomizeDetails(IDetailLayoutBuilder
 		UE_LOG(LGUIEditor, Log, TEXT("[%s].%d Get TargetScript is null"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 		return;
 	}
-	auto TargetWorld = TargetScriptArray[0]->GetWorld();
+	const TWeakObjectPtr<ULexWidgetPresenterComponentBase> PrimaryTarget = TargetScriptArray[0];
+	const TWeakObjectPtr<UWorld> TargetWorld = PrimaryTarget.IsValid() ? PrimaryTarget->GetWorld() : nullptr;
 
 	auto& Category = DetailBuilder.EditCategory("LexWidgetPresenter");
 
@@ -58,9 +59,9 @@ void FLexWidgetPresenterBaseCustomization::CustomizeDetails(IDetailLayoutBuilder
 			SNew(SButton)
 			.HAlign(HAlign_Center)
 			.VAlign(VAlign_Center)
-			.OnClicked_Lambda([=, this]()
+			.OnClicked_Lambda([Targets = TargetScriptArray]()
 			{
-				for (auto& Target : TargetScriptArray)
+				for (const TWeakObjectPtr<ULexWidgetPresenterComponentBase>& Target : Targets)
 				{
 					if (Target.IsValid())
 					{
@@ -92,7 +93,7 @@ void FLexWidgetPresenterBaseCustomization::CustomizeDetails(IDetailLayoutBuilder
 	if (ExistingTab.IsValid())
 	{
 		auto WidgetInspector = StaticCastSharedRef<SLexUIWidgetInspector>(ExistingTab->GetContent());
-		bIsExternalTabAlreadyOpened = TargetWorld != nullptr && WidgetInspector->GetWorld() == TargetWorld;
+		bIsExternalTabAlreadyOpened = TargetWorld.IsValid() && WidgetInspector->GetWorld() == TargetWorld.Get();
 	}
 	Category.AddCustomRow(FText())
 		.NameContent()
@@ -106,19 +107,23 @@ void FLexWidgetPresenterBaseCustomization::CustomizeDetails(IDetailLayoutBuilder
 			SNew(SButton)
 			.HAlign(HAlign_Center)
 			.VAlign(VAlign_Center)
-			.Visibility_Lambda([=, this]()
+			.Visibility_Lambda([PrimaryTarget]()
 			{
-				if (TargetScriptArray.Num() > 0 && TargetScriptArray[0] != nullptr && TargetScriptArray[0]->GetWorld() != nullptr)
+				if (const ULexWidgetPresenterComponentBase* Target = PrimaryTarget.Get(); Target && IsValid(Target->GetWorld()))
 				{
 					return EVisibility::Visible;
 				}
 				return EVisibility::Collapsed;
 			})
-			.OnClicked_Lambda([=, this]()
+			.OnClicked_Lambda([PrimaryTarget]()
 			{
-				if (auto Tab = FGlobalTabmanager::Get()->TryInvokeTab(FLGUIEditorModule::LexUIWidgetInspectorTabName))
+				ULexWidgetPresenterComponentBase* Target = PrimaryTarget.Get();
+				if (Target && IsValid(Target->GetWorld()))
 				{
-					StaticCastSharedRef<SLexUIWidgetInspector>(Tab->GetContent())->AssignWorld(TargetScriptArray[0]->GetWorld());
+					if (auto Tab = FGlobalTabmanager::Get()->TryInvokeTab(FLGUIEditorModule::LexUIWidgetInspectorTabName))
+					{
+						StaticCastSharedRef<SLexUIWidgetInspector>(Tab->GetContent())->AssignWorld(Target->GetWorld());
+					}
 				}
 				return FReply::Handled();
 			})
@@ -135,14 +140,21 @@ void FLexWidgetPresenterBaseCustomization::CustomizeDetails(IDetailLayoutBuilder
 		UObject* CanvasTemplate = nullptr;
 		CanvasTemplate_PH->GetValue(CanvasTemplate);
 		auto& CanvasTemplateCategory = DetailBuilder.EditCategory("CanvasTemplate");
-		auto CanvasTemplateRow = CanvasTemplateCategory.AddExternalObjects({ CanvasTemplate }, EPropertyLocation::Default
-			, FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(true));
-		CanvasTemplateRow->ShouldAutoExpand(true);
-		CanvasTemplateRow->Visibility(TAttribute<EVisibility>::CreateSPLambda(this, [=]()
+		if (IsValid(CanvasTemplate))
 		{
-			return TargetWorld->IsGameWorld() ? EVisibility::Collapsed : EVisibility::Visible;
-		}));
-		DetailBuilder.HideProperty(CanvasTemplate_PH);
+			if (IDetailPropertyRow* CanvasTemplateRow = CanvasTemplateCategory.AddExternalObjects(
+				{ CanvasTemplate }, EPropertyLocation::Default,
+				FAddPropertyParams().HideRootObjectNode(true).CreateCategoryNodes(true)))
+			{
+				CanvasTemplateRow->ShouldAutoExpand(true);
+				CanvasTemplateRow->Visibility(TAttribute<EVisibility>::CreateLambda([TargetWorld]()
+				{
+					const UWorld* World = TargetWorld.Get();
+					return World && World->IsGameWorld() ? EVisibility::Collapsed : EVisibility::Visible;
+				}));
+				DetailBuilder.HideProperty(CanvasTemplate_PH);
+			}
+		}
 	}
 }
 void FLexWidgetPresenterBaseCustomization::ForceRefresh(IDetailLayoutBuilder* DetailBuilder)
