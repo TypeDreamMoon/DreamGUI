@@ -423,8 +423,7 @@ TArray<ULexWidget*> ULexPanelLayoutBase::CollectLayoutChildren(bool bEnsureSlots
 			continue;
 		}
 		ULexPanelSlot* ExistingSlot = Child->GetPanelSlot();
-		const ULexLayoutSelf* LayoutSelf = Child->GetLayoutSelf();
-		const bool bIgnored = IsValid(LayoutSelf) && LayoutSelf->GetIgnoreLayoutContainer();
+		const bool bIgnored = Child->GetIgnoreLayout();
 		if (!Child->GetLayoutVisibleInHierarchy() || bIgnored)
 		{
 			if (bEnsureSlots && IsValid(ExistingSlot))
@@ -513,9 +512,8 @@ FVector2D ULexPanelLayoutBase::GetDesiredSize(ULexWidget* Child) const
 		{
 			for (ULexWidget* ContentChild : Widget->GetChildren())
 			{
-				const ULexLayoutSelf* ContentLayoutSelf = IsValid(ContentChild) ? ContentChild->GetLayoutSelf() : nullptr;
 				if (IsValid(ContentChild) && ContentChild->GetLayoutVisibleInHierarchy()
-					&& (!IsValid(ContentLayoutSelf) || !ContentLayoutSelf->GetIgnoreLayoutContainer()))
+					&& !ContentChild->GetIgnoreLayout())
 				{
 					const FVector2D ContentDesired = GetIntrinsicSize(ContentChild, Visited);
 					Accumulate(Desired.X, bWidthOverridden, ContentDesired.X);
@@ -597,7 +595,8 @@ void ULexPanelLayoutBase::ApplyChildRect(ULexWidget* Child, const FVector2D& Pos
 	Child->SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.5), FVector2D(0.5), true, true);
 	if (ULexLayoutSelfFlexBox* FlexSelf = Cast<ULexLayoutSelfFlexBox>(Child->GetLayoutSelf()))
 	{
-		FlexSelf->SetSizeByLayoutContainer(FinalSize, 0);
+		FlexSelf->SetFinalSizeByLayoutContainer(FinalSize);
+		Child->SetSizeDelta(FVector2D(FinalSize));
 	}
 	else
 	{
@@ -664,7 +663,7 @@ FLexLayoutControlAnchorData ULexPanelLayoutBase::GetLayoutControlAnchor(const UL
 	{
 		return Result;
 	}
-	if (const ULexLayoutSelf* LayoutSelf = TargetWidget->GetLayoutSelf(); IsValid(LayoutSelf) && LayoutSelf->GetIgnoreLayoutContainer())
+	if (TargetWidget->GetIgnoreLayout())
 	{
 		return Result;
 	}
@@ -798,7 +797,7 @@ FLexLayoutControlAnchorData ULexLayoutContainerCanvasPanel::GetLayoutControlAnch
 	{
 		return Result;
 	}
-	if (const ULexLayoutSelf* LayoutSelf = TargetWidget->GetLayoutSelf(); IsValid(LayoutSelf) && LayoutSelf->GetIgnoreLayoutContainer())
+	if (TargetWidget->GetIgnoreLayout())
 	{
 		return Result;
 	}
@@ -825,7 +824,8 @@ void ULexLayoutContainerCanvasPanel::CalculateLayout()
 			const FVector2D Desired = GetDesiredSize(Child);
 			if (ULexLayoutSelfFlexBox* FlexSelf = Cast<ULexLayoutSelfFlexBox>(Child->GetLayoutSelf()))
 			{
-				FlexSelf->SetSizeByLayoutContainer(FVector2f(Desired), 0);
+				FlexSelf->SetFinalSizeByLayoutContainer(FVector2f(Desired));
+				Child->SetSizeDelta(Desired);
 			}
 			else
 			{
@@ -1210,9 +1210,8 @@ void ULexLayoutContainerUniformGridPanel::CalculateLayout()
 FVector2f ULexLayoutContainerSizeBox::MeasureLayout() const
 {
 	ULexWidget* Content = LexPanelLayoutLocal::GetFirstValidChild(GetWidget());
-	const ULexLayoutSelf* ContentLayoutSelf = IsValid(Content) ? Content->GetLayoutSelf() : nullptr;
 	const bool bContentParticipates = IsValid(Content) && Content->GetLayoutVisibleInHierarchy()
-		&& (!IsValid(ContentLayoutSelf) || !ContentLayoutSelf->GetIgnoreLayoutContainer());
+		&& !Content->GetIgnoreLayout();
 	FVector2D Desired = bContentParticipates ? GetDesiredSize(Content) : FVector2D::ZeroVector;
 	if (bContentParticipates)
 	{
@@ -1275,8 +1274,7 @@ void ULexLayoutContainerSizeBox::CalculateLayout()
 	}
 	if (IsValid(Content))
 	{
-		const ULexLayoutSelf* LayoutSelf = Content->GetLayoutSelf();
-		if (Content->GetLayoutVisibleInHierarchy() && (!IsValid(LayoutSelf) || !LayoutSelf->GetIgnoreLayoutContainer()))
+		if (Content->GetLayoutVisibleInHierarchy() && !Content->GetIgnoreLayout())
 		{
 			ApplyChildRect(Content, FVector2D(LexPanelLayoutLocal::FiniteOrZero(Padding.Left), LexPanelLayoutLocal::FiniteOrZero(Padding.Top)), FVector2D(
 				FMath::Max(0.0f, GetWidget()->GetWidth() - LexPanelLayoutLocal::HorizontalPadding(Padding)),
@@ -1293,9 +1291,8 @@ void ULexLayoutContainerSizeBox::CalculateLayout()
 FVector2f ULexLayoutContainerScaleBox::MeasureLayout() const
 {
 	ULexWidget* Content = LexPanelLayoutLocal::GetFirstValidChild(GetWidget());
-	const ULexLayoutSelf* ContentLayoutSelf = IsValid(Content) ? Content->GetLayoutSelf() : nullptr;
 	if (!IsValid(Content) || !Content->GetLayoutVisibleInHierarchy()
-		|| (IsValid(ContentLayoutSelf) && ContentLayoutSelf->GetIgnoreLayoutContainer()))
+		|| Content->GetIgnoreLayout())
 	{
 		return FVector2f::ZeroVector;
 	}
@@ -1377,9 +1374,8 @@ void ULexLayoutContainerScaleBox::CalculateLayout()
 		Candidate->SetLayoutScale(FVector2f::UnitVector);
 		Candidate->SetLayoutVisibilitySuppressed(false);
 	}
-	const ULexLayoutSelf* ChildLayoutSelf = IsValid(Child) ? Child->GetLayoutSelf() : nullptr;
 	if (!IsValid(Child) || !Child->GetLayoutVisibleInHierarchy()
-		|| (IsValid(ChildLayoutSelf) && ChildLayoutSelf->GetIgnoreLayoutContainer()))
+		|| Child->GetIgnoreLayout())
 	{
 		if (IsValid(Child))
 		{
@@ -1474,7 +1470,8 @@ void ULexLayoutContainerScaleBox::CalculateLayout()
 	Child->SetHorizontalAndVerticalAnchorMinMax(FVector2D(0.5), FVector2D(0.5), true, true);
 	if (ULexLayoutSelfFlexBox* FlexSelf = Cast<ULexLayoutSelfFlexBox>(Child->GetLayoutSelf()))
 	{
-		FlexSelf->SetSizeByLayoutContainer(FVector2f(UnscaledSize), 0);
+		FlexSelf->SetFinalSizeByLayoutContainer(FVector2f(UnscaledSize));
+		Child->SetSizeDelta(UnscaledSize);
 	}
 	else
 	{
@@ -1577,9 +1574,8 @@ FVector2f ULexLayoutContainerSafeZone::MeasureLayout() const
 {
 	FVector2f Result = FVector2f::ZeroVector;
 	ULexWidget* Content = LexPanelLayoutLocal::GetFirstValidChild(GetWidget());
-	const ULexLayoutSelf* ContentLayoutSelf = IsValid(Content) ? Content->GetLayoutSelf() : nullptr;
 	if (IsValid(Content) && Content->GetLayoutVisibleInHierarchy()
-		&& (!IsValid(ContentLayoutSelf) || !ContentLayoutSelf->GetIgnoreLayoutContainer()))
+		&& !Content->GetIgnoreLayout())
 	{
 		const FVector2D Desired = GetDesiredSize(Content);
 		const ULexPanelSlot* Slot = GetSlot(Content);
@@ -1666,8 +1662,7 @@ void ULexLayoutContainerSafeZone::CalculateLayout()
 	}
 	if (IsValid(Content))
 	{
-		const ULexLayoutSelf* LayoutSelf = Content->GetLayoutSelf();
-		if (Content->GetLayoutVisibleInHierarchy() && (!IsValid(LayoutSelf) || !LayoutSelf->GetIgnoreLayoutContainer()))
+		if (Content->GetLayoutVisibleInHierarchy() && !Content->GetIgnoreLayout())
 		{
 			ApplyChildRect(Content, FVector2D(Combined.Left, Combined.Top), FVector2D(
 				FMath::Max(0.0f, GetWidget()->GetWidth() - LexPanelLayoutLocal::HorizontalPadding(Combined)),
@@ -1722,7 +1717,7 @@ FVector2f ULexLayoutContainerWidgetSwitcher::MeasureLayout() const
 	{
 		return FVector2f::ZeroVector;
 	}
-	if (const ULexLayoutSelf* LayoutSelf = Child->GetLayoutSelf(); IsValid(LayoutSelf) && LayoutSelf->GetIgnoreLayoutContainer())
+	if (Child->GetIgnoreLayout())
 	{
 		return FVector2f::ZeroVector;
 	}
@@ -1759,8 +1754,7 @@ void ULexLayoutContainerWidgetSwitcher::CalculateLayout()
 		if (ULexWidget* Child = Panel->GetChildren()[Index]; IsValid(Child))
 		{
 			const bool bIsActive = Child == ActiveChild;
-			const ULexLayoutSelf* LayoutSelf = Child->GetLayoutSelf();
-			const bool bIgnored = IsValid(LayoutSelf) && LayoutSelf->GetIgnoreLayoutContainer();
+			const bool bIgnored = Child->GetIgnoreLayout();
 			if (!bIsActive || bIgnored)
 			{
 				if (ULexPanelSlot* Slot = Child->GetPanelSlot(); IsValid(Slot))
@@ -1773,8 +1767,7 @@ void ULexLayoutContainerWidgetSwitcher::CalculateLayout()
 	}
 	if (ULexWidget* Child = ActiveChild; IsValid(Child) && Child->GetLayoutVisibleInHierarchy())
 	{
-		const ULexLayoutSelf* LayoutSelf = Child->GetLayoutSelf();
-		if (!IsValid(LayoutSelf) || !LayoutSelf->GetIgnoreLayoutContainer())
+		if (!Child->GetIgnoreLayout())
 		{
 			EnsureSlot(Child);
 			ApplyChildRect(Child, FVector2D(LexPanelLayoutLocal::FiniteOrZero(Padding.Left), LexPanelLayoutLocal::FiniteOrZero(Padding.Top)), FVector2D(

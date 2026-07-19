@@ -4,6 +4,7 @@
 #include "Core/Components/LexLayoutSelfFlexBox.h"
 #include "Core/Components/LexWidget.h"
 #include "LGUI.h"
+#include "LTweenBPLibrary.h"
 #include "Core/LexUIManager.h"
 
 DECLARE_CYCLE_STAT(TEXT("LexLayoutContainer FlexBox"), STAT_LexLayoutContainerFlexBox, STATGROUP_LGUI);
@@ -65,8 +66,9 @@ void ULexLayoutContainerFlexBox::CalculateLayout()
         
         if (IsValid(LayoutResult.LayoutSelf))
         {
-            LayoutResult.LayoutSelf->SetSizeByLayoutContainer(LayoutResult.Size, LayoutResult.PrimaryAxis);
+            LayoutResult.LayoutSelf->SetFinalSizeByLayoutContainer(LayoutResult.Size);
         }
+		LayoutResult.Widget->SetSizeDelta(FVector2D(LayoutResult.Size));
     }
     CalculatedLayoutResultArray.Reset();
 }
@@ -83,10 +85,7 @@ void ULexLayoutContainerFlexBox::RefreshChildren()
     {
 		if (!IsValid(ChildWidget)) continue;
         if (!ChildWidget->GetLayoutVisibleInHierarchy())continue;
-        if (auto ChildLayoutSelf = ChildWidget->GetLayoutSelf())
-        {
-            if (ChildLayoutSelf->GetIgnoreLayoutContainer())continue;
-        }
+		if (ChildWidget->GetIgnoreLayout())continue;
         Children.Add(ChildWidget);
 
         auto AnchorMin = ChildWidget->GetAnchorMin();
@@ -114,8 +113,6 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
     
     RefreshChildren();
     
-    CalculatedLayoutResultArray.Reset();
-
     bool bIsVertical = Direction == ELexLayoutFlexBoxDirectionType::Vertical || Direction == ELexLayoutFlexBoxDirectionType::VerticalReverse;
     int PrimaryAxis = bIsVertical ? 1 : 0;
     int SecondaryAxis = bIsVertical ? 0 : 1;
@@ -233,7 +230,6 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
 			ContentSize.X = FMath::Max(0.0f, ContentSize.X - HorizontalMargin);
 			ContentSize.Y = FMath::Max(0.0f, ContentSize.Y - VerticalMargin);
         }
-
 		const FVector2D Pivot = ChildWidget->GetPivot();
 		const FVector2D AnchorMin = ChildWidget->GetAnchorMin();
 		const double PivotX = FMath::IsFinite(Pivot.X) ? Pivot.X : 0.5;
@@ -252,7 +248,6 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
         CalculatedLayout.AnchoredPos = FVector2D(AnchoredPositionX, AnchoredPositionY);
         CalculatedLayout.LayoutSelf = ChildLayoutSelf;
 		CalculatedLayout.Size = ContentSize;
-        CalculatedLayout.PrimaryAxis = PrimaryAxis;
         CalculatedLayoutResultArray.Add(CalculatedLayout);
     };
 
@@ -350,7 +345,6 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
     TotalPreferredSize[SecondaryAxis] += SecondaryTotalPreferred;
 
     if (!bApplyLayoutToChildren || LineDataArray.IsEmpty())return;
-
     bool bReverseHorizontal = Direction == ELexLayoutFlexBoxDirectionType::HorizontalReverse;
     bool bReverseVertical = Direction == ELexLayoutFlexBoxDirectionType::VerticalReverse;
     bool bReverse = bReverseHorizontal || bReverseVertical;
@@ -561,6 +555,29 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
     }
 }
 
+void ULexLayoutContainerFlexBox::RefreshChildren()
+{
+    auto Widget = GetWidget();
+    Children.Empty();
+    for (auto& ChildWidget : Widget->GetChildren())
+    {
+        if (!ChildWidget->GetWidgetActiveInHierarchy())continue;
+        if (ChildWidget->GetIgnoreLayout())continue;
+        Children.Add(ChildWidget);
+
+        auto AnchorMin = ChildWidget->GetAnchorMin();
+        auto AnchorMax = ChildWidget->GetAnchorMax();
+        if (AnchorMin.X != AnchorMax.X)//custom anchor not support
+        {
+            ChildWidget->SetHorizontalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
+        }
+        if (AnchorMin.Y != AnchorMax.Y)
+        {
+            ChildWidget->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
+        }
+    }
+}
+
 void ULexLayoutContainerFlexBox::CalculatePreferredSize()
 {
     RefreshChildren();
@@ -628,11 +645,7 @@ FLexLayoutControlAnchorData ULexLayoutContainerFlexBox::GetLayoutControlAnchor(c
     }
     else if (ThisWidget->GetChildren().Contains(TargetWidget))//child
     {
-        bool bIgnoreLayout = false;
-        if (auto LayoutSelf = TargetWidget->GetLayoutSelf())
-        {
-            bIgnoreLayout = LayoutSelf->GetIgnoreLayoutContainer();
-        }
+        bool bIgnoreLayout = TargetWidget->GetIgnoreLayout();
         if (!bIgnoreLayout)
         {
             Result.bCanControlHorizontalPosition = true;

@@ -15,7 +15,7 @@ namespace LexUIPrefabSystem
 	}
 	bool FLexUIOverrideParameterObjectWriter::ShouldSkipProperty(const FProperty* InProperty) const
 	{
-		if (LGUIPrefab_ShouldSkipProperty(InProperty))
+		if (LexUIPrefab_ShouldSkipProperty(InProperty))
 		{
 			return true;
 		}
@@ -62,7 +62,7 @@ namespace LexUIPrefabSystem
 	}
 	FString FLexUIOverrideParameterObjectWriter::GetArchiveName() const
 	{
-		return TEXT("FLGUIOverrideParameterObjectWriter");
+		return TEXT("FLexUIOverrideParameterObjectWriter");
 	}
 
 
@@ -74,7 +74,7 @@ namespace LexUIPrefabSystem
 	}
 	bool FLexUIOverrideParameterObjectReader::ShouldSkipProperty(const FProperty* InProperty) const
 	{
-		if (LGUIPrefab_ShouldSkipProperty(InProperty))
+		if (LexUIPrefab_ShouldSkipProperty(InProperty))
 		{
 			return true;
 		}
@@ -146,7 +146,7 @@ namespace LexUIPrefabSystem
 	}
 	FString FLexUIOverrideParameterObjectReader::GetArchiveName() const
 	{
-		return TEXT("FLGUIOverrideParameterObjectReader");
+		return TEXT("FLexUIOverrideParameterObjectReader");
 	}
 
 
@@ -166,7 +166,7 @@ namespace LexUIPrefabSystem
 	}
 	bool FLexUIImmediateOverrideParameterObjectWriter::ShouldSkipProperty(const FProperty* InProperty) const
 	{
-		if (LGUIPrefab_ShouldSkipProperty(InProperty))
+		if (LexUIPrefab_ShouldSkipProperty(InProperty))
 		{
 			return true;
 		}
@@ -187,7 +187,7 @@ namespace LexUIPrefabSystem
 	}
 	FString FLexUIImmediateOverrideParameterObjectWriter::GetArchiveName() const
 	{
-		return TEXT("FLGUIImmediateOverrideParameterObjectWriter");
+		return TEXT("FLexUIImmediateOverrideParameterObjectWriter");
 	}
 
 
@@ -204,7 +204,7 @@ namespace LexUIPrefabSystem
 	}
 	bool FLexUIImmediateOverrideParameterObjectReader::ShouldSkipProperty(const FProperty* InProperty) const
 	{
-		if (LGUIPrefab_ShouldSkipProperty(InProperty))
+		if (LexUIPrefab_ShouldSkipProperty(InProperty))
 		{
 			return true;
 		}
@@ -225,6 +225,6 @@ namespace LexUIPrefabSystem
 	}
 	FString FLexUIImmediateOverrideParameterObjectReader::GetArchiveName() const
 	{
-		return TEXT("FLGUIImmediateOverrideParameterObjectReader");
+		return TEXT("FLexUIImmediateOverrideParameterObjectReader");
 	}
 }

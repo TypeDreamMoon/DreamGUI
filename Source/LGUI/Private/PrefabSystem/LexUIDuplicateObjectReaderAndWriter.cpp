@@ -75,7 +75,7 @@ namespace LexUIPrefabSystem
 	}
 	FString FLexUIDuplicateObjectWriter::GetArchiveName() const
 	{
-		return TEXT("FLGUIDuplicateObjectReader");
+		return TEXT("FLexUIDuplicateObjectReader");
 	}
 
 
@@ -162,6 +162,6 @@ namespace LexUIPrefabSystem
 	}
 	FString FLexUIDuplicateObjectReader::GetArchiveName() const
 	{
-		return TEXT("FLGUIDuplicateObjectReader");
+		return TEXT("FLexUIDuplicateObjectReader");
 	}
 }

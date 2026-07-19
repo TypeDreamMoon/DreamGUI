@@ -66,7 +66,7 @@ namespace LexUIPrefabSystem
 	}
 	FString FLexUIDuplicateOverrideParameterObjectWriter::GetArchiveName() const
 	{
-		return TEXT("FLGUIDuplicateOverrideParameterObjectWriter");
+		return TEXT("FLexUIDuplicateOverrideParameterObjectWriter");
 	}
 
 
@@ -158,6 +158,6 @@ namespace LexUIPrefabSystem
 	}
 	FString FLexUIDuplicateOverrideParameterObjectReader::GetArchiveName() const
 	{
-		return TEXT("FLGUIDuplicateOverrideParameterObjectReader");
+		return TEXT("FLexUIDuplicateOverrideParameterObjectReader");
 	}
 }

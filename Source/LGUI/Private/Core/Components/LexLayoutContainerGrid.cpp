@@ -214,14 +214,13 @@ void ULexLayoutContainerGrid::CalculateLayout()
 	for (ULexWidget* Child : Widget->GetChildren())
 	{
 		if (!IsValid(Child) || !Child->GetLayoutVisibleInHierarchy()) continue;
-		if (ULexLayoutSelf* LayoutSelf = Child->GetLayoutSelf(); IsValid(LayoutSelf) && LayoutSelf->GetIgnoreLayoutContainer()) continue;
+		if (Child->GetIgnoreLayout()) continue;
 		ULexLayoutSelfGrid* GridSelf = Cast<ULexLayoutSelfGrid>(Child->GetLayoutSelf());
 		if (!IsValid(GridSelf))
 		{
 			UnlocatedWidgets.Add(Child);
 			continue;
 		}
-
 		const int32 Column = FMath::Clamp(GridSelf->GetColumnIndex(), 0, Columns.Num() - 1);
 		const int32 Row = FMath::Clamp(GridSelf->GetRowIndex(), 0, Rows.Num() - 1);
 		const int32 ColumnSpan = FMath::Clamp(GridSelf->GetColumnCount(), 1, Columns.Num() - Column);
@@ -258,7 +257,7 @@ FLexLayoutControlAnchorData ULexLayoutContainerGrid::GetLayoutControlAnchor(cons
 	ULexWidget* Widget = GetWidget();
 	if (!IsValid(Widget) || !IsValid(TargetWidget) || Columns.IsEmpty() || Rows.IsEmpty()
 		|| !Widget->GetChildren().Contains(TargetWidget)) return Result;
-	if (const ULexLayoutSelf* LayoutSelf = TargetWidget->GetLayoutSelf(); IsValid(LayoutSelf) && LayoutSelf->GetIgnoreLayoutContainer()) return Result;
+	if (TargetWidget->GetIgnoreLayout()) return Result;
 	Result.bCanControlHorizontalPosition = true;
 	Result.bCanControlVerticalPosition = true;
 	if (IsValid(Cast<ULexLayoutSelfGrid>(TargetWidget->GetLayoutSelf())))

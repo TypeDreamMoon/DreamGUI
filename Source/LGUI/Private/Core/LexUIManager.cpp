@@ -850,6 +850,7 @@ void ULexUIManagerWorldSubsystem::Deinitialize()
 
 void ULexUIManagerWorldSubsystem::BeginDestroy()
 {
+	check(!IsInitialized());
 #if WITH_EDITOR
 	auto CopiedWidgetArray = AllWidgetArray;//use a copied array, because when Widget.OnUnregister the AllWidgetArray will change
 	for (int i = 0; i < CopiedWidgetArray.Num(); i++)
@@ -1046,12 +1047,14 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 	//update layout
 	if (LayoutDirtyWidgetArray.Num() > 0)
 	{
+		bIsExecutingLayout = true;
 		constexpr int32 MaxLayoutPassesPerFrame = 32;
 		int32 LayoutPassCount = 0;
 #if WITH_EDITOR
 		auto Time = FDateTime::Now();
 		UE_LOG(LGUI, Log, TEXT("---Begin layout frame:%d, World:%s---"), GFrameNumber, *GetWorld()->GetPathName());
 #endif
+		LayoutContainerArrayWhichHasSnapshot.Reset();
 		while (LayoutDirtyWidgetArray.Num() > 0 && LayoutPassCount < MaxLayoutPassesPerFrame)
 		{
 			SCOPE_CYCLE_COUNTER(STAT_UpdateLayout);
@@ -1072,6 +1075,13 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 				TEXT("Layout did not converge after %d passes in World %s. Deferring %d pending widgets to the next frame."),
 				MaxLayoutPassesPerFrame, *GetNameSafe(GetWorld()), LayoutDirtyWidgetArray.Num());
 		}
+		for (auto& SnapshotLayout : LayoutContainerArrayWhichHasSnapshot)
+		{
+			if (IsValid(SnapshotLayout))
+			{
+				SnapshotLayout->ApplyLayoutResult();
+			}
+		}
 #if WITH_EDITOR
 		for (auto& CalcCountKeyValue : LayoutCalculationCounterMap)
 		{
@@ -1084,6 +1094,7 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 		auto TimeSpan = (FDateTime::Now() - Time).GetTotalMilliseconds();
 		UE_LOG(LGUI, Log, TEXT("---end layout frame:%d, count:%d, time:%f"), GFrameNumber, LayoutPassCount, TimeSpan);
 #endif
+		bIsExecutingLayout = false;
 	}
 
 #if WITH_EDITOR
@@ -1476,43 +1487,67 @@ void ULexUIManagerWorldSubsystem::AddLayoutDirtyWidget(ULexWidget* InWidget)
 
 void ULexUIManagerWorldSubsystem::MarkRebuildLayoutTree(ULexWidget* InWidget)
 {
-	MapWidgetToLayoutTree.Remove(InWidget);
+	if (!bIsExecutingLayout)
+	{
+		MapWidgetToLayoutTree.Remove(InWidget);
+	}
 }
 
 void ULexUIManagerWorldSubsystem::MarkRebuildAllLayoutTree()
 {
-	MapWidgetToLayoutTree.Empty();
+	if (!bIsExecutingLayout)
+	{
+		MapWidgetToLayoutTree.Empty();
+	}
 }
 
 void ULexUIManagerWorldSubsystem::CalculateLayoutTree(ULexWidget* RootLayoutWidget)
 {
+	if (!IsValid(RootLayoutWidget))
+	{
+		return;
+	}
+
 	struct LOCAL
 	{
-		static void CollectLayoutTree(ULexWidget* Widget, TArray<TObjectPtr<ULexWidget>>& LayoutTreeArray)
+		static void CollectLayoutTree(ULexWidget* Widget, TArray<TObjectPtr<ULexWidget>>& LayoutTreeArray,
+			TSet<const ULexWidget*>& VisitedWidgets)
 		{
 			if (!IsValid(Widget))return;
-			if (!Widget->GetWidgetActiveInHierarchy())return;
+			if (VisitedWidgets.Contains(Widget))return;
+			VisitedWidgets.Add(Widget);
+			if (!Widget->GetLayoutVisibleInHierarchy())return;
 			if (!Widget->HasRegistered())return;//if not registered, means it could about to remove
 			LayoutTreeArray.Add(Widget);
-			if (Widget->GetLayoutContainer())
+			for (ULexWidget* Child : Widget->GetChildren())
 			{
-				for (auto& Child : Widget->GetChildren())
-				{
-					CollectLayoutTree(Child, LayoutTreeArray);
-				}
+				CollectLayoutTree(Child, LayoutTreeArray, VisitedWidgets);
 			}
 		}
 	};
-
-	auto LayoutTree = MapWidgetToLayoutTree.FindOrAdd(RootLayoutWidget);
-	auto& LayoutTreeArray = LayoutTree.WidgetArray;
-	if (LayoutTreeArray.IsEmpty())
+	auto& LayoutTree = MapWidgetToLayoutTree.FindOrAdd(RootLayoutWidget);
+	if (LayoutTree.WidgetArray.IsEmpty())
 	{
-		LOCAL::CollectLayoutTree(RootLayoutWidget, LayoutTreeArray);
+		TSet<const ULexWidget*> VisitedWidgets;
+		LOCAL::CollectLayoutTree(RootLayoutWidget, LayoutTree.WidgetArray, VisitedWidgets);
 	}
+	auto& LayoutTreeArray = LayoutTree.WidgetArray;
 	for (int i = 0; i < LayoutTreeArray.Num(); i++)
 	{
-		LayoutTreeArray[i]->UpdateLayout();
+		auto Widget = LayoutTreeArray[i];
+		if (!IsValid(Widget))
+		{
+			continue;
+		}
+		if (auto LayoutContainer = Widget->GetLayoutContainer())
+		{
+			if (!LayoutContainerArrayWhichHasSnapshot.Contains(LayoutContainer))
+			{
+				LayoutContainer->SnapshotLayout();
+				LayoutContainerArrayWhichHasSnapshot.Add(LayoutContainer);
+			}
+		}
+		Widget->UpdateLayout();
 	}
 }
 

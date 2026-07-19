@@ -138,7 +138,6 @@ private:
 		ULexLayoutSelfFlexBox* LayoutSelf = nullptr;
 		FVector2D AnchoredPos;
 		FVector2f Size;
-		int PrimaryAxis;
 	};
 	TArray<FCalculatedLayoutResult> CalculatedLayoutResultArray;
 
