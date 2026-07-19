@@ -151,6 +151,18 @@ public:
 	uint8 ViewportType = 2;//ELevelViewportType::LVT_OrthoYZ
 	UPROPERTY()
 	TSet<FGuid> UnexpandedWidgetSet;
+	/** Widgets hidden only in the prefab designer; runtime WidgetActive is not changed. */
+	UPROPERTY()
+	TSet<FGuid> HiddenWidgetSet;
+	/** Widgets protected from selection and manipulation in the designer. */
+	UPROPERTY()
+	TSet<FGuid> LockedWidgetSet;
+	UPROPERTY()
+	bool bDesignerGridSnapEnabled = true;
+	UPROPERTY()
+	float DesignerGridSize = 10.0f;
+	UPROPERTY()
+	bool bShowDesignerGuides = true;
 };
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FLexUIPrefab_LoadPrefabCallback, ULexWidget*, LoadedRootWidget);

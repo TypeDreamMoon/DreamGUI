@@ -193,10 +193,14 @@ void ULexEventSystem::SetSelectWidget(ULexWidget* InSelectWidget, ULexBaseEventD
 		if (IsValid(oldSelectedComp))
 		{
 			CallOnPointerDeselect(oldSelectedComp, EventData);
+			const int32 PointerId = Cast<ULexPointerEventData>(EventData) ? CastChecked<ULexPointerEventData>(EventData)->PointerID : 0;
+			oldSelectedComp->NotifyFocusLost(UserIndex, PointerId);
 		}
 		if (IsValid(EventData->SelectedComponent))
 		{
 			CallOnPointerSelect(EventData->SelectedComponent, EventData);
+			const int32 PointerId = Cast<ULexPointerEventData>(EventData) ? CastChecked<ULexPointerEventData>(EventData)->PointerID : 0;
+			EventData->SelectedComponent->NotifyFocusReceived(UserIndex, PointerId);
 		}
 	}
 }
@@ -216,10 +220,14 @@ void ULexEventSystem::SetSelectWidget(ULexEventSystem* InEventSystem, ULexWidget
 			if (IsValid(oldSelectedComp))
 			{
 				ExecuteEvent_OnPointerDeselect(oldSelectedComp, EventData, false);
+				const int32 PointerId = Cast<ULexPointerEventData>(EventData) ? CastChecked<ULexPointerEventData>(EventData)->PointerID : 0;
+				oldSelectedComp->NotifyFocusLost(0, PointerId);
 			}
 			if (IsValid(EventData->SelectedComponent))
 			{
 				ExecuteEvent_OnPointerSelect(EventData->SelectedComponent, EventData, false);
+				const int32 PointerId = Cast<ULexPointerEventData>(EventData) ? CastChecked<ULexPointerEventData>(EventData)->PointerID : 0;
+				EventData->SelectedComponent->NotifyFocusReceived(0, PointerId);
 			}
 		}
 	}

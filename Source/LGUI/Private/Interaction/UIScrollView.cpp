@@ -338,6 +338,17 @@ void UUIScrollView::SetVelocity(const FVector2D& value)
     }
 }
 
+void UUIScrollView::SetContent(ULexWidget* Value)
+{
+	if (Content.Get() != Value)
+	{
+		Content = Value;
+		ContentParent = nullptr;
+		bRangeCalculated = false;
+		RecalculateRange();
+	}
+}
+
 void UUIScrollView::SetDecelerateRate(float value)
 {
     if (DecelerateRate != value)

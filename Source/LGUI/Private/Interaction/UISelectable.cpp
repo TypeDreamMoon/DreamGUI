@@ -11,6 +11,7 @@
 #include "Core/Components/LexImage.h"
 #include "Core/Components/LexWidget.h"
 #include "Interaction/UINavigationInputSelectionHandler.h"
+#include "Interaction/LexSelectableStyle.h"
 
 
 UUITransition::UUITransition()
@@ -93,6 +94,10 @@ void UUISelectable::Awake()
 void UUISelectable::OnRegister()
 {
 	Super::OnRegister();
+	if (GetWidget())
+	{
+		GetWidget()->SetIsFocusable(true);
+	}
 	ULexUIManagerWorldSubsystem::AddSelectable(this);
 }
 void UUISelectable::OnUnregister()
@@ -130,6 +135,7 @@ void UUISelectable::OnInteractableChanged(bool IsEnabled)
 
 void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 {
+	const float EffectiveAnimDuration = Style ? Style->AnimationDuration : AnimDuration;
 	if (TransitionType != EUISelectableTransitionType::Custom)
 	{
 		if (!TransitionTarget.IsValid())return;
@@ -146,12 +152,12 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 			case EUISelectableTransitionType::None:break;
 			case EUISelectableTransitionType::Color:
 				{
-					Color = NormalColor;
+					Color = GetNormalColor();
 				}
 				break;
 			case EUISelectableTransitionType::ImageBrush:
 				{
-					Brush = NormalImageBrush;
+					Brush = GetNormalImageBrush();
 				}
 				break;
 			case EUISelectableTransitionType::Custom:
@@ -172,12 +178,12 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 			case EUISelectableTransitionType::None:break;
 			case EUISelectableTransitionType::Color:
 				{
-					Color = HoveredColor;
+					Color = GetHoveredColor();
 				}
 				break;
 			case EUISelectableTransitionType::ImageBrush:
 				{
-					Brush = HoveredImageBrush;
+					Brush = GetHoveredImageBrush();
 				}
 				break;
 			case EUISelectableTransitionType::Custom:
@@ -198,12 +204,12 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 			case EUISelectableTransitionType::None:break;
 			case EUISelectableTransitionType::Color:
 				{
-					Color = PressedColor;
+					Color = GetPressedColor();
 				}
 				break;
 			case EUISelectableTransitionType::ImageBrush:
 				{
-					Brush = PressedImageBrush;
+					Brush = GetPressedImageBrush();
 				}
 				break;
 			case EUISelectableTransitionType::Custom:
@@ -224,12 +230,12 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 			case EUISelectableTransitionType::None:break;
 			case EUISelectableTransitionType::Color:
 				{
-					Color = DisabledColor;
+					Color = GetDisabledColor();
 				}
 				break;
 			case EUISelectableTransitionType::ImageBrush:
 				{
-					Brush =  DisabledImageBrush;
+					Brush = GetDisabledImageBrush();
 				}
 				break;
 			case EUISelectableTransitionType::Custom:
@@ -247,7 +253,7 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 
 	if (Color.IsSet())
 	{
-		if (AnimDuration <= 0.0f || ImmediateSet)
+		if (EffectiveAnimDuration <= 0.0f || ImmediateSet)
 		{
 			TransitionTarget->SetColor(Color.GetValue());
 		}
@@ -258,7 +264,7 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 				, FLTweenColorGetterFunction::CreateWeakLambda(TransitionTarget.Get(), [=, this]()
 			{
 				return TransitionTarget->GetColor();
-			}), FLTweenColorSetterFunction::CreateUObject(TransitionTarget.Get(), &ULexVisual::SetColor), Color.GetValue(), AnimDuration);
+			}), FLTweenColorSetterFunction::CreateUObject(TransitionTarget.Get(), &ULexVisual::SetColor), Color.GetValue(), EffectiveAnimDuration);
 			if (TransitionTweener)
 			{
 				ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), TransitionTweener);
@@ -275,7 +281,7 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 			}
 			else
 			{
-				if (AnimDuration <= 0.0f || ImmediateSet)
+				if (EffectiveAnimDuration <= 0.0f || ImmediateSet)
 				{
 					TransitionTargetAsLexImage->SetBrushTintColor(Brush.GetValue().TintColor);
 				}
@@ -286,7 +292,7 @@ void UUISelectable::ApplyPointerSelectionState(bool ImmediateSet)
 						, FLTweenColorGetterFunction::CreateWeakLambda(TransitionTargetAsLexImage, [=, this]()
 					{
 						return TransitionTargetAsLexImage->GetBrush().TintColor;
-					}), FLTweenColorSetterFunction::CreateUObject(TransitionTargetAsLexImage, &ULexImage::SetBrushTintColor), Brush.GetValue().TintColor, AnimDuration);
+					}), FLTweenColorSetterFunction::CreateUObject(TransitionTargetAsLexImage, &ULexImage::SetBrushTintColor), Brush.GetValue().TintColor, EffectiveAnimDuration);
 					if (TransitionTweener)
 					{
 						ULexWidget::SetWidgetTweenerAffectByGamePauseAndTimeDilation(GetWidget(), TransitionTweener);
@@ -378,6 +384,24 @@ EUISelectableSelectionState UUISelectable::GetSelectionState()const
 	return EUISelectableSelectionState::Normal;
 }
 
+FColor UUISelectable::GetNormalColor() const { return Style ? Style->NormalColor : NormalColor; }
+FColor UUISelectable::GetHoveredColor() const { return Style ? Style->HoveredColor : HoveredColor; }
+FColor UUISelectable::GetPressedColor() const { return Style ? Style->PressedColor : PressedColor; }
+FColor UUISelectable::GetDisabledColor() const { return Style ? Style->DisabledColor : DisabledColor; }
+const FLexUIImageBrush& UUISelectable::GetNormalImageBrush() const { return Style ? Style->NormalImageBrush : NormalImageBrush; }
+const FLexUIImageBrush& UUISelectable::GetHoveredImageBrush() const { return Style ? Style->HoveredImageBrush : HoveredImageBrush; }
+const FLexUIImageBrush& UUISelectable::GetPressedImageBrush() const { return Style ? Style->PressedImageBrush : PressedImageBrush; }
+const FLexUIImageBrush& UUISelectable::GetDisabledImageBrush() const { return Style ? Style->DisabledImageBrush : DisabledImageBrush; }
+
+void UUISelectable::SetStyle(ULexSelectableStyle* Value)
+{
+	if (Style != Value)
+	{
+		Style = Value;
+		ApplyPointerSelectionState(false);
+	}
+}
+
 void UUISelectable::SetTransitionTarget(ULexVisual* Value)
 {
 	if (TransitionTarget != Value)
@@ -462,7 +486,7 @@ bool UUISelectable::IsInteractable()const
 {
 	if (auto Widget = GetWidget())
 	{
-		return Widget->GetWidgetActiveInHierarchy() && Widget->GetInteractableInHierarchy() && bInteractable;
+		return Widget->GetRenderVisibleInHierarchy() && Widget->GetInteractableInHierarchy() && bInteractable;
 	}
 	return bInteractable;
 }

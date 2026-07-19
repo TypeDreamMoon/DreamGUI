@@ -135,7 +135,7 @@ void ULexLayoutContainerGrid::CalculateLayout()
 	//firstly locate widgets with layout self data, then locate widgets without layout self data in left grid cell
 	for (auto& ChildWidget : Widget->GetChildren())
 	{
-		if (!ChildWidget->GetWidgetActiveInHierarchy())continue;
+		if (!ChildWidget->GetLayoutVisibleInHierarchy())continue;
 		auto ChildLayoutSelf = Cast<ULexLayoutSelfGrid>(ChildWidget->GetLayoutSelf());
 		if (ChildLayoutSelf && ChildLayoutSelf->GetIgnoreLayoutContainer())
 		{

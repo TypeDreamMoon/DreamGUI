@@ -200,7 +200,7 @@ void ULexUMGWidget::SetTickMode(ETickMode InTickMode)
 bool ULexUMGWidget::IsWidgetVisible() const
 {
 	//  If we are in World Space, if the component or the SlateWindow is not visible the Widget is not visible.
-	if ((!GetWidget()->GetWidgetActiveInHierarchy() || !SlateWindow.IsValid() || !SlateWindow->GetVisibility().IsVisible()))
+	if ((!GetWidget()->GetRenderVisibleInHierarchy() || !SlateWindow.IsValid() || !SlateWindow->GetVisibility().IsVisible()))
 	{
 		return false;
 	}

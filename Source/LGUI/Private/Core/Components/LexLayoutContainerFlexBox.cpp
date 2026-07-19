@@ -50,7 +50,7 @@ void ULexLayoutContainerFlexBox::RefreshChildren()
     Children.Empty();
     for (auto& ChildWidget : Widget->GetChildren())
     {
-        if (!ChildWidget->GetWidgetActiveInHierarchy())continue;
+        if (!ChildWidget->GetLayoutVisibleInHierarchy())continue;
         if (auto ChildLayoutSelf = ChildWidget->GetLayoutSelf())
         {
             if (ChildLayoutSelf->GetIgnoreLayoutContainer())continue;

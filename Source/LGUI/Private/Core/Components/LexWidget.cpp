@@ -8,7 +8,13 @@
 #include "LTweenManager.h"
 #include "Core/LexUIClipData.h"
 #include "Core/Components/LexLayout.h"
+#include "Core/Components/LexPanelSlot.h"
 #include "Core/Components/LexVisual.h"
+#include "Event/LexEventSystem.h"
+#if WITH_ACCESSIBILITY
+#include "Framework/Application/SlateApplication.h"
+#include "Widgets/Accessibility/SlateAccessibleMessageHandler.h"
+#endif
 #include "Components/SceneComponent.h"
 #include "Core/LexUIBehaviour.h"
 #if WITH_EDITOR
@@ -51,6 +57,10 @@ void ULexWidget::BeginPlay()
 	{
 		LayoutSelf->BeginPlay();
 	}
+	if (IsValid(PanelSlot))
+	{
+		PanelSlot->BeginPlay();
+	}
 	if (IsValid(Visual))
 	{
 		Visual->BeginPlay();
@@ -73,6 +83,10 @@ void ULexWidget::EndPlay()
 	if (IsValid(LayoutSelf))
 	{
 		LayoutSelf->EndPlay();
+	}
+	if (IsValid(PanelSlot))
+	{
+		PanelSlot->EndPlay();
 	}
 	if (IsValid(Visual))
 	{
@@ -522,6 +536,8 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		static const FName VisualName = GET_MEMBER_NAME_CHECKED(ULexWidget, Visual);
 		static const FName LayoutContainerName = GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutContainer);
 		static const FName LayoutSelfName = GET_MEMBER_NAME_CHECKED(ULexWidget, LayoutSelf);
+		static const FName PanelSlotName = GET_MEMBER_NAME_CHECKED(ULexWidget, PanelSlot);
+		static const FName VisibilityName = GET_MEMBER_NAME_CHECKED(ULexWidget, Visibility);
 		static const FName InteractableName = GET_MEMBER_NAME_CHECKED(ULexWidget, Interactable);
 		static const FName RenderOpacityName = GET_MEMBER_NAME_CHECKED(ULexWidget, RenderOpacity);
 
@@ -597,6 +613,18 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 				UpdateLayout();
 			}
 		}
+		else if (MemberName == PanelSlotName)
+		{
+			if (IsValid(PanelSlot))
+			{
+				if (bHasBegunPlay)
+				{
+					PanelSlot->BeginPlay();
+				}
+				PanelSlot->Call_OnRegister();
+			}
+			MarkLayoutForRebuild(Parent.IsValid() ? Parent.Get() : this);
+		}
 		if (MemberName == AnchorDataName)
 		{
 			CalculateTransformFromAnchor();
@@ -605,6 +633,11 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		if (MemberName == WidgetActiveName)
 		{
 			CalculateWidgetActive_Recursive();
+			CalculateVisibility_Recursive();
+		}
+		if (MemberName == VisibilityName)
+		{
+			CalculateVisibility_Recursive();
 		}
 		if (MemberName == RaycastableName)
 		{
@@ -683,6 +716,17 @@ void ULexWidget::PreEditChange(FProperty* PropertyAboutToChange)
 				LayoutSelf->EndPlay();
 			}
 			LayoutSelf->Call_OnUnregister();
+		}
+	}
+	else if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, PanelSlot))
+	{
+		if (IsValid(PanelSlot))
+		{
+			if (bHasBegunPlay)
+			{
+				PanelSlot->EndPlay();
+			}
+			PanelSlot->Call_OnUnregister();
 		}
 	}
 }
@@ -818,6 +862,7 @@ void ULexWidget::EnsureDataForRebuild()
 	LOCAL::EnsureDataForRebuildRecursive(this);
 	LOCAL::ForceRefreshRenderCanvasRecursive(this);
 	CalculateWidgetActive_Recursive();
+	CalculateVisibility_Recursive();
 	CalculateRaycastable_Recursive();
 	CalculateInteractable_Recursive();
 	CalculateObjectToWorldTransform();
@@ -1301,6 +1346,7 @@ void ULexWidget::OnAttachedToParent()
 	OnHierarchyAttachmentChanged(ParentCanvas, Parent->RootWidget.Get());
 
 	CalculateWidgetActive_Recursive();
+	CalculateVisibility_Recursive();
 	CalculateRaycastable_Recursive();
 	CalculateInteractable_Recursive();
 	
@@ -1368,6 +1414,7 @@ void ULexWidget::OnRegister()
 	if (this->IsRootWidgetInHierarchy())
 	{
 		CalculateWidgetActive_Recursive();
+		CalculateVisibility_Recursive();
 		CalculateRaycastable_Recursive();
 		CalculateInteractable_Recursive();
 	}
@@ -1379,6 +1426,10 @@ void ULexWidget::OnRegister()
 	if (IsValid(LayoutSelf))
 	{
 		LayoutSelf->Call_OnRegister();
+	}
+	if (IsValid(PanelSlot))
+	{
+		PanelSlot->Call_OnRegister();
 	}
 	if (IsValid(Visual))
 	{
@@ -1410,6 +1461,10 @@ void ULexWidget::OnUnregister()
 	if (IsValid(LayoutSelf))
 	{
 		LayoutSelf->Call_OnUnregister();
+	}
+	if (IsValid(PanelSlot))
+	{
+		PanelSlot->Call_OnUnregister();
 	}
 	if (IsValid(Visual))
 	{
@@ -2491,8 +2546,7 @@ void ULexWidget::CalculateWidgetActive_Recursive()
 		static void CalculateWidgetActive(ULexWidget* Widget)
 		{
 			bool bResultActive = true;
-			bool bSelfActiveForRender = Widget->bWidgetActive;
-			if (!bSelfActiveForRender)
+			if (!Widget->bWidgetActive)
 				bResultActive = false;
 			else if (Widget->Parent.IsValid())
 				bResultActive = Widget->Parent->GetWidgetActiveInHierarchy();
@@ -2516,6 +2570,66 @@ void ULexWidget::CalculateWidgetActive_Recursive()
 		}
 	};
 	LOCAL::CalculateWidgetActive(this);
+}
+
+void ULexWidget::CalculateVisibility_Recursive()
+{
+	struct FVisibilityCalculator
+	{
+		static void Calculate(ULexWidget* Widget)
+		{
+			const bool bParentLayoutVisible = !Widget->Parent.IsValid() || Widget->Parent->bCacheLayoutVisibleInHierarchy;
+			const bool bParentRenderVisible = !Widget->Parent.IsValid() || Widget->Parent->bCacheRenderVisibleInHierarchy;
+			const bool bParentAllowsHitTest = !Widget->Parent.IsValid() || Widget->Parent->bCacheChildrenHitTestVisibleInHierarchy;
+			const bool bActive = Widget->bCacheWidgetActiveInHierarchy;
+
+			bool bDesignerVisible = true;
+#if WITH_EDITOR
+			if (Widget->bHiddenInDesigner && (!Widget->GetWorld() || !Widget->GetWorld()->IsGameWorld()))
+			{
+				bDesignerVisible = false;
+			}
+#endif
+
+			const bool bCollapsed = Widget->Visibility == ELexWidgetVisibility::Collapsed;
+			const bool bPaints = Widget->Visibility != ELexWidgetVisibility::Hidden && !bCollapsed;
+			const bool bBlocksChildren = Widget->Visibility == ELexWidgetVisibility::HitTestInvisible;
+			const bool bSelfAcceptsHit = Widget->Visibility == ELexWidgetVisibility::Visible;
+
+			const bool bNewLayoutVisible = bActive && bParentLayoutVisible && !bCollapsed;
+			const bool bNewRenderVisible = bActive && bDesignerVisible && bParentRenderVisible && bPaints;
+			const bool bNewChildrenHitTestVisible = bNewRenderVisible && bParentAllowsHitTest && !bBlocksChildren;
+			const bool bNewSelfHitTestVisible = bNewChildrenHitTestVisible && bSelfAcceptsHit;
+
+			const bool bLayoutChanged = Widget->bCacheLayoutVisibleInHierarchy != bNewLayoutVisible;
+			const bool bRenderChanged = Widget->bCacheRenderVisibleInHierarchy != bNewRenderVisible;
+			const bool bHitTestChanged = Widget->bCacheSelfHitTestVisibleInHierarchy != bNewSelfHitTestVisible
+				|| Widget->bCacheChildrenHitTestVisibleInHierarchy != bNewChildrenHitTestVisible;
+
+			Widget->bCacheLayoutVisibleInHierarchy = bNewLayoutVisible;
+			Widget->bCacheRenderVisibleInHierarchy = bNewRenderVisible;
+			Widget->bCacheSelfHitTestVisibleInHierarchy = bNewSelfHitTestVisible;
+			Widget->bCacheChildrenHitTestVisibleInHierarchy = bNewChildrenHitTestVisible;
+
+			if (bLayoutChanged)
+			{
+				ULexWidget::MarkLayoutForRebuild(Widget->Parent.IsValid() ? Widget->Parent.Get() : Widget);
+			}
+			if (bRenderChanged || bHitTestChanged)
+			{
+				Widget->MarkCanvasUpdate(true);
+			}
+
+			for (ULexWidget* Child : Widget->GetChildren())
+			{
+				if (IsValid(Child))
+				{
+					Calculate(Child);
+				}
+			}
+		}
+	};
+	FVisibilityCalculator::Calculate(this);
 }
 void ULexWidget::CalculateInteractable_Recursive()
 {
@@ -3040,13 +3154,108 @@ bool ULexWidget::GetWidgetActiveInHierarchy() const
 	return bCacheWidgetActiveInHierarchy;
 }
 
+#if WITH_EDITOR
+void ULexWidget::SetHiddenInDesigner(bool bHidden)
+{
+	if (bHiddenInDesigner != bHidden)
+	{
+		bHiddenInDesigner = bHidden;
+		CalculateVisibility_Recursive();
+	}
+}
+#endif
+
 void ULexWidget::SetWidgetActive(bool Value)
 {
 	if (bWidgetActive != Value)
 	{
 		bWidgetActive = Value;
 		CalculateWidgetActive_Recursive();
+		CalculateVisibility_Recursive();
 	}
+}
+
+void ULexWidget::SetVisibility(ELexWidgetVisibility Value)
+{
+	if (Visibility != Value)
+	{
+		Visibility = Value;
+		CalculateVisibility_Recursive();
+		OnVisibilityChanged.Broadcast(Visibility);
+	}
+}
+
+bool ULexWidget::SetFocus(int32 UserIndex, int32 PointerId)
+{
+	if (!bIsFocusable || !GetRenderVisibleInHierarchy() || !GetInteractableInHierarchy())
+	{
+		return false;
+	}
+	if (ULexEventSystem* EventSystem = ULexEventSystem::GetLexEventSystemInstance(this, UserIndex))
+	{
+		ULexBaseEventData* EventData = EventSystem->GetPointerEventData(PointerId, true);
+		EventSystem->SetSelectWidget(this, EventData);
+		return true;
+	}
+	return false;
+}
+
+bool ULexWidget::HasFocus(int32 UserIndex, int32 PointerId) const
+{
+	if (ULexEventSystem* EventSystem = ULexEventSystem::GetLexEventSystemInstance(const_cast<ULexWidget*>(this), UserIndex))
+	{
+		return EventSystem->GetCurrentSelectedComponent(PointerId) == this;
+	}
+	return false;
+}
+
+void ULexWidget::ClearFocus(int32 UserIndex, int32 PointerId)
+{
+	if (ULexEventSystem* EventSystem = ULexEventSystem::GetLexEventSystemInstance(this, UserIndex))
+	{
+		ULexBaseEventData* EventData = EventSystem->GetPointerEventData(PointerId, false);
+		if (EventData && EventData->SelectedComponent == this)
+		{
+			EventSystem->SetSelectWidget(nullptr, EventData);
+		}
+	}
+}
+
+void ULexWidget::NotifyFocusReceived(int32 UserIndex, int32 PointerId)
+{
+	OnFocusReceived.Broadcast(UserIndex, PointerId);
+	if (AccessibleBehavior != ELexAccessibleBehavior::NotAccessible)
+	{
+		AnnounceAccessibleText();
+	}
+}
+
+void ULexWidget::NotifyFocusLost(int32 UserIndex, int32 PointerId)
+{
+	OnFocusLost.Broadcast(UserIndex, PointerId);
+}
+
+void ULexWidget::AnnounceAccessibleText(const FText& Announcement)
+{
+#if WITH_ACCESSIBILITY
+	if (!FSlateApplication::IsInitialized())
+	{
+		return;
+	}
+	FText TextToAnnounce = Announcement;
+	if (TextToAnnounce.IsEmpty())
+	{
+		TextToAnnounce = AccessibleBehavior == ELexAccessibleBehavior::Summary ? AccessibleSummaryText : AccessibleText;
+	}
+	if (TextToAnnounce.IsEmpty())
+	{
+		TextToAnnounce = FText::FromString(DisplayName);
+	}
+	if (!TextToAnnounce.IsEmpty())
+	{
+		FSlateApplication::Get().GetAccessibleMessageHandler()->MakeAccessibleAnnouncement(TextToAnnounce.ToString());
+	}
+#endif
 }
 
 void ULexWidget::SetRaycastable(ELexWidgetRaycastableType Value)
@@ -3214,6 +3423,50 @@ void ULexWidget::RemoveLayoutSelf()
 		}
 		OldLayout->Call_OnUnregister();
 	}
+}
+
+ULexPanelSlot* ULexWidget::CreateNewPanelSlot(TSubclassOf<ULexPanelSlot> SlotClass)
+{
+	if (!SlotClass)
+	{
+		SlotClass = ULexPanelSlot::StaticClass();
+	}
+	ULexPanelSlot* OldSlot = PanelSlot;
+	ULexPanelSlot* NewSlot = NewObject<ULexPanelSlot>(this, SlotClass, NAME_None, RF_Public | RF_Transactional);
+	if (IsValid(OldSlot))
+	{
+		if (bHasBegunPlay)
+		{
+			OldSlot->EndPlay();
+		}
+		OldSlot->Call_OnUnregister();
+	}
+	PanelSlot = NewSlot;
+	if (IsValid(NewSlot))
+	{
+		NewSlot->Call_OnRegister();
+		if (bHasBegunPlay)
+		{
+			NewSlot->BeginPlay();
+		}
+	}
+	MarkLayoutForRebuild(Parent.IsValid() ? Parent.Get() : this);
+	return NewSlot;
+}
+
+void ULexWidget::RemovePanelSlot()
+{
+	ULexPanelSlot* OldSlot = PanelSlot;
+	PanelSlot = nullptr;
+	if (IsValid(OldSlot))
+	{
+		if (bHasBegunPlay)
+		{
+			OldSlot->EndPlay();
+		}
+		OldSlot->Call_OnUnregister();
+	}
+	MarkLayoutForRebuild(Parent.IsValid() ? Parent.Get() : this);
 }
 
 #pragma region TweenAnimation

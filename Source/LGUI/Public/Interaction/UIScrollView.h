@@ -125,6 +125,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
 		ULexWidget* GetContent()const { return Content.Get(); }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
+		void SetContent(ULexWidget* Value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
 		bool GetHorizontal()const { return Horizontal; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
 		bool GetVertical()const { return Vertical; }

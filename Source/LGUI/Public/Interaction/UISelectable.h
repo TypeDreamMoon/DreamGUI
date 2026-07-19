@@ -14,6 +14,7 @@ class UUINavigationInputSelectionHandler;
 class UUISelectable;
 class ULexVisual;
 class ULTweener;
+class ULexSelectableStyle;
 
 UENUM(BlueprintType, Category = LGUI)
 enum class EUISelectableTransitionType:uint8
@@ -169,6 +170,9 @@ protected:
 	virtual void OnInteractableChanged(bool IsEnabled) override;
 
 #pragma region Transition
+	/** Optional shared style. Inline values below remain the backwards-compatible fallback. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI-Selectable", meta = (AllowPrivateAccess = true))
+	TObjectPtr<ULexSelectableStyle> Style = nullptr;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Selectable")
 	TWeakObjectPtr<ULexVisual> TransitionTarget;
 	
@@ -242,22 +246,27 @@ public:
 		ULexVisual* GetTransitionTarget()const { return TransitionTarget.Get(); }
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
-	FColor GetNormalColor()const { return NormalColor; }
+	FColor GetNormalColor()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
-	FColor GetHoveredColor()const { return HoveredColor; }
+	FColor GetHoveredColor()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
-	FColor GetPressedColor()const { return PressedColor; }
+	FColor GetPressedColor()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
-	FColor GetDisabledColor()const { return DisabledColor; }
+	FColor GetDisabledColor()const;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
-	const FLexUIImageBrush& GetNormalImageBrush()const { return NormalImageBrush; }
+	const FLexUIImageBrush& GetNormalImageBrush()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
-	const FLexUIImageBrush& GetHoveredImageBrush()const { return HoveredImageBrush; }
+	const FLexUIImageBrush& GetHoveredImageBrush()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
-	const FLexUIImageBrush& GetPressedImageBrush()const { return PressedImageBrush; }
+	const FLexUIImageBrush& GetPressedImageBrush()const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
-	const FLexUIImageBrush& GetDisabledImageBrush()const { return DisabledImageBrush; }
+	const FLexUIImageBrush& GetDisabledImageBrush()const;
+
+	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable")
+	void SetStyle(ULexSelectableStyle* Value);
+	UFUNCTION(BlueprintPure, Category = "LGUI-Selectable")
+	ULexSelectableStyle* GetStyle()const { return Style; }
 	
 	UFUNCTION(BlueprintCallable, Category = "LGUI-Selectable") 
 		EUISelectableSelectionState GetSelectionState()const;

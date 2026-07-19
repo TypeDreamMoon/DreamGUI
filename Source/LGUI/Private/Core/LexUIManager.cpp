@@ -285,7 +285,7 @@ void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool Scr
 		for (auto& Child : Widget->GetChildren())
 		{
 			if (IsValid(Child)
-				&& Child->GetWidgetActiveInHierarchy())
+				&& Child->GetRenderVisibleInHierarchy())
 			{
 				DrawWidget(Child, RectDrawColor);
 			}
@@ -296,7 +296,7 @@ void ULexUIManagerWorldSubsystem::DrawFrameOnWidget(ULexWidget* Widget, bool Scr
 			for (auto& SiblingWidget : Parent->GetChildren())
 			{
 				if (IsValid(SiblingWidget)
-					&& SiblingWidget->GetWidgetActiveInHierarchy()
+					&& SiblingWidget->GetRenderVisibleInHierarchy()
 					&& SiblingWidget != Widget)
 				{
 					DrawWidget(SiblingWidget, RectDrawColor);
@@ -742,7 +742,7 @@ bool ULexUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULe
 		{
 			if (auto Visual = Widget->GetVisual())
 			{
-				if (Widget->GetWidgetActiveInHierarchy() && Widget->GetRenderCanvas() != nullptr)
+				if (Widget->GetRenderVisibleInHierarchy() && Widget->GetRenderCanvas() != nullptr)
 				{
 					FLexUIHitResult HitInfo;
 					auto OriginRaycastType = Visual->GetRaycastType();
@@ -1058,7 +1058,7 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 				static void UpdateLayoutRecursively(ULexWidget* Widget)
 				{
 					if (!IsValid(Widget))return;
-					if (!Widget->GetWidgetActiveInHierarchy())return;
+					if (!Widget->GetLayoutVisibleInHierarchy())return;
 					if (!Widget->HasRegistered())return;//if not registered, means it could about to remove
 					Widget->UpdateLayout();
 					if (Widget->GetLayoutContainer())

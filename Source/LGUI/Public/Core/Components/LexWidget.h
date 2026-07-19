@@ -3,6 +3,7 @@
 #pragma once
 
 #include "LTweener.h"
+#include "InputCoreTypes.h"
 #include "Core/LexUIAnchorData.h"
 #include "LexWidget.generated.h"
 
@@ -11,10 +12,34 @@ class ULexUIBehaviour;
 class ULexVisual;
 class ULexLayoutSelf;
 class ULexLayoutContainer;
+class ULexPanelSlot;
 class FLexUIClipData;
 class ULexUIDataAsTexture;
 class ULexCanvas;
 enum class ELexRenderMode : uint8;
+
+/** Matches UMG/Slate visibility while keeping WidgetActive as the behaviour lifecycle switch. */
+UENUM(BlueprintType)
+enum class ELexWidgetVisibility : uint8
+{
+	Visible,
+	Hidden,
+	Collapsed,
+	HitTestInvisible UMETA(DisplayName = "Not Hit-Testable (Self & Children)"),
+	SelfHitTestInvisible UMETA(DisplayName = "Not Hit-Testable (Self Only)"),
+};
+
+UENUM(BlueprintType)
+enum class ELexAccessibleBehavior : uint8
+{
+	Auto,
+	NotAccessible,
+	Summary,
+	Custom,
+};
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FLexWidgetVisibilityChangedEvent, ELexWidgetVisibility, Visibility);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FLexWidgetFocusEvent, int32, UserIndex, int32, PointerId);
 
 UENUM(BlueprintType)
 enum class ELexWidgetClipping : uint8
@@ -111,6 +136,10 @@ public:
 	static FName GetPropertyName_WidgetActive()
 	{
 		return GET_MEMBER_NAME_CHECKED(ULexWidget, bWidgetActive);
+	}
+	static FName GetPropertyName_Visibility()
+	{
+		return GET_MEMBER_NAME_CHECKED(ULexWidget, Visibility);
 	}
 	static FName GetPropertyName_DisplayName()
 	{
@@ -531,6 +560,13 @@ protected:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter = "GetWidgetActive", Setter="SetWidgetActive", meta = (AllowPrivateAccess = true))
 	bool bWidgetActive = true;
+	/** Controls layout, painting and hit testing independently from WidgetActive. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter = "GetVisibility", Setter = "SetVisibility", meta = (AllowPrivateAccess = true))
+	ELexWidgetVisibility Visibility = ELexWidgetVisibility::Visible;
+#if WITH_EDITORONLY_DATA
+	/** Transient preview state restored from the owning prefab editor data. */
+	bool bHiddenInDesigner = false;
+#endif
 	/** If the widget will draw snapped to the nearest pixel.  Improves clarity but might cause visible stepping in animation. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LGUI", Getter, Setter, meta = (AllowPrivateAccess = true))
 	EWidgetPixelSnapping PixelSnapping = EWidgetPixelSnapping::Inherit;
@@ -551,6 +587,29 @@ protected:
 	TObjectPtr<ULexLayoutContainer> LayoutContainer = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Instanced, Category = "LayoutSelf", Getter, meta = (AllowPrivateAccess = true))
 	TObjectPtr<ULexLayoutSelf> LayoutSelf = nullptr;
+	/** Parent-panel-owned layout data. This is separate from LayoutSelf so legacy Flex/Grid assets remain valid. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Instanced, Category = "PanelSlot", Getter, meta = (AllowPrivateAccess = true))
+	TObjectPtr<ULexPanelSlot> PanelSlot = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction|Focus", Getter = "GetIsFocusable", Setter = "SetIsFocusable", meta = (AllowPrivateAccess = true))
+	bool bIsFocusable = false;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction", Getter, Setter, meta = (AllowPrivateAccess = true))
+	TEnumAsByte<EMouseCursor::Type> Cursor = EMouseCursor::Default;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction", Getter, Setter, meta = (AllowPrivateAccess = true, MultiLine = true))
+	FText ToolTipText;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Accessibility", Getter, Setter, meta = (AllowPrivateAccess = true))
+	ELexAccessibleBehavior AccessibleBehavior = ELexAccessibleBehavior::Auto;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Accessibility", Getter, Setter, meta = (AllowPrivateAccess = true, MultiLine = true))
+	FText AccessibleText;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Accessibility", Getter, Setter, meta = (AllowPrivateAccess = true, MultiLine = true))
+	FText AccessibleSummaryText;
+
+	UPROPERTY(BlueprintAssignable, Category = "LGUI|Visibility")
+	FLexWidgetVisibilityChangedEvent OnVisibilityChanged;
+	UPROPERTY(BlueprintAssignable, Category = "LGUI|Focus")
+	FLexWidgetFocusEvent OnFocusReceived;
+	UPROPERTY(BlueprintAssignable, Category = "LGUI|Focus")
+	FLexWidgetFocusEvent OnFocusLost;
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
@@ -600,12 +659,67 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	bool GetWidgetActiveInHierarchy()const;
+#if WITH_EDITOR
+	/** Editor-preview visibility. This never changes the serialized runtime WidgetActive value. */
+	bool GetHiddenInDesigner()const { return bHiddenInDesigner; }
+	void SetHiddenInDesigner(bool bHidden);
+#endif
 	/**
 	 * Set WidgetActive self property
 	 * @param Value 
 	 */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetWidgetActive(bool Value);
+
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	ELexWidgetVisibility GetVisibility()const { return Visibility; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void SetVisibility(ELexWidgetVisibility Value);
+	/** Hidden still participates in layout; Collapsed does not. */
+	UFUNCTION(BlueprintPure, Category = "LGUI|Visibility")
+	bool GetLayoutVisibleInHierarchy()const { return bCacheLayoutVisibleInHierarchy; }
+	UFUNCTION(BlueprintPure, Category = "LGUI|Visibility")
+	bool GetRenderVisibleInHierarchy()const { return bCacheRenderVisibleInHierarchy; }
+	UFUNCTION(BlueprintPure, Category = "LGUI|Visibility")
+	bool GetHitTestVisibleInHierarchy()const { return bCacheSelfHitTestVisibleInHierarchy; }
+	UFUNCTION(BlueprintPure, Category = "LGUI|Visibility")
+	bool GetChildrenHitTestVisibleInHierarchy()const { return bCacheChildrenHitTestVisibleInHierarchy; }
+
+	UFUNCTION(BlueprintPure, Category = "LGUI|Focus")
+	bool GetIsFocusable()const { return bIsFocusable; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI|Focus")
+	void SetIsFocusable(bool Value) { bIsFocusable = Value; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI|Focus")
+	bool SetFocus(int32 UserIndex = 0, int32 PointerId = 0);
+	UFUNCTION(BlueprintPure, Category = "LGUI|Focus")
+	bool HasFocus(int32 UserIndex = 0, int32 PointerId = 0)const;
+	UFUNCTION(BlueprintCallable, Category = "LGUI|Focus")
+	void ClearFocus(int32 UserIndex = 0, int32 PointerId = 0);
+	void NotifyFocusReceived(int32 UserIndex, int32 PointerId);
+	void NotifyFocusLost(int32 UserIndex, int32 PointerId);
+	UFUNCTION(BlueprintPure, Category = "LGUI|Interaction")
+	EMouseCursor::Type GetCursor()const { return Cursor.GetValue(); }
+	UFUNCTION(BlueprintCallable, Category = "LGUI|Interaction")
+	void SetCursor(EMouseCursor::Type Value) { Cursor = Value; }
+	UFUNCTION(BlueprintPure, Category = "LGUI|Interaction")
+	const FText& GetToolTipText()const { return ToolTipText; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI|Interaction")
+	void SetToolTipText(const FText& Value) { ToolTipText = Value; }
+	UFUNCTION(BlueprintPure, Category = "LGUI|Accessibility")
+	ELexAccessibleBehavior GetAccessibleBehavior()const { return AccessibleBehavior; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI|Accessibility")
+	void SetAccessibleBehavior(ELexAccessibleBehavior Value) { AccessibleBehavior = Value; }
+	UFUNCTION(BlueprintPure, Category = "LGUI|Accessibility")
+	const FText& GetAccessibleText()const { return AccessibleText; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI|Accessibility")
+	void SetAccessibleText(const FText& Value) { AccessibleText = Value; }
+	UFUNCTION(BlueprintPure, Category = "LGUI|Accessibility")
+	const FText& GetAccessibleSummaryText()const { return AccessibleSummaryText; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI|Accessibility")
+	void SetAccessibleSummaryText(const FText& Value) { AccessibleSummaryText = Value; }
+	/** Sends text through Slate's platform accessibility announcement channel. */
+	UFUNCTION(BlueprintCallable, Category = "LGUI|Accessibility")
+	void AnnounceAccessibleText(const FText& Announcement = FText());
 	
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	ELexWidgetRaycastableType GetRaycastable()const { return Raycastable; }
@@ -674,6 +788,18 @@ public:
 	}
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void RemoveLayoutSelf();
+
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	ULexPanelSlot* GetPanelSlot()const { return PanelSlot; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI", meta=(DeterminesOutputType="SlotClass"))
+	ULexPanelSlot* CreateNewPanelSlot(TSubclassOf<ULexPanelSlot> SlotClass);
+	template<class T>
+	T* CreateNewPanelSlot()
+	{
+		return Cast<T>(CreateNewPanelSlot(T::StaticClass()));
+	}
+	UFUNCTION(BlueprintCallable, Category = "LGUI")
+	void RemovePanelSlot();
 
 	const TWeakPtr<FLexUIClipData>& GetClipData()const{return ClipData;}
 
@@ -788,6 +914,10 @@ private:
 	mutable uint32 bNeedRecreateClip : 1 = true;
 	
 	uint32 bCacheWidgetActiveInHierarchy : 1 = true;
+	uint32 bCacheLayoutVisibleInHierarchy : 1 = true;
+	uint32 bCacheRenderVisibleInHierarchy : 1 = true;
+	uint32 bCacheSelfHitTestVisibleInHierarchy : 1 = true;
+	uint32 bCacheChildrenHitTestVisibleInHierarchy : 1 = true;
 	uint32 bCacheInteractableInHierarchy : 1 = true;
 	uint32 bCacheRaycastableInHierarchy : 1 = true;
 
@@ -804,6 +934,7 @@ private:
 	void CheckRootWidget(ULexWidget* RootWidgetInParent = nullptr);
 
 	void CalculateWidgetActive_Recursive();
+	void CalculateVisibility_Recursive();
 	void CalculateInteractable_Recursive();
 	void CalculateRaycastable_Recursive();
 public:

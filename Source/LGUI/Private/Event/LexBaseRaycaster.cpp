@@ -89,7 +89,7 @@ void ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, ULex
 			ThisHit.FaceIndex = INDEX_NONE;
 			if (
 				Widget->GetRaycastableInHierarchy()
-				&& Widget->GetWidgetActiveInHierarchy()
+				&& Widget->GetHitTestVisibleInHierarchy()
 				&& Visual->GetRaycastTarget()
 				&& Visual->LineTraceUI(ThisHit, OutRayOrigin, OutRayEnd)
 				)
@@ -113,7 +113,7 @@ void ULexBaseRaycaster::RaycastUI(ULexPointerEventData* InPointerEventData, ULex
 				ThisHit.FaceIndex = INDEX_NONE;
 				if (
 					Widget->GetRaycastableInHierarchy()
-					&& Widget->GetWidgetActiveInHierarchy()
+					&& Widget->GetHitTestVisibleInHierarchy()
 					&& Visual->GetRaycastTarget()
 					&& Visual->LineTraceUI(ThisHit, OutRayOrigin, OutRayEnd)
 					)

@@ -4,6 +4,7 @@
 #include "LGUI.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexLayoutContainerFlexBox.h"
+#include "Core/Components/LexPanelLayouts.h"
 #include "Core/Components/LexVisual.h"
 
 float FLexLayoutSize::Calculate(ULexWidget* Widget, bool IsVertical) const
@@ -303,7 +304,8 @@ void ULexLayoutSelfFlexBox::CalculateSize()
     if (auto ParentWidget = Widget->GetParent())
     {
         //if parent widget have FlexBoxContainer, then widget size should be set by it, because Grow/Shrink/Stretch is calculated by FlexBoxContainer
-        if (auto ParentFlexBoxContainer = Cast<ULexLayoutContainerFlexBox>(ParentWidget->GetLayoutContainer()))
+		if (Cast<ULexLayoutContainerFlexBox>(ParentWidget->GetLayoutContainer())
+			|| Cast<ULexPanelLayoutBase>(ParentWidget->GetLayoutContainer()))
         {
             bShouldSetPreferredSize = false;
         }

@@ -45,7 +45,7 @@ void ULexCanvas::Awake()
 	CurrentRenderMode = this->GetActualRenderMode();
 	if (auto LexWidget = GetWidget())
 	{
-		bPrevIsVisible = LexWidget->GetWidgetActiveInHierarchy();
+		bPrevIsVisible = LexWidget->GetRenderVisibleInHierarchy();
 	}
 	else
 	{
@@ -523,7 +523,7 @@ void ULexCanvas::OnUIHierarchyAttachmentChanged()
 
 void ULexCanvas::OnWidgetActiveChanged(bool WidgetActive)
 {
-	if (GetWidget()->GetWidgetActiveInHierarchy())
+	if (GetWidget()->GetRenderVisibleInHierarchy())
 	{
 		if (ParentCanvas.IsValid())
 		{
@@ -892,7 +892,7 @@ void ULexCanvas::PrepareDrawCallBatchingData(TArray<FLexUIRenderData>& OutRender
 		{
 			auto Visual = Widget->GetVisual();
 			if (!Visual)continue;
-			if (!Widget->GetWidgetActiveInHierarchy())//if not visible, need to remove the draw-call from draw-call list
+			if (!Widget->GetRenderVisibleInHierarchy())//if not visible, need to remove the draw-call from draw-call list
 			{
 				continue;
 			}
@@ -1195,7 +1195,7 @@ void ULexCanvas::UpdateCanvasDrawCall()
 	 * If Canvas is rendering in frame 1, and in frame 2 the Canvas is disabled(set WidgetActive to false), then the Canvas will not do draw-call calculation, and the prev existing draw-call mesh is still there and render,
 	 * so we check bPrevIsVisible, then we can still do draw-call calculation at this frame, and the prev existing draw-call will be removed.
 	 */
-	const bool bNowIsVisible = LexWidget->GetWidgetActiveInHierarchy();
+	const bool bNowIsVisible = LexWidget->GetRenderVisibleInHierarchy();
 	if (bNowIsVisible || bPrevIsVisible)
 	{
 		if (bNowIsVisible != bPrevIsVisible)
@@ -1243,7 +1243,7 @@ void ULexCanvas::UpdateCanvasDrawCall()
 			for (const auto& Widget : WidgetList)
 			{
 				Widget->UpdateClip(RootCanvas->ClipDataAsTexture, RootCanvas->ClipDataList);
-				if (Widget->GetWidgetActiveInHierarchy() && Widget->GetRenderCanvas() == this)
+				if (Widget->GetRenderVisibleInHierarchy() && Widget->GetRenderCanvas() == this)
 				{
 					Widget->UpdateVisual();
 				}
