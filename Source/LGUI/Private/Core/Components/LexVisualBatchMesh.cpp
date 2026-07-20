@@ -9,6 +9,7 @@
 #include "Core/LexUIDrawCall.h"
 #include "Core/Components/LexWidget.h"
 #include "Event/LexPointerEventData.h"
+#include "Engine/World.h"
 
 DECLARE_CYCLE_STAT(TEXT("LexVisualBatchMesh UpdateGeometry"), STAT_LexUpdateGeometry, STATGROUP_LGUI);
 DECLARE_CYCLE_STAT(TEXT("LexVisualBatchMesh TransformVertices"), STAT_TransformVertices, STATGROUP_LGUI);
@@ -77,6 +78,29 @@ void ULexVisualBatchMesh::MarkVerticesDirty()
 	bUVChanged = true;
 	bColorChanged = true;
 	GetWidget()->MarkCanvasUpdate(true);
+}
+
+ULexMeshModifierBase* ULexVisualBatchMesh::AddMeshModifier(TSubclassOf<ULexMeshModifierBase> ModifierClass)
+{
+	UClass* Class = ModifierClass.Get();
+	if (!Class || Class->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated))
+	{
+		return nullptr;
+	}
+
+	Modify();
+	ULexMeshModifierBase* Modifier = NewObject<ULexMeshModifierBase>(this, Class, NAME_None, RF_Transactional);
+	if (!Modifier)
+	{
+		return nullptr;
+	}
+	MeshModifierArray.Add(Modifier);
+	if (UWorld* World = GetWorld(); World && World->HasBegunPlay())
+	{
+		Modifier->BeginPlay();
+	}
+	MarkVerticesDirty();
+	return Modifier;
 }
 
 void ULexVisualBatchMesh::MarkVerticesDirty(bool InTriangleDirty, bool InVertexPositionDirty, bool InVertexUVDirty, bool InVertexColorDirty)

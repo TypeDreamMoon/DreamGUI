@@ -129,6 +129,7 @@ public:
 
 	virtual void MarkAllDirty()override;
 	FLexUIGeometry* GetGeometry()const { return UIGeometry.Get(); }
+	ULexMeshModifierBase* AddMeshModifier(TSubclassOf<ULexMeshModifierBase> ModifierClass);
 
 	virtual bool LineTraceUI(FLexUIHitResult& OutHit, const FVector& Start, const FVector& End)const override;
 	/** is this UI element type support draw-call batching? */
