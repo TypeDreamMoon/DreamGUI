@@ -64,7 +64,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 		ULexUIPrefabSequencePlayer* GetSequencePlayer() const { return SequencePlayer; }
 
-	/** Plays a new animation instance without interrupting animations already running on this prefab. */
+	/**
+	 * Plays a new animation instance without interrupting animations already running on this prefab.
+	 * @param NumLoopsToPlay Total number of times to play the animation. Zero loops indefinitely, matching UMG.
+	 */
 	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "LexUI|Animation", meta = (AdvancedDisplay = "bRestoreState"))
 	FLexUIAnimationHandle PlayAnimationByDisplayName(
 		const FString& Name,
@@ -124,5 +127,5 @@ protected:
 
 	void HandleActiveSequencePlayerFinished(ULexUIPrefabSequencePlayer* Player);
 	bool IsActiveSequencePlayer(const ULexUIPrefabSequencePlayer* Player) const;
-	void ReleaseActiveSequencePlayer(ULexUIPrefabSequencePlayer* Player);
+	void ReleaseActiveSequencePlayer(ULexUIPrefabSequencePlayer* Player, bool bStopPlayer = true);
 };

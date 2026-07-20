@@ -144,7 +144,9 @@ void ULexUIPrefabSequenceComponent::HandleActiveSequencePlayerFinished(ULexUIPre
 	// bPauseAtEnd intentionally leaves the handle alive so callers can resume or stop it.
 	if (IsValid(Player) && !Player->IsPaused())
 	{
-		ReleaseActiveSequencePlayer(Player);
+		// Natural completion has already stopped and finalized the player. Calling Stop again
+		// would queue a second final update through UMovieSceneSequencePlayer::StopInternal.
+		ReleaseActiveSequencePlayer(Player, false);
 	}
 }
 
@@ -153,7 +155,7 @@ bool ULexUIPrefabSequenceComponent::IsActiveSequencePlayer(const ULexUIPrefabSeq
 	return IsValid(Player) && ActiveSequencePlayers.Contains(Player);
 }
 
-void ULexUIPrefabSequenceComponent::ReleaseActiveSequencePlayer(ULexUIPrefabSequencePlayer* Player)
+void ULexUIPrefabSequenceComponent::ReleaseActiveSequencePlayer(ULexUIPrefabSequencePlayer* Player, bool bStopPlayer)
 {
 	if (!IsValid(Player))
 	{
@@ -161,7 +163,10 @@ void ULexUIPrefabSequenceComponent::ReleaseActiveSequencePlayer(ULexUIPrefabSequ
 	}
 
 	Player->OnNativeFinished.Unbind();
-	Player->Stop();
+	if (bStopPlayer)
+	{
+		Player->Stop();
+	}
 	Player->TearDown();
 	ActiveSequencePlayers.RemoveSingleSwap(Player);
 }
