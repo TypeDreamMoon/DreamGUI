@@ -14,12 +14,11 @@
 #include "Framework/Commands/GenericCommands.h"
 #include "Widgets/Text/SInlineEditableTextBlock.h"
 #include "Misc/TextFilter.h"
-#include "PropertyCustomizationHelpers.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "LexUIEditorTools.h"
 #include "SPositiveActionButton.h"
-#include "Core/LexUIManager.h"
 #include "Core/Components/LexWidget.h"
+#include "Utils/LexUIUtils.h"
 
 #define LOCTEXT_NAMESPACE "SLexUIPrefabSequenceEditor"
 
@@ -109,7 +108,12 @@ private:
 
 	void OnNameTextCommited(const FText& InText, ETextCommit::Type CommitInfo)
 	{
-		auto Animation = ListItem.Pin()->Animation;
+		TSharedPtr<FWidgetAnimationListItem> PinnedItem = ListItem.Pin();
+		if (!PinnedItem.IsValid() || !IsValid(PinnedItem->Animation))
+		{
+			return;
+		}
+		auto Animation = PinnedItem->Animation;
 
 		// Name has already been checked in VerifyAnimationRename
 		auto NewName = InText.ToString();
@@ -121,7 +125,7 @@ private:
 		const bool bValidName = !OldName.Equals(NewName) && !InText.IsEmpty();
 		const bool bCanRename = (bValidName/* || bBindWidgetAnim*/);
 
-		const bool bNewAnimation = ListItem.Pin()->bNewAnimation;
+		const bool bNewAnimation = PinnedItem->bNewAnimation;
 		if (bCanRename)
 		{
 			FText TransactionName = bNewAnimation ? LOCTEXT("NewAnimation", "New Animation") : LOCTEXT("RenameAnimation", "Rename Animation");
@@ -130,19 +134,20 @@ private:
 				Animation->Modify();
 
 				Animation->SetDisplayNameString(NewName);
+				Editor->MarkAnimationDataDirty();
 
 				if (bNewAnimation)
 				{
+					PinnedItem->bNewAnimation = false;
 					Editor->RefreshAnimationList();
-					ListItem.Pin()->bNewAnimation = false;
 				}
 			}
 		}
 		else if (bNewAnimation)
 		{
 			const FScopedTransaction Transaction(LOCTEXT("NewAnimation", "New Animation"));
+			PinnedItem->bNewAnimation = false;
 			Editor->RefreshAnimationList();
-			ListItem.Pin()->bNewAnimation = false;
 		}
 	}
 private:
@@ -157,6 +162,7 @@ SLexUIPrefabSequenceEditor::~SLexUIPrefabSequenceEditor()
 	FCoreUObjectDelegates::OnObjectsReplaced.Remove(OnObjectsReplacedHandle);
 	FLexUIEditorTools::OnEditingPrefabChanged.Remove(EditingPrefabChangedHandle);
 	FLexUIEditorTools::OnBeforeApplyPrefab.Remove(OnBeforeApplyPrefabHandle);
+	FEditorDelegates::PostUndoRedo.Remove(PostUndoRedoHandle);
 }
 
 void SLexUIPrefabSequenceEditor::Construct(const FArguments& InArgs)
@@ -178,72 +184,13 @@ void SLexUIPrefabSequenceEditor::Construct(const FArguments& InArgs)
 			[
 				SNew(SBox)
 				.IsEnabled_Lambda([=, this]() {
-					return WeakSequenceComponent.IsValid();
+					return WeakRootWidget.IsValid();
 				})
 				[
 					SNew(SBorder)
 					.BorderImage(FAppStyle::GetBrush("ToolPanel.GroupBorder"))
 					[
 						SNew(SVerticalBox)
-						+ SVerticalBox::Slot()
-						.Padding( 2 )
-						.AutoHeight()
-						[
-							SNew(SHorizontalBox)
-							+SHorizontalBox::Slot()
-							.AutoWidth()
-							.VAlign(EVerticalAlignment::VAlign_Center)
-							[
-								SNew(SButton)
-								.Text_Lambda([=, this](){
-									if (WeakSequenceComponent.IsValid())
-									{
-										if (auto Widget = WeakSequenceComponent->GetWidget())
-										{
-											return FText::FromString(Widget->GetDisplayName());
-										}
-									}
-									return LOCTEXT("NullSequenceComponent", "Null (LexUIPrefabSequence)");
-								})
-								.ToolTipText_Lambda([=, this]()
-								{
-									if (WeakSequenceComponent.IsValid())
-									{
-										return FText::Format(LOCTEXT("ObjectButtonTooltipText", "{0}.{1}, click to select target")
-										, FText::FromString(WeakSequenceComponent->GetWidget()->GetPathDisplayName()), FText::FromString(WeakSequenceComponent->GetName()));
-									}
-									return LOCTEXT("NullSequenceComponent", "Null (LexUIPrefabSequence)");
-								})
-								.IsEnabled_Lambda([=, this](){
-									return WeakSequenceComponent.IsValid();
-								})
-								.ButtonStyle( FAppStyle::Get(), "PropertyEditor.AssetComboStyle" )
-								.ForegroundColor(FAppStyle::GetColor("PropertyEditor.AssetName.ColorAndOpacity"))
-								.OnClicked_Lambda([=, this](){
-									if (WeakSequenceComponent.IsValid())
-									{
-										if (auto Selection = ULexUISelection::GetInstance(WeakSequenceComponent->GetWorld()))
-										{
-											Selection->SelectNone();
-											Selection->SelectWidget(WeakSequenceComponent->GetWidget());
-											Selection->SelectComponent(WeakSequenceComponent.Get());
-										}
-									}
-									return FReply::Handled();
-								})
-							]
-							+SHorizontalBox::Slot()
-							.HAlign(HAlign_Right)
-							.VAlign(VAlign_Center)
-							[
-								PropertyCustomizationHelpers::MakeResetButton(
-									FSimpleDelegate::CreateLambda([=, this]() {
-										AssignLexUIPrefabSequenceComponent(nullptr);
-										})
-									, LOCTEXT("ClearSequenceComponent", "Click to clear current selected LexUISequenceComponent, so we will not edit it here.")
-											)
-							]
-						]
 						+ SVerticalBox::Slot()
 						.Padding( 2 )
 						.AutoHeight()
@@ -293,6 +240,7 @@ void SLexUIPrefabSequenceEditor::Construct(const FArguments& InArgs)
 	PrefabSequenceEditor->AssignSequence(GetPrefabSequence());
 	EditingPrefabChangedHandle = FLexUIEditorTools::OnEditingPrefabChanged.AddRaw(this, &SLexUIPrefabSequenceEditor::OnEditingPrefabChanged);
 	OnBeforeApplyPrefabHandle = FLexUIEditorTools::OnBeforeApplyPrefab.AddRaw(this, &SLexUIPrefabSequenceEditor::OnBeforeApplyPrefab);
+	PostUndoRedoHandle = FEditorDelegates::PostUndoRedo.AddSP(this, &SLexUIPrefabSequenceEditor::OnPostUndoRedo);
 }
 
 void SLexUIPrefabSequenceEditor::AssignLexUIPrefabSequenceComponent(TWeakObjectPtr<ULexUIPrefabSequenceComponent> InSequenceComponent)
@@ -303,23 +251,121 @@ void SLexUIPrefabSequenceEditor::AssignLexUIPrefabSequenceComponent(TWeakObjectP
 
 ULexUIPrefabSequence* SLexUIPrefabSequenceEditor::GetPrefabSequence() const
 {
-	if (CurrentSelectedAnimationIndex != INDEX_NONE)
+	return GetSelectedAnimation();
+}
+
+ULexUIPrefabSequenceComponent* SLexUIPrefabSequenceEditor::FindAnimationHost(ULexWidget* RootWidget) const
+{
+	if (!IsValid(RootWidget))
 	{
-		ULexUIPrefabSequenceComponent* SequenceComponent = WeakSequenceComponent.Get();
-		return SequenceComponent ? SequenceComponent->GetSequenceByIndex(CurrentSelectedAnimationIndex) : nullptr;
+		return nullptr;
 	}
-	return nullptr;
+
+	if (ULexUIPrefabSequenceComponent* RootHost = RootWidget->GetComponent<ULexUIPrefabSequenceComponent>())
+	{
+		return RootHost;
+	}
+
+	ULexUIPrefabHelperObject* PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(RootWidget);
+	TFunction<ULexUIPrefabSequenceComponent*(ULexWidget*)> FindRecursive;
+	FindRecursive = [&](ULexWidget* ParentWidget) -> ULexUIPrefabSequenceComponent*
+	{
+		for (ULexWidget* ChildWidget : ParentWidget->GetChildren())
+		{
+			if (!IsValid(ChildWidget)
+				|| (PrefabHelperObject && PrefabHelperObject->IsWidgetBelongsToSubPrefab(ChildWidget)))
+			{
+				continue;
+			}
+
+			if (ULexUIPrefabSequenceComponent* LegacyHost = ChildWidget->GetComponent<ULexUIPrefabSequenceComponent>())
+			{
+				return LegacyHost;
+			}
+			if (ULexUIPrefabSequenceComponent* DescendantHost = FindRecursive(ChildWidget))
+			{
+				return DescendantHost;
+			}
+		}
+		return nullptr;
+	};
+	return FindRecursive(RootWidget);
+}
+
+ULexUIPrefabSequenceComponent* SLexUIPrefabSequenceEditor::EnsureAnimationHost()
+{
+	ULexWidget* RootWidget = WeakRootWidget.Get();
+	if (!IsValid(RootWidget))
+	{
+		return nullptr;
+	}
+	if (ULexUIPrefabSequenceComponent* ExistingHost = FindAnimationHost(RootWidget))
+	{
+		if (WeakSequenceComponent.Get() != ExistingHost)
+		{
+			AssignLexUIPrefabSequenceComponent(ExistingHost);
+		}
+		return ExistingHost;
+	}
+
+	RootWidget->SetFlags(RF_Transactional);
+	RootWidget->Modify();
+	if (UObject* WidgetOuter = RootWidget->GetOuter())
+	{
+		WidgetOuter->Modify();
+	}
+
+	ULexUIPrefabSequenceComponent* NewHost = RootWidget->AddComponent<ULexUIPrefabSequenceComponent>();
+	if (!IsValid(NewHost))
+	{
+		return nullptr;
+	}
+	NewHost->SetFlags(RF_Transactional);
+	NewHost->Modify();
+	FLexUIUtils::NotifyPropertyChanged(RootWidget, ULexWidget::GetPropertyName_Components());
+	AssignLexUIPrefabSequenceComponent(NewHost);
+	MarkAnimationDataDirty();
+	return NewHost;
+}
+
+void SLexUIPrefabSequenceEditor::MarkAnimationDataDirty()
+{
+	ULexWidget* ContextWidget = WeakRootWidget.Get();
+	if (!IsValid(ContextWidget) && WeakSequenceComponent.IsValid())
+	{
+		ContextWidget = WeakSequenceComponent->GetWidget();
+	}
+	if (ULexUIPrefabHelperObject* Helper = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(ContextWidget))
+	{
+		Helper->Modify();
+		Helper->SetAnythingDirty();
+	}
 }
 
 void SLexUIPrefabSequenceEditor::OnObjectsReplaced(const TMap<UObject*, UObject*>& ReplacementMap)
 {
-	ULexUIPrefabSequenceComponent* Component = WeakSequenceComponent.Get(true);
-
-	ULexUIPrefabSequenceComponent* NewSequenceComponent = Component ? Cast<ULexUIPrefabSequenceComponent>(ReplacementMap.FindRef(Component)) : nullptr;
-	if (NewSequenceComponent)
+	bool bRootReplaced = false;
+	if (ULexWidget* RootWidget = WeakRootWidget.Get(true))
 	{
-		WeakSequenceComponent = NewSequenceComponent;
-		PrefabSequenceEditor->AssignSequence(GetPrefabSequence());
+		if (ULexWidget* NewRootWidget = Cast<ULexWidget>(ReplacementMap.FindRef(RootWidget)))
+		{
+			WeakRootWidget = NewRootWidget;
+			bRootReplaced = true;
+		}
+	}
+
+	if (ULexUIPrefabSequenceComponent* Component = WeakSequenceComponent.Get(true))
+	{
+		if (ULexUIPrefabSequenceComponent* NewSequenceComponent = Cast<ULexUIPrefabSequenceComponent>(ReplacementMap.FindRef(Component)))
+		{
+			AssignLexUIPrefabSequenceComponent(NewSequenceComponent);
+			return;
+		}
+	}
+
+	if (bRootReplaced)
+	{
+		AssignLexUIPrefabSequenceComponent(FindAnimationHost(WeakRootWidget.Get()));
 	}
 }
 
@@ -330,36 +376,88 @@ TSharedRef<ITableRow> SLexUIPrefabSequenceEditor::OnGenerateRowForAnimationListV
 
 void SLexUIPrefabSequenceEditor::OnAnimationListViewSelectionChanged(TSharedPtr<FWidgetAnimationListItem> InListItem, ESelectInfo::Type InSelectInfo)
 {
-	CurrentSelectedAnimationIndex = INDEX_NONE;
-	if (InListItem.IsValid())
-	{
-		auto& SequenceArray = WeakSequenceComponent->GetSequenceArray();
-		for (int i = 0; i < SequenceArray.Num(); i++)
-		{
-			if (SequenceArray[i] == InListItem->Animation)
-			{
-				CurrentSelectedAnimationIndex = i;
-				break;
-			}
-		}
-	}
 	PrefabSequenceEditor->AssignSequence(GetPrefabSequence());
+}
+
+ULexUIPrefabSequence* SLexUIPrefabSequenceEditor::GetSelectedAnimation() const
+{
+	if (!AnimationListView.IsValid())
+	{
+		return nullptr;
+	}
+	const TArray<TSharedPtr<FWidgetAnimationListItem>> SelectedItems = AnimationListView->GetSelectedItems();
+	return SelectedItems.Num() == 1 && SelectedItems[0].IsValid() ? SelectedItems[0]->Animation : nullptr;
+}
+
+int32 SLexUIPrefabSequenceEditor::GetSelectedAnimationSourceIndex() const
+{
+	ULexUIPrefabSequence* SelectedAnimation = GetSelectedAnimation();
+	return WeakSequenceComponent.IsValid() && IsValid(SelectedAnimation)
+		? WeakSequenceComponent->GetSequenceArray().IndexOfByKey(SelectedAnimation)
+		: INDEX_NONE;
+}
+
+bool SLexUIPrefabSequenceEditor::CanExecuteAnimationListAction() const
+{
+	return GetSelectedAnimationSourceIndex() != INDEX_NONE;
 }
 
 void SLexUIPrefabSequenceEditor::RefreshAnimationList()
 {
+	ULexUIPrefabSequence* PreviouslySelectedAnimation = GetSelectedAnimation();
+	if (AnimationListView.IsValid())
+	{
+		AnimationListView->ClearSelection();
+	}
+	Animations.Reset();
 	if (WeakSequenceComponent.IsValid())
 	{
-		Animations.Reset();
-		auto& SequenceArray = WeakSequenceComponent->GetSequenceArray();
-		for (auto& Item : SequenceArray)
+		const FText SearchText = SearchBoxPtr.IsValid() ? SearchBoxPtr->GetText() : FText::GetEmpty();
+		TTextFilter<ULexUIPrefabSequence*> TextFilter(
+			TTextFilter<ULexUIPrefabSequence*>::FItemToStringArray::CreateLambda(
+				[](ULexUIPrefabSequence* InAnimation, TArray<FString>& OutFilterStrings)
+				{
+					OutFilterStrings.Add(InAnimation->GetDisplayNameString());
+					OutFilterStrings.Add(InAnimation->GetName());
+				}));
+		TextFilter.SetRawFilterText(SearchText);
+		if (SearchBoxPtr.IsValid())
 		{
-			Animations.Add(MakeShareable(new FWidgetAnimationListItem(Item)));
+			SearchBoxPtr->SetError(TextFilter.GetFilterErrorText());
 		}
+
+		for (ULexUIPrefabSequence* Item : WeakSequenceComponent->GetSequenceArray())
+		{
+			if (IsValid(Item) && (SearchText.IsEmpty() || TextFilter.PassesFilter(Item)))
+			{
+				Animations.Add(MakeShareable(new FWidgetAnimationListItem(Item)));
+			}
+		}
+	}
+	else if (SearchBoxPtr.IsValid())
+	{
+		SearchBoxPtr->SetError(FText::GetEmpty());
+	}
+
+	if (AnimationListView.IsValid())
+	{
 		AnimationListView->RequestListRefresh();
-		if (Animations.Num() > 0)
+		TSharedPtr<FWidgetAnimationListItem>* ItemToSelect = Animations.FindByPredicate(
+			[PreviouslySelectedAnimation](const TSharedPtr<FWidgetAnimationListItem>& Item)
+			{
+				return Item.IsValid() && Item->Animation == PreviouslySelectedAnimation;
+			});
+		if (ItemToSelect)
+		{
+			AnimationListView->SetSelection(*ItemToSelect);
+		}
+		else if (Animations.Num() > 0)
 		{
 			AnimationListView->SetSelection(Animations[0]);
+		}
+		else if (PrefabSequenceEditor.IsValid())
+		{
+			PrefabSequenceEditor->AssignSequence(nullptr);
 		}
 	}
 }
@@ -378,30 +476,16 @@ void SLexUIPrefabSequenceEditor::OnBeforeApplyPrefab(ULexUIPrefabHelperObject* I
 	}
 }
 
+void SLexUIPrefabSequenceEditor::OnPostUndoRedo()
+{
+	AssignLexUIPrefabSequenceComponent(FindAnimationHost(WeakRootWidget.Get()));
+}
+
 // Trigger when opening a new prefab
 void SLexUIPrefabSequenceEditor::OnEditingPrefabChanged(ULexWidget* RootWidget)
 {
-	if (RootWidget)
-	{
-		for (auto ChildWidget : RootWidget->GetChildren())
-		{
-			auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(RootWidget);
-			if (PrefabHelperObject)
-			{
-				//skip sub prefab's PrefabSequenceComponent
-				if (PrefabHelperObject->IsWidgetBelongsToSubPrefab(ChildWidget))
-				{
-					continue;
-				}
-			}
-
-			auto PrefabSequencerComponent = ChildWidget->GetComponent<ULexUIPrefabSequenceComponent>();
-			if (PrefabSequencerComponent)
-			{
-				AssignLexUIPrefabSequenceComponent(PrefabSequencerComponent);
-			}
-		}
-	}
+	WeakRootWidget = RootWidget;
+	AssignLexUIPrefabSequenceComponent(FindAnimationHost(RootWidget));
 }
 
 TSharedPtr<ISequencer> SLexUIPrefabSequenceEditor::GetSequencer() const
@@ -411,42 +495,7 @@ TSharedPtr<ISequencer> SLexUIPrefabSequenceEditor::GetSequencer() const
 
 void SLexUIPrefabSequenceEditor::OnAnimationListViewSearchChanged(const FText& InSearchText)
 {
-	if (WeakSequenceComponent.IsValid())
-	{
-		auto& SequenceArray = WeakSequenceComponent->GetSequenceArray();
-		if (!InSearchText.IsEmpty())
-		{
-			struct Local
-			{
-				static void UpdateFilterStrings(ULexUIPrefabSequence* InAnimation, OUT TArray< FString >& OutFilterStrings)
-				{
-					OutFilterStrings.Add(InAnimation->GetName());
-				}
-			};
-
-			TTextFilter<ULexUIPrefabSequence*> TextFilter(TTextFilter<ULexUIPrefabSequence*>::FItemToStringArray::CreateStatic(&Local::UpdateFilterStrings));
-
-			TextFilter.SetRawFilterText(InSearchText);
-			SearchBoxPtr->SetError(TextFilter.GetFilterErrorText());
-
-			Animations.Reset();
-
-			for (ULexUIPrefabSequence* Animation : SequenceArray)
-			{
-				if (TextFilter.PassesFilter(Animation))
-				{
-					Animations.Add(MakeShareable(new FWidgetAnimationListItem(Animation)));
-				}
-			}
-
-			AnimationListView->RequestListRefresh();
-		}
-		else
-		{
-			SearchBoxPtr->SetError(FText::GetEmpty());
-			RefreshAnimationList();
-		}
-	}
+	RefreshAnimationList();
 }
 
 void SLexUIPrefabSequenceEditor::OnItemScrolledIntoView(TSharedPtr<FWidgetAnimationListItem> InListItem, const TSharedPtr<ITableRow>& InWidget) const
@@ -471,7 +520,7 @@ TSharedPtr<SWidget> SLexUIPrefabSequenceEditor::OnContextMenuOpening()const
 		//create fix button
 		{
 			auto SelectedItems = AnimationListView->GetSelectedItems();
-			if (SelectedItems.Num() == 1)
+			if (SelectedItems.Num() == 1 && WeakSequenceComponent.IsValid())
 			{
 				auto SelectedItem = SelectedItems[0];
 				if (!SelectedItem->Animation->IsObjectReferencesGood(WeakSequenceComponent->GetWidget()))
@@ -501,73 +550,99 @@ void SLexUIPrefabSequenceEditor::CreateCommandList()
 
 	CommandList->MapAction(
 		FGenericCommands::Get().Duplicate,
-		FExecuteAction::CreateSP(this, &SLexUIPrefabSequenceEditor::OnDuplicateAnimation)
+		FExecuteAction::CreateSP(this, &SLexUIPrefabSequenceEditor::OnDuplicateAnimation),
+		FCanExecuteAction::CreateSP(this, &SLexUIPrefabSequenceEditor::CanExecuteAnimationListAction)
 	);
 
 	CommandList->MapAction(
 		FGenericCommands::Get().Delete,
-		FExecuteAction::CreateSP(this, &SLexUIPrefabSequenceEditor::OnDeleteAnimation)
+		FExecuteAction::CreateSP(this, &SLexUIPrefabSequenceEditor::OnDeleteAnimation),
+		FCanExecuteAction::CreateSP(this, &SLexUIPrefabSequenceEditor::CanExecuteAnimationListAction)
 	);
 
 	CommandList->MapAction(
 		FGenericCommands::Get().Rename,
-		FExecuteAction::CreateSP(this, &SLexUIPrefabSequenceEditor::OnRenameAnimation)
+		FExecuteAction::CreateSP(this, &SLexUIPrefabSequenceEditor::OnRenameAnimation),
+		FCanExecuteAction::CreateSP(this, &SLexUIPrefabSequenceEditor::CanExecuteAnimationListAction)
 	);
 }
 
 FReply SLexUIPrefabSequenceEditor::OnNewAnimationClicked()
 {
-	if (WeakSequenceComponent.IsValid())
+	const FScopedTransaction Transaction(LOCTEXT("AddAnimation_Transaction", "Add LexUI Animation"));
+	if (ULexUIPrefabSequenceComponent* SequenceComponent = EnsureAnimationHost())
 	{
-		auto Sequence = WeakSequenceComponent->AddNewAnimation();
-		bool bRequestRename = true;
-		bool bNewAnimation = true;
-		int32 NewIndex = Animations.Add(MakeShareable(new FWidgetAnimationListItem(Sequence, bRequestRename, bNewAnimation)));
-		AnimationListView->RequestScrollIntoView(Animations[NewIndex]);
+		SequenceComponent->Modify();
+		ULexUIPrefabSequence* Sequence = SequenceComponent->AddNewAnimation();
+		MarkAnimationDataDirty();
+		if (SearchBoxPtr.IsValid())
+		{
+			SearchBoxPtr->SetText(FText::GetEmpty());
+		}
+		RefreshAnimationList();
+		if (TSharedPtr<FWidgetAnimationListItem>* NewItem = Animations.FindByPredicate(
+			[Sequence](const TSharedPtr<FWidgetAnimationListItem>& Item) { return Item.IsValid() && Item->Animation == Sequence; }))
+		{
+			(*NewItem)->bRenameRequestPending = true;
+			(*NewItem)->bNewAnimation = true;
+			AnimationListView->SetSelection(*NewItem);
+			AnimationListView->RequestScrollIntoView(*NewItem);
+		}
 	}
 	return FReply::Handled();
 }
 
 void SLexUIPrefabSequenceEditor::OnDuplicateAnimation()
 {
-	if (WeakSequenceComponent.IsValid())
+	const int32 SourceIndex = GetSelectedAnimationSourceIndex();
+	if (WeakSequenceComponent.IsValid() && SourceIndex != INDEX_NONE)
 	{
-		GEditor->BeginTransaction(LOCTEXT("DuplicateAnimation_Transaction", "LexUISequence Duplicate Animation"));
+		const FScopedTransaction Transaction(LOCTEXT("DuplicateAnimation_Transaction", "LexUISequence Duplicate Animation"));
 		WeakSequenceComponent->Modify();
-		auto Sequence = WeakSequenceComponent->DuplicateAnimationByIndex(CurrentSelectedAnimationIndex);
-		GEditor->EndTransaction();
+		ULexUIPrefabSequence* Sequence = WeakSequenceComponent->DuplicateAnimationByIndex(SourceIndex);
+		MarkAnimationDataDirty();
 
 		if (Sequence)
 		{
-			bool bRequestRename = true;
-			bool bNewAnimation = true;
-			int32 NewIndex = Animations.Insert(MakeShareable(new FWidgetAnimationListItem(Sequence, bRequestRename, bNewAnimation)), CurrentSelectedAnimationIndex + 1);
-			AnimationListView->RequestScrollIntoView(Animations[NewIndex]);
+			if (SearchBoxPtr.IsValid())
+			{
+				SearchBoxPtr->SetText(FText::GetEmpty());
+			}
+			RefreshAnimationList();
+			if (TSharedPtr<FWidgetAnimationListItem>* NewItem = Animations.FindByPredicate(
+				[Sequence](const TSharedPtr<FWidgetAnimationListItem>& Item) { return Item.IsValid() && Item->Animation == Sequence; }))
+			{
+				(*NewItem)->bRenameRequestPending = true;
+				(*NewItem)->bNewAnimation = true;
+				AnimationListView->SetSelection(*NewItem);
+				AnimationListView->RequestScrollIntoView(*NewItem);
+			}
 		}
 	}
 }
 void SLexUIPrefabSequenceEditor::OnDeleteAnimation()
 {
-	if (WeakSequenceComponent.IsValid())
+	const int32 SourceIndex = GetSelectedAnimationSourceIndex();
+	if (WeakSequenceComponent.IsValid() && SourceIndex != INDEX_NONE)
 	{
-		GEditor->BeginTransaction(LOCTEXT("DeleteAnimation_Transaction", "LexUISequence Delete Animation"));
+		const FScopedTransaction Transaction(LOCTEXT("DeleteAnimation_Transaction", "LexUISequence Delete Animation"));
 		WeakSequenceComponent->Modify();
-		bool bDeleted = WeakSequenceComponent->DeleteAnimationByIndex(CurrentSelectedAnimationIndex);
-		GEditor->EndTransaction();
+		const bool bDeleted = WeakSequenceComponent->DeleteAnimationByIndex(SourceIndex);
 
 		if (bDeleted)
 		{
-			Animations.RemoveAt(CurrentSelectedAnimationIndex);
-			AnimationListView->RebuildList();
-			CurrentSelectedAnimationIndex = INDEX_NONE;
-			PrefabSequenceEditor->AssignSequence(nullptr);
+			MarkAnimationDataDirty();
+			RefreshAnimationList();
 		}
 	}
 }
 void SLexUIPrefabSequenceEditor::OnRenameAnimation()
 {
 	TArray< TSharedPtr<FWidgetAnimationListItem> > SelectedAnimations = AnimationListView->GetSelectedItems();
-	check(SelectedAnimations.Num() == 1);
+	if (SelectedAnimations.Num() != 1)
+	{
+		return;
+	}
 
 	TSharedPtr<FWidgetAnimationListItem> SelectedAnimation = SelectedAnimations[0];
 	SelectedAnimation->bRenameRequestPending = true;

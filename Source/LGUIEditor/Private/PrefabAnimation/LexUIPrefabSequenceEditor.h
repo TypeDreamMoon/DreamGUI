@@ -28,20 +28,25 @@ public:
 	ULexUIPrefabSequence* GetPrefabSequence() const;
 	ULexUIPrefabSequenceComponent* GetSequenceComponent()const { return WeakSequenceComponent.Get(); }
 	void RefreshAnimationList();
+	void MarkAnimationDataDirty();
 	void OnEditingPrefabChanged(ULexWidget* RootWidget);
 	TSharedPtr<ISequencer> GetSequencer() const;
 private:
+	TWeakObjectPtr<ULexWidget> WeakRootWidget;
 	TWeakObjectPtr<ULexUIPrefabSequenceComponent> WeakSequenceComponent;
+	ULexUIPrefabSequenceComponent* FindAnimationHost(ULexWidget* RootWidget) const;
+	ULexUIPrefabSequenceComponent* EnsureAnimationHost();
 	FDelegateHandle OnObjectsReplacedHandle;
 	FDelegateHandle EditingPrefabChangedHandle;
 	FDelegateHandle OnBeforeApplyPrefabHandle;
+	FDelegateHandle PostUndoRedoHandle;
 	void OnBeforeApplyPrefab(ULexUIPrefabHelperObject* InObject);
+	void OnPostUndoRedo();
 
 	TSharedPtr<SLexUIPrefabSequenceEditorWidget> PrefabSequenceEditor;
 
 	TSharedPtr<SListView<TSharedPtr<FWidgetAnimationListItem>>> AnimationListView;
 	TArray< TSharedPtr<FWidgetAnimationListItem> > Animations;
-	int32 CurrentSelectedAnimationIndex = 0;
 	TSharedRef<ITableRow> OnGenerateRowForAnimationListView(TSharedPtr<FWidgetAnimationListItem> InListItem, const TSharedRef<STableViewBase>& InOwnerTableView);
 	void OnAnimationListViewSelectionChanged(TSharedPtr<FWidgetAnimationListItem> InListItem, ESelectInfo::Type InSelectInfo);
 	void OnItemScrolledIntoView(TSharedPtr<FWidgetAnimationListItem> InListItem, const TSharedPtr<ITableRow>& InWidget) const;
@@ -54,5 +59,8 @@ private:
 	void OnDuplicateAnimation();
 	void OnDeleteAnimation();
 	void OnRenameAnimation();
+	ULexUIPrefabSequence* GetSelectedAnimation() const;
+	int32 GetSelectedAnimationSourceIndex() const;
+	bool CanExecuteAnimationListAction() const;
 	void OnObjectsReplaced(const TMap<UObject*, UObject*>& ReplacementMap);
 };

@@ -55,7 +55,7 @@ void FLexUIPrefabSequenceComponentCustomization::CustomizeDetails(IDetailLayoutB
 
 	DetailBuilder.HideProperty("Sequence");
 
-	IDetailCategoryBuilder& Category = DetailBuilder.EditCategory("Sequence", FText(), ECategoryPriority::Important);
+	IDetailCategoryBuilder& Category = DetailBuilder.EditCategory("Animation", LOCTEXT("AnimationCategory", "Animation"), ECategoryPriority::Important);
 
 	bool bIsExternalTabAlreadyOpened = false;
 
@@ -70,7 +70,7 @@ void FLexUIPrefabSequenceComponentCustomization::CustomizeDetails(IDetailLayoutB
 		.NameContent()
 		[
 			SNew(STextBlock)
-			.Text(LOCTEXT("SequenceValueText", "Sequence"))
+			.Text(LOCTEXT("AnimationsValueText", "Animations"))
 			.Font(DetailBuilder.GetDetailFont())
 		]
 		.ValueContent()
@@ -102,7 +102,7 @@ void FLexUIPrefabSequenceComponentCustomization::CustomizeDetails(IDetailLayoutB
 			})
 			[
 				SNew(STextBlock)
-				.Text(bIsExternalTabAlreadyOpened ? LOCTEXT("FocusSequenceTabButtonText", "Focus Tab") : LOCTEXT("OpenSequenceTabButtonText", "Open in Tab"))
+				.Text(bIsExternalTabAlreadyOpened ? LOCTEXT("FocusAnimationsTabButtonText", "Focus Tab") : LOCTEXT("OpenAnimationsTabButtonText", "Open Animations"))
 				.Font(DetailBuilder.GetDetailFont())
 			]
 		];

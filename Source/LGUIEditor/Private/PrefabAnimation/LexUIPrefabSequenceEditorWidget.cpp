@@ -503,7 +503,7 @@ private:
 						AddTrackMenuBuilder.BeginSection("Materials", LOCTEXT("MaterialsSection", "Materials"));
 						{
 							FText DisplayNameText = MaterialProperty->GetDisplayNameText();
-							FUIAction AddMaterialAction(FExecuteAction::CreateRaw(this, &SLexUIPrefabSequenceEditorWidgetImpl::AddMaterialTrack, (UObject*)Image, MaterialProperty, DisplayNameText));
+							FUIAction AddMaterialAction(FExecuteAction::CreateRaw(this, &SLexUIPrefabSequenceEditorWidgetImpl::AddMaterialTrack, (UObject*)Text, MaterialProperty, DisplayNameText));
 							FText AddMaterialLabel = DisplayNameText;
 							FText AddMaterialToolTip = FText::Format(LOCTEXT("TextMaterialToolTipFormat", "Add a material track for the {0} property."), DisplayNameText);
 							AddTrackMenuBuilder.AddMenuEntry(AddMaterialLabel, AddMaterialToolTip, FSlateIcon(), AddMaterialAction);

@@ -35,21 +35,7 @@ bool FLexUIDetailKeyframeHandler::IsPropertyAnimated(const IPropertyHandle& Prop
 {
 	if (auto Sequencer = GetSequencer())
 	{
-		if (Sequencer->GetFocusedMovieSceneSequence())
-		{
-			constexpr bool bCreateHandleIfMissing = false;
-			FGuid ObjectHandle = Sequencer->GetHandleToObject(ParentObject, bCreateHandleIfMissing);
-			if (ObjectHandle.IsValid()) 
-			{
-				UMovieScene* MovieScene = Sequencer->GetFocusedMovieSceneSequence()->GetMovieScene();
-				FProperty* Property = PropertyHandle.GetProperty();
-				TSharedRef<FPropertyPath> PropertyPath = FPropertyPath::CreateEmpty();
-				PropertyPath->AddProperty(FPropertyInfo(Property));
-				FName PropertyName(*PropertyPath->ToString(TEXT(".")));
-				TSubclassOf<UMovieSceneTrack> TrackClass; //use empty @todo find way to get the UMovieSceneTrack from the Property type.
-				return MovieScene->FindTrack(TrackClass, ObjectHandle, PropertyName) != nullptr;
-			}
-		}
+		return Sequencer->GetPropertyKeyedStatus(PropertyHandle) != EPropertyKeyedStatus::NotKeyed;
 	}
 	return false;
 }
