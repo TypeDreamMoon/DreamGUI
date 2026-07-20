@@ -214,7 +214,7 @@ namespace LexUIPrefabSystem
 			}
 			if (Widget->HasRegistered())
 			{
-				Widget->SetParent(ParentWidget, false);
+				Widget->SetParentFromPrefab(ParentWidget, false);
 			}
 			else
 			{
@@ -239,7 +239,7 @@ namespace LexUIPrefabSystem
 			}
 			if (Widget->HasRegistered())
 			{
-				Widget->SetParent(ParentWidget, false);
+				Widget->SetParentFromPrefab(ParentWidget, false);
 			}
 			else
 			{
@@ -595,7 +595,7 @@ namespace LexUIPrefabSystem
 								{
 									if (SubPrefabRootWidget->HasRegistered())
 									{
-										SubPrefabRootWidget->SetParent(Cast<ULexWidget>(*ParentWidgetPtr), false);
+										SubPrefabRootWidget->SetParentFromPrefab(Cast<ULexWidget>(*ParentWidgetPtr), false);
 									}
 									else
 									{

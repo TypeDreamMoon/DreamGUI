@@ -39,9 +39,9 @@ struct FLexLayoutSize
 	UPROPERTY(VisibleAnywhere, Category = "LGUI")
 	float AutoValue = 0;
 #endif
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI", meta = (EditCondition = "Type == ELexLayoutSizeType::Fixed", UIMin=0))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI", meta = (EditCondition = "Type == ELexLayoutSizeType::Fixed", ClampMin="0.0"))
 	float FixedValue = 100;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI", meta = (EditCondition = "Type == ELexLayoutSizeType::Percent", UIMin=0, UIMax=1))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI", meta = (EditCondition = "Type == ELexLayoutSizeType::Percent", ClampMin="0.0", ClampMax="1.0"))
 	float PercentValue = 0.5;
 
 	FLexLayoutSize(){}
@@ -68,11 +68,12 @@ struct FLexLayoutSize
 	}
 	bool operator==(const FLexLayoutSize& Other) const
 	{
-		return this->Type == Other.Type && this->FixedValue == Other.FixedValue && this->PercentValue == Other.PercentValue;
+		return this->bEnable == Other.bEnable && this->Type == Other.Type
+			&& this->FixedValue == Other.FixedValue && this->PercentValue == Other.PercentValue;
 	}
 	bool operator!=(const FLexLayoutSize& Other) const
 	{
-		return this->Type != Other.Type || this->FixedValue != Other.FixedValue || this->PercentValue != Other.PercentValue;
+		return !(*this == Other);
 	}
 
 	float Calculate(ULexWidget* Widget, bool IsVertical)const;
@@ -98,9 +99,9 @@ struct FLexLayoutMinMaxSize
 	bool bEnable = false;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI")
 	ELexLayoutMinMaxSizeType Type = ELexLayoutMinMaxSizeType::Fixed;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI", meta = (EditCondition = "Type == ELexLayoutMinMaxSizeType::Fixed", UIMin=0))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI", meta = (EditCondition = "Type == ELexLayoutMinMaxSizeType::Fixed", ClampMin="0.0"))
 	float FixedValue = 100;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI", meta = (EditCondition = "Type == ELexLayoutMinMaxSizeType::Percent", UIMin=0, UIMax=100))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LGUI", meta = (EditCondition = "Type == ELexLayoutMinMaxSizeType::Percent", ClampMin="0.0", ClampMax="1.0"))
 	float PercentValue = 0.5f;
 
 	FLexLayoutMinMaxSize(){}
@@ -127,11 +128,12 @@ struct FLexLayoutMinMaxSize
 	}
 	bool operator==(const FLexLayoutMinMaxSize& Other) const
 	{
-		return this->Type == Other.Type && this->FixedValue == Other.FixedValue && this->PercentValue == Other.PercentValue;
+		return this->bEnable == Other.bEnable && this->Type == Other.Type
+			&& this->FixedValue == Other.FixedValue && this->PercentValue == Other.PercentValue;
 	}
 	bool operator!=(const FLexLayoutMinMaxSize& Other) const
 	{
-		return this->Type != Other.Type || this->FixedValue != Other.FixedValue || this->PercentValue != Other.PercentValue;
+		return !(*this == Other);
 	}
 
 	float Calculate(ULexWidget* Widget, bool IsVertical, bool IsMinOrMax)const;
@@ -163,7 +165,7 @@ private:
 	FLexLayoutMinMaxSize MaxHeight;
 
 	/** Expands outwards. Only valid when parent have FlexBoxContainer */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Layout", meta = (AllowPrivateAccess = true, UIMin=0))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetMargin, Category = "Layout", meta = (AllowPrivateAccess = true, ClampMin="0.0"))
 	FMargin Margin;
 
 	/**

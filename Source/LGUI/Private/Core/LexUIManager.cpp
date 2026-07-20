@@ -1045,28 +1045,28 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 	//update layout
 	if (LayoutDirtyWidgetArray.Num() > 0)
 	{
+		constexpr int32 MaxLayoutPassesPerFrame = 32;
+		int32 LayoutPassCount = 0;
 #if WITH_EDITOR
-		int LayoutCalcCount = 0;
 		UE_LOG(LGUI, Log, TEXT("---Begin layout frame:%d, World:%s---"), GFrameNumber, *GetWorld()->GetPathName());
 #endif
-		while (LayoutDirtyWidgetArray.Num() > 0)
+		while (LayoutDirtyWidgetArray.Num() > 0 && LayoutPassCount < MaxLayoutPassesPerFrame)
 		{
 			SCOPE_CYCLE_COUNTER(STAT_UpdateLayout);
-			LayoutCalcCount++;
+			++LayoutPassCount;
 			struct LOCAL
 			{
-				static void UpdateLayoutRecursively(ULexWidget* Widget)
+				static void UpdateLayoutRecursively(ULexWidget* Widget, TSet<const ULexWidget*>& VisitedWidgets)
 				{
 					if (!IsValid(Widget))return;
+					if (VisitedWidgets.Contains(Widget))return;
+					VisitedWidgets.Add(Widget);
 					if (!Widget->GetLayoutVisibleInHierarchy())return;
 					if (!Widget->HasRegistered())return;//if not registered, means it could about to remove
 					Widget->UpdateLayout();
-					if (Widget->GetLayoutContainer())
+					for (ULexWidget* Child : Widget->GetChildren())
 					{
-						for (auto& Child : Widget->GetChildren())
-						{
-							UpdateLayoutRecursively(Child);
-						}
+						UpdateLayoutRecursively(Child, VisitedWidgets);
 					}
 				}
 			};
@@ -1076,8 +1076,15 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 			for (int i = CopiedLayoutDirtyWidgetArray.Num() - 1; i >= 0; i--)
 			{
 				auto& Widget = CopiedLayoutDirtyWidgetArray[i];
-				LOCAL::UpdateLayoutRecursively(Widget.Get());
+				TSet<const ULexWidget*> VisitedWidgets;
+				LOCAL::UpdateLayoutRecursively(Widget.Get(), VisitedWidgets);
 			}
+		}
+		if (LayoutDirtyWidgetArray.Num() > 0)
+		{
+			UE_LOG(LGUI, Error,
+				TEXT("Layout did not converge after %d passes in World %s. Deferring %d pending widgets to the next frame."),
+				MaxLayoutPassesPerFrame, *GetNameSafe(GetWorld()), LayoutDirtyWidgetArray.Num());
 		}
 #if WITH_EDITOR
 		for (auto& CalcCountKeyValue : LayoutCalculationCounterMap)
@@ -1088,7 +1095,7 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 			}
 		}
 		LayoutCalculationCounterMap.Reset();
-		UE_LOG(LGUI, Log, TEXT("---end layout frame:%d, count:%d"), GFrameNumber, LayoutCalcCount);
+		UE_LOG(LGUI, Log, TEXT("---end layout frame:%d, count:%d"), GFrameNumber, LayoutPassCount);
 #endif
 	}
 
@@ -1474,7 +1481,10 @@ void ULexUIManagerWorldSubsystem::RemoveWidget(ULexWidget* InWidget)
 
 void ULexUIManagerWorldSubsystem::AddLayoutDirtyWidget(ULexWidget* InWidget)
 {
-	LayoutDirtyWidgetArray.AddUnique(InWidget);
+	if (IsValid(InWidget))
+	{
+		LayoutDirtyWidgetArray.AddUnique(InWidget);
+	}
 }
 
 #if WITH_EDITOR

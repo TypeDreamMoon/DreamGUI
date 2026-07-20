@@ -17,19 +17,20 @@ class LGUI_API ULexLayoutSelfGrid : public ULexLayoutSelf
 protected:
 	virtual void BeginPlay() override;
 private:
-	UPROPERTY(EditAnywhere, Category = "LGUI")
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (ClampMin = "0"))
 	int RowIndex = 0;
-	UPROPERTY(EditAnywhere, Category = "LGUI")
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (ClampMin = "1"))
 	int RowCount = 1;
-	UPROPERTY(EditAnywhere, Category = "LGUI")
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (ClampMin = "0"))
 	int ColumnIndex = 0;
-	UPROPERTY(EditAnywhere, Category = "LGUI")
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (ClampMin = "1"))
 	int ColumnCount = 1;
 public:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* Widget) const override;
+	virtual FVector2f GetLayoutPreferredSize() override;
 	
 	void SetSizeByLayoutContainer(FVector2f Value); 
 

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Core/LexUIAnchorData.h"
 #include "LexWidgetSubObjectBehaviour.h"
 #include "LexPanelSlot.generated.h"
 
@@ -36,6 +37,25 @@ UCLASS(BlueprintType, DefaultToInstanced, EditInlineNew, DisplayName = "Panel Sl
 class LGUI_API ULexPanelSlot : public ULexWidgetSubObjectBehaviour
 {
 	GENERATED_BODY()
+
+private:
+	/** Authored rect preserved independently from the serialized rect currently produced by a panel pass. */
+	UPROPERTY()
+	FLexUIAnchorData AuthoredAnchorData;
+	/** Actual authored size is stored separately because stretched anchors depend on the parent size. */
+	UPROPERTY()
+	FVector2f AuthoredDesiredSizeFallback = FVector2f::ZeroVector;
+	UPROPERTY()
+	bool bHasAuthoredGeometry = false;
+	/** Persists so an asset reloaded after Apply still knows that AnchorData contains arranged geometry. */
+	UPROPERTY()
+	bool bLayoutGeometryApplied = false;
+	/** Axes touched by the active layout pass. Zero on an applied legacy slot means all axes. */
+	UPROPERTY()
+	uint8 LayoutGeometryControlMask = 0;
+
+protected:
+	virtual void OnRegister() override;
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetPadding, Category = "Slot")
@@ -75,7 +95,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Slot")
 	void NotifySlotChanged();
 
+	void CaptureAuthoredGeometry(bool bForce = false);
+	bool RestoreAuthoredGeometry(bool bForce = false);
+	void InvalidateAuthoredGeometry();
+	void MarkLayoutGeometryApplied(bool bHorizontalPosition = true, bool bVerticalPosition = true,
+		bool bHorizontalSize = true, bool bVerticalSize = true);
+	bool HasAuthoredGeometry() const { return bHasAuthoredGeometry; }
+	bool HasLayoutGeometryApplied() const { return bLayoutGeometryApplied; }
+	FVector2f GetAuthoredDesiredSizeFallback() const { return AuthoredDesiredSizeFallback; }
+
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+	virtual void PostEditUndo() override;
 #endif
 };

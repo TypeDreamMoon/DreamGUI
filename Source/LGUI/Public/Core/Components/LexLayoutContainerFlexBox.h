@@ -76,35 +76,35 @@ private:
 	 * Specifies how items are placed in the container, by setting the direction of the container's primary axis.
 	 * Direction defines the primary axis, if Direction is Horizontal or HorizontalReversed then secondary axis would be vertical.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LayoutContainer", meta = (AllowPrivateAccess = true))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetDirection, Category = "LayoutContainer", meta = (AllowPrivateAccess = true))
 	ELexLayoutFlexBoxDirectionType Direction = ELexLayoutFlexBoxDirectionType::Horizontal;
 	/**
 	 * Controls whether the container is single-line or multi-line, and the direction of the secondary-axis, which determines the direction new lines are stacked in.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LayoutContainer", meta = (AllowPrivateAccess = true))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetWrap, Category = "LayoutContainer", meta = (AllowPrivateAccess = true))
 	ELexLayoutFlexBoxWrapType Wrap = ELexLayoutFlexBoxWrapType::NoWrap;
 	/**
 	 * Know as justify-content. Aligns items along the primary axis of the current line of the container.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LayoutContainer", meta = (AllowPrivateAccess = true))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetPrimaryAlignment, Category = "LayoutContainer", meta = (AllowPrivateAccess = true))
 	ELexLayoutFlexBoxPrimaryAxisAlignment PrimaryAlignment = ELexLayoutFlexBoxPrimaryAxisAlignment::Start;
 	/**
 	 * Know as align-content. Aligns a container's lines within the container when there is extra space in the secondary-axis, similar to how 'PrimaryAlignment' aligns individual items within the primary-axis.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LayoutContainer", meta = (AllowPrivateAccess = true))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetSecondaryAlignment, Category = "LayoutContainer", meta = (AllowPrivateAccess = true))
 	ELexLayoutFlexBoxSecondaryAxisAlignment SecondaryAlignment = ELexLayoutFlexBoxSecondaryAxisAlignment::Start;
 	/**
 	 * Know as align-items. Aligns items along the secondary-axis of the current line of the container.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LayoutContainer", meta = (AllowPrivateAccess = true))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetSecondaryLineAlignment, Category = "LayoutContainer", meta = (AllowPrivateAccess = true))
 	ELexLayoutFlexBoxSecondaryAxisLineAlignment SecondaryLineAlignment = ELexLayoutFlexBoxSecondaryAxisLineAlignment::Start;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LayoutContainer", meta = (AllowPrivateAccess = true, UIMin=0))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetWidthGap, Category = "LayoutContainer", meta = (AllowPrivateAccess = true, ClampMin="0.0"))
 	float WidthGap = 0;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LayoutContainer", meta = (AllowPrivateAccess = true, UIMin=0))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetHeightGap, Category = "LayoutContainer", meta = (AllowPrivateAccess = true, ClampMin="0.0"))
 	float HeightGap = 0;
 	/** Expands inwards */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LayoutContainer", meta = (AllowPrivateAccess = true, UIMin=0))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetPadding, Category = "LayoutContainer", meta = (AllowPrivateAccess = true, ClampMin="0.0"))
 	FMargin Padding;
 
 	virtual void MarkLayoutDirty() override;

@@ -21,6 +21,8 @@ public:
 	ULexUIBehaviour();
 	friend class ULexWidget;
 	virtual UWorld* GetWorld() const override final;
+	/** INDEX_NONE means this behaviour does not impose a child-count limit on its widget. */
+	virtual int32 GetMaxWidgetChildren() const { return INDEX_NONE; }
 private:
 	void BeginPlay();
 	void EndPlay();
@@ -28,6 +30,8 @@ private:
 protected:
 	virtual void OnRegister();
 	virtual void OnUnregister();
+	virtual void OnWidgetChildAttached(ULexWidget* Child) {}
+	virtual void OnWidgetChildDetached(ULexWidget* Child) {}
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)override;
 #endif

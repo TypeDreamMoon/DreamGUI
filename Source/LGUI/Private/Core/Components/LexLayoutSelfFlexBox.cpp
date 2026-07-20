@@ -5,119 +5,104 @@
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexLayoutContainerFlexBox.h"
 #include "Core/Components/LexPanelLayouts.h"
+#include "Core/Components/LexPanelSlot.h"
 #include "Core/Components/LexVisual.h"
+
+namespace LexLayoutSelfFlexBoxLocal
+{
+	static float NonNegativeFinite(float Value)
+	{
+		return FMath::IsFinite(Value) ? FMath::Max(0.0f, Value) : 0.0f;
+	}
+
+	static FMargin SanitizeMargin(const FMargin& Value)
+	{
+		return FMargin(
+			NonNegativeFinite(Value.Left),
+			NonNegativeFinite(Value.Top),
+			NonNegativeFinite(Value.Right),
+			NonNegativeFinite(Value.Bottom));
+	}
+}
 
 float FLexLayoutSize::Calculate(ULexWidget* Widget, bool IsVertical) const
 {
-    if (bEnable)
-    {
-        switch (Type)
-        {
-        case ELexLayoutSizeType::Auto:
-            if (auto LayoutContainer = Widget->GetLayoutContainer())
-            {
-                auto LayoutPreferredSize = LayoutContainer->GetLayoutPreferredSize();
-                return IsVertical ? LayoutPreferredSize.Y : LayoutPreferredSize.X;
-            }
-            if (auto Visual = Widget->GetVisual())
-            {
-                return IsVertical ? Visual->GetPreferredHeight() : Visual->GetPreferredWidth();
-            }
-            return 0;
-        case ELexLayoutSizeType::Fixed:
-            return FixedValue;
-        case ELexLayoutSizeType::Percent:
-            if (auto ParentWidget = Widget->GetParent())
-            {
-                if (IsVertical)
-                {
-                    float FinalSize = 0;
-                    if (auto ParentLayoutSelf = ParentWidget->GetLayoutSelf())
-                    {
-                        FinalSize = ParentLayoutSelf->GetLayoutFinalSize().Y;
-                    }
-                    else
-                    {
-                        FinalSize = ParentWidget->GetHeight();
-                    }
-                    if (auto ParentLayoutContainer = Cast<ULexLayoutContainerFlexBox>(ParentWidget->GetLayoutContainer()))
-                    {
-                        auto& Padding = ParentLayoutContainer->GetPadding();
-                        FinalSize -= Padding.Bottom + Padding.Top;
-                    }
-                    return PercentValue * FinalSize;
-                }
-                else
-                {
-                    float FinalSize = 0;
-                    if (auto ParentLayoutSelf = ParentWidget->GetLayoutSelf())
-                    {
-                        FinalSize = ParentLayoutSelf->GetLayoutFinalSize().X;
-                    }
-                    else
-                    {
-                        FinalSize = ParentWidget->GetWidth();
-                    }
-                    if (auto ParentLayoutContainer = Cast<ULexLayoutContainerFlexBox>(ParentWidget->GetLayoutContainer()))
-                    {
-                        auto& Padding = ParentLayoutContainer->GetPadding();
-                        FinalSize -= Padding.Left + Padding.Right;
-                    }
-                    return PercentValue * FinalSize;
-                }
-            }
-            return 0;//no valid parent, just return 0
-        }
-    }
-    return IsVertical ? Widget->GetHeight() : Widget->GetWidth();
+	if (!IsValid(Widget)) return 0.0f;
+	if (!bEnable)
+	{
+		return LexLayoutSelfFlexBoxLocal::NonNegativeFinite(IsVertical ? Widget->GetHeight() : Widget->GetWidth());
+	}
+
+	switch (Type)
+	{
+	case ELexLayoutSizeType::Auto:
+		if (ULexLayoutContainer* LayoutContainer = Widget->GetLayoutContainer(); IsValid(LayoutContainer))
+		{
+			const FVector2f LayoutPreferredSize = LayoutContainer->GetLayoutPreferredSize();
+			const float Value = IsVertical ? LayoutPreferredSize.Y : LayoutPreferredSize.X;
+			if (const ULexLayoutContainerSizeBox* SizeBox = Cast<ULexLayoutContainerSizeBox>(LayoutContainer);
+				IsValid(SizeBox) && (IsVertical ? SizeBox->bOverrideHeight : SizeBox->bOverrideWidth))
+			{
+				return LexLayoutSelfFlexBoxLocal::NonNegativeFinite(Value);
+			}
+			if (FMath::IsFinite(Value) && Value > 0.0f) return Value;
+		}
+		if (ULexVisual* Visual = Widget->GetVisual(); IsValid(Visual))
+		{
+			const float Value = IsVertical ? Visual->GetPreferredHeight() : Visual->GetPreferredWidth();
+			if (FMath::IsFinite(Value) && Value >= 0.0f) return Value;
+		}
+		return FMath::IsFinite(FixedValue) ? FMath::Max(0.0f, FixedValue) : 0.0f;
+	case ELexLayoutSizeType::Fixed:
+		return FMath::IsFinite(FixedValue) ? FMath::Max(0.0f, FixedValue) : 0.0f;
+	case ELexLayoutSizeType::Percent:
+		if (ULexWidget* ParentWidget = Widget->GetParent(); IsValid(ParentWidget))
+		{
+			float FinalSize = IsVertical ? ParentWidget->GetHeight() : ParentWidget->GetWidth();
+			if (ULexLayoutSelf* ParentLayoutSelf = ParentWidget->GetLayoutSelf(); IsValid(ParentLayoutSelf))
+			{
+				const FVector2f LayoutSize = ParentLayoutSelf->GetLayoutFinalSize();
+				FinalSize = IsVertical ? LayoutSize.Y : LayoutSize.X;
+			}
+			if (const ULexLayoutContainerFlexBox* ParentLayoutContainer = Cast<ULexLayoutContainerFlexBox>(ParentWidget->GetLayoutContainer()))
+			{
+				const FMargin Padding = LexLayoutSelfFlexBoxLocal::SanitizeMargin(ParentLayoutContainer->GetPadding());
+				FinalSize -= IsVertical ? Padding.Top + Padding.Bottom : Padding.Left + Padding.Right;
+			}
+			const float Percent = FMath::IsFinite(PercentValue) ? FMath::Clamp(PercentValue, 0.0f, 1.0f) : 0.0f;
+			return Percent * LexLayoutSelfFlexBoxLocal::NonNegativeFinite(FinalSize);
+		}
+		return 0.0f;
+	}
+	return 0.0f;
 }
 
 float FLexLayoutMinMaxSize::Calculate(ULexWidget* Widget, bool IsVertical,
     bool IsMinOrMax) const
 {
-    float CalculatedValue = IsMinOrMax ? -UE_MAX_FLT : UE_MAX_FLT;
-    if (bEnable)
-    {
-        switch (Type)
-        {
-        case ELexLayoutMinMaxSizeType::Fixed:
-            CalculatedValue = FixedValue;
-            break;
-        case ELexLayoutMinMaxSizeType::Percent:
-            if (auto ParentWidget = Widget->GetParent())
-            {
-                if (IsVertical)
-                {
-                    if (auto LayoutSelf = ParentWidget->GetLayoutSelf())
-                    {
-                        auto FinalSize = LayoutSelf->GetLayoutFinalSize();
-                        return PercentValue * FinalSize.Y;
-                    }
-                    else
-                    {
-                        return 0;
-                    }
-                }
-                else
-                {
-                    if (auto LayoutSelf = ParentWidget->GetLayoutSelf())
-                    {
-                        auto FinalSize = LayoutSelf->GetLayoutFinalSize();
-                        return PercentValue * FinalSize.X;
-                    }
-                    else
-                    {
-                        return CalculatedValue;
-                    }
-                }
-            }
-            else
-            {
-                return CalculatedValue;
-            }
-        }
-    }
-    return CalculatedValue;
+	const float DisabledValue = IsMinOrMax ? -UE_MAX_FLT : UE_MAX_FLT;
+	if (!bEnable || !IsValid(Widget)) return DisabledValue;
+	if (Type == ELexLayoutMinMaxSizeType::Fixed)
+	{
+		return FMath::IsFinite(FixedValue) ? FMath::Max(0.0f, FixedValue) : DisabledValue;
+	}
+	if (ULexWidget* ParentWidget = Widget->GetParent(); IsValid(ParentWidget))
+	{
+		float FinalSize = IsVertical ? ParentWidget->GetHeight() : ParentWidget->GetWidth();
+		if (ULexLayoutSelf* ParentLayoutSelf = ParentWidget->GetLayoutSelf(); IsValid(ParentLayoutSelf))
+		{
+			const FVector2f LayoutSize = ParentLayoutSelf->GetLayoutFinalSize();
+			FinalSize = IsVertical ? LayoutSize.Y : LayoutSize.X;
+		}
+		if (const ULexLayoutContainerFlexBox* ParentLayoutContainer = Cast<ULexLayoutContainerFlexBox>(ParentWidget->GetLayoutContainer()))
+		{
+			const FMargin Padding = LexLayoutSelfFlexBoxLocal::SanitizeMargin(ParentLayoutContainer->GetPadding());
+			FinalSize -= IsVertical ? Padding.Top + Padding.Bottom : Padding.Left + Padding.Right;
+		}
+		const float Percent = FMath::IsFinite(PercentValue) ? FMath::Clamp(PercentValue, 0.0f, 1.0f) : 0.0f;
+		return Percent * LexLayoutSelfFlexBoxLocal::NonNegativeFinite(FinalSize);
+	}
+	return DisabledValue;
 }
 
 FName ULexLayoutSelfFlexBox::GetPropertyName_PreferredWidth()
@@ -162,9 +147,25 @@ void ULexLayoutSelfFlexBox::OnDimensionChanged(bool InPivotChange, bool InWidthC
 void ULexLayoutSelfFlexBox::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
-    Grow = FMath::Max(Grow, 0);
-    Shrink = FMath::Max(Shrink, 0);
-    // CalculateSize();
+	Grow = FMath::IsFinite(Grow) ? FMath::Max(Grow, 0.0f) : 0.0f;
+	Shrink = FMath::IsFinite(Shrink) ? FMath::Max(Shrink, 0.0f) : 0.0f;
+	auto SanitizeSize = [](FLexLayoutSize& Size)
+	{
+		Size.FixedValue = FMath::IsFinite(Size.FixedValue) ? FMath::Max(0.0f, Size.FixedValue) : 0.0f;
+		Size.PercentValue = FMath::IsFinite(Size.PercentValue) ? FMath::Clamp(Size.PercentValue, 0.0f, 1.0f) : 0.0f;
+	};
+	auto SanitizeMinMax = [](FLexLayoutMinMaxSize& Size)
+	{
+		Size.FixedValue = FMath::IsFinite(Size.FixedValue) ? FMath::Max(0.0f, Size.FixedValue) : 0.0f;
+		Size.PercentValue = FMath::IsFinite(Size.PercentValue) ? FMath::Clamp(Size.PercentValue, 0.0f, 1.0f) : 0.0f;
+	};
+	SanitizeSize(PreferredWidth);
+	SanitizeSize(PreferredHeight);
+	SanitizeMinMax(MinWidth);
+	SanitizeMinMax(MinHeight);
+	SanitizeMinMax(MaxWidth);
+	SanitizeMinMax(MaxHeight);
+	Margin = LexLayoutSelfFlexBoxLocal::SanitizeMargin(Margin);
 }
 
 bool ULexLayoutSelfFlexBox::CanEditChange(const FProperty* InProperty) const
@@ -222,15 +223,40 @@ FVector2f ULexLayoutSelfFlexBox::GetLayoutPreferredSize()
 
 FVector2f ULexLayoutSelfFlexBox::GetLayoutFinalSize()
 {
-    if (auto ParentWidget = GetWidget()->GetParent())
-    {
-        if (auto LayoutContainer = ParentWidget->GetLayoutContainer())
-        {
-            //since we calculate form root to leaf, final size should already be set by parent LayoutContainer
-            return FVector2f(CalculatedFinalWidth, CalculatedFinalHeight);
-        }
-    }
-    return FVector2f(CalculatedPreferredWidth, CalculatedPreferredHeight);
+	ULexWidget* Widget = GetWidget();
+	if (!IsValid(Widget)) return FVector2f::ZeroVector;
+	const FVector2f CurrentSize(
+		LexLayoutSelfFlexBoxLocal::NonNegativeFinite(Widget->GetWidth()),
+		LexLayoutSelfFlexBoxLocal::NonNegativeFinite(Widget->GetHeight()));
+
+	// A panel assignment is only authoritative while its slot still owns the arranged
+	// geometry. Once the slot restores authored geometry (or this item opts out), the
+	// cached final size belongs to the previous layout pass and must not leak downstream.
+	if (GetIgnoreLayoutContainer())
+	{
+		return CurrentSize;
+	}
+	const ULexPanelSlot* PanelSlot = Widget->GetPanelSlot();
+	if (IsValid(PanelSlot) && !PanelSlot->HasLayoutGeometryApplied())
+	{
+		return CurrentSize;
+	}
+
+	if (ULexWidget* ParentWidget = Widget->GetParent(); IsValid(ParentWidget))
+	{
+		ULexLayoutContainer* ParentLayout = ParentWidget->GetLayoutContainer();
+		const bool bAssignedByFlexContainer = IsValid(Cast<ULexLayoutContainerFlexBox>(ParentLayout));
+		const bool bAssignedByPanel = IsValid(Cast<ULexPanelLayoutBase>(ParentLayout))
+			&& IsValid(PanelSlot) && PanelSlot->HasLayoutGeometryApplied();
+		if (bAssignedByFlexContainer || bAssignedByPanel)
+		{
+			// Layout runs root-to-leaf, so the parent has already assigned this size.
+			return FVector2f(
+				LexLayoutSelfFlexBoxLocal::NonNegativeFinite(CalculatedFinalWidth),
+				LexLayoutSelfFlexBoxLocal::NonNegativeFinite(CalculatedFinalHeight));
+		}
+	}
+	return CurrentSize;
 }
 
 void ULexLayoutSelfFlexBox::GetLayoutMinMax(FVector2f& OutMin, FVector2f& OutMax)
@@ -249,21 +275,7 @@ void ULexLayoutSelfFlexBox::CalculateSize()
     auto Widget = GetWidget();
     if (!Widget)return;
     
-#if WITH_EDITOR
-    if (Widget->GetDisplayName() == "ClickMode" && Widget->GetParent() && Widget->GetParent()->GetDisplayName() == "Button_Page_Prefab")
-    {
-        if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(GetWorld()))
-        {
-            LexUIManager->IncreateLayoutCalculationCounter(FString::Printf(TEXT("%s_%d"), *this->GetPathDisplayName(GetWorld()), this));
-        }
-    }
-#endif
-
-    auto PrevSize = FVector2f(CalculatedPreferredWidth, CalculatedPreferredHeight);
-    if (Widget->GetDisplayName() == "ClickMode" && Widget->GetParent() && Widget->GetParent()->GetDisplayName() == "Button_Page_Prefab")
-    {
-        UE_LOG(LGUI, Warning, TEXT(""))
-    }
+	auto PrevSize = FVector2f(CalculatedPreferredWidth, CalculatedPreferredHeight);
     
     bIsCalculatingSize = true;
     {
@@ -327,27 +339,12 @@ void ULexLayoutSelfFlexBox::CalculateSize()
     
     bIsCalculatingSize = false;
 
-    if (CalculatedPreferredWidth != PrevSize.X || CalculatedPreferredHeight != PrevSize.Y)
-    {
-        auto ParentWidget = Widget->GetParent();
-        if (Widget->GetDisplayName() == "ClickMode" && ParentWidget && ParentWidget->GetDisplayName() == "Button_Page_Prefab")
-        {
-            UE_LOG(LGUI, Warning, TEXT(""))
-        }
-    }
+	(void)PrevSize;
 }
 
 void ULexLayoutSelfFlexBox::MarkLayoutDirty()
 {
-    Super::MarkLayoutDirty();
-    if (auto Widget = GetWidget())
-    {
-        auto ParentWidget = Widget->GetParent();
-        if (Widget->GetDisplayName() == "ClickMode" && ParentWidget && ParentWidget->GetDisplayName() == "Button_Page_Prefab")
-        {
-            UE_LOG(LGUI, Warning, TEXT("LayoutSelf MarkLayoutDirty"))
-        }
-    }
+	Super::MarkLayoutDirty();
 }
 
 float ULexLayoutSelfFlexBox::GetGrowForLayoutContainer(int Axis) const
@@ -404,7 +401,9 @@ bool ULexLayoutSelfFlexBox::GetSecondaryAxisSizeCanStretchByLayoutContainer(int 
 void ULexLayoutSelfFlexBox::SetSizeByLayoutContainer(FVector2f Value, int PrimaryAxis)
 {
     auto Widget = GetWidget();
-    if (!Widget)return;
+	if (!IsValid(Widget))return;
+	Value.X = LexLayoutSelfFlexBoxLocal::NonNegativeFinite(Value.X);
+	Value.Y = LexLayoutSelfFlexBoxLocal::NonNegativeFinite(Value.Y);
 
     this->CalculatedFinalWidth = Value.X;
     this->CalculatedFinalHeight = Value.Y;
@@ -460,9 +459,10 @@ void ULexLayoutSelfFlexBox::SetMaxHeight(const FLexLayoutMinMaxSize& Value)
 
 void ULexLayoutSelfFlexBox::SetMargin(const FMargin& Value)
 {
-    if (Margin != Value)
+	const FMargin Sanitized = LexLayoutSelfFlexBoxLocal::SanitizeMargin(Value);
+	if (Margin != Sanitized)
     {
-        Margin = Value;
+		Margin = Sanitized;
         ULexWidget::MarkLayoutForRebuild(GetWidget());
     }
 }
@@ -487,24 +487,26 @@ void ULexLayoutSelfFlexBox::SetPreferredHeight(const FLexLayoutSize& Value)
 
 void ULexLayoutSelfFlexBox::SetGrow(float Value)
 {
+	Value = LexLayoutSelfFlexBoxLocal::NonNegativeFinite(Value);
     if (Grow != Value)
     {
-        Grow = FMath::Max(0, Value);
-        if (auto Parent = GetWidget()->GetParent())
+		Grow = Value;
+		if (ULexWidget* Widget = GetWidget(); IsValid(Widget))
         {
-            ULexWidget::MarkLayoutForRebuild(Parent);
+			ULexWidget::MarkLayoutForRebuild(Widget->GetParent());
         }
     }
 }
 
 void ULexLayoutSelfFlexBox::SetShrink(float Value)
 {
+	Value = LexLayoutSelfFlexBoxLocal::NonNegativeFinite(Value);
     if (Shrink != Value)
     {
-        Shrink = FMath::Max(0, Value);
-        if (auto Parent = GetWidget()->GetParent())
+		Shrink = Value;
+		if (ULexWidget* Widget = GetWidget(); IsValid(Widget))
         {
-            ULexWidget::MarkLayoutForRebuild(Parent);
+			ULexWidget::MarkLayoutForRebuild(Widget->GetParent());
         }
     }
 }

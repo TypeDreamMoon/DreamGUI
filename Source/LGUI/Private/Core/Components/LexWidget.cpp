@@ -24,15 +24,42 @@
 
 namespace
 {
-	bool EnsurePanelSlotForChild(ULexWidget* ParentWidget, ULexWidget* ChildWidget)
+	bool EnsurePanelSlotForChild(ULexWidget* ParentWidget, ULexWidget* ChildWidget, bool bRecaptureDesiredSize = false)
 	{
 		if (!IsValid(ParentWidget) || !IsValid(ChildWidget)
-			|| !IsValid(Cast<ULexPanelLayoutBase>(ParentWidget->GetLayoutContainer()))
-			|| IsValid(ChildWidget->GetPanelSlot()))
+			|| !IsValid(Cast<ULexPanelLayoutBase>(ParentWidget->GetLayoutContainer())))
 		{
 			return false;
 		}
-		return IsValid(ChildWidget->CreateNewPanelSlot<ULexPanelSlot>());
+		if (ULexPanelSlot* ExistingSlot = ChildWidget->GetPanelSlot(); IsValid(ExistingSlot))
+		{
+			if (bRecaptureDesiredSize)
+			{
+				ExistingSlot->CaptureAuthoredGeometry(true);
+			}
+			else
+			{
+				ExistingSlot->CaptureAuthoredGeometry();
+			}
+			return false;
+		}
+#if WITH_EDITOR
+		if (const UWorld* World = ChildWidget->GetWorld(); !World || !World->IsGameWorld())
+		{
+			ChildWidget->Modify();
+		}
+#endif
+		ULexPanelSlot* NewSlot = ChildWidget->CreateNewPanelSlot<ULexPanelSlot>();
+		if (IsValid(NewSlot))
+		{
+			if (ParentWidget->GetLayoutContainer()->IsA<ULexLayoutContainerScaleBox>())
+			{
+				NewSlot->SetHorizontalAlignment(ELexPanelHorizontalAlignment::Center);
+				NewSlot->SetVerticalAlignment(ELexPanelVerticalAlignment::Center);
+			}
+			NewSlot->CaptureAuthoredGeometry(bRecaptureDesiredSize);
+		}
+		return IsValid(NewSlot);
 	}
 }
 
@@ -505,32 +532,46 @@ void ULexWidget::DestroyWidget()
 {
 	struct LOCAL
 	{
-		static void UnregisterRecursive(ULexWidget* Widget)
+		static void UnregisterRecursive(ULexWidget* Widget, TSet<const ULexWidget*>& VisitedWidgets)
 		{
+			// BeginDestroy can run after GC has marked the object unreachable, at which point
+			// IsValid() is already false even though teardown on the live memory is still required.
+			if (Widget == nullptr || Widget->HasAnyFlags(RF_FinishDestroyed) || VisitedWidgets.Contains(Widget))
+			{
+				return;
+			}
+			VisitedWidgets.Add(Widget);
 			if (Widget->bIsRegistered)
 			{
 				Widget->OnUnregister();
 			}
-			for (auto Child : Widget->GetChildren())
+			for (ULexWidget* Child : Widget->GetChildren())
 			{
-				UnregisterRecursive(Child);
+				UnregisterRecursive(Child, VisitedWidgets);
 			}
 		}
-		static void EndPlayRecursive(ULexWidget* Widget)
+		static void EndPlayRecursive(ULexWidget* Widget, TSet<const ULexWidget*>& VisitedWidgets)
 		{
+			if (Widget == nullptr || Widget->HasAnyFlags(RF_FinishDestroyed) || VisitedWidgets.Contains(Widget))
+			{
+				return;
+			}
+			VisitedWidgets.Add(Widget);
 			if (Widget->bHasBegunPlay)
 			{
 				Widget->EndPlay();
 			}
-			for (auto Child : Widget->GetChildren())
+			for (ULexWidget* Child : Widget->GetChildren())
 			{
-				EndPlayRecursive(Child);
+				EndPlayRecursive(Child, VisitedWidgets);
 			}
 		}
 	};
-	LOCAL::UnregisterRecursive(this);
+	TSet<const ULexWidget*> UnregisterVisitedWidgets;
+	LOCAL::UnregisterRecursive(this, UnregisterVisitedWidgets);
 	this->SetParent(nullptr);
-	LOCAL::EndPlayRecursive(this);
+	TSet<const ULexWidget*> EndPlayVisitedWidgets;
+	LOCAL::EndPlayRecursive(this, EndPlayVisitedWidgets);
 }
 
 UWorld* ULexWidget::GetWorld() const
@@ -617,6 +658,13 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 					LayoutContainer->BeginPlay();
 				}
 				LayoutContainer->Call_OnRegister();
+				if (IsValid(Cast<ULexPanelLayoutBase>(LayoutContainer)))
+				{
+					for (ULexWidget* Child : Children)
+					{
+						EnsurePanelSlotForChild(this, Child, true);
+					}
+				}
 				LayoutContainer->CalculateLayout();
 			}
 			MarkDimensionChanged(false, true, true);//change LayoutContainer could cause LayoutSelf size change
@@ -635,6 +683,7 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 				MarkWidgetLayoutDirty();
 				UpdateLayout();
 			}
+			MarkLayoutForRebuild(this);
 		}
 		else if (MemberName == PanelSlotName)
 		{
@@ -776,7 +825,8 @@ void ULexWidget::PostEditUndo()
 	{
 		//restore SiblingIndex
 		Parent->Children.Remove(this);
-		Parent->Children.Insert(this, SiblingIndex);
+		const int32 RestoredSiblingIndex = FMath::Clamp(SiblingIndex, 0, Parent->Children.Num());
+		Parent->Children.Insert(this, RestoredSiblingIndex);
 		for (int i = 0; i < Parent->Children.Num(); i++)
 		{
 			auto& UIChild = Parent->Children[i];
@@ -789,27 +839,79 @@ void ULexWidget::PostEditUndo()
 	// Re-register if unregistered (e.g., undo of a delete operation via DeleteForUndo).
 	// bIsRegistered is not a UPROPERTY so it is not saved/restored by the undo system;
 	// after soft-delete it remains false, so we need to call OnRegister() explicitly.
+	const bool bWasRegistered = bIsRegistered;
 	if (!bIsRegistered)
 	{
 		struct LOCAL
 		{
-			static void RegisterRecursive(ULexWidget* Widget)
+			static void RegisterRecursive(ULexWidget* Widget, TSet<const ULexWidget*>& VisitedWidgets)
 			{
+				if (!IsValid(Widget) || VisitedWidgets.Contains(Widget))
+				{
+					return;
+				}
+				VisitedWidgets.Add(Widget);
 				if (!Widget->bIsRegistered)
 				{
 					Widget->OnRegister();
 				}
-				for (auto& Child : Widget->Children)
+				for (ULexWidget* Child : Widget->Children)
 				{
 					if (IsValid(Child))
 					{
-						RegisterRecursive(Child);
+						RegisterRecursive(Child, VisitedWidgets);
 					}
 				}
 			}
 		};
-		LOCAL::RegisterRecursive(this);
+		TSet<const ULexWidget*> VisitedWidgets;
+		LOCAL::RegisterRecursive(this, VisitedWidgets);
 	}
+
+	// Transactional pointer swaps do not run the old layout's unregister path. Reset every
+	// parent-owned transient before registering and rebuilding the currently restored layout.
+	SetLayoutScale(FVector2f::UnitVector);
+	SetLayoutVisibilitySuppressed(false);
+	ClearLayoutClippingOverride();
+	for (ULexWidget* Child : Children)
+	{
+		if (!IsValid(Child))
+		{
+			continue;
+		}
+		Child->SetLayoutScale(FVector2f::UnitVector);
+		Child->SetLayoutVisibilitySuppressed(false);
+	}
+	if (IsValid(LayoutContainer) && bWasRegistered)
+	{
+		LayoutContainer->Call_OnRegister();
+	}
+	if (IsValid(Cast<ULexLayoutContainerScrollBox>(LayoutContainer)))
+	{
+		SetLayoutClippingOverride(ELexWidgetClipping::ClipToBounds);
+	}
+	if (IsValid(Cast<ULexPanelLayoutBase>(LayoutContainer)))
+	{
+		for (ULexWidget* Child : Children)
+		{
+			EnsurePanelSlotForChild(this, Child);
+		}
+	}
+	else
+	{
+		for (ULexWidget* Child : Children)
+		{
+			if (IsValid(Child))
+			{
+				if (ULexPanelSlot* Slot = Child->GetPanelSlot(); IsValid(Slot))
+				{
+					Slot->RestoreAuthoredGeometry();
+				}
+			}
+		}
+	}
+	CalculateVisibility_Recursive();
+	MarkLayoutForRebuild(this);
 }
 
 void ULexWidget::PostRename(UObject* OldOuter, const FName OldName)
@@ -969,6 +1071,18 @@ void ULexWidget::SetRelativeScale(const FVector& Value)
 		this->CalculateObjectToWorldTransform();
 	}
 }
+
+void ULexWidget::SetLayoutScale(const FVector2f& Value)
+{
+	const FVector2f SanitizedScale(
+		FMath::IsFinite(Value.X) ? FMath::Max(0.0f, Value.X) : 1.0f,
+		FMath::IsFinite(Value.Y) ? FMath::Max(0.0f, Value.Y) : 1.0f);
+	if (!LayoutScale.Equals(SanitizedScale, 0.0f))
+	{
+		LayoutScale = SanitizedScale;
+		CalculateObjectToWorldTransform();
+	}
+}
 void ULexWidget::SetRelativeLocationAndRotation(const FVector& InLocation, const FQuat& InRotation)
 {
 	if (this->RelativeLocation != InLocation || this->RelativeRotation != InRotation)
@@ -998,32 +1112,16 @@ void ULexWidget::SetWorldRotation(const FQuat& Value)
 }
 void ULexWidget::SetWorldLocationAndRotation(const FVector& InLocation, const FQuat& InRotation)
 {
-	if (Parent.IsValid())
-	{
-		auto WorldToParentTransform = Parent->GetWorldTransform().Inverse();
-		auto NewPosition = WorldToParentTransform.TransformPosition(InLocation);
-		auto NewRotation = WorldToParentTransform.TransformRotation(InRotation);
-		this->SetRelativeLocationAndRotation(NewPosition, NewRotation);
-	}
-	else
-	{
-		if (auto WidgetPresenterComponent = GetAttachedRootSceneComponent())
-		{
-			auto WorldToParentTransform = WidgetPresenterComponent->GetComponentTransform().Inverse();
-			auto NewPosition = WorldToParentTransform.TransformPosition(InLocation);
-			auto NewRotation = WorldToParentTransform.TransformRotation(InRotation);
-			this->SetRelativeLocationAndRotation(NewPosition, NewRotation);
-		}
-		else
-		{
-			this->SetRelativeLocationAndRotation(InLocation, InRotation);
-		}
-	}
+	FTransform DesiredWorldTransform = GetWorldTransform();
+	DesiredWorldTransform.SetLocation(InLocation);
+	DesiredWorldTransform.SetRotation(InRotation);
+	SetWorldTransform(DesiredWorldTransform);
 }
 
 FTransform ULexWidget::GetLocalTransform()const
 {
-	return FTransform(RelativeRotation, RelativeLocation, RelativeScale);
+	return FTransform(RelativeRotation, RelativeLocation,
+		RelativeScale * FVector(1.0, LayoutScale.X, LayoutScale.Y));
 }
 const FTransform& ULexWidget::GetWorldTransform()const
 {
@@ -1032,46 +1130,60 @@ const FTransform& ULexWidget::GetWorldTransform()const
 
 void ULexWidget::SetWorldTransform(const FTransform& InWorldTransform)
 {
+	const FVector PreviousAuthoredScale = RelativeScale;
+	auto ResolveAuthoredScale = [this, &PreviousAuthoredScale](const FVector& EffectiveLocalScale)
+	{
+		FVector Result = EffectiveLocalScale;
+		Result.Y = FMath::IsNearlyZero(LayoutScale.X) ? PreviousAuthoredScale.Y : EffectiveLocalScale.Y / LayoutScale.X;
+		Result.Z = FMath::IsNearlyZero(LayoutScale.Y) ? PreviousAuthoredScale.Z : EffectiveLocalScale.Z / LayoutScale.Y;
+		return Result;
+	};
+	FTransform LocalTransform = InWorldTransform;
 	if (Parent.IsValid())
 	{
-		auto WorldToParentTransform = Parent->GetWorldTransform().Inverse();
-		auto LocalTransform = WorldToParentTransform * InWorldTransform;
-		this->RelativeLocation = LocalTransform.GetLocation();
-		this->RelativeRotation = LocalTransform.GetRotation();
-		this->RelativeScale = LocalTransform.GetScale3D();
-
-		ObjectToWorldTransform = InWorldTransform;
+		LocalTransform = InWorldTransform.GetRelativeTransform(Parent->GetWorldTransform());
 	}
-	else
+	else if (const USceneComponent* WidgetPresenterComponent = GetAttachedRootSceneComponent())
 	{
-		auto LocalTransform = InWorldTransform;
-		this->RelativeLocation = LocalTransform.GetLocation();
-		this->RelativeRotation = LocalTransform.GetRotation();
-		this->RelativeScale = LocalTransform.GetScale3D();
-		
-		if (auto WidgetPresenterComponent = GetAttachedRootSceneComponent())
-		{
-			ObjectToWorldTransform = WidgetPresenterComponent->GetComponentTransform() * LocalTransform;			
-		}
-		else
-		{
-			ObjectToWorldTransform = InWorldTransform;
-		}
+		LocalTransform = InWorldTransform.GetRelativeTransform(WidgetPresenterComponent->GetComponentTransform());
 	}
-	this->MarkTransformChanged();
+
+	this->RelativeLocation = LocalTransform.GetLocation();
+	this->RelativeRotation = LocalTransform.GetRotation();
+	this->RelativeRotationEuler = this->RelativeRotation.Rotator();
+	this->RelativeScale = ResolveAuthoredScale(LocalTransform.GetScale3D());
+	CalculateObjectToWorldTransform(true);
+	if (bCanSetAnchorFromTransform)
+	{
+		CalculateAnchorFromTransform();
+		MarkLayoutForRebuild(this);
+	}
 }
 
 void ULexWidget::SetParentBeforeRegister(ULexWidget* InParent)
 {
 	check(!bIsRegistered);
+	if (InParent == this || (IsValid(InParent) && InParent->IsChildOf(this)))
+	{
+		ensureMsgf(false, TEXT("Cannot restore cyclic LexWidget parent relationship for %s."), *GetPathName());
+		return;
+	}
 	if (Parent != InParent)
 	{
+		if (Parent.IsValid() && IsValid(PanelSlot))
+		{
+			PanelSlot->RestoreAuthoredGeometry();
+			PanelSlot->InvalidateAuthoredGeometry();
+		}
 		if (Parent.IsValid())
 		{
 			Parent->Children.Remove(this);
 		}
 		Parent = InParent;
-		Parent->Children.Add(this);
+		if (Parent.IsValid())
+		{
+			Parent->Children.Add(this);
+		}
 	}
 }
 
@@ -1171,7 +1283,7 @@ void ULexWidget::UpdateObjectToWorldTransform()
 	{
 		if (auto WidgetPresenterComponent = GetAttachedRootSceneComponent())
 		{
-			ObjectToWorldTransform = WidgetPresenterComponent->GetComponentTransform() * LocalTransform;			
+			ObjectToWorldTransform = LocalTransform * WidgetPresenterComponent->GetComponentTransform();
 		}
 		else
 		{
@@ -1186,28 +1298,141 @@ void ULexWidget::CalculateObjectToWorldTransform(bool bPropagateToChildren)
 	this->OnUpdateTransform();
 	if (bPropagateToChildren)
 	{
-		for (auto Child : this->Children)
+		for (ULexWidget* Child : this->Children)
 		{
-			Child->CalculateObjectToWorldTransform(true);
+			if (IsValid(Child))
+			{
+				Child->CalculateObjectToWorldTransform(true);
+			}
 		}
 	}
 }
 
+int32 ULexWidget::GetMaxChildrenCapacity() const
+{
+	int32 Capacity = INDEX_NONE;
+	auto ApplyLimit = [&Capacity](int32 Limit)
+	{
+		if (Limit >= 0)
+		{
+			Capacity = Capacity == INDEX_NONE ? Limit : FMath::Min(Capacity, Limit);
+		}
+	};
+	if (IsValid(LayoutContainer))
+	{
+		ApplyLimit(LayoutContainer->GetMaxChildren());
+	}
+	for (const ULexUIBehaviour* Component : Components)
+	{
+		if (IsValid(Component))
+		{
+			ApplyLimit(Component->GetMaxWidgetChildren());
+		}
+	}
+	return Capacity;
+}
+
+bool ULexWidget::CanAcceptAdditionalChildren(int32 AdditionalChildCount) const
+{
+	if (AdditionalChildCount <= 0)
+	{
+		return true;
+	}
+	const int32 Capacity = GetMaxChildrenCapacity();
+	if (Capacity == INDEX_NONE)
+	{
+		return true;
+	}
+	int32 CurrentChildCount = 0;
+	for (const ULexWidget* Child : Children)
+	{
+		CurrentChildCount += IsValid(Child) ? 1 : 0;
+	}
+	return CurrentChildCount <= Capacity && AdditionalChildCount <= Capacity - CurrentChildCount;
+}
+
+bool ULexWidget::CanAcceptChildren(TConstArrayView<ULexWidget*> InChildren) const
+{
+	TSet<const ULexWidget*> UniqueCandidates;
+	for (const ULexWidget* Candidate : InChildren)
+	{
+		if (!IsValid(Candidate) || Candidate == this || IsChildOf(Candidate))
+		{
+			return false;
+		}
+		UniqueCandidates.Add(Candidate);
+	}
+
+	const int32 Capacity = GetMaxChildrenCapacity();
+	if (Capacity == INDEX_NONE)
+	{
+		return true;
+	}
+	TSet<const ULexWidget*> ProjectedChildren;
+	for (const ULexWidget* ExistingChild : Children)
+	{
+		if (IsValid(ExistingChild))
+		{
+			ProjectedChildren.Add(ExistingChild);
+		}
+	}
+	for (const ULexWidget* Candidate : UniqueCandidates)
+	{
+		ProjectedChildren.Add(Candidate);
+	}
+	return ProjectedChildren.Num() <= Capacity;
+}
+
+bool ULexWidget::CanAcceptChild(const ULexWidget* InChild) const
+{
+	ULexWidget* Candidate = const_cast<ULexWidget*>(InChild);
+	return CanAcceptChildren(MakeArrayView(&Candidate, 1));
+}
+
 void ULexWidget::SetParent(ULexWidget* InParent, bool InKeepWorldPosition, int InSiblingIndex)
+{
+	TrySetParent(InParent, InKeepWorldPosition, InSiblingIndex);
+}
+
+bool ULexWidget::TrySetParent(ULexWidget* InParent, bool InKeepWorldPosition, int InSiblingIndex)
+{
+	return TrySetParentInternal(InParent, InKeepWorldPosition, InSiblingIndex, true);
+}
+
+bool ULexWidget::SetParentFromPrefab(ULexWidget* InParent, bool InKeepWorldPosition, int InSiblingIndex)
+{
+	return TrySetParentInternal(InParent, InKeepWorldPosition, InSiblingIndex, false);
+}
+
+bool ULexWidget::TrySetParentInternal(ULexWidget* InParent, bool InKeepWorldPosition, int InSiblingIndex, bool bEnforceCapacity)
 {
 	if (IsValid(InParent))//attach to parent
 	{
-		check(this != InParent);
-		if (this->Parent == InParent)return;
-		if (InParent->IsChildOf(this))return;
-		if (InParent->Children.Contains(this))return;
+		if (this == InParent)
+		{
+			ensureMsgf(false, TEXT("A LexWidget cannot be parented to itself: %s"), *GetPathName());
+			return false;
+		}
+		if (this->Parent == InParent)
+		{
+			if (InSiblingIndex >= 0)
+			{
+				SetSiblingIndex(InSiblingIndex);
+			}
+			return true;
+		}
+		if (InParent->IsChildOf(this))return false;
+		if (InParent->Children.Contains(this))return false;
+		if (bEnforceCapacity && !InParent->CanAcceptChild(this))return false;
+		const FTransform OldObjectToWorldTransform = this->GetWorldTransform();
+		const FVector PreviousAuthoredScale = RelativeScale;
+		const FVector2f PreviousLayoutScale = LayoutScale;
 		bIsAttaching = true;
 		if (Parent.IsValid())
 		{
-			SetParent(nullptr, InKeepWorldPosition);
+			TrySetParent(nullptr, false);
 		}
 		bIsAttaching = false;
-		auto OldObjectToWorldTransform = this->GetWorldTransform();
 		if (InSiblingIndex == -1 || !InParent->Children.IsValidIndex(InSiblingIndex))
 		{
 			InParent->Children.Add(this);
@@ -1220,44 +1445,80 @@ void ULexWidget::SetParent(ULexWidget* InParent, bool InKeepWorldPosition, int I
 			for (int i = InSiblingIndex; i < InParent->Children.Num(); i++)
 			{
 				auto Child = InParent->Children[i];
-				Child->SiblingIndex = i;
+				if (IsValid(Child)) Child->SiblingIndex = i;
 			}
 			this->Call_SiblingIndexChanged();
 		}
 		this->Parent = InParent;
-		if (bIsRegistered)
-		{
-			EnsurePanelSlotForChild(InParent, this);
-		}
 		if (InKeepWorldPosition)
 		{
-			auto WorldToParentTransform = InParent->GetWorldTransform().Inverse();
-			auto LocalTransform = WorldToParentTransform * OldObjectToWorldTransform;
+			const FTransform LocalTransform = OldObjectToWorldTransform.GetRelativeTransform(InParent->GetWorldTransform());
 			this->RelativeLocation = LocalTransform.GetLocation();
 			this->RelativeRotation = LocalTransform.GetRotation();
+			this->RelativeRotationEuler = this->RelativeRotation.Rotator();
 			this->RelativeScale = LocalTransform.GetScale3D();
+			if (FMath::IsNearlyZero(PreviousLayoutScale.X)) this->RelativeScale.Y = PreviousAuthoredScale.Y;
+			if (FMath::IsNearlyZero(PreviousLayoutScale.Y)) this->RelativeScale.Z = PreviousAuthoredScale.Z;
 		}
 		this->CalculateObjectToWorldTransform();
 		this->OnAttachedToParent();
+		if (bIsRegistered)
+		{
+			EnsurePanelSlotForChild(InParent, this, true);
+		}
 		InParent->OnChildAttached(this);
+		return true;
 	}
 	else//detach from parent
 	{
-		if (this->Parent == nullptr)return;
+		if (this->Parent == nullptr)return true;
 		auto OldParent = this->Parent;
-		auto OldObjectToWorldTransform = this->GetWorldTransform();
+		const FTransform OldObjectToWorldTransform = this->GetWorldTransform();
+		const FVector PreviousAuthoredScale = RelativeScale;
+		const FVector2f PreviousLayoutScale = LayoutScale;
+		if (IsValid(PanelSlot))
+		{
+			PanelSlot->RestoreAuthoredGeometry();
+			PanelSlot->InvalidateAuthoredGeometry();
+		}
+		SetLayoutVisibilitySuppressed(false);
+		SetLayoutScale(FVector2f::UnitVector);
+		const FVector PreviousRelativeLocation = RelativeLocation;
+		const FQuat PreviousRelativeRotation = RelativeRotation;
+		const FVector PreviousRelativeScale = RelativeScale;
 		this->Parent->Children.Remove(this);
 		this->Parent = nullptr;
+		this->OnDetachedFromParent();
 		if (InKeepWorldPosition)
 		{
-			auto LocalTransform = OldObjectToWorldTransform;
+			FTransform LocalTransform = OldObjectToWorldTransform;
+			if (const USceneComponent* WidgetPresenterComponent = GetAttachedRootSceneComponent())
+			{
+				LocalTransform = OldObjectToWorldTransform.GetRelativeTransform(WidgetPresenterComponent->GetComponentTransform());
+			}
 			this->RelativeLocation = LocalTransform.GetLocation();
 			this->RelativeRotation = LocalTransform.GetRotation();
 			this->RelativeScale = LocalTransform.GetScale3D();
+			if (FMath::IsNearlyZero(PreviousLayoutScale.X)) this->RelativeScale.Y = PreviousAuthoredScale.Y;
+			if (FMath::IsNearlyZero(PreviousLayoutScale.Y)) this->RelativeScale.Z = PreviousAuthoredScale.Z;
 		}
+		else
+		{
+			this->RelativeLocation = PreviousRelativeLocation;
+			this->RelativeRotation = PreviousRelativeRotation;
+			this->RelativeScale = PreviousRelativeScale;
+		}
+		this->RelativeRotationEuler = this->RelativeRotation.Rotator();
 		this->CalculateObjectToWorldTransform();
-		this->OnDetachedFromParent();
-		OldParent->OnChildDetached();
+		if (bIsRegistered)
+		{
+			CalculateAnchorFromTransform();
+		}
+		if (OldParent.IsValid())
+		{
+			OldParent->OnChildDetached(this);
+		}
+		return true;
 	}
 }
 
@@ -1268,18 +1529,25 @@ void ULexWidget::SetSiblingIndex(int32 InInt)
 		SiblingIndex = InInt;
 		this->Call_SiblingIndexChanged();
 		ApplySiblingIndex();
+		MarkLayoutForRebuild(Parent.IsValid() ? Parent.Get() : this);
 	}
 }
 
 bool ULexWidget::IsChildOf(const ULexWidget* InTarget)const
 {
 	auto TempParent = this->Parent;
+	TSet<const ULexWidget*> VisitedWidgets;
 	while (TempParent.IsValid())
 	{
 		if (TempParent == InTarget)
 		{
 			return true;
 		}
+		if (VisitedWidgets.Contains(TempParent.Get()))
+		{
+			return false;
+		}
+		VisitedWidgets.Add(TempParent.Get());
 		TempParent = TempParent->Parent;
 	}
 	return false;
@@ -1289,9 +1557,14 @@ bool ULexWidget::IsChildOf(const ULexWidget* InTarget)const
 TArray<ULexUIBehaviour*> ULexWidget::GetComponents(TSubclassOf<ULexUIBehaviour> ComponentClass)const
 {
 	TArray<ULexUIBehaviour*> ResultArray;
+	UClass* RequestedClass = *ComponentClass;
+	if (!IsValid(RequestedClass) || !RequestedClass->IsChildOf(ULexUIBehaviour::StaticClass()))
+	{
+		return ResultArray;
+	}
 	for (auto& Comp : Components)
 	{
-		if (Comp->IsA(ComponentClass))
+		if (IsValid(Comp) && Comp->IsA(RequestedClass))
 		{
 			ResultArray.Add(Comp);
 		}
@@ -1301,9 +1574,14 @@ TArray<ULexUIBehaviour*> ULexWidget::GetComponents(TSubclassOf<ULexUIBehaviour> 
 
 ULexUIBehaviour* ULexWidget::GetComponent(TSubclassOf<ULexUIBehaviour> ComponentClass)const
 {
+	UClass* RequestedClass = *ComponentClass;
+	if (!IsValid(RequestedClass) || !RequestedClass->IsChildOf(ULexUIBehaviour::StaticClass()))
+	{
+		return nullptr;
+	}
 	for (auto& Comp : Components)
 	{
-		if (Comp && Comp->IsA(ComponentClass))
+		if (IsValid(Comp) && Comp->IsA(RequestedClass))
 		{
 			return Comp;
 		}
@@ -1313,9 +1591,13 @@ ULexUIBehaviour* ULexWidget::GetComponent(TSubclassOf<ULexUIBehaviour> Component
 
 ULexUIBehaviour* ULexWidget::GetComponentByInterface(UClass* InterfaceClass)const
 {
+	if (!IsValid(InterfaceClass) || !InterfaceClass->HasAnyClassFlags(CLASS_Interface))
+	{
+		return nullptr;
+	}
 	for (auto& Component : GetAllComponents())
 	{
-		if (Component->GetClass()->ImplementsInterface(InterfaceClass))
+		if (IsValid(Component) && Component->GetClass()->ImplementsInterface(InterfaceClass))
 		{
 			return Component;
 		}
@@ -1374,6 +1656,10 @@ void ULexWidget::OnChildAttached(ULexWidget* ChildWidget)
 			}
 		}
 	}
+	for (ULexUIBehaviour* Component : Components)
+	{
+		if (IsValid(Component)) Component->OnWidgetChildAttached(ChildWidget);
+	}
 
 	MarkCanvasUpdate(false);
 }
@@ -1404,7 +1690,7 @@ void ULexWidget::OnAttachedToParent()
 #endif
 }
 
-void ULexWidget::OnChildDetached()
+void ULexWidget::OnChildDetached(ULexWidget* ChildWidget)
 {
 	for (int i = 0; i < Children.Num(); i++)
 	{
@@ -1415,21 +1701,23 @@ void ULexWidget::OnChildDetached()
 			UIChild->Call_SiblingIndexChanged();
 		}
 	}
+	for (ULexUIBehaviour* Component : Components)
+	{
+		if (IsValid(Component)) Component->OnWidgetChildDetached(ChildWidget);
+	}
 	MarkLayoutForRebuild(this);//child removed, so need to rebuild layout
 }
 
 void ULexWidget::OnDetachedFromParent()
 {
-	if (bIsAttaching)return;
-	if (this->bIsRegistered)//registered means not during prefab process
+	if (bIsAttaching)
 	{
-		Call_TransformChanged();
-		CalculateAnchorFromTransform();//if not from PrefabSystem, then calculate anchors on transform, so when use AttachComponent, the KeepRelative or KeepWorld will work. If from PrefabSystem, then anchor will automatically do the job
+		return;
 	}
-
 	OnHierarchyAttachmentChanged(nullptr, nullptr);
 
 	CalculateWidgetActive_Recursive();
+	CalculateVisibility_Recursive();
 	CalculateRaycastable_Recursive();
 	CalculateInteractable_Recursive();
 
@@ -2432,7 +2720,7 @@ void ULexWidget::UpdateClip(ULexUIDataAsTexture* ClipDataTexture, TArray<TShared
 	{
 		ParentClip = Parent->ClipData.Pin();
 	}
-	switch (Clipping)
+	switch (GetClipping())
 	{
 	case ELexWidgetClipping::Inherit:
 		this->ClipData = ParentClip;
@@ -2640,7 +2928,7 @@ void ULexWidget::CalculateVisibility_Recursive()
 			}
 #endif
 
-			const bool bCollapsed = Widget->Visibility == ELexWidgetVisibility::Collapsed;
+			const bool bCollapsed = Widget->Visibility == ELexWidgetVisibility::Collapsed || Widget->bLayoutVisibilitySuppressed;
 			const bool bPaints = Widget->Visibility != ELexWidgetVisibility::Hidden && !bCollapsed;
 			const bool bBlocksChildren = Widget->Visibility == ELexWidgetVisibility::HitTestInvisible;
 			const bool bSelfAcceptsHit = Widget->Visibility == ELexWidgetVisibility::Visible;
@@ -3010,46 +3298,66 @@ bool ULexWidget::IsWorldSpaceUI()const
 
 void ULexWidget::MarkLayoutForRebuild(ULexWidget* InWidget)
 {
-	auto TargetWidget = InWidget;
-	//move up, find if parent widget affect by layout then mark dirty
-	while (TargetWidget)
+	if (!IsValid(InWidget))
 	{
-		if (auto LayoutContainer = TargetWidget->GetLayoutContainer())
+		return;
+	}
+
+	ULexWidget* TargetWidget = InWidget;
+	ULexWidget* RebuildRoot = nullptr;
+	TSet<const ULexWidget*> VisitedWidgets;
+	// Desired-size dependencies may cross plain wrapper widgets, so dirty every layout on the ancestor chain.
+	while (IsValid(TargetWidget) && !VisitedWidgets.Contains(TargetWidget))
+	{
+		VisitedWidgets.Add(TargetWidget);
+		if (ULexLayoutContainer* LayoutContainer = TargetWidget->GetLayoutContainer(); IsValid(LayoutContainer))
 		{
 			LayoutContainer->MarkLayoutDirty();
+			RebuildRoot = TargetWidget;
 		}
-		if (auto LayoutSelf = TargetWidget->GetLayoutSelf())
+		if (ULexLayoutSelf* LayoutSelf = TargetWidget->GetLayoutSelf(); IsValid(LayoutSelf))
 		{
 			LayoutSelf->MarkLayoutDirty();
+			RebuildRoot = TargetWidget;
 		}
 		
-		if (auto ParentWidget = TargetWidget->GetParent())
-		{
-			if (auto LayoutContainer = ParentWidget->GetLayoutContainer())//parent contains LayoutContainer, need calculate layout
-			{
-				TargetWidget = ParentWidget;
-				continue;
-			}
-		}
-		break;
+		TargetWidget = TargetWidget->GetParent();
 	}
-	TargetWidget->MarkWidgetLayoutDirty();
+	if (!IsValid(RebuildRoot))
+	{
+		RebuildRoot = InWidget;
+	}
+	if (IsValid(RebuildRoot))
+	{
+		RebuildRoot->MarkWidgetLayoutDirty();
+	}
 }
 
 void ULexWidget::ForceRebuildLayoutImmediately(ULexWidget* InWidget)
 {
+	if (!IsValid(InWidget))
+	{
+		return;
+	}
+
 	struct LOCAL
 	{
-		static void RebuildLayout(ULexWidget* InWidget)
+		static void RebuildLayout(ULexWidget* Widget, TSet<const ULexWidget*>& VisitedWidgets)
 		{
-			InWidget->UpdateLayout();
-			for (auto Child : InWidget->GetChildren())
+			if (!IsValid(Widget) || VisitedWidgets.Contains(Widget))
 			{
-				RebuildLayout(Child);
+				return;
+			}
+			VisitedWidgets.Add(Widget);
+			Widget->UpdateLayout();
+			for (ULexWidget* Child : Widget->GetChildren())
+			{
+				RebuildLayout(Child, VisitedWidgets);
 			}
 		}
 	};
-	LOCAL::RebuildLayout(InWidget);
+	TSet<const ULexWidget*> VisitedWidgets;
+	LOCAL::RebuildLayout(InWidget, VisitedWidgets);
 }
 
 void ULexWidget::MarkWidgetLayoutDirty()
@@ -3066,9 +3374,14 @@ void ULexWidget::MarkClipDirty(bool InClipTypeChanged) const
 	if (InClipTypeChanged)bNeedRecreateClip = true;
 	struct LOCAL
 	{
-		static void MarkDirty(const ULexWidget* Widget, bool InClipTypeChanged)
+		static void MarkDirty(const ULexWidget* Widget, bool InClipTypeChanged, TSet<const ULexWidget*>& VisitedWidgets)
 		{
-			switch (Widget->Clipping)
+			if (!IsValid(Widget) || VisitedWidgets.Contains(Widget))
+			{
+				return;
+			}
+			VisitedWidgets.Add(Widget);
+			switch (Widget->GetClipping())
 			{
 			case ELexWidgetClipping::Inherit:
 			case ELexWidgetClipping::ClipToBounds:
@@ -3080,15 +3393,17 @@ void ULexWidget::MarkClipDirty(bool InClipTypeChanged) const
 				return;
 			}
 
-			for (auto& Child : Widget->GetChildren())
+			for (const ULexWidget* Child : Widget->GetChildren())
 			{
-				MarkDirty(Child, InClipTypeChanged);
+				MarkDirty(Child, InClipTypeChanged, VisitedWidgets);
 			}
 		}
 	};
-	for (auto& Child : this->GetChildren())
+	TSet<const ULexWidget*> VisitedWidgets;
+	VisitedWidgets.Add(this);
+	for (const ULexWidget* Child : this->GetChildren())
 	{
-		LOCAL::MarkDirty(Child, InClipTypeChanged);
+		LOCAL::MarkDirty(Child, InClipTypeChanged, VisitedWidgets);
 	}
 }
 bool ULexWidget::IsPointVisibleOnClip(const FVector& Value) const
@@ -3103,7 +3418,37 @@ void ULexWidget::SetClipping(ELexWidgetClipping Value)
 {
 	if (Clipping != Value)
 	{
+		const ELexWidgetClipping PreviousEffectiveClipping = GetClipping();
 		Clipping = Value;
+		if (PreviousEffectiveClipping != GetClipping())
+		{
+			MarkClipDirty(true);
+		}
+	}
+}
+
+void ULexWidget::SetLayoutClippingOverride(ELexWidgetClipping Value)
+{
+	const ELexWidgetClipping PreviousEffectiveClipping = GetClipping();
+	bHasLayoutClippingOverride = true;
+	LayoutClippingOverride = Value;
+	if (PreviousEffectiveClipping != GetClipping())
+	{
+		MarkClipDirty(true);
+	}
+}
+
+void ULexWidget::ClearLayoutClippingOverride()
+{
+	if (!bHasLayoutClippingOverride)
+	{
+		return;
+	}
+	const ELexWidgetClipping PreviousEffectiveClipping = GetClipping();
+	bHasLayoutClippingOverride = false;
+	LayoutClippingOverride = ELexWidgetClipping::Inherit;
+	if (PreviousEffectiveClipping != GetClipping())
+	{
 		MarkClipDirty(true);
 	}
 }
@@ -3231,6 +3576,15 @@ void ULexWidget::SetVisibility(ELexWidgetVisibility Value)
 		Visibility = Value;
 		CalculateVisibility_Recursive();
 		OnVisibilityChanged.Broadcast(Visibility);
+	}
+}
+
+void ULexWidget::SetLayoutVisibilitySuppressed(bool bSuppressed)
+{
+	if (bLayoutVisibilitySuppressed != bSuppressed)
+	{
+		bLayoutVisibilitySuppressed = bSuppressed;
+		CalculateVisibility_Recursive();
 	}
 }
 
@@ -3399,8 +3753,19 @@ void ULexWidget::RemoveVisual()
 
 ULexLayoutContainer* ULexWidget::CreateNewLayoutContainer(TSubclassOf<ULexLayoutContainer> LayoutClass)
 {
+	UClass* RequestedClass = *LayoutClass;
+	if (!IsValid(RequestedClass)
+		|| !RequestedClass->IsChildOf(ULexLayoutContainer::StaticClass())
+		|| RequestedClass->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists))
+	{
+		return nullptr;
+	}
 	auto OldLayout = LayoutContainer;
-	auto NewLayout = NewObject<ULexLayoutContainer>(this, LayoutClass, NAME_None, RF_Public | RF_Transactional);
+	auto NewLayout = NewObject<ULexLayoutContainer>(this, RequestedClass, NAME_None, RF_Public | RF_Transactional);
+	if (!IsValid(NewLayout))
+	{
+		return nullptr;
+	}
 	if (IsValid(OldLayout))
 	{
 		if (bHasBegunPlay)
@@ -3420,9 +3785,9 @@ ULexLayoutContainer* ULexWidget::CreateNewLayoutContainer(TSubclassOf<ULexLayout
 	{
 		for (ULexWidget* Child : Children)
 		{
-			if (IsValid(Child) && Child->HasRegistered())
+			if (IsValid(Child))
 			{
-				EnsurePanelSlotForChild(this, Child);
+				EnsurePanelSlotForChild(this, Child, true);
 			}
 		}
 	}
@@ -3444,12 +3809,25 @@ void ULexWidget::RemoveLayoutContainer()
 		}
 		OldLayout->Call_OnUnregister();
 	}
+	MarkLayoutForRebuild(this);
+	MarkDimensionChanged(false, true, true);
 }
 
 ULexLayoutSelf* ULexWidget::CreateNewLayoutSelf(TSubclassOf<ULexLayoutSelf> LayoutClass)
 {
+	UClass* RequestedClass = *LayoutClass;
+	if (!IsValid(RequestedClass)
+		|| !RequestedClass->IsChildOf(ULexLayoutSelf::StaticClass())
+		|| RequestedClass->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists))
+	{
+		return nullptr;
+	}
 	auto OldLayout = LayoutSelf;
-	auto NewLayout = NewObject<ULexLayoutSelf>(this, LayoutClass, NAME_None, RF_Public | RF_Transactional);
+	auto NewLayout = NewObject<ULexLayoutSelf>(this, RequestedClass, NAME_None, RF_Public | RF_Transactional);
+	if (!IsValid(NewLayout))
+	{
+		return nullptr;
+	}
 	if (IsValid(OldLayout))
 	{
 		if (bHasBegunPlay)
@@ -3482,18 +3860,30 @@ void ULexWidget::RemoveLayoutSelf()
 		}
 		OldLayout->Call_OnUnregister();
 	}
+	MarkLayoutForRebuild(this);
 }
 
 ULexPanelSlot* ULexWidget::CreateNewPanelSlot(TSubclassOf<ULexPanelSlot> SlotClass)
 {
-	if (!SlotClass)
+	UClass* RequestedClass = *SlotClass;
+	if (!IsValid(RequestedClass))
 	{
-		SlotClass = ULexPanelSlot::StaticClass();
+		RequestedClass = ULexPanelSlot::StaticClass();
+	}
+	if (!RequestedClass->IsChildOf(ULexPanelSlot::StaticClass())
+		|| RequestedClass->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists))
+	{
+		return nullptr;
 	}
 	ULexPanelSlot* OldSlot = PanelSlot;
-	ULexPanelSlot* NewSlot = NewObject<ULexPanelSlot>(this, SlotClass, NAME_None, RF_Public | RF_Transactional);
+	ULexPanelSlot* NewSlot = NewObject<ULexPanelSlot>(this, RequestedClass, NAME_None, RF_Public | RF_Transactional);
+	if (!IsValid(NewSlot))
+	{
+		return nullptr;
+	}
 	if (IsValid(OldSlot))
 	{
+		OldSlot->RestoreAuthoredGeometry();
 		if (bHasBegunPlay)
 		{
 			OldSlot->EndPlay();
@@ -3516,15 +3906,16 @@ ULexPanelSlot* ULexWidget::CreateNewPanelSlot(TSubclassOf<ULexPanelSlot> SlotCla
 void ULexWidget::RemovePanelSlot()
 {
 	ULexPanelSlot* OldSlot = PanelSlot;
-	PanelSlot = nullptr;
 	if (IsValid(OldSlot))
 	{
+		OldSlot->RestoreAuthoredGeometry();
 		if (bHasBegunPlay)
 		{
 			OldSlot->EndPlay();
 		}
 		OldSlot->Call_OnUnregister();
 	}
+	PanelSlot = nullptr;
 	MarkLayoutForRebuild(Parent.IsValid() ? Parent.Get() : this);
 }
 

@@ -67,7 +67,8 @@ public:
 	
 	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* Widget)const PURE_VIRTUAL(ULexLayout::GetLayoutControlAnchor, return FLexLayoutControlAnchorData(););
 
-	virtual FVector2f GetLayoutPreferredSize()PURE_VIRTUAL(ULexLayout::GetLayoutProperties, return FVector2f::ZeroVector;);
+	/** Zero means this layout does not contribute an intrinsic desired size. */
+	virtual FVector2f GetLayoutPreferredSize() { return FVector2f::ZeroVector; }
 	virtual void MarkLayoutDirty();
 protected:
 	bool bIsLayoutDirty = false;
@@ -88,6 +89,8 @@ public:
 	virtual void PostReinitProperties()override;
 
 	virtual void OnRegister() override;
+	/** INDEX_NONE means this container does not impose a child-count limit. */
+	virtual int32 GetMaxChildren() const { return INDEX_NONE; }
 
 	//called by LexWidget during layout processing
 	virtual void CalculateLayout(){}

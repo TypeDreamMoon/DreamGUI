@@ -44,7 +44,7 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true))
 	ELexLayoutAspectRatioType AspectRatioType = ELexLayoutAspectRatioType::None;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition="AspectRatioType!=ELexLayoutAspectRatioType::None"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LayoutSelf", Getter, Setter, meta = (AllowPrivateAccess = true, EditCondition="AspectRatioType!=ELexLayoutAspectRatioType::None", ClampMin="0.0001"))
 	float AspectRatio = 1.0f;
 
 	bool bIsCalculatingSize = false;

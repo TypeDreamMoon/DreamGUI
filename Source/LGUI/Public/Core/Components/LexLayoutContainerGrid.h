@@ -31,9 +31,9 @@ struct LGUI_API FLexLayoutGridSize
 	GENERATED_BODY()
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 	ELexLayoutGridSizeType Type = ELexLayoutGridSizeType::Ratio;
-	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (UIMin = "0.0"))
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (ClampMin = "0.0"))
 	float FixedValue = 100.0f;
-	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (UIMin = "0.0"))
+	UPROPERTY(EditAnywhere, Category = "LGUI", meta = (ClampMin = "0.0"))
 	float RatioValue = 1.0f;
 
 	FLexLayoutGridSize() {}
@@ -88,6 +88,7 @@ public:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 	virtual FLexLayoutControlAnchorData GetLayoutControlAnchor(const ULexWidget* TargetWidget)const override;
+	virtual FVector2f GetLayoutPreferredSize() override;
 	virtual void CalculateLayout()override;
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")

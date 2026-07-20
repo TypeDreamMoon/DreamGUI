@@ -237,6 +237,8 @@ public:
 	void SetRelativeRotationEuler(const FRotator& Value);
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	void SetRelativeScale(const FVector& Value);
+	/** Transient scale contributed by a parent layout. It is never serialized or exposed as authored transform data. */
+	void SetLayoutScale(const FVector2f& Value);
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	void SetRelativeLocationAndRotation(const FVector& InLocation, const FQuat& InRotation);
 
@@ -254,6 +256,8 @@ public:
 	void SetWorldTransform(const FTransform& InWorldTransform);
 	/** Only called by PrefabSystem to restore parent-children hierarchy */
 	void SetParentBeforeRegister(ULexWidget* InParent);
+	/** Restores a serialized hierarchy while preserving legacy over-capacity assets. Cycle checks still apply. */
+	bool SetParentFromPrefab(ULexWidget* InParent, bool InKeepWorldPosition = false, int InSiblingIndex = -1);
 	/** Only called by PrefabSystem to restore parent-children sibling index */
 	void ApplySiblingIndexBeforeRegister_Recursive();
 
@@ -266,6 +270,15 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	void SetParent(ULexWidget* InParent, bool InKeepWorldPosition = true, int InSiblingIndex = -1);
+	/** Same operation as SetParent, but reports capacity/cycle rejection to the caller. */
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	bool TrySetParent(ULexWidget* InParent, bool InKeepWorldPosition = true, int InSiblingIndex = -1);
+	/** Minimum child capacity imposed by the current LayoutContainer and Behaviours. INDEX_NONE is unlimited. */
+	int32 GetMaxChildrenCapacity() const;
+	bool CanAcceptAdditionalChildren(int32 AdditionalChildCount = 1) const;
+	bool CanAcceptChildren(TConstArrayView<ULexWidget*> InChildren) const;
+	UFUNCTION(BlueprintPure, Category = "Transform")
+	bool CanAcceptChild(const ULexWidget* InChild) const;
 	/** Set the sibling index of this widget in its parent's children list. */
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	void SetSiblingIndex(int Value);
@@ -331,12 +344,13 @@ public:
 	void CalculateObjectToWorldTransform(bool bPropagateToChildren = true);
 private:
 	ULexUIBehaviour* AddComponent(TSubclassOf<ULexUIBehaviour> ComponentClass, ULexUIBehaviour* ComponentTemplate);
+	bool TrySetParentInternal(ULexWidget* InParent, bool InKeepWorldPosition, int InSiblingIndex, bool bEnforceCapacity);
 	
 	mutable FTransform ObjectToWorldTransform;
 
 	virtual void OnUpdateTransform();
 	virtual void OnChildAttached(ULexWidget* ChildComponent);
-	virtual void OnChildDetached();
+	virtual void OnChildDetached(ULexWidget* ChildComponent);
 
 	void OnDetachedFromParent();
 	void OnAttachedToParent();
@@ -633,11 +647,20 @@ protected:
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
-	ELexWidgetClipping GetClipping()const { return Clipping; }
+	ELexWidgetClipping GetClipping()const
+	{
+		return bHasLayoutClippingOverride && Clipping == ELexWidgetClipping::Inherit
+			? LayoutClippingOverride
+			: Clipping;
+	}
+	ELexWidgetClipping GetAuthoredClipping()const { return Clipping; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	bool IsPointVisibleOnClip(const FVector& Value)const;
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetClipping(ELexWidgetClipping Value);
+	/** Applies a transient layout default while authored clipping remains Inherit. */
+	void SetLayoutClippingOverride(ELexWidgetClipping Value);
+	void ClearLayoutClippingOverride();
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	FVector4f GetClippingCornerRadius()const { return ClippingCornerRadius; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
@@ -695,6 +718,8 @@ public:
 	ELexWidgetVisibility GetVisibility()const { return Visibility; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 	void SetVisibility(ELexWidgetVisibility Value);
+	/** Temporarily removes this widget from layout, rendering and hit testing without changing Visibility. */
+	void SetLayoutVisibilitySuppressed(bool bSuppressed);
 	/** Hidden still participates in layout; Collapsed does not. */
 	UFUNCTION(BlueprintPure, Category = "LGUI|Visibility")
 	bool GetLayoutVisibleInHierarchy()const { return bCacheLayoutVisibleInHierarchy; }
@@ -940,6 +965,10 @@ private:
 	uint32 bCacheChildrenHitTestVisibleInHierarchy : 1 = true;
 	uint32 bCacheInteractableInHierarchy : 1 = true;
 	uint32 bCacheRaycastableInHierarchy : 1 = true;
+	uint32 bLayoutVisibilitySuppressed : 1 = false;
+	uint32 bHasLayoutClippingOverride : 1 = false;
+	FVector2f LayoutScale = FVector2f::UnitVector;
+	ELexWidgetClipping LayoutClippingOverride = ELexWidgetClipping::Inherit;
 
 	uint32 bHasBegunPlay : 1 = false;
 	uint32 bIsRegistered : 1 = false;

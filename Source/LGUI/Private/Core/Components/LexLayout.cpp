@@ -32,15 +32,15 @@ void ULexLayoutContainer::OnRegister()
 	}
 }
 
+void ULexLayout::MarkLayoutDirty()
+{
+	bIsLayoutDirty = true;
+}
+
 #if WITH_EDITOR
 void ULexLayout::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
-}
-
-void ULexLayout::MarkLayoutDirty()
-{
-	bIsLayoutDirty = true;
 }
 
 void ULexLayoutContainer::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
