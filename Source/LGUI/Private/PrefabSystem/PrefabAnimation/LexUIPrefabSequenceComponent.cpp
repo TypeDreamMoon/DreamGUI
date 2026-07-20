@@ -5,8 +5,15 @@
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequencePlayer.h"
 #include "LGUI.h"
 
+#include "MovieSceneSequencePlaybackSettings.h"
+
 ULexUIPrefabSequenceComponent::ULexUIPrefabSequenceComponent()
 {
+}
+
+bool FLexUIAnimationHandle::IsValid() const
+{
+	return ::IsValid(Player.Get());
 }
 
 void ULexUIPrefabSequenceComponent::Awake()
@@ -14,7 +21,7 @@ void ULexUIPrefabSequenceComponent::Awake()
 	Super::Awake();
 	InitSequencePlayer();
 
-	if (PlaybackSettings.bAutoPlay)
+	if (PlaybackSettings.bAutoPlay && SequencePlayer && SequencePlayer->IsValid())
 	{
 		SequencePlayer->Play();
 	}
@@ -23,12 +30,140 @@ void ULexUIPrefabSequenceComponent::Awake()
 void ULexUIPrefabSequenceComponent::OnDestroy()
 {
 	Super::OnDestroy();
+	StopAllAnimations();
 
 	if (SequencePlayer)
 	{
 		SequencePlayer->Stop();
 		SequencePlayer->TearDown();
 	}
+}
+
+FLexUIAnimationHandle ULexUIPrefabSequenceComponent::PlayAnimationByDisplayName(
+	const FString& Name,
+	float StartAtTime,
+	int32 NumLoopsToPlay,
+	ELexUIAnimationPlayMode PlayMode,
+	float PlaybackSpeed,
+	bool bRestoreState)
+{
+	FLexUIAnimationHandle Handle;
+	ULexUIPrefabSequence* Sequence = GetSequenceByDisplayName(Name);
+	if (!IsValid(Sequence))
+	{
+		UE_LOG(LGUI, Warning, TEXT("Animation '%s' was not found on '%s'."), *Name, *GetPathName());
+		return Handle;
+	}
+
+	FMovieSceneSequencePlaybackSettings Settings = PlaybackSettings;
+	Settings.bAutoPlay = false;
+	Settings.bRandomStartTime = false;
+	Settings.StartTime = PlayMode == ELexUIAnimationPlayMode::Forward ? FMath::Max(0.0f, StartAtTime) : 0.0f;
+	Settings.PlayRate = FMath::Max(FMath::Abs(PlaybackSpeed), UE_SMALL_NUMBER);
+	Settings.LoopCount.Value = NumLoopsToPlay == 0 ? -1 : FMath::Max(0, NumLoopsToPlay - 1);
+	Settings.FinishCompletionStateOverride = bRestoreState
+		? EMovieSceneCompletionModeOverride::ForceRestoreState
+		: EMovieSceneCompletionModeOverride::ForceKeepState;
+
+	ULexUIPrefabSequencePlayer* Player = NewObject<ULexUIPrefabSequencePlayer>(this);
+	Player->SetPlaybackClient(this);
+	Player->InitializeForTick(this);
+	Player->Initialize(Sequence, Settings);
+	Player->OnNativeFinished.BindUObject(this, &ULexUIPrefabSequenceComponent::HandleActiveSequencePlayerFinished, Player);
+	ActiveSequencePlayers.Add(Player);
+
+	if (PlayMode == ELexUIAnimationPlayMode::Reverse)
+	{
+		if (StartAtTime > 0.0f)
+		{
+			const double ReverseStartTime = FMath::Max(0.0, Player->GetEndTime().AsSeconds() - StartAtTime);
+			Player->SetPlaybackPosition(FMovieSceneSequencePlaybackParams(ReverseStartTime, EUpdatePositionMethod::Jump));
+		}
+		Player->PlayReverse();
+	}
+	else
+	{
+		Player->Play();
+	}
+
+	Handle.Player = Player;
+	return Handle;
+}
+
+void ULexUIPrefabSequenceComponent::PauseAnimation(FLexUIAnimationHandle Handle)
+{
+	if (IsActiveSequencePlayer(Handle.Player) && Handle.Player->IsPlaying())
+	{
+		Handle.Player->Pause();
+	}
+}
+
+void ULexUIPrefabSequenceComponent::StopAnimation(FLexUIAnimationHandle Handle)
+{
+	if (IsActiveSequencePlayer(Handle.Player))
+	{
+		ReleaseActiveSequencePlayer(Handle.Player);
+	}
+}
+
+void ULexUIPrefabSequenceComponent::ReverseAnimation(FLexUIAnimationHandle Handle)
+{
+	if (IsActiveSequencePlayer(Handle.Player))
+	{
+		Handle.Player->ChangePlaybackDirection();
+	}
+}
+
+bool ULexUIPrefabSequenceComponent::IsAnimationPlaying(FLexUIAnimationHandle Handle) const
+{
+	return IsActiveSequencePlayer(Handle.Player) && Handle.Player->IsPlaying();
+}
+
+void ULexUIPrefabSequenceComponent::StopAllAnimations()
+{
+	if (SequencePlayer && SequencePlayer->IsPlaying())
+	{
+		SequencePlayer->Stop();
+	}
+
+	TArray<TObjectPtr<ULexUIPrefabSequencePlayer>> Players = MoveTemp(ActiveSequencePlayers);
+	ActiveSequencePlayers.Reset();
+	for (ULexUIPrefabSequencePlayer* Player : Players)
+	{
+		if (IsValid(Player))
+		{
+			Player->OnNativeFinished.Unbind();
+			Player->Stop();
+			Player->TearDown();
+		}
+	}
+}
+
+void ULexUIPrefabSequenceComponent::HandleActiveSequencePlayerFinished(ULexUIPrefabSequencePlayer* Player)
+{
+	// bPauseAtEnd intentionally leaves the handle alive so callers can resume or stop it.
+	if (IsValid(Player) && !Player->IsPaused())
+	{
+		ReleaseActiveSequencePlayer(Player);
+	}
+}
+
+bool ULexUIPrefabSequenceComponent::IsActiveSequencePlayer(const ULexUIPrefabSequencePlayer* Player) const
+{
+	return IsValid(Player) && ActiveSequencePlayers.Contains(Player);
+}
+
+void ULexUIPrefabSequenceComponent::ReleaseActiveSequencePlayer(ULexUIPrefabSequencePlayer* Player)
+{
+	if (!IsValid(Player))
+	{
+		return;
+	}
+
+	Player->OnNativeFinished.Unbind();
+	Player->Stop();
+	Player->TearDown();
+	ActiveSequencePlayers.RemoveSingleSwap(Player);
 }
 
 #if WITH_EDITOR
@@ -77,7 +212,7 @@ ULexUIPrefabSequence* ULexUIPrefabSequenceComponent::GetSequenceByDisplayName(co
 {
 	for (auto Item : SequenceArray)
 	{
-		if (Item->GetDisplayNameString() == InName)
+		if (IsValid(Item) && Item->GetDisplayNameString() == InName)
 		{
 			return Item;
 		}
@@ -105,9 +240,9 @@ void ULexUIPrefabSequenceComponent::InitSequencePlayer()
 		// reference to the tick manager is maintained
 		SequencePlayer->InitializeForTick(this);
 	}
-	if (auto CurrentSequence = GetCurrentSequence())
+	if (SequenceArray.IsValidIndex(CurrentSequenceIndex))
 	{
-		SequencePlayer->Initialize(CurrentSequence, PlaybackSettings);
+		SequencePlayer->Initialize(SequenceArray[CurrentSequenceIndex], PlaybackSettings);
 	}
 }
 void ULexUIPrefabSequenceComponent::SetSequenceByIndex(int32 InIndex)
@@ -144,11 +279,8 @@ bool ULexUIPrefabSequenceComponent::DeleteAnimationByIndex(int32 InIndex)
 		UE_LOG(LGUI, Error, TEXT("[%s].%d Index out of range! Index: %d, ArrayNum: %d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, InIndex, SequenceArray.Num());
 		return false;
 	}
-	if (auto SequenceItem = SequenceArray[InIndex])
-	{
-		SequenceItem->ConditionalBeginDestroy();
-	}
 	SequenceArray.RemoveAt(InIndex);
+	CurrentSequenceIndex = SequenceArray.IsEmpty() ? 0 : FMath::Clamp(CurrentSequenceIndex, 0, SequenceArray.Num() - 1);
 	return true;
 }
 ULexUIPrefabSequence* ULexUIPrefabSequenceComponent::DuplicateAnimationByIndex(int32 InIndex)
