@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Textures/SlateIcon.h"
 
 class ULexWidget;
 DECLARE_MULTICAST_DELEGATE(FOnLexUIControlRegistryChanged);
@@ -25,6 +26,8 @@ struct LGUIEDITOR_API FLexUIControlDescriptor
 	TWeakObjectPtr<UClass> LayoutContainerClass;
 	TWeakObjectPtr<UClass> LayoutSelfClass;
 	TWeakObjectPtr<UClass> BehaviourClass;
+	TWeakObjectPtr<UClass> MeshModifierClass;
+	FSlateIcon Icon;
 	TFunction<void(ULexWidget*)> NativeConfigure;
 };
 
@@ -37,11 +40,18 @@ public:
 	bool Unregister(FName Name);
 	const TArray<FLexUIControlDescriptor>& GetDescriptors()const { return Descriptors; }
 	bool Validate(const FLexUIControlDescriptor& Descriptor, FText& OutError)const;
+	void InitializeDynamicDiscovery();
+	void ShutdownDynamicDiscovery();
+	void RefreshDynamicClasses();
 	FOnLexUIControlRegistryChanged& OnChanged() { return RegistryChanged; }
 
 private:
 	FLexUIControlRegistry();
 	void RegisterDefaults();
+	void HandleAssetLoaded(UObject* Asset);
 	TArray<FLexUIControlDescriptor> Descriptors;
+	TMap<FName, TWeakObjectPtr<UClass>> DynamicPostProcessClasses;
+	FDelegateHandle BlueprintCompiledHandle;
+	FDelegateHandle AssetLoadedHandle;
 	FOnLexUIControlRegistryChanged RegistryChanged;
 };
