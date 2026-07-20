@@ -24,7 +24,9 @@
 #include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
 #include "Kismet2/KismetEditorUtilities.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "EdGraph/EdGraph.h"
+#include "K2Node_CustomEvent.h"
 #include "UMGStyle.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
@@ -1037,12 +1039,37 @@ void FLexUIPrefabEditor::PromoteToBehaviourVariable(UObject* InTarget)
 	FSlateNotificationManager::Get().AddNotification(Info);
 }
 
-void FLexUIPrefabEditor::AddEventHandler(const LexUIPrefabBehaviourUtils::FDiscoveredEvent& InEvent)
+bool FLexUIPrefabEditor::CanAddEventHandler(ELexUIBehaviourHandlerType InHandlerType) const
 {
+	UClass* BehaviourClass = GetEffectiveBehaviourClass();
+	if (BehaviourClass == nullptr)
+	{
+		return true;
+	}
+	TSharedPtr<ILexUIBehaviourEditorBackend> Backend = GetBehaviourEditorBackend();
+	return Backend.IsValid() && Backend->CanAddEventHandler(BehaviourClass, InHandlerType);
+}
+
+void FLexUIPrefabEditor::AddEventHandler(const LexUIPrefabBehaviourUtils::FDiscoveredEvent& InEvent,
+	ELexUIBehaviourHandlerType InHandlerType)
+{
+	if (!IsValid(InEvent.Component) || InEvent.EventProperty == nullptr)
+	{
+		return;
+	}
+	FLexUIEventDelegate* LiveEvent = InEvent.EventProperty->ContainerPtrToValuePtr<FLexUIEventDelegate>(InEvent.Component);
+	if (LiveEvent->IsBound())
+	{
+		FNotificationInfo Info(LOCTEXT("EventHandlerAlreadyBound", "This event already has a binding."));
+		Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
+		Info.ExpireDuration = 4.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+		return;
+	}
 	if (GetEffectiveBehaviourClass() == nullptr && GetOrCreateBehaviourBlueprint() == nullptr)return;
 	ULexUIBehaviour* PrimaryBehaviour = GetPrimaryBehaviour();
 	TSharedPtr<ILexUIBehaviourEditorBackend> Backend = GetBehaviourEditorBackend();
-	if (!IsValid(PrimaryBehaviour) || !Backend.IsValid() || !Backend->CanAddEventHandler(PrimaryBehaviour->GetClass()))
+	if (!IsValid(PrimaryBehaviour) || !Backend.IsValid() || !Backend->CanAddEventHandler(PrimaryBehaviour->GetClass(), InHandlerType))
 	{
 		FNotificationInfo Info(LOCTEXT("BehaviourBackendCannotAddEvent", "This Behaviour backend cannot generate event handlers. Declare a compatible reflected function in the script and bind it in Details."));
 		Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
@@ -1053,7 +1080,7 @@ void FLexUIPrefabEditor::AddEventHandler(const LexUIPrefabBehaviourUtils::FDisco
 
 	FText Message;
 	const FName HandlerName = Backend->AddEventHandler(GetLoadedRootWidget(), PrimaryBehaviour,
-		InEvent.Component, InEvent.EventProperty ? InEvent.EventProperty->GetFName() : NAME_None, Message);
+		InEvent.Component, InEvent.EventProperty->GetFName(), InHandlerType, Message);
 	const bool bSuccess = !HandlerName.IsNone();
 	if (bSuccess)
 	{
@@ -1075,15 +1102,28 @@ void FLexUIPrefabEditor::AddEventHandler(const LexUIPrefabBehaviourUtils::FDisco
 	{
 		if (UBlueprint* Blueprint = Cast<UBlueprint>(PrimaryBehaviour->GetClass()->ClassGeneratedBy))
 		{
-			// open the blueprint at the generated function graph, UMG "+" style
-			if (UEdGraph* FuncGraph = FindObject<UEdGraph>(Blueprint, *HandlerName.ToString()))
+			if (InHandlerType == ELexUIBehaviourHandlerType::Function)
 			{
-				FKismetEditorUtilities::BringKismetToFocusAttentionOnObject(FuncGraph, false);
+				if (UEdGraph* FuncGraph = FindObject<UEdGraph>(Blueprint, *HandlerName.ToString()))
+				{
+					FKismetEditorUtilities::BringKismetToFocusAttentionOnObject(FuncGraph, false);
+					return;
+				}
 			}
-			else
+			else if (UEdGraph* EventGraph = FBlueprintEditorUtils::FindEventGraph(Blueprint))
 			{
-				GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(Blueprint);
+				TArray<UK2Node_CustomEvent*> EventNodes;
+				EventGraph->GetNodesOfClass(EventNodes);
+				for (UK2Node_CustomEvent* EventNode : EventNodes)
+				{
+					if (IsValid(EventNode) && EventNode->CustomFunctionName == HandlerName)
+					{
+						FKismetEditorUtilities::BringKismetToFocusAttentionOnObject(EventNode, false);
+						return;
+					}
+				}
 			}
+			GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(Blueprint);
 		}
 	}
 }

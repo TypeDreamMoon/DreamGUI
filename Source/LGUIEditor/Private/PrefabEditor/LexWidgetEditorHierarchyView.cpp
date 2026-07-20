@@ -4,6 +4,7 @@
 
 #include "LGUIEditorModule.h"
 #include "LexUIPrefabEditor.h"
+#include "LexUIBehaviourEditorBackend.h"
 #include "LexWidgetEditorHierarchyViewItem.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexWidget.h"
@@ -529,21 +530,56 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 								if (W == nullptr)return;
 								TArray<LexUIPrefabBehaviourUtils::FDiscoveredEvent> Events;
 								LexUIPrefabBehaviourUtils::DiscoverEvents(W, Events);
+								int32 UnboundEventCount = 0;
 								for (const auto& Event : Events)
 								{
-									if (Event.Component == nullptr)continue;
-									SubMenu.AddMenuEntry(
+									if (Event.Component == nullptr || Event.bIsBound)continue;
+									++UnboundEventCount;
+									SubMenu.AddSubMenu(
 										FText::Format(LOCTEXT("AddEventEntry", "{0} ({1})"), FText::FromString(Event.DisplayName), FText::FromString(Event.Component->GetClass()->GetName())),
 										FText::Format(LOCTEXT("AddEventEntryTooltip", "Create a handler for {0} and bind it."), FText::FromString(Event.DisplayName)),
-										FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Plus"),
-										FUIAction(FExecuteAction::CreateLambda([WeakEditor, Event]()
+										FNewMenuDelegate::CreateLambda([WeakEditor, Event](FMenuBuilder& HandlerMenu)
 										{
-											if (auto E = WeakEditor.Pin())E->AddEventHandler(Event);
-										}), FCanExecuteAction::CreateLambda([WeakEditor]()
-										{
-											auto E = WeakEditor.Pin();
-											return E.IsValid() && E->CanAuthorBehaviour();
-										})));
+											auto AddHandlerType = [&HandlerMenu, WeakEditor, Event](const FText& Label,
+												const FText& Tooltip, const FSlateIcon& Icon, ELexUIBehaviourHandlerType HandlerType)
+											{
+												HandlerMenu.AddMenuEntry(Label, Tooltip, Icon,
+													FUIAction(FExecuteAction::CreateLambda([WeakEditor, Event, HandlerType]()
+													{
+														if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())
+														{
+															Editor->AddEventHandler(Event, HandlerType);
+														}
+													}), FCanExecuteAction::CreateLambda([WeakEditor, HandlerType]()
+													{
+														TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin();
+														return Editor.IsValid() && Editor->CanAddEventHandler(HandlerType);
+													})));
+											};
+											AddHandlerType(LOCTEXT("AddEventFromFunction", "From Function"),
+												LOCTEXT("AddEventFromFunctionTooltip", "Create and bind a Blueprint function."),
+												FSlateIcon(FAppStyle::GetAppStyleSetName(), "GraphEditor.Function_16x"),
+												ELexUIBehaviourHandlerType::Function);
+											AddHandlerType(LOCTEXT("AddEventFromEvent", "From Event"),
+												LOCTEXT("AddEventFromEventTooltip", "Create and bind a Blueprint custom event."),
+												FSlateIcon(FAppStyle::GetAppStyleSetName(), "GraphEditor.Event_16x"),
+												ELexUIBehaviourHandlerType::Event);
+										}), false, FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Plus"));
+								}
+								if (Events.IsEmpty())
+								{
+									SubMenu.AddMenuEntry(
+										LOCTEXT("NoEventsAvailable", "No Events Available"),
+										FText::GetEmpty(), FSlateIcon(),
+										FUIAction(FExecuteAction(), FCanExecuteAction::CreateLambda([] { return false; })));
+								}
+								else if (UnboundEventCount == 0)
+								{
+									SubMenu.AddMenuEntry(
+										LOCTEXT("AllEventsBound", "All Events Are Bound"),
+										LOCTEXT("AllEventsBoundTooltip", "Every event on this widget already has a binding."),
+										FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.SuccessWithColor"),
+										FUIAction(FExecuteAction(), FCanExecuteAction::CreateLambda([] { return false; })));
 								}
 							}));
 					}

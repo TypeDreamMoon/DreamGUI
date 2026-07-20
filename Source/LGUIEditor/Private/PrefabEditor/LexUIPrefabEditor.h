@@ -19,6 +19,7 @@ class AActor;
 class ULexUIPrefabHelperObject;
 class ULexUIBehaviour;
 class ILexUIBehaviourEditorBackend;
+enum class ELexUIBehaviourHandlerType : uint8;
 class IMessageLogListing;
 class UToolMenu;
 struct FLexUISubPrefabData;
@@ -230,7 +231,8 @@ public:
 	 * blueprint at the new function. InEvent is one FLexUIEventDelegate discovered on a
 	 * selected widget's behaviour (see LexUIPrefabBehaviourUtils::DiscoverEvents).
 	 */
-	void AddEventHandler(const LexUIPrefabBehaviourUtils::FDiscoveredEvent& InEvent);
+	void AddEventHandler(const LexUIPrefabBehaviourUtils::FDiscoveredEvent& InEvent, ELexUIBehaviourHandlerType InHandlerType);
+	bool CanAddEventHandler(ELexUIBehaviourHandlerType InHandlerType) const;
 	/**
 	 * UMG-toolbar-style align: move every selected sibling widget so the chosen edge/center
 	 * lines up with the selection's overall bound. Operates in the shared parent's frame;

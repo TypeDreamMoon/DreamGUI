@@ -8,6 +8,7 @@ class ULexWidget;
 class ULexUIBehaviour;
 class ULexUIPrefab;
 class UBlueprint;
+enum class ELexUIBehaviourHandlerType : uint8;
 
 /**
  * The prefab's "companion behaviour blueprint", UMG-WidgetBlueprint style, ported from the
@@ -57,17 +58,19 @@ namespace LexUIPrefabBehaviourUtils
 		ULexUIBehaviour* Component = nullptr;
 		class FStructProperty* EventProperty = nullptr;
 		FString DisplayName;//e.g. "OnClick"
+		bool bIsBound = false;
 	};
 	/** Every FLexUIEventDelegate UPROPERTY across InWidget's behaviours (UIButton.OnClick, UIToggle.OnValueChanged, ...). */
 	void DiscoverEvents(ULexWidget* InWidget, TArray<FDiscoveredEvent>& OutEvents);
 	/**
-	 * UMG "Event +" counterpart: generate a handler function on the behaviour blueprint whose
-	 * signature matches the event's native parameter, compile, then wire InEvent's
+	 * UMG "Event +" counterpart: generate either a function graph or custom event node on the
+	 * behaviour blueprint whose signature matches the event's native parameter, compile, then wire InEvent's
 	 * FLexUIEventDelegate to call it on the companion instance. When the parameter type can't
 	 * be mapped to a pin the handler is parameterless (the binding still fires, without the value).
 	 * @return the generated function name (NAME_None on failure); OutMessage carries the reason.
 	 */
-	FName AddEventHandler(UBlueprint* InBlueprint, ULexWidget* InRootWidget, const FDiscoveredEvent& InEvent, FText& OutMessage);
+	FName AddEventHandler(UBlueprint* InBlueprint, ULexWidget* InRootWidget, const FDiscoveredEvent& InEvent,
+		ELexUIBehaviourHandlerType InHandlerType, FText& OutMessage);
 
 	/**
 	 * Editor-time BindWidget: for every Instance-Editable, hard-object, blueprint-declared null

@@ -7,6 +7,12 @@
 class ULexUIBehaviour;
 class ULexWidget;
 
+enum class ELexUIBehaviourHandlerType : uint8
+{
+	Function,
+	Event,
+};
+
 /**
  * Optional editor integration for a script system that produces ULexUIBehaviour classes.
  * The prefab editor itself only depends on UClass reflection; Blueprint and future
@@ -26,8 +32,19 @@ public:
 	virtual bool PromoteToVariable(ULexWidget* InRootWidget, ULexUIBehaviour* InPrimaryBehaviour, UObject* InTarget, FText& OutMessage) { return false; }
 
 	virtual bool CanAddEventHandler(const UClass* InBehaviourClass) const { return false; }
+	virtual bool CanAddEventHandler(const UClass* InBehaviourClass, ELexUIBehaviourHandlerType InHandlerType) const
+	{
+		return InHandlerType == ELexUIBehaviourHandlerType::Function && CanAddEventHandler(InBehaviourClass);
+	}
 	virtual FName AddEventHandler(ULexWidget* InRootWidget, ULexUIBehaviour* InPrimaryBehaviour,
 		ULexUIBehaviour* InSourceComponent, FName InEventPropertyName, FText& OutMessage) { return NAME_None; }
+	virtual FName AddEventHandler(ULexWidget* InRootWidget, ULexUIBehaviour* InPrimaryBehaviour,
+		ULexUIBehaviour* InSourceComponent, FName InEventPropertyName, ELexUIBehaviourHandlerType InHandlerType, FText& OutMessage)
+	{
+		return InHandlerType == ELexUIBehaviourHandlerType::Function
+			? AddEventHandler(InRootWidget, InPrimaryBehaviour, InSourceComponent, InEventPropertyName, OutMessage)
+			: NAME_None;
+	}
 };
 
 class LGUIEDITOR_API FLexUIBehaviourEditorBackendRegistry

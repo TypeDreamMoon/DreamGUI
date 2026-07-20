@@ -15,8 +15,10 @@
 #include "Engine/BlueprintGeneratedClass.h"
 #include "EdGraphSchema_K2.h"
 #include "K2Node_FunctionEntry.h"
+#include "K2Node_CustomEvent.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
+#include "LexUIBehaviourEditorBackend.h"
 #include "Misc/PackageName.h"
 #include "UObject/Package.h"
 
@@ -274,6 +276,7 @@ void DiscoverEvents(ULexWidget* InWidget, TArray<FDiscoveredEvent>& OutEvents)
 				Event.Component = Comp;
 				Event.EventProperty = StructProperty;
 				Event.DisplayName = StructProperty->GetName();
+				Event.bIsBound = StructProperty->ContainerPtrToValuePtr<FLexUIEventDelegate>(Comp)->IsBound();
 				OutEvents.Add(Event);
 			}
 		}
@@ -313,7 +316,8 @@ namespace
 	}
 }
 
-FName AddEventHandler(UBlueprint* InBlueprint, ULexWidget* InRootWidget, const FDiscoveredEvent& InEvent, FText& OutMessage)
+FName AddEventHandler(UBlueprint* InBlueprint, ULexWidget* InRootWidget, const FDiscoveredEvent& InEvent,
+	ELexUIBehaviourHandlerType InHandlerType, FText& OutMessage)
 {
 	if (InBlueprint == nullptr || InRootWidget == nullptr || InEvent.Component == nullptr || InEvent.EventProperty == nullptr)
 	{
@@ -340,6 +344,12 @@ FName AddEventHandler(UBlueprint* InBlueprint, ULexWidget* InRootWidget, const F
 			return Existing;
 		}
 	}
+	if (LiveEvent->IsBound())
+	{
+		OutMessage = FText::Format(LOCTEXT("AddEventAlreadyBound", "{0}.{1} already has an event binding."),
+			FText::FromString(InEvent.Component->GetName()), FText::FromString(InEvent.DisplayName));
+		return NAME_None;
+	}
 
 	// event's native parameter type from the CDO (SupportParameterType is set in the constructor)
 	auto CDO = InEvent.Component->GetClass()->GetDefaultObject();
@@ -350,21 +360,56 @@ FName AddEventHandler(UBlueprint* InBlueprint, ULexWidget* InRootWidget, const F
 	FString BaseName = FString::Printf(TEXT("%s_%s"), *InEvent.DisplayName, *MakeVariableNameForTarget(InEvent.Component->GetWidget()));
 	const FName HandlerName = FBlueprintEditorUtils::FindUniqueKismetName(InBlueprint, BaseName);
 
-	UEdGraph* FuncGraph = FBlueprintEditorUtils::CreateNewGraph(InBlueprint, HandlerName, UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
-	FBlueprintEditorUtils::AddFunctionGraph<UClass>(InBlueprint, FuncGraph, /*bIsUserCreated*/true, /*SignatureFromClass*/(UClass*)nullptr);
-
 	FEdGraphPinType ParamPinType;
 	bool bUseNativeParameter = MakePinTypeForEventParam(ParamType, ParamPinType);
-	if (bUseNativeParameter)
+	if (InHandlerType == ELexUIBehaviourHandlerType::Function)
 	{
-		TArray<UK2Node_FunctionEntry*> EntryNodes;
-		FuncGraph->GetNodesOfClass(EntryNodes);
-		if (EntryNodes.Num() > 0)
+		UEdGraph* FuncGraph = FBlueprintEditorUtils::CreateNewGraph(InBlueprint, HandlerName,
+			UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
+		FBlueprintEditorUtils::AddFunctionGraph<UClass>(InBlueprint, FuncGraph, true, static_cast<UClass*>(nullptr));
+		if (bUseNativeParameter)
 		{
-			EntryNodes[0]->CreateUserDefinedPin(TEXT("Value"), ParamPinType, EGPD_Output);
-			FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(InBlueprint);
+			TArray<UK2Node_FunctionEntry*> EntryNodes;
+			FuncGraph->GetNodesOfClass(EntryNodes);
+			if (EntryNodes.Num() > 0)
+			{
+				EntryNodes[0]->CreateUserDefinedPin(TEXT("Value"), ParamPinType, EGPD_Output);
+				FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(InBlueprint);
+			}
+			else
+			{
+				bUseNativeParameter = false;
+			}
 		}
-		else { bUseNativeParameter = false; }
+	}
+	else
+	{
+		UEdGraph* EventGraph = FBlueprintEditorUtils::FindEventGraph(InBlueprint);
+		if (EventGraph == nullptr)
+		{
+			EventGraph = FBlueprintEditorUtils::CreateNewGraph(InBlueprint, UEdGraphSchema_K2::GN_EventGraph,
+				UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
+			FBlueprintEditorUtils::AddUbergraphPage(InBlueprint, EventGraph);
+		}
+
+		UK2Node_CustomEvent* CustomEvent = NewObject<UK2Node_CustomEvent>(EventGraph);
+		CustomEvent->CustomFunctionName = HandlerName;
+		CustomEvent->bIsEditable = true;
+		CustomEvent->SetFlags(RF_Transactional);
+		CustomEvent->CreateNewGuid();
+		CustomEvent->PostPlacedNewNode();
+		CustomEvent->AllocateDefaultPins();
+		const FVector2D Position = EventGraph->GetGoodPlaceForNewNode();
+		CustomEvent->NodePosX = static_cast<int32>(Position.X);
+		CustomEvent->NodePosY = static_cast<int32>(Position.Y);
+		if (bUseNativeParameter)
+		{
+			CustomEvent->CreateUserDefinedPin(TEXT("Value"), ParamPinType, EGPD_Output);
+		}
+		EventGraph->Modify();
+		EventGraph->AddNode(CustomEvent, true, false);
+		FBlueprintEditorUtils::ValidateBlueprintChildVariables(InBlueprint, HandlerName);
+		FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(InBlueprint);
 	}
 
 	FKismetEditorUtilities::CompileBlueprint(InBlueprint);
@@ -391,9 +436,10 @@ FName AddEventHandler(UBlueprint* InBlueprint, ULexWidget* InRootWidget, const F
 	const ELexUIEventDelegateParameterType BindingParamType = bUseNativeParameter ? ParamType : ELexUIEventDelegateParameterType::Empty;
 	LiveEvent->AddFunctionBinding(InRootWidget, BehaviourComp, HandlerName, BindingParamType, bUseNativeParameter);
 
-	OutMessage = FText::Format(LOCTEXT("AddEventSuccess", "{0}.{1} -> {2}.{3}")
+	OutMessage = FText::Format(LOCTEXT("AddEventSuccess", "{0}.{1} -> {2}.{3} ({4})")
 		, FText::FromString(InEvent.Component->GetName()), FText::FromString(InEvent.DisplayName)
-		, FText::FromString(InBlueprint->GetName()), FText::FromName(HandlerName));
+		, FText::FromString(InBlueprint->GetName()), FText::FromName(HandlerName)
+		, InHandlerType == ELexUIBehaviourHandlerType::Function ? LOCTEXT("HandlerTypeFunction", "Function") : LOCTEXT("HandlerTypeEvent", "Event"));
 	return HandlerName;
 }
 

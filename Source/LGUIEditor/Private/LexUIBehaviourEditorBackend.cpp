@@ -47,9 +47,14 @@ namespace
 		}
 
 		virtual bool CanAddEventHandler(const UClass* InBehaviourClass) const override { return SupportsClass(InBehaviourClass); }
+		virtual bool CanAddEventHandler(const UClass* InBehaviourClass, ELexUIBehaviourHandlerType InHandlerType) const override
+		{
+			return SupportsClass(InBehaviourClass);
+		}
 
 		virtual FName AddEventHandler(ULexWidget* InRootWidget, ULexUIBehaviour* InPrimaryBehaviour,
-			ULexUIBehaviour* InSourceComponent, FName InEventPropertyName, FText& OutMessage) override
+			ULexUIBehaviour* InSourceComponent, FName InEventPropertyName, ELexUIBehaviourHandlerType InHandlerType,
+			FText& OutMessage) override
 		{
 			UBlueprint* Blueprint = IsValid(InPrimaryBehaviour) ? Cast<UBlueprint>(InPrimaryBehaviour->GetClass()->ClassGeneratedBy) : nullptr;
 			FStructProperty* EventProperty = IsValid(InSourceComponent)
@@ -65,7 +70,7 @@ namespace
 			Event.Component = InSourceComponent;
 			Event.EventProperty = EventProperty;
 			Event.DisplayName = EventProperty->GetName();
-			return LexUIPrefabBehaviourUtils::AddEventHandler(Blueprint, InRootWidget, Event, OutMessage);
+			return LexUIPrefabBehaviourUtils::AddEventHandler(Blueprint, InRootWidget, Event, InHandlerType, OutMessage);
 		}
 	};
 
