@@ -33,6 +33,8 @@
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexLayoutContainerFlexBox.h"
 #include "Core/Components/LexLayoutContainerGrid.h"
+#include "Core/Components/LexPanelLayouts.h"
+#include "Interaction/LexContentWidget.h"
 #include "Framework/Commands/GenericCommands.h"
 #include "PrefabSystem/LexUIPrefabInstanceScene.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
@@ -131,19 +133,36 @@ FName GetPrefabWorldName()
 FLexUIPrefabEditor::FLexUIPrefabEditor()
 {
 	PrefabEditorInstanceCollection.Add(this);
-
-	GEditor->RegisterForUndo(this);
 }
 FLexUIPrefabEditor::~FLexUIPrefabEditor()
 {
 	PrefabEditorInstanceCollection.Remove(this);
 
- 	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->EventOnOutlineChanged.RemoveAll(this);
-	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->bShouldTickInEditor = false;
-	ULexUISelection::GetInstance(GetWorld())->OnSelectionChanged.RemoveAll(this);
-	ULexUISelection::GetInstance(GetWorld())->SelectNone();
+	UWorld* EditorWorld = nullptr;
+	if (IsValid(PrefabBeingEdited))
+	{
+		if (FLexUIPrefabInstanceScene* PreviewScene = PrefabBeingEdited->GetPrefabInstanceScene())
+		{
+			EditorWorld = PreviewScene->GetWorld();
+		}
+	}
+	if (ULexUIManagerWorldSubsystem* Manager = ULexUIManagerWorldSubsystem::GetInstance(EditorWorld))
+	{
+		Manager->OnLexUIWidgetOutlinerChanged.RemoveAll(this);
+		Manager->EventOnOutlineChanged.RemoveAll(this);
+		Manager->bShouldTickInEditor = false;
+	}
+	if (ULexUISelection* Selection = ULexUISelection::GetInstance(EditorWorld))
+	{
+		Selection->OnSelectionChanged.RemoveAll(this);
+		Selection->SelectNone();
+	}
 
-	GEditor->UnregisterForUndo(this);
+	if (bRegisteredForUndo && GEditor)
+	{
+		GEditor->UnregisterForUndo(this);
+		bRegisteredForUndo = false;
+	}
 }
 
 FLexUIPrefabEditor* FLexUIPrefabEditor::GetEditorForPrefabIfValid(ULexUIPrefab* InPrefab)
@@ -334,18 +353,23 @@ bool FLexUIPrefabEditor::GetAnythingDirty()const
 
 namespace
 {
-	void SyncWidgetRegisterStateAfterTransaction(FLexUIPrefabEditor* InEditor)
+	void SyncWidgetRegisterStateAfterTransaction(ULexWidget* RootAgent, UWorld* EditorWorld)
 	{
-		InEditor->GetPreviewScene()->GetRootAgent()->EnsureChildrenAfterTransaction();
+		if (!IsValid(RootAgent) || !IsValid(EditorWorld))
+		{
+			return;
+		}
+
+		RootAgent->EnsureChildrenAfterTransaction();
 		TArray<ULexWidget*> ReachableWidgets;
-		ULexWidget::CollectChildrenWidgets(InEditor->GetPreviewScene()->GetRootAgent(), ReachableWidgets);
+		ULexWidget::CollectChildrenWidgets(RootAgent, ReachableWidgets);
 
 		TSet<ULexWidget*> AllWidgets;
 		ForEachObjectOfClass(ULexWidget::StaticClass(), [&](UObject* Object)
 		{
 			if (auto Widget = Cast<ULexWidget>(Object))
 			{
-				if (Widget->GetWorld() == InEditor->GetWorld())
+				if (Widget->GetWorld() == EditorWorld)
 				{
 					AllWidgets.Add(Widget);
 				}
@@ -428,22 +452,52 @@ void FLexUIPrefabEditor::UnregisterTabSpawners(const TSharedRef<FTabManager>& In
 
 void FLexUIPrefabEditor::PostUndo(bool bSuccess)
 {
-	SyncWidgetRegisterStateAfterTransaction(this);
-	ApplyDesignerState();
-	ULexUIManagerWorldSubsystem::RefreshAllUI();
-	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->EventOnOutlineChanged.Broadcast();
-	SelectedWidgets = ULexUISelection::GetInstance(GetWorld())->GetSelectedWidgets();
-	OnSelectionChanged.Broadcast();
-	OutlinerPtr->RequestRefresh();
+	HandlePostTransaction(bSuccess);
 }
 void FLexUIPrefabEditor::PostRedo(bool bSuccess)
 {
-	SyncWidgetRegisterStateAfterTransaction(this);
+	HandlePostTransaction(bSuccess);
+}
+
+void FLexUIPrefabEditor::HandlePostTransaction(bool bSuccess)
+{
+	if (!bSuccess || !IsValid(PrefabBeingEdited))
+	{
+		return;
+	}
+
+	FLexUIPrefabInstanceScene* PreviewScene = PrefabBeingEdited->GetPrefabInstanceScene();
+	if (!PreviewScene)
+	{
+		return;
+	}
+	UWorld* EditorWorld = PreviewScene->GetWorld();
+	ULexWidget* RootAgent = PreviewScene->GetRootAgent();
+	if (!IsValid(EditorWorld) || !IsValid(RootAgent))
+	{
+		return;
+	}
+
+	SyncWidgetRegisterStateAfterTransaction(RootAgent, EditorWorld);
 	ApplyDesignerState();
-	ULexUIManagerWorldSubsystem::RefreshAllUI();
-	SelectedWidgets = ULexUISelection::GetInstance(GetWorld())->GetSelectedWidgets();
+	ULexUIManagerWorldSubsystem::RefreshAllUI(EditorWorld);
+	if (ULexUIManagerWorldSubsystem* Manager = ULexUIManagerWorldSubsystem::GetInstance(EditorWorld))
+	{
+		Manager->MarkLexUIWidgetOutlinerChanged();
+	}
+	if (ULexUISelection* Selection = ULexUISelection::GetInstance(EditorWorld))
+	{
+		SelectedWidgets = Selection->GetSelectedWidgets();
+	}
+	else
+	{
+		SelectedWidgets.Reset();
+	}
 	OnSelectionChanged.Broadcast();
-	OutlinerPtr->RequestRefresh();
+	if (OutlinerPtr.IsValid())
+	{
+		OutlinerPtr->RequestRefresh();
+	}
 }
 
 void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const TSharedPtr<IToolkitHost >& InitToolkitHost, ULexUIPrefab* InPrefab)
@@ -471,7 +525,7 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 
 	PrefabRawDataViewer = SNew(SLexUIPrefabRawDataViewer, PrefabEditorPtr, PrefabBeingEdited);
 	
-	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->EventOnOutlineChanged.AddSPLambda(this, [=, this]()
+	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->OnLexUIWidgetOutlinerChanged.AddSPLambda(this, [=, this]()
 	{
 		if (OutlinerPtr.IsValid())
 		{
@@ -558,6 +612,11 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 		);
 
 	InitAssetEditor(Mode, InitToolkitHost, PrefabEditorAppName, StandaloneDefaultLayout, true, true, PrefabBeingEdited);
+	if (!bRegisteredForUndo && GEditor)
+	{
+		GEditor->RegisterForUndo(this);
+		bRegisteredForUndo = true;
+	}
 
 	// After opening a prefab, broadcast event to LexUIPrefabSequencerEditor
 	FLexUIEditorTools::OnEditingPrefabChanged.Broadcast(GetLoadedRootWidget());
@@ -1323,6 +1382,28 @@ void FLexUIPrefabEditor::WrapSelectedWidgets(ELexUIWrapType WrapType)
 	if (!GatherSharedParentSelection(GetSelectedWidgets(), 1, /*bRefuseLayoutParent*/false, Widgets, CommonParent)) return;
 	if (CommonParent == nullptr) return;
 
+	TSet<const ULexWidget*> SelectedSet;
+	for (ULexWidget* Widget : Widgets)
+	{
+		if (IsValid(Widget)) SelectedSet.Add(Widget);
+	}
+	int32 ValidChildCount = 0;
+	int32 ReplacedChildCount = 0;
+	for (const ULexWidget* Child : CommonParent->GetChildren())
+	{
+		if (!IsValid(Child)) continue;
+		++ValidChildCount;
+		ReplacedChildCount += SelectedSet.Contains(Child) ? 1 : 0;
+	}
+	const int32 ParentCapacity = CommonParent->GetMaxChildrenCapacity();
+	if (ReplacedChildCount == 0
+		|| (ParentCapacity != INDEX_NONE && ValidChildCount - ReplacedChildCount + 1 > ParentCapacity))
+	{
+		UE_LOG(LGUIEditor, Warning, TEXT("Widget '%s' cannot replace the selected children with a wrapper."),
+			*CommonParent->GetDisplayName());
+		return;
+	}
+
 	// Selection bound in the shared parent's frame, and the lowest sibling slot to drop the wrapper into.
 	double GroupLeft = TNumericLimits<double>::Max(), GroupRight = TNumericLimits<double>::Lowest();
 	double GroupBottom = TNumericLimits<double>::Max(), GroupTop = TNumericLimits<double>::Lowest();
@@ -1347,13 +1428,26 @@ void FLexUIPrefabEditor::WrapSelectedWidgets(ELexUIWrapType WrapType)
 	}
 	if (MinSiblingIndex == TNumericLimits<int32>::Max()) MinSiblingIndex = -1;
 
-	const FScopedTransaction Transaction(NSLOCTEXT("LexUIPrefabEditor", "WrapWidgets", "Wrap Widgets"));
-	if (auto Helper = GetPrefabHelperObject())
-	{
-		Helper->Modify();
-		Helper->SetAnythingDirty();
-	}
+	FScopedTransaction Transaction(NSLOCTEXT("LexUIPrefabEditor", "WrapWidgets", "Wrap Widgets"));
 	CommonParent->Modify();
+
+	struct FWidgetWrapState
+	{
+		ULexWidget* Widget = nullptr;
+		int32 SiblingIndex = INDEX_NONE;
+		float Width = 0.0f;
+		float Height = 0.0f;
+	};
+	TArray<FWidgetWrapState> WidgetStates;
+	WidgetStates.Reserve(Widgets.Num());
+	for (ULexWidget* Widget : Widgets)
+	{
+		WidgetStates.Add({ Widget, Widget->GetSiblingIndex(), Widget->GetWidth(), Widget->GetHeight() });
+	}
+	WidgetStates.Sort([](const FWidgetWrapState& A, const FWidgetWrapState& B)
+	{
+		return A.SiblingIndex < B.SiblingIndex;
+	});
 
 	// New container, inserted where the selection was, sized to enclose it.
 	FString WrapperName;
@@ -1368,7 +1462,43 @@ void FLexUIPrefabEditor::WrapSelectedWidgets(ELexUIWrapType WrapType)
 	Wrapper->Modify();//enroll the new widget in the transaction so undo/redo restores it (and re-registers it), like DeleteWidgets
 	Wrapper->SetDisplayName(FLexUIEditorTools::MakeUniqueWidgetDisplayName(CommonParent, WrapperName));
 	Wrapper->OnRegister();
-	Wrapper->SetParent(CommonParent, false, MinSiblingIndex);
+
+	auto RestoreOriginalHierarchy = [&]()
+	{
+		Wrapper->TrySetParent(nullptr, false);
+		for (const FWidgetWrapState& State : WidgetStates)
+		{
+			if (IsValid(State.Widget) && State.Widget->GetParent() != CommonParent)
+			{
+				State.Widget->SetParentFromPrefab(CommonParent, true, State.SiblingIndex);
+			}
+			if (IsValid(State.Widget))
+			{
+				State.Widget->SetWidth(State.Width);
+				State.Widget->SetHeight(State.Height);
+			}
+		}
+		Wrapper->DestroyWidget();
+		Transaction.Cancel();
+	};
+
+	// Capacity is evaluated against the final replacement. Temporarily detach the selected
+	// children so a full single-child parent can accept the wrapper itself.
+	for (int32 Index = WidgetStates.Num() - 1; Index >= 0; --Index)
+	{
+		FWidgetWrapState& State = WidgetStates[Index];
+		State.Widget->Modify();
+		if (!State.Widget->TrySetParent(nullptr, true))
+		{
+			RestoreOriginalHierarchy();
+			return;
+		}
+	}
+	if (!Wrapper->TrySetParent(CommonParent, false, MinSiblingIndex))
+	{
+		RestoreOriginalHierarchy();
+		return;
+	}
 	Wrapper->SetPivot(FVector2D(0.5f, 0.5f));
 	Wrapper->SetWidth(GroupRight - GroupLeft);
 	Wrapper->SetHeight(GroupTop - GroupBottom);
@@ -1383,18 +1513,20 @@ void FLexUIPrefabEditor::WrapSelectedWidgets(ELexUIWrapType WrapType)
 
 	// Reparent the selection under the wrapper, keeping world position so nothing visually jumps.
 	// A layout container (added next) then arranges them.
-	for (ULexWidget* W : Widgets)
+	for (const FWidgetWrapState& State : WidgetStates)
 	{
+		ULexWidget* W = State.Widget;
 		// keepWorld preserves the pivot transform but NOT the anchor-driven size: a stretch-anchored
 		// child (AnchorMin != AnchorMax) resolves its width/height against the parent, so moving it
 		// under the differently-sized wrapper would resize it. Snapshot the rendered extent and
 		// restore it after reparenting (a no-op for fixed-anchor children, whose size is parent-independent).
-		const float OldWidth = W->GetWidth();
-		const float OldHeight = W->GetHeight();
-		W->Modify();
-		W->SetParent(Wrapper, true);
-		W->SetWidth(OldWidth);
-		W->SetHeight(OldHeight);
+		if (!W->TrySetParent(Wrapper, true))
+		{
+			RestoreOriginalHierarchy();
+			return;
+		}
+		W->SetWidth(State.Width);
+		W->SetHeight(State.Height);
 	}
 
 	switch (WrapType)
@@ -1410,6 +1542,12 @@ void FLexUIPrefabEditor::WrapSelectedWidgets(ELexUIWrapType WrapType)
 		break;
 	default:
 		break;//plain widget container
+	}
+
+	if (auto Helper = GetPrefabHelperObject())
+	{
+		Helper->Modify();
+		Helper->SetAnythingDirty();
 	}
 
 	SelectWidgets(TSet<ULexWidget*>{ Wrapper }, false);
@@ -1523,6 +1661,7 @@ void FLexUIPrefabEditor::ValidatePrefabReferences(TArray<FLexUIPrefabCompilerIss
 	// above are always reported.
 	const bool bExpectCompleteGuidMap = !Helper->GetAnythingDirty();
 	TArray<ULexWidget*> Widgets;
+	TSet<const ULexWidget*> VisitedWidgets;
 	Widgets.Add(RootWidget);
 	for (int32 WidgetIndex = 0; WidgetIndex < Widgets.Num(); ++WidgetIndex)
 	{
@@ -1531,7 +1670,62 @@ void FLexUIPrefabEditor::ValidatePrefabReferences(TArray<FLexUIPrefabCompilerIss
 		{
 			continue;
 		}
-		Widgets.Append(Widget->GetChildren());
+		if (VisitedWidgets.Contains(Widget))
+		{
+			AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+				FString::Printf(TEXT("Widget hierarchy contains a duplicate or cyclic reference to '%s'."),
+					*Widget->GetDisplayName()), Widget, nullptr, true);
+			continue;
+		}
+		VisitedWidgets.Add(Widget);
+		for (ULexWidget* Child : Widget->GetChildren())
+		{
+			if (IsValid(Child))
+			{
+				if (Child->GetParent() != Widget)
+				{
+					AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+						FString::Printf(TEXT("Widget '%s' is listed under '%s' but points to a different parent."),
+							*Child->GetDisplayName(), *Widget->GetDisplayName()), Child, nullptr, true);
+				}
+				Widgets.Add(Child);
+			}
+		}
+		int32 ValidDirectChildCount = 0;
+		for (const ULexWidget* Child : Widget->GetChildren())
+		{
+			ValidDirectChildCount += IsValid(Child) ? 1 : 0;
+		}
+		const int32 ChildCapacity = Widget->GetMaxChildrenCapacity();
+		if (ChildCapacity != INDEX_NONE && ValidDirectChildCount > ChildCapacity)
+		{
+			AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+				FString::Printf(TEXT("Widget '%s' has %d direct children but its layout/behaviour capacity is %d."),
+					*Widget->GetDisplayName(), ValidDirectChildCount, ChildCapacity), Widget);
+		}
+
+		int32 ContentWidgetCount = 0;
+		for (ULexUIBehaviour* Component : Widget->GetAllComponents())
+		{
+			ContentWidgetCount += IsValid(Cast<ULexContentWidget>(Component)) ? 1 : 0;
+		}
+		const ULexLayoutContainer* LayoutContainer = Widget->GetLayoutContainer();
+		const bool bRequiresContentWidget = IsValid(LayoutContainer)
+			&& (LayoutContainer->IsA<ULexLayoutContainerSizeBox>()
+				|| LayoutContainer->IsA<ULexLayoutContainerScaleBox>()
+				|| LayoutContainer->IsA<ULexLayoutContainerSafeZone>());
+		if (bRequiresContentWidget && ContentWidgetCount == 0)
+		{
+			AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+				FString::Printf(TEXT("Widget '%s' uses a single-child layout but has no ContentWidget behaviour."),
+					*Widget->GetDisplayName()), Widget);
+		}
+		else if (ContentWidgetCount > 1)
+		{
+			AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+				FString::Printf(TEXT("Widget '%s' has %d ContentWidget behaviours; only one is allowed."),
+					*Widget->GetDisplayName(), ContentWidgetCount), Widget);
+		}
 		if (bExpectCompleteGuidMap && !FirstGuidByObject.Contains(Widget))
 		{
 			AddIssue(ELexUIPrefabCompilerSeverity::Warning,
@@ -1545,6 +1739,22 @@ void FLexUIPrefabEditor::ValidatePrefabReferences(TArray<FLexUIPrefabCompilerIss
 					FString::Printf(TEXT("Component '%s' on widget '%s' is missing from the helper GUID map."),
 						*Component->GetName(), *Widget->GetDisplayName()), Component, nullptr, true);
 			}
+		}
+	}
+	for (const TPair<FGuid, TObjectPtr<UObject>>& Pair : Helper->MapGuidToObject)
+	{
+		UObject* Object = Pair.Value.Get();
+		if (!IsValid(Object)) continue;
+		const ULexWidget* OwningWidget = Cast<ULexWidget>(Object);
+		if (!OwningWidget)
+		{
+			OwningWidget = Object->GetTypedOuter<ULexWidget>();
+		}
+		if (!IsValid(OwningWidget) || !VisitedWidgets.Contains(OwningWidget))
+		{
+			AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+				FString::Printf(TEXT("Helper GUID '%s' maps '%s', which is outside the prefab root hierarchy."),
+					*Pair.Key.ToString(), *Object->GetName()), Object, nullptr, true);
 		}
 	}
 
@@ -1646,10 +1856,15 @@ void FLexUIPrefabEditor::ValidatePrefabReferences(TArray<FLexUIPrefabCompilerIss
 		{
 			continue;
 		}
-		for (ULexUIBehaviour* Component : Widget->GetAllComponents())
+		const TArray<ULexUIBehaviour*>& Components = Widget->GetAllComponents();
+		for (int32 ComponentIndex = 0; ComponentIndex < Components.Num(); ++ComponentIndex)
 		{
+			ULexUIBehaviour* Component = Components[ComponentIndex];
 			if (!IsValid(Component))
 			{
+				AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+					FString::Printf(TEXT("Widget '%s' has a missing Behaviour component at slot %d."),
+						*Widget->GetDisplayName(), ComponentIndex), Widget);
 				continue;
 			}
 			for (TFieldIterator<FStructProperty> It(Component->GetClass()); It; ++It)
@@ -1661,7 +1876,7 @@ void FLexUIPrefabEditor::ValidatePrefabReferences(TArray<FLexUIPrefabCompilerIss
 				}
 				const FLexUIEventDelegate* Event = EventProperty->ContainerPtrToValuePtr<FLexUIEventDelegate>(Component);
 				TArray<FLexUIEventBindingValidationIssue> EventIssues;
-				Event->GetValidationIssues(EventIssues);
+				Event->GetValidationIssues(EventIssues, RootWidget);
 				for (const FLexUIEventBindingValidationIssue& EventIssue : EventIssues)
 				{
 					AddIssue(ELexUIPrefabCompilerSeverity::Warning,
@@ -1684,6 +1899,12 @@ void FLexUIPrefabEditor::ValidatePrefabReferences(TArray<FLexUIPrefabCompilerIss
 					}
 					TArray<FGuid> InvalidBindingIds;
 					Sequence->GetInvalidObjectBindingIds(RootWidget, InvalidBindingIds);
+					if (Sequence->HasObjectBindingCountMismatch())
+					{
+						AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+							FString::Printf(TEXT("Animation '%s' has mismatched object binding ID and reference arrays."),
+								*Sequence->GetDisplayNameString()), Component, Sequence, true);
+					}
 					for (const FGuid& BindingId : InvalidBindingIds)
 					{
 						FString BindingName = BindingId.ToString();
@@ -1903,13 +2124,12 @@ bool FLexUIPrefabEditor::ApplyPrefabChanges()
 		}
 	}
 
-	// UMG BindWidget-style pass, run just before the prefab is written: auto-wire any null
-	// Instance-Editable companion variable to the same-named descendant, and warn about
-	// bindings the serializer would silently drop (dangling / not Instance-Editable / ambiguous).
+	// UMG BindWidget-style pass, run just before the prefab is written. Validation runs below
+	// after auto-wiring so each remaining problem is reported exactly once.
 	if (ULexWidget* RootWidget = GetLoadedRootWidget())
 	{
-		TArray<FString> BoundDetails, Problems;
-		LexUIPrefabBehaviourUtils::AutoBindAndValidate(RootWidget, Prefab, BoundDetails, Problems, true);
+		TArray<FString> BoundDetails, IgnoredProblems;
+		LexUIPrefabBehaviourUtils::AutoBindAndValidate(RootWidget, Prefab, BoundDetails, IgnoredProblems, true);
 		if (BoundDetails.Num() > 0)
 		{
 			Helper->Modify();
@@ -1918,13 +2138,6 @@ bool FLexUIPrefabEditor::ApplyPrefabChanges()
 			Issue.Severity = ELexUIPrefabCompilerSeverity::Info;
 			Issue.Message = FString::Printf(TEXT("Auto-bound %d Behaviour variable(s): %s"),
 				BoundDetails.Num(), *FString::Join(BoundDetails, TEXT(", ")));
-			Issue.SourceObject = GetPrimaryBehaviour();
-		}
-		for (const FString& Problem : Problems)
-		{
-			FLexUIPrefabCompilerIssue& Issue = Issues.AddDefaulted_GetRef();
-			Issue.Severity = ELexUIPrefabCompilerSeverity::Warning;
-			Issue.Message = FString::Printf(TEXT("Behaviour variable: %s"), *Problem);
 			Issue.SourceObject = GetPrimaryBehaviour();
 		}
 	}
@@ -2722,6 +2935,12 @@ FReply FLexUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent&
 				{
 					auto MsgText = FText::Format(LOCTEXT("Error_RootCannotBeParentNode", "{0} cannot be parent actor of child prefab, please choose another actor."), FText::FromString(FLexUIPrefabInstanceScene::RootAgentActorName));
 					FMessageDialog::Open(EAppMsgType::Ok, MsgText);
+					return FReply::Unhandled();
+				}
+				if (!CurrentSelectedWidget->CanAcceptAdditionalChildren(PrefabsToLoad.Num()))
+				{
+					FMessageDialog::Open(EAppMsgType::Ok,
+						LOCTEXT("Error_ParentAtCapacity", "The target widget cannot accept the dropped prefab(s)."));
 					return FReply::Unhandled();
 				}
 			}

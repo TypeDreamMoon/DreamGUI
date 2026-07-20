@@ -816,7 +816,7 @@ void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, UWorld* InWorl
 
     FPropertyEditorModule& PropPlugin = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
     FDetailsViewArgs DetailsViewArgs;
-    DetailsViewArgs.bUpdatesFromSelection = true;
+	DetailsViewArgs.bUpdatesFromSelection = false;
     DetailsViewArgs.bLockable = true;
     DetailsViewArgs.NotifyHook = GUnrealEd;
     DetailsViewArgs.ViewIdentifier = FName(TEXT("LexUIPrefabEditor"));
@@ -1010,6 +1010,10 @@ void SLexUIPrefabEditorDetails::Construct(const FArguments& Args, UWorld* InWorl
 
 SLexUIPrefabEditorDetails::~SLexUIPrefabEditorDetails()
 {
+	if (TSharedPtr<FLexUIPrefabEditor> PrefabEditor = PrefabEditorPtr.Pin())
+	{
+		PrefabEditor->OnSelectionChanged.RemoveAll(this);
+	}
 	if (auto Selection = ULexUISelection::GetInstance(World.Get()))
 	{
 		Selection->OnSelectionChanged.RemoveAll(this);

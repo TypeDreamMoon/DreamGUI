@@ -196,6 +196,11 @@ ULexWidget* FLexUIEditorTools::CreateWidgetAndReturn(TFunction<ULexWidget*()> Ge
 	auto SelectedWidget = GetSelectedWidgetFunction();
 	if (SelectedWidget == nullptr)return nullptr;
 	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return nullptr;
+	if (!SelectedWidget->CanAcceptAdditionalChildren())
+	{
+		UE_LOG(LGUIEditor, Warning, TEXT("Widget '%s' cannot accept another child."), *SelectedWidget->GetDisplayName());
+		return nullptr;
+	}
 	const FScopedTransaction Transaction(LOCTEXT("CreateChildWidget_Transaction", "LexUI Child Widget"));
 	ULexUISelection::GetInstance(SelectedWidget->GetWorld())->Modify();
 	auto NewWidget = NewObject<ULexWidget>(SelectedWidget->GetOuter(), ULexWidget::StaticClass(), NAME_None, RF_Public | RF_Transactional);
@@ -238,6 +243,11 @@ ULexWidget* FLexUIEditorTools::CreateUIControlsAndReturn(TFunction<ULexWidget*()
 	auto SelectedWidget = GetSelectedWidgetFunction();
 	if (SelectedWidget == nullptr)return nullptr;
 	if (!IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return nullptr;
+	if (!SelectedWidget->CanAcceptAdditionalChildren())
+	{
+		UE_LOG(LGUIEditor, Warning, TEXT("Widget '%s' cannot accept another child prefab."), *SelectedWidget->GetDisplayName());
+		return nullptr;
+	}
 	const FScopedTransaction Transaction(LOCTEXT("CreateUIControl_Transaction", "LexUI Create UI Control"));
 	ULexUISelection::GetInstance(SelectedWidget->GetWorld())->Modify();
 	ULexWidget* CreatedWidget = nullptr;
@@ -333,6 +343,23 @@ void FLexUIEditorTools::DuplicateWidgets(TFunction<TArray<ULexWidget*>()> GetSel
 		return;
 	}
 	auto RootWidgetList = FLexUIEditorTools::GetRootWidgetListFromSelection(SelectedWidgets);
+	TMap<ULexWidget*, int32> AdditionalChildrenByParent;
+	for (ULexWidget* Widget : RootWidgetList)
+	{
+		if (IsValid(Widget) && IsValid(Widget->GetParent()))
+		{
+			++AdditionalChildrenByParent.FindOrAdd(Widget->GetParent());
+		}
+	}
+	for (const TPair<ULexWidget*, int32>& Pair : AdditionalChildrenByParent)
+	{
+		if (!Pair.Key->CanAcceptAdditionalChildren(Pair.Value))
+		{
+			UE_LOG(LGUIEditor, Warning, TEXT("Widget '%s' cannot accept %d duplicated child widget(s)."),
+				*Pair.Key->GetDisplayName(), Pair.Value);
+			return;
+		}
+	}
 	const FScopedTransaction Transaction(LOCTEXT("DuplicateWidget_Transaction", "LexUI Duplicate Widgets"));
 	auto World = SelectedWidgets[0]->GetWorld();
 	ULexUISelection::GetInstance(World)->Modify();
@@ -521,6 +548,17 @@ void FLexUIEditorTools::PasteWidgets(TFunction<TArray<ULexWidget*>()> GetSelecte
 	auto ParentWidget = SelectedWidgets[0];
 	auto PrefabHelperObject = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(ParentWidget);
 	if (PrefabHelperObject == nullptr)return;
+	int32 PasteCount = 0;
+	for (const TPair<FString, TWeakObjectPtr<ULexUIPrefab>>& Pair : CopiedWidgetPrefabMap)
+	{
+		PasteCount += Pair.Value.IsValid() ? 1 : 0;
+	}
+	if (!ParentWidget->CanAcceptAdditionalChildren(PasteCount))
+	{
+		UE_LOG(LGUIEditor, Warning, TEXT("Widget '%s' cannot accept %d pasted child widget(s)."),
+			*ParentWidget->GetDisplayName(), PasteCount);
+		return;
+	}
 
 	const FScopedTransaction Transaction(LOCTEXT("PasteWidget_Transaction", "LexUI Paste Widgets"));
 	auto World = ParentWidget->GetWorld();
@@ -601,6 +639,18 @@ bool FLexUIEditorTools::CanDuplicateWidget(TFunction<TArray<ULexWidget*>()> GetS
 {
 	auto SelectedWidgets = GetSelectedWidgetArrayFunction();
 	if (SelectedWidgets.Num() <= 0)return false;
+	TMap<ULexWidget*, int32> AdditionalChildrenByParent;
+	for (ULexWidget* Widget : GetRootWidgetListFromSelection(SelectedWidgets))
+	{
+		if (IsValid(Widget) && IsValid(Widget->GetParent()))
+		{
+			++AdditionalChildrenByParent.FindOrAdd(Widget->GetParent());
+		}
+	}
+	for (const TPair<ULexWidget*, int32>& Pair : AdditionalChildrenByParent)
+	{
+		if (!Pair.Key->CanAcceptAdditionalChildren(Pair.Value))return false;
+	}
 	return true;
 }
 bool FLexUIEditorTools::CanCopyWidget(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction)
@@ -615,6 +665,12 @@ bool FLexUIEditorTools::CanPasteWidget(TFunction<ULexWidget*()> GetSelectedWidge
 	auto SelectedWidget = GetSelectedWidgetFunction();
 	if (SelectedWidget == nullptr)return false;
 	if (!FLexUIEditorTools::IsWidgetCompatibleWithLexUIToolsMenu(SelectedWidget))return false;
+	int32 PasteCount = 0;
+	for (const TPair<FString, TWeakObjectPtr<ULexUIPrefab>>& Pair : CopiedWidgetPrefabMap)
+	{
+		PasteCount += Pair.Value.IsValid() ? 1 : 0;
+	}
+	if (!SelectedWidget->CanAcceptAdditionalChildren(PasteCount))return false;
 	return true;
 }
 bool FLexUIEditorTools::CanCutWidget(TFunction<TArray<ULexWidget*>()> GetSelectedWidgetArrayFunction)

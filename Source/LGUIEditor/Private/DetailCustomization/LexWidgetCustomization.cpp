@@ -1001,10 +1001,35 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	{
 		auto PanelSlot_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, PanelSlot));
 		DetailBuilder.HideProperty(PanelSlot_PH);
-		UObject* PanelSlotObject = nullptr;
-		PanelSlot_PH->GetValue(PanelSlotObject);
-		ULexLayoutContainer* ParentLayout = TargetScriptArray[0]->GetParent() ? TargetScriptArray[0]->GetParent()->GetLayoutContainer() : nullptr;
-		const bool bHasPanelSlot = IsValid(PanelSlotObject) && ParentLayout && ParentLayout->IsA<ULexPanelLayoutBase>();
+		TArray<UObject*> PanelSlotObjects;
+		ULexLayoutContainer* ParentLayout = nullptr;
+		UClass* ParentLayoutClass = nullptr;
+		bool bCompatiblePanelContext = true;
+		for (const TWeakObjectPtr<ULexWidget>& WeakWidget : TargetScriptArray)
+		{
+			ULexWidget* Widget = WeakWidget.Get();
+			ULexWidget* Parent = IsValid(Widget) ? Widget->GetParent() : nullptr;
+			ULexLayoutContainer* ThisParentLayout = IsValid(Parent) ? Parent->GetLayoutContainer() : nullptr;
+			ULexPanelSlot* Slot = IsValid(Widget) ? Widget->GetPanelSlot() : nullptr;
+			if (!IsValid(ThisParentLayout) || !ThisParentLayout->IsA<ULexPanelLayoutBase>() || !IsValid(Slot))
+			{
+				bCompatiblePanelContext = false;
+				break;
+			}
+			if (!ParentLayoutClass)
+			{
+				ParentLayout = ThisParentLayout;
+				ParentLayoutClass = ThisParentLayout->GetClass();
+			}
+			else if (ParentLayoutClass != ThisParentLayout->GetClass())
+			{
+				bCompatiblePanelContext = false;
+				break;
+			}
+			PanelSlotObjects.Add(Slot);
+		}
+		const bool bHasPanelSlot = bCompatiblePanelContext && !PanelSlotObjects.IsEmpty()
+			&& PanelSlotObjects.Num() == TargetScriptArray.Num();
 		FText SlotType = LOCTEXT("PanelSlotType", "Panel");
 		if (ParentLayout)
 		{
@@ -1028,7 +1053,7 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		PanelSlotCategory.SetIsEmpty(!bHasPanelSlot);
 		if (bHasPanelSlot)
 		{
-			FLexPanelSlotCustomization::AddSlotProperties(PanelSlotCategory, { PanelSlotObject }, ParentLayout);
+			FLexPanelSlotCustomization::AddSlotProperties(PanelSlotCategory, PanelSlotObjects, ParentLayout);
 		}
 	}
 

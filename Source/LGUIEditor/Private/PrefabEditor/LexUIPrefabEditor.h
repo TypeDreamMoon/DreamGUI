@@ -105,7 +105,9 @@ public:
 private:
 	// End of FAssetEditorToolkit
 	void SyncSelection();
+	void HandlePostTransaction(bool bSuccess);
 	bool bIsSelecting = false;
+	bool bRegisteredForUndo = false;
 	ELexUIPrefabApplyStatus LastApplyStatus = ELexUIPrefabApplyStatus::Unknown;
 	bool bLastApplySerializationSucceeded = false;
 	int32 LastApplyWarningCount = 0;

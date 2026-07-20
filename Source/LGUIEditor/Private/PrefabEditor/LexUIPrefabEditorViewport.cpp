@@ -100,6 +100,7 @@ FReply SLexUIPrefabEditorViewport::OnDragOver(const FGeometry& MyGeometry, const
 		{
 			if (TSharedPtr<FLexUIPrefabEditor> Editor = PrefabEditorPtr.Pin())Target = Editor->GetLoadedRootWidget();
 		}
+		if (Target && !Target->CanAcceptAdditionalChildren())Target = nullptr;
 		EditorViewportClient->SetPaletteDropPreview(Target);
 		return Target ? FReply::Handled() : FReply::Unhandled();
 	}
@@ -124,7 +125,7 @@ FReply SLexUIPrefabEditorViewport::OnDrop(const FGeometry& MyGeometry, const FDr
 		EditorViewportClient->ClearPaletteDropPreview();
 		if (Created)
 		{
-			ULexUIManagerWorldSubsystem::GetInstance(Editor->GetWorld())->EventOnOutlineChanged.Broadcast();
+			ULexUIManagerWorldSubsystem::GetInstance(Editor->GetWorld())->MarkLexUIWidgetOutlinerChanged();
 			EditorViewportClient->Invalidate();
 			return FReply::Handled();
 		}

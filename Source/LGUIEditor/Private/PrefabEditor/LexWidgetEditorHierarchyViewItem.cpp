@@ -139,6 +139,10 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 	TSharedPtr<FDragDropOperation> DragDropOp = DragDropEvent.GetOperation();
 	if (DragDropOp.IsValid() && !DragDropOp->IsOfType<FHierarchyLexWidgetDragDropOp>())
 	{
+		if (!IsValid(TargetItem) || !TargetItem->CanAcceptAdditionalChildren())
+		{
+			return TOptional<EItemDropZone>();
+		}
 		if (bIsDrop)
 		{
 			if (DragDropOp->IsOfType<FAssetDragDropOp>() && Manager.IsValid())
@@ -179,6 +183,17 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 			}
 
 			auto* NewParent = TargetItem;
+			TArray<ULexWidget*> ProposedChildren;
+			for (const FHierarchyLexWidgetDragDropOp::FItem& DraggedItem : HierarchyDragDropOp->DraggedWidgets)
+			{
+				if (IsValid(DraggedItem.Widget)) ProposedChildren.Add(DraggedItem.Widget);
+			}
+			if (!NewParent->CanAcceptChildren(ProposedChildren))
+			{
+				HierarchyDragDropOp->CurrentIconBrush = FAppStyle::GetBrush(TEXT("Graph.ConnectorFeedback.Error"));
+				HierarchyDragDropOp->CurrentHoverText = LOCTEXT("ParentAtCapacity", "This widget cannot accept the selected children.");
+				return TOptional<EItemDropZone>();
+			}
 
 			if (bIsDrop)
 			{
@@ -206,15 +221,14 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 						}
 					}
 
-					TemplateWidget->SetParent(nullptr, true);
-
-					if (Index.IsSet())
+					const int32 DesiredIndex = Index.IsSet()
+						? Index.GetValue()
+						: (TemplateWidget->GetParent() == NewParent ? NewParent->GetChildrenCount() - 1 : -1);
+					if (!TemplateWidget->TrySetParent(NewParent, true, DesiredIndex))
 					{
-						TemplateWidget->SetParent(NewParent, true, Index.GetValue());
-					}
-					else
-					{
-						TemplateWidget->SetParent(NewParent, true);
+						HierarchyDragDropOp->CurrentIconBrush = FAppStyle::GetBrush(TEXT("Graph.ConnectorFeedback.Error"));
+						HierarchyDragDropOp->CurrentHoverText = LOCTEXT("ReparentFailed", "Unable to move this widget to the target parent.");
+						return TOptional<EItemDropZone>();
 					}
 				}
 			}
@@ -547,7 +561,9 @@ TOptional<EItemDropZone> SLexWidgetEditorHierarchyViewItem::HandleCanAcceptDrop(
 	}
 	if (DragDropEvent.GetOperationAs<FLexUIPaletteDragDropOp>().IsValid())
 	{
-		return EItemDropZone::OntoItem;
+		return Widget.IsValid() && Widget->CanAcceptAdditionalChildren()
+			? TOptional<EItemDropZone>(EItemDropZone::OntoItem)
+			: TOptional<EItemDropZone>();
 	}
 
 	if (DragDropOp.IsValid() && DragDropOp->IsOfType<FHierarchyLexWidgetDragDropOp>())

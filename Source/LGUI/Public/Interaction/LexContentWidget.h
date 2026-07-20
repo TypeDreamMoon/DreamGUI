@@ -15,15 +15,20 @@ class LGUI_API ULexContentWidget : public ULexUIBehaviour
 	GENERATED_BODY()
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ContentWidget", meta = (AllowPrivateAccess = true))
+	UPROPERTY(VisibleAnywhere, Transient, BlueprintReadOnly, Category = "ContentWidget", meta = (AllowPrivateAccess = true))
 	TObjectPtr<ULexWidget> Content = nullptr;
 	virtual void OnRegister() override;
+	virtual void OnWidgetChildAttached(ULexWidget* Child) override;
+	virtual void OnWidgetChildDetached(ULexWidget* Child) override;
+	void SynchronizeContentFromChildren();
 
 public:
+	virtual int32 GetMaxWidgetChildren() const override { return 1; }
 	UFUNCTION(BlueprintPure, Category = "ContentWidget")
-	ULexWidget* GetContent()const { return Content; }
+	ULexWidget* GetContent()const;
 	UFUNCTION(BlueprintCallable, Category = "ContentWidget")
 	bool SetContent(ULexWidget* NewContent);
+	/** ContentWidget always removes its actual child; bDetach is retained for Blueprint compatibility. */
 	UFUNCTION(BlueprintCallable, Category = "ContentWidget")
 	void ClearContent(bool bDetach = true);
 	UFUNCTION(BlueprintPure, Category = "ContentWidget")
@@ -39,6 +44,9 @@ class LGUI_API ULexNamedSlotHost : public ULexUIBehaviour
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NamedSlots", meta = (AllowPrivateAccess = true))
 	TMap<FName, TObjectPtr<ULexWidget>> NamedSlots;
+	virtual void OnRegister() override;
+	virtual void OnWidgetChildDetached(ULexWidget* Child) override;
+	void SynchronizeNamedSlots();
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "NamedSlots")

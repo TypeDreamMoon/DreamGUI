@@ -471,9 +471,15 @@ void FLexUIControlRegistry::RegisterDefaults()
 	Register(MakePanel(TEXT("WrapBox"), ULexLayoutContainerWrapBox::StaticClass(), TEXT("ClassIcon.WrapBox")));
 	Register(MakePanel(TEXT("GridPanel"), ULexLayoutContainerGridPanel::StaticClass(), TEXT("ClassIcon.GridPanel")));
 	Register(MakePanel(TEXT("UniformGridPanel"), ULexLayoutContainerUniformGridPanel::StaticClass(), TEXT("ClassIcon.UniformGridPanel")));
-	Register(MakePanel(TEXT("SafeZone"), ULexLayoutContainerSafeZone::StaticClass(), TEXT("ClassIcon.SafeZone")));
-	Register(MakePanel(TEXT("ScaleBox"), ULexLayoutContainerScaleBox::StaticClass(), TEXT("ClassIcon.ScaleBox")));
-	Register(MakePanel(TEXT("SizeBox"), ULexLayoutContainerSizeBox::StaticClass(), TEXT("ClassIcon.Sizebox")));
+	FLexUIControlDescriptor SafeZone = MakePanel(TEXT("SafeZone"), ULexLayoutContainerSafeZone::StaticClass(), TEXT("ClassIcon.SafeZone"));
+	SafeZone.BehaviourClass = ULexContentWidget::StaticClass();
+	Register(SafeZone);
+	FLexUIControlDescriptor ScaleBox = MakePanel(TEXT("ScaleBox"), ULexLayoutContainerScaleBox::StaticClass(), TEXT("ClassIcon.ScaleBox"));
+	ScaleBox.BehaviourClass = ULexContentWidget::StaticClass();
+	Register(ScaleBox);
+	FLexUIControlDescriptor SizeBox = MakePanel(TEXT("SizeBox"), ULexLayoutContainerSizeBox::StaticClass(), TEXT("ClassIcon.Sizebox"));
+	SizeBox.BehaviourClass = ULexContentWidget::StaticClass();
+	Register(SizeBox);
 	Register(MakePanel(TEXT("WidgetSwitcher"), ULexLayoutContainerWidgetSwitcher::StaticClass(), TEXT("ClassIcon.WidgetSwitcher")));
 	Register(MakePanel(TEXT("FlexBox"), ULexLayoutContainerFlexBox::StaticClass(), TEXT("ClassIcon.WrapBox")));
 	Register(MakePanel(TEXT("LayoutScrollBox"), ULexLayoutContainerScrollBox::StaticClass(), TEXT("ClassIcon.Scrollbox"), TEXT("Scroll Box Layout")));
@@ -484,6 +490,7 @@ void FLexUIControlRegistry::RegisterDefaults()
 	Register(ScrollBox);
 	FLexUIControlDescriptor Border = MakePanel(TEXT("Border"), ULexLayoutContainerOverlay::StaticClass(), TEXT("ClassIcon.Border"));
 	Border.VisualClass = ULexImage::StaticClass();
+	Border.BehaviourClass = ULexContentWidget::StaticClass();
 	Border.NativeConfigure = ConfigureImage;
 	Register(Border);
 

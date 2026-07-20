@@ -7,6 +7,7 @@
 #include "Core/Components/LexLayout.h"
 #include "Core/Components/LexPanelLayouts.h"
 #include "Core/Components/LexWidget.h"
+#include "Interaction/LexContentWidget.h"
 #include "Kismet2/SClassPickerDialog.h"
 #include "Modules/ModuleManager.h"
 #include "PrefabSystem/LexUIPrefab.h"
@@ -131,7 +132,13 @@ UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent,
 		{
 			check(RootLayoutClass->IsChildOf(ULexLayoutContainer::StaticClass()));
 			check(!RootLayoutClass->HasAnyClassFlags(CLASS_Abstract));
-			HelperObject->LoadedRootWidget->CreateNewLayoutContainer(RootLayoutClass.Get());
+			if (HelperObject->LoadedRootWidget->CreateNewLayoutContainer(RootLayoutClass.Get())
+				&& (RootLayoutClass->IsChildOf(ULexLayoutContainerSizeBox::StaticClass())
+					|| RootLayoutClass->IsChildOf(ULexLayoutContainerScaleBox::StaticClass())
+					|| RootLayoutClass->IsChildOf(ULexLayoutContainerSafeZone::StaticClass())))
+			{
+				HelperObject->LoadedRootWidget->AddComponent<ULexContentWidget>();
+			}
 		}
 		HelperObject->SavePrefab();
 		return NewAsset;
