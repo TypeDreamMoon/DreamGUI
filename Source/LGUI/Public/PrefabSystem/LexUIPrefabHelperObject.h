@@ -47,7 +47,7 @@ public:
 	void Init(ULexUIPrefab* InPrefab, class FLexUIPrefabInstanceScene* InPrefabInstanceScene);
 	
 	ULexUIPrefab* GetSubPrefabAsset(ULexWidget* InSubPrefabWidget);
-	void SavePrefab();
+	bool SavePrefab();
 	void ClearLoadedPrefab();
 	bool IsWidgetBelongsToSubPrefab(const ULexWidget* InWidget);
 	/**

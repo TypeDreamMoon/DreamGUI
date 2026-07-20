@@ -257,7 +257,7 @@ ULexWidget* ULexUIPrefabHelperObject::GetSubPrefabRootWidget(ULexWidget* InSubPr
 	return nullptr;
 }
 
-void ULexUIPrefabHelperObject::SavePrefab()
+bool ULexUIPrefabHelperObject::SavePrefab()
 {
 	CleanupInvalidSubPrefab();
 	if (IsValid(PrefabAsset))
@@ -270,7 +270,7 @@ void ULexUIPrefabHelperObject::SavePrefab()
 				MapObjectToGuid.Add(KeyValue.Value, KeyValue.Key);
 			}
 		}
-		PrefabAsset->SavePrefab(LoadedRootWidget
+		const bool bSaveSucceeded = PrefabAsset->SavePrefab(LoadedRootWidget
 			, MapObjectToGuid, SubPrefabMap
 		);
 		MapGuidToObject.Empty();
@@ -278,13 +278,16 @@ void ULexUIPrefabHelperObject::SavePrefab()
 		{
 			MapGuidToObject.Add(KeyValue.Value, KeyValue.Key);
 		}
-		bAnythingDirty = false;
-		PrefabAsset->EnsureInstanceObjects();
+		if (bSaveSucceeded)
+		{
+			bAnythingDirty = false;
+			PrefabAsset->EnsureInstanceObjects();
+		}
+		return bSaveSucceeded;
 	}
-	else
-	{
-		UE_LOG(LGUI, Error, TEXT("PrefabAsset is null, please create a LGUIPrefab asset and assign to PrefabAsset"));
-	}
+
+	UE_LOG(LGUI, Error, TEXT("PrefabAsset is null, please create a LGUIPrefab asset and assign to PrefabAsset"));
+	return false;
 }
 
 ULexUIPrefab* ULexUIPrefabHelperObject::GetSubPrefabAsset(ULexWidget* InSubPrefabWidget)
