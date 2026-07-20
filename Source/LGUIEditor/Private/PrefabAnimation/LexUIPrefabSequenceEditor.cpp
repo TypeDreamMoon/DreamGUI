@@ -254,6 +254,34 @@ ULexUIPrefabSequence* SLexUIPrefabSequenceEditor::GetPrefabSequence() const
 	return GetSelectedAnimation();
 }
 
+void SLexUIPrefabSequenceEditor::SelectAnimation(ULexUIPrefabSequence* InAnimation)
+{
+	if (!AnimationListView.IsValid() || !IsValid(InAnimation))
+	{
+		return;
+	}
+	auto TrySelect = [this, InAnimation]()
+	{
+		for (const TSharedPtr<FWidgetAnimationListItem>& Item : Animations)
+		{
+			if (Item.IsValid() && Item->Animation == InAnimation)
+			{
+				AnimationListView->SetSelection(Item, ESelectInfo::Direct);
+				AnimationListView->RequestScrollIntoView(Item);
+				PrefabSequenceEditor->AssignSequence(InAnimation);
+				return true;
+			}
+		}
+		return false;
+	};
+	if (!TrySelect() && SearchBoxPtr.IsValid() && !SearchBoxPtr->GetText().IsEmpty())
+	{
+		SearchBoxPtr->SetText(FText::GetEmpty());
+		RefreshAnimationList();
+		TrySelect();
+	}
+}
+
 ULexUIPrefabSequenceComponent* SLexUIPrefabSequenceEditor::FindAnimationHost(ULexWidget* RootWidget) const
 {
 	if (!IsValid(RootWidget))
@@ -485,7 +513,74 @@ void SLexUIPrefabSequenceEditor::OnPostUndoRedo()
 void SLexUIPrefabSequenceEditor::OnEditingPrefabChanged(ULexWidget* RootWidget)
 {
 	WeakRootWidget = RootWidget;
-	AssignLexUIPrefabSequenceComponent(FindAnimationHost(RootWidget));
+	ULexUIPrefabSequenceComponent* AnimationHost = FindAnimationHost(RootWidget);
+
+	// Older editor builds could create the animation host on the transient preview root.
+	// Move its data into the serialized prefab hierarchy while that preview is still alive.
+	if (!IsValid(AnimationHost) && IsValid(RootWidget))
+	{
+		ULexWidget* PreviewRoot = RootWidget->GetParent();
+		ULexUIPrefabHelperObject* PrefabHelperObject =
+			ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(RootWidget);
+		if (IsValid(PreviewRoot)
+			&& IsValid(PrefabHelperObject)
+			&& !PrefabHelperObject->IsWidgetBelongsToThis(PreviewRoot))
+		{
+			ULexUIPrefabSequenceComponent* TemporaryHost =
+				PreviewRoot->GetComponent<ULexUIPrefabSequenceComponent>();
+			if (IsValid(TemporaryHost) && !TemporaryHost->GetSequenceArray().IsEmpty())
+			{
+				const FScopedTransaction Transaction(LOCTEXT(
+					"MigrateTemporaryAnimationHost",
+					"Move Animations Into Prefab"));
+				RootWidget->SetFlags(RF_Transactional);
+				RootWidget->Modify();
+				PreviewRoot->Modify();
+				if (UObject* WidgetOuter = RootWidget->GetOuter())
+				{
+					WidgetOuter->Modify();
+				}
+
+				AnimationHost = RootWidget->AddComponentByTemplate<ULexUIPrefabSequenceComponent>(TemporaryHost);
+				if (IsValid(AnimationHost))
+				{
+					bool bAnimationDataWasInstanced =
+						AnimationHost->GetSequenceArray().Num() == TemporaryHost->GetSequenceArray().Num();
+					for (ULexUIPrefabSequence* Sequence : AnimationHost->GetSequenceArray())
+					{
+						if (!IsValid(Sequence)
+							|| Sequence->GetOuter() != AnimationHost
+							|| !IsValid(Sequence->GetMovieScene())
+							|| Sequence->GetMovieScene()->GetOuter() != Sequence)
+						{
+							bAnimationDataWasInstanced = false;
+							break;
+						}
+					}
+
+					if (bAnimationDataWasInstanced)
+					{
+						for (ULexUIPrefabSequence* Sequence : AnimationHost->GetSequenceArray())
+						{
+							Sequence->FixEditorHelpers(RootWidget);
+						}
+						AnimationHost->SetFlags(RF_Transactional);
+						AnimationHost->Modify();
+						PreviewRoot->RemoveComponent(TemporaryHost);
+						FLexUIUtils::NotifyPropertyChanged(RootWidget, ULexWidget::GetPropertyName_Components());
+						MarkAnimationDataDirty();
+					}
+					else
+					{
+						RootWidget->RemoveComponent(AnimationHost);
+						AnimationHost = nullptr;
+					}
+				}
+			}
+		}
+	}
+
+	AssignLexUIPrefabSequenceComponent(AnimationHost);
 }
 
 TSharedPtr<ISequencer> SLexUIPrefabSequenceEditor::GetSequencer() const

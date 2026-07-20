@@ -26,6 +26,7 @@ public:
 
 	void AssignLexUIPrefabSequenceComponent(TWeakObjectPtr<ULexUIPrefabSequenceComponent> InSequenceComponent);
 	ULexUIPrefabSequence* GetPrefabSequence() const;
+	void SelectAnimation(ULexUIPrefabSequence* InAnimation);
 	ULexUIPrefabSequenceComponent* GetSequenceComponent()const { return WeakSequenceComponent.Get(); }
 	void RefreshAnimationList();
 	void MarkAnimationDataDirty();

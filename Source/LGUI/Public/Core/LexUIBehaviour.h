@@ -6,6 +6,7 @@
 #include "LexUIBehaviour.generated.h"
 
 class ULexWidget;
+class ULexUIPrefabSequenceComponent;
 class USceneComponent;
 
 /**
@@ -66,6 +67,8 @@ private:
 	void Call_OnDestroy();
 	UPROPERTY(Transient, Getter=GetWidget, DisplayName=Widget, BlueprintReadOnly, Category=LexUIBehaviour, meta=(AllowPrivateAccess=true))
 	mutable TObjectPtr<ULexWidget> CacheWidget = nullptr;
+	UPROPERTY(Transient, Getter=GetAnimationPlayer, DisplayName="Animation Player", BlueprintReadOnly, Category="LexUI|Animation", meta=(AllowPrivateAccess=true))
+	mutable TObjectPtr<ULexUIPrefabSequenceComponent> AnimationPlayer = nullptr;
 protected:
 
 	/**
@@ -139,6 +142,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "LexUIBehaviour")
 	ULexWidget* GetWidget() const;
+	/** Finds the prefab animation host on this widget or the nearest parent widget. */
+	UFUNCTION(BlueprintPure, Category = "LexUI|Animation")
+	ULexUIPrefabSequenceComponent* GetAnimationPlayer() const;
 	UFUNCTION(BlueprintCallable, Category = LGUI)
 	FString GetPathDisplayName()const;
 	

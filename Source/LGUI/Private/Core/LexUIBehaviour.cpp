@@ -5,6 +5,7 @@
 #include "LGUI.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexWidget.h"
+#include "PrefabSystem/PrefabAnimation/LexUIPrefabSequenceComponent.h"
 
 ULexUIBehaviour::ULexUIBehaviour()
 {
@@ -17,6 +18,7 @@ void ULexUIBehaviour::BeginPlay()
 	auto Widget = this->GetWidget();
 	check(Widget);
 	check (!this->bIsAwakeCalled);
+	GetAnimationPlayer();
 	this->Call_Awake();
 	if (Widget->GetWidgetActiveInHierarchy())
 	{
@@ -63,6 +65,7 @@ void ULexUIBehaviour::OnUnregister()
 		CacheWidget->GetInteractableChangedEvent().RemoveAll(this);
 		CacheWidget->GetRaycastableChangedEvent().RemoveAll(this);
 	}
+	AnimationPlayer = nullptr;
 }
 
 #if WITH_EDITOR
@@ -297,6 +300,36 @@ ULexWidget* ULexUIBehaviour::GetWidget() const
 		CacheWidget = this->GetTypedOuter<ULexWidget>();
 	}
 	return CacheWidget.Get();
+}
+
+ULexUIPrefabSequenceComponent* ULexUIBehaviour::GetAnimationPlayer() const
+{
+	ULexWidget* Widget = GetWidget();
+	if (!IsValid(Widget))
+	{
+		AnimationPlayer = nullptr;
+		return nullptr;
+	}
+
+	if (IsValid(AnimationPlayer))
+	{
+		ULexWidget* HostWidget = AnimationPlayer->GetWidget();
+		const bool bHostIsInHierarchy = IsValid(HostWidget)
+			&& (HostWidget == Widget || Widget->IsChildOf(HostWidget));
+		const bool bHostIsStillRegistered = bHostIsInHierarchy
+			&& HostWidget->GetComponent<ULexUIPrefabSequenceComponent>() == AnimationPlayer;
+		if (bHostIsStillRegistered)
+		{
+			return AnimationPlayer.Get();
+		}
+	}
+
+	AnimationPlayer = Widget->GetComponent<ULexUIPrefabSequenceComponent>();
+	if (!IsValid(AnimationPlayer))
+	{
+		AnimationPlayer = Widget->GetComponentInParent<ULexUIPrefabSequenceComponent>();
+	}
+	return AnimationPlayer.Get();
 }
 
 FString ULexUIBehaviour::GetPathDisplayName() const
