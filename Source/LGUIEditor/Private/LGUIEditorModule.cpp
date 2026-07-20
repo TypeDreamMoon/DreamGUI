@@ -14,6 +14,7 @@
 #include "LexUIEditorCommands.h"
 #include "LexUIEditorTools.h"
 #include "LexUIControlRegistry.h"
+#include "LexUIBehaviourEditorBackend.h"
 
 #include "Thumbnail/LexUIPrefabThumbnailRenderer.h"
 #include "Thumbnail/LexUISpriteThumbnailRenderer.h"
@@ -136,6 +137,7 @@ void FLGUIEditorModule::StartupModule()
 	FLGUIEditorStyle::Initialize();
 	FLGUIEditorStyle::ReloadTextures();
 	FLexUIControlRegistry::Get().InitializeDynamicDiscovery();
+	FLexUIBehaviourEditorBackendRegistry::Get().RegisterBuiltInBackends();
 
 	OnInitializeSequenceHandle = ULexUIPrefabSequence::OnInitializeSequence().AddStatic(FLGUIEditorModule::OnInitializeSequence);
 
@@ -354,6 +356,7 @@ void FLGUIEditorModule::ShutdownModule()
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
 	// we call this function before unloading the module.
 	FLexUIControlRegistry::Get().ShutdownDynamicDiscovery();
+	FLexUIBehaviourEditorBackendRegistry::Get().UnregisterBuiltInBackends();
 	FLGUIEditorStyle::Shutdown();
 
 	FLexUIEditorCommands::Unregister();

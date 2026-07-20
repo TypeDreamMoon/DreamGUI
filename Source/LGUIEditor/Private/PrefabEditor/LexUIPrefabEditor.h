@@ -17,9 +17,36 @@ class SLexUIPrefabEditorDetails;
 class SLexUIPrefabRawDataViewer;
 class AActor;
 class ULexUIPrefabHelperObject;
+class ULexUIBehaviour;
+class ILexUIBehaviourEditorBackend;
+class IMessageLogListing;
 class UToolMenu;
 struct FLexUISubPrefabData;
 namespace LexUIPrefabBehaviourUtils { struct FDiscoveredEvent; }
+
+enum class ELexUIPrefabApplyStatus : uint8
+{
+	Unknown,
+	Success,
+	Warning,
+	Error,
+};
+
+enum class ELexUIPrefabCompilerSeverity : uint8
+{
+	Info,
+	Warning,
+	Error,
+};
+
+struct FLexUIPrefabCompilerIssue
+{
+	ELexUIPrefabCompilerSeverity Severity = ELexUIPrefabCompilerSeverity::Warning;
+	FString Message;
+	TWeakObjectPtr<UObject> SourceObject;
+	TWeakObjectPtr<ULexUIPrefabSequence> Animation;
+	bool bOpenRawData = false;
+};
 
 /** UMG-toolbar-style alignment target for a multi-widget selection (LGUI UI plane is YZ: horizontal=Y, vertical=Z). */
 enum class ELexUIWidgetAlignType : uint8
@@ -78,8 +105,10 @@ private:
 	// End of FAssetEditorToolkit
 	void SyncSelection();
 	bool bIsSelecting = false;
-	bool bLastApplyHadProblems = false;
+	ELexUIPrefabApplyStatus LastApplyStatus = ELexUIPrefabApplyStatus::Unknown;
 	bool bLastApplySerializationSucceeded = false;
+	int32 LastApplyWarningCount = 0;
+	int32 LastApplyErrorCount = 0;
 	void OnApply();
 	bool ApplyPrefabChanges();
 	void SaveAppliedPrefabToDisk();
@@ -157,6 +186,7 @@ private:
 	TSharedPtr<class SLexUIPrefabPalette> PalettePtr;
 	TSharedPtr<SLexUIPrefabSequenceEditor> SequencerPtr;
 	TSharedPtr<SLexUIPrefabRawDataViewer> PrefabRawDataViewer;
+	TSharedPtr<IMessageLogListing> CompilerResultsListing;
 
 	TArray<TWeakObjectPtr<ULexWidget>> SelectedWidgets;
 private:
@@ -165,6 +195,7 @@ private:
 	//void ExtendMenu();
 	void ExtendToolbar();
 	void GenerateApplyOptionsMenu(UToolMenu* InMenu);
+	void GenerateBehaviourOptionsMenu(UToolMenu* InMenu);
 	void GenerateSaveOnApplyMenu(UToolMenu* InMenu);
 	void SetSaveOnApplyMode(int32 InMode);
 	bool IsSaveOnApplyMode(int32 InMode)const;
@@ -181,6 +212,12 @@ public:
 	 * next to the prefab asset if there is none yet.
 	 */
 	void CreateOrOpenBehaviourBlueprint();
+	void CreateAndAssignBehaviourBlueprint();
+	void PickBehaviourClass();
+	void RemovePrimaryBehaviour();
+	UClass* GetEffectiveBehaviourClass() const;
+	ULexUIBehaviour* GetPrimaryBehaviour() const;
+	bool CanAuthorBehaviour() const;
 	/**
 	 * UMG "Is Variable" counterpart: add a member variable to the companion behaviour blueprint
 	 * (created on demand) typed to InTarget's class, and bind it to InTarget. Serialized with
@@ -219,6 +256,16 @@ private:
 	void ApplyDesignerState();
 	/** Companion behaviour blueprint for this prefab, created + attached to the root widget on demand. Null on failure. */
 	class UBlueprint* GetOrCreateBehaviourBlueprint();
+	bool AssignBehaviourClass(UClass* InClass);
+	bool ReplacePrimaryBehaviour(ULexUIBehaviour* InOldBehaviour, ULexUIBehaviour* InNewBehaviour, bool bNewBehaviourWasCreated);
+	TSharedPtr<ILexUIBehaviourEditorBackend> GetBehaviourEditorBackend() const;
+	TArray<FString> PendingBehaviourWarnings;
+	void ValidatePrefabReferences(TArray<FLexUIPrefabCompilerIssue>& OutIssues) const;
+	void PublishCompilerResults(const FText& PageTitle, const TArray<FLexUIPrefabCompilerIssue>& Issues,
+		const FText& Summary, bool bAutoOpenOnProblems);
+	void RunInitialReferenceValidation();
+	void NavigateToCompilerObject(TWeakObjectPtr<UObject> InObject);
+	void NavigateToAnimation(TWeakObjectPtr<ULexUIPrefabSequence> InAnimation);
 public:
 
 	TSharedRef<SDockTab> SpawnTab_Viewport(const FSpawnTabArgs& Args);
@@ -227,6 +274,7 @@ public:
 	TSharedRef<SDockTab> SpawnTab_Palette(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_Sequencer(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_PrefabRawDataViewer(const FSpawnTabArgs& Args);
+	TSharedRef<SDockTab> SpawnTab_CompilerResults(const FSpawnTabArgs& Args);
 
 	bool IsFilteredActor(const AActor* Actor);
 	void OnOutlinerActorDoubleClick(AActor* Actor);

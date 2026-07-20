@@ -32,9 +32,9 @@ namespace LexUIPrefabBehaviourUtils
 	/** The blueprint asset behind FindBehaviourComponent, or null. */
 	UBlueprint* FindBehaviourBlueprint(ULexWidget* InRootWidget, ULexUIPrefab* InPrefab);
 	/**
-	 * Create "BP_<PrefabName>" (ULexUIBehaviour subclass) next to the prefab asset and attach
-	 * an instance to the root widget. Re-attaches an existing orphaned asset of that name
-	 * instead of minting a numbered duplicate. Returns null on failure.
+	 * Create "BP_<PrefabName>" (ULexUIBehaviour subclass) next to the prefab asset. Reuses an
+	 * existing orphaned asset of that name instead of minting a numbered duplicate. The prefab
+	 * editor assigns and attaches the resulting class transactionally. Returns null on failure.
 	 */
 	UBlueprint* CreateBehaviourBlueprint(ULexUIPrefab* InPrefab, ULexWidget* InRootWidget);
 
@@ -81,5 +81,6 @@ namespace LexUIPrefabBehaviourUtils
 	 * @param OutBoundDetails  "Variable -> Widget" per auto-bound property.
 	 * @param OutProblems      Dangling / ambiguous / not-savable descriptions.
 	 */
-	void AutoBindAndValidate(ULexWidget* InRootWidget, ULexUIPrefab* InPrefab, TArray<FString>& OutBoundDetails, TArray<FString>& OutProblems);
+	void AutoBindAndValidate(ULexWidget* InRootWidget, ULexUIPrefab* InPrefab, TArray<FString>& OutBoundDetails,
+		TArray<FString>& OutProblems, bool bPerformAutoBind = true);
 }

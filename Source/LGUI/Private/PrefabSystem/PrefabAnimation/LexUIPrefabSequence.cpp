@@ -164,6 +164,10 @@ bool ULexUIPrefabSequence::IsObjectReferencesGood(ULexWidget* InContextWidget)co
 {
 	return ObjectReferences.IsObjectReferencesGood(InContextWidget);
 }
+void ULexUIPrefabSequence::GetInvalidObjectBindingIds(ULexWidget* InContextWidget, TArray<FGuid>& OutBindingIds) const
+{
+	ObjectReferences.GetInvalidBindingIds(InContextWidget, OutBindingIds);
+}
 bool ULexUIPrefabSequence::IsEditorHelpersGood(ULexWidget* InContextWidget)const
 {
 	return ObjectReferences.IsEditorHelpersGood(InContextWidget);

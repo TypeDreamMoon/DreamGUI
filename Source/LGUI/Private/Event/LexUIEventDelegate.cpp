@@ -501,6 +501,78 @@ void FLexUIEventDelegateData::Execute(void* InParam, ELexUIEventDelegateParamete
 }
 
 #if WITH_EDITOR
+UObject* FLexUIEventDelegateData::ResolveTargetForValidation(FString& OutError) const
+{
+	OutError.Reset();
+	if (!IsValid(HelperWidget))
+	{
+		OutError = TEXT("target widget is missing");
+		return nullptr;
+	}
+	if (!IsValid(HelperClass))
+	{
+		OutError = TEXT("target class is missing");
+		return nullptr;
+	}
+
+	if (HelperClass == ULexWidget::StaticClass())
+	{
+		return HelperWidget;
+	}
+	if (HelperClass->IsChildOf(ULexVisual::StaticClass()))
+	{
+		UObject* Result = HelperWidget->GetVisual();
+		if (!IsValid(Result) || !Result->IsA(HelperClass))
+		{
+			OutError = FString::Printf(TEXT("widget '%s' no longer has visual '%s'"), *HelperWidget->GetDisplayName(), *HelperClass->GetName());
+			return nullptr;
+		}
+		return Result;
+	}
+	if (HelperClass->IsChildOf(ULexLayoutContainer::StaticClass()))
+	{
+		UObject* Result = HelperWidget->GetLayoutContainer();
+		if (!IsValid(Result) || !Result->IsA(HelperClass))
+		{
+			OutError = FString::Printf(TEXT("widget '%s' no longer has layout container '%s'"), *HelperWidget->GetDisplayName(), *HelperClass->GetName());
+			return nullptr;
+		}
+		return Result;
+	}
+	if (HelperClass->IsChildOf(ULexLayoutSelf::StaticClass()))
+	{
+		UObject* Result = HelperWidget->GetLayoutSelf();
+		if (!IsValid(Result) || !Result->IsA(HelperClass))
+		{
+			OutError = FString::Printf(TEXT("widget '%s' no longer has layout self '%s'"), *HelperWidget->GetDisplayName(), *HelperClass->GetName());
+			return nullptr;
+		}
+		return Result;
+	}
+
+	TArray<ULexUIBehaviour*> Components = HelperWidget->GetComponents(HelperClass);
+	if (!HelperComponentName.IsNone())
+	{
+		for (ULexUIBehaviour* Component : Components)
+		{
+			if (IsValid(Component) && Component->GetFName() == HelperComponentName)
+			{
+				return Component;
+			}
+		}
+		OutError = FString::Printf(TEXT("component '%s' of class '%s' is missing on widget '%s'"), *HelperComponentName.ToString(), *HelperClass->GetName(), *HelperWidget->GetDisplayName());
+		return nullptr;
+	}
+	if (Components.Num() == 1)
+	{
+		return Components[0];
+	}
+	OutError = Components.IsEmpty()
+		? FString::Printf(TEXT("component class '%s' is missing on widget '%s'"), *HelperClass->GetName(), *HelperWidget->GetDisplayName())
+		: FString::Printf(TEXT("component class '%s' is ambiguous on widget '%s'"), *HelperClass->GetName(), *HelperWidget->GetDisplayName());
+	return nullptr;
+}
+
 bool FLexUIEventDelegateData::CheckFunctionParameter()const
 {
 	if (ParamType == ELexUIEventDelegateParameterType::None)
@@ -508,7 +580,14 @@ bool FLexUIEventDelegateData::CheckFunctionParameter()const
 		return false;
 	}
 
-	auto TargetFunction = TargetObject->FindFunction(FunctionName);
+	FString ResolveError;
+	UObject* ResolvedTarget = ResolveTargetForValidation(ResolveError);
+	if (!IsValid(ResolvedTarget))
+	{
+		return false;
+	}
+
+	auto TargetFunction = ResolvedTarget->FindFunction(FunctionName);
 	if (!TargetFunction)
 	{
 		return false;
@@ -939,14 +1018,86 @@ void FLexUIEventDelegate::FireEvent(const FText& InParam)const
 #if WITH_EDITOR
 bool FLexUIEventDelegate::CheckFunctionParameter()const
 {
-	for (auto& item : EventList)
+	TArray<FLexUIEventBindingValidationIssue> Issues;
+	GetValidationIssues(Issues);
+	return Issues.IsEmpty();
+}
+void FLexUIEventDelegate::GetValidationIssues(TArray<FLexUIEventBindingValidationIssue>& OutIssues) const
+{
+	for (int32 Index = 0; Index < EventList.Num(); ++Index)
 	{
-		if (!item.CheckFunctionParameter())
+		const FLexUIEventDelegateData& Item = EventList[Index];
+		FLexUIEventBindingValidationIssue Issue;
+		Issue.BindingIndex = Index;
+		Issue.TargetWidget = Item.HelperWidget;
+		Issue.FunctionName = Item.FunctionName;
+
+		FString ResolveError;
+		UObject* Target = Item.ResolveTargetForValidation(ResolveError);
+		if (!IsValid(Target))
 		{
-			return false;
+			Issue.Message = MoveTemp(ResolveError);
+			OutIssues.Add(MoveTemp(Issue));
+			continue;
+		}
+		if (Item.ParamType == ELexUIEventDelegateParameterType::None)
+		{
+			Issue.Message = TEXT("binding parameter type is invalid");
+			OutIssues.Add(MoveTemp(Issue));
+			continue;
+		}
+		if (Item.FunctionName.IsNone())
+		{
+			Issue.Message = TEXT("target function is not set");
+			OutIssues.Add(MoveTemp(Issue));
+			continue;
+		}
+
+		UFunction* Function = Target->FindFunction(Item.FunctionName);
+		if (Function == nullptr)
+		{
+			Issue.Message = FString::Printf(TEXT("function '%s' no longer exists on '%s'"), *Item.FunctionName.ToString(), *Target->GetClass()->GetName());
+			OutIssues.Add(MoveTemp(Issue));
+			continue;
+		}
+		if (!ULexUIEventDelegateParameterHelper::IsStillSupported(Function, Item.ParamType))
+		{
+			Issue.Message = FString::Printf(TEXT("function '%s' has an incompatible signature"), *Item.FunctionName.ToString());
+			OutIssues.Add(MoveTemp(Issue));
+			continue;
+		}
+		if (Item.bUseNativeParameter && Item.ParamType != SupportParameterType)
+		{
+			const bool bConvertibleFloatPair =
+				(Item.ParamType == ELexUIEventDelegateParameterType::Float && SupportParameterType == ELexUIEventDelegateParameterType::Double)
+				|| (Item.ParamType == ELexUIEventDelegateParameterType::Double && SupportParameterType == ELexUIEventDelegateParameterType::Float);
+			if (!bConvertibleFloatPair)
+			{
+				Issue.Message = FString::Printf(TEXT("function '%s' expects a different native event parameter"), *Item.FunctionName.ToString());
+				OutIssues.Add(MoveTemp(Issue));
+			}
 		}
 	}
-	return true;
+}
+void FLexUIEventDelegate::ReplaceBindingTarget(ULexUIBehaviour* InOldTarget, ULexUIBehaviour* InNewTarget)
+{
+	if (!IsValid(InOldTarget) || !IsValid(InNewTarget))
+	{
+		return;
+	}
+	for (FLexUIEventDelegateData& Item : EventList)
+	{
+		FString ResolveError;
+		UObject* ResolvedTarget = Item.ResolveTargetForValidation(ResolveError);
+		if (Item.TargetObject == InOldTarget || ResolvedTarget == InOldTarget)
+		{
+			Item.TargetObject = InNewTarget;
+			Item.HelperWidget = InNewTarget->GetWidget();
+			Item.HelperClass = InNewTarget->GetClass();
+			Item.HelperComponentName = InNewTarget->GetFName();
+			Item.CacheFunction = nullptr;
+		}
+	}
 }
 bool FLexUIEventDelegate::HasFunctionBinding(ULexUIBehaviour* InTargetComponent, FName InFunctionName)const
 {

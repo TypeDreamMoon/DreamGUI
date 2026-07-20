@@ -118,6 +118,7 @@ struct FLexUIPrefabSequenceObjectReferenceMap
 
 #if WITH_EDITOR
 	bool IsObjectReferencesGood(ULexWidget* InContextWidget)const;
+	void GetInvalidBindingIds(ULexWidget* InContextWidget, TArray<FGuid>& OutBindingIds) const;
 	bool IsEditorHelpersGood(ULexWidget* InContextWidget)const;
 	//return true if anything changed
 	bool FixObjectReferences(ULexWidget* InContextWidget);

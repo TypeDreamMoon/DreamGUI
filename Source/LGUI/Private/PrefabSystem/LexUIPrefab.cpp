@@ -596,6 +596,7 @@ bool ULexUIPrefab::IsPrefabBelongsToThisSubPrefab(ULexUIPrefab* InPrefab, bool I
 
 void ULexUIPrefab::CopyDataTo(ULexUIPrefab* TargetPrefab)
 {
+	TargetPrefab->BehaviourClass = this->BehaviourClass;
 	TargetPrefab->ReferenceAssetList = this->ReferenceAssetList;
 	TargetPrefab->ReferenceClassList = this->ReferenceClassList;
 	TargetPrefab->ReferenceNameList = this->ReferenceNameList;

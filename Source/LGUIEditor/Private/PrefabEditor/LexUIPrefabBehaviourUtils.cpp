@@ -33,6 +33,22 @@ FString GetCompanionBlueprintName(ULexUIPrefab* InPrefab)
 ULexUIBehaviour* FindBehaviourComponent(ULexWidget* InRootWidget, ULexUIPrefab* InPrefab)
 {
 	if (InRootWidget == nullptr || InPrefab == nullptr)return nullptr;
+	if (UClass* ExplicitClass = InPrefab->GetBehaviourClass())
+	{
+		ULexUIBehaviour* Match = nullptr;
+		for (ULexUIBehaviour* Comp : InRootWidget->GetAllComponents())
+		{
+			if (IsValid(Comp) && Comp->GetClass() == ExplicitClass)
+			{
+				if (Match != nullptr)
+				{
+					return nullptr;
+				}
+				Match = Comp;
+			}
+		}
+		return Match;
+	}
 	// the companion is the blueprint ULexUIBehaviour on the root widget whose blueprint asset
 	// name matches the convention -- name-matching (not "first blueprint behaviour") so a
 	// reusable behaviour attached to the root isn't mistaken for the companion
@@ -85,11 +101,6 @@ UBlueprint* CreateBehaviourBlueprint(ULexUIPrefab* InPrefab, ULexWidget* InRootW
 		Package->MarkPackageDirty();
 	}
 
-	// attach the logic host to the root widget; LexUI's AddComponent registers it in the
-	// widget's Components array, which the prefab serializes
-	InRootWidget->Modify();
-	UClass* GeneratedClass = Blueprint->GeneratedClass;
-	InRootWidget->AddComponent(GeneratedClass);
 	return Blueprint;
 }
 
@@ -397,7 +408,8 @@ static ULexWidget* OwnerWidgetOfBoundValue(UObject* InValue)
 	return nullptr;
 }
 
-void AutoBindAndValidate(ULexWidget* InRootWidget, ULexUIPrefab* InPrefab, TArray<FString>& OutBoundDetails, TArray<FString>& OutProblems)
+void AutoBindAndValidate(ULexWidget* InRootWidget, ULexUIPrefab* InPrefab, TArray<FString>& OutBoundDetails,
+	TArray<FString>& OutProblems, bool bPerformAutoBind)
 {
 	OutBoundDetails.Reset();
 	OutProblems.Reset();
@@ -436,13 +448,13 @@ void AutoBindAndValidate(ULexWidget* InRootWidget, ULexUIPrefab* InPrefab, TArra
 
 		// Hard object references only. FObjectProperty excludes weak/soft/lazy refs, which LexUI
 		// does not serialize as hard references -- auto-binding one would report success yet come
-		// back null after save/load, the very failure this pass exists to catch. Native inherited
-		// properties are excluded too (GetOwnerClass is the declaring class); only companion-
-		// blueprint-declared variables qualify.
+		// back null after save/load, the very failure this pass exists to catch. Requiring CPF_Edit
+		// keeps this backend-neutral: Blueprint, native and AngelScript-declared instance properties
+		// all participate while private/transient runtime caches remain excluded.
 		for (TFieldIterator<FObjectProperty> It(ComponentClass); It; ++It)
 		{
 			FObjectProperty* Prop = *It;
-			if (Cast<UBlueprintGeneratedClass>(Prop->GetOwnerClass()) == nullptr) continue;
+			if (!Prop->HasAnyPropertyFlags(CPF_Edit) || Prop->HasAnyPropertyFlags(CPF_Transient)) continue;
 			UClass* TargetClass = Prop->PropertyClass;
 			if (TargetClass == nullptr) continue;
 			const bool bBindable =
@@ -513,9 +525,12 @@ void AutoBindAndValidate(ULexWidget* InRootWidget, ULexUIPrefab* InPrefab, TArra
 				continue;
 			}
 
-			Companion->Modify();
-			Prop->SetObjectPropertyValue_InContainer(Companion, NewValue);
-			OutBoundDetails.Add(FString::Printf(TEXT("%s -> %s (%s)"), *VarName, *MakeVariableNameForTarget(MatchWidget), *BoundKind));
+			if (bPerformAutoBind)
+			{
+				Companion->Modify();
+				Prop->SetObjectPropertyValue_InContainer(Companion, NewValue);
+				OutBoundDetails.Add(FString::Printf(TEXT("%s -> %s (%s)"), *VarName, *MakeVariableNameForTarget(MatchWidget), *BoundKind));
+			}
 		}
 	}
 }

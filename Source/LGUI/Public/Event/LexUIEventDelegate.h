@@ -6,6 +6,17 @@
 #include "LexUIEventDelegate.generated.h"
 
 class ULexUIBehaviour;
+class ULexWidget;
+
+#if WITH_EDITOR
+struct LGUI_API FLexUIEventBindingValidationIssue
+{
+	int32 BindingIndex = INDEX_NONE;
+	TWeakObjectPtr<ULexWidget> TargetWidget;
+	FName FunctionName;
+	FString Message;
+};
+#endif
 
 
 UENUM()
@@ -136,6 +147,7 @@ public:
 	 * @return	true- is compatible, false- not
 	 */
 	bool CheckFunctionParameter()const;
+	UObject* ResolveTargetForValidation(FString& OutError) const;
 #endif
 private:
 	bool CheckTargetObject();
@@ -202,6 +214,10 @@ public:
 	 * @return	true- is compatible, false- not
 	 */
 	bool CheckFunctionParameter()const;
+	/** Append one actionable issue for every invalid serialized binding. */
+	void GetValidationIssues(TArray<FLexUIEventBindingValidationIssue>& OutIssues) const;
+	/** Redirect bindings that target a behaviour instance after the prefab replaces its primary behaviour. */
+	void ReplaceBindingTarget(ULexUIBehaviour* InOldTarget, ULexUIBehaviour* InNewTarget);
 
 	/** This event's native parameter type (the value it fires with). */
 	ELexUIEventDelegateParameterType GetSupportParameterType()const { return SupportParameterType; }

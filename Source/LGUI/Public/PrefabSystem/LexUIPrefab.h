@@ -11,6 +11,7 @@
 #define LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE LexUIPrefabSystem
 
 class ULexWidget;
+class ULexUIBehaviour;
 
 enum class ELexUIPrefabVersion : uint16
 {
@@ -180,6 +181,18 @@ public:
 	ULexUIPrefab();
 	friend class FLexUIPrefabCustomization;
 	friend class ULexUIPrefabFactory;
+	friend class FLexUIPrefabEditor;
+
+private:
+	/** The single root behaviour used as this prefab's logic host. The component instance remains part of BinaryData. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Behaviour", meta = (AllowPrivateAccess = true))
+	TSubclassOf<ULexUIBehaviour> BehaviourClass;
+public:
+	UFUNCTION(BlueprintPure, Category = "LexUI|Prefab")
+	TSubclassOf<ULexUIBehaviour> GetBehaviourClass() const { return BehaviourClass; }
+#if WITH_EDITOR
+	void SetBehaviourClass(TSubclassOf<ULexUIBehaviour> InClass) { BehaviourClass = InClass; }
+#endif
 
 #if WITH_EDITORONLY_DATA
 private:

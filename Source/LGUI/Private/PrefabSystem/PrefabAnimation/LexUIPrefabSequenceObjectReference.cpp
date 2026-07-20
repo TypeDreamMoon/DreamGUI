@@ -254,6 +254,21 @@ bool FLexUIPrefabSequenceObjectReferenceMap::IsObjectReferencesGood(ULexWidget* 
 	}
 	return true;
 }
+void FLexUIPrefabSequenceObjectReferenceMap::GetInvalidBindingIds(ULexWidget* InContextWidget, TArray<FGuid>& OutBindingIds) const
+{
+	const int32 Count = FMath::Min(BindingIds.Num(), References.Num());
+	for (int32 Index = 0; Index < Count; ++Index)
+	{
+		for (const FLexUIPrefabSequenceObjectReference& Reference : References[Index].Array)
+		{
+			if (!Reference.IsObjectReferenceGood(InContextWidget))
+			{
+				OutBindingIds.AddUnique(BindingIds[Index]);
+				break;
+			}
+		}
+	}
+}
 bool FLexUIPrefabSequenceObjectReferenceMap::IsEditorHelpersGood(ULexWidget* InContextWidget)const
 {
 	for (auto& Reference : References)

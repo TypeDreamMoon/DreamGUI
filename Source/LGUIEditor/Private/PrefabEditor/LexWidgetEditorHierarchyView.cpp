@@ -486,17 +486,21 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 					{
 						MenuBuilder.AddSubMenu(
 							LOCTEXT("PromoteSubMenu", "Promote to Behaviour Variable"),
-							LOCTEXT("PromoteSubMenuTooltip", "Add a variable to this prefab's behaviour blueprint (created on demand) and bind it to the selected element. Saved with the prefab; no runtime lookup needed."),
+							LOCTEXT("PromoteSubMenuTooltip", "Ask the primary Behaviour's editor backend to declare and bind a reflected variable. Blueprint is supported built-in; external script systems can register a backend."),
 							FNewMenuDelegate::CreateLambda([WeakEditor = Manager, WeakWidget = TWeakObjectPtr<ULexWidget>(SelectedWidget)](FMenuBuilder& SubMenu)
 							{
-								auto AddEntry = [&SubMenu, WeakEditor](UObject* Target, const FText& Label)
-								{
+									auto AddEntry = [&SubMenu, WeakEditor](UObject* Target, const FText& Label)
+									{
 									SubMenu.AddMenuEntry(Label, FText::FromString(Target->GetClass()->GetPathName()),
 										FSlateIconFinder::FindIconForClass(Target->GetClass()),
 										FUIAction(FExecuteAction::CreateLambda([WeakEditor, WeakTarget = TWeakObjectPtr<UObject>(Target)]()
 										{
 											auto E = WeakEditor.Pin();
 											if (E.IsValid() && WeakTarget.IsValid())E->PromoteToBehaviourVariable(WeakTarget.Get());
+										}), FCanExecuteAction::CreateLambda([WeakEditor]()
+										{
+											auto E = WeakEditor.Pin();
+											return E.IsValid() && E->CanAuthorBehaviour();
 										})));
 								};
 								ULexWidget* W = WeakWidget.Get();
@@ -518,7 +522,7 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 
 						MenuBuilder.AddSubMenu(
 							LOCTEXT("AddEventSubMenu", "Add Event Handler"),
-							LOCTEXT("AddEventSubMenuTooltip", "Generate a handler on this prefab's behaviour blueprint (created on demand) and wire the selected element's event to it, then jump to it -- UMG's event \"+\"."),
+							LOCTEXT("AddEventSubMenuTooltip", "Ask the primary Behaviour's editor backend to generate and bind a compatible handler."),
 							FNewMenuDelegate::CreateLambda([WeakEditor = Manager, WeakWidget = TWeakObjectPtr<ULexWidget>(SelectedWidget)](FMenuBuilder& SubMenu)
 							{
 								ULexWidget* W = WeakWidget.Get();
@@ -535,6 +539,10 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 										FUIAction(FExecuteAction::CreateLambda([WeakEditor, Event]()
 										{
 											if (auto E = WeakEditor.Pin())E->AddEventHandler(Event);
+										}), FCanExecuteAction::CreateLambda([WeakEditor]()
+										{
+											auto E = WeakEditor.Pin();
+											return E.IsValid() && E->CanAuthorBehaviour();
 										})));
 								}
 							}));

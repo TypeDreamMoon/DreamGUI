@@ -74,7 +74,8 @@ public class LGUIEditor : ModuleRules
                 "PlacementMode",
                 "ClassViewer",
                 "ToolWidgets",
-				"AssetRegistry",
+                "AssetRegistry",
+                "MessageLog",
             }
             );
 			

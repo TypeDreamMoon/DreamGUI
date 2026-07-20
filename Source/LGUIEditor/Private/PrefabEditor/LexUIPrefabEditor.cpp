@@ -16,6 +16,10 @@
 #include "LexWidgetEditorHierarchyView.h"
 #include "SLexUIPrefabPalette.h"
 #include "LexUIPrefabBehaviourUtils.h"
+#include "LexUIBehaviourEditorBackend.h"
+#include "ClassViewerFilter.h"
+#include "ClassViewerModule.h"
+#include "Kismet2/SClassPickerDialog.h"
 #include "Subsystems/AssetEditorSubsystem.h"
 #include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
@@ -33,6 +37,17 @@
 #include "PrefabAnimation/LexUIPrefabSequenceEditor.h"
 #include "ScopedTransaction.h"
 #include "Misc/ConfigCacheIni.h"
+#include "Serialization/ArchiveReplaceObjectRef.h"
+#include "SourceCodeNavigation.h"
+#include "Event/LexUIEventDelegate.h"
+#include "Utils/LexUIUtils.h"
+#include "PrefabSystem/PrefabAnimation/LexUIPrefabSequenceComponent.h"
+#include "PrefabSystem/PrefabAnimation/LexUIPrefabSequence.h"
+#include "MessageLogModule.h"
+#include "IMessageLogListing.h"
+#include "Logging/TokenizedMessage.h"
+#include "MovieScene.h"
+#include "MovieScenePossessable.h"
 
 #define LOCTEXT_NAMESPACE "LexUIPrefabEditor"
 
@@ -49,6 +64,7 @@ struct FLexUIPrefabEditorTabs
 	static const FName PaletteID;
 	static const FName SequencerID;
 	static const FName PrefabRawDataViewerID;
+	static const FName CompilerResultsID;
 };
 
 const FName FLexUIPrefabEditorTabs::DetailsID(TEXT("Details"));
@@ -57,9 +73,33 @@ const FName FLexUIPrefabEditorTabs::OutlinerID(TEXT("Outliner"));
 const FName FLexUIPrefabEditorTabs::PaletteID(TEXT("Palette"));
 const FName FLexUIPrefabEditorTabs::SequencerID(TEXT("Sequencer"));
 const FName FLexUIPrefabEditorTabs::PrefabRawDataViewerID(TEXT("PrefabRawDataViewer"));
+const FName FLexUIPrefabEditorTabs::CompilerResultsID(TEXT("CompilerResults"));
 
 namespace LexUIPrefabEditorLocal
 {
+	class FBehaviourClassFilter final : public IClassViewerFilter
+	{
+	public:
+		virtual bool IsClassAllowed(const FClassViewerInitializationOptions& InInitOptions, const UClass* InClass,
+			TSharedRef<FClassViewerFilterFuncs> InFilterFuncs) override
+		{
+			return InClass != nullptr
+				&& InClass->IsChildOf(ULexUIBehaviour::StaticClass())
+				&& !InClass->HasAnyClassFlags(DisallowedFlags);
+		}
+
+		virtual bool IsUnloadedClassAllowed(const FClassViewerInitializationOptions& InInitOptions,
+			const TSharedRef<const IUnloadedBlueprintData> InUnloadedClassData,
+			TSharedRef<FClassViewerFilterFuncs> InFilterFuncs) override
+		{
+			return InUnloadedClassData->IsChildOf(ULexUIBehaviour::StaticClass())
+				&& !InUnloadedClassData->HasAnyClassFlags(DisallowedFlags);
+		}
+
+		static constexpr EClassFlags DisallowedFlags = CLASS_Abstract | CLASS_Deprecated
+			| CLASS_NewerVersionExists | CLASS_Hidden | CLASS_HideDropDown | CLASS_Transient;
+	};
+
 	enum ESaveOnApplyMode : int32
 	{
 		Never = 0,
@@ -365,6 +405,11 @@ void FLexUIPrefabEditor::RegisterTabSpawners(const TSharedRef<FTabManager>& InTa
 		.SetDisplayName(LOCTEXT("PrefabRawDataViewerTabLabel", "PrefabRawDataViewer"))
 		.SetGroup(WorkspaceMenuCategoryRef)
 		;
+
+	InTabManager->RegisterTabSpawner(FLexUIPrefabEditorTabs::CompilerResultsID, FOnSpawnTab::CreateSP(this, &FLexUIPrefabEditor::SpawnTab_CompilerResults))
+		.SetDisplayName(LOCTEXT("CompilerResultsTabLabel", "Compiler Results"))
+		.SetGroup(WorkspaceMenuCategoryRef)
+		.SetIcon(FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Message"));
 }
 void FLexUIPrefabEditor::UnregisterTabSpawners(const TSharedRef<FTabManager>& InTabManager)
 {
@@ -376,6 +421,7 @@ void FLexUIPrefabEditor::UnregisterTabSpawners(const TSharedRef<FTabManager>& In
 	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::PaletteID);
 	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::SequencerID);
 	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::PrefabRawDataViewerID);
+	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::CompilerResultsID);
 }
 
 void FLexUIPrefabEditor::PostUndo(bool bSuccess)
@@ -401,16 +447,15 @@ void FLexUIPrefabEditor::PostRedo(bool bSuccess)
 void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const TSharedPtr<IToolkitHost >& InitToolkitHost, ULexUIPrefab* InPrefab)
 {
 	PrefabBeingEdited = InPrefab;
-	if (PrefabBeingEdited->ReferenceClassList.Contains(nullptr))
-	{
-		auto MsgText = LOCTEXT("Error_PrefabMissingReferenceClass", "Prefab missing some class reference!");
-		FMessageDialog::Open(EAppMsgType::Ok, MsgText);
-	}
-	if (PrefabBeingEdited->ReferenceAssetList.Contains(nullptr))
-	{
-		auto MsgText = LOCTEXT("Error_PrefabMissingReferenceAsset", "Prefab missing some asset reference!");
-		FMessageDialog::Open(EAppMsgType::Ok, MsgText);
-	}
+	FMessageLogInitializationOptions LogOptions;
+	LogOptions.bShowFilters = true;
+	LogOptions.bShowPages = true;
+	LogOptions.bAllowClear = true;
+	LogOptions.bDiscardDuplicates = false;
+	LogOptions.bShowInLogWindow = false;
+	LogOptions.MaxPageCount = 50;
+	CompilerResultsListing = FModuleManager::LoadModuleChecked<FMessageLogModule>("MessageLog")
+		.CreateLogListing(*FString::Printf(TEXT("LexUIPrefabCompiler_%p"), this), LogOptions);
 
 	FLexUIPrefabEditorCommand::Register();
 
@@ -456,7 +501,7 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 	ExtendToolbar();
 
 	// Default layout
-	const TSharedRef<FTabManager::FLayout> StandaloneDefaultLayout = FTabManager::NewLayout("Standalone_LexUIPrefabEditor_Layout_v2")
+	const TSharedRef<FTabManager::FLayout> StandaloneDefaultLayout = FTabManager::NewLayout("Standalone_LexUIPrefabEditor_Layout_v3")
 		->AddArea
 		(
 			FTabManager::NewPrimaryArea()
@@ -498,6 +543,7 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 					->SetSizeCoefficient(0.3f)
 					->SetForegroundTab(FLexUIPrefabEditorTabs::SequencerID)
 					->AddTab(FLexUIPrefabEditorTabs::SequencerID, ETabState::OpenedTab)
+					->AddTab(FLexUIPrefabEditorTabs::CompilerResultsID, ETabState::OpenedTab)
 				)
 			)
 		);
@@ -505,7 +551,8 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 	InitAssetEditor(Mode, InitToolkitHost, PrefabEditorAppName, StandaloneDefaultLayout, true, true, PrefabBeingEdited);
 
 	// After opening a prefab, broadcast event to LexUIPrefabSequencerEditor
-	FLexUIEditorTools::OnEditingPrefabChanged.Broadcast(GetPreviewScene()->GetRootAgent());
+	FLexUIEditorTools::OnEditingPrefabChanged.Broadcast(GetLoadedRootWidget());
+	RunInitialReferenceValidation();
 }
 
 void FLexUIPrefabEditor::GetInitialViewSetting(FVector& OutLocation, FRotator& OutRotation, FVector& OutOrbitLocation, ELevelViewportType& OutViewType)
@@ -585,7 +632,15 @@ UBlueprint* FLexUIPrefabEditor::GetOrCreateBehaviourBlueprint()
 	ULexWidget* RootWidget = GetLoadedRootWidget();
 	if (RootWidget == nullptr || PrefabBeingEdited == nullptr)return nullptr;
 
-	UBlueprint* Blueprint = LexUIPrefabBehaviourUtils::FindBehaviourBlueprint(RootWidget, PrefabBeingEdited);
+	UBlueprint* Blueprint = nullptr;
+	if (ULexUIBehaviour* PrimaryBehaviour = GetPrimaryBehaviour())
+	{
+		Blueprint = Cast<UBlueprint>(PrimaryBehaviour->GetClass()->ClassGeneratedBy);
+		if (Blueprint == nullptr)
+		{
+			return nullptr;
+		}
+	}
 	if (Blueprint == nullptr)
 	{
 		Blueprint = LexUIPrefabBehaviourUtils::CreateBehaviourBlueprint(PrefabBeingEdited, RootWidget);
@@ -594,11 +649,9 @@ UBlueprint* FLexUIPrefabEditor::GetOrCreateBehaviourBlueprint()
 			FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_CreateBehaviourBlueprint", "Failed to create the behaviour blueprint."));
 			return nullptr;
 		}
-		// the attached script is part of the prefab now
-		if (auto Helper = GetPrefabHelperObject())
+		if (!AssignBehaviourClass(Blueprint->GeneratedClass))
 		{
-			Helper->Modify();
-			Helper->SetAnythingDirty();
+			return nullptr;
 		}
 		FNotificationInfo Info(FText::Format(LOCTEXT("BehaviourBlueprintCreated", "Created {0} and attached it to the prefab root widget.")
 			, FText::FromString(Blueprint->GetName())));
@@ -610,22 +663,363 @@ UBlueprint* FLexUIPrefabEditor::GetOrCreateBehaviourBlueprint()
 
 void FLexUIPrefabEditor::CreateOrOpenBehaviourBlueprint()
 {
-	if (UBlueprint* Blueprint = GetOrCreateBehaviourBlueprint())
+	UClass* BehaviourClass = GetEffectiveBehaviourClass();
+	if (BehaviourClass == nullptr)
 	{
-		GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(Blueprint);
+		CreateAndAssignBehaviourBlueprint();
+		return;
 	}
+	if (TSharedPtr<ILexUIBehaviourEditorBackend> Backend = GetBehaviourEditorBackend())
+	{
+		if (Backend->OpenClass(BehaviourClass))
+		{
+			return;
+		}
+	}
+	if (UObject* GeneratedBy = BehaviourClass->ClassGeneratedBy)
+	{
+		if (GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(GeneratedBy))
+		{
+			return;
+		}
+	}
+	FSourceCodeNavigation::NavigateToClass(BehaviourClass);
+}
+
+void FLexUIPrefabEditor::CreateAndAssignBehaviourBlueprint()
+{
+	ULexWidget* RootWidget = GetLoadedRootWidget();
+	if (!IsValid(RootWidget) || !IsValid(PrefabBeingEdited))return;
+
+	if (UBlueprint* ExistingBlueprint = Cast<UBlueprint>(GetEffectiveBehaviourClass() ? GetEffectiveBehaviourClass()->ClassGeneratedBy : nullptr))
+	{
+		GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(ExistingBlueprint);
+		return;
+	}
+
+	UBlueprint* Blueprint = LexUIPrefabBehaviourUtils::CreateBehaviourBlueprint(PrefabBeingEdited, RootWidget);
+	if (Blueprint == nullptr || !AssignBehaviourClass(Blueprint->GeneratedClass))
+	{
+		FNotificationInfo Info(LOCTEXT("Error_CreateAndAssignBehaviourBlueprint", "Failed to create or assign the behaviour Blueprint."));
+		Info.Image = FAppStyle::GetBrush(TEXT("Icons.ErrorWithColor"));
+		Info.ExpireDuration = 6.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+		return;
+	}
+	GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(Blueprint);
+}
+
+UClass* FLexUIPrefabEditor::GetEffectiveBehaviourClass() const
+{
+	if (!IsValid(PrefabBeingEdited))return nullptr;
+	if (UClass* ExplicitClass = PrefabBeingEdited->GetBehaviourClass())
+	{
+		return ExplicitClass;
+	}
+	if (ULexWidget* RootWidget = const_cast<FLexUIPrefabEditor*>(this)->GetLoadedRootWidget())
+	{
+		if (ULexUIBehaviour* LegacyCompanion = LexUIPrefabBehaviourUtils::FindBehaviourComponent(RootWidget, PrefabBeingEdited))
+		{
+			return LegacyCompanion->GetClass();
+		}
+	}
+	return nullptr;
+}
+
+ULexUIBehaviour* FLexUIPrefabEditor::GetPrimaryBehaviour() const
+{
+	ULexWidget* RootWidget = const_cast<FLexUIPrefabEditor*>(this)->GetLoadedRootWidget();
+	UClass* BehaviourClass = GetEffectiveBehaviourClass();
+	if (!IsValid(RootWidget) || !IsValid(BehaviourClass))return nullptr;
+
+	ULexUIBehaviour* Match = nullptr;
+	for (ULexUIBehaviour* Component : RootWidget->GetAllComponents())
+	{
+		if (IsValid(Component) && Component->GetClass() == BehaviourClass)
+		{
+			if (Match != nullptr)return nullptr;
+			Match = Component;
+		}
+	}
+	return Match;
+}
+
+TSharedPtr<ILexUIBehaviourEditorBackend> FLexUIPrefabEditor::GetBehaviourEditorBackend() const
+{
+	return FLexUIBehaviourEditorBackendRegistry::Get().FindBackend(GetEffectiveBehaviourClass());
+}
+
+bool FLexUIPrefabEditor::CanAuthorBehaviour() const
+{
+	UClass* BehaviourClass = GetEffectiveBehaviourClass();
+	if (BehaviourClass == nullptr)return true;
+	TSharedPtr<ILexUIBehaviourEditorBackend> Backend = GetBehaviourEditorBackend();
+	return Backend.IsValid()
+		&& (Backend->CanPromoteToVariable(BehaviourClass) || Backend->CanAddEventHandler(BehaviourClass));
+}
+
+void FLexUIPrefabEditor::PickBehaviourClass()
+{
+	FClassViewerInitializationOptions Options;
+	Options.DisplayMode = EClassViewerDisplayMode::TreeView;
+	Options.Mode = EClassViewerMode::ClassPicker;
+	Options.bShowNoneOption = true;
+	Options.bShowUnloadedBlueprints = true;
+	Options.bEnableClassDynamicLoading = true;
+	Options.NameTypeToDisplay = EClassViewerNameTypeToDisplay::Dynamic;
+	Options.InitiallySelectedClass = GetEffectiveBehaviourClass();
+	Options.ClassFilters.Add(MakeShared<LexUIPrefabEditorLocal::FBehaviourClassFilter>());
+
+	UClass* ChosenClass = GetEffectiveBehaviourClass();
+	if (!SClassPickerDialog::PickClass(LOCTEXT("PickPrefabBehaviourClass", "Pick Root Behaviour for LexUI Prefab"),
+		Options, ChosenClass, ULexUIBehaviour::StaticClass()))
+	{
+		return;
+	}
+	if (ChosenClass == nullptr)
+	{
+		RemovePrimaryBehaviour();
+	}
+	else
+	{
+		AssignBehaviourClass(ChosenClass);
+	}
+}
+
+bool FLexUIPrefabEditor::AssignBehaviourClass(UClass* InClass)
+{
+	ULexWidget* RootWidget = GetLoadedRootWidget();
+	ULexUIPrefabHelperObject* Helper = GetPrefabHelperObject();
+	if (!IsValid(InClass) || !InClass->IsChildOf(ULexUIBehaviour::StaticClass())
+		|| InClass->HasAnyClassFlags(LexUIPrefabEditorLocal::FBehaviourClassFilter::DisallowedFlags)
+		|| !IsValid(RootWidget) || !IsValid(Helper))
+	{
+		return false;
+	}
+
+	TArray<ULexUIBehaviour*> MatchingComponents;
+	for (ULexUIBehaviour* Component : RootWidget->GetAllComponents())
+	{
+		if (IsValid(Component) && Component->GetClass() == InClass)
+		{
+			MatchingComponents.Add(Component);
+		}
+	}
+	if (MatchingComponents.Num() > 1)
+	{
+		PendingBehaviourWarnings.Add(FString::Printf(TEXT("Root widget has %d instances of primary behaviour class '%s'. Remove duplicates before assigning it."), MatchingComponents.Num(), *InClass->GetName()));
+		FNotificationInfo Info(FText::FromString(PendingBehaviourWarnings.Last()));
+		Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
+		Info.ExpireDuration = 7.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+		return false;
+	}
+
+	const FScopedTransaction Transaction(LOCTEXT("AssignPrefabBehaviourTransaction", "Assign Prefab Behaviour"));
+	PrefabBeingEdited->Modify();
+	Helper->Modify();
+	RootWidget->SetFlags(RF_Transactional);
+	RootWidget->Modify();
+
+	ULexUIBehaviour* OldBehaviour = GetPrimaryBehaviour();
+	ULexUIBehaviour* NewBehaviour = MatchingComponents.IsEmpty() ? nullptr : MatchingComponents[0];
+	const bool bCreatedNew = NewBehaviour == nullptr;
+	if (bCreatedNew)
+	{
+		NewBehaviour = RootWidget->AddComponent(InClass);
+		if (!IsValid(NewBehaviour))return false;
+		NewBehaviour->SetFlags(RF_Transactional);
+		NewBehaviour->Modify();
+	}
+
+	if (IsValid(OldBehaviour) && OldBehaviour != NewBehaviour)
+	{
+		if (!ReplacePrimaryBehaviour(OldBehaviour, NewBehaviour, bCreatedNew))return false;
+	}
+
+	PrefabBeingEdited->SetBehaviourClass(InClass);
+	Helper->SetAnythingDirty();
+	FLexUIUtils::NotifyPropertyChanged(RootWidget, ULexWidget::GetPropertyName_Components());
+	SelectWidgets(TSet<ULexWidget*>{RootWidget}, false);
+	return true;
+}
+
+bool FLexUIPrefabEditor::ReplacePrimaryBehaviour(ULexUIBehaviour* InOldBehaviour, ULexUIBehaviour* InNewBehaviour, bool bNewBehaviourWasCreated)
+{
+	ULexWidget* RootWidget = GetLoadedRootWidget();
+	ULexUIPrefabHelperObject* Helper = GetPrefabHelperObject();
+	if (!IsValid(InOldBehaviour) || !IsValid(InNewBehaviour) || !IsValid(RootWidget) || !IsValid(Helper))return false;
+
+	const int32 OldIndex = RootWidget->GetAllComponents().IndexOfByKey(InOldBehaviour);
+	const FName OldName = InOldBehaviour->GetFName();
+	InOldBehaviour->SetFlags(RF_Transactional);
+	InOldBehaviour->Modify();
+	InNewBehaviour->SetFlags(RF_Transactional);
+	InNewBehaviour->Modify();
+
+	if (bNewBehaviourWasCreated)
+	{
+		UObject* OldDefault = InOldBehaviour->GetClass()->GetDefaultObject();
+		for (TFieldIterator<FProperty> It(InOldBehaviour->GetClass()); It; ++It)
+		{
+			FProperty* OldProperty = *It;
+			if (!OldProperty->HasAnyPropertyFlags(CPF_Edit)
+				|| OldProperty->HasAnyPropertyFlags(CPF_Transient | CPF_DisableEditOnInstance))continue;
+
+			FProperty* NewProperty = FindFProperty<FProperty>(InNewBehaviour->GetClass(), OldProperty->GetFName());
+			if (NewProperty != nullptr && OldProperty->SameType(NewProperty))
+			{
+				void* Destination = NewProperty->ContainerPtrToValuePtr<void>(InNewBehaviour);
+				const void* Source = OldProperty->ContainerPtrToValuePtr<void>(InOldBehaviour);
+				NewProperty->CopyCompleteValue(Destination, Source);
+			}
+			else if (OldDefault != nullptr && !OldProperty->Identical_InContainer(InOldBehaviour, OldDefault))
+			{
+				PendingBehaviourWarnings.Add(FString::Printf(TEXT("Behaviour property '%s.%s' could not be migrated to '%s'."),
+					*InOldBehaviour->GetClass()->GetName(), *OldProperty->GetName(), *InNewBehaviour->GetClass()->GetName()));
+			}
+		}
+	}
+
+	TArray<ULexWidget*> WidgetStack;
+	WidgetStack.Add(RootWidget);
+	while (!WidgetStack.IsEmpty())
+	{
+		ULexWidget* Widget = WidgetStack.Pop();
+		for (ULexUIBehaviour* Component : Widget->GetAllComponents())
+		{
+			if (!IsValid(Component))continue;
+			for (TFieldIterator<FStructProperty> It(Component->GetClass()); It; ++It)
+			{
+				FStructProperty* StructProperty = *It;
+				if (StructProperty->Struct == FLexUIEventDelegate::StaticStruct())
+				{
+					FLexUIEventDelegate* Event = StructProperty->ContainerPtrToValuePtr<FLexUIEventDelegate>(Component);
+					Event->ReplaceBindingTarget(InOldBehaviour, InNewBehaviour);
+				}
+			}
+		}
+		WidgetStack.Append(Widget->GetChildren());
+	}
+
+	TMap<UObject*, UObject*> ReplacementMap;
+	ReplacementMap.Add(InOldBehaviour, InNewBehaviour);
+	for (const TPair<FGuid, TObjectPtr<UObject>>& Pair : Helper->MapGuidToObject)
+	{
+		UObject* Object = Pair.Value.Get();
+		if (IsValid(Object) && Object != RootWidget && Object != InOldBehaviour)
+		{
+			FArchiveReplaceObjectRef<UObject> ReplaceReferences(Object, ReplacementMap,
+				EArchiveReplaceObjectFlags::IgnoreOuterRef | EArchiveReplaceObjectFlags::IgnoreArchetypeRef);
+		}
+	}
+
+	FGuid OldGuid;
+	FGuid NewGuid;
+	for (const TPair<FGuid, TObjectPtr<UObject>>& Pair : Helper->MapGuidToObject)
+	{
+		if (Pair.Value == InOldBehaviour)OldGuid = Pair.Key;
+		if (Pair.Value == InNewBehaviour)NewGuid = Pair.Key;
+	}
+	if (OldGuid.IsValid())
+	{
+		if (NewGuid.IsValid() && NewGuid != OldGuid)Helper->MapGuidToObject.Remove(NewGuid);
+		Helper->MapGuidToObject.FindOrAdd(OldGuid) = InNewBehaviour;
+	}
+
+	RootWidget->RemoveComponent(InOldBehaviour);
+	if (bNewBehaviourWasCreated)
+	{
+		const FName ReplacedName = MakeUniqueObjectName(RootWidget, InOldBehaviour->GetClass(),
+			FName(*(OldName.ToString() + TEXT("_Replaced"))));
+		InOldBehaviour->Rename(*ReplacedName.ToString(), RootWidget, REN_DontCreateRedirectors);
+		InNewBehaviour->Rename(*OldName.ToString(), RootWidget, REN_DontCreateRedirectors);
+		// Refresh serialized event helper names after preserving the old component object name.
+		TArray<ULexWidget*> RefreshStack;
+		RefreshStack.Add(RootWidget);
+		while (!RefreshStack.IsEmpty())
+		{
+			ULexWidget* Widget = RefreshStack.Pop();
+			for (ULexUIBehaviour* Component : Widget->GetAllComponents())
+			{
+				if (!IsValid(Component))continue;
+				for (TFieldIterator<FStructProperty> It(Component->GetClass()); It; ++It)
+				{
+					FStructProperty* StructProperty = *It;
+					if (StructProperty->Struct == FLexUIEventDelegate::StaticStruct())
+					{
+						StructProperty->ContainerPtrToValuePtr<FLexUIEventDelegate>(Component)->ReplaceBindingTarget(InNewBehaviour, InNewBehaviour);
+					}
+				}
+			}
+			RefreshStack.Append(Widget->GetChildren());
+		}
+	}
+	if (OldIndex != INDEX_NONE)RootWidget->MoveComponentToIndex(InNewBehaviour, OldIndex);
+	return true;
+}
+
+void FLexUIPrefabEditor::RemovePrimaryBehaviour()
+{
+	ULexUIBehaviour* OldBehaviour = GetPrimaryBehaviour();
+	if (!IsValid(PrefabBeingEdited))return;
+	if (FMessageDialog::Open(EAppMsgType::YesNo,
+		LOCTEXT("RemovePrimaryBehaviourConfirm", "Remove the primary Behaviour component from this prefab? The script asset will not be deleted.")) != EAppReturnType::Yes)
+	{
+		return;
+	}
+
+	const FScopedTransaction Transaction(LOCTEXT("RemovePrefabBehaviourTransaction", "Remove Prefab Behaviour"));
+	PrefabBeingEdited->Modify();
+	if (IsValid(OldBehaviour))
+	{
+		ULexWidget* RootWidget = GetLoadedRootWidget();
+		ULexUIPrefabHelperObject* Helper = GetPrefabHelperObject();
+		if (!IsValid(RootWidget) || !IsValid(Helper))
+		{
+			return;
+		}
+		RootWidget->Modify();
+		OldBehaviour->Modify();
+		TMap<UObject*, UObject*> ReplacementMap;
+		ReplacementMap.Add(OldBehaviour, nullptr);
+		for (const TPair<FGuid, TObjectPtr<UObject>>& Pair : Helper->MapGuidToObject)
+		{
+			UObject* Object = Pair.Value.Get();
+			if (IsValid(Object) && Object != RootWidget && Object != OldBehaviour)
+			{
+				FArchiveReplaceObjectRef<UObject> ReplaceReferences(Object, ReplacementMap,
+					EArchiveReplaceObjectFlags::IgnoreOuterRef | EArchiveReplaceObjectFlags::IgnoreArchetypeRef);
+			}
+		}
+		for (auto It = Helper->MapGuidToObject.CreateIterator(); It; ++It)
+		{
+			if (It.Value() == OldBehaviour)It.RemoveCurrent();
+		}
+		RootWidget->RemoveComponent(OldBehaviour);
+		FLexUIUtils::NotifyPropertyChanged(RootWidget, ULexWidget::GetPropertyName_Components());
+		Helper->SetAnythingDirty();
+	}
+	PrefabBeingEdited->SetBehaviourClass(nullptr);
 }
 
 void FLexUIPrefabEditor::PromoteToBehaviourVariable(UObject* InTarget)
 {
 	if (InTarget == nullptr)return;
-	UBlueprint* Blueprint = GetOrCreateBehaviourBlueprint();
-	if (Blueprint == nullptr)return;
-	ULexWidget* RootWidget = GetLoadedRootWidget();
+	if (GetEffectiveBehaviourClass() == nullptr && GetOrCreateBehaviourBlueprint() == nullptr)return;
+	ULexUIBehaviour* PrimaryBehaviour = GetPrimaryBehaviour();
+	TSharedPtr<ILexUIBehaviourEditorBackend> Backend = GetBehaviourEditorBackend();
+	if (!IsValid(PrimaryBehaviour) || !Backend.IsValid() || !Backend->CanPromoteToVariable(PrimaryBehaviour->GetClass()))
+	{
+		FNotificationInfo Info(LOCTEXT("BehaviourBackendCannotPromote", "This Behaviour backend cannot generate variables. Declare the reflected property in the script, then Apply to auto-bind it."));
+		Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
+		Info.ExpireDuration = 7.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+		return;
+	}
 
-	const FString VariableName = LexUIPrefabBehaviourUtils::MakeVariableNameForTarget(InTarget);
 	FText Message;
-	const bool bSuccess = LexUIPrefabBehaviourUtils::PromoteToVariable(Blueprint, RootWidget, InTarget, VariableName, Message);
+	const bool bSuccess = Backend->PromoteToVariable(GetLoadedRootWidget(), PrimaryBehaviour, InTarget, Message);
 	if (bSuccess)
 	{
 		if (auto Helper = GetPrefabHelperObject())
@@ -645,12 +1039,21 @@ void FLexUIPrefabEditor::PromoteToBehaviourVariable(UObject* InTarget)
 
 void FLexUIPrefabEditor::AddEventHandler(const LexUIPrefabBehaviourUtils::FDiscoveredEvent& InEvent)
 {
-	UBlueprint* Blueprint = GetOrCreateBehaviourBlueprint();
-	if (Blueprint == nullptr)return;
-	ULexWidget* RootWidget = GetLoadedRootWidget();
+	if (GetEffectiveBehaviourClass() == nullptr && GetOrCreateBehaviourBlueprint() == nullptr)return;
+	ULexUIBehaviour* PrimaryBehaviour = GetPrimaryBehaviour();
+	TSharedPtr<ILexUIBehaviourEditorBackend> Backend = GetBehaviourEditorBackend();
+	if (!IsValid(PrimaryBehaviour) || !Backend.IsValid() || !Backend->CanAddEventHandler(PrimaryBehaviour->GetClass()))
+	{
+		FNotificationInfo Info(LOCTEXT("BehaviourBackendCannotAddEvent", "This Behaviour backend cannot generate event handlers. Declare a compatible reflected function in the script and bind it in Details."));
+		Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
+		Info.ExpireDuration = 7.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+		return;
+	}
 
 	FText Message;
-	const FName HandlerName = LexUIPrefabBehaviourUtils::AddEventHandler(Blueprint, RootWidget, InEvent, Message);
+	const FName HandlerName = Backend->AddEventHandler(GetLoadedRootWidget(), PrimaryBehaviour,
+		InEvent.Component, InEvent.EventProperty ? InEvent.EventProperty->GetFName() : NAME_None, Message);
 	const bool bSuccess = !HandlerName.IsNone();
 	if (bSuccess)
 	{
@@ -670,14 +1073,17 @@ void FLexUIPrefabEditor::AddEventHandler(const LexUIPrefabBehaviourUtils::FDisco
 
 	if (bSuccess)
 	{
-		// open the blueprint at the generated function graph, UMG "+" style
-		if (UEdGraph* FuncGraph = FindObject<UEdGraph>(Blueprint, *HandlerName.ToString()))
+		if (UBlueprint* Blueprint = Cast<UBlueprint>(PrimaryBehaviour->GetClass()->ClassGeneratedBy))
 		{
-			FKismetEditorUtilities::BringKismetToFocusAttentionOnObject(FuncGraph, false);
-		}
-		else
-		{
-			GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(Blueprint);
+			// open the blueprint at the generated function graph, UMG "+" style
+			if (UEdGraph* FuncGraph = FindObject<UEdGraph>(Blueprint, *HandlerName.ToString()))
+			{
+				FKismetEditorUtilities::BringKismetToFocusAttentionOnObject(FuncGraph, false);
+			}
+			else
+			{
+				GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(Blueprint);
+			}
 		}
 	}
 }
@@ -1001,30 +1407,448 @@ void FLexUIPrefabEditor::SaveEditorState()
 	}
 }
 
+void FLexUIPrefabEditor::ValidatePrefabReferences(TArray<FLexUIPrefabCompilerIssue>& OutIssues) const
+{
+	auto AddIssue = [&OutIssues](ELexUIPrefabCompilerSeverity Severity, FString Message,
+		UObject* SourceObject = nullptr, ULexUIPrefabSequence* Animation = nullptr, bool bOpenRawData = false)
+	{
+		FLexUIPrefabCompilerIssue& Issue = OutIssues.AddDefaulted_GetRef();
+		Issue.Severity = Severity;
+		Issue.Message = MoveTemp(Message);
+		Issue.SourceObject = SourceObject;
+		Issue.Animation = Animation;
+		Issue.bOpenRawData = bOpenRawData;
+	};
+
+	ULexUIPrefab* Prefab = PrefabBeingEdited;
+	ULexUIPrefabHelperObject* Helper = IsValid(Prefab) ? Prefab->GetPrefabHelperObject() : nullptr;
+	ULexWidget* RootWidget = IsValid(Helper) ? Helper->LoadedRootWidget.Get() : nullptr;
+	if (!IsValid(Prefab) || !IsValid(Helper) || !IsValid(RootWidget))
+	{
+		AddIssue(ELexUIPrefabCompilerSeverity::Error, TEXT("The prefab, helper, or loaded root widget is unavailable."));
+		return;
+	}
+
+	for (int32 Index = 0; Index < Prefab->ReferenceAssetList.Num(); ++Index)
+	{
+		if (!IsValid(Prefab->ReferenceAssetList[Index]))
+		{
+			AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+				FString::Printf(TEXT("ReferenceAssetList[%d] is missing."), Index), nullptr, nullptr, true);
+		}
+	}
+	for (int32 Index = 0; Index < Prefab->ReferenceClassList.Num(); ++Index)
+	{
+		if (!IsValid(Prefab->ReferenceClassList[Index]))
+		{
+			AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+				FString::Printf(TEXT("ReferenceClassList[%d] is missing."), Index), nullptr, nullptr, true);
+		}
+	}
+
+	TMap<UObject*, FGuid> FirstGuidByObject;
+	for (const TPair<FGuid, TObjectPtr<UObject>>& Pair : Helper->MapGuidToObject)
+	{
+		if (!Pair.Key.IsValid())
+		{
+			AddIssue(ELexUIPrefabCompilerSeverity::Warning, TEXT("Helper GUID map contains an invalid GUID."), Pair.Value.Get(), nullptr, true);
+		}
+		if (!IsValid(Pair.Value))
+		{
+			AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+				FString::Printf(TEXT("Helper GUID '%s' points to a missing object."), *Pair.Key.ToString()), nullptr, nullptr, true);
+			continue;
+		}
+		if (const FGuid* ExistingGuid = FirstGuidByObject.Find(Pair.Value.Get()))
+		{
+			AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+				FString::Printf(TEXT("Object '%s' is mapped by multiple helper GUIDs (%s and %s)."),
+					*Pair.Value->GetName(), *ExistingGuid->ToString(), *Pair.Key.ToString()), Pair.Value.Get(), nullptr, true);
+		}
+		else
+		{
+			FirstGuidByObject.Add(Pair.Value.Get(), Pair.Key);
+		}
+	}
+
+	// Newly added widgets/components receive stable GUIDs during SavePrefab. Missing entries are
+	// only suspicious while the helper is otherwise clean; invalid or duplicate existing entries
+	// above are always reported.
+	const bool bExpectCompleteGuidMap = !Helper->GetAnythingDirty();
+	TArray<ULexWidget*> Widgets;
+	Widgets.Add(RootWidget);
+	for (int32 WidgetIndex = 0; WidgetIndex < Widgets.Num(); ++WidgetIndex)
+	{
+		ULexWidget* Widget = Widgets[WidgetIndex];
+		if (!IsValid(Widget))
+		{
+			continue;
+		}
+		Widgets.Append(Widget->GetChildren());
+		if (bExpectCompleteGuidMap && !FirstGuidByObject.Contains(Widget))
+		{
+			AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+				FString::Printf(TEXT("Widget '%s' is missing from the helper GUID map."), *Widget->GetDisplayName()), Widget, nullptr, true);
+		}
+		for (ULexUIBehaviour* Component : Widget->GetAllComponents())
+		{
+			if (bExpectCompleteGuidMap && IsValid(Component) && !FirstGuidByObject.Contains(Component))
+			{
+				AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+					FString::Printf(TEXT("Component '%s' on widget '%s' is missing from the helper GUID map."),
+						*Component->GetName(), *Widget->GetDisplayName()), Component, nullptr, true);
+			}
+		}
+	}
+
+	UClass* BehaviourClass = GetEffectiveBehaviourClass();
+	if (BehaviourClass != nullptr)
+	{
+		if (!BehaviourClass->IsChildOf(ULexUIBehaviour::StaticClass())
+			|| BehaviourClass->HasAnyClassFlags(LexUIPrefabEditorLocal::FBehaviourClassFilter::DisallowedFlags))
+		{
+			AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+				FString::Printf(TEXT("BehaviourClass '%s' is not a concrete usable ULexUIBehaviour class."), *BehaviourClass->GetName()),
+				Prefab);
+		}
+		int32 MatchCount = 0;
+		ULexUIBehaviour* Match = nullptr;
+		for (ULexUIBehaviour* Component : RootWidget->GetAllComponents())
+		{
+			if (IsValid(Component) && Component->GetClass() == BehaviourClass)
+			{
+				++MatchCount;
+				Match = Component;
+			}
+		}
+		if (MatchCount == 0)
+		{
+			AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+				FString::Printf(TEXT("Primary Behaviour '%s' is not attached to the prefab root widget."), *BehaviourClass->GetName()), RootWidget);
+		}
+		else if (MatchCount > 1)
+		{
+			AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+				FString::Printf(TEXT("Primary Behaviour '%s' is ambiguous: %d root components use this class."),
+					*BehaviourClass->GetName(), MatchCount), RootWidget);
+		}
+		else if (bExpectCompleteGuidMap && !FirstGuidByObject.Contains(Match))
+		{
+			AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+				FString::Printf(TEXT("Primary Behaviour '%s' has no helper GUID mapping."), *Match->GetName()), Match, nullptr, true);
+		}
+	}
+
+	for (const TPair<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& Pair : Helper->SubPrefabMap)
+	{
+		ULexWidget* SubPrefabRoot = Pair.Key.Get();
+		const FLexUISubPrefabData& Data = Pair.Value;
+		if (!IsValid(SubPrefabRoot))
+		{
+			AddIssue(ELexUIPrefabCompilerSeverity::Warning, TEXT("SubPrefabMap contains a missing root widget."), nullptr, nullptr, true);
+		}
+		if (!IsValid(Data.PrefabAsset))
+		{
+			AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+				FString::Printf(TEXT("Sub-prefab root '%s' has no valid prefab asset."), *GetNameSafe(SubPrefabRoot)), SubPrefabRoot);
+		}
+		for (const TPair<FGuid, TObjectPtr<UObject>>& ObjectPair : Data.MapGuidToObject)
+		{
+			if (!ObjectPair.Key.IsValid() || !IsValid(ObjectPair.Value))
+			{
+				AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+					FString::Printf(TEXT("Sub-prefab '%s' contains an invalid object mapping for GUID '%s'."),
+						*GetNameSafe(Data.PrefabAsset), *ObjectPair.Key.ToString()), SubPrefabRoot, nullptr, true);
+			}
+		}
+		for (const FLexUIPrefabOverrideParameterData& Override : Data.ObjectOverrideParameterArray)
+		{
+			UObject* OverrideObject = Override.Object.Get();
+			if (!IsValid(OverrideObject))
+			{
+				AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+					FString::Printf(TEXT("Sub-prefab '%s' contains an override for a missing object."), *GetNameSafe(Data.PrefabAsset)),
+					SubPrefabRoot, nullptr, true);
+				continue;
+			}
+			for (FName PropertyName : Override.MemberPropertyNames)
+			{
+				FProperty* Property = FindFProperty<FProperty>(OverrideObject->GetClass(), PropertyName);
+				if (Property == nullptr)
+				{
+					AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+						FString::Printf(TEXT("Override property '%s.%s' no longer exists."),
+							*OverrideObject->GetClass()->GetName(), *PropertyName.ToString()), OverrideObject, nullptr, true);
+				}
+			}
+		}
+	}
+
+	TArray<FString> IgnoredBindings;
+	TArray<FString> BindingProblems;
+	LexUIPrefabBehaviourUtils::AutoBindAndValidate(RootWidget, Prefab, IgnoredBindings, BindingProblems, false);
+	for (const FString& Problem : BindingProblems)
+	{
+		AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+			FString::Printf(TEXT("Behaviour variable: %s"), *Problem), GetPrimaryBehaviour());
+	}
+
+	for (ULexWidget* Widget : Widgets)
+	{
+		if (!IsValid(Widget))
+		{
+			continue;
+		}
+		for (ULexUIBehaviour* Component : Widget->GetAllComponents())
+		{
+			if (!IsValid(Component))
+			{
+				continue;
+			}
+			for (TFieldIterator<FStructProperty> It(Component->GetClass()); It; ++It)
+			{
+				FStructProperty* EventProperty = *It;
+				if (EventProperty->Struct != FLexUIEventDelegate::StaticStruct())
+				{
+					continue;
+				}
+				const FLexUIEventDelegate* Event = EventProperty->ContainerPtrToValuePtr<FLexUIEventDelegate>(Component);
+				TArray<FLexUIEventBindingValidationIssue> EventIssues;
+				Event->GetValidationIssues(EventIssues);
+				for (const FLexUIEventBindingValidationIssue& EventIssue : EventIssues)
+				{
+					AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+						FString::Printf(TEXT("%s.%s binding %d: %s"), *Component->GetName(), *EventProperty->GetName(),
+							EventIssue.BindingIndex + 1, *EventIssue.Message), Component);
+				}
+			}
+
+			if (ULexUIPrefabSequenceComponent* SequenceComponent = Cast<ULexUIPrefabSequenceComponent>(Component))
+			{
+				const TArray<ULexUIPrefabSequence*>& Sequences = SequenceComponent->GetSequenceArray();
+				for (int32 SequenceIndex = 0; SequenceIndex < Sequences.Num(); ++SequenceIndex)
+				{
+					ULexUIPrefabSequence* Sequence = Sequences[SequenceIndex];
+					if (!IsValid(Sequence))
+					{
+						AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+							FString::Printf(TEXT("Animation slot %d on '%s' is missing."), SequenceIndex, *Component->GetName()), Component);
+						continue;
+					}
+					TArray<FGuid> InvalidBindingIds;
+					Sequence->GetInvalidObjectBindingIds(RootWidget, InvalidBindingIds);
+					for (const FGuid& BindingId : InvalidBindingIds)
+					{
+						FString BindingName = BindingId.ToString();
+						if (UMovieScene* MovieScene = Sequence->GetMovieScene())
+						{
+							if (FMovieScenePossessable* Possessable = MovieScene->FindPossessable(BindingId))
+							{
+								BindingName = Possessable->GetName();
+							}
+						}
+						AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+							FString::Printf(TEXT("Animation '%s' references deleted object binding '%s'."),
+								*Sequence->GetDisplayNameString(), *BindingName), Component, Sequence);
+					}
+				}
+			}
+		}
+	}
+}
+
+void FLexUIPrefabEditor::PublishCompilerResults(const FText& PageTitle,
+	const TArray<FLexUIPrefabCompilerIssue>& Issues, const FText& Summary, bool bAutoOpenOnProblems)
+{
+	if (!CompilerResultsListing.IsValid())
+	{
+		return;
+	}
+	CompilerResultsListing->NewPage(PageTitle);
+	const TWeakPtr<FLexUIPrefabEditor> WeakThis = SharedThis(this);
+	bool bHasProblems = false;
+	for (const FLexUIPrefabCompilerIssue& Issue : Issues)
+	{
+		EMessageSeverity::Type Severity = EMessageSeverity::Info;
+		if (Issue.Severity == ELexUIPrefabCompilerSeverity::Warning)
+		{
+			Severity = EMessageSeverity::Warning;
+			bHasProblems = true;
+		}
+		else if (Issue.Severity == ELexUIPrefabCompilerSeverity::Error)
+		{
+			Severity = EMessageSeverity::Error;
+			bHasProblems = true;
+		}
+
+		TSharedRef<FTokenizedMessage> Message = FTokenizedMessage::Create(Severity, FText::FromString(Issue.Message));
+		TSharedPtr<FActionToken> ActionToken;
+		if (Issue.Animation.IsValid())
+		{
+			const TWeakObjectPtr<ULexUIPrefabSequence> WeakAnimation = Issue.Animation;
+			ActionToken = FActionToken::Create(LOCTEXT("OpenAnimationIssueAction", "Open Animation"),
+				LOCTEXT("OpenAnimationIssueActionTooltip", "Open and select the animation containing this binding."),
+				FOnActionTokenExecuted::CreateLambda([WeakThis, WeakAnimation]()
+				{
+					if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakThis.Pin())
+					{
+						Editor->NavigateToAnimation(WeakAnimation);
+					}
+				}));
+		}
+		else if (Issue.bOpenRawData)
+		{
+			ActionToken = FActionToken::Create(LOCTEXT("OpenRawDataIssueAction", "Open Raw Data"),
+				LOCTEXT("OpenRawDataIssueActionTooltip", "Open the prefab reference and GUID data."),
+				FOnActionTokenExecuted::CreateLambda([WeakThis]()
+				{
+					if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakThis.Pin())
+					{
+						Editor->OnOpenRawDataViewerPanel();
+					}
+				}));
+		}
+		else if (Issue.SourceObject.IsValid())
+		{
+			const TWeakObjectPtr<UObject> WeakObject = Issue.SourceObject;
+			ActionToken = FActionToken::Create(LOCTEXT("SelectCompilerIssueAction", "Select"),
+				LOCTEXT("SelectCompilerIssueActionTooltip", "Select the source widget or Behaviour in the prefab editor."),
+				FOnActionTokenExecuted::CreateLambda([WeakThis, WeakObject]()
+				{
+					if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakThis.Pin())
+					{
+						Editor->NavigateToCompilerObject(WeakObject);
+					}
+				}));
+		}
+		if (ActionToken.IsValid())
+		{
+			Message->AddToken(ActionToken.ToSharedRef());
+			Message->SetMessageLink(ActionToken.ToSharedRef());
+		}
+		CompilerResultsListing->AddMessage(Message, false);
+	}
+	CompilerResultsListing->AddMessage(FTokenizedMessage::Create(EMessageSeverity::Info, Summary), false);
+	if (bAutoOpenOnProblems && bHasProblems)
+	{
+		InvokeTab(FLexUIPrefabEditorTabs::CompilerResultsID);
+	}
+}
+
+void FLexUIPrefabEditor::RunInitialReferenceValidation()
+{
+	TArray<FLexUIPrefabCompilerIssue> Issues;
+	ValidatePrefabReferences(Issues);
+	LastApplyWarningCount = 0;
+	LastApplyErrorCount = 0;
+	for (const FLexUIPrefabCompilerIssue& Issue : Issues)
+	{
+		LastApplyWarningCount += Issue.Severity == ELexUIPrefabCompilerSeverity::Warning ? 1 : 0;
+		LastApplyErrorCount += Issue.Severity == ELexUIPrefabCompilerSeverity::Error ? 1 : 0;
+	}
+	LastApplyStatus = LastApplyErrorCount > 0
+		? ELexUIPrefabApplyStatus::Error
+		: (LastApplyWarningCount > 0 ? ELexUIPrefabApplyStatus::Warning : ELexUIPrefabApplyStatus::Unknown);
+	const FText Summary = LastApplyErrorCount > 0 || LastApplyWarningCount > 0
+		? FText::Format(LOCTEXT("OpenReferenceCheckProblems", "Reference check found {0} error(s) and {1} warning(s)."),
+			FText::AsNumber(LastApplyErrorCount), FText::AsNumber(LastApplyWarningCount))
+		: LOCTEXT("OpenReferenceCheckClean", "Reference check completed. No issues found.");
+	PublishCompilerResults(FText::Format(LOCTEXT("OpenResultsPageTitle", "Open {0}"), FText::FromString(GetNameSafe(PrefabBeingEdited))),
+		Issues, Summary, true);
+}
+
+void FLexUIPrefabEditor::NavigateToCompilerObject(TWeakObjectPtr<UObject> InObject)
+{
+	UObject* Object = InObject.Get();
+	if (!IsValid(Object))
+	{
+		return;
+	}
+	ULexUIBehaviour* Behaviour = Cast<ULexUIBehaviour>(Object);
+	ULexWidget* Widget = Cast<ULexWidget>(Object);
+	if (Behaviour != nullptr)
+	{
+		Widget = Behaviour->GetWidget();
+	}
+	if (Widget == nullptr)
+	{
+		Widget = Object->GetTypedOuter<ULexWidget>();
+	}
+	if (!IsValid(Widget))
+	{
+		return;
+	}
+	InvokeTab(FLexUIPrefabEditorTabs::DetailsID);
+	SelectWidgets(TSet<ULexWidget*>{Widget}, false);
+	if (Behaviour != nullptr)
+	{
+		ULexUISelection* Selection = ULexUISelection::GetInstance(GetWorld());
+		Selection->ClearComponentSelection();
+		Selection->SelectComponent(Behaviour);
+	}
+}
+
+void FLexUIPrefabEditor::NavigateToAnimation(TWeakObjectPtr<ULexUIPrefabSequence> InAnimation)
+{
+	if (!InAnimation.IsValid() || !SequencerPtr.IsValid())
+	{
+		return;
+	}
+	InvokeTab(FLexUIPrefabEditorTabs::SequencerID);
+	SequencerPtr->SelectAnimation(InAnimation.Get());
+}
+
 bool FLexUIPrefabEditor::ApplyPrefabChanges()
 {
 	ULexUIPrefab* Prefab = GetPrefabBeingEdited();
 	ULexUIPrefabHelperObject* Helper = IsValid(Prefab) ? Prefab->GetPrefabHelperObject() : nullptr;
+	TArray<FLexUIPrefabCompilerIssue> Issues;
+	const FText PageTitle = FText::Format(
+		LOCTEXT("ApplyResultsPageTitle", "Apply {0} - {1}"),
+		FText::FromString(GetNameSafe(Prefab)),
+		FText::AsTime(FDateTime::Now()));
 	if (!IsValid(Helper) || !IsValid(Helper->LoadedRootWidget))
 	{
-		bLastApplyHadProblems = true;
+		FLexUIPrefabCompilerIssue& Issue = Issues.AddDefaulted_GetRef();
+		Issue.Severity = ELexUIPrefabCompilerSeverity::Error;
+		Issue.Message = TEXT("Apply failed because the prefab root data is unavailable.");
+		LastApplyStatus = ELexUIPrefabApplyStatus::Error;
+		LastApplyWarningCount = 0;
+		LastApplyErrorCount = 1;
 		bLastApplySerializationSucceeded = false;
+		PublishCompilerResults(PageTitle, Issues, LOCTEXT("ApplyMissingRootSummary", "Apply failed: prefab root data is unavailable."), true);
 		return false;
 	}
 
-	bLastApplyHadProblems = false;
+	LastApplyStatus = ELexUIPrefabApplyStatus::Unknown;
+	LastApplyWarningCount = 0;
+	LastApplyErrorCount = 0;
 	bLastApplySerializationSucceeded = false;
 	FLexUIEditorTools::OnBeforeApplyPrefab.Broadcast(Helper);
+
+	// Old assets used a convention-based BP_<PrefabName> component without storing the class.
+	// Persist that already-loaded component as the explicit primary behaviour on first Apply.
+	if (Prefab->GetBehaviourClass() == nullptr)
+	{
+		if (ULexUIBehaviour* LegacyBehaviour = LexUIPrefabBehaviourUtils::FindBehaviourComponent(Helper->LoadedRootWidget, Prefab))
+		{
+			Prefab->Modify();
+			Prefab->SetBehaviourClass(LegacyBehaviour->GetClass());
+			FLexUIPrefabCompilerIssue& Issue = Issues.AddDefaulted_GetRef();
+			Issue.Severity = ELexUIPrefabCompilerSeverity::Info;
+			Issue.Message = FString::Printf(TEXT("Migrated legacy companion behaviour '%s' to BehaviourClass."), *LegacyBehaviour->GetClass()->GetName());
+			Issue.SourceObject = LegacyBehaviour;
+		}
+	}
+
 	if (ULexWidget* RootWidget = GetLoadedRootWidget())
 	{
 		const int32 RenameCount = FLexUIEditorTools::EnsureUniqueWidgetDisplayNames(RootWidget);
 		if (RenameCount > 0)
 		{
-			FNotificationInfo Info(FText::Format(
-				LOCTEXT("UniqueWidgetNamesOnApply", "Renamed {0} duplicate widget name(s) using UMG-style numeric suffixes."),
-				FText::AsNumber(RenameCount)));
-			Info.ExpireDuration = 5.0f;
-			FSlateNotificationManager::Get().AddNotification(Info);
+			FLexUIPrefabCompilerIssue& Issue = Issues.AddDefaulted_GetRef();
+			Issue.Severity = ELexUIPrefabCompilerSeverity::Info;
+			Issue.Message = FString::Printf(TEXT("Renamed %d duplicate widget name(s) using UMG-style numeric suffixes."), RenameCount);
 			if (OutlinerPtr.IsValid())
 			{
 				OutlinerPtr->RequestRefresh();
@@ -1038,37 +1862,89 @@ bool FLexUIPrefabEditor::ApplyPrefabChanges()
 	if (ULexWidget* RootWidget = GetLoadedRootWidget())
 	{
 		TArray<FString> BoundDetails, Problems;
-		LexUIPrefabBehaviourUtils::AutoBindAndValidate(RootWidget, Prefab, BoundDetails, Problems);
+		LexUIPrefabBehaviourUtils::AutoBindAndValidate(RootWidget, Prefab, BoundDetails, Problems, true);
 		if (BoundDetails.Num() > 0)
 		{
 			Helper->Modify();
 			Helper->SetAnythingDirty();
-			FNotificationInfo Info(FText::Format(LOCTEXT("AutoBindOnApply", "Auto-bound {0} variable(s):\n{1}")
-				, FText::AsNumber(BoundDetails.Num()), FText::FromString(FString::Join(BoundDetails, TEXT("\n")))));
-			Info.ExpireDuration = 5.0f;
-			FSlateNotificationManager::Get().AddNotification(Info);
+			FLexUIPrefabCompilerIssue& Issue = Issues.AddDefaulted_GetRef();
+			Issue.Severity = ELexUIPrefabCompilerSeverity::Info;
+			Issue.Message = FString::Printf(TEXT("Auto-bound %d Behaviour variable(s): %s"),
+				BoundDetails.Num(), *FString::Join(BoundDetails, TEXT(", ")));
+			Issue.SourceObject = GetPrimaryBehaviour();
 		}
-		if (Problems.Num() > 0)
+		for (const FString& Problem : Problems)
 		{
-			bLastApplyHadProblems = true;
-			FNotificationInfo Info(FText::Format(LOCTEXT("AutoBindProblemsOnApply", "Companion binding issues:\n{0}")
-				, FText::FromString(FString::Join(Problems, TEXT("\n")))));
-			Info.ExpireDuration = 8.0f;
-			Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
-			FSlateNotificationManager::Get().AddNotification(Info);
+			FLexUIPrefabCompilerIssue& Issue = Issues.AddDefaulted_GetRef();
+			Issue.Severity = ELexUIPrefabCompilerSeverity::Warning;
+			Issue.Message = FString::Printf(TEXT("Behaviour variable: %s"), *Problem);
+			Issue.SourceObject = GetPrimaryBehaviour();
 		}
 	}
 
-	bLastApplySerializationSucceeded = Helper->SavePrefab();
+	for (const FString& Warning : PendingBehaviourWarnings)
+	{
+		FLexUIPrefabCompilerIssue& Issue = Issues.AddDefaulted_GetRef();
+		Issue.Severity = ELexUIPrefabCompilerSeverity::Warning;
+		Issue.Message = Warning;
+	}
+	PendingBehaviourWarnings.Reset();
+
+	ValidatePrefabReferences(Issues);
+	const bool bHasStructuralError = Issues.ContainsByPredicate([](const FLexUIPrefabCompilerIssue& Issue)
+	{
+		return Issue.Severity == ELexUIPrefabCompilerSeverity::Error;
+	});
+	if (!bHasStructuralError)
+	{
+		bLastApplySerializationSucceeded = Helper->SavePrefab();
+	}
 	if (!bLastApplySerializationSucceeded)
 	{
-		bLastApplyHadProblems = true;
-		FNotificationInfo Info(LOCTEXT("ApplySerializationFailed", "Apply failed while serializing the prefab. Current changes were not written to the asset."));
-		Info.ExpireDuration = 8.0f;
-		Info.Image = FAppStyle::GetBrush(TEXT("Icons.ErrorWithColor"));
-		FSlateNotificationManager::Get().AddNotification(Info);
+		FLexUIPrefabCompilerIssue& Issue = Issues.AddDefaulted_GetRef();
+		Issue.Severity = ELexUIPrefabCompilerSeverity::Error;
+		Issue.Message = TEXT("Prefab serialization failed. Current changes were not written to the asset.");
 	}
-	return !bLastApplyHadProblems;
+
+	LastApplyWarningCount = 0;
+	LastApplyErrorCount = 0;
+	for (const FLexUIPrefabCompilerIssue& Issue : Issues)
+	{
+		LastApplyWarningCount += Issue.Severity == ELexUIPrefabCompilerSeverity::Warning ? 1 : 0;
+		LastApplyErrorCount += Issue.Severity == ELexUIPrefabCompilerSeverity::Error ? 1 : 0;
+	}
+	LastApplyStatus = LastApplyErrorCount > 0
+		? ELexUIPrefabApplyStatus::Error
+		: (LastApplyWarningCount > 0 ? ELexUIPrefabApplyStatus::Warning : ELexUIPrefabApplyStatus::Success);
+
+	FText Summary;
+	if (LastApplyStatus == ELexUIPrefabApplyStatus::Error)
+	{
+		Summary = FText::Format(LOCTEXT("ApplyErrorSummary", "Apply failed with {0} error(s) and {1} warning(s)."),
+			FText::AsNumber(LastApplyErrorCount), FText::AsNumber(LastApplyWarningCount));
+	}
+	else if (LastApplyStatus == ELexUIPrefabApplyStatus::Warning)
+	{
+		Summary = FText::Format(LOCTEXT("ApplyWarningSummary", "Applied with {0} warning(s)."), FText::AsNumber(LastApplyWarningCount));
+	}
+	else
+	{
+		Summary = LOCTEXT("ApplySuccessSummary", "Apply succeeded. No reference issues found.");
+	}
+	PublishCompilerResults(PageTitle, Issues, Summary, true);
+
+	FNotificationInfo Info(Summary);
+	Info.ExpireDuration = LastApplyErrorCount > 0 ? 7.0f : 4.0f;
+	if (LastApplyStatus == ELexUIPrefabApplyStatus::Error)
+	{
+		Info.Image = FAppStyle::GetBrush(TEXT("Icons.ErrorWithColor"));
+	}
+	else if (LastApplyStatus == ELexUIPrefabApplyStatus::Warning)
+	{
+		Info.Image = FAppStyle::GetBrush(TEXT("Icons.WarningWithColor"));
+	}
+	FSlateNotificationManager::Get().AddNotification(Info);
+	return LastApplyStatus != ELexUIPrefabApplyStatus::Error;
 }
 
 void FLexUIPrefabEditor::OnApply()
@@ -1435,14 +2311,60 @@ void FLexUIPrefabEditor::ExtendToolbar()
 		auto BehaviourButton = FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().OpenBehaviourBlueprint
 			, TAttribute<FText>(), TAttribute<FText>()
 			, FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Blueprints"));
+		auto BehaviourOptionsMenuEntry = FToolMenuEntry::InitComboButton(
+			"BehaviourOptions",
+			FUIAction(),
+			FNewToolMenuDelegate::CreateSP(this, &FLexUIPrefabEditor::GenerateBehaviourOptionsMenu),
+			LOCTEXT("BehaviourOptionsTooltip", "Create, select, replace, or remove this prefab's primary Behaviour."));
+		BehaviourOptionsMenuEntry.ToolBarData.bSimpleComboBox = true;
 
 		FToolMenuSection& Section = ToolBar->AddSection("LexUIPrefabCommands", TAttribute<FText>(), InsertAfterAssetSection);
 		Section.AddEntry(ApplyButtonMenuEntry);
 		Section.AddEntry(ApplyOptionsMenuEntry);
 		Section.AddEntry(BehaviourButton);
+		Section.AddEntry(BehaviourOptionsMenuEntry);
 		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().RawDataViewer));
 		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().OpenPrefabHelperObject));
 	}
+}
+
+void FLexUIPrefabEditor::GenerateBehaviourOptionsMenu(UToolMenu* InMenu)
+{
+	FToolMenuSection& Section = InMenu->AddSection("Behaviour", LOCTEXT("BehaviourMenuSection", "Behaviour"));
+	Section.AddMenuEntry(
+		"OpenCurrentBehaviour",
+		LOCTEXT("OpenCurrentBehaviour", "Open Current Behaviour"),
+		LOCTEXT("OpenCurrentBehaviourTooltip", "Open the current Behaviour using its registered script editor backend."),
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Edit"),
+		FUIAction(
+			FExecuteAction::CreateSP(this, &FLexUIPrefabEditor::CreateOrOpenBehaviourBlueprint),
+			FCanExecuteAction::CreateLambda([WeakThis = TWeakPtr<FLexUIPrefabEditor>(SharedThis(this))]()
+			{
+				return WeakThis.IsValid() && WeakThis.Pin()->GetEffectiveBehaviourClass() != nullptr;
+			})));
+	Section.AddMenuEntry(
+		"CreateBehaviourBlueprint",
+		LOCTEXT("CreateBehaviourBlueprint", "Create Blueprint Behaviour"),
+		LOCTEXT("CreateBehaviourBlueprintTooltip", "Create BP_<PrefabName>, assign it as the primary Behaviour, and open it."),
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Blueprints"),
+		FUIAction(FExecuteAction::CreateSP(this, &FLexUIPrefabEditor::CreateAndAssignBehaviourBlueprint)));
+	Section.AddMenuEntry(
+		"SelectBehaviourClass",
+		LOCTEXT("SelectBehaviourClass", "Select Behaviour Class..."),
+		LOCTEXT("SelectBehaviourClassTooltip", "Pick any concrete ULexUIBehaviour class, including externally generated script classes."),
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Search"),
+		FUIAction(FExecuteAction::CreateSP(this, &FLexUIPrefabEditor::PickBehaviourClass)));
+	Section.AddMenuEntry(
+		"RemoveBehaviour",
+		LOCTEXT("RemoveBehaviour", "Remove Behaviour"),
+		LOCTEXT("RemoveBehaviourTooltip", "Remove the primary Behaviour component without deleting its script asset."),
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Delete"),
+		FUIAction(
+			FExecuteAction::CreateSP(this, &FLexUIPrefabEditor::RemovePrimaryBehaviour),
+			FCanExecuteAction::CreateLambda([WeakThis = TWeakPtr<FLexUIPrefabEditor>(SharedThis(this))]()
+			{
+				return WeakThis.IsValid() && WeakThis.Pin()->GetEffectiveBehaviourClass() != nullptr;
+			})));
 }
 
 void FLexUIPrefabEditor::GenerateApplyOptionsMenu(UToolMenu* InMenu)
@@ -1493,20 +2415,37 @@ FText FLexUIPrefabEditor::GetApplyButtonStatusTooltip()const
 	{
 		return LOCTEXT("Apply_Tooltip", "Changes need to be applied");
 	}
-	if (bLastApplyHadProblems)
+	switch (LastApplyStatus)
 	{
-		return LOCTEXT("ApplyProblems_Tooltip", "Applied with validation issues");
+	case ELexUIPrefabApplyStatus::Success:
+		return LOCTEXT("ApplyGood_Tooltip", "Prefab is up to date");
+	case ELexUIPrefabApplyStatus::Warning:
+		return FText::Format(LOCTEXT("ApplyWarnings_Tooltip", "Applied with {0} warning(s)"), FText::AsNumber(LastApplyWarningCount));
+	case ELexUIPrefabApplyStatus::Error:
+		return FText::Format(LOCTEXT("ApplyErrors_Tooltip", "Apply failed with {0} error(s)"), FText::AsNumber(LastApplyErrorCount));
+	default:
+		return LOCTEXT("ApplyUnknown_Tooltip", "Prefab has not been applied in this editor session");
 	}
-	return LOCTEXT("ApplyGood_Tooltip", "Prefab is up to date");
 }
 FSlateIcon FLexUIPrefabEditor::GetApplyButtonStatusImage()const
 {
 	static const FName CompileStatusBackground("Blueprint.CompileStatus.Background");
 	static const FName CompileStatusUnknown("Blueprint.CompileStatus.Overlay.Unknown");
 	static const FName CompileStatusGood("Blueprint.CompileStatus.Overlay.Good");
+	static const FName CompileStatusWarning("Blueprint.CompileStatus.Overlay.Warning");
 	static const FName CompileStatusError("Blueprint.CompileStatus.Overlay.Error");
 
-	const FName Overlay = GetAnythingDirty() ? CompileStatusUnknown : (bLastApplyHadProblems ? CompileStatusError : CompileStatusGood);
+	FName Overlay = CompileStatusUnknown;
+	if (!GetAnythingDirty())
+	{
+		switch (LastApplyStatus)
+		{
+		case ELexUIPrefabApplyStatus::Success: Overlay = CompileStatusGood; break;
+		case ELexUIPrefabApplyStatus::Warning: Overlay = CompileStatusWarning; break;
+		case ELexUIPrefabApplyStatus::Error: Overlay = CompileStatusError; break;
+		default: break;
+		}
+	}
 	return FSlateIcon(FAppStyle::GetAppStyleSetName(), CompileStatusBackground, NAME_None, Overlay);
 }
 
@@ -1560,6 +2499,17 @@ TSharedRef<SDockTab> FLexUIPrefabEditor::SpawnTab_PrefabRawDataViewer(const FSpa
 		.Label(LOCTEXT("OverrideParameterTab_Title", "PrefabRawData"))
 		[
 			PrefabRawDataViewer.ToSharedRef()
+		];
+}
+
+TSharedRef<SDockTab> FLexUIPrefabEditor::SpawnTab_CompilerResults(const FSpawnTabArgs& Args)
+{
+	check(CompilerResultsListing.IsValid());
+	return SNew(SDockTab)
+		.Label(LOCTEXT("CompilerResultsTab_Title", "Compiler Results"))
+		[
+			FModuleManager::LoadModuleChecked<FMessageLogModule>("MessageLog")
+				.CreateLogListingWidget(CompilerResultsListing.ToSharedRef())
 		];
 }
 
