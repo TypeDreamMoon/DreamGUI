@@ -110,7 +110,7 @@ protected:
 	/**
 	 * Render color of UI element.
 	 */
-	UPROPERTY(EditAnywhere, Category = "LGUI", Getter, Setter, BlueprintReadWrite)
+	UPROPERTY(Interp, EditAnywhere, Category = "LGUI", Getter, Setter, BlueprintReadWrite)
 	FColor Color = FColor::White;
 	UPROPERTY(EditAnywhere, Category = "LGUI-Raycast")
 	bool bRaycastTarget = true;

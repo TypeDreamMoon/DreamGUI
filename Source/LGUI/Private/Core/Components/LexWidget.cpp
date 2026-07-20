@@ -451,6 +451,10 @@ void ULexWidget::MarkRenderModeChangeRecursive(ULexCanvas* Canvas, ELexRenderMod
 void ULexWidget::PostLoad()
 {
 	Super::PostLoad();
+	// RelativeRotationEuler is transient, so seed it from the serialized rotation. Loading writes
+	// RelativeRotation through reflection rather than the setter, which would leave the mirror at
+	// zero and make Sequencer restore an animated widget to no rotation at all.
+	this->RelativeRotationEuler = this->RelativeRotation.Rotator();
 }
 
 void ULexWidget::BeginDestroy()
@@ -746,6 +750,9 @@ bool ULexWidget::CanEditChange(const FEditPropertyChain& PropertyChain) const
 void ULexWidget::PostEditUndo()
 {
 	Super::PostEditUndo();
+	// Undo restores RelativeRotation straight into the property, bypassing the setter that keeps
+	// the transient euler mirror in step.
+	this->RelativeRotationEuler = this->RelativeRotation.Rotator();
 	if (Parent.IsValid())
 	{
 		//restore SiblingIndex
@@ -919,6 +926,19 @@ void ULexWidget::SetRelativeRotation(const FQuat& Value)
 	if (this->RelativeRotation != Value)
 	{
 		this->RelativeRotation = Value;
+		this->RelativeRotationEuler = Value.Rotator();
+		this->CalculateObjectToWorldTransform();
+	}
+}
+void ULexWidget::SetRelativeRotationEuler(const FRotator& Value)
+{
+	// Store what the caller gave us rather than round-tripping through the quaternion: that would
+	// normalize the angles (370 degrees becomes 10), making an animation jump as it crosses a turn.
+	this->RelativeRotationEuler = Value;
+	const FQuat NewRotation = Value.Quaternion();
+	if (this->RelativeRotation != NewRotation)
+	{
+		this->RelativeRotation = NewRotation;
 		this->CalculateObjectToWorldTransform();
 	}
 }
@@ -936,6 +956,7 @@ void ULexWidget::SetRelativeLocationAndRotation(const FVector& InLocation, const
 	{
 		this->RelativeLocation = InLocation;
 		this->RelativeRotation = InRotation;
+		this->RelativeRotationEuler = InRotation.Rotator();
 		this->CalculateObjectToWorldTransform();
 
 		if (bCanSetAnchorFromTransform)

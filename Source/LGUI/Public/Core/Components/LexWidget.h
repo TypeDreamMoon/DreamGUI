@@ -180,13 +180,27 @@ private:
 #pragma endregion
 private:
 	/** Local space position */
-	UPROPERTY(BlueprintReadOnly, Getter, Setter, meta=(AllowPrivateAccess = true))
+	UPROPERTY(Interp, BlueprintReadOnly, Getter, Setter, meta=(AllowPrivateAccess = true))
 	FVector RelativeLocation = FVector::ZeroVector;
-	/** Local space rotation */
+	/**
+	 * Local space rotation.
+	 * Not marked Interp: Sequencer has no property track for FQuat, so this cannot be keyed
+	 * directly. Animate RelativeRotationEuler instead, which mirrors this value.
+	 */
 	UPROPERTY(BlueprintReadOnly, Getter, Setter, meta = (AllowPrivateAccess = true))
 	FQuat RelativeRotation = FQuat::Identity;
+	/**
+	 * Local space rotation as euler angles, mirroring RelativeRotation so that rotation can be
+	 * animated: Sequencer has an FRotator property track but none for FQuat.
+	 *
+	 * Transient, because RelativeRotation stays the serialized source of truth. Sequencer reads
+	 * property memory directly while writing through the setter, so this has to be a real stored
+	 * field kept in sync rather than a value derived on demand.
+	 */
+	UPROPERTY(Interp, Transient, BlueprintReadOnly, Getter, Setter, meta = (AllowPrivateAccess = true))
+	FRotator RelativeRotationEuler = FRotator::ZeroRotator;
 	/** Local space scale */
-	UPROPERTY(BlueprintReadOnly, Getter, Setter, meta = (AllowPrivateAccess = true, AllowPreserveRatio))
+	UPROPERTY(Interp, BlueprintReadOnly, Getter, Setter, meta = (AllowPrivateAccess = true, AllowPreserveRatio))
 	FVector RelativeScale = FVector::OneVector;
 
 public:
@@ -194,6 +208,9 @@ public:
 	const FVector& GetRelativeLocation()const { return RelativeLocation; }
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	const FQuat& GetRelativeRotation()const { return RelativeRotation; }
+	/** Euler-angle mirror of GetRelativeRotation, for animating rotation through Sequencer. */
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	const FRotator& GetRelativeRotationEuler()const { return RelativeRotationEuler; }
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	const FVector& GetRelativeScale()const { return RelativeScale; }
 
@@ -215,6 +232,9 @@ public:
 	void SetRelativeLocation(const FVector& Value);
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	void SetRelativeRotation(const FQuat& Value);
+	/** Set rotation from euler angles. This is the rotation entry point Sequencer drives. */
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	void SetRelativeRotationEuler(const FRotator& Value);
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	void SetRelativeScale(const FVector& Value);
 	UFUNCTION(BlueprintCallable, Category = "Transform")

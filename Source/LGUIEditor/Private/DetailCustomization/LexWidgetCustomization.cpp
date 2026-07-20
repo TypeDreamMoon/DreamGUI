@@ -186,6 +186,9 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 	DetailBuilder.HideCategory("Interaction");
 	DetailBuilder.HideCategory("Accessibility");
 	DetailBuilder.HideCategory("TransformCommon");
+	// Marking a property Interp so Sequencer can animate it also implies Edit, which drops the
+	// transform properties into an auto-named category. The Layout category already presents them.
+	DetailBuilder.HideCategory("LexWidget");
 	IDetailCategoryBuilder& TransformCategory = DetailBuilder.EditCategory(
 		"LexLayout", LOCTEXT("LayoutCategory", "Layout"), ECategoryPriority::Important);
 	IDetailCategoryBuilder& BehaviorCategory = DetailBuilder.EditCategory(
