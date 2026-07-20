@@ -468,16 +468,18 @@ void AutoBindAndValidate(ULexWidget* InRootWidget, ULexUIPrefab* InPrefab, TArra
 	TMap<FString, TArray<ULexWidget*>> NameToWidgets;
 	{
 		TArray<ULexWidget*> Stack;
+		TSet<const ULexWidget*> VisitedWidgets;
 		Stack.Add(InRootWidget);
 		while (Stack.Num() > 0)
 		{
 			ULexWidget* Widget = Stack.Pop();
-			if (Widget == nullptr) continue;
+			if (!IsValid(Widget) || VisitedWidgets.Contains(Widget)) continue;
+			VisitedWidgets.Add(Widget);
 			Subtree.Add(Widget);
 			NameToWidgets.FindOrAdd(MakeVariableNameForTarget(Widget)).Add(Widget);
 			for (ULexWidget* Child : Widget->GetChildren())
 			{
-				Stack.Add(Child);
+				if (IsValid(Child)) Stack.Add(Child);
 			}
 		}
 	}

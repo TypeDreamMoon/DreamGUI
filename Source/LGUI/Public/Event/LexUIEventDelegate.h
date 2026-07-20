@@ -214,8 +214,8 @@ public:
 	 * @return	true- is compatible, false- not
 	 */
 	bool CheckFunctionParameter()const;
-	/** Append one actionable issue for every invalid serialized binding. */
-	void GetValidationIssues(TArray<FLexUIEventBindingValidationIssue>& OutIssues) const;
+	/** Append one actionable issue for every invalid serialized binding. RootWidget limits targets to one prefab tree. */
+	void GetValidationIssues(TArray<FLexUIEventBindingValidationIssue>& OutIssues, const ULexWidget* RootWidget = nullptr) const;
 	/** Redirect bindings that target a behaviour instance after the prefab replaces its primary behaviour. */
 	void ReplaceBindingTarget(ULexUIBehaviour* InOldTarget, ULexUIBehaviour* InNewTarget);
 

@@ -2,6 +2,7 @@
 
 #include "PrefabSystem/LexUIObjectReaderAndWriter.h"
 #include "PrefabSystem/WidgetSerializerBase.h"
+#include "Core/Components/LexWidget.h"
 #include "Serialization/MemoryReader.h"
 #include "Engine/Blueprint.h"
 
@@ -82,29 +83,28 @@ namespace LexUIPrefabSystem
 		else
 		{
 			bool canSerializeObject = false;
-			auto guidPtr = Serializer.MapObjectToGuid.Find(Object);
-			if (guidPtr != nullptr)
+			FGuid guid;
+			if (Object->IsA<ULexWidget>())
 			{
-				canSerializeObject = true;
-				//MapObjectToGuid could be passed-in, if that the CollectObjectToSerailize will not execute which will miss some objects. so we still need to collect objects to serialize
-				FGuid guid;
-				Serializer.CollectObjectToSerialize(Object, guid);
+				if (Serializer.WillSerializeWidgetArray.Contains(CastChecked<ULexWidget>(Object)))
+				{
+					if (const FGuid* GuidPtr = Serializer.MapObjectToGuid.Find(Object))
+					{
+						guid = *GuidPtr;
+						canSerializeObject = true;
+					}
+				}
 			}
 			else
 			{
-				FGuid guid;
 				canSerializeObject = Serializer.CollectObjectToSerialize(Object, guid);
-				if (canSerializeObject)
-				{
-					guidPtr = &guid;
-				}
 			}
 
 			if (canSerializeObject)//object belongs to this actor hierarchy
 			{
 				auto type = (uint8)EObjectType::ObjectReference;
 				*this << type;
-				*this << *guidPtr;
+				*this << guid;
 				return true;
 			}
 			else
@@ -264,14 +264,21 @@ namespace LexUIPrefabSystem
 		auto type = (EObjectType)typeUint8;
 		switch (type)
 		{
+		case LexUIPrefabSystem::EObjectType::None:
+			Object = nullptr;
+			return true;
 		case LexUIPrefabSystem::EObjectType::Class:
 		{
 			check(CanSerializeClass);
 			int32 id = -1;
 			*this << id;
 			auto asset = Serializer.FindClassFromListByIndex(id);
-			Object = asset;
-			return true;
+			if (IsValid(asset))
+			{
+				Object = asset;
+				return true;
+			}
+			return false;
 		}
 		break;
 		case LexUIPrefabSystem::EObjectType::Asset:
@@ -279,15 +286,19 @@ namespace LexUIPrefabSystem
 			int32 id = -1;
 			*this << id;
 			auto asset = Serializer.FindAssetFromListByIndex(id);
-			Object = asset;
-			return true;
+			if (IsValid(asset))
+			{
+				Object = asset;
+				return true;
+			}
+			return false;
 		}
 		break;
 		case LexUIPrefabSystem::EObjectType::ObjectReference:
 		{
 			FGuid guid;
 			*this << guid;
-			if (auto ObjectPtr = Serializer.MapGuidToObject.Find(guid))
+			if (auto ObjectPtr = Serializer.MapGuidToObject.Find(guid); ObjectPtr && IsValid(*ObjectPtr))
 			{
 				Object = *ObjectPtr;
 				return true;
@@ -300,8 +311,7 @@ namespace LexUIPrefabSystem
 	FArchive& FLexUIObjectReader::operator<<(UObject*& Value)
 	{
 		UObject* Res = nullptr;
-		SerializeObject(Res, true);
-		if (Res)
+		if (SerializeObject(Res, true))
 		{
 			Value = Res;
 		}
@@ -310,8 +320,7 @@ namespace LexUIPrefabSystem
 	FArchive& FLexUIObjectReader::operator<<(FObjectPtr& Value)
 	{
 		UObject* Res = nullptr;
-		SerializeObject(Res, true);
-		if (Res)
+		if (SerializeObject(Res, true))
 		{
 			Value = Res;
 		}
@@ -320,8 +329,7 @@ namespace LexUIPrefabSystem
 	FArchive& FLexUIObjectReader::operator<<(FWeakObjectPtr& Value)
 	{
 		UObject* Res = nullptr;
-		SerializeObject(Res, false);
-		if (Res)
+		if (SerializeObject(Res, false))
 		{
 			Value = Res;
 		}

@@ -261,7 +261,7 @@ namespace LexUIPrefabSystem
 		//origin guid mean the object guid in it's origin prefab, not sub prefab
 		TMap<TObjectPtr<UObject>, FGuid> MapObjectToOriginGuid;
 
-		void CollectWidgetRecursive(ULexWidget* Widget);
+		void CollectWidgetRecursive(ULexWidget* Widget, TSet<const ULexWidget*>& VisitedWidgets);
 
 		struct FSubPrefabObjectOverrideParameterData
 		{

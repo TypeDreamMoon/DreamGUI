@@ -138,7 +138,8 @@ namespace LexUIPrefabSystem
 	}
 	void WidgetSerializer::SerializeWidgetToData(ULexWidget* OriginRootWidget, FLexUIPrefabSaveData& OutData)
 	{
-		CollectWidgetRecursive(OriginRootWidget);
+		TSet<const ULexWidget*> VisitedWidgets;
+		CollectWidgetRecursive(OriginRootWidget, VisitedWidgets);
 		//serialize Widget
 		SerializeWidgetArray(OutData.MapWidgetToParent, OutData.SavedWidgets, OutData.SavedObjectData);
 		//serialize objects and components
@@ -222,9 +223,11 @@ namespace LexUIPrefabSystem
 		return true;
 	}
 
-	void WidgetSerializer::CollectWidgetRecursive(ULexWidget* Widget)
+	void WidgetSerializer::CollectWidgetRecursive(ULexWidget* Widget, TSet<const ULexWidget*>& VisitedWidgets)
 	{
 		if (!IsValid(Widget))return;
+		if (VisitedWidgets.Contains(Widget))return;
+		VisitedWidgets.Add(Widget);
 		if (Widget->HasAnyFlags(EObjectFlags::RF_Transient))return;
 		//collect actor
 		bool bIsSubPrefabWidget = SubPrefabWidgetArray.Contains(Widget);
@@ -249,7 +252,7 @@ namespace LexUIPrefabSystem
 		auto& Children = Widget->GetChildren();
 		for (auto& ChildWidget : Children)
 		{
-			CollectWidgetRecursive(ChildWidget);
+			CollectWidgetRecursive(ChildWidget, VisitedWidgets);
 		}
 	}
 

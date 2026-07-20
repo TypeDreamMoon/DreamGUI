@@ -549,6 +549,11 @@ UObject* FLexUIEventDelegateData::ResolveTargetForValidation(FString& OutError) 
 		}
 		return Result;
 	}
+	if (!HelperClass->IsChildOf(ULexUIBehaviour::StaticClass()))
+	{
+		OutError = FString::Printf(TEXT("target class '%s' is not supported"), *HelperClass->GetName());
+		return nullptr;
+	}
 
 	TArray<ULexUIBehaviour*> Components = HelperWidget->GetComponents(HelperClass);
 	if (!HelperComponentName.IsNone())
@@ -631,7 +636,7 @@ bool FLexUIEventDelegateData::CheckTargetObject()
 					{
 						TargetObject = HelperWidget->GetLayoutSelf();
 					}
-					else
+					else if (HelperClass->IsChildOf(ULexUIBehaviour::StaticClass()))
 					{
 						auto Components = HelperWidget->GetComponents(HelperClass);
 						if (Components.Num() == 1)
@@ -644,7 +649,7 @@ bool FLexUIEventDelegateData::CheckTargetObject()
 							{
 								for (auto& Comp : Components)
 								{
-									if (Comp->GetFName() == HelperComponentName)
+									if (IsValid(Comp) && Comp->GetFName() == HelperComponentName)
 									{
 										TargetObject = Comp;
 										return true;
@@ -1022,7 +1027,7 @@ bool FLexUIEventDelegate::CheckFunctionParameter()const
 	GetValidationIssues(Issues);
 	return Issues.IsEmpty();
 }
-void FLexUIEventDelegate::GetValidationIssues(TArray<FLexUIEventBindingValidationIssue>& OutIssues) const
+void FLexUIEventDelegate::GetValidationIssues(TArray<FLexUIEventBindingValidationIssue>& OutIssues, const ULexWidget* RootWidget) const
 {
 	for (int32 Index = 0; Index < EventList.Num(); ++Index)
 	{
@@ -1031,6 +1036,13 @@ void FLexUIEventDelegate::GetValidationIssues(TArray<FLexUIEventBindingValidatio
 		Issue.BindingIndex = Index;
 		Issue.TargetWidget = Item.HelperWidget;
 		Issue.FunctionName = Item.FunctionName;
+		if (IsValid(RootWidget) && IsValid(Item.HelperWidget)
+			&& Item.HelperWidget != RootWidget && !Item.HelperWidget->IsChildOf(RootWidget))
+		{
+			Issue.Message = TEXT("target widget is outside this prefab and cannot be serialized");
+			OutIssues.Add(MoveTemp(Issue));
+			continue;
+		}
 
 		FString ResolveError;
 		UObject* Target = Item.ResolveTargetForValidation(ResolveError);

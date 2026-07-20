@@ -111,7 +111,10 @@ bool FLexUIPrefabSequenceObjectReference::CanFixObjectReferenceFromEditorHelpers
 }
 bool FLexUIPrefabSequenceObjectReference::IsObjectReferenceGood(ULexWidget* InContextWidget)const
 {
-	CheckTargetObject();
+	if (!IsValid(InContextWidget) || !CheckTargetObject() || !IsValid(Object))
+	{
+		return false;
+	}
 	auto Widget = Cast<ULexWidget>(Object);
 	if (Widget == nullptr)
 	{
@@ -135,6 +138,16 @@ bool FLexUIPrefabSequenceObjectReference::IsEditorHelpersGood(ULexWidget* InCont
 
 bool FLexUIPrefabSequenceObjectReference::InitHelpers(ULexWidget* InContextWidget)
 {
+	if (!IsValid(InContextWidget) || !IsValid(Object))
+	{
+		HelperWidget = nullptr;
+		ObjectPathRelativeToWidget.Reset();
+#if WITH_EDITOR
+		HelperWidgetPath.Reset();
+#endif
+		return false;
+	}
+
 	if (auto Widget = Cast<ULexWidget>(Object))
 	{
 		this->HelperWidget = Widget;
@@ -195,11 +208,13 @@ UObject* FLexUIPrefabSequenceObjectReference::Resolve() const
 
 bool FLexUIPrefabSequenceObjectReferenceMap::HasBinding(const FGuid& ObjectId) const
 {
-	return BindingIds.Contains(ObjectId);
+	const int32 Index = BindingIds.IndexOfByKey(ObjectId);
+	return References.IsValidIndex(Index);
 }
 
 void FLexUIPrefabSequenceObjectReferenceMap::RemoveBinding(const FGuid& ObjectId)
 {
+	References.SetNum(BindingIds.Num());
 	int32 Index = BindingIds.IndexOfByKey(ObjectId);
 	if (Index != INDEX_NONE)
 	{
@@ -210,6 +225,7 @@ void FLexUIPrefabSequenceObjectReferenceMap::RemoveBinding(const FGuid& ObjectId
 
 void FLexUIPrefabSequenceObjectReferenceMap::CreateBinding(const FGuid& ObjectId, const FLexUIPrefabSequenceObjectReference& ObjectReference)
 {
+	References.SetNum(BindingIds.Num());
 	int32 ExistingIndex = BindingIds.IndexOfByKey(ObjectId);
 	if (ExistingIndex == INDEX_NONE)
 	{
@@ -218,14 +234,13 @@ void FLexUIPrefabSequenceObjectReferenceMap::CreateBinding(const FGuid& ObjectId
 		BindingIds.Add(ObjectId);
 		References.AddDefaulted();
 	}
-
 	References[ExistingIndex].Array.AddUnique(ObjectReference);
 }
 
 void FLexUIPrefabSequenceObjectReferenceMap::ResolveBinding(const FGuid& ObjectId, TArray<UObject*, TInlineAllocator<1>>& OutObjects) const
 {
 	int32 Index = BindingIds.IndexOfByKey(ObjectId);
-	if (Index == INDEX_NONE)
+	if (!References.IsValidIndex(Index))
 	{
 		return;
 	}
@@ -242,6 +257,7 @@ void FLexUIPrefabSequenceObjectReferenceMap::ResolveBinding(const FGuid& ObjectI
 #if WITH_EDITOR
 bool FLexUIPrefabSequenceObjectReferenceMap::IsObjectReferencesGood(ULexWidget* InContextWidget)const
 {
+	if (BindingIds.Num() != References.Num()) return false;
 	for (auto& Reference : References)
 	{
 		for (auto& RefItem : Reference.Array)
@@ -268,9 +284,14 @@ void FLexUIPrefabSequenceObjectReferenceMap::GetInvalidBindingIds(ULexWidget* In
 			}
 		}
 	}
+	for (int32 Index = Count; Index < BindingIds.Num(); ++Index)
+	{
+		OutBindingIds.AddUnique(BindingIds[Index]);
+	}
 }
 bool FLexUIPrefabSequenceObjectReferenceMap::IsEditorHelpersGood(ULexWidget* InContextWidget)const
 {
+	if (BindingIds.Num() != References.Num()) return false;
 	for (auto& Reference : References)
 	{
 		for (auto& RefItem : Reference.Array)

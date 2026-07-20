@@ -106,14 +106,21 @@ namespace LexUIPrefabSystem
 		auto type = (EObjectType)typeUint8;
 		switch (type)
 		{
+		case LexUIPrefabSystem::EObjectType::None:
+			Object = nullptr;
+			return true;
 		case LexUIPrefabSystem::EObjectType::Class:
 		{
 			check(CanSerializeClass);
 			int32 id = -1;
 			*this << id;
 			auto asset = Serializer.FindClassFromListByIndex(id);
-			Object = asset;
-			return true;
+			if (IsValid(asset))
+			{
+				Object = asset;
+				return true;
+			}
+			return false;
 		}
 		break;
 		case LexUIPrefabSystem::EObjectType::Asset:
@@ -121,15 +128,19 @@ namespace LexUIPrefabSystem
 			int32 id = -1;
 			*this << id;
 			auto asset = Serializer.FindAssetFromListByIndex(id);
-			Object = asset;
-			return true;
+			if (IsValid(asset))
+			{
+				Object = asset;
+				return true;
+			}
+			return false;
 		}
 		break;
 		case LexUIPrefabSystem::EObjectType::ObjectReference:
 		{
 			FGuid guid;
 			*this << guid;
-			if (auto ObjectPtr = Serializer.MapGuidToObject.Find(guid))
+			if (auto ObjectPtr = Serializer.MapGuidToObject.Find(guid); ObjectPtr && IsValid(*ObjectPtr))
 			{
 				Object = *ObjectPtr;
 				return true;

@@ -168,6 +168,10 @@ void ULexUIPrefabSequence::GetInvalidObjectBindingIds(ULexWidget* InContextWidge
 {
 	ObjectReferences.GetInvalidBindingIds(InContextWidget, OutBindingIds);
 }
+bool ULexUIPrefabSequence::HasObjectBindingCountMismatch() const
+{
+	return ObjectReferences.HasBindingCountMismatch();
+}
 bool ULexUIPrefabSequence::IsEditorHelpersGood(ULexWidget* InContextWidget)const
 {
 	return ObjectReferences.IsEditorHelpersGood(InContextWidget);

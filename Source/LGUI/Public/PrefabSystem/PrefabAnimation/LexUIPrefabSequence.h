@@ -66,6 +66,7 @@ public:
 
 	bool IsObjectReferencesGood(ULexWidget* InContextWidget)const;
 	void GetInvalidObjectBindingIds(ULexWidget* InContextWidget, TArray<FGuid>& OutBindingIds) const;
+	bool HasObjectBindingCountMismatch() const;
 	bool IsEditorHelpersGood(ULexWidget* InContextWidget)const;
 	void FixObjectReferences(ULexWidget* InContextWidget);
 	void FixEditorHelpers(ULexWidget* InContextWidget);
