@@ -32,7 +32,14 @@ void ULexPanelSlot::NotifySlotChanged()
 {
 	if (ULexWidget* Widget = GetWidget())
 	{
-		ULexWidget::MarkLayoutForRebuild(Widget->GetParent() ? Widget->GetParent() : Widget);
+		ULexWidget* LayoutWidget = Widget->GetParent() ? Widget->GetParent() : Widget;
+		ULexWidget::MarkLayoutForRebuild(LayoutWidget);
+#if WITH_EDITOR
+		if (const UWorld* World = LayoutWidget->GetWorld(); World && !World->IsGameWorld())
+		{
+			ULexWidget::ForceRebuildLayoutImmediately(LayoutWidget);
+		}
+#endif
 	}
 }
 
