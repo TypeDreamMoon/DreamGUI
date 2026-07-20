@@ -8,6 +8,7 @@
 #pragma once
 
 class SLexUIPrefabSequenceEditor;
+class ULexUIPrefabSequence;
 class SLexWidgetEditorHierarchyView;
 class ULexWidget;
 class ULexUIPrefab;
@@ -135,6 +136,14 @@ public:
 
 	TSharedPtr<SLexUIPrefabSequenceEditor> GetSequencerEditor()const{return SequencerPtr;}
 	static FName GetSequencerTabID();
+
+	/**
+	 * The animation currently selected in the animation list, or nullptr when none is.
+	 * While one is selected the widgets in the viewport are being driven by Sequencer,
+	 * so what is on screen is the animated pose rather than the prefab's design values.
+	 */
+	ULexUIPrefabSequence* GetAnimationBeingEdited()const;
+	bool IsInAnimationEditMode()const { return GetAnimationBeingEdited() != nullptr; }
 
 	/** Fires whenever the selected set of widgets changes */
 	FSimpleMulticastDelegate OnSelectionChanged;

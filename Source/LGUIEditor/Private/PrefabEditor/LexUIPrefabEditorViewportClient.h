@@ -139,6 +139,9 @@ private:
 	bool IntersectDesignerPlane(const FVector2D& PixelPosition, const FTransform& PlaneTransform, FVector& OutPoint) const;
 	void DrawWidgetScreenOutline(ULexWidget* InWidget, FSceneView& View, FCanvas& Canvas, const FLinearColor& Color, float Thickness = 1.0f) const;
 	void DrawDesignerCanvasBoundary(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const;
+	void DrawAnimationModeIndicator(FViewport& InViewport, FCanvas& Canvas) const;
+	/** Key the given widgets' transform into the animation being edited, if there is one. */
+	void AutoKeyAnimatedTransform(const TArray<ULexWidget*>& InWidgets, bool bLocation, bool bRotation, bool bScale) const;
 	TArray<FVector2D> DesignerScreenCorners;
 	TMap<EDesignerHandle, FVector2D> DesignerHandlePositions;
 	FBox2D DesignerScreenBounds = FBox2D(EForceInit::ForceInit);

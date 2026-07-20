@@ -548,6 +548,11 @@ FName FLexUIPrefabEditor::GetSequencerTabID()
 	return FLexUIPrefabEditorTabs::SequencerID;
 }
 
+ULexUIPrefabSequence* FLexUIPrefabEditor::GetAnimationBeingEdited()const
+{
+	return SequencerPtr.IsValid() ? SequencerPtr->GetPrefabSequence() : nullptr;
+}
+
 void FLexUIPrefabEditor::SaveAsset_Execute()
 {
 	ApplyPrefabChanges();

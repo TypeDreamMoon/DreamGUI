@@ -30,6 +30,11 @@
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
+#include "PrefabSystem/PrefabAnimation/LexUIPrefabSequence.h"
+#include "PrefabAnimation/LexUIPrefabSequenceEditor.h"
+#include "ISequencer.h"
+#include "KeyPropertyParams.h"
+#include "PropertyPath.h"
 #include "Core/LexUIMesh/LexUIGizmoMesh.h"
 #include "Core/LexUIRender/LexUIRenderer.h"
 #include "PrefabSystem/LexUIPrefabInstanceScene.h"
@@ -937,6 +942,98 @@ void FLexUIPrefabEditorViewportClient::DrawCanvas(FViewport& InViewport, FSceneV
 
 	FEditorViewportClient::DrawCanvas(InViewport, View, Canvas);
 	DrawDesignerOverlay(InViewport, View, Canvas);
+	DrawAnimationModeIndicator(InViewport, Canvas);
+}
+
+void FLexUIPrefabEditorViewportClient::DrawAnimationModeIndicator(FViewport& InViewport, FCanvas& Canvas) const
+{
+	const TSharedPtr<FLexUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+	ULexUIPrefabSequence* Animation = Editor.IsValid() ? Editor->GetAnimationBeingEdited() : nullptr;
+	if (Animation == nullptr)
+	{
+		return;
+	}
+
+	// While an animation is selected Sequencer drives the widgets, so the viewport is showing the
+	// animated pose rather than the prefab's design values. Frame it so the two can't be confused.
+	const float DpiScale = Canvas.GetDPIScale();
+	const FVector2D ViewSize = FVector2D(InViewport.GetSizeXY()) / DpiScale;
+	const FLinearColor AccentColor(1.0f, 0.62f, 0.1f);
+
+	const float Inset = 1.0f;
+	const FVector2D Corners[4] = {
+		FVector2D(Inset, Inset),
+		FVector2D(ViewSize.X - Inset, Inset),
+		FVector2D(ViewSize.X - Inset, ViewSize.Y - Inset),
+		FVector2D(Inset, ViewSize.Y - Inset),
+	};
+	for (int32 Index = 0; Index < 4; ++Index)
+	{
+		FCanvasLineItem Line(Corners[Index], Corners[(Index + 1) % 4]);
+		Line.SetColor(AccentColor);
+		Line.LineThickness = 2.0f;
+		Canvas.DrawItem(Line);
+	}
+
+	UFont* Font = GEngine->GetSmallFont();
+	if (Font == nullptr)
+	{
+		return;
+	}
+	const FString Label = FString::Printf(TEXT("ANIMATION MODE   %s"), *Animation->GetDisplayNameString());
+	const FVector2D Padding(8.0f, 4.0f);
+	const FVector2D ChipSize = FVector2D(Font->GetStringSize(*Label), Font->GetMaxCharHeight()) + Padding * 2.0f;
+	const FVector2D ChipPos((ViewSize.X - ChipSize.X) * 0.5f, 6.0f);
+
+	FCanvasTileItem Chip(ChipPos, ChipSize, FLinearColor(0.0f, 0.0f, 0.0f, 0.65f));
+	Chip.BlendMode = SE_BLEND_Translucent;
+	Canvas.DrawItem(Chip);
+
+	FCanvasTextItem Text(ChipPos + Padding, FText::FromString(Label), Font, AccentColor);
+	Canvas.DrawItem(Text);
+}
+
+void FLexUIPrefabEditorViewportClient::AutoKeyAnimatedTransform(const TArray<ULexWidget*>& InWidgets, bool bLocation, bool bRotation, bool bScale) const
+{
+	const TSharedPtr<FLexUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+	if (!Editor.IsValid() || !Editor->IsInAnimationEditMode())
+	{
+		return;
+	}
+	const TSharedPtr<SLexUIPrefabSequenceEditor> SequencerEditor = Editor->GetSequencerEditor();
+	const TSharedPtr<ISequencer> Sequencer = SequencerEditor.IsValid() ? SequencerEditor->GetSequencer() : nullptr;
+	if (!Sequencer.IsValid())
+	{
+		return;
+	}
+
+	TArray<UObject*> ObjectsToKey;
+	for (ULexWidget* KeyedWidget : InWidgets)
+	{
+		if (IsValid(KeyedWidget))
+		{
+			ObjectsToKey.Add(KeyedWidget);
+		}
+	}
+	if (ObjectsToKey.IsEmpty())
+	{
+		return;
+	}
+
+	auto KeyPropertyNamed = [&Sequencer, &ObjectsToKey](const TCHAR* InPropertyName)
+	{
+		if (FProperty* Property = ULexWidget::StaticClass()->FindPropertyByName(InPropertyName))
+		{
+			FPropertyPath PropertyPath;
+			PropertyPath.AddProperty(FPropertyInfo(Property));
+			Sequencer->KeyProperty(FKeyPropertyParams(ObjectsToKey, PropertyPath, ESequencerKeyMode::ManualKeyForced));
+		}
+	};
+
+	if (bLocation)KeyPropertyNamed(TEXT("RelativeLocation"));
+	// Rotation is keyed through the euler mirror; Sequencer has no track for the FQuat itself.
+	if (bRotation)KeyPropertyNamed(TEXT("RelativeRotationEuler"));
+	if (bScale)KeyPropertyNamed(TEXT("RelativeScale"));
 }
 
 bool FLexUIPrefabEditorViewportClient::UpdateDesignerScreenGeometry(FSceneView& View)
@@ -1436,6 +1533,17 @@ void FLexUIPrefabEditorViewportClient::FinishDesignerDrag(bool bCancel)
 		{
 			Helper->SetAnythingDirty();
 		}
+		// Dragging in the designer moves the widget by its anchored position, which the widget
+		// resolves into RelativeLocation; that is the property the animation keys.
+		TArray<ULexWidget*> DraggedWidgets;
+		for (const FDesignerWidgetSnapshot& Snapshot : DesignerSnapshots)
+		{
+			if (ULexWidget* DraggedWidget = Snapshot.Widget.Get())
+			{
+				DraggedWidgets.Add(DraggedWidget);
+			}
+		}
+		AutoKeyAnimatedTransform(DraggedWidgets, true, false, false);
 	}
 	if (DesignerTransaction.IsValid() && (bCancel || !bDesignerChanged))DesignerTransaction->Cancel();
 	DesignerTransaction.Reset();
@@ -1473,7 +1581,21 @@ bool FLexUIPrefabEditorViewportClient::InputKey(const FInputKeyEventArgs& EventA
 	}
 	if (!bHandled && TransformWidget.IsValid() && IsPerspective())
 	{
+		const bool bWasDraggingGizmo = TransformWidget->IsDragging();
 		bHandled = TransformWidget->HandleInputKey(EventArgs);
+		if (bWasDraggingGizmo && !TransformWidget->IsDragging() && PrefabEditorPtr.IsValid())
+		{
+			// The gizmo drag just ended. It writes location and rotation, so key both.
+			TArray<ULexWidget*> MovedWidgets;
+			for (const TWeakObjectPtr<ULexWidget>& WeakWidget : PrefabEditorPtr.Pin()->GetSelectedWidgets())
+			{
+				if (ULexWidget* MovedWidget = WeakWidget.Get())
+				{
+					MovedWidgets.Add(MovedWidget);
+				}
+			}
+			AutoKeyAnimatedTransform(MovedWidgets, true, true, false);
+		}
 	}
 	if (!bHandled)
 	{
