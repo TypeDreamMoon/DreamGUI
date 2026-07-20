@@ -44,32 +44,36 @@ void SLexUIPrefabEditorViewport::OnFocusViewportToSelection()
 	EditorViewportClient->FocusViewportToTargets();
 }
 
-FReply SLexUIPrefabEditorViewport::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+bool SLexUIPrefabEditorViewport::SummonContextMenu()
 {
-	if (MouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
-	{
-		RightMouseDownPosition = MouseEvent.GetScreenSpacePosition();
-	}
-	return SEditorViewport::OnMouseButtonDown(MyGeometry, MouseEvent);
-}
+	FSlateApplication& SlateApplication = FSlateApplication::Get();
+	SlateApplication.DismissAllMenus();
 
-FReply SLexUIPrefabEditorViewport::OnMouseButtonUp(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
-{
-	FReply Reply = SEditorViewport::OnMouseButtonUp(MyGeometry, MouseEvent);
-	if (MouseEvent.GetEffectingButton() == EKeys::RightMouseButton
-		&& FVector2D::Distance(RightMouseDownPosition, MouseEvent.GetScreenSpacePosition()) <= 4.0f)
+	TSharedPtr<FLexUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+	if (!Editor.IsValid())
 	{
-		if (TSharedPtr<FLexUIPrefabEditor> Editor = PrefabEditorPtr.Pin())
-		{
-			if (TSharedPtr<SWidget> MenuContent = Editor->BuildWidgetContextMenu())
-			{
-				FSlateApplication::Get().PushMenu(AsShared(), FWidgetPath(), MenuContent.ToSharedRef(),
-					MouseEvent.GetScreenSpacePosition(), FPopupTransitionEffect(FPopupTransitionEffect::ContextMenu));
-				return FReply::Handled();
-			}
-		}
+		return false;
 	}
-	return Reply;
+	TSharedPtr<SWidget> MenuContent = Editor->BuildWidgetContextMenu();
+	if (!MenuContent.IsValid())
+	{
+		return false;
+	}
+
+	FWidgetPath WidgetPath;
+	if (!SlateApplication.GeneratePathToWidgetUnchecked(AsShared(), WidgetPath))
+	{
+		return false;
+	}
+	return SlateApplication.PushMenu(
+		AsShared(),
+		WidgetPath,
+		MenuContent.ToSharedRef(),
+		SlateApplication.GetCursorPos(),
+		FPopupTransitionEffect(FPopupTransitionEffect::ContextMenu),
+		true,
+		FVector2D::ZeroVector,
+		EPopupMethod::UseCurrentWindow).IsValid();
 }
 
 namespace LexUIPrefabViewportLocal

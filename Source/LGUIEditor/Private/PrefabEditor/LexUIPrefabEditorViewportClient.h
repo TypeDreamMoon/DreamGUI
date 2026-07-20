@@ -130,6 +130,7 @@ private:
 		FVector StartPlanePoint = FVector::ZeroVector;
 	};
 	bool HandleDesignerInputKey(const FInputKeyEventArgs& EventArgs);
+	void TrackRightMouseMovement(int32 MouseX, int32 MouseY);
 	void UpdateDesignerDrag();
 	void FinishDesignerDrag(bool bCancel);
 	void DrawDesignerOverlay(FViewport& InViewport, FSceneView& View, FCanvas& Canvas);
@@ -137,6 +138,7 @@ private:
 	EDesignerHandle HitTestDesignerHandle(const FVector2D& PixelPosition) const;
 	bool IntersectDesignerPlane(const FVector2D& PixelPosition, const FTransform& PlaneTransform, FVector& OutPoint) const;
 	void DrawWidgetScreenOutline(ULexWidget* InWidget, FSceneView& View, FCanvas& Canvas, const FLinearColor& Color, float Thickness = 1.0f) const;
+	void DrawDesignerCanvasBoundary(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const;
 	TArray<FVector2D> DesignerScreenCorners;
 	TMap<EDesignerHandle, FVector2D> DesignerHandlePositions;
 	FBox2D DesignerScreenBounds = FBox2D(EForceInit::ForceInit);
@@ -156,6 +158,10 @@ private:
 	FDelegateHandle OnSelectionChangedDelegateHandle;
 
 	TWeakPtr<FLexUIPrefabEditor> PrefabEditorPtr;
+	TWeakPtr<class SLexUIPrefabEditorViewport> EditorViewportPtr;
+	FIntPoint RightMouseDownPosition = FIntPoint::ZeroValue;
+	bool bRightMouseButtonDown = false;
+	bool bRightMouseMoved = false;
 	// Are we currently manipulating something?
 	bool bManipulating = false;
 	FTrackingTransaction TrackingTransaction;

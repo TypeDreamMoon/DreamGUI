@@ -672,6 +672,7 @@ FLexUIPrefabEditorViewportClient::FLexUIPrefabEditorViewportClient(TWeakPtr<FLex
 	, CachedElementsToManipulate(UTypedElementRegistry::GetInstance()->CreateElementList())
 {
 	PrefabEditorPtr = InPrefabEditorPtr;
+	EditorViewportPtr = InEditorViewportPtr;
 	ModeTools->SetWidgetMode(UE::Widget::WM_Translate);
 	Widget->SetUsesEditorModeTools(ModeTools.Get());
 	bShowWidget = false;
@@ -1070,9 +1071,85 @@ void FLexUIPrefabEditorViewportClient::DrawWidgetScreenOutline(ULexWidget* InWid
 	}
 }
 
+void FLexUIPrefabEditorViewportClient::DrawDesignerCanvasBoundary(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const
+{
+	const TSharedPtr<FLexUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+	ULexWidget* RootAgent = Editor.IsValid() ? Editor->GetRootAgentWidget() : nullptr;
+	if (!IsValid(RootAgent) || RootAgent->GetWidth() <= 0.0f || RootAgent->GetHeight() <= 0.0f)
+	{
+		return;
+	}
+
+	const float Left = -RootAgent->GetPivot().X * RootAgent->GetWidth();
+	const float Right = (1.0f - RootAgent->GetPivot().X) * RootAgent->GetWidth();
+	const float Bottom = -RootAgent->GetPivot().Y * RootAgent->GetHeight();
+	const float Top = (1.0f - RootAgent->GetPivot().Y) * RootAgent->GetHeight();
+	const FTransform& Transform = RootAgent->GetWorldTransform();
+	const float DpiScale = Canvas.GetDPIScale();
+
+	TArray<FVector2D> Corners;
+	FBox2D Bounds(EForceInit::ForceInit);
+	for (const FVector& Local : { FVector(0, Left, Bottom), FVector(0, Right, Bottom), FVector(0, Right, Top), FVector(0, Left, Top) })
+	{
+		FVector2D Pixel;
+		if (!View.WorldToPixel(Transform.TransformPosition(Local), Pixel))
+		{
+			return;
+		}
+		Pixel /= DpiScale;
+		Corners.Add(Pixel);
+		Bounds += Pixel;
+	}
+
+	const FVector2D ViewSize = FVector2D(InViewport.GetSizeXY()) / DpiScale;
+	const bool bIntersectsViewport = Bounds.Max.X > 0.0f && Bounds.Max.Y > 0.0f
+		&& Bounds.Min.X < ViewSize.X && Bounds.Min.Y < ViewSize.Y;
+	if (bIntersectsViewport)
+	{
+		const float MinX = FMath::Clamp(Bounds.Min.X, 0.0f, ViewSize.X);
+		const float MaxX = FMath::Clamp(Bounds.Max.X, 0.0f, ViewSize.X);
+		const float MinY = FMath::Clamp(Bounds.Min.Y, 0.0f, ViewSize.Y);
+		const float MaxY = FMath::Clamp(Bounds.Max.Y, 0.0f, ViewSize.Y);
+		const FLinearColor OutsideColor(0.0f, 0.0f, 0.0f, 0.32f);
+
+		auto DrawOutsideTile = [&Canvas, &OutsideColor](const FVector2D& Position, const FVector2D& Size)
+		{
+			if (Size.X <= 0.0f || Size.Y <= 0.0f)
+			{
+				return;
+			}
+			FCanvasTileItem Tile(Position, Size, OutsideColor);
+			Tile.BlendMode = SE_BLEND_Translucent;
+			Canvas.DrawItem(Tile);
+		};
+
+		DrawOutsideTile(FVector2D::ZeroVector, FVector2D(ViewSize.X, MinY));
+		DrawOutsideTile(FVector2D(0.0f, MaxY), FVector2D(ViewSize.X, ViewSize.Y - MaxY));
+		DrawOutsideTile(FVector2D(0.0f, MinY), FVector2D(MinX, MaxY - MinY));
+		DrawOutsideTile(FVector2D(MaxX, MinY), FVector2D(ViewSize.X - MaxX, MaxY - MinY));
+	}
+
+	for (int32 Index = 0; Index < Corners.Num(); ++Index)
+	{
+		const FVector2D& Start = Corners[Index];
+		const FVector2D& End = Corners[(Index + 1) % Corners.Num()];
+
+		FCanvasLineItem Shadow(Start, End);
+		Shadow.SetColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.9f));
+		Shadow.LineThickness = 4.0f;
+		Canvas.DrawItem(Shadow);
+
+		FCanvasLineItem Border(Start, End);
+		Border.SetColor(FLinearColor(0.72f, 0.82f, 0.9f, 1.0f));
+		Border.LineThickness = 2.0f;
+		Canvas.DrawItem(Border);
+	}
+}
+
 void FLexUIPrefabEditorViewportClient::DrawDesignerOverlay(FViewport& InViewport, FSceneView& View, FCanvas& Canvas)
 {
 	if (!IsOrtho())return;
+	DrawDesignerCanvasBoundary(InViewport, View, Canvas);
 	if (PaletteDropPreviewWidget.IsValid())
 	{
 		DrawWidgetScreenOutline(PaletteDropPreviewWidget.Get(), View, Canvas, FLinearColor(1.0f, 0.55f, 0.05f), 2.0f);
@@ -1149,6 +1226,9 @@ void FLexUIPrefabEditorViewportClient::ReceivedFocus(FViewport* InViewport)
 void FLexUIPrefabEditorViewportClient::LostFocus(FViewport* InViewport)
 {
 	if (bDesignerDragging)FinishDesignerDrag(true);
+	bRightMouseButtonDown = false;
+	bRightMouseMoved = false;
+	RightMouseDownPosition = FIntPoint::ZeroValue;
 	FEditorViewportClient::LostFocus(InViewport);
 
 	GEditor->SetPreviewMeshMode(false);
@@ -1370,6 +1450,22 @@ void FLexUIPrefabEditorViewportClient::FinishDesignerDrag(bool bCancel)
 
 bool FLexUIPrefabEditorViewportClient::InputKey(const FInputKeyEventArgs& EventArgs)
 {
+	bool bSummonContextMenu = false;
+	if (EventArgs.Key == EKeys::RightMouseButton)
+	{
+		if (EventArgs.Event == IE_Pressed)
+		{
+			RightMouseDownPosition = FIntPoint(EventArgs.Viewport->GetMouseX(), EventArgs.Viewport->GetMouseY());
+			bRightMouseButtonDown = true;
+			bRightMouseMoved = false;
+		}
+		else if (EventArgs.Event == IE_Released)
+		{
+			TrackRightMouseMovement(EventArgs.Viewport->GetMouseX(), EventArgs.Viewport->GetMouseY());
+			bSummonContextMenu = bRightMouseButtonDown && !bRightMouseMoved;
+		}
+	}
+
 	bool bHandled = false;
 	if (IsOrtho())
 	{
@@ -1392,6 +1488,20 @@ bool FLexUIPrefabEditorViewportClient::InputKey(const FInputKeyEventArgs& EventA
 			if (EventArgs.Event == IE_Pressed)
 			{
 				bHandled = FocusViewportToTargets();
+			}
+		}
+	}
+
+	if (EventArgs.Key == EKeys::RightMouseButton && EventArgs.Event == IE_Released)
+	{
+		bRightMouseButtonDown = false;
+		bRightMouseMoved = false;
+		RightMouseDownPosition = FIntPoint::ZeroValue;
+		if (bSummonContextMenu)
+		{
+			if (TSharedPtr<SLexUIPrefabEditorViewport> EditorViewport = EditorViewportPtr.Pin())
+			{
+				bHandled |= EditorViewport->SummonContextMenu();
 			}
 		}
 	}
@@ -2328,8 +2438,22 @@ bool FLexUIPrefabEditorViewportClient::CanMoveActorInViewport(const AActor* InAc
 
 #include "UnrealWidget.h"
 
+void FLexUIPrefabEditorViewportClient::TrackRightMouseMovement(int32 MouseX, int32 MouseY)
+{
+	if (!bRightMouseButtonDown || bRightMouseMoved)
+	{
+		return;
+	}
+
+	const int32 DeltaX = MouseX - RightMouseDownPosition.X;
+	const int32 DeltaY = MouseY - RightMouseDownPosition.Y;
+	bRightMouseMoved = FMath::Square(DeltaX) + FMath::Square(DeltaY) >= MOUSE_CLICK_DRAG_DELTA;
+}
+
 void FLexUIPrefabEditorViewportClient::CapturedMouseMove(FViewport* InViewport, int32 InMouseX, int32 InMouseY)
 {
+	TrackRightMouseMovement(InMouseX, InMouseY);
+
 	// Commit to any pending transactions now
 	TrackingTransaction.PromotePendingToActive();
 
@@ -2349,6 +2473,7 @@ void FLexUIPrefabEditorViewportClient::MouseEnter(FViewport* InViewport, int32 x
 }
 void FLexUIPrefabEditorViewportClient::MouseMove(FViewport* InViewport, int32 x, int32 y)
 {
+	TrackRightMouseMovement(x, y);
 	FEditorViewportClient::MouseMove(InViewport, x, y);
 }
 void FLexUIPrefabEditorViewportClient::MouseLeave(FViewport* InViewport)

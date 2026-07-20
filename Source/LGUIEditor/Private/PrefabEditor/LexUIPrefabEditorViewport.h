@@ -25,8 +25,6 @@ public:
 	virtual TSharedPtr<SWidget> BuildViewportToolbar() override;
 	virtual EVisibility GetTransformToolbarVisibility() const override;
 	virtual void OnFocusViewportToSelection() override;
-	virtual FReply OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
-	virtual FReply OnMouseButtonUp(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
 	virtual FReply OnDragOver(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent) override;
 	virtual FReply OnDrop(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent) override;
 	virtual void OnDragLeave(const FDragDropEvent& DragDropEvent) override;
@@ -38,6 +36,7 @@ public:
 	virtual void OnFloatingButtonClicked() override;
 	// End of ICommonEditorViewportToolbarInfoProvider interface
 	TSharedPtr<FLexUIPrefabEditor> GetPrefabEditor() const { return PrefabEditorPtr.Pin(); }
+	bool SummonContextMenu();
 
 private:
 	// Pointer back to owning sprite editor instance (the keeper of state)
@@ -46,5 +45,4 @@ private:
 
 	// Viewport client
 	TSharedPtr<FLexUIPrefabEditorViewportClient> EditorViewportClient;
-	FVector2D RightMouseDownPosition = FVector2D::ZeroVector;
 };
