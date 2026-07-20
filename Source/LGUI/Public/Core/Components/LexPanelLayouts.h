@@ -45,7 +45,7 @@ public:
 	void RequestLayoutRefresh();
 };
 
-UCLASS(BlueprintType, DisplayName = "LayoutContainer-CanvasPanel")
+UCLASS(BlueprintType, DisplayName = "Canvas Panel")
 class LGUI_API ULexLayoutContainerCanvasPanel : public ULexPanelLayoutBase
 {
 	GENERATED_BODY()
@@ -55,7 +55,7 @@ public:
 	virtual void CalculateLayout() override;
 };
 
-UCLASS(BlueprintType, DisplayName = "LayoutContainer-Overlay")
+UCLASS(BlueprintType, DisplayName = "Overlay")
 class LGUI_API ULexLayoutContainerOverlay : public ULexPanelLayoutBase
 {
 	GENERATED_BODY()
@@ -65,7 +65,7 @@ public:
 	virtual void CalculateLayout() override;
 };
 
-UCLASS(BlueprintType, DisplayName = "LayoutContainer-StackBox")
+UCLASS(BlueprintType, DisplayName = "Stack Box")
 class LGUI_API ULexLayoutContainerStackBox : public ULexPanelLayoutBase
 {
 	GENERATED_BODY()
@@ -79,7 +79,7 @@ public:
 	virtual void CalculateLayout() override;
 };
 
-UCLASS(BlueprintType, DisplayName = "LayoutContainer-HorizontalBox")
+UCLASS(BlueprintType, DisplayName = "Horizontal Box")
 class LGUI_API ULexLayoutContainerHorizontalBox : public ULexLayoutContainerStackBox
 {
 	GENERATED_BODY()
@@ -87,7 +87,7 @@ public:
 	ULexLayoutContainerHorizontalBox();
 };
 
-UCLASS(BlueprintType, DisplayName = "LayoutContainer-VerticalBox")
+UCLASS(BlueprintType, DisplayName = "Vertical Box")
 class LGUI_API ULexLayoutContainerVerticalBox : public ULexLayoutContainerStackBox
 {
 	GENERATED_BODY()
@@ -95,7 +95,7 @@ public:
 	ULexLayoutContainerVerticalBox();
 };
 
-UCLASS(BlueprintType, DisplayName = "LayoutContainer-WrapBox")
+UCLASS(BlueprintType, DisplayName = "Wrap Box")
 class LGUI_API ULexLayoutContainerWrapBox : public ULexPanelLayoutBase
 {
 	GENERATED_BODY()
@@ -111,7 +111,7 @@ public:
 	virtual void CalculateLayout() override;
 };
 
-UCLASS(BlueprintType, DisplayName = "LayoutContainer-GridPanel")
+UCLASS(BlueprintType, DisplayName = "Grid Panel")
 class LGUI_API ULexLayoutContainerGridPanel : public ULexPanelLayoutBase
 {
 	GENERATED_BODY()
@@ -127,7 +127,7 @@ public:
 	virtual void CalculateLayout() override;
 };
 
-UCLASS(BlueprintType, DisplayName = "LayoutContainer-UniformGridPanel")
+UCLASS(BlueprintType, DisplayName = "Uniform Grid Panel")
 class LGUI_API ULexLayoutContainerUniformGridPanel : public ULexPanelLayoutBase
 {
 	GENERATED_BODY()
@@ -143,7 +143,7 @@ public:
 	virtual void CalculateLayout() override;
 };
 
-UCLASS(BlueprintType, DisplayName = "LayoutContainer-SizeBox")
+UCLASS(BlueprintType, DisplayName = "Size Box")
 class LGUI_API ULexLayoutContainerSizeBox : public ULexPanelLayoutBase
 {
 	GENERATED_BODY()
@@ -165,7 +165,7 @@ public:
 	virtual void CalculateLayout() override;
 };
 
-UCLASS(BlueprintType, DisplayName = "LayoutContainer-ScaleBox")
+UCLASS(BlueprintType, DisplayName = "Scale Box")
 class LGUI_API ULexLayoutContainerScaleBox : public ULexPanelLayoutBase
 {
 	GENERATED_BODY()
@@ -181,7 +181,7 @@ public:
 	virtual void CalculateLayout() override;
 };
 
-UCLASS(BlueprintType, DisplayName = "LayoutContainer-SafeZone")
+UCLASS(BlueprintType, DisplayName = "Safe Zone")
 class LGUI_API ULexLayoutContainerSafeZone : public ULexPanelLayoutBase
 {
 	GENERATED_BODY()
@@ -204,7 +204,7 @@ public:
 	virtual void CalculateLayout() override;
 };
 
-UCLASS(BlueprintType, DisplayName = "LayoutContainer-ScrollBox")
+UCLASS(BlueprintType, DisplayName = "Scroll Box Layout")
 class LGUI_API ULexLayoutContainerScrollBox : public ULexLayoutContainerStackBox
 {
 	GENERATED_BODY()
@@ -213,7 +213,7 @@ public:
 	virtual void OnRegister() override;
 };
 
-UCLASS(BlueprintType, DisplayName = "LayoutContainer-WidgetSwitcher")
+UCLASS(BlueprintType, DisplayName = "Widget Switcher")
 class LGUI_API ULexLayoutContainerWidgetSwitcher : public ULexPanelLayoutBase
 {
 	GENERATED_BODY()
