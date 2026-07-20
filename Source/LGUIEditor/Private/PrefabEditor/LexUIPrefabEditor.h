@@ -16,6 +16,7 @@ class SLexUIPrefabEditorDetails;
 class SLexUIPrefabRawDataViewer;
 class AActor;
 class ULexUIPrefabHelperObject;
+class UToolMenu;
 struct FLexUISubPrefabData;
 namespace LexUIPrefabBehaviourUtils { struct FDiscoveredEvent; }
 
@@ -76,7 +77,11 @@ private:
 	// End of FAssetEditorToolkit
 	void SyncSelection();
 	bool bIsSelecting = false;
+	bool bLastApplyHadProblems = false;
+	bool bLastApplySerializationSucceeded = false;
 	void OnApply();
+	bool ApplyPrefabChanges();
+	void SaveAppliedPrefabToDisk();
 public:
 	/** FGCObject interface */
 	virtual void AddReferencedObjects(FReferenceCollector& Collector) override;
@@ -150,6 +155,10 @@ private:
 	void BindCommands();
 	//void ExtendMenu();
 	void ExtendToolbar();
+	void GenerateApplyOptionsMenu(UToolMenu* InMenu);
+	void GenerateSaveOnApplyMenu(UToolMenu* InMenu);
+	void SetSaveOnApplyMode(int32 InMode);
+	bool IsSaveOnApplyMode(int32 InMode)const;
 
 	FText GetApplyButtonStatusTooltip()const;
 	FSlateIcon GetApplyButtonStatusImage()const;

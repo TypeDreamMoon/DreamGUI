@@ -32,6 +32,7 @@
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "PrefabAnimation/LexUIPrefabSequenceEditor.h"
 #include "ScopedTransaction.h"
+#include "Misc/ConfigCacheIni.h"
 
 #define LOCTEXT_NAMESPACE "LexUIPrefabEditor"
 
@@ -56,6 +57,29 @@ const FName FLexUIPrefabEditorTabs::OutlinerID(TEXT("Outliner"));
 const FName FLexUIPrefabEditorTabs::PaletteID(TEXT("Palette"));
 const FName FLexUIPrefabEditorTabs::SequencerID(TEXT("Sequencer"));
 const FName FLexUIPrefabEditorTabs::PrefabRawDataViewerID(TEXT("PrefabRawDataViewer"));
+
+namespace LexUIPrefabEditorLocal
+{
+	enum ESaveOnApplyMode : int32
+	{
+		Never = 0,
+		SuccessOnly = 1,
+		Always = 2,
+	};
+
+	static const TCHAR* SaveOnApplySection = TEXT("LexUIPrefabEditor.Settings");
+	static const TCHAR* SaveOnApplyKey = TEXT("SaveOnApply");
+
+	static int32 GetSaveOnApplyMode()
+	{
+		int32 Mode = Never;
+		if (GConfig)
+		{
+			GConfig->GetInt(SaveOnApplySection, SaveOnApplyKey, Mode, GEditorPerProjectIni);
+		}
+		return FMath::Clamp(Mode, static_cast<int32>(Never), static_cast<int32>(Always));
+	}
+}
 
 FName GetPrefabWorldName()
 {
@@ -333,7 +357,7 @@ void FLexUIPrefabEditor::RegisterTabSpawners(const TSharedRef<FTabManager>& InTa
 		.SetIcon(FSlateIcon(FAppStyle::GetAppStyleSetName(), "Kismet.Tabs.Palette"));
 
 	InTabManager->RegisterTabSpawner(FLexUIPrefabEditorTabs::SequencerID, FOnSpawnTab::CreateSP(this, &FLexUIPrefabEditor::SpawnTab_Sequencer))
-		.SetDisplayName(LOCTEXT("SequencerTabLabel", "Sequencer"))
+		.SetDisplayName(LOCTEXT("SequencerTabLabel", "Animations"))
 		.SetGroup(WorkspaceMenuCategoryRef)
 		.SetIcon(FSlateIcon(FUMGStyle::GetStyleSetName(), "Animations.TabIcon"));
 
@@ -412,6 +436,18 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 	
 	OutlinerPtr = SNew(SLexWidgetEditorHierarchyView, GetWorld());
 	PalettePtr = SNew(SLexUIPrefabPalette, SharedThis(this));
+	if (ULexWidget* RootWidget = GetLoadedRootWidget())
+	{
+		const int32 RenameCount = FLexUIEditorTools::EnsureUniqueWidgetDisplayNames(RootWidget);
+		if (RenameCount > 0)
+		{
+			FNotificationInfo Info(FText::Format(
+				LOCTEXT("UniqueWidgetNamesOnOpen", "Renamed {0} duplicate widget name(s) using UMG-style numeric suffixes. Apply to save the migration."),
+				FText::AsNumber(RenameCount)));
+			Info.ExpireDuration = 6.0f;
+			FSlateNotificationManager::Get().AddNotification(Info);
+		}
+	}
 	ApplyDesignerState();
 
 	SequencerPtr = SNew(SLexUIPrefabSequenceEditor);
@@ -420,7 +456,7 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 	ExtendToolbar();
 
 	// Default layout
-	const TSharedRef<FTabManager::FLayout> StandaloneDefaultLayout = FTabManager::NewLayout("Standalone_LexUIPrefabEditor_Layout_v1")
+	const TSharedRef<FTabManager::FLayout> StandaloneDefaultLayout = FTabManager::NewLayout("Standalone_LexUIPrefabEditor_Layout_v2")
 		->AddArea
 		(
 			FTabManager::NewPrimaryArea()
@@ -461,7 +497,7 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 					FTabManager::NewStack()
 					->SetSizeCoefficient(0.3f)
 					->SetForegroundTab(FLexUIPrefabEditorTabs::SequencerID)
-					->AddTab(FLexUIPrefabEditorTabs::SequencerID, ETabState::ClosedTab)
+					->AddTab(FLexUIPrefabEditorTabs::SequencerID, ETabState::OpenedTab)
 				)
 			)
 		);
@@ -514,11 +550,17 @@ FName FLexUIPrefabEditor::GetSequencerTabID()
 
 void FLexUIPrefabEditor::SaveAsset_Execute()
 {
-	SaveEditorState();
-	FAssetEditorToolkit::SaveAsset_Execute();//save asset
-	
-	FLexUIEditorTools::OnBeforeApplyPrefab.Broadcast(GetPrefabHelperObject());
+	ApplyPrefabChanges();
+	if (bLastApplySerializationSucceeded)
+	{
+		SaveAppliedPrefabToDisk();
+	}
+}
 
+void FLexUIPrefabEditor::SaveAppliedPrefabToDisk()
+{
+	SaveEditorState();
+	FAssetEditorToolkit::SaveAsset_Execute();
 	FLexUIEditorTools::RefreshLoadedPrefab();
 	FLexUIEditorTools::RefreshOnSubPrefabChange(GetPrefabHelperObject()->PrefabAsset);
 }
@@ -866,7 +908,7 @@ void FLexUIPrefabEditor::WrapSelectedWidgets(ELexUIWrapType WrapType)
 	}
 	ULexWidget* Wrapper = NewObject<ULexWidget>(CommonParent->GetOuter(), ULexWidget::StaticClass(), NAME_None, RF_Public | RF_Transactional);
 	Wrapper->Modify();//enroll the new widget in the transaction so undo/redo restores it (and re-registers it), like DeleteWidgets
-	Wrapper->SetDisplayName(WrapperName);
+	Wrapper->SetDisplayName(FLexUIEditorTools::MakeUniqueWidgetDisplayName(CommonParent, WrapperName));
 	Wrapper->OnRegister();
 	Wrapper->SetParent(CommonParent, false, MinSiblingIndex);
 	Wrapper->SetPivot(FVector2D(0.5f, 0.5f));
@@ -954,22 +996,48 @@ void FLexUIPrefabEditor::SaveEditorState()
 	}
 }
 
-void FLexUIPrefabEditor::OnApply()
+bool FLexUIPrefabEditor::ApplyPrefabChanges()
 {
+	ULexUIPrefab* Prefab = GetPrefabBeingEdited();
+	ULexUIPrefabHelperObject* Helper = IsValid(Prefab) ? Prefab->GetPrefabHelperObject() : nullptr;
+	if (!IsValid(Helper) || !IsValid(Helper->LoadedRootWidget))
+	{
+		bLastApplyHadProblems = true;
+		bLastApplySerializationSucceeded = false;
+		return false;
+	}
+
+	bLastApplyHadProblems = false;
+	bLastApplySerializationSucceeded = false;
+	FLexUIEditorTools::OnBeforeApplyPrefab.Broadcast(Helper);
+	if (ULexWidget* RootWidget = GetLoadedRootWidget())
+	{
+		const int32 RenameCount = FLexUIEditorTools::EnsureUniqueWidgetDisplayNames(RootWidget);
+		if (RenameCount > 0)
+		{
+			FNotificationInfo Info(FText::Format(
+				LOCTEXT("UniqueWidgetNamesOnApply", "Renamed {0} duplicate widget name(s) using UMG-style numeric suffixes."),
+				FText::AsNumber(RenameCount)));
+			Info.ExpireDuration = 5.0f;
+			FSlateNotificationManager::Get().AddNotification(Info);
+			if (OutlinerPtr.IsValid())
+			{
+				OutlinerPtr->RequestRefresh();
+			}
+		}
+	}
+
 	// UMG BindWidget-style pass, run just before the prefab is written: auto-wire any null
 	// Instance-Editable companion variable to the same-named descendant, and warn about
 	// bindings the serializer would silently drop (dangling / not Instance-Editable / ambiguous).
 	if (ULexWidget* RootWidget = GetLoadedRootWidget())
 	{
 		TArray<FString> BoundDetails, Problems;
-		LexUIPrefabBehaviourUtils::AutoBindAndValidate(RootWidget, GetPrefabBeingEdited(), BoundDetails, Problems);
+		LexUIPrefabBehaviourUtils::AutoBindAndValidate(RootWidget, Prefab, BoundDetails, Problems);
 		if (BoundDetails.Num() > 0)
 		{
-			if (auto Helper = GetPrefabHelperObject())
-			{
-				Helper->Modify();
-				Helper->SetAnythingDirty();
-			}
+			Helper->Modify();
+			Helper->SetAnythingDirty();
 			FNotificationInfo Info(FText::Format(LOCTEXT("AutoBindOnApply", "Auto-bound {0} variable(s):\n{1}")
 				, FText::AsNumber(BoundDetails.Num()), FText::FromString(FString::Join(BoundDetails, TEXT("\n")))));
 			Info.ExpireDuration = 5.0f;
@@ -977,6 +1045,7 @@ void FLexUIPrefabEditor::OnApply()
 		}
 		if (Problems.Num() > 0)
 		{
+			bLastApplyHadProblems = true;
 			FNotificationInfo Info(FText::Format(LOCTEXT("AutoBindProblemsOnApply", "Companion binding issues:\n{0}")
 				, FText::FromString(FString::Join(Problems, TEXT("\n")))));
 			Info.ExpireDuration = 8.0f;
@@ -985,7 +1054,28 @@ void FLexUIPrefabEditor::OnApply()
 		}
 	}
 
-	GetPrefabHelperObject()->SavePrefab();
+	bLastApplySerializationSucceeded = Helper->SavePrefab();
+	if (!bLastApplySerializationSucceeded)
+	{
+		bLastApplyHadProblems = true;
+		FNotificationInfo Info(LOCTEXT("ApplySerializationFailed", "Apply failed while serializing the prefab. Current changes were not written to the asset."));
+		Info.ExpireDuration = 8.0f;
+		Info.Image = FAppStyle::GetBrush(TEXT("Icons.ErrorWithColor"));
+		FSlateNotificationManager::Get().AddNotification(Info);
+	}
+	return !bLastApplyHadProblems;
+}
+
+void FLexUIPrefabEditor::OnApply()
+{
+	const bool bApplySucceeded = ApplyPrefabChanges();
+	const int32 SaveMode = LexUIPrefabEditorLocal::GetSaveOnApplyMode();
+	const bool bShouldSave = SaveMode == LexUIPrefabEditorLocal::Always
+		|| (SaveMode == LexUIPrefabEditorLocal::SuccessOnly && bApplySucceeded);
+	if (bLastApplySerializationSucceeded && bShouldSave)
+	{
+		SaveAppliedPrefabToDisk();
+	}
 }
 
 void FLexUIPrefabEditor::AddReferencedObjects(FReferenceCollector& Collector)
@@ -1195,6 +1285,24 @@ void FLexUIPrefabEditor::BindCommands()
 		FIsActionChecked()
 	);
 	ToolkitCommands->MapAction(
+		PrefabEditorCommands.SaveOnApply_Never,
+		FExecuteAction::CreateSP(this, &FLexUIPrefabEditor::SetSaveOnApplyMode, static_cast<int32>(LexUIPrefabEditorLocal::Never)),
+		FCanExecuteAction(),
+		FIsActionChecked::CreateSP(this, &FLexUIPrefabEditor::IsSaveOnApplyMode, static_cast<int32>(LexUIPrefabEditorLocal::Never))
+	);
+	ToolkitCommands->MapAction(
+		PrefabEditorCommands.SaveOnApply_SuccessOnly,
+		FExecuteAction::CreateSP(this, &FLexUIPrefabEditor::SetSaveOnApplyMode, static_cast<int32>(LexUIPrefabEditorLocal::SuccessOnly)),
+		FCanExecuteAction(),
+		FIsActionChecked::CreateSP(this, &FLexUIPrefabEditor::IsSaveOnApplyMode, static_cast<int32>(LexUIPrefabEditorLocal::SuccessOnly))
+	);
+	ToolkitCommands->MapAction(
+		PrefabEditorCommands.SaveOnApply_Always,
+		FExecuteAction::CreateSP(this, &FLexUIPrefabEditor::SetSaveOnApplyMode, static_cast<int32>(LexUIPrefabEditorLocal::Always)),
+		FCanExecuteAction(),
+		FIsActionChecked::CreateSP(this, &FLexUIPrefabEditor::IsSaveOnApplyMode, static_cast<int32>(LexUIPrefabEditorLocal::Always))
+	);
+	ToolkitCommands->MapAction(
 		PrefabEditorCommands.RawDataViewer,
 		FExecuteAction::CreateSP(this, &FLexUIPrefabEditor::OnOpenRawDataViewerPanel),
 		FCanExecuteAction(),
@@ -1309,6 +1417,15 @@ void FLexUIPrefabEditor::ExtendToolbar()
 			, LOCTEXT("Apply", "Apply")
 			, TAttribute<FText>(this, &FLexUIPrefabEditor::GetApplyButtonStatusTooltip)
 			, TAttribute<FSlateIcon>(this, &FLexUIPrefabEditor::GetApplyButtonStatusImage));
+		ApplyButtonMenuEntry.StyleNameOverride = "CalloutToolbar";
+
+		auto ApplyOptionsMenuEntry = FToolMenuEntry::InitComboButton(
+			"ApplyOptions",
+			FUIAction(),
+			FNewToolMenuDelegate::CreateSP(this, &FLexUIPrefabEditor::GenerateApplyOptionsMenu),
+			LOCTEXT("ApplyOptionsTooltip", "Options to customize how LexUI prefabs are applied"));
+		ApplyOptionsMenuEntry.StyleNameOverride = "CalloutToolbar";
+		ApplyOptionsMenuEntry.ToolBarData.bSimpleComboBox = true;
 		
 		auto BehaviourButton = FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().OpenBehaviourBlueprint
 			, TAttribute<FText>(), TAttribute<FText>()
@@ -1316,23 +1433,76 @@ void FLexUIPrefabEditor::ExtendToolbar()
 
 		FToolMenuSection& Section = ToolBar->AddSection("LexUIPrefabCommands", TAttribute<FText>(), InsertAfterAssetSection);
 		Section.AddEntry(ApplyButtonMenuEntry);
+		Section.AddEntry(ApplyOptionsMenuEntry);
 		Section.AddEntry(BehaviourButton);
 		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().RawDataViewer));
 		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().OpenPrefabHelperObject));
 	}
 }
 
+void FLexUIPrefabEditor::GenerateApplyOptionsMenu(UToolMenu* InMenu)
+{
+	FToolMenuSection& Section = InMenu->AddSection("ApplyOptions");
+	Section.AddSubMenu(
+		"SaveOnApply",
+		LOCTEXT("SaveOnApplySubMenu", "Save on Apply"),
+		LOCTEXT("SaveOnApplySubMenuTooltip", "Determines when the prefab asset is saved after Apply."),
+		FNewToolMenuDelegate::CreateSP(this, &FLexUIPrefabEditor::GenerateSaveOnApplyMenu));
+}
+
+void FLexUIPrefabEditor::GenerateSaveOnApplyMenu(UToolMenu* InMenu)
+{
+	FToolMenuSection& Section = InMenu->AddSection("SaveOnApply");
+	const FLexUIPrefabEditorCommand& Commands = FLexUIPrefabEditorCommand::Get();
+	Section.AddMenuEntry(Commands.SaveOnApply_Never);
+	Section.AddMenuEntry(Commands.SaveOnApply_SuccessOnly);
+	Section.AddMenuEntry(Commands.SaveOnApply_Always);
+}
+
+void FLexUIPrefabEditor::SetSaveOnApplyMode(int32 InMode)
+{
+	if (!GConfig)
+	{
+		return;
+	}
+	const int32 ClampedMode = FMath::Clamp(
+		InMode,
+		static_cast<int32>(LexUIPrefabEditorLocal::Never),
+		static_cast<int32>(LexUIPrefabEditorLocal::Always));
+	GConfig->SetInt(
+		LexUIPrefabEditorLocal::SaveOnApplySection,
+		LexUIPrefabEditorLocal::SaveOnApplyKey,
+		ClampedMode,
+		GEditorPerProjectIni);
+	GConfig->Flush(false, GEditorPerProjectIni);
+}
+
+bool FLexUIPrefabEditor::IsSaveOnApplyMode(int32 InMode)const
+{
+	return LexUIPrefabEditorLocal::GetSaveOnApplyMode() == InMode;
+}
+
 FText FLexUIPrefabEditor::GetApplyButtonStatusTooltip()const
 {
-	return GetAnythingDirty() ? LOCTEXT("Apply_Tooltip", "Dirty, need to apply") : LOCTEXT("Apply_Tooltip", "Good to go");
+	if (GetAnythingDirty())
+	{
+		return LOCTEXT("Apply_Tooltip", "Changes need to be applied");
+	}
+	if (bLastApplyHadProblems)
+	{
+		return LOCTEXT("ApplyProblems_Tooltip", "Applied with validation issues");
+	}
+	return LOCTEXT("ApplyGood_Tooltip", "Prefab is up to date");
 }
 FSlateIcon FLexUIPrefabEditor::GetApplyButtonStatusImage()const
 {
 	static const FName CompileStatusBackground("Blueprint.CompileStatus.Background");
 	static const FName CompileStatusUnknown("Blueprint.CompileStatus.Overlay.Unknown");
 	static const FName CompileStatusGood("Blueprint.CompileStatus.Overlay.Good");
+	static const FName CompileStatusError("Blueprint.CompileStatus.Overlay.Error");
 
-	return FSlateIcon(FAppStyle::GetAppStyleSetName(), CompileStatusBackground, NAME_None, GetAnythingDirty() ? CompileStatusUnknown : CompileStatusGood);
+	const FName Overlay = GetAnythingDirty() ? CompileStatusUnknown : (bLastApplyHadProblems ? CompileStatusError : CompileStatusGood);
+	return FSlateIcon(FAppStyle::GetAppStyleSetName(), CompileStatusBackground, NAME_None, Overlay);
 }
 
 TSharedRef<SDockTab> FLexUIPrefabEditor::SpawnTab_Viewport(const FSpawnTabArgs& Args)
@@ -1372,7 +1542,7 @@ TSharedRef<SDockTab> FLexUIPrefabEditor::SpawnTab_Palette(const FSpawnTabArgs& A
 TSharedRef<SDockTab> FLexUIPrefabEditor::SpawnTab_Sequencer(const FSpawnTabArgs& Args)
 {
 	return SNew(SDockTab)
-		.Label(LOCTEXT("SequencerTab_Title", "Sequencer"))
+		.Label(LOCTEXT("SequencerTab_Title", "Animations"))
 		[
 			SequencerPtr.ToSharedRef()
 		];
@@ -1574,6 +1744,7 @@ FReply FLexUIPrefabEditor::TryHandleAssetDragDropOperation(const FDragDropEvent&
 					);
 
 					GetPrefabHelperObject()->MakePrefabAsSubPrefab(PrefabAsset, LoadedSubPrefabRootActor, SubPrefabMapGuidToObject, {});
+					FLexUIEditorTools::EnsureUniqueWidgetDisplayNames(GetLoadedRootWidget());
 					CreatedWidgetArray.Add(LoadedSubPrefabRootActor);
 				}
 
