@@ -59,7 +59,10 @@ void ULexWidget::BeginPlay()
 
 	for (auto Component : Components)
 	{
-		Component->BeginPlay();
+		if (IsValid(Component))
+		{
+			Component->BeginPlay();
+		}
 	}
 	
 	if (IsValid(LayoutContainer))
@@ -86,7 +89,10 @@ void ULexWidget::EndPlay()
 
 	for (auto Component : Components)
 	{
-		Component->EndPlay();
+		if (IsValid(Component))
+		{
+			Component->EndPlay();
+		}
 	}
 	
 	if (IsValid(LayoutContainer))
@@ -1491,7 +1497,10 @@ void ULexWidget::OnUnregister()
 	
 	for (auto Component : Components)
 	{
-		Component->OnUnregister();
+		if (IsValid(Component))
+		{
+			Component->OnUnregister();
+		}
 	}
 
 	if (IsValid(LayoutContainer))
