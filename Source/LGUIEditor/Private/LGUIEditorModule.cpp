@@ -105,12 +105,16 @@
 #include "Extensions/2DLineRenderer/Lex2DLineRaw.h"
 #include "Interaction/UIButton.h"
 #include "Interaction/UIDropdown.h"
+#include "Interaction/LexContentWidget.h"
+#include "Interaction/UIListView.h"
 #include "Interaction/UIScrollbar.h"
 #include "Interaction/UIScrollViewWithScrollbar.h"
 #include "Interaction/UISelectable.h"
 #include "Interaction/UISlider.h"
+#include "Interaction/UIStandardControls.h"
 #include "Interaction/UITextInput.h"
 #include "Interaction/UIToggle.h"
+#include "Interaction/UIToggleGroup.h"
 #include "MeshModifier/LexMeshModifierBase.h"
 #include "MeshModifier/LexMeshModifierTextAnimation.h"
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequence.h"
@@ -131,6 +135,7 @@ void FLGUIEditorModule::StartupModule()
 	
 	FLGUIEditorStyle::Initialize();
 	FLGUIEditorStyle::ReloadTextures();
+	FLexUIControlRegistry::Get().InitializeDynamicDiscovery();
 
 	OnInitializeSequenceHandle = ULexUIPrefabSequence::OnInitializeSequence().AddStatic(FLGUIEditorModule::OnInitializeSequence);
 
@@ -348,6 +353,7 @@ void FLGUIEditorModule::ShutdownModule()
 {
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
 	// we call this function before unloading the module.
+	FLexUIControlRegistry::Get().ShutdownDynamicDiscovery();
 	FLGUIEditorStyle::Shutdown();
 
 	FLexUIEditorCommands::Unregister();
@@ -724,14 +730,43 @@ if (Widget->GetComponent<Class>())\
 {\
 return FSlateIconFinder::FindIconBrushForClass(Class::StaticClass());\
 }
+	RETURN_BRUSH(UUITreeView);
+	RETURN_BRUSH(UUITileView);
+	RETURN_BRUSH(UUIListView);
+	RETURN_BRUSH(UUIProgressBar);
+	RETURN_BRUSH(ULexNamedSlotHost);
+	RETURN_BRUSH(ULexContentWidget);
 	RETURN_BRUSH(UUITextInput);
 	RETURN_BRUSH(UUIButton);
 	RETURN_BRUSH(UUIToggle);
+	RETURN_BRUSH(UUIToggleGroup);
 	RETURN_BRUSH(UUISlider);
 	RETURN_BRUSH(UUIScrollbar);
 	RETURN_BRUSH(UUIDropdown);
 	RETURN_BRUSH(UUIScrollView);
 	return nullptr;
+}
+
+const FSlateBrush* FLGUIEditorModule::GetWidgetIconBrush(ULexWidget* Widget)
+{
+	if (!IsValid(Widget))return nullptr;
+	if (const FSlateBrush* InteractionIcon = GetInteractionIconBrush(Widget))
+	{
+		return InteractionIcon;
+	}
+	if (ULexLayoutContainer* LayoutContainer = Widget->GetLayoutContainer())
+	{
+		return FSlateIconFinder::FindIconBrushForClass(LayoutContainer->GetClass());
+	}
+	if (ULexVisual* Visual = Widget->GetVisual())
+	{
+		return FSlateIconFinder::FindIconBrushForClass(Visual->GetClass());
+	}
+	if (ULexLayoutSelf* LayoutSelf = Widget->GetLayoutSelf())
+	{
+		return FSlateIconFinder::FindIconBrushForClass(LayoutSelf->GetClass());
+	}
+	return FSlateIconFinder::FindIconBrushForClass(ULexWidget::StaticClass());
 }
 
 bool FLGUIEditorModule::IsValidClassName(const FString& InName)
@@ -806,44 +841,24 @@ void FLGUIEditorModule::CreateExtraPrefabsSubMenu(FMenuBuilder& MenuBuilder, TFu
 
 void FLGUIEditorModule::CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder, TFunction<ULexWidget*()> GetSelectedWidgetFunction)
 {
-	struct FunctionContainer
-	{
-		static void CreateWidgetVisualElementMenuEntry(FMenuBuilder& InBuilder, TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString Name, UClass* InVisualClass, TFunction<void(ULexWidget*)> Callback)
-		{
-			UClass* NameClass = InVisualClass ? InVisualClass : ULexWidget::StaticClass();
-			InBuilder.AddMenuEntry(
-				FText::FromString(NameClass->GetName()),
-				NameClass->GetToolTipText(),
-				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateWidget, GetSelectedWidgetFunction, Name, InVisualClass, Callback))
-			);
-		}
-	};
-
+	FLexUIControlRegistry::Get().RefreshDynamicClasses();
 	MenuBuilder.BeginSection("UIPostProcess");
 	{
-		for (TObjectIterator<UClass> ClassItr; ClassItr; ++ClassItr)
+		for (const FLexUIControlDescriptor& Descriptor : FLexUIControlRegistry::Get().GetDescriptors())
 		{
-			if (ClassItr->IsChildOf(ULexVisualPostProcess::StaticClass()))
+			if (Descriptor.Category != TEXT("Post Process"))
 			{
-				if (
-					   !(ClassItr->HasAnyClassFlags(CLASS_Transient))
-					&& !(ClassItr->HasAnyClassFlags(CLASS_Abstract))
-					&& !(ClassItr->HasAnyClassFlags(CLASS_Deprecated))
-					&& !(ClassItr->HasAnyClassFlags(CLASS_NotPlaceable))
-					)
-				{
-					bool isBlueprint = ClassItr->HasAnyClassFlags(CLASS_CompiledFromBlueprint);
-					if (isBlueprint)
-					{
-						if (!IsValidClassName(ClassItr->GetName()))
-						{
-							continue;
-						}
-					}
-					FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedWidgetFunction, ClassItr->GetName(), *ClassItr, nullptr);
-				}
+				continue;
 			}
+			FText ValidationError;
+			const bool bValid = FLexUIControlRegistry::Get().Validate(Descriptor, ValidationError);
+			MenuBuilder.AddMenuEntry(
+				Descriptor.DisplayName,
+				bValid && Descriptor.VisualClass.IsValid() ? Descriptor.VisualClass->GetToolTipText() : ValidationError,
+				Descriptor.Icon,
+				FUIAction(
+					FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateRegisteredControl, GetSelectedWidgetFunction, Descriptor.Name),
+					FCanExecuteAction::CreateLambda([bValid]() { return bValid; })));
 		}
 	}
 	MenuBuilder.EndSection();
@@ -851,39 +866,24 @@ void FLGUIEditorModule::CreateUIPostProcessSubMenu(FMenuBuilder& MenuBuilder, TF
 
 void FLGUIEditorModule::CreateUIExtensionSubMenu(FMenuBuilder& MenuBuilder, TFunction<ULexWidget*()> GetSelectedWidgetFunction)
 {
-	struct FunctionContainer
-	{
-		static void CreateWidgetVisualElementMenuEntry(FMenuBuilder& InBuilder, TFunction<ULexWidget*()> GetSelectedWidgetFunction, UClass* InVisualClass, TFunction<void(ULexWidget*)> Callback)
-		{
-			UClass* NameClass = InVisualClass ? InVisualClass : ULexWidget::StaticClass();
-			InBuilder.AddMenuEntry(
-				FText::FromString(NameClass->GetName()),
-				NameClass->GetToolTipText(),
-				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateWidget, GetSelectedWidgetFunction, InVisualClass->GetName(), InVisualClass, Callback))
-			);
-		}
-		static void CreateMenuEntryByPrefab(FMenuBuilder& InBuilder, TFunction<ULexWidget*()> GetSelectedWidgetFunction, const FString& InControlName, const FText& InLabel, const FText& InTooltip = FText::GetEmpty())
-		{
-			InBuilder.AddMenuEntry(
-				InLabel,
-				InTooltip,
-				FSlateIcon(),
-				FUIAction(FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateUIControls, GetSelectedWidgetFunction, FLexUIEditorTools::LexUIPresetPrefabPath + InControlName))
-			);
-		}
-	};
-
 	MenuBuilder.BeginSection("UIExtension");
 	{
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedWidgetFunction, ULexPolygon::StaticClass(), nullptr);
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedWidgetFunction, ULexPolygonLine::StaticClass(), nullptr);
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedWidgetFunction, ULexRing::StaticClass(), nullptr);
-		//FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedWidgetFunction, ULexStaticMesh::StaticClass(), nullptr);
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedWidgetFunction, ULex2DLineRaw::StaticClass(), nullptr);
-		FunctionContainer::CreateWidgetVisualElementMenuEntry(MenuBuilder, GetSelectedWidgetFunction, ULex2DLineChildrenAsPoints::StaticClass(), nullptr);
-		//FunctionContainer::CreateMenuEntryByPrefab(MenuBuilder, TEXT("UIWidget"), LOCTEXT("UIWidget", "UI Widget"), AUIWidgetActor::StaticClass()->GetToolTipText());
-		//FunctionContainer::CreateMenuEntryByPrefab(MenuBuilder, TEXT("UIRenderTarget"), LOCTEXT("UIRenderTarget", "UI Render Target"), AUIRenderTargetActor::StaticClass()->GetToolTipText());
+		for (const FLexUIControlDescriptor& Descriptor : FLexUIControlRegistry::Get().GetDescriptors())
+		{
+			if (Descriptor.Category != TEXT("Extensions"))
+			{
+				continue;
+			}
+			FText ValidationError;
+			const bool bValid = FLexUIControlRegistry::Get().Validate(Descriptor, ValidationError);
+			MenuBuilder.AddMenuEntry(
+				Descriptor.DisplayName,
+				bValid && Descriptor.VisualClass.IsValid() ? Descriptor.VisualClass->GetToolTipText() : ValidationError,
+				Descriptor.Icon,
+				FUIAction(
+					FExecuteAction::CreateStatic(&FLexUIEditorTools::CreateRegisteredControl, GetSelectedWidgetFunction, Descriptor.Name),
+					FCanExecuteAction::CreateLambda([bValid]() { return bValid; })));
+		}
 	}
 	MenuBuilder.EndSection();
 }

@@ -14,6 +14,7 @@
 #include "Editor.h"
 #include "LGUIEditorModule.h"
 #include "LGUIEditorStyle.h"
+#include "LexUIEditorTools.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexVisual.h"
@@ -263,28 +264,10 @@ void SLexWidgetEditorHierarchyViewItem::Construct(const FArguments& InArgs, cons
 			[
 				SNew(SImage)
 				.ColorAndOpacity(FSlateColor::UseForeground())
+				.DesiredSizeOverride(FVector2D(16, 16))
 				.Image_Lambda([=, this]()
 				{
-					if (Widget.IsValid())
-					{
-						if (Widget->GetVisual())
-							return FSlateIconFinder::FindIconBrushForClass(Widget->GetVisual()->GetClass());
-						return FSlateIconFinder::FindIconBrushForClass(ULexWidget::StaticClass());
-					}
-					return (const FSlateBrush*)nullptr;
-				})
-			]
-			// Interaction icon
-			+ SHorizontalBox::Slot()
-			.AutoWidth()
-			.VAlign(VAlign_Center)
-			.Padding(2, 0)
-			[
-				SNew(SImage)
-				.ColorAndOpacity(FSlateColor::UseForeground())
-				.Image_Lambda([=, this]()
-				{
-					return FLGUIEditorModule::Get().GetInteractionIconBrush(Widget.Get());
+					return FLGUIEditorModule::Get().GetWidgetIconBrush(Widget.Get());
 				})
 			]
 
@@ -741,24 +724,6 @@ bool SLexWidgetEditorHierarchyViewItem::OnVerifyNameTextChanged(const FText& InT
 	{
 		return false;
 	}
-	if (Widget.IsValid())
-	{
-		ULexWidget* Root = Widget->GetRootWidgetInHierarchy();
-		TArray<ULexWidget*> Widgets;
-		if (Root)
-		{
-			Widgets.Add(Root);
-			ULexWidget::CollectChildrenWidgets(Root, Widgets);
-		}
-		for (ULexWidget* Other : Widgets)
-		{
-			if (Other && Other != Widget.Get() && Other->GetDisplayName().Equals(ProposedName, ESearchCase::IgnoreCase))
-			{
-				OutErrorMessage = LOCTEXT("DuplicateWidgetName", "Widget names must be unique within a prefab for reliable behaviour binding.");
-				return false;
-			}
-		}
-	}
 	return true;
 }
 void SLexWidgetEditorHierarchyViewItem::OnNameTextCommited(const FText& InText, ETextCommit::Type CommitInfo)
@@ -773,9 +738,11 @@ void SLexWidgetEditorHierarchyViewItem::OnNameTextCommited(const FText& InText, 
 
 	GEditor->BeginTransaction(LOCTEXT("ChangeWidgetName_Transaction", "Change Name"));
 	Widget->Modify();
+	const FString UniqueName = FLexUIEditorTools::MakeUniqueWidgetDisplayName(
+		Widget.Get(), InText.ToString().TrimStartAndEnd(), Widget.Get());
 	FLexUIUtils::ChangePropertyWithNotify(Widget.Get(), ULexWidget::GetPropertyName_DisplayName(), [=, this]()
 	{
-		Widget->SetDisplayName(InText.ToString().TrimStartAndEnd());
+		Widget->SetDisplayName(UniqueName);
 	});
 	GEditor->EndTransaction();
 

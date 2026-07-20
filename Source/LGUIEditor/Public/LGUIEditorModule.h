@@ -27,6 +27,7 @@ public:
 	TArray<TSharedPtr<class FAssetTypeActions_Base>> AssetTypeActionsArray;
 
 	const FSlateBrush* GetInteractionIconBrush(ULexWidget* Widget);
+	const FSlateBrush* GetWidgetIconBrush(ULexWidget* Widget);
 private:
 
 	bool IsValidClassName(const FString& InName);

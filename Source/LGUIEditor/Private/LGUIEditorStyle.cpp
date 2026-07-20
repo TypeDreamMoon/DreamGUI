@@ -36,6 +36,7 @@ FString UMG_Brush_RootToContentDir(const FString& RelativePath, const TCHAR* Ext
 #define IMAGE_BRUSH( RelativePath, ... ) FSlateImageBrush( Style->RootToContentDir( RelativePath, TEXT(".png") ), __VA_ARGS__ )
 #define BOX_BRUSH( RelativePath, ... ) FSlateBoxBrush( Style->RootToContentDir( RelativePath, TEXT(".png") ), __VA_ARGS__ )
 #define BORDER_BRUSH( RelativePath, ... ) FSlateBorderBrush( Style->RootToContentDir( RelativePath, TEXT(".png") ), __VA_ARGS__ )
+#define UMG_IMAGE( RelativePath, ... ) FSlateImageBrush( UMG_Brush_RootToContentDir( RelativePath, TEXT(".png")), __VA_ARGS__ )
 #define UMG_ICON( RelativePath, ... ) FSlateVectorImageBrush( UMG_Brush_RootToContentDir( RelativePath, TEXT(".svg")), __VA_ARGS__ )
 #define TTF_FONT( RelativePath, ... ) FSlateFontInfo( Style->RootToContentDir( RelativePath, TEXT(".ttf") ), __VA_ARGS__ )
 #define OTF_FONT( RelativePath, ... ) FSlateFontInfo( Style->RootToContentDir( RelativePath, TEXT(".otf") ), __VA_ARGS__ )
@@ -78,34 +79,78 @@ TSharedRef< FSlateStyleSet > FLGUIEditorStyle::Create()
 
 	Style->Set("ClassIcon.LexCanvas", new IMAGE_BRUSH(TEXT("LexCanvas_16x"), Icon16x16));
 	Style->Set("ClassIcon.UISpriteBase", new IMAGE_BRUSH(TEXT("UISprite_16x"), Icon16x16));
-	Style->Set("ClassIcon.LexText", new IMAGE_BRUSH(TEXT("LexText_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexText", new UMG_ICON(TEXT("Text"), Icon16x16));
 	Style->Set("ClassIcon.UITexture", new IMAGE_BRUSH(TEXT("UITexture_16x"), Icon16x16));
-	Style->Set("ClassIcon.LexImage", new IMAGE_BRUSH(TEXT("Image_16x"), Icon16x16));
-	Style->Set("ClassIcon.LexWidget", new IMAGE_BRUSH(TEXT("LexWidget_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexImage", new UMG_ICON(TEXT("Image"), Icon16x16));
+	Style->Set("ClassIcon.LexWidget", new UMG_IMAGE(TEXT("Widget"), Icon16x16));
 	Style->Set("ClassIcon.UIPolygon", new IMAGE_BRUSH(TEXT("UIPolygon_16x"), Icon16x16));
 	Style->Set("ClassIcon.UIPolygonLine", new IMAGE_BRUSH(TEXT("UIPolygonLine_16x"), Icon16x16));
 	Style->Set("ClassIcon.UI2DLineRaw", new IMAGE_BRUSH(TEXT("UILine_16x"), Icon16x16));
 	Style->Set("ClassIcon.UI2DLineRendererBase", new IMAGE_BRUSH(TEXT("UILine_16x"), Icon16x16));
 	Style->Set("ClassIcon.UI2DLineChildrenAsPoints", new IMAGE_BRUSH(TEXT("UILineChildrenAsPoints_16x"), Icon16x16));
 	Style->Set("ClassIcon.UIRing", new IMAGE_BRUSH(TEXT("UIRing_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexPolygon", new IMAGE_BRUSH(TEXT("UIPolygon_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexPolygonLine", new IMAGE_BRUSH(TEXT("UIPolygonLine_16x"), Icon16x16));
+	Style->Set("ClassIcon.Lex2DLineRaw", new IMAGE_BRUSH(TEXT("UILine_16x"), Icon16x16));
+	Style->Set("ClassIcon.Lex2DLineChildrenAsPoints", new IMAGE_BRUSH(TEXT("UILineChildrenAsPoints_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexRing", new IMAGE_BRUSH(TEXT("UIRing_16x"), Icon16x16));
 	Style->Set("ClassIcon.UITextureBase", new IMAGE_BRUSH(TEXT("UITexture_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexVisualPostProcess", new IMAGE_BRUSH(TEXT("UIPostProcess_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexBackgroundBlur", new IMAGE_BRUSH(TEXT("UIPostProcess_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexBackgroundPixelate", new IMAGE_BRUSH(TEXT("UIPostProcess_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexUIBehaviour", new IMAGE_BRUSH(TEXT("LexUIBehaviour_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexUIMLBehaviour", new IMAGE_BRUSH(TEXT("Xaml_16x"), Icon16x16));
-	Style->Set("ClassIcon.LexRectBlock", new IMAGE_BRUSH(TEXT("LexRectBlock_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexRectBlock", new UMG_ICON(TEXT("Border"), Icon16x16));
 	Style->Set("ClassIcon.UIWidget", new IMAGE_BRUSH(TEXT("UIWidget_16x"), Icon16x16));
 	Style->Set("ClassIcon.UIRenderTarget", new IMAGE_BRUSH(TEXT("UIRenderTarget_16x"), Icon16x16));
 	Style->Set("ClassIcon.UICustomMesh", new IMAGE_BRUSH(TEXT("UICustomMesh_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexUICustomMesh", new IMAGE_BRUSH(TEXT("UICustomMesh_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexCustomMesh", new IMAGE_BRUSH(TEXT("UICustomMesh_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexStaticMesh", new IMAGE_BRUSH(TEXT("UICustomMesh_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexUMGWidget", new IMAGE_BRUSH(TEXT("UIWidget_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexCanvasRenderTargetPreviewer", new IMAGE_BRUSH(TEXT("UIRenderTarget_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexPostProcessRenderElement", new IMAGE_BRUSH(TEXT("UIRenderTarget_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexPostProcessRenderElement_Text", new UMG_ICON(TEXT("Text"), Icon16x16));
+	Style->Set("ClassIcon.LexSprite", new IMAGE_BRUSH(TEXT("UISprite_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexTexture", new IMAGE_BRUSH(TEXT("UITexture_16x"), Icon16x16));
+	Style->Set("ClassIcon.LexVisualEmpty", new UMG_IMAGE(TEXT("Widget"), Icon16x16));
 	Style->Set("ClassIcon.LexUIFontData_BaseObject", new IMAGE_BRUSH(TEXT("Font_16x"), Icon16x16));
 	Style->Set("ClassIcon.LexUIFontEmojiData", new IMAGE_BRUSH(TEXT("FontEmoji_16x"), Icon16x16));
 	Style->Set("ClassIcon.UIButton", new UMG_ICON(TEXT("Button"), Icon16x16));
 	Style->Set("ClassIcon.UITextInput", new UMG_ICON(TEXT("TextBox"), Icon16x16));
 	Style->Set("ClassIcon.UIToggle", new UMG_ICON(TEXT("CheckBox"), Icon16x16));
+	Style->Set("ClassIcon.UIToggleGroup", new UMG_ICON(TEXT("CheckBox"), Icon16x16));
 	Style->Set("ClassIcon.UISlider", new UMG_ICON(TEXT("Slider"), Icon16x16));
-	Style->Set("ClassIcon.UIScrollbar", new UMG_ICON(TEXT("ProgressBar"), Icon16x16));
+	Style->Set("ClassIcon.UIScrollbar", new UMG_ICON(TEXT("ScrollBar"), Icon16x16));
 	Style->Set("ClassIcon.UIDropdown", new UMG_ICON(TEXT("ComboBox"), Icon16x16));
 	Style->Set("ClassIcon.UIScrollView", new UMG_ICON(TEXT("ScrollBox"), Icon16x16));
+	Style->Set("ClassIcon.UIProgressBar", new UMG_ICON(TEXT("ProgressBar"), Icon16x16));
+	Style->Set("ClassIcon.LexContentWidget", new UMG_ICON(TEXT("NativeWidgetHost"), Icon16x16));
+	Style->Set("ClassIcon.LexNamedSlotHost", new UMG_ICON(TEXT("NamedSlot"), Icon16x16));
+	Style->Set("ClassIcon.UIListView", new UMG_ICON(TEXT("ListView"), Icon16x16));
+	Style->Set("ClassIcon.UITileView", new UMG_ICON(TEXT("TileView"), Icon16x16));
+	Style->Set("ClassIcon.UITreeView", new UMG_ICON(TEXT("TreeView"), Icon16x16));
+
+	Style->Set("ClassIcon.LexLayoutContainerCanvasPanel", new UMG_ICON(TEXT("CanvasPanel"), Icon16x16));
+	Style->Set("ClassIcon.LexLayoutContainerOverlay", new UMG_ICON(TEXT("Overlay"), Icon16x16));
+	Style->Set("ClassIcon.LexLayoutContainerHorizontalBox", new UMG_ICON(TEXT("HorizontalBox"), Icon16x16));
+	Style->Set("ClassIcon.LexLayoutContainerVerticalBox", new UMG_ICON(TEXT("VerticalBox"), Icon16x16));
+	Style->Set("ClassIcon.LexLayoutContainerStackBox", new UMG_ICON(TEXT("StackBox"), Icon16x16));
+	Style->Set("ClassIcon.LexLayoutContainerWrapBox", new UMG_ICON(TEXT("WrapBox"), Icon16x16));
+	Style->Set("ClassIcon.LexLayoutContainerGridPanel", new UMG_ICON(TEXT("GridPanel"), Icon16x16));
+	Style->Set("ClassIcon.LexLayoutContainerUniformGridPanel", new UMG_ICON(TEXT("UniformGridPanel"), Icon16x16));
+	Style->Set("ClassIcon.LexLayoutContainerSafeZone", new UMG_ICON(TEXT("SafeZone"), Icon16x16));
+	Style->Set("ClassIcon.LexLayoutContainerScaleBox", new UMG_ICON(TEXT("ScaleBox"), Icon16x16));
+	Style->Set("ClassIcon.LexLayoutContainerSizeBox", new UMG_ICON(TEXT("SizeBox"), Icon16x16));
+	Style->Set("ClassIcon.LexLayoutContainerScrollBox", new UMG_ICON(TEXT("ScrollBox"), Icon16x16));
+	Style->Set("ClassIcon.LexLayoutContainerWidgetSwitcher", new UMG_ICON(TEXT("WidgetSwitcher"), Icon16x16));
+	Style->Set("ClassIcon.LexLayoutContainerFlexBox", new UMG_ICON(TEXT("WrapBox"), Icon16x16));
+	Style->Set("ClassIcon.LexLayoutContainerGrid", new UMG_ICON(TEXT("GridPanel"), Icon16x16));
+	Style->Set("ClassIcon.LexLayoutSelfSpacer", new UMG_ICON(TEXT("Spacer"), Icon16x16));
+	Style->Set("ClassIcon.LexLayoutSelfAspectRatio", new UMG_ICON(TEXT("ScaleBox"), Icon16x16));
+	Style->Set("ClassIcon.LexLayoutSelfFlexBox", new UMG_ICON(TEXT("WrapBox"), Icon16x16));
+	Style->Set("ClassIcon.LexLayoutSelfGrid", new UMG_ICON(TEXT("GridPanel"), Icon16x16));
+	Style->Set("ClassIcon.LexMeshModifierBase", new UMG_ICON(TEXT("Border"), Icon16x16));
 
 	Style->Set("ClassThumbnail.LexUIEventSystemActor", new IMAGE_BRUSH(TEXT("EventSystem_40x"), Icon40x40));
 	Style->Set("ClassThumbnail.LexUIEventSystem", new IMAGE_BRUSH(TEXT("EventSystem_40x"), Icon40x40));
@@ -174,6 +219,8 @@ TSharedRef< FSlateStyleSet > FLGUIEditorStyle::Create()
 #undef IMAGE_BRUSH
 #undef BOX_BRUSH
 #undef BORDER_BRUSH
+#undef UMG_IMAGE
+#undef UMG_ICON
 #undef TTF_FONT
 #undef OTF_FONT
 

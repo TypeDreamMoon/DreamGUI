@@ -165,28 +165,10 @@ void SLexWidgetHierarchyPickerViewItem::Construct(const FArguments& InArgs, cons
 					[
 						SNew(SImage)
 						.ColorAndOpacity(FSlateColor::UseForeground())
+						.DesiredSizeOverride(FVector2D(16, 16))
 						.Image_Lambda([=, this]()
 						{
-							if (Widget.IsValid())
-							{
-								if (Widget->GetVisual())
-									return FSlateIconFinder::FindIconBrushForClass(Widget->GetVisual()->GetClass());
-								return FSlateIconFinder::FindIconBrushForClass(ULexWidget::StaticClass());
-							}
-							return (const FSlateBrush*)nullptr;
-						})
-					]
-					// Interaction icon
-					+ SHorizontalBox::Slot()
-					.AutoWidth()
-					.VAlign(VAlign_Center)
-					.Padding(2, 0)
-					[
-						SNew(SImage)
-						.ColorAndOpacity(FSlateColor::UseForeground())
-						.Image_Lambda([=, this]()
-						{
-							return FLGUIEditorModule::Get().GetInteractionIconBrush(Widget.Get());
+							return FLGUIEditorModule::Get().GetWidgetIconBrush(Widget.Get());
 						})
 					]
 

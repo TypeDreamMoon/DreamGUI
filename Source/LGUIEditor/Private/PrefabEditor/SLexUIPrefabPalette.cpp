@@ -215,8 +215,19 @@ TSharedRef<ITableRow> SLexUIPrefabPalette::OnGenerateRow(FItemPtr InItem, const 
 			];
 	}
 
-	// element row: icon (visual class or a generic UI icon) + name
-	UClass* IconClass = InItem->VisualClass.IsValid() ? InItem->VisualClass.Get() : ULexWidget::StaticClass();
+	// Registry entries carry an explicit semantic icon. Basics and project prefabs
+	// still resolve through their native class, matching UMG's palette behavior.
+	const FSlateBrush* IconBrush = nullptr;
+	if (InItem->NativeDescriptor.IsValid() && InItem->NativeDescriptor->Icon.IsSet())
+	{
+		IconBrush = InItem->NativeDescriptor->Icon.GetOptionalIcon();
+	}
+	if (!IconBrush)
+	{
+		UClass* IconClass = InItem->VisualClass.IsValid() ? InItem->VisualClass.Get()
+			: InItem->PrefabAsset.IsValid() ? ULexUIPrefab::StaticClass() : ULexWidget::StaticClass();
+		IconBrush = FSlateIconFinder::FindIconBrushForClass(IconClass);
+	}
 	const FText Tooltip = !InItem->bValid
 		? InItem->ValidationError
 		: InItem->Kind == EItemKind::Prefab
@@ -235,7 +246,8 @@ TSharedRef<ITableRow> SLexUIPrefabPalette::OnGenerateRow(FItemPtr InItem, const 
 			.Padding(2, 0, 6, 0)
 			[
 				SNew(SImage)
-				.Image(FSlateIconFinder::FindIconBrushForClass(IconClass))
+				.Image(IconBrush)
+				.ColorAndOpacity(FSlateColor::UseForeground())
 				.DesiredSizeOverride(FVector2D(16, 16))
 			]
 			+ SHorizontalBox::Slot()
