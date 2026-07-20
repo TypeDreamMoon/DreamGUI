@@ -29,7 +29,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "LGUI")
 		bool ApplyAlphaToBlur = true;
 	
-	UPROPERTY(EditAnywhere, Category = "LGUI", AdvancedDisplay)
+	UPROPERTY(EditAnywhere, Category = "LGUI", AdvancedDisplay, meta = (ClampMin = 0, UIMin = 0, UIMax = 8))
 		int MaxDownSampleLevel = 7;
 public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI")

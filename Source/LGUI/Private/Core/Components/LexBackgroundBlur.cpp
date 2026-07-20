@@ -11,6 +11,11 @@
 #include "Core/LexVisualPostProcessRenderProxy.h"
 #include "RHIStaticStates.h"
 
+BEGIN_SHADER_PARAMETER_STRUCT(FLexUIBackgroundBlurPassParameters, )
+	RDG_TEXTURE_ACCESS(SourceTexture, ERHIAccess::SRVGraphics)
+	RENDER_TARGET_BINDING_SLOTS()
+END_SHADER_PARAMETER_STRUCT()
+
 ULexBackgroundBlur::ULexBackgroundBlur(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
 	
@@ -168,7 +173,10 @@ public:
 		float MagicNumber = 1.0f / 2.2f;//this is a magic number which can make blur transition feel smooth
 		uint32 SourceWidth = BlurEffectRenderTexture->GetSizeX();
 		uint32 SourceHeight = BlurEffectRenderTexture->GetSizeY();
-		auto MaxDownSampleCount = FMath::Min3(FMath::FloorLog2(SourceWidth), FMath::FloorLog2(SourceHeight), static_cast<uint32>(MaxDownSampleLevel));
+		constexpr uint32 MinBlurDimension = 8;
+		const uint32 MinSourceDimension = FMath::Min(SourceWidth, SourceHeight);
+		const int32 DimensionLimitedDownSampleCount = static_cast<int32>(FMath::FloorLog2(FMath::Max(MinSourceDimension / MinBlurDimension, 1u)));
+		const int32 MaxDownSampleCount = FMath::Min(FMath::Max(MaxDownSampleLevel, 0), DimensionLimitedDownSampleCount);
 		float FilteredBlurStrength = FMath::Pow(BlurStrength, MagicNumber) * MaxDownSampleCount;//convert BlurStrength from 0~1 to 0~Count, with adjusted curvature
 		FRHITexture* PrevRT = BlurEffectRenderTexture;
 		SourceWidth = BlurEffectRenderTexture->GetSizeX();
@@ -184,6 +192,15 @@ public:
 				FPooledRenderTargetDesc RenderTargetDesc(FPooledRenderTargetDesc::Create2DDesc(FIntPoint(SourceWidth, SourceHeight)
 					, BlurEffectRenderTexture->GetFormat(), FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable, false));
 				GRenderTargetPool.FindFreeElement(RHICmdList, RenderTargetDesc, DownSampleRT, *FString::Printf(TEXT("LexUI_DownsampleRT_%d"), i));
+				if (!DownSampleRT.IsValid())
+				{
+					ReleaseRenderTarget();
+					for (auto& RenderTarget : DownSampleRenderTargetArray)
+					{
+						RenderTarget.SafeRelease();
+					}
+					return;
+				}
 				DownSampleRenderTargetArray.Add(DownSampleRT);
 				Renderer->CopyRenderTarget(GraphBuilder, GlobalShaderMap, PrevRT, DownSampleRT->GetRHI());
 			
@@ -244,7 +261,12 @@ public:
 		FPooledRenderTargetDesc desc(FPooledRenderTargetDesc::Create2DDesc(FIntPoint(RenderTargetTexture->GetSizeX(), RenderTargetTexture->GetSizeY())
 			, RenderTargetTexture->GetFormat(), FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable, false));
 		GRenderTargetPool.FindFreeElement(GraphBuilder.RHICmdList, desc, DownSampleRT_Blur, *FString::Printf(TEXT("LexUI_DownsampleRT_Blur")));
-		auto RenderTargetTexture_Blur = DownSampleRT_Blur->GetRHI();
+		if (!DownSampleRT_Blur.IsValid())
+		{
+			return;
+		}
+		auto SourceTexture = RegisterExternalTexture(GraphBuilder, RenderTargetTexture, TEXT("LexUIBackgroundBlurSource"));
+		auto BlurTexture = RegisterExternalTexture(GraphBuilder, DownSampleRT_Blur->GetRHI(), TEXT("LexUIBackgroundBlurIntermediate"));
 		
 		TShaderMapRef<FLexUISimplePostProcessVS> VertexShader(GlobalShaderMap);
 		TShaderMapRef<FLexUIPostProcessGaussianBlurPS> PixelShader(GlobalShaderMap);
@@ -253,14 +275,16 @@ public:
 		BlurAmount = FMath::Clamp(BlurAmount, 0.0f, 1.0f);
 		BlurAmount = FMath::Pow(BlurAmount, MagicNumber);
 				
-		auto* VerticalPassParameters = GraphBuilder.AllocParameters<FRenderTargetParameters>();
-		VerticalPassParameters->RenderTargets[0] = FRenderTargetBinding(RegisterExternalTexture(GraphBuilder, RenderTargetTexture_Blur, TEXT("Horizontal_BlurEffectRenderTexture")), ERenderTargetLoadAction::ELoad);
+		auto* VerticalPassParameters = GraphBuilder.AllocParameters<FLexUIBackgroundBlurPassParameters>();
+		VerticalPassParameters->SourceTexture = SourceTexture;
+		VerticalPassParameters->RenderTargets[0] = FRenderTargetBinding(BlurTexture, ERenderTargetLoadAction::ENoAction);
 		GraphBuilder.AddPass(
 			RDG_EVENT_NAME("LexUIBackgroundBlur_Pass_Horizontal"),
 			VerticalPassParameters,
 			ERDGPassFlags::Raster,
-			[this, VertexShader, PixelShader, Renderer, MainTexture = RenderTargetTexture, SamplerState, BlurAmount](FRHICommandListImmediate& RHICmdList)
+			[this, VertexShader, PixelShader, Renderer, SourceTexture, BlurTexture, SamplerState, BlurAmount](FRHICommandListImmediate& RHICmdList)
 			{
+				SourceTexture->MarkResourceAsUsed();
 				FGraphicsPipelineStateInitializer GraphicsPSOInit;
 				RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
 				GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
@@ -273,20 +297,22 @@ public:
 				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 				VertexShader->SetParameters(RHICmdList);
 				//render vertical
-				RHICmdList.SetViewport(0, 0, 0.0f, MainTexture->GetSizeX(), MainTexture->GetSizeY(), 1.0f);
-				PixelShader->SetMainTexture(RHICmdList, MainTexture, SamplerState);
-				PixelShader->SetBlurStrength(RHICmdList, FVector2f(1.0f / MainTexture->GetSizeX() * BlurAmount, 0));
+				RHICmdList.SetViewport(0, 0, 0.0f, BlurTexture->Desc.Extent.X, BlurTexture->Desc.Extent.Y, 1.0f);
+				PixelShader->SetMainTexture(RHICmdList, SourceTexture->GetRHI(), SamplerState);
+				PixelShader->SetBlurStrength(RHICmdList, FVector2f(1.0f / SourceTexture->Desc.Extent.X * BlurAmount, 0));
 				Renderer->DrawFullScreenQuad(RHICmdList);
 			});
 
-		auto* HorizontalPassParameters = GraphBuilder.AllocParameters<FRenderTargetParameters>();
-		HorizontalPassParameters->RenderTargets[0] = FRenderTargetBinding(RegisterExternalTexture(GraphBuilder, RenderTargetTexture, TEXT("Vertical_BlurEffectRenderTexture")), ERenderTargetLoadAction::ELoad);
+		auto* HorizontalPassParameters = GraphBuilder.AllocParameters<FLexUIBackgroundBlurPassParameters>();
+		HorizontalPassParameters->SourceTexture = BlurTexture;
+		HorizontalPassParameters->RenderTargets[0] = FRenderTargetBinding(SourceTexture, ERenderTargetLoadAction::ENoAction);
 		GraphBuilder.AddPass(
 			RDG_EVENT_NAME("LexUIBackgroundBlur_Pass_Vertical"),
 			HorizontalPassParameters,
 			ERDGPassFlags::Raster,
-			[this, VertexShader, PixelShader, Renderer, MainTexture = RenderTargetTexture_Blur, SamplerState, BlurAmount](FRHICommandListImmediate& RHICmdList)
+			[this, VertexShader, PixelShader, Renderer, SourceTexture, BlurTexture, SamplerState, BlurAmount](FRHICommandListImmediate& RHICmdList)
 			{
+				BlurTexture->MarkResourceAsUsed();
 				FGraphicsPipelineStateInitializer GraphicsPSOInit;
 				RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
 				GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, ECompareFunction::CF_Always>::GetRHI();
@@ -299,9 +325,9 @@ public:
 				SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0, EApplyRendertargetOption::CheckApply);
 				VertexShader->SetParameters(RHICmdList);
 				//render horizontal
-				RHICmdList.SetViewport(0, 0, 0.0f, MainTexture->GetSizeX(), MainTexture->GetSizeY(), 1.0f);
-				PixelShader->SetMainTexture(RHICmdList, MainTexture, SamplerState);
-				PixelShader->SetBlurStrength(RHICmdList, FVector2f(0, 1.0f / MainTexture->GetSizeY() * BlurAmount));
+				RHICmdList.SetViewport(0, 0, 0.0f, SourceTexture->Desc.Extent.X, SourceTexture->Desc.Extent.Y, 1.0f);
+				PixelShader->SetMainTexture(RHICmdList, BlurTexture->GetRHI(), SamplerState);
+				PixelShader->SetBlurStrength(RHICmdList, FVector2f(0, 1.0f / BlurTexture->Desc.Extent.Y * BlurAmount));
 				Renderer->DrawFullScreenQuad(RHICmdList);
 			});
 
@@ -318,7 +344,7 @@ void ULexBackgroundBlur::SendOthersDataToRenderProxy()
 		struct FUIBackgroundBlurUpdateOthersData
 		{
 			float BlurStrengthWithAlpha;
-			float MaxDownSampleLevel;
+			int MaxDownSampleLevel;
 		};
 		auto updateData = new FUIBackgroundBlurUpdateOthersData();
 		updateData->BlurStrengthWithAlpha = this->GetBlurStrengthInternal();

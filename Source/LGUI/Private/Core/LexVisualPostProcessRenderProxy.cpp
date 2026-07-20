@@ -7,6 +7,12 @@
 #include "RHIResourceUtils.h"
 #include "SceneTextures.h"
 
+BEGIN_SHADER_PARAMETER_STRUCT(FLexUIPostProcessRenderMeshParameters, )
+	SHADER_PARAMETER_RDG_TEXTURE(Texture2D, SceneDepthTex)
+	RDG_TEXTURE_ACCESS(MeshRegionTexture, ERHIAccess::SRVGraphics)
+	RENDER_TARGET_BINDING_SLOTS()
+END_SHADER_PARAMETER_STRUCT()
+
 FLexVisualPostProcessRenderProxy::FLexVisualPostProcessRenderProxy()
 {
 	
@@ -42,16 +48,20 @@ void FLexVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 )
 {
 	uint8 NumSamples = ScreenTargetTexture->GetNumSamples();
-	auto PSShaderParameters = GraphBuilder.AllocParameters<FLexUIWorldRenderPSParameter>();
+	auto MeshRegionRDGTexture = RegisterExternalTexture(GraphBuilder, MeshRegionTexture, TEXT("LexUIPostProcessMeshRegionTexture"));
+	auto PSShaderParameters = GraphBuilder.AllocParameters<FLexUIPostProcessRenderMeshParameters>();
 	PSShaderParameters->SceneDepthTex = SceneTextures.Depth.Resolve;
+	PSShaderParameters->MeshRegionTexture = MeshRegionRDGTexture;
 	PSShaderParameters->RenderTargets[0] = FRenderTargetBinding(RegisterExternalTexture(GraphBuilder, ScreenTargetTexture, TEXT("LexUIRendererTargetTexture")), ERenderTargetLoadAction::ELoad);
 
 	GraphBuilder.AddPass(
 		RDG_EVENT_NAME("UIPostProcess_RenderMeshToScreen"),
 		PSShaderParameters,
 		ERDGPassFlags::Raster,
-		[this, PSShaderParameters, GlobalShaderMap, MeshRegionTexture, ModelViewProjectionMatrix, ModelMatrix, IsWorldSpace, BlendDepthForWorld, DepthFadeForWorld, DepthTextureScaleOffset, ViewRect, ResultTextureSamplerState, NumSamples](FRHICommandListImmediate& RHICmdList)
+		[this, PSShaderParameters, GlobalShaderMap, MeshRegionRDGTexture, ModelViewProjectionMatrix, ModelMatrix, IsWorldSpace, BlendDepthForWorld, DepthFadeForWorld, DepthTextureScaleOffset, ViewRect, ResultTextureSamplerState, NumSamples](FRHICommandListImmediate& RHICmdList)
 		{
+			MeshRegionRDGTexture->MarkResourceAsUsed();
+			auto MeshRegionTextureRHI = MeshRegionRDGTexture->GetRHI();
 			RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
 
 			FBufferRHIRef IndexBuffer = nullptr;
@@ -66,7 +76,7 @@ void FLexVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 						TShaderMapRef<FLexUIRenderMeshWithMaskWorldPS_Clip> PixelShader(GlobalShaderMap);
 						SET_PIPELINE_STATE_FOR_CLIP();
 						VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
-						PixelShader->SetParameters(RHICmdList, MeshRegionTexture, MaskTexture->TextureRHI
+						PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, MaskTexture->TextureRHI
 							, ResultTextureSamplerState
 							, MaskTexture->SamplerStateRHI
 						);
@@ -82,7 +92,7 @@ void FLexVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 						TShaderMapRef<FLexUIRenderMeshWithMaskWorldDepthFadePS_Clip> PixelShader(GlobalShaderMap);
 						SET_PIPELINE_STATE_FOR_CLIP();
 						VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
-						PixelShader->SetParameters(RHICmdList, MeshRegionTexture, MaskTexture->TextureRHI
+						PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, MaskTexture->TextureRHI
 							, ResultTextureSamplerState
 							, MaskTexture->SamplerStateRHI
 						);
@@ -100,7 +110,7 @@ void FLexVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 					TShaderMapRef<FLexUIRenderMeshWithMaskPS_Clip> PixelShader(GlobalShaderMap);
 					SET_PIPELINE_STATE_FOR_CLIP();
 					VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
-					PixelShader->SetParameters(RHICmdList, MeshRegionTexture, MaskTexture->TextureRHI
+					PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, MaskTexture->TextureRHI
 						, ResultTextureSamplerState
 						, MaskTexture->SamplerStateRHI
 					);
@@ -121,7 +131,7 @@ void FLexVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 						TShaderMapRef<FLexUIRenderMeshWorldPS_Clip> PixelShader(GlobalShaderMap);
 						SET_PIPELINE_STATE_FOR_CLIP();
 						VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
-						PixelShader->SetParameters(RHICmdList, MeshRegionTexture, ResultTextureSamplerState);
+						PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, ResultTextureSamplerState);
 						if (ClipDataTexture != nullptr)
 						{
 							PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTexture->TextureRHI);
@@ -134,7 +144,7 @@ void FLexVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 						TShaderMapRef<FLexUIRenderMeshWorldDepthFadePS_Clip> PixelShader(GlobalShaderMap);
 						SET_PIPELINE_STATE_FOR_CLIP();
 						VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
-						PixelShader->SetParameters(RHICmdList, MeshRegionTexture, ResultTextureSamplerState);
+						PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, ResultTextureSamplerState);
 						if (ClipDataTexture != nullptr)
 						{
 							PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTexture->TextureRHI);
@@ -149,7 +159,7 @@ void FLexVisualPostProcessRenderProxy::RenderMeshOnScreen_RenderThread(
 					TShaderMapRef<FLexUIRenderMeshPS_Clip> PixelShader(GlobalShaderMap);
 					SET_PIPELINE_STATE_FOR_CLIP();
 					VertexShader->SetParameters(RHICmdList, ModelViewProjectionMatrix, ModelMatrix);
-					PixelShader->SetParameters(RHICmdList, MeshRegionTexture, ResultTextureSamplerState);
+					PixelShader->SetParameters(RHICmdList, MeshRegionTextureRHI, ResultTextureSamplerState);
 					if (ClipDataTexture != nullptr)
 					{
 						PixelShader->SetClipParameters(RHICmdList, ModelMatrix.Inverse(), ClipDataTexture->TextureRHI);
