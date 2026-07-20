@@ -22,6 +22,11 @@ public:
 	static FEditingPrefabChangedDelegate OnEditingPrefabChanged;
 	static FBeforeApplyPrefabDelegate OnBeforeApplyPrefab;
 	static TArray<ULexWidget*> GetRootWidgetListFromSelection(const TArray<ULexWidget*>& InSelectedWidgets);
+	/** UMG-style unique name in the containing prefab: Name, Name_1, Name_2, ... */
+	static FString MakeUniqueWidgetDisplayName(ULexWidget* ContextWidget, const FString& DesiredName,
+		const ULexWidget* WidgetToIgnore = nullptr);
+	/** Normalize an existing prefab tree and return how many duplicate names were changed. */
+	static int32 EnsureUniqueWidgetDisplayNames(ULexWidget* RootWidget, TArray<FString>* OutRenamedWidgets = nullptr);
 	static void CreateWidget(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString Name, UClass* VisualClass, TFunction<void(class ULexWidget*)> Callback);
 	static void CreateUIControls(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString InPrefabPath);
 	static ULexWidget* CreateWidgetAndReturn(TFunction<ULexWidget*()> GetSelectedWidgetFunction, FString Name, UClass* VisualClass, TFunction<void(class ULexWidget*)> Callback);

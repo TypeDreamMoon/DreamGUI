@@ -13,7 +13,9 @@
 #include "LGUIEditorModule.h"
 #include "PrefabEditor/LexUIPrefabEditor.h"
 #include "Core/Components/LexLayout.h"
+#include "Core/Components/LexVisualBatchMesh.h"
 #include "PrefabSystem/LexUIPrefabPresenterComponent.h"
+#include "Utils/LexUIUtils.h"
 
 #define LOCTEXT_NAMESPACE "LGUIEditorTools"
 
@@ -23,90 +25,130 @@ FBeforeApplyPrefabDelegate FLexUIEditorTools::OnBeforeApplyPrefab;
 
 struct FLexUIEditorToolsHelperFunctionHolder
 {
-	static FString GetLabelPrefixForCopy(const FString& SrcWidgetName, FString& OutNumericSuffix)
+	static FString RemoveNumericSuffix(const FString& Name)
 	{
-		int rightCount = 1;
-		while (rightCount <= SrcWidgetName.Len() && SrcWidgetName.Right(rightCount).IsNumeric())
+		int32 SuffixIndex = INDEX_NONE;
+		if (!Name.FindLastChar(TEXT('_'), SuffixIndex) || SuffixIndex + 1 >= Name.Len())
 		{
-			rightCount++;
+			return Name;
 		}
-		rightCount--;
-		OutNumericSuffix = SrcWidgetName.Right(rightCount);
-		return SrcWidgetName.Left(SrcWidgetName.Len() - rightCount);
+		for (int32 Index = SuffixIndex + 1; Index < Name.Len(); ++Index)
+		{
+			if (Name[Index] < TEXT('0') || Name[Index] > TEXT('9'))
+			{
+				return Name;
+			}
+		}
+		return Name.Left(SuffixIndex);
 	}
-	static FString GetCopiedWidgetLabel(ULexWidget* Parent, FString OriginWidgetName, UObject* Outer)
-	{
-		TArray<ULexWidget*> SameParentWidgetList;//all widgets attached at same parent widget. if parent is null then get all widgets
-		for (TObjectIterator<ULexWidget> WidgetItr; WidgetItr; ++WidgetItr)
-		{
-			if (auto ItemWidget = *WidgetItr)
-			{
-				if (IsValid(ItemWidget) && ItemWidget->GetOuter() == Outer)
-				{
-					if (IsValid(Parent))
-					{
-						if (ItemWidget->GetParent() == Parent)
-						{
-							SameParentWidgetList.Add(ItemWidget);
-						}
-					}
-					else
-					{
-						if (ItemWidget->GetParent() == nullptr)
-						{
-							SameParentWidgetList.Add(ItemWidget);
-						}
-					}
-				}
-			}
-		}
-	
 
-		FString MaxNumericSuffixStr = TEXT("");//numeric suffix
-		OriginWidgetName = GetLabelPrefixForCopy(OriginWidgetName, MaxNumericSuffixStr);
-		int MaxNumericSuffixStrLength = MaxNumericSuffixStr.Len();
-		int SameNameWidgetCount = 0;//if widget name is same with source name, then collect it
-		for (int i = 0; i < SameParentWidgetList.Num(); i ++)//search from same level Widgets, and get the right suffix
+	static FString MakeUniqueName(const FString& DesiredName, const TSet<FName>& UsedNames)
+	{
+		FString Candidate = DesiredName.TrimStartAndEnd();
+		if (Candidate.IsEmpty())
 		{
-			auto item = SameParentWidgetList[i];
-			auto ItemWidgetName = item->GetDisplayName();
-			if (ItemWidgetName == OriginWidgetName)SameNameWidgetCount++;
-			if (OriginWidgetName.Len() == 0 || ItemWidgetName.StartsWith(OriginWidgetName))
+			Candidate = TEXT("Widget");
+		}
+		if (!UsedNames.Contains(FName(*Candidate)))
+		{
+			return Candidate;
+		}
+
+		FString BaseName = RemoveNumericSuffix(Candidate);
+		if (BaseName.IsEmpty())
+		{
+			BaseName = TEXT("Widget");
+		}
+		Candidate = BaseName;
+		int32 Postfix = 0;
+		while (UsedNames.Contains(FName(*Candidate)))
+		{
+			++Postfix;
+			Candidate = FString::Printf(TEXT("%s_%d"), *BaseName, Postfix);
+		}
+		return Candidate;
+	}
+
+	static ULexWidget* GetNamingRoot(ULexWidget* ContextWidget)
+	{
+		if (!IsValid(ContextWidget))
+		{
+			return nullptr;
+		}
+		if (ULexUIPrefabHelperObject* Helper = ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(ContextWidget))
+		{
+			if (IsValid(Helper->LoadedRootWidget))
 			{
-				auto itemRightStr = ItemWidgetName.Right(ItemWidgetName.Len() - OriginWidgetName.Len());
-				if (!itemRightStr.IsNumeric())//if rest is not numetric
-				{
-					continue;
-				}
-				FString itemNumetrixSuffixStr = itemRightStr;
-				int itemNumetrix = FCString::Atoi(*itemNumetrixSuffixStr);
-				int maxNumetrixSuffix = FCString::Atoi(*MaxNumericSuffixStr);
-				if (itemNumetrix > maxNumetrixSuffix)
-				{
-					maxNumetrixSuffix = itemNumetrix;
-					MaxNumericSuffixStr = FString::Printf(TEXT("%d"), maxNumetrixSuffix);
-				}
+				return Helper->LoadedRootWidget;
 			}
 		}
-		FString CopiedWidgetLabel = OriginWidgetName;
-		if (!MaxNumericSuffixStr.IsEmpty() || SameNameWidgetCount > 0)
-		{
-			int MaxNumrixSuffix = FCString::Atoi(*MaxNumericSuffixStr);
-			MaxNumrixSuffix++;
-			FString NumetrixSuffixStr = FString::Printf(TEXT("%d"), MaxNumrixSuffix);
-			while (NumetrixSuffixStr.Len() < MaxNumericSuffixStrLength)
-			{
-				NumetrixSuffixStr = TEXT("0") + NumetrixSuffixStr;
-			}
-			CopiedWidgetLabel += NumetrixSuffixStr;
-		}
-		return CopiedWidgetLabel;
+		return ContextWidget->GetRootWidgetInHierarchy();
 	}
 };
 
 TMap<FString, TWeakObjectPtr<ULexUIPrefab>> FLexUIEditorTools::CopiedWidgetPrefabMap;
 
 FString FLexUIEditorTools::LexUIPresetPrefabPath = TEXT("/LGUI/Prefabs/");
+
+FString FLexUIEditorTools::MakeUniqueWidgetDisplayName(
+	ULexWidget* ContextWidget,
+	const FString& DesiredName,
+	const ULexWidget* WidgetToIgnore)
+{
+	TSet<FName> UsedNames;
+	if (ULexWidget* RootWidget = FLexUIEditorToolsHelperFunctionHolder::GetNamingRoot(ContextWidget))
+	{
+		TArray<ULexWidget*> Widgets;
+		ULexWidget::CollectChildrenWidgets(RootWidget, Widgets);
+		for (const ULexWidget* Widget : Widgets)
+		{
+			if (IsValid(Widget) && Widget != WidgetToIgnore)
+			{
+				UsedNames.Add(FName(*Widget->GetDisplayName()));
+			}
+		}
+	}
+	return FLexUIEditorToolsHelperFunctionHolder::MakeUniqueName(DesiredName, UsedNames);
+}
+
+int32 FLexUIEditorTools::EnsureUniqueWidgetDisplayNames(ULexWidget* RootWidget, TArray<FString>* OutRenamedWidgets)
+{
+	if (!IsValid(RootWidget))
+	{
+		return 0;
+	}
+
+	TArray<ULexWidget*> Widgets;
+	ULexWidget::CollectChildrenWidgets(RootWidget, Widgets);
+	TSet<FName> UsedNames;
+	int32 RenameCount = 0;
+	for (ULexWidget* Widget : Widgets)
+	{
+		if (!IsValid(Widget))
+		{
+			continue;
+		}
+		const FString OldName = Widget->GetDisplayName();
+		const FString UniqueName = FLexUIEditorToolsHelperFunctionHolder::MakeUniqueName(OldName, UsedNames);
+		UsedNames.Add(FName(*UniqueName));
+		if (OldName.Equals(UniqueName, ESearchCase::CaseSensitive))
+		{
+			continue;
+		}
+
+		Widget->Modify();
+		FLexUIUtils::ChangePropertyWithNotify(Widget, ULexWidget::GetPropertyName_DisplayName(), [Widget, UniqueName]()
+		{
+			Widget->SetDisplayName(UniqueName);
+		});
+		if (OutRenamedWidgets)
+		{
+			OutRenamedWidgets->Add(FString::Printf(TEXT("%s -> %s"), *OldName, *UniqueName));
+		}
+		++RenameCount;
+	}
+	return RenameCount;
+}
 
 TArray<ULexWidget*> FLexUIEditorTools::GetRootWidgetListFromSelection(const TArray<ULexWidget*>& InSelectedWidgets)
 {
@@ -164,7 +206,7 @@ ULexWidget* FLexUIEditorTools::CreateWidgetAndReturn(TFunction<ULexWidget*()> Ge
 			PrefabHelperObject->Modify();
 			PrefabHelperObject->SetAnythingDirty();
 		}
-		NewWidget->SetDisplayName(Name);
+		NewWidget->SetDisplayName(MakeUniqueWidgetDisplayName(SelectedWidget, Name));
 		NewWidget->OnRegister();
 		if (SelectedWidget != nullptr)
 		{
@@ -180,6 +222,7 @@ ULexWidget* FLexUIEditorTools::CreateWidgetAndReturn(TFunction<ULexWidget*()> Ge
 		{
 			Callback(NewWidget);
 		}
+		EnsureUniqueWidgetDisplayNames(FLexUIEditorToolsHelperFunctionHolder::GetNamingRoot(NewWidget));
 		ULexUISelection::GetInstance(SelectedWidget->GetWorld())->SelectWidget(NewWidget);
 	}
 	return NewWidget;
@@ -209,6 +252,7 @@ ULexWidget* FLexUIEditorTools::CreateUIControlsAndReturn(TFunction<ULexWidget*()
 			, SelectedWidget->GetOuter()
 			, SelectedWidget);
 		if (Callback)Callback(CreatedWidget);
+		EnsureUniqueWidgetDisplayNames(FLexUIEditorToolsHelperFunctionHolder::GetNamingRoot(CreatedWidget));
 		ULexUISelection::GetInstance(SelectedWidget->GetWorld())->SelectNone();
 		ULexUISelection::GetInstance(SelectedWidget->GetWorld())->SelectWidget(CreatedWidget);
 	}
@@ -262,6 +306,13 @@ ULexWidget* FLexUIEditorTools::CreateRegisteredControlAndReturn(TFunction<ULexWi
 			{
 				InWidget->AddComponent(Recipe.BehaviourClass.Get());
 			}
+			if (Recipe.MeshModifierClass.IsValid())
+			{
+				if (ULexVisualBatchMesh* Visual = Cast<ULexVisualBatchMesh>(InWidget->GetVisual()))
+				{
+					Visual->AddMeshModifier(Recipe.MeshModifierClass.Get());
+				}
+			}
 			if (Recipe.NativeConfigure)
 			{
 				Recipe.NativeConfigure(InWidget);
@@ -289,7 +340,7 @@ void FLexUIEditorTools::DuplicateWidgets(TFunction<TArray<ULexWidget*>()> GetSel
 	for (auto Widget : RootWidgetList)
 	{
 		Widget->GetOuter()->Modify();
-		auto CopiedWidgetName = FLexUIEditorToolsHelperFunctionHolder::GetCopiedWidgetLabel(Widget->GetParent(), Widget->GetDisplayName(), Widget->GetWorld());
+		auto CopiedWidgetName = MakeUniqueWidgetDisplayName(Widget, Widget->GetDisplayName());
 		ULexWidget* CopiedWidget = nullptr;
 		auto Parent = Widget->GetParent();
 		if (Parent)
@@ -362,7 +413,12 @@ void FLexUIEditorTools::DuplicateWidgets(TFunction<TArray<ULexWidget*>()> GetSel
 		{
 			CopiedWidget = LEXUIPREFAB_SERIALIZER_NEWEST_NAMESPACE::WidgetSerializer::DuplicateWidgetForEditor(Widget->GetWorld(), Widget, Parent, {}, InMapObjectToGuid, DuplicatedSubPrefabMap, OutMapGuidToObject);
 		}
-		CopiedWidget->SetDisplayName(CopiedWidgetName);
+		CopiedWidget->Modify();
+		FLexUIUtils::ChangePropertyWithNotify(CopiedWidget, ULexWidget::GetPropertyName_DisplayName(), [CopiedWidget, CopiedWidgetName]()
+		{
+			CopiedWidget->SetDisplayName(CopiedWidgetName);
+		});
+		EnsureUniqueWidgetDisplayNames(FLexUIEditorToolsHelperFunctionHolder::GetNamingRoot(CopiedWidget));
 		ULexUISelection::GetInstance(World)->SelectWidget(CopiedWidget);
 	}
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
@@ -476,7 +532,7 @@ void FLexUIEditorTools::PasteWidgets(TFunction<TArray<ULexWidget*>()> GetSelecte
 		{
 			TMap<FGuid, TObjectPtr<UObject>> OutMapGuidToObject;
 			TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> LoadedSubPrefabMap;
-			auto CopiedWidgetName = FLexUIEditorToolsHelperFunctionHolder::GetCopiedWidgetLabel(ParentWidget, KeyValuePair.Key, ParentWidget->GetWorld());
+			auto CopiedWidgetName = MakeUniqueWidgetDisplayName(ParentWidget, KeyValuePair.Key);
 			auto CopiedWidget = KeyValuePair.Value->LoadPrefabInEditor(ParentWidget->GetWorld(), ParentWidget->GetOuter(), ParentWidget, LoadedSubPrefabMap, OutMapGuidToObject, false);
 			for (auto& KeyValue : LoadedSubPrefabMap)
 			{
@@ -487,7 +543,12 @@ void FLexUIEditorTools::PasteWidgets(TFunction<TArray<ULexWidget*>()> GetSelecte
 				}
 				PrefabHelperObject->MakePrefabAsSubPrefab(KeyValue.Value.PrefabAsset, KeyValue.Key, SubMapGuidToObject, KeyValue.Value.ObjectOverrideParameterArray);
 			}
-			CopiedWidget->SetDisplayName(CopiedWidgetName);
+			CopiedWidget->Modify();
+			FLexUIUtils::ChangePropertyWithNotify(CopiedWidget, ULexWidget::GetPropertyName_DisplayName(), [CopiedWidget, CopiedWidgetName]()
+			{
+				CopiedWidget->SetDisplayName(CopiedWidgetName);
+			});
+			EnsureUniqueWidgetDisplayNames(FLexUIEditorToolsHelperFunctionHolder::GetNamingRoot(CopiedWidget));
 			PrefabHelperObject->SetAnythingDirty();
 			ULexUISelection::GetInstance(World)->SelectWidget(CopiedWidget);
 		}
