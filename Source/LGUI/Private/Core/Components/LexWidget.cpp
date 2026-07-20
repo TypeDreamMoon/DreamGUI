@@ -8,6 +8,7 @@
 #include "LTweenManager.h"
 #include "Core/LexUIClipData.h"
 #include "Core/Components/LexLayout.h"
+#include "Core/Components/LexPanelLayouts.h"
 #include "Core/Components/LexPanelSlot.h"
 #include "Core/Components/LexVisual.h"
 #include "Event/LexEventSystem.h"
@@ -21,7 +22,19 @@
 #include "UObject/UnrealType.h"
 #endif
 
-
+namespace
+{
+	bool EnsurePanelSlotForChild(ULexWidget* ParentWidget, ULexWidget* ChildWidget)
+	{
+		if (!IsValid(ParentWidget) || !IsValid(ChildWidget)
+			|| !IsValid(Cast<ULexPanelLayoutBase>(ParentWidget->GetLayoutContainer()))
+			|| IsValid(ChildWidget->GetPanelSlot()))
+		{
+			return false;
+		}
+		return IsValid(ChildWidget->CreateNewPanelSlot<ULexPanelSlot>());
+	}
+}
 
 ULexWidget::ULexWidget()
 {
@@ -1206,6 +1219,10 @@ void ULexWidget::SetParent(ULexWidget* InParent, bool InKeepWorldPosition, int I
 			this->Call_SiblingIndexChanged();
 		}
 		this->Parent = InParent;
+		if (bIsRegistered)
+		{
+			EnsurePanelSlotForChild(InParent, this);
+		}
 		if (InKeepWorldPosition)
 		{
 			auto WorldToParentTransform = InParent->GetWorldTransform().Inverse();
@@ -1423,6 +1440,8 @@ void ULexWidget::OnDetachedFromParent()
 void ULexWidget::OnRegister()
 {
 	bIsRegistered = true;
+	const bool bPanelSlotRegisteredByEnsure = Parent.IsValid()
+		&& EnsurePanelSlotForChild(Parent.Get(), this);
 	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld()))
 	{
 		LexUIManager->AddWidget(this);
@@ -1448,7 +1467,7 @@ void ULexWidget::OnRegister()
 	{
 		LayoutSelf->Call_OnRegister();
 	}
-	if (IsValid(PanelSlot))
+	if (IsValid(PanelSlot) && !bPanelSlotRegisteredByEnsure)
 	{
 		PanelSlot->Call_OnRegister();
 	}
@@ -3388,6 +3407,16 @@ ULexLayoutContainer* ULexWidget::CreateNewLayoutContainer(TSubclassOf<ULexLayout
 		NewLayout->BeginPlay();
 	}
 	LayoutContainer = NewLayout;
+	if (IsValid(Cast<ULexPanelLayoutBase>(NewLayout)))
+	{
+		for (ULexWidget* Child : Children)
+		{
+			if (IsValid(Child) && Child->HasRegistered())
+			{
+				EnsurePanelSlotForChild(this, Child);
+			}
+		}
+	}
 	MarkLayoutForRebuild(this);
 	MarkDimensionChanged(false, true, true);//change LayoutContainer could cause LayoutSelf size change
 	return NewLayout;

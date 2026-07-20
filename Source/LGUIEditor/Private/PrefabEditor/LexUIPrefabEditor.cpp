@@ -473,7 +473,14 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 	
 	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->EventOnOutlineChanged.AddSPLambda(this, [=, this]()
 	{
-		OutlinerPtr->RequestRefresh();
+		if (OutlinerPtr.IsValid())
+		{
+			OutlinerPtr->RequestRefresh();
+		}
+		if (DetailsPtr.IsValid())
+		{
+			DetailsPtr->Refresh();
+		}
 	});
 	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->bShouldTickInEditor = true;
 	ULexUISelection::GetInstance(GetWorld())->OnSelectionChanged.AddSPLambda(this, [=, this]

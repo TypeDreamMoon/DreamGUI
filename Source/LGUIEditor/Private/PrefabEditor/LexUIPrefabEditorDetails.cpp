@@ -1197,6 +1197,14 @@ void SLexUIPrefabEditorDetails::OnComponentSelectionChanged(const TArray<TWeakOb
 	bIsSelectFromComponentList = false;
 }
 
+void SLexUIPrefabEditorDetails::Refresh()
+{
+	if (DetailsView.IsValid())
+	{
+		DetailsView->ForceRefresh();
+	}
+}
+
 bool SLexUIPrefabEditorDetails::IsPropertyReadOnly(const FPropertyAndParent& InPropertyAndParent)
 {
 	return false;

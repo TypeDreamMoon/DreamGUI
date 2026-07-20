@@ -21,7 +21,8 @@ public:
     SLATE_END_ARGS()
 
     /** Widget constructor */
-    void Construct(const FArguments& Args, UWorld* InWorld);
+	void Construct(const FArguments& Args, UWorld* InWorld);
+	void Refresh();
 
 	virtual ~SLexUIPrefabEditorDetails();
 private:
