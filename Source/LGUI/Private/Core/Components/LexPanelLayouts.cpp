@@ -113,6 +113,27 @@ namespace LexPanelLayoutLocal
 		return Result;
 	}
 
+	static FMargin GetPlatformSafePadding(bool bUsePlatformSafeZone, bool bPadLeft, bool bPadTop,
+		bool bPadRight, bool bPadBottom, const FVector2D& OverrideSize)
+	{
+		if (!bUsePlatformSafeZone || !FSlateApplication::IsInitialized())
+		{
+			return FMargin();
+		}
+
+		FMargin Result;
+		FSlateApplication::Get().GetSafeZoneSize(Result, OverrideSize);
+		if (const TOptional<float> GlobalSafeZoneScale = SSafeZone::GetGlobalSafeZoneScale(); GlobalSafeZoneScale.IsSet())
+		{
+			Result = Result * NonNegative(GlobalSafeZoneScale.GetValue());
+		}
+		if (!bPadLeft) Result.Left = 0.0f;
+		if (!bPadTop) Result.Top = 0.0f;
+		if (!bPadRight) Result.Right = 0.0f;
+		if (!bPadBottom) Result.Bottom = 0.0f;
+		return CleanNonNegativeMargin(Result);
+	}
+
 	static ELexPanelOrientation CleanOrientation(ELexPanelOrientation Value)
 	{
 		return Value == ELexPanelOrientation::Horizontal || Value == ELexPanelOrientation::Vertical
@@ -412,7 +433,7 @@ TArray<ULexWidget*> ULexPanelLayoutBase::CollectLayoutChildren(bool bEnsureSlots
 				{
 					ExistingSlot->RestoreAuthoredGeometry();
 				}
-				else if (bIgnored)
+				else
 				{
 					ExistingSlot->CaptureAuthoredGeometry(true);
 				}
@@ -956,7 +977,7 @@ FVector2f ULexLayoutContainerWrapBox::MeasureLayout() const
 {
 	const float GapX = LexPanelLayoutLocal::NonNegative(Spacing.X);
 	const float GapY = LexPanelLayoutLocal::NonNegative(Spacing.Y);
-	const float AvailableWidth = bExplicitWrapSize && WrapSize > 0.0f
+	const float AvailableWidth = bExplicitWrapSize
 		? LexPanelLayoutLocal::NonNegative(WrapSize)
 		: (IsValid(GetWidget()) ? FMath::Max(0.0f, GetWidget()->GetWidth() - LexPanelLayoutLocal::HorizontalPadding(Padding)) : 0.0f);
 	float X = 0.0f;
@@ -1000,7 +1021,7 @@ void ULexLayoutContainerWrapBox::CalculateLayout()
 
 	const float GapX = LexPanelLayoutLocal::NonNegative(Spacing.X);
 	const float GapY = LexPanelLayoutLocal::NonNegative(Spacing.Y);
-	const float AvailableWidth = bExplicitWrapSize && WrapSize > 0.0f
+	const float AvailableWidth = bExplicitWrapSize
 		? LexPanelLayoutLocal::NonNegative(WrapSize)
 		: FMath::Max(0.0f, GetWidget()->GetWidth() - LexPanelLayoutLocal::HorizontalPadding(Padding));
 	TArray<FWrapLine> Lines;
@@ -1393,14 +1414,20 @@ void ULexLayoutContainerScaleBox::CalculateLayout()
 	const float ScaleX = Desired.X > UE_SMALL_NUMBER ? AvailableWidth / Desired.X : 1.0f;
 	const float ScaleY = Desired.Y > UE_SMALL_NUMBER ? AvailableHeight / Desired.Y : 1.0f;
 	FVector2f Scale(1.0f, 1.0f);
-	switch (Stretch)
+	if (Stretch == ELexScaleBoxStretch::UserSpecified)
 	{
-	case ELexScaleBoxStretch::ScaleToFit: Scale = FVector2f(FMath::Min(ScaleX, ScaleY)); break;
-	case ELexScaleBoxStretch::ScaleToFill: Scale = FVector2f(FMath::Max(ScaleX, ScaleY)); break;
-	case ELexScaleBoxStretch::ScaleToFitX: Scale = FVector2f(ScaleX); break;
-	case ELexScaleBoxStretch::ScaleToFitY: Scale = FVector2f(ScaleY); break;
-	case ELexScaleBoxStretch::UserSpecified: Scale = FVector2f(LexPanelLayoutLocal::NonNegative(UserSpecifiedScale)); break;
-	default: break;
+		Scale = FVector2f(LexPanelLayoutLocal::NonNegative(UserSpecifiedScale));
+	}
+	else if (Desired.X > UE_SMALL_NUMBER && Desired.Y > UE_SMALL_NUMBER)
+	{
+		switch (Stretch)
+		{
+		case ELexScaleBoxStretch::ScaleToFit: Scale = FVector2f(FMath::Min(ScaleX, ScaleY)); break;
+		case ELexScaleBoxStretch::ScaleToFill: Scale = FVector2f(FMath::Max(ScaleX, ScaleY)); break;
+		case ELexScaleBoxStretch::ScaleToFitX: Scale = FVector2f(ScaleX); break;
+		case ELexScaleBoxStretch::ScaleToFitY: Scale = FVector2f(ScaleY); break;
+		default: break;
+		}
 	}
 	if (bIgnoreInheritedScale && Stretch != ELexScaleBoxStretch::Fill)
 	{
@@ -1513,23 +1540,27 @@ FMargin ULexLayoutContainerSafeZone::GetCombinedSafePadding() const
 	{
 		return FMargin();
 	}
-	FMargin PlatformPadding;
 	const FVector2D WidgetSize = LexPanelLayoutLocal::CleanSize(Widget->GetSize());
-	if (bUsePlatformSafeZone && FSlateApplication::IsInitialized())
-	{
-		FSlateApplication::Get().GetSafeZoneSize(PlatformPadding, WidgetSize);
-		if (const TOptional<float> GlobalSafeZoneScale = SSafeZone::GetGlobalSafeZoneScale(); GlobalSafeZoneScale.IsSet())
-		{
-			PlatformPadding = PlatformPadding * FMath::Max(0.0f, GlobalSafeZoneScale.GetValue());
-		}
-		if (!bPadLeft) PlatformPadding.Left = 0.0f;
-		if (!bPadTop) PlatformPadding.Top = 0.0f;
-		if (!bPadRight) PlatformPadding.Right = 0.0f;
-		if (!bPadBottom) PlatformPadding.Bottom = 0.0f;
-	}
 	const FMargin CleanSafe = LexPanelLayoutLocal::CleanNonNegativeMargin(SafePadding);
-	const FMargin CleanPlatform = LexPanelLayoutLocal::CleanNonNegativeMargin(PlatformPadding);
 	const FMargin CleanNormalized = LexPanelLayoutLocal::CleanNormalizedSafePadding(NormalizedSafePadding);
+#if WITH_EDITOR
+	// A unit editor override gives the platform padding coefficient directly,
+	// without making preferred size depend on this widget's current size.
+	const FMargin PlatformNormalized = LexPanelLayoutLocal::GetPlatformSafePadding(
+		bUsePlatformSafeZone, bPadLeft, bPadTop, bPadRight, bPadBottom, FVector2D(1.0));
+	const FMargin CombinedNormalized = LexPanelLayoutLocal::CleanNormalizedSafePadding(FMargin(
+		CleanNormalized.Left + PlatformNormalized.Left,
+		CleanNormalized.Top + PlatformNormalized.Top,
+		CleanNormalized.Right + PlatformNormalized.Right,
+		CleanNormalized.Bottom + PlatformNormalized.Bottom));
+	return FMargin(
+		CleanSafe.Left + WidgetSize.X * CombinedNormalized.Left,
+		CleanSafe.Top + WidgetSize.Y * CombinedNormalized.Top,
+		CleanSafe.Right + WidgetSize.X * CombinedNormalized.Right,
+		CleanSafe.Bottom + WidgetSize.Y * CombinedNormalized.Bottom);
+#else
+	const FMargin CleanPlatform = LexPanelLayoutLocal::GetPlatformSafePadding(
+		bUsePlatformSafeZone, bPadLeft, bPadTop, bPadRight, bPadBottom, WidgetSize);
 	return FMargin(
 		CleanSafe.Left + CleanPlatform.Left
 			+ WidgetSize.X * CleanNormalized.Left,
@@ -1539,6 +1570,7 @@ FMargin ULexLayoutContainerSafeZone::GetCombinedSafePadding() const
 			+ WidgetSize.X * CleanNormalized.Right,
 		CleanSafe.Bottom + CleanPlatform.Bottom
 			+ WidgetSize.Y * CleanNormalized.Bottom);
+#endif
 }
 
 FVector2f ULexLayoutContainerSafeZone::MeasureLayout() const
@@ -1554,15 +1586,29 @@ FVector2f ULexLayoutContainerSafeZone::MeasureLayout() const
 		Result.X = static_cast<float>(Desired.X + LexPanelLayoutLocal::HorizontalPadding(Slot->Padding));
 		Result.Y = static_cast<float>(Desired.Y + LexPanelLayoutLocal::VerticalPadding(Slot->Padding));
 	}
-	const FMargin Combined = GetCombinedSafePadding();
-	ULexWidget* Widget = GetWidget();
-	const FMargin CleanNormalized = LexPanelLayoutLocal::CleanNormalizedSafePadding(NormalizedSafePadding);
-	const float NormalizedHorizontal = CleanNormalized.Left + CleanNormalized.Right;
-	const float NormalizedVertical = CleanNormalized.Top + CleanNormalized.Bottom;
-	const float CurrentWidth = IsValid(Widget) ? FMath::Max(0.0f, Widget->GetWidth()) : 0.0f;
-	const float CurrentHeight = IsValid(Widget) ? FMath::Max(0.0f, Widget->GetHeight()) : 0.0f;
-	const float AbsoluteHorizontal = LexPanelLayoutLocal::HorizontalPadding(Combined) - CurrentWidth * NormalizedHorizontal;
-	const float AbsoluteVertical = LexPanelLayoutLocal::VerticalPadding(Combined) - CurrentHeight * NormalizedVertical;
+	FMargin AbsolutePadding = LexPanelLayoutLocal::CleanNonNegativeMargin(SafePadding);
+	FMargin CombinedNormalized = LexPanelLayoutLocal::CleanNormalizedSafePadding(NormalizedSafePadding);
+#if WITH_EDITOR
+	const FMargin PlatformNormalized = LexPanelLayoutLocal::GetPlatformSafePadding(
+		bUsePlatformSafeZone, bPadLeft, bPadTop, bPadRight, bPadBottom, FVector2D(1.0));
+	CombinedNormalized = LexPanelLayoutLocal::CleanNormalizedSafePadding(FMargin(
+		CombinedNormalized.Left + PlatformNormalized.Left,
+		CombinedNormalized.Top + PlatformNormalized.Top,
+		CombinedNormalized.Right + PlatformNormalized.Right,
+		CombinedNormalized.Bottom + PlatformNormalized.Bottom));
+#else
+	const FMargin PlatformPadding = LexPanelLayoutLocal::GetPlatformSafePadding(
+		bUsePlatformSafeZone, bPadLeft, bPadTop, bPadRight, bPadBottom, FVector2D::ZeroVector);
+	AbsolutePadding = FMargin(
+		AbsolutePadding.Left + PlatformPadding.Left,
+		AbsolutePadding.Top + PlatformPadding.Top,
+		AbsolutePadding.Right + PlatformPadding.Right,
+		AbsolutePadding.Bottom + PlatformPadding.Bottom);
+#endif
+	const float NormalizedHorizontal = CombinedNormalized.Left + CombinedNormalized.Right;
+	const float NormalizedVertical = CombinedNormalized.Top + CombinedNormalized.Bottom;
+	const float AbsoluteHorizontal = LexPanelLayoutLocal::HorizontalPadding(AbsolutePadding);
+	const float AbsoluteVertical = LexPanelLayoutLocal::VerticalPadding(AbsolutePadding);
 	Result.X = (Result.X + FMath::Max(0.0f, AbsoluteHorizontal)) / FMath::Max(1.0e-3f, 1.0f - NormalizedHorizontal);
 	Result.Y = (Result.Y + FMath::Max(0.0f, AbsoluteVertical)) / FMath::Max(1.0e-3f, 1.0f - NormalizedVertical);
 	return Result;

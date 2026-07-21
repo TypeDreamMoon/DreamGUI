@@ -3766,6 +3766,8 @@ ULexLayoutContainer* ULexWidget::CreateNewLayoutContainer(TSubclassOf<ULexLayout
 	{
 		return nullptr;
 	}
+	const bool bInitializeScaleBoxSlots = NewLayout->IsA<ULexLayoutContainerScaleBox>()
+		&& (!IsValid(OldLayout) || !OldLayout->IsA<ULexLayoutContainerScaleBox>());
 	if (IsValid(OldLayout))
 	{
 		if (bHasBegunPlay)
@@ -3787,6 +3789,22 @@ ULexLayoutContainer* ULexWidget::CreateNewLayoutContainer(TSubclassOf<ULexLayout
 		{
 			if (IsValid(Child))
 			{
+				// UMG creates a fresh ScaleBoxSlot with Center/Center defaults when the panel type changes.
+				// Lex reuses its generic slot, so initialize those defaults explicitly on the same transition.
+				if (bInitializeScaleBoxSlots)
+				{
+					if (ULexPanelSlot* ExistingSlot = Child->GetPanelSlot(); IsValid(ExistingSlot))
+					{
+#if WITH_EDITOR
+						if (const UWorld* World = Child->GetWorld(); !World || !World->IsGameWorld())
+						{
+							ExistingSlot->Modify();
+						}
+#endif
+						ExistingSlot->SetHorizontalAlignment(ELexPanelHorizontalAlignment::Center);
+						ExistingSlot->SetVerticalAlignment(ELexPanelVerticalAlignment::Center);
+					}
+				}
 				EnsurePanelSlotForChild(this, Child, true);
 			}
 		}
