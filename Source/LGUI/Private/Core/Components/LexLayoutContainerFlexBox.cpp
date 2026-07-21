@@ -4,7 +4,6 @@
 #include "Core/Components/LexLayoutSelfFlexBox.h"
 #include "Core/Components/LexWidget.h"
 #include "LGUI.h"
-#include "LTweenBPLibrary.h"
 #include "Core/LexUIManager.h"
 
 DECLARE_CYCLE_STAT(TEXT("LexLayoutContainer FlexBox"), STAT_LexLayoutContainerFlexBox, STATGROUP_LGUI);
@@ -56,19 +55,21 @@ void ULexLayoutContainerFlexBox::CalculateLayout()
     if (!bIsLayoutDirty)return;
     bIsLayoutDirty = false;
     
-    CalculateLayout(true);
+    DoCalculate(true);
 
     //apply result
     for (auto& LayoutResult : CalculatedLayoutResultArray)
     {
 		if (!IsValid(LayoutResult.Widget)) continue;
-        LayoutResult.Widget->SetAnchoredPosition(LayoutResult.AnchoredPos);
-        
-        if (IsValid(LayoutResult.LayoutSelf))
-        {
-            LayoutResult.LayoutSelf->SetFinalSizeByLayoutContainer(LayoutResult.Size);
-        }
-		LayoutResult.Widget->SetSizeDelta(FVector2D(LayoutResult.Size));
+		if (IsValid(LayoutResult.LayoutSelf))
+		{
+			LayoutResult.LayoutSelf->SetFinalSizeByLayoutContainer(LayoutResult.Size);
+			LayoutResult.Widget->SetAnchoredPositionAndSizeDelta(LayoutResult.AnchoredPos, FVector2D(LayoutResult.Size));
+		}
+		else
+		{
+			LayoutResult.Widget->SetAnchoredPosition(LayoutResult.AnchoredPos);
+		}
     }
     CalculatedLayoutResultArray.Reset();
 }
@@ -101,18 +102,19 @@ void ULexLayoutContainerFlexBox::RefreshChildren()
     }
 }
 
-void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
+void ULexLayoutContainerFlexBox::DoCalculate(bool bApplyResult)
 {
 #if WITH_EDITOR
-    if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(GetWorld()))
-    {
+	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(GetWorld()))
+	{
 		LexUIManager->IncreateLayoutCalculationCounter(FString::Printf(
 			TEXT("%s_%p"), *this->GetPathDisplayName(GetWorld()), static_cast<void*>(this)));
-    }
+	}
 #endif
-    
-    RefreshChildren();
-    
+
+	RefreshChildren();
+	CalculatedLayoutResultArray.Reset();
+
     bool bIsVertical = Direction == ELexLayoutFlexBoxDirectionType::Vertical || Direction == ELexLayoutFlexBoxDirectionType::VerticalReverse;
     int PrimaryAxis = bIsVertical ? 1 : 0;
     int SecondaryAxis = bIsVertical ? 0 : 1;
@@ -248,7 +250,7 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
         CalculatedLayout.AnchoredPos = FVector2D(AnchoredPositionX, AnchoredPositionY);
         CalculatedLayout.LayoutSelf = ChildLayoutSelf;
 		CalculatedLayout.Size = ContentSize;
-        CalculatedLayoutResultArray.Add(CalculatedLayout);
+		CalculatedLayoutResultArray.Add(CalculatedLayout);
     };
 
     bool bAllowWrap = Wrap == ELexLayoutFlexBoxWrapType::Wrap || Wrap == ELexLayoutFlexBoxWrapType::WrapReverse;
@@ -343,8 +345,15 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
     }
     //secondary axis size: accumulate secondary sizes
     TotalPreferredSize[SecondaryAxis] += SecondaryTotalPreferred;
+	TotalPreferredSize[PrimaryAxis] = LexFlexBoxLocal::AddClamped(
+		TotalPreferredSize[PrimaryAxis], PrimaryAxis == 0 ? HorizontalPadding : VerticalPadding);
+	TotalPreferredSize[SecondaryAxis] = LexFlexBoxLocal::AddClamped(
+		TotalPreferredSize[SecondaryAxis], SecondaryAxis == 0 ? HorizontalPadding : VerticalPadding);
+	TotalPreferredSize.X = LexFlexBoxLocal::NonNegativeFinite(TotalPreferredSize.X);
+	TotalPreferredSize.Y = LexFlexBoxLocal::NonNegativeFinite(TotalPreferredSize.Y);
+	if (!bApplyResult)return;
 
-    if (!bApplyLayoutToChildren || LineDataArray.IsEmpty())return;
+	if (LineDataArray.IsEmpty())return;
     bool bReverseHorizontal = Direction == ELexLayoutFlexBoxDirectionType::HorizontalReverse;
     bool bReverseVertical = Direction == ELexLayoutFlexBoxDirectionType::VerticalReverse;
     bool bReverse = bReverseHorizontal || bReverseVertical;
@@ -555,33 +564,11 @@ void ULexLayoutContainerFlexBox::CalculateLayout(bool bApplyLayoutToChildren)
     }
 }
 
-void ULexLayoutContainerFlexBox::RefreshChildren()
-{
-    auto Widget = GetWidget();
-    Children.Empty();
-    for (auto& ChildWidget : Widget->GetChildren())
-    {
-        if (!ChildWidget->GetWidgetActiveInHierarchy())continue;
-        if (ChildWidget->GetIgnoreLayout())continue;
-        Children.Add(ChildWidget);
-
-        auto AnchorMin = ChildWidget->GetAnchorMin();
-        auto AnchorMax = ChildWidget->GetAnchorMax();
-        if (AnchorMin.X != AnchorMax.X)//custom anchor not support
-        {
-            ChildWidget->SetHorizontalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
-        }
-        if (AnchorMin.Y != AnchorMax.Y)
-        {
-            ChildWidget->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
-        }
-    }
-}
-
 void ULexLayoutContainerFlexBox::CalculatePreferredSize()
 {
-    RefreshChildren();
-    
+    DoCalculate(false);
+
+#if 0
     auto GetChildPreferredSize = [&](ULexWidget* ChildWidget)
     {
 		if (!IsValid(ChildWidget)) return FVector2f::ZeroVector;
@@ -632,6 +619,7 @@ void ULexLayoutContainerFlexBox::CalculatePreferredSize()
 		TotalPreferredSize[SecondaryAxis], SecondaryAxis == 0 ? HorizontalPadding : VerticalPadding);
 	TotalPreferredSize.X = LexFlexBoxLocal::NonNegativeFinite(TotalPreferredSize.X);
 	TotalPreferredSize.Y = LexFlexBoxLocal::NonNegativeFinite(TotalPreferredSize.Y);
+#endif
 }
 
 FLexLayoutControlAnchorData ULexLayoutContainerFlexBox::GetLayoutControlAnchor(const ULexWidget* TargetWidget)const

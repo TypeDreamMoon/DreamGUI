@@ -109,7 +109,7 @@ private:
 
 	virtual void CalculateLayout() override;
 	void RefreshChildren();
-	void CalculateLayout(bool bApplyLayoutToChildren);
+	void DoCalculate(bool bApplyResult);
 	void CalculatePreferredSize();
 
 	struct FLineData
@@ -130,7 +130,6 @@ private:
 		FVector2f TotalShrink;
 	};
 	TArray<FLineData> LineDataArray;
-	UPROPERTY(Transient)TArray<ULexWidget*> Children;
 	FVector2f TotalPreferredSize;
 	struct FCalculatedLayoutResult
 	{

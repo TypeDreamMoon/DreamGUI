@@ -23,6 +23,8 @@ public:
 	virtual UWorld* GetWorld() const override final;
 	/** INDEX_NONE means this behaviour does not impose a child-count limit on its widget. */
 	virtual int32 GetMaxWidgetChildren() const { return INDEX_NONE; }
+
+	int32 GetComponentIndexInWidget()const;
 private:
 	void BeginPlay();
 	void EndPlay();
