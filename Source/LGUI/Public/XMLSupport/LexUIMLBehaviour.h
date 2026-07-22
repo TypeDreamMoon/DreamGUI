@@ -19,6 +19,8 @@ public:
 	ULexUIMLBehaviour();
 	
 	void GetUIMLData(FString& XAMLFilePath, ULexUIMLResource*& XAMLResource)const;
+	/** Resolve a source path. Relative paths are rooted at the project's Content directory. */
+	static FString ResolveUIMLPath(const FString& InPath);
 
 #if WITH_EDITORONLY_DATA
 	UPROPERTY(EditAnywhere, Category=LexWidgetPresenter)
@@ -27,7 +29,7 @@ public:
 	
 protected:
 	/**
-	 * Return the absolute path of the XAML file.
+	 * Return an absolute path or a path relative to the project's Content directory.
 	 */
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, meta=(DisplayName="GetUIMLData"))
 	void ReceiveGetUIMLData(FString& XAMLFilePath, ULexUIMLResource*& XAMLResource)const;

@@ -5,6 +5,7 @@
 
 #include "LGUI.h"
 #include "Event/LexScreenSpaceRaycaster.h"
+#include "Misc/Paths.h"
 #include "XMLSupport/LexUIML.h"
 
 ULexUIMLBehaviour::ULexUIMLBehaviour()
@@ -20,6 +21,23 @@ void ULexUIMLBehaviour::GetUIMLData(FString& XAMLFilePath, ULexUIMLResource*& XA
 	}
 }
 
+FString ULexUIMLBehaviour::ResolveUIMLPath(const FString& InPath)
+{
+	FString ResolvedPath = InPath.TrimStartAndEnd();
+	if (ResolvedPath.IsEmpty())
+	{
+		return FString();
+	}
+
+	if (FPaths::IsRelative(ResolvedPath))
+	{
+		ResolvedPath = FPaths::Combine(FPaths::ProjectContentDir(), ResolvedPath);
+	}
+	ResolvedPath = FPaths::ConvertRelativePathToFull(ResolvedPath);
+	FPaths::NormalizeFilename(ResolvedPath);
+	return ResolvedPath;
+}
+
 ULexUIMLBehaviour* ULexUIMLBehaviour::CreateByClass(TSubclassOf<ULexUIMLBehaviour> Class, UWorld* World
 	, ULexWidget* Parent, ULexUIMLResource* Resources, bool IsSubTemplate
 	, const TFunction<void(const TArray<ULexWidget*>&)>& OnAllWidgetsCreated)
@@ -27,6 +45,7 @@ ULexUIMLBehaviour* ULexUIMLBehaviour::CreateByClass(TSubclassOf<ULexUIMLBehaviou
 	FString XAMLFilePath;
 	ULexUIMLResource* DefaultResources = nullptr;
 	GetDefault<ULexUIMLBehaviour>(Class)->GetUIMLData(XAMLFilePath, DefaultResources);
+	XAMLFilePath = ResolveUIMLPath(XAMLFilePath);
 	if (XAMLFilePath.IsEmpty()) return nullptr;
 	if (Resources == nullptr) Resources = DefaultResources;
 

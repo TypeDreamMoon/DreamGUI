@@ -176,7 +176,7 @@ FString ULexUIMLPresenterComponent::GetXAMLFilePath() const
 		GetDefault<ULexUIMLBehaviour>(XAMLScriptClass)->GetUIMLData(RelativePath, Resource);
 		if (!RelativePath.IsEmpty())
 		{
-			return FPaths::ProjectContentDir() / RelativePath;
+			return ULexUIMLBehaviour::ResolveUIMLPath(RelativePath);
 		}
 	}
 	return FString();
