@@ -24,6 +24,10 @@
 #include "Core/Components/LexLayoutSelfGrid.h"
 #include "Core/Components/LexLayoutSelfAspectRatio.h"
 #include "Core/Components/LexLayout.h"
+#include "Interaction/UIButton.h"
+#include "Interaction/UISlider.h"
+#include "Interaction/UITextInput.h"
+#include "Interaction/UIToggle.h"
 
 // ============================================================================
 // ULexUIXAMLResource
@@ -273,52 +277,64 @@ static bool TryApplyLayoutAttribute(const FString& AttrName, const FString& Attr
 
 void FLexUIMLUtils::BindVarName(ULexUIMLBehaviour* EventContext, const FString& VarName, ULexWidget* Widget, ULexVisual* Visual) const
 {
+	BindObjectName(EventContext, VarName, { Widget, Visual });
+}
+
+void FLexUIMLUtils::BindObjectName(ULexUIMLBehaviour* EventContext, const FString& VarName, const TArray<UObject*>& Candidates) const
+{
 	if (!EventContext || VarName.IsEmpty()) return;
 
-	FProperty* Prop = FindFProperty<FProperty>(EventContext->GetClass(), *VarName);
-	if (!Prop)
+	FObjectPropertyBase* ObjectProperty = CastField<FObjectPropertyBase>(FindFProperty<FProperty>(EventContext->GetClass(), *VarName));
+	if (!ObjectProperty)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s].%d - VarName '%s': property not found on %s"),
+		UE_LOG(LogTemp, Warning, TEXT("[%s].%d - VarName '%s' is not an object property on %s"),
 			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *VarName, *EventContext->GetClass()->GetName());
 		return;
 	}
 
-	FObjectPropertyBase* ObjProp = CastField<FObjectPropertyBase>(Prop);
-	if (!ObjProp)
+	for (UObject* Candidate : Candidates)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s].%d - VarName '%s': property '%s' is not an object reference (type: %s)"),
-			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *VarName, *VarName, *Prop->GetClass()->GetName());
-		return;
+		if (Candidate && Candidate->IsA(ObjectProperty->PropertyClass))
+		{
+			ObjectProperty->SetObjectPropertyValue_InContainer(EventContext, Candidate);
+			return;
+		}
 	}
 
-	UClass* PropClass = ObjProp->PropertyClass;
-	UObject* ValueToSet = nullptr;
+	UE_LOG(LogTemp, Warning, TEXT("[%s].%d - VarName '%s' expects %s, but no created object is compatible"),
+		ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *VarName, *ObjectProperty->PropertyClass->GetName());
+}
 
-	// Try matching the widget first
-	if (Widget->IsA(PropClass))
+UClass* FLexUIMLUtils::ResolveBehaviourClass(const FString& ClassName)
+{
+	const FString TrimmedName = ClassName.TrimStartAndEnd();
+	if (TrimmedName.IsEmpty()) return nullptr;
+
+	if (TrimmedName == TEXT("Button")) return UUIButton::StaticClass();
+	if (TrimmedName == TEXT("TextInput")) return UUITextInput::StaticClass();
+	if (TrimmedName == TEXT("Toggle")) return UUIToggle::StaticClass();
+	if (TrimmedName == TEXT("Slider")) return UUISlider::StaticClass();
+
+	UClass* Result = UClass::TryFindTypeSlow<UClass>(TrimmedName);
+	if (!Result && TrimmedName.StartsWith(TEXT("/")))
 	{
-		ValueToSet = Widget;
+		Result = LoadObject<UClass>(nullptr, *TrimmedName);
 	}
-	// Then try the visual
-	else if (Visual && Visual->IsA(PropClass))
+	if (!Result)
 	{
-		ValueToSet = Visual;
+		const FString ScriptPath = FString::Printf(TEXT("/Script/LGUI.%s"), *TrimmedName);
+		Result = UClass::TryFindTypeSlow<UClass>(ScriptPath);
+		if (!Result)
+		{
+			Result = LoadObject<UClass>(nullptr, *ScriptPath);
+		}
 	}
 
-	if (ValueToSet)
+	if (!Result || !Result->IsChildOf(ULexUIBehaviour::StaticClass()) || Result->HasAnyClassFlags(CLASS_Abstract))
 	{
-		ObjProp->SetObjectPropertyValue_InContainer(EventContext, ValueToSet);
-		UE_LOG(LogTemp, Log, TEXT("[%s].%d - VarName '%s' → %s (%s)"),
-			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *VarName, *ValueToSet->GetName(), *PropClass->GetName());
+		return nullptr;
 	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s].%d - VarName '%s': type mismatch — property expects '%s', but widget is '%s' and visual is '%s'"),
-			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *VarName,
-			*PropClass->GetName(),
-			*Widget->GetClass()->GetName(),
-			Visual ? *Visual->GetClass()->GetName() : TEXT("none"));
-	}
+	return Result;
 }
 
 FLexUIMLUtils::FLexUIMLUtils(bool InIsSubTemplate, TFunction<void(const TArray<ULexWidget*>&)> InAllWidgetsCreated)
@@ -486,7 +502,7 @@ ULexUIMLBehaviour* FLexUIMLUtils::LoadFromString(UWorld* InWorld, ULexWidget* Pa
  * Bind XML event attributes (e.g. OnClick="FuncName,Param1,Param2") to the widget's components.
  * Validates function existence, parameter count, and parameter type before binding.
  */
-void FLexUIMLUtils::BindXMLEvents(ULexWidget* Widget, const FXmlNode* XmlNode, UObject* EventContext)
+void FLexUIMLUtils::BindXMLEvents(ULexWidget* Widget, const FXmlNode* XmlNode, UObject* EventContext, ULexUIBehaviour* ComponentFilter)
 {
 	if (!Widget || !EventContext) return;
 
@@ -535,6 +551,8 @@ void FLexUIMLUtils::BindXMLEvents(ULexWidget* Widget, const FXmlNode* XmlNode, U
 
 		for (ULexUIBehaviour* Comp : Components)
 		{
+			if (ComponentFilter && Comp != ComponentFilter) continue;
+
 			for (TFieldIterator<FMulticastDelegateProperty> It(Comp->GetClass()); It; ++It)
 			{
 				const FString DelegateName = It->GetName();
@@ -1020,7 +1038,11 @@ void FLexUIMLUtils::ProcessChildElements(const TArray<FXmlNode*>& Children, ULex
 	{
 		const FString& ChildTag = Child->GetTag();
 		UClass* VisualClass = nullptr;
-		if (IsPrefabElement(ChildTag))
+		if (ChildTag == TEXT("Component"))
+		{
+			ParseComponentElement(Child, ParentWidget, EventContext);
+		}
+		else if (IsPrefabElement(ChildTag))
 		{
 			if (!Resources)
 			{
@@ -1077,6 +1099,65 @@ void FLexUIMLUtils::ProcessChildElements(const TArray<FXmlNode*>& Children, ULex
 			ParsePropertyElement(Child, ParentWidget);
 		}
 	}
+}
+
+void FLexUIMLUtils::ParseComponentElement(const FXmlNode* ComponentNode, ULexWidget* ParentWidget, ULexUIMLBehaviour* EventContext)
+{
+	if (!ComponentNode || !ParentWidget) return;
+
+	const FString ClassName = ComponentNode->GetAttribute(TEXT("Class"));
+	UClass* ComponentClass = ResolveBehaviourClass(ClassName);
+	if (!ComponentClass)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[%s].%d - Component class '%s' is missing, abstract, or not a LexUI behaviour"),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *ClassName);
+		return;
+	}
+
+	ULexUIBehaviour* Component = ParentWidget->AddComponent(ComponentClass);
+	if (!Component)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[%s].%d - Failed to add component '%s'"),
+			ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *ComponentClass->GetName());
+		return;
+	}
+
+	TMap<FString, FString> CombinedAttrs;
+	ApplyStyleAttributes(ComponentNode->GetAttribute(TEXT("Style")), CombinedAttrs);
+	for (const FXmlAttribute& Attr : ComponentNode->GetAttributes())
+	{
+		if (Attr.GetTag() != TEXT("Style"))
+		{
+			CombinedAttrs.Add(Attr.GetTag(), Attr.GetValue());
+		}
+	}
+
+	for (const TPair<FString, FString>& Pair : CombinedAttrs)
+	{
+		const FString& AttrName = Pair.Key;
+		if (AttrName == TEXT("Class") || AttrName == TEXT("VarName") || AttrName == TEXT("IdName") || AttrName.StartsWith(TEXT("Event:")))
+		{
+			continue;
+		}
+		if (!ApplyPropertyValue(Component, AttrName, Pair.Value))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[%s].%d - Unknown property '%s' on component %s"),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *AttrName, *ComponentClass->GetName());
+		}
+	}
+
+	for (const FXmlNode* Child : ComponentNode->GetChildrenNodes())
+	{
+		ParsePropertyElement(Child, Component);
+	}
+
+	const FString IdName = ComponentNode->GetAttribute(TEXT("IdName")).TrimStartAndEnd();
+	if (!IdName.IsEmpty())
+	{
+		DataContainer->MapIdNameToObject.Add(IdName, Component);
+	}
+	BindObjectName(EventContext, ComponentNode->GetAttribute(TEXT("VarName")), { Component });
+	BindXMLEvents(ParentWidget, ComponentNode, EventContext, Component);
 }
 
 void FLexUIMLUtils::ParseSlotElement(const FXmlNode* SlotNode, const FString& SlotName, ULexWidget* ParentWidget, ULexUIMLBehaviour* EventContext)
@@ -1251,7 +1332,7 @@ void FLexUIMLUtils::ApplyStyleAttributes(const FString& Style, TMap<FString, FSt
 	}
 }
 
-void FLexUIMLUtils::ParsePropertyElement(const FXmlNode* PropNode, ULexWidget* TargetWidget)
+void FLexUIMLUtils::ParsePropertyElement(const FXmlNode* PropNode, UObject* TargetObject)
 {
 	const FString& Tag = PropNode->GetTag();
 
@@ -1267,7 +1348,7 @@ void FLexUIMLUtils::ParsePropertyElement(const FXmlNode* PropNode, ULexWidget* T
 	// If we have a simple value, apply directly
 	if (!ValueStr.IsEmpty())
 	{
-		ApplyPropertyValue(TargetWidget, Tag, ValueStr);
+		ApplyPropertyValue(TargetObject, Tag, ValueStr);
 		return;
 	}
 
@@ -1282,7 +1363,7 @@ void FLexUIMLUtils::ParsePropertyElement(const FXmlNode* PropNode, ULexWidget* T
 		if (AttrName != TEXT("Value"))
 		{
 			FString FullPropName = FString::Printf(TEXT("%s.%s"), *Tag, *AttrName);
-			ApplyPropertyValue(TargetWidget, FullPropName, AttrValue);
+			ApplyPropertyValue(TargetObject, FullPropName, AttrValue);
 		}
 	}
 }

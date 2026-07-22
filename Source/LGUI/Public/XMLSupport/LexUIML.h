@@ -125,6 +125,11 @@ public:
  *   <Sprite DisplayName="Avatar" Src="AvatarSprite" IdName="MySprite"
  *     SizeDelta="128,128"/>
  *
+ *   <Image DisplayName="OkButton" SizeDelta="160,48">
+ *     <Component Class="Button" VarName="OkButton"
+ *       Event:OnClick="OnOkClicked"/>
+ *   </Image>
+ *
  *   <Prefab:Button DisplayName="OkBtn"
  *     SizeDelta="160,48"
  *     Event:OnClick="OnOkClicked,1,test,IdName:MySprite">
@@ -158,6 +163,7 @@ public:
  *   Text             — ULexWidget + ULexText           (Font → Fonts)
  *   Texture          — ULexWidget + ULexTexture        (Src → Textures)
  *   Sprite           — ULexWidget + ULexSprite         (Src → Sprites)
+ *   Component        — attach a ULexUIBehaviour         (Class aliases: Button, TextInput, Toggle, Slider)
  *   Slot / Slot:Name — placeholder or named slot        (binds to Behaviour slots)
  *   Prefab:Key       — instantiate ULexUIPrefab from Resources.Prefabs
  *   Template:Key     — instantiate ULexUIMLBehaviour subclass from Resources.Templates
@@ -166,6 +172,10 @@ public:
  *   Event:OnClick="FuncName"                  → Behaviour->FuncName()
  *   Event:OnClick="FuncName,123,test"         → Behaviour->FuncName(123, "test")
  *   Event:OnClick="FuncName,IdName:MySprite"  → resolves IdName to ULexWidget* param
+ *
+ * Component Class accepts aliases, reflected class names, and full object paths such as
+ * /Script/LGUI.UIButton. Component attributes and nested property elements are imported
+ * through reflection; VarName and IdName refer to the created component.
  */
 struct LGUI_API FLexUIMLUtils
 {
@@ -184,6 +194,8 @@ struct LGUI_API FLexUIMLUtils
 
 	/** Set a single property from string via typed setters (avoids ImportText format issues). */
 	static void SetPropertyValueFromString(FProperty* Property, void* ValuePtr, const FString& ValueStr, UObject* Owner);
+	/** Resolve a native or reflected LexUI behaviour class. Includes common control aliases. */
+	static UClass* ResolveBehaviourClass(const FString& ClassName);
 
 private:
 	/** Apply a named property from a string value using reflection. Supports "Prop.SubProp" paths. */
@@ -192,7 +204,8 @@ private:
 	ULexUIMLBehaviour* ParseWidgetElement(const FXmlNode* WidgetNode, UClass* VisualClass, ULexWidget* ParentWidget, ULexUIMLBehaviour* EventContext, UClass* ScriptClass);
 	ULexUIMLBehaviour* ParsePrefabElement(const FXmlNode* PrefabNode, ULexUIPrefab* Prefab, ULexWidget* ParentWidget, ULexUIMLBehaviour* EventContext, UClass* ScriptClass);
 	ULexUIMLBehaviour* ParseTemplateElement(const FXmlNode* TemplateNode, TSubclassOf<ULexUIMLBehaviour> TemplateClass, ULexWidget* ParentWidget, ULexUIMLBehaviour* EventContext, UClass* ScriptClass);
-	void ParsePropertyElement(const FXmlNode* PropNode, ULexWidget* TargetWidget);
+	void ParseComponentElement(const FXmlNode* ComponentNode, ULexWidget* ParentWidget, ULexUIMLBehaviour* EventContext);
+	void ParsePropertyElement(const FXmlNode* PropNode, UObject* TargetObject);
 
 	/** Create an empty placeholder widget for a <Slot> element and bind it to the Behaviour's slot properties. */
 	void ParseSlotElement(const FXmlNode* SlotNode, const FString& SlotName, ULexWidget* ParentWidget, ULexUIMLBehaviour* EventContext);
@@ -208,9 +221,10 @@ private:
 
 	/** Bind VarName attribute: set a named property on EventContext to the created widget (or its Visual). */
 	void BindVarName(ULexUIMLBehaviour* EventContext, const FString& VarName, ULexWidget* Widget, ULexVisual* Visual) const;
+	void BindObjectName(ULexUIMLBehaviour* EventContext, const FString& VarName, const TArray<UObject*>& Candidates) const;
 
 	/** Bind XML event attributes (OnClick, etc.) to widget components. */
-	void BindXMLEvents(ULexWidget* Widget, const FXmlNode* XmlNode, UObject* EventContext);
+	void BindXMLEvents(ULexWidget* Widget, const FXmlNode* XmlNode, UObject* EventContext, ULexUIBehaviour* ComponentFilter = nullptr);
 
 	/** Parse <PropertyGroup> elements and populate the PropertyGroups map. */
 	void ParsePropertyGroups(const TArray<FXmlNode*>& Children);
