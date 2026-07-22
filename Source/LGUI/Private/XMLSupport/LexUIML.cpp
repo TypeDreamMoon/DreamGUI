@@ -840,6 +840,7 @@ ULexUIMLBehaviour* FLexUIMLUtils::ParseWidgetElement(const FXmlNode* WidgetNode,
 		return nullptr;
 	}
 	AllWidgets.Add(NewWidget);
+	NewWidget->SetParent(ParentWidget, false);
 
 	// Create typed Visual if needed
 	ULexVisual* CreatedVisual = nullptr;
@@ -1009,8 +1010,6 @@ ULexUIMLBehaviour* FLexUIMLUtils::ParseWidgetElement(const FXmlNode* WidgetNode,
 
 	// --- Process child elements ---
 	ProcessChildElements(WidgetNode->GetChildrenNodes(), NewWidget, EventContext, ScriptClass);
-
-	NewWidget->SetParent(ParentWidget, false);
 
 	return EventContext;
 }
