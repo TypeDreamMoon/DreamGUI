@@ -229,6 +229,10 @@ struct LGUI_API FLexUIMLUtils
 	 * @return The root ULexWidget created, or nullptr on failure.
 	 */
 	ULexUIMLBehaviour* LoadFromString(UWorld* World, ULexWidget* Parent, TSubclassOf<ULexUIMLBehaviour> Class, ULexUIMLResource* Resources, const FString& XmlString);
+	/** Validate markup without creating objects. Returns false and fills OutErrors for semantic or XML errors. */
+	static bool ValidateString(const FString& XmlString, UClass* ScriptClass, TArray<FString>& OutErrors);
+	/** Load and validate a UIML file without creating objects. */
+	static bool ValidateFile(const FString& FilePath, UClass* ScriptClass, TArray<FString>& OutErrors);
 
 	/** Set a single property from string via typed setters (avoids ImportText format issues). */
 	static void SetPropertyValueFromString(FProperty* Property, void* ValuePtr, const FString& ValueStr, UObject* Owner);

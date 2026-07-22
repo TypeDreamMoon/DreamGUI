@@ -113,4 +113,33 @@ bool FLexUIMLDeclarativeComponentsTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexUIMLValidationTest,
+	"LGUI.UIML.Validation",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexUIMLValidationTest::RunTest(const FString& Parameters)
+{
+	TArray<FString> Errors;
+	const FString ValidMarkup = TEXT(
+		"<Widget>"
+		"  <Image IdName=\"Target\"><Component Class=\"Button\" Event:OnClick=\"HandleClick\"/></Image>"
+		"  <Text VarName=\"StatusLabel\" Bind:Text=\"StatusText\"/>"
+		"</Widget>");
+	TestTrue(TEXT("Valid markup passes semantic validation"),
+		FLexUIMLUtils::ValidateString(ValidMarkup, ULexUIMLTestBehaviour::StaticClass(), Errors));
+	TestEqual(TEXT("Valid markup reports no errors"), Errors.Num(), 0);
+
+	const FString InvalidMarkup = TEXT(
+		"<Widget>"
+		"  <Image IdName=\"Duplicate\"/>"
+		"  <Text IdName=\"Duplicate\" VarName=\"MissingVar\" Bind:Text=\"MissingSource\"/>"
+		"  <Component Class=\"MissingControl\" Event:OnClick=\"MissingFunction\" Fill=\"IdName:MissingId\"/>"
+		"</Widget>");
+	TestFalse(TEXT("Invalid markup fails semantic validation"),
+		FLexUIMLUtils::ValidateString(InvalidMarkup, ULexUIMLTestBehaviour::StaticClass(), Errors));
+	TestTrue(TEXT("Invalid markup reports all independent failures"), Errors.Num() >= 6);
+	return true;
+}
+
 #endif

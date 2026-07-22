@@ -362,6 +362,145 @@ static FString GetSlotName(const FXmlNode* Node)
 	return Name;
 }
 
+bool FLexUIMLUtils::ValidateFile(const FString& FilePath, UClass* ScriptClass, TArray<FString>& OutErrors)
+{
+	FString XmlString;
+	if (!FFileHelper::LoadFileToString(XmlString, *FilePath))
+	{
+		OutErrors.Add(FString::Printf(TEXT("Could not read UIML file: %s"), *FilePath));
+		return false;
+	}
+	return ValidateString(XmlString, ScriptClass, OutErrors);
+}
+
+bool FLexUIMLUtils::ValidateString(const FString& XmlString, UClass* ScriptClass, TArray<FString>& OutErrors)
+{
+	OutErrors.Reset();
+	FXmlFile XmlFile;
+	if (XmlString.IsEmpty() || !XmlFile.LoadFile(XmlString, EConstructMethod::ConstructFromBuffer))
+	{
+		OutErrors.Add(XmlString.IsEmpty() ? TEXT("UIML markup is empty") : XmlFile.GetLastError());
+		return false;
+	}
+
+	const FXmlNode* Root = XmlFile.GetRootNode();
+	if (!Root)
+	{
+		OutErrors.Add(TEXT("UIML markup has no root element"));
+		return false;
+	}
+
+	const FXmlNode* ContentRoot = Root;
+	if (Root->GetTag() == TEXT("LexUIML"))
+	{
+		ContentRoot = nullptr;
+		for (const FXmlNode* Child : Root->GetChildrenNodes())
+		{
+			if (Child->GetTag() != TEXT("PropertyGroup") && Child->GetTag() != TEXT("Include"))
+			{
+				if (ContentRoot)
+				{
+					OutErrors.Add(TEXT("<LexUIML> must contain exactly one content root"));
+				}
+				else
+				{
+					ContentRoot = Child;
+				}
+			}
+		}
+	}
+
+	UClass* RootVisualClass = nullptr;
+	if (!ContentRoot || (!IsWidgetElement(ContentRoot->GetTag(), RootVisualClass)
+		&& !IsPrefabElement(ContentRoot->GetTag()) && !IsTemplateElement(ContentRoot->GetTag())))
+	{
+		OutErrors.Add(ContentRoot
+			? FString::Printf(TEXT("Unsupported UIML root element: <%s>"), *ContentRoot->GetTag())
+			: TEXT("<LexUIML> has no content root"));
+		return false;
+	}
+
+	TSet<FString> IdNames;
+	TArray<TPair<FString, FString>> References;
+	TFunction<void(const FXmlNode*)> ValidateNode = [&](const FXmlNode* Node)
+	{
+		const FString& Tag = Node->GetTag();
+		const FString IdName = Node->GetAttribute(TEXT("IdName")).TrimStartAndEnd();
+		if (!IdName.IsEmpty())
+		{
+			if (IdNames.Contains(IdName))
+			{
+				OutErrors.Add(FString::Printf(TEXT("Duplicate IdName '%s' on <%s>"), *IdName, *Tag));
+			}
+			IdNames.Add(IdName);
+		}
+
+		if (Tag == TEXT("Component"))
+		{
+			const FString ClassName = Node->GetAttribute(TEXT("Class")).TrimStartAndEnd();
+			if (!ResolveBehaviourClass(ClassName))
+			{
+				OutErrors.Add(FString::Printf(TEXT("Invalid component class '%s'"), *ClassName));
+			}
+		}
+
+		const FString VarName = Node->GetAttribute(TEXT("VarName")).TrimStartAndEnd();
+		if (ScriptClass && !VarName.IsEmpty() && !CastField<FObjectPropertyBase>(FindFProperty<FProperty>(ScriptClass, *VarName)))
+		{
+			OutErrors.Add(FString::Printf(TEXT("VarName '%s' is not an object property on %s"), *VarName, *ScriptClass->GetName()));
+		}
+
+		for (const FXmlAttribute& Attr : Node->GetAttributes())
+		{
+			const FString& AttrName = Attr.GetTag();
+			const FString& AttrValue = Attr.GetValue();
+			if (ScriptClass && AttrName.StartsWith(TEXT("Event:")))
+			{
+				FString FunctionName;
+				FString Params;
+				if (!AttrValue.Split(TEXT(","), &FunctionName, &Params)) FunctionName = AttrValue;
+				FunctionName.TrimStartAndEndInline();
+				if (!ScriptClass->FindFunctionByName(*FunctionName))
+				{
+					OutErrors.Add(FString::Printf(TEXT("Event function '%s' was not found on %s"), *FunctionName, *ScriptClass->GetName()));
+				}
+			}
+			else if (ScriptClass && AttrName.StartsWith(TEXT("Bind:")))
+			{
+				FString SourceProperty = AttrValue.TrimStartAndEnd();
+				SourceProperty.RemoveFromStart(TEXT("!"));
+				if (!FindFProperty<FProperty>(ScriptClass, *SourceProperty))
+				{
+					OutErrors.Add(FString::Printf(TEXT("Binding source '%s' was not found on %s"), *SourceProperty, *ScriptClass->GetName()));
+				}
+			}
+
+			FString Selector;
+			FString ReferenceId;
+			if (AttrValue.Split(TEXT(":"), &Selector, &ReferenceId)
+				&& (Selector == TEXT("IdName") || Selector == TEXT("Widget") || Selector == TEXT("Visual")))
+			{
+				References.Add({ ReferenceId, FString::Printf(TEXT("%s.%s"), *Tag, *AttrName) });
+			}
+		}
+
+		for (const FXmlNode* Child : Node->GetChildrenNodes())
+		{
+			ValidateNode(Child);
+		}
+	};
+	ValidateNode(ContentRoot);
+
+	for (const TPair<FString, FString>& Reference : References)
+	{
+		if (!IdNames.Contains(Reference.Key))
+		{
+			OutErrors.Add(FString::Printf(TEXT("Unresolved reference '%s' at %s"), *Reference.Key, *Reference.Value));
+		}
+	}
+	return OutErrors.IsEmpty();
+}
+
 /** Resolve a LayoutContainer class name to its UClass. */
 static UClass* ResolveLayoutContainerClass(const FString& Name)
 {
@@ -498,18 +637,22 @@ UClass* FLexUIMLUtils::ResolveBehaviourClass(const FString& ClassName)
 	if (TrimmedName == TEXT("Toggle")) return UUIToggle::StaticClass();
 	if (TrimmedName == TEXT("Slider")) return UUISlider::StaticClass();
 
-	UClass* Result = UClass::TryFindTypeSlow<UClass>(TrimmedName);
-	if (!Result && TrimmedName.StartsWith(TEXT("/")))
+	UClass* Result = nullptr;
+	if (TrimmedName.StartsWith(TEXT("/")))
 	{
-		Result = LoadObject<UClass>(nullptr, *TrimmedName);
-	}
-	if (!Result)
-	{
-		const FString ScriptPath = FString::Printf(TEXT("/Script/LGUI.%s"), *TrimmedName);
-		Result = UClass::TryFindTypeSlow<UClass>(ScriptPath);
+		Result = UClass::TryFindTypeSlowSafe<UClass>(TrimmedName);
 		if (!Result)
 		{
-			Result = LoadObject<UClass>(nullptr, *ScriptPath);
+			Result = LoadObject<UClass>(nullptr, *TrimmedName, nullptr, LOAD_NoWarn | LOAD_Quiet);
+		}
+	}
+	else
+	{
+		const FString ScriptPath = FString::Printf(TEXT("/Script/LGUI.%s"), *TrimmedName);
+		Result = UClass::TryFindTypeSlowSafe<UClass>(ScriptPath);
+		if (!Result)
+		{
+			Result = LoadObject<UClass>(nullptr, *ScriptPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
 		}
 	}
 
@@ -546,9 +689,13 @@ ULexUIMLBehaviour* FLexUIMLUtils::LoadFromFile(UWorld* InWorld, ULexWidget* Pare
 
 ULexUIMLBehaviour* FLexUIMLUtils::LoadFromString(UWorld* InWorld, ULexWidget* Parent, TSubclassOf<ULexUIMLBehaviour> Class, ULexUIMLResource* InResources, const FString& XmlString)
 {
-	if (XmlString.IsEmpty())
+	TArray<FString> ValidationErrors;
+	if (!ValidateString(XmlString, Class.Get(), ValidationErrors))
 	{
-		UE_LOG(LogTemp, Error, TEXT("[%s].%d - XML string is empty."), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
+		for (const FString& Error : ValidationErrors)
+		{
+			UE_LOG(LogTemp, Error, TEXT("[%s].%d - %s"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Error);
+		}
 		return nullptr;
 	}
 
