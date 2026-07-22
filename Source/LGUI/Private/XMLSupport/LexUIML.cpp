@@ -465,6 +465,8 @@ ULexUIMLBehaviour* FLexUIMLUtils::LoadFromString(UWorld* InWorld, ULexWidget* Pa
 		return nullptr;
 	}
 
+	ResolveDeferredObjectReferences();
+
 	for (auto& EventBinding : EventBindings)
 	{
 		EventBinding->DataContainer = this->DataContainer;
@@ -1474,6 +1476,14 @@ bool FLexUIMLUtils::ApplyPropertyValue(UObject* Target, const FString& PropertyN
 		return false;
 	}
 
+	FProperty* DirectProperty = FindFProperty<FProperty>(Target->GetClass(), *PropertyName);
+	if (CastField<FObjectPropertyBase>(DirectProperty)
+		&& (ValueStr.StartsWith(TEXT("IdName:")) || ValueStr.StartsWith(TEXT("Widget:")) || ValueStr.StartsWith(TEXT("Visual:"))))
+	{
+		DeferredObjectReferences.Add({ Target, PropertyName, ValueStr });
+		return true;
+	}
+
 	// Handle nested path: "AnchorData.Pivot" or "RelativeLocation.X"
 	FString TopProp, SubProp;
 	if (PropertyName.Split(TEXT("."), &TopProp, &SubProp))
@@ -1589,4 +1599,85 @@ bool FLexUIMLUtils::ApplyPropertyValue(UObject* Target, const FString& PropertyN
 	}
 
 	return false;
+}
+
+UObject* FLexUIMLUtils::ResolveObjectReference(const FString& Reference, UClass* ExpectedClass) const
+{
+	FString Selector;
+	FString IdName;
+	if (!Reference.Split(TEXT(":"), &Selector, &IdName) || IdName.IsEmpty() || !ExpectedClass)
+	{
+		return nullptr;
+	}
+
+	const TWeakObjectPtr<UObject>* Found = DataContainer->MapIdNameToObject.Find(IdName);
+	UObject* NamedObject = Found ? Found->Get() : nullptr;
+	if (!NamedObject) return nullptr;
+
+	TArray<UObject*> Candidates;
+	auto AddWidgetCandidates = [&Candidates](ULexWidget* Widget)
+	{
+		if (!Widget) return;
+		Candidates.Add(Widget);
+		Candidates.Add(Widget->GetVisual());
+		for (ULexUIBehaviour* Component : Widget->GetAllComponents())
+		{
+			Candidates.Add(Component);
+		}
+	};
+
+	ULexWidget* HostWidget = Cast<ULexWidget>(NamedObject);
+	if (!HostWidget)
+	{
+		if (ULexUIBehaviour* Behaviour = Cast<ULexUIBehaviour>(NamedObject))
+		{
+			HostWidget = Behaviour->GetWidget();
+		}
+	}
+
+	if (Selector == TEXT("Widget"))
+	{
+		Candidates.Add(HostWidget);
+	}
+	else if (Selector == TEXT("Visual"))
+	{
+		Candidates.Add(HostWidget ? HostWidget->GetVisual() : Cast<ULexVisual>(NamedObject));
+	}
+	else
+	{
+		Candidates.Add(NamedObject);
+		AddWidgetCandidates(HostWidget);
+	}
+
+	for (UObject* Candidate : Candidates)
+	{
+		if (Candidate && Candidate->IsA(ExpectedClass))
+		{
+			return Candidate;
+		}
+	}
+	return nullptr;
+}
+
+void FLexUIMLUtils::ResolveDeferredObjectReferences()
+{
+	for (const FLexUIML_DeferredObjectReference& Pending : DeferredObjectReferences)
+	{
+		UObject* Target = Pending.Target.Get();
+		FObjectPropertyBase* Property = Target
+			? CastField<FObjectPropertyBase>(FindFProperty<FProperty>(Target->GetClass(), *Pending.PropertyName))
+			: nullptr;
+		UObject* Value = Property ? ResolveObjectReference(Pending.Reference, Property->PropertyClass) : nullptr;
+		if (Target && Property && Value)
+		{
+			Property->SetObjectPropertyValue_InContainer(Target, Value);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("[%s].%d - Could not resolve %s.%s='%s'"),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, Target ? *Target->GetName() : TEXT("<expired>"),
+				*Pending.PropertyName, *Pending.Reference);
+		}
+	}
+	DeferredObjectReferences.Reset();
 }

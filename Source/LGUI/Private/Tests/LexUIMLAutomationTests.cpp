@@ -42,9 +42,11 @@ bool FLexUIMLDeclarativeComponentsTest::RunTest(const FString& Parameters)
 	const FString Markup = TEXT(
 		"<Image DisplayName=\"Root\">"
 		"  <Component Class=\"Button\" VarName=\"ActionButton\" IdName=\"SubmitAction\" Event:OnClick=\"HandleClick\"/>"
-		"  <Component Class=\"Slider\" VarName=\"AmountSlider\" MinValue=\"10\" MaxValue=\"50\" Value=\"25\"/>"
-		"  <Component Class=\"/Script/LGUI.UITextInput\" VarName=\"NameInput\"><Text Value=\"Alice\"/></Component>"
+		"  <Component Class=\"Slider\" VarName=\"AmountSlider\" MinValue=\"10\" MaxValue=\"50\" Value=\"25\" Fill=\"IdName:FillBar\"/>"
+		"  <Component Class=\"/Script/LGUI.UITextInput\" VarName=\"NameInput\" Text=\"Alice\" TextVisual=\"Visual:InputText\"/>"
 		"  <Component Class=\"Toggle\" VarName=\"ReadyToggle\" bIsOn=\"false\"/>"
+		"  <Image IdName=\"FillBar\"/>"
+		"  <Text IdName=\"InputText\"/>"
 		"</Image>");
 
 	FLexUIMLUtils Parser(false, nullptr);
@@ -63,10 +65,12 @@ bool FLexUIMLDeclarativeComponentsTest::RunTest(const FString& Parameters)
 			TestEqual(TEXT("Component minimum property is imported"), Behaviour->AmountSlider->GetMinValue(), 10.0f);
 			TestEqual(TEXT("Component maximum property is imported"), Behaviour->AmountSlider->GetMaxValue(), 50.0f);
 			TestEqual(TEXT("Component value property is imported"), Behaviour->AmountSlider->GetValue(), 25.0f);
+			TestNotNull(TEXT("Forward IdName reference resolves a widget"), Behaviour->AmountSlider->GetFill());
 		}
 		if (Behaviour->NameInput)
 		{
-			TestEqual(TEXT("Nested component property is imported"), Behaviour->NameInput->GetText(), FString(TEXT("Alice")));
+			TestEqual(TEXT("Component string property is imported"), Behaviour->NameInput->GetText(), FString(TEXT("Alice")));
+			TestNotNull(TEXT("Forward Visual reference resolves a visual"), Behaviour->NameInput->GetTextComponent());
 		}
 		if (Behaviour->ReadyToggle)
 		{

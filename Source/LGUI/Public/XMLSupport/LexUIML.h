@@ -76,6 +76,13 @@ struct FLexUIML_DataContainer
 	TMap<FString, TWeakObjectPtr<UObject>> MapIdNameToObject;
 };
 
+struct FLexUIML_DeferredObjectReference
+{
+	TWeakObjectPtr<UObject> Target;
+	FString PropertyName;
+	FString Reference;
+};
+
 /**
  * Internal helper: wraps a parameterized UFUNCTION call so it can be bound
  * to a no-parameter delegate. Created and managed by BindXMLEvents.
@@ -176,6 +183,8 @@ public:
  * Component Class accepts aliases, reflected class names, and full object paths such as
  * /Script/LGUI.UIButton. Component attributes and nested property elements are imported
  * through reflection; VarName and IdName refer to the created component.
+ * Object properties may use forward references: IdName:Name resolves the named object,
+ * Widget:Name resolves its host widget, and Visual:Name resolves its visual.
  */
 struct LGUI_API FLexUIMLUtils
 {
@@ -200,6 +209,8 @@ struct LGUI_API FLexUIMLUtils
 private:
 	/** Apply a named property from a string value using reflection. Supports "Prop.SubProp" paths. */
 	bool ApplyPropertyValue(UObject* Target, const FString& PropertyName, const FString& ValueStr);
+	void ResolveDeferredObjectReferences();
+	UObject* ResolveObjectReference(const FString& Reference, UClass* ExpectedClass) const;
 	
 	ULexUIMLBehaviour* ParseWidgetElement(const FXmlNode* WidgetNode, UClass* VisualClass, ULexWidget* ParentWidget, ULexUIMLBehaviour* EventContext, UClass* ScriptClass);
 	ULexUIMLBehaviour* ParsePrefabElement(const FXmlNode* PrefabNode, ULexUIPrefab* Prefab, ULexWidget* ParentWidget, ULexUIMLBehaviour* EventContext, UClass* ScriptClass);
@@ -247,6 +258,7 @@ private:
 	TMap<FString, TWeakObjectPtr<ULexWidget>> NamedSlots;
 	TSharedPtr<FLexUIML_DataContainer> DataContainer;
 	TArray<ULexUIMLEventBinding*> EventBindings;
+	TArray<FLexUIML_DeferredObjectReference> DeferredObjectReferences;
 	
 	TArray<ULexWidget*> AllWidgets;
 };
