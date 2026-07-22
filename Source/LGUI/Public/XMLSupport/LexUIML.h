@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Core/LexUIImageBrush.h"
+#include "Core/LexUIBehaviour.h"
 #include "LexUIML.generated.h"
 
 class ULexVisual;
@@ -81,6 +82,32 @@ struct FLexUIML_DeferredObjectReference
 	TWeakObjectPtr<UObject> Target;
 	FString PropertyName;
 	FString Reference;
+};
+
+struct FLexUIML_PropertyBinding
+{
+	TWeakObjectPtr<UObject> Source;
+	TWeakObjectPtr<UObject> Target;
+	FName SourceProperty;
+	FName TargetProperty;
+	bool bNegateBoolean = false;
+};
+
+/** Runtime host for one-way UIML property bindings. */
+UCLASS(Transient)
+class LGUI_API ULexUIMLBindingBehaviour : public ULexUIBehaviour
+{
+	GENERATED_BODY()
+
+public:
+	bool AddBinding(UObject* Source, const FString& SourceProperty, UObject* Target, const FString& TargetProperty);
+	void RefreshBindings();
+
+protected:
+	virtual void Tick(float DeltaTime) override;
+
+private:
+	TArray<FLexUIML_PropertyBinding> Bindings;
 };
 
 /**
@@ -185,6 +212,8 @@ public:
  * through reflection; VarName and IdName refer to the created component.
  * Object properties may use forward references: IdName:Name resolves the named object,
  * Widget:Name resolves its host widget, and Visual:Name resolves its visual.
+ * One-way bindings use Bind:TargetProperty="SourceProperty". Prefix a boolean source
+ * with ! to invert it, for example Bind:WidgetActive="!bLoading".
  */
 struct LGUI_API FLexUIMLUtils
 {
@@ -211,6 +240,7 @@ private:
 	bool ApplyPropertyValue(UObject* Target, const FString& PropertyName, const FString& ValueStr);
 	void ResolveDeferredObjectReferences();
 	UObject* ResolveObjectReference(const FString& Reference, UClass* ExpectedClass) const;
+	void ParseBindings(const FXmlNode* XmlNode, const TArray<UObject*>& TargetCandidates, ULexUIMLBehaviour* EventContext);
 	
 	ULexUIMLBehaviour* ParseWidgetElement(const FXmlNode* WidgetNode, UClass* VisualClass, ULexWidget* ParentWidget, ULexUIMLBehaviour* EventContext, UClass* ScriptClass);
 	ULexUIMLBehaviour* ParsePrefabElement(const FXmlNode* PrefabNode, ULexUIPrefab* Prefab, ULexWidget* ParentWidget, ULexUIMLBehaviour* EventContext, UClass* ScriptClass);

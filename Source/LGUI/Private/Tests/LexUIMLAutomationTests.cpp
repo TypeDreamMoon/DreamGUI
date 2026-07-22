@@ -47,6 +47,8 @@ bool FLexUIMLDeclarativeComponentsTest::RunTest(const FString& Parameters)
 		"  <Component Class=\"Toggle\" VarName=\"ReadyToggle\" bIsOn=\"false\"/>"
 		"  <Image IdName=\"FillBar\"/>"
 		"  <Text IdName=\"InputText\"/>"
+		"  <Text VarName=\"StatusLabel\" Bind:Text=\"StatusText\"/>"
+		"  <Widget VarName=\"VisibilityPanel\" Bind:WidgetActive=\"bPanelVisible\"/>"
 		"</Image>");
 
 	FLexUIMLUtils Parser(false, nullptr);
@@ -59,6 +61,8 @@ bool FLexUIMLDeclarativeComponentsTest::RunTest(const FString& Parameters)
 		TestNotNull(TEXT("Slider alias creates and binds UUISlider"), Behaviour->AmountSlider.Get());
 		TestNotNull(TEXT("Full class path creates and binds UUITextInput"), Behaviour->NameInput.Get());
 		TestNotNull(TEXT("Toggle alias creates and binds UUIToggle"), Behaviour->ReadyToggle.Get());
+		TestNotNull(TEXT("Text visual binds through VarName"), Behaviour->StatusLabel.Get());
+		TestNotNull(TEXT("Visibility widget binds through VarName"), Behaviour->VisibilityPanel.Get());
 
 		if (Behaviour->AmountSlider)
 		{
@@ -75,6 +79,22 @@ bool FLexUIMLDeclarativeComponentsTest::RunTest(const FString& Parameters)
 		if (Behaviour->ReadyToggle)
 		{
 			TestFalse(TEXT("Boolean component property is imported"), Behaviour->ReadyToggle->GetValue());
+		}
+		if (Behaviour->StatusLabel && Behaviour->VisibilityPanel)
+		{
+			TestEqual(TEXT("Text binding applies its initial value"), Behaviour->StatusLabel->GetText().ToString(), FString(TEXT("Waiting")));
+			TestTrue(TEXT("WidgetActive binding applies its initial value"), Behaviour->VisibilityPanel->GetWidgetActive());
+
+			Behaviour->StatusText = FText::FromString(TEXT("Ready"));
+			Behaviour->bPanelVisible = false;
+			ULexUIMLBindingBehaviour* BindingHost = Behaviour->GetWidget()->GetComponent<ULexUIMLBindingBehaviour>();
+			TestNotNull(TEXT("Bindings create a runtime binding host"), BindingHost);
+			if (BindingHost)
+			{
+				BindingHost->RefreshBindings();
+				TestEqual(TEXT("Text binding refreshes changed source data"), Behaviour->StatusLabel->GetText().ToString(), FString(TEXT("Ready")));
+				TestFalse(TEXT("WidgetActive binding refreshes changed source data"), Behaviour->VisibilityPanel->GetWidgetActive());
+			}
 		}
 		if (Behaviour->ActionButton)
 		{

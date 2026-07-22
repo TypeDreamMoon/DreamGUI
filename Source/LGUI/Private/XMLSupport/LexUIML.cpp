@@ -160,6 +160,145 @@ void ULexUIMLEventBinding::Execute()
 // FLexUIXAML
 // ============================================================================
 
+static FProperty* FindBindingProperty(UObject* Object, const FString& RequestedName, FString& OutResolvedName)
+{
+	if (!Object) return nullptr;
+
+	OutResolvedName = RequestedName;
+	FProperty* Property = FindFProperty<FProperty>(Object->GetClass(), *OutResolvedName);
+	if (!Property && RequestedName == TEXT("WidgetActive"))
+	{
+		OutResolvedName = TEXT("bWidgetActive");
+		Property = FindFProperty<FProperty>(Object->GetClass(), *OutResolvedName);
+	}
+	if (!Property && RequestedName == TEXT("Value") && Object->IsA<UUIToggle>())
+	{
+		OutResolvedName = TEXT("bIsOn");
+		Property = FindFProperty<FProperty>(Object->GetClass(), *OutResolvedName);
+	}
+	return Property;
+}
+
+static FString ExportBindingValue(FProperty* Property, const void* Value, UObject* Source)
+{
+	FString Result;
+	if (Property && Value)
+	{
+		Property->ExportTextItem_Direct(Result, Value, nullptr, Source, PPF_None);
+	}
+	return Result;
+}
+
+bool ULexUIMLBindingBehaviour::AddBinding(UObject* Source, const FString& SourceProperty, UObject* Target, const FString& TargetProperty)
+{
+	FString TrimmedSource = SourceProperty.TrimStartAndEnd();
+	const bool bNegate = TrimmedSource.RemoveFromStart(TEXT("!"));
+	FString ResolvedTargetName;
+	FProperty* SourceProp = Source ? FindFProperty<FProperty>(Source->GetClass(), *TrimmedSource) : nullptr;
+	FProperty* TargetProp = FindBindingProperty(Target, TargetProperty, ResolvedTargetName);
+	if (!SourceProp || !TargetProp)
+	{
+		return false;
+	}
+	if (bNegate && !CastField<FBoolProperty>(SourceProp))
+	{
+		return false;
+	}
+
+	Bindings.Add({ Source, Target, *TrimmedSource, *ResolvedTargetName, bNegate });
+	RefreshBindings();
+	return true;
+}
+
+void ULexUIMLBindingBehaviour::RefreshBindings()
+{
+	for (const FLexUIML_PropertyBinding& Binding : Bindings)
+	{
+		UObject* Source = Binding.Source.Get();
+		UObject* Target = Binding.Target.Get();
+		FProperty* SourceProperty = Source ? FindFProperty<FProperty>(Source->GetClass(), Binding.SourceProperty) : nullptr;
+		FProperty* TargetProperty = Target ? FindFProperty<FProperty>(Target->GetClass(), Binding.TargetProperty) : nullptr;
+		if (!Source || !Target || !SourceProperty || !TargetProperty) continue;
+
+		const void* SourceValue = SourceProperty->ContainerPtrToValuePtr<void>(Source);
+		if (ULexWidget* Widget = Cast<ULexWidget>(Target); Widget && Binding.TargetProperty == TEXT("bWidgetActive"))
+		{
+			if (const FBoolProperty* BoolProperty = CastField<FBoolProperty>(SourceProperty))
+			{
+				const bool Value = BoolProperty->GetPropertyValue(SourceValue) != Binding.bNegateBoolean;
+				Widget->SetWidgetActive(Value);
+			}
+			continue;
+		}
+		if (ULexText* Text = Cast<ULexText>(Target); Text && Binding.TargetProperty == TEXT("Text"))
+		{
+			if (const FTextProperty* TextProperty = CastField<FTextProperty>(SourceProperty))
+			{
+				Text->SetText(TextProperty->GetPropertyValue(SourceValue));
+			}
+			else if (const FStrProperty* StringProperty = CastField<FStrProperty>(SourceProperty))
+			{
+				Text->SetText(FText::FromString(StringProperty->GetPropertyValue(SourceValue)));
+			}
+			else
+			{
+				Text->SetText(FText::FromString(ExportBindingValue(SourceProperty, SourceValue, Source)));
+			}
+			continue;
+		}
+		if (UUITextInput* TextInput = Cast<UUITextInput>(Target); TextInput && Binding.TargetProperty == TEXT("Text"))
+		{
+			TextInput->SetTextWithoutNotify(ExportBindingValue(SourceProperty, SourceValue, Source));
+			continue;
+		}
+		if (UUISlider* Slider = Cast<UUISlider>(Target); Slider && Binding.TargetProperty == TEXT("Value"))
+		{
+			if (const FNumericProperty* NumericProperty = CastField<FNumericProperty>(SourceProperty))
+			{
+				const double NumericValue = NumericProperty->IsFloatingPoint()
+					? NumericProperty->GetFloatingPointPropertyValue(SourceValue)
+					: static_cast<double>(NumericProperty->GetSignedIntPropertyValue(SourceValue));
+				Slider->SetValueWithoutNotify(static_cast<float>(NumericValue));
+			}
+			continue;
+		}
+		if (UUIToggle* Toggle = Cast<UUIToggle>(Target); Toggle && Binding.TargetProperty == TEXT("bIsOn"))
+		{
+			if (const FBoolProperty* BoolProperty = CastField<FBoolProperty>(SourceProperty))
+			{
+				Toggle->SetValueWithoutNotify(BoolProperty->GetPropertyValue(SourceValue) != Binding.bNegateBoolean);
+			}
+			continue;
+		}
+		if (Binding.bNegateBoolean)
+		{
+			if (const FBoolProperty* SourceBool = CastField<FBoolProperty>(SourceProperty))
+			{
+				if (FBoolProperty* TargetBool = CastField<FBoolProperty>(TargetProperty))
+				{
+					TargetBool->SetPropertyValue_InContainer(Target, !SourceBool->GetPropertyValue(SourceValue));
+					continue;
+				}
+			}
+		}
+
+		void* TargetValue = TargetProperty->ContainerPtrToValuePtr<void>(Target);
+		if (SourceProperty->SameType(TargetProperty))
+		{
+			TargetProperty->CopyCompleteValue(TargetValue, SourceValue);
+		}
+		else
+		{
+			FLexUIMLUtils::SetPropertyValueFromString(TargetProperty, TargetValue, ExportBindingValue(SourceProperty, SourceValue, Source), Target);
+		}
+	}
+}
+
+void ULexUIMLBindingBehaviour::Tick(float DeltaTime)
+{
+	RefreshBindings();
+}
+
 
 static bool IsWidgetElement(const FString& Tag, UClass*& Class)
 {
@@ -303,6 +442,50 @@ void FLexUIMLUtils::BindObjectName(ULexUIMLBehaviour* EventContext, const FStrin
 
 	UE_LOG(LogTemp, Warning, TEXT("[%s].%d - VarName '%s' expects %s, but no created object is compatible"),
 		ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *VarName, *ObjectProperty->PropertyClass->GetName());
+}
+
+void FLexUIMLUtils::ParseBindings(const FXmlNode* XmlNode, const TArray<UObject*>& TargetCandidates, ULexUIMLBehaviour* EventContext)
+{
+	if (!XmlNode || !EventContext || !EventContext->GetWidget()) return;
+
+	ULexUIMLBindingBehaviour* BindingHost = nullptr;
+	for (const FXmlAttribute& Attr : XmlNode->GetAttributes())
+	{
+		if (!Attr.GetTag().StartsWith(TEXT("Bind:"))) continue;
+
+		const FString TargetPropertyName = Attr.GetTag().Mid(5);
+		UObject* BindingTarget = nullptr;
+		for (UObject* Candidate : TargetCandidates)
+		{
+			FString ResolvedName;
+			if (FindBindingProperty(Candidate, TargetPropertyName, ResolvedName))
+			{
+				BindingTarget = Candidate;
+				break;
+			}
+		}
+
+		if (!BindingTarget)
+		{
+			UE_LOG(LogTemp, Error, TEXT("[%s].%d - Binding target property '%s' was not found"),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *TargetPropertyName);
+			continue;
+		}
+
+		if (!BindingHost)
+		{
+			BindingHost = EventContext->GetWidget()->GetComponent<ULexUIMLBindingBehaviour>();
+			if (!BindingHost)
+			{
+				BindingHost = EventContext->GetWidget()->AddComponent<ULexUIMLBindingBehaviour>();
+			}
+		}
+		if (!BindingHost || !BindingHost->AddBinding(EventContext, Attr.GetValue(), BindingTarget, TargetPropertyName))
+		{
+			UE_LOG(LogTemp, Error, TEXT("[%s].%d - Could not bind %s='%s' on %s"),
+				ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *Attr.GetTag(), *Attr.GetValue(), *BindingTarget->GetName());
+		}
+	}
 }
 
 UClass* FLexUIMLUtils::ResolveBehaviourClass(const FString& ClassName)
@@ -712,6 +895,7 @@ ULexUIMLBehaviour* FLexUIMLUtils::ParsePrefabElement(const FXmlNode* PrefabNode,
 			BindVarName(EventContext, AttrValue, NewWidget, NewWidget->GetVisual());
 			continue;
 		}
+		if (AttrName.StartsWith(TEXT("Event:")) || AttrName.StartsWith(TEXT("Bind:"))) continue;
 
 		if (TryApplyLayoutAttribute(AttrName, AttrValue, NewWidget, DeferredLayoutContainerProps, DeferredLayoutSelfProps)) continue;
 
@@ -745,6 +929,7 @@ ULexUIMLBehaviour* FLexUIMLUtils::ParsePrefabElement(const FXmlNode* PrefabNode,
 			UE_LOG(LogTemp, Log, TEXT("[%s].%d - Added script behaviour '%s' to root widget"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *ScriptClass->GetName());
 		}
 	}
+	ParseBindings(PrefabNode, { NewWidget, NewWidget->GetVisual() }, EventContext);
 
 	// --- Bind XML events (OnClick="FuncName", etc.) ---
 	BindXMLEvents(NewWidget, PrefabNode, EventContext);
@@ -813,6 +998,7 @@ ULexUIMLBehaviour* FLexUIMLUtils::ParseTemplateElement(const FXmlNode* TemplateN
 			BindVarName(EventContext, AttrValue, RootWidget, RootWidget->GetVisual());
 			continue;
 		}
+		if (AttrName.StartsWith(TEXT("Event:")) || AttrName.StartsWith(TEXT("Bind:"))) continue;
 
 		if (TryApplyLayoutAttribute(AttrName, AttrValue, RootWidget, DeferredLayoutContainerProps, DeferredLayoutSelfProps)) continue;
 
@@ -836,6 +1022,7 @@ ULexUIMLBehaviour* FLexUIMLUtils::ParseTemplateElement(const FXmlNode* TemplateN
 	}
 
 	ApplyDeferredLayoutProps(RootWidget, DeferredLayoutContainerProps, DeferredLayoutSelfProps);
+	ParseBindings(TemplateNode, { RootWidget, RootWidget->GetVisual() }, EventContext);
 	
 	// --- Bind XML events (OnClick="FuncName", etc.) ---
 	BindXMLEvents(RootWidget, TemplateNode, EventContext);
@@ -904,7 +1091,8 @@ ULexUIMLBehaviour* FLexUIMLUtils::ParseWidgetElement(const FXmlNode* WidgetNode,
 			DataContainer->MapIdNameToObject.Add(AttrValue, NewWidget);
 			continue;
 		}
-		if (AttrName == TEXT("ImageBrush") || AttrName == TEXT("Font") || AttrName == TEXT("Texture") || AttrName == TEXT("Sprite") || AttrName == TEXT("VarName")) continue;
+		if (AttrName == TEXT("ImageBrush") || AttrName == TEXT("Font") || AttrName == TEXT("Texture") || AttrName == TEXT("Sprite") || AttrName == TEXT("VarName")
+			|| AttrName.StartsWith(TEXT("Event:")) || AttrName.StartsWith(TEXT("Bind:"))) continue;
 
 		if (TryApplyLayoutAttribute(AttrName, AttrValue, NewWidget, DeferredLayoutContainerProps, DeferredLayoutSelfProps)) continue;
 
@@ -1024,6 +1212,7 @@ ULexUIMLBehaviour* FLexUIMLUtils::ParseWidgetElement(const FXmlNode* WidgetNode,
 		FString VarName = WidgetNode->GetAttribute(TEXT("VarName"));
 		BindVarName(EventContext, VarName, NewWidget, CreatedVisual);
 	}
+	ParseBindings(WidgetNode, { NewWidget, CreatedVisual }, EventContext);
 
 	// --- Bind XML events (OnClick="FuncName", etc.) ---
 	BindXMLEvents(NewWidget, WidgetNode, EventContext);
@@ -1137,7 +1326,8 @@ void FLexUIMLUtils::ParseComponentElement(const FXmlNode* ComponentNode, ULexWid
 	for (const TPair<FString, FString>& Pair : CombinedAttrs)
 	{
 		const FString& AttrName = Pair.Key;
-		if (AttrName == TEXT("Class") || AttrName == TEXT("VarName") || AttrName == TEXT("IdName") || AttrName.StartsWith(TEXT("Event:")))
+		if (AttrName == TEXT("Class") || AttrName == TEXT("VarName") || AttrName == TEXT("IdName")
+			|| AttrName.StartsWith(TEXT("Event:")) || AttrName.StartsWith(TEXT("Bind:")))
 		{
 			continue;
 		}
@@ -1159,6 +1349,7 @@ void FLexUIMLUtils::ParseComponentElement(const FXmlNode* ComponentNode, ULexWid
 		DataContainer->MapIdNameToObject.Add(IdName, Component);
 	}
 	BindObjectName(EventContext, ComponentNode->GetAttribute(TEXT("VarName")), { Component });
+	ParseBindings(ComponentNode, { Component }, EventContext);
 	BindXMLEvents(ParentWidget, ComponentNode, EventContext, Component);
 }
 
