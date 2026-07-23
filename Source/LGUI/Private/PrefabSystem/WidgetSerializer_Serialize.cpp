@@ -10,6 +10,47 @@
 
 namespace LexUIPrefabSystem
 {
+	namespace WidgetSerializerLocal
+	{
+		TSet<const ULexWidget*> CollectReachableWidgets(const ULexWidget* RootWidget)
+		{
+			TSet<const ULexWidget*> Result;
+			TArray<const ULexWidget*> Pending;
+			Pending.Add(RootWidget);
+			while (!Pending.IsEmpty())
+			{
+				const ULexWidget* Widget = Pending.Pop();
+				if (!IsValid(Widget) || Result.Contains(Widget))
+				{
+					continue;
+				}
+				Result.Add(Widget);
+				for (ULexWidget* Child : Widget->GetChildren())
+				{
+					if (IsValid(Child))
+					{
+						Pending.Add(Child);
+					}
+				}
+			}
+			return Result;
+		}
+
+		bool IsObjectWithinRootHierarchy(UObject* Object, const TSet<const ULexWidget*>& ReachableWidgets)
+		{
+			if (!IsValid(Object))
+			{
+				return false;
+			}
+			const ULexWidget* OwningWidget = Cast<ULexWidget>(Object);
+			if (!OwningWidget)
+			{
+				OwningWidget = Object->GetTypedOuter<ULexWidget>();
+			}
+			return IsValid(OwningWidget) && ReachableWidgets.Contains(OwningWidget);
+		}
+	}
+
 	bool WidgetSerializer::SavePrefab(ULexWidget* OriginRootWidget, ULexUIPrefab* InPrefab
 		, TMap<UObject*, FGuid>& InOutMapObjectToGuid, TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& InSubPrefabMap
 		, bool InForEditorOrRuntimeUse
@@ -36,12 +77,22 @@ namespace LexUIPrefabSystem
 			return false;
 		}
 		WidgetSerializer serializer;
+		const TSet<const ULexWidget*> ReachableWidgets = WidgetSerializerLocal::CollectReachableWidgets(OriginRootWidget);
+		int32 RemovedStaleMappings = 0;
 		for (auto& KeyValue : InOutMapObjectToGuid)//Preprocess the map, ignore invalid object
 		{
-			if (IsValid(KeyValue.Key))
+			if (WidgetSerializerLocal::IsObjectWithinRootHierarchy(KeyValue.Key, ReachableWidgets))
 			{
 				serializer.MapObjectToGuid.Add(KeyValue.Key, KeyValue.Value);
 			}
+			else
+			{
+				++RemovedStaleMappings;
+			}
+		}
+		if (RemovedStaleMappings > 0)
+		{
+			UE_LOG(LGUI, Display, TEXT("Filtered %d stale GUID mapping(s) before prefab serialization."), RemovedStaleMappings);
 		}
 		serializer.SubPrefabMap = InSubPrefabMap;
 		for (auto& SubPrefabKeyValue : InSubPrefabMap)

@@ -58,6 +58,8 @@ public:
 	bool IsSubPrefabRootWidget(const ULexWidget* InWidget);
 	bool IsWidgetBelongsToThis(const ULexWidget* InWidget);
 	bool ClearInvalidObjectAndGuid();
+	/** Remove valid GUID objects whose owning widget is no longer reachable from LoadedRootWidget. */
+	int32 CleanupObjectsOutsideRootHierarchy();
 	void AddMemberPropertyToSubPrefab(ULexWidget* InSubPrefabWidget, UObject* InObject, FName InPropertyName);
 	void RemoveMemberPropertyFromSubPrefab(ULexWidget* InSubPrefabWidget, UObject* InObject, FName InPropertyName);
 	void RemoveAllMemberPropertyFromSubPrefab(ULexWidget* InSubPrefabActor, bool InIncludeRootTransform);

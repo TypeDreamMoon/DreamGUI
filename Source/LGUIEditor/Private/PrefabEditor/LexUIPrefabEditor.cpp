@@ -2150,6 +2150,16 @@ bool FLexUIPrefabEditor::ApplyPrefabChanges()
 	}
 	PendingBehaviourWarnings.Reset();
 
+	const int32 RemovedStaleGuidMappings = Helper->CleanupObjectsOutsideRootHierarchy();
+	if (RemovedStaleGuidMappings > 0)
+	{
+		FLexUIPrefabCompilerIssue& Issue = Issues.AddDefaulted_GetRef();
+		Issue.Severity = ELexUIPrefabCompilerSeverity::Info;
+		Issue.Message = FString::Printf(
+			TEXT("Removed %d stale Helper GUID mapping(s) outside the prefab root hierarchy."),
+			RemovedStaleGuidMappings);
+	}
+
 	ValidatePrefabReferences(Issues);
 	const bool bHasStructuralError = Issues.ContainsByPredicate([](const FLexUIPrefabCompilerIssue& Issue)
 	{

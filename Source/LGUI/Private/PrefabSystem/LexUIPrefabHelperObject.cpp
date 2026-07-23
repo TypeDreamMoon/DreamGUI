@@ -14,6 +14,40 @@
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabManager"
 
+namespace LexUIPrefabHelperLocal
+{
+	void RemoveGuidReferencesFromSubPrefabs(
+		TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& SubPrefabMap,
+		const FGuid& ParentGuid,
+		UObject* RemovedObject)
+	{
+		for (TPair<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& Pair : SubPrefabMap)
+		{
+			FLexUISubPrefabData& Data = Pair.Value;
+			if (const FGuid* SubPrefabGuid = Data.MapObjectGuidFromParentPrefabToSubPrefab.Find(ParentGuid))
+			{
+				Data.MapGuidToObject.Remove(*SubPrefabGuid);
+				Data.MapObjectGuidFromParentPrefabToSubPrefab.Remove(ParentGuid);
+			}
+			for (auto It = Data.MapObjectIdToNewlyCreatedId.CreateIterator(); It; ++It)
+			{
+				if (It.Value() == ParentGuid || It.Key().RootWidgetGuidInParentPrefab == ParentGuid)
+				{
+					It.RemoveCurrent();
+				}
+			}
+			if (IsValid(RemovedObject))
+			{
+				Data.ObjectOverrideParameterArray.RemoveAll(
+					[RemovedObject](const FLexUIPrefabOverrideParameterData& Override)
+					{
+						return Override.Object.Get() == RemovedObject;
+					});
+			}
+		}
+	}
+}
+
 
 ULexUIPrefabHelperObject::ULexUIPrefabHelperObject()
 {
@@ -142,6 +176,74 @@ bool ULexUIPrefabHelperObject::ClearInvalidObjectAndGuid()
 	return GuidsToRemove.Num() > 0;
 }
 
+int32 ULexUIPrefabHelperObject::CleanupObjectsOutsideRootHierarchy()
+{
+	if (!IsValid(LoadedRootWidget))
+	{
+		return 0;
+	}
+
+	TSet<const ULexWidget*> ReachableWidgets;
+	TArray<const ULexWidget*> PendingWidgets;
+	PendingWidgets.Add(LoadedRootWidget);
+	while (!PendingWidgets.IsEmpty())
+	{
+		const ULexWidget* Widget = PendingWidgets.Pop();
+		if (!IsValid(Widget) || ReachableWidgets.Contains(Widget))
+		{
+			continue;
+		}
+		ReachableWidgets.Add(Widget);
+		for (ULexWidget* Child : Widget->GetChildren())
+		{
+			if (IsValid(Child))
+			{
+				PendingWidgets.Add(Child);
+			}
+		}
+	}
+
+	struct FStaleGuidObject
+	{
+		FGuid Guid;
+		TObjectPtr<UObject> Object;
+	};
+	TArray<FStaleGuidObject> StaleObjects;
+	for (const TPair<FGuid, TObjectPtr<UObject>>& Pair : MapGuidToObject)
+	{
+		UObject* Object = Pair.Value.Get();
+		if (!IsValid(Object))
+		{
+			continue;
+		}
+		const ULexWidget* OwningWidget = Cast<ULexWidget>(Object);
+		if (!OwningWidget)
+		{
+			OwningWidget = Object->GetTypedOuter<ULexWidget>();
+		}
+		if (!IsValid(OwningWidget) || !ReachableWidgets.Contains(OwningWidget))
+		{
+			StaleObjects.Add({ Pair.Key, Object });
+		}
+	}
+
+	for (const FStaleGuidObject& Stale : StaleObjects)
+	{
+		MapGuidToObject.Remove(Stale.Guid);
+		LexUIPrefabHelperLocal::RemoveGuidReferencesFromSubPrefabs(SubPrefabMap, Stale.Guid, Stale.Object.Get());
+	}
+	if (!StaleObjects.IsEmpty())
+	{
+		bAnythingDirty = true;
+		if (IsValid(PrefabAsset))
+		{
+			PrefabAsset->MarkPackageDirty();
+		}
+		UE_LOG(LGUI, Display, TEXT("Removed %d stale prefab GUID mapping(s) outside the root hierarchy."), StaleObjects.Num());
+	}
+	return StaleObjects.Num();
+}
+
 void ULexUIPrefabHelperObject::AddMemberPropertyToSubPrefab(ULexWidget* InSubPrefabWidget, UObject* InObject, FName InPropertyName)
 {
 	CleanupInvalidSubPrefab();
@@ -260,6 +362,8 @@ ULexWidget* ULexUIPrefabHelperObject::GetSubPrefabRootWidget(ULexWidget* InSubPr
 bool ULexUIPrefabHelperObject::SavePrefab()
 {
 	CleanupInvalidSubPrefab();
+	ClearInvalidObjectAndGuid();
+	CleanupObjectsOutsideRootHierarchy();
 	if (IsValid(PrefabAsset))
 	{
 		TMap<UObject*, FGuid> MapObjectToGuid;
