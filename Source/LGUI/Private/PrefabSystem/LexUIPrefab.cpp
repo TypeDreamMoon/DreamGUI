@@ -190,7 +190,10 @@ void ULexUIPrefab::EnsureInstanceObjects()
 	{
 		if (!IsValid(PrefabHelperObject))
 		{
-			PrefabHelperObject = NewObject<ULexUIPrefabHelperObject>(this, "PrefabHelper");
+			PrefabHelperObject = NewObject<ULexUIPrefabHelperObject>(
+				GetTransientPackage(),
+				NAME_None,
+				RF_Transient | RF_Transactional);
 			PrefabHelperObject->Init(this, GetPrefabInstanceScene());
 		}
 	}
@@ -388,7 +391,7 @@ void ULexUIPrefab::PostEditUndo()
 void ULexUIPrefab::PreSave(FObjectPreSaveContext SaveContext)
 {
 	UObject::PreSave(SaveContext);
-	if (IsValid(PrefabHelperObject))
+	if (IsValid(PrefabHelperObject) && IsValid(PrefabHelperObject->LoadedRootWidget))
 	{
 		PrefabHelperObject->SavePrefab();
 	}

@@ -120,11 +120,19 @@ int32 FLexUIEditorTools::EnsureUniqueWidgetDisplayNames(ULexWidget* RootWidget, 
 
 	TArray<ULexWidget*> Widgets;
 	ULexWidget::CollectChildrenWidgets(RootWidget, Widgets);
+	ULexUIPrefabHelperObject* ManagingHelper =
+		ULexUIPrefabHelperObject::GetPrefabHelperObject_WhichManageThisWidget(RootWidget);
 	TSet<FName> UsedNames;
 	int32 RenameCount = 0;
 	for (ULexWidget* Widget : Widgets)
 	{
 		if (!IsValid(Widget))
+		{
+			continue;
+		}
+		if (ManagingHelper
+			&& ManagingHelper->IsWidgetBelongsToSubPrefab(Widget)
+			&& !ManagingHelper->IsSubPrefabRootWidget(Widget))
 		{
 			continue;
 		}
