@@ -286,7 +286,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	bool IsChildOf(const ULexWidget* InTarget)const;
 	UFUNCTION(BlueprintCallable, Category = "Transform")
-	const TArray<ULexWidget*>& GetChildren()const { return Children; }
+	const TArray<ULexWidget*>& GetChildren()const
+	{
+		EnsureUIChildrenSorted();
+		return Children;
+	}
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	int GetChildrenCount()const { return Children.Num(); }
 	
@@ -949,6 +953,7 @@ public:
 private:
 	friend class FLexWidgetCustomization;
 	friend class ULexCanvas;
+	friend class FLexCanvasHierarchyOrderTest;
 	/** LexCanvas which render this UI element */
 	UPROPERTY(Transient) mutable TWeakObjectPtr<ULexCanvas> RenderCanvas = nullptr;
 	

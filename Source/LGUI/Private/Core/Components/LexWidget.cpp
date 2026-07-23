@@ -246,13 +246,13 @@ void ULexWidget::MarkFlattenHierarchyIndexDirty()
 	//tell canvas to update
 	if (RenderCanvas.IsValid())
 	{
-		RenderCanvas->MarkCanvasUpdate(true);
+		RenderCanvas->MarkCanvasHierarchyChanged();
 		//if this LexWidget have a LGUICanvas, then we need to tell the upper canvas that hierarchy order change, in order to sort render order between canvas
 		if (this->bIsCanvasWidget)
 		{
 			if (RenderCanvas->GetParentCanvas().IsValid())
 			{
-				RenderCanvas->GetParentCanvas()->MarkCanvasUpdate(true);
+				RenderCanvas->GetParentCanvas()->MarkCanvasHierarchyChanged();
 			}
 		}
 	}

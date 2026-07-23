@@ -226,6 +226,8 @@ public:
 	 * @param	bRebuildDrawCall	When we need rebuild draw-call? Material or texture change, transform or vertex position change, add or remove ui element
 	 */
 	void MarkCanvasUpdate(bool bRebuildDrawCall);
+	/** Invalidate the cached hierarchy list before rebuilding draw calls after sibling order changes. */
+	void MarkCanvasHierarchyChanged();
 
 	static void BuildProjectionMatrix(FIntPoint InViewportSize, ECameraProjectionMode::Type InProjectionType, float FOV, float FarClipPlane, float NearClipPlane, FMatrix& OutProjectionMatrix);
 	FMatrix GetViewProjectionMatrix()const;
@@ -710,6 +712,7 @@ private:
 	mutable FMatrix CacheViewProjectionMatrix = FMatrix::Identity;//cache to prevent multiple calculation in same frame
 	mutable float LastRenderTime = 0;
 	friend class FLexUIRenderSceneProxy;
+	friend class FLexCanvasHierarchyOrderTest;
 	/**
 	 * RenderMode can affect UI's renderer, basically WorldSpace use UE's built-in renderer, others use LGUI's renderer. Different renderers cannot share same render data.
 	 * eg: when attach to other canvas, this will tell which render mode in old canvas, and if not compatible then recreate render data.

@@ -590,6 +590,12 @@ void ULexCanvas::MarkCanvasUpdate(bool bRebuildDrawCall)
 	}
 }
 
+void ULexCanvas::MarkCanvasHierarchyChanged()
+{
+	bNeedToGenerateWidgetList = true;
+	MarkCanvasUpdate(true);
+}
+
 #if WITH_EDITOR
 bool ULexCanvas::CanEditChange(const FProperty* InProperty) const
 {
@@ -1604,7 +1610,7 @@ void ULexCanvas::UpdateDrawCallMaterial()
 				{
 					if (DrawCallItem.Material->IsA<UMaterialInstanceDynamic>())
 					{
-						auto RenderMatDynamic = static_cast<UMaterialInstanceDynamic*>(RenderMat);
+						auto RenderMatDynamic = static_cast<UMaterialInstanceDynamic*>(DrawCallItem.Material.Get());
 						RenderMat = RenderMatDynamic;
 						bShouldSetMaterialParameter = true;
 						SetParameterForNewlyCreatedMaterial(RenderMatDynamic);
