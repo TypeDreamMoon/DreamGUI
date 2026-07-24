@@ -16,6 +16,22 @@
 
 namespace LexUIPrefabHelperLocal
 {
+	bool IsSubPrefabRootPanelSlot(
+		const TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& SubPrefabMap,
+		const UObject* Object)
+	{
+		for (const TPair<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& Pair : SubPrefabMap)
+		{
+			const TObjectPtr<UObject>* RootPanelSlot =
+				Pair.Value.MapGuidToObject.Find(LexUIPrefabSystem::GetSubPrefabRootPanelSlotOriginGuid());
+			if (RootPanelSlot && RootPanelSlot->Get() == Object)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	void RemoveGuidReferencesFromSubPrefabs(
 		TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& SubPrefabMap,
 		const FGuid& ParentGuid,
@@ -485,7 +501,8 @@ bool ULexUIPrefabHelperObject::RefreshOnSubPrefabDirty(ULexUIPrefab* InSubPrefab
 			auto& MapGuidToObjectInSubPrefab = SubPrefabData.PrefabAsset->GetPrefabHelperObject()->MapGuidToObject;
 			for (auto& KeyValue : SubPrefabMapGuidToObject)
 			{
-				if (!MapGuidToObjectInSubPrefab.Contains(KeyValue.Key))
+				if (KeyValue.Key != LexUIPrefabSystem::GetSubPrefabRootPanelSlotOriginGuid()
+					&& !MapGuidToObjectInSubPrefab.Contains(KeyValue.Key))
 				{
 					ExtraObjectsGuidsToRemove.Add(KeyValue.Key);
 					ExtraObjectsToDelete.Add(KeyValue.Value);
@@ -658,6 +675,15 @@ void ULexUIPrefabHelperObject::TryCollectPropertyToOverride(UObject* InObject, F
 	if (!bCanCollectProperty)return;
 	if (InObject->GetWorld() == this->GetPrefabWorld())
 	{
+		// A nested root's panel slot belongs to the parent prefab's layout.
+		// Saving the parent persists it directly; it cannot be applied back to
+		// the child prefab because no corresponding source slot exists there.
+		if (LexUIPrefabHelperLocal::IsSubPrefabRootPanelSlot(SubPrefabMap, InObject))
+		{
+			SetAnythingDirty();
+			return;
+		}
+
 		auto PropertyName = InMemberProperty->GetFName();
 		ULexWidget* PropertyWidgetInSubPrefab = nullptr;
 		if (auto Widget = Cast<ULexWidget>(InObject))

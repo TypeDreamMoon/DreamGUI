@@ -3,6 +3,7 @@
 #include "PrefabSystem/WidgetSerializer.h"
 #include "PrefabSystem/LexUIObjectReaderAndWriter.h"
 #include "LGUI.h"
+#include "Core/Components/LexPanelSlot.h"
 #include "Core/Components/LexWidget.h"
 #include "Misc/NetworkVersion.h"
 #include "Runtime/Launch/Resources/Version.h"
@@ -145,6 +146,53 @@ namespace LexUIPrefabSystem
 						WidgetSaveData.MapObjectGuidToSubPrefabOverrideParameter.Add(MapObjectToGuid[SubPrefabObject], RecordDataItem);
 					}
 				}
+
+				// The nested root's panel slot is created by its parent and therefore
+				// has no object GUID in the source prefab. Persist all editable slot
+				// fields as parent-owned attachment data.
+				if (ULexPanelSlot* PanelSlot = Widget->GetPanelSlot(); IsValid(PanelSlot))
+				{
+					FLexUISubPrefabObjectUniqueId PanelSlotId;
+					PanelSlotId.RootWidgetGuidInParentPrefab = WidgetSaveData.WidgetGuid;
+					PanelSlotId.ObjectGuidInOriginPrefab = GetSubPrefabRootPanelSlotOriginGuid();
+
+					FGuid PanelSlotGuid;
+					if (const FGuid* StoredGuid = SubPrefabDataPtr->MapObjectIdToNewlyCreatedId.Find(PanelSlotId))
+					{
+						PanelSlotGuid = *StoredGuid;
+					}
+					else if (const FGuid* ExistingGuid = MapObjectToGuid.Find(PanelSlot))
+					{
+						PanelSlotGuid = *ExistingGuid;
+					}
+					else
+					{
+						PanelSlotGuid = FGuid::NewGuid();
+					}
+
+					MapObjectToGuid.Add(PanelSlot, PanelSlotGuid);
+					SubPrefabDataPtr->MapGuidToObject.Add(GetSubPrefabRootPanelSlotOriginGuid(), PanelSlot);
+					SubPrefabDataPtr->MapObjectGuidFromParentPrefabToSubPrefab.Add(
+						PanelSlotGuid, GetSubPrefabRootPanelSlotOriginGuid());
+					SubPrefabDataPtr->MapObjectIdToNewlyCreatedId.Add(PanelSlotId, PanelSlotGuid);
+
+					FLexUIPrefabOverrideParameterSaveData RecordDataItem;
+					for (TFieldIterator<FProperty> PropertyIt(PanelSlot->GetClass(), EFieldIterationFlags::IncludeSuper);
+						PropertyIt; ++PropertyIt)
+					{
+						FProperty* Property = *PropertyIt;
+						if (Property->HasAnyPropertyFlags(CPF_Edit)
+							&& !LexUIPrefab_ShouldSkipProperty(Property))
+						{
+							RecordDataItem.OverrideParameterNames.Add(Property->GetFName());
+						}
+					}
+					WriterOrReaderFunctionForSubPrefabOverride(
+						PanelSlot, RecordDataItem.OverrideParameterData, RecordDataItem.OverrideParameterNames);
+					WidgetSaveData.MapObjectGuidToSubPrefabOverrideParameter.Add(
+						PanelSlotGuid, MoveTemp(RecordDataItem));
+				}
+
 				for (auto& DataItem : SubPrefabDataPtr->MapObjectIdToNewlyCreatedId)
 				{
 					WidgetSaveData.MapObjectIdToNewlyCreatedId.Add({ DataItem.Key.RootWidgetGuidInParentPrefab, DataItem.Key.ObjectGuidInOriginPrefab }, DataItem.Value);

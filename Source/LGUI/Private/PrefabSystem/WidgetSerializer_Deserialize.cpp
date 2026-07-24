@@ -7,6 +7,8 @@
 #include "Core/LexUIBehaviour.h"
 #include "Core/LexUIManager.h"
 #include "Core/LexUISettings.h"
+#include "Core/Components/LexPanelLayouts.h"
+#include "Core/Components/LexPanelSlot.h"
 #include "Core/Components/LexWidget.h"
 #include "Serialization/MemoryReader.h"
 
@@ -219,6 +221,50 @@ namespace LexUIPrefabSystem
 			else
 			{
 				Widget->SetParentBeforeRegister(ParentWidget);
+			}
+		}
+
+		// Parent-owned slots do not exist while a nested prefab is deserialized
+		// without its parent. Recreate and restore them after attachment but
+		// before widget registration/layout begins.
+		for (FSubPrefabRootPanelSlotOverrideData& SlotOverride : SubPrefabRootPanelSlotOverrides)
+		{
+			ULexWidget* RootWidget = SlotOverride.RootWidget;
+			if (!IsValid(RootWidget) || !RootWidget->GetParent())
+			{
+				continue;
+			}
+
+			ULexPanelSlot* PanelSlot = RootWidget->GetPanelSlot();
+			if (!IsValid(PanelSlot)
+				&& RootWidget->GetParent()->GetLayoutContainer()
+				&& RootWidget->GetParent()->GetLayoutContainer()->IsA<ULexPanelLayoutBase>())
+			{
+				PanelSlot = RootWidget->CreateNewPanelSlot<ULexPanelSlot>();
+			}
+			if (!IsValid(PanelSlot))
+			{
+				continue;
+			}
+
+			MapGuidToObject.Add(SlotOverride.PanelSlotGuid, PanelSlot);
+			MapObjectToOriginGuid.Add(PanelSlot, SlotOverride.PanelSlotGuid);
+			if (FLexUISubPrefabData* SubPrefabData = SubPrefabMap.Find(RootWidget))
+			{
+				SubPrefabData->MapGuidToObject.Add(GetSubPrefabRootPanelSlotOriginGuid(), PanelSlot);
+				SubPrefabData->MapObjectGuidFromParentPrefabToSubPrefab.Add(
+					SlotOverride.PanelSlotGuid, GetSubPrefabRootPanelSlotOriginGuid());
+
+				FLexUISubPrefabObjectUniqueId PanelSlotId;
+				PanelSlotId.RootWidgetGuidInParentPrefab = SlotOverride.RootWidgetGuid;
+				PanelSlotId.ObjectGuidInOriginPrefab = GetSubPrefabRootPanelSlotOriginGuid();
+				SubPrefabData->MapObjectIdToNewlyCreatedId.Add(PanelSlotId, SlotOverride.PanelSlotGuid);
+			}
+
+			if (!SlotOverride.ParameterNames.IsEmpty())
+			{
+				WriterOrReaderFunctionForSubPrefabOverride(
+					PanelSlot, SlotOverride.ParameterDatas, SlotOverride.ParameterNames);
 			}
 		}
 		//attach root actor's parent
@@ -445,6 +491,21 @@ namespace LexUIPrefabSystem
 						ULexWidget* SubPrefabRootWidget = nullptr;
 						FLexUISubPrefabData SubPrefabData;
 						SubPrefabData.PrefabAsset = SubPrefabAsset;
+						FGuid RootPanelSlotGuid;
+						FLexUIPrefabOverrideParameterSaveData RootPanelSlotOverride;
+						{
+							const FLexUISubPrefabObjectUniqueIdSaveData PanelSlotId{
+								InWidgetData.WidgetGuid, GetSubPrefabRootPanelSlotOriginGuid() };
+							if (const FGuid* StoredGuid = InWidgetData.MapObjectIdToNewlyCreatedId.Find(PanelSlotId))
+							{
+								RootPanelSlotGuid = *StoredGuid;
+								if (const FLexUIPrefabOverrideParameterSaveData* StoredOverride =
+									InWidgetData.MapObjectGuidToSubPrefabOverrideParameter.Find(RootPanelSlotGuid))
+								{
+									RootPanelSlotOverride = *StoredOverride;
+								}
+							}
+						}
 
 #if WITH_EDITOR
 						if (SubPrefabAsset->PrefabVersion < (uint16)ELexUIPrefabVersion::NewObjectOnNestedPrefab)
@@ -474,7 +535,9 @@ namespace LexUIPrefabSystem
 								}
 							}
 #endif
-							bool bAnyGuidFrom_MapObjectIdToNewlyCreatedId = false;
+							// The parent-owned root slot never has a persistent GUID in the
+							// source prefab, so its unique-id mapping must survive every load.
+							bool bAnyGuidFrom_MapObjectIdToNewlyCreatedId = RootPanelSlotGuid.IsValid();
 							auto GetObjectGuidInParent = [&](const FGuid& GuidInSubPrefab, const FGuid& GuidInOriginPrefab) {
 								FGuid GuidInParent;
 								auto ObjectGuidInParentPrefabPtr = MapObjectGuidFromSubPrefabToParentPrefab.Find(GuidInSubPrefab);
@@ -576,6 +639,16 @@ namespace LexUIPrefabSystem
 			}
 
 							SubPrefabMap.Add(SubPrefabRootWidget, SubPrefabData);
+							if (RootPanelSlotGuid.IsValid())
+							{
+								FSubPrefabRootPanelSlotOverrideData& PendingSlot =
+									SubPrefabRootPanelSlotOverrides.AddDefaulted_GetRef();
+								PendingSlot.RootWidget = SubPrefabRootWidget;
+								PendingSlot.RootWidgetGuid = InWidgetData.WidgetGuid;
+								PendingSlot.PanelSlotGuid = RootPanelSlotGuid;
+								PendingSlot.ParameterDatas = MoveTemp(RootPanelSlotOverride.OverrideParameterData);
+								PendingSlot.ParameterNames = MoveTemp(RootPanelSlotOverride.OverrideParameterNames);
+							}
 
 							if (i == 0)
 							{

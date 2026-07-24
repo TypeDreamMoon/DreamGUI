@@ -11,6 +11,17 @@
 
 namespace LexUIPrefabSystem
 {
+	/**
+	 * A nested prefab root gets its panel slot from the parent prefab, so the
+	 * object has no source GUID in the nested prefab asset. Use a reserved
+	 * origin GUID to persist that parent-owned attachment object.
+	 */
+	inline const FGuid& GetSubPrefabRootPanelSlotOriginGuid()
+	{
+		static const FGuid Guid(0x4C455850, 0x414E454C, 0x534C4F54, 0x00000001);
+		return Guid;
+	}
+
 	struct FLexUICommonObjectSaveData
 	{
 	public:
@@ -269,6 +280,16 @@ namespace LexUIPrefabSystem
 			TArray<FName> ParameterNames;
 		};
 		TArray<FSubPrefabObjectOverrideParameterData> SubPrefabOverrideParameters;
+
+		struct FSubPrefabRootPanelSlotOverrideData
+		{
+			ULexWidget* RootWidget = nullptr;
+			FGuid RootWidgetGuid;
+			FGuid PanelSlotGuid;
+			TArray<uint8> ParameterDatas;
+			TArray<FName> ParameterNames;
+		};
+		TArray<FSubPrefabRootPanelSlotOverrideData> SubPrefabRootPanelSlotOverrides;
 
 		//serialize widget
 		bool SerializeWidget(ULexWidget* RootWidget, ULexUIPrefab* InPrefab);
