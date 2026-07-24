@@ -1,6 +1,7 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "PrefabSystem/LexUIPrefabScene.h"
+#include "Misc/CoreDelegates.h"
 #include "Misc/ConfigCacheIni.h"
 #include "UObject/Package.h"
 #include "SceneInterface.h"
@@ -85,10 +86,23 @@ FLexUIPrefabScene::FLexUIPrefabScene(FLexUIPrefabScene::ConstructionValues CVS)
 		LineBatcher->bCalculateAccurateBounds = false;
 		AddComponent(LineBatcher, FTransform::Identity);
 	}
+
+	FCoreDelegates::OnEnginePreExit.AddRaw(this, &FLexUIPrefabScene::Uninitialize);
 }
 
 FLexUIPrefabScene::~FLexUIPrefabScene()
 {
+	FCoreDelegates::OnEnginePreExit.RemoveAll(this);
+	Uninitialize();
+}
+
+void FLexUIPrefabScene::Uninitialize()
+{
+	if (!PreviewWorld)
+	{
+		return;
+	}
+
 	// Stop any audio components playing in this scene
 	if (GEngine)
 	{
@@ -122,14 +136,18 @@ FLexUIPrefabScene::~FLexUIPrefabScene()
 
 		Component->UnregisterComponent();
 	}
-	
+	Components.Empty();
+
+	UWorld* LocalPreviewWorld = PreviewWorld;
+	PreviewWorld = nullptr;
+
 	// The world may be released by now.
-	if (PreviewWorld && GEngine)
+	if (LocalPreviewWorld && GEngine)
 	{
-		PreviewWorld->CleanupWorld();
-		GEngine->DestroyWorldContext(GetWorld());
+		LocalPreviewWorld->CleanupWorld();
+		GEngine->DestroyWorldContext(LocalPreviewWorld);
 		// Release PhysicsScene for fixing big fbx importing bug
-		PreviewWorld->ReleasePhysicsScene();
+		LocalPreviewWorld->ReleasePhysicsScene();
 	}
 }
 
