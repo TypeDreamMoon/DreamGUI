@@ -810,8 +810,8 @@ FLexLayoutControlAnchorData ULexLayoutContainerCanvasPanel::GetLayoutControlAnch
 void ULexLayoutContainerCanvasPanel::CalculateLayout()
 {
 	if (!BeginLayoutPass()) return;
-	TArray<ULexWidget*> Children = CollectLayoutChildren();
-	for (ULexWidget* Child : Children)
+	TArray<ULexWidget*> LayoutChildren = CollectLayoutChildren();
+	for (ULexWidget* Child : LayoutChildren)
 	{
 		const ULexPanelSlot* Slot = GetSlot(Child);
 		if (Slot->bAutoSize)
@@ -847,7 +847,7 @@ void ULexLayoutContainerCanvasPanel::CalculateLayout()
 	}
 	if (bSortChildrenByZOrder)
 	{
-		LexPanelLayoutLocal::ApplyStableZOrderWithinParticipatingSlots(GetWidget(), Children);
+		LexPanelLayoutLocal::ApplyStableZOrderWithinParticipatingSlots(GetWidget(), LayoutChildren);
 	}
 	PreferredSize = MeasureLayout();
 }
@@ -884,12 +884,12 @@ void ULexLayoutContainerOverlay::CalculateLayout()
 
 FVector2f ULexLayoutContainerStackBox::MeasureLayout() const
 {
-	const TArray<ULexWidget*> Children = CollectLayoutChildren(false);
+	const TArray<ULexWidget*> LayoutChildren = CollectLayoutChildren(false);
 	const bool bHorizontal = Orientation == ELexPanelOrientation::Horizontal;
 	const float Gap = LexPanelLayoutLocal::NonNegative(Spacing);
-	float Primary = Gap * FMath::Max(0, Children.Num() - 1);
+	float Primary = Gap * FMath::Max(0, LayoutChildren.Num() - 1);
 	float Secondary = 0.0f;
-	for (ULexWidget* Child : Children)
+	for (ULexWidget* Child : LayoutChildren)
 	{
 		const FVector2D Desired = GetDesiredSize(Child);
 		const ULexPanelSlot* Slot = GetSlot(Child);
@@ -907,7 +907,7 @@ void ULexLayoutContainerStackBox::CalculateLayout()
 {
 	if (!BeginLayoutPass()) return;
 	ULexWidget* Panel = GetWidget();
-	const TArray<ULexWidget*> Children = CollectLayoutChildren();
+	const TArray<ULexWidget*> LayoutChildren = CollectLayoutChildren();
 	const bool bHorizontal = Orientation == ELexPanelOrientation::Horizontal;
 	const float Gap = LexPanelLayoutLocal::NonNegative(Spacing);
 	const float AvailablePrimary = bHorizontal
@@ -917,9 +917,9 @@ void ULexLayoutContainerStackBox::CalculateLayout()
 		? FMath::Max(0.0f, Panel->GetHeight() - LexPanelLayoutLocal::VerticalPadding(Padding))
 		: FMath::Max(0.0f, Panel->GetWidth() - LexPanelLayoutLocal::HorizontalPadding(Padding));
 
-	float FixedPrimary = Gap * FMath::Max(0, Children.Num() - 1);
+	float FixedPrimary = Gap * FMath::Max(0, LayoutChildren.Num() - 1);
 	float FillWeight = 0.0f;
-	for (ULexWidget* Child : Children)
+	for (ULexWidget* Child : LayoutChildren)
 	{
 		const ULexPanelSlot* Slot = GetSlot(Child);
 		const FVector2D Desired = GetDesiredSize(Child);
@@ -939,7 +939,7 @@ void ULexLayoutContainerStackBox::CalculateLayout()
 
 	const float FillContentSpace = FMath::Max(0.0f, AvailablePrimary - FixedPrimary);
 	float Cursor = bHorizontal ? LexPanelLayoutLocal::FiniteOrZero(Padding.Left) : LexPanelLayoutLocal::FiniteOrZero(Padding.Top);
-	for (ULexWidget* Child : Children)
+	for (ULexWidget* Child : LayoutChildren)
 	{
 		const FVector2D Desired = GetDesiredSize(Child);
 		const ULexPanelSlot* Slot = GetSlot(Child);
@@ -1065,10 +1065,10 @@ void ULexLayoutContainerWrapBox::CalculateLayout()
 
 FVector2f ULexLayoutContainerGridPanel::MeasureLayout() const
 {
-	const TArray<ULexWidget*> Children = CollectLayoutChildren(false);
+	const TArray<ULexWidget*> LayoutChildren = CollectLayoutChildren(false);
 	int32 ColumnCount = FMath::Min(ColumnFill.Num(), LexPanelLayoutLocal::MaxGridTrackCount);
 	int32 RowCount = FMath::Min(RowFill.Num(), LexPanelLayoutLocal::MaxGridTrackCount);
-	for (ULexWidget* Child : Children)
+	for (ULexWidget* Child : LayoutChildren)
 	{
 		const ULexPanelSlot* Slot = GetSlot(Child);
 		ColumnCount = FMath::Max(ColumnCount, LexPanelLayoutLocal::GridTrackEnd(Slot->Column, Slot->ColumnSpan));
@@ -1078,7 +1078,7 @@ FVector2f ULexLayoutContainerGridPanel::MeasureLayout() const
 	TArray<float> Rows;
 	Columns.Init(0.0f, ColumnCount);
 	Rows.Init(0.0f, RowCount);
-	for (ULexWidget* Child : Children)
+	for (ULexWidget* Child : LayoutChildren)
 	{
 		const ULexPanelSlot* Slot = GetSlot(Child);
 		const FVector2D Desired = GetDesiredSize(Child);
@@ -1095,10 +1095,10 @@ FVector2f ULexLayoutContainerGridPanel::MeasureLayout() const
 void ULexLayoutContainerGridPanel::CalculateLayout()
 {
 	if (!BeginLayoutPass()) return;
-	TArray<ULexWidget*> Children = CollectLayoutChildren();
+	TArray<ULexWidget*> LayoutChildren = CollectLayoutChildren();
 	int32 ColumnCount = FMath::Min(ColumnFill.Num(), LexPanelLayoutLocal::MaxGridTrackCount);
 	int32 RowCount = FMath::Min(RowFill.Num(), LexPanelLayoutLocal::MaxGridTrackCount);
-	for (ULexWidget* Child : Children)
+	for (ULexWidget* Child : LayoutChildren)
 	{
 		const ULexPanelSlot* Slot = GetSlot(Child);
 		ColumnCount = FMath::Max(ColumnCount, LexPanelLayoutLocal::GridTrackEnd(Slot->Column, Slot->ColumnSpan));
@@ -1108,7 +1108,7 @@ void ULexLayoutContainerGridPanel::CalculateLayout()
 	TArray<float> DesiredRows;
 	DesiredColumns.Init(0.0f, ColumnCount);
 	DesiredRows.Init(0.0f, RowCount);
-	for (ULexWidget* Child : Children)
+	for (ULexWidget* Child : LayoutChildren)
 	{
 		const ULexPanelSlot* Slot = GetSlot(Child);
 		const FVector2D Desired = GetDesiredSize(Child);
@@ -1125,9 +1125,9 @@ void ULexLayoutContainerGridPanel::CalculateLayout()
 	const TArray<float> Columns = LexPanelLayoutLocal::ArrangeTracks(DesiredColumns, ColumnFill, AvailableWidth);
 	const TArray<float> Rows = LexPanelLayoutLocal::ArrangeTracks(DesiredRows, RowFill, AvailableHeight);
 
-	LexPanelLayoutLocal::ApplyStableZOrderWithinParticipatingSlots(GetWidget(), Children);
+	LexPanelLayoutLocal::ApplyStableZOrderWithinParticipatingSlots(GetWidget(), LayoutChildren);
 
-	for (ULexWidget* Child : Children)
+	for (ULexWidget* Child : LayoutChildren)
 	{
 		if (ColumnCount <= 0 || RowCount <= 0) break;
 		const ULexPanelSlot* Slot = GetSlot(Child);
@@ -1146,14 +1146,14 @@ void ULexLayoutContainerGridPanel::CalculateLayout()
 
 FVector2f ULexLayoutContainerUniformGridPanel::MeasureLayout() const
 {
-	const TArray<ULexWidget*> Children = CollectLayoutChildren(false);
+	const TArray<ULexWidget*> LayoutChildren = CollectLayoutChildren(false);
 	int32 ColumnCount = 0;
 	int32 RowCount = 0;
 	float CellWidth = LexPanelLayoutLocal::NonNegative(MinDesiredSlotWidth);
 	float CellHeight = LexPanelLayoutLocal::NonNegative(MinDesiredSlotHeight);
 	const float GapX = LexPanelLayoutLocal::NonNegative(Spacing.X);
 	const float GapY = LexPanelLayoutLocal::NonNegative(Spacing.Y);
-	for (ULexWidget* Child : Children)
+	for (ULexWidget* Child : LayoutChildren)
 	{
 		const ULexPanelSlot* Slot = GetSlot(Child);
 		const int32 ColumnSpan = LexPanelLayoutLocal::GridSpan(Slot->ColumnSpan);
@@ -1174,10 +1174,10 @@ FVector2f ULexLayoutContainerUniformGridPanel::MeasureLayout() const
 void ULexLayoutContainerUniformGridPanel::CalculateLayout()
 {
 	if (!BeginLayoutPass()) return;
-	const TArray<ULexWidget*> Children = CollectLayoutChildren();
+	const TArray<ULexWidget*> LayoutChildren = CollectLayoutChildren();
 	int32 ColumnCount = 0;
 	int32 RowCount = 0;
-	for (ULexWidget* Child : Children)
+	for (ULexWidget* Child : LayoutChildren)
 	{
 		const ULexPanelSlot* Slot = GetSlot(Child);
 		ColumnCount = FMath::Max(ColumnCount, LexPanelLayoutLocal::GridTrackEnd(Slot->Column, Slot->ColumnSpan));
@@ -1191,7 +1191,7 @@ void ULexLayoutContainerUniformGridPanel::CalculateLayout()
 	const float CellHeight = RowCount > 0
 		? FMath::Max(0.0f, GetWidget()->GetHeight() - LexPanelLayoutLocal::VerticalPadding(Padding) - GapY * (RowCount - 1)) / RowCount
 		: 0.0f;
-	for (ULexWidget* Child : Children)
+	for (ULexWidget* Child : LayoutChildren)
 	{
 		if (ColumnCount <= 0 || RowCount <= 0) break;
 		const ULexPanelSlot* Slot = GetSlot(Child);

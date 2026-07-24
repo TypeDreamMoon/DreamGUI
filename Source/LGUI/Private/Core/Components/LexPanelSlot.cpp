@@ -171,7 +171,7 @@ void ULexPanelSlot::NotifySlotChanged()
 #if WITH_EDITOR
 		if (const UWorld* World = LayoutWidget->GetWorld(); World && !World->IsGameWorld())
 		{
-			ULexWidget::ForceRebuildLayoutImmediately(LayoutWidget);
+			ULexWidget::RebuildLayoutImmediately(LayoutWidget);
 		}
 #endif
 	}
