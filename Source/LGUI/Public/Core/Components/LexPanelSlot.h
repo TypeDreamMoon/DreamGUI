@@ -105,6 +105,8 @@ public:
 	FVector2f GetAuthoredDesiredSizeFallback() const { return AuthoredDesiredSizeFallback; }
 
 #if WITH_EDITOR
+	/** Keep the cached authored rect in sync after a user edits the widget transform. */
+	void SyncAuthoredGeometryAfterUserEdit();
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual void PostEditUndo() override;
 #endif

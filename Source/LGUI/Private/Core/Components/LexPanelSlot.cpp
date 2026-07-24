@@ -1,6 +1,7 @@
 // Copyright 2026-Present LexLiu. All Rights Reserved.
 
 #include "Core/Components/LexPanelSlot.h"
+#include "Core/Components/LexLayout.h"
 #include "Core/Components/LexWidget.h"
 
 namespace LexPanelSlotLocal
@@ -178,6 +179,70 @@ void ULexPanelSlot::NotifySlotChanged()
 }
 
 #if WITH_EDITOR
+void ULexPanelSlot::SyncAuthoredGeometryAfterUserEdit()
+{
+	ULexWidget* Widget = GetWidget();
+	if (!IsValid(Widget))
+	{
+		return;
+	}
+	Modify();
+
+	FLexLayoutControlAnchorData LayoutControl;
+	if (ULexLayoutSelf* LayoutSelf = Widget->GetLayoutSelf(); IsValid(LayoutSelf))
+	{
+		LayoutControl.Or(LayoutSelf->GetLayoutControlAnchor(Widget));
+	}
+	if (ULexWidget* Parent = Widget->GetParent(); IsValid(Parent))
+	{
+		if (ULexLayoutContainer* ParentLayout = Parent->GetLayoutContainer(); IsValid(ParentLayout))
+		{
+			LayoutControl.Or(ParentLayout->GetLayoutControlAnchor(Widget));
+		}
+	}
+
+	const FLexUIAnchorData& Current = Widget->GetAnchorData();
+	const FVector2D CurrentSize = Widget->GetSize();
+	if (!bHasAuthoredGeometry)
+	{
+		AuthoredAnchorData = Current;
+		AuthoredDesiredSizeFallback = FVector2f(
+			FMath::IsFinite(CurrentSize.X) ? FMath::Max(0.0, CurrentSize.X) : 0.0,
+			FMath::IsFinite(CurrentSize.Y) ? FMath::Max(0.0, CurrentSize.Y) : 0.0);
+		bHasAuthoredGeometry = true;
+	}
+
+	AuthoredAnchorData.Pivot = Current.Pivot;
+	if (!LayoutControl.bCanControlHorizontalPosition)
+	{
+		AuthoredAnchorData.AnchorMin.X = Current.AnchorMin.X;
+		AuthoredAnchorData.AnchorMax.X = Current.AnchorMax.X;
+		AuthoredAnchorData.AnchoredPosition.X = Current.AnchoredPosition.X;
+	}
+	if (!LayoutControl.bCanControlVerticalPosition)
+	{
+		AuthoredAnchorData.AnchorMin.Y = Current.AnchorMin.Y;
+		AuthoredAnchorData.AnchorMax.Y = Current.AnchorMax.Y;
+		AuthoredAnchorData.AnchoredPosition.Y = Current.AnchoredPosition.Y;
+	}
+	if (!LayoutControl.bCanControlHorizontalSize)
+	{
+		AuthoredAnchorData.SizeDelta.X = Current.SizeDelta.X;
+		AuthoredDesiredSizeFallback.X = FMath::IsFinite(CurrentSize.X) ? FMath::Max(0.0, CurrentSize.X) : 0.0;
+	}
+	if (!LayoutControl.bCanControlVerticalSize)
+	{
+		AuthoredAnchorData.SizeDelta.Y = Current.SizeDelta.Y;
+		AuthoredDesiredSizeFallback.Y = FMath::IsFinite(CurrentSize.Y) ? FMath::Max(0.0, CurrentSize.Y) : 0.0;
+	}
+
+	LayoutGeometryControlMask = (LayoutControl.bCanControlHorizontalPosition ? LexPanelSlotLocal::HorizontalPositionMask : 0)
+		| (LayoutControl.bCanControlVerticalPosition ? LexPanelSlotLocal::VerticalPositionMask : 0)
+		| (LayoutControl.bCanControlHorizontalSize ? LexPanelSlotLocal::HorizontalSizeMask : 0)
+		| (LayoutControl.bCanControlVerticalSize ? LexPanelSlotLocal::VerticalSizeMask : 0);
+	bLayoutGeometryApplied = LayoutGeometryControlMask != 0;
+}
+
 namespace
 {
 	void SanitizePanelSlot(ULexPanelSlot& Slot)

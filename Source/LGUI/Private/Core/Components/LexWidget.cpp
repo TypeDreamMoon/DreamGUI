@@ -583,6 +583,15 @@ UWorld* ULexWidget::GetWorld() const
 #if WITH_EDITOR
 void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
+	static const FName AnchorDataName = GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData);
+	const FName ChangedMemberName = PropertyChangedEvent.GetMemberPropertyName();
+	// Component/prefab notifications dispatched by Super can run a layout pass immediately.
+	// Preserve a direct anchor edit before that pass has a chance to restore stale geometry.
+	if (ChangedMemberName == AnchorDataName && IsValid(PanelSlot))
+	{
+		PanelSlot->SyncAuthoredGeometryAfterUserEdit();
+	}
+
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
 	if (PropertyChangedEvent.Property != nullptr)
@@ -591,7 +600,6 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		auto MemberName = PropertyChangedEvent.GetMemberPropertyName();
 		auto PropertyName = PropertyChangedEvent.GetPropertyName();
 
-		static const FName AnchorDataName = GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData);
 		static const FName WidgetActiveName = GET_MEMBER_NAME_CHECKED(ULexWidget, bWidgetActive);
 		static const FName RaycastableName = GET_MEMBER_NAME_CHECKED(ULexWidget, Raycastable);
 		static const FName ClippingName = GET_MEMBER_NAME_CHECKED(ULexWidget, Clipping);
@@ -705,6 +713,15 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		{
 			CalculateTransformFromAnchor();
 			this->CalculateObjectToWorldTransform();
+		}
+		else if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, RelativeLocation)
+			|| MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, RelativeRotation)
+			|| MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, RelativeScale))
+		{
+			if (IsValid(PanelSlot))
+			{
+				PanelSlot->SyncAuthoredGeometryAfterUserEdit();
+			}
 		}
 		if (MemberName == WidgetActiveName)
 		{

@@ -2,6 +2,7 @@
 
 #include "Misc/AutomationTest.h"
 #include "Core/Components/LexPanelLayouts.h"
+#include "Core/Components/LexPanelSlot.h"
 #include "Core/Components/LexWidget.h"
 #include "PrefabSystem/LexUIPrefab.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
@@ -81,6 +82,71 @@ bool FLexUIPrefabGuidMapCleanupTest::RunTest(const FString& Parameters)
 			Root, Prefab, ObjectToGuid, EmptySubPrefabs, true));
 	TestFalse(TEXT("Serializer filters the orphan mapping"), ObjectToGuid.Contains(OrphanLayout));
 	TestTrue(TEXT("Serializer retains the owned layout mapping"), ObjectToGuid.Contains(ValidLayout));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexPanelSlotUserAnchorEditTest,
+	"LGUI.Layout.Canvas.UserAnchorEditPersists",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexPanelSlotUserAnchorEditTest::RunTest(const FString& Parameters)
+{
+	ULexWidget* Parent = NewObject<ULexWidget>();
+	ULexWidget* Child = NewObject<ULexWidget>(Parent);
+	ULexLayoutContainerCanvasPanel* Canvas = Parent->CreateNewLayoutContainer<ULexLayoutContainerCanvasPanel>();
+	TestNotNull(TEXT("Canvas layout created"), Canvas);
+	TestTrue(TEXT("Child joins the canvas"), Child->TrySetParent(Parent, false));
+	ULexPanelSlot* Slot = Child->CreateNewPanelSlot<ULexPanelSlot>();
+	TestNotNull(TEXT("Canvas slot created"), Slot);
+	if (!Parent || !Child || !Canvas || !Slot)
+	{
+		return false;
+	}
+
+	FLexUIAnchorData Centered;
+	Centered.AnchorMin = FVector2D(0.5, 0.5);
+	Centered.AnchorMax = FVector2D(0.5, 0.5);
+	Centered.SizeDelta = FVector2D(1920.0, 1080.0);
+	Child->SetAnchorData(Centered);
+	Slot->CaptureAuthoredGeometry(true);
+	Slot->MarkLayoutGeometryApplied();
+
+	FLexUIAnchorData Stretched = Centered;
+	Stretched.AnchorMin = FVector2D::ZeroVector;
+	Stretched.AnchorMax = FVector2D::UnitVector;
+	Stretched.SizeDelta = FVector2D::ZeroVector;
+	Child->SetAnchorData(Stretched);
+	Slot->SyncAuthoredGeometryAfterUserEdit();
+	TestFalse(TEXT("Canvas without AutoSize releases stale layout geometry"), Slot->HasLayoutGeometryApplied());
+	Canvas->SnapshotLayout();
+	Canvas->CalculateLayout();
+	if (Slot->HasLayoutGeometryApplied())
+	{
+		Slot->RestoreAuthoredGeometry();
+	}
+	else
+	{
+		Slot->CaptureAuthoredGeometry(true);
+	}
+	TestEqual(TEXT("Stretch anchor minimum survives the next canvas pass"), Child->GetAnchorMin(), FVector2D::ZeroVector);
+	TestEqual(TEXT("Stretch anchor maximum survives the next canvas pass"), Child->GetAnchorMax(), FVector2D::UnitVector);
+
+	Child->SetAnchorData(Centered);
+	Slot->CaptureAuthoredGeometry(true);
+	Slot->SetAutoSize(true);
+	Slot->MarkLayoutGeometryApplied(false, false, true, true);
+	Child->SetAnchorData(Stretched);
+	Slot->SyncAuthoredGeometryAfterUserEdit();
+	TestTrue(TEXT("Canvas AutoSize retains size ownership"), Slot->HasLayoutGeometryApplied());
+	Canvas->SnapshotLayout();
+	Canvas->CalculateLayout();
+	Slot->SetAutoSize(false);
+	Slot->RestoreAuthoredGeometry();
+	TestEqual(TEXT("AutoSize restore keeps the user-authored anchor minimum"), Child->GetAnchorMin(), FVector2D::ZeroVector);
+	TestEqual(TEXT("AutoSize restore keeps the user-authored anchor maximum"), Child->GetAnchorMax(), FVector2D::UnitVector);
+	TestEqual(TEXT("AutoSize restore returns the authored width"), Child->GetSizeDelta().X, 1920.0);
+	TestEqual(TEXT("AutoSize restore returns the authored height"), Child->GetSizeDelta().Y, 1080.0);
 	return true;
 }
 

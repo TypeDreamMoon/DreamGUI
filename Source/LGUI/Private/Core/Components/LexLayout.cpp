@@ -221,11 +221,12 @@ void ULexLayoutContainer::RefreshChildren()
 
 		auto AnchorMin = ChildWidget->GetAnchorMin();
 		auto AnchorMax = ChildWidget->GetAnchorMax();
-		if (AnchorMin.X != AnchorMax.X)//custom anchor not support
+		const FLexLayoutControlAnchorData LayoutControl = GetLayoutControlAnchor(ChildWidget);
+		if (AnchorMin.X != AnchorMax.X && LayoutControl.bCanControlHorizontalPosition)//custom anchor not support
 		{
 			ChildWidget->SetHorizontalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
 		}
-		if (AnchorMin.Y != AnchorMax.Y)
+		if (AnchorMin.Y != AnchorMax.Y && LayoutControl.bCanControlVerticalPosition)
 		{
 			ChildWidget->SetVerticalAnchorMinMax(FVector2D(0.5, 0.5), true, true);
 		}

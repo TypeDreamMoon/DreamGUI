@@ -14,6 +14,7 @@
 #include "LGUIEditorModule.h"
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
+#include "IPropertyUtilities.h"
 #include "UnrealEdGlobals.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexPanelLayouts.h"
@@ -138,7 +139,7 @@ TSharedRef<IDetailCustomization> FLexWidgetCustomization::MakeInstance()
 
 FText FLexWidgetCustomization::GetAnchorsTooltipText()const
 {
-	return GetLayoutControlAnchorValue().AnyControl() ? LOCTEXT("ChangeAnchor_Tooltip", "Change anchor") : LOCTEXT("AnchorIsControlledByLayout", "Anchor is controlled by layout");
+	return GetLayoutControlAnchorValue().AnyControl() ? LOCTEXT("AnchorIsControlledByLayout", "Anchor is controlled by layout") : LOCTEXT("ChangeAnchor_Tooltip", "Change anchor");
 }
 
 void FLexWidgetCustomization::ForceUpdateUI()
@@ -1689,10 +1690,14 @@ void FLexWidgetCustomization::OnSelectAnchor(LGUIAnchorPreviewWidget::UIAnchorHo
 			Widget->SetAnchorOffsetTop(PrevAnchorAsMargin.Top);
 		}
 
+		if (ULexPanelSlot* PanelSlot = Widget->GetPanelSlot(); IsValid(PanelSlot))
+		{
+			PanelSlot->CaptureAuthoredGeometry(true);
+		}
 		FLexUIUtils::NotifyPropertyChanged(Widget.Get(), GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData));
 	}
 	TargetScriptArray[0]->MarkCanvasUpdate(true);
-	DetailBuilder->ForceRefreshDetails();
+	DetailBuilder->GetPropertyUtilities()->RequestForceRefresh();
 	GEditor->EndTransaction();
 }
 
@@ -1704,13 +1709,9 @@ FLexLayoutControlAnchorData FLexWidgetCustomization::GetLayoutControlAnchorValue
 	auto Widget = TargetScriptArray[0];
 	if (Widget.IsValid())
 	{
-		if (Widget->LayoutContainer)
+		if (auto LayoutSelf = Widget->GetLayoutSelf())
 		{
-			Result = Widget->LayoutContainer->GetLayoutControlAnchor(Widget.Get());
-		}
-		if (Widget->LayoutSelf)
-		{
-			auto LayoutSelfResult = Widget->LayoutSelf->GetLayoutControlAnchor(Widget.Get());
+			auto LayoutSelfResult = LayoutSelf->GetLayoutControlAnchor(Widget.Get());
 			Result.Or(LayoutSelfResult);
 		}
 		if (auto Parent = Widget->GetParent())
