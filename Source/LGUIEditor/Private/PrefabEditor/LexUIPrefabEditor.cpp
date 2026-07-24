@@ -1399,8 +1399,6 @@ void FLexUIPrefabEditor::WrapSelectedWidgets(ELexUIWrapType WrapType)
 	if (ReplacedChildCount == 0
 		|| (ParentCapacity != INDEX_NONE && ValidChildCount - ReplacedChildCount + 1 > ParentCapacity))
 	{
-		UE_LOG(LGUIEditor, Warning, TEXT("Widget '%s' cannot replace the selected children with a wrapper."),
-			*CommonParent->GetDisplayName());
 		return;
 	}
 

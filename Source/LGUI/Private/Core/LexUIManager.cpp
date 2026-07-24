@@ -29,6 +29,8 @@
 #define LOCTEXT_NAMESPACE "LexUIManager"
 
 
+#define LGUI_DEBUG_DUMP_ENABLED 0
+
 
 ULexUIManagerObject* ULexUIManagerObject::Instance = nullptr;
 #if WITH_EDITOR
@@ -1431,7 +1433,7 @@ void ULexUIManagerWorldSubsystem::RefreshAllUI(UWorld* InWorld)
 
 void ULexUIManagerWorldSubsystem::AddCanvas(ULexCanvas* InCanvas)
 {
-#if !UE_BUILD_SHIPPING
+#if !UE_BUILD_SHIPPING && LGUI_DEBUG_DUMP_ENABLED
 	if (this->AllCanvasArray.Contains(InCanvas))
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
@@ -1443,7 +1445,7 @@ void ULexUIManagerWorldSubsystem::AddCanvas(ULexCanvas* InCanvas)
 
 void ULexUIManagerWorldSubsystem::RemoveCanvas(ULexCanvas* InCanvas)
 {
-#if !UE_BUILD_SHIPPING
+#if !UE_BUILD_SHIPPING && LGUI_DEBUG_DUMP_ENABLED
 	if (!this->AllCanvasArray.Contains(InCanvas))
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
@@ -1455,7 +1457,7 @@ void ULexUIManagerWorldSubsystem::RemoveCanvas(ULexCanvas* InCanvas)
 
 void ULexUIManagerWorldSubsystem::AddWidget(ULexWidget* InWidget)
 {
-#if !UE_BUILD_SHIPPING
+#if !UE_BUILD_SHIPPING && LGUI_DEBUG_DUMP_ENABLED
 	if (AllWidgetArray.Contains(InWidget))
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
@@ -1467,7 +1469,7 @@ void ULexUIManagerWorldSubsystem::AddWidget(ULexWidget* InWidget)
 
 void ULexUIManagerWorldSubsystem::RemoveWidget(ULexWidget* InWidget)
 {
-#if !UE_BUILD_SHIPPING
+#if !UE_BUILD_SHIPPING && LGUI_DEBUG_DUMP_ENABLED
 	if (!AllWidgetArray.Contains(InWidget))
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
@@ -1648,7 +1650,7 @@ void ULexUIManagerWorldSubsystem::AddSelectable(UUISelectable* InSelectable)
 	if (auto Instance = GetInstance(InSelectable->GetWorld()))
 	{
 		auto& AllSelectableArray = Instance->AllSelectableArray;
-#if !UE_BUILD_SHIPPING
+#if !UE_BUILD_SHIPPING && LGUI_DEBUG_DUMP_ENABLED
 		if (AllSelectableArray.Contains(InSelectable))
 		{
 			UE_LOG(LGUI, Error, TEXT("[%s].%d break here for debug"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
