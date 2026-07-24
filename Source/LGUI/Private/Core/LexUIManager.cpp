@@ -17,6 +17,7 @@
 #include "Core/LexUIBehaviour.h"
 #include "Core/Components/LexLayout.h"
 #include "Core/LexUIMesh/LexUIGizmoMesh.h"
+#include "CoreGlobals.h"
 #include "Event/LexEventSystem.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "PrefabSystem/LexUIPrefabPresenterComponent.h"
@@ -789,6 +790,11 @@ bool ULexUIManagerWorldSubsystem::RaycastHitUI(UWorld* InWorld, const TArray<ULe
 	return false;
 }
 #endif
+
+bool ULexUIManagerWorldSubsystem::ShouldCreateSubsystem(UObject* Outer) const
+{
+	return !IsRunningCommandlet() && Super::ShouldCreateSubsystem(Outer);
+}
 
 void ULexUIManagerWorldSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
