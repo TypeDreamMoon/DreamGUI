@@ -60,6 +60,11 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	"LGUI.Prefab.NestedObjectMappingValidation",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexUIPrefabLevelVersionCleanupTest,
+	"LGUI.Prefab.LevelVersionCleanup",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
 bool FLexUIPrefabRelatedAnchorPropertyTest::RunTest(const FString& Parameters)
 {
 	ULexUIPrefabHelperObject* Helper = NewObject<ULexUIPrefabHelperObject>();
@@ -256,6 +261,22 @@ bool FLexUIPrefabNestedObjectMappingTest::RunTest(const FString& Parameters)
 
 	SourceHelper->ClearLoadedPrefab();
 	SourcePrefab->ClearPrefabInstanceScene();
+	return true;
+}
+
+bool FLexUIPrefabLevelVersionCleanupTest::RunTest(const FString& Parameters)
+{
+	ULexUIPrefabHelperObject* Helper = NewObject<ULexUIPrefabHelperObject>();
+	ULexWidget* MissingPrefabRoot = NewObject<ULexWidget>();
+	if (!Helper || !MissingPrefabRoot)
+	{
+		return false;
+	}
+
+	Helper->SubPrefabMap.Add(MissingPrefabRoot, FLexUISubPrefabData());
+	Helper->CheckPrefabVersion();
+	TestTrue(TEXT("Level helper removes invalid sub-prefab data"), Helper->SubPrefabMap.IsEmpty());
+	TestTrue(TEXT("Level helper records version cleanup as dirty"), Helper->GetAnythingDirty());
 	return true;
 }
 

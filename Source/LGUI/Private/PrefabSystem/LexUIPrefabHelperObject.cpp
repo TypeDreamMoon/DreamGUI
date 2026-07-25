@@ -1820,7 +1820,7 @@ void ULexUIPrefabHelperObject::CheckPrefabVersion()
 	{
 		bAnythingChanged = true;
 	}
-	if (bAnythingChanged)
+	if (bAnythingChanged && IsValid(PrefabAsset))
 	{
 		this->PrefabAsset->MarkPackageDirty();
 	}
