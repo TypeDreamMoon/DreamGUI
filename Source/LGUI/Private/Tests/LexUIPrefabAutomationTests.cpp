@@ -14,6 +14,27 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	"LGUI.Prefab.GuidMapCleanup",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexUIPrefabUnsupportedCookVersionTest,
+	"LGUI.Prefab.UnsupportedCookVersionRejected",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexUIPrefabUnsupportedCookVersionTest::RunTest(const FString& Parameters)
+{
+	ULexUIPrefab* Prefab = NewObject<ULexUIPrefab>();
+	TestNotNull(TEXT("Prefab created"), Prefab);
+	if (!Prefab)
+	{
+		return false;
+	}
+
+	Prefab->PrefabVersion = static_cast<uint16>(ELexUIPrefabVersion::BuiltinFArchive) - 1;
+	AddExpectedError(TEXT("Cannot cook prefab"), EAutomationExpectedErrorFlags::Contains, 1);
+	Prefab->BeginCacheForCookedPlatformData(nullptr);
+	TestTrue(TEXT("Unsupported prefab produces no cooked payload"), Prefab->BinaryDataForBuild.IsEmpty());
+	return true;
+}
+
 bool FLexUIPrefabGuidMapCleanupTest::RunTest(const FString& Parameters)
 {
 	ULexWidget* Root = NewObject<ULexWidget>();

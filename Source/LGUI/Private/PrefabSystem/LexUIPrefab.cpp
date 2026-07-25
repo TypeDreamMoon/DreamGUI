@@ -427,10 +427,19 @@ ULexUIPrefabHelperObject* ULexUIPrefab::GetPrefabHelperObject()
 void ULexUIPrefab::BeginCacheForCookedPlatformData(const ITargetPlatform* TargetPlatform)
 {
 	BinaryDataForBuild.Empty();
+	if (PrefabVersion < static_cast<uint16>(ELexUIPrefabVersion::BuiltinFArchive))
+	{
+		UE_LOG(LGUI, Error,
+			TEXT("Cannot cook prefab '%s' with unsupported format version %u. Open and upgrade the asset before cooking."),
+			*GetPathName(), PrefabVersion);
+		return;
+	}
+
+	EnsureInstanceObjects();
 	if (!IsValid(PrefabHelperObject) || !IsValid(PrefabHelperObject->LoadedRootWidget))
 	{
-		UE_LOG(LGUI, Log, TEXT("[%s].%d AgentObjects not valid, recreate it! prefab: '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(this->GetPathName()));
-		EnsureInstanceObjects();
+		UE_LOG(LGUI, Error, TEXT("Cannot cook prefab '%s' because its editable hierarchy could not be loaded."), *GetPathName());
+		return;
 	}
 
 	//serialize to runtime data
