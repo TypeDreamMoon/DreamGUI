@@ -112,9 +112,9 @@ struct FLayoutAnimationSnapshotData
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<ULexWidget> Widget = nullptr;
 	UPROPERTY(EditAnywhere)
-	FVector2D Position;
+	FVector2D Position = FVector2D::ZeroVector;
 	UPROPERTY(EditAnywhere)
-	FVector2D Size;
+	FVector2D Size = FVector2D::ZeroVector;
 };
 
 UCLASS(BlueprintType, Abstract, DefaultToInstanced, EditInlineNew)

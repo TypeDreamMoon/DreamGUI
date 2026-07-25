@@ -18,6 +18,20 @@ namespace LexPanelLayoutIntegrationTestLocal
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexLayoutAnimationSnapshotDefaultsTest,
+	"LGUI.Layout.AnimationSnapshotDefaults",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexLayoutAnimationSnapshotDefaultsTest::RunTest(const FString& Parameters)
+{
+	const FLayoutAnimationSnapshotData Snapshot;
+	TestNull(TEXT("Default snapshot has no widget"), Snapshot.Widget);
+	TestEqual(TEXT("Default snapshot position is deterministic"), Snapshot.Position, FVector2D::ZeroVector);
+	TestEqual(TEXT("Default snapshot size is deterministic"), Snapshot.Size, FVector2D::ZeroVector);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FLexPanelAlgorithmsStayFiniteTest,
 	"LGUI.Layout.Panel.AllAlgorithmsStayFinite",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
