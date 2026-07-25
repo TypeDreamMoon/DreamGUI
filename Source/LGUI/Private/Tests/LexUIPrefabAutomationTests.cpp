@@ -207,27 +207,40 @@ bool FLexUIPrefabUnknownVersionTargetTest::RunTest(const FString& Parameters)
 bool FLexUIPrefabNestedObjectMappingTest::RunTest(const FString& Parameters)
 {
 	ULexUIPrefab* SourcePrefab = NewObject<ULexUIPrefab>();
-	ULexWidget* SeedSourceWidget = NewObject<ULexWidget>();
-	ULexPanelSlot* SeedSourceSlot = SeedSourceWidget
-		? SeedSourceWidget->CreateNewPanelSlot<ULexPanelSlot>()
+	ULexWidget* SeedSourceRoot = NewObject<ULexWidget>();
+	ULexWidget* SeedSourceWidget = NewObject<ULexWidget>(SeedSourceRoot);
+	ULexLayoutContainerHorizontalBox* SeedPanel = SeedSourceRoot
+		? SeedSourceRoot->CreateNewLayoutContainer<ULexLayoutContainerHorizontalBox>()
 		: nullptr;
-	if (!SourcePrefab || !SeedSourceWidget || !SeedSourceSlot)
+	if (!SourcePrefab || !SeedSourceRoot || !SeedSourceWidget || !SeedPanel)
+	{
+		return false;
+	}
+	TestTrue(TEXT("Nested-reference source joins its panel"), SeedSourceWidget->TrySetParent(SeedSourceRoot, false));
+	ULexPanelSlot* SeedSourceSlot = SeedSourceWidget->GetPanelSlot();
+	TestNotNull(TEXT("Nested-reference source receives a panel slot"), SeedSourceSlot);
+	if (!SeedSourceSlot)
 	{
 		return false;
 	}
 
 	const FGuid SourceRootGuid = FGuid::NewGuid();
+	const FGuid SourceWidgetGuid = FGuid::NewGuid();
 	const FGuid SourceSlotGuid = FGuid::NewGuid();
 	TMap<UObject*, FGuid> SourceObjectToGuid;
-	SourceObjectToGuid.Add(SeedSourceWidget, SourceRootGuid);
+	SourceObjectToGuid.Add(SeedSourceRoot, SourceRootGuid);
+	SourceObjectToGuid.Add(SeedSourceWidget, SourceWidgetGuid);
 	SourceObjectToGuid.Add(SeedSourceSlot, SourceSlotGuid);
 	TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> EmptySubPrefabs;
 	TestTrue(TEXT("Nested-reference source prefab is serialized"),
 		LexUIPrefabSystem::WidgetSerializer::SavePrefab(
-			SeedSourceWidget, SourcePrefab, SourceObjectToGuid, EmptySubPrefabs, true));
+			SeedSourceRoot, SourcePrefab, SourceObjectToGuid, EmptySubPrefabs, true));
 
 	ULexUIPrefabHelperObject* SourceHelper = SourcePrefab->GetPrefabHelperObject();
-	ULexWidget* SourceWidget = SourceHelper ? SourceHelper->LoadedRootWidget.Get() : nullptr;
+	ULexWidget* SourceRoot = SourceHelper ? SourceHelper->LoadedRootWidget.Get() : nullptr;
+	ULexWidget* SourceWidget = SourceRoot && SourceRoot->GetChildrenCount() > 0
+		? SourceRoot->GetChildByIndex(0)
+		: nullptr;
 	ULexPanelSlot* SourceSlot = SourceWidget ? SourceWidget->GetPanelSlot() : nullptr;
 	ULexUIPrefabHelperObject* ParentHelper = NewObject<ULexUIPrefabHelperObject>();
 	ULexWidget* ParentWidget = NewObject<ULexWidget>();
