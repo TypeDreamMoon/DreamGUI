@@ -1722,16 +1722,18 @@ bool ULexUIPrefabHelperObject::CleanupInvalidSubPrefab()
 	bool bAnythingChanged = false;
 
 	{
-		SubPrefabMap.Remove(nullptr);
 		//invalid sub prefab
 		TSet<ULexWidget*> SubPrefabKeysToRemove;
 		for (auto& KeyValue : SubPrefabMap)
 		{
-			if (IsValid(KeyValue.Key) && !IsValid(KeyValue.Value.PrefabAsset))
+			if (!IsValid(KeyValue.Key) || !IsValid(KeyValue.Value.PrefabAsset))
 			{
 				SubPrefabKeysToRemove.Add(KeyValue.Key);
 #if WITH_EDITOR
-				MissingPrefab.Add(KeyValue.Key);
+				if (IsValid(KeyValue.Key))
+				{
+					MissingPrefab.Add(KeyValue.Key);
+				}
 #endif
 			}
 		}
@@ -1739,29 +1741,22 @@ bool ULexUIPrefabHelperObject::CleanupInvalidSubPrefab()
 		TSet<FGuid> GuidKeysToRemove;
 		for (auto& Item : SubPrefabKeysToRemove)
 		{
-			SubPrefabMap.Remove(Item);
-			if (IsValid(Item))
+			if (const FLexUISubPrefabData* SubPrefabData = SubPrefabMap.Find(Item))
 			{
-				//cleanup MapGuidToObject, because these object could belongs to sub prefab that is about to remove
-				for (auto& GuidToObjectKeyValue : MapGuidToObject)
+				for (const TPair<FGuid, FGuid>& GuidPair : SubPrefabData->MapObjectGuidFromParentPrefabToSubPrefab)
 				{
-					if (IsValid(GuidToObjectKeyValue.Value))
-					{
-						if (GuidToObjectKeyValue.Value->IsInOuter(Item) || GuidToObjectKeyValue.Value == Item)
-						{
-							if (!GuidKeysToRemove.Contains(GuidToObjectKeyValue.Key))
-							{
-								GuidKeysToRemove.Add(GuidToObjectKeyValue.Key);
-							}
-						}
-					}
-					else
-					{
-						if (!GuidKeysToRemove.Contains(GuidToObjectKeyValue.Key))
-						{
-							GuidKeysToRemove.Add(GuidToObjectKeyValue.Key);
-						}
-					}
+					GuidKeysToRemove.Add(GuidPair.Key);
+				}
+			}
+			SubPrefabMap.Remove(Item);
+			//cleanup MapGuidToObject, because these objects could belong to the sub prefab being removed
+			for (auto& GuidToObjectKeyValue : MapGuidToObject)
+			{
+				if (!IsValid(GuidToObjectKeyValue.Value)
+					|| (IsValid(Item)
+						&& (GuidToObjectKeyValue.Value->IsInOuter(Item) || GuidToObjectKeyValue.Value == Item)))
+				{
+					GuidKeysToRemove.Add(GuidToObjectKeyValue.Key);
 				}
 			}
 		}
@@ -1782,7 +1777,13 @@ bool ULexUIPrefabHelperObject::CleanupInvalidSubPrefab()
 			SetAnythingDirty();
 		}
 #if WITH_EDITOR
-		MissingPrefab.Remove(nullptr);
+		for (auto It = MissingPrefab.CreateIterator(); It; ++It)
+		{
+			if (!IsValid(*It))
+			{
+				It.RemoveCurrent();
+			}
+		}
 #endif
 	}
 	return bAnythingChanged;

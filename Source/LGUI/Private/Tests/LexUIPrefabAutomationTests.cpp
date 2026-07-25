@@ -65,6 +65,11 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	"LGUI.Prefab.LevelVersionCleanup",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexUIPrefabInvalidRootCleanupTest,
+	"LGUI.Prefab.InvalidRootCleanup",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
 bool FLexUIPrefabRelatedAnchorPropertyTest::RunTest(const FString& Parameters)
 {
 	ULexUIPrefabHelperObject* Helper = NewObject<ULexUIPrefabHelperObject>();
@@ -277,6 +282,33 @@ bool FLexUIPrefabLevelVersionCleanupTest::RunTest(const FString& Parameters)
 	Helper->CheckPrefabVersion();
 	TestTrue(TEXT("Level helper removes invalid sub-prefab data"), Helper->SubPrefabMap.IsEmpty());
 	TestTrue(TEXT("Level helper records version cleanup as dirty"), Helper->GetAnythingDirty());
+	return true;
+}
+
+bool FLexUIPrefabInvalidRootCleanupTest::RunTest(const FString& Parameters)
+{
+	ULexUIPrefabHelperObject* Helper = NewObject<ULexUIPrefabHelperObject>();
+	ULexUIPrefab* ValidPrefab = NewObject<ULexUIPrefab>();
+	ULexWidget* InvalidRoot = NewObject<ULexWidget>();
+	UObject* MappedObject = NewObject<UObject>();
+	if (!Helper || !ValidPrefab || !InvalidRoot || !MappedObject)
+	{
+		return false;
+	}
+
+	const FGuid ParentObjectGuid = FGuid::NewGuid();
+	FLexUISubPrefabData SubPrefabData;
+	SubPrefabData.PrefabAsset = ValidPrefab;
+	SubPrefabData.MapObjectGuidFromParentPrefabToSubPrefab.Add(ParentObjectGuid, FGuid::NewGuid());
+	Helper->SubPrefabMap.Add(InvalidRoot, MoveTemp(SubPrefabData));
+	Helper->MapGuidToObject.Add(ParentObjectGuid, MappedObject);
+	InvalidRoot->MarkAsGarbage();
+	TestFalse(TEXT("Test root is invalid before cleanup"), IsValid(InvalidRoot));
+
+	TestTrue(TEXT("Invalid sub-prefab root is reported as cleanup"), Helper->CleanupInvalidSubPrefab());
+	TestTrue(TEXT("Invalid sub-prefab root is removed"), Helper->SubPrefabMap.IsEmpty());
+	TestFalse(TEXT("Invalid root parent mapping is removed"), Helper->MapGuidToObject.Contains(ParentObjectGuid));
+	TestTrue(TEXT("Invalid root cleanup marks the helper dirty"), Helper->GetAnythingDirty());
 	return true;
 }
 
