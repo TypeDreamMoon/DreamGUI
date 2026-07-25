@@ -427,6 +427,10 @@ ULexUIPrefabHelperObject* ULexUIPrefab::GetPrefabHelperObject()
 void ULexUIPrefab::BeginCacheForCookedPlatformData(const ITargetPlatform* TargetPlatform)
 {
 	BinaryDataForBuild.Empty();
+	ReferenceAssetListForBuild.Empty();
+	ReferenceClassListForBuild.Empty();
+	ReferenceNameListForBuild.Empty();
+	ReferenceTextListForBuild.Empty();
 	if (PrefabVersion < static_cast<uint16>(ELexUIPrefabVersion::BuiltinFArchive))
 	{
 		UE_LOG(LGUI, Error,
@@ -467,7 +471,7 @@ void ULexUIPrefab::BeginCacheForCookedPlatformData(const ITargetPlatform* Target
 				MapObjectToGuid.Add(KeyValue.Value, KeyValue.Key);
 			}
 		}
-		this->SavePrefab(PrefabHelperObject->LoadedRootWidget
+		const bool bCookSerializationSucceeded = this->SavePrefab(PrefabHelperObject->LoadedRootWidget
 			, MapObjectToGuid, PrefabHelperObject->SubPrefabMap
 			, false
 		);
@@ -475,6 +479,16 @@ void ULexUIPrefab::BeginCacheForCookedPlatformData(const ITargetPlatform* Target
 		for (auto KeyValue : MapObjectToGuid)
 		{
 			PrefabHelperObject->MapGuidToObject.Add(KeyValue.Value, KeyValue.Key);
+		}
+		if (!bCookSerializationSucceeded || BinaryDataForBuild.IsEmpty())
+		{
+			BinaryDataForBuild.Empty();
+			ReferenceAssetListForBuild.Empty();
+			ReferenceClassListForBuild.Empty();
+			ReferenceNameListForBuild.Empty();
+			ReferenceTextListForBuild.Empty();
+			UE_LOG(LGUI, Error, TEXT("Cook serialization failed for prefab '%s'; no runtime prefab data was produced."), *GetPathName());
+			return;
 		}
 	}
 }
