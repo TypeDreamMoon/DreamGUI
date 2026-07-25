@@ -206,6 +206,8 @@ public:
 	const TArray<TObjectPtr<ULexWidget>>& GetAllWidgetArray()const{return AllWidgetArray;}
 	void AddWidget(ULexWidget* InWidget);
 	void RemoveWidget(ULexWidget* InWidget);
+	/** Tears down registered widgets once per hierarchy root. Safe to call repeatedly during world shutdown. */
+	void DestroyRegisteredWidgetTrees();
 
 	void AddLayoutDirtyWidget(ULexWidget* InWidget);
 	void MarkRebuildLayoutTree(ULexWidget* InWidget);

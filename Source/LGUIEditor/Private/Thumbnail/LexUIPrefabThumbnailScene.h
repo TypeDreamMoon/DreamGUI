@@ -11,6 +11,7 @@ class FLexUIPrefabThumbnailScene :public FThumbnailPreviewScene
 {
 public:
 	FLexUIPrefabThumbnailScene();
+	virtual ~FLexUIPrefabThumbnailScene() override;
 	bool IsValidForVisualization();
 	void SetPrefab(ULexUIPrefab* Prefab);
 protected:
@@ -22,7 +23,7 @@ private:
 	void ClearOldWidgets();
 private:
 	int32 NumStartingActors;
-	TWeakObjectPtr<ULexWidget> RootAgentWidget;
+	TStrongObjectPtr<ULexWidget> RootAgentWidget;
 	TWeakObjectPtr<ULexUIPrefab> CurrentPrefab;
 	FText CachedPrefabContent;
 	FBoxSphereBounds PreviewBounds;

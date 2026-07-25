@@ -507,23 +507,29 @@ void ULexWidget::BeginDestroy()
 {
 	if (bHasBegunPlay || bIsRegistered)
 	{
-		auto World = this->GetWorld();
+		ULexWidget* TeardownRoot = RootWidget.GetEvenIfUnreachable();
+		if (TeardownRoot == nullptr || TeardownRoot->HasAnyFlags(RF_FinishDestroyed))
+		{
+			TeardownRoot = this;
+		}
+
+		auto World = TeardownRoot->GetWorld();
 		auto WorldName = World ? World->GetName() : TEXT("null");
 		auto Manager = ULexUIManagerWorldSubsystem::GetInstance(World);
 		auto ManagerName = Manager ? Manager->GetName() : TEXT("null");
 
-		UE_LOG(LGUI, Error, TEXT("ULexWidget %s is not properly destroyed! Missing DestroyWidget call. World:%s, WorldType:%d, Manager:%s. Auto cleanup in BeginDestroy."),
-			*GetPathDisplayName(), *WorldName, World ? World->WorldType : -1, *ManagerName);
+		UE_LOG(LGUI, Error, TEXT("ULexWidget tree %s was not destroyed by its owner. World:%s, WorldType:%d, Manager:%s. Auto cleanup in BeginDestroy."),
+			*TeardownRoot->GetPathDisplayName(), *WorldName, World ? World->WorldType : -1, *ManagerName);
 
 		if (GEngine)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red
-				, FString::Printf(TEXT("ULexWidget %s is not properly destroyed! Missing DestroyWidget call, auto cleaned up in BeginDestroy. World:%s, Manager:%s")
-					, *GetPathDisplayName(), *WorldName, *ManagerName));
+				, FString::Printf(TEXT("ULexWidget tree %s was not destroyed by its owner; auto cleaned up. World:%s, Manager:%s")
+					, *TeardownRoot->GetPathDisplayName(), *WorldName, *ManagerName));
 		}
 
-		// Fallback for cases where caller forgot DestroyWidget().
-		DestroyWidget();
+		// Elevating fallback cleanup to the hierarchy root prevents one diagnostic per child.
+		TeardownRoot->DestroyWidget();
 	}
 	Super::BeginDestroy();
 }

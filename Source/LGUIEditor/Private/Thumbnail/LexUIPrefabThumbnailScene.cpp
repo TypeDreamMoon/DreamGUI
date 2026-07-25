@@ -45,10 +45,14 @@ FLexUIPrefabThumbnailScene::FLexUIPrefabThumbnailScene()
 {
 	NumStartingActors = GetWorld()->GetCurrentLevel()->Actors.Num();
 }
+FLexUIPrefabThumbnailScene::~FLexUIPrefabThumbnailScene()
+{
+	ClearOldWidgets();
+}
 void FLexUIPrefabThumbnailScene::SpawnPreviewActor()
 {
 	if (!CurrentPrefab.IsValid())return;
-	if (RootAgentWidget.IsValid())return;
+	if (RootAgentWidget != nullptr)return;
 	auto CanvasSize = CurrentPrefab->PrefabDataForPrefabEditor.CanvasSize;
 
 	//create Canvas for UI
@@ -56,7 +60,7 @@ void FLexUIPrefabThumbnailScene::SpawnPreviewActor()
 	RootWidget->SetSizeDelta(CanvasSize);
 	RootWidget->SetDisplayName(TEXT("[RootAgent]"));
 	RootWidget->OnRegister();
-	RootAgentWidget = RootWidget;
+	RootAgentWidget = TStrongObjectPtr(RootWidget);
 
 	CurrentPrefab->LoadPrefab(this->GetWorld(), RootWidget);
 	auto Canvas = RootWidget->AddComponent<ULexCanvas>();
@@ -113,7 +117,7 @@ void FLexUIPrefabThumbnailScene::GetBoundsRecursive(ULexWidget* RootWidget, FBox
 }
 void FLexUIPrefabThumbnailScene::ClearOldWidgets()
 {
-	if (RootAgentWidget.IsValid())
+	if (RootAgentWidget != nullptr)
 	{
 		RootAgentWidget->DestroyWidget();
 		RootAgentWidget.Reset();

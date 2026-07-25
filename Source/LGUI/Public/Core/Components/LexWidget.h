@@ -975,6 +975,8 @@ public:
 	/** return root Widget in hierarchy, could be null if not initialized yet. */
 	UFUNCTION(BlueprintCallable, Category = "LGUI")
 		ULexWidget* GetRootWidgetInHierarchy()const { return RootWidget.Get(); }
+	/** Shutdown-only accessor used while GC may already have marked the hierarchy unreachable. */
+	ULexWidget* GetRootWidgetInHierarchyEvenIfUnreachable()const { return RootWidget.GetEvenIfUnreachable(); }
 	bool IsRootWidgetInHierarchy()const{return RootWidget.Get() == this;}
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI")

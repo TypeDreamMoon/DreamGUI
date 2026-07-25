@@ -844,6 +844,7 @@ void ULexUIManagerWorldSubsystem::Deinitialize()
 	}
 	OnDeinitialize.Broadcast();
 #endif
+	DestroyRegisteredWidgetTrees();
 	if (MainViewportViewExtension.IsValid())
 	{
 		MainViewportViewExtension.Reset();
@@ -859,18 +860,7 @@ void ULexUIManagerWorldSubsystem::Deinitialize()
 void ULexUIManagerWorldSubsystem::BeginDestroy()
 {
 	check(!IsInitialized());
-#if WITH_EDITOR
-	auto CopiedWidgetArray = AllWidgetArray;//use a copied array, because when Widget.OnUnregister the AllWidgetArray will change
-	for (int i = 0; i < CopiedWidgetArray.Num(); i++)
-	{
-		auto& Widget = CopiedWidgetArray[i];
-		if (Widget->HasRegistered())
-		{
-			Widget->OnUnregister();
-		}
-		check(!Widget->HasBegunPlay());//edit mode should never begin play
-	}
-#endif
+	DestroyRegisteredWidgetTrees();
 	Super::BeginDestroy();
 }
 
@@ -932,19 +922,7 @@ void ULexUIManagerWorldSubsystem::OnWorldEndPlay(UWorld& InWorld)
 	if (this->GetWorld()->IsGameWorld())//game mode should deinit when EndPlay
 #endif
 	{
-		auto CopiedWidgetArray = AllWidgetArray;//use a copied array, because when Widget.OnUnregister the AllWidgetArray will change
-		for (int i = 0; i < CopiedWidgetArray.Num(); i++)
-		{
-			auto& Widget = CopiedWidgetArray[i];
-			if (Widget->HasRegistered())
-			{
-				Widget->OnUnregister();
-			}
-			if (Widget->HasBegunPlay())
-			{
-				Widget->EndPlay();
-			}
-		}
+		DestroyRegisteredWidgetTrees();
 	}
 	Super::OnWorldEndPlay(InWorld);
 }
@@ -1483,6 +1461,44 @@ void ULexUIManagerWorldSubsystem::RemoveWidget(ULexWidget* InWidget)
 	}
 #endif
 	AllWidgetArray.RemoveSingle(InWidget);
+}
+
+void ULexUIManagerWorldSubsystem::DestroyRegisteredWidgetTrees()
+{
+	if (AllWidgetArray.IsEmpty())
+	{
+		return;
+	}
+
+	const TArray<TObjectPtr<ULexWidget>> RegisteredWidgets = AllWidgetArray;
+	TSet<ULexWidget*> Roots;
+	for (ULexWidget* Widget : RegisteredWidgets)
+	{
+		if (Widget == nullptr || Widget->HasAnyFlags(RF_FinishDestroyed))
+		{
+			continue;
+		}
+		ULexWidget* Root = Widget->GetRootWidgetInHierarchyEvenIfUnreachable();
+		Roots.Add(Root ? Root : Widget);
+	}
+
+	for (ULexWidget* Root : Roots)
+	{
+		if (Root != nullptr && !Root->HasAnyFlags(RF_FinishDestroyed))
+		{
+			Root->DestroyWidget();
+		}
+	}
+
+	// Corrupt or partially collected hierarchies may not have a usable cached root.
+	for (ULexWidget* Widget : RegisteredWidgets)
+	{
+		if (Widget != nullptr && !Widget->HasAnyFlags(RF_FinishDestroyed)
+			&& (Widget->HasRegistered() || Widget->HasBegunPlay()))
+		{
+			Widget->DestroyWidget();
+		}
+	}
 }
 
 void ULexUIManagerWorldSubsystem::AddLayoutDirtyWidget(ULexWidget* InWidget)
