@@ -398,6 +398,7 @@ public:
 		Prefab = InPrefab;
 		this->EngineMajorVersion = Prefab->EngineMajorVersion;
 		this->EngineMinorVersion = Prefab->EngineMinorVersion;
+		this->EnginePatchVersion = Prefab->EnginePatchVersion;
 		this->PrefabVersion = Prefab->PrefabVersion;
 		this->PrefabSchemaVersion = Prefab->PrefabSchemaVersion;
 		this->ArchiveVersion = Prefab->ArchiveVersion;
@@ -409,6 +410,7 @@ public:
 	{
 		Prefab->EngineMajorVersion = this->EngineMajorVersion;
 		Prefab->EngineMinorVersion = this->EngineMinorVersion;
+		Prefab->EnginePatchVersion = this->EnginePatchVersion;
 		Prefab->PrefabVersion = this->PrefabVersion;
 		Prefab->PrefabSchemaVersion = this->PrefabSchemaVersion;
 		Prefab->ArchiveVersion = this->ArchiveVersion;

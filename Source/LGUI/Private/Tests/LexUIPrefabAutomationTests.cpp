@@ -8,6 +8,7 @@
 #include "PrefabSystem/LexUIPrefab.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "PrefabSystem/WidgetSerializer.h"
+#include "Runtime/Launch/Resources/Version.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FLexUIPrefabGuidMapCleanupTest,
@@ -70,6 +71,7 @@ bool FLexUIPrefabExistingObjectValidationTest::RunTest(const FString& Parameters
 	TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> EmptySubPrefabs;
 	TestTrue(TEXT("Source prefab serialized"),
 		LexUIPrefabSystem::WidgetSerializer::SavePrefab(SourceRoot, Prefab, ObjectToGuid, EmptySubPrefabs, true));
+	TestEqual(TEXT("Prefab records the engine patch version"), Prefab->EnginePatchVersion, static_cast<uint16>(ENGINE_PATCH_VERSION));
 
 	UObject* WrongObject = NewObject<UObject>(World);
 	TMap<FGuid, TObjectPtr<UObject>> ExistingObjects;

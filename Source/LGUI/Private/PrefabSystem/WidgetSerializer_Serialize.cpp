@@ -327,6 +327,7 @@ namespace LexUIPrefabSystem
 
 		InPrefab->EngineMajorVersion = ENGINE_MAJOR_VERSION;
 		InPrefab->EngineMinorVersion = ENGINE_MINOR_VERSION;
+		InPrefab->EnginePatchVersion = ENGINE_PATCH_VERSION;
 		InPrefab->PrefabVersion = LEXUI_CURRENT_PREFAB_VERSION;
 
 		auto TimeSpan = FDateTime::Now() - StartTime;
