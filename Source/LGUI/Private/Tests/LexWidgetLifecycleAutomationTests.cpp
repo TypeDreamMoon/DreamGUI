@@ -1,6 +1,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "Core/Components/LexWidget.h"
+#include "Engine/World.h"
 #include "Interaction/UIScrollView.h"
 #include "Tests/LexWidgetLifecycleTestTypes.h"
 
@@ -78,8 +79,17 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FLexWidgetHierarchyMutationDuringTeardownTest::RunTest(const FString& Parameters)
 {
-	ULexWidget* Root = NewObject<ULexWidget>(GetTransientPackage());
-	ULexWidget* ExternalParent = NewObject<ULexWidget>(GetTransientPackage());
+	UWorld* World = UWorld::CreateWorld(EWorldType::None, false);
+	ULexWidget* Root = World ? NewObject<ULexWidget>(World) : nullptr;
+	ULexWidget* ExternalParent = World ? NewObject<ULexWidget>(World) : nullptr;
+	if (!World || !Root || !ExternalParent)
+	{
+		if (World)
+		{
+			World->DestroyWorld(false);
+		}
+		return false;
+	}
 	ULexWidget* OriginalChild = NewObject<ULexWidget>(Root);
 	ULexWidget* LateChild = NewObject<ULexWidget>(ExternalParent);
 	TestTrue(TEXT("Original child joins the teardown tree"), OriginalChild->TrySetParent(Root, false));
@@ -90,6 +100,7 @@ bool FLexWidgetHierarchyMutationDuringTeardownTest::RunTest(const FString& Param
 	TestNotNull(TEXT("Hierarchy mutation behaviour is created"), MutationBehaviour);
 	if (!MutationBehaviour)
 	{
+		World->DestroyWorld(false);
 		return false;
 	}
 	MutationBehaviour->Configure(OriginalChild, LateChild, ExternalParent);
@@ -108,6 +119,7 @@ bool FLexWidgetHierarchyMutationDuringTeardownTest::RunTest(const FString& Param
 	TestFalse(TEXT("Detached original child still ends play"), OriginalChild->HasBegunPlay());
 	TestFalse(TEXT("Newly attached child is unregistered"), LateChild->HasRegistered());
 	TestFalse(TEXT("Newly attached child ends play"), LateChild->HasBegunPlay());
+	World->DestroyWorld(false);
 	return true;
 }
 
