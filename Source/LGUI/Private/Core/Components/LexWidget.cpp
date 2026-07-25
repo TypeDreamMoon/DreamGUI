@@ -3109,6 +3109,11 @@ void ULexWidget::CalculateVisibility_Recursive()
 
 			if (bLayoutChanged)
 			{
+				// Cached layout trees omit collapsed subtrees and must be recollected when they become visible.
+				if (ULexUIManagerWorldSubsystem* LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(Widget->GetWorld()))
+				{
+					LexUIManager->MarkRebuildAllLayoutTree();
+				}
 				ULexWidget::MarkLayoutForRebuild(Widget->Parent.IsValid() ? Widget->Parent.Get() : Widget);
 			}
 			if (bRenderChanged || bHitTestChanged)

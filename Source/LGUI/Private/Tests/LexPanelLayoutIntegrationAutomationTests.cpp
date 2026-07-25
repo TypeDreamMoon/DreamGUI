@@ -176,6 +176,55 @@ bool FLexPanelModeTransitionContractsTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexVisibleNestedPanelRebuildTest,
+	"LGUI.Layout.Panel.VisibleNestedTreeRebuilds",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexVisibleNestedPanelRebuildTest::RunTest(const FString& Parameters)
+{
+	UWorld* World = UWorld::CreateWorld(EWorldType::Game, false);
+	ULexWidget* Root = World ? NewObject<ULexWidget>(World) : nullptr;
+	ULexWidget* NestedPanel = Root ? NewObject<ULexWidget>(Root) : nullptr;
+	ULexWidget* NestedChild = NestedPanel ? NewObject<ULexWidget>(NestedPanel) : nullptr;
+	if (!World || !Root || !NestedPanel || !NestedChild)
+	{
+		if (World)
+		{
+			World->DestroyWorld(false);
+		}
+		return false;
+	}
+
+	Root->SetWidth(320.0f);
+	Root->SetHeight(180.0f);
+	NestedPanel->SetWidth(80.0f);
+	NestedPanel->SetHeight(60.0f);
+	NestedChild->SetWidth(16.0f);
+	NestedChild->SetHeight(12.0f);
+	TestTrue(TEXT("Nested panel joins the root"), NestedPanel->TrySetParent(Root, false));
+	TestTrue(TEXT("Nested child joins its panel"), NestedChild->TrySetParent(NestedPanel, false));
+	TestNotNull(TEXT("Root overlay is created"), Root->CreateNewLayoutContainer<ULexLayoutContainerOverlay>());
+	TestNotNull(TEXT("Nested overlay is created"), NestedPanel->CreateNewLayoutContainer<ULexLayoutContainerOverlay>());
+
+	Root->OnRegister();
+	NestedPanel->OnRegister();
+	NestedChild->OnRegister();
+	NestedPanel->SetVisibility(ELexWidgetVisibility::Collapsed);
+	ULexWidget::MarkLayoutForRebuild(Root);
+	ULexWidget::RebuildLayoutImmediately(Root);
+
+	NestedPanel->SetVisibility(ELexWidgetVisibility::Visible);
+	ULexWidget::RebuildLayoutImmediately(Root);
+	TestEqual(TEXT("Newly visible nested panel fills the root immediately"), NestedPanel->GetSize(), Root->GetSize());
+	TestEqual(TEXT("Newly visible nested child is included in the rebuilt layout tree"),
+		NestedChild->GetSize(), NestedPanel->GetSize());
+
+	Root->DestroyWidget();
+	World->DestroyWorld(false);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FLexPanelPrefabRoundTripTest,
 	"LGUI.Prefab.PanelLayoutRoundTrip",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
