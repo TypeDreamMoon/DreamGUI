@@ -567,46 +567,105 @@ void ULexWidget::DestroyWidget()
 {
 	struct LOCAL
 	{
-		static void UnregisterRecursive(ULexWidget* Widget, TSet<const ULexWidget*>& VisitedWidgets)
+		static void AppendSubtree(
+			ULexWidget* Widget,
+			TArray<TObjectPtr<ULexWidget>>& TeardownWidgets,
+			TSet<const ULexWidget*>& ScheduledWidgets)
 		{
 			// BeginDestroy can run after GC has marked the object unreachable, at which point
 			// IsValid() is already false even though teardown on the live memory is still required.
-			if (Widget == nullptr || Widget->HasAnyFlags(RF_FinishDestroyed) || VisitedWidgets.Contains(Widget))
+			if (Widget == nullptr || Widget->HasAnyFlags(RF_FinishDestroyed))
 			{
 				return;
 			}
-			VisitedWidgets.Add(Widget);
+
+			TArray<TObjectPtr<ULexWidget>> PendingWidgets;
+			PendingWidgets.Add(Widget);
+			while (!PendingWidgets.IsEmpty())
+			{
+				ULexWidget* CurrentWidget = PendingWidgets.Pop(EAllowShrinking::No).Get();
+				if (CurrentWidget == nullptr
+					|| CurrentWidget->HasAnyFlags(RF_FinishDestroyed)
+					|| ScheduledWidgets.Contains(CurrentWidget))
+				{
+					continue;
+				}
+
+				ScheduledWidgets.Add(CurrentWidget);
+				TeardownWidgets.Add(CurrentWidget);
+				const TArray<ULexWidget*> ChildrenSnapshot = CurrentWidget->GetChildren();
+				for (int32 ChildIndex = ChildrenSnapshot.Num() - 1; ChildIndex >= 0; --ChildIndex)
+				{
+					PendingWidgets.Add(ChildrenSnapshot[ChildIndex]);
+				}
+			}
+		}
+
+		static void AppendCurrentChildren(
+			ULexWidget* Widget,
+			TArray<TObjectPtr<ULexWidget>>& TeardownWidgets,
+			TSet<const ULexWidget*>& ScheduledWidgets)
+		{
+			if (Widget == nullptr || Widget->HasAnyFlags(RF_FinishDestroyed))
+			{
+				return;
+			}
+
+			const TArray<ULexWidget*> ChildrenSnapshot = Widget->GetChildren();
+			for (ULexWidget* Child : ChildrenSnapshot)
+			{
+				AppendSubtree(Child, TeardownWidgets, ScheduledWidgets);
+			}
+		}
+	};
+
+	TArray<TObjectPtr<ULexWidget>> TeardownWidgets;
+	TSet<const ULexWidget*> ScheduledWidgets;
+	LOCAL::AppendSubtree(this, TeardownWidgets, ScheduledWidgets);
+
+	int32 UnregisterIndex = 0;
+	auto UnregisterPendingWidgets = [&]()
+	{
+		while (UnregisterIndex < TeardownWidgets.Num())
+		{
+			ULexWidget* Widget = TeardownWidgets[UnregisterIndex++].Get();
+			if (Widget == nullptr || Widget->HasAnyFlags(RF_FinishDestroyed))
+			{
+				continue;
+			}
 			if (Widget->bIsRegistered)
 			{
 				Widget->OnUnregister();
 			}
-			for (ULexWidget* Child : Widget->GetChildren())
-			{
-				UnregisterRecursive(Child, VisitedWidgets);
-			}
-		}
-		static void EndPlayRecursive(ULexWidget* Widget, TSet<const ULexWidget*>& VisitedWidgets)
-		{
-			if (Widget == nullptr || Widget->HasAnyFlags(RF_FinishDestroyed) || VisitedWidgets.Contains(Widget))
-			{
-				return;
-			}
-			VisitedWidgets.Add(Widget);
-			if (Widget->bHasBegunPlay)
-			{
-				Widget->EndPlay();
-			}
-			for (ULexWidget* Child : Widget->GetChildren())
-			{
-				EndPlayRecursive(Child, VisitedWidgets);
-			}
+			LOCAL::AppendCurrentChildren(Widget, TeardownWidgets, ScheduledWidgets);
 		}
 	};
-	TSet<const ULexWidget*> UnregisterVisitedWidgets;
-	LOCAL::UnregisterRecursive(this, UnregisterVisitedWidgets);
+
+	UnregisterPendingWidgets();
 	this->SetParent(nullptr);
-	TSet<const ULexWidget*> EndPlayVisitedWidgets;
-	LOCAL::EndPlayRecursive(this, EndPlayVisitedWidgets);
+	const int32 WidgetCountAfterDetach = TeardownWidgets.Num();
+	for (int32 WidgetIndex = 0; WidgetIndex < WidgetCountAfterDetach; ++WidgetIndex)
+	{
+		ULexWidget* Widget = TeardownWidgets[WidgetIndex].Get();
+		LOCAL::AppendCurrentChildren(Widget, TeardownWidgets, ScheduledWidgets);
+	}
+	UnregisterPendingWidgets();
+
+	int32 EndPlayIndex = 0;
+	while (EndPlayIndex < TeardownWidgets.Num())
+	{
+		UnregisterPendingWidgets();
+		ULexWidget* Widget = TeardownWidgets[EndPlayIndex++].Get();
+		if (Widget == nullptr || Widget->HasAnyFlags(RF_FinishDestroyed))
+		{
+			continue;
+		}
+		if (Widget->bHasBegunPlay)
+		{
+			Widget->EndPlay();
+		}
+		LOCAL::AppendCurrentChildren(Widget, TeardownWidgets, ScheduledWidgets);
+	}
 }
 
 UWorld* ULexWidget::GetWorld() const

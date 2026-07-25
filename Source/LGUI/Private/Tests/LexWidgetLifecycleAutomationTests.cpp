@@ -2,6 +2,7 @@
 
 #include "Core/Components/LexWidget.h"
 #include "Interaction/UIScrollView.h"
+#include "Tests/LexWidgetLifecycleTestTypes.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -67,6 +68,46 @@ bool FLexWidgetComponentMutationDuringUnregisterTest::RunTest(const FString& Par
 	TestFalse(TEXT("Host is unregistered after helper removal"), Root->HasRegistered());
 	TestNull(TEXT("Range helper is removed during scroll view teardown"),
 		Root->GetComponent<UUIScrollViewHelper>());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexWidgetHierarchyMutationDuringTeardownTest,
+	"LGUI.Lifecycle.HierarchyMutationDuringTeardown",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexWidgetHierarchyMutationDuringTeardownTest::RunTest(const FString& Parameters)
+{
+	ULexWidget* Root = NewObject<ULexWidget>(GetTransientPackage());
+	ULexWidget* ExternalParent = NewObject<ULexWidget>(GetTransientPackage());
+	ULexWidget* OriginalChild = NewObject<ULexWidget>(Root);
+	ULexWidget* LateChild = NewObject<ULexWidget>(ExternalParent);
+	TestTrue(TEXT("Original child joins the teardown tree"), OriginalChild->TrySetParent(Root, false));
+	TestTrue(TEXT("Late child starts outside the teardown tree"), LateChild->TrySetParent(ExternalParent, false));
+
+	ULexWidgetHierarchyMutationBehaviour* MutationBehaviour =
+		Root->AddComponent<ULexWidgetHierarchyMutationBehaviour>();
+	TestNotNull(TEXT("Hierarchy mutation behaviour is created"), MutationBehaviour);
+	if (!MutationBehaviour)
+	{
+		return false;
+	}
+	MutationBehaviour->Configure(OriginalChild, LateChild, ExternalParent);
+
+	Root->OnRegister();
+	OriginalChild->OnRegister();
+	LateChild->OnRegister();
+	Root->BeginPlay();
+	OriginalChild->BeginPlay();
+	LateChild->BeginPlay();
+
+	Root->DestroyWidget();
+	TestEqual(TEXT("Behaviour detaches the original child"), OriginalChild->GetParent(), ExternalParent);
+	TestEqual(TEXT("Behaviour attaches the late child"), LateChild->GetParent(), Root);
+	TestFalse(TEXT("Detached original child is still unregistered"), OriginalChild->HasRegistered());
+	TestFalse(TEXT("Detached original child still ends play"), OriginalChild->HasBegunPlay());
+	TestFalse(TEXT("Newly attached child is unregistered"), LateChild->HasRegistered());
+	TestFalse(TEXT("Newly attached child ends play"), LateChild->HasBegunPlay());
 	return true;
 }
 
