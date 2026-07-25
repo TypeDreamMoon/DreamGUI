@@ -83,6 +83,9 @@ void ULexUIPrefabHelperObject::BeginDestroy()
 
 void ULexUIPrefabHelperObject::Init(ULexUIPrefab* InPrefab, FLexUIPrefabInstanceScene* InPrefabInstanceScene)
 {
+	FCoreUObjectDelegates::OnObjectPropertyChanged.RemoveAll(this);
+	FCoreUObjectDelegates::OnPreObjectPropertyChanged.RemoveAll(this);
+
 	PrefabAsset = InPrefab;
 	PrefabInstanceWorld = InPrefabInstanceScene->GetWorld();
 	if (!IsValid(LoadedRootWidget))
@@ -107,6 +110,9 @@ void ULexUIPrefabHelperObject::Init(ULexUIPrefab* InPrefab, FLexUIPrefabInstance
 
 void ULexUIPrefabHelperObject::ClearLoadedPrefab()
 {
+	FCoreUObjectDelegates::OnObjectPropertyChanged.RemoveAll(this);
+	FCoreUObjectDelegates::OnPreObjectPropertyChanged.RemoveAll(this);
+
 	if (IsValid(LoadedRootWidget))
 	{
 		LoadedRootWidget->DestroyWidget();
