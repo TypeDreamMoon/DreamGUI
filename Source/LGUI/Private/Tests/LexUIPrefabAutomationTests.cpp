@@ -74,7 +74,7 @@ bool FLexUIPrefabRelatedAnchorPropertyTest::RunTest(const FString& Parameters)
 {
 	ULexUIPrefabHelperObject* Helper = NewObject<ULexUIPrefabHelperObject>();
 	ULexWidget* Widget = NewObject<ULexWidget>();
-	UObject* PlainObject = NewObject<UObject>();
+	UObject* PlainObject = NewObject<ULexUIPrefab>();
 	if (!Helper || !Widget || !PlainObject)
 	{
 		return false;
@@ -290,7 +290,7 @@ bool FLexUIPrefabInvalidRootCleanupTest::RunTest(const FString& Parameters)
 	ULexUIPrefabHelperObject* Helper = NewObject<ULexUIPrefabHelperObject>();
 	ULexUIPrefab* ValidPrefab = NewObject<ULexUIPrefab>();
 	ULexWidget* InvalidRoot = NewObject<ULexWidget>();
-	UObject* MappedObject = NewObject<UObject>();
+	UObject* MappedObject = NewObject<ULexUIPrefab>();
 	if (!Helper || !ValidPrefab || !InvalidRoot || !MappedObject)
 	{
 		return false;
@@ -350,7 +350,7 @@ bool FLexUIPrefabExistingObjectValidationTest::RunTest(const FString& Parameters
 		LexUIPrefabSystem::WidgetSerializer::SavePrefab(SourceRoot, Prefab, ObjectToGuid, EmptySubPrefabs, true));
 	TestEqual(TEXT("Prefab records the engine patch version"), Prefab->EnginePatchVersion, static_cast<uint16>(ENGINE_PATCH_VERSION));
 
-	UObject* WrongObject = NewObject<UObject>(World);
+	UObject* WrongObject = NewObject<ULexUIPrefab>(World);
 	TMap<FGuid, TObjectPtr<UObject>> ExistingObjects;
 	ExistingObjects.Add(RootGuid, WrongObject);
 	TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> LoadedSubPrefabs;
@@ -372,7 +372,7 @@ bool FLexUIPrefabExistingObjectValidationTest::RunTest(const FString& Parameters
 bool FLexUIPrefabInvalidOverrideMappingTest::RunTest(const FString& Parameters)
 {
 	ULexUIPrefabHelperObject* Helper = NewObject<ULexUIPrefabHelperObject>();
-	UObject* UnownedObject = NewObject<UObject>();
+	UObject* UnownedObject = NewObject<ULexUIPrefab>();
 	if (!Helper || !UnownedObject)
 	{
 		return false;
