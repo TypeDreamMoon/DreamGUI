@@ -40,6 +40,11 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	"LGUI.Prefab.RelativeLocationIncludesAnchorData",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexUIPrefabRefreshSaveFailureTest,
+	"LGUI.Prefab.RefreshSaveFailureKeepsVersion",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
 bool FLexUIPrefabRelatedAnchorPropertyTest::RunTest(const FString& Parameters)
 {
 	ULexUIPrefabHelperObject* Helper = NewObject<ULexUIPrefabHelperObject>();
@@ -62,6 +67,79 @@ bool FLexUIPrefabRelatedAnchorPropertyTest::RunTest(const FString& Parameters)
 		Helper->GetExtraRelatedPropertyForApplyOrRevert(
 			PlainObject, ULexWidget::GetPropertyName_RelativeLocation()),
 		NAME_None);
+	return true;
+}
+
+bool FLexUIPrefabRefreshSaveFailureTest::RunTest(const FString& Parameters)
+{
+	UWorld* World = UWorld::CreateWorld(EWorldType::None, false);
+	ULexUIPrefab* SubPrefab = NewObject<ULexUIPrefab>();
+	ULexWidget* SourceRoot = World
+		? NewObject<ULexWidget>(World, NAME_None, RF_Public | RF_Transactional)
+		: nullptr;
+	if (!World || !SubPrefab || !SourceRoot)
+	{
+		if (World)
+		{
+			World->DestroyWorld(false);
+		}
+		return false;
+	}
+
+	const FGuid SourceRootGuid = FGuid::NewGuid();
+	TMap<UObject*, FGuid> SourceObjectToGuid;
+	SourceObjectToGuid.Add(SourceRoot, SourceRootGuid);
+	TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> EmptySubPrefabs;
+	TestTrue(TEXT("Sub-prefab source is serialized"),
+		LexUIPrefabSystem::WidgetSerializer::SavePrefab(
+			SourceRoot, SubPrefab, SourceObjectToGuid, EmptySubPrefabs, true));
+
+	ULexUIPrefabHelperObject* SubPrefabHelper = SubPrefab->GetPrefabHelperObject();
+	ULexUIPrefabHelperObject* ParentHelper = NewObject<ULexUIPrefabHelperObject>();
+	ULexWidget* ParentRoot = NewObject<ULexWidget>(World, NAME_None, RF_Public | RF_Transactional);
+	ULexWidget* InstanceRoot = NewObject<ULexWidget>(World, NAME_None, RF_Public | RF_Transactional);
+	ULexWidget* ExtraWidget = NewObject<ULexWidget>(InstanceRoot, NAME_None, RF_Public | RF_Transactional);
+	if (!SubPrefabHelper || !ParentHelper || !ParentRoot || !InstanceRoot || !ExtraWidget)
+	{
+		SubPrefab->ClearPrefabInstanceScene();
+		World->DestroyWorld(false);
+		return false;
+	}
+	TestTrue(TEXT("Sub-prefab instance joins the parent hierarchy"), InstanceRoot->TrySetParent(ParentRoot, false));
+	TestTrue(TEXT("Extra widget starts inside the sub-prefab instance"), ExtraWidget->TrySetParent(InstanceRoot, false));
+
+	const FGuid ParentRootGuid = FGuid::NewGuid();
+	const FGuid InstanceRootGuid = FGuid::NewGuid();
+	const FGuid ExtraWidgetGuid = FGuid::NewGuid();
+	const FGuid MissingSourceGuid = FGuid::NewGuid();
+	ParentHelper->LoadedRootWidget = ParentRoot;
+	ParentHelper->PrefabInstanceWorld = World;
+	ParentHelper->MapGuidToObject.Add(ParentRootGuid, ParentRoot);
+	ParentHelper->MapGuidToObject.Add(InstanceRootGuid, InstanceRoot);
+	ParentHelper->MapGuidToObject.Add(ExtraWidgetGuid, ExtraWidget);
+
+	FLexUISubPrefabData InstanceData;
+	InstanceData.PrefabAsset = SubPrefab;
+	InstanceData.OverallVersionMD5 = TEXT("unaccepted-version");
+	InstanceData.MapGuidToObject.Add(SourceRootGuid, InstanceRoot);
+	InstanceData.MapGuidToObject.Add(MissingSourceGuid, ExtraWidget);
+	InstanceData.MapObjectGuidFromParentPrefabToSubPrefab.Add(InstanceRootGuid, SourceRootGuid);
+	InstanceData.MapObjectGuidFromParentPrefabToSubPrefab.Add(ExtraWidgetGuid, MissingSourceGuid);
+	ParentHelper->SubPrefabMap.Add(InstanceRoot, MoveTemp(InstanceData));
+
+	AddExpectedError(TEXT("PrefabAsset is null"), EAutomationExpectedErrorFlags::Contains, 1);
+	AddExpectedError(TEXT("the refresh remains dirty for retry"), EAutomationExpectedErrorFlags::Contains, 1);
+	TestFalse(TEXT("Refresh reports the parent save failure"),
+		ParentHelper->RefreshOnSubPrefabDirty(SubPrefab, InstanceRoot));
+	TestTrue(TEXT("Failed refresh remains dirty"), ParentHelper->GetAnythingDirty());
+	const FLexUISubPrefabData* RefreshedData = ParentHelper->SubPrefabMap.Find(InstanceRoot);
+	TestTrue(TEXT("Failed refresh keeps the previous accepted version"),
+		RefreshedData && RefreshedData->OverallVersionMD5 == TEXT("unaccepted-version"));
+
+	ParentHelper->ClearLoadedPrefab();
+	SubPrefabHelper->ClearLoadedPrefab();
+	SubPrefab->ClearPrefabInstanceScene();
+	World->DestroyWorld(false);
 	return true;
 }
 

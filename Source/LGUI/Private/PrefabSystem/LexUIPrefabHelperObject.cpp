@@ -633,23 +633,41 @@ bool ULexUIPrefabHelperObject::RefreshOnSubPrefabDirty(ULexUIPrefab* InSubPrefab
 		}
 	}
 
+	bool bRefreshSucceeded = true;
 	if (AnythingChange)
 	{
-		this->SavePrefab();
-		if (this->PrefabAsset != nullptr)//could be null in level editor
+		bRefreshSucceeded = this->SavePrefab();
+		if (bRefreshSucceeded)
 		{
+			if (this->PrefabAsset != nullptr)//could be null in level editor
+			{
 #if WITH_EDITOR
-			this->PrefabAsset->bThumbnailDirty = true;
+				this->PrefabAsset->bThumbnailDirty = true;
 #endif
-			this->PrefabAsset->MarkPackageDirty();
+				this->PrefabAsset->MarkPackageDirty();
+			}
+			ClearInvalidObjectAndGuid();//incase LevelPrefab reference invalid object, eg: delete object in sub-prefab's sub-prefab, and update the prefab in level
 		}
-		ClearInvalidObjectAndGuid();//incase LevelPrefab reference invalid object, eg: delete object in sub-prefab's sub-prefab, and update the prefab in level
+		else
+		{
+			bAnythingDirty = true;
+			if (IsValid(PrefabAsset))
+			{
+				PrefabAsset->MarkPackageDirty();
+			}
+			UE_LOG(LGUI, Error,
+				TEXT("Failed to save parent prefab '%s' after refreshing sub-prefab '%s'; the refresh remains dirty for retry."),
+				*GetNameSafe(PrefabAsset), *GetNameSafe(InSubPrefab));
+		}
 	}
-	RefreshSubPrefabVersion(InSubPrefabRootWidget);
+	if (bRefreshSucceeded)
+	{
+		RefreshSubPrefabVersion(InSubPrefabRootWidget);
+	}
 	bCanCollectProperty = true;
 	bCanNotifyComponentCreateDelete = true;
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
-	return AnythingChange;
+	return AnythingChange && bRefreshSucceeded;
 }
 
 void ULexUIPrefabHelperObject::OnObjectPropertyChanged(UObject* InObject, struct FPropertyChangedEvent& InPropertyChangedEvent)
