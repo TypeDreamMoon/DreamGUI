@@ -1182,12 +1182,11 @@ void ULexUIPrefabHelperObject::RevertAllPrefabOverride(UObject* InObject)
 
 FName ULexUIPrefabHelperObject::GetExtraRelatedPropertyForApplyOrRevert(UObject* InObject, FName InPropertyName)
 {
-	if (InObject->IsA<ULexWidget>())
+	if (IsValid(InObject)
+		&& InObject->IsA<ULexWidget>()
+		&& InPropertyName == ULexWidget::GetPropertyName_RelativeLocation())
 	{
-		if (InPropertyName == ULexWidget::GetPropertyName_RelativeLocation())
-		{
-			InPropertyName = ULexWidget::GetPropertyName_AnchorData();
-		}
+		return ULexWidget::GetPropertyName_AnchorData();
 	}
 	return NAME_None;
 }

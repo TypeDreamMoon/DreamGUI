@@ -35,6 +35,36 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	"LGUI.Prefab.CycleTraversalIsBounded",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexUIPrefabRelatedAnchorPropertyTest,
+	"LGUI.Prefab.RelativeLocationIncludesAnchorData",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexUIPrefabRelatedAnchorPropertyTest::RunTest(const FString& Parameters)
+{
+	ULexUIPrefabHelperObject* Helper = NewObject<ULexUIPrefabHelperObject>();
+	ULexWidget* Widget = NewObject<ULexWidget>();
+	UObject* PlainObject = NewObject<UObject>();
+	if (!Helper || !Widget || !PlainObject)
+	{
+		return false;
+	}
+
+	TestEqual(TEXT("Relative location includes anchor data"),
+		Helper->GetExtraRelatedPropertyForApplyOrRevert(
+			Widget, ULexWidget::GetPropertyName_RelativeLocation()),
+		ULexWidget::GetPropertyName_AnchorData());
+	TestEqual(TEXT("Unrelated widget properties have no companion"),
+		Helper->GetExtraRelatedPropertyForApplyOrRevert(
+			Widget, ULexWidget::GetPropertyName_RelativeRotation()),
+		NAME_None);
+	TestEqual(TEXT("Non-widget objects have no anchor companion"),
+		Helper->GetExtraRelatedPropertyForApplyOrRevert(
+			PlainObject, ULexWidget::GetPropertyName_RelativeLocation()),
+		NAME_None);
+	return true;
+}
+
 bool FLexUIPrefabUnsupportedCookVersionTest::RunTest(const FString& Parameters)
 {
 	ULexUIPrefab* Prefab = NewObject<ULexUIPrefab>();
