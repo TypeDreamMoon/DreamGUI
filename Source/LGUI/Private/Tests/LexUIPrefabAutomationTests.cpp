@@ -45,6 +45,11 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	"LGUI.Prefab.RefreshSaveFailureKeepsVersion",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexUIPrefabLevelHelperDirtyStateTest,
+	"LGUI.Prefab.LevelHelperDirtyState",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
 bool FLexUIPrefabRelatedAnchorPropertyTest::RunTest(const FString& Parameters)
 {
 	ULexUIPrefabHelperObject* Helper = NewObject<ULexUIPrefabHelperObject>();
@@ -140,6 +145,20 @@ bool FLexUIPrefabRefreshSaveFailureTest::RunTest(const FString& Parameters)
 	SubPrefabHelper->ClearLoadedPrefab();
 	SubPrefab->ClearPrefabInstanceScene();
 	World->DestroyWorld(false);
+	return true;
+}
+
+bool FLexUIPrefabLevelHelperDirtyStateTest::RunTest(const FString& Parameters)
+{
+	ULexUIPrefabHelperObject* Helper = NewObject<ULexUIPrefabHelperObject>();
+	if (!Helper)
+	{
+		return false;
+	}
+
+	TestNull(TEXT("Level-prefab helper has no asset"), Helper->PrefabAsset.Get());
+	Helper->SetAnythingDirty();
+	TestTrue(TEXT("Level-prefab helper still records dirty state"), Helper->GetAnythingDirty());
 	return true;
 }
 

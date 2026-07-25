@@ -1753,7 +1753,10 @@ bool ULexUIPrefabHelperObject::GetAnythingDirty()const
 void ULexUIPrefabHelperObject::SetAnythingDirty()
 {
 	bAnythingDirty = true;
-	PrefabAsset->MarkPackageDirty();
+	if (IsValid(PrefabAsset))
+	{
+		PrefabAsset->MarkPackageDirty();
+	}
 }
 
 #if WITH_EDITOR
