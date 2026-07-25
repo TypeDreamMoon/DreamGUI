@@ -24,6 +24,21 @@
 
 namespace
 {
+	void RemovePanelSlotFromChild(ULexWidget* ChildWidget)
+	{
+		if (!IsValid(ChildWidget) || !IsValid(ChildWidget->GetPanelSlot()))
+		{
+			return;
+		}
+#if WITH_EDITOR
+		if (const UWorld* World = ChildWidget->GetWorld(); !World || !World->IsGameWorld())
+		{
+			ChildWidget->Modify();
+		}
+#endif
+		ChildWidget->RemovePanelSlot();
+	}
+
 	bool EnsurePanelSlotForChild(ULexWidget* ParentWidget, ULexWidget* ChildWidget, bool bRecaptureDesiredSize = false)
 	{
 		if (!IsValid(ParentWidget) || !IsValid(ChildWidget)
@@ -60,6 +75,20 @@ namespace
 			NewSlot->CaptureAuthoredGeometry(bRecaptureDesiredSize);
 		}
 		return IsValid(NewSlot);
+	}
+
+	void SynchronizePanelSlotForParent(ULexWidget* ParentWidget, ULexWidget* ChildWidget,
+		bool bRecaptureDesiredSize = false)
+	{
+		if (IsValid(ParentWidget)
+			&& IsValid(Cast<ULexPanelLayoutBase>(ParentWidget->GetLayoutContainer())))
+		{
+			EnsurePanelSlotForChild(ParentWidget, ChildWidget, bRecaptureDesiredSize);
+		}
+		else
+		{
+			RemovePanelSlotFromChild(ChildWidget);
+		}
 	}
 }
 
@@ -1455,6 +1484,7 @@ bool ULexWidget::TrySetParentInternal(ULexWidget* InParent, bool InKeepWorldPosi
 			{
 				SetSiblingIndex(InSiblingIndex);
 			}
+			SynchronizePanelSlotForParent(InParent, this, true);
 			return true;
 		}
 		if (InParent->IsChildOf(this))return false;
@@ -1498,10 +1528,7 @@ bool ULexWidget::TrySetParentInternal(ULexWidget* InParent, bool InKeepWorldPosi
 		}
 		this->CalculateObjectToWorldTransform();
 		this->OnAttachedToParent();
-		if (bIsRegistered)
-		{
-			EnsurePanelSlotForChild(InParent, this, true);
-		}
+		SynchronizePanelSlotForParent(InParent, this, true);
 		InParent->OnChildAttached(this);
 		return true;
 	}
@@ -1512,11 +1539,7 @@ bool ULexWidget::TrySetParentInternal(ULexWidget* InParent, bool InKeepWorldPosi
 		const FTransform OldObjectToWorldTransform = this->GetWorldTransform();
 		const FVector PreviousAuthoredScale = RelativeScale;
 		const FVector2f PreviousLayoutScale = LayoutScale;
-		if (IsValid(PanelSlot))
-		{
-			PanelSlot->RestoreAuthoredGeometry();
-			PanelSlot->InvalidateAuthoredGeometry();
-		}
+		RemovePanelSlotFromChild(this);
 		SetLayoutVisibilitySuppressed(false);
 		SetLayoutScale(FVector2f::UnitVector);
 		const FVector PreviousRelativeLocation = RelativeLocation;
@@ -3945,6 +3968,23 @@ ULexLayoutContainer* ULexWidget::CreateNewLayoutContainer(TSubclassOf<ULexLayout
 	{
 		return nullptr;
 	}
+	const ULexLayoutContainer* RequestedLayoutDefault = Cast<ULexLayoutContainer>(RequestedClass->GetDefaultObject());
+	if (IsValid(RequestedLayoutDefault))
+	{
+		const int32 MaxChildren = RequestedLayoutDefault->GetMaxChildren();
+		if (MaxChildren >= 0)
+		{
+			int32 ValidChildCount = 0;
+			for (const ULexWidget* Child : Children)
+			{
+				ValidChildCount += IsValid(Child) ? 1 : 0;
+			}
+			if (ValidChildCount > MaxChildren)
+			{
+				return nullptr;
+			}
+		}
+	}
 	auto OldLayout = LayoutContainer;
 	auto NewLayout = NewObject<ULexLayoutContainer>(this, RequestedClass, NAME_None, RF_Public | RF_Transactional);
 	if (!IsValid(NewLayout))
@@ -3994,6 +4034,13 @@ ULexLayoutContainer* ULexWidget::CreateNewLayoutContainer(TSubclassOf<ULexLayout
 			}
 		}
 	}
+	else
+	{
+		for (ULexWidget* Child : Children)
+		{
+			RemovePanelSlotFromChild(Child);
+		}
+	}
 	MarkLayoutForRebuild(this);
 	MarkDimensionChanged(false, true, true);//change LayoutContainer could cause LayoutSelf size change
 	if (auto LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(GetWorld()))
@@ -4015,6 +4062,10 @@ void ULexWidget::RemoveLayoutContainer()
 			OldLayout->EndPlay();
 		}
 		OldLayout->Call_OnUnregister();
+	}
+	for (ULexWidget* Child : Children)
+	{
+		RemovePanelSlotFromChild(Child);
 	}
 	MarkLayoutForRebuild(this);
 	MarkDimensionChanged(false, true, true);

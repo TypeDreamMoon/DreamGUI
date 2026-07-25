@@ -2,6 +2,7 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "Core/Components/LexLayoutContainerFlexBox.h"
 #include "Core/Components/LexPanelLayouts.h"
 #include "Core/Components/LexPanelSlot.h"
 #include "Core/Components/LexWidget.h"
@@ -122,9 +123,23 @@ bool FLexPanelModeTransitionContractsTest::RunTest(const FString& Parameters)
 	const FVector2D AuthoredSize = Child->GetSize();
 	Slot->SetHorizontalAlignment(ELexPanelHorizontalAlignment::Left);
 	Slot->SetVerticalAlignment(ELexPanelVerticalAlignment::Top);
+	TestTrue(TEXT("An unregistered child joins an existing panel"), RejectedChild->TrySetParent(Root, false));
+	ULexPanelSlot* RejectedSlot = RejectedChild->GetPanelSlot();
+	TestNotNull(TEXT("Joining an existing panel creates a slot immediately"), RejectedSlot);
+	TestNull(TEXT("An over-capacity panel replacement is rejected atomically"),
+		Root->CreateNewLayoutContainer<ULexLayoutContainerSizeBox>());
+	TestTrue(TEXT("Rejected replacement preserves the old layout"), Root->GetLayoutContainer() == Horizontal);
+	TestEqual(TEXT("Rejected replacement preserves the child hierarchy"), Root->GetChildrenCount(), 2);
+	TestTrue(TEXT("Rejected replacement preserves the first slot"), Child->GetPanelSlot() == Slot);
+	TestTrue(TEXT("Rejected replacement preserves the second slot"), RejectedChild->GetPanelSlot() == RejectedSlot);
+
+	ULexWidget* PlainParent = NewObject<ULexWidget>();
+	TestTrue(TEXT("A panel child can move to a non-panel parent"), RejectedChild->TrySetParent(PlainParent, false));
+	TestNull(TEXT("Moving to a non-panel parent removes the old slot immediately"), RejectedChild->GetPanelSlot());
 
 	ULexLayoutContainerScaleBox* ScaleBox = Root->CreateNewLayoutContainer<ULexLayoutContainerScaleBox>();
 	TestNotNull(TEXT("ScaleBox transition succeeds"), ScaleBox);
+	TestTrue(TEXT("Panel-to-panel transition preserves the slot object"), Child->GetPanelSlot() == Slot);
 	TestEqual(TEXT("First ScaleBox transition uses centered horizontal alignment"),
 		Slot->HorizontalAlignment, ELexPanelHorizontalAlignment::Center);
 	TestEqual(TEXT("First ScaleBox transition uses centered vertical alignment"),
@@ -142,7 +157,19 @@ bool FLexPanelModeTransitionContractsTest::RunTest(const FString& Parameters)
 
 	CastChecked<ULexPanelLayoutBase>(Root->GetLayoutContainer())->SnapshotLayout();
 	Root->GetLayoutContainer()->CalculateLayout();
+	TestNotNull(TEXT("Panel-to-legacy transition succeeds"),
+		Root->CreateNewLayoutContainer<ULexLayoutContainerFlexBox>());
+	TestNull(TEXT("Panel-to-legacy transition removes the panel slot immediately"), Child->GetPanelSlot());
+	TestEqual(TEXT("Panel-to-legacy transition restores the authored position"), Child->GetAnchoredPosition(), AuthoredPosition);
+	TestEqual(TEXT("Panel-to-legacy transition restores the authored size"), Child->GetSize(), AuthoredSize);
+
+	TestNotNull(TEXT("A panel can be created again after legacy layout"),
+		Root->CreateNewLayoutContainer<ULexLayoutContainerHorizontalBox>());
+	TestNotNull(TEXT("Returning to a panel creates a fresh slot"), Child->GetPanelSlot());
+	CastChecked<ULexPanelLayoutBase>(Root->GetLayoutContainer())->SnapshotLayout();
+	Root->GetLayoutContainer()->CalculateLayout();
 	Root->RemoveLayoutContainer();
+	TestNull(TEXT("Removing a panel removes the child slot immediately"), Child->GetPanelSlot());
 	TestEqual(TEXT("Removing a panel restores the authored position"), Child->GetAnchoredPosition(), AuthoredPosition);
 	TestEqual(TEXT("Removing a panel restores the authored size"), Child->GetSize(), AuthoredSize);
 	return true;
