@@ -55,6 +55,11 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	"LGUI.Prefab.UnknownVersionTargetRejected",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexUIPrefabNestedObjectMappingTest,
+	"LGUI.Prefab.NestedObjectMappingValidation",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
 bool FLexUIPrefabRelatedAnchorPropertyTest::RunTest(const FString& Parameters)
 {
 	ULexUIPrefabHelperObject* Helper = NewObject<ULexUIPrefabHelperObject>();
@@ -186,6 +191,71 @@ bool FLexUIPrefabUnknownVersionTargetTest::RunTest(const FString& Parameters)
 	const FLexUISubPrefabData* StoredData = Helper->SubPrefabMap.Find(UnknownRoot);
 	TestTrue(TEXT("Invalid prefab asset leaves the accepted version unchanged"),
 		StoredData && StoredData->OverallVersionMD5 == TEXT("unchanged-version"));
+	return true;
+}
+
+bool FLexUIPrefabNestedObjectMappingTest::RunTest(const FString& Parameters)
+{
+	ULexUIPrefab* SourcePrefab = NewObject<ULexUIPrefab>();
+	ULexWidget* SeedSourceWidget = NewObject<ULexWidget>();
+	ULexPanelSlot* SeedSourceSlot = SeedSourceWidget
+		? SeedSourceWidget->CreateNewPanelSlot<ULexPanelSlot>()
+		: nullptr;
+	if (!SourcePrefab || !SeedSourceWidget || !SeedSourceSlot)
+	{
+		return false;
+	}
+
+	const FGuid SourceRootGuid = FGuid::NewGuid();
+	const FGuid SourceSlotGuid = FGuid::NewGuid();
+	TMap<UObject*, FGuid> SourceObjectToGuid;
+	SourceObjectToGuid.Add(SeedSourceWidget, SourceRootGuid);
+	SourceObjectToGuid.Add(SeedSourceSlot, SourceSlotGuid);
+	TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> EmptySubPrefabs;
+	TestTrue(TEXT("Nested-reference source prefab is serialized"),
+		LexUIPrefabSystem::WidgetSerializer::SavePrefab(
+			SeedSourceWidget, SourcePrefab, SourceObjectToGuid, EmptySubPrefabs, true));
+
+	ULexUIPrefabHelperObject* SourceHelper = SourcePrefab->GetPrefabHelperObject();
+	ULexWidget* SourceWidget = SourceHelper ? SourceHelper->LoadedRootWidget.Get() : nullptr;
+	ULexPanelSlot* SourceSlot = SourceWidget ? SourceWidget->GetPanelSlot() : nullptr;
+	ULexUIPrefabHelperObject* ParentHelper = NewObject<ULexUIPrefabHelperObject>();
+	ULexWidget* ParentWidget = NewObject<ULexWidget>();
+	ULexPanelSlot* ParentSlot = ParentWidget
+		? ParentWidget->CreateNewPanelSlot<ULexPanelSlot>()
+		: nullptr;
+	FProperty* PanelSlotProperty = FindFProperty<FProperty>(ULexWidget::StaticClass(), TEXT("PanelSlot"));
+	if (!SourceHelper || !SourceWidget || !SourceSlot || !ParentHelper || !ParentWidget || !ParentSlot || !PanelSlotProperty)
+	{
+		SourcePrefab->ClearPrefabInstanceScene();
+		return false;
+	}
+
+	const FGuid ParentSlotGuid = FGuid::NewGuid();
+	FLexUISubPrefabData SubPrefabData;
+	SubPrefabData.PrefabAsset = SourcePrefab;
+	SubPrefabData.MapObjectGuidFromParentPrefabToSubPrefab.Add(ParentSlotGuid, SourceSlotGuid);
+
+	AddExpectedError(TEXT("parent object mapping is missing"), EAutomationExpectedErrorFlags::Contains, 1);
+	ParentHelper->RevertPrefabPropertyValue(
+		ParentWidget, PanelSlotProperty, ParentWidget, SourceWidget, SubPrefabData);
+	TestEqual(TEXT("Revert keeps the existing slot when the parent mapping is stale"),
+		ParentWidget->GetPanelSlot(), ParentSlot);
+	TestFalse(TEXT("Revert does not insert an empty parent mapping"),
+		ParentHelper->MapGuidToObject.Contains(ParentSlotGuid));
+
+	ParentHelper->MapGuidToObject.Add(ParentSlotGuid, ParentSlot);
+	SourceHelper->MapGuidToObject.Remove(SourceSlotGuid);
+	AddExpectedError(TEXT("source object mapping is missing"), EAutomationExpectedErrorFlags::Contains, 1);
+	ParentHelper->ApplyPrefabPropertyValue(
+		SourceWidget, PanelSlotProperty, ParentWidget, SourceWidget, SubPrefabData);
+	TestEqual(TEXT("Apply keeps the existing slot when the source mapping is stale"),
+		SourceWidget->GetPanelSlot(), SourceSlot);
+	TestFalse(TEXT("Apply does not insert an empty source mapping"),
+		SourceHelper->MapGuidToObject.Contains(SourceSlotGuid));
+
+	SourceHelper->ClearLoadedPrefab();
+	SourcePrefab->ClearPrefabInstanceScene();
 	return true;
 }
 

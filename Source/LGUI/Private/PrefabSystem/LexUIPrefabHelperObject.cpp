@@ -904,13 +904,23 @@ void ULexUIPrefabHelperObject::RevertPrefabPropertyValue(UObject* ContextObject,
 				}
 				if (ObjectGuidInParent.IsValid())
 				{
-					auto ObjectInParent = this->MapGuidToObject[ObjectGuidInParent];
+					const TObjectPtr<UObject>* ObjectInParentPtr = this->MapGuidToObject.Find(ObjectGuidInParent);
+					UObject* ObjectInParent = ObjectInParentPtr ? ObjectInParentPtr->Get() : nullptr;
 					if (ObjectClass->IsChildOf(ULexWidget::StaticClass())
 						|| ObjectClass->IsChildOf(ULexWidgetSubObjectBehaviour::StaticClass())
 						|| ObjectClass->IsChildOf(ULexUIBehaviour::StaticClass())
 						)
 					{
-						ObjectProperty->SetObjectPropertyValue_InContainer(ContainerPointerInSrc, ObjectInParent, RawArrayIndex);
+						if (IsValid(ObjectInParent))
+						{
+							ObjectProperty->SetObjectPropertyValue_InContainer(ContainerPointerInSrc, ObjectInParent, RawArrayIndex);
+						}
+						else
+						{
+							UE_LOG(LGUI, Warning,
+								TEXT("Cannot revert nested prefab reference '%s' because its parent object mapping is missing."),
+								*Property->GetName());
+						}
 					}
 					else
 					{
@@ -922,12 +932,18 @@ void ULexUIPrefabHelperObject::RevertPrefabPropertyValue(UObject* ContextObject,
 							{
 								//EditInlineNew object can create new one
 								ObjectInParent = NewObject<UObject>(ContextObject, ObjectClass, NAME_None, RF_NoFlags, ObjectInPrefab);
-								ObjectProperty->SetObjectPropertyValue_InContainer(ContainerPointerInSrc, ObjectInParent, RawArrayIndex);
-								this->MapGuidToObject[ObjectGuidInParent] = ObjectInParent;
+								if (IsValid(ObjectInParent))
+								{
+									this->MapGuidToObject.Add(ObjectGuidInParent, ObjectInParent);
+								}
 							}
-							for (const auto PropertyItem : TFieldRange<FProperty>(ObjectClass))//check property inside object
+							if (IsValid(ObjectInParent))
 							{
-								RevertPrefabPropertyValue(ObjectInParent, PropertyItem, ObjectInParent, ObjectInPrefab, SubPrefabData);
+								ObjectProperty->SetObjectPropertyValue_InContainer(ContainerPointerInSrc, ObjectInParent, RawArrayIndex);
+								for (const auto PropertyItem : TFieldRange<FProperty>(ObjectClass))//check property inside object
+								{
+									RevertPrefabPropertyValue(ObjectInParent, PropertyItem, ObjectInParent, ObjectInPrefab, SubPrefabData);
+								}
 							}
 						}
 						else
@@ -1266,13 +1282,26 @@ void ULexUIPrefabHelperObject::ApplyPrefabPropertyValue(UObject* ContextObject, 
 				}
 				if (ObjectGuidInPrefab.IsValid())
 				{
-					auto ObjectInPrefab = SubPrefabData.PrefabAsset->GetPrefabHelperObject()->MapGuidToObject[ObjectGuidInPrefab];
+					ULexUIPrefabHelperObject* SubPrefabHelper = SubPrefabData.PrefabAsset->GetPrefabHelperObject();
+					const TObjectPtr<UObject>* ObjectInPrefabPtr = IsValid(SubPrefabHelper)
+						? SubPrefabHelper->MapGuidToObject.Find(ObjectGuidInPrefab)
+						: nullptr;
+					UObject* ObjectInPrefab = ObjectInPrefabPtr ? ObjectInPrefabPtr->Get() : nullptr;
 					if (ObjectClass->IsChildOf(ULexWidget::StaticClass())
 						|| ObjectClass->IsChildOf(ULexWidgetSubObjectBehaviour::StaticClass())
 						|| ObjectClass->IsChildOf(ULexUIBehaviour::StaticClass())
 						)
 					{
-						ObjectProperty->SetObjectPropertyValue_InContainer(ContainerPointerInPrefab, ObjectInPrefab, RawArrayIndex);
+						if (IsValid(ObjectInPrefab))
+						{
+							ObjectProperty->SetObjectPropertyValue_InContainer(ContainerPointerInPrefab, ObjectInPrefab, RawArrayIndex);
+						}
+						else
+						{
+							UE_LOG(LGUI, Warning,
+								TEXT("Cannot apply nested prefab reference '%s' because its source object mapping is missing."),
+								*Property->GetName());
+						}
 					}
 					else
 					{
@@ -1284,12 +1313,18 @@ void ULexUIPrefabHelperObject::ApplyPrefabPropertyValue(UObject* ContextObject, 
 							{
 								//EditInlineNew object can create new one
 								ObjectInPrefab = NewObject<UObject>(ContextObject, ObjectClass, NAME_None, RF_NoFlags, ObjectInParent);
-								ObjectProperty->SetObjectPropertyValue_InContainer(ContainerPointerInPrefab, ObjectInPrefab, RawArrayIndex);
-								SubPrefabData.PrefabAsset->GetPrefabHelperObject()->MapGuidToObject[ObjectGuidInPrefab] = ObjectInPrefab;
+								if (IsValid(ObjectInPrefab) && IsValid(SubPrefabHelper))
+								{
+									SubPrefabHelper->MapGuidToObject.Add(ObjectGuidInPrefab, ObjectInPrefab);
+								}
 							}
-							for (const auto PropertyItem : TFieldRange<FProperty>(ObjectClass))//check property inside object
+							if (IsValid(ObjectInPrefab))
 							{
-								ApplyPrefabPropertyValue(ObjectInPrefab, PropertyItem, ObjectInParent, ObjectInPrefab, SubPrefabData);
+								ObjectProperty->SetObjectPropertyValue_InContainer(ContainerPointerInPrefab, ObjectInPrefab, RawArrayIndex);
+								for (const auto PropertyItem : TFieldRange<FProperty>(ObjectClass))//check property inside object
+								{
+									ApplyPrefabPropertyValue(ObjectInPrefab, PropertyItem, ObjectInParent, ObjectInPrefab, SubPrefabData);
+								}
 							}
 						}
 						else
