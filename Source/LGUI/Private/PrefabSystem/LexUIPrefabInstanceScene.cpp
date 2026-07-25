@@ -88,8 +88,15 @@ ULexWidget* FLexUIPrefabInstanceScene::GetParentForLoadPrefab(ULexUIPrefab* InPr
 	if (InPrefab->GetIsPrefabVariant())
 	{
 		auto RootSubPrefab = InPrefab;
+		TSet<const ULexUIPrefab*> VisitedVariants;
 		while (RootSubPrefab->GetIsPrefabVariant())
 		{
+			if (VisitedVariants.Contains(RootSubPrefab))
+			{
+				UE_LOG(LGUI, Error, TEXT("Circular prefab variant reference detected while opening '%s'."), *InPrefab->GetPathName());
+				return nullptr;
+			}
+			VisitedVariants.Add(RootSubPrefab);
 			if (RootSubPrefab->ReferenceAssetList.Num() <= 0)
 			{
 				return nullptr;

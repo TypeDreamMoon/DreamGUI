@@ -18,6 +18,39 @@
 
 namespace LexUIPrefabSystem
 {
+	namespace WidgetSerializerLoadGuard
+	{
+		thread_local TArray<const ULexUIPrefab*> ActivePrefabs;
+
+		class FScopedPrefabLoad
+		{
+		public:
+			explicit FScopedPrefabLoad(const ULexUIPrefab* InPrefab)
+				: Prefab(InPrefab)
+				, bEntered(IsValid(InPrefab) && !ActivePrefabs.Contains(InPrefab))
+			{
+				if (bEntered)
+				{
+					ActivePrefabs.Add(InPrefab);
+				}
+			}
+
+			~FScopedPrefabLoad()
+			{
+				if (bEntered)
+				{
+					ActivePrefabs.RemoveSingleSwap(Prefab, EAllowShrinking::No);
+				}
+			}
+
+			bool WasEntered() const { return bEntered; }
+
+		private:
+			const ULexUIPrefab* Prefab = nullptr;
+			bool bEntered = false;
+		};
+	}
+
 	ULexWidget* WidgetSerializer::LoadPrefabWithExistingObjects(UWorld* InWorld, UObject* InOuter, ULexUIPrefab* InPrefab, ULexWidget* Parent
 		, TMap<FGuid, TObjectPtr<UObject>>& InOutMapGuidToObjects, TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& OutSubPrefabMap
 	)
@@ -324,6 +357,13 @@ namespace LexUIPrefabSystem
 	}
 	ULexWidget* WidgetSerializer::DeserializeWidget(ULexWidget* Parent, ULexUIPrefab* InPrefab, const TFunction<void()>& InCallbackBeforeDeserialize, bool ReplaceTransform, FVector InLocation, FQuat InRotation, FVector InScale)
 	{
+		WidgetSerializerLoadGuard::FScopedPrefabLoad LoadScope(InPrefab);
+		if (!LoadScope.WasEntered())
+		{
+			UE_LOG(LGUI, Error, TEXT("Circular prefab reference detected while loading '%s'."), *GetPathNameSafe(InPrefab));
+			return nullptr;
+		}
+
 		auto StartTime = FDateTime::Now();
 		PrefabAssetPath = InPrefab->GetPathName();
 #if WITH_EDITOR

@@ -780,27 +780,31 @@ ULexWidget* ULexUIPrefab::LoadPrefabWithExistingObjects(UWorld* InWorld, UObject
 
 bool ULexUIPrefab::IsPrefabBelongsToThisSubPrefab(ULexUIPrefab* InPrefab, bool InRecursive)
 {
-	EnsureInstanceObjects();
-	if (!PrefabHelperObject)return false;
-	if (this == InPrefab)return false;
-	for (auto& KeyValue : PrefabHelperObject->SubPrefabMap)
+	if (!IsValid(InPrefab) || this == InPrefab)return false;
+	TSet<const ULexUIPrefab*> VisitedPrefabs;
+	TFunction<bool(ULexUIPrefab*)> ContainsPrefab = [&](ULexUIPrefab* ParentPrefab)
 	{
-		if (KeyValue.Value.PrefabAsset == InPrefab)
+		if (!IsValid(ParentPrefab) || VisitedPrefabs.Contains(ParentPrefab))return false;
+		VisitedPrefabs.Add(ParentPrefab);
+		ParentPrefab->EnsureInstanceObjects();
+		if (!IsValid(ParentPrefab->PrefabHelperObject))return false;
+		for (const TPair<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& Pair : ParentPrefab->PrefabHelperObject->SubPrefabMap)
 		{
-			return true;
-		}
-	}
-	if (InRecursive)
-	{
-		for (auto& KeyValue : PrefabHelperObject->SubPrefabMap)
-		{
-			if (KeyValue.Value.PrefabAsset->IsPrefabBelongsToThisSubPrefab(InPrefab, InRecursive))
+			if (Pair.Value.PrefabAsset == InPrefab)
 			{
 				return true;
 			}
 		}
-	}
-	return false;
+		if (InRecursive)
+		{
+			for (const TPair<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& Pair : ParentPrefab->PrefabHelperObject->SubPrefabMap)
+			{
+				if (ContainsPrefab(Pair.Value.PrefabAsset.Get()))return true;
+			}
+		}
+		return false;
+	};
+	return ContainsPrefab(this);
 }
 
 void ULexUIPrefab::CopyDataTo(ULexUIPrefab* TargetPrefab)
@@ -827,20 +831,23 @@ FString ULexUIPrefab::GenerateOverallVersionMD5()
 {
 	struct LOCAL
 	{
-		static void CollectOverallPrefab(ULexUIPrefab* Parent, TArray<ULexUIPrefab*>& Collection)
+		static void CollectOverallPrefab(ULexUIPrefab* Parent, TArray<ULexUIPrefab*>& Collection, TSet<const ULexUIPrefab*>& VisitedPrefabs)
 		{
+			if (!IsValid(Parent) || VisitedPrefabs.Contains(Parent))return;
+			VisitedPrefabs.Add(Parent);
 			Collection.Add(Parent);
 			for (auto& Item : Parent->ReferenceAssetList)
 			{
 				if (auto SubPrefab = Cast<ULexUIPrefab>(Item))
 				{
-					CollectOverallPrefab(SubPrefab, Collection);
+					CollectOverallPrefab(SubPrefab, Collection, VisitedPrefabs);
 				}
 			}
 		}
 	};
 	TArray<ULexUIPrefab*> Collection;
-	LOCAL::CollectOverallPrefab(this, Collection);
+	TSet<const ULexUIPrefab*> VisitedPrefabs;
+	LOCAL::CollectOverallPrefab(this, Collection, VisitedPrefabs);
 	Collection.Sort([](const ULexUIPrefab& A, const ULexUIPrefab& B) {
 		return A.CreateTime > B.CreateTime;
 		});

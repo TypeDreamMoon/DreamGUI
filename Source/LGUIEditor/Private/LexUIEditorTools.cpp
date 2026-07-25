@@ -912,8 +912,13 @@ void FLexUIEditorTools::RefreshOnSubPrefabChange(ULexUIPrefab* InSubPrefab)
 	struct Local
 	{
 	public:
-		static void RefreshAllPrefabsOnSubPrefabChange(const TArray<ULexUIPrefab*>& InPrefabs, ULexUIPrefab* InSubPrefab)
+		static void RefreshAllPrefabsOnSubPrefabChange(
+			const TArray<ULexUIPrefab*>& InPrefabs,
+			ULexUIPrefab* InSubPrefab,
+			TSet<const ULexUIPrefab*>& VisitedPrefabs)
 		{
+			if (!IsValid(InSubPrefab) || VisitedPrefabs.Contains(InSubPrefab))return;
+			VisitedPrefabs.Add(InSubPrefab);
 			for (auto& Prefab : InPrefabs)
 			{
 				if (Prefab->IsPrefabBelongsToThisSubPrefab(InSubPrefab, false))
@@ -923,13 +928,14 @@ void FLexUIEditorTools::RefreshOnSubPrefabChange(ULexUIPrefab* InSubPrefab)
 					{
 						PrefabEditor->RefreshOnSubPrefabDirty(InSubPrefab);
 					}
-					RefreshAllPrefabsOnSubPrefabChange(InPrefabs, Prefab);
+					RefreshAllPrefabsOnSubPrefabChange(InPrefabs, Prefab, VisitedPrefabs);
 				}
 			}
 		}
 	};
 
-	Local::RefreshAllPrefabsOnSubPrefabChange(AllPrefabs, InSubPrefab);
+	TSet<const ULexUIPrefab*> VisitedPrefabs;
+	Local::RefreshAllPrefabsOnSubPrefabChange(AllPrefabs, InSubPrefab, VisitedPrefabs);
 }
 
 TArray<ULexUIPrefab*> FLexUIEditorTools::GetAllPrefabArray()

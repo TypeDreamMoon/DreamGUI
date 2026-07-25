@@ -29,6 +29,11 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	"LGUI.Prefab.InvalidOverrideMappingRejected",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexUIPrefabCycleTraversalTest,
+	"LGUI.Prefab.CycleTraversalIsBounded",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
 bool FLexUIPrefabUnsupportedCookVersionTest::RunTest(const FString& Parameters)
 {
 	ULexUIPrefab* Prefab = NewObject<ULexUIPrefab>();
@@ -97,6 +102,64 @@ bool FLexUIPrefabInvalidOverrideMappingTest::RunTest(const FString& Parameters)
 	AddExpectedError(TEXT("without an owning widget"), EAutomationExpectedErrorFlags::Contains, 2);
 	Helper->ApplyPrefabOverride(UnownedObject, {TEXT("MissingProperty")});
 	Helper->RevertPrefabOverride(UnownedObject, {TEXT("MissingProperty")});
+	return true;
+}
+
+bool FLexUIPrefabCycleTraversalTest::RunTest(const FString& Parameters)
+{
+	UWorld* SeedWorld = UWorld::CreateWorld(EWorldType::None, false);
+	ULexUIPrefab* PrefabA = NewObject<ULexUIPrefab>();
+	ULexUIPrefab* PrefabB = NewObject<ULexUIPrefab>();
+	ULexUIPrefab* UnrelatedPrefab = NewObject<ULexUIPrefab>();
+	ULexWidget* RootA = SeedWorld ? NewObject<ULexWidget>(SeedWorld, NAME_None, RF_Public | RF_Transactional) : nullptr;
+	ULexWidget* RootB = SeedWorld ? NewObject<ULexWidget>(SeedWorld, NAME_None, RF_Public | RF_Transactional) : nullptr;
+	if (!SeedWorld || !PrefabA || !PrefabB || !UnrelatedPrefab || !RootA || !RootB)
+	{
+		if (SeedWorld)
+		{
+			SeedWorld->DestroyWorld(false);
+		}
+		return false;
+	}
+
+	TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> EmptySubPrefabs;
+	TMap<UObject*, FGuid> ObjectToGuidA;
+	ObjectToGuidA.Add(RootA, FGuid::NewGuid());
+	TMap<UObject*, FGuid> ObjectToGuidB;
+	ObjectToGuidB.Add(RootB, FGuid::NewGuid());
+	if (!LexUIPrefabSystem::WidgetSerializer::SavePrefab(RootA, PrefabA, ObjectToGuidA, EmptySubPrefabs, true)
+		|| !LexUIPrefabSystem::WidgetSerializer::SavePrefab(RootB, PrefabB, ObjectToGuidB, EmptySubPrefabs, true))
+	{
+		SeedWorld->DestroyWorld(false);
+		return false;
+	}
+
+	ULexUIPrefabHelperObject* HelperA = PrefabA ? PrefabA->GetPrefabHelperObject() : nullptr;
+	ULexUIPrefabHelperObject* HelperB = PrefabB ? PrefabB->GetPrefabHelperObject() : nullptr;
+	if (!HelperA || !HelperB)
+	{
+		SeedWorld->DestroyWorld(false);
+		return false;
+	}
+
+	FLexUISubPrefabData DataForB;
+	DataForB.PrefabAsset = PrefabB;
+	FLexUISubPrefabData DataForA;
+	DataForA.PrefabAsset = PrefabA;
+	HelperA->SubPrefabMap.Add(NewObject<ULexWidget>(), MoveTemp(DataForB));
+	HelperB->SubPrefabMap.Add(NewObject<ULexWidget>(), MoveTemp(DataForA));
+	TestTrue(TEXT("Direct nested prefab is still detected"), PrefabA->IsPrefabBelongsToThisSubPrefab(PrefabB, true));
+	TestFalse(TEXT("Cycle traversal terminates for an unrelated prefab"), PrefabA->IsPrefabBelongsToThisSubPrefab(UnrelatedPrefab, true));
+
+	PrefabA->ReferenceAssetList.Add(PrefabB);
+	PrefabB->ReferenceAssetList.Add(PrefabA);
+	TestFalse(TEXT("Overall version generation terminates on a cycle"), PrefabA->GenerateOverallVersionMD5().IsEmpty());
+
+	HelperA->ClearLoadedPrefab();
+	HelperB->ClearLoadedPrefab();
+	PrefabA->ClearPrefabInstanceScene();
+	PrefabB->ClearPrefabInstanceScene();
+	SeedWorld->DestroyWorld(false);
 	return true;
 }
 
