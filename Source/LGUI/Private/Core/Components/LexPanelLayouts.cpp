@@ -637,6 +637,70 @@ FVector2f ULexPanelLayoutBase::GetLayoutPreferredSize()
 	return FVector2f(LexPanelLayoutLocal::NonNegative(Result.X), LexPanelLayoutLocal::NonNegative(Result.Y));
 }
 
+bool ULexPanelLayoutBase::GetLayoutDebugInfo(const ULexWidget* TargetWidget, FLexLayoutDebugInfo& OutInfo) const
+{
+	ULexWidget* Panel = GetWidget();
+	if (!IsValid(TargetWidget) || !IsValid(Panel))
+	{
+		return false;
+	}
+	if (TargetWidget == Panel)
+	{
+		if (!Super::GetLayoutDebugInfo(TargetWidget, OutInfo))
+		{
+			return false;
+		}
+		OutInfo.DesiredSize = FVector2D(MeasureLayout());
+		OutInfo.Algorithm = FString::Printf(TEXT("UMG Compatible / %s"), *GetClass()->GetDisplayNameText().ToString());
+		OutInfo.SlotRule = TEXT("Panel root");
+		return true;
+	}
+	if (!Panel->GetChildren().Contains(const_cast<ULexWidget*>(TargetWidget)))
+	{
+		return false;
+	}
+
+	const ULexPanelSlot* Slot = GetSlot(TargetWidget);
+	OutInfo = FLexLayoutDebugInfo();
+	OutInfo.Widget = const_cast<ULexWidget*>(TargetWidget);
+	OutInfo.DesiredSize = GetDesiredSize(const_cast<ULexWidget*>(TargetWidget));
+	OutInfo.ArrangedPosition = TargetWidget->GetAnchoredPosition();
+	OutInfo.ArrangedSize = TargetWidget->GetSize();
+	OutInfo.AuthoredSize = Slot->HasAuthoredGeometry()
+		? FVector2D(Slot->GetAuthoredDesiredSizeFallback()) : OutInfo.ArrangedSize;
+	OutInfo.ContentBounds = Panel->GetSize();
+	OutInfo.Algorithm = FString::Printf(TEXT("UMG Compatible / %s"), *GetClass()->GetDisplayNameText().ToString());
+
+	auto EnumDisplayName = [](const UEnum* Enum, int64 Value)
+	{
+		return Enum ? Enum->GetDisplayNameTextByValue(Value).ToString() : FString(TEXT("Unknown"));
+	};
+	const FString SizeRule = EnumDisplayName(StaticEnum<ELexPanelSizeRule>(), static_cast<int64>(Slot->SizeRule));
+	const FString Horizontal = EnumDisplayName(StaticEnum<ELexPanelHorizontalAlignment>(), static_cast<int64>(Slot->HorizontalAlignment));
+	const FString Vertical = EnumDisplayName(StaticEnum<ELexPanelVerticalAlignment>(), static_cast<int64>(Slot->VerticalAlignment));
+	OutInfo.SlotRule = FString::Printf(TEXT("%s %.2f | H:%s V:%s | Pad %.0f,%.0f,%.0f,%.0f"),
+		*SizeRule, Slot->FillWeight, *Horizontal, *Vertical,
+		Slot->Padding.Left, Slot->Padding.Top, Slot->Padding.Right, Slot->Padding.Bottom);
+
+	const FLexLayoutControlAnchorData Control = GetLayoutControlAnchor(TargetWidget);
+	auto DescribeAxes = [](bool bX, bool bY, const TCHAR* Controlled, const TCHAR* Authored)
+	{
+		if (bX && bY) return FString::Printf(TEXT("%s X+Y"), Controlled);
+		if (bX) return FString::Printf(TEXT("%s X / %s Y"), Controlled, Authored);
+		if (bY) return FString::Printf(TEXT("%s Y / %s X"), Controlled, Authored);
+		return FString::Printf(TEXT("%s X+Y"), Authored);
+	};
+	OutInfo.PositionOwner = DescribeAxes(Control.bCanControlHorizontalPosition, Control.bCanControlVerticalPosition,
+		TEXT("Panel"), TEXT("Anchors"));
+	OutInfo.SizeOwner = DescribeAxes(Control.bCanControlHorizontalSize, Control.bCanControlVerticalSize,
+		TEXT("Panel"), TEXT("Authored"));
+	if (const UEnum* ClippingEnum = StaticEnum<ELexWidgetClipping>())
+	{
+		OutInfo.Clipping = ClippingEnum->GetDisplayNameTextByValue(static_cast<int64>(TargetWidget->GetClipping())).ToString();
+	}
+	return true;
+}
+
 void ULexPanelLayoutBase::OnUnregister()
 {
 	if (ULexWidget* Panel = GetWidget(); IsValid(Panel))

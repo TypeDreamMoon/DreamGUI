@@ -103,6 +103,7 @@ public:
 	bool HasAuthoredGeometry() const { return bHasAuthoredGeometry; }
 	bool HasLayoutGeometryApplied() const { return bLayoutGeometryApplied; }
 	FVector2f GetAuthoredDesiredSizeFallback() const { return AuthoredDesiredSizeFallback; }
+	uint8 GetLayoutGeometryControlMask() const { return LayoutGeometryControlMask; }
 
 #if WITH_EDITOR
 	/** Keep the cached authored rect in sync after a user edits the widget transform. */

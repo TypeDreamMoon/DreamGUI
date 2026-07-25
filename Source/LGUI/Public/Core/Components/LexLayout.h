@@ -53,6 +53,36 @@ struct FLexLayoutControlAnchorData
 	}
 };
 
+/** Read-only snapshot used by editor layout diagnostics. */
+USTRUCT(BlueprintType)
+struct LGUI_API FLexLayoutDebugInfo
+{
+	GENERATED_BODY()
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Layout Debug")
+	TObjectPtr<ULexWidget> Widget = nullptr;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Layout Debug")
+	FVector2D DesiredSize = FVector2D::ZeroVector;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Layout Debug")
+	FVector2D ArrangedPosition = FVector2D::ZeroVector;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Layout Debug")
+	FVector2D ArrangedSize = FVector2D::ZeroVector;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Layout Debug")
+	FVector2D AuthoredSize = FVector2D::ZeroVector;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Layout Debug")
+	FVector2D ContentBounds = FVector2D::ZeroVector;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Layout Debug")
+	FString Algorithm;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Layout Debug")
+	FString SlotRule;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Layout Debug")
+	FString PositionOwner;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Layout Debug")
+	FString SizeOwner;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Layout Debug")
+	FString Clipping;
+};
+
 UCLASS(Abstract, DefaultToInstanced, EditInlineNew)
 class LGUI_API ULexLayout : public ULexWidgetSubObjectBehaviour
 {
@@ -153,6 +183,7 @@ class LGUI_API ULexLayoutContainer : public ULexLayout
 	GENERATED_BODY()
 public:
 	ULexLayoutContainer();
+	virtual bool GetLayoutDebugInfo(const ULexWidget* TargetWidget, FLexLayoutDebugInfo& OutInfo) const;
 protected:
 	UPROPERTY(EditAnywhere, Category = "LayoutContainer")
 	bool bUseAnimation = false;

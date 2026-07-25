@@ -40,6 +40,14 @@ enum class ELexUIRendererMSAASampleCount :uint8
 	Eight = 8		UMETA(DisplayName = "8x MSAA"),
 };
 
+/** Selects which layout family the editor presents as the project's primary workflow. */
+UENUM(BlueprintType)
+enum class ELexUILayoutMode : uint8
+{
+	LegacyLGUI UMETA(DisplayName = "Legacy LGUI"),
+	UMGCompatible UMETA(DisplayName = "UMG Compatible"),
+};
+
 USTRUCT(BlueprintType)
 struct LGUI_API FLexUIAtlasSettings
 {
@@ -66,6 +74,13 @@ class LGUI_API ULexUISettings :public UObject
 {
 	GENERATED_BODY()
 public:
+	/**
+	 * Legacy LGUI uses the original FlexBox/Grid components. UMG Compatible uses the
+	 * Panel/PanelSlot family and follows UE's Slate/UMG measure and arrange rules.
+	 */
+	UPROPERTY(EditAnywhere, config, Category = "Layout", meta = (ConfigRestartRequired = true))
+	ELexUILayoutMode LayoutMode = ELexUILayoutMode::LegacyLGUI;
+
 	/** default atlas setting */
 	UPROPERTY(EditAnywhere, config, Category = Sprite)
 		FLexUIAtlasSettings DefaultAtlasSetting;
@@ -132,6 +147,7 @@ public:
 	static TextureFilter GetAtlasTextureFilter(const FName& InPackingTag);
 	static const TMap<FName, FLexUIAtlasSettings>& GetAllAtlasSettings();
 	static float GetAutoBatchThreshold();
+	static ELexUILayoutMode GetLayoutMode();
 	static int32 ConvertAtlasTextureSizeTypeToSize(const ELexUIAtlasTextureSizeType& InType);
 	static int32 GetPriorityInSceneViewExtension();
 private:
@@ -159,6 +175,10 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, config, Category = "LGUI Editor")
 		bool bDrawHelperFrame = true;
+
+	/** Show selected widget measurement, arrangement, slot, ownership, and clipping diagnostics. */
+	UPROPERTY(EditAnywhere, config, Category = "LGUI Editor|Layout")
+		bool bShowLayoutDebugVisualization = false;
 
 	/**
 	 * Draw navigation visualizer

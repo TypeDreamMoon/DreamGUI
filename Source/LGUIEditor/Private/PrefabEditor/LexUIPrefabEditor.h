@@ -132,6 +132,8 @@ public:
 	void SetDesignerGridSize(float GridSize);
 	bool GetShowDesignerGuides() const;
 	void ToggleDesignerGuides();
+	bool GetShowLayoutDebug() const;
+	void ToggleLayoutDebug();
 	float SnapDesignerValue(float Value) const;
 	TSharedPtr<SWidget> BuildWidgetContextMenu();
 

@@ -71,6 +71,10 @@ float ULexUISettings::GetAutoBatchThreshold()
 	return GetDefault<ULexUISettings>()->AutoBatchThreshold;
 #endif
 }
+ELexUILayoutMode ULexUISettings::GetLayoutMode()
+{
+	return GetDefault<ULexUISettings>()->LayoutMode;
+}
 int32 ULexUISettings::ConvertAtlasTextureSizeTypeToSize(const ELexUIAtlasTextureSizeType& InType)
 {
 	return 1 << ((int32)InType + 8);

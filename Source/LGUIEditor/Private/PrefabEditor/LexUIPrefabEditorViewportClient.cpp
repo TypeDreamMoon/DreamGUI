@@ -29,6 +29,7 @@
 #include "LexUIPrefabViewportClickHandlers.h"
 #include "Core/LexUIManager.h"
 #include "Core/Components/LexCanvas.h"
+#include "Core/Components/LexLayout.h"
 #include "Core/Components/LexWidget.h"
 #include "PrefabSystem/PrefabAnimation/LexUIPrefabSequence.h"
 #include "PrefabAnimation/LexUIPrefabSequenceEditor.h"
@@ -1247,6 +1248,7 @@ void FLexUIPrefabEditorViewportClient::DrawDesignerOverlay(FViewport& InViewport
 {
 	if (!IsOrtho())return;
 	DrawDesignerCanvasBoundary(InViewport, View, Canvas);
+	DrawLayoutDebugOverlay(InViewport, Canvas);
 	if (PaletteDropPreviewWidget.IsValid())
 	{
 		DrawWidgetScreenOutline(PaletteDropPreviewWidget.Get(), View, Canvas, FLinearColor(1.0f, 0.55f, 0.05f), 2.0f);
@@ -1298,6 +1300,86 @@ void FLexUIPrefabEditorViewportClient::DrawDesignerOverlay(FViewport& InViewport
 			Guide.SetColor(FLinearColor(1.0f, 0.25f, 0.65f, 0.9f));
 			Canvas.DrawItem(Guide);
 		}
+	}
+}
+
+void FLexUIPrefabEditorViewportClient::DrawLayoutDebugOverlay(FViewport& InViewport, FCanvas& Canvas) const
+{
+	const TSharedPtr<FLexUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+	if (!Editor.IsValid() || !Editor->GetShowLayoutDebug() || Editor->GetSelectedWidgets().Num() != 1)
+	{
+		return;
+	}
+
+	ULexWidget* SelectedWidget = Editor->GetSelectedWidgets()[0].Get();
+	if (!IsValid(SelectedWidget))
+	{
+		return;
+	}
+	ULexLayoutContainer* Layout = nullptr;
+	if (ULexWidget* Parent = SelectedWidget->GetParent(); IsValid(Parent))
+	{
+		Layout = Parent->GetLayoutContainer();
+	}
+	if (!IsValid(Layout))
+	{
+		Layout = SelectedWidget->GetLayoutContainer();
+	}
+	FLexLayoutDebugInfo Info;
+	if (!IsValid(Layout) || !Layout->GetLayoutDebugInfo(SelectedWidget, Info))
+	{
+		return;
+	}
+
+	auto SizeLine = [](const TCHAR* Label, const FVector2D& Value)
+	{
+		return FString::Printf(TEXT("%s %.1f x %.1f"), Label, Value.X, Value.Y);
+	};
+	auto Compact = [](const FString& Value)
+	{
+		return Value.Len() > 76 ? Value.Left(73) + TEXT("...") : Value;
+	};
+	const TArray<FString> Lines = {
+		Compact(Info.Algorithm),
+		SizeLine(TEXT("Desired"), Info.DesiredSize),
+		FString::Printf(TEXT("Arranged %.1f x %.1f at %.1f, %.1f"), Info.ArrangedSize.X, Info.ArrangedSize.Y,
+			Info.ArrangedPosition.X, Info.ArrangedPosition.Y),
+		SizeLine(TEXT("Authored"), Info.AuthoredSize) + TEXT("   ") + SizeLine(TEXT("Bounds"), Info.ContentBounds),
+		Compact(FString(TEXT("Slot: ")) + Info.SlotRule),
+		Compact(FString(TEXT("Position: ")) + Info.PositionOwner),
+		Compact(FString(TEXT("Size: ")) + Info.SizeOwner),
+		Compact(FString(TEXT("Clipping: ")) + Info.Clipping),
+	};
+
+	UFont* Font = GEngine ? GEngine->GetSmallFont() : nullptr;
+	if (!Font)
+	{
+		return;
+	}
+	const float DpiScale = Canvas.GetDPIScale();
+	const FVector2D ViewSize = FVector2D(InViewport.GetSizeXY()) / DpiScale;
+	const float LineHeight = Font->GetMaxCharHeight() + 3.0f;
+	const FVector2D Padding(10.0f, 8.0f);
+	float TextWidth = 0.0f;
+	for (const FString& Line : Lines)
+	{
+		TextWidth = FMath::Max(TextWidth, static_cast<float>(Font->GetStringSize(*Line)));
+	}
+	const float MaxPanelWidth = FMath::Max(240.0f, ViewSize.X - 24.0f);
+	const FVector2D PanelSize(FMath::Min(TextWidth + Padding.X * 2.0f, MaxPanelWidth),
+		Lines.Num() * LineHeight + Padding.Y * 2.0f);
+	const FVector2D PanelPosition(FMath::Max(12.0f, ViewSize.X - PanelSize.X - 12.0f), 42.0f);
+	FCanvasTileItem Background(PanelPosition, PanelSize, FLinearColor(0.015f, 0.02f, 0.025f, 0.9f));
+	Background.BlendMode = SE_BLEND_Translucent;
+	Canvas.DrawItem(Background);
+
+	for (int32 Index = 0; Index < Lines.Num(); ++Index)
+	{
+		FCanvasTextItem Text(PanelPosition + Padding + FVector2D(0.0f, Index * LineHeight),
+			FText::FromString(Lines[Index]), Font,
+			Index == 0 ? FLinearColor(0.2f, 0.75f, 1.0f) : FLinearColor::White);
+		Text.EnableShadow(FLinearColor::Black);
+		Canvas.DrawItem(Text);
 	}
 }
 

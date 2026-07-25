@@ -29,6 +29,7 @@
 #include "K2Node_CustomEvent.h"
 #include "UMGStyle.h"
 #include "Core/LexUIManager.h"
+#include "Core/LexUISettings.h"
 #include "Core/Components/LexCanvas.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexLayoutContainerFlexBox.h"
@@ -2401,6 +2402,18 @@ void FLexUIPrefabEditor::ToggleDesignerGuides()
 	PrefabBeingEdited->Modify();
 	PrefabBeingEdited->PrefabDataForPrefabEditor.bShowDesignerGuides = !GetShowDesignerGuides();
 	PrefabBeingEdited->MarkPackageDirty();
+}
+
+bool FLexUIPrefabEditor::GetShowLayoutDebug() const
+{
+	return GetDefault<ULexUIEditorSettings>()->bShowLayoutDebugVisualization;
+}
+
+void FLexUIPrefabEditor::ToggleLayoutDebug()
+{
+	ULexUIEditorSettings* Settings = GetMutableDefault<ULexUIEditorSettings>();
+	Settings->bShowLayoutDebugVisualization = !Settings->bShowLayoutDebugVisualization;
+	Settings->SaveConfig();
 }
 
 float FLexUIPrefabEditor::SnapDesignerValue(float Value) const

@@ -239,6 +239,29 @@ void SLexUIPrefabEditorViewportToolbar::Construct(const FArguments& InArgs, TSha
 				]
 			]
 			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			[
+				SNew(SCheckBox)
+				.Style(FAppStyle::Get(), "ToggleButtonCheckbox")
+				.ToolTipText(LOCTEXT("LayoutDebugTooltip", "Show layout measurement, arrangement, slot, ownership, and clipping diagnostics for the selected widget."))
+				.IsChecked_Lambda([WeakEditor]()
+				{
+					if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())return Editor->GetShowLayoutDebug() ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+					return ECheckBoxState::Unchecked;
+				})
+				.OnCheckStateChanged_Lambda([WeakEditor](ECheckBoxState)
+				{
+					if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())Editor->ToggleLayoutDebug();
+				})
+				[
+					SNew(SBox).WidthOverride(22).HeightOverride(22).HAlign(HAlign_Center).VAlign(VAlign_Center)
+					[
+						SNew(SImage).Image(FAppStyle::GetBrush("Icons.Info"))
+					]
+				]
+			]
+			+ SHorizontalBox::Slot()
 			.FillWidth(1.0f)
 			[
 				SNullWidget::NullWidget

@@ -134,6 +134,7 @@ private:
 	void UpdateDesignerDrag();
 	void FinishDesignerDrag(bool bCancel);
 	void DrawDesignerOverlay(FViewport& InViewport, FSceneView& View, FCanvas& Canvas);
+	void DrawLayoutDebugOverlay(FViewport& InViewport, FCanvas& Canvas) const;
 	bool UpdateDesignerScreenGeometry(FSceneView& View);
 	EDesignerHandle HitTestDesignerHandle(const FVector2D& PixelPosition) const;
 	bool IntersectDesignerPlane(const FVector2D& PixelPosition, const FTransform& PlaneTransform, FVector& OutPoint) const;

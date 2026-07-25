@@ -209,6 +209,60 @@ ULexLayoutContainer::ULexLayoutContainer()
 {
 }
 
+bool ULexLayoutContainer::GetLayoutDebugInfo(const ULexWidget* TargetWidget, FLexLayoutDebugInfo& OutInfo) const
+{
+	const ULexWidget* LayoutOwnerWidget = GetWidget();
+	if (!IsValid(TargetWidget) || !IsValid(LayoutOwnerWidget)
+		|| (TargetWidget != LayoutOwnerWidget && !LayoutOwnerWidget->GetChildren().Contains(const_cast<ULexWidget*>(TargetWidget))))
+	{
+		return false;
+	}
+
+	OutInfo = FLexLayoutDebugInfo();
+	OutInfo.Widget = const_cast<ULexWidget*>(TargetWidget);
+	OutInfo.ArrangedPosition = TargetWidget->GetAnchoredPosition();
+	OutInfo.ArrangedSize = TargetWidget->GetSize();
+	OutInfo.AuthoredSize = OutInfo.ArrangedSize;
+	OutInfo.ContentBounds = LayoutOwnerWidget->GetSize();
+	OutInfo.Algorithm = FString::Printf(TEXT("Legacy LGUI / %s"), *GetClass()->GetDisplayNameText().ToString());
+	OutInfo.SlotRule = IsValid(TargetWidget->GetLayoutSelf())
+		? FString::Printf(TEXT("LayoutSelf: %s"), *TargetWidget->GetLayoutSelf()->GetClass()->GetDisplayNameText().ToString())
+		: TEXT("Authored size");
+
+	OutInfo.DesiredSize = OutInfo.ArrangedSize;
+	if (ULexLayoutSelf* LayoutSelf = TargetWidget->GetLayoutSelf(); IsValid(LayoutSelf))
+	{
+		const FVector2f Preferred = LayoutSelf->GetLayoutPreferredSize();
+		const FLexLayoutControlAnchorData SelfControl = LayoutSelf->GetLayoutControlAnchor(TargetWidget);
+		if (SelfControl.bCanControlHorizontalSize && FMath::IsFinite(Preferred.X) && Preferred.X >= 0.0f)
+		{
+			OutInfo.DesiredSize.X = Preferred.X;
+		}
+		if (SelfControl.bCanControlVerticalSize && FMath::IsFinite(Preferred.Y) && Preferred.Y >= 0.0f)
+		{
+			OutInfo.DesiredSize.Y = Preferred.Y;
+		}
+	}
+
+	const FLexLayoutControlAnchorData Control = GetLayoutControlAnchor(TargetWidget);
+	auto DescribeAxes = [](bool bX, bool bY, const TCHAR* Controlled, const TCHAR* Authored)
+	{
+		if (bX && bY) return FString::Printf(TEXT("%s X+Y"), Controlled);
+		if (bX) return FString::Printf(TEXT("%s X / %s Y"), Controlled, Authored);
+		if (bY) return FString::Printf(TEXT("%s Y / %s X"), Controlled, Authored);
+		return FString::Printf(TEXT("%s X+Y"), Authored);
+	};
+	OutInfo.PositionOwner = DescribeAxes(Control.bCanControlHorizontalPosition, Control.bCanControlVerticalPosition,
+		TEXT("Layout"), TEXT("Anchors"));
+	OutInfo.SizeOwner = DescribeAxes(Control.bCanControlHorizontalSize, Control.bCanControlVerticalSize,
+		TEXT("Layout"), TEXT("Authored"));
+	if (const UEnum* ClippingEnum = StaticEnum<ELexWidgetClipping>())
+	{
+		OutInfo.Clipping = ClippingEnum->GetDisplayNameTextByValue(static_cast<int64>(TargetWidget->GetClipping())).ToString();
+	}
+	return true;
+}
+
 void ULexLayoutContainer::RefreshChildren()
 {
 	auto Widget = GetWidget();

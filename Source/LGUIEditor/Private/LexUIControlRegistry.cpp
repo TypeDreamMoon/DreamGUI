@@ -21,6 +21,7 @@
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexVisual.h"
 #include "Core/LexUIBehaviour.h"
+#include "Core/LexUISettings.h"
 #include "Core/LexUISpriteData.h"
 #include "Extensions/2DLineRenderer/Lex2DLineChildrenAsPoints.h"
 #include "Extensions/2DLineRenderer/Lex2DLineRaw.h"
@@ -135,7 +136,14 @@ namespace LexUIControlRegistryLocal
 		Content->SetHorizontalAnchorMinMax(FVector2D(0.0, 1.0), false, false);
 		Content->SetVerticalAnchorMinMax(FVector2D(1.0, 1.0), false, false);
 		Content->SetHeight(500.0f);
-		Content->CreateNewLayoutContainer<ULexLayoutContainerVerticalBox>();
+		if (ULexUISettings::GetLayoutMode() == ELexUILayoutMode::UMGCompatible)
+		{
+			Content->CreateNewLayoutContainer<ULexLayoutContainerVerticalBox>();
+		}
+		else if (ULexLayoutContainerFlexBox* FlexBox = Content->CreateNewLayoutContainer<ULexLayoutContainerFlexBox>())
+		{
+			FlexBox->SetDirection(ELexLayoutFlexBoxDirectionType::Vertical);
+		}
 		ScrollView->SetContent(Content);
 		ScrollView->SetHorizontal(false);
 		ScrollView->SetVertical(true);
@@ -450,6 +458,17 @@ bool FLexUIControlRegistry::Validate(const FLexUIControlDescriptor& Descriptor, 
 void FLexUIControlRegistry::RegisterDefaults()
 {
 	using namespace LexUIControlRegistryLocal;
+	const bool bUseUMGLayout = ULexUISettings::GetLayoutMode() == ELexUILayoutMode::UMGCompatible;
+	auto MakeFrameworkPanel = [bUseUMGLayout](const TCHAR* Name, UClass* LayoutClass, const TCHAR* IconStyleName,
+		bool bUMGPanel, const TCHAR* DisplayName = nullptr)
+	{
+		FLexUIControlDescriptor Descriptor = MakePanel(Name, LayoutClass, IconStyleName, DisplayName);
+		if (bUMGPanel != bUseUMGLayout)
+		{
+			Descriptor.Category = bUMGPanel ? TEXT("UMG Panels") : TEXT("Legacy LGUI Panels");
+		}
+		return Descriptor;
+	};
 	Register(MakePrefab(TEXT("Button"), TEXT("Button"), TEXT("Button"), TEXT("ClassIcon.Button")));
 	Register(MakePrefab(TEXT("CheckBox"), TEXT("Check Box"), TEXT("Toggle"), TEXT("ClassIcon.CheckBox")));
 	Register(MakePrefab(TEXT("ToggleGroup"), TEXT("Toggle Group"), TEXT("ToggleGroup"), TEXT("ClassIcon.CheckBox")));
@@ -463,32 +482,33 @@ void FLexUIControlRegistry::RegisterDefaults()
 	Register(MakePrefab(TEXT("HorizontalScrollView"), TEXT("Horizontal Scroll Box"), TEXT("HorizontalScrollView"), TEXT("ClassIcon.Scrollbox")));
 	Register(MakePrefab(TEXT("VerticalScrollView"), TEXT("Vertical Scroll Box"), TEXT("VerticalScrollView"), TEXT("ClassIcon.Scrollbox")));
 
-	Register(MakePanel(TEXT("CanvasPanel"), ULexLayoutContainerCanvasPanel::StaticClass(), TEXT("ClassIcon.CanvasPanel")));
-	Register(MakePanel(TEXT("Overlay"), ULexLayoutContainerOverlay::StaticClass(), TEXT("ClassIcon.Overlay")));
-	Register(MakePanel(TEXT("HorizontalBox"), ULexLayoutContainerHorizontalBox::StaticClass(), TEXT("ClassIcon.HorizontalBox")));
-	Register(MakePanel(TEXT("VerticalBox"), ULexLayoutContainerVerticalBox::StaticClass(), TEXT("ClassIcon.VerticalBox")));
-	Register(MakePanel(TEXT("StackBox"), ULexLayoutContainerStackBox::StaticClass(), TEXT("ClassIcon.StackBox")));
-	Register(MakePanel(TEXT("WrapBox"), ULexLayoutContainerWrapBox::StaticClass(), TEXT("ClassIcon.WrapBox")));
-	Register(MakePanel(TEXT("GridPanel"), ULexLayoutContainerGridPanel::StaticClass(), TEXT("ClassIcon.GridPanel")));
-	Register(MakePanel(TEXT("UniformGridPanel"), ULexLayoutContainerUniformGridPanel::StaticClass(), TEXT("ClassIcon.UniformGridPanel")));
-	FLexUIControlDescriptor SafeZone = MakePanel(TEXT("SafeZone"), ULexLayoutContainerSafeZone::StaticClass(), TEXT("ClassIcon.SafeZone"));
+	Register(MakeFrameworkPanel(TEXT("CanvasPanel"), ULexLayoutContainerCanvasPanel::StaticClass(), TEXT("ClassIcon.CanvasPanel"), true));
+	Register(MakeFrameworkPanel(TEXT("Overlay"), ULexLayoutContainerOverlay::StaticClass(), TEXT("ClassIcon.Overlay"), true));
+	Register(MakeFrameworkPanel(TEXT("HorizontalBox"), ULexLayoutContainerHorizontalBox::StaticClass(), TEXT("ClassIcon.HorizontalBox"), true));
+	Register(MakeFrameworkPanel(TEXT("VerticalBox"), ULexLayoutContainerVerticalBox::StaticClass(), TEXT("ClassIcon.VerticalBox"), true));
+	Register(MakeFrameworkPanel(TEXT("StackBox"), ULexLayoutContainerStackBox::StaticClass(), TEXT("ClassIcon.StackBox"), true));
+	Register(MakeFrameworkPanel(TEXT("WrapBox"), ULexLayoutContainerWrapBox::StaticClass(), TEXT("ClassIcon.WrapBox"), true));
+	Register(MakeFrameworkPanel(TEXT("GridPanel"), ULexLayoutContainerGridPanel::StaticClass(), TEXT("ClassIcon.GridPanel"), true));
+	Register(MakeFrameworkPanel(TEXT("UniformGridPanel"), ULexLayoutContainerUniformGridPanel::StaticClass(), TEXT("ClassIcon.UniformGridPanel"), true));
+	FLexUIControlDescriptor SafeZone = MakeFrameworkPanel(TEXT("SafeZone"), ULexLayoutContainerSafeZone::StaticClass(), TEXT("ClassIcon.SafeZone"), true);
 	SafeZone.BehaviourClass = ULexContentWidget::StaticClass();
 	Register(SafeZone);
-	FLexUIControlDescriptor ScaleBox = MakePanel(TEXT("ScaleBox"), ULexLayoutContainerScaleBox::StaticClass(), TEXT("ClassIcon.ScaleBox"));
+	FLexUIControlDescriptor ScaleBox = MakeFrameworkPanel(TEXT("ScaleBox"), ULexLayoutContainerScaleBox::StaticClass(), TEXT("ClassIcon.ScaleBox"), true);
 	ScaleBox.BehaviourClass = ULexContentWidget::StaticClass();
 	Register(ScaleBox);
-	FLexUIControlDescriptor SizeBox = MakePanel(TEXT("SizeBox"), ULexLayoutContainerSizeBox::StaticClass(), TEXT("ClassIcon.Sizebox"));
+	FLexUIControlDescriptor SizeBox = MakeFrameworkPanel(TEXT("SizeBox"), ULexLayoutContainerSizeBox::StaticClass(), TEXT("ClassIcon.Sizebox"), true);
 	SizeBox.BehaviourClass = ULexContentWidget::StaticClass();
 	Register(SizeBox);
-	Register(MakePanel(TEXT("WidgetSwitcher"), ULexLayoutContainerWidgetSwitcher::StaticClass(), TEXT("ClassIcon.WidgetSwitcher")));
-	Register(MakePanel(TEXT("FlexBox"), ULexLayoutContainerFlexBox::StaticClass(), TEXT("ClassIcon.WrapBox")));
-	Register(MakePanel(TEXT("LayoutScrollBox"), ULexLayoutContainerScrollBox::StaticClass(), TEXT("ClassIcon.Scrollbox"), TEXT("Scroll Box Layout")));
-	Register(MakePanel(TEXT("ResponsiveGrid"), ULexLayoutContainerGrid::StaticClass(), TEXT("ClassIcon.GridPanel"), TEXT("Responsive Grid (Experimental)")));
+	Register(MakeFrameworkPanel(TEXT("WidgetSwitcher"), ULexLayoutContainerWidgetSwitcher::StaticClass(), TEXT("ClassIcon.WidgetSwitcher"), true));
+	Register(MakeFrameworkPanel(TEXT("FlexBox"), ULexLayoutContainerFlexBox::StaticClass(), TEXT("ClassIcon.WrapBox"), false));
+	Register(MakeFrameworkPanel(TEXT("LayoutScrollBox"), ULexLayoutContainerScrollBox::StaticClass(), TEXT("ClassIcon.Scrollbox"), true, TEXT("Scroll Box Layout")));
+	Register(MakeFrameworkPanel(TEXT("ResponsiveGrid"), ULexLayoutContainerGrid::StaticClass(), TEXT("ClassIcon.GridPanel"), false, TEXT("Responsive Grid (Experimental)")));
 
 	FLexUIControlDescriptor ScrollBox = MakeBehaviour(TEXT("ScrollBox"), UUIScrollView::StaticClass(), TEXT("ClassIcon.Scrollbox"), ConfigureScrollBox);
 	ScrollBox.Category = TEXT("Panels");
 	Register(ScrollBox);
 	FLexUIControlDescriptor Border = MakePanel(TEXT("Border"), ULexLayoutContainerOverlay::StaticClass(), TEXT("ClassIcon.Border"));
+	if (!bUseUMGLayout) Border.Category = TEXT("UMG Panels");
 	Border.VisualClass = ULexImage::StaticClass();
 	Border.BehaviourClass = ULexContentWidget::StaticClass();
 	Border.NativeConfigure = ConfigureImage;

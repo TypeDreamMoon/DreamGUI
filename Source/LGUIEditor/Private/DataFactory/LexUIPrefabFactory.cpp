@@ -5,8 +5,11 @@
 #include "ClassViewerFilter.h"
 #include "ClassViewerModule.h"
 #include "Core/Components/LexLayout.h"
+#include "Core/Components/LexLayoutContainerFlexBox.h"
+#include "Core/Components/LexLayoutContainerGrid.h"
 #include "Core/Components/LexPanelLayouts.h"
 #include "Core/Components/LexWidget.h"
+#include "Core/LexUISettings.h"
 #include "Interaction/LexContentWidget.h"
 #include "Kismet2/SClassPickerDialog.h"
 #include "Modules/ModuleManager.h"
@@ -66,10 +69,19 @@ bool ULexUIPrefabFactory::ConfigureProperties()
 	Options.bShowNoneOption = true;
 	Options.bExpandAllNodes = true;
 	Options.NameTypeToDisplay = EClassViewerNameTypeToDisplay::DisplayName;
-	Options.ExtraPickerCommonClasses.Add(ULexLayoutContainerCanvasPanel::StaticClass());
-	Options.ExtraPickerCommonClasses.Add(ULexLayoutContainerOverlay::StaticClass());
-	Options.ExtraPickerCommonClasses.Add(ULexLayoutContainerHorizontalBox::StaticClass());
-	Options.ExtraPickerCommonClasses.Add(ULexLayoutContainerVerticalBox::StaticClass());
+	const bool bUseUMGLayout = ULexUISettings::GetLayoutMode() == ELexUILayoutMode::UMGCompatible;
+	if (bUseUMGLayout)
+	{
+		Options.ExtraPickerCommonClasses.Add(ULexLayoutContainerCanvasPanel::StaticClass());
+		Options.ExtraPickerCommonClasses.Add(ULexLayoutContainerOverlay::StaticClass());
+		Options.ExtraPickerCommonClasses.Add(ULexLayoutContainerHorizontalBox::StaticClass());
+		Options.ExtraPickerCommonClasses.Add(ULexLayoutContainerVerticalBox::StaticClass());
+	}
+	else
+	{
+		Options.ExtraPickerCommonClasses.Add(ULexLayoutContainerFlexBox::StaticClass());
+		Options.ExtraPickerCommonClasses.Add(ULexLayoutContainerGrid::StaticClass());
+	}
 
 	TSharedRef<LexUIPrefabFactoryLocal::FRootLayoutClassFilter> Filter =
 		MakeShared<LexUIPrefabFactoryLocal::FRootLayoutClassFilter>();
@@ -82,7 +94,9 @@ bool ULexUIPrefabFactory::ConfigureProperties()
 		| CLASS_Transient;
 	Options.ClassFilters.Add(Filter);
 
-	const FText TitleText = LOCTEXT("PickRootLayout", "Pick Root Layout for New LexUI Prefab");
+	const FText TitleText = bUseUMGLayout
+		? LOCTEXT("PickUMGRootLayout", "Pick UMG-Compatible Root Layout for New LexUI Prefab")
+		: LOCTEXT("PickLegacyRootLayout", "Pick Legacy LGUI Root Layout for New LexUI Prefab");
 	return SClassPickerDialog::PickClass(
 		TitleText,
 		Options,
