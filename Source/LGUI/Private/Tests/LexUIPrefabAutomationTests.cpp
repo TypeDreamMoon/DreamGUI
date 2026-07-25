@@ -50,6 +50,11 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	"LGUI.Prefab.LevelHelperDirtyState",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexUIPrefabUnknownVersionTargetTest,
+	"LGUI.Prefab.UnknownVersionTargetRejected",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
 bool FLexUIPrefabRelatedAnchorPropertyTest::RunTest(const FString& Parameters)
 {
 	ULexUIPrefabHelperObject* Helper = NewObject<ULexUIPrefabHelperObject>();
@@ -159,6 +164,28 @@ bool FLexUIPrefabLevelHelperDirtyStateTest::RunTest(const FString& Parameters)
 	TestNull(TEXT("Level-prefab helper has no asset"), Helper->PrefabAsset.Get());
 	Helper->SetAnythingDirty();
 	TestTrue(TEXT("Level-prefab helper still records dirty state"), Helper->GetAnythingDirty());
+	return true;
+}
+
+bool FLexUIPrefabUnknownVersionTargetTest::RunTest(const FString& Parameters)
+{
+	ULexUIPrefabHelperObject* Helper = NewObject<ULexUIPrefabHelperObject>();
+	ULexWidget* UnknownRoot = NewObject<ULexWidget>();
+	if (!Helper || !UnknownRoot)
+	{
+		return false;
+	}
+
+	Helper->RefreshSubPrefabVersion(UnknownRoot);
+	TestTrue(TEXT("Unknown version target does not create sub-prefab data"), Helper->SubPrefabMap.IsEmpty());
+
+	FLexUISubPrefabData InvalidData;
+	InvalidData.OverallVersionMD5 = TEXT("unchanged-version");
+	Helper->SubPrefabMap.Add(UnknownRoot, MoveTemp(InvalidData));
+	Helper->RefreshSubPrefabVersion(UnknownRoot);
+	const FLexUISubPrefabData* StoredData = Helper->SubPrefabMap.Find(UnknownRoot);
+	TestTrue(TEXT("Invalid prefab asset leaves the accepted version unchanged"),
+		StoredData && StoredData->OverallVersionMD5 == TEXT("unchanged-version"));
 	return true;
 }
 

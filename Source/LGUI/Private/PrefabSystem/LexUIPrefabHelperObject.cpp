@@ -1591,14 +1591,20 @@ void ULexUIPrefabHelperObject::RefreshSubPrefabVersion(ULexWidget* InSubPrefabRo
 {
 	if (InSubPrefabRootWidget != nullptr)
 	{
-		auto& SubPrefabData = SubPrefabMap[InSubPrefabRootWidget];
-		SubPrefabData.OverallVersionMD5 = SubPrefabData.PrefabAsset->GenerateOverallVersionMD5();
+		FLexUISubPrefabData* SubPrefabData = SubPrefabMap.Find(InSubPrefabRootWidget);
+		if (SubPrefabData && IsValid(SubPrefabData->PrefabAsset))
+		{
+			SubPrefabData->OverallVersionMD5 = SubPrefabData->PrefabAsset->GenerateOverallVersionMD5();
+		}
 	}
 	else
 	{
 		for (auto& KeyValue : SubPrefabMap)
 		{
-			KeyValue.Value.OverallVersionMD5 = KeyValue.Value.PrefabAsset->GenerateOverallVersionMD5();
+			if (IsValid(KeyValue.Value.PrefabAsset))
+			{
+				KeyValue.Value.OverallVersionMD5 = KeyValue.Value.PrefabAsset->GenerateOverallVersionMD5();
+			}
 		}
 	}
 }
