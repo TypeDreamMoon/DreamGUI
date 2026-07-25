@@ -429,19 +429,6 @@ namespace LexUIPrefabSystem
 					continue;
 				}
 
-				UObject* CreatedNewObject = nullptr;
-#if WITH_EDITOR
-				// LoadPrefabWithExistingObjects can supply an already-created object for this guid.
-				if (auto ObjectPtr = MapGuidToObject.Find(ObjectGuid))
-				{
-					CreatedNewObject = *ObjectPtr;
-					MapObjectToOriginGuid.Add(CreatedNewObject, ObjectGuid);
-					CollectDefaultSubobjects(CreatedNewObject, ObjectGuid, *ObjectData);
-					PendingObjectGuids.RemoveAtSwap(PendingIndex);
-					bMadeProgress = true;
-					continue;
-				}
-#endif
 				UClass* ObjectClass = FindClassFromListByIndex(ObjectData->ObjectClass);
 				if (!ObjectClass)
 				{
@@ -463,6 +450,31 @@ namespace LexUIPrefabSystem
 				{
 					continue;
 				}
+
+				UObject* CreatedNewObject = nullptr;
+#if WITH_EDITOR
+				// LoadPrefabWithExistingObjects can supply an already-created object for this guid.
+				if (auto ObjectPtr = MapGuidToObject.Find(ObjectGuid))
+				{
+					UObject* ExistingObject = ObjectPtr->Get();
+					if (IsValid(ExistingObject)
+						&& ExistingObject->GetClass() == ObjectClass
+						&& ExistingObject->GetOuter() == OuterObjectPtr->Get())
+					{
+						CreatedNewObject = ExistingObject;
+						MapObjectToOriginGuid.Add(CreatedNewObject, ObjectGuid);
+						CollectDefaultSubobjects(CreatedNewObject, ObjectGuid, *ObjectData);
+						PendingObjectGuids.RemoveAtSwap(PendingIndex);
+						bMadeProgress = true;
+						continue;
+					}
+
+					UE_LOG(LGUI, Warning,
+						TEXT("Discarding incompatible existing object mapping for guid '%s' in prefab '%s'."),
+						*ObjectGuid.ToString(), *PrefabAssetPath);
+					MapGuidToObject.Remove(ObjectGuid);
+				}
+#endif
 #if WITH_EDITOR
 				if (auto ExistingObject = FindObjectWithOuter(*OuterObjectPtr, nullptr, ObjectData->ObjectName))
 				{
@@ -720,15 +732,28 @@ namespace LexUIPrefabSystem
 
 					ULexWidget* NewWidget = nullptr;
 #if WITH_EDITOR
-					//MapGuidToObject can passed from LoadPrefabWithExistingObjects, so we need to find from map first. This only needed in editor, because runtime never use LoadPrefabWithExistingObjects
+					//MapGuidToObject can passed from LoadPrefabWithExistingObjects, so validate the candidate before reuse.
 					if (auto WidgetPtr = MapGuidToObject.Find(InWidgetData.WidgetGuid))
 					{
-						NewWidget = (ULexWidget*)(*WidgetPtr);
-						MapObjectToOriginGuid.Add(NewWidget, InWidgetData.WidgetGuid);
-						CollectDefaultSubobjects(NewWidget);
+						ULexWidget* ExistingWidget = Cast<ULexWidget>(WidgetPtr->Get());
+						if (IsValid(ExistingWidget)
+							&& ExistingWidget->GetClass() == WidgetClass
+							&& ExistingWidget->GetOuter() == OwnerObject)
+						{
+							NewWidget = ExistingWidget;
+							MapObjectToOriginGuid.Add(NewWidget, InWidgetData.WidgetGuid);
+							CollectDefaultSubobjects(NewWidget);
+						}
+						else
+						{
+							UE_LOG(LGUI, Warning,
+								TEXT("Discarding incompatible existing widget mapping for guid '%s' in prefab '%s'."),
+								*InWidgetData.WidgetGuid.ToString(), *PrefabAssetPath);
+							MapGuidToObject.Remove(InWidgetData.WidgetGuid);
+						}
 					}
-					else
 #endif
+					if (!NewWidget)
 					{
 						NewWidget = NewObject<ULexWidget>(OwnerObject, WidgetClass, NAME_None, (EObjectFlags)InWidgetData.ObjectFlags);
 						MapGuidToObject.Add(InWidgetData.WidgetGuid, NewWidget);

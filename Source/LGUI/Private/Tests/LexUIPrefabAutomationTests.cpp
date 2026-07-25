@@ -19,6 +19,11 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	"LGUI.Prefab.UnsupportedCookVersionRejected",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexUIPrefabExistingObjectValidationTest,
+	"LGUI.Prefab.ExistingObjectMappingValidation",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
 bool FLexUIPrefabUnsupportedCookVersionTest::RunTest(const FString& Parameters)
 {
 	ULexUIPrefab* Prefab = NewObject<ULexUIPrefab>();
@@ -32,6 +37,46 @@ bool FLexUIPrefabUnsupportedCookVersionTest::RunTest(const FString& Parameters)
 	AddExpectedError(TEXT("Cannot cook prefab"), EAutomationExpectedErrorFlags::Contains, 1);
 	Prefab->BeginCacheForCookedPlatformData(nullptr);
 	TestTrue(TEXT("Unsupported prefab produces no cooked payload"), Prefab->BinaryDataForBuild.IsEmpty());
+	return true;
+}
+
+bool FLexUIPrefabExistingObjectValidationTest::RunTest(const FString& Parameters)
+{
+	UWorld* World = UWorld::CreateWorld(EWorldType::None, false);
+	ULexUIPrefab* Prefab = NewObject<ULexUIPrefab>();
+	ULexWidget* SourceRoot = World ? NewObject<ULexWidget>(World, NAME_None, RF_Public | RF_Transactional) : nullptr;
+	if (!World || !Prefab || !SourceRoot)
+	{
+		if (World)
+		{
+			World->DestroyWorld(false);
+		}
+		return false;
+	}
+
+	const FGuid RootGuid = FGuid::NewGuid();
+	TMap<UObject*, FGuid> ObjectToGuid;
+	ObjectToGuid.Add(SourceRoot, RootGuid);
+	TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> EmptySubPrefabs;
+	TestTrue(TEXT("Source prefab serialized"),
+		LexUIPrefabSystem::WidgetSerializer::SavePrefab(SourceRoot, Prefab, ObjectToGuid, EmptySubPrefabs, true));
+
+	UObject* WrongObject = NewObject<UObject>(World);
+	TMap<FGuid, TObjectPtr<UObject>> ExistingObjects;
+	ExistingObjects.Add(RootGuid, WrongObject);
+	TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> LoadedSubPrefabs;
+	AddExpectedError(TEXT("Discarding incompatible existing widget mapping"), EAutomationExpectedErrorFlags::Contains, 1);
+	ULexWidget* LoadedRoot = LexUIPrefabSystem::WidgetSerializer::LoadPrefabWithExistingObjects(
+		World, World, Prefab, nullptr, ExistingObjects, LoadedSubPrefabs);
+	TestNotNull(TEXT("A valid widget replaces the incompatible mapping"), LoadedRoot);
+	TestNotEqual(TEXT("The incompatible UObject is not reused"), static_cast<UObject*>(LoadedRoot), WrongObject);
+	TestEqual(TEXT("The root guid points at the replacement widget"), ExistingObjects.FindRef(RootGuid).Get(), static_cast<UObject*>(LoadedRoot));
+
+	if (LoadedRoot)
+	{
+		LoadedRoot->DestroyWidget();
+	}
+	World->DestroyWorld(false);
 	return true;
 }
 
