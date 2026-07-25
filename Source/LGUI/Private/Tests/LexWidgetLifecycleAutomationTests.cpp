@@ -108,7 +108,6 @@ bool FLexWidgetHierarchyMutationDuringTeardownTest::RunTest(const FString& Param
 	Root->OnRegister();
 	OriginalChild->OnRegister();
 	LateChild->OnRegister();
-	Root->BeginPlay();
 	OriginalChild->BeginPlay();
 	LateChild->BeginPlay();
 
