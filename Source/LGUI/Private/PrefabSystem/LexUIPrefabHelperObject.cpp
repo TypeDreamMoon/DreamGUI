@@ -10,6 +10,10 @@
 #include "Utils/LexUIUtils.h"
 #include "PrefabSystem/LexUIObjectReaderAndWriter.h"
 
+#if WITH_EDITOR
+#include "ScopedTransaction.h"
+#endif
+
 #include LEXUIPREFAB_SERIALIZER_NEWEST_INCLUDE
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabManager"
@@ -972,7 +976,9 @@ void ULexUIPrefabHelperObject::RevertPrefabPropertyValue(UObject* ContextObject,
 }
 void ULexUIPrefabHelperObject::RevertPrefabOverride(UObject* InObject, const TArray<FName>& InPropertyNames)
 {
-	GEditor->BeginTransaction(FText::Format(LOCTEXT("RevertPrefabOnObjectProperties", "Revert Prefab Override: {0}"), FText::FromString(InObject->GetName())));
+	const FScopedTransaction Transaction(FText::Format(
+		LOCTEXT("RevertPrefabOnObjectProperties", "Revert Prefab Override: {0}"),
+		FText::FromString(InObject->GetName())));
 	InObject->Modify();
 	this->Modify();
 
@@ -1030,7 +1036,6 @@ void ULexUIPrefabHelperObject::RevertPrefabOverride(UObject* InObject, const TAr
 		}
 	}
 	bCanCollectProperty = true;
-	GEditor->EndTransaction();
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	//when apply or revert parameters in level editor, means we accept sub-prefab's current version, so we mark the version to newest, and we won't get 'update warning'.
 	RefreshSubPrefabVersion(GetSubPrefabRootWidget(Widget));
@@ -1297,7 +1302,9 @@ void ULexUIPrefabHelperObject::ApplyPrefabPropertyValue(UObject* ContextObject, 
 }
 void ULexUIPrefabHelperObject::ApplyPrefabOverride(UObject* InObject, const TArray<FName>& InPropertyNames)
 {
-	GEditor->BeginTransaction(FText::Format(LOCTEXT("ApplyPrefabOnObjectProperties", "Apply Prefab Override: {0}"), FText::FromString(InObject->GetName())));
+	const FScopedTransaction Transaction(FText::Format(
+		LOCTEXT("ApplyPrefabOnObjectProperties", "Apply Prefab Override: {0}"),
+		FText::FromString(InObject->GetName())));
 	InObject->Modify();
 	this->Modify();
 
@@ -1367,7 +1374,6 @@ void ULexUIPrefabHelperObject::ApplyPrefabOverride(UObject* InObject, const TArr
 		}
 	}
 	bCanCollectProperty = true;
-	GEditor->EndTransaction();
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	//when apply or revert parameters in level editor, means we accept sub-prefab's current version, so we mark the version to newest, and we won't get 'update warning'.
 	RefreshSubPrefabVersion(GetSubPrefabRootWidget(Widget));
