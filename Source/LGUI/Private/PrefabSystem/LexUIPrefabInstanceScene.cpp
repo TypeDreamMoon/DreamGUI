@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "PrefabSystem/LexUIPrefabInstanceScene.h"
+#include "LGUI.h"
 #include "PrefabSystem/LexUIPrefab.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Core/Components/LexWidget.h"
