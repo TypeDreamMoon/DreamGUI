@@ -937,23 +937,25 @@ void ULexUIPrefabHelperObject::RevertPrefabPropertyValue(UObject* ContextObject,
 		Property->CopyCompleteValue_InContainer(ContainerPointerInSrc, ContainerPointerInPrefab);//just copy so we don't need to resize it
 		FScriptMapHelper MapHelper(MapProperty, MapProperty->ContainerPtrToValuePtr<void>(ContainerPointerInSrc, RawArrayIndex));
 		FScriptMapHelper MapHelperForPrefab(MapProperty, MapProperty->ContainerPtrToValuePtr<void>(ContainerPointerInPrefab, RawArrayIndex));
-		for (int i = 0; i < MapHelper.Num(); i++)
+		for (int32 Index = 0; Index < MapHelper.GetMaxIndex(); ++Index)
 		{
-			RevertPrefabPropertyValue(ContextObject, MapProperty->KeyProp, MapHelper.GetKeyPtr(i), MapHelperForPrefab.GetKeyPtr(i), SubPrefabData);
-			RevertPrefabPropertyValue(ContextObject, MapProperty->ValueProp, MapHelper.GetPairPtr(i), MapHelperForPrefab.GetPairPtr(i), SubPrefabData);
+			if (!MapHelper.IsValidIndex(Index) || !MapHelperForPrefab.IsValidIndex(Index))continue;
+			RevertPrefabPropertyValue(ContextObject, MapProperty->KeyProp, MapHelper.GetKeyPtr(Index), MapHelperForPrefab.GetKeyPtr(Index), SubPrefabData);
+			RevertPrefabPropertyValue(ContextObject, MapProperty->ValueProp, MapHelper.GetPairPtr(Index), MapHelperForPrefab.GetPairPtr(Index), SubPrefabData);
 		}
-		MapHelperForPrefab.Rehash();
+		MapHelper.Rehash();
 	}
 	else if (auto SetProperty = CastField<FSetProperty>(Property))
 	{
 		Property->CopyCompleteValue_InContainer(ContainerPointerInSrc, ContainerPointerInPrefab);//just copy so we don't need to resize it
 		FScriptSetHelper SetHelper(SetProperty, SetProperty->ContainerPtrToValuePtr<void>(ContainerPointerInSrc, RawArrayIndex));
 		FScriptSetHelper SetHelperForPrefab(SetProperty, SetProperty->ContainerPtrToValuePtr<void>(ContainerPointerInPrefab, RawArrayIndex));
-		for (int i = 0; i < SetHelper.Num(); i++)
+		for (int32 Index = 0; Index < SetHelper.GetMaxIndex(); ++Index)
 		{
-			RevertPrefabPropertyValue(ContextObject, SetProperty->ElementProp, SetHelper.GetElementPtr(i), SetHelperForPrefab.GetElementPtr(i), SubPrefabData);
+			if (!SetHelper.IsValidIndex(Index) || !SetHelperForPrefab.IsValidIndex(Index))continue;
+			RevertPrefabPropertyValue(ContextObject, SetProperty->ElementProp, SetHelper.GetElementPtr(Index), SetHelperForPrefab.GetElementPtr(Index), SubPrefabData);
 		}
-		SetHelperForPrefab.Rehash();
+		SetHelper.Rehash();
 	}
 	else if (auto StructProperty = CastField<FStructProperty>(Property))
 	{
@@ -1305,10 +1307,11 @@ void ULexUIPrefabHelperObject::ApplyPrefabPropertyValue(UObject* ContextObject, 
 		Property->CopyCompleteValue_InContainer(ContainerPointerInPrefab, ContainerPointerInSrc);//just copy so we don't need to resize it
 		FScriptMapHelper MapHelper(MapProperty, MapProperty->ContainerPtrToValuePtr<void>(ContainerPointerInSrc, RawArrayIndex));
 		FScriptMapHelper MapHelperForDst(MapProperty, MapProperty->ContainerPtrToValuePtr<void>(ContainerPointerInPrefab, RawArrayIndex));
-		for (int i = 0; i < MapHelper.Num(); i++)
+		for (int32 Index = 0; Index < MapHelper.GetMaxIndex(); ++Index)
 		{
-			ApplyPrefabPropertyValue(ContextObject, MapProperty->KeyProp, MapHelper.GetKeyPtr(i), MapHelperForDst.GetKeyPtr(i), SubPrefabData);
-			ApplyPrefabPropertyValue(ContextObject, MapProperty->ValueProp, MapHelper.GetPairPtr(i), MapHelperForDst.GetPairPtr(i), SubPrefabData);
+			if (!MapHelper.IsValidIndex(Index) || !MapHelperForDst.IsValidIndex(Index))continue;
+			ApplyPrefabPropertyValue(ContextObject, MapProperty->KeyProp, MapHelper.GetKeyPtr(Index), MapHelperForDst.GetKeyPtr(Index), SubPrefabData);
+			ApplyPrefabPropertyValue(ContextObject, MapProperty->ValueProp, MapHelper.GetPairPtr(Index), MapHelperForDst.GetPairPtr(Index), SubPrefabData);
 		}
 		MapHelperForDst.Rehash();
 	}
@@ -1317,9 +1320,10 @@ void ULexUIPrefabHelperObject::ApplyPrefabPropertyValue(UObject* ContextObject, 
 		Property->CopyCompleteValue_InContainer(ContainerPointerInPrefab, ContainerPointerInSrc);//just copy so we don't need to resize it
 		FScriptSetHelper SetHelper(SetProperty, SetProperty->ContainerPtrToValuePtr<void>(ContainerPointerInSrc, RawArrayIndex));
 		FScriptSetHelper SetHelperForDst(SetProperty, SetProperty->ContainerPtrToValuePtr<void>(ContainerPointerInPrefab, RawArrayIndex));
-		for (int i = 0; i < SetHelper.Num(); i++)
+		for (int32 Index = 0; Index < SetHelper.GetMaxIndex(); ++Index)
 		{
-			ApplyPrefabPropertyValue(ContextObject, SetProperty->ElementProp, SetHelper.GetElementPtr(i), SetHelperForDst.GetElementPtr(i), SubPrefabData);
+			if (!SetHelper.IsValidIndex(Index) || !SetHelperForDst.IsValidIndex(Index))continue;
+			ApplyPrefabPropertyValue(ContextObject, SetProperty->ElementProp, SetHelper.GetElementPtr(Index), SetHelperForDst.GetElementPtr(Index), SubPrefabData);
 		}
 		SetHelperForDst.Rehash();
 	}
