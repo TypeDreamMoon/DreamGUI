@@ -18,11 +18,19 @@ private:
 	TWeakObjectPtr<class ULexUIPrefab> TargetScriptPtr;
 	FText GetEngineVersionText()const;
 	FText GetPrefabVersionText()const;
+	FText GetPrefabSchemaVersionText()const;
 	EVisibility ShouldShowFixEngineVersionButton()const;
 	FSlateColor GetEngineVersionTextColorAndOpacity()const;
 	FSlateColor GetPrefabVersionTextColorAndOpacity()const;
+	FSlateColor GetPrefabSchemaVersionTextColorAndOpacity()const;
 	EVisibility ShouldShowFixPrefabVersionButton()const;
+	FText GetSchemaDiagnosticsText()const { return SchemaDiagnosticsText; }
+	EVisibility GetSchemaDiagnosticsVisibility()const;
 
 	FReply OnClickRecreteButton();
 	FReply OnClickEditPrefabButton();
+	FReply OnClickPreviewSchemaButton();
+	FReply OnClickUpgradeSchemaButton();
+
+	FText SchemaDiagnosticsText;
 };

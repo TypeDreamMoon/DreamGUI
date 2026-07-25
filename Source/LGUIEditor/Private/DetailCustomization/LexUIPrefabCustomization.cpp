@@ -7,6 +7,7 @@
 #include "DetailLayoutBuilder.h"
 #include "DetailCategoryBuilder.h"
 #include "DetailWidgetRow.h"
+#include "ScopedTransaction.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabCustomization"
 
@@ -117,6 +118,58 @@ void FLexUIPrefabCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 			]
 		]
 		;
+	category.AddCustomRow(LOCTEXT("PrefabSchemaVersion", "Prefab Schema Version"))
+		.NameContent()
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("PrefabSchemaVersion", "Prefab Schema Version"))
+			.ToolTipText(LOCTEXT("PrefabSchemaVersionTooltip", "Hierarchy and component-contract version. This is independent from the binary prefab format."))
+			.Font(IDetailLayoutBuilder::GetDetailFont())
+		]
+		.ValueContent()
+		.MinDesiredWidth(500)
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			.FillWidth(1.0f)
+			.VAlign(VAlign_Center)
+			[
+				SNew(STextBlock)
+				.Text(this, &FLexUIPrefabCustomization::GetPrefabSchemaVersionText)
+				.ColorAndOpacity(this, &FLexUIPrefabCustomization::GetPrefabSchemaVersionTextColorAndOpacity)
+				.AutoWrapText(true)
+			]
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.Padding(4.0f, 0.0f)
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("PreviewPrefabSchema", "Preview"))
+				.ToolTipText(LOCTEXT("PreviewPrefabSchemaTooltip", "Run the migration on an isolated copy and show every proposed repair."))
+				.OnClicked(this, &FLexUIPrefabCustomization::OnClickPreviewSchemaButton)
+			]
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("UpgradePrefabSchema", "Upgrade / Repair"))
+				.ToolTipText(LOCTEXT("UpgradePrefabSchemaTooltip", "Apply deterministic hierarchy repairs and save the prefab. This operation supports Undo."))
+				.OnClicked(this, &FLexUIPrefabCustomization::OnClickUpgradeSchemaButton)
+			]
+		];
+	category.AddCustomRow(LOCTEXT("PrefabSchemaDiagnostics", "Prefab Schema Diagnostics"))
+		.Visibility(TAttribute<EVisibility>::CreateSP(this, &FLexUIPrefabCustomization::GetSchemaDiagnosticsVisibility))
+		.WholeRowContent()
+		[
+			SNew(SBorder)
+			.Padding(8.0f)
+			[
+				SNew(STextBlock)
+				.Text(this, &FLexUIPrefabCustomization::GetSchemaDiagnosticsText)
+				.AutoWrapText(true)
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
+		];
 
 	category.AddCustomRow(LOCTEXT("AdditionalButton", "Additional Button"), true)
 		.WholeRowContent()
@@ -163,6 +216,28 @@ FText FLexUIPrefabCustomization::GetPrefabVersionText()const
 	{
 		return LOCTEXT("Error", "Error");
 	}
+}
+FText FLexUIPrefabCustomization::GetPrefabSchemaVersionText()const
+{
+	if (!TargetScriptPtr.IsValid())
+	{
+		return LOCTEXT("Error", "Error");
+	}
+	if (TargetScriptPtr->PrefabSchemaVersion == LEXUI_CURRENT_PREFAB_SCHEMA_VERSION)
+	{
+		return FText::Format(
+			LOCTEXT("PrefabSchemaCurrent", "{0} (Current)"),
+			TargetScriptPtr->PrefabSchemaVersion);
+	}
+	if (TargetScriptPtr->PrefabSchemaVersion > LEXUI_CURRENT_PREFAB_SCHEMA_VERSION)
+	{
+		return FText::Format(
+			LOCTEXT("PrefabSchemaFuture", "{0} (Newer than this plugin supports)"),
+			TargetScriptPtr->PrefabSchemaVersion);
+	}
+	return FText::Format(
+		LOCTEXT("PrefabSchemaUpgradeAvailable", "{0} (Upgrade available to {1})"),
+		TargetScriptPtr->PrefabSchemaVersion, LEXUI_CURRENT_PREFAB_SCHEMA_VERSION);
 }
 EVisibility FLexUIPrefabCustomization::ShouldShowFixEngineVersionButton()const
 {
@@ -218,6 +293,17 @@ FSlateColor FLexUIPrefabCustomization::GetPrefabVersionTextColorAndOpacity()cons
 		return FSlateColor::UseForeground();
 	}
 }
+FSlateColor FLexUIPrefabCustomization::GetPrefabSchemaVersionTextColorAndOpacity()const
+{
+	if (!TargetScriptPtr.IsValid()
+		|| TargetScriptPtr->PrefabSchemaVersion == LEXUI_CURRENT_PREFAB_SCHEMA_VERSION)
+	{
+		return FSlateColor::UseForeground();
+	}
+	return TargetScriptPtr->PrefabSchemaVersion > LEXUI_CURRENT_PREFAB_SCHEMA_VERSION
+		? FSlateColor(FLinearColor::Red)
+		: FSlateColor(FLinearColor::Yellow);
+}
 EVisibility FLexUIPrefabCustomization::ShouldShowFixPrefabVersionButton()const
 {
 	if (TargetScriptPtr.IsValid())
@@ -247,6 +333,30 @@ FReply FLexUIPrefabCustomization::OnClickRecreteButton()
 }
 FReply FLexUIPrefabCustomization::OnClickEditPrefabButton()
 {
+	return FReply::Handled();
+}
+
+EVisibility FLexUIPrefabCustomization::GetSchemaDiagnosticsVisibility()const
+{
+	return SchemaDiagnosticsText.IsEmpty() ? EVisibility::Collapsed : EVisibility::Visible;
+}
+
+FReply FLexUIPrefabCustomization::OnClickPreviewSchemaButton()
+{
+	if (ULexUIPrefab* Prefab = TargetScriptPtr.Get())
+	{
+		SchemaDiagnosticsText = FText::FromString(Prefab->PreviewSchemaUpgrade().ToString());
+	}
+	return FReply::Handled();
+}
+
+FReply FLexUIPrefabCustomization::OnClickUpgradeSchemaButton()
+{
+	if (ULexUIPrefab* Prefab = TargetScriptPtr.Get())
+	{
+		const FScopedTransaction Transaction(LOCTEXT("UpgradePrefabSchemaTransaction", "Upgrade LexUI Prefab Schema"));
+		SchemaDiagnosticsText = FText::FromString(Prefab->UpgradeSchema().ToString());
+	}
 	return FReply::Handled();
 }
 

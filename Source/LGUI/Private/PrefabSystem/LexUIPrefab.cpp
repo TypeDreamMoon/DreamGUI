@@ -2,6 +2,8 @@
 
 #include "PrefabSystem/LexUIPrefab.h"
 #include "LGUI.h"
+#include "Core/Components/LexPanelLayouts.h"
+#include "Core/Components/LexPanelSlot.h"
 #include "Core/Components/LexWidget.h"
 
 #include LEXUIPREFAB_SERIALIZER_NEWEST_INCLUDE
@@ -11,6 +13,140 @@
 #include "UObject/ObjectSaveContext.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefab"
+
+FString FLexUIPrefabSchemaMigrationReport::ToString() const
+{
+	TArray<FString> Lines;
+	Lines.Add(FString::Printf(
+		TEXT("Schema %u -> %u | %d changed object(s)"),
+		FromVersion, ToVersion, ChangedObjectCount));
+	if (bSchemaVersionUpdated)
+	{
+		Lines.Add(TEXT("Schema version will be updated."));
+	}
+	auto AppendSection = [&Lines](const TCHAR* Heading, const TArray<FString>& Entries)
+	{
+		if (Entries.IsEmpty())
+		{
+			return;
+		}
+		Lines.Add(FString::Printf(TEXT("%s:"), Heading));
+		for (const FString& Entry : Entries)
+		{
+			Lines.Add(FString::Printf(TEXT("  - %s"), *Entry));
+		}
+	};
+	AppendSection(TEXT("Actions"), Actions);
+	AppendSection(TEXT("Warnings"), Warnings);
+	AppendSection(TEXT("Errors"), Errors);
+	if (!HasChanges() && !HasErrors())
+	{
+		Lines.Add(TEXT("No migration is required."));
+	}
+	return FString::Join(Lines, TEXT("\n"));
+}
+
+namespace LexUIPrefabSchemaLocal
+{
+	FString BuildWidgetPath(const ULexWidget* Widget)
+	{
+		TArray<FString> Segments;
+		TSet<const ULexWidget*> Visited;
+		const ULexWidget* Current = Widget;
+		while (IsValid(Current) && !Visited.Contains(Current))
+		{
+			Visited.Add(Current);
+			Segments.Insert(Current->GetName(), 0);
+			Current = Current->GetParent();
+		}
+		return FString::Printf(TEXT("/%s"), *FString::Join(Segments, TEXT("/")));
+	}
+
+	void MigrateWidgetRecursive(
+		ULexWidget* Widget,
+		TSet<ULexWidget*>& Visited,
+		TSet<ULexWidget*>& ActivePath,
+		TSet<ULexWidget*>& ChangedWidgets,
+		FLexUIPrefabSchemaMigrationReport& Report,
+		bool bApplyChanges)
+	{
+		if (!IsValid(Widget))
+		{
+			Report.Warnings.Add(TEXT("Skipped an invalid widget reference."));
+			return;
+		}
+		if (ActivePath.Contains(Widget))
+		{
+			Report.Errors.Add(FString::Printf(
+				TEXT("Hierarchy cycle detected at %s."), *BuildWidgetPath(Widget)));
+			return;
+		}
+		if (Visited.Contains(Widget))
+		{
+			Report.Errors.Add(FString::Printf(
+				TEXT("Widget is referenced more than once: %s."), *BuildWidgetPath(Widget)));
+			return;
+		}
+
+		Visited.Add(Widget);
+		ActivePath.Add(Widget);
+		const FString WidgetPath = BuildWidgetPath(Widget);
+		ULexWidget* Parent = Widget->GetParent();
+		const bool bParentOwnsPanelSlot = IsValid(Parent)
+			&& IsValid(Cast<ULexPanelLayoutBase>(Parent->GetLayoutContainer()));
+		ULexPanelSlot* Slot = Widget->GetPanelSlot();
+		if (bParentOwnsPanelSlot)
+		{
+			if (!IsValid(Slot))
+			{
+				ChangedWidgets.Add(Widget);
+				Report.Actions.Add(FString::Printf(TEXT("Created parent-owned PanelSlot for %s."), *WidgetPath));
+				if (bApplyChanges)
+				{
+					Slot = Widget->CreateNewPanelSlot<ULexPanelSlot>();
+					if (IsValid(Slot))
+					{
+						Slot->CaptureAuthoredGeometry(true);
+					}
+					else
+					{
+						Report.Errors.Add(FString::Printf(TEXT("Could not create PanelSlot for %s."), *WidgetPath));
+					}
+				}
+			}
+			else if (!Slot->HasAuthoredGeometry())
+			{
+				ChangedWidgets.Add(Widget);
+				Report.Actions.Add(FString::Printf(TEXT("Captured authored geometry for %s."), *WidgetPath));
+				if (bApplyChanges)
+				{
+					Slot->CaptureAuthoredGeometry(true);
+				}
+			}
+		}
+		else if (IsValid(Slot))
+		{
+			ChangedWidgets.Add(Widget);
+			Report.Warnings.Add(FString::Printf(TEXT("Removed stale PanelSlot from %s."), *WidgetPath));
+			if (bApplyChanges)
+			{
+				Widget->RemovePanelSlot();
+			}
+		}
+
+		for (ULexWidget* Child : Widget->GetChildren())
+		{
+			if (IsValid(Child) && Child->GetParent() != Widget)
+			{
+				Report.Errors.Add(FString::Printf(
+					TEXT("Parent link mismatch under %s for child %s."), *WidgetPath, *Child->GetName()));
+				continue;
+			}
+			MigrateWidgetRecursive(Child, Visited, ActivePath, ChangedWidgets, Report, bApplyChanges);
+		}
+		ActivePath.Remove(Widget);
+	}
+}
 
 
 FLexUISubPrefabData::FLexUISubPrefabData()
@@ -135,6 +271,50 @@ ULexUIPrefab::ULexUIPrefab()
 
 }
 
+FLexUIPrefabSchemaMigrationReport ULexUIPrefab::ApplySchemaMigration(ULexWidget* RootWidget)
+{
+	const FLexUIPrefabSchemaMigrationReport ValidationReport = EvaluateSchemaMigration(RootWidget, false);
+	if (ValidationReport.HasErrors())
+	{
+		return ValidationReport;
+	}
+	return EvaluateSchemaMigration(RootWidget, true);
+}
+
+FLexUIPrefabSchemaMigrationReport ULexUIPrefab::EvaluateSchemaMigration(ULexWidget* RootWidget, bool bApplyChanges)
+{
+	FLexUIPrefabSchemaMigrationReport Report;
+	Report.FromVersion = PrefabSchemaVersion;
+	if (PrefabSchemaVersion > LEXUI_CURRENT_PREFAB_SCHEMA_VERSION)
+	{
+		Report.Errors.Add(FString::Printf(
+			TEXT("Prefab schema %u is newer than the supported schema %u."),
+			PrefabSchemaVersion, LEXUI_CURRENT_PREFAB_SCHEMA_VERSION));
+		return Report;
+	}
+	if (!IsValid(RootWidget))
+	{
+		Report.Errors.Add(TEXT("Prefab has no valid root widget."));
+		return Report;
+	}
+
+	TSet<ULexWidget*> Visited;
+	TSet<ULexWidget*> ActivePath;
+	TSet<ULexWidget*> ChangedWidgets;
+	LexUIPrefabSchemaLocal::MigrateWidgetRecursive(
+		RootWidget, Visited, ActivePath, ChangedWidgets, Report, bApplyChanges);
+	Report.ChangedObjectCount = ChangedWidgets.Num();
+	if (!Report.HasErrors() && PrefabSchemaVersion != LEXUI_CURRENT_PREFAB_SCHEMA_VERSION)
+	{
+		Report.bSchemaVersionUpdated = true;
+		if (bApplyChanges)
+		{
+			PrefabSchemaVersion = LEXUI_CURRENT_PREFAB_SCHEMA_VERSION;
+		}
+	}
+	return Report;
+}
+
 #if WITH_EDITOR
 
 void ULexUIPrefab::SetRootWidgetNameFromPrefab()
@@ -203,6 +383,7 @@ struct FLexUIPrefabVersionScope
 {
 public:
 	uint16 PrefabVersion = 0;
+	uint16 PrefabSchemaVersion = 0;
 	uint16 EngineMajorVersion = 0;
 	uint16 EngineMinorVersion = 0;
 	uint16 EnginePatchVersion = 0;
@@ -218,6 +399,7 @@ public:
 		this->EngineMajorVersion = Prefab->EngineMajorVersion;
 		this->EngineMinorVersion = Prefab->EngineMinorVersion;
 		this->PrefabVersion = Prefab->PrefabVersion;
+		this->PrefabSchemaVersion = Prefab->PrefabSchemaVersion;
 		this->ArchiveVersion = Prefab->ArchiveVersion;
 		this->ArchiveLicenseeVer = Prefab->ArchiveLicenseeVer;
 		this->ArEngineNetVer = Prefab->ArEngineNetVer;
@@ -228,6 +410,7 @@ public:
 		Prefab->EngineMajorVersion = this->EngineMajorVersion;
 		Prefab->EngineMinorVersion = this->EngineMinorVersion;
 		Prefab->PrefabVersion = this->PrefabVersion;
+		Prefab->PrefabSchemaVersion = this->PrefabSchemaVersion;
 		Prefab->ArchiveVersion = this->ArchiveVersion;
 		Prefab->ArchiveLicenseeVer = this->ArchiveLicenseeVer;
 		Prefab->ArEngineNetVer = this->ArEngineNetVer;
@@ -606,6 +789,7 @@ void ULexUIPrefab::CopyDataTo(ULexUIPrefab* TargetPrefab)
 	TargetPrefab->ReferenceTextList = this->ReferenceTextList;
 	TargetPrefab->BinaryData = this->BinaryData;
 	TargetPrefab->PrefabVersion = this->PrefabVersion;
+	TargetPrefab->PrefabSchemaVersion = this->PrefabSchemaVersion;
 	TargetPrefab->EngineMajorVersion = this->EngineMajorVersion;
 	TargetPrefab->EngineMinorVersion = this->EngineMinorVersion;
 	TargetPrefab->EnginePatchVersion = this->EnginePatchVersion;
@@ -644,6 +828,42 @@ FString ULexUIPrefab::GenerateOverallVersionMD5()
 		CreateTimeOverall += Item->CreateTime.ToIso8601();
 	}
 	return FLexUIUtils::GetMD5String(FLexUIUtils::GetMD5(CreateTimeOverall));
+}
+
+FLexUIPrefabSchemaMigrationReport ULexUIPrefab::PreviewSchemaUpgrade()
+{
+	ULexUIPrefab* PreviewPrefab = DuplicateObject<ULexUIPrefab>(this, GetTransientPackage());
+	if (!IsValid(PreviewPrefab))
+	{
+		FLexUIPrefabSchemaMigrationReport Report;
+		Report.FromVersion = PrefabSchemaVersion;
+		Report.Errors.Add(TEXT("Could not create an isolated prefab copy for migration preview."));
+		return Report;
+	}
+
+	ULexUIPrefabHelperObject* SourceHelper = GetPrefabHelperObject();
+	return PreviewPrefab->EvaluateSchemaMigration(
+		IsValid(SourceHelper) ? SourceHelper->LoadedRootWidget : nullptr, false);
+}
+
+FLexUIPrefabSchemaMigrationReport ULexUIPrefab::UpgradeSchema()
+{
+	ULexUIPrefabHelperObject* Helper = GetPrefabHelperObject();
+	if (!IsValid(Helper) || !IsValid(Helper->LoadedRootWidget))
+	{
+		FLexUIPrefabSchemaMigrationReport Report;
+		Report.FromVersion = PrefabSchemaVersion;
+		Report.Errors.Add(TEXT("Prefab has no editable hierarchy to upgrade."));
+		return Report;
+	}
+
+	Modify();
+	FLexUIPrefabSchemaMigrationReport Report = ApplySchemaMigration(Helper->LoadedRootWidget);
+	if (!Report.HasErrors() && Report.HasChanges() && !Helper->SavePrefab())
+	{
+		Report.Errors.Add(TEXT("Migration succeeded in memory, but the prefab could not be saved."));
+	}
+	return Report;
 }
 
 bool ULexUIPrefab::SavePrefab(ULexWidget* RootWidget

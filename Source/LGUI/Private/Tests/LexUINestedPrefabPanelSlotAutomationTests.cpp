@@ -101,6 +101,23 @@ bool FLexUINestedPrefabPanelSlotPersistenceTest::RunTest(const FString& Paramete
 					&& Override.MemberPropertyNames.Contains(GET_MEMBER_NAME_CHECKED(ULexPanelSlot, SizeRule));
 			}));
 
+	// Refreshing an already-loaded parent passes its parent-owned slot back in
+	// the existing-object map. The child serializer must ignore that extra object.
+	TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> RefreshedSubPrefabs;
+	ULexWidget* RefreshedParent = WidgetSerializer::LoadPrefabWithExistingObjects(
+		World, World, ParentPrefab, nullptr, ReloadedGuidToObject, RefreshedSubPrefabs);
+	ULexWidget* RefreshedNestedRoot = RefreshedParent && RefreshedParent->GetChildrenCount() == 1
+		? RefreshedParent->GetChildByIndex(0)
+		: nullptr;
+	ULexPanelSlot* RefreshedSlot = RefreshedNestedRoot ? RefreshedNestedRoot->GetPanelSlot() : nullptr;
+	TestNotNull(TEXT("Existing-object refresh preserves the nested root slot"), RefreshedSlot);
+	if (RefreshedSlot)
+	{
+		TestEqual(TEXT("Refresh retains fill rule"), RefreshedSlot->SizeRule, ELexPanelSizeRule::Fill);
+		TestEqual(TEXT("Refresh retains fill weight"), RefreshedSlot->FillWeight, 2.5f);
+		TestEqual(TEXT("Refresh retains padding"), RefreshedSlot->Padding, FMargin(3.0f, 4.0f, 5.0f, 6.0f));
+	}
+
 	// Deserialization may normalize transient new-object mappings. Loading the
 	// same asset again must retain the reserved parent-slot mapping and values.
 	UWorld* SecondWorld = UWorld::CreateWorld(EWorldType::None, false);

@@ -110,6 +110,7 @@ UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent,
 	{
 		ULexUIPrefab* NewAsset = NewObject<ULexUIPrefab>(InParent, Class, Name, Flags | RF_Transactional);
 		NewAsset->bIsPrefabVariant = true;
+		NewAsset->PrefabSchemaVersion = LEXUI_CURRENT_PREFAB_SCHEMA_VERSION;
 		auto HelperObject = NewAsset->GetPrefabHelperObject();
 		HelperObject->PrefabAsset = NewAsset;
 		TMap<FGuid, TObjectPtr<UObject>> MapGuidToObject;
@@ -135,6 +136,7 @@ UObject* ULexUIPrefabFactory::FactoryCreateNew(UClass* Class, UObject* InParent,
 		ULexUIPrefab* NewAsset = NewObject<ULexUIPrefab>(InParent, Class, Name, Flags | RF_Transactional);
 		NewAsset->bIsPrefabVariant = false;
 		NewAsset->PrefabVersion = LEXUI_CURRENT_PREFAB_VERSION;
+		NewAsset->PrefabSchemaVersion = LEXUI_CURRENT_PREFAB_SCHEMA_VERSION;
 		auto HelperObject = NewAsset->GetPrefabHelperObject();
 		HelperObject->PrefabAsset = NewAsset;
 		auto PrefabScene = NewAsset->GetPrefabInstanceScene();

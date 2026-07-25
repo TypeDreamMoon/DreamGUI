@@ -569,8 +569,15 @@ namespace LexUIPrefabSystem
 								{
 									auto& GuidInSubPrefab = KeyValue.Key;
 									auto& ObjectInSubPrefab = KeyValue.Value;
+									const FGuid* GuidInOriginPrefab = InMapObjectToOriginGuid.Find(ObjectInSubPrefab);
+									if (!GuidInOriginPrefab)
+									{
+										// Existing-object reloads can carry parent-owned objects, such as the
+										// nested root panel slot, which have no GUID in the child prefab.
+										continue;
+									}
 
-									auto GuidInParent = GetObjectGuidInParent(GuidInSubPrefab, InMapObjectToOriginGuid[ObjectInSubPrefab]);
+									auto GuidInParent = GetObjectGuidInParent(GuidInSubPrefab, *GuidInOriginPrefab);
 
 									if (auto RecordDataPtr = InWidgetData.MapObjectGuidToSubPrefabOverrideParameter.Find(GuidInParent))
 									{

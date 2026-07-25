@@ -63,8 +63,35 @@ enum class ELexUIPrefabVersion : uint16
  */
 #define LEXUI_CURRENT_PREFAB_VERSION (uint16)ELexUIPrefabVersion::NEWEST
 
+/** Object-model migrations are versioned separately from the binary serializer format. */
+enum class ELexUIPrefabSchemaVersion : uint16
+{
+	Unversioned = 0,
+	PanelSlotOwnership = 1,
+
+	MAX_NO_USE,
+	NEWEST = MAX_NO_USE - 1,
+};
+
+#define LEXUI_CURRENT_PREFAB_SCHEMA_VERSION (uint16)ELexUIPrefabSchemaVersion::NEWEST
+
 class ULexUIPrefab;
 class ULexUIPrefabHelperObject;
+
+struct LGUI_API FLexUIPrefabSchemaMigrationReport
+{
+	uint16 FromVersion = 0;
+	uint16 ToVersion = LEXUI_CURRENT_PREFAB_SCHEMA_VERSION;
+	int32 ChangedObjectCount = 0;
+	bool bSchemaVersionUpdated = false;
+	TArray<FString> Actions;
+	TArray<FString> Warnings;
+	TArray<FString> Errors;
+
+	bool HasChanges() const { return bSchemaVersionUpdated || ChangedObjectCount > 0; }
+	bool HasErrors() const { return !Errors.IsEmpty(); }
+	FString ToString() const;
+};
 
 USTRUCT(NotBlueprintType)
 struct LGUI_API FLexUIPrefabOverrideParameterData
@@ -225,6 +252,9 @@ public:
 	/** Prefab system's version when creating this prefab */
 	UPROPERTY()
 		uint16 PrefabVersion;
+	/** Hierarchy and component-contract version, independent from PrefabVersion's binary format. */
+	UPROPERTY()
+		uint16 PrefabSchemaVersion;
 	/** Engine's major version when creating this prefab */
 	UPROPERTY()
 		uint16 EngineMajorVersion;
@@ -320,12 +350,19 @@ public:
 		, TMap<FGuid, TObjectPtr<UObject>>& InOutMapGuidToObject, TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& OutSubPrefabMap
 	);
 	bool IsPrefabBelongsToThisSubPrefab(ULexUIPrefab* InPrefab, bool InRecursive);
+	/** Repair and validate the current hierarchy before it is serialized. */
+	FLexUIPrefabSchemaMigrationReport ApplySchemaMigration(ULexWidget* RootWidget);
 #if WITH_EDITOR
 	void CopyDataTo(ULexUIPrefab* TargetPrefab);
 	bool GetIsPrefabVariant()const { return bIsPrefabVariant; }
 	FString GenerateOverallVersionMD5();
+	/** Evaluate migration against an isolated duplicate without changing this asset or its live hierarchy. */
+	FLexUIPrefabSchemaMigrationReport PreviewSchemaUpgrade();
+	/** Upgrade the live hierarchy and persist it into this asset. */
+	FLexUIPrefabSchemaMigrationReport UpgradeSchema();
 #endif
 private:
+	FLexUIPrefabSchemaMigrationReport EvaluateSchemaMigration(ULexWidget* RootWidget, bool bApplyChanges);
 #if WITH_EDITOR
 	void SetRootWidgetNameFromPrefab();
 public:

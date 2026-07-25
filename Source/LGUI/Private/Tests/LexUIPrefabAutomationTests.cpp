@@ -4,6 +4,7 @@
 #include "Core/Components/LexPanelLayouts.h"
 #include "Core/Components/LexPanelSlot.h"
 #include "Core/Components/LexWidget.h"
+#include "Engine/World.h"
 #include "PrefabSystem/LexUIPrefab.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "PrefabSystem/WidgetSerializer.h"
@@ -147,6 +148,85 @@ bool FLexPanelSlotUserAnchorEditTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("AutoSize restore keeps the user-authored anchor maximum"), Child->GetAnchorMax(), FVector2D::UnitVector);
 	TestEqual(TEXT("AutoSize restore returns the authored width"), Child->GetSizeDelta().X, 1920.0);
 	TestEqual(TEXT("AutoSize restore returns the authored height"), Child->GetSizeDelta().Y, 1080.0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexUIPrefabSchemaMigrationTest,
+	"LGUI.Prefab.SchemaMigrationPreviewAndUpgrade",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLexUIPrefabSchemaMigrationTest::RunTest(const FString& Parameters)
+{
+	UWorld* SeedWorld = UWorld::CreateWorld(EWorldType::None, false);
+	TestNotNull(TEXT("Seed world created"), SeedWorld);
+	if (!SeedWorld)
+	{
+		return false;
+	}
+
+	ULexUIPrefab* Prefab = NewObject<ULexUIPrefab>();
+	ULexWidget* SeedRoot = NewObject<ULexWidget>(SeedWorld, NAME_None, RF_Public | RF_Transactional);
+	ULexWidget* SeedMissingSlotChild = NewObject<ULexWidget>(SeedRoot, NAME_None, RF_Public | RF_Transactional);
+	ULexWidget* SeedPlainParent = NewObject<ULexWidget>(SeedRoot, NAME_None, RF_Public | RF_Transactional);
+	ULexWidget* SeedStaleSlotChild = NewObject<ULexWidget>(SeedPlainParent, NAME_None, RF_Public | RF_Transactional);
+	ULexLayoutContainerHorizontalBox* Panel = SeedRoot->CreateNewLayoutContainer<ULexLayoutContainerHorizontalBox>();
+	TestNotNull(TEXT("Panel layout created"), Panel);
+	TestTrue(TEXT("Seed child joins panel"), SeedMissingSlotChild->TrySetParent(SeedRoot, false));
+	TestTrue(TEXT("Seed plain parent joins panel"), SeedPlainParent->TrySetParent(SeedRoot, false));
+	TestTrue(TEXT("Seed nested child joins plain parent"), SeedStaleSlotChild->TrySetParent(SeedPlainParent, false));
+	if (!Prefab || !SeedRoot || !SeedMissingSlotChild || !SeedPlainParent || !SeedStaleSlotChild || !Panel)
+	{
+		SeedWorld->DestroyWorld(false);
+		return false;
+	}
+
+	TMap<UObject*, FGuid> SeedObjectToGuid;
+	SeedObjectToGuid.Add(SeedRoot, FGuid::NewGuid());
+	TMap<TObjectPtr<ULexWidget>, FLexUISubPrefabData> EmptySubPrefabs;
+	TestTrue(TEXT("Seed prefab serialized"), LexUIPrefabSystem::WidgetSerializer::SavePrefab(
+		SeedRoot, Prefab, SeedObjectToGuid, EmptySubPrefabs, true));
+	SeedWorld->DestroyWorld(false);
+
+	Prefab->PrefabSchemaVersion = static_cast<uint16>(ELexUIPrefabSchemaVersion::Unversioned);
+	ULexUIPrefabHelperObject* Helper = Prefab->GetPrefabHelperObject();
+	ULexWidget* Root = IsValid(Helper) ? Helper->LoadedRootWidget : nullptr;
+	ULexWidget* MissingSlotChild = IsValid(Root) && Root->GetChildrenCount() > 0 ? Root->GetChildByIndex(0) : nullptr;
+	ULexWidget* PlainParent = IsValid(Root) && Root->GetChildrenCount() > 1 ? Root->GetChildByIndex(1) : nullptr;
+	ULexWidget* StaleSlotChild = IsValid(PlainParent) && PlainParent->GetChildrenCount() > 0
+		? PlainParent->GetChildByIndex(0) : nullptr;
+	if (!Helper || !Root || !MissingSlotChild || !PlainParent || !StaleSlotChild)
+	{
+		return false;
+	}
+	MissingSlotChild->RemovePanelSlot();
+	ULexPanelSlot* StaleSlot = StaleSlotChild->CreateNewPanelSlot<ULexPanelSlot>();
+	TestNotNull(TEXT("Legacy hierarchy contains a stale slot"), StaleSlot);
+
+	const FLexUIPrefabSchemaMigrationReport Preview = Prefab->PreviewSchemaUpgrade();
+	TestFalse(TEXT("Preview has no errors"), Preview.HasErrors());
+	TestTrue(TEXT("Preview finds hierarchy repairs"), Preview.HasChanges());
+	TestNull(TEXT("Preview does not add the missing slot to the source"), MissingSlotChild->GetPanelSlot());
+	TestNotNull(TEXT("Preview does not remove the stale source slot"), StaleSlotChild->GetPanelSlot());
+	TestEqual(TEXT("Preview does not update the source schema"), Prefab->PrefabSchemaVersion,
+		static_cast<uint16>(ELexUIPrefabSchemaVersion::Unversioned));
+
+	const FLexUIPrefabSchemaMigrationReport Upgrade = Prefab->UpgradeSchema();
+	TestFalse(TEXT("Upgrade has no errors"), Upgrade.HasErrors());
+	TestEqual(TEXT("Upgrade matches the preview change count"), Upgrade.ChangedObjectCount, Preview.ChangedObjectCount);
+	TestTrue(TEXT("Upgrade applies both ownership repairs"), Upgrade.ChangedObjectCount >= 2);
+	TestNotNull(TEXT("Upgrade creates the panel-owned slot"), MissingSlotChild->GetPanelSlot());
+	TestNull(TEXT("Upgrade removes the stale slot"), StaleSlotChild->GetPanelSlot());
+	TestEqual(TEXT("Upgrade records the current schema"), Prefab->PrefabSchemaVersion,
+		LEXUI_CURRENT_PREFAB_SCHEMA_VERSION);
+
+	const FLexUIPrefabSchemaMigrationReport SecondUpgrade = Prefab->UpgradeSchema();
+	TestFalse(TEXT("Second upgrade has no errors"), SecondUpgrade.HasErrors());
+	TestFalse(TEXT("Second upgrade is idempotent"), SecondUpgrade.HasChanges());
+	TestEqual(TEXT("Second upgrade changes no objects"), SecondUpgrade.ChangedObjectCount, 0);
+
+	Helper->ClearLoadedPrefab();
+	Prefab->ClearPrefabInstanceScene();
 	return true;
 }
 

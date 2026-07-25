@@ -77,6 +77,19 @@ namespace LexUIPrefabSystem
 			UE_LOG(LGUI, Error, TEXT("[%s].%d OriginRootWidget is editor only!"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 			return false;
 		}
+		const FLexUIPrefabSchemaMigrationReport MigrationReport = InPrefab->ApplySchemaMigration(OriginRootWidget);
+		for (const FString& Warning : MigrationReport.Warnings)
+		{
+			UE_LOG(LGUI, Warning, TEXT("Prefab schema migration: %s"), *Warning);
+		}
+		for (const FString& Error : MigrationReport.Errors)
+		{
+			UE_LOG(LGUI, Error, TEXT("Prefab schema migration: %s"), *Error);
+		}
+		if (MigrationReport.HasErrors())
+		{
+			return false;
+		}
 		WidgetSerializer serializer;
 		const TSet<const ULexWidget*> ReachableWidgets = WidgetSerializerLocal::CollectReachableWidgets(OriginRootWidget);
 		int32 RemovedStaleMappings = 0;
