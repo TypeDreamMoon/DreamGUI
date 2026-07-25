@@ -11,6 +11,15 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUIScrollViewValueChangedEvent, FVector2D, InVector2);
 
+UENUM(BlueprintType)
+enum class ELexScrollCoordinateMode : uint8
+{
+	/** Backward-compatible raw component location used by legacy LGUI prefabs. */
+	RelativeLocation,
+	/** RectTransform-style offset that remains stable across anchors and pivots. */
+	AnchoredPosition,
+};
+
 UCLASS(ClassGroup=(LGUI), Transient)
 class LGUI_API UUIScrollViewHelper :public ULexUIBehaviour
 {
@@ -32,6 +41,8 @@ class LGUI_API UUIScrollView : public ULexUIBehaviour, public ILexPointerDragInt
 protected:
 	virtual void Awake() override;
 	virtual void Tick(float DeltaTime) override;
+	virtual void OnUnregister() override;
+	virtual void OnDestroy() override;
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
@@ -55,6 +66,12 @@ protected:
 	/** Sensitivity when use mouse scroll wheel input */ 
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollView")
 		float ScrollSensitivity = 1.0f;
+	/** If greater than zero, mouse wheel input advances by this normalized progress instead of Slate units. */
+	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollView", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+		float WheelProgressStep = 0.0f;
+	/** Coordinate contract used to move Content. AnchoredPosition is recommended for layout-managed content. */
+	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollView")
+		ELexScrollCoordinateMode CoordinateMode = ELexScrollCoordinateMode::RelativeLocation;
 	/** When Content size is smaller than Content's parent size, can we still scroll it? */
 	UPROPERTY(EditAnywhere, Category = "LGUI-ScrollView")
 		bool CanScrollInSmallSize = true;
@@ -95,6 +112,7 @@ protected:
 	bool CheckParameters();
 	virtual bool CheckValidHit(ULexWidget* InHitComp);
 	UPROPERTY(Transient)TWeakObjectPtr<ULexWidget> ContentParent = nullptr;//Content's parent
+	UPROPERTY(Transient)TWeakObjectPtr<UUIScrollViewHelper> RangeHelper = nullptr;
 	virtual void UpdateProgress(bool InFireEvent = true);
 	FVector2D Velocity = FVector2D(0, 0);//drag speed
 	FVector2D HorizontalRange;//horizontal scroll range, x--min, y--max
@@ -103,6 +121,10 @@ protected:
 
 	void UpdateAfterDrag(float deltaTime);
 	virtual void ApplyContentPositionWithProgress();
+	FVector2D GetContentPosition() const;
+	void SetContentPosition(const FVector2D& Value) const;
+	void ReleaseRangeHelper();
+	float GetSafeDeltaTime() const;
 
 	FLexUIMulticastDelegateVector2 OnValueChangedCPP;
 	UPROPERTY(BlueprintAssignable, Category = "LGUI-ScrollView", DisplayName="OnValueChanged")
@@ -135,6 +157,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
 		float GetScrollSensitivity()const { return ScrollSensitivity; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
+		float GetWheelProgressStep()const { return WheelProgressStep; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
+		ELexScrollCoordinateMode GetCoordinateMode()const { return CoordinateMode; }
+	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
 		bool GetCanScrollInSmallSize()const { return CanScrollInSmallSize; }
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
 		FVector2D GetVelocity()const { return Velocity; }
@@ -155,6 +181,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
 		void SetScrollSensitivity(float value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
+		void SetWheelProgressStep(float value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
+		void SetCoordinateMode(ELexScrollCoordinateMode value);
+	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
+		void SetKeepProgress(bool value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")
 		void SetHorizontal(bool value);
 	UFUNCTION(BlueprintCallable, Category = "LGUI-ScrollView")

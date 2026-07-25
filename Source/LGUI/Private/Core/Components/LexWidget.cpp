@@ -3183,7 +3183,24 @@ void ULexWidget::MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged, 
 {
 	if (ClipData.IsValid() && ClipData.Pin()->GetWidget() == this)
 	{
-		ClipData.Pin()->MarkNeedUpdateData();
+		TFunction<void(const ULexWidget*)> InvalidateClipData;
+		InvalidateClipData = [&InvalidateClipData](const ULexWidget* Widget)
+		{
+			if (!IsValid(Widget))
+			{
+				return;
+			}
+			if (Widget->ClipData.IsValid() && Widget->ClipData.Pin()->GetWidget() == Widget)
+			{
+				Widget->ClipData.Pin()->MarkNeedUpdateData();
+			}
+			for (const ULexWidget* Child : Widget->Children)
+			{
+				InvalidateClipData(Child);
+			}
+		};
+		// Every nested clip buffer embeds its ancestor clip rectangles.
+		InvalidateClipData(this);
 	}
 
 	OnDimensionChangedEvent.Broadcast(InPivotChanged, InWidthChanged, InHeightChanged);
