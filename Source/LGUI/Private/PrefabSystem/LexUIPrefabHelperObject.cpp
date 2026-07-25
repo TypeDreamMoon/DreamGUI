@@ -976,20 +976,31 @@ void ULexUIPrefabHelperObject::RevertPrefabPropertyValue(UObject* ContextObject,
 }
 void ULexUIPrefabHelperObject::RevertPrefabOverride(UObject* InObject, const TArray<FName>& InPropertyNames)
 {
-	const FScopedTransaction Transaction(FText::Format(
-		LOCTEXT("RevertPrefabOnObjectProperties", "Revert Prefab Override: {0}"),
-		FText::FromString(InObject->GetName())));
-	InObject->Modify();
-	this->Modify();
-
+	if (!IsValid(InObject))return;
 	auto Widget = Cast<ULexWidget>(InObject);
 	if (!Widget)
 	{
 		Widget = InObject->GetTypedOuter<ULexWidget>();
 	}
-	auto SubPrefabData = GetSubPrefabData(Widget);
-	auto SubPrefabAsset = SubPrefabData.PrefabAsset;
+	if (!IsValid(Widget))
+	{
+		UE_LOG(LGUI, Warning, TEXT("Cannot revert prefab override for '%s' without an owning widget."), *InObject->GetPathName());
+		return;
+	}
+	auto SubPrefabRootWidget = GetSubPrefabRootWidget(Widget);
+	auto SubPrefabDataPtr = SubPrefabMap.Find(SubPrefabRootWidget);
+	if (!SubPrefabDataPtr || !IsValid(SubPrefabDataPtr->PrefabAsset))
+	{
+		UE_LOG(LGUI, Warning, TEXT("Cannot revert prefab override for '%s' because its sub-prefab data is missing."), *InObject->GetPathName());
+		return;
+	}
+	auto SubPrefabAsset = SubPrefabDataPtr->PrefabAsset.Get();
 	auto SubPrefabHelperObject = SubPrefabAsset->GetPrefabHelperObject();
+	if (!IsValid(SubPrefabHelperObject))
+	{
+		UE_LOG(LGUI, Warning, TEXT("Cannot revert prefab override for '%s' because the source prefab helper is unavailable."), *InObject->GetPathName());
+		return;
+	}
 	FGuid ObjectGuid;
 	for (auto& KeyValue : MapGuidToObject)
 	{
@@ -999,8 +1010,24 @@ void ULexUIPrefabHelperObject::RevertPrefabOverride(UObject* InObject, const TAr
 			break;
 		}
 	}
-	FGuid ObjectGuidInSubPrefab = SubPrefabData.MapObjectGuidFromParentPrefabToSubPrefab[ObjectGuid];
-	auto ObjectInPrefab = SubPrefabHelperObject->MapGuidToObject[ObjectGuidInSubPrefab];
+	const FGuid* ObjectGuidInSubPrefab = ObjectGuid.IsValid()
+		? SubPrefabDataPtr->MapObjectGuidFromParentPrefabToSubPrefab.Find(ObjectGuid)
+		: nullptr;
+	const TObjectPtr<UObject>* ObjectInPrefabPtr = ObjectGuidInSubPrefab
+		? SubPrefabHelperObject->MapGuidToObject.Find(*ObjectGuidInSubPrefab)
+		: nullptr;
+	UObject* ObjectInPrefab = ObjectInPrefabPtr ? ObjectInPrefabPtr->Get() : nullptr;
+	if (!IsValid(ObjectInPrefab))
+	{
+		UE_LOG(LGUI, Warning, TEXT("Cannot revert prefab override for '%s' because its source object mapping is missing."), *InObject->GetPathName());
+		return;
+	}
+	const FLexUISubPrefabData SubPrefabData = *SubPrefabDataPtr;
+	const FScopedTransaction Transaction(FText::Format(
+		LOCTEXT("RevertPrefabOnObjectProperties", "Revert Prefab Override: {0}"),
+		FText::FromString(InObject->GetName())));
+	InObject->Modify();
+	this->Modify();
 	CopyRootObjectParentAnchorData(InObject, ObjectInPrefab);
 
 	bCanCollectProperty = false;
@@ -1038,21 +1065,28 @@ void ULexUIPrefabHelperObject::RevertPrefabOverride(UObject* InObject, const TAr
 	bCanCollectProperty = true;
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	//when apply or revert parameters in level editor, means we accept sub-prefab's current version, so we mark the version to newest, and we won't get 'update warning'.
-	RefreshSubPrefabVersion(GetSubPrefabRootWidget(Widget));
+	RefreshSubPrefabVersion(SubPrefabRootWidget);
 }
 
 void ULexUIPrefabHelperObject::RevertAllPrefabOverride(UObject* InObject)
 {
+	if (!IsValid(InObject))return;
+	auto Widget = Cast<ULexWidget>(InObject);
+	if (!Widget)
+	{
+		Widget = InObject->GetTypedOuter<ULexWidget>();
+	}
+	if (!IsValid(Widget))return;
+	auto SubPrefabRootWidget = GetSubPrefabRootWidget(Widget);
+	auto SubPrefabDataPtr = SubPrefabMap.Find(SubPrefabRootWidget);
+	if (!SubPrefabDataPtr || !IsValid(SubPrefabDataPtr->PrefabAsset))return;
+	auto SubPrefabData = *SubPrefabDataPtr;
+	auto SubPrefabAsset = SubPrefabData.PrefabAsset.Get();
+	auto SubPrefabHelperObject = SubPrefabAsset->GetPrefabHelperObject();
+	if (!IsValid(SubPrefabHelperObject))return;
+
 	bCanCollectProperty = false;
 	{
-		auto Widget = Cast<ULexWidget>(InObject);
-		if (!Widget)
-		{
-			Widget = InObject->GetTypedOuter<ULexWidget>();
-		}
-		auto SubPrefabData = GetSubPrefabData(Widget);
-		auto SubPrefabRootWidget = GetSubPrefabRootWidget(Widget);
-
 		GEditor->BeginTransaction(LOCTEXT("RevertPrefabOnAll_Transaction", "Revert Prefab Override"));
 		for (int i = 0; i < SubPrefabData.ObjectOverrideParameterArray.Num(); i++)
 		{
@@ -1061,20 +1095,23 @@ void ULexUIPrefabHelperObject::RevertAllPrefabOverride(UObject* InObject)
 		}
 		this->Modify();
 
-		auto SubPrefabAsset = SubPrefabData.PrefabAsset;
-		auto SubPrefabHelperObject = SubPrefabAsset->GetPrefabHelperObject();
-		auto FindOriginObjectInSourcePrefab = [&](UObject* InObject) {
+		auto FindOriginObjectInSourcePrefab = [&](UObject* Object) -> UObject* {
 			FGuid ObjectGuid;
 			for (auto& KeyValue : MapGuidToObject)
 			{
-				if (KeyValue.Value == InObject)
+				if (KeyValue.Value == Object)
 				{
 					ObjectGuid = KeyValue.Key;
 					break;
 				}
 			}
-			FGuid ObjectGuidInSubPrefab = SubPrefabData.MapObjectGuidFromParentPrefabToSubPrefab[ObjectGuid];
-			return SubPrefabHelperObject->MapGuidToObject[ObjectGuidInSubPrefab];
+			const FGuid* ObjectGuidInSubPrefab = ObjectGuid.IsValid()
+				? SubPrefabData.MapObjectGuidFromParentPrefabToSubPrefab.Find(ObjectGuid)
+				: nullptr;
+			const TObjectPtr<UObject>* SourceObject = ObjectGuidInSubPrefab
+				? SubPrefabHelperObject->MapGuidToObject.Find(*ObjectGuidInSubPrefab)
+				: nullptr;
+			return SourceObject ? SourceObject->Get() : nullptr;
 		};
 		for (int i = 0; i < SubPrefabData.ObjectOverrideParameterArray.Num(); i++)
 		{
@@ -1082,6 +1119,11 @@ void ULexUIPrefabHelperObject::RevertAllPrefabOverride(UObject* InObject)
 			auto SourceObject = DataItem.Object.Get();
 			TSet<FName> FilterNameSet;
 			auto ObjectInPrefab = FindOriginObjectInSourcePrefab(SourceObject);
+			if (!IsValid(SourceObject) || !IsValid(ObjectInPrefab))
+			{
+				UE_LOG(LGUI, Warning, TEXT("Skipping prefab override with a missing source mapping while reverting all overrides."));
+				continue;
+			}
 			CopyRootObjectParentAnchorData(SourceObject, ObjectInPrefab);
 
 			TSet<FName> NamesToClear;
@@ -1302,20 +1344,31 @@ void ULexUIPrefabHelperObject::ApplyPrefabPropertyValue(UObject* ContextObject, 
 }
 void ULexUIPrefabHelperObject::ApplyPrefabOverride(UObject* InObject, const TArray<FName>& InPropertyNames)
 {
-	const FScopedTransaction Transaction(FText::Format(
-		LOCTEXT("ApplyPrefabOnObjectProperties", "Apply Prefab Override: {0}"),
-		FText::FromString(InObject->GetName())));
-	InObject->Modify();
-	this->Modify();
-
+	if (!IsValid(InObject))return;
 	auto Widget = Cast<ULexWidget>(InObject);
 	if (!Widget)
 	{
 		Widget = InObject->GetTypedOuter<ULexWidget>();
 	}
-	auto SubPrefabData = GetSubPrefabData(Widget);
-	auto SubPrefabAsset = SubPrefabData.PrefabAsset;
+	if (!IsValid(Widget))
+	{
+		UE_LOG(LGUI, Warning, TEXT("Cannot apply prefab override for '%s' without an owning widget."), *InObject->GetPathName());
+		return;
+	}
+	auto SubPrefabRootWidget = GetSubPrefabRootWidget(Widget);
+	auto SubPrefabDataPtr = SubPrefabMap.Find(SubPrefabRootWidget);
+	if (!SubPrefabDataPtr || !IsValid(SubPrefabDataPtr->PrefabAsset))
+	{
+		UE_LOG(LGUI, Warning, TEXT("Cannot apply prefab override for '%s' because its sub-prefab data is missing."), *InObject->GetPathName());
+		return;
+	}
+	auto SubPrefabAsset = SubPrefabDataPtr->PrefabAsset.Get();
 	auto SubPrefabHelperObject = SubPrefabAsset->GetPrefabHelperObject();
+	if (!IsValid(SubPrefabHelperObject))
+	{
+		UE_LOG(LGUI, Warning, TEXT("Cannot apply prefab override for '%s' because the source prefab helper is unavailable."), *InObject->GetPathName());
+		return;
+	}
 	FGuid ObjectGuid;
 	for (auto& KeyValue : MapGuidToObject)
 	{
@@ -1325,13 +1378,24 @@ void ULexUIPrefabHelperObject::ApplyPrefabOverride(UObject* InObject, const TArr
 			break;
 		}
 	}
-	//object not exist
-	if (!ObjectGuid.IsValid())
+	const FGuid* ObjectGuidInSubPrefab = ObjectGuid.IsValid()
+		? SubPrefabDataPtr->MapObjectGuidFromParentPrefabToSubPrefab.Find(ObjectGuid)
+		: nullptr;
+	const TObjectPtr<UObject>* ObjectInPrefabPtr = ObjectGuidInSubPrefab
+		? SubPrefabHelperObject->MapGuidToObject.Find(*ObjectGuidInSubPrefab)
+		: nullptr;
+	UObject* ObjectInPrefab = ObjectInPrefabPtr ? ObjectInPrefabPtr->Get() : nullptr;
+	if (!IsValid(ObjectInPrefab))
 	{
+		UE_LOG(LGUI, Warning, TEXT("Cannot apply prefab override for '%s' because its source object mapping is missing."), *InObject->GetPathName());
 		return;
 	}
-	FGuid ObjectGuidInSubPrefab = SubPrefabData.MapObjectGuidFromParentPrefabToSubPrefab[ObjectGuid];
-	auto ObjectInPrefab = SubPrefabHelperObject->MapGuidToObject[ObjectGuidInSubPrefab];
+	const FLexUISubPrefabData SubPrefabData = *SubPrefabDataPtr;
+	const FScopedTransaction Transaction(FText::Format(
+		LOCTEXT("ApplyPrefabOnObjectProperties", "Apply Prefab Override: {0}"),
+		FText::FromString(InObject->GetName())));
+	InObject->Modify();
+	this->Modify();
 
 	bCanCollectProperty = false;
 	{
@@ -1376,18 +1440,24 @@ void ULexUIPrefabHelperObject::ApplyPrefabOverride(UObject* InObject, const TArr
 	bCanCollectProperty = true;
 	ULexUIManagerWorldSubsystem::RefreshAllUI();
 	//when apply or revert parameters in level editor, means we accept sub-prefab's current version, so we mark the version to newest, and we won't get 'update warning'.
-	RefreshSubPrefabVersion(GetSubPrefabRootWidget(Widget));
+	RefreshSubPrefabVersion(SubPrefabRootWidget);
 }
 void ULexUIPrefabHelperObject::ApplyAllOverrideToPrefab(UObject* InObject)
 {
+	if (!IsValid(InObject))return;
 	auto Widget = Cast<ULexWidget>(InObject);
 	if (!Widget)
 	{
 		Widget = InObject->GetTypedOuter<ULexWidget>();
 	}
-	auto SubPrefabData = GetSubPrefabData(Widget);
+	if (!IsValid(Widget))return;
 	auto SubPrefabRootWidget = GetSubPrefabRootWidget(Widget);
-	auto SubPrefabAsset = SubPrefabData.PrefabAsset;
+	auto SubPrefabDataPtr = SubPrefabMap.Find(SubPrefabRootWidget);
+	if (!SubPrefabDataPtr || !IsValid(SubPrefabDataPtr->PrefabAsset))return;
+	auto SubPrefabData = *SubPrefabDataPtr;
+	auto SubPrefabAsset = SubPrefabData.PrefabAsset.Get();
+	auto SubPrefabHelperObject = SubPrefabAsset->GetPrefabHelperObject();
+	if (!IsValid(SubPrefabHelperObject))return;
 
 	bCanCollectProperty = false;
 	{
@@ -1399,26 +1469,23 @@ void ULexUIPrefabHelperObject::ApplyAllOverrideToPrefab(UObject* InObject)
 		}
 		this->Modify();
 
-		auto SubPrefabHelperObject = SubPrefabAsset->GetPrefabHelperObject();
-		auto FindOriginObjectInSourcePrefab = [&](UObject* InObject) {
+		auto FindOriginObjectInSourcePrefab = [&](UObject* Object) -> UObject* {
 			FGuid ObjectGuid;
 			for (auto& KeyValue : MapGuidToObject)
 			{
-				if (KeyValue.Value == InObject)
+				if (KeyValue.Value == Object)
 				{
 					ObjectGuid = KeyValue.Key;
 					break;
 				}
 			}
-			if (ObjectGuid.IsValid())
-			{
-				FGuid ObjectGuidInSubPrefab = SubPrefabData.MapObjectGuidFromParentPrefabToSubPrefab[ObjectGuid];
-				return SubPrefabHelperObject->MapGuidToObject[ObjectGuidInSubPrefab];
-			}
-			else
-			{
-				return (TObjectPtr<UObject>)nullptr;
-			}
+			const FGuid* ObjectGuidInSubPrefab = ObjectGuid.IsValid()
+				? SubPrefabData.MapObjectGuidFromParentPrefabToSubPrefab.Find(ObjectGuid)
+				: nullptr;
+			const TObjectPtr<UObject>* SourceObject = ObjectGuidInSubPrefab
+				? SubPrefabHelperObject->MapGuidToObject.Find(*ObjectGuidInSubPrefab)
+				: nullptr;
+			return SourceObject ? SourceObject->Get() : nullptr;
 		};
 		for (int i = 0; i < SubPrefabData.ObjectOverrideParameterArray.Num(); i++)
 		{

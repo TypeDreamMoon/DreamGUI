@@ -24,6 +24,11 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	"LGUI.Prefab.ExistingObjectMappingValidation",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FLexUIPrefabInvalidOverrideMappingTest,
+	"LGUI.Prefab.InvalidOverrideMappingRejected",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
 bool FLexUIPrefabUnsupportedCookVersionTest::RunTest(const FString& Parameters)
 {
 	ULexUIPrefab* Prefab = NewObject<ULexUIPrefab>();
@@ -77,6 +82,21 @@ bool FLexUIPrefabExistingObjectValidationTest::RunTest(const FString& Parameters
 		LoadedRoot->DestroyWidget();
 	}
 	World->DestroyWorld(false);
+	return true;
+}
+
+bool FLexUIPrefabInvalidOverrideMappingTest::RunTest(const FString& Parameters)
+{
+	ULexUIPrefabHelperObject* Helper = NewObject<ULexUIPrefabHelperObject>();
+	UObject* UnownedObject = NewObject<UObject>();
+	if (!Helper || !UnownedObject)
+	{
+		return false;
+	}
+
+	AddExpectedError(TEXT("without an owning widget"), EAutomationExpectedErrorFlags::Contains, 2);
+	Helper->ApplyPrefabOverride(UnownedObject, {TEXT("MissingProperty")});
+	Helper->RevertPrefabOverride(UnownedObject, {TEXT("MissingProperty")});
 	return true;
 }
 
