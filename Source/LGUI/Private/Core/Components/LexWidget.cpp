@@ -1836,9 +1836,10 @@ void ULexWidget::OnRegister()
 	}
 
 	Components.Remove(nullptr);//clear null component
-	for (auto Component : Components)
+	const TArray<TObjectPtr<ULexUIBehaviour>> ComponentsToRegister = Components;
+	for (ULexUIBehaviour* Component : ComponentsToRegister)
 	{
-		if (IsValid(Component))
+		if (IsValid(Component) && Components.Contains(Component))
 		{
 			Component->OnRegister();
 		}
@@ -1847,10 +1848,13 @@ void ULexWidget::OnRegister()
 void ULexWidget::OnUnregister()
 {
 	bIsRegistered = false;
-	
-	for (auto Component : Components)
+
+	// Component teardown may remove helper behaviours from this same widget.
+	// Iterate a snapshot so those callbacks cannot invalidate the active iterator.
+	const TArray<TObjectPtr<ULexUIBehaviour>> ComponentsToUnregister = Components;
+	for (ULexUIBehaviour* Component : ComponentsToUnregister)
 	{
-		if (IsValid(Component))
+		if (IsValid(Component) && Components.Contains(Component))
 		{
 			Component->OnUnregister();
 		}
