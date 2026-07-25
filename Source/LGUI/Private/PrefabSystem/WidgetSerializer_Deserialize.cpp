@@ -413,64 +413,94 @@ namespace LexUIPrefabSystem
 				MapObjectToOriginGuid.Add(DefaultSubObject, DefaultSubObjectGuid);
 			}
 		};
-		for (auto& KeyValuePair : SavedObjects)
+		TArray<FGuid> PendingObjectGuids;
+		SavedObjects.GenerateKeyArray(PendingObjectGuids);
+		while (!PendingObjectGuids.IsEmpty())
 		{
-			auto& ObjectGuid = KeyValuePair.Key;
-			auto& ObjectData = KeyValuePair.Value;
-			UObject* CreatedNewObject = nullptr;
-#if WITH_EDITOR
-			//MapGuidToObject can passed from LoadPrefabWithExistingObjects, so we need to find from map first. This only needed in editor, because runtime never use LoadPrefabWithExistingObjects
-			if (auto ObjectPtr = MapGuidToObject.Find(ObjectGuid))
+			bool bMadeProgress = false;
+			for (int32 PendingIndex = PendingObjectGuids.Num() - 1; PendingIndex >= 0; --PendingIndex)
 			{
-				CreatedNewObject = *ObjectPtr;
-				MapObjectToOriginGuid.Add(CreatedNewObject, ObjectGuid);
-				CollectDefaultSubobjects(CreatedNewObject, ObjectGuid, ObjectData);
-			}
-			else
-#endif
-			{
-				if (auto ObjectClass = FindClassFromListByIndex(ObjectData.ObjectClass))
+				const FGuid ObjectGuid = PendingObjectGuids[PendingIndex];
+				FLexUIObjectSaveData* ObjectData = SavedObjects.Find(ObjectGuid);
+				if (!ObjectData)
 				{
-					if (auto OuterObjectPtr = MapGuidToObject.Find(ObjectData.OuterObjectGuid))
-					{
-#if WITH_EDITOR
-						if (auto ExitObject = FindObjectWithOuter(*OuterObjectPtr, nullptr, ObjectData.ObjectName))
-						{
-							if (auto Obj = Cast<UObject>(ExitObject))
-							{
-								if (auto Widget = Cast<ULexWidget>(Obj))
-								{
-									Widget->DestroyWidget();
-								}
-								else if (auto WidgetComponent = Cast<ULexUIBehaviour>(Obj))
-								{
-									WidgetComponent->DestroyComponent();
-								}
-								else
-								{
-									Obj->ConditionalBeginDestroy();
-								}
-								Obj->Rename(nullptr, GetTransientPackage());
-							}
-							UE_LOG(LGUI, Warning, TEXT("[%s].%d Object '%s' already exist on outer '%s', will destroy and rename exiting one. Prefab: '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(ObjectData.ObjectName.ToString()), *(OuterObjectPtr->GetPathName()), *PrefabAssetPath);
-						}
-#endif
-						if (ObjectClass->HasAnyClassFlags(CLASS_Abstract))
-						{
-							UE_LOG(LGUI, Warning, TEXT("[%s].%d Bad class %s when creating object: '%s'. Prefab: '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(ObjectClass->GetPathName()), *(ObjectData.ObjectName.ToString()), *PrefabAssetPath);
-							continue;
-						}
-						CreatedNewObject = NewObject<UObject>(*OuterObjectPtr, ObjectClass, ObjectData.ObjectName, (EObjectFlags)ObjectData.ObjectFlags);
-						MapGuidToObject.Add(ObjectGuid, CreatedNewObject);
-						MapObjectToOriginGuid.Add(CreatedNewObject, ObjectGuid);
-						CollectDefaultSubobjects(CreatedNewObject, ObjectGuid, ObjectData);
-					}
-					else
-					{
-						UE_LOG(LGUI, Warning, TEXT("[%s].%d Missing Outer object when creating object: '%s'. Prefab: '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(ObjectData.ObjectName.ToString()), *PrefabAssetPath);
-						continue;
-					}
+					PendingObjectGuids.RemoveAtSwap(PendingIndex);
+					bMadeProgress = true;
+					continue;
 				}
+
+				UObject* CreatedNewObject = nullptr;
+#if WITH_EDITOR
+				// LoadPrefabWithExistingObjects can supply an already-created object for this guid.
+				if (auto ObjectPtr = MapGuidToObject.Find(ObjectGuid))
+				{
+					CreatedNewObject = *ObjectPtr;
+					MapObjectToOriginGuid.Add(CreatedNewObject, ObjectGuid);
+					CollectDefaultSubobjects(CreatedNewObject, ObjectGuid, *ObjectData);
+					PendingObjectGuids.RemoveAtSwap(PendingIndex);
+					bMadeProgress = true;
+					continue;
+				}
+#endif
+				UClass* ObjectClass = FindClassFromListByIndex(ObjectData->ObjectClass);
+				if (!ObjectClass)
+				{
+					UE_LOG(LGUI, Warning, TEXT("[%s].%d Missing class when creating object: '%s'. Prefab: '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(ObjectData->ObjectName.ToString()), *PrefabAssetPath);
+					PendingObjectGuids.RemoveAtSwap(PendingIndex);
+					bMadeProgress = true;
+					continue;
+				}
+				if (ObjectClass->HasAnyClassFlags(CLASS_Abstract))
+				{
+					UE_LOG(LGUI, Warning, TEXT("[%s].%d Bad class %s when creating object: '%s'. Prefab: '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(ObjectClass->GetPathName()), *(ObjectData->ObjectName.ToString()), *PrefabAssetPath);
+					PendingObjectGuids.RemoveAtSwap(PendingIndex);
+					bMadeProgress = true;
+					continue;
+				}
+
+				auto OuterObjectPtr = MapGuidToObject.Find(ObjectData->OuterObjectGuid);
+				if (!OuterObjectPtr)
+				{
+					continue;
+				}
+#if WITH_EDITOR
+				if (auto ExistingObject = FindObjectWithOuter(*OuterObjectPtr, nullptr, ObjectData->ObjectName))
+				{
+					if (auto Obj = Cast<UObject>(ExistingObject))
+					{
+						if (auto Widget = Cast<ULexWidget>(Obj))
+						{
+							Widget->DestroyWidget();
+						}
+						else if (auto WidgetComponent = Cast<ULexUIBehaviour>(Obj))
+						{
+							WidgetComponent->DestroyComponent();
+						}
+						else
+						{
+							Obj->ConditionalBeginDestroy();
+						}
+						Obj->Rename(nullptr, GetTransientPackage());
+					}
+					UE_LOG(LGUI, Warning, TEXT("[%s].%d Object '%s' already exist on outer '%s', will destroy and rename exiting one. Prefab: '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, *(ObjectData->ObjectName.ToString()), *(*OuterObjectPtr)->GetPathName(), *PrefabAssetPath);
+				}
+#endif
+				CreatedNewObject = NewObject<UObject>(*OuterObjectPtr, ObjectClass, ObjectData->ObjectName, (EObjectFlags)ObjectData->ObjectFlags);
+				MapGuidToObject.Add(ObjectGuid, CreatedNewObject);
+				MapObjectToOriginGuid.Add(CreatedNewObject, ObjectGuid);
+				CollectDefaultSubobjects(CreatedNewObject, ObjectGuid, *ObjectData);
+				PendingObjectGuids.RemoveAtSwap(PendingIndex);
+				bMadeProgress = true;
+			}
+
+			if (!bMadeProgress)
+			{
+				for (const FGuid& ObjectGuid : PendingObjectGuids)
+				{
+					const FLexUIObjectSaveData* ObjectData = SavedObjects.Find(ObjectGuid);
+					UE_LOG(LGUI, Warning, TEXT("[%s].%d Missing Outer object when creating object: '%s'. Prefab: '%s'"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, ObjectData ? *(ObjectData->ObjectName.ToString()) : TEXT("Unknown"), *PrefabAssetPath);
+				}
+				break;
 			}
 		}
 	}
