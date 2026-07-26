@@ -24,7 +24,6 @@ void UUIToggleGroup::AddToggleComponent(UUIToggle* InComp)
 		return;
 	}
 	ToggleCollection.Add(InComp);
-	bNeedToSortToggleCollection = true;
 }
 void UUIToggleGroup::RemoveToggleComponent(UUIToggle* InComp)
 {
@@ -38,13 +37,18 @@ void UUIToggleGroup::RemoveToggleComponent(UUIToggle* InComp)
 }
 void UUIToggleGroup::SortToggleCollection()
 {
-	if (bNeedToSortToggleCollection)
-	{
-		bNeedToSortToggleCollection = false;
-		ToggleCollection.Sort([](const TWeakObjectPtr<UUIToggle>& A, const TWeakObjectPtr<UUIToggle>& B) {
-			return A->GetWidget()->GetFlattenHierarchyIndex() < B->GetWidget()->GetFlattenHierarchyIndex();
-			});
-	}
+	// Always re-sorted on access: FlattenHierarchyIndex changes whenever any ancestor of any toggle is
+	// reordered or reparented, and no event reaches this group when that happens — a dirty flag set only
+	// on Add kept returning the stale order forever. The collection is a handful of entries, so sorting
+	// on demand is cheaper than being wrong. Stale weak pointers are compacted first: dereferencing one
+	// inside a comparator is a null-this call.
+	ToggleCollection.RemoveAll([](const TWeakObjectPtr<UUIToggle>& Item)
+		{
+			return !Item.IsValid() || !IsValid(Item->GetWidget());
+		});
+	ToggleCollection.StableSort([](const TWeakObjectPtr<UUIToggle>& A, const TWeakObjectPtr<UUIToggle>& B) {
+		return A->GetWidget()->GetFlattenHierarchyIndex() < B->GetWidget()->GetFlattenHierarchyIndex();
+		});
 }
 void UUIToggleGroup::SetSelection(UUIToggle* Target)
 {
@@ -94,11 +98,12 @@ int32 UUIToggleGroup::GetToggleIndex(const UUIToggle* InComp)const
 }
 UUIToggle* UUIToggleGroup::GetToggleByIndex(int32 InIndex)const
 {
+	//sort (and compact) first — validation against the pre-compaction count could pass a stale bound
+	(const_cast<UUIToggleGroup*>(this))->SortToggleCollection();
 	if (InIndex < 0 || InIndex >= ToggleCollection.Num())
 	{
 		UE_LOG(LGUI, Error, TEXT("[%s].%d Index:%d out of range:%d"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__, InIndex, ToggleCollection.Num());
 		return nullptr;
 	}
-	(const_cast<UUIToggleGroup*>(this))->SortToggleCollection();
 	return ToggleCollection[InIndex].Get();
 }

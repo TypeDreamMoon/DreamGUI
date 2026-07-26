@@ -20,7 +20,6 @@ public:
 protected:
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI-ToggleGroup", AdvancedDisplay) TWeakObjectPtr<UUIToggle> LastSelect = nullptr;
 	UPROPERTY(Transient, VisibleAnywhere, Category = "LGUI-ToggleGroup", AdvancedDisplay) TArray<TWeakObjectPtr<UUIToggle>> ToggleCollection;
-	bool bNeedToSortToggleCollection = false;
 	void SortToggleCollection();
 	UPROPERTY(EditAnywhere, Category = "LGUI-ToggleGroup")
 		bool bAllowNoneSelected = true;
