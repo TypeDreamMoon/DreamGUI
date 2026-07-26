@@ -13,7 +13,7 @@
  * immediate rebuild is iterating the very cache it empties. Either way the revealed subtree must still
  * end up laid out.
  */
-UCLASS(NotBlueprintable, NotBlueprintType, Transient)
+UCLASS(NotBlueprintable, NotBlueprintType, Transient, HideDropdown)
 class ULexLayoutVisibilityFlipOverlay : public ULexLayoutContainerOverlay
 {
 	GENERATED_BODY()
@@ -32,7 +32,7 @@ public:
  * one-shot. Each nested rebuild inserts into the manager's layout tree map, forcing it to rehash while an
  * outer CalculateLayoutTree is still iterating — the re-entrancy that must not dangle.
  */
-UCLASS(NotBlueprintable, NotBlueprintType, Transient)
+UCLASS(NotBlueprintable, NotBlueprintType, Transient, HideDropdown)
 class ULexLayoutReentrantRebuildOverlay : public ULexLayoutContainerOverlay
 {
 	GENERATED_BODY()

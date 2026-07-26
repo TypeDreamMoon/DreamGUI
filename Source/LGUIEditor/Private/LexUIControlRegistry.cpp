@@ -463,6 +463,12 @@ void FLexUIControlRegistry::RegisterDefaults()
 		bool bUMGPanel, const TCHAR* DisplayName = nullptr)
 	{
 		FLexUIControlDescriptor Descriptor = MakePanel(Name, LayoutClass, IconStyleName, DisplayName);
+		if (!DisplayName)
+		{
+			// The class DisplayName carries the family prefix ("UMG Vertical Box" / "Lex Flex Box"),
+			// so the palette label follows it instead of the spaceless registry name.
+			Descriptor.DisplayName = LayoutClass->GetDisplayNameText();
+		}
 		if (bUMGPanel != bUseUMGLayout)
 		{
 			Descriptor.Category = bUMGPanel ? TEXT("UMG Panels") : TEXT("Legacy LGUI Panels");
@@ -501,11 +507,13 @@ void FLexUIControlRegistry::RegisterDefaults()
 	Register(SizeBox);
 	Register(MakeFrameworkPanel(TEXT("WidgetSwitcher"), ULexLayoutContainerWidgetSwitcher::StaticClass(), TEXT("ClassIcon.WidgetSwitcher"), true));
 	Register(MakeFrameworkPanel(TEXT("FlexBox"), ULexLayoutContainerFlexBox::StaticClass(), TEXT("ClassIcon.WrapBox"), false));
-	Register(MakeFrameworkPanel(TEXT("LayoutScrollBox"), ULexLayoutContainerScrollBox::StaticClass(), TEXT("ClassIcon.Scrollbox"), true, TEXT("Scroll Box Layout")));
-	Register(MakeFrameworkPanel(TEXT("ResponsiveGrid"), ULexLayoutContainerGrid::StaticClass(), TEXT("ClassIcon.GridPanel"), false, TEXT("Responsive Grid (Experimental)")));
+	Register(MakeFrameworkPanel(TEXT("LayoutScrollBox"), ULexLayoutContainerScrollBox::StaticClass(), TEXT("ClassIcon.Scrollbox"), true));
+	Register(MakeFrameworkPanel(TEXT("ResponsiveGrid"), ULexLayoutContainerGrid::StaticClass(), TEXT("ClassIcon.GridPanel"), false));
 
 	FLexUIControlDescriptor ScrollBox = MakeBehaviour(TEXT("ScrollBox"), UUIScrollView::StaticClass(), TEXT("ClassIcon.Scrollbox"), ConfigureScrollBox);
-	ScrollBox.Category = TEXT("Panels");
+	ScrollBox.DisplayName = FText::FromString(TEXT("Lex Scroll Box"));
+	// Same category rule as the other Lex-family panels: sidelined when the project runs UMG layout.
+	ScrollBox.Category = bUseUMGLayout ? TEXT("Legacy LGUI Panels") : TEXT("Panels");
 	Register(ScrollBox);
 	FLexUIControlDescriptor Border = MakePanel(TEXT("Border"), ULexLayoutContainerOverlay::StaticClass(), TEXT("ClassIcon.Border"));
 	if (!bUseUMGLayout) Border.Category = TEXT("UMG Panels");

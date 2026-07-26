@@ -64,7 +64,7 @@ class ULexLayoutSelfGrid;
 /**
  * Flexible & Responsive grid based layout.
  */
-UCLASS(ClassGroup=(LGUI), DisplayName="Responsive Grid (Experimental)", Experimental)
+UCLASS(ClassGroup=(LGUI), DisplayName="Lex Responsive Grid (Experimental)", Experimental)
 class LGUI_API ULexLayoutContainerGrid : public ULexLayoutContainer
 {
 	GENERATED_BODY()

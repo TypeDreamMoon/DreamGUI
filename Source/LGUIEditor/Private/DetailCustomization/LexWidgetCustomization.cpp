@@ -1068,17 +1068,9 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		FText SlotType = LOCTEXT("PanelSlotType", "Panel");
 		if (ParentLayout)
 		{
-			if (ParentLayout->IsA<ULexLayoutContainerCanvasPanel>()) SlotType = LOCTEXT("CanvasSlotType", "Canvas Panel");
-			else if (ParentLayout->IsA<ULexLayoutContainerOverlay>()) SlotType = LOCTEXT("OverlaySlotType", "Overlay");
-			else if (ParentLayout->IsA<ULexLayoutContainerHorizontalBox>()) SlotType = LOCTEXT("HorizontalSlotType", "Horizontal Box");
-			else if (ParentLayout->IsA<ULexLayoutContainerVerticalBox>()) SlotType = LOCTEXT("VerticalSlotType", "Vertical Box");
-			else if (ParentLayout->IsA<ULexLayoutContainerStackBox>()) SlotType = LOCTEXT("StackSlotType", "Stack Box");
-			else if (ParentLayout->IsA<ULexLayoutContainerWrapBox>()) SlotType = LOCTEXT("WrapSlotType", "Wrap Box");
-			else if (ParentLayout->IsA<ULexLayoutContainerGridPanel>()) SlotType = LOCTEXT("GridSlotType", "Grid Panel");
-			else if (ParentLayout->IsA<ULexLayoutContainerUniformGridPanel>()) SlotType = LOCTEXT("UniformGridSlotType", "Uniform Grid");
-			else if (ParentLayout->IsA<ULexLayoutContainerSafeZone>()) SlotType = LOCTEXT("SafeZoneSlotType", "Safe Zone");
-			else if (ParentLayout->IsA<ULexLayoutContainerScaleBox>()) SlotType = LOCTEXT("ScaleBoxSlotType", "Scale Box");
-			else if (ParentLayout->IsA<ULexLayoutContainerSizeBox>()) SlotType = LOCTEXT("SizeBoxSlotType", "Size Box");
+			// The class DisplayName carries the family prefix ("UMG Vertical Box"), and deriving it
+			// here keeps the slot header covering every container class without a hand-kept chain.
+			SlotType = ParentLayout->GetClass()->GetDisplayNameText();
 		}
 		auto& PanelSlotCategory = DetailBuilder.EditCategory(
 			TEXT("LexSlot"),

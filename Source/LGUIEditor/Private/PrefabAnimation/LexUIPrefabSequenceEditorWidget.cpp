@@ -449,7 +449,7 @@ private:
 				if (auto LayoutContainer = Widget->GetLayoutContainer())
 				{
 					AddTrackMenuBuilder.AddMenuEntry(
-						FText::Format(LOCTEXT("WidgetLayoutContainerLabelFormat", "{0} ({1})"), FText::FromString(LayoutContainer->GetName()), FText::FromString(LayoutContainer->GetClass()->GetName())),
+						FText::Format(LOCTEXT("WidgetLayoutContainerLabelFormat", "{0} ({1})"), FText::FromString(LayoutContainer->GetName()), LayoutContainer->GetClass()->GetDisplayNameText()),
 						FText::FromString(LayoutContainer->GetPathDisplayName()), FSlateIcon(),
 						FUIAction(FExecuteAction::CreateLambda([=, this]() {
 							const FScopedTransaction Transaction(LOCTEXT("AddLayoutContainerToSequencer", "Add LayoutContainer to Sequencer"));

@@ -63,7 +63,7 @@ public:
 	void RequestLayoutRefresh();
 };
 
-UCLASS(BlueprintType, DisplayName = "Canvas Panel")
+UCLASS(BlueprintType, DisplayName = "UMG Canvas Panel")
 class LGUI_API ULexLayoutContainerCanvasPanel : public ULexPanelLayoutBase
 {
 	GENERATED_BODY()
@@ -77,7 +77,7 @@ public:
 	virtual void CalculateLayout() override;
 };
 
-UCLASS(BlueprintType, DisplayName = "Overlay")
+UCLASS(BlueprintType, DisplayName = "UMG Overlay")
 class LGUI_API ULexLayoutContainerOverlay : public ULexPanelLayoutBase
 {
 	GENERATED_BODY()
@@ -90,7 +90,7 @@ public:
 	virtual void CalculateLayout() override;
 };
 
-UCLASS(BlueprintType, DisplayName = "Stack Box")
+UCLASS(BlueprintType, DisplayName = "UMG Stack Box")
 class LGUI_API ULexLayoutContainerStackBox : public ULexPanelLayoutBase
 {
 	GENERATED_BODY()
@@ -109,7 +109,7 @@ public:
 	virtual void CalculateLayout() override;
 };
 
-UCLASS(BlueprintType, DisplayName = "Horizontal Box")
+UCLASS(BlueprintType, DisplayName = "UMG Horizontal Box")
 class LGUI_API ULexLayoutContainerHorizontalBox : public ULexLayoutContainerStackBox
 {
 	GENERATED_BODY()
@@ -117,7 +117,7 @@ public:
 	ULexLayoutContainerHorizontalBox();
 };
 
-UCLASS(BlueprintType, DisplayName = "Vertical Box")
+UCLASS(BlueprintType, DisplayName = "UMG Vertical Box")
 class LGUI_API ULexLayoutContainerVerticalBox : public ULexLayoutContainerStackBox
 {
 	GENERATED_BODY()
@@ -125,7 +125,7 @@ public:
 	ULexLayoutContainerVerticalBox();
 };
 
-UCLASS(BlueprintType, DisplayName = "Wrap Box")
+UCLASS(BlueprintType, DisplayName = "UMG Wrap Box")
 class LGUI_API ULexLayoutContainerWrapBox : public ULexPanelLayoutBase
 {
 	GENERATED_BODY()
@@ -147,7 +147,7 @@ public:
 	virtual void CalculateLayout() override;
 };
 
-UCLASS(BlueprintType, DisplayName = "Grid Panel")
+UCLASS(BlueprintType, DisplayName = "UMG Grid Panel")
 class LGUI_API ULexLayoutContainerGridPanel : public ULexPanelLayoutBase
 {
 	GENERATED_BODY()
@@ -169,7 +169,7 @@ public:
 	virtual void CalculateLayout() override;
 };
 
-UCLASS(BlueprintType, DisplayName = "Uniform Grid Panel")
+UCLASS(BlueprintType, DisplayName = "UMG Uniform Grid Panel")
 class LGUI_API ULexLayoutContainerUniformGridPanel : public ULexPanelLayoutBase
 {
 	GENERATED_BODY()
@@ -191,7 +191,7 @@ public:
 	virtual void CalculateLayout() override;
 };
 
-UCLASS(BlueprintType, DisplayName = "Size Box")
+UCLASS(BlueprintType, DisplayName = "UMG Size Box")
 class LGUI_API ULexLayoutContainerSizeBox : public ULexPanelLayoutBase
 {
 	GENERATED_BODY()
@@ -224,7 +224,7 @@ public:
 	virtual void CalculateLayout() override;
 };
 
-UCLASS(BlueprintType, DisplayName = "Scale Box")
+UCLASS(BlueprintType, DisplayName = "UMG Scale Box")
 class LGUI_API ULexLayoutContainerScaleBox : public ULexPanelLayoutBase
 {
 	GENERATED_BODY()
@@ -253,7 +253,7 @@ public:
 	virtual void CalculateLayout() override;
 };
 
-UCLASS(BlueprintType, DisplayName = "Safe Zone")
+UCLASS(BlueprintType, DisplayName = "UMG Safe Zone")
 class LGUI_API ULexLayoutContainerSafeZone : public ULexPanelLayoutBase
 {
 	GENERATED_BODY()
@@ -300,7 +300,7 @@ public:
  * precisely because content may exceed the viewport), the scrollable extent is derived from that arrangement,
  * and clipping is applied automatically. Drop one in, add children, done.
  */
-UCLASS(BlueprintType, DisplayName = "Scroll Box Layout")
+UCLASS(BlueprintType, DisplayName = "UMG Scroll Box")
 class LGUI_API ULexLayoutContainerScrollBox : public ULexLayoutContainerStackBox
 {
 	GENERATED_BODY()
@@ -348,7 +348,7 @@ private:
 	TWeakObjectPtr<class ULexScrollBoxInputHandler> InputHandler;
 };
 
-UCLASS(BlueprintType, DisplayName = "Widget Switcher")
+UCLASS(BlueprintType, DisplayName = "UMG Widget Switcher")
 class LGUI_API ULexLayoutContainerWidgetSwitcher : public ULexPanelLayoutBase
 {
 	GENERATED_BODY()

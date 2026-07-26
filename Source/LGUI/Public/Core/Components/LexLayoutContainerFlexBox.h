@@ -67,7 +67,7 @@ enum class ELexLayoutFlexBoxSecondaryAxisLineAlignment :uint8
 /**
  * This layout act like html/css3-flex layout
  */
-UCLASS(BlueprintType, DisplayName="Flex Box")
+UCLASS(BlueprintType, DisplayName="Lex Flex Box")
 class LGUI_API ULexLayoutContainerFlexBox : public ULexLayoutContainer
 {
 	GENERATED_BODY()
