@@ -284,16 +284,49 @@ public:
 	virtual void CalculateLayout() override;
 };
 
+/**
+ * A stack box that clips to its own bounds and scrolls its children — the whole scroll view in one panel.
+ *
+ * Unlike the UUIScrollView component, there is no separate viewport/content pair to wire up: children are
+ * arranged at their desired size along the scroll axis (Fill is meaningless here, since a scroll box exists
+ * precisely because content may exceed the viewport), the scrollable extent is derived from that arrangement,
+ * and clipping is applied automatically. Drop one in, add children, done.
+ */
 UCLASS(BlueprintType, DisplayName = "Scroll Box Layout")
 class LGUI_API ULexLayoutContainerScrollBox : public ULexLayoutContainerStackBox
 {
 	GENERATED_BODY()
 protected:
 	bool bAppliedDefaultClipping = false;
+	virtual void CalculateLayout() override;
 public:
 	ULexLayoutContainerScrollBox();
 	virtual void OnRegister() override;
 	virtual void OnUnregister() override;
+
+	/** Local units scrolled per wheel notch. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox", meta = (ClampMin = "0.0"))
+	float ScrollSensitivity = 40.0f;
+
+	/** Distance scrolled from the start, in local units. Always within [0, GetMaxScrollOffset()]. */
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	float GetScrollOffset() const { return ScrollOffset; }
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	void SetScrollOffset(float Value);
+	/** How far this box can scroll: content extent minus viewport extent, or 0 when everything fits. */
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	float GetMaxScrollOffset() const { return MaxScrollOffset; }
+	/** Scroll by a signed delta. Returns true when the offset actually changed, false when already at a limit. */
+	UFUNCTION(BlueprintCallable, Category = "ScrollBox")
+	bool ScrollBy(float Delta);
+
+private:
+	UPROPERTY()
+	float ScrollOffset = 0.0f;
+	/** Recomputed by CalculateLayout from the measured content extent; not authored. */
+	float MaxScrollOffset = 0.0f;
+	UPROPERTY(Transient)
+	TWeakObjectPtr<class ULexScrollBoxInputHandler> InputHandler;
 };
 
 UCLASS(BlueprintType, DisplayName = "Widget Switcher")

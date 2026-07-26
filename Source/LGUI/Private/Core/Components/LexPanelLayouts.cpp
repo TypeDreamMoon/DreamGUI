@@ -1,6 +1,8 @@
 // Copyright 2026-Present LexLiu. All Rights Reserved.
 
 #include "Core/Components/LexPanelLayouts.h"
+#include "Core/Components/LexImage.h"
+#include "Core/Components/LexScrollBoxInputHandler.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexLayoutSelfFlexBox.h"
 #include "Core/Components/LexVisual.h"
@@ -1769,10 +1771,40 @@ ULexLayoutContainerScrollBox::ULexLayoutContainerScrollBox()
 void ULexLayoutContainerScrollBox::OnRegister()
 {
 	Super::OnRegister();
-	if (IsValid(GetWidget()))
+	ULexWidget* Widget = GetWidget();
+	if (!IsValid(Widget))
 	{
-		bAppliedDefaultClipping = true;
-		GetWidget()->SetLayoutClippingOverride(ELexWidgetClipping::ClipToBounds);
+		return;
+	}
+	bAppliedDefaultClipping = true;
+	Widget->SetLayoutClippingOverride(ELexWidgetClipping::ClipToBounds);
+	// The event system raycasts against visuals only (see FLexBaseRaycaster, which walks the canvas visual list),
+	// so a container with no visual can never be hit and wheel/drag would silently do nothing. Give it a fully
+	// transparent rect-raycast target. Rect tracing does not need render geometry, so this costs no visible
+	// pixels. Runtime only, so it is never serialized into a prefab.
+	if (!IsValid(Widget->GetVisual()) && Widget->GetWorld() && Widget->GetWorld()->IsGameWorld())
+	{
+		if (ULexImage* HitArea = Widget->CreateNewVisual<ULexImage>())
+		{
+			HitArea->SetColor(FColor(0, 0, 0, 0));
+			HitArea->SetRaycastType(ELexVisualRaycastType::Rect);
+			HitArea->SetRaycastTarget(true);
+		}
+	}
+	// A layout container cannot receive pointer events, so wheel/drag lives on a transient companion behaviour
+	// that writes back into this layout. Transient so it is never serialized into a prefab.
+	if (!InputHandler.IsValid())
+	{
+		ULexScrollBoxInputHandler* Handler = Widget->GetComponent<ULexScrollBoxInputHandler>();
+		if (!IsValid(Handler))
+		{
+			Handler = Widget->AddComponent<ULexScrollBoxInputHandler>();
+		}
+		if (IsValid(Handler))
+		{
+			Handler->TargetLayout = this;
+			InputHandler = Handler;
+		}
 	}
 }
 
@@ -1782,8 +1814,90 @@ void ULexLayoutContainerScrollBox::OnUnregister()
 	{
 		GetWidget()->ClearLayoutClippingOverride();
 	}
+	if (InputHandler.IsValid())
+	{
+		InputHandler->DestroyComponent();
+		InputHandler.Reset();
+	}
 	bAppliedDefaultClipping = false;
 	Super::OnUnregister();
+}
+
+void ULexLayoutContainerScrollBox::SetScrollOffset(float Value)
+{
+	const float Clamped = FMath::Clamp(LexPanelLayoutLocal::FiniteOrZero(Value), 0.0f, MaxScrollOffset);
+	if (FMath::IsNearlyEqual(ScrollOffset, Clamped))
+	{
+		return;
+	}
+	ScrollOffset = Clamped;
+	MarkLayoutDirty();
+	if (ULexWidget* Widget = GetWidget(); IsValid(Widget))
+	{
+		ULexWidget::MarkLayoutForRebuild(Widget);
+	}
+}
+
+bool ULexLayoutContainerScrollBox::ScrollBy(float Delta)
+{
+	const float Before = ScrollOffset;
+	SetScrollOffset(ScrollOffset + Delta);
+	return !FMath::IsNearlyEqual(Before, ScrollOffset);
+}
+
+void ULexLayoutContainerScrollBox::CalculateLayout()
+{
+	if (!BeginLayoutPass()) return;
+	ULexWidget* Panel = GetWidget();
+	const TArray<ULexWidget*> LayoutChildren = CollectLayoutChildren();
+	const bool bHorizontal = Orientation == ELexPanelOrientation::Horizontal;
+	const float Gap = LexPanelLayoutLocal::NonNegative(Spacing);
+	const float AvailablePrimary = bHorizontal
+		? FMath::Max(0.0f, Panel->GetWidth() - LexPanelLayoutLocal::HorizontalPadding(Padding))
+		: FMath::Max(0.0f, Panel->GetHeight() - LexPanelLayoutLocal::VerticalPadding(Padding));
+	const float AvailableSecondary = bHorizontal
+		? FMath::Max(0.0f, Panel->GetHeight() - LexPanelLayoutLocal::VerticalPadding(Padding))
+		: FMath::Max(0.0f, Panel->GetWidth() - LexPanelLayoutLocal::HorizontalPadding(Padding));
+
+	// Children always take their desired size along the scroll axis. Fill would shrink content to the viewport,
+	// which would make the box unscrollable by construction.
+	auto PrimaryExtentOf = [&](ULexWidget* Child)
+	{
+		const ULexPanelSlot* Slot = GetSlot(Child);
+		const FVector2D Desired = GetDesiredSize(Child);
+		const float SlotPadding = bHorizontal
+			? LexPanelLayoutLocal::HorizontalPadding(Slot->Padding)
+			: LexPanelLayoutLocal::VerticalPadding(Slot->Padding);
+		return FMath::Max(0.0f, static_cast<float>(bHorizontal ? Desired.X : Desired.Y) + SlotPadding);
+	};
+
+	float ContentPrimary = Gap * FMath::Max(0, LayoutChildren.Num() - 1);
+	for (ULexWidget* Child : LayoutChildren)
+	{
+		ContentPrimary += PrimaryExtentOf(Child);
+	}
+	MaxScrollOffset = FMath::Max(0.0f, ContentPrimary - AvailablePrimary);
+	ScrollOffset = FMath::Clamp(ScrollOffset, 0.0f, MaxScrollOffset);
+
+	float Cursor = (bHorizontal
+		? LexPanelLayoutLocal::FiniteOrZero(Padding.Left)
+		: LexPanelLayoutLocal::FiniteOrZero(Padding.Top)) - ScrollOffset;
+	for (ULexWidget* Child : LayoutChildren)
+	{
+		const float SlotPrimary = PrimaryExtentOf(Child);
+		if (bHorizontal)
+		{
+			ApplyChildRect(Child, FVector2D(Cursor, LexPanelLayoutLocal::FiniteOrZero(Padding.Top)),
+				FVector2D(SlotPrimary, AvailableSecondary));
+		}
+		else
+		{
+			ApplyChildRect(Child, FVector2D(LexPanelLayoutLocal::FiniteOrZero(Padding.Left), Cursor),
+				FVector2D(AvailableSecondary, SlotPrimary));
+		}
+		Cursor += SlotPrimary + Gap;
+	}
+	PreferredSize = MeasureLayout();
 }
 
 FVector2f ULexLayoutContainerWidgetSwitcher::MeasureLayout() const
