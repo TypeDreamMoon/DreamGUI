@@ -1871,6 +1871,38 @@ void ULexLayoutContainerScrollBox::OnUnregister()
 	Super::OnUnregister();
 }
 
+FVector2f ULexLayoutContainerScrollBox::MeasureLayout() const
+{
+	// A scroll box must never report its content extent along the scroll axis. If it did, any
+	// Auto-measuring ancestor (a SizeBox with a cleared override, an Auto stack slot) would grow the
+	// viewport to fit ALL content — unscrollable by construction — and the designer and PIE would
+	// disagree wherever the surrounding space differs. The scroll-axis preferred size is padding
+	// only; measurement then falls back to the widget's authored rect (the designer's viewport size),
+	// and the actual viewport comes from that, the slot, a SizeBox override, or anchors. The cross
+	// axis measures like a normal stack.
+	FVector2f Result = Super::MeasureLayout();
+	if (Orientation == ELexPanelOrientation::Horizontal)
+	{
+		Result.X = LexPanelLayoutLocal::HorizontalPadding(Padding);
+	}
+	else
+	{
+		Result.Y = LexPanelLayoutLocal::VerticalPadding(Padding);
+	}
+	return Result;
+}
+
+#if WITH_EDITOR
+void ULexLayoutContainerScrollBox::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+	// Details-panel edits bypass SetScrollOffset; sanitize and re-arrange so the designer sees the
+	// scrolled content immediately (layout clamps against MaxScrollOffset).
+	ScrollOffset = FMath::Max(0.0f, LexPanelLayoutLocal::FiniteOrZero(ScrollOffset));
+	RequestLayoutRefresh();
+}
+#endif
+
 void ULexLayoutContainerScrollBox::SetScrollOffset(float Value)
 {
 	const float Clamped = FMath::Clamp(LexPanelLayoutLocal::FiniteOrZero(Value), 0.0f, MaxScrollOffset);

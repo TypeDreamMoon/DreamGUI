@@ -307,6 +307,10 @@ class LGUI_API ULexLayoutContainerScrollBox : public ULexLayoutContainerStackBox
 protected:
 	bool bAppliedDefaultClipping = false;
 	virtual void CalculateLayout() override;
+	virtual FVector2f MeasureLayout() const override;
+#if WITH_EDITOR
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
 public:
 	ULexLayoutContainerScrollBox();
 	virtual void OnRegister() override;
@@ -331,7 +335,12 @@ public:
 	bool ScrollBy(float Delta);
 
 private:
-	UPROPERTY()
+	/**
+	 * Distance scrolled from the start. Editable so the designer can scroll the content in the prefab
+	 * editor (where no pointer input exists) to reach and edit off-screen children; the authored value
+	 * is also the initial scroll position at runtime. Clamped to [0, GetMaxScrollOffset()] by layout.
+	 */
+	UPROPERTY(EditAnywhere, Category = "ScrollBox", meta = (ClampMin = "0.0", AllowPrivateAccess = true))
 	float ScrollOffset = 0.0f;
 	/** Recomputed by CalculateLayout from the measured content extent; not authored. */
 	float MaxScrollOffset = 0.0f;
