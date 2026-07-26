@@ -3105,7 +3105,9 @@ void ULexWidget::CalculateVisibility_Recursive()
 
 			if (bLayoutChanged)
 			{
-				// Cached layout trees omit collapsed subtrees and must be recollected when they become visible.
+				// Cached layout trees keep collapsed subtrees and filter at update time, so this wipe is
+				// belt-and-braces (it is also swallowed while a layout pass is executing); the layout pass
+				// itself no longer depends on it to see a revealed subtree.
 				if (ULexUIManagerWorldSubsystem* LexUIManager = ULexUIManagerWorldSubsystem::GetInstance(Widget->GetWorld()))
 				{
 					LexUIManager->MarkRebuildAllLayoutTree();
