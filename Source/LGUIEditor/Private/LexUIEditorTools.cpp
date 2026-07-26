@@ -309,7 +309,9 @@ ULexWidget* FLexUIEditorTools::CreateRegisteredControlAndReturn(TFunction<ULexWi
 	}
 
 	const FLexUIControlDescriptor Recipe = *Descriptor;
-	return CreateWidgetAndReturn(MoveTemp(GetSelectedWidgetFunction), Recipe.DisplayName.ToString(), Recipe.VisualClass.Get(),
+	// Name new widgets from the terse registry name ("CanvasPanel"), not the palette label — labels
+	// now carry family prefixes ("UMG Canvas Panel") that would pollute hierarchy names and prefabs.
+	return CreateWidgetAndReturn(MoveTemp(GetSelectedWidgetFunction), Recipe.Name.ToString(), Recipe.VisualClass.Get(),
 		[Recipe, Callback = MoveTemp(Callback)](ULexWidget* InWidget) mutable
 		{
 			if (Recipe.LayoutContainerClass.IsValid())
