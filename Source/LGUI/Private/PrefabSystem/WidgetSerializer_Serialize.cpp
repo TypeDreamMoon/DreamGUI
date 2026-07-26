@@ -261,7 +261,13 @@ namespace LexUIPrefabSystem
 	{
 		auto StartTime = FDateTime::Now();
 
-		this->PrefabVersion = InPrefab->PrefabVersion;
+		// Encode with the version this save is about to stamp onto the asset (see LEXUI_CURRENT_PREFAB_VERSION
+		// below), not the version the asset happened to carry beforehand. Adopting the previous version here made
+		// the writer and the later reader disagree whenever the asset was not already at the newest version —
+		// most visibly for a brand-new transient prefab (editor copy/paste), whose version starts at 0. FText is
+		// the only type whose encoding is version-gated: it was written inline and then read back as a list
+		// index, so FindTextFromListByIndex silently returned FText::GetEmpty() and every string vanished.
+		this->PrefabVersion = LEXUI_CURRENT_PREFAB_VERSION;
 
 		FLexUIPrefabSaveData SaveData;
 		SerializeWidgetToData(OriginRootWidget, SaveData);
