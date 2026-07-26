@@ -249,12 +249,27 @@ namespace LexUIPrefabSystem
 			}
 			if (Widget->HasRegistered())
 			{
+				// Reflection already restored the authored SiblingIndex; the attach path overwrites it
+				// with a tail index (Children.Num()-1), which both loses the authored position and can
+				// collide with another child's restored index. Re-assert the authored value and let the
+				// parent's lazy sort put the array in order.
+				const int32 AuthoredSiblingIndex = Widget->GetSiblingIndex();
 				Widget->SetParentFromPrefab(ParentWidget, false);
+				if (AuthoredSiblingIndex >= 0)
+				{
+					Widget->RestoreSiblingIndexFromPrefab(AuthoredSiblingIndex);
+				}
 			}
 			else
 			{
 				Widget->SetParentBeforeRegister(ParentWidget);
 			}
+		}
+		// Restored indices may carry holes or duplicates (legacy assets, cross-parent moves). Normalize
+		// the whole tree once: stable-order by authored indices, renumber contiguously.
+		if (IsValid(CreatedRootWidget))
+		{
+			CreatedRootWidget->ApplySiblingIndexFromPrefab_Recursive();
 		}
 
 		// Parent-owned slots do not exist while a nested prefab is deserialized

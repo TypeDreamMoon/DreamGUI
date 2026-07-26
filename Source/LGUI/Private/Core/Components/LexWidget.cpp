@@ -724,8 +724,9 @@ void ULexWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 		}
 		else if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, SiblingIndex))
 		{
-			this->Call_SiblingIndexChanged();
+			// Same order as SetSiblingIndex: settle the value first, then broadcast it.
 			ApplySiblingIndex();
+			this->Call_SiblingIndexChanged();
 		}
 		else if (MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, RelativeLocation) || MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, RelativeRotation) || MemberName == GET_MEMBER_NAME_CHECKED(ULexWidget, RelativeScale))
 		{
@@ -1308,13 +1309,30 @@ void ULexWidget::SetParentBeforeRegister(ULexWidget* InParent)
 	}
 }
 
-void ULexWidget::ApplySiblingIndexBeforeRegister_Recursive()
+void ULexWidget::ApplySiblingIndexFromPrefab_Recursive()
 {
+	// Order by the restored indices first — StableSort keeps relative order across holes and duplicates
+	// (legacy data, cross-parent moves) — then renumber contiguously so a later tail-append can never
+	// collide with a restored index. Silent on purpose: this runs during prefab assembly/refresh, before
+	// anything consumes the hierarchy.
+	Children.StableSort([](const ULexWidget& A, const ULexWidget& B)
+		{
+			return A.SiblingIndex < B.SiblingIndex;
+		});
 	for (int i = 0; i < Children.Num(); i++)
 	{
 		auto& Child = Children[i];
 		Child->SiblingIndex = i;
-		Child->ApplySiblingIndexBeforeRegister_Recursive();
+		Child->ApplySiblingIndexFromPrefab_Recursive();
+	}
+}
+
+void ULexWidget::RestoreSiblingIndexFromPrefab(int32 InSiblingIndex)
+{
+	SiblingIndex = InSiblingIndex;
+	if (Parent.IsValid())
+	{
+		Parent->bNeedSortUIChildren = true;
 	}
 }
 
@@ -1570,7 +1588,15 @@ bool ULexWidget::TrySetParentInternal(ULexWidget* InParent, bool InKeepWorldPosi
 			for (int i = InSiblingIndex; i < InParent->Children.Num(); i++)
 			{
 				auto Child = InParent->Children[i];
-				if (IsValid(Child)) Child->SiblingIndex = i;
+				if (!IsValid(Child)) continue;
+				const bool bIndexChanged = Child->SiblingIndex != i;
+				Child->SiblingIndex = i;
+				// Displaced siblings observe their move, matching every other renumber path
+				// (ApplySiblingIndex, OnChildDetached).
+				if (bIndexChanged && Child != this)
+				{
+					Child->Call_SiblingIndexChanged();
+				}
 			}
 			this->Call_SiblingIndexChanged();
 		}
@@ -1640,13 +1666,15 @@ bool ULexWidget::TrySetParentInternal(ULexWidget* InParent, bool InKeepWorldPosi
 	}
 }
 
-void ULexWidget::SetSiblingIndex(int32 InInt) 
-{ 
+void ULexWidget::SetSiblingIndex(int32 InInt)
+{
 	if (InInt != SiblingIndex)
 	{
 		SiblingIndex = InInt;
-		this->Call_SiblingIndexChanged();
+		// Apply (clamp + rearrange) BEFORE broadcasting, so observers see the settled index and the
+		// rearranged children array instead of a raw, possibly out-of-range request.
 		ApplySiblingIndex();
+		this->Call_SiblingIndexChanged();
 		MarkLayoutForRebuild(Parent.IsValid() ? Parent.Get() : this);
 	}
 }
@@ -1965,11 +1993,13 @@ void ULexWidget::EnsureUIChildrenSorted()const
 	if (bNeedSortUIChildren)
 	{
 		bNeedSortUIChildren = false;
-		Children.Sort([](const ULexWidget& A, const ULexWidget& B)
+		// StableSort: duplicate SiblingIndex values exist in legacy data and transiently during prefab
+		// refresh. An unstable sort made equal-key children swap places on every RefreshAllUI (IntroSort's
+		// small-array selection sort deterministically flips the tail pair each pass) — visible as widgets
+		// trading positions after every editor refresh. Equal keys must keep their current order.
+		Children.StableSort([](const ULexWidget& A, const ULexWidget& B)
 			{
-				if (A.GetSiblingIndex() < B.GetSiblingIndex())
-					return true;
-				return false;
+				return A.GetSiblingIndex() < B.GetSiblingIndex();
 			});
 	}
 }

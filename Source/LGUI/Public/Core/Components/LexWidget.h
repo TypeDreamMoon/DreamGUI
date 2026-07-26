@@ -269,8 +269,16 @@ public:
 	void SetParentBeforeRegister(ULexWidget* InParent);
 	/** Restores a serialized hierarchy while preserving legacy over-capacity assets. Cycle checks still apply. */
 	bool SetParentFromPrefab(ULexWidget* InParent, bool InKeepWorldPosition = false, int InSiblingIndex = -1);
-	/** Only called by PrefabSystem to restore parent-children sibling index */
-	void ApplySiblingIndexBeforeRegister_Recursive();
+	/**
+	 * PrefabSystem only: order every children array by the restored sibling indices (stable across holes
+	 * and duplicates) and renumber contiguously, so later appends can never collide with restored values.
+	 */
+	void ApplySiblingIndexFromPrefab_Recursive();
+	/**
+	 * PrefabSystem only: re-assert a deserialized sibling index after an attach overwrote it with a tail
+	 * index, deferring the reorder to the parent's lazy sort.
+	 */
+	void RestoreSiblingIndexFromPrefab(int32 InSiblingIndex);
 
 	UFUNCTION(BlueprintCallable, Category = "Transform")
 	ULexWidget* GetParent()const { return Parent.Get(); }
