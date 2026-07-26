@@ -441,6 +441,26 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 			;
 		};//@todo: auto refresh SAnchorPreviewWidget when change from AnchorMinMax
 
+		// UMG hides the transform of a widget in a non-canvas slot entirely; here the fields stay visible
+		// (they show the arranged result) but a banner says who owns them and where to edit instead.
+		TransformCategory.AddCustomRow(LOCTEXT("ArrangedByBanner_Filter", "Arranged By"))
+		.Visibility(TAttribute<EVisibility>::Create(TAttribute<EVisibility>::FGetter::CreateSP(
+			this, &FLexWidgetCustomization::GetArrangedByBannerVisibility)))
+		.WholeRowContent()
+		[
+			SNew(SBox)
+			.VAlign(VAlign_Center)
+			.Padding(FMargin(2, 4))
+			[
+				SNew(STextBlock)
+				.Text(this, &FLexWidgetCustomization::GetArrangedByBannerText)
+				.ColorAndOpacity(FLinearColor(1.0f, 0.78f, 0.30f))
+				.AutoWrapText(true)
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+			]
+		]
+		;
+
 		auto SplitLineColor = FLinearColor(0.5f, 0.5f, 0.5f);
 		TransformCategory.AddCustomRow(LOCTEXT("Anchor","Anchor"))
 		.CopyAction(FUIAction
@@ -549,6 +569,9 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 					SNew(SComboButton)
 					.ContentPadding(8)
 					.HasDownArrow(false)
+					// Anchors are position-domain data; while a panel arranges this widget the preset
+					// would be stomped by the next layout pass, so it is not offered.
+					.IsEnabled(this, &FLexWidgetCustomization::AreAnchorsFreeToEdit)
 					.ToolTipText(this, &FLexWidgetCustomization::GetAnchorsTooltipText)
 					.ButtonStyle(FLGUIEditorStyle::Get(), "AnchorButton")
 					.ButtonContent()
@@ -839,17 +862,19 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 
 		IDetailGroup& AnchorGroup = TransformCategory.AddGroup(FName("Anchors"), LOCTEXT("AnchorsGroup", "Anchors"));
 
+		const TAttribute<bool> AnchorsFreeToEdit = TAttribute<bool>::Create(
+			TAttribute<bool>::FGetter::CreateSP(this, &FLexWidgetCustomization::AreAnchorsFreeToEdit));
 		IDetailPropertyRow& AnchorMinProperty = AnchorGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData.AnchorMin)));
-		if (!this->IsAnchorEditable())
+		AnchorMinProperty.IsEnabled(AnchorsFreeToEdit);
+		if (!this->AreAnchorsFreeToEdit())
 		{
-			AnchorMinProperty.IsEnabled(false);
 			AnchorMinProperty.ToolTip(LOCTEXT("ControlledByLayoutTip", "This property is controlled by layout"));
 		}
 
 		IDetailPropertyRow& AnchorMaxProperty = AnchorGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData.AnchorMax)));
-		if (!this->IsAnchorEditable())
+		AnchorMaxProperty.IsEnabled(AnchorsFreeToEdit);
+		if (!this->AreAnchorsFreeToEdit())
 		{
-			AnchorMaxProperty.IsEnabled(false);
 			AnchorMaxProperty.ToolTip(LOCTEXT("ControlledByLayoutTip", "This property is controlled by layout"));
 		}
 
@@ -870,8 +895,10 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		;
 		auto& AnchoredPositionProperty = AnchorRawDataGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData.AnchoredPosition)));
 		auto& SizeDeltaProperty = AnchorRawDataGroup.AddPropertyRow(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData.SizeDelta)));
-		AnchoredPositionProperty.IsEnabled(this->IsAnchorEditable());
-		SizeDeltaProperty.IsEnabled(this->IsAnchorEditable());
+		AnchoredPositionProperty.IsEnabled(TAttribute<bool>::Create(
+			TAttribute<bool>::FGetter::CreateSP(this, &FLexWidgetCustomization::IsAnchoredPositionRowEnabled)));
+		SizeDeltaProperty.IsEnabled(TAttribute<bool>::Create(
+			TAttribute<bool>::FGetter::CreateSP(this, &FLexWidgetCustomization::IsSizeDeltaRowEnabled)));
 	}
 	//pivot
 	auto Pivot_PH = DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, AnchorData.Pivot));
@@ -1234,6 +1261,75 @@ void FLexWidgetCustomization::OnPasteHierarchyIndex(TSharedRef<IPropertyHandle> 
 		int value = FCString::Atoi(*PastedText);
 		PropertyHandle->SetValue(value);
 	}
+}
+
+bool FLexWidgetCustomization::IsAnyGeometryAxisArranged()const
+{
+	const FLexLayoutControlAnchorData Control = GetLayoutControlAnchorValue();
+	return Control.bCanControlHorizontalPosition || Control.bCanControlVerticalPosition
+		|| Control.bCanControlHorizontalSize || Control.bCanControlVerticalSize;
+}
+
+bool FLexWidgetCustomization::AreAnchorsFreeToEdit()const
+{
+	if (!IsAnchorEditable())
+	{
+		return false;
+	}
+	const FLexLayoutControlAnchorData Control = GetLayoutControlAnchorValue();
+	return !Control.bCanControlHorizontalPosition && !Control.bCanControlVerticalPosition;
+}
+
+bool FLexWidgetCustomization::IsAnchoredPositionRowEnabled()const
+{
+	return AreAnchorsFreeToEdit();
+}
+
+bool FLexWidgetCustomization::IsSizeDeltaRowEnabled()const
+{
+	if (!IsAnchorEditable())
+	{
+		return false;
+	}
+	const FLexLayoutControlAnchorData Control = GetLayoutControlAnchorValue();
+	return !Control.bCanControlHorizontalSize && !Control.bCanControlVerticalSize;
+}
+
+EVisibility FLexWidgetCustomization::GetArrangedByBannerVisibility()const
+{
+	return IsAnyGeometryAxisArranged() ? EVisibility::Visible : EVisibility::Collapsed;
+}
+
+FText FLexWidgetCustomization::GetArrangedByBannerText()const
+{
+	if (TargetScriptArray.Num() == 0 || !TargetScriptArray[0].IsValid())
+	{
+		return FText::GetEmpty();
+	}
+	ULexWidget* Widget = TargetScriptArray[0].Get();
+	const auto ControlsAnything = [](const FLexLayoutControlAnchorData& Control)
+	{
+		return Control.bCanControlHorizontalPosition || Control.bCanControlVerticalPosition
+			|| Control.bCanControlHorizontalSize || Control.bCanControlVerticalSize;
+	};
+	TArray<FString> Arrangers;
+	if (ULexLayoutSelf* LayoutSelf = Widget->GetLayoutSelf();
+		IsValid(LayoutSelf) && ControlsAnything(LayoutSelf->GetLayoutControlAnchor(Widget)))
+	{
+		Arrangers.Add(LayoutSelf->GetClass()->GetDisplayNameText().ToString());
+	}
+	if (ULexWidget* Parent = Widget->GetParent(); IsValid(Parent))
+	{
+		if (ULexLayoutContainer* ParentLayout = Parent->GetLayoutContainer();
+			IsValid(ParentLayout) && ControlsAnything(ParentLayout->GetLayoutControlAnchor(Widget)))
+		{
+			Arrangers.Add(FString::Printf(TEXT("%s on '%s'"),
+				*ParentLayout->GetClass()->GetDisplayNameText().ToString(), *Parent->GetDisplayName()));
+		}
+	}
+	return FText::Format(
+		LOCTEXT("ArrangedByBannerFormat", "Arranged by {0} — the greyed-out values below are layout results, not yours to edit. Edit the Panel Slot or the layout's own properties instead."),
+		FText::FromString(FString::Join(Arrangers, TEXT(" and "))));
 }
 
 bool FLexWidgetCustomization::IsAnchorEditable()const

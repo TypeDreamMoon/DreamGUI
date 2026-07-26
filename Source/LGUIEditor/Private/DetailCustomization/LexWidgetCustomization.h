@@ -48,6 +48,14 @@ private:
 	void OnAnchorValueSliderMovementEnd(float Value, TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex);
 	bool IsAnchorValueEnable(TSharedRef<IPropertyHandle> AnchorHandle, int AnchorValueIndex)const;
 	bool IsAnchorEditable()const;
+	/** A fitter or the parent panel currently owns at least one geometry axis of the primary selection. */
+	bool IsAnyGeometryAxisArranged()const;
+	/** Anchors belong to the position domain: editable only while no layout owns a position axis. */
+	bool AreAnchorsFreeToEdit()const;
+	bool IsAnchoredPositionRowEnabled()const;
+	bool IsSizeDeltaRowEnabled()const;
+	FText GetArrangedByBannerText()const;
+	EVisibility GetArrangedByBannerVisibility()const;
 	TSharedPtr<IPropertyHandle> GetAnchorPropertyHandle(IDetailLayoutBuilder* DetailBuilder, TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle, int Index)const;
 	FText GetAnchorLabelText(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle, int LabelIndex)const;
 	FText GetAnchorLabelTooltipText(TSharedRef<IPropertyHandle> AnchorMinHandle, TSharedRef<IPropertyHandle> AnchorMaxHandle, int LabelTooltipIndex)const;
