@@ -233,6 +233,14 @@ TOptional<EItemDropZone> ProcessHierarchyDragDrop(const FDragDropEvent& DragDrop
 						HierarchyDragDropOp->CurrentHoverText = LOCTEXT("ReparentFailed", "Unable to move this widget to the target parent.");
 						return TOptional<EItemDropZone>();
 					}
+					// Advance past the widget just placed so the next dragged widget lands AFTER it
+					// (UMG parity: SHierarchyViewItem increments after every InsertChildAt). Without
+					// this, every later widget inserted at the same index and a multi-selection came
+					// out reversed.
+					if (Index.IsSet())
+					{
+						Index = Index.GetValue() + 1;
+					}
 				}
 			}
 
