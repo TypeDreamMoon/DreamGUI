@@ -408,6 +408,28 @@ const ULexPanelSlot* ULexPanelLayoutBase::GetSlot(const ULexWidget* Child) const
 	return GetDefault<ULexPanelSlot>();
 }
 
+/**
+ * Hand a skipped child back to its authored anchors — but only when it explicitly opted out of layout.
+ *
+ * bIgnoreLayout means "I position myself", so restoring the authored geometry is what the author asked for.
+ * A child that is merely collapsed right now is still owned by this panel and will be laid out again the moment
+ * it becomes visible, so its geometry must be left untouched. The authored snapshot is captured at design time
+ * (in the prefab editor, at whatever root size that scene had) and can encode a position that is far outside the
+ * runtime canvas — restoring it there teleports the whole subtree off-screen, and because the panel skips the
+ * child again on the next pass it never comes back.
+ */
+static void ReleaseSkippedChildGeometry(ULexWidget* Child)
+{
+	if (!IsValid(Child) || !Child->GetIgnoreLayout())
+	{
+		return;
+	}
+	if (ULexPanelSlot* Slot = Child->GetPanelSlot(); IsValid(Slot))
+	{
+		Slot->RestoreAuthoredGeometry();
+	}
+}
+
 TArray<ULexWidget*> ULexPanelLayoutBase::CollectLayoutChildren(bool bEnsureSlots) const
 {
 	TArray<ULexWidget*> Result;
@@ -426,7 +448,9 @@ TArray<ULexWidget*> ULexPanelLayoutBase::CollectLayoutChildren(bool bEnsureSlots
 		const bool bIgnored = Child->GetIgnoreLayout();
 		if (!Child->GetLayoutVisibleInHierarchy() || bIgnored)
 		{
-			if (bEnsureSlots && IsValid(ExistingSlot))
+			// Only re-snapshot or restore for a child that opted out of layout; see ReleaseSkippedChildGeometry.
+			// A collapsed child keeps whatever this panel last gave it, and is re-laid-out when it reappears.
+			if (bIgnored && bEnsureSlots && IsValid(ExistingSlot))
 			{
 				if (ExistingSlot->HasLayoutGeometryApplied())
 				{
@@ -1344,9 +1368,9 @@ void ULexLayoutContainerSizeBox::CalculateLayout()
 				FMath::Max(0.0f, GetWidget()->GetWidth() - LexPanelLayoutLocal::HorizontalPadding(Padding)),
 				FMath::Max(0.0f, GetWidget()->GetHeight() - LexPanelLayoutLocal::VerticalPadding(Padding))));
 		}
-		else if (ULexPanelSlot* Slot = Content->GetPanelSlot(); IsValid(Slot))
+		else
 		{
-			Slot->RestoreAuthoredGeometry();
+			ReleaseSkippedChildGeometry(Content);
 		}
 	}
 	PreferredSize = MeasureLayout();
@@ -1441,10 +1465,7 @@ void ULexLayoutContainerScaleBox::CalculateLayout()
 	if (!IsValid(Child) || !Child->GetLayoutVisibleInHierarchy()
 		|| Child->GetIgnoreLayout())
 	{
-		if (IsValid(Child))
-		{
-			if (ULexPanelSlot* Slot = Child->GetPanelSlot(); IsValid(Slot)) Slot->RestoreAuthoredGeometry();
-		}
+		ReleaseSkippedChildGeometry(Child);
 		if (ScaledChild.IsValid() && ScaledChild->GetParent() == GetWidget())
 		{
 			ScaledChild->SetLayoutScale(FVector2f::UnitVector);
@@ -1732,9 +1753,9 @@ void ULexLayoutContainerSafeZone::CalculateLayout()
 				FMath::Max(0.0f, GetWidget()->GetWidth() - LexPanelLayoutLocal::HorizontalPadding(Combined)),
 				FMath::Max(0.0f, GetWidget()->GetHeight() - LexPanelLayoutLocal::VerticalPadding(Combined))));
 		}
-		else if (ULexPanelSlot* Slot = Content->GetPanelSlot(); IsValid(Slot))
+		else
 		{
-			Slot->RestoreAuthoredGeometry();
+			ReleaseSkippedChildGeometry(Content);
 		}
 	}
 	PreferredSize = MeasureLayout();

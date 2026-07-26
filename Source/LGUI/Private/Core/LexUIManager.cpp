@@ -1558,8 +1558,12 @@ void ULexUIManagerWorldSubsystem::CalculateLayoutTree(ULexWidget* RootLayoutWidg
 			if (!IsValid(Widget))return;
 			if (VisitedWidgets.Contains(Widget))return;
 			VisitedWidgets.Add(Widget);
-			if (!Widget->GetLayoutVisibleInHierarchy())return;
-			if (!Widget->HasRegistered())return;//if not registered, means it could about to remove
+			//Collect the full subtree, including layout-invisible and not-yet-registered widgets. Both flags flip
+			//without a usable chance to invalidate this cache: a collapsed subtree that becomes visible from
+			//inside a layout pass hits the bIsExecutingLayout guard in MarkRebuildAllLayoutTree, and OnRegister
+			//never invalidates the cache at all. Pruning here would bake such a subtree out of the cached tree
+			//permanently, so it would only lay out again after something re-dirties the whole tree top-down
+			//(a viewport resize). Filter per-widget at update time instead.
 			LayoutTreeArray.Add(Widget);
 			for (ULexWidget* Child : Widget->GetChildren())
 			{
@@ -1573,13 +1577,23 @@ void ULexUIManagerWorldSubsystem::CalculateLayoutTree(ULexWidget* RootLayoutWidg
 		TSet<const ULexWidget*> VisitedWidgets;
 		LOCAL::CollectLayoutTree(RootLayoutWidget, LayoutTree.WidgetArray, VisitedWidgets);
 	}
-	auto& LayoutTreeArray = LayoutTree.WidgetArray;
+	//Iterate a copy: UpdateLayout can re-enter CalculateLayoutTree through RebuildLayoutImmediately, and the
+	//FindOrAdd there may rehash the map out from under a reference into it.
+	const TArray<TObjectPtr<ULexWidget>> LayoutTreeArray = LayoutTree.WidgetArray;
 	for (int i = 0; i < LayoutTreeArray.Num(); i++)
 	{
 		auto Widget = LayoutTreeArray[i];
 		if (!IsValid(Widget))
 		{
 			continue;
+		}
+		if (!Widget->GetLayoutVisibleInHierarchy())
+		{
+			continue;//collapsed for layout, but stays in the tree so it lays out as soon as it becomes visible
+		}
+		if (!Widget->HasRegistered())
+		{
+			continue;//if not registered, means it could about to remove
 		}
 		if (auto LayoutContainer = Widget->GetLayoutContainer())
 		{
