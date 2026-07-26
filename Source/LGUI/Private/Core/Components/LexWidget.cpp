@@ -113,14 +113,18 @@ void ULexWidget::BeginPlay()
 	check(!bHasBegunPlay);
 	bHasBegunPlay = true;
 
-	for (auto Component : Components)
+	// Iterate a snapshot: a component's BeginPlay can add or remove components on this same widget (a layout
+	// container attaching its companion behaviour, for one), which would invalidate a ranged-for over Components.
+	// OnRegister and OnUnregister already guard this way.
+	const TArray<TObjectPtr<ULexUIBehaviour>> ComponentsToBeginPlay = Components;
+	for (auto Component : ComponentsToBeginPlay)
 	{
-		if (IsValid(Component))
+		if (IsValid(Component) && Components.Contains(Component))
 		{
 			Component->BeginPlay();
 		}
 	}
-	
+
 	if (IsValid(LayoutContainer))
 	{
 		LayoutContainer->BeginPlay();
