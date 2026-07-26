@@ -1119,7 +1119,10 @@ TSharedPtr<FLexUIRenderSection> ULexUIMeshComponent::SetupRenderSection(ELexUIRe
 		{
 			auto ChildCanvasSectionPtr = static_cast<FLexUIRenderSection_ChildCanvas*>(RenderSection.Get());
 			ChildCanvasSectionPtr->ChildCanvasMeshComponent = InDrawCallData->ChildCanvas->GetUIMesh();
-			ChildCanvasSectionPtr->ChildCanvasMeshComponent->SetParentCanvasMeshComp(InDrawCallData->ChildCanvas->GetUIMesh());
+			// The parent of the child's mesh is THIS mesh (the one hosting the section). It was set to the
+			// child's own mesh, which parented every child canvas to itself — the pooled-section teardown
+			// (ClearParentCanvasMeshComp(this)) and proxy-recreated re-hookup both assume `this`.
+			ChildCanvasSectionPtr->ChildCanvasMeshComponent->SetParentCanvasMeshComp(this);
 			if (ChildCanvasSectionPtr->RenderProxy)
 			{
 				if (this->SceneProxy != nullptr)
@@ -1144,11 +1147,15 @@ TSharedPtr<FLexUIRenderSection> ULexUIMeshComponent::SetupRenderSection(ELexUIRe
 	return RenderSection;
 }
 
-void ULexUIMeshComponent::UpdateMeshSection(int Index, FLexUIDrawCall* InDrawCallData)
+void ULexUIMeshComponent::UpdateMeshSection(const TSharedPtr<FLexUIRenderSection>& InRenderSection, FLexUIDrawCall* InDrawCallData)
 {
-	auto& RenderSection = RenderSectionArray[Index];
-	
-	auto MeshSectionPtr = static_cast<FLexUIRenderSection_Mesh*>(RenderSection.Get());
+	// Addressed by handle, not by draw-call index: skipped draw-calls have no section, so index-based
+	// addressing hit the wrong section — including reinterpreting a ChildCanvas section as a mesh.
+	if (!InRenderSection.IsValid() || InRenderSection->Type != ELexUIRenderSectionType::Mesh)
+	{
+		return;
+	}
+	auto MeshSectionPtr = static_cast<FLexUIRenderSection_Mesh*>(InRenderSection.Get());
 	if (MeshSectionPtr->RenderProxy)//if we have valid render-proxy then recreate or update data
 	{
 		MeshSectionPtr->BoundingBox = InDrawCallData->CombinedBounds.TransformBy(GetComponentTransform());
@@ -1308,9 +1315,13 @@ void ULexUIMeshComponent::PoolAllRenderSection()
 	RenderSectionArray.Reset();
 }
 
-void ULexUIMeshComponent::SetRenderSectionRenderPriority(int32 InSectionIndex, int32 InSortPriority)
+void ULexUIMeshComponent::SetRenderSectionRenderPriority(const TSharedPtr<FLexUIRenderSection>& InRenderSection, int32 InSortPriority)
 {
-	auto RenderSection = RenderSectionArray[InSectionIndex];
+	auto& RenderSection = InRenderSection;
+	if (!RenderSection.IsValid())
+	{
+		return;
+	}
 	RenderSection->RenderPriority = InSortPriority;
 	if (SceneProxy)
 	{

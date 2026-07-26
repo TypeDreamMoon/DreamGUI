@@ -108,11 +108,11 @@ private:
 	void ExpandMeshSectionRenderData(FLexUIRenderSection_Mesh* InMeshSection);
 public:
 	TSharedPtr<FLexUIRenderSection> SetupRenderSection(ELexUIRenderSectionType InType, FLexUIDrawCall* InDrawCallData);
-	void UpdateMeshSection(int Index, FLexUIDrawCall* InDrawCallData);
+	void UpdateMeshSection(const TSharedPtr<FLexUIRenderSection>& InRenderSection, FLexUIDrawCall* InDrawCallData);
 	void SetupDirectMeshRenderSection(FLexUIRenderSection_DirectMesh* InDirectMeshSection, bool bNeedExpandMeshSection, UMaterialInterface* InMaterial);
 	void SetDirectMeshRenderSectionMaterial(FLexUIRenderSection_DirectMesh* InDirectMeshSection, UMaterialInterface* InMaterial);
 	void PoolAllRenderSection();
-	void SetRenderSectionRenderPriority(int32 InSectionIndex, int32 InSortPriority);
+	void SetRenderSectionRenderPriority(const TSharedPtr<FLexUIRenderSection>& InRenderSection, int32 InSortPriority);
 	void SetMeshSectionMaterial(int32 InSectionIndex, UMaterialInterface* InMaterial);
 
 	void Init(ULexCanvas* InCanvas);

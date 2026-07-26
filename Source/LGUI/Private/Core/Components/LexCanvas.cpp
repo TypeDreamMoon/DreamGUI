@@ -860,6 +860,35 @@ void ULexCanvas::SetDefaultMeshType(TSubclassOf<ULexUIMeshComponent> InValue)
 	}
 }
 
+ULexCanvas* ULexCanvas::GetSortOwnerCanvas()
+{
+	ULexCanvas* Canvas = this;
+	while (IsValid(Canvas) && !Canvas->IsRootCanvas() && !Canvas->GetOverrideSorting())
+	{
+		ULexCanvas* Parent = Canvas->GetParentCanvas().Get();
+		if (!IsValid(Parent))
+		{
+			break;
+		}
+		Canvas = Parent;
+	}
+	return Canvas;
+}
+
+void ULexCanvas::ConsumePendingRenderPrioritySort()
+{
+	if (!bNeedToSortRenderPriority)
+	{
+		return;
+	}
+	if (!IsRootCanvas() && !GetOverrideSorting())
+	{
+		return;//not a sort owner; the request was escalated to the owner at set time
+	}
+	bNeedToSortRenderPriority = false;
+	SortDrawCall();
+}
+
 void ULexCanvas::MarkFinishUpdateCanvasDrawCall()
 {
 	//sort render priority
@@ -1351,7 +1380,7 @@ void ULexCanvas::UpdateDrawCallBatchData()
 					if (DrawCallItem.Type == ELexUIDrawCallType::BatchMesh)
 					{
 						DrawCallItem.CopyBatchMeshGeometry();
-						UIMesh->UpdateMeshSection(i, &DrawCallItem);
+						UIMesh->UpdateMeshSection(DrawCallItem.RenderSection, &DrawCallItem);
 					}
 				}
 			}
@@ -1370,6 +1399,7 @@ void ULexCanvas::UpdateDrawCallMesh()
 	if (!IsValid(UIMesh))return;
 	UIMesh->PoolAllRenderSection();
 	bool bNeedToUpdateBounds = false;
+	bool bAnySectionCreated = false;
 	for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
 	{
 		auto& DrawCallItem = CurrentDrawCallData.DrawCallArray[i];
@@ -1382,15 +1412,15 @@ void ULexCanvas::UpdateDrawCallMesh()
 					UE_LOG(LGUI, Warning, TEXT("[%s].%d Invalid DirectMesh draw-call, will ignore it"), ANSI_TO_TCHAR(__FUNCTION__), __LINE__);
 					continue;
 				}
-				UIMesh->SetupRenderSection(ELexUIRenderSectionType::DirectMesh, &DrawCallItem);
-				bNeedToSortRenderPriority = true;
+				DrawCallItem.RenderSection = UIMesh->SetupRenderSection(ELexUIRenderSectionType::DirectMesh, &DrawCallItem);
+				bAnySectionCreated = true;
 				bNeedToUpdateBounds = true;
 			}
 			break;
 		case ELexUIDrawCallType::BatchMesh:
 			{
-				UIMesh->SetupRenderSection(ELexUIRenderSectionType::Mesh, &DrawCallItem);
-				bNeedToSortRenderPriority = true;
+				DrawCallItem.RenderSection = UIMesh->SetupRenderSection(ELexUIRenderSectionType::Mesh, &DrawCallItem);
+				bAnySectionCreated = true;
 				bNeedToUpdateBounds = true;
 			}
 			break;
@@ -1407,9 +1437,9 @@ void ULexCanvas::UpdateDrawCallMesh()
 					continue;
 				}
 
-				UIMesh->SetupRenderSection(ELexUIRenderSectionType::PostProcess, &DrawCallItem);
+				DrawCallItem.RenderSection = UIMesh->SetupRenderSection(ELexUIRenderSectionType::PostProcess, &DrawCallItem);
 				//create new section, need to sort it
-				bNeedToSortRenderPriority = true;
+				bAnySectionCreated = true;
 				bNeedToUpdateBounds = true;
 			}
 			break;
@@ -1421,15 +1451,27 @@ void ULexCanvas::UpdateDrawCallMesh()
 					continue;
 				}
 				
-				UIMesh->SetupRenderSection(ELexUIRenderSectionType::ChildCanvas, &DrawCallItem);
+				DrawCallItem.RenderSection = UIMesh->SetupRenderSection(ELexUIRenderSectionType::ChildCanvas, &DrawCallItem);
 				//create new section, need to sort it
-				bNeedToSortRenderPriority = true;
+				bAnySectionCreated = true;
 				bNeedToUpdateBounds = true;
 			}
 			break;
 		}
 	}
-	
+
+	if (bAnySectionCreated)
+	{
+		// Sections carry fresh (or pooled, stale) priorities and must be re-sorted. Sorting is owned by
+		// the nearest override-sorting ancestor or the root (SortDrawCall cascades from there), so the
+		// request has to land on the owner: setting it on a plain child canvas fed a flag that its own
+		// consume site cleared without ever sorting, and the owner never heard about it.
+		if (ULexCanvas* SortOwner = GetSortOwnerCanvas())
+		{
+			SortOwner->bNeedToSortRenderPriority = true;
+		}
+	}
+
 	if (this->IsRootCanvas())
 	{
 		UIMesh->UpdateChildCanvasSectionBox();
@@ -1515,25 +1557,26 @@ void ULexCanvas::CheckUIMesh()const
 
 void ULexCanvas::SortDrawCall()
 {
+	if (!IsValid(UIMesh))
+	{
+		return;
+	}
 	UIMesh->SetUITranslucentSortPriority(this->GetActualSortOrder());
 	int MeshSectionIndex = 0;
 	for (int i = 0; i < CurrentDrawCallData.DrawCallArray.Num(); i++)
 	{
 		auto& DrawCallItem = CurrentDrawCallData.DrawCallArray[i];
-		UIMesh->SetRenderSectionRenderPriority(i, MeshSectionIndex++);
-		switch (DrawCallItem.Type)
+		// Only draw-calls that actually produced a section own a priority slot. Skipped draw-calls
+		// (invalid objects, WorldSpace post process) have no section, so addressing sections by the
+		// draw-call's position both shifted every later priority and, at the tail, indexed past the
+		// section array.
+		if (DrawCallItem.RenderSection.IsValid())
 		{
-		case ELexUIDrawCallType::BatchMesh:
-		case ELexUIDrawCallType::DirectMesh:
-		case ELexUIDrawCallType::PostProcess:
-		{
+			UIMesh->SetRenderSectionRenderPriority(DrawCallItem.RenderSection, MeshSectionIndex++);
 		}
-		break;
-		case ELexUIDrawCallType::ChildCanvas:
+		if (DrawCallItem.Type == ELexUIDrawCallType::ChildCanvas && DrawCallItem.ChildCanvas.IsValid())
 		{
 			DrawCallItem.ChildCanvas->SortDrawCall();
-		}
-		break;
 		}
 	}
 

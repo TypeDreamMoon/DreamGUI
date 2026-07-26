@@ -791,6 +791,18 @@ public:
 	 * which share the root's ClipDataList. Driven once per tick by ULexUIManagerWorldSubsystem after layout.
 	 */
 	void RefreshAllClipData();
+	/**
+	 * The canvas whose SortDrawCall covers this canvas's sections: the nearest override-sorting
+	 * ancestor, or the root. Sort requests must land here — a plain child canvas never sorts.
+	 */
+	ULexCanvas* GetSortOwnerCanvas();
+	/**
+	 * Execute a pending render-priority sort if this canvas owns sorting (root or override-sorting).
+	 * Driven once per tick by ULexUIManagerWorldSubsystem after draw-call updates, so requests raised
+	 * outside a rebuild (SetSortOrder at runtime, a child canvas rebuilding alone) take effect the
+	 * same frame instead of waiting for the owner's next incidental rebuild.
+	 */
+	void ConsumePendingRenderPrioritySort();
 private:
 
 	void PrepareDrawCallBatchingData(TArray<FLexUIRenderData>& OutRenderDataArray);

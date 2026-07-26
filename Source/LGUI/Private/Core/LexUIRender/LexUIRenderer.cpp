@@ -688,7 +688,9 @@ void FLexUIRenderer::RenderLexUI_RenderThread(
 				{
 					Item.DistToCamera = FVector3f::DistSquared(InViewPosition, Item.WorldPosition);
 				}
-				RenderSequenceArray.Sort([InViewPosition](const FWorldSpaceRenderParameterSequence& A, const FWorldSpaceRenderParameterSequence& B) {
+				//StableSort: equal (priority, distance) keeps registration order, so ties cannot flip
+				//between frames when the array is rebuilt or resorted.
+				RenderSequenceArray.StableSort([InViewPosition](const FWorldSpaceRenderParameterSequence& A, const FWorldSpaceRenderParameterSequence& B) {
 					if (A.RenderPriority == B.RenderPriority)
 					{
 						return A.DistToCamera > B.DistToCamera;
@@ -1292,7 +1294,9 @@ void FLexUIRenderer::RemoveScreenSpacePrimitive_RenderThread(ILexUIRendererPrimi
 }
 void FLexUIRenderer::SortScreenSpacePrimitiveRenderPriority_RenderThread()
 {
-	ScreenSpaceRenderParameter.PrimitiveArray.Sort([](ILexUIRendererPrimitive& A, ILexUIRendererPrimitive& B)
+	//StableSort: multiple root canvases share SortOrder 0 by default; an unstable sort could flip
+	//their relative order (and thus visual z-order) on any resort, e.g. after a proxy re-registers.
+	ScreenSpaceRenderParameter.PrimitiveArray.StableSort([](ILexUIRendererPrimitive& A, ILexUIRendererPrimitive& B)
 		{
 			return A.LexUI_GetRenderPriority() < B.LexUI_GetRenderPriority();
 		});

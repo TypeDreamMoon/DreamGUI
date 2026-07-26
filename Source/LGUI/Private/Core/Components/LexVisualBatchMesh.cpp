@@ -150,8 +150,16 @@ void ULexVisualBatchMesh::ApplyGeometryModifier(bool triangleChanged, bool uvCha
 	if (bMeshModifierOrderChanged)
 	{
 		bMeshModifierOrderChanged = false;
-		MeshModifierArray.Sort([](const TWeakObjectPtr<ULexMeshModifierBase> A, const TWeakObjectPtr<ULexMeshModifierBase> B) {
-		return A->GetComponentIndexInWidget() < B->GetComponentIndexInWidget();
+		// The consume loop below tolerates stale entries, so the comparator must too — dereferencing a
+		// stale weak pointer is a null-this call. Stale entries sort to the end, valid ones keep a
+		// strict weak ordering on component index.
+		MeshModifierArray.StableSort([](const TWeakObjectPtr<ULexMeshModifierBase>& A, const TWeakObjectPtr<ULexMeshModifierBase>& B) {
+			const bool bAValid = A.IsValid();
+			if (bAValid != B.IsValid())
+			{
+				return bAValid;
+			}
+			return bAValid && A->GetComponentIndexInWidget() < B->GetComponentIndexInWidget();
 		});
 	}
 	for (auto& ModifierComp : MeshModifierArray)

@@ -71,6 +71,14 @@ public:
 
 	TWeakObjectPtr<ULexVisualDirectMesh> DirectMeshVisualObject;
 
+	/**
+	 * The render section this draw-call produced in UpdateDrawCallMesh, or null when it was skipped
+	 * (invalid object, WorldSpace post process). Draw-call index and section index diverge whenever
+	 * anything is skipped, so priority/geometry updates must address the section through this handle,
+	 * never by the draw-call's position.
+	 */
+	TSharedPtr<struct FLexUIRenderSection> RenderSection;
+
 	TArray<TWeakObjectPtr<ULexVisualBatchMesh>> BatchMeshVisualArray;
 	TArray<FLexUIGeometry> BatchMeshGeometryArray;//BatchMesh's geometry collections belong to this draw-call, must be sorted on hierarchy-index
 	TArray<FLexUIMeshVertex> CombinedBatchMeshGeometryVertices;

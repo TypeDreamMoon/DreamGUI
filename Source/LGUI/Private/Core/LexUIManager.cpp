@@ -1150,6 +1150,17 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 		UpdateCanvas(ELexRenderMode::WorldSpace_LexUI);
 		UpdateCanvas(ELexRenderMode::RenderTarget);
 	}
+
+	// Consume render-priority sort requests at their owner. A request raised outside the owner's own
+	// draw-call rebuild (runtime SetSortOrder, a child canvas rebuilding alone) used to sit in the flag
+	// until the owner happened to rebuild for some other reason; this sweep executes it the same frame.
+	for (auto& Canvas : AllCanvasArray)
+	{
+		if (Canvas.IsValid())
+		{
+			Canvas->ConsumePendingRenderPrioritySort();
+		}
+	}
 }
 
 void ULexUIManagerWorldSubsystem::OnWorldPreSendAllEndOfFrameUpdates(UWorld* InWorld)
