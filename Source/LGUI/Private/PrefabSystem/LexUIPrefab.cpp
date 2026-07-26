@@ -502,6 +502,7 @@ void ULexUIPrefab::WillNeverCacheCookedPlatformDataAgain()
 		ReferenceAssetListForBuild.Empty();
 		ReferenceClassListForBuild.Empty();
 		ReferenceNameListForBuild.Empty();
+		ReferenceTextListForBuild.Empty();
 	}
 }
 void ULexUIPrefab::ClearCachedCookedPlatformData(const ITargetPlatform* TargetPlatform)
@@ -512,6 +513,7 @@ void ULexUIPrefab::ClearCachedCookedPlatformData(const ITargetPlatform* TargetPl
 		ReferenceAssetListForBuild.Empty();
 		ReferenceClassListForBuild.Empty();
 		ReferenceNameListForBuild.Empty();
+		ReferenceTextListForBuild.Empty();
 	}
 }
 
