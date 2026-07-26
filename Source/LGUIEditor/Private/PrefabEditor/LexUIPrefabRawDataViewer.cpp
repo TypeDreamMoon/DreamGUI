@@ -8,7 +8,10 @@
 #include "PrefabSystem/LexUIPrefab.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "PropertyEditorModule.h"
+#include "Styling/AppStyle.h"
 #include "Widgets/Input/SButton.h"
+#include "Widgets/Input/SSearchBox.h"
+#include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SExpandableArea.h"
 #include "Widgets/Layout/SScrollBox.h"
@@ -81,6 +84,22 @@ namespace LexUIPrefabRawDataViewerLocal
 
 	FSlateFontInfo MonoFont() { return FCoreStyle::GetDefaultFontStyle("Mono", 9); }
 
+	const FLinearColor AccentColor(0.55f, 0.75f, 1.0f);
+	const FLinearColor DimColor(0.6f, 0.6f, 0.6f);
+	const FLinearColor DeadColor(1.0f, 0.35f, 0.35f);
+
+	/** Faint alternating background so long lists stay scannable. */
+	TSharedRef<SWidget> MakeStripedRow(int32 VisibleIndex, const TSharedRef<SWidget>& Inner)
+	{
+		return SNew(SBorder)
+			.BorderImage(FAppStyle::GetBrush("WhiteBrush"))
+			.BorderBackgroundColor(FSlateColor(VisibleIndex % 2 == 0 ? FLinearColor(1, 1, 1, 0.04f) : FLinearColor::Transparent))
+			.Padding(FMargin(0))
+			[
+				Inner
+			];
+	}
+
 	TSharedRef<SWidget> MakeKeyValueRow(const FText& Key, const FString& Value, bool bMonospace = false, const FLinearColor& ValueColor = FLinearColor(0.85f, 0.85f, 0.85f))
 	{
 		return SNew(SHorizontalBox)
@@ -110,18 +129,25 @@ namespace LexUIPrefabRawDataViewerLocal
 
 	TSharedRef<SWidget> MakeSection(const FText& Title, const TSharedRef<SWidget>& Body, bool bInitiallyCollapsed = false)
 	{
-		return SNew(SExpandableArea)
-			.InitiallyCollapsed(bInitiallyCollapsed)
-			.Padding(FMargin(8, 4))
-			.HeaderContent()
+		return SNew(SBorder)
+			.BorderImage(FAppStyle::GetBrush("NoBorder"))
+			.Padding(FMargin(0, 0, 0, 2))
 			[
-				SNew(STextBlock)
-				.Text(Title)
-				.Font(IDetailLayoutBuilder::GetDetailFontBold())
-			]
-			.BodyContent()
-			[
-				Body
+				SNew(SExpandableArea)
+				.InitiallyCollapsed(bInitiallyCollapsed)
+				.BorderBackgroundColor(FLinearColor(1, 1, 1, 0.05f))
+				.Padding(FMargin(8, 4))
+				.HeaderContent()
+				[
+					SNew(STextBlock)
+					.Text(Title)
+					.Font(IDetailLayoutBuilder::GetDetailFontBold())
+					.ColorAndOpacity(FSlateColor(AccentColor))
+				]
+				.BodyContent()
+				[
+					Body
+				]
 			];
 	}
 
@@ -159,6 +185,7 @@ void SLexUIPrefabRawDataViewer::Construct(const FArguments& InArgs, TSharedPtr<F
 			SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot()
 			.AutoWidth()
+			.VAlign(VAlign_Center)
 			[
 				SNew(SButton)
 				.Text(LOCTEXT("Refresh", "Refresh"))
@@ -168,13 +195,25 @@ void SLexUIPrefabRawDataViewer::Construct(const FArguments& InArgs, TSharedPtr<F
 			+ SHorizontalBox::Slot()
 			.FillWidth(1.0f)
 			.VAlign(VAlign_Center)
-			.Padding(8, 0)
+			.Padding(8, 0, 0, 0)
 			[
-				SNew(STextBlock)
-				.Text(LOCTEXT("Hint", "Decoded view of the serialized prefab data. The raw asset properties live in the last section."))
-				.Font(IDetailLayoutBuilder::GetDetailFont())
-				.ColorAndOpacity(FSlateColor(FLinearColor(0.6f, 0.6f, 0.6f)))
+				SNew(SSearchBox)
+				.HintText(LOCTEXT("SearchHint", "Filter rows in every section..."))
+				.OnTextChanged_Lambda([this](const FText& Text)
+				{
+					FilterString = Text.ToString();
+					Rebuild();
+				})
 			]
+		]
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(8, 0, 8, 4)
+		[
+			SNew(STextBlock)
+			.Text(LOCTEXT("Hint", "Decoded view of the serialized prefab data. The raw asset properties live in the last section."))
+			.Font(IDetailLayoutBuilder::GetDetailFont())
+			.ColorAndOpacity(FSlateColor(LexUIPrefabRawDataViewerLocal::DimColor))
 		]
 		+ SVerticalBox::Slot()
 		.FillHeight(1.0f)
@@ -187,6 +226,11 @@ void SLexUIPrefabRawDataViewer::Construct(const FArguments& InArgs, TSharedPtr<F
 		]
 	];
 	Rebuild();
+}
+
+bool SLexUIPrefabRawDataViewer::MatchesFilter(const FString& Haystack) const
+{
+	return FilterString.IsEmpty() || Haystack.Contains(FilterString);
 }
 
 void SLexUIPrefabRawDataViewer::Rebuild()
@@ -221,21 +265,31 @@ TSharedRef<SWidget> SLexUIPrefabRawDataViewer::BuildOverviewSection(ULexUIPrefab
 	ULexUIPrefabHelperObject* Helper = Prefab->GetPrefabHelperObject();
 	const int32 WidgetCount = (Helper && IsValid(Helper->LoadedRootWidget)) ? CountWidgets(Helper->LoadedRootWidget) : -1;
 
-	TSharedRef<SVerticalBox> Box = SNew(SVerticalBox);
-	Box->AddSlot().AutoHeight()[MakeKeyValueRow(LOCTEXT("PrefabVersion", "Binary format version"), PrefabVersionToString(Prefab->PrefabVersion))];
-	Box->AddSlot().AutoHeight()[MakeKeyValueRow(LOCTEXT("SchemaVersion", "Schema version"), SchemaVersionToString(Prefab->PrefabSchemaVersion))];
-	Box->AddSlot().AutoHeight()[MakeKeyValueRow(LOCTEXT("SavedByEngine", "Saved by engine"),
-		FString::Printf(TEXT("%d.%d.%d"), Prefab->EngineMajorVersion, Prefab->EngineMinorVersion, Prefab->EnginePatchVersion))];
-	Box->AddSlot().AutoHeight()[MakeKeyValueRow(LOCTEXT("CreateTime", "Last saved (UTC)"), Prefab->CreateTime.ToString())];
-	Box->AddSlot().AutoHeight()[MakeKeyValueRow(LOCTEXT("EditorPayload", "Editor payload (BinaryData)"), BytesToString(Prefab->BinaryData.Num()))];
-	Box->AddSlot().AutoHeight()[MakeKeyValueRow(LOCTEXT("BuildPayload", "Cooked payload (BinaryDataForBuild)"),
-		Prefab->BinaryDataForBuild.Num() > 0 ? BytesToString(Prefab->BinaryDataForBuild.Num()) : TEXT("not cached"))];
-	Box->AddSlot().AutoHeight()[MakeKeyValueRow(LOCTEXT("WidgetCount", "Widgets in loaded hierarchy"),
-		WidgetCount >= 0 ? FString::FromInt(WidgetCount) : TEXT("hierarchy not loaded"))];
-	Box->AddSlot().AutoHeight()[MakeKeyValueRow(LOCTEXT("RefCounts", "Reference table sizes"),
+	TArray<TPair<FText, FString>> Rows;
+	Rows.Emplace(LOCTEXT("PrefabVersion", "Binary format version"), PrefabVersionToString(Prefab->PrefabVersion));
+	Rows.Emplace(LOCTEXT("SchemaVersion", "Schema version"), SchemaVersionToString(Prefab->PrefabSchemaVersion));
+	Rows.Emplace(LOCTEXT("SavedByEngine", "Saved by engine"),
+		FString::Printf(TEXT("%d.%d.%d"), Prefab->EngineMajorVersion, Prefab->EngineMinorVersion, Prefab->EnginePatchVersion));
+	Rows.Emplace(LOCTEXT("CreateTime", "Last saved (UTC)"), Prefab->CreateTime.ToString());
+	Rows.Emplace(LOCTEXT("EditorPayload", "Editor payload (BinaryData)"), BytesToString(Prefab->BinaryData.Num()));
+	Rows.Emplace(LOCTEXT("BuildPayload", "Cooked payload (BinaryDataForBuild)"),
+		Prefab->BinaryDataForBuild.Num() > 0 ? BytesToString(Prefab->BinaryDataForBuild.Num()) : FString(TEXT("not cached")));
+	Rows.Emplace(LOCTEXT("WidgetCount", "Widgets in loaded hierarchy"),
+		WidgetCount >= 0 ? FString::FromInt(WidgetCount) : FString(TEXT("hierarchy not loaded")));
+	Rows.Emplace(LOCTEXT("RefCounts", "Reference table sizes"),
 		FString::Printf(TEXT("assets %d, classes %d, names %d, texts %d"),
 			Prefab->ReferenceAssetList.Num(), Prefab->ReferenceClassList.Num(),
-			Prefab->ReferenceNameList.Num(), Prefab->ReferenceTextList.Num()))];
+			Prefab->ReferenceNameList.Num(), Prefab->ReferenceTextList.Num()));
+
+	TSharedRef<SVerticalBox> Box = SNew(SVerticalBox);
+	for (const TPair<FText, FString>& Row : Rows)
+	{
+		if (!MatchesFilter(Row.Key.ToString() + TEXT(" ") + Row.Value))
+		{
+			continue;
+		}
+		Box->AddSlot().AutoHeight()[MakeKeyValueRow(Row.Key, Row.Value)];
+	}
 	return Box;
 }
 
@@ -244,43 +298,61 @@ TSharedRef<SWidget> SLexUIPrefabRawDataViewer::BuildReferenceListsSection(ULexUI
 	using namespace LexUIPrefabRawDataViewerLocal;
 	TSharedRef<SVerticalBox> Box = SNew(SVerticalBox);
 
-	auto AddRows = [](const TSharedRef<SVerticalBox>& Target, const FText& Title, int32 Num, TFunctionRef<FString(int32)> RowText, TFunctionRef<bool(int32)> RowValid)
+	auto AddRows = [this](const TSharedRef<SVerticalBox>& Target, const TCHAR* ListName, const TCHAR* ListDescription, int32 Num, TFunctionRef<FString(int32)> RowText, TFunctionRef<bool(int32)> RowValid)
 	{
 		TSharedRef<SVerticalBox> Rows = SNew(SVerticalBox);
+		int32 Shown = 0;
 		for (int32 i = 0; i < Num; i++)
 		{
+			const FString Text = FString::Printf(TEXT("[%d]  %s"), i, *RowText(i));
+			if (!MatchesFilter(Text))
+			{
+				continue;
+			}
 			const bool bValid = RowValid(i);
+			Rows->AddSlot().AutoHeight().Padding(8, 0, 4, 0)
+			[
+				MakeStripedRow(Shown,
+					SNew(STextBlock)
+					.Text(FText::FromString(Text))
+					.Font(MonoFont())
+					.ColorAndOpacity(FSlateColor(bValid ? FLinearColor(0.85f, 0.85f, 0.85f) : DeadColor)))
+			];
+			Shown++;
+		}
+		if (Shown == 0)
+		{
 			Rows->AddSlot().AutoHeight().Padding(12, 0, 4, 0)
 			[
 				SNew(STextBlock)
-				.Text(FText::FromString(FString::Printf(TEXT("[%d]  %s"), i, *RowText(i))))
-				.Font(MonoFont())
-				.ColorAndOpacity(FSlateColor(bValid ? FLinearColor(0.85f, 0.85f, 0.85f) : FLinearColor(1.0f, 0.35f, 0.35f)))
+				.Text(Num == 0 ? LOCTEXT("EmptyList", "(empty)") : LOCTEXT("NoRowMatches", "(no rows match the filter)"))
+				.Font(IDetailLayoutBuilder::GetDetailFont())
+				.ColorAndOpacity(FSlateColor(DimColor))
 			];
 		}
-		if (Num == 0)
-		{
-			Rows->AddSlot().AutoHeight().Padding(12, 0, 4, 0)
-			[
-				SNew(STextBlock).Text(LOCTEXT("EmptyList", "(empty)")).Font(IDetailLayoutBuilder::GetDetailFont())
-			];
-		}
-		Target->AddSlot().AutoHeight()[MakeSection(Title, Rows, /*bInitiallyCollapsed*/Num > 20)];
+		const bool bFiltering = !FilterString.IsEmpty();
+		const FString CountLabel = bFiltering
+			? FString::Printf(TEXT("%d/%d match"), Shown, Num)
+			: FString::FromInt(Num);
+		const FString Title = FString::Printf(TEXT("%s (%s)%s%s"), ListName, *CountLabel,
+			ListDescription && *ListDescription ? TEXT(" — ") : TEXT(""), ListDescription);
+		Target->AddSlot().AutoHeight()[MakeSection(FText::FromString(Title), Rows,
+			/*bInitiallyCollapsed*/!bFiltering && Num > 20)];
 	};
 
-	AddRows(Box, FText::Format(LOCTEXT("AssetsFmt", "Assets ({0}) — object references stored by index"), Prefab->ReferenceAssetList.Num()),
+	AddRows(Box, TEXT("Assets"), TEXT("object references stored by index"),
 		Prefab->ReferenceAssetList.Num(),
 		[Prefab](int32 i) { UObject* O = Prefab->ReferenceAssetList[i]; return IsValid(O) ? FString::Printf(TEXT("%s  (%s)"), *O->GetName(), *O->GetClass()->GetName()) : FString(TEXT("MISSING — the payload references a dead asset")); },
 		[Prefab](int32 i) { return IsValid(Prefab->ReferenceAssetList[i].Get()); });
-	AddRows(Box, FText::Format(LOCTEXT("ClassesFmt", "Classes ({0}) — widget/component classes by index"), Prefab->ReferenceClassList.Num()),
+	AddRows(Box, TEXT("Classes"), TEXT("widget/component classes by index"),
 		Prefab->ReferenceClassList.Num(),
 		[Prefab](int32 i) { UClass* C = Prefab->ReferenceClassList[i]; return IsValid(C) ? C->GetName() : FString(TEXT("MISSING — the payload references a dead class")); },
 		[Prefab](int32 i) { return IsValid(Prefab->ReferenceClassList[i].Get()); });
-	AddRows(Box, FText::Format(LOCTEXT("NamesFmt", "Names ({0})"), Prefab->ReferenceNameList.Num()),
+	AddRows(Box, TEXT("Names"), TEXT(""),
 		Prefab->ReferenceNameList.Num(),
 		[Prefab](int32 i) { return Prefab->ReferenceNameList[i].ToString(); },
 		[](int32) { return true; });
-	AddRows(Box, FText::Format(LOCTEXT("TextsFmt", "Texts ({0}) — FText values, localization-gatherable"), Prefab->ReferenceTextList.Num()),
+	AddRows(Box, TEXT("Texts"), TEXT("FText values, localization-gatherable"),
 		Prefab->ReferenceTextList.Num(),
 		[Prefab](int32 i) { return TruncateText(Prefab->ReferenceTextList[i].ToString()); },
 		[](int32) { return true; });
@@ -301,6 +373,7 @@ TSharedRef<SWidget> SLexUIPrefabRawDataViewer::BuildGuidMapSection(ULexUIPrefab*
 		return Box;
 	}
 	int32 DeadCount = 0;
+	int32 Shown = 0;
 	for (const TPair<FGuid, TObjectPtr<UObject>>& Pair : Helper->MapGuidToObject)
 	{
 		const UObject* Object = Pair.Value.Get();
@@ -320,19 +393,31 @@ TSharedRef<SWidget> SLexUIPrefabRawDataViewer::BuildGuidMapSection(ULexUIPrefab*
 			Label = FString::Printf(TEXT("%s  DEAD MAPPING — object gone; cleaned up on next save"),
 				*Pair.Key.ToString(EGuidFormats::DigitsWithHyphens).Left(8));
 		}
-		Box->AddSlot().AutoHeight().Padding(12, 0, 4, 0)
+		// Match the full GUID too — the row shows only the first 8 chars but the tooltip (and any
+		// log line the user copied it from) carries the whole thing.
+		if (!MatchesFilter(Label + TEXT(" ") + Pair.Key.ToString(EGuidFormats::DigitsWithHyphens)))
+		{
+			continue;
+		}
+		Box->AddSlot().AutoHeight().Padding(8, 0, 4, 0)
 		[
-			SNew(STextBlock)
-			.Text(FText::FromString(Label))
-			.ToolTipText(FText::FromString(Pair.Key.ToString(EGuidFormats::DigitsWithHyphens)))
-			.Font(MonoFont())
-			.ColorAndOpacity(FSlateColor(bValid ? FLinearColor(0.85f, 0.85f, 0.85f) : FLinearColor(1.0f, 0.35f, 0.35f)))
+			MakeStripedRow(Shown,
+				SNew(STextBlock)
+				.Text(FText::FromString(Label))
+				.ToolTipText(FText::FromString(Pair.Key.ToString(EGuidFormats::DigitsWithHyphens)))
+				.Font(MonoFont())
+				.ColorAndOpacity(FSlateColor(bValid ? FLinearColor(0.85f, 0.85f, 0.85f) : DeadColor)))
 		];
+		Shown++;
+	}
+	FString Summary = FString::Printf(TEXT("%d total, %d dead"), Helper->MapGuidToObject.Num(), DeadCount);
+	if (!FilterString.IsEmpty())
+	{
+		Summary += FString::Printf(TEXT(" (%d match the filter)"), Shown);
 	}
 	Box->InsertSlot(0).AutoHeight().Padding(4, 2)
 	[
-		MakeKeyValueRow(LOCTEXT("GuidSummary", "Mappings"),
-			FString::Printf(TEXT("%d total, %d dead"), Helper->MapGuidToObject.Num(), DeadCount),
+		MakeKeyValueRow(LOCTEXT("GuidSummary", "Mappings"), Summary,
 			false, DeadCount > 0 ? FLinearColor(1.0f, 0.6f, 0.3f) : FLinearColor(0.85f, 0.85f, 0.85f))
 	];
 	return Box;
@@ -351,19 +436,44 @@ TSharedRef<SWidget> SLexUIPrefabRawDataViewer::BuildSubPrefabSection(ULexUIPrefa
 		];
 		return Box;
 	}
+	Box->AddSlot().AutoHeight().Padding(4, 2)
+	[
+		SNew(STextBlock)
+		.Text(LOCTEXT("SubPrefabOverridesHint", "Per-object override details live in the Overrides tab."))
+		.Font(IDetailLayoutBuilder::GetDetailFont())
+		.ColorAndOpacity(FSlateColor(DimColor))
+	];
 	for (const TPair<TObjectPtr<ULexWidget>, FLexUISubPrefabData>& Pair : Helper->SubPrefabMap)
 	{
 		const ULexWidget* RootWidget = Pair.Key.Get();
 		const FLexUISubPrefabData& Data = Pair.Value;
+		const FString RootName = RootWidget ? RootWidget->GetDisplayName() : TEXT("<missing root>");
 		int32 OverriddenPropertyCount = 0;
+		FString OverrideHaystack;
 		for (const FLexUIPrefabOverrideParameterData& Override : Data.ObjectOverrideParameterArray)
 		{
 			OverriddenPropertyCount += Override.MemberPropertyNames.Num();
+			if (const UObject* Object = Override.Object.Get())
+			{
+				OverrideHaystack += TEXT(" ") + Object->GetClass()->GetName();
+			}
+			for (const FName& PropertyName : Override.MemberPropertyNames)
+			{
+				OverrideHaystack += TEXT(" ") + PropertyName.ToString();
+			}
+		}
+		// Searching a pinned class or property name should surface the instance that pins it, and any
+		// text the entry visibly renders (like the MD5) must also hit.
+		if (!MatchesFilter(RootName + TEXT(" ") + GetNameSafe(Data.PrefabAsset) + OverrideHaystack
+			+ TEXT(" ") + Data.OverallVersionMD5))
+		{
+			continue;
 		}
 		TSharedRef<SVerticalBox> Entry = SNew(SVerticalBox);
 		Entry->AddSlot().AutoHeight()[MakeKeyValueRow(LOCTEXT("SubAsset", "Asset"), GetNameSafe(Data.PrefabAsset))];
 		Entry->AddSlot().AutoHeight()[MakeKeyValueRow(LOCTEXT("SubOverrides", "Instance overrides"),
-			FString::Printf(TEXT("%d object(s), %d propert(ies)"), Data.ObjectOverrideParameterArray.Num(), OverriddenPropertyCount))];
+			FString::Printf(TEXT("%d object(s), %d propert(ies)"), Data.ObjectOverrideParameterArray.Num(), OverriddenPropertyCount),
+			false, OverriddenPropertyCount > 0 ? FLinearColor(1.0f, 0.75f, 0.35f) : FLinearColor(0.85f, 0.85f, 0.85f))];
 		Entry->AddSlot().AutoHeight()[MakeKeyValueRow(LOCTEXT("SubMappings", "Guid mappings"),
 			FString::Printf(TEXT("%d in-instance, %d parent→sub, %d newly-created ids"),
 				Data.MapGuidToObject.Num(), Data.MapObjectGuidFromParentPrefabToSubPrefab.Num(), Data.MapObjectIdToNewlyCreatedId.Num()))];
@@ -371,7 +481,7 @@ TSharedRef<SWidget> SLexUIPrefabRawDataViewer::BuildSubPrefabSection(ULexUIPrefa
 			Data.OverallVersionMD5.IsEmpty() ? TEXT("(empty)") : Data.OverallVersionMD5, true)];
 		Box->AddSlot().AutoHeight()
 		[
-			MakeSection(FText::FromString(FString::Printf(TEXT("%s"), RootWidget ? *RootWidget->GetDisplayName() : TEXT("<missing root>"))), Entry)
+			MakeSection(FText::FromString(RootName), Entry)
 		];
 	}
 	return Box;

@@ -34,9 +34,12 @@ private:
 	TSharedRef<SWidget> BuildReferenceListsSection(ULexUIPrefab* Prefab);
 	TSharedRef<SWidget> BuildGuidMapSection(ULexUIPrefab* Prefab);
 	TSharedRef<SWidget> BuildSubPrefabSection(ULexUIPrefab* Prefab);
+	/** Case-insensitive substring match against the current search text; everything matches when the box is empty. */
+	bool MatchesFilter(const FString& Haystack) const;
 
 	TWeakPtr<FLexUIPrefabEditor> PrefabEditorPtr;
 	TWeakObjectPtr<ULexUIPrefab> PrefabWeak;
 	TSharedPtr<SVerticalBox> ContentBox;
 	TSharedPtr<IDetailsView> DescriptorDetailView;
+	FString FilterString;
 };
