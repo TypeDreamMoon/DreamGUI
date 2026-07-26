@@ -78,6 +78,11 @@ public:
 	int32 RowSpan = 1;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetColumnSpan, Category = "Slot", meta = (ClampMin = "1"))
 	int32 ColumnSpan = 1;
+	/**
+	 * Paint order among siblings, applied as a stable reorder (equal values keep sibling order).
+	 * Consumed by Overlay and GridPanel always, and by CanvasPanel when SortChildrenByZOrder is on;
+	 * every other panel arranges strictly by sibling order and ignores this value.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetZOrder, Category = "Slot")
 	int32 ZOrder = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, BlueprintSetter = SetAutoSize, Category = "Slot")

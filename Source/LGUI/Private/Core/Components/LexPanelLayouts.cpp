@@ -974,7 +974,13 @@ void ULexLayoutContainerOverlay::CalculateLayout()
 	const FVector2D AreaSize(
 		FMath::Max(0.0f, Panel->GetWidth() - LexPanelLayoutLocal::HorizontalPadding(Padding)),
 		FMath::Max(0.0f, Panel->GetHeight() - LexPanelLayoutLocal::VerticalPadding(Padding)));
-	for (ULexWidget* Child : CollectLayoutChildren())
+	TArray<ULexWidget*> LayoutChildren = CollectLayoutChildren();
+	// Paint order is the whole point of an overlay: honor the slot ZOrder the same stable way
+	// CanvasPanel (opt-in) and GridPanel do. Equal ZOrder — the default — keeps sibling order
+	// untouched, so this only reorders children whose ZOrder was actually authored. Before this,
+	// ZOrder on overlay children was silently ignored and stacking followed sibling order alone.
+	LexPanelLayoutLocal::ApplyStableZOrderWithinParticipatingSlots(Panel, LayoutChildren);
+	for (ULexWidget* Child : LayoutChildren)
 	{
 		ApplyChildRect(Child, AreaPosition, AreaSize);
 	}
@@ -1949,11 +1955,13 @@ FVector2f ULexLayoutContainerWidgetSwitcher::MeasureLayout() const
 	{
 		return FVector2f::ZeroVector;
 	}
-	ULexWidget* Child = ActiveWidget.IsValid() && ActiveWidget->GetParent() == Panel
-		? ActiveWidget.Get()
-		: (Panel->GetChildren().IsValidIndex(ActiveWidgetIndex)
-			? Panel->GetChildren()[ActiveWidgetIndex]
-			: nullptr);
+	ULexWidget* Child = nullptr;
+	if (Panel->GetChildrenCount() > 0)
+	{
+		//same clamp-resolution as CalculateLayout, so measure and arrangement agree on the child
+		const int32 ResolvedIndex = FMath::Clamp(ActiveWidgetIndex, 0, Panel->GetChildrenCount() - 1);
+		Child = Panel->GetChildren()[ResolvedIndex];
+	}
 	if (!IsValid(Child) || !Child->GetWidgetActiveInHierarchy() || Child->GetVisibility() == ELexWidgetVisibility::Collapsed)
 	{
 		return FVector2f::ZeroVector;
@@ -1973,21 +1981,14 @@ void ULexLayoutContainerWidgetSwitcher::CalculateLayout()
 {
 	if (!BeginLayoutPass()) return;
 	ULexWidget* Panel = GetWidget();
-	ULexWidget* ActiveChild = ActiveWidget.IsValid() && ActiveWidget->GetParent() == Panel
-		? ActiveWidget.Get()
-		: nullptr;
-	if (IsValid(ActiveChild))
+	// Index-authoritative (UMG-aligned): resolve the displayed child by clamping for THIS pass only,
+	// keeping the stored request intact so pages attached later can still satisfy it. ActiveWidget is a
+	// cache of the resolution, never a competing source of truth.
+	ULexWidget* ActiveChild = nullptr;
+	if (Panel->GetChildrenCount() > 0)
 	{
-		ActiveWidgetIndex = Panel->GetChildren().IndexOfByKey(ActiveChild);
-	}
-	else if (Panel->GetChildrenCount() > 0)
-	{
-		ActiveWidgetIndex = FMath::Clamp(ActiveWidgetIndex, 0, Panel->GetChildrenCount() - 1);
-		ActiveChild = Panel->GetChildren()[ActiveWidgetIndex];
-	}
-	else
-	{
-		ActiveWidgetIndex = 0;
+		const int32 ResolvedIndex = FMath::Clamp(ActiveWidgetIndex, 0, Panel->GetChildrenCount() - 1);
+		ActiveChild = Panel->GetChildren()[ResolvedIndex];
 	}
 	ActiveWidget = ActiveChild;
 	for (int32 Index = 0; Index < Panel->GetChildrenCount(); ++Index)
@@ -2034,16 +2035,17 @@ void ULexLayoutContainerWidgetSwitcher::OnUnregister()
 
 void ULexLayoutContainerWidgetSwitcher::SetActiveWidgetIndex(int32 Value)
 {
+	// Store the REQUEST (sanitized to >=0), never a clamp against the current child count: the index is
+	// routinely set before the pages attach, and clamping to 0 silently discarded the caller's intent.
+	// Display resolution clamps at layout time, so a page attached later snaps to the requested index.
+	Value = FMath::Max(0, Value);
 	ULexWidget* Panel = GetWidget();
-	const int32 Clamped = IsValid(Panel) && Panel->GetChildrenCount() > 0
-		? FMath::Clamp(Value, 0, Panel->GetChildrenCount() - 1)
-		: 0;
-	ULexWidget* NewActiveWidget = IsValid(Panel) && Panel->GetChildren().IsValidIndex(Clamped)
-		? Panel->GetChildren()[Clamped]
+	ULexWidget* NewActiveWidget = IsValid(Panel) && Panel->GetChildren().IsValidIndex(Value)
+		? Panel->GetChildren()[Value]
 		: nullptr;
-	if (ActiveWidgetIndex != Clamped || ActiveWidget.Get() != NewActiveWidget)
+	if (ActiveWidgetIndex != Value || ActiveWidget.Get() != NewActiveWidget)
 	{
-		ActiveWidgetIndex = Clamped;
+		ActiveWidgetIndex = Value;
 		ActiveWidget = NewActiveWidget;
 		ULexWidget::MarkLayoutForRebuild(Panel);
 	}
