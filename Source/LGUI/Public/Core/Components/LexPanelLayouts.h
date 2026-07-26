@@ -311,6 +311,8 @@ public:
 	ULexLayoutContainerScrollBox();
 	virtual void OnRegister() override;
 	virtual void OnUnregister() override;
+	virtual void BeginPlay() override;
+	virtual void EndPlay() override;
 
 	/** Local units scrolled per wheel notch. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ScrollBox", meta = (ClampMin = "0.0"))

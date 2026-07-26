@@ -1787,11 +1787,32 @@ void ULexLayoutContainerScrollBox::OnRegister()
 	}
 	bAppliedDefaultClipping = true;
 	Widget->SetLayoutClippingOverride(ELexWidgetClipping::ClipToBounds);
-	// The event system raycasts against visuals only (see FLexBaseRaycaster, which walks the canvas visual list),
-	// so a container with no visual can never be hit and wheel/drag would silently do nothing. Give it a fully
-	// transparent rect-raycast target. Rect tracing does not need render geometry, so this costs no visible
-	// pixels. Runtime only, so it is never serialized into a prefab.
-	if (!IsValid(Widget->GetVisual()) && Widget->GetWorld() && Widget->GetWorld()->IsGameWorld())
+	// No companion creation here. OnRegister can run in the middle of prefab deserialization and
+	// registration, and growing the widget's Components array there would mutate state the loader is
+	// still walking. Runtime input companions are created in BeginPlay, which every load path calls
+	// only after the whole hierarchy is deserialized and registered.
+}
+
+void ULexLayoutContainerScrollBox::BeginPlay()
+{
+	Super::BeginPlay();
+	ULexWidget* Widget = GetWidget();
+	if (!IsValid(Widget))
+	{
+		return;
+	}
+	// Runtime input companions exist in GAME worlds only. Editor scenes (prefab editor, helper loads for
+	// save/refresh) never begin play, and the editor never needs wheel/drag on the panel anyway; its
+	// viewport has its own scrolling.
+	if (!Widget->GetWorld() || !Widget->GetWorld()->IsGameWorld())
+	{
+		return;
+	}
+	// The event system raycasts against visuals only (see FLexBaseRaycaster, which walks the canvas
+	// visual list), so a container with no visual can never be hit and wheel/drag would silently do
+	// nothing. Give it a fully transparent rect-raycast target. Rect tracing does not need render
+	// geometry, so this costs no visible pixels.
+	if (!IsValid(Widget->GetVisual()))
 	{
 		if (ULexImage* HitArea = Widget->CreateNewVisual<ULexImage>())
 		{
@@ -1800,8 +1821,8 @@ void ULexLayoutContainerScrollBox::OnRegister()
 			HitArea->SetRaycastTarget(true);
 		}
 	}
-	// A layout container cannot receive pointer events, so wheel/drag lives on a transient companion behaviour
-	// that writes back into this layout. Transient so it is never serialized into a prefab.
+	// A layout container cannot receive pointer events, so wheel/drag lives on a transient companion
+	// behaviour that writes back into this layout. Transient so it is never serialized into a prefab.
 	if (!InputHandler.IsValid())
 	{
 		ULexScrollBoxInputHandler* Handler = Widget->GetComponent<ULexScrollBoxInputHandler>();
@@ -1815,6 +1836,18 @@ void ULexLayoutContainerScrollBox::OnRegister()
 			InputHandler = Handler;
 		}
 	}
+}
+
+void ULexLayoutContainerScrollBox::EndPlay()
+{
+	// The handler is created per play session; leaving it alive would double its Awake if the widget
+	// begins play again.
+	if (InputHandler.IsValid())
+	{
+		InputHandler->DestroyComponent();
+		InputHandler.Reset();
+	}
+	Super::EndPlay();
 }
 
 void ULexLayoutContainerScrollBox::OnUnregister()
