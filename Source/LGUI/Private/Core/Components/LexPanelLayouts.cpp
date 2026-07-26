@@ -559,6 +559,15 @@ FVector2D ULexPanelLayoutBase::GetDesiredSize(ULexWidget* Child) const
 				bHasAuthoredFallback = true;
 			}
 		}
+		// Once a panel pass has written this widget's rect, its current width/height are layout OUTPUT.
+		// Feeding them back into measurement closes a loop where a squeezed widget measures as squeezed
+		// forever — the "column collapsed to zero and never comes back" failure. Measurement therefore
+		// prefers the authored snapshot whenever one exists (every slot arranged in-session has one:
+		// MarkLayoutGeometryApplied captures it first, and ULexPanelSlot::OnRegister heals legacy slots
+		// by capturing the pre-arrangement rect on load). The bare GetWidth/GetHeight fallback remains
+		// only for legacy "applied but never snapshotted" data in worlds that skip registration, where
+		// zeroing instead would collapse content that used to render; the prefab compiler reports
+		// zero-desired Auto children so those spots surface in CompilerResults rather than on screen.
 		if (Desired.X < 0.0) Desired.X = bHasAuthoredFallback ? AuthoredFallback.X : Widget->GetWidth();
 		if (Desired.Y < 0.0) Desired.Y = bHasAuthoredFallback ? AuthoredFallback.Y : Widget->GetHeight();
 		return LexPanelLayoutLocal::CleanSize(Desired);

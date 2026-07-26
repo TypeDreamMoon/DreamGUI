@@ -31,13 +31,21 @@ class LGUI_API ULexPanelLayoutBase : public ULexLayoutContainer
 {
 	GENERATED_BODY()
 
+public:
+	/**
+	 * Authored/intrinsic size a child wants: fitter -> container preferred -> visual intrinsic ->
+	 * content children -> authored rect. Never reads a rect a panel pass has written (layout output
+	 * must not feed back into measurement). Public so the prefab compiler and tests can diagnose
+	 * children with no intrinsic size source.
+	 */
+	FVector2D GetDesiredSize(ULexWidget* Child) const;
+
 protected:
 	FVector2f PreferredSize = FVector2f::ZeroVector;
 	virtual void OnUnregister() override;
 	ULexPanelSlot* EnsureSlot(ULexWidget* Child) const;
 	const ULexPanelSlot* GetSlot(const ULexWidget* Child) const;
 	TArray<ULexWidget*> CollectLayoutChildren(bool bEnsureSlots = true) const;
-	FVector2D GetDesiredSize(ULexWidget* Child) const;
 	void ApplyChildRect(ULexWidget* Child, const FVector2D& Position, const FVector2D& Size, bool bForceFill = false) const;
 	bool BeginLayoutPass();
 	virtual FVector2f MeasureLayout() const;

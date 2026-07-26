@@ -35,6 +35,7 @@
 #include "Core/Components/LexLayoutContainerFlexBox.h"
 #include "Core/Components/LexLayoutContainerGrid.h"
 #include "Core/Components/LexPanelLayouts.h"
+#include "Core/Components/LexPanelSlot.h"
 #include "Interaction/LexContentWidget.h"
 #include "Framework/Commands/GenericCommands.h"
 #include "PrefabSystem/LexUIPrefabInstanceScene.h"
@@ -1920,6 +1921,43 @@ void FLexUIPrefabEditor::ValidatePrefabReferences(TArray<FLexUIPrefabCompilerIss
 					}
 				}
 			}
+		}
+	}
+
+	// Measurement never feeds arranged rects back into itself, so an Auto-measured child with no
+	// intrinsic size source (no authored rect, no fitter, no visual, no sized content) measures as
+	// zero and collapses. That used to be silent and self-perpetuating; report it here instead.
+	for (ULexWidget* Widget : Widgets)
+	{
+		if (!IsValid(Widget) || Widget->GetIgnoreLayout() || !Widget->GetLayoutVisibleInHierarchy())
+		{
+			continue;
+		}
+		ULexWidget* Parent = Widget->GetParent();
+		ULexPanelLayoutBase* ParentPanel = IsValid(Parent) ? Cast<ULexPanelLayoutBase>(Parent->GetLayoutContainer()) : nullptr;
+		if (!IsValid(ParentPanel))
+		{
+			continue;
+		}
+		const ULexPanelSlot* Slot = Widget->GetPanelSlot();
+		if (IsValid(Slot) && Slot->SizeRule != ELexPanelSizeRule::Auto)
+		{
+			continue;
+		}
+		// A widget with neither visual nor children is an intentional spacer; zero is its job.
+		const bool bContentBearing = IsValid(Widget->GetVisual()) || Widget->GetChildrenCount() > 0;
+		if (!bContentBearing)
+		{
+			continue;
+		}
+		const FVector2D Desired = ParentPanel->GetDesiredSize(Widget);
+		if (Desired.X <= 0.0 || Desired.Y <= 0.0)
+		{
+			AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+				FString::Printf(TEXT("'%s' has no intrinsic size source on its Auto-measured %s axis and will collapse to zero under '%s'. Give it an authored size, a SizeBox override, or content with intrinsic size."),
+					*Widget->GetDisplayName(),
+					Desired.X <= 0.0 && Desired.Y <= 0.0 ? TEXT("X and Y") : (Desired.X <= 0.0 ? TEXT("X") : TEXT("Y")),
+					*Parent->GetDisplayName()), Widget);
 		}
 	}
 }
