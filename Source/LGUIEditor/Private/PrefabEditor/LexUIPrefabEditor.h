@@ -15,6 +15,7 @@ class ULexUIPrefab;
 class SLexUIPrefabEditorViewport;
 class SLexUIPrefabEditorDetails;
 class SLexUIPrefabRawDataViewer;
+class SLexUIPrefabOverridesViewer;
 class AActor;
 class ULexUIPrefabHelperObject;
 class ULexUIBehaviour;
@@ -191,6 +192,7 @@ private:
 	TSharedPtr<class SLexUIPrefabPalette> PalettePtr;
 	TSharedPtr<SLexUIPrefabSequenceEditor> SequencerPtr;
 	TSharedPtr<SLexUIPrefabRawDataViewer> PrefabRawDataViewer;
+	TSharedPtr<SLexUIPrefabOverridesViewer> PrefabOverridesViewer;
 	TSharedPtr<IMessageLogListing> CompilerResultsListing;
 
 	TArray<TWeakObjectPtr<ULexWidget>> SelectedWidgets;
@@ -209,6 +211,7 @@ private:
 	FSlateIcon GetApplyButtonStatusImage()const;
 
 	void OnOpenRawDataViewerPanel();
+	void OnOpenOverridesViewerPanel();
 	void OnOpenPrefabHelperObjectDetailsPanel();
 public:
 	/**
@@ -280,6 +283,7 @@ public:
 	TSharedRef<SDockTab> SpawnTab_Palette(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_Sequencer(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_PrefabRawDataViewer(const FSpawnTabArgs& Args);
+	TSharedRef<SDockTab> SpawnTab_PrefabOverridesViewer(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_CompilerResults(const FSpawnTabArgs& Args);
 
 	bool IsFilteredActor(const AActor* Actor);

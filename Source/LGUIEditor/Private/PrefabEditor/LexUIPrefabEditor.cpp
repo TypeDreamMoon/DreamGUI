@@ -4,6 +4,7 @@
 #include "LexUIPrefabEditorViewport.h"
 #include "LexUIPrefabEditorDetails.h"
 #include "LexUIPrefabRawDataViewer.h"
+#include "LexUIPrefabOverridesViewer.h"
 #include "EditorModeManager.h"
 #include "GameFramework/Actor.h"
 #include "AssetSelection.h"
@@ -70,6 +71,7 @@ struct FLexUIPrefabEditorTabs
 	static const FName PaletteID;
 	static const FName SequencerID;
 	static const FName PrefabRawDataViewerID;
+	static const FName PrefabOverridesViewerID;
 	static const FName CompilerResultsID;
 };
 
@@ -79,6 +81,7 @@ const FName FLexUIPrefabEditorTabs::OutlinerID(TEXT("Outliner"));
 const FName FLexUIPrefabEditorTabs::PaletteID(TEXT("Palette"));
 const FName FLexUIPrefabEditorTabs::SequencerID(TEXT("Sequencer"));
 const FName FLexUIPrefabEditorTabs::PrefabRawDataViewerID(TEXT("PrefabRawDataViewer"));
+const FName FLexUIPrefabEditorTabs::PrefabOverridesViewerID(TEXT("PrefabOverridesViewer"));
 const FName FLexUIPrefabEditorTabs::CompilerResultsID(TEXT("CompilerResults"));
 
 namespace LexUIPrefabEditorLocal
@@ -434,6 +437,11 @@ void FLexUIPrefabEditor::RegisterTabSpawners(const TSharedRef<FTabManager>& InTa
 		.SetGroup(WorkspaceMenuCategoryRef)
 		;
 
+	InTabManager->RegisterTabSpawner(FLexUIPrefabEditorTabs::PrefabOverridesViewerID, FOnSpawnTab::CreateSP(this, &FLexUIPrefabEditor::SpawnTab_PrefabOverridesViewer))
+		.SetDisplayName(LOCTEXT("PrefabOverridesViewerTabLabel", "Overrides"))
+		.SetGroup(WorkspaceMenuCategoryRef)
+		;
+
 	InTabManager->RegisterTabSpawner(FLexUIPrefabEditorTabs::CompilerResultsID, FOnSpawnTab::CreateSP(this, &FLexUIPrefabEditor::SpawnTab_CompilerResults))
 		.SetDisplayName(LOCTEXT("CompilerResultsTabLabel", "Compiler Results"))
 		.SetGroup(WorkspaceMenuCategoryRef)
@@ -449,6 +457,7 @@ void FLexUIPrefabEditor::UnregisterTabSpawners(const TSharedRef<FTabManager>& In
 	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::PaletteID);
 	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::SequencerID);
 	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::PrefabRawDataViewerID);
+	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::PrefabOverridesViewerID);
 	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::CompilerResultsID);
 }
 
@@ -526,6 +535,8 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 	DetailsPtr = SNew(SLexUIPrefabEditorDetails, GetWorld());
 
 	PrefabRawDataViewer = SNew(SLexUIPrefabRawDataViewer, PrefabEditorPtr, PrefabBeingEdited);
+
+	PrefabOverridesViewer = SNew(SLexUIPrefabOverridesViewer, PrefabEditorPtr, PrefabBeingEdited);
 	
 	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->OnLexUIWidgetOutlinerChanged.AddSPLambda(this, [=, this]()
 	{
@@ -685,6 +696,11 @@ void FLexUIPrefabEditor::SaveAppliedPrefabToDisk()
 	FAssetEditorToolkit::SaveAsset_Execute();
 	FLexUIEditorTools::RefreshLoadedPrefab();
 	FLexUIEditorTools::RefreshOnSubPrefabChange(GetPrefabHelperObject()->PrefabAsset);
+}
+
+void FLexUIPrefabEditor::OnOpenOverridesViewerPanel()
+{
+	this->InvokeTab(FLexUIPrefabEditorTabs::PrefabOverridesViewerID);
 }
 
 void FLexUIPrefabEditor::OnOpenRawDataViewerPanel()
@@ -2534,6 +2550,12 @@ void FLexUIPrefabEditor::BindCommands()
 		FIsActionChecked()
 	);
 	ToolkitCommands->MapAction(
+		PrefabEditorCommands.OverridesViewer,
+		FExecuteAction::CreateSP(this, &FLexUIPrefabEditor::OnOpenOverridesViewerPanel),
+		FCanExecuteAction(),
+		FIsActionChecked()
+	);
+	ToolkitCommands->MapAction(
 		PrefabEditorCommands.OpenPrefabHelperObject,
 		FExecuteAction::CreateSP(this, &FLexUIPrefabEditor::OnOpenPrefabHelperObjectDetailsPanel),
 		FCanExecuteAction(),
@@ -2668,6 +2690,7 @@ void FLexUIPrefabEditor::ExtendToolbar()
 		Section.AddEntry(BehaviourButton);
 		Section.AddEntry(BehaviourOptionsMenuEntry);
 		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().RawDataViewer));
+		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().OverridesViewer));
 		Section.AddEntry(FToolMenuEntry::InitToolBarButton(FLexUIPrefabEditorCommand::Get().OpenPrefabHelperObject));
 	}
 }
@@ -2843,6 +2866,19 @@ TSharedRef<SDockTab> FLexUIPrefabEditor::SpawnTab_PrefabRawDataViewer(const FSpa
 		.Label(LOCTEXT("OverrideParameterTab_Title", "PrefabRawData"))
 		[
 			PrefabRawDataViewer.ToSharedRef()
+		];
+}
+
+TSharedRef<SDockTab> FLexUIPrefabEditor::SpawnTab_PrefabOverridesViewer(const FSpawnTabArgs& Args)
+{
+	if (PrefabOverridesViewer.IsValid())
+	{
+		PrefabOverridesViewer->Rebuild();
+	}
+	return SNew(SDockTab)
+		.Label(LOCTEXT("PrefabOverridesTab_Title", "Overrides"))
+		[
+			PrefabOverridesViewer.ToSharedRef()
 		];
 }
 

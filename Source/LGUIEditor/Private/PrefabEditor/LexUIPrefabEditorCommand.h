@@ -30,6 +30,7 @@ public:
 	TSharedPtr<FUICommandInfo> SaveOnApply_SuccessOnly;
 	TSharedPtr<FUICommandInfo> SaveOnApply_Always;
 	TSharedPtr<FUICommandInfo> RawDataViewer;
+	TSharedPtr<FUICommandInfo> OverridesViewer;
 	TSharedPtr<FUICommandInfo> OpenPrefabHelperObject;
 	TSharedPtr<FUICommandInfo> OpenBehaviourBlueprint;
 };
