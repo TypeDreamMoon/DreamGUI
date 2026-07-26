@@ -1,6 +1,7 @@
 ﻿// Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "PrefabSystem/WidgetSerializer.h"
+#include "PrefabSystem/LexUIAuthoredGeometrySaveScope.h"
 #include "PrefabSystem/LexUIObjectReaderAndWriter.h"
 #include "LGUI.h"
 #include "Core/Components/LexPanelSlot.h"
@@ -128,6 +129,10 @@ namespace LexUIPrefabSystem
 			LexUIPrefabSystem::FLexUIOverrideParameterObjectWriter Writer(InOutBuffer, serializer, InOverridePropertyNames);
 			Writer.DoSerialize(InObject);
 		};
+		// The asset stores authored geometry only: panel-arranged rects are swapped out for the duration
+		// of serialization (see FLexUIAuthoredGeometrySaveScope) and re-derived by layout after load.
+		// A no-op when an outer scope (e.g. the helper's save+verify span) already swapped.
+		FLexUIAuthoredGeometrySaveScope AuthoredGeometryScope(OriginRootWidget);
 		bool saveResult = serializer.SerializeWidget(OriginRootWidget, InPrefab);
 		InOutMapObjectToGuid = serializer.MapObjectToGuid;
 		return saveResult;

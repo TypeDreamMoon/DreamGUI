@@ -988,6 +988,8 @@ private:
 	friend class FLexWidgetCustomization;
 	friend class ULexCanvas;
 	friend class FLexCanvasHierarchyOrderTest;
+	/** Swaps arranged geometry out of AnchorData around prefab serialization; raw access, no side effects. */
+	friend class FLexUIAuthoredGeometrySaveScope;
 	/** LexCanvas which render this UI element */
 	UPROPERTY(Transient) mutable TWeakObjectPtr<ULexCanvas> RenderCanvas = nullptr;
 	

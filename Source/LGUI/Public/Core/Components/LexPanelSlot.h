@@ -53,6 +53,8 @@ private:
 	/** Axes touched by the active layout pass. Zero on an applied legacy slot means all axes. */
 	UPROPERTY()
 	uint8 LayoutGeometryControlMask = 0;
+	/** Swaps arranged geometry out of the persistent fields around prefab serialization. */
+	friend class FLexUIAuthoredGeometrySaveScope;
 
 protected:
 	virtual void OnRegister() override;
@@ -104,6 +106,11 @@ public:
 	bool HasLayoutGeometryApplied() const { return bLayoutGeometryApplied; }
 	FVector2f GetAuthoredDesiredSizeFallback() const { return AuthoredDesiredSizeFallback; }
 	uint8 GetLayoutGeometryControlMask() const { return LayoutGeometryControlMask; }
+	/**
+	 * Merge the authored values over Current on every axis the active layout pass controls (all axes when
+	 * the mask is empty). Only meaningful while HasAuthoredGeometry(); pure query, applies nothing.
+	 */
+	FLexUIAnchorData ComposeAuthoredAnchorData(const FLexUIAnchorData& Current) const;
 
 #if WITH_EDITOR
 	/** Keep the cached authored rect in sync after a user edits the widget transform. */

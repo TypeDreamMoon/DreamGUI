@@ -11,6 +11,7 @@
 #include "PrefabSystem/LexUIObjectReaderAndWriter.h"
 #if WITH_EDITOR
 #include "Core/LexUISettings.h"
+#include "PrefabSystem/LexUIAuthoredGeometrySaveScope.h"
 #include "PrefabSystem/LexUIPrefabSaveVerification.h"
 #endif
 
@@ -415,6 +416,10 @@ bool ULexUIPrefabHelperObject::SavePrefab()
 		{
 			PayloadSnapshot.Capture(PrefabAsset);
 		}
+		// Hold authored geometry across BOTH the save and the round-trip verification: the asset persists
+		// authored values, so the verification must compare authored-vs-authored, not arranged-vs-authored.
+		// The serializer's own inner scope becomes a no-op under this one.
+		FLexUIAuthoredGeometrySaveScope AuthoredGeometryScope(LoadedRootWidget);
 #endif
 		const bool bSaveSucceeded = PrefabAsset->SavePrefab(LoadedRootWidget
 			, MapObjectToGuid, SubPrefabMap

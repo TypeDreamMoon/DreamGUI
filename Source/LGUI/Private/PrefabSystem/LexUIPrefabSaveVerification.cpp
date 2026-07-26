@@ -167,13 +167,21 @@ namespace SaveVerificationLocal
 		// The root widget's attachment describes where the editing scene put the instance, not what the
 		// asset stores; a reloaded root is parentless by construction.
 		static const TSet<FString> RootIgnoredKeys = {
-			TEXT("parent"), TEXT("panelSlot"),
+			TEXT("parent"),
 		};
-		// Relative transform is a cache derived from AnchorData plus parent geometry by the layout pass.
-		// The editing scene has been laid out and the verification world has not, so these always differ;
-		// the authored truth (AnchorData) is compared instead.
+		// Two families of keys are not payload:
+		//  - relative transform is a cache derived from AnchorData by the layout pass;
+		//  - panelSlot/visual/layoutContainer/layoutSelf are Instanced sub-objects that the JSON converter
+		//    inlines here, duplicating the dedicated per-object records (which carry the proper rules).
 		static const TSet<FString> WidgetIgnoredKeys = {
 			TEXT("relativeLocation"), TEXT("relativeRotation"), TEXT("relativeScale"),
+			TEXT("panelSlot"), TEXT("visual"), TEXT("layoutContainer"), TEXT("layoutSelf"),
+		};
+		// Whether (and how) a panel pass has arranged the widget is runtime state, not asset content:
+		// saves normalize it to "nothing applied", and the verification world may legitimately run its
+		// own layout pass right after loading, flipping it back.
+		static const TSet<FString> SlotIgnoredKeys = {
+			TEXT("bLayoutGeometryApplied"), TEXT("layoutGeometryControlMask"),
 		};
 
 		TSet<FString> Keys;
@@ -185,10 +193,25 @@ namespace SaveVerificationLocal
 		{
 			Keys.Add(FString(Pair.Key.ToView()));
 		}
+		// When the verification world's own layout pass has re-arranged the reloaded widget, its live
+		// AnchorData is arranged output again while the (normalized) source holds authored values — the
+		// authored payload is still fully compared through the slot's authoredAnchorData.
+		bool bReloadedWasRearranged = false;
+		if (const ULexWidget* ReloadedWidget = Cast<ULexWidget>(Reloaded.Object))
+		{
+			const ULexPanelSlot* ReloadedSlot = ReloadedWidget->GetPanelSlot();
+			bReloadedWasRearranged = IsValid(ReloadedSlot) && ReloadedSlot->HasLayoutGeometryApplied();
+		}
+
 		for (const FString& Key : Keys)
 		{
 			if (Source.Kind == TEXT("widget")
-				&& (WidgetIgnoredKeys.Contains(Key) || (bIsRoot && RootIgnoredKeys.Contains(Key))))
+				&& (WidgetIgnoredKeys.Contains(Key) || (bIsRoot && RootIgnoredKeys.Contains(Key))
+					|| (bReloadedWasRearranged && Key == TEXT("anchorData"))))
+			{
+				continue;
+			}
+			if (Source.Kind == TEXT("slot") && SlotIgnoredKeys.Contains(Key))
 			{
 				continue;
 			}

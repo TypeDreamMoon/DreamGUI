@@ -98,38 +98,8 @@ bool ULexPanelSlot::RestoreAuthoredGeometry(bool bForce)
 		return false;
 	}
 
-	const uint8 ControlMask = LayoutGeometryControlMask != 0
-		? LayoutGeometryControlMask : LexPanelSlotLocal::AllGeometryMask;
 	const FLexUIAnchorData& Current = Widget->GetAnchorData();
-	FLexUIAnchorData Restored = Current;
-	// Anchors are part of positioning, not sizing. Canvas AutoSize only owns SizeDelta,
-	// so restoring its size must not discard anchors authored while AutoSize was active.
-	if (ControlMask & LexPanelSlotLocal::HorizontalPositionMask)
-	{
-		Restored.AnchorMin.X = AuthoredAnchorData.AnchorMin.X;
-		Restored.AnchorMax.X = AuthoredAnchorData.AnchorMax.X;
-	}
-	if (ControlMask & LexPanelSlotLocal::VerticalPositionMask)
-	{
-		Restored.AnchorMin.Y = AuthoredAnchorData.AnchorMin.Y;
-		Restored.AnchorMax.Y = AuthoredAnchorData.AnchorMax.Y;
-	}
-	if (ControlMask & LexPanelSlotLocal::HorizontalPositionMask)
-	{
-		Restored.AnchoredPosition.X = AuthoredAnchorData.AnchoredPosition.X;
-	}
-	if (ControlMask & LexPanelSlotLocal::VerticalPositionMask)
-	{
-		Restored.AnchoredPosition.Y = AuthoredAnchorData.AnchoredPosition.Y;
-	}
-	if (ControlMask & LexPanelSlotLocal::HorizontalSizeMask)
-	{
-		Restored.SizeDelta.X = AuthoredAnchorData.SizeDelta.X;
-	}
-	if (ControlMask & LexPanelSlotLocal::VerticalSizeMask)
-	{
-		Restored.SizeDelta.Y = AuthoredAnchorData.SizeDelta.Y;
-	}
+	const FLexUIAnchorData Restored = ComposeAuthoredAnchorData(Current);
 	const bool bChanged = !Current.AnchorMin.Equals(Restored.AnchorMin, 0.0)
 		|| !Current.AnchorMax.Equals(Restored.AnchorMax, 0.0)
 		|| !Current.AnchoredPosition.Equals(Restored.AnchoredPosition, 0.0)
@@ -141,6 +111,36 @@ bool ULexPanelSlot::RestoreAuthoredGeometry(bool bForce)
 		Widget->SetAnchorData(Restored);
 	}
 	return bChanged;
+}
+
+FLexUIAnchorData ULexPanelSlot::ComposeAuthoredAnchorData(const FLexUIAnchorData& Current) const
+{
+	const uint8 ControlMask = LayoutGeometryControlMask != 0
+		? LayoutGeometryControlMask : LexPanelSlotLocal::AllGeometryMask;
+	FLexUIAnchorData Composed = Current;
+	// Anchors are part of positioning, not sizing. Canvas AutoSize only owns SizeDelta,
+	// so composing its size must not discard anchors authored while AutoSize was active.
+	if (ControlMask & LexPanelSlotLocal::HorizontalPositionMask)
+	{
+		Composed.AnchorMin.X = AuthoredAnchorData.AnchorMin.X;
+		Composed.AnchorMax.X = AuthoredAnchorData.AnchorMax.X;
+		Composed.AnchoredPosition.X = AuthoredAnchorData.AnchoredPosition.X;
+	}
+	if (ControlMask & LexPanelSlotLocal::VerticalPositionMask)
+	{
+		Composed.AnchorMin.Y = AuthoredAnchorData.AnchorMin.Y;
+		Composed.AnchorMax.Y = AuthoredAnchorData.AnchorMax.Y;
+		Composed.AnchoredPosition.Y = AuthoredAnchorData.AnchoredPosition.Y;
+	}
+	if (ControlMask & LexPanelSlotLocal::HorizontalSizeMask)
+	{
+		Composed.SizeDelta.X = AuthoredAnchorData.SizeDelta.X;
+	}
+	if (ControlMask & LexPanelSlotLocal::VerticalSizeMask)
+	{
+		Composed.SizeDelta.Y = AuthoredAnchorData.SizeDelta.Y;
+	}
+	return Composed;
 }
 
 void ULexPanelSlot::InvalidateAuthoredGeometry()
