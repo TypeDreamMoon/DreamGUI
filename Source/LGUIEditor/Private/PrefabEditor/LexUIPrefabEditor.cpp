@@ -1960,6 +1960,31 @@ void FLexUIPrefabEditor::ValidatePrefabReferences(TArray<FLexUIPrefabCompilerIss
 					*Parent->GetDisplayName()), Widget);
 		}
 	}
+
+	// A scroll box only arranges (and scrolls) layout-participating children. Content converted from
+	// the UIScrollView component workflow often keeps its old Ignore Layout flag — the scroll box then
+	// excludes it entirely and MaxScrollOffset stays 0, which reads as "scrolling is broken".
+	for (ULexWidget* Widget : Widgets)
+	{
+		if (!IsValid(Widget) || !Cast<ULexLayoutContainerScrollBox>(Widget->GetLayoutContainer()))
+		{
+			continue;
+		}
+		int32 Participating = 0;
+		for (ULexWidget* Child : Widget->GetChildren())
+		{
+			if (IsValid(Child) && !Child->GetIgnoreLayout() && Child->GetLayoutVisibleInHierarchy())
+			{
+				Participating++;
+			}
+		}
+		if (Participating == 0 && Widget->GetChildrenCount() > 0)
+		{
+			AddIssue(ELexUIPrefabCompilerSeverity::Warning,
+				FString::Printf(TEXT("Scroll box '%s' has children but none participate in layout (Ignore Layout is set on all of them) — nothing will scroll. Clear Ignore Layout on the content."),
+					*Widget->GetDisplayName()), Widget);
+		}
+	}
 }
 
 void FLexUIPrefabEditor::PublishCompilerResults(const FText& PageTitle,

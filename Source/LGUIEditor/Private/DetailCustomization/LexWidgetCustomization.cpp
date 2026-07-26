@@ -461,6 +461,14 @@ void FLexWidgetCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuild
 		]
 		;
 
+		// Surfaced next to the banner it modulates: checking this opts the widget out of the parent
+		// layout's arrangement. It was buried by HideCategory("LGUI") and invisible in the panel while
+		// silently disabling things like scroll-box content participation.
+		TransformCategory.AddProperty(DetailBuilder.GetProperty(GET_MEMBER_NAME_CHECKED(ULexWidget, bIgnoreLayout)))
+			.DisplayName(LOCTEXT("IgnoreLayoutDisplayName", "Ignore Layout"))
+			.ToolTip(LOCTEXT("IgnoreLayoutTip",
+				"Opt this widget out of its parent layout's arrangement: the panel will neither position nor size it (its authored anchors apply), and panels that arrange content — including Scroll Box — will skip it entirely. Leftover from the old UIScrollView content workflow on many widgets; clear it unless you really mean it."));
+
 		auto SplitLineColor = FLinearColor(0.5f, 0.5f, 0.5f);
 		TransformCategory.AddCustomRow(LOCTEXT("Anchor","Anchor"))
 		.CopyAction(FUIAction
