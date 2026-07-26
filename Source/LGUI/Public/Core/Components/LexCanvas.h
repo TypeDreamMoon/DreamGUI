@@ -785,6 +785,13 @@ private:
 	void UpdateCanvasDrawCall();
 	/** mark render finish */
 	void MarkFinishUpdateCanvasDrawCall();
+public:
+	/**
+	 * Recompute and upload every clip rectangle owned by this canvas hierarchy. No-op on non-root canvases,
+	 * which share the root's ClipDataList. Driven once per tick by ULexUIManagerWorldSubsystem after layout.
+	 */
+	void RefreshAllClipData();
+private:
 
 	void PrepareDrawCallBatchingData(TArray<FLexUIRenderData>& OutRenderDataArray);
 	void UpdateDrawCallMesh();

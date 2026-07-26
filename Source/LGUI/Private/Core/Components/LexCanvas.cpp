@@ -581,6 +581,19 @@ bool ULexCanvas::IsRenderByLexUIRendererOrUERenderer()const
 	return false;
 }
 
+void ULexCanvas::RefreshAllClipData()
+{
+	// All children canvas clip data is stored in the root canvas, so only the root has a list to walk.
+	if (this != RootCanvas)
+	{
+		return;
+	}
+	for (const auto& ClipData : ClipDataList)
+	{
+		ClipData->UpdateData();
+	}
+}
+
 void ULexCanvas::MarkCanvasUpdate(bool bRebuildDrawCall)
 {
 	this->bCanTickUpdate = true;
@@ -849,14 +862,6 @@ void ULexCanvas::SetDefaultMeshType(TSubclassOf<ULexUIMeshComponent> InValue)
 
 void ULexCanvas::MarkFinishUpdateCanvasDrawCall()
 {
-	//All children canvas clip data is stored in root canvas, so update from root canvas
-	if (this == RootCanvas)
-	{
-		for (const auto& ClipData : ClipDataList)
-		{
-			ClipData->UpdateData();
-		}
-	}
 	//sort render priority
 	if (bNeedToSortRenderPriority)
 	{
@@ -1254,6 +1259,7 @@ void ULexCanvas::UpdateCanvasDrawCall()
 					Widget->UpdateVisual();
 				}
 			}
+			// Clips created above are uploaded by RefreshAllClipData, driven every tick from the UI manager.
 		}
 		WidgetPropertyDataAsTexture->Flush();
 		

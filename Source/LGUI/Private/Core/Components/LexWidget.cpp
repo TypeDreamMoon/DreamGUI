@@ -2903,10 +2903,6 @@ void ULexWidget::UpdateClip(ULexUIDataAsTexture* ClipDataTexture, TArray<TShared
 		this->ClipData = nullptr;
 		break;
 	}
-	if (ClipData.IsValid() && ClipData.Pin()->GetWidget() == this)
-	{
-		ClipData.Pin()->MarkNeedUpdateData();
-	}
 	if (Visual)
 	{
 		Visual->CheckClipDataStartPosition();
@@ -3272,28 +3268,8 @@ float ULexWidget::GetLocalSpaceTop()const
 
 void ULexWidget::MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged, bool InHeightChanged)
 {
-	if (ClipData.IsValid() && ClipData.Pin()->GetWidget() == this)
-	{
-		TFunction<void(const ULexWidget*)> InvalidateClipData;
-		InvalidateClipData = [&InvalidateClipData](const ULexWidget* Widget)
-		{
-			if (!IsValid(Widget))
-			{
-				return;
-			}
-			if (Widget->ClipData.IsValid() && Widget->ClipData.Pin()->GetWidget() == Widget)
-			{
-				Widget->ClipData.Pin()->MarkNeedUpdateData();
-			}
-			for (const ULexWidget* Child : Widget->Children)
-			{
-				InvalidateClipData(Child);
-			}
-		};
-		// Every nested clip buffer embeds its ancestor clip rectangles.
-		InvalidateClipData(this);
-	}
-
+	// No clip invalidation here: clip rectangles are recomputed and diffed every tick from the owner's world
+	// transform (see FLexUIClipData::UpdateData), so there is nothing to mark.
 	OnDimensionChangedEvent.Broadcast(InPivotChanged, InWidthChanged, InHeightChanged);
 	if (IsValid(LayoutContainer))
 	{
@@ -3322,10 +3298,6 @@ void ULexWidget::MarkDimensionChanged(bool InPivotChanged, bool InWidthChanged, 
 
 void ULexWidget::MarkTransformChanged()
 {
-	if (ClipData.IsValid() && ClipData.Pin()->GetWidget() == this)
-	{
-		ClipData.Pin()->MarkNeedUpdateData();
-	}
 	if (this->RenderCanvas.IsValid())
 	{
 		this->RenderCanvas->MarkCanvasUpdate(true);//mark canvas to update
@@ -3635,6 +3607,13 @@ void ULexWidget::MarkClipDirty(bool InClipTypeChanged) const
 {
 	bClipDirty = true;
 	if (InClipTypeChanged)bNeedRecreateClip = true;
+	// Waking the canvas is required, not optional. ULexCanvas::UpdateCanvasDrawCall gates everything that
+	// reconciles clipping behind bCanTickUpdate: UpdateClip (creates/destroys the FLexUIClipData),
+	// ULexVisual::CheckClipDataStartPosition (refreshes the slot index baked into vertex data) and
+	// MarkFinishUpdateCanvasDrawCall (uploads the clip blocks). Marking bClipDirty without waking the canvas
+	// leaves a widget sitting on Clipping == ClipToBounds with no ClipData, while its visual still points at a
+	// recycled clip slot — the shader then clips against a stale rectangle and the subtree renders nothing.
+	MarkCanvasUpdate(true);
 	struct LOCAL
 	{
 		static void MarkDirty(const ULexWidget* Widget, bool InClipTypeChanged, TSet<const ULexWidget*>& VisitedWidgets)
@@ -3650,6 +3629,8 @@ void ULexWidget::MarkClipDirty(bool InClipTypeChanged) const
 			case ELexWidgetClipping::ClipToBounds:
 				Widget->bClipDirty = true;
 				if (InClipTypeChanged)Widget->bNeedRecreateClip = true;
+				// Descendants may render through a different (child) canvas, so wake each one individually.
+				Widget->MarkCanvasUpdate(true);
 				break;
 			case ELexWidgetClipping::ClipToBoundsWithoutIntersecting:
 			case ELexWidgetClipping::Disabled:

@@ -1116,6 +1116,24 @@ void ULexUIManagerWorldSubsystem::TickLexUI(float DeltaTime)
 		OnLexUIWidgetOutlinerChanged.Broadcast();
 	}
 #endif
+
+	// Refresh clip rectangles after layout, before draw-calls.
+	//
+	// This is the equivalent of UGUI's ClipperRegistry.Cull(): a clip rectangle is derived from widget world
+	// transforms, which the layout pass above has just changed, so it is recomputed here every tick instead of
+	// being driven by dirty flags. Flag-driven invalidation was the wrong shape for this — a clip depends on the
+	// transform of every ancestor, and whatever moves an ancestor has no idea a descendant owns a clip, so every
+	// missed mark left the shader clipping against a stale rectangle and silently culled a whole subtree.
+	// FLexUIClipData::UpdateData diffs against the last uploaded block, so an unchanged clip costs one matrix
+	// build and a memcmp, with no GPU write.
+	for (auto& Canvas : AllCanvasArray)
+	{
+		if (Canvas.IsValid())
+		{
+			Canvas->RefreshAllClipData();
+		}
+	}
+
 	//update draw-call
 	{
 		auto UpdateCanvas = [this](ELexRenderMode RenderMode) {

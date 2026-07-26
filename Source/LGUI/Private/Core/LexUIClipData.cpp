@@ -39,9 +39,11 @@ void FLexUIClipData::Add2DTranslationToMatrix(FMatrix44d& Matrix, const FVector2
 }
 void FLexUIClipData::UpdateData()
 {
-	if (!bNeedUpdateData)return;
-	bNeedUpdateData = false;
-	
+	if (!IsValid(this->GetWidget()) || !this->GetWidget()->GetRenderCanvas())
+	{
+		return;
+	}
+
 	TArray<uint8> BlockBuffer;
 	BlockBuffer.SetNumUninitialized(BlockSizeInBytes);
 	FMemory::Memzero(BlockBuffer.GetData(), BlockSizeInBytes);
@@ -80,6 +82,13 @@ void FLexUIClipData::UpdateData()
 		}
 		TargetClip = TargetClip->Parent.Pin().Get();
 	}
+	// Nothing moved since the last upload: skip the GPU write. This is what keeps a per-tick refresh cheap.
+	if (LastUploadedBlock.Num() == BlockBuffer.Num()
+		&& FMemory::Memcmp(LastUploadedBlock.GetData(), BlockBuffer.GetData(), BlockBuffer.Num()) == 0)
+	{
+		return;
+	}
+	LastUploadedBlock = BlockBuffer;
 	DataTexture->UpdateBlock(BufferStartPos, MoveTemp(BlockBuffer));
 }
 
