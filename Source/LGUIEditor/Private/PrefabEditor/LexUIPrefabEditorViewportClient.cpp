@@ -1,6 +1,7 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "LexUIPrefabEditorViewportClient.h"
+#include "LexUIDesignScreenSizes.h"
 #include "LexUIPrefabEditorViewport.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Animation/AnimationAsset.h"
@@ -1244,10 +1245,75 @@ void FLexUIPrefabEditorViewportClient::DrawDesignerCanvasBoundary(FViewport& InV
 	}
 }
 
+void FLexUIPrefabEditorViewportClient::DrawResolutionGuides(FViewport& InViewport, FSceneView& View, FCanvas& Canvas) const
+{
+	const TSharedPtr<FLexUIPrefabEditor> Editor = PrefabEditorPtr.Pin();
+	ULexWidget* RootAgent = Editor.IsValid() ? Editor->GetRootAgentWidget() : nullptr;
+	if (!IsValid(RootAgent))
+	{
+		return;
+	}
+	// Anchor every resolution rect at the design canvas's top-left corner, mirroring how UMG's
+	// designer stacks its device-size overlay.
+	const float Left = -RootAgent->GetPivot().X * RootAgent->GetWidth();
+	const float Top = (1.0f - RootAgent->GetPivot().Y) * RootAgent->GetHeight();
+	const FTransform& Transform = RootAgent->GetWorldTransform();
+	const float DpiScale = Canvas.GetDPIScale();
+	UFont* Font = GEngine->GetSmallFont();
+	const TArrayView<const FLexUIDesignScreenSize> ScreenSizes = GetLexUIDesignScreenSizes();
+	for (int32 Index = 0; Index < ScreenSizes.Num(); Index++)
+	{
+		const FIntPoint Size = ScreenSizes[Index].Size;
+		const FVector LocalCorners[4] = {
+			FVector(0, Left, Top),
+			FVector(0, Left + Size.X, Top),
+			FVector(0, Left + Size.X, Top - Size.Y),
+			FVector(0, Left, Top - Size.Y),
+		};
+		FVector2D Pixels[4];
+		FBox2D Bounds(EForceInit::ForceInit);
+		bool bProjected = true;
+		for (int32 Corner = 0; Corner < 4; Corner++)
+		{
+			if (!View.WorldToPixel(Transform.TransformPosition(LocalCorners[Corner]), Pixels[Corner]))
+			{
+				bProjected = false;
+				break;
+			}
+			Pixels[Corner] /= DpiScale;
+			Bounds += Pixels[Corner];
+		}
+		if (!bProjected)
+		{
+			continue;
+		}
+		const float Fade = ScreenSizes.Num() > 1 ? (float)Index / (ScreenSizes.Num() - 1) : 0.0f;
+		const FLinearColor GuideColor = FMath::Lerp(
+			FLinearColor(0.05f, 0.45f, 0.95f, 0.85f), FLinearColor(0.65f, 0.85f, 1.0f, 0.85f), Fade);
+		for (int32 Corner = 0; Corner < 4; Corner++)
+		{
+			FCanvasLineItem Line(Pixels[Corner], Pixels[(Corner + 1) % 4]);
+			Line.SetColor(GuideColor);
+			Line.LineThickness = 1.0f;
+			Canvas.DrawItem(Line);
+		}
+		const FString Label = FString::Printf(TEXT("%d x %d"), Size.X, Size.Y);
+		const float LabelWidth = Font ? (float)Font->GetStringSize(*Label) : 60.0f;
+		FCanvasTextItem Text(FVector2D(Bounds.Max.X - LabelWidth - 4.0f, Bounds.Max.Y - 16.0f),
+			FText::FromString(Label), Font, GuideColor);
+		Text.EnableShadow(FLinearColor::Black);
+		Canvas.DrawItem(Text);
+	}
+}
+
 void FLexUIPrefabEditorViewportClient::DrawDesignerOverlay(FViewport& InViewport, FSceneView& View, FCanvas& Canvas)
 {
 	if (!IsOrtho())return;
 	DrawDesignerCanvasBoundary(InViewport, View, Canvas);
+	if (PrefabEditorPtr.IsValid() && PrefabEditorPtr.Pin()->GetShowResolutionGuides())
+	{
+		DrawResolutionGuides(InViewport, View, Canvas);
+	}
 	DrawLayoutDebugOverlay(InViewport, Canvas);
 	if (PaletteDropPreviewWidget.IsValid())
 	{

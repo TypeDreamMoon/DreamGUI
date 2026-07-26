@@ -75,8 +75,9 @@ class LGUI_API ULexUISettings :public UObject
 	GENERATED_BODY()
 public:
 	/**
-	 * Legacy LGUI uses the original FlexBox/Grid components. UMG Compatible uses the
-	 * Panel/PanelSlot family and follows UE's Slate/UMG measure and arrange rules.
+	 * Legacy LGUI uses the original Lex-family components (Lex Flex Box / Lex Responsive Grid).
+	 * UMG Compatible uses the UMG-prefixed Panel/PanelSlot family and follows UE's Slate/UMG
+	 * measure and arrange rules.
 	 */
 	UPROPERTY(EditAnywhere, config, Category = "Layout", meta = (ConfigRestartRequired = true))
 	ELexUILayoutMode LayoutMode = ELexUILayoutMode::LegacyLGUI;
@@ -194,6 +195,10 @@ public:
 	/** Show selected widget measurement, arrangement, slot, ownership, and clipping diagnostics. */
 	UPROPERTY(EditAnywhere, config, Category = "LGUI Editor|Layout")
 		bool bShowLayoutDebugVisualization = false;
+
+	/** Overlay common device resolutions on the prefab designer canvas, like UMG's designer surface. */
+	UPROPERTY(EditAnywhere, config, Category = "LGUI Editor|Layout")
+		bool bShowDesignResolutionGuides = false;
 
 	/**
 	 * Draw navigation visualizer

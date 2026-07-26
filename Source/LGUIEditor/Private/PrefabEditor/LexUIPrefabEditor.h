@@ -16,6 +16,7 @@ class SLexUIPrefabEditorViewport;
 class SLexUIPrefabEditorDetails;
 class SLexUIPrefabRawDataViewer;
 class SLexUIPrefabOverridesViewer;
+class SLexUIPrefabBehaviourViewer;
 class AActor;
 class ULexUIPrefabHelperObject;
 class ULexUIBehaviour;
@@ -132,6 +133,12 @@ public:
 	float GetDesignerGridSize() const;
 	void SetDesignerGridSize(float GridSize);
 	bool GetShowDesignerGuides() const;
+	bool GetShowResolutionGuides() const;
+	void ToggleResolutionGuides();
+	/** Current design canvas size (the root agent widget's rect; falls back to the stored value). */
+	FIntPoint GetDesignerCanvasSize();
+	/** Resize the design canvas to a preset resolution, with undo, and re-arrange the hierarchy. */
+	void SetDesignerCanvasSize(FIntPoint NewSize);
 	void ToggleDesignerGuides();
 	bool GetShowLayoutDebug() const;
 	void ToggleLayoutDebug();
@@ -193,6 +200,7 @@ private:
 	TSharedPtr<SLexUIPrefabSequenceEditor> SequencerPtr;
 	TSharedPtr<SLexUIPrefabRawDataViewer> PrefabRawDataViewer;
 	TSharedPtr<SLexUIPrefabOverridesViewer> PrefabOverridesViewer;
+	TSharedPtr<SLexUIPrefabBehaviourViewer> PrefabBehaviourViewer;
 	TSharedPtr<IMessageLogListing> CompilerResultsListing;
 
 	TArray<TWeakObjectPtr<ULexWidget>> SelectedWidgets;
@@ -212,6 +220,7 @@ private:
 
 	void OnOpenRawDataViewerPanel();
 	void OnOpenOverridesViewerPanel();
+	void OnOpenBehaviourViewerPanel();
 	void OnOpenPrefabHelperObjectDetailsPanel();
 public:
 	/**
@@ -284,6 +293,7 @@ public:
 	TSharedRef<SDockTab> SpawnTab_Sequencer(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_PrefabRawDataViewer(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_PrefabOverridesViewer(const FSpawnTabArgs& Args);
+	TSharedRef<SDockTab> SpawnTab_PrefabBehaviourViewer(const FSpawnTabArgs& Args);
 	TSharedRef<SDockTab> SpawnTab_CompilerResults(const FSpawnTabArgs& Args);
 
 	bool IsFilteredActor(const AActor* Actor);

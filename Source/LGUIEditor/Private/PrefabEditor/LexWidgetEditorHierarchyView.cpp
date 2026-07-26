@@ -7,6 +7,7 @@
 #include "LexUIBehaviourEditorBackend.h"
 #include "LexWidgetEditorHierarchyViewItem.h"
 #include "Core/LexUIManager.h"
+#include "Core/LexUISettings.h"
 #include "Core/Components/LexWidget.h"
 #include "Core/Components/LexVisual.h"
 #include "Core/LexUIBehaviour.h"
@@ -606,7 +607,7 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 					{
 						MenuBuilder.AddSubMenu(
 							LOCTEXT("WrapWithSubMenu", "Wrap With..."),
-							LOCTEXT("WrapWithSubMenuTooltip", "Group the selected widgets under a new container widget inserted at their position; they keep their layout. A Horizontal/Vertical Box or Grid then arranges them."),
+							LOCTEXT("WrapWithSubMenuTooltip", "Group the selected widgets under a new container widget inserted at their position; they keep their layout. The chosen panel then arranges them."),
 							FNewMenuDelegate::CreateLambda([WeakEditor = Manager](FMenuBuilder& SubMenu)
 							{
 								auto AddWrap = [&SubMenu, WeakEditor](const FText& Label, ELexUIWrapType Type)
@@ -619,9 +620,19 @@ TSharedPtr<SWidget> SLexWidgetEditorHierarchyView::OnContextMenuOpening()
 								};
 								AddWrap(LOCTEXT("WrapWidget", "Widget"), ELexUIWrapType::Widget);
 								SubMenu.AddSeparator();
-								AddWrap(LOCTEXT("WrapHBox", "Horizontal Box"), ELexUIWrapType::HorizontalBox);
-								AddWrap(LOCTEXT("WrapVBox", "Vertical Box"), ELexUIWrapType::VerticalBox);
-								AddWrap(LOCTEXT("WrapGrid", "Grid"), ELexUIWrapType::Grid);
+								// The wrap implementation branches on the layout mode; the labels must
+								// name the family that will actually be created.
+								const bool bWrapUMGLayout =
+									ULexUISettings::GetLayoutMode() == ELexUILayoutMode::UMGCompatible;
+								AddWrap(bWrapUMGLayout
+									? LOCTEXT("WrapHBoxUMG", "UMG Horizontal Box")
+									: LOCTEXT("WrapHBoxLex", "Lex Flex Box (Horizontal)"),
+									ELexUIWrapType::HorizontalBox);
+								AddWrap(bWrapUMGLayout
+									? LOCTEXT("WrapVBoxUMG", "UMG Vertical Box")
+									: LOCTEXT("WrapVBoxLex", "Lex Flex Box (Vertical)"),
+									ELexUIWrapType::VerticalBox);
+								AddWrap(LOCTEXT("WrapGrid", "Lex Responsive Grid (Experimental)"), ELexUIWrapType::Grid);
 							}));
 					}
 					MenuBuilder.EndSection();

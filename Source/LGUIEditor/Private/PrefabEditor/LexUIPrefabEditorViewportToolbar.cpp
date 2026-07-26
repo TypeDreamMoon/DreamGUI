@@ -1,6 +1,7 @@
 // Copyright 2019-Present LexLiu. All Rights Reserved.
 
 #include "LexUIPrefabEditorViewportToolbar.h"
+#include "LexUIDesignScreenSizes.h"
 #include "LexUIPrefabEditorViewport.h"
 #include "LexUIPrefabEditor.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
@@ -211,6 +212,69 @@ void SLexUIPrefabEditorViewportToolbar::Construct(const FArguments& InArgs, TSha
 					SNew(STextBlock).Text_Lambda([WeakEditor]()
 					{
 						if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())return FText::AsNumber(Editor->GetDesignerGridSize());
+						return FText::GetEmpty();
+					})
+				]
+			]
+			+ SHorizontalBox::Slot()
+			.AutoWidth()
+			.VAlign(VAlign_Center)
+			.Padding(4, 0, 0, 0)
+			[
+				SNew(SComboButton)
+				.HasDownArrow(true)
+				.ToolTipText(LOCTEXT("ScreenSizeTooltip", "Design screen size: resize the design canvas to a common device resolution, flip its orientation, or overlay resolution guides."))
+				.OnGetMenuContent_Lambda([WeakEditor]() -> TSharedRef<SWidget>
+				{
+					FMenuBuilder MenuBuilder(true, nullptr);
+					MenuBuilder.BeginSection(NAME_None, LOCTEXT("ScreenSizeSection", "Screen Size"));
+					for (const FLexUIDesignScreenSize& ScreenSize : GetLexUIDesignScreenSizes())
+					{
+						const FIntPoint Size = ScreenSize.Size;
+						MenuBuilder.AddMenuEntry(FText::FromString(ScreenSize.Label), FText::GetEmpty(), FSlateIcon(),
+							FUIAction(FExecuteAction::CreateLambda([WeakEditor, Size]()
+							{
+								if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())Editor->SetDesignerCanvasSize(Size);
+							}), FCanExecuteAction(), FIsActionChecked::CreateLambda([WeakEditor, Size]()
+							{
+								if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())return Editor->GetDesignerCanvasSize() == Size;
+								return false;
+							})), NAME_None, EUserInterfaceActionType::RadioButton);
+					}
+					MenuBuilder.EndSection();
+					MenuBuilder.BeginSection(NAME_None, LOCTEXT("ScreenSizeToolsSection", "Tools"));
+					MenuBuilder.AddMenuEntry(LOCTEXT("FlipOrientation", "Flip Orientation"),
+						LOCTEXT("FlipOrientationTip", "Swap the design canvas width and height."), FSlateIcon(),
+						FUIAction(FExecuteAction::CreateLambda([WeakEditor]()
+						{
+							if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())
+							{
+								const FIntPoint Size = Editor->GetDesignerCanvasSize();
+								Editor->SetDesignerCanvasSize(FIntPoint(Size.Y, Size.X));
+							}
+						})));
+					MenuBuilder.AddMenuEntry(LOCTEXT("ShowResolutionGuides", "Show Resolution Guides"),
+						LOCTEXT("ShowResolutionGuidesTip", "Overlay common device resolutions on the design canvas, like UMG's designer surface."), FSlateIcon(),
+						FUIAction(FExecuteAction::CreateLambda([WeakEditor]()
+						{
+							if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())Editor->ToggleResolutionGuides();
+						}), FCanExecuteAction(), FIsActionChecked::CreateLambda([WeakEditor]()
+						{
+							if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())return Editor->GetShowResolutionGuides();
+							return false;
+						})), NAME_None, EUserInterfaceActionType::ToggleButton);
+					MenuBuilder.EndSection();
+					return MenuBuilder.MakeWidget();
+				})
+				.ButtonContent()
+				[
+					SNew(STextBlock).Text_Lambda([WeakEditor]()
+					{
+						if (TSharedPtr<FLexUIPrefabEditor> Editor = WeakEditor.Pin())
+						{
+							const FIntPoint Size = Editor->GetDesignerCanvasSize();
+							return FText::FromString(FString::Printf(TEXT("%d x %d"), Size.X, Size.Y));
+						}
 						return FText::GetEmpty();
 					})
 				]

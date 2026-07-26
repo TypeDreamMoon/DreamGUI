@@ -5,6 +5,7 @@
 #include "LexUIPrefabEditorDetails.h"
 #include "LexUIPrefabRawDataViewer.h"
 #include "LexUIPrefabOverridesViewer.h"
+#include "LexUIPrefabBehaviourViewer.h"
 #include "EditorModeManager.h"
 #include "GameFramework/Actor.h"
 #include "AssetSelection.h"
@@ -72,6 +73,7 @@ struct FLexUIPrefabEditorTabs
 	static const FName SequencerID;
 	static const FName PrefabRawDataViewerID;
 	static const FName PrefabOverridesViewerID;
+	static const FName PrefabBehaviourViewerID;
 	static const FName CompilerResultsID;
 };
 
@@ -82,6 +84,7 @@ const FName FLexUIPrefabEditorTabs::PaletteID(TEXT("Palette"));
 const FName FLexUIPrefabEditorTabs::SequencerID(TEXT("Sequencer"));
 const FName FLexUIPrefabEditorTabs::PrefabRawDataViewerID(TEXT("PrefabRawDataViewer"));
 const FName FLexUIPrefabEditorTabs::PrefabOverridesViewerID(TEXT("PrefabOverridesViewer"));
+const FName FLexUIPrefabEditorTabs::PrefabBehaviourViewerID(TEXT("PrefabBehaviourViewer"));
 const FName FLexUIPrefabEditorTabs::CompilerResultsID(TEXT("CompilerResults"));
 
 namespace LexUIPrefabEditorLocal
@@ -442,6 +445,11 @@ void FLexUIPrefabEditor::RegisterTabSpawners(const TSharedRef<FTabManager>& InTa
 		.SetGroup(WorkspaceMenuCategoryRef)
 		;
 
+	InTabManager->RegisterTabSpawner(FLexUIPrefabEditorTabs::PrefabBehaviourViewerID, FOnSpawnTab::CreateSP(this, &FLexUIPrefabEditor::SpawnTab_PrefabBehaviourViewer))
+		.SetDisplayName(LOCTEXT("PrefabBehaviourViewerTabLabel", "Behaviour"))
+		.SetGroup(WorkspaceMenuCategoryRef)
+		;
+
 	InTabManager->RegisterTabSpawner(FLexUIPrefabEditorTabs::CompilerResultsID, FOnSpawnTab::CreateSP(this, &FLexUIPrefabEditor::SpawnTab_CompilerResults))
 		.SetDisplayName(LOCTEXT("CompilerResultsTabLabel", "Compiler Results"))
 		.SetGroup(WorkspaceMenuCategoryRef)
@@ -458,6 +466,7 @@ void FLexUIPrefabEditor::UnregisterTabSpawners(const TSharedRef<FTabManager>& In
 	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::SequencerID);
 	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::PrefabRawDataViewerID);
 	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::PrefabOverridesViewerID);
+	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::PrefabBehaviourViewerID);
 	InTabManager->UnregisterTabSpawner(FLexUIPrefabEditorTabs::CompilerResultsID);
 }
 
@@ -537,6 +546,8 @@ void FLexUIPrefabEditor::InitPrefabEditor(const EToolkitMode::Type Mode, const T
 	PrefabRawDataViewer = SNew(SLexUIPrefabRawDataViewer, PrefabEditorPtr, PrefabBeingEdited);
 
 	PrefabOverridesViewer = SNew(SLexUIPrefabOverridesViewer, PrefabEditorPtr, PrefabBeingEdited);
+
+	PrefabBehaviourViewer = SNew(SLexUIPrefabBehaviourViewer, PrefabEditorPtr, PrefabBeingEdited);
 	
 	ULexUIManagerWorldSubsystem::GetInstance(GetWorld())->OnLexUIWidgetOutlinerChanged.AddSPLambda(this, [=, this]()
 	{
@@ -701,6 +712,11 @@ void FLexUIPrefabEditor::SaveAppliedPrefabToDisk()
 void FLexUIPrefabEditor::OnOpenOverridesViewerPanel()
 {
 	this->InvokeTab(FLexUIPrefabEditorTabs::PrefabOverridesViewerID);
+}
+
+void FLexUIPrefabEditor::OnOpenBehaviourViewerPanel()
+{
+	this->InvokeTab(FLexUIPrefabEditorTabs::PrefabBehaviourViewerID);
 }
 
 void FLexUIPrefabEditor::OnOpenRawDataViewerPanel()
@@ -1545,13 +1561,30 @@ void FLexUIPrefabEditor::WrapSelectedWidgets(ELexUIWrapType WrapType)
 		W->SetHeight(State.Height);
 	}
 
+	// Box wraps follow the project layout mode, like ConfigureScrollBox and the prefab factory:
+	// UMG-compatible projects get the UMG box family, legacy projects keep the Lex flex box.
+	const bool bWrapUMGLayout = ULexUISettings::GetLayoutMode() == ELexUILayoutMode::UMGCompatible;
 	switch (WrapType)
 	{
 	case ELexUIWrapType::HorizontalBox:
-		if (auto FlexBox = Wrapper->CreateNewLayoutContainer<ULexLayoutContainerFlexBox>()) FlexBox->SetDirection(ELexLayoutFlexBoxDirectionType::Horizontal);
+		if (bWrapUMGLayout)
+		{
+			Wrapper->CreateNewLayoutContainer<ULexLayoutContainerHorizontalBox>();
+		}
+		else if (auto FlexBox = Wrapper->CreateNewLayoutContainer<ULexLayoutContainerFlexBox>())
+		{
+			FlexBox->SetDirection(ELexLayoutFlexBoxDirectionType::Horizontal);
+		}
 		break;
 	case ELexUIWrapType::VerticalBox:
-		if (auto FlexBox = Wrapper->CreateNewLayoutContainer<ULexLayoutContainerFlexBox>()) FlexBox->SetDirection(ELexLayoutFlexBoxDirectionType::Vertical);
+		if (bWrapUMGLayout)
+		{
+			Wrapper->CreateNewLayoutContainer<ULexLayoutContainerVerticalBox>();
+		}
+		else if (auto FlexBox = Wrapper->CreateNewLayoutContainer<ULexLayoutContainerFlexBox>())
+		{
+			FlexBox->SetDirection(ELexLayoutFlexBoxDirectionType::Vertical);
+		}
 		break;
 	case ELexUIWrapType::Grid:
 		Wrapper->CreateNewLayoutContainer<ULexLayoutContainerGrid>();
@@ -1982,7 +2015,11 @@ void FLexUIPrefabEditor::ValidatePrefabReferences(TArray<FLexUIPrefabCompilerIss
 	// excludes it entirely and MaxScrollOffset stays 0, which reads as "scrolling is broken".
 	for (ULexWidget* Widget : Widgets)
 	{
-		if (!IsValid(Widget) || !Cast<ULexLayoutContainerScrollBox>(Widget->GetLayoutContainer()))
+		// Skip hierarchy-hidden scroll boxes: under a deactivated page every child reads as
+		// non-participating, which used to fire this warning with a misleading "Ignore Layout"
+		// message for perfectly healthy content.
+		if (!IsValid(Widget) || !Cast<ULexLayoutContainerScrollBox>(Widget->GetLayoutContainer())
+			|| !Widget->GetLayoutVisibleInHierarchy())
 		{
 			continue;
 		}
@@ -2488,6 +2525,53 @@ bool FLexUIPrefabEditor::GetShowLayoutDebug() const
 	return GetDefault<ULexUIEditorSettings>()->bShowLayoutDebugVisualization;
 }
 
+bool FLexUIPrefabEditor::GetShowResolutionGuides() const
+{
+	return GetDefault<ULexUIEditorSettings>()->bShowDesignResolutionGuides;
+}
+
+void FLexUIPrefabEditor::ToggleResolutionGuides()
+{
+	ULexUIEditorSettings* Settings = GetMutableDefault<ULexUIEditorSettings>();
+	Settings->bShowDesignResolutionGuides = !Settings->bShowDesignResolutionGuides;
+	Settings->SaveConfig();
+}
+
+FIntPoint FLexUIPrefabEditor::GetDesignerCanvasSize()
+{
+	if (ULexWidget* RootAgent = GetRootAgentWidget())
+	{
+		return FIntPoint(FMath::RoundToInt(RootAgent->GetWidth()), FMath::RoundToInt(RootAgent->GetHeight()));
+	}
+	return PrefabBeingEdited ? PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasSize : FIntPoint(1920, 1080);
+}
+
+void FLexUIPrefabEditor::SetDesignerCanvasSize(FIntPoint NewSize)
+{
+	ULexWidget* RootAgent = GetRootAgentWidget();
+	if (!IsValid(RootAgent) || !PrefabBeingEdited || NewSize.X <= 0 || NewSize.Y <= 0)
+	{
+		return;
+	}
+	// Re-clicking the checked preset (or flipping a square canvas) must not dirty the asset or
+	// push an empty undo entry.
+	if (NewSize == GetDesignerCanvasSize())
+	{
+		return;
+	}
+	const FScopedTransaction Transaction(LOCTEXT("SetDesignScreenSize", "Set Design Screen Size"));
+	// The preview-scene agent is created without RF_Transactional; without it Modify records
+	// nothing and undo would roll back only the stored CanvasSize, not the visible canvas.
+	RootAgent->SetFlags(RF_Transactional);
+	RootAgent->Modify();
+	// SetSizeDelta, matching how the instance scene and thumbnail scene size the root canvas.
+	RootAgent->SetSizeDelta(FVector2D(NewSize.X, NewSize.Y));
+	PrefabBeingEdited->Modify();
+	PrefabBeingEdited->PrefabDataForPrefabEditor.CanvasSize = NewSize;
+	ULexWidget::MarkLayoutForRebuild(RootAgent);
+	ULexWidget::RebuildLayoutImmediately(RootAgent);
+}
+
 void FLexUIPrefabEditor::ToggleLayoutDebug()
 {
 	ULexUIEditorSettings* Settings = GetMutableDefault<ULexUIEditorSettings>();
@@ -2699,6 +2783,12 @@ void FLexUIPrefabEditor::GenerateBehaviourOptionsMenu(UToolMenu* InMenu)
 {
 	FToolMenuSection& Section = InMenu->AddSection("Behaviour", LOCTEXT("BehaviourMenuSection", "Behaviour"));
 	Section.AddMenuEntry(
+		"OpenBehaviourPanel",
+		LOCTEXT("OpenBehaviourPanel", "Behaviour Panel"),
+		LOCTEXT("OpenBehaviourPanelTooltip", "Open the behaviour panel: widget references with quick bind, provided events and functions, and per-widget event handler shortcuts."),
+		FSlateIcon(FAppStyle::GetAppStyleSetName(), "Icons.Details"),
+		FUIAction(FExecuteAction::CreateSP(this, &FLexUIPrefabEditor::OnOpenBehaviourViewerPanel)));
+	Section.AddMenuEntry(
 		"OpenCurrentBehaviour",
 		LOCTEXT("OpenCurrentBehaviour", "Open Current Behaviour"),
 		LOCTEXT("OpenCurrentBehaviourTooltip", "Open the current Behaviour using its registered script editor backend."),
@@ -2879,6 +2969,19 @@ TSharedRef<SDockTab> FLexUIPrefabEditor::SpawnTab_PrefabOverridesViewer(const FS
 		.Label(LOCTEXT("PrefabOverridesTab_Title", "Overrides"))
 		[
 			PrefabOverridesViewer.ToSharedRef()
+		];
+}
+
+TSharedRef<SDockTab> FLexUIPrefabEditor::SpawnTab_PrefabBehaviourViewer(const FSpawnTabArgs& Args)
+{
+	if (PrefabBehaviourViewer.IsValid())
+	{
+		PrefabBehaviourViewer->Rebuild();
+	}
+	return SNew(SDockTab)
+		.Label(LOCTEXT("PrefabBehaviourTab_Title", "Behaviour"))
+		[
+			PrefabBehaviourViewer.ToSharedRef()
 		];
 }
 

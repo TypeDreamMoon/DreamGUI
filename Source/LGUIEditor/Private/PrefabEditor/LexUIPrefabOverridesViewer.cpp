@@ -2,17 +2,23 @@
 
 #include "LexUIPrefabOverridesViewer.h"
 #include "Core/Components/LexWidget.h"
+#include "Core/LexUIBehaviour.h"
 #include "DetailLayoutBuilder.h"
+#include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "LexUIPrefabEditor.h"
+#include "Modules/ModuleManager.h"
 #include "PrefabSystem/LexUIPrefab.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
+#include "PropertyEditorModule.h"
 #include "Styling/AppStyle.h"
 #include "Widgets/Input/SButton.h"
+#include "Widgets/Input/SComboButton.h"
 #include "Widgets/Input/SSearchBox.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SExpandableArea.h"
 #include "Widgets/Layout/SScrollBox.h"
+#include "Widgets/Layout/SSplitter.h"
 #include "Widgets/Text/STextBlock.h"
 
 #define LOCTEXT_NAMESPACE "LGUIPrefabOverridesViewer"
@@ -26,6 +32,7 @@ namespace LexUIPrefabOverridesViewerLocal
 	const FLinearColor DeadColor(1.0f, 0.35f, 0.35f);
 	const FLinearColor AccentColor(0.55f, 0.75f, 1.0f);
 	const FLinearColor WarnColor(1.0f, 0.75f, 0.35f);
+	const FLinearColor SelectedRowColor(0.25f, 0.45f, 0.75f, 0.35f);
 
 	/** "WidgetName · ClassName" — enough to find the object in the hierarchy and know what kind it is. */
 	FString DescribeOverrideObject(UObject* Object)
@@ -56,6 +63,17 @@ void SLexUIPrefabOverridesViewer::Construct(const FArguments& InArgs, TSharedPtr
 	using namespace LexUIPrefabOverridesViewerLocal;
 	PrefabEditorPtr = InPrefabEditorPtr;
 	PrefabWeak = Cast<ULexUIPrefab>(InObject);
+
+	FPropertyEditorModule& EditModule = FModuleManager::Get().GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
+	FDetailsViewArgs DetailsViewArgs;
+	{
+		DetailsViewArgs.bAllowSearch = true;
+		DetailsViewArgs.bShowOptions = false;
+		DetailsViewArgs.bAllowMultipleTopLevelObjects = false;
+		DetailsViewArgs.bAllowFavoriteSystem = false;
+		DetailsViewArgs.bHideSelectionTip = true;
+	}
+	ObjectDetailView = EditModule.CreateDetailView(DetailsViewArgs);
 
 	ChildSlot
 	[
@@ -93,7 +111,7 @@ void SLexUIPrefabOverridesViewer::Construct(const FArguments& InArgs, TSharedPtr
 		.Padding(8, 0, 8, 4)
 		[
 			SNew(STextBlock)
-			.Text(LOCTEXT("Hint", "A pinned property shadows any later edit made in the sub-prefab asset itself. To un-pin: select the sub-prefab root and use Details → \"Prefab Override Properties\"."))
+			.Text(LOCTEXT("Hint", "A pinned property shadows any later edit made in the sub-prefab asset itself. Click an object to select it and edit its properties below; use a row's Revert menu to un-pin."))
 			.Font(IDetailLayoutBuilder::GetDetailFont())
 			.ColorAndOpacity(FSlateColor(DimColor))
 			.AutoWrapText(true)
@@ -101,10 +119,43 @@ void SLexUIPrefabOverridesViewer::Construct(const FArguments& InArgs, TSharedPtr
 		+ SVerticalBox::Slot()
 		.FillHeight(1.0f)
 		[
-			SNew(SScrollBox)
-			+ SScrollBox::Slot()
+			SNew(SSplitter)
+			.Orientation(Orient_Vertical)
+			+ SSplitter::Slot()
+			.Value(0.6f)
 			[
-				SAssignNew(ContentBox, SVerticalBox)
+				SNew(SScrollBox)
+				+ SScrollBox::Slot()
+				[
+					SAssignNew(ContentBox, SVerticalBox)
+				]
+			]
+			+ SSplitter::Slot()
+			.Value(0.4f)
+			[
+				SNew(SVerticalBox)
+				+ SVerticalBox::Slot()
+				.AutoHeight()
+				.Padding(8, 4, 8, 2)
+				[
+					SNew(STextBlock)
+					.Text_Lambda([this]()
+					{
+						UObject* Object = SelectedObject.Get();
+						return Object
+							? FText::Format(LOCTEXT("SelectedObjectFmt", "Editing: {0} — changes on a nested instance are recorded as overrides."),
+								FText::FromString(LexUIPrefabOverridesViewerLocal::DescribeOverrideObject(Object)))
+							: LOCTEXT("NoSelectedObject", "Click an object above to inspect and edit its properties here.");
+					})
+					.Font(IDetailLayoutBuilder::GetDetailFont())
+					.ColorAndOpacity(FSlateColor(DimColor))
+					.AutoWrapText(true)
+				]
+				+ SVerticalBox::Slot()
+				.FillHeight(1.0f)
+				[
+					ObjectDetailView.ToSharedRef()
+				]
 			]
 		]
 	];
@@ -114,6 +165,43 @@ void SLexUIPrefabOverridesViewer::Construct(const FArguments& InArgs, TSharedPtr
 bool SLexUIPrefabOverridesViewer::MatchesFilter(const FString& Haystack) const
 {
 	return FilterString.IsEmpty() || Haystack.Contains(FilterString);
+}
+
+ULexWidget* SLexUIPrefabOverridesViewer::ResolveOwnerWidget(UObject* Object)
+{
+	if (!IsValid(Object))
+	{
+		return nullptr;
+	}
+	if (ULexWidget* AsWidget = Cast<ULexWidget>(Object))
+	{
+		return AsWidget;
+	}
+	if (ULexWidget* OuterWidget = Object->GetTypedOuter<ULexWidget>())
+	{
+		return OuterWidget;
+	}
+	if (ULexUIBehaviour* AsBehaviour = Cast<ULexUIBehaviour>(Object))
+	{
+		return AsBehaviour->GetWidget();
+	}
+	return nullptr;
+}
+
+void SLexUIPrefabOverridesViewer::SelectOverrideObject(UObject* Object)
+{
+	SelectedObject = Object;
+	if (ObjectDetailView.IsValid())
+	{
+		ObjectDetailView->SetObject(Object);
+	}
+	if (ULexWidget* Widget = ResolveOwnerWidget(Object))
+	{
+		if (TSharedPtr<FLexUIPrefabEditor> Editor = PrefabEditorPtr.Pin())
+		{
+			Editor->SelectWidgets(TSet<ULexWidget*>{ Widget }, false);
+		}
+	}
 }
 
 void SLexUIPrefabOverridesViewer::Rebuild()
@@ -207,29 +295,51 @@ void SLexUIPrefabOverridesViewer::Rebuild()
 			{
 				continue;
 			}
+			const TWeakObjectPtr<UObject> ObjectWeak = Object;
+			const int32 StripeIndex = ShownRows;
 			Rows->AddSlot().AutoHeight()
 			[
 				SNew(SBorder)
 				.BorderImage(FAppStyle::GetBrush("WhiteBrush"))
-				.BorderBackgroundColor(FSlateColor(ShownRows % 2 == 0 ? FLinearColor(1, 1, 1, 0.04f) : FLinearColor::Transparent))
+				.BorderBackgroundColor_Lambda([this, ObjectWeak, StripeIndex]()
+				{
+					if (ObjectWeak.IsValid() && SelectedObject == ObjectWeak)
+					{
+						return FSlateColor(SelectedRowColor);
+					}
+					return FSlateColor(StripeIndex % 2 == 0 ? FLinearColor(1, 1, 1, 0.04f) : FLinearColor::Transparent);
+				})
 				.Padding(FMargin(4, 2))
 				[
 					SNew(SHorizontalBox)
 					+ SHorizontalBox::Slot()
 					.AutoWidth()
+					.VAlign(VAlign_Center)
 					.Padding(4, 1)
 					[
 						SNew(SBox)
 						.WidthOverride(260)
 						[
-							SNew(STextBlock)
-							.Text(FText::FromString(ObjectLabel))
-							.Font(IDetailLayoutBuilder::GetDetailFontBold())
-							.ColorAndOpacity(FSlateColor(bDead ? DeadColor : ValueColor))
+							SNew(SButton)
+							.ButtonStyle(FAppStyle::Get(), "SimpleButton")
+							.ToolTipText(LOCTEXT("SelectObjectTip", "Select this object in the prefab editor and load it into the property panel below."))
+							.IsEnabled(!bDead)
+							.OnClicked_Lambda([this, ObjectWeak]()
+							{
+								SelectOverrideObject(ObjectWeak.Get());
+								return FReply::Handled();
+							})
+							[
+								SNew(STextBlock)
+								.Text(FText::FromString(ObjectLabel))
+								.Font(IDetailLayoutBuilder::GetDetailFontBold())
+								.ColorAndOpacity(FSlateColor(bDead ? DeadColor : ValueColor))
+							]
 						]
 					]
 					+ SHorizontalBox::Slot()
 					.FillWidth(1.0f)
+					.VAlign(VAlign_Center)
 					.Padding(4, 1)
 					[
 						SNew(STextBlock)
@@ -237,6 +347,60 @@ void SLexUIPrefabOverridesViewer::Rebuild()
 						.Font(MonoFont())
 						.ColorAndOpacity(FSlateColor(bDead ? DeadColor : DimColor))
 						.AutoWrapText(true)
+					]
+					+ SHorizontalBox::Slot()
+					.AutoWidth()
+					.VAlign(VAlign_Center)
+					.Padding(4, 1)
+					[
+						SNew(SComboButton)
+						.ToolTipText(LOCTEXT("RevertMenuTip", "Un-pin properties on this object so the sub-prefab asset's values apply again."))
+						.ButtonContent()
+						[
+							SNew(STextBlock)
+							.Text(LOCTEXT("RevertMenu", "Revert"))
+							.Font(IDetailLayoutBuilder::GetDetailFont())
+						]
+						.OnGetMenuContent_Lambda([this, ObjectWeak, Names = Override.MemberPropertyNames]()
+						{
+							FMenuBuilder MenuBuilder(/*bInShouldCloseWindowAfterMenuSelection*/true, nullptr);
+							MenuBuilder.BeginSection(NAME_None, LOCTEXT("RevertSingleSection", "Revert single property"));
+							for (const FName& PropertyName : Names)
+							{
+								MenuBuilder.AddMenuEntry(
+									FText::FromName(PropertyName),
+									FText::Format(LOCTEXT("RevertPropertyTip", "Un-pin {0}; the value from the sub-prefab asset applies again."), FText::FromName(PropertyName)),
+									FSlateIcon(),
+									FUIAction(FExecuteAction::CreateLambda([this, ObjectWeak, PropertyName]()
+									{
+										ULexUIPrefab* LocalPrefab = PrefabWeak.Get();
+										ULexUIPrefabHelperObject* LocalHelper = IsValid(LocalPrefab) ? LocalPrefab->GetPrefabHelperObject() : nullptr;
+										if (LocalHelper && ObjectWeak.IsValid())
+										{
+											LocalHelper->RevertPrefabOverride(ObjectWeak.Get(), { PropertyName });
+										}
+										Rebuild();
+									})));
+							}
+							MenuBuilder.EndSection();
+							MenuBuilder.BeginSection(NAME_None, LOCTEXT("RevertAllSection", "Whole object"));
+							MenuBuilder.AddMenuEntry(
+								LOCTEXT("RevertAllOnObject", "Revert all on this object"),
+								LOCTEXT("RevertAllOnObjectTip", "Un-pin every property recorded on this object."),
+								FSlateIcon(),
+								FUIAction(FExecuteAction::CreateLambda([this, ObjectWeak]()
+								{
+									ULexUIPrefab* LocalPrefab = PrefabWeak.Get();
+									ULexUIPrefabHelperObject* LocalHelper = IsValid(LocalPrefab) ? LocalPrefab->GetPrefabHelperObject() : nullptr;
+									if (LocalHelper && ObjectWeak.IsValid())
+									{
+										LocalHelper->RevertAllPrefabOverride(ObjectWeak.Get());
+									}
+									Rebuild();
+								})));
+							MenuBuilder.EndSection();
+							return MenuBuilder.MakeWidget();
+						})
 					]
 				]
 			];
