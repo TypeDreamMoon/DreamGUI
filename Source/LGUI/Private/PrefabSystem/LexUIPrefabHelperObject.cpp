@@ -9,6 +9,10 @@
 #include "PrefabSystem/LexUIPrefab.h"
 #include "Utils/LexUIUtils.h"
 #include "PrefabSystem/LexUIObjectReaderAndWriter.h"
+#if WITH_EDITOR
+#include "Core/LexUISettings.h"
+#include "PrefabSystem/LexUIPrefabSaveVerification.h"
+#endif
 
 #if WITH_EDITOR
 #include "ScopedTransaction.h"
@@ -400,6 +404,18 @@ bool ULexUIPrefabHelperObject::SavePrefab()
 				MapObjectToGuid.Add(KeyValue.Value, KeyValue.Key);
 			}
 		}
+#if WITH_EDITOR
+		// Loading during verification can refresh out-of-date sub prefabs, which saves them through this
+		// same function — don't verify (or snapshot) recursively, the outermost save covers it.
+		static bool bSaveVerificationInProgress = false;
+		const bool bVerifyRoundTrip = GetDefault<ULexUISettings>()->bVerifyPrefabSaveRoundTrip
+			&& !bSaveVerificationInProgress;
+		LexUIPrefabSystem::FLexUIPrefabEditorPayloadSnapshot PayloadSnapshot;
+		if (bVerifyRoundTrip)
+		{
+			PayloadSnapshot.Capture(PrefabAsset);
+		}
+#endif
 		const bool bSaveSucceeded = PrefabAsset->SavePrefab(LoadedRootWidget
 			, MapObjectToGuid, SubPrefabMap
 		);
@@ -410,6 +426,54 @@ bool ULexUIPrefabHelperObject::SavePrefab()
 		}
 		if (bSaveSucceeded)
 		{
+#if WITH_EDITOR
+			if (bVerifyRoundTrip)
+			{
+				TGuardValue<bool> ReentrancyGuard(bSaveVerificationInProgress, true);
+				const LexUIPrefabSystem::FLexUIPrefabSaveVerificationResult Verification =
+					LexUIPrefabSystem::VerifyPrefabSaveRoundTrip(PrefabAsset, LoadedRootWidget);
+				constexpr int32 MaxReportedDifferences = 20;
+				int32 ReportedCount = 0;
+				for (const FString& Difference : Verification.PropertyDifferences)
+				{
+					if (++ReportedCount > MaxReportedDifferences)
+					{
+						UE_LOG(LGUI, Warning, TEXT("Prefab save verification: ...and %d more property difference(s)."),
+							Verification.PropertyDifferences.Num() - MaxReportedDifferences);
+						break;
+					}
+					UE_LOG(LGUI, Warning, TEXT("Prefab save verification: property drift on %s: %s"),
+						*PrefabAsset->GetName(), *Difference);
+				}
+				const bool bRefuseSave = !Verification.bStructureMatches
+					|| (GetDefault<ULexUISettings>()->bBlockPrefabSaveOnPropertyDrift
+						&& Verification.PropertyDifferences.Num() > 0);
+				if (bRefuseSave)
+				{
+					ReportedCount = 0;
+					for (const FString& Difference : Verification.StructuralDifferences)
+					{
+						if (++ReportedCount > MaxReportedDifferences)
+						{
+							UE_LOG(LGUI, Error, TEXT("Prefab save verification: ...and %d more structural difference(s)."),
+								Verification.StructuralDifferences.Num() - MaxReportedDifferences);
+							break;
+						}
+						UE_LOG(LGUI, Error, TEXT("Prefab save verification: %s: %s"),
+							*PrefabAsset->GetName(), *Difference);
+					}
+					UE_LOG(LGUI, Error,
+						TEXT("Prefab save verification FAILED for %s: the just-serialized payload does not load back as the edited hierarchy. The asset has been rolled back to its previous payload and this save is refused."),
+						*PrefabAsset->GetName());
+					FLexUIUtils::EditorNotification(FText::Format(
+						LOCTEXT("PrefabSaveVerificationFailed",
+							"Save of prefab '{0}' was refused: the serialized data does not load back as the edited hierarchy (see log). The asset keeps its previous data."),
+						FText::FromString(PrefabAsset->GetName())), false, 10.0f);
+					PayloadSnapshot.Restore(PrefabAsset);
+					return false;
+				}
+			}
+#endif
 			bAnythingDirty = false;
 			PrefabAsset->EnsureInstanceObjects();
 		}

@@ -81,6 +81,21 @@ public:
 	UPROPERTY(EditAnywhere, config, Category = "Layout", meta = (ConfigRestartRequired = true))
 	ELexUILayoutMode LayoutMode = ELexUILayoutMode::LegacyLGUI;
 
+	/**
+	 * After every editor prefab save, immediately deserialize the just-written payload into a throwaway
+	 * world and compare it with the edited hierarchy. A structural mismatch (an object lost, gained or
+	 * class-changed by the round trip) rolls the asset back to its previous payload and fails the save,
+	 * so corrupted data can never silently reach disk.
+	 */
+	UPROPERTY(EditAnywhere, config, Category = "Prefab", meta = (DisplayName = "Verify Prefab Save Round Trip"))
+	bool bVerifyPrefabSaveRoundTrip = true;
+	/**
+	 * Escalate property-level round-trip drift (values that load back different from what was saved) from a
+	 * logged warning to a hard save failure. Off by default until the known-benign drift list is burned down.
+	 */
+	UPROPERTY(EditAnywhere, config, Category = "Prefab", meta = (EditCondition = "bVerifyPrefabSaveRoundTrip"))
+	bool bBlockPrefabSaveOnPropertyDrift = false;
+
 	/** default atlas setting */
 	UPROPERTY(EditAnywhere, config, Category = Sprite)
 		FLexUIAtlasSettings DefaultAtlasSetting;

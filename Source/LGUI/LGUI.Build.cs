@@ -93,6 +93,8 @@ public class LGUI : ModuleRules
                 "TargetPlatform",
                 "LevelEditor",
                 "ToolWidgets",//SCustomDialog
+                "Json",
+                "JsonUtilities",//prefab save round-trip verification
             }
             );
         }
