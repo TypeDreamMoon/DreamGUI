@@ -12,6 +12,7 @@
 #include "LexUIPrefabEditor.h"
 #include "PrefabSystem/LexUIPrefab.h"
 #include "PrefabSystem/LexUIPrefabHelperObject.h"
+#include "ScopedTransaction.h"
 #include "Styling/AppStyle.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SComboButton.h"
@@ -219,6 +220,9 @@ void SLexUIPrefabBehaviourViewer::RunAutoBind()
 	}
 	TArray<FString> BoundDetails;
 	TArray<FString> Problems;
+	// The pass only assigns object properties on the companion, so it undoes cleanly -- but the
+	// Modify() calls inside it record nothing unless a transaction is open here.
+	const FScopedTransaction Transaction(LOCTEXT("AutoBindTransaction", "Auto Bind Widget References"));
 	LexUIPrefabBehaviourUtils::AutoBindAndValidate(RootWidget, Prefab, BoundDetails, Problems, /*bPerformAutoBind*/true);
 	if (BoundDetails.Num() > 0)
 	{
@@ -418,6 +422,9 @@ void SLexUIPrefabBehaviourViewer::BuildWidgetReferenceSection(UClass* BehaviourC
 						{
 							return;
 						}
+						const FScopedTransaction Transaction(NewValue != nullptr
+							? LOCTEXT("BindReferenceTransaction", "Bind Widget Reference")
+							: LOCTEXT("UnbindReferenceTransaction", "Unbind Widget Reference"));
 						LocalPrimary->Modify();
 						Property->SetObjectPropertyValue_InContainer(LocalPrimary, NewValue);
 						if (ULexUIPrefab* LocalPrefab = PrefabWeak.Get())

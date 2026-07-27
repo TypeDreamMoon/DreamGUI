@@ -2,6 +2,7 @@
 
 #include "LexUIPrefabBehaviourUtils.h"
 #include "PrefabSystem/LexUIPrefab.h"
+#include "PrefabSystem/LexUIPrefabHelperObject.h"
 #include "Core/LexUIBehaviour.h"
 #include "Core/Components/LexWidget.h"
 
@@ -464,8 +465,33 @@ void AutoBindAndValidate(ULexWidget* InRootWidget, ULexUIPrefab* InPrefab, TArra
 	// Flatten the subtree and index widgets by their sanitized display name (the same key
 	// PromoteToVariable / MakeVariableNameForTarget mint variables from). Names collect into
 	// arrays so duplicates surface as ambiguity instead of an arbitrary silent pick.
+	// Widgets living inside a sub-prefab instance are NOT referenceable from this prefab: the
+	// writer only emits a reference when the target is in WillSerializeWidgetArray, which excludes
+	// every sub-prefab widget -- the sub-prefab root included (WidgetSerializer_Serialize.cpp
+	// CollectWidgetRecursive, FLexUIObjectWriter::SerializeObject). Binding one would report
+	// success here and then come back null after save, exactly the failure this pass exists to
+	// prevent, so they are kept out of the candidate index and reported instead.
+	TSet<const ULexWidget*> SubPrefabWidgets;
+	if (IsValid(InPrefab))
+	{
+		if (ULexUIPrefabHelperObject* Helper = InPrefab->GetPrefabHelperObject())
+		{
+			for (const auto& SubPrefabPair : Helper->SubPrefabMap)
+			{
+				for (const auto& GuidToObjectPair : SubPrefabPair.Value.MapGuidToObject)
+				{
+					if (const ULexWidget* SubPrefabWidget = Cast<ULexWidget>(GuidToObjectPair.Value))
+					{
+						SubPrefabWidgets.Add(SubPrefabWidget);
+					}
+				}
+			}
+		}
+	}
+
 	TArray<ULexWidget*> Subtree;
 	TMap<FString, TArray<ULexWidget*>> NameToWidgets;
+	TMap<FString, int32> SubPrefabNameCounts;
 	{
 		TArray<ULexWidget*> Stack;
 		TSet<const ULexWidget*> VisitedWidgets;
@@ -476,7 +502,14 @@ void AutoBindAndValidate(ULexWidget* InRootWidget, ULexUIPrefab* InPrefab, TArra
 			if (!IsValid(Widget) || VisitedWidgets.Contains(Widget)) continue;
 			VisitedWidgets.Add(Widget);
 			Subtree.Add(Widget);
-			NameToWidgets.FindOrAdd(MakeVariableNameForTarget(Widget)).Add(Widget);
+			if (SubPrefabWidgets.Contains(Widget))
+			{
+				SubPrefabNameCounts.FindOrAdd(MakeVariableNameForTarget(Widget))++;
+			}
+			else
+			{
+				NameToWidgets.FindOrAdd(MakeVariableNameForTarget(Widget)).Add(Widget);
+			}
 			for (ULexWidget* Child : Widget->GetChildren())
 			{
 				if (IsValid(Child)) Stack.Add(Child);
@@ -526,6 +559,11 @@ void AutoBindAndValidate(ULexWidget* InRootWidget, ULexUIPrefab* InPrefab, TArra
 					OutProblems.Add(FString::Printf(TEXT("'%s' points to '%s', which is not in this prefab -- the reference will not save.")
 						, *VarName, *GetNameSafe(Value)));
 				}
+				else if (SubPrefabWidgets.Contains(OwnerWidget))
+				{
+					OutProblems.Add(FString::Printf(TEXT("'%s' points to '%s' inside a sub-prefab instance -- the reference will not save. Bind it from that sub-prefab's own behaviour instead.")
+						, *VarName, *MakeVariableNameForTarget(OwnerWidget)));
+				}
 				else if (!bSavable)
 				{
 					OutProblems.Add(FString::Printf(TEXT("'%s' is bound but not Instance Editable -- it will come back empty after save. Promote via the menu to fix.")
@@ -538,7 +576,15 @@ void AutoBindAndValidate(ULexWidget* InRootWidget, ULexUIPrefab* InPrefab, TArra
 
 			// Null + savable + name matches a descendant -> UMG BindWidget: wire it up.
 			TArray<ULexWidget*>* Matches = NameToWidgets.Find(VarName);
-			if (Matches == nullptr || Matches->Num() == 0) continue;
+			if (Matches == nullptr || Matches->Num() == 0)
+			{
+				if (const int32* SubPrefabMatches = SubPrefabNameCounts.Find(VarName))
+				{
+					OutProblems.Add(FString::Printf(TEXT("'%s' matches %d widget(s) inside a sub-prefab instance, which cannot be referenced from this prefab. Bind it from that sub-prefab's own behaviour instead.")
+						, *VarName, *SubPrefabMatches));
+				}
+				continue;
+			}
 			if (Matches->Num() > 1)
 			{
 				OutProblems.Add(FString::Printf(TEXT("'%s' matches %d widgets by name -- rename to disambiguate, or bind it by hand.")
