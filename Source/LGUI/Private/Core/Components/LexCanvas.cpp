@@ -2767,10 +2767,20 @@ void ULexCanvas::OnEditorTick(float DeltaTime)
 			|| this->GetRenderMode() == ELexRenderMode::RenderTarget
 			)
 		{
-			DrawViewportArea();
-			if (ULexUISelection::GetInstance(this->GetWorld())->IsSelected(this->GetWidget()))
+			// The editor tick can still reach a canvas whose world has gone -- closing a prefab
+			// editor, ending PIE, changing level -- and every accessor below resolves through the
+			// world subsystem, which returns null for an invalid world. Dereferencing it unguarded
+			// is what crashed here in ULexUISelection::IsSelected. Resolving it once also means a
+			// valid subsystem implies a valid world, so GetWorld() below needs no second check.
+			ULexUIManagerWorldSubsystem* ManagerSubsystem = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld());
+			if (ManagerSubsystem == nullptr)
 			{
-				if (auto ViewportClient = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld())->GetEditorViewportClient())
+				return;
+			}
+			DrawViewportArea();
+			if (ManagerSubsystem->GetSelection()->IsSelected(this->GetWidget()))
+			{
+				if (auto ViewportClient = ManagerSubsystem->GetEditorViewportClient())
 				{
 					if (!ViewportClient->IsOrtho())
 					{
@@ -2778,7 +2788,7 @@ void ULexCanvas::OnEditorTick(float DeltaTime)
 					}
 				}
 			}
-				
+
 			if (!GetWorld()->IsGameWorld())
 			{
 				if (this->GetRenderMode() == ELexRenderMode::ScreenSpaceOverlay)
@@ -2792,7 +2802,7 @@ void ULexCanvas::OnEditorTick(float DeltaTime)
 					else
 #endif
 					{
-						if (auto ViewportClient = ULexUIManagerWorldSubsystem::GetInstance(this->GetWorld())->GetEditorViewportClient())
+						if (auto ViewportClient = ManagerSubsystem->GetEditorViewportClient())
 						{
 							auto Viewport = ViewportClient->Viewport;
 							if (Viewport == nullptr)
